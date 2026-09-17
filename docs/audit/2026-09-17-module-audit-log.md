@@ -15,6 +15,63 @@ config-service / storage-service / engine-exec。
 
 ---
 
+## 结论汇总（供审阅）
+
+**审查范围**：backend 全部 40+ 模块、frontend（React）、frontend_mobile（Vue）、公共包
+（contracts / conversion-service / storage-service / config-service / mxVersionTool / impl-mx）、
+前端 API 调用规范、backend 全部 shell-exec 面。逐模块过命令注入、路径遍历、SQL 注入、IDOR、
+鉴权、XSS、token 存储、时序侧信道、SSE 凭据、开放重定向九类安全面。
+
+**已修复（真实缺陷，均带回归测试 + 已 push）**：
+
+| 节 | 模块 | 缺陷 | 提交 |
+|---|---|---|---|
+| 1.1 | contracts | `buildEngineParams` 字符串字段空值语义回归（转发 `''` 给引擎） | ade2be6 |
+| 2.1/2.2 | mxcad conversion | 转换链路参数/失败分类问题 | d4fcff6 |
+| 3.1/4.1 | auth/permission | 认证/权限两处缺陷 | 见节 |
+| 5.1-5.3 | share/storage/public-file | 三处缺陷 | 见节 |
+| 6.1-6.3 | frontend 核心 | token/上传/stores 三处 | 见节 |
+| 7.1 | storage-service | 一处缺陷 | 36f276b |
+| 8.1/8.2 | config-service | multipart 解析两处 | 3805b03 |
+| 11.1 | file-operations | 一处缺陷 | 8151f06 |
+| 12.1 | personal-space | deleteNode 门禁 | 4f1f05a |
+| 13.1 | version-control | getFileHistory 遍历 | e92b03d |
+| 15.1/15.2 | mxcad upload | body.name 未清洗 + createFileNode 收敛 | daa0dc1 / 3319fac |
+| 17 | mxcad infra | filesData 路径遍历 + 其余文件 | 12be970 / 0503b46 |
+| 18 | mxcad save | sourceFileHash 路径遍历 | 9f8b511 |
+| 19 | mxcad core | multer 落盘遍历 | ed52846 |
+| 20 | mxcad external-ref | 4 处 fileName 路径遍历 | 92e27a6 |
+| 21 | users | 头像 serveAvatar/saveAvatarToDisk 遍历 | d766563 |
+
+**无新缺陷（如实记录，未改代码）**：conversion-service、engine-exec、file-system、
+batch-download、roles、billing、backup、library、function-executor、runtime-config、fonts、
+notice-center、admin、ip-blacklist、user-cleanup、alert、audit、common、config、cooperate、
+database、health、ip-whitelist、metrics、notification、ownership、redis、security、task-run、
+storage-management、cache-architecture、assets、frontend、frontend_mobile、mxVersionTool、impl-mx。
+
+**关键实证**（支撑「无缺陷」判断，非表面结论）：
+- Express 5 `:id`/`*path` 参数**会解码 `%2f`→`/`、`%5c`→`\`**（真实 express@5.2.1 起服务验证）
+  → URL 参数遍历是真实可达的，故所有 URL 路径参数入口都逐一核实。
+- fonts `deleteFont` 漏 `\` 检查，经 node `path.join`/`resolve` 实测 9 类输入证明**不可利用**
+  （唯一逃逸原语 `..` 已拒；Windows 绝对/UNC 路径经 `path.join` 不逃逸）。
+- backup `execFile`（非 `exec`）+ `BACKUP_FILENAME_PATTERN`/`IDENTIFIER_PATTERN` 白名单，
+  17 个调用点 `file`/`args` 全来自 config/严格校验，无命令注入。
+- billing 用户侧订单全 `userId` 限定（防 IDOR）+ 金额服务端派生（防改价）+ webhook 走 IP
+  白名单+签名。
+- backend 三处 shell `exec`/`execSync`（disk-monitor/linux-init/thumbnail-generation）内插值
+  均 config/结构约束/服务端生成，无用户输入。
+
+**观察项（非缺陷，记录不处理）**：
+- `mxcad/external-reference-handler.service.ts` 死代码遍历、`chunk-dir` 读路径未 basename
+  （影响可忽略）、`filesystem-node.service.ts` 破损 JSDoc（§19）。
+- `storage-management/FileCopyService` 无外部调用方（孤儿代码，架构问题非安全缺陷，§23）。
+- `mxVersionTool/mxcat.js` 用 `--password <明文>` 数组参数（进程列表可见；`mxlog.js` 用
+  `--password-from-env` 更优）——进程可见性差异非命令注入（§25）。
+- `frontend/annotation.ts` `document.write('<img src="' + imageData + '"/>')`：`imageData` 是
+  CAD 引擎 base64 data URL（非用户文本，base64 字符集无法逃逸属性），且落独立弹窗（§24）。
+
+---
+
 ## 1. @cloudcad/contracts（契约层）
 
 ### 1.1 buildEngineParams 字符串字段空值语义回归（已修复）
