@@ -3,6 +3,7 @@ import { FileConversionService } from './file-conversion.service';
 import { AsyncConversionService } from './async-conversion.service';
 import { UnifiedConversionService } from './conversion-task.service';
 import { ConversionReconciliationService } from './conversion-reconciliation.service';
+import { ConversionFailedNodeCleanupService } from './conversion-failed-node-cleanup.service';
 import { ConversionStatusController } from './conversion-status.controller';
 import { ConversionTaskController } from './conversion-task.controller';
 import { ConversionTaskSseService } from './conversion-task.sse.service';
@@ -18,6 +19,7 @@ import { FileOperationsModule } from '../../file-operations/file-operations.modu
     AsyncConversionService,
     UnifiedConversionService,
     ConversionReconciliationService,
+    ConversionFailedNodeCleanupService,
     ConversionTaskSseService,
     { provide: MXCAD_CONVERSION_SERVICE, useExisting: FileConversionService },
   ],

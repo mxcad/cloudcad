@@ -21,7 +21,12 @@ import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { FileStatus, NodeType } from '@cloudcad/db';
 import { FileNodeMaterializer } from './file-node-materializer.service';
+import { AuditLogService } from '../../audit/audit-log.service';
+import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import * as path from 'path';
+
+/** 落盘（存储分配 / 复制）失败的统一错误文案：materialize 返回 null 不携带原因 */
+const MATERIALIZE_FAILED_ERROR = '落盘失败（存储分配或文件复制未成功）';
 
 /**
  * 摄入源：传输层差异（整包 / 分片）在此收敛为判别联合
@@ -110,7 +115,8 @@ export class DrawingIngestService {
     private readonly restrictionEngine: RestrictionEngine,
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
     private readonly materializer: FileNodeMaterializer,
-    private readonly asyncConversionService: AsyncConversionService
+    private readonly asyncConversionService: AsyncConversionService,
+    private readonly auditLogService: AuditLogService
   ) {
     this.mxcadUploadPath =
       this.configService.get('mxcadUploadPath') || '../../uploads';
@@ -137,6 +143,52 @@ export class DrawingIngestService {
     to: FileStatus
   ): Promise<void> {
     return this.nodeStatusTransitioner.transition(nodeId, from, to);
+  }
+
+  /**
+   * 终态失败审计：失败瞬间写，节点保留窗口到期会被清理，审计是失败原因的唯一
+   * 持久记录（节点上无 error 字段，引擎原始 message 只存在于本处 + 日志）。
+   *
+   * 复用 AuditAction.FILE_UPLOAD：AuditLogService 对高频读组只过滤「成功」记录，
+   * success=false 一定落库，正好承载「上传了但转换/落盘失败」的追溯需求。
+   * 埋点失败不阻塞后台清理流程。
+   */
+  private async logUploadFailure(args: {
+    context: FileSystemNodeContext;
+    nodeId: string;
+    name: string;
+    fileHash: string;
+    size: number;
+    error: string;
+    transient?: boolean;
+    stage: 'conversion' | 'materialize';
+  }): Promise<void> {
+    try {
+      await this.auditLogService.log(
+        AuditAction.FILE_UPLOAD,
+        ResourceType.FILE,
+        args.nodeId,
+        args.context?.userId ?? 'unknown',
+        false,
+        args.error,
+        undefined,
+        undefined,
+        args.name,
+        {
+          fileName: args.name,
+          hash: args.fileHash,
+          size: args.size,
+          failureStage: args.stage,
+          transient: args.transient ?? null,
+        }
+      );
+    } catch (error) {
+      this.logger.warn(
+        `[DrawingIngest] 上传失败审计埋点失败（业务不阻塞）: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
   /**
@@ -599,7 +651,12 @@ export class DrawingIngestService {
    *
    * 转换 + 落盘（finalize）+ 外部参照 + 状态迁移全部在后台完成：
    * - 成功：finalize（置 path）→ COMPLETED；外部参照场景走 handleExtRef。
-   * - 失败/异常：回滚转换额度 → FAILED → 保留节点（不硬删）。
+   * - 失败/异常：回滚转换额度 → FAILED → **保留节点（不立即硬删）**。
+   *   FAILED 行在保留窗口内是失败的唯一可见面：前端对 FAILED 节点渲染红色 ×
+   *   +「转换失败」标签，转换面板按 fileStatus=FAILED 展示失败原因，用户据此知道
+   *   上传失败了而不是文件凭空消失。真实错误同步写审计（logUploadFailure）。
+   *   窗口到期由 ConversionFailedNodeCleanupService 彻底删除——FAILED 行不会永久
+   *   堆积，也不需要用户手动清理。
    * 前端 waitForFileReady 轮询节点 fileStatus，FAILED 立即失败、COMPLETED 后打开。
    * 任何异常都不向上抛出（后台任务，避免 unhandledRejection）。
    */
@@ -652,13 +709,22 @@ export class DrawingIngestService {
             cadNodeId
           );
           if (finalNodeId === null) {
-            // 落盘失败：节点置 FAILED（保留节点，不硬删）——用户可在文件列表看到失败节点，
-            // 而不是上传结束后什么痕迹都查不到。
+            // 落盘失败：节点置 FAILED 并保留（同转换失败），真实原因写审计
             await this.transition(
               cadNodeId,
               FileStatus.PROCESSING,
               FileStatus.FAILED
             );
+            await this.logUploadFailure({
+              context,
+              nodeId: cadNodeId,
+              name,
+              fileHash: hash,
+              size,
+              error: MATERIALIZE_FAILED_ERROR,
+              transient: true,
+              stage: 'materialize',
+            });
             this.logger.warn(
               `[DrawingIngest.background] 落盘失败，保留 FAILED 节点: ${cadNodeId}`
             );
@@ -679,9 +745,19 @@ export class DrawingIngestService {
             FileStatus.PROCESSING,
             FileStatus.FAILED
           );
-          // 保留 FAILED 节点（不硬删）：FileSystemNode 没有错误信息字段，引擎错误原文
-          // 只进后端日志；硬删后用户既看不到失败记录也拿不到失败原因。
-          // transient=true = 环境性失败（超时/引擎未启动，可重试）；false = 确定性内容失败。
+          // 保留 FAILED 节点（不立即硬删）：transient=true（超时/引擎未启动/输出
+          // 无法解析）属环境性可重试失败，transient=false 才是内容性永久失败，两者
+          // 都不应静默删除用户的上传记录；引擎原始 message 同时记日志 + 审计。
+          await this.logUploadFailure({
+            context,
+            nodeId: cadNodeId,
+            name,
+            fileHash: hash,
+            size,
+            error: result.error || '未知错误',
+            transient: result.transient,
+            stage: 'conversion',
+          });
           this.logger.warn(
             `[DrawingIngest.background] 转换失败，保留 FAILED 节点: ${cadNodeId} ` +
               `（transient=${result.transient ?? 'unknown'}，${
@@ -696,6 +772,8 @@ export class DrawingIngestService {
           error instanceof Error ? error.stack : undefined
         );
         try {
+          // 保留 FAILED 节点（不立即硬删）：后台异常（含转换服务抛错）同样不能
+          // 静默删除用户的上传记录。
           await this.releaseConversionReservation(context, source);
           await this.transition(
             cadNodeId,
@@ -709,6 +787,16 @@ export class DrawingIngestService {
             }`
           );
         }
+        // 审计独立于状态迁移成败：迁移失败也不丢失败原因
+        await this.logUploadFailure({
+          context,
+          nodeId: cadNodeId,
+          name,
+          fileHash: hash,
+          size,
+          error: errMsg,
+          stage: 'conversion',
+        });
       }
     })();
   }
@@ -718,7 +806,8 @@ export class DrawingIngestService {
    *
    * 转换 + 落盘（materialize）+ 外部参照 + 临时目录/缓存清理 + 状态迁移全部在后台完成：
    * - 成功：materialize（置 path）→ COMPLETED；外部参照场景走 materialize 的 extRef。
-   * - 失败/异常：回滚转换额度 → FAILED → 保留节点（不硬删）→ 清理临时目录/缓存。
+   * - 失败/异常：回滚转换额度 → FAILED → 保留节点（不立即硬删，到期由
+   *   ConversionFailedNodeCleanupService 清理）→ 清理临时目录/缓存。
    * 前端 waitForFileReady 轮询节点 fileStatus，FAILED 立即失败、COMPLETED 后打开。
    * 任何异常都不向上抛出（后台任务，避免 unhandledRejection）。
    *
@@ -784,8 +873,18 @@ export class DrawingIngestService {
             FileStatus.PROCESSING,
             FileStatus.FAILED
           );
-          // 保留 FAILED 节点（不硬删），与后台单文件上传一致：
-          // transient=true = 环境性失败（可重试）；false = 确定性内容失败。
+          // 保留 FAILED 节点（不立即硬删），与后台单文件上传一致；
+          // tmpDir 与合并缓存照旧清理。
+          await this.logUploadFailure({
+            context,
+            nodeId: newNodeId,
+            name: fileName,
+            fileHash: fileMd5,
+            size: fileSize,
+            error: convertResult?.error || '未知错误',
+            transient: convertResult?.transient,
+            stage: 'conversion',
+          });
           this.logger.warn(
             `[DrawingIngest.chunks-bg] 转换失败，保留 FAILED 节点: ${newNodeId} ` +
               `（transient=${convertResult?.transient ?? 'unknown'}，${
@@ -796,12 +895,6 @@ export class DrawingIngestService {
           await this.cacheManager.delete('file-upload', mergeKey);
           return;
         }
-
-        await this.transition(
-          newNodeId,
-          FileStatus.PROCESSING,
-          FileStatus.COMPLETED
-        );
 
         const result = await this.materializer.materialize({
           ownerId: target.ownerId,
@@ -823,18 +916,40 @@ export class DrawingIngestService {
             : undefined,
         });
         if (!result) {
-          // 落盘失败：释放占位 + 删除节点 + 清理临时目录/缓存
+          // 落盘失败：置 FAILED 并保留（同转换失败），不硬删——硬删会让用户看到
+          // 「上传成功但文件凭空消失」。COMPLETED 必须等落盘成功后才置：未落盘的
+          // 节点 path=null，提前置 COMPLETED 会让前端拿它去打开一个不存在的文件。
           if (conversionReserved) {
             await this.releaseConversionReservation(context, source);
           }
-          await this.nodeTrashService.deleteNode(newNodeId, true);
+          await this.transition(
+            newNodeId,
+            FileStatus.PROCESSING,
+            FileStatus.FAILED
+          );
+          await this.logUploadFailure({
+            context,
+            nodeId: newNodeId,
+            name: fileName,
+            fileHash: fileMd5,
+            size: fileSize,
+            error: MATERIALIZE_FAILED_ERROR,
+            transient: true,
+            stage: 'materialize',
+          });
           await this.fileSystemService.deleteDirectory(tmpDir);
           await this.cacheManager.delete('file-upload', mergeKey);
-          this.logger.log(
-            `[DrawingIngest.chunks-bg] 落盘失败，已删除节点: ${newNodeId}`
+          this.logger.warn(
+            `[DrawingIngest.chunks-bg] 落盘失败，保留 FAILED 节点: ${newNodeId}`
           );
           return;
         }
+
+        await this.transition(
+          newNodeId,
+          FileStatus.PROCESSING,
+          FileStatus.COMPLETED
+        );
 
         await this.fileSystemService.deleteDirectory(tmpDir);
         await this.cacheManager.delete('file-upload', mergeKey);
@@ -851,7 +966,7 @@ export class DrawingIngestService {
           if (conversionReserved) {
             await this.releaseConversionReservation(context, source);
           }
-          // 保留 FAILED 节点（不硬删）。节点若已 COMPLETED（materialize 前已迁移），
+          // 保留 FAILED 节点（不立即硬删）。异常若发生在落盘成功之后（节点已 COMPLETED），
           // PROCESSING→FAILED 非法会抛异常——不阻断下方临时目录/缓存清理。
           try {
             await this.transition(
@@ -869,6 +984,16 @@ export class DrawingIngestService {
                 })`
             );
           }
+          // 审计独立于状态迁移成败：迁移失败也不丢失败原因
+          await this.logUploadFailure({
+            context,
+            nodeId: newNodeId,
+            name: fileName,
+            fileHash: fileMd5,
+            size: fileSize,
+            error: errMsg,
+            stage: 'conversion',
+          });
           await this.fileSystemService.deleteDirectory(tmpDir);
           await this.cacheManager.delete('file-upload', mergeKey);
         } catch (cleanupErr) {

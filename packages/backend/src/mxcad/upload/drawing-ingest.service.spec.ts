@@ -24,6 +24,8 @@ import {
   IngestTarget,
 } from './drawing-ingest.service';
 import { FileNodeMaterializer } from './file-node-materializer.service';
+import { AuditLogService } from '../../audit/audit-log.service';
+import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 
 describe('DrawingIngestService', () => {
   let service: DrawingIngestService;
@@ -40,6 +42,7 @@ describe('DrawingIngestService', () => {
     deleteDirectory: jest.fn(),
     getChunkTempDirPath: jest.fn(),
     readDirectory: jest.fn(),
+    mergeChunks: jest.fn(),
   };
 
   const mockFileTreeService = {
@@ -95,6 +98,8 @@ describe('DrawingIngestService', () => {
     registerTask: jest.fn().mockResolvedValue('async_node1_1234567890'),
   };
 
+  const mockAuditLogService = { log: jest.fn() };
+
   function fileSource(
     overrides?: Partial<Extract<IngestSource, { kind: 'file' }>>
   ): IngestSource {
@@ -142,6 +147,7 @@ describe('DrawingIngestService', () => {
           provide: AsyncConversionService,
           useValue: mockAsyncConversionService,
         },
+        { provide: AuditLogService, useValue: mockAuditLogService },
       ],
     }).compile();
     service = module.get<DrawingIngestService>(DrawingIngestService);
@@ -270,7 +276,8 @@ describe('DrawingIngestService', () => {
       mockFileConversionService.convertFile.mockResolvedValue({
         isOk: false,
         ret: { code: 1 },
-        transient: false,
+        error: 'read file error',
+        transient: true,
       });
 
       // 上传请求立即返回 kOk（不阻塞等待转换），节点保持 PROCESSING
@@ -297,6 +304,72 @@ describe('DrawingIngestService', () => {
         FileStatus.FAILED
       );
       expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      // 失败原因在失败瞬间写审计（节点无 error 字段，保留窗口到期会删节点）
+      expect(mockAuditLogService.log).toHaveBeenCalledWith(
+        AuditAction.FILE_UPLOAD,
+        ResourceType.FILE,
+        'cad1',
+        'user1',
+        false,
+        'read file error',
+        undefined,
+        undefined,
+        'upload.dwg',
+        {
+          fileName: 'upload.dwg',
+          hash: 'hash1',
+          size: 1024,
+          failureStage: 'conversion',
+          transient: true,
+        }
+      );
+    });
+
+    it('落盘失败：置 FAILED 不硬删，审计 failureStage=materialize', async () => {
+      mockFileConversionService.needsConversion.mockReturnValue(true);
+      mockFileSystemService.getFileSize.mockResolvedValue(1024);
+      mockFileTreeService.createFileNode.mockResolvedValue({ id: 'cad1' });
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { code: 0 },
+      });
+      mockMaterializer.materialize.mockResolvedValue(null);
+
+      const result = await service.ingest(fileSource(), target());
+      expect(result).toEqual({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'cad1',
+        created: true,
+      });
+
+      await flushMicrotasks();
+
+      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
+        'cad1',
+        FileStatus.PROCESSING,
+        FileStatus.FAILED
+      );
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(FileStatus),
+        FileStatus.COMPLETED
+      );
+      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).toHaveBeenCalledWith(
+        AuditAction.FILE_UPLOAD,
+        ResourceType.FILE,
+        'cad1',
+        'user1',
+        false,
+        expect.any(String),
+        undefined,
+        undefined,
+        'upload.dwg',
+        expect.objectContaining({
+          failureStage: 'materialize',
+          transient: true,
+        })
+      );
     });
   });
 
@@ -484,6 +557,156 @@ describe('DrawingIngestService', () => {
       await expect(
         service.ingest(fileSource(), target())
       ).rejects.toThrow(QuotaExceededException);
+    });
+  });
+
+  describe('分片合并上传（#433 异步化：后台转换 + 落盘）', () => {
+    async function flushMicrotasks(count = 20): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
+
+    function chunksSource(): IngestSource {
+      return {
+        kind: 'chunks',
+        hash: 'hash1',
+        name: 'upload.dwg',
+        size: 1024,
+        chunkCount: 1,
+      };
+    }
+
+    beforeEach(async () => {
+      mockFileSystemService.exists.mockResolvedValue(true);
+      mockFileSystemService.readDirectory.mockResolvedValue(['chunk-0']);
+      mockFileSystemService.mergeChunks.mockResolvedValue({ success: true });
+      mockFileSystemService.getFileSize.mockResolvedValue(1024);
+      mockCacheManager.get.mockResolvedValue(undefined);
+      mockFileTreeService.getChildren.mockResolvedValue({ nodes: [] });
+      mockFileTreeService.createFileNode.mockResolvedValue({ id: 'node-1' });
+      mockMaterializer.materialize.mockResolvedValue({ nodeId: 'node-1' });
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { code: 0 },
+      });
+    });
+
+    it('COMPLETED 只在落盘成功后才置（不先于 materialize）', async () => {
+      const transitions: FileStatus[] = [];
+      let completedBeforeMaterialize = false;
+      mockNodeStatusTransitioner.transition.mockImplementation(
+        (_nodeId: string, _from: FileStatus, to: FileStatus) => {
+          transitions.push(to);
+          return Promise.resolve();
+        }
+      );
+      mockMaterializer.materialize.mockImplementation(async () => {
+        // materialize 被调用时若 COMPLETED 已在迁移序列里，说明顺序反了
+        if (transitions.includes(FileStatus.COMPLETED)) {
+          completedBeforeMaterialize = true;
+        }
+        return { nodeId: 'node-1' };
+      });
+
+      const result = await service.ingest(chunksSource(), target());
+      expect(result).toEqual({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'node-1',
+        created: true,
+      });
+
+      await flushMicrotasks();
+
+      expect(completedBeforeMaterialize).toBe(false);
+      expect(transitions).toContain(FileStatus.COMPLETED);
+    });
+
+    it('落盘失败：置 FAILED 不硬删，且不把 COMPLETED 置上', async () => {
+      mockMaterializer.materialize.mockResolvedValue(null);
+
+      const result = await service.ingest(chunksSource(), target());
+      expect(result).toEqual({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'node-1',
+        created: true,
+      });
+
+      await flushMicrotasks();
+
+      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
+        'node-1',
+        FileStatus.PROCESSING,
+        FileStatus.FAILED
+      );
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(FileStatus),
+        FileStatus.COMPLETED
+      );
+      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).toHaveBeenCalledWith(
+        AuditAction.FILE_UPLOAD,
+        ResourceType.FILE,
+        'node-1',
+        'user1',
+        false,
+        expect.any(String),
+        undefined,
+        undefined,
+        'upload.dwg',
+        expect.objectContaining({
+          failureStage: 'materialize',
+          transient: true,
+        })
+      );
+      // 临时目录与合并缓存照旧清理
+      expect(mockFileSystemService.deleteDirectory).toHaveBeenCalled();
+      expect(mockCacheManager.delete).toHaveBeenCalledWith(
+        'file-upload',
+        'merging:hash1'
+      );
+    });
+
+    it('转换失败：置 FAILED + 审计 failureStage=conversion，不进落盘', async () => {
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: false,
+        ret: { code: 1 },
+        error: 'read file error',
+        transient: false,
+      });
+
+      const result = await service.ingest(chunksSource(), target());
+      expect(result).toEqual({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'node-1',
+        created: true,
+      });
+
+      await flushMicrotasks();
+
+      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
+        'node-1',
+        FileStatus.PROCESSING,
+        FileStatus.FAILED
+      );
+      expect(mockMaterializer.materialize).not.toHaveBeenCalled();
+      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).toHaveBeenCalledWith(
+        AuditAction.FILE_UPLOAD,
+        ResourceType.FILE,
+        'node-1',
+        'user1',
+        false,
+        'read file error',
+        undefined,
+        undefined,
+        'upload.dwg',
+        expect.objectContaining({
+          failureStage: 'conversion',
+          transient: false,
+        })
+      );
     });
   });
 });
