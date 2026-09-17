@@ -152,9 +152,13 @@ export function buildEngineParams(
     param.create_preloading_data = options.createPreloadingData !== false;
   }
 
-  // 以下逐字段对齐原 backend 进程内 param 与 runner._buildParam 的判定条件：
-  // 尺寸/颜色/产物名用真值判定，角度/版本/布局/区域字段用「非 undefined」判定
-  // （0 是合法角度、false 是合法的 create_clip_block，不能用真值判定误丢）。
+  // 逐字段判定条件按「字段值的合法域」分三类，与重构前 backend 进程内 param 及
+  // runner._buildParam 的既有行为一致（勿统一成一种判定，会改变空值语义）：
+  // - 字符串字段（outname/cmd/colorPolicy/outjpg/layout_name/bd_pt*/open_file_md5）
+  //   用真值判定：'' 不是合法值（空布局/空坐标/空 MD5），省略等价于引擎的「字段缺失」
+  //   语义；若转发 ''，引擎按「有值但为空」处理，print_to_pdf/cut_dwg 会静默回 "false"。
+  // - 数值字段（roate_angle/view_angle/dwgVersion）用「非 undefined」判定：0 是合法角度/版本。
+  // - 布尔字段（create_clip_block）用「非 undefined」判定：false 是合法值（不创建裁剪块）。
   if (!options.compression) param.compression = 0;
   if (options.outname) param.outname = options.outname;
   if (options.cmd) param.cmd = options.cmd;
@@ -167,12 +171,11 @@ export function buildEngineParams(
   if (options.view_angle !== undefined) param.view_angle = options.view_angle;
   if (options.dwgVersion !== undefined) param.dwg_version = options.dwgVersion;
   if (options.layout_name) param.layout_name = options.layout_name;
-  if (options.bd_pt1_x !== undefined) param.bd_pt1_x = options.bd_pt1_x;
-  if (options.bd_pt1_y !== undefined) param.bd_pt1_y = options.bd_pt1_y;
-  if (options.bd_pt2_x !== undefined) param.bd_pt2_x = options.bd_pt2_x;
-  if (options.bd_pt2_y !== undefined) param.bd_pt2_y = options.bd_pt2_y;
-  if (options.open_file_md5 !== undefined)
-    param.open_file_md5 = options.open_file_md5;
+  if (options.bd_pt1_x) param.bd_pt1_x = options.bd_pt1_x;
+  if (options.bd_pt1_y) param.bd_pt1_y = options.bd_pt1_y;
+  if (options.bd_pt2_x) param.bd_pt2_x = options.bd_pt2_x;
+  if (options.bd_pt2_y) param.bd_pt2_y = options.bd_pt2_y;
+  if (options.open_file_md5) param.open_file_md5 = options.open_file_md5;
   if (options.create_clip_block !== undefined) {
     param.create_clip_block = options.create_clip_block;
   }

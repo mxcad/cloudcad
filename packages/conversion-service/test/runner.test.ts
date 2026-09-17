@@ -80,6 +80,38 @@ describe('MxcadRunner._buildParam', () => {
     assert.equal(param.create_clip_block, true);
   });
 
+  it('空字符串字符串字段省略、0/数值/false 保留（空值语义按字段合法域分流）', () => {
+    const runner = new MxcadRunner();
+    const param = runner._buildParam({
+      srcPath: '/in/a.dwg',
+      fileHash: 'h1',
+      cmd: 'print_to_pdf',
+      // 字符串字段传 ''：不是合法值，须省略（转发 '' 会让引擎按「有值但空」处理回 "false"）
+      layout_name: '',
+      bd_pt1_x: '',
+      bd_pt1_y: '',
+      bd_pt2_x: '',
+      bd_pt2_y: '',
+      open_file_md5: '',
+      // 数值字段传 0：0 是合法角度/版本，须保留
+      roate_angle: 0,
+      view_angle: 0,
+      dwgVersion: 0,
+      // 布尔字段传 false：false 是合法值（不创建裁剪块），须保留
+      create_clip_block: false,
+    });
+    assert.ok(!('layout_name' in param));
+    assert.ok(!('bd_pt1_x' in param));
+    assert.ok(!('bd_pt1_y' in param));
+    assert.ok(!('bd_pt2_x' in param));
+    assert.ok(!('bd_pt2_y' in param));
+    assert.ok(!('open_file_md5' in param));
+    assert.equal(param.roate_angle, 0);
+    assert.equal(param.view_angle, 0);
+    assert.equal(param.dwg_version, 0);
+    assert.equal(param.create_clip_block, false);
+  });
+
   it('binToMxweb 形状（带 outpath）：srcpath + outpath + outname，无 src_file_md5', () => {
     const runner = new MxcadRunner();
     const param = runner._buildParam({
