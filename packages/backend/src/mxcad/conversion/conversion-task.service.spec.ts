@@ -25,7 +25,11 @@ describe('UnifiedConversionService', () => {
   };
   let executor: { getTaskStatus: jest.Mock };
   let prisma: {
-    fileSystemNode: { findMany: jest.Mock; count: jest.Mock };
+    fileSystemNode: {
+      findMany: jest.Mock;
+      count: jest.Mock;
+      findFirst: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -46,7 +50,11 @@ describe('UnifiedConversionService', () => {
         {
           provide: DatabaseService,
           useValue: {
-            fileSystemNode: { findMany: jest.fn(), count: jest.fn() },
+            fileSystemNode: {
+              findMany: jest.fn(),
+              count: jest.fn(),
+              findFirst: jest.fn(),
+            },
           },
         },
       ],
@@ -156,6 +164,22 @@ describe('UnifiedConversionService', () => {
       });
       const result = await service.cancelTask('task-1');
       expect(result).toEqual({ ok: true, status: 'CANCELLED' });
+    });
+
+    it('节点已软删时不转发执行器，返回 ok=false + 精确原因', async () => {
+      (executor as unknown as { cancelTask: jest.Mock }).cancelTask = jest
+        .fn()
+        .mockResolvedValue({ ok: true, status: 'CANCELLED' });
+      prisma.fileSystemNode.findFirst.mockImplementation(
+        ({ where }: { where: { deletedAt?: unknown } }) =>
+          Promise.resolve(where.deletedAt ? { id: 'node-1' } : null)
+      );
+
+      const result = await service.cancelTask('task-1');
+      expect(result.ok).toBe(false);
+      expect(result.reason).toMatch(/已删除/);
+      expect((executor as unknown as { cancelTask: jest.Mock }).cancelTask)
+        .not.toHaveBeenCalled();
     });
   });
 
@@ -484,4 +508,64 @@ describe('UnifiedConversionService', () => {
       expect(call.where.name).toBeUndefined();
     });
   });
+
+  describe('retryTask', () => {
+    it('别人的 taskId（查询无结果）时抛 NotFoundException（归属校验与 404 合并）', async () => {
+      prisma.fileSystemNode.findFirst.mockResolvedValue(null);
+
+      await expect(service.retryTask('task-other', 'user-1')).rejects.toThrow(
+        NotFoundException
+      );
+      expect(prisma.fileSystemNode.findFirst).toHaveBeenCalledWith({
+        where: {
+          taskId: 'task-other',
+          deletedAt: null,
+          OR: expect.any(Array),
+        },
+        select: { id: true, fileStatus: true, deletedAt: true },
+      });
+      expect(asyncConversionService.convertNode).not.toHaveBeenCalled();
+    });
+
+    it('已删除节点拒绝重试（node_deleted 精确原因），不重新排队', async () => {
+      prisma.fileSystemNode.findFirst.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: 'FAILED',
+        deletedAt: new Date('2026-09-17T03:55:29Z'),
+      });
+
+      await expect(service.retryTask('task-1', 'user-1')).rejects.toThrow(
+        /已删除/
+      );
+      expect(asyncConversionService.convertNode).not.toHaveBeenCalled();
+    });
+
+    it('非 FAILED 状态拒绝（retry_not_failed），不重新排队', async () => {
+      prisma.fileSystemNode.findFirst.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: 'COMPLETED',
+      });
+
+      await expect(service.retryTask('task-1', 'user-1')).rejects.toThrow(
+        BadRequestException
+      );
+      expect(asyncConversionService.convertNode).not.toHaveBeenCalled();
+    });
+
+    it('FAILED 节点原地重新排队：convertNode 以 priority 2 被调，返回新 taskId + 原 nodeId', async () => {
+      prisma.fileSystemNode.findFirst.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: 'FAILED',
+      });
+      asyncConversionService.convertNode.mockResolvedValue('task-new');
+
+      const result = await service.retryTask('task-1', 'user-1');
+      expect(asyncConversionService.convertNode).toHaveBeenCalledWith(
+        'node-1',
+        2
+      );
+      expect(result).toEqual({ taskId: 'task-new', nodeId: 'node-1' });
+    });
+  });
 });
+

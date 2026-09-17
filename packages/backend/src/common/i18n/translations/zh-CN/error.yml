@@ -594,3 +594,6 @@ conversion_task:
   download_requires_user: "下载类型（download）需要登录用户（用于配额占位）"
   cancel_not_supported: "当前执行模式不支持取消（仅独立转换服务支持）"
   task_lost: "转换任务已丢失（服务可能已重启），请重新打开图纸"
+  not_found_or_no_access: "转换任务不存在或您没有访问权限"
+  retry_not_failed: "只有失败的转换任务可以重试"
+  node_deleted: "文件已删除，无法重试"

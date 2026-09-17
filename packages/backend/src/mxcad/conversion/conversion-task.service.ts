@@ -3,10 +3,12 @@ import {
   Inject,
   Logger,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { I18nContext } from 'nestjs-i18n';
 import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
+import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { AsyncConversionService } from './async-conversion.service';
 import { FileStatus } from '../../common/enums/file-status.enum';
 import { NodeType, Prisma } from '@cloudcad/db';
@@ -16,6 +18,8 @@ import {
   ConversionTaskItemDto,
   ConversionTaskListResponseDto,
   ConversionHistoryResponseDto,
+  RetryConversionTaskResponseDto,
+  ConversionQuotaDto,
 } from './dto/conversion-task.dto';
 
 /** 面板云端列表上限（#469）：只取最近的任务，避免全表扫描 */
@@ -43,7 +47,8 @@ export class UnifiedConversionService {
   constructor(
     private readonly asyncConversionService: AsyncConversionService,
     @Inject(IFunctionExecutor) private readonly executor: IFunctionExecutor,
-    private readonly prisma: DatabaseService
+    private readonly prisma: DatabaseService,
+    private readonly restrictionEngine: RestrictionEngine
   ) {}
 
   /**
@@ -116,8 +121,82 @@ export class UnifiedConversionService {
           '当前执行模式不支持取消（仅独立转换服务支持）',
       };
     }
+    // 节点已进回收站：不要再去杀在途任务，给出精确原因。
+    const deleted = await this.prisma.fileSystemNode.findFirst({
+      where: { taskId, deletedAt: { not: null } },
+      select: { id: true },
+    });
+    if (deleted) {
+      return {
+        ok: false,
+        reason:
+          I18nContext.current()?.t('error.conversion_task.node_deleted') ??
+          '文件已删除，无法取消',
+      };
+    }
     return this.executor.cancelTask(taskId);
   }
+
+  /**
+   * 重试失败的转换任务：原图纸**原地重新排队**——不重新上传文件、节点保留、不占配额，
+   * 无上限次数。仅接受 FAILED 状态的节点（fileStatus 为终态真相）。
+   *
+   * 返回新 taskId + 原 nodeId，前端按 nodeId 合并同一节点的任务。
+   */
+  async retryTask(
+    taskId: string,
+    userId: string
+  ): Promise<RetryConversionTaskResponseDto> {
+    const node = await this.findNodeByTaskId(taskId, userId);
+    if (!node) {
+      throw new NotFoundException(
+        I18nContext.current()?.t(
+          'error.conversion_task.not_found_or_no_access'
+        ) ?? '转换任务不存在或您没有访问权限'
+      );
+    }
+    if (node.deletedAt) {
+      // 文件已进回收站（在途转换未取消时，面板可能仍残留该行被点重试）：
+      // 重试已删除节点无意义，给出精确原因而非笼统的「任务不存在或无权操作」。
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.conversion_task.node_deleted') ??
+          '文件已删除，无法重试'
+      );
+    }
+    if (node.fileStatus !== FileStatus.FAILED) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.conversion_task.retry_not_failed') ??
+          '只有失败的转换任务可以重试'
+      );
+    }
+    // 重试 = 原图纸重新排队：convertNode 只换 taskId + 置 PROCESSING，
+    // 不重新上传、不删节点、不占配额。
+    // priority 2：用户显式请求重跑，低于打开命脉 1、高于后台 3。
+    const newTaskId = await this.asyncConversionService.convertNode(node.id, 2);
+    return { taskId: newTaskId, nodeId: node.id };
+  }
+
+  /**
+   * 当前调用者的转换配额只读状态（ADR-0043）：委托 RestrictionEngine 解析窗口归属
+   * （登录用户按 userId、游客按 IP）后映射为 7 字段 DTO。limit <= 0 视为不限额。
+   */
+  async getQuota(userId?: string, ip?: string): Promise<ConversionQuotaDto> {
+    const state = await this.restrictionEngine.getConversionQuotaState(
+      userId,
+      ip
+    );
+    const unlimited = state.limit <= 0;
+    return {
+      limit: state.limit,
+      used: state.used,
+      remaining: unlimited ? 0 : Math.max(0, state.limit - state.used),
+      windowHours: state.windowHours,
+      unlimited,
+      resetsAt: state.resetsAt?.toISOString() ?? null,
+      scope: state.scope,
+    };
+  }
+
 
   /**
    * 统一状态查询（#469）：当前用户可访问的、taskId 非空且处于进行中/失败的节点转换。
@@ -269,6 +348,24 @@ export class UnifiedConversionService {
       total,
       hasMore: clampedOffset + tasks.length < total,
     };
+  }
+
+  /**
+   * 按 taskId 定位归属节点（retryTask 的归属校验用）。
+   *
+   * 刻意**不**过滤 `deletedAt`：删除发生在转换在途时，面板可能仍残留该行并被用户点
+   * 「重试」，若一并过滤会把「文件已删除」误报成「任务不存在」。
+   * 越权面不受影响——可访问范围仍由 `OR: buildAccessFilter(userId)` 约束，
+   * 调用方拿到已删除节点后自行短路。
+   */
+  private async findNodeByTaskId(taskId: string, userId: string) {
+    return this.prisma.fileSystemNode.findFirst({
+      where: {
+        taskId,
+        OR: this.buildAccessFilter(userId),
+      },
+      select: { id: true, fileStatus: true, deletedAt: true },
+    });
   }
 
   /**

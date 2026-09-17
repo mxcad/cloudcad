@@ -594,3 +594,6 @@ conversion_task:
   download_requires_user: "Download type (download) requires a logged-in user (for quota reservation)"
   cancel_not_supported: "The current execution mode does not support cancellation (only the standalone conversion service supports it)"
   task_lost: "The conversion task was lost (the service may have restarted); please reopen the drawing"
+  not_found_or_no_access: "The conversion task does not exist or you do not have access to it"
+  retry_not_failed: "Only failed conversion tasks can be retried"
+  node_deleted: "The file has been deleted and cannot be retried"

@@ -31,6 +31,8 @@ import {
   IPermissionService,
 } from '../permission/interfaces/permission-service.interface';
 import { ProjectPermission } from '../common/enums/permissions.enum';
+import { ModuleRef } from '@nestjs/core';
+import { IFunctionExecutor } from '../function-executor/function-executor.interface';
 import * as path from 'path';
 import { IStorageProvider } from '../storage/interfaces/storage-provider.interface';
 import { I18nContext } from 'nestjs-i18n';
@@ -67,8 +69,93 @@ export class NodeTrashService {
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
     private readonly nodeSizeResolver: NodeSizeResolverService,
     private readonly storageUsageService: StorageUsageService,
-    private readonly auditLogService: AuditLogService
+    private readonly auditLogService: AuditLogService,
+    private readonly moduleRef: ModuleRef
   ) {}
+
+  /** 转换执行器的惰性解析缓存（见 cancelInflightConversions 的说明） */
+  private _functionExecutor?: IFunctionExecutor;
+
+  /**
+   * 惰性解析 IFunctionExecutor。
+   *
+   * 用 ModuleRef 延迟获取而非构造注入：FunctionExecutorModule 经 forwardRef 指向
+   * MxcadConversionModule，后者已 import FileOperationsModule，给本模块新增
+   * FunctionExecutorModule 依赖会形成循环。仅用到 DI token（该接口模块无运行时依赖），
+   * 因此只需此处的值导入，不产生模块级循环。
+   * strict:false 未接线时返回 undefined，调用方自动跳过取消。
+   */
+  private getFunctionExecutor(): IFunctionExecutor | undefined {
+    if (this._functionExecutor === undefined) {
+      try {
+        this._functionExecutor = this.moduleRef.get<IFunctionExecutor>(
+          IFunctionExecutor,
+          { strict: false }
+        );
+      } catch {
+        this._functionExecutor = undefined;
+      }
+    }
+    return this._functionExecutor;
+  }
+
+  /**
+   * 取消子树内仍在进行的转换任务（软删/硬删共用，best-effort）。
+   *
+   * 删除发生在转换在途时（上传后立刻删除），不取消的后果：
+   * - 白占转换并发槽（信号量），有效容量被已删文件的任务占住；
+   * - 完成回调打到已删节点上（DELETED→COMPLETED 是状态机合法边，会让已删文件
+   *   静默「复活」为 COMPLETED；DELETED→FAILED 非法会抛错并触发 3 次无意义重试）。
+   *   后者已在 AsyncConversionService.updateNodeStatus 兜住，此处是源头止损。
+   *
+   * process-pool / cloud-faas 模式无 cancelTask（undefined）→ 跳过，
+   * 由 updateNodeStatus 的已删守卫在转换自然结束时清理。
+   *
+   * @param nodeIds 子树节点 id。软删在事务后调用（行仍在库）；硬删在事务前调用
+   *   （事务会物理删行），调用方需自行带上根节点 id（getSubtreeIds 默认不含根）。
+   */
+  private async cancelInflightConversions(nodeIds: string[]): Promise<void> {
+    if (nodeIds.length === 0) return;
+    const executor = this.getFunctionExecutor();
+    if (!executor?.cancelTask) return;
+
+    const running = await this.prisma.fileSystemNode.findMany({
+      where: {
+        id: { in: nodeIds },
+        taskId: { not: null },
+        fileStatus: {
+          in: [FileStatus.PROCESSING, FileStatus.UPLOADING],
+        },
+      },
+      select: { id: true, taskId: true },
+    });
+    if (running.length === 0) return;
+
+    // 先清 taskId 再杀任务：即使取消失败，节点也不再指向在途任务引用
+    await this.prisma.fileSystemNode.updateMany({
+      where: { id: { in: running.map((n) => n.id) } },
+      data: { taskId: null },
+    });
+    for (const node of running) {
+      if (!node.taskId) continue;
+      try {
+        const result = await executor.cancelTask(node.taskId);
+        if (!result.ok) {
+          this.logger.warn(
+            `取消节点 ${node.id} 的在途转换 ${node.taskId} 未成功: ${
+              result.reason ?? result.status
+            }`
+          );
+        }
+      } catch (err) {
+        this.logger.warn(
+          `取消节点 ${node.id} 的在途转换 ${node.taskId} 失败: ${
+            (err as Error).message
+          }`
+        );
+      }
+    }
+  }
 
   async deleteNode(
     nodeId: string,
@@ -121,6 +208,14 @@ export class NodeTrashService {
           )
           .map((f) => ({ path: f.path, fileHash: f.fileHash, nodeId: f.id }));
         const nodesToDelete = subtreeIds;
+
+        // 事务会物理删行，取消在途转换必须排在事务前（getSubtreeIds 默认不含根，补上 nodeId）
+        this.cancelInflightConversions([...nodesToDelete, nodeId]).catch(
+          (err: unknown) =>
+            this.logger.warn(
+              `删除前取消在途转换失败（不影响删除结果）: ${(err as Error).message}`
+            )
+        );
 
         await this.prisma.$transaction(
           async (tx) => {
@@ -198,6 +293,13 @@ export class NodeTrashService {
           });
         }
       });
+
+      // 取消在途转换（best-effort，不阻塞删除响应）：已删文件不再占转换并发槽
+      this.cancelInflightConversions(nodesToUpdate).catch((err: unknown) =>
+        this.logger.warn(
+          `删除后取消在途转换失败（不影响删除结果）: ${(err as Error).message}`
+        )
+      );
 
       if (node.ownerId) {
         await this.nodeMutationGuard.invalidateQuotaAfterMutation(

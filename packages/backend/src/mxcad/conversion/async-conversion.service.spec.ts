@@ -234,4 +234,104 @@ describe('AsyncConversionService', () => {
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
   });
+
+  describe('转换在途时节点被删除：不回写终态、清 taskId', () => {
+    function callUpdateNodeStatus(
+      nodeId: string,
+      status: FileStatus
+    ): Promise<void> {
+      return (
+        service as unknown as {
+          updateNodeStatus: (nodeId: string, status: FileStatus) => Promise<void>;
+        }
+      ).updateNodeStatus(nodeId, status);
+    }
+
+    it('已软删节点：跳过状态迁移与 SSE，清 taskId，select 含 deletedAt', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      const transitioner = (
+        service as unknown as {
+          nodeStatusTransitioner: { transition: jest.Mock };
+        }
+      ).nodeStatusTransitioner;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: 'DELETED',
+        ownerId: 'user-1',
+        deletedAt: new Date('2026-09-17T03:55:29Z'),
+      });
+      prisma.fileSystemNode.update.mockResolvedValue({});
+
+      await callUpdateNodeStatus('node-1', FileStatus.COMPLETED);
+
+      // DELETED→COMPLETED 是状态机合法边（恢复用），照写会让已删文件静默复活
+      expect(transitioner.transition).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.update).toHaveBeenCalledWith({
+        where: { id: 'node-1' },
+        data: { taskId: null },
+      });
+      expect(prisma.fileSystemNode.findUnique.mock.calls[0][0].select).toEqual(
+        expect.objectContaining({ deletedAt: true })
+      );
+    });
+
+    it('节点已物理删除：静默返回，不迁移不 emit 不写库', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      const transitioner = (
+        service as unknown as {
+          nodeStatusTransitioner: { transition: jest.Mock };
+        }
+      ).nodeStatusTransitioner;
+      prisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(callUpdateNodeStatus('node-1', FileStatus.FAILED)).resolves.toBe(
+        undefined
+      );
+
+      expect(transitioner.transition).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('清 taskId 失败：best-effort 降级，整体仍正常返回', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      const transitioner = (
+        service as unknown as {
+          nodeStatusTransitioner: { transition: jest.Mock };
+        }
+      ).nodeStatusTransitioner;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: 'DELETED',
+        ownerId: 'user-1',
+        deletedAt: new Date('2026-09-17T03:55:29Z'),
+      });
+      prisma.fileSystemNode.update.mockRejectedValue(new Error('db down'));
+
+      await expect(callUpdateNodeStatus('node-1', FileStatus.FAILED)).resolves.toBe(
+        undefined
+      );
+
+      expect(transitioner.transition).not.toHaveBeenCalled();
+    });
+  });
 });

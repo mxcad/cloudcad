@@ -1,7 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { ModuleRef } from '@nestjs/core';
 import { NodeType, FileStatus as PrismaFileStatus } from '@cloudcad/db';
+import { FileStatus } from '../common/enums/file-status.enum';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../storage-management/services/storage-manager.service';
 import { VERSION_CONTROL_TOKEN } from '../version-control/interfaces/version-control.interface';
@@ -29,6 +31,7 @@ describe('NodeTrashService', () => {
   let nodeSizeResolver: Record<string, jest.Mock>;
   let storageUsageService: Record<string, jest.Mock>;
   let auditLogService: Record<string, jest.Mock>;
+  let executor: Record<string, jest.Mock>;
 
   const fileNode = (overrides: Record<string, unknown> = {}) => ({
     id: 'node-1',
@@ -77,7 +80,13 @@ describe('NodeTrashService', () => {
         }),
         update: jest.fn().mockResolvedValue(fileNode()),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        delete: jest.fn().mockResolvedValue({}),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      // 事务直接执行回调，事务内直接用 prisma mock（无独立 tx 代理）
+      $transaction: jest.fn().mockImplementation((fn: (tx: unknown) => unknown) =>
+        fn(prisma)
+      ),
     };
     storageManager = {
       getFullPath: jest
@@ -89,6 +98,7 @@ describe('NodeTrashService', () => {
     };
     treeWalker = {
       getSubtreeIds: jest.fn().mockResolvedValue([]),
+      getSubtreeFiles: jest.fn().mockResolvedValue([]),
       resolveProjectId: jest.fn().mockResolvedValue('proj-1'),
     };
     nodeMutationGuard = {
@@ -113,6 +123,10 @@ describe('NodeTrashService', () => {
     auditLogService = {
       log: jest.fn().mockResolvedValue(undefined),
       logProjectNodeAction: jest.fn().mockResolvedValue(undefined),
+    };
+    // 默认无 cancelTask（process-pool / cloud-faas 模式），按需用例补上
+    executor = {
+      cancelTask: jest.fn().mockResolvedValue({ ok: true, status: 'CANCELLED' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -141,6 +155,7 @@ describe('NodeTrashService', () => {
         { provide: NodeSizeResolverService, useValue: nodeSizeResolver },
         { provide: StorageUsageService, useValue: storageUsageService },
         { provide: AuditLogService, useValue: auditLogService },
+        { provide: ModuleRef, useValue: { get: jest.fn(() => executor) } },
       ],
     }).compile();
 
@@ -265,6 +280,110 @@ describe('NodeTrashService', () => {
       expect(nodeMutationGuard.assertByteQuota).toHaveBeenCalledWith(
         { node: { id: 'node-1' }, incrementBytes: 5120 },
         'user-1'
+      );
+    });
+  });
+
+  describe('deleteNode — 取消在途转换（软删/硬删共用）', () => {
+    /** cancelInflightConversions 是 fire-and-forget，deleteNode 返回后需等微任务链跑完 */
+    async function flush(): Promise<void> {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    /** 直调私有方法，避免依赖 fire-and-forget 的时序 */
+    function callCancel(nodeIds: string[]): Promise<void> {
+      return (
+        service as unknown as {
+          cancelInflightConversions: (ids: string[]) => Promise<void>;
+        }
+      ).cancelInflightConversions(nodeIds);
+    }
+
+    const inFlightRows = [
+      { id: 'node-1', taskId: 'async_node-1_1' },
+      { id: 'child-1', taskId: 'async_child-1_2' },
+    ];
+
+    const stubInflightScan = (rows: typeof inFlightRows) => {
+      prisma.fileSystemNode.findMany.mockImplementation(({ where }: any) =>
+        where.fileStatus?.in ? Promise.resolve(rows) : Promise.resolve([])
+      );
+    };
+
+    it('软删：扫描子树在途节点、清 taskId 后逐个 cancelTask', async () => {
+      stubInflightScan(inFlightRows);
+      treeWalker.getSubtreeIds.mockResolvedValue(['node-1', 'child-1']);
+
+      await service.deleteNode('node-1');
+      await flush();
+
+      expect(prisma.fileSystemNode.findMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ['node-1', 'child-1'] },
+          taskId: { not: null },
+          fileStatus: { in: [FileStatus.PROCESSING, FileStatus.UPLOADING] },
+        },
+        select: { id: true, taskId: true },
+      });
+      expect(prisma.fileSystemNode.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['node-1', 'child-1'] } },
+        data: { taskId: null },
+      });
+      expect(executor.cancelTask).toHaveBeenCalledTimes(2);
+      expect(executor.cancelTask).toHaveBeenCalledWith('async_node-1_1');
+      expect(executor.cancelTask).toHaveBeenCalledWith('async_child-1_2');
+    });
+
+    it('执行器无 cancelTask（process-pool / cloud-faas）时直接跳过', async () => {
+      delete executor.cancelTask;
+
+      await callCancel(['node-1']);
+
+      expect(prisma.fileSystemNode.findMany).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('cancelTask 抛错或返回 ok=false：降级为告警，整体正常返回', async () => {
+      stubInflightScan(inFlightRows);
+      executor.cancelTask
+        .mockRejectedValueOnce(new Error('timeout'))
+        .mockResolvedValueOnce({ ok: false, reason: 'already done' });
+
+      await expect(callCancel(['node-1', 'child-1'])).resolves.toBe(undefined);
+
+      expect(executor.cancelTask).toHaveBeenCalledTimes(2);
+      expect(prisma.fileSystemNode.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['node-1', 'child-1'] } },
+        data: { taskId: null },
+      });
+    });
+
+    it('硬删：取消必须发生在物理删除事务之前，且带上根节点 id', async () => {
+      stubInflightScan([{ id: 'node-1', taskId: 'async_node-1_9' }]);
+      treeWalker.getSubtreeIds.mockResolvedValue(['child-1']);
+      jest
+        .spyOn(service, 'deleteFileFromStorage')
+        .mockResolvedValue(undefined);
+
+      await service.deleteNode('node-1', true);
+      await flush();
+
+      expect(prisma.fileSystemNode.findMany).toHaveBeenCalledWith({
+        where: {
+          id: { in: ['child-1', 'node-1'] },
+          taskId: { not: null },
+          fileStatus: { in: [FileStatus.PROCESSING, FileStatus.UPLOADING] },
+        },
+        select: { id: true, taskId: true },
+      });
+      expect(prisma.fileSystemNode.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['node-1'] } },
+        data: { taskId: null },
+      });
+      expect(executor.cancelTask).toHaveBeenCalledWith('async_node-1_9');
+      // 事务会物理删行，若在事务后才扫描就查不到任何在途任务
+      expect(prisma.fileSystemNode.findMany.mock.invocationCallOrder[0]).toBeLessThan(
+        prisma.$transaction.mock.invocationCallOrder[0]
       );
     });
   });

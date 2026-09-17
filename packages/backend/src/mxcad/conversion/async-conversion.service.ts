@@ -247,16 +247,43 @@ export class AsyncConversionService {
   ): Promise<void> {
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },
-      select: { fileStatus: true, ownerId: true },
+      select: { fileStatus: true, ownerId: true, deletedAt: true },
     });
+    if (!node) {
+      // 节点已被永久删除（物理删行）：无状态可回写，静默返回，
+      // 否则 transition 抛错会触发 updateNodeStatusWithRetry 的 3 次无意义重试
+      this.logger.warn(
+        `Node ${nodeId} no longer exists; dropping terminal status ${status}`
+      );
+      return;
+    }
+    if (node.deletedAt) {
+      // 节点在转换在途时被删除：不回写终态。
+      // - DELETED → COMPLETED 是状态机的合法边（回收站恢复用），照写会让已删除的文件
+      //   静默「复活」为 COMPLETED，而 deletedAt 仍在 → 状态与软删标记互相矛盾。
+      // - DELETED → FAILED 非法，transition 抛 BadRequestException，
+      //   上层 updateNodeStatusWithRetry 会白白重试 3 次并报 ERROR。
+      // 清 taskId 停止面板跟踪（节点已不在 listTasks 范围内，此处仅是清理残留引用）。
+      this.logger.warn(
+        `Node ${nodeId} was deleted during conversion; dropping terminal status ${status} and clearing taskId`
+      );
+      await this.prisma.fileSystemNode
+        .update({ where: { id: nodeId }, data: { taskId: null } })
+        .catch((e: unknown) =>
+          this.logger.error(
+            `Failed to clear taskId for deleted node ${nodeId}: ${(e as Error).message}`
+          )
+        );
+      return;
+    }
     await this.nodeStatusTransitioner.transition(
       nodeId,
-      (node?.fileStatus as FileStatus | null) ?? null,
+      node.fileStatus as FileStatus,
       status
     );
     // S4-3：终态（COMPLETED/FAILED）变更后推送 SSE，面板实时刷新（best-effort，
     // 失败不影响状态迁移）。per-user 通道按 ownerId 分（面板数据源=当前用户可访问任务）。
-    this.emitTaskStatusChange(node?.ownerId ?? null, nodeId, status);
+    this.emitTaskStatusChange(node.ownerId, nodeId, status);
   }
 
   /** S4-3：向 per-user 通道 emit 终态变更（无 ownerId 或 emit 失败时静默降级，不影响主链路） */

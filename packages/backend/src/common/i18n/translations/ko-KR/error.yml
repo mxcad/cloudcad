@@ -594,3 +594,6 @@ conversion_task:
   download_requires_user: "다운로드 유형(download)은 로그인한 사용자가 필요합니다(할당량 예약용)"
   cancel_not_supported: "현재 실행 모드는 취소를 지원하지 않습니다(독립 변환 서비스만 지원)"
   task_lost: "변환 작업이 손실되었습니다(서비스가 재시작되었을 수 있음). 도면을 다시 열어주세요"
+  not_found_or_no_access: "변환 작업이 존재하지 않거나 접근 권한이 없습니다"
+  retry_not_failed: "실패한 변환 작업만 다시 시도할 수 있습니다"
+  node_deleted: "파일이 삭제되어 다시 시도할 수 없습니다"
