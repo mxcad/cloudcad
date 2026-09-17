@@ -3173,6 +3173,10 @@ export type ConversionTaskItemDto = {
      */
     error?: string;
     /**
+     * 失败性质分类（仅 FAILED 有意义）：content-error=内容性永久失败（重试无意义，面板据此门控重试）；其余为环境性可重试（timeout/killed/not-started/output-unparseable/unknown）
+     */
+    errorCategory?: 'timeout' | 'killed' | 'not-started' | 'output-unparseable' | 'content-error' | 'unknown';
+    /**
      * 排队位置（S6-5）：任务在优先级池 acquire 队列中的 1-based 序号；仅排队中（PENDING）任务有意义，面板展示「第 N 位」
      */
     queuePosition?: number;
@@ -10272,6 +10276,22 @@ export type ShareControllerGetFileSharesResponses = {
 };
 
 export type ShareControllerGetFileSharesResponse = ShareControllerGetFileSharesResponses[keyof ShareControllerGetFileSharesResponses];
+
+export type ConversionFileSseControllerStreamFileData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * 文件 MD5 hash
+         */
+        hash: string;
+    };
+    url: '/api/v1/mxcad/conversion/file-stream';
+};
+
+export type ConversionFileSseControllerStreamFileResponses = {
+    200: unknown;
+};
 
 export type AdminControllerGetOverviewData = {
     body?: never;

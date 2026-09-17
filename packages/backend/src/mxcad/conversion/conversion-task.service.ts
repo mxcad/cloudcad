@@ -12,6 +12,7 @@ import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { AsyncConversionService } from './async-conversion.service';
 import { FileStatus } from '../../common/enums/file-status.enum';
 import { NodeType, Prisma } from '@cloudcad/db';
+import type { ConversionFailureCategory } from '@cloudcad/contracts';
 import {
   SubmitConversionTaskDto,
   SubmitConversionTaskResponseDto,
@@ -232,6 +233,7 @@ export class UnifiedConversionService {
       let error: string | undefined;
       let progress: number | undefined;
       let queuePosition: number | undefined;
+      let errorCategory: ConversionFailureCategory | undefined;
       if (node.taskId) {
         const inProgress =
           fileStatus === FileStatus.PROCESSING ||
@@ -247,9 +249,10 @@ export class UnifiedConversionService {
             // S6-5：透传排队位置（仅排队中任务有意义，运行中/未入队为 undefined）
             queuePosition = status.queuePosition;
           } else if (fileStatus === FileStatus.FAILED) {
-            // FAILED 节点据任务记录取 error。节点 fileStatus 为终态真相（taskStatus
-            // 不覆盖，面板据 fileStatus 展示「失败」）；任务记录丢失（404）时 catch 降级。
+            // FAILED 节点据任务记录取 error + 失败性质分类。节点 fileStatus 为终态真相
+            // （taskStatus 不覆盖，面板据 fileStatus 展示「失败」）；任务记录丢失（404）时 catch 降级。
             error = status.error;
+            errorCategory = status.errorCategory;
           }
         } catch {
           if (inProgress) taskStatus = 'UNKNOWN';
@@ -264,6 +267,7 @@ export class UnifiedConversionService {
         taskStatus,
         progress,
         error,
+        errorCategory,
         queuePosition,
         updatedAt: node.updatedAt.toISOString(),
       });

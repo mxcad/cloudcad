@@ -17,7 +17,10 @@
  * runner 共用同一份，ADR-0064/0069）。此处 import + re-export，既建立本地绑定供下方
  * ConversionResult.ret 使用，又保留历史命名出口，调用方无需改动。
  */
-import type { MxCadConversionResult } from '@cloudcad/contracts';
+import type {
+  MxCadConversionResult,
+  ConversionFailureCategory,
+} from '@cloudcad/contracts';
 
 export type { MxCadConversionResult };
 
@@ -47,6 +50,15 @@ export interface ConversionResult {
    * 此前进程内路径两类失败无法区分，超时也被判成「解析输出失败」。
    */
   transient?: boolean;
+  /**
+   * 失败性质分类（结构化，@cloudcad/contracts）。
+   *
+   * 与 transient 同源但保留完整粒度：transient 是「可重试/不可重试」的二值派生，
+   * errorCategory 是六值分类（timeout/killed/not-started/output-unparseable/
+   * content-error/unknown），供审计按失败类型告警、面板按 content-error 门控重试。
+   * 仅 FAILED 有意义；成功路径为 undefined。
+   */
+  errorCategory?: ConversionFailureCategory;
 }
 
 export interface ConversionOptions {

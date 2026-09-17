@@ -114,6 +114,7 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
       status: record.status,
       result: record.result,
       error: record.error,
+      errorCategory: record.result?.errorCategory,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -129,7 +130,7 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
 
     switch (task.type) {
       case 'convertFile': {
-        const { isOk, ret, error } =
+        const { isOk, ret, error, errorCategory } =
           await this.fileConversionService.convertFile(task.params);
         return {
           taskId,
@@ -137,6 +138,7 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
           outputPath: ret?.newpath,
           error,
           metadata: ret as Record<string, unknown>,
+          errorCategory,
         };
       }
       case 'convertBinToMxweb': {

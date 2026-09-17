@@ -1,4 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  CONVERSION_FAILURE_CATEGORIES,
+  type ConversionFailureCategory,
+} from '@cloudcad/contracts';
 
 /**
  * 转换任务类型（#467）
@@ -71,6 +75,13 @@ export class ConversionTaskItemDto {
 
   @ApiPropertyOptional({ description: '错误信息' })
   error?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '失败性质分类（仅 FAILED 有意义）：content-error=内容性永久失败（重试无意义，面板据此门控重试）；其余为环境性可重试（timeout/killed/not-started/output-unparseable/unknown）',
+    enum: CONVERSION_FAILURE_CATEGORIES,
+  })
+  errorCategory?: ConversionFailureCategory;
 
   @ApiPropertyOptional({
     description:

@@ -430,7 +430,8 @@ export class FileConversionService implements IMxcadConversionService {
 					isOk: false,
 					ret: { code: -2, message: timeoutMsg },
 					error: timeoutMsg,
-					transient: true,
+					errorCategory: "timeout",
+					transient: isTransientFailure("timeout"),
 				};
 			}
 
@@ -446,7 +447,10 @@ export class FileConversionService implements IMxcadConversionService {
 					isOk: false,
 					ret: { code: -2, message: spawnMsg },
 					error: spawnMsg,
-					transient: true,
+					errorCategory: runResult.signal ? "killed" : "not-started",
+					transient: isTransientFailure(
+						runResult.signal ? "killed" : "not-started"
+					),
 				};
 			}
 
@@ -489,7 +493,8 @@ export class FileConversionService implements IMxcadConversionService {
 						isOk: false,
 						ret,
 						error: ret.message,
-						transient: false,
+						errorCategory: "content-error",
+						transient: isTransientFailure("content-error"),
 					};
 				}
 			} catch (e) {
@@ -513,9 +518,10 @@ export class FileConversionService implements IMxcadConversionService {
 				return {
 					isOk: false,
 					ret: { code: -2, message: parseMsg },
-					error: parseMsg,
-					transient: true,
-				};
+						error: parseMsg,
+						errorCategory: "output-unparseable",
+						transient: isTransientFailure("output-unparseable"),
+					};
 			}
 		} catch (error: unknown) {
 			// 异常路径（如 spawn 失败）：stdout/stderr 已由 runMxcadAssembly 捕获（可能为空）
@@ -557,9 +563,10 @@ export class FileConversionService implements IMxcadConversionService {
 			return {
 				isOk: false,
 				ret: { code: -2, message: errorMessage },
-				error: errorMessage,
-				transient: true,
-			};
+					error: errorMessage,
+					errorCategory: "unknown",
+					transient: isTransientFailure("unknown"),
+				};
 		}
 	}
 
@@ -600,7 +607,8 @@ export class FileConversionService implements IMxcadConversionService {
 				isOk: false,
 				ret: { code: -2, message: err },
 				error: err,
-				transient: true,
+				errorCategory: "unknown",
+				transient: isTransientFailure("unknown"),
 			};
 		}
 		const result = await executor.invoke(task);
@@ -629,9 +637,10 @@ export class FileConversionService implements IMxcadConversionService {
 		return {
 			isOk: false,
 			ret: { code: result.errorCode ?? -1, message: result.error },
-			error: result.error,
-			transient,
-		};
+				error: result.error,
+				errorCategory: result.errorCategory,
+				transient,
+			};
 	}
 
 	async convertFileAsync(

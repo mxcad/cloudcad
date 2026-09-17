@@ -55,6 +55,12 @@ export interface ConversionTask {
   /** 排队位置（S6-5，仅排队中任务有意义；运行中/未入队 undefined） */
   queuePosition?: number;
   error?: string;
+  /**
+   * 失败性质分类（仅 FAILED 有意义，结构化过线，替代按错误文案判断）：
+   * 'content-error' = 内容性永久失败（重试无意义，面板据此门控重试）；
+   * 其余（timeout/killed/not-started/output-unparseable/unknown）为环境性可重试。
+   */
+  errorCategory?: string;
 }
 
 const LOCAL_STORAGE_KEY = 'cloudcad.conversion.local-tasks';
@@ -303,6 +309,8 @@ export const useConversionQueueStore = create<ConversionQueueState>(
             createdAt: new Date(item.updatedAt).getTime(),
             progress: item.progress,
             error: item.error,
+            // 失败性质分类（结构化过线）→ 面板据此门控 content-error 的重试
+            errorCategory: item.errorCategory,
             // S6-5：排队位置（仅排队中任务有意义）→ 面板展示「第 N 位」
             queuePosition: item.queuePosition,
           })

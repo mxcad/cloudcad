@@ -326,6 +326,7 @@ describe('DrawingIngestService', () => {
           size: 1024,
           failureStage: 'conversion',
           transient: true,
+          errorCategory: null,
         }
       );
     });

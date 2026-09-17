@@ -98,9 +98,14 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           task.source === 'cloud' &&
           !!task.taskId;
         const canOpen = task.status === 'completed' && !!task.nodeId;
-        // 仅失败的云端任务可重试（后端只接受 FAILED 节点）；无上限
+        // 内容性永久失败（content-error）：同一输入重试注定再失败，不提供重试入口；
+        // 其余失败（环境性可重试）才显示重试。失败性质由后端结构化下发（errorCategory）。
+        const isContentError = task.errorCategory === 'content-error';
         const canRetry =
-          task.status === 'failed' && task.source === 'cloud' && !!task.taskId;
+          !isContentError &&
+          task.status === 'failed' &&
+          task.source === 'cloud' &&
+          !!task.taskId;
         return (
           <div key={task.id} className={`conversion-row ${meta.className}`}>
             <div className="conversion-row-main">
@@ -109,7 +114,14 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                 <span className="conversion-row-name" title={task.name}>
                   {task.name}
                 </span>
-                <span className={`conversion-row-status ${meta.className}`}>
+                <span
+                  className={`conversion-row-status ${meta.className}`}
+                  title={
+                    isContentError
+                      ? t('该文件转换失败，请检查文件内容')
+                      : undefined
+                  }
+                >
                   {meta.label}
                   {task.status === 'processing' &&
                     typeof task.progress === 'number' &&

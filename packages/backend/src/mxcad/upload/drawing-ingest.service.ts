@@ -25,6 +25,7 @@ import { NodeStatusTransitioner } from '../../file-system/file-status/node-statu
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { FileStatus, NodeType } from '@cloudcad/db';
+import type { ConversionFailureCategory } from '@cloudcad/contracts';
 import { FileNodeMaterializer } from './file-node-materializer.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
@@ -184,6 +185,8 @@ export class DrawingIngestService {
     size: number;
     error: string;
     transient?: boolean;
+    /** 失败性质分类（仅 conversion 阶段有意义）：存完整粒度供运维按失败类型告警 */
+    errorCategory?: ConversionFailureCategory;
     stage: 'conversion' | 'materialize';
   }): Promise<void> {
     try {
@@ -203,6 +206,7 @@ export class DrawingIngestService {
           size: args.size,
           failureStage: args.stage,
           transient: args.transient ?? null,
+          errorCategory: args.errorCategory ?? null,
         }
       );
     } catch (error) {
@@ -772,6 +776,7 @@ export class DrawingIngestService {
             size,
             error: result.error || '未知错误',
             transient: result.transient,
+            errorCategory: result.errorCategory,
             stage: 'conversion',
           });
           this.logger.warn(
@@ -899,6 +904,7 @@ export class DrawingIngestService {
             size: fileSize,
             error: convertResult?.error || '未知错误',
             transient: convertResult?.transient,
+            errorCategory: convertResult?.errorCategory,
             stage: 'conversion',
           });
           this.logger.warn(
