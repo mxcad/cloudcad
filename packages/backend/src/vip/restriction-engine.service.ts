@@ -31,11 +31,26 @@ const REDIS_TTL_PADDING = 300;
 const conversionWindowKey = (
   scope: 'user' | 'ip',
   id: string,
-  hours: number
+  hours: number,
+  nowMs = Date.now()
 ): string => {
-  const slot = Math.floor(Date.now() / (hours * 3600 * 1000));
+  const slot = Math.floor(nowMs / (hours * 3600 * 1000));
   return `conversion:window:${scope}:${id}:${slot}`;
 };
+
+/**
+ * 当前窗口转换配额只读状态（ADR-0043）。
+ * limit 为配置上限（<= 0 表示不限额）；used 为本窗口已占位次数。
+ */
+export interface ConversionQuotaState {
+  /** 窗口归属：ip（游客）或 user（登录用户） */
+  scope: 'ip' | 'user';
+  limit: number;
+  used: number;
+  windowHours: number;
+  /** 当前窗口重置时刻（窗口起点 + windowHours） */
+  resetsAt: Date;
+}
 
 /** 转 bin（覆盖保存）频率窗口 Redis 键：与转换窗口独立前缀，避免混用计数 */
 const saveWindowKey = (
@@ -213,6 +228,53 @@ export class RestrictionEngine implements IConversionAccessGuard {
     const limit = await this.getGuestConversionLimit();
     const windowHours = await this.getGuestWindowHours();
     this.throwFrequencyExceeded(limit, windowHours);
+  }
+
+  /**
+   * 读取当前窗口的转换配额只读状态（ADR-0043，只查不占位）。
+   * 登录用户按 userId 窗口（限制值来自 VIP tier 配置），游客按 IP 窗口
+   * （限制值来自运行时配置 conversionGuestLimit / conversionGuestWindowHours）。
+   * limit <= 0 表示不限额（Redis 中通常无计数键，used 为 0）。
+   */
+  async getConversionQuotaState(
+    userId?: string,
+    ip?: string
+  ): Promise<ConversionQuotaState> {
+    if (userId) {
+      const limit = await this.getConversionWindowLimit(userId);
+      const windowHours = await this.getConversionWindowHours(userId);
+      return this.readConversionWindowState('user', userId, limit, windowHours);
+    }
+    return this.readConversionWindowState(
+      'ip',
+      ip ?? 'unknown',
+      await this.getGuestConversionLimit(),
+      await this.getGuestWindowHours()
+    );
+  }
+
+  /**
+   * 读单个窗口的已用次数 + 窗口重置时刻（user/ip 共用）。
+   * key 与窗口起点同用 nowMs 计算，避免临界时刻槽位错位。
+   */
+  private async readConversionWindowState(
+    scope: 'user' | 'ip',
+    id: string,
+    limit: number,
+    windowHours: number
+  ): Promise<ConversionQuotaState> {
+    const nowMs = Date.now();
+    const slotMs = windowHours * 3600 * 1000;
+    const raw = await this.redis
+      .get(conversionWindowKey(scope, id, windowHours, nowMs))
+      .catch(() => null);
+    return {
+      scope,
+      limit,
+      used: raw === null ? 0 : Math.max(0, Number(raw) || 0),
+      windowHours,
+      resetsAt: new Date(Math.floor(nowMs / slotMs) * slotMs + slotMs),
+    };
   }
 
   /**
