@@ -777,3 +777,22 @@ L156/L159），并被复用于：UI 展示、批量下载 zip 条目名（`tryAd
 ingest 被调，双断言失败）；③`图纸 (1).dwg` 原样保留（守「勿用白名单误拒」的回归）。
 
 **验证**：`pnpm jest mxcad-upload.controller.spec` 11/11 绿（含 3 例新回归）；`pnpm type-check` 0 错。
+
+### 15.2 清洗收敛到 createFileNode（所有建节点入口的单一事实源）——已修（3319fac）
+
+**问题**：15.1 只在 `uploadFile` 控制器清洗 `body.name`，但 `createFileNode`（file-tree）是**所有
+文件节点创建的收敛点**——图纸上传 / 秒传 `checkExist` / 资源库 / 另存为 / 外部参照 / 物化器全部经它
+落库。其中**秒传 `checkFileExist` 的 `body.filename`** 同样未清洗（`checkExist` 直接透传，无校验），
+控制器级清洗覆盖不到。外部参照入口已有 `ExtRefValidatorService.validateFileName`（拒 `..`/`/`/`\`/
+控制字符/`<>:"|?*`）故无需重复。
+
+**决策**：把清洗**上移到 `createFileNode` 顶部**（`const name = FileUtils.sanitizeFilename(rawName)`），
+一次覆盖全部建节点入口；**撤回 15.1 的控制器级清洗**（避免双重清洗，控制器/秒传等入口无需各自处理）。
+`name`/`originalName` 均落清洗后的值；`extension` 是独立参数不受影响。
+
+**回归测试**：3 例有牙齿回归从 mxcad-upload.controller.spec 迁到 file-tree.service.spec（断言
+`create` 收到的 `data.name`/`data.originalName` 为清洗后值）——①`../../evil.dwg`→`evil.dwg`；
+②`..` 清洗后为空 → 400 且不落库；③`图纸 (1).dwg` 原样保留。
+
+**验证**：file-tree 50 + mxcad-upload 8 + materializer/library/save-as/drawing-ingest 51 全绿；
+`pnpm type-check` 0 错。
