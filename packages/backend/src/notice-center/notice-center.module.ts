@@ -13,8 +13,11 @@
 /**
  * 通用通知中心模块。
  *
- * @Global() 是有意为之：后续 kind='download' 的定向推送方（batch-download 等）
- * 需要注入 NoticeCenterService 发通知，不必各自 import 本模块。
+ * 故意不加 @Global()：通知写入方必须是显式 seam。当前唯一消费方向是 HTTP 读端
+ * （前端 get current / SSE stream），没有任何 module 注入 NoticeCenterService 生产通知；
+ * @Global() 会让全仓任意 module 零成本拿到注入权，并让 app 启动时为不存在的生产者
+ * 常驻一条 Redis 订阅连接。后续 kind='download' 的定向推送方（batch-download 等）
+ * 落地时，在自己的 module imports 里加 NoticeCenterModule 即可，无需全仓可见。
  *
  * NOTICE_REDIS_SUBSCRIBER 是本模块专属的第二条 Redis 连接：ioredis 进入订阅模式
  * 后独占连接、不能再发命令，所以不能复用 RedisModule 的命令连接。订阅连接用
@@ -22,7 +25,6 @@
  */
 
 import {
-  Global,
   InternalServerErrorException,
   Logger,
   Module,
@@ -78,7 +80,6 @@ const noticeSubscriberProvider: Provider = {
   inject: [ConfigService],
 };
 
-@Global()
 @Module({
   imports: [DatabaseModule, PermissionModule],
   controllers: [NoticeCenterController],
