@@ -1427,11 +1427,25 @@ onUnmounted(stopCountdown)
 }
 
 /* ── 账号信息 / 详情 ── */
+/* van-cell 默认 title/value 各占 50%：两字标签撑出大片空白，值区只剩半格，
+   邮箱这类长文本被压到约 88px 直接截断。标签按内容宽度，剩余空间让给值。
+   二者都是 vant 内部元素，scoped 须 :deep 才能命中。 */
+.account-section :deep(.van-cell__title) {
+  flex: none;
+}
+
+.account-section :deep(.van-cell__value) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* display:inline-block + max-width:100%：短值收缩到自身宽度（不占满），长值封顶在
+   可用宽度并真正渲染省略号——display:flex 下的裸文本节点不会出 ellipsis，是硬剪。
+   text-align:left 保证超长时从左起裁成「1245…@…」而非反向裁掉邮箱头部。 */
 .cell-value {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 60%;
+  display: inline-block;
+  max-width: 100%;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1439,7 +1453,6 @@ onUnmounted(stopCountdown)
 
 .verified-mark {
   color: var(--accent, #00a99e);
-  flex-shrink: 0;
 }
 
 .meta-tag {
