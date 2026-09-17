@@ -4,8 +4,8 @@
         "en-US": "Loading in progress ..",
         "ko-KR": "로드 중...",
         "$files": [
-            "src/App.tsx(2725-2735)",
-            "src/components/Layout.tsx(22305-22315)",
+            "src/App.tsx(2973-2983)",
+            "src/components/Layout.tsx(22239-22249)",
             "src/components/LoadingOverlay.tsx(2729-2739)",
             "src/components/WorkListPanel.tsx(1882-1892)",
             "src/components/common/FileListGrid.tsx(7305-7315)",
@@ -14,7 +14,7 @@
             "src/components/common/ResourceList.tsx(10134-10144)",
             "src/components/common/SelectableTable.tsx(6737-6747)",
             "src/components/common/SelectableTable.tsx(9777-9787)",
-            "src/components/conversion-panel/ConversionTab.tsx(5991-6001)",
+            "src/components/conversion-panel/ConversionTab.tsx(7273-7283)",
             "src/components/modals/MembersModal.tsx(23323-23333)",
             "src/components/modals/ProjectRolesModal.tsx(5641-5651)",
             "src/components/modals/VersionHistoryModal.tsx(2333-2343)",
@@ -40,7 +40,7 @@
         "en-US": "Loading CAD editor ..",
         "ko-KR": "CAD 편집기를 로드하는 중입니다...",
         "$files": [
-            "src/App.tsx(7955-7974)"
+            "src/App.tsx(8490-8509)"
         ],
         "$id": 4666
     },
@@ -64,21 +64,22 @@
             "src/components/BreadcrumbNavigation.tsx(6191-6197)",
             "src/components/DirectoryImportDialog.tsx(16270-16276)",
             "src/components/DirectoryImportDialog.tsx(16626-16632)",
-            "src/components/Layout.tsx(31824-31830)",
+            "src/components/Layout.tsx(30675-30681)",
             "src/contexts/NotificationContext.tsx(2213-2219)",
             "src/contexts/NotificationContext.tsx(2477-2483)",
             "src/contexts/NotificationContext.tsx(2707-2713)",
             "src/contexts/NotificationContext.tsx(6051-6057)",
             "src/contexts/NotificationContext.tsx(6620-6626)",
-            "src/pages/DeviceAuthorize.tsx(9946-9952)",
-            "src/pages/MemberCenter.tsx(42705-42711)",
+            "src/pages/DeviceAuthorize.tsx(10005-10011)",
+            "src/pages/MemberCenter.tsx(47193-47199)",
             "src/utils/quotaUpgradeGuide.ts(1985-1991)",
             "src/utils/quotaUpgradeGuide.ts(3217-3223)",
             "src/utils/vipFeatureGuide.ts(1789-1795)",
             "src/utils/vipFeatureGuide.ts(2280-2286)",
             "src/components/billing/WechatPayButton.tsx(6009-6015)",
             "src/components/billing/WechatPayButton.tsx(8146-8152)",
-            "src/components/conversion-panel/ConversionTab.tsx(3822-3828)",
+            "src/components/conversion-panel/ConversionTab.tsx(4531-4537)",
+            "src/components/conversion-panel/ConversionTab.tsx(4579-4585)",
             "src/components/conversion-panel/DownloadTab.tsx(4816-4822)",
             "src/components/conversion-panel/DownloadTab.tsx(4872-4878)",
             "src/components/modals/BatchDownloadDialog.tsx(9855-9861)",
@@ -186,6 +187,25 @@
         ],
         "$id": 4672
     },
+    "CAD 编辑器加载失败，请刷新页面重试": {
+        "zh-TW": "CAD編輯器載入失敗，請刷新頁面重試",
+        "en-US": "Failed to load the CAD editor. Please refresh the page and try again",
+        "ko-KR": "CAD 편집기를 로드하지 못했습니다. 페이지를 새로고침한 후 다시 시도하세요",
+        "$files": [
+            "src/components/CadLoadFailedFallback.tsx(790-813)"
+        ],
+        "$id": 8013
+    },
+    "刷新页面": {
+        "zh-TW": "刷新頁面",
+        "en-US": "Refresh page",
+        "ko-KR": "페이지 새로고침",
+        "$files": [
+            "src/components/CadLoadFailedFallback.tsx(976-984)",
+            "src/pages/CADEditorDirect.tsx(20282-20290)"
+        ],
+        "$id": 1011
+    },
     "一级分类": {
         "zh-TW": "一級分類",
         "en-US": "Level 1 classification",
@@ -274,11 +294,11 @@
         "ko-KR": "완료",
         "$files": [
             "src/components/CollabShareModal.tsx(1615-1621)",
-            "src/components/conversion-panel/ConversionTab.tsx(763-769)",
+            "src/components/conversion-panel/ConversionTab.tsx(827-833)",
             "src/components/conversion-panel/UploadTab.tsx(830-836)",
             "src/components/modals/ExternalReferenceModal.tsx(5325-5331)",
             "src/components/modals/ShareDialog.tsx(25509-25515)",
-            "src/components/modals/ShareDialog.tsx(27297-27303)"
+            "src/components/modals/ShareDialog.tsx(26859-26865)"
         ],
         "$id": 895
     },
@@ -290,8 +310,8 @@
             "src/components/CollabWorkCard.tsx(1968-1974)",
             "src/components/WorkListPanel.tsx(3307-3313)",
             "src/components/WorkListPanel.tsx(4902-4908)",
-            "src/components/conversion-panel/ConversionTab.tsx(3311-3317)",
-            "src/components/conversion-panel/ConversionTab.tsx(5122-5128)"
+            "src/components/conversion-panel/ConversionTab.tsx(4017-4023)",
+            "src/components/conversion-panel/ConversionTab.tsx(6322-6328)"
         ],
         "$id": 7184
     },
@@ -328,7 +348,7 @@
         "ko-KR": "사용자",
         "$files": [
             "src/components/CollabWorkCard.tsx(2985-2991)",
-            "src/components/Layout.tsx(21921-21927)",
+            "src/components/Layout.tsx(21855-21861)",
             "src/pages/AuditLogPage/constants.ts(1501-1507)",
             "src/pages/Dashboard/index.tsx(8211-8217)",
             "src/pages/Profile/ProfileHeader.tsx(2655-2661)",
@@ -806,7 +826,7 @@
             "src/components/modals/ProjectRolesModal.tsx(4991-4997)",
             "src/components/modals/VersionHistoryModal.tsx(2036-2042)",
             "src/pages/FontLibrary/components/UploadFontModal.tsx(4389-4395)",
-            "src/pages/ForgotPassword/components/SupportModal.tsx(1967-1973)",
+            "src/pages/ForgotPassword/components/SupportModal.tsx(2176-2182)",
             "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(4405-4411)"
         ],
         "$id": 927
@@ -872,8 +892,8 @@
         "$files": [
             "src/components/FileItem.tsx(7839-7851)",
             "src/components/MxCadUploader.tsx(4156-4168)",
-            "src/pages/CADEditorDirect.tsx(14125-14137)",
-            "src/pages/CADEditorDirect.tsx(19384-19396)",
+            "src/pages/CADEditorDirect.tsx(14366-14378)",
+            "src/pages/CADEditorDirect.tsx(18769-18781)",
             "src/utils/download.ts(5896-5908)"
         ],
         "$id": 5908
@@ -887,7 +907,7 @@
             "src/components/FileItem.tsx(9906-9918)",
             "src/components/MxCadUploader.tsx(4945-4957)",
             "src/components/MxCadUploader.tsx(6475-6487)",
-            "src/pages/CADEditorDirect.tsx(15696-15708)"
+            "src/pages/CADEditorDirect.tsx(15937-15949)"
         ],
         "$id": 5776
     },
@@ -1003,7 +1023,7 @@
         "en-US": "System Administrator",
         "ko-KR": "시스템 관리자",
         "$files": [
-            "src/components/Layout.tsx(6432-6441)",
+            "src/components/Layout.tsx(6347-6356)",
             "src/pages/Profile/ProfileHeader.tsx(2786-2795)",
             "src/pages/Profile/ProfileInfoTab.tsx(8477-8486)",
             "src/pages/FontLibrary/components/FontListView.tsx(4024-4033)"
@@ -1015,7 +1035,7 @@
         "en-US": "User administrator",
         "ko-KR": "사용자 관리자",
         "$files": [
-            "src/components/Layout.tsx(6465-6474)"
+            "src/components/Layout.tsx(6380-6389)"
         ],
         "$id": 2645
     },
@@ -1024,7 +1044,7 @@
         "en-US": "Font Manager",
         "ko-KR": "글꼴 관리자",
         "$files": [
-            "src/components/Layout.tsx(6498-6507)"
+            "src/components/Layout.tsx(6413-6422)"
         ],
         "$id": 2646
     },
@@ -1033,7 +1053,7 @@
         "en-US": "Regular user",
         "ko-KR": "일반 사용자",
         "$files": [
-            "src/components/Layout.tsx(6523-6531)",
+            "src/components/Layout.tsx(6438-6446)",
             "src/pages/Profile/ProfileHeader.tsx(2799-2807)",
             "src/pages/Profile/ProfileInfoTab.tsx(8490-8498)"
         ],
@@ -1044,7 +1064,7 @@
         "en-US": "Project Manager",
         "ko-KR": "프로젝트 관리자",
         "$files": [
-            "src/components/Layout.tsx(6550-6558)"
+            "src/components/Layout.tsx(6465-6473)"
         ],
         "$id": 2647
     },
@@ -1053,7 +1073,7 @@
         "en-US": "visitor",
         "ko-KR": "방문객",
         "$files": [
-            "src/components/Layout.tsx(6575-6581)"
+            "src/components/Layout.tsx(6490-6496)"
         ],
         "$id": 2648
     },
@@ -1062,7 +1082,7 @@
         "en-US": "Dashboard",
         "ko-KR": "대시보드",
         "$files": [
-            "src/components/Layout.tsx(7808-7815)",
+            "src/components/Layout.tsx(7723-7730)",
             "src/pages/Dashboard/index.tsx(2028-2035)"
         ],
         "$id": 1013
@@ -1072,7 +1092,7 @@
         "en-US": "project management",
         "ko-KR": "프로젝트 관리",
         "$files": [
-            "src/components/Layout.tsx(7930-7938)",
+            "src/components/Layout.tsx(7845-7853)",
             "src/constants/permissions.ts(6744-6752)",
             "src/components/sidebar/SidebarTabBar.tsx(1112-1120)",
             "src/components/sidebar/SidebarTrigger.tsx(1644-1652)",
@@ -1088,13 +1108,13 @@
         "en-US": "Personal space",
         "ko-KR": "개인 공간",
         "$files": [
-            "src/components/Layout.tsx(8096-8104)",
+            "src/components/Layout.tsx(8011-8019)",
             "src/hooks/useCollabWorks.ts(12675-12683)",
             "src/components/modals/SaveAsModal.tsx(6342-6350)",
             "src/components/modals/SaveAsModal.tsx(9229-9237)",
             "src/components/modals/SelectFileModal.tsx(2886-2894)",
             "src/components/modals/SelectFolderModal.tsx(11434-11442)",
-            "src/components/sidebar/SidebarContainer.tsx(2604-2612)",
+            "src/components/sidebar/SidebarContainer.tsx(2546-2554)",
             "src/components/sidebar/SidebarTrigger.tsx(2117-2125)",
             "src/config/tours/personal-space.ts(1033-1041)",
             "src/config/tours/personal-space.ts(1126-1134)",
@@ -1109,7 +1129,7 @@
         "en-US": "Sharing Management",
         "ko-KR": "공유 관리",
         "$files": [
-            "src/components/Layout.tsx(8258-8266)",
+            "src/components/Layout.tsx(8173-8181)",
             "src/pages/ShareManagePage/index.tsx(1417-1425)"
         ],
         "$id": 2650
@@ -1119,7 +1139,7 @@
         "en-US": "Personal info",
         "ko-KR": "개인 정보",
         "$files": [
-            "src/components/Layout.tsx(8374-8382)",
+            "src/components/Layout.tsx(8289-8297)",
             "src/pages/Profile/index.tsx(2492-2500)"
         ],
         "$id": 1143
@@ -1129,7 +1149,7 @@
         "en-US": "Public repository",
         "ko-KR": "공용 저장소",
         "$files": [
-            "src/components/Layout.tsx(8493-8502)",
+            "src/components/Layout.tsx(8408-8417)",
             "src/constants/permissions.ts(6553-6562)"
         ],
         "$id": 1132
@@ -1139,7 +1159,7 @@
         "en-US": "Font library",
         "ko-KR": "글꼴 라이브러리",
         "$files": [
-            "src/components/Layout.tsx(8743-8750)",
+            "src/components/Layout.tsx(8658-8665)",
             "src/pages/FontLibrary/index.tsx(796-803)"
         ],
         "$id": 1075
@@ -1149,7 +1169,7 @@
         "en-US": "User Management",
         "ko-KR": "사용자 관리",
         "$files": [
-            "src/components/Layout.tsx(8901-8909)",
+            "src/components/Layout.tsx(8816-8824)",
             "src/pages/UserManagement/index.tsx(1956-1964)",
             "src/pages/UserManagement/index.tsx(18917-18925)",
             "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts(1802-1810)"
@@ -1161,7 +1181,7 @@
         "en-US": "Role permissions",
         "ko-KR": "역할 권한",
         "$files": [
-            "src/components/Layout.tsx(9066-9074)",
+            "src/components/Layout.tsx(8981-8989)",
             "src/pages/RoleManagement/index.tsx(1127-1135)"
         ],
         "$id": 1206
@@ -1171,7 +1191,7 @@
         "en-US": "Payment Management",
         "ko-KR": "지불 관리",
         "$files": [
-            "src/components/Layout.tsx(9274-9282)",
+            "src/components/Layout.tsx(9189-9197)",
             "src/pages/AdminBillingPage/index.tsx(1364-1372)",
             "src/pages/AdminBillingPage/index.tsx(2239-2247)"
         ],
@@ -1182,7 +1202,7 @@
         "en-US": "IP Access Control",
         "ko-KR": "IP 액세스 제어",
         "$files": [
-            "src/components/Layout.tsx(9567-9578)",
+            "src/components/Layout.tsx(9482-9493)",
             "src/pages/IpAccessControlPage/index.tsx(1719-1730)",
             "src/pages/IpAccessControlPage/index.tsx(2627-2638)"
         ],
@@ -1193,7 +1213,7 @@
         "en-US": "audit log",
         "ko-KR": "감사 로그",
         "$files": [
-            "src/components/Layout.tsx(9946-9954)",
+            "src/components/Layout.tsx(9861-9869)",
             "src/pages/AuditLogPage/index.tsx(1194-1202)",
             "src/pages/AuditLogPage/index.tsx(5636-5644)"
         ],
@@ -1204,28 +1224,19 @@
         "en-US": "System monitoring",
         "ko-KR": "시스템 모니터링",
         "$files": [
-            "src/components/Layout.tsx(10231-10239)",
+            "src/components/Layout.tsx(10146-10154)",
             "src/constants/permissions.ts(6239-6247)",
             "src/pages/SystemMonitorPage/index.tsx(1778-1786)",
             "src/pages/SystemMonitorPage/index.tsx(3994-4002)"
         ],
         "$id": 1246
     },
-    "CAD 协同平台": {
-        "zh-TW": "CAD協同平臺",
-        "en-US": "CAD Collaborative Platform",
-        "ko-KR": "CAD 공동 작업 플랫폼",
-        "$files": [
-            "src/components/Layout.tsx(14115-14127)"
-        ],
-        "$id": 2654
-    },
     "关闭菜单": {
         "zh-TW": "關閉選單",
         "en-US": "Close menu",
         "ko-KR": "메뉴 닫기",
         "$files": [
-            "src/components/Layout.tsx(14474-14482)"
+            "src/components/Layout.tsx(14408-14416)"
         ],
         "$id": 4691
     },
@@ -1234,7 +1245,7 @@
         "en-US": "Main Menu",
         "ko-KR": "메인 메뉴",
         "$files": [
-            "src/components/Layout.tsx(14939-14946)"
+            "src/components/Layout.tsx(14873-14880)"
         ],
         "$id": 2655
     },
@@ -1243,7 +1254,7 @@
         "en-US": "System Administration",
         "ko-KR": "시스템 관리",
         "$files": [
-            "src/components/Layout.tsx(15834-15842)",
+            "src/components/Layout.tsx(15768-15776)",
             "src/constants/permissions.ts(6064-6072)"
         ],
         "$id": 2656
@@ -1253,7 +1264,7 @@
         "en-US": "Personal space storage",
         "ko-KR": "개인 공간 스토리지",
         "$files": [
-            "src/components/Layout.tsx(16879-16889)"
+            "src/components/Layout.tsx(16813-16823)"
         ],
         "$id": 7423
     },
@@ -1262,7 +1273,7 @@
         "en-US": "⚠️  Storage space has exceeded the limit",
         "ko-KR": "⚠️ 스토리지 공간이 초과되었습니다.",
         "$files": [
-            "src/components/Layout.tsx(18381-18395)"
+            "src/components/Layout.tsx(18315-18329)"
         ],
         "$id": 2658
     },
@@ -1271,7 +1282,7 @@
         "en-US": "Upgrade VIP for more storage",
         "ko-KR": "멤버십을 업그레이드하면 저장 공간을 확장할 수 있습니다",
         "$files": [
-            "src/components/Layout.tsx(18511-18526)",
+            "src/components/Layout.tsx(18445-18460)",
             "src/components/billing/PlanSelectOverlay.tsx(2057-2072)"
         ],
         "$id": 6079
@@ -1281,7 +1292,7 @@
         "en-US": "Go to Purchase",
         "ko-KR": "구매하러 가기",
         "$files": [
-            "src/components/Layout.tsx(18897-18904)",
+            "src/components/Layout.tsx(18831-18838)",
             "src/utils/quotaUpgradeGuide.ts(3190-3197)",
             "src/utils/vipFeatureGuide.ts(2253-2260)"
         ],
@@ -1292,7 +1303,7 @@
         "en-US": "Unable to load storage information",
         "ko-KR": "스토리지 정보를 로드할 수 없습니다.",
         "$files": [
-            "src/components/Layout.tsx(19118-19130)"
+            "src/components/Layout.tsx(19052-19064)"
         ],
         "$id": 2660
     },
@@ -1301,7 +1312,7 @@
         "en-US": "View Guidance Center",
         "ko-KR": "부트 센터 보기",
         "$files": [
-            "src/components/Layout.tsx(19471-19481)"
+            "src/components/Layout.tsx(19405-19415)"
         ],
         "$id": 2661
     },
@@ -1310,7 +1321,7 @@
         "en-US": "Help guide",
         "ko-KR": "도움말 부트",
         "$files": [
-            "src/components/Layout.tsx(20060-20068)"
+            "src/components/Layout.tsx(19994-20002)"
         ],
         "$id": 2662
     },
@@ -1319,7 +1330,7 @@
         "en-US": "In progress",
         "ko-KR": "진행 중",
         "$files": [
-            "src/components/Layout.tsx(20217-20224)"
+            "src/components/Layout.tsx(20151-20158)"
         ],
         "$id": 2663
     },
@@ -1328,7 +1339,7 @@
         "en-US": "unknown role",
         "ko-KR": "알 수 없는 역할",
         "$files": [
-            "src/components/Layout.tsx(22460-22468)",
+            "src/components/Layout.tsx(22394-22402)",
             "src/pages/UserManagement/UserTable.tsx(6145-6153)"
         ],
         "$id": 2665
@@ -1338,7 +1349,7 @@
         "en-US": "Personal Settings",
         "ko-KR": "개인 설정",
         "$files": [
-            "src/components/Layout.tsx(23421-23429)"
+            "src/components/Layout.tsx(23355-23363)"
         ],
         "$id": 2666
     },
@@ -1347,7 +1358,7 @@
         "en-US": "Log out",
         "ko-KR": "로그아웃",
         "$files": [
-            "src/components/Layout.tsx(23822-23830)"
+            "src/components/Layout.tsx(23756-23764)"
         ],
         "$id": 2667
     },
@@ -1356,7 +1367,7 @@
         "en-US": "Return to CAD Editor",
         "ko-KR": "CAD 편집기로 돌아가기",
         "$files": [
-            "src/components/Layout.tsx(25003-25015)"
+            "src/components/Layout.tsx(24937-24949)"
         ],
         "$id": 6172
     },
@@ -1365,9 +1376,9 @@
         "en-US": "File queue",
         "ko-KR": "파일 대기열",
         "$files": [
-            "src/components/Layout.tsx(25978-25986)",
-            "src/components/Layout.tsx(26303-26311)",
-            "src/components/conversion-panel/ConversionPanel.tsx(17700-17708)"
+            "src/components/Layout.tsx(25912-25920)",
+            "src/components/Layout.tsx(26237-26245)",
+            "src/components/conversion-panel/ConversionPanel.tsx(18276-18284)"
         ],
         "$id": 8026
     },
@@ -1376,8 +1387,8 @@
         "en-US": "System Settings",
         "ko-KR": "시스템 설정",
         "$files": [
-            "src/components/Layout.tsx(27722-27730)",
-            "src/components/Layout.tsx(28089-28097)"
+            "src/components/Layout.tsx(27656-27664)",
+            "src/components/Layout.tsx(28023-28031)"
         ],
         "$id": 2668
     },
@@ -1386,7 +1397,7 @@
         "en-US": "Your administrator password is about to expire, please change it in advance",
         "ko-KR": "관리자 암호가 만료됩니다. 미리 수정하십시오.",
         "$files": [
-            "src/components/Layout.tsx(29573-29594)"
+            "src/components/Layout.tsx(29507-29528)"
         ],
         "$id": 7736
     },
@@ -1395,7 +1406,7 @@
         "en-US": "Change password",
         "ko-KR": "비밀번호 변경",
         "$files": [
-            "src/components/Layout.tsx(29824-29832)",
+            "src/components/Layout.tsx(29758-29766)",
             "src/pages/AuditLogPage/constants.ts(841-849)",
             "src/pages/Profile/index.tsx(9224-9232)",
             "src/pages/Profile/ProfileInfoTab.tsx(8094-8102)",
@@ -1408,8 +1419,8 @@
         "en-US": "Confirm to log out and log in",
         "ko-KR": "로그아웃 확인",
         "$files": [
-            "src/components/Layout.tsx(31594-31604)",
-            "src/components/Layout.tsx(32844-32854)"
+            "src/components/Layout.tsx(30445-30455)",
+            "src/components/Layout.tsx(31695-31705)"
         ],
         "$id": 2669
     },
@@ -1418,7 +1429,7 @@
         "en-US": "Exiting ..",
         "ko-KR": "종료 중...",
         "$files": [
-            "src/components/Layout.tsx(32228-32238)"
+            "src/components/Layout.tsx(31079-31089)"
         ],
         "$id": 2670
     },
@@ -1427,7 +1438,7 @@
         "en-US": "Confirm exit",
         "ko-KR": "종료 확인",
         "$files": [
-            "src/components/Layout.tsx(32304-32312)"
+            "src/components/Layout.tsx(31155-31163)"
         ],
         "$id": 2671
     },
@@ -1436,7 +1447,7 @@
         "en-US": "Are you sure you want to exit {appName}? After logging out, you need to log in again to access system functions.",
         "ko-KR": "_ _ $_ $_ $_ $_ 을 (를) 종료하시겠습니까?시스템 기능에 액세스하려면 종료 후 다시 로그인해야 합니다.",
         "$files": [
-            "src/components/Layout.tsx(32965-33023)"
+            "src/components/Layout.tsx(31816-31874)"
         ],
         "$id": 2672
     },
@@ -1609,7 +1620,7 @@
         "$files": [
             "src/components/ProjectFilterTabs.tsx(1172-1180)",
             "src/components/modals/SelectFileModal.tsx(3682-3690)",
-            "src/components/sidebar/SidebarContainer.tsx(2540-2548)",
+            "src/components/sidebar/SidebarContainer.tsx(2483-2491)",
             "src/components/sidebar/SidebarTrigger.tsx(1896-1904)",
             "src/pages/Dashboard/components/StatsGrid.tsx(1058-1066)"
         ],
@@ -2432,7 +2443,7 @@
         "ko-KR": "파일 변환 중입니다. 잠시 기다려주세요...",
         "$files": [
             "src/hooks/useCadFileLoader.ts(7304-7320)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(5371-5387)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(5424-5440)"
         ],
         "$id": 1417
     },
@@ -2441,8 +2452,8 @@
         "en-US": "Conversion failed",
         "ko-KR": "변환 실패",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(7894-7902)",
-            "src/components/conversion-panel/ConversionTab.tsx(888-896)",
+            "src/hooks/useCadFileLoader.ts(7879-7887)",
+            "src/components/conversion-panel/ConversionTab.tsx(952-960)",
             "src/components/file-item/FileItemInfo.tsx(2199-2207)"
         ],
         "$id": 7772
@@ -2452,9 +2463,12 @@
         "en-US": "The file conversion failed, please check the file content",
         "ko-KR": "파일 변환에 실패했습니다. 파일 내용을 확인하십시오.",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(7931-7950)",
+            "src/hooks/useCadFileLoader.ts(7916-7935)",
+            "src/components/conversion-panel/ConversionTab.tsx(3429-3448)",
             "src/components/file-item/FileItemInfo.tsx(2109-2128)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(5047-5066)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(5100-5119)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(18663-18682)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(18769-18788)"
         ],
         "$id": 7818
     },
@@ -2463,7 +2477,8 @@
         "en-US": "Understood.",
         "ko-KR": "알았어",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(7983-7990)"
+            "src/hooks/useCadFileLoader.ts(7968-7975)",
+            "src/components/notice/NoticeModal.tsx(2308-2315)"
         ],
         "$id": 7819
     },
@@ -2472,7 +2487,7 @@
         "en-US": "File conversion failed. Unable to open file",
         "ko-KR": "파일 변환에 실패했습니다. 파일을 열 수 없습니다",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(8120-8137)"
+            "src/hooks/useCadFileLoader.ts(8105-8122)"
         ],
         "$id": 6142
     },
@@ -2481,8 +2496,8 @@
         "en-US": "File conversion not yet complete",
         "ko-KR": "파일 변환이 아직 완료되지 않았습니다",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(8156-8168)",
-            "src/hooks/useCadFileLoader.ts(8719-8731)"
+            "src/hooks/useCadFileLoader.ts(8141-8153)",
+            "src/hooks/useCadFileLoader.ts(8704-8716)"
         ],
         "$id": 989
     },
@@ -2491,7 +2506,7 @@
         "en-US": "Missing node ID",
         "ko-KR": "노드 ID가 없습니다",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(9329-9339)",
+            "src/hooks/useCadFileLoader.ts(9314-9324)",
             "src/components/sidebar/hooks/useDrawingOpener.ts(2298-2308)"
         ],
         "$id": 990
@@ -2501,7 +2516,7 @@
         "en-US": "Cannot construct file access URL",
         "ko-KR": "파일 접근 URL을 구성할 수 없습니다",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(11895-11910)"
+            "src/hooks/useCadFileLoader.ts(11880-11895)"
         ],
         "$id": 991
     },
@@ -2510,8 +2525,9 @@
         "en-US": "Loading drawing...",
         "ko-KR": "도면 로딩 중...",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(12917-12930)",
-            "src/pages/CADEditorDirect.tsx(24109-24122)"
+            "src/hooks/useCadFileLoader.ts(12902-12915)",
+            "src/pages/CADEditorDirect.tsx(23471-23484)",
+            "src/components/sidebar/SidebarContainer.tsx(16619-16632)"
         ],
         "$id": 992
     },
@@ -2520,7 +2536,7 @@
         "en-US": "CAD editor initialization failed",
         "ko-KR": "CAD 편집기 초기화 실패",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(15668-15683)"
+            "src/hooks/useCadFileLoader.ts(15640-15655)"
         ],
         "$id": 993
     },
@@ -2529,7 +2545,7 @@
         "en-US": "Drawing opening failed:{msg}",
         "ko-KR": "시트 열기 실패: _ _ $_ $_ _",
         "$files": [
-            "src/hooks/useCadFileLoader.ts(15819-15835)"
+            "src/hooks/useCadFileLoader.ts(15791-15807)"
         ],
         "$id": 7676
     },
@@ -2643,8 +2659,8 @@
             "src/hooks/useCollabWorks.ts(6715-6721)",
             "src/components/modals/ExternalReferenceModal.tsx(9954-9960)",
             "src/components/modals/ExternalReferencePanel.tsx(5174-5180)",
-            "src/components/ProjectDrawingsPanel/index.tsx(5547-5553)",
-            "src/components/sidebar/SidebarTabBar.tsx(1214-1220)"
+            "src/components/sidebar/SidebarTabBar.tsx(1214-1220)",
+            "src/components/ProjectDrawingsPanel/index.tsx(5547-5553)"
         ],
         "$id": 873
     },
@@ -2823,7 +2839,7 @@
         "ko-KR": "파일 열기 실패",
         "$files": [
             "src/hooks/useFileInsert.ts(2651-2661)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(13336-13346)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(13389-13399)"
         ],
         "$id": 1003
     },
@@ -2832,7 +2848,7 @@
         "en-US": "Save As",
         "ko-KR": "다른 이름으로 저장",
         "$files": [
-            "src/hooks/useFileOpenGuard.ts(4812-4819)",
+            "src/hooks/useFileOpenGuard.ts(4855-4862)",
             "src/components/modals/SaveAsModal.tsx(4519-4526)"
         ],
         "$id": 995
@@ -2842,8 +2858,8 @@
         "en-US": "Save file",
         "ko-KR": "파일 저장",
         "$files": [
-            "src/hooks/useFileOpenGuard.ts(4901-4909)",
-            "src/hooks/useFileOpenGuard.ts(5584-5592)",
+            "src/hooks/useFileOpenGuard.ts(4944-4952)",
+            "src/hooks/useFileOpenGuard.ts(5627-5635)",
             "src/services/mxcadManager/saveDialogs.ts(232-240)",
             "src/services/mxcadManager/cmd/saveAsToCloud.ts(709-717)",
             "src/services/mxcadManager/cmd/saveCommand.ts(993-1001)"
@@ -2980,7 +2996,7 @@
         "en-US": "Join Collaboration",
         "ko-KR": "협동 에 가입 하다",
         "$files": [
-            "src/pages/CADEditorDirect.tsx(9428-9436)"
+            "src/pages/CADEditorDirect.tsx(9669-9677)"
         ],
         "$id": 7188
     },
@@ -2989,25 +3005,16 @@
         "en-US": "Opening external reference ..",
         "ko-KR": "외부 참조가 열리고 있습니다...",
         "$files": [
-            "src/pages/CADEditorDirect.tsx(17839-17854)"
+            "src/pages/CADEditorDirect.tsx(17692-17707)"
         ],
         "$id": 5907
-    },
-    "刷新页面": {
-        "zh-TW": "刷新頁面",
-        "en-US": "Refresh page",
-        "ko-KR": "페이지 새로고침",
-        "$files": [
-            "src/pages/CADEditorDirect.tsx(20961-20969)"
-        ],
-        "$id": 1011
     },
     "返回项目列表": {
         "zh-TW": "返回項目清單",
         "en-US": "Back to project list",
         "ko-KR": "프로젝트 목록으로 돌아가기",
         "$files": [
-            "src/pages/CADEditorDirect.tsx(20973-20983)",
+            "src/pages/CADEditorDirect.tsx(20294-20304)",
             "src/pages/FileSystemManager/FileSystemHeader.tsx(6100-6110)"
         ],
         "$id": 1012
@@ -3017,7 +3024,7 @@
         "en-US": "The current drawing has been deleted. Save it as a new file",
         "ko-KR": "현재 시트가 삭제되어 새 파일로 저장됨",
         "$files": [
-            "src/pages/CADEditorDirect.tsx(21453-21475)",
+            "src/pages/CADEditorDirect.tsx(20774-20796)",
             "src/services/mxcadManager/saveFile.ts(1939-1961)",
             "src/services/mxcadManager/saveSequences.ts(2747-2769)",
             "src/services/mxcadManager/saveSequences.ts(3240-3262)"
@@ -3029,7 +3036,7 @@
         "en-US": "Equipment authorization",
         "ko-KR": "장치 인증",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(2122-2130)",
+            "src/pages/DeviceAuthorize.tsx(2181-2189)",
             "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts(2049-2057)"
         ],
         "$id": 5805
@@ -3039,7 +3046,7 @@
         "en-US": "Authorization failed, please try again",
         "ko-KR": "인증 실패, 다시 시도하십시오.",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(6548-6560)"
+            "src/pages/DeviceAuthorize.tsx(6607-6619)"
         ],
         "$id": 5806
     },
@@ -3048,7 +3055,7 @@
         "en-US": "Authorization request failed",
         "ko-KR": "승인 요청 실패",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(7133-7143)"
+            "src/pages/DeviceAuthorize.tsx(7192-7202)"
         ],
         "$id": 5807
     },
@@ -3057,7 +3064,7 @@
         "en-US": "Authorization code has expired or is invalid",
         "ko-KR": "인증 코드가 만료되었거나 유효하지 않습니다.",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(7295-7308)"
+            "src/pages/DeviceAuthorize.tsx(7354-7367)"
         ],
         "$id": 5808
     },
@@ -3066,7 +3073,7 @@
         "en-US": "Missing authorization code",
         "ko-KR": "인증 코드 누락",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(8013-8022)"
+            "src/pages/DeviceAuthorize.tsx(8072-8081)"
         ],
         "$id": 5809
     },
@@ -3075,7 +3082,7 @@
         "en-US": "Please obtain the authorization code from the desktop application and try again",
         "ko-KR": "데스크톱 응용 프로그램에서 인증 코드를 받은 후 다시 시도하십시오.",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(8090-8109)"
+            "src/pages/DeviceAuthorize.tsx(8149-8168)"
         ],
         "$id": 5810
     },
@@ -3084,7 +3091,7 @@
         "en-US": "Please confirm the authorization code below to allow desktop applications to log in to your account",
         "ko-KR": "아래에서 인증 코드를 확인하여 데스크톱 앱이 귀하의 계정에 로그인할 수 있도록 하십시오.",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(8869-8896)"
+            "src/pages/DeviceAuthorize.tsx(8928-8955)"
         ],
         "$id": 5811
     },
@@ -3093,7 +3100,7 @@
         "en-US": "__Automatic authorization after $_ $_ $__ seconds",
         "ko-KR": "_ _ $_ $_ $_ 초 후 자동 인증",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(9371-9393)"
+            "src/pages/DeviceAuthorize.tsx(9430-9452)"
         ],
         "$id": 5812
     },
@@ -3102,7 +3109,7 @@
         "en-US": "Confirm authorization",
         "ko-KR": "인증 확인",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(9737-9745)"
+            "src/pages/DeviceAuthorize.tsx(9796-9804)"
         ],
         "$id": 5813
     },
@@ -3111,7 +3118,7 @@
         "en-US": "Authorization successful",
         "ko-KR": "인증 성공",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(10618-10626)"
+            "src/pages/DeviceAuthorize.tsx(10677-10685)"
         ],
         "$id": 5814
     },
@@ -3120,7 +3127,7 @@
         "en-US": "The desktop application has successfully obtained login permission. You can close this page",
         "ko-KR": "데스크톱 응용 프로그램에서 로그인 권한을 획득했습니다. 이 페이지를 닫을 수 있습니다.",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(10694-10721)"
+            "src/pages/DeviceAuthorize.tsx(10753-10780)"
         ],
         "$id": 5815
     },
@@ -3129,7 +3136,7 @@
         "en-US": "Authorization failed",
         "ko-KR": "인증 실패",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(11360-11368)"
+            "src/pages/DeviceAuthorize.tsx(11419-11427)"
         ],
         "$id": 5816
     },
@@ -3138,7 +3145,7 @@
         "en-US": "Authorized ..",
         "ko-KR": "허가 중...",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(12068-12078)"
+            "src/pages/DeviceAuthorize.tsx(12127-12137)"
         ],
         "$id": 5817
     },
@@ -3147,7 +3154,7 @@
         "en-US": "Processing your authorization request",
         "ko-KR": "승인 요청 처리 중",
         "$files": [
-            "src/pages/DeviceAuthorize.tsx(12133-12147)"
+            "src/pages/DeviceAuthorize.tsx(12192-12206)"
         ],
         "$id": 5818
     },
@@ -3156,7 +3163,7 @@
         "en-US": "Pending Payment",
         "ko-KR": "미지급",
         "$files": [
-            "src/pages/MemberCenter.tsx(2504-2511)",
+            "src/pages/MemberCenter.tsx(2594-2601)",
             "src/pages/AdminBillingPage/constants.ts(174-181)"
         ],
         "$id": 2703
@@ -3166,7 +3173,7 @@
         "en-US": "Completed",
         "ko-KR": "완료됨",
         "$files": [
-            "src/pages/MemberCenter.tsx(2528-2535)",
+            "src/pages/MemberCenter.tsx(2618-2625)",
             "src/utils/mxcadUtils.ts(1988-1995)",
             "src/components/modals/BatchDownloadProgress.tsx(2243-2250)",
             "src/components/modals/ExternalReferenceModal.tsx(3558-3565)",
@@ -3181,7 +3188,7 @@
         "en-US": "Payment failed",
         "ko-KR": "결제 실패",
         "$files": [
-            "src/pages/MemberCenter.tsx(2549-2557)",
+            "src/pages/MemberCenter.tsx(2639-2647)",
             "src/components/billing/WechatPayButton.tsx(2042-2050)",
             "src/components/billing/WechatPayButton.tsx(2713-2721)",
             "src/components/billing/WechatPayButton.tsx(3022-3030)",
@@ -3194,7 +3201,7 @@
         "en-US": "Refunded",
         "ko-KR": "환불 완료",
         "$files": [
-            "src/pages/MemberCenter.tsx(2573-2580)",
+            "src/pages/MemberCenter.tsx(2663-2670)",
             "src/pages/AdminBillingPage/constants.ts(325-332)"
         ],
         "$id": 2705
@@ -3204,8 +3211,8 @@
         "en-US": "Cancelled",
         "ko-KR": "취소됨",
         "$files": [
-            "src/pages/MemberCenter.tsx(2594-2601)",
-            "src/components/conversion-panel/ConversionTab.tsx(1014-1021)",
+            "src/pages/MemberCenter.tsx(2684-2691)",
+            "src/components/conversion-panel/ConversionTab.tsx(1078-1085)",
             "src/components/conversion-panel/UploadTab.tsx(957-964)",
             "src/components/modals/BatchDownloadProgress.tsx(2339-2346)",
             "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(15657-15664)"
@@ -3217,7 +3224,7 @@
         "en-US": "Timeout closure",
         "ko-KR": "시간 초과 종료",
         "$files": [
-            "src/pages/MemberCenter.tsx(2616-2624)"
+            "src/pages/MemberCenter.tsx(2706-2714)"
         ],
         "$id": 7881
     },
@@ -3226,17 +3233,27 @@
         "en-US": "Member center",
         "ko-KR": "멤버십 센터",
         "$files": [
-            "src/pages/MemberCenter.tsx(4217-4225)",
+            "src/pages/MemberCenter.tsx(4763-4771)",
             "src/pages/Profile/ProfileHeader.tsx(5203-5211)"
         ],
         "$id": 1142
+    },
+    "创建订单失败，请重试": {
+        "zh-TW": "創建訂單失敗,請重試",
+        "en-US": "Failed to create order, please try again",
+        "ko-KR": "주문 생성에 실패했습니다. 다시 시도하십시오.",
+        "$files": [
+            "src/pages/MemberCenter.tsx(9265-9279)",
+            "src/components/billing/PlanSelectOverlay.tsx(9433-9447)"
+        ],
+        "$id": 5949
     },
     "该订单已支付成功，会员已开通": {
         "zh-TW": "該訂單已支付成功,會員已開通",
         "en-US": "The order has been successfully paid and the member has been activated",
         "ko-KR": "이 주문은 지불 완료, 회원 가입 완료",
         "$files": [
-            "src/pages/MemberCenter.tsx(8271-8289)"
+            "src/pages/MemberCenter.tsx(10624-10642)"
         ],
         "$id": 7189
     },
@@ -3245,8 +3262,8 @@
         "en-US": "The order status has changed and payment cannot continue",
         "ko-KR": "주문 상태가 변경되어 결제를 계속할 수 없습니다.",
         "$files": [
-            "src/pages/MemberCenter.tsx(8664-8682)",
-            "src/pages/MemberCenter.tsx(8711-8729)"
+            "src/pages/MemberCenter.tsx(11017-11035)",
+            "src/pages/MemberCenter.tsx(11064-11082)"
         ],
         "$id": 5909
     },
@@ -3255,7 +3272,7 @@
         "en-US": "Failed to obtain payment parameters, please try again",
         "ko-KR": "결제 매개 변수를 가져오지 못했습니다. 다시 시도하십시오.",
         "$files": [
-            "src/pages/MemberCenter.tsx(9195-9211)"
+            "src/pages/MemberCenter.tsx(11548-11564)"
         ],
         "$id": 5910
     },
@@ -3264,7 +3281,7 @@
         "en-US": "Please provide the reason for the refund",
         "ko-KR": "환불 이유를 기입해 주십시오.",
         "$files": [
-            "src/pages/MemberCenter.tsx(9525-9536)"
+            "src/pages/MemberCenter.tsx(11878-11889)"
         ],
         "$id": 6844
     },
@@ -3273,7 +3290,7 @@
         "en-US": "Refund request submitted, please wait for review",
         "ko-KR": "환불 신청이 제출되었으니 심사를 기다려 주십시오",
         "$files": [
-            "src/pages/MemberCenter.tsx(9932-9949)"
+            "src/pages/MemberCenter.tsx(12285-12302)"
         ],
         "$id": 6845
     },
@@ -3282,7 +3299,7 @@
         "en-US": "Refund application submission failed, please try again",
         "ko-KR": "환불 요청 제출에 실패했습니다. 다시 시도하십시오.",
         "$files": [
-            "src/pages/MemberCenter.tsx(10155-10171)"
+            "src/pages/MemberCenter.tsx(12508-12524)"
         ],
         "$id": 6846
     },
@@ -3291,7 +3308,7 @@
         "en-US": "The membership function is not yet open",
         "ko-KR": "회원 기능은 아직 오픈하지 않았습니다.",
         "$files": [
-            "src/pages/MemberCenter.tsx(10949-10961)"
+            "src/pages/MemberCenter.tsx(13302-13314)"
         ],
         "$id": 5911
     },
@@ -3300,7 +3317,7 @@
         "en-US": "VIP{level}",
         "ko-KR": "VIP{level}",
         "$files": [
-            "src/pages/MemberCenter.tsx(12928-12942)",
+            "src/pages/MemberCenter.tsx(15281-15295)",
             "src/pages/Profile/ProfileHeader.tsx(3729-3743)",
             "src/pages/UserManagement/index.tsx(3138-3152)",
             "src/pages/UserManagement/UserModals/MembershipManageModal.tsx(3915-3929)",
@@ -3313,7 +3330,7 @@
         "en-US": "free user",
         "ko-KR": "무료 사용자",
         "$files": [
-            "src/pages/MemberCenter.tsx(13075-13083)",
+            "src/pages/MemberCenter.tsx(15428-15436)",
             "src/pages/Profile/ProfileHeader.tsx(3806-3814)",
             "src/pages/UserManagement/index.tsx(3107-3115)",
             "src/pages/UserManagement/UserTable.tsx(2268-2276)",
@@ -3329,7 +3346,7 @@
         "en-US": "Permanently valid",
         "ko-KR": "영구 유효",
         "$files": [
-            "src/pages/MemberCenter.tsx(13732-13740)",
+            "src/pages/MemberCenter.tsx(16085-16093)",
             "src/components/billing/MembershipBadge.tsx(240-248)",
             "src/components/billing/MembershipBadge.tsx(963-971)"
         ],
@@ -3340,7 +3357,7 @@
         "en-US": "Remaining {months} months {days} days",
         "ko-KR": "남은 _ _ $_ $_ $_ _ 개월 _ _ $_ $_ $_ 일",
         "$files": [
-            "src/pages/MemberCenter.tsx(13982-14009)",
+            "src/pages/MemberCenter.tsx(16335-16362)",
             "src/components/billing/MembershipBadge.tsx(346-373)",
             "src/pages/Profile/ProfileHeader.tsx(4247-4274)"
         ],
@@ -3351,7 +3368,7 @@
         "en-US": "Remaining {months} months",
         "ko-KR": "남은 _ _ $_ $_ $_ 개월",
         "$files": [
-            "src/pages/MemberCenter.tsx(14228-14246)",
+            "src/pages/MemberCenter.tsx(16581-16599)",
             "src/components/billing/MembershipBadge.tsx(457-475)",
             "src/pages/Profile/ProfileHeader.tsx(4468-4486)"
         ],
@@ -3362,7 +3379,7 @@
         "en-US": "Remaining {days} days",
         "ko-KR": "남은 _ _ $_ $_ $_ _ 일",
         "$files": [
-            "src/pages/MemberCenter.tsx(14373-14388)",
+            "src/pages/MemberCenter.tsx(16726-16741)",
             "src/components/billing/MembershipBadge.tsx(511-526)",
             "src/pages/Profile/ProfileHeader.tsx(4548-4563)"
         ],
@@ -3373,7 +3390,7 @@
         "en-US": "Valid until{date}",
         "ko-KR": "유효 기간은 _ _ $_ $_ $_ 입니다.",
         "$files": [
-            "src/pages/MemberCenter.tsx(14878-14893)"
+            "src/pages/MemberCenter.tsx(17231-17246)"
         ],
         "$id": 5213
     },
@@ -3382,7 +3399,7 @@
         "en-US": "Renewal",
         "ko-KR": "연장 결제",
         "$files": [
-            "src/pages/MemberCenter.tsx(15485-15491)",
+            "src/pages/MemberCenter.tsx(17838-17844)",
             "src/components/billing/PlanSelectOverlay.tsx(14013-14019)"
         ],
         "$id": 5217
@@ -3392,8 +3409,8 @@
         "en-US": "upgrade",
         "ko-KR": "업그레이드",
         "$files": [
-            "src/pages/MemberCenter.tsx(15730-15736)",
-            "src/pages/MemberCenter.tsx(22577-22583)"
+            "src/pages/MemberCenter.tsx(18083-18089)",
+            "src/pages/MemberCenter.tsx(24930-24936)"
         ],
         "$id": 5916
     },
@@ -3402,7 +3419,7 @@
         "en-US": "Due soon, please renew in a timely manner",
         "ko-KR": "곧 만기가 되니, 제때에 비용을 연장해 주십시오.",
         "$files": [
-            "src/pages/MemberCenter.tsx(16633-16647)"
+            "src/pages/MemberCenter.tsx(18986-19000)"
         ],
         "$id": 5917
     },
@@ -3411,7 +3428,7 @@
         "en-US": "Solution Comparison",
         "ko-KR": "시나리오 비교",
         "$files": [
-            "src/pages/MemberCenter.tsx(17079-17087)"
+            "src/pages/MemberCenter.tsx(19432-19440)"
         ],
         "$id": 5918
     },
@@ -3420,7 +3437,7 @@
         "en-US": "No available solutions at the moment",
         "ko-KR": "사용 가능한 스키마 없음",
         "$files": [
-            "src/pages/MemberCenter.tsx(17735-17745)",
+            "src/pages/MemberCenter.tsx(20088-20098)",
             "src/components/billing/PlanSelectOverlay.tsx(12723-12733)"
         ],
         "$id": 5919
@@ -3430,9 +3447,9 @@
         "en-US": "current solution",
         "ko-KR": "현재 시나리오",
         "$files": [
-            "src/pages/MemberCenter.tsx(18823-18831)",
-            "src/pages/MemberCenter.tsx(22418-22426)",
-            "src/pages/MemberCenter.tsx(22501-22509)"
+            "src/pages/MemberCenter.tsx(21176-21184)",
+            "src/pages/MemberCenter.tsx(24771-24779)",
+            "src/pages/MemberCenter.tsx(24854-24862)"
         ],
         "$id": 4838
     },
@@ -3441,8 +3458,8 @@
         "en-US": "free",
         "ko-KR": "무료",
         "$files": [
-            "src/pages/MemberCenter.tsx(20229-20235)",
-            "src/pages/MemberCenter.tsx(29317-29323)"
+            "src/pages/MemberCenter.tsx(22582-22588)",
+            "src/pages/MemberCenter.tsx(31670-31676)"
         ],
         "$id": 5223
     },
@@ -3451,7 +3468,7 @@
         "en-US": "/Month",
         "ko-KR": "/ 월",
         "$files": [
-            "src/pages/MemberCenter.tsx(20538-20544)"
+            "src/pages/MemberCenter.tsx(22891-22897)"
         ],
         "$id": 5920
     },
@@ -3460,7 +3477,7 @@
         "en-US": "activate",
         "ko-KR": "개통",
         "$files": [
-            "src/pages/MemberCenter.tsx(22616-22622)"
+            "src/pages/MemberCenter.tsx(24969-24975)"
         ],
         "$id": 5921
     },
@@ -3469,7 +3486,7 @@
         "en-US": "Equity Details",
         "ko-KR": "권익 명세",
         "$files": [
-            "src/pages/MemberCenter.tsx(23076-23084)"
+            "src/pages/MemberCenter.tsx(25429-25437)"
         ],
         "$id": 5922
     },
@@ -3478,7 +3495,7 @@
         "en-US": "No equity information available at the moment",
         "ko-KR": "권익 정보가 잠시 없다.",
         "$files": [
-            "src/pages/MemberCenter.tsx(23731-23741)"
+            "src/pages/MemberCenter.tsx(26084-26094)"
         ],
         "$id": 5923
     },
@@ -3487,7 +3504,7 @@
         "en-US": "Currently:{val}",
         "ko-KR": "현재: _ _ $_ $_ $_",
         "$files": [
-            "src/pages/MemberCenter.tsx(25635-25648)"
+            "src/pages/MemberCenter.tsx(27988-28001)"
         ],
         "$id": 5924
     },
@@ -3496,7 +3513,7 @@
         "en-US": "Used already{used}",
         "ko-KR": "_ _ $_ $_ $_ _",
         "$files": [
-            "src/pages/MemberCenter.tsx(26327-26340)"
+            "src/pages/MemberCenter.tsx(28680-28693)"
         ],
         "$id": 5925
     },
@@ -3505,7 +3522,7 @@
         "en-US": "Total{total}",
         "ko-KR": "합계 _ _ $_ $_ $_",
         "$files": [
-            "src/pages/MemberCenter.tsx(26578-26592)"
+            "src/pages/MemberCenter.tsx(28931-28945)"
         ],
         "$id": 5926
     },
@@ -3514,7 +3531,7 @@
         "en-US": "Usage rate {pct}%",
         "ko-KR": "사용률 _ _ $_ $_ $_ _%",
         "$files": [
-            "src/pages/MemberCenter.tsx(28020-28034)"
+            "src/pages/MemberCenter.tsx(30373-30387)"
         ],
         "$id": 5927
     },
@@ -3523,7 +3540,7 @@
         "en-US": "After exceeding:",
         "ko-KR": "초과 후:",
         "$files": [
-            "src/pages/MemberCenter.tsx(30468-30476)"
+            "src/pages/MemberCenter.tsx(32821-32829)"
         ],
         "$id": 5928
     },
@@ -3532,7 +3549,7 @@
         "en-US": "Example:",
         "ko-KR": "예:",
         "$files": [
-            "src/pages/MemberCenter.tsx(31243-31250)"
+            "src/pages/MemberCenter.tsx(33596-33603)"
         ],
         "$id": 5929
     },
@@ -3541,7 +3558,7 @@
         "en-US": "Frequently Asked Questions",
         "ko-KR": "자주 묻는 질문",
         "$files": [
-            "src/pages/MemberCenter.tsx(31887-31895)"
+            "src/pages/MemberCenter.tsx(34240-34248)"
         ],
         "$id": 5930
     },
@@ -3550,7 +3567,7 @@
         "en-US": "Order History",
         "ko-KR": "주문 내역",
         "$files": [
-            "src/pages/MemberCenter.tsx(34223-34231)"
+            "src/pages/MemberCenter.tsx(36576-36584)"
         ],
         "$id": 5931
     },
@@ -3559,7 +3576,7 @@
         "en-US": "No order records available at the moment",
         "ko-KR": "주문 기록 없음",
         "$files": [
-            "src/pages/MemberCenter.tsx(35000-35010)"
+            "src/pages/MemberCenter.tsx(37353-37363)"
         ],
         "$id": 5932
     },
@@ -3568,7 +3585,7 @@
         "en-US": "Refund review in progress",
         "ko-KR": "환불 검토 중",
         "$files": [
-            "src/pages/MemberCenter.tsx(35864-35873)"
+            "src/pages/MemberCenter.tsx(38217-38226)"
         ],
         "$id": 6847
     },
@@ -3577,7 +3594,7 @@
         "en-US": "Refund rejected",
         "ko-KR": "환불이 기각되었습니다.",
         "$files": [
-            "src/pages/MemberCenter.tsx(35938-35947)"
+            "src/pages/MemberCenter.tsx(38291-38300)"
         ],
         "$id": 7096
     },
@@ -3586,7 +3603,7 @@
         "en-US": "Reason for rejection:{note}",
         "ko-KR": "기각 이유: _ _ $_ $_ $_",
         "$files": [
-            "src/pages/MemberCenter.tsx(37806-37821)"
+            "src/pages/MemberCenter.tsx(40159-40174)"
         ],
         "$id": 7097
     },
@@ -3595,8 +3612,8 @@
         "en-US": "Request a refund",
         "ko-KR": "환불 신청",
         "$files": [
-            "src/pages/MemberCenter.tsx(39028-39036)",
-            "src/pages/MemberCenter.tsx(41076-41084)"
+            "src/pages/MemberCenter.tsx(41381-41389)",
+            "src/pages/MemberCenter.tsx(45564-45572)"
         ],
         "$id": 6848
     },
@@ -3605,7 +3622,7 @@
         "en-US": "Order {orderNo}, refund amount{amount}",
         "ko-KR": "주문 _ _ $_ $_ $_ _, 환불 금액 _ _ $_ $_",
         "$files": [
-            "src/pages/MemberCenter.tsx(41278-41308)"
+            "src/pages/MemberCenter.tsx(45766-45796)"
         ],
         "$id": 6849
     },
@@ -3614,7 +3631,7 @@
         "en-US": "Last refund request was rejected:{note}",
         "ko-KR": "마지막 환불 요청이 거부되었습니다: _ _ $_ $_",
         "$files": [
-            "src/pages/MemberCenter.tsx(41793-41813)"
+            "src/pages/MemberCenter.tsx(46281-46301)"
         ],
         "$id": 7098
     },
@@ -3623,7 +3640,7 @@
         "en-US": "Please fill in the reason for refund (required)",
         "ko-KR": "환불 사유 기재 (필수)",
         "$files": [
-            "src/pages/MemberCenter.tsx(41991-42006)"
+            "src/pages/MemberCenter.tsx(46479-46494)"
         ],
         "$id": 6850
     },
@@ -3632,7 +3649,7 @@
         "en-US": "After submission, it needs to be reviewed by the administrator, and the review results will be notified via email",
         "ko-KR": "제출 후 관리자의 검토가 필요하며 감사 결과는 이메일로 통지됩니다.",
         "$files": [
-            "src/pages/MemberCenter.tsx(42428-42453)"
+            "src/pages/MemberCenter.tsx(46916-46941)"
         ],
         "$id": 6851
     },
@@ -3641,7 +3658,7 @@
         "en-US": "Submit an application",
         "ko-KR": "신청서를 제출하다",
         "$files": [
-            "src/pages/MemberCenter.tsx(42906-42914)"
+            "src/pages/MemberCenter.tsx(47394-47402)"
         ],
         "$id": 6852
     },
@@ -3947,7 +3964,7 @@
         "en-US": "Phone number verification",
         "ko-KR": "휴대폰 번호 인증",
         "$files": [
-            "src/pages/PhoneVerification.tsx(1300-1309)"
+            "src/pages/PhoneVerification.tsx(1359-1368)"
         ],
         "$id": 1137
     },
@@ -3956,7 +3973,7 @@
         "en-US": "Please enter the verification code",
         "ko-KR": "인증번호를 입력하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(3163-3173)",
+            "src/pages/PhoneVerification.tsx(3222-3232)",
             "src/pages/Register/BasicInfoStep.tsx(7146-7156)",
             "src/pages/ResetPassword/resetPasswordSchema.ts(138-148)",
             "src/pages/EmailVerification/hooks/useEmailVerificationForm.ts(1247-1257)",
@@ -3971,7 +3988,7 @@
         "en-US": "Verification code should be 6 digits",
         "ko-KR": "인증번호는 6자리 숫자여야 합니다",
         "$files": [
-            "src/pages/PhoneVerification.tsx(3257-3270)",
+            "src/pages/PhoneVerification.tsx(3316-3329)",
             "src/pages/EmailVerification/hooks/useEmailVerificationForm.ts(1337-1350)"
         ],
         "$id": 1040
@@ -3981,11 +3998,11 @@
         "en-US": "Please enter your phone number",
         "ko-KR": "휴대폰 번호를 입력하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(3342-3352)",
-            "src/pages/PhoneVerification.tsx(8891-8901)",
+            "src/pages/PhoneVerification.tsx(3401-3411)",
+            "src/pages/PhoneVerification.tsx(8950-8960)",
             "src/pages/Profile/ProfilePhoneTab.tsx(6557-6567)",
             "src/pages/Register/BasicInfoStep.tsx(5703-5713)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(5377-5387)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(5600-5610)",
             "src/pages/Login/components/PhoneLoginForm.tsx(1810-1820)",
             "src/pages/Login/hooks/loginFormSchema.ts(585-595)",
             "src/pages/Register/hooks/useRegisterForm.ts(6254-6264)",
@@ -3999,8 +4016,8 @@
         "en-US": "Phone number missing. Please log in again",
         "ko-KR": "휴대폰 번호가 없습니다. 다시 로그인하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(3356-3371)",
-            "src/pages/PhoneVerification.tsx(4903-4918)"
+            "src/pages/PhoneVerification.tsx(3415-3430)",
+            "src/pages/PhoneVerification.tsx(4962-4977)"
         ],
         "$id": 1139
     },
@@ -4009,8 +4026,8 @@
         "en-US": "Please enter a valid phone number",
         "ko-KR": "올바른 휴대폰 번호를 입력하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(3489-3502)",
-            "src/pages/PhoneVerification.tsx(5019-5032)",
+            "src/pages/PhoneVerification.tsx(3548-3561)",
+            "src/pages/PhoneVerification.tsx(5078-5091)",
             "src/pages/Profile/ProfilePhoneTab.tsx(6668-6681)",
             "src/pages/UserManagement/index.tsx(12657-12670)",
             "src/pages/Login/hooks/loginFormSchema.ts(622-635)",
@@ -4029,7 +4046,7 @@
         "en-US": "Failed to bind phone number",
         "ko-KR": "휴대폰 번호 연결 실패",
         "$files": [
-            "src/pages/PhoneVerification.tsx(3856-3867)"
+            "src/pages/PhoneVerification.tsx(3915-3926)"
         ],
         "$id": 1141
     },
@@ -4038,7 +4055,7 @@
         "en-US": "Verification failed. Please check if the code is correct or expired",
         "ko-KR": "인증 실패. 인증번호가 올바른지 또는 만료되지 않았는지 확인하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(4695-4718)",
+            "src/pages/PhoneVerification.tsx(4754-4777)",
             "src/pages/EmailVerification/hooks/useEmailVerificationForm.ts(3125-3148)"
         ],
         "$id": 1043
@@ -4048,7 +4065,7 @@
         "en-US": "Please enter your phone number first",
         "ko-KR": "먼저 핸드폰 번호를 입력하세요.",
         "$files": [
-            "src/pages/PhoneVerification.tsx(4888-4899)"
+            "src/pages/PhoneVerification.tsx(4947-4958)"
         ],
         "$id": 4771
     },
@@ -4057,7 +4074,7 @@
         "en-US": "Send failed. Please try again later",
         "ko-KR": "전송 실패. 나중에 다시 시도하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(5640-5654)",
+            "src/pages/PhoneVerification.tsx(5699-5713)",
             "src/pages/EmailVerification/hooks/useResendEmail.ts(1723-1737)"
         ],
         "$id": 1046
@@ -4067,7 +4084,7 @@
         "en-US": "Mobile number verification successful!",
         "ko-KR": "핸드폰 번호 확인 성공!",
         "$files": [
-            "src/pages/PhoneVerification.tsx(6470-6482)"
+            "src/pages/PhoneVerification.tsx(6529-6541)"
         ],
         "$id": 4772
     },
@@ -4076,7 +4093,7 @@
         "en-US": "The account has been activated and will automatically redirect ..",
         "ko-KR": "계정이 이미 활성화되어 자동 이동합니다...",
         "$files": [
-            "src/pages/PhoneVerification.tsx(6562-6581)"
+            "src/pages/PhoneVerification.tsx(6621-6640)"
         ],
         "$id": 4773
     },
@@ -4085,7 +4102,7 @@
         "en-US": "Bind your phone number",
         "ko-KR": "휴대폰 번호 바인딩",
         "$files": [
-            "src/pages/PhoneVerification.tsx(7400-7411)"
+            "src/pages/PhoneVerification.tsx(7459-7470)"
         ],
         "$id": 4774
     },
@@ -4094,7 +4111,7 @@
         "en-US": "Verify your phone number",
         "ko-KR": "휴대폰 번호 확인",
         "$files": [
-            "src/pages/PhoneVerification.tsx(7415-7426)"
+            "src/pages/PhoneVerification.tsx(7474-7485)"
         ],
         "$id": 4775
     },
@@ -4103,7 +4120,7 @@
         "en-US": "Your account needs to be linked to a phone number in order to continue using it",
         "ko-KR": "귀하의 계정은 핸드폰 번호를 바인딩해야만 계속 사용할 수 있습니다",
         "$files": [
-            "src/pages/PhoneVerification.tsx(7749-7770)"
+            "src/pages/PhoneVerification.tsx(7808-7829)"
         ],
         "$id": 4776
     },
@@ -4112,9 +4129,9 @@
         "en-US": "We have sent to ",
         "ko-KR": "다음으로 전송했습니다 ",
         "$files": [
-            "src/pages/PhoneVerification.tsx(7886-7894)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(3083-3091)",
-            "src/pages/ForgotPassword/components/SuccessView.tsx(1838-1846)"
+            "src/pages/PhoneVerification.tsx(7945-7953)",
+            "src/pages/EmailVerification/components/VerificationForm.tsx(3243-3251)",
+            "src/pages/ForgotPassword/components/SuccessView.tsx(1954-1962)"
         ],
         "$id": 1054
     },
@@ -4123,9 +4140,9 @@
         "en-US": " a verification code",
         "ko-KR": "인증번호를 발송했습니다",
         "$files": [
-            "src/pages/PhoneVerification.tsx(7997-8007)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(3192-3202)",
-            "src/pages/ForgotPassword/components/SuccessView.tsx(1946-1956)"
+            "src/pages/PhoneVerification.tsx(8056-8066)",
+            "src/pages/EmailVerification/components/VerificationForm.tsx(3354-3364)",
+            "src/pages/ForgotPassword/components/SuccessView.tsx(2064-2074)"
         ],
         "$id": 1055
     },
@@ -4134,8 +4151,8 @@
         "en-US": "Please enter the 6-digit verification code you received",
         "ko-KR": "받은 6자리 인증번호를 입력하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(8115-8133)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(3306-3324)"
+            "src/pages/PhoneVerification.tsx(8174-8192)",
+            "src/pages/EmailVerification/components/VerificationForm.tsx(3472-3490)"
         ],
         "$id": 1056
     },
@@ -4144,13 +4161,13 @@
         "en-US": "Phone Number",
         "ko-KR": "휴대폰 번호",
         "$files": [
-            "src/pages/PhoneVerification.tsx(8479-8486)",
+            "src/pages/PhoneVerification.tsx(8538-8545)",
             "src/pages/Profile/ProfileInfoTab.tsx(6522-6529)",
             "src/pages/Profile/ProfilePhoneTab.tsx(6108-6115)",
             "src/pages/Register/BasicInfoStep.tsx(5065-5072)",
             "src/pages/UserManagement/UserTable.tsx(4575-4582)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2661-2668)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(3267-3274)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2798-2805)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(3426-3433)",
             "src/pages/Login/components/PhoneLoginForm.tsx(1341-1348)",
             "src/pages/Register/hooks/useRegisterForm.ts(8484-8491)",
             "src/pages/UserManagement/UserModals/CreateUserModal.tsx(5230-5237)",
@@ -4163,7 +4180,7 @@
         "en-US": "The verification code has been resent, please check",
         "ko-KR": "인증 코드가 다시 전송되었습니다. 확인하십시오.",
         "$files": [
-            "src/pages/PhoneVerification.tsx(9719-9735)"
+            "src/pages/PhoneVerification.tsx(9778-9794)"
         ],
         "$id": 4777
     },
@@ -4172,14 +4189,14 @@
         "en-US": "Verification Code",
         "ko-KR": "인증번호",
         "$files": [
-            "src/pages/PhoneVerification.tsx(9935-9942)",
-            "src/pages/ResetPassword.tsx(7105-7112)",
+            "src/pages/PhoneVerification.tsx(9994-10001)",
+            "src/pages/ResetPassword.tsx(7164-7171)",
             "src/pages/Profile/ProfileEmailTab.tsx(7496-7503)",
             "src/pages/Profile/ProfileEmailTab.tsx(10685-10692)",
             "src/pages/Profile/ProfilePhoneTab.tsx(3556-3563)",
             "src/pages/Profile/ProfilePhoneTab.tsx(7520-7527)",
             "src/pages/Register/BasicInfoStep.tsx(6394-6401)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(4857-4864)",
+            "src/pages/EmailVerification/components/VerificationForm.tsx(5071-5078)",
             "src/pages/Login/components/PhoneLoginForm.tsx(2250-2257)",
             "src/pages/Register/hooks/useRegisterForm.ts(8510-8517)"
         ],
@@ -4190,8 +4207,8 @@
         "en-US": "Please enter the 6-digit verification code",
         "ko-KR": "6자리 인증번호를 입력하세요",
         "$files": [
-            "src/pages/PhoneVerification.tsx(10343-10357)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(5128-5142)",
+            "src/pages/PhoneVerification.tsx(10402-10416)",
+            "src/pages/EmailVerification/components/VerificationForm.tsx(5350-5364)",
             "src/pages/Login/hooks/loginFormSchema.ts(714-728)",
             "src/pages/Profile/hooks/usePhoneProfile.ts(6927-6941)"
         ],
@@ -4202,7 +4219,7 @@
         "en-US": "The verification code is a 6-digit number, please check your mobile SMS",
         "ko-KR": "인증번호는 6자리 숫자입니다. 핸드폰 문자 확인하세요.",
         "$files": [
-            "src/pages/PhoneVerification.tsx(10515-10535)"
+            "src/pages/PhoneVerification.tsx(10574-10594)"
         ],
         "$id": 4778
     },
@@ -4211,12 +4228,12 @@
         "en-US": "Verifying...",
         "ko-KR": "인증 중...",
         "$files": [
-            "src/pages/PhoneVerification.tsx(10896-10906)",
+            "src/pages/PhoneVerification.tsx(10955-10965)",
             "src/pages/AdminLogin/index.tsx(11385-11395)",
             "src/pages/Profile/ProfileEmailTab.tsx(5390-5400)",
             "src/pages/Profile/ProfileEmailTab.tsx(12163-12173)",
             "src/pages/Profile/ProfilePhoneTab.tsx(4950-4960)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(5666-5676)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(5907-5917)"
         ],
         "$id": 1062
     },
@@ -4225,9 +4242,9 @@
         "en-US": "Verify",
         "ko-KR": "인증",
         "$files": [
-            "src/pages/PhoneVerification.tsx(10977-10983)",
+            "src/pages/PhoneVerification.tsx(11036-11042)",
             "src/pages/Profile/ProfileEmailTab.tsx(5404-5410)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(5744-5750)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(5988-5994)"
         ],
         "$id": 1063
     },
@@ -4236,7 +4253,7 @@
         "en-US": "Did you not receive the verification code?",
         "ko-KR": "인증번호를 받지 못했습니까?",
         "$files": [
-            "src/pages/PhoneVerification.tsx(11213-11225)"
+            "src/pages/PhoneVerification.tsx(11272-11284)"
         ],
         "$id": 4779
     },
@@ -4245,7 +4262,7 @@
         "en-US": "Check if the phone number is correct",
         "ko-KR": "핸드폰 번호가 정확한지 확인하다",
         "$files": [
-            "src/pages/PhoneVerification.tsx(11307-11320)"
+            "src/pages/PhoneVerification.tsx(11366-11379)"
         ],
         "$id": 4780
     },
@@ -4254,7 +4271,7 @@
         "en-US": "Check if the SMS has been intercepted",
         "ko-KR": "문자 메시지 차단 여부 확인",
         "$files": [
-            "src/pages/PhoneVerification.tsx(11356-11369)"
+            "src/pages/PhoneVerification.tsx(11415-11428)"
         ],
         "$id": 4781
     },
@@ -4263,7 +4280,7 @@
         "en-US": "The verification code is valid within 15 minutes",
         "ko-KR": "인증 코드 15분 이내 유효",
         "$files": [
-            "src/pages/PhoneVerification.tsx(11405-11419)"
+            "src/pages/PhoneVerification.tsx(11464-11478)"
         ],
         "$id": 4782
     },
@@ -4272,9 +4289,9 @@
         "en-US": "Send verification code",
         "ko-KR": "인증번호 발송",
         "$files": [
-            "src/pages/PhoneVerification.tsx(12325-12334)",
+            "src/pages/PhoneVerification.tsx(12384-12393)",
             "src/pages/Profile/ProfileEmailTab.tsx(10167-10176)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(5824-5833)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6065-6074)"
         ],
         "$id": 2796
     },
@@ -4283,7 +4300,7 @@
         "en-US": "Resend verification code",
         "ko-KR": "인증 코드 다시 보내기",
         "$files": [
-            "src/pages/PhoneVerification.tsx(12361-12372)"
+            "src/pages/PhoneVerification.tsx(12420-12431)"
         ],
         "$id": 4783
     },
@@ -4292,15 +4309,15 @@
         "en-US": "Back to login",
         "ko-KR": "로그인으로 돌아가기",
         "$files": [
-            "src/pages/PhoneVerification.tsx(12673-12681)",
-            "src/pages/ResetPassword.tsx(10293-10301)",
+            "src/pages/PhoneVerification.tsx(12732-12740)",
+            "src/pages/ResetPassword.tsx(10352-10360)",
             "src/pages/Legal/LegalPage.tsx(1094-1102)",
             "src/pages/Register/RegisterClosed.tsx(812-820)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(7243-7251)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6184-6192)",
-            "src/pages/ForgotPassword/components/NoChannelView.tsx(2862-2870)",
-            "src/pages/ForgotPassword/components/SuccessView.tsx(2548-2556)",
-            "src/pages/ForgotPassword/components/SupportView.tsx(2815-2823)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(7534-7542)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6439-6447)",
+            "src/pages/ForgotPassword/components/NoChannelView.tsx(3006-3014)",
+            "src/pages/ForgotPassword/components/SuccessView.tsx(2684-2692)",
+            "src/pages/ForgotPassword/components/SupportView.tsx(2963-2971)"
         ],
         "$id": 1070
     },
@@ -4309,13 +4326,13 @@
         "en-US": "High-performance CAD online preview",
         "ko-KR": "고성능 CAD 온라인 미리보기",
         "$files": [
-            "src/pages/PhoneVerification.tsx(12898-12914)",
-            "src/pages/ResetPassword.tsx(10511-10527)",
-            "src/pages/Login/index.tsx(14373-14389)",
+            "src/pages/PhoneVerification.tsx(12957-12973)",
+            "src/pages/ResetPassword.tsx(10570-10586)",
+            "src/pages/Login/index.tsx(14394-14410)",
             "src/pages/Register/RegisterFooter.tsx(729-745)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(7437-7453)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6359-6375)",
-            "src/pages/ForgotPassword/components/SuccessView.tsx(2749-2765)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(7735-7751)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6621-6637)",
+            "src/pages/ForgotPassword/components/SuccessView.tsx(2893-2909)"
         ],
         "$id": 1071
     },
@@ -4324,13 +4341,13 @@
         "en-US": "Multi-user real-time collaborative editing",
         "ko-KR": "다중 사용자 실시간 협업 편집",
         "$files": [
-            "src/pages/PhoneVerification.tsx(13077-13090)",
-            "src/pages/ResetPassword.tsx(10690-10703)",
-            "src/pages/Login/index.tsx(14593-14606)",
+            "src/pages/PhoneVerification.tsx(13136-13149)",
+            "src/pages/ResetPassword.tsx(10749-10762)",
+            "src/pages/Login/index.tsx(14614-14627)",
             "src/pages/Register/RegisterFooter.tsx(878-891)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(7610-7623)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6520-6533)",
-            "src/pages/ForgotPassword/components/SuccessView.tsx(2910-2923)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(7914-7927)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6788-6801)",
+            "src/pages/ForgotPassword/components/SuccessView.tsx(3060-3073)"
         ],
         "$id": 1072
     },
@@ -4339,13 +4356,13 @@
         "en-US": "Enterprise-grade data security",
         "ko-KR": "엔터프라이즈급 데이터 보안",
         "$files": [
-            "src/pages/PhoneVerification.tsx(13255-13268)",
-            "src/pages/ResetPassword.tsx(10868-10881)",
-            "src/pages/Login/index.tsx(14812-14825)",
+            "src/pages/PhoneVerification.tsx(13314-13327)",
+            "src/pages/ResetPassword.tsx(10927-10940)",
+            "src/pages/Login/index.tsx(14833-14846)",
             "src/pages/Register/RegisterFooter.tsx(1026-1039)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(7782-7795)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6680-6693)",
-            "src/pages/ForgotPassword/components/SuccessView.tsx(3070-3083)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(8092-8105)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(6954-6967)",
+            "src/pages/ForgotPassword/components/SuccessView.tsx(3226-3239)"
         ],
         "$id": 1073
     },
@@ -4354,8 +4371,8 @@
         "en-US": "Reset password",
         "ko-KR": "비밀번호 재설정",
         "$files": [
-            "src/pages/ResetPassword.tsx(1717-1725)",
-            "src/pages/ResetPassword.tsx(9973-9981)"
+            "src/pages/ResetPassword.tsx(1776-1784)",
+            "src/pages/ResetPassword.tsx(10032-10040)"
         ],
         "$id": 1200
     },
@@ -4364,7 +4381,7 @@
         "en-US": "Password reset successful. Please log in with your new password",
         "ko-KR": "비밀번호 재설정 성공. 새 비밀번호로 로그인하세요",
         "$files": [
-            "src/pages/ResetPassword.tsx(3107-3126)"
+            "src/pages/ResetPassword.tsx(3166-3185)"
         ],
         "$id": 1201
     },
@@ -4373,7 +4390,7 @@
         "en-US": "Password reset successful!",
         "ko-KR": "비밀번호 재설정 성공!",
         "$files": [
-            "src/pages/ResetPassword.tsx(3880-3891)"
+            "src/pages/ResetPassword.tsx(3939-3950)"
         ],
         "$id": 4788
     },
@@ -4382,7 +4399,7 @@
         "en-US": "You will soon be automatically redirected to the login page ..",
         "ko-KR": "곧 자동으로 로그인 페이지로 이동합니다...",
         "$files": [
-            "src/pages/ResetPassword.tsx(3971-3988)"
+            "src/pages/ResetPassword.tsx(4030-4047)"
         ],
         "$id": 4789
     },
@@ -4391,7 +4408,7 @@
         "en-US": "Reset your account password",
         "ko-KR": "계정 비밀번호 재설정",
         "$files": [
-            "src/pages/ResetPassword.tsx(4780-4792)"
+            "src/pages/ResetPassword.tsx(4839-4851)"
         ],
         "$id": 4790
     },
@@ -4400,7 +4417,7 @@
         "en-US": "Set a new password",
         "ko-KR": "새 암호 설정",
         "$files": [
-            "src/pages/ResetPassword.tsx(4937-4946)",
+            "src/pages/ResetPassword.tsx(4996-5005)",
             "src/pages/AdminPasswordChange/index.tsx(12199-12208)"
         ],
         "$id": 4791
@@ -4410,7 +4427,7 @@
         "en-US": "Please enter the verification code and new password",
         "ko-KR": "인증 코드와 새 암호를 입력하십시오.",
         "$files": [
-            "src/pages/ResetPassword.tsx(5003-5017)"
+            "src/pages/ResetPassword.tsx(5062-5076)"
         ],
         "$id": 4792
     },
@@ -4419,13 +4436,13 @@
         "en-US": "Email address",
         "ko-KR": "이메일 주소",
         "$files": [
-            "src/pages/ResetPassword.tsx(5614-5622)",
+            "src/pages/ResetPassword.tsx(5673-5681)",
             "src/pages/Profile/ProfileEmailTab.tsx(6224-6232)",
             "src/pages/Profile/ProfileEmailTab.tsx(9370-9378)",
             "src/pages/Profile/ProfileInfoTab.tsx(5871-5879)",
             "src/pages/Register/BasicInfoStep.tsx(3866-3874)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(3651-3659)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(4362-4370)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(3828-3836)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(4558-4566)"
         ],
         "$id": 1057
     },
@@ -4434,12 +4451,12 @@
         "en-US": "Please enter email address",
         "ko-KR": "이메일 주소를 입력하세요",
         "$files": [
-            "src/pages/ResetPassword.tsx(5992-6003)",
+            "src/pages/ResetPassword.tsx(6051-6062)",
             "src/pages/Profile/ProfileEmailTab.tsx(6675-6686)",
             "src/pages/Register/BasicInfoStep.tsx(4416-4427)",
-            "src/pages/EmailVerification/components/VerificationForm.tsx(3885-3896)",
+            "src/pages/EmailVerification/components/VerificationForm.tsx(4069-4080)",
             "src/pages/EmailVerification/hooks/useEmailVerificationForm.ts(1418-1429)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(4713-4724)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(4918-4929)",
             "src/pages/Profile/hooks/useEmailProfile.ts(2061-2072)",
             "src/pages/UserManagement/UserModals/CreateUserModal.tsx(3506-3517)"
         ],
@@ -4450,8 +4467,8 @@
         "en-US": "mobile phone number",
         "ko-KR": "휴대폰 번호",
         "$files": [
-            "src/pages/ResetPassword.tsx(6365-6373)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(5029-5037)"
+            "src/pages/ResetPassword.tsx(6424-6432)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(5243-5251)"
         ],
         "$id": 2794
     },
@@ -4460,7 +4477,7 @@
         "en-US": "Please enter phone number",
         "ko-KR": "휴대폰 번호를 입력하세요",
         "$files": [
-            "src/pages/ResetPassword.tsx(6740-6751)"
+            "src/pages/ResetPassword.tsx(6799-6810)"
         ],
         "$id": 1202
     },
@@ -4469,7 +4486,7 @@
         "en-US": "Please enter 6-digit verification code",
         "ko-KR": "6자리 인증번호를 입력하세요",
         "$files": [
-            "src/pages/ResetPassword.tsx(7459-7471)",
+            "src/pages/ResetPassword.tsx(7518-7530)",
             "src/pages/Profile/ProfileEmailTab.tsx(11155-11167)"
         ],
         "$id": 1203
@@ -4479,7 +4496,7 @@
         "en-US": "new password",
         "ko-KR": "새 암호",
         "$files": [
-            "src/pages/ResetPassword.tsx(7775-7782)",
+            "src/pages/ResetPassword.tsx(7834-7841)",
             "src/pages/AdminPasswordChange/index.tsx(7977-7984)",
             "src/pages/Profile/ProfilePasswordTab.tsx(3121-3128)",
             "src/pages/UserManagement/UserModals/EditUserModal.tsx(5234-5241)"
@@ -4491,7 +4508,7 @@
         "en-US": "New password (at least 8 characters)",
         "ko-KR": "새 비밀번호 (최소 8자)",
         "$files": [
-            "src/pages/ResetPassword.tsx(8176-8191)"
+            "src/pages/ResetPassword.tsx(8235-8250)"
         ],
         "$id": 1204
     },
@@ -4500,7 +4517,7 @@
         "en-US": "Confirm new password",
         "ko-KR": "새 암호 확인",
         "$files": [
-            "src/pages/ResetPassword.tsx(8820-8829)",
+            "src/pages/ResetPassword.tsx(8879-8888)",
             "src/pages/AdminPasswordChange/index.tsx(9518-9527)",
             "src/pages/Profile/ProfilePasswordTab.tsx(4627-4636)"
         ],
@@ -4511,7 +4528,7 @@
         "en-US": "Please enter the new password again",
         "ko-KR": "새 비밀번호를 다시 입력하세요",
         "$files": [
-            "src/pages/ResetPassword.tsx(9234-9246)",
+            "src/pages/ResetPassword.tsx(9293-9305)",
             "src/pages/AdminPasswordChange/index.tsx(10107-10119)"
         ],
         "$id": 1205
@@ -4521,7 +4538,7 @@
         "en-US": "Failed to obtain conversion task",
         "ko-KR": "변환 작업 가져오기 실패",
         "$files": [
-            "src/stores/conversionQueueStore.ts(9438-9450)"
+            "src/stores/conversionQueueStore.ts(10587-10599)"
         ],
         "$id": 7770
     },
@@ -4530,7 +4547,7 @@
         "en-US": "Failed to retrieve conversion history",
         "ko-KR": "변환 기록 가져오기 실패",
         "$files": [
-            "src/stores/conversionQueueStore.ts(11224-11236)"
+            "src/stores/conversionQueueStore.ts(12373-12385)"
         ],
         "$id": 7905
     },
@@ -4539,7 +4556,7 @@
         "en-US": "Submission conversion failed",
         "ko-KR": "전송 변환 실패",
         "$files": [
-            "src/stores/conversionQueueStore.ts(11680-11690)"
+            "src/stores/conversionQueueStore.ts(12829-12839)"
         ],
         "$id": 7771
     },
@@ -4548,10 +4565,22 @@
         "en-US": "Failed to cancel",
         "ko-KR": "취소 실패",
         "$files": [
-            "src/stores/conversionQueueStore.ts(14153-14161)",
+            "src/stores/conversionQueueStore.ts(15302-15310)",
             "src/hooks/file-system/useBatchDownload.ts(16309-16317)"
         ],
         "$id": 5882
+    },
+    "重试失败": {
+        "zh-TW": "重試失敗",
+        "en-US": "Retry failed",
+        "ko-KR": "재시도 실패",
+        "$files": [
+            "src/stores/conversionQueueStore.ts(16434-16442)",
+            "src/stores/conversionQueueStore.ts(16719-16727)",
+            "src/hooks/file-system/useBatchDownload.ts(17072-17080)",
+            "src/hooks/file-system/useBatchDownload.ts(18540-18548)"
+        ],
+        "$id": 8057
     },
     "无法撤销：当前项目与操作时的项目不一致": {
         "zh-TW": "無法撤銷：當前項目與操作時的項目不一致",
@@ -4561,69 +4590,6 @@
             "src/stores/fileSystemUndoRedoStore.ts(851-874)"
         ],
         "$id": 1273
-    },
-    "需要登录": {
-        "zh-TW": "需要登入",
-        "en-US": "Login required",
-        "ko-KR": "로그인 필요",
-        "$files": [
-            "src/components/auth/LoginPrompt.tsx(1259-1267)",
-            "src/utils/quotaUpgradeGuide.ts(1880-1888)",
-            "src/utils/vipFeatureGuide.ts(1684-1692)"
-        ],
-        "$id": 1311
-    },
-    "稍后再说": {
-        "zh-TW": "稍後再說",
-        "en-US": "Later",
-        "ko-KR": "나중에",
-        "$files": [
-            "src/components/auth/LoginPrompt.tsx(1370-1378)",
-            "src/components/tour/TourStartModal.tsx(3643-3651)"
-        ],
-        "$id": 1312
-    },
-    "立即登录": {
-        "zh-TW": "立即登入",
-        "en-US": "Login Now",
-        "ko-KR": "지금 로그인",
-        "$files": [
-            "src/components/auth/LoginPrompt.tsx(1522-1530)",
-            "src/components/sidebar/SidebarContainer.tsx(14298-14306)",
-            "src/components/sidebar/SidebarContainer.tsx(15928-15936)",
-            "src/components/sidebar/SidebarContainer.tsx(17515-17523)",
-            "src/pages/Register/RegisterFooter.tsx(551-559)",
-            "src/pages/Login/components/AccountLoginForm.tsx(4084-4092)",
-            "src/pages/Login/components/PhoneLoginForm.tsx(3783-3791)"
-        ],
-        "$id": 1313
-    },
-    "登录以继续操作": {
-        "zh-TW": "登入以繼續操作",
-        "en-US": "Log in to continue",
-        "ko-KR": "계속하려면 로그인하세요",
-        "$files": [
-            "src/components/auth/LoginPrompt.tsx(2018-2029)"
-        ],
-        "$id": 1314
-    },
-    "「{action}」功能需要登录后才能使用": {
-        "zh-TW": "「{action}」功能需要登入後才能使用",
-        "en-US": "The \"{action}\" feature requires login",
-        "ko-KR": "\"{action}\" 기능은 로그인이 필요합니다",
-        "$files": [
-            "src/components/auth/LoginPrompt.tsx(2139-2164)"
-        ],
-        "$id": 1315
-    },
-    "登录后可使用完整功能，包括保存文件、管理项目等": {
-        "zh-TW": "登入後可使用完整功能,包括保存檔案、管理項目等",
-        "en-US": "Full features including file saving and project management are available after login",
-        "ko-KR": "로그인 후 파일 저장, 프로젝트 관리 등 모든 기능을 사용할 수 있습니다",
-        "$files": [
-            "src/components/auth/LoginPrompt.tsx(2293-2320)"
-        ],
-        "$id": 1316
     },
     "{user} 授予 {target} 权限 {permission}": {
         "zh-TW": "{user}授予{target}許可權{permission}",
@@ -5017,7 +4983,7 @@
         "en-US": "Just now",
         "ko-KR": "방금",
         "$files": [
-            "src/utils/dateUtils.ts(2794-2800)",
+            "src/utils/dateUtils.ts(2965-2971)",
             "src/utils/fileUtils.ts(1997-2003)",
             "src/components/modals/VersionHistoryModal.tsx(1445-1451)"
         ],
@@ -5028,7 +4994,7 @@
         "en-US": "minutes ago",
         "ko-KR": "분 전",
         "$files": [
-            "src/utils/dateUtils.ts(2855-2862)",
+            "src/utils/dateUtils.ts(3026-3033)",
             "src/utils/fileUtils.ts(2059-2066)"
         ],
         "$id": 1277
@@ -5038,7 +5004,7 @@
         "en-US": "hours ago",
         "ko-KR": "시간 전",
         "$files": [
-            "src/utils/dateUtils.ts(2913-2920)",
+            "src/utils/dateUtils.ts(3084-3091)",
             "src/utils/fileUtils.ts(2126-2133)"
         ],
         "$id": 1278
@@ -5048,7 +5014,7 @@
         "en-US": "days ago",
         "ko-KR": "일 전",
         "$files": [
-            "src/utils/dateUtils.ts(2969-2975)",
+            "src/utils/dateUtils.ts(3140-3146)",
             "src/utils/fileUtils.ts(2240-2246)"
         ],
         "$id": 1280
@@ -5194,8 +5160,8 @@
         "$files": [
             "src/utils/mxcadUploadUtils.ts(6573-6584)",
             "src/utils/mxcadUploadUtils.ts(6726-6737)",
-            "src/utils/mxcadUploadUtils.ts(8586-8597)",
-            "src/utils/mxcadUploadUtils.ts(9821-9832)"
+            "src/utils/mxcadUploadUtils.ts(8677-8688)",
+            "src/utils/mxcadUploadUtils.ts(10476-10487)"
         ],
         "$id": 5822
     },
@@ -5204,7 +5170,7 @@
         "en-US": "Failed to check chunk",
         "ko-KR": "청크 확인 실패",
         "$files": [
-            "src/utils/mxcadUploadUtils.ts(7818-7828)"
+            "src/utils/mxcadUploadUtils.ts(8065-8075)"
         ],
         "$id": 5775
     },
@@ -5310,6 +5276,17 @@
         ],
         "$id": 5763
     },
+    "需要登录": {
+        "zh-TW": "需要登入",
+        "en-US": "Login required",
+        "ko-KR": "로그인 필요",
+        "$files": [
+            "src/utils/quotaUpgradeGuide.ts(1880-1888)",
+            "src/utils/vipFeatureGuide.ts(1684-1692)",
+            "src/components/auth/LoginPrompt.tsx(1259-1267)"
+        ],
+        "$id": 1311
+    },
     "此功能需要VIP会员，是否前往登录并购买？": {
         "zh-TW": "此功能需要VIP會員,是否前往登入並購買？",
         "en-US": "This feature requires VIP membership. Would you like to log in and purchase it?",
@@ -5327,7 +5304,7 @@
         "$files": [
             "src/utils/quotaUpgradeGuide.ts(1955-1963)",
             "src/utils/vipFeatureGuide.ts(1759-1767)",
-            "src/pages/SessionTransfer/index.tsx(5222-5230)"
+            "src/pages/SessionTransfer/index.tsx(5426-5434)"
         ],
         "$id": 7191
     },
@@ -5423,6 +5400,58 @@
             "src/utils/withTimeout.ts(836-852)"
         ],
         "$id": 1000050
+    },
+    "稍后再说": {
+        "zh-TW": "稍後再說",
+        "en-US": "Later",
+        "ko-KR": "나중에",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(1370-1378)",
+            "src/components/tour/TourStartModal.tsx(3643-3651)"
+        ],
+        "$id": 1312
+    },
+    "立即登录": {
+        "zh-TW": "立即登入",
+        "en-US": "Login Now",
+        "ko-KR": "지금 로그인",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(1522-1530)",
+            "src/components/sidebar/SidebarContainer.tsx(14308-14316)",
+            "src/components/sidebar/SidebarContainer.tsx(16111-16119)",
+            "src/components/sidebar/SidebarContainer.tsx(18154-18162)",
+            "src/pages/Register/RegisterFooter.tsx(551-559)",
+            "src/pages/Login/components/AccountLoginForm.tsx(4084-4092)",
+            "src/pages/Login/components/PhoneLoginForm.tsx(3783-3791)"
+        ],
+        "$id": 1313
+    },
+    "登录以继续操作": {
+        "zh-TW": "登入以繼續操作",
+        "en-US": "Log in to continue",
+        "ko-KR": "계속하려면 로그인하세요",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(2018-2029)"
+        ],
+        "$id": 1314
+    },
+    "「{action}」功能需要登录后才能使用": {
+        "zh-TW": "「{action}」功能需要登入後才能使用",
+        "en-US": "The \"{action}\" feature requires login",
+        "ko-KR": "\"{action}\" 기능은 로그인이 필요합니다",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(2139-2164)"
+        ],
+        "$id": 1315
+    },
+    "登录后可使用完整功能，包括保存文件、管理项目等": {
+        "zh-TW": "登入後可使用完整功能,包括保存檔案、管理項目等",
+        "en-US": "Full features including file saving and project management are available after login",
+        "ko-KR": "로그인 후 파일 저장, 프로젝트 관리 등 모든 기능을 사용할 수 있습니다",
+        "$files": [
+            "src/components/auth/LoginPrompt.tsx(2293-2320)"
+        ],
+        "$id": 1316
     },
     "九折": {
         "zh-TW": "九折",
@@ -5576,15 +5605,6 @@
             "src/components/billing/PlanSelectOverlay.tsx(8863-8873)"
         ],
         "$id": 5210
-    },
-    "创建订单失败，请重试": {
-        "zh-TW": "創建訂單失敗,請重試",
-        "en-US": "Failed to create order, please try again",
-        "ko-KR": "주문 생성에 실패했습니다. 다시 시도하십시오.",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(9433-9447)"
-        ],
-        "$id": 5949
     },
     "个月": {
         "zh-TW": "個月",
@@ -5954,7 +5974,6 @@
         "ko-KR": "복사됨",
         "$files": [
             "src/components/common/ShareLinkBar.tsx(1854-1861)",
-            "src/components/modals/ShareDialog.tsx(26442-26449)",
             "src/pages/FileSystemManager/hooks/useFileSystemUrlEffects.ts(6332-6339)",
             "src/pages/LibraryManager/hooks/useLibraryClipboardActions.ts(3991-3998)"
         ],
@@ -5968,7 +5987,6 @@
             "src/components/common/ShareLinkBar.tsx(1865-1871)",
             "src/components/file-item/fileActionConfig.tsx(12316-12322)",
             "src/components/modals/SelectFolderModal.tsx(14632-14638)",
-            "src/components/modals/ShareDialog.tsx(26453-26459)",
             "src/hooks/file-browser/useFileBrowserActions.ts(12402-12408)",
             "src/hooks/file-system/useMoveCopyOrchestrator.ts(6687-6693)",
             "src/pages/AuditLogPage/constants.ts(779-785)",
@@ -6013,7 +6031,7 @@
         "en-US": "Drag to adjust position",
         "ko-KR": "드래그하여 위치 조정",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(17579-17589)"
+            "src/components/conversion-panel/ConversionPanel.tsx(18155-18165)"
         ],
         "$id": 7775
     },
@@ -6022,8 +6040,8 @@
         "en-US": "Hide",
         "ko-KR": "숨기다",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(18217-18223)",
-            "src/components/conversion-panel/ConversionPanel.tsx(18251-18257)"
+            "src/components/conversion-panel/ConversionPanel.tsx(18793-18799)",
+            "src/components/conversion-panel/ConversionPanel.tsx(18827-18833)"
         ],
         "$id": 8029
     },
@@ -6032,7 +6050,7 @@
         "en-US": "Unlimited number of conversions",
         "ko-KR": "변환 횟수 제한 없음",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(18519-18529)"
+            "src/components/conversion-panel/ConversionPanel.tsx(19095-19105)"
         ],
         "$id": 8030
     },
@@ -6041,7 +6059,7 @@
         "en-US": "This {h} hour has {n}/{m} times left",
         "ko-KR": "이 _ _ $_ $_ $_ _ _ _ _ _ _ _ _ _ $_ _ _ _ _ _ _ _ _ _ 시간 동안 _ _ $_ _ _ $_ 회 남았습니다.",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(18548-18571)"
+            "src/components/conversion-panel/ConversionPanel.tsx(19124-19147)"
         ],
         "$id": 8032
     },
@@ -6050,7 +6068,7 @@
         "en-US": "Transformation",
         "ko-KR": "전환",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(19374-19380)"
+            "src/components/conversion-panel/ConversionPanel.tsx(19950-19956)"
         ],
         "$id": 7992
     },
@@ -6059,7 +6077,7 @@
         "en-US": "Download",
         "ko-KR": "다운로드",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(19932-19938)",
+            "src/components/conversion-panel/ConversionPanel.tsx(20508-20514)",
             "src/components/conversion-panel/DownloadTab.tsx(3610-3616)",
             "src/components/conversion-panel/DownloadTab.tsx(4453-4459)",
             "src/components/conversion-panel/DownloadTab.tsx(4562-4568)",
@@ -6078,7 +6096,7 @@
         "en-US": "Upload",
         "ko-KR": "업로드",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(20496-20502)",
+            "src/components/conversion-panel/ConversionPanel.tsx(21072-21078)",
             "src/components/modals/ExternalReferencePanel.tsx(7445-7451)",
             "src/pages/FontLibrary/components/UploadFontModal.tsx(9173-9179)"
         ],
@@ -6089,7 +6107,7 @@
         "en-US": "Search for file name ..",
         "ko-KR": "파일 이름을 검색합니다...",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(21084-21096)",
+            "src/components/conversion-panel/ConversionPanel.tsx(21660-21672)",
             "src/pages/ShareManagePage/components/ShareToolbar.tsx(908-920)"
         ],
         "$id": 4800
@@ -6099,8 +6117,8 @@
         "en-US": "Drag to adjust width",
         "ko-KR": "드래그하여 너비 조정",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(22584-22594)",
-            "src/components/conversion-panel/ConversionPanel.tsx(22741-22751)"
+            "src/components/conversion-panel/ConversionPanel.tsx(23160-23170)",
+            "src/components/conversion-panel/ConversionPanel.tsx(23317-23327)"
         ],
         "$id": 7910
     },
@@ -6109,8 +6127,8 @@
         "en-US": "Drag to adjust height",
         "ko-KR": "드래그하여 높이 조정",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(22900-22910)",
-            "src/components/conversion-panel/ConversionPanel.tsx(23056-23066)"
+            "src/components/conversion-panel/ConversionPanel.tsx(23476-23486)",
+            "src/components/conversion-panel/ConversionPanel.tsx(23632-23642)"
         ],
         "$id": 7911
     },
@@ -6119,10 +6137,10 @@
         "en-US": "Drag to resize",
         "ko-KR": "드래그하여 크기 조정",
         "$files": [
-            "src/components/conversion-panel/ConversionPanel.tsx(23219-23229)",
-            "src/components/conversion-panel/ConversionPanel.tsx(23382-23392)",
-            "src/components/conversion-panel/ConversionPanel.tsx(23545-23555)",
-            "src/components/conversion-panel/ConversionPanel.tsx(23708-23718)"
+            "src/components/conversion-panel/ConversionPanel.tsx(23795-23805)",
+            "src/components/conversion-panel/ConversionPanel.tsx(23958-23968)",
+            "src/components/conversion-panel/ConversionPanel.tsx(24121-24131)",
+            "src/components/conversion-panel/ConversionPanel.tsx(24284-24294)"
         ],
         "$id": 7912
     },
@@ -6131,7 +6149,7 @@
         "en-US": "In line",
         "ko-KR": "대기 중",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(510-517)",
+            "src/components/conversion-panel/ConversionTab.tsx(574-581)",
             "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(11030-11037)",
             "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(15786-15793)"
         ],
@@ -6142,7 +6160,7 @@
         "en-US": "Converting",
         "ko-KR": "변환 중",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(633-640)",
+            "src/components/conversion-panel/ConversionTab.tsx(697-704)",
             "src/components/conversion-panel/UploadTab.tsx(691-698)",
             "src/components/conversion-panel/UploadTab.tsx(790-797)",
             "src/components/modals/BatchDownloadDialog.tsx(10318-10325)"
@@ -6154,7 +6172,7 @@
         "en-US": "No matching results",
         "ko-KR": "일치하는 결과 없음",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(2059-2068)",
+            "src/components/conversion-panel/ConversionTab.tsx(2232-2241)",
             "src/components/conversion-panel/DownloadTab.tsx(7312-7321)",
             "src/components/conversion-panel/UploadTab.tsx(7391-7400)"
         ],
@@ -6165,7 +6183,7 @@
         "en-US": "No conversion tasks",
         "ko-KR": "전환 작업 없음",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(2072-2082)"
+            "src/components/conversion-panel/ConversionTab.tsx(2245-2255)"
         ],
         "$id": 7776
     },
@@ -6174,17 +6192,29 @@
         "en-US": "#{n} in queue",
         "ko-KR": "줄 {n}번째",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(3216-3227)"
+            "src/components/conversion-panel/ConversionTab.tsx(3922-3933)"
         ],
         "$id": 7899
+    },
+    "重试转换": {
+        "zh-TW": "重试转换",
+        "en-US": "重试转换",
+        "ko-KR": "重试转换",
+        "$files": [
+            "src/components/conversion-panel/ConversionTab.tsx(4791-4799)",
+            "src/components/conversion-panel/ConversionTab.tsx(4861-4869)"
+        ],
+        "$id": 8014
     },
     "打开": {
         "zh-TW": "打開",
         "en-US": "Open",
         "ko-KR": "열기",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(3999-4005)",
-            "src/components/conversion-panel/ConversionTab.tsx(5630-5636)",
+            "src/components/conversion-panel/ConversionTab.tsx(5120-5126)",
+            "src/components/conversion-panel/ConversionTab.tsx(5168-5174)",
+            "src/components/conversion-panel/ConversionTab.tsx(6833-6839)",
+            "src/components/conversion-panel/ConversionTab.tsx(6881-6887)",
             "src/components/conversion-panel/UploadTab.tsx(5150-5156)",
             "src/components/conversion-panel/UploadTab.tsx(5206-5212)",
             "src/components/export/useExportModals.ts(3722-3728)"
@@ -6196,7 +6226,7 @@
         "en-US": "history",
         "ko-KR": "히스토리",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(4367-4375)"
+            "src/components/conversion-panel/ConversionTab.tsx(5567-5575)"
         ],
         "$id": 8084
     },
@@ -6205,7 +6235,7 @@
         "en-US": "Load more...",
         "ko-KR": "더 불러오기...",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(6124-6135)"
+            "src/components/conversion-panel/ConversionTab.tsx(7406-7417)"
         ],
         "$id": 7906
     },
@@ -6214,7 +6244,7 @@
         "en-US": "No more",
         "ko-KR": "더 이상 없음",
         "$files": [
-            "src/components/conversion-panel/ConversionTab.tsx(6240-6248)"
+            "src/components/conversion-panel/ConversionTab.tsx(7522-7530)"
         ],
         "$id": 7907
     },
@@ -6562,7 +6592,7 @@
         "ko-KR": "도면 공유",
         "$files": [
             "src/components/file-item/fileActionConfig.tsx(10087-10095)",
-            "src/components/modals/ShareDialog.tsx(28558-28566)"
+            "src/components/modals/ShareDialog.tsx(28120-28128)"
         ],
         "$id": 1400
     },
@@ -7959,7 +7989,7 @@
             "src/components/modals/OperationHistoryModal.tsx(5174-5180)",
             "src/components/search/SearchFilters.tsx(2582-2588)",
             "src/components/search/SearchFilters.tsx(5625-5631)",
-            "src/components/ui/DatePicker.tsx(6075-6081)"
+            "src/components/ui/DatePicker.tsx(9549-9555)"
         ],
         "$id": 2902
     },
@@ -8592,7 +8622,7 @@
         "ko-KR": "도면 라이브러리",
         "$files": [
             "src/components/modals/SaveAsModal.tsx(7787-7794)",
-            "src/components/sidebar/SidebarContainer.tsx(2412-2419)",
+            "src/components/sidebar/SidebarContainer.tsx(2357-2364)",
             "src/components/sidebar/SidebarTrigger.tsx(2344-2351)",
             "src/hooks/library/useLibraryQuery.ts(6746-6753)",
             "src/pages/LibraryManager/index.tsx(2553-2560)",
@@ -8606,7 +8636,7 @@
         "ko-KR": "블록 라이브러리",
         "$files": [
             "src/components/modals/SaveAsModal.tsx(7842-7849)",
-            "src/components/sidebar/SidebarContainer.tsx(2482-2489)",
+            "src/components/sidebar/SidebarContainer.tsx(2426-2433)",
             "src/components/sidebar/SidebarTrigger.tsx(2578-2585)",
             "src/hooks/library/useLibraryQuery.ts(6757-6764)",
             "src/pages/LibraryManager/index.tsx(2564-2571)",
@@ -9004,7 +9034,7 @@
         "ko-KR": "공유 취소",
         "$files": [
             "src/components/modals/ShareDialog.tsx(16142-16150)",
-            "src/components/modals/ShareDialog.tsx(27175-27183)",
+            "src/components/modals/ShareDialog.tsx(26737-26745)",
             "src/pages/ShareManagePage/components/ShareTable.tsx(6932-6940)"
         ],
         "$id": 1394
@@ -9051,7 +9081,8 @@
         "ko-KR": "공유 링크 복사",
         "$files": [
             "src/components/modals/ShareDialog.tsx(23941-23951)",
-            "src/components/modals/ShareDialog.tsx(28477-28487)"
+            "src/components/modals/ShareDialog.tsx(26045-26055)",
+            "src/components/modals/ShareDialog.tsx(28039-28049)"
         ],
         "$id": 1399
     },
@@ -9070,7 +9101,7 @@
         "en-US": "Expires on: {date}",
         "ko-KR": "만료일: {date}",
         "$files": [
-            "src/components/modals/ShareDialog.tsx(26606-26622)"
+            "src/components/modals/ShareDialog.tsx(26168-26184)"
         ],
         "$id": 1397
     },
@@ -9079,7 +9110,7 @@
         "en-US": "Generating sharing link .. ({current}/{total})",
         "ko-KR": "공유 링크를 생성하는 중입니다... ({current}/{total})",
         "$files": [
-            "src/components/modals/ShareDialog.tsx(27812-27847)"
+            "src/components/modals/ShareDialog.tsx(27374-27409)"
         ],
         "$id": 5859
     },
@@ -9088,7 +9119,7 @@
         "en-US": "Generating share link...",
         "ko-KR": "공유 링크 생성 중...",
         "$files": [
-            "src/components/modals/ShareDialog.tsx(28274-28289)"
+            "src/components/modals/ShareDialog.tsx(27836-27851)"
         ],
         "$id": 1398
     },
@@ -9097,7 +9128,7 @@
         "en-US": "Batch sharing of drawings",
         "ko-KR": "시트 대량 공유",
         "$files": [
-            "src/components/modals/ShareDialog.tsx(28529-28539)"
+            "src/components/modals/ShareDialog.tsx(28091-28101)"
         ],
         "$id": 5860
     },
@@ -9324,81 +9355,6 @@
             "src/components/permission/PermissionAssignment.tsx(10882-10901)"
         ],
         "$id": 4915
-    },
-    "已修改": {
-        "zh-TW": "已修改",
-        "en-US": "Modified",
-        "ko-KR": "수정됨",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/buildResourceItems.tsx(1182-1189)",
-            "src/pages/RuntimeConfigPage/ConfigCard.tsx(3318-3325)"
-        ],
-        "$id": 4918
-    },
-    "未找到匹配的内容": {
-        "zh-TW": "未找到匹配的內容",
-        "en-US": "No matching content found",
-        "ko-KR": "일치하는 컨텐트를 찾을 수 없습니다.",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(5481-5493)"
-        ],
-        "$id": 4921
-    },
-    "图块": {
-        "zh-TW": "圖塊",
-        "en-US": "tile",
-        "ko-KR": "그림 블록",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(5583-5589)"
-        ],
-        "$id": 4922
-    },
-    "内容": {
-        "zh-TW": "內容",
-        "en-US": "content",
-        "ko-KR": "콘텐츠",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(5593-5599)"
-        ],
-        "$id": 4923
-    },
-    "移动到分类": {
-        "zh-TW": "移動到分類",
-        "en-US": "Move to Category",
-        "ko-KR": "분류로 이동",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(8643-8652)"
-        ],
-        "$id": 5865
-    },
-    "复制到分类": {
-        "zh-TW": "複製到分類",
-        "en-US": "Copy to Category",
-        "ko-KR": "분류로 복사",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(8841-8850)"
-        ],
-        "$id": 5866
-    },
-    "移动到此": {
-        "zh-TW": "移動到此",
-        "en-US": "Move here",
-        "ko-KR": "여기로 이동",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(12504-12512)",
-            "src/hooks/file-browser/useFileBrowserModals.ts(5958-5966)"
-        ],
-        "$id": 4924
-    },
-    "复制到此": {
-        "zh-TW": "複製到此",
-        "en-US": "Copy here",
-        "ko-KR": "여기로 복사",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(12516-12524)",
-            "src/hooks/file-browser/useFileBrowserModals.ts(5974-5982)"
-        ],
-        "$id": 4925
     },
     "DWG 图纸": {
         "zh-TW": "DWG圖紙",
@@ -9783,7 +9739,7 @@
         "$files": [
             "src/components/search/SearchInput.tsx(1443-1449)",
             "src/components/ui/Autocomplete.tsx(2202-2208)",
-            "src/components/ui/DatePicker.tsx(6184-6190)",
+            "src/components/ui/DatePicker.tsx(9658-9664)",
             "src/components/ui/Select.tsx(4774-4780)",
             "src/components/ui/Select.tsx(21918-21924)",
             "src/pages/FontLibrary/components/FontToolbar.tsx(1963-1969)"
@@ -9795,7 +9751,7 @@
         "en-US": "Login to access my project",
         "ko-KR": "내 프로젝트에 액세스하려면 로그인",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(13857-13870)"
+            "src/components/sidebar/SidebarContainer.tsx(13834-13847)"
         ],
         "$id": 4926
     },
@@ -9804,7 +9760,7 @@
         "en-US": "After logging in, you can view and manage your projects",
         "ko-KR": "로그인 후 항목을 보고 관리할 수 있습니다.",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(13991-14009)"
+            "src/components/sidebar/SidebarContainer.tsx(13977-13995)"
         ],
         "$id": 4927
     },
@@ -9813,7 +9769,7 @@
         "en-US": "Login to access personal space",
         "ko-KR": "개인 공간에 액세스하려면 로그인하십시오.",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(15485-15498)"
+            "src/components/sidebar/SidebarContainer.tsx(15635-15648)"
         ],
         "$id": 7424
     },
@@ -9822,7 +9778,7 @@
         "en-US": "After logging in, you can view and manage your private drawings",
         "ko-KR": "로그인 후 개인 도면을 보고 관리할 수 있습니다.",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(15619-15639)"
+            "src/components/sidebar/SidebarContainer.tsx(15778-15798)"
         ],
         "$id": 4929
     },
@@ -9831,7 +9787,7 @@
         "en-US": "Login to use full functionality",
         "ko-KR": "전체 기능을 사용하려면 로그인하십시오.",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(17044-17057)"
+            "src/components/sidebar/SidebarContainer.tsx(17694-17707)"
         ],
         "$id": 4930
     },
@@ -9840,7 +9796,7 @@
         "en-US": "After logging in, you can use personal space, My Projects, Collaboration and other functions",
         "ko-KR": "로그인 후 개인 공간, 내 프로젝트, 협동 등 기능 사용 가능",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(17184-17210)"
+            "src/components/sidebar/SidebarContainer.tsx(17831-17857)"
         ],
         "$id": 7425
     },
@@ -9849,7 +9805,7 @@
         "en-US": "Real time collaboration",
         "ko-KR": "실시간 협동",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(18049-18057)",
+            "src/components/sidebar/SidebarContainer.tsx(18674-18682)",
             "src/components/sidebar/SidebarTabBar.tsx(1274-1282)",
             "src/components/sidebar/SidebarTrigger.tsx(2772-2780)"
         ],
@@ -9860,7 +9816,7 @@
         "en-US": "Real time collaboration only supports private deployment, please click",
         "ko-KR": "실시간 공동 작업은 프라이빗 배포만 지원합니다.",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(18158-18178)"
+            "src/components/sidebar/SidebarContainer.tsx(18781-18801)"
         ],
         "$id": 5872
     },
@@ -9869,7 +9825,7 @@
         "en-US": "View document",
         "ko-KR": "문서 보기",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(18606-18614)"
+            "src/components/sidebar/SidebarContainer.tsx(19218-19226)"
         ],
         "$id": 5873
     },
@@ -9878,7 +9834,7 @@
         "en-US": "Or contact customer service",
         "ko-KR": "아니면 고객센터에 연락하세요.",
         "$files": [
-            "src/components/sidebar/SidebarContainer.tsx(18671-18681)"
+            "src/components/sidebar/SidebarContainer.tsx(19281-19291)"
         ],
         "$id": 5874
     },
@@ -9921,6 +9877,81 @@
             "src/components/sidebar/SidebarTrigger.tsx(5466-5478)"
         ],
         "$id": 4936
+    },
+    "已修改": {
+        "zh-TW": "已修改",
+        "en-US": "Modified",
+        "ko-KR": "수정됨",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/buildResourceItems.tsx(1182-1189)",
+            "src/pages/RuntimeConfigPage/ConfigCard.tsx(3318-3325)"
+        ],
+        "$id": 4918
+    },
+    "未找到匹配的内容": {
+        "zh-TW": "未找到匹配的內容",
+        "en-US": "No matching content found",
+        "ko-KR": "일치하는 컨텐트를 찾을 수 없습니다.",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(5481-5493)"
+        ],
+        "$id": 4921
+    },
+    "图块": {
+        "zh-TW": "圖塊",
+        "en-US": "tile",
+        "ko-KR": "그림 블록",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(5583-5589)"
+        ],
+        "$id": 4922
+    },
+    "内容": {
+        "zh-TW": "內容",
+        "en-US": "content",
+        "ko-KR": "콘텐츠",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(5593-5599)"
+        ],
+        "$id": 4923
+    },
+    "移动到分类": {
+        "zh-TW": "移動到分類",
+        "en-US": "Move to Category",
+        "ko-KR": "분류로 이동",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(8643-8652)"
+        ],
+        "$id": 5865
+    },
+    "复制到分类": {
+        "zh-TW": "複製到分類",
+        "en-US": "Copy to Category",
+        "ko-KR": "분류로 복사",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(8841-8850)"
+        ],
+        "$id": 5866
+    },
+    "移动到此": {
+        "zh-TW": "移動到此",
+        "en-US": "Move here",
+        "ko-KR": "여기로 이동",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(12504-12512)",
+            "src/hooks/file-browser/useFileBrowserModals.ts(5958-5966)"
+        ],
+        "$id": 4924
+    },
+    "复制到此": {
+        "zh-TW": "複製到此",
+        "en-US": "Copy here",
+        "ko-KR": "여기로 복사",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(12516-12524)",
+            "src/hooks/file-browser/useFileBrowserModals.ts(5974-5982)"
+        ],
+        "$id": 4925
     },
     "{count} 步": {
         "zh-TW": "{count}步",
@@ -10207,11 +10238,47 @@
         "en-US": "Select a date",
         "ko-KR": "날짜 선택",
         "$files": [
-            "src/components/ui/DatePicker.tsx(2223-2231)",
+            "src/components/ui/DatePicker.tsx(3484-3492)",
             "src/pages/IpBlacklistPage/components/AddEntryModal.tsx(4926-4934)",
             "src/pages/IpWhitelistPage/components/AddEntryModal.tsx(4975-4983)"
         ],
         "$id": 6158
+    },
+    "小时": {
+        "zh-TW": "小时",
+        "en-US": "小时",
+        "ko-KR": "小时",
+        "$files": [
+            "src/components/ui/DatePicker.tsx(8374-8380)"
+        ],
+        "$id": 8016
+    },
+    "时": {
+        "zh-TW": "时",
+        "en-US": "时",
+        "ko-KR": "时",
+        "$files": [
+            "src/components/ui/DatePicker.tsx(8666-8671)"
+        ],
+        "$id": 8017
+    },
+    "分钟": {
+        "zh-TW": "分钟",
+        "en-US": "分钟",
+        "ko-KR": "分钟",
+        "$files": [
+            "src/components/ui/DatePicker.tsx(8944-8950)"
+        ],
+        "$id": 8018
+    },
+    "分": {
+        "zh-TW": "分",
+        "en-US": "分",
+        "ko-KR": "分",
+        "$files": [
+            "src/components/ui/DatePicker.tsx(9238-9243)"
+        ],
+        "$id": 8019
     },
     "隐藏密码": {
         "zh-TW": "隱藏密碼",
@@ -11776,16 +11843,6 @@
         ],
         "$id": 8056
     },
-    "重试失败": {
-        "zh-TW": "重試失敗",
-        "en-US": "Retry failed",
-        "ko-KR": "재시도 실패",
-        "$files": [
-            "src/hooks/file-system/useBatchDownload.ts(17072-17080)",
-            "src/hooks/file-system/useBatchDownload.ts(18540-18548)"
-        ],
-        "$id": 8057
-    },
     "已重新加入下载队列（仅失败项）": {
         "zh-TW": "已重新加入下載隊列(僅失敗項)",
         "en-US": "Joined download queue again (only failed items)",
@@ -12652,137 +12709,6 @@
         ],
         "$id": 6856
     },
-    "绑定双因素认证": {
-        "zh-TW": "綁定雙因素認證",
-        "en-US": "Bind two factor authentication",
-        "ko-KR": "바인딩 이중 요소 인증",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(1998-2009)"
-        ],
-        "$id": 7683
-    },
-    "加载双因素绑定信息失败": {
-        "zh-TW": "加載雙因素綁定資訊失敗",
-        "en-US": "Failed to load two factor binding information",
-        "ko-KR": "이중 요소 바인딩 정보 로드 실패",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(3102-3117)"
-        ],
-        "$id": 7684
-    },
-    "请输入 6 位动态码": {
-        "zh-TW": "請輸入6比特動態碼",
-        "en-US": "Please enter a 6-digit dynamic code",
-        "ko-KR": "6자리 동적 코드를 입력하십시오.",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(3500-3514)",
-            "src/pages/AdminLogin/index.tsx(4512-4526)"
-        ],
-        "$id": 7677
-    },
-    "动态码错误，请重试": {
-        "zh-TW": "動態碼錯誤,請重試",
-        "en-US": "Dynamic code error, please try again",
-        "ko-KR": "동적 코드 오류, 다시 시도하십시오.",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(3906-3919)",
-            "src/pages/AdminLogin/index.tsx(4999-5012)"
-        ],
-        "$id": 7678
-    },
-    "管理员": {
-        "zh-TW": "管理員",
-        "en-US": "Administrator",
-        "ko-KR": "관리자",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(4560-4567)",
-            "src/pages/AdminLogin/index.tsx(5823-5830)",
-            "src/pages/AdminPasswordChange/index.tsx(5548-5555)"
-        ],
-        "$id": 7326
-    },
-    "安全合规要求：管理员需启用双因素认证": {
-        "zh-TW": "安全合規要求：管理員需啟用雙因素認證",
-        "en-US": "Security compliance requirements: Administrators need to enable two factor authentication",
-        "ko-KR": "보안 규정 준수 요구 사항: 관리자는 이중 요소 인증 필요",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(4636-4658)"
-        ],
-        "$id": 7685
-    },
-    "加载绑定信息...": {
-        "zh-TW": "加載綁定資訊. ..",
-        "en-US": "Load binding information ..",
-        "ko-KR": "바인딩 정보를 로드합니다...",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(5230-5243)"
-        ],
-        "$id": 7686
-    },
-    "使用 Google Authenticator / 1Password 等验证器 App 扫描二维码": {
-        "zh-TW": "使用Google Authenticator / 1Password等驗證器App掃描二維碼",
-        "en-US": "Scan the QR code using Google Authenticator/1Password and other authentication apps",
-        "ko-KR": "Google Authenticator / 1Password와 같은 인증기 App을 사용하여 QR코드 검색",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(5808-5862)"
-        ],
-        "$id": 7687
-    },
-    "无法扫码？手动输入上方密钥到验证器 App": {
-        "zh-TW": "無法掃碼？ 手動輸入上方金鑰到驗證器App",
-        "en-US": "Can't scan the code? Manually enter the key above into the validator app",
-        "ko-KR": "코드를 스캔할 수 없습니까?위쪽 키를 인증기 App에 수동으로 입력",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(7183-7208)"
-        ],
-        "$id": 7688
-    },
-    "输入验证器 App 当前显示的 6 位动态码": {
-        "zh-TW": "輸入驗證器App當前顯示的6比特動態碼",
-        "en-US": "Enter the 6-digit dynamic code currently displayed on the validator app",
-        "ko-KR": "인증기 App에 현재 표시된 6비트 동적 코드 입력",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(7530-7556)"
-        ],
-        "$id": 7689
-    },
-    "例如 123456": {
-        "zh-TW": "例如123456",
-        "en-US": "For example, 123456",
-        "ko-KR": "예: 123456",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(8060-8073)"
-        ],
-        "$id": 7690
-    },
-    "激活中...": {
-        "zh-TW": "啟動中. ..",
-        "en-US": "Activating ..",
-        "ko-KR": "활성화 중...",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(8654-8664)"
-        ],
-        "$id": 7691
-    },
-    "激活双因素认证": {
-        "zh-TW": "啟動雙因素認證",
-        "en-US": "Activate two factor authentication",
-        "ko-KR": "이중 요소 인증 활성화",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(8725-8736)"
-        ],
-        "$id": 7692
-    },
-    "当前账号：": {
-        "zh-TW": "當前帳號：",
-        "en-US": "Current account:",
-        "ko-KR": "현재 계정:",
-        "$files": [
-            "src/pages/AdminMfaSetup/index.tsx(9003-9012)",
-            "src/pages/AdminPasswordChange/index.tsx(12528-12537)"
-        ],
-        "$id": 7693
-    },
     "管理员登录": {
         "zh-TW": "管理員登錄",
         "en-US": "Administrator Login",
@@ -12803,6 +12729,37 @@
             "src/pages/Login/hooks/useLoginForm.ts(8108-8125)"
         ],
         "$id": 1481
+    },
+    "请输入 6 位动态码": {
+        "zh-TW": "請輸入6比特動態碼",
+        "en-US": "Please enter a 6-digit dynamic code",
+        "ko-KR": "6자리 동적 코드를 입력하십시오.",
+        "$files": [
+            "src/pages/AdminLogin/index.tsx(4512-4526)",
+            "src/pages/AdminMfaSetup/index.tsx(3500-3514)"
+        ],
+        "$id": 7677
+    },
+    "动态码错误，请重试": {
+        "zh-TW": "動態碼錯誤,請重試",
+        "en-US": "Dynamic code error, please try again",
+        "ko-KR": "동적 코드 오류, 다시 시도하십시오.",
+        "$files": [
+            "src/pages/AdminLogin/index.tsx(4999-5012)",
+            "src/pages/AdminMfaSetup/index.tsx(3906-3919)"
+        ],
+        "$id": 7678
+    },
+    "管理员": {
+        "zh-TW": "管理員",
+        "en-US": "Administrator",
+        "ko-KR": "관리자",
+        "$files": [
+            "src/pages/AdminLogin/index.tsx(5823-5830)",
+            "src/pages/AdminMfaSetup/index.tsx(4560-4567)",
+            "src/pages/AdminPasswordChange/index.tsx(5548-5555)"
+        ],
+        "$id": 7326
     },
     "仅限系统管理员登录，需 IP 白名单校验": {
         "zh-TW": "僅限系統管理員登入,需IP白名單校驗",
@@ -12912,6 +12869,106 @@
             "src/pages/AdminLogin/index.tsx(12288-12298)"
         ],
         "$id": 7330
+    },
+    "绑定双因素认证": {
+        "zh-TW": "綁定雙因素認證",
+        "en-US": "Bind two factor authentication",
+        "ko-KR": "바인딩 이중 요소 인증",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(1998-2009)"
+        ],
+        "$id": 7683
+    },
+    "加载双因素绑定信息失败": {
+        "zh-TW": "加載雙因素綁定資訊失敗",
+        "en-US": "Failed to load two factor binding information",
+        "ko-KR": "이중 요소 바인딩 정보 로드 실패",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(3102-3117)"
+        ],
+        "$id": 7684
+    },
+    "安全合规要求：管理员需启用双因素认证": {
+        "zh-TW": "安全合規要求：管理員需啟用雙因素認證",
+        "en-US": "Security compliance requirements: Administrators need to enable two factor authentication",
+        "ko-KR": "보안 규정 준수 요구 사항: 관리자는 이중 요소 인증 필요",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(4636-4658)"
+        ],
+        "$id": 7685
+    },
+    "加载绑定信息...": {
+        "zh-TW": "加載綁定資訊. ..",
+        "en-US": "Load binding information ..",
+        "ko-KR": "바인딩 정보를 로드합니다...",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(5230-5243)"
+        ],
+        "$id": 7686
+    },
+    "使用 Google Authenticator / 1Password 等验证器 App 扫描二维码": {
+        "zh-TW": "使用Google Authenticator / 1Password等驗證器App掃描二維碼",
+        "en-US": "Scan the QR code using Google Authenticator/1Password and other authentication apps",
+        "ko-KR": "Google Authenticator / 1Password와 같은 인증기 App을 사용하여 QR코드 검색",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(5808-5862)"
+        ],
+        "$id": 7687
+    },
+    "无法扫码？手动输入上方密钥到验证器 App": {
+        "zh-TW": "無法掃碼？ 手動輸入上方金鑰到驗證器App",
+        "en-US": "Can't scan the code? Manually enter the key above into the validator app",
+        "ko-KR": "코드를 스캔할 수 없습니까?위쪽 키를 인증기 App에 수동으로 입력",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(7183-7208)"
+        ],
+        "$id": 7688
+    },
+    "输入验证器 App 当前显示的 6 位动态码": {
+        "zh-TW": "輸入驗證器App當前顯示的6比特動態碼",
+        "en-US": "Enter the 6-digit dynamic code currently displayed on the validator app",
+        "ko-KR": "인증기 App에 현재 표시된 6비트 동적 코드 입력",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(7530-7556)"
+        ],
+        "$id": 7689
+    },
+    "例如 123456": {
+        "zh-TW": "例如123456",
+        "en-US": "For example, 123456",
+        "ko-KR": "예: 123456",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(8060-8073)"
+        ],
+        "$id": 7690
+    },
+    "激活中...": {
+        "zh-TW": "啟動中. ..",
+        "en-US": "Activating ..",
+        "ko-KR": "활성화 중...",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(8654-8664)"
+        ],
+        "$id": 7691
+    },
+    "激活双因素认证": {
+        "zh-TW": "啟動雙因素認證",
+        "en-US": "Activate two factor authentication",
+        "ko-KR": "이중 요소 인증 활성화",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(8725-8736)"
+        ],
+        "$id": 7692
+    },
+    "当前账号：": {
+        "zh-TW": "當前帳號：",
+        "en-US": "Current account:",
+        "ko-KR": "현재 계정:",
+        "$files": [
+            "src/pages/AdminMfaSetup/index.tsx(9003-9012)",
+            "src/pages/AdminPasswordChange/index.tsx(12528-12537)"
+        ],
+        "$id": 7693
     },
     "修改管理员密码": {
         "zh-TW": "修改管理員密碼",
@@ -13768,8 +13825,8 @@
         "en-US": "Forgot password",
         "ko-KR": "암호를 잊었습니다.",
         "$files": [
-            "src/pages/ForgotPassword/index.tsx(1101-1109)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2452-2460)"
+            "src/pages/ForgotPassword/index.tsx(1197-1205)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2585-2593)"
         ],
         "$id": 2779
     },
@@ -14121,9 +14178,9 @@
         "ko-KR": "개인정보 처리방침",
         "$files": [
             "src/pages/Legal/PrivacyPolicyPage.tsx(559-567)",
-            "src/pages/Login/index.tsx(15136-15144)",
+            "src/pages/Login/index.tsx(15146-15154)",
             "src/pages/Register/BasicInfoStep.tsx(8785-8793)",
-            "src/pages/Register/RegisterLayout.tsx(1232-1240)"
+            "src/pages/Register/RegisterLayout.tsx(1320-1328)"
         ],
         "$id": 5744
     },
@@ -14143,9 +14200,9 @@
         "ko-KR": "사용자 프로토콜",
         "$files": [
             "src/pages/Legal/TermsOfServicePage.tsx(555-563)",
-            "src/pages/Login/index.tsx(15262-15270)",
+            "src/pages/Login/index.tsx(15272-15280)",
             "src/pages/Register/BasicInfoStep.tsx(8650-8658)",
-            "src/pages/Register/RegisterLayout.tsx(1354-1362)",
+            "src/pages/Register/RegisterLayout.tsx(1446-1454)",
             "src/pages/Register/hooks/useRegisterForm.ts(8545-8553)"
         ],
         "$id": 5761
@@ -14173,7 +14230,7 @@
         "en-US": "Login",
         "ko-KR": "로그인",
         "$files": [
-            "src/pages/Login/index.tsx(2166-2172)"
+            "src/pages/Login/index.tsx(2187-2193)"
         ],
         "$id": 1404
     },
@@ -14182,7 +14239,7 @@
         "en-US": "Your account has been automatically restored, cancellation has been canceled",
         "ko-KR": "계정이 자동으로 복구되고 로그아웃이 취소됨",
         "$files": [
-            "src/pages/Login/index.tsx(4183-4202)",
+            "src/pages/Login/index.tsx(4204-4223)",
             "src/pages/Login/hooks/useLoginForm.ts(7496-7515)",
             "src/pages/Login/hooks/useLoginForm.ts(10065-10084)"
         ],
@@ -14193,7 +14250,7 @@
         "en-US": "Account Login",
         "ko-KR": "계정 로그인",
         "$files": [
-            "src/pages/Login/index.tsx(10995-11003)"
+            "src/pages/Login/index.tsx(11016-11024)"
         ],
         "$id": 1407
     },
@@ -14202,7 +14259,7 @@
         "en-US": "Phone Login",
         "ko-KR": "휴대폰 로그인",
         "$files": [
-            "src/pages/Login/index.tsx(11262-11270)"
+            "src/pages/Login/index.tsx(11283-11291)"
         ],
         "$id": 1408
     },
@@ -14211,7 +14268,7 @@
         "en-US": "Don't have an account?",
         "ko-KR": "계정이 없으신가요?",
         "$files": [
-            "src/pages/Login/index.tsx(13757-13767)"
+            "src/pages/Login/index.tsx(13778-13788)"
         ],
         "$id": 1409
     },
@@ -14220,7 +14277,7 @@
         "en-US": "Register Now",
         "ko-KR": "지금 가입",
         "$files": [
-            "src/pages/Login/index.tsx(13947-13955)",
+            "src/pages/Login/index.tsx(13968-13976)",
             "src/pages/Register/PasswordStep.tsx(5567-5575)"
         ],
         "$id": 1410
@@ -14580,8 +14637,8 @@
         "$files": [
             "src/pages/Profile/ProfileEmailTab.tsx(2428-2436)",
             "src/pages/Profile/ProfilePhoneTab.tsx(2388-2396)",
-            "src/pages/ForgotPassword/components/NoChannelView.tsx(1630-1638)",
-            "src/pages/ForgotPassword/components/SupportView.tsx(1627-1635)"
+            "src/pages/ForgotPassword/components/NoChannelView.tsx(1738-1746)",
+            "src/pages/ForgotPassword/components/SupportView.tsx(1738-1746)"
         ],
         "$id": 2780
     },
@@ -14722,7 +14779,7 @@
         "ko-KR": "발송 중...",
         "$files": [
             "src/pages/Profile/ProfileEmailTab.tsx(10153-10163)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(5746-5756)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(5984-5994)"
         ],
         "$id": 2795
     },
@@ -15934,7 +15991,7 @@
         "en-US": "Lack of transfer voucher",
         "ko-KR": "전송 자격 증명이 없습니다.",
         "$files": [
-            "src/pages/SessionTransfer/index.tsx(2616-2626)"
+            "src/pages/SessionTransfer/index.tsx(2739-2749)"
         ],
         "$id": 8042
     },
@@ -15943,7 +16000,7 @@
         "en-US": "Session transfer failed, please try again",
         "ko-KR": "세션 전송에 실패했습니다. 다시 시도하십시오.",
         "$files": [
-            "src/pages/SessionTransfer/index.tsx(3808-3822)"
+            "src/pages/SessionTransfer/index.tsx(3966-3980)"
         ],
         "$id": 8043
     },
@@ -15952,7 +16009,7 @@
         "en-US": "Switching accounts ..",
         "ko-KR": "계정을 바꾸는 중입니다...",
         "$files": [
-            "src/pages/SessionTransfer/index.tsx(4519-4532)"
+            "src/pages/SessionTransfer/index.tsx(4700-4713)"
         ],
         "$id": 8044
     },
@@ -15961,7 +16018,7 @@
         "en-US": "Switching login status for you",
         "ko-KR": "로그인 상태 전환 중",
         "$files": [
-            "src/pages/SessionTransfer/index.tsx(4586-4600)"
+            "src/pages/SessionTransfer/index.tsx(4768-4782)"
         ],
         "$id": 8045
     },
@@ -15970,7 +16027,7 @@
         "en-US": "Session transfer failed",
         "ko-KR": "세션 전송 실패",
         "$files": [
-            "src/pages/SessionTransfer/index.tsx(4940-4950)"
+            "src/pages/SessionTransfer/index.tsx(5134-5144)"
         ],
         "$id": 8046
     },
@@ -16595,8 +16652,8 @@
         "ko-KR": "이메일",
         "$files": [
             "src/pages/UserManagement/UserTable.tsx(4502-4508)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2651-2657)",
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(3060-3066)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2788-2794)",
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(3212-3218)",
             "src/pages/Register/hooks/useRegisterForm.ts(8458-8464)",
             "src/pages/UserManagement/UserModals/CreateUserModal.tsx(3178-3184)",
             "src/pages/UserManagement/UserModals/EditUserModal.tsx(4558-4564)"
@@ -16686,8 +16743,8 @@
         "$files": [
             "src/services/mxcadManager/initMxCAD.ts(5935-5948)",
             "src/services/mxcadManager/initMxCAD.ts(6270-6283)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(15823-15836)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(16112-16125)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(17975-17988)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(18264-18277)"
         ],
         "$id": 981
     },
@@ -16697,7 +16754,8 @@
         "ko-KR": "도면 변환 중...",
         "$files": [
             "src/services/mxcadManager/initMxCAD.ts(6187-6199)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(16036-16048)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(18188-18200)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(18417-18429)"
         ],
         "$id": 982
     },
@@ -16888,8 +16946,8 @@
         "en-US": "MxCADView initialization failed, instance is empty",
         "ko-KR": "MxCADView 초기화 실패, 인스턴스가 비어 있습니다",
         "$files": [
-            "src/services/mxcadManager/mxcadInstanceManager.ts(9662-9686)",
-            "src/services/mxcadManager/mxcadInstanceManager.ts(9914-9938)"
+            "src/services/mxcadManager/mxcadInstanceManager.ts(11488-11512)",
+            "src/services/mxcadManager/mxcadInstanceManager.ts(11740-11764)"
         ],
         "$id": 1446
     },
@@ -16898,7 +16956,7 @@
         "en-US": "Cannot get personal space. Please contact administrator",
         "ko-KR": "개인 공간을 가져올 수 없습니다. 관리자에게 문의하세요",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(3024-3043)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(3077-3096)"
         ],
         "$id": 1416
     },
@@ -16907,7 +16965,7 @@
         "en-US": "File conversion not complete. Please check the file list later",
         "ko-KR": "파일 변환이 완료되지 않았습니다. 나중에 파일 목록에서 확인하세요",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(6162-6185)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(6215-6238)"
         ],
         "$id": 1418
     },
@@ -16916,7 +16974,7 @@
         "en-US": "Cannot get drawing library file info",
         "ko-KR": "도면 라이브러리 파일 정보를 가져올 수 없습니다",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(7894-7909)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(7947-7962)"
         ],
         "$id": 1419
     },
@@ -16925,8 +16983,8 @@
         "en-US": "Cannot get file path",
         "ko-KR": "파일 경로를 가져올 수 없습니다",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(8121-8133)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(10256-10268)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(8174-8186)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(10309-10321)"
         ],
         "$id": 1420
     },
@@ -16935,8 +16993,8 @@
         "en-US": "Cannot get file name",
         "ko-KR": "파일 이름을 가져올 수 없습니다",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(8178-8189)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(10313-10324)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(8231-8242)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(10366-10377)"
         ],
         "$id": 1421
     },
@@ -16945,7 +17003,7 @@
         "en-US": "Cannot get block library file info",
         "ko-KR": "블록 라이브러리 파일 정보를 가져올 수 없습니다",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(10029-10044)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(10082-10097)"
         ],
         "$id": 1422
     },
@@ -16954,8 +17012,8 @@
         "en-US": "Calculating file hash...",
         "ko-KR": "파일 해시 계산 중...",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(11416-11431)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(13930-13945)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(11469-11484)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(17154-17169)",
             "src/services/mxcadManager/mxcadTypes.ts(2814-2829)"
         ],
         "$id": 1423
@@ -16965,7 +17023,7 @@
         "en-US": "Checking local cache...",
         "ko-KR": "로컬 캐시 확인 중...",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(11630-11645)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(11683-11698)"
         ],
         "$id": 1424
     },
@@ -16974,7 +17032,7 @@
         "en-US": "Caching file...",
         "ko-KR": "파일 캐싱 중...",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(12413-12426)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(12466-12479)"
         ],
         "$id": 1425
     },
@@ -16983,39 +17041,37 @@
         "en-US": "Opening file...",
         "ko-KR": "파일 여는 중...",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(12904-12917)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(14584-14597)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(16419-16432)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(12957-12970)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(14156-14169)",
             "src/services/mxcadManager/mxcadTypes.ts(2874-2887)"
         ],
         "$id": 1426
-    },
-    "正在检查缓存...": {
-        "zh-TW": "正在檢查緩存. ..",
-        "en-US": "Checking cache...",
-        "ko-KR": "캐시 확인 중...",
-        "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(14044-14057)"
-        ],
-        "$id": 1427
     },
     "文件打开失败": {
         "zh-TW": "檔案打開失敗",
         "en-US": "File failed to open",
         "ko-KR": "파일 열기 실패",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(15669-15679)",
-            "src/services/mxcadManager/mxcadOpenFile.ts(17400-17410)",
+            "src/services/mxcadManager/mxcadOpenFile.ts(14981-14991)",
             "src/services/mxcadManager/mxcadOpenFlow.ts(7534-7544)"
         ],
         "$id": 1428
+    },
+    "正在检查缓存...": {
+        "zh-TW": "正在檢查緩存. ..",
+        "en-US": "Checking cache...",
+        "ko-KR": "캐시 확인 중...",
+        "$files": [
+            "src/services/mxcadManager/mxcadOpenFile.ts(17344-17357)"
+        ],
+        "$id": 1427
     },
     "文件上传失败": {
         "zh-TW": "文件上傳失敗",
         "en-US": "File upload failed",
         "ko-KR": "파일 업로드 실패",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(18119-18129)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(19905-19915)"
         ],
         "$id": 1429
     },
@@ -17024,7 +17080,7 @@
         "en-US": "Unsupported file format. Please select .dwg, .dxf, or .mxweb",
         "ko-KR": "지원되지 않는 파일 형식입니다. .dwg, .dxf, .mxweb 중에서 선택하세요",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(18873-18906)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(20659-20692)"
         ],
         "$id": 1430
     },
@@ -17033,7 +17089,7 @@
         "en-US": "Command execution failed",
         "ko-KR": "명령 실행 실패",
         "$files": [
-            "src/services/mxcadManager/mxcadOpenFile.ts(19313-19323)"
+            "src/services/mxcadManager/mxcadOpenFile.ts(21099-21109)"
         ],
         "$id": 1431
     },
@@ -18417,7 +18473,7 @@
         "en-US": "Bind your email address",
         "ko-KR": "이메일 주소를 연결하세요",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(2394-2406)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(2533-2545)"
         ],
         "$id": 1049
     },
@@ -18426,7 +18482,7 @@
         "en-US": "Verify email to complete registration",
         "ko-KR": "이메일을 인증하여 등록 완료",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(2464-2476)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(2605-2617)"
         ],
         "$id": 1050
     },
@@ -18435,7 +18491,7 @@
         "en-US": "Verify your email address",
         "ko-KR": "이메일 주소를 인증하세요",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(2498-2510)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(2640-2652)"
         ],
         "$id": 1051
     },
@@ -18444,7 +18500,7 @@
         "en-US": "Your account needs to bind an email to continue using",
         "ko-KR": "계속 사용하려면 계정에 이메일을 연결해야 합니다",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(2798-2818)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(2950-2970)"
         ],
         "$id": 1052
     },
@@ -18453,7 +18509,7 @@
         "en-US": "Please enter your email address to complete registration",
         "ko-KR": "등록을 완료하려면 이메일 주소를 입력하세요",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(2952-2971)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(3108-3127)"
         ],
         "$id": 1053
     },
@@ -18462,7 +18518,7 @@
         "en-US": "Verification email resent. Please check your inbox",
         "ko-KR": "인증 이메일이 재전송되었습니다. 받은 편지함을 확인하세요",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(4643-4660)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(4850-4867)"
         ],
         "$id": 1058
     },
@@ -18471,7 +18527,7 @@
         "en-US": "The verification code is 6 digits. Please check your email",
         "ko-KR": "인증번호는 6자리 숫자입니다. 이메일을 확인하세요",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(5305-5323)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(5532-5550)"
         ],
         "$id": 1061
     },
@@ -18480,7 +18536,7 @@
         "en-US": "Didn't receive the email?",
         "ko-KR": "이메일을 받지 못하셨나요?",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(5949-5960)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(6200-6211)"
         ],
         "$id": 1064
     },
@@ -18489,7 +18545,7 @@
         "en-US": "• Check spam folder",
         "ko-KR": "• 스팸 폴더 확인",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(6032-6047)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(6285-6300)"
         ],
         "$id": 1065
     },
@@ -18498,7 +18554,7 @@
         "en-US": "• Confirm email address is correct",
         "ko-KR": "• 이메일 주소가 올바른지 확인",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(6074-6088)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(6328-6342)"
         ],
         "$id": 1066
     },
@@ -18507,7 +18563,7 @@
         "en-US": "• Verification code is valid for 15 minutes",
         "ko-KR": "• 인증번호는 15분 동안 유효합니다",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(6115-6131)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(6370-6386)"
         ],
         "$id": 1067
     },
@@ -18516,7 +18572,7 @@
         "en-US": "__Resend after $_ $_ $__ seconds",
         "ko-KR": "_ _ $_ $_ $_ _ 초 후 재전송 가능",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(6619-6646)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(6891-6918)"
         ],
         "$id": 5736
     },
@@ -18525,7 +18581,7 @@
         "en-US": "Send verification email",
         "ko-KR": "인증 이메일 보내기",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(6979-6989)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(7261-7271)"
         ],
         "$id": 1068
     },
@@ -18534,7 +18590,7 @@
         "en-US": "Resend verification email",
         "ko-KR": "인증 이메일 재전송",
         "$files": [
-            "src/pages/EmailVerification/components/VerificationForm.tsx(7015-7027)"
+            "src/pages/EmailVerification/components/VerificationForm.tsx(7298-7310)"
         ],
         "$id": 1069
     },
@@ -18933,7 +18989,7 @@
         "en-US": "Retrieve your account password",
         "ko-KR": "계정 비밀번호 찾기",
         "$files": [
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2329-2341)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2458-2470)"
         ],
         "$id": 2787
     },
@@ -18942,7 +18998,7 @@
         "en-US": "Use {method} to receive the verification code",
         "ko-KR": "_ _ $_ $_ $_ 을 사용하여 인증 코드 수신",
         "$files": [
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2575-2595)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2711-2731)"
         ],
         "$id": 2788
     },
@@ -18951,7 +19007,7 @@
         "en-US": "Use email to receive verification code",
         "ko-KR": "사서함으로 인증번호 받기",
         "$files": [
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2738-2751)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2878-2891)"
         ],
         "$id": 2790
     },
@@ -18960,7 +19016,7 @@
         "en-US": "Receive verification code using mobile phone number",
         "ko-KR": "휴대폰 번호로 인증번호를 받다",
         "$files": [
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2771-2785)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(2912-2926)"
         ],
         "$id": 2791
     },
@@ -18969,7 +19025,7 @@
         "en-US": "Forgot email?",
         "ko-KR": "메일박스를 잊으셨습니까?",
         "$files": [
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(3582-3591)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(3753-3762)"
         ],
         "$id": 2792
     },
@@ -18978,7 +19034,7 @@
         "en-US": "Forgot your phone number?",
         "ko-KR": "핸드폰 번호 까먹었어?",
         "$files": [
-            "src/pages/ForgotPassword/components/ForgotFormView.tsx(3833-3843)"
+            "src/pages/ForgotPassword/components/ForgotFormView.tsx(4013-4023)"
         ],
         "$id": 2793
     },
@@ -18987,7 +19043,7 @@
         "en-US": "Email and SMS services are not enabled. Please contact customer service to reset your password",
         "ko-KR": "메일과 문자 서비스가 모두 활성화되지 않았습니다. 고객센터에 연락하여 비밀번호를 재설정하십시오.",
         "$files": [
-            "src/pages/ForgotPassword/components/NoChannelView.tsx(1708-1733)"
+            "src/pages/ForgotPassword/components/NoChannelView.tsx(1818-1843)"
         ],
         "$id": 2781
     },
@@ -18996,8 +19052,8 @@
         "en-US": "Customer service contact information",
         "ko-KR": "고객 서비스 연락처",
         "$files": [
-            "src/pages/ForgotPassword/components/NoChannelView.tsx(1851-1861)",
-            "src/pages/ForgotPassword/components/SupportView.tsx(1847-1857)"
+            "src/pages/ForgotPassword/components/NoChannelView.tsx(1964-1974)",
+            "src/pages/ForgotPassword/components/SupportView.tsx(1964-1974)"
         ],
         "$id": 2782
     },
@@ -19006,8 +19062,8 @@
         "en-US": "There is currently no customer service contact information available. Please contact the system administrator",
         "ko-KR": "고객 서비스 연락처가 없습니다. 시스템 관리자에게 문의하십시오.",
         "$files": [
-            "src/pages/ForgotPassword/components/NoChannelView.tsx(2565-2586)",
-            "src/pages/ForgotPassword/components/SupportView.tsx(2561-2582)"
+            "src/pages/ForgotPassword/components/NoChannelView.tsx(2697-2718)",
+            "src/pages/ForgotPassword/components/SupportView.tsx(2697-2718)"
         ],
         "$id": 2783
     },
@@ -19016,7 +19072,7 @@
         "en-US": "Verification code sent",
         "ko-KR": "인증번호가 전송되었습니다",
         "$files": [
-            "src/pages/ForgotPassword/components/SuccessView.tsx(1758-1768)",
+            "src/pages/ForgotPassword/components/SuccessView.tsx(1872-1882)",
             "src/pages/Login/hooks/useLoginForm.ts(6317-6327)",
             "src/pages/Profile/hooks/useEmailProfile.ts(6202-6212)",
             "src/pages/Profile/hooks/usePhoneProfile.ts(2340-2350)",
@@ -19029,7 +19085,7 @@
         "en-US": "Please use the verification code to reset your password",
         "ko-KR": "암호를 재설정하려면 인증 코드를 사용하십시오.",
         "$files": [
-            "src/pages/ForgotPassword/components/SuccessView.tsx(2131-2145)"
+            "src/pages/ForgotPassword/components/SuccessView.tsx(2255-2269)"
         ],
         "$id": 2785
     },
@@ -19038,7 +19094,7 @@
         "en-US": "Go to reset password",
         "ko-KR": "비밀번호 재설정",
         "$files": [
-            "src/pages/ForgotPassword/components/SuccessView.tsx(2334-2344)"
+            "src/pages/ForgotPassword/components/SuccessView.tsx(2464-2474)"
         ],
         "$id": 2786
     },
@@ -19047,7 +19103,7 @@
         "en-US": "Contact customer service",
         "ko-KR": "고객 서비스에 문의",
         "$files": [
-            "src/pages/ForgotPassword/components/SupportModal.tsx(442-450)"
+            "src/pages/ForgotPassword/components/SupportModal.tsx(566-574)"
         ],
         "$id": 2797
     },
@@ -19056,7 +19112,7 @@
         "en-US": "If you need assistance, please contact customer service for support.",
         "ko-KR": "도움이 필요하면 고객 서비스 직원에게 문의하여 지원을 받으십시오.",
         "$files": [
-            "src/pages/ForgotPassword/components/SupportModal.tsx(700-721)"
+            "src/pages/ForgotPassword/components/SupportModal.tsx(831-852)"
         ],
         "$id": 2798
     },
@@ -19065,8 +19121,8 @@
         "en-US": "Support Email:",
         "ko-KR": "고객센터 이메일:",
         "$files": [
-            "src/pages/ForgotPassword/components/SupportModal.tsx(926-935)",
-            "src/pages/Login/components/SupportModal.tsx(1596-1605)"
+            "src/pages/ForgotPassword/components/SupportModal.tsx(1062-1071)",
+            "src/pages/Login/components/SupportModal.tsx(1540-1549)"
         ],
         "$id": 1466
     },
@@ -19075,8 +19131,8 @@
         "en-US": "Support Phone:",
         "ko-KR": "고객센터 전화:",
         "$files": [
-            "src/pages/ForgotPassword/components/SupportModal.tsx(1306-1315)",
-            "src/pages/Login/components/SupportModal.tsx(2002-2011)"
+            "src/pages/ForgotPassword/components/SupportModal.tsx(1446-1455)",
+            "src/pages/Login/components/SupportModal.tsx(1946-1955)"
         ],
         "$id": 1467
     },
@@ -19085,26 +19141,17 @@
         "en-US": "Business Hours:",
         "ko-KR": "업무 시간:",
         "$files": [
-            "src/pages/ForgotPassword/components/SupportModal.tsx(1620-1629)",
-            "src/pages/Login/components/SupportModal.tsx(2405-2414)"
+            "src/pages/ForgotPassword/components/SupportModal.tsx(1827-1836)",
+            "src/pages/Login/components/SupportModal.tsx(2349-2358)"
         ],
         "$id": 1468
-    },
-    "周一至周日 9:00-18:00": {
-        "zh-TW": "週一至周日9:00-18:00",
-        "en-US": "Monday to Sunday 9:00-18:00",
-        "ko-KR": "월-일 9: 00-18: 00",
-        "$files": [
-            "src/pages/ForgotPassword/components/SupportModal.tsx(1731-1751)"
-        ],
-        "$id": 2799
     },
     "该找回方式暂不可用，请联系客服重置密码": {
         "zh-TW": "該找回管道暫不可用,請聯系客服重置密碼",
         "en-US": "The retrieval method is currently unavailable. Please contact customer service to reset your password",
         "ko-KR": "이 복구 방식은 잠시 사용할 수 없습니다. 고객센터에 연락하여 비밀번호를 재설정하십시오.",
         "$files": [
-            "src/pages/ForgotPassword/components/SupportView.tsx(1705-1728)"
+            "src/pages/ForgotPassword/components/SupportView.tsx(1818-1841)"
         ],
         "$id": 2784
     },
@@ -19565,7 +19612,7 @@
         "en-US": "The account has been deleted.",
         "ko-KR": "계정 로그아웃",
         "$files": [
-            "src/pages/Login/components/SupportModal.tsx(880-889)"
+            "src/pages/Login/components/SupportModal.tsx(824-833)"
         ],
         "$id": 6877
     },
@@ -19574,7 +19621,7 @@
         "en-US": "Account Disabled",
         "ko-KR": "계정이 비활성화되었습니다",
         "$files": [
-            "src/pages/Login/components/SupportModal.tsx(893-903)"
+            "src/pages/Login/components/SupportModal.tsx(837-847)"
         ],
         "$id": 1463
     },
@@ -19583,7 +19630,7 @@
         "en-US": "Your account has been deactivated and the grace period has passed. Please contact support to restore your account.",
         "ko-KR": "계정이 해지되었고 유예 기간이 지났습니다. 복구를 위해 고객센터에 문의하세요.",
         "$files": [
-            "src/pages/Login/components/SupportModal.tsx(1066-1094)"
+            "src/pages/Login/components/SupportModal.tsx(1010-1038)"
         ],
         "$id": 6878
     },
@@ -19592,7 +19639,7 @@
         "en-US": "The data will be completely deleted after {days} days and cannot be recovered after the deadline.",
         "ko-KR": "_ _ $_ $_ $_ _ _ 일 후에 데이터가 완전히 삭제되고 기한이 지나면 복구할 수 없습니다.",
         "$files": [
-            "src/pages/Login/components/SupportModal.tsx(1135-1165)"
+            "src/pages/Login/components/SupportModal.tsx(1079-1109)"
         ],
         "$id": 6879
     },
@@ -19601,7 +19648,7 @@
         "en-US": "Your account has been disabled and cannot log in to the system.",
         "ko-KR": "계정이 비활성화되어 시스템에 로그인할 수 없습니다.",
         "$files": [
-            "src/pages/Login/components/SupportModal.tsx(1298-1318)"
+            "src/pages/Login/components/SupportModal.tsx(1242-1262)"
         ],
         "$id": 1464
     },
@@ -19610,18 +19657,9 @@
         "en-US": "If you have any questions, please contact customer service for assistance.",
         "ko-KR": "문의사항이 있으시면 고객센터로 연락해 주세요.",
         "$files": [
-            "src/pages/Login/components/SupportModal.tsx(1359-1380)"
+            "src/pages/Login/components/SupportModal.tsx(1303-1324)"
         ],
         "$id": 1465
-    },
-    "周一至周五 9:00-18:00": {
-        "zh-TW": "週一至週五9:00-18:00",
-        "en-US": "Monday - Friday, 9:00 AM - 6:00 PM",
-        "ko-KR": "월요일 ~ 금요일, 09:00 - 18:00",
-        "$files": [
-            "src/pages/Login/components/SupportModal.tsx(2517-2537)"
-        ],
-        "$id": 1469
     },
     "其他登录方式": {
         "zh-TW": "其他登入管道",

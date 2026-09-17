@@ -21,6 +21,9 @@ import {
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LoadingOverlay } from './components/LoadingOverlay';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { CadLoadFailedFallback } from './components/CadLoadFailedFallback';
+import { importWithTimeout } from './lib/lazyImport';
 import { ConversionPanel } from './components/conversion-panel/ConversionPanel';
 import { useAuth } from './contexts/AuthContext';
 import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
@@ -85,7 +88,12 @@ const TermsOfServicePage = lazy(
 );
 
 // CAD 编辑器（高频使用，单独分包）
-const CADEditorDirect = lazy(() => import('./pages/CADEditorDirect'));
+// CAD 编辑器懒加载链有 23 个 chunk（vendor-cad 8.3MB），React.lazy 无超时：
+// 任一 chunk 请求悬挂时加载中会永远显示。限定每次尝试的时间并允许重试一次，
+// 全部失败则 reject，由 CadLoadFailedFallback 给出刷新页面出口。
+const CADEditorDirect = lazy(() =>
+  importWithTimeout(() => import('./pages/CADEditorDirect'), 30_000, 2)
+);
 
 // 分享管理页
 const ShareManagePage = lazy(() => import('./pages/ShareManagePage'));
@@ -192,27 +200,29 @@ function CADEditorRouteGuard() {
   if (!currentIsCADRoute && !everLoadedRef.current) return null;
 
   return (
-    <Suspense
-      fallback={
-        <div
-          className="fixed inset-0 flex flex-col items-center justify-center"
-          style={{ background: 'var(--bg-primary)' }}
-        >
+    <ErrorBoundary fallback={<CadLoadFailedFallback />}>
+      <Suspense
+        fallback={
           <div
-            className="animate-spin rounded-full h-8 w-8"
-            style={{
-              border: '2px solid var(--border-strong)',
-              borderTopColor: 'var(--accent-600)',
-            }}
-          />
-          <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
-            {t('正在加载 CAD 编辑器...')}
-          </p>
-        </div>
-      }
-    >
-      <CADEditorDirect />
-    </Suspense>
+            className="fixed inset-0 flex flex-col items-center justify-center"
+            style={{ background: 'var(--bg-primary)' }}
+          >
+            <div
+              className="animate-spin rounded-full h-8 w-8"
+              style={{
+                border: '2px solid var(--border-strong)',
+                borderTopColor: 'var(--accent-600)',
+              }}
+            />
+            <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
+              {t('正在加载 CAD 编辑器...')}
+            </p>
+          </div>
+        }
+      >
+        <CADEditorDirect />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
