@@ -88,13 +88,14 @@ export class RegistrationService implements IRegistrationService {
         username,
         password,
         nickname: nickname || wechatData?.nickname || username,
-        avatar: wechatData?.avatar,
         wechatId: wechatData?.wechatId,
         provider: wechatData ? 'WECHAT' : 'LOCAL',
       });
 
       this.logger.log(`用户直接注册成功（邮件服务未启用）: ${username}`);
 
+      // 不预写微信 URL（页面 COEP=require-corp，前端直连微信头像域名必被拦，落库即永久无效）；
+      // 落盘成功由 syncWechatAvatar 写入本地 URL，失败 avatar 保持空
       if (wechatData?.avatar) {
         await this.userService.syncWechatAvatar(user.id, wechatData.avatar);
       }
@@ -121,13 +122,14 @@ export class RegistrationService implements IRegistrationService {
         username,
         password,
         nickname: nickname || wechatData?.nickname || username,
-        avatar: wechatData?.avatar,
         wechatId: wechatData?.wechatId,
         provider: wechatData ? 'WECHAT' : 'LOCAL',
       });
 
       this.logger.log(`用户直接注册成功（无需邮箱验证）: ${username}`);
 
+      // 不预写微信 URL（页面 COEP=require-corp，前端直连微信头像域名必被拦，落库即永久无效）；
+      // 落盘成功由 syncWechatAvatar 写入本地 URL，失败 avatar 保持空
       if (wechatData?.avatar) {
         await this.userService.syncWechatAvatar(user.id, wechatData.avatar);
       }
@@ -190,7 +192,6 @@ export class RegistrationService implements IRegistrationService {
         username: registerData.username,
         password: registerData.password,
         nickname: registerData.nickname,
-        avatar: registerData.avatar,
         wechatId: registerData.wechatId,
         provider: registerData.provider || 'LOCAL',
       });
@@ -198,6 +199,8 @@ export class RegistrationService implements IRegistrationService {
       this.logger.log(`用户创建成功: ${email}`);
       await this.redis.del(registerKey);
 
+      // 不预写微信 URL（页面 COEP=require-corp，前端直连微信头像域名必被拦，落库即永久无效）；
+      // 落盘成功由 syncWechatAvatar 写入本地 URL，失败 avatar 保持空
       if (registerData.avatar) {
         await this.userService.syncWechatAvatar(user.id, registerData.avatar);
       }

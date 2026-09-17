@@ -260,14 +260,14 @@ export class OssAuthProvider
           provider: 'WECHAT',
           username,
           nickname: wechatUser.nickname,
-          avatar: wechatUser.headimgurl,
           roleId: defaultRole.id,
           status: 'ACTIVE',
         });
 
         this.logger.log(`微信自动注册新用户: ${username} (ID: ${user.id})`);
 
-        // 微信头像落盘：下载到本地存储并更新 avatar 为本地 URL，失败降级保留微信 URL
+        // 微信头像落盘：成功由 syncWechatAvatar 写入本地 URL；不落库微信 URL——
+        // 页面 COEP=require-corp，前端直连微信头像域名必被拦，落库即永久无效
         await this.userService.syncWechatAvatar(user.id, wechatUser.headimgurl);
       } else {
         const tempToken = this.jwtService.sign(
@@ -318,17 +318,18 @@ export class OssAuthProvider
         throw new UnauthorizedException(I18nContext.current()?.t('error.auth.invalid_credentials') ?? '账号或密码错误');
       }
 
-      // 用户已上传本地头像时不覆盖；仅当 avatar 为空或仍为微信 URL 时更新并落盘
+      // 用户已上传本地头像时不覆盖；仅当 avatar 为空或仍为微信 URL 时同步并落盘
       const avatarIsLocal =
         !!user.avatar && user.avatar.startsWith('/api/v1/users/avatar/');
 
       if (!avatarIsLocal) {
+        // 不预写微信 URL（页面 COEP=require-corp，前端直连微信头像域名必被拦，
+        // 落库即永久无效）；清空存量微信 URL，avatar 只由 syncWechatAvatar 成功后写入本地 URL
         await this.userRepo.update(user.id, {
           nickname: wechatUser.nickname,
-          avatar: wechatUser.headimgurl,
+          avatar: null,
         });
 
-        // 微信头像落盘：下载到本地存储并更新 avatar 为本地 URL，失败降级保留微信 URL
         await this.userService.syncWechatAvatar(
           user.id,
           wechatUser.headimgurl
