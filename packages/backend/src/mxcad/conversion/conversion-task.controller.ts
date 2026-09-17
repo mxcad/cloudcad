@@ -18,6 +18,7 @@ import {
   ApiParam,
   ApiResponse,
   ApiQuery,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { Public } from '../../auth/decorators/public.decorator';
 import { Response, Request as ExpressRequest } from 'express';
@@ -128,7 +129,10 @@ export class ConversionTaskController {
    * 前端收到即 refreshCloud 刷新（替代 5s 轮询为主实时通道，轮询保留为兜底）。
    * token 走 query（EventSource 无法带 Authorization header，与 batch-download SSE 一致）。
    */
+  // SSE 端点不进 Swagger/SDK（ADR-0034，EventSource 订阅无 SDK 形态），
+  // @ApiExcludeEndpoint 把豁免下沉为可执行门禁，重跑 generate:api-types 不收本端点。
   @Get('tasks/stream')
+  @ApiExcludeEndpoint()
   @Header('Cache-Control', 'no-cache')
   @ApiOperation({ summary: '转换任务状态实时推送（SSE，per-user 长连接）' })
   @ApiQuery({

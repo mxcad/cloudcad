@@ -377,6 +377,32 @@ describe('UnifiedConversionService', () => {
       const result = await service.listTasks('user-1');
       expect(result.tasks[0].queuePosition).toBeUndefined();
     });
+
+    it('访问过滤同时覆盖 PROJECT 与 PERSONAL_SPACE 两类容器（个人空间文件不被漏掉）', () => {
+      // buildAccessFilter 是 listTasks/retryTask 的越权面，单测 mock 不到 DB 语义，
+      // 直接断言过滤形状：project 关系须 OR 匹配 PROJECT 根与 PERSONAL_SPACE 根，
+      // 否则个人空间文件（projectId→PERSONAL_SPACE）的在途/失败转换不进面板、
+      // retryTask 报「任务不存在或无权」。
+      const filter = (service as any).buildAccessFilter('user-1');
+      expect(Array.isArray(filter)).toBe(true);
+      // 存在一个 { project: { OR: [...] } } 条件，其 OR 同时含两类容器
+      const projectCond = filter.find(
+        (c: any) => c && c.project && Array.isArray(c.project.OR)
+      );
+      expect(projectCond).toBeTruthy();
+      const containerTypes = projectCond.project.OR.map(
+        (c: any) => c.nodeType
+      );
+      expect(containerTypes).toContain('PROJECT');
+      expect(containerTypes).toContain('PERSONAL_SPACE');
+      // 每类容器的访问 = 属主或成员
+      for (const c of projectCond.project.OR) {
+        expect(c.OR).toEqual([
+          { ownerId: 'user-1' },
+          { projectMembers: { some: { userId: 'user-1' } } },
+        ]);
+      }
+    });
   });
 
   describe('listHistory', () => {

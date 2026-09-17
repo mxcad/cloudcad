@@ -368,22 +368,28 @@ export class UnifiedConversionService {
   }
 
   /**
-   * 当前用户可访问节点的范围过滤（listTasks 实时任务用）：
-   * 项目文件（属主或成员）或个人空间（属主或成员）。
+   * 当前用户可访问**文件节点**的范围过滤（listTasks / retryTask 用）：
+   * 文件的 `project` 关系指向其容器根——项目文件指向 PROJECT 根，个人空间文件
+   * 指向 PERSONAL_SPACE 根（file-tree 创建时 resolveProjectId 上溯到该根写入 projectId）。
+   * 故须按「容器根可访问」匹配，且 PROJECT 与 PERSONAL_SPACE 两类容器都要覆盖：
+   * 此前只匹配 PROJECT 容器，个人空间文件（projectId→PERSONAL_SPACE）被整体漏掉，
+   * 其进行中/失败的转换不进面板、retryTask 报「任务不存在或无权」。
+   * 容器访问 = 属主或成员（个人空间实际无私有成员，成员条件恒不命中，保留以对齐项目语义）。
    */
   private buildAccessFilter(userId: string): Prisma.FileSystemNodeWhereInput[] {
-    const accessibleProjectFilter: Prisma.FileSystemNodeWhereInput = {
-      nodeType: NodeType.PROJECT,
-      OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
-    };
-    const userAccessFilter = [
+    const containerAccess: Prisma.FileSystemNodeWhereInput[] = [
       { ownerId: userId },
       { projectMembers: { some: { userId } } },
     ];
     return [
-      { project: accessibleProjectFilter },
-      { nodeType: NodeType.PROJECT, ...accessibleProjectFilter },
-      { nodeType: NodeType.PERSONAL_SPACE, OR: userAccessFilter },
+      {
+        project: {
+          OR: [
+            { nodeType: NodeType.PROJECT, OR: containerAccess },
+            { nodeType: NodeType.PERSONAL_SPACE, OR: containerAccess },
+          ],
+        },
+      },
     ];
   }
 }

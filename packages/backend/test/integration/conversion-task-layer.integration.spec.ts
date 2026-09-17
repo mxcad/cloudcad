@@ -37,6 +37,10 @@ describe("Unified Conversion Task Layer Integration", () => {
 	let projectP: string;
 	/** 项目 P 下的文件节点（taskId + PROCESSING）—— 测 project 归属访问过滤 */
 	let fileF: string;
+	/** 用户 A 的个人空间根节点（nodeType=PERSONAL_SPACE） */
+	let personalSpaceA: string;
+	/** 个人空间下的文件节点（projectId→个人空间根，taskId + PROCESSING）—— 测个人空间文件访问过滤 */
+	let personalFile: string;
 
 	beforeAll(async () => {
 		const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -104,6 +108,33 @@ describe("Unified Conversion Task Layer Integration", () => {
 			},
 		});
 		fileF = fileFResult.id;
+
+		// 用户 A 的个人空间根节点：注册流程（initialization.service）已自动创建
+		// （库内有部分唯一索引 unique_personal_space：每用户至多一个 PERSONAL_SPACE，
+		// 再 create 必然冲突），故这里只查不建
+		const personalSpaceAResult = await prisma.fileSystemNode.findFirst({
+			where: {
+				ownerId: userA.id,
+				nodeType: NodeType.PERSONAL_SPACE,
+			},
+		});
+		expect(personalSpaceAResult).toBeTruthy();
+		personalSpaceA = personalSpaceAResult!.id;
+
+		// 个人空间下的文件节点：projectId→个人空间根（file-tree 创建时 resolveProjectId
+		// 上溯到该根写入），fileStatus=PROCESSING + taskId。
+		// 命中 listTasks 的「容器为可访问 PERSONAL_SPACE」分支——用户 A 属主可见，用户 B 不可见。
+		const personalFileResult = await prisma.fileSystemNode.create({
+			data: {
+				name: "personal-test.dwg",
+				nodeType: NodeType.FILE,
+				ownerId: userA.id,
+				projectId: personalSpaceA,
+				fileStatus: FileStatus.PROCESSING,
+				taskId: "task-personal-1",
+			},
+		});
+		personalFile = personalFileResult.id;
 	}, 90000);
 
 	afterAll(async () => {
@@ -133,5 +164,17 @@ describe("Unified Conversion Task Layer Integration", () => {
 		const resultB = await service.listTasks(userB.id);
 		const idsB = resultB.tasks.map((t) => t.nodeId);
 		expect(idsB).not.toContain(fileF);
+	}, 30000);
+
+	it("listTasks 覆盖个人空间文件（projectId→PERSONAL_SPACE 容器，属主可见/他人不可见）", async () => {
+		// 用户 A 是个人空间属主 → 空间内文件可见
+		const resultA = await service.listTasks(userA.id);
+		const idsA = resultA.tasks.map((t) => t.nodeId);
+		expect(idsA).toContain(personalFile);
+
+		// 用户 B 非属主 → 个人空间文件不可见（个人空间私有）
+		const resultB = await service.listTasks(userB.id);
+		const idsB = resultB.tasks.map((t) => t.nodeId);
+		expect(idsB).not.toContain(personalFile);
 	}, 30000);
 });
