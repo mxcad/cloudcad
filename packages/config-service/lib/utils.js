@@ -37,35 +37,49 @@ function parseMultipart(req) {
     req.on('data', (chunk) => chunks.push(chunk));
     req.on('end', () => {
       const buffer = Buffer.concat(chunks);
-      const parts = buffer
-        .toString('binary')
-        .split(`--${boundary}`)
-        .filter(Boolean);
+      // 必须用 latin1 做字符串往返：它是逐字节映射，字符串偏移 == 字节偏移。
+      // 默认 utf8 会把图片里的高位字节替换成 U+FFFD，导致 indexOf 返回 -1。
+      const text = buffer.toString('latin1');
+      const parts = text.split(`--${boundary}`).filter(Boolean);
 
       for (const part of parts) {
-        const lines = part.split(/\r?\n/);
-        const headerLine = lines[0];
+        const headerEndMatch = part.match(/\r?\n\r?\n/);
+        if (!headerEndMatch) continue;
 
-        if (!headerLine.includes('Content-Disposition')) continue;
+        const headerEnd = headerEndMatch.index + headerEndMatch[0].length;
+        // 只切 header 段，避免对二进制正文做 split
+        const headerLines = part.slice(0, headerEnd).split(/\r?\n/);
+        const headerLine = headerLines.find((l) =>
+          l.includes('Content-Disposition')
+        );
+
+        if (!headerLine) continue;
 
         const nameMatch = headerLine.match(/name="([^"]+)"/);
         const filenameMatch = headerLine.match(/filename="([^"]+)"/);
 
         if (!filenameMatch) continue;
 
-        const contentTypeMatch = lines[1]?.match(/Content-Type:\s*([^\s]+)/i);
+        const contentTypeLine = headerLines.find((l) =>
+          /^Content-Type:/i.test(l.trim())
+        );
+        const contentTypeMatch = contentTypeLine?.match(
+          /Content-Type:\s*([^\s]+)/i
+        );
         const filename = filenameMatch[1];
 
-        const bodyStart2 = part.indexOf('\r\n\r\n') + 4;
-        const bodyEnd = part.length - (part.endsWith('\r\n') ? 2 : 0);
-        const fileBuffer = buffer.slice(
-          buffer.indexOf(part) + bodyStart2,
-          buffer.indexOf(part) + bodyEnd
+        const bodyStart = headerEnd;
+        // 正文与下一个 boundary 之间恰好一个行尾，CRLF 和 LF 都要退掉
+        const trailer = /\r?\n$/.exec(part);
+        const bodyEnd = part.length - (trailer ? trailer[0].length : 0);
+        const fileBuffer = buffer.subarray(
+          text.indexOf(part) + bodyStart,
+          text.indexOf(part) + bodyEnd
         );
 
         resolve({
           file: {
-            fieldname: nameMatch[1],
+            fieldname: nameMatch ? nameMatch[1] : null,
             filename,
             contentType: contentTypeMatch
               ? contentTypeMatch[1]
