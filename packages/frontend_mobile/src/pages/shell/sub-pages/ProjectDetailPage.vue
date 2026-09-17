@@ -34,11 +34,12 @@ import { useUser } from '@/composables/useUser'
 import { rolesControllerGetProjectRolesByProject } from '@cloudcad/api-sdk/sdk.gen'
 import { usersControllerSearchUsers } from '@cloudcad/api-sdk/sdk.gen'
 import { formatNodeAsItems, formatSize } from '@/composables/useNodeFormatter'
-import { openMxWeb } from '@/plugins/mxcad/openMxWeb'
-import { useEditorState } from '@/composables/useEditorState'
+import { useShellFileOpen } from '@/composables/useShellFileOpen'
+import { useShellStack } from '@/stores/shellStack'
 import { calculateFileHash } from '@/utils/hashUtils'
 import { uploadFile } from '@/services/mobileUploadService'
 import { validateName } from '@/utils/validateName'
+import { ProjectPermission, getProjectRoleDisplayName } from '@/utils/projectPermissions'
 import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.gen'
 import { useBatchDownload } from '@/composables/useBatchDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
@@ -47,20 +48,6 @@ import RenameNodePopup from '../components/RenameNodePopup.vue'
 import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
 import BatchDownloadPanel from '../components/BatchDownloadPanel.vue'
 import type { DownloadFormatPayload } from '../components/DownloadFormatPopup.vue'
-
-// 项目角色名称映射（使用 t() 包裹以支持 i18n）
-const PROJECT_ROLE_NAMES: Record<string, string> = {
-  PROJECT_OWNER: t('项目所有者'),
-  PROJECT_ADMIN: t('项目管理员'),
-  PROJECT_EDITOR: t('项目编辑者'),
-  PROJECT_MEMBER: t('项目成员'),
-  PROJECT_VIEWER: t('项目查看者'),
-}
-
-// 获取角色显示名称
-function getRoleDisplayName(roleName: string): string {
-  return PROJECT_ROLE_NAMES[roleName] || roleName
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -84,7 +71,8 @@ const members = ref<any[]>([])
 const memberLoading = ref(false)
 const memberError = ref('')
 
-const editorState = useEditorState()
+const shellStack = useShellStack()
+const { openFromList } = useShellFileOpen()
 
 const fileSearch = ref('')
 const filePage = ref(1)
@@ -406,18 +394,23 @@ const canManageMembers = computed(() =>
   projectPermissions.value.includes('PROJECT_MEMBER_MANAGE')
 )
 
+// 角色管理入口（对齐 PC ProjectListView 的 canManageRoles 门控：PROJECT_ROLE_MANAGE）
+const canManageRoles = computed(() =>
+  projectPermissions.value.includes(ProjectPermission.PROJECT_ROLE_MANAGE)
+)
+
+function goRoleManagement() {
+  router.push(`/shell/file/project/${projectId.value}/roles`)
+}
+
 function getRoleName(id: string): string {
   const role = roles.value.find((r: any) => r.id === id)
   if (!role) return t('未知角色')
-  return getRoleDisplayName(role.name)
+  return getProjectRoleDisplayName(role.name)
 }
 
-function stripExt(name: string): string {
-  const dot = name.lastIndexOf('.')
-  return dot > 0 ? name.slice(0, dot) : name
-}
-
-async function enterFolder(item: any) {
+/** 文件夹下钻 + 图纸打开（打开走 useShellFileOpen，补齐文件上下文与缓存） */
+function enterFolder(item: any) {
   if (item.isFolder) {
     currentFolderId.value = item.id
     fileBreadcrumbs.value.push({ id: item.id, name: item.name })
@@ -426,20 +419,11 @@ async function enterFolder(item: any) {
     return
   }
 
-  if (!item.path) return
-  const fileUrl = `/api/v1/mxcad/filesData/${item.path}?t=${Date.now()}`
-  editorState.reset()
-  editorState.setLoading(true)
-  const ok = await openMxWeb(fileUrl)
-  editorState.setLoading(false)
-
-  if (ok) {
-    editorState.setIsActive(true)
-    editorState.setFileName(stripExt(item.name))
-    router.back()
-  } else {
-    showFailToast('文件打开失败，请重试')
-  }
+  void openFromList(item.id, {
+    path: `/shell/file/project/${projectId.value}`,
+    folderId: currentFolderId.value,
+    breadcrumbs: fileBreadcrumbs.value,
+  })
 }
 
 function goBackTo(index: number) {
@@ -800,7 +784,7 @@ const memberRows = computed(() =>
   members.value.map((m: any) => ({
     id: m.id,
     name: m.nickname ?? m.username ?? m.email ?? '未知',
-    role: getRoleDisplayName(m.projectRoleName ?? m.role?.name ?? 'PROJECT_MEMBER'),
+    role: getProjectRoleDisplayName(m.projectRoleName ?? m.role?.name ?? 'PROJECT_MEMBER'),
     joinedAt: m.joinedAt ?? '',
     projectRoleId: m.projectRoleId,
     email: m.email ?? '',
@@ -809,6 +793,14 @@ const memberRows = computed(() =>
 )
 
 onMounted(() => {
+  // 打开图纸返回：还原打开前所在的文件夹（loadFiles 读 currentFolderId）
+  const target = shellStack.returnTarget
+  if (target?.folderId && target.breadcrumbs?.length) {
+    currentFolderId.value = target.folderId
+    fileBreadcrumbs.value = target.breadcrumbs
+  }
+  shellStack.clearReturnTarget()
+
   loadProjectInfo()
   loadFiles()
   loadMembers()
@@ -871,16 +863,23 @@ onMounted(() => {
         <div v-else-if="memberLoading && members.length === 0" class="state-box">
           <van-loading size="24" />
         </div>
-        <div v-else-if="members.length === 0" class="state-box">
-          <span class="state-text">暂无成员</span>
-        </div>
         <div v-else class="member-list">
-          <div class="member-header">
-            <span class="member-count">{{ members.length }} 人</span>
-            <button v-if="canManageMembers" class="add-member-btn" @click="openAddMemberDialog">
-              <van-icon name="plus" size="14" />
-              添加成员
-            </button>
+          <!-- 0 成员时列表头仍要保留角色管理入口（PC 端按权限恒显示，不依赖成员数） -->
+          <div v-if="members.length > 0 || canManageRoles || canManageMembers" class="member-header">
+            <span v-if="members.length > 0" class="member-count">{{ members.length }} 人</span>
+            <div class="member-header-actions">
+              <button v-if="canManageRoles" class="add-member-btn" @click="goRoleManagement">
+                <van-icon name="apps-o" size="14" />
+                {{ t('角色管理') }}
+              </button>
+              <button v-if="canManageMembers" class="add-member-btn" @click="openAddMemberDialog">
+                <van-icon name="plus" size="14" />
+                添加成员
+              </button>
+            </div>
+          </div>
+          <div v-if="members.length === 0" class="state-box">
+            <span class="state-text">暂无成员</span>
           </div>
           <div
             v-for="m in memberRows"
@@ -897,7 +896,7 @@ onMounted(() => {
             <div v-if="canManageMembers && !isOwner(m) && !isSelf(m)" class="member-actions">
               <van-dropdown-menu class="role-dropdown">
                 <van-dropdown-item
-                  :options="roles.filter(r => !r.isOwnerRole).map(r => ({ text: getRoleDisplayName(r.name), value: r.id }))"
+                  :options="roles.filter(r => !r.isOwnerRole).map(r => ({ text: getProjectRoleDisplayName(r.name), value: r.id }))"
                   v-model="m.projectRoleId"
                   @change="(val: any) => onUpdateMemberRole(m, val)"
                 />
@@ -1025,7 +1024,7 @@ onMounted(() => {
                 :key="role.id"
                 class="role-option"
               >
-                <van-radio :name="role.id">{{ getRoleDisplayName(role.name) }}</van-radio>
+                <van-radio :name="role.id">{{ getProjectRoleDisplayName(role.name) }}</van-radio>
               </div>
             </van-radio-group>
           </div>
@@ -1296,6 +1295,12 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
+}
+
+.member-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .add-member-btn {

@@ -519,10 +519,11 @@ onMounted(async () => {
   });
   mxcad.on('openFileComplete', () => {
     editorState.setIsModified(false);
-    // 打开文件后异步生成并上传缩略图（参考 PC setupFileOpenListener）
-    const fileId = editorState.state.fileId;
-    if (fileId) {
-      uploadThumbnailForNode(fileId).catch(() => { });
+    // 打开文件后异步生成并上传缩略图（参考 PC setupFileOpenListener）；
+    // 公开文件没有服务端节点（fileId 存的是 hash），跳过
+    const { fileId, isPublicFile } = editorState.state;
+    if (fileId && !isPublicFile) {
+      uploadThumbnailForNode(fileId, { waitForRender: true }).catch(() => { });
     }
   });
 

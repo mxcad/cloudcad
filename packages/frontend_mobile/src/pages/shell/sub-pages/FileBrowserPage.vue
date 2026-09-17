@@ -9,10 +9,10 @@
  *
  * 点击项目卡片 → router.push('/shell/file/project/:id')
  * 点击个人空间文件夹 → 进入文件夹
- * 点击个人空间文件 → 编辑器打开（openMxWeb）
+ * 点击个人空间文件 → 编辑器打开（useShellFileOpen → useFileLoader.loadByNodeId）
  * FAB 上下文敏感：项目 Tab → 新建项目；个人空间 → 新建文件夹/上传
  */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast, showDialog, showSuccessToast, showFailToast } from 'vant'
 import type { ActionSheetAction } from 'vant'
@@ -34,8 +34,8 @@ import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType } fro
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { useViewMode } from '@/composables/useViewMode'
 import { formatNodeAsItems, formatTime } from '@/composables/useNodeFormatter'
-import { openMxWeb } from '@/plugins/mxcad/openMxWeb'
-import { useEditorState } from '@/composables/useEditorState'
+import { useShellFileOpen } from '@/composables/useShellFileOpen'
+import { useShellStack } from '@/stores/shellStack'
 import { calculateFileHash } from '@/utils/hashUtils'
 import { uploadFile } from '@/services/mobileUploadService'
 import { validateName } from '@/utils/validateName'
@@ -150,7 +150,8 @@ const personalHasMore = computed(() => personalFileList.hasMore.value)
 const personalError = ref('')
 // A-16 视图模式（网格/清单）按域持久化，与项目详情各自记住
 const personalMode = useViewMode('personal')
-const editorState = useEditorState()
+const shellStack = useShellStack()
+const { openFromList } = useShellFileOpen()
 
 async function loadPersonalSpace() {
   personalError.value = ''
@@ -160,6 +161,14 @@ async function loadPersonalSpace() {
     const space = res.data as { id?: string } | undefined
     if (space?.id) {
       await personalFileList.loadRootNode(space.id)
+      // 打开图纸返回：根节点就绪后还原打开前所在的文件夹（消费一次）
+      const target = shellStack.returnTarget
+      if (target?.folderId && target.breadcrumbs?.length) {
+        shellStack.clearReturnTarget()
+        personalFileList.breadcrumbs.value = target.breadcrumbs
+        personalFileList.currentFolderId.value = target.folderId
+        personalFileList.loadNodes()
+      }
     }
   } catch (e) {
     personalError.value = '加载个人空间失败'
@@ -172,6 +181,13 @@ watch(activeTab, (tab) => {
     loadProjects()
   } else {
     loadPersonalSpace()
+  }
+})
+
+// 打开图纸返回：先切回个人空间 Tab（watch(activeTab) 触发 loadPersonalSpace 还原文件夹）
+onMounted(() => {
+  if (shellStack.returnTarget?.tab === 1) {
+    activeTab.value = 1
   }
 })
 
@@ -190,16 +206,6 @@ function onProjectClick(project: ProjectCard) {
   router.push(`/shell/file/project/${project.id}`)
 }
 
-function stripExt(name: string): string {
-  const dot = name.lastIndexOf('.')
-  return dot > 0 ? name.slice(0, dot) : name
-}
-
-function getNodeFileUrl(itemPath: string): string {
-  if (!itemPath) return ''
-  return `/api/v1/mxcad/filesData/${itemPath}?t=${Date.now()}`
-}
-
 async function onPersonalItemClick(item: { id: string; name: string; isFolder?: boolean; path?: string }) {
   if (item.isFolder) {
     const raw = personalFileList.nodes.value.find(n => n.id === item.id)
@@ -207,21 +213,12 @@ async function onPersonalItemClick(item: { id: string; name: string; isFolder?: 
     return
   }
 
-  const fileUrl = getNodeFileUrl(item.path || '')
-  if (!fileUrl) return
-
-  editorState.reset()
-  editorState.setLoading(true)
-  const ok = await openMxWeb(fileUrl)
-  editorState.setLoading(false)
-
-  if (ok) {
-    editorState.setIsActive(true)
-    editorState.setFileName(stripExt(item.name))
-    router.back()
-  } else {
-    showFailToast('文件打开失败，请重试')
-  }
+  void openFromList(item.id, {
+    path: '/shell/file',
+    tab: 1,
+    folderId: personalFileList.currentFolderId.value,
+    breadcrumbs: personalFileList.breadcrumbs.value,
+  })
 }
 
 // A-16 切换模式时写回持久化 ref（composable 内部 watch 落 localStorage）
