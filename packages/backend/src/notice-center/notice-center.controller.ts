@@ -39,6 +39,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiExcludeEndpoint,
   ApiOperation,
   ApiQuery,
   ApiResponse,
@@ -115,9 +116,13 @@ export class NoticeCenterController {
    *
    * 服务端先订阅 Redis、再下发当前快照，两步之间发布的通知只会重复到达
    * （客户端按 noticeId 去重），不会漏。
+   *
+   * @ApiExcludeEndpoint()：SSE 无 SDK 形态（ADR-0034 豁免），返回类型对
+   * EventSource 订阅毫无表达力，进 api-sdk 只是污染；排除后生成脚本不会收它。
    */
   @Public()
   @Get('stream')
+  @ApiExcludeEndpoint()
   @Throttle({ default: { limit: 60, ttl: 60000 } })
   @ApiOperation({ summary: '通知 SSE 长连接（一次性 ticket 认证）' })
   @ApiQuery({ name: 'ticket', description: 'POST /notices/stream/ticket 获取' })

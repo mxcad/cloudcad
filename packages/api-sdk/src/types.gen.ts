@@ -9655,22 +9655,6 @@ export type ConversionTaskControllerListHistoryResponses = {
 
 export type ConversionTaskControllerListHistoryResponse = ConversionTaskControllerListHistoryResponses[keyof ConversionTaskControllerListHistoryResponses];
 
-export type ConversionTaskControllerStreamTasksData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * JWT token for SSE auth
-         */
-        token?: unknown;
-    };
-    url: '/api/v1/mxcad/conversion/tasks/stream';
-};
-
-export type ConversionTaskControllerStreamTasksResponses = {
-    200: unknown;
-};
-
 export type ConversionTaskControllerCancelTaskData = {
     body?: never;
     path: {
@@ -10277,22 +10261,6 @@ export type ShareControllerGetFileSharesResponses = {
 
 export type ShareControllerGetFileSharesResponse = ShareControllerGetFileSharesResponses[keyof ShareControllerGetFileSharesResponses];
 
-export type ConversionFileSseControllerStreamFileData = {
-    body?: never;
-    path?: never;
-    query: {
-        /**
-         * 文件 MD5 hash
-         */
-        hash: string;
-    };
-    url: '/api/v1/mxcad/conversion/file-stream';
-};
-
-export type ConversionFileSseControllerStreamFileResponses = {
-    200: unknown;
-};
-
 export type AdminControllerGetOverviewData = {
     body?: never;
     path?: never;
@@ -10754,22 +10722,6 @@ export type NoticeCenterControllerIssueTicketResponses = {
 };
 
 export type NoticeCenterControllerIssueTicketResponse = NoticeCenterControllerIssueTicketResponses[keyof NoticeCenterControllerIssueTicketResponses];
-
-export type NoticeCenterControllerOpenStreamData = {
-    body?: never;
-    path?: never;
-    query: {
-        /**
-         * POST /notices/stream/ticket 获取
-         */
-        ticket: string;
-    };
-    url: '/api/v1/notices/stream';
-};
-
-export type NoticeCenterControllerOpenStreamResponses = {
-    200: unknown;
-};
 
 export type NoticeCenterControllerListAllData = {
     body?: never;

@@ -115,35 +115,6 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
-  http.get(
-    `${baseURL}/api/v1/mxcad/conversion/tasks/stream`,
-    async ({ request }) => {
-      const shouldEchoRequestBody = false;
-      let requestJson = null;
-      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
-        try {
-          requestJson = await request.clone().json();
-        } catch (e) {
-          requestJson = null;
-        }
-      }
-
-      const resultArray = [[undefined, { status: 200 }]] as [
-        any,
-        { status: number },
-      ][];
-
-      const [body, init] =
-        resultArray[
-          next(`get /api/v1/mxcad/conversion/tasks/stream`) % resultArray.length
-        ];
-      const responseJson =
-        requestJson && body && typeof body === 'object' && !Array.isArray(body)
-          ? { ...body, ...requestJson }
-          : body;
-      return HttpResponse.json(responseJson, init);
-    }
-  ),
   http.post(`${baseURL}/api/v1/admin/auth/mfa/bind`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -3138,30 +3109,6 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`get /api/v1/notices/current`) % resultArray.length];
-    const responseJson =
-      requestJson && body && typeof body === 'object' && !Array.isArray(body)
-        ? { ...body, ...requestJson }
-        : body;
-    return HttpResponse.json(responseJson, init);
-  }),
-  http.get(`${baseURL}/api/v1/notices/stream`, async ({ request }) => {
-    const shouldEchoRequestBody = false;
-    let requestJson = null;
-    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
-      try {
-        requestJson = await request.clone().json();
-      } catch (e) {
-        requestJson = null;
-      }
-    }
-
-    const resultArray = [[undefined, { status: 200 }]] as [
-      any,
-      { status: number },
-    ][];
-
-    const [body, init] =
-      resultArray[next(`get /api/v1/notices/stream`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -13196,6 +13143,14 @@ export function getConversionTaskControllerListTasksdefaultResponse() {
         taskStatus: faker.lorem.words(),
         progress: 42,
         error: faker.lorem.words(),
+        errorCategory: faker.helpers.arrayElement([
+          'timeout',
+          'killed',
+          'not-started',
+          'output-unparseable',
+          'content-error',
+          'unknown',
+        ]),
         queuePosition: 2,
         updatedAt: faker.lorem.words(),
       }));
@@ -13220,6 +13175,14 @@ export function getConversionTaskControllerListHistorydefaultResponse() {
         taskStatus: faker.lorem.words(),
         progress: 42,
         error: faker.lorem.words(),
+        errorCategory: faker.helpers.arrayElement([
+          'timeout',
+          'killed',
+          'not-started',
+          'output-unparseable',
+          'content-error',
+          'unknown',
+        ]),
         queuePosition: 2,
         updatedAt: faker.lorem.words(),
       }));
