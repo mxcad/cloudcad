@@ -7,6 +7,7 @@ import { authControllerRefreshToken } from '@/api-sdk';
 import { isCADRoute } from '@/utils/hasRoute';
 import { ADMIN_LOGIN_PATH } from '@/constants/adminLoginConfig';
 import {
+  decodeJwtPayload,
   getAccessToken,
   getRefreshToken,
   getValidToken,
@@ -253,12 +254,11 @@ export function cancelLoginRedirect(): void {
 
 /** 解析 access token 剩余有效毫秒数（主动刷新/临门刷新共用，统一口径） */
 function getTokenRemainingMs(token: string): number | null {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1] || ''));
-    return payload.exp ? payload.exp * 1000 - Date.now() : null;
-  } catch {
-    return null;
-  }
+  // 必须走 decodeJwtPayload（base64url 解码）：payload 含 UUID（sub/jti）时
+  // 编码结果几乎必然含 -/_，直接 atob 抛异常 → 返回 null → 主动刷新与
+  // ensureFreshAuthCookie 保活全部静默失效
+  const payload = decodeJwtPayload(token);
+  return payload?.exp ? (payload.exp as number) * 1000 - Date.now() : null;
 }
 
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
