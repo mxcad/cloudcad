@@ -5,20 +5,15 @@ import { log } from '../lib/utils';
 import { runMxcadAssembly } from '../mxcad-exec';
 
 /**
- * 转换执行错误（#465 永久失败负缓存）
- *
- * `deterministic` 区分两类失败：
- * - true：确定性内容失败（解析/格式错，mxcadassembly 返回非 0 code）→ 可标 known-bad
- * - false：瞬时失败（超时 / 进程被杀）→ 不标 known-bad，可重试
+ * 转换执行错误：mxcadassembly 返回非 0 code / 超时 / 进程被杀 / 进程未启动 / 输出无法解析。
+ * 失败一律作为普通失败返回，调用方按需重试。
  */
 export class ConversionExecutionError extends Error {
-  deterministic: boolean;
   code?: number;
 
-  constructor(message: string, deterministic: boolean, code?: number) {
+  constructor(message: string, code?: number) {
     super(message);
     this.name = 'ConversionExecutionError';
-    this.deterministic = deterministic;
     this.code = code;
   }
 }
@@ -119,21 +114,19 @@ class MxcadRunner {
       onChild,
     });
 
-    // 瞬时失败（超时 / 进程被杀）：不标永久失败（#465），可重试
+    // 瞬时失败（超时 / 进程被杀）：可重试
     if (result.timedOut || result.signal) {
       throw new ConversionExecutionError(
-        result.timedOut ? '转换超时' : `转换进程被终止 (${result.signal})`,
-        false
+        result.timedOut ? '转换超时' : `转换进程被终止 (${result.signal})`
       );
     }
 
-    // spawn 失败（二进制缺失/无法启动，exitCode=null）：环境/瞬时错误，不标永久失败。
-    // 否则 ENOENT 的 stderr 会落进 _parseOutput 解析失败 → 误标确定性内容失败、污染
-    // 负缓存（误导的「转换输出格式错误」+ 需手动 known-bad/reset），掩盖真实的路径/部署问题。
+    // spawn 失败（二进制缺失/无法启动，exitCode=null）：环境/瞬时错误。
+    // 否则 ENOENT 的 stderr 会落进 _parseOutput 解析失败（误导的「转换输出格式错误」），
+    // 掩盖真实的路径/部署问题。
     if (result.exitCode === null) {
       throw new ConversionExecutionError(
-        `mxcadassembly 进程未正常启动（stderr: ${result.stderr.slice(0, 200) || '无'}）`,
-        false
+        `mxcadassembly 进程未正常启动（stderr: ${result.stderr.slice(0, 200) || '无'}）`
       );
     }
 
@@ -159,9 +152,9 @@ class MxcadRunner {
       return { ...parsed, newpath: parsed.newpath || computedNewpath };
     }
 
-    // 确定性内容失败（解析/格式错，mxcadassembly 返回非 0 code）→ 可标 known-bad
+    // 内容失败（解析/格式错，mxcadassembly 返回非 0 code）
     // 记录引擎原始 stdout/stderr：引擎常只回 {"code":非0,"message":"false"}（"false" 无信息量），
-    // 不记录则真因被吞，且负缓存标 known-bad 后重试注定再失败、无从排查。
+    // 不记录则真因被吞，重试再失败也无从排查。
     // 带上 cmd（print_to_pdf/cut_dwg 等）便于定位是哪类命令失败。
     // 打出引擎实际收到的关键参数（含裁剪框 bd_pt*）：对照前端发的 box.param，
     // 能看出裁剪框到底有没有传到引擎（漏字段 vs 前端没发 vs 引擎不认）。
@@ -172,11 +165,7 @@ class MxcadRunner {
         `stdout=[${(result.stdout || '').slice(0, 500)}] ` +
         `stderr=[${(result.stderr || '').slice(0, 500)}]`
     );
-    throw new ConversionExecutionError(
-      parsed.message || `转换失败, code=${parsed.code}`,
-      true,
-      parsed.code
-    );
+    throw new ConversionExecutionError(parsed.message || `转换失败, code=${parsed.code}`, parsed.code);
   }
 
   /**
@@ -195,7 +184,7 @@ class MxcadRunner {
     // 源路径缺失时显式报错（而非 _resolvePath 返回 undefined 后 .replace 崩溃成
     // "Cannot read properties of undefined (reading 'replace')" 无从定位）
     if (!srcPath) {
-      throw new ConversionExecutionError('转换参数缺少 srcPath', true);
+      throw new ConversionExecutionError('转换参数缺少 srcPath');
     }
 
     const absoluteSrcPath = this._resolvePath(srcPath);

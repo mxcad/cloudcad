@@ -130,19 +130,17 @@ describe('MxcadRunner.execute 失败分类', () => {
     timedOut: false,
   };
 
-  it('spawn 失败（exitCode=null）→ 瞬时错误（deterministic=false），不标 known-bad', async () => {
+  it('spawn 失败（exitCode=null）→ 抛出「进程未正常启动」错误', async () => {
     const runner = new MxcadRunner();
     const fakeRun = async () => spawnFailure;
     await assert.rejects(
       runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
       (err: unknown) =>
-        err instanceof ConversionExecutionError &&
-        err.deterministic === false &&
-        /未正常启动/.test(err.message)
+        err instanceof ConversionExecutionError && /未正常启动/.test(err.message)
     );
   });
 
-  it('超时（timedOut=true）→ 瞬时错误（deterministic=false）', async () => {
+  it('超时（timedOut=true）→ 抛出「转换超时」错误', async () => {
     const runner = new MxcadRunner();
     const fakeRun = async () => ({
       stdout: '',
@@ -153,11 +151,12 @@ describe('MxcadRunner.execute 失败分类', () => {
     });
     await assert.rejects(
       runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
-      (err: unknown) => err instanceof ConversionExecutionError && err.deterministic === false
+      (err: unknown) =>
+        err instanceof ConversionExecutionError && /转换超时/.test(err.message)
     );
   });
 
-  it('mxcadassembly 返回非 0 code（进程正常退出）→ 确定性内容失败（deterministic=true）', async () => {
+  it('mxcadassembly 返回非 0 code（进程正常退出）→ 抛出携带 code 的转换失败', async () => {
     const runner = new MxcadRunner();
     const fakeRun = async () => ({
       stdout: '{"code":12,"message":"param error"}',
@@ -168,10 +167,7 @@ describe('MxcadRunner.execute 失败分类', () => {
     });
     await assert.rejects(
       runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
-      (err: unknown) =>
-        err instanceof ConversionExecutionError &&
-        err.deterministic === true &&
-        err.code === 12
+      (err: unknown) => err instanceof ConversionExecutionError && err.code === 12
     );
   });
 });

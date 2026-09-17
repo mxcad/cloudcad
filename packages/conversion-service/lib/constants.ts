@@ -9,7 +9,7 @@ const PORT = parseInt(process.env.CONVERSION_SERVICE_PORT || '3100', 10);
 // runtime/{windows|linux}/mxcad/ 下）。tsconfig rootDir="."+outDir="dist"，编译产物
 // dist/lib/constants.js 比源码 lib/ 深一层——写死 path.resolve(__dirname,'..','..','..')
 // 会从 dist/lib/ 只爬到 packages/（少爬一层 dist），致 assemblyPath 指向不存在的
-// packages/runtime/... → spawn ENOENT（被 runner 误判成确定性内容失败、污染负缓存）。
+// packages/runtime/... → spawn ENOENT，失败被归类为「进程未正常启动」（可重试的环境性失败）。
 // 向上查找与嵌套深度无关：源码 lib/、编译 dist/lib/、部署包布局（runtime/ 恒在根）均正确。
 // 找不到 runtime/（如 CI 无 runtime 资产）时回退旧的 3 层解析，保持向后兼容。
 function resolveProjectRoot(): string {
@@ -93,10 +93,6 @@ const WORKER_POOL_BACKLOG_WINDOW_MS = parseInt(process.env.WORKER_POOL_BACKLOG_W
 
 const CALLBACK_TIMEOUT = parseInt(process.env.CALLBACK_TIMEOUT || '10000', 10);
 
-// 永久失败负缓存 TTL（#465 定案）：known-bad 条目超过 TTL 后自动失效（内容可能已被修复/
-// 引擎升级后可转，避免"毒化"永久失败）。默认 24h；设 0 = 永久不失效（须管理员手动 reset）。
-const NEGATIVE_CACHE_TTL_HOURS = parseFloat(process.env.NEGATIVE_CACHE_TTL_HOURS || '24');
-
 export interface PriorityConfig {
   label: string;
   maxConcurrent: number;
@@ -120,5 +116,4 @@ export {
   WORKER_POOL_BACKLOG_THRESHOLD,
   WORKER_POOL_BACKLOG_WINDOW_MS,
   CALLBACK_TIMEOUT,
-  NEGATIVE_CACHE_TTL_HOURS,
 };

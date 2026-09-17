@@ -51,25 +51,6 @@ describe('TaskStore', () => {
     assert.equal(updated.progress, 100);
   });
 
-  it('should persist permanent flag on FAILED task (S6-7 永久失败标记)', () => {
-    store.create({ id: 't-perm', params: {} });
-    const updated = store.updateStatus('t-perm', 'FAILED', {
-      error: '永久失败（内容不可转换）：解析失败',
-      permanent: true,
-    })!;
-    assert.equal(updated.status, 'FAILED');
-    assert.equal(updated.permanent, true);
-    // 记录持久化（后续 GET /tasks/:taskId / list 可读到）
-    assert.equal(store.get('t-perm')!.permanent, true);
-  });
-
-  it('should leave permanent undefined when not provided (S6-7 普通任务)', () => {
-    store.create({ id: 't-plain', params: {} });
-    const updated = store.updateStatus('t-plain', 'FAILED', { error: '瞬时失败' })!;
-    assert.equal(updated.status, 'FAILED');
-    assert.equal('permanent' in updated, false);
-  });
-
   it('should ignore updates for unknown tasks', () => {
     assert.equal(store.updateStatus('nope', 'COMPLETED', {}), null);
   });

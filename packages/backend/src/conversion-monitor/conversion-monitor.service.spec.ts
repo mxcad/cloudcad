@@ -11,10 +11,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ConfigService } from '@nestjs/config';
-import { validate } from 'class-validator';
 import { ConversionMonitorService } from './conversion-monitor.service';
 import { ProcessPoolExecutor } from '../function-executor/process-pool.executor';
-import { ResetKnownBadDto } from './dto/conversion-monitor.dto';
 
 function makeService(
   env: Record<string, string>,
@@ -28,7 +26,6 @@ function makeService(
     executor as ProcessPoolExecutor,
   );
   (service as unknown as { httpGet: jest.Mock }).httpGet = jest.fn();
-  (service as unknown as { httpPost: jest.Mock }).httpPost = jest.fn();
   return service;
 }
 
@@ -215,77 +212,8 @@ describe('ConversionMonitorService', () => {
     });
   });
 
-  describe('known-bad（#477 永久失败负缓存）', () => {
-    it('conversion-service 模式 proxy 远端列出永久失败条目', async () => {
-      const service = makeService(
-        {
-          FUNCTION_EXECUTOR: 'conversion-service',
-          CONVERSION_SERVICE_URL: 'http://cs:3100',
-        },
-        {} as Partial<ProcessPoolExecutor>,
-      );
-      (service as unknown as { httpGet: jest.Mock }).httpGet.mockResolvedValue({
-        items: [
-          { contentKey: 'abc123', reason: 'read file error', markedAt: 1700000000000 },
-        ],
-        total: 1,
-      });
-
-      const list = await service.listKnownBad();
-      expect(list.total).toBe(1);
-      expect(list.items[0]).toEqual({
-        contentKey: 'abc123',
-        reason: 'read file error',
-        markedAt: 1700000000000,
-      });
-      expect((service as unknown as { httpGet: jest.Mock }).httpGet).toHaveBeenCalledWith(
-        '/v1/conversions/known-bad',
-      );
-    });
-
-    it('process-pool 模式无负缓存，返回空列表且不调远端', async () => {
-      const service = makeService(
-        { FUNCTION_EXECUTOR: '' },
-        {} as Partial<ProcessPoolExecutor>,
-      );
-
-      const list = await service.listKnownBad();
-      expect(list).toEqual({ items: [], total: 0 });
-      expect((service as unknown as { httpGet: jest.Mock }).httpGet).not.toHaveBeenCalled();
-    });
-
-    it('conversion-service 模式 proxy 远端复位单条（携带 contentKey）', async () => {
-      const service = makeService(
-        { FUNCTION_EXECUTOR: 'conversion-service' },
-        {} as Partial<ProcessPoolExecutor>,
-      );
-      (service as unknown as { httpPost: jest.Mock }).httpPost.mockResolvedValue({
-        reset: 1,
-        contentKey: 'abc123',
-      });
-
-      const result = await service.resetKnownBad('abc123');
-      expect(result.reset).toBe(1);
-      expect((service as unknown as { httpPost: jest.Mock }).httpPost).toHaveBeenCalledWith(
-        '/v1/conversions/known-bad/reset',
-        { contentKey: 'abc123' },
-      );
-    });
-
-    it('process-pool 模式复位返回 unsupported（无负缓存）', async () => {
-      const service = makeService(
-        { FUNCTION_EXECUTOR: '' },
-        {} as Partial<ProcessPoolExecutor>,
-      );
-
-      const result = await service.resetKnownBad();
-      expect(result).toEqual({ reset: 0, unsupported: true });
-      expect((service as unknown as { httpPost: jest.Mock }).httpPost).not.toHaveBeenCalled();
-    });
-  });
-
   describe('listTasks（#478 监控 Tab 逐任务明细）', () => {
-    it('conversion-service 模式 proxy 远端列出任务明细（含 permanent 标记）', async () => {
+    it('conversion-service 模式 proxy 远端列出任务明细', async () => {
       const service = makeService(
         { FUNCTION_EXECUTOR: 'conversion-service' },
         {} as Partial<ProcessPoolExecutor>,
@@ -301,7 +229,6 @@ describe('ConversionMonitorService', () => {
             updatedAt: '2026-09-03T00:01:00Z',
             startedAt: '2026-09-03T00:00:10Z',
             completedAt: '2026-09-03T00:01:00Z',
-            permanent: true,
             contentKey: 'abc123',
           },
           {
@@ -325,7 +252,6 @@ describe('ConversionMonitorService', () => {
           id: 't-1',
           status: 'completed',
           progress: 100,
-          permanent: true,
           contentKey: 'abc123',
         }),
       );
@@ -334,7 +260,6 @@ describe('ConversionMonitorService', () => {
           id: 't-2',
           status: 'processing',
           progress: 50,
-          permanent: undefined,
         }),
       );
       expect((service as unknown as { httpGet: jest.Mock }).httpGet).toHaveBeenCalledWith(
@@ -381,25 +306,5 @@ describe('ConversionMonitorService', () => {
       const list = await service.listTasks();
       expect(list).toEqual({ items: [], total: 0 });
     });
-  });
-});
-
-describe('ResetKnownBadDto 白名单（#477 复位单条 contentKey）', () => {
-  // CustomValidationPipe 用 whitelist+forbidNonWhitelisted：contentKey 必须带 class-validator
-  // 装饰器（@IsOptional/@IsString），否则前端带 contentKey 复位单条会被判「should not exist」→400。
-  // 此处复刻 pipe 的 validate 选项，锁定 contentKey 被白名单放行（回归 721fe02 同类漏装饰器）。
-  const pipeOptions = { whitelist: true, forbidNonWhitelisted: true } as const;
-
-  it('带 contentKey 复位单条：白名单放行（不报 should not exist）', async () => {
-    const dto = new ResetKnownBadDto();
-    dto.contentKey = 'ck_5121df958f3244523f4d';
-    const errors = await validate(dto, pipeOptions);
-    expect(errors).toEqual([]);
-  });
-
-  it('不带 contentKey 复位全部：白名单放行', async () => {
-    const dto = new ResetKnownBadDto();
-    const errors = await validate(dto, pipeOptions);
-    expect(errors).toEqual([]);
   });
 });

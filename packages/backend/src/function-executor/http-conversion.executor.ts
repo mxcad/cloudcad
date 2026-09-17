@@ -91,8 +91,6 @@ export class HttpConversionExecutor implements IFunctionExecutor {
           }
         : undefined,
       error: response.error,
-      // 永久失败标记（S6-7）：conversion-service GET /tasks/:taskId 透传（仅 conversion-service 模式有）
-      permanent: response.permanent === true,
       // 排队位置（S6-5）：conversion-service GET /tasks/:taskId 透传（仅排队中任务有意义，否则 null）
       queuePosition:
         typeof response.queuePosition === 'number'

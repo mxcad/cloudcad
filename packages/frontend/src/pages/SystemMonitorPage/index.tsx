@@ -201,11 +201,7 @@ export const SystemMonitorPage: React.FC = () => {
             state={conversionQueue.state}
             loading={conversionQueue.loading}
             error={conversionQueue.error}
-            knownBad={conversionQueue.knownBad}
             onRefresh={conversionQueue.refresh}
-            canReset={conversionQueue.canReset}
-            resetting={conversionQueue.resetting}
-            onReset={conversionQueue.resetKnownBad}
             tasks={conversionTasks.tasks}
             tasksLoading={conversionTasks.loading}
             tasksError={conversionTasks.error}

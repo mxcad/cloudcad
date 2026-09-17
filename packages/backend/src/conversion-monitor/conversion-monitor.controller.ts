@@ -13,8 +13,6 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -30,9 +28,6 @@ import { RequirePermissions } from '../common/decorators/require-permissions.dec
 import { SystemPermission } from '../common/enums/permissions.enum';
 import {
   ConversionMonitorStatsDto,
-  KnownBadListDto,
-  ResetKnownBadDto,
-  KnownBadResetResultDto,
   MonitorTaskListDto,
 } from './dto/conversion-monitor.dto';
 
@@ -60,26 +55,6 @@ export class ConversionMonitorController {
   @RequirePermissions([SystemPermission.SYSTEM_MONITOR])
   getStats(): Promise<ConversionMonitorStatsDto> {
     return this.conversionMonitorService.getStats();
-  }
-
-  @Get('known-bad')
-  @ApiOperation({ summary: '列出永久失败负缓存（#477 管理后台「转换任务」页）' })
-  @ApiResponse({ status: 200, type: KnownBadListDto })
-  @RequirePermissions([SystemPermission.SYSTEM_MONITOR])
-  listKnownBad(): Promise<KnownBadListDto> {
-    return this.conversionMonitorService.listKnownBad();
-  }
-
-  @Post('known-bad/reset')
-  @ApiOperation({
-    summary: '复位永久失败负缓存（#477）：contentKey 缺省=复位全部',
-  })
-  @ApiResponse({ status: 200, type: KnownBadResetResultDto })
-  @RequirePermissions([SystemPermission.SYSTEM_ADMIN])
-  resetKnownBad(
-    @Body() dto: ResetKnownBadDto
-  ): Promise<KnownBadResetResultDto> {
-    return this.conversionMonitorService.resetKnownBad(dto?.contentKey);
   }
 
   @Get('tasks')

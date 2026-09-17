@@ -88,16 +88,6 @@ vi.mock('@/api-sdk', () => ({
       },
     })
   ),
-  conversionMonitorControllerListKnownBad: vi.fn(() =>
-    Promise.resolve({
-      data: { items: [], total: 0 },
-    })
-  ),
-  conversionMonitorControllerResetKnownBad: vi.fn(() =>
-    Promise.resolve({
-      data: { reset: 0, all: true },
-    })
-  ),
   cacheMonitorControllerGetSummary: vi.fn(() =>
     Promise.resolve({
       data: {
@@ -397,139 +387,22 @@ describe('SystemMonitorPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('转换队列 Tab 渲染永久失败列表与排队 ETA（conversion-service 模式，#478）', async () => {
+  it('转换队列 Tab 渲染排队 ETA（conversion-service 模式，#478）', async () => {
     const sdk = await import('@/api-sdk');
     vi.mocked(sdk.conversionMonitorControllerGetStats).mockResolvedValue({
-      data: {
-        mode: 'conversion-service',
-        processPool: null,
-        conversionService: {
-          tasks: { total: 5, pending: 4, processing: 2, completed: 1, failed: 0 },
-          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 },
-          workers: {},
-        },
-        conversionServiceError: null,
-        history: [],
-        sampledAt: Date.now(),
-      },
+      data: { mode: 'conversion-service', processPool: null,
+        conversionService: { tasks: { total: 5, pending: 4, processing: 2, completed: 1, failed: 0 },
+          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 }, workers: {} },
+        conversionServiceError: null, history: [], sampledAt: Date.now() },
     } as never);
-    vi.mocked(sdk.conversionMonitorControllerListKnownBad).mockResolvedValue({
-      data: {
-        items: [
-          { contentKey: 'sha256-abc-001', reason: '格式不支持', markedAt: 1720000000000 },
-          { contentKey: 'sha256-def-002', reason: '文件损坏', markedAt: 1720000000000 },
-        ],
-        total: 2,
-      },
-    } as never);
-
     renderPage();
     await screen.findByText('PostgreSQL 数据库');
-
     fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
-
-    // 永久失败列表（#478）
-    expect(await screen.findByText('永久失败（内容不可转换）')).toBeInTheDocument();
-    expect(screen.getByText('sha256-abc-001')).toBeInTheDocument();
-    expect(screen.getByText('sha256-def-002')).toBeInTheDocument();
-    expect(screen.getByText('格式不支持')).toBeInTheDocument();
     // 排队 ETA：pending=4 / processing=2 × p50=3000ms = 6000ms = 6s
-    expect(screen.getByText(/排队 4 个 · 预计约 6s 清空/)).toBeInTheDocument();
-  });
-
-  it('转换队列 Tab 永久失败复位：SYSTEM_ADMIN 可见复位按钮，点击「复位全部」触发 reset（#477 合并自独立转换任务页）', async () => {
-    permissionMock.hasPermission.mockImplementation((p: string) =>
-      ['SYSTEM_MONITOR', 'SYSTEM_ADMIN'].includes(p)
-    );
-    const sdk = await import('@/api-sdk');
-    vi.mocked(sdk.conversionMonitorControllerGetStats).mockResolvedValue({
-      data: {
-        mode: 'conversion-service',
-        processPool: null,
-        conversionService: {
-          tasks: { total: 5, pending: 0, processing: 0, completed: 5, failed: 0 },
-          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 },
-          workers: {},
-        },
-        conversionServiceError: null,
-        history: [],
-        sampledAt: Date.now(),
-      },
-    } as never);
-    vi.mocked(sdk.conversionMonitorControllerListKnownBad).mockResolvedValue({
-      data: {
-        items: [
-          { contentKey: 'sha256-abc-001', reason: '格式不支持', markedAt: 1720000000000 },
-        ],
-        total: 1,
-      },
-    } as never);
-    const resetMock = vi.mocked(sdk.conversionMonitorControllerResetKnownBad);
-
-    renderPage();
-    await screen.findByText('PostgreSQL 数据库');
-
-    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
-
-    // SYSTEM_ADMIN 可见「复位全部」+ 行内「复位」按钮
-    expect(await screen.findByText('sha256-abc-001')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: '复位全部' })
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '复位' })).toBeInTheDocument();
-
-    // 点击「复位全部」触发 reset（body 空对象）+ 复位成功 toast
-    resetMock.mockClear();
-    fireEvent.click(screen.getByRole('button', { name: '复位全部' }));
-    await waitFor(() => {
-      expect(resetMock).toHaveBeenCalledWith({ body: {} });
-    });
-    await waitFor(() => {
-      expect(notificationMock.showToast).toHaveBeenCalledWith(
-        '复位成功',
-        'success'
-      );
-    });
-  });
-
-  it('转换队列 Tab 永久失败：非 SYSTEM_ADMIN 看不到复位按钮（#477）', async () => {
-    const sdk = await import('@/api-sdk');
-    vi.mocked(sdk.conversionMonitorControllerGetStats).mockResolvedValue({
-      data: {
-        mode: 'conversion-service',
-        processPool: null,
-        conversionService: {
-          tasks: { total: 5, pending: 0, processing: 0, completed: 5, failed: 0 },
-          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 },
-          workers: {},
-        },
-        conversionServiceError: null,
-        history: [],
-        sampledAt: Date.now(),
-      },
-    } as never);
-    vi.mocked(sdk.conversionMonitorControllerListKnownBad).mockResolvedValue({
-      data: {
-        items: [
-          { contentKey: 'sha256-abc-001', reason: '格式不支持', markedAt: 1720000000000 },
-        ],
-        total: 1,
-      },
-    } as never);
-
-    renderPage();
-    await screen.findByText('PostgreSQL 数据库');
-
-    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
-
-    // 非 SYSTEM_ADMIN（默认 hasPermission 只返回 SYSTEM_MONITOR）：列表可见但无复位按钮
-    expect(await screen.findByText('sha256-abc-001')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '复位全部' })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '复位' })
-    ).not.toBeInTheDocument();
+    expect(await screen.findByText(/排队 4 个 · 预计约 6s 清空/)).toBeInTheDocument();
+    // 永久失败（known-bad）机制已整体移除：面板不再有该区块与复位入口
+    expect(screen.queryByText(/永久失败/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '复位全部' })).not.toBeInTheDocument();
   });
 
   it('切换到缓存监控 Tab 渲染摘要/健康/警告/图表/key 操作', async () => {

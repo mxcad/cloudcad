@@ -22,14 +22,13 @@ packages/conversion-service/
 │   ├── constants.ts       # 常量配置（端口、超时、优先级、队列驱动等）
 │   ├── env.ts             # 0 依赖 .env/.env.local 预加载（不引 dotenv）
 │   ├── logger.ts          # 日志（按天轮转 + 保留天数）
-│   ├── redis-client.ts    # 0 依赖 Redis 客户端（队列/负缓存持久化）
+│   ├── redis-client.ts    # 0 依赖 Redis 客户端（队列持久化）
 │   └── utils.ts           # 通用工具函数
 ├── routes/
 │   └── conversions.ts     # 转换服务 API 路由
 ├── services/
 │   ├── task-store.ts      # 任务状态存储（local / redis）+ 崩溃恢复
 │   ├── worker-pool.ts     # 工作进程池 + 三级优先级信号量
-│   ├── negative-cache.ts  # 永久失败负缓存（#465，内容 key + TTL）
 │   └── callback.ts        # 任务回调通知引擎
 ├── mxcad/
 │   └── runner.ts          # MxCAD 转换执行器（camelCase→lowercase 参数桥接）
@@ -43,11 +42,9 @@ packages/conversion-service/
 | POST | `/v1/conversions/convertFile` | 同步文件转换 |
 | POST | `/v1/conversions/async/convertFile` | 异步文件转换 |
 | POST | `/v1/conversions/batchConvert` | 批量转换（聚合任务，#428 导出/下载预计算） |
-| GET | `/v1/conversions/tasks/:taskId` | 查询任务状态（含进度 0-100 + `permanent` 永久失败标记，#465） |
-| GET | `/v1/conversions/tasks` | 任务列表（含 `permanent` 标记） |
+| GET | `/v1/conversions/tasks/:taskId` | 查询任务状态（含进度 0-100） |
+| GET | `/v1/conversions/tasks` | 任务列表 |
 | POST | `/v1/conversions/tasks/:taskId/cancel` | 取消任务（#431：排队中出队 / 运行中杀 mxcadassembly 进程组） |
-| GET | `/v1/conversions/known-bad` | 永久失败负缓存列表（#465，内容 key + 原因 + 标记时间） |
-| POST | `/v1/conversions/known-bad/reset` | 重置永久失败负缓存（管理员，清除毒化条目） |
 | GET | `/v1/conversions/stats` | 服务统计信息（任务计数 + 耗时 P50/P95 + worker 水位） |
 | GET | `/health` | 健康检查 |
 
@@ -103,10 +100,9 @@ pnpm build && pnpm start
 | `CONVERSION_SERVICE_SECRET` | — | 管理类路由共享密钥（与后端保持一致，带 `X-Conversion-Service-Secret` 头） |
 | `INTERNAL_SERVICE_SECRET` | — | #419 等保内部服务统一共享密钥（后端带 `X-Internal-Service-Secret` 头；与上者任一匹配即放行） |
 | `CONVERSION_SERVICE_REQUIRE_AUTH` | 随环境 | 两密钥均未配置时是否拒绝请求：`NODE_ENV=production`→`true`（防生产裸奔），其他→`false`（本地/内网向后兼容）；显式 `true`/`false` 可覆盖 |
-| `QUEUE_DRIVER` | `local` | 任务队列后端：`local` / `redis`（redis 时任务队列 + 永久失败负缓存持久化，跨重启/多节点一致） |
+| `QUEUE_DRIVER` | `local` | 任务队列后端：`local` / `redis`（redis 时任务队列持久化，跨重启/多节点一致） |
 | `REDIS_URL` | —（未设） | Redis 连接串（`QUEUE_DRIVER=redis` 时**必填**；格式 `redis://[:密码@]host:端口/库`） |
 | `MXCAD_ASSEMBLY_PATH` | 平台默认 | mxcadassembly 二进制路径（部署态须指向实际位置；缺省 `runtime/<platform>/mxcad/mxcadassembly[.exe]`） |
-| `NEGATIVE_CACHE_TTL_HOURS` | `24` | 永久失败负缓存 TTL（小时）：known-bad 条目超 TTL 自动失效；`0`=永久不失效（须管理员手动 reset） |
 | `WORKER_POOL_AUTO_SCALE` | `false` | 工作池按积压自动扩容（默认关，CPU 密集单进程，需按容量公式显式开） |
 | `LOG_DIR` | `data/logs` | 日志根目录（相对路径基于包根解析，日志落盘 `data/logs/conversion-service/app-YYYY-MM-DD.log`） |
 | `LOG_RETENTION_DAYS` | `180` | 日志保留天数（按天轮转，过期自动清理） |

@@ -11,7 +11,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
 
 /**
  * 转换队列监控统计（#406 / ADR-0058）
@@ -100,56 +99,6 @@ export class ConversionMonitorStatsDto {
   sampledAt: number;
 }
 
-/** 永久失败负缓存条目（#465 / #477） */
-export class KnownBadItemDto {
-  @ApiProperty({ description: '内容 key（内容 hash + 源格式 + 目标格式派生）' })
-  contentKey: string;
-
-  @ApiProperty({ description: '永久失败原因（确定性内容失败的 mxcadassembly 报错）' })
-  reason: string;
-
-  @ApiProperty({ description: '标记时间（epoch ms）' })
-  markedAt: number;
-}
-
-/** 永久失败负缓存列表（#477 管理后台「转换任务」页数据源） */
-export class KnownBadListDto {
-  @ApiProperty({ type: [KnownBadItemDto], description: '永久失败条目' })
-  items: KnownBadItemDto[];
-
-  @ApiProperty({ description: '条目总数' })
-  total: number;
-}
-
-/** 永久失败复位请求体（#477）：contentKey 缺省=复位全部 */
-export class ResetKnownBadDto {
-  @ApiPropertyOptional({
-    description: '要复位的内容 key；缺省（不传）= 复位全部永久失败',
-  })
-  // CustomValidationPipe 用 whitelist+forbidNonWhitelisted：仅有 @ApiPropertyOptional（Swagger）
-  // 不足以让 class-validator 白名单放行该属性，须补 @IsOptional/@IsString，否则前端带 contentKey
-  // 复位单条时会被判「property contentKey should not exist」→ 400
-  @IsOptional()
-  @IsString()
-  contentKey?: string;
-}
-
-/** 永久失败复位结果（#477） */
-export class KnownBadResetResultDto {
-  @ApiProperty({ description: '复位的条目数' })
-  reset: number;
-
-  @ApiPropertyOptional({
-    description: '是否复位全部（缺省 contentKey 时为 true）',
-  })
-  all?: boolean;
-
-  @ApiPropertyOptional({
-    description: '非 conversion-service 模式（无负缓存）时为 true',
-  })
-  unsupported?: boolean;
-}
-
 /**
  * 监控任务明细（#478 监控 Tab 逐任务明细）：conversion-service 模式 proxy 远端
  * GET /v1/conversions/tasks（TaskRecord 子集）。
@@ -185,12 +134,6 @@ export class MonitorTaskItemDto {
 
   @ApiPropertyOptional({ description: '错误信息（失败时）' })
   error?: string;
-
-  @ApiPropertyOptional({
-    description:
-      '永久失败标记（#465 负缓存命中 / 确定性内容失败）：true 表示重试注定再失败',
-  })
-  permanent?: boolean;
 
   @ApiPropertyOptional({
     description: '内容 key（内容 hash + 源格式 + 目标格式派生）',

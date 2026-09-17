@@ -16,12 +16,11 @@ import {
   AlertTriangle,
   Gauge,
   Clock,
-  XCircle,
   ListOrdered,
 } from 'lucide-react';
 import { t } from '@/languages';
-import { Button, Tag } from '@/components/ui';
-import type { MonitorTaskItemDto, KnownBadItemDto } from '@/api-sdk';
+import { Tag } from '@/components/ui';
+import type { MonitorTaskItemDto } from '@/api-sdk';
 import type {
   ConversionQueueState,
   ConversionWorkerLevel,
@@ -33,15 +32,7 @@ export interface ConversionQueueTabProps {
   state: ConversionQueueState | null;
   loading: boolean;
   error: string | null;
-  /** 永久失败负缓存条目（#478）；非 conversion-service 模式恒为空 */
-  knownBad: KnownBadItemDto[];
   onRefresh: () => void;
-  /** 永久失败复位权限（SYSTEM_ADMIN，#477 合并自独立转换任务页） */
-  canReset: boolean;
-  /** 复位进行中（'all' 或 contentKey） */
-  resetting: string | null;
-  /** 复位永久失败（contentKey 缺省=全部） */
-  onReset: (contentKey?: string) => void;
   /** 转换任务明细（#478 监控 Tab 逐任务明细）；非 conversion-service 模式恒为空 */
   tasks: MonitorTaskItemDto[];
   /** 任务明细加载中 */
@@ -77,11 +68,6 @@ function formatMs(ms: number | null): string {
 function formatClock(epochMs: number | null): string {
   if (epochMs === null) return '-';
   return new Date(epochMs).toLocaleTimeString();
-}
-
-function formatMarkedAt(epochMs: number): string {
-  if (!epochMs) return '-';
-  return new Date(epochMs).toLocaleString();
 }
 
 function formatTaskTime(iso: string): string {
@@ -193,11 +179,7 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
   state,
   loading,
   error,
-  knownBad,
   onRefresh,
-  canReset,
-  resetting,
-  onReset,
   tasks,
   tasksLoading,
   tasksError,
@@ -457,61 +439,6 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2>{t('永久失败（内容不可转换）')}</h2>
-          <div className={styles.sectionHeaderRight}>
-            {canReset && knownBad.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={resetting !== null}
-                onClick={() => void onReset()}
-              >
-                {resetting === 'all' ? t('复位中...') : t('复位全部')}
-              </Button>
-            )}
-            <XCircle size={16} style={{ color: 'var(--danger)' }} aria-hidden />
-            <span className={styles.infoLabel}>
-              {t('内容不可转换的文件，复位后重新尝试')}
-            </span>
-          </div>
-        </div>
-
-        {knownBad.length === 0 ? (
-          <div className={styles.chartEmpty}>{t('暂无永久失败任务')}</div>
-        ) : (
-          <div className={styles.knownBadList}>
-            {knownBad.map((item) => (
-              <div key={item.contentKey} className={styles.knownBadItem}>
-                <span className={styles.knownBadKey} title={item.contentKey}>
-                  <XCircle size={13} aria-hidden />
-                  {truncateKey(item.contentKey)}
-                </span>
-                <span className={styles.knownBadReason}>
-                  {item.reason || t('未知原因')}
-                </span>
-                <span className={styles.knownBadMarked}>
-                  {formatMarkedAt(item.markedAt)}
-                </span>
-                {canReset && (
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    disabled={resetting !== null}
-                    onClick={() => void onReset(item.contentKey)}
-                  >
-                    {resetting === item.contentKey
-                      ? t('复位中...')
-                      : t('复位')}
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
           <h2>{t('任务明细')}</h2>
           <div className={styles.sectionHeaderRight}>
             <ListOrdered size={16} aria-hidden />
@@ -549,17 +476,15 @@ export const ConversionQueueTab: React.FC<ConversionQueueTabProps> = ({
                   }
                   size="sm"
                 >
-                  {task.permanent
-                    ? t('永久失败')
-                    : task.status === 'completed'
-                      ? t('已完成')
-                      : task.status === 'failed'
-                        ? t('失败')
-                        : task.status === 'cancelled'
-                          ? t('已取消')
-                          : task.status === 'processing'
-                            ? t('处理中')
-                            : t('排队中')}
+                  {task.status === 'completed'
+                    ? t('已完成')
+                    : task.status === 'failed'
+                      ? t('失败')
+                      : task.status === 'cancelled'
+                        ? t('已取消')
+                        : task.status === 'processing'
+                          ? t('处理中')
+                          : t('排队中')}
                 </Tag>
                 <span className={styles.taskProgress}>
                   {task.progress}%

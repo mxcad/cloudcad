@@ -130,8 +130,8 @@ services:
     restart: unless-stopped
     environment:
       CONVERSION_SERVICE_PORT: 3100
-      # 与 backend 对齐走 redis：任务队列 + 永久失败负缓存持久化（跨重启/多节点一致），
-      # 而非 local 内存队列（重启丢队列、负缓存不持久化）。REDIS_URL 须指向 redis 服务且带 requirepass 密码
+      # 与 backend 对齐走 redis：任务队列持久化（跨重启/多节点一致），
+      # 而非 local 内存队列（重启丢队列）。REDIS_URL 须指向 redis 服务且带 requirepass 密码
       QUEUE_DRIVER: redis
       REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379/0"
       # #419 等保 8.1.2.2：内部服务共享密钥（非 health 路由校验 X-Internal-Service-Secret）

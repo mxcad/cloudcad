@@ -218,15 +218,14 @@ describe('HttpConversionExecutor', () => {
       expect(status.createdAt).toEqual(new Date('2026-01-01T00:00:00.000Z'));
     });
 
-    it('should map permanent flag from the conversion-service response (S6-7)', async () => {
+    it('should map error from the conversion-service FAILED response', async () => {
       port = await startServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
           JSON.stringify({
             taskId: 'fw_6',
             status: 'FAILED',
-            error: '永久失败（内容不可转换）：解析失败',
-            permanent: true,
+            error: '转换失败',
             createdAt: '2026-01-01T00:00:00.000Z',
             updatedAt: '2026-01-01T00:01:00.000Z',
           }),
@@ -235,28 +234,7 @@ describe('HttpConversionExecutor', () => {
       executor = await createExecutor();
 
       const status = await executor.getTaskStatus('fw_6');
-      expect(status.permanent).toBe(true);
-      expect(status.error).toBe('永久失败（内容不可转换）：解析失败');
-    });
-
-    it('should map permanent=false when the response omits the flag (S6-7 普通任务)', async () => {
-      port = await startServer((req, res) => {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            taskId: 'fw_7',
-            status: 'FAILED',
-            error: '瞬时失败',
-            // 无 permanent 字段（普通任务）
-            createdAt: '2026-01-01T00:00:00.000Z',
-            updatedAt: '2026-01-01T00:01:00.000Z',
-          }),
-        );
-      });
-      executor = await createExecutor();
-
-      const status = await executor.getTaskStatus('fw_7');
-      expect(status.permanent).toBe(false);
+      expect(status.error).toBe('转换失败');
     });
 
     it('should map queuePosition from the conversion-service response (S6-5)', async () => {

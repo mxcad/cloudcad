@@ -46,12 +46,6 @@ export interface TaskStatus {
   result?: ConversionResult;
   error?: string;
   /**
-   * 永久失败标记（#465 负缓存命中 / 确定性内容失败，S6-7）。
-   * true 表示该任务终态 FAILED 且重试注定再失败（内容不可转换）；
-   * 面板据此展示「永久失败」区别于普通「转换失败」。仅 conversion-service 模式透传。
-   */
-  permanent?: boolean;
-  /**
    * 排队位置（S6-5）：任务在其优先级池 acquire 队列中的 1-based 序号。
    * 仅排队中（PENDING 且已入队）任务有意义，运行中/未入队/终态为 undefined。
    * 仅 conversion-service 模式透传（独立服务有真实排队队列）。

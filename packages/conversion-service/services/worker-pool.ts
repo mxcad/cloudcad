@@ -6,17 +6,9 @@ import {
   WORKER_POOL_BACKLOG_THRESHOLD,
   WORKER_POOL_BACKLOG_WINDOW_MS,
 } from '../lib/constants';
-import { log, generateId, deriveContentKey } from '../lib/utils';
+import { log, generateId } from '../lib/utils';
 import type TaskStore from './task-store';
 import type { TaskRecord, TaskInput } from './task-store';
-
-// 永久失败负缓存契约（#465，未接线时为 null / no-op）
-// get：批量子任务 fail-fast 用（命中 known-bad 不 spawn）
-export interface NegativeCacheLike {
-  markBad(contentKey: string, reason: string): void;
-  get(contentKey: string): { contentKey: string; reason: string; markedAt: string } | null;
-  isBad(contentKey: string): boolean;
-}
 
 interface WorkerPoolOptions {
   autoScale?: boolean;
@@ -24,13 +16,6 @@ interface WorkerPoolOptions {
   backlogWindowMs?: number;
   maxMultiplier?: number;
   maxConcurrent?: number;
-  negativeCache?: NegativeCacheLike | null;
-}
-
-export interface NegativeCacheLike {
-  isBad(contentKey: string | null | undefined): boolean;
-  markBad(contentKey: string, reason: string): void;
-  get(contentKey: string): { contentKey: string; reason: string; markedAt: string } | null;
 }
 
 // runner 契约：execute(params, timeout) 返回转换结果（含 newpath 等）。
@@ -156,7 +141,6 @@ class WorkerPool {
   taskStore: TaskStore;
   runner: RunnerLike;
   callbackEngine: CallbackEngineLike | null;
-  negativeCache: NegativeCacheLike | null;
   pools: Record<string, SemaphorePool>;
   workers: Map<string, unknown>;
   // 运行中任务的取消句柄（#431 取消机制）：taskId → 杀 mxcadassembly 进程组的函数
@@ -170,11 +154,10 @@ class WorkerPool {
   _queued: Set<string>;
   _running: boolean;
 
-  constructor(taskStore: TaskStore, runner: RunnerLike, callbackEngine: CallbackEngineLike | null = null, options: WorkerPoolOptions = {}, negativeCache?: NegativeCacheLike | null) {
+  constructor(taskStore: TaskStore, runner: RunnerLike, callbackEngine: CallbackEngineLike | null = null, options: WorkerPoolOptions = {}) {
     this.taskStore = taskStore;
     this.runner = runner;
     this.callbackEngine = callbackEngine || null;
-    this.negativeCache = negativeCache !== undefined ? negativeCache : (options.negativeCache ?? null);
     this.pools = {};
     this.workers = new Map();
     this.cancelHandles = new Map();
@@ -377,12 +360,6 @@ class WorkerPool {
       if (current && current.status === 'CANCELLED') return;
       this.taskStore.updateStatus(task.id, 'FAILED', { error: (err as Error).message });
       this._notify(task.id, 'FAILED', null, (err as Error).message);
-      // 永久失败负缓存（#465）：仅「确定性内容失败」(deterministic=true) 且任务带 contentKey
-      // 才标记 known-bad；超时/进程被杀 (deterministic=false) 不标记，可重试。
-      const deterministic = (err as { deterministic?: boolean }).deterministic === true;
-      if (this.negativeCache && deterministic && task.contentKey) {
-        this.negativeCache.markBad(task.contentKey, (err as Error).message);
-      }
     } finally {
       this.cancelHandles.delete(task.id);
     }
@@ -402,33 +379,14 @@ class WorkerPool {
     for (const item of items) {
       // 取消守卫：批量执行中任务被取消 → 停止后续文件，返回已完成部分
       if (this.taskStore.get(task.id)?.status === 'CANCELLED') break;
-      // 永久失败负缓存（S1-4）：子任务派生 contentKey，命中 known-bad → fail-fast 不 spawn mxcadassembly
-      const contentKey = deriveContentKey(item);
-      const knownBad = contentKey && this.negativeCache ? this.negativeCache.get(contentKey) : null;
-      if (knownBad) {
-        results.push({
-          id: item.id,
-          success: false,
-          permanent: true,
-          error: `永久失败（内容不可转换）：${knownBad.reason}`,
-        });
-      } else {
-        try {
-          const r = await this.runner.execute(item, timeout, onChild);
-          const entry: Record<string, unknown> = { id: item.id, success: true };
-          const outputPath = (r && r.newpath) || item.outname;
-          if (outputPath) entry.outputPath = outputPath;
-          results.push(entry);
-        } catch (err) {
-          const entry: Record<string, unknown> = { id: item.id, success: false, error: (err as Error).message };
-          // 确定性内容失败 → 标记 known-bad 供后续 fail-fast；瞬时失败（超时/进程被杀）不标记（可重试）
-          const deterministic = (err as { deterministic?: boolean }).deterministic === true;
-          if (contentKey && this.negativeCache && deterministic) {
-            this.negativeCache.markBad(contentKey, (err as Error).message);
-            entry.permanent = true;
-          }
-          results.push(entry);
-        }
+      try {
+        const r = await this.runner.execute(item, timeout, onChild);
+        const entry: Record<string, unknown> = { id: item.id, success: true };
+        const outputPath = (r && r.newpath) || item.outname;
+        if (outputPath) entry.outputPath = outputPath;
+        results.push(entry);
+      } catch (err) {
+        results.push({ id: item.id, success: false, error: (err as Error).message });
       }
       done += 1;
       this.taskStore.updateStatus(task.id, 'PROCESSING', {

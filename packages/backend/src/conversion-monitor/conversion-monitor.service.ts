@@ -109,28 +109,6 @@ export interface ConversionMonitorStats {
   sampledAt: number;
 }
 
-/** 永久失败负缓存条目（#465 / #477）：内容 key + 失败原因 + 标记时间 */
-export interface KnownBadItem {
-  contentKey: string;
-  reason: string;
-  /** epoch ms */
-  markedAt: number;
-}
-
-/** 永久失败负缓存列表（#477 管理后台「转换任务」页数据源） */
-export interface KnownBadList {
-  items: KnownBadItem[];
-  total: number;
-}
-
-/** 永久失败复位结果（#477） */
-export interface KnownBadResetResult {
-  reset: number;
-  all?: boolean;
-  /** 非 conversion-service 模式（无负缓存）时为 true */
-  unsupported?: boolean;
-}
-
 /**
  * 转换任务明细（#478 监控 Tab 逐任务明细）：conversion-service 模式 proxy 远端
  * GET /v1/conversions/tasks（TaskRecord 子集）。process-pool 模式无独立任务存储，
@@ -146,8 +124,6 @@ export interface ConversionTaskItem {
   startedAt: string | null;
   completedAt: string | null;
   error?: string;
-  /** 永久失败标记（#465 负缓存命中 / 确定性内容失败） */
-  permanent?: boolean;
   contentKey?: string;
 }
 
@@ -244,58 +220,6 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 列出永久失败负缓存（#477）：仅 conversion-service 模式有负缓存（proxy 远端
-   * GET /v1/conversions/known-bad）；process-pool / cloud-faas 模式无负缓存，返回空列表。
-   */
-  async listKnownBad(): Promise<KnownBadList> {
-    if (this.mode !== 'conversion-service') {
-      return { items: [], total: 0 };
-    }
-    try {
-      const raw = await this.httpGet('/v1/conversions/known-bad');
-      const rawItems = Array.isArray(raw.items) ? raw.items : [];
-      const items: KnownBadItem[] = rawItems
-        .map((it) => {
-          const o = (it ?? {}) as Record<string, unknown>;
-          return {
-            contentKey: typeof o.contentKey === 'string' ? o.contentKey : '',
-            reason: typeof o.reason === 'string' ? o.reason : '',
-            markedAt:
-              typeof o.markedAt === 'number'
-                ? o.markedAt
-                : typeof o.markedAt === 'string'
-                  ? Number(o.markedAt) || 0
-                  : 0,
-          };
-        })
-        .filter((it) => it.contentKey !== '');
-      return { items, total: items.length };
-    } catch (err: unknown) {
-      this.logger.warn(
-        `拉取永久失败负缓存失败: ${err instanceof Error ? err.message : String(err)}`
-      );
-      return { items: [], total: 0 };
-    }
-  }
-
-  /**
-   * 复位永久失败负缓存（#477）：proxy 远端 POST /v1/conversions/known-bad/reset。
-   * 传 contentKey 复位单条，缺省复位全部。非 conversion-service 模式返回 unsupported。
-   */
-  async resetKnownBad(contentKey?: string): Promise<KnownBadResetResult> {
-    if (this.mode !== 'conversion-service') {
-      return { reset: 0, unsupported: true };
-    }
-    const raw = await this.httpPost('/v1/conversions/known-bad/reset', {
-      contentKey: contentKey ?? undefined,
-    });
-    return {
-      reset: toNumber(raw.reset),
-      all: raw.all === true,
-    };
-  }
-
-  /**
    * 列出转换任务明细（#478 监控 Tab 逐任务明细）：仅 conversion-service 模式有
    * 独立任务存储（proxy 远端 GET /v1/conversions/tasks）；process-pool / cloud-faas
    * 模式无任务明细，返回空列表（前端仅展示聚合统计）。
@@ -324,7 +248,6 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
             completedAt:
               typeof o.completedAt === 'string' ? o.completedAt : null,
             error: typeof o.error === 'string' ? o.error : undefined,
-            permanent: o.permanent === true ? true : undefined,
             contentKey:
               typeof o.contentKey === 'string' ? o.contentKey : undefined,
           };
@@ -450,59 +373,6 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  /** POST 请求远端 conversion-service（#477 永久失败复位） */
-  private httpPost(
-    path: string,
-    body: Record<string, unknown>
-  ): Promise<Record<string, unknown>> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(path, this.conversionServiceUrl);
-      const mod = this.useHttps ? https : http;
-      const payload = JSON.stringify(body);
-      const req = mod.request(
-        {
-          hostname: url.hostname,
-          port: url.port || (this.useHttps ? 443 : 80),
-          path: url.pathname,
-          method: 'POST',
-          headers: {
-            ...this.secretHeaders,
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(payload),
-          },
-          timeout: 5000,
-        },
-        (res) => {
-          let data = '';
-          res.on('data', (chunk: string) => {
-            data += chunk;
-          });
-          res.on('end', () => {
-            if (res.statusCode && res.statusCode >= 400) {
-              reject(
-                new Error(
-                  `HTTP ${res.statusCode} for POST ${path}: ${data.substring(0, 200)}`
-                )
-              );
-              return;
-            }
-            try {
-              resolve(JSON.parse(data) as Record<string, unknown>);
-            } catch {
-              reject(new Error(`Invalid JSON response from ${path}`));
-            }
-          });
-        }
-      );
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Request timeout: POST ${path}`));
-      });
-      req.write(payload);
-      req.end();
-    });
-  }
 }
 
 function toNumber(v: unknown): number {

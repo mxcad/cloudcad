@@ -27,10 +27,6 @@ export interface TaskRecord {
   // 内容身份（content_hash + 源文件 + 目标格式派生，见 utils.deriveContentKey）。
   // 同 key 的在途任务合并去重（#431 门禁3）。
   contentKey?: string | null;
-  // 永久失败（#465 负缓存命中 / 确定性内容失败）：标记后该任务终态为 FAILED，
-  // 且重试注定再失败（内容不可转换）。供 GET /tasks/:taskId 透传 → backend listTasks
-  // → 前端面板展示「永久失败」（区别于普通「转换失败」，提示重试无意义）。
-  permanent?: boolean;
   // 允许入队时透传的额外字段（如 task.params 之外的自定义字段）
   [key: string]: unknown;
 }
@@ -243,7 +239,6 @@ class TaskStore {
     if (extra.result) record.result = extra.result;
     if (extra.error) record.error = extra.error;
     if (extra.progress !== undefined) record.progress = extra.progress;
-    if (extra.permanent !== undefined) record.permanent = extra.permanent;
     this._persist(taskId, record);
     return record;
   }

@@ -11,7 +11,6 @@ import { log, resolveRequestId, runWithRequest, sendJson } from './lib/utils';
 import TaskStore from './services/task-store';
 import WorkerPool from './services/worker-pool';
 import CallbackEngine from './services/callback';
-import NegativeCache from './services/negative-cache';
 import MxcadRunner from './mxcad/runner';
 import { create as createConversions } from './routes/conversions';
 
@@ -19,22 +18,15 @@ async function bootstrap(): Promise<void> {
   const taskStore = new TaskStore(QUEUE_DRIVER, { redisUrl: REDIS_URL });
   const runner = new MxcadRunner();
   const callbackEngine = new CallbackEngine(taskStore);
-  // 永久失败负缓存（#465）：Redis 模式下持久化 known-bad（重启不丢）；local 模式仅内存
-  const negativeCache = new NegativeCache(
-    QUEUE_DRIVER === 'redis' ? { redisUrl: REDIS_URL } : {}
-  );
-  const workerPool = new WorkerPool(taskStore, runner, callbackEngine, {
-    negativeCache,
-  });
+  const workerPool = new WorkerPool(taskStore, runner, callbackEngine);
 
   await taskStore.init();
-  await negativeCache.init();
   // 崩溃恢复（#431 门禁4）：重启后残留的 PROCESSING 任务重置为 PENDING 重新调度
   // （须在 worker 开始 tick 前，避免竞态）
   taskStore.recoverStuckProcessing();
   workerPool.start();
 
-  const functionRoutes = createConversions(workerPool, taskStore, callbackEngine, negativeCache);
+  const functionRoutes = createConversions(workerPool, taskStore, callbackEngine);
 
   async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (req.method === 'OPTIONS') {
@@ -109,8 +101,6 @@ async function bootstrap(): Promise<void> {
     log(`  GET  /v1/conversions/tasks/:taskId`);
     log(`  GET  /v1/conversions/tasks`);
     log(`  GET  /v1/conversions/stats`);
-    log(`  GET  /v1/conversions/known-bad`);
-    log(`  POST /v1/conversions/known-bad/reset`);
     log(`  GET  /health`);
 
     // 鉴权门禁大声信号（S1-1）：两密钥均未配置时，明确告知当前鉴权状态，
@@ -128,8 +118,7 @@ async function bootstrap(): Promise<void> {
   const shutdown = () => {
     log('[server] 收到退出信号, 优雅关闭...');
     workerPool.stop();
-    Promise.all([taskStore.flush(), negativeCache.flush()]).finally(() => {
-      negativeCache.close();
+    taskStore.flush().finally(() => {
       server.close(() => process.exit(0));
     });
   };
