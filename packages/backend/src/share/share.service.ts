@@ -400,7 +400,11 @@ export class ShareService {
       // 只要 shareToken 有效，且请求的文件与主文件在同一 nodeId 目录下，就允许访问
       const mainParts = fileNode.path.split('/');
       const mainPrefix = mainParts.length >= 2 ? `${mainParts[0]}/${mainParts[1]}` : '';
-      const isSameNodeAccess = mainPrefix && storagePath.startsWith(mainPrefix);
+      // 必须带尾部 / 比较：裸 startsWith 会让同月前缀兄弟目录（YYYYMM/<nodeId>-evil/…）
+      // 被误判为同节点。storagePath 来自 URL 路径参数（攻击者可控），nodeId 目录虽由
+      // 系统生成，此处按最小包含性原则收紧
+      const isSameNodeAccess =
+        mainPrefix && storagePath.startsWith(mainPrefix + '/');
       if (!isSameNodeAccess) {
         this.logger.warn(
           `分享令牌路径不匹配: token=${token}, expected=${fileNode.path}, requested=${storagePath}`
