@@ -11,7 +11,6 @@ import {
   Check,
   Trash2,
   Loader2,
-  Link2,
   Plus,
   ArrowLeft,
   FileText,
@@ -20,6 +19,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useCopy } from '../../hooks/useCopy';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
 import { getErrorMessage } from '../../utils/errorHandler';
 import {
@@ -30,6 +30,7 @@ import {
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
 import { ConfirmRevokeModal } from './ConfirmRevokeModal';
+import { ShareLinkBar } from '@/components/common/ShareLinkBar';
 import {
   ExpirationOption,
   getExpirationLabels,
@@ -109,13 +110,21 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   const [shareInfo, setShareInfo] = useState<ShareInfo | null>(null);
   const [batchResults, setBatchResults] = useState<BatchShareResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const prevFileIdRef = useRef<string | null>(null);
 
   const [items, setItems] = useState<ShareListItem[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  // 列表行的复制反馈（toast + 行内标记）；主链接与批量结果由 ShareLinkBar 自管
+  const {
+    copiedMarker: copiedToken,
+    copy: copyShareItem,
+    reset: resetShareItemCopy,
+  } = useCopy({
+    successMessage: t('链接已复制'),
+    failMessage: t('复制失败'),
+  });
 
   const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
@@ -175,13 +184,12 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     if (!isOpen) {
       setShareInfo(null);
       setBatchResults([]);
-      setCopied(false);
       prevFileIdRef.current = null;
       setExpiration('7d');
       setCustomDays(1);
       setItems([]);
       setListError(null);
-      setCopiedToken(null);
+      resetShareItemCopy();
       setView('list');
       return;
     }
@@ -202,7 +210,15 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setView('list');
     }
     fetchShares();
-  }, [isOpen, effectiveFiles, isBatch, resolvedFileId, fetchShares, view]);
+  }, [
+    isOpen,
+    effectiveFiles,
+    isBatch,
+    resolvedFileId,
+    fetchShares,
+    view,
+    resetShareItemCopy,
+  ]);
 
   const createShare = useCallback(async () => {
     if (!resolvedFileId) {
@@ -371,25 +387,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     }
   };
 
-  const copyLink = useCallback(async () => {
-    if (!shareInfo) return;
-    const fullUrl = `${window.location.origin}${shareInfo.url}`;
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const textarea = document.createElement('textarea');
-      textarea.value = fullUrl;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [shareInfo]);
-
   const confirmRevokeItem = (token: string) => {
     setRevokeTarget(token);
     setShowRevokeConfirm(true);
@@ -418,15 +415,10 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   };
 
   const handleCopyItem = async (linkUrl: string, token?: string) => {
-    const fullUrl = `${window.location.origin}${linkUrl}`;
-    try {
-      await navigator.clipboard.writeText(fullUrl);
-      setCopiedToken(token ?? linkUrl);
-      setTimeout(() => setCopiedToken(null), 2000);
-      showToast(t('链接已复制'), 'success');
-    } catch {
-      showToast(t('复制失败'), 'error');
-    }
+    await copyShareItem(
+      `${window.location.origin}${linkUrl}`,
+      token ?? linkUrl
+    );
   };
 
   const fullUrl = shareInfo ? `${window.location.origin}${shareInfo.url}` : '';
@@ -514,10 +506,11 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                 <tr key={item.token}>
                   <td>
                     <div className="share-dialog-link-cell">
-                      <span className="share-dialog-link-text">
-                        {item.url?.length > 25
-                          ? item.url.slice(0, 25) + '...'
-                          : item.url}
+                      <span
+                        className="share-dialog-link-text"
+                        title={`${window.location.origin}${item.url}`}
+                      >
+                        {item.url}
                       </span>
                       <button
                         onClick={() => handleCopyItem(item.url, item.token)}
@@ -785,31 +778,15 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                         {result.fileName}
                       </span>
                     </div>
-                    <div
-                      className="share-dialog-url-bar"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Link2 size={12} className="share-dialog-url-icon" />
-                      <span
-                        className="share-dialog-url-text"
-                        style={{ fontSize: 'var(--text-xs)' }}
-                      >
-                        {result.url?.length > 40
-                          ? result.url.slice(0, 40) + '...'
-                          : result.url}
-                      </span>
-                      <button
-                        onClick={() => handleCopyItem(result.url, result.token)}
-                        className="share-dialog-copy-link-btn"
-                        style={{ padding: '2px 8px' }}
-                      >
-                        {copiedToken === result.token ? (
-                          <Check size={10} />
-                        ) : (
-                          <Copy size={10} />
-                        )}
-                      </button>
-                    </div>
+                    <ShareLinkBar
+                      url={`${window.location.origin}${result.url}`}
+                      label={t('复制分享链接')}
+                      showHint={false}
+                      copyOptions={{
+                        successMessage: t('链接已复制'),
+                        failMessage: t('复制失败'),
+                      }}
+                    />
                   </div>
                 ) : (
                   <div style={{ padding: '10px 12px', color: 'var(--error)' }}>
@@ -868,17 +845,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           </div>
         </div>
 
-        <div className="share-dialog-url-bar">
-          <Link2 size={14} className="share-dialog-url-icon" />
-          <span className="share-dialog-url-text">{fullUrl}</span>
-          <button
-            onClick={copyLink}
-            className={`share-dialog-copy-link-btn ${copied ? 'share-dialog-copy-link-btn--copied' : ''}`}
-          >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-            {copied ? t('已复制') : t('复制')}
-          </button>
-        </div>
+        <ShareLinkBar url={fullUrl} label={t('复制分享链接')} />
 
         {shareInfo!.expiresAt && (
           <span className="share-dialog-expiry-hint">

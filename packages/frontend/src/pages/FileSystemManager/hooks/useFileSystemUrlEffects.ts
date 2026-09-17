@@ -10,6 +10,7 @@ import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
 import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
 import { resolveRootKindFromMode } from '@/lib/crossProjectPaste';
 import { t } from '@/languages';
+import { useCopy } from '@/hooks/useCopy';
 import { getErrorMessage } from '@/utils/errorHandler';
 import type { FileSystemNode } from '@/types/filesystem';
 
@@ -54,6 +55,11 @@ export function useFileSystemUrlEffects({
 }: UseFileSystemNavigationOptions) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  const { copy: copyPathText } = useCopy({
+    successMessage: t('路径已复制到剪贴板'),
+    failMessage: t('复制失败'),
+  });
 
   const highlightNodeId = searchParams.get('highlight');
   const pageFromUrl = searchParams.get('page');
@@ -217,14 +223,9 @@ export function useFileSystemUrlEffects({
       const path = node.ancestorPath
         ? `${node.ancestorPath} > ${node.name}`
         : node.name;
-      try {
-        await navigator.clipboard.writeText(path);
-        showToast(t('路径已复制到剪贴板'), 'success');
-      } catch {
-        showToast(t('复制失败'), 'error');
-      }
+      await copyPathText(path);
     },
-    [showToast]
+    [copyPathText]
   );
 
   const handleSubmitProject = useCallback(

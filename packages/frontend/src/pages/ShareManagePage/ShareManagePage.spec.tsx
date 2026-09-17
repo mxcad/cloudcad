@@ -290,8 +290,13 @@ describe('ShareManagePage', () => {
     });
 
     // 生成成功：展示完整链接
+    // 链接由 ShareLinkBar 放进只读输入框（保留在 DOM 里供手动选中复制），
+    // findByText 匹配不到 value 属性，改按 aria-label 取输入框断言 value
     const fullUrl = `${window.location.origin}/s/new-token-1`;
-    expect(await screen.findByText(fullUrl)).toBeInTheDocument();
+    const linkInput = (await screen.findByLabelText(
+      t('复制分享链接')
+    )) as HTMLInputElement;
+    expect(linkInput.value).toBe(fullUrl);
 
     // 复制生成的链接
     fireEvent.click(screen.getByRole('button', { name: t('复制') }));

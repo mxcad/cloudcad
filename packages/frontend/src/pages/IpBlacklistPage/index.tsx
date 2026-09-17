@@ -18,22 +18,13 @@ import { SelectableTable } from '@/components/common/SelectableTable';
 import { BatchActionBar } from '@/components/common/BatchActionBar';
 import { t } from '@/languages';
 import { globalShowToast } from '@/utils/notificationEvents';
+import { useCopy } from '@/hooks/useCopy';
 import { ipBlacklistControllerRemove } from '@/api-sdk';
 import { AddEntryModal } from './components/AddEntryModal';
 import { RemoveEntryModal } from './components/RemoveEntryModal';
 import { IP_BLACKLIST_PAGE_SIZE, IP_BLACKLIST_SOURCE_META } from './constants';
 import { useAddIpBlacklistEntry, useIpBlacklistList } from './hooks/useIpBlacklist';
 import type { IpBlacklistEntry, IpBlacklistEntryForm } from './types';
-
-/** 复制文本到剪贴板 */
-async function copyToClipboard(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text);
-    globalShowToast(t('复制成功'), 'success');
-  } catch {
-    globalShowToast(t('复制失败'), 'error');
-  }
-}
 
 function formatTime(value: string): string {
   return new Date(value).toLocaleString();
@@ -49,6 +40,12 @@ export default function IpBlacklistPage({
   embedded?: boolean;
 }) {
   useDocumentTitle(t('IP 黑名单'), embedded);
+
+  // 保留 copyToClipboard 名称，调用点无需改动
+  const { copy: copyToClipboard } = useCopy({
+    successMessage: t('复制成功'),
+    failMessage: t('复制失败'),
+  });
 
   const [page, setPage] = useState(1);
   const [addOpen, setAddOpen] = useState(false);

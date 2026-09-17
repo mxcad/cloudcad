@@ -24,7 +24,7 @@ We may revise this policy from time to time based on changes in laws and regulat
 By continuing to use this service after the policy revision takes effect, you are deemed to have read and accepted the revised policy.
 9. Contact us and the personal information protection officer
 If you have any questions, opinions, or complaints about this privacy policy or personal information processing, you may contact us through the following means:
-Customer Service Phone: 17381962637
-Customer Service Email: 710714273@qq.com
-The contact information of our personal information protection officer is: 710714273@qq.com. We will process your feedback and requests in a timely manner.
+Customer Service Phone: {{supportPhone}}
+Customer Service Email: {{supportEmail}}
+The contact information of our personal information protection officer is: {{supportEmail}}. We will process your feedback and requests in a timely manner.
 `

@@ -1,6 +1,6 @@
 export default `
 1. Service Description
-Dream Web CAD Real-time Collaboration Platform (CloudCAD, hereinafter referred to as "this service") is operated by Chengdu Dreamkaide Technology Co., Ltd. (hereinafter referred to as "we"), providing registered users with cloud services such as storage, conversion, preview, editing, sharing, and collaboration of online CAD drawings. The specific functions are subject to the actual product provided.
+{{productName}} ({{productShortName}}, hereinafter referred to as "this service") is operated by {{entityName}} (hereinafter referred to as "we"), providing registered users with cloud services such as storage, conversion, preview, editing, sharing, and collaboration of online CAD drawings. The specific functions are subject to the actual product provided.
 This service is divided into a free version and a paid membership (VIP) version. Free users can use basic functions for free, while paid members enjoy corresponding functional benefits and quotas according to the selected package, subject to the display on the ordering page. We may adjust the scope of functions and quotas according to operational needs, and major adjustments will be notified in advance through page announcements or other means.
 2. Account Registration and Security
 You should use truthful, accurate, and legal information to complete the registration. By registering, you confirm that you have full capacity for civil conduct and agree to our processing of your personal information in accordance with the Privacy Policy. This service is provided to adults; minors under the age of 18 may not register for or use this service.
@@ -40,6 +40,6 @@ If you continue to use this service after the revised agreement takes effect, it
 This agreement and the Privacy Policy are available in Simplified Chinese, Traditional Chinese, English, Korean, and other language versions. In the event of any inconsistency among the versions, the Simplified Chinese version shall prevail.
 11. Contact Us
 If you have any questions, opinions, or complaints about this agreement, you may contact us through the following means:
-Customer Service Phone: 17381962637
-Customer Service Email: 710714273@qq.com
+Customer Service Phone: {{supportPhone}}
+Customer Service Email: {{supportEmail}}
 `

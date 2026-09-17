@@ -55,7 +55,7 @@ grep -rn "navigator\.clipboard\|document\.execCommand" src --include="*.ts" --in
 | `vi.waitFor` 与 `vi.useFakeTimers()` 不兼容 | 改用 `act(() => vi.advanceTimersByTime(ms))` 后直接断言 |
 | 计时器未清理 | 用 fake timers 的用例结束要 `vi.useRealTimers()`，否则污染同文件后续用例 |
 | hook 测试里 `act` 的导入来源 | 从 `@testing-library/react` 导入，不是 `react` |
-| `let api` 捕获式渲染 | React 19 下观察不到 state 更新；改用 `renderHook(() => useHook(options))` + `result.current` |
+| 把 hook 返回值存到局部变量（含 `renderHook` 的 `result.current`） | hook 每次渲染返回**新对象**，局部变量会冻在首次渲染的旧值上，症状是「函数返回 true 但 `copied` 恒 false」——极易被误判成实现 bug 或跨文件污染。断言时持续读 `hook.result.current`，勿在 host 组件或 setup 里赋值捕获（本仓两种捕获写法均实测失败），见 `src/hooks/useCopy.spec.tsx` |
 
 ## 测试覆盖率阈值
 

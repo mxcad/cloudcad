@@ -8,6 +8,7 @@ import type { ShareListItemDto } from '@/api-sdk';
 import { useNotification } from '@/contexts/NotificationContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { t } from '@/languages';
+import { useCopy } from '@/hooks/useCopy';
 import type { ShareFileInfo, SortConfig } from '../types';
 
 interface UseShareActionsParams {
@@ -31,7 +32,10 @@ export function useShareActions({
 }: UseShareActionsParams) {
   const { showToast } = useNotification();
 
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const {
+    copiedMarker: copiedToken,
+    copy: copyShareItem,
+  } = useCopy({ successMessage: t('链接已复制'), failMessage: t('复制失败') });
   const [showFileSelector, setShowFileSelector] = useState(false);
   const [shareFiles, setShareFiles] = useState<ShareFileInfo[]>([]);
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -109,17 +113,9 @@ export function useShareActions({
 
   const handleCopy = useCallback(
     async (linkUrl: string, token?: string) => {
-      const fullUrl = `${window.location.origin}${linkUrl}`;
-      try {
-        await navigator.clipboard.writeText(fullUrl);
-        setCopiedToken(token ?? linkUrl);
-        setTimeout(() => setCopiedToken(null), 2000);
-        showToast(t('链接已复制'), 'success');
-      } catch (error) {
-        showToast(getErrorMessage(error), 'error');
-      }
+      await copyShareItem(`${window.location.origin}${linkUrl}`, token ?? linkUrl);
     },
-    [showToast]
+    [copyShareItem]
   );
 
   const handleEditExpiry = useCallback(

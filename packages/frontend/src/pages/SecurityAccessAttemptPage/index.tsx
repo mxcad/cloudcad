@@ -13,6 +13,7 @@ import { Tag } from '@/components/ui/Tag';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { t } from '@/languages';
 import { globalShowToast } from '@/utils/notificationEvents';
+import { useCopy } from '@/hooks/useCopy';
 import {
   SECURITY_ATTEMPT_PAGE_SIZE,
   SECURITY_ATTEMPT_REASON_META,
@@ -24,15 +25,6 @@ import {
 } from './hooks/useSecurityAccessAttempt';
 import type { SecurityAccessAttemptAggregate } from './types';
 
-/** 复制文本到剪贴板 */
-async function copyToClipboard(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text);
-    globalShowToast(t('复制成功'), 'success');
-  } catch {
-    globalShowToast(t('复制失败'), 'error');
-  }
-}
 
 function formatTime(value: string): string {
   return new Date(value).toLocaleString();
@@ -48,6 +40,12 @@ export default function SecurityAccessAttemptPage({
   embedded?: boolean;
 }) {
   useDocumentTitle(t('高危访问尝试'), embedded);
+
+  // 保留 copyToClipboard 名称，调用点无需改动
+  const { copy: copyToClipboard } = useCopy({
+    successMessage: t('复制成功'),
+    failMessage: t('复制失败'),
+  });
 
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');

@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
-import { Copy, Check, Link2 } from 'lucide-react';
+import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { ShareLinkBar } from '@/components/common/ShareLinkBar';
 import { t } from '@/languages';
 
 interface CollabShareModalProps {
@@ -22,19 +22,7 @@ export const CollabShareModal: React.FC<CollabShareModalProps> = ({
   projectId,
   libraryKey,
 }) => {
-  const [copied, setCopied] = useState(false);
-
   const shareUrl = `${window.location.origin}/cad-editor?collabWorkId=${workId}${drawingId ? `&drawingId=${encodeURIComponent(drawingId)}` : ''}${projectId ? `&projectId=${encodeURIComponent(projectId)}` : ''}${libraryKey ? `&library=${libraryKey}` : ''}`;
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard
-      .writeText(shareUrl)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(() => {});
-  }, [shareUrl]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('分享协同')} size="sm">
@@ -58,43 +46,7 @@ export const CollabShareModal: React.FC<CollabShareModalProps> = ({
           <QRCodeSVG value={shareUrl} size={160} level="M" />
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            width: '100%',
-            padding: '8px 12px',
-            background: 'var(--bg-tertiary)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--border-default)',
-          }}
-        >
-          <Link2
-            size={14}
-            style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}
-          />
-          <span
-            style={{
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            {shareUrl}
-          </span>
-          <Button
-            variant="secondary"
-            size="xs"
-            icon={copied ? Check : Copy}
-            onClick={handleCopy}
-          >
-            {copied ? t('已复制') : t('复制')}
-          </Button>
-        </div>
+        <ShareLinkBar url={shareUrl} label={t('协同链接')} />
 
         <Button variant="primary" onClick={onClose} style={{ width: '100%' }}>
           {t('完成')}
