@@ -451,7 +451,9 @@ export default (): AppConfig => {
     // 超时配置（单位：毫秒）
     timeout: {
       fileConversion:
-        parseInt(process.env.TIMEOUT_FILE_CONVERSION || '60000', 10) || 60000, // 1分钟
+        // 默认 3 分钟，与 conversion-service PRIORITY_CONFIG 1/2 级超时（180000ms）对齐：
+        // 大图纸（十几 MB DWG、含外部参照）常超 60s，旧默认会把慢转换误杀成「文件转换超时」
+        parseInt(process.env.TIMEOUT_FILE_CONVERSION || '180000', 10) || 180000,
       distributedLock:
         parseInt(process.env.TIMEOUT_DISTRIBUTED_LOCK || '5000', 10) || 5000, // 5秒
       rateLimiter:

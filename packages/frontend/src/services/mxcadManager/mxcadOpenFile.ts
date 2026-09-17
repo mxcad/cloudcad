@@ -133,6 +133,12 @@ export async function waitForFileReady(
     if (fileInfoResponse.error) throw fileInfoResponse.error;
     const fileInfo = fileInfoResponse.data;
     if (!fileInfo) return null;
+    // 后端转换失败保留 FAILED 节点（不再硬删），若继续轮询会空等满 maxAttempts
+    // （默认 60×2s=120s）才报「文件转换未完成」，用户误以为还在转换。
+    // 这里立即失败并给出与 useCadFileLoader 一致的失败文案。
+    if (fileInfo.fileStatus === 'FAILED') {
+      throw new Error(t('该文件转换失败，请检查文件内容'));
+    }
     if (fileInfo.fileHash && fileInfo.path) {
       return {
         fileHash: fileInfo.fileHash,

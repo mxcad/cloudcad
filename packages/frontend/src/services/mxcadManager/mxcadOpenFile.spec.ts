@@ -216,4 +216,36 @@ describe('S6-1/S6-6 主上传路径：waitForFileReady 轮询期间重拉云端�
     // 而非仅入口一次——否则新上传的云端任务（node.taskId 稍后才写入）会被漏掉）
     expect(mockListTasks.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
+
+  it('节点 FAILED：立即抛失败（不再空等满 maxAttempts 报「文件转换未完成」）', async () => {
+    // 后端转换失败保留 FAILED 节点（不再硬删）：若继续轮询会空等满 maxAttempts
+    // （默认 60×2s=120s）才报「文件转换未完成」，用户误以为还在转换。
+    mockNodeControllerGetNode.mockResolvedValue({
+      data: { fileStatus: 'FAILED' },
+    });
+
+    await expect(waitForFileReady('node-1', 60, 2000)).rejects.toThrow(
+      '该文件转换失败，请检查文件内容'
+    );
+    // 立即失败：只查一次节点，未进入轮询等待
+    expect(mockNodeControllerGetNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('节点 PROCESSING：继续轮询（仅 FAILED 短路，不误杀在途转换）', async () => {
+    mockNodeControllerGetNode
+      .mockResolvedValueOnce({ data: { fileStatus: 'PROCESSING' } })
+      .mockResolvedValueOnce({
+        data: {
+          fileStatus: 'COMPLETED',
+          fileHash: 'h',
+          path: '/p',
+          name: 'a.dwg',
+          parentId: 'p',
+        },
+      });
+
+    const result = await waitForFileReady('node-1', 5, 1);
+    expect(result).toMatchObject({ fileHash: 'h' });
+    expect(mockNodeControllerGetNode).toHaveBeenCalledTimes(2);
+  });
 });

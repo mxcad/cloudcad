@@ -129,6 +129,8 @@ describe("FileConversionService", () => {
 			});
 			expect(r.isOk).toBe(false);
 			expect(r.error).toContain("Invalid file");
+			// 引擎返回非 0 code = 确定性内容失败，同一输入重试注定再失败
+			expect(r.transient).toBe(false);
 		});
 
 		it("should handle parse error when output is invalid JSON", async () => {
@@ -144,6 +146,8 @@ describe("FileConversionService", () => {
 				fileHash: "abc",
 			});
 			expect(r.isOk).toBe(false);
+			// 引擎已正常退出但输出不可解析 = 引擎协议/配置异常，属环境性失败
+			expect(r.transient).toBe(true);
 		});
 
 		it("should handle non-zero exit with successful stdout fallback", async () => {
@@ -174,6 +178,10 @@ describe("FileConversionService", () => {
 				fileHash: "abc",
 			});
 			expect(r.isOk).toBe(false);
+			// 超时是环境性失败（可重试），且 code=-2 区别于内容失败与解析失败
+			expect(r.transient).toBe(true);
+			expect(r.ret.code).toBe(-2);
+			expect(r.error).toContain("文件转换超时");
 		});
 
 		// ===== 导出下载方向会员门控（mxweb → 其他格式）=====
@@ -702,6 +710,46 @@ describe("FileConversionService", () => {
 			await module.close();
 		});
 
+		// 转换服务只回错误字符串、不透传失败性质，按 runner.ts 抛出的文案归类：
+		// '转换超时' / '转换进程被终止' / '进程未正常启动' / '转换输出格式错误' = 瞬态；
+		// 其余（引擎非 0 code 的原始 message，如 'read file error'）= 确定性内容失败。
+		it.each([
+			["转换超时", true],
+			["转换进程被终止 (SIGKILL)", true],
+			["mxcadassembly 进程未正常启动（stderr: 无）", true],
+			["转换输出格式错误", true],
+			["read file error", false],
+			["false", false],
+			["转换参数缺少 srcPath", false],
+		])(
+			"conversion-service 模式：转发失败文案「%s」归类 transient=%s",
+			async (error, expectedTransient) => {
+				const mockExecutor = {
+					invoke: jest.fn(async () => ({
+						taskId: "cs_1",
+						status: "FAILED",
+						error,
+					})),
+					getTaskStatus: jest.fn(),
+				} as unknown as IFunctionExecutorType;
+				const module = await Test.createTestingModule({
+					providers: [
+						FileConversionService,
+						{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+						{ provide: IFunctionExecutor, useValue: mockExecutor },
+					],
+				})
+					.setLogger(silentLogger)
+					.compile();
+				const svc = module.get<FileConversionService>(FileConversionService);
+				const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+				expect(r.isOk).toBe(false);
+				expect(r.error).toContain(error);
+				expect(r.transient).toBe(expectedTransient);
+				await module.close();
+			},
+		);
+
 		it("conversion-service 模式：binToMxweb 空串 newpath 回落本地计算路径（回归：历史版本「bin→mxweb 转换失败: undefined」）", async () => {
 			// 忠实模拟 HttpConversionExecutor 映射：转换服务单任务结果 = mxcadassembly 输出
 			// {code, message}（无 newpath 键），runner 成功时补 newpath: ''，
@@ -748,6 +796,238 @@ describe("FileConversionService", () => {
 			expect(r.isOk).toBe(true);
 			// 进程内 spawn 被调用
 			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	// ==================== 失败分类与确定性失败负缓存（process-pool 对齐 conversion-service） ====================
+	describe("失败分类与确定性失败负缓存", () => {
+		it("进程被信号杀死（exitCode=null）归为瞬态，并给出可定位的进程未启动文案", async () => {
+			setRun(() => ({
+				stdout: "",
+				stderr: "ENOENT: no such file",
+				exitCode: null,
+				signal: null,
+				timedOut: false,
+			}));
+			const r = await service.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(false);
+			expect(r.transient).toBe(true);
+			expect(r.ret.code).toBe(-2);
+			expect(r.error).toContain("进程未正常启动");
+		});
+
+		it("被 SIGKILL 强杀归为瞬态（非超时）", async () => {
+			setRun(() => ({
+				stdout: "",
+				stderr: "",
+				exitCode: null,
+				signal: "SIGKILL",
+				timedOut: false,
+			}));
+			const r = await service.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(false);
+			expect(r.transient).toBe(true);
+			expect(r.error).toContain("signal=SIGKILL");
+			expect(r.error).not.toContain("文件转换超时");
+		});
+
+		it("引擎返回非 0 code 归为确定性失败并保留引擎原始 message", async () => {
+			setRun(() => ({
+				stdout: '{"code":1,"message":"read file error"}',
+				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: false,
+			}));
+			const r = await service.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(false);
+			expect(r.transient).toBe(false);
+			expect(r.ret.message).toBe("read file error");
+			expect(r.error).toBe("read file error");
+		});
+
+		it("超时但 stdout 已含完整成功结果时采信成功（超时线边界竞态）", async () => {
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: true,
+			}));
+			const r = await service.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(true);
+			expect(r.ret.code).toBe(0);
+		});
+
+		it("输出无法解析时归为瞬态且错误信息带原始输出片段", async () => {
+			setRun(() => ({
+				stdout: "garbled engine output",
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
+			const r = await service.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(false);
+			expect(r.transient).toBe(true);
+			expect(r.error).toContain("输出无法解析");
+			expect(r.error).toContain("garbled engine output");
+		});
+
+		it("确定性失败命中负缓存后短路，不再 spawn 引擎", async () => {
+			setRun(() => ({
+				stdout: '{"code":1,"message":"read file error"}',
+				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: false,
+			}));
+			const options = { srcPath: "/tmp/bad.dwg", fileHash: "xyz" };
+			const first = await service.convertFile(options);
+			expect(first.isOk).toBe(false);
+			expect(first.transient).toBe(false);
+
+			const second = await service.convertFile(options);
+			expect(second.isOk).toBe(false);
+			expect(second.transient).toBe(false);
+			expect(second.error).toContain("内容不可转换");
+			expect(second.error).toContain("read file error");
+			// 第二次不再真实执行转换
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
+		});
+
+		it("瞬态失败（超时）不写入负缓存，同参数可重试", async () => {
+			setRun(() => ({
+				stdout: "",
+				stderr: "timeout",
+				exitCode: null,
+				signal: "SIGTERM",
+				timedOut: true,
+			}));
+			const options = { srcPath: "/tmp/slow.dwg", fileHash: "slow1" };
+			const first = await service.convertFile(options);
+			expect(first.transient).toBe(true);
+
+			// 引擎恢复后同参数重试必须真实执行（瞬态失败不污染负缓存）
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
+			const second = await service.convertFile(options);
+			expect(second.isOk).toBe(true);
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(2);
+		});
+
+		it("同 fileHash 不同 cmd/outname 视为不同内容身份，不互相短路", async () => {
+			setRun(() => ({
+				stdout: '{"code":1,"message":"read file error"}',
+				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: false,
+			}));
+			await service.convertFile({
+				srcPath: "/tmp/same.dwg",
+				fileHash: "same",
+				outname: "a.mxweb",
+				cmd: "to_mxweb",
+			});
+			const r = await service.convertFile({
+				srcPath: "/tmp/same.dwg",
+				fileHash: "same",
+				outname: "b.pdf",
+				cmd: "print_to_pdf",
+			});
+			expect(r.isOk).toBe(false);
+			expect(r.error).not.toContain("内容不可转换");
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(2);
+		});
+
+		it("成功且引擎未回 newpath 时按 outname 补算产物路径", async () => {
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
+			const r = await service.convertFile({
+				srcPath: "/tmp/src.dwg",
+				fileHash: "abc",
+				outname: "out.pdf",
+			});
+			expect(r.isOk).toBe(true);
+			// 与 conversion-service MxcadRunner 的补算规则一致：产物在源文件同目录
+			expect(r.ret.newpath).toBe(path.join("/tmp", "out.pdf"));
+		});
+
+		it("convertBinToMxweb 四路失败分类齐全（超时/未启动/内容失败/解析失败）", async () => {
+			// 1) 超时（无成功输出）→ 瞬态
+			setRun(() => ({
+				stdout: "",
+				stderr: "timeout",
+				exitCode: null,
+				signal: "SIGTERM",
+				timedOut: true,
+			}));
+			let r = await service.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
+			expect(r.success).toBe(false);
+			expect(r.transient).toBe(true);
+			expect(r.error).toContain("转换超时");
+
+			// 2) 超时但已含完整成功结果 → 采信成功
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: true,
+			}));
+			r = await service.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
+			expect(r.success).toBe(true);
+			expect(r.outputPath).toBe(path.join("/tmp/out", "f.mxweb"));
+
+			// 3) 进程未正常启动（exitCode=null）→ 瞬态
+			setRun(() => ({
+				stdout: "",
+				stderr: "",
+				exitCode: null,
+				signal: null,
+				timedOut: false,
+			}));
+			r = await service.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
+			expect(r.success).toBe(false);
+			expect(r.transient).toBe(true);
+			expect(r.error).toContain("进程未正常启动");
+
+			// 4) 引擎非 0 code → 确定性内容失败
+			setRun(() => ({
+				stdout: '{"code":1,"message":"read file error"}',
+				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: false,
+			}));
+			r = await service.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
+			expect(r.success).toBe(false);
+			expect(r.transient).toBe(false);
+			expect(r.error).toBe("read file error");
+
+			// 5) 输出无法解析 → 瞬态
+			setRun(() => ({
+				stdout: "junk",
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
+			r = await service.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
+			expect(r.success).toBe(false);
+			expect(r.transient).toBe(true);
+			expect(r.error).toContain("输出无法解析");
 		});
 	});
 });

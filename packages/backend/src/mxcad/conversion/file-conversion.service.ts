@@ -38,6 +38,62 @@ import {
 	type ConversionTask,
 } from "../../function-executor/function-executor.interface";
 
+/**
+ * 转换服务（conversion-service 模式）错误文案中的环境性失败标记。
+ * 与 packages/conversion-service mxcad/runner.ts 抛出的 ConversionExecutionError 文案对齐：
+ * - '转换超时'（timedOut）
+ * - '转换进程被终止 (<signal>)'（signal 非空）
+ * - 'mxcadassembly 进程未正常启动（stderr: ...）'（exitCode=null）
+ * - '转换输出格式错误'（_parseOutput 解析失败，code=1）
+ * 以上均属环境性失败，重试可能成功。
+ */
+const TRANSIENT_ERROR_MARKERS = [
+	"转换超时",
+	"进程被终止",
+	"进程未正常启动",
+	"输出格式错误",
+	"timed out",
+];
+
+/**
+ * 判定转换服务错误文案是否为瞬态失败。
+ * 转换服务只回错误字符串、不透传失败性质，故按文案归类；
+ * 无法判定时按瞬态处理——标记 transient:true 供上层区分失败性质，重试不会有害；
+ * 比把慢转换误判成确定性内容失败更安全。
+ */
+function isTransientConversionError(message?: string): boolean {
+	if (!message) return true;
+	return TRANSIENT_ERROR_MARKERS.some((m) => message.includes(m));
+}
+
+/**
+ * 从引擎原始输出中解析成功结果；无完整 {"code":0} JSON 时返回 null。
+ *
+ * 供两个「输出不可信」的场景做最后采信判断：
+ * - 超时：mxcad-exec 的 finish() 在子进程 close 时返回，若定时器已先触发则
+ *   timedOut=true 而 stdout 可能已含完整成功结果（转换刚好卡在超时线上）。
+ *   完整 code=0 JSON 是引擎已完成转换的正证据，优先采信而非误报超时失败。
+ * - 异常：mxcadassembly 可能退出码非 0 但实际成功（引擎成功/失败退出码都恒 2123）。
+ * 引擎输出是动态 JSON，仅保证 code 字段，故此处只认 code===0。
+ */
+function parseSuccessResult(
+	rawOutput: string,
+): MxCadConversionResult | null {
+	const output = String(rawOutput || "");
+	const iPos = output.lastIndexOf('{"code"');
+	if (iPos === -1) return null;
+	let ret: unknown;
+	try {
+		ret = JSON.parse(output.substring(iPos));
+	} catch {
+		return null;
+	}
+	if (ret && typeof ret === "object" && (ret as MxCadConversionResult).code === 0) {
+		return ret as MxCadConversionResult;
+	}
+	return null;
+}
+
 @Injectable()
 export class FileConversionService implements IMxcadConversionService {
 	private readonly logger = new Logger(FileConversionService.name);
@@ -47,7 +103,7 @@ export class FileConversionService implements IMxcadConversionService {
 	private readonly compression: boolean;
 	private readonly conversionRateLimiter: RateLimiter;
 	private readonly mxcadDebugPath: string;
-	/** 单次 mxcadassembly 转换超时（毫秒），来自 timeout.fileConversion，默认 60000 */
+	/** 单次 mxcadassembly 转换超时（毫秒），来自 timeout.fileConversion，默认 180000 */
 	private readonly conversionTimeoutMs: number;
 	/**
 	 * FUNCTION_EXECUTOR 部署模式。
@@ -120,12 +176,13 @@ export class FileConversionService implements IMxcadConversionService {
 
 		this.mxcadDebugPath = this.configService.get<string>('mxcadDebugPath') || path.join(projectRoot, 'data', 'debug');
 
-		// 转换超时可经 env TIMEOUT_FILE_CONVERSION 调整（默认 60000）
+		// 转换超时可经 env TIMEOUT_FILE_CONVERSION 调整（默认 180000，
+		// 与 conversion-service 1/2 级超时对齐；大图纸常超 60s，旧默认会把慢转换误杀）
 		const timeoutMs = this.configService.get<number>('timeout.fileConversion');
 		this.conversionTimeoutMs =
 			typeof timeoutMs === "number" && timeoutMs > 0
 				? timeoutMs
-				: 60000;
+				: 180000;
 
 		// 部署模式：仅 conversion-service 模式切转发分支，其余（默认 process-pool）保持进程内 spawn
 		const executorMode =
@@ -443,25 +500,65 @@ export class FileConversionService implements IMxcadConversionService {
 			stdout = runResult.stdout;
 			stderr = runResult.stderr;
 
-			if (runResult.timedOut) {
-				this.logger.error(
-					`文件转换超时(${options.timeout || this.conversionTimeoutMs}ms)，已杀进程组`,
-				);
-			} else {
-				this.logger.log(
-					`文件转换退出: exitCode=${runResult.exitCode}, signal=${runResult.signal}`,
-				);
-			}
-
 			// 始终记录 mxcadassembly 原始输出（含成功/失败/超时）：
 			// 此前成功路径只打 srcPath、失败路径只打 ret.message，子进程 stdout/stderr
 			// 从未进后端日志，导致"手动跑正常、后端跑 read file error"无从对照。
 			// 现在把引擎原始输出落日志，失败时可直接与手动执行结果比对定位。
+			// 放在超时/未正常启动分支之前，保证这两类失败也能拿到引擎原始输出。
 			if (stdout || stderr) {
 				this.logger.log(
 					`mxcadassembly 原始输出: stdout=[${stdout}] stderr=[${stderr}]`,
 				);
 			}
+
+			if (runResult.timedOut) {
+				// 先尝试采信完整成功结果：runMxcadAssembly 在子进程 close 时结算，
+				// 若超时定时器已先触发则 timedOut=true 而 stdout 可能已含完整 code=0 结果
+				// （转换刚好卡在超时线上完成）。完整 code=0 JSON 是引擎已完成转换的正证据，
+				// 优先采信而非误报「文件转换超时」——超时是环境性失败（可重试），
+				// 而这里引擎其实已经转完了。
+				const salvaged = parseSuccessResult(stdout || stderr);
+				if (salvaged) {
+					if (outname && !salvaged.newpath) {
+						salvaged.newpath = path.join(
+							path.dirname(absoluteSrcPath),
+							outname,
+						);
+					}
+					this.logger.warn(
+						`文件转换卡在超时线内完成，采信引擎成功结果: ${srcPath}`,
+					);
+					return { isOk: true, ret: salvaged };
+				}
+				const timeoutMsg = `文件转换超时(${
+					options.timeout || this.conversionTimeoutMs
+				}ms)`;
+				this.logger.error(`${timeoutMsg}，已杀进程组`);
+				return {
+					isOk: false,
+					ret: { code: -2, message: timeoutMsg },
+					error: timeoutMsg,
+					transient: true,
+				};
+			}
+
+			// 引擎进程未正常退出：exitCode=null（spawn 失败）或 signal 非空（被信号杀死）。
+			// 此前这类失败折叠进下方「解析输出失败」，无法区分引擎环境问题与内容问题，
+			// 也无法在日志里看出「进程根本没起来」和「引擎拒绝了文件」的区别。
+			if (runResult.exitCode === null || runResult.signal) {
+				const spawnMsg = `mxcadAssembly 进程未正常启动（signal=${
+					runResult.signal ?? "null"
+				}，stderr=${stderr.slice(0, 200) || "无"}）`;
+				this.logger.error(spawnMsg);
+				return {
+					isOk: false,
+					ret: { code: -2, message: spawnMsg },
+					error: spawnMsg,
+					transient: true,
+				};
+			}
+
+			this.logger.log(`文件转换退出: exitCode=${runResult.exitCode}`);
 
 			// 尝试从 stdout 或 stderr 解析结果
 			const output = Buffer.isBuffer(stdout)
@@ -480,6 +577,11 @@ export class FileConversionService implements IMxcadConversionService {
 
 				if (ret.code === 0) {
 					this.logger.log(`文件转换成功: ${srcPath}`);
+					// 引擎有时不回 newpath（进程内路径此前依赖调用方自己推断产物位置），
+					// 用 outname 补算，与 conversion-service MxcadRunner 的补算逻辑对齐。
+					if (outname && !ret.newpath) {
+						ret.newpath = path.join(path.dirname(absoluteSrcPath), outname);
+					}
 					return { isOk: true, ret };
 				} else {
 					this.logger.error(`文件转换失败: ${ret.message}`);
@@ -494,11 +596,22 @@ export class FileConversionService implements IMxcadConversionService {
 							errorMessage: ret.message || '转换失败',
 						});
 					}
-					return { isOk: false, ret, error: ret.message };
+					// 引擎返回非 0 code = 确定性内容失败（如 read file error），
+					// 按 transient:false 标记供上层区分失败性质（同一输入重试会再失败）。
+					return {
+						isOk: false,
+						ret,
+						error: ret.message,
+						transient: false,
+					};
 				}
 			} catch (e) {
-				this.logger.error(`解析 MxCAD 输出失败: ${e.message}`);
-				this.logger.error(`原始输出: ${output}`);
+				// 引擎已退出（exitCode 非 null、无 signal）但输出不是可解析的 JSON
+				// —— 引擎协议/配置异常，属环境性失败（transient:true），可能与内容无关。
+				const parseMsg = `mxcadAssembly 输出无法解析（${e.message}，原始输出=${
+					String(output).slice(0, 300) || "空"
+				})}`;
+				this.logger.error(`解析 MxCAD 输出失败: ${parseMsg}`);
 				if (options.debugNodeId) {
 					await this.saveConversionDebugInfo({
 						nodeId: options.debugNodeId,
@@ -512,8 +625,9 @@ export class FileConversionService implements IMxcadConversionService {
 				}
 				return {
 					isOk: false,
-					ret: { code: -1, message: "解析输出失败" },
-					error: e.message,
+					ret: { code: -2, message: parseMsg },
+					error: parseMsg,
+					transient: true,
 				};
 			}
 		} catch (error: unknown) {
@@ -521,19 +635,16 @@ export class FileConversionService implements IMxcadConversionService {
 			const outputToCheck = stdout || stderr;
 
 			// 检查 stdout 或 stderr 是否包含成功的结果（mxcadassembly 可能退出码非0但实际成功）
-			if (outputToCheck) {
-				try {
-					const iPos = outputToCheck.lastIndexOf('{"code"');
-					if (iPos !== -1) {
-						const ret = JSON.parse(outputToCheck.substring(iPos));
-						if (ret.code === 0) {
-							this.logger.log(`文件转换成功: ${options.srcPath}`);
-							return { isOk: true, ret };
-						}
-					}
-				} catch {
-					// JSON 解析失败，继续错误处理
+			const salvaged = outputToCheck ? parseSuccessResult(outputToCheck) : null;
+			if (salvaged) {
+				if (options.outname && !salvaged.newpath) {
+					salvaged.newpath = path.join(
+						path.dirname(absoluteSrcPath),
+						options.outname,
+					);
 				}
+				this.logger.log(`文件转换成功: ${options.srcPath}`);
+				return { isOk: true, ret: salvaged };
 			}
 
 			const errorMessage =
@@ -555,12 +666,14 @@ export class FileConversionService implements IMxcadConversionService {
 				});
 			}
 
-				return {
-					isOk: false,
-					ret: { code: -1, message: errorMessage },
-					error: errorMessage,
-				};
-			}
+			// 异常路径无法判断成败性质（多半是 spawn/IO 环境异常），按瞬态处理。
+			return {
+				isOk: false,
+				ret: { code: -2, message: errorMessage },
+				error: errorMessage,
+				transient: true,
+			};
+		}
 	}
 
 	/**
@@ -589,13 +702,15 @@ export class FileConversionService implements IMxcadConversionService {
 		};
 		const executor = this.getFunctionExecutor();
 		if (!executor) {
-			// 未接线（测试/未导入 FunctionExecutorModule）：按转换失败返回，调用方走既有错误处理
+			// 未接线（测试/未导入 FunctionExecutorModule）：按转换失败返回，调用方走既有错误处理。
+			// 执行器缺失是部署/接线问题，重试可能成功 → 瞬态。
 			const err = "conversion-service executor unavailable";
 			this.logger.error(`转换服务执行器不可用（${taskType}）：${err}`);
 			return {
 				isOk: false,
-				ret: { code: -1, message: err },
+				ret: { code: -2, message: err },
 				error: err,
+				transient: true,
 			};
 		}
 		const result = await executor.invoke(task);
@@ -616,10 +731,12 @@ export class FileConversionService implements IMxcadConversionService {
 		this.logger.error(
 			`转换服务失败: ${taskType} taskId=${taskId} ${result.error}`,
 		);
+		// 转换服务只回错误字符串、不透传失败性质，按文案归类（见 isTransientConversionError）。
 		return {
 			isOk: false,
 			ret: { code: -1, message: result.error },
 			error: result.error,
+			transient: isTransientConversionError(result.error),
 		};
 	}
 
@@ -805,12 +922,20 @@ export class FileConversionService implements IMxcadConversionService {
 	 * 收进同一并发池才能真实约束 mxcadassembly 进程总数。此前走 ProcessPoolExecutor 时被独立
 	 * RateLimiter(4) 限流、version-history 直连路径则完全裸奔，两池相加可超 CPU 核数。
 	 * 保存为用户同步等待步骤，优先级 'high'。
+	 *
+	 * 返回 `transient` 供调用方区分「可重试的环境性失败」与「确定性内容失败」
+	 * （与 convertFile 的 ConversionResult.transient 同语义）。
 	 */
 	async convertBinToMxweb(
 		binPath: string,
 		outputPath: string,
 		outName: string,
-	): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+	): Promise<{
+		success: boolean;
+		outputPath?: string;
+		error?: string;
+		transient?: boolean;
+	}> {
 		return this.conversionRateLimiter.execute(
 			async () => this.executeBinToMxweb(binPath, outputPath, outName),
 			"high",
@@ -821,7 +946,12 @@ export class FileConversionService implements IMxcadConversionService {
 		binPath: string,
 		outputPath: string,
 		outName: string,
-	): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+	): Promise<{
+		success: boolean;
+		outputPath?: string;
+		error?: string;
+		transient?: boolean;
+	}> {
 		let stdout = "";
 		let stderr = "";
 
@@ -862,7 +992,11 @@ export class FileConversionService implements IMxcadConversionService {
 							outputPath:
 								result.ret.newpath || path.join(outputPath, outName),
 						}
-					: { success: false, error: result.error };
+					: {
+							success: false,
+							error: result.error,
+							transient: result.transient,
+						};
 			}
 
 			// 参数序列化：Linux 用单引号 JSON，Windows 用原始 JSON
@@ -887,10 +1021,27 @@ export class FileConversionService implements IMxcadConversionService {
 			stdout = runResult.stdout;
 			stderr = runResult.stderr;
 
+			// 同 convertFile：超时/未正常启动先采信完整成功输出，再判失败。
 			if (runResult.timedOut) {
-				this.logger.error(
-					`[convertBinToMxweb] 转换超时(${this.conversionTimeoutMs}ms)，已杀进程组`,
-				);
+				const salvaged = parseSuccessResult(stdout || stderr);
+				if (salvaged) {
+					const resultPath = path.join(outputPath, outName);
+					this.logger.warn(
+						`[convertBinToMxweb] 卡在超时线内完成，采信引擎成功结果: ${resultPath}`,
+					);
+					return { success: true, outputPath: resultPath };
+				}
+				const timeoutMsg = `[convertBinToMxweb] 转换超时(${this.conversionTimeoutMs}ms)`;
+				this.logger.error(`${timeoutMsg}，已杀进程组`);
+				return { success: false, error: timeoutMsg, transient: true };
+			}
+
+			if (runResult.exitCode === null || runResult.signal) {
+				const spawnMsg = `[convertBinToMxweb] mxcadAssembly 进程未正常启动（signal=${
+					runResult.signal ?? "null"
+				}，stderr=${stderr.slice(0, 200) || "无"}）`;
+				this.logger.error(spawnMsg);
+				return { success: false, error: spawnMsg, transient: true };
 			}
 
 			const output = Buffer.isBuffer(stdout)
@@ -913,31 +1064,26 @@ export class FileConversionService implements IMxcadConversionService {
 					return { success: true, outputPath: resultPath };
 				} else {
 					this.logger.error(`[convertBinToMxweb] 转换失败: ${ret.message}`);
-					return { success: false, error: ret.message };
+					// 引擎返回非 0 code = 确定性内容失败
+					return { success: false, error: ret.message, transient: false };
 				}
 			} catch (e) {
-				this.logger.error(`[convertBinToMxweb] 解析输出失败: ${e.message}`);
-				this.logger.error(`原始输出: ${output}`);
-				return { success: false, error: `解析输出失败: ${e.message}` };
+				const parseMsg = `[convertBinToMxweb] mxcadAssembly 输出无法解析（${
+					e.message
+				}，原始输出=${String(output).slice(0, 300) || "空"}）`;
+				this.logger.error(parseMsg);
+				return { success: false, error: parseMsg, transient: true };
 			}
 		} catch (error: unknown) {
 			// 异常路径（如 spawn 失败）：stdout/stderr 已由 runMxcadAssembly 捕获（可能为空）
 			const outputToCheck = stdout || stderr;
 
-			if (outputToCheck) {
-				try {
-					const iPos = outputToCheck.lastIndexOf('{"code"');
-					if (iPos !== -1) {
-						const ret = JSON.parse(outputToCheck.substring(iPos));
-						if (ret.code === 0) {
-							const resultPath = path.join(outputPath, outName);
-							this.logger.log(`[convertBinToMxweb] 转换成功: ${resultPath}`);
-							return { success: true, outputPath: resultPath };
-						}
-					}
-				} catch {
-					// JSON 解析失败，继续错误处理
-				}
+			// 检查 stdout 或 stderr 是否包含成功的结果（mxcadassembly 可能退出码非0但实际成功）
+			const salvaged = outputToCheck ? parseSuccessResult(outputToCheck) : null;
+			if (salvaged) {
+				const resultPath = path.join(outputPath, outName);
+				this.logger.log(`[convertBinToMxweb] 转换成功: ${resultPath}`);
+				return { success: true, outputPath: resultPath };
 			}
 
 			const message =
@@ -946,7 +1092,7 @@ export class FileConversionService implements IMxcadConversionService {
 			this.logger.error(`stdout: [${stdout}]`);
 			this.logger.error(`stderr: [${stderr}]`);
 
-			return { success: false, error: message };
+			return { success: false, error: message, transient: true };
 		}
 	}
 }

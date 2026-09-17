@@ -263,13 +263,14 @@ describe('DrawingIngestService', () => {
       }
     }
 
-    it('上传立即返回 kOk（节点 PROCESSING），转换失败在后台释放占位 + 删节点', async () => {
+    it('上传立即返回 kOk（节点 PROCESSING），转换失败在后台释放占位 + 保留 FAILED 节点', async () => {
       mockFileConversionService.needsConversion.mockReturnValue(true);
       mockFileSystemService.getFileSize.mockResolvedValue(1024);
       mockFileTreeService.createFileNode.mockResolvedValue({ id: 'cad1' });
       mockFileConversionService.convertFile.mockResolvedValue({
         isOk: false,
         ret: { code: 1 },
+        transient: false,
       });
 
       // 上传请求立即返回 kOk（不阻塞等待转换），节点保持 PROCESSING
@@ -286,7 +287,7 @@ describe('DrawingIngestService', () => {
       // 冲刷后台转换任务微任务链（fire-and-forget，mock 立即 resolve 故任务已完成）
       await flushMicrotasks();
 
-      // 后台任务：转换失败 → 释放占位 + 节点 FAILED + 删除节点
+      // 后台任务：转换失败 → 释放占位 + 节点 FAILED + 保留节点（不硬删）
       expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
         'user1'
       );
@@ -295,7 +296,7 @@ describe('DrawingIngestService', () => {
         FileStatus.PROCESSING,
         FileStatus.FAILED
       );
-      expect(mockNodeTrashService.deleteNode).toHaveBeenCalledWith('cad1', true);
+      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
     });
   });
 

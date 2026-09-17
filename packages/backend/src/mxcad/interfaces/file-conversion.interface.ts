@@ -37,6 +37,20 @@ export interface ConversionResult {
   ret: MxCadConversionResult;
   /** 错误信息 */
   error?: string;
+  /**
+   * 失败是否为瞬态（true = 超时 / mxcadassembly 进程未启动 / 输出无法解析等环境性失败）。
+   *
+   * 与 conversion-service `ConversionExecutionError.deterministic` 语义对齐：
+   * - transient=true → 环境性失败，重试可能成功（引擎配置/路径/资源问题）；
+   * - transient=false → 确定性内容失败（引擎返回非 0 code，如 read file error），
+   *   同一输入重试注定再失败。
+   *
+   * 用于：① process-pool 负缓存只收录 transient=false（环境性失败不污染缓存）；
+   * ② 调用方日志/上报区分「可重试」与「永久失败」。
+   * 注：上传链路两类失败都保留 FAILED 节点（不再硬删），transient 不决定节点生死。
+   * 此前进程内路径两类失败无法区分，全部按永久失败处理：超时也被判成「解析输出失败」。
+   */
+  transient?: boolean;
 }
 
 export interface ConversionOptions {
