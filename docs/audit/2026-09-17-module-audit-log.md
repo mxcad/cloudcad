@@ -277,3 +277,29 @@ password, ...}`（含**明文密码**）存 `register:pending:<email>`（Redis�
   属跨 `@cloudcad/contracts` + user-crud + registration 的多文件契约重构，超出「单点
   手术」范围。记为后续独立票（若做：CreateUserDto 加 `preHashedPassword?` 或
   `passwordHashed: boolean`，user-crud 据此跳过 hash，registration 先 hash 再存 Redis）。
+
+---
+
+## 5. public-file（公开文件服务，@Public 无认证端点）
+
+### 5.1 路径包含性缺陷（已修 63ec97c）
+
+公开端点的 `hash`/`filename`/`srcHash` 来自 URL 参数且 `srcFileHash` 无格式校验，
+三处路径拼接缺包含性校验：
+
+| 位置 | 缺陷 | 影响 |
+|---|---|---|
+| `findFileInDir` | `path.join(uploadPath, hash, filename)` 后直接 existsSync/流式返回 | `GET access/:hash/:filename` 路径遍历读文件：Linux 一级越界（hash=.. + 已知文件名）；**Windows 反斜杠也是分隔符，`..\..\` 可任意读文件**（Express 路由参数不含 `/` 挡不住 `\`） |
+| `checkExtReferenceExists` | 同上，existsSync 直接返回 | `GET ext-reference/check` 任意文件**存在性探测 oracle**（query 参数可含 `/`，跨平台） |
+| `uploadExtReference` | `resolvedSrcDir.startsWith(resolvedUploadPath)` 裸前缀比较 | `srcFileHash=../uploads-evil` 解析为 uploads 的同名前缀兄弟目录被误判为内部，且 `mkdirSync` 真建目录 + 写文件（100MB 上限内） |
+
+修法：service 内新增 `isWithinUploadPath`（resolve 后 `startsWith(base + path.sep)`，
+带分隔符后缀防同名前缀兄弟目录误判），三处统一走它；越界一律按「不存在/非法路径」
+处理（404/400，不泄露存在性）。回归测试 `public-file.service.spec.ts` 8 例（真实
+临时目录，断言即旧缺陷行为，有牙齿）。
+
+其余端点无缺陷：`access/:filename`（平铺）走 findFilesByPrefix（目录列举过滤）+
+DB 查 fileHash，无用户输入拼路径；`preloading/:hash` 的 hashDir 仅在 mxweb 命中后
+使用（越界 hash 无命中早退）；`convert` 的 fileHash 走 findMxwebFile 同上安全。
+DWG 分支的临时文件路径经文件名校验（无分隔符/无 ..）后不可能越出 srcDir，内层
+两处 startsWith 校验冗余但无害，未动。
