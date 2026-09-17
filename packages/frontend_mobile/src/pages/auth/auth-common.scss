@@ -1,0 +1,156 @@
+/*
+ * 认证页共享样式（LoginPage / RegisterPage / VerifyEmailPage / VerifyPhonePage /
+ * BindIdentityPage / ForgotPasswordPage / ResetPasswordPage 共同引用）。
+ *
+ * 此前这 6 个页面的 <style scoped> 逐字复制了同一份 .auth-page/.auth-card/
+ * .primary-btn 等声明（约 120 行 × 6 份），改一处要改六处。收敛到这里，
+ * 页面只保留自己特有的少量样式。
+ *
+ * 注意：所有选择器写成 `button.xxx`（特异性 0,2,1）而不是裸 `.xxx`（0,1,1）。
+ * main.scss 的全局 reset 是 [type="button"]:not(.van-button)，特异性 (0,2,0)，
+ * 产物里 reset 排在组件样式之后 —— 裸类选择器会与其打平并按源序落败，
+ * background/border/color 被改写成 none/none/inherit，在黑底上按钮物理消失。
+ * 所有自定义 button 类必须自带 `type="button"`。
+ */
+
+/* label 只有 2 个字，vant 默认给 label 留 6.2em，会把「请输入用户名、邮箱或手机号」
+   的尾部挤到卡片外被截断；收窄 label 列并把宽度让给输入区 */
+.auth-page .van-field {
+  --van-field-label-width: 5.5em;
+  --van-field-padding-horizontal: 12px;
+}
+
+.auth-page {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-header {
+  text-align: center;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: var(--font-size-page-title);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.auth-subtitle {
+  margin: 8px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.form-body,
+.tab-body {
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 获取验证码按钮（挂 van-field 的 #button slot） */
+button.code-btn {
+  margin: 0;
+  padding: 0 12px;
+  height: 28px;
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+
+  &:disabled {
+    color: var(--text-tertiary);
+    border-color: var(--border-default);
+    cursor: default;
+  }
+}
+
+/* 主按钮：渐变用 token 而非硬编码色值 */
+button.primary-btn {
+  margin-top: 4px;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: var(--on-accent);
+  font-size: var(--font-size-body-lg);
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+button.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+
+  &.link-btn-right {
+    margin-left: auto;
+  }
+
+  &.link-btn-sep {
+    margin-left: 6px;
+  }
+}
+
+.auth-error {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  font-size: var(--font-size-sm);
+  color: var(--danger);
+}
+
+/* 非错误态提示条（如「请先验证邮箱，完成注册」） */
+.notice {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--info-bg);
+  border: 1px solid var(--info-border);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* 表单内联说明文字（如「密码强度：强」） */
+.hint {
+  margin: 6px 0 0;
+  font-size: var(--font-size-caption);
+  color: var(--text-tertiary);
+}
+
+.auth-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
