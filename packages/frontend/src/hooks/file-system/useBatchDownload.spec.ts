@@ -370,4 +370,34 @@ describe('useBatchDownload — 单文件格式下载走独立路由（回归：�
     expect(findTask('task-1')?.totalCount).toBe(1);
     expect(findTask('task-1')?.autoDownload).toBe(true);
   });
+
+  it('createFileHashTask 调 single-file 路由并传 fileHash（不传 nodeId），不触碰批量任务路由', async () => {
+    const { result } = renderHook(() => useBatchDownload());
+
+    const taskId = await result.current.createFileHashTask(
+      'hash-abc',
+      'drawing.mxweb',
+      'dwg',
+      { dwgVersion: 23 }
+    );
+
+    expect(taskId).toBe('task-1');
+    expect(mockCreateSingleFile).toHaveBeenCalledTimes(1);
+    // fileHash-only（CAD 编辑器内存导出上传的临时文件）：body 传 fileHash，nodeId 缺省
+    expect(mockCreateSingleFile).toHaveBeenCalledWith({
+      body: {
+        fileHash: 'hash-abc',
+        fileName: 'drawing.mxweb',
+        format: 'dwg',
+        dwgVersion: 23,
+        width: undefined,
+        height: undefined,
+        colorPolicy: undefined,
+        projectId: undefined,
+        libraryType: undefined,
+      },
+    });
+    // 批量下载路由必须未被调用——否则批量开关关闭时内存导出会被 403 拦掉
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
 });
