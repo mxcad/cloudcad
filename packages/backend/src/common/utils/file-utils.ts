@@ -376,4 +376,31 @@ export class FileUtils {
 
     return basename;
   }
+
+  /**
+   * 将相对路径解析到根目录下，并校验结果仍在根目录内（防 `..` 路径遍历逃逸）。
+   *
+   * 用于所有「把用户可控路径拼到 filesDataPath 等根目录下再读盘」的场景：
+   * 先 resolve 再校验前缀，逃逸即拒绝，避免 `path.resolve(root, '../../etc/passwd')`
+   * 跳出根目录读取任意文件（Express 通配符 `*path` 会原样捕获 `..` 段，不经过
+   * 浏览器/客户端的路径归一化）。
+   *
+   * @param root 根目录（如 filesDataPath）
+   * @param relative 相对路径（可能含用户输入）
+   * @returns 解析后的绝对路径（保证在 root 内，含 root 本身）
+   * @throws BadRequestException 若解析结果逃逸出 root
+   */
+  static resolveWithinRoot(root: string, relative: string): string {
+    const resolvedRoot = path.resolve(root);
+    const resolved = path.resolve(resolvedRoot, relative);
+    if (
+      resolved !== resolvedRoot &&
+      !resolved.startsWith(resolvedRoot + path.sep)
+    ) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径'
+      );
+    }
+    return resolved;
+  }
 }

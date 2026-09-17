@@ -1,4 +1,9 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
@@ -10,6 +15,7 @@ import { IVersionControl, VERSION_CONTROL_TOKEN } from '../../version-control/in
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { I18nContext } from 'nestjs-i18n';
 import { AppConfig } from '../../config/app.config';
+import { FileUtils } from '../../common/utils/file-utils';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 
@@ -71,7 +77,11 @@ export class MxcadVersionHistoryService {
       const filesDataPath = this.configService.get('filesDataPath', {
         infer: true,
       });
-      const absoluteFilePath = path.resolve(filesDataPath, filename);
+      // 路径遍历防护：解析结果必须仍位于 filesDataPath 内，逃逸抛 BadRequestException（入口映射 400）
+      const absoluteFilePath = FileUtils.resolveWithinRoot(
+        filesDataPath,
+        filename
+      );
 
       if (version === '-1') {
         const fileDir = path.dirname(absoluteFilePath);
@@ -214,6 +224,14 @@ export class MxcadVersionHistoryService {
         res.status(error.status).json({ code: -1, message: error.message });
         return;
       }
+      // 路径遍历（resolveWithinRoot 逃逸）等客户端非法路径：返回 400，不当作服务端 500
+      if (error instanceof BadRequestException) {
+        this.logger.warn(
+          `非法历史版本路径（疑似路径遍历）: ${filename} v${version}`
+        );
+        res.status(400).json({ code: -1, message: error.message });
+        return;
+      }
       const err = error as Error;
       this.logger.error(
         `获取历史版本文件失败: ${filename} v${version}, 错误: ${err.message}`,
@@ -245,7 +263,11 @@ export class MxcadVersionHistoryService {
     const filesDataPath = this.configService.get('filesDataPath', {
       infer: true,
     });
-    const absoluteFilePath = path.resolve(filesDataPath, filename);
+    // 路径遍历防护：同 handleHistoricalVersionRequest，逃逸抛 BadRequestException
+    const absoluteFilePath = FileUtils.resolveWithinRoot(
+      filesDataPath,
+      filename
+    );
     const fileDir = path.dirname(absoluteFilePath);
     const mxwebBaseName = path.basename(filename);
 

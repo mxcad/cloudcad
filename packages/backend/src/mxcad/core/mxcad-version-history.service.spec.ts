@@ -586,4 +586,58 @@ describe("MxcadVersionHistoryService", () => {
 			expect(mockRestrictionEngine.releaseHistoryCount).not.toHaveBeenCalled();
 		});
 	});
+
+	describe("handleHistoricalVersionRequest — 路径遍历防护", () => {
+		const makeRes = () => {
+			const res: any = {
+				setHeader: jest.fn(),
+				removeHeader: jest.fn(),
+				status: jest.fn().mockReturnThis(),
+				json: jest.fn(),
+				send: jest.fn(),
+				end: jest.fn(),
+			};
+			return res;
+		};
+		// 游客请求（无 userId）：req 仅用于 (req as any).user?.id 取值
+		const mockReq: any = {};
+
+		it("filename 含 .. 逃逸出 filesDataPath：返回 400，不读取任意文件、不触发转换", async () => {
+			const res = makeRes();
+			// 202608/node-1 两段 + 5 个 .. → 跳出 /fake/filesData
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/../../../../../etc/passwd",
+				"3",
+				res,
+				mockReq,
+				false
+			);
+			expect(res.status).toHaveBeenCalledWith(400);
+			expect(res.send).not.toHaveBeenCalled();
+			// 逃逸在 resolveWithinRoot 阶段即被拦截，不应触碰版本库/转换
+			expect(
+				mockVersionControlService.listDirectoryAtRevision
+			).not.toHaveBeenCalled();
+			expect(mockFileConversionService.convertBinToMxweb).not.toHaveBeenCalled();
+		});
+
+		it("filename 含 .. 但仍在 filesDataPath 内：正常处理（不误伤合法路径）", async () => {
+			// 202608/node-1/../../202608/node-2/… → resolve 后仍在 /fake/filesData 内
+			const { existsSync } = jest.requireMock("fs") as {
+				existsSync: jest.Mock;
+			};
+			existsSync.mockReturnValueOnce(true); // _v3.mxweb 缓存已存在
+			const res = makeRes();
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/../../202608/node-2/abc123.dwg.mxweb",
+				"3",
+				res,
+				mockReq,
+				false
+			);
+			// 仍在根内 → 正常命中缓存返回 200（而非 400）
+			expect(res.status).toHaveBeenCalledWith(200);
+			expect(res.send).toHaveBeenCalledWith(Buffer.from("mxweb-content"));
+		});
+	});
 });

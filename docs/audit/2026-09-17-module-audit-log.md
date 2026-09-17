@@ -796,3 +796,59 @@ ingest 被调，双断言失败）；③`图纸 (1).dwg` 原样保留（守「�
 
 **验证**：file-tree 50 + mxcad-upload 8 + materializer/library/save-as/drawing-ingest 51 全绿；
 `pnpm type-check` 0 错。
+
+## 16. backend mxcad infra/core —— filesData 文件服务路径遍历（任意文件读）——已修
+
+### 16.1 `path.resolve(filesDataPath, 用户路径)` 无 containment，`..` 可逃逸读任意文件
+
+**缺陷**：`mxcad-file-access.controller` 的 `filesData/*path` 通配符把 URL 路径段**原样**捕获为
+`params.path`（含 `..` 段——Express 5 / path-to-regexp 8 的 `*path` 通配符**不做路径归一化**，
+`..` 段原样进入参数数组，已用 `path-to-regexp.match` 实测确认：`/mxcad/filesData/202609/node-1/
+../../../etc/passwd` → `params.path = ["202609","node-1","..","..","..","etc","passwd"]`）。
+`extractPath` 将其 `join('/')` 成 `202609/node-1/../../../etc/passwd`，随后：
+
+- `MxcadFileHandlerService.serveFile`：`path.resolve(filesDataPath, filename)` **无 containment** →
+  `..` 段把绝对路径解析出 `filesDataPath`（实测 `path.resolve('/data/filesData','202609/node-1/
+  ../../../etc/passwd')` = `D:\data\etc\passwd`），`fs.existsSync` 命中即 `streamFile` 外发；
+- `MxcadFileHandlerService.findExternalReferencePath`（serveFile 的未命中回退）：
+  `path.resolve(filesDataPath, dir)` 同样无 containment，`readdirSync` 列任意目录；
+- `MxcadVersionHistoryService.handleHistoricalVersionRequest` / `resolveMxwebVersion`（带 `?v=` 的
+  历史版本路径）：`path.resolve(filesDataPath, filename)` 同样无 containment。
+
+**授权为何拦不住**：`getFilesDataFile`（GET）先走 `authorizeFilesDataAccess`，但它只取
+`parts[1]`（nodeId）校验节点权限——攻击者用**自己拥有的任一节点**拼 `202609/{自己的nodeId}/
+../../../../etc/passwd`，`parts[1]` 是合法 nodeId、权限通过，随后 `serveFile` 仍按含 `..` 的完整
+路径读盘逃逸。即「有任一文件访问权即可读服务器任意文件」。
+
+**更严重的入口**：`library.controller` 的 `drawing/filesData/*path` 与 `block/filesData/*path`
+均为 **`@Public()`（完全无鉴权）**，且把通配符**直接**透传给 `libraryService.serveFile` →
+`mxcadFileHandler.serveFile`（serveFile 内部无任何授权）。故本漏洞**未登录即可利用**——可读取
+`/etc/passwd`、SSH 私钥、`.env`（DB 凭据/JWT secret）、源码等。属**严重（Critical）任意文件读**。
+
+**修复**：新增 `FileUtils.resolveWithinRoot(root, relative)` 作为「用户可控路径拼到根目录再读盘」的
+**唯一路径遍历防线**：先 `path.resolve` 再校验 `resolved === root || resolved.startsWith(root +
+path.sep)`（加 `path.sep` 防 `root+"evil"` 兄弟目录前缀误判），逃逸即抛 `BadRequestException`
+（复用既有 i18n 键 `error.mxcad.path_invalid`，4 语言均已存在）。在 4 处 live 解析点套用：
+`serveFile`、`findExternalReferencePath`（其内层 catch 把抛错归为「未找到」→404）、
+`handleHistoricalVersionRequest`、`resolveMxwebVersion`。version-history 入口 catch 补
+`BadRequestException → 400` 分支（原会落入 500，遍历属客户端错误不当服务端错误）。
+
+**未改（判定）**：
+- `mxcad-file-access.controller.handleFilesDataFileRequest` 的非 version 分支为**死代码**（仅带
+  `?v=` 时被调用且恒委托 version-history），按「不修死代码」保留；
+- 其余 `path.resolve(filesDataPath, …)` 点（`async-conversion`/`external-reference-handler`）入参为
+  **DB 存的 `node.path`**（服务端生成，非直接用户输入），属纵深防御、非本漏洞，留作后续独立点；
+- `thumbnail.controller` 已 `.replace(/\.\./g,'_')` 剥离，无遍历。
+
+**回归测试**（3 处，均有牙齿）：
+- `file-utils.spec.ts`（新建）：`resolveWithinRoot` 7 例——正常路径/空路径/根内 `..`（不误伤）/
+  直接逃逸/单段 `..`/深层逃逸/兄弟目录前缀（守 `+path.sep` 防经典 `startsWith(root)` 缺陷）；
+- `mxcad-file-handler.service.spec.ts`（新建）：`serveFile` 2 例——逃逸 → 400 且不触 `createReadStream`、
+  正常不存在路径 → 404（不受防护误伤）；
+- `mxcad-version-history.service.spec.ts`：新增 2 例——逃逸 → 400 且不触版本库/转换、根内 `..` →
+  正常 200（守「勿过度拦截」回归）。
+
+**验证**：`pnpm jest file-utils + mxcad-file-handler + mxcad-version-history` 29 例全绿；受影响
+library/thumbnail/version-control 53 例全绿；**后端全量单测 180 suites / 2474 tests 全绿**；
+`pnpm type-check` 0 错。改动行 prettier 干净（两 service 文件 HEAD 本就非 prettier-clean，按项目
+约定不 `--write` 重排既有行）。

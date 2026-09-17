@@ -4,6 +4,7 @@ import { Response } from 'express';
 import { DatabaseService } from '../../database/database.service';
 import * as path from 'path';
 import * as fs from 'fs';
+import { FileUtils } from '../../common/utils/file-utils';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -44,7 +45,11 @@ export class MxcadFileHandlerService {
       const filesDataPath = this.configService.get('filesDataPath', {
         infer: true,
       });
-      const absoluteFilePath = path.resolve(filesDataPath, filename);
+      // 路径遍历防护：解析结果必须仍位于 filesDataPath 内，逃逸即拒绝（400）
+      const absoluteFilePath = FileUtils.resolveWithinRoot(
+        filesDataPath,
+        filename
+      );
 
       this.logger.log(`[serveFile] 绝对路径: ${absoluteFilePath}`);
 
@@ -108,7 +113,8 @@ export class MxcadFileHandlerService {
       const filesDataPath = this.configService.get('filesDataPath', {
         infer: true,
       });
-      const dirPath = path.resolve(filesDataPath, dir);
+      // 路径遍历防护：dirPath 必须仍位于 filesDataPath 内，逃逸抛错由外层 catch 归为未找到
+      const dirPath = FileUtils.resolveWithinRoot(filesDataPath, dir);
 
       // 列出 {dir} 下所有子目录，在每个子目录中查找文件
       // DWG/DXF 外部参照在磁盘上统一存储为 {fileName}.mxweb，所以同时搜索两种变体
