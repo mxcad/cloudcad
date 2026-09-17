@@ -36,7 +36,7 @@ const STATE_CONFIG: Record<string, StateConfig> = {
     actionText: t('重新登录'),
   },
   network_error: {
-    icon: 'error-o',
+    icon: 'fail',
     title: t('网络异常'),
     desc: t('网络连接不稳定，请检查网络后重试'),
     actionText: t('重试'),
@@ -59,7 +59,7 @@ const STATE_CONFIG: Record<string, StateConfig> = {
 
 const config = computed((): StateConfig => {
   const c = STATE_CONFIG[authState.value.kind]
-  return c || { icon: 'error-o', title: t('异常'), desc: t('未知状态') }
+  return c || { icon: 'fail', title: t('异常'), desc: t('未知状态') }
 })
 
 function handleAction() {

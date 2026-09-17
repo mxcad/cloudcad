@@ -497,7 +497,7 @@ function onFabClick() {
 const fabActions = computed<FabAction[]>(() => [
   { key: 'createFolder', name: t('新建文件夹'), icon: 'bag-o' },
   { key: 'createDrawing', name: t('新建图纸'), icon: 'description' },
-  { key: 'uploadFile', name: t('上传文件'), icon: 'upload' },
+  { key: 'uploadFile', name: t('上传文件'), icon: 'arrow-up' },
   { key: 'downloadTasks', name: t('下载任务'), icon: 'down' },
 ])
 

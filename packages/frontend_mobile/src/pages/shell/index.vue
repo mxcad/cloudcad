@@ -34,9 +34,10 @@ interface SheetItem {
   color?: string
 }
 
-/** 纯导航入口；账号与设置项在 sheetItems 里追加 */
+/** 纯导航入口；账号与设置项在 sheetItems 里追加
+ *  icon 须是 vant 内置图标名：van-action-sheet 按 van-icon-{name} 渲染，名字不存在时静默空白 */
 const SHEET_NAV_ITEMS: SheetItem[] = [
-  { name: '文件', icon: 'folder-o', route: '/shell/file' },
+  { name: '文件', icon: 'records-o', route: '/shell/file' },
   { name: '分享', icon: 'share-o', route: '/shell/share' },
   { name: '我的', icon: 'user-o', route: '/shell/profile' },
 ]
@@ -130,7 +131,8 @@ const sheetItems = computed<SheetItem[]>(() => [
   ...SHEET_NAV_ITEMS,
   {
     name: t('语言'),
-    icon: 'wap-nav',
+    // action-sheet 不支持 icon-prefix，只能用 vant 内置名（自定义 mxicon 图标在此用不了）
+    icon: 'font-o',
     value: ACTION_LANGUAGE,
     subname: currentLanguageName.value,
   },

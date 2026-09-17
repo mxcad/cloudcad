@@ -123,7 +123,7 @@ function onConfirm() {
         </div>
         <div v-else-if="folders.length === 0" class="picker-empty">{{ t('暂无子文件夹') }}</div>
         <div v-for="f in folders" :key="f.id" class="picker-item" @click="enterFolder(f)">
-          <van-icon name="folder-o" size="18" class="picker-item-icon" />
+          <van-icon name="bag-o" size="18" class="picker-item-icon" />
           <span class="picker-item-name">{{ f.name }}</span>
           <van-icon name="arrow" size="14" class="picker-item-arrow" />
         </div>

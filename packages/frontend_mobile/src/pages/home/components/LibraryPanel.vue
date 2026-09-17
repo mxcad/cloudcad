@@ -100,7 +100,7 @@
             size="20"
           />
           <div v-if="library.isFolder(node)" class="thumbnail thumbnail--folder">
-            <van-icon name="folder-o" size="28" />
+            <van-icon name="bag-o" size="28" />
           </div>
           <div v-else-if="failedImages[node.id]" class="thumbnail thumbnail--file">
             <van-icon name="description" size="28" />

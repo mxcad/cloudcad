@@ -580,7 +580,7 @@ async function onTargetTypeChange(newType: SaveTargetType) {
     <template #footer>
       <template v-if="step === 'form'">
         <button class="footer-btn footer-btn--primary" @click="handleSave" :loading="saveAs.saving.value">
-          <van-icon name="cloud-o" size="18" />
+          <van-icon name="arrow-up" size="18" />
           {{ t('保存到云图') }}
         </button>
       </template>
