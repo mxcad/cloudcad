@@ -18,7 +18,6 @@ import {
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { diskStorage } from 'multer';
-import { join } from 'path';
 import * as fs from 'fs';
 import { AppConfig } from '../../config/app.config';
 import { JwtModule } from '@nestjs/jwt';
@@ -49,6 +48,7 @@ import { MxcadUploadController } from '../upload/mxcad-upload.controller';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
 import { MxcadVersionHistoryService } from './mxcad-version-history.service';
 import { MxCadRequestContextBuilder } from './mxcad-request-context-builder';
+import { buildMulterChunkDir, buildMulterFilename } from './multer-path.utils';
 
 /**
  * Mxcad 核心子模块
@@ -86,8 +86,8 @@ import { MxCadRequestContextBuilder } from './mxcad-request-context-builder';
           storage: diskStorage({
             destination: (req, file, cb) => {
               if (req.body.chunk !== undefined) {
-                const fileMd5 = req.body.hash;
-                const tmpDir = join(tempPath, `chunk_${fileMd5}`);
+                // 路径遍历防护：hash 来自客户端（DTO 校验晚于本回调），basename 剥离路径段
+                const tmpDir = buildMulterChunkDir(tempPath, req.body.hash);
                 fs.mkdirSync(tmpDir, { recursive: true });
                 cb(null, tmpDir);
               } else {
@@ -96,15 +96,8 @@ import { MxCadRequestContextBuilder } from './mxcad-request-context-builder';
               }
             },
             filename: (req, file, cb) => {
-              const fileMd5 = req.body.hash;
-              if (req.body.chunk !== undefined) {
-                cb(null, `${req.body.chunk}_${fileMd5}`);
-              } else if (fileMd5) {
-                const ext = file.originalname.split('.').pop();
-                cb(null, `${fileMd5}.${ext}`);
-              } else {
-                cb(null, file.originalname);
-              }
+              // 路径遍历防护：hash/chunk/originalname 均经 basename 剥离路径段
+              cb(null, buildMulterFilename(req.body, file.originalname));
             },
           }),
           limits: {

@@ -911,3 +911,45 @@ library/thumbnail/version-control 53 例全绿；**后端全量单测 180 suites
 
 **验证**：`pnpm jest save` 3 suites / 30 tests 全绿；`pnpm type-check` 0 错；两文件 HEAD 与工作树
 均 prettier-clean（无新增漂移）。
+
+## 18. mxcad core — multer 落盘路径遍历（**高危：未鉴权任意文件写入**）
+
+**范围**：`mxcad/core/mxcad-core.module.ts` 的 `MulterModule.registerAsync` 工厂（`diskStorage`
+的 `destination`/`filename` 回调）。
+
+**根因**：`destination` 回调 `join(tempPath, `chunk_${req.body.hash}`)`、`filename` 回调
+`` `${req.body.chunk}_${req.body.hash}` `` / `` `${req.body.hash}.${ext}` `` / `file.originalname`
+均直接用客户端 multipart 字段 `hash`/`chunk`/`originalname` 拼路径。`hash` 仅 `@IsString()`（无格式
+校验），而 **DTO 的 class-validator 校验发生在路由处理器——晚于 multer 拦截器**（NestJS 顺序
+Guard→Interceptor→Handler；`AnyFilesInterceptor` 在 `intercept` 里跑 `multer.any()`，此时
+`req.body.hash` 是未校验原始值）。`AnyFilesInterceptor({ defParamCharset:'utf8' })` 的 localOptions
+不含 `storage`，故 `multer({ ...moduleOptions, ...localOptions })` 仍采用本模块的 `diskStorage`
+（已读 `@nestjs/platform-express@11.1.27` 源码确认）。
+
+**可达性**：`POST /mxcad/files/uploadFiles` 为 `@OptionalAuth()` + `@RequireProjectPermission
+(FILE_CREATE)`（游客可上传，见 ecef755）。攻击者构造 multipart（`hash` 字段置于 file 之前）传
+`hash=../../../../target` → `filename` 回调返回 `../../../../target.mxweb` → multer 把上传文件写到
+`join(mxcadUploadPath, '../../../../target.mxweb')`，逃逸到任意路径。**未鉴权任意文件写入**（可覆盖
+/etc/cron.d、写 shell 脚本等），比 16.1 的 filesData 任意读更严重。
+
+**排查其他 MulterModule 配置（同缺陷类）**：
+- `library.module.ts`：`filename = library_<Date.now()>_<randomBytes(8)hex>${extname(originalname)}`
+  ——随机前缀 + `extname`（取 basename 扩展名，恒无分隔符）→ 单段，**安全**。
+- `fonts.module.ts`：`MulterModule.register({ limits })` 无自定义 storage → multer 默认随机 hex
+  文件名 → **安全**。
+- `public-file.module.ts`：`memoryStorage()`（不落盘）→ **安全**。
+→ 仅 `mxcad-core.module.ts` 中招。
+
+**修复**：把两处回调的路径构造抽成框架无关纯函数 `multer-path.utils.ts`（`buildMulterChunkDir` /
+`buildMulterFilename`），对 `hash`/`chunk`/`originalname` 统一 `path.basename()` 剥离路径段
+（`basename` 结果恒不含 `/`/`\`，故 `join(root, …)` 必落在 root 内；合法 MD5 与常规文件名无分隔符，
+no-op）。模块回调改为调用这两个函数。对正常上传零行为变化（合法 hash/originalname 经 basename 不变）。
+
+**回归测试**：新建 `multer-path.utils.spec.ts` 7 例——`buildMulterChunkDir`（合法/遍历 `../../../../etc`
+→ `chunk_etc` 且 `startsWith(root+sep)`/空 hash）、`buildMulterFilename`（合法 `<hash>.<ext>`、遍历
+hash → `passwd.dwg` 无分隔符、分片 chunk+hash 均剥离、无 hash 时 originalname 经 basename）。
+
+**验证**：`pnpm jest multer-path.utils.spec` 7/7 绿；`pnpm jest src/mxcad/core` 4 suites / 44 tests
+全绿；`pnpm type-check` 0 错。`multer-path.utils.ts`/`spec` prettier-clean；`mxcad-core.module.ts`
+HEAD 本就非 prettier-clean（`runtimeMaxFileSizeMB`/`controllers` 两行预存漂移，按约定不 `--write`），
+仅确保我新增的 import 行单行干净。
