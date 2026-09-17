@@ -16,6 +16,7 @@ import {
   openSession,
   emitOpenComplete,
   emit,
+  subscribe,
   setModified,
   getCurrentFileUrl,
   getCacheTimestamp,
@@ -52,9 +53,65 @@ export function setCurrentShareToken(token: string | null): void {
   currentShareToken = token;
 }
 
-/** 获取当前 shareToken */
-export function getCurrentShareToken(): string | null {
-  return currentShareToken;
+/** 引擎的默认空模板文件名：currentFileName 停留在这两个值说明还没有真正打开过图纸 */
+const EMPTY_DOCUMENT_NAMES = ['empty_template.mxweb', 'empty.mxweb'];
+
+const DOCUMENT_LOADED_TIMEOUT_MS = 15_000;
+
+const FILE_OPEN_LISTENER_RETRIES = 30;
+const FILE_OPEN_LISTENER_RETRY_DELAY_MS = 100;
+
+/**
+ * 引擎是否已经打开了真实图纸（区别于默认空模板）
+ *
+ * isReady() 只表示引擎对象已创建（WASM 加载完），不代表文档已加载：
+ * 首次打开时 mxweb 可能还在下载/解析。串行化打开队列用这个判据决定
+ * 「上一个打开是否真的结束」，避免并发 openWebFile。
+ */
+export function hasDocumentLoaded(manager: {
+  getCurrentFileName(): string | null;
+}): boolean {
+  const name = manager.getCurrentFileName();
+  return !!name && !EMPTY_DOCUMENT_NAMES.includes(name);
+}
+
+/**
+ * 等待当前文档的 openFileComplete（引擎 ready 后的首个空模板事件也算），
+ * 超时按 false 返回不永久卡住。
+ *
+ * 引擎的 hideLoading 受 _isStopLoading 单向闩锁保护，重叠的第二次
+ * openWebFile 会锁死首次打开的 hideLoading/callOpenFileComplete →
+ * loading 永久转圈。所有打开入口都先等这里再发打开命令。
+ */
+export async function waitForDocumentLoaded(
+  manager: { getCurrentFileName(): string | null },
+  timeoutMs: number = DOCUMENT_LOADED_TIMEOUT_MS
+): Promise<boolean> {
+  if (hasDocumentLoaded(manager)) return true;
+  let settled = false;
+  let timedOut = false;
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      timedOut = true;
+      resolve();
+    }, timeoutMs);
+    const unsubscribe = subscribe(CAD_EVENTS.OPEN_COMPLETE, () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsubscribe();
+      resolve();
+    });
+  });
+  if (timedOut) {
+    console.warn(
+      '[waitForDocumentLoaded] 等待文档加载完成超时，继续打开目标图纸'
+    );
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -68,7 +125,9 @@ function buildViewOptions(openFile?: string) {
     try {
       const urlObj = new URL(openFile, window.location.origin);
       currentShareToken = urlObj.searchParams.get('shareToken');
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
   const baseHeaders: Record<string, string> = {};
   if (token) baseHeaders.Authorization = `Bearer ${token}`;
@@ -80,10 +139,10 @@ function buildViewOptions(openFile?: string) {
     const currentUrl = getCurrentFileUrl();
     const activeUrl = currentUrl || openFile;
     if (!activeUrl) return fileName;
-    
+
     // 使用模块级 currentShareToken（在 openFile 时已设置）
     // WASM 层的 HTTP 请求不携带 requestHeaders，只能通过 URL 传递认证信息
-    
+
     if (activeUrl.includes('/public-file/access/')) {
       const parts = activeUrl.split('/');
       const hashIndex = parts.indexOf('access') + 1;
@@ -92,7 +151,8 @@ function buildViewOptions(openFile?: string) {
         if (hash) {
           const rawHash = hash.replace(/(?:\.[^.]+)?\.mxweb$/i, '');
           let url = `/api/v1/public-file/access/${rawHash}/${fileName}`;
-          if (currentShareToken) url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
+          if (currentShareToken)
+            url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
           return url;
         }
       }
@@ -105,7 +165,8 @@ function buildViewOptions(openFile?: string) {
     if (mxcadMatch) {
       const baseDir = mxcadMatch[1];
       let url = `/api/v1/mxcad/filesData/${baseDir}/${fileName}`;
-      if (currentShareToken) url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
+      if (currentShareToken)
+        url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
       return url;
     }
     return fileName;
@@ -176,7 +237,10 @@ async function handleOpenCompleteSideEffects(): Promise<void> {
         setTimeout(runThumbnailTask, 3000);
       }
     } catch (error) {
-      handleError(error, 'mxcadManager: setupFileOpenListener thumbnail');
+      handleError(
+        error,
+        'mxcadManager: handleOpenCompleteSideEffects thumbnail'
+      );
     }
     const cacheTimestamp = getCacheTimestamp();
     const currentMxwebUrl = getCurrentFileUrl();
@@ -209,31 +273,26 @@ export class MxCADInstanceManager {
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
   private pendingOpenInfo: PendingOpenInfo | null = null;
+  /** 打开串行队列尾：上一个打开未结束前不发起下一个 __openWebFile__ */
+  private openTail: Promise<void> = Promise.resolve();
+  /** 引擎全局监听（MxFun.on）只注册一次：MxCADView 必须单实例 */
+  private engineListenersInstalled = false;
+  /** openFileComplete 监听只挂一次，避免重复消费 pendingOpenInfo */
+  private fileOpenListenerAttached = false;
   private readonly openFlow: MxCADOpenFlow;
 
   constructor() {
     this.openFlow = new MxCADOpenFlow(this);
   }
 
-  async initialize(
-    initialFileUrl?: string,
-    initialFileInfo?: CurrentFileInfo,
-    onSuccess?: () => void
-  ): Promise<MxCADView> {
-    if (initialFileInfo) {
-      this.pendingOpenInfo = { fileInfo: initialFileInfo, onSuccess };
-    }
-    if (this.mxcadView && this.isInitialized) {
-      if (initialFileUrl) await this.openFile({ url: initialFileUrl });
-      return this.mxcadView;
-    }
+  async initialize(): Promise<MxCADView> {
+    if (this.mxcadView && this.isInitialized) return this.mxcadView;
     if (this.initPromise) {
       await this.initPromise;
-      if (initialFileUrl) await this.openFile({ url: initialFileUrl });
       if (!this.mxcadView) throw new Error(t('MxCADView 初始化失败，实例为空'));
       return this.mxcadView;
     }
-    this.initPromise = this.createInstance(initialFileUrl);
+    this.initPromise = this.createInstance();
     try {
       await this.initPromise;
     } finally {
@@ -243,7 +302,42 @@ export class MxCADInstanceManager {
     return this.mxcadView;
   }
 
-  private setupFileOpenListener(): void {
+  /**
+   * 打开串行队列：上一个打开（含其 openFileComplete 回调链）结束前不发起下一个。
+   *
+   * 引擎同一时刻只能打开一个文档：openFile 入口无条件 stopAllLoading()，
+   * _isStopLoading 单向闩锁只置位不复位，重叠的第二次打开会锁死首次打开的
+   * hideLoading/callOpenFileComplete → loading 永久转圈。
+   * 排队期间先等当前文档加载完成（空模板也算），再执行本次打开。
+   */
+  private enqueueOpen<T>(run: () => Promise<T>): Promise<T> {
+    const previous = this.openTail;
+    let release!: () => void;
+    this.openTail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return previous
+      .catch(() => undefined)
+      .then(() =>
+        this.isReady() ? waitForDocumentLoaded(this) : Promise.resolve(true)
+      )
+      .then(run)
+      .then(
+        (result) => {
+          release();
+          return result;
+        },
+        (error) => {
+          release();
+          throw error;
+        }
+      );
+  }
+
+  private attachFileOpenListener(
+    retries: number = FILE_OPEN_LISTENER_RETRIES
+  ): void {
+    if (this.fileOpenListenerAttached) return;
     // MxDrawObject 层 openFileComplete 携带打开结果码（0=成功，非 0=失败）；
     // McObject 层同名事件转发时丢失该参数（callEvent 只传实例），无法区分成败。
     // 失败不得消费待打开会话/记录当前文件状态（currentFileInfo/currentFileName/title），
@@ -261,31 +355,52 @@ export class MxCADInstanceManager {
         return;
       }
       if (this.pendingOpenInfo) {
-        openSession(this.pendingOpenInfo.fileInfo);
-        this.pendingOpenInfo.onSuccess?.();
+        const { fileInfo, onSuccess } = this.pendingOpenInfo;
+        openSession(fileInfo);
         this.pendingOpenInfo = null;
+        onSuccess?.();
       }
       await handleOpenCompleteSideEffects();
     };
+    let attachError: unknown;
     try {
       const mxdraw = this.mxcadView?.mxcad?.getMxDrawObject?.();
       if (mxdraw) {
         mxdraw.addEvent('openFileComplete', onOpen);
+        this.fileOpenListenerAttached = true;
         return;
       }
     } catch (error) {
-      handleError(error, 'mxcadManager: setupFileOpenListener');
+      attachError = error;
     }
+    // mxcadApplicationCreatedMxCADObject 早于内部 mxdrawObject 就绪，
+    // 此刻 getMxDrawObject() 会抛 'reading mxdrawObject'。立即退回 McObject 层
+    // 会丢掉打开结果码（失败被当成功），故先重试若干次。
+    if (retries > 0) {
+      setTimeout(() => {
+        this.attachFileOpenListener(retries - 1);
+      }, FILE_OPEN_LISTENER_RETRY_DELAY_MS);
+      return;
+    }
+    handleError(
+      attachError,
+      'mxcadManager: attachFileOpenListener（退回 McObject 层，丢失打开结果码）'
+    );
     // 兜底：拿不到 MxDrawObject（不应发生）时退回 McObject 层事件（无结果码，按成功消费）
     this.mxcadView?.mxcad?.on('openFileComplete', () => {
       void onOpen(0);
     });
+    this.fileOpenListenerAttached = true;
   }
 
   private setupInitializationListener(): void {
+    // MxFun.on 是引擎全局监听：重复注册会在同一事件上跑多份回调，
+    // 而 MxCADView 必须严格单实例（见 createInstance 守卫）
+    if (this.engineListenersInstalled) return;
+    this.engineListenersInstalled = true;
     MxFun.on('mxcadApplicationCreatedMxCADObject', async () => {
       this.isInitialized = true;
-      this.setupFileOpenListener();
+      this.attachFileOpenListener();
       this.setupDocumentModifyListener();
       applyVipExportIcons();
       // VIP 命令前置门控：Mx_ExportPDF/DWG/DXF、Mx_PrintDialog、showDWGCutDialog
@@ -293,7 +408,7 @@ export class MxCADInstanceManager {
       installVipCommandGuard();
       // QSave 后 Ctrl+S 落回引擎内置保存（绕过自定义 Mx_QSave 流程） 通过addCommand 直接覆盖为空的实现
       setTimeout(() => {
-        MxFun.addCommand('Mx_QSave', () => { });
+        MxFun.addCommand('Mx_QSave', () => {});
       }, 2000);
     });
   }
@@ -309,13 +424,15 @@ export class MxCADInstanceManager {
     }
   }
 
-  private async createInstance(openFile?: string): Promise<void> {
+  private async createInstance(): Promise<void> {
     try {
+      // MxCADView 严格单实例：引擎只支持一个视图，重复 new 会创建第二份
+      // 全局监听并丢失共享状态
+      if (this.mxcadView) return;
       // 确保 auth_token cookie 新鲜：config.openFile 的引擎内部请求只携带 cookie，
       // 若 token 临近过期，WASM 加载期间可能过期导致 401
       await ensureFreshAuthCookie();
-      if (openFile) setCurrentFileUrl(openFile);
-      const viewOptions = buildViewOptions(openFile);
+      const viewOptions = buildViewOptions();
       this.mxcadView = new MxCADView(viewOptions);
       this.setupInitializationListener();
       this.mxcadView.create();
@@ -327,19 +444,14 @@ export class MxCADInstanceManager {
     }
   }
 
-  async reopenWithUrl(fileUrl: string): Promise<void> {
-    this.reset();
-    await this.initialize(fileUrl);
-  }
-
-  /** 打开文件（委托 MxCADOpenFlow；facade 与 initialize 内部共用此入口） */
+  /** 打开文件（委托 MxCADOpenFlow；所有打开入口经串行队列，不重叠） */
   async openFile(payload: OpenFilePayload): Promise<void> {
-    return this.openFlow.openFile(payload);
+    return this.enqueueOpen(() => this.openFlow.openFile(payload));
   }
 
-  /** 重载当前文件（委托 MxCADOpenFlow） */
+  /** 重载当前文件（委托 MxCADOpenFlow；同一串行队列） */
   async reloadCurrentFile(): Promise<boolean> {
-    return this.openFlow.reloadCurrentFile();
+    return this.enqueueOpen(() => this.openFlow.reloadCurrentFile());
   }
 
   getCurrentView(): MxCADView | null {
@@ -386,13 +498,5 @@ export class MxCADInstanceManager {
   }
   isReady(): boolean {
     return this.isInitialized && this.mxcadView !== null;
-  }
-
-  reset(): void {
-    this.mxcadView = null;
-    this.isInitialized = false;
-    this.initPromise = null;
-    this.pendingOpenInfo = null;
-    MxCADContainerManager.getInstance().clearContainer();
   }
 }

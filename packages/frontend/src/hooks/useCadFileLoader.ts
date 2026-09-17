@@ -236,8 +236,7 @@ export function useCadFileLoader(
           if (cancelled) return;
           if (!conversion.completed) {
             const isTerminalFailure =
-              conversion.status === 'FAILED' ||
-              conversion.status === 'DELETED';
+              conversion.status === 'FAILED' || conversion.status === 'DELETED';
             if (isTerminalFailure) {
               // #477：永久失败弹窗提示（区别于「尚未转换完成」）
               void globalShowConfirm({
@@ -367,8 +366,16 @@ export function useCadFileLoader(
         }
 
         const doOpenMxFile = async (skipFileOpen = false) => {
-          if (isInitializedRef.current && mxcadManager.isCreated()) {
+          // 视图已创建（引擎单实例仍存活）→ 直接发打开命令。组件卸载再挂载时
+          // isInitializedRef 归零而 isCreated() 仍为 true；若只等就绪不发命令，
+          // 图纸被静默跳过，且 loadedFileUrlRef 已写入 → 后续重跑命中 URL 相等
+          // 守卫永久不打开。
+          if (mxcadManager.isCreated()) {
+            isInitializedRef.current = true;
             mxcadManager.showMxCAD(true);
+            // 引擎可能仍在初始化（WASM 加载中），等就绪再发命令避免命令丢失
+            await waitForEngineReady(mxcadManager, () => cancelled);
+            if (cancelled) return;
             showGlobalLoading(t('正在加载图纸...'));
             await mxcadManager.openFile({
               url: mxcadFileUrl,
@@ -382,19 +389,7 @@ export function useCadFileLoader(
             return;
           }
 
-          if (mxcadManager.isCreated()) {
-            isInitializedRef.current = true;
-            loadedFileUrlRef.current = mxcadFileUrl;
-            currentFileIdRef.current = fileId;
-            // 视图已创建但引擎可能仍在初始化（WASM 加载中），等待就绪再显示容器，
-            // 期间由骨架屏覆盖，避免露出空白画布（#349）
-            await waitForEngineReady(mxcadManager, () => cancelled);
-            mxcadManager.showMxCAD(true);
-            onLoading(false);
-            return;
-          }
-
-          const { initThemeSync, initMxCADConfig, restoreEditorTitle } =
+          const { initThemeSync, initMxCADConfig } =
             await import('../services/mxcadManager');
           if (cancelled) return;
 
@@ -404,11 +399,7 @@ export function useCadFileLoader(
           // 引擎挂载前不显示容器：提前 showMxCAD(true) 会露出尚未渲染 mxcad-app 的空白容器
           // （白屏闪烁），且与编辑器骨架屏遮罩同时存在造成"两重 loading"。
           // 加载期间由骨架屏（loading 遮罩）覆盖，容器显示延后到引擎就绪（2 RAF）之后。
-          await mxcadManager.initializeMxCADView(
-            skipFileOpen ? undefined : mxcadFileUrl,
-            fileInfoForOpen,
-            onOpenSuccess
-          );
+          await mxcadManager.initializeMxCADView();
           if (cancelled) return;
 
           await initThemeSync();
@@ -423,15 +414,18 @@ export function useCadFileLoader(
           // （首次加载 WASM / 大图纸场景可能数秒）。提前 showMxCAD(true) 并关闭骨架屏会露出
           // 空白画布，期间无任何 loading 反馈（#349）。
           await waitForEngineReady(mxcadManager, () => cancelled);
+          if (cancelled) return;
 
-          // 首次进入：引擎通过 config.openFile 初始打开图纸，该通道无失败回调
-          // （失败是静默的），mxcad-app 会把标题显示成 mxweb 内部访问文件名
-          // （引擎 currentFileName = URL 尾部，如 <md5>.dwg.mxweb?t=...）。
-          // 打开成功时 openSession 已写入 currentFileInfo 并由 handleOpenCompleteSideEffects
-          // 设置图纸名标题；restoreEditorTitle 统一修正：无当前文件→目标图纸名，
-          // 有当前文件→恢复原标题（成功后写入同一格式，无冲突）。
           if (!skipFileOpen) {
-            restoreEditorTitle(file.name);
+            // 首开必须等默认空模板的 openFileComplete 再发 __openWebFile__：引擎同一时刻
+            // 只能打开一个文档，重叠的第二次打开会锁死首次打开的 hideLoading/openFileComplete
+            // （由 openFile 的串行队列保证不重叠），且失败能走 retCall + 60s 超时而不是静默卡住。
+            // 成功后 openSession 写入 currentFileInfo 并设置图纸名标题，无需再 restoreEditorTitle。
+            await mxcadManager.openFile({
+              url: mxcadFileUrl,
+              fileInfo: fileInfoForOpen,
+              onSuccess: onOpenSuccess,
+            });
           }
 
           // 引擎已挂载（再等 2 RAF 保证 canvas 渲染）再显示容器，避免空白区透出背景

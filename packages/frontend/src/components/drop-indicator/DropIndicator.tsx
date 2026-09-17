@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { CSS_CLASSES } from '../../services/mxcadManager';
+import { CSS_CLASSES } from '@/services/mxcadManager/mxcadTypes';
 import { t } from '@/languages';
 
 interface DropIndicatorProps {

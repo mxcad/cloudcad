@@ -18,6 +18,7 @@ vi.mock('@/services/drawingSession', () => ({
   openSession: vi.fn(),
   emitOpenComplete: vi.fn(),
   emit: vi.fn(),
+  subscribe: vi.fn(),
   setModified: vi.fn(),
   getCurrentFileUrl: vi.fn(),
   getCacheTimestamp: vi.fn(),
@@ -59,13 +60,29 @@ import {
   refreshFileName,
 } from '../mxcadHelpers';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
+import { handleError } from '@/utils/errorHandler';
 
 /**
  * 回归（用户反馈）：CAD 编辑器侧边栏打开图纸失败时，当前文件状态（title/currentFileInfo）
  * 仍被写成失败图纸。根因：McObject 层 openFileComplete 事件丢失结果码，旧实现无条件消费
  * pendingOpenInfo（openSession）。修复后订阅 MxDrawObject 层事件，仅结果码 0（成功）才记录。
+ *
+ * 附带覆盖 attachFileOpenListener 的引擎就绪重试：mxcadApplicationCreatedMxCADObject
+ * 早于内部 mxdrawObject 就绪，此刻 getMxDrawObject() 抛 'reading mxdrawObject'，
+ * 立即退回 McObject 层会丢掉打开结果码（失败被当成功），故重试若干次。
  */
-describe('MxCADInstanceManager.setupFileOpenListener — 结果码门控', () => {
+const MXDRAW_NOT_READY_ERROR = new TypeError(
+  "Cannot read properties of undefined (reading 'mxdrawObject')"
+);
+
+function internals(manager: MxCADInstanceManager) {
+  return manager as unknown as {
+    mxcadView: unknown;
+    attachFileOpenListener: (retries?: number) => void;
+  };
+}
+
+describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () => {
   let openCompleteHandlers: Array<(iResult: number) => void>;
   let mxdraw: {
     addEvent: ReturnType<typeof vi.fn>;
@@ -98,11 +115,9 @@ describe('MxCADInstanceManager.setupFileOpenListener — 结果码门控', () =>
     };
     manager = new MxCADInstanceManager();
     (manager as unknown as { mxcadView: unknown }).mxcadView = {
-      mxcad: { getMxDrawObject: () => mxdraw },
+      mxcad: { getMxDrawObject: () => mxdraw, on: vi.fn() },
     };
-    (manager as unknown as {
-      setupFileOpenListener: () => void;
-    }).setupFileOpenListener();
+    internals(manager).attachFileOpenListener();
   });
 
   it('订阅 MxDrawObject 层事件（携带结果码）而非 McObject 层', () => {
@@ -188,5 +203,87 @@ describe('MxCADInstanceManager.setupFileOpenListener — 结果码门控', () =>
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('getMxDrawObject 抛「引擎未就绪」错误时重试，不立即退回 McObject 层', async () => {
+    vi.useFakeTimers();
+    try {
+      const retryMxdraw = { addEvent: vi.fn(), removeEventFuction: vi.fn() };
+      const view = {
+        mxcad: { on: vi.fn() } as {
+          on: ReturnType<typeof vi.fn>;
+          getMxDrawObject?: () => unknown;
+        },
+      };
+      let attempts = 0;
+      view.mxcad.getMxDrawObject = () => {
+        attempts += 1;
+        if (attempts < 3) throw MXDRAW_NOT_READY_ERROR;
+        return retryMxdraw;
+      };
+      const retryManager = new MxCADInstanceManager();
+      (retryManager as unknown as { mxcadView: unknown }).mxcadView = view;
+
+      internals(retryManager).attachFileOpenListener();
+
+      // 首次失败：既没挂上 MxDrawObject 层（带结果码），也没退回 McObject 层（丢结果码）
+      expect(view.mxcad.on).not.toHaveBeenCalled();
+      expect(handleError).not.toHaveBeenCalled();
+
+      for (
+        let i = 0;
+        i < 10 && retryMxdraw.addEvent.mock.calls.length === 0;
+        i++
+      ) {
+        vi.advanceTimersByTime(100);
+      }
+
+      expect(retryMxdraw.addEvent).toHaveBeenCalledWith(
+        'openFileComplete',
+        expect.any(Function)
+      );
+      expect(handleError).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('重试耗尽后退回 McObject 层，并记录一次错误日志', async () => {
+    vi.useFakeTimers();
+    try {
+      const view = {
+        mxcad: {
+          getMxDrawObject: () => {
+            throw MXDRAW_NOT_READY_ERROR;
+          },
+          on: vi.fn(),
+        },
+      };
+      const retryManager = new MxCADInstanceManager();
+      (retryManager as unknown as { mxcadView: unknown }).mxcadView = view;
+
+      internals(retryManager).attachFileOpenListener(2);
+      expect(view.mxcad.on).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(200);
+
+      expect(view.mxcad.on).toHaveBeenCalledWith(
+        'openFileComplete',
+        expect.any(Function)
+      );
+      expect(handleError).toHaveBeenCalledTimes(1);
+      expect(handleError).toHaveBeenCalledWith(
+        MXDRAW_NOT_READY_ERROR,
+        expect.stringContaining('退回 McObject 层')
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('已挂上 MxDrawObject 层监听后重复调用不再重复 addEvent', () => {
+    expect(mxdraw.addEvent).toHaveBeenCalledTimes(1);
+    internals(manager).attachFileOpenListener();
+    expect(mxdraw.addEvent).toHaveBeenCalledTimes(1);
   });
 });

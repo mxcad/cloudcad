@@ -3,10 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { CAD_EVENTS } from '@/constants/events';
 import { t } from '@/languages';
 import { exitCurrentCollaboration } from '@/services/mxcadManager';
-import {
-  subscribe,
-  type SaveRequiredDetail,
-} from '@/services/drawingSession';
+import { subscribe, type SaveRequiredDetail } from '@/services/drawingSession';
 
 export interface UseFileOpenGuardOptions {
   fileId: string | null;
@@ -122,12 +119,17 @@ export function useFileOpenGuard({
   useEffect(() => {
     if (isAuthenticated) {
       import('../services/mxcadManager')
-        .then(({ refreshFileName, mxcadManager }) => {
+        .then(({ refreshFileName, hasDocumentLoaded, mxcadManager }) => {
           refreshFileName();
-          // 仅在引擎已完全就绪时 reload，避免与 config.openFile 的首次加载竞态：
-          // 引擎未就绪时 reloadCurrentFile 会发起并发 openWebFile 请求，
-          // 若此时 config.openFile 正在进行中，可能导致 401（token 被刷新失效）
-          if (fileId && mxcadManager.isReady()) {
+          // 必须等首个文档真正加载完（openFileComplete）才 reload：引擎同一时刻只能打开
+          // 一个文档，初次打开进行中就 reload 会发并发 openWebFile，锁死首次打开的
+          // hideLoading/openFileComplete，loading 永久转圈。isReady() 只表示引擎对象已创建
+          // （WASM 加载完），此时 mxweb 往往还在下载/解析——这也是原来只防了 401 没防住的原因。
+          if (
+            fileId &&
+            mxcadManager.isReady() &&
+            hasDocumentLoaded(mxcadManager)
+          ) {
             mxcadManager
               .reloadCurrentFile()
               .catch(() =>

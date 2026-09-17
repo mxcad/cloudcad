@@ -38,16 +38,8 @@ export class MxCADManager {
     return MxCADManager.instance;
   }
 
-  async initializeMxCADView(
-    initialFileUrl?: string,
-    initialFileInfo?: CurrentFileInfo,
-    onSuccess?: () => void
-  ): Promise<MxCADView> {
-    return this.instanceManager.initialize(
-      initialFileUrl,
-      initialFileInfo,
-      onSuccess
-    );
+  async initializeMxCADView(): Promise<MxCADView> {
+    return this.instanceManager.initialize();
   }
 
   showMxCAD(show: boolean = true): void {
@@ -87,14 +79,6 @@ export class MxCADManager {
 
   async reloadCurrentFile(): Promise<boolean> {
     return this.instanceManager.reloadCurrentFile();
-  }
-
-  reset(): void {
-    this.instanceManager.reset();
-  }
-
-  async reopenWithUrl(fileUrl: string): Promise<void> {
-    return this.instanceManager.reopenWithUrl(fileUrl);
   }
 
   getCurrentFileInfo(): CurrentFileInfo | null {
