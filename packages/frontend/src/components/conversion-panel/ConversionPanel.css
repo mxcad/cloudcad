@@ -469,48 +469,6 @@
   overflow: hidden;
 }
 
-.conversion-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 12px;
-  flex-shrink: 0;
-}
-
-.conversion-section-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.conversion-section-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.conversion-section-actions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-.conversion-section-actions button:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
 .upload-task-list {
   position: relative;
   overflow-y: auto;

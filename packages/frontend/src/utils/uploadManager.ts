@@ -253,28 +253,6 @@ export class UploadManager {
     }
   }
 
-  /**
-   * 为无 File 对象的失败任务（localStorage 恢复的历史任务）重新选择文件并重新入队。
-   * 更新文件元数据（名称/大小），重置进度与错误，回到队首等待执行。
-   */
-  requeueTask(taskId: string, file: File): void {
-    const task = this.tasks.get(taskId);
-    if (!task || task.status !== 'failed' || task.file) return;
-    task.file = file;
-    task.fileName = file.name;
-    task.fileSize = file.size;
-    task.status = 'waiting';
-    task.progress = 0;
-    task.error = undefined;
-    task.result = undefined;
-    task.updatedAt = Date.now();
-    this.queue.unshift(taskId);
-    this.emit({ type: 'task-resumed', taskId });
-    this.emit({ type: 'queue-changed' });
-    this.persistHistory();
-    this.processQueue();
-  }
-
   /** 任务列表（按时间戳倒序，最新在前） */
   getTasks(): UploadTask[] {
     // Map 保留插入序：历史任务先入、新上传后入，直接遍历会把刚上传的任务排到

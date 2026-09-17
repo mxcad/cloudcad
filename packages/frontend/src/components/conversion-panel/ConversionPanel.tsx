@@ -618,11 +618,7 @@ export function ConversionPanel() {
 
           {/* 上传区块（仅上传 tab 显示；常显，无任务时显示空态，历史任务由 UploadManager 从 localStorage 恢复） */}
           {activeTab === 'upload' && (
-            <UploadTab
-              uploadActiveCount={uploadActiveCount}
-              search={uploadSearch}
-              onOpen={handleOpenUpload}
-            />
+            <UploadTab search={uploadSearch} onOpen={handleOpenUpload} />
           )}
 
           {/* 转换/下载区块（live/本地在前 + 已完成历史在后，滚动加载更多）。

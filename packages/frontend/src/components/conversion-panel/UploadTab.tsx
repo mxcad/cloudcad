@@ -3,8 +3,6 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  XCircle,
-  Upload,
   File,
   Clock,
   Play,
@@ -95,7 +93,6 @@ interface UploadRowProps {
   /** 取消进行中的上传（waiting/uploading/paused） */
   onRemove: (id: string) => void;
   onRetry: (id: string) => void;
-  onRequeueFile: (taskId: string) => void;
   /** 完成态「打开」：上传结果带 nodeId 时打开 CAD 编辑器 */
   onOpen: (task: UploadTask) => void;
 }
@@ -106,7 +103,6 @@ function UploadRow({
   onResume,
   onRemove,
   onRetry,
-  onRequeueFile,
   onOpen,
 }: UploadRowProps) {
   const progressBarClass =
@@ -208,31 +204,19 @@ function UploadRow({
             <ExternalLink size={12} />
           </button>
         )}
-        {/* 有 File 对象的失败任务可直接重试；从历史恢复的失败任务无 File 对象，须先重新选择文件 */}
-        {task.status === 'failed' &&
-          (task.file ? (
-            <button
-              className="retry"
-              title={t('重试')}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRetry(task.id);
-              }}
-            >
-              <RefreshCw size={12} />
-            </button>
-          ) : (
-            <button
-              className="retry"
-              title={t('重新选择文件')}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRequeueFile(task.id);
-              }}
-            >
-              <File size={12} />
-            </button>
-          ))}
+        {/* 失败任务仅在有 File 对象时可重试；从历史恢复的失败任务无 File 对象，不提供重试入口 */}
+        {task.status === 'failed' && task.file && (
+          <button
+            className="retry"
+            title={t('重试')}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRetry(task.id);
+            }}
+          >
+            <RefreshCw size={12} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -243,21 +227,17 @@ function UploadRow({
  *
  * 常显：无任务时显示空态；历史任务（done/failed）由 UploadManager 从
  * localStorage 恢复，刷新后仍可见。
- * 行内仅提供「暂停/恢复/取消上传/打开/重试/重新选择文件」等活体操作；
+ * 行内仅提供「暂停/恢复/取消上传/打开/重试」等活体操作；
  * 完成/失败记录为临时日志（localStorage 上限 50 条，超出挤掉最旧），不提供删除 / 清空。
+ * 区块自身不渲染「上传」标题栏：面板 tab 已标注当前分区，再渲一次标题是重复信息。
  */
 interface UploadTabProps {
-  uploadActiveCount: number;
   search: string;
   /** 完成态「打开」：上传结果带 nodeId 时打开 CAD 编辑器 */
   onOpen: (task: UploadTask) => void;
 }
 
-export const UploadTab: React.FC<UploadTabProps> = ({
-  uploadActiveCount,
-  search,
-  onOpen,
-}) => {
+export const UploadTab: React.FC<UploadTabProps> = ({ search, onOpen }) => {
   const {
     tasks: uploadTasks,
     stats: uploadStats,
@@ -265,29 +245,7 @@ export const UploadTab: React.FC<UploadTabProps> = ({
     resumeTask: resumeUpload,
     removeTask: removeUpload,
     retryTask: retryUpload,
-    requeueTask: requeueUpload,
-    pauseAll: pauseAllUpload,
-    resumeAll: resumeAllUpload,
   } = useUploadManager({ maxConcurrent: 3 });
-
-  // 从历史恢复的失败任务无 File 对象：点「重新选择文件」后由此隐藏 input 取新文件重新入队
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const pendingRequeueIdRef = React.useRef<string | null>(null);
-
-  const handleRequeueFile = (taskId: string) => {
-    pendingRequeueIdRef.current = taskId;
-    fileInputRef.current?.click();
-  };
-
-  const handleRequeueFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    const taskId = pendingRequeueIdRef.current;
-    pendingRequeueIdRef.current = null;
-    e.target.value = '';
-    if (file && taskId) requeueUpload(taskId, file);
-  };
 
   const filteredTasks = uploadTasks.filter((task) => {
     if (!search) return true;
@@ -323,27 +281,6 @@ export const UploadTab: React.FC<UploadTabProps> = ({
 
   return (
     <div className="conversion-upload-section">
-      <div className="conversion-section-header">
-        <span className="conversion-section-title">
-          <Upload size={13} />
-          {t('上传')}
-          {uploadActiveCount > 0 && (
-            <span className="conv-badge">{uploadActiveCount}</span>
-          )}
-        </span>
-        <div className="conversion-section-actions">
-          {uploadStats.uploading + uploadStats.waiting > 0 && (
-            <button title={t('全部暂停')} onClick={pauseAllUpload}>
-              <Pause size={13} />
-            </button>
-          )}
-          {uploadStats.paused > 0 && (
-            <button title={t('全部恢复')} onClick={resumeAllUpload}>
-              <Play size={13} />
-            </button>
-          )}
-        </div>
-      </div>
       <div className="upload-task-list">
         {visible.map((task) => (
           <UploadRow
@@ -353,7 +290,6 @@ export const UploadTab: React.FC<UploadTabProps> = ({
             onResume={resumeUpload}
             onRemove={removeUpload}
             onRetry={retryUpload}
-            onRequeueFile={handleRequeueFile}
             onOpen={onOpen}
           />
         ))}
@@ -367,12 +303,6 @@ export const UploadTab: React.FC<UploadTabProps> = ({
           </button>
         )}
       </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        style={{ display: 'none' }}
-        onChange={handleRequeueFileChange}
-      />
       <div className="conversion-upload-footer">
         <span className="conversion-upload-summary">
           {t('完成 {done}/{total}', {

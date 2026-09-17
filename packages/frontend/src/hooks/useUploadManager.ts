@@ -80,10 +80,6 @@ export function useUploadManager(options: UseUploadManagerOptions = {}) {
     managerRef.current?.retryTask(taskId);
   }, []);
 
-  const requeueTask = useCallback((taskId: string, file: File) => {
-    managerRef.current?.requeueTask(taskId, file);
-  }, []);
-
   const pauseAll = useCallback(() => {
     managerRef.current?.pauseAll();
   }, []);
@@ -113,7 +109,6 @@ export function useUploadManager(options: UseUploadManagerOptions = {}) {
     resumeTask,
     removeTask,
     retryTask,
-    requeueTask,
     pauseAll,
     resumeAll,
     clearCompleted,
