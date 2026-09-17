@@ -6,13 +6,17 @@
  *  - 编辑器根（Home）恒渲染不卸载，由路由容器 App.vue 挂载
  *  - 子页通过 <router-view> 门控渲染，带 page-slide 右滑转场
  *  - 壳顶栏（44px）+ 编辑器原顶栏分两条（T1 定案 A）
- *  - 「+」按钮 → 底部 action sheet（T7 定案）
+ *  - 「+」按钮 → 底部 action sheet（T7 定案）：导航入口 + 账号与设置（语言 / 退出登录）
  *
  * 栈同步：useShellStack 从 router.currentRoute 同步，不手动维护。
  */
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useVoerkaI18n } from '@voerkai18n/vue'
+import { showDialog } from 'vant'
 import { useShellStack } from '../../stores/shellStack'
+import { t } from '../../languages'
+import { useUser } from '../../composables/useUser'
 import Home from '../home/index.vue'
 import FileBrowserPage from './sub-pages/FileBrowserPage.vue'
 import ProfilePage from './sub-pages/ProfilePage.vue'
@@ -23,15 +27,23 @@ import type { LibraryType } from '../../composables/useLibrary'
 
 interface SheetItem {
   name: string
-  icon: string
+  icon?: string
   route?: string
+  value?: string
+  subname?: string
+  color?: string
 }
 
-const SHEET_ITEMS: SheetItem[] = [
+/** 纯导航入口；账号与设置项在 sheetItems 里追加 */
+const SHEET_NAV_ITEMS: SheetItem[] = [
   { name: '文件', icon: 'folder-o', route: '/shell/file' },
   { name: '分享', icon: 'share-o', route: '/shell/share' },
   { name: '我的', icon: 'user-o', route: '/shell/profile' },
 ]
+
+/** 非导航项的标识值，用于在 onSheetSelect 里区分处理方式 */
+const ACTION_LANGUAGE = 'language'
+const ACTION_LOGOUT = 'logout'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,13 +75,19 @@ function closeLibrary() {
   libraryType.value = null
 }
 
-function pushRoute(target: string) {
-  showSheet.value = false
-  router.push(target)
-}
-
 function onSheetSelect(action: SheetItem) {
-  if (action.route) pushRoute(action.route)
+  showSheet.value = false
+  if (action.route) {
+    router.push(action.route)
+    return
+  }
+  if (action.value === ACTION_LANGUAGE) {
+    showLanguageSheet.value = true
+    return
+  }
+  if (action.value === ACTION_LOGOUT) {
+    void confirmLogout()
+  }
 }
 
 function pop() {
@@ -83,6 +101,56 @@ function openSheet() {
 }
 function closeSheet() {
   showSheet.value = false
+}
+
+// ── 「+」菜单：导航入口 + 账号与设置（语言 / 退出登录）──
+const i18n = useVoerkaI18n()
+const { isAuthenticated, logout } = useUser()
+const showLanguageSheet = ref(false)
+
+/** 语言名用各语言自身写法（nativeTitle），不同语言下都能认出母语 */
+const languageDisplayName = (lang: (typeof i18n.languages)[number]) =>
+  lang.nativeTitle || lang.title || ''
+
+const currentLanguageName = computed(() => {
+  const current = i18n.languages.find((lang) => lang.name === i18n.activeLanguage.value)
+  return current ? languageDisplayName(current) : ''
+})
+
+const languageSheetItems = computed<SheetItem[]>(() => {
+  // 读一下当前语言，保证语言切换后二级菜单重新求值
+  void i18n.activeLanguage.value
+  return i18n.languages.map((lang) => ({
+    name: languageDisplayName(lang),
+    value: lang.name,
+  }))
+})
+
+const sheetItems = computed<SheetItem[]>(() => [
+  ...SHEET_NAV_ITEMS,
+  {
+    name: t('语言'),
+    icon: 'wap-nav',
+    value: ACTION_LANGUAGE,
+    subname: currentLanguageName.value,
+  },
+  // 退出登录仅登录用户可见
+  ...(isAuthenticated.value ? [{ name: t('退出登录'), value: ACTION_LOGOUT, color: 'var(--danger)' }] : []),
+])
+
+async function onLanguageSelect(action: SheetItem) {
+  showLanguageSheet.value = false
+  if (action.value) await i18n.changeLanguage(action.value)
+}
+
+/** 退出登录确认（与个人中心同口径），确认后清会话并回登录页 */
+async function confirmLogout() {
+  try {
+    await showDialog({ title: t('退出登录'), message: t('确定要退出当前账号吗？') })
+  } catch {
+    return
+  }
+  void logout()
 }
 
 /**
@@ -155,7 +223,7 @@ defineExpose({
 
     <van-action-sheet
       v-model:show="showSheet"
-      :actions="SHEET_ITEMS"
+      :actions="sheetItems"
       :close-on-click-overlay="true"
       @select="onSheetSelect"
       @cancel="closeSheet"
@@ -164,6 +232,14 @@ defineExpose({
         <div class="sheet-title">导航</div>
       </template>
     </van-action-sheet>
+
+    <!-- 语言选择：主菜单「语言」项的二级选择，按各语言自身名称展示 -->
+    <van-action-sheet
+      v-model:show="showLanguageSheet"
+      :actions="languageSheetItems"
+      :close-on-click-overlay="true"
+      @select="onLanguageSelect"
+    />
   </div>
 </template>
 

@@ -1,12 +1,12 @@
 import { uiConfig } from "@/config/uiConfig"
-import { i18nScope, t } from "@/languages"
+import { t } from "@/languages"
 import { addCommand, callCommand } from "@/plugins/mxcad/command"
 import { exportDrawing, showDwgOptionsDialog, showPdfOptionsDialog } from "@/services/exportService"
 import { canExportDownloadGate } from "@/services/permissionService"
 import { useVoerkaI18n } from "@voerkai18n/vue"
 import { MxCpp } from "mxcad"
 import { PopoverAction, showToast } from "vant"
-import { ref, computed, watch } from "vue"
+import { ref, computed } from "vue"
 import { saveToCloudTrigger, saveAsToCloudTrigger, saveLoginRequiredTrigger } from "../../../composables/useSaveAs"
 import { useUser } from "../../../composables/useUser"
 import { useRuntimeConfig } from "../../../composables/useRuntimeConfig"
@@ -16,11 +16,14 @@ import { useShellMode } from "@/composables/useShellMode"
  * M7 编辑器菜单裁剪：壳模式下，「打开文件」入口（OpenDwg）从编辑器菜单剥离，
  * 迁移到壳的文件浏览器子页。此处通过 getDefaultMenuData 过滤 + 命令重定向实现。
  * 库入口（图纸库/图块库）保留在编辑器菜单——点击经 mxcad-shell-navigate 打开库抽屉
- * （对齐 PC CAD 编辑器侧边栏的库入口）。保留的编辑器命令：导出/保存/版本历史/布局/协同/语言/新建图纸。
+ * （对齐 PC CAD 编辑器侧边栏的库入口）。保留的编辑器命令：导出/保存/版本历史/布局/协同/新建图纸。
+ * 账号与设置类入口（语言切换 Mx_languages、退出登录）不属编辑器命令，已迁移到壳顶栏
+ * 「+」菜单（shell/index.vue），此处一并过滤。
  */
 const SHELL_REMOVED_CMDS = new Set([
   'OpenDwg',
   'OpenDwg_DoNotUseCache',
+  'Mx_languages',
 ])
 
 function isShellMenuCmd(cmd: string): boolean {
@@ -46,7 +49,7 @@ function isTokenExpired(): boolean {
 export const useMenu = () => {
     const i18n = useVoerkaI18n()
     const isShowMenu = ref(false)
-    const { user, isAuthenticated } = useUser()
+    const { user } = useUser()
     const { config } = useRuntimeConfig()
     const { isShellMode } = useShellMode()
 
@@ -139,52 +142,19 @@ export const useMenu = () => {
             return copy
         })||[]]
 
-        // M7 壳模式：编辑器菜单剥离文件管理入口（库/打开图纸），迁移到壳子页导航
+        // M7 壳模式：编辑器菜单剥离文件管理入口（库/打开图纸）与账号设置入口（语言/退出登录），
+        // 迁移到壳子页导航与壳顶栏「+」菜单
         if (isShellMode.value) {
             items = items.filter(item => !isShellMenuCmd((item as Record<string, unknown>).cmd as string))
         }
-
-        // 退出登录仅登录用户可见：未登录时隐藏该菜单项
-        if (isAuthenticated.value) {
-            items.push(Object.assign({} as Record<string, unknown>, {
-                text: '退出登录',
-                icon: 'tuichudenglu',
-                cmd: '',
-                call: () => {
-                    isShowMenu.value = false
-                    logout()
-                }
-            }))
-        }
         return items
     }
-    // 登录态变化（跨窗口登录/登出）时，若菜单未打开则重建默认菜单，
-    // 避免打开时仍是旧登录态下的菜单项
-    watch(isAuthenticated, () => {
-        if (!isShowMenu.value) {
-            actions.value = getDefaultMenuData()
-        }
-    })
-    const { logout } = useUser()
     const actions = ref<PopoverAction[]>(getDefaultMenuData())
     addCommand("Mx_NewFile", () => {
         window.dispatchEvent(new CustomEvent('mxcad-new-file'))
     })
     addCommand("Mx_versionHistory", () => {
         window.dispatchEvent(new CustomEvent('open-version-history'))
-    })
-    addCommand("Mx_languages", () => {
-        setTimeout(() => {
-            isShowMenu.value = true
-            actions.value = i18nScope.languages.map(({ name, title }) => {
-                return {
-                    text: t(title || ""),
-                    call: () => {
-                        i18nScope.change(name)
-                    }
-                }
-            }) as PopoverAction[]
-        }, 200)
     })
     addCommand("Mx_layouts", () => {
         setTimeout(() => {
