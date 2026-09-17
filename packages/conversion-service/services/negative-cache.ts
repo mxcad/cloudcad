@@ -5,9 +5,6 @@ import { NEGATIVE_CACHE_TTL_HOURS } from '../lib/constants';
 const KNOWN_BAD_HASH_KEY = 'fworkflow:known-bad';
 const DEFAULT_REDIS_URL = 'redis://127.0.0.1:6379/0';
 
-/**
- * 永久失败负缓存条目
- */
 export interface KnownBadEntry {
   contentKey: string;
   reason: string;
@@ -18,9 +15,7 @@ interface NegativeCacheOptions {
   redisUrl?: string;
   commandTimeoutMs?: number;
   connectTimeoutMs?: number;
-  // TTL（小时）：known-bad 条目超过 TTL 后懒失效。0 = 永久不失效。默认 NEGATIVE_CACHE_TTL_HOURS (24)
   ttlHours?: number;
-  // 时钟注入（测试可控时间），默认 () => Date.now()
   now?: () => number;
 }
 
@@ -35,7 +30,7 @@ interface NegativeCacheOptions {
  * 管理员可薄复位（reset / resetAll）。
  *
  * 存储：内存 Map 为唯一读来源；Redis 模式 fire-and-forget 持久化到 Hash
- * （fworkflow:known-bad -> { contentKey: entryJSON }），重启不丢（否则重启忘记 known-bad 会重试）。
+ * （fworkflow:known-bad -> { contentKey: entryJSON }），重启不丢。
  * Redis 不可用时回退内存模式。
  */
 class NegativeCache {
@@ -45,9 +40,7 @@ class NegativeCache {
   private _persistQueue: Promise<unknown>;
   private readonly redisUrl: string;
   private readonly commandTimeoutMs?: number;
-  // TTL（毫秒）：0 = 永久不失效
   private readonly ttlMs: number;
-  // 时钟（测试可注入），默认真实时间
   private readonly now: () => number;
 
   constructor(options: NegativeCacheOptions = {}) {
@@ -62,7 +55,6 @@ class NegativeCache {
     this.now = options.now || (() => Date.now());
   }
 
-  /** 从 Redis 加载存量 known-bad（仅当配置了 Redis）。失败时回退内存模式。 */
   async init(): Promise<NegativeCache> {
     if (!this.redisUrl) return this;
     try {
@@ -75,10 +67,7 @@ class NegativeCache {
       for (let i = 0; i < arr.length; i += 2) {
         try {
           const contentKey = arr[i].toString();
-          const entry = JSON.parse(arr[i + 1].toString()) as Omit<
-            KnownBadEntry,
-            'contentKey'
-          >;
+          const entry = JSON.parse(arr[i + 1].toString()) as Omit<KnownBadEntry, 'contentKey'>;
           this.entries.set(contentKey, entry);
         } catch (err) {
           log(`[NegativeCache] 跳过损坏的 known-bad 记录: ${(err as Error).message}`);
@@ -98,9 +87,7 @@ class NegativeCache {
     return this._redis !== null;
   }
 
-  /** 标记内容身份为 known-bad（确定性内容失败时调用） */
   markBad(contentKey: string, reason: string): void {
-    // markedAt 用注入时钟（生产 = 真实时间），与 isExpired 的 now 一致，便于测试推进时间
     const entry = { reason, markedAt: new Date(this.now()).toISOString() };
     this.entries.set(contentKey, entry);
     this._persist(contentKey, entry);
@@ -128,20 +115,17 @@ class NegativeCache {
     return { contentKey, ...entry };
   }
 
-  // TTL 过期判定（S2）：ttlMs=0（永久）恒不过期；否则 now - markedAt > ttlMs 即过期
   private isExpired(entry: Omit<KnownBadEntry, 'contentKey'>): boolean {
     if (this.ttlMs <= 0) return false;
     return this.now() - new Date(entry.markedAt).getTime() > this.ttlMs;
   }
 
-  // 懒失效清除：删内存 + Redis（S2）
   private _purge(contentKey: string): void {
     this.entries.delete(contentKey);
     if (this.isRedis()) this._persistDelete(contentKey);
     log(`[NegativeCache] 过期失效 known-bad: ${contentKey}`);
   }
 
-  /** 管理员薄复位单个内容身份。返回是否命中并删除 */
   reset(contentKey: string): boolean {
     const existed = this.entries.delete(contentKey);
     if (existed && this.isRedis()) this._persistDelete(contentKey);
@@ -149,16 +133,13 @@ class NegativeCache {
     return existed;
   }
 
-  /** 管理员批量复位全部 known-bad。返回复位条数 */
   resetAll(): number {
     const count = this.entries.size;
     this.entries.clear();
     if (count > 0 && this.isRedis()) {
       this._persistQueue = this._persistQueue
         .then(() => this._redis!.command(['DEL', KNOWN_BAD_HASH_KEY]))
-        .catch((err) =>
-          log(`[NegativeCache] Redis 清空失败: ${(err as Error).message}`)
-        );
+        .catch((err) => log(`[NegativeCache] Redis 清空失败: ${(err as Error).message}`));
     }
     if (count > 0) log(`[NegativeCache] 批量复位 ${count} 条 known-bad`);
     return count;
@@ -188,7 +169,6 @@ class NegativeCache {
     return count;
   }
 
-  // 串行化写操作，保证同一 contentKey 的多次更新按序持久化
   private _persist(contentKey: string, entry: Omit<KnownBadEntry, 'contentKey'>): void {
     if (!this.isRedis()) return;
     this._persistQueue = this._persistQueue
@@ -209,7 +189,6 @@ class NegativeCache {
       );
   }
 
-  // 等待所有排队中的持久化完成（优雅关闭时调用）
   async flush(): Promise<void> {
     await this._persistQueue;
   }

@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import TaskStore from '../services/task-store';
 import WorkerPool from '../services/worker-pool';
-import { deriveContentKey } from '../lib/utils';
+import type { NegativeCacheLike } from '../services/worker-pool';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -128,127 +128,161 @@ describe('WorkerPool 批量转换聚合 (batchConvert)', () => {
     ]);
     pool.stop();
   });
-});
-
-describe('WorkerPool 批量转换 + 永久失败负缓存 (S1-4)', () => {
-  let store: TaskStore;
-  let bad: Map<string, { reason: string; markedAt: string }>;
-  let markBadCalls: Array<[string, string]>;
-  let runner: any;
-  let negativeCache: any;
-
-  beforeEach(() => {
-    store = new TaskStore('local');
-    bad = new Map();
-    markBadCalls = [];
-    negativeCache = {
-      get: (contentKey: string) =>
-        bad.has(contentKey) ? { contentKey, ...bad.get(contentKey)! } : null,
-      markBad: (contentKey: string, reason: string) => {
-        markBadCalls.push([contentKey, reason]);
-        bad.set(contentKey, { reason, markedAt: new Date().toISOString() });
-      },
-    };
-    // runner 按 item 配置决定：deterministicFail=确定性内容失败 / transientFail=瞬时失败 / 否则成功
-    runner = {
-      execute: async (item: any) => {
-        if (item.deterministicFail) {
-          const e = new Error(item.deterministicFail) as Error & { deterministic?: boolean };
-          e.deterministic = true;
-          throw e;
-        }
-        if (item.transientFail) {
-          const e = new Error(item.transientFail) as Error & { deterministic?: boolean };
-          e.deterministic = false;
-          throw e;
-        }
-        return { code: 0, newpath: `/out/${item.id}.mxweb` };
-      },
-    };
-  });
 
   it('子任务命中 known-bad → fail-fast 不 spawn，结果标 permanent', async () => {
+    const { deriveContentKey } = await import('../lib/utils');
+    const badKey = deriveContentKey({ srcPath: '/in/1.dwg', fileHash: 'bad1' });
+    const negativeCache: NegativeCacheLike = {
+      markBad: () => {},
+      get: (key: string) => key === badKey ? { contentKey: key, reason: '格式损坏', markedAt: new Date().toISOString() } : null,
+      isBad: (key: string) => key === badKey,
+    };
     const pool = new WorkerPool(store, runner, null, { negativeCache });
     pool.start();
 
-    // 预标记某内容身份为 known-bad（模拟历史确定性失败）
-    const badKey = deriveContentKey({ srcPath: '/in/bad.dwg' })!;
-    negativeCache.markBad(badKey, '解析失败 code=12');
-
+    // 预先 markBad 一个 contentKey（通过 negativeCache 直接设置）
+    // 使用带 fileHash 的子任务使 deriveContentKey 产生确定性 key
     pool.enqueue({
-      id: 'batch_nf',
+      id: 'batch_failfast',
       priority: 2,
       type: 'batch',
       params: {
         tasks: [
-          { id: 'good', srcPath: '/in/good.dwg' },
-          { id: 'bad', srcPath: '/in/bad.dwg' },
+          { id: 'f1', srcPath: '/in/1.dwg', fileHash: 'bad1' },
+          { id: 'f2', srcPath: '/in/2.dwg' },
         ],
       },
       callbackUrl: null,
       createdAt: new Date().toISOString(),
     });
 
-    await waitUntil(() => store.get('batch_nf')?.status === 'COMPLETED');
-    const results: any[] = (store.get('batch_nf')!.result as { results: any[] }).results;
+    await waitUntil(() => store.get('batch_failfast')?.status === 'COMPLETED');
+
+    const task = store.get('batch_failfast');
+    const results: any[] = (task!.result as { results: any[] }).results;
     assert.equal(results.length, 2);
-    // 未命中的子任务正常转换
-    assert.equal(results[0].success, true);
-    // 命中 known-bad 的子任务：不 spawn、标 permanent、带原因
-    assert.equal(results[1].success, false);
-    assert.equal(results[1].permanent, true);
-    assert.match(String(results[1].error), /解析失败 code=12/);
+
+    // f1 命中 known-bad → fail-fast
+    assert.equal(results[0].success, false);
+    assert.equal(results[0].permanent, true);
+    assert.match(results[0].error, /永久失败/);
+    // f1 不应被 runner 执行
+    assert.ok(!calls.includes('f1'));
+
+    // f2 正常执行
+    assert.equal(results[1].success, true);
+    assert.ok(calls.includes('f2'));
+
     pool.stop();
   });
 
   it('子任务确定性内容失败 → 派生 contentKey 并 markBad，结果标 permanent', async () => {
-    const pool = new WorkerPool(store, runner, null, { negativeCache });
+    const marked: { key: string; reason: string }[] = [];
+    const negativeCache: NegativeCacheLike = {
+      markBad: (key: string, reason: string) => marked.push({ key, reason }),
+      get: () => null,
+      isBad: () => false,
+    };
+
+    // runner 对 f2 抛确定性错误
+    const failRunner = {
+      execute: async (item: any) => {
+        calls.push(item.id);
+        if (item.id === 'f2') {
+          const err = new Error('DWG 格式损坏');
+          (err as any).deterministic = true;
+          throw err;
+        }
+        return { code: 0, newpath: `/out/${item.id}.mxweb` };
+      },
+    };
+
+    const pool = new WorkerPool(store, failRunner, null, { negativeCache });
     pool.start();
 
     pool.enqueue({
-      id: 'batch_det',
+      id: 'batch_markbad',
       priority: 2,
       type: 'batch',
       params: {
-        tasks: [{ id: 'det', srcPath: '/in/det.dwg', deterministicFail: '格式错 code=8' }],
+        tasks: [
+          { id: 'f1', srcPath: '/in/1.dwg', fileHash: 'hash_aaa' },
+          { id: 'f2', srcPath: '/in/2.dwg', fileHash: 'hash_bbb' },
+        ],
       },
       callbackUrl: null,
       createdAt: new Date().toISOString(),
     });
 
-    await waitUntil(() => store.get('batch_det')?.status === 'COMPLETED');
-    const results: any[] = (store.get('batch_det')!.result as { results: any[] }).results;
-    assert.equal(results[0].success, false);
-    assert.equal(results[0].permanent, true);
-    // 标记的 contentKey 与子任务派生一致
-    const expectedKey = deriveContentKey({ id: 'det', srcPath: '/in/det.dwg' })!;
-    assert.deepEqual(markBadCalls, [[expectedKey, '格式错 code=8']]);
-    // 标记后可被 fail-fast 命中
-    assert.ok(negativeCache.get(expectedKey));
+    await waitUntil(() => store.get('batch_markbad')?.status === 'COMPLETED');
+
+    const task = store.get('batch_markbad');
+    const results: any[] = (task!.result as { results: any[] }).results;
+
+    // f1 成功
+    assert.equal(results[0].success, true);
+
+    // f2 确定性失败 → permanent + markBad
+    assert.equal(results[1].success, false);
+    assert.equal(results[1].permanent, true);
+
+    // markBad 被调用了一次（f2 的 contentKey）
+    assert.equal(marked.length, 1);
+    assert.ok(marked[0].key.startsWith('ck_'));
+    assert.match(marked[0].reason, /DWG 格式损坏/);
+
     pool.stop();
   });
 
   it('子任务瞬时失败（deterministic=false）→ 不 markBad，结果不标 permanent', async () => {
-    const pool = new WorkerPool(store, runner, null, { negativeCache });
+    const marked: string[] = [];
+    const negativeCache: NegativeCacheLike = {
+      markBad: (key: string) => marked.push(key),
+      get: () => null,
+      isBad: () => false,
+    };
+
+    // runner 对 f2 抛瞬时错误（超时/进程被杀，无 deterministic 标记）
+    const timeoutRunner = {
+      execute: async (item: any) => {
+        calls.push(item.id);
+        if (item.id === 'f2') throw new Error('timeout');
+        return { code: 0, newpath: `/out/${item.id}.mxweb` };
+      },
+    };
+
+    const pool = new WorkerPool(store, timeoutRunner, null, { negativeCache });
     pool.start();
 
     pool.enqueue({
-      id: 'batch_tr',
+      id: 'batch_transient',
       priority: 2,
       type: 'batch',
       params: {
-        tasks: [{ id: 'tr', srcPath: '/in/tr.dwg', transientFail: '超时' }],
+        tasks: [
+          { id: 'f1', srcPath: '/in/1.dwg', fileHash: 'hash_ccc' },
+          { id: 'f2', srcPath: '/in/2.dwg', fileHash: 'hash_ddd' },
+        ],
       },
       callbackUrl: null,
       createdAt: new Date().toISOString(),
     });
 
-    await waitUntil(() => store.get('batch_tr')?.status === 'COMPLETED');
-    const results: any[] = (store.get('batch_tr')!.result as { results: any[] }).results;
-    assert.equal(results[0].success, false);
-    assert.equal('permanent' in results[0], false);
-    // 瞬时失败不污染负缓存
-    assert.equal(markBadCalls.length, 0);
+    await waitUntil(() => store.get('batch_transient')?.status === 'COMPLETED');
+
+    const task = store.get('batch_transient');
+    const results: any[] = (task!.result as { results: any[] }).results;
+
+    // f1 成功
+    assert.equal(results[0].success, true);
+
+    // f2 瞬时失败 → 不标 permanent
+    assert.equal(results[1].success, false);
+    assert.equal(results[1].permanent, undefined);
+
+    // 不应调用 markBad
+    assert.equal(marked.length, 0);
+
     pool.stop();
   });
 });

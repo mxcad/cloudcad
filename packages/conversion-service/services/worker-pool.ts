@@ -10,14 +10,27 @@ import { log, generateId, deriveContentKey } from '../lib/utils';
 import type TaskStore from './task-store';
 import type { TaskRecord, TaskInput } from './task-store';
 
+// 永久失败负缓存契约（#465，未接线时为 null / no-op）
+// get：批量子任务 fail-fast 用（命中 known-bad 不 spawn）
+export interface NegativeCacheLike {
+  markBad(contentKey: string, reason: string): void;
+  get(contentKey: string): { contentKey: string; reason: string; markedAt: string } | null;
+  isBad(contentKey: string): boolean;
+}
+
 interface WorkerPoolOptions {
   autoScale?: boolean;
   backlogThreshold?: number;
   backlogWindowMs?: number;
   maxMultiplier?: number;
   maxConcurrent?: number;
-  // 永久失败负缓存（#465）：确定性内容失败时标记 contentKey 为 known-bad（未接线时为 null）
   negativeCache?: NegativeCacheLike | null;
+}
+
+export interface NegativeCacheLike {
+  isBad(contentKey: string | null | undefined): boolean;
+  markBad(contentKey: string, reason: string): void;
+  get(contentKey: string): { contentKey: string; reason: string; markedAt: string } | null;
 }
 
 // runner 契约：execute(params, timeout) 返回转换结果（含 newpath 等）。
@@ -29,13 +42,6 @@ export interface RunnerLike {
 // 回调引擎契约（callbackEngine 未接线时为 null / no-op）
 export interface CallbackEngineLike {
   notify(taskId: string, result: { status: string; result: unknown; error?: unknown }): Promise<void>;
-}
-
-// 永久失败负缓存契约（#465，未接线时为 null / no-op）
-// get：批量子任务 fail-fast 用（命中 known-bad 不 spawn）
-export interface NegativeCacheLike {
-  markBad(contentKey: string, reason: string): void;
-  get(contentKey: string): { contentKey: string; reason: string; markedAt: string } | null;
 }
 
 interface ScaleState {
@@ -164,11 +170,11 @@ class WorkerPool {
   _queued: Set<string>;
   _running: boolean;
 
-  constructor(taskStore: TaskStore, runner: RunnerLike, callbackEngine: CallbackEngineLike | null = null, options: WorkerPoolOptions = {}) {
+  constructor(taskStore: TaskStore, runner: RunnerLike, callbackEngine: CallbackEngineLike | null = null, options: WorkerPoolOptions = {}, negativeCache?: NegativeCacheLike | null) {
     this.taskStore = taskStore;
     this.runner = runner;
     this.callbackEngine = callbackEngine || null;
-    this.negativeCache = options.negativeCache || null;
+    this.negativeCache = negativeCache !== undefined ? negativeCache : (options.negativeCache ?? null);
     this.pools = {};
     this.workers = new Map();
     this.cancelHandles = new Map();

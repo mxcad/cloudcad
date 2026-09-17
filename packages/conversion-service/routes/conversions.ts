@@ -38,12 +38,19 @@ interface RouteCallbackEngine {
   notify(taskId: string, result: { status: string; result: unknown; error?: unknown }): Promise<void>;
 }
 
-// 永久失败负缓存（#465）：提交时命中 known-bad 直接失败不 spawn；管理员可复位
+// 永久失败负缓存契约（路由层用，与 worker-pool NegativeCacheLike 对齐）
 interface RouteNegativeCache {
   get(contentKey: string): { contentKey: string; reason: string; markedAt: string } | null;
-  list(): Array<{ contentKey: string; reason: string; markedAt: string }>;
+  isBad(contentKey: string): boolean;
+}
+
+interface RouteNegativeCache {
+  isBad(contentKey: string | null | undefined): boolean;
+  markBad(contentKey: string, reason: string): void;
+  list(): { contentKey: string; reason: string; markedAt: string }[];
   reset(contentKey: string): boolean;
   resetAll(): number;
+  size(): number;
 }
 
 /**
@@ -105,45 +112,41 @@ function create(
 
   /**
    * 提交单个转换任务（同步/异步共用）。
-   * 1. 永久失败负缓存命中（#465）：contentKey 已 known-bad → 直接返回失败，不 spawn。
-   * 2. 同内容身份在途合并去重（#431 门禁3）：已有 PENDING/PROCESSING 同 key 任务则挂上去。
+   * 同内容身份在途合并去重（#431 门禁3）：已有 PENDING/PROCESSING 同 key 任务则挂上去。
    */
   function submitConvertTask(body: Record<string, unknown>, callbackUrl: string | null): {
     taskId: string;
     status: string;
     merged: boolean;
     contentKey: string | null;
-    permanent?: boolean;
-    reason?: string;
+    permanent: boolean;
   } {
     const params: Record<string, unknown> = (body.params as Record<string, unknown>) || body;
     const contentKey = deriveContentKey(params);
+
+    // 永久失败负缓存（#465）：命中 known-bad → 直接返回失败，不 spawn
+    if (contentKey && negativeCache && negativeCache.isBad(contentKey)) {
+      const taskId = generateId();
+      const entry = negativeCache.get(contentKey);
+      const reason = entry ? entry.reason : 'permanent failure';
+      log(`[NegativeCache] 命中 known-bad，直接失败: ${contentKey}`);
+      taskStore.create({
+        id: taskId,
+        priority: (body.priority as number) || 2,
+        params,
+        callbackUrl,
+        createdAt: new Date().toISOString(),
+        contentKey,
+      });
+      taskStore.updateStatus(taskId, 'FAILED', { error: reason, permanent: true });
+      return { taskId, status: 'FAILED', merged: false, contentKey, permanent: true };
+    }
+
     if (contentKey) {
-      // 永久失败负缓存命中（#465）：内容已知不可转换 → 直接失败，不 spawn mxcadassembly
-      const knownBad = negativeCache ? negativeCache.get(contentKey) : null;
-      if (knownBad) {
-        const taskId = generateId();
-        taskStore.create({ id: taskId, params, contentKey });
-        // permanent 落到任务记录（S6-7）：供 GET /tasks/:taskId 透传 → backend listTasks
-        // → 前端面板对 FAILED 节点展示「永久失败」（区别于普通「转换失败」）
-        taskStore.updateStatus(taskId, 'FAILED', {
-          error: `永久失败（内容不可转换）：${knownBad.reason}`,
-          permanent: true,
-        });
-        log(`[NegativeCache] 命中 known-bad，直接失败: ${contentKey}`);
-        return {
-          taskId,
-          status: 'FAILED',
-          merged: false,
-          contentKey,
-          permanent: true,
-          reason: knownBad.reason,
-        };
-      }
       const inFlight = taskStore.findInFlightByContentKey(contentKey);
       if (inFlight) {
         log(`[Dedup] 同内容身份合并到在途任务: ${inFlight.id} (contentKey=${contentKey})`);
-        return { taskId: inFlight.id, status: inFlight.status, merged: true, contentKey };
+        return { taskId: inFlight.id, status: inFlight.status, merged: true, contentKey, permanent: false };
       }
     }
     const taskId = generateId();
@@ -155,7 +158,7 @@ function create(
       createdAt: new Date().toISOString(),
       contentKey,
     });
-    return { taskId, status: 'PENDING', merged: false, contentKey };
+    return { taskId, status: 'PENDING', merged: false, contentKey, permanent: false };
   }
 
   async function handle(req: RouteRequest, res: ResponseLike, pathname: string, method: string | undefined): Promise<boolean> {
@@ -193,7 +196,7 @@ function create(
     // POST /v1/conversions/async/convertFile — async
     if (method === 'POST' && pathname === `${base}/async/convertFile`) {
       const body = await parseBody(req);
-      const { taskId, status, merged, contentKey, permanent, reason } = submitConvertTask(
+      const { taskId, status, merged, contentKey, permanent } = submitConvertTask(
         body,
         (body.callbackUrl as string | undefined) || null
       );
@@ -203,39 +206,11 @@ function create(
         taskId,
         status,
         merged,
-        // 内容身份（#441）：前端队列面板按内容派生身份展示/去重感知；无识别字段时为 null
         contentKey,
-        // 永久失败负缓存命中（#465）：permanent=true 时前端直接展示「永久失败」
-        permanent: permanent || false,
-        reason,
-        message: permanent
-          ? `内容永久转换失败：${reason}`
-          : '任务已提交，可通过 GET /v1/conversions/tasks/{taskId} 查询状态',
+        permanent,
+        reason: permanent && contentKey ? (negativeCache?.get(contentKey)?.reason || 'permanent failure') : undefined,
+        message: permanent ? '内容已标记为永久失败（known-bad），请修正后重试或联系管理员 POST /known-bad/reset 清除' : '任务已提交，可通过 GET /v1/conversions/tasks/{taskId} 查询状态',
       });
-    }
-
-    // GET /v1/conversions/known-bad — 列出永久失败负缓存（#465，管理员/监控）
-    if (method === 'GET' && pathname === `${base}/known-bad`) {
-      const items = negativeCache ? negativeCache.list() : [];
-      return sendJson(res, 200, { items, total: items.length });
-    }
-
-    // POST /v1/conversions/known-bad/reset — 管理员薄复位（#465）
-    // body: { contentKey } 复位单个；缺省复位全部
-    if (method === 'POST' && pathname === `${base}/known-bad/reset`) {
-      if (!negativeCache) {
-        return sendJson(res, 400, { error: '永久失败负缓存未启用' });
-      }
-      const body = await parseBody(req);
-      const contentKey = body.contentKey as string | undefined;
-      if (contentKey) {
-        const ok = negativeCache.reset(contentKey);
-        return ok
-          ? sendJson(res, 200, { reset: 1, contentKey })
-          : sendJson(res, 404, { error: 'known-bad 不存在', contentKey });
-      }
-      const reset = negativeCache.resetAll();
-      return sendJson(res, 200, { reset, all: true });
     }
 
     // POST /v1/conversions/batchConvert — batch 批量转换（聚合任务）
@@ -308,9 +283,7 @@ function create(
         progress: task.progress,
         result: task.result,
         error: task.error,
-        // 永久失败标记（S6-7）：false 表示普通任务（非 known-bad 命中）
-        permanent: task.permanent === true,
-        // 排队位置（S6-5）：仅排队中任务有意义，运行中/未入队/终态为 null
+        permanent: (task as any).permanent || false,
         queuePosition: workerPool.getQueuePosition(taskId),
         priority: task.priority,
         createdAt: task.createdAt,
@@ -333,10 +306,35 @@ function create(
     if (method === 'GET' && pathname === `${base}/stats`) {
       return sendJson(res, 200, {
         tasks: taskStore.getStats(),
-        // 终态任务耗时 P50/P95（样本=保留的终态任务，见 TaskStore.MAX_TERMINAL_RETAIN）
         duration: taskStore.getDurationStats(),
         workers: workerPool.getStats(),
       });
+    }
+
+    // GET /v1/conversions/known-bad — 永久失败负缓存列表（#465）
+    if (method === 'GET' && pathname === `${base}/known-bad`) {
+      if (!negativeCache) {
+        return sendJson(res, 501, { error: 'NegativeCache not available' });
+      }
+      const items = negativeCache.list();
+      return sendJson(res, 200, { total: items.length, items });
+    }
+
+    // POST /v1/conversions/known-bad/reset — 管理员复位 known-bad（#465）
+    if (method === 'POST' && pathname === `${base}/known-bad/reset`) {
+      if (!negativeCache) {
+        return sendJson(res, 501, { error: 'NegativeCache not available' });
+      }
+      const body = await parseBody(req);
+      const contentKey = body.contentKey as string | undefined;
+      if (contentKey) {
+        const existed = negativeCache.reset(contentKey);
+        if (!existed) return sendJson(res, 404, { error: 'Not found', contentKey });
+        return sendJson(res, 200, { reset: 1, contentKey });
+      }
+      // 缺省 contentKey → 复位全部
+      const count = negativeCache.resetAll();
+      return sendJson(res, 200, { reset: count, all: true });
     }
 
     return false;
