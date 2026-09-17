@@ -90,6 +90,17 @@ export class PublicFileService {
   }
 
   /**
+   * 判断解析后的路径是否严格位于 uploads 目录内（防路径遍历）。
+   * 公开端点的 hash/filename 来自 URL 参数：Windows 下反斜杠也是路径分隔符，
+   * 仅靠 Express 路由参数不含 `/` 无法挡住 `..` / `..\` 形式的越界。
+   * 必须带 path.sep 后缀比较，否则 uploads 的同名前缀兄弟目录（uploads-evil）会被误判为内部。
+   */
+  private isWithinUploadPath(targetPath: string): boolean {
+    const base = path.resolve(this.uploadService.getUploadPath());
+    return path.resolve(targetPath).startsWith(base + path.sep);
+  }
+
+  /**
    * 在 uploads/{hash} 目录下查找指定文件
    * 如 findFileInDir(hash, "A1.dwg.mxweb") 返回 uploads/{hash}/A1.dwg.mxweb
    */
@@ -97,13 +108,13 @@ export class PublicFileService {
     const dirPath = path.join(this.uploadService.getUploadPath(), hash);
     const filePath = path.join(dirPath, filename);
 
-    if (fs.existsSync(filePath)) {
+    if (this.isWithinUploadPath(filePath) && fs.existsSync(filePath)) {
       return filePath;
     }
 
     // DWG/DXF 外部参照在磁盘上存储为 {filename}.mxweb
     const mxwebPath = path.join(dirPath, `${filename}.mxweb`);
-    if (fs.existsSync(mxwebPath)) {
+    if (this.isWithinUploadPath(mxwebPath) && fs.existsSync(mxwebPath)) {
       return mxwebPath;
     }
 
@@ -174,9 +185,11 @@ export class PublicFileService {
     const srcDir = path.join(uploadPath, srcFileHash);
 
     // 确保目标目录在 uploads 路径下，防止路径遍历
+    // 必须带 path.sep 后缀比较：uploads 的同名前缀兄弟目录（如 ../uploads-evil →
+    // /data/uploads-evil）会被裸 startsWith 误判为内部，且下方 mkdirSync 会真建出来
     const resolvedSrcDir = path.resolve(srcDir);
     const resolvedUploadPath = path.resolve(uploadPath);
-    if (!resolvedSrcDir.startsWith(resolvedUploadPath)) {
+    if (!resolvedSrcDir.startsWith(resolvedUploadPath + path.sep)) {
       throw new BadRequestException(I18nContext.current()?.t('error.public_file.source_path_invalid') ?? '无效的源路径');
     }
 
@@ -301,6 +314,11 @@ export class PublicFileService {
       targetPath = path.join(srcDir, extRefFileName);
     }
 
+    // srcHash/fileName 来自公开查询参数且无格式校验，越界路径一律按不存在处理，
+    // 否则 existsSync 成为任意文件存在性探测（oracle）
+    if (!this.isWithinUploadPath(targetPath)) {
+      return false;
+    }
     return fs.existsSync(targetPath);
   }
 
