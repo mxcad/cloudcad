@@ -146,7 +146,13 @@ async function onLanguageSelect(action: SheetItem) {
 /** 退出登录确认（与个人中心同口径），确认后清会话并回登录页 */
 async function confirmLogout() {
   try {
-    await showDialog({ title: t('退出登录'), message: t('确定要退出当前账号吗？') })
+    await showDialog({
+      title: t('退出登录'),
+      message: t('确定要退出当前账号吗？'),
+      showCancelButton: true,
+      confirmButtonText: t('退出登录'),
+      cancelButtonText: t('取消'),
+    })
   } catch {
     return
   }

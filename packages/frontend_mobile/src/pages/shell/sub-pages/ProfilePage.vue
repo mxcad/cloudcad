@@ -754,6 +754,9 @@ async function onLogout() {
     await showDialog({
       title: t('退出登录'),
       message: t('确定要退出当前账号吗？'),
+      showCancelButton: true,
+      confirmButtonText: t('退出登录'),
+      cancelButtonText: t('取消'),
     })
   } catch {
     return
@@ -867,7 +870,7 @@ onUnmounted(stopCountdown)
       </van-cell-group>
 
       <!-- ═══ 账号信息 ═══ -->
-      <van-cell-group class="section">
+      <van-cell-group class="section account-section">
         <div class="section-title">{{ t('账号信息') }}</div>
         <van-cell
           v-for="item in accountGroup"
