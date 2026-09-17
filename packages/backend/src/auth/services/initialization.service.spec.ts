@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { BlacklistSource } from '@cloudcad/db';
 import { InitializationService } from './initialization.service';
 import { DatabaseService } from '../../database/database.service';
 import { RoleInheritanceService } from '../../permission/services/role-inheritance.service';
@@ -19,6 +20,10 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
     },
     role: {
       findFirst: jest.fn(),
+    },
+    ipWhitelistEntry: {
+      findMany: jest.fn(),
+      createMany: jest.fn(),
     },
   } as any;
   const mockConfigService = {
@@ -121,5 +126,77 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
 
     expect(mockUserService.create).not.toHaveBeenCalled();
     expect(mockPrisma.role.findFirst).not.toHaveBeenCalled();
+  });
+
+  describe('ensureDefaultAdminIpWhitelist（首次部署默认全局可访问）', () => {
+    it('首次启动写入 0.0.0.0/0 + ::/0（source=AUTO, createdBy=system）', async () => {
+      mockFirstBoot('Str0ng!Admin#2026');
+      mockPrisma.ipWhitelistEntry.findMany.mockResolvedValue([]);
+      mockPrisma.ipWhitelistEntry.createMany.mockResolvedValue({ count: 2 });
+
+      await (service as any).ensureDefaultAdminIpWhitelist();
+
+      expect(mockPrisma.ipWhitelistEntry.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            ip: '0.0.0.0/0',
+            source: BlacklistSource.AUTO,
+            reason: expect.any(String),
+            createdBy: 'system',
+          },
+          {
+            ip: '::/0',
+            source: BlacklistSource.AUTO,
+            reason: expect.any(String),
+            createdBy: 'system',
+          },
+        ],
+      });
+    });
+
+    it('非首次启动永不插入：升级与重启不自动放宽白名单', async () => {
+      mockPrisma.user.count.mockResolvedValue(3);
+
+      await (service as any).ensureDefaultAdminIpWhitelist();
+
+      expect(mockPrisma.ipWhitelistEntry.findMany).not.toHaveBeenCalled();
+      expect(mockPrisma.ipWhitelistEntry.createMany).not.toHaveBeenCalled();
+    });
+
+    it('删除默认条目后重启不会重新插入（仅首次启动 + 一次性）', async () => {
+      // 模拟：用户已删掉默认条目，且环境已有用户（非首次启动）
+      mockPrisma.user.count.mockResolvedValue(1);
+      mockPrisma.ipWhitelistEntry.findMany.mockResolvedValue([]);
+
+      await (service as any).ensureDefaultAdminIpWhitelist();
+
+      expect(mockPrisma.ipWhitelistEntry.createMany).not.toHaveBeenCalled();
+    });
+
+    it('部分存在时仅插入缺失条目（幂等）', async () => {
+      mockPrisma.user.count.mockResolvedValue(0);
+      mockPrisma.ipWhitelistEntry.findMany.mockResolvedValue([
+        { ip: '0.0.0.0/0' },
+      ]);
+      mockPrisma.ipWhitelistEntry.createMany.mockResolvedValue({ count: 1 });
+
+      await (service as any).ensureDefaultAdminIpWhitelist();
+
+      expect(mockPrisma.ipWhitelistEntry.createMany).toHaveBeenCalledWith({
+        data: [expect.objectContaining({ ip: '::/0' })],
+      });
+    });
+
+    it('默认条目已全存在时跳过插入', async () => {
+      mockPrisma.user.count.mockResolvedValue(0);
+      mockPrisma.ipWhitelistEntry.findMany.mockResolvedValue([
+        { ip: '0.0.0.0/0' },
+        { ip: '::/0' },
+      ]);
+
+      await (service as any).ensureDefaultAdminIpWhitelist();
+
+      expect(mockPrisma.ipWhitelistEntry.createMany).not.toHaveBeenCalled();
+    });
   });
 });

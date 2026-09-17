@@ -17,7 +17,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';
 import { PERSONAL_SPACE_NAME } from '../../personal-space/personal-space.service';
-import { NodeType, Permission, ProjectPermission } from '@cloudcad/db';
+import {
+  BlacklistSource,
+  NodeType,
+  Permission,
+  ProjectPermission,
+} from '@cloudcad/db';
 import {
   SystemRole,
   ProjectRole,
@@ -31,6 +36,14 @@ import {
 } from '../../common/interfaces/user-service.interface';
 import { RoleInheritanceService } from '../../permission/services/role-inheritance.service';
 import { I18nContext } from 'nestjs-i18n';
+
+/**
+ * 首次启动默认写入的管理员白名单条目：IPv4 / IPv6 各一条 /0，等价「全局可访问」。
+ *
+ * 必须成对写入——cidrContains 要求版本一致（见 ip-blacklist.utils.ts），
+ * 单独 0.0.0.0/0 不含纯 IPv6，会出现「以为已全放行」的半吊子状态。
+ */
+const DEFAULT_ADMIN_WHITELIST_IPS: string[] = ['0.0.0.0/0', '::/0'];
 
 /**
  * 系统初始化服务
@@ -81,6 +94,7 @@ export class InitializationService implements OnModuleInit {
 
     // 串行执行有依赖的任务
     await this.checkAndCreateInitialAdmin();
+    await this.ensureDefaultAdminIpWhitelist();
     await this.ensureAllUsersHavePersonalSpace();
     await this.ensurePublicLibraries();
 
@@ -526,6 +540,51 @@ export class InitializationService implements OnModuleInit {
       );
     } catch (error) {
       this.logger.error('创建初始管理员账户失败', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 首次启动写入默认管理员白名单条目（全局可访问）。
+   *
+   * 背景：白名单判定 fail-close，全新部署后白名单为空 → 管理员从任何非环回 IP
+   * 都无法登录，只能 SSH 到服务器编辑 config/admin-ip-whitelist.json 自救。
+   * 首次启动时插入全局放行条目消除该锁死，管理员后续可在 IP 访问控制页
+   * 删除后按需添加受限网段。
+   *
+   * 一次性 + 幂等：仅首次启动（无任何用户）执行；同值条目已存在则跳过。
+   * 升级部署与重启永不自动放宽——删除默认条目后不会在下次启动被重新插入。
+   */
+  private async ensureDefaultAdminIpWhitelist(): Promise<void> {
+    try {
+      const userCount = await this.prisma.user.count();
+      if (userCount > 0) return;
+
+      const existing = await this.prisma.ipWhitelistEntry.findMany({
+        where: { ip: { in: DEFAULT_ADMIN_WHITELIST_IPS } },
+        select: { ip: true },
+      });
+      const existingIps = new Set(existing.map((entry) => entry.ip));
+      const missing = DEFAULT_ADMIN_WHITELIST_IPS.filter(
+        (ip) => !existingIps.has(ip)
+      );
+      if (missing.length === 0) return;
+
+      await this.prisma.ipWhitelistEntry.createMany({
+        data: missing.map((ip) => ({
+          ip,
+          source: BlacklistSource.AUTO,
+          reason: '首次部署默认放行（全局可访问），可在 IP 访问控制页删除',
+          createdBy: 'system',
+        })),
+      });
+
+      this.logger.warn(
+        `已添加默认管理员白名单条目 ${missing.join(', ')}（全局可访问）。` +
+          '如需收紧访问范围，请在 IP 访问控制页删除后添加受限网段'
+      );
+    } catch (error) {
+      this.logger.error('添加默认管理员白名单条目失败', error);
       throw error;
     }
   }

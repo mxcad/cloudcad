@@ -51,6 +51,25 @@ export function RemoveEntryModal({
               ip: removable[0]?.ip ?? '',
             })}
       </p>
+      {/* 移除即物理删除，删错可能把自己锁在门外，故固定提示恢复路径 */}
+      <div
+        className="mt-3 p-2.5 rounded-lg text-xs leading-relaxed"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          color: 'var(--text-tertiary)',
+        }}
+      >
+        <p>
+          {t(
+            '删除后若白名单不再包含您的出口 IP 将无法登录，建议先添加新条目再删除。'
+          )}
+        </p>
+        <p className="mt-1">
+          {t(
+            '误删恢复：服务器本机（环回地址恒放行）仍可登录，或编辑服务器文件 config/admin-ip-whitelist.json。'
+          )}
+        </p>
+      </div>
       <div className="flex justify-end gap-2 mt-6">
         <Button variant="outline" onClick={onClose} disabled={removing}>
           {t('取消')}

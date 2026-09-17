@@ -5,10 +5,11 @@
 /////////////////////////////////////////////////////////////////////////////
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Copy, Plus, RefreshCw, Search, X, FileCode2 } from 'lucide-react';
+import { Copy, Plus, RefreshCw, Search, X, FileCode2, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { Menu } from '@/components/ui/Menu';
 import { Tag } from '@/components/ui/Tag';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useFileBrowserSelection } from '@/hooks/file-browser';
@@ -24,9 +25,14 @@ import { RemoveEntryModal } from './components/RemoveEntryModal';
 import {
   FILE_ENTRY_ID_PREFIX,
   IP_WHITELIST_PAGE_SIZE,
+  IP_WHITELIST_PRESETS,
   IP_WHITELIST_SOURCE_META,
 } from './constants';
-import { useAddIpWhitelistEntry, useIpWhitelistList } from './hooks/useIpWhitelist';
+import {
+  useAddIpWhitelistEntry,
+  useBatchAddIpWhitelistPreset,
+  useIpWhitelistList,
+} from './hooks/useIpWhitelist';
 import type { IpWhitelistEntry, IpWhitelistEntryForm } from './types';
 
 /** 复制文本到剪贴板 */
@@ -79,6 +85,7 @@ export default function IpWhitelistPage({
 
   const { items, total, loading, refetch } = useIpWhitelistList(page, keyword);
   const addMutation = useAddIpWhitelistEntry(() => setAddOpen(false));
+  const batchAddMutation = useBatchAddIpWhitelistPreset();
 
   const totalPages = Math.ceil(total / IP_WHITELIST_PAGE_SIZE);
 
@@ -246,6 +253,30 @@ export default function IpWhitelistPage({
               icon={RefreshCw}
               onClick={() => void refetch()}
             />
+            <Menu>
+              <Menu.Trigger>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={Wand2}
+                  disabled={batchAddMutation.isPending}
+                >
+                  {t('快速添加')}
+                </Button>
+              </Menu.Trigger>
+              <Menu.Content align="end" style={{ width: 340 }}>
+                {IP_WHITELIST_PRESETS.map((preset) => (
+                  <Menu.Item
+                    key={preset.key}
+                    description={preset.description}
+                    disabled={batchAddMutation.isPending}
+                    onClick={() => batchAddMutation.mutate(preset)}
+                  >
+                    {preset.label}
+                  </Menu.Item>
+                ))}
+              </Menu.Content>
+            </Menu>
             <Button size="sm" icon={Plus} onClick={() => setAddOpen(true)}>
               {t('添加')}
             </Button>
