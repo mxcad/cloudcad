@@ -13484,15 +13484,18 @@ export function getHealthControllerCheck503Response() {
 }
 
 export function getQueueControllerGetQueueStats200Response() {
-  return {
-    queueLength: faker.number.int(),
-    criticalPriorityQueueLength: faker.number.int(),
-    highPriorityQueueLength: faker.number.int(),
-    lowPriorityQueueLength: faker.number.int(),
-    runningCount: faker.number.int(),
-    maxConcurrent: faker.number.int(),
-    timeout: faker.number.int(),
-  };
+  return faker.helpers.arrayElement([
+    {
+      queueLength: faker.number.int(),
+      criticalPriorityQueueLength: faker.number.int(),
+      highPriorityQueueLength: faker.number.int(),
+      lowPriorityQueueLength: faker.number.int(),
+      runningCount: faker.number.int(),
+      maxConcurrent: faker.number.int(),
+      timeout: faker.number.int(),
+    },
+    null,
+  ]);
 }
 
 export function getNoticeCenterControllerGetCurrent200Response() {

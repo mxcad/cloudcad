@@ -43,7 +43,6 @@ function createMockArchiveWriter() {
 function createService(mocks: {
   prisma?: any;
   config?: any;
-  audit?: any;
   diskMonitor?: any;
   systemPermission?: any;
   sseManager?: any;
@@ -79,7 +78,6 @@ function createService(mocks: {
   return new BatchDownloadService(
     mocks.prisma as any,
     mocks.config || (defaultConfig as any),
-    mocks.audit as any,
     mocks.diskMonitor as any,
     (mocks.systemPermission || defaultSystemPermission) as any,
     (mocks.sseManager || defaultSseManager) as any,

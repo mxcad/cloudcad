@@ -10684,9 +10684,9 @@ export type QueueControllerGetQueueStatsData = {
 
 export type QueueControllerGetQueueStatsResponses = {
     /**
-     * 转换队列统计信息
+     * 优先级队列统计；当前执行器无排队队列（独立服务/云函数）时为 null
      */
-    200: QueueStatsDto;
+    200: QueueStatsDto | unknown;
 };
 
 export type QueueControllerGetQueueStatsResponse = QueueControllerGetQueueStatsResponses[keyof QueueControllerGetQueueStatsResponses];

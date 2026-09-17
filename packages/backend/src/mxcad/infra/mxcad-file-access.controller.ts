@@ -28,6 +28,7 @@ import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
 import { I_EXTERNAL_REF_FACADE, IExternalRefFacade } from '../external-ref/interfaces/ext-ref-facade.interface';
 import { MXCAD_CONVERSION_SERVICE } from '../interfaces/mxcad-service-tokens';
 import type { IMxcadConversionService } from '../interfaces/mxcad-conversion.interface';
+import type { MxCadConversionResult } from '../interfaces/file-conversion.interface';
 import type { MxCadRequest } from '../types/request.types';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
@@ -171,7 +172,7 @@ export class MxcadFileAccessController {
     const outName = `${baseName}.${downloadFormat}`;
     const outPath = path.join(outDir, outName);
 
-    let convertResult: { code?: number } | undefined;
+    let convertResult: MxCadConversionResult | undefined;
     try {
       convertResult = await this.conversionService.convertServerFile({
         srcPath,
@@ -193,7 +194,7 @@ export class MxcadFileAccessController {
       throw error;
     }
 
-    if ((convertResult as { code?: number })?.code !== 0) {
+    if (convertResult?.code !== 0) {
       if (userId) {
         await this.restrictionEngine.releaseConversionCount(userId);
       }

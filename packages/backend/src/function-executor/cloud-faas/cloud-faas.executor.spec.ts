@@ -9,7 +9,10 @@ import { CloudFaaSExecutor } from './cloud-faas.executor';
 import { HuaweiExecutor } from './providers/huawei.executor';
 import { AliyunExecutor } from './providers/aliyun.executor';
 import { LambdaExecutor } from './providers/aws.executor';
-import type { ConversionTask } from '../function-executor.interface';
+import type {
+  ConversionTask,
+  IFunctionExecutor,
+} from '../function-executor.interface';
 
 jest.mock('./providers/huawei.executor', () => ({
   HuaweiExecutor: jest.fn(),
@@ -156,5 +159,15 @@ describe('CloudFaaSExecutor', () => {
 
       expect(HuaweiMock).toHaveBeenCalled();
     });
+  describe('observability via the seam', () => {
+    it('should report no queue and no duration samples (cloud provider schedules)', async () => {
+      const executor = (await createExecutor()) as IFunctionExecutor;
+
+      await expect(executor.queueStats()).resolves.toBeNull();
+      await expect(executor.durationStats()).resolves.toBeNull();
+      expect(executor.listTasks).toBeUndefined();
+      expect(executor.clearQueue).toBeUndefined();
+    });
+  });
   });
 });

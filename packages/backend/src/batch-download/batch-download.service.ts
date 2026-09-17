@@ -10,7 +10,6 @@
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
-import { AuditLogger } from '../audit/audit-logger.service';
 import { DiskMonitorService } from '../storage-management/services/disk-monitor.service';
 import {
   IPERMISSION_SERVICE,
@@ -46,7 +45,6 @@ export class BatchDownloadService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly configService: ConfigService,
-    private readonly auditLogger: AuditLogger,
     private readonly diskMonitor: DiskMonitorService,
     @Inject(IPERMISSION_SERVICE)
     private readonly systemPermissionService: IPermissionService,

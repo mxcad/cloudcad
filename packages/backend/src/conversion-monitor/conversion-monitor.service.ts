@@ -12,77 +12,51 @@
 
 import {
   Injectable,
+  Inject,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as http from 'http';
-import * as https from 'https';
-import { ProcessPoolExecutor } from '../function-executor/process-pool.executor';
-import { internalServiceSecretHeader } from '../common/utils';
+import { IFunctionExecutor } from '../function-executor/function-executor.interface';
+import type {
+  ExecutorDurationStats,
+  ExecutorQueueStats,
+  ExecutorTaskRecord,
+  PriorityQueueDurationStats,
+  PriorityQueueStats,
+  TaskDurationStats,
+  WorkerPoolLevelStats,
+  WorkerPoolTaskCounts,
+} from '../function-executor/function-executor.interface';
 
 /**
  * 转换队列监控（#406 / ADR-0058）：
  *
- * - 按 FUNCTION_EXECUTOR 模式路由取数：
- *   - process-pool（默认）：读本进程 ProcessPoolExecutor 的 RateLimiter 统计
- *   - conversion-service：HTTP 代理远端 GET /v1/conversions/stats
- *   - cloud-faas：无队列概念，返回 null（前端显示「不适用」）
- * - 30s 定时采样写入 24h 内存环形缓冲（重启丢失，长历史走 Grafana，见 ADR-0055/0058）
- * - 单实例部署前提（backend/conversion-service 均 replicas=1），无跨实例聚合
+ * 取数只走 IFunctionExecutor seam：容器已按 FUNCTION_EXECUTOR 选定 adapter，
+ * 本模块不读配置键、不认模式字符串，形态差异由 adapter 的返回值判别联合体现
+ * （process-pool 进程内统计 / conversion-service 代理远端 / cloud-faas 无队列）。
+ * 30s 定时采样写入 24h 内存环形缓冲（重启丢失，长历史走 Grafana，见 ADR-0055/0058）；
+ * 单实例部署前提（backend/conversion-service 均 replicas=1），无跨实例聚合。
  */
 
+/** 转换执行器模式（对外契约：前端按此选择监控面板） */
 export type ConversionMode =
   'process-pool' | 'conversion-service' | 'cloud-faas';
 
-/** process-pool 模式：进程内 RateLimiter 当前统计 */
-export interface ProcessPoolCurrent {
-  queueLength: number;
-  criticalPriorityQueueLength: number;
-  highPriorityQueueLength: number;
-  lowPriorityQueueLength: number;
-  runningCount: number;
-  maxConcurrent: number;
-  timeout: number;
-  /** 最近完成任务的耗时/等待时长（有界样本，见 RateLimiter.getDurationStats） */
-  duration: {
-    sampleCount: number;
-    p50DurationMs: number | null;
-    p95DurationMs: number | null;
-    p50WaitMs: number | null;
-    p95WaitMs: number | null;
-  };
-}
+/** process-pool 形态当前值 = seam 词汇表 + 耗时样本（不再镜像 RateLimiter 字段） */
+export type ProcessPoolCurrent = PriorityQueueStats & {
+  duration: PriorityQueueDurationStats;
+};
 
-/** conversion-service 模式：单级工作池统计（key 为优先级 "1"/"2"/"3"） */
-export interface WorkerLevelStats {
-  label: string;
-  maxConcurrent: number;
-  currentMax: number;
-  running: number;
-  waiting: number;
-  autoScale: boolean;
-  backlogSince: number | null;
-}
+/** conversion-service 形态当前值（远端 /v1/conversions/stats 透传） */
+export type ConversionServiceCurrent = {
+  tasks: WorkerPoolTaskCounts;
+  duration: TaskDurationStats;
+  workers: Record<string, WorkerPoolLevelStats>;
+};
 
-/** conversion-service 模式：远端服务当前统计（GET /v1/conversions/stats 透传） */
-export interface ConversionServiceCurrent {
-  tasks: {
-    total: number;
-    pending: number;
-    processing: number;
-    completed: number;
-    failed: number;
-  };
-  /** 终态任务执行耗时（有界样本，见 TaskStore.getDurationStats） */
-  duration: {
-    sampleCount: number;
-    p50Ms: number | null;
-    p95Ms: number | null;
-  };
-  workers: Record<string, WorkerLevelStats>;
-}
+/** 转换任务明细记录 = seam 的 ExecutorTaskRecord（同一份词汇表） */
+export type ConversionTaskItem = ExecutorTaskRecord;
 
 /** 历史采样点（30s 间隔；null 表示该模式无此字段） */
 export interface ConversionSample {
@@ -98,33 +72,15 @@ export interface ConversionSample {
 
 export interface ConversionMonitorStats {
   mode: ConversionMode;
-  /** process-pool 模式当前值（其他模式为 null） */
+  /** process-pool 形态当前值（其他形态为 null） */
   processPool: ProcessPoolCurrent | null;
-  /** conversion-service 模式当前值（其他模式或拉取失败为 null） */
+  /** conversion-service 形态当前值（其他形态或拉取失败为 null） */
   conversionService: ConversionServiceCurrent | null;
   /** conversion-service 拉取失败原因（成功为 null） */
   conversionServiceError: string | null;
   /** 24h 历史采样（30s 间隔，旧→新；重启后为空） */
   history: ConversionSample[];
   sampledAt: number;
-}
-
-/**
- * 转换任务明细（#478 监控 Tab 逐任务明细）：conversion-service 模式 proxy 远端
- * GET /v1/conversions/tasks（TaskRecord 子集）。process-pool 模式无独立任务存储，
- * 返回空列表（前端仅展示聚合统计）。
- */
-export interface ConversionTaskItem {
-  id: string;
-  type?: string;
-  status: string;
-  progress: number;
-  createdAt: string;
-  updatedAt: string;
-  startedAt: string | null;
-  completedAt: string | null;
-  error?: string;
-  contentKey?: string;
 }
 
 /** 转换任务明细列表（#478 监控 Tab 数据源） */
@@ -140,34 +96,12 @@ const MAX_HISTORY_POINTS = 24 * 60 + 1;
 @Injectable()
 export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ConversionMonitorService.name);
-  private readonly mode: ConversionMode;
-  private readonly conversionServiceUrl: string;
-  private readonly useHttps: boolean;
-  private readonly secretHeaders: Record<string, string>;
   private readonly history: ConversionSample[] = [];
   private samplerTimer: NodeJS.Timeout | null = null;
 
   constructor(
-    private readonly configService: ConfigService,
-    private readonly processPoolExecutor: ProcessPoolExecutor
-  ) {
-    const rawMode =
-      this.configService.get<string>('FUNCTION_EXECUTOR') || 'process-pool';
-    this.mode =
-      rawMode === 'conversion-service'
-        ? 'conversion-service'
-        : rawMode === 'cloud-faas'
-          ? 'cloud-faas'
-          : 'process-pool';
-    this.conversionServiceUrl =
-      this.configService.get<string>('CONVERSION_SERVICE_URL') ||
-      'http://localhost:3100';
-    this.useHttps = this.conversionServiceUrl.startsWith('https');
-    // #419：conversion-service 非 health 路由需共享密钥，监控拉取 stats 须带 header
-    this.secretHeaders = internalServiceSecretHeader(
-      this.configService.get<string>('INTERNAL_SERVICE_SECRET')
-    );
-  }
+    @Inject(IFunctionExecutor) private readonly executor: IFunctionExecutor
+  ) {}
 
   onModuleInit(): void {
     this.samplerTimer = setInterval(() => {
@@ -191,26 +125,41 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
     let processPool: ProcessPoolCurrent | null = null;
     let conversionService: ConversionServiceCurrent | null = null;
     let conversionServiceError: string | null = null;
+    // cloud-faas 形态无队列语义（queueStats 返回 null）；另两种形态由 kind 决定
+    let mode: ConversionMode = 'cloud-faas';
 
-    if (this.mode === 'process-pool') {
-      processPool = {
-        ...this.processPoolExecutor.getQueueStats(),
-        duration: this.processPoolExecutor.getDurationStats(),
-      };
-    } else if (this.mode === 'conversion-service') {
-      try {
-        conversionService = await this.fetchRemoteStats();
-      } catch (err: unknown) {
-        conversionServiceError =
-          err instanceof Error ? err.message : String(err);
-        this.logger.warn(
-          `拉取 conversion-service 统计失败: ${conversionServiceError}`
-        );
+    try {
+      const queue = await this.executor.queueStats();
+      const duration = await this.executor.durationStats();
+
+      if (queue?.kind === 'priority-queue') {
+        mode = 'process-pool';
+        if (duration?.kind === 'priority-queue') {
+          processPool = { ...queue.stats, duration: duration.stats };
+        }
+      } else if (queue?.kind === 'worker-pool') {
+        mode = 'conversion-service';
+        if (duration?.kind === 'task') {
+          conversionService = {
+            tasks: queue.tasks,
+            duration: duration.stats,
+            workers: queue.workers,
+          };
+        }
       }
+    } catch (err: unknown) {
+      // 只有 conversion-service 形态涉及 IO（另两种为进程内读或无队列），
+      // 失败即该形态：保留模式标签 + 错误原因，前端据此显示「拉取失败」而非「不适用」
+      mode = 'conversion-service';
+      conversionServiceError =
+        err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `拉取 conversion-service 统计失败: ${conversionServiceError}`
+      );
     }
 
     return {
-      mode: this.mode,
+      mode,
       processPool,
       conversionService,
       conversionServiceError,
@@ -220,39 +169,18 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 列出转换任务明细（#478 监控 Tab 逐任务明细）：仅 conversion-service 模式有
-   * 独立任务存储（proxy 远端 GET /v1/conversions/tasks）；process-pool / cloud-faas
-   * 模式无任务明细，返回空列表（前端仅展示聚合统计）。
+   * 列出转换任务明细（#478 监控 Tab 逐任务明细）。
+   * 无独立任务存储的执行器不实现 listTasks（process-pool 的簿记仅供 getTaskStatus），
+   * 此时返回空列表（前端仅展示聚合统计）。
    * 可选 status 过滤（pending/processing/completed/failed/cancelled）。
    */
   async listTasks(status?: string): Promise<ConversionTaskList> {
-    if (this.mode !== 'conversion-service') {
+    const listTasks = this.executor.listTasks;
+    if (!listTasks) {
       return { items: [], total: 0 };
     }
     try {
-      const qs = status ? `?status=${encodeURIComponent(status)}` : '';
-      const raw = await this.httpGet(`/v1/conversions/tasks${qs}`);
-      const rawItems = Array.isArray(raw.tasks) ? raw.tasks : [];
-      const items: ConversionTaskItem[] = rawItems
-        .map((it) => {
-          const o = (it ?? {}) as Record<string, unknown>;
-          return {
-            id: typeof o.id === 'string' ? o.id : '',
-            type: typeof o.type === 'string' ? o.type : undefined,
-            status: typeof o.status === 'string' ? o.status.toLowerCase() : 'unknown',
-            progress: toNumber(o.progress),
-            createdAt: typeof o.createdAt === 'string' ? o.createdAt : '',
-            updatedAt: typeof o.updatedAt === 'string' ? o.updatedAt : '',
-            startedAt:
-              typeof o.startedAt === 'string' ? o.startedAt : null,
-            completedAt:
-              typeof o.completedAt === 'string' ? o.completedAt : null,
-            error: typeof o.error === 'string' ? o.error : undefined,
-            contentKey:
-              typeof o.contentKey === 'string' ? o.contentKey : undefined,
-          };
-        })
-        .filter((it) => it.id !== '');
+      const items = await listTasks.call(this.executor, status);
       return { items, total: items.length };
     } catch (err: unknown) {
       this.logger.warn(
@@ -269,17 +197,20 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
     let running: number | null = null;
     let p95DurationMs: number | null = null;
 
-    if (this.mode === 'process-pool') {
-      const stats = this.processPoolExecutor.getQueueStats();
-      const duration = this.processPoolExecutor.getDurationStats();
-      queueDepth = stats.queueLength;
-      running = stats.runningCount;
-      p95DurationMs = duration.p95DurationMs;
-    } else if (this.mode === 'conversion-service') {
-      const remote = await this.fetchRemoteStats();
-      queueDepth = remote.tasks.pending;
-      running = remote.tasks.processing;
-      p95DurationMs = remote.duration.p95Ms;
+    const queue = await this.executor.queueStats();
+    if (queue?.kind === 'priority-queue') {
+      queueDepth = queue.stats.queueLength;
+      running = queue.stats.runningCount;
+    } else if (queue?.kind === 'worker-pool') {
+      queueDepth = queue.tasks.pending;
+      running = queue.tasks.processing;
+    }
+
+    const duration = await this.executor.durationStats();
+    if (duration?.kind === 'priority-queue') {
+      p95DurationMs = duration.stats.p95DurationMs;
+    } else if (duration?.kind === 'task') {
+      p95DurationMs = duration.stats.p95Ms;
     }
 
     this.history.push({ t, queueDepth, running, p95DurationMs });
@@ -292,96 +223,4 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** 拉取远端 conversion-service 的 /v1/conversions/stats */
-  private async fetchRemoteStats(): Promise<ConversionServiceCurrent> {
-    const raw = await this.httpGet('/v1/conversions/stats');
-    const tasks = (raw.tasks ?? {}) as Record<string, unknown>;
-    const duration = (raw.duration ?? {}) as Record<string, unknown>;
-    const workersRaw = (raw.workers ?? {}) as Record<string, unknown>;
-    const workers: Record<string, WorkerLevelStats> = {};
-    for (const [key, value] of Object.entries(workersRaw)) {
-      const w = (value ?? {}) as Record<string, unknown>;
-      workers[key] = {
-        label: typeof w.label === 'string' ? w.label : key,
-        maxConcurrent: toNumber(w.maxConcurrent),
-        currentMax: toNumber(w.currentMax),
-        running: toNumber(w.running),
-        waiting: toNumber(w.waiting),
-        autoScale: w.autoScale === true,
-        backlogSince:
-          typeof w.backlogSince === 'number' ? w.backlogSince : null,
-      };
-    }
-    return {
-      tasks: {
-        total: toNumber(tasks.total),
-        pending: toNumber(tasks.pending),
-        processing: toNumber(tasks.processing),
-        completed: toNumber(tasks.completed),
-        failed: toNumber(tasks.failed),
-      },
-      duration: {
-        sampleCount: toNumber(duration.sampleCount),
-        p50Ms: toNullableNumber(duration.p50Ms),
-        p95Ms: toNullableNumber(duration.p95Ms),
-      },
-      workers,
-    };
-  }
-
-  private httpGet(path: string): Promise<Record<string, unknown>> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(path, this.conversionServiceUrl);
-      const mod = this.useHttps ? https : http;
-      const req = mod.request(
-        {
-          hostname: url.hostname,
-          port: url.port || (this.useHttps ? 443 : 80),
-          path: url.pathname,
-          method: 'GET',
-          headers: this.secretHeaders,
-          timeout: 5000,
-        },
-        (res) => {
-          let data = '';
-          res.on('data', (chunk: string) => {
-            data += chunk;
-          });
-          res.on('end', () => {
-            if (res.statusCode && res.statusCode >= 400) {
-              reject(
-                new Error(
-                  `HTTP ${res.statusCode} for GET ${path}: ${data.substring(0, 200)}`
-                )
-              );
-              return;
-            }
-            try {
-              resolve(JSON.parse(data) as Record<string, unknown>);
-            } catch {
-              reject(new Error(`Invalid JSON response from ${path}`));
-            }
-          });
-        }
-      );
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Request timeout: GET ${path}`));
-      });
-      req.end();
-    });
-  }
-
-}
-
-function toNumber(v: unknown): number {
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function toNullableNumber(v: unknown): number | null {
-  if (v === null || v === undefined) return null;
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) ? n : null;
 }

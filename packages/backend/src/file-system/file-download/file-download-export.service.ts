@@ -334,9 +334,8 @@ export class FileDownloadExportService {
 
     const mxCadConversionService = await this.getMxCadConversionService();
     const result = await mxCadConversionService.convertServerFile(conversionOptions);
-    const resultObj = result as Record<string, unknown>;
-    if (!resultObj || typeof resultObj.code !== 'number' || resultObj.code !== 0) {
-      const errMsg = resultObj?.message || '文件转换失败';
+    if (result.code !== 0) {
+      const errMsg = result.message || '文件转换失败';
       if (userId) {
         await this.restrictionEngine.releaseConversionCount(userId);
       }
@@ -663,9 +662,8 @@ export class FileDownloadExportService {
             throw error;
           }
 
-          const resultObj = result as Record<string, unknown>;
-          if (!resultObj || typeof resultObj.code !== 'number' || resultObj.code !== 0) {
-            const errMsg = resultObj?.message || '文件转换失败';
+          if (result.code !== 0) {
+            const errMsg = result.message || '文件转换失败';
             this.logger.error(`文件转换失败: ${errMsg}`);
             if (userId) {
               await this.restrictionEngine.releaseConversionCount(userId);

@@ -1,8 +1,6 @@
-﻿import { Injectable, Logger, Inject } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
-import { IStorageService } from '../storage/interfaces/storage-service.interface';
-import { StorageManager } from '../storage-management/services/storage-manager.service';
 import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
 import type { IMxcadConversionService } from '../mxcad/interfaces/mxcad-conversion.interface';
 import type { ConvertServerFileParam } from '../mxcad/types/mxcad-context.types';
@@ -13,9 +11,8 @@ import { PublicFileService } from '../public-file/public-file.service';
 import { CadDownloadFormat } from '../file-system/dto/download-node.dto';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as http from 'http';
-import * as https from 'https';
 import { internalServiceSecretHeader } from '../common/utils';
+import { ConversionServiceClient } from '../common/utils/conversion-service-client';
 
 class Semaphore {
   private current = 0;
@@ -96,19 +93,14 @@ export class ConversionRunner {
   private mxCadConversionService: IMxcadConversionService | null = null;
   private semaphore: Semaphore;
   private readonly delegateWorkflow: boolean;
-  private readonly conversionServiceUrl: string;
-  private readonly conversionServiceSecret: string;
-  private readonly internalSecretHeaders: Record<string, string>;
+  private readonly client: ConversionServiceClient;
   private readonly workflowPollIntervalMs: number;
   private readonly workflowTimeoutMs: number;
-  private readonly workflowHttpTimeoutMs: number;
   private workflowCooldownUntil = 0;
   private static readonly WORKFLOW_COOLDOWN_MS = 60_000;
 
   constructor(
     private readonly moduleRef: ModuleRef,
-    @Inject(IStorageService) private readonly storageService: any,
-    private readonly storageManager: StorageManager,
     private readonly configService: ConfigService,
     private readonly restrictionEngine: RestrictionEngine,
     private readonly fileDownloadExportService: FileDownloadExportService,
@@ -120,11 +112,12 @@ export class ConversionRunner {
     const maxConcurrency = batchConfig?.maxConcurrency || 3;
     this.semaphore = new Semaphore(maxConcurrency);
     this.delegateWorkflow = !!batchConfig?.delegateWorkflow;
+
     const workflowUrl = batchConfig?.conversionServiceUrl;
     const envWorkflowUrl = this.configService.get<string>(
       'CONVERSION_SERVICE_URL'
     );
-    this.conversionServiceUrl =
+    const baseUrl =
       typeof workflowUrl === 'string' && workflowUrl
         ? workflowUrl
         : typeof envWorkflowUrl === 'string' && envWorkflowUrl
@@ -133,15 +126,28 @@ export class ConversionRunner {
     const envSecret = this.configService.get<string>(
       'CONVERSION_SERVICE_SECRET'
     );
-    this.conversionServiceSecret =
+    const conversionServiceSecret =
       typeof envSecret === 'string' && envSecret ? envSecret : '';
-    // #419：统一内网共享密钥 header（与旧 X-Conversion-Service-Secret 并存，服务端任一匹配即放行）
-    this.internalSecretHeaders = internalServiceSecretHeader(
-      this.configService.get<string>('INTERNAL_SERVICE_SECRET')
-    );
-    this.workflowPollIntervalMs = batchConfig?.workflowPollIntervalMs || 1500;
+
+    // 单请求超时取轮询总超时的较小值与 60s 的下限：轮询超时负责整体兜底，
+    // 单请求超时只防一个连接挂住
     this.workflowTimeoutMs = batchConfig?.workflowTimeoutMs || 10 * 60 * 1000;
-    this.workflowHttpTimeoutMs = Math.min(this.workflowTimeoutMs, 60_000);
+    this.workflowPollIntervalMs = batchConfig?.workflowPollIntervalMs || 1500;
+    this.client = new ConversionServiceClient({
+      baseUrl,
+      timeoutMs: Math.min(this.workflowTimeoutMs, 60_000),
+      // #419：统一内网共享密钥 header（与旧 X-Conversion-Service-Secret 并存，
+      // 服务端任一匹配即放行）
+      headers: {
+        'Content-Type': 'application/json',
+        ...internalServiceSecretHeader(
+          this.configService.get<string>('INTERNAL_SERVICE_SECRET')
+        ),
+        ...(conversionServiceSecret
+          ? { 'X-Conversion-Service-Secret': conversionServiceSecret }
+          : {}),
+      },
+    });
   }
 
   /**
@@ -166,6 +172,52 @@ export class ConversionRunner {
         : null;
     }
     return null;
+  }
+
+  /**
+   * 目标格式派生：输出扩展名、下载格式枚举、引擎参数。
+   *
+   * 委托路径（buildWorkflowTask）与进程内路径（convertInProcess）共用，
+   * 否则默认值（'2000' / 'mono'）与格式分支要各写一份——漏抄即静默丢参数
+   * （368ca55 漏抄 6 个裁剪框字段即此类）。
+   */
+  private resolveTarget(
+    format: string,
+    pdfParams?: ConvertRequest['pdfParams']
+  ): {
+    targetExt: string;
+    cadFormat: CadDownloadFormat;
+    params: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: number;
+    };
+  } {
+    const targetExt =
+      format === 'dwg' ? '.dwg' : format === 'dxf' ? '.dxf' : '.pdf';
+    const cadFormat =
+      format === 'dwg'
+        ? CadDownloadFormat.DWG
+        : format === 'dxf'
+          ? CadDownloadFormat.DXF
+          : CadDownloadFormat.PDF;
+
+    const params: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: number;
+    } = {};
+    if (format === 'pdf') {
+      params.width = pdfParams?.width || '2000';
+      params.height = pdfParams?.height || '2000';
+      params.colorPolicy = pdfParams?.colorPolicy || 'mono';
+    }
+    if ((format === 'dwg' || format === 'dxf') && pdfParams?.dwgVersion) {
+      params.dwgVersion = pdfParams.dwgVersion;
+    }
+    return { targetExt, cadFormat, params };
   }
 
   /**
@@ -397,18 +449,10 @@ export class ConversionRunner {
     snapshot: { snapshotPath: string; hash: string }
   ): WorkflowConvertTask {
     const node = request.node;
-    const targetExt =
-      request.format === 'dwg'
-        ? '.dwg'
-        : request.format === 'dxf'
-          ? '.dxf'
-          : '.pdf';
-    const cadFormat =
-      request.format === 'dwg'
-        ? CadDownloadFormat.DWG
-        : request.format === 'dxf'
-          ? CadDownloadFormat.DXF
-          : CadDownloadFormat.PDF;
+    const { targetExt, cadFormat, params } = this.resolveTarget(
+      request.format,
+      request.pdfParams
+    );
     const paramKey = this.fileDownloadExportService.buildParamKey(
       cadFormat,
       request.pdfParams
@@ -421,27 +465,14 @@ export class ConversionRunner {
       fileHash: node.fileHash || '',
       outname: `${snapshot.hash}-${paramKey}${targetExt}`,
     };
-
-    if (request.format === 'pdf') {
-      task.width = request.pdfParams?.width || '2000';
-      task.height = request.pdfParams?.height || '2000';
-      task.colorPolicy = request.pdfParams?.colorPolicy || 'mono';
-    }
-
-    if (
-      (request.format === 'dwg' || request.format === 'dxf') &&
-      request.pdfParams?.dwgVersion
-    ) {
-      task.dwgVersion = request.pdfParams.dwgVersion;
-    }
-
+    Object.assign(task, params);
     return task;
   }
 
   private async submitBatch(
     tasks: WorkflowConvertTask[]
   ): Promise<{ taskId: string }> {
-    const result = await this.httpRequest(
+    const result = await this.client.request<{ taskId?: string }>(
       '/v1/conversions/batchConvert',
       'POST',
       { tasks }
@@ -470,7 +501,7 @@ export class ConversionRunner {
     const deadline = Date.now() + this.workflowTimeoutMs;
 
     for (;;) {
-      const result = await this.httpRequest(
+      const result = await this.client.request(
         `/v1/conversions/tasks/${encodeURIComponent(taskId)}`,
         'GET'
       );
@@ -492,63 +523,6 @@ export class ConversionRunner {
     }
   }
 
-  private httpRequest(
-    requestPath: string,
-    method: string,
-    body?: unknown
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(requestPath, this.conversionServiceUrl);
-      const useHttps = url.protocol === 'https:';
-      const mod = useHttps ? https : http;
-      const payload = body !== undefined ? JSON.stringify(body) : undefined;
-      const options: http.RequestOptions = {
-        hostname: url.hostname,
-        port: url.port || (useHttps ? 443 : 80),
-        path: url.pathname + url.search,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...this.internalSecretHeaders,
-        },
-        timeout: this.workflowHttpTimeoutMs,
-      };
-      if (this.conversionServiceSecret) {
-        options.headers!['X-Conversion-Service-Secret'] =
-          this.conversionServiceSecret;
-      }
-      if (payload)
-        options.headers!['Content-Length'] = Buffer.byteLength(payload);
-
-      const req = mod.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk: string) => (data += chunk));
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 400) {
-            reject(
-              new Error(
-                `Workflow HTTP ${res.statusCode} for ${method} ${requestPath}: ${data.substring(0, 200)}`
-              )
-            );
-            return;
-          }
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            reject(new Error(`Workflow invalid JSON: ${data}`));
-          }
-        });
-      });
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Workflow timeout: ${method} ${requestPath}`));
-      });
-      if (payload) req.write(payload);
-      req.end();
-    });
-  }
-
   private async convertInProcess(
     node: ConvertRequest['node'],
     format: string,
@@ -568,10 +542,12 @@ export class ConversionRunner {
           };
         }
 
-        const targetExt =
-          format === 'dwg' ? '.dwg' : format === 'dxf' ? '.dxf' : '.pdf';
+        const { targetExt, cadFormat, params } = this.resolveTarget(
+          format,
+          pdfParams
+        );
         const paramKey = this.fileDownloadExportService.buildParamKey(
-          format as CadDownloadFormat,
+          cadFormat,
           pdfParams
         );
         // 产物版本绑定：outname = {hash}-{paramKey}{targetExt}，产物落 srcPath 同目录（uploads/{hash}-{paramKey}{targetExt} = 缓存路径）
@@ -597,25 +573,15 @@ export class ConversionRunner {
           outname,
           createPreloadingData: false,
           priority: 'low',
+          ...params,
         };
-
-        if (format === 'pdf') {
-          conversionOptions.width = pdfParams?.width || '2000';
-          conversionOptions.height = pdfParams?.height || '2000';
-          conversionOptions.colorPolicy = pdfParams?.colorPolicy || 'mono';
-        }
-
-        if ((format === 'dwg' || format === 'dxf') && pdfParams?.dwgVersion) {
-          conversionOptions.dwgVersion = pdfParams.dwgVersion;
-        }
 
         const conversionService = await this.getConversionService();
         const result =
           await conversionService.convertServerFile(conversionOptions);
-        const resultObj = result as Record<string, unknown>;
 
-        if (!resultObj || resultObj.code !== 0) {
-          const errMsg = (resultObj?.message as string) || 'Conversion failed';
+        if (result.code !== 0) {
+          const errMsg = result.message || 'Conversion failed';
           return { filePath: '', format, success: false, error: errMsg };
         }
 

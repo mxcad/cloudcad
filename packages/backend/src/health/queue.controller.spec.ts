@@ -5,19 +5,19 @@
 
 import { Test } from '@nestjs/testing';
 import { QueueController } from './queue.controller';
-import { ProcessPoolExecutor } from '../function-executor/process-pool.executor';
+import { IFunctionExecutor } from '../function-executor/function-executor.interface';
 import { IPERMISSION_SERVICE } from '../permission/interfaces/permission-service.interface';
 
 describe('QueueController', () => {
   let controller: QueueController;
-  let mockProcessPoolExecutor: { getQueueStats: jest.Mock };
+  let mockExecutor: { queueStats: jest.Mock };
 
   beforeEach(async () => {
-    mockProcessPoolExecutor = { getQueueStats: jest.fn() };
+    mockExecutor = { queueStats: jest.fn() };
     const module = await Test.createTestingModule({
       controllers: [QueueController],
       providers: [
-        { provide: ProcessPoolExecutor, useValue: mockProcessPoolExecutor },
+        { provide: IFunctionExecutor, useValue: mockExecutor },
         { provide: IPERMISSION_SERVICE, useValue: { hasPermissions: jest.fn() } },
       ],
     }).compile();
@@ -25,7 +25,7 @@ describe('QueueController', () => {
   });
 
   describe('when fetching queue stats', () => {
-    it('should return the stats from the process pool executor', () => {
+    it('should return the priority queue stats from the executor', async () => {
       const stats = {
         queueLength: 3,
         criticalPriorityQueueLength: 1,
@@ -35,31 +35,50 @@ describe('QueueController', () => {
         maxConcurrent: 4,
         timeout: 600000,
       };
-      mockProcessPoolExecutor.getQueueStats.mockReturnValue(stats);
+      mockExecutor.queueStats.mockResolvedValue({ kind: 'priority-queue', stats });
 
-      const result = controller.getQueueStats();
+      const result = await controller.getQueueStats();
 
       expect(result).toEqual(stats);
-      expect(mockProcessPoolExecutor.getQueueStats).toHaveBeenCalledTimes(1);
+      expect(mockExecutor.queueStats).toHaveBeenCalledTimes(1);
     });
 
-    it('should return all-zero stats when the queue is idle', () => {
-      const stats = {
-        queueLength: 0,
-        criticalPriorityQueueLength: 0,
-        highPriorityQueueLength: 0,
-        lowPriorityQueueLength: 0,
-        runningCount: 0,
-        maxConcurrent: 4,
-        timeout: 600000,
-      };
-      mockProcessPoolExecutor.getQueueStats.mockReturnValue(stats);
+    it('should return all-zero stats when the queue is idle', async () => {
+      mockExecutor.queueStats.mockResolvedValue({
+        kind: 'priority-queue',
+        stats: {
+          queueLength: 0,
+          criticalPriorityQueueLength: 0,
+          highPriorityQueueLength: 0,
+          lowPriorityQueueLength: 0,
+          runningCount: 0,
+          maxConcurrent: 4,
+          timeout: 600000,
+        },
+      });
 
-      const result = controller.getQueueStats();
+      const result = await controller.getQueueStats();
 
-      expect(result.queueLength).toBe(0);
-      expect(result.runningCount).toBe(0);
-      expect(result.maxConcurrent).toBe(4);
+      expect(result?.queueLength).toBe(0);
+      expect(result?.runningCount).toBe(0);
+      expect(result?.maxConcurrent).toBe(4);
+    });
+
+    it('should return null when the executor has no priority queue', async () => {
+      // 独立服务/云函数形态无优先级队列：真实排队数据在 /conversion-monitor/stats
+      mockExecutor.queueStats.mockResolvedValue({
+        kind: 'worker-pool',
+        tasks: {
+          total: 0,
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          failed: 0,
+        },
+        workers: {},
+      });
+
+      expect(await controller.getQueueStats()).toBeNull();
     });
   });
 });

@@ -9,7 +9,6 @@ import { FileSystemModule } from '../file-system/file-system.module';
 import { PublicFileModule } from '../public-file/public-file.module';
 import { AuthModule } from '../auth/auth.module';
 import { MxCadModule } from '../mxcad/mxcad.module';
-import { AuditLogModule } from '../audit/audit-log.module';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { AlertModule } from '../alert/alert.module';
 import { TaskRunModule } from '../task-run/task-run.module';
@@ -37,7 +36,6 @@ import { ProgressTrackerService } from './progress-tracker.service';
     PublicFileModule,
     AuthModule.forRoot(),
     MxCadModule,
-    AuditLogModule,
     RuntimeConfigModule,
     AlertModule,
     TaskRunModule,

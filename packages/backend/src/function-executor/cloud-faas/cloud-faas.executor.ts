@@ -5,6 +5,8 @@ import type {
   ConversionTask,
   ConversionResult,
   TaskStatus,
+  ExecutorQueueStats,
+  ExecutorDurationStats,
 } from '../function-executor.interface';
 import { HuaweiExecutor } from './providers/huawei.executor';
 import { AliyunExecutor } from './providers/aliyun.executor';
@@ -53,6 +55,15 @@ export class CloudFaaSExecutor implements IFunctionExecutor {
       createdAt: new Date(result.createdAt),
       updatedAt: new Date(result.updatedAt),
     };
+  }
+
+  /** 云函数形态无排队队列（由供应商侧调度），监控返回「不适用」 */
+  async queueStats(): Promise<ExecutorQueueStats | null> {
+    return null;
+  }
+
+  async durationStats(): Promise<ExecutorDurationStats | null> {
+    return null;
   }
 
   private createProvider(name: string): FaasProvider {

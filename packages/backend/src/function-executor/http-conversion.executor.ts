@@ -3,8 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import { isConversionFailureCategory } from '@cloudcad/contracts';
 import type { ConversionFailureCategory } from '@cloudcad/contracts';
-import * as http from 'http';
-import * as https from 'https';
+import { ConversionServiceClient } from '../common/utils/conversion-service-client';
 import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
 import { internalServiceSecretHeader } from '../common/utils/internal-service-auth';
 import type {
@@ -12,6 +11,10 @@ import type {
   ConversionTask,
   ConversionResult,
   TaskStatus,
+  ExecutorQueueStats,
+  ExecutorDurationStats,
+  ExecutorTaskRecord,
+  WorkerPoolLevelStats,
 } from './function-executor.interface';
 
 /**
@@ -31,45 +34,52 @@ function toErrorCode(value: unknown): number | undefined {
 @Injectable()
 export class HttpConversionExecutor implements IFunctionExecutor {
   private readonly logger = new Logger(HttpConversionExecutor.name);
-  private readonly baseUrl: string;
-  private readonly useHttps: boolean;
+  private readonly client: ConversionServiceClient;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
-  /** #419：内部服务共享密钥（空则不带头，向后兼容本地开发） */
-  private readonly secretHeaders: Record<string, string>;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly cls: ClsService,
   ) {
-    this.baseUrl = this.configService.get<string>('CONVERSION_SERVICE_URL')
-      || 'http://localhost:3100';
-    this.useHttps = this.baseUrl.startsWith('https');
+    this.client = new ConversionServiceClient({
+      baseUrl:
+        this.configService.get<string>('CONVERSION_SERVICE_URL') ||
+        'http://localhost:3100',
+      timeoutMs: 300000,
+      // #419：conversion-service 非 health 路由需共享密钥（空则不带头，向后兼容本地开发）
+      headers: {
+        'Content-Type': 'application/json',
+        ...internalServiceSecretHeader(
+          this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
+        ),
+      },
+    });
     this.pollIntervalMs = Number(
       this.configService.get<string>('CONVERSION_SERVICE_POLL_INTERVAL') || 1000,
     );
     this.pollTimeoutMs = Number(
       this.configService.get<string>('CONVERSION_SERVICE_POLL_TIMEOUT') || 300000,
     );
-    this.secretHeaders = internalServiceSecretHeader(
-      this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
-    );
   }
 
   async invoke(task: ConversionTask): Promise<ConversionResult> {
-    const body = JSON.stringify({
-      priority: task.priority,
-      callbackUrl: null,
-      params: {
-        type: task.type,
-        ...task.params,
-      },
-    });
-
     let submitted: any;
     try {
       // 异步提交：返回 taskId 后由轮询等待终态，避免在 conversion-service 服务侧长期占用连接
-      submitted = await this.request('/v1/conversions/async/convertFile', 'POST', body);
+      submitted = await this.client.request(
+        '/v1/conversions/async/convertFile',
+        'POST',
+        {
+          priority: task.priority,
+          callbackUrl: null,
+          params: {
+            type: task.type,
+            ...task.params,
+          },
+        },
+        this.traceHeaders()
+      );
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : String(error);
       return {
@@ -92,7 +102,12 @@ export class HttpConversionExecutor implements IFunctionExecutor {
   }
 
   async getTaskStatus(taskId: string): Promise<TaskStatus> {
-    const response = await this.request(`/v1/conversions/tasks/${taskId}`, 'GET');
+    const response = await this.client.request<Record<string, any>>(
+      `/v1/conversions/tasks/${taskId}`,
+      'GET',
+      undefined,
+      this.traceHeaders()
+    );
     const raw = response.result as Record<string, unknown> | undefined;
     return {
       taskId: response.taskId,
@@ -130,9 +145,11 @@ export class HttpConversionExecutor implements IFunctionExecutor {
     reason?: string;
   }> {
     try {
-      const response = await this.request(
+      const response = await this.client.request<Record<string, any>>(
         `/v1/conversions/tasks/${encodeURIComponent(taskId)}/cancel`,
-        'POST'
+        'POST',
+        undefined,
+        this.traceHeaders()
       );
       return { ok: true, status: response.status };
     } catch (error: unknown) {
@@ -177,56 +194,123 @@ export class HttpConversionExecutor implements IFunctionExecutor {
     };
   }
 
-  private request(path: string, method: string, body?: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(path, this.baseUrl);
-      const mod = this.useHttps ? https : http;
-      const options: http.RequestOptions = {
-        hostname: url.hostname,
-        port: url.port || (this.useHttps ? 443 : 80),
-        path: url.pathname,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          // X-Request-Id/X-Trace-Id 透传（#309）：conversion-service 侧日志据此串联
-          ...buildOutboundTraceHeaders(
-            {
-              requestId: this.cls?.get<string>('requestId'),
-              traceId: this.cls?.get<string>('traceId'),
-            },
-            'http-conversion',
-          ),
-          // #419：内部服务共享密钥
-          ...this.secretHeaders,
-        },
-        timeout: 300000,
-      };
-      if (body) {
-        options.headers!['Content-Length'] = Buffer.byteLength(body);
-      }
-      const req = mod.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk: string) => data += chunk);
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 400) {
-            return reject(
-              new Error(`HTTP ${res.statusCode} for ${method} ${path}: ${data.substring(0, 200)}`),
-            );
-          }
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            reject(new Error(`Invalid JSON response: ${data}`));
-          }
-        });
-      });
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Request timeout: ${method} ${path}`));
-      });
-      if (body) req.write(body);
-      req.end();
-    });
+  /**
+   * 队列统计（seam 统一形态）：透传 conversion-service GET /v1/conversions/stats。
+   * 该形态的排队/运行计数落在 tasks，工作池明细落在 workers。
+   */
+  async queueStats(): Promise<ExecutorQueueStats | null> {
+    const raw = await this.fetchRemoteStats();
+    const tasks = (raw.tasks ?? {}) as Record<string, unknown>;
+    return {
+      kind: 'worker-pool',
+      tasks: {
+        total: toNumber(tasks.total),
+        pending: toNumber(tasks.pending),
+        processing: toNumber(tasks.processing),
+        completed: toNumber(tasks.completed),
+        failed: toNumber(tasks.failed),
+      },
+      workers: parseWorkerLevels(raw.workers),
+    };
   }
+
+  /** 终态任务执行耗时（有界样本）；该形态无排队等待时长语义 */
+  async durationStats(): Promise<ExecutorDurationStats | null> {
+    const raw = await this.fetchRemoteStats();
+    const duration = (raw.duration ?? {}) as Record<string, unknown>;
+    return {
+      kind: 'task',
+      stats: {
+        sampleCount: toNumber(duration.sampleCount),
+        p50Ms: toNullableNumber(duration.p50Ms),
+        p95Ms: toNullableNumber(duration.p95Ms),
+      },
+    };
+  }
+
+  /**
+   * 逐任务明细：proxy conversion-service GET /v1/conversions/tasks。
+   * 可选 status 过滤（pending/processing/completed/failed/cancelled）。
+   */
+  async listTasks(status?: string): Promise<ExecutorTaskRecord[]> {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    const raw = await this.client.request<Record<string, unknown>>(
+      `/v1/conversions/tasks${qs}`,
+      'GET',
+      undefined,
+      this.traceHeaders()
+    );
+    const rawItems = Array.isArray(raw.tasks) ? raw.tasks : [];
+    return rawItems
+      .map((item) => {
+        const o = (item ?? {}) as Record<string, unknown>;
+        return {
+          id: typeof o.id === 'string' ? o.id : '',
+          type: typeof o.type === 'string' ? o.type : undefined,
+          status: typeof o.status === 'string' ? o.status.toLowerCase() : 'unknown',
+          progress: toNumber(o.progress),
+          createdAt: typeof o.createdAt === 'string' ? o.createdAt : '',
+          updatedAt: typeof o.updatedAt === 'string' ? o.updatedAt : '',
+          startedAt: typeof o.startedAt === 'string' ? o.startedAt : null,
+          completedAt: typeof o.completedAt === 'string' ? o.completedAt : null,
+          error: typeof o.error === 'string' ? o.error : undefined,
+          contentKey: typeof o.contentKey === 'string' ? o.contentKey : undefined,
+        } satisfies ExecutorTaskRecord;
+      })
+      .filter((item) => item.id !== '');
+  }
+
+  /** 拉取远端 conversion-service 的 /v1/conversions/stats */
+  private async fetchRemoteStats(): Promise<Record<string, unknown>> {
+    return this.client.request<Record<string, unknown>>(
+      '/v1/conversions/stats',
+      'GET',
+      undefined,
+      this.traceHeaders()
+    );
+  }
+
+  /**
+   * 出站追踪头（#309）：conversion-service 侧日志据此与 backend 请求串联
+   */
+  private traceHeaders(): Record<string, string> {
+    return buildOutboundTraceHeaders(
+      {
+        requestId: this.cls?.get<string>('requestId'),
+        traceId: this.cls?.get<string>('traceId'),
+      },
+      'http-conversion',
+    );
+  }
+}
+
+function toNumber(v: unknown): number {
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function toNullableNumber(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseWorkerLevels(
+  raw: unknown
+): Record<string, WorkerPoolLevelStats> {
+  const workersRaw = (raw ?? {}) as Record<string, unknown>;
+  const workers: Record<string, WorkerPoolLevelStats> = {};
+  for (const [key, value] of Object.entries(workersRaw)) {
+    const w = (value ?? {}) as Record<string, unknown>;
+    workers[key] = {
+      label: typeof w.label === 'string' ? w.label : key,
+      maxConcurrent: toNumber(w.maxConcurrent),
+      currentMax: toNumber(w.currentMax),
+      running: toNumber(w.running),
+      waiting: toNumber(w.waiting),
+      autoScale: w.autoScale === true,
+      backlogSince: typeof w.backlogSince === 'number' ? w.backlogSince : null,
+    };
+  }
+  return workers;
 }

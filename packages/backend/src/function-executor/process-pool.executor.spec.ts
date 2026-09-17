@@ -210,18 +210,27 @@ describe('ProcessPoolExecutor', () => {
   });
 
   describe('queue stats helpers', () => {
-    it('should expose queue stats and clear queue', () => {
-      expect(executor.getQueueStats()).toHaveProperty('maxConcurrent', 4);
+    it('should expose queue stats and clear queue', async () => {
+      // 嵌入式执行器恒有排队队列，null 分支由 cloud-faas 覆盖
+      const stats = await executor.queueStats();
+      expect(stats?.kind).toBe('priority-queue');
+      expect(stats).toMatchObject({
+        kind: 'priority-queue',
+        stats: { maxConcurrent: 4, queueLength: 0 },
+      });
       expect(typeof executor.clearQueue()).toBe('number');
     });
 
-    it('should expose duration stats from the rate limiter', () => {
-      expect(executor.getDurationStats()).toEqual({
-        sampleCount: 0,
-        p50DurationMs: null,
-        p95DurationMs: null,
-        p50WaitMs: null,
-        p95WaitMs: null,
+    it('should expose duration stats from the rate limiter', async () => {
+      expect(await executor.durationStats()).toEqual({
+        kind: 'priority-queue',
+        stats: {
+          sampleCount: 0,
+          p50DurationMs: null,
+          p95DurationMs: null,
+          p50WaitMs: null,
+          p95WaitMs: null,
+        },
       });
     });
   });

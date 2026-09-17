@@ -4,9 +4,9 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ProcessPoolExecutor } from '../function-executor/process-pool.executor';
+import { IFunctionExecutor } from '../function-executor/function-executor.interface';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
@@ -16,13 +16,22 @@ import { QueueStatsDto } from './dto/queue-stats.dto';
 @Controller('queue')
 @UseGuards(PermissionsGuard)
 export class QueueController {
-  constructor(private readonly processPoolExecutor: ProcessPoolExecutor) {}
+  constructor(
+    @Inject(IFunctionExecutor) private readonly executor: IFunctionExecutor
+  ) {}
 
   @Get('stats')
   @ApiOperation({ summary: '转换队列统计' })
-  @ApiResponse({ status: 200, type: QueueStatsDto, description: '转换队列统计信息' })
+  @ApiResponse({
+    status: 200,
+    type: QueueStatsDto,
+    nullable: true,
+    description:
+      '优先级队列统计；当前执行器无排队队列（独立服务/云函数）时为 null',
+  })
   @RequirePermissions([SystemPermission.SYSTEM_MONITOR])
-  getQueueStats(): QueueStatsDto {
-    return this.processPoolExecutor.getQueueStats();
+  async getQueueStats(): Promise<QueueStatsDto | null> {
+    const stats = await this.executor.queueStats();
+    return stats?.kind === 'priority-queue' ? stats.stats : null;
   }
 }

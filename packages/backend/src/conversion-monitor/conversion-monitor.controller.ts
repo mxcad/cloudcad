@@ -34,8 +34,8 @@ import {
 /**
  * 转换队列监控（#406 / ADR-0058）：
  * 单端点返回「当前值 + 24h 历史采样」，前端 30s 轮询。
- * 与 /queue/stats（process-pool 运维端点）互补：本端点按 FUNCTION_EXECUTOR
- * 模式路由取数，standalone 模式下代理远端 conversion-service 的真实队列。
+ * 与 /queue/stats（优先级队列运维端点）互补：本端点覆盖所有执行器形态，
+ * 独立服务模式下代理远端 conversion-service 的真实队列。
  */
 @ApiTags('转换监控')
 @Controller('conversion-monitor')
@@ -60,7 +60,7 @@ export class ConversionMonitorController {
   @Get('tasks')
   @ApiOperation({
     summary:
-      '列出转换任务明细（#478 监控 Tab 逐任务明细）：conversion-service 模式 proxy 远端 GET /v1/conversions/tasks；process-pool 模式返回空列表',
+      '列出转换任务明细（#478 监控 Tab 逐任务明细）：独立服务模式 proxy 远端 GET /v1/conversions/tasks；嵌入式模式返回空列表',
   })
   @ApiQuery({
     name: 'status',

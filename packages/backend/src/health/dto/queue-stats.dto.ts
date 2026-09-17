@@ -7,7 +7,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
- * 转换队列统计（来源：ProcessPoolExecutor.getQueueStats → RateLimiter.getStats）
+ * 转换队列统计（来源：IFunctionExecutor.queueStats 的 priority-queue 形态，
+ * 嵌入式模式由其内部 RateLimiter.getStats 提供）
  */
 export class QueueStatsDto {
   @ApiProperty({ description: '队列总长度（各优先级排队任务数之和）' })

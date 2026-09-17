@@ -86,6 +86,93 @@ export interface TaskStatus {
  * - HttpConversionExecutor（独立服务）
  * - CloudFaaSExecutor（云函数）
  */
+/**
+ * 优先级排队执行器（嵌入式 process-pool）的队列统计。
+ *
+ * 字段名同时是监控 API（ConversionMonitorStats.processPool）的对外契约：
+ * 词汇表由 seam 拥有，监控模块不再逐字镜像 RateLimiter 的内部字段名。
+ */
+export interface PriorityQueueStats {
+  queueLength: number;
+  criticalPriorityQueueLength: number;
+  highPriorityQueueLength: number;
+  lowPriorityQueueLength: number;
+  runningCount: number;
+  maxConcurrent: number;
+  timeout: number;
+}
+
+/** 工作池执行器（独立 conversion-service）的单级工作池统计 */
+export interface WorkerPoolLevelStats {
+  label: string;
+  maxConcurrent: number;
+  currentMax: number;
+  running: number;
+  waiting: number;
+  autoScale: boolean;
+  backlogSince: number | null;
+}
+
+/** 工作池执行器的任务计数 */
+export interface WorkerPoolTaskCounts {
+  total: number;
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+}
+
+/**
+ * 队列统计，按执行器形态判别：
+ * - priority-queue：进程内三级优先级队列（queueLength = 三级之和）
+ * - worker-pool：独立服务的单级工作池 + 任务计数
+ */
+export type ExecutorQueueStats =
+  | { kind: 'priority-queue'; stats: PriorityQueueStats }
+  | {
+      kind: 'worker-pool';
+      tasks: WorkerPoolTaskCounts;
+      workers: Record<string, WorkerPoolLevelStats>;
+    };
+
+/** 优先级排队执行器的耗时/等待时长样本（有界） */
+export interface PriorityQueueDurationStats {
+  sampleCount: number;
+  p50DurationMs: number | null;
+  p95DurationMs: number | null;
+  p50WaitMs: number | null;
+  p95WaitMs: number | null;
+}
+
+/** 工作池执行器的终态任务执行耗时样本（有界；无排队等待时长语义） */
+export interface TaskDurationStats {
+  sampleCount: number;
+  p50Ms: number | null;
+  p95Ms: number | null;
+}
+
+/** 耗时统计，按执行器形态判别（样本语义与队列形态一一对应） */
+export type ExecutorDurationStats =
+  | { kind: 'priority-queue'; stats: PriorityQueueDurationStats }
+  | { kind: 'task'; stats: TaskDurationStats };
+
+/**
+ * 执行器侧任务明细记录（conversion-service 的 TaskRecord 子集）。
+ * 字段名同时是监控 API（/conversion-monitor/tasks）的对外契约。
+ */
+export interface ExecutorTaskRecord {
+  id: string;
+  type?: string;
+  status: string;
+  progress: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  error?: string;
+  contentKey?: string;
+}
+
 export const IFunctionExecutor = 'IFunctionExecutor';
 
 export interface IFunctionExecutor {
@@ -106,4 +193,22 @@ export interface IFunctionExecutor {
    * process-pool / cloud-faas 模式不实现（undefined），调用方据此隐藏取消入口。
    */
   cancelTask?(taskId: string): Promise<{ ok: boolean; status?: string; reason?: string }>;
+
+  /**
+   * 队列统计。无排队队列的执行器返回 null（cloud-faas 无队列语义）。
+   * 监控/健康检查只依赖本方法，不再按 FUNCTION_EXECUTOR 字符串分支。
+   */
+  queueStats(): Promise<ExecutorQueueStats | null>;
+
+  /** 耗时/等待时长统计（有界样本）。无采样来源返回 null。 */
+  durationStats(): Promise<ExecutorDurationStats | null>;
+
+  /**
+   * 逐任务明细（可选）。无独立任务存储的执行器不实现（process-pool 的任务簿记
+   * 随进程生命周期，仅供 getTaskStatus 查询）；调用方按 undefined 返回空列表。
+   */
+  listTasks?(status?: string): Promise<ExecutorTaskRecord[]>;
+
+  /** 清空排队中任务，返回被取消数（可选；无排队队列的执行器不实现）。 */
+  clearQueue?(): number;
 }

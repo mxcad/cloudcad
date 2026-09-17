@@ -4,27 +4,12 @@ import type {
   ConversionTask,
   ConversionResult,
   TaskStatus,
+  ExecutorQueueStats,
+  ExecutorDurationStats,
 } from './function-executor.interface';
 import { RateLimiter } from '../common/concurrency/rate-limiter';
 import type { IMxcadConversionService } from '../mxcad/interfaces/mxcad-conversion.interface';
-import type {
-  ConversionOptions as MxCadConversionOptions,
-  ConversionResult as MxCadConversionResult,
-} from '../mxcad/interfaces/file-conversion.interface';
 import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
-
-/** FileConversionService 在 IMxcadConversionService 基础上额外提供的方法签名 */
-type MxcadConversionMethods = {
-  convertFile: (
-    options: MxCadConversionOptions
-  ) => Promise<MxCadConversionResult>;
-  convertBinToMxweb: (
-    binPath: string,
-    outputPath: string,
-    outName: string
-  ) => Promise<{ success: boolean; outputPath?: string; error?: string }>;
-  generateBinFiles: (mxwebPath: string, nodeName: string) => Promise<void>;
-};
 
 interface TaskRecord {
   task: ConversionTask;
@@ -48,8 +33,7 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
 
   constructor(
     @Inject(MXCAD_CONVERSION_SERVICE)
-    private readonly fileConversionService: IMxcadConversionService &
-      MxcadConversionMethods
+    private readonly fileConversionService: IMxcadConversionService
   ) {
     this.rateLimiter = new RateLimiter(4);
   }
@@ -174,16 +158,19 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
     }
   }
 
-  getQueueStats() {
-    return this.rateLimiter.getStats();
+  async queueStats(): Promise<ExecutorQueueStats | null> {
+    return { kind: 'priority-queue', stats: this.rateLimiter.getStats() };
   }
 
   /** 最近完成任务的耗时/等待时长统计（透传 RateLimiter 有界样本） */
-  getDurationStats() {
-    return this.rateLimiter.getDurationStats();
+  async durationStats(): Promise<ExecutorDurationStats | null> {
+    return {
+      kind: 'priority-queue',
+      stats: this.rateLimiter.getDurationStats(),
+    };
   }
 
-  clearQueue() {
+  clearQueue(): number {
     return this.rateLimiter.clearQueue();
   }
 }

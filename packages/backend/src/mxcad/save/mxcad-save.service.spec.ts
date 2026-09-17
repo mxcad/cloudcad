@@ -73,7 +73,6 @@ describe('MxcadSaveService', () => {
 
   const mockMxcadConversionService = {
     convertServerFile: jest.fn(),
-    checkTzStatus: jest.fn(),
     generateBinFiles: jest.fn(),
   } as unknown as IMxcadConversionService & { generateBinFiles: jest.Mock };
 

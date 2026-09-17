@@ -3302,6 +3302,6 @@ export const backupControllerDeleteBackup = <ThrowOnError extends boolean = fals
 export const conversionMonitorControllerGetStats = <ThrowOnError extends boolean = false>(options?: Options<ConversionMonitorControllerGetStatsData, ThrowOnError>) => (options?.client ?? client).get<ConversionMonitorControllerGetStatsResponses, unknown, ThrowOnError>({ url: '/api/v1/conversion-monitor/stats', ...options });
 
 /**
- * 列出转换任务明细（#478 监控 Tab 逐任务明细）：conversion-service 模式 proxy 远端 GET /v1/conversions/tasks；process-pool 模式返回空列表
+ * 列出转换任务明细（#478 监控 Tab 逐任务明细）：独立服务模式 proxy 远端 GET /v1/conversions/tasks；嵌入式模式返回空列表
  */
 export const conversionMonitorControllerListTasks = <ThrowOnError extends boolean = false>(options?: Options<ConversionMonitorControllerListTasksData, ThrowOnError>) => (options?.client ?? client).get<ConversionMonitorControllerListTasksResponses, unknown, ThrowOnError>({ url: '/api/v1/conversion-monitor/tasks', ...options });

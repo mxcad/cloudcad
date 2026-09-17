@@ -11,7 +11,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { ConversionMonitorController } from './conversion-monitor.controller';
 import { ConversionMonitorService } from './conversion-monitor.service';
 import { FunctionExecutorModule } from '../function-executor/function-executor.module';
@@ -19,12 +18,12 @@ import { PermissionModule } from '../permission/permission.module';
 
 /**
  * 转换队列监控（#406 / ADR-0058）：
- * 按 FUNCTION_EXECUTOR 模式路由取数（process-pool 读进程内统计 /
- * conversion-service 代理远端 /v1/conversions/stats），30s 采样维护 24h
+ * 取数只依赖 IFunctionExecutor seam（容器已选定 adapter：嵌入式读进程内统计 /
+ * 独立服务代理远端 /v1/conversions/stats / 云函数无队列），30s 采样维护 24h
  * 内存环形缓冲，供管理员在系统监控页观察排队/并发/耗时趋势以决策扩容。
  */
 @Module({
-  imports: [ConfigModule, FunctionExecutorModule, PermissionModule],
+  imports: [FunctionExecutorModule, PermissionModule],
   controllers: [ConversionMonitorController],
   providers: [ConversionMonitorService],
   exports: [ConversionMonitorService],

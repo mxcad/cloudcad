@@ -294,5 +294,183 @@ describe('HttpConversionExecutor', () => {
 
       await expect(executor.getTaskStatus('fw_5')).rejects.toBeTruthy();
     });
+  describe('observability via the seam', () => {
+    it('should expose worker pool stats from the remote stats endpoint', async () => {
+      port = await startServer((req, res) => {
+        requests.push({ method: req.method ?? '', path: req.url ?? '' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            tasks: {
+              total: 10,
+              pending: 2,
+              processing: 1,
+              completed: 6,
+              failed: 1,
+            },
+            duration: { sampleCount: 6, p50Ms: 1200, p95Ms: 4500 },
+            workers: {
+              '1': {
+                label: 'upload',
+                maxConcurrent: 2,
+                currentMax: 4,
+                running: 2,
+                waiting: 1,
+                autoScale: true,
+                backlogSince: 1700000000000,
+              },
+            },
+          })
+        );
+      });
+      executor = await createExecutor();
+
+      const queue = await executor.queueStats();
+      const duration = await executor.durationStats();
+
+      expect(queue).toEqual({
+        kind: 'worker-pool',
+        tasks: {
+          total: 10,
+          pending: 2,
+          processing: 1,
+          completed: 6,
+          failed: 1,
+        },
+        workers: {
+          '1': {
+            label: 'upload',
+            maxConcurrent: 2,
+            currentMax: 4,
+            running: 2,
+            waiting: 1,
+            autoScale: true,
+            backlogSince: 1700000000000,
+          },
+        },
+      });
+      expect(duration).toEqual({
+        kind: 'task',
+        stats: { sampleCount: 6, p50Ms: 1200, p95Ms: 4500 },
+      });
+      expect(requests.map((r) => r.path)).toEqual([
+        '/v1/conversions/stats',
+        '/v1/conversions/stats',
+      ]);
+    });
+
+    it('should tolerate malformed remote stats responses', async () => {
+      port = await startServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            tasks: { pending: '2' },
+            workers: { '2': { label: 'export', running: '1' } },
+          })
+        );
+      });
+      executor = await createExecutor();
+
+      const queue = await executor.queueStats();
+      const duration = await executor.durationStats();
+
+      expect(queue?.kind).toBe('worker-pool');
+      if (queue?.kind === 'worker-pool') {
+        expect(queue.tasks.pending).toBe(2);
+        expect(queue.tasks.total).toBe(0);
+        expect(queue.workers['2'].running).toBe(1);
+        expect(queue.workers['2'].autoScale).toBe(false);
+        expect(queue.workers['2'].label).toBe('export');
+      }
+      expect(duration?.kind).toBe('task');
+      if (duration?.kind === 'task') {
+        expect(duration.stats.p95Ms).toBeNull();
+      }
+    });
+
+    it('should proxy task records and forward the status filter', async () => {
+      port = await startServer((req, res) => {
+        requests.push({ method: req.method ?? '', path: req.url ?? '' });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            tasks: [
+              {
+                id: 't-1',
+                type: 'open',
+                status: 'COMPLETED',
+                progress: 100,
+                createdAt: '2026-09-03T00:00:00Z',
+                updatedAt: '2026-09-03T00:01:00Z',
+                startedAt: '2026-09-03T00:00:10Z',
+                completedAt: '2026-09-03T00:01:00Z',
+                contentKey: 'abc123',
+              },
+              { id: '', progress: 0, status: 7, createdAt: 0 },
+            ],
+            total: 2,
+          })
+        );
+      });
+      executor = await createExecutor();
+
+      const records = await executor.listTasks('failed');
+
+      expect(requests.map((r) => r.path)).toEqual([
+        '/v1/conversions/tasks?status=failed',
+      ]);
+      // 无 id 的记录被丢弃；status 归一化为小写，缺字段回落默认值
+      expect(records).toEqual([
+        {
+          id: 't-1',
+          type: 'open',
+          status: 'completed',
+          progress: 100,
+          createdAt: '2026-09-03T00:00:00Z',
+          updatedAt: '2026-09-03T00:01:00Z',
+          startedAt: '2026-09-03T00:00:10Z',
+          completedAt: '2026-09-03T00:01:00Z',
+          error: undefined,
+          contentKey: 'abc123',
+        },
+      ]);
+    });
+
+    it('should send the internal service secret on stats requests (#419)', async () => {
+      let seenHeaders: Record<string, string | undefined> = {};
+      port = await startServer((req, res) => {
+        seenHeaders = {
+          'x-internal-service-secret': req.headers['x-internal-service-secret'] as
+            | string
+            | undefined,
+        };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ tasks: {}, duration: {}, workers: {} }));
+      });
+      const module = await Test.createTestingModule({
+        providers: [
+          HttpConversionExecutor,
+          {
+            provide: ConfigService,
+            useValue: {
+              get: jest.fn((key: string) => {
+                if (key === 'CONVERSION_SERVICE_URL') {
+                  return `http://127.0.0.1:${port}`;
+                }
+                if (key === 'INTERNAL_SERVICE_SECRET') return 'topsecret';
+                return undefined;
+              }),
+            },
+          },
+          { provide: ClsService, useValue: { get: jest.fn() } },
+        ],
+      }).compile();
+      executor = module.get(HttpConversionExecutor);
+
+      await executor.queueStats();
+
+      expect(seenHeaders['x-internal-service-secret']).toBe('topsecret');
+    });
+  });
   });
 });
