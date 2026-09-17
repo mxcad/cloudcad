@@ -111,11 +111,10 @@ export class BatchDownloadOrchestrator {
         if (isTerminated()) break;
         const label = `${fileName} (${format})`;
 
-        // fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）；nodeId 项保留原 ext 路由
-        if (
-          !isFileHashItem &&
-          (format === 'original' || format === 'mxweb' || ext === '.mxweb')
-        ) {
+        // 路由只看请求格式、不看源文件 ext：mxweb 源 + dwg/dxf/pdf 必须走转换
+        // （快照最新 mxweb → 排队转换，与单文件 downloadNodeWithFormat 一致）；
+        // 仅 original/mxweb 格式直取源文件。fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）
+        if (!isFileHashItem && (format === 'original' || format === 'mxweb')) {
           await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
           ctx.completedCount++;
         } else {
@@ -244,11 +243,10 @@ export class BatchDownloadOrchestrator {
       if (isTerminated()) break;
       const label = `${fileName} (${format})`;
 
-      // fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）；nodeId 项保留原 ext 路由
-      if (
-        !isFileHashItem &&
-        (format === 'original' || format === 'mxweb' || ext === '.mxweb')
-      ) {
+      // 路由只看请求格式、不看源文件 ext：mxweb 源 + dwg/dxf/pdf 必须走转换
+      // （快照最新 mxweb → 排队转换，与单文件 downloadNodeWithFormat 一致）；
+      // 仅 original/mxweb 格式直取源文件。fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）
+      if (!isFileHashItem && (format === 'original' || format === 'mxweb')) {
         await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
       } else {
         await this.tryConvert(
@@ -288,7 +286,12 @@ export class BatchDownloadOrchestrator {
         });
         return;
       }
-      const baseName = format === 'original' ? fileName : `${fileName}.mxweb`;
+      // 源文件已是 .mxweb 时不再叠加后缀（与单文件 downloadNodeWithFormat 命名一致）
+      const srcExt = path.extname(fileName).toLowerCase();
+      const baseName =
+        format === 'original' || srcExt === '.mxweb'
+          ? fileName
+          : `${fileName}.mxweb`;
       const sanitized = ctx.sanitizeZipName(prefix + baseName);
       ctx.archiveEntries.push({
         name: sanitized,
