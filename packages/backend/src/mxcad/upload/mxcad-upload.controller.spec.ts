@@ -3,6 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
+import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { MxcadUploadController } from './mxcad-upload.controller';
 import { DrawingIngestService } from './drawing-ingest.service';
@@ -246,6 +247,67 @@ describe('MxcadUploadController - 分片上传配额预检', () => {
       await controller.checkFileExist(req.body as never, req as never);
 
       expect(mockAuditLogService.logProjectNodeAction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('body.name 路径遍历清洗（落库前 sanitize）', () => {
+    const wholeFileRequest = (overrides: Record<string, unknown> = {}) => ({
+      body: {
+        hash: 'hash1',
+        name: 'drawing.dwg',
+        size: 1024,
+        nodeId: 'node1',
+        ...overrides,
+      },
+      query: {},
+    });
+
+    it('含 .. 路径段的名字清洗为 basename 后再进 ingest', async () => {
+      mockDrawingIngestService.ingest.mockResolvedValue({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'n1',
+        created: false,
+      });
+      const req = wholeFileRequest({ name: '../../evil.dwg' });
+      await controller.uploadFile(
+        [{} as Express.Multer.File],
+        req.body as never,
+        req as never,
+      );
+      expect(mockDrawingIngestService.ingest).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'evil.dwg' }),
+        expect.anything(),
+      );
+    });
+
+    it('清洗后为空的名字（纯点/路径段）400，不进 ingest', async () => {
+      const req = wholeFileRequest({ name: '..' });
+      await expect(
+        controller.uploadFile(
+          [{} as Express.Multer.File],
+          req.body as never,
+          req as never,
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mockDrawingIngestService.ingest).not.toHaveBeenCalled();
+    });
+
+    it('含合法特殊字符的名字（括号/空格）不被误拒', async () => {
+      mockDrawingIngestService.ingest.mockResolvedValue({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'n1',
+        created: false,
+      });
+      const req = wholeFileRequest({ name: '图纸 (1).dwg' });
+      await controller.uploadFile(
+        [{} as Express.Multer.File],
+        req.body as never,
+        req as never,
+      );
+      expect(mockDrawingIngestService.ingest).toHaveBeenCalledWith(
+        expect.objectContaining({ name: '图纸 (1).dwg' }),
+        expect.anything(),
+      );
     });
   });
 });
