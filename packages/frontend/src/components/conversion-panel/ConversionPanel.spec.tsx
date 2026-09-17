@@ -18,6 +18,7 @@ import {
   conversionTaskControllerListHistory,
   batchDownloadControllerRetryTask,
   batchDownloadControllerRetryFailedItems,
+  batchDownloadControllerGetUserTasks,
 } from '@/api-sdk';
 import { t } from '@/languages';
 import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
@@ -39,6 +40,13 @@ vi.mock('@/api-sdk', () => ({
   batchDownloadControllerRetryTask: vi.fn(),
   // 批量下载部分失败重试（P1-3）：「仅重试失败项」按钮经 useBatchDownload.retryFailedItems 调用
   batchDownloadControllerRetryFailedItems: vi.fn(),
+  // 下载任务服务端同步：面板挂载时 syncTasksFromServer 拉取历史记录（hydrate）。
+  // hasMore=true：分页未取尽时 syncTasksFromServer 不剪枝本地任务，
+  // 避免各用例直接 setState 注入的任务被服务端空列表清掉。
+  batchDownloadControllerGetUserTasks: vi.fn().mockResolvedValue({
+    error: undefined,
+    data: { tasks: [], hasMore: true },
+  }),
 }));
 
 // S4-3：getValidToken 可控（默认 undefined=游客不订阅 SSE；SSE 测试设为 token）
@@ -61,6 +69,22 @@ vi.mock('@/hooks/useUploadManager', () => ({
 async function renderPanel() {
   await act(async () => {
     render(<ConversionPanel />);
+  });
+}
+
+/**
+ * 等初始数据 hydrate 完成（settled 生效）。
+ *
+ * settled 是组件内单调 latch（云端首次拉取 + 下载服务端同步完成），此前只记录
+ * 基线不自动展开。「settled 之后新触发」类用例须先 flush 到 settled 再注入任务。
+ * 用真实定时器（本文件仅自动收起用例切 fake timers，且各不越用）。
+ */
+async function flushSettled() {
+  await waitFor(() => {
+    expect(vi.mocked(conversionTaskControllerListTasks)).toHaveBeenCalled();
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
   });
 }
 
@@ -94,6 +118,11 @@ beforeEach(() => {
     error: undefined,
     data: { newTaskId: 'dl-fail-retry' },
   });
+  vi.mocked(batchDownloadControllerGetUserTasks).mockReset();
+  vi.mocked(batchDownloadControllerGetUserTasks).mockResolvedValue({
+    error: undefined,
+    data: { tasks: [], hasMore: true },
+  });
   // 上传管理器默认空任务（上传区块测试时覆盖）
   mockUseUploadManager.mockReset();
   mockUseUploadManager.mockReturnValue({
@@ -108,9 +137,13 @@ beforeEach(() => {
     clearCompleted: vi.fn(),
     manager: {},
   });
+  // 下载 store 重置：前序用例残留的 tasks 会在渲染时被当作「本会话新触发」
+  // （settled 前只记录基线，但 settled 后增长即展开），导致用例不独立
+  useBatchDownloadStore.setState({ tasks: [] });
   useConversionQueueStore.setState({
     tasks: [],
     collapsed: true,
+    autoDismissable: false,
     position: null,
     size: { width: 320, height: 420 },
     history: [],
@@ -249,12 +282,12 @@ describe('ConversionPanel', () => {
     expect(document.querySelector('.conversion-panel')).toBeNull();
   });
 
-  it('手动展开后无任务自动收起（S6-3）：点击药丸展开，无任务时超过自动收起时长后面板收起', async () => {
+  it('手动展开后面板不因无任务而自动收起：用户显式打开不受自动收起定时影响', async () => {
     vi.useFakeTimers();
     await renderPanel();
     const pill = document.querySelector('.conversion-collapsed')!;
 
-    // 点击药丸 → 展开
+    // 点击药丸 → 用户显式展开（autoDismissable=false）
     await act(async () => {
       pill.dispatchEvent(
         new MouseEvent('pointerdown', { clientX: 100, clientY: 100, bubbles: true })
@@ -264,14 +297,15 @@ describe('ConversionPanel', () => {
       );
     });
     expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
     expect(document.querySelector('.conversion-panel')).toBeTruthy();
 
-    // 推进超过自动收起时长（8s = AUTO_COLLAPSE_DELAY_MS）→ 无任务，自动收起
+    // 远超自动收起时长（8s = AUTO_COLLAPSE_DELAY_MS）→ 手动打开的面板保持展开
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(8000);
+      await vi.advanceTimersByTimeAsync(60_000);
     });
-    expect(useConversionQueueStore.getState().collapsed).toBe(true);
-    expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(document.querySelector('.conversion-panel')).toBeTruthy();
   });
 
   it('展开态显示任务名 + 进度百分比（S4-2）', async () => {
@@ -387,9 +421,9 @@ describe('ConversionPanel', () => {
     expect(document.body.textContent).toContain('第 2 位');
   });
 
-  it('无 active 任务时延迟自动收起（S6-3，fake timers）', async () => {
+  it('任务自动展开的面板无 active 任务后延迟自动收起（S6-3）', async () => {
     vi.useFakeTimers();
-    // 仅终态任务（无 active）→ 触发自动收起 timer
+    // 任务驱动的展开（autoDismissable=true）+ 仅终态任务（无 active）→ 触发自动收起 timer
     useConversionQueueStore.setState({
       tasks: [
         {
@@ -401,6 +435,7 @@ describe('ConversionPanel', () => {
         },
       ],
       collapsed: false,
+      autoDismissable: true,
     });
     await renderPanel();
     // 初始展开
@@ -411,6 +446,138 @@ describe('ConversionPanel', () => {
     });
     expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
     expect(document.querySelector('.conversion-panel')).toBeNull();
+  });
+
+  it('手动打开的面板不因任务结束而自动收起（用户显式打开 vs 任务驱动展开）', async () => {
+    vi.useFakeTimers();
+    // 用户手动展开（autoDismissable=false）+ 一个终态任务
+    useConversionQueueStore.setState({
+      tasks: [
+        {
+          id: 'local-1',
+          name: 'a.dwg',
+          status: 'completed',
+          source: 'local',
+          createdAt: Date.now(),
+        },
+      ],
+      collapsed: false,
+      autoDismissable: false,
+    });
+    await renderPanel();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(document.querySelector('.conversion-panel')).toBeTruthy();
+  });
+
+  it('挂载时存量进行中转换任务不自动展开面板（默认关闭，仅记录基线）', async () => {
+    useConversionQueueStore.setState({
+      tasks: [
+        {
+          id: 'cloud-old',
+          name: 'old.dwg',
+          status: 'processing',
+          source: 'cloud',
+          nodeId: 'cloud-old',
+          createdAt: Date.now(),
+        },
+      ],
+      collapsed: true,
+    });
+    await renderPanel();
+    await flushSettled();
+    // 存量任务是 hydrate 的基线，不是本会话新动作：面板保持收起
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+    expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
+    expect(document.querySelector('.conversion-panel')).toBeNull();
+  });
+
+  it('settled 后云端新增进行中任务自动展开面板（按 active 数量增长判定）', async () => {
+    await renderPanel();
+    await flushSettled();
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+
+    // 本会话新触发转换：云端新增一个进行中节点（active 数 0 → 1）
+    vi.mocked(conversionTaskControllerListTasks).mockResolvedValueOnce({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'cloud-1',
+            name: 'new.dwg',
+            fileStatus: 'PROCESSING',
+            taskId: 'task-1',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+      },
+    } as never);
+    await act(async () => {
+      await useConversionQueueStore.getState().refreshCloud();
+    });
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(document.querySelector('.conversion-panel')).toBeTruthy();
+  });
+
+  it('挂载时存量下载任务不自动展开面板（localStorage 残留 / 服务端 hydrate 都不算新动作）', async () => {
+    useBatchDownloadStore.setState({
+      tasks: [
+        {
+          taskId: 'dl-pending',
+          status: 'PENDING',
+          mode: 'zip',
+          itemNames: ['a.dwg'],
+          totalCount: 1,
+          completedCount: 0,
+          errorCount: 0,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          taskId: 'dl-done',
+          status: 'COMPLETED',
+          mode: 'zip',
+          itemNames: ['b.dwg'],
+          totalCount: 1,
+          completedCount: 1,
+          errorCount: 0,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    });
+    await renderPanel();
+    await flushSettled();
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+    expect(document.querySelector('.conversion-panel')).toBeNull();
+  });
+
+  it('settled 后新增下载任务自动展开并切到下载 tab', async () => {
+    await renderPanel();
+    await flushSettled();
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+
+    await act(async () => {
+      useBatchDownloadStore.setState({
+        tasks: [
+          {
+            taskId: 'dl-1',
+            status: 'PROCESSING',
+            mode: 'zip',
+            itemNames: ['a.dwg'],
+            totalCount: 1,
+            completedCount: 0,
+            errorCount: 0,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
+    });
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(document.querySelector('.conversion-panel')).toBeTruthy();
+    const tabs = document.querySelectorAll('[role="tab"]');
+    expect((tabs[1] as HTMLButtonElement).getAttribute('aria-selected')).toBe(
+      'true'
+    );
   });
 
   it('S4-3：登录用户订阅 SSE（EventSource），收到消息触发 refreshCloud；卸载后关闭', async () => {

@@ -33,6 +33,7 @@ beforeEach(() => {
   useConversionQueueStore.setState({
     tasks: [],
     collapsed: true,
+    autoDismissable: false,
     position: null,
     size: { width: 320, height: 420 },
     history: [],
@@ -276,6 +277,87 @@ describe('conversionQueueStore 自动展开（S6-3）', () => {
       status: 'completed',
     });
     expect(useConversionQueueStore.getState().collapsed).toBe(true);
+  });
+});
+
+describe('conversionQueueStore 自动收起来源标记（autoDismissable）', () => {
+  it('expandByTask 从收起展开 → 标记可自动收起', () => {
+    useConversionQueueStore.getState().expandByTask();
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(true);
+  });
+
+  it('expandByTask 面板已展开时 no-op：不把手动打开的面板变成可自动收起', () => {
+    useConversionQueueStore.getState().setCollapsed(false);
+    useConversionQueueStore.getState().expandByTask();
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
+  });
+
+  it('addLocalTask 新增 active 任务（收起→展开）→ 标记可自动收起', () => {
+    useConversionQueueStore.getState().addLocalTask({
+      id: 'local-1',
+      name: 'a.dwg',
+      status: 'processing',
+    });
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(true);
+  });
+
+  it('addLocalTask 面板已手动展开时新增 active 任务 → 标记保持 false', () => {
+    useConversionQueueStore.getState().setCollapsed(false);
+    useConversionQueueStore.getState().addLocalTask({
+      id: 'local-1',
+      name: 'a.dwg',
+      status: 'processing',
+    });
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
+  });
+
+  it('addLocalTask 新增终态任务 → 不展开也不改标记', () => {
+    useConversionQueueStore.getState().expandByTask();
+    useConversionQueueStore.getState().addLocalTask({
+      id: 'local-1',
+      name: 'a.dwg',
+      status: 'completed',
+    });
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(true);
+  });
+
+  it('setCollapsed 清掉任务驱动标记：手动收起后面板保持用户选择', () => {
+    useConversionQueueStore.getState().expandByTask();
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(true);
+    useConversionQueueStore.getState().setCollapsed(true);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
+  });
+
+  it('setCollapsed(false) 手动展开 → 不可自动收起', () => {
+    useConversionQueueStore.getState().expandByTask();
+    useConversionQueueStore.getState().setCollapsed(true);
+    useConversionQueueStore.getState().setCollapsed(false);
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
+  });
+
+  it('submitTask 提交成功从收起展开 → 标记可自动收起', async () => {
+    mockedSubmit.mockResolvedValue({
+      error: undefined,
+      data: { taskId: 'task-9', nodeId: 'node-9', async: true },
+    } as never);
+    await useConversionQueueStore.getState().submitTask('node-9');
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(true);
+  });
+
+  it('submitTask 面板已手动展开时 → 标记保持 false', async () => {
+    mockedSubmit.mockResolvedValue({
+      error: undefined,
+      data: { taskId: 'task-9', nodeId: 'node-9', async: true },
+    } as never);
+    useConversionQueueStore.getState().setCollapsed(false);
+    await useConversionQueueStore.getState().submitTask('node-9');
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
   });
 });
 

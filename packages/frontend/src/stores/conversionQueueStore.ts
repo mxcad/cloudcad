@@ -184,6 +184,15 @@ function persistPanelUi(
 interface ConversionQueueState {
   tasks: ConversionTask[];
   collapsed: boolean;
+  /**
+   * 面板是否由任务驱动的自动展开拉起。
+   *
+   * true = 允许「无 active 任务后延迟自动收起」（S6-3）；false = 用户显式打开
+   * （点击药丸 / 顶栏入口），保持展开不被自动收掉。避免用户打开面板看历史任务时
+   * 被 8s 后自动收起。仅 `expandByTask` / `addLocalTask` / `submitTask` 能置 true，
+   * 用户显式控制（`setCollapsed`）恒置 false。
+   */
+  autoDismissable: boolean;
   /** null = 默认右下角；拖动后记录位置（持久化，#476） */
   position: { x: number; y: number } | null;
   /** 面板尺寸（持久化，#476） */
@@ -228,6 +237,13 @@ interface ConversionQueueState {
   /** 取消任务（cloud + taskId 时调后端；否则仅本地标记） */
   cancelTask: (task: ConversionTask) => Promise<boolean>;
   setCollapsed: (collapsed: boolean) => void;
+  /**
+   * 任务驱动的自动展开：展开并标记为「无任务后可自动收起」。
+   *
+   * 已展开时不重置标记——面板可能是用户手动打开的，任务到达不应把它变成
+   * 可自动收起（否则用户手动打开后面板照样在 8s 后消失）。
+   */
+  expandByTask: () => void;
   setPosition: (position: { x: number; y: number } | null) => void;
   setSize: (size: { width: number; height: number }) => void;
   setSearch: (search: string) => void;
@@ -239,6 +255,7 @@ export const useConversionQueueStore = create<ConversionQueueState>(
   (set, get) => ({
     tasks: loadLocalTasks(),
     collapsed: true,
+    autoDismissable: false,
     position: initialPanelUi.position,
     size: initialPanelUi.size,
     history: [],
@@ -383,7 +400,13 @@ export const useConversionQueueStore = create<ConversionQueueState>(
               ...state.tasks,
             ];
         persistLocalTasks(tasks);
-        return { tasks, collapsed: false };
+        return {
+          tasks,
+          collapsed: false,
+          // 任务驱动的自动展开（S6-3）；仅「从隐藏到显示」的展开标记可自动收起，
+          // 已展开（可能是用户手动打开的）保持原标记
+          autoDismissable: state.collapsed ? true : state.autoDismissable,
+        };
       });
       return res.data?.taskId ?? null;
     },
@@ -405,9 +428,14 @@ export const useConversionQueueStore = create<ConversionQueueState>(
         const tasks = [newTask, ...rest].slice(0, MAX_LOCAL_TASKS + 50);
         persistLocalTasks(tasks);
         // 新增 active（pending/processing）任务自动展开面板（S6-3）；终态记录不展开
+        const isActive = isActiveStatus(status);
         return {
           tasks,
-          collapsed: isActiveStatus(status) ? false : state.collapsed,
+          collapsed: isActive ? false : state.collapsed,
+          // 仅「从隐藏到显示」的自动展开标记可自动收起；已展开（可能是用户手动
+          // 打开的）保持原标记
+          autoDismissable:
+            isActive && state.collapsed ? true : state.autoDismissable,
         };
       });
     },
@@ -450,7 +478,14 @@ export const useConversionQueueStore = create<ConversionQueueState>(
       return true;
     },
 
-    setCollapsed: (collapsed) => set({ collapsed }),
+    // 用户显式控制（点击药丸 / 顶栏入口）：清掉「任务驱动」标记，面板保持用户
+    // 选择的状态，不被 8s 后自动收起
+    setCollapsed: (collapsed) => set({ collapsed, autoDismissable: false }),
+    expandByTask: () => {
+      // 已展开时不改标记：面板可能是用户手动打开的，任务到达不应让它变成可自动收起
+      if (!get().collapsed) return;
+      set({ collapsed: false, autoDismissable: true });
+    },
     setPosition: (position) => {
       set({ position });
       persistPanelUi(position, get().size);

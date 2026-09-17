@@ -30,6 +30,7 @@ import {
   type ConversionTask,
 } from '@/stores/conversionQueueStore';
 import { useBatchDownload } from '@/hooks/file-system/useBatchDownload';
+import { usePanelAutoCollapse } from '@/hooks/conversion/usePanelAutoCollapse';
 import { useUploadManager } from '@/hooks/useUploadManager';
 import type { UploadTask } from '@/utils/uploadManager';
 import { ConversionTab } from './ConversionTab';
@@ -37,8 +38,6 @@ import { DownloadTab } from './DownloadTab';
 import { UploadTab } from './UploadTab';
 import './ConversionPanel.css';
 
-/** 无 active 任务后延迟收起面板的时长（S6-3）：让用户看到终态结果后再收起 */
-const AUTO_COLLAPSE_DELAY_MS = 8000;
 /** 拖动判定阈值（px）：pointerdown 后位移小于该值视为「点击」（收起态药丸点击展开），超过才进入拖动 */
 const DRAG_THRESHOLD_PX = 5;
 /** 滚动容器距底部多少 px 时触发加载下一页历史 */
@@ -92,13 +91,17 @@ function clampPanelToViewport(): void {
  * - 下载 tab：批量下载任务（useBatchDownloadStore，进度 + ZIP/逐个下载）。记录由后端 cron 自动过期，不做手动删除。
  * - 上传 tab：本地上传/转换任务（useUploadManager，进度条 + 暂停/恢复/重试，历史任务从 localStorage 恢复）。
  *
- * 有进行中任务时每 5s 轮询云端刷新状态；无 active 任务后延迟自动收起（S6-3）。
+ * 有进行中任务时每 5s 轮询云端刷新状态；面板默认收起，仅本会话新动作
+ * （上传 / 下载 / 触发转换）自动展开；任务自动展开的面板在无 active 任务后
+ * 延迟自动收起（S6-3），用户手动打开的面板保持展开不被收掉。
  * 已完成且关联节点的任务提供「打开」按钮（新标签页打开 CAD 编辑器）。
  */
 export function ConversionPanel() {
   const {
     tasks,
     collapsed,
+    autoDismissable,
+    cloudLoading,
     position,
     size,
     search,
@@ -106,6 +109,7 @@ export function ConversionPanel() {
     historyHasMore,
     historyLoading,
     setCollapsed,
+    expandByTask,
     setPosition,
     setSize,
 
@@ -133,6 +137,9 @@ export function ConversionPanel() {
   const [activeTab, setActiveTab] = useState<
     'conversion' | 'download' | 'upload'
   >('conversion');
+
+  /** 下载任务服务端同步是否完成（面板默认关闭：同步前 hydrate 的历史记录不算新动作） */
+  const [downloadSynced, setDownloadSynced] = useState(false);
 
   const activeCount = countActiveTasks(tasks);
   const hasActive = hasActiveTask(tasks);
@@ -179,11 +186,24 @@ export function ConversionPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 初次挂载同步下载任务（刷新/重开后从服务端 hydrate 下载记录，后端 cron 自动过期）
+  // 初次挂载同步下载任务（刷新/重开后从服务端 hydrate 下载记录，后端 cron 自动过期）。
+  // 同步完成前 settled 保持 false：hydrate 进来的历史记录不算本会话新触发的下载。
   useEffect(() => {
-    syncTasksFromServer();
+    syncTasksFromServer().finally(() => setDownloadSynced(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * 初始数据 hydrate 完成（云端任务首次拉取 + 下载任务服务端同步）。
+   *
+   * 单调 latch：一旦为 true 不再回退（polling / SSE 触发的后续 refreshCloud 会把
+   * cloudLoading 短暂置 true）。此前只记录基线，存量任务不触发自动展开。
+   */
+  const [settled, settleInitial] = useState(false);
+  useEffect(() => {
+    if (settled || cloudLoading || !downloadSynced) return;
+    settleInitial(true);
+  }, [settled, cloudLoading, downloadSynced]);
 
   // 有进行中任务时轮询云端（S4-3 兜底：SSE 断连 / 事件丢失 / 项目成员无 per-owner 通道时，
   // 5s 轮询保证最终一致；SSE 正常时提供 sub-5s 实时推送，二者叠加无害——refreshCloud 幂等）
@@ -223,59 +243,33 @@ export function ConversionPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsed]);
 
-  // 展开面板：先 clamp 回视口内再展开，保证首帧就在屏内（见 clampPanelToViewport）
+  // 任务驱动的自动展开：先 clamp 回视口内再展开，保证首帧就在屏内（见 clampPanelToViewport）。
+  // 已展开时 expandByTask 不改 autoDismissable——面板可能是用户手动打开的，
+  // 任务到达不应让它变成可自动收起。
   const expandPanel = useCallback(() => {
+    clampPanelToViewport();
+    expandByTask();
+  }, [expandByTask]);
+
+  // 用户显式展开（点击药丸）：走 setCollapsed 清掉任务驱动标记，面板保持用户
+  // 选择的状态，不因无任务被自动收起
+  const expandPanelByUser = useCallback(() => {
     clampPanelToViewport();
     setCollapsed(false);
   }, [setCollapsed]);
 
-  // 新增活跃上传任务时自动展开面板并切到上传 tab（并入统一面板后，上传需即时可见，#476）
-  // 用活跃数而非 total：历史任务（done/failed）恢复时不应触发展开；
-  // 挂载时活跃数恒为 0（UploadManager 仅恢复终态历史），故首次渲染不会误切 tab
-  const prevUploadActiveRef = useRef(0);
-  useEffect(() => {
-    if (uploadActiveCount > prevUploadActiveRef.current) {
-      expandPanel();
-      setActiveTab('upload');
-    }
-    prevUploadActiveRef.current = uploadActiveCount;
-  }, [uploadActiveCount, expandPanel]);
-
-  // 新增下载任务时自动展开面板并切到下载 tab（#536 统一异步：单文件 dwg/dxf/pdf 导出入队后即时可见）
-  const prevDownloadTotalRef = useRef(0);
-  const downloadTotalInitializedRef = useRef(false);
-  useEffect(() => {
-    const grew =
-      downloadTasks.length > prevDownloadTotalRef.current &&
-      downloadTasks.length > 0;
-    if (grew) {
-      expandPanel();
-      // 首次渲染仅展开（保留 auto-expand-on-mount，不切 tab，默认仍是转换 tab）；
-      // 新增任务才切到下载 tab，让用户即时看到刚入队的任务
-      if (downloadTotalInitializedRef.current) setActiveTab('download');
-    }
-    prevDownloadTotalRef.current = downloadTasks.length;
-    downloadTotalInitializedRef.current = true;
-  }, [downloadTasks.length, expandPanel]);
-
-  // 无 active 任务且无活跃上传且无活跃下载任务时延迟收起（S6-3）：
-  // 让用户看到终态结果后再收起；active/活跃上传/活跃下载存在时保持展开
-  // （上传历史 done/failed 不阻止收起，否则有历史后面板永不收起）
-  const activeDownloadCount = downloadTasks.filter(
-    (t) => t.status === 'PENDING' || t.status === 'PROCESSING'
-  ).length;
-  const hasActiveDownload = activeDownloadCount > 0;
-  // 无活动任务时自动收起
-  useEffect(() => {
-    if (hasActive || uploadActiveCount > 0 || hasActiveDownload) return;
-    const timer = setTimeout(() => setCollapsed(true), AUTO_COLLAPSE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [
+  const { activeDownloadCount } = usePanelAutoCollapse({
     hasActive,
+    activeCount,
     uploadActiveCount,
-    hasActiveDownload,
+    downloadTasks,
+    settled,
+    autoDismissable,
+    expandPanel,
+    setActiveTab,
     setCollapsed,
-  ]);
+  });
+  const hasActiveDownload = activeDownloadCount > 0;
 
   // 拖动 + 点击逻辑（收起态药丸 / 展开态 header 共用）：
   // - pointerdown 记录指针相对定位盒的偏移（position 为视口绝对坐标，应用到外层 portal position: fixed），
@@ -502,7 +496,7 @@ export function ConversionPanel() {
       {collapsed ? (
         <div
           className="conversion-collapsed"
-          onPointerDown={(e) => beginDrag(e, expandPanel)}
+          onPointerDown={(e) => beginDrag(e, expandPanelByUser)}
           title={t('点击展开转换队列，拖动调整位置')}
         >
           {hasActive || uploadActiveCount > 0 || hasActiveDownload ? (
