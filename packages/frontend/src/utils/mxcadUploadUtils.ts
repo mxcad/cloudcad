@@ -283,21 +283,28 @@ export async function uploadFile(
     const end = Math.min(start + chunkSize, file.size);
     const chunk = file.slice(start, end);
 
-    // 检查分片是否存在
-    const chunkData = await mxcadUploadControllerCheckChunkExist({
-      body: {
-        chunk: chunkIndex,
-        chunks: totalChunks,
-        size: chunk.size,
-        fileHash: hash,
-        filename: safeName,
-        nodeId,
-      },
-    });
-    throwOnSdkError(chunkData, t('检查分片失败'), safeName);
-    const data = chunkData.data!;
-    // mxcadApi 已自动解包，chunkData 直接是 { exists: boolean }
-    if (!data.exists) {
+    // 分片存在性检查（断点续传 / 秒传）— forceUpload 时跳过，强制全量重传。
+    // noCache 打开语义 = 不要任何缓存（含分片级缓存），故 forceUpload 一并门控此检查，
+    // 否则已存在于服务端 chunk 目录的分片会被复用、不重传。
+    let shouldUpload = true;
+    if (!forceUpload) {
+      const chunkData = await mxcadUploadControllerCheckChunkExist({
+        body: {
+          chunk: chunkIndex,
+          chunks: totalChunks,
+          size: chunk.size,
+          fileHash: hash,
+          filename: safeName,
+          nodeId,
+        },
+      });
+      throwOnSdkError(chunkData, t('检查分片失败'), safeName);
+      const data = chunkData.data!;
+      // mxcadApi 已自动解包，chunkData 直接是 { exists: boolean }
+      shouldUpload = !data.exists;
+    }
+
+    if (shouldUpload) {
       const uploadData = await mxcadUploadControllerUploadFile({
         body: {
           chunk: chunkIndex,
@@ -384,8 +391,9 @@ export async function uploadFile(
     newNodeId = mergeData.data!.nodeId;
   }
 
-  // 检查是否是跳过策略（文件已存在）
-  if ((mergeData as unknown as { ret?: string }).ret === 'fileAlreadyExist') {
+  // 检查是否是跳过策略（文件已存在）。ret 在解包后的 data 内（与末片上传分支
+  // 的 uploadData.data.ret 同层），外层 mergeData.ret 恒为 undefined 会漏判
+  if (mergeData.data?.ret === 'fileAlreadyExist') {
     return {
       file,
       hash,

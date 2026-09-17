@@ -139,6 +139,52 @@ describe('mxcadUploadUtils 分片上传（并发 3 + 显式合并）', () => {
     expect(result.nodeId).toBe('node-merged');
   });
 
+  it('全片已存在 + 合并返回 fileAlreadyExist → isUseServerExistingFile=true（修复：ret 在 data 内，外层恒 undefined 会漏判）', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片
+    // 所有分片已存在 → 无分片上传，skipResult 不会被末片上传响应置位
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: true } });
+    // 显式合并请求返回 fileAlreadyExist + nodeId（skip 策略下文件已存在）
+    mocks.uploadFile.mockResolvedValue({
+      data: { ret: 'fileAlreadyExist', nodeId: 'node-exist' },
+    });
+
+    const result = await mod.uploadFile({ file, hash: 'h12', nodeId: 'n1' });
+
+    const { chunkCalls, mergeCalls } = splitCalls();
+    expect(chunkCalls).toHaveLength(0);
+    expect(mergeCalls).toHaveLength(1);
+    expect(result.nodeId).toBe('node-exist');
+    expect(result.isUseServerExistingFile).toBe(true);
+  });
+
+  it('forceUpload：分片已存在也全量重传，且不查 checkChunkExist（noCache 语义 = 不要任何缓存）', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片
+    // 即使分片已存在，forceUpload 也不查存在性、直接重传
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: true } });
+    mocks.uploadFile.mockImplementation(async ({ body }) => {
+      if (body.chunk !== undefined) return { data: { ret: 'kOk' } };
+      return { data: { ret: 'kOk', nodeId: 'node-merged' } };
+    });
+
+    const result = await mod.uploadFile({
+      file,
+      hash: 'h12',
+      nodeId: 'n1',
+      forceUpload: true,
+    });
+
+    const { chunkCalls, mergeCalls } = splitCalls();
+    // 3 个分片全部重传（不受 exists=true 影响）+ 1 个显式合并
+    expect(chunkCalls.map((c) => c[0].body.chunk).sort()).toEqual([0, 1, 2]);
+    expect(mergeCalls).toHaveLength(1);
+    // forceUpload 跳过分片存在性检查
+    expect(mocks.checkChunkExist).not.toHaveBeenCalled();
+    expect(result.nodeId).toBe('node-merged');
+    expect(result.isInstantUpload).toBe(false);
+  });
+
   it('skip 策略：末片上传返回 fileAlreadyExist → 提前返回 isUseServerExistingFile，不发合并', async () => {
     const mod = await loadFreshModule();
     const file = makeFile(12); // 3 分片
