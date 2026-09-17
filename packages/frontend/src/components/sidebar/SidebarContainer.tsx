@@ -71,12 +71,15 @@ interface SidebarContainerProps {
   loading?: boolean;
   /** 协同文件加载完成回调（协同链接进入时用于延迟关闭加载态） */
   onCollabFileLoaded?: () => void;
+  /** 内容就绪门控：false 时数据面板不挂载，显示一行轻提示（引擎就绪 + 图纸打开终态前） */
+  contentReady?: boolean;
 }
 
 export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   projectId,
   onInsertFile,
   onCollabFileLoaded,
+  contentReady = true,
 }) => {
   // ==================== Hooks ====================
   const navigate = useNavigate();
@@ -355,119 +358,135 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
               </Tab>
             ))}
           </div>
-          {/* 子 Tab 内容 */}
+          {/* 子 Tab 内容：引擎就绪 + 图纸打开终态前不挂载数据面板，避免与图纸下载抢带宽/主线程 */}
           <div className={styles.subTabContent}>
-            <div
-              className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
-            >
-              <ProjectDrawingsPanel
-                key="drawings-gallery"
-                libraryType="drawing"
-                onDrawingOpen={handleDrawingOpen}
-                currentOpenFileId={currentOpenFileId}
-                isModified={isModified}
-                visible={activeDrawingsSubTab === 'drawings-gallery'}
-              />
-            </div>
-            <div
-              className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
-            >
-              <ProjectDrawingsPanel
-                key="blocks-gallery"
-                libraryType="block"
-                onDrawingOpen={handleDrawingOpen}
-                currentOpenFileId={currentOpenFileId}
-                isModified={isModified}
-                doubleClickToOpen={true}
-                visible={activeDrawingsSubTab === 'blocks-gallery'}
-              />
-            </div>
-            <div
-              className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
-            >
-              {isAuthenticated ? (
-                <ProjectDrawingsPanel
-                  key="my-project"
-                  projectId={isLibraryFile ? '' : projectId}
-                  onDrawingOpen={handleDrawingOpen}
-                  currentOpenFileId={currentOpenFileId}
-                  currentOpenProjectId={currentOpenProjectId}
-                  isModified={isModified}
-                  parentId={isLibraryFile ? null : currentOpenFileParentId}
-                  personalSpaceId={personalSpaceId}
-                  visible={activeDrawingsSubTab === 'my-project'}
-                  tabId="my-project"
-                />
-              ) : (
-                <div className={styles.loginPromptContainer}>
-                  <div className={styles.loginPromptContent}>
-                    <div className={styles.loginPromptIcon}>
-                      <FolderOpen size={40} />
-                    </div>
-                    <h3 className={styles.loginPromptTitle}>
-                      {t('登录以访问我的项目')}
-                    </h3>
-                    <p className={styles.loginPromptDescription}>
-                      {t('登录后可以查看和管理您的项目')}
-                    </p>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleLoginClick}
-                      className={styles.loginPromptButton}
-                    >
-                      {t('立即登录')}
-                    </Button>
-                  </div>
+            {contentReady ? (
+              <>
+                <div
+                  className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'drawings-gallery' ? styles.active : ''}`}
+                >
+                  <ProjectDrawingsPanel
+                    key="drawings-gallery"
+                    libraryType="drawing"
+                    onDrawingOpen={handleDrawingOpen}
+                    currentOpenFileId={currentOpenFileId}
+                    isModified={isModified}
+                    visible={activeDrawingsSubTab === 'drawings-gallery'}
+                  />
                 </div>
-              )}
-            </div>
-            <div
-              className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
-            >
-              {isAuthenticated ? (
-                <ProjectDrawingsPanel
-                  key="my-drawings"
-                  projectId={personalSpaceId || ''}
-                  onDrawingOpen={handleDrawingOpen}
-                  isPersonalSpace={true}
-                  currentOpenFileId={currentOpenFileId}
-                  isModified={isModified}
-                  parentId={currentOpenFileParentId}
-                  personalSpaceId={personalSpaceId}
-                  visible={activeDrawingsSubTab === 'my-drawings'}
-                  tabId="my-drawings"
-                />
-              ) : (
-                <div className={styles.loginPromptContainer}>
-                  <div className={styles.loginPromptContent}>
-                    <div className={styles.loginPromptIcon}>
-                      <FileText size={40} />
-                    </div>
-                    <h3 className={styles.loginPromptTitle}>
-                      {t('登录以访问个人空间')}
-                    </h3>
-                    <p className={styles.loginPromptDescription}>
-                      {t('登录后可以查看和管理您的私人图纸')}
-                    </p>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleLoginClick}
-                      className={styles.loginPromptButton}
-                    >
-                      {t('立即登录')}
-                    </Button>
-                  </div>
+                <div
+                  className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'blocks-gallery' ? styles.active : ''}`}
+                >
+                  <ProjectDrawingsPanel
+                    key="blocks-gallery"
+                    libraryType="block"
+                    onDrawingOpen={handleDrawingOpen}
+                    currentOpenFileId={currentOpenFileId}
+                    isModified={isModified}
+                    doubleClickToOpen={true}
+                    visible={activeDrawingsSubTab === 'blocks-gallery'}
+                  />
                 </div>
-              )}
-            </div>
+                <div
+                  className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-project' ? styles.active : ''}`}
+                >
+                  {isAuthenticated ? (
+                    <ProjectDrawingsPanel
+                      key="my-project"
+                      projectId={isLibraryFile ? '' : projectId}
+                      onDrawingOpen={handleDrawingOpen}
+                      currentOpenFileId={currentOpenFileId}
+                      currentOpenProjectId={currentOpenProjectId}
+                      isModified={isModified}
+                      parentId={isLibraryFile ? null : currentOpenFileParentId}
+                      personalSpaceId={personalSpaceId}
+                      visible={activeDrawingsSubTab === 'my-project'}
+                      tabId="my-project"
+                    />
+                  ) : (
+                    <div className={styles.loginPromptContainer}>
+                      <div className={styles.loginPromptContent}>
+                        <div className={styles.loginPromptIcon}>
+                          <FolderOpen size={40} />
+                        </div>
+                        <h3 className={styles.loginPromptTitle}>
+                          {t('登录以访问我的项目')}
+                        </h3>
+                        <p className={styles.loginPromptDescription}>
+                          {t('登录后可以查看和管理您的项目')}
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleLoginClick}
+                          className={styles.loginPromptButton}
+                        >
+                          {t('立即登录')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div
+                  className={`${styles.subTabPanel} ${activeDrawingsSubTab === 'my-drawings' ? styles.active : ''}`}
+                >
+                  {isAuthenticated ? (
+                    <ProjectDrawingsPanel
+                      key="my-drawings"
+                      projectId={personalSpaceId || ''}
+                      onDrawingOpen={handleDrawingOpen}
+                      isPersonalSpace={true}
+                      currentOpenFileId={currentOpenFileId}
+                      isModified={isModified}
+                      parentId={currentOpenFileParentId}
+                      personalSpaceId={personalSpaceId}
+                      visible={activeDrawingsSubTab === 'my-drawings'}
+                      tabId="my-drawings"
+                    />
+                  ) : (
+                    <div className={styles.loginPromptContainer}>
+                      <div className={styles.loginPromptContent}>
+                        <div className={styles.loginPromptIcon}>
+                          <FileText size={40} />
+                        </div>
+                        <h3 className={styles.loginPromptTitle}>
+                          {t('登录以访问个人空间')}
+                        </h3>
+                        <p className={styles.loginPromptDescription}>
+                          {t('登录后可以查看和管理您的私人图纸')}
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleLoginClick}
+                          className={styles.loginPromptButton}
+                        >
+                          {t('立即登录')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className={styles.contentReadyHint}>
+                <div className={styles.contentReadyHintInner}>
+                  <span
+                    className={`${styles.contentReadySpinner} animate-spin`}
+                  />
+                  <span className={styles.contentReadyHintText}>
+                    {t('正在加载图纸...')}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* 协同 tab — 始终挂载，不活跃时 CSS 隐藏 */}
         <div style={{ display: activeTab === 'collaborate' ? '' : 'none' }}>
-          {runtimeConfig.collaborationEnabled && isCollaborationAllowed(runtimeConfig.collaborationDomains) ? (
+          {runtimeConfig.collaborationEnabled &&
+          isCollaborationAllowed(runtimeConfig.collaborationDomains) ? (
             <>
               <div className={styles.content}>
                 <CollaborateSidebar

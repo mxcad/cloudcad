@@ -186,6 +186,36 @@
   background: var(--sidebar-bg, #212832);
 }
 
+/* 侧边栏内容就绪前的一行轻提示（contentReady=false 时） */
+.contentReadyHint {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 24px;
+}
+
+.contentReadyHintInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.contentReadySpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent-600);
+  border-radius: 9999px;
+}
+
+.contentReadyHintText {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
 /* ---- 面板显隐控制（保�?DOM 存在，视觉切换） ---- */
 .subTabPanel {
   flex: 1;

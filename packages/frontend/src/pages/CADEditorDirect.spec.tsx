@@ -6,11 +6,10 @@
  * 「超时后订阅被清理」与「卸载后订阅被清理」两个行为。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { render, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { NotificationProvider } from '@/contexts/NotificationContext';
-import { CAD_EVENTS } from '@/constants/events';
 import { clearDrawingSessionListeners } from '@/services/drawingSession';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { CADEditorDirect } from './CADEditorDirect';
@@ -22,6 +21,7 @@ const { subscriptions } = vi.hoisted(() => ({
 const { mxcadManagerMock } = vi.hoisted(() => ({
   mxcadManagerMock: {
     isReady: vi.fn(() => true),
+    hasPendingOpen: vi.fn(() => false),
     getCurrentFileName: vi.fn(() => 'empty_template.mxweb'),
     openFile: vi.fn(async () => {}),
     reloadCurrentFile: vi.fn(async () => {}),
@@ -242,53 +242,34 @@ describe('CADEditorDirect — fileUrl 外部参照 3s 超时路径', () => {
     );
   }
 
-  it('3s 超时兜底后仍调用 openFile，并清理 OPEN_COMPLETE 订阅', async () => {
-    vi.useFakeTimers();
+  it('不等初始文件加载完成即调用 openFile：排队由 enqueueOpen 统一负责', async () => {
     renderWithFileUrl();
-    // 冲刷动态 import 与 effect 微任务，等待订阅建立
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3000);
-    });
-    expect(mxcadManagerMock.openFile).toHaveBeenCalledWith(
-      expect.objectContaining({ url: EXTERNAL_REF_URL })
+    // 不推进 3s 兜底：旧实现会订阅 OPEN_COMPLETE 并最多等 3s 才打开，那种等待在 500ms
+    // 窗口内不可能完成，故本断言能抓住回归。用 waitFor 而非 fake timers——后者会同时
+    // 挡住 React 被动 effect 刷新与动态 import，openFile 根本不会被调用。
+    const start = performance.now();
+    await waitFor(
+      () => {
+        expect(mxcadManagerMock.openFile).toHaveBeenCalledWith(
+          expect.objectContaining({ url: EXTERNAL_REF_URL })
+        );
+      },
+      { timeout: 500 }
     );
-    // 超时路径必须取消订阅（修复前该订阅泄漏）
-    expect(subscriptions.some((cleaned) => cleaned)).toBe(true);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 
-  it('OPEN_COMPLETE 事件提前到达时不等待 3s 超时', async () => {
-    vi.useFakeTimers();
-    const { emit } = await import('@/services/drawingSession');
-    renderWithFileUrl();
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    act(() => {
-      emit(CAD_EVENTS.OPEN_COMPLETE, { fileId: 'node-1', fileName: 'a.mxweb' });
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(mxcadManagerMock.openFile).toHaveBeenCalledWith(
-      expect.objectContaining({ url: EXTERNAL_REF_URL })
-    );
-  });
-
-  it('等待期间卸载组件时清理 OPEN_COMPLETE 订阅', async () => {
+  it('卸载组件时清理 OPEN_COMPLETE 订阅（loading 兜底订阅）', async () => {
     vi.useFakeTimers();
     const { unmount } = renderWithFileUrl();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    // 此时应已建立订阅（openExternalRef 等待订阅 + loading 兜底订阅）
+    // loading 兜底订阅仍在（openExternalRef 的等待订阅已随 3s 等待一并删除）
     expect(subscriptions.length).toBeGreaterThanOrEqual(1);
     act(() => {
       unmount();
     });
-    // 修复前 openExternalRef 的订阅在卸载时泄漏（未标记清理）
     expect(subscriptions.every((cleaned) => cleaned)).toBe(true);
   });
 });

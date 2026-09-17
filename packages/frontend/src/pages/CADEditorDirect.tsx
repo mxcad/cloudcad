@@ -90,6 +90,7 @@ import { useExternalRefCompletion } from '../hooks/useExternalRefCompletion';
 import { useCollabShare } from '../hooks/useCollabShare';
 import { useFileInsert } from '../hooks/useFileInsert';
 import { useHomeInit } from '../hooks/useHomeInit';
+import { useSidebarContentReady } from '../hooks/useSidebarContentReady';
 
 export const CADEditorDirect: React.FC = () => {
   const navigate = useNavigate();
@@ -286,6 +287,14 @@ export const CADEditorDirect: React.FC = () => {
     const workId = parseInt(collabWorkIdParam, 10);
     return !isNaN(workId) && workId > 0;
   }, [collabWorkIdParam]);
+
+  // 侧边栏内容就绪门控：Tab 栏立即渲染，数据面板等引擎就绪 + 图纸打开终态
+  const contentReady = useSidebarContentReady({
+    isActive,
+    isHomeMode,
+    isCollabLink,
+    error,
+  });
 
   // 协同链接 + 未登录（游客）：未登录不能加入协同，弹出登录提示。
   // 登录后 redirect 回原 URL（handleLoginClick 保留 ?collabWorkId=9），
@@ -540,18 +549,6 @@ export const CADEditorDirect: React.FC = () => {
 
     const decodedUrl = decodeURIComponent(fileUrl);
 
-    // 等待初始文件打开完成的订阅与超时计时器（评审修复：超时/卸载均需清理，避免订阅泄漏）
-    let unsubscribeOpenComplete: (() => void) | null = null;
-    let waitTimer: ReturnType<typeof setTimeout> | null = null;
-    const clearWait = () => {
-      if (waitTimer) {
-        clearTimeout(waitTimer);
-        waitTimer = null;
-      }
-      unsubscribeOpenComplete?.();
-      unsubscribeOpenComplete = null;
-    };
-
     const openExternalRef = async () => {
       try {
         showGlobalLoading(t('正在打开外部参照...'));
@@ -568,24 +565,8 @@ export const CADEditorDirect: React.FC = () => {
           throw new Error('CAD 引擎未初始化');
         }
 
-        // 额外等待初始文件打开完成，避免 CAD 引擎报 "cannot start a new open"
-        const currentFile = mxcadManager.getCurrentFileName();
-        if (currentFile === 'empty_template.mxweb' || !currentFile) {
-          await new Promise<void>((resolve) => {
-            waitTimer = setTimeout(() => {
-              clearWait();
-              resolve();
-            }, 3000);
-            unsubscribeOpenComplete = subscribe(
-              CAD_EVENTS.OPEN_COMPLETE,
-              () => {
-                clearWait();
-                resolve();
-              }
-            );
-          });
-        }
-
+        // 无需额外等初始文件打开完成：openFile 经 enqueueOpen 排队，会在真正发起
+        // __openWebFile__ 之前等当前文档加载完成（避免引擎报 "cannot start a new open"）。
         await mxcadManager.openFile({
           url: decodedUrl,
           fileInfo: {
@@ -604,13 +585,10 @@ export const CADEditorDirect: React.FC = () => {
       } catch {
         globalShowToast(t('打开外部参照失败'), 'error');
         hideGlobalLoading();
-      } finally {
-        clearWait();
       }
     };
 
     openExternalRef();
-    return clearWait;
   }, []);
 
   // 监听文件打开完成事件，隐藏底部加载状态
@@ -681,6 +659,7 @@ export const CADEditorDirect: React.FC = () => {
             }
             onInsertFile={handleInsertFile}
             loading={loading}
+            contentReady={contentReady}
             onCollabFileLoaded={
               isCollabLink && isAuthenticated ? () => setLoading(false) : undefined
             }
