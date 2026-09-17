@@ -869,3 +869,45 @@ library/thumbnail/version-control 53 例全绿；**后端全量单测 180 suites
   可能，非用户可利用）。
 - `thumbnail.controller.ts`（16.1 已述）：`node.path` 已 `.replace(/\.\./g,'_')` 剥离，无遍历。
 → infra 模块整体干净，无需再改。
+
+## 17. mxcad save 子模块 — `copyPreloadingData` 的 `sourceFileHash` 潜在路径遍历（低危）
+
+**范围**：`mxcad/save/` 全 4 文件（`mxcad-save.service.ts`、`save-as.service.ts`、
+`save.controller.ts`、`save-mxweb-as.dto.ts`）。
+
+**逐项排查结论**：
+
+- `mxcad-save.service.ts`：`saveMxwebFile` 目标路径 = `storageManager.getFullPath(node.path)`
+  （DB 源）；`file.path` 为 multer 临时路径；`file.originalname` 仅用于 `.mxweb` 后缀判断；
+  `saveMxwebFileByHash` 的 `fileHash` 用作 `readdir` 结果的前缀过滤（`f.startsWith(fileHash) &&
+  f.endsWith('.mxweb')`，readdir 只返回 basename，`../` 匹配不到真实条目 → 安全）。**干净**。
+- `save.controller.ts`：`saveMxwebToNode` 由 `@RequireProjectPermission(CAD_SAVE)` 守卫；
+  `saveMxwebAs` 强制 `userId`（未登录 401）+ 按 targetType 分派权限（personal 校 ownerId、
+  library 校系统权限、project 校 CAD_SAVE 节点权限）。**干净**。
+- `save-mxweb-as.dto.ts`：`format` 为 `@IsIn(['dwg','dxf','mxweb'])` 白名单（故
+  `mxwebFileName = ${newNodeId}.${format}.mxweb` 无遍历）；`hash`/`fileName` 经 `readdir`
+  前缀过滤 / 节点名清洗（`createFileNode` 修复 3319fac）安全。**唯一未校验的路径拼接输入 =
+  `sourceFileHash`（仅 `@IsString() @IsOptional()`）**。
+- `save-as.service.ts` `copyPreloadingData`：`sourceFileHash` 直接进三处 `path.join`——
+  ①`path.join(uploadPath, `${sourceFileHash}.mxweb_preloading.json`)`、②`path.join(uploadPath,
+  sourceFileHash)`、③`srcFileMd5` 回落 `sourceFileHash` 后 `path.join(nodeDirectory, srcFileMd5)`。
+  攻击者（持 CAD_SAVE 权限的登录用户）可传 `../../etc` 等使路径逃逸出 `uploadPath`/
+  `nodeDirectory`。**定级低危**：受 `fs.existsSync` 门禁（须目标处已存在
+  `<traversal>.mxweb_preloading.json`/目录才可实际触发）+ 需鉴权 + 影响限于把目录复制进攻击者
+  自身节点存储；但仍属「用户输入进 `path.join` 无包含校验」的真实缺陷，与 16.1 同类。
+  `sourceNodeId` 分支的 `srcFileMd5 = sourcePreloading.srcFileMd5 || sourceNodeId` 均为服务端
+  生成值（preloading.json 由上传时服务端写入 / 节点 UUID），**安全**。
+
+**修复**：`copyPreloadingData` 的 uploads 查找分支加十六进制门禁——`sourceFileHash` 仅接受
+`/^[a-f0-9]+$/i`（合法 MD5 为 32 位十六进制，含 `/`/`\`/`.`/`..` 等非十六进制字符一律拦截）；
+不合法则 `logger.warn` 告警并跳过该分支（best-effort 复制，不阻断另存为）。对正常流程是 no-op。
+
+**回归测试**：`save-as.service.spec.ts` 新增 `copyPreloadingData — sourceFileHash 路径遍历防护`
+2 例——①`sourceFileHash='../../etc'` → 不触 `copyDirectoryContents` 且 `existsSync` 未被传入
+含 `..` 的路径（守「恶意 hash 被拦截」）；②合法十六进制 hash → 正常进入 uploads 分支并对
+`<hash>.mxweb_preloading.json` 做 `existsSync` 探测（守「勿过度拦截」）。`jest.mock('fs')` 工厂
+补 `existsSync: jest.fn()`（原 spread 自真实 fs 的 getter 不可 `spyOn` 重定义；默认 `false`，
+既有 6 例不传 `sourceFileHash` 故不受影响）。
+
+**验证**：`pnpm jest save` 3 suites / 30 tests 全绿；`pnpm type-check` 0 错；两文件 HEAD 与工作树
+均 prettier-clean（无新增漂移）。

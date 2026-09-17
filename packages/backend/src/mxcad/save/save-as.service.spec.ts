@@ -25,6 +25,7 @@ jest.mock('fs', () => {
   return {
     ...actual,
     statSync: jest.fn().mockReturnValue({ size: 1024 }),
+    existsSync: jest.fn().mockReturnValue(false),
     promises: {
       ...actual.promises,
       copyFile: jest.fn().mockResolvedValue(undefined),
@@ -265,6 +266,57 @@ describe('SaveAsService', () => {
 
       expect(result.success).toBe(false);
       expect(result.message).toBe('目标必须是文件夹');
+    });
+  });
+
+  describe('copyPreloadingData — sourceFileHash 路径遍历防护', () => {
+    it('应拒绝非十六进制 sourceFileHash（含路径分隔符），不触文件系统/复制', async () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
+      const copySpy = jest
+        .spyOn(service as any, 'copyDirectoryContents')
+        .mockResolvedValue(undefined);
+
+      await (service as any).copyPreloadingData({
+        newNodeId: 'node1',
+        nodeDirectory: '/storage/node1',
+        sourceFileHash: '../../etc',
+      });
+
+      // 恶意 hash 被十六进制门禁拦截，未进入 uploads 查找分支
+      expect(copySpy).not.toHaveBeenCalled();
+      // 未用恶意 hash 拼接任何含 .. 的路径做 existsSync
+      const calledPaths = (fs.existsSync as jest.Mock).mock.calls.map((c) =>
+        String(c[0])
+      );
+      expect(calledPaths.some((p) => p.includes('..'))).toBe(false);
+    });
+
+    it('合法十六进制 hash 正常进入 uploads 查找分支（勿过度拦截）', async () => {
+      (fs.existsSync as jest.Mock).mockImplementation((p: any) =>
+        String(p).endsWith('.mxweb_preloading.json')
+      );
+      (fs.promises.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify({
+          images: [],
+          externalReference: [],
+          tz: false,
+          src_file_md5: 'abc123',
+        })
+      );
+
+      await (service as any).copyPreloadingData({
+        newNodeId: 'node1',
+        nodeDirectory: '/storage/node1',
+        sourceFileHash: 'abc123def456',
+      });
+
+      // 合法 hash 进入分支：对 <hash>.mxweb_preloading.json 做了 existsSync 探测
+      const calledPaths = (fs.existsSync as jest.Mock).mock.calls.map((c) =>
+        String(c[0])
+      );
+      expect(
+        calledPaths.some((p) => p.endsWith('.mxweb_preloading.json'))
+      ).toBe(true);
     });
   });
 });

@@ -450,7 +450,11 @@ export class SaveAsService {
     let hasData = false;
 
     // 1) 从 uploads 目录查找（CAD 编辑器公开场景）
-    if (sourceFileHash) {
+    // 路径遍历防护：sourceFileHash 来自客户端（DTO 仅 @IsString，无格式校验），
+    // 仅接受十六进制哈希串；含路径分隔符/.. 等一律跳过并告警，防 path.join(uploadPath, …)
+    // 与 path.join(nodeDirectory, srcFileMd5)（srcFileMd5 回落 sourceFileHash）逃逸出
+    // uploads/nodeDirectory。合法 MD5 为 32 位十六进制，此校验对正常流程是 no-op。
+    if (sourceFileHash && /^[a-f0-9]+$/i.test(sourceFileHash)) {
       try {
         const uploadPath =
           this.configService.get('mxcadUploadPath', { infer: true }) ||
@@ -489,6 +493,10 @@ export class SaveAsService {
           `[copyPreloadingData] 从 uploads 复制失败: ${err.message}`
         );
       }
+    } else if (sourceFileHash) {
+      this.logger.warn(
+        `[copyPreloadingData] 非法 sourceFileHash（非十六进制），跳过外部参照复制: ${sourceFileHash}`
+      );
     }
 
     // 2) 从源节点存储查找（文件系统场景）
