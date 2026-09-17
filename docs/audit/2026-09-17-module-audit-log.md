@@ -159,7 +159,7 @@ permission-cache.service.ts / context-permission.strategy.ts / store-permission.
 
 **验证**：spec 新增 2 例——`findUnique` 返回 null 时拒绝、抛异常时拒绝（5/5 绿）。
 
-**提交**：见本节末。
+**提交**：a855800（已 push）。
 
 **审查无缺陷项**：
 - `permission.service.ts`：单查/批量查都走 `getRolePermissions`（含继承），语义一致；
@@ -171,3 +171,62 @@ permission-cache.service.ts / context-permission.strategy.ts / store-permission.
   未处理 error 事件崩进程）；失效事件带 5s 时效防循环；`parseInt(userId)` 对 UUID
   得 NaN，但 set/delete 两侧同变换、键自洽，非缺陷。
 - `store-permission.strategy.ts`：薄委托，store 缺失返回 null 走默认路径，正确。
+
+---
+
+## 4. backend auth 核心
+
+### 4.1 无密码账号（password=null）密码登录抛 500，破坏防枚举（已修复）
+
+**现象**：`UserRecord.password: string | null`（微信注册等无密码账号为 null）。
+`login.service.ts` 的 `bcrypt.compare(password, user.password)` 在 hash 为 null 时
+**reject**（bcryptjs 实测：`Illegal arguments: string, object`）→ 未处理异常 →
+500 Internal Server Error，而非该文件精心设计的通用 401「账号或密码错误」。
+
+**为何是缺陷**：
+1. 功能面：攻击者/用户用密码登录一个微信账号得到 500（而非 401），错误语义错误；
+2. 安全面：该文件多处注释强调防枚举（禁用/不存在/密码错误统一文案），500 vs 401
+   的差异让攻击者能区分「该账号是无密码账号」——枚举面被破坏。
+
+**根因**：写密码校验时未考虑 `password: null` 合法值（类型上允许）。
+
+**修复**：`login.service.ts` 与 `password.service.ts`（`validateUser`，同缺陷类，
+契约公开方法）改为 `user.password ? await bcrypt.compare(...) : false`——无密码账号
+走「密码错误」同路径（失败计数 + 通用 401 / 返回 null）。
+
+**同缺陷类排查（不修项及理由）**：
+- `admin-auth.service.ts:153`：同一 `findLoginUserIncludingDeleted` 查询，但 compare
+  之前有角色门禁（非 ADMIN 先拒绝），能到 compare 的只有 ADMIN（管理员必有密码），
+  null 仅可能来自数据异常，且其审计/防枚举路径对 null 无额外暴露面 → 不改，保持手术性。
+- `user-password.service.ts changePassword`：已用 `if (hasPassword)` 守卫，无缺陷。
+- `users.service.ts validatePassword` / `auth-facade validateUser` 透传链：生产无调用方
+  （TOB 扩展点），底层 `password.service.ts` 已修，透传层无独立逻辑。
+
+**验证**：
+- login.service.spec 新增「无密码账号密码登录：不抛 500，走防枚举通用 401 并计数」
+  （断言 `bcrypt.compare` 未被调用 + `recordLoginFailure` 被调用 + 不发 token）；
+- password.service.spec 新增 validateUser 两例（null 密码返回 null 且不调 compare；
+  正常密码返回去密码用户）；
+- 两 spec 22/22 绿；backend `tsc --noEmit` 0 错。
+
+**提交**：38d9cdb（已 push）。
+
+**auth 核心审查无缺陷项（已读）**：
+- `jwt.strategy.executor.ts`：有 token 强制 JWT 验证不降级 session（有意设计，防陈旧
+  token 静默换 session）；session 回退路径查黑名单 + DB 状态 + 实时角色，fail-closed；
+  抓取令牌认证仅对 @ScrapeAuth 端点生效且需配置 SCRAPE_TOKEN。
+- `jwt.strategy.ts`：token 类型/黑名单/用户黑名单/状态/MFA 强制/口令到期六道检查，
+  异常一律 401/403 不泄露；JWT user 对象里 nickname/phone 等硬编码 null 字段经 grep
+  确认无消费方（profile 走 DB 查询），安全。
+- `refresh-token.strategy.ts` / `auth-token.service.ts`：refresh 走 DB 存储校验 +
+  轮换（旧 token 删除）+ 上限 10 个/用户/client；logout 按 client_id 删 refresh +
+  access 进黑名单至过期 + 销毁 session；`client_id` 机制对 exe 设备流自洽
+  （设备流自签含 client_id 的 token 并入库），web 流恒 null 路径，行为一致。
+- `token-blacklist.service.ts`：Redis 故障时 `isBlacklisted`/`isUserBlacklisted`
+  fail-closed（返回 true 拒绝）；SCAN 迭代不用 KEYS。
+- `login.service.ts` 其余：限流+失败锁定前置、先认证后注销恢复副作用、防枚举统一
+  文案、ADMIN 禁走普通入口、冷静期自动恢复仅 SELF 注销——逻辑正确。
+- **观察项（不修，记录）**：`blacklistUserTokens`（用户级黑名单写入）生产无调用方，
+  用户禁用实际走 DB status=非ACTIVE 路径（jwt.strategy 每请求查），用户黑名单检查
+  恒 false 属遗留防御；`client_type: 'exe'` 只写不读（预留字段，exe 客户端可能解码
+  自用，不删）。
