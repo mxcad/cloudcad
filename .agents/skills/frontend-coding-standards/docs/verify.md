@@ -32,6 +32,31 @@ pnpm prisma generate    # 重新生成 client
 pnpm type-check         # 验证 Prisma v7 类型重命名
 ```
 
+## 重复实现扫描（横切平台能力门禁）
+
+新增工具函数或 Hook 前，先按**底层 API 名**确认是否已有实现。以下命令应返回 0 行（出口文件已排除）：
+
+```bash
+cd packages/frontend
+grep -rn "navigator\.clipboard\|document\.execCommand" src --include="*.ts" --include="*.tsx" \
+  | grep -v "\.spec\.\|\.test\.\|api-sdk/" \
+  | grep -v "clipboard\.ts"
+```
+
+有命中 = 存在绕过唯一出口的内联调用，必须改为调用方（`src/lib/clipboard.ts` / `src/hooks/useCopy.ts`）。**门禁必须带"牙齿"**：去掉 `grep -v "clipboard\.ts"` 应能看到命中（本仓为 5 行），否则说明扫描本身是空匹配、不可信。
+
+其他横切能力按同样方式建门禁：`document.execCommand`、`window.open`（下载）、`Intl.DateTimeFormat`、`localStorage.getItem`（业务态）、`new Blob` + `URL.createObjectURL`。
+
+## 测试卫生
+
+| 坑 | 说明 |
+|----|------|
+| `Object.defineProperty` stub 不被 `vi.restoreAllMocks()` 还原 | happy-dom 的 `navigator.clipboard` 是**原型上的 accessor**，`delete navigator.clipboard` 删不掉；必须在实例上 `Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true, writable: true })` 遮蔽它。这类 stub 会在用例间泄漏，须在模块加载时快照 `Object.getOwnPropertyDescriptor`、在 `afterEach` 显式还原（还原时区分：原描述符存在则 `defineProperty` 回去，不存在则 `delete`） |
+| `vi.waitFor` 与 `vi.useFakeTimers()` 不兼容 | 改用 `act(() => vi.advanceTimersByTime(ms))` 后直接断言 |
+| 计时器未清理 | 用 fake timers 的用例结束要 `vi.useRealTimers()`，否则污染同文件后续用例 |
+| hook 测试里 `act` 的导入来源 | 从 `@testing-library/react` 导入，不是 `react` |
+| `let api` 捕获式渲染 | React 19 下观察不到 state 更新；改用 `renderHook(() => useHook(options))` + `result.current` |
+
 ## 测试覆盖率阈值
 
 | 优先级 | 文件 | 阈值 |

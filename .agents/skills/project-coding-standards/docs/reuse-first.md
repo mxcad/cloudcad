@@ -14,6 +14,19 @@
 | 类型定义 | `src/types/` | 检查同名/相似类型是否已存在 |
 | Store | `src/stores/` | 检查已有 store 是否覆盖当前状态 |
 | API 调用函数 | `src/api/` 或 `src/api-sdk/` | 检查 SDK 是否已生成对应端点 |
+| **横切平台能力** | PC `src/lib/` + `src/hooks/`；移动 `src/utils/` + `src/components/` | **按底层 API 名搜索**，见下方专节 |
+
+### 横切平台能力（最容易漏掉的一类）
+
+上表按「我要建一个 X 组件/函数」来触发搜索，但**内联浏览器/运行时 API 不会触发**——写 `navigator.clipboard.writeText(...)` 的人脑子里没有"我在造一个函数"这件事，清单永远不会弹出来。这一类能力的特征：每个调用点都只有 3~8 行，看起来"太小不值得抽"，于是复制粘贴。
+
+**规则**：
+
+1. **先搜底层 API 名，而不是先想"我要建个什么"**。要写 `navigator.clipboard` 就 `grep -rn "navigator\.clipboard" src`；要写 `document.execCommand` 就先 `grep` 它。已有命中 → 走已有出口。
+2. **出口位置固定**：PC 纯函数进 `src/lib/`、有状态封装进 `src/hooks/`；移动纯函数进 `src/utils/`、UI 兜底进 `src/components/`。
+3. **降级链只允许写在出口文件里**。调用方只消费结果（成功/失败/需要人工兜底），不得各自 try/catch 后自己决定下一步。
+4. **≥3 份相同实现即缺陷**，收敛到唯一出口、其余改为调用方——不等"以后再抽"。
+5. **实例**：clipboard 曾散在 10 个文件 / 15 个调用点 / 4 套互不相同的降级策略，其中 1 处 `.catch(() => {})` 完全静默（用户点复制没有任何反馈）、1 处未检查 `document.execCommand` 返回值就提示「已复制」（假成功）。已收敛为 `frontend/src/lib/clipboard.ts` + `hooks/useCopy.ts`、`frontend_mobile/src/utils/clipboard.ts` + `components/ShareLinkSheet.vue`。
 
 ## 后端搜索清单
 

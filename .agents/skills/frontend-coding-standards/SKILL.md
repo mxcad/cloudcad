@@ -7,7 +7,7 @@ description: 前端编码规范 — 主题系统、Z-Index 层级、组件复用
 
 处理前端代码时，必须遵守以下前端特有规范。同时自动遵守 `project-coding-standards` 的全部公共规则。
 
-**核心原则**：先查已有基础设施，再动手。所有视觉元素（颜色、z-index、字体、间距）必须使用 CSS 变量/Token，禁止硬编码。
+**核心原则**：先查已有基础设施，再动手。所有视觉元素（颜色、z-index、字体、间距）必须使用 CSS 变量/Token，禁止硬编码。**这条"先查"同样覆盖功能能力**（复制/剪贴板、下载、日期格式化、权限判断…）：先 `grep` 底层 API 名，再决定是自己写还是走包内唯一出口，详见 `project-coding-standards` → `docs/reuse-first.md` 的「横切平台能力」专节。
 
 **地基 ADR 必读**：前端开发地基由 ADR-0028~0034 沉淀（依赖分层/模块入口/状态归属/可替换/样式/拆分/fetch 治理），涉及对应场景先读 ADR 再动手，详见 `packages/frontend/AGENTS.md` 的地基 ADR 索引。
 
@@ -24,6 +24,7 @@ AI 应根据当前任务选择阅读相关文档：
 | 写任何样式 / CSS / 组件 | `docs/theme-system.md`（ADR-0032） |
 | 处理层级、弹窗、Tooltip、Toast | `docs/z-index-rules.md`（ADR-0032） |
 | 新增 UI 组件 | `docs/component-reuse.md` |
+| 新增工具函数 / Hook / 任何横切平台能力（复制、下载、格式化…） | `project-coding-standards` → `docs/reuse-first.md`（按底层 API 名搜索，出口位置固定） |
 | 前端 API 调用 / 类型定义 / 裸 fetch 治理 | `docs/api-contracts.md`（ADR-0034） |
 | 权限相关 UI | `docs/permission-system.md` |
 | 任何前端反模式检查 | `docs/anti-patterns.md` |
@@ -163,6 +164,8 @@ pnpm dlx shadcn@latest add <component>
 | 深路径导入已有入口的模块子文件（如 `services/mxcadManager/mxcadSave`） | 从模块目录入口导入，见 `docs/module-entry.md` |
 | 页面/组件目录重复实现共享逻辑 | 提升 `hooks/` 根共享，见 `docs/module-entry.md` |
 | 前端照搬后端「接口 + DI token + @Optional()」抽象 / 造注册表、插件系统 | 默认不抽象，配置优先，见 `docs/abstraction-rule.md` |
+| 业务代码里直接内联 `navigator.clipboard` / `document.execCommand` | 走唯一出口 `src/lib/clipboard.ts`（+ `src/hooks/useCopy.ts`），调用方只消费结果。降级链只许写在出口文件里 |
+| 同一能力在 ≥3 个文件重复实现（相同的降级链、逐字节相同的 helper、相同的格式化） | ≥3 份即缺陷：收敛到唯一出口、副本改为调用方；写之前先按底层 API 名 `grep`，见 `project-coding-standards` → `docs/reuse-first.md` |
 
 ## 文档引用
 

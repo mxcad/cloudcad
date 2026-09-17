@@ -319,7 +319,10 @@ describe('ShareManagePage', () => {
         `${window.location.origin}/s/token-valid`
       );
     });
-    expect(screen.getByText(t('链接已复制'))).toBeInTheDocument();
+    // toast 经 useCopy → globalShowToast → CustomEvent 异步派发，需用 findByText 等待
+    expect(
+      await screen.findByText(t('链接已复制'))
+    ).toBeInTheDocument();
   });
 
   // ── 3. 撤销分享 → 列表即时更新 ──

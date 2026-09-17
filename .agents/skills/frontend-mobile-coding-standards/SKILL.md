@@ -19,6 +19,7 @@ description: 移动端编码规范 — Vue 3 + Vite 4 + vant + VoerkaI18n 移动
 |------|-------------|
 | i18n 国际化 | `docs/i18n.md` |
 | 弹窗开发 | `docs/popup-patterns.md` |
+| 新增工具函数 / 任何横切平台能力（复制、下载、格式化…） | `project-coding-standards` → `docs/reuse-first.md`（按底层 API 名搜索，出口位置固定） |
 | 提交前检查 | `docs/verify.md` |
 
 ## 四条关键规则（对齐前端地基，详见 `packages/frontend_mobile/AGENTS.md`）
@@ -44,6 +45,12 @@ description: 移动端编码规范 — Vue 3 + Vite 4 + vant + VoerkaI18n 移动
 - 所有中文 UI 文本必须 `t()` 包裹；变量用 `t(msg, vars)` 第二参数传，禁止 `.replace()` 插值
 - `translates/messages/default.json` 自动生成勿手编；自定义翻译写 `mxUIConfig.json`
 - `library: false`（独立模式），compile 后确认未被覆盖
+
+**i18n 已知坑**：
+
+- **`extract` 之后必须跟着跑 `compile`**，否则 `messages/*.ts` 与 `idMap.json` 停留在旧快照，约 973/1195 个引用文件在 type-check 里直接报红——看起来像"改坏了全局"，其实只是没编译。三步 `extract → i18nAutoTranslate → compile` 一个都不能省。
+- **手写 `mxUIConfig.json` 的 `$id` 必须避开 `default.json` 已用区间**：`$id` 撞号会让 `extract` 崩在 `ReferenceError: logsets is not defined`（工具内部按 id 建索引，撞号时索引为 undefined）。新增前先 `grep` 两边 json 的最大 id，接着往后编。
+- **备份文件会被 glob 吃掉**：翻译配置 glob 是 `["*.json", "!*.bak*.json"]`，备份一律带 `.bak` 后缀（`default.json.bak`），否则备份里的旧条目会被当正式翻译参与编译。
 
 ### ④ 样式 token
 
@@ -255,6 +262,8 @@ init()       → 只需调用一次（模块级守卫）
 | 硬编码色值 | 使用 CSS 变量 |
 | 不处理 i18n | 所有中文用 `t()` 包裹 |
 | 直接调用 SDK `joinWork` | 使用 `useCooperate` 封装 |
+| 业务代码里直接内联 `navigator.clipboard` / `document.execCommand` | 走唯一出口 `src/utils/clipboard.ts`；两级降级都失败时弹出 `components/ShareLinkSheet.vue`（只读输入框）让用户手动选中复制，**不要** `showToast(url)` —— toast 无法被选中，等于没有兜底 |
+| 同一能力在 ≥3 个文件重复实现 | ≥3 份即缺陷：收敛到唯一出口、副本改为调用方（实例：`ShareManagePage.vue` 曾有 3 段逐字节相同的 clipboard 降级块，已收敛为 `copyLinkWithFallback()`）；写之前先按底层 API 名 `grep`，见 `project-coding-standards` → `docs/reuse-first.md` |
 | 忽略移动端适配 | 使用 rem 单位 + CSS 变量 |
 
 ## 测试与验证

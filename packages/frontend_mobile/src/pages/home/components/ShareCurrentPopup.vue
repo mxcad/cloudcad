@@ -9,6 +9,8 @@
 import { ref, watch, computed } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import QRCode from 'qrcode'
+import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
+import { copyText } from '@/utils/clipboard'
 import { t } from '@/languages'
 import { useAuthState } from '@/composables/useAuthState'
 import {
@@ -150,23 +152,19 @@ async function handleCreate() {
   }
 }
 
+const showLinkSheet = ref(false)
+const linkSheetUrl = ref('')
+
 async function copyLink() {
   if (!created.value) return
   const url = created.value.url || shareUrl(created.value.token)
-  await copyText(url)
-}
-
-async function copyText(text: string) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    try {
-      await navigator.clipboard.writeText(text)
-      showToast(t('已复制链接'))
-      return
-    } catch {
-      // 降级：直接展示链接文本
-    }
+  const result = await copyText(url)
+  if (result === 'failed') {
+    linkSheetUrl.value = url
+    showLinkSheet.value = true
+    return
   }
-  showToast(text)
+  showToast(t('已复制链接'))
 }
 
 async function handleRevoke(item: FileShareItem) {
@@ -317,6 +315,8 @@ function onClose() {
       </div>
     </div>
   </van-popup>
+
+  <ShareLinkSheet v-model:show="showLinkSheet" :url="linkSheetUrl" />
 </template>
 
 <style scoped lang="scss">

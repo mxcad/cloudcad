@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { t } from '@/languages';
 import { showToast } from 'vant';
+import ShareLinkSheet from './ShareLinkSheet.vue';
+import { copyText } from '@/utils/clipboard';
 import type { Work } from '../composables/useCooperate';
 
 export interface WorkDisplay {
@@ -30,12 +33,19 @@ const emit = defineEmits<{
   (e: 'exit'): void;
 }>();
 
-function handleShare() {
-  navigator.clipboard.writeText(props.display.shareUrl).then(() => {
-    showToast(t('分享链接已复制'));
-  }).catch(() => {
-    showToast(t('复制失败'));
-  });
+const showLinkSheet = ref(false);
+const linkSheetUrl = ref('');
+
+async function handleShare() {
+  const url = props.display.shareUrl;
+  const result = await copyText(url);
+  // 两级降级都失败：弹出只读输入框让用户手动选中复制
+  if (result === 'failed') {
+    linkSheetUrl.value = url;
+    showLinkSheet.value = true;
+    return;
+  }
+  showToast(t('分享链接已复制'));
 }
 </script>
 
@@ -44,6 +54,8 @@ function handleShare() {
     class="work-card"
     :class="{ 'work-card-active': display.isJoined }"
   >
+    <ShareLinkSheet v-model:show="showLinkSheet" :url="linkSheetUrl" :title="t('分享协同')" />
+
     <!-- 主体行 -->
     <div class="card-main">
       <div class="card-info">

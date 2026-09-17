@@ -8,6 +8,8 @@
  * 新建分享 → 底部弹窗（文件选择 + 有效期 + 创建 + 二维码 + 复制）
  */
 import { ref, watch, computed } from 'vue'
+import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
+import { copyText } from '@/utils/clipboard'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import { shareControllerListShares, shareControllerRevokeShare, shareControllerCreateShare, shareControllerUpdateShare, projectControllerGetPersonalSpace } from '@cloudcad/api-sdk/sdk.gen'
@@ -219,13 +221,26 @@ async function openQrPopup(url: string) {
   showQrPopup.value = true
 }
 
-function copyQrUrl() {
-  if (!qrPopupUrl.value) return
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(qrPopupUrl.value).then(() => showToast(t('已复制链接')))
-  } else {
-    showToast(qrPopupUrl.value)
+const showLinkSheet = ref(false)
+const linkSheetUrl = ref('')
+
+/**
+ * 复制链接：两级降级都失败时弹出只读输入框，让用户手动选中复制。
+ * 原降级是 showToast(url) —— toast 无法被选中复制，等于没有兜底。
+ */
+async function copyLinkWithFallback(url: string) {
+  if (!url) return
+  const result = await copyText(url)
+  if (result === 'failed') {
+    linkSheetUrl.value = url
+    showLinkSheet.value = true
+    return
   }
+  showToast(t('已复制链接'))
+}
+
+function copyQrUrl() {
+  void copyLinkWithFallback(qrPopupUrl.value)
 }
 
 function onShareClick(item: ShareItem) {
@@ -253,11 +268,7 @@ function onActionSheetSelect(action: { name: string; className?: string }) {
   if (action.name === t('打开')) {
     window.open(url, '_blank')
   } else if (action.name === t('复制链接')) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(() => showToast(t('已复制链接')))
-    } else {
-      showToast(url)
-    }
+    void copyLinkWithFallback(url)
   } else if (action.name === t('修改有效期')) {
     openRenewPopup(item)
   } else if (action.name === t('查看二维码')) {
@@ -409,12 +420,7 @@ async function handleCreateShare() {
 async function copyCreatedLink() {
   if (!createdShareInfo.value) return
   const url = createdShareInfo.value.url || shareBaseUrl(createdShareInfo.value.token)
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(url)
-    showToast(t('已复制链接'))
-  } else {
-    showToast(url)
-  }
+  void copyLinkWithFallback(url)
 }
 
 function closeCreateSharePopup() {
@@ -449,6 +455,8 @@ watch(
 
 <template>
   <div class="subpage">
+    <ShareLinkSheet v-model:show="showLinkSheet" :url="linkSheetUrl" />
+
     <van-nav-bar :title="t('分享管理')" left-arrow @click-left="() => router.back()" />
 
     <van-search v-model="keyword" :placeholder="t('搜索分享')" shape="round" />
