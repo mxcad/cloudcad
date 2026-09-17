@@ -704,30 +704,53 @@ async function prepareDeployStore(variant = 'oss') {
   const storeName = '.pnpm-store-deploy';
   const storePath = path.join(PROJECT_ROOT, storeName);
 
-  // Docker 构建阶段已通过 --store-dir /app/.pnpm-store-deploy 安装了完整依赖，
-  // node_modules 和 store 都已就绪。此处只验证 store 完整性 + 补充下载
-  // 全平台 Prisma 引擎二进制，绝不在容器内重装依赖——
-  // 重装会 cleanNodeModules + 用错误 store 增量安装，产出残缺 store（历史教训）。
+  // store 来源分流：
+  //   - Linux 通道：容器内由 Dockerfile `pnpm install --store-dir /app/.pnpm-store-deploy`
+  //     构建期写好，本函数只校验，不重装（重装会 cleanNodeModules + 用错误 store
+  //     增量安装，产出残缺 store——历史教训）；缺失或为空直接失败。
+  //   - Windows 本机直打：无容器镜像可复用，首次打包时由本函数联网创建（pnpm install
+  //     --store-dir 落盘，无 cleanNodeModules），随后进入与缺包补齐相同的离线复验门禁。
+  //
+  // 调用顺序：本函数在 buildProject 之后执行（packDeploy 步骤 2/3），因为 --prod install
+  // 会剔除整个 workspace 的 devDependencies，先构建可保住 tsc/vite；devDeps 由 finally 的
+  // restoreNodeModules 在打包结束后恢复。
 
-  // 1. 验证 Docker store 存在且完整（数量 + 离线解析双重校验）
+  let storeCheck;
+
+  // 1. store 缺失或为空：Windows 本机直打首次联网创建（上次中断可能留下空目录，同样走创建）
   if (!fs.existsSync(storePath)) {
-    error(`${storeName} 不存在——Docker 构建可能未正确安装依赖`);
-    throw new Error('Docker store 缺失');
+    if (os.platform() !== 'win32') {
+      error(`${storeName} 不存在——Docker 构建可能未正确安装依赖`);
+      throw new Error('Docker store 缺失');
+    }
+    log(`⚠ ${storeName} 不存在，首次联网创建部署 store（约需一次生产依赖下载）...`);
+  } else {
+    const preCheck = verifyDeployStore(storePath);
+    if (!preCheck.valid && preCheck.reason === 'store/v3/files 目录不存在') {
+      if (os.platform() !== 'win32') {
+        error(`${storeName} ${preCheck.reason}——Docker 构建可能未正确安装依赖`);
+        throw new Error('Docker store 缺失');
+      }
+      log(`⚠ ${storeName} 为空（上次中断残留），联网重新创建...`);
+    }
   }
-  const storeCheck = verifyDeployStore(storePath);
+
+  // 2. 离线解析预演校验 + 缺包自动补齐（机制防漏，store 不存在/为空时即为首次创建）
+  //    verifyDeployStore 只数数量（>=100）测不出"数量够但缺个别包"（如 pino-roll）。
+  //    ensureDeployStoreComplete 用 --offline 让 pnpm 逐个判定生产依赖：缺包时按平台分流
+  //    （Windows 联网补齐 / Linux 直接失败），补齐后离线复验，仍缺则出包失败——
+  //    缺依赖在打包机就被拦截，不泄漏到部署机。
+  ensureDeployStoreComplete(storePath, variant, storeName);
+
+  // 3. 数量门禁（>=100 个包）。放在补齐/创建完成之后判定，避免空 store 被误报「不完整」。
+  storeCheck = verifyDeployStore(storePath);
   if (!storeCheck.valid) {
     error(`${storeName} ${storeCheck.reason}`);
-    throw new Error('Docker store 不完整');
+    throw new Error('部署 store 不完整');
   }
   log(`✓ ${storeName} 已就绪 (${storeCheck.count} 个包)`);
 
-  // 1.5 离线解析预演校验 + 缺包自动补齐（机制防漏）
-  //     verifyDeployStore 只数数量（>=100）测不出"数量够但缺个别包"（如 pino-roll）。
-  //     ensureDeployStoreComplete 用 --offline 让 pnpm 逐个判定生产依赖，缺包自动联网补齐，
-  //     补齐后离线复验，仍缺则出包失败——缺依赖在打包机就被拦截，不泄漏到部署机。
-  ensureDeployStoreComplete(storePath, variant, storeName);
-
-  // 2. 生成本地 Prisma Client（buildProject 已生成过，此处幂等）
+  // 4. 生成本地 Prisma Client（buildProject 已生成过，此处幂等）
   //    PRISMA_CLI_BINARY_TARGETS 确保下载所有平台的 schema engine（离线用）
   const PRISMA_BINARY_TARGETS = [
     'windows',
@@ -751,7 +774,7 @@ async function prepareDeployStore(variant = 'oss') {
     env,
   });
 
-  // 3. 预置 schema-engine 二进制到包内 runtime/prisma-engines/（离线 migrate deploy 用）
+  // 5. 预置 schema-engine 二进制到包内 runtime/prisma-engines/（离线 migrate deploy 用）
   //    根因：@prisma/engines 包目录含当前平台 schema-engine（postinstall 下载），
   //    但 pnpm store 的 manifest 未引用该二进制（reconstruct 后包目录缺失），
   //    prisma CLI 经 getEnginesPath() 在包目录找不到 → 回退联网下载 → 断网 migrate deploy 失败。
