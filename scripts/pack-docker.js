@@ -118,6 +118,9 @@ const INCLUDE_LIST = [
   { src: 'packages/contracts/src', dest: 'packages/contracts/src', isDir: true },
   { src: 'packages/contracts/package.json', dest: 'packages/contracts/package.json' },
   { src: 'packages/contracts/tsconfig.json', dest: 'packages/contracts/tsconfig.json' },
+
+  // 引擎执行层（mxcadAssembly 进程组 spawn/杀树，0 运行时依赖，容器内构建）
+  { src: 'packages/engine-exec', dest: 'packages/engine-exec', isDir: true },
   
   // 前端源码
   { src: 'packages/frontend/src', dest: 'packages/frontend/src', isDir: true },

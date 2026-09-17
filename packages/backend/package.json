@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "dev": "node node_modules/@nestjs/cli/bin/nest.js start --watch",
-    "prebuild": "pnpm --filter @cloudcad/db build && pnpm --filter @cloudcad/contracts build",
+    "prebuild": "pnpm --filter @cloudcad/db build && pnpm --filter @cloudcad/contracts build && pnpm --filter @cloudcad/engine-exec build",
     "build": "pnpm prebuild && node node_modules/@nestjs/cli/bin/nest.js build && pnpm generate:swagger && pnpm build:seed",
     "build:seed": "tsc -p tsconfig.seed.json",
     "generate:swagger": "tsx scripts/generate-swagger.js",
@@ -50,6 +50,7 @@
     "@alicloud/tea-util": "^1.4.11",
     "@cloudcad/contracts": "workspace:*",
     "@cloudcad/db": "workspace:*",
+    "@cloudcad/engine-exec": "workspace:*",
     "@cloudcad/mx-version-tool": "workspace:*",
     "@nestjs-modules/ioredis": "^2.0.2",
     "@nestjs-modules/mailer": "^2.0.2",

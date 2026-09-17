@@ -515,16 +515,18 @@ async function step2_InstallDeps() {
   };
 
   // 只安装后端生产依赖（部署包只包含后端依赖）
-  // 注意：必须把 @cloudcad/db、@cloudcad/contracts、@cloudcad/conversion-service 也纳入 filter ——
+  // 注意：必须把 @cloudcad/db、@cloudcad/contracts、@cloudcad/engine-exec、
+  // @cloudcad/conversion-service 也纳入 filter ——
   // pnpm --filter backend 不会安装 workspace 依赖（@cloudcad/db）自己的依赖
   // （如 @prisma/client），导致 packages/db/node_modules 为空、运行时
   // require('@prisma/client/runtime/client') 失败（MODULE_NOT_FOUND）；
-  // conversion-service 现依赖 @cloudcad/contracts（ADR-0069），漏掉它则该服务起不来、
-  // 健康检查 3100 端口无监听，本验证会正确判失败。
+  // engine-exec 与 conversion-service 现依赖 @cloudcad/contracts（ADR-0069），
+  // 漏掉它们则 require 解析失败（backend 转换路径炸 / 3100 端口无监听），
+  // 本验证会正确判失败。
   // 与 setup-offline.js runPnpmInstallOffline 保持一致。
   log(
     'info',
-    '运行 pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service install --offline --prod...'
+    '运行 pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --offline --prod...'
   );
 
   const installResult = spawnSync(
@@ -537,6 +539,8 @@ async function step2_InstallDeps() {
       '@cloudcad/db',
       '--filter',
       '@cloudcad/contracts',
+      '--filter',
+      '@cloudcad/engine-exec',
       '--filter',
       '@cloudcad/conversion-service',
       'install',

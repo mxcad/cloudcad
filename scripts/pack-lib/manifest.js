@@ -83,6 +83,17 @@ function getSharedEntries() {
       src: 'packages/contracts/package.json',
       dest: 'packages/contracts/package.json',
     },
+    // 引擎执行层（mxcadassembly 进程组 spawn/杀树/超时语义，0 运行时依赖）
+    // backend 进程内转换与 conversion-service 共同 require，两侧 dist 都必需
+    {
+      src: 'packages/engine-exec/dist',
+      dest: 'packages/engine-exec/dist',
+      isDir: true,
+    },
+    {
+      src: 'packages/engine-exec/package.json',
+      dest: 'packages/engine-exec/package.json',
+    },
     // 前端（构建产物；升级包配置经 renameFrontendConfigFiles 改名 .example）
     {
       src: 'packages/frontend/dist',

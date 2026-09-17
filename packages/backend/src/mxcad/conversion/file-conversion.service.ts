@@ -32,7 +32,7 @@ import {
 } from "../../common/interfaces/conversion-access-guard";
 import { FileTypeDetector } from "../utils/file-type-detector";
 import { VipFeatureRequiredException } from "../../vip/errors/vip-feature-required.error";
-import { runMxcadAssembly } from "./mxcad-exec";
+import { runMxcadAssembly } from "@cloudcad/engine-exec";
 import {
 	IFunctionExecutor,
 	type ConversionTask,
@@ -40,40 +40,13 @@ import {
 import {
 	ENGINE_INPUT_FIELDS,
 	buildEngineParams,
+	isTransientFailure,
 	parseEngineOutput,
 } from "@cloudcad/contracts";
 import type {
 	ConversionRequest,
 	EngineInputField,
 } from "@cloudcad/contracts";
-
-/**
- * 转换服务（conversion-service 模式）错误文案中的环境性失败标记。
- * 与 packages/conversion-service mxcad/runner.ts 抛出的 ConversionExecutionError 文案对齐：
- * - '转换超时'（timedOut）
- * - '转换进程被终止 (<signal>)'（signal 非空）
- * - 'mxcadassembly 进程未正常启动（stderr: ...）'（exitCode=null）
- * - '转换输出格式错误'（_parseOutput 解析失败，code=1）
- * 以上均属环境性失败，重试可能成功。
- */
-const TRANSIENT_ERROR_MARKERS = [
-	"转换超时",
-	"进程被终止",
-	"进程未正常启动",
-	"输出格式错误",
-	"timed out",
-];
-
-/**
- * 判定转换服务错误文案是否为瞬态失败。
- * 转换服务只回错误字符串、不透传失败性质，故按文案归类；
- * 无法判定时按瞬态处理——标记 transient:true 供上层区分失败性质，重试不会有害；
- * 比把慢转换误判成确定性内容失败更安全。
- */
-function isTransientConversionError(message?: string): boolean {
-	if (!message) return true;
-	return TRANSIENT_ERROR_MARKERS.some((m) => message.includes(m));
-}
 
 /**
  * 从引擎原始输出中解析成功结果；无完整 {"code":0} JSON 时返回 null。
@@ -648,12 +621,16 @@ export class FileConversionService implements IMxcadConversionService {
 		this.logger.error(
 			`转换服务失败: ${taskType} taskId=${taskId} ${result.error}`,
 		);
-		// 转换服务只回错误字符串、不透传失败性质，按文案归类（见 isTransientConversionError）。
+		// 失败性质由转换服务结构化下发（errorCategory），不再按错误文案反推——
+		// 此前两侧靠中文字符串匹配，marker 是「进程被终止」而 runner 抛「转换进程被终止」，
+		// 靠 includes 子串侥幸命中，runner 改文案即静默翻转 transient 语义。
+		// errorCode 缺省回落 -1（与旧实现一致），缺分类按瞬态处理。
+		const transient = isTransientFailure(result.errorCategory);
 		return {
 			isOk: false,
-			ret: { code: -1, message: result.error },
+			ret: { code: result.errorCode ?? -1, message: result.error },
 			error: result.error,
-			transient: isTransientConversionError(result.error),
+			transient,
 		};
 	}
 

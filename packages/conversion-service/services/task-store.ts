@@ -23,6 +23,11 @@ export interface TaskRecord {
   completedAt: string | null;
   result: unknown;
   error: unknown;
+  // 失败性质分类（@cloudcad/contracts 的 ConversionFailureCategory），随任务状态过线
+  // 给 backend 判定「可重试 vs 确定性失败」；error 只存人可读文案，不作分类依据。
+  errorCategory?: string | null;
+  // 引擎返回码（仅 content-error 时为非 0）
+  errorCode?: number | null;
   callbackUrl: string | null;
   // 内容身份（content_hash + 源文件 + 目标格式派生，见 utils.deriveContentKey）。
   // 同 key 的在途任务合并去重（#431 门禁3）。
@@ -238,6 +243,10 @@ class TaskStore {
     }
     if (extra.result) record.result = extra.result;
     if (extra.error) record.error = extra.error;
+    // 失败性质分类随任务一起持久化（error 只存人可读文案，分类必须结构化过线，
+    // 否则 backend 只能按中文字符串反推「可重试 vs 确定性失败」）。
+    if (extra.errorCategory) record.errorCategory = extra.errorCategory;
+    if (extra.errorCode !== undefined) record.errorCode = extra.errorCode;
     if (extra.progress !== undefined) record.progress = extra.progress;
     this._persist(taskId, record);
     return record;

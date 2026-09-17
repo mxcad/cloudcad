@@ -233,6 +233,89 @@ export function parseEngineOutput(rawOutput: string): MxCadConversionResult {
 }
 
 /**
+ * 转换失败性质分类全集（结构化失败契约）。
+ *
+ * 背景：一次转换失败后，其「性质」历史上只能靠 error 字符串表达，backend 只能拿
+ * 4 个中文字符串反推分类，且与 conversion-service 的实际文案靠子串侥幸匹配
+ * （marker 是「进程被终止」，runner 抛的是「转换进程被终止」）——runner 改文案
+ * 即静默翻转 transient 语义，上层「可重试 vs 确定性失败」的分支随之失效。
+ * 分类改为结构化字段随任务状态一起下发后，两侧不再依赖任何文案。
+ */
+export const CONVERSION_FAILURE_CATEGORIES = [
+  /** 超时：进程组已被杀。stdout 可能已含完整 {"code":0}，调用方应先尝试救回再判失败 */
+  'timeout',
+  /** 进程被信号终止：用户取消、OOM killer、杀整组等 */
+  'killed',
+  /** spawn 失败：二进制缺失或无法启动（exitCode 为 null） */
+  'not-started',
+  /** 引擎输出无法解析：截断 / 畸形 / 缺 code 字段 */
+  'output-unparseable',
+  /** 引擎返回非 0 code：确定性内容失败，同一输入重试注定再失败 */
+  'content-error',
+  /** 未归类：HTTP 边界外的失败、上游提交超时等 */
+  'unknown',
+] as const;
+
+export type ConversionFailureCategory =
+  (typeof CONVERSION_FAILURE_CATEGORIES)[number];
+
+/**
+ * 可重试（瞬态）分类集合 = 全集 − content-error。
+ *
+ * transient=true  → 环境性失败，重试可能成功（引擎配置 / 路径 / 资源 / 排队问题）；
+ * transient=false → 确定性内容失败（content-error），重试注定再失败。
+ *
+ * unknown 归为 transient 是刻意的：无 message / 无法归类时宁可多重试一次，
+ * 也不要永久判死（与既有 `!message → true` 的语义一致）。
+ */
+export const TRANSIENT_FAILURE_CATEGORIES: readonly ConversionFailureCategory[] =
+  ['timeout', 'killed', 'not-started', 'output-unparseable', 'unknown'];
+
+/**
+ * 判定失败分类是否瞬态（可重试）。
+ *
+ * 缺分类时返回 true：历史数据与未经过分类的失败（老版本 conversion-service、
+ * 上游提交失败）默认按可重试处理，避免静默转成「永久失败」。
+ */
+export function isTransientFailure(
+  category: ConversionFailureCategory | null | undefined
+): boolean {
+  return category == null || TRANSIENT_FAILURE_CATEGORIES.includes(category);
+}
+
+/**
+ * 类型收窄：判断任意值是否为合法的失败分类。
+ *
+ * HTTP 边界传过来的 errorCategory 是松包 string（JSON 反序列化后无类型），
+ * 两侧入口（conversion-service 落库、backend 读响应）都要先过这道校验；
+ * 收敛成一个函数，避免各写一份 includes 且各写一种收窄写法。
+ */
+export function isConversionFailureCategory(
+  value: unknown
+): value is ConversionFailureCategory {
+  return (
+    typeof value === 'string' &&
+    (CONVERSION_FAILURE_CATEGORIES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * 转换失败的结构化描述（backend ↔ conversion-service 的 HTTP 边界契约）。
+ *
+ * 此前边界只传 message 字符串，失败性质在跨线时被丢弃，backend 只能按文案反推；
+ * 现在 category / code 与 message 并列下发（errorCategory / errorCode 字段），
+ * 判定依据从「文案匹配」变成「字段读取」。
+ */
+export interface ConversionFailureDetail {
+  /** 人可读错误信息，用于日志与 UI 展示；不作分类依据 */
+  message: string;
+  /** 失败性质分类 */
+  category: ConversionFailureCategory;
+  /** 引擎返回码：仅 content-error 时为非 0，其余分类为 undefined */
+  code?: number;
+}
+
+/**
  * 不参与内容身份派生的引擎输入字段。
  *
  * outpath 是产物落点（bin→mxweb 方向的输出目录），是转换宿主机的本地路径，不是内容身份：

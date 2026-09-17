@@ -2,27 +2,49 @@ import os from 'os';
 import path from 'path';
 import {
   buildEngineParams,
+  isTransientFailure,
   parseEngineOutput,
 } from '@cloudcad/contracts';
 import type {
+  ConversionFailureCategory,
   ConversionRequest,
   MxCadConversionResult,
   MxCadEngineParams,
 } from '@cloudcad/contracts';
 import { MXCAD_CONFIG } from '../lib/constants';
 import { log } from '../lib/utils';
-import { runMxcadAssembly } from '../mxcad-exec';
+import { runMxcadAssembly } from '@cloudcad/engine-exec';
 
 /**
  * 转换执行错误：mxcadassembly 返回非 0 code / 超时 / 进程被杀 / 进程未启动 / 输出无法解析。
  * 失败一律作为普通失败返回，调用方按需重试。
+ *
+ * category 是结构化的失败性质（@cloudcad/contracts 的失败分类契约），随任务状态
+ * 跨 HTTP 边界下发给 backend，让上层按字段而非错误文案判定「可重试 vs 确定性失败」；
+ * message 只用于日志与 UI 展示，不再作分类依据。
  */
 export class ConversionExecutionError extends Error {
+  /** 失败性质分类 */
+  category: ConversionFailureCategory;
+  /** 引擎返回码（仅 content-error 时为非 0） */
   code?: number;
 
-  constructor(message: string, code?: number) {
+  /**
+   * 是否瞬态（可重试）：由 category 派生，不单独存储。
+   * 唯一不可重试分类是 content-error（引擎返回非 0 code，同一输入重试注定再失败）。
+   */
+  get transient(): boolean {
+    return isTransientFailure(this.category);
+  }
+
+  constructor(
+    message: string,
+    category: ConversionFailureCategory = 'unknown',
+    code?: number
+  ) {
     super(message);
     this.name = 'ConversionExecutionError';
+    this.category = category;
     this.code = code;
   }
 }
@@ -37,10 +59,10 @@ export class ConversionExecutionError extends Error {
  * MxCAD 转换执行器
  * 基于 FileConversionService.executeConversion 的逻辑。
  *
- * 以独立进程组运行 mxcadassembly（见 ../mxcad-exec.js 的 runMxcadAssembly，
- * 移植自 backend aaf2626 修复）：超时/结束时杀整组，杜绝孤儿 mxcadassembly
- * 进程累积（8-28 CPU 打满死机事故根因）。不再用 `exec`（shell 包装）+
- * `process.chdir`（全局竞态），改为 `spawn` + per-spawn cwd + Windows verbatim 传参。
+ * 以独立进程组运行 mxcadassembly（@cloudcad/engine-exec 的 runMxcadAssembly，
+ * backend 进程内转换与转换服务共用同一实现）：超时/结束时杀整组，杜绝孤儿
+ * mxcadassembly 进程累积（8-28 CPU 打满死机事故根因）。不用 `exec`（shell 包装）+
+ * `process.chdir`（全局竞态），改用 `spawn` + per-spawn cwd + Windows verbatim 传参。
  */
 class MxcadRunner {
 
@@ -68,10 +90,26 @@ class MxcadRunner {
       onChild,
     });
 
-    // 瞬时失败（超时 / 进程被杀）：可重试
-    if (result.timedOut || result.signal) {
+    // 超时：先救回已完整的引擎输出，再判失败。
+    // 引擎常被超时掐在「已写完产物、未及退出」的状态（大图纸尤其常见），此时 stdout
+    // 里已有完整 {"code":0}。不救回就把一次成功的转换判成 FAILED 并触发重试，
+    // 与 backend 进程内路径（file-conversion.service 的超时救回）行为正好相反——
+    // 同一个慢转换，两种部署模式结论相反。
+    if (result.timedOut) {
+      const salvaged = this._parseOutput(result.stdout || result.stderr || '');
+      if (salvaged && salvaged.code === 0) {
+        log(`[MxcadRunner] 超时但引擎输出已完整，采信成功结果: ${params.srcPath}`);
+        return this._withNewpath(salvaged, params);
+      }
+      throw new ConversionExecutionError('转换超时', 'timeout');
+    }
+
+    // 进程被信号终止（用户取消 / OOM / 杀整组）：环境性失败，可重试。
+    // 与 backend 进程内路径一致：signal 分支不救回输出（backend 只救回 timedOut）。
+    if (result.signal) {
       throw new ConversionExecutionError(
-        result.timedOut ? '转换超时' : `转换进程被终止 (${result.signal})`
+        `转换进程被终止 (${result.signal})`,
+        'killed'
       );
     }
 
@@ -80,30 +118,24 @@ class MxcadRunner {
     // 掩盖真实的路径/部署问题。
     if (result.exitCode === null) {
       throw new ConversionExecutionError(
-        `mxcadassembly 进程未正常启动（stderr: ${result.stderr.slice(0, 200) || '无'}）`
+        `mxcadassembly 进程未正常启动（stderr: ${result.stderr.slice(0, 200) || '无'}）`,
+        'not-started'
       );
     }
 
     const output = result.stdout || result.stderr || '';
     const parsed = this._parseOutput(output);
+    if (!parsed) {
+      // 输出截断/畸形：环境性失败（引擎可能被中途打断），按分类抛出让上层可重试
+      throw new ConversionExecutionError(
+        `转换输出格式错误（原始输出=${output.slice(0, 200) || '空'}）`,
+        'output-unparseable'
+      );
+    }
 
     if (parsed.code === 0) {
       log(`[MxcadRunner] 转换成功: ${params.srcPath}`);
-      // 真实 mxcadassembly 只回 code/message（无 newpath），runner 按引擎行为补齐产物路径，
-      // 使任务结果自描述（单任务路径无 worker-pool 的 outname 回落，消费方不能拿到空 newpath）：
-      // - binToMxweb（带 outpath）：产物 = outpath/outname
-      // - convertFile（无 outpath，带 outname）：引擎把 outname 写到 srcpath 同目录
-      //   （与 backend 进程内 convertInProcess 的 path.join(dirname(srcPath), outname) 一致，
-      //   batch 链路下游 fs.createReadStream(filePath) 依赖完整路径，纯文件名会按 cwd 解析 ENOENT）
-      // - 无 outname：引擎自定产物名，位置不可推导 → ''
-      let computedNewpath = '';
-      if (params.outname) {
-        const base = params.outpath
-          ? this._resolvePath(params.outpath)
-          : path.dirname(this._resolvePath(params.srcPath));
-        computedNewpath = path.join(base, params.outname);
-      }
-      return { ...parsed, newpath: parsed.newpath || computedNewpath };
+      return this._withNewpath(parsed, params);
     }
 
     // 内容失败（解析/格式错，mxcadassembly 返回非 0 code）
@@ -119,7 +151,36 @@ class MxcadRunner {
         `stdout=[${(result.stdout || '').slice(0, 500)}] ` +
         `stderr=[${(result.stderr || '').slice(0, 500)}]`
     );
-    throw new ConversionExecutionError(parsed.message || `转换失败, code=${parsed.code}`, parsed.code);
+    throw new ConversionExecutionError(
+      parsed.message || `转换失败, code=${parsed.code}`,
+      'content-error',
+      parsed.code
+    );
+  }
+
+  /**
+   * 按引擎行为补齐产物路径，使任务结果自描述。
+   *
+   * 真实 mxcadassembly 只回 code/message（无 newpath）；单任务路径没有 worker-pool 的
+   * outname 回落，消费方不能拿到空 newpath。抽出为方法，供正常成功与超时救回两条路径复用。
+   * - binToMxweb（带 outpath）：产物 = outpath/outname
+   * - convertFile（无 outpath，带 outname）：引擎把 outname 写到 srcpath 同目录
+   *   （与 backend 进程内 convertInProcess 的 path.join(dirname(srcPath), outname) 一致，
+   *   batch 链路下游 fs.createReadStream(filePath) 依赖完整路径，纯文件名会按 cwd 解析 ENOENT）
+   * - 无 outname：引擎自定产物名，位置不可推导 → ''
+   */
+  _withNewpath(
+    parsed: MxCadConversionResult,
+    params: ConversionRequest
+  ): MxCadConversionResult {
+    let computedNewpath = '';
+    if (params.outname) {
+      const base = params.outpath
+        ? this._resolvePath(params.outpath)
+        : path.dirname(this._resolvePath(params.srcPath));
+      computedNewpath = path.join(base, params.outname);
+    }
+    return { ...parsed, newpath: parsed.newpath || computedNewpath };
   }
 
   /**
@@ -154,7 +215,14 @@ class MxcadRunner {
     return path.resolve(process.cwd(), inputPath);
   }
 
-  _parseOutput(output: string): MxCadConversionResult {
+  /**
+   * 解析引擎输出；无法解析时返回 null，由调用方决定分类。
+   *
+   * 旧实现在这里返回 `{code:1, message:'转换输出格式错误'}`，把「解析失败」伪装成
+   * 一个引擎结果对象——失败性质随之下游丢失，上层只能靠 message 文案反推。
+   * 现在解析失败返回 null，调用方按 'output-unparseable' 分类抛出。
+   */
+  _parseOutput(output: string): MxCadConversionResult | null {
     const strOutput = String(output ?? '');
     try {
       // marker 截取 + JSON.parse + code 校验集中在 @cloudcad/contracts 的 parseEngineOutput，
@@ -162,7 +230,7 @@ class MxcadRunner {
       return parseEngineOutput(strOutput);
     } catch (err) {
       log(`[MxcadRunner] 无法解析转换输出: ${(err as Error).message}`);
-      return { code: 1, message: '转换输出格式错误', raw: strOutput.slice(0, 500) };
+      return null;
     }
   }
 }

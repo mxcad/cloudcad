@@ -1,3 +1,5 @@
+import { isConversionFailureCategory } from '@cloudcad/contracts';
+import type { ConversionFailureCategory } from '@cloudcad/contracts';
 import {
   PRIORITY_CONFIG,
   WORKER_POOL_AUTO_SCALE,
@@ -27,6 +29,23 @@ export interface RunnerLike {
 // 回调引擎契约（callbackEngine 未接线时为 null / no-op）
 export interface CallbackEngineLike {
   notify(taskId: string, result: { status: string; result: unknown; error?: unknown }): Promise<void>;
+}
+
+// 执行异常 → 结构化失败详情。只认结构化字段（ConversionExecutionError 的 category / code），
+// 不做任何文案匹配：文案是给人看的，分类必须走字段。未归类异常归 'unknown'，
+// 按瞬态处理（宁多重试一次，也不要永久判死）。
+function toFailureDetail(err: unknown): {
+  message: string;
+  category: ConversionFailureCategory;
+  code?: number;
+} {
+  const message = err instanceof Error ? err.message : String(err);
+  const source = (err ?? {}) as { category?: unknown; code?: unknown };
+  const category = isConversionFailureCategory(source.category)
+    ? source.category
+    : 'unknown';
+  const code = typeof source.code === 'number' ? source.code : undefined;
+  return { message, category, code };
 }
 
 interface ScaleState {
@@ -358,8 +377,15 @@ class WorkerPool {
     } catch (err) {
       const current = this.taskStore.get(task.id);
       if (current && current.status === 'CANCELLED') return;
-      this.taskStore.updateStatus(task.id, 'FAILED', { error: (err as Error).message });
-      this._notify(task.id, 'FAILED', null, (err as Error).message);
+      // 分类与错误码一并落记录，随 GET /tasks/:taskId 过线给 backend；
+      // 此前只存 message，失败性质在跨线时丢失。
+      const detail = toFailureDetail(err);
+      this.taskStore.updateStatus(task.id, 'FAILED', {
+        error: detail.message,
+        errorCategory: detail.category,
+        errorCode: detail.code,
+      });
+      this._notify(task.id, 'FAILED', null, detail.message);
     } finally {
       this.cancelHandles.delete(task.id);
     }
@@ -386,7 +412,14 @@ class WorkerPool {
         if (outputPath) entry.outputPath = outputPath;
         results.push(entry);
       } catch (err) {
-        results.push({ id: item.id, success: false, error: (err as Error).message });
+        const detail = toFailureDetail(err);
+        results.push({
+          id: item.id,
+          success: false,
+          error: detail.message,
+          errorCategory: detail.category,
+          ...(detail.code !== undefined ? { errorCode: detail.code } : {}),
+        });
       }
       done += 1;
       this.taskStore.updateStatus(task.id, 'PROCESSING', {

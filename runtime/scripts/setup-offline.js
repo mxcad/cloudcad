@@ -665,20 +665,24 @@ function runPnpmInstallOffline(options = {}) {
 
   // 构建安装命令参数
   // 如果使用 .pnpm-store-deploy（只含 backend prod deps），自动追加 --prod
-  // 注意：必须把 @cloudcad/db、@cloudcad/contracts、@cloudcad/conversion-service 也纳入 filter ——
+  // 注意：必须把 @cloudcad/db、@cloudcad/contracts、@cloudcad/engine-exec、
+  // @cloudcad/conversion-service 也纳入 filter ——
   // pnpm --filter backend 不会安装 workspace 依赖（@cloudcad/db）自己的依赖
   // （如 @prisma/client），导致 packages/db/node_modules 为空、运行时
   // require('@prisma/client/runtime/client') 失败（MODULE_NOT_FOUND）；
-  // conversion-service 现依赖 @cloudcad/contracts（ADR-0069），不在 filter 里就不会建
-  // packages/conversion-service/node_modules 链接，dist/server.js 起不来（3100 端口无监听）。
+  // engine-exec 与 conversion-service 现依赖 @cloudcad/contracts（ADR-0069），
+  // 不在 filter 里就不会建它们的 node_modules 链接，dist 里的 require 解析失败
+  // （backend 转换路径炸 / 3100 端口无监听）。
   // 私有部署包（--variant private）额外携带 packages/impl-mx，需显式纳入
   // filter 才会为其建立 workspace 链接并安装依赖；OSS 包无此目录则跳过，
-  // 避免 pnpm 因找不到 workspace 包而失败。conversion-service 目录两种变体都有，无需条件判断。
+  // 避免 pnpm 因找不到 workspace 包而失败。engine-exec 与 conversion-service
+  // 目录两种变体都有，无需条件判断。
   const installArgs = deployBackendOnly || isDeployStore
     ? [
         '--filter', 'backend',
         '--filter', '@cloudcad/db',
         '--filter', '@cloudcad/contracts',
+        '--filter', '@cloudcad/engine-exec',
         '--filter', '@cloudcad/conversion-service',
         ...(fs.existsSync(path.join(PROJECT_ROOT, 'packages', 'impl-mx', 'package.json'))
           ? ['--filter', '@cloudcad/impl-mx']

@@ -6,42 +6,29 @@ import MxcadRunner, { ConversionExecutionError } from '../mxcad/runner';
 
 describe('MxcadRunner._parseOutput', () => {
   it('should parse valid JSON output', () => {
-    const runner = new MxcadRunner();
-    const parsed = runner._parseOutput('some log\n{"code":0,"newpath":"/out/a.mxweb"}');
-    assert.equal(parsed.code, 0);
-    assert.equal(parsed.newpath, '/out/a.mxweb');
+    const parsed = new MxcadRunner()._parseOutput('some log\n{"code":0,"newpath":"/out/a.mxweb"}');
+    assert.equal(parsed?.code, 0);
+    assert.equal(parsed?.newpath, '/out/a.mxweb');
   });
 
   it('should extract JSON after leading log noise', () => {
-    const runner = new MxcadRunner();
-    const parsed = runner._parseOutput('INFO: start\nWARN: skip\n{"code":1,"message":"boom"}');
-    assert.equal(parsed.code, 1);
-    assert.equal(parsed.message, 'boom');
+    const parsed = new MxcadRunner()._parseOutput(
+      'INFO: start\nWARN: skip\n{"code":1,"message":"boom"}'
+    );
+    assert.equal(parsed?.code, 1);
+    assert.equal(parsed?.message, 'boom');
   });
 
-  it('should return a failure object instead of throwing on malformed JSON', () => {
-    const runner = new MxcadRunner();
-    const parsed = runner._parseOutput('mxcad produced garbage output');
-    assert.equal(parsed.code, 1);
-    assert.ok(parsed.message);
-    assert.match(parsed.message, /格式错误/);
-    assert.ok(parsed.raw);
+  it('畸形输出返回 null（解析失败不再伪装成 code=1 的结果对象，否则失败性质会丢失）', () => {
+    assert.equal(new MxcadRunner()._parseOutput('mxcad produced garbage output'), null);
   });
 
-  it('should return a failure object when JSON is truncated', () => {
-    const runner = new MxcadRunner();
-    const parsed = runner._parseOutput('{"code":0,"newpath":');
-    assert.equal(parsed.code, 1);
-    assert.ok(parsed.message);
-    assert.match(parsed.message, /格式错误/);
+  it('截断 JSON 返回 null', () => {
+    assert.equal(new MxcadRunner()._parseOutput('{"code":0,"newpath":'), null);
   });
 
-  it('缺 code 字段的 JSON 也算解析失败（不能当成 code=undefined 的成功）', () => {
-    const runner = new MxcadRunner();
-    const parsed = runner._parseOutput('{"newpath":"/out/a.mxweb"}');
-    assert.equal(parsed.code, 1);
-    assert.ok(parsed.message);
-    assert.match(parsed.message, /格式错误/);
+  it('缺 code 字段的 JSON 返回 null（不能当成 code=undefined 的成功）', () => {
+    assert.equal(new MxcadRunner()._parseOutput('{"newpath":"/out/a.mxweb"}'), null);
   });
 });
 
@@ -139,17 +126,20 @@ describe('MxcadRunner.execute 失败分类', () => {
     timedOut: false,
   };
 
-  it('spawn 失败（exitCode=null）→ 抛出「进程未正常启动」错误', async () => {
+  it('spawn 失败（exitCode=null）→ category=not-started', async () => {
     const runner = new MxcadRunner();
     const fakeRun = async () => spawnFailure;
     await assert.rejects(
       runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
       (err: unknown) =>
-        err instanceof ConversionExecutionError && /未正常启动/.test(err.message)
+        err instanceof ConversionExecutionError &&
+        /未正常启动/.test(err.message) &&
+        err.category === 'not-started' &&
+        err.transient === true
     );
   });
 
-  it('超时（timedOut=true）→ 抛出「转换超时」错误', async () => {
+  it('超时且输出无法解析 → category=timeout', async () => {
     const runner = new MxcadRunner();
     const fakeRun = async () => ({
       stdout: '',
@@ -161,11 +151,90 @@ describe('MxcadRunner.execute 失败分类', () => {
     await assert.rejects(
       runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
       (err: unknown) =>
-        err instanceof ConversionExecutionError && /转换超时/.test(err.message)
+        err instanceof ConversionExecutionError &&
+        /转换超时/.test(err.message) &&
+        err.category === 'timeout' &&
+        err.transient === true
     );
   });
 
-  it('mxcadassembly 返回非 0 code（进程正常退出）→ 抛出携带 code 的转换失败', async () => {
+  it('超时但 stdout 已含完整 {"code":0} → 救回为成功，不抛错（与 backend 进程内路径对称）', async () => {
+    const runner = new MxcadRunner();
+    // 引擎被超时掐在「已写完产物、未及退出」的状态：stdout 已有完整结果，
+    // 救回失败即把一次成功判成 FAILED 并触发重试。
+    const fakeRun = async () => ({
+      stdout: '{"code":0,"message":"ok"}',
+      stderr: '',
+      exitCode: null,
+      signal: null,
+      timedOut: true,
+    });
+    const result = await runner.execute(
+      { srcPath: '/in/a.dwg', fileHash: 'h1', outname: 'a.pdf' },
+      60000,
+      undefined,
+      fakeRun
+    );
+    assert.equal(result.code, 0);
+    assert.equal(result.newpath, path.join('/in', 'a.pdf'));
+  });
+
+  it('超时救回也补齐 newpath（outpath+outname 形状）', async () => {
+    const runner = new MxcadRunner();
+    const fakeRun = async () => ({
+      stdout: '{"code":0,"message":"ok"}',
+      stderr: '',
+      exitCode: null,
+      signal: null,
+      timedOut: true,
+    });
+    const result = await runner.execute(
+      { srcPath: '/bin/a.bin', outpath: '/out', outname: 'a.mxweb' },
+      60000,
+      undefined,
+      fakeRun
+    );
+    assert.equal(result.code, 0);
+    assert.equal(result.newpath, path.join('/out', 'a.mxweb'));
+  });
+
+  it('进程被信号终止 → category=killed（与 backend 一致：不救回输出）', async () => {
+    const runner = new MxcadRunner();
+    const fakeRun = async () => ({
+      stdout: '',
+      stderr: '',
+      exitCode: null,
+      signal: 'SIGTERM',
+      timedOut: false,
+    });
+    await assert.rejects(
+      runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
+      (err: unknown) =>
+        err instanceof ConversionExecutionError &&
+        err.category === 'killed' &&
+        err.transient === true
+    );
+  });
+
+  it('引擎输出无法解析 → category=output-unparseable', async () => {
+    const runner = new MxcadRunner();
+    const fakeRun = async () => ({
+      stdout: 'garbage without result json',
+      stderr: '',
+      exitCode: 2123,
+      signal: null,
+      timedOut: false,
+    });
+    await assert.rejects(
+      runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
+      (err: unknown) =>
+        err instanceof ConversionExecutionError &&
+        err.category === 'output-unparseable' &&
+        err.transient === true
+    );
+  });
+
+  it('mxcadassembly 返回非 0 code（进程正常退出）→ category=content-error 且不可重试', async () => {
     const runner = new MxcadRunner();
     const fakeRun = async () => ({
       stdout: '{"code":12,"message":"param error"}',
@@ -176,7 +245,11 @@ describe('MxcadRunner.execute 失败分类', () => {
     });
     await assert.rejects(
       runner.execute({ srcPath: '/in/a.dwg', fileHash: 'h1' }, 60000, undefined, fakeRun),
-      (err: unknown) => err instanceof ConversionExecutionError && err.code === 12
+      (err: unknown) =>
+        err instanceof ConversionExecutionError &&
+        err.code === 12 &&
+        err.category === 'content-error' &&
+        err.transient === false
     );
   });
 });

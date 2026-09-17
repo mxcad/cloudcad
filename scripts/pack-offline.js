@@ -430,11 +430,12 @@ function getDeployIncludeList(platform, variant = 'oss') {
 async function installFullDeps(variant = 'oss') {
   cleanNodeModules(true);
 
-  // conversion-service 现依赖 @cloudcad/contracts（ADR-0069），与 backend 一样须在 install
-  // filter 内，否则打包机建不出它的 workspace 链接；构建它还需要 typescript（devDep）。
+  // conversion-service 现依赖 @cloudcad/contracts（ADR-0069）与 @cloudcad/engine-exec，
+  // 与 backend 一样须在 install filter 内，否则打包机建不出它们的 workspace 链接；
+  // 构建它还需要 typescript（devDep）。
   const filter = variant === 'private'
-    ? 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service --filter @cloudcad/impl-mx'
-    : 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service';
+    ? 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service --filter @cloudcad/impl-mx'
+    : 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service';
 
   try {
     execSync(filter, {
@@ -477,6 +478,8 @@ async function buildProject(variant = 'oss') {
     path.join(PROJECT_ROOT, 'packages', 'backend', 'dist'),
     path.join(PROJECT_ROOT, 'packages', 'db', 'dist'),
     path.join(PROJECT_ROOT, 'packages', 'contracts', 'dist'),
+    // 引擎执行层 dist（backend 与 conversion-service 共同 require）
+    path.join(PROJECT_ROOT, 'packages', 'engine-exec', 'dist'),
     // 转换服务 dist（tsc 产物；运行时日志目录 data/logs 由 logger 自建，clean 后重建安全）
     path.join(PROJECT_ROOT, 'packages', 'conversion-service', 'dist'),
   ];
@@ -603,12 +606,13 @@ function getLockfileHash() {
  * @param {string} variant - oss | private
  */
 function getDeployStoreInstallFilter(variant = 'oss') {
-  // 必须含 @cloudcad/conversion-service：它现依赖 @cloudcad/contracts（ADR-0069），
-  // 若不在 filter 里，目标机 --prod 安装不会建 packages/conversion-service/node_modules
-  // 的 workspace 链接，dist/server.js 的 require('@cloudcad/contracts') 解析失败→3100 起不来。
+  // 必须含 @cloudcad/engine-exec 与 @cloudcad/conversion-service：两者现依赖
+  // @cloudcad/contracts（ADR-0069），若不在 filter 里，目标机 --prod 安装不会建
+  // 它们的 node_modules workspace 链接，dist 里的 require('@cloudcad/contracts') /
+  // require('@cloudcad/engine-exec') 解析失败（backend 转换路径炸、3100 起不来）。
   return variant === 'private'
-    ? 'pnpm --filter backend --filter @cloudcad/impl-mx --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service install --frozen-lockfile --prod'
-    : 'pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service install --frozen-lockfile --prod';
+    ? 'pnpm --filter backend --filter @cloudcad/impl-mx --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --frozen-lockfile --prod'
+    : 'pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --frozen-lockfile --prod';
 }
 
 /**

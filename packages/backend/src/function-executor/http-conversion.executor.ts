@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
+import { isConversionFailureCategory } from '@cloudcad/contracts';
+import type { ConversionFailureCategory } from '@cloudcad/contracts';
 import * as http from 'http';
 import * as https from 'https';
 import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
@@ -11,6 +13,20 @@ import type {
   ConversionResult,
   TaskStatus,
 } from './function-executor.interface';
+
+/**
+ * 把转换服务下发的失败分类收敛为契约类型；非法或缺省值归 undefined，
+ * 调用方据此走 isTransientFailure 的默认分支（瞬态）。
+ */
+function toFailureCategory(
+  value: unknown
+): ConversionFailureCategory | undefined {
+  return isConversionFailureCategory(value) ? value : undefined;
+}
+
+function toErrorCode(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
 
 @Injectable()
 export class HttpConversionExecutor implements IFunctionExecutor {
@@ -91,6 +107,9 @@ export class HttpConversionExecutor implements IFunctionExecutor {
           }
         : undefined,
       error: response.error,
+      // 失败性质分类结构化透传（此前只透传 error 字符串，backend 靠中文文案反推）
+      errorCategory: toFailureCategory(response.errorCategory),
+      errorCode: toErrorCode(response.errorCode),
       // 排队位置（S6-5）：conversion-service GET /tasks/:taskId 透传（仅排队中任务有意义，否则 null）
       queuePosition:
         typeof response.queuePosition === 'number'
@@ -137,7 +156,13 @@ export class HttpConversionExecutor implements IFunctionExecutor {
           };
         }
         if (status.status === 'FAILED') {
-          return { taskId, status: 'FAILED', error: status.error };
+          return {
+            taskId,
+            status: 'FAILED',
+            error: status.error,
+            errorCategory: status.errorCategory,
+            errorCode: status.errorCode,
+          };
         }
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : String(error);

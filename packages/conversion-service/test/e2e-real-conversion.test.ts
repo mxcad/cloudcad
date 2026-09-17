@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { runMxcadAssembly } from '../mxcad-exec';
+import { runMxcadAssembly } from '@cloudcad/engine-exec';
 import type { TestContext } from 'node:test';
 
 /**

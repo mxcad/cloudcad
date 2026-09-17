@@ -105,6 +105,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/db/package.json ./packages/db/
 COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/engine-exec/package.json ./packages/engine-exec/
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/frontend_mobile/package.json ./packages/frontend_mobile/
 COPY packages/mxVersionTool/package.json ./packages/mxVersionTool/
@@ -124,7 +125,7 @@ RUN if [ -n "${NPM_CONFIG_REGISTRY}" ]; then \
 # pnpm 在 node_modules 已完整时会跳过写 store，单独"store 缓存层"实际不会产生任何内容
 # （曾因此导致容器内升级流程每次全量下载依赖）
 # 安装依赖（仅后端运行时包；前端 dist 已在本地预构建，无需 node_modules）
-RUN pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service --store-dir /app/.pnpm-store-deploy
+RUN pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service --store-dir /app/.pnpm-store-deploy
 
 # ===== 私有实现包层（源码层：impl-mx 变更仅重建此层及以下）=====
 ARG VARIANT=oss
@@ -140,6 +141,9 @@ COPY packages/backend ./packages/backend
 # 复制其他包
 COPY packages/db ./packages/db
 COPY packages/contracts ./packages/contracts
+# 引擎执行层（mxcadAssembly 进程组 spawn/杀树，0 运行时依赖）：backend 与 conversion-service
+# 共同 require，容器内 prebuild tsc 编译后 dist 随包分发
+COPY packages/engine-exec ./packages/engine-exec
 COPY packages/mxVersionTool ./packages/mxVersionTool
 COPY packages/config-service ./packages/config-service
 # 转换服务（黑盒，0 运行时依赖）：COPY 源码供容器内 buildProject tsc 编译，

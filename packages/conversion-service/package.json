@@ -4,17 +4,19 @@
   "description": "CloudCAD 转换服务 — CAD 转换任务队列执行",
   "main": "dist/server.js",
   "scripts": {
-    "prebuild": "pnpm --filter @cloudcad/contracts build",
+    "prebuild": "pnpm --filter @cloudcad/contracts build && pnpm --filter @cloudcad/engine-exec build",
     "build": "tsc",
     "dev": "tsc && node dist/server.js",
     "start": "node dist/server.js",
+    "pretest": "pnpm --filter @cloudcad/engine-exec build",
     "test": "tsc && node --test dist/test/",
     "type-check": "tsc --noEmit"
   },
   "keywords": ["cloudcad", "conversion", "conversion-service"],
   "license": "MIT",
   "dependencies": {
-    "@cloudcad/contracts": "workspace:*"
+    "@cloudcad/contracts": "workspace:*",
+    "@cloudcad/engine-exec": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.7",

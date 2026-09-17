@@ -1,0 +1,30 @@
+{
+  "name": "@cloudcad/engine-exec",
+  "version": "0.1.0",
+  "private": true,
+  "description": "mxcadAssembly 引擎执行层 —— 单一进程组 spawn/杀树/超时语义，backend 与 conversion-service 共用",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "test": "tsc && node --test dist/test/"
+  },
+  "keywords": [
+    "cloudcad",
+    "mxcad",
+    "engine",
+    "exec"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "typescript": "~5.9.3"
+  }
+}

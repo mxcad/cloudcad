@@ -2,12 +2,12 @@
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
-jest.mock("./mxcad-exec", () => ({
+jest.mock("@cloudcad/engine-exec", () => ({
 	runMxcadAssembly: jest.fn(),
 }));
 
 import * as path from "path";
-import { runMxcadAssembly } from "./mxcad-exec";
+import { runMxcadAssembly } from "@cloudcad/engine-exec";
 import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { FileConversionService } from "./file-conversion.service";
@@ -710,25 +710,27 @@ describe("FileConversionService", () => {
 			await module.close();
 		});
 
-		// 转换服务只回错误字符串、不透传失败性质，按 runner.ts 抛出的文案归类：
-		// '转换超时' / '转换进程被终止' / '进程未正常启动' / '转换输出格式错误' = 瞬态；
-		// 其余（引擎非 0 code 的原始 message，如 'read file error'）= 确定性内容失败。
+		// 失败性质由转换服务结构化下发（errorCategory），backend 按字段判定 transient，
+		// 不再匹配错误文案。唯一不可重试分类是 content-error（引擎非 0 code，同一输入
+		// 重试注定再失败）；未携带分类（老版本转换服务 / 上游提交失败）按瞬态处理。
 		it.each([
-			["转换超时", true],
-			["转换进程被终止 (SIGKILL)", true],
-			["mxcadassembly 进程未正常启动（stderr: 无）", true],
-			["转换输出格式错误", true],
-			["read file error", false],
-			["false", false],
-			["转换参数缺少 srcPath", false],
-		])(
-			"conversion-service 模式：转发失败文案「%s」归类 transient=%s",
-			async (error, expectedTransient) => {
+			["timeout", undefined, true],
+			["killed", undefined, true],
+			["not-started", undefined, true],
+			["output-unparseable", undefined, true],
+			["unknown", undefined, true],
+			["content-error", 12, false],
+			[undefined, undefined, true],
+		] as Array<[string | undefined, number | undefined, boolean]>)(
+			"conversion-service 模式：errorCategory=%s errorCode=%s 归类 transient=%s",
+			async (errorCategory, errorCode, expectedTransient) => {
 				const mockExecutor = {
 					invoke: jest.fn(async () => ({
 						taskId: "cs_1",
 						status: "FAILED",
-						error,
+						error: "转换超时",
+						errorCategory,
+						errorCode,
 					})),
 					getTaskStatus: jest.fn(),
 				} as unknown as IFunctionExecutorType;
@@ -744,11 +746,43 @@ describe("FileConversionService", () => {
 				const svc = module.get<FileConversionService>(FileConversionService);
 				const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
 				expect(r.isOk).toBe(false);
-				expect(r.error).toContain(error);
+				expect(r.error).toContain("转换超时");
 				expect(r.transient).toBe(expectedTransient);
+				// errorCode 透传到 ret.code（缺省回落 -1，与旧实现一致）
+				expect(r.ret.code).toBe(errorCode ?? -1);
 				await module.close();
 			},
 		);
+
+		it("conversion-service 模式：错误文案不参与分类（同一文案不同分类 = 结论相反）", async () => {
+			// 与上一个用例逐字相同的文案「转换超时」，但分类是 content-error：
+			// 旧实现按 includes('转换超时') 判 transient=true，此处证明分类只认结构化字段。
+			const mockExecutor = {
+				invoke: jest.fn(async () => ({
+					taskId: "cs_1",
+					status: "FAILED",
+					error: "转换超时",
+					errorCategory: "content-error",
+					errorCode: 12,
+				})),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+			const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.error).toContain("转换超时");
+			expect(r.transient).toBe(false);
+			expect(r.ret.code).toBe(12);
+			await module.close();
+		});
 
 		it("conversion-service 模式：binToMxweb 空串 newpath 回落本地计算路径（回归：历史版本「bin→mxweb 转换失败: undefined」）", async () => {
 			// 忠实模拟 HttpConversionExecutor 映射：转换服务单任务结果 = mxcadassembly 输出

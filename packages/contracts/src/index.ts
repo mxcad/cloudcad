@@ -81,12 +81,18 @@ export {
   CONTENT_KEY_FIELDS,
   buildEngineParams,
   parseEngineOutput,
+  CONVERSION_FAILURE_CATEGORIES,
+  TRANSIENT_FAILURE_CATEGORIES,
+  isTransientFailure,
+  isConversionFailureCategory,
 } from './conversion/mxcad-engine-contract';
 export type {
   EngineInputField,
   ConversionRequest,
   MxCadEngineParams,
   MxCadConversionResult,
+  ConversionFailureCategory,
+  ConversionFailureDetail,
 } from './conversion/mxcad-engine-contract';
 
 // Repository interfaces

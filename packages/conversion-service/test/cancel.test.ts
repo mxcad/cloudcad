@@ -2,7 +2,6 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import TaskStore from '../services/task-store';
 import WorkerPool from '../services/worker-pool';
-import { runMxcadAssembly } from '../mxcad-exec';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -171,33 +170,6 @@ describe('取消机制（#431）', () => {
       assert.ok(pool.pools['3'].queue.length >= 1, 'stop 前应有排队任务在 acquire 队列');
       pool.stop();
       assert.equal(pool.pools['3'].queue.length, 0, 'stop 后 acquire 队列应清空（悬空计时器清除）');
-    });
-  });
-
-  describe('runMxcadAssembly onChild 接线（fake child）', () => {
-    // 进程组杀（killTree）的端到端正确性已由门禁1 的 mxcad-exec.test.ts 真实子进程测试覆盖；
-    // 此处只验证取消机制新增的接线：onChild 在子进程拉起后回调 kill 句柄，promise 随 close 结算。
-    it('onChild 在子进程拉起后回调 kill 句柄，promise 随 close 结算', async () => {
-      const fakeChild: any = {
-        pid: 4242,
-        stdout: { on: () => {} },
-        stderr: { on: () => {} },
-        on(event: string, cb: (...args: any[]) => void) {
-          if (event === 'close') setImmediate(() => cb(0, null));
-          return this;
-        },
-      };
-      let killHandle: (() => void) | null = null;
-      const p = runMxcadAssembly('fake-bin', 'fake-arg', {
-        timeoutMs: 5000,
-        spawnFn: () => fakeChild,
-        onChild: (kill) => {
-          killHandle = kill;
-        },
-      });
-      const r = await p;
-      assert.equal(typeof killHandle, 'function', 'onChild 回调了 kill 句柄');
-      assert.equal(r.timedOut, false, '子进程自然 close 结算，非超时');
     });
   });
 });

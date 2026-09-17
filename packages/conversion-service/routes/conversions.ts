@@ -246,6 +246,10 @@ function create(
         progress: task.progress,
         result: task.result,
         error: task.error,
+        // 失败性质分类与引擎返回码：结构化过线，backend 据此判定「可重试 vs 确定性失败」，
+        // 不再按 error 文案反推（此前两侧靠中文字符串匹配，改文案即静默翻转语义）。
+        errorCategory: task.errorCategory ?? null,
+        errorCode: task.errorCode ?? null,
         // 排队位置（S6-5）：仅排队中任务有意义，运行中/未入队/终态为 null
         queuePosition: workerPool.getQueuePosition(taskId),
         priority: task.priority,
@@ -288,7 +292,10 @@ function waitForTask(
   taskStore: RouteTaskStore,
   timeout: number,
   signal?: AbortSignal
-): Promise<{ taskId: string; status: string; result?: unknown; error?: unknown }> {
+): Promise<
+  { taskId: string; status: string; result?: unknown; error?: unknown } &
+    Partial<Pick<TaskRecord, 'errorCategory' | 'errorCode'>>
+> {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     let settled = false;
@@ -328,7 +335,13 @@ function waitForTask(
         if (settled) return;
         settled = true;
         cleanup();
-        return resolve({ taskId, status: 'FAILED', error: task.error });
+        return resolve({
+          taskId,
+          status: 'FAILED',
+          error: task.error,
+          errorCategory: task.errorCategory ?? null,
+          errorCode: task.errorCode ?? null,
+        });
       }
       if (Date.now() - start > timeout) {
         if (settled) return;
