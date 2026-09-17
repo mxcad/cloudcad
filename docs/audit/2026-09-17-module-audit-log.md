@@ -1114,3 +1114,67 @@ HEAD 本就非 prettier-clean（预存长行漂移，我新增行不在 diff 中
   `configService.get('wechatPay.certPath'/'keyPath')`（服务端配置，非用户输入）。
 - **管理端**：`admin/billing/*` 类级 `@UseGuards(PermissionsGuard)` + 逐路由
   `@RequirePermissions([SYSTEM_BILLING_READ | SYSTEM_BILLING_WRITE])`。
+
+---
+
+## 22. backend runtime-config / fonts / notice-center / admin / ip-blacklist / user-cleanup / alert 七模块（无新缺陷）
+
+逐一审查命令注入、路径遍历、SQL 注入、IDOR、鉴权、时序侧信道、SSE 凭据七类安全面，
+均未发现可利用缺陷。结论性记录如下。
+
+### 22.1 fonts：上传 basename + 下载三重拒绝 + 删除不可逃逸（含实证）
+
+- 上传 `uploadSingleFont`：`fileName = path.basename(rawName)`（basename 剥离路径段，
+  `join(fontsDir,…)` 必落目录内）→ 写盘安全。
+- 下载 `downloadFont`：拒绝 `..` / `/` / `\` 三者（L354-361）→ 完整。
+- 删除 `deleteFont`：只拒 `..` / `/`（L289），**漏 `\`**。经实测证明**不可利用**：
+  - Windows 下 `path.join(dir, 'C:\\Windows\\system32')` → `dir\C:\Windows\system32`
+    （盘符 `C:` 被当作字面目录段，**不产生绝对路径**，仍落 dir 内）；
+  - UNC `\\server\share` → `path.join` 归一化为相对路径，落 dir 内；
+  - **唯一逃逸原语是 `..`，而 deleteFont 已正确拒绝**（`..\evil`/`../evil`/`a\..\..\x` 全含 `..`）。
+  - 实测脚本（node `path.join`/`path.resolve`）对 9 类输入逐一验证：所有 `passesDelete=true`
+    的输入 `escapes=false`。
+  - 结论：`\` 遗漏是**防御纵深不一致**（downloadFont 更严）而非真实漏洞，按「不修确实没
+    问题的点」原则记录为无缺陷、不改代码。
+
+### 22.2 admin：`$queryRaw` 仅内插枚举常量 + 日期格式校验，无 SQL 注入
+
+- `admin-stats.service.ts` 所有 `$queryRaw`/`Prisma.sql` 内插值均为 `OrderStatus.*` 枚举常量
+  （非用户输入）；用户可控的 `provider`/`tierId` 走 `Prisma.sql` tagged template（参数化绑定，
+  非字符串拼接）；`startDate`/`endDate` 经 `DATE_PATTERN`（YYYY-MM-DD）校验后转 `Date` 对象。
+- 控制器类级 `@RequirePermissions([SystemPermission.SYSTEM_ADMIN])`。
+
+### 22.3 notice-center：SSE 一次性 ticket 教科书级实现
+
+- `issueTicket` 需 JWT 登录 + `@Throttle(60/min)`；ticket = `randomBytes(24).toString('base64url')`
+  （192 bit 熵，不可猜）。
+- `redeemTicket` 用 `redis.getdel(prefix+ticket)`——**原子取删**，一次性消费无 get/del 竞态，
+  过期/已用返回 null → 401。TTL `NOTICE_TICKET_TTL_SECONDS`（5 分钟）。
+- 公开读 `GET /notices/current` 只返回广播通知（未登录无个人通知）；写端点全挂
+  `SYSTEM_CONFIG_WRITE`；管理列表 `SYSTEM_CONFIG_READ`。
+
+### 22.4 ip-blacklist：分层 IP 提取 + 正确 CIDR 匹配
+
+- 管理端 `admin/ip-blacklist/*` 全挂 `SYSTEM_IP_BLACKLIST_MANAGE`。
+- 全局 `IpBlacklistGuard` 用 `getClientIp`（XFF 优先）——**文档明确的 fail-open 设计**（仅用于
+  黑名单/限流等次要防线）；真正安全边界（管理员登录 IP 白名单）用 `getAdminClientIp`（取
+  socket 真实对端，仅命中可信代理段时才取 XFF 最右项，直连伪造 XFF 无效）→ 分层正确。
+- `isBlocked`：Redis 缓存优先 → DB 兜底，fail-open（有文档）；过期条目惰性删除 +
+  `expiresAt > now` 判定。
+- `ip-blacklist.utils.ts` CIDR 匹配：`parseCidr` 要求网络位对齐（`(value & mask) !== 0 → null`
+  防手滑封错段）、`cidrContains` 版本一致 + 位掩码比对、`::ffff:a.b.c.d` 归一为 IPv4、
+  `prefixMask` 对 /32//128 用 `~0n`（全 1）正确。
+
+### 22.5 runtime-config：`:key` 白名单校验
+
+- `:key` 参数经 `RUNTIME_CONFIG_DEFINITIONS` 白名单校验（未知键 `BadRequestException`），
+  非路径拼接 → 无注入面。
+- `@Public()` 仅 `GET /runtime-config/public`（运行时公开配置，设计如此）；读/写/重置端点全挂
+  `SYSTEM_CONFIG_READ` / `SYSTEM_CONFIG_WRITE`。
+
+### 22.6 user-cleanup / alert：全限定 + 时序安全内部密钥
+
+- `user-cleanup/*` 类级 `SYSTEM_USER_DELETE`；`alert/*` 类级 `SYSTEM_MONITOR`。
+- `internal-alert`（宿主机运维脚本入站）`@Public()` + `InternalSecretGuard`：
+  `isInternalServiceSecretValid` 用 `crypto.timingSafeEqual` + 长度预检（防时序侧信道），
+  **fail-close**（服务端未配 secret 一律拒绝，未配密钥不向全网开放告警注入入口）。
