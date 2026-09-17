@@ -645,3 +645,45 @@ userId`）。而 `deleteProject` 有显式门禁「私人空间不支持删除�
 不落库、不物理删除）。
 
 **验证**：`pnpm jest file-operations` 6 套件 151/151 绿（含 2 例新回归）；`pnpm type-check` 0 错。
+
+---
+
+## 13. backend version-control（MX/SVN 版本控制集成，只读历史/内容/列表 + 提交）
+
+审查范围：version-control.controller（3 个只读端点）、mx-version-control.provider（MX CLI 调用 +
+路径处理）、mxVersionTool 包（CLI 包装层）+ 共用的 FileUtils.validatePath。
+
+### 13.1 getFileHistory 漏 validatePath（三个只读端点中唯一未校验用户路径的）——已修
+
+**缺陷**：`listDirectoryAtRevision`（L983）与 `getFileContentAtRevision`（L1046）都对用户传入的
+`directoryPath`/`filePath` 调 `FileUtils.validatePath(path, filesDataPath)`（拒绝 `..`/`~`、绝对路径
+按 `path.relative(base,target).startsWith('..')` 判界），但 `getFileHistory`（L762）**漏了这一步**：
+它直接 `stripStoragePrefix(filePath)` 后把结果拼进 `file:///${mxRepoPath}/${directoryPath}` 仓库 URL
+交给 MX CLI。于是 `filePath` 里的 `..`/`~` 原样进入 URL，经 CLI 解析可越出仓库根（与两个兄弟端点
+的安全约定不一致）。
+
+**修复**：`getFileHistory` 顶部（`ensureInitialized` 后）补 `FileUtils.validatePath(filePath,
+filesDataPath)`，与两个兄弟端点对齐。
+
+**回归测试**：mx-version-control.provider.spec 新增 1 例——mock `validatePath` 对含 `..` 的入参抛
+BadRequest，断言 `getFileHistory('../../etc/passwd')` 抛错。旧代码不消费该 once 实现（不调
+validatePath）→ 操作继续推进 → 断言失败（有牙齿）。
+
+**验证**：`pnpm jest version-control` 3 套件 56/56 绿（含 1 例新回归）；`pnpm type-check` 0 错。
+
+### 13.2 其余审查结论（无缺陷 / 观察项，记录）
+
+- **无命令注入**：MX CLI 全部经 `@cloudcad/mx-version-tool` 的 `executeSpawn`/`executeExecFile`
+  （arg-array，`getSpawnOptions`/`getExecOptions` 只设 `windowsHide` + `LD_LIBRARY_PATH`，**不设
+  `shell:true`**）→ 用户路径作为参数向量传入，特殊字符无法注入命令。壳版 `executeCommand`
+  （`exec` 字符串）**已导出但全仓 0 调用者**（死代码，仅记录）。
+- **validatePath 判界正确**：先拒原始输入 `..`/`~`（normalize 前，防展开绕过），绝对路径用
+  `path.relative(base,target).startsWith('..')`（比 storage-service 修复前的裸 `startsWith(base)` 更
+  稳健，无同名前缀兄弟目录误放行）；相对路径因 `..` 已被拒 + 调用方 `resolveStoragePath`/
+  `path.relative` 收敛到 filesDataPath 下，安全。
+- **权限**：3 个只读端点均 `@RequireProjectPermission(VERSION_READ)`。
+
+**观察项（不修，设计层面，记录待议）**：3 个端点的权限判据是 query 的 `projectId`，而实际访问的
+文件由 `filePath`/`directoryPath` 决定，**filePath 未与 projectId 做归属绑定**。跨项目越权需知道
+目标 nodeId（存储布局 `YYYYMM/nodeId` 中 nodeId 为随机 UUID，不可猜测），故实际风险低；若要根治
+应改为按 filePath 解析归属项目再校验（属权限模型调整，非本点范围，留待专项）。

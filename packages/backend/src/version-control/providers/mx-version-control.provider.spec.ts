@@ -1,7 +1,9 @@
+import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { I18nService } from 'nestjs-i18n';
 import * as path from 'path';
+import { FileUtils } from '../../common/utils/file-utils';
 import { MxVersionControlProvider } from './mx-version-control.provider';
 
 const mockMxCommit = jest.fn();
@@ -547,6 +549,25 @@ describe('MxVersionControlProvider', () => {
         const result = await provider.getFileHistory('filesData/missing-path');
         expect(result.success).toBe(false);
         expect(result.totalCount).toBe(0);
+      });
+    });
+
+    describe('路径遍历门禁（与 listDirectoryAtRevision / getFileContentAtRevision 一致）', () => {
+      it('filePath 含 .. 时经 validatePath 拒绝（BadRequest），不拼进仓库 URL', async () => {
+        // 旧代码 getFileHistory 未调用 validatePath：此 once 实现不会被消费，操作继续推进
+        // （mxLogAsync mock 返回成功 → 不抛错），断言失败即回归测试的「牙齿」
+        (FileUtils.validatePath as jest.Mock).mockImplementationOnce(
+          (p: string) => {
+            if (p.includes('..')) {
+              throw new BadRequestException('路径包含非法字符');
+            }
+            return p;
+          }
+        );
+
+        await expect(
+          provider.getFileHistory('../../etc/passwd')
+        ).rejects.toBeInstanceOf(BadRequestException);
       });
     });
   });

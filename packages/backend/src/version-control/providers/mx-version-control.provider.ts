@@ -765,6 +765,11 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
   ): Promise<HistoryResult> {
     await this.ensureInitialized();
 
+    // 与 listDirectoryAtRevision / getFileContentAtRevision 一致：校验用户路径，
+    // 拒绝 .. / ~ 遍历。否则 filePath 的 .. 会原样拼进下方 file:/// 仓库 URL，
+    // 经 MX CLI 解析后越出仓库根（本方法此前漏了该校验，是三个只读端点中唯一未校验的）。
+    FileUtils.validatePath(filePath, this.filesDataPath);
+
     if (!this.isInitialized) {
       this.logger.warn('MX 未初始化');
       return {
