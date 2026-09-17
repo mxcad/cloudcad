@@ -1,6 +1,8 @@
 ﻿import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
+import { AppConfig } from '../../config/app.config';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
@@ -30,11 +32,15 @@ export interface WritePreloadingData {
 @Injectable()
 export class ExtRefPreloadingService {
   private readonly logger = new Logger(ExtRefPreloadingService.name);
+  private readonly mxcadUploadPath: string;
 
   constructor(
+    private readonly configService: ConfigService<AppConfig>,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly storageManager: StorageManager,
-  ) {}
+  ) {
+    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+  }
 
   /**
    * 根据节点路径获取 preloading JSON 文件名
@@ -68,9 +74,12 @@ export class ExtRefPreloadingService {
   async getPreloadingFilePath(nodeId: string): Promise<string | null> {
     const node = await this.fileSystemNodeService.findById(nodeId);
     const nodePath = node?.path || '';
-    if (!node?.path) return null;
 
-    const storageRootPath = path.dirname(this.storageManager.getFullPath(node.path));
+    // 用户云端：按 node.path 解析存储目录；游客/临时：回退到 mxcadUploadPath
+    const storageRootPath = node?.path
+      ? path.dirname(this.storageManager.getFullPath(node.path))
+      : this.mxcadUploadPath;
+
     const preloadingFileName = this.getPreloadingFileName(nodeId, nodePath);
     return path.join(storageRootPath, preloadingFileName);
   }

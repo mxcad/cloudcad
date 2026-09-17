@@ -3,7 +3,10 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { X, Download, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import { BatchTask } from '@/stores/useBatchDownloadStore';
+import {
+  useBatchDownloadStore,
+  BatchTask,
+} from '@/stores/useBatchDownloadStore';
 import { useBatchDownload } from '@/hooks/file-system';
 import { t } from '@/languages';
 import { Z_LAYERS } from '@/constants/layers';
@@ -26,16 +29,23 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
 }) => {
   const { cancelTask, downloadZip, downloadAllItems } =
     useBatchDownload(showToast);
+  // 读 store 中的 live task：store 有则用最新状态（取消/进度后即时刷新，避免快照 prop 不更新）；
+  // 已被移除（individual 终态自动清理）则回退传入的快照
+  const liveTask = useBatchDownloadStore((s) =>
+    s.tasks.find((x) => x.taskId === task.taskId)
+  );
+  const taskLive = liveTask ?? task;
 
   const progress = useMemo(() => {
-    if (task.totalCount === 0) return 0;
-    return Math.round((task.completedCount / task.totalCount) * 100);
-  }, [task.completedCount, task.totalCount]);
+    if (taskLive.totalCount === 0) return 0;
+    return Math.round((taskLive.completedCount / taskLive.totalCount) * 100);
+  }, [taskLive.completedCount, taskLive.totalCount]);
 
-  const isActive = task.status === 'PENDING' || task.status === 'PROCESSING';
+  const isActive =
+    taskLive.status === 'PENDING' || taskLive.status === 'PROCESSING';
 
   const statusIcon = () => {
-    switch (task.status) {
+    switch (taskLive.status) {
       case 'COMPLETED':
         return (
           <CheckCircle
@@ -59,7 +69,7 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
   };
 
   const statusText = () => {
-    switch (task.status) {
+    switch (taskLive.status) {
       case 'PENDING':
         return t('等待处理');
       case 'PROCESSING':
@@ -71,7 +81,7 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
       case 'CANCELLED':
         return t('已取消');
       default:
-        return task.status;
+        return taskLive.status;
     }
   };
 
@@ -85,17 +95,17 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
       footer={
         <div className="flex gap-2 justify-end">
           {isActive ? (
-            <Button variant="secondary" onClick={() => cancelTask(task.taskId)}>
+            <Button variant="secondary" onClick={() => cancelTask(taskLive.taskId)}>
               {t('取消')}
             </Button>
-          ) : task.status === 'COMPLETED' ? (
-            task.mode === 'individual' ? (
-              <Button onClick={() => void downloadAllItems(task)}>
+          ) : taskLive.status === 'COMPLETED' ? (
+            taskLive.mode === 'individual' ? (
+              <Button onClick={() => void downloadAllItems(taskLive)}>
                 <Download className="w-4 h-4 mr-1" />
                 {t('逐个下载')}
               </Button>
             ) : (
-              <Button onClick={() => downloadZip(task)}>
+              <Button onClick={() => downloadZip(taskLive)}>
                 <Download className="w-4 h-4 mr-1" />
                 {t('下载 ZIP')}
               </Button>
@@ -116,12 +126,12 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
           >
             {statusText()}
           </span>
-          {isActive && task.currentFile && (
+          {isActive && taskLive.currentFile && (
             <span
               className="text-sm ml-2"
               style={{ color: 'var(--text-tertiary)' }}
             >
-              - {task.currentFile}
+              - {taskLive.currentFile}
             </span>
           )}
         </div>
@@ -133,7 +143,7 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
           >
             <span>{t('进度')}</span>
             <span>
-              {task.completedCount}/{task.totalCount}
+              {taskLive.completedCount}/{taskLive.totalCount}
             </span>
           </div>
           <div
@@ -145,7 +155,7 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
               style={{
                 width: `${progress}%`,
                 background:
-                  task.status === 'FAILED'
+                  taskLive.status === 'FAILED'
                     ? 'var(--danger)'
                     : 'var(--primary-500)',
               }}
@@ -153,16 +163,16 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
           </div>
         </div>
 
-        {task.errors && task.errors.length > 0 && (
+        {taskLive.errors && taskLive.errors.length > 0 && (
           <Card>
             <div className="space-y-1">
               <p
                 className="text-sm font-medium"
                 style={{ color: 'var(--danger)' }}
               >
-                {t('错误详情')} ({task.errors.length})
+                {t('错误详情')} ({taskLive.errors.length})
               </p>
-              {task.errors.slice(0, 5).map((err, i) => (
+              {taskLive.errors.slice(0, 5).map((err, i) => (
                 <p
                   key={i}
                   className="text-xs"
@@ -171,13 +181,15 @@ export const BatchDownloadProgress: React.FC<BatchDownloadProgressProps> = ({
                   {err.fileName}: {err.error}
                 </p>
               ))}
-              {task.errors.length > 5 && (
+              {taskLive.errors.length > 5 && (
                 <p
                   className="text-xs"
                   style={{ color: 'var(--text-tertiary)' }}
                 >
                   ...
-                  {t('还有 {count} 个错误', { count: task.errors.length - 5 })}
+                  {t('还有 {count} 个错误', {
+                    count: taskLive.errors.length - 5,
+                  })}
                 </p>
               )}
             </div>

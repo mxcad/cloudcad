@@ -195,6 +195,8 @@ export function handleTokenRefreshFailure() {
     '/reset-password',
     '/verify-email',
     '/verify-phone',
+    // 会话转移透明交接路由：交接瞬间旧 token 恰好 401 时不得被劫持跳登录页，打断转移
+    '/session-transfer',
   ];
   if (PUBLIC_PATHS.some((p) => currentPath.startsWith(p))) {
     return;

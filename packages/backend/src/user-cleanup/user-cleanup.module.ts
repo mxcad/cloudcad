@@ -8,6 +8,8 @@ import { UserCleanupService } from './user-cleanup.service';
 import { UserCleanupController } from './user-cleanup.controller';
 
 @Module({
+  // 注意：UserCleanupScheduler 的清理指标埋点由 SchedulerModule（已导入 MetricsModule）提供，
+  // 本模块自身无 CleanupMetricsService 消费者，不导入 MetricsModule（#325 模块健康审查）
   imports: [PermissionModule, StorageManagementModule, RuntimeConfigModule],
   providers: [UserCleanupService, { provide: CONFIG, useExisting: RuntimeConfigService }],
   controllers: [UserCleanupController],

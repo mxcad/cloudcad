@@ -43,6 +43,21 @@ describe('FolderExpanderService', () => {
       expect(dirSet.size).toBe(0);
     });
 
+    it('should carry through fileHash-only items without node lookup', async () => {
+      const service = createService({ prisma: mockPrisma });
+
+      const items = [
+        { fileHash: 'hash-abc', fileName: 'drawing.dwg', formats: ['dwg'] },
+      ];
+      const dirSet = new Set<string>();
+      const result = await service.expandFolderItems(items, dirSet);
+
+      expect(result).toEqual(items);
+      expect(dirSet.size).toBe(0);
+      // fileHash-only 项无 DB 节点，不应触发节点查询
+      expect(mockPrisma.fileSystemNode.findUnique).not.toHaveBeenCalled();
+    });
+
     it('should expand folder into children', async () => {
       const service = createService({ prisma: mockPrisma });
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue({

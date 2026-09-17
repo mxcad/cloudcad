@@ -27,6 +27,7 @@ import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { useSidebarSettings } from '../../hooks/useSidebarSettings';
 import { isTourModeActive } from '../../utils/tourMode';
 import { useDrawingOpener } from './hooks/useDrawingOpener';
+import { useAutoSelectSubTab } from './hooks/useAutoSelectSubTab';
 import { SidebarTabBar } from './SidebarTabBar';
 import { SidebarTrigger } from './SidebarTrigger';
 import { ProjectDrawingsPanel } from '../ProjectDrawingsPanel';
@@ -36,7 +37,7 @@ import { FileSystemNode } from '../../types/filesystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
 import { useDrawingSession } from '../../services/drawingSession';
-import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
+import { isCollaborationAllowed } from '../../constants/appConfig';
 import styles from './sidebar.module.css';
 import { t } from '@/languages';
 
@@ -66,16 +67,15 @@ interface SidebarContainerProps {
   onInsertFile?: (file: InsertFileParams) => void | Promise<void>;
   /** 是否可见 - 用于 loading 期间隐藏但保持 DOM 布局稳定 */
   visible?: boolean;
-  /** 是否处于加载状态 */
+  /** 是否处于加载状态（骨架屏已移除，保留字段兼容既有调用方；协同场景经 onCollabFileLoaded 控制节奏） */
   loading?: boolean;
-  /** 协同文件加载完成回调（协同链接进入时骨架屏延迟关闭） */
+  /** 协同文件加载完成回调（协同链接进入时用于延迟关闭加载态） */
   onCollabFileLoaded?: () => void;
 }
 
 export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   projectId,
   onInsertFile,
-  loading: isLoading = false,
   onCollabFileLoaded,
 }) => {
   // ==================== Hooks ====================
@@ -93,10 +93,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     setLastActiveTab,
     setLastDrawingsSubTab,
   } = useSidebarSettings();
-
-  // 防闪烁：骨架屏只在 loading 持续超过阈值后显示，
-  // CAD 引擎/数据快速就绪时不闪现骨架（协同链接进入时 loading 会持续到文件加载完，不受影响）
-  const showSkeleton = useDelayedLoading(isLoading);
 
   // ==================== State ====================
 
@@ -154,6 +150,15 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // ==================== Refs ====================
 
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // 自动选择子tab（首次打开CAD编辑器时根据图纸来源选择）
+  useAutoSelectSubTab({
+    fileInfo,
+    activeDrawingsSubTab,
+    setActiveDrawingsSubTab,
+    setLastDrawingsSubTab,
+    rememberState: settings.rememberState,
+  });
 
   // ==================== Effects ====================
 
@@ -391,6 +396,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   parentId={isLibraryFile ? null : currentOpenFileParentId}
                   personalSpaceId={personalSpaceId}
                   visible={activeDrawingsSubTab === 'my-project'}
+                  tabId="my-project"
                 />
               ) : (
                 <div className={styles.loginPromptContainer}>
@@ -429,6 +435,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   isModified={isModified}
                   parentId={currentOpenFileParentId}
                   visible={activeDrawingsSubTab === 'my-drawings'}
+                  tabId="my-drawings"
                 />
               ) : (
                 <div className={styles.loginPromptContainer}>
@@ -459,7 +466,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 
         {/* 协同 tab — 始终挂载，不活跃时 CSS 隐藏 */}
         <div style={{ display: activeTab === 'collaborate' ? '' : 'none' }}>
-          {runtimeConfig.collaborationEnabled ? (
+          {runtimeConfig.collaborationEnabled && isCollaborationAllowed(runtimeConfig.collaborationDomains) ? (
             <>
               <div className={styles.content}>
                 <CollaborateSidebar
@@ -539,32 +546,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
         transition: isResizing || !mounted ? 'none' : undefined,
       }}
     >
-      {showSkeleton ? (
-        /* 加载骨架屏 */
-        <div className={styles.skeletonContainer}>
-          <div className={styles.skeletonTabBar}>
-            <div className={styles.skeletonTab} />
-            <div className={styles.skeletonTab} />
-          </div>
-          <div className={styles.skeletonList}>
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-              <div key={i} className={styles.skeletonItem}>
-                <div className={styles.skeletonIcon} />
-                <div className={styles.skeletonText}>
-                  <div
-                    className={styles.skeletonLine}
-                    style={{ width: '60%' }}
-                  />
-                  <div
-                    className={styles.skeletonLine}
-                    style={{ width: '35%' }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : isVisible ? (
+      {isVisible ? (
         <>
           {/* Tab 栏 */}
           <SidebarTabBar

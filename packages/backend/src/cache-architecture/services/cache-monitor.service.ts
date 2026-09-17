@@ -59,6 +59,11 @@ export interface CacheWarningItem {
 }
 
 /**
+ * 定时 cron 表达式：@Cron 装饰器与手动触发注册表（任务清单展示）共用同一来源，防止漂移
+ */
+const PERFORMANCE_DATA_CLEANUP_CRON = '0 * * * * *';
+
+/**
  * 缓存监控服务
  * 实时监控缓存性能和健康状态
  */
@@ -80,6 +85,8 @@ export class CacheMonitorService {
     // 手动触发注册表（#210）
     this.taskRunService.register(TASK_NAMES.CACHE_MONITOR.PERFORMANCE_DATA, {
       description: '缓存性能数据过期清理',
+      schedule: PERFORMANCE_DATA_CLEANUP_CRON,
+      scheduleLabel: '每分钟',
       execute: () => this.cleanOldPerformanceDataTask(),
     });
   }
@@ -87,7 +94,7 @@ export class CacheMonitorService {
   /**
    * 每分钟清理过期的性能数据（使用 @nestjs/schedule）
    */
-  @Cron('0 * * * * *')
+  @Cron(PERFORMANCE_DATA_CLEANUP_CRON)
   async cleanOldPerformanceData(): Promise<void> {
     const enabled = await this.runtimeConfigService.getValue<boolean>(
       TASK_ENABLED_KEYS.CACHE_MONITOR,

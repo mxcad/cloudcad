@@ -12,4 +12,5 @@ export const CAD_EVENTS = {
   NEW_FILE: 'mxcad-new-file',
   UPLOAD_COMPLETED: 'mxcad-upload-completed',
   PUBLIC_FILE_UPLOADED: 'public-file-uploaded',
+  SHARE_FILE: 'mxcad-share-file',
 } as const;

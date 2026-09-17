@@ -11,7 +11,23 @@ import type {
   SaveSdkHandles,
 } from './saveTypes';
 
-const projectPermsCache = new Map<string, string[]>();
+/**
+ * 保存流项目权限缓存（带 TTL，对齐 globalPermissionCache 的 5 分钟）
+ *
+ * 无 TTL 时"无权限"判定整个 SPA 会话期间不复验：切换图纸/权限变更后
+ * 保存流仍复用旧结果（历史 bug：旧图纸无权限状态泄漏到新图纸）。
+ * 登录/登出时经 clearSavePermissionCache 整体清空（跨用户防串）。
+ */
+const projectPermsCache = new Map<
+  string,
+  { perms: string[]; timestamp: number }
+>();
+const PROJECT_PERMS_TTL_MS = 5 * 60 * 1000;
+
+/** 清空保存流权限缓存（AuthContext 登录/登出/跨标签页登出时调用） */
+export function clearSavePermissionCache(): void {
+  projectPermsCache.clear();
+}
 
 /** 默认 SDK 句柄：直接桥接 @api-sdk 生成函数 */
 export function createDefaultSaveSdk(): SaveSdkHandles {
@@ -41,8 +57,11 @@ export function createDefaultSaveSdk(): SaveSdkHandles {
 export function createDefaultPermissionQuerier(): SavePermissionQuerier {
   return {
     async hasProjectPermission(projectId, permission) {
-      let perms = projectPermsCache.get(projectId);
-      if (!perms) {
+      const cached = projectPermsCache.get(projectId);
+      let perms: string[];
+      if (cached && Date.now() - cached.timestamp < PROJECT_PERMS_TTL_MS) {
+        perms = cached.perms;
+      } else {
         const result = await memberControllerGetUserProjectPermissions({
           path: { projectId },
         });
@@ -50,7 +69,7 @@ export function createDefaultPermissionQuerier(): SavePermissionQuerier {
         // 会让用户被误导"您没有保存图纸的权限"（历史 bug），必须抛出让上层显示真实原因
         if (result.error) throw result.error;
         perms = result.data?.permissions || [];
-        projectPermsCache.set(projectId, perms);
+        projectPermsCache.set(projectId, { perms, timestamp: Date.now() });
       }
       return perms.includes(permission);
     },

@@ -497,5 +497,32 @@
         "zh-TW": "另存為到雲圖",
         "ko-KR": "클라우드로 저장",
         "$id": 1090
+    },
+    "导出 MXWEB": {
+        "$files": [
+            "src/pages/home/hooks/useMenu.ts"
+        ],
+        "zh-TW": "匯出 MXWEB",
+        "en-US": "Export MXWEB",
+        "ko-KR": "MXWEB 내보내기",
+        "$id": 2642
+    },
+    "另存为本地": {
+        "$files": [
+            "public/mxUIConfig.json"
+        ],
+        "zh-TW": "另存為本地",
+        "en-US": "Save as Local",
+        "ko-KR": "로컬에 저장",
+        "$id": 2643
+    },
+    "分享": {
+        "$files": [
+            "public/mxUIConfig.json"
+        ],
+        "zh-TW": "分享",
+        "en-US": "Share",
+        "ko-KR": "공유",
+        "$id": 2644
     }
 }

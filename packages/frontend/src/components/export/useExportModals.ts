@@ -51,6 +51,18 @@ export function useExportModals({
   );
   const [saveAsFileHash, setSaveAsFileHash] = useState<string | null>(null);
 
+  // 切换图纸时重置另存为簇状态：ExportModals 是页面级组件（同路由换 fileId
+  // 参数不重挂载），不清理会残留上一张图纸的另存为弹框/旧 blob
+  useEffect(() => {
+    setShowSaveAsModal(false);
+    setSaveAsBlob(null);
+    setSaveAsFileName('');
+    setSaveAsPersonalSpaceId(null);
+    setSaveAsSourceNodeId(null);
+    setSaveAsFileHash(null);
+    forceDownloadToLocal.current = false;
+  }, [fileId]);
+
   const convert = useExportConvert({
     fileId,
     canExport,

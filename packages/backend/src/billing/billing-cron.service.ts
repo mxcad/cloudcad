@@ -10,6 +10,12 @@ import { TaskRunService } from '../task-run/task-run.service';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../task-run/task-run.constants';
 import { BillingService } from './billing.service';
 
+/**
+ * 定时 cron 表达式：@Cron 装饰器与手动触发注册表（任务清单展示）共用同一来源，防止漂移
+ */
+const DOWNGRADE_MEMBERSHIPS_CRON = '0 2 * * *';
+const TIMEOUT_ORDERS_CRON = '0 */2 * * *';
+
 @Injectable()
 export class BillingCron {
   private readonly logger = new Logger(BillingCron.name);
@@ -25,10 +31,14 @@ export class BillingCron {
     // 手动触发注册表（#210）
     this.taskRunService.register(TASK_NAMES.BILLING.DOWNGRADE_MEMBERSHIPS, {
       description: '过期会员降级',
+      schedule: DOWNGRADE_MEMBERSHIPS_CRON,
+      scheduleLabel: '每天 02:00',
       execute: () => this.downgradeExpiredMembershipsTask(),
     });
     this.taskRunService.register(TASK_NAMES.BILLING.TIMEOUT_ORDERS, {
       description: '超时未支付订单关闭',
+      schedule: TIMEOUT_ORDERS_CRON,
+      scheduleLabel: '每 2 小时',
       execute: () => this.timeoutPendingOrdersTask(),
     });
   }
@@ -41,7 +51,7 @@ export class BillingCron {
   }
 
   // 服务器本地时间 02:00 执行（建议服务器时区设为 UTC+8）
-  @Cron('0 2 * * *')
+  @Cron(DOWNGRADE_MEMBERSHIPS_CRON)
   async downgradeExpiredMemberships() {
     const enabled = await this.isEnabled();
     if (!enabled) {
@@ -86,7 +96,7 @@ export class BillingCron {
     }
   }
 
-  @Cron('0 */2 * * *')
+  @Cron(TIMEOUT_ORDERS_CRON)
   async timeoutPendingOrders() {
     const enabled = await this.isEnabled();
     if (!enabled) {

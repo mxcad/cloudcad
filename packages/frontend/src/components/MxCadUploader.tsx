@@ -95,7 +95,10 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
         onExternalReferenceSuccess?.();
       },
       onError: (error) => {
-        globalShowToast(t(`外部参照上传失败: ${error}`), 'error');
+        globalShowToast(
+          t('外部参照上传失败: {error}', { error: String(error) }),
+          'error'
+        );
       },
       onSkip: () => {
         onExternalReferenceSkip?.();
@@ -228,7 +231,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
       if (allowedFiles.length !== files.length) {
         globalShowToast(
-          t(`已忽略 ${files.length - allowedFiles.length} 个不支持的文件类型`),
+          t('已忽略 {count} 个不支持的文件类型', {
+            count: String(files.length - allowedFiles.length),
+          }),
           'info'
         );
       }
@@ -281,6 +286,9 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
               .toLowerCase()
               .endsWith('.mxweb');
             if (enableExternalReferenceCheck && !isSkipXrefCheck) {
+              // 外部参照的存储/查找以源图纸节点（fileNodeId）为准，
+              // 同步更新 currentNodeId 确保查看/下载使用正确的节点 ID
+              setCurrentNodeId(task.result.nodeId);
               externalReferenceUpload.checkMissingReferences(
                 task.result.nodeId,
                 true,
@@ -319,7 +327,10 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
             });
           }
           const errorMsg = event.error || t('上传失败');
-          globalShowToast(t(`文件上传失败: ${errorMsg}`), 'error');
+          globalShowToast(
+            t('文件上传失败: {errorMsg}', { errorMsg }),
+            'error'
+          );
         }
       };
 

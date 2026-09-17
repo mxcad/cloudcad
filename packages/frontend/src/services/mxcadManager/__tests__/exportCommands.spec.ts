@@ -25,7 +25,7 @@ import {
 
 const mockCtx: CommandContext = {
   fileName: 'test.dwg',
-  fileInfo: { fileId: '', name: 'test.dwg', parentId: null, projectId: null },
+  fileInfo: { fileId: 'node-123', name: 'test.dwg', parentId: null, projectId: null },
   saveDrawingToBlob: vi.fn().mockResolvedValue({
     blob: new Blob(['export'], { type: 'application/octet-stream' }),
     data: new ArrayBuffer(8),
@@ -102,6 +102,29 @@ describe('导出命令簇参数化（T6）', () => {
       blob: expect.any(Blob),
     });
     expect(handler.mock.calls[0][0]).not.toHaveProperty('format');
+    unsub();
+  });
+
+  it('事件 payload 只含 fileName/blob/format（无 nodeId，云图与本地图一致）', async () => {
+    const handler = vi.fn();
+    const unsub = subscribe(CAD_EVENTS.EXPORT_DWG, handler);
+    const localCtx: CommandContext = {
+      ...mockCtx,
+      fileInfo: {
+        fileId: '',
+        name: 'local.dwg',
+        parentId: null,
+        projectId: null,
+      },
+    };
+
+    const result = await CommandRegistry.execute('Mx_ExportDWG', localCtx);
+
+    expect(result.success).toBe(true);
+    const payload = handler.mock.calls[0][0];
+    // 导出的是编辑器内存 blob，不携带 nodeId；云图/本地图行为一致
+    expect(payload).not.toHaveProperty('nodeId');
+    expect(payload).toHaveProperty('blob');
     unsub();
   });
 

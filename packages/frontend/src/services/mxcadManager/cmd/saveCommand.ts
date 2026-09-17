@@ -10,6 +10,9 @@ import {
   getPersonalSpaceId,
   showSaveAsDialog,
 } from '../mxcadHelpers';
+// 显式导入门面文件 mxcadManager.ts（文件优先于目录 index.ts；index 会 import cmd/ 成环）。
+// 门面静态链（instanceManager→openFlow 等）不 import cmd/，无循环。
+import { mxcadManager } from '../mxcadManager';
 import type { Command, CommandContext, CommandResult } from './types';
 
 export class SaveCommand implements Command {
@@ -20,6 +23,13 @@ export class SaveCommand implements Command {
       if (!isAuthenticated() || isAccessTokenExpired()) {
         emit(CAD_EVENTS.SAVE_REQUIRED, { action: t('保存文件') });
         return { success: false, error: 'unauthorized' };
+      }
+
+      // 新图纸打开中：会话仍持上一张图纸的 fileInfo，此时保存会把引擎当前
+      // 内容写到旧节点（或保存旧图纸），必须拒绝
+      if (mxcadManager.hasPendingOpen()) {
+        globalShowToast(t('图纸正在打开，请稍后再保存'), 'warning');
+        return { success: false, error: 'file-opening' };
       }
 
       const fileInfo = ctx.fileInfo;
@@ -35,7 +45,7 @@ export class SaveCommand implements Command {
       }
 
       const outcome = await ctx.saveFile(fileInfo);
-      if (outcome.status === 'failed') {
+      if (outcome.status === 'failed' || outcome.status === 'denied') {
         return { success: false, error: outcome.error };
       }
       return { success: true };

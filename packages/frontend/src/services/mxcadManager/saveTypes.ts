@@ -40,6 +40,8 @@ export type SaveFileOutcome =
   | { status: 'saved' }
   | { status: 'saveAs' }
   | { status: 'cancelled' }
+  /** 权限拒绝（项目图纸无 CAD_SAVE：禁止原地保存，也禁止另存为） */
+  | { status: 'denied'; error: string }
   | { status: 'failed'; error: string };
 
 export type SaveFileFn = (

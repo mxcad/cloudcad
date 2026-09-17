@@ -32,6 +32,7 @@ vi.mock('@/languages', () => ({
 
 vi.mock('@/api-sdk', () => ({
   taskRunControllerListRuns: vi.fn(),
+  taskRunControllerListTasks: vi.fn(),
   taskRunControllerRunTask: vi.fn(),
   runtimeConfigControllerGetAllConfigs: vi.fn(),
   runtimeConfigControllerUpdateConfig: vi.fn(),
@@ -39,12 +40,14 @@ vi.mock('@/api-sdk', () => ({
 
 import {
   taskRunControllerListRuns,
+  taskRunControllerListTasks,
   taskRunControllerRunTask,
   runtimeConfigControllerGetAllConfigs,
   runtimeConfigControllerUpdateConfig,
 } from '@/api-sdk';
 
 const mockedListRuns = vi.mocked(taskRunControllerListRuns);
+const mockedListTasks = vi.mocked(taskRunControllerListTasks);
 const mockedRunTask = vi.mocked(taskRunControllerRunTask);
 const mockedGetAllConfigs = vi.mocked(runtimeConfigControllerGetAllConfigs);
 const mockedUpdateConfig = vi.mocked(runtimeConfigControllerUpdateConfig);
@@ -98,6 +101,7 @@ describe('useBackgroundTasks', () => {
     );
     notificationMock.showConfirm.mockResolvedValue(true);
     mockListResponse();
+    mockedListTasks.mockResolvedValue({ data: { data: [] } } as never);
   });
 
   it('active=false 时不对任何接口发起请求', () => {
@@ -105,7 +109,42 @@ describe('useBackgroundTasks', () => {
     renderHook(() => useBackgroundTasks(false), { wrapper });
 
     expect(mockedListRuns).not.toHaveBeenCalled();
+    expect(mockedListTasks).not.toHaveBeenCalled();
     expect(mockedGetAllConfigs).not.toHaveBeenCalled();
+  });
+
+  it('active=true 时请求任务清单并解析（含 schedule/scheduleLabel，null 表示无独立定时）', async () => {
+    const { wrapper } = createTestWrapper();
+    mockedListTasks.mockResolvedValue({
+      data: {
+        data: [
+          { taskName: 'cache-cleanup:warning-check', description: '缓存监控告警检查', schedule: '0 */10 * * * *', scheduleLabel: '每 10 分钟' },
+          { taskName: 'backup:database', description: '数据库备份', schedule: null, scheduleLabel: null },
+        ],
+      } as never,
+    });
+
+    const { result } = renderHook(() => useBackgroundTasks(true), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.taskList).toHaveLength(2));
+    expect(mockedListTasks).toHaveBeenCalledTimes(1);
+    expect(result.current.taskList).toEqual([
+      { taskName: 'cache-cleanup:warning-check', description: '缓存监控告警检查', schedule: '0 */10 * * * *', scheduleLabel: '每 10 分钟' },
+      { taskName: 'backup:database', description: '数据库备份', schedule: null, scheduleLabel: null },
+    ]);
+  });
+
+  it('任务清单防御性解析：data 非数组返回空列表', async () => {
+    const { wrapper } = createTestWrapper();
+    mockedListTasks.mockResolvedValue({ data: { data: 'not-array' } as never });
+
+    const { result } = renderHook(() => useBackgroundTasks(true), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.taskList).toEqual([]));
   });
 
   it('active=true 时请求执行记录列表并解析', async () => {

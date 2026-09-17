@@ -23,9 +23,10 @@ import { StorageCleanupScheduler } from './storage-cleanup.scheduler';
 import { UserCleanupScheduler } from '../../user-cleanup/user-cleanup.scheduler';
 import { PermissionModule } from '../../permission/permission.module';
 import { TaskRunModule } from '../../task-run/task-run.module';
+import { MetricsModule } from '../../metrics/metrics.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), CommonModule, StorageManagementModule, UserCleanupModule, AuditLogModule, PermissionModule, AlertModule, TaskRunModule],
+  imports: [ScheduleModule.forRoot(), CommonModule, StorageManagementModule, UserCleanupModule, AuditLogModule, PermissionModule, AlertModule, TaskRunModule, MetricsModule],
   providers: [CacheCleanupScheduler, AuditCleanupScheduler, StorageCleanupScheduler, UserCleanupScheduler],
 })
 export class SchedulerModule {}

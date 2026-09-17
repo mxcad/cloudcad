@@ -54,6 +54,7 @@ export function openSession(info: OpenFileInfo): void {
   store.setCurrentFileInfo({ ...info, expectedTimestamp: info.updatedAt });
   store.setCurrentFileId(info.fileId);
   store.setCurrentFileName(info.name || null);
+  store.setIsCurrentFileDeleted(false);
 }
 
 /** 唯一 writer：关闭图纸（退出登录等场景），脏标记一并复位，引擎侧运行态一并重置 */

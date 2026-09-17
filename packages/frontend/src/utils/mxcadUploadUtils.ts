@@ -19,21 +19,50 @@ import { sanitizeFileName, CAD_EXTENSIONS } from './fileUtils';
 import { MxCadUploadError, throwOnSdkError } from './mxcadUploadErrors';
 import { t } from '@/languages';
 
-export { MxCadUploadError } from './mxcadUploadErrors';
-
 /**
- * 当前上传最大文件大小（字节），可由外部动态更新
- * 默认 100MB，后端运行时配置可动态修改
+ * 从后端获取最新的最大文件大小配置（MB）
+ * 优先使用缓存值，避免每次都调用API
  */
-export let uploadMaxFileSize = 100 * 1024 * 1024;
+let cachedMaxFileSize: number | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL_MS = 30 * 1000; // 30秒缓存
+
+async function fetchMaxFileSizeFromBackend(): Promise<number> {
+  const now = Date.now();
+  if (cachedMaxFileSize !== null && now - lastFetchTime < CACHE_TTL_MS) {
+    return cachedMaxFileSize;
+  }
+
+  try {
+    // 动态导入避免循环依赖
+    const { runtimeConfigControllerGetPublicConfigs } = await import('@/api-sdk');
+    const result = await runtimeConfigControllerGetPublicConfigs();
+    if (result.data?.maxFileSize) {
+      cachedMaxFileSize = Number(result.data.maxFileSize);
+      lastFetchTime = now;
+      return cachedMaxFileSize;
+    }
+  } catch (error) {
+    console.warn('获取文件大小配置失败，使用默认值:', error);
+  }
+
+  return 100; // 默认100MB
+}
 
 /**
- * 更新上传最大文件大小
- * 供 RuntimeConfigContext 在加载完成后调用
+ * 将运行时配置的 maxFileSize（MB）同步进模块缓存。
+ * 由 RuntimeConfigProvider 在公开配置加载/管理员保存后调用（单一同步点）；
+ * TTL 内非 React 消费者（mxcadManager 等）经 fetchMaxFileSizeFromBackend 取到最新值，
+ * TTL 过期后回源后端自愈。
  */
 export function setUploadMaxFileSize(sizeMB: number): void {
-  uploadMaxFileSize = sizeMB * 1024 * 1024;
+  if (Number.isFinite(sizeMB) && sizeMB > 0) {
+    cachedMaxFileSize = sizeMB;
+    lastFetchTime = Date.now();
+  }
 }
+
+export { MxCadUploadError } from './mxcadUploadErrors';
 /**
  * MxCAD 上传配置接口
  */
@@ -56,7 +85,7 @@ export interface MxCadUploadOptions {
   onProgress?: (percentage: number) => void;
   /** 文件排队回调 */
   onFileQueued?: (file: File) => void;
-  /** 最大文件大小（字节），默认使用 uploadMaxFileSize */
+  /** 最大文件大小（字节），默认从后端获取 */
   maxSize?: number;
 }
 
@@ -96,7 +125,7 @@ export const validateFileType = (file: File): boolean => {
  */
 export const validateFileSize = (
   file: File,
-  maxSize: number = uploadMaxFileSize
+  maxSize: number
 ): boolean => {
   return file.size <= maxSize;
 };
@@ -145,8 +174,9 @@ export async function uploadFile(
     );
   }
 
-  // 验证文件大小
-  const fileMaxSize = maxSize ?? uploadMaxFileSize;
+  // 验证文件大小 - 优先使用传入的maxSize，否则从后端获取最新配置
+  const backendMaxFileSizeMB = await fetchMaxFileSizeFromBackend();
+  const fileMaxSize = maxSize ?? backendMaxFileSizeMB * 1024 * 1024;
   if (!validateFileSize(file, fileMaxSize)) {
     throw new MxCadUploadError(
       t('文件过大: ${file.name} (最大${size}MB)')

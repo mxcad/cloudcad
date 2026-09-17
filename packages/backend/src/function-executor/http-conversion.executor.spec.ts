@@ -218,6 +218,85 @@ describe('HttpConversionExecutor', () => {
       expect(status.createdAt).toEqual(new Date('2026-01-01T00:00:00.000Z'));
     });
 
+    it('should map permanent flag from the conversion-service response (S6-7)', async () => {
+      port = await startServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            taskId: 'fw_6',
+            status: 'FAILED',
+            error: '永久失败（内容不可转换）：解析失败',
+            permanent: true,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:01:00.000Z',
+          }),
+        );
+      });
+      executor = await createExecutor();
+
+      const status = await executor.getTaskStatus('fw_6');
+      expect(status.permanent).toBe(true);
+      expect(status.error).toBe('永久失败（内容不可转换）：解析失败');
+    });
+
+    it('should map permanent=false when the response omits the flag (S6-7 普通任务)', async () => {
+      port = await startServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            taskId: 'fw_7',
+            status: 'FAILED',
+            error: '瞬时失败',
+            // 无 permanent 字段（普通任务）
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:01:00.000Z',
+          }),
+        );
+      });
+      executor = await createExecutor();
+
+      const status = await executor.getTaskStatus('fw_7');
+      expect(status.permanent).toBe(false);
+    });
+
+    it('should map queuePosition from the conversion-service response (S6-5)', async () => {
+      port = await startServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            taskId: 'fw_8',
+            status: 'PENDING',
+            queuePosition: 3,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:01:00.000Z',
+          }),
+        );
+      });
+      executor = await createExecutor();
+
+      const status = await executor.getTaskStatus('fw_8');
+      expect(status.queuePosition).toBe(3);
+    });
+
+    it('should map queuePosition=null to undefined (S6-5 运行中/未入队)', async () => {
+      port = await startServer((req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            taskId: 'fw_9',
+            status: 'PROCESSING',
+            queuePosition: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:01:00.000Z',
+          }),
+        );
+      });
+      executor = await createExecutor();
+
+      const status = await executor.getTaskStatus('fw_9');
+      expect(status.queuePosition).toBeUndefined();
+    });
+
     it('should reject when connection is refused', async () => {
       const module = await Test.createTestingModule({
         providers: [

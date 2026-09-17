@@ -55,7 +55,7 @@ export const AccountLoginForm: React.FC<AccountLoginFormProps> = ({
             id="account"
             name="account"
             type="text"
-            autoComplete="email username tel"
+            autoComplete="username"
             required
             className={styles.inputField}
             placeholder={getAccountLoginPlaceholder()}

@@ -13,6 +13,9 @@ import { AuditLogService } from '../../../audit/audit-log.service';
 import { IpWhitelistService } from '../../../ip-whitelist/ip-whitelist.service';
 import { IpBlacklistService } from '../../../ip-blacklist/ip-blacklist.service';
 import { SecurityAccessAttemptService } from '../../../security/security-access-attempt.service';
+import { MfaService } from '../../services/mfa.service';
+import { PasswordPolicyService } from '../../services/password-policy.service';
+import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
 
 beforeEach(() => {
@@ -33,6 +36,10 @@ describe('AdminAuthService（管理员专用登录）', () => {
   const mockAccountRateLimitService = {
     checkLimit: jest.fn().mockResolvedValue(undefined),
     reset: jest.fn().mockResolvedValue(undefined),
+    // #416 失败锁定
+    checkAccountLock: jest.fn().mockResolvedValue(undefined),
+    recordLoginFailure: jest.fn().mockResolvedValue(undefined),
+    clearLoginFailures: jest.fn().mockResolvedValue(undefined),
   };
   const mockAuditLogService = {
     log: jest.fn().mockResolvedValue(undefined),
@@ -46,6 +53,22 @@ describe('AdminAuthService（管理员专用登录）', () => {
   const mockSecurityAccessAttemptService = {
     record: jest.fn().mockResolvedValue(undefined),
   };
+  const mockMfaService = {
+    verifyCode: jest.fn().mockResolvedValue(true),
+    isTotpEnabled: jest.fn().mockResolvedValue(false),
+  };
+  const mockPasswordPolicyService = {
+    // 默认：新鲜口令（无需强改、未到期）
+    getPasswordChangeStatus: jest
+      .fn()
+      .mockReturnValue({ required: undefined, expiringSoon: false }),
+  };
+  // 总闸默认关闭（与生产默认一致）：mfaEnforceEnabled=false → TOTP 完全不生效
+  const mockRuntimeConfigService = {
+    getValue: jest.fn().mockImplementation((_key: string, def: unknown) =>
+      Promise.resolve(def)
+    ),
+  };
 
   let adminUser: Record<string, unknown>;
 
@@ -58,9 +81,26 @@ describe('AdminAuthService（管理员专用登录）', () => {
     });
     mockAccountRateLimitService.checkLimit.mockResolvedValue(undefined);
     mockAccountRateLimitService.reset.mockResolvedValue(undefined);
+    mockAccountRateLimitService.checkAccountLock.mockResolvedValue(undefined);
+    mockAccountRateLimitService.recordLoginFailure.mockResolvedValue(
+      undefined
+    );
+    mockAccountRateLimitService.clearLoginFailures.mockResolvedValue(
+      undefined
+    );
+    mockPasswordPolicyService.getPasswordChangeStatus.mockReturnValue({
+      required: undefined,
+      expiringSoon: false,
+    });
     mockIpWhitelistService.isAllowed.mockResolvedValue(true);
     mockIpBlacklistService.isBlocked.mockResolvedValue(false);
     mockSecurityAccessAttemptService.record.mockResolvedValue(undefined);
+    mockMfaService.verifyCode.mockResolvedValue(true);
+    mockMfaService.isTotpEnabled.mockResolvedValue(false);
+    // 默认关闭总闸（getValue 返回传入的 defaultValue，mfaEnforceEnabled 默认 false）
+    mockRuntimeConfigService.getValue.mockImplementation(
+      (_key: string, def: unknown) => Promise.resolve(def)
+    );
 
     adminUser = {
       id: 'admin-1',
@@ -75,6 +115,9 @@ describe('AdminAuthService（管理员专用登录）', () => {
       nickname: 'System Admin',
       avatar: null,
       deletedAt: null,
+      totpEnabled: false,
+      // 默认新鲜口令（1 天前修改）：无需强改、未到期
+      passwordChangedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -89,6 +132,15 @@ describe('AdminAuthService（管理员专用登录）', () => {
         {
           provide: SecurityAccessAttemptService,
           useValue: mockSecurityAccessAttemptService,
+        },
+        { provide: MfaService, useValue: mockMfaService },
+        {
+          provide: PasswordPolicyService,
+          useValue: mockPasswordPolicyService,
+        },
+        {
+          provide: RuntimeConfigService,
+          useValue: mockRuntimeConfigService,
         },
       ],
     }).compile();
@@ -210,6 +262,154 @@ describe('AdminAuthService（管理员专用登录）', () => {
       expect(result.refreshToken).toBe('rt');
       expect(result.user).toMatchObject({ id: 'admin-1' });
       expect(mockAuditLogService.log).toHaveBeenCalled();
+    });
+  });
+
+  describe('TOTP 双因素（#415，总闸开启 mfaEnforceEnabled=true）', () => {
+    // 总闸开启时才走 TOTP 逻辑；这些用例验证开启态
+    beforeEach(() => {
+      mockRuntimeConfigService.getValue.mockResolvedValue(true);
+    });
+
+    it('未绑定 TOTP：签发 token 且响应带 mfaSetupRequired（前端锁定至绑定页）', async () => {
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue(adminUser);
+      const result = await service.login(dto, undefined, '127.0.0.1');
+      expect(result.mfaSetupRequired).toBe(true);
+      expect(mockMfaService.verifyCode).not.toHaveBeenCalled();
+    });
+
+    it('已绑定 TOTP 且缺码：抛 MFA_REQUIRED 且不发 token', async () => {
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...adminUser,
+        totpEnabled: true,
+      });
+      await expect(service.login(dto, undefined, '127.0.0.1')).rejects.toMatchObject({
+        status: 401,
+        response: { code: 'MFA_REQUIRED' },
+      });
+      expect(mockAuthTokenService.generateTokens).not.toHaveBeenCalled();
+      expect(mockSecurityAccessAttemptService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'mfa_code_missing' })
+      );
+    });
+
+    it('已绑定 TOTP 且错码：抛 MFA_CODE_INVALID + 计入限流 + 失败审计', async () => {
+      mockMfaService.verifyCode.mockResolvedValue(false);
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...adminUser,
+        totpEnabled: true,
+      });
+      await expect(
+        service.login(
+          { ...dto, totpCode: '000000' },
+          undefined,
+          '127.0.0.1'
+        )
+      ).rejects.toMatchObject({
+        status: 401,
+        response: { code: 'MFA_CODE_INVALID' },
+      });
+      // 错码尝试计入登录维度限流（与密码错误共享计数窗口）
+      expect(mockAccountRateLimitService.checkLimit).toHaveBeenCalledWith(
+        'login',
+        'admin'
+      );
+      expect(mockSecurityAccessAttemptService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: 'mfa_code_invalid' })
+      );
+      expect(mockAuthTokenService.generateTokens).not.toHaveBeenCalled();
+    });
+
+    it('已绑定 TOTP 且码正确：签发 token 且响应不带 mfaSetupRequired', async () => {
+      mockMfaService.verifyCode.mockResolvedValue(true);
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...adminUser,
+        totpEnabled: true,
+      });
+      const result = await service.login(
+        { ...dto, totpCode: '123456' },
+        undefined,
+        '127.0.0.1'
+      );
+      expect(result.accessToken).toBe('at');
+      expect(result.mfaSetupRequired).toBeUndefined();
+      expect(mockMfaService.verifyCode).toHaveBeenCalledWith('admin-1', '123456');
+    });
+  });
+
+  describe('TOTP 总闸关闭（mfaEnforceEnabled=false，默认）', () => {
+    it('未绑定管理员：签发 token 且响应不带 mfaSetupRequired（不锁定）', async () => {
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue(adminUser);
+      const result = await service.login(dto, undefined, '127.0.0.1');
+      expect(result.accessToken).toBe('at');
+      expect(result.mfaSetupRequired).toBeUndefined();
+      expect(mockMfaService.verifyCode).not.toHaveBeenCalled();
+    });
+
+    it('已绑定管理员：无需动态码即签发 token（开关关闭时 totpCode 被忽略）', async () => {
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...adminUser,
+        totpEnabled: true,
+      });
+      const result = await service.login(dto, undefined, '127.0.0.1');
+      expect(result.accessToken).toBe('at');
+      expect(result.mfaSetupRequired).toBeUndefined();
+      expect(mockMfaService.verifyCode).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('口令到期状态（#416 等保 8.1.4.1 b)，仅管理员）', () => {
+    it('首登未改密（passwordChangedAt=null）→ 响应带 passwordChangeRequired=first_login', async () => {
+      mockPasswordPolicyService.getPasswordChangeStatus.mockReturnValue({
+        required: 'first_login',
+        expiringSoon: false,
+      });
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...adminUser,
+        passwordChangedAt: null,
+      });
+      const result = await service.login(dto, undefined, '127.0.0.1');
+      expect(result.accessToken).toBe('at');
+      expect(result.passwordChangeRequired).toBe('first_login');
+      expect(result.passwordExpiringSoon).toBeUndefined();
+    });
+
+    it('超 180 天 → 响应带 passwordChangeRequired=expired', async () => {
+      mockPasswordPolicyService.getPasswordChangeStatus.mockReturnValue({
+        required: 'expired',
+        expiringSoon: false,
+      });
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...adminUser,
+        passwordChangedAt: new Date(Date.now() - 181 * 24 * 60 * 60 * 1000),
+      });
+      const result = await service.login(dto, undefined, '127.0.0.1');
+      expect(result.passwordChangeRequired).toBe('expired');
+    });
+
+    it('即将到期（14 天内）→ 响应带 passwordExpiringSoon=true（软提示）', async () => {
+      mockPasswordPolicyService.getPasswordChangeStatus.mockReturnValue({
+        required: undefined,
+        expiringSoon: true,
+      });
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...adminUser,
+        passwordChangedAt: new Date(Date.now() - 167 * 24 * 60 * 60 * 1000),
+      });
+      const result = await service.login(dto, undefined, '127.0.0.1');
+      expect(result.passwordChangeRequired).toBeUndefined();
+      expect(result.passwordExpiringSoon).toBe(true);
+    });
+
+    it('新鲜口令 → 响应不带 passwordChangeRequired / passwordExpiringSoon', async () => {
+      mockPasswordPolicyService.getPasswordChangeStatus.mockReturnValue({
+        required: undefined,
+        expiringSoon: false,
+      });
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue(adminUser);
+      const result = await service.login(dto, undefined, '127.0.0.1');
+      expect(result.passwordChangeRequired).toBeUndefined();
+      expect(result.passwordExpiringSoon).toBeUndefined();
     });
   });
 });

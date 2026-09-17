@@ -1,6 +1,112 @@
-# 梦想网页CAD实时协同平台 指标告警规则（ADR-0055 §4）
-# 8 条基础规则由 ticket #316 填充（CPU>85% / 内存>85% / 磁盘<10% / 5xx>5% / P99>2s /
-# 事件循环延迟>100ms / up=0 / DB 连接池），severity 分级 P0/P1/P2，可外部覆盖。
-# 当前为空规则文件，保证监控栈可一键启动；#316 完成后替换为正式规则。
+# 梦想网页CAD实时协同平台 指标告警规则（ADR-0055 §4 / #316）
+# 8 条基础规则，severity ↔ 告警分级：critical=P0（立即）/ warning=P1（15min 聚合）/ info=P2（日报）。
+# 可外部覆盖：部署时挂载/替换本文件（docker-compose.monitoring.yml 或 install-monitoring.sh 渲染路径）。
+# 阈值初值按行业惯例设定，上线后观察 2-4 周按误报/漏报调优；调优记录写入本文件头部下方「调优记录」。
+#
+# 主机级指标来源：host_cpu_usage_percent / host_memory_usage_percent / host_disk_free_percent
+# 由后端进程内 HostMetricsService 采样暴露（无需 node_exporter，与部署形态无关）。
+#
+# 调优记录（上线 2-4 周后填写）：
+#   日期 | 规则 | 变更 | 原因（误报/漏报）
 
-groups: []
+groups:
+  - name: cloudcad-basic-alerts
+    rules:
+      # ── 主机资源（P1）──
+
+      - alert: HostCpuUsageHigh
+        expr: host_cpu_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '主机 CPU 使用率过高'
+          description: 'CPU 使用率 {{ printf "%.1f" $value }}% 持续超过 85%（5 分钟）'
+
+      - alert: HostMemoryUsageHigh
+        expr: host_memory_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '主机内存使用率过高'
+          description: '内存使用率 {{ printf "%.1f" $value }}% 持续超过 85%（5 分钟）'
+
+      - alert: HostDiskSpaceLow
+        expr: host_disk_free_percent < 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: '磁盘剩余空间不足'
+          description: '挂载点 {{ $labels.mount }} 剩余空间 {{ printf "%.1f" $value }}%（低于 10%，持续 10 分钟）'
+
+      # ── 应用指标 ──
+
+      # 5xx 占比（P0）：/health、/metrics 已在 prometheus.middleware 排除不计数，
+      # path 负向匹配为双保险（防止排除清单变更后告警口径漂移）
+      - alert: HttpServerErrorRateHigh
+        expr: >
+          sum(rate(http_requests_total{job="cloudcad-backend", status=~"5..", path!~"/(api/)?health|/(api/)?metrics"}[5m]))
+          /
+          sum(rate(http_requests_total{job="cloudcad-backend", path!~"/(api/)?health|/(api/)?metrics"}[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'HTTP 5xx 错误占比过高'
+          description: '5xx 请求占比 {{ $value | humanizePercentage }} 超过 5%（5 分钟）'
+
+      - alert: HttpP99LatencyHigh
+        expr: >
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="cloudcad-backend"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: '接口 P99 延迟过高'
+          description: 'P99 延迟 {{ printf "%.2f" $value }}s 超过 2s（5 分钟）'
+
+      - alert: NodeEventLoopLagHigh
+        expr: nodejs_eventloop_lag_seconds{job="cloudcad-backend"} > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Node 事件循环延迟过高'
+          description: '事件循环延迟 {{ printf "%.3f" $value }}s 超过 100ms（5 分钟），接口响应将全面变慢'
+
+      - alert: BackendTargetDown
+        expr: up{job="cloudcad-backend"} == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: '后端进程不可达'
+          description: 'Prometheus 抓取 {{ $labels.instance }} 失败（up=0），后端可能已宕机'
+
+      # ── 入侵信号（#418 边界防护）──
+      # 登录失败突增（P1）：auth/admin 登录接口 4xx（401 密码错 / 429 限流 / 423 锁定）
+      # 速率持续超阈值 → 疑似暴力破解。与应用层账号失败锁定（#416）+ fail2ban 互补：
+      # 本规则从指标视角发现「多账号/多 IP 分布式慢速爆破」这类单账号阈值不触发的攻击。
+      # 阈值 30 次/分（5 分钟窗口）为初值，上线后按误报/漏报调优并记入头部「调优记录」。
+      - alert: AuthLoginFailureSpike
+        expr: >
+          sum(rate(http_requests_total{job="cloudcad-backend", path=~"/api/(admin/)?auth/login", status=~"4.."}[5m])) * 60 > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '登录失败率突增（疑似暴力破解）'
+          description: '登录接口失败速率 {{ printf "%.1f" $value }} 次/分 持续超过 30 次/分（5 分钟），请核查 fail2ban 封禁记录与账号锁定告警'
+
+      # ── 待实现（ADR-0055 §4 第 8 条）──
+      # DB 连接池使用率（P1）：待 database.service 暴露连接池 gauge 后启用，示例：
+      # - alert: DbPoolUsageHigh
+      #   expr: db_pool_usage_percent > 80
+      #   for: 5m
+      #   labels:
+      #     severity: warning

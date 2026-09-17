@@ -32,11 +32,16 @@ services:
     image: redis:7-alpine
     container_name: cloudcad-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # #419 等保 8.1.2.2：requirepass 内部链路鉴权（REDIS_PASSWORD 非空时启用）
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: >-
+      sh -c 'redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+      $${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ['CMD-SHELL', 'redis-cli $${REDIS_PASSWORD:+-a $$REDIS_PASSWORD} --no-auth-warning ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -64,17 +69,30 @@ services:
       DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_DATABASE:-cloudcad}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # #419 等保 8.1.2.2：Redis 必填密码（生产校验）+ 内部服务共享密钥
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required for production}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-}
       FILES_DATA_PATH: /app/data/files
       MX_REPO_PATH: /app/data/svn-repo
       STORAGE_MODE: standalone
       STORAGE_SERVICE_URL: http://storage-service:3200
       FUNCTION_EXECUTOR: conversion-service
       CONVERSION_SERVICE_URL: http://conversion-service:3100
+      # 批量管理路由鉴权：与 conversion-service 的 CONVERSION_SERVICE_SECRET 一致（同引用，backend 带 X-Conversion-Service-Secret 头）
+      CONVERSION_SERVICE_SECRET: ${CONVERSION_SERVICE_SECRET:-}
+      # #408 公网 TLS（可选）：证书落位 ./data/certs/ 后自动启用 443 https（留空文件不存在 = 纯 HTTP 80）
+      TLS_CERT_PATH: ${TLS_CERT_PATH:-/etc/nginx/certs/fullchain.pem}
+      TLS_KEY_PATH: ${TLS_KEY_PATH:-/etc/nginx/certs/privkey.pem}
     ports:
       - '${HTTP_PORT:-80}:80'
+      # #408 公网 TLS：443 恒映射。未落位证书时容器内无 443 监听（映射闲置、连接直接拒绝，
+      # 无服务暴露）；证书落位后 entrypoint 自动切 TLS 模板，443 即时可达，无需再改 compose
+      - '${HTTPS_PORT:-443}:443'
       - '${API_PORT:-3001}:3001'
     volumes:
       - app_data:/app/data
+      # #408 公网 TLS：证书目录只读挂载（放置 fullchain.pem/privkey.pem 后生效）
+      - ./data/certs:/etc/nginx/certs:ro
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -94,8 +112,11 @@ services:
       STORAGE_CACHE_MAX_FILE_SIZE: "10485760"
       STORAGE_CACHE_TTL_MS: "300000"
       BACKEND_JWT_SECRET: ${JWT_SECRET:?required}
+      # #419 等保 8.1.2.2：内部服务共享密钥（非 health 路由校验 X-Internal-Service-Secret）
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-}
     ports:
-      - '3200:3200'
+      # #418 端口收口：storage-service 仅本机可访问（后端容器经 cloudcad-net 直连）
+      - '127.0.0.1:3200:3200'
     volumes:
       - storage_data:/data
     networks: [cloudcad-net]
@@ -109,9 +130,17 @@ services:
     restart: unless-stopped
     environment:
       CONVERSION_SERVICE_PORT: 3100
-      QUEUE_DRIVER: local
+      # 与 backend 对齐走 redis：任务队列 + 永久失败负缓存持久化（跨重启/多节点一致），
+      # 而非 local 内存队列（重启丢队列、负缓存不持久化）。REDIS_URL 须指向 redis 服务且带 requirepass 密码
+      QUEUE_DRIVER: redis
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@redis:6379/0"
+      # #419 等保 8.1.2.2：内部服务共享密钥（非 health 路由校验 X-Internal-Service-Secret）
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-}
+      # 批量管理路由鉴权：与 backend 的 CONVERSION_SERVICE_SECRET 一致（backend 带 X-Conversion-Service-Secret 头调用批量路由）
+      CONVERSION_SERVICE_SECRET: ${CONVERSION_SERVICE_SECRET:-}
     ports:
-      - '3100:3100'
+      # #418 端口收口：conversion-service 仅本机可访问
+      - '127.0.0.1:3100:3100'
     volumes:
       - ../runtime:/app/runtime:ro
     networks: [cloudcad-net]

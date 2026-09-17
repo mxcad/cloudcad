@@ -92,10 +92,37 @@ Promtail 需**每台业务机**部署一份，采集 `data/logs/<服务>/*.log` 
 | `PROM_PORT` / `LOKI_PORT` / `GRAFANA_PORT` / `ALERTMANAGER_PORT` | 9090/3100/3005/9093 | 对外端口 |
 | `PROM_RETENTION` | `30d` | Prometheus 指标保留 |
 
-## 四、与其它 ticket 的衔接
+## 四、告警规则与阈值（#316）
+
+规则文件：[`prometheus/alert-rules.yml`](./prometheus/alert-rules.yml)（可外部覆盖，`promtool check rules` 校验通过）。
+
+| 规则 | 表达式要点 | 阈值 | 持续 | severity（分级） |
+|---|---|---|---|---|
+| HostCpuUsageHigh | `host_cpu_usage_percent` | > 85% | 5m | warning（P1） |
+| HostMemoryUsageHigh | `host_memory_usage_percent` | > 85% | 5m | warning（P1） |
+| HostDiskSpaceLow | `host_disk_free_percent{mount}` | < 10% | 10m | warning（P1） |
+| HttpServerErrorRateHigh | 5xx 占比（已排除 /health、/metrics） | > 5% | 5m | critical（P0） |
+| HttpP99LatencyHigh | `histogram_quantile(0.99, …)` | > 2s | 5m | critical（P0） |
+| NodeEventLoopLagHigh | `nodejs_eventloop_lag_seconds` | > 100ms | 5m | warning（P1） |
+| BackendTargetDown | `up == 0` | — | 即时 | critical（P0） |
+| DbPoolUsageHigh | **待实现**：database.service 暴露连接池 gauge 后启用（规则文件内已留注释模板） | > 80% | 5m | warning（P1） |
+
+**主机级指标来源**：`host_*` 三条 gauge 由后端进程内 `HostMetricsService`（每 5s 采样）暴露到 `/api/metrics`——无需 node_exporter，Windows 裸机/docker/多机全形态可用。磁盘采样路径经 `HOST_METRIC_DISK_PATHS`（逗号分隔，默认进程工作目录）配置。
+
+**Alertmanager 路由**（[`alertmanager/alertmanager.yml`](./alertmanager/alertmanager.yml)）：critical/P0 立即外发（group_wait 10s、repeat 15m）；warning/P1 聚合 15min（与业务 AlertService P1 窗口语义对齐）；info/P2 group_wait 8h 日报风格。抑制规则：磁盘告警期间抑制同实例的 CPU/内存/5xx/P99 衍生噪声。
+
+### 阈值调优记录
+
+> 上线后观察 2-4 周，按误报/漏报在此登记（同时改 alert-rules.yml 阈值并注明日期）。
+
+| 日期 | 规则 | 变更（旧→新） | 原因 |
+|---|---|---|---|
+| _待上线后填写_ | | | |
+
+## 五、与其它 ticket 的衔接
 
 - **#315**：后端 `/metrics` 改为 Bearer Token 认证，本栈 Prometheus 已用 `SCRAPE_TOKEN` 配置抓取头。
-- **#316**：8 条指标告警规则（`docker/monitoring/prometheus/alert-rules.yml`，当前为空占位）+ Alertmanager severity 路由细化。
+- **#316**：8 条指标告警规则 + Alertmanager severity 路由细化（见上文第四节）。
 - **#317**：Grafana 看板 JSON（当前仅预置数据源与目录）。
 - **#314**：裸机离线部署包（Loki/Prometheus/Grafana/Alertmanager/Promtail 二进制 + systemd）。
 

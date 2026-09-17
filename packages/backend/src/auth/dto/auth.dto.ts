@@ -100,6 +100,16 @@ export class LoginDto {
   @IsString({ message: '密码必须是字符串' })
   @IsNotEmpty({ message: '密码不能为空' })
   password: string;
+
+  @ApiPropertyOptional({
+    description:
+      'TOTP 双因素动态码（管理员入口且已启用 TOTP 时必传；普通入口忽略）',
+    example: '123456',
+  })
+  @IsOptional()
+  @IsString({ message: '双因素动态码必须是字符串' })
+  @MaxLength(8, { message: '双因素动态码最多8个字符' })
+  totpCode?: string;
 }
 
 export class RefreshTokenDto {
@@ -276,6 +286,25 @@ export class AuthResponseDto {
     description: '注销冷静期内登录自动恢复成功标记（账户已自动取消注销）',
   })
   restored?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      '管理员未绑定 TOTP 双因素标记（true=登录成功但被锁定至绑定页，完成绑定前后台其余功能不可用）',
+  })
+  mfaSetupRequired?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      '口令定期更换强制标记（仅管理员入口，#416 等保 8.1.4.1 b)）：first_login=首登未改密，expired=超 180 天到期；true 时前端锁定至改密页',
+    enum: ['first_login', 'expired'],
+  })
+  passwordChangeRequired?: 'first_login' | 'expired';
+
+  @ApiPropertyOptional({
+    description:
+      '口令即将到期提示（仅管理员入口，#416；提前 14 天软提示，不拦截）',
+  })
+  passwordExpiringSoon?: boolean;
 }
 
 export class AuthApiResponseDto extends AuthResponseDto {}

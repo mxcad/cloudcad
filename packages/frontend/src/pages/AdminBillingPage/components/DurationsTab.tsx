@@ -71,7 +71,7 @@ export function DurationsTab({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-text-primary">
-                        {item.label} ({item.months}个月)
+                        {item.label} ({t('{n}个月', { n: String(item.months) })})
                       </span>
                       {item.isActive ? (
                         <Tag variant="success">{t('上架')}</Tag>

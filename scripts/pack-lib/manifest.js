@@ -41,6 +41,18 @@ function getSharedEntries() {
       src: 'packages/backend/package.json',
       dest: 'packages/backend/package.json',
     },
+    // PII 字段级加密脚本（#417/#426）：.js 而非 .ts——离线部署只装生产依赖
+    //（devDependencies 含 tsx 不装），离线 runtime Node 20 不能原生跑 TS，故用 node 直接运行 .js。
+    // pii-backfill.js 由部署链 runPiiBackfill 执行；pii-offline-plaintext.js 为步骤⑤手动收缩脚本。
+    // 二者 require dist/ 编译产物（pii-crypto.service.js），dist 已在上方条目中。
+    {
+      src: 'packages/backend/scripts/pii-backfill.js',
+      dest: 'packages/backend/scripts/pii-backfill.js',
+    },
+    {
+      src: 'packages/backend/scripts/pii-offline-plaintext.js',
+      dest: 'packages/backend/scripts/pii-offline-plaintext.js',
+    },
     // 共享 Prisma Client 包（schema 单一源 + 编译产物，backend 运行时 require）
     {
       src: 'packages/db/prisma',
@@ -92,9 +104,33 @@ function getSharedEntries() {
       dest: 'packages/config-service',
       isDir: true,
     },
+    // 转换服务（黑盒，0 运行时依赖，dist 自包含纯 Node 内置 + 相对导入）
+    // start.js / verify-deploy.js 在后端 FUNCTION_EXECUTOR=conversion-service 时拉起
+    // packages/conversion-service/dist/server.js；两类包（部署/升级）都需携带以支持该模式
+    {
+      src: 'packages/conversion-service/dist',
+      dest: 'packages/conversion-service/dist',
+      isDir: true,
+    },
+    {
+      src: 'packages/conversion-service/package.json',
+      dest: 'packages/conversion-service/package.json',
+    },
+    // .env.example：conversion-service 配置模板（QUEUE_DRIVER / REDIS_URL / CONVERSION_SERVICE_SECRET 等），
+    // 目标机 bootstrap 合并新增配置项（同 backend .env.example，mergeExampleIntoEnv）
+    {
+      src: 'packages/conversion-service/.env.example',
+      dest: 'packages/conversion-service/.env.example',
+    },
     // 运行时脚本
     { src: 'runtime/scripts', dest: 'runtime/scripts', isDir: true },
     { src: 'runtime/ecosystem.config.js', dest: 'runtime/ecosystem.config.js' },
+    // Prisma schema-engine 预置二进制（离线 migrate deploy 用，pack-offline.js bundlePrismaSchemaEngine 预置）
+    // pnpm store manifest 不引用 postinstall 下载的 schema-engine，部署机重建 @prisma/engines
+    // 包目录缺该二进制 → prisma CLI 回退联网下载 → 断网 migrate deploy 失败。
+    // 故预置到 runtime/prisma-engines/，verify-deploy.js / migrate.js 设 PRISMA_SCHEMA_ENGINE_BINARY 指向它。
+    // 目录可能不存在（构建机未找到 schema-engine 时跳过预置），prepareDeployDir 对缺失源静默跳过。
+    { src: 'runtime/prisma-engines', dest: 'runtime/prisma-engines', isDir: true },
     // 根目录文件（pnpm-lock.yaml 是目标机依赖重装检测的触发器）
     { src: 'pnpm-lock.yaml', dest: 'pnpm-lock.yaml' },
     { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml' },

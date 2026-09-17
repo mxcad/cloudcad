@@ -111,13 +111,39 @@ describe('TaskRunService', () => {
 
 	describe('register / getRunner / listRunners', () => {
 		it('should register runner and expose it', () => {
-			const runner = { description: 'desc', execute: jest.fn() };
+			const runner = {
+				description: 'desc',
+				schedule: '0 3 * * *',
+				scheduleLabel: '每天 03:00',
+				execute: jest.fn(),
+			};
 
 			service.register('test:task', runner);
 
 			expect(service.getRunner('test:task')).toBe(runner);
 			expect(service.listRunners()).toEqual([
-				{ taskName: 'test:task', description: 'desc' },
+				{
+					taskName: 'test:task',
+					description: 'desc',
+					schedule: '0 3 * * *',
+					scheduleLabel: '每天 03:00',
+				},
+			]);
+		});
+
+		it('should expose schedule as null when runner has none', () => {
+			service.register('test:no-schedule', {
+				description: 'desc',
+				execute: jest.fn(),
+			});
+
+			expect(service.listRunners()).toEqual([
+				{
+					taskName: 'test:no-schedule',
+					description: 'desc',
+					schedule: null,
+					scheduleLabel: null,
+				},
 			]);
 		});
 
@@ -189,6 +215,23 @@ describe('TaskRunService', () => {
 				// 30 天前：2026-07-12T12:00:00Z
 				expect(arg.where.startedAt.lt.toISOString()).toBe(
 					'2026-07-12T12:00:00.000Z'
+				);
+			} finally {
+				jest.useRealTimers();
+			}
+		});
+
+		it('should compute cutoff correctly for the 180-day default retention (#326)', async () => {
+			mockPrisma.taskRun.deleteMany.mockResolvedValue({ count: 0 });
+			jest.useFakeTimers();
+			jest.setSystemTime(new Date('2026-08-11T12:00:00Z'));
+			try {
+				await service.cleanupOldRuns(180);
+
+				const arg = mockPrisma.taskRun.deleteMany.mock.calls[0][0];
+				// 180 天前：2026-02-12T12:00:00Z
+				expect(arg.where.startedAt.lt.toISOString()).toBe(
+					'2026-02-12T12:00:00.000Z'
 				);
 			} finally {
 				jest.useRealTimers();

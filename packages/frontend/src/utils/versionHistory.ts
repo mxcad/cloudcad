@@ -23,3 +23,19 @@ export function toVersionDisplayList<T extends { revision?: number }>(
       entry.revision === INITIAL_VERSION_REVISION ? 0 : totalCount - index,
   }));
 }
+
+/**
+ * 从版本提交消息中提取用户填写的修改说明。
+ *
+ * 后端保存时消息格式为 `Save: <文件名> - <说明>`。说明来自保存弹窗的多行输入，
+ * 可能含换行/空行，故说明捕获组必须用 [\s\S]（. 不匹配换行，多行说明会导致
+ * 整体失配、说明整条丢失）。无说明（如 `Save: <文件名>`）或纯空白说明返回 null。
+ */
+export function extractUserNote(message: string): string | null {
+  if (!message) return null;
+  const saveMatch = message.match(/^Save:\s*.+?\s*-\s*([\s\S]+)$/i);
+  if (saveMatch) {
+    return saveMatch[1]?.trim() || null;
+  }
+  return null;
+}

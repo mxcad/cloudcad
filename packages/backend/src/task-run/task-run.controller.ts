@@ -44,6 +44,7 @@ import {
   RunTaskDto,
   TaskRunListResponseDto,
   TaskRunTriggerResultDto,
+  TaskListResponseDto,
 } from './dto/task-run.dto';
 
 /**
@@ -84,6 +85,19 @@ export class TaskRunController {
       },
       { page: query.page ?? 1, limit: query.limit ?? 20 }
     );
+  }
+
+  @Get('tasks')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '查询已注册后台任务清单（SYSTEM_MONITOR）' })
+  @ApiResponse({
+    status: 200,
+    description: '查询成功',
+    type: TaskListResponseDto,
+  })
+  @ApiResponse({ status: 403, description: '无 SYSTEM_MONITOR 权限' })
+  async listTasks(): Promise<TaskListResponseDto> {
+    return { data: this.taskRunService.listRunners() };
   }
 
   @Post('run')

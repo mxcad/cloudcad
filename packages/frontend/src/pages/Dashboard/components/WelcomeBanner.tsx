@@ -39,7 +39,7 @@ export const WelcomeBanner: React.FC<WelcomeBannerProps> = ({
           {userName}
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-          {t(`欢迎使用 ${appName}，开始您的设计工作`)}
+          {t('欢迎使用 {appName}，开始您的设计工作', { appName })}
         </p>
       </div>
 

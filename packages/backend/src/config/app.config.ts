@@ -39,6 +39,20 @@ export interface JwtConfig {
   refreshExpiresIn: string;
 }
 
+/** TOTP 双因素配置（#415）：secret 密文存储的加密密钥来源 */
+export interface TotpConfig {
+  /** AES-256-GCM 加密密钥（TOTP_ENCRYPTION_KEY），缺省回退 JWT_SECRET */
+  encryptionKey: string;
+}
+
+/** PII 字段级加密配置（#417 等保 8.1.4.8）：phone/email 密文存储与归一化索引密钥 */
+export interface PiiConfig {
+  /** AES-256-GCM 加密密钥（32 字节 hex，64 字符；env PII_ENCRYPTION_KEY 显式设置时启动校验长度，缺省回退 SHA-256(JWT_SECRET)） */
+  encryptionKey: string;
+  /** HMAC-SHA256 索引密钥（32 字节 hex，64 字符；env PII_HMAC_KEY 显式设置时启动校验长度，缺省回退 SHA-256(JWT_REFRESH_SECRET)） */
+  hmacKey: string;
+}
+
 export interface UploadConfig {
   maxSize: number;
   allowedTypes: string[];
@@ -260,14 +274,107 @@ export interface AuthRateLimitConfig {
   registerWindowSeconds: number;
 }
 
+/**
+ * 口令策略配置（#416 等保 8.1.4.1 a)/b)）
+ *
+ * 复杂度：新设口令 ≥minLength 位 + 大小写/数字/特殊字符四类至少三类 + 弱口令黑名单。
+ * 定期更换（仅 ADMIN 角色生效）：maxAgeDays 天到期强制改密，提前 expiringSoonDays 天提示。
+ */
+export interface PasswordPolicyConfig {
+  /** 口令最小长度（默认 10） */
+  minLength: number;
+  /** 口令最大有效期（天，默认 180；到期强制改密，仅 ADMIN 角色生效） */
+  maxAgeDays: number;
+  /** 提前提示天数（默认 14；到期前 N 天提示，仅 ADMIN 角色生效） */
+  expiringSoonDays: number;
+  /**
+   * 定期更换 / 首登未改密「强制改密」总开关（默认 false=关闭，仅 ADMIN 角色生效）。
+   * 关闭时 getPasswordChangeStatus 恒返回「无需强改」：登录不下发 passwordChangeRequired、
+   * JWT 不做改密锁定（上游 jwt.strategy / admin-auth 自动生效）。
+   * 复杂度校验（assertPasswordPolicy）不受此开关影响，恒生效。
+   */
+  changeEnforceEnabled: boolean;
+}
+
+/**
+ * 账号失败锁定配置（#416 等保 8.1.4.1 c) 防暴力破解）
+ *
+ * 与 AuthRateLimitConfig（5次/60s 频率限流）独立叠加：限流管「请求频率」，
+ * 锁定管「连续失败暴力破解」——failThreshold 次失败（windowSeconds 窗口内）→ 锁 durationSeconds。
+ * 锁期内正确密码也拒绝并告知剩余时间，无手动解锁页，到期自愈。Redis 故障降级进程内计数。
+ */
+export interface AccountLockConfig {
+  /** 触发锁定的连续失败次数阈值（默认 10） */
+  failThreshold: number;
+  /** 失败计数窗口（秒，默认 900=15 分钟） */
+  windowSeconds: number;
+  /** 锁定时长（秒，默认 1800=30 分钟） */
+  durationSeconds: number;
+}
+
 export interface AuditConfig {
-  /** 审计日志保留天数（默认 180，#207/ADR-0045；兼容旧变量 AUDIT_RETENTION_DAYS 回退） */
+  /** 审计日志保留天数（#322：默认 183，严格大于 6 个月；兼容旧变量 AUDIT_RETENTION_DAYS 回退） */
   retentionDays: number;
+  /** 超期审计日志归档开关（#322，AUDIT_ARCHIVE_ENABLED；等保验收需开启） */
+  archiveEnabled: boolean;
+  /** 归档文件输出目录（#322，AUDIT_ARCHIVE_PATH，相对路径基于项目根解析） */
+  archivePath: string;
 }
 
 export interface TaskRunConfig {
-  /** 后台任务执行记录保留天数（默认 30，#271 无界增长治理） */
+  /** 后台任务执行记录保留天数（#271 无界增长治理；#326 默认 180，运维排查窗口与等保对齐） */
   retentionDays: number;
+}
+
+/** 异地推送类型（#319：BACKUP_REMOTE_TYPE，none 时完全跳过推送） */
+export type BackupRemoteType = 'none' | 'rsync' | 'oss' | 's3';
+
+/** 数据库备份异地推送配置（#319，ADR-0055 §5） */
+export interface BackupRemoteConfig {
+  /** 推送类型（默认 none）；rsync=内网 SSH，oss/s3=对象存储 CLI 子进程（零新依赖） */
+  type: BackupRemoteType;
+  /** rsync 目标主机（若值本身含 user@ 前缀则优先于 user 字段） */
+  host: string;
+  /** rsync SSH 用户（key 认证，不走密码） */
+  user: string;
+  /** rsync 远端目标目录 */
+  path: string;
+  /** rsync 远端保留份数（超出清理最旧；仅 rsync 模式生效） */
+  keep: number;
+  /** oss/s3 endpoint（s3 兼容存储必填如 MinIO；AWS 原生可留空） */
+  endpoint: string;
+  /** oss/s3 桶名，可带路径前缀（如 mybucket/backups） */
+  bucket: string;
+  /** oss/s3 访问密钥 ID */
+  accessKey: string;
+  /** oss/s3 访问密钥 Secret */
+  secret: string;
+  /** rsync CLI 路径（未配置时从 PATH 探测） */
+  rsyncPath: string;
+  /** ossutil CLI 路径（未配置时从 PATH 探测） */
+  ossutilPath: string;
+  /** aws CLI 路径（未配置时从 PATH 探测） */
+  awsCliPath: string;
+}
+
+/** 数据库备份配置（#318） */
+export interface BackupConfig {
+  /** 备份总开关（环境变量 BACKUP_ENABLED，默认 true；运行时开关 backupEnabled 可动态禁用） */
+  enabled: boolean;
+  /** 备份输出目录（默认 data/backups，相对路径基于项目根解析） */
+  dir: string;
+  /** 本地备份保留份数（超出清理最旧，默认 14） */
+  keepLocal: number;
+  /** 备份 cron 表达式（默认每日 01:00） */
+  cron: string;
+  /** pg_dump 可执行文件路径（未配置时按 runtime 目录 → PATH 探测） */
+  pgDumpPath: string;
+  /** 恢复演练开关（#320，BACKUP_DRILL_ENABLED，默认 true；每月临时库恢复 + 行数校验） */
+  drillEnabled: boolean;
+  /** 演练行数比对表清单（#320，BACKUP_DRILL_TABLES，逗号分隔，默认 audit_logs,alert_records,task_runs,users） */
+  drillTables: string[];
+  /** 异地推送（#319，ADR-0055 §5：none/rsync/oss/s3 三通道可配） */
+  remote: BackupRemoteConfig;
 }
 
 /** 告警邮件通知配置（#311） */
@@ -301,6 +408,11 @@ export interface MetricsScrapeConfig {
    * 或 Basic 认证（密码字段与令牌比对）；未配置时退回 SYSTEM_MONITOR 权限控制
    */
   scrapeToken: string;
+  /**
+   * 主机级磁盘指标采样路径（环境变量 HOST_METRIC_DISK_PATHS，逗号分隔，
+   * 默认进程工作目录；ADR-0055 §4 / #316 host_disk_free_percent 指标）
+   */
+  hostDiskPaths: string[];
 }
 
 export interface AppConfig {
@@ -310,6 +422,8 @@ export interface AppConfig {
   /** 自定义认证实现模块路径（环境变量 IMPL），为空则使用默认实现 */
   authImpl: string;
   jwt: JwtConfig;
+  totp: TotpConfig;
+  pii: PiiConfig;
   database: DatabaseConfig;
   redis: RedisConfig;
   upload: UploadConfig;
@@ -343,8 +457,14 @@ export interface AppConfig {
   cooperate: CooperateConfig;
   batchDownload: BatchDownloadConfig;
   authRateLimit: AuthRateLimitConfig;
+  /** 口令策略（#416 等保 8.1.4.1 a)/b)） */
+  passwordPolicy: PasswordPolicyConfig;
+  /** 账号失败锁定（#416 等保 8.1.4.1 c) 防暴力破解） */
+  accountLock: AccountLockConfig;
   audit: AuditConfig;
   taskRun: TaskRunConfig;
+  /** 数据库备份（#318） */
+  backup: BackupConfig;
   /** 告警邮件通知（#311：P0 实时邮件 + 恢复通知 + 失败升级） */
   alertEmail: AlertEmailConfig;
   /** /metrics 抓取令牌认证（#315） */

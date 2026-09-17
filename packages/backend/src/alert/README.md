@@ -9,12 +9,13 @@
 ```
 src/alert/
 ├── alert.controller.ts      # 告警查询/解决（SYSTEM_MONITOR）
+├── internal-alert.controller.ts  # 内部告警上报（#421 宿主机侧 ClamAV 扫描接入；X-Internal-Service-Secret 鉴权，不入 API SDK）
 ├── alert.service.ts         # raise / resolveBySourceKey / resolveById / findAll（去重走 $transaction；raise/resolve 后 emit alert.raised / alert.resolved 事件，#311）
 ├── alert.events.ts          # 领域事件常量（alert.raised / alert.resolved）
 ├── webhook/webhook.service.ts  # 通用 webhook 适配器（模板渲染，detail 转义防注入）
 ├── notification/alert-notification.service.ts  # 邮件通知订阅方（P0 实时 + P1 聚合 + P2 日报 + 恢复通知 + 失败升级，#311 #312）
 ├── enums/                   # 本地枚举（对应 schema AlertLevel/AlertStatus）
-└── dto/                     # 查询 DTO
+└── dto/                     # 查询 DTO + 内部上报 DTO（RaiseInternalAlertDto）
 ```
 
 ## 数据模型（schema 单一源）
@@ -35,6 +36,7 @@ src/alert/
 |------|------|------|
 | GET | `/api/v1/alert` | 告警分页查询（QueryAlertDto：按 status/level/source 过滤） |
 | PATCH | `/api/v1/alert/:id/resolve` | 手动解决告警（置 RESOLVED + resolvedAt） |
+| POST | `/api/internal/alert/raise` | 内部告警上报（#421，宿主机 ClamAV 扫描脚本调用；`X-Internal-Service-Secret` 共享密钥鉴权 + `@Public()` 绕过 JWT/CSRF；`@ApiExcludeEndpoint` 不入 API SDK；服务端未配置 `INTERNAL_SERVICE_SECRET` 时 fail-close 拒绝） |
 
 ## 告警触发源
 

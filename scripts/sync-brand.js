@@ -24,8 +24,9 @@
  * 注意：
  * - 逻辑标识（小写 cloudcad：包名 / 命令名 / 数据库名 / 目录路径 / 系统用户等，
  *   以及 CloudCAD-PM2 注册表键、CloudCAD fixed wrapper 升级检测标识）不会被替换；
- * - 编码：start.bat / cloudcad.bat 为 GBK 编码，本工具读写时自动识别并在
- *   Windows 用 PowerShell、Linux 用 iconv 完成 GBK 编解码；
+ * - 编码：含中文的 .bat / .cmd 一律 GBK 编码（cmd.exe 按 OEM 代码页解析批处理，
+ *   UTF-8 中文会被撕碎成乱码命令；回归守卫见 tests/runtime-unit/test/bat-encoding.test.js），
+ *   本工具读写时自动识别编码并在 Windows 用 PowerShell、Linux 用 iconv 完成 GBK 编解码；
  * - 前端 UI 品牌由 packages/config-service/brand.js 运行时配置管理，不在本工具范围。
  */
 const fs = require('fs');

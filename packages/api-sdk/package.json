@@ -15,7 +15,8 @@
     "./core/*": "./src/core/*.ts"
   },
   "scripts": {
-    "generate:sdk": "node scripts/generate-sdk.cjs"
+    "generate:sdk": "node scripts/generate-sdk.cjs",
+    "test": "node scripts/vite-plugin.test.mjs"
   },
   "devDependencies": {
     "@hey-api/client-fetch": "^0.13.1",

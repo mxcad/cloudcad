@@ -11,7 +11,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mocks = vi.hoisted(() => ({
   handleVipFeatureRequiredError: vi.fn(),
   getQueryData: vi.fn(),
-  globalShowToast: vi.fn(),
   mxdraw: {
     MxFun: {},
     store: {
@@ -28,9 +27,6 @@ vi.mock('mxdraw', () => ({
 }));
 vi.mock('@/utils/vipFeatureGuide', () => ({
   handleVipFeatureRequiredError: mocks.handleVipFeatureRequiredError,
-}));
-vi.mock('@/utils/notificationEvents', () => ({
-  globalShowToast: mocks.globalShowToast,
 }));
 vi.mock('@/lib/queryClient', () => ({
   queryClient: { getQueryData: mocks.getQueryData },
@@ -59,7 +55,6 @@ describe('vipCommandGuard', () => {
   beforeEach(() => {
     mocks.handleVipFeatureRequiredError.mockReset();
     mocks.getQueryData.mockReset().mockReturnValue({ freeExportDownloadEnabled: false });
-    mocks.globalShowToast.mockReset();
 
     originalSend = vi.fn().mockReturnValue(true);
     originalInit = vi.fn();
@@ -94,16 +89,15 @@ describe('vipCommandGuard', () => {
     expect(result).toBe(true);
     expect(originalSend.mock.calls[0][0]).toBe('Mx_Undo');
     expect(mocks.handleVipFeatureRequiredError).not.toHaveBeenCalled();
-    expect(mocks.globalShowToast).not.toHaveBeenCalled();
   });
 
   it('VIP 命令：非会员（含游客）拦截，不执行原命令，提示错误并复用购买弹窗', async () => {
     await loadInstalled();
     await fakeMxFun.sendStringToExecute('Mx_ExportDWG');
 
-    // 原实现未被调用（命令未发往引擎）
+    // 原实现未被调用（命令未发往引擎）；错误提示与购买弹窗统一由
+    // handleVipFeatureRequiredError 承担（内部 confirm 引导，guard 不直接 toast）
     expect(originalSend.mock.results).toEqual([]);
-    expect(mocks.globalShowToast).toHaveBeenCalledWith('导出下载为会员专属功能', 'error');
     expect(mocks.handleVipFeatureRequiredError).toHaveBeenCalledTimes(1);
     expect(mocks.handleVipFeatureRequiredError).toHaveBeenCalledWith(
       undefined,
@@ -122,7 +116,6 @@ describe('vipCommandGuard', () => {
     expect(originalSend.mock.calls[0][0]).toBe('Mx_ExportDWG');
     expect(originalSend.mock.results[0].value).toBe(true);
     expect(mocks.handleVipFeatureRequiredError).not.toHaveBeenCalled();
-    expect(mocks.globalShowToast).not.toHaveBeenCalled();
   });
 
   it('VIP 命令：会员到期（expiresAt 已过）按非会员拦截', async () => {

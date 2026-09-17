@@ -20,6 +20,8 @@ export interface UseProjectDrawingsEffectsOptions {
   personalSpaceId?: string | null;
   parentId?: string | null;
   libraryType?: LibraryType;
+  /** 子tab标识，用于持久化状态（仅非库模式使用） */
+  tabId?: string;
 }
 
 /**
@@ -36,6 +38,7 @@ export function useProjectDrawingsEffects({
   personalSpaceId,
   parentId: initialParentId,
   libraryType,
+  tabId,
 }: UseProjectDrawingsEffectsOptions) {
   const {
     selectedProjectId,
@@ -81,6 +84,10 @@ export function useProjectDrawingsEffects({
 
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // 持久化状态标识（仅非库模式使用）
+  const isPersistentMode = !isLibraryMode && !!tabId;
+  const persistentInitializedRef = useRef(false);
+
   // Initialize: load project root
   useEffect(() => {
     if (!visible) return;
@@ -90,6 +97,11 @@ export function useProjectDrawingsEffects({
         resetNodes();
         setBreadcrumb([]);
       }
+      return;
+    }
+
+    // 持久化模式：如果已初始化过，跳过重新加载
+    if (isPersistentMode && persistentInitializedRef.current) {
       return;
     }
 
@@ -111,8 +123,12 @@ export function useProjectDrawingsEffects({
     // 先等待项目根节点就绪（可能触发服务端懒创建），再加载子节点
     initProject().then(() => {
       loadNodes(selectedProjectId);
+      // 标记持久化模式已初始化
+      if (isPersistentMode) {
+        persistentInitializedRef.current = true;
+      }
     });
-  }, [visible, selectedProjectId, loadNodes]);
+  }, [visible, selectedProjectId, loadNodes, isPersistentMode]);
 
   // Sync projectId in personal space
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   IUserService,
@@ -12,7 +12,12 @@ import { UserPasswordService } from './services/user-password.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserMembershipDto } from './dto/update-user-membership.dto';
+import { DatabaseService } from '../database/database.service';
+import { PiiCryptoService } from '../common/pii/pii-crypto.service';
+import { Prisma } from '@cloudcad/db';
+import { I18nContext } from 'nestjs-i18n';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ClsService } from 'nestjs-cls';
@@ -28,6 +33,8 @@ export class UsersService implements IUserService {
     private readonly passwordService: UserPasswordService,
     private readonly configService: ConfigService,
     private readonly cls: ClsService,
+    private readonly databaseService: DatabaseService,
+    private readonly pii: PiiCryptoService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<ICreatedUser> {
@@ -56,6 +63,173 @@ export class UsersService implements IUserService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<ICreatedUser> {
     return this.crudService.update(id, updateUserDto);
+  }
+
+  /**
+   * 用户修改自己资料（含用户名修改限额检查）。
+   * 业务规则 + 事务边界全部在此方法内，控制器只做路由委托。
+   */
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<ICreatedUser> {
+    return this.databaseService.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          phone: true,
+          phoneVerified: true,
+          wechatId: true,
+          provider: true,
+          usernameChangeCount: true,
+          lastUsernameChangeAt: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              isSystem: true,
+              permissions: { select: { permission: true } },
+            },
+          },
+          membership: { select: { tierLevel: true, expiresAt: true } },
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.user.not_found') ?? '用户不存在'
+        );
+      }
+
+      const usernameChanged =
+        dto.username != null && dto.username !== user.username;
+
+      const now = new Date();
+      const oneMonthAgo = new Date(now);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      const data: Prisma.UserUpdateInput = { ...dto };
+
+      if (usernameChanged) {
+        // 检查用户名唯一性
+        const usernameExists = await tx.user.findUnique({
+          where: { username: dto.username },
+        });
+        if (usernameExists && usernameExists.id !== userId) {
+          throw new BadRequestException(
+            I18nContext.current()?.t('error.user.username_exists') ??
+              '用户名已存在'
+          );
+        }
+
+        // 判断是否需要重置计数（上次修改超过一个月）
+        const expired =
+          !user.lastUsernameChangeAt || user.lastUsernameChangeAt < oneMonthAgo;
+        const effectiveCount = expired ? 0 : user.usernameChangeCount;
+
+        if (effectiveCount >= 3) {
+          throw new BadRequestException(
+            I18nContext.current()?.t('error.user.username_change_limit') ??
+              '用户名一月内只能修改3次'
+          );
+        }
+
+        data.usernameChangeCount = expired ? 1 : { increment: 1 };
+        data.lastUsernameChangeAt = now;
+      }
+
+      // 检查邮箱唯一性（#417：查重走 HMAC 归一化索引列，大小写不敏感）
+      if (dto.email && dto.email !== user.email) {
+        const emailExists = await tx.user.findFirst({
+          where: {
+            emailHmac: this.pii.emailHmacIndex(dto.email),
+            deletedAt: null,
+          },
+        });
+        if (emailExists) {
+          throw new BadRequestException(
+            I18nContext.current()?.t('error.user.email_exists') ?? '邮箱已存在'
+          );
+        }
+      }
+
+      // 检查手机号唯一性（#417：查重走 HMAC 归一化索引列，兼容 +86/空白）
+      if (dto.phone && dto.phone !== user.phone) {
+        const phoneExists = await tx.user.findFirst({
+          where: {
+            phoneHmac: this.pii.phoneHmacIndex(dto.phone),
+            deletedAt: null,
+          },
+        });
+        if (phoneExists) {
+          throw new BadRequestException(
+            I18nContext.current()?.t('error.user.phone_exists') ?? '手机号已存在'
+          );
+        }
+      }
+
+      // #417 双写：dto 涉及 email/phone 时同步补齐派生列（解绑传 null 时清空派生列）；
+      // 未涉及字段传 undefined，derivePiiFields 不触碰其派生列
+      Object.assign(
+        data,
+        this.pii.derivePiiFields({
+          email:
+            dto.email !== undefined ? dto.email || null : undefined,
+          phone:
+            dto.phone !== undefined ? dto.phone || null : undefined,
+        })
+      );
+
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data,
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          phone: true,
+          phoneVerified: true,
+          wechatId: true,
+          provider: true,
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              isSystem: true,
+              permissions: { select: { permission: true } },
+            },
+          },
+          membership: { select: { tierLevel: true, expiresAt: true } },
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // 扁平化 membership 字段
+      const { membership: membershipRow, ...userWithoutMembership } = updatedUser;
+      const membershipValid =
+        !!membershipRow &&
+        (membershipRow.expiresAt === null ||
+          membershipRow.expiresAt > new Date());
+      const membershipTierLevel = membershipValid ? membershipRow.tierLevel : 0;
+
+      return {
+        ...userWithoutMembership,
+        membershipTierLevel,
+        membershipExpiresAt: membershipValid ? membershipRow.expiresAt : null,
+        isVip: membershipTierLevel > 0,
+      };
+    });
   }
 
   async updateMembership(id: string, dto: UpdateUserMembershipDto) {

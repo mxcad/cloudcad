@@ -78,6 +78,23 @@ function renderProvider() {
   );
 }
 
+/**
+ * 构造合法未过期 JWT：AuthContext 的 validateToken effect 会解析 exp 判定过期，
+ * 非 JWT 假数据会被按「失效 token」清除登录态（生产 token 均为 JWT）
+ */
+const makeJwt = (expSecondsFromNow = 3600): string => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(
+    JSON.stringify({
+      exp: Math.floor(Date.now() / 1000) + expSecondsFromNow,
+      sub: 'u-phone',
+    })
+  );
+  return `${header}.${payload}.test-signature`;
+};
+
+const PHONE_JWT = makeJwt();
+
 describe('AuthContext - registerByPhone (T4 bug regression)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -88,7 +105,7 @@ describe('AuthContext - registerByPhone (T4 bug regression)', () => {
     } as never);
     vi.mocked(authControllerRegisterByPhone).mockResolvedValue({
       data: {
-        accessToken: 'at-phone',
+        accessToken: PHONE_JWT,
         refreshToken: 'rt-phone',
         user: { id: 'u-phone', username: 'phoneuser' },
       },
@@ -103,11 +120,11 @@ describe('AuthContext - registerByPhone (T4 bug regression)', () => {
     await waitFor(() => {
       expect(screen.getByTestId('auth').textContent).toBe('true');
     });
-    expect(screen.getByTestId('token').textContent).toBe('at-phone');
+    expect(screen.getByTestId('token').textContent).toBe(PHONE_JWT);
     expect(screen.getByTestId('user').textContent).toBe('phoneuser');
 
     // 同步写入 localStorage（refresh 等机制依赖）
-    expect(localStorage.getItem('accessToken')).toBe('at-phone');
+    expect(localStorage.getItem('accessToken')).toBe(PHONE_JWT);
     expect(localStorage.getItem('refreshToken')).toBe('rt-phone');
     expect(localStorage.getItem('user')).toContain('phoneuser');
     expect(authControllerRegisterByPhone).toHaveBeenCalledWith({

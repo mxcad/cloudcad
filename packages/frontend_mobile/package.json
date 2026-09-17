@@ -60,14 +60,14 @@
     "@voerkai18n/vue": "^3.0.12",
     "@vueuse/core": "^10.9.0",
     "axios": "^1.13.2",
-    "latest": "^0.2.0",
     "mxcad": "^1.0.393",
     "mxdraw": "^0.1.383",
     "pinia": "^3.0.4",
     "qrcode": "^1.5.4",
     "spark-md5": "^3.0.2",
     "vant": "^4.9.24",
-    "vue": "^3.2.47"
+    "vue": "^3.2.47",
+    "vue-router": "4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

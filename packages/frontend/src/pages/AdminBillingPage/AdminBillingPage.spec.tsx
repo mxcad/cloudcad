@@ -34,6 +34,21 @@ import type {
 
 // ── 数据工厂 ────────────────────────────────────────────────────────────
 
+/**
+ * 有效未过期 JWT：useTierConfigRegistry 仅在登录态（isAccessTokenExpired()=false）
+ * 下请求 registry，未登录时权益配置项不渲染
+ */
+const ADMIN_JWT = (() => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(
+    JSON.stringify({
+      exp: Math.floor(Date.now() / 1000) + 3600,
+      sub: 'admin',
+    })
+  );
+  return `${header}.${payload}.test-signature`;
+})();
+
 const REGISTRY_ENTRIES = [
   {
     id: 'reg-1',
@@ -305,6 +320,8 @@ describe('AdminBillingPage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // 模拟管理员登录态：registry 查询仅在有效 token 下启用
+    localStorage.setItem('accessToken', ADMIN_JWT);
     ordersStore = [PENDING_ORDER, SUCCEEDED_ORDER, FAILED_ORDER];
     ordersTotal = ordersStore.length;
     orderPageRequests = [];
@@ -778,8 +795,9 @@ describe('AdminBillingPage', () => {
     fireEvent.click(screen.getByRole('button', { name: t('确认通过并退款') }));
 
     await waitFor(() => {
+      // approve 请求体默认携带 revertMembership: true（弹窗勾选框默认选中）
       expect(approveCalls).toEqual([
-        { id: 'ra1', body: { note: '同意退款' } },
+        { id: 'ra1', body: { note: '同意退款', revertMembership: true } },
       ]);
     });
     await waitFor(() => {

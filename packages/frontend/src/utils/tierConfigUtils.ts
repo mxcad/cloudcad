@@ -21,7 +21,8 @@ export function buildRegistryMap(entries: ConfigRegistryEntry[]): RegistryMap {
 }
 
 export function getConfigLabel(registry: RegistryMap, key: string): string {
-  return registry.get(key)?.label ?? key;
+  const label = registry.get(key)?.label ?? key;
+  return t(label);
 }
 
 type FormatStyle = 'full' | 'short';

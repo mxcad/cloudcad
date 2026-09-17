@@ -1,6 +1,8 @@
 import { memberControllerGetUserProjectPermissions } from '../api-sdk';
 import { useEditorState } from '../composables/useEditorState';
 import { useUser } from '../composables/useUser';
+import { showToast } from 'vant';
+import { t } from '@/languages';
 
 interface CachedPermissions {
   canSave: boolean;
@@ -90,4 +92,21 @@ export async function checkLibraryPermissions(): Promise<{ canManageDrawing: boo
     checkSystemPermission(PERMISSIONS.LIBRARY_BLOCK_MANAGE),
   ]);
   return { canManageDrawing, canManageBlock };
+}
+
+/**
+ * 导出下载方向（mxweb → 其他格式）会员预检（纯函数，编辑器菜单与库抽屉共用）：
+ * VIP（membershipTierLevel > 0）或运行时开关 freeExportDownloadEnabled 开放时可导出，
+ * 否则 toast 提示并短路（后端仍有 403 门控兜底）。
+ */
+export function canExportDownloadGate(
+  user: unknown,
+  freeExportDownloadEnabled: boolean,
+): boolean {
+  const tierLevel = (user as unknown as Record<string, unknown> | null)
+    ?.membershipTierLevel as number | undefined;
+  const isVip = typeof tierLevel === 'number' && tierLevel > 0;
+  if (isVip || freeExportDownloadEnabled) return true;
+  showToast(t('导出下载为会员专属功能，开通 VIP 后即可使用'));
+  return false;
 }

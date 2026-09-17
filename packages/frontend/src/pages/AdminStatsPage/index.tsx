@@ -3,6 +3,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
 import { t } from '@/languages';
 import {
+  useAdminStatsOverview,
   useDailyPurchases,
   useDailyRegistrations,
 } from './hooks/useAdminStats';
@@ -33,11 +34,17 @@ const PRESET_PARAMS: Record<'7' | '30' | '90', AdminStatsRangeParams> = {
 const PRESETS: RangePreset[] = ['7', '30', '90'];
 
 /**
- * 运营统计页——每日新增用户 / 每日会员购买。
+ * 运营统计页——总量概览 / 每日新增用户 / 每日会员购买。
  * 页面入口需 SYSTEM_USER_READ 或 SYSTEM_BILLING_READ 任一（路由守卫同规则）；
  * 区块按各自权限显隐，无权限的区块不发起请求。
+ *
+ * @param embedded 嵌入用户管理 Tab 时为 true：隐藏独立页头（标题由外层 Tab 承担）
  */
-export default function AdminStatsPage() {
+export default function AdminStatsPage({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const { hasPermission } = usePermission();
   const canReadUsers = hasPermission(SystemPermission.SYSTEM_USER_READ);
   const canReadBilling = hasPermission(SystemPermission.SYSTEM_BILLING_READ);
@@ -57,20 +64,25 @@ export default function AdminStatsPage() {
 
   const registrations = useDailyRegistrations(rangeParams, canReadUsers);
   const purchases = useDailyPurchases(rangeParams, canReadBilling);
+  const overview = useAdminStatsOverview(canReadUsers || canReadBilling);
 
   const effectiveRange = registrations.stats ?? purchases.stats ?? undefined;
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <h1>{t('运营统计')}</h1>
-        <p>
-          {t('统计区间')}
-          {effectiveRange
-            ? `：${effectiveRange.startDate} ~ ${effectiveRange.endDate}`
-            : ''}
-        </p>
-      </header>
+    <div
+      className={`${styles.page} ${embedded ? styles.pageEmbedded : ''}`}
+    >
+      {!embedded && (
+        <header className={styles.header}>
+          <h1>{t('运营统计')}</h1>
+          <p>
+            {t('统计区间')}
+            {effectiveRange
+              ? `：${effectiveRange.startDate} ~ ${effectiveRange.endDate}`
+              : ''}
+          </p>
+        </header>
+      )}
 
       <div className={styles.rangeBar}>
         {PRESETS.map((p) => (
@@ -104,6 +116,27 @@ export default function AdminStatsPage() {
           }}
         />
       </div>
+
+      {(canReadUsers || canReadBilling) && (
+        <div className={styles.kpiRow}>
+          {canReadUsers && (
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiLabel}>{t('当前用户总数')}</span>
+              <span className={styles.kpiValue}>
+                {overview.loading ? '…' : (overview.stats?.totalUsers ?? 0)}
+              </span>
+            </div>
+          )}
+          {canReadBilling && (
+            <div className={styles.kpiCard}>
+              <span className={styles.kpiLabel}>{t('累计付费用户')}</span>
+              <span className={styles.kpiValue}>
+                {overview.loading ? '…' : (overview.stats?.paidUsers ?? 0)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {canReadUsers && (
         <RegistrationsSection

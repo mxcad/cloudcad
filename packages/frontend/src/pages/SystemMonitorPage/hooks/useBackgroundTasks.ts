@@ -4,6 +4,7 @@ import {
   runtimeConfigControllerGetAllConfigs,
   runtimeConfigControllerUpdateConfig,
   taskRunControllerListRuns,
+  taskRunControllerListTasks,
   taskRunControllerRunTask,
 } from '@/api-sdk';
 import { t } from '@/languages';
@@ -11,18 +12,27 @@ import { getErrorMessage } from '@/utils/errorHandler';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
 import { useNotification } from '@/contexts/NotificationContext';
-import { TASK_ENABLED_KEY_BY_NAME, parseTaskRunList } from '../types';
-import type { TaskRunRecord } from '../types';
+import {
+  TASK_ENABLED_KEY_BY_NAME,
+  parseTaskRunList,
+  parseTaskList,
+} from '../types';
+import type { TaskRunRecord, TaskInfo } from '../types';
 
 const REFRESH_INTERVAL_SECONDS = 30;
 export const TASK_RUNS_LIMIT = 50;
 const TASK_RUNS_KEY = 'taskRunsList' as const;
 const TASK_ENABLED_KEYS_KEY = 'taskEnabledKeys' as const;
+const TASK_LIST_KEY = 'taskList' as const;
 
 export interface BackgroundTasksState {
   records: TaskRunRecord[];
   loading: boolean;
   error: string | null;
+  /** 已注册后台任务清单（任务清单段数据源） */
+  taskList: TaskInfo[];
+  /** 任务清单加载中 */
+  taskListLoading: boolean;
   refreshCountdown: number;
   refresh: () => void;
   /** taskName → runtime-config 开关状态；配置不可读时为 null */
@@ -69,6 +79,17 @@ export function useBackgroundTasks(active: boolean): BackgroundTasksState {
       return parseTaskRunList(res.data);
     },
     placeholderData: (prev) => prev,
+    enabled: active,
+  });
+
+  // 任务清单（任务级控件数据源）：独立 query，失败不阻塞执行历史表
+  const taskListQuery = useQuery({
+    queryKey: [TASK_LIST_KEY],
+    queryFn: async () => {
+      const res = await taskRunControllerListTasks();
+      if (res.error) throw res.error;
+      return parseTaskList(res.data);
+    },
     enabled: active,
   });
 
@@ -177,6 +198,8 @@ export function useBackgroundTasks(active: boolean): BackgroundTasksState {
     error: runsQuery.isError
       ? getErrorMessage(runsQuery.error) || t('获取后台任务失败')
       : null,
+    taskList: taskListQuery.data ?? [],
+    taskListLoading: taskListQuery.isFetching,
     refreshCountdown,
     refresh,
     enabledByName,

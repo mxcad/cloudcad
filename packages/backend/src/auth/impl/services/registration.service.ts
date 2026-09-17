@@ -7,6 +7,7 @@ import Redis from 'ioredis';
 import type { IUserRepository, IEmailVerificationService, IRuntimeConfigService, IRegistrationService, IUserService, RegisterDto, AuthResponseDto, SessionRequest } from '@cloudcad/contracts';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
+import { PasswordPolicyService } from '../../services/password-policy.service';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
@@ -22,11 +23,15 @@ export class RegistrationService implements IRegistrationService {
     @Inject('USER_SERVICE') private readonly userService: IUserService,
     private authTokenService: AuthTokenService,
     @InjectRedis() private readonly redis: Redis,
-    private accountRateLimitService: AccountRateLimitService
+    private accountRateLimitService: AccountRateLimitService,
+    private passwordPolicyService: PasswordPolicyService
   ) {}
 
   async register(registerDto: RegisterDto, req?: SessionRequest): Promise<AuthResponseDto> {
     const { email, username, password, nickname, wechatTempToken } = registerDto;
+
+    // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
+    this.passwordPolicyService.assertPasswordPolicy(password);
 
     const allowRegister = await this.runtimeConfigService.getValue<boolean>('allowRegister', true);
     if (!allowRegister) {

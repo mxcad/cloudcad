@@ -30,6 +30,7 @@ import 'vant/es/icon/style'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
+import router from './router'
 
 import 'lib-flexible'
 
@@ -57,6 +58,7 @@ i18nScope.ready(async ()=> {
         i18nScope
     })
     app.use(createPinia())
+    app.use(router)
     app.use(plugins)
 
     setupApiClient()

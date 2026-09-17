@@ -9,6 +9,8 @@ import { MembershipService } from '../../vip/membership.service';
 import { StorageInfoService } from '../../file-system/storage-quota/storage-info.service';
 import { StorageUsageService } from '../../vip/storage-usage/storage-usage.service';
 import { PASSWORD_HASHER } from '../interfaces/password-hasher.interface';
+import { PasswordPolicyService } from '../../auth/services/password-policy.service';
+import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
 
 describe('UserCrudService.updateMembership', () => {
   let service: UserCrudService;
@@ -46,6 +48,21 @@ describe('UserCrudService.updateMembership', () => {
         {
           provide: StorageUsageService,
           useValue: { usageSize: jest.fn().mockResolvedValue(0) },
+        },
+        {
+          provide: PasswordPolicyService,
+          useValue: {
+            assertPasswordPolicy: jest.fn(),
+            getPasswordChangeStatus: jest.fn(),
+          },
+        },
+        {
+          provide: PiiCryptoService,
+          useValue: {
+            emailHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            phoneHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            derivePiiFields: jest.fn(() => ({})),
+          },
         },
       ],
     }).compile();

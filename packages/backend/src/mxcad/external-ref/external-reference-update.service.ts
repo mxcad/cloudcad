@@ -162,51 +162,46 @@ export class ExternalReferenceUpdateService {
   async getPreloadingData(nodeId: string): Promise<PreloadingDataDto | null> {
     try {
       const node = await this.fileSystemNodeService.findById(nodeId);
+      let nodePath: string | undefined;
 
-      if (!node) {
-        this.logger.warn(`[getPreloadingData] 节点不存在: nodeId=${nodeId}`);
-        return null;
+      if (node) {
+        if (node.nodeType !== NodeType.FILE) {
+          this.logger.warn(
+            `[getPreloadingData] 节点是文件夹，不是文件: nodeId=${nodeId}, name=${node.name}`
+          );
+          return null;
+        }
+
+        if (!node.fileHash) {
+          this.logger.warn(
+            `[getPreloadingData] 文件节点没有 fileHash: nodeId=${nodeId}, name=${node.name}, fileStatus=${node.fileStatus}`
+          );
+          return null;
+        }
+
+        const fileHash = node.fileHash;
+        if (!this.isValidFileHash(fileHash)) {
+          this.logger.warn(`无效的文件哈希格式: ${fileHash}`);
+          return null;
+        }
+
+        nodePath = node.path;
+      } else {
+        this.logger.debug(`[getPreloadingData] 节点不存在，使用临时存储: nodeId=${nodeId}`);
       }
 
-      if (node.nodeType !== NodeType.FILE) {
-        this.logger.warn(
-          `[getPreloadingData] 节点是文件夹，不是文件: nodeId=${nodeId}, name=${node.name}`
-        );
-        return null;
-      }
-
-      if (!node.fileHash) {
-        this.logger.warn(
-          `[getPreloadingData] 文件节点没有 fileHash: nodeId=${nodeId}, name=${node.name}, fileStatus=${node.fileStatus}`
-        );
-        return null;
-      }
-
-      const fileHash = node.fileHash;
-
-      // 验证哈希值格式
-      if (!this.isValidFileHash(fileHash)) {
-        this.logger.warn(`无效的文件哈希格式: ${fileHash}`);
-        return null;
-      }
-
-      // 获取存储根路径
       const storageRootPath = await this.getStorageRootPath(nodeId);
       this.logger.debug(`[getPreloadingData] 存储根路径: ${storageRootPath}`);
 
-      // 构造预加载数据文件路径（根据 node.path 动态获取扩展名）
-      const preloadingFileName = this.extRefPreloadingService.getPreloadingFileName(nodeId, node.path);
+      const preloadingFileName = this.extRefPreloadingService.getPreloadingFileName(nodeId, nodePath);
       const preloadingFilePath = path.join(storageRootPath, preloadingFileName);
 
-      // 检查文件是否存在
       try {
         const content = await fsPromises.readFile(preloadingFilePath, 'utf-8');
         const rawData: PreloadingData = JSON.parse(content);
 
-        // 获取外部参照目录名称（src_file_md5）
         const extRefDirName = rawData.src_file_md5 || nodeId;
 
-        // 将原始字符串数组转为包含文件大小和类型的对象数组
         const externalReference =
           await this.enrichFileInfoList(
             rawData.externalReference,
@@ -240,13 +235,13 @@ export class ExternalReferenceUpdateService {
         } else {
           this.logger.error(
             `[getPreloadingData] 读取文件失败: ${readError.message}`,
-            readError.stack
+            (readError as Error).stack
           );
         }
         return null;
       }
     } catch (error) {
-      this.logger.error(`获取预加载数据失败: ${error.message}`, error.stack);
+      this.logger.error(`获取预加载数据失败: ${error.message}`, (error as Error).stack);
       return null;
     }
   }
@@ -303,12 +298,10 @@ export class ExternalReferenceUpdateService {
   async checkExists(nodeId: string, fileName: string): Promise<boolean> {
     try {
       const sourceNode = await this.fileSystemNodeService.findById(nodeId);
-
       if (!sourceNode || !sourceNode.path) {
-        this.logger.warn(
-          `[checkExists] 源图纸节点不存在或没有 path: nodeId=${nodeId}`
+        this.logger.debug(
+          `[checkExists] 节点不存在或无 path，使用临时存储: nodeId=${nodeId}`
         );
-        return false;
       }
 
       // 获取存储根路径（已包含 YYYYMM[/N]/sourceNodeId）
@@ -615,30 +608,31 @@ export class ExternalReferenceUpdateService {
     try {
       const storageRootPath = await this.getStorageRootPath(nodeId);
       const extRefDirName = await this.extRefPreloadingService.getExtRefDirName(nodeId);
-      // DWG/DXF 文件在磁盘上统一存储为 {fileName}.mxweb
       const ext = path.extname(fileName).toLowerCase();
       const isDwgFile = ['.dwg', '.dxf'].includes(ext);
+
+      // 构建磁盘文件名：
+      // - DWG/DXF: 追加 .mxweb 后缀 → A1.dwg → A1.dwg.mxweb
+      // - 图片等: 使用原名 → image.png → image.png
       const targetFileName = isDwgFile ? `${fileName}.mxweb` : fileName;
 
       // 尝试多个可能的文件名模式
       const candidates: string[] = [];
       candidates.push(path.join(storageRootPath, extRefDirName, targetFileName));
 
+      // 兼容旧格式：部分文件可能以去扩展名的方式存储（如 A1.mxweb 而非 A1.dwg.mxweb）
       if (isDwgFile) {
-        // 即使 fileName 有 .dwg 后缀，实际文件可能存为 {name}.mxweb（去掉原始扩展名）
         const baseName = path.basename(fileName, ext);
         candidates.push(path.join(storageRootPath, extRefDirName, `${baseName}.mxweb`));
-      } else {
-        // 无扩展名的 fileName 可能存为 {name}.mxweb
-        candidates.push(path.join(storageRootPath, extRefDirName, `${fileName}.mxweb`));
-        // 旧格式 URL 兼容：fileName 带 .mxweb 尾部（旧路由 external-ref-view/:nodeId/:fileName.mxweb
-        // 的 {fileName} 不含后缀；图片旧 URL 为 xxx.jpg.mxweb → fileName=xxx.jpg.mxweb），
-        // 实际磁盘文件可能是不带 .mxweb 的原名（如 xxx.jpg）
+      }
+
+      if (!isDwgFile) {
+        // 旧格式 URL 兼容：fileName 带 .mxweb 尾部（旧路由遗留），
+        // 实际磁盘文件是不带 .mxweb 的原名
         if (fileName.toLowerCase().endsWith('.mxweb')) {
           const nameWithoutMxweb = fileName.slice(0, -'.mxweb'.length);
           if (nameWithoutMxweb) {
             candidates.push(path.join(storageRootPath, extRefDirName, nameWithoutMxweb));
-            // DWG 去原扩展名存储变体：a.dwg.mxweb → a.dwg → 磁盘可能存为 a.mxweb
             const innerExt = path.extname(nameWithoutMxweb).toLowerCase();
             if (['.dwg', '.dxf'].includes(innerExt)) {
               const innerBase = path.basename(nameWithoutMxweb, innerExt);

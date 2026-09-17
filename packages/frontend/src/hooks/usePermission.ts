@@ -133,8 +133,8 @@ export const usePermission = () => {
 
   /**
    * 检查是否为系统管理员（角色名为 ADMIN）
-   * 注意：SYSTEM_ADMIN 权限只是"审计日志/缓存监控/任务触发"等管理端点权限位，
-   * 不代表管理员身份（自定义角色勾了它不应显示为管理员），故按角色判断
+   * 注意：SYSTEM_ADMIN/AUDIT_ADMIN 权限只是"审计日志/缓存监控/任务触发"等
+   * 管理端点权限位，不代表管理员身份（自定义角色勾了它不应显示为管理员），故按角色判断
    */
   const isAdmin = useCallback((): boolean => {
     return getUserRole() === 'ADMIN';

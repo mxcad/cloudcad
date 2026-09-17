@@ -10,6 +10,7 @@ import { MXCAD_CONVERSION_SERVICE } from '../interfaces/mxcad-service-tokens';
 import { IMxcadConversionService } from '../interfaces/mxcad-conversion.interface';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
+import { NodeSizeResolverService } from '../../file-system/storage-quota/node-size-resolver.service';
 import * as os from 'os';
 import * as path from 'path';
 
@@ -36,6 +37,7 @@ jest.mock('fs/promises', () => ({
 
 describe('MxcadSaveService', () => {
   let service: MxcadSaveService;
+  let testModule: TestingModule;
 
   const mockNodeService = {
     findById: jest.fn(),
@@ -93,7 +95,7 @@ describe('MxcadSaveService', () => {
       .fn()
       .mockResolvedValue({ success: true, message: 'ok' });
 
-    const module: TestingModule = await Test.createTestingModule({
+    testModule = await Test.createTestingModule({
       providers: [
         MxcadSaveService,
         { provide: ConfigService, useValue: mockConfigService },
@@ -121,6 +123,13 @@ describe('MxcadSaveService', () => {
             resolveProjectContext: jest.fn(),
           },
         },
+        {
+          provide: NodeSizeResolverService,
+          useValue: {
+            resolveFileSize: jest.fn().mockResolvedValue(1024),
+            resolveFileSizes: jest.fn().mockResolvedValue(1024),
+          },
+        },
       ],
     })
       .setLogger({
@@ -132,7 +141,7 @@ describe('MxcadSaveService', () => {
       })
       .compile();
 
-    service = module.get<MxcadSaveService>(MxcadSaveService);
+    service = testModule.get<MxcadSaveService>(MxcadSaveService);
   });
 
   afterEach(() => {
@@ -376,6 +385,87 @@ describe('MxcadSaveService', () => {
       });
       const r = await service.saveMxwebFile('n1', mockFile, 'u1', 'User');
       expect(r.success).toBe(true);
+    });
+
+    it('uses physical file size when DB size is null (prevents false quota exceed)', async () => {
+      const mockNodeSizeResolver = testModule.get(NodeSizeResolverService);
+      mockNodeService.findById.mockResolvedValue({
+        id: 'n1',
+        path: '2026/n1/f.mxweb',
+        name: 'f.mxweb',
+      });
+      // size is null in DB - this is the bug scenario
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        nodeType: NodeType.FILE,
+        name: 'f.mxweb',
+        path: '2026/n1/f.mxweb',
+        size: null,
+        updatedAt: new Date(),
+      });
+      mockMxcadConversionService.generateBinFiles.mockResolvedValue(undefined);
+      mockVersionControl.commitNodeDirectory.mockResolvedValue({
+        success: true,
+        message: 'ok',
+      });
+      // Physical file size is same as uploaded file → incrementBytes should be 0
+      (mockNodeSizeResolver.resolveFileSize as jest.Mock).mockResolvedValue(
+        mockFile.size ?? 1024
+      );
+
+      const r = await service.saveMxwebFile(
+        'n1',
+        { ...mockFile, size: mockFile.size ?? 1024 } as Express.Multer.File,
+        'u1',
+        'User'
+      );
+      expect(r.success).toBe(true);
+      // NodeSizeResolverService should be called when DB size is null
+      expect(mockNodeSizeResolver.resolveFileSize).toHaveBeenCalled();
+      // incrementBytes should be 0 (same file size), assertByteQuota called with 0
+      const nodeMutationGuard = testModule.get(NodeMutationGuard);
+      expect(nodeMutationGuard.assertByteQuota).toHaveBeenCalledWith(
+        { node: { id: 'n1' }, incrementBytes: 0 },
+        'u1'
+      );
+    });
+
+    it('calculates correct increment when file size changes', async () => {
+      const mockNodeSizeResolver = testModule.get(NodeSizeResolverService);
+      mockNodeService.findById.mockResolvedValue({
+        id: 'n1',
+        path: '2026/n1/f.mxweb',
+        name: 'f.mxweb',
+      });
+      // Old file was 500 bytes in DB
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        nodeType: NodeType.FILE,
+        name: 'f.mxweb',
+        path: '2026/n1/f.mxweb',
+        size: 500,
+        updatedAt: new Date(),
+      });
+      mockMxcadConversionService.generateBinFiles.mockResolvedValue(undefined);
+      mockVersionControl.commitNodeDirectory.mockResolvedValue({
+        success: true,
+        message: 'ok',
+      });
+
+      const newFileSize = 1024;
+      const r = await service.saveMxwebFile(
+        'n1',
+        { ...mockFile, size: newFileSize } as Express.Multer.File,
+        'u1',
+        'User'
+      );
+      expect(r.success).toBe(true);
+      // DB size exists (500), so NodeSizeResolverService should NOT be called
+      expect(mockNodeSizeResolver.resolveFileSize).not.toHaveBeenCalled();
+      // incrementBytes = 1024 - 500 = 524
+      const nodeMutationGuard = testModule.get(NodeMutationGuard);
+      expect(nodeMutationGuard.assertByteQuota).toHaveBeenCalledWith(
+        { node: { id: 'n1' }, incrementBytes: 524 },
+        'u1'
+      );
     });
   });
 });

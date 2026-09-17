@@ -21,7 +21,6 @@ jest.mock('../../../runtime/scripts/lib/context', () => {
     PROJECT_ROOT: 'd:/mock/root',
     PM2_JS: 'd:/mock/pm2.js',
     PM2_HOME: 'd:/mock/data/pm2',
-    PM2_CMD: 'd:/mock/pm2.cmd',
     NODE_EXE: 'd:/mock/node.exe',
     PNPM_JS: 'd:/mock/pnpm.cjs',
   };
@@ -37,13 +36,13 @@ jest.mock('child_process', () => {
   };
 });
 
-// mock fs.existsSync：让 PM2_JS / PM2_CMD 指向的路径"存在"，否则 getPm2StatusList 直接返回 []
+// mock fs.existsSync：让 PM2_JS 指向的路径"存在"，否则 getPm2StatusList 直接返回 []
 jest.mock('fs', () => {
   const actual = jest.requireActual('fs');
   return {
     ...actual,
     existsSync: (p) => {
-      if (p === 'd:/mock/pm2.js' || p === 'd:/mock/pm2.cmd') return true;
+      if (p === 'd:/mock/pm2.js') return true;
       return actual.existsSync(p);
     },
   };

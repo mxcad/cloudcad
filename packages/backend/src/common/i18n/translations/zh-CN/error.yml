@@ -6,6 +6,7 @@ auth:
   account_deactivated_expired: "账号已注销且已过冷静期，请联系客服恢复。数据将在30天后彻底删除"
   user_disabled: "用户已被禁用"
   user_not_found_or_disabled: "用户不存在或已被禁用"
+  session_transfer_invalid: "转移凭证无效或已过期"
   refresh_token_invalid_type: "无效的刷新Token类型"
   registration_disabled: "系统已关闭注册功能"
   not_logged_in: "未登录"
@@ -56,6 +57,8 @@ auth:
   wechat_refresh_failed: "刷新授权失败"
   wechat_verification_failed: "微信验证失败"
   wechat_not_match_account: "该微信与当前账户不匹配"
+  password_change_required: "您的密码已到期或首次登录未修改，请立即修改密码"
+  password_expiring_soon: "您的密码即将到期，建议尽快修改"
 
 account_binding:
   email_service_disabled: "邮件服务未启用，无法绑定邮箱"
@@ -139,6 +142,8 @@ project_member:
   only_owner_can_transfer: "只有项目所有者可以转让项目"
   cannot_remove_admin: "只有项目所有者可以移除管理员"
   cannot_modify_admin_role: "只有项目所有者可以修改管理员的角色"
+  cannot_modify_self_role: "不能修改自己的角色"
+  cannot_remove_self: "不能移除自己"
   only_owner_can_delete: "只有项目所有者可以删除项目"
   cannot_transfer_to_self: "不能转让给自己"
   transfer_target_must_be_member: "转让目标必须是项目成员"
@@ -321,6 +326,15 @@ database:
 
 rate_limit:
   too_many_requests: "请求过于频繁，请稍后再试"
+  account_locked: "账号因多次登录失败已被临时锁定，请 {minutes} 分钟后再试"
+
+password_policy:
+  too_short: "密码长度至少 {min} 位"
+  complexity: "密码需包含大小写字母、数字、特殊字符中至少三类"
+  weak: "密码过于简单（命中常见弱密码），请更换为更复杂的密码"
+
+initialization:
+  admin_password_required: "INITIAL_ADMIN_PASSWORD 环境变量未设置，首次启动必须提供初始管理员密码"
 
 ip_blacklist:
   invalid_ip: "无效的 IP 或 CIDR 格式"
@@ -336,6 +350,12 @@ ip_whitelist:
 
 admin_auth:
   ip_not_allowed: "当前 IP 不在管理员白名单中，禁止登录"
+
+mfa:
+  required: "请输入双因素认证动态码"
+  code_invalid: "双因素认证动态码错误，请重试"
+  setup_required: "请先完成 TOTP 双因素认证绑定"
+  already_enabled: "TOTP 已启用，无需重复绑定"
 
 resource:
   not_found: "请求的资源不存在"
@@ -566,3 +586,11 @@ alert:
   not_found: "告警不存在"
 task_run:
   not_found: "任务不存在或未注册"
+security:
+  brute_force_suspected: "账号 {account} 连续 {count} 次登录失败触发锁定，疑似暴力破解，已锁定 {minutes} 分钟"
+conversion_task:
+  no_node_id: "统一提交端点仅支持节点关联的转换（open/download + nodeId）；无节点关联的转换由前端本地记录"
+  download_requires_format: "下载类型（download）必须提供目标格式（dwg/dxf/mxweb/pdf）"
+  download_requires_user: "下载类型（download）需要登录用户（用于配额占位）"
+  cancel_not_supported: "当前执行模式不支持取消（仅独立转换服务支持）"
+  task_lost: "转换任务已丢失（服务可能已重启），请重新打开图纸"

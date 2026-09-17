@@ -13,6 +13,10 @@ datasource db {
 model User {
   id                   String           @id @default(cuid())
   email                String?          @unique
+  /// PII 字段级加密（#417 等保 8.1.4.8）：email 的 AES-256-GCM 密文（enc:v1 格式）；明文列保留至收缩阶段
+  emailEnc             String?
+  /// PII 归一化索引（#417）：HMAC-SHA256(归一化 email) hex，查询走此列等值匹配
+  emailHmac            String?          @unique
   username             String           @unique
   password             String?
   nickname             String?
@@ -24,6 +28,10 @@ model User {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   phone                String?          @unique
+  /// PII 字段级加密（#417 等保 8.1.4.8）：phone 的 AES-256-GCM 密文（enc:v1 格式）；明文列保留至收缩阶段
+  phoneEnc             String?
+  /// PII 归一化索引（#417）：HMAC-SHA256(归一化 phone) hex，查询走此列等值匹配
+  phoneHmac            String?          @unique
   phoneVerified        Boolean          @default(false)
   phoneVerifiedAt      DateTime?
   wechatId             String?          @unique
@@ -34,6 +42,13 @@ model User {
   deactivatedBy        String?
   lastUsernameChangeAt DateTime?
   usernameChangeCount  Int              @default(0)
+  /// 口令最后修改时间（#416 等保 8.1.4.1）：全员维护（注册/改密/重置时写入）；
+  /// 仅 ADMIN 角色据此做 180 天到期强制改密 + 首登未改密判定（null=初始管理员首登未改密）
+  passwordChangedAt    DateTime?
+  /// TOTP 双因素密钥（AES-256-GCM 密文，格式 enc:v1:<iv>:<ciphertext>:<tag>）；null=未绑定
+  totpSecret           String?
+  /// TOTP 双因素启用标志（ADMIN 角色生效；启用后管理员登录入口必须通过动态码校验）
+  totpEnabled          Boolean          @default(false)
   auditLogs            AuditLog[]
   ownedNodes           FileSystemNode[] @relation("NodeOwner")
   projectMembers       ProjectMember[]
@@ -147,6 +162,7 @@ model FileSystemNode {
   @@index([nodeType])
   @@index([deletedAt])
   @@index([projectId])
+  @@index([fileStatus])
   @@index([projectId, deletedAt, nodeType, updatedAt], name: "idx_project_search")
   @@index([nodeType, deletedAt, updatedAt], name: "idx_library_search")
   @@map("file_system_nodes")
@@ -285,36 +301,6 @@ model UploadSession {
   @@map("upload_sessions")
 }
 
-model PermissionPolicy {
-  id          String             @id @default(cuid())
-  type        PolicyType
-  name        String
-  description String?
-  config      Json
-  enabled     Boolean            @default(true)
-  priority    Int                @default(0)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  permissions PolicyPermission[]
-
-  @@index([type])
-  @@index([enabled])
-  @@index([priority])
-  @@map("permission_policies")
-}
-
-model PolicyPermission {
-  id         String           @id @default(cuid())
-  policyId   String
-  permission Permission
-  createdAt  DateTime         @default(now())
-  policy     PermissionPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
-
-  @@unique([policyId, permission])
-  @@index([permission])
-  @@map("policy_permissions")
-}
-
 model RuntimeConfig {
   id          String   @id @default(cuid())
   key         String   @unique
@@ -407,6 +393,10 @@ enum SecurityAttemptReason {
   not_admin
   bad_password
   blacklisted
+  /// TOTP 动态码缺失（#415：已启用 TOTP 的管理员登录未带码）
+  mfa_code_missing
+  /// TOTP 动态码错误（#415：已启用 TOTP 的管理员登录码校验失败）
+  mfa_code_invalid
 }
 
 enum UserStatus {
@@ -431,6 +421,7 @@ enum Permission {
   SYSTEM_FONT_DELETE
   SYSTEM_FONT_DOWNLOAD
   SYSTEM_ADMIN
+  AUDIT_ADMIN
   SYSTEM_BILLING_READ
   SYSTEM_BILLING_WRITE
   SYSTEM_MONITOR
@@ -540,6 +531,7 @@ enum AuditAction {
   ADMIN_LOGIN
   ALERT_RESOLVE
   AUDIT_EXPORT
+  AUDIT_CLEANUP
   FILE_CREATE
   FILE_UPDATE
   FOLDER_CREATE
@@ -550,6 +542,10 @@ enum AuditAction {
   REFUND_APPLY
   REFUND_APPROVE
   REFUND_REJECT
+  MFA_BIND
+  MFA_UNBIND
+  // 会话转移（桌面端 EXE → 系统浏览器强制会话切换，等保 8.1.4.1 会话切换可追溯）
+  USER_SESSION_TRANSFER
 }
 
 enum ResourceType {
@@ -676,12 +672,6 @@ model UserMembership {
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id])
   @@map("user_memberships")
-}
-
-enum PolicyType {
-  TIME
-  IP
-  DEVICE
 }
 
 enum BatchJobStatus {

@@ -9,6 +9,7 @@ import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
+import { AsyncConversionService } from '../conversion/async-conversion.service';
 import { FileSystemNodeContext } from '../node/filesystem-node.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
@@ -107,7 +108,8 @@ export class DrawingIngestService {
     private readonly nodeMutationGuard: NodeMutationGuard,
     private readonly restrictionEngine: RestrictionEngine,
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
-    private readonly materializer: FileNodeMaterializer
+    private readonly materializer: FileNodeMaterializer,
+    private readonly asyncConversionService: AsyncConversionService
   ) {
     this.mxcadUploadPath =
       this.configService.get('mxcadUploadPath') || '../../uploads';
@@ -432,6 +434,76 @@ export class DrawingIngestService {
       }
     }
 
+    // 外部参照 DWG 上传：不建数据库节点，前端经 checkMissingReferences 独立轮询预加载数据，
+    // 不套用「节点 PROCESSING → 轮询」模型。转换 + handleExtRef 保持同步（请求返回即就位，
+    // 前端按 ret 判定每文件成败），故此处不进入 fire-and-forget。
+    if (context.srcDwgNodeId && !context.isImage) {
+      return this.ingestExternalRefDwg({
+        filePath,
+        fileHash: hash,
+        name,
+        size,
+        srcDwgNodeId: context.srcDwgNodeId,
+        context,
+        uploadPath,
+        source,
+      });
+    }
+
+    // 普通 CAD 文件：节点已建（PROCESSING），fire-and-forget 后台转换 + 落盘 + 状态迁移。
+    // 上传请求立即返回（ret=kOk + nodeId），前端轮询节点状态（waitForFileReady）直到 COMPLETED，
+    // 用户不阻塞在上传请求上，「文件转换中」由前端轮询呈现。
+    if (cadNodeId) {
+      this.runBackgroundCadConversion({
+        filePath,
+        fileHash: hash,
+        name,
+        size,
+        context,
+        target,
+        cadNodeId,
+        source,
+      });
+      return { ret: MxUploadReturn.kOk, nodeId: cadNodeId, created: true };
+    }
+
+    // 无 nodeId（CAD 编辑器打开图纸 = 纯打开/预览，游客与登录用户一致，不建数据库节点）：
+    // 同步转换（请求返回即 mxweb 就位），文件留在 uploads 目录，前端经
+    // public-file/access/<hash>.mxweb 打开（findMxwebFile 按 hash 在 uploads/ 查找）。
+    // 恢复 #433 之前「转换无条件执行」语义——#433 把转换耦合到节点创建，无 nodeId 时
+    // 转换被跳过、前端拿到 convertFileError（CAD 编辑器打开图纸恒失败）。
+    if (!context.nodeId) {
+      return this.ingestNoNodePreview({
+        filePath,
+        fileHash: hash,
+        name,
+        size,
+        context,
+        source,
+      });
+    }
+
+    // 节点创建失败（nodeId 存在但建节点失败）：回滚转换额度，返回转换错误
+    await this.releaseConversionReservation(context, source);
+    return { ret: MxUploadReturn.kConvertFileError };
+  }
+
+  /**
+   * 无节点场景（CAD 编辑器打开图纸 = 纯打开/预览，游客与登录用户一致）：
+   * 不建数据库节点，同步转换（请求返回即 mxweb 就位），文件留在 uploads 目录，
+   * 前端经 public-file/access/<hash>.mxweb 打开（findMxwebFile 按 hash 在 uploads/
+   * 查找 <hash>.*.mxweb）。与 ingestExternalRefDwg 同为同步转换，区别是不挂外部参照、
+   * 不建节点——mxweb 留在 uploads 供预览。
+   */
+  private async ingestNoNodePreview(args: {
+    filePath: string;
+    fileHash: string;
+    name: string;
+    size: number;
+    context: FileSystemNodeContext;
+    source: Extract<IngestSource, { kind: 'file' }>;
+  }): Promise<IngestResult> {
+    const { filePath, fileHash: hash, name, size, context, source } = args;
     let isOk: boolean;
     let ret: { tz?: boolean } | undefined;
     try {
@@ -440,7 +512,6 @@ export class DrawingIngestService {
         srcPath: filePath,
         fileHash: hash,
         createPreloadingData: true,
-        debugNodeId: cadNodeId,
       });
       isOk = result.isOk;
       ret = result.ret;
@@ -450,64 +521,345 @@ export class DrawingIngestService {
     }
 
     if (isOk) {
-      if (cadNodeId) {
-        await this.transition(
-          cadNodeId,
-          FileStatus.PROCESSING,
-          FileStatus.COMPLETED
-        );
-      }
-
-      // 外部参照上传：跳过创建数据库节点和存储分配，直接处理外部参照文件
-      if (context.srcDwgNodeId && !context.isImage) {
-        this.logger.log(
-          `[DrawingIngest.ingest] 外部参照 DWG 文件上传，跳过创建节点和存储分配: ${name}`
-        );
-        const convertedFilePath = path.join(
-          uploadPath,
-          this.uploadUtilityService.getConvertedFileName(hash, name)
-        );
-        await this.materializer.handleExtRef({
-          srcDwgNodeId: context.srcDwgNodeId,
-          name,
-          fileHash: hash,
-          sourcePath: convertedFilePath,
-        });
-      } else {
-        const finalNodeId = await this.finalizeCadNode(
-          name,
-          hash,
-          size,
-          filePath,
-          context,
-          target.ownerId,
-          cadNodeId
-        );
-        if (finalNodeId === null) {
-          return { ret: MxUploadReturn.kConvertFileError };
-        }
-        // finalize 兜底建节点时 cadNodeId 可能为空，以 finalize 返回的节点 id 为准
-        cadNodeId = finalNodeId;
-      }
-      return {
-        ret: MxUploadReturn.kOk,
-        tz: ret?.tz,
-        nodeId: cadNodeId,
-        created: !!cadNodeId,
-      };
+      this.logger.log(
+        `[DrawingIngest.ingest] 无节点场景（CAD 编辑器打开），跳过节点创建，同步转换: ${name}`
+      );
+      return { ret: MxUploadReturn.kOk, tz: ret?.tz, created: false };
     }
 
     await this.releaseConversionReservation(context, source);
-    if (cadNodeId) {
-      await this.transition(
-        cadNodeId,
-        FileStatus.PROCESSING,
-        FileStatus.FAILED
-      );
-      await this.nodeTrashService.deleteNode(cadNodeId, true);
-      this.logger.log(`[DrawingIngest.ingest] 已删除失败节点: ${cadNodeId}`);
-    }
     return { ret: MxUploadReturn.kConvertFileError };
+  }
+
+  /**
+   * 外部参照 DWG 上传（同步）：不建数据库节点，转换后 handleExtRef 挂到源 DWG 的外部参照列表。
+   * 前端 useExternalReferenceUpload 按请求 ret 判定每文件成败，并经 checkMissingReferences
+   * 轮询预加载数据，故此处保持同步——请求返回即代表外部参照已就位。
+   */
+  private async ingestExternalRefDwg(args: {
+    filePath: string;
+    fileHash: string;
+    name: string;
+    size: number;
+    srcDwgNodeId: string;
+    context: FileSystemNodeContext;
+    uploadPath: string;
+    source: Extract<IngestSource, { kind: 'file' }>;
+  }): Promise<IngestResult> {
+    const {
+      filePath,
+      fileHash: hash,
+      name,
+      size,
+      srcDwgNodeId,
+      context,
+      uploadPath,
+      source,
+    } = args;
+    let isOk: boolean;
+    let ret: { tz?: boolean } | undefined;
+    try {
+      await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
+      const result = await this.fileConversionService.convertFile({
+        srcPath: filePath,
+        fileHash: hash,
+        createPreloadingData: true,
+      });
+      isOk = result.isOk;
+      ret = result.ret;
+    } catch (error) {
+      await this.releaseConversionReservation(context, source);
+      throw error;
+    }
+
+    if (isOk) {
+      this.logger.log(
+        `[DrawingIngest.ingest] 外部参照 DWG 文件上传，跳过创建节点和存储分配: ${name}`
+      );
+      const convertedFilePath = path.join(
+        uploadPath,
+        this.uploadUtilityService.getConvertedFileName(hash, name)
+      );
+      await this.materializer.handleExtRef({
+        srcDwgNodeId,
+        name,
+        fileHash: hash,
+        sourcePath: convertedFilePath,
+      });
+      return { ret: MxUploadReturn.kOk, tz: ret?.tz, created: false };
+    }
+
+    await this.releaseConversionReservation(context, source);
+    return { ret: MxUploadReturn.kConvertFileError };
+  }
+
+  /**
+   * 后台 CAD 转换（#433 异步化）：fire-and-forget，不阻塞上传请求。
+   *
+   * 转换 + 落盘（finalize）+ 外部参照 + 状态迁移全部在后台完成：
+   * - 成功：finalize（置 path）→ COMPLETED；外部参照场景走 handleExtRef。
+   * - 失败/异常：回滚转换额度 → FAILED → 删除节点。
+   * 前端 waitForFileReady 轮询节点 fileHash && path，COMPLETED 后打开。
+   * 任何异常都不向上抛出（后台任务，避免 unhandledRejection）。
+   */
+  /**
+   * 返回后台任务 Promise：调用方（ingestCadFile）fire-and-forget 忽略返回值，
+   * 测试可 await 它等待后台转换完成再断言。
+   */
+  private runBackgroundCadConversion(args: {
+    filePath: string;
+    fileHash: string;
+    name: string;
+    size: number;
+    context: FileSystemNodeContext;
+    target: IngestTarget;
+    cadNodeId: string;
+    source: Extract<IngestSource, { kind: 'file' }>;
+  }): Promise<void> {
+    const {
+      filePath,
+      fileHash: hash,
+      name,
+      size,
+      context,
+      target,
+      cadNodeId,
+      source,
+    } = args;
+    return (async () => {
+      try {
+        // S5-2 上传链路统一：注册后台转换任务（写 node.taskId + 确保 PROCESSING），
+        // 使上传图纸进面板「云端」列表（node.taskId 非空 = 云端任务）。
+        // 转换仍走同步 convertFile（下方）+ finalizeCadNode 落盘，不触发 executor.invoke。
+        await this.asyncConversionService.registerTask(cadNodeId);
+        await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
+        const result = await this.fileConversionService.convertFile({
+          srcPath: filePath,
+          fileHash: hash,
+          createPreloadingData: true,
+          debugNodeId: cadNodeId,
+        });
+
+        if (result.isOk) {
+          const finalNodeId = await this.finalizeCadNode(
+            name,
+            hash,
+            size,
+            filePath,
+            context,
+            target.ownerId,
+            cadNodeId
+          );
+          if (finalNodeId === null) {
+            // 落盘失败：节点置 FAILED + 删除
+            await this.transition(
+              cadNodeId,
+              FileStatus.PROCESSING,
+              FileStatus.FAILED
+            );
+            await this.nodeTrashService.deleteNode(cadNodeId, true);
+            this.logger.log(
+              `[DrawingIngest.background] 落盘失败，已删除节点: ${cadNodeId}`
+            );
+            return;
+          }
+          await this.transition(
+            cadNodeId,
+            FileStatus.PROCESSING,
+            FileStatus.COMPLETED
+          );
+          this.logger.log(
+            `[DrawingIngest.background] 转换完成: ${name} (node ${cadNodeId})`
+          );
+        } else {
+          await this.releaseConversionReservation(context, source);
+          await this.transition(
+            cadNodeId,
+            FileStatus.PROCESSING,
+            FileStatus.FAILED
+          );
+          await this.nodeTrashService.deleteNode(cadNodeId, true);
+          this.logger.log(
+            `[DrawingIngest.background] 转换失败，已删除节点: ${cadNodeId} (${result.error})`
+          );
+        }
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `[DrawingIngest.background] 后台转换异常: ${errMsg}`,
+          error instanceof Error ? error.stack : undefined
+        );
+        try {
+          await this.releaseConversionReservation(context, source);
+          await this.transition(
+            cadNodeId,
+            FileStatus.PROCESSING,
+            FileStatus.FAILED
+          );
+          await this.nodeTrashService.deleteNode(cadNodeId, true);
+        } catch (cleanupErr) {
+          this.logger.error(
+            `[DrawingIngest.background] 失败清理异常: ${
+              cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
+            }`
+          );
+        }
+      }
+    })();
+  }
+
+  /**
+   * 后台分片合并转换（#433 异步化）：fire-and-forget，不阻塞合并请求。
+   *
+   * 转换 + 落盘（materialize）+ 外部参照 + 临时目录/缓存清理 + 状态迁移全部在后台完成：
+   * - 成功：materialize（置 path）→ COMPLETED；外部参照场景走 materialize 的 extRef。
+   * - 失败/异常：回滚转换额度 → FAILED → 删除节点 → 清理临时目录/缓存。
+   * 前端 waitForFileReady 轮询节点 fileHash && path，COMPLETED 后打开。
+   * 任何异常都不向上抛出（后台任务，避免 unhandledRejection）。
+   *
+   * 返回后台任务 Promise：调用方（ingestChunks）fire-and-forget 忽略返回值，
+   * 测试可 await 它等待后台转换完成再断言。
+   */
+  private runBackgroundChunkConversion(args: {
+    filepath: string;
+    fileMd5: string;
+    fileName: string;
+    fileExtName: string;
+    fileSize: number;
+    context: FileSystemNodeContext;
+    target: IngestTarget;
+    newNodeId: string;
+    tmpDir: string;
+    mergeKey: string;
+    conversionReserved: boolean;
+    source: Extract<IngestSource, { kind: 'chunks' }>;
+  }): Promise<void> {
+    const {
+      filepath,
+      fileMd5,
+      fileName,
+      fileExtName,
+      fileSize,
+      context,
+      target,
+      newNodeId,
+      tmpDir,
+      mergeKey,
+      conversionReserved,
+      source,
+    } = args;
+    const extension = path.extname(fileName).toLowerCase();
+    const isMxwebFile = extension === '.mxweb';
+
+    return (async () => {
+      try {
+        // Step 2: 格式转换（.mxweb 文件无需转换）
+        let isOk = true;
+        if (!isMxwebFile) {
+          const convertResult = await this.fileConversionService.convertFile({
+            srcPath: filepath,
+            fileHash: fileMd5,
+            createPreloadingData: true,
+            debugNodeId: newNodeId,
+          });
+          isOk = convertResult.isOk;
+        } else {
+          this.logger.log(
+            `[DrawingIngest.chunks-bg] .mxweb 文件，跳过转换: ${fileName}`
+          );
+        }
+
+        if (!isOk) {
+          if (conversionReserved) {
+            await this.releaseConversionReservation(context, source);
+          }
+          await this.transition(
+            newNodeId,
+            FileStatus.PROCESSING,
+            FileStatus.FAILED
+          );
+          await this.nodeTrashService.deleteNode(newNodeId, true);
+          await this.fileSystemService.deleteDirectory(tmpDir);
+          await this.cacheManager.delete('file-upload', mergeKey);
+          this.logger.log(
+            `[DrawingIngest.chunks-bg] 转换失败，已删除节点: ${newNodeId}`
+          );
+          return;
+        }
+
+        await this.transition(
+          newNodeId,
+          FileStatus.PROCESSING,
+          FileStatus.COMPLETED
+        );
+
+        const result = await this.materializer.materialize({
+          ownerId: target.ownerId,
+          name: fileName,
+          fileHash: fileMd5,
+          size: fileSize,
+          existingNodeId: newNodeId,
+          source: {
+            kind: 'artifacts',
+            suffix: fileExtName.toLowerCase(),
+            uploadPath: this.mxcadUploadPath,
+          },
+          isCadFile: extension === '.dwg' || extension === '.dxf',
+          extRef: context.srcDwgNodeId
+            ? {
+                srcDwgNodeId: context.srcDwgNodeId,
+                sourcePath: filepath,
+              }
+            : undefined,
+        });
+        if (!result) {
+          // 落盘失败：释放占位 + 删除节点 + 清理临时目录/缓存
+          if (conversionReserved) {
+            await this.releaseConversionReservation(context, source);
+          }
+          await this.nodeTrashService.deleteNode(newNodeId, true);
+          await this.fileSystemService.deleteDirectory(tmpDir);
+          await this.cacheManager.delete('file-upload', mergeKey);
+          this.logger.log(
+            `[DrawingIngest.chunks-bg] 落盘失败，已删除节点: ${newNodeId}`
+          );
+          return;
+        }
+
+        await this.fileSystemService.deleteDirectory(tmpDir);
+        await this.cacheManager.delete('file-upload', mergeKey);
+        this.logger.log(
+          `[DrawingIngest.chunks-bg] 转换完成: ${fileName} (node ${newNodeId})`
+        );
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `[DrawingIngest.chunks-bg] 后台转换异常: ${errMsg}`,
+          error instanceof Error ? error.stack : undefined
+        );
+        try {
+          if (conversionReserved) {
+            await this.releaseConversionReservation(context, source);
+          }
+          await this.transition(
+            newNodeId,
+            FileStatus.PROCESSING,
+            FileStatus.FAILED
+          );
+          await this.nodeTrashService.deleteNode(newNodeId, true);
+          await this.fileSystemService.deleteDirectory(tmpDir);
+          await this.cacheManager.delete('file-upload', mergeKey);
+        } catch (cleanupErr) {
+          this.logger.error(
+            `[DrawingIngest.chunks-bg] 失败清理异常: ${
+              cleanupErr instanceof Error
+                ? cleanupErr.message
+                : String(cleanupErr)
+            }`
+          );
+        }
+      }
+    })();
   }
 
   /**
@@ -766,98 +1118,26 @@ export class DrawingIngestService {
           );
         }
 
-        // Step 2: 格式转换（.mxweb 文件无需转换）
-        let isOk = true;
-        let ret = MxUploadReturn.kOk;
-        let conversionRet:
-          | import('../interfaces/file-conversion.interface').MxCadConversionResult
-          | undefined;
-
-        if (!isMxwebFile) {
-          const convertResult = await this.fileConversionService.convertFile({
-            srcPath: filepath,
-            fileHash: fileMd5,
-            createPreloadingData: true,
-          });
-          isOk = convertResult.isOk;
-          conversionRet = convertResult.ret;
-          ret =
-            convertResult.ret?.code === 0
-              ? MxUploadReturn.kOk
-              : MxUploadReturn.kConvertFileError;
-        } else {
-          this.logger.log(
-            `[DrawingIngest.chunks] .mxweb 文件，跳过转换: ${fileName}`
-          );
-        }
-
-        // Step 3: 根据转换结果更新状态
-        if (!isOk) {
-          if (conversionReserved) {
-            await this.releaseConversionReservation(context, source);
-          }
-          if (newNodeId) {
-            await this.transition(
-              newNodeId,
-              FileStatus.PROCESSING,
-              FileStatus.FAILED
-            );
-            await this.nodeTrashService.deleteNode(newNodeId, true);
-            this.logger.log(
-              `[DrawingIngest.chunks] 已删除失败节点: ${newNodeId}`
-            );
-          }
-          await this.fileSystemService.deleteDirectory(tmpDir);
-          await this.cacheManager.delete('file-upload', mergeKey);
-          return { ret: MxUploadReturn.kConvertFileError };
-        }
-
+        // 异步转换（#433）：fire-and-forget，节点保持 PROCESSING，后台转换 + 落盘 + 状态迁移。
+        // 合并请求立即返回（ret=kOk + nodeId），前端轮询节点状态（waitForFileReady）直到 COMPLETED，
+        // 用户不阻塞在合并请求上，「文件转换中」由前端轮询呈现。
         if (newNodeId) {
-          await this.transition(
+          this.runBackgroundChunkConversion({
+            filepath,
+            fileMd5,
+            fileName,
+            fileExtName,
+            fileSize,
+            context,
+            target,
             newNodeId,
-            FileStatus.PROCESSING,
-            FileStatus.COMPLETED
-          );
-        }
-
-        if (context && context.userId && context.nodeId && newNodeId) {
-          const result = await this.materializer.materialize({
-            ownerId: target.ownerId,
-            name: fileName,
-            fileHash: fileMd5,
-            size: fileSize,
-            existingNodeId: newNodeId,
-            source: {
-              kind: 'artifacts',
-              suffix: fileExtName.toLowerCase(),
-              uploadPath: this.mxcadUploadPath,
-            },
-            isCadFile:
-              extension === '.dwg' || extension === '.dxf',
-            extRef: context.srcDwgNodeId
-              ? {
-                  srcDwgNodeId: context.srcDwgNodeId,
-                  sourcePath: filepath,
-                }
-              : undefined,
+            tmpDir,
+            mergeKey,
+            conversionReserved,
+            source,
           });
-          if (!result) {
-            // 落盘失败：释放占位 + 删除节点（保持原 catch 语义）
-            if (conversionReserved) {
-              await this.releaseConversionReservation(context, source);
-            }
-            await this.nodeTrashService.deleteNode(newNodeId, true);
-            await this.fileSystemService.deleteDirectory(tmpDir);
-            await this.cacheManager.delete('file-upload', mergeKey);
-            return { ret: MxUploadReturn.kConvertFileError };
-          }
-
-          await this.fileSystemService.deleteDirectory(tmpDir);
-
-          await this.cacheManager.delete('file-upload', mergeKey);
           return {
             ret: MxUploadReturn.kOk,
-            tz: conversionRet?.tz,
             nodeId: newNodeId,
             created: true,
           };

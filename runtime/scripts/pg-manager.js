@@ -97,6 +97,58 @@ function ensureDir(dir) {
   }
 }
 
+// Unix socket 目录解析
+// Linux 下 AF_UNIX 的 sun_path 上限 108 字节（含结尾 \0），即
+// "<socket 目录>/.s.PGSQL.<port>" 必须不超过 107 字节，否则 postmaster 直接
+// FATAL "could not create any Unix-domain sockets"（TCP 即使已 bind 也一起死）。
+// 部署目录一旦很深（常见于 /home/<用户>/Documents/<长包名>），把 socket 目录
+// 放在 data 目录下就会超限，因此按候选顺序探测，优先标准系统路径，退到 /tmp。
+const UNIX_SOCKET_MAX_LEN = 107;
+
+function resolveSocketDir() {
+  const candidates = [
+    '/var/run/postgresql',
+    '/run/postgresql',
+    '/tmp/cadpg-sock',
+    '/dev/shm/cadpg',
+    '/tmp/cadpg',
+    '/tmp/pg',
+    '/tmp',
+  ];
+
+  for (const dir of candidates) {
+    const socketPath = `${dir}/${'.s.PGSQL.'}${PG_PORT}`;
+    if (socketPath.length > UNIX_SOCKET_MAX_LEN) {
+      continue;
+    }
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      const probe = `${dir}/.cloudcad-probe`;
+      fs.writeFileSync(probe, '');
+      fs.unlinkSync(probe);
+      return dir;
+    } catch (e) {
+      // 无写权限（非 root 常见）或只读文件系统，尝试下一个候选
+    }
+  }
+
+  log(
+    'error',
+    `找不到可用的 Unix socket 目录（socket 路径须 ≤ ${UNIX_SOCKET_MAX_LEN} 字节），已尝试: ${candidates.join(', ')}`
+  );
+  return null;
+}
+
+// Linux 下解析并缓存 socket 目录（进程内多次启动/重启复用同一目录）
+let resolvedSocketDir = null;
+function getSocketDir() {
+  if (!IS_LINUX) return null;
+  if (!resolvedSocketDir) {
+    resolvedSocketDir = resolveSocketDir();
+  }
+  return resolvedSocketDir;
+}
+
 // Linux 系统初始化（创建必要的目录和符号链接）
 function initLinuxSystem() {
   if (!IS_LINUX) return true;
@@ -125,48 +177,114 @@ function initLinuxSystem() {
     checkPathPermissions(PG_DATA_DIR);
   }
 
-  // 1. 创建 PostgreSQL Unix socket 目录
-  const pgSocketDir = '/var/run/postgresql';
-  if (!fs.existsSync(pgSocketDir)) {
-    try {
-      fs.mkdirSync(pgSocketDir, { recursive: true });
-      log('info', `创建 PostgreSQL socket 目录: ${pgSocketDir}`);
-    } catch (e) {
-      // 可能需要 root 权限，使用 data 目录下的替代路径
-      const altSocketDir = path.join(DATA_DIR, 'postgres', 'sockets');
-      ensureDir(altSocketDir);
-      log('warn', `无法创建 ${pgSocketDir}，使用替代路径: ${altSocketDir}`);
-      // 设置环境变量让后续 pg_ctl 使用替代 socket 目录
-      process.env.PG_SOCKET_DIR = altSocketDir;
+  // 1. 解析 PostgreSQL Unix socket 目录
+  // 只解析，不在此创建：initDatabase() 会清空 data/postgres 下的全部条目，
+  // 目录必须在那之后才创建（见 startPostgres）。
+  const pgSocketDir = getSocketDir();
+  if (!pgSocketDir) {
+    return false;
+  }
+  process.env.PG_SOCKET_DIR = pgSocketDir;
+  log('info', `PostgreSQL socket 目录: ${pgSocketDir}`);
+
+  // 2. 验证 / 修复 PostgreSQL share 目录可访问
+  // postgres 运行时 get_share_path() 返回 bin/../share/
+  // 需要确保 share/timezonesets 等路径可访问
+  //
+  // 兼容路径（postgres 实际查找的）：
+  //   runtime/linux/postgres/share/timezonesets
+  // 真实资源路径（部署包内）：
+  //   runtime/linux/postgres/share/postgresql/15/timezonesets
+  //
+  // 优先顺序：
+  //   a) share/timezonesets 已存在（构建时或上次运行时创建） -> 直接用
+  //   b) 系统 /usr/share/postgresql/15/timezonesets 存在 -> 用系统
+  //   c) 运行时自动创建 symlink（rootless，无需 sudo）
+  //   d) 以上都失败 -> 返回 false，阻止启动
+  //
+  // 注意：b) 不能只判断 /usr/share/postgresql/15 目录是否存在，
+  // 系统可能只装了 client 或残留空目录，必须确认 timezonesets 真的在里面。
+  const pgShareLinkDir = path.join(PLATFORM_DIR, PG_DIR_NAME, 'share');
+  const pgShareCheckPath = path.join(pgShareLinkDir, 'timezonesets');
+  const pgShareSrcDir = path.join(pgShareLinkDir, 'postgresql', '15');
+  const pgSystemShare = '/usr/share/postgresql/15';
+  const pgSystemTimezonesets = path.join(pgSystemShare, 'timezonesets');
+
+  let shareAccessible = fs.existsSync(pgShareCheckPath);
+
+  if (!shareAccessible) {
+    if (fs.existsSync(pgSystemTimezonesets)) {
+      log('info', `${pgSystemShare} 已存在且完整（系统 PostgreSQL），直接使用`);
+      shareAccessible = true;
+    } else if (fs.existsSync(pgSystemShare)) {
+      log(
+        'warn',
+        `${pgSystemShare} 存在但不完整（缺 timezonesets），忽略系统路径`
+      );
     }
   }
 
-  // 2. 验证 PostgreSQL share 目录可访问
-  // postgres 运行时 get_share_path() 返回 bin/../share/
-  // 需要确保 share/timezonesets 等路径可访问
-  // 方案1（构建时，推荐）：extract-linux-runtime.js 在 share/ 下创建了
-  //   指向 share/postgresql/15/* 的符号链接（rootless，无需 sudo）
-  // 方案2（运行时）：/usr/share/postgresql/15 如果存在则直接使用（系统 PG）
-  const pgShareCheckPath = path.join(
-    PLATFORM_DIR,
-    PG_DIR_NAME,
-    'share',
-    'timezonesets'
-  );
-  const pgSystemShare = '/usr/share/postgresql/15';
-
-  // 优先检查构建时创建的 share/ 级别兼容 symlink
-  let shareAccessible = fs.existsSync(pgShareCheckPath);
-
-  // 如果构建时 symlink 不存在，检查系统 PG
   if (!shareAccessible) {
-    if (fs.existsSync(pgSystemShare)) {
-      log('info', `${pgSystemShare} 已存在（系统 PostgreSQL），直接使用`);
-      shareAccessible = true;
+    // 运行时自动创建兼容 symlink：share/<entry> -> share/postgresql/15/<entry>
+    if (fs.existsSync(pgShareSrcDir)) {
+      try {
+        const entries = fs.readdirSync(pgShareSrcDir);
+        let created = 0;
+        for (const entry of entries) {
+          const src = path.join(pgShareSrcDir, entry);
+          const dst = path.join(pgShareLinkDir, entry);
+          if (!fs.existsSync(dst)) {
+            try {
+              fs.symlinkSync(src, dst);
+              created += 1;
+            } catch (e) {
+              log('warn', `创建符号链接失败: ${dst} -> ${src} (${e.message})`);
+            }
+          }
+        }
+        if (fs.existsSync(pgShareCheckPath)) {
+          log(
+            'info',
+            `已自动创建 share 兼容符号链接（${created} 个）: ${pgShareLinkDir}`
+          );
+          shareAccessible = true;
+        } else {
+          log('warn', `自动创建 share 符号链接后仍找不到: ${pgShareCheckPath}`);
+        }
+      } catch (e) {
+        log('warn', `读取 share 源目录失败: ${pgShareSrcDir} (${e.message})`);
+      }
     } else {
-      log('warn', '未检测到 PostgreSQL share 目录的可访问符号链接');
-      log('warn', '请重新构建部署包（extract-linux-runtime.js 已添加兼容性修复）');
+      log('warn', `share 源目录不存在: ${pgShareSrcDir}`);
     }
+  }
+
+  if (!shareAccessible) {
+    // 最后一道兜底：pg-path-redirect.so
+    const redirectSo = PG_LIB_DIR
+      ? path.join(PG_LIB_DIR, 'pg-path-redirect.so')
+      : null;
+    if (redirectSo && fs.existsSync(redirectSo) && PG_SHARE_DIR) {
+      log('info', `使用 LD_PRELOAD 路径重定向: ${redirectSo}`);
+      shareAccessible = true;
+    }
+  }
+
+  if (!shareAccessible) {
+    log('error', 'PostgreSQL share 目录不可访问，无法启动');
+    log('error', `请检查以下路径之一是否存在:`);
+    log('error', `  - ${pgShareCheckPath}`);
+    log('error', `  - ${pgShareSrcDir}`);
+    log('error', `  - ${pgSystemTimezonesets}`);
+    log(
+      'error',
+      `  - ${
+        PG_LIB_DIR
+          ? path.join(PG_LIB_DIR, 'pg-path-redirect.so')
+          : '(pg-path-redirect.so)'
+      }`
+    );
+    return false;
   }
 
   // 3. 创建 postgres 用户（如果以 root 运行且用户不存在）
@@ -407,18 +525,83 @@ function isRunning() {
   }
 }
 
-// 启动 PostgreSQL
+// 写入 postgresql.auto.conf
+// 只更新 unix_socket_directories 和 port，保留其他已有配置
 function writePgAutoConf() {
-  // 写入 postgresql.auto.conf（每次启动都执行，确保 socket/port 配置正确）
-  // 升级场景下 data/postgres 已存在，initdb 不会重跑，但需确保 socket 配置
   const socketDir = process.env.PG_SOCKET_DIR;
-  if (socketDir && fs.existsSync(PG_DATA_DIR)) {
-    const autoConf = path.join(PG_DATA_DIR, 'postgresql.auto.conf');
-    let content = '';
-    content += `unix_socket_directories = '${socketDir.replace(/'/g, "\\'")}'\n`;
-    content += `port = ${PG_PORT}\n`;
-    fs.writeFileSync(autoConf, content, 'utf8');
-    log('info', `已更新 postgresql.auto.conf（socket=${socketDir}, port=${PG_PORT}）`);
+  if (!fs.existsSync(PG_DATA_DIR)) {
+    return;
+  }
+
+  const autoConf = path.join(PG_DATA_DIR, 'postgresql.auto.conf');
+  const desired = {};
+  if (socketDir) {
+    desired['unix_socket_directories'] = `'${socketDir.replace(/'/g, "\\'")}'`;
+  }
+  desired['port'] = String(PG_PORT);
+
+  let lines = [];
+  if (fs.existsSync(autoConf)) {
+    try {
+      lines = fs.readFileSync(autoConf, 'utf8').split('\n');
+    } catch (e) {
+      lines = [];
+    }
+  }
+
+  const updatedKeys = new Set();
+  const newLines = lines.map((line) => {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/);
+    if (m && desired[m[1]] !== undefined) {
+      updatedKeys.add(m[1]);
+      return `${m[1]} = ${desired[m[1]]}`;
+    }
+    return line;
+  });
+
+  for (const key of Object.keys(desired)) {
+    if (!updatedKeys.has(key)) {
+      newLines.push(`${key} = ${desired[key]}`);
+    }
+  }
+
+  // 去掉末尾多余空行，保证文件以换行结尾
+  while (newLines.length > 0 && newLines[newLines.length - 1].trim() === '') {
+    newLines.pop();
+  }
+  const content = newLines.join('\n') + '\n';
+
+  fs.writeFileSync(autoConf, content, 'utf8');
+  log(
+    'info',
+    `已更新 postgresql.auto.conf（${Object.keys(desired)
+      .map((k) => `${k}=${desired[k]}`)
+      .join(', ')}）`
+  );
+}
+
+// pg_ctl 失败时打印服务端日志尾部。postmaster 的真实错误（FATAL 原因）只写在
+// -l 指定的日志文件里，只报"启动失败"会让部署侧无法定位问题。
+function logTail(logFile) {
+  let lines;
+  try {
+    lines = fs
+      .readFileSync(logFile, 'utf8')
+      .split('\n')
+      .filter((line) => line.trim() !== '');
+  } catch (e) {
+    log('warn', `无法读取 PostgreSQL 服务端日志: ${logFile} (${e.message})`);
+    return;
+  }
+
+  if (lines.length === 0) {
+    log('warn', `PostgreSQL 服务端日志为空: ${logFile}`);
+    return;
+  }
+
+  log('error', `PostgreSQL 服务端日志尾部（${logFile}）:`);
+  for (const line of lines.slice(-30)) {
+    log('error', `  ${line}`);
   }
 }
 
@@ -430,7 +613,10 @@ function startPostgres() {
 
   // Linux 系统初始化（socket 目录、share 目录验证等）
   // 必须在 writePgAutoConf 之前执行，因为后者需要 process.env.PG_SOCKET_DIR
-  initLinuxSystem();
+  if (!initLinuxSystem()) {
+    log('error', 'Linux 系统初始化失败，取消启动 PostgreSQL');
+    return false;
+  }
 
   // 写入 socket/port 配置（每次启动都执行，确保即使升级场景也正确）
   writePgAutoConf();
@@ -446,13 +632,13 @@ function startPostgres() {
     try {
       const stat = fs.statSync(PG_DATA_DIR);
       const mode = stat.mode & 0o777;
-      
+
       // 检查权限是否符合 PostgreSQL 要求（0700 或 0750）
       if (mode !== 0o700 && mode !== 0o750) {
         log('info', `修复数据目录权限: ${mode.toString(8)} -> 700`);
         fs.chmodSync(PG_DATA_DIR, 0o700);
       }
-      
+
       // 确保数据目录归属 postgres 用户
       if (process.getuid() === 0) {
         spawnSync('chown', ['-R', 'postgres:postgres', PG_DATA_DIR], {
@@ -461,6 +647,19 @@ function startPostgres() {
       }
     } catch (e) {
       log('warn', `检查数据目录权限失败: ${e.message}`);
+    }
+  }
+
+  // socket 目录必须在 initDatabase() 之后创建：该函数的前置清理循环会清空
+  // data/postgres 下的全部条目（包括之前创建的 socket 目录）。每次启动都补一次，
+  // 保证升级/残留场景下目录也存在。
+  const socketDir = getSocketDir();
+  if (socketDir) {
+    try {
+      ensureDir(socketDir);
+    } catch (e) {
+      log('error', `创建 socket 目录失败: ${socketDir} (${e.message})`);
+      return false;
     }
   }
 
@@ -531,6 +730,7 @@ function startPostgres() {
     }
 
     log('error', 'PostgreSQL 启动失败');
+    logTail(logFile);
     return false;
   }
 
@@ -560,6 +760,7 @@ function startPostgres() {
   }
 
   log('error', 'PostgreSQL 启动失败');
+  logTail(logFile);
   return false;
 }
 

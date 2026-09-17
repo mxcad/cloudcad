@@ -30,7 +30,6 @@ export interface PdfExportState {
   setBlob: React.Dispatch<React.SetStateAction<Blob | null>>;
   fileName: string;
   setFileName: React.Dispatch<React.SetStateAction<string>>;
-  exporting: boolean;
 }
 
 export interface DwgExportState {
@@ -42,7 +41,6 @@ export interface DwgExportState {
   setFileName: React.Dispatch<React.SetStateAction<string>>;
   format: 'dwg' | 'dxf';
   setFormat: React.Dispatch<React.SetStateAction<'dwg' | 'dxf'>>;
-  exporting: boolean;
 }
 
 export interface SaveAsState {

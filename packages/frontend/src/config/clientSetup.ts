@@ -63,11 +63,26 @@ client.setConfig({
   },
 });
 
-// ── 2. Bearer Token + Language (request interceptor) ──
+// ── 2. Bearer Token + Language + CSRF (request interceptor) ──
+// CSRF double-submit：读 csrf_token cookie 并发送 x-csrf-token header。
+// 有 Bearer token 时后端跳过 CSRF 检查（无副作用）；cookie-only 会话（localStorage
+// 无 accessToken）时，后端 CsrfGuard 要求 cookie 与 header 双重提交，此 header 补全
+// 该回退路径（cookie 由后端 bootstrap 中间件在首个响应中预置）。
+function getCsrfToken(): string | null {
+  const match = document.cookie
+    .split('; ')
+    .find((c) => c.startsWith('csrf_token='));
+  return match ? match.slice('csrf_token='.length) : null;
+}
+
 client.interceptors.request.use((request) => {
   const token = getValidToken();
   if (token) {
     request.headers.set('Authorization', `Bearer ${token}`);
+  }
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    request.headers.set('x-csrf-token', csrfToken);
   }
   // 携带当前语言，后端根据 Accept-Language 返回国际化响应
   const lang = i18nScope.activeLanguage;
@@ -194,6 +209,26 @@ client.interceptors.error.use(async (error, _response, _request, _options) => {
     if (e.status === 403) {
       (error as Record<string, unknown>).isPermissionError = true;
       (error as Record<string, unknown>).statusCode = 403;
+    }
+    // MFA_SETUP_REQUIRED（#415 等保 8.1.4.1(d)）：未绑定 TOTP 的管理员访问被锁定端点
+    // （后端 JwtStrategy 层对非白名单路径统一 403）→ 重定向至绑定页，完成绑定后自动解锁。
+    // 仅在有登录态且不在绑定页时重定向，避免绑定页自身/未登录态重复跳转。
+    if (
+      e.code === 'MFA_SETUP_REQUIRED' &&
+      getValidToken() &&
+      window.location.pathname !== '/admin/mfa'
+    ) {
+      window.location.href = '/admin/mfa';
+    }
+    // PASSWORD_CHANGE_REQUIRED（#416 等保 8.1.4.1 b)）：口令首登未改密/超期到期的管理员
+    // 访问被锁定端点（后端 JwtStrategy 实时判定 passwordChangedAt，仅放行改密/profile/登出）
+    // → 重定向至强制改密页，改密成功后自动解锁。
+    if (
+      e.code === 'PASSWORD_CHANGE_REQUIRED' &&
+      getValidToken() &&
+      window.location.pathname !== '/admin/change-password'
+    ) {
+      window.location.href = '/admin/change-password';
     }
     // QUOTA_EXCEEDED（配额超限/转换频率限制）的提示 owner 是此处：该错误可能出现在
     // 任意 API（不限于上传），全局统一处理避免各调用方各自实现提示逻辑。

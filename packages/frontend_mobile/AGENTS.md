@@ -21,13 +21,15 @@ packages/frontend_mobile/
 │   ├── styles/         # 全局样式
 │   ├── test/           # 测试辅助（__mocks__/setup.ts）
 │   ├── utils/          # 工具函数
-│   ├── App.vue         # 根组件（/share/* 之外全部渲染 Home）
+│   ├── App.vue         # 根组件（始终渲染 Shell 壳模式）
 │   ├── main.ts         # 入口
 │   └── route.ts        # 路由定义（当前未通过 Vue Router 使用，仅声明）
 ```
 
 - 入口是 `main.ts`（不是 `main.js`）
-- 无 `router/` 目录（路由在 `route.ts` 声明，`/share/*` 走独立处理，其余 App.vue 直接渲染 Home）
+- `src/router/index.ts`（Vue Router 4，`createWebHashHistory`）：`/` 重定向到 `/shell`，Shell 渲染顶栏 + 编辑器根 + 子页覆盖层
+- 壳模式始终启用——进入 App 即为壳（`http://localhost:7001/` 自动进入壳模式）
+- `src/route.ts` 是遗留文件（未通过 Vue Router 使用），仅声明路由表，可忽略
 - **无 CLAUDE.md**（本包轻量纳入，不建独立 AI 行为文档；本 AGENTS.md + `frontend-mobile-coding-standards` skill 足够）
 
 ## 关键命令

@@ -5,7 +5,10 @@ import type { MxLogEntryDto } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 import { History } from 'lucide-react';
 import { t } from '@/languages';
-import { toVersionDisplayList } from '../../utils/versionHistory';
+import {
+  toVersionDisplayList,
+  extractUserNote,
+} from '../../utils/versionHistory';
 
 interface VersionHistoryModalProps {
   isOpen: boolean;
@@ -59,15 +62,6 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  // 从消息中提取用户说明
-  const extractUserNote = (message: string): string | null => {
-    const saveMatch = message.match(/^Save:\s*.+?\s*-\s*(.+)$/i);
-    if (saveMatch) {
-      return saveMatch[1]?.trim() ?? null;
-    }
-    return null;
   };
 
   return (

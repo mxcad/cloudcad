@@ -76,6 +76,9 @@ export class LinuxInitService implements OnModuleInit {
 
     this.logger.log('检测到 Linux 平台，开始环境初始化...');
 
+    // 清理上次崩溃/重启遗留的 mxcadassembly 孤儿进程（防止残留进程持续占用 CPU）
+    await this.killLeftoverMxcadAssembly();
+
     // 校验 mxcadassembly 可执行文件路径配置（跨平台 .env 误配置在此 fail-fast）
     this.validateAssemblyPath();
 
@@ -85,6 +88,39 @@ export class LinuxInitService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`Linux 环境初始化失败: ${error.message}`);
       this.logger.warn('部分功能可能无法正常工作，请手动执行初始化脚本');
+    }
+  }
+
+  /**
+   * 清理遗留的 mxcadassembly 孤儿进程
+   * 后端(重)启动时杀掉上次崩溃/重启遗留的 mxcadassembly 进程，防止其持续占用 CPU。
+   * 转换进程组杀除（mxcad-exec.ts）是主防线，本方法为兜底：进程组杀除仍可能因
+   * 极端情况（如内核态卡死）留下残留，启动时统一清掉。
+   */
+  private async killLeftoverMxcadAssembly(): Promise<void> {
+    try {
+      // 先列出遗留进程（便于日志），再 pkill -f 按命令行匹配杀掉
+      // 无匹配进程时 pgrep/pkill 退出码为 1，用 `|| true` 避免 exec 抛错
+      const { stdout } = await execAsync('pgrep -f mxcadassembly || true');
+      const leftover = stdout
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (leftover.length === 0) {
+        this.logger.log('无遗留 mxcadassembly 进程');
+        return;
+      }
+
+      await execAsync('pkill -9 -f mxcadassembly || true');
+      this.logger.warn(
+        `已清理 ${leftover.length} 个遗留 mxcadassembly 孤儿进程: ${leftover.join(', ')}`,
+      );
+    } catch (error) {
+      // pgrep/pkill 可能不存在（极少见）或执行失败，均不阻塞启动
+      this.logger.warn(
+        `清理遗留 mxcadassembly 进程失败（忽略）: ${error.message}`,
+      );
     }
   }
 

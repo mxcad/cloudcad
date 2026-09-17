@@ -4,6 +4,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { AppConfig } from '../../config/app.config';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
@@ -18,15 +20,19 @@ import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 @Injectable()
 export class ExternalRefService {
   private readonly logger = new Logger(ExternalRefService.name);
+  private readonly mxcadUploadPath: string;
 
   constructor(
+    private readonly configService: ConfigService<AppConfig>,
     private readonly fileSystemService: MxFileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly fileTreeService: FileTreeService,
     private readonly storageManager: StorageManager,
     private readonly extRefPreloadingService: ExtRefPreloadingService,
     private readonly nodeMutationGuard: NodeMutationGuard
-  ) {}
+  ) {
+    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true });
+  }
 
   async getExternalRefDirName(srcDwgNodeId: string): Promise<string> {
     try {
@@ -53,18 +59,24 @@ export class ExternalRefService {
 
       const sourceNode =
         await this.fileSystemNodeService.findById(srcDwgNodeId);
-      if (!sourceNode || !sourceNode.path) {
-        throw new NotFoundException(
-          I18nContext.current()?.t(
-            'error.file_extra.source_drawing_not_exist',
-            { args: { id: srcDwgNodeId } }
-          ) ?? `源图纸节点不存在: ${srcDwgNodeId}`
+
+      let sourceNodeDir: string;
+      let externalRefDirName: string;
+
+      if (sourceNode && sourceNode.path) {
+        // 用户云端：写入 filesDataPath 下的节点目录
+        const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
+        sourceNodeDir = path.dirname(sourceNodePath);
+        externalRefDirName = await this.getExternalRefDirName(srcDwgNodeId);
+      } else {
+        // 游客/临时：写入 mxcadUploadPath 下的临时目录
+        sourceNodeDir = this.mxcadUploadPath;
+        externalRefDirName = srcDwgNodeId;
+        this.logger.debug(
+          `[handleExternalReferenceFile] 源节点不存在，使用临时存储: srcDwgNodeId=${srcDwgNodeId}`
         );
       }
 
-      const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
-      const sourceNodeDir = path.dirname(sourceNodePath);
-      const externalRefDirName = await this.getExternalRefDirName(srcDwgNodeId);
       const externalRefDir = path.join(sourceNodeDir, externalRefDirName);
 
       if (!(await this.fileSystemService.exists(externalRefDir))) {
@@ -109,14 +121,6 @@ export class ExternalRefService {
 
       const sourceNode =
         await this.fileSystemNodeService.findById(srcDwgNodeId);
-      if (!sourceNode || !sourceNode.path) {
-        throw new NotFoundException(
-          I18nContext.current()?.t(
-            'error.file_extra.source_drawing_not_exist',
-            { args: { id: srcDwgNodeId } }
-          ) ?? `源图纸节点不存在: ${srcDwgNodeId}`
-        );
-      }
 
       if (context?.userId && context?.fileSize) {
         await this.nodeMutationGuard.assertByteQuota(
@@ -125,13 +129,25 @@ export class ExternalRefService {
         );
       }
 
-      const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
-      const sourceNodeDir = path.dirname(sourceNodePath);
-      // 优先使用 preloading.json 的 src_file_md5；新建图纸尚无 preloading.json 时，
-      // 降级使用源节点 fileHash，与 addImageToPreloadingData 自动创建时写入的 src_file_md5 保持一致，
-      // 避免图片落入 nodeId 目录而 preloading 记录指向 fileHash 目录，导致校验/外部参照列表找不到图片
-      const preloading = await this.extRefPreloadingService.readPreloadingData(srcDwgNodeId);
-      const externalRefDirName = preloading?.srcFileMd5 || sourceNode.fileHash || srcDwgNodeId;
+      let sourceNodeDir: string;
+      let externalRefDirName: string;
+
+      if (sourceNode && sourceNode.path) {
+        // 用户云端：写入 filesDataPath 下的节点目录
+        const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
+        sourceNodeDir = path.dirname(sourceNodePath);
+        const preloading = await this.extRefPreloadingService.readPreloadingData(srcDwgNodeId);
+        externalRefDirName = preloading?.srcFileMd5 || sourceNode.fileHash || srcDwgNodeId;
+      } else {
+        // 游客/临时：写入 mxcadUploadPath 下的临时目录
+        sourceNodeDir = this.mxcadUploadPath;
+        const preloading = await this.extRefPreloadingService.readPreloadingData(srcDwgNodeId);
+        externalRefDirName = preloading?.srcFileMd5 || srcDwgNodeId;
+        this.logger.debug(
+          `[handleExternalReferenceImage] 源节点不存在，使用临时存储: srcDwgNodeId=${srcDwgNodeId}`
+        );
+      }
+
       const externalRefDir = path.join(sourceNodeDir, externalRefDirName);
 
       if (!(await this.fileSystemService.exists(externalRefDir))) {

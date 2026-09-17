@@ -63,6 +63,8 @@ export class LoginService {
 
     // 账号维度限流（防撞库/暴力破解），与 IP 维度 RateLimitGuard 互补
     await this.accountRateLimitService.checkLimit('login', account);
+    // 失败锁定检查（#416 等保 8.1.4.1 c)）：锁期内正确密码也拒绝，含剩余时间
+    await this.accountRateLimitService.checkAccountLock(account);
 
     // 登录前同步扩展点：私有实现可在此代理外部认证并创建/更新本地用户，主流程不变
     if (this.userSyncHook) {
@@ -100,6 +102,8 @@ export class LoginService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       this.logger.warn(`登录失败 - 密码错误: ${account}`);
+      // 失败锁定计数（#416）：连续失败达阈值 → 锁 30 分钟
+      await this.accountRateLimitService.recordLoginFailure(account);
       throw new UnauthorizedException(
         I18nContext.current()?.t('error.auth.invalid_credentials') ??
           '账号或密码错误'
@@ -247,8 +251,9 @@ export class LoginService {
       this.logger.log(`Session 已设置 userId=${user.id}, role=${roleName}`);
     }
 
-    // 登录成功，清空该账号的失败计数
+    // 登录成功，清空该账号的失败计数（频率限流 + 失败锁定链）
     await this.accountRateLimitService.reset('login', account);
+    await this.accountRateLimitService.clearLoginFailures(account);
 
     this.logger.log(
       `用户登录成功: ${account} (ID: ${user.id}, 角色: ${roleName})`

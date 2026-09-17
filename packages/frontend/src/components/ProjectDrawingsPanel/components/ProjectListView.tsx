@@ -11,10 +11,8 @@ import { getFileItemPermissionProps } from '@/hooks/useFileItemProps';
 import type { ProjectFilterType } from '@/api-sdk';
 import { Tab, Tabs } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
-import { ListSkeleton } from '@/components/common/ListSkeleton';
 import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
 import { useScrollPagination } from '@/hooks/common/useScrollPagination';
-import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
 import { PAGE_SIZE } from '@/constants/pagination';
 import styles from '@/components/sidebar/sidebar.module.css';
 import { t } from '@/languages';
@@ -110,9 +108,6 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
     onPageChange: (page, direction) => onScrollPageChange?.(page, direction),
   });
 
-  // 防闪烁：骨架只在 loading 持续超过阈值后显示
-  const showSkeleton = useDelayedLoading(loading);
-
   return (
     <div className={styles.projectDrawingsPanel}>
       {/* 创建按钮 */}
@@ -158,12 +153,8 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           </div>
         )}
 
-        {loading && filteredProjects.length === 0 ? (
-          // 防闪烁：loading 快速结束时不闪现骨架，延迟窗口期内渲染空白
-          showSkeleton ? (
-            <ListSkeleton variant="list" count={3} />
-          ) : null
-        ) : filteredProjects.length === 0 ? (
+        {loading &&
+        filteredProjects.length === 0 ? null : filteredProjects.length === 0 ? (
           <div className={styles.emptyState}>
             <FolderOpen size={48} className={styles.emptyIcon} />
             <div className={styles.emptyText}>
@@ -229,10 +220,16 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
           </div>
         )}
 
-        {/* 底部指示：加载中骨架 / 翻页失败提示 / 已经是最后一页（互斥） */}
+        {/* 底部指示：加载中提示 / 翻页失败提示 / 已经是最后一页（互斥） */}
         {filteredProjects.length > 0 &&
           (showBottomLoader ? (
-            <ListSkeleton variant="list" count={3} />
+            <div
+              className="flex items-center justify-center gap-2 py-2 text-xs"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <Loader2 size={14} className="animate-spin" />
+              <span>{t('加载中...')}</span>
+            </div>
           ) : loadError ? (
             <div
               data-testid="project-list-load-error"

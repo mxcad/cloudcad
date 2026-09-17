@@ -1,6 +1,7 @@
 import {
   batchDownloadControllerDownloadZip,
   batchDownloadControllerDownloadItem,
+  batchDownloadControllerMergeZip,
   batchDownloadControllerGetProgress,
   downloadControllerDownloadNodeWithFormat,
   mxcadFileAccessControllerGetFileDownloadExternalRef,
@@ -113,6 +114,28 @@ export async function downloadBatchItem(
       parseContentDispositionFilename(
         result.response.headers.get('Content-Disposition')
       ) ?? fallbackName;
+    triggerBlobDownload(result.data as Blob, filename);
+    return { ok: true };
+  } catch {
+    return { ok: false, status: undefined };
+  }
+}
+
+/** 合并多个 COMPLETED 任务为单个 ZIP 并触发浏览器下载（单次下载）。非 2xx 返回状态码，不抛错。 */
+export async function downloadMergedBatchZip(
+  taskIds: string[]
+): Promise<DownloadBatchZipResult> {
+  try {
+    const result = await batchDownloadControllerMergeZip({
+      body: { taskIds },
+    });
+    if (result.error || !result.response?.ok) {
+      return { ok: false, status: result.response?.status };
+    }
+    const filename =
+      parseContentDispositionFilename(
+        result.response.headers.get('Content-Disposition')
+      ) ?? `merged-download-${new Date().toISOString().slice(0, 10)}.zip`;
     triggerBlobDownload(result.data as Blob, filename);
     return { ok: true };
   } catch {

@@ -1,7 +1,8 @@
 /**
  * package.json preinstall 钩子的容错包装
  *
- * 调用 scripts/ensure-runtime.js 检查/下载开发环境的产品二进制（mxcad/mxversion）。
+ * 调用 scripts/ensure-runtime.js 检查/下载开发环境的产品二进制（mxcad/mxversion）
+ * 与缺失的标准组件（node/postgresql/redis/svn，ADR-0059）。
  *
  * 为什么要容错：
  *   - 开发环境：scripts/ 存在 → 正常执行 ensure-runtime.js 下载缺失的运行时

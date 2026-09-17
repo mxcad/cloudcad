@@ -41,10 +41,22 @@ export interface ConversionResult {
  */
 export interface TaskStatus {
   taskId: string;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   progress?: number;
   result?: ConversionResult;
   error?: string;
+  /**
+   * 永久失败标记（#465 负缓存命中 / 确定性内容失败，S6-7）。
+   * true 表示该任务终态 FAILED 且重试注定再失败（内容不可转换）；
+   * 面板据此展示「永久失败」区别于普通「转换失败」。仅 conversion-service 模式透传。
+   */
+  permanent?: boolean;
+  /**
+   * 排队位置（S6-5）：任务在其优先级池 acquire 队列中的 1-based 序号。
+   * 仅排队中（PENDING 且已入队）任务有意义，运行中/未入队/终态为 undefined。
+   * 仅 conversion-service 模式透传（独立服务有真实排队队列）。
+   */
+  queuePosition?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,4 +82,11 @@ export interface IFunctionExecutor {
    * 查询任务执行状态
    */
   getTaskStatus(taskId: string): Promise<TaskStatus>;
+
+  /**
+   * 取消任务（可选，#463）。
+   * 仅 conversion-service 模式支持（独立服务有进程组可杀 / 排队中可出队）；
+   * process-pool / cloud-faas 模式不实现（undefined），调用方据此隐藏取消入口。
+   */
+  cancelTask?(taskId: string): Promise<{ ok: boolean; status?: string; reason?: string }>;
 }

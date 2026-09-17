@@ -7,6 +7,8 @@ import { AlertService } from '../../alert/alert.service';
 import { AlertLevel } from '../../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { TaskRunService } from '../../task-run/task-run.service';
+import { TASK_NAMES } from '../../task-run/task-run.constants';
+import { CleanupMetricsService } from '../../metrics/cleanup-metrics.service';
 
 describe('CacheCleanupScheduler', () => {
 	let scheduler: CacheCleanupScheduler;
@@ -38,6 +40,10 @@ describe('CacheCleanupScheduler', () => {
 		listRunners: jest.fn(),
 	};
 
+	const mockCleanupMetrics = {
+		observe: jest.fn(),
+	};
+
 	const warningItem = {
 		key: CACHE_ALERT_KEYS.L1_CAPACITY,
 		level: AlertLevel.P1,
@@ -60,6 +66,7 @@ describe('CacheCleanupScheduler', () => {
 				{ provide: AlertService, useValue: mockAlertService },
 				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 				{ provide: TaskRunService, useValue: mockTaskRunService },
+				{ provide: CleanupMetricsService, useValue: mockCleanupMetrics },
 			],
 		}).compile();
 
@@ -194,6 +201,41 @@ describe('CacheCleanupScheduler', () => {
 					task: 'logHealthStatus',
 					error: 'health error',
 				},
+			});
+		});
+	});
+
+	// ==================== cleanup_* 指标埋点（#325） ====================
+	describe('cleanup metrics instrumentation (#325)', () => {
+		it('observes duration for warning check, stats log and health check', async () => {
+			mockCacheMonitorService.checkWarningItems.mockResolvedValue([]);
+			mockCacheService.getStats.mockResolvedValue({
+				totalEntries: 0,
+				capacity: 1000,
+				memoryUsage: 0,
+				hitRate: 0,
+			});
+			mockCacheMonitorService.getHealthStatus.mockResolvedValue({
+				L1: { status: 'ok' },
+				L2: { status: 'ok' },
+				overall: 'ok',
+			});
+
+			await scheduler.handleCacheCleanup();
+			await scheduler.logCacheStats();
+			await scheduler.logHealthStatus();
+
+			expect(mockCleanupMetrics.observe).toHaveBeenCalledWith({
+				task: TASK_NAMES.CACHE_CLEANUP.WARNING_CHECK,
+				durationSeconds: expect.any(Number),
+			});
+			expect(mockCleanupMetrics.observe).toHaveBeenCalledWith({
+				task: TASK_NAMES.CACHE_CLEANUP.STATS_LOG,
+				durationSeconds: expect.any(Number),
+			});
+			expect(mockCleanupMetrics.observe).toHaveBeenCalledWith({
+				task: TASK_NAMES.CACHE_CLEANUP.HEALTH_CHECK,
+				durationSeconds: expect.any(Number),
 			});
 		});
 	});

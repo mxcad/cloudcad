@@ -115,6 +115,87 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(
+    `${baseURL}/api/v1/mxcad/conversion/tasks/stream`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 200 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/mxcad/conversion/tasks/stream`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(`${baseURL}/api/v1/admin/auth/mfa/bind`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [undefined, { status: 200 }],
+      [undefined, { status: 401 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/admin/auth/mfa/bind`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.post(`${baseURL}/api/v1/admin/auth/mfa/setup`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getAdminMfaControllerSetup200Response(), { status: 200 }],
+      [undefined, { status: 409 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/admin/auth/mfa/setup`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(
     `${baseURL}/api/v1/admin/permissions/cache/cleanup`,
     async ({ request }) => {
@@ -481,6 +562,31 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(`${baseURL}/api/v1/admin/stats/overview`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getAdminControllerGetOverview200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`get /api/v1/admin/stats/overview`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(`${baseURL}/api/v1/admin/stats/purchases`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -555,6 +661,30 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`get /api/v1/admin/tasks/runs`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(`${baseURL}/api/v1/admin/tasks/tasks`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getTaskRunControllerListTasks200Response(), { status: 200 }],
+      [undefined, { status: 403 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/admin/tasks/tasks`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -703,10 +833,12 @@ export const handlers = [
         }
       }
 
-      const resultArray = [[undefined, { status: 200 }]] as [
-        any,
-        { status: number },
-      ][];
+      const resultArray = [
+        [
+          await getBatchDownloadControllerGetUserTasksdefaultResponse(),
+          { status: 500 },
+        ],
+      ] as [any, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -873,6 +1005,65 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(
+    `${baseURL}/api/v1/mxcad/conversion/history`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getConversionTaskControllerListHistorydefaultResponse(),
+          { status: 500 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/mxcad/conversion/history`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(`${baseURL}/api/v1/mxcad/conversion/tasks`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getConversionTaskControllerListTasksdefaultResponse(),
+        { status: 500 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`get /api/v1/mxcad/conversion/tasks`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(
     `${baseURL}/api/v1/public-file/ext-reference/check`,
     async ({ request }) => {
@@ -1327,6 +1518,39 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(
+    `${baseURL}/api/v1/auth/session-transfer/consume`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getSessionTransferControllerConsume200Response(),
+          { status: 200 },
+        ],
+        [undefined, { status: 401 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/auth/session-transfer/consume`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.post(`${baseURL}/api/v1/auth/wechat/bind`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -1376,6 +1600,38 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(
+    `${baseURL}/api/v1/conversion-monitor/known-bad/reset`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getConversionMonitorControllerResetKnownBad200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/conversion-monitor/known-bad/reset`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.post(`${baseURL}/api/v1/device/oauth/token`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -1400,6 +1656,66 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(
+    `${baseURL}/api/v1/file-system/batch-download/merge-zip`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 201 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/file-system/batch-download/merge-zip`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/file-system/batch-download/single-file`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 201 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/file-system/batch-download/single-file`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.post(
     `${baseURL}/api/v1/file-system/download/batch-zip`,
     async ({ request }) => {
@@ -1718,6 +2034,34 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(`${baseURL}/api/v1/mxcad/conversion/tasks`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getConversionTaskControllerSubmitTaskdefaultResponse(),
+        { status: 500 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/mxcad/conversion/tasks`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(
     `${baseURL}/api/v1/mxcad/files/chunkisExist`,
     async ({ request }) => {
@@ -2022,6 +2366,29 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`get /api/auth/wechat/callback`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(`${baseURL}/api/v1/admin/backups`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getBackupControllerListBackups200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/admin/backups`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -2442,6 +2809,99 @@ export const handlers = [
     return HttpResponse.json(responseJson, init);
   }),
   http.get(
+    `${baseURL}/api/v1/conversion-monitor/known-bad`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getConversionMonitorControllerListKnownBad200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/conversion-monitor/known-bad`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(
+    `${baseURL}/api/v1/conversion-monitor/stats`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getConversionMonitorControllerGetStats200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/conversion-monitor/stats`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(
+    `${baseURL}/api/v1/conversion-monitor/tasks`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getConversionMonitorControllerListTasks200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/conversion-monitor/tasks`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(
     `${baseURL}/api/v1/file-system/personal-space`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -2852,6 +3312,30 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(`${baseURL}/api/v1/admin/backup`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getBackupControllerTriggerBackup200Response(), { status: 200 }],
+      [undefined, { status: 500 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`post /api/v1/admin/backup`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(`${baseURL}/api/v1/admin/ip-blacklist`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -2913,10 +3397,10 @@ export const handlers = [
       }
     }
 
-    const resultArray = [[undefined, { status: 200 }]] as [
-      any,
-      { status: number },
-    ][];
+    const resultArray = [
+      [undefined, { status: 200 }],
+      [undefined, { status: 409 }],
+    ] as [any, { status: number }][];
 
     const [body, init] =
       resultArray[next(`post /api/v1/audit/cleanup`) % resultArray.length];
@@ -3482,6 +3966,31 @@ export const handlers = [
     const [body, init] =
       resultArray[
         next(`post /api/v1/auth/send-verification`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.post(`${baseURL}/api/v1/auth/session-transfer`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getSessionTransferControllerCreate200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/auth/session-transfer`) % resultArray.length
       ];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
@@ -4393,32 +4902,6 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
-  http.get(`${baseURL}/api/v1/policy-config`, async ({ request }) => {
-    const shouldEchoRequestBody = false;
-    let requestJson = null;
-    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
-      try {
-        requestJson = await request.clone().json();
-      } catch (e) {
-        requestJson = null;
-      }
-    }
-
-    const resultArray = [
-      [
-        await getPolicyConfigControllerGetAllPolicies200Response(),
-        { status: 200 },
-      ],
-    ] as [any, { status: number }][];
-
-    const [body, init] =
-      resultArray[next(`get /api/v1/policy-config`) % resultArray.length];
-    const responseJson =
-      requestJson && body && typeof body === 'object' && !Array.isArray(body)
-        ? { ...body, ...requestJson }
-        : body;
-    return HttpResponse.json(responseJson, init);
-  }),
   http.get(`${baseURL}/api/v1/roles`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -4508,33 +4991,6 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`get /api/v1/users`) % resultArray.length];
-    const responseJson =
-      requestJson && body && typeof body === 'object' && !Array.isArray(body)
-        ? { ...body, ...requestJson }
-        : body;
-    return HttpResponse.json(responseJson, init);
-  }),
-  http.post(`${baseURL}/api/v1/policy-config`, async ({ request }) => {
-    const shouldEchoRequestBody = false;
-    let requestJson = null;
-    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
-      try {
-        requestJson = await request.clone().json();
-      } catch (e) {
-        requestJson = null;
-      }
-    }
-
-    const resultArray = [
-      [
-        await getPolicyConfigControllerCreatePolicy201Response(),
-        { status: 201 },
-      ],
-      [undefined, { status: 403 }],
-    ] as [any, { status: number }][];
-
-    const [body, init] =
-      resultArray[next(`post /api/v1/policy-config`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -5227,6 +5683,36 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(
+    `${baseURL}/api/v1/mxcad/conversion/tasks/:taskId/cancel`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 201 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/mxcad/conversion/tasks/:taskId/cancel`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.put(
     `${baseURL}/api/v1/admin/vip/tiers/:id/configs`,
     async ({ request }) => {
@@ -5573,10 +6059,12 @@ export const handlers = [
         }
       }
 
-      const resultArray = [[undefined, { status: 200 }]] as [
-        any,
-        { status: number },
-      ][];
+      const resultArray = [
+        [
+          await getBatchDownloadControllerGetProgressdefaultResponse(),
+          { status: 500 },
+        ],
+      ] as [any, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -6462,6 +6950,66 @@ export const handlers = [
     }
   ),
   http.post(
+    `${baseURL}/api/v1/file-system/batch-download/:taskId/retry`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 200 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/file-system/batch-download/:taskId/retry`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/file-system/batch-download/:taskId/retry-failed`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 200 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/file-system/batch-download/:taskId/retry-failed`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
     `${baseURL}/api/v1/file-system/nodes/:nodeId/copy`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -6949,6 +7497,32 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.delete(`${baseURL}/api/v1/admin/backups/:name`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('delete')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getBackupControllerDeleteBackup200Response(), { status: 200 }],
+      [undefined, { status: 400 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`delete /api/v1/admin/backups/:name`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.delete(
     `${baseURL}/api/v1/admin/ip-blacklist/:id`,
     async ({ request }) => {
@@ -7376,6 +7950,7 @@ export const handlers = [
 
     const resultArray = [
       [undefined, { status: 200 }],
+      [undefined, { status: 202 }],
       [undefined, { status: 204 }],
       [undefined, { status: 401 }],
       [undefined, { status: 404 }],
@@ -8125,68 +8700,6 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
-  http.put(
-    `${baseURL}/api/v1/policy-config/:id/disable`,
-    async ({ request }) => {
-      const shouldEchoRequestBody = false;
-      let requestJson = null;
-      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('put')) {
-        try {
-          requestJson = await request.clone().json();
-        } catch (e) {
-          requestJson = null;
-        }
-      }
-
-      const resultArray = [
-        [
-          await getPolicyConfigControllerDisablePolicy200Response(),
-          { status: 200 },
-        ],
-      ] as [any, { status: number }][];
-
-      const [body, init] =
-        resultArray[
-          next(`put /api/v1/policy-config/:id/disable`) % resultArray.length
-        ];
-      const responseJson =
-        requestJson && body && typeof body === 'object' && !Array.isArray(body)
-          ? { ...body, ...requestJson }
-          : body;
-      return HttpResponse.json(responseJson, init);
-    }
-  ),
-  http.put(
-    `${baseURL}/api/v1/policy-config/:id/enable`,
-    async ({ request }) => {
-      const shouldEchoRequestBody = false;
-      let requestJson = null;
-      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('put')) {
-        try {
-          requestJson = await request.clone().json();
-        } catch (e) {
-          requestJson = null;
-        }
-      }
-
-      const resultArray = [
-        [
-          await getPolicyConfigControllerEnablePolicy200Response(),
-          { status: 200 },
-        ],
-      ] as [any, { status: number }][];
-
-      const [body, init] =
-        resultArray[
-          next(`put /api/v1/policy-config/:id/enable`) % resultArray.length
-        ];
-      const responseJson =
-        requestJson && body && typeof body === 'object' && !Array.isArray(body)
-          ? { ...body, ...requestJson }
-          : body;
-      return HttpResponse.json(responseJson, init);
-    }
-  ),
   http.delete(
     `${baseURL}/api/v1/font-management/:fileName`,
     async ({ request }) => {
@@ -8219,32 +8732,6 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
-  http.delete(`${baseURL}/api/v1/policy-config/:id`, async ({ request }) => {
-    const shouldEchoRequestBody = false;
-    let requestJson = null;
-    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('delete')) {
-      try {
-        requestJson = await request.clone().json();
-      } catch (e) {
-        requestJson = null;
-      }
-    }
-
-    const resultArray = [
-      [undefined, { status: 204 }],
-      [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
-
-    const [body, init] =
-      resultArray[
-        next(`delete /api/v1/policy-config/:id`) % resultArray.length
-      ];
-    const responseJson =
-      requestJson && body && typeof body === 'object' && !Array.isArray(body)
-        ? { ...body, ...requestJson }
-        : body;
-    return HttpResponse.json(responseJson, init);
-  }),
   http.delete(`${baseURL}/api/v1/roles/:id`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -8312,30 +8799,6 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`delete /api/v1/users/:id`) % resultArray.length];
-    const responseJson =
-      requestJson && body && typeof body === 'object' && !Array.isArray(body)
-        ? { ...body, ...requestJson }
-        : body;
-    return HttpResponse.json(responseJson, init);
-  }),
-  http.get(`${baseURL}/api/v1/policy-config/:id`, async ({ request }) => {
-    const shouldEchoRequestBody = false;
-    let requestJson = null;
-    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
-      try {
-        requestJson = await request.clone().json();
-      } catch (e) {
-        requestJson = null;
-      }
-    }
-
-    const resultArray = [
-      [await getPolicyConfigControllerGetPolicy200Response(), { status: 200 }],
-      [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
-
-    const [body, init] =
-      resultArray[next(`get /api/v1/policy-config/:id`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -8502,33 +8965,6 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`patch /api/v1/users/:id`) % resultArray.length];
-    const responseJson =
-      requestJson && body && typeof body === 'object' && !Array.isArray(body)
-        ? { ...body, ...requestJson }
-        : body;
-    return HttpResponse.json(responseJson, init);
-  }),
-  http.put(`${baseURL}/api/v1/policy-config/:id`, async ({ request }) => {
-    const shouldEchoRequestBody = false;
-    let requestJson = null;
-    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('put')) {
-      try {
-        requestJson = await request.clone().json();
-      } catch (e) {
-        requestJson = null;
-      }
-    }
-
-    const resultArray = [
-      [
-        await getPolicyConfigControllerUpdatePolicy200Response(),
-        { status: 200 },
-      ],
-      [undefined, { status: 404 }],
-    ] as [any, { status: number }][];
-
-    const [body, init] =
-      resultArray[next(`put /api/v1/policy-config/:id`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -9061,6 +9497,24 @@ export function getTaskRunControllerListRuns200Response() {
   };
 }
 
+export function getTaskRunControllerListTasks200Response() {
+  return {
+    data: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        taskName: faker.person.fullName(),
+        description: faker.lorem.words(),
+        schedule: {},
+        scheduleLabel: {},
+      }));
+    })(),
+  };
+}
+
 export function getTaskRunControllerRunTask200Response() {
   return {
     success: faker.datatype.boolean(),
@@ -9149,6 +9603,12 @@ export function getAuthControllerRegister201Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9192,6 +9652,12 @@ export function getAuthControllerLogin200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9235,6 +9701,12 @@ export function getAuthControllerRefreshToken200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9319,6 +9791,12 @@ export function getAuthControllerVerifyEmail200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9362,6 +9840,12 @@ export function getAuthControllerVerifyEmailAndRegisterPhone201Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9418,6 +9902,12 @@ export function getAuthControllerBindEmailAndLogin200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9461,6 +9951,12 @@ export function getAuthControllerBindPhoneAndLogin200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9504,6 +10000,12 @@ export function getAuthControllerVerifyPhone200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9595,6 +10097,12 @@ export function getAuthControllerRegisterByPhone201Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9638,6 +10146,12 @@ export function getAuthControllerLoginByPhone200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -9741,6 +10255,77 @@ export function getAdminAuthControllerLogin200Response() {
       isVip: faker.datatype.boolean(),
     },
     restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
+  };
+}
+
+export function getAdminMfaControllerSetup200Response() {
+  return {
+    secret: 'JBSWY3DPEHPK3PXP',
+    otpauthUrl: 'otpauth://totp/CloudCAD:admin?secret=...&issuer=CloudCAD',
+  };
+}
+
+export function getSessionTransferControllerCreate200Response() {
+  return {
+    token: 'GmRhmhcxhwAzkoEqiMEg_DnyEysNkuNhszIySk9e',
+    expiresIn: 60,
+    transferUrl:
+      'https://app.mxdraw.com/session-transfer?token=***&redirect=/member-center',
+  };
+}
+
+export function getSessionTransferControllerConsume200Response() {
+  return {
+    accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    user: {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      email: 'user@example.com',
+      username: 'username',
+      nickname: '用户昵称',
+      avatar: 'https://example.com/avatar.jpg',
+      role: {
+        id: 'clxxxxxxx',
+        name: 'USER',
+        description: '普通用户，基础权限',
+        isSystem: true,
+        permissions: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => ({
+            permission: faker.lorem.words(),
+          }));
+        })(),
+      },
+      status: 'ACTIVE',
+      phone: '13800138000',
+      phoneVerified: faker.datatype.boolean(),
+      wechatId: 'oXYZ123...',
+      provider: 'LOCAL',
+      hasPassword: true,
+      membershipTierLevel: faker.number.int(),
+      membershipExpiresAt: faker.lorem.words(),
+      membershipTier: 'VIP0',
+      isVip: faker.datatype.boolean(),
+    },
+    restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
   };
 }
 
@@ -12380,6 +12965,65 @@ export function getConversionStatusControllerGetConversionStatusdefaultResponse(
   };
 }
 
+export function getConversionTaskControllerSubmitTaskdefaultResponse() {
+  return {
+    taskId: faker.string.uuid(),
+    nodeId: faker.string.uuid(),
+    async: true,
+  };
+}
+
+export function getConversionTaskControllerListTasksdefaultResponse() {
+  return {
+    tasks: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        nodeId: faker.string.uuid(),
+        name: faker.person.fullName(),
+        fileStatus: 'PROCESSING',
+        taskId: faker.string.uuid(),
+        taskStatus: faker.lorem.words(),
+        progress: 42,
+        error: faker.lorem.words(),
+        permanent: true,
+        queuePosition: 2,
+        updatedAt: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
+  };
+}
+
+export function getConversionTaskControllerListHistorydefaultResponse() {
+  return {
+    tasks: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        nodeId: faker.string.uuid(),
+        name: faker.person.fullName(),
+        fileStatus: 'PROCESSING',
+        taskId: faker.string.uuid(),
+        taskStatus: faker.lorem.words(),
+        progress: 42,
+        error: faker.lorem.words(),
+        permanent: true,
+        queuePosition: 2,
+        updatedAt: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
+    hasMore: faker.datatype.boolean(),
+  };
+}
+
 export function getSaveControllerSaveMxwebToNode200Response() {
   return {
     nodeId: faker.string.uuid(),
@@ -12538,6 +13182,13 @@ export function getShareControllerGetFileShares200Response() {
   })();
 }
 
+export function getAdminControllerGetOverview200Response() {
+  return {
+    totalUsers: 1234,
+    paidUsers: 56,
+  };
+}
+
 export function getAdminControllerGetRegistrationStats200Response() {
   return {
     startDate: '2026-07-27',
@@ -12673,315 +13324,6 @@ export function getQueueControllerGetQueueStats200Response() {
     runningCount: faker.number.int(),
     maxConcurrent: faker.number.int(),
     timeout: faker.number.int(),
-  };
-}
-
-export function getPolicyConfigControllerCreatePolicy201Response() {
-  return {
-    id: faker.string.uuid(),
-    type: faker.helpers.arrayElement(['TIME', 'IP', 'DEVICE']),
-    name: faker.person.fullName(),
-    description: faker.lorem.words(),
-    config: {},
-    permissions: (() => {
-      const arrayMin = 1;
-      const arrayMax = MAX_ARRAY_LENGTH;
-      const safeMin = Math.min(arrayMin, arrayMax);
-      return [
-        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) =>
-        faker.helpers.arrayElement([
-          'SYSTEM_USER_READ',
-          'SYSTEM_USER_CREATE',
-          'SYSTEM_USER_UPDATE',
-          'SYSTEM_USER_DELETE',
-          'SYSTEM_USER_MEMBERSHIP_MANAGE',
-          'SYSTEM_ROLE_READ',
-          'SYSTEM_ROLE_CREATE',
-          'SYSTEM_ROLE_UPDATE',
-          'SYSTEM_ROLE_DELETE',
-          'SYSTEM_ROLE_PERMISSION_MANAGE',
-          'SYSTEM_FONT_READ',
-          'SYSTEM_FONT_UPLOAD',
-          'SYSTEM_FONT_DELETE',
-          'SYSTEM_FONT_DOWNLOAD',
-          'SYSTEM_ADMIN',
-          'SYSTEM_BILLING_READ',
-          'SYSTEM_BILLING_WRITE',
-          'SYSTEM_MONITOR',
-          'SYSTEM_CONFIG_READ',
-          'SYSTEM_CONFIG_WRITE',
-          'SYSTEM_IP_BLACKLIST_MANAGE',
-          'SYSTEM_IP_WHITELIST_MANAGE',
-          'LIBRARY_DRAWING_MANAGE',
-          'LIBRARY_BLOCK_MANAGE',
-          'PROJECT_CREATE',
-        ])
-      );
-    })(),
-    enabled: faker.datatype.boolean(),
-    priority: faker.number.int(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
-export function getPolicyConfigControllerGetAllPolicies200Response() {
-  return (() => {
-    const arrayMin = 1;
-    const arrayMax = MAX_ARRAY_LENGTH;
-    const safeMin = Math.min(arrayMin, arrayMax);
-    return [
-      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-    ].map((_) => ({
-      id: faker.string.uuid(),
-      type: faker.helpers.arrayElement(['TIME', 'IP', 'DEVICE']),
-      name: faker.person.fullName(),
-      description: faker.lorem.words(),
-      config: {},
-      permissions: (() => {
-        const arrayMin = 1;
-        const arrayMax = MAX_ARRAY_LENGTH;
-        const safeMin = Math.min(arrayMin, arrayMax);
-        return [
-          ...new Array(
-            faker.number.int({ min: safeMin, max: arrayMax })
-          ).keys(),
-        ].map((_) =>
-          faker.helpers.arrayElement([
-            'SYSTEM_USER_READ',
-            'SYSTEM_USER_CREATE',
-            'SYSTEM_USER_UPDATE',
-            'SYSTEM_USER_DELETE',
-            'SYSTEM_USER_MEMBERSHIP_MANAGE',
-            'SYSTEM_ROLE_READ',
-            'SYSTEM_ROLE_CREATE',
-            'SYSTEM_ROLE_UPDATE',
-            'SYSTEM_ROLE_DELETE',
-            'SYSTEM_ROLE_PERMISSION_MANAGE',
-            'SYSTEM_FONT_READ',
-            'SYSTEM_FONT_UPLOAD',
-            'SYSTEM_FONT_DELETE',
-            'SYSTEM_FONT_DOWNLOAD',
-            'SYSTEM_ADMIN',
-            'SYSTEM_BILLING_READ',
-            'SYSTEM_BILLING_WRITE',
-            'SYSTEM_MONITOR',
-            'SYSTEM_CONFIG_READ',
-            'SYSTEM_CONFIG_WRITE',
-            'SYSTEM_IP_BLACKLIST_MANAGE',
-            'SYSTEM_IP_WHITELIST_MANAGE',
-            'LIBRARY_DRAWING_MANAGE',
-            'LIBRARY_BLOCK_MANAGE',
-            'PROJECT_CREATE',
-          ])
-        );
-      })(),
-      enabled: faker.datatype.boolean(),
-      priority: faker.number.int(),
-      createdAt: faker.date.anytime().toISOString(),
-      updatedAt: faker.date.anytime().toISOString(),
-    }));
-  })();
-}
-
-export function getPolicyConfigControllerUpdatePolicy200Response() {
-  return {
-    id: faker.string.uuid(),
-    type: faker.helpers.arrayElement(['TIME', 'IP', 'DEVICE']),
-    name: faker.person.fullName(),
-    description: faker.lorem.words(),
-    config: {},
-    permissions: (() => {
-      const arrayMin = 1;
-      const arrayMax = MAX_ARRAY_LENGTH;
-      const safeMin = Math.min(arrayMin, arrayMax);
-      return [
-        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) =>
-        faker.helpers.arrayElement([
-          'SYSTEM_USER_READ',
-          'SYSTEM_USER_CREATE',
-          'SYSTEM_USER_UPDATE',
-          'SYSTEM_USER_DELETE',
-          'SYSTEM_USER_MEMBERSHIP_MANAGE',
-          'SYSTEM_ROLE_READ',
-          'SYSTEM_ROLE_CREATE',
-          'SYSTEM_ROLE_UPDATE',
-          'SYSTEM_ROLE_DELETE',
-          'SYSTEM_ROLE_PERMISSION_MANAGE',
-          'SYSTEM_FONT_READ',
-          'SYSTEM_FONT_UPLOAD',
-          'SYSTEM_FONT_DELETE',
-          'SYSTEM_FONT_DOWNLOAD',
-          'SYSTEM_ADMIN',
-          'SYSTEM_BILLING_READ',
-          'SYSTEM_BILLING_WRITE',
-          'SYSTEM_MONITOR',
-          'SYSTEM_CONFIG_READ',
-          'SYSTEM_CONFIG_WRITE',
-          'SYSTEM_IP_BLACKLIST_MANAGE',
-          'SYSTEM_IP_WHITELIST_MANAGE',
-          'LIBRARY_DRAWING_MANAGE',
-          'LIBRARY_BLOCK_MANAGE',
-          'PROJECT_CREATE',
-        ])
-      );
-    })(),
-    enabled: faker.datatype.boolean(),
-    priority: faker.number.int(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
-export function getPolicyConfigControllerGetPolicy200Response() {
-  return {
-    id: faker.string.uuid(),
-    type: faker.helpers.arrayElement(['TIME', 'IP', 'DEVICE']),
-    name: faker.person.fullName(),
-    description: faker.lorem.words(),
-    config: {},
-    permissions: (() => {
-      const arrayMin = 1;
-      const arrayMax = MAX_ARRAY_LENGTH;
-      const safeMin = Math.min(arrayMin, arrayMax);
-      return [
-        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) =>
-        faker.helpers.arrayElement([
-          'SYSTEM_USER_READ',
-          'SYSTEM_USER_CREATE',
-          'SYSTEM_USER_UPDATE',
-          'SYSTEM_USER_DELETE',
-          'SYSTEM_USER_MEMBERSHIP_MANAGE',
-          'SYSTEM_ROLE_READ',
-          'SYSTEM_ROLE_CREATE',
-          'SYSTEM_ROLE_UPDATE',
-          'SYSTEM_ROLE_DELETE',
-          'SYSTEM_ROLE_PERMISSION_MANAGE',
-          'SYSTEM_FONT_READ',
-          'SYSTEM_FONT_UPLOAD',
-          'SYSTEM_FONT_DELETE',
-          'SYSTEM_FONT_DOWNLOAD',
-          'SYSTEM_ADMIN',
-          'SYSTEM_BILLING_READ',
-          'SYSTEM_BILLING_WRITE',
-          'SYSTEM_MONITOR',
-          'SYSTEM_CONFIG_READ',
-          'SYSTEM_CONFIG_WRITE',
-          'SYSTEM_IP_BLACKLIST_MANAGE',
-          'SYSTEM_IP_WHITELIST_MANAGE',
-          'LIBRARY_DRAWING_MANAGE',
-          'LIBRARY_BLOCK_MANAGE',
-          'PROJECT_CREATE',
-        ])
-      );
-    })(),
-    enabled: faker.datatype.boolean(),
-    priority: faker.number.int(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
-export function getPolicyConfigControllerEnablePolicy200Response() {
-  return {
-    id: faker.string.uuid(),
-    type: faker.helpers.arrayElement(['TIME', 'IP', 'DEVICE']),
-    name: faker.person.fullName(),
-    description: faker.lorem.words(),
-    config: {},
-    permissions: (() => {
-      const arrayMin = 1;
-      const arrayMax = MAX_ARRAY_LENGTH;
-      const safeMin = Math.min(arrayMin, arrayMax);
-      return [
-        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) =>
-        faker.helpers.arrayElement([
-          'SYSTEM_USER_READ',
-          'SYSTEM_USER_CREATE',
-          'SYSTEM_USER_UPDATE',
-          'SYSTEM_USER_DELETE',
-          'SYSTEM_USER_MEMBERSHIP_MANAGE',
-          'SYSTEM_ROLE_READ',
-          'SYSTEM_ROLE_CREATE',
-          'SYSTEM_ROLE_UPDATE',
-          'SYSTEM_ROLE_DELETE',
-          'SYSTEM_ROLE_PERMISSION_MANAGE',
-          'SYSTEM_FONT_READ',
-          'SYSTEM_FONT_UPLOAD',
-          'SYSTEM_FONT_DELETE',
-          'SYSTEM_FONT_DOWNLOAD',
-          'SYSTEM_ADMIN',
-          'SYSTEM_BILLING_READ',
-          'SYSTEM_BILLING_WRITE',
-          'SYSTEM_MONITOR',
-          'SYSTEM_CONFIG_READ',
-          'SYSTEM_CONFIG_WRITE',
-          'SYSTEM_IP_BLACKLIST_MANAGE',
-          'SYSTEM_IP_WHITELIST_MANAGE',
-          'LIBRARY_DRAWING_MANAGE',
-          'LIBRARY_BLOCK_MANAGE',
-          'PROJECT_CREATE',
-        ])
-      );
-    })(),
-    enabled: faker.datatype.boolean(),
-    priority: faker.number.int(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
-export function getPolicyConfigControllerDisablePolicy200Response() {
-  return {
-    id: faker.string.uuid(),
-    type: faker.helpers.arrayElement(['TIME', 'IP', 'DEVICE']),
-    name: faker.person.fullName(),
-    description: faker.lorem.words(),
-    config: {},
-    permissions: (() => {
-      const arrayMin = 1;
-      const arrayMax = MAX_ARRAY_LENGTH;
-      const safeMin = Math.min(arrayMin, arrayMax);
-      return [
-        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) =>
-        faker.helpers.arrayElement([
-          'SYSTEM_USER_READ',
-          'SYSTEM_USER_CREATE',
-          'SYSTEM_USER_UPDATE',
-          'SYSTEM_USER_DELETE',
-          'SYSTEM_USER_MEMBERSHIP_MANAGE',
-          'SYSTEM_ROLE_READ',
-          'SYSTEM_ROLE_CREATE',
-          'SYSTEM_ROLE_UPDATE',
-          'SYSTEM_ROLE_DELETE',
-          'SYSTEM_ROLE_PERMISSION_MANAGE',
-          'SYSTEM_FONT_READ',
-          'SYSTEM_FONT_UPLOAD',
-          'SYSTEM_FONT_DELETE',
-          'SYSTEM_FONT_DOWNLOAD',
-          'SYSTEM_ADMIN',
-          'SYSTEM_BILLING_READ',
-          'SYSTEM_BILLING_WRITE',
-          'SYSTEM_MONITOR',
-          'SYSTEM_CONFIG_READ',
-          'SYSTEM_CONFIG_WRITE',
-          'SYSTEM_IP_BLACKLIST_MANAGE',
-          'SYSTEM_IP_WHITELIST_MANAGE',
-          'LIBRARY_DRAWING_MANAGE',
-          'LIBRARY_BLOCK_MANAGE',
-          'PROJECT_CREATE',
-        ])
-      );
-    })(),
-    enabled: faker.datatype.boolean(),
-    priority: faker.number.int(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
   };
 }
 
@@ -14101,5 +14443,176 @@ export function getLibraryControllerBatchCopyBlockNodes201Response() {
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
       ].map((_) => faker.lorem.words());
     })(),
+  };
+}
+
+export function getBatchDownloadControllerGetProgressdefaultResponse() {
+  return {
+    taskId: faker.string.uuid(),
+    status: faker.lorem.words(),
+    mode: faker.helpers.arrayElement(['zip', 'individual']),
+    totalCount: faker.number.int(),
+    completedCount: faker.number.int(),
+    errorCount: faker.number.int(),
+    currentFile: faker.lorem.words(),
+    errors: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    zipPath: faker.location.zipCode(),
+    itemNames: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+  };
+}
+
+export function getBatchDownloadControllerGetUserTasksdefaultResponse() {
+  return {
+    tasks: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        taskId: faker.string.uuid(),
+        status: faker.lorem.words(),
+        mode: faker.helpers.arrayElement(['zip', 'individual']),
+        totalCount: faker.number.int(),
+        completedCount: faker.number.int(),
+        errorCount: faker.number.int(),
+        zipPath: faker.location.zipCode(),
+        zipSize: faker.number.int(),
+        itemNames: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => faker.lorem.words());
+        })(),
+      }));
+    })(),
+    hasMore: faker.datatype.boolean(),
+  };
+}
+
+export function getBackupControllerTriggerBackup200Response() {
+  return {
+    success: true,
+    filename: 'cloudcad-20260826-010000.dump',
+    sizeBytes: faker.number.int(),
+    durationMs: faker.number.int(),
+    deletedCount: faker.number.int(),
+  };
+}
+
+export function getBackupControllerListBackups200Response() {
+  return {
+    data: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        name: 'cloudcad-20260826-010000.dump',
+        sizeBytes: 10485760,
+        modifiedAt: faker.date.anytime().toISOString(),
+      }));
+    })(),
+    total: 3,
+  };
+}
+
+export function getBackupControllerDeleteBackup200Response() {
+  return {
+    success: true,
+    name: faker.person.fullName(),
+  };
+}
+
+export function getConversionMonitorControllerGetStats200Response() {
+  return {
+    mode: faker.helpers.arrayElement([
+      'process-pool',
+      'conversion-service',
+      'cloud-faas',
+    ]),
+    processPool: {},
+    conversionService: {},
+    conversionServiceError: {},
+    history: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    sampledAt: faker.number.int(),
+  };
+}
+
+export function getConversionMonitorControllerListKnownBad200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        contentKey: faker.lorem.words(),
+        reason: faker.lorem.words(),
+        markedAt: faker.number.int(),
+      }));
+    })(),
+    total: faker.number.int(),
+  };
+}
+
+export function getConversionMonitorControllerResetKnownBad200Response() {
+  return {
+    reset: faker.number.int(),
+    all: faker.datatype.boolean(),
+    unsupported: faker.datatype.boolean(),
+  };
+}
+
+export function getConversionMonitorControllerListTasks200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        type: faker.lorem.words(),
+        status: faker.lorem.words(),
+        progress: faker.number.int(),
+        createdAt: faker.lorem.words(),
+        updatedAt: faker.lorem.words(),
+        startedAt: {},
+        completedAt: {},
+        error: faker.lorem.words(),
+        permanent: faker.datatype.boolean(),
+        contentKey: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
   };
 }

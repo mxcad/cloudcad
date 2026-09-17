@@ -43,6 +43,7 @@ const {
   waitPortReleased,
 } = require('../lib/health');
 const { parseEnvFile } = require('../lib/env');
+const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
 const { promptConfirm } = require('../lib/prompt');
 const state = require('../lib/state');
 const { startInfrastructure } = require('./infra');
@@ -179,6 +180,63 @@ function getBackendDist() {
 }
 
 /**
+ * 转换服务（conversion-service）启动配置。
+ * 仅当后端 FUNCTION_EXECUTOR=conversion-service 时启用——否则后端走进程内 process-pool
+ * （或 cloud-faas），无需独立转换服务，不起它避免白占进程 + Redis 连接。
+ * 启用时从后端 .env 的 REDIS_* 现场拼出 REDIS_URL 注入，保证转换服务的 Redis 连接/密码
+ * 与后端始终一致（单一事实源，避免两份配置漂移）。
+ * 返回 { enabled, dist, env }；dist 是否真实存在由调用方判断（部署包未含产物时 S9-4 硬失败）。
+ */
+function getConversionServiceConfig() {
+  const dist = path.join(
+    PROJECT_ROOT,
+    'packages',
+    'conversion-service',
+    'dist',
+    'server.js'
+  );
+  const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  const envConfig = fs.existsSync(envPath) ? parseEnvFile(envPath) : {};
+  const executor = (envConfig.FUNCTION_EXECUTOR || 'process-pool').toLowerCase();
+  if (executor !== 'conversion-service') {
+    return { enabled: false, dist, env: {} };
+  }
+  // 从后端 REDIS_* 拼 REDIS_URL（与后端 config.redis 同一实例/密码/库）
+  const redisHost = envConfig.REDIS_HOST || 'localhost';
+  const redisPort = envConfig.REDIS_PORT || '6379';
+  const redisDb = envConfig.REDIS_DB || '0';
+  const redisPassword = envConfig.REDIS_PASSWORD || '';
+  const auth = redisPassword ? `:${redisPassword}@` : '';
+  const env = {
+    NODE_ENV: 'production',
+    CONVERSION_SERVICE_PORT: String(PORTS.conversion),
+    REDIS_URL: `redis://${auth}${redisHost}:${redisPort}/${redisDb}`,
+    QUEUE_DRIVER: 'redis',
+    // #419 内部服务鉴权：与后端共享同一密钥，后端带 X-Internal-Service-Secret 头调用
+    ...(envConfig.INTERNAL_SERVICE_SECRET
+      ? { INTERNAL_SERVICE_SECRET: envConfig.INTERNAL_SERVICE_SECRET }
+      : {}),
+    // S1-2 批量管理路由鉴权：后端 conversion-runner 批量下载带 X-Conversion-Service-Secret 头
+    // 调用批量路由，须与后端 CONVERSION_SERVICE_SECRET 一致（.env.example 已含该项）。
+    // 不注入则服务端该密钥为空，批量路由在部署态实际无密钥防护。
+    ...(envConfig.CONVERSION_SERVICE_SECRET
+      ? { CONVERSION_SERVICE_SECRET: envConfig.CONVERSION_SERVICE_SECRET }
+      : {}),
+  };
+  // mxcad 二进制路径：conversion-service 的 PROJECT_ROOT 在 dist 布局下会算错，其 assemblyPath
+  // 回退会指向不存在的目录。注入绝对路径（取后端 .env 的 MXCAD_ASSEMBLY_PATH，相对则基于部署
+  // PROJECT_ROOT 解析；未设则平台默认 runtime/<platform>/mxcad/），确保转换服务找到 mxcad。
+  // 跨平台误配置回退见 lib/mxcad-path.js（与后端 resolveMxExecutablePath 同语义）：后端自身会
+  // 回退 Linux 上的 Windows .exe 配置，但转换服务直接读该 env 无守卫——原样注入会让它去 spawn
+  // 部署包里不存在的 runtime/windows/mxcad/mxcadassembly.exe → 每次转换 ENOENT。
+  const mxcadAssemblyRaw = resolveMxcadAssemblyPath(envConfig);
+  env.MXCAD_ASSEMBLY_PATH = path.isAbsolute(mxcadAssemblyRaw)
+    ? mxcadAssemblyRaw
+    : path.join(PROJECT_ROOT, mxcadAssemblyRaw);
+  return { enabled: true, dist, env };
+}
+
+/**
  * 统一的应用服务启动函数
  * @param {'pm2' | 'foreground'} mode - 启动模式
  * @param {Function} [onReady] - 服务就绪后、阻塞等待前回调（P2.4 部署收尾时序修正）
@@ -198,6 +256,23 @@ async function startAppServices(mode, onReady) {
 
   const modeLabel = mode === 'pm2' ? 'PM2 后台模式' : '前台模式';
   log('blue', `[5/5] 启动生产服务 (${modeLabel})...`);
+
+  // 转换服务：仅当后端 FUNCTION_EXECUTOR=conversion-service 时启用（见 getConversionServiceConfig）。
+  // S9-4 dist 缺失硬失败：FUNCTION_EXECUTOR=conversion-service 但部署包未含 conversion-service 产物
+  // 属配置/包不一致——静默降级启动会让后端所有转换失败（生产隐患）。故硬失败拒绝启动（exit 1），
+  // 强制改用完整部署包或改回 process-pool。process-pool 默认模式 conversion.enabled=false，不受影响。
+  // 注：此处 infra（PG/Redis）已由 startAppServicesWithInfra 拉起（PM2 托管、幂等），退出后保留，
+  // 下次 start 复用；如需清理可 cloudcad stop。
+  const conversion = getConversionServiceConfig();
+  const conversionReady = conversion.enabled && fs.existsSync(conversion.dist);
+  if (conversion.enabled && !fs.existsSync(conversion.dist)) {
+    log(
+      'red',
+      `[错误] FUNCTION_EXECUTOR=conversion-service 但转换服务构建产物不存在（${conversion.dist}）。` +
+        '部署包与配置不一致——继续启动会让后端所有转换静默失败。请改用包含 conversion-service 的完整部署包，或将后端 .env 的 FUNCTION_EXECUTOR 改回 process-pool。'
+    );
+    process.exit(1);
+  }
 
   if (mode === 'pm2') {
     // PM2 后台模式
@@ -242,10 +317,24 @@ async function startAppServices(mode, onReady) {
       },
     };
 
+    // 转换服务条件性追加（未启用时 apps 仍为 [backend, frontend]，pm2-deploy.config.js 格式不变，守 C8）
+    const apps = [backendConfig, frontendConfig];
+    if (conversionReady) {
+      apps.push({
+        name: 'conversion',
+        script: conversion.dist,
+        cwd: path.join(PROJECT_ROOT, 'packages', 'conversion-service'),
+        autorestart: true,
+        watch: false,
+        max_restarts: 10,
+        env: conversion.env,
+      });
+    }
+
     const tempConfigPath = path.join(DATA_DIR, 'pm2-deploy.config.js');
     fs.writeFileSync(
       tempConfigPath,
-      `module.exports = { apps: [${JSON.stringify(backendConfig)}, ${JSON.stringify(frontendConfig)}] };`
+      `module.exports = { apps: [${apps.map((a) => JSON.stringify(a)).join(', ')}] };`
     );
 
     if (anyRegistered) {
@@ -261,21 +350,27 @@ async function startAppServices(mode, onReady) {
     // 先判定占用者并提示，避免 EADDRINUSE 静默失败或重复 spawn 双实例。
     const backendPortTaken = await isPortOpen(PORTS.backend);
     const frontendPortTaken = await isPortOpen(PORTS.frontend);
-    if (backendPortTaken || frontendPortTaken) {
+    // 转换服务端口（仅启用时检测，避免 process-pool 模式下误报 3100 占用）
+    const conversionPortTaken = conversionReady
+      ? await isPortOpen(PORTS.conversion)
+      : false;
+    if (backendPortTaken || frontendPortTaken || conversionPortTaken) {
       const takenDesc = [];
       if (backendPortTaken) takenDesc.push(`后端 ${PORTS.backend}`);
       if (frontendPortTaken) takenDesc.push(`前端 ${PORTS.frontend}`);
+      if (conversionPortTaken) takenDesc.push(`转换服务 ${PORTS.conversion}`);
 
       log(
         'yellow',
         `[检测] 以下端口已被占用：${takenDesc.join('、')}`
       );
 
-      // 收集每个被占端口的占用者 PID（可能不同进程分别占 backend/frontend）
+      // 收集每个被占端口的占用者 PID（可能不同进程分别占 backend/frontend/转换服务）
       const takenPids = new Set();
       for (const port of [
         backendPortTaken ? PORTS.backend : null,
         frontendPortTaken ? PORTS.frontend : null,
+        conversionPortTaken ? PORTS.conversion : null,
       ]) {
         if (port) {
           const pid = getPidByPort(port);
@@ -314,6 +409,7 @@ async function startAppServices(mode, onReady) {
           for (const port of [
             backendPortTaken ? PORTS.backend : null,
             frontendPortTaken ? PORTS.frontend : null,
+            conversionPortTaken ? PORTS.conversion : null,
           ]) {
             if (port) await waitPortReleased(port, 15000);
           }
@@ -375,6 +471,24 @@ async function startAppServices(mode, onReady) {
     state.childProcesses.add(frontendProcess);
     state.appProcesses.add(frontendProcess);
 
+    // 转换服务（仅 FUNCTION_EXECUTOR=conversion-service 时）：Redis 连接/密码从后端 .env 同步
+    if (conversionReady) {
+      log('cyan', `启动转换服务 (conversion-service, port=${PORTS.conversion})...`);
+      const conversionProcess = spawn(NODE_EXE, [conversion.dist], {
+        cwd: path.join(PROJECT_ROOT, 'packages', 'conversion-service'),
+        stdio: ['ignore', 'inherit', 'inherit'],
+        shell: false,
+        windowsHide: true,
+        detached: IS_LINUX,
+        env: {
+          ...process.env,
+          ...conversion.env,
+        },
+      });
+      state.childProcesses.add(conversionProcess);
+      state.appProcesses.add(conversionProcess);
+    }
+
     setupSignalHandlers();
 
     // 等待所有服务就绪（前台模式）
@@ -403,6 +517,12 @@ async function startAppServices(mode, onReady) {
       'green',
       '║  配置:  http://localhost:' + PORTS.configService + '           ║'
     );
+    if (conversionReady) {
+      log(
+        'green',
+        '║  转换:  http://localhost:' + PORTS.conversion + '           ║'
+      );
+    }
     log('green', '╠══════════════════════════════════════════════════════════╣');
     log('green', '║  停止:  选择菜单 [停止服务]                               ║');
     log('green', '╚══════════════════════════════════════════════════════════╝');

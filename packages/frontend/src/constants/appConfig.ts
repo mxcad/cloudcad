@@ -128,6 +128,16 @@ export const MEMBERSHIP_ENABLED =
   import.meta.env.VITE_MEMBERSHIP_ENABLED === 'true';
 
 /**
+ * 协同功能域名白名单检查
+ * 仅允许白名单中的域名使用协同功能
+ */
+export const isCollaborationAllowed = (domains: string): boolean => {
+  if (!domains) return true;
+  const allowedDomains = domains.split(',').map(d => d.trim().toLowerCase());
+  return allowedDomains.includes(window.location.hostname.toLowerCase());
+};
+
+/**
  * 分页配置
  */
 export const PAGINATION_CONFIG = {

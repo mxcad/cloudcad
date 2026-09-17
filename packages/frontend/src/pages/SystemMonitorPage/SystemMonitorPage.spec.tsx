@@ -58,9 +58,44 @@ vi.mock('@/api-sdk', () => ({
       },
     })
   ),
-  queueControllerGetQueueStats: vi.fn(() =>
+  conversionMonitorControllerGetStats: vi.fn(() =>
     Promise.resolve({
-      data: { queueLength: 0, runningCount: 0, maxConcurrent: 4, timeout: 60000 },
+      data: {
+        mode: 'process-pool',
+        processPool: {
+          queueLength: 2,
+          criticalPriorityQueueLength: 1,
+          highPriorityQueueLength: 1,
+          lowPriorityQueueLength: 0,
+          runningCount: 3,
+          maxConcurrent: 4,
+          timeout: 600000,
+          duration: {
+            sampleCount: 10,
+            p50DurationMs: 1200,
+            p95DurationMs: 4500,
+            p50WaitMs: 0,
+            p95WaitMs: 15,
+          },
+        },
+        conversionService: null,
+        conversionServiceError: null,
+        history: [
+          { t: Date.now() - 60000, queueDepth: 1, running: 2, p95DurationMs: 4000 },
+          { t: Date.now(), queueDepth: 2, running: 3, p95DurationMs: 4500 },
+        ],
+        sampledAt: Date.now(),
+      },
+    })
+  ),
+  conversionMonitorControllerListKnownBad: vi.fn(() =>
+    Promise.resolve({
+      data: { items: [], total: 0 },
+    })
+  ),
+  conversionMonitorControllerResetKnownBad: vi.fn(() =>
+    Promise.resolve({
+      data: { reset: 0, all: true },
     })
   ),
   cacheMonitorControllerGetSummary: vi.fn(() =>
@@ -108,6 +143,7 @@ vi.mock('@/api-sdk', () => ({
   cacheMonitorControllerCleanup: vi.fn(),
   alertControllerList: vi.fn(),
   taskRunControllerListRuns: vi.fn(),
+  taskRunControllerListTasks: vi.fn(),
   taskRunControllerRunTask: vi.fn(),
   runtimeConfigControllerGetAllConfigs: vi.fn(),
   runtimeConfigControllerUpdateConfig: vi.fn(),
@@ -148,10 +184,15 @@ vi.mock('recharts', () => {
 });
 
 import { SystemMonitorPage } from './index';
-import { alertControllerList, taskRunControllerListRuns } from '@/api-sdk';
+import {
+  alertControllerList,
+  taskRunControllerListRuns,
+  taskRunControllerListTasks,
+} from '@/api-sdk';
 
 const alertListMock = vi.mocked(alertControllerList);
 const taskRunListMock = vi.mocked(taskRunControllerListRuns);
+const taskListMock = vi.mocked(taskRunControllerListTasks);
 
 function mockAlertList(items: unknown[] = [], pagination: Record<string, unknown> = {}) {
   alertListMock.mockResolvedValue({
@@ -180,6 +221,10 @@ function mockTaskRunList(items: unknown[] = []) {
       },
     } as never,
   });
+}
+
+function mockTaskList(items: unknown[] = []) {
+  taskListMock.mockResolvedValue({ data: { data: items } } as never);
 }
 
 function makeTaskRun(overrides: Record<string, unknown> = {}) {
@@ -220,17 +265,21 @@ describe('SystemMonitorPage', () => {
     );
     mockAlertList();
     mockTaskRunList();
+    mockTaskList();
   });
 
-  it('默认展示核心服务 Tab（核心服务/转换队列/系统信息）', async () => {
+  it('默认展示核心服务 Tab（核心服务/系统信息；转换队列已独立成 Tab）', async () => {
     renderPage();
 
     expect(await screen.findByText('PostgreSQL 数据库')).toBeInTheDocument();
-    expect(screen.getAllByText('转换队列').length).toBeGreaterThan(0);
     expect(screen.getByText('系统信息')).toBeInTheDocument();
+    // 转换队列不再内嵌核心 Tab，而是独立 Tab 按钮（#406）
+    expect(
+      screen.getByRole('button', { name: '转换队列' })
+    ).toBeInTheDocument();
   });
 
-  it('渲染监控中心全部 Tab，预留 Tab 为禁用态', async () => {
+  it('渲染监控中心全部 Tab，均可用', async () => {
     renderPage();
     await screen.findByText('PostgreSQL 数据库');
 
@@ -239,8 +288,248 @@ describe('SystemMonitorPage', () => {
     }
 
     expect(screen.getByRole('button', { name: '后台任务' })).not.toBeDisabled();
-    expect(screen.getByRole('button', { name: '转换队列' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '转换队列' })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: '告警历史' })).not.toBeDisabled();
+  });
+
+  it('转换队列 Tab 渲染 process-pool 模式当前值、耗时与趋势图', async () => {
+    renderPage();
+    await screen.findByText('PostgreSQL 数据库');
+
+    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
+
+    expect(await screen.findByText('转换队列状态')).toBeInTheDocument();
+    expect(screen.getByText('进程内执行')).toBeInTheDocument();
+    expect(screen.getByText('进程内转换队列')).toBeInTheDocument();
+    // 队列深度 2 / 运行中 3 / 并发上限 4
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('3 / 4')).toBeInTheDocument();
+    // 耗时 P50/P95 与样本数
+    expect(screen.getByText('1.2s')).toBeInTheDocument();
+    expect(screen.getByText('4.5s')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
+    // 趋势图
+    expect(screen.getByText('近 24 小时趋势')).toBeInTheDocument();
+    expect(screen.getByTestId('recharts-LineChart')).toBeInTheDocument();
+  });
+
+  it('转换队列 Tab 在 conversion-service 模式渲染三级工作池与自动扩容状态', async () => {
+    const { conversionMonitorControllerGetStats } = await import('@/api-sdk');
+    vi.mocked(conversionMonitorControllerGetStats).mockResolvedValue({
+      data: {
+        mode: 'conversion-service',
+        processPool: null,
+        conversionService: {
+          tasks: {
+            total: 20,
+            pending: 3,
+            processing: 2,
+            completed: 14,
+            failed: 1,
+          },
+          duration: { sampleCount: 14, p50Ms: 900, p95Ms: 3200 },
+          workers: {
+            '1': {
+              label: 'upload',
+              maxConcurrent: 2,
+              currentMax: 4,
+              running: 2,
+              waiting: 1,
+              autoScale: true,
+              backlogSince: 1700000000000,
+            },
+            '2': {
+              label: 'export',
+              maxConcurrent: 2,
+              currentMax: 2,
+              running: 0,
+              waiting: 0,
+              autoScale: true,
+              backlogSince: null,
+            },
+          },
+        },
+        conversionServiceError: null,
+        history: [],
+        sampledAt: Date.now(),
+      },
+    } as never);
+
+    renderPage();
+    await screen.findByText('PostgreSQL 数据库');
+
+    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
+
+    expect(await screen.findByText('独立转换服务')).toBeInTheDocument();
+    // 队列积压（pending=3 > 0）
+    expect(screen.getByText('队列积压')).toBeInTheDocument();
+    // 任务计数
+    expect(screen.getByText('排队中')).toBeInTheDocument();
+    expect(screen.getByText('已完成')).toBeInTheDocument();
+    // 三级工作池卡片 + 自动扩容标签
+    expect(screen.getByText('upload')).toBeInTheDocument();
+    expect(screen.getByText('export')).toBeInTheDocument();
+    expect(screen.getByText('已自动扩容')).toBeInTheDocument();
+    expect(screen.getByText('基准容量')).toBeInTheDocument();
+  });
+
+  it('转换队列 Tab 在 cloud-faas 模式展示不适用说明', async () => {
+    const { conversionMonitorControllerGetStats } = await import('@/api-sdk');
+    vi.mocked(conversionMonitorControllerGetStats).mockResolvedValue({
+      data: {
+        mode: 'cloud-faas',
+        processPool: null,
+        conversionService: null,
+        conversionServiceError: null,
+        history: [],
+        sampledAt: Date.now(),
+      },
+    } as never);
+
+    renderPage();
+    await screen.findByText('PostgreSQL 数据库');
+
+    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
+
+    expect(await screen.findByText('云函数')).toBeInTheDocument();
+    expect(
+      screen.getByText('云函数由云厂商托管调度，无队列概念，本 Tab 不适用')
+    ).toBeInTheDocument();
+  });
+
+  it('转换队列 Tab 渲染永久失败列表与排队 ETA（conversion-service 模式，#478）', async () => {
+    const sdk = await import('@/api-sdk');
+    vi.mocked(sdk.conversionMonitorControllerGetStats).mockResolvedValue({
+      data: {
+        mode: 'conversion-service',
+        processPool: null,
+        conversionService: {
+          tasks: { total: 5, pending: 4, processing: 2, completed: 1, failed: 0 },
+          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 },
+          workers: {},
+        },
+        conversionServiceError: null,
+        history: [],
+        sampledAt: Date.now(),
+      },
+    } as never);
+    vi.mocked(sdk.conversionMonitorControllerListKnownBad).mockResolvedValue({
+      data: {
+        items: [
+          { contentKey: 'sha256-abc-001', reason: '格式不支持', markedAt: 1720000000000 },
+          { contentKey: 'sha256-def-002', reason: '文件损坏', markedAt: 1720000000000 },
+        ],
+        total: 2,
+      },
+    } as never);
+
+    renderPage();
+    await screen.findByText('PostgreSQL 数据库');
+
+    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
+
+    // 永久失败列表（#478）
+    expect(await screen.findByText('永久失败（内容不可转换）')).toBeInTheDocument();
+    expect(screen.getByText('sha256-abc-001')).toBeInTheDocument();
+    expect(screen.getByText('sha256-def-002')).toBeInTheDocument();
+    expect(screen.getByText('格式不支持')).toBeInTheDocument();
+    // 排队 ETA：pending=4 / processing=2 × p50=3000ms = 6000ms = 6s
+    expect(screen.getByText(/排队 4 个 · 预计约 6s 清空/)).toBeInTheDocument();
+  });
+
+  it('转换队列 Tab 永久失败复位：SYSTEM_ADMIN 可见复位按钮，点击「复位全部」触发 reset（#477 合并自独立转换任务页）', async () => {
+    permissionMock.hasPermission.mockImplementation((p: string) =>
+      ['SYSTEM_MONITOR', 'SYSTEM_ADMIN'].includes(p)
+    );
+    const sdk = await import('@/api-sdk');
+    vi.mocked(sdk.conversionMonitorControllerGetStats).mockResolvedValue({
+      data: {
+        mode: 'conversion-service',
+        processPool: null,
+        conversionService: {
+          tasks: { total: 5, pending: 0, processing: 0, completed: 5, failed: 0 },
+          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 },
+          workers: {},
+        },
+        conversionServiceError: null,
+        history: [],
+        sampledAt: Date.now(),
+      },
+    } as never);
+    vi.mocked(sdk.conversionMonitorControllerListKnownBad).mockResolvedValue({
+      data: {
+        items: [
+          { contentKey: 'sha256-abc-001', reason: '格式不支持', markedAt: 1720000000000 },
+        ],
+        total: 1,
+      },
+    } as never);
+    const resetMock = vi.mocked(sdk.conversionMonitorControllerResetKnownBad);
+
+    renderPage();
+    await screen.findByText('PostgreSQL 数据库');
+
+    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
+
+    // SYSTEM_ADMIN 可见「复位全部」+ 行内「复位」按钮
+    expect(await screen.findByText('sha256-abc-001')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '复位全部' })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '复位' })).toBeInTheDocument();
+
+    // 点击「复位全部」触发 reset（body 空对象）+ 复位成功 toast
+    resetMock.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: '复位全部' }));
+    await waitFor(() => {
+      expect(resetMock).toHaveBeenCalledWith({ body: {} });
+    });
+    await waitFor(() => {
+      expect(notificationMock.showToast).toHaveBeenCalledWith(
+        '复位成功',
+        'success'
+      );
+    });
+  });
+
+  it('转换队列 Tab 永久失败：非 SYSTEM_ADMIN 看不到复位按钮（#477）', async () => {
+    const sdk = await import('@/api-sdk');
+    vi.mocked(sdk.conversionMonitorControllerGetStats).mockResolvedValue({
+      data: {
+        mode: 'conversion-service',
+        processPool: null,
+        conversionService: {
+          tasks: { total: 5, pending: 0, processing: 0, completed: 5, failed: 0 },
+          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 },
+          workers: {},
+        },
+        conversionServiceError: null,
+        history: [],
+        sampledAt: Date.now(),
+      },
+    } as never);
+    vi.mocked(sdk.conversionMonitorControllerListKnownBad).mockResolvedValue({
+      data: {
+        items: [
+          { contentKey: 'sha256-abc-001', reason: '格式不支持', markedAt: 1720000000000 },
+        ],
+        total: 1,
+      },
+    } as never);
+
+    renderPage();
+    await screen.findByText('PostgreSQL 数据库');
+
+    fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
+
+    // 非 SYSTEM_ADMIN（默认 hasPermission 只返回 SYSTEM_MONITOR）：列表可见但无复位按钮
+    expect(await screen.findByText('sha256-abc-001')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '复位全部' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '复位' })
+    ).not.toBeInTheDocument();
   });
 
   it('切换到缓存监控 Tab 渲染摘要/健康/警告/图表/key 操作', async () => {
@@ -437,12 +726,18 @@ describe('SystemMonitorPage', () => {
       ['SYSTEM_MONITOR', 'SYSTEM_ADMIN', 'SYSTEM_CONFIG_WRITE'].includes(p)
     );
     mockTaskRunList([makeTaskRun()]);
+    mockTaskList([
+      {
+        taskName: 'storage-cleanup:expired-storage',
+        description: '清理过期存储',
+      },
+    ]);
 
     renderPage();
     await screen.findByText('PostgreSQL 数据库');
 
     fireEvent.click(screen.getByRole('button', { name: '后台任务' }));
-    await screen.findByText('storage-cleanup:expired-storage');
+    await screen.findByRole('button', { name: '手动触发' });
 
     expect(screen.getByRole('button', { name: '手动触发' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox')).toBeInTheDocument();
@@ -459,7 +754,7 @@ describe('SystemMonitorPage', () => {
     });
   });
 
-  it('同一任务多条记录时，操作按钮仅挂在最新一条记录上', async () => {
+  it('任务清单每任务一个手动触发按钮（不随执行记录数变化）', async () => {
     permissionMock.hasPermission.mockImplementation((p: string) =>
       ['SYSTEM_MONITOR', 'SYSTEM_ADMIN'].includes(p)
     );
@@ -467,18 +762,51 @@ describe('SystemMonitorPage', () => {
       makeTaskRun({ id: 'r1', startedAt: '2026-08-01T02:00:00.000Z' }),
       makeTaskRun({ id: 'r2', startedAt: '2026-08-01T01:00:00.000Z' }),
     ]);
+    mockTaskList([
+      { taskName: 'storage-cleanup:expired-storage', description: '清理过期存储' },
+      { taskName: 'cache-cleanup:warning-check', description: '缓存监控告警检查' },
+    ]);
 
     renderPage();
     await screen.findByText('PostgreSQL 数据库');
 
     fireEvent.click(screen.getByRole('button', { name: '后台任务' }));
 
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: '手动触发' })).toBeInTheDocument();
-    });
-    const triggerButtons = screen.getAllByRole('button', {
+    const triggerButtons = await screen.findAllByRole('button', {
       name: '手动触发',
     });
-    expect(triggerButtons).toHaveLength(1);
+    expect(triggerButtons).toHaveLength(2);
+  });
+
+  it('任务清单定时列：显示人类可读描述（hover 显示 cron），无独立定时显示「—」', async () => {
+    permissionMock.hasPermission.mockImplementation((p: string) =>
+      ['SYSTEM_MONITOR', 'SYSTEM_ADMIN'].includes(p)
+    );
+    mockTaskList([
+      {
+        taskName: 'storage-cleanup:expired-storage',
+        description: '清理过期存储',
+        schedule: '0 03 * * *',
+        scheduleLabel: '每天 03:00',
+      },
+      {
+        taskName: 'backup:remote-push',
+        description: '推送最新备份到异地',
+        schedule: null,
+        scheduleLabel: null,
+      },
+    ]);
+
+    renderPage();
+    await screen.findByText('PostgreSQL 数据库');
+
+    fireEvent.click(screen.getByRole('button', { name: '后台任务' }));
+    await screen.findByText('storage-cleanup:expired-storage');
+
+    // 主显示人类可读描述，tooltip 保留原始 cron
+    const scheduleCell = screen.getByText('每天 03:00');
+    expect(scheduleCell).toBeInTheDocument();
+    expect(scheduleCell).toHaveAttribute('title', '0 03 * * *');
+    expect(screen.getByText('—', { exact: true })).toBeInTheDocument();
   });
 });

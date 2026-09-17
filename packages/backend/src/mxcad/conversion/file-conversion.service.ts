@@ -11,11 +11,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable, Logger, Inject, Optional } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import * as http from "http";
 import * as https from "https";
-import { exec } from "child_process";
-import { promisify } from "util";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -23,6 +22,7 @@ import { RateLimiter } from "../../common/concurrency/rate-limiter";
 import type {
 	ConversionOptions,
 	ConversionResult,
+	MxCadConversionResult,
 } from "../interfaces/file-conversion.interface";
 import type { IMxcadConversionService } from "../interfaces/mxcad-conversion.interface";
 import type { ConvertServerFileParam } from "../types/mxcad-context.types";
@@ -32,8 +32,11 @@ import {
 } from "../../common/interfaces/conversion-access-guard";
 import { FileTypeDetector } from "../utils/file-type-detector";
 import { VipFeatureRequiredException } from "../../vip/errors/vip-feature-required.error";
-
-const execAsync = promisify(exec);
+import { runMxcadAssembly } from "./mxcad-exec";
+import {
+	IFunctionExecutor,
+	type ConversionTask,
+} from "../../function-executor/function-executor.interface";
 
 @Injectable()
 export class FileConversionService implements IMxcadConversionService {
@@ -44,9 +47,27 @@ export class FileConversionService implements IMxcadConversionService {
 	private readonly compression: boolean;
 	private readonly conversionRateLimiter: RateLimiter;
 	private readonly mxcadDebugPath: string;
+	/** 单次 mxcadassembly 转换超时（毫秒），来自 timeout.fileConversion，默认 60000 */
+	private readonly conversionTimeoutMs: number;
+	/**
+	 * FUNCTION_EXECUTOR 部署模式。
+	 * - 'process-pool'（默认）：本方法内直接 spawn mxcadassembly（进程内，行为不变）。
+	 * - 'conversion-service'：转发到独立转换服务（经 IFunctionExecutor=HttpConversionExecutor，
+	 *   其内部 POST /v1/conversions/async/convertFile + 轮询终态）。
+	 * 两条分支互不影响：默认模式代码路径零改动，仅在 conversion-service 模式切到转发分支。
+	 */
+	private readonly useConversionService: boolean;
+
+	/**
+	 * 独立转换服务执行器的惰性解析缓存。
+	 * 用 ModuleRef 延迟获取而非构造注入，规避 FileConversionService ↔ ProcessPoolExecutor
+	 * 的构造期循环依赖（ProcessPoolExecutor 依赖 MXCAD_CONVERSION_SERVICE=FileConversionService）。
+	 */
+	private _functionExecutor?: IFunctionExecutor;
 
 	constructor(
 		private readonly configService: ConfigService,
+		private readonly moduleRef: ModuleRef,
 		@Inject(CONVERSION_ACCESS_GUARD)
 		@Optional()
 		private readonly conversionAccessGuard?: IConversionAccessGuard,
@@ -98,6 +119,43 @@ export class FileConversionService implements IMxcadConversionService {
 		this.compression = mxcadConfig?.compression !== false;
 
 		this.mxcadDebugPath = this.configService.get<string>('mxcadDebugPath') || path.join(projectRoot, 'data', 'debug');
+
+		// 转换超时可经 env TIMEOUT_FILE_CONVERSION 调整（默认 60000）
+		const timeoutMs = this.configService.get<number>('timeout.fileConversion');
+		this.conversionTimeoutMs =
+			typeof timeoutMs === "number" && timeoutMs > 0
+				? timeoutMs
+				: 60000;
+
+		// 部署模式：仅 conversion-service 模式切转发分支，其余（默认 process-pool）保持进程内 spawn
+		const executorMode =
+			this.configService.get<string>("FUNCTION_EXECUTOR") || "process-pool";
+		this.useConversionService = executorMode === "conversion-service";
+		if (this.useConversionService) {
+			this.logger.log("转换部署模式=conversion-service：转换请求转发到独立转换服务");
+		}
+	}
+
+	/**
+	 * 惰性解析 IFunctionExecutor（env=conversion-service 时 = HttpConversionExecutor）。
+	 *
+	 * 用 ModuleRef 延迟获取而非构造注入：ProcessPoolExecutor 依赖 MXCAD_CONVERSION_SERVICE
+	 * (=本服务)，构造期注入会形成循环依赖。延迟到首次 conversion-service 模式转换请求时解析
+	 * （此时本服务实例已构造完成，ProcessPoolExecutor 可正常取到本服务），strict:false 未接线
+	 * 时返回 undefined，转发分支自动降级为进程内 spawn。
+	 */
+	private getFunctionExecutor(): IFunctionExecutor | undefined {
+		if (this._functionExecutor === undefined) {
+			try {
+				this._functionExecutor = this.moduleRef.get<IFunctionExecutor>(
+					IFunctionExecutor,
+					{ strict: false },
+				);
+			} catch {
+				this._functionExecutor = undefined;
+			}
+		}
+		return this._functionExecutor;
 	}
 
 	/**
@@ -225,8 +283,6 @@ export class FileConversionService implements IMxcadConversionService {
 		let stderr = "";
 		let commandStr = "";
 		let absoluteSrcPath = "";
-		const originalDir = process.cwd();
-		let changedDir = false;
 
 		try {
 			const {
@@ -313,40 +369,98 @@ export class FileConversionService implements IMxcadConversionService {
 				param.dwg_version = options.dwgVersion;
 			}
 
-			// Linux 平台特殊处理
-			if (this.isLinux()) {
-				if (this.mxCadBinPath) {
-					process.chdir(this.mxCadBinPath);
-					changedDir = true;
-					this.logger.log(`[Linux] 切换工作目录: ${this.mxCadBinPath}`);
-				}
+			// 部署模式分支：conversion-service 模式转发到独立转换服务（经 IFunctionExecutor）。
+			// 关键：转换服务的 MxcadRunner 按 ConversionOptions 驼峰形状读取入参（srcPath/fileHash/
+			// createPreloadingData/outname/...），并非 mxcadassembly 小写参数（srcpath/src_file_md5/...）。
+			// 故此处转发 ConversionOptions 形状（srcPath 用已解析绝对路径，转换服务 _resolvePath 原样返回），
+			// 而非下方进程内 spawn 用的 mxcadassembly 参数 param——否则转换服务读 params.srcPath 恒 undefined，
+			// _resolvePath 返回 undefined 后 .replace 崩溃（Cannot read properties of undefined）。
+			// 各字段取上方解构的有效值（已套用 this.compression 等默认），保证与进程内 spawn 结果等价。
+			// 默认 process-pool 模式走下方进程内 spawn，行为不变。
+			if (this.useConversionService && this.getFunctionExecutor()) {
+				const serviceParam: Record<string, unknown> = {
+					srcPath: absoluteSrcPath,
+					fileHash,
+					createPreloadingData,
+					compression,
+				};
+				if (outname) serviceParam.outname = outname;
+				if (cmd) serviceParam.cmd = cmd;
+				if (width) serviceParam.width = width;
+				if (height) serviceParam.height = height;
+				if (colorPolicy) serviceParam.colorPolicy = colorPolicy;
+				if (outjpg) serviceParam.outjpg = outjpg;
+				if (options.roate_angle !== undefined)
+					serviceParam.roate_angle = options.roate_angle;
+				if (options.view_angle !== undefined)
+					serviceParam.view_angle = options.view_angle;
+				if (options.dwgVersion !== undefined)
+					serviceParam.dwgVersion = options.dwgVersion;
+				if (options.layout_name)
+					serviceParam.layout_name = options.layout_name;
+				// 721fe02 把 param 重构为驼峰 serviceParam 时漏抄这 6 个字段（进程内 param 有、
+				// serviceParam 无），致 conversion-service 模式下 cut_dwg/print_to_pdf 的裁剪框
+				// (bd_pt1_x/bd_pt1_y/bd_pt2_x/bd_pt2_y)、open_file_md5、create_clip_block 丢失，
+				// 引擎缺区域信息回 {"message":"false"}。补齐以与进程内 spawn 等价。
+				if (options.bd_pt1_x)
+					serviceParam.bd_pt1_x = options.bd_pt1_x;
+				if (options.bd_pt1_y)
+					serviceParam.bd_pt1_y = options.bd_pt1_y;
+				if (options.bd_pt2_x)
+					serviceParam.bd_pt2_x = options.bd_pt2_x;
+				if (options.bd_pt2_y)
+					serviceParam.bd_pt2_y = options.bd_pt2_y;
+				if (options.open_file_md5)
+					serviceParam.open_file_md5 = options.open_file_md5;
+				if (options.create_clip_block !== undefined)
+					serviceParam.create_clip_block = options.create_clip_block;
+				return await this.forwardViaExecutor(
+					"convertFile",
+					serviceParam,
+					options.priority === "low" ? 3 : 2,
+				);
+			}
 
-				// 将参数中的双引号替换为单引号
-				const paramStr = JSON.stringify(param).replace(/"/g, "'");
-				commandStr = `"${this.mxCadAssemblyPath}" "${paramStr}"`;
-				this.logger.log(`执行 MxCAD 转换命令 (Linux): ${commandStr}`);
+			// 参数序列化：Linux 用单引号 JSON（mxcadassembly 约定），Windows 用原始 JSON
+			const paramStr = this.isLinux()
+				? JSON.stringify(param).replace(/"/g, "'")
+				: JSON.stringify(param);
+			commandStr = `"${this.mxCadAssemblyPath}" ${paramStr}`;
+			this.logger.log(`执行 MxCAD 转换命令: ${commandStr}`);
 
-				const execResult = await execAsync(commandStr, {
-					encoding: "utf8",
-					timeout: options.timeout || 60000,
-					maxBuffer: 50 * 1024 * 1024,
-				});
+			// 以独立进程组运行 mxcadassembly：超时/失败时杀整组，杜绝孤儿进程累积
+			const runResult = await runMxcadAssembly(
+				this.mxCadAssemblyPath,
+				paramStr,
+				{
+					cwd: this.isLinux()
+						? this.mxCadBinPath || undefined
+						: undefined,
+					timeoutMs: options.timeout || this.conversionTimeoutMs,
+					logger: this.logger,
+				},
+			);
+			stdout = runResult.stdout;
+			stderr = runResult.stderr;
 
-				stdout = execResult.stdout;
-				stderr = execResult.stderr;
+			if (runResult.timedOut) {
+				this.logger.error(
+					`文件转换超时(${options.timeout || this.conversionTimeoutMs}ms)，已杀进程组`,
+				);
 			} else {
-				// Windows 平台
-				commandStr = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
-				this.logger.log(`执行 MxCAD 转换命令: ${commandStr}`);
+				this.logger.log(
+					`文件转换退出: exitCode=${runResult.exitCode}, signal=${runResult.signal}`,
+				);
+			}
 
-				const execResult = await execAsync(commandStr, {
-					encoding: "utf8",
-					timeout: options.timeout || 60000,
-					maxBuffer: 50 * 1024 * 1024,
-				});
-
-				stdout = execResult.stdout;
-				stderr = execResult.stderr;
+			// 始终记录 mxcadassembly 原始输出（含成功/失败/超时）：
+			// 此前成功路径只打 srcPath、失败路径只打 ret.message，子进程 stdout/stderr
+			// 从未进后端日志，导致"手动跑正常、后端跑 read file error"无从对照。
+			// 现在把引擎原始输出落日志，失败时可直接与手动执行结果比对定位。
+			if (stdout || stderr) {
+				this.logger.log(
+					`mxcadassembly 原始输出: stdout=[${stdout}] stderr=[${stderr}]`,
+				);
 			}
 
 			// 尝试从 stdout 或 stderr 解析结果
@@ -403,81 +517,110 @@ export class FileConversionService implements IMxcadConversionService {
 				};
 			}
 		} catch (error: unknown) {
-			// 确保 stdout 和 stderr 是字符串
-			const errorStdout = (error as { stdout?: Buffer | string }).stdout
-				? Buffer.isBuffer((error as { stdout?: Buffer | string }).stdout)
-					? (
-							(error as { stdout?: Buffer | string }).stdout as Buffer
-						).toString()
-					: (error as { stdout?: Buffer | string }).stdout
-				: stdout || "";
-			const errorStderr = (error as { stderr?: Buffer | string }).stderr
-				? Buffer.isBuffer((error as { stderr?: Buffer | string }).stderr)
-					? (
-							(error as { stderr?: Buffer | string }).stderr as Buffer
-						).toString()
-					: (error as { stderr?: Buffer | string }).stderr
-				: stderr || "";
+			// 异常路径（如 spawn 失败）：stdout/stderr 已由 runMxcadAssembly 捕获（可能为空）
+			const outputToCheck = stdout || stderr;
 
 			// 检查 stdout 或 stderr 是否包含成功的结果（mxcadassembly 可能退出码非0但实际成功）
-			const outputToCheck = errorStdout || errorStderr;
-
 			if (outputToCheck) {
 				try {
-					const outputStr =
-						typeof outputToCheck === "string"
-							? outputToCheck
-							: outputToCheck.toString();
-
-					const iPos = outputStr.lastIndexOf('{"code"');
-
+					const iPos = outputToCheck.lastIndexOf('{"code"');
 					if (iPos !== -1) {
-						const strOutput = outputStr.substring(iPos);
-						const ret = JSON.parse(strOutput);
-
+						const ret = JSON.parse(outputToCheck.substring(iPos));
 						if (ret.code === 0) {
 							this.logger.log(`文件转换成功: ${options.srcPath}`);
 							return { isOk: true, ret };
 						}
 					}
-				} catch (parseError) {
+				} catch {
 					// JSON 解析失败，继续错误处理
 				}
 			}
 
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			const errorCode = (error as { code?: string | number }).code;
 
 			this.logger.error(`文件转换异常: ${errorMessage}`);
-			this.logger.error(`退出码: ${errorCode}`);
-			this.logger.error(`stdout: [${errorStdout}]`);
-			this.logger.error(`stderr: [${errorStderr}]`);
+			this.logger.error(`stdout: [${stdout}]`);
+			this.logger.error(`stderr: [${stderr}]`);
 
 			if (options.debugNodeId) {
 				await this.saveConversionDebugInfo({
 					nodeId: options.debugNodeId,
 					srcPath: absoluteSrcPath,
 					commandStr,
-					exitCode: errorCode ?? -1,
-					stdout: String(errorStdout),
-					stderr: String(errorStderr),
+					exitCode: -1,
+					stdout,
+					stderr,
 					errorMessage,
 				});
 			}
 
+				return {
+					isOk: false,
+					ret: { code: -1, message: errorMessage },
+					error: errorMessage,
+				};
+			}
+	}
+
+	/**
+	 * 转发到独立转换服务（env=conversion-service 模式）。
+	 *
+	 * 经 IFunctionExecutor（此时为 HttpConversionExecutor）POST /v1/conversions/async/convertFile
+	 * + 轮询终态，把执行器结果映射回 file-conversion 的 {isOk, ret, error} 形状。
+	 *
+	 * 传入的 param 即 mxcadassembly 参数对象（srcpath/src_file_md5/outname/cmd/width/height...），
+	 * 与进程内 spawn 传入的参数完全一致，保证两种部署模式转换结果等价。
+	 * 独立服务的任务结果 = mxcadassembly 输出（含 code/newpath），metadata 承载该输出，
+	 * 故 COMPLETED 时 ret 直接取 metadata（与进程内解析形状一致）。
+	 */
+	private async forwardViaExecutor(
+		taskType: "convertFile" | "convertBinToMxweb",
+		param: Record<string, unknown>,
+		priority: 1 | 2 | 3,
+	): Promise<ConversionResult> {
+		const taskId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+		const task: ConversionTask = {
+			id: taskId,
+			type: taskType,
+			params: param,
+			priority,
+			createdAt: new Date(),
+		};
+		const executor = this.getFunctionExecutor();
+		if (!executor) {
+			// 未接线（测试/未导入 FunctionExecutorModule）：按转换失败返回，调用方走既有错误处理
+			const err = "conversion-service executor unavailable";
+			this.logger.error(`转换服务执行器不可用（${taskType}）：${err}`);
 			return {
 				isOk: false,
-				ret: { code: -1, message: errorMessage },
-				error: errorMessage,
+				ret: { code: -1, message: err },
+				error: err,
 			};
-		} finally {
-			// 恢复原始工作目录
-			if (changedDir) {
-				process.chdir(originalDir);
-				this.logger.log(`[Linux] 恢复工作目录: ${originalDir}`);
-			}
 		}
+		const result = await executor.invoke(task);
+		if (result.status === "COMPLETED") {
+			const metadata = result.metadata as
+				| Record<string, unknown>
+				| undefined;
+			// 独立服务结果 = mxcadassembly 输出（含 code/newpath），与进程内解析形状一致
+			const ret: MxCadConversionResult =
+				metadata && typeof metadata === "object"
+					? (metadata as MxCadConversionResult)
+					: { code: 0, newpath: result.outputPath };
+			this.logger.log(
+				`转换服务完成: ${taskType} taskId=${taskId} newpath=${result.outputPath}`,
+			);
+			return { isOk: true, ret };
+		}
+		this.logger.error(
+			`转换服务失败: ${taskType} taskId=${taskId} ${result.error}`,
+		);
+		return {
+			isOk: false,
+			ret: { code: -1, message: result.error },
+			error: result.error,
+		};
 	}
 
 	async convertFileAsync(
@@ -656,15 +799,31 @@ export class FileConversionService implements IMxcadConversionService {
 		}
 	}
 
+	/**
+	 * bin → mxweb 转换（保存链路内部转换，带并发限制）。
+	 * 与 convertFile 共享同一 conversionRateLimiter：两者都 spawn 重量级 mxcadassembly 进程，
+	 * 收进同一并发池才能真实约束 mxcadassembly 进程总数。此前走 ProcessPoolExecutor 时被独立
+	 * RateLimiter(4) 限流、version-history 直连路径则完全裸奔，两池相加可超 CPU 核数。
+	 * 保存为用户同步等待步骤，优先级 'high'。
+	 */
 	async convertBinToMxweb(
+		binPath: string,
+		outputPath: string,
+		outName: string,
+	): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+		return this.conversionRateLimiter.execute(
+			async () => this.executeBinToMxweb(binPath, outputPath, outName),
+			"high",
+		);
+	}
+
+	private async executeBinToMxweb(
 		binPath: string,
 		outputPath: string,
 		outName: string,
 	): Promise<{ success: boolean; outputPath?: string; error?: string }> {
 		let stdout = "";
 		let stderr = "";
-		const originalDir = process.cwd();
-		let changedDir = false;
 
 		try {
 			this.logger.log(`[convertBinToMxweb] 开始转换: ${binPath} -> ${outName}`);
@@ -678,37 +837,60 @@ export class FileConversionService implements IMxcadConversionService {
 				outname: outName,
 			};
 
-			if (this.isLinux()) {
-				if (this.mxCadBinPath) {
-					process.chdir(this.mxCadBinPath);
-					changedDir = true;
-					this.logger.log(`[Linux] 切换工作目录: ${this.mxCadBinPath}`);
-				}
+			// 部署模式分支：conversion-service 模式转发到独立转换服务。
+			// 同 convertFile：转换服务 MxcadRunner 按驼峰 srcPath 读源路径（非小写 srcpath），
+			// binToMxweb 额外带 outpath（输出目录）。srcPath/outpath 用已解析绝对路径，
+			// 转换服务 _resolvePath 原样返回。runner 按 outpath 有无区分 binToMxweb/convertFile。
+			if (this.useConversionService && this.getFunctionExecutor()) {
+				const serviceParam: Record<string, unknown> = {
+					srcPath: absoluteBinPath,
+					outpath: absoluteOutputPath,
+					outname: outName,
+				};
+				const result = await this.forwardViaExecutor(
+					"convertBinToMxweb",
+					serviceParam,
+					2,
+				);
+				return result.isOk
+					? {
+							// mxcadassembly 不返回 newpath，转换服务成功时该字段为 ''（非 nullish），
+							// 须用 || 而非 ?? 回落本地计算路径（与进程内分支一致），
+							// 否则 outputPath='' 被调用方判为失败且 error=undefined
+							// （历史版本「bin→mxweb 转换失败: undefined」根因）
+							success: true,
+							outputPath:
+								result.ret.newpath || path.join(outputPath, outName),
+						}
+					: { success: false, error: result.error };
+			}
 
-				const paramStr = JSON.stringify(param).replace(/"/g, "'");
-				const cmd = `"${this.mxCadAssemblyPath}" "${paramStr}"`;
-				this.logger.log(`执行 bin→mxweb 转换命令 (Linux): ${cmd}`);
+			// 参数序列化：Linux 用单引号 JSON，Windows 用原始 JSON
+			const paramStr = this.isLinux()
+				? JSON.stringify(param).replace(/"/g, "'")
+				: JSON.stringify(param);
+			const cmd = `"${this.mxCadAssemblyPath}" ${paramStr}`;
+			this.logger.log(`执行 bin→mxweb 转换命令: ${cmd}`);
 
-				const execResult = await execAsync(cmd, {
-					encoding: "utf8",
-					timeout: 60000,
-					maxBuffer: 50 * 1024 * 1024,
-				});
+			// 以独立进程组运行：超时/失败时杀整组，杜绝孤儿进程累积
+			const runResult = await runMxcadAssembly(
+				this.mxCadAssemblyPath,
+				paramStr,
+				{
+					cwd: this.isLinux()
+						? this.mxCadBinPath || undefined
+						: undefined,
+					timeoutMs: this.conversionTimeoutMs,
+					logger: this.logger,
+				},
+			);
+			stdout = runResult.stdout;
+			stderr = runResult.stderr;
 
-				stdout = execResult.stdout;
-				stderr = execResult.stderr;
-			} else {
-				const cmd = `"${this.mxCadAssemblyPath}" ${JSON.stringify(param)}`;
-				this.logger.log(`执行 bin→mxweb 转换命令: ${cmd}`);
-
-				const execResult = await execAsync(cmd, {
-					encoding: "utf8",
-					timeout: 60000,
-					maxBuffer: 50 * 1024 * 1024,
-				});
-
-				stdout = execResult.stdout;
-				stderr = execResult.stderr;
+			if (runResult.timedOut) {
+				this.logger.error(
+					`[convertBinToMxweb] 转换超时(${this.conversionTimeoutMs}ms)，已杀进程组`,
+				);
 			}
 
 			const output = Buffer.isBuffer(stdout)
@@ -739,33 +921,14 @@ export class FileConversionService implements IMxcadConversionService {
 				return { success: false, error: `解析输出失败: ${e.message}` };
 			}
 		} catch (error: unknown) {
-			const err = error as Error & {
-				code?: number;
-				stdout?: string | Buffer;
-				stderr?: string | Buffer;
-			};
-
-			const errorStdout = err.stdout
-				? Buffer.isBuffer(err.stdout)
-					? err.stdout.toString()
-					: err.stdout
-				: stdout || "";
-			const errorStderr = err.stderr
-				? Buffer.isBuffer(err.stderr)
-					? err.stderr.toString()
-					: err.stderr
-				: stderr || "";
-
-			const outputToCheck = errorStdout || errorStderr;
+			// 异常路径（如 spawn 失败）：stdout/stderr 已由 runMxcadAssembly 捕获（可能为空）
+			const outputToCheck = stdout || stderr;
 
 			if (outputToCheck) {
 				try {
 					const iPos = outputToCheck.lastIndexOf('{"code"');
-
 					if (iPos !== -1) {
-						const strOutput = outputToCheck.substring(iPos);
-						const ret = JSON.parse(strOutput);
-
+						const ret = JSON.parse(outputToCheck.substring(iPos));
 						if (ret.code === 0) {
 							const resultPath = path.join(outputPath, outName);
 							this.logger.log(`[convertBinToMxweb] 转换成功: ${resultPath}`);
@@ -777,17 +940,13 @@ export class FileConversionService implements IMxcadConversionService {
 				}
 			}
 
-			this.logger.error(`[convertBinToMxweb] 转换异常: ${err.message}`);
-			this.logger.error(`退出码: ${err.code}`);
-			this.logger.error(`stdout: [${errorStdout}]`);
-			this.logger.error(`stderr: [${errorStderr}]`);
+			const message =
+				error instanceof Error ? error.message : String(error);
+			this.logger.error(`[convertBinToMxweb] 转换异常: ${message}`);
+			this.logger.error(`stdout: [${stdout}]`);
+			this.logger.error(`stderr: [${stderr}]`);
 
-			return { success: false, error: err.message };
-		} finally {
-			if (changedDir) {
-				process.chdir(originalDir);
-				this.logger.log(`[Linux] 恢复工作目录: ${originalDir}`);
-			}
+			return { success: false, error: message };
 		}
 	}
 }

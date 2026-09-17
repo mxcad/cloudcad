@@ -22,12 +22,15 @@ import {
   SystemRole,
   ProjectRole,
   DEFAULT_PROJECT_ROLE_PERMISSIONS,
+  SYSTEM_ROLE_PERMISSIONS,
+  SYSTEM_ROLE_LEVELS,
 } from '../../common/enums/permissions.enum';
 import {
   USER_SERVICE,
   IUserService,
 } from '../../common/interfaces/user-service.interface';
 import { RoleInheritanceService } from '../../permission/services/role-inheritance.service';
+import { I18nContext } from 'nestjs-i18n';
 
 /**
  * 系统初始化服务
@@ -159,71 +162,35 @@ export class InitializationService implements OnModuleInit {
    */
   private async createSystemDefaultRoles(): Promise<void> {
     try {
+      // 权限定义来源于 SYSTEM_ROLE_PERMISSIONS（@cloudcad/contracts 单一来源），
+      // 不再在此内联维护，避免与角色权限定义漂移
       const defaultRoles = [
         {
           name: SystemRole.ADMIN,
           description: '系统管理员，拥有所有权限',
-          permissions: [
-            'SYSTEM_USER_READ',
-            'SYSTEM_USER_CREATE',
-            'SYSTEM_USER_UPDATE',
-            'SYSTEM_USER_DELETE',
-            'SYSTEM_ROLE_READ',
-            'SYSTEM_ROLE_CREATE',
-            'SYSTEM_ROLE_UPDATE',
-            'SYSTEM_ROLE_DELETE',
-            'SYSTEM_ROLE_PERMISSION_MANAGE',
-            'SYSTEM_FONT_READ',
-            'SYSTEM_FONT_UPLOAD',
-            'SYSTEM_FONT_DELETE',
-            'SYSTEM_FONT_DOWNLOAD',
-            'SYSTEM_ADMIN',
-            'SYSTEM_BILLING_READ',
-            'SYSTEM_BILLING_WRITE',
-            'SYSTEM_MONITOR',
-            'SYSTEM_CONFIG_READ',
-            'SYSTEM_CONFIG_WRITE',
-            'SYSTEM_IP_BLACKLIST_MANAGE',
-            'LIBRARY_DRAWING_MANAGE',
-            'LIBRARY_BLOCK_MANAGE',
-            'PROJECT_CREATE',
-          ],
+        },
+        {
+          name: SystemRole.AUDIT_ADMIN,
+          description:
+            '审计管理员，管理审计数据（查询/导出/清理），三权分立（等保 8.5.2）',
         },
         {
           name: SystemRole.USER_MANAGER,
           description: '用户管理员，管理系统用户和角色',
-          permissions: [
-            'SYSTEM_USER_READ',
-            'SYSTEM_USER_CREATE',
-            'SYSTEM_USER_UPDATE',
-            'SYSTEM_USER_DELETE',
-            'SYSTEM_ROLE_READ',
-            'SYSTEM_ROLE_CREATE',
-            'SYSTEM_ROLE_UPDATE',
-            'SYSTEM_ROLE_DELETE',
-            'SYSTEM_ROLE_PERMISSION_MANAGE',
-            'PROJECT_CREATE',
-          ],
         },
         {
           name: SystemRole.FONT_MANAGER,
           description: '字体管理员，管理系统字体库',
-          permissions: [
-            'SYSTEM_FONT_READ',
-            'SYSTEM_FONT_UPLOAD',
-            'SYSTEM_FONT_DELETE',
-            'SYSTEM_FONT_DOWNLOAD',
-            'PROJECT_CREATE',
-          ],
         },
         {
           name: SystemRole.USER,
           description: '普通用户，基本访问权限',
-          permissions: ['PROJECT_CREATE'], // 普通用户可以创建项目
         },
       ];
 
       for (const roleConfig of defaultRoles) {
+        // 权限定义来源于 SYSTEM_ROLE_PERMISSIONS（@cloudcad/contracts 单一来源）
+        const expectedPermissions = SYSTEM_ROLE_PERMISSIONS[roleConfig.name];
         const existingRole = await this.prisma.role.findFirst({
           where: { name: roleConfig.name },
           orderBy: { level: 'desc' },
@@ -236,11 +203,11 @@ export class InitializationService implements OnModuleInit {
             existingRole.permissions.map((p) => p.permission as Permission)
           );
           const expectedPerms = new Set<Permission>(
-            roleConfig.permissions.map((p) => p as Permission)
+            expectedPermissions.map((p) => p as Permission)
           );
 
           // 1. 检测并自动补充缺失的权限
-          const missingPerms = roleConfig.permissions.filter(
+          const missingPerms = expectedPermissions.filter(
             (p) => !existingPerms.has(p as Permission)
           );
 
@@ -320,12 +287,13 @@ export class InitializationService implements OnModuleInit {
             description: roleConfig.description,
             category: 'SYSTEM',
             isSystem: true,
-            level: roleConfig.name === SystemRole.ADMIN ? 100 : 0,
+            // 层级来源于 SYSTEM_ROLE_LEVELS（@cloudcad/contracts 单一来源，与 seed.ts 一致）
+            level: SYSTEM_ROLE_LEVELS[roleConfig.name],
           },
         });
 
         await this.prisma.rolePermission.createMany({
-          data: roleConfig.permissions.map((permission) => ({
+          data: expectedPermissions.map((permission) => ({
             roleId: role.id,
             permission: permission as Permission,
           })),
@@ -333,7 +301,7 @@ export class InitializationService implements OnModuleInit {
         });
 
         this.logger.log(
-          `✅ 系统角色 ${roleConfig.name} 创建成功，分配 ${roleConfig.permissions.length} 个权限`
+          `✅ 系统角色 ${roleConfig.name} 创建成功，分配 ${expectedPermissions.length} 个权限`
         );
       }
 
@@ -519,16 +487,25 @@ export class InitializationService implements OnModuleInit {
         'INITIAL_ADMIN_USERNAME',
         'admin'
       );
+      // #416 等保 8.1.4.1：INITIAL_ADMIN_PASSWORD env 必填无缺省——首次启动（无用户）时
+      // 缺失则启动失败，不再有 Admin123! 缺省。部署工具（setup-offline/wizard）生成随机强口令写入 .env。
       const adminPassword = this.configService.get<string>(
-        'INITIAL_ADMIN_PASSWORD',
-        'Admin123!'
+        'INITIAL_ADMIN_PASSWORD'
       );
+      if (!adminPassword) {
+        throw new InternalServerErrorException(
+          I18nContext.current()?.t(
+            'error.initialization.admin_password_required'
+          ) ??
+            'INITIAL_ADMIN_PASSWORD 环境变量未设置，首次启动必须提供初始管理员密码'
+        );
+      }
 
       // 使用 IUserService 创建用户（会自动创建私人空间）
       if (!this.userService) {
         throw new Error('UserService 不可用，无法创建管理员账户');
       }
-      await this.userService.create({
+      const createdAdmin = await this.userService.create({
         email: adminEmail,
         username: adminUsername,
         password: adminPassword,
@@ -536,12 +513,16 @@ export class InitializationService implements OnModuleInit {
         roleId: adminRole.id,
       });
 
+      // #416 首登未改密标记：初始管理员创建后 passwordChangedAt 置 null（覆盖 create 默认写入的 now()），
+      // 据此判定"首登未改密"强制改密。
+      await this.prisma.user.update({
+        where: { id: createdAdmin.id },
+        data: { passwordChangedAt: null },
+      });
+
+      // 删除启动日志打印明文口令（#416 等保 8.1.4.1）：仅记录创建成功，不输出邮箱/用户名/密码
       this.logger.log(
-        `✅ 初始管理员账户创建成功！\n` +
-          `   邮箱: ${adminEmail}\n` +
-          `   用户名: ${adminUsername}\n` +
-          `   密码: ${adminPassword}\n` +
-          `   ⚠️  请在首次登录后立即修改密码！`
+        '✅ 初始管理员账户创建成功（请在首次登录后立即修改密码）'
       );
     } catch (error) {
       this.logger.error('创建初始管理员账户失败', error);

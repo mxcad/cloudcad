@@ -1,0 +1,293 @@
+import {
+  Injectable,
+  Inject,
+  Logger,
+  BadRequestException,
+} from '@nestjs/common';
+import { I18nContext } from 'nestjs-i18n';
+import { DatabaseService } from '../../database/database.service';
+import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
+import { AsyncConversionService } from './async-conversion.service';
+import { FileStatus } from '../../common/enums/file-status.enum';
+import { NodeType, Prisma } from '@cloudcad/db';
+import {
+  SubmitConversionTaskDto,
+  SubmitConversionTaskResponseDto,
+  ConversionTaskItemDto,
+  ConversionTaskListResponseDto,
+  ConversionHistoryResponseDto,
+} from './dto/conversion-task.dto';
+
+/** 面板云端列表上限（#469）：只取最近的任务，避免全表扫描 */
+const MAX_LIST = 50;
+
+/** 历史分页：每页默认 / 上限（#476） */
+const HISTORY_DEFAULT_LIMIT = 20;
+const HISTORY_MAX_LIMIT = 50;
+
+/**
+ * 统一转换任务服务（#467 / #468 / #469）
+ *
+ * 面板「云端」数据源：只有真正存到数据库、影响 node 状态的转换
+ * （node.taskId 非空）才记录到服务器。本服务提供：
+ * - 统一提交端点（#468）：打开类型（open + nodeId）复用 AsyncConversionService.convertNode
+ * - 统一状态查询端点（#469）：列出当前用户可访问的、taskId 非空的节点转换及其实时任务状态
+ *
+ * 本地（localStorage）数据源由前端负责（游客 / 公开图纸等无 nodeId 关联的转换），
+ * 不经过本服务。
+ */
+@Injectable()
+export class UnifiedConversionService {
+  private readonly logger = new Logger(UnifiedConversionService.name);
+
+  constructor(
+    private readonly asyncConversionService: AsyncConversionService,
+    @Inject(IFunctionExecutor) private readonly executor: IFunctionExecutor,
+    private readonly prisma: DatabaseService
+  ) {}
+
+  /**
+   * 统一提交转换任务（#468 / #474）。
+   * - 打开类型（open，默认）+ nodeId：复用 convertNode（建 node.taskId + PROCESSING + 后台转换）。
+   * - 下载类型（download）+ nodeId + format：复用 convertNodeForExport（后台预转换目标格式，
+   *   前端轮询到完成后调现有 downloadNodeWithFormat 命中缓存秒回）。
+   * 返回 taskId 供前端轮询 / 面板展示。无 nodeId（游客 / 公开图纸）由前端本地记录，此处显式 400。
+   *
+   * @param userId 当前用户 id（download 类型用于配额占位 + 导出服务鉴权；open 类型可选）
+   */
+  async submitTask(
+    dto: SubmitConversionTaskDto,
+    userId?: string
+  ): Promise<SubmitConversionTaskResponseDto> {
+    const nodeId = dto.target?.nodeId;
+    if (!nodeId) {
+      // 无 nodeId（游客 / 公开图纸）：本地记录，不经服务器统一提交端点
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.conversion_task.no_node_id') ??
+          '统一提交端点仅支持节点关联的转换（open/download + nodeId）；无节点关联的转换由前端本地记录'
+      );
+    }
+
+    if (dto.type === 'download') {
+      const format = dto.target?.format;
+      if (!format) {
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.conversion_task.download_requires_format') ??
+            '下载类型（download）必须提供目标格式（dwg/dxf/mxweb/pdf）'
+        );
+      }
+      if (!userId) {
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.conversion_task.download_requires_user') ??
+            '下载类型（download）需要登录用户（用于配额占位）'
+        );
+      }
+      const taskId = await this.asyncConversionService.convertNodeForExport(
+        nodeId,
+        format,
+        userId,
+        dto.priority ?? 2
+      );
+      return { taskId, nodeId, async: true };
+    }
+
+    // 打开类型（open，默认）
+    const taskId = await this.asyncConversionService.convertNode(
+      nodeId,
+      dto.priority ?? 1
+    );
+    return { taskId, nodeId, async: true };
+  }
+
+  /**
+   * 取消任务（#463）。仅 conversion-service 模式支持（executor.cancelTask 存在）；
+   * process-pool / cloud-faas 模式返回 ok=false + reason（前端据此隐藏取消入口）。
+   */
+  async cancelTask(taskId: string): Promise<{
+    ok: boolean;
+    status?: string;
+    reason?: string;
+  }> {
+    if (!this.executor.cancelTask) {
+      return {
+        ok: false,
+        reason:
+          I18nContext.current()?.t('error.conversion_task.cancel_not_supported') ??
+          '当前执行模式不支持取消（仅独立转换服务支持）',
+      };
+    }
+    return this.executor.cancelTask(taskId);
+  }
+
+  /**
+   * 统一状态查询（#469）：当前用户可访问的、taskId 非空且处于进行中/失败的节点转换。
+   * 对进行中（PROCESSING/UPLOADING）的节点解析实时任务状态（executor.getTaskStatus）。
+   */
+  async listTasks(
+    userId: string
+  ): Promise<ConversionTaskListResponseDto> {
+    const nodes = await this.prisma.fileSystemNode.findMany({
+      where: {
+        deletedAt: null,
+        deletedByCascade: false,
+        taskId: { not: null },
+        fileStatus: {
+          in: [FileStatus.PROCESSING, FileStatus.UPLOADING, FileStatus.FAILED],
+        },
+        OR: this.buildAccessFilter(userId),
+      },
+      select: {
+        id: true,
+        name: true,
+        fileStatus: true,
+        taskId: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: MAX_LIST,
+    });
+
+    const tasks: ConversionTaskItemDto[] = [];
+    for (const node of nodes) {
+      const fileStatus = node.fileStatus || FileStatus.COMPLETED;
+      let taskStatus: string | undefined;
+      let error: string | undefined;
+      let progress: number | undefined;
+      let permanent: boolean | undefined;
+      let queuePosition: number | undefined;
+      if (node.taskId) {
+        const inProgress =
+          fileStatus === FileStatus.PROCESSING ||
+          fileStatus === FileStatus.UPLOADING;
+        try {
+          const status = await this.executor.getTaskStatus(node.taskId);
+          if (inProgress) {
+            // 进行中节点：解析实时任务状态（状态 + 进度 + 错误）
+            taskStatus = status.status;
+            error = status.error;
+            // S4-2：透传转换进度（黑盒未上报时为 undefined）
+            progress = status.progress;
+            // S6-5：透传排队位置（仅排队中任务有意义，运行中/未入队为 undefined）
+            queuePosition = status.queuePosition;
+          } else if (fileStatus === FileStatus.FAILED) {
+            // S6-7：FAILED 节点据任务记录取 permanent + error。节点 fileStatus 为终态真相
+            //（taskStatus 不覆盖，面板据 fileStatus 展示「失败」），permanent 让面板区分
+            //「永久失败」（重试无意义）与普通「转换失败」；任务记录丢失（404）时 catch 降级。
+            error = status.error;
+            permanent = status.permanent;
+          }
+        } catch {
+          if (inProgress) taskStatus = 'UNKNOWN';
+          // FAILED 节点任务记录丢失：降级为普通失败（error/permanent 保持 undefined）
+        }
+      }
+      tasks.push({
+        nodeId: node.id,
+        name: node.name,
+        fileStatus,
+        taskId: node.taskId || undefined,
+        taskStatus,
+        progress,
+        error,
+        permanent,
+        queuePosition,
+        updatedAt: node.updatedAt.toISOString(),
+      });
+    }
+
+    return { tasks, total: tasks.length };
+  }
+
+  /**
+   * 转换历史分页查询（#476）：当前用户**自己账号**名下、已 COMPLETED 的**文件**节点。
+   * 供面板「转换·历史」区块滚动加载（offset 分页）。
+   *
+   * 范围语义（#478 收窄）：历史只列**归当前用户所有**（ownerId = userId）的文件，
+   * 不含"所在项目的他人文件"——面板要展示的是"我的转换记录 + 本地任务"，而非整个可访问文件库。
+   *
+   * 注意：历史 = 可打开的已完成文件（nodeType=FILE），**不要求 taskId 非空**——
+   * 绝大多数文件转换走同步路径，完成后 taskId 为 null（仅异步任务路径会写 taskId）。
+   * 若沿用 listTasks 的 `taskId: { not: null }` 会过滤掉几乎全部已完成文件，导致历史为空。
+   * 已完成为只读终态数据，无需解析实时任务状态。
+   *
+   * `search`（可选）：按文件名模糊匹配（DB 侧 contains），用于面板搜索框跨分页检索
+   * （前端只持有已加载页，无法搜到未加载数据，故搜索须下推到 DB）。
+   */
+  async listHistory(
+    userId: string,
+    limit?: number,
+    offset?: number,
+    search?: string
+  ): Promise<ConversionHistoryResponseDto> {
+    const clampedLimit = Number.isFinite(limit)
+      ? Math.min(Math.max(1, Math.floor(limit)), HISTORY_MAX_LIMIT)
+      : HISTORY_DEFAULT_LIMIT;
+    const clampedOffset = Number.isFinite(offset)
+      ? Math.max(0, Math.floor(offset))
+      : 0;
+    // 按文件名模糊搜索（DB 侧 contains，参数化无注入风险；空=不过滤）。
+    // Prisma 类型安全 API 无 iLike，contains 在 PG 上大小写敏感；如需不敏感后续用 raw ILIKE。
+    const trimmedSearch = search?.trim();
+
+    const where: Prisma.FileSystemNodeWhereInput = {
+      deletedAt: null,
+      deletedByCascade: false,
+      nodeType: NodeType.FILE,
+      fileStatus: FileStatus.COMPLETED,
+      ownerId: userId,
+      ...(trimmedSearch ? { name: { contains: trimmedSearch } } : {}),
+    };
+
+    // 排序加 id 兜底，避免同 updatedAt 跨页重复/遗漏
+    const [nodes, total] = await Promise.all([
+      this.prisma.fileSystemNode.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          fileStatus: true,
+          taskId: true,
+          updatedAt: true,
+        },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        skip: clampedOffset,
+        take: clampedLimit,
+      }),
+      this.prisma.fileSystemNode.count({ where }),
+    ]);
+
+    const tasks: ConversionTaskItemDto[] = nodes.map((node) => ({
+      nodeId: node.id,
+      name: node.name,
+      fileStatus: node.fileStatus || FileStatus.COMPLETED,
+      taskId: node.taskId || undefined,
+      updatedAt: node.updatedAt.toISOString(),
+    }));
+
+    return {
+      tasks,
+      total,
+      hasMore: clampedOffset + tasks.length < total,
+    };
+  }
+
+  /**
+   * 当前用户可访问节点的范围过滤（listTasks 实时任务用）：
+   * 项目文件（属主或成员）或个人空间（属主或成员）。
+   */
+  private buildAccessFilter(userId: string): Prisma.FileSystemNodeWhereInput[] {
+    const accessibleProjectFilter: Prisma.FileSystemNodeWhereInput = {
+      nodeType: NodeType.PROJECT,
+      OR: [{ ownerId: userId }, { projectMembers: { some: { userId } } }],
+    };
+    const userAccessFilter = [
+      { ownerId: userId },
+      { projectMembers: { some: { userId } } },
+    ];
+    return [
+      { project: accessibleProjectFilter },
+      { nodeType: NodeType.PROJECT, ...accessibleProjectFilter },
+      { nodeType: NodeType.PERSONAL_SPACE, OR: userAccessFilter },
+    ];
+  }
+}

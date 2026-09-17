@@ -12,8 +12,8 @@ export interface SystemHealth {
 
 /**
  * 系统监控中心 Tab 枚举（#217 定案）
- * backgroundTasks / conversionQueue / alertHistory 为预留位，
- * 分别由后续 #211 / 转换队列 / #209（#248 派发）实现。
+ * backgroundTasks / alertHistory 由 #211 / #248 实现；
+ * conversionQueue 由 #406（ADR-0058）实现。
  */
 export type MonitorTab =
   | 'core'
@@ -98,6 +98,144 @@ export interface CacheTrendPoint {
   value: number;
 }
 
+/* ==================== 转换队列监控（#406 / ADR-0058） ==================== */
+
+export type ConversionMode =
+  | 'process-pool'
+  | 'conversion-service'
+  | 'cloud-faas';
+
+/** conversion-service 模式：单级工作池（优先级 1=upload / 2=export / 3=thumbnail） */
+export interface ConversionWorkerLevel {
+  label: string;
+  maxConcurrent: number;
+  currentMax: number;
+  running: number;
+  waiting: number;
+  autoScale: boolean;
+  backlogSince: number | null;
+}
+
+/** 历史采样点（30s 间隔；null 表示该模式无此字段） */
+export interface ConversionHistoryPoint {
+  t: number;
+  queueDepth: number | null;
+  running: number | null;
+  p95DurationMs: number | null;
+}
+
+/**
+ * 转换队列监控页面状态（从 SDK 宽松类型防御性解析而来）
+ * process-pool 与 conversion-service 字段按模式互斥填充，无数据为 null
+ */
+export interface ConversionQueueState {
+  mode: ConversionMode;
+  /** process-pool：队列深度 / 运行中 / 并发上限 / 超时阈值 */
+  queueLength: number | null;
+  criticalQueueLength: number | null;
+  highQueueLength: number | null;
+  lowQueueLength: number | null;
+  runningCount: number | null;
+  maxConcurrent: number | null;
+  timeoutMs: number | null;
+  /** process-pool：最近完成任务的执行耗时 / 排队等待时长（P50/P95，ms） */
+  p50DurationMs: number | null;
+  p95DurationMs: number | null;
+  p50WaitMs: number | null;
+  p95WaitMs: number | null;
+  durationSampleCount: number;
+  /** conversion-service：任务计数 */
+  tasksPending: number | null;
+  tasksProcessing: number | null;
+  tasksCompleted: number | null;
+  tasksFailed: number | null;
+  /** conversion-service：终态任务执行耗时（P50/P95，ms） */
+  p50TaskMs: number | null;
+  p95TaskMs: number | null;
+  /** conversion-service：三级工作池（含自动扩容状态） */
+  workers: ConversionWorkerLevel[];
+  /** conversion-service 拉取失败原因（成功为 null） */
+  conversionServiceError: string | null;
+  /** 24h 历史采样（旧→新；重启后为空） */
+  history: ConversionHistoryPoint[];
+}
+
+/**
+ * SDK 返回的 ConversionMonitorStatsDto 嵌套字段为宽松类型
+ * （{[key: string]: unknown}），在此做防御性解析为页面级具体类型
+ * （与 parseCacheSummary 模式一致）
+ */
+export function parseConversionMonitorStats(
+  raw: unknown
+): ConversionQueueState {
+  const root = (raw ?? {}) as Record<string, unknown>;
+  const mode: ConversionMode =
+    root.mode === 'conversion-service' || root.mode === 'cloud-faas'
+      ? root.mode
+      : 'process-pool';
+
+  const pp = (root.processPool ?? {}) as Record<string, unknown>;
+  const ppDuration = (pp.duration ?? {}) as Record<string, unknown>;
+  const cs = (root.conversionService ?? {}) as Record<string, unknown>;
+  const csTasks = (cs.tasks ?? {}) as Record<string, unknown>;
+  const csDuration = (cs.duration ?? {}) as Record<string, unknown>;
+  const csWorkersRaw = (cs.workers ?? {}) as Record<string, unknown>;
+
+  const workers: ConversionWorkerLevel[] = Object.entries(csWorkersRaw).map(
+    ([key, value]) => {
+      const w = (value ?? {}) as Record<string, unknown>;
+      return {
+        label: typeof w.label === 'string' ? w.label : key,
+        maxConcurrent: toNumber(w.maxConcurrent),
+        currentMax: toNumber(w.currentMax),
+        running: toNumber(w.running),
+        waiting: toNumber(w.waiting),
+        autoScale: toBoolean(w.autoScale),
+        backlogSince: toNumberOrNull(w.backlogSince),
+      };
+    }
+  );
+
+  const historyRaw = Array.isArray(root.history) ? root.history : [];
+  const history: ConversionHistoryPoint[] = historyRaw.map((item) => {
+    const h = (item ?? {}) as Record<string, unknown>;
+    return {
+      t: toNumber(h.t),
+      queueDepth: toNumberOrNull(h.queueDepth),
+      running: toNumberOrNull(h.running),
+      p95DurationMs: toNumberOrNull(h.p95DurationMs),
+    };
+  });
+
+  return {
+    mode,
+    queueLength: toNumberOrNull(pp.queueLength),
+    criticalQueueLength: toNumberOrNull(pp.criticalPriorityQueueLength),
+    highQueueLength: toNumberOrNull(pp.highPriorityQueueLength),
+    lowQueueLength: toNumberOrNull(pp.lowPriorityQueueLength),
+    runningCount: toNumberOrNull(pp.runningCount),
+    maxConcurrent: toNumberOrNull(pp.maxConcurrent),
+    timeoutMs: toNumberOrNull(pp.timeout),
+    p50DurationMs: toNumberOrNull(ppDuration.p50DurationMs),
+    p95DurationMs: toNumberOrNull(ppDuration.p95DurationMs),
+    p50WaitMs: toNumberOrNull(ppDuration.p50WaitMs),
+    p95WaitMs: toNumberOrNull(ppDuration.p95WaitMs),
+    durationSampleCount: toNumber(ppDuration.sampleCount),
+    tasksPending: toNumberOrNull(csTasks.pending),
+    tasksProcessing: toNumberOrNull(csTasks.processing),
+    tasksCompleted: toNumberOrNull(csTasks.completed),
+    tasksFailed: toNumberOrNull(csTasks.failed),
+    p50TaskMs: toNumberOrNull(csDuration.p50Ms),
+    p95TaskMs: toNumberOrNull(csDuration.p95Ms),
+    workers,
+    conversionServiceError:
+      typeof root.conversionServiceError === 'string'
+        ? root.conversionServiceError
+        : null,
+    history,
+  };
+}
+
 /* ==================== 告警历史（#248） ==================== */
 
 export interface AlertPagination {
@@ -154,6 +292,16 @@ export interface TaskRunRecord {
   createdAt: string;
 }
 
+/** 已注册后台任务（任务清单，驱动源 = GET /admin/tasks/tasks） */
+export interface TaskInfo {
+  taskName: string;
+  description: string;
+  /** 定时 cron 表达式（服务器时区）；null = 无独立定时（随宿主任务执行或仅手动触发） */
+  schedule: string | null;
+  /** 定时的人类可读描述（主展示，如「每天 02:00」）；null = 无独立定时 */
+  scheduleLabel: string | null;
+}
+
 /**
  * taskName → runtime-config 开关 key（与后端 task-run.constants.ts
  * TASK_NAMES / TASK_ENABLED_KEYS 一一对应，#210 定案）
@@ -203,6 +351,26 @@ export function parseTaskRunList(raw: unknown): TaskRunRecord[] {
   });
 }
 
+/**
+ * SDK 返回的 TaskListResponseDto.data 为宽松类型，在此做防御性解析为 TaskInfo[]
+ */
+export function parseTaskList(raw: unknown): TaskInfo[] {
+  const root = (raw ?? {}) as Record<string, unknown>;
+  if (!Array.isArray(root.data)) return [];
+  return root.data
+    .map((item) => {
+      const r = (item ?? {}) as Record<string, unknown>;
+      return {
+        taskName: typeof r.taskName === 'string' ? r.taskName : '',
+        description: typeof r.description === 'string' ? r.description : '',
+        schedule: typeof r.schedule === 'string' ? r.schedule : null,
+        scheduleLabel:
+          typeof r.scheduleLabel === 'string' ? r.scheduleLabel : null,
+      };
+    })
+    .filter((item) => item.taskName !== '');
+}
+
 const toNumberOrNull = (v: unknown): number | null => {
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : null;
@@ -210,7 +378,7 @@ const toNumberOrNull = (v: unknown): number | null => {
 
 /**
  * SDK 返回的 CacheMonitoringSummaryDto 为宽松类型（嵌套对象 unknown），
- * 在此做防御性解析为页面级具体类型（与 QueueStatsCard 模式一致）
+ * 在此做防御性解析为页面级具体类型
  */
 export function parseCacheSummary(raw: unknown): CacheMonitorSummary {
   const root = (raw ?? {}) as Record<string, unknown>;

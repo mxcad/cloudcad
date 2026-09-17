@@ -124,7 +124,10 @@ export function useFileOpenGuard({
       import('../services/mxcadManager')
         .then(({ refreshFileName, mxcadManager }) => {
           refreshFileName();
-          if (fileId) {
+          // 仅在引擎已完全就绪时 reload，避免与 config.openFile 的首次加载竞态：
+          // 引擎未就绪时 reloadCurrentFile 会发起并发 openWebFile 请求，
+          // 若此时 config.openFile 正在进行中，可能导致 401（token 被刷新失效）
+          if (fileId && mxcadManager.isReady()) {
             mxcadManager
               .reloadCurrentFile()
               .catch(() =>

@@ -6,6 +6,7 @@ auth:
   account_deactivated_expired: "Your account has been deactivated and the grace period has passed. Please contact support to restore it. Your data will be permanently deleted after 30 days."
   user_disabled: "User has been disabled"
   user_not_found_or_disabled: "User does not exist or has been disabled"
+  session_transfer_invalid: "Transfer credential is invalid or expired"
   refresh_token_invalid_type: "Invalid refresh token type"
   registration_disabled: "Registration is currently disabled"
   not_logged_in: "Not logged in"
@@ -56,6 +57,8 @@ auth:
   wechat_refresh_failed: "Failed to refresh authorization"
   wechat_verification_failed: "WeChat verification failed"
   wechat_not_match_account: "This WeChat account does not match the current account"
+  password_change_required: "Your password has expired or has not been changed since first login. Please change it now."
+  password_expiring_soon: "Your password is about to expire. We recommend changing it soon."
 
 account_binding:
   email_service_disabled: "Email service is not enabled, cannot bind email"
@@ -139,6 +142,8 @@ project_member:
   only_owner_can_transfer: "Only the project owner can transfer the project"
   cannot_remove_admin: "Only the project owner can remove an admin"
   cannot_modify_admin_role: "Only the project owner can modify an admin's role"
+  cannot_modify_self_role: "You cannot modify your own role"
+  cannot_remove_self: "You cannot remove yourself"
   only_owner_can_delete: "Only the project owner can delete the project"
   cannot_transfer_to_self: "Cannot transfer to yourself"
   transfer_target_must_be_member: "Transfer target must be a project member"
@@ -321,6 +326,15 @@ database:
 
 rate_limit:
   too_many_requests: "Too many requests, please try again later"
+  account_locked: "Account has been temporarily locked due to repeated login failures. Please try again in {minutes} minutes."
+
+password_policy:
+  too_short: "Password must be at least {min} characters long"
+  complexity: "Password must contain at least 3 of the following: uppercase, lowercase, digits, special characters"
+  weak: "Password is too weak (matches a common weak password). Please use a stronger password"
+
+initialization:
+  admin_password_required: "INITIAL_ADMIN_PASSWORD environment variable is not set. An initial admin password is required on first startup."
 
 ip_blacklist:
   invalid_ip: "Invalid IP or CIDR format"
@@ -336,6 +350,12 @@ ip_whitelist:
 
 admin_auth:
   ip_not_allowed: "Your IP is not in the admin whitelist; login is forbidden"
+
+mfa:
+  required: "Two-factor authentication code is required"
+  code_invalid: "Invalid two-factor authentication code, please try again"
+  setup_required: "Please complete TOTP two-factor setup first"
+  already_enabled: "TOTP is already enabled, no need to set up again"
 
 resource:
   not_found: "Requested resource does not exist"
@@ -566,3 +586,11 @@ alert:
   not_found: "Alert does not exist"
 task_run:
   not_found: "Task does not exist or is not registered"
+security:
+  brute_force_suspected: "Account {account} locked after {count} consecutive login failures; suspected brute-force attack, locked for {minutes} minutes"
+conversion_task:
+  no_node_id: "The unified submit endpoint only supports node-linked conversions (open/download + nodeId); node-less conversions are recorded locally by the frontend"
+  download_requires_format: "Download type (download) requires a target format (dwg/dxf/mxweb/pdf)"
+  download_requires_user: "Download type (download) requires a logged-in user (for quota reservation)"
+  cancel_not_supported: "The current execution mode does not support cancellation (only the standalone conversion service supports it)"
+  task_lost: "The conversion task was lost (the service may have restarted); please reopen the drawing"

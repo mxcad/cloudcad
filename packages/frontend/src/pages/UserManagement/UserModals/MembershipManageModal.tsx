@@ -13,11 +13,11 @@ import { FREE_TIER_LEVEL } from '@/constants/vip';
 import styles from '../UserManagement.module.css';
 
 const PRESET_DURATIONS = [
-  { days: 7, label: '7 天' },
-  { days: 30, label: '30 天' },
-  { days: 90, label: '90 天' },
-  { days: 180, label: '180 天' },
-  { days: 365, label: '365 天' },
+  { days: 7, label: t('{n} 天', { n: '7' }) },
+  { days: 30, label: t('{n} 天', { n: '30' }) },
+  { days: 90, label: t('{n} 天', { n: '90' }) },
+  { days: 180, label: t('{n} 天', { n: '180' }) },
+  { days: 365, label: t('{n} 天', { n: '365' }) },
 ];
 
 const ADJUST_QUICK_DAYS = [7, 30, 90, 180, 365];

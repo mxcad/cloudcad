@@ -10,7 +10,14 @@ import {
 } from 'lucide-react';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  lazy,
+  Suspense,
+} from 'react';
 import { Button, Tab, Tabs, Tag } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { usePermission } from '@/hooks/usePermission';
@@ -34,6 +41,9 @@ import { EditUserModal } from './UserModals/EditUserModal';
 import { MembershipManageModal } from './UserModals/MembershipManageModal';
 import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
 import styles from './UserManagement.module.css';
+
+// 运营统计嵌入本页 Tab（独立路由 /admin/stats 仍保留深链可用）
+const AdminStatsPage = lazy(() => import('../AdminStatsPage'));
 
 export const UserManagement = () => {
   useDocumentTitle(t('用户管理'));
@@ -85,7 +95,9 @@ export const UserManagement = () => {
         setTierOptions(options);
       })
       .catch(() => {});
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const apiParams = useMemo(
@@ -99,7 +111,16 @@ export const UserManagement = () => {
       page: currentPage,
       limit: pageSize,
     }),
-    [searchQuery, roleFilter, tierFilter, userTab, sortBy, sortOrder, currentPage, pageSize]
+    [
+      searchQuery,
+      roleFilter,
+      tierFilter,
+      userTab,
+      sortBy,
+      sortOrder,
+      currentPage,
+      pageSize,
+    ]
   );
 
   const {
@@ -202,7 +223,15 @@ export const UserManagement = () => {
   // 查询身份（tab/搜索/角色/排序）变化时清空选择（历史选择不再指向当前列表）
   useEffect(() => {
     clearSelection();
-  }, [userTab, searchQuery, roleFilter, tierFilter, sortBy, sortOrder, clearSelection]);
+  }, [
+    userTab,
+    searchQuery,
+    roleFilter,
+    tierFilter,
+    sortBy,
+    sortOrder,
+    clearSelection,
+  ]);
 
   // 批量注销（仅软删，进入冷静期；确认弹窗由 DeleteUserConfirm count 模式承担）
   const openBatchDelete = () => {
@@ -284,15 +313,15 @@ export const UserManagement = () => {
   };
 
   // 多选快捷键：ESC 清空 / Ctrl+A 全选 / Delete 批量注销（仅活跃 tab + 删除权限）
-  const canDeletePermission = hasPermission(SystemPermission.SYSTEM_USER_DELETE);
+  const canDeletePermission = hasPermission(
+    SystemPermission.SYSTEM_USER_DELETE
+  );
   useSelectionShortcuts({
     enabled: !loading,
     onClearSelection: clearSelection,
     onSelectAll: handleSelectAll,
     onDeleteSelected:
-      userTab === 'active' && canDeletePermission
-        ? openBatchDelete
-        : undefined,
+      userTab === 'active' && canDeletePermission ? openBatchDelete : undefined,
     canDelete: selectedCount > 0,
   });
 
@@ -535,7 +564,6 @@ export const UserManagement = () => {
     }
   };
 
-
   if (!canAccess) {
     return (
       <div className={styles.userManagementContainer}>
@@ -586,7 +614,7 @@ export const UserManagement = () => {
       )}
 
       {/* 首屏/查询无内容时的错误 banner（列表已有内容时由底部失败条提示，见 UserTable loadError） */}
-      {error && viewUsers.length === 0 && (
+      {userTab !== 'stats' && error && viewUsers.length === 0 && (
         <div className={styles.errorBanner}>
           <XCircle size={18} />
           <span>{error}</span>
@@ -657,113 +685,126 @@ export const UserManagement = () => {
           >
             {t('已注销')}
           </Tab>
+          <Tab active={userTab === 'stats'} onClick={() => setUserTab('stats')}>
+            {t('运营统计')}
+          </Tab>
         </Tabs>
       )}
 
-      <UserSearchBar
-        searchQuery={searchQuery}
-        onSearchChange={(q) => {
-          setSearchQuery(q);
-          setCurrentPage(1);
-        }}
-        roleFilter={roleFilter}
-        onRoleFilterChange={(r) => {
-          setRoleFilter(r);
-          setCurrentPage(1);
-        }}
-        roles={roles}
-        tierFilter={tierFilter}
-        onTierFilterChange={(tier) => {
-          setTierFilter(tier);
-          setCurrentPage(1);
-        }}
-        tierOptions={tierOptions}
-        sortBy={sortBy}
-        onSortByChange={(field) => {
-          setSortBy(field);
-          setCurrentPage(1); // 排序变化重置页码：新排序下深层页码无意义
-        }}
-        sortOrder={sortOrder}
-        onSortOrderChange={(order) => {
-          setSortOrder(order);
-          setCurrentPage(1);
-        }}
-      />
-
-      <div className={styles.usersTableCard}>
-        {/* 表格撑满剩余空间（页面恒一屏，列表内部滚动） */}
-        <div className="flex-1 min-h-0 flex flex-col">
-          <UserTable
-            users={viewUsers}
-            mailEnabled={mailEnabled}
-            smsEnabled={smsEnabled}
-            canEdit={hasPermission(SystemPermission.SYSTEM_USER_UPDATE)}
-            canDelete={canDeletePermission}
-            canManageMembership={hasPermission(
-              SystemPermission.SYSTEM_USER_MEMBERSHIP_MANAGE
-            )}
-            selectedIds={selectedNodes}
-            onToggleSelect={handleNodeSelect}
-            onToggleSelectAll={handleSelectAll}
-            onRubberBandSelect={selectMany}
-            paginationMeta={{
-              total: totalUsers,
-              page: currentPage,
-              limit: pageSize,
-              // 不 || 1：totalPages 未同步（total=0）时为 0，防首屏误报「已经是最后一页」
-              totalPages: Math.ceil(totalUsers / pageSize),
-            }}
-            onPageChange={(next) => {
-              clearSelection();
-              setCurrentPage(next);
-            }}
-            showSizeChanger
-            onPageSizeChange={handlePageSizeChange}
-            pageSizeOptions={[30, 50, 100]}
-            onScrollPageChange={handleScrollPageChange}
-            minLoadedPage={minLoadedPage}
-            loadError={error && viewUsers.length > 0 ? error : null}
-            onRetryLoadMore={loadUsers}
-            onEdit={handleOpenEdit}
-            onDelete={handleDelete}
-            onRestore={handleRestore}
-            onManageMembership={handleOpenMembership}
-            userTab={userTab}
-            loading={loading}
-            // 底部悬浮操作栏：列表滚动容器内 sticky 吸底（列表撑满一屏，不遮分页栏）
-            bottomBar={
-              selectedCount > 0 ? (
-                <BatchActionBar
-                  count={selectedCount}
-                  onClear={clearSelection}
-                  actions={
-                    userTab === 'deleted'
-                      ? [
-                          {
-                            key: 'restore',
-                            label: t('批量恢复'),
-                            loading: batchRestoring,
-                            onClick: () => void handleBatchRestore(),
-                          },
-                        ]
-                      : canDeletePermission
-                        ? [
-                            {
-                              key: 'delete',
-                              label: t('批量注销'),
-                              variant: 'danger',
-                              loading: batchDeleting,
-                              onClick: openBatchDelete,
-                            },
-                          ]
-                        : []
-                  }
-                />
-              ) : undefined
-            }
-          />
+      {userTab === 'stats' ? (
+        <div className={styles.statsPanel}>
+          <Suspense fallback={null}>
+            <AdminStatsPage embedded />
+          </Suspense>
         </div>
-      </div>
+      ) : (
+        <>
+          <UserSearchBar
+            searchQuery={searchQuery}
+            onSearchChange={(q) => {
+              setSearchQuery(q);
+              setCurrentPage(1);
+            }}
+            roleFilter={roleFilter}
+            onRoleFilterChange={(r) => {
+              setRoleFilter(r);
+              setCurrentPage(1);
+            }}
+            roles={roles}
+            tierFilter={tierFilter}
+            onTierFilterChange={(tier) => {
+              setTierFilter(tier);
+              setCurrentPage(1);
+            }}
+            tierOptions={tierOptions}
+            sortBy={sortBy}
+            onSortByChange={(field) => {
+              setSortBy(field);
+              setCurrentPage(1); // 排序变化重置页码：新排序下深层页码无意义
+            }}
+            sortOrder={sortOrder}
+            onSortOrderChange={(order) => {
+              setSortOrder(order);
+              setCurrentPage(1);
+            }}
+          />
+
+          <div className={styles.usersTableCard}>
+            {/* 表格撑满剩余空间（页面恒一屏，列表内部滚动） */}
+            <div className="flex-1 min-h-0 flex flex-col">
+              <UserTable
+                users={viewUsers}
+                mailEnabled={mailEnabled}
+                smsEnabled={smsEnabled}
+                canEdit={hasPermission(SystemPermission.SYSTEM_USER_UPDATE)}
+                canDelete={canDeletePermission}
+                canManageMembership={hasPermission(
+                  SystemPermission.SYSTEM_USER_MEMBERSHIP_MANAGE
+                )}
+                selectedIds={selectedNodes}
+                onToggleSelect={handleNodeSelect}
+                onToggleSelectAll={handleSelectAll}
+                onRubberBandSelect={selectMany}
+                paginationMeta={{
+                  total: totalUsers,
+                  page: currentPage,
+                  limit: pageSize,
+                  // 不 || 1：totalPages 未同步（total=0）时为 0，防首屏误报「已经是最后一页」
+                  totalPages: Math.ceil(totalUsers / pageSize),
+                }}
+                onPageChange={(next) => {
+                  clearSelection();
+                  setCurrentPage(next);
+                }}
+                showSizeChanger
+                onPageSizeChange={handlePageSizeChange}
+                pageSizeOptions={[30, 50, 100]}
+                onScrollPageChange={handleScrollPageChange}
+                minLoadedPage={minLoadedPage}
+                loadError={error && viewUsers.length > 0 ? error : null}
+                onRetryLoadMore={loadUsers}
+                onEdit={handleOpenEdit}
+                onDelete={handleDelete}
+                onRestore={handleRestore}
+                onManageMembership={handleOpenMembership}
+                userTab={userTab}
+                loading={loading}
+                // 底部悬浮操作栏：列表滚动容器内 sticky 吸底（列表撑满一屏，不遮分页栏）
+                bottomBar={
+                  selectedCount > 0 ? (
+                    <BatchActionBar
+                      count={selectedCount}
+                      onClear={clearSelection}
+                      actions={
+                        userTab === 'deleted'
+                          ? [
+                              {
+                                key: 'restore',
+                                label: t('批量恢复'),
+                                loading: batchRestoring,
+                                onClick: () => void handleBatchRestore(),
+                              },
+                            ]
+                          : canDeletePermission
+                            ? [
+                                {
+                                  key: 'delete',
+                                  label: t('批量注销'),
+                                  variant: 'danger',
+                                  loading: batchDeleting,
+                                  onClick: openBatchDelete,
+                                },
+                              ]
+                            : []
+                      }
+                    />
+                  ) : undefined
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {editingUser ? (
         <EditUserModal

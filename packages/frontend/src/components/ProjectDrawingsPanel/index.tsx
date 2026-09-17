@@ -47,6 +47,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
   libraryType,
   doubleClickToOpen = false,
   visible = true,
+  tabId,
 }) => {
   const data = useProjectDrawingsData({
     projectId,
@@ -56,6 +57,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     isModified,
     libraryType,
     visible,
+    tabId,
   });
   const actions = useProjectDrawingsActions({
     data,
@@ -76,6 +78,7 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     personalSpaceId,
     parentId: initialParentId,
     libraryType,
+    tabId,
   });
 
   const {

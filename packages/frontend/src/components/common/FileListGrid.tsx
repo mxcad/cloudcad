@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
-import { ListSkeleton } from '@/components/common/ListSkeleton';
 import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
 import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
 import { useScrollPagination } from '@/hooks/common/useScrollPagination';
@@ -246,12 +245,16 @@ export const FileListGrid: React.FC<FileListGridProps> = ({
             rubberBandJustEndedRef={rubberBandJustEndedRef}
             rubberBandOverlay={rubberBandOverlay}
           />
-          {/* 底部指示：加载中骨架 / 翻页失败提示（仅已有内容时）/ 已经是最后一页（互斥） */}
+          {/* 底部指示：加载中提示 / 翻页失败提示（仅已有内容时）/ 已经是最后一页（互斥） */}
           {showBottomLoader ? (
-            <ListSkeleton
-              variant={viewMode === 'grid' ? 'grid' : 'list'}
-              count={viewMode === 'grid' ? 6 : 3}
-            />
+            <div
+              data-testid="bottom-loader"
+              className="flex items-center justify-center gap-2 py-2 text-xs"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <Loader2 size={14} className="animate-spin" />
+              <span>{t('加载中...')}</span>
+            </div>
           ) : loadError && nodes.length > 0 ? (
             <div
               data-testid="load-more-error"

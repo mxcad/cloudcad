@@ -825,6 +825,127 @@
   font-size: var(--text-md);
 }
 
+/* ==================== 转换队列 ETA + 永久失败列表（#478） ==================== */
+.etaLine {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-default);
+  border-radius: 10px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.etaLine svg {
+  color: var(--primary-500);
+  flex-shrink: 0;
+}
+
+.knownBadList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.knownBadItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--danger);
+  border-radius: 10px;
+  font-size: var(--text-sm);
+}
+
+.knownBadKey {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 32%;
+  min-width: 0;
+  font-family: monospace;
+  font-size: var(--text-xs);
+  color: var(--danger);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knownBadKey svg {
+  flex-shrink: 0;
+}
+
+.knownBadReason {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knownBadMarked {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  font-size: var(--text-sm);
+}
+
+.taskId {
+  flex: 0 0 100px;
+  min-width: 0;
+  font-family: monospace;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskProgress {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  min-width: 40px;
+  text-align: right;
+}
+
+.taskError {
+  flex: 1;
+  min-width: 0;
+  color: var(--danger);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskTime {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
 /* ==================== 缓存 Key 操作区（#217） ==================== */
 .keyOpsCard {
   position: relative;
@@ -1051,6 +1172,27 @@
   font-size: var(--text-xs);
   color: var(--text-secondary);
   display: block;
+}
+
+/* 任务清单描述列 */
+.taskDescriptionCell {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  display: block;
+}
+
+/* 任务清单定时列（cron 表达式，等宽字体） */
+.taskScheduleCell {
+  font-family: var(--font-family-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  display: block;
+}
+
+/* 任务清单无独立开关的占位符（置灰「—」） */
+.taskNoToggle {
+  color: var(--text-tertiary);
+  cursor: default;
 }
 
 .taskErrorSummary {

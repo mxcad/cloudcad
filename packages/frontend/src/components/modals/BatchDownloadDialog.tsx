@@ -64,8 +64,13 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
     'mono'
   );
   const [loading, setLoading] = useState(false);
-  const { createZipTask, createIndividualTask, downloadAllItems, pollTaskUntilDone } =
-    useBatchDownload(showToast);
+  const {
+    createZipTask,
+    createIndividualTask,
+    downloadAllItems,
+    pollTaskUntilDone,
+    syncIndividualTerminal,
+  } = useBatchDownload(showToast);
   const isFolder = dialogMode === 'folder';
   const membership = useMembership();
   const { config } = useRuntimeConfig();
@@ -184,6 +189,8 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
 
   /** individual 任务轮询取消标志：用户关闭 dialog 时置位（任务后台继续，可从下载管理重下） */
   const pollCancelRef = useRef(false);
+  /** 当前正在轮询的 individual 任务 id（关闭 dialog 时做终态兜底回写，防"等待中"残留） */
+  const individualTaskIdRef = useRef<string | null>(null);
   const [individualProgress, setIndividualProgress] = useState<{
     completed: number;
     total: number;
@@ -191,6 +198,12 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
 
   const handleClose = () => {
     pollCancelRef.current = true;
+    // 中途关闭：individual 任务无 SSE，轮询已停，store 停中间态。
+    // 查一次进度，若后端已终态则回写并移除，避免"等待中"残留（症状 2/3 复发）
+    if (individualTaskIdRef.current) {
+      void syncIndividualTerminal(individualTaskIdRef.current);
+      individualTaskIdRef.current = null;
+    }
     onClose();
   };
 
@@ -258,14 +271,17 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
       );
       if (created) {
         pollCancelRef.current = false;
+        individualTaskIdRef.current = created.taskId;
         setIndividualProgress({ completed: 0, total: batchItems.length });
         const done = await pollTaskUntilDone(
           created.taskId,
           (completed, total) => setIndividualProgress({ completed, total }),
-          () => pollCancelRef.current
+          () => pollCancelRef.current,
+          false // 保留任务记录在 Download Tab 中，用户可看到下载历史
         );
         setIndividualProgress(null);
-        if (!done) return; // 用户中途关闭：任务后台继续，可从下载管理手动重下
+        if (!done) return; // 用户中途关闭：handleClose 已做终态兜底回写
+        individualTaskIdRef.current = null; // 正常完成：任务已移除，无需再兜底
         if (done.status === 'COMPLETED') {
           await downloadAllItems({
             taskId: created.taskId,

@@ -12,10 +12,15 @@ import { useCoreServices } from './hooks/useCoreServices';
 import { useCacheMonitor } from './hooks/useCacheMonitor';
 import { useAlertHistory } from './hooks/useAlertHistory';
 import { useBackgroundTasks } from './hooks/useBackgroundTasks';
+import {
+  useConversionQueue,
+  useConversionTasks,
+} from './hooks/useConversionQueue';
 import { CoreServicesTab } from './components/CoreServicesTab';
 import { CacheMonitorTab } from './components/CacheMonitorTab';
 import { AlertHistoryTab } from './components/AlertHistoryTab';
 import { BackgroundTasksTab } from './components/BackgroundTasksTab';
+import { ConversionQueueTab } from './components/ConversionQueueTab';
 import { MONITOR_TABS } from './types';
 import type { MonitorTab } from './types';
 import styles from './SystemMonitorPage.module.css';
@@ -25,6 +30,7 @@ const AVAILABLE_TABS: MonitorTab[] = [
   'core',
   'cache',
   'backgroundTasks',
+  'conversionQueue',
   'alertHistory',
 ];
 
@@ -50,6 +56,8 @@ export const SystemMonitorPage: React.FC = () => {
   const cacheMonitor = useCacheMonitor(activeTab === 'cache');
   const alertHistory = useAlertHistory(activeTab === 'alertHistory', alertPage);
   const backgroundTasks = useBackgroundTasks(activeTab === 'backgroundTasks');
+  const conversionQueue = useConversionQueue(activeTab === 'conversionQueue');
+  const conversionTasks = useConversionTasks(activeTab === 'conversionQueue');
 
   useEffect(() => {
     const canAccess = hasPermission(SystemPermission.SYSTEM_MONITOR);
@@ -187,6 +195,21 @@ export const SystemMonitorPage: React.FC = () => {
         )}
         {activeTab === 'backgroundTasks' && (
           <BackgroundTasksTab state={backgroundTasks} />
+        )}
+        {activeTab === 'conversionQueue' && (
+          <ConversionQueueTab
+            state={conversionQueue.state}
+            loading={conversionQueue.loading}
+            error={conversionQueue.error}
+            knownBad={conversionQueue.knownBad}
+            onRefresh={conversionQueue.refresh}
+            canReset={conversionQueue.canReset}
+            resetting={conversionQueue.resetting}
+            onReset={conversionQueue.resetKnownBad}
+            tasks={conversionTasks.tasks}
+            tasksLoading={conversionTasks.loading}
+            tasksError={conversionTasks.error}
+          />
         )}
       </main>
     </div>

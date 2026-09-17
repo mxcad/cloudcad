@@ -55,7 +55,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [centos7, ubuntu22, ubuntu24, rocky8, rocky9, debian]
+        # ADR-0059 决策 2：发行版收敛到 3 个 glibc 档位（centos7/ubuntu22/rocky9），
+        # 砍掉 ubuntu24/rocky8/debian（glibc 与三档重叠或可被代表）
+        os: [centos7, ubuntu22, rocky9]
         arch: ${{ fromJSON(needs.detect-arch.outputs.linux-arch) }}
     steps:
       - uses: actions/checkout@v4
@@ -122,11 +124,53 @@ jobs:
             fi
           done
 
+      # ADR-0059：下载 runtime 依赖包（node/pg/redis/svn 内容寻址资产），解压到
+      # runtime/cache/linux-extract/<os>/。pack-linux-deploy.js 的容器挂载该目录后，
+      # extract-linux-runtime.js 检测到已提取即跳过 apt/dnf/yum 重复安装 + 收集依赖库。
+      # 多源回退：经 scripts/lib/download-sources.js（GitHub 主源 → 内置公开镜像 → 用户自定义源）。
+      - name: 下载 runtime 依赖包（复用，避免重复提取）
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          os="${{ matrix.os }}"
+          arch="${{ matrix.arch }}"
+          # 组件版本指纹（与 scripts/pack-runtime-deps.js COMPONENT_VERSIONS 一致）
+          fingerprint="node20.19.5-pg15-redis5"
+          asset="cloudcad-runtime-deps-${os}-${arch}-${fingerprint}.tar.gz"
+          cacheDir="runtime/cache/linux-extract/${os}"
+          echo "下载 runtime 依赖包: ${asset}"
+          node -e "
+            const { downloadFile } = require('./scripts/lib/download-sources');
+            const fs = require('fs'); const path = require('path');
+            const os = process.argv[1], arch = process.argv[2], fp = process.argv[3];
+            const asset = 'cloudcad-runtime-deps-' + os + '-' + arch + '-' + fp + '.tar.gz';
+            const canonical = 'https://github.com/mxcad/cloudcad/releases/download/runtime-deps/' + asset;
+            const dest = path.join('runtime', 'cache', 'linux-extract', os + '.tar.gz');
+            fs.mkdirSync(path.dirname(dest), { recursive: true });
+            downloadFile(canonical, dest, { onTry: (s) => console.log('尝试源: ' + s.label) })
+              .then(({ url, bytes }) => console.log('✓ 下载 ' + asset + ' (' + (bytes/1024/1024).toFixed(1) + ' MB) 自 ' + url))
+              .catch((e) => { console.error(e.message); process.exit(1); });
+          " "$os" "$arch" "$fingerprint"
+          mkdir -p "${cacheDir}"
+          tar -xzf "runtime/cache/linux-extract/${os}.tar.gz" -C "${cacheDir}"
+          rm -f "runtime/cache/linux-extract/${os}.tar.gz"
+          echo "✓ runtime 依赖包已解压到 ${cacheDir}/（node/postgres/redis/subversion）"
+
       # 用 Docker 打包 Linux 部署包（QEMU/多架构见上方注释）
       - name: 打包 Linux 部署包
         env:
           CI: 'true'
         run: node scripts/pack-linux-deploy.js --os "${{ matrix.os }}"
+
+      # ADR-0059 决策 8：断网启动验证硬门禁——docker run --network none 在发行版匹配的基础镜像内
+      # 解压包 + 启动全服务（postgres/redis/backend/frontend/cooperate/config-service）+ 健康检查。
+      # 验证失败 → 本 job 失败 → 下方上传步骤不执行（draft Release 只含验证过的包）。
+      - name: 断网启动验证（--network none，验证通过才上传）
+        env:
+          CI: 'true'
+        run: node scripts/verify-linux-deploy.js --os "${{ matrix.os }}"
 
       # 上传产物到 Release（同名 Release 已存在则追加产物）
       - name: 上传产物到 Release
@@ -218,6 +262,15 @@ jobs:
         env:
           CI: 'true'
         run: node scripts/pack-offline.js --deploy --win
+
+      # ADR-0059 决策 8：Windows 断网启动验证硬门禁——docker run --network none 在 servercore 容器内
+      # 解压 .7z + 内嵌 node 跑 verify-deploy.js（启动全服务 + 健康检查）。
+      # 验证失败 → 本 job 失败 → 不上传。注意：GH windows-latest 跑 Windows 容器可能慢/不稳，
+      # 降级路径见 ADR-0059（Linux 硬门禁 + Windows 手动验证）。
+      - name: Windows 断网启动验证（--network none，验证通过才上传）
+        env:
+          CI: 'true'
+        run: node scripts/verify-windows-deploy.js
 
       # 上传产物到 Release（同名 Release 已存在则追加产物）
       - name: 上传产物到 Release

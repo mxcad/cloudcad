@@ -18,6 +18,7 @@ import {
 } from '@/config/clientSetup';
 import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
+import { clearSavePermissionCache } from '@/services/mxcadManager/saveDefaults';
 
 export interface User extends UserDto {
   membershipTierLevel?: number;
@@ -44,8 +45,17 @@ export interface UseAuthActionsResult {
    * 管理员独立入口登录（POST /admin/auth/login）：
    * 仅 ADMIN 角色 + IP 白名单可通过；成功即写入标准登录态，
    * 复用既有刷新/鉴权链路进入管理后台。
+   * totpCode：已启用 TOTP 的管理员必传（缺码后端返回 MFA_REQUIRED，前端据此进入第二因子输入）。
+   * 返回 mfaSetupRequired：未绑定 TOTP 的管理员登录成功但被锁定至绑定页（#415）。
    */
-  adminLogin: (account: string, password: string) => Promise<boolean>;
+  adminLogin: (
+    account: string,
+    password: string,
+    totpCode?: string
+  ) => Promise<{
+    mfaSetupRequired: boolean;
+    passwordChangeRequired?: 'first_login' | 'expired';
+  }>;
   /** 返回注销冷静期内自动恢复标记（true=登录同时已自动取消注销） */
   loginByPhone: (phone: string, code: string) => Promise<boolean>;
   register: (
@@ -153,21 +163,48 @@ export function useAuthActions({
    * 进入管理后台后复用既有鉴权/权限链路。
    */
   const adminLogin = useCallback(
-    async (account: string, password: string): Promise<boolean> => {
+    async (
+      account: string,
+      password: string,
+      totpCode?: string
+    ): Promise<{
+      mfaSetupRequired: boolean;
+      passwordChangeRequired?: 'first_login' | 'expired';
+    }> => {
       const response = await adminAuthControllerLogin({
-        body: { account, password },
+        body: {
+          account,
+          password,
+          ...(totpCode ? { totpCode } : {}),
+        },
       });
       if (response.error) throw response.error;
       const apiResponse = response.data!;
 
-      const { accessToken, refreshToken, user: userData } = apiResponse;
+      const {
+        accessToken,
+        refreshToken,
+        user: userData,
+        mfaSetupRequired,
+        passwordChangeRequired,
+        passwordExpiringSoon,
+      } = apiResponse;
 
+      // #416：口令到期状态随用户态下发（强制改密页 + Layout 提示条据此展示；
+      // /auth/profile 刷新同样返回这两个字段，refreshUser 后保持一致）
       applyAuthData({
         accessToken,
         refreshToken: refreshToken || '',
-        user: userData as unknown as User,
+        user: {
+          ...userData,
+          passwordChangeRequired,
+          passwordExpiringSoon,
+        } as unknown as User,
       });
-      return false;
+      return {
+        mfaSetupRequired: mfaSetupRequired === true,
+        ...(passwordChangeRequired ? { passwordChangeRequired } : {}),
+      };
     },
     [applyAuthData]
   );
@@ -308,6 +345,7 @@ export function useAuthActions({
 
       // 4. 清除项目权限内存缓存（防止切换账号后权限串用）
       clearProjectPermissionsCache();
+      clearSavePermissionCache();
 
       // 4. 取消主动 token 刷新定时器
       cancelProactiveRefresh();

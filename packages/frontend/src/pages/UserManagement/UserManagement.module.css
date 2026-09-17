@@ -225,9 +225,19 @@
   flex-direction: column;
 }
 
-/* 页面 flex 布局：除表格卡外其余区块（Tabs/搜索/错误 banner 等）防压缩 */
-.user-management-container > :not(.users-table-card) {
+/* 页面 flex 布局：除表格卡 / 统计面板外其余区块（Tabs/搜索/错误 banner 等）防压缩 */
+.user-management-container >
+  :not(.users-table-card):not(.stats-panel) {
   flex-shrink: 0;
+}
+
+/* 运营统计面板：撑满剩余空间，内容在自身内部滚动（与表格卡同等对待）；
+   与上方 Tabs 保留间距（容器 padding 已提供底部间隙） */
+.stats-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: var(--space-4);
 }
 
 /* ===== 表格 ===== */

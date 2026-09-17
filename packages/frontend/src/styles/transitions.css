@@ -31,22 +31,6 @@
   position: relative;
 }
 
-/* 防止闪烁的加载状态 */
-.loading-skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
 /* 优化认证状态切换 */
 .auth-transition {
   transition: opacity 0.15s ease-in-out;

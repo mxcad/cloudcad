@@ -14,6 +14,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { CommonModule } from '../common/common.module';
+import { AlertModule } from '../alert/alert.module';
 import { NotificationModule } from '../notification/notification.module';
 import { DatabaseModule } from '../database/database.module';
 import { RedisModule } from '../redis/redis.module';
@@ -25,6 +26,9 @@ import { SmsModule } from './services/sms/sms.module';
 import { WechatModule } from './services/wechat/wechat.module';
 import { AuthController } from './auth.controller';
 import { AdminAuthController } from './admin-auth.controller';
+import { AdminMfaController } from './admin-mfa.controller';
+import { SessionTransferController } from './session-transfer/session-transfer.controller';
+import { SessionTransferService } from './session-transfer/session-transfer.service';
 import { AuthFacadeService } from './auth-facade.service';
 import { AdminAuthService } from './impl/services/admin-auth.service';
 import { IpWhitelistModule } from '../ip-whitelist/ip-whitelist.module';
@@ -33,6 +37,8 @@ import { SecurityAccessAttemptModule } from '../security/security-access-attempt
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { InitializationService } from './services/initialization.service';
 import { AccountRateLimitService } from './services/account-rate-limit.service';
+import { PasswordPolicyService } from './services/password-policy.service';
+import { MfaService } from './services/mfa.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { AppConfig } from '../config/app.config';
@@ -100,6 +106,7 @@ export class AuthModule {
       imports: [
         DatabaseModule,
         CommonModule,
+        AlertModule,
         NotificationModule,
         RedisModule,
         RuntimeConfigModule,
@@ -125,10 +132,16 @@ export class AuthModule {
           inject: [ConfigService],
         }),
       ],
-      controllers: [AuthController, AdminAuthController],
+      controllers: [
+        AuthController,
+        AdminAuthController,
+        AdminMfaController,
+        SessionTransferController,
+      ],
       providers: [
         AuthFacadeService,
         AdminAuthService,
+        SessionTransferService,
         {
           provide: IAUTH_FACADE,
           useClass: AuthFacadeService,
@@ -136,6 +149,8 @@ export class AuthModule {
         TokenBlacklistService,
         InitializationService,
         AccountRateLimitService,
+        PasswordPolicyService,
+        MfaService,
         JwtStrategy,
         RefreshTokenStrategy,
         // Token aliases for private auth implementation DI
@@ -151,6 +166,9 @@ export class AuthModule {
         AuthFacadeService,
         IAUTH_FACADE,
         TokenBlacklistService,
+        // #416 口令策略：UsersModule（UserCrudService/UserPasswordService）跨模块注入，
+        // AuthModule 为 global 模块，导出后全局可见，无需 UsersModule 反向 import（避免循环依赖）
+        PasswordPolicyService,
         SmsModule,
         WechatModule,
       ],

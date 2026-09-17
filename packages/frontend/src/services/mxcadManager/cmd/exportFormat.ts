@@ -25,6 +25,8 @@ export class ExportFormatCommand implements Command {
 
   async execute(ctx: CommandContext): Promise<CommandResult> {
     try {
+      // 导出编辑器内存里最新的 mxweb blob（含未保存改动），云图/本地图行为一致；
+      // 弹框据此上传 blob（skipDb）→ 创建非阻塞 fileHash 转换任务 → 面板下载 tab 跟踪 → 完成自动下载。
       const { blob, filename } = await ctx.saveDrawingToBlob(ctx.fileName);
       if (this.format === 'dwg') {
         emit(CAD_EVENTS.EXPORT_DWG, {

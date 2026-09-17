@@ -24,6 +24,9 @@ import {
 import {
   ProjectRole,
   DEFAULT_PROJECT_ROLE_PERMISSIONS,
+  SystemRole,
+  SYSTEM_ROLE_PERMISSIONS,
+  SYSTEM_ROLE_LEVELS,
 } from '@cloudcad/contracts';
 
 /**
@@ -65,15 +68,7 @@ export enum RoleCategory {
   CUSTOM = 'CUSTOM', // 自定义角色
 }
 
-/**
- * 系统角色（用于后台管理）
- */
-export enum SystemRole {
-  ADMIN = 'ADMIN', // 系统管理员：拥有所有系统权限
-  USER_MANAGER = 'USER_MANAGER', // 用户管理员：管理用户和角色
-  FONT_MANAGER = 'FONT_MANAGER', // 字体管理员：管理字体库
-  USER = 'USER', // 普通用户：基础系统权限
-}
+// SystemRole 枚举已下沉到 @cloudcad/contracts（单一来源），见下方 re-export
 
 /**
  * 项目角色枚举
@@ -83,64 +78,11 @@ export enum SystemRole {
 export { ProjectRole };
 
 /**
- * 系统角色权限映射
- * 定义系统角色拥有的系统权限（直接权限，不包括继承）
+ * 系统角色权限映射（SYSTEM_ROLE_PERMISSIONS）与层级（SYSTEM_ROLE_LEVELS）
+ * 已下沉到 @cloudcad/contracts（单一来源；prisma seed 脚本因 rootDir 约束
+ * 无法 import backend/src），此处 re-export 保持既有 import 路径兼容
  */
-export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
-  [SystemRole.ADMIN]: [
-    // 系统管理员拥有所有系统权限
-    PrismaPermission.SYSTEM_USER_READ,
-    PrismaPermission.SYSTEM_USER_CREATE,
-    PrismaPermission.SYSTEM_USER_UPDATE,
-    PrismaPermission.SYSTEM_USER_DELETE,
-    PrismaPermission.SYSTEM_USER_MEMBERSHIP_MANAGE,
-    PrismaPermission.SYSTEM_ROLE_READ,
-    PrismaPermission.SYSTEM_ROLE_CREATE,
-    PrismaPermission.SYSTEM_ROLE_UPDATE,
-    PrismaPermission.SYSTEM_ROLE_DELETE,
-    PrismaPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
-    PrismaPermission.SYSTEM_FONT_READ,
-    PrismaPermission.SYSTEM_FONT_UPLOAD,
-    PrismaPermission.SYSTEM_FONT_DELETE,
-    PrismaPermission.SYSTEM_FONT_DOWNLOAD,
-    PrismaPermission.SYSTEM_ADMIN,
-    PrismaPermission.SYSTEM_BILLING_READ,
-    PrismaPermission.SYSTEM_BILLING_WRITE,
-    PrismaPermission.SYSTEM_MONITOR,
-    PrismaPermission.SYSTEM_CONFIG_READ,
-    PrismaPermission.SYSTEM_CONFIG_WRITE,
-    PrismaPermission.SYSTEM_IP_BLACKLIST_MANAGE,
-    PrismaPermission.SYSTEM_IP_WHITELIST_MANAGE,
-    PrismaPermission.LIBRARY_DRAWING_MANAGE,
-    PrismaPermission.LIBRARY_BLOCK_MANAGE,
-    PrismaPermission.PROJECT_CREATE,
-  ],
-  [SystemRole.USER_MANAGER]: [
-    // 用户管理员权限
-    PrismaPermission.SYSTEM_USER_READ,
-    PrismaPermission.SYSTEM_USER_CREATE,
-    PrismaPermission.SYSTEM_USER_UPDATE,
-    PrismaPermission.SYSTEM_USER_DELETE,
-    PrismaPermission.SYSTEM_ROLE_READ,
-    PrismaPermission.SYSTEM_ROLE_CREATE,
-    PrismaPermission.SYSTEM_ROLE_UPDATE,
-    PrismaPermission.SYSTEM_ROLE_DELETE,
-    PrismaPermission.SYSTEM_ROLE_PERMISSION_MANAGE,
-    PrismaPermission.PROJECT_CREATE,
-  ],
-  [SystemRole.FONT_MANAGER]: [
-    // 字体管理员权限
-    PrismaPermission.SYSTEM_FONT_READ,
-    PrismaPermission.SYSTEM_FONT_UPLOAD,
-    PrismaPermission.SYSTEM_FONT_DELETE,
-    PrismaPermission.SYSTEM_FONT_DOWNLOAD,
-    PrismaPermission.PROJECT_CREATE,
-  ],
-  [SystemRole.USER]: [
-    // 普通用户：创建项目权限
-    PrismaPermission.PROJECT_CREATE,
-  ],
-};
+export { SystemRole, SYSTEM_ROLE_PERMISSIONS, SYSTEM_ROLE_LEVELS };
 
 /**
  * 系统角色继承关系
@@ -148,6 +90,7 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<SystemRole, SystemPermission[]> = {
  */
 export const SYSTEM_ROLE_HIERARCHY: Record<SystemRole, SystemRole | null> = {
   [SystemRole.ADMIN]: null, // 顶级角色
+  [SystemRole.AUDIT_ADMIN]: SystemRole.USER, // 继承自 USER（独立于 ADMIN 的审计线，与系统管理权互不隶属）
   [SystemRole.USER_MANAGER]: SystemRole.USER, // 继承自 USER
   [SystemRole.FONT_MANAGER]: SystemRole.USER, // 继承自 USER
   [SystemRole.USER]: null, // 基础角色

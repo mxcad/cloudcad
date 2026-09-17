@@ -80,7 +80,6 @@ export const ExportModals = forwardRef<ExportModalsHandle, ExportModalsProps>(
             pdfExport.setBlob(null);
           }}
           onExport={handlePdfExport}
-          loading={pdfExport.exporting}
         />
         {/* DWG/DXF 导出参数弹窗 */}
         <DwgExportModal
@@ -92,7 +91,6 @@ export const ExportModals = forwardRef<ExportModalsHandle, ExportModalsProps>(
             dwgExport.setBlob(null);
           }}
           onExport={handleDwgExport}
-          loading={dwgExport.exporting}
         />
         {/* 另存为弹窗 */}
         {saveAs.show && saveAs.blob && (

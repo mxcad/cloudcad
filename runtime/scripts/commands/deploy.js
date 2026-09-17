@@ -16,7 +16,7 @@ const { waitForPort } = require('../lib/health');
 const versionHelper = require('../drawing-version-helper');
 const { startInfrastructure, setupPm2Startup } = require('./infra');
 const { stopAppServices } = require('./stop');
-const { runDatabaseMigration } = require('./migrate');
+const { runDatabaseMigration, runPiiBackfill } = require('./migrate');
 const { startAppServices } = require('./start');
 const { rimdir } = require('./dev');
 
@@ -90,6 +90,14 @@ async function deployMode(skipBuild = false) {
 
   // 3. 数据库迁移（依赖已在 setupOffline 中安装）
   if (!(await runDatabaseMigration())) {
+    return;
+  }
+
+  // 3.5 PII 字段级加密存量回填（#417 等保 8.1.4.8）：migration 应用后、读切换代码
+  //     启动前，用当前 .env 密钥回填 users 表 phone/email 派生列（enc/hmac）。
+  //     幂等：已回填则秒跳过（升级部署无额外开销）。失败则中止部署——读切换代码
+  //     查 HMAC 列，若存量行 HMAC 列缺失，存量用户登录/查重会落空。
+  if (!(await runPiiBackfill())) {
     return;
   }
 

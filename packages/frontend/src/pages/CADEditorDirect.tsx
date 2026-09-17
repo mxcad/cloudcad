@@ -27,6 +27,7 @@ import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { ExportModals } from '@/components/export';
 import type { ExportModalsHandle } from '@/components/export';
 import { ImagePreviewModal } from '../components/modals/ImagePreviewModal';
+import { ShareDialog } from '../components/modals/ShareDialog';
 import { Button } from '@/components/ui/Button';
 import { ExternalReferencePanel } from '../components/modals/ExternalReferencePanel';
 import type { ExternalReferenceFile } from '../types/filesystem';
@@ -229,6 +230,11 @@ export const CADEditorDirect: React.FC = () => {
   // 导出/另存为子系统：ExportModals 自包含组件（ADR-0040），
   // 仅经 ref 命令触发外部参照格式弹窗
   const exportModalsRef = useRef<ExportModalsHandle | null>(null);
+
+  // 分享对话框状态
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareFileId, setShareFileId] = useState<string | null>(null);
+  const [shareFileName, setShareFileName] = useState('');
 
   useHistoryBackFix(fileId);
 
@@ -517,6 +523,15 @@ export const CADEditorDirect: React.FC = () => {
 
   // 文件打开/新建事件监听已提取到 useCadFileLoader
 
+  // 监听分享文件事件（Mx_Share 命令触发）
+  useEffect(() => {
+    return subscribe(CAD_EVENTS.SHARE_FILE, (detail) => {
+      setShareFileId(detail.fileId);
+      setShareFileName(detail.fileName);
+      setShareDialogOpen(true);
+    });
+  }, []);
+
   // 处理外部参照查看请求（fileUrl URL 参数）
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -777,6 +792,18 @@ export const CADEditorDirect: React.FC = () => {
           revokeXrefViewBlobUrl(previewXref?.url || '');
           setPreviewXref(null);
         }}
+      />
+
+      {/* 分享对话框 */}
+      <ShareDialog
+        isOpen={shareDialogOpen}
+        onClose={() => {
+          setShareDialogOpen(false);
+          setShareFileId(null);
+          setShareFileName('');
+        }}
+        fileId={shareFileId ?? undefined}
+        fileName={shareFileName}
       />
 
       {/* 拖拽文件提示层 */}

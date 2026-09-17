@@ -43,7 +43,7 @@ import {
 } from 'vant';
 import { showToastOnce } from '@/utils/toast';
 
-import { getPCLoginUrl } from '@/utils/apiConfig';
+import { getPCLoginUrl, getPCRegisterUrl } from '@/utils/apiConfig';
 import { navigateBack } from '../../utils/navigateBack';
 import {
   exitCollaborationIfNeeded,
@@ -55,13 +55,12 @@ import { useRuntimeConfig } from '../../composables/useRuntimeConfig';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
 import SaveAsSheet from './components/SaveAsSheet.vue';
 import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
-import LoginPromptPopup from './components/LoginPromptPopup.vue';
+import LoginPromptPopup from '@/components/LoginPromptPopup.vue';
 import CooperatePopup from './components/CooperatePopup.vue';
+import ShareCurrentPopup from './components/ShareCurrentPopup.vue';
 import InsertBlockPopup from './components/InsertBlockPopup.vue';
-import LibraryPanel from './components/LibraryPanel.vue';
 import type { LibraryType } from '../../composables/useLibrary';
 import { pendingInsertParams } from '../../command/m_mx_insert_block';
-import { isBlockLibrary } from '../../composables/useInsertBlock';
 import type { BlockInfoItem } from '../../composables/useInsertBlock';
 import MxToolbar from '@/components/MxToolbar.vue';
 
@@ -249,19 +248,14 @@ const showCooperate = ref(false);
 const showCollabDisabled = ref(false);
 const showInsertBlock = ref(false);
 const insertBlockParams = ref<BlockInfoItem | null>(null);
-const showLibrary = ref(false);
-const libraryType = ref<LibraryType>('drawing');
 
 const onInsertBlockConfirm = () => {
-  showLibrary.value = false
+  // 图块插入完成后不需要重新打开抽屉（已改用子页导航）
 }
 
 const onInsertBlockComplete = () => {
-  // 仅从图块库触发插入时，插入完成后重新弹出图块库抽屉
-  if (!isBlockLibrary.value) return
-  setTimeout(() => {
-    showLibrary.value = true
-  }, 1000)
+  // 插入完成后不再自动重新打开库抽屉
+  // 用户可通过菜单手动打开
 }
 
 const onInsertBlockClose = () => {
@@ -324,20 +318,23 @@ function onShowVersionHistory() {
   showVersionHistory.value = true;
 }
 
-function onLoginPromptLogin() {
-  loginPromptWaiting.value = true;
+function onLoginPromptLogin(target: 'login' | 'register' = 'login') {
+  loginPromptWaiting.value = true
   if (pendingActionAfterLogin.value) {
-    sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value);
-    pendingActionAfterLogin.value = null;
+    sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value)
+    pendingActionAfterLogin.value = null
   }
 
-  const win = window.open(getPCLoginUrl(window.location.href), 'pc-login');
+  const url = target === 'register'
+    ? getPCRegisterUrl(window.location.href)
+    : getPCLoginUrl(window.location.href)
+  const win = window.open(url, 'pc-login')
 
   if (!win) {
-    loginPromptWaiting.value = false;
-    showLoginPrompt.value = false;
-    window.location.href = getPCLoginUrl();
-    return;
+    loginPromptWaiting.value = false
+    showLoginPrompt.value = false
+    window.location.href = url
+    return
   }
 
   // storage 事件监听：新标签页写入 token 后触发 refresh
@@ -416,8 +413,15 @@ const handleShowInsertBlock = (e: Event) => {
 };
 
 const handleShowLibrary = (e: Event) => {
-  libraryType.value = ((e as CustomEvent).detail as LibraryType) ?? 'drawing';
-  showLibrary.value = true;
+  const libraryType = ((e as CustomEvent).detail as LibraryType) ?? 'drawing';
+  // 库是浮在画布上的抽屉，由壳统一打开（见 shell/index.vue 的 handleShellNavigate）
+  window.dispatchEvent(new CustomEvent('mxcad-shell-navigate', { detail: `/shell/library/${libraryType}` }));
+};
+
+// E-07 分享当前图纸：编辑器菜单经 mxcad-share-current 事件唤起
+const showShareCurrent = ref(false);
+const handleShareCurrent = () => {
+  showShareCurrent.value = true;
 };
 
 function onBeforeUnloadHandler() {
@@ -430,6 +434,7 @@ onMounted(async () => {
   window.addEventListener('mxcad-show-collaborate', handleShowCollaborate);
   window.addEventListener('mxcad-show-insert-block', handleShowInsertBlock);
   window.addEventListener('mxcad-show-library', handleShowLibrary);
+  window.addEventListener('mxcad-share-current', handleShareCurrent);
   window.addEventListener('beforeunload', onBeforeUnloadHandler);
 
   // Auto-join cleanup reference
@@ -441,6 +446,7 @@ onMounted(async () => {
     window.removeEventListener('mxcad-show-collaborate', handleShowCollaborate);
     window.removeEventListener('mxcad-show-insert-block', handleShowInsertBlock);
     window.removeEventListener('mxcad-show-library', handleShowLibrary);
+    window.removeEventListener('mxcad-share-current', handleShareCurrent);
     window.removeEventListener('beforeunload', onBeforeUnloadHandler);
     autoJoinCleanup?.();
     // 离开页面时退出当前协同会话
@@ -686,9 +692,14 @@ setViewportHeight();
       :can-manage-library="canManageLibrary" :current-node-id="editorState.state.fileId || undefined"
       @close="onSaveAsClose" @success="onSaveAsSuccess" @login-required="showLoginPrompt = true" />
     <VersionHistoryPopup v-if="showVersionHistory" @close="showVersionHistory = false" />
-    <LoginPromptPopup v-if="showLoginPrompt" :waiting="loginPromptWaiting" @login="onLoginPromptLogin"
-      @close="onLoginPromptClose" />
+    <LoginPromptPopup v-if="showLoginPrompt" :waiting="loginPromptWaiting" @login="onLoginPromptLogin('login')"
+      @register="onLoginPromptLogin('register')" @close="onLoginPromptClose" />
     <CooperatePopup v-if="showCooperate" @close="showCooperate = false" />
+    <ShareCurrentPopup
+      v-model:show="showShareCurrent"
+      :file-id="editorState.state.fileId ?? ''"
+      :file-name="editorState.state.fileName"
+    />
     <van-dialog v-model:show="showCollabDisabled" :title="t('提示')" @confirm="showCollabDisabled = false">
       <div style="padding: 16px 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
         <span>{{ t('实时协同只支持私有化部署，请点击') }}</span>
@@ -708,14 +719,6 @@ setViewportHeight();
         @close="onInsertBlockClose"
         @confirm="onInsertBlockConfirm"
         @insert-complete="onInsertBlockComplete"
-      />
-    </div>
-    <div v-show="showLibrary">
-      <LibraryPanel
-        v-model:show="showLibrary"
-        :library-type="libraryType"
-        preserve-height-on-reopen
-        @close="showLibrary = false"
       />
     </div>
     <canvas id="mxCanvas"></canvas>

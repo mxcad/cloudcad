@@ -430,9 +430,11 @@ function getDeployIncludeList(platform, variant = 'oss') {
 async function installFullDeps(variant = 'oss') {
   cleanNodeModules(true);
 
+  // conversion-service 0 运行时依赖（纯 Node 内置 + 相对导入），dist 自包含，目标机无需安装其依赖；
+  // 但构建它需要 typescript（devDep），故纳入 install 使打包机（Docker 容器）可用 tsc。
   const filter = variant === 'private'
-    ? 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/impl-mx'
-    : 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts';
+    ? 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service --filter @cloudcad/impl-mx'
+    : 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service';
 
   try {
     execSync(filter, {
@@ -475,6 +477,8 @@ async function buildProject(variant = 'oss') {
     path.join(PROJECT_ROOT, 'packages', 'backend', 'dist'),
     path.join(PROJECT_ROOT, 'packages', 'db', 'dist'),
     path.join(PROJECT_ROOT, 'packages', 'contracts', 'dist'),
+    // 转换服务 dist（tsc 产物；运行时日志目录 data/logs 由 logger 自建，clean 后重建安全）
+    path.join(PROJECT_ROOT, 'packages', 'conversion-service', 'dist'),
   ];
   if (variant === 'private') {
     dirs.push(path.join(PROJECT_ROOT, 'packages', 'impl-mx', 'dist'));
@@ -531,7 +535,12 @@ async function buildProject(variant = 'oss') {
       cwd: PROJECT_ROOT,
       stdio: 'inherit',
     });
-    log('✓ 构建完成');
+    // 构建转换服务（纯 tsc，无 workspace 依赖，独立于 backend；dist 自包含随包分发）
+    execSync('pnpm --filter @cloudcad/conversion-service build', {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit',
+    });
+    log('✓ 构建完成（含转换服务）');
     return true;
   } catch (err) {
     error('构建失败');
@@ -742,7 +751,69 @@ async function prepareDeployStore(variant = 'oss') {
     env,
   });
 
+  // 3. 预置 schema-engine 二进制到包内 runtime/prisma-engines/（离线 migrate deploy 用）
+  //    根因：@prisma/engines 包目录含当前平台 schema-engine（postinstall 下载），
+  //    但 pnpm store 的 manifest 未引用该二进制（reconstruct 后包目录缺失），
+  //    prisma CLI 经 getEnginesPath() 在包目录找不到 → 回退联网下载 → 断网 migrate deploy 失败。
+  //    故把 schema-engine 预置到 runtime/prisma-engines/，verify-deploy.js / migrate.js
+  //    设 PRISMA_SCHEMA_ENGINE_BINARY 指向该预置二进制（绝对路径，Ry() 按 process.cwd() 解析）。
+  bundlePrismaSchemaEngine();
+
   log(`✓ ${storeName} 准备完成 (${storeCheck.count} 个包)`);
+}
+
+/**
+ * 把 @prisma/engines 包目录的 schema-engine 二进制复制到包内 runtime/prisma-engines/。
+ *
+ * 背景：pnpm store 的 manifest 只引用 npm registry 文件，不含 postinstall 下载的
+ * schema-engine 二进制。部署机 pnpm install --offline 重建 @prisma/engines 包目录时
+ * 缺该二进制，prisma CLI（getEnginesPath）找不到 → 回退联网下载 → 断网 migrate deploy 失败。
+ * 故打包时把当前平台（构建机=目标机平台）的 schema-engine 预置到 runtime/prisma-engines/，
+ * 由 verify-deploy.js / migrate.js 设 PRISMA_SCHEMA_ENGINE_BINARY 指向它（绝对路径）。
+ *
+ * @returns {boolean} true=已预置；false=未找到 schema-engine（警告，不阻断——目标机可回退下载）
+ */
+function bundlePrismaSchemaEngine() {
+  const destDir = path.join(PROJECT_ROOT, 'runtime', 'prisma-engines');
+  // @prisma/engines 包目录：优先 node_modules/@prisma/engines（pnpm 符号链接），
+  // 回退 .pnpm 布局（node_modules/.pnpm/@prisma+engines@*/node_modules/@prisma/engines）
+  let enginesDir = path.join(PROJECT_ROOT, 'node_modules', '@prisma', 'engines');
+  if (!fs.existsSync(enginesDir)) {
+    const pnpmDir = path.join(PROJECT_ROOT, 'node_modules', '.pnpm');
+    if (fs.existsSync(pnpmDir)) {
+      const candidates = fs
+        .readdirSync(pnpmDir)
+        .filter((d) => d.startsWith('@prisma+engines@'))
+        .map((d) => path.join(pnpmDir, d, 'node_modules', '@prisma', 'engines'))
+        .filter((d) => fs.existsSync(d));
+      if (candidates.length > 0) enginesDir = candidates[0];
+    }
+  }
+  if (!fs.existsSync(enginesDir)) {
+    log('警告: 未找到 @prisma/engines 包目录，跳过 schema-engine 预置（目标机可回退联网下载）');
+    return false;
+  }
+  // schema-engine 文件名平台相关：linux= schema-engine，windows= schema-engine-windows.exe
+  // 取包目录内所有 schema-engine* 二进制（当前平台构建机=目标机平台，取全部预置）
+  const engines = fs
+    .readdirSync(enginesDir)
+    .filter((f) => f.startsWith('schema-engine') && !f.endsWith('.sha256') && !f.endsWith('.gz.sha256'));
+  if (engines.length === 0) {
+    log('警告: @prisma/engines 包目录无 schema-engine 二进制，跳过预置');
+    return false;
+  }
+  ensureDir(destDir);
+  for (const engine of engines) {
+    const src = path.join(enginesDir, engine);
+    const dest = path.join(destDir, engine);
+    fs.copyFileSync(src, dest);
+    // 二进制须可执行（部署机直接 spawn schema-engine）
+    try {
+      fs.chmodSync(dest, 0o755);
+    } catch {}
+    log(`✓ 预置 schema-engine: runtime/prisma-engines/${engine} (${formatSize(fs.statSync(dest).size)})`);
+  }
+  return true;
 }
 
 /**
@@ -912,17 +983,18 @@ function writeDeployMeta(tempDir) {
 }
 
 /**
- * Windows 标准运行时组件出包前校验（node / postgresql / redis）。
+ * Windows 标准运行时组件出包前校验（node / pm2 / postgresql / redis）。
  *
  * 背景：runtime/windows/ 在 manifest 中是整目录复制，只要 node/ 存在即可通过，
- * 缺 postgresql/redis 子目录完全无感知——曾因 build-windows-runtime.js 下载源
- * 失效且错误被静默吞掉，导致线上 Windows 离线包缺 pg/redis、目标机启动失败。
+ * 缺 postgresql/redis 子目录或 node_modules/pm2 完全无感知——曾因 build-windows-runtime.js
+ * 下载源失效且错误被静默吞掉，导致线上 Windows 离线包缺 pg/redis、目标机启动失败。
  * 此处在打压缩包前按关键可执行文件逐项断言（路径与 runtime/scripts 的
- * pg-manager.js / redis-manager.js 引用保持一致）。
+ * pg-manager.js / redis-manager.js、lib/proc.js 的 PM2_JS 引用保持一致）。
  */
 function assertWindowsRuntimeComponents() {
   const required = [
     path.join('node', 'node.exe'),
+    path.join('node', 'node_modules', 'pm2', 'bin', 'pm2'),
     path.join('postgresql', 'pgsql', 'bin', 'initdb.exe'),
     path.join('postgresql', 'pgsql', 'bin', 'pg_ctl.exe'),
     path.join('redis', 'redis-server.exe'),
@@ -935,13 +1007,48 @@ function assertWindowsRuntimeComponents() {
   if (missing.length > 0) {
     error(`Windows 标准运行时组件缺失，中止打包:\n  ${missing.join('\n  ')}`);
     error('修复方式:');
-    error('  - node/redis: 运行 node scripts/build-windows-runtime.js --force');
+    error('  - node/pm2/redis: node scripts/build-windows-runtime.js --force');
+    error('    （node_modules 里的 pm2 由 reinstall-node-tools.js 重建）');
     error('  - postgresql: 本地 PG binaries zip（顶层含 pgsql/ 目录）放入');
     error('    mxcad-dist/windows-x64/postgresql.zip 后运行 node scripts/upload-mxcad.js，');
     error('    再由 release.yml「下载产品二进制」步骤解压到 runtime/windows/postgresql');
     process.exit(1);
   }
-  log('Windows 标准运行时组件校验通过（node / postgresql / redis）');
+  log('Windows 标准运行时组件校验通过（node / pm2 / postgresql / redis）');
+}
+
+/**
+ * Linux 标准运行时组件出包前校验（node / pm2 / postgres / redis / svn）。
+ *
+ * 背景：runtime/linux/ 在 manifest 中是整目录复制，目录非空即通过，
+ * node/ 内容残缺（bin/node 或 node_modules/pm2/bin/pm2 缺失）完全无感知——
+ * 坏提取缓存被复用后打出缺 node 的包，目标机 start.sh 报"找不到 Node.js 运行时"。
+ * 此处在打压缩包前按关键可执行文件逐项断言（路径与 start.sh / verify-deploy.js /
+ * lib/proc.js 的 PM2_JS、packages/config-service/lib/pm2.js 引用保持一致）。
+ */
+function assertLinuxRuntimeComponents() {
+  const required = [
+    path.join('node', 'bin', 'node'),
+    path.join('node', 'node_modules', 'pm2', 'bin', 'pm2'),
+    path.join('postgres', 'bin', 'postgres'),
+    path.join('redis', 'redis-server'),
+    path.join('subversion', 'svn'),
+  ];
+  const missing = [];
+  for (const rel of required) {
+    const p = path.join(PROJECT_ROOT, 'runtime', 'linux', rel);
+    if (!fs.existsSync(p)) missing.push(`runtime/linux/${rel}`);
+  }
+  if (missing.length > 0) {
+    error(`Linux 标准运行时组件缺失，中止打包:\n  ${missing.join('\n  ')}`);
+    error('修复方式:');
+    error('  - 删除坏提取缓存后重跑打包（容器内重新全量提取）:');
+    error('    rm -rf runtime/cache/linux-extract/<os>');
+    error('  - 或重新下载 runtime 依赖资产解压到 runtime/cache/linux-extract/<os>/');
+    error('  注: pm2 属 node 组件提取，缺 pm2 即 node 产物残缺，须重新提取');
+    process.exit(1);
+  }
+  log('Linux 标准运行时组件校验通过（node / pm2 / postgres / redis / svn）');
 }
 
 /**
@@ -1058,6 +1165,7 @@ async function packDeploy(platform, variant = 'oss') {
       );
       process.exit(1);
     }
+    assertLinuxRuntimeComponents();
   }
 
   // 检查 Windows 标准运行时组件（node/postgresql/redis 关键可执行文件）
@@ -1281,6 +1389,8 @@ async function packUpgrade(platform, variant = 'oss') {
       path.join(tempDir, 'packages', 'db', 'dist'),
       path.join(tempDir, 'packages', 'contracts', 'dist'),
       path.join(tempDir, 'packages', 'frontend', 'dist'),
+      // 转换服务 dist 恒在包内（共享清单两类包都带），缺失即打包不完整
+      path.join(tempDir, 'packages', 'conversion-service', 'dist'),
     ];
     if (variant === 'private') {
       verifyDirs.push(path.join(tempDir, 'packages', 'impl-mx', 'dist'));

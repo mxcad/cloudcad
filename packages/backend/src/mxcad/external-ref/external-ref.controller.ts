@@ -134,14 +134,6 @@ export class MxcadExternalRefController {
         '.dxf',
       ]);
     if (!validationResult.success) return res.json(validationResult.error);
-    const node = await this.fileSystemNodeService.findById(body.nodeId);
-    if (!node)
-      return res.json({
-        code: -1,
-        message:
-          I18nContext.current()?.t('error.mxcad.not_found_source') ??
-          '未找到源图纸',
-      });
     let fileHash = body.hash;
     if (!fileHash) {
       const result = this.externalRefFacade.computeUploadedFileHash(
@@ -151,12 +143,13 @@ export class MxcadExternalRefController {
       fileHash = result.hash;
       file.path = result.path;
     }
+    const node = await this.fileSystemNodeService.findById(body.nodeId);
     const parentFolderId = node?.parentId || node?.id || 'external-reference';
     const context = {
       nodeId: parentFolderId,
       userId: await this.externalRefFacade.validateTokenAndGetUserId(request),
       userRole: 'USER',
-      srcDwgNodeId: node.id,
+      srcDwgNodeId: node?.id || body.nodeId,
       isImage: false,
     };
     const storageFileName = body.originalXrefName || body.ext_ref_file;
@@ -224,26 +217,21 @@ export class MxcadExternalRefController {
       const userId =
         await this.externalRefFacade.validateTokenAndGetUserId(request);
       const node = await this.fileSystemNodeService.findById(body.nodeId);
-      if (!node)
-        return res.json({
-          code: -1,
-          message:
-            I18nContext.current()?.t('error.mxcad.not_found_source') ??
-            '未找到源图纸',
-        });
-      const permission = await this.externalRefFacade.checkFileAccessPermission(
-        body.nodeId,
-        userId,
-        userId
-      );
-      if (!permission)
-        return res.json({
-          code: -1,
-          message:
-            I18nContext.current()?.t('error.mxcad.no_access_drawing') ??
-            '无权限访问该图纸',
-        });
-      sourceNode = node;
+      if (node) {
+        const permission = await this.externalRefFacade.checkFileAccessPermission(
+          body.nodeId,
+          userId,
+          userId
+        );
+        if (!permission)
+          return res.json({
+            code: -1,
+            message:
+              I18nContext.current()?.t('error.mxcad.no_access_drawing') ??
+              '无权限访问该图纸',
+          });
+        sourceNode = node;
+      }
     } catch (authError) {
       return res.json({
         code: -1,
@@ -259,11 +247,12 @@ export class MxcadExternalRefController {
         file.originalname
       );
     file.path = newPath;
+    const srcNodeId = sourceNode?.id || body.nodeId;
     const context = {
-      nodeId: sourceNode?.id,
+      nodeId: srcNodeId,
       userId: await this.externalRefFacade.validateTokenAndGetUserId(request),
       userRole: 'USER',
-      srcDwgNodeId: sourceNode.id,
+      srcDwgNodeId: srcNodeId,
       isImage: true,
       fileSize: file.size,
     };
@@ -271,7 +260,7 @@ export class MxcadExternalRefController {
     try {
       await this.externalRefFacade.handleExternalReferenceImage(
         fileHash,
-        sourceNode.id,
+        srcNodeId,
         storageFileName,
         file.path,
         context

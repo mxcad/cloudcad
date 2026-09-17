@@ -1,5 +1,7 @@
 import {
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   Logger,
@@ -19,6 +21,9 @@ import { IpBlacklistService } from '../../../ip-blacklist/ip-blacklist.service';
 import { SecurityAccessAttemptService } from '../../../security/security-access-attempt.service';
 import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
+import { MfaService } from '../../services/mfa.service';
+import { PasswordPolicyService } from '../../services/password-policy.service';
+import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
 
 /** 管理员登录请求：Session 基础上携带 headers（审计 user-agent） */
 type AdminLoginRequest = SessionRequest & { headers?: Record<string, unknown> };
@@ -45,7 +50,10 @@ export class AdminAuthService {
     private readonly auditLogService: AuditLogService,
     private readonly ipWhitelistService: IpWhitelistService,
     private readonly ipBlacklistService: IpBlacklistService,
-    private readonly securityAccessAttemptService: SecurityAccessAttemptService
+    private readonly securityAccessAttemptService: SecurityAccessAttemptService,
+    private readonly mfaService: MfaService,
+    private readonly runtimeConfigService: RuntimeConfigService,
+    private readonly passwordPolicyService: PasswordPolicyService
   ) {}
 
   async login(
@@ -93,6 +101,8 @@ export class AdminAuthService {
 
     // 2. 账号维度限流（防撞库；与 IP 维度 RateLimitGuard 互补）
     await this.accountRateLimitService.checkLimit('login', account);
+    // 失败锁定检查（#416 等保 8.1.4.1 c)）：锁期内正确密码也拒绝，含剩余时间
+    await this.accountRateLimitService.checkAccountLock(account);
 
     // 3. 账号校验（全部走同一防枚举文案：不暴露账号存在性/状态/是否管理员）
     const genericReject = () =>
@@ -143,6 +153,8 @@ export class AdminAuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       this.logger.warn(`管理员登录失败 - 密码错误: ${account}`);
+      // 失败锁定计数（#416）：连续失败达阈值 → 锁 30 分钟
+      await this.accountRateLimitService.recordLoginFailure(account);
       await this.auditAdminLoginFailure(
         account,
         clientIp,
@@ -152,6 +164,78 @@ export class AdminAuthService {
       );
       throw genericReject();
     }
+
+    // 3.5 TOTP 双因素（仅管理员入口，#415 等保 8.1.4.1(d)）：
+    // 总闸 mfaEnforceEnabled（运行时配置，默认关闭）关闭时 TOTP 完全不生效
+    // （含已绑定者也无需动态码，totpCode 参数被忽略）；开启时：
+    // - 未绑定：正常签发 token，响应带 mfaSetupRequired 标记——前端锁定至绑定页，
+    //   完成绑定前 JwtStrategy 层拦截后台其余端点（强制引导）；
+    // - 已绑定：动态码必传。缺码 → MFA_REQUIRED（前端据此进入第二因子输入）；
+    //   错码 → 计入账号限流 + 失败审计，返回 MFA_CODE_INVALID（第一因子已验证，
+    //   暴露"码错误"不构成账号枚举风险）
+    let mfaSetupRequired = false;
+    const mfaEnforceEnabled = await this.runtimeConfigService.getValue<boolean>(
+      'mfaEnforceEnabled',
+      false
+    );
+    if (mfaEnforceEnabled) {
+      if (!user.totpEnabled) {
+        mfaSetupRequired = true;
+      } else if (!loginDto.totpCode) {
+        this.logger.warn(`管理员登录拒绝 - TOTP 动态码缺失: ${account}`);
+        await this.auditAdminLoginFailure(
+          account,
+          clientIp,
+          req,
+          'mfa_code_missing',
+          user.id
+        );
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.UNAUTHORIZED,
+            message:
+              I18nContext.current()?.t('error.mfa.required') ??
+              '请输入双因素认证动态码',
+            code: 'MFA_REQUIRED',
+          },
+          HttpStatus.UNAUTHORIZED
+        );
+      } else if (
+        !(await this.mfaService.verifyCode(user.id, loginDto.totpCode))
+      ) {
+        this.logger.warn(`管理员登录失败 - TOTP 动态码错误: ${account}`);
+        // 复用登录维度限流：错码尝试与密码错误共享同一账号计数窗口
+        await this.accountRateLimitService.checkLimit('login', account);
+        await this.auditAdminLoginFailure(
+          account,
+          clientIp,
+          req,
+          'mfa_code_invalid',
+          user.id
+        );
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.UNAUTHORIZED,
+            message:
+              I18nContext.current()?.t('error.mfa.code_invalid') ??
+              '双因素认证动态码错误，请重试',
+            code: 'MFA_CODE_INVALID',
+          },
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+    }
+
+    // 3.6 口令定期更换判定（#416 等保 8.1.4.1 b)，仅管理员入口）：
+    // passwordChangedAt=null → 首登未改密（强制改密）；>180 天 → 到期强制改密；
+    // >166 天 → 提前 14 天软提示（不拦截）。
+    // 标记随响应下发，JwtStrategy 据此对未改密管理员做强制引导（复用 #415 MFA 锁定模式）。
+    const passwordChangeStatus =
+      this.passwordPolicyService.getPasswordChangeStatus(
+        user.passwordChangedAt
+      );
+    const passwordChangeRequired = passwordChangeStatus.required;
+    const passwordExpiringSoon = passwordChangeStatus.expiringSoon;
 
     // 4. 签发 token（与普通登录同构：登录后使用完整管理功能与既有鉴权链路）
     const userWithMembership = user as UserRecord & {
@@ -177,8 +261,9 @@ export class AdminAuthService {
       );
     }
 
-    // 登录成功，清空该账号的失败计数
+    // 登录成功，清空该账号的失败计数（频率限流 + 失败锁定链）
     await this.accountRateLimitService.reset('login', account);
+    await this.accountRateLimitService.clearLoginFailures(account);
 
     this.logger.log(
       `管理员登录成功: ${account} (ID: ${user.id}, IP: ${clientIp})`
@@ -195,13 +280,25 @@ export class AdminAuthService {
       undefined,
       undefined,
       user.username || user.email || user.id,
-      { account, ip: clientIp, loginMethod: 'admin_password' },
+      {
+        account,
+        ip: clientIp,
+        loginMethod: mfaSetupRequired
+          ? 'admin_password_mfa_pending'
+          : 'admin_password',
+        mfaSetupRequired,
+      },
       clientIp,
       req?.headers?.['user-agent'] as string | undefined
     );
 
     return {
       ...tokens,
+      ...(mfaSetupRequired ? { mfaSetupRequired: true } : {}),
+      ...(passwordChangeRequired
+        ? { passwordChangeRequired }
+        : {}),
+      ...(passwordExpiringSoon ? { passwordExpiringSoon: true } : {}),
       user: {
         ...userWithoutPassword,
         nickname: userWithoutPassword.nickname || undefined,

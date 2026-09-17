@@ -172,27 +172,6 @@
     transform: translateY(-2px);
   }
 
-  /* 骨架屏动�?*/
-  .skeleton-pulse {
-    background: linear-gradient(
-      90deg,
-      var(--bg-tertiary) 0%,
-      var(--border-default) 50%,
-      var(--bg-tertiary) 100%
-    );
-    background-size: 200% 100%;
-    animation: skeleton-loading 1.5s ease-in-out infinite;
-  }
-
-  @keyframes skeleton-loading {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
   /* 选中状态指示器动画 */
   .selection-indicator {
     transition: all var(--transition-base);

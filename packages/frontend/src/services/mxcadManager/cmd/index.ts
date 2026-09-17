@@ -10,6 +10,7 @@ import { NewFileCommand } from './newFileCommand';
 import { OpenFileCommand, OpenFileNoCacheCommand } from './openFileCommand';
 import { SaveToCloudCommand } from './saveToCloud';
 import { InsertImageCommand } from './insertImageCommand';
+import { ShareCommand } from './shareCommand';
 import { CommandRegistry } from './types';
 
 CommandRegistry.register(new ExportPDFCommand());
@@ -24,3 +25,4 @@ CommandRegistry.register(new OpenFileCommand());
 CommandRegistry.register(new OpenFileNoCacheCommand());
 CommandRegistry.register(new SaveToCloudCommand());
 CommandRegistry.register(new InsertImageCommand());
+CommandRegistry.register(new ShareCommand());

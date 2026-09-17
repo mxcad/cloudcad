@@ -42,6 +42,10 @@ export enum AuditAction {
   USER_UNBIND_EMAIL = 'USER_UNBIND_EMAIL',
   USER_UNBIND_PHONE = 'USER_UNBIND_PHONE',
   USER_UNBIND_WECHAT = 'USER_UNBIND_WECHAT',
+  // —— 账号安全：会话转移（桌面端 EXE → 系统浏览器强制会话切换，等保 8.1.4.1 会话切换可追溯）——
+  // 独立动作值而非复用 USER_LOGIN：后者属高频读组，成功记录被 AuditLogService 写入入口过滤，
+  // 无法满足「会话切换操作留痕」的追溯要求。
+  USER_SESSION_TRANSFER = 'USER_SESSION_TRANSFER',
   // —— 安全类：IP 黑名单 ——
   IP_BLACKLIST_ADD = 'IP_BLACKLIST_ADD',
   IP_BLACKLIST_REMOVE = 'IP_BLACKLIST_REMOVE',
@@ -75,10 +79,15 @@ export enum AuditAction {
   ALERT_RESOLVE = 'ALERT_RESOLVE',
   // —— 阶段 2 新增：审计导出动作本身（#207）——
   AUDIT_EXPORT = 'AUDIT_EXPORT',
+  // —— 审计受限删除：清理动作本身留痕（#323，等保 8.4.3.3 防未授权删除）——
+  AUDIT_CLEANUP = 'AUDIT_CLEANUP',
   // —— 资金敏感：退款申请 / 审核通过 / 审核驳回 ——
   REFUND_APPLY = 'REFUND_APPLY',
   REFUND_APPROVE = 'REFUND_APPROVE',
   REFUND_REJECT = 'REFUND_REJECT',
+  // —— 账号安全：管理员 TOTP 双因素（#415，等保 8.1.4.1(d)）——
+  MFA_BIND = 'MFA_BIND',
+  MFA_UNBIND = 'MFA_UNBIND',
 }
 
 /**

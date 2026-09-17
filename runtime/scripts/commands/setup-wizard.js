@@ -85,6 +85,31 @@ function generateJwtSecret(length = 32) {
 }
 
 /**
+ * 生成符合口令策略的强随机口令（#416 等保 8.1.4.1）：
+ * 长度 16，覆盖小写/大写/数字/特殊字符四类（满足"四类至少三类"），
+ * 随机生成不会命中弱口令黑名单。用于生成 INITIAL_ADMIN_PASSWORD。
+ */
+function generateStrongPassword() {
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const special = '!@#$%^&*-_=+?';
+  const all = lower + upper + digits + special;
+  const rand = (chars) => chars[crypto.randomInt(chars.length)];
+  // 保证四类各至少一个，其余随机补齐到 16 位
+  const chars = [rand(lower), rand(upper), rand(digits), rand(special)];
+  while (chars.length < 16) {
+    chars.push(rand(all));
+  }
+  // Fisher-Yates 洗牌打散位置
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
+
+/**
  * 运行部署引导配置
  */
 async function runSetupWizard() {
@@ -99,7 +124,8 @@ async function runSetupWizard() {
 
   // 获取默认值
   const defaultDbPassword = envConfig.DB_PASSWORD || 'password';
-  const defaultAdminPassword = envConfig.INITIAL_ADMIN_PASSWORD || 'Admin123!';
+  const defaultAdminPassword =
+    envConfig.INITIAL_ADMIN_PASSWORD || generateStrongPassword();
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -160,8 +186,8 @@ async function runSetupWizard() {
       finalAdminPassword = adminPassword;
       updates.INITIAL_ADMIN_PASSWORD = adminPassword;
     } else {
-      // 自动生成
-      finalAdminPassword = generateRandomPassword();
+      // 自动生成（符合口令策略的强随机口令，#416 等保 8.1.4.1）
+      finalAdminPassword = generateStrongPassword();
       updates.INITIAL_ADMIN_PASSWORD = finalAdminPassword;
       console.log(`  → 已自动生成管理员密码`);
     }
@@ -311,10 +337,10 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   // JWT 密钥自动生成（无需用户编辑）
   updates.JWT_SECRET = generateJwtSecret(32);
 
-  // 自动生成默认密码（10位纯数字）
+  // 自动生成默认密码（数据库/Redis 用 10 位纯数字；管理员口令用符合策略的强随机口令，#416 等保 8.1.4.1）
   const dbPassword = generateNumericPassword(10);
   const redisPassword = generateNumericPassword(10);
-  const adminPassword = generateNumericPassword(10);
+  const adminPassword = generateStrongPassword();
 
   if (!interactive) {
     updates.DB_PASSWORD = dbPassword;

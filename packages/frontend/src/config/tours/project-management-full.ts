@@ -397,12 +397,12 @@ export function getProjectManagementFullGuide(): TourGuide {
         target: 'upload-btn',
         title: t('上传文件'),
         content: t(
-          '如果需要上传图纸，可以点击上传按钮。已存在的图纸可以直接使用。'
+          '这里可以上传 DWG、DXF 等 CAD 文件。已存在的图纸可以直接使用。'
         ),
         placement: 'bottom',
         mode: 'display',
         waitForElement: 3000,
-        fallbackContent: t('上传文件按钮可以上传 DWG、DXF 等 CAD 文件。'),
+        fallbackContent: t('上传文件功能可以上传 DWG、DXF 等 CAD 文件。'),
       },
       {
         target: 'file-item',

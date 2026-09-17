@@ -4,6 +4,7 @@ import { UserPasswordService } from './user-password.service';
 import { DatabaseService } from '../../database/database.service';
 import { PASSWORD_HASHER } from '../interfaces/password-hasher.interface';
 import { AuditLogService } from '../../audit/audit-log.service';
+import { PasswordPolicyService } from '../../auth/services/password-policy.service';
 
 /**
  * UserPasswordService 账号安全审计：
@@ -32,8 +33,16 @@ describe('UserPasswordService（修改密码审计）', () => {
     log: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockPasswordPolicyService = {
+    assertPasswordPolicy: jest.fn(),
+    getPasswordChangeStatus: jest
+      .fn()
+      .mockReturnValue({ required: undefined, expiringSoon: false }),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPasswordPolicyService.assertPasswordPolicy.mockReset();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,6 +50,10 @@ describe('UserPasswordService（修改密码审计）', () => {
         { provide: DatabaseService, useValue: mockPrisma },
         { provide: PASSWORD_HASHER, useValue: mockPasswordHasher },
         { provide: AuditLogService, useValue: mockAuditLogService },
+        {
+          provide: PasswordPolicyService,
+          useValue: mockPasswordPolicyService,
+        },
       ],
     }).compile();
     service = module.get(UserPasswordService);

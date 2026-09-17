@@ -42,20 +42,20 @@
 
 ### 开发环境
 
-| 软件 | 版本要求 | 说明 |
-|------|----------|------|
-| Node.js | >= 20.19.5 | 运行前后端代码 |
-| pnpm | >= 9.15.4 | 包管理器 |
-| PostgreSQL | 15.x | 数据库 |
-| Redis | 7.x | 缓存 |
-| Git | 任意版本 | 代码管理 |
+| 软件       | 版本要求   | 说明           |
+| ---------- | ---------- | -------------- |
+| Node.js    | >= 20.19.5 | 运行前后端代码 |
+| pnpm       | >= 9.15.4  | 包管理器       |
+| PostgreSQL | 15.x       | 数据库         |
+| Redis      | 7.x        | 缓存           |
+| Git        | 任意版本   | 代码管理       |
 
 ### 生产环境
 
-| 软件 | 版本要求 | 说明 |
-|------|----------|------|
-| Docker | >= 24.0 | 容器运行时 |
-| Docker Compose | >= 2.20 | 容器编排 |
+| 软件           | 版本要求 | 说明       |
+| -------------- | -------- | ---------- |
+| Docker         | >= 24.0  | 容器运行时 |
+| Docker Compose | >= 2.20  | 容器编排   |
 
 ### 检查环境
 
@@ -98,11 +98,11 @@ pnpm dev
 
 ### 访问地址
 
-| 服务 | 地址 | 说明 |
-|------|------|------|
-| 前端 | http://localhost:3000 | Vite 开发服务器 |
-| 后端 API | http://localhost:3001/api | NestJS 开发服务器 |
-| API 文档 | http://localhost:3001/api/docs | Swagger UI |
+| 服务     | 地址                           | 说明              |
+| -------- | ------------------------------ | ----------------- |
+| 前端     | http://localhost:3000          | Vite 开发服务器   |
+| 后端 API | http://localhost:3001/api      | NestJS 开发服务器 |
+| API 文档 | http://localhost:3001/api/docs | Swagger UI        |
 
 ---
 
@@ -116,6 +116,7 @@ pnpm deploy
 ```
 
 首次部署会：
+
 1. 构建前后端代码
 2. 创建 Docker 镜像
 3. 启动 PostgreSQL、Redis、API Server、Config Center、Storage Service、Function Workflow 等全部容器
@@ -123,10 +124,10 @@ pnpm deploy
 
 ### 访问地址
 
-| 服务 | 地址 |
-|------|------|
-| 前端 | http://localhost |
-| 后端 API | http://localhost/api |
+| 服务     | 地址                    |
+| -------- | ----------------------- |
+| 前端     | http://localhost        |
+| 后端 API | http://localhost/api    |
 | 健康检查 | http://localhost/health |
 
 ### 环境变量配置
@@ -143,6 +144,7 @@ copy docker\.env.example docker\.env
 ```
 
 **生成安全的 JWT 密钥：**
+
 ```powershell
 # 方式1: 使用 Node.js
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
@@ -152,16 +154,19 @@ openssl rand -base64 32
 ```
 
 **配置优先级：**
+
 ```
 容器环境变量 > .env 文件 > 默认值
 ```
 
 **注意：**
+
 - `packages/backend/.env` 是本地开发用的，Docker 部署不会读取
 - `docker/.env` 是 Docker Compose 读取的
 - 生产环境没有默认密码，必须显式配置
 
 **Session Cookie Secure（会话 Cookie 安全标志）：**
+
 - 默认 `SESSION_COOKIE_SECURE=auto`，后端按请求协议自适应：
   - **http 请求**（局域网 IP 直连 / 未挂 HTTPS）→ cookie 不带 `Secure`，浏览器正常存储，登录/协同功能正常
   - **https 请求**（已挂 HTTPS 反代）→ cookie 带 `Secure`
@@ -198,26 +203,40 @@ pnpm deploy
 
 生产环境使用 Docker 命名卷存储数据：
 
-| 卷名 | 用途 |
-|------|------|
-| postgres_data | 数据库数据 |
-| redis_data | Redis 持久化 |
-| files_data | 用户文件 |
-| uploads | 上传文件 |
-| logs | 日志文件 |
+| 卷名          | 用途         |
+| ------------- | ------------ |
+| postgres_data | 数据库数据   |
+| redis_data    | Redis 持久化 |
+| files_data    | 用户文件     |
+| uploads       | 上传文件     |
+| logs          | 日志文件     |
 
 ### 备份与恢复
+
+#### 自动备份（后端内置）
+
+- **每日全量备份**：默认 01:00（`BACKUP_CRON` 可配）执行 `pg_dump -Fc`，输出至 `BACKUP_DIR`（默认 `data/backups`），保留最近 14 份（`BACKUP_KEEP_LOCAL`）
+- **完整性校验**：每次备份后立即 `pg_restore --list` 验证；校验失败的备份重命名为 `*.invalid` 保留现场，并产生 P1 告警（source: `backup-verify`），需人工排查后删除
+- **月度恢复演练**：默认每月 1 日 03:00（`BACKUP_DRILL_CRON` 可配，`BACKUP_DRILL_ENABLED=true` 开启）自动将最近一份有效备份恢复到临时库 `cloudcad_restore_drill`，与备份时行数快照（`*.counts.json`）逐表比对（`BACKUP_DRILL_TABLES` 可配），完成后清理临时库；演练失败产生 P1 告警（source: `restore-drill`）
+- 总开关：环境级 `BACKUP_ENABLED` + 运行时开关（管理界面）；手动触发走后台任务接口（任务名 `backup:database` / `backup:restore-drill`）
+
+#### 手动恢复步骤
 
 ```powershell
 # 备份数据库
 docker compose exec postgres pg_dump -U postgres cloudcad > backup.sql
 
-# 恢复数据库
-docker compose exec -T postgres psql -U postgres cloudcad < backup.sql
+# 从 .dump 备份恢复数据库（先停应用写入，恢复后重启）
+pg_restore -h <host> -p 5432 -U postgres -d cloudcad --clean --if-exists data\backups\cloudcad-YYYYMMDD-HHmmss.dump
+
+# 校验备份文件可读（不执行恢复）
+pg_restore --list data\backups\cloudcad-YYYYMMDD-HHmmss.dump > $null
 
 # 备份上传文件
 docker compose cp app:/app/uploads ./backup_uploads
 ```
+
+> 演练结果解读：TaskRun 记录（任务名 `backup:restore-drill`）中 `mismatches` 为空表示行数一致；有快照缺失时跳过比对（仅验证可恢复性）。完整制度见 `docs/ops/backup-restore-policy.md`。
 
 ---
 
@@ -225,22 +244,22 @@ docker compose cp app:/app/uploads ./backup_uploads
 
 ### 开发环境
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm dev` | 启动前后端开发服务器 |
-| `pnpm build` | 构建前后端 |
-| `pnpm lint` | 代码检查 |
-| `pnpm format` | 代码格式化 |
+| 命令          | 说明                 |
+| ------------- | -------------------- |
+| `pnpm dev`    | 启动前后端开发服务器 |
+| `pnpm build`  | 构建前后端           |
+| `pnpm lint`   | 代码检查             |
+| `pnpm format` | 代码格式化           |
 
 ### 生产部署
 
-| 命令 | 说明 |
-|------|------|
-| `pnpm deploy` | 构建并启动生产服务 |
-| `pnpm deploy:down` | 停止生产服务 |
-| `pnpm deploy:reset` | 删除所有数据卷 |
-| `pnpm deploy:logs` | 查看生产服务日志 |
-| `pnpm deploy:rebuild` | 强制重新构建镜像 |
+| 命令                  | 说明               |
+| --------------------- | ------------------ |
+| `pnpm deploy`         | 构建并启动生产服务 |
+| `pnpm deploy:down`    | 停止生产服务       |
+| `pnpm deploy:reset`   | 删除所有数据卷     |
+| `pnpm deploy:logs`    | 查看生产服务日志   |
+| `pnpm deploy:rebuild` | 强制重新构建镜像   |
 
 ---
 
@@ -253,6 +272,7 @@ Error: port is already allocated
 ```
 
 **解决方案：**
+
 ```powershell
 # 查看端口占用
 netstat -ano | findstr :5432
@@ -272,6 +292,7 @@ Error: Can't reach database server
 ```
 
 **解决方案：**
+
 ```powershell
 # 检查数据库容器状态
 docker compose ps
@@ -290,6 +311,7 @@ Error: build failed
 ```
 
 **解决方案：**
+
 ```powershell
 # 清理 Docker 缓存
 docker system prune -a
@@ -306,6 +328,7 @@ Error: JavaScript heap out of memory
 ```
 
 **解决方案：**
+
 ```powershell
 # 增加 Node.js 内存限制 (package.json)
 "scripts": {
@@ -320,6 +343,7 @@ Error: JavaScript heap out of memory
 ```
 
 **解决方案：**
+
 ```powershell
 # 安装 pnpm
 npm install -g pnpm
@@ -336,6 +360,7 @@ Error: P1001: Can't reach database server
 ```
 
 **解决方案：**
+
 ```powershell
 # 确保数据库服务正在运行
 # 检查 packages/backend/.env 中的数据库连接配置
@@ -358,19 +383,19 @@ pnpm deploy
 
 ### 1. 白名单双通道
 
-| 通道 | 维护方式 | 特点 |
-|------|---------|------|
-| **DB 通道** | 管理界面 `/admin/ip-whitelist`（需 `SYSTEM_IP_WHITELIST_MANAGE` 权限） | 增删即时生效；可设限期 |
-| **本地文件通道（兜底）** | 服务器上直接编辑白名单文件 | 编辑即生效（mtime 检测热加载），无需重启后端；**界面误删白名单后的自救通道** |
+| 通道                     | 维护方式                                                               | 特点                                                                         |
+| ------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **DB 通道**              | 管理界面 `/admin/ip-whitelist`（需 `SYSTEM_IP_WHITELIST_MANAGE` 权限） | 增删即时生效；可设限期                                                       |
+| **本地文件通道（兜底）** | 服务器上直接编辑白名单文件                                             | 编辑即生效（mtime 检测热加载），无需重启后端；**界面误删白名单后的自救通道** |
 
 > 本机环回地址 `127.0.0.1` / `::1` **恒放行**，作为服务器本机自救通道。
 
 ### 2. 本地文件路径与环境变量
 
-| 环境变量 | 说明 | 默认值 |
-|---------|------|--------|
-| `ADMIN_IP_WHITELIST_FILE` | 本地白名单文件路径（相对路径基于项目根，也可用绝对路径） | `config/admin-ip-whitelist.json` |
-| `ADMIN_TRUSTED_PROXY_IPS` | 可信反向代理地址段（逗号分隔，支持精确 IP/CIDR），用于 XFF 安全判定 | `127.0.0.1,::1` |
+| 环境变量                  | 说明                                                                | 默认值                           |
+| ------------------------- | ------------------------------------------------------------------- | -------------------------------- |
+| `ADMIN_IP_WHITELIST_FILE` | 本地白名单文件路径（相对路径基于项目根，也可用绝对路径）            | `config/admin-ip-whitelist.json` |
+| `ADMIN_TRUSTED_PROXY_IPS` | 可信反向代理地址段（逗号分隔，支持精确 IP/CIDR），用于 XFF 安全判定 | `127.0.0.1,::1`                  |
 
 **文件格式**（二选一，按内容自动识别）：
 
@@ -444,11 +469,11 @@ cloudcad/
 
 ### 技术栈
 
-| 组件 | 技术 |
-|------|------|
-| 前端 | React + Vite + TypeScript |
-| 后端 | NestJS + Express + TypeScript |
-| 数据库 | PostgreSQL 15 |
-| 缓存 | Redis 7 |
-| 反向代理 | Nginx |
-| 容器 | Docker + Docker Compose |
+| 组件     | 技术                          |
+| -------- | ----------------------------- |
+| 前端     | React + Vite + TypeScript     |
+| 后端     | NestJS + Express + TypeScript |
+| 数据库   | PostgreSQL 15                 |
+| 缓存     | Redis 7                       |
+| 反向代理 | Nginx                         |
+| 容器     | Docker + Docker Compose       |

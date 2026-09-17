@@ -45,6 +45,15 @@ _避免_: 项目动态、活动记录
 
 **外部参照（External Reference / Xref）**:
 图纸中引用的外部 DWG 文件或图片，作为当前图纸的参照底图。外部参照独立存储，不纳入 FileSystemNode 体系（非 CAD 文件如参照图片属于外部参照专项）。需要 CAD_EXTERNAL_REFERENCE 权限方可上传/管理。
+
+**外部参照磁盘文件命名**:
+外部参照文件按「源文件全名 + .mxweb」存储在源图纸目录下的外部参照子目录中，形如 `data/files/{日期}/{nodeId}/{src_file_md5}/{fileName}.mxweb`。
+- DWG/DXF 外部参照：`A1.dwg` → `A1.dwg.mxweb`（保留原始扩展名，追加 `.mxweb`，**勿剥掉扩展名**）
+- 图片外部参照：`image.png` → `image.png`（保持原名，不追加后缀）
+- 外部参照子目录名取自 `preloading.json` 的 `src_file_md5`，降级为 `nodeId`
+- 无 DB 节点（游客/临时上传）时写入 `mxcadUploadPath/{srcDwgNodeId}/` 临时目录
+- **命名规则以写入端为准**：`handleExternalReferenceFile` 写入的文件名是单一事实源，所有消费端（`checkExists`、`getExternalRefDownloadPath`、`enrichFileInfoList`）须与之一致，禁止各自重复推导
+
 _避免_: 外部引用、附件
 
 **预加载索引（Preloading Index）**:

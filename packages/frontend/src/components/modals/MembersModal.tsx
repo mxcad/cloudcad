@@ -25,6 +25,7 @@ import { usersControllerSearchUsers } from '@/api-sdk';
 import { rolesControllerGetProjectRolesByProject } from '@/api-sdk';
 import type { ProjectRoleDto } from '@/api-sdk';
 import { useProjectPermission } from '@/hooks/useProjectPermission';
+import { useAuth } from '@/contexts/AuthContext';
 import { ProjectPermission, getRoleDisplayName } from '@/constants/permissions';
 import { t, $t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -75,6 +76,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
   const { checkPermission, refreshProjectPermissions } = useProjectPermission();
+  const { user } = useAuth();
+  const currentUserId = user?.id;
 
   const loadMembers = useCallback(async () => {
     setErrorMessage('');
@@ -666,6 +669,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                   member.projectRoleId ===
                   projectRoles.find((r) => r.isOwnerRole)?.id;
 
+                // 当前登录用户自己：角色不可自改、不可自移除（统一由所有者/管理员分配）
+                const isSelf = currentUserId === member.userId;
+
                 const displayName =
                   member.nickname ||
                   member.username ||
@@ -709,6 +715,18 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                       >
                         {t('项目所有者')}
                       </Tag>
+                    ) : isSelf ? (
+                      <Tooltip
+                        content={t('您的角色由项目所有者/管理员统一分配')}
+                      >
+                        <Tag
+                          variant="neutral"
+                          size="sm"
+                          className="flex-shrink-0"
+                        >
+                          {getRoleDisplayName(member.projectRoleName, false)}
+                        </Tag>
+                      </Tooltip>
                     ) : (
                       <select
                         value={member.projectRoleId}
@@ -770,30 +788,34 @@ export const MembersModal: React.FC<MembersModalProps> = ({
                     {!isOwner && (
                       <Tooltip
                         content={
-                          canManageMembers
-                            ? t('移除成员')
-                            : t('需要成员管理权限')
+                          isSelf
+                            ? t('不能移除自己')
+                            : canManageMembers
+                              ? t('移除成员')
+                              : t('需要成员管理权限')
                         }
                       >
                         <button
                           onClick={() =>
-                            canManageMembers && handleRemoveMember(member.id)
+                            canManageMembers &&
+                            !isSelf &&
+                            handleRemoveMember(member.id)
                           }
-                          disabled={!canManageMembers}
+                          disabled={!canManageMembers || isSelf}
                           className={`p-1.5 rounded flex-shrink-0 ${
-                            !canManageMembers
+                            !canManageMembers || isSelf
                               ? 'opacity-50 cursor-not-allowed'
                               : ''
                           }`}
                           style={{ color: 'var(--text-muted)' }}
                           onMouseEnter={(e) => {
-                            if (!canManageMembers) return;
+                            if (!canManageMembers || isSelf) return;
                             e.currentTarget.style.color = 'var(--error)';
                             e.currentTarget.style.background =
                               'var(--error-light)';
                           }}
                           onMouseLeave={(e) => {
-                            if (!canManageMembers) return;
+                            if (!canManageMembers || isSelf) return;
                             e.currentTarget.style.color = 'var(--text-muted)';
                             e.currentTarget.style.background = 'transparent';
                           }}

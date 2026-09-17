@@ -92,7 +92,8 @@ describe('ProcessPoolExecutor', () => {
       const result = await executor.invoke(
         makeTask({
           type: 'convertBinToMxweb',
-          params: { binPath: '/in/a.bin', outputPath: '/out', outName: 'a' },
+          // 参数名与 forwardViaExecutor 转发契约一致（srcPath/outpath/outname）
+          params: { srcPath: '/in/a.bin', outpath: '/out', outname: 'a' },
         }),
       );
 
@@ -206,6 +207,40 @@ describe('ProcessPoolExecutor', () => {
     it('should expose queue stats and clear queue', () => {
       expect(executor.getQueueStats()).toHaveProperty('maxConcurrent', 4);
       expect(typeof executor.clearQueue()).toBe('number');
+    });
+
+    it('should expose duration stats from the rate limiter', () => {
+      expect(executor.getDurationStats()).toEqual({
+        sampleCount: 0,
+        p50DurationMs: null,
+        p95DurationMs: null,
+        p50WaitMs: null,
+        p95WaitMs: null,
+      });
+    });
+  });
+
+  describe('terminal record retention', () => {
+    it('should evict the oldest terminal records beyond the retention cap', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { newpath: '/out/r.mxweb' },
+        error: undefined,
+      });
+
+      const cap = 500;
+      for (let i = 0; i < cap + 5; i += 1) {
+        await executor.invoke(makeTask({ id: `t${i}` }));
+      }
+
+      // 最旧的 5 条被淘汰，getTaskStatus 报 not found
+      await expect(executor.getTaskStatus('t0')).rejects.toThrow(
+        'Task not found',
+      );
+      await expect(executor.getTaskStatus('t4')).rejects.toThrow(
+        'Task not found',
+      );
+      expect((await executor.getTaskStatus('t5')).status).toBe('COMPLETED');
     });
   });
 });

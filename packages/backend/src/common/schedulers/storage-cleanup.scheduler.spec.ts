@@ -7,6 +7,11 @@ import { RuntimeConfigService } from '../../runtime-config/runtime-config.servic
 import { AlertService } from '../../alert/alert.service';
 import { AlertLevel } from '../../alert/enums/alert.enum';
 import { TaskRunService } from '../../task-run/task-run.service';
+import { TASK_NAMES } from '../../task-run/task-run.constants';
+import {
+	CLEANUP_PARTIAL_MESSAGE_KEY,
+	CleanupMetricsService,
+} from '../../metrics/cleanup-metrics.service';
 
 describe('StorageCleanupScheduler', () => {
 	let scheduler: StorageCleanupScheduler;
@@ -41,6 +46,10 @@ describe('StorageCleanupScheduler', () => {
 		register: jest.fn(),
 		getRunner: jest.fn(),
 		listRunners: jest.fn(),
+	};
+
+	const mockCleanupMetrics = {
+		observe: jest.fn(),
 	};
 
 	const baseStats = {
@@ -82,6 +91,7 @@ describe('StorageCleanupScheduler', () => {
 				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 				{ provide: AlertService, useValue: mockAlertService },
 				{ provide: TaskRunService, useValue: mockTaskRunService },
+				{ provide: CleanupMetricsService, useValue: mockCleanupMetrics },
 			],
 		}).compile();
 
@@ -185,7 +195,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.P2,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('cleanup error'),
 				detail: {
 					task: 'handleCleanup',
@@ -204,7 +214,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.P2,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('trash error'),
 				detail: {
 					task: 'handleTrashCleanup',
@@ -223,7 +233,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.P2,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('lock error'),
 				detail: {
 					task: 'handleLockCleanup',
@@ -242,7 +252,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.P2,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('orphan error'),
 				detail: {
 					task: 'handleOrphanCleanup',
@@ -261,7 +271,7 @@ describe('StorageCleanupScheduler', () => {
 			expect(mockAlertService.raise).toHaveBeenCalledWith({
 				source: 'scheduler:storage-cleanup',
 				messageKey: 'task_run_failed',
-				level: AlertLevel.P2,
+				level: AlertLevel.P1,
 				message: expect.stringContaining('disk query error'),
 				detail: {
 					task: 'handleDiskMonitor',
@@ -277,6 +287,107 @@ describe('StorageCleanupScheduler', () => {
 			mockAlertService.raise.mockRejectedValue(new Error('db down'));
 
 			await expect(scheduler.handleCleanup()).resolves.toBeUndefined();
+		});
+	});
+
+	// ==================== cleanup_* 指标埋点（#325） ====================
+	describe('cleanup metrics instrumentation (#325)', () => {
+		it('observes rows/freed/duration after expired storage cleanup', async () => {
+			mockStorageCleanupService.cleanupExpiredStorage.mockResolvedValue({
+				success: true,
+				deletedNodes: 3,
+				deletedDirectories: 2,
+				freedSpace: 4096,
+				errors: [],
+			});
+			mockDiskMonitorService.getHealthReport.mockReturnValue(
+				buildHealthReport(false, false, 'Disk status normal')
+			);
+
+			await scheduler.handleCleanup();
+
+			expect(mockCleanupMetrics.observe).toHaveBeenCalledWith({
+				task: TASK_NAMES.STORAGE_CLEANUP.EXPIRED_STORAGE,
+				recordsDeleted: 3,
+				spaceFreedBytes: 4096,
+				durationSeconds: expect.any(Number),
+			});
+			expect(mockAlertService.raise).not.toHaveBeenCalled();
+		});
+
+		it('observes trash cleanup and raises cleanup.partial (P2) when errors remain', async () => {
+			mockStorageCleanupService.cleanupExpiredTrash.mockResolvedValue({
+				success: false,
+				deletedNodes: 5,
+				deletedDirectories: 0,
+				freedSpace: 100,
+				errors: ['清理回收站项目失败: t1, boom', '清理回收站项目失败: t2, bang'],
+			});
+
+			await scheduler.handleTrashCleanup();
+
+			expect(mockCleanupMetrics.observe).toHaveBeenCalledWith({
+				task: TASK_NAMES.STORAGE_CLEANUP.TRASH,
+				recordsDeleted: 5,
+				spaceFreedBytes: 100,
+				durationSeconds: expect.any(Number),
+			});
+			expect(mockAlertService.raise).toHaveBeenCalledWith({
+				source: 'scheduler:storage-cleanup',
+				messageKey: CLEANUP_PARTIAL_MESSAGE_KEY,
+				level: AlertLevel.P2,
+				message: expect.stringContaining('部分成功'),
+				detail: {
+					task: TASK_NAMES.STORAGE_CLEANUP.TRASH,
+					errorCount: 2,
+					errorSummary: [
+						'清理回收站项目失败: t1, boom',
+						'清理回收站项目失败: t2, bang',
+					],
+				},
+			});
+		});
+
+		it('does not raise cleanup.partial on fully successful runs', async () => {
+			mockStorageCleanupService.cleanupOrphans.mockResolvedValue({
+				success: true,
+				deletedNodes: 1,
+				deletedDirectories: 0,
+				freedSpace: 512,
+				errors: [],
+			});
+
+			await scheduler.handleOrphanCleanup();
+
+			expect(mockCleanupMetrics.observe).toHaveBeenCalledWith(
+				expect.objectContaining({ task: TASK_NAMES.STORAGE_CLEANUP.ORPHANS })
+			);
+			expect(mockAlertService.raise).not.toHaveBeenCalledWith(
+				expect.objectContaining({ messageKey: CLEANUP_PARTIAL_MESSAGE_KEY })
+			);
+		});
+
+		it('observes lock cleanup row count without freed bytes', async () => {
+			mockFileLockService.cleanupExpiredLocks.mockResolvedValue(7);
+
+			await scheduler.handleLockCleanup();
+
+			expect(mockCleanupMetrics.observe).toHaveBeenCalledWith({
+				task: TASK_NAMES.STORAGE_CLEANUP.LOCKS,
+				recordsDeleted: 7,
+				spaceFreedBytes: undefined,
+				durationSeconds: expect.any(Number),
+			});
+		});
+
+		it('still observes metrics when cleanup throws before completion', async () => {
+			mockStorageCleanupService.cleanupExpiredStorage.mockRejectedValue(
+				new Error('cleanup error')
+			);
+
+			await scheduler.handleCleanup();
+
+			expect(mockCleanupMetrics.observe).not.toHaveBeenCalled();
 		});
 	});
 });

@@ -391,10 +391,11 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
       <div>
         {/* 已选择的目录信息 */}
         <div className="bg-[var(--bg-secondary)] border border-[var(--primary-200)] rounded-lg p-3 mb-4">
-          <p className="text-sm font-medium">{t(`已选择目录：${dirName}`)}</p>
+          <p className="text-sm font-medium">{t('已选择目录：{dirName}', { dirName })}</p>
           <p className="text-xs text-[var(--text-tertiary)] mt-1">
             {t(
-              `共 ${extSummary} 文件导入到当前目录${folders > 0 ? `以及 ${folders} 个文件夹` : ''}`
+              '共 {extSummary} 文件导入到当前目录{folders}',
+              { extSummary, folders: folders > 0 ? t(' 以及 {count} 个文件夹', { count: String(folders) }) : '' }
             )}
           </p>
           <p className="text-xs text-[var(--text-tertiary)]">
@@ -548,7 +549,7 @@ export const DirectoryImportDialog: React.FC<DirectoryImportDialogProps> = ({
     <Modal
       isOpen={open}
       onClose={handleCloseModal}
-      title={t(`批量导入 - ${libraryType === 'drawing' ? '图纸库' : '图块库'}`)}
+      title={libraryType === 'drawing' ? t('批量导入 - 图纸库') : t('批量导入 - 图块库')}
       className="max-w-md"
       footer={
         <div className="flex justify-end gap-2">

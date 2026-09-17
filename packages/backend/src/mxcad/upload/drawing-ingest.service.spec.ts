@@ -10,6 +10,7 @@ import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
+import { AsyncConversionService } from '../conversion/async-conversion.service';
 import { CacheManagerService } from '../infra/cache-manager.service';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
@@ -90,6 +91,10 @@ describe('DrawingIngestService', () => {
     handleExtRef: jest.fn(),
   };
 
+  const mockAsyncConversionService = {
+    registerTask: jest.fn().mockResolvedValue('async_node1_1234567890'),
+  };
+
   function fileSource(
     overrides?: Partial<Extract<IngestSource, { kind: 'file' }>>
   ): IngestSource {
@@ -133,6 +138,10 @@ describe('DrawingIngestService', () => {
           useValue: mockNodeStatusTransitioner,
         },
         { provide: FileNodeMaterializer, useValue: mockMaterializer },
+        {
+          provide: AsyncConversionService,
+          useValue: mockAsyncConversionService,
+        },
       ],
     }).compile();
     service = module.get<DrawingIngestService>(DrawingIngestService);
@@ -246,8 +255,15 @@ describe('DrawingIngestService', () => {
     });
   });
 
-  describe('转换失败占位释放', () => {
-    it('should release conversion reservation and delete failed node', async () => {
+  describe('转换失败占位释放（#433 异步化：后台处理）', () => {
+    // 后台转换任务 fire-and-forget，需冲刷微任务链使其完成后再断言
+    async function flushMicrotasks(count = 12): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
+
+    it('上传立即返回 kOk（节点 PROCESSING），转换失败在后台释放占位 + 删节点', async () => {
       mockFileConversionService.needsConversion.mockReturnValue(true);
       mockFileSystemService.getFileSize.mockResolvedValue(1024);
       mockFileTreeService.createFileNode.mockResolvedValue({ id: 'cad1' });
@@ -256,11 +272,21 @@ describe('DrawingIngestService', () => {
         ret: { code: 1 },
       });
 
+      // 上传请求立即返回 kOk（不阻塞等待转换），节点保持 PROCESSING
       const result = await service.ingest(fileSource(), target());
-
+      expect(result).toEqual({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'cad1',
+        created: true,
+      });
       expect(mockRestrictionEngine.reserveConversionCountOrThrow).toHaveBeenCalledWith(
         'user1'
       );
+
+      // 冲刷后台转换任务微任务链（fire-and-forget，mock 立即 resolve 故任务已完成）
+      await flushMicrotasks();
+
+      // 后台任务：转换失败 → 释放占位 + 节点 FAILED + 删除节点
       expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
         'user1'
       );
@@ -269,11 +295,151 @@ describe('DrawingIngestService', () => {
         FileStatus.PROCESSING,
         FileStatus.FAILED
       );
-      expect(mockNodeTrashService.deleteNode).toHaveBeenCalledWith(
+      expect(mockNodeTrashService.deleteNode).toHaveBeenCalledWith('cad1', true);
+    });
+  });
+
+  describe('S5-2 上传链路统一：后台转换注册 node.taskId 进面板「云端」列表', () => {
+    async function flushMicrotasks(count = 12): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+    }
+
+    it('后台转换前调用 registerTask 写 node.taskId（上传图纸进面板云端列表）', async () => {
+      mockFileConversionService.needsConversion.mockReturnValue(true);
+      mockFileSystemService.getFileSize.mockResolvedValue(1024);
+      mockFileTreeService.createFileNode.mockResolvedValue({ id: 'cad1' });
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { code: 0 },
+      });
+      mockMaterializer.materialize.mockResolvedValue({ nodeId: 'cad1' });
+
+      const result = await service.ingest(fileSource(), target());
+      expect(result).toEqual({
+        ret: MxUploadReturn.kOk,
+        nodeId: 'cad1',
+        created: true,
+      });
+
+      await flushMicrotasks();
+
+      // S5-2：后台转换前注册 node.taskId（写 taskId + 确保 PROCESSING），
+      // 使上传图纸进面板「云端」列表（node.taskId 非空 = 云端任务）。
+      expect(mockAsyncConversionService.registerTask).toHaveBeenCalledWith('cad1');
+      // 转换完成 + 落盘 + 节点 COMPLETED
+      expect(mockFileConversionService.convertFile).toHaveBeenCalled();
+      expect(mockMaterializer.materialize).toHaveBeenCalled();
+      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
         'cad1',
-        true
+        FileStatus.PROCESSING,
+        FileStatus.COMPLETED
       );
+    });
+  });
+
+  describe('外部参照 DWG 上传（保持同步，不建节点）', () => {
+    it('srcDwgNodeId 场景：同步转换 + handleExtRef，不建节点，返回 kOk + created:false', async () => {
+      mockFileConversionService.needsConversion.mockReturnValue(true);
+      mockFileSystemService.getFileSize.mockResolvedValue(1024);
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { code: 0, tz: true },
+      });
+      mockUploadUtilityService.getConvertedFileName.mockReturnValue(
+        'hash1.dwg.mxweb'
+      );
+
+      const result = await service.ingest(
+        fileSource(),
+        target({ srcDwgNodeId: 'dwg-node-1', isImage: false })
+      );
+
+      // 外部参照：不建数据库节点，同步转换 + handleExtRef（请求返回即就位）
+      expect(result).toEqual({
+        ret: MxUploadReturn.kOk,
+        tz: true,
+        created: false,
+      });
+      expect(mockFileTreeService.createFileNode).not.toHaveBeenCalled();
+      expect(mockMaterializer.handleExtRef).toHaveBeenCalledWith({
+        srcDwgNodeId: 'dwg-node-1',
+        name: 'upload.dwg',
+        fileHash: 'hash1',
+        sourcePath: expect.any(String),
+      });
+    });
+
+    it('外部参照转换失败：同步释放占位 + 返回 kConvertFileError（不删节点）', async () => {
+      mockFileConversionService.needsConversion.mockReturnValue(true);
+      mockFileSystemService.getFileSize.mockResolvedValue(1024);
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: false,
+        ret: { code: 1 },
+      });
+
+      const result = await service.ingest(
+        fileSource(),
+        target({ srcDwgNodeId: 'dwg-node-1', isImage: false })
+      );
+
       expect(result).toEqual({ ret: MxUploadReturn.kConvertFileError });
+      expect(mockMaterializer.handleExtRef).not.toHaveBeenCalled();
+      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
+        'user1'
+      );
+    });
+  });
+
+  describe('无 nodeId 打开（CAD 编辑器打开图纸 = 纯打开/预览，不建节点）', () => {
+    it('登录用户无 nodeId：同步转换 + 不建节点，返回 kOk + created:false（回归：#433 前转换无条件执行）', async () => {
+      mockFileConversionService.needsConversion.mockReturnValue(true);
+      mockFileSystemService.getFileSize.mockResolvedValue(1024);
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { code: 0 },
+      });
+
+      // 无 nodeId（CAD 编辑器打开图纸，游客与登录用户一致）：target.parentNodeId 为空
+      const result = await service.ingest(
+        fileSource(),
+        target({ parentNodeId: '' })
+      );
+
+      // 转换执行、不建数据库节点、返回 kOk（前端经 public-file/access/<hash>.mxweb 打开）
+      expect(result).toEqual({ ret: MxUploadReturn.kOk, created: false });
+      expect(mockFileConversionService.convertFile).toHaveBeenCalledWith({
+        srcPath: '/tmp/upload.dwg',
+        fileHash: 'hash1',
+        createPreloadingData: true,
+      });
+      expect(mockFileTreeService.createFileNode).not.toHaveBeenCalled();
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalled();
+      // 转换成功，不释放占位
+      expect(mockRestrictionEngine.releaseConversionCount).not.toHaveBeenCalled();
+    });
+
+    it('无 nodeId 转换失败：同步释放占位 + 返回 kConvertFileError（不建节点、不删节点）', async () => {
+      mockFileConversionService.needsConversion.mockReturnValue(true);
+      mockFileSystemService.getFileSize.mockResolvedValue(1024);
+      mockFileConversionService.convertFile.mockResolvedValue({
+        isOk: false,
+        ret: { code: 1 },
+      });
+
+      const result = await service.ingest(
+        fileSource(),
+        target({ parentNodeId: '' })
+      );
+
+      expect(result).toEqual({ ret: MxUploadReturn.kConvertFileError });
+      expect(mockFileTreeService.createFileNode).not.toHaveBeenCalled();
+      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
+        'user1'
+      );
     });
   });
 

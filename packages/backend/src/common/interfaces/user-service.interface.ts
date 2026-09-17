@@ -33,6 +33,8 @@ export interface ICreatedUser {
   status: string;
   createdAt?: Date;
   updatedAt?: Date;
+  /** #416 口令最后修改时间（null=初始管理员首登未改密） */
+  passwordChangedAt?: Date | null;
 }
 
 /** 用户详情（包含 hasPassword 标志） */

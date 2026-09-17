@@ -38,8 +38,16 @@ function formatTime(value: string): string {
   return new Date(value).toLocaleString();
 }
 
-export default function SecurityAccessAttemptPage() {
-  useDocumentTitle(t('高危访问尝试'));
+/**
+ * @param embedded 嵌入 IP 访问控制 Tab 时为 true：隐藏独立页头与外边距
+ * （标题由外层 Tab 承担，「管理员登录被拒记录」标签保留在工具栏行内）
+ */
+export default function SecurityAccessAttemptPage({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
+  useDocumentTitle(t('高危访问尝试'), embedded);
 
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState('');
@@ -98,13 +106,33 @@ export default function SecurityAccessAttemptPage() {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden p-6 text-text-secondary">
-      <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
-        <div className="flex-shrink-0 flex items-center justify-between mb-6">
+    <div
+      className={
+        embedded
+          ? 'h-full flex flex-col overflow-hidden text-text-secondary'
+          : 'h-full flex flex-col overflow-hidden p-6 text-text-secondary'
+      }
+    >
+      <div
+        className={
+          embedded
+            ? 'w-full flex flex-col flex-1 min-h-0'
+            : 'max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0'
+        }
+      >
+        <div
+          className={
+            embedded
+              ? 'flex-shrink-0 flex items-center justify-between mb-4'
+              : 'flex-shrink-0 flex items-center justify-between mb-6'
+          }
+        >
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-text-primary">
-              {t('高危访问尝试')}
-            </h1>
+            {!embedded && (
+              <h1 className="text-2xl font-bold text-text-primary">
+                {t('高危访问尝试')}
+              </h1>
+            )}
             <Tag variant="error" size="xs">
               {t('管理员登录被拒记录')}
             </Tag>

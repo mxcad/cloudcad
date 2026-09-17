@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, act } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { CAD_EVENTS } from '@/constants/events';
 import { clearDrawingSessionListeners } from '@/services/drawingSession';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
@@ -234,7 +235,9 @@ describe('CADEditorDirect — fileUrl 外部参照 3s 超时路径', () => {
     );
     return render(
       <MemoryRouter>
-        <CADEditorDirect />
+        <NotificationProvider>
+          <CADEditorDirect />
+        </NotificationProvider>
       </MemoryRouter>
     );
   }
@@ -314,7 +317,9 @@ describe('CADEditorDirect — 协同链接未登录（游客）场景', () => {
 
     render(
       <MemoryRouter>
-        <CADEditorDirect />
+        <NotificationProvider>
+          <CADEditorDirect />
+        </NotificationProvider>
       </MemoryRouter>
     );
     await act(async () => {
@@ -346,7 +351,9 @@ describe('CADEditorDirect — 协同链接未登录（游客）场景', () => {
 
     render(
       <MemoryRouter>
-        <CADEditorDirect />
+        <NotificationProvider>
+          <CADEditorDirect />
+        </NotificationProvider>
       </MemoryRouter>
     );
     await act(async () => {

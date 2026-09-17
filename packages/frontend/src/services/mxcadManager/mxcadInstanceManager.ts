@@ -31,6 +31,7 @@ import { MxCADContainerManager } from './mxcadContainerManager';
 import { clearOldMxwebCache } from './mxcadCache';
 import { applyVipExportIcons } from './applyVipExportIcons';
 import { installVipCommandGuard } from './vipCommandGuard';
+import { ensureFreshAuthCookie } from '@/config/tokenRefresh';
 
 /**
  * 待打开会话信息：文件打开成功后由 openFileComplete 监听器消费
@@ -41,39 +42,78 @@ export interface PendingOpenInfo {
 }
 
 /**
+ * 当前共享图纸的 shareToken（模块级变量，供 extReferenceUrlResolver 使用）
+ * WASM 层的 HTTP 请求不携带 requestHeaders，只能通过 URL 传递认证信息
+ */
+let currentShareToken: string | null = null;
+
+/** 设置当前 shareToken（openFile 时调用） */
+export function setCurrentShareToken(token: string | null): void {
+  currentShareToken = token;
+}
+
+/** 获取当前 shareToken */
+export function getCurrentShareToken(): string | null {
+  return currentShareToken;
+}
+
+/**
  * 构建 MxCADView 初始化配置（从 MxCADInstanceManager 拆出的模块级函数）
  */
 function buildViewOptions(openFile?: string) {
   const containerManager = MxCADContainerManager.getInstance();
   const token = localStorage.getItem('accessToken');
+  // 从 openFile URL 提取 shareToken（共享图纸场景）
+  if (openFile) {
+    try {
+      const urlObj = new URL(openFile, window.location.origin);
+      currentShareToken = urlObj.searchParams.get('shareToken');
+    } catch { /* ignore */ }
+  }
+  const baseHeaders: Record<string, string> = {};
+  if (token) baseHeaders.Authorization = `Bearer ${token}`;
+  if (currentShareToken) baseHeaders['x-share-token'] = currentShareToken;
+  const hasHeaders = Object.keys(baseHeaders).length > 0;
+
   const resolveExtReferenceUrl = (fileName: string) => {
-    if (!openFile) return fileName;
-    if (openFile.includes('/public-file/access/')) {
-      const parts = openFile.split('/');
+    // 优先从运行时获取当前文件 URL，提取路径部分构造外部参照 URL
+    const currentUrl = getCurrentFileUrl();
+    const activeUrl = currentUrl || openFile;
+    if (!activeUrl) return fileName;
+    
+    // 使用模块级 currentShareToken（在 openFile 时已设置）
+    // WASM 层的 HTTP 请求不携带 requestHeaders，只能通过 URL 传递认证信息
+    
+    if (activeUrl.includes('/public-file/access/')) {
+      const parts = activeUrl.split('/');
       const hashIndex = parts.indexOf('access') + 1;
       if (hashIndex < parts.length) {
         const hash = parts[hashIndex];
         if (hash) {
           const rawHash = hash.replace(/(?:\.[^.]+)?\.mxweb$/i, '');
-          return `/api/v1/public-file/access/${rawHash}/${fileName}`;
+          let url = `/api/v1/public-file/access/${rawHash}/${fileName}`;
+          if (currentShareToken) url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
+          return url;
         }
       }
     }
-    // openFile 格式: /api/v1/mxcad/filesData/YYYYMM/{nodeId}/{file}.mxweb?t=...
+    // activeUrl 格式: /api/v1/mxcad/filesData/YYYYMM/{nodeId}/{file}.mxweb?t=...
     // 提取 YYYYMM/{nodeId} 作为基底目录
-    const mxcadMatch = openFile.match(
+    const mxcadMatch = activeUrl.match(
       /\/api\/v1\/mxcad\/filesData\/([^/]+\/[^/]+)\//
     );
     if (mxcadMatch) {
       const baseDir = mxcadMatch[1];
-      return `/api/v1/mxcad/filesData/${baseDir}/${fileName}`;
+      let url = `/api/v1/mxcad/filesData/${baseDir}/${fileName}`;
+      if (currentShareToken) url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
+      return url;
     }
     return fileName;
   };
   return {
     rootContainer: containerManager.getContainer(),
     ...(openFile && { openFile }),
-    ...(token && { requestHeaders: { Authorization: `Bearer ${token}` } }),
+    ...(hasHeaders && { requestHeaders: baseHeaders }),
     extReferenceUrlResolver: resolveExtReferenceUrl,
   };
 }
@@ -215,6 +255,7 @@ export class MxCADInstanceManager {
         // （不 openSession），但引擎会把标题置为 URL 尾部的 mxweb 内部访问文件名
         // （如 <md5>.mxweb?t=...），这里用待打开的图纸名修正标题，避免显示 id.mxweb。
         // 与 MxCADOpenFlow.openFile 的 fail 路径（restoreEditorTitle）保持一致。
+        // pendingOpenInfo 保留：由 MxCADOpenFlow 的 retCall（openFile 路径）统一清理回滚
         const pendingName = this.pendingOpenInfo?.fileInfo?.name;
         if (pendingName) restoreEditorTitle(pendingName);
         return;
@@ -270,6 +311,9 @@ export class MxCADInstanceManager {
 
   private async createInstance(openFile?: string): Promise<void> {
     try {
+      // 确保 auth_token cookie 新鲜：config.openFile 的引擎内部请求只携带 cookie，
+      // 若 token 临近过期，WASM 加载期间可能过期导致 401
+      await ensureFreshAuthCookie();
       if (openFile) setCurrentFileUrl(openFile);
       const viewOptions = buildViewOptions(openFile);
       this.mxcadView = new MxCADView(viewOptions);

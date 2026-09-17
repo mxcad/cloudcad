@@ -111,6 +111,7 @@ MxFun.addCommand('Mx_NewFile', handler);
 - **协同退出使用 `exitGuardRef`（3s 冷却）** — 防止 auto-join 循环
 - **初始化等待 2 个 `requestAnimationFrame`** — 确保 canvas 已挂载再隐藏 loading
 - **`cache` 模式** — `__openWebFile__` 的 header flags 控制缓存行为
+- **后端转换 `mxcadassembly.exe` 子进程传参（Windows）** — `spawn` 传含双引号的 JSON 参数**必须** `windowsVerbatimArguments: true`（`packages/backend/src/mxcad/conversion/mxcad-exec.ts` 已设 `!isLinux`）：Node 默认把参数里的 `"` 转义成 `\"`，而 mxcadassembly 按原始命令行解析、不认转义 → 解析不到 `srcpath` 报 `read file error`（aaf2626 把 exec 改 spawn 后回归）。**mxcadassembly 成功/失败退出码恒 2123，成败只认 JSON stdout 的 `code`，勿按退出码判成败**
 
 ## 文档引用
 

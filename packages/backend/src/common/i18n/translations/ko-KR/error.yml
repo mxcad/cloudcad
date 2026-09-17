@@ -6,6 +6,7 @@ auth:
   account_deactivated_expired: "계정이 해지되었고 유예 기간이 지났습니다. 복구를 위해 고객센터에 문의하세요. 데이터는 30일 후에 완전히 삭제됩니다."
   user_disabled: "사용자가 비활성화되었습니다"
   user_not_found_or_disabled: "사용자가 존재하지 않거나 비활성화되었습니다"
+  session_transfer_invalid: "전환 증명이 유효하지 않거나 만료되었습니다"
   refresh_token_invalid_type: "유효하지 않은 새로고침 토큰 유형"
   registration_disabled: "회원가입 기능이 비활성화되었습니다"
   not_logged_in: "로그인되지 않음"
@@ -56,6 +57,8 @@ auth:
   wechat_refresh_failed: "인증 새로고침 실패"
   wechat_verification_failed: "위챗 인증 실패"
   wechat_not_match_account: "이 위챗은 현재 계정과 일치하지 않습니다"
+  password_change_required: "비밀번호가 만료되었거나 첫 로그인 후 변경되지 않았습니다. 지금 바로 비밀번호를 변경해 주세요."
+  password_expiring_soon: "비밀번호가 곧 만료됩니다. 조속히 변경하는 것을 권장합니다."
 
 account_binding:
   email_service_disabled: "이메일 서비스가 활성화되지 않아 이메일을 연결할 수 없습니다"
@@ -139,6 +142,8 @@ project_member:
   only_owner_can_transfer: "프로젝트 소유자만 프로젝트를 양도할 수 있습니다"
   cannot_remove_admin: "프로젝트 소유자만 관리자를 제거할 수 있습니다"
   cannot_modify_admin_role: "프로젝트 소유자만 관리자의 역할을 수정할 수 있습니다"
+  cannot_modify_self_role: "자신의 역할을 수정할 수 없습니다"
+  cannot_remove_self: "자신을 제거할 수 없습니다"
   only_owner_can_delete: "프로젝트 소유자만 프로젝트를 삭제할 수 있습니다"
   cannot_transfer_to_self: "자신에게 양도할 수 없습니다"
   transfer_target_must_be_member: "양도 대상은 프로젝트 구성원이어야 합니다"
@@ -321,6 +326,15 @@ database:
 
 rate_limit:
   too_many_requests: "요청이 너무 많습니다. 나중에 다시 시도해주세요"
+  account_locked: "반복된 로그인 실패로 계정이 일시적으로 잠겼습니다. {minutes}분 후 다시 시도해 주세요."
+
+password_policy:
+  too_short: "비밀번호는 최소 {min}자 이상이어야 합니다"
+  complexity: "비밀번호는 대문자, 소문자, 숫자, 특수문자 중 3종 이상을 포함해야 합니다"
+  weak: "비밀번호가 너무 약합니다(흔히 사용되는 약한 비밀번호와 일치). 더 강력한 비밀번호를 사용하세요"
+
+initialization:
+  admin_password_required: "INITIAL_ADMIN_PASSWORD 환경변수가 설정되지 않았습니다. 첫 시작 시 초기 관리자 비밀번호가 필요합니다."
 
 ip_blacklist:
   invalid_ip: "잘못된 IP 또는 CIDR 형식입니다"
@@ -336,6 +350,12 @@ ip_whitelist:
 
 admin_auth:
   ip_not_allowed: "현재 IP가 관리자 화이트리스트에 없어 로그인이 거부되었습니다"
+
+mfa:
+  required: "이중 인증 동적 코드를 입력해 주세요"
+  code_invalid: "이중 인증 동적 코드가 올바르지 않습니다. 다시 시도해 주세요"
+  setup_required: "먼저 TOTP 이중 인증 연동을 완료해 주세요"
+  already_enabled: "TOTP가 이미 활성화되어 있습니다. 다시 연동할 필요가 없습니다"
 
 resource:
   not_found: "요청한 리소스가 존재하지 않습니다"
@@ -566,3 +586,11 @@ alert:
   not_found: "경보가 존재하지 않습니다"
 task_run:
   not_found: "작업이 존재하지 않거나 등록되지 않았습니다"
+security:
+  brute_force_suspected: "계정 {account}이(가) {count}회 연속 로그인 실패로 잠금 처리되었습니다. 브루트포스 공격이 의심되며 {minutes}분 동안 잠금됩니다"
+conversion_task:
+  no_node_id: "통합 제출 엔드포인트는 노드 연결 변환(open/download + nodeId)만 지원합니다. 노드가 없는 변환은 프론트엔드가 로컬에 기록합니다"
+  download_requires_format: "다운로드 유형(download)은 대상 형식(dwg/dxf/mxweb/pdf)을 제공해야 합니다"
+  download_requires_user: "다운로드 유형(download)은 로그인한 사용자가 필요합니다(할당량 예약용)"
+  cancel_not_supported: "현재 실행 모드는 취소를 지원하지 않습니다(독립 변환 서비스만 지원)"
+  task_lost: "변환 작업이 손실되었습니다(서비스가 재시작되었을 수 있음). 도면을 다시 열어주세요"

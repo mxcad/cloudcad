@@ -25,6 +25,7 @@ import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 import { I18nContext } from 'nestjs-i18n';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
+import { NodeSizeResolverService } from '../../file-system/storage-quota/node-size-resolver.service';
 
 @Injectable()
 export class MxcadSaveService implements IMxcadSaveService {
@@ -41,7 +42,8 @@ export class MxcadSaveService implements IMxcadSaveService {
     @Inject(MXCAD_CONVERSION_SERVICE)
     private readonly mxcadConversionService: IMxcadConversionService,
     private readonly nodeMutationGuard: NodeMutationGuard,
-    private readonly restrictionEngine: RestrictionEngine
+    private readonly restrictionEngine: RestrictionEngine,
+    private readonly nodeSizeResolver: NodeSizeResolverService
   ) {
     this.mxcadUploadPath = this.configService.get('mxcadUploadPath', {
       infer: true,
@@ -115,7 +117,12 @@ export class MxcadSaveService implements IMxcadSaveService {
 
       if (userId && file?.size) {
         // 覆盖保存时 DB 聚合已含旧节点 size，仅按增量计费，避免重复累加提前触顶
-        const incrementBytes = Math.max(0, file.size - (fullNode.size ?? 0));
+        // 当 fullNode.size 为 null 时，读取实际文件大小作为旧值，防止 null 被当作 0
+        const oldSize = fullNode.size ?? await this.nodeSizeResolver.resolveFileSize(
+          { size: fullNode.size, path: fullNode.path },
+          nodeId
+        );
+        const incrementBytes = Math.max(0, file.size - oldSize);
         await this.nodeMutationGuard.assertByteQuota(
           { node: { id: nodeId }, incrementBytes },
           userId

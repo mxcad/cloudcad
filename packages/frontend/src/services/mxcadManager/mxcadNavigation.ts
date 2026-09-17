@@ -1,6 +1,7 @@
 import { handleError } from '@/utils/errorHandler';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { getFileInfo } from './mxcadHelpers';
+import { isCadEditorEntry } from '@/utils/cadEditorRoute';
 import {
   confirmExitCollaborationIfNeeded,
   checkAndConfirmUnsavedChanges,
@@ -78,6 +79,7 @@ export const returnToCloudMapManagement = async () => {
     let targetPath: string;
     if (
       openedBackUrl &&
+      !isCadEditorEntry(openedBackUrl) &&
       openedInitialFileId &&
       currentFileId === openedInitialFileId
     ) {

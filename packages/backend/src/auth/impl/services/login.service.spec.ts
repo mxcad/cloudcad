@@ -59,6 +59,10 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
   const mockAccountRateLimitService = {
     checkLimit: jest.fn().mockResolvedValue(undefined),
     reset: jest.fn().mockResolvedValue(undefined),
+    // #416 失败锁定
+    checkAccountLock: jest.fn().mockResolvedValue(undefined),
+    recordLoginFailure: jest.fn().mockResolvedValue(undefined),
+    clearLoginFailures: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockSyncHook = {
@@ -80,6 +84,15 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     });
     mockAccountRateLimitService.checkLimit.mockResolvedValue(undefined);
     mockAccountRateLimitService.reset.mockResolvedValue(undefined);
+    mockAccountRateLimitService.checkAccountLock.mockResolvedValue(
+      undefined
+    );
+    mockAccountRateLimitService.recordLoginFailure.mockResolvedValue(
+      undefined
+    );
+    mockAccountRateLimitService.clearLoginFailures.mockResolvedValue(
+      undefined
+    );
     // 按 key 返回：登录功能开关默认 false，注销冷静期默认 7 天
     mockRuntimeConfigService.getValue.mockImplementation(
       async (key: string) => {

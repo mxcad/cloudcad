@@ -26,6 +26,7 @@ import type {
 import type { ToastType } from '@/components/ui/Toast';
 import type { DownloadFormatState } from '../types';
 import { uploadAndConvert } from './uploadAndConvert';
+import { useBatchDownload } from '@/hooks/file-system';
 
 export interface DownloadFormatModalOptions {
   canExport?: boolean;
@@ -67,6 +68,7 @@ export function useDownloadFormatModal({
 
   const membership = useMembership();
   const { config } = useRuntimeConfig();
+  const { createSingleFormatTask } = useBatchDownload(showToast);
 
   const handleDownloadWithFormat = useCallback(
     async (
@@ -109,6 +111,26 @@ export function useDownloadFormatModal({
           return;
         }
 
+        // 转换格式（dwg/dxf/pdf）走异步下载队列：HTTP 立即返回，前端靠
+        // useBatchDownload 的 SSE 观察进度，终态自动下载。mxweb/original
+        // 保持同步——无转换开销，排队只会拖慢。
+        if (format !== 'mxweb') {
+          const taskId = await createSingleFormatTask(
+            downloadingNodeId,
+            downloadingFileName,
+            format,
+            {
+              dwgVersion: dwgOptions?.dwgVersion,
+              width: pdfOptions?.width,
+              height: pdfOptions?.height,
+              colorPolicy: pdfOptions?.colorPolicy,
+            }
+          );
+          // taskId 非空 = 入队成功；null = 失败（配额/磁盘/VIP），保留 modal
+          if (taskId) setShowDownloadFormatModal(false);
+          return;
+        }
+
         const result = await downloadControllerDownloadNodeWithFormat({
           path: { nodeId: downloadingNodeId },
           query: { format, ...pdfOptions, ...dwgOptions },
@@ -136,6 +158,7 @@ export function useDownloadFormatModal({
       setSaveAsBlob,
       membership?.isVip,
       config.freeExportDownloadEnabled,
+      createSingleFormatTask,
     ]
   );
 

@@ -280,6 +280,11 @@ export class ProjectMemberService {
         throw new ForbiddenException(I18nContext.current()?.t('error.project_member.cannot_modify_owner_role') ?? '不能修改项目所有者的角色');
       }
 
+      // 成员不得修改自己的角色（统一由项目所有者/管理员分配），防止自我降权后锁死
+      if (operatorId === userId) {
+        throw new ForbiddenException(I18nContext.current()?.t('error.project_member.cannot_modify_self_role') ?? '不能修改自己的角色');
+      }
+
       const role = await this.prisma.projectRole.findUnique({
         where: { id: projectRoleId },
       });
@@ -438,6 +443,11 @@ export class ProjectMemberService {
 
       if (project.ownerId === userId) {
         throw new ForbiddenException(I18nContext.current()?.t('error.project_member.cannot_remove_owner') ?? '不能移除项目所有者');
+      }
+
+      // 成员不得把自己移出项目（统一由项目所有者/管理员管理），防止自我移除后失去访问权
+      if (operatorId === userId) {
+        throw new ForbiddenException(I18nContext.current()?.t('error.project_member.cannot_remove_self') ?? '不能移除自己');
       }
 
       // 移除前的目标用户信息（REMOVE_MEMBER 审计模板展示 target 名称）

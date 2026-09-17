@@ -46,6 +46,15 @@ export const TASK_NAMES = {
   CACHE_MONITOR: {
     PERFORMANCE_DATA: 'cache-monitor:performance-data',
   },
+  BACKUP: {
+    DATABASE: 'backup:database',
+    RESTORE_DRILL: 'backup:restore-drill',
+    REMOTE_PUSH: 'backup:remote-push',
+    /** 本地轮转清理（#325 cleanup_* 指标 task 标签；无独立运行时开关） */
+    ROTATE: 'backup:rotate',
+    /** 审计归档目录异地同步（#420，随每日备份后执行；无独立运行时开关） */
+    AUDIT_ARCHIVE_SYNC: 'backup:audit-archive-sync',
+  },
 } as const;
 
 /**
@@ -63,4 +72,5 @@ export const TASK_ENABLED_KEYS = {
   BILLING: 'billingCronEnabled',
   USER_CLEANUP: 'userCleanupEnabled',
   CACHE_MONITOR: 'cacheMonitorEnabled',
+  BACKUP: 'backupEnabled',
 } as const;

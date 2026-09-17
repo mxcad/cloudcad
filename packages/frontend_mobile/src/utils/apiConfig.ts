@@ -1,7 +1,7 @@
 import { t, i18nScope } from '@/languages';
 import { client } from '@cloudcad/api-sdk/client.gen';
 import { authControllerRefreshToken } from '../api-sdk';
-import { classifyApiError, isAuthError, isPermissionError, isAbortError } from './errorHandler';
+import { classifyApiError, isPermissionError, isAbortError } from './errorHandler';
 import { showToast } from 'vant';
 
 export function getApiBaseUrl(): string {
@@ -63,6 +63,11 @@ async function tryRefreshToken(): Promise<boolean> {
   }
 }
 
+// ── 401 刷新 — fetch 层覆写，与 PC packages/frontend/src/config/clientSetup.ts 对齐 ──
+// 背景：@hey-api 生成的 client 其 error interceptor 返回 {retry: true} 不被消费端 honor，
+// 请求保持失败态。PC 端在 fetch 层做 401 检测→refresh→重放。此处同步实现。
+const nativeFetch = globalThis.fetch.bind(globalThis);
+
 export function setupApiClient(): void {
   const apiBaseUrl = getApiBaseUrl();
   let baseUrl: string;
@@ -96,6 +101,40 @@ export function setupApiClient(): void {
     },
   });
 
+  client.setConfig({
+    fetch: async (input: URL | RequestInfo, init?: RequestInit) => {
+      let response = await nativeFetch(input, init);
+
+      if (response.status === 401) {
+        const url = typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url;
+        const isAuthEndpoint =
+          url.includes('/auth/login') ||
+          url.includes('/auth/refresh') ||
+          url.includes('/auth/forgot-password') ||
+          url.includes('/auth/reset-password');
+        if (!isAuthEndpoint) {
+          if (!refreshPromise) {
+            refreshPromise = tryRefreshToken();
+          }
+          const refreshed = await refreshPromise;
+          refreshPromise = null;
+          if (refreshed) {
+            const token = getAccessToken();
+            const headers = new Headers(init?.headers);
+            headers.set('Authorization', `Bearer ${token}`);
+            response = await nativeFetch(input, { ...init, headers });
+          }
+        }
+      }
+
+      return response;
+    },
+  });
+
   // Bearer Token request interceptor — 与 PC packages/frontend/src/config/clientSetup.ts 对齐
   client.interceptors.request.use((request) => {
     const token = getAccessToken();
@@ -113,30 +152,14 @@ export function setupApiClient(): void {
     return request;
   });
 
-  client.interceptors.error.use(async (error, response, _request, _options) => {
+  // Error interceptor — 仅做错误分类标记，401 刷新已在 fetch 层处理
+  client.interceptors.error.use((error) => {
     if (error && typeof error === 'object') {
       const e = error as Record<string, unknown>;
-
       if (isPermissionError(error)) {
         e.isPermissionError = true;
         e.statusCode = 403;
       }
-
-      if (isAuthError(error)) {
-        const isAuthEndpoint = typeof _request?.url === 'string' &&
-          (_request.url.includes('/auth/') || _request.url.includes('/login') || _request.url.includes('/refresh'));
-        if (!isAuthEndpoint) {
-          if (!refreshPromise) {
-            refreshPromise = tryRefreshToken();
-          }
-          const refreshed = await refreshPromise;
-          refreshPromise = null;
-          if (refreshed) {
-            return { retry: true };
-          }
-        }
-      }
-
       if (isAbortError(error)) {
         return error;
       }
@@ -180,4 +203,42 @@ export function getPCLoginUrl(redirectUrl?: string): string {
     url += `?redirect=${encodeURIComponent(redirectUrl)}`;
   }
   return url;
+}
+
+/**
+ * 获取 PC 端注册页面 URL。
+ * 与 getPCLoginUrl 同一机制：移动端 window.open 打开，PC 端注册成功后
+ * 经 redirect 参数跳回移动端 URL 带回 token（PC Register 页已对齐 Login 页的 redirect 处理）。
+ * @param redirectUrl 注册成功后要跳转的移动端 URL
+ */
+export function getPCRegisterUrl(redirectUrl?: string): string {
+  let url: string;
+  if (import.meta.env.DEV) {
+    url = 'http://localhost:3000/register';
+  } else {
+    url = '/register';
+  }
+  if (redirectUrl) {
+    url += `?redirect=${encodeURIComponent(redirectUrl)}`;
+  }
+  return url;
+}
+
+/**
+ * 获取 PC 端忘记密码页面 URL。
+ * 移动端不承载原生认证流程（ADR-0062），忘记密码走 PC 页；不带 redirect，
+ * 完成重置后用户在 PC 重新登录。
+ * DEV/prod 分支沿用 getPCLoginUrl，避免第二处 import.meta.env 引用。
+ */
+export function getPCForgotPasswordUrl(): string {
+  return getPCLoginUrl().replace('/login', '/forgot-password');
+}
+
+/**
+ * 获取 PC 端会员中心 URL（套餐对比 / 购买续费 / 订单历史）。
+ * 会员购买涉及支付下单流程，移动端不重做，统一跳 PC 会员中心。
+ * DEV/prod 分支沿用 getPCLoginUrl，避免第二处 import.meta.env 引用。
+ */
+export function getPCMemberCenterUrl(): string {
+  return getPCLoginUrl().replace('/login', '/member-center');
 }

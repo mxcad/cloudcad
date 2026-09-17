@@ -122,7 +122,7 @@ const TourCard: React.FC<{
           ) : (
             <Circle size={12} />
           )}
-          {t(`${guide.steps.length} 步`)}
+          {t('{count} 步', { count: String(guide.steps.length) })}
         </span>
       </div>
 

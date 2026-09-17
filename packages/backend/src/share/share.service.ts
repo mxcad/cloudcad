@@ -396,10 +396,17 @@ export class ShareService {
     }
 
     if (fileNode.path !== storagePath) {
-      this.logger.warn(
-        `分享令牌路径不匹配: token=${token}, expected=${fileNode.path}, requested=${storagePath}`
-      );
-      throw new ForbiddenException(I18nContext.current()?.t('error.share.token_mismatch') ?? '分享令牌与请求的文件不匹配');
+      // 外部参照文件（如 A1.dwg.mxweb）不是分享的主文件，而是主文件的关联文件
+      // 只要 shareToken 有效，且请求的文件与主文件在同一 nodeId 目录下，就允许访问
+      const mainParts = fileNode.path.split('/');
+      const mainPrefix = mainParts.length >= 2 ? `${mainParts[0]}/${mainParts[1]}` : '';
+      const isSameNodeAccess = mainPrefix && storagePath.startsWith(mainPrefix);
+      if (!isSameNodeAccess) {
+        this.logger.warn(
+          `分享令牌路径不匹配: token=${token}, expected=${fileNode.path}, requested=${storagePath}`
+        );
+        throw new ForbiddenException(I18nContext.current()?.t('error.share.token_mismatch') ?? '分享令牌与请求的文件不匹配');
+      }
     }
   }
 

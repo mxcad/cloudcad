@@ -53,7 +53,6 @@ import {
   SystemPermission,
   ProjectPermission,
 } from './common/enums/permissions.enum';
-import { PolicyEngineModule } from './policy-engine/policy-engine.module';
 import { CacheArchitectureModule } from './cache-architecture/cache-architecture.module';
 import { RuntimeConfigModule } from './runtime-config/runtime-config.module';
 import { PublicFileModule } from './public-file/public-file.module';
@@ -67,6 +66,8 @@ import { MetricsModule } from './metrics/metrics.module';
 import { OwnershipModule } from './ownership/ownership.module';
 import { AlertModule } from './alert/alert.module';
 import { TaskRunModule } from './task-run/task-run.module';
+import { BackupModule } from './backup/backup.module';
+import { ConversionMonitorModule } from './conversion-monitor/conversion-monitor.module';
 
 // env 文件查找路径：支持多种运行模式
 // 1. 部署模式 (pkg/node)：优先从运行目录查找 (process.cwd())
@@ -98,6 +99,10 @@ const logDirAbs = resolve(PROJECT_ROOT, logDirRaw);
 mkdirSync(join(logDirAbs, 'backend'), { recursive: true, mode: 0o750 });
 const logRetentionDays =
   parseInt(process.env.LOG_RETENTION_DAYS || '180', 10) || 180;
+// 根日志级别（#325）：生产默认 warn 保持历史行为不变；需要采集
+// cleanup_run 结构化清理日志（cleanup_* 指标对账）时设 LOG_LEVEL=info。
+// 仅影响 pino-roll 落盘流；生产 stdout 的 pino/file 目标保持 warn 不刷屏。
+const logLevel = process.env.LOG_LEVEL || (isProduction ? 'warn' : 'debug');
 
 @Module({
   imports: [
@@ -109,7 +114,7 @@ const logRetentionDays =
     LoggerModule.forRoot({
       forRoutes: [{ path: '*path', method: RequestMethod.ALL }],
       pinoHttp: {
-        level: isProduction ? 'warn' : 'debug',
+        level: logLevel,
         autoLogging: false,
         // pino redact 全量脱敏（ADR-0055 §1）：password/token/authorization/cookie/验证码/手机号/邮箱 等
         redact: {
@@ -166,7 +171,7 @@ const logRetentionDays =
                 // 保留 N 个已轮转文件 + 当前文件（pino-roll@4 用 limit.count，非 maxFiles）
                 limit: { count: logRetentionDays },
               },
-              level: isProduction ? 'warn' : 'debug',
+              level: logLevel,
             },
           ],
         },
@@ -204,7 +209,6 @@ const logRetentionDays =
     HealthModule,
     AuditLogModule,
     VersionControlModule,
-    PolicyEngineModule,
     RuntimeConfigModule,
     PublicFileModule,
     LibraryModule,
@@ -217,6 +221,8 @@ const logRetentionDays =
     OwnershipModule,
     AlertModule,
     TaskRunModule,
+    BackupModule,
+    ConversionMonitorModule,
   ],
   controllers: [AppController],
   providers: [

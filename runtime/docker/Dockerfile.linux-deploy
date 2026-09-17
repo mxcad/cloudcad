@@ -109,6 +109,7 @@ COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/frontend_mobile/package.json ./packages/frontend_mobile/
 COPY packages/mxVersionTool/package.json ./packages/mxVersionTool/
 COPY packages/config-service/package.json ./packages/config-service/
+COPY packages/conversion-service/package.json ./packages/conversion-service/
 
 # 如果通过 --build-arg NPM_CONFIG_REGISTRY 传入了自定义 registry，覆盖 .npmrc
 ARG NPM_CONFIG_REGISTRY
@@ -123,7 +124,7 @@ RUN if [ -n "${NPM_CONFIG_REGISTRY}" ]; then \
 # pnpm 在 node_modules 已完整时会跳过写 store，单独"store 缓存层"实际不会产生任何内容
 # （曾因此导致容器内升级流程每次全量下载依赖）
 # 安装依赖（仅后端运行时包；前端 dist 已在本地预构建，无需 node_modules）
-RUN pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --store-dir /app/.pnpm-store-deploy
+RUN pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/conversion-service --store-dir /app/.pnpm-store-deploy
 
 # ===== 私有实现包层（源码层：impl-mx 变更仅重建此层及以下）=====
 ARG VARIANT=oss
@@ -141,6 +142,9 @@ COPY packages/db ./packages/db
 COPY packages/contracts ./packages/contracts
 COPY packages/mxVersionTool ./packages/mxVersionTool
 COPY packages/config-service ./packages/config-service
+# 转换服务（黑盒，0 运行时依赖）：COPY 源码供容器内 buildProject tsc 编译，
+# dist 自包含随包分发（FUNCTION_EXECUTOR=conversion-service 模式必需，verify-deploy.js 硬门禁）
+COPY packages/conversion-service ./packages/conversion-service
 # 复制前端的预构建产物（本地已构建好）
 COPY packages/frontend/dist ./packages/frontend/dist
 COPY packages/frontend_mobile/dist ./packages/frontend_mobile/dist

@@ -1,5 +1,5 @@
 @echo off
-title 姊︽兂缃戦〉CAD瀹炴椂鍗忓悓骞冲彴 Stop Services
+title 梦想网页CAD实时协同平台 Stop Services
 
 cd /d "%~dp0"
 
@@ -13,6 +13,6 @@ if not exist "%NODE_EXE%" (
     exit /b 1
 )
 
-echo Stopping 姊︽兂缃戦〉CAD瀹炴椂鍗忓悓骞冲彴 services...
+echo Stopping 梦想网页CAD实时协同平台 services...
 "%NODE_EXE%" runtime\scripts\cli.js stop
 pause

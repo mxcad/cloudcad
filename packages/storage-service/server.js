@@ -1,5 +1,5 @@
 const http = require('http');
-const { PORT, FILES_DATA_PATH } = require('./lib/constants');
+const { PORT, FILES_DATA_PATH, INTERNAL_SERVICE_SECRET } = require('./lib/constants');
 const { log, resolveRequestId, runWithRequest, sendJson } = require('./lib/utils');
 const FileHandler = require('./services/file-handler');
 const StorageRouter = require('./services/router');
@@ -14,6 +14,33 @@ const tokenValidator = new TokenValidator();
 const fileRoutes = require('./routes/files').create(fileHandler, tokenValidator);
 const svnRoutes = require('./routes/svn').create(svnAgent);
 const cacheRoutes = require('./routes/cache').create(fileHandler);
+
+/**
+ * #419：校验后端内部路由的共享密钥（可信内网隔离路线的鉴权层）。
+ * 仅当配置了 INTERNAL_SERVICE_SECRET 时生效（空值=本地开发/未启用，向后兼容）。
+ *
+ * 豁免两类路由：
+ * - /health：只读探测端点（部署健康检查/监控探活）。
+ * - POST /v1/files/upload：客户端直传路由（JWT 上传令牌鉴权，见 UploadTokenService），
+ *   属客户端面向路由而非内部服务间调用，客户端不持有内部密钥，故不校验内部密钥。
+ */
+function isSecretExempt(pathname, method) {
+  if (pathname === '/health' && method === 'GET') return true;
+  if (pathname === '/v1/files/upload' && method === 'POST') return true;
+  return false;
+}
+
+function checkSecret(req, res, pathname, method) {
+  if (isSecretExempt(pathname, method)) return true;
+  if (
+    INTERNAL_SERVICE_SECRET &&
+    req.headers['x-internal-service-secret'] !== INTERNAL_SERVICE_SECRET
+  ) {
+    sendJson(res, 401, { error: 'Unauthorized: invalid internal service secret' });
+    return false;
+  }
+  return true;
+}
 
 async function handleRequest(req, res) {
   if (req.method === 'OPTIONS') {
@@ -37,6 +64,9 @@ async function handleRequest(req, res) {
         nodes: storageRouter.getNodes(),
       });
     }
+
+    // #419：后端内部路由统一校验共享密钥（豁免 /health 与客户端直传 /v1/files/upload）
+    if (!checkSecret(req, res, pathname, method)) return;
 
     // File routes
     if (pathname.startsWith('/v1/files')) {

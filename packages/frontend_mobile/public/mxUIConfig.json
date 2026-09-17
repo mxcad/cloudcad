@@ -27,6 +27,35 @@
       "cmd": "Mx_ZoomE"
     },
     {
+      "text": "导出",
+      "icon": "geshi",
+      "cmd": "Mx_export"
+    },
+    {
+      "text": "版本历史",
+      "icon": "banben",
+      "cmd": "Mx_versionHistory"
+    },
+    {
+      "text": "协同",
+      "icon": "xietong",
+      "cmd": "Mx_ShowCollaborate"
+    },
+    {
+      "text": "另存为",
+      "icon": "baocun",
+      "cmd": "Mx_SaveAsToCloud"
+    },
+    {
+      "text": "另存为本地",
+      "icon": "baocun",
+      "cmd": "Mx_SaveAsMxWeb"
+    },
+    {
+      "text": "分享",
+      "cmd": "Mx_Share"
+    },
+    {
       "text": "布局",
       "icon": "buju",
       "cmd": "Mx_layouts"
@@ -40,6 +69,11 @@
       "text": "图块库",
       "icon": "tukuai",
       "cmd": "Mx_ShowBlockLibrary"
+    },
+    {
+      "text": "语言",
+      "icon": "duoyuyan",
+      "cmd": "Mx_languages"
     }
   ],
   "?toolbarData": "底部工具栏",

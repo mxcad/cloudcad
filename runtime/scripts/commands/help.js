@@ -63,6 +63,11 @@ function showHelp() {
     `  ${colors.green}version:verify${colors.reset}       图纸版本部署后验证（status/info/log/cat/commit）`
   );
   console.log('');
+  console.log(`${colors.cyan}双因素认证恢复（#415 等保）：${colors.reset}`);
+  console.log(
+    `  ${colors.green}mfa:totp-unbind <用户名>${colors.reset}  解绑指定管理员的 TOTP 双因素（丢失验证器时恢复，写 MFA_UNBIND 审计）`
+  );
+  console.log('');
   console.log(`${colors.cyan}启动模式说明：${colors.reset}`);
   console.log(
     `  ${colors.green}PM2 后台模式${colors.reset}  服务在后台运行，关闭终端不影响`

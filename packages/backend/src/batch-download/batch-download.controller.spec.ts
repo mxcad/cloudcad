@@ -1,7 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { BatchDownloadController } from './batch-download.controller';
 import { BatchDownloadService } from './batch-download.service';
-import { CreateBatchDownloadDto } from './dto/create-batch-download.dto';
+import {
+  CreateBatchDownloadDto,
+  CreateSingleFormatDownloadDto,
+} from './dto/create-batch-download.dto';
 import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
@@ -92,6 +95,25 @@ describe('BatchDownloadController', () => {
       const dto: CreateBatchDownloadDto = {
         fileList: [{ nodeId: 'node-1', fileName: 'test.dwg', formats: ['pdf'] }],
         projectId: 'proj-1',
+        mode: 'zip',
+      };
+
+      await expect(
+        controller.createTask(dto, mockRequest()),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockService.createTask).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException for individual mode too when switch is off', async () => {
+      mockRuntimeConfig.getValue.mockResolvedValue(false);
+      // individual 只表示不打包 ZIP：弹窗「逐个下载」也走本端点，仍属批量下载
+      const dto: CreateBatchDownloadDto = {
+        fileList: [
+          { nodeId: 'node-1', fileName: 'a.dwg', formats: ['dwg'] },
+          { nodeId: 'node-2', fileName: 'b.dwg', formats: ['dwg'] },
+        ],
+        projectId: 'proj-1',
+        mode: 'individual',
       };
 
       await expect(
@@ -109,6 +131,56 @@ describe('BatchDownloadController', () => {
       await expect(
         controller.createTask(dto, { user: {}, headers: {} } as any),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('createSingleFileTask', () => {
+    it('creates a single-item individual task while the batch switch is off', async () => {
+      // 单文件格式下载不走批量下载开关；开关即使为 false 也应放行
+      mockRuntimeConfig.getValue.mockResolvedValue(false);
+      const dto = {
+        nodeId: 'node-1',
+        fileName: 'test.dwg',
+        format: 'dwg',
+        dwgVersion: 23,
+      } as CreateSingleFormatDownloadDto;
+      mockService.createTask.mockResolvedValue({ taskId: 'task-1' });
+
+      await expect(
+        controller.createSingleFileTask(dto, mockRequest()),
+      ).resolves.toEqual({ taskId: 'task-1' });
+      // 不读 batchDownloadEnabled
+      expect(mockRuntimeConfig.getValue).not.toHaveBeenCalled();
+      // 内核复用批量任务表：mode='individual' + 单项
+      expect(mockService.createTask).toHaveBeenCalledWith('user-1', {
+        fileList: [
+          {
+            nodeId: 'node-1',
+            fileName: 'test.dwg',
+            formats: ['dwg'],
+            dwgVersion: 23,
+            width: undefined,
+            height: undefined,
+            colorPolicy: undefined,
+          },
+        ],
+        projectId: undefined,
+        mode: 'individual',
+        libraryType: undefined,
+      });
+    });
+
+    it('should throw UnauthorizedException when no user id', async () => {
+      const dto = {
+        nodeId: 'n1',
+        fileName: 'f.dwg',
+        format: 'pdf',
+      } as CreateSingleFormatDownloadDto;
+
+      await expect(
+        controller.createSingleFileTask(dto, { user: {}, headers: {} } as any),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(mockService.createTask).not.toHaveBeenCalled();
     });
   });
 
@@ -163,12 +235,15 @@ describe('BatchDownloadController', () => {
   describe('getUserTasks', () => {
     it('should return user task list from service', async () => {
       const tasks = [{ taskId: 'task-1', status: 'COMPLETED' }];
-      mockService.getUserTasks.mockResolvedValue(tasks);
+      mockService.getUserTasks.mockResolvedValue({ tasks, hasMore: false });
 
       const result = await controller.getUserTasks(mockRequest());
 
-      expect(mockService.getUserTasks).toHaveBeenCalledWith('user-1');
-      expect(result).toEqual(tasks);
+      expect(mockService.getUserTasks).toHaveBeenCalledWith(
+        'user-1',
+        expect.any(Object)
+      );
+      expect(result).toEqual({ tasks, hasMore: false });
     });
   });
 

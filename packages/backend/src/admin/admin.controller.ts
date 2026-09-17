@@ -46,6 +46,7 @@ import { AdminStatsService } from './admin-stats.service';
 import {
   DailyPurchasesStatsDto,
   DailyRegistrationsStatsDto,
+  StatsOverviewDto,
 } from './dto/admin-stats.dto';
 
 @ApiTags('管理员')
@@ -63,8 +64,21 @@ export class AdminController {
   ) {}
 
   // ────────────────────────────────────────────────────────────
-  // 运营统计（每日新增用户 / 每日会员购买）
+  // 运营统计（总量概览 / 每日新增用户 / 每日会员购买）
   // ────────────────────────────────────────────────────────────
+
+  @Get('stats/overview')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '运营总量概览' })
+  @ApiResponse({
+    status: 200,
+    description:
+      '运营总量概览成功（当前用户总数 + 累计付费用户数，与统计区间无关）',
+    type: StatsOverviewDto,
+  })
+  getOverview() {
+    return this.adminStatsService.getOverview();
+  }
 
   @Get('stats/registrations')
   @HttpCode(HttpStatus.OK)

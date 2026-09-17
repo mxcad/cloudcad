@@ -1,0 +1,139 @@
+name: runtime 依赖提取
+
+# ADR-0059：把 node/postgresql/redis/subversion 标准组件按 os×arch 提取一次，
+# 打成内容寻址 tarball 上传 Release，供 CI（release.yml）与 dev 机（preinstall）复用，
+# 避免每次 release 重复 apt/dnf/yum 安装 + 提取。
+#
+# 触发：
+#   - workflow_dispatch：手动播种（首次）/ 组件版本变更后重提
+#   - schedule（可选，注释掉）：周期刷新防组件版本漂移
+#
+# 资产：release/cloudcad-runtime-deps-<os>-<arch>-<fingerprint>.tar.gz
+#   上传到 Release tag（默认 runtime-deps，可经输入覆盖）。
+#   dev 机 preinstall 从该 tag 下载对应 os×arch 的资产。
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '上传到的 Release tag（默认 runtime-deps）'
+        required: false
+        default: 'runtime-deps'
+      os:
+        description: '仅提取指定发行版（留空=全部 3 档 + windows）'
+        required: false
+        default: ''
+  # 可选周期刷新（防组件版本漂移）——需要时取消注释
+  # schedule:
+  #   - cron: '0 4 * * 1' # 每周一 04:00
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || 'runtime-deps' }}
+
+permissions:
+  contents: write
+
+jobs:
+  # ============================================================
+  # Linux：Docker per-distro 提取（复用 Dockerfile.linux-deploy，命令覆盖只跑 extract）
+  # ============================================================
+  build-linux:
+    name: Linux (${{ matrix.os }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [centos7, ubuntu22, rocky9]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.9
+
+      - run: pnpm install --frozen-lockfile
+
+      # 提取 + 打包 runtime 依赖（Docker 建镜像 + 命令覆盖只跑 extract-linux-runtime.js + tar + manifest）
+      - name: 提取 + 打包 runtime 依赖
+        run: node scripts/pack-runtime-deps.js --os "${{ matrix.os }}"
+
+      # 上传 runtime 依赖资产到 Release
+      - name: 上传 runtime 依赖资产
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: release/cloudcad-runtime-deps-${{ matrix.os }}-*.tar.gz
+          draft: false
+
+  # ============================================================
+  # Windows：node+redis（build-windows-runtime.js）+ postgresql（产品二进制通道）
+  # ============================================================
+  build-windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.9
+
+      - run: pnpm install --frozen-lockfile
+
+      # postgresql 走产品二进制通道（mxcad/cloudcad 的 mxcad-stable Release），
+      # 解压到 runtime/windows/postgresql/（与 release.yml 的 Windows 通道一致）
+      - name: 下载 postgresql（产品二进制通道）
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          MXCAD_REPO="mxcad/cloudcad"
+          MXCAD_TAG="mxcad-stable"
+          asset=$(node -e "
+            const m = require('./mxcad-dist/manifest.json');
+            for (const k of Object.keys(m)) {
+              const e = m[k];
+              if (e.component === 'postgresql' && e.platform === 'windows' && e.arch === 'x64') {
+                console.log(e.asset); break;
+              }
+            }
+          ")
+          if [ -z "$asset" ]; then
+            echo "::error::manifest 中未找到 postgresql-windows-x64 产物，请先运行 scripts/upload-mxcad.js"
+            exit 1
+          fi
+          echo "下载 postgresql: $asset"
+          gh release download "$MXCAD_TAG" --repo "$MXCAD_REPO" --pattern "$asset" --dir /tmp/dl --clobber
+          mkdir -p runtime/windows/postgresql
+          unzip -o "/tmp/dl/$asset" -d "runtime/windows/postgresql" || true
+          if [ "$(find runtime/windows/postgresql -type f | wc -l)" -eq 0 ]; then
+            echo "::error::postgresql 解压后为空"
+            exit 1
+          fi
+
+      # node + redis（官方源）
+      - name: 构建 node + redis
+        run: node scripts/build-windows-runtime.js
+
+      # 打包 runtime 依赖（tar node/redis/postgresql + manifest）
+      - name: 打包 runtime 依赖
+        run: node scripts/pack-runtime-deps.js --win
+
+      # 上传 runtime 依赖资产到 Release
+      - name: 上传 runtime 依赖资产
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: release/cloudcad-runtime-deps-windows-*.tar.gz
+          draft: false

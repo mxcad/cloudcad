@@ -19,6 +19,7 @@ import * as https from 'https';
 import type { Readable } from 'stream';
 import { Readable as ReadableStream } from 'stream';
 import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
+import { internalServiceSecretHeader } from '../common/utils/internal-service-auth';
 import type { IStorageProvider } from './interfaces/storage-provider.interface';
 
 /**
@@ -38,6 +39,8 @@ export class HttpStorageProvider implements IStorageProvider {
   private readonly logger = new Logger(HttpStorageProvider.name);
   private readonly baseUrl: string;
   private readonly useHttps: boolean;
+  /** #419：内部服务共享密钥（空则不带头，向后兼容本地开发） */
+  private readonly secretHeaders: Record<string, string>;
 
   constructor(
     private readonly configService: ConfigService,
@@ -47,6 +50,9 @@ export class HttpStorageProvider implements IStorageProvider {
       this.configService.get<string>('STORAGE_SERVICE_URL') ||
       'http://localhost:3200';
     this.useHttps = this.baseUrl.startsWith('https');
+    this.secretHeaders = internalServiceSecretHeader(
+      this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
+    );
   }
 
   async read(path: string): Promise<Readable> {
@@ -178,6 +184,8 @@ export class HttpStorageProvider implements IStorageProvider {
             },
             'http-storage',
           ),
+          // #419：内部服务共享密钥（storage-service 非 health 路由校验）
+          ...this.secretHeaders,
         },
         timeout: 60000,
       };
@@ -228,6 +236,8 @@ export class HttpStorageProvider implements IStorageProvider {
             },
             'http-storage',
           ),
+          // #419：内部服务共享密钥
+          ...this.secretHeaders,
         },
         timeout: 60000,
       };

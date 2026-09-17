@@ -36,4 +36,6 @@ export interface ProjectDrawingsPanelProps {
   doubleClickToOpen?: boolean;
   /** 面板是否可见（不可见时跳过数据加载，保持 DOM 存在避免切换跳动） */
   visible?: boolean;
+  /** 子tab标识，用于持久化状态（仅非库模式使用） */
+  tabId?: string;
 }

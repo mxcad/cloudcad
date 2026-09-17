@@ -68,6 +68,13 @@ export {
   DEFAULT_PROJECT_ROLE_PERMISSIONS,
 } from './domain/project-role.types';
 
+// System role contracts (values)
+export {
+  SystemRole,
+  SYSTEM_ROLE_PERMISSIONS,
+  SYSTEM_ROLE_LEVELS,
+} from './domain/system-role.types';
+
 // Repository interfaces
 export type { IUserRepository } from './repositories/user-repository.interface';
 export type { IRefreshTokenRepository } from './repositories/refresh-token-repository.interface';

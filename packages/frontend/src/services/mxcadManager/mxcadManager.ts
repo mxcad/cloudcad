@@ -74,6 +74,10 @@ export class MxCADManager {
   isReady(): boolean {
     return this.instanceManager.isReady();
   }
+  /** 是否有正在打开中的图纸（pendingOpenInfo 未消费：成功 openSession / 失败回滚前） */
+  hasPendingOpen(): boolean {
+    return this.instanceManager.getPendingOpenInfo() !== null;
+  }
   getCurrentFileName(): string | null {
     return this.instanceManager.getCurrentFileName();
   }

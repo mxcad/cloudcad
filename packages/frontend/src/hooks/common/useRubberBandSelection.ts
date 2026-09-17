@@ -283,6 +283,7 @@ export function useRubberBandSelection({
         const width = Math.abs(ccx - scx);
         const height = Math.abs(ccy - scy);
         return React.createElement('div', {
+          className: 'rubber-band-overlay',
           style: {
             position: 'absolute',
             left,

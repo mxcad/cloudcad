@@ -81,12 +81,12 @@ interface OrderItem {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: '待支付',
-  SUCCEEDED: '已完成',
-  FAILED: '支付失败',
-  REFUNDED: '已退款',
-  CLOSED: '已取消',
-  TIMEOUT: '超时关闭',
+  PENDING: t('待支付'),
+  SUCCEEDED: t('已完成'),
+  FAILED: t('支付失败'),
+  REFUNDED: t('已退款'),
+  CLOSED: t('已取消'),
+  TIMEOUT: t('超时关闭'),
 };
 
 const STATUS_COLORS: Record<string, TagVariant> = {

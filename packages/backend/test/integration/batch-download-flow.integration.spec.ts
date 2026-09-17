@@ -1217,10 +1217,34 @@ describe('BatchDownload Flow Integration (issue #286)', () => {
               { nodeId: 'node-1', fileName: 'a.dwg', formats: ['original'] },
             ],
             projectId: 'proj-1',
+            mode: 'zip',
           } as any,
           req
         )
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows single-file task creation via the dedicated route while batchDownloadEnabled is off', async () => {
+      runtimeConfigMock.getValue.mockResolvedValue(false);
+      const req: any = { user: { id: 'user-1' } };
+      const node = prismaMock._seedNode({
+        id: 'node-single',
+        name: 'a.dwg',
+        path: '202608/node-single/a.dwg.mxweb',
+      });
+      await writeSourceFile(node);
+
+      const created = await controller.createSingleFileTask(
+        {
+          nodeId: node.id,
+          fileName: 'a.dwg',
+          format: 'dwg',
+          projectId: 'proj-1',
+        } as any,
+        req
+      );
+      expect(created.taskId).toBeDefined();
+      expect((await waitForStatus(created.taskId, 'COMPLETED')).errorCount).toBe(0);
     });
 
     it('routes SSE vs JSON by Accept header; unknown task streams a FAILED event', async () => {

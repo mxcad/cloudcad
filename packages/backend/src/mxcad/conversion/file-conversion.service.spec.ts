@@ -2,51 +2,36 @@
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
-jest.mock("child_process", () => {
-	const actual = jest.requireActual("child_process");
-	const { promisify } = jest.requireActual("util");
-	const mockExec = jest.fn();
-	mockExec[promisify.custom] = (command: string, options: unknown) =>
-		new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-			mockExec(command, options, (err: Error | null, stdout: string, stderr: string) => {
-				if (err) {
-					(err as Error & { stdout: string; stderr: string }).stdout = stdout;
-					(err as Error & { stdout: string; stderr: string }).stderr = stderr;
-					reject(err);
-				} else {
-					resolve({ stdout, stderr });
-				}
-			});
-		});
-	return { ...actual, exec: mockExec };
-});
+jest.mock("./mxcad-exec", () => ({
+	runMxcadAssembly: jest.fn(),
+}));
 
-import { exec } from "child_process";
+import * as path from "path";
+import { runMxcadAssembly } from "./mxcad-exec";
 import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { FileConversionService } from "./file-conversion.service";
 import { VipFeatureRequiredException } from "../../vip/errors/vip-feature-required.error";
 import { CONVERSION_ACCESS_GUARD } from "../../common/interfaces/conversion-access-guard";
+import {
+	IFunctionExecutor,
+	type IFunctionExecutor as IFunctionExecutorType,
+} from "../../function-executor/function-executor.interface";
 
-// Module-level child_process.exec mock — allows per-test control of exec()
-function setExec(
-	_pattern: string,
-	fn: (cmd: string) => { error: Error | null; stdout: string; stderr: string },
-) {
-	const mockExec = exec as unknown as jest.Mock;
-	mockExec.mockImplementation((cmd: string, _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-		const result = fn(cmd);
-		if (result.error) {
-			const errWithOutput = Object.assign(new Error(result.error.message), {
-				stdout: result.stdout,
-				stderr: result.stderr,
-				code: (result.error as Error & { code?: number }).code,
-			});
-			callback(errWithOutput, result.stdout, result.stderr);
-		} else {
-			callback(null, result.stdout, result.stderr);
-		}
-	});
+// runMxcadAssembly 返回值形状（与 mxcad-exec.ts 的 MxcadRunResult 一致）
+interface RunResult {
+	stdout: string;
+	stderr: string;
+	exitCode: number | null;
+	signal: NodeJS.Signals | null;
+	timedOut: boolean;
+}
+
+// Module-level runMxcadAssembly mock — allows per-test control of the conversion run.
+// 助手始终 resolve（不 reject）：非零退出/超时通过 exitCode/signal/timedOut 表达。
+function setRun(fn: () => RunResult) {
+	const mockRun = runMxcadAssembly as unknown as jest.Mock;
+	mockRun.mockImplementation(() => Promise.resolve(fn()));
 }
 
 describe("FileConversionService", () => {
@@ -81,11 +66,17 @@ describe("FileConversionService", () => {
 	beforeEach(async () => {
 		jest.clearAllMocks();
 
-		// Reset exec mock to default success state
-		const mockExec = exec as unknown as jest.Mock;
-		mockExec.mockImplementation((_cmd: string, _opts: unknown, callback: (err: Error | null, stdout: string, stderr: string) => void) => {
-			callback(null, '{"code":0}', "");
-		});
+		// Reset runMxcadAssembly mock to default success state
+		const mockRun = runMxcadAssembly as unknown as jest.Mock;
+		mockRun.mockImplementation(() =>
+			Promise.resolve({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}),
+		);
 
 		const mockConfigService = createMockConfig();
 
@@ -110,7 +101,13 @@ describe("FileConversionService", () => {
 	// ==================== convertFile ====================
 	describe("convertFile", () => {
 		it("should convert DWG file successfully", async () => {
-			setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const r = await service.convertFile({
 				srcPath: "/tmp/f.dwg",
 				fileHash: "abc",
@@ -119,10 +116,12 @@ describe("FileConversionService", () => {
 		});
 
 		it("should handle conversion failure with error code", async () => {
-			setExec("*", () => ({
-				error: null,
+			setRun(() => ({
 				stdout: '{"code":1,"message":"Invalid file"}',
 				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: false,
 			}));
 			const r = await service.convertFile({
 				srcPath: "/tmp/bad.dwg",
@@ -133,7 +132,13 @@ describe("FileConversionService", () => {
 		});
 
 		it("should handle parse error when output is invalid JSON", async () => {
-			setExec("*", () => ({ error: null, stdout: "not json", stderr: "" }));
+			setRun(() => ({
+				stdout: "not json",
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const r = await service.convertFile({
 				srcPath: "/tmp/f.dwg",
 				fileHash: "abc",
@@ -141,11 +146,13 @@ describe("FileConversionService", () => {
 			expect(r.isOk).toBe(false);
 		});
 
-		it("should handle exec error with successful stdout fallback", async () => {
-			setExec("*", () => ({
-				error: new Error("exec error"),
+		it("should handle non-zero exit with successful stdout fallback", async () => {
+			setRun(() => ({
 				stdout: '{"code":0}',
 				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: true,
 			}));
 			const r = await service.convertFile({
 				srcPath: "/tmp/f.dwg",
@@ -154,11 +161,13 @@ describe("FileConversionService", () => {
 			expect(r.isOk).toBe(true);
 		});
 
-		it("should handle exec error with no successful output", async () => {
-			setExec("*", () => ({
-				error: new Error("ETIMEOUT"),
+		it("should handle timeout with no successful output", async () => {
+			setRun(() => ({
 				stdout: "",
 				stderr: "timeout",
+				exitCode: null,
+				signal: "SIGTERM",
+				timedOut: true,
 			}));
 			const r = await service.convertFile({
 				srcPath: "/tmp/f.dwg",
@@ -169,7 +178,13 @@ describe("FileConversionService", () => {
 
 		// ===== 导出下载方向会员门控（mxweb → 其他格式）=====
 		it("should call conversion guard for mxweb source (export direction)", async () => {
-			setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const guard = { assertExportDownloadAllowed: jest.fn().mockResolvedValue(undefined) };
 			const module: TestingModule = await Test.createTestingModule({
 				providers: [
@@ -191,7 +206,13 @@ describe("FileConversionService", () => {
 		});
 
 		it("should skip guard for non-mxweb source (open direction)", async () => {
-			setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const guard = { assertExportDownloadAllowed: jest.fn().mockResolvedValue(undefined) };
 			const module: TestingModule = await Test.createTestingModule({
 				providers: [
@@ -211,7 +232,13 @@ describe("FileConversionService", () => {
 		});
 
 		it("should propagate guard rejection for mxweb export", async () => {
-			setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const guard = {
 				assertExportDownloadAllowed: jest.fn().mockRejectedValue(
 					new Error("VIP_FEATURE_REQUIRED")
@@ -236,7 +263,13 @@ describe("FileConversionService", () => {
 		});
 
 		it("convertServerFile 透传门控拒绝（不折叠为 code:12）", async () => {
-			setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const guard = {
 				assertExportDownloadAllowed: jest.fn().mockRejectedValue(
 					new VipFeatureRequiredException(
@@ -268,7 +301,13 @@ describe("FileConversionService", () => {
 
 	// ===== skipExportGate：内部转换跳过导出下载门控 =====
 	it("should skip export gate when skipExportGate is set (internal conversion)", async () => {
-		setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+		setRun(() => ({
+			stdout: '{"code":0}',
+			stderr: "",
+			exitCode: 0,
+			signal: null,
+			timedOut: false,
+		}));
 		const guard = {
 			assertExportDownloadAllowed: jest.fn().mockRejectedValue(
 				new Error("VIP_FEATURE_REQUIRED")
@@ -296,7 +335,13 @@ describe("FileConversionService", () => {
 	// ==================== generateBinFiles ====================
 	describe("generateBinFiles", () => {
 		it("保存时生成 bin 文件属于内部转换，不应触发导出下载会员门控", async () => {
-			setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const guard = {
 				assertExportDownloadAllowed: jest.fn().mockRejectedValue(
 					new VipFeatureRequiredException(
@@ -406,7 +451,13 @@ describe("FileConversionService", () => {
 	// ==================== convertBinToMxweb ====================
 	describe("convertBinToMxweb", () => {
 		it("should convert bin file to mxweb successfully", async () => {
-			setExec("*", () => ({ error: null, stdout: '{"code":0}', stderr: "" }));
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const r = await service.convertBinToMxweb(
 				"/tmp/f.bin",
 				"/tmp/out",
@@ -417,10 +468,12 @@ describe("FileConversionService", () => {
 		});
 
 		it("should handle conversion failure", async () => {
-			setExec("*", () => ({
-				error: null,
+			setRun(() => ({
 				stdout: '{"code":1,"message":"Convert failed"}',
 				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: false,
 			}));
 			const r = await service.convertBinToMxweb(
 				"/tmp/f.bin",
@@ -431,7 +484,13 @@ describe("FileConversionService", () => {
 		});
 
 		it("should handle parse error", async () => {
-			setExec("*", () => ({ error: null, stdout: "invalid json", stderr: "" }));
+			setRun(() => ({
+				stdout: "invalid json",
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
 			const r = await service.convertBinToMxweb(
 				"/tmp/f.bin",
 				"/tmp/out",
@@ -440,11 +499,13 @@ describe("FileConversionService", () => {
 			expect(r.success).toBe(false);
 		});
 
-		it("should handle execution error", async () => {
-			setExec("*", () => ({
-				error: new Error("Exec failed"),
+		it("should handle spawn failure with no output", async () => {
+			setRun(() => ({
 				stdout: "",
-				stderr: "",
+				stderr: "Exec failed",
+				exitCode: null,
+				signal: null,
+				timedOut: false,
 			}));
 			const r = await service.convertBinToMxweb(
 				"/tmp/f.bin",
@@ -455,10 +516,12 @@ describe("FileConversionService", () => {
 		});
 
 		it("should handle success when exit code non-zero but output indicates success", async () => {
-			setExec("*", () => ({
-				error: new Error("non-zero"),
+			setRun(() => ({
 				stdout: '{"code":0}',
 				stderr: "",
+				exitCode: 1,
+				signal: null,
+				timedOut: false,
 			}));
 			const r = await service.convertBinToMxweb(
 				"/tmp/f.bin",
@@ -466,6 +529,225 @@ describe("FileConversionService", () => {
 				"f.mxweb",
 			);
 			expect(r.success).toBe(true);
+		});
+
+		it("should limit concurrent bin→mxweb conversions to the configured max", async () => {
+			let active = 0;
+			let maxActive = 0;
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockImplementation(
+				() =>
+					new Promise<RunResult>((resolve) => {
+						active++;
+						maxActive = Math.max(maxActive, active);
+						setTimeout(() => {
+							active--;
+							resolve({
+								stdout: '{"code":0}',
+								stderr: "",
+								exitCode: 0,
+								signal: null,
+								timedOut: false,
+							});
+						}, 50);
+					}),
+			);
+			await Promise.all([
+				service.convertBinToMxweb("/tmp/a.bin", "/tmp/out", "a.mxweb"),
+				service.convertBinToMxweb("/tmp/b.bin", "/tmp/out", "b.mxweb"),
+				service.convertBinToMxweb("/tmp/c.bin", "/tmp/out", "c.mxweb"),
+			]);
+			// 限流器 cap = min(2, cpu, 2) = 2：3 个并发请求最多 2 个同时跑
+			expect(maxActive).toBeLessThanOrEqual(2);
+		});
+	});
+
+	// ==================== 部署模式 env 分支（#433） ====================
+	describe("FUNCTION_EXECUTOR 部署模式分支", () => {
+		const silentLogger = {
+			log: jest.fn(),
+			error: jest.fn(),
+			warn: jest.fn(),
+			debug: jest.fn(),
+			verbose: jest.fn(),
+		};
+
+		function configWithExecutorMode(mode?: string) {
+			const base = createMockConfig();
+			return {
+				get: jest.fn((key: string, options?: Record<string, unknown>) => {
+					if (key === "FUNCTION_EXECUTOR") return mode;
+					return base.get(key, options);
+				}),
+			};
+		}
+
+		it("conversion-service 模式：convertFile 经 IFunctionExecutor 转发，不 spawn 进程", async () => {
+			const mockExecutor = {
+				invoke: jest.fn(async () => ({
+					taskId: "cs_1",
+					status: "COMPLETED",
+					outputPath: "/out/f.mxweb",
+					metadata: { code: 0, newpath: "/out/f.mxweb" },
+				})),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(true);
+			expect(r.ret.newpath).toBe("/out/f.mxweb");
+			expect(mockExecutor.invoke).toHaveBeenCalledTimes(1);
+			// 转发模式下进程内 spawn 不应被调用
+			expect(runMxcadAssembly).not.toHaveBeenCalled();
+			await module.close();
+		});
+
+		it("conversion-service 模式：转发参数为 ConversionOptions 驼峰形状（srcPath 非 srcpath），防契约断裂", async () => {
+			const mockExecutor = {
+				invoke: jest.fn(async () => ({
+					taskId: "cs_1",
+					status: "COMPLETED",
+					outputPath: "/out/f.mxweb",
+					metadata: { code: 0, newpath: "/out/f.mxweb" },
+				})),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				outname: "out.mxweb",
+				cmd: "to_mxweb",
+				bd_pt1_x: "1",
+				bd_pt1_y: "2",
+				bd_pt2_x: "3",
+				bd_pt2_y: "4",
+				open_file_md5: "md5hash",
+				create_clip_block: true,
+			});
+			expect(r.isOk).toBe(true);
+			// 转发给转换服务的参数必须是 ConversionOptions 驼峰形状：转换服务 MxcadRunner 读
+			// params.srcPath（驼峰），若误发 mxcadassembly 小写 srcpath 会读 undefined → .replace 崩溃。
+			const invokeMock = mockExecutor.invoke as unknown as {
+				mock: { calls: unknown[][] };
+			};
+			const task = invokeMock.mock.calls[0][0] as {
+				params: Record<string, unknown>;
+			};
+			// 核心回归：srcPath（驼峰）必须存在——转换服务读 params.srcPath，缺失即 .replace 崩溃
+			expect(typeof task.params.srcPath).toBe("string");
+			// 路径值（Windows 下 path.normalize 产出反斜杠，统一转正斜杠比对，跨平台稳定）
+			expect(String(task.params.srcPath).replace(/\\/g, "/")).toBe("/tmp/f.dwg");
+			expect(task.params.fileHash).toBe("abc");
+			expect(task.params.outname).toBe("out.mxweb");
+			expect(task.params.cmd).toBe("to_mxweb");
+			// 关键回归：不得携带 mxcadassembly 小写键，否则转换服务读 srcPath 恒 undefined
+			expect(task.params).not.toHaveProperty("srcpath");
+			expect(task.params).not.toHaveProperty("src_file_md5");
+			// 721fe02 重构 serviceParam 时漏抄的 6 个字段（cut_dwg/print_to_pdf 区域/引用），
+			// 丢失会致引擎缺区域信息回 {"message":"false"}——锁定必须转发，防再漏
+			expect(task.params.bd_pt1_x).toBe("1");
+			expect(task.params.bd_pt1_y).toBe("2");
+			expect(task.params.bd_pt2_x).toBe("3");
+			expect(task.params.bd_pt2_y).toBe("4");
+			expect(task.params.open_file_md5).toBe("md5hash");
+			expect(task.params.create_clip_block).toBe(true);
+			await module.close();
+		});
+
+		it("conversion-service 模式：转发失败时返回 isOk=false 与错误信息", async () => {
+			const mockExecutor = {
+				invoke: jest.fn(async () => ({
+					taskId: "cs_1",
+					status: "FAILED",
+					error: "conversion service down",
+				})),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(false);
+			expect(r.error).toContain("conversion service down");
+			expect(runMxcadAssembly).not.toHaveBeenCalled();
+			await module.close();
+		});
+
+		it("conversion-service 模式：binToMxweb 空串 newpath 回落本地计算路径（回归：历史版本「bin→mxweb 转换失败: undefined」）", async () => {
+			// 忠实模拟 HttpConversionExecutor 映射：转换服务单任务结果 = mxcadassembly 输出
+			// {code, message}（无 newpath 键），runner 成功时补 newpath: ''，
+			// getTaskStatus 映射 outputPath = raw.newpath ?? raw.outputPath = ''（空串非 nullish）。
+			const mockExecutor = {
+				invoke: jest.fn(async () => ({
+					taskId: "cs_1",
+					status: "COMPLETED",
+					outputPath: "",
+					metadata: { code: 0, message: "ok", newpath: "" },
+				})),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
+			expect(r.success).toBe(true);
+			// 空串 newpath 必须回落本地计算路径（与进程内分支一致），
+			// 不得返回 outputPath=''（调用方 !outputPath 判失败且 error=undefined）
+			expect(r.outputPath).toBe(path.join("/tmp/out", "f.mxweb"));
+			expect(runMxcadAssembly).not.toHaveBeenCalled();
+			await module.close();
+		});
+
+		it("默认 process-pool 模式：convertFile 走进程内 spawn，不经 IFunctionExecutor", async () => {
+			// beforeEach 的 service：FUNCTION_EXECUTOR 未设 = process-pool
+			setRun(() => ({
+				stdout: '{"code":0}',
+				stderr: "",
+				exitCode: 0,
+				signal: null,
+				timedOut: false,
+			}));
+			const r = await service.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(true);
+			// 进程内 spawn 被调用
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
 		});
 	});
 });

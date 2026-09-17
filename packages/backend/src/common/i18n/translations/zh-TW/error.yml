@@ -6,6 +6,7 @@ auth:
   account_deactivated_expired: "帳號已登出且已過冷靜期，請聯絡客服恢復。資料將在30天後徹底刪除"
   user_disabled: "用戶已被停用"
   user_not_found_or_disabled: "用戶不存在或已被停用"
+  session_transfer_invalid: "轉移憑證無效或已過期"
   refresh_token_invalid_type: "無效的刷新Token類型"
   registration_disabled: "系統已關閉註冊功能"
   not_logged_in: "未登入"
@@ -56,6 +57,8 @@ auth:
   wechat_refresh_failed: "重新整理授權失敗"
   wechat_verification_failed: "微信驗證失敗"
   wechat_not_match_account: "該微信與目前帳戶不匹配"
+  password_change_required: "您的密碼已到期或首次登入未修改，請立即修改密碼"
+  password_expiring_soon: "您的密碼即將到期，建議盡快修改"
 
 account_binding:
   email_service_disabled: "郵件服務未啟用，無法綁定信箱"
@@ -139,6 +142,8 @@ project_member:
   only_owner_can_transfer: "只有專案所有者可以轉讓專案"
   cannot_remove_admin: "只有專案所有者可以移除管理員"
   cannot_modify_admin_role: "只有專案所有者可以修改管理員的角色"
+  cannot_modify_self_role: "不能修改自己的角色"
+  cannot_remove_self: "不能移除自己"
   only_owner_can_delete: "只有專案所有者可以刪除專案"
   cannot_transfer_to_self: "不能轉讓給自己"
   transfer_target_must_be_member: "轉讓目標必須是專案成員"
@@ -321,6 +326,15 @@ database:
 
 rate_limit:
   too_many_requests: "請求過於頻繁，請稍後再試"
+  account_locked: "帳號因多次登入失敗已被暫時鎖定，請 {minutes} 分鐘後再試"
+
+password_policy:
+  too_short: "密碼長度至少 {min} 位"
+  complexity: "密碼需包含大小寫字母、數字、特殊字元中至少三類"
+  weak: "密碼過於簡單（命中常見弱密碼），請更換為更複雜的密碼"
+
+initialization:
+  admin_password_required: "INITIAL_ADMIN_PASSWORD 環境變數未設定，首次啟動必須提供初始管理員密碼"
 
 ip_blacklist:
   invalid_ip: "無效的 IP 或 CIDR 格式"
@@ -336,6 +350,12 @@ ip_whitelist:
 
 admin_auth:
   ip_not_allowed: "當前 IP 不在管理員白名單中，禁止登入"
+
+mfa:
+  required: "請輸入雙因素認證動態碼"
+  code_invalid: "雙因素認證動態碼錯誤，請重試"
+  setup_required: "請先完成 TOTP 雙因素認證綁定"
+  already_enabled: "TOTP 已啟用，無需重複綁定"
 
 resource:
   not_found: "請求的資源不存在"
@@ -566,3 +586,11 @@ alert:
   not_found: "警示不存在"
 task_run:
   not_found: "任務不存在或未註冊"
+security:
+  brute_force_suspected: "帳號 {account} 連續 {count} 次登入失敗觸發鎖定，疑似暴力破解，已鎖定 {minutes} 分鐘"
+conversion_task:
+  no_node_id: "統一提交端點僅支援節點關聯的轉換（open/download + nodeId）；無節點關聯的轉換由前端本地記錄"
+  download_requires_format: "下載類型（download）必須提供目標格式（dwg/dxf/mxweb/pdf）"
+  download_requires_user: "下載類型（download）需要登入使用者（用於配額佔位）"
+  cancel_not_supported: "目前執行模式不支援取消（僅獨立轉換服務支援）"
+  task_lost: "轉換任務已遺失（服務可能已重新啟動），請重新開啟圖紙"

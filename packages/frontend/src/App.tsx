@@ -21,7 +21,7 @@ import {
 } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LoadingOverlay } from './components/LoadingOverlay';
-import { UploadPanel } from './components/upload-panel/UploadPanel';
+import { ConversionPanel } from './components/conversion-panel/ConversionPanel';
 import { useAuth } from './contexts/AuthContext';
 import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
 import { TourProvider } from './contexts/TourContext';
@@ -31,8 +31,6 @@ import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
 import { ADMIN_LOGIN_PATH } from './constants/adminLoginConfig';
 import { BrandProvider } from './contexts/BrandContext';
-import { useRuntimeConfig } from './contexts/RuntimeConfigContext';
-import { setUploadMaxFileSize } from './utils/mxcadUploadUtils';
 import NoPermissionPage from './components/ui/NoPermissionPage';
 import { i18nScope, t } from '@/languages';
 import { useVoerkaI18n } from '@voerkai18n/react';
@@ -42,6 +40,7 @@ import {
   getMobileRedirectConfig,
   getMobileRedirectUrl,
 } from './utils/mobileRedirect';
+import { isConversionPanelRoute } from './utils/conversionPanelRoute';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -68,6 +67,8 @@ const PageLoader: React.FC = () => (
 // 公开页面（认证相关）
 const Login = lazy(() => import('./pages/Login'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const AdminMfaSetup = lazy(() => import('./pages/AdminMfaSetup'));
+const AdminPasswordChange = lazy(() => import('./pages/AdminPasswordChange'));
 const Register = lazy(() => import('./pages/Register'));
 const EmailVerification = lazy(() => import('./pages/EmailVerification'));
 const PhoneVerification = lazy(() => import('./pages/PhoneVerification'));
@@ -76,6 +77,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 // 设备授权页面（桌面端 EXE OAuth）
 const DeviceAuthorize = lazy(() => import('./pages/DeviceAuthorize'));
+const SessionTransfer = lazy(() => import('./pages/SessionTransfer'));
 const PrivacyPolicyPage = lazy(() => import('./pages/Legal/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(
   () => import('./pages/Legal/TermsOfServicePage')
@@ -103,11 +105,8 @@ const SystemMonitorPage = lazy(() => import('./pages/SystemMonitorPage'));
 const RuntimeConfigPage = lazy(() => import('./pages/RuntimeConfigPage'));
 const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'));
 const AdminStatsPage = lazy(() => import('./pages/AdminStatsPage'));
-const IpBlacklistPage = lazy(() => import('./pages/IpBlacklistPage'));
-const IpWhitelistPage = lazy(() => import('./pages/IpWhitelistPage'));
-const SecurityAccessAttemptPage = lazy(
-  () => import('./pages/SecurityAccessAttemptPage')
-);
+// IP 访问控制（黑名单 / 白名单 / 高危访问尝试 三 Tab；子页面由容器静态引用，同 chunk）
+const IpAccessControlPage = lazy(() => import('./pages/IpAccessControlPage'));
 
 // ============================================================================
 // 路由保护组件
@@ -216,16 +215,48 @@ function CADEditorRouteGuard() {
   );
 }
 
+/**
+ * 全局转换队列面板门卫 — 公开页（登录 / 注册 / 找回密码 / 合规 / 设备授权）不渲染。
+ *
+ * 面板的上传·转换·下载语义只对「需登录的后台页 + CAD 编辑器」有意义。
+ * 隐藏期间在途上传不受影响（UploadManager 为模块级单例），回到可见路由后面板
+ * 恢复（位置 / 尺寸持久化在 conversionQueueStore）。单独成组件，避免每次导航
+ * 都重渲染整个 AppContent。
+ */
+function ConversionPanelGate() {
+  const location = useLocation();
+  return isConversionPanelRoute(location.pathname) ? <ConversionPanel /> : null;
+}
+
 function AppContent() {
   const { activeLanguage } = useVoerkaI18n(i18nScope);
+
+  // 语言跨标签页同步：监听其他标签页的 localStorage 语言变更
+  useEffect(() => {
+    const LANGUAGE_STORAGE_KEY = 'language';
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LANGUAGE_STORAGE_KEY && e.newValue !== null) {
+        const newLang = e.newValue;
+        if (newLang !== i18nScope.activeLanguage) {
+          i18nScope.change(newLang);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   return (
     <div className="layout-container">
       <SetupSpaNavigate />
       <MobileRouteGuard />
       {/* 全局加载遮罩 - 覆盖所有内容 */}
       <LoadingOverlay />
-      {/* 全局上传面板 - 多文件上传管理 */}
-      <UploadPanel />
+      {/* 全局统一队列面板 - 悬浮可拖动按钮 + 展开面板（上传 + 转换·历史，#471 / #476）
+          仅 CAD 编辑器 + 需登录的后台页渲染，公开页（登录/注册/合规等）不渲染 */}
+      <ConversionPanelGate />
       {/* 全局 CAD 编辑器覆盖层 — 仅 CAD 路由挂载，保护 WebGL 上下文 */}
       <CADEditorRouteGuard />
 
@@ -246,6 +277,32 @@ function AppContent() {
             <Suspense fallback={<PageLoader />}>
               <AdminLogin />
             </Suspense>
+          }
+        />
+        {/* 管理员 TOTP 双因素绑定页（#415 等保 8.1.4.1(d)）：未绑定管理员登录后被锁定至此。
+            需登录态（ProtectedRoute）但独立于后台 Layout——后台 Layout 的菜单/数据请求
+            会被后端 JwtStrategy 的 MFA 锁定拦截（403 MFA_SETUP_REQUIRED），故此处独立渲染。 */}
+        <Route
+          path="/admin/mfa"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AdminMfaSetup />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+        {/* 管理员强制改密页（#416 等保 8.1.4.1 b)）：口令首登未改密/超 180 天到期被锁定至此。
+            需登录态但独立于后台 Layout——后台 Layout 的菜单/数据请求会被后端 JwtStrategy
+            的口令锁定拦截（403 PASSWORD_CHANGE_REQUIRED），故此处独立渲染。 */}
+        <Route
+          path="/admin/change-password"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<PageLoader />}>
+                <AdminPasswordChange />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
         <Route
@@ -305,6 +362,16 @@ function AppContent() {
           element={
             <Suspense fallback={<PageLoader />}>
               <DeviceAuthorize />
+            </Suspense>
+          }
+        />
+
+        {/* 桌面端 EXE → 系统浏览器 会话转移透明交接路由（公开，无交互） */}
+        <Route
+          path="/session-transfer"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <SessionTransfer />
             </Suspense>
           }
         />
@@ -520,12 +587,15 @@ function AppContent() {
                     }
                   />
 
-                  {/* 审计日志 - 需要 SYSTEM_ADMIN 权限 */}
+                  {/* 审计日志 - AUDIT_ADMIN 或 SYSTEM_ADMIN 权限（#321 三权分立） */}
                   <Route
                     path="/audit-logs"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_ADMIN}
+                        permission={[
+                          SystemPermission.AUDIT_ADMIN,
+                          SystemPermission.SYSTEM_ADMIN,
+                        ]}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AuditLogPage />
@@ -609,45 +679,40 @@ function AppContent() {
                     }
                   />
 
-                  {/* IP 黑名单 - 需要 SYSTEM_IP_BLACKLIST_MANAGE 权限 */}
+                  {/* IP 访问控制（黑名单/白名单/高危访问尝试三 Tab）- 两个权限位任一即可进入 */}
+                  <Route
+                    path="/admin/ip-access"
+                    element={
+                      <PermissionRoute
+                        permission={[
+                          SystemPermission.SYSTEM_IP_BLACKLIST_MANAGE,
+                          SystemPermission.SYSTEM_IP_WHITELIST_MANAGE,
+                        ]}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <IpAccessControlPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 旧入口重定向：兼容已保存的书签与登录后 redirect 参数 */}
                   <Route
                     path="/admin/ip-blacklist"
                     element={
-                      <PermissionRoute
-                        permission={SystemPermission.SYSTEM_IP_BLACKLIST_MANAGE}
-                      >
-                        <Suspense fallback={<PageLoader />}>
-                          <IpBlacklistPage />
-                        </Suspense>
-                      </PermissionRoute>
+                      <Navigate to="/admin/ip-access?tab=blacklist" replace />
                     }
                   />
-
-                  {/* 管理员 IP 白名单 - 需要 SYSTEM_IP_WHITELIST_MANAGE 权限 */}
                   <Route
                     path="/admin/ip-whitelist"
                     element={
-                      <PermissionRoute
-                        permission={SystemPermission.SYSTEM_IP_WHITELIST_MANAGE}
-                      >
-                        <Suspense fallback={<PageLoader />}>
-                          <IpWhitelistPage />
-                        </Suspense>
-                      </PermissionRoute>
+                      <Navigate to="/admin/ip-access?tab=whitelist" replace />
                     }
                   />
-
-                  {/* 高危访问尝试 - 复用 SYSTEM_IP_WHITELIST_MANAGE 权限（IP 安全治理） */}
                   <Route
                     path="/admin/security-attempts"
                     element={
-                      <PermissionRoute
-                        permission={SystemPermission.SYSTEM_IP_WHITELIST_MANAGE}
-                      >
-                        <Suspense fallback={<PageLoader />}>
-                          <SecurityAccessAttemptPage />
-                        </Suspense>
-                      </PermissionRoute>
+                      <Navigate to="/admin/ip-access?tab=attempts" replace />
                     }
                   />
                 </Routes>
@@ -671,7 +736,6 @@ function App() {
     <BrandProvider>
       <Router>
         <RuntimeConfigProvider>
-          <RuntimeConfigSync />
           <TourProvider>
             <AppContent />
             {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
@@ -685,17 +749,6 @@ function App() {
 }
 
 export default App;
-
-/**
- * 将 RuntimeConfig 中的 maxFileSize 同步到 mxcadUploadUtils
- */
-function RuntimeConfigSync(): null {
-  const { config } = useRuntimeConfig();
-  React.useEffect(() => {
-    setUploadMaxFileSize(config.maxFileSize);
-  }, [config.maxFileSize]);
-  return null;
-}
 
 /**
  * 移动端路由守卫 — 检测客户端导航到 CAD 编辑器路由时，自动跳转到移动端 H5 编辑器。

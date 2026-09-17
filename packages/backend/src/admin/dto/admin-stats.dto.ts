@@ -1,6 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
+ * 运营总量概览（与统计区间无关的当前存量）
+ */
+export class StatsOverviewDto {
+  @ApiProperty({
+    description: '当前用户总数（排除软删/注销账号）',
+    example: 1234,
+  })
+  totalUsers: number;
+
+  @ApiProperty({
+    description: '累计付费用户数（历史任意成功支付过去重计数）',
+    example: 56,
+  })
+  paidUsers: number;
+}
+
+/**
  * 每日新增用户统计点（UTC+8 自然日，排除软删账号）
  */
 export class DailyRegistrationsPointDto {

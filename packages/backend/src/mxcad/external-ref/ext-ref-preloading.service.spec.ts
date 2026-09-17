@@ -12,6 +12,7 @@ import { ExtRefPreloadingService } from './ext-ref-preloading.service';
 
 describe('ExtRefPreloadingService', () => {
   let service: ExtRefPreloadingService;
+  let mockConfigService: any;
   let mockNodeService: any;
   let mockStorageManager: any;
   let fsPromisesMock: any;
@@ -21,9 +22,14 @@ describe('ExtRefPreloadingService', () => {
     jest.clearAllMocks();
     fsPromisesMock = jest.requireMock('fs/promises');
     fsMock = jest.requireMock('fs');
+    mockConfigService = { get: jest.fn().mockReturnValue('') };
     mockNodeService = { findById: jest.fn() };
     mockStorageManager = { getFullPath: jest.fn() };
-    service = new ExtRefPreloadingService(mockNodeService, mockStorageManager);
+    service = new ExtRefPreloadingService(
+      mockConfigService,
+      mockNodeService,
+      mockStorageManager
+    );
   });
 
   describe('getPreloadingFileName', () => {
@@ -82,8 +88,9 @@ describe('ExtRefPreloadingService', () => {
       expect(await service.checkExists('node-1')).toBe(false);
     });
 
-    it('should return false when node has no path', async () => {
+    it('should fall back to mxcadUploadPath and check existence when node has no path', async () => {
       mockNodeService.findById.mockResolvedValue({ id: 'node-1', path: null });
+      fsMock.existsSync.mockReturnValue(false);
       expect(await service.checkExists('node-1')).toBe(false);
     });
   });

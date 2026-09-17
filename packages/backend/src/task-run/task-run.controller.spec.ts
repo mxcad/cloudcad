@@ -16,6 +16,7 @@ describe('TaskRunController', () => {
 		run: jest.Mock;
 		getRunner: jest.Mock;
 		findRecent: jest.Mock;
+		listRunners: jest.Mock;
 	};
 	let mockAlertService: { raise: jest.Mock; resolveBySourceKey: jest.Mock };
 
@@ -28,6 +29,7 @@ describe('TaskRunController', () => {
 			run: jest.fn(),
 			getRunner: jest.fn(),
 			findRecent: jest.fn(),
+			listRunners: jest.fn(),
 		};
 		mockAlertService = {
 			raise: jest.fn(),
@@ -67,6 +69,15 @@ describe('TaskRunController', () => {
 				[TaskRunController.prototype.runTask, TaskRunController]
 			);
 			expect(permissions).toEqual([SystemPermission.SYSTEM_ADMIN]);
+		});
+
+		it('should inherit class-level SYSTEM_MONITOR on listTasks', () => {
+			const reflector = new Reflector();
+			const permissions = reflector.getAllAndOverride<SystemPermission[]>(
+				PERMISSIONS_KEY,
+				[TaskRunController.prototype.listTasks, TaskRunController]
+			);
+			expect(permissions).toEqual([SystemPermission.SYSTEM_MONITOR]);
 		});
 	});
 
@@ -108,6 +119,33 @@ describe('TaskRunController', () => {
 				{},
 				{ page: 1, limit: 20 }
 			);
+		});
+	});
+
+	describe('listTasks', () => {
+		it('should return registered tasks wrapped in { data }', async () => {
+			const runners = [
+				{
+					taskName: 'storage-cleanup:expired-storage',
+					description: '清理过期存储',
+					schedule: '0 3 * * *',
+					scheduleLabel: '每天 03:00',
+				},
+			];
+			mockTaskRunService.listRunners.mockReturnValue(runners);
+
+			const response = await controller.listTasks();
+
+			expect(mockTaskRunService.listRunners).toHaveBeenCalledTimes(1);
+			expect(response).toEqual({ data: runners });
+		});
+
+		it('should return empty data when no tasks registered', async () => {
+			mockTaskRunService.listRunners.mockReturnValue([]);
+
+			const response = await controller.listTasks();
+
+			expect(response).toEqual({ data: [] });
 		});
 	});
 

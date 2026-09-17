@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM 姊︽兂缃戦〉CAD瀹炴椂鍗忓悓骞冲彴 AutoTest Pipeline
+REM 梦想网页CAD实时协同平台 AutoTest Pipeline
 REM Scheduled hourly via Windows Task Scheduler
 REM Runs all tests, fixes failures, auto-commits
 REM ============================================================

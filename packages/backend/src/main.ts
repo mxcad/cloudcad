@@ -32,11 +32,13 @@ import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { I18nContext } from 'nestjs-i18n';
+import * as crypto from 'crypto';
 import { RuntimeConfigService } from './runtime-config/runtime-config.service';
 import { CooperateAuthService } from './cooperate/cooperate-auth.service';
 import { TokenBlacklistService } from './auth/services/token-blacklist.service';
 import { DatabaseService } from './database/database.service';
 import { AccessLogMiddleware } from './common/middlewares/access-log.middleware';
+import { withSessionRedisFallback } from './common/session/degrade-session-middleware';
 
 const logger = new Logger('Bootstrap');
 
@@ -219,9 +221,9 @@ async function bootstrap() {
     },
     name: config.session.name,
   });
-  server.use((req, res, next) => {
-    sessionMiddleware(req, res, next);
-  });
+  // Redis 故障（NOAUTH / 宕机 / 连接失败）降级：skip session 不 500，
+  // 与「Redis 非必需」声明对齐（上文连接失败时仍继续启动）。
+  server.use(withSessionRedisFallback(sessionMiddleware, logger));
   logger.log(
     `Session cookie secure: ${
       config.session.cookieSecure ?? 'auto（按请求协议自适应）'
@@ -234,6 +236,27 @@ async function bootstrap() {
 
   // Cookie 解析中间件（用于读取 refresh_token cookie）
   server.use(cookieParser());
+
+  // CSRF double-submit cookie bootstrap（ADR：cookie-only 会话的 CSRF 回退路径补全）：
+  // 前端请求拦截器读该 cookie 并发送 x-csrf-token header（double-submit 模式）。
+  // 仅在 cookie 缺失时设置（稳定 per-session，不覆盖已有 token），确保首个 CSRF 保护
+  // 请求前 cookie 已存在，打破「cookie 只在请求成功后才设置」的鸡生蛋。
+  // 注意：CsrfGuard 在成功请求后仍会轮换 token（见 csrf.guard.ts），本中间件只负责
+  // 首次 bootstrap，不干扰轮换。
+  server.use((req, res, next) => {
+    const existing = req.cookies?.['csrf_token'];
+    if (!existing) {
+      const token = crypto.randomBytes(32).toString('hex');
+      res.cookie('csrf_token', token, {
+        httpOnly: false,
+        secure: config.nodeEnv === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 1000,
+      });
+    }
+    next();
+  });
 
   // 创建 NestJS 应用
   const app = await NestFactory.create<NestExpressApplication>(
@@ -420,6 +443,8 @@ async function bootstrap() {
   //  mxcad 协同 SDK createWork/joinWork 均为 application/json POST，实测缺此项时挂起）。
   // 仅当 req.readableLength === 0（bodyParser 已消费）时生效；multipart 跳过 json 解析时
   // req.body 为空 → 直接透传原始流，无副作用；与 verify 捕获的 req.rawBody 互不干扰。
+  // 现有链路为 HTTP 转发（协同服务 mxcadassembly 为原生黑盒进程，REST 通道）；
+  // 若未来需要转发 WebSocket 升级，须补 ws:true。
   server.use(
     '/api/cooperate',
     createProxyMiddleware({

@@ -29,7 +29,37 @@ GET /api/metrics   （Prometheus 文本格式，已从 Swagger 排除）
 |------|------|------|
 | `http_requests_total` | Counter | HTTP 请求总数，按 `method / path / status` 打标签 |
 | `http_request_duration_seconds` | Histogram | 请求耗时分布（0.005s ~ 10s 分桶），可算 P50/P95/P99 |
+| `cleanup_records_deleted_total{task}` | Counter | 后台清理任务累计删除记录数（#325 / ADR-0055 §7） |
+| `cleanup_space_freed_bytes{task}` | Counter | 后台清理任务累计释放磁盘字节（仅可统计字节的任务产生序列） |
+| `cleanup_last_duration_seconds{task}` | Gauge | 各清理任务最近一次运行耗时（秒） |
 | Node.js 运行时指标 | 默认 | 进程内存、CPU、事件循环延迟等（`collectDefaultMetrics`） |
+
+## 清理任务指标（#325）
+
+`CleanupMetricsService.observe({ task, recordsDeleted?, spaceFreedBytes?, durationSeconds })`
+是唯一的埋点接缝：同时更新上述三个指标并向应用日志写一条结构化 JSON
+（`event=cleanup_run`，字段 `task / rows / freed / duration`，单位秒），单一代码路径
+保证日志与指标数值一致。各清理 scheduler 在裸执行函数（定时 + 手动触发共用）中调用。
+
+`task` 标签取值统一来自 `TASK_NAMES` 常量（如 `storage-cleanup:expired-storage`）。
+
+### 失败分级语义（ADR-0055 §7）
+
+- **完全失败** → P1 `task_run_failed`（沿用现有链路，15min 同源聚合邮件）
+- **部分成功**（已删部分但有单项失败）→ P2 `cleanup.partial`，detail 携带
+  `errorCount + errorSummary`（前 10 条），每日日报汇总
+
+### 生产环境采集结构化日志
+
+生产根级别默认 `warn`，`cleanup_run` 日志不落盘。需要时设置：
+
+```bash
+LOG_LEVEL=info   # 仅影响落盘流；stdout 的 pino/file 目标保持 warn 不刷屏
+```
+
+### 备份轮转埋点说明
+
+`backup:*` 任务的 cleanup_* 埋点随备份工作流落地后补齐（避免与备份工作流并行改动冲突）。
 
 ## 工作机制
 

@@ -208,6 +208,36 @@ jobs:
           fail_ci_if_error: false
 
   # ============================================================
+  # 依赖漏洞门禁（等保 #423，8.1.4.4(e)/8.1.10.5）：
+  # audit-ci --high 根目录单跑，只查生产依赖（--skip-dev），无需 pnpm install（秒级）
+  # allowlist 见根目录 audit-ci.json（30 天复核，跟踪表 docs/ops/audit-ci-allowlist.md）
+  # ============================================================
+  dependency-scan:
+    name: 依赖漏洞扫描（audit-ci）
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.9
+
+      - name: 运行 audit-ci（high+ 拦截，allowlist 内不红）
+        # 版本钉死：与本地验证版本一致（2026-08-31），升级须同步复核 allowlist 兼容性
+        run: npx -y audit-ci@7.1.0 --config audit-ci.json
+
+  # ============================================================
   # PR 门禁 1：提交信息/PR 标题符合 Conventional Commits
   # ============================================================
   check-commit-convention:

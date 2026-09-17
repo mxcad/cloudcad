@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 // FileDownloadExportService 转换产物缓存行为测试
-// 覆盖：未命中转换后写入缓存 / 命中免转换免配额 / 无 fileHash 不缓存 / TTL 过期重转
+// 覆盖：未命中转换后产物即缓存 / 命中免转换免配额 / 无 hash 不缓存 / TTL 过期重转 / 内容变化失效
 ///////////////////////////////////////////////////////////////////////////////
 
 import { NodeType } from '@cloudcad/db';
@@ -10,6 +10,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
 import { IStorageService } from '../../storage/interfaces/storage-service.interface';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
@@ -29,7 +30,7 @@ function collectStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
   });
 }
 
-describe('FileDownloadExportService - 转换产物缓存', () => {
+describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () => {
   let service: FileDownloadExportService;
   let prisma: {
     fileSystemNode: { findUnique: jest.Mock };
@@ -38,28 +39,30 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
   let restrictionEngine: Record<string, jest.Mock>;
   let storageManagerGetFullPath: jest.Mock;
   let tmpRoot: string;
-  let cacheDir: string;
+  let uploadsDir: string;
 
-  const fileHash = 'abcdef0123456789abcdef0123456789';
-  const updatedAt = new Date('2026-08-25T00:00:00.000Z');
+  const fileContent = 'test-mxweb-content-v1';
+  const fileHash = crypto.createHash('md5').update(fileContent).digest('hex');
   const makeNode = (overrides: Record<string, unknown> = {}) => ({
     id: 'node-1',
     name: 'test.dwg',
     originalName: 'test.dwg',
     path: 'files/n1.mxweb',
-    fileHash,
-    updatedAt,
+    fileHash: 'abcdef0123456789abcdef0123456789',
+    updatedAt: new Date('2026-08-25T00:00:00.000Z'),
     nodeType: NodeType.FILE,
     ...overrides,
   });
 
-  const cacheKeyFor = (node: { id: string; updatedAt: Date }, suffix: string) =>
-    `${node.id}-${node.updatedAt.getTime()}-${suffix}`;
+  const cacheKeyFor = (paramKey: string) => `${fileHash}-${paramKey}`;
 
   beforeEach(async () => {
     tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'conv-cache-'));
-    cacheDir = path.join(tmpRoot, 'cache');
+    uploadsDir = path.join(tmpRoot, 'uploads');
     fs.mkdirSync(path.join(tmpRoot, 'files'), { recursive: true });
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    // 创建工作副本（快照读此文件计算 hash）
+    fs.writeFileSync(path.join(tmpRoot, 'files/n1.mxweb'), fileContent);
 
     prisma = {
       fileSystemNode: { findUnique: jest.fn() },
@@ -88,10 +91,11 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
       }
       if (key === 'batchDownload') {
         return {
-          conversionCacheDir: cacheDir,
+          conversionCacheDir: '',
           conversionCacheTtlHours: 1,
         };
       }
+      if (key === 'mxcadUploadPath') return uploadsDir;
       return undefined;
     });
 
@@ -126,18 +130,26 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
     fs.rmSync(tmpRoot, { recursive: true, force: true });
   });
 
-  /** 在转换输出位置预置产物（模拟 convertServerFile 写盘成功） */
-  const stageConvertedOutput = (nodePath: string, outName: string) => {
-    const outPath = path.join(tmpRoot, path.dirname(nodePath), outName);
-    fs.writeFileSync(outPath, 'converted-content');
-    return outPath;
+  /** 设置转换 mock 使其写产物文件（内容寻址：产物即缓存，无需预置） */
+  const mockConversionWritesOutput = (paramKey: string, ext: string) => {
+    conversionMock.convertServerFile.mockImplementation(() => {
+      const outPath = path.join(uploadsDir, `${fileHash}-${paramKey}${ext}`);
+      fs.writeFileSync(outPath, 'converted-content');
+      return Promise.resolve({ code: 0 });
+    });
   };
 
-  it('缓存未命中：调用转换并把产物移入缓存目录（不再删除）', async () => {
+  /** 预置缓存文件（模拟已有缓存命中场景） */
+  const stageCacheFile = (paramKey: string, ext: string) => {
+    const cachePath = path.join(uploadsDir, `${fileHash}-${paramKey}${ext}`);
+    fs.writeFileSync(cachePath, 'cached-content');
+    return cachePath;
+  };
+
+  it('缓存未命中：调用转换，产物即缓存（内容寻址，无需移动）', async () => {
     const node = makeNode();
     prisma.fileSystemNode.findUnique.mockResolvedValue(node);
-    const outPath = stageConvertedOutput(node.path, 'test.dwg');
-    conversionMock.convertServerFile.mockResolvedValue({ code: 0 });
+    mockConversionWritesOutput('dwg-v29', '.dwg');
 
     const result = await service.downloadNodeWithFormat(
       node.id,
@@ -147,22 +159,19 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
     );
 
     expect(conversionMock.convertServerFile).toHaveBeenCalledTimes(1);
-    expect(result.cacheKey).toBe(cacheKeyFor(node, 'dwg-v29'));
+    expect(result.cacheKey).toBe(cacheKeyFor('dwg-v29'));
     await collectStream(result.stream);
 
-    // 产物已移入缓存目录且保留
-    const cacheFile = path.join(cacheDir, `${result.cacheKey}.dwg`);
+    // 产物已在缓存位置（内容寻址）
+    const cacheFile = path.join(uploadsDir, `${result.cacheKey}.dwg`);
     expect(fs.existsSync(cacheFile)).toBe(true);
     expect(fs.readFileSync(cacheFile, 'utf-8')).toBe('converted-content');
-    expect(fs.existsSync(outPath)).toBe(false);
   });
 
   it('缓存命中：不调用转换、不占转换配额，直接返回缓存内容', async () => {
     const node = makeNode();
     prisma.fileSystemNode.findUnique.mockResolvedValue(node);
-    const cacheFile = path.join(cacheDir, `${cacheKeyFor(node, 'dwg-v29')}.dwg`);
-    fs.mkdirSync(cacheDir, { recursive: true });
-    fs.writeFileSync(cacheFile, 'cached-content');
+    stageCacheFile('dwg-v29', '.dwg');
 
     const result = await service.downloadNodeWithFormat(
       node.id,
@@ -171,7 +180,6 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
       { dwgVersion: 29 }
     );
 
-    // 先消费流（关闭文件句柄）再断言，避免 Windows 下 afterEach 清理临时目录时报句柄占用
     const content = await collectStream(result.stream);
 
     expect(conversionMock.convertServerFile).not.toHaveBeenCalled();
@@ -182,8 +190,7 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
   it('参数不同 → 缓存 key 不同（PDF 尺寸/颜色参与 key）', async () => {
     const node = makeNode();
     prisma.fileSystemNode.findUnique.mockResolvedValue(node);
-    stageConvertedOutput(node.path, 'test.pdf');
-    conversionMock.convertServerFile.mockResolvedValue({ code: 0 });
+    mockConversionWritesOutput('pdf-3000x2000-color', '.pdf');
 
     const result = await service.downloadNodeWithFormat(
       node.id,
@@ -192,39 +199,17 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
       { width: '3000', height: '2000', colorPolicy: 'color' }
     );
 
-    expect(result.cacheKey).toBe(`${node.id}-${updatedAt.getTime()}-pdf-3000x2000-color`);
-  });
-
-  it('无 updatedAt 的节点不缓存（转换后走旧行为删除临时文件）', async () => {
-    const node = makeNode({ updatedAt: null });
-    prisma.fileSystemNode.findUnique.mockResolvedValue(node);
-    const outPath = stageConvertedOutput(node.path, 'test.dwg');
-    conversionMock.convertServerFile.mockResolvedValue({ code: 0 });
-
-    const result = await service.downloadNodeWithFormat(
-      node.id,
-      'user-1',
-      CadDownloadFormat.DWG
-    );
-
-    expect(result.cacheKey).toBeUndefined();
-    await collectStream(result.stream);
-    // 等待流 end 回调异步删除
-    await new Promise((r) => setTimeout(r, 20));
-    expect(fs.existsSync(outPath)).toBe(false);
-    expect(fs.existsSync(cacheDir)).toBe(false);
+    expect(result.cacheKey).toBe(`${fileHash}-pdf-3000x2000-color`);
   });
 
   it('缓存超过 TTL：视为未命中，重新转换', async () => {
     const node = makeNode();
     prisma.fileSystemNode.findUnique.mockResolvedValue(node);
-    const cacheFile = path.join(cacheDir, `${cacheKeyFor(node, 'dwg-v29')}.dwg`);
-    fs.mkdirSync(cacheDir, { recursive: true });
+    const cacheFile = path.join(uploadsDir, `${cacheKeyFor('dwg-v29')}.dwg`);
     fs.writeFileSync(cacheFile, 'stale-content');
     const expired = new Date(Date.now() - 2 * 60 * 60 * 1000);
     fs.utimesSync(cacheFile, expired, expired);
-    stageConvertedOutput(node.path, 'test.dwg');
-    conversionMock.convertServerFile.mockResolvedValue({ code: 0 });
+    mockConversionWritesOutput('dwg-v29', '.dwg');
 
     const result = await service.downloadNodeWithFormat(
       node.id,
@@ -239,19 +224,21 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
     expect(fs.readFileSync(cacheFile, 'utf-8')).toBe('converted-content');
   });
 
-  it('节点更新（updatedAt 变化）后旧缓存失效，重新转换', async () => {
-    // 编辑器保存只更新 updatedAt 不更新 fileHash——缓存 key 必须随 updatedAt 变化
-    const oldUpdatedAt = new Date('2026-08-20T00:00:00.000Z');
-    const node = makeNode({ updatedAt: new Date('2026-08-25T00:00:00.000Z') });
+  it('文件内容变化 → hash 变化 → 旧缓存失效，重新转换', async () => {
+    // 修改工作副本内容 → hash 变化 → 旧缓存不命中
+    const oldContent = 'old-mxweb-content';
+    const oldHash = crypto.createHash('md5').update(oldContent).digest('hex');
+    fs.writeFileSync(path.join(tmpRoot, 'files/n1.mxweb'), oldContent);
+
+    const node = makeNode();
     prisma.fileSystemNode.findUnique.mockResolvedValue(node);
-    const staleCache = path.join(
-      cacheDir,
-      `${node.id}-${oldUpdatedAt.getTime()}-dwg-v29.dwg`
-    );
-    fs.mkdirSync(cacheDir, { recursive: true });
+    const staleCache = path.join(uploadsDir, `${oldHash}-dwg-v29.dwg`);
     fs.writeFileSync(staleCache, 'stale-content');
-    stageConvertedOutput(node.path, 'test.dwg');
-    conversionMock.convertServerFile.mockResolvedValue({ code: 0 });
+
+    // 修改文件内容（模拟编辑器保存）
+    fs.writeFileSync(path.join(tmpRoot, 'files/n1.mxweb'), fileContent);
+
+    mockConversionWritesOutput('dwg-v29', '.dwg');
 
     const result = await service.downloadNodeWithFormat(
       node.id,
@@ -264,8 +251,10 @@ describe('FileDownloadExportService - 转换产物缓存', () => {
     expect(conversionMock.convertServerFile).toHaveBeenCalledTimes(1);
     await collectStream(result.stream);
     // 新 key 缓存写入
-    const freshCache = path.join(cacheDir, `${result.cacheKey}.dwg`);
+    const freshCache = path.join(uploadsDir, `${result.cacheKey}.dwg`);
     expect(fs.existsSync(freshCache)).toBe(true);
     expect(fs.readFileSync(freshCache, 'utf-8')).toBe('converted-content');
+    // 旧缓存仍在（未被删除，只是不再命中）
+    expect(fs.existsSync(staleCache)).toBe(true);
   });
 });

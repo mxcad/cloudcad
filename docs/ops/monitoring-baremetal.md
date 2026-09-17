@@ -1,5 +1,7 @@
 # 监控栈裸机离线部署（Log Monitor Ops / ADR-0055 §3）
 
+> **体系定位**：本文为**操作规程（规程层）**而非签发制度——随部署直接执行，不走制度签发流程；体系位置与等保对照（8.5.4 集中监测）见 [制度索引](README.md)。
+>
 > 对应 ticket：[#314 监控栈裸机离线部署包（二进制预下载 + systemd）](https://github.com/mxcad/cloudcad/issues/314)
 >
 > 适用场景：**非 docker 的裸机/多机部署**，且可能**无外网**（toC/toB 离线单机/多机形态）。与 [#313 监控栈 docker-compose 变体](https://github.com/mxcad/cloudcad/issues/313) 功能等价，复用同一份 `docker/monitoring/` 配置源与 `runtime/scripts/monitoring/promtail/` 模板。
@@ -123,7 +125,9 @@ sudo ./runtime/scripts/monitoring/install-monitoring.sh \
 | 数据目录 | `docker/data/monitoring/` | `/app/data/monitoring/` |
 | 功能 | 等价 | 等价 |
 
-两者共用：`docker/monitoring/prometheus/alert-rules.yml`（#316 填充）、`runtime/scripts/monitoring/promtail/promtail.yml`。
+两者共用：`docker/monitoring/prometheus/alert-rules.yml`（#316 已填充 8 条规则，阈值表与调优记录见 [`docker/monitoring/README.md`](../../docker/monitoring/README.md)）、`runtime/scripts/monitoring/promtail/promtail.yml`。
+
+> 注意：主机级告警指标（CPU/内存/磁盘）由后端进程内采样（`host_*` gauge）暴露于 `/api/metrics`，裸机形态无需额外安装 node_exporter；磁盘采样路径用后端 `HOST_METRIC_DISK_PATHS` 配置。
 
 ## 等保对照（ADR-0055 §5）
 

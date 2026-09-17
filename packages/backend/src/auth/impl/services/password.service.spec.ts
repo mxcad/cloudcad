@@ -3,6 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { PasswordService } from './password.service';
 import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
+import { PasswordPolicyService } from '../../services/password-policy.service';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
 
 describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
@@ -41,6 +42,13 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
     reset: jest.fn(),
   };
 
+  const mockPasswordPolicyService = {
+    assertPasswordPolicy: jest.fn(),
+    getPasswordChangeStatus: jest
+      .fn()
+      .mockReturnValue({ required: undefined, expiringSoon: false }),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -63,6 +71,10 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
         { provide: AuthTokenService, useValue: mockAuthTokenService },
         { provide: 'TOKEN_BLACKLIST', useValue: mockTokenBlacklistService },
         { provide: AccountRateLimitService, useValue: mockAccountRateLimitService },
+        {
+          provide: PasswordPolicyService,
+          useValue: mockPasswordPolicyService,
+        },
       ],
     }).compile();
 

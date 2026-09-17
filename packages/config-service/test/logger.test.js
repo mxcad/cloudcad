@@ -10,7 +10,8 @@ const path = require('path');
 process.env.LOG_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'cfg-svc-logs-'));
 process.env.LOG_RETENTION_DAYS = '180';
 
-const { log, resolveRequestId, runWithRequest } = require('../lib/logger');
+const { log, resolveRequestId, runWithRequest, getLogDir } = require('../lib/logger');
+const { PROJECT_ROOT } = require('../lib/constants');
 
 function captureStdout(fn) {
   const lines = [];
@@ -109,5 +110,18 @@ describe('logger (零依赖 JSON 日志)', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     assert.equal(fs.existsSync(path.join(dir, staleName)), false);
     process.env.LOG_RETENTION_DAYS = '180';
+  });
+
+  it('相对路径 LOG_DIR 基于项目根解析（非包内 __dirname），日志统一落 data/logs/<service>/', () => {
+    const prev = process.env.LOG_DIR;
+    process.env.LOG_DIR = 'data/logs';
+    try {
+      assert.equal(getLogDir(), path.resolve(PROJECT_ROOT, 'data/logs'));
+      // 关键回归：不再落到包内（__dirname 上级）
+      assert.notEqual(getLogDir(), path.resolve(__dirname, '..', 'data/logs'));
+    } finally {
+      if (prev === undefined) delete process.env.LOG_DIR;
+      else process.env.LOG_DIR = prev;
+    }
   });
 });

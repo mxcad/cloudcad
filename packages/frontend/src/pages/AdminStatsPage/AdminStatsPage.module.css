@@ -7,6 +7,13 @@
   margin: 0 auto;
 }
 
+/* 嵌入用户管理 Tab：与表格卡同宽（撑满容器）；滚动由外层 stats-panel 容器承担 */
+.pageEmbedded {
+  padding: 0;
+  max-width: none;
+  margin: 0;
+}
+
 .header h1 {
   margin: 0;
   font-size: 20px;

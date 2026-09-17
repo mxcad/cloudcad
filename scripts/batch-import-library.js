@@ -6,8 +6,9 @@ const path = require('path');
 const config = {
   baseUrl: 'http://localhost:3001',
   admin: {
-    username: process.env.ADMIN_USERNAME || 'admin',
-    password: process.env.ADMIN_PASSWORD || 'Admin123!'
+    // admin 账户由后端 initialization.service 用 INITIAL_ADMIN_PASSWORD 创建，此处对齐同一来源
+    username: process.env.INITIAL_ADMIN_USERNAME || 'admin',
+    password: process.env.INITIAL_ADMIN_PASSWORD
   },
   libraries: {
     drawing: {

@@ -11,13 +11,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   projectControllerGetPersonalSpace: vi.fn(),
+  memberControllerGetUserProjectPermissions: vi.fn(),
   handleError: vi.fn(),
+  hasPendingOpen: vi.fn().mockReturnValue(false),
 }));
 
-vi.mock('mxcad', () => ({ MxCpp: {} }));
+vi.mock('mxcad', () => ({
+  MxCpp: {
+    App: {
+      getCurrentMxCAD: () => ({
+        saveFile: (_name: string, cb: (data: Uint8Array) => void) => {
+          cb(new Uint8Array([1, 2, 3]));
+        },
+      }),
+    },
+  },
+}));
 vi.mock('@/api-sdk', () => ({
   projectControllerGetPersonalSpace:
     mocks.projectControllerGetPersonalSpace,
+  memberControllerGetUserProjectPermissions:
+    mocks.memberControllerGetUserProjectPermissions,
 }));
 vi.mock('@/utils/errorHandler', () => ({ handleError: mocks.handleError }));
 vi.mock('@/utils/authCheck', () => ({ isAuthenticated: () => true }));
@@ -33,12 +47,35 @@ vi.mock('../loadingService', () => ({
 vi.mock('@/utils/notificationEvents', () => ({
   globalShowToast: vi.fn(),
 }));
-vi.mock('../drawingSession', () => ({
+// triggerSaveAs 动态导入的门面（避免测试环境加载真实 mxcad-app/mxdraw 链）
+vi.mock('../mxcadManager', () => ({
+  mxcadManager: {
+    hasPendingOpen: () => mocks.hasPendingOpen(),
+  },
+}));
+vi.mock('../../drawingSession', () => ({
   emit: vi.fn(),
 }));
 
-import { getPersonalSpaceId } from '../mxcadHelpers';
+import { getPersonalSpaceId, triggerSaveAs } from '../mxcadHelpers';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
+import { useCADEditorStore } from '@/stores/useCADEditorStore';
+import { emit } from '../../drawingSession';
+import { globalShowToast } from '@/utils/notificationEvents';
+import { CAD_EVENTS } from '@/constants/events';
+import type { CurrentFileInfo } from '../mxcadTypes';
+
+function setFileInfo(overrides: Partial<CurrentFileInfo> = {}): void {
+  useCADEditorStore.setState({
+    currentFileInfo: {
+      fileId: 'node-1',
+      parentId: null,
+      projectId: null,
+      name: 'drawing.dwg',
+      ...overrides,
+    },
+  });
+}
 
 describe('getPersonalSpaceId — 失败回退本地缓存（偶发另存为 bug 回归）', () => {
   beforeEach(() => {
@@ -97,5 +134,120 @@ describe('getPersonalSpaceId — 失败回退本地缓存（偶发另存为 bug 
     );
 
     await expect(getPersonalSpaceId()).resolves.toBeNull();
+  });
+});
+
+describe('triggerSaveAs — 项目图纸 CAD_SAVE 门控（无权限 = 无另存为权限）', () => {
+  // saveDefaults 的 projectPermsCache 为模块级，各用例用不同 projectId 避免串扰
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setFileInfo();
+  });
+
+  it('项目图纸 + 无 CAD_SAVE → 拒绝，不打开另存为窗口', async () => {
+    setFileInfo({ projectId: 'proj-deny' });
+    mocks.memberControllerGetUserProjectPermissions.mockResolvedValue({
+      data: { permissions: ['CAD_READ'] },
+      error: undefined,
+    });
+
+    await expect(triggerSaveAs()).resolves.toBe(false);
+    expect(globalShowToast).toHaveBeenCalledWith(
+      '您没有保存图纸的权限',
+      'warning'
+    );
+    expect(emit).not.toHaveBeenCalledWith(
+      CAD_EVENTS.SAVE_AS,
+      expect.anything()
+    );
+  });
+
+  it('项目图纸 + 有 CAD_SAVE → 打开另存为窗口', async () => {
+    setFileInfo({ projectId: 'proj-ok' });
+    mocks.memberControllerGetUserProjectPermissions.mockResolvedValue({
+      data: { permissions: ['CAD_SAVE'] },
+      error: undefined,
+    });
+    mocks.projectControllerGetPersonalSpace.mockResolvedValue({
+      data: { id: 'ps-1' },
+      error: undefined,
+    });
+
+    await expect(triggerSaveAs()).resolves.toBe(true);
+    expect(emit).toHaveBeenCalledWith(
+      CAD_EVENTS.SAVE_AS,
+      expect.objectContaining({ currentFileName: 'drawing.dwg' })
+    );
+  });
+
+  it('资源库文件（projectId 为库节点 ID）→ 不受项目门控，直接打开另存为窗口', async () => {
+    setFileInfo({
+      projectId: 'lib-root-id',
+      libraryKey: 'drawing',
+      path: '202607/lib/node.mxweb',
+    });
+    mocks.projectControllerGetPersonalSpace.mockResolvedValue({
+      data: { id: 'ps-1' },
+      error: undefined,
+    });
+
+    await expect(triggerSaveAs()).resolves.toBe(true);
+    expect(
+      mocks.memberControllerGetUserProjectPermissions
+    ).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith(
+      CAD_EVENTS.SAVE_AS,
+      expect.objectContaining({ currentFileName: 'drawing.dwg' })
+    );
+  });
+
+  it('公开/本地图纸（无 projectId）→ 不受门控，直接打开另存为窗口', async () => {
+    setFileInfo({ projectId: null, fileHash: 'local-md5' });
+    mocks.projectControllerGetPersonalSpace.mockResolvedValue({
+      data: { id: 'ps-1' },
+      error: undefined,
+    });
+
+    await expect(triggerSaveAs()).resolves.toBe(true);
+    expect(
+      mocks.memberControllerGetUserProjectPermissions
+    ).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith(
+      CAD_EVENTS.SAVE_AS,
+      expect.objectContaining({ currentFileName: 'drawing.dwg' })
+    );
+  });
+
+  it('项目图纸 + 权限查询抛异常 → fail-closed 拒绝', async () => {
+    setFileInfo({ projectId: 'proj-err' });
+    mocks.memberControllerGetUserProjectPermissions.mockRejectedValue(
+      new Error('network')
+    );
+
+    await expect(triggerSaveAs()).resolves.toBe(false);
+    expect(mocks.handleError).toHaveBeenCalledWith(
+      expect.anything(),
+      'mxcadManager: triggerSaveAs project permission check'
+    );
+    expect(emit).not.toHaveBeenCalledWith(
+      CAD_EVENTS.SAVE_AS,
+      expect.anything()
+    );
+  });
+
+  it('新图纸打开中（pendingOpen）→ 拒绝，不打开另存为窗口', async () => {
+    setFileInfo({ projectId: null });
+    mocks.hasPendingOpen.mockReturnValue(true);
+
+    await expect(triggerSaveAs()).resolves.toBe(false);
+    expect(globalShowToast).toHaveBeenCalledWith(
+      '图纸正在打开，请稍后再保存',
+      'warning'
+    );
+    expect(emit).not.toHaveBeenCalledWith(
+      CAD_EVENTS.SAVE_AS,
+      expect.anything()
+    );
+    mocks.hasPendingOpen.mockReturnValue(false);
   });
 });

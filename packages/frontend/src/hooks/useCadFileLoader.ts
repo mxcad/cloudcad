@@ -18,6 +18,7 @@ import { waitForConversion } from './conversion/useConversionPolling';
 import { VIEW_INIT_TIMEOUT_MS } from '@/services/mxcadManager/mxcadTypes';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { globalShowToast, globalShowConfirm } from '@/utils/notificationEvents';
 
 /**
  * 等待 CAD 引擎真正就绪（WASM 加载 + 引擎对象创建，mxcadApplicationCreatedMxCADObject 事件）。
@@ -234,10 +235,21 @@ export function useCadFileLoader(
           hideGlobalLoading();
           if (cancelled) return;
           if (!conversion.completed) {
-            const msg =
-              conversion.status === 'FAILED' || conversion.status === 'DELETED'
-                ? t('文件转换失败，无法打开文件')
-                : t('文件尚未转换完成');
+            const isTerminalFailure =
+              conversion.status === 'FAILED' ||
+              conversion.status === 'DELETED';
+            if (isTerminalFailure) {
+              // #477：永久失败弹窗提示（区别于「尚未转换完成」）
+              void globalShowConfirm({
+                title: t('转换失败'),
+                message: t('该文件转换失败，请检查文件内容'),
+                confirmText: t('知道了'),
+                type: 'danger',
+              });
+            }
+            const msg = isTerminalFailure
+              ? t('文件转换失败，无法打开文件')
+              : t('文件尚未转换完成');
             onError(msg);
             onStoreError(msg);
             onLoading(false);
@@ -445,6 +457,9 @@ export function useCadFileLoader(
             error instanceof Error && error.message
               ? error.message
               : t('CAD编辑器初始化失败');
+          // 失败必须显式 toast：会话仍停留在上一张图纸（currentFileInfo 未更新），
+          // 用户若未察觉失败会继续对旧图纸操作（保存命中旧项目权限判定）
+          globalShowToast(t('图纸打开失败：{msg}', { msg }), 'error');
           onError(msg);
           onStoreError(msg);
           onLoading(false);

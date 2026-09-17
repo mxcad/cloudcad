@@ -58,11 +58,12 @@ export class MxcadFileAccessController {
   @Get('filesData/*path')
   @OptionalAuth()
   @ApiResponse({ status: 200, description: '成功获取文件' })
+  @ApiResponse({ status: 202, description: '预热中（warmup=1 时历史版本转换已发起/在途，前端轮询本端点直到 204）' })
   @ApiResponse({ status: 204, description: '预热成功（warmup=1 时不返回内容）' })
   @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 404, description: '文件不存在' })
   @ApiQuery({ name: 'v', required: false, description: '历史版本号，存在时返回指定版本文件' })
-  @ApiQuery({ name: 'warmup', required: false, description: '预热模式（1/true）：生成版本缓存后不返回内容，仅确认就绪' })
+  @ApiQuery({ name: 'warmup', required: false, description: '预热模式（1/true）：确认版本缓存就绪；转换已发起/在途时返回 202 供前端轮询' })
   @ApiQuery({ name: 'shareToken', required: false, description: '分享访问令牌' })
   async getFilesDataFile(
     @Res() res: Response,
@@ -252,7 +253,8 @@ export class MxcadFileAccessController {
       const fileStats = fs.statSync(filePath);
       res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Length', fileStats.size);
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(filePath))}"`);
+      // 显示逻辑文件名（A1.dwg），而非磁盘文件名（A1.dwg.mxweb）
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
       // 外部参照可被替换，URL 不变但内容会变，禁止浏览器 HTTP 缓存，否则替换后查看仍显示旧图
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -325,7 +327,9 @@ export class MxcadFileAccessController {
 
   private async authorizeFilesDataAccess(filename: string, req: Request): Promise<void> {
     const normalizedFilename = filename.replace(/,/g, '/');
-    const shareToken = (req.query.shareToken as string | undefined) || (req.headers['x-share-token'] as string | undefined);
+    const shareToken = (req.query.shareToken as string | undefined)
+      || (req.headers['x-share-token'] as string | undefined)
+      || this.extractShareTokenFromReferer(req);
     if (shareToken) { await this.shareService.validateShareFileAccess(shareToken, normalizedFilename); return; }
     const userId = (req as any).user?.id;
     if (!userId) throw new UnauthorizedException(I18nContext.current()?.t('error.auth.login_required') ?? '请先登录');
@@ -340,6 +344,22 @@ export class MxcadFileAccessController {
 
     const hasAccess = await this.permissionService.getNodeAccessRole(userId, node.id);
     if (!hasAccess) throw new UnauthorizedException(I18nContext.current()?.t('error.file.no_access') ?? '没有文件访问权限');
+  }
+
+  /**
+   * 从 referer header 中提取 shareToken（WASM 引擎外部参照请求 fallback）
+   * WASM 层的 HTTP 请求可能无法正确传递自定义 header 或 URL 参数，
+   * 但浏览器会自动携带 referer，其中包含原始页面的 query 参数
+   */
+  private extractShareTokenFromReferer(req: Request): string | undefined {
+    const referer = req.headers.referer as string | undefined;
+    if (!referer) return undefined;
+    try {
+      const url = new URL(referer);
+      return url.searchParams.get('shareToken') || undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private async handleFilesDataFileRequest(filename: string, res: Response, req: Request, isHeadRequest: boolean, versionParam?: string, isWarmup = false) {

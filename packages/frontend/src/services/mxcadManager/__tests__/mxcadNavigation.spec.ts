@@ -136,6 +136,28 @@ describe('mxcadNavigation', () => {
     );
   });
 
+  it('does not send the user back into the CAD editor when back was recorded from inside the editor', async () => {
+    (useCADEditorStore.getState as ReturnType<typeof vi.fn>).mockReturnValue({
+      openedBackUrl:
+        '/cad-editor/file-1?nodeId=folder-1&v=2276&back=%2Fcad-editor%2Ffile-1%3FnodeId%3Dfolder-1',
+      openedInitialFileId: 'file-1',
+    });
+    (getFileInfo as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      fileId: 'file-1',
+      parentId: 'folder-1',
+      projectId: 'project-1',
+      personalSpaceId: null,
+      libraryKey: null,
+    });
+
+    await returnToCloudMapManagement();
+
+    expect(window.open).toHaveBeenCalledWith(
+      '/projects/project-1/files/folder-1',
+      '_blank'
+    );
+  });
+
   it('falls back to the calculated path when back was recorded but file differs', async () => {
     (useCADEditorStore.getState as ReturnType<typeof vi.fn>).mockReturnValue({
       openedBackUrl: '/projects/project-1/files',

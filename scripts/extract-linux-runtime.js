@@ -243,6 +243,12 @@ function extractWithYum(components, outputDir) {
       }
     } catch (err) {
       error(`${comp} 提取失败: ${err.message}`);
+      // node 是部署包启动的必需组件（start.sh 依赖 runtime/linux/node/bin/node），
+      // 提取失败必须致命——否则空/残缺 node 目录会被缓存复用，打出缺 node 的包。
+      if (comp === 'node') {
+        error('Node.js 提取失败，中止（部署包缺少 node 运行时将无法启动）');
+        process.exit(1);
+      }
     }
   }
 }
@@ -544,6 +550,12 @@ function extractWithApt(components, outputDir) {
       }
     } catch (err) {
       error(`${comp} 提取失败: ${err.message}`);
+      // node 是部署包启动的必需组件（start.sh 依赖 runtime/linux/node/bin/node），
+      // 提取失败必须致命——否则空/残缺 node 目录会被缓存复用，打出缺 node 的包。
+      if (comp === 'node') {
+        error('Node.js 提取失败，中止（部署包缺少 node 运行时将无法启动）');
+        process.exit(1);
+      }
     }
   }
 }
@@ -910,23 +922,53 @@ exec "$NODE_EXE" runtime/scripts/cli.js "$@"
 
 // ==================== 主函数 ====================
 
+// 各组件关键可执行文件（相对组件目录）。缓存命中判定与提取后断言共用：
+// 只查"目录存在且非空"会把"目录在但内容残缺"（如 node/bin/node 缺失）误判为就绪，
+// 导致坏缓存被复用、缺 node 的包被打出（start.sh 报"找不到 Node.js 运行时"）。
+const CRITICAL_FILES = {
+  node: 'bin/node',
+  postgres: 'bin/postgres',
+  redis: 'redis-server',
+  svn: 'svn',
+};
+
+function componentDirName(comp) {
+  return comp === 'svn' ? 'subversion' : comp;
+}
+
+function isComponentReady(outputDir, comp) {
+  const critical = CRITICAL_FILES[comp];
+  if (!critical) return false;
+  return fs.existsSync(path.join(outputDir, componentDirName(comp), critical));
+}
+
+/**
+ * 断言各组件关键可执行文件就绪，缺失即致命退出。
+ * 组件级 catch 仅对 node 致命（其余组件失败只打日志），但断言兜底
+ * 对全部组件生效："目录在、内容残缺"的产物一旦落盘成缓存，下次打包
+ * 会被误判缓存命中，打出缺组件的包，故提取完成后逐项断言。
+ */
+function assertExtractedComponents(outputDir, components) {
+  const missing = components.filter((c) => !isComponentReady(outputDir, c));
+  if (missing.length > 0) {
+    error(
+      `标准组件关键可执行文件缺失，视为提取失败，中止（防坏产物入缓存/部署包）:\n  ` +
+        missing.map((c) => `${componentDirName(c)}/${CRITICAL_FILES[c]}`).join('\n  ')
+    );
+    process.exit(1);
+  }
+}
+
 /**
  * 判断产物是否已完整存在（缓存命中则跳过提取）
- * 检查各组件对应子目录是否已存在且非空。
+ * 检查各组件关键可执行文件是否已存在（而非仅目录非空）。
  * @param {string} outputDir - 输出目录
  * @param {string[]} components - 需要提取的组件
  * @returns {boolean} true=产物已完整，可跳过提取
  */
 function isRuntimeExtracted(outputDir, components) {
   if (!fs.existsSync(outputDir)) return false;
-  for (const comp of components) {
-    const dirName = comp === 'svn' ? 'subversion' : comp;
-    const dir = path.join(outputDir, dirName);
-    if (!fs.existsSync(dir) || fs.readdirSync(dir).length === 0) {
-      return false;
-    }
-  }
-  return true;
+  return components.every((comp) => isComponentReady(outputDir, comp));
 }
 
 function main() {
@@ -977,7 +1019,11 @@ function main() {
   
   // 执行提取
   extractNative(components, outputDir);
-  
+
+  // 提取后断言关键可执行文件：组件级错误仅 node 致命，其余组件失败只打日志，
+  // 但"目录在、内容残缺"的产物不能落盘成缓存（下次打包会被误判缓存命中）。
+  assertExtractedComponents(outputDir, components);
+
   // 创建入口脚本（如果提取了 node）
   if (components.includes('node')) {
     createCloudcadSh(outputDir);

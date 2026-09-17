@@ -16,7 +16,6 @@ import { UserAvatar } from './ui/UserAvatar';
 import { formatFileSize } from '../utils/fileUtils';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { DownloadManager } from './modals/DownloadManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { Logo } from './Logo';
 import { InteractiveBackground } from './InteractiveBackground';
@@ -31,6 +30,7 @@ import { LayoutDashboard } from 'lucide-react';
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { Users } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { ShieldCheck } from 'lucide-react';
 import { Type } from 'lucide-react';
 import { Activity } from 'lucide-react';
@@ -48,10 +48,7 @@ import {
   Share2,
   User,
   DollarSign,
-  ShieldBan,
-  ShieldAlert,
   Home,
-  BarChart3,
 } from 'lucide-react';
 import { Menu } from './ui/Menu';
 
@@ -172,7 +169,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
-  const { hasPermission } = usePermission();
+  const { hasPermission, hasAnyPermission } = usePermission();
   const { config: runtimeConfig } = useRuntimeConfig();
   const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
@@ -189,7 +186,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // 存储空间
-  const { data: storageInfo, isLoading: storageLoading } = useStorageQuota();
+  const { data: storageInfo } = useStorageQuota();
 
   // 角色名称映射
   const getRoleDisplayName = useCallback((roleName: string): string => {
@@ -317,37 +314,25 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         visible: hasPermission(SystemPermission.SYSTEM_BILLING_READ),
       },
       {
-        to: '/admin/stats',
-        icon: BarChart3,
-        label: t('运营统计'),
-        // 与路由守卫一致：任一权限即可进页，页内区块按权限各自显隐
-        visible:
-          hasPermission(SystemPermission.SYSTEM_USER_READ) ||
-          hasPermission(SystemPermission.SYSTEM_BILLING_READ),
-      },
-      {
-        to: '/admin/ip-blacklist',
-        icon: ShieldBan,
-        label: t('IP 黑名单'),
-        visible: hasPermission(SystemPermission.SYSTEM_IP_BLACKLIST_MANAGE),
-      },
-      {
-        to: '/admin/ip-whitelist',
-        icon: ShieldCheck,
-        label: t('管理员 IP 白名单'),
-        visible: hasPermission(SystemPermission.SYSTEM_IP_WHITELIST_MANAGE),
-      },
-      {
-        to: '/admin/security-attempts',
-        icon: ShieldAlert,
-        label: t('高危访问尝试'),
-        visible: hasPermission(SystemPermission.SYSTEM_IP_WHITELIST_MANAGE),
+        to: '/admin/ip-access',
+        icon: Shield,
+        label: t('IP 访问控制'),
+        // 三个子 Tab 权限不同（黑名单 / 白名单+高危访问尝试），任一权限即见入口，
+        // 页内再按权限显隐 Tab；与 /admin/ip-access 路由守卫的 OR 规则保持一致
+        visible: hasAnyPermission([
+          SystemPermission.SYSTEM_IP_BLACKLIST_MANAGE,
+          SystemPermission.SYSTEM_IP_WHITELIST_MANAGE,
+        ]),
       },
       {
         to: '/audit-logs',
         icon: ScrollText,
         label: t('审计日志'),
-        visible: hasPermission(SystemPermission.SYSTEM_ADMIN),
+        // #321 三权分立：审计管理员（AUDIT_ADMIN）或系统管理员可见
+        visible: hasAnyPermission([
+          SystemPermission.AUDIT_ADMIN,
+          SystemPermission.SYSTEM_ADMIN,
+        ]),
       },
       {
         to: '/system-monitor',
@@ -356,7 +341,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
       },
     ],
-    [hasPermission]
+    [hasPermission, hasAnyPermission]
   );
 
   // 判断当前导航项是否活跃
@@ -546,12 +531,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               </span>
             </div>
 
-            {storageLoading ? (
-              <div className="space-y-2">
-                <div className="h-2 rounded-full skeleton-theme" />
-                <div className="h-3 w-20 rounded skeleton-theme" />
-              </div>
-            ) : storageInfo ? (
+            {storageInfo ? (
               <>
                 {/* 进度条 */}
                 <div
@@ -798,11 +778,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               <ThemeToggle />
             </div>
 
-            {/* 下载管理 */}
-            <div className="p-0.5">
-              <DownloadManager />
-            </div>
-
             {/* 系统设置 */}
             {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
               <div className="p-0.5">
@@ -826,6 +801,40 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             )}
           </div>
         </header>
+
+        {/* 管理员口令即将到期提示条（#416 等保 8.1.4.1 b)）：距到期 ≤14 天软提示，不拦截。
+            后端 /auth/profile 与登录响应均下发 passwordExpiringSoon（仅 ADMIN 角色有值），
+            refreshUser 后保持同步；到期即由后端 JwtStrategy 强制锁定至 /admin/change-password。 */}
+        {user?.role?.name === 'ADMIN' &&
+          (user as { passwordExpiringSoon?: boolean }).passwordExpiringSoon && (
+            <div
+              className="px-4 py-2 animate-slide-up"
+              style={{
+                background: isDark
+                  ? 'var(--warning-dim)'
+                  : 'var(--warning-light)',
+                borderBottom: `1px solid ${isDark ? 'var(--warning)' : 'var(--warning-dim)'}`,
+              }}
+            >
+              <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+                <ShieldCheck
+                  size={18}
+                  className="flex-shrink-0"
+                  style={{ color: 'var(--warning)' }}
+                />
+                <span className="text-sm" style={{ color: 'var(--warning)' }}>
+                  {t('您的管理员密码即将到期，请提前修改')}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => navigate('/admin/change-password')}
+                >
+                  {t('修改密码')}
+                </Button>
+              </div>
+            </div>
+          )}
 
         {/* 系统公告横幅 */}
         {runtimeConfig.systemNotice && (

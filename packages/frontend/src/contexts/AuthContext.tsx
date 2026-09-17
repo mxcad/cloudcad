@@ -14,6 +14,7 @@ import {
   cancelProactiveRefresh,
 } from '@/config/clientSetup';
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
+import { clearSavePermissionCache } from '@/services/mxcadManager/saveDefaults';
 import {
   isAccessTokenExpired,
   removeAccessToken,
@@ -34,8 +35,19 @@ interface AuthContextType {
   token: string | null;
   /** 返回注销冷静期内自动恢复标记（true=登录同时已自动取消注销） */
   login: (account: string, password: string) => Promise<boolean>;
-  /** 管理员独立入口登录（仅 ADMIN 角色 + IP 白名单可通过，见 /admin-login 页面） */
-  adminLogin: (account: string, password: string) => Promise<boolean>;
+  /**
+   * 管理员独立入口登录（仅 ADMIN 角色 + IP 白名单可通过，见 /admin-login 页面）。
+   * totpCode：已启用 TOTP 时必传；返回 mfaSetupRequired（未绑定管理员被锁定至绑定页）。
+   * 返回 passwordChangeRequired（#416：首登未改密/超期，被锁定至强制改密页）。
+   */
+  adminLogin: (
+    account: string,
+    password: string,
+    totpCode?: string
+  ) => Promise<{
+    mfaSetupRequired: boolean;
+    passwordChangeRequired?: 'first_login' | 'expired';
+  }>;
   /** 返回注销冷静期内自动恢复标记（true=登录同时已自动取消注销） */
   loginByPhone: (phone: string, code: string) => Promise<boolean>;
   loginWithWechat: () => Promise<void>;
@@ -125,6 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setToken(null);
           setUser(null);
           clearProjectPermissionsCache();
+          clearSavePermissionCache();
           cancelProactiveRefresh();
           return;
         }
@@ -185,6 +198,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(null);
       setUser(null);
       clearProjectPermissionsCache();
+      clearSavePermissionCache();
       cancelProactiveRefresh();
     };
     setAuthFailureCallback(clearAuthState);
@@ -201,6 +215,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setToken(null);
         setUser(null);
         clearProjectPermissionsCache();
+        clearSavePermissionCache();
         cancelProactiveRefresh();
       }
     };

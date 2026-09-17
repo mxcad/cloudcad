@@ -61,6 +61,9 @@ CloudCAD 架构决策记录（`docs/adr/`）。编号唯一；`superseded` 表�
 | [0055](0055-log-monitoring-ops.md) | `accepted` | 0055 — 日志监控运维方案（日志落盘/访问日志/脱敏、告警分级邮件外发、Prometheus+Loki+Grafana 采集端、备份自动化、审计归档防篡改、清理可观测、trace 透传；等保三级合规） |
 | [0056](0056-deployment-runtime-packager-modularization.md) | `accepted` | 0056 — 离线部署运行时与打包工具工程化（双包架构 runtime-cli/packager + 两步迁移 + 前台真修复 + 入口双 facade + 分层测试策略） |
 | [0057](0057-history-version-access-permissions.md) | `accepted` | 0057 — 历史版本访问的权限与限频模型（游客 401 / 登录用户窗口限频 / 分享放行不限频；分享+v 口子有意不封堵，理由：缓存兜底 + 滥用面有限） |
+| [0058](0058-conversion-queue-monitoring.md) | `accepted` | 0058 — 转换队列监控（Conversion Queue Monitoring） |
+| [0059](0059-runtime-deps-release-bundle-and-airgap-verify.md) | `accepted` | 0059 — runtime 依赖 Release 复用（内容寻址资产）+ 发行版收敛 3 档 + dev preinstall 按需拉标准组件 + 断网启动验证成 release 硬门禁 + 下载源多源有序回退（双形态 + 内置公开镜像 + 自定义源；不破坏离线部署自包含红线） |
+| [0060](0060-conversion-concurrency-and-caching.md) | `accepted` | 0060 — 转换并发与缓存策略（孤儿进程泄漏根因止血 + 进程组杀除 + 启动清理 + 三条 mxcadassembly 路径收进同一限流器 + 批量路径复用结果缓存 + 批量并行度削峰；否决 in-flight 去重/调大超时/同步改异步，含「3 并发=3 不同格式故去重无效」「60s 非根因是 CPU 饥饿」洞察） |
 
 ## 规则
 

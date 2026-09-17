@@ -8,6 +8,9 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 // JWT 验证
 const JWT_SECRET = process.env.BACKEND_JWT_SECRET || '';
 
+// #419：内网服务间共享密钥（非 health 路由校验；空值=未启用，向后兼容本地开发）
+const INTERNAL_SERVICE_SECRET = process.env.INTERNAL_SERVICE_SECRET || '';
+
 // LRU 缓存配置
 const LRU_CONFIG = {
   maxSize: parseInt(process.env.STORAGE_CACHE_MAX_SIZE || '100', 10),
@@ -24,4 +27,4 @@ const SVN_CONFIG = {
   mxToolPath: process.env.MX_VERSION_TOOL_PATH || path.join(PROJECT_ROOT, 'packages', 'mxVersionTool', 'mxcmd.js'),
 };
 
-module.exports = { PORT, FILES_DATA_PATH, PROJECT_ROOT, JWT_SECRET, LRU_CONFIG, ROUTING_TABLE_PATH, SVN_CONFIG };
+module.exports = { PORT, FILES_DATA_PATH, PROJECT_ROOT, JWT_SECRET, INTERNAL_SERVICE_SECRET, LRU_CONFIG, ROUTING_TABLE_PATH, SVN_CONFIG };

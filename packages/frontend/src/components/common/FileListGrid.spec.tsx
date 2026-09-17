@@ -18,7 +18,9 @@ function makeNode(id: string): FileSystemNode {
 }
 
 function makeNodes(prefix: string, count = 30): FileSystemNode[] {
-  return Array.from({ length: count }, (_, i) => makeNode(`${prefix}-${i + 1}`));
+  return Array.from({ length: count }, (_, i) =>
+    makeNode(`${prefix}-${i + 1}`)
+  );
 }
 
 interface HarnessProps {
@@ -65,10 +67,7 @@ function Harness({
       minLoadedPage={minLoadedPage ?? page}
       loading={loading}
       renderItem={(node) => (
-        <div
-          data-testid={`item-${node.id}`}
-          style={{ height: ITEM_HEIGHT }}
-        >
+        <div data-testid={`item-${node.id}`} style={{ height: ITEM_HEIGHT }}>
           {node.name}
         </div>
       )}
@@ -145,9 +144,11 @@ function renderHarness(props: HarnessProps) {
   const itemsWrapper = utils.container.querySelector(
     '[data-view-mode="grid"]'
   ) as HTMLElement;
-  // data-view-mode 的父级是 relative 包裹层，再上一层才是滚动容器
-  const scrollContainer = (itemsWrapper.parentElement as HTMLElement)
-    .parentElement as HTMLElement;
+  // 滚动容器 = 最近的 overflow-y-auto 祖先（中间隔着 FileListGridItems 的
+  // relative 包裹层与内容包装层，逐层 parentElement 易随结构变动错位）
+  const scrollContainer = itemsWrapper.closest(
+    '.overflow-y-auto'
+  ) as HTMLElement;
   stubLayout(scrollContainer, props.nodes.length, 0);
   return { ...utils, scrollContainer, onScrollPageChange, onPageChange };
 }
@@ -220,15 +221,14 @@ describe('FileListGrid 滚动分页', () => {
     expect(onPageChange).toHaveBeenCalledWith(2);
   });
 
-  it('向下滚动加载进行中：底部显示骨架占位', () => {
+  it('向下滚动加载进行中：底部显示加载中提示（无骨架占位）', () => {
     const { container, rerender, onScrollPageChange } = renderHarness({
       nodes: makeNodes('p1'),
       page: 1,
       totalPages: 3,
     });
-    expect(
-      container.querySelector('[data-testid="list-skeleton"]')
-    ).toBeNull();
+    expect(container.querySelector('[data-testid="bottom-loader"]')).toBeNull();
+    expect(container.querySelector('[data-testid="list-skeleton"]')).toBeNull();
 
     rerender(
       <Harness
@@ -239,8 +239,10 @@ describe('FileListGrid 滚动分页', () => {
         onScrollPageChange={onScrollPageChange}
       />
     );
-    const skeleton = container.querySelector('[data-testid="list-skeleton"]');
-    expect(skeleton).not.toBeNull();
+    const bottomLoader = container.querySelector(
+      '[data-testid="bottom-loader"]'
+    );
+    expect(bottomLoader).not.toBeNull();
   });
 
   it('翻页失败：显示底部失败条与重试按钮，点击触发重试回调', () => {
@@ -269,9 +271,7 @@ describe('FileListGrid 滚动分页', () => {
     expect(failBar).not.toBeNull();
     expect(failBar?.textContent).toContain('加载分享列表失败');
     // 已加载内容保留（列表项仍渲染）
-    expect(
-      container.querySelector('[data-testid="item-p1-1"]')
-    ).not.toBeNull();
+    expect(container.querySelector('[data-testid="item-p1-1"]')).not.toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: '重试' }));
     expect(onRetryLoadMore).toHaveBeenCalled();
@@ -288,9 +288,7 @@ describe('FileListGrid 滚动分页', () => {
     expect(
       container.querySelector('[data-testid="load-more-error"]')
     ).not.toBeNull();
-    expect(
-      container.querySelector('[data-testid="last-page"]')
-    ).toBeNull();
+    expect(container.querySelector('[data-testid="last-page"]')).toBeNull();
   });
 
   it('向上滚动加载进行中：顶部显示「加载中...」指示', () => {

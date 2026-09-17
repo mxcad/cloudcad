@@ -20,6 +20,11 @@ export class FolderExpanderService {
   ): Promise<BatchFileItem[]> {
     const result: BatchFileItem[] = [];
     for (const item of fileList) {
+      // fileHash-only 项（CAD 编辑器内存导出）：无 DB 节点，直接保留（非文件夹）
+      if (!item.nodeId) {
+        result.push(item);
+        continue;
+      }
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: item.nodeId },
         select: { nodeType: true, name: true },

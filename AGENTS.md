@@ -2,6 +2,70 @@
 
 所有 agent 必须阅读此文件。
 
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
 **汇报语言：所有输出必须使用中文。**
 
 ## ⚠️ 铁律：三层一致性原则
@@ -23,6 +87,16 @@
 **禁止**：仅看后端代码就下结论说"这个API没有调用者"——必须确认前端源码和 MSW mock handler。
 **禁止**：修改 DTO 后不重新生成 API SDK，导致前端类型编译失败。
 **禁止**：前端代码中使用 `fetch()` 调用后端 API。所有 API 调用必须走 `@/api-sdk` 生成的函数。multipart 场景传**普通对象**（`body: { file, hash, ... } as never`，SDK 的 `formDataBodySerializer` 会自动序列化；禁止传原生 `FormData`——`Object.entries(FormData)` 为空会导致字段全部丢失，参考头像上传修复 b1cd0d56）。（例外：.mxweb 文件流、缩略图图片链接等非 JSON 资源可接受直接 URL）。涉及 API 调用时，必须先加载 `api-contracts` Skill。
+
+## ⚠️ 分支策略：main = 正式版本 / develop = 本地开发版本
+
+- **`main`**：以后**所有 main 分支上的代码都是正式版本**——只允许功能完整、没有错误的代码合入。需要立即要一个完整可用的版本（打包、部署、交付）时，切到 `main` 打包。
+- **`develop`**：**本地开发分支**——所有新功能开发、修复、进行中的实现都在这上面做。
+- **基本 git 开发工作流**：实现到一半、马上需要一个功能完整没有错误的版本时 → `git switch main` 打包 → 打包完成后 `git switch develop` 切回继续开发。开发完成并验证通过后，把 `develop` 合入 `main` 作为新的正式版本。
+- **不要随意切分支**：只允许「main↔develop 打包切换」这一种切分支场景。切换前必须：
+  1. 确认工作区干净（`git status` 无未提交改动，有则先提交）；
+  2. **确认没有其他 AI 会话在并发修改文件**（本工作区多会话共享，用 `git status` / `git log -1 -- <path>` 判断文件归属；有并发会话在改文件时先协调，勿直接切）。
+- 除此之外，未经用户明确要求，禁止创建新分支、merge、cherry-pick、rebase 等任何分支操作。
 
 ## 快速索引
 
@@ -110,7 +184,12 @@ pnpm build                  # i18n compile → vite build
 | 协同 SDK | `createWrok` 自动加入、`joinWork` 自动加载文件、`exitWork` 回退本地 | cad-engine-integration |
 | 后端 i18n | 新增错误键必须写 4 个语言文件 | backend-coding-standards |
 | 外部参照路径 | `filesDataPath/YYYYMM/nodeId/src_file_md5/fileName` | file-storage-paths |
+| mxcad 转换子进程传参 | Windows 下 `spawn` 传含双引号的 JSON 参数**必须** `windowsVerbatimArguments: true`（`mxcad-exec.ts` 已设 `!isLinux`）：Node 默认把参数里的 `"` 转义成 `\"`，而 mxcadassembly 按原始命令行解析、不认转义 → 解析不到 `srcpath` 报 `read file error`（实例：aaf2626 把 exec 改 spawn 后回归）。**mxcadassembly 成功/失败退出码恒 2123，结果只认 JSON stdout 的 `code`，勿按退出码判成败** | — |
+| conversion-service 参数两级命名 | backend↔conversion-service **HTTP 契约是 camelCase `ConversionOptions`**（`srcPath`/`fileHash`/`createPreloadingData`/`dwgVersion`），**不是** lowercase；lowercase `srcpath`/`src_file_md5`/`create_preloading_data` 是**低层 mxcadassembly 二进制接口**，由 conversion-service 内部 `MxcadRunner._buildParam` 桥接（camelCase→lowercase，唯一翻译点）。两个 backend 调用方（`file-conversion.service.ts` 转发分支 + `batch-download/conversion-runner.ts` 的 `WorkflowConvertTask`）都发 camelCase。**改任一层字段名须同步 backend spec + conversion-service runner 测试**（721fe02 曾因转发分支误发 lowercase 致 `replace` 崩溃） | ADR-0064 |
 | CI | main/develop 分支；需要 PG15 + Redis7；前端 CI 只 type-check | — |
+| runtime 依赖包复用 | node/pg/redis/svn 标准组件提取一次打**内容寻址** Release 资产（`cloudcad-runtime-deps-<os>-<arch>-<fingerprint>.tar.gz`），CI + dev preinstall 都**只下载不重提**；勿在 release.yml 里按发行版重新 `apt/dnf install`+提取（`runtime/cache/` 被 gitignore、runner 恒空）。打包 `scripts/pack-runtime-deps.js` + 独立 workflow `runtime-deps.yml`，发行版收敛 3 glibc 档（centos7/ubuntu22/rocky9） | ADR-0059 |
+| 断网启动验证硬门禁 | 部署包产出后**先断网验证通过才上传** Release（`verify-linux-deploy.js`/`verify-windows-deploy.js`，`docker run --network none` + 全服务健康检查 pg/redis/backend/frontend/cooperate/config-service）；任一包失败→release 失败。勿跳过验证直接上传 | ADR-0059 |
+| 下载源多源回退 | 所有 runtime 资产下载走 `scripts/lib/download-sources.js`（单一事实源）：多源有序回退（GitHub 主源→内置公开加速镜像→用户 `RUNTIME_DOWNLOAD_URLS`），超时+状态码双判；prisma engine 是 `@prisma/engines` npm 包（随 store 离线可用）不属 runtime 依赖包，勿单独预下载 | ADR-0059 |
 
 ### 反模式
 
@@ -132,9 +211,10 @@ pnpm build                  # i18n compile → vite build
 | 新建模块/服务/barrel 却无消费者、无测试（孤儿） | 新建前三问：有无消费者？有无测试？是否值得独立（<5 文件并入相关模块）？无消费者代码删或标注；未激活模块必须 JSDoc 标注 + 登记 issue（实例：ownership 空壳 #228、policy-engine 未接线） |
 | 扩展架构迁移（expand-contract）只扩不缩，停留在双轨 | 扩的同时排收尾票（contract：旧路径退休）；新抽象不得与旧抽象并行命名混淆（实例：storage vs storage-provider 的 IStorageProvider_Elastic，见 #234；#273/#274 已合并单轨收尾） |
 | 在 PowerShell 里把 CLI 输出（如 `gh issue edit --body $body`）经变量/管道中转后写回 | 中文/UTF-8 会被按 GBK 双重转码破坏成 mojibake（`鍓嶇` 等）且不可逆。**一律先写 UTF-8 文件再 `--body-file` 传入**（gh 按 UTF-8 读文件）；读回 body 用 `node` 字节级处理（`execFileSync` + `buf.toString('utf8')`），不经 PowerShell 变量 |
-| `git restore` / `git reset` / `git checkout --` / `git checkout .` / `git checkout <ref> -- <path>` / `git clean -f` / `git revert` / `git stash`（含 save/push/pop/apply/drop/clear 全部形式）/ `git switch -f` / `git checkout <branch>` 等任何可能改变工作区/暂存区/HEAD 状态的操作 | **禁止任何形式的 git 恢复、回退、暂存、切分支操作**，会丢弃无法恢复的工作区改动或打乱并行工作流。已在命令层被 `.opencode/plugins/block-dangerous-git.ts` 钩子硬拦截；需要撤销或临时验证时改用非破坏性方式（手动编辑文件、复制文件到临时目录、提交新改动） |
+| `git restore` / `git reset` / `git checkout --` / `git checkout .` / `git checkout <ref> -- <path>` / `git clean -f` / `git revert` / `git stash`（含 save/push/pop/apply/drop/clear 全部形式）/ `git switch -f` / `git checkout <branch>` 等任何可能改变工作区/暂存区/HEAD 状态的操作 | **禁止任何形式的 git 恢复、回退、暂存、切分支操作**，会丢弃无法恢复的工作区改动或打乱并行工作流。已在命令层被 `.opencode/plugins/block-dangerous-git.ts` 钩子硬拦截；需要撤销或临时验证时改用非破坏性方式（手动编辑文件、复制文件到临时目录、提交新改动）。**唯一例外**：「main↔develop 打包切换」按上文《分支策略》执行（工作区干净 + 无其他 AI 会话并发改文件） |
 | `git worktree add` 创建临时 worktree 来验证 HEAD 基线/并行会话状态 | **禁止默认使用 git worktree**（`worktree add`/`remove`/`list`/`prune` 均默认禁止）：worktree 需要重装 node_modules/重跑 pnpm install，代价高且与本仓库「避免破坏性变更 + 并行会话隔离」约束冲突；验证基线请用只读方式（`git show HEAD:<path>`、`git diff`、直接读文件判断），确需 worktree 时先与用户确认并获得明确许可 |
 | 用浏览器自动化（Playwright MCP 等）打开页面/登录/截图来诊断问题 | **禁止默认调用浏览器操作**（`playwright_browser_*` 系列工具）：耗时且需登录态，多数问题可通过读代码、查日志（后端 NestJS Logger / 浏览器 console）、直接请求后端接口（`Invoke-WebRequest`/curl 带 cookie/token）验证。浏览器操作仅在用户明确要求时才使用 |
+| 把 `exec`（经 shell）改成 `spawn`（无壳）却不验证参数传递语义 | `exec` 经 cmd.exe 传原始参数，`spawn` 由 Node 转义（含 `"` 的参数变 `\"`）——mxcad 转换因此报 `read file error`（aaf2626 回归，`mxcad-exec.ts` 加 `windowsVerbatimArguments` 修复）。改进程启动方式必须用**真实子进程**对照复现（默认 vs `windowsVerbatimArguments`），不能只看"进程能起来"；且 mxcadassembly 退出码恒 2123，成败只认 JSON stdout |
 | CLI/部署脚本/打包工具中硬编码产品名（`CloudCAD` / 中文名） | **产品名单一事实源**：用户可见品牌名一律从 `runtime/scripts/lib/branding.js`（`PRODUCT_NAME`）引用（JS `require`）或由 `scripts/sync-brand.js` 统一同步。改产品名只改 branding.js + 追加旧名到 `sync-brand.js` 的 `CN_LEGACY`，再跑 `pnpm brand:sync`（打包入口已自动执行）。静态文件里的逻辑标识（`cloudcad` 小写：包名/命令名/DB 名/`CloudCAD-PM2`/`CloudCAD fixed wrapper` 等）**禁止替换**；`.md` 文档不进自动同步 |
 
 > **钩子**：`.opencode/plugins/block-dangerous-git.ts` 会在 bash 工具执行前拦截上述 git 恢复/回退/暂存/切分支命令（含 `git -C <dir>` 变体、`-f/--force` 强制标志、`git stash` 全部形式、`git checkout <branch>`/`-b`、`git switch` 等），并默认拦截 `git worktree` 命令。误拦截需豁免时，先与用户确认并在注释说明原因。

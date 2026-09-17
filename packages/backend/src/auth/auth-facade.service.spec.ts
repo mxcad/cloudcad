@@ -54,6 +54,16 @@ import {
 } from "./interfaces/service-interfaces";
 import { MembershipService } from "../vip/membership.service";
 import { TokenBlacklistService } from "./services/token-blacklist.service";
+import { PasswordPolicyService } from "./services/password-policy.service";
+import {
+	registerAuditLoggerInstance,
+	type AuditLogger,
+} from "../audit/audit-logger.service";
+import {
+	maskPhone,
+	maskEmail,
+	maskAccount,
+} from "../common/pii/pii-crypto.service";
 
 describe("AuthFacadeService", () => {
 	let service: AuthFacadeService;
@@ -192,6 +202,16 @@ describe("AuthFacadeService", () => {
 				},
 				{ provide: InitializationService, useValue: mockInitializationService },
 				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
+				{
+					provide: PasswordPolicyService,
+					useValue: {
+						assertPasswordPolicy: jest.fn(),
+						getPasswordChangeStatus: jest.fn().mockReturnValue({
+							required: undefined,
+							expiringSoon: false,
+						}),
+					},
+				},
 				{ provide: USER_SERVICE, useValue: mockUserService },
 				{
 					provide: "default_IORedisModuleConnectionToken",
@@ -214,6 +234,70 @@ describe("AuthFacadeService", () => {
 
 	it("should be defined", () => {
 		expect(service).toBeDefined();
+	});
+
+	describe("audit details PII 掩码（#417）", () => {
+		let auditMock: { audit: jest.Mock };
+
+		beforeEach(() => {
+			auditMock = { audit: jest.fn().mockResolvedValue(undefined) };
+			registerAuditLoggerInstance(auditMock as unknown as AuditLogger);
+		});
+
+		afterEach(() => {
+			registerAuditLoggerInstance(null);
+		});
+
+		// 审计装饰器默认以 result.user.id 作为 userId，缺省则跳过审计；
+		// 故 mock 返回体须含 user.id 才能让 details 回调执行。
+		const authResponse = {
+			accessToken: "a",
+			refreshToken: "r",
+			user: { id: "user-1" },
+		} as AuthResponseDto;
+
+		it("login：account 部分掩码写入审计 details（不含明文）", async () => {
+			mockAuthProvider.login.mockResolvedValue(authResponse);
+
+			await service.login(
+				{ account: "+8613812345678", password: "x" } as LoginDto,
+				{ session: {} } as SessionRequest,
+			);
+
+			const details = auditMock.audit.mock.calls[0][0].details;
+			expect(details.account).toBe(maskAccount("+8613812345678"));
+			expect(details.account).not.toContain("13812345678");
+			expect(JSON.stringify(details)).not.toContain("+8613812345678");
+		});
+
+		it("loginByPhone：phone 部分掩码写入审计 details（不含明文）", async () => {
+			mockAuthProvider.loginByPhone.mockResolvedValue(authResponse);
+
+			await service.loginByPhone(
+				"+8613812345678",
+				"123456",
+				{ session: {} } as SessionRequest,
+			);
+
+			const details = auditMock.audit.mock.calls[0][0].details;
+			expect(details.phone).toBe(maskPhone("+8613812345678"));
+			expect(details.phone).not.toContain("13812345678");
+		});
+
+		it("bindEmailAndLogin：email 部分掩码写入审计 details（不含明文）", async () => {
+			mockAuthProvider.bindEmailAndLogin.mockResolvedValue(authResponse);
+
+			await service.bindEmailAndLogin(
+				"temp",
+				"Test@Example.com",
+				"123456",
+				{ session: {} } as SessionRequest,
+			);
+
+			const details = auditMock.audit.mock.calls[0][0].details;
+			expect(details.email).toBe(maskEmail("Test@Example.com"));
+			expect(details.email).not.toContain("Test@Example.com");
+		});
 	});
 
 	describe("register", () => {

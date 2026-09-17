@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const readline = require('readline');
 const { spawn, spawnSync } = require('child_process');
 
 const {
@@ -35,12 +36,18 @@ const {
   getPidByPort,
   isNodePid,
   isOurRuntimeProcess,
+  isForeignCloudCadRuntimeProcess,
+  getProcessExecutablePath,
   killTree,
 } = require('../lib/proc');
 const state = require('../lib/state');
 // isPortOpen 单一实现位于 lib/health（infra 直接复用，避免重复实现）
 const { isPortOpen } = require('../lib/health');
 const { log } = require('../lib/logger');
+const {
+  detectRedisOwnership,
+  stopRedisProcess,
+} = require('../lib/redis-takeover');
 
 /**
  * 启动基础服务。
@@ -69,26 +76,19 @@ async function startInfrastructure(_usePm2 = true) {
   for (const appName of INFRA_SERVICE_APPS) {
     const portKey = INFRA_APP_TO_PORT_KEY[appName];
     portOpenMap[appName] = await isPortOpen(PORTS[portKey]);
-    pm2StatusMap[appName] = pm2Available
-      ? getPm2AppStatus(appName)
-      : 'unknown';
+    pm2StatusMap[appName] = pm2Available ? getPm2AppStatus(appName) : 'unknown';
   }
 
-  const allPortsOpen = INFRA_SERVICE_APPS.every(
-    (name) => portOpenMap[name]
-  );
+  const allPortsOpen = INFRA_SERVICE_APPS.every((name) => portOpenMap[name]);
   if (allPortsOpen) {
     // 端口全开，但可能存在"端口被非 PM2 进程占用"或"PM2 服务定义与端口不一致"的残留，
     // 需在部署机场景下校验 PM2 是否真的在托管这些端口。
     if (pm2Available && !areAllInfraOnline(pm2StatusMap)) {
       log(
         'yellow',
-        '[警告] 检测到基础服务端口已占用，但 PM2 未在托管（可能是前台残留/外部进程），尝试重建 PM2 托管...'
+        '[警告] 检测到基础服务端口已占用，但本目录 PM2 未在托管（可能是前台残留/另一部署目录的服务/外部进程），尝试理顺 PM2 托管...'
       );
-      return reconcileInfrastructureWithPm2(
-        portOpenMap,
-        pm2StatusMap
-      );
+      return reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap);
     }
     log('green', '[✓] 基础服务已在运行，复用现有实例（不重启）');
     return true;
@@ -111,16 +111,96 @@ async function startInfrastructure(_usePm2 = true) {
  * 是否所有基础服务在 PM2 中均处于 online。
  */
 function areAllInfraOnline(pm2StatusMap) {
-  return INFRA_SERVICE_APPS.every(
-    (name) => pm2StatusMap[name] === 'online'
-  );
+  return INFRA_SERVICE_APPS.every((name) => pm2StatusMap[name] === 'online');
+}
+
+/**
+ * 端口被**另一部署目录**的 cloudcad 服务占用时的用户询问。
+ *
+ * 不同部署目录是相互独立的项目（各自 .env 密钥/数据目录），静默接管对方服务
+ * 会导致本目录密钥与对方存量数据错位（PII 回填校验拦截部署），故必须询问：
+ * 停止对方服务、起本目录自己的，还是中止部署。
+ * 非交互环境（非 TTY，如 CI/无人值守）不询问、默认中止——无人值守下
+ * 静默停掉另一个项目的服务风险不可接受。
+ * @returns {Promise<boolean>} true=用户确认停止对方服务
+ */
+function askForeignServiceStop(appName, port, pid) {
+  if (!process.stdin.isTTY) {
+    return Promise.resolve(false);
+  }
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  return new Promise((resolve) => {
+    rl.question(
+      `  [?] ${appName} 端口 ${port} 被另一部署目录的服务占用 (PID ${pid})。停止该服务并启动本目录的？[y/N]: `,
+      (ans) => {
+        rl.close();
+        resolve(/^y(es)?$/i.test((ans || '').trim()));
+      }
+    );
+  });
+}
+
+/**
+ * 停止另一部署目录的基础服务（用户确认后的停止动作）。
+ *
+ * 直接 killTree 杀进程会被对方 PM2（autorestart: true）立即拉起，端口再次
+ * 被占；须通过对方目录的 PM2_HOME 执行 `pm2 stop <app>`（PM2 标记 stopped，
+ * 不触发自动重启）。对方根目录从可执行文件路径推导（exe 位于
+ * <对方根>/runtime/<platform>/ 下，PM2_HOME = <对方根>/data/pm2，与
+ * context.js 的 DATA_DIR/data/pm2 约定一致）。
+ * 对方 PM2 daemon 未运行（命令非 0 退出）时回退 killTree——daemon 不在则
+ * 无人拉起，直接杀进程树安全。
+ * @returns {boolean} 是否成功停止
+ */
+function stopForeignService(appName, pid) {
+  const exe = getProcessExecutablePath(pid);
+  const normalized = (exe || '').toLowerCase().replace(/\\/g, '/');
+  const runtimeIdx = normalized.indexOf('/runtime/');
+  if (exe && runtimeIdx > 0 && PM2_JS && fs.existsSync(PM2_JS)) {
+    const foreignRoot = exe.slice(0, runtimeIdx);
+    const foreignPm2Home = path.join(foreignRoot, 'data', 'pm2');
+    if (fs.existsSync(foreignPm2Home)) {
+      const nodeDir = path.dirname(NODE_EXE);
+      const existingPath = process.env.PATH || '';
+      const res = spawnSync(NODE_EXE, [PM2_JS, 'stop', appName], {
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 30000,
+        env: {
+          ...process.env,
+          PM2_HOME: foreignPm2Home,
+          PATH: IS_WINDOWS
+            ? `${nodeDir};${existingPath}`
+            : `${nodeDir}:${existingPath}`,
+        },
+      });
+      if (res.status === 0) {
+        log(
+          `  [✓] 已通过对方目录 PM2 停止 ${appName}（PM2_HOME: ${foreignPm2Home}）`
+        );
+        return true;
+      }
+      log(
+        'yellow',
+        `  [警告] 对方目录 PM2 停止失败（退出码 ${res.status}），回退为直接终止进程树...`
+      );
+    }
+  }
+  return killTree(pid, { silent: false });
 }
 
 /**
  * 用 PM2 理顺基础服务托管（Q1）：
  * 1. 对"端口未开"的服务 → 若 PM2 已注册（stopped/errored/launching）则 restart，否则 start；
- * 2. 对"端口被非 PM2 进程占用"的服务 → 若占用者是 node 且不在 PM2 托管中，视为前台残留，
- *    先按 PID 清掉（避免双实例），再交给 PM2 启动；外部进程占用则告警跳过，不误杀。
+ * 2. 对"端口被本目录 PM2 未托管的进程占用"的服务，按占用者归属分类：
+ *    - 另一部署目录的 cloudcad 服务（exe 在另一目录 runtime/ 下）：静默接管会导致
+ *      本目录 .env 密钥与对方存量数据错位（PII 回填校验拦截部署），须询问用户
+ *      "停止对方服务起自己的"（经对方 PM2_HOME 停止，防 autorestart 竞态）或中止部署；
+ *    - 本目录残留（本 runtime 进程 / node 进程）：先按 PID 清掉（避免双实例）再交 PM2 启动；
+ *    - 外部系统服务（系统自带 PG/Redis）：告警跳过，不误杀。
  */
 async function reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap) {
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
@@ -144,12 +224,51 @@ async function reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap) {
     }
 
     if (portOpen && !onlineApps.has(appName)) {
-      // 端口开但 PM2 未托管：存在占用者。按归属判定是否清理：
-      // - node 进程：本 CLI 前台 spawn 残留 → 清理
-      // - 本部署包 runtime 进程（redis-server.exe / postgres.exe / mxcadassembly 等）：
-      //   可能是 PM2 崩溃后残留、未被 PM2 托管的部署服务 → 清理（避免"端口被占 + PM2 起不来"死锁）
+      // 端口开但 PM2 未托管：存在占用者。按归属判定处理方式：
+      // - 另一部署目录的 cloudcad 服务（exe 在另一目录 runtime/ 下）：
+      //   静默接管会使本目录 .env 密钥与对方存量数据错位（PII 回填校验拦截部署），
+      //   须询问用户：停止对方服务起自己的，或中止部署
+      // - 本部署包 runtime 进程 / node 进程（本目录）：PM2 崩溃或前台 spawn 残留 → 清理
       // - 外部系统服务（系统自带 PG/Redis）：不误杀，跳过告警
       const pid = getPidByPort(PORTS[portKey]);
+      if (pid && isForeignCloudCadRuntimeProcess(pid)) {
+        const exe = getProcessExecutablePath(pid) || '未知路径';
+        log(
+          'yellow',
+          `  [冲突] ${appName} 端口 ${PORTS[portKey]} 被另一部署目录的服务占用 (PID ${pid}): ${exe}`
+        );
+        const stopForeign = await askForeignServiceStop(
+          appName,
+          PORTS[portKey],
+          pid
+        );
+        if (stopForeign) {
+          log(
+            'yellow',
+            `  [清理] 正在按用户确认停止另一部署目录的 ${appName} 服务 (PID ${pid})...`
+          );
+          if (!stopForeignService(appName, pid)) {
+            log(
+              'red',
+              `  [错误] 停止另一部署目录的 ${appName} 服务失败，部署中止。请在该目录手动执行 stop 后重跑。`
+            );
+            return false;
+          }
+          // 停止后直接交给 PM2 启动（start 幂等，若仍占用会失败）
+          toStart.push(appName);
+        } else {
+          log(
+            'red',
+            `  [错误] ${appName} 端口 ${PORTS[portKey]} 被另一部署目录的服务占用且未停止——端口冲突，当前项目无法启动，部署中止。`
+          );
+          log(
+            'cyan',
+            '  继续方式：停止另一部署目录的服务（在该目录执行 stop），或修改本目录 .env 的端口配置避开冲突后重跑。'
+          );
+          return false;
+        }
+        continue;
+      }
       if (pid && (isNodePid(pid) || isOurRuntimeProcess(pid))) {
         const kind = isNodePid(pid) ? 'node 进程' : '本部署包残留进程';
         log(
@@ -159,6 +278,34 @@ async function reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap) {
         killTree(pid, { silent: false });
         // 清理后需重查端口，但此处直接交给 PM2 启动（start 幂等，若仍占用会失败）
         toStart.push(appName);
+      } else if (appName === 'redis') {
+        // 端口被非 PM2 托管进程占用：不误杀。redis 额外做归属确认（升级路径 #419）：
+        // 占用实例 cmdline 含本部署 data/redis 目录 → 本部署旧实例（可能无密码/
+        // 密码不一致，且不在 PM2 托管内）→ 停掉并交 PM2 重启（redis-manager 按
+        // .env REDIS_PASSWORD 以 --requirepass 拉起，密码持久化 + 纳入托管）；
+        // 非本部署实例 / 归属未知 → 不触碰，落入下方冲突告警。
+        if (detectRedisOwnership(pid) === 'ours') {
+          log(
+            'yellow',
+            `  [清理] redis 端口 ${PORTS.redis} 被本部署旧无托管实例占用 (PID ${pid})，停止并交 PM2 重启（按 .env REDIS_PASSWORD 设密）...`
+          );
+          if (!stopRedisProcess(pid)) {
+            log(
+              'red',
+              `  [错误] 停止旧 redis 实例 (PID ${pid}) 失败，落入冲突告警`
+            );
+            conflicts.push(`${appName}(${PORTS[portKey]})`);
+          } else {
+            // 等端口释放（redis 收到 SIGTERM 优雅退出、落盘 AOF，通常 1 秒内），
+            // 避免新 redis-manager 误判旧实例"已在运行"进入 keepAlive
+            for (let i = 0; i < 10 && (await isPortOpen(PORTS.redis)); i++) {
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            }
+            toStart.push('redis');
+          }
+        } else {
+          conflicts.push(`${appName}(${PORTS[portKey]})`);
+        }
       } else {
         // 外部进程占用（如系统自带 PG）：不误杀，跳过并告警
         conflicts.push(`${appName}(${PORTS[portKey]})`);
@@ -254,7 +401,17 @@ async function setupPm2Startup() {
     const runValue = `cmd /c "${escapedBat}"`;
     return runCommand(
       'reg',
-      ['add', runKey, '/v', 'CloudCAD-PM2', '/t', 'REG_SZ', '/d', runValue, '/f'],
+      [
+        'add',
+        runKey,
+        '/v',
+        'CloudCAD-PM2',
+        '/t',
+        'REG_SZ',
+        '/d',
+        runValue,
+        '/f',
+      ],
       { silent: true }
     );
   } catch {

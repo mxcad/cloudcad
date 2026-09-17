@@ -26,13 +26,10 @@ const VERIFY_IMAGE_NAME = 'cloudcad-verify';
 // 品牌单一事实源（runtime/scripts/lib/branding.js）
 const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 
-// OS 到基础镜像的映射
+// OS 到基础镜像的映射（ADR-0059 收敛到 3 个 glibc 档位）
 const OS_BASE_IMAGES = {
-  debian: 'node:20-bullseye-slim',
-  ubuntu22: 'ubuntu:22.04',
-  ubuntu24: 'ubuntu:24.04',
   centos7: 'centos:7',
-  rocky8: 'rockylinux:8',
+  ubuntu22: 'ubuntu:22.04',
   rocky9: 'rockylinux:9',
 };
 
@@ -121,13 +118,13 @@ function findPackageByName(packageName) {
 /**
  * 构建验证镜像
  */
-async function buildVerifyImage(packageFile, os = 'debian') {
+async function buildVerifyImage(packageFile, os = 'ubuntu22') {
   log('构建验证镜像...');
-  
+
   const dockerfilePath = path.join(DOCKER_DIR, DOCKERFILE_VERIFY);
   const packageName = path.basename(packageFile);
-  const baseImage = OS_BASE_IMAGES[os] || OS_BASE_IMAGES.debian;
-  const imageName = os === 'debian' ? VERIFY_IMAGE_NAME : `${VERIFY_IMAGE_NAME}-${os}`;
+  const baseImage = OS_BASE_IMAGES[os] || OS_BASE_IMAGES.ubuntu22;
+  const imageName = `${VERIFY_IMAGE_NAME}-${os}`;
   
   if (!fs.existsSync(dockerfilePath)) {
     throw new Error(`找不到 Dockerfile: ${dockerfilePath}`);
@@ -164,18 +161,17 @@ function showHelp() {
 ${PRODUCT_NAME} Linux 部署包验证脚本（独立）
 
 使用方式：
-  node scripts/verify-linux-deploy.js                       验证最新的部署包 (Debian)
+  node scripts/verify-linux-deploy.js                       验证最新的部署包 (Ubuntu 22.04)
   node scripts/verify-linux-deploy.js --os centos7          在 CentOS 7 环境验证
-  node scripts/verify-linux-deploy.js --os rocky8           在 Rocky Linux 8 环境验证
+  node scripts/verify-linux-deploy.js --os ubuntu22         在 Ubuntu 22.04 环境验证
   node scripts/verify-linux-deploy.js --os rocky9           在 Rocky Linux 9 环境验证
   node scripts/verify-linux-deploy.js --package xxx.tar.gz  验证指定包
   node scripts/verify-linux-deploy.js --help                显示帮助
 
-支持的 OS：
-  debian   - Debian 11 (默认)
-  centos7  - CentOS 7
-  rocky8   - Rocky Linux 8
-  rocky9   - Rocky Linux 9
+支持的 OS（ADR-0059 收敛到 3 个 glibc 档位）：
+  centos7  - CentOS 7 (glibc 2.17)
+  ubuntu22 - Ubuntu 22.04 (glibc 2.35，默认)
+  rocky9   - Rocky Linux 9 (glibc 2.34)
 
 验证流程：
   1. 查找 release 目录中的部署包
@@ -204,7 +200,7 @@ async function main() {
   }
   
   // 解析 --os 参数
-  let os = 'debian';
+  let os = 'ubuntu22';
   const osIndex = args.indexOf('--os');
   if (osIndex !== -1 && args[osIndex + 1]) {
     const osArg = args[osIndex + 1].toLowerCase();

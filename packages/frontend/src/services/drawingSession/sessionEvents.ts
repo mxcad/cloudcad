@@ -71,6 +71,12 @@ export interface PublicFileUploadedDetail {
   callback: () => Promise<void>;
 }
 
+/** 分享文件信号 payload（对应原 mxcad-share-file window 事件） */
+export interface ShareFileDetail {
+  fileId: string;
+  fileName: string;
+}
+
 /** 事件 → payload 类型映射（单一来源） */
 export interface DrawingEventPayloads {
   [CAD_EVENTS.FILE_OPENED]: FileOpenedDetail;
@@ -87,6 +93,7 @@ export interface DrawingEventPayloads {
   [CAD_EVENTS.SAVE_AS_REQUIRED]: SaveRequiredDetail;
   [CAD_EVENTS.NEW_FILE]: NewFileDetail;
   [CAD_EVENTS.PUBLIC_FILE_UPLOADED]: PublicFileUploadedDetail;
+  [CAD_EVENTS.SHARE_FILE]: ShareFileDetail;
 }
 
 export type DrawingEvent = keyof DrawingEventPayloads;

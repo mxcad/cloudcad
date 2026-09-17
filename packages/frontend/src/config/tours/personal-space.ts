@@ -59,14 +59,14 @@ export function getPersonalSpaceGuide(): TourGuide {
         target: 'upload-btn',
         title: t('上传文件'),
         content: t(
-          '点击"上传文件"按钮可以上传 DWG、DXF 等 CAD 格式文件。支持批量上传和拖拽上传。'
+          '这里可以上传 DWG、DXF 等 CAD 格式文件，支持批量上传和拖拽上传。'
         ),
         placement: 'bottom',
         mode: 'display',
-        highlight: true,
+        highlight: false,
         waitForElement: 3000,
         fallbackContent: t(
-          '上传文件功能在工具栏中。点击可以上传 DWG、DXF 等 CAD 格式文件。'
+          '上传文件功能在工具栏中，可以上传 DWG、DXF 等 CAD 格式文件。'
         ),
       },
       {

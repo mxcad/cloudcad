@@ -31,7 +31,7 @@ vi.mock('../mxcadHelpers', () => ({
   saveCurrentDrawingToBlob: vi.fn(),
   showSaveAsDialog: vi.fn(),
   getPersonalSpaceId: vi.fn().mockResolvedValue('ps-1'),
-  triggerSaveAs: vi.fn(),
+  triggerSaveAs: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('../mxcadCache', () => ({
@@ -252,6 +252,7 @@ describe('showSaveConfirmDialog（从 mxcadSave 收编）', () => {
       label: '修改说明（可选）',
       confirmText: '保存',
       multiline: true,
+      required: false,
     });
   });
 
@@ -427,22 +428,23 @@ describe('saveCurrentFile — 单入口判别（node / library / saveAs）', () 
     );
   });
 
-  it('项目文件无 CAD_SAVE 权限 → 提示 + 另存为', async () => {
+  it('项目文件无 CAD_SAVE 权限 → 拒绝（无另存为权限，不打开另存为窗口）', async () => {
     const deps = makeDeps({
       permissions: { hasProjectPermission: vi.fn().mockResolvedValue(false) },
     });
     const info = makeFileInfo({ parentId: 'proj-1', projectId: 'proj-1' });
     const result = await saveCurrentFile(info, deps);
 
-    expect(result).toEqual({ status: 'saveAs' });
-    expect(showSaveAsDialog).toHaveBeenCalledWith('ps-1', 'drawing.dwg');
+    expect(result).toEqual({ status: 'denied', error: '您没有保存图纸的权限' });
+    expect(showSaveAsDialog).not.toHaveBeenCalled();
+    expect(triggerSaveAs).not.toHaveBeenCalled();
     expect(globalShowToast).toHaveBeenCalledWith(
-      '当前图纸没有保存权限，已为您打开另存为窗口',
+      '您没有保存图纸的权限',
       'warning'
     );
   });
 
-  it('项目权限检查抛异常 → 回退另存为', async () => {
+  it('项目权限检查抛异常 → fail-closed 拒绝（不打开另存为窗口）', async () => {
     const deps = makeDeps({
       permissions: {
         hasProjectPermission: vi.fn().mockRejectedValue(new Error('boom')),
@@ -451,8 +453,28 @@ describe('saveCurrentFile — 单入口判别（node / library / saveAs）', () 
     const info = makeFileInfo({ parentId: 'proj-1', projectId: 'proj-1' });
     const result = await saveCurrentFile(info, deps);
 
-    expect(result).toEqual({ status: 'saveAs' });
-    expect(showSaveAsDialog).toHaveBeenCalled();
+    expect(result).toEqual({
+      status: 'denied',
+      error: '权限检查失败，请稍后重试',
+    });
+    expect(showSaveAsDialog).not.toHaveBeenCalled();
+    expect(handleError).toHaveBeenCalled();
+  });
+
+  it('已删除标记 + 门控拒绝（triggerSaveAs 返回 false）→ denied', async () => {
+    useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+    (triggerSaveAs as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      false
+    );
+    const deps = makeDeps();
+    const result = await saveCurrentFile(makeFileInfo(), deps);
+
+    expect(result).toEqual({
+      status: 'denied',
+      error: '您没有保存图纸的权限',
+    });
+    expect(triggerSaveAs).toHaveBeenCalledTimes(1);
+    expect(showSaveAsDialog).not.toHaveBeenCalled();
   });
 
   it('节点保存路径：节点自身权限检查失败 → 错误 toast + failed', async () => {

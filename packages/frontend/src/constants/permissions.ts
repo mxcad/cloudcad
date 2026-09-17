@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-08-21T07:42:31.214Z
+ * 生成时间: 2026-08-26T03:03:17.065Z
  * 来源: Prisma Schema (packages/db/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/db/prisma/schema.prisma 文件，
@@ -32,6 +32,7 @@ export const SystemPermission = {
   SYSTEM_FONT_DELETE: 'SYSTEM_FONT_DELETE',
   SYSTEM_FONT_DOWNLOAD: 'SYSTEM_FONT_DOWNLOAD',
   SYSTEM_ADMIN: 'SYSTEM_ADMIN',
+  AUDIT_ADMIN: 'AUDIT_ADMIN',
   SYSTEM_BILLING_READ: 'SYSTEM_BILLING_READ',
   SYSTEM_BILLING_WRITE: 'SYSTEM_BILLING_WRITE',
   SYSTEM_MONITOR: 'SYSTEM_MONITOR',
@@ -388,7 +389,8 @@ export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): str
   // 根据角色名称前缀判断是否为项目角色
   const isProjectRole = roleName.startsWith('PROJECT_');
   const mapping = isProjectRole ? PROJECT_ROLE_NAMES : SYSTEM_ROLE_NAMES;
-  return mapping[roleName] || roleName;
+  const displayName = mapping[roleName] || roleName;
+  return t(displayName);
 };
 
 /**

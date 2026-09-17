@@ -3,7 +3,6 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Pagination } from '@/components/ui/Pagination';
 import { Button } from '@/components/ui/Button';
-import { ListSkeleton } from '@/components/common/ListSkeleton';
 import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
 import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
 import { useScrollPagination } from '@/hooks/common/useScrollPagination';
@@ -276,9 +275,16 @@ export function SelectableTable<T>({
 
           {rubberBandOverlay}
 
-          {/* 底部指示：加载中骨架 / 翻页失败提示（仅已有内容时）/ 已经是最后一页（互斥） */}
+          {/* 底部指示：加载中提示 / 翻页失败提示（仅已有内容时）/ 已经是最后一页（互斥） */}
           {showBottomLoader ? (
-            <ListSkeleton variant="list" count={3} />
+            <div
+              data-testid="bottom-loader"
+              className="flex items-center justify-center gap-2 py-2 text-xs"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <Loader2 size={14} className="animate-spin" />
+              <span>{t('加载中...')}</span>
+            </div>
           ) : loadError && rows.length > 0 ? (
             <div
               data-testid="load-more-error"

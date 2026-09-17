@@ -7,6 +7,7 @@ import type { OpenFilePayload } from './mxcadTypes';
 import { getCurrentFileUrl, setCurrentFileUrl } from '../drawingSession';
 import { getFileInfo, restoreEditorTitle } from './mxcadHelpers';
 import type { MxCADInstanceManager } from './mxcadInstanceManager';
+import { setCurrentShareToken } from './mxcadInstanceManager';
 
 /**
  * MxCAD 文件打开流程（从 MxCADInstanceManager 拆分）
@@ -68,6 +69,14 @@ export class MxCADOpenFlow {
     }
     const previousUrl = getCurrentFileUrl();
     setCurrentFileUrl(payload.url);
+    // 更新模块级 shareToken（供 extReferenceUrlResolver 使用）
+    // WASM 层的 HTTP 请求不携带 requestHeaders，只能通过 URL 传递认证信息
+    try {
+      const urlObj = new URL(payload.url, window.location.origin);
+      setCurrentShareToken(urlObj.searchParams.get('shareToken'));
+    } catch {
+      setCurrentShareToken(null);
+    }
     const currentFileName = this.manager.getCurrentFileName();
     const targetFileName = payload.url.split('/').pop();
     // 早退：引擎当前文件名与目标一致**且**会话记录匹配（同一文件真正成功打开过）才跳过。
@@ -100,13 +109,24 @@ export class MxCADOpenFlow {
         }
       })();
       // 打开失败（含游客 IP 转换限制 403 等）时恢复上一个图纸状态：
-      // 回滚引擎侧当前文件 URL，并清理待生效的文件信息，避免影响后续打开/重载
+      // 回滚引擎侧当前文件 URL 和 shareToken，并清理待生效的文件信息，避免影响后续打开/重载
       const restorePreviousFile = () => {
         const pending = this.manager.getPendingOpenInfo();
         if (pending?.fileInfo.fileId === payload.fileInfo?.fileId) {
           this.manager.setPendingOpenInfo(null);
         }
         setCurrentFileUrl(previousUrl);
+        // 恢复之前的 shareToken
+        try {
+          if (previousUrl) {
+            const urlObj = new URL(previousUrl, window.location.origin);
+            setCurrentShareToken(urlObj.searchParams.get('shareToken'));
+          } else {
+            setCurrentShareToken(null);
+          }
+        } catch {
+          setCurrentShareToken(null);
+        }
       };
       const timeout = setTimeout(() => {
         fail(new Error(t('文件打开超时')));
@@ -151,6 +171,17 @@ export class MxCADOpenFlow {
       }
       const doOpen = async () => {
         const token = localStorage.getItem('accessToken');
+        // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
+        // 后端 authorizeFilesDataAccess 支持 query + header 双路检测
+        let shareToken: string | null = null;
+        try {
+          const urlObj = new URL(payload.url, window.location.origin);
+          shareToken = urlObj.searchParams.get('shareToken');
+        } catch { /* ignore */ }
+        const baseHeaders: Record<string, string> = {};
+        if (token) baseHeaders.Authorization = `Bearer ${token}`;
+        if (shareToken) baseHeaders['x-share-token'] = shareToken;
+        const hasHeaders = Object.keys(baseHeaders).length > 0;
         for (
           let attempt = 0;
           attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
@@ -168,9 +199,7 @@ export class MxCADOpenFlow {
                 }
               },
               true,
-              token
-                ? { requestHeaders: { Authorization: `Bearer ${token}` } }
-                : undefined,
+              hasHeaders ? { requestHeaders: baseHeaders } : undefined,
               payload.noCache
                 ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY |
                   FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE |
@@ -246,6 +275,16 @@ export class MxCADOpenFlow {
         try {
           const token = localStorage.getItem('accessToken');
           const url = currentMxwebUrl;
+          // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
+          let shareToken: string | null = null;
+          try {
+            const urlObj = new URL(url, window.location.origin);
+            shareToken = urlObj.searchParams.get('shareToken');
+          } catch { /* ignore */ }
+          const baseHeaders: Record<string, string> = {};
+          if (token) baseHeaders.Authorization = `Bearer ${token}`;
+          if (shareToken) baseHeaders['x-share-token'] = shareToken;
+          const hasHeaders = Object.keys(baseHeaders).length > 0;
           for (
             let attempt = 0;
             attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
@@ -261,9 +300,7 @@ export class MxCADOpenFlow {
                   }
                 },
                 true,
-                token
-                  ? { requestHeaders: { Authorization: `Bearer ${token}` } }
-                  : undefined,
+                hasHeaders ? { requestHeaders: baseHeaders } : undefined,
                 0,
               ]);
               return;

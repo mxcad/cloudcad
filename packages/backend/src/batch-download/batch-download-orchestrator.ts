@@ -1,20 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
 import { ConversionRunner } from './conversion-runner';
 import { JobContext } from './job-context';
+import { isInUploadsCache } from './upload-cache.util';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
 export class BatchDownloadOrchestrator {
   private readonly logger = new Logger(BatchDownloadOrchestrator.name);
+  private readonly mxcadUploadPath: string;
 
   constructor(
     private readonly prisma: DatabaseService,
     private readonly fileDownloadExportService: FileDownloadExportService,
-    private readonly conversionRunner: ConversionRunner
-  ) {}
+    private readonly conversionRunner: ConversionRunner,
+    private readonly configService: ConfigService
+  ) {
+    this.mxcadUploadPath =
+      this.configService.get<string>('mxcadUploadPath') || '';
+  }
 
   /**
    * 委托 conversion-service 模式的批量路径：
@@ -42,32 +49,53 @@ export class BatchDownloadOrchestrator {
 
     for (const item of ctx.expandedItems) {
       if (isTerminated()) return;
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: item.nodeId },
-        select: {
-          id: true,
-          name: true,
-          originalName: true,
-          path: true,
-          fileHash: true,
-          extension: true,
-          nodeType: true,
-          size: true,
-        },
-      });
+      // fileHash-only 项（CAD 编辑器内存导出）：无 DB 节点，构造合成节点
+      //（path 缺失，源文件由 conversion-runner 按 fileHash 解析）
+      let node: any;
+      let isFileHashItem = false;
+      if (!item.nodeId && item.fileHash) {
+        const name = item.fileName;
+        node = {
+          id: item.fileHash,
+          name,
+          originalName: name,
+          path: null,
+          fileHash: item.fileHash,
+          extension: path.extname(name).toLowerCase(),
+          nodeType: 'FILE',
+        };
+        isFileHashItem = true;
+      } else {
+        node = await this.prisma.fileSystemNode.findUnique({
+          where: { id: item.nodeId },
+          select: {
+            id: true,
+            name: true,
+            originalName: true,
+            path: true,
+            fileHash: true,
+            extension: true,
+            nodeType: true,
+            size: true,
+            // 转换缓存 key 的失效维度（节点更新→缓存失效，ADR-0060）
+            updatedAt: true,
+          },
+        });
+      }
 
       if (!node || node.nodeType !== 'FILE') {
         await ctx.recordError(
-          item.nodeId,
+          item.nodeId ?? item.fileHash,
           item.fileName,
           'Node not found or not a file'
         );
         continue;
       }
 
-      if (!node.path) {
+      // fileHash-only 项源文件由 conversion-runner 按 fileHash 解析，跳过 path 校验
+      if (!isFileHashItem && !node.path) {
         await ctx.recordError(
-          item.nodeId,
+          item.nodeId ?? item.fileHash,
           item.fileName,
           'File path is missing'
         );
@@ -83,7 +111,11 @@ export class BatchDownloadOrchestrator {
         if (isTerminated()) break;
         const label = `${fileName} (${format})`;
 
-        if (format === 'original' || format === 'mxweb' || ext === '.mxweb') {
+        // fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）；nodeId 项保留原 ext 路由
+        if (
+          !isFileHashItem &&
+          (format === 'original' || format === 'mxweb' || ext === '.mxweb')
+        ) {
           await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
           ctx.completedCount++;
         } else {
@@ -129,7 +161,7 @@ export class BatchDownloadOrchestrator {
             name: sanitized,
             stream: fs.createReadStream(result.filePath),
             sourcePath: result.filePath,
-            temp: true,
+            temp: !isInUploadsCache(result.filePath, this.mxcadUploadPath),
           });
           ctx.convertedFiles.push(result.filePath);
         } else {
@@ -152,31 +184,54 @@ export class BatchDownloadOrchestrator {
     ctx: JobContext,
     isTerminated: () => boolean
   ): Promise<void> {
-    const node = await this.prisma.fileSystemNode.findUnique({
-      where: { id: item.nodeId },
-      select: {
-        id: true,
-        name: true,
-        originalName: true,
-        path: true,
-        fileHash: true,
-        extension: true,
-        nodeType: true,
-        size: true,
-      },
-    });
+    // fileHash-only 项（CAD 编辑器内存导出）：无 DB 节点，构造合成节点
+    //（path 缺失，源文件由 conversion-runner 按 fileHash 解析）
+    let node: any;
+    let isFileHashItem = false;
+    if (!item.nodeId && item.fileHash) {
+      const name = item.fileName;
+      node = {
+        id: item.fileHash,
+        name,
+        originalName: name,
+        path: null,
+        fileHash: item.fileHash,
+        extension: path.extname(name).toLowerCase(),
+        nodeType: 'FILE',
+      };
+      isFileHashItem = true;
+    } else {
+      node = await this.prisma.fileSystemNode.findUnique({
+        where: { id: item.nodeId },
+        select: {
+          id: true,
+          name: true,
+          originalName: true,
+          path: true,
+          fileHash: true,
+          extension: true,
+          nodeType: true,
+          size: true,
+        },
+      });
+    }
 
     if (!node || node.nodeType !== 'FILE') {
       await ctx.recordError(
-        item.nodeId,
+        item.nodeId ?? item.fileHash,
         item.fileName,
         'Node not found or not a file'
       );
       return;
     }
 
-    if (!node.path) {
-      await ctx.recordError(item.nodeId, item.fileName, 'File path is missing');
+    // fileHash-only 项源文件由 conversion-runner 按 fileHash 解析，跳过 path 校验
+    if (!isFileHashItem && !node.path) {
+      await ctx.recordError(
+        item.nodeId ?? item.fileHash,
+        item.fileName,
+        'File path is missing'
+      );
       return;
     }
 
@@ -189,7 +244,11 @@ export class BatchDownloadOrchestrator {
       if (isTerminated()) break;
       const label = `${fileName} (${format})`;
 
-      if (format === 'original' || format === 'mxweb' || ext === '.mxweb') {
+      // fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）；nodeId 项保留原 ext 路由
+      if (
+        !isFileHashItem &&
+        (format === 'original' || format === 'mxweb' || ext === '.mxweb')
+      ) {
         await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
       } else {
         await this.tryConvert(
@@ -269,7 +328,13 @@ export class BatchDownloadOrchestrator {
           ? { dwgVersion: item.dwgVersion }
           : undefined;
     const result = await this.conversionRunner.convertFile(
-      { id: node.id, fileHash: node.fileHash, path: node.path, name: fileName },
+      {
+        id: node.id,
+        fileHash: node.fileHash,
+        path: node.path,
+        name: fileName,
+        updatedAt: node.updatedAt,
+      },
       format,
       pdfParams,
       ctx.userId ?? undefined
@@ -281,7 +346,7 @@ export class BatchDownloadOrchestrator {
         name: sanitized,
         stream: fs.createReadStream(result.filePath),
         sourcePath: result.filePath,
-        temp: true,
+        temp: !isInUploadsCache(result.filePath, this.mxcadUploadPath),
       });
       ctx.convertedFiles.push(result.filePath);
     } else {

@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { FolderOpen, Users } from 'lucide-react';
+import { FolderOpen, Users, XCircle } from 'lucide-react';
 import { FileSystemNode } from '../../types/filesystem';
 import { formatDate, formatFileSize } from '../../utils/fileUtils';
 import {
@@ -62,6 +62,21 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
       node.updatedAt,
       galleryMode,
     ]);
+
+    // 永久失败徽标（#477）：fileStatus=FAILED 的文件节点显示红色× + 「转换失败」标签
+    const failedBadge = useMemo(() => {
+      if (node.isFolder || node.fileStatus !== 'FAILED') return null;
+      return (
+        <span
+          className="inline-flex items-center gap-0.5 text-xs font-medium"
+          style={{ color: 'var(--danger)' }}
+          title={t('该文件转换失败，请检查文件内容')}
+        >
+          <XCircle size={13} aria-hidden />
+          {t('转换失败')}
+        </span>
+      );
+    }, [node.isFolder, node.fileStatus]);
 
     // 项目根节点元数据行（网格视图）：文件数 · 成员数，与描述分离避免挤占
     const metaStats = useMemo(() => {
@@ -129,6 +144,9 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
               </FileNameText>
             )}
           </h3>
+          {failedBadge ? (
+            <div className="mt-0.5 w-full flex justify-center">{failedBadge}</div>
+          ) : null}
           {searchPathBadge ? (
             <div className="mt-1 w-full flex justify-center">
               {searchPathBadge}
@@ -188,6 +206,7 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
             </FileNameText>
           )}
         </h3>
+        {failedBadge ? <div className="mt-0.5">{failedBadge}</div> : null}
         {searchPathBadge ? (
           <div className="flex items-center gap-1 mt-0.5">
             {searchPathBadge}

@@ -29,6 +29,8 @@ import {
   IPasswordHasher,
 } from '../interfaces/password-hasher.interface';
 import { UserLifecycleEventPayload } from '../interfaces/user-lifecycle-event.interface';
+import { PasswordPolicyService } from '../../auth/services/password-policy.service';
+import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
 
 import { I18nContext } from 'nestjs-i18n';
 
@@ -45,7 +47,9 @@ export class UserCrudService {
     private readonly eventEmitter: EventEmitter2,
     private readonly membershipService: MembershipService,
     private readonly storageInfoService: StorageInfoService,
-    private readonly storageUsageService: StorageUsageService
+    private readonly storageUsageService: StorageUsageService,
+    private readonly passwordPolicyService: PasswordPolicyService,
+    private readonly pii: PiiCryptoService
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<ICreatedUser> {
@@ -68,8 +72,12 @@ export class UserCrudService {
       }
 
       if (createUserDto.email) {
+        // #417：查重走 HMAC 归一化索引列（归一化后等值匹配，大小写不敏感）
         const existingEmail = await this.prisma.user.findFirst({
-          where: { email: createUserDto.email, deletedAt: null },
+          where: {
+            emailHmac: this.pii.emailHmacIndex(createUserDto.email),
+            deletedAt: null,
+          },
         });
         if (existingEmail) {
           throw new ConflictException(
@@ -89,8 +97,12 @@ export class UserCrudService {
       }
 
       if (createUserDto.phone) {
+        // #417：查重走 HMAC 归一化索引列（归一化后等值匹配，兼容 +86/空白）
         const existingPhone = await this.prisma.user.findFirst({
-          where: { phone: createUserDto.phone, deletedAt: null },
+          where: {
+            phoneHmac: this.pii.phoneHmacIndex(createUserDto.phone),
+            deletedAt: null,
+          },
         });
         if (existingPhone) {
           throw new ConflictException(
@@ -109,6 +121,9 @@ export class UserCrudService {
             '默认角色不存在，请联系管理员'
         );
       }
+
+      // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
+      this.passwordPolicyService.assertPasswordPolicy(createUserDto.password);
 
       const hashedPassword = await this.passwordHasher.hash(
         createUserDto.password
@@ -133,6 +148,14 @@ export class UserCrudService {
             phoneVerifiedAt: createUserDto.phone ? new Date() : null,
             wechatId: createUserDto.wechatId || null,
             provider: createUserDto.provider || 'LOCAL',
+            // #416 等保 8.1.4.1：新设口令记录修改时间（注册/管理员创建均走此入口）；
+            // 初始管理员由 initialization.service 创建后置 null（首登未改密标记）
+            passwordChangedAt: new Date(),
+            // #417 双写：明文列保留至收缩阶段，同步补齐加密列与 HMAC 索引列
+            ...this.pii.derivePiiFields({
+              email: createUserDto.email || null,
+              phone: createUserDto.phone || null,
+            }),
           },
           select: {
             id: true,
@@ -221,11 +244,13 @@ export class UserCrudService {
       const where: Prisma.UserWhereInput = {};
 
       if (search) {
+        // #417：phone/email 改归一化精确匹配（HMAC 索引列等值），username/nickname 保留 contains；
+        // 片段模糊搜索 phone/email 的行为变化已与产品确认（完整手机号/邮箱才能命中）
         where.OR = [
-          { email: { contains: search, mode: 'insensitive' } },
           { username: { contains: search, mode: 'insensitive' } },
           { nickname: { contains: search, mode: 'insensitive' } },
-          { phone: { contains: search, mode: 'insensitive' } },
+          { phoneHmac: this.pii.phoneHmacIndex(search) },
+          { emailHmac: this.pii.emailHmacIndex(search) },
         ];
       }
 
@@ -381,6 +406,7 @@ export class UserCrudService {
           status: true,
           createdAt: true,
           updatedAt: true,
+          passwordChangedAt: true,
         },
       });
 
@@ -411,8 +437,9 @@ export class UserCrudService {
 
   async findByEmail(email: string): Promise<IUserDetail> {
     try {
-      const user = await this.prisma.user.findUnique({
-        where: { email },
+      // #417：查询走 HMAC 归一化索引列等值匹配（不再读明文列）
+      const user = await this.prisma.user.findFirst({
+        where: { emailHmac: this.pii.emailHmacIndex(email) },
         select: {
           id: true,
           email: true,
@@ -457,8 +484,9 @@ export class UserCrudService {
 
   async findByEmailWithPassword(email: string) {
     try {
-      return await this.prisma.user.findUnique({
-        where: { email },
+      // #417：查询走 HMAC 归一化索引列等值匹配（不再读明文列）
+      return await this.prisma.user.findFirst({
+        where: { emailHmac: this.pii.emailHmacIndex(email) },
         select: {
           id: true,
           email: true,
@@ -503,8 +531,12 @@ export class UserCrudService {
       }
 
       if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
+        // #417：查重走 HMAC 归一化索引列（归一化后等值匹配，大小写不敏感）
         const emailExists = await this.prisma.user.findFirst({
-          where: { email: updateUserDto.email, deletedAt: null },
+          where: {
+            emailHmac: this.pii.emailHmacIndex(updateUserDto.email),
+            deletedAt: null,
+          },
         });
         if (emailExists) {
           throw new ConflictException(
@@ -529,8 +561,12 @@ export class UserCrudService {
       }
 
       if (updateUserDto.phone && updateUserDto.phone !== existingUser.phone) {
+        // #417：查重走 HMAC 归一化索引列（归一化后等值匹配，兼容 +86/空白）
         const phoneExists = await this.prisma.user.findFirst({
-          where: { phone: updateUserDto.phone, deletedAt: null },
+          where: {
+            phoneHmac: this.pii.phoneHmacIndex(updateUserDto.phone),
+            deletedAt: null,
+          },
         });
         if (phoneExists) {
           throw new ConflictException(
@@ -556,10 +592,30 @@ export class UserCrudService {
         updateData.role = { connect: { id: updateUserDto.roleId } };
       if (updateUserDto.status) updateData.status = updateUserDto.status;
       if (updateUserDto.password) {
+        // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
+        this.passwordPolicyService.assertPasswordPolicy(updateUserDto.password);
         updateData.password = await this.passwordHasher.hash(
           updateUserDto.password
         );
+        // 记录口令修改时间（#416）
+        updateData.passwordChangedAt = new Date();
       }
+
+      // #417 双写：本次更新涉及 email/phone 时同步补齐派生列（解绑 phone 传 null 时清空派生列）；
+      // 未涉及的字段传 undefined，derivePiiFields 不触碰其派生列
+      Object.assign(
+        updateData,
+        this.pii.derivePiiFields({
+          email:
+            updateUserDto.email !== undefined
+              ? updateUserDto.email || null
+              : undefined,
+          phone:
+            updateUserDto.phone !== undefined
+              ? updateUserDto.phone || null
+              : undefined,
+        })
+      );
 
       const user = await this.prisma.user.update({
         where: { id },

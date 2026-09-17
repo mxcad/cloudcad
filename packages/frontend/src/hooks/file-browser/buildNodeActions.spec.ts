@@ -165,6 +165,19 @@ describe('buildNodeActions — 权限 → 动作分组全枚举', () => {
       expect(types).toContain('rename');
     });
 
+    it('文件夹 + 未注入 onFolderDownload：文件夹打包下载消失（batchDownloadEnabled 关闭时外壳不注入回调，见 fileActionConfig）', () => {
+      const result = buildNodeActions({
+        node: folderNode,
+        isTrash: false,
+        permissions: fullPermissions,
+        callbacks: { ...fullCallbacks, onFolderDownload: undefined },
+      });
+      const types = actionTypes(result);
+      expect(types).not.toContain('batch_download_folder');
+      // 其余动作不受影响
+      expect(types).toContain('rename');
+    });
+
     it('非 CAD 文件：版本历史不出现', () => {
       const plainNode = { ...fileNode, name: 'doc.pdf', extension: '.pdf' };
       const result = buildNodeActions({

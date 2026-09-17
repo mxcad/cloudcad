@@ -46,10 +46,12 @@ export {
 /**
  * 单入口：判别联合（node / library / saveAs）决策保存目标。
  *
- * - 已删除标记 → 另存为（triggerSaveAs）
+ * - 已删除标记 → 另存为（triggerSaveAs，内部含项目图纸 CAD_SAVE 门控）
  * - 我的图纸（parentId === personalSpaceId）→ node 保存
  * - 资源库文件 → 库权限（LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE）→ library 保存或另存为
- * - 项目文件 → 项目 CAD_SAVE 权限 → node 保存或另存为
+ * - 项目文件 → 项目 CAD_SAVE 权限 → node 保存；无权限（含查询失败）→ 拒绝，
+ *   不允许另存为
+ * - 无 projectId 的图纸（公开分享 / 本地打开）→ 直接另存为
  */
 export async function saveCurrentFile(
   fileInfo: CurrentFileInfo,
@@ -57,8 +59,10 @@ export async function saveCurrentFile(
 ): Promise<SaveFileOutcome> {
   if (useCADEditorStore.getState().isCurrentFileDeleted) {
     globalShowToast(t('当前图纸已被删除，保存将另存为新文件'), 'warning');
-    await triggerSaveAs();
-    return { status: 'saveAs' };
+    const opened = await triggerSaveAs();
+    return opened
+      ? { status: 'saveAs' }
+      : { status: 'denied', error: t('您没有保存图纸的权限') };
   }
 
   let personalSpaceId: string | null = null;
@@ -101,16 +105,18 @@ export async function saveCurrentFile(
       ) {
         return saveToNodeFile(fileInfo, personalSpaceId, deps);
       }
-      globalShowToast(
-        t('当前图纸没有保存权限，已为您打开另存为窗口'),
-        'warning'
-      );
+      // 项目图纸无 CAD_SAVE = 无另存为权限：拒绝保存，不打开另存为窗口
+      globalShowToast(t('您没有保存图纸的权限'), 'warning');
+      return { status: 'denied', error: t('您没有保存图纸的权限') };
     } catch (error) {
+      // 权限查询失败按无权限处理（fail-closed），同样不打开另存为窗口
       handleError(error, 'mxcadManager: Mx_Save project permission check');
-      globalShowToast(t('权限检查失败，已为您打开另存为窗口'), 'warning');
+      globalShowToast(t('权限检查失败，请稍后重试'), 'warning');
+      return { status: 'denied', error: t('权限检查失败，请稍后重试') };
     }
   }
 
+  // 无 projectId 的图纸（公开分享图纸 / 本地打开图纸）→ 直接另存为
   await showSaveAsDialog(personalSpaceId, fileInfo.name || 'untitled');
   return { status: 'saveAs' };
 }

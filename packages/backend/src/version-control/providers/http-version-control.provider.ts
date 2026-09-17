@@ -18,6 +18,7 @@ import * as https from 'https';
 import * as path from 'path';
 import { FileUtils } from '../../common/utils/file-utils';
 import { buildOutboundTraceHeaders } from '../../common/utils/outbound-trace';
+import { internalServiceSecretHeader } from '../../common/utils/internal-service-auth';
 import {
   IVersionControl,
   CommitResult,
@@ -43,6 +44,8 @@ export class HttpVersionControlProvider implements IVersionControl {
   private readonly baseUrl: string;
   private readonly useHttps: boolean;
   private readonly filesDataPath?: string;
+  /** #419：内部服务共享密钥（空则不带头，向后兼容本地开发） */
+  private readonly secretHeaders: Record<string, string>;
 
   constructor(
     private readonly configService: ConfigService,
@@ -55,6 +58,9 @@ export class HttpVersionControlProvider implements IVersionControl {
     this.filesDataPath = this.configService.get<string>('filesDataPath', {
       infer: true,
     });
+    this.secretHeaders = internalServiceSecretHeader(
+      this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
+    );
   }
 
   isReady(): boolean {
@@ -298,6 +304,8 @@ export class HttpVersionControlProvider implements IVersionControl {
             },
             'http-version-control',
           ),
+          // #419：内部服务共享密钥
+          ...this.secretHeaders,
         },
         timeout: 60000,
       };
@@ -348,6 +356,8 @@ export class HttpVersionControlProvider implements IVersionControl {
             },
             'http-version-control',
           ),
+          // #419：内部服务共享密钥
+          ...this.secretHeaders,
         },
         timeout: 60000,
       };

@@ -18,8 +18,8 @@ interface UseUserSearchReturn {
   setCurrentPage: (page: number) => void;
   pageSize: number;
   setPageSize: (size: number) => void;
-  userTab: 'active' | 'deleted';
-  setUserTab: (tab: 'active' | 'deleted') => void;
+  userTab: 'active' | 'deleted' | 'stats';
+  setUserTab: (tab: 'active' | 'deleted' | 'stats') => void;
 }
 
 export function useUserSearch(): UseUserSearchReturn {
@@ -36,7 +36,9 @@ export function useUserSearch(): UseUserSearchReturn {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(30);
-  const [userTab, setUserTab] = useState<'active' | 'deleted'>('active');
+  const [userTab, setUserTab] = useState<'active' | 'deleted' | 'stats'>(
+    'active'
+  );
 
   return {
     searchQuery,

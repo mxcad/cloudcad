@@ -13,6 +13,10 @@ export interface IProfileWithMembership extends IUserDetail {
   membershipExpiresAt: Date | null;
   isVip: boolean;
   membershipTier: string;
+  /** #416 口令到期状态（仅 ADMIN 角色有值）：'first_login'=首登未改密、'expired'=到期 */
+  passwordChangeRequired?: 'first_login' | 'expired';
+  /** #416 口令即将到期软提示（仅 ADMIN 角色有值） */
+  passwordExpiringSoon?: boolean;
 }
 
 export interface IAuthFacade {

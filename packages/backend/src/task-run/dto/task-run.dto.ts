@@ -146,3 +146,32 @@ export class TaskRunTriggerResultDto {
   @ApiProperty({ description: '触发时间' })
   triggeredAt: Date;
 }
+
+export class TaskInfoDto {
+  @ApiProperty({
+    description: '任务名（调度器注册 key，如 storage-cleanup:expired-storage）',
+  })
+  taskName: string;
+
+  @ApiProperty({ description: '任务描述（用于任务清单展示）' })
+  description: string;
+
+  @ApiPropertyOptional({
+    description:
+      '定时 cron 表达式（服务器时区）；null 表示无独立定时（随宿主任务执行或仅手动触发）',
+    nullable: true,
+  })
+  schedule: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      '定时的人类可读描述（任务清单主展示，如「每天 02:00」）；null 表示无独立定时',
+    nullable: true,
+  })
+  scheduleLabel: string | null;
+}
+
+export class TaskListResponseDto {
+  @ApiProperty({ type: [TaskInfoDto], description: '已注册后台任务清单' })
+  data: TaskInfoDto[];
+}

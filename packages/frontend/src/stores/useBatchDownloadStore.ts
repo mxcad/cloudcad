@@ -15,6 +15,8 @@ export interface BatchTask {
   errors?: Array<{ nodeId: string; fileName: string; error: string }>;
   zipPath?: string;
   createdAt: string;
+  /** 终态后自动触发浏览器下载（单文件格式下载置 true） */
+  autoDownload?: boolean;
 }
 
 export interface BatchFileItem {

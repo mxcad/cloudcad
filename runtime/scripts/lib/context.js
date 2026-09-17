@@ -7,7 +7,7 @@
  * - USE_RUNTIME/DATA_DIR/PM2_HOME：cli.js:57-59
  * - BACKEND_ENV_PATH：cli.js:107
  * - getPorts/PORTS：cli.js:108-143
- * - NODE_EXE/PM2_JS/PM2_CMD/PNPM_JS：cli.js:146-175
+ * - NODE_EXE/PM2_JS/PNPM_JS：cli.js:146-175
  * - getMobileAccessPath：cli.js:61-81
  *
  * 依赖方向铁律：lib 只允许 require 其他 lib 或独立模块，禁止 require commands。
@@ -79,6 +79,7 @@ function getPorts() {
     postgresql: 5432,
     redis: 6379,
     cooperate: 3091,
+    conversion: 3100,
   };
 
   if (!fs.existsSync(BACKEND_ENV_PATH)) {
@@ -99,6 +100,9 @@ function getPorts() {
       redis: parseInt(envConfig.REDIS_PORT || '6379', 10) || defaults.redis,
       cooperate:
         parseInt(envConfig.COOPERATE_PORT || '3091', 10) || defaults.cooperate,
+      conversion:
+        parseInt(envConfig.CONVERSION_SERVICE_PORT || '3100', 10) ||
+        defaults.conversion,
     };
   } catch (err) {
     return defaults;
@@ -128,13 +132,6 @@ const PM2_JS = USE_RUNTIME
       )
   : null;
 
-// PM2 包装脚本路径（确保 PM2 daemon 能找到 node）
-const PM2_CMD = USE_RUNTIME
-  ? IS_WINDOWS
-    ? path.join(PROJECT_ROOT, 'pm2.cmd')
-    : path.join(PROJECT_ROOT, 'node', 'bin','pm2')
-  : 'pm2';
-
 // 使用真正的 pnpm.cjs，而不是 corepack 代理（离线环境下 corepack 会尝试联网）
 const PNPM_JS = USE_RUNTIME
   ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs')
@@ -156,7 +153,6 @@ module.exports = {
   getMobileAccessPath,
   NODE_EXE,
   PM2_JS,
-  PM2_CMD,
   PNPM_JS,
   INFRA_SERVICE_APPS,
   INFRA_APP_TO_PORT_KEY,

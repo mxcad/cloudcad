@@ -11,6 +11,7 @@ import { globalShowToast } from '../../utils/notificationEvents';
 import { projectControllerGetPersonalSpace } from '@/api-sdk';
 import { CAD_EVENTS } from '@/constants/events';
 import { emit } from '../drawingSession';
+import { createDefaultPermissionQuerier } from './saveDefaults';
 
 export function getFileInfo() {
   return useCADEditorStore.getState().currentFileInfo;
@@ -146,13 +147,47 @@ export async function showSaveAsDialog(
   });
 }
 
-export async function triggerSaveAs() {
-  const fileName = getFileInfo()?.name || 'untitled';
+/**
+ * 另存为（云图）统一入口。返回是否实际打开了另存为窗口。
+ *
+ * 项目图纸门控：无 CAD_SAVE 权限 = 无另存为权限，拒绝并提示（fail-closed），
+ * 不打开另存为窗口。不受门控的图纸：
+ * - 公开分享图纸 / 本地打开图纸（无 projectId）
+ * - 资源库文件（libraryKey）：projectId 是库节点 ID（库根/库文件夹）而非项目，
+ *   归属公开资源库，按库权限体系处理（无库权限即可另存为）
+ */
+export async function triggerSaveAs(): Promise<boolean> {
+  const fileInfo = getFileInfo();
+  const fileName = fileInfo?.name || 'untitled';
 
   if (!isAuthenticated() || isAccessTokenExpired()) {
     cancelLoginRedirect();
     await showSaveAsDialog(null, fileName);
-    return;
+    return true;
+  }
+
+  // 新图纸打开中：会话仍持上一张图纸的 fileInfo，另存为 blob 会是新图纸内容
+  // 而归属信息是旧图纸——拒绝。动态导入避免与门面（mxcadManager.ts 反向
+  // import 本模块的 getFileInfo）形成模块初始化期循环
+  const { mxcadManager } = await import('./mxcadManager');
+  if (mxcadManager.hasPendingOpen()) {
+    globalShowToast(t('图纸正在打开，请稍后再保存'), 'warning');
+    return false;
+  }
+
+  if (fileInfo?.projectId && !fileInfo.libraryKey) {
+    try {
+      const hasSavePermission = await createDefaultPermissionQuerier()
+        .hasProjectPermission(fileInfo.projectId, 'CAD_SAVE');
+      if (!hasSavePermission) {
+        globalShowToast(t('您没有保存图纸的权限'), 'warning');
+        return false;
+      }
+    } catch (error) {
+      handleError(error, 'mxcadManager: triggerSaveAs project permission check');
+      globalShowToast(t('权限检查失败，请稍后重试'), 'warning');
+      return false;
+    }
   }
 
   let personalSpaceId: string | null = null;
@@ -162,4 +197,5 @@ export async function triggerSaveAs() {
     globalShowToast(t('登录状态可能已过期，请保存到本地或重新登录'), 'warning');
   }
   await showSaveAsDialog(personalSpaceId, fileName);
+  return true;
 }

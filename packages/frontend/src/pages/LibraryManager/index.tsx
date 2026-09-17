@@ -376,7 +376,12 @@ export const LibraryManager: React.FC = () => {
             openDownloadFormatModal={openDownloadFormatModal}
             handleNodeSelect={handleNodeSelect}
             handleOpenInEditor={handleOpenInEditor}
-            handleFolderDownload={handleFolderDownload}
+            // 文件夹打包走批量下载内核（mode='zip'），后端受 batchDownloadEnabled
+            // 门控；未开放时不注入回调，使文件夹打包动作因 visibilityCheck 要求
+            // onFolderDownload 而自动隐藏（否则菜单可见、请求 403）。
+            handleFolderDownload={
+              config.batchDownloadEnabled ? handleFolderDownload : undefined
+            }
             handleDeleteConfirm={handleDeleteConfirm}
             onBatchDelete={libraryOperations.handleBatchDelete}
             handleRename={handleRename}

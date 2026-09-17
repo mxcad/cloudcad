@@ -236,23 +236,58 @@ Release 附件（mxcad 独立 Release，与业务解耦）：
 ```json
 {
   "scripts": {
-    "preinstall": "node scripts/ensure-runtime.js"
+    "preinstall": "node -e \"try{require('./scripts/preinstall-runtime.js')}catch(e){...}\""
   }
 }
 ```
 
-`scripts/ensure-runtime.js` 行为：
-1. 检查本平台【产品二进制】是否就绪：
-   - Linux: `runtime/linux/mxcad/`
-   - Windows: `runtime/windows/mxcad/` + `runtime/windows/mxversion/`
-2. **已就绪 → 直接跳过**（幂等，零开销，不阻塞日常 install）。
-3. 缺失 → 自动从 GitHub Releases 下载对应平台×架构的产品二进制并解压。
+`scripts/ensure-runtime.js` 行为（ADR-0059）：
+1. 检查本平台【产品二进制】是否就绪：Linux `runtime/linux/mxcad/`、Windows `runtime/windows/mxcad/` + `runtime/windows/mxversion/`。
+2. 检查【标准组件】是否就绪：node / postgresql / redis / svn（Linux `runtime/linux/`，Windows `runtime/windows/`；Windows 的 svn 由 mxversion 提供，无独立 subversion）。
+3. **已就绪 → 直接跳过**（幂等，零开销，不阻塞日常 install）。
+4. 缺失 → 自动从 GitHub Release 下载对应平台×架构的 **runtime 依赖包**（`cloudcad-runtime-deps-<os>-<arch>-<fingerprint>.tar.gz`，内容寻址，见 5.7）并解压到 `runtime/<platform>/`。
 
-> **只检查 mxcad / mxversion 产品二进制**。node / postgresql / redis / svn 等标准组件，
-> 开发环境通常本地已有，不一定需要离线版本，因此不强制下载。
+> **目标体验**：clone → `pnpm i`（preinstall 自动拉产品二进制 + 缺失的标准组件）→ `pnpm dev`（predev 跑 `prisma generate` + tsc）→ 直接启动。完全不懂开发的人 clone 后开箱即用。
+>
+> **prisma engine 无需单独处理**：Prisma 7 的 engine 是 npm 包 `@prisma/engines`（node_modules 下含全 6 平台 binary），随 `pnpm install` 落盘，`prisma generate` 直接用 node_modules 里的 engine（不联网）。runtime 依赖包只装 node/pg/redis/svn 标准组件，**不含 engine**。
 >
 > 纯 Node 标准库实现，无第三方依赖，可在 `pnpm install` 早期安全执行。
-> 下载源可用环境变量覆盖：`RUNTIME_DOWNLOAD_URL`（完整基地址）、`RUNTIME_RELEASE_TAG`（默认 `mxcad-stable`）。
+
+### 5.6.1 技术用户 opt-out 路径（互不冲突）
+
+1. **按需检测天然跳过**：本地已有组件（或已手动放到 `runtime/<platform>/<component>/`）→ preinstall 检测到即跳过。
+2. **显式 opt-out**：环境变量 `CLOUDCAD_SKIP_STD_RUNTIME=1` 整体跳过标准组件自动拉取（产品二进制仍拉）。
+3. **手动放置**：手动把组件放到 `runtime/` 对应目录（preinstall 检测到即跳过）。
+
+### 5.6.2 下载源多源有序回退（加速下载，ADR-0059 决策 9）
+
+国内访问 GitHub 不稳定，下载源设计为**多源有序回退**（单一事实源 `scripts/lib/download-sources.js`）：
+
+- **回退顺序**：默认 `[GitHub 主源, ...内置公开加速镜像]`（内置 3 个左右 ghproxy 类公开服务，集中定义、易腐可配）。
+- **可配置覆盖**：`RUNTIME_DOWNLOAD_URLS`（有序列表，逗号/空格分隔）优先级最高——**未来自己服务器就绪 = 往列表前插一项即优先**。保留 `RUNTIME_DOWNLOAD_URL`（单地址，向后兼容，等价列表长度 1）。
+- **双形态**：① 基地址替换 `<base>/<asset>`（自己服务器/rsync 镜像用）；② 前缀代理 `<mirror>/https://github.com/...`（ghproxy 类公开加速用）。
+- **回退判定 = 超时 + 状态码双判**：每源设连接超时（~10s）+ 读取超时（`RUNTIME_DOWNLOAD_TIMEOUT_MS`，默认 60s），超时或 HTTP 非 2xx 即切下一源；全部失败才报错（提示手动放置 / 设镜像）。**必须判超时**——国内 GitHub 典型症状是「TCP 能连但传输极慢/卡死」。
+- **覆盖范围 = 全链路统一**：dev preinstall（产品二进制 + 标准组件）+ CI（runtime 依赖包 + mxcad 二进制）+ 终端用户部署包下载文档，全部走同一下载助手。
+- **其他环境变量**：`RUNTIME_RELEASE_TAG`（产品二进制 tag，默认 `mxcad-stable`）、`RUNTIME_DEPS_TAG`（runtime 依赖包 tag，默认 `runtime-deps`）、`CLOUDCAD_RUNTIME_TIER`（Linux glibc 档位覆盖，默认按 `/etc/os-release` 探测）。
+
+**终端用户自建镜像**：把 Release 资产 rsync 到自己服务器，再设 `RUNTIME_DOWNLOAD_URLS=https://your-server/`（基地址替换形态）即可优先走自己服务器。
+
+### 5.7 runtime 依赖包（Release 复用 + 断网验证硬门禁，ADR-0059）
+
+**问题**：`release.yml` 的 `build-linux` 矩阵每个发行版都起 Docker 容器重新 `apt/dnf install` + 提取 node/pg/redis/svn，而 `runtime/cache/`（按发行版隔离的提取缓存）被 `.gitignore` 排除、GitHub runner 恒空 → 每次 release 全部重提。
+
+**方案**（三件事）：
+
+1. **runtime 依赖包 = 内容寻址 Release 资产**：node/pg/redis/svn 按 `os × arch` 提取一次，打成 `cloudcad-runtime-deps-<os>-<arch>-<fingerprint>.tar.gz`（fingerprint=组件版本指纹，如 `node20.19.5-pg15-redis5`），上传 Release。CI（`release.yml`）与 dev 机（preinstall）**都只下载该资产**，不再各自提取。版本不变 → 资产名不变 → 永久复用、零重提。
+   - 打包脚本 `scripts/pack-runtime-deps.js`（`--os <os>` Linux Docker 提取 / `--win` Windows）+ `mxcad-dist/manifest.json` 登记「组件×平台×架构 + hash」。
+   - 独立提取 workflow `.github/workflows/runtime-deps.yml`（`workflow_dispatch` 手动播种 + 可选 `schedule` 周期刷新防版本漂移），与 release 解耦。
+2. **发行版收敛 6→3 glibc 档**：`centos7`(glibc2.17) / `ubuntu22`(2.35) / `rocky9`(2.34+)，砍 `ubuntu24`/`rocky8`/`debian`（glibc 重叠或可被代表）。`release.yml` 矩阵 + `pack-linux-deploy.js`/`verify-linux-deploy.js` 的 `OS_BASE_IMAGES` 同步收敛。
+3. **断网启动验证 = release 硬门禁**：每个 build job 产出部署包后，**先跑断网验证、通过才上传** draft Release；任一包验证失败 → 整个 release 失败。
+   - Linux：`scripts/verify-linux-deploy.js --os <os>`（`docker run --rm --network none` 断网容器 + 解压包 + 装依赖 + 启 PostgreSQL/Redis/后端/前端 + 全服务健康检查）。
+   - Windows：`scripts/verify-windows-deploy.js` + `runtime/docker/Dockerfile.windows-deploy-verify`（`docker run --network none mcr.microsoft.com/windows/servercore:ltsc2022` + 解压 .7z + 跑 Windows 版 verify）。
+   - **判定标准 = 全服务健康检查通过**：postgresql（`pg_isready`）、redis（`redis-cli ping`）、backend（API 健康端点 200）、frontend（HTTP 200）、cooperate + config-service（进程存活 + 端口监听）全部通过。
+
+**红线**：runtime 依赖包**只作为打包机/CI 的复用层**，不改变部署包内嵌 runtime 的事实——部署包仍自包含、目标机仍纯离线（store-based 250-350MB 结构不变）。
 
 ---
 

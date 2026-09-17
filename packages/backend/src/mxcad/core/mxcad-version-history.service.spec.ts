@@ -112,6 +112,8 @@ describe("MxcadVersionHistoryService", () => {
 			return res;
 		};
 		const mockReq: any = {};
+		// 登录用户请求：user.id 用于限频占位
+		const mockReqWithUser: any = { user: { id: "user-1" } };
 
 		const mockMxwebSource = () => {
 			mockVersionControlService.listDirectoryAtRevision.mockResolvedValue({
@@ -187,12 +189,22 @@ describe("MxcadVersionHistoryService", () => {
 			expect(mockVersionControlService.listDirectoryAtRevision).not.toHaveBeenCalled();
 		});
 
-		it("warmup=1 且缓存未生成：走转换链路生成缓存后返回 204", async () => {
+		/** 让 runHistoryConversion 的异步链（占额→拉分片→转换→清理→记录结果）跑完 */
+		const flushAsync = async (times = 10) => {
+			for (let i = 0; i < times; i++) {
+				await new Promise((resolve) => setImmediate(resolve));
+			}
+		};
+
+		it("warmup=1 且需转换：发起转换后立即返回 202（PROCESSING），不阻塞等转换完成", async () => {
 			mockMxwebSource();
-			mockFileConversionService.convertBinToMxweb.mockResolvedValue({
-				success: true,
-				outputPath: "/fake/filesData/202608/node-1/abc123_v3.mxweb",
-			});
+			let resolveConvert!: (value: unknown) => void;
+			mockFileConversionService.convertBinToMxweb.mockImplementation(
+				() =>
+					new Promise((resolve) => {
+						resolveConvert = resolve;
+					})
+			);
 
 			const res = makeRes();
 			await service.handleHistoricalVersionRequest(
@@ -204,11 +216,199 @@ describe("MxcadVersionHistoryService", () => {
 				true
 			);
 
+			// 转换已发起但未完成：本次请求返回 202 供前端轮询，不返回文件内容
+			expect(res.status).toHaveBeenCalledWith(202);
+			expect(res.json).toHaveBeenCalledWith({ status: "PROCESSING" });
+			expect(res.end).not.toHaveBeenCalled();
+			expect(res.send).not.toHaveBeenCalled();
 			expect(mockVersionControlService.listDirectoryAtRevision).toHaveBeenCalledTimes(1);
 			expect(mockFileConversionService.convertBinToMxweb).toHaveBeenCalledTimes(1);
+
+			// 转换完成 → 下一次预热轮询命中缓存返回 204
+			resolveConvert({
+				success: true,
+				outputPath: "/fake/filesData/202608/node-1/abc123_v3.mxweb",
+			});
+			await flushAsync();
+			const { existsSync } = jest.requireMock("fs") as {
+				existsSync: jest.Mock;
+			};
+			existsSync.mockReturnValueOnce(true); // 缓存已生成
+
+			const res2 = makeRes();
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/abc123.dwg.mxweb",
+				"3",
+				res2,
+				mockReq,
+				false,
+				true
+			);
+
+			expect(res2.status).toHaveBeenCalledWith(204);
+			expect(res2.end).toHaveBeenCalled();
+			expect(res2.send).not.toHaveBeenCalled();
+			// 命中缓存不重跑转换
+			expect(mockFileConversionService.convertBinToMxweb).toHaveBeenCalledTimes(1);
+		});
+
+		it("warmup=1 命中在途转换：返回 202 且复用同一转换（不重复列目录/占额/转换）", async () => {
+			mockMxwebSource();
+			let resolveConvert!: (value: unknown) => void;
+			mockFileConversionService.convertBinToMxweb.mockImplementation(
+				() =>
+					new Promise((resolve) => {
+						resolveConvert = resolve;
+					})
+			);
+			mockRestrictionEngine.reserveHistoryCountOrThrow.mockResolvedValue(
+				undefined
+			);
+
+			const first = makeRes();
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/abc123.dwg.mxweb",
+				"3",
+				first,
+				mockReqWithUser,
+				false,
+				true
+			);
+			expect(first.status).toHaveBeenCalledWith(202);
+
+			const second = makeRes();
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/abc123.dwg.mxweb",
+				"3",
+				second,
+				mockReqWithUser,
+				false,
+				true
+			);
+			expect(second.status).toHaveBeenCalledWith(202);
+
+			// 复用同一转换：三个副作用各只发生一次
+			expect(mockVersionControlService.listDirectoryAtRevision).toHaveBeenCalledTimes(1);
+			expect(mockFileConversionService.convertBinToMxweb).toHaveBeenCalledTimes(1);
+			expect(mockRestrictionEngine.reserveHistoryCountOrThrow).toHaveBeenCalledTimes(1);
+
+			resolveConvert({
+				success: true,
+				outputPath: "/fake/filesData/202608/node-1/abc123_v3.mxweb",
+			});
+			await flushAsync();
+		});
+
+		it("warmup=1 命中近期转换失败：返回 500 且不重跑转换（防轮询重试风暴）", async () => {
+			mockMxwebSource();
+			mockFileConversionService.convertBinToMxweb.mockRejectedValue(
+				new Error("转换进程崩溃")
+			);
+			mockRestrictionEngine.reserveHistoryCountOrThrow.mockResolvedValue(
+				undefined
+			);
+			mockRestrictionEngine.releaseHistoryCount.mockResolvedValue(undefined);
+
+			const first = makeRes();
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/abc123.dwg.mxweb",
+				"3",
+				first,
+				mockReqWithUser,
+				false,
+				true
+			);
+			expect(first.status).toHaveBeenCalledWith(202);
+			await flushAsync();
+			expect(mockFileConversionService.convertBinToMxweb).toHaveBeenCalledTimes(1);
+
+			const second = makeRes();
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/abc123.dwg.mxweb",
+				"3",
+				second,
+				mockReqWithUser,
+				false,
+				true
+			);
+
+			expect(second.status).toHaveBeenCalledWith(500);
+			expect(mockFileConversionService.convertBinToMxweb).toHaveBeenCalledTimes(1);
+			expect(mockRestrictionEngine.reserveHistoryCountOrThrow).toHaveBeenCalledTimes(1);
+		});
+
+		it("warmup=1 失败记忆过期后允许重试（瞬时失败不永久阻断）", async () => {
+			mockMxwebSource();
+			mockFileConversionService.convertBinToMxweb
+				.mockRejectedValueOnce(new Error("转换服务超时"))
+				.mockResolvedValueOnce({
+					success: true,
+					outputPath: "/fake/filesData/202608/node-1/abc123_v3.mxweb",
+				});
+			mockRestrictionEngine.reserveHistoryCountOrThrow.mockResolvedValue(
+				undefined
+			);
+			mockRestrictionEngine.releaseHistoryCount.mockResolvedValue(undefined);
+
+			const nowSpy = jest.spyOn(Date, "now").mockReturnValue(1_000_000);
+			try {
+				const first = makeRes();
+				await service.handleHistoricalVersionRequest(
+					"202608/node-1/abc123.dwg.mxweb",
+					"3",
+					first,
+					mockReqWithUser,
+					false,
+					true
+				);
+				expect(first.status).toHaveBeenCalledWith(202);
+				await flushAsync();
+
+				// 记忆窗口内（60s）短路；窗口外允许重试
+				nowSpy.mockReturnValue(1_000_000 + 60_001);
+
+				const res2 = makeRes();
+				await service.handleHistoricalVersionRequest(
+					"202608/node-1/abc123.dwg.mxweb",
+					"3",
+					res2,
+					mockReqWithUser,
+					false,
+					true
+				);
+
+				expect(res2.status).toHaveBeenCalledWith(202);
+				expect(mockFileConversionService.convertBinToMxweb).toHaveBeenCalledTimes(2);
+			} finally {
+				nowSpy.mockRestore();
+			}
+		});
+
+		it("warmup=1 且无 bin 分片：同步走兜底解析后返回 204", async () => {
+			mockVersionControlService.listDirectoryAtRevision.mockResolvedValue({
+				success: true,
+				files: ["abc123.dwg"], // 无 .bin 分片
+			});
+			mockVersionControlService.getFileContentAtRevision.mockResolvedValue({
+				success: true,
+				content: Buffer.from("original-content"),
+			});
+			mockFileConversionService.convertFile.mockResolvedValue({ isOk: true });
+
+			const res = makeRes();
+			await service.handleHistoricalVersionRequest(
+				"202608/node-1/abc123.dwg.mxweb",
+				"3",
+				res,
+				mockReq,
+				false,
+				true
+			);
+
 			expect(res.status).toHaveBeenCalledWith(204);
 			expect(res.end).toHaveBeenCalled();
 			expect(res.send).not.toHaveBeenCalled();
+			expect(mockFileConversionService.convertBinToMxweb).not.toHaveBeenCalled();
 		});
 	});
 

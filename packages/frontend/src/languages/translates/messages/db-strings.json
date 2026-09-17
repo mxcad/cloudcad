@@ -298,5 +298,191 @@
         "en-US": "Upload Limit",
         "ko-KR": "업로드 제한",
         "$id": 1000051
+    },
+    "备份数据库": {
+        "zh-TW": "備份資料庫",
+        "en-US": "Backup Database",
+        "ko-KR": "데이터베이스 백업",
+        "$id": 1000100
+    },
+    "备份 protected-drl": {
+        "zh-TW": "備份 protected-drl",
+        "en-US": "Backup protected-drl",
+        "ko-KR": "protected-drl 백업",
+        "$id": 1000101
+    },
+    "增量快照+对象验证": {
+        "zh-TW": "增量快照+對象驗證",
+        "en-US": "Incremental snapshot + object verification",
+        "ko-KR": "증분 스냅샷 + 객체 검증",
+        "$id": 1000102
+    },
+    "推送最新备份到异地": {
+        "zh-TW": "推送最新備份到異地",
+        "en-US": "Push latest backup to remote",
+        "ko-KR": "최신 백업을 원격으로 푸시",
+        "$id": 1000103
+    },
+    "审计日志清理": {
+        "zh-TW": "審計日誌清理",
+        "en-US": "Audit log cleanup",
+        "ko-KR": "감사 로그 정리",
+        "$id": 1000104
+    },
+    "过期项目成员关系清理": {
+        "zh-TW": "過期項目成員關係清理",
+        "en-US": "Expired project member relation cleanup",
+        "ko-KR": "만료된 프로젝트 멤버 관계 정리",
+        "$id": 1000105
+    },
+    "过期文件存储清理": {
+        "zh-TW": "過期檔案儲存清理",
+        "en-US": "Expired file storage cleanup",
+        "ko-KR": "만료된 파일 저장소 정리",
+        "$id": 1000106
+    },
+    "过期回收站文件清理": {
+        "zh-TW": "過期回收站檔案清理",
+        "en-US": "Expired recycle bin file cleanup",
+        "ko-KR": "만료된 휴지통 파일 정리",
+        "$id": 1000107
+    },
+    "缓存性能数据采集": {
+        "zh-TW": "快取效能資料採集",
+        "en-US": "Cache performance data collection",
+        "ko-KR": "캐시 성능 데이터 수집",
+        "$id": 1000108
+    },
+    "缓存监控告警检查": {
+        "zh-TW": "快取監控告警檢查",
+        "en-US": "Cache monitoring alert check",
+        "ko-KR": "캐시 모니터링 알림 검사",
+        "$id": 1000109
+    },
+    "存储空间配额检查": {
+        "zh-TW": "儲存空間配額檢查",
+        "en-US": "Storage space quota check",
+        "ko-KR": "저장 공간 할당량 검사",
+        "$id": 1000110
+    },
+    "用户账户清理": {
+        "zh-TW": "用戶帳戶清理",
+        "en-US": "User account cleanup",
+        "ko-KR": "사용자 계정 정리",
+        "$id": 1000111
+    },
+    "过期登录会话清理": {
+        "zh-TW": "過期登入會話清理",
+        "en-US": "Expired login session cleanup",
+        "ko-KR": "만료된 로그인 세션 정리",
+        "$id": 1000112
+    },
+    "过期密码重置令牌清理": {
+        "zh-TW": "過期密碼重設令牌清理",
+        "en-US": "Expired password reset token cleanup",
+        "ko-KR": "만료된 비밀번호 재설정 토큰 정리",
+        "$id": 1000113
+    },
+    "缓存命中率统计日志": {
+        "zh-TW": "快取命中率統計日誌",
+        "en-US": "Cache hit rate statistics log",
+        "ko-KR": "캐시 히트율 통계 로그",
+        "$id": 1000114
+    },
+    "高频访问检测": {
+        "zh-TW": "高頻存取檢測",
+        "en-US": "High-frequency access detection",
+        "ko-KR": "고빈도 접근 감지",
+        "$id": 1000115
+    },
+    "会员过期自动降级": {
+        "zh-TW": "會員過期自動降級",
+        "en-US": "Auto downgrade on membership expiration",
+        "ko-KR": "멤버십 만료 시 자동 등급 하락",
+        "$id": 1000116
+    },
+    "定时订单自动关闭": {
+        "zh-TW": "定時訂單自動關閉",
+        "en-US": "Scheduled order auto-close",
+        "ko-KR": "预定 주문 자동 마감",
+        "$id": 1000117
+    },
+    "项目所有者": {
+        "zh-TW": "項目所有者",
+        "en-US": "Project Owner",
+        "ko-KR": "프로젝트 소유자",
+        "$id": 1000118
+    },
+    "项目管理员": {
+        "zh-TW": "項目管理員",
+        "en-US": "Project Admin",
+        "ko-KR": "프로젝트 관리자",
+        "$id": 1000119
+    },
+    "项目编辑者": {
+        "zh-TW": "項目編輯者",
+        "en-US": "Project Editor",
+        "ko-KR": "프로젝트 편집자",
+        "$id": 1000120
+    },
+    "项目成员": {
+        "zh-TW": "項目成員",
+        "en-US": "Project Member",
+        "ko-KR": "프로젝트 구성원",
+        "$id": 1000121
+    },
+    "项目查看者": {
+        "zh-TW": "項目查看者",
+        "en-US": "Project Viewer",
+        "ko-KR": "프로젝트 뷰어",
+        "$id": 1000122
+    },
+    "个人空间容量(MB)": {
+        "zh-TW": "個人空間容量(MB)",
+        "en-US": "Personal Storage Capacity (MB)",
+        "ko-KR": "개인 저장 용량(MB)",
+        "$id": 1000123
+    },
+    "最大创建项目数": {
+        "zh-TW": "最大創建項目數",
+        "en-US": "Maximum Projects",
+        "ko-KR": "최대 프로젝트 수",
+        "$id": 1000124
+    },
+    "项目体积上限(MB)": {
+        "zh-TW": "項目體積上限(MB)",
+        "en-US": "Project Size Limit (MB)",
+        "ko-KR": "프로젝트 크기 제한(MB)",
+        "$id": 1000125
+    },
+    "每窗口转换次数": {
+        "zh-TW": "每窗口轉換次數",
+        "en-US": "Conversions per Window",
+        "ko-KR": "윈도우당 변환 횟수",
+        "$id": 1000126
+    },
+    "源项目未开放跨项目转移": {
+        "zh-TW": "源項目未開放跨項目轉移",
+        "en-US": "Source project does not allow cross-project transfer",
+        "ko-KR": "소스 프로젝트가 프로젝트 간 전송을 허용하지 않습니다",
+        "$id": 1000127
+    },
+    "当前项目未开放跨项目转移": {
+        "zh-TW": "當前項目未開放跨項目轉移",
+        "en-US": "Current project does not allow cross-project transfer",
+        "ko-KR": "현재 프로젝트가 프로젝트 간 전송을 허용하지 않습니다",
+        "$id": 1000128
+    },
+    "源项目跨项目策略不允许{action}，已禁止": {
+        "zh-TW": "源項目跨項目策略不允許{action}，已禁止",
+        "en-US": "Source project policy does not allow {action}, blocked",
+        "ko-KR": "소스 프로젝트 정책이 {action}을 허용하지 않아 차단됨",
+        "$id": 1000129
+    },
+    "当前项目跨项目策略不允许{action}，已禁止": {
+        "zh-TW": "當前項目跨項目策略不允許{action}，已禁止",
+        "en-US": "Current project policy does not allow {action}, blocked",
+        "ko-KR": "현재 프로젝트 정책이 {action}을 허용하지 않아 차단됨",
+        "$id": 1000130
     }
 }

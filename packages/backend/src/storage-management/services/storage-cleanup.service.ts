@@ -22,6 +22,7 @@ export interface CleanupResult {
   success: boolean;
   deletedNodes: number;
   deletedDirectories: number;
+  /** 释放字节数：基于 FileSystemNode.size 元数据累加的估算值（#325），非删除后实测磁盘差值 */
   freedSpace: number;
   errors: string[];
 }
@@ -146,7 +147,8 @@ export class StorageCleanupService {
           deletedFromStorage: { not: null, lt: expiryDate },
           nodeType: NodeType.FILE,
         },
-        select: { id: true, path: true, deletedFromStorage: true },
+        // size 用于 freedSpace 统计（#325：cleanup_space_freed_bytes 指标）
+        select: { id: true, path: true, deletedFromStorage: true, size: true },
       });
 
       this.logger.log(`找到 ${nodesToDelete.length} 个需要清理的节点`);
@@ -164,6 +166,7 @@ export class StorageCleanupService {
 
           await this.storageManager.deleteNodeStorage(nodeId, directory);
           result.deletedNodes++;
+          result.freedSpace += node.size ?? 0;
 
           await this.prisma.fileSystemNode.update({
             where: { id: node.id },
@@ -242,7 +245,16 @@ export class StorageCleanupService {
 
       const trashItems = await this.prisma.fileSystemNode.findMany({
         where: { deletedAt: { not: null, lt: expiryDate } },
-        select: { id: true, nodeType: true, path: true, fileHash: true, ownerId: true, projectId: true },
+        // size 用于 freedSpace 统计（#325：cleanup_space_freed_bytes 指标）
+        select: {
+          id: true,
+          nodeType: true,
+          path: true,
+          fileHash: true,
+          ownerId: true,
+          projectId: true,
+          size: true,
+        },
       });
 
       this.logger.log(`找到 ${trashItems.length} 个需要清理的回收站项目`);
@@ -259,6 +271,7 @@ export class StorageCleanupService {
               const nodeId = pathParts[1];
               await this.storageManager.deleteNodeStorage(nodeId, directory);
               result.deletedNodes++;
+              result.freedSpace += item.size ?? 0;
               await this.prisma.fileSystemNode.delete({ where: { id: item.id } });
             }
           } else if (item.nodeType !== NodeType.FILE) {
@@ -292,7 +305,7 @@ export class StorageCleanupService {
   private async cleanupFolderRecursive(folderId: string, result: CleanupResult): Promise<void> {
     const children = await this.prisma.fileSystemNode.findMany({
       where: { parentId: folderId },
-      select: { id: true, nodeType: true, path: true },
+      select: { id: true, nodeType: true, path: true, size: true },
     });
 
     for (const child of children) {
@@ -306,6 +319,7 @@ export class StorageCleanupService {
           try {
             await this.storageManager.deleteNodeStorage(nodeId, directory);
             result.deletedNodes++;
+            result.freedSpace += child.size ?? 0;
           } catch (error) {
             result.errors.push(`清理文件失败: ${child.id}, ${error.message}`);
           }
@@ -332,7 +346,8 @@ export class StorageCleanupService {
 
     const nodesToDelete = await this.prisma.fileSystemNode.findMany({
       where: { deletedFromStorage: { not: null, lt: expiryDate }, nodeType: NodeType.FILE },
-      select: { id: true, path: true, deletedFromStorage: true },
+      // size 用于 freedSpace 统计（#325：cleanup_space_freed_bytes 指标）
+      select: { id: true, path: true, deletedFromStorage: true, size: true },
     });
 
     this.logger.log(`找到 ${nodesToDelete.length} 个需要清理的节点`);
@@ -359,6 +374,7 @@ export class StorageCleanupService {
 
           await this.storageManager.deleteNodeStorage(nodeId, directory);
           result.deletedNodes++;
+          result.freedSpace += node.size ?? 0;
 
           await this.prisma.fileSystemNode.update({
             where: { id: node.id },

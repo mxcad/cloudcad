@@ -9,6 +9,7 @@ import { ClsModule } from './cls/cls.module';
 import { FileExtensionsService } from './services/file-extensions.service';
 import { FtsQueryBuilder } from '../file-system/search/fts-query-builder';
 import { AncestorQueryService } from './services/ancestor-query.service';
+import { PiiCryptoService } from './pii/pii-crypto.service';
 
 @Module({
   imports: [
@@ -24,11 +25,13 @@ import { AncestorQueryService } from './services/ancestor-query.service';
     FileExtensionsService,
     FtsQueryBuilder,
     AncestorQueryService,
+    PiiCryptoService,
   ],
   exports: [
     FileExtensionsService,
     FtsQueryBuilder,
     AncestorQueryService,
+    PiiCryptoService,
     ClsModule,
     RuntimeConfigModule,
   ],

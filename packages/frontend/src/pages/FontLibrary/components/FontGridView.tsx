@@ -43,16 +43,9 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
   formatDate,
   rubberBandJustEndedRef,
 }) => {
+  // 骨架屏已移除：加载期间渲染空白，数据就绪后直接显示内容
   if (loading) {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="card-theme h-40">
-            <div className="skeleton-theme w-full h-full rounded-lg" />
-          </div>
-        ))}
-      </div>
-    );
+    return null;
   }
 
   if (fonts.length === 0) {
@@ -121,9 +114,7 @@ export const FontGridView: React.FC<FontGridViewProps> = ({
                 选中时恒显示，未选中 hover 卡片时淡入 */}
             <div
               className={`absolute top-3 left-3 z-10 transition-opacity ${
-                isSelected
-                  ? 'opacity-100'
-                  : 'opacity-0 group-hover:opacity-100'
+                isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
               }`}
               onClick={(e) => e.stopPropagation()}
             >

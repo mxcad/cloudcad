@@ -167,11 +167,12 @@ COPY runtime/linux/mxcad ./runtime/linux/mxcad
 # 复制协同服务管理脚本
 COPY runtime/scripts/cooperate-manager.js ./runtime/scripts/cooperate-manager.js
 
-# 复制 nginx 配置
-COPY docker/nginx/nginx.conf /etc/nginx/http.d/default.conf
+# 复制 nginx 配置模板（#408 公网 TLS：entrypoint 按 TLS 证书是否落位二选一渲染到 http.d/default.conf）
+COPY docker/nginx/nginx.conf /etc/nginx/templates/default.conf
+COPY docker/nginx/nginx-tls.conf /etc/nginx/templates/default-tls.conf
 
 # 创建数据目录并设置权限（统一在 /app/data/ 下）
-RUN mkdir -p /app/data/files /app/data/logs /app/data/svn-repo /app/data/uploads /app/data/temp /run/nginx && \
+RUN mkdir -p /app/data/files /app/data/logs /app/data/svn-repo /app/data/uploads /app/data/temp /run/nginx /etc/nginx/certs && \
     adduser -D -h /home/cloudcad cloudcad && \
     mkdir -p /home/cloudcad && chown cloudcad:cloudcad /home/cloudcad && \
     chown -R cloudcad:cloudcad /app/data && \
@@ -180,8 +181,8 @@ RUN mkdir -p /app/data/files /app/data/logs /app/data/svn-repo /app/data/uploads
 # 安装 su-exec（用于降权运行服务进程）
 RUN apk add --no-cache su-exec
 
-# 暴露端口
-EXPOSE 80 3001 3000
+# 暴露端口（443 用于 #408 公网 TLS，证书落位后启用）
+EXPOSE 80 443 3001 3000
 
 # 健康检查（增加超时时间，适应启动较慢的场景）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \

@@ -23,7 +23,6 @@ const {
   PLATFORM_DIR,
   NODE_EXE,
   PM2_JS,
-  PM2_CMD,
   PNPM_JS,
   PM2_HOME,
 } = require('./context');
@@ -51,11 +50,10 @@ function killTree(pid, options = {}) {
 
   try {
     if (IS_WINDOWS) {
-      const result = spawnSync(
-        'taskkill',
-        ['/PID', String(pid), '/T', '/F'],
-        { stdio: 'pipe', windowsHide: true }
-      );
+      const result = spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+        stdio: 'pipe',
+        windowsHide: true,
+      });
       // taskkill 退出码：0=成功终止；128=找不到目标进程（已不存在，视为已清理）；
       // 其余非 0（如 5=拒绝访问/权限不足）= 真实失败，须返回 false，避免掩盖。
       if (result.status === 0 || result.status === 128) {
@@ -174,16 +172,16 @@ function runPnpm(args, options = {}) {
   const nodeBinDir = IS_LINUX
     ? path.join(PLATFORM_DIR, 'node', 'bin')
     : path.join(PLATFORM_DIR, 'node');
-  
+
   const nodeModulesBinDirs = [
     path.join(PROJECT_ROOT, 'node_modules', '.bin'),
     path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules', '.bin'),
   ];
-  
+
   const existingPath = process.env.PATH || '';
   const pathParts = [nodeBinDir, ...nodeModulesBinDirs, existingPath];
   const newPath = pathParts.join(path.delimiter);
-  
+
   // 创建独立的环境变量对象，不影响 process.env
   const env = Object.assign({}, process.env, options.env, {
     PATH: newPath,
@@ -198,38 +196,19 @@ function runPnpm(args, options = {}) {
 }
 
 function runPm2(args, options = {}) {
-  // 优先使用 pm2.cmd/pm2 包装脚本，确保 PM2 daemon 能找到 node
-  // 包装脚本会设置 PATH，daemon 继承后能正确 spawn('node', ...)
-  if (PM2_CMD && fs.existsSync(PM2_CMD)) {
-    return runCommand(PM2_CMD, args, {
-      ...options,
-      env: {
-        ...options.env,
-        PM2_HOME,
-      },
-    });
-  }
-
-  // 回退：直接使用 node 运行 pm2.js（需要手动设置 PATH）
   if (!PM2_JS || !fs.existsSync(PM2_JS)) {
     log('red', '[错误] PM2 不可用');
     return false;
   }
 
-  const nodeDir = path.dirname(NODE_EXE);
-  const existingPath = process.env.PATH || '';
-  const newPath = USE_RUNTIME
-    ? IS_WINDOWS
-      ? `${nodeDir};${existingPath}`
-      : `${nodeDir}:${existingPath}`
-    : existingPath;
-
+  // 用「内嵌 node + pm2 脚本」的绝对路径调用（部署包根目录不再有 pm2 包装脚本）；
+  // node 目录前置到 PATH 由 runCommand 的 withNodePath 统一处理——PM2 daemon
+  // 靠 PATH 解析 node 来 spawn 子进程。
   return runCommand(NODE_EXE, [PM2_JS, ...args], {
     ...options,
     env: {
       ...options.env,
       PM2_HOME,
-      PATH: newPath,
     },
   });
 }
@@ -260,7 +239,7 @@ function getPm2StatusList() {
 /**
  * 查询某个 PM2 app 的运行状态。
  * @param {string} name app 名
- * @returns {'online'|'stopped'|'errored'|'launching'|'unknown'} 
+ * @returns {'online'|'stopped'|'errored'|'launching'|'unknown'}
  */
 function getPm2AppStatus(name) {
   const list = getPm2StatusList();
@@ -294,18 +273,13 @@ function getPm2OnlineApps() {
 function getPidByPort(port) {
   try {
     if (IS_WINDOWS) {
-      const res = spawnSync(
-        'netstat',
-        ['-ano', '-p', 'TCP'],
-        { encoding: 'utf8', windowsHide: true }
-      );
+      const res = spawnSync('netstat', ['-ano', '-p', 'TCP'], {
+        encoding: 'utf8',
+        windowsHide: true,
+      });
       const line = (res.stdout || '')
         .split('\n')
-        .find(
-          (l) =>
-            l.includes(`:${port}`) &&
-            l.includes('LISTENING')
-        );
+        .find((l) => l.includes(`:${port}`) && l.includes('LISTENING'));
       if (!line) return null;
       const parts = line.trim().split(/\s+/);
       const pid = parseInt(parts[parts.length - 1], 10);
@@ -317,11 +291,7 @@ function getPidByPort(port) {
     });
     const lsofPid = parseInt((lsof.stdout || '').trim(), 10);
     if (Number.isFinite(lsofPid) && lsofPid > 0) return lsofPid;
-    const netstat = spawnSync(
-      'netstat',
-      ['-tlnp'],
-      { encoding: 'utf8' }
-    );
+    const netstat = spawnSync('netstat', ['-tlnp'], { encoding: 'utf8' });
     const line = (netstat.stdout || '')
       .split('\n')
       .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));
@@ -346,10 +316,14 @@ function isNodePid(pid) {
   if (!pid) return false;
   try {
     if (IS_WINDOWS) {
-      const res = spawnSync('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], {
-        encoding: 'utf8',
-        windowsHide: true,
-      });
+      const res = spawnSync(
+        'tasklist',
+        ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'],
+        {
+          encoding: 'utf8',
+          windowsHide: true,
+        }
+      );
       return /node\.exe/i.test(res.stdout || '');
     }
     const res = spawnSync('ps', ['-o', 'comm=', '-p', String(pid)], {
@@ -375,15 +349,26 @@ function getProcessExecutablePath(pid) {
       // WMIC 在部分系统已弃用，PowerShell Get-CimInstance 更可靠；两者都试
       const psRes = spawnSync(
         'powershell',
-        ['-NoProfile', '-NonInteractive', '-Command',
-          `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").ExecutablePath`],
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").ExecutablePath`,
+        ],
         { encoding: 'utf8', windowsHide: true, timeout: 8000 }
       );
       const psPath = (psRes.stdout || '').trim();
       if (psPath) return psPath;
       const wmicRes = spawnSync(
         'wmic',
-        ['process', 'where', `ProcessId=${pid}`, 'get', 'ExecutablePath', '/value'],
+        [
+          'process',
+          'where',
+          `ProcessId=${pid}`,
+          'get',
+          'ExecutablePath',
+          '/value',
+        ],
         { encoding: 'utf8', windowsHide: true, timeout: 8000 }
       );
       const m = /ExecutablePath=([^\r\n]+)/.exec(wmicRes.stdout || '');
@@ -414,6 +399,33 @@ function isOurRuntimeProcess(pid) {
   const runtimeDirNorm = normalize(path.join(PROJECT_ROOT, 'runtime'));
   const exeNorm = normalize(exe);
   return exeNorm.startsWith(runtimeDirNorm + '/') || exeNorm === runtimeDirNorm;
+}
+
+/**
+ * 判断某进程是否属于**另一个** CloudCAD 部署目录的基础服务。
+ *
+ * 部署包的服务二进制（postgres.exe / redis-server.exe / node.exe 等）均位于
+ * <部署目录>/runtime/<platform>/ 下。可执行文件路径含 /runtime/<platform>/ 段
+ * 但不在本目录 runtime/ 下 → 属于同机另一个部署目录的服务（实例：目录 A 的
+ * PG 运行中，目录 B 部署时 5432 被 A 的 postgres 占用）。系统自带的 PG/Redis
+ *（Program Files / /usr 等）不含该段，不会被误判。
+ *
+ * 静默复用另一目录的服务会导致本目录 .env 密钥（PII/JWT 等）与对方存量数据
+ * 错位（PII 回填校验拦截部署），故调用方须询问用户"停止对方服务起自己的"或
+ * 中止部署，而非静默接管。
+ * @param {number} pid
+ * @returns {boolean}
+ */
+function isForeignCloudCadRuntimeProcess(pid) {
+  const exe = getProcessExecutablePath(pid);
+  if (!exe) return false;
+  const normalize = (p) =>
+    p.toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
+  const exeNorm = normalize(exe);
+  const ourRuntimeNorm = normalize(path.join(PROJECT_ROOT, 'runtime'));
+  // 本目录 runtime 下的进程归 isOurRuntimeProcess 处理（残留清理）
+  if (exeNorm.startsWith(ourRuntimeNorm + '/')) return false;
+  return /\/runtime\/(windows|linux|macos)\//.test(exeNorm);
 }
 
 function runInNewWindow(title, command, args) {
@@ -453,4 +465,5 @@ module.exports = {
   isNodePid,
   getProcessExecutablePath,
   isOurRuntimeProcess,
+  isForeignCloudCadRuntimeProcess,
 };

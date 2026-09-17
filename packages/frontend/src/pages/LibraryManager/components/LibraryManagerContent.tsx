@@ -53,7 +53,8 @@ interface LibraryManagerContentProps {
     isFolder?: boolean;
     path?: string;
   }) => void;
-  handleFolderDownload: (node: FileSystemNode) => void;
+  /** 未开放批量下载时为 undefined：文件夹打包动作自动隐藏（见 fileActionConfig） */
+  handleFolderDownload?: (node: FileSystemNode) => void;
   handleDeleteConfirm: (nodeId: string, nodeName: string) => void;
   /** 批量删除（统一走 useLibraryOperations.handleBatchDelete，由父层注入） */
   onBatchDelete: (nodeIds: string[]) => void;

@@ -740,6 +740,32 @@ function generateSecret() {
 }
 
 /**
+ * 生成符合口令策略的强随机口令（#416 等保 8.1.4.1）：
+ * 长度 16，覆盖小写/大写/数字/特殊字符四类（满足"四类至少三类"），
+ * 随机生成不会命中弱口令黑名单。用于填充 INITIAL_ADMIN_PASSWORD。
+ */
+function generateStrongPassword() {
+  const crypto = require('crypto');
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const special = '!@#$%^&*-_=+?';
+  const all = lower + upper + digits + special;
+  const rand = (chars) => chars[crypto.randomInt(chars.length)];
+  // 保证四类各至少一个，其余随机补齐到 16 位
+  const chars = [rand(lower), rand(upper), rand(digits), rand(special)];
+  while (chars.length < 16) {
+    chars.push(rand(all));
+  }
+  // Fisher-Yates 洗牌打散位置
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
+
+/**
  * 填充 .env 中空白的必填密钥（SESSION_SECRET、JWT_SECRET）
  * 首次部署时自动生成随机密钥，避免生产环境校验报错
  * @param {string} envFile - .env 文件路径
@@ -747,7 +773,21 @@ function generateSecret() {
 function fillEmptySecrets(envFile) {
   if (!fs.existsSync(envFile)) return;
   let content = fs.readFileSync(envFile, 'utf8');
-  const secrets = ['SESSION_SECRET', 'JWT_SECRET'];
+  const secrets = [
+    'SESSION_SECRET',
+    'JWT_SECRET',
+    // #417 等保 8.1.4.8：PII 字段级加密密钥（users.phone/email 的 AES-GCM 加密 +
+    // HMAC-SHA256 归一化索引）。首次部署自动生成两个独立密钥；升级部署保留已有值
+    // （正则只匹配空白行），避免重启后密钥变化导致存量密文无法解密。
+    'PII_ENCRYPTION_KEY',
+    'PII_HMAC_KEY',
+    // #419 等保 8.1.2.2：Redis requirepass 密码。生产必填（configuration.ts 校验），
+    // 首次部署自动生成；升级部署保留已有值（避免 Redis 密码变化导致后端连不上）。
+    'REDIS_PASSWORD',
+    // #419 等保 8.1.2.2：storage/conversion 内部服务共享密钥（backend 出站带
+    // X-Internal-Service-Secret 头，服务侧非 health 路由校验）。
+    'INTERNAL_SERVICE_SECRET',
+  ];
   let changed = false;
   for (const key of secrets) {
     const regex = new RegExp(`^${key}=[ \\t]*$`, 'm');
@@ -756,6 +796,16 @@ function fillEmptySecrets(envFile) {
       log(`  ✓ 自动生成 ${key}`);
       changed = true;
     }
+  }
+  // #416 等保 8.1.4.1：INITIAL_ADMIN_PASSWORD 必填无缺省——首次部署生成符合策略的强随机口令
+  const adminPasswordRegex = /^INITIAL_ADMIN_PASSWORD=[ \t]*$/m;
+  if (adminPasswordRegex.test(content)) {
+    content = content.replace(
+      adminPasswordRegex,
+      `INITIAL_ADMIN_PASSWORD=${generateStrongPassword()}`
+    );
+    log('  ✓ 自动生成 INITIAL_ADMIN_PASSWORD（强随机口令，请妥善保存）');
+    changed = true;
   }
   if (changed) {
     fs.writeFileSync(envFile, content, 'utf8');
@@ -825,6 +875,19 @@ function copyEnvExampleToEnv() {
     const label = backendEnvCreated ? '新创建' : '已有';
     log(`填充 ${label} .env 文件中的空白密钥...`);
     fillEmptySecrets(backendEnv);
+  }
+
+  // #424：生产 .env 含真密钥，权限收紧 600（仅属主可读写）
+  // Windows（NTFS 无 unix 权限位）下 chmod 为无操作，不报错
+  for (const config of envConfigs) {
+    const envFile = path.join(config.dir, config.target);
+    if (fs.existsSync(envFile)) {
+      try {
+        fs.chmodSync(envFile, 0o600);
+      } catch (_) {
+        // 权限设置失败不阻断部署（Windows 无权限概念/只读文件系统等）
+      }
+    }
   }
 
   return true;
@@ -1012,6 +1075,10 @@ module.exports = {
   calcLockHash,
   shouldReinstallDependencies,
   markInstalledVersion,
+  // 生成 .env 空白密钥（SESSION_SECRET/JWT_SECRET/PII_*/REDIS_PASSWORD/INTERNAL_SERVICE_SECRET）。
+  // start.js 部署时调用；verify-deploy.js 也须调用（验收器不跑 start.js，须自行补齐密钥，
+  // 否则后端生产模式校验 SESSION_SECRET/REDIS_PASSWORD 缺失而启动失败）。
+  fillEmptySecrets,
   OFFLINE_NODE_DIR,
   OFFLINE_NODE_EXE,
   NODE_MODULES_BIN,

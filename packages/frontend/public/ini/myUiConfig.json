@@ -36,6 +36,11 @@
       "prompt": "新建",
       "icon": "xinjian",
       "cmd": "Mx_NewFile"
+    },
+    {
+      "prompt": "分享",
+      "icon": "cloudcad-dibudaohanglan-",
+      "cmd": "Mx_Share"
     }
   ],
   "isShowTopButtonBar": true,

@@ -631,8 +631,10 @@ export function useCollabActions(
     if (data.v === 3 && data.drawingName) {
       patchSession({ name: data.drawingName });
       refreshFileName();
+      // 只有当drawingName有效时才清空ref，否则等待fetchWorks返回
+      // 服务端的真实work数据（包含正确的drawingName）
+      pendingJoinWorkIdRef.current = null;
     }
-    pendingJoinWorkIdRef.current = null;
   }, [works]);
 
   return {

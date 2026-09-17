@@ -42,9 +42,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           >
             {title}
           </div>
-          {loading ? (
-            <div className="h-8 w-20 rounded-lg skeleton-theme" />
-          ) : (
+          {!loading && (
             <div
               className="text-2xl font-bold mb-1"
               style={{ color: 'var(--text-primary)' }}

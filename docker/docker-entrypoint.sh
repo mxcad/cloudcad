@@ -232,7 +232,22 @@ try {
     fi
 
     export MOBILE_ACCESS_PATH="$mobile_path"
+
+    # #408 公网 TLS：证书路径均配置且文件存在 → 选用 TLS 变体（443 https + 80→443 跳转）；
+    # 否则保持纯 HTTP 变体（仅 80），证书缺失不阻塞启动。
+    local template="/etc/nginx/templates/default.conf"
+    if [ -n "$TLS_CERT_PATH" ] && [ -n "$TLS_KEY_PATH" ] && [ -f "$TLS_CERT_PATH" ] && [ -f "$TLS_KEY_PATH" ]; then
+        template="/etc/nginx/templates/default-tls.conf"
+        log_info "TLS 已启用: 443 https（证书: $TLS_CERT_PATH）"
+    else
+        log_info "TLS 未启用（TLS_CERT_PATH/TLS_KEY_PATH 未配置或文件缺失），仅监听 80"
+    fi
+
+    cp "$template" /etc/nginx/http.d/default.conf
     sed -i "s|__MOBILE_PATH__|$MOBILE_ACCESS_PATH|g" /etc/nginx/http.d/default.conf
+    # TLS 占位符仅存在于 TLS 变体；HTTP 变体无此占位符，空值替换无副作用
+    sed -i "s|__TLS_CERT_PATH__|${TLS_CERT_PATH}|g" /etc/nginx/http.d/default.conf
+    sed -i "s|__TLS_KEY_PATH__|${TLS_KEY_PATH}|g" /etc/nginx/http.d/default.conf
     log_info "移动端访问路径: /$MOBILE_ACCESS_PATH"
 }
 

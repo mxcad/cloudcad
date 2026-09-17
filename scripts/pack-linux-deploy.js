@@ -37,17 +37,16 @@ const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 
 // ==================== OS 镜像映射 ====================
 
+// ADR-0059 决策 2：发行版收敛到 3 个 glibc 档位（centos7/ubuntu22/rocky9），
+// 砍掉 ubuntu24/rocky8/debian（glibc 与三档重叠或可被代表）。
 const OS_BASE_IMAGES = {
   centos7: 'centos:7',
-  debian: 'node:20-bullseye-slim',
   ubuntu22: 'ubuntu:22.04',
-  ubuntu24: 'ubuntu:24.04',
-  rocky8: 'rockylinux:8',
   rocky9: 'rockylinux:9',
 };
 
 // glibc >= 2.35 的系统需要 SystemLib 版本的 mxcad 二进制
-const NEEDS_SYSTEM_LIB = ['ubuntu22', 'ubuntu24'];
+const NEEDS_SYSTEM_LIB = ['ubuntu22'];
 
 // ==================== 二进制缓存配置 ====================
 
@@ -253,6 +252,39 @@ function getRuntimeExtractCacheDir(targetOs) {
   return path.join(CACHE_DIR, 'linux-extract', targetOs);
 }
 
+// 标准组件关键可执行文件（与 extract-linux-runtime.js 的 CRITICAL_FILES 保持一致）
+const RUNTIME_CRITICAL_FILES = {
+  node: 'bin/node',
+  postgres: 'bin/postgres',
+  redis: 'redis-server',
+  subversion: 'svn',
+};
+
+/**
+ * 检查平台物料缓存完整性（关键可执行文件，而非仅目录存在）。
+ *
+ * 缓存目录跨多次打包持久化，若上次提取中断/文件被杀软隔离/复用了残缺资产，
+ * 会留下"目录在但内容残缺"的坏缓存。缺失时由后续容器运行
+ * （runPack 挂载缓存目录 + extract-linux-runtime.js）自动重新提取并落盘修复，
+ * 此处只做检查与清晰提示，无需人工清理。
+ *
+ * @returns {string[]} 缺失的关键文件清单（空数组=缓存完整）
+ */
+function checkRuntimeExtractCache(targetOs) {
+  const cacheDir = getRuntimeExtractCacheDir(targetOs);
+  const missing = Object.entries(RUNTIME_CRITICAL_FILES)
+    .map(([comp, rel]) => `${comp === 'svn' ? 'subversion' : comp}/${rel}`)
+    .filter((rel) => !fs.existsSync(path.join(cacheDir, rel)));
+
+  if (missing.length === 0) {
+    log(`✓ 平台物料缓存完整（${targetOs}：node/postgres/redis/subversion 关键可执行文件均在）`);
+  } else {
+    log(`平台物料缓存不完整（${targetOs}），缺失: ${missing.join(', ')}`);
+    log('→ 将由容器内 extract-linux-runtime.js 自动重新提取（覆盖写入本地缓存目录，无需人工清理）');
+  }
+  return missing;
+}
+
 async function runPack(targetOs = 'centos7', variant = 'oss', mode = 'deploy') {
   log('执行打包...');
 
@@ -321,13 +353,10 @@ ${PRODUCT_NAME} Linux 部署包打包入口
   node scripts/pack-linux-deploy.js --help                 显示帮助
   node scripts/pack-linux-deploy.js --npm-registry https://registry.npmmirror.com  自定义 npm registry
 
-支持的 OS：
+支持的 OS（ADR-0059 收敛到 3 个 glibc 档位）：
   centos7   - CentOS 7 (默认，glibc 2.17，兼容性最广)
   ubuntu22  - Ubuntu 22.04 (glibc 2.35)
-  ubuntu24  - Ubuntu 24.04 (glibc 2.39)
-  rocky8    - Rocky Linux 8 (glibc 2.28)
   rocky9    - Rocky Linux 9 (glibc 2.34)
-  debian    - Debian 11 (glibc 2.31)
 
 流程说明：
   --upgrade（免 Docker 本机直打）:
@@ -629,8 +658,23 @@ async function main() {
     // 2. 执行打包
     log('');
     log('[2/3] 执行打包...');
+    // 打包前检查平台物料缓存：缺失关键文件时容器内会自动重新提取
+    const missingBefore = checkRuntimeExtractCache(targetOs);
     await runPack(targetOs, variant, mode);
-    
+
+    // 打包后回验：缓存仍缺关键文件说明容器内重新提取失败，fail-fast
+    // （否则坏缓存会被静默复用，打出缺组件的部署包）
+    const missingAfter = checkRuntimeExtractCache(targetOs);
+    if (missingAfter.length > 0) {
+      error('平台物料缓存仍不完整，容器内重新提取未成功，中止打包:');
+      missingAfter.forEach((f) => error(`  - runtime/cache/linux-extract/${targetOs}/${f}`));
+      error('修复方式: 检查容器日志（网络/包管理器/磁盘），重跑本命令即可（缓存缺失会自动重提）');
+      process.exit(1);
+    }
+    if (missingBefore.length > 0) {
+      log('✓ 平台物料缓存已在容器内重新提取并落盘修复');
+    }
+
     // 查找生成的包
     const packageFile = findDeployPackage(mode);
     

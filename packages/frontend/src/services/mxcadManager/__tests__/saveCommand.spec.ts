@@ -22,6 +22,16 @@ vi.mock('../mxcadHelpers', () => ({
   triggerSaveAs: vi.fn().mockResolvedValue(undefined),
 }));
 
+// 门面 mock：避免测试环境加载真实 mxcad-app/mxdraw 实例化链
+const pendingOpenMocks = vi.hoisted(() => ({
+  hasPendingOpen: vi.fn().mockReturnValue(false),
+}));
+vi.mock('../mxcadManager', () => ({
+  mxcadManager: {
+    hasPendingOpen: () => pendingOpenMocks.hasPendingOpen(),
+  },
+}));
+
 import { emit, subscribe, clearDrawingSessionListeners } from '../../drawingSession';
 import { CAD_EVENTS } from '@/constants/events';
 import { isAuthenticated } from '@/utils/authCheck';
@@ -74,6 +84,8 @@ beforeEach(() => {
   (
     isAccessTokenExpired as unknown as ReturnType<typeof vi.fn>
   ).mockReturnValue(false);
+  // clearAllMocks 不清实现：显式复位，防止 pendingOpen 用例的 true 泄漏
+  pendingOpenMocks.hasPendingOpen.mockReturnValue(false);
 });
 
 describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
@@ -89,6 +101,21 @@ describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
 
     expect(result).toEqual({ success: false, error: 'unauthorized' });
     expect(handler).toHaveBeenCalledWith({ action: '保存文件' });
+  });
+
+  it('新图纸打开中（pendingOpen）→ 拒绝保存并提示，不进入保存分支', async () => {
+    pendingOpenMocks.hasPendingOpen.mockReturnValue(true);
+    const saveFile = vi.fn().mockResolvedValue({ status: 'saved' });
+    const command = new SaveCommand();
+    const result = await command.execute(makeCtx({ saveFile }));
+
+    expect(result).toEqual({ success: false, error: 'file-opening' });
+    expect(globalShowToast).toHaveBeenCalledWith(
+      '图纸正在打开，请稍后再保存',
+      'warning'
+    );
+    expect(saveFile).not.toHaveBeenCalled();
+    expect(showSaveAsDialog).not.toHaveBeenCalled();
   });
 
   it('无文件信息 → 获取个人空间并打开另存为（untitled）', async () => {
@@ -131,6 +158,20 @@ describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
     const result = await command.execute(makeCtx({ saveFile }));
 
     expect(result).toEqual({ success: false, error: '配额不足' });
+  });
+
+  it('权限拒绝（denied）→ 返回 success:false 透传错误', async () => {
+    const saveFile = vi.fn().mockResolvedValue({
+      status: 'denied',
+      error: '您没有保存图纸的权限',
+    });
+    const command = new SaveCommand();
+    const result = await command.execute(makeCtx({ saveFile }));
+
+    expect(result).toEqual({
+      success: false,
+      error: '您没有保存图纸的权限',
+    });
   });
 
   it('深服务抛异常 → handleError + 错误 toast + success:false', async () => {

@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import {
+  adminControllerGetOverview,
   adminControllerGetPurchaseStats,
   adminControllerGetRegistrationStats,
 } from '@/api-sdk';
 import type {
   DailyPurchasesStatsDto,
   DailyRegistrationsStatsDto,
+  StatsOverviewDto,
 } from '@/api-sdk';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/languages';
@@ -18,8 +20,31 @@ export interface AdminStatsRangeParams {
   [key: string]: unknown;
 }
 
+const OVERVIEW_ERROR = t('加载总量概览失败');
 const REGISTRATIONS_ERROR = t('加载新增用户统计失败');
 const PURCHASES_ERROR = t('加载会员购买统计失败');
+
+/**
+ * 运营总量概览（当前用户总数 / 累计付费用户，与统计区间无关）
+ * @param enabled 无权限时为 false，不发请求
+ */
+export function useAdminStatsOverview(enabled: boolean) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.adminStats.overview,
+    queryFn: async (): Promise<StatsOverviewDto> => {
+      const result = await adminControllerGetOverview();
+      if (result.error) throw result.error;
+      return result.data as StatsOverviewDto;
+    },
+    enabled,
+  });
+
+  return {
+    stats: data,
+    loading: isLoading,
+    error: error ? getErrorMessage(error) || OVERVIEW_ERROR : null,
+  };
+}
 
 /**
  * 每日新增用户统计（SYSTEM_USER_READ）

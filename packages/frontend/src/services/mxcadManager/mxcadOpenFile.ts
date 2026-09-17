@@ -24,6 +24,7 @@ import {
 } from '../loadingService';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
 import { useFileSystemStore } from '../../stores/fileSystemStore';
+import { useConversionQueueStore } from '../../stores/conversionQueueStore';
 import { mxcadManager } from './mxcadManager';
 import { emitFileOpened, setCacheTimestamp, emit } from '../drawingSession';
 import { DEFAULT_MESSAGES, FILE_UPLOAD_CONFIG } from './mxcadTypes';
@@ -113,7 +114,7 @@ async function getProjectId(
 
 export async function waitForFileReady(
   nodeId: string,
-  maxAttempts: number = 30,
+  maxAttempts: number = 60,
   intervalMs: number = 2000
 ): Promise<{
   fileHash: string;
@@ -121,6 +122,9 @@ export async function waitForFileReady(
   name: string;
   parentId: string;
 } | null> {
+  // 统一转换面板（#470/#472）：让面板感知该节点的在途转换（云端列表），
+  // 面板悬浮按钮据此可见并轮询；waitForFileReady 继续等待就绪后打开文件。
+  void useConversionQueueStore.getState().refreshCloud();
   setLoadingProgress(0);
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const fileInfoResponse = await nodeControllerGetNode({ path: { nodeId } });
@@ -141,6 +145,10 @@ export async function waitForFileReady(
       setLoadingMessage(
         `${t('文件转换中，请稍候...')} (${attempt}/${maxAttempts})`
       );
+      // S6-1/S6-6 主上传路径：新上传的云端任务（node.taskId）由后台转换（fire-and-forget）
+      // 稍后才写入，入口的 refreshCloud（函数顶部）可能早于其写入而漏掉。每轮等待后重拉
+      // 云端列表，确保该任务在 node.taskId 写入后 ≤ 一个轮询间隔内进入面板（消除竞态）。
+      void useConversionQueueStore.getState().refreshCloud();
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
   }
@@ -381,6 +389,13 @@ export async function handlePublicUpload(
   file: File,
   noCache?: boolean
 ): Promise<void> {
+  // S6-1/S6-6：游客/公开路径登记本地转换任务（无 nodeId → 本地任务，面板据此可见）。
+  // 云端路径（登录用户）已由 node.taskId + refreshCloud 覆盖；此处补齐游客/公开路径。
+  // 任务在打开文件成功时置 completed、失败时置 failed（callback 是异步打开入口）。
+  const localTaskId = `local_public_${Date.now()}`;
+  const { addLocalTask, updateTaskStatus } =
+    useConversionQueueStore.getState();
+  addLocalTask({ id: localTaskId, name: file.name, status: 'processing' });
   try {
     showGlobalLoading(t('正在计算文件哈希...'));
     const hash = await calculateFileHash(file);
@@ -421,8 +436,12 @@ export async function handlePublicUpload(
                 },
               });
               hideGlobalLoading();
+              updateTaskStatus(localTaskId, 'completed');
             } catch (error) {
               hideGlobalLoading();
+              updateTaskStatus(localTaskId, 'failed', {
+                error: error instanceof Error ? error.message : undefined,
+              });
               globalShowToast(
                 error instanceof Error ? error.message : t('文件打开失败'),
                 'error'
@@ -473,8 +492,12 @@ export async function handlePublicUpload(
             },
           });
           hideGlobalLoading();
+          updateTaskStatus(localTaskId, 'completed');
         } catch (error) {
           hideGlobalLoading();
+          updateTaskStatus(localTaskId, 'failed', {
+            error: error instanceof Error ? error.message : undefined,
+          });
           globalShowToast(
             error instanceof Error ? error.message : t('文件打开失败'),
             'error'
@@ -484,6 +507,9 @@ export async function handlePublicUpload(
     });
   } catch (error) {
     hideGlobalLoading();
+    updateTaskStatus(localTaskId, 'failed', {
+      error: error instanceof Error ? error.message : undefined,
+    });
     // QUOTA_EXCEEDED（转换频率限制）的提示由全局 error interceptor 独占负责
     // （clientSetup.ts → handleQuotaExceededError：游客 toast / 登录用户确认购买弹窗），
     // 此处静默 return 仅为避免双重提示。

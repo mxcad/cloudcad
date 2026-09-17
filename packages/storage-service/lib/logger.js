@@ -6,13 +6,14 @@
  * - JSON 单行：{"time","level","service","message","requestId"?}
  * - 双输出：stdout + 文件落盘 data/logs/<service>/app-YYYY-MM-DD.log
  * - 按天轮转 + 保留期清理（LOG_RETENTION_DAYS，默认 180 天，与 backend 一致）
- * - 目录经 LOG_DIR env 可配（相对路径基于包根解析，默认 data/logs，与 backend 语义一致）
+ * - 目录经 LOG_DIR env 可配（相对路径基于项目根解析，默认 data/logs，与 backend 语义一致）
  * - 请求级 requestId 经 AsyncLocalStorage 传播（纯 Node 能力，非第三方依赖）
  */
 
 const fs = require('fs');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
+const { PROJECT_ROOT } = require('./constants');
 
 const SERVICE_NAME = 'storage-service';
 const LEVELS = ['debug', 'info', 'warn', 'error'];
@@ -23,8 +24,9 @@ const requestStore = new AsyncLocalStorage();
 
 function getLogDir() {
   const raw = process.env.LOG_DIR || 'data/logs';
-  // 相对路径基于包根解析（lib/ 的上级），避免随 cwd 漂移写入外部目录
-  return path.isAbsolute(raw) ? raw : path.resolve(__dirname, '..', raw);
+  // 相对路径基于项目根解析（与 backend 语义一致），日志统一落 data/logs/<service>/，
+  // 避免随包内 __dirname 漂移到包内 data（各服务日志散落在 packages/*/data 的问题）
+  return path.isAbsolute(raw) ? raw : path.resolve(PROJECT_ROOT, raw);
 }
 
 function getRetentionDays() {
@@ -134,4 +136,4 @@ function runWithRequest(requestId, fn) {
   return requestStore.run({ requestId }, fn);
 }
 
-module.exports = { log, resolveRequestId, runWithRequest };
+module.exports = { log, resolveRequestId, runWithRequest, getLogDir };

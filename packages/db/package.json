@@ -16,10 +16,10 @@
     "prisma/schema.prisma"
   ],
   "scripts": {
-    "db:generate": "prisma generate",
+    "db:generate": "node scripts/clean-dir.js src/generated/client && prisma generate",
     "build": "pnpm db:generate && pnpm clean && tsc",
     "type-check": "tsc --noEmit",
-    "clean": "node -e \"const fs=require('node:fs');const {execSync}=require('node:child_process');for(let i=0;i<5;i++){try{fs.rmSync('dist',{recursive:true,force:true});break}catch(e){if(i===4)throw e;execSync(process.platform==='win32'?'timeout /t 1 /nobreak >nul':'sleep 1',{stdio:'ignore'})}}\""
+    "clean": "node scripts/clean-dir.js dist"
   },
   "dependencies": {
     "@prisma/client": "^7.1.0"

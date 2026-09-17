@@ -54,7 +54,6 @@ const {
   getMobileAccessPath,
   NODE_EXE,
   PM2_JS,
-  PM2_CMD,
   PNPM_JS,
 } = require('./lib/context');
 
@@ -83,6 +82,12 @@ const {
 } = require('./lib/prompt');
 const state = require('./lib/state');
 
+// ==================== 运维操作留痕（#418） ====================
+// 每次 CLI 调用记 start 行；进程退出记 exit 行（含退出码）。
+const { recordStart, installExitHook } = require('./lib/ops-log');
+recordStart(args);
+installExitHook();
+
 // ==================== 命令模块（拆分至 commands/*） ====================
 
 const {
@@ -109,6 +114,7 @@ const {
 const { startOnly, startMode } = require('./commands/start');
 const { devMode } = require('./commands/dev');
 const { deployMode } = require('./commands/deploy');
+const { mfaTotpUnbind } = require('./commands/mfa');
 
 
 async function databaseBackupMenu() {
@@ -179,6 +185,7 @@ const menuItems = [
   { key: '10', label: '数据库备份与恢复', action: databaseBackupMenu },
   { key: 's', label: '图纸版本检查', action: () => versionHelper.runHealthCheck({ silent: false }) },
   { key: 'v', label: '图纸版本验证', action: () => versionHelper.runVerification({ silent: false }) },
+  { key: 'u', label: '解绑管理员 TOTP（#415 恢复通道）', action: () => mfaTotpUnbind() },
   { key: '0', label: '停止服务', action: stopInfrastructure },
   { key: 'q', label: '退出', action: () => process.exit(0) },
 ];
@@ -314,6 +321,7 @@ async function bootstrap() {
       logs: viewLogs,
       'version:check': () => versionHelper.runHealthCheck({ silent: false }),
       'version:verify': () => versionHelper.runVerification({ silent: false }),
+      'mfa:totp-unbind': () => mfaTotpUnbind(),
     };
 
     const cmd = commandMap[args[0]];
@@ -334,6 +342,10 @@ async function bootstrap() {
       // 支持 db:restore <文件>
       else if (args[0] === 'db:restore' && args[1]) {
         await restoreDatabase(args[1]);
+      }
+      // 支持 mfa:totp-unbind <username>（#415 管理员 TOTP 解绑恢复）
+      else if (args[0] === 'mfa:totp-unbind') {
+        await mfaTotpUnbind(args[1]);
       } else {
         await cmd();
       }
@@ -341,7 +353,7 @@ async function bootstrap() {
       log('red', `未知命令: ${args[0]}`);
       log(
         'cyan',
-        '可用命令: dev, deploy, start, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, version:check, version:verify'
+        '可用命令: dev, deploy, start, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, version:check, version:verify, mfa:totp-unbind'
       );
       log('cyan', '  deploy             : 交互式部署，询问是否构建');
       log(

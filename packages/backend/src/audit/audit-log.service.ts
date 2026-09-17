@@ -443,45 +443,11 @@ export class AuditLogService {
       take: EXPORT_MAX_ROWS,
     });
 
-    const header = [
-      '时间',
-      '操作用户',
-      '操作',
-      '资源类型',
-      '资源名称',
-      '资源ID',
-      '项目ID',
-      'IP地址',
-      '是否成功',
-      '错误信息',
-      '参数',
-    ];
-
-    const rows = logs.map((log) => [
-      log.createdAt.toISOString(),
-      log.user?.username || log.user?.email || log.userId,
-      log.action,
-      log.resourceType,
-      log.resourceName ?? '',
-      log.resourceId ?? '',
-      log.projectId ?? '',
-      log.ipAddress ?? '',
-      log.success ? '是' : '否',
-      log.errorMessage ?? '',
-      log.params ? JSON.stringify(log.params) : '',
-    ]);
-
-    const csv = [header, ...rows]
-      .map((row) => row.map(escapeCsvField).join(','))
-      .join('\r\n');
-
-    // UTF-8 BOM：Excel 直接打开不乱码
-    const buffer = Buffer.from(`\uFEFF${csv}`, 'utf8');
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const filename = `audit-logs-${dateStr}.csv`;
 
     return {
-      buffer,
+      buffer: buildAuditCsv(logs),
       filename,
       mimeType: 'text/csv; charset=utf-8',
     };
@@ -548,12 +514,14 @@ export class AuditLogService {
   /**
    * 清理旧审计日志
    *
+   * 注意：本方法不做归档校验（供 cron 直删分支与已通过 #323 前置门禁的
+   * 手动清理复用）；手动入口的"未归档拒删"校验在 Controller 编排。
+   *
    * @param daysToKeep 保留天数
    * @returns 删除的记录数
    */
   async cleanupOldLogs(daysToKeep: number, userId: string = 'unknown'): Promise<number> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+    const cutoffDate = computeRetentionCutoff(new Date(), daysToKeep);
 
     const result = await this.prisma.auditLog.deleteMany({
       where: {
@@ -567,6 +535,17 @@ export class AuditLogService {
 
     return result.count;
   }
+}
+
+/**
+ * 按保留天数计算清理截止时间（#323 提取共享）：
+ * 手动清理入口（Controller 归档校验）与 cleanupOldLogs 必须使用同一 cutoff 口径，
+ * 保证"校验的时间段"与"删除的时间段"严格一致。
+ */
+export function computeRetentionCutoff(now: Date, daysToKeep: number): Date {
+  const cutoffDate = new Date(now);
+  cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+  return cutoffDate;
 }
 
 /**
@@ -604,6 +583,46 @@ export function splitQueryValues(value?: string): string[] | undefined {
     .map((v) => v.trim())
     .filter(Boolean);
   return values.length > 0 ? values : undefined;
+}
+
+/**
+ * 审计日志 CSV 构建（#322 提取共享：exportLogs 与 AuditArchiveService 归档分片复用，
+ * 字段/编码单一事实源）。UTF-8 BOM：Excel 直接打开不乱码。
+ */
+export function buildAuditCsv(logs: AuditLogListItem[]): Buffer {
+  const header = [
+    '时间',
+    '操作用户',
+    '操作',
+    '资源类型',
+    '资源名称',
+    '资源ID',
+    '项目ID',
+    'IP地址',
+    '是否成功',
+    '错误信息',
+    '参数',
+  ];
+
+  const rows = logs.map((log) => [
+    log.createdAt.toISOString(),
+    log.user?.username || log.user?.email || log.userId,
+    log.action,
+    log.resourceType,
+    log.resourceName ?? '',
+    log.resourceId ?? '',
+    log.projectId ?? '',
+    log.ipAddress ?? '',
+    log.success ? '是' : '否',
+    log.errorMessage ?? '',
+    log.params ? JSON.stringify(log.params) : '',
+  ]);
+
+  const csv = [header, ...rows]
+    .map((row) => row.map(escapeCsvField).join(','))
+    .join('\r\n');
+
+  return Buffer.from(`\uFEFF${csv}`, 'utf8');
 }
 
 /**

@@ -738,16 +738,6 @@
   }
 }
 
-/* 5.5 骨架屏闪光 */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 /* 5.6 旋转 */
 @keyframes spin {
   to {
@@ -830,18 +820,6 @@
 
 .animate-spin {
   animation: spin 0.8s linear infinite;
-}
-
-/* 6.2 骨架屏 */
-.skeleton-theme {
-  background: linear-gradient(
-    90deg,
-    var(--bg-tertiary) 25%,
-    var(--bg-secondary) 50%,
-    var(--bg-tertiary) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
 }
 
 /* 6.3 玻璃态效果 */

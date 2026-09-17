@@ -34,13 +34,7 @@ export const RecentFilesSection: React.FC<RecentFilesSectionProps> = ({
     variant="outlined"
     className="rounded-2xl"
   >
-    {loading ? (
-      <div className="space-y-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 rounded-xl skeleton-theme" />
-        ))}
-      </div>
-    ) : files.length > 0 ? (
+    {!loading && files.length > 0 ? (
       <div className="space-y-1">
         {files.map((file) => (
           <FileItem

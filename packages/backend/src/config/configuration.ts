@@ -13,6 +13,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import type { AppConfig } from './app.config';
+import { resolvePiiKey } from '../common/pii/pii-crypto.service';
 
 /**
  * 判断当前操作系统是否为 Windows
@@ -139,7 +140,14 @@ export default (): AppConfig => {
   );
 
   if (isProduction) {
-    const requiredVars = ['JWT_SECRET', 'DB_PASSWORD', 'SESSION_SECRET'];
+    // #419 等保 8.1.2.2：REDIS_PASSWORD 生产必填——内部链路 Redis 须 requirepass，
+    // 防止同机/同网段未授权直连。dev 放行（本地 Redis 无密码）。
+    const requiredVars = [
+      'JWT_SECRET',
+      'DB_PASSWORD',
+      'SESSION_SECRET',
+      'REDIS_PASSWORD',
+    ];
     const missingVars = requiredVars.filter(
       (v) => !process.env[v] || process.env[v]!.trim() === ''
     );
@@ -162,6 +170,30 @@ export default (): AppConfig => {
       ),
       expiresIn: process.env.JWT_EXPIRES_IN || '1h',
       refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    },
+
+    // TOTP 双因素（#415）：secret 密文存储的加密密钥；缺省回退 JWT_SECRET
+    totp: {
+      encryptionKey:
+        process.env.TOTP_ENCRYPTION_KEY ||
+        getRequiredEnv('JWT_SECRET', 'dev-only-jwt-secret-change-me'),
+    },
+
+    // PII 字段级加密（#417 等保 8.1.4.8）：phone/email 密文存储 + HMAC 归一化索引密钥；
+    // env 显式设置时启动即校验（必须解码为 32 字节），缺省回退 JWT 密钥（开发环境可用）。
+    // 以 hex 字符串形式存入配置（Buffer 非基础类型，ConfigService 路径类型推断不兼容）
+    pii: {
+      encryptionKey: resolvePiiKey(
+        process.env.PII_ENCRYPTION_KEY,
+        getRequiredEnv('JWT_SECRET', 'dev-only-jwt-secret-change-me')
+      ).toString('hex'),
+      hmacKey: resolvePiiKey(
+        process.env.PII_HMAC_KEY,
+        getRequiredEnv(
+          'JWT_REFRESH_SECRET',
+          'dev-only-jwt-refresh-secret-change-me'
+        )
+      ).toString('hex'),
     },
 
     database: {
@@ -559,21 +591,92 @@ export default (): AppConfig => {
       ),
     },
 
-    // 审计日志配置（#207/ADR-0045：默认保留 180 天；旧变量 AUDIT_RETENTION_DAYS 兼容回退）
+    // 口令策略配置（#416 等保 8.1.4.1 a)/b)）
+    // 复杂度：≥minLength 位 + 大小写/数字/特殊字符四类至少三类 + 弱口令黑名单
+    // 定期更换（仅 ADMIN 角色生效）：maxAgeDays 天到期强制改密，提前 expiringSoonDays 天提示
+    passwordPolicy: {
+      minLength: parseInt(process.env.PASSWORD_POLICY_MIN_LENGTH || '10', 10),
+      maxAgeDays: parseInt(process.env.PASSWORD_POLICY_MAX_AGE_DAYS || '180', 10),
+      expiringSoonDays: parseInt(
+        process.env.PASSWORD_POLICY_EXPIRING_SOON_DAYS || '14',
+        10
+      ),
+      // 定期更换 / 首登未改密「强制改密」总开关（默认关闭；PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED=true 开启，仅 ADMIN 角色）
+      changeEnforceEnabled: parseBoolean(
+        process.env.PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED,
+        false
+      ),
+    },
+
+    // 账号失败锁定配置（#416 等保 8.1.4.1 c) 防暴力破解）
+    // 与 authRateLimit（5次/60s 频率限流）独立叠加：failThreshold 次失败（windowSeconds 窗口内）→ 锁 durationSeconds
+    // 锁期内正确密码也拒绝并告知剩余时间，到期自愈；Redis 故障降级进程内计数
+    accountLock: {
+      failThreshold: parseInt(process.env.AUTH_LOCK_FAIL_THRESHOLD || '10', 10),
+      windowSeconds: parseInt(
+        process.env.AUTH_LOCK_WINDOW_SECONDS || '900',
+        10
+      ),
+      durationSeconds: parseInt(
+        process.env.AUTH_LOCK_DURATION_SECONDS || '1800',
+        10
+      ),
+    },
+
+    // 审计日志配置（#207/ADR-0045；#322：默认 183 天（>6 个月整）+ 按月归档 CSV）
     audit: {
       retentionDays:
         parseInt(
           process.env.AUDIT_LOG_RETENTION_DAYS ||
             process.env.AUDIT_RETENTION_DAYS ||
-            '180',
+            '183',
           10
-        ) || 180,
+        ) || 183,
+      // #322 fail-closed：true 时超期记录先按月归档 CSV + SHA-256 清单，成功才删库；
+      // false 时直接按保留天数删除。等保 8.4.3.3/8.4.7.2 验收需开启。
+      archiveEnabled: parseBoolean(process.env.AUDIT_ARCHIVE_ENABLED, false),
+      archivePath: resolvePath(
+        process.env.AUDIT_ARCHIVE_PATH || 'data/archives/audit-logs'
+      ),
     },
 
-    // 后台任务执行记录保留策略（#271：默认保留 30 天，无界增长治理）
+    // 后台任务执行记录保留策略（#271 无界增长治理；#326 默认 180 天，运维排查窗口与等保对齐）
     taskRun: {
       retentionDays:
-        parseInt(process.env.TASK_RUN_RETENTION_DAYS || '30', 10) || 30,
+        parseInt(process.env.TASK_RUN_RETENTION_DAYS || '180', 10) || 180,
+    },
+
+    // 数据库备份配置（#318：每日全量 pg_dump -Fc + 本地轮转；#320：月度恢复演练）
+    backup: {
+      enabled: parseBoolean(process.env.BACKUP_ENABLED, true),
+      dir: resolvePath(process.env.BACKUP_DIR || 'data/backups'),
+      keepLocal: parseInt(process.env.BACKUP_KEEP_LOCAL || '14', 10) || 14,
+      cron: process.env.BACKUP_CRON || '0 1 * * *',
+      pgDumpPath: process.env.PG_DUMP_PATH || '',
+      drillEnabled: parseBoolean(process.env.BACKUP_DRILL_ENABLED, true),
+      drillTables: (
+        process.env.BACKUP_DRILL_TABLES ||
+        'audit_logs,alert_records,task_runs,users'
+      )
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean),
+      // 异地推送（#319，ADR-0055 §5：none/rsync/oss/s3 三通道可配，失败告警 P1）
+      remote: {
+        type: (process.env.BACKUP_REMOTE_TYPE || 'none') as AppConfig['backup']['remote']['type'],
+        host: process.env.BACKUP_REMOTE_HOST || '',
+        user: process.env.BACKUP_REMOTE_USER || '',
+        path: process.env.BACKUP_REMOTE_PATH || '',
+        keep:
+          parseInt(process.env.BACKUP_REMOTE_KEEP || '14', 10) || 14,
+        endpoint: process.env.BACKUP_REMOTE_ENDPOINT || '',
+        bucket: process.env.BACKUP_REMOTE_BUCKET || '',
+        accessKey: process.env.BACKUP_REMOTE_ACCESS_KEY || '',
+        secret: process.env.BACKUP_REMOTE_SECRET || '',
+        rsyncPath: process.env.BACKUP_RSYNC_PATH || '',
+        ossutilPath: process.env.BACKUP_OSSUTIL_PATH || '',
+        awsCliPath: process.env.BACKUP_AWS_CLI_PATH || '',
+      },
     },
 
     // 告警邮件通知（#311：P0 实时邮件 + 恢复通知 + 连续失败升级）
@@ -597,6 +700,11 @@ export default (): AppConfig => {
     // /api/metrics；未配置时保持原有 SYSTEM_MONITOR 权限控制（兼容现有行为）
     metrics: {
       scrapeToken: process.env.SCRAPE_TOKEN || '',
+      // 主机级指标磁盘采样路径（ADR-0055 §4 / #316）：逗号分隔，默认进程工作目录
+      hostDiskPaths: (process.env.HOST_METRIC_DISK_PATHS || process.cwd())
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean),
     },
 
     // 管理员登录 IP 白名单本地文件兜底通道（相对路径基于项目根目录解析）
@@ -627,8 +735,11 @@ export default (): AppConfig => {
         24,
       dbRetentionDays:
         parseInt(process.env.BATCH_DOWNLOAD_DB_RETENTION_DAYS || '7', 10) || 7,
+      // 批量下载进程内转换并行度（Semaphore）。默认 2：8 核机器上 3 个重格式并发 + 常驻服务
+      // 会抢光 CPU 致单转换 >60s 超时失败（ADR-0060 事故根因）；削到 2 让单转换 CPU 充足、
+      // 60s 内转完 → 结果缓存能落盘 → 破「失败→重提交」循环。可按机器核数经 env 调。
       maxConcurrency:
-        parseInt(process.env.BATCH_DOWNLOAD_MAX_CONCURRENCY || '3', 10) || 3,
+        parseInt(process.env.BATCH_DOWNLOAD_MAX_CONCURRENCY || '2', 10) || 2,
       // 批量转换是否委托 conversion-service 服务（默认关闭，走进程内 mxcad conversionService）
       delegateWorkflow: parseBoolean(
         process.env.BATCH_DOWNLOAD_DELEGATE_WORKFLOW,

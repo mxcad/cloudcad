@@ -12,6 +12,7 @@
 
 import { forwardRef, Module } from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
+import { AuditArchiveService } from './audit-archive.service';
 import { AuditLogger, registerAuditLoggerInstance } from './audit-logger.service';
 import { AuditLogController } from './audit-log.controller';
 import { ProjectAuditLogController } from './project-audit-log.controller';
@@ -41,6 +42,8 @@ import { ClsService } from 'nestjs-cls';
   controllers: [AuditLogController, ProjectAuditLogController],
   providers: [
     AuditLogService,
+    // #322：超期审计日志按月归档 CSV + SHA-256 清单（fail-closed），供 audit-cleanup 调度器消费
+    AuditArchiveService,
     {
       provide: AuditLogger,
       useFactory: (auditLogService: AuditLogService, cls: ClsService) => {
@@ -53,6 +56,6 @@ import { ClsService } from 'nestjs-cls';
       inject: [AuditLogService, ClsService],
     },
   ],
-  exports: [AuditLogService, AuditLogger],
+  exports: [AuditLogService, AuditArchiveService, AuditLogger],
 })
 export class AuditLogModule {}

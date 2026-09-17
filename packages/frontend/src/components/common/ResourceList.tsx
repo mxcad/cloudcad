@@ -21,10 +21,8 @@ import { Button } from '@/components/ui/Button';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { Pagination } from '@/components/ui/Pagination';
 import { ViewToggle } from '@/components/common/ViewToggle';
-import { ListSkeleton } from '@/components/common/ListSkeleton';
 import { ScrollToTopButton } from '@/components/common/ScrollToTopButton';
 import { useRubberBandSelection } from '@/hooks/common/useRubberBandSelection';
-import { useDelayedLoading } from '@/hooks/common/useDelayedLoading';
 import { t } from '@/languages';
 import { CascadeCategorySelector } from './CascadeCategorySelector';
 import { useResourceListScroll } from './useResourceListScroll';
@@ -35,7 +33,6 @@ export type { ResourceItem, ViewMode } from './ResourceListTypes';
 
 const PaginationMemo = React.memo(Pagination);
 import styles from './ResourceList.module.css';
-import sidebarStyles from '@/components/sidebar/sidebar.module.css';
 
 /** 资源列表组件 */
 export const ResourceList: React.FC<ResourceListProps> = ({
@@ -115,10 +112,6 @@ export const ResourceList: React.FC<ResourceListProps> = ({
     onPageChange,
     itemContainerRef,
   });
-
-  // 防闪烁：loading 快速结束（缓存命中/快速返回）时不闪现骨架，
-  // 延迟窗口期内渲染空白（而不是提前渲染空态）
-  const showSkeleton = useDelayedLoading(!!loading);
 
   // Rubber band selection
   const {
@@ -253,29 +246,9 @@ export const ResourceList: React.FC<ResourceListProps> = ({
           <div
             style={onRubberBandSelect ? { position: 'relative' } : undefined}
           >
-            {loading && !loadingTimedOut && items.length === 0 ? (
-              showSkeleton ? (
-                <div className={sidebarStyles.skeletonContainer}>
-                  <div className={sidebarStyles.skeletonList}>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className={sidebarStyles.skeletonItem}>
-                        <div className={sidebarStyles.skeletonIcon} />
-                        <div className={sidebarStyles.skeletonText}>
-                          <div
-                            className={sidebarStyles.skeletonLine}
-                            style={{ width: '60%' }}
-                          />
-                          <div
-                            className={sidebarStyles.skeletonLine}
-                            style={{ width: '40%' }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null
-            ) : items.length === 0 && error ? (
+            {loading &&
+            !loadingTimedOut &&
+            items.length === 0 ? null : items.length === 0 && error ? (
               <div className={styles.emptyState}>
                 <AlertCircle size={48} className={styles.emptyIcon} />
                 <div className={styles.emptyText}>{error}</div>
@@ -334,14 +307,14 @@ export const ResourceList: React.FC<ResourceListProps> = ({
             {onRubberBandSelect && rubberBandOverlay}
           </div>
 
-          {/* 加载更多触发元素（底部指示：加载中骨架 / 翻页失败提示 / 已经是最后一页） */}
+          {/* 加载更多触发元素（底部指示：加载中提示 / 翻页失败提示 / 已经是最后一页） */}
           {items.length > 0 && paginationEnabled && (
             <div className={styles.loadMoreTrigger}>
               {showBottomLoader ? (
-                <ListSkeleton
-                  variant={viewMode === 'list' ? 'list' : 'grid'}
-                  count={viewMode === 'list' ? 3 : 6}
-                />
+                <div className={styles.loadingMore}>
+                  <Loader2 size={20} className={styles.loadingMoreIcon} />
+                  <span>{t('加载中...')}</span>
+                </div>
               ) : loadError ? (
                 <div
                   data-testid="load-more-error"

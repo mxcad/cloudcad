@@ -14,6 +14,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { PRODUCT_NAME } = require('./lib/branding');
+const { resolveMxcadAssemblyPath } = require('./lib/mxcad-path');
+const { fillEmptySecrets } = require('./setup-offline');
 
 // ==================== 配置 ====================
 
@@ -31,6 +33,82 @@ const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PM2_HOME = path.join(DATA_DIR, 'pm2');
 const LOGS_DIR = path.join(DATA_DIR, 'logs');
+
+// Prisma schema-engine 预置二进制（pack-offline.js bundlePrismaSchemaEngine 预置到
+// runtime/prisma-engines/，含全平台二进制）。pnpm store manifest 不引用 postinstall 下载的
+// schema-engine，部署机重建 @prisma/engines 包目录缺该二进制 → prisma CLI（getEnginesPath）
+// 找不到 → 回退联网下载 → 断网 migrate deploy 失败。故设 PRISMA_SCHEMA_ENGINE_BINARY 指向
+// 预置二进制（绝对路径，prisma CLI Ry() 按 process.cwd() 解析）。
+//
+// 二进制按平台区分（debian/rhel/musl × openssl 版本 × arch）。选择策略：
+//   - Windows：schema-engine-windows.exe。
+//   - Linux：优先选与当前平台匹配的二进制（复刻 prisma CLI 平台检测：/etc/os-release →
+//     distro family，openssl 版本 → libssl 后缀，arch → 文件名）；匹配不到则回退到
+//     静态链接的 schema-engine-debian-openssl-1.1.x（无运行时 openssl 依赖，glibc 通用，
+//     经验证在 ubuntu22 上 ldd 无 libssl 依赖、可正常运行），最后回退任意非 windows 二进制。
+function detectLinuxSchemaEngineName() {
+  try {
+    // distro family：alpine→musl；centos/rhel/rocky/almalinux/fedora/suse→rhel；其余→debian
+    let family = 'debian';
+    try {
+      const osRelease = fs.readFileSync('/etc/os-release', 'utf-8');
+      const id = ((osRelease.match(/(^|\n)ID="?([^"\n]*)"?/i) || [])[2] || '').toLowerCase();
+      const idLike = ((osRelease.match(/(^|\n)ID_LIKE="?([^"\n]*)"?/i) || [])[2] || '').toLowerCase();
+      const ids = `${id} ${idLike}`;
+      if (ids.includes('alpine')) family = 'musl';
+      else if (/rhel|centos|rocky|almalinux|fedora|amzn|\bol\b|suse/.test(ids)) family = 'rhel';
+      else family = 'debian'; // ubuntu/debian/raspbian 等默认 debian
+    } catch { /* 保持默认 debian */ }
+    // openssl 版本：优先 ldconfig 检测 libssl.so（libssl.so.3→3.0.x、libssl.so.1.1→1.1.x），
+    // 其次 openssl version -v
+    let libssl = '';
+    try {
+      const out = execSync('ldconfig -p 2>/dev/null', { encoding: 'utf-8' });
+      const m = out.match(/libssl\.so\.(\d+)(?:\.(\d+))?/);
+      if (m) libssl = `${m[1]}.${m[2] || '0'}.x`;
+    } catch { /* 继续 */ }
+    if (!libssl) {
+      try {
+        const out = execSync('openssl version -v 2>/dev/null', { encoding: 'utf-8' });
+        const m = out.match(/^OpenSSL\s(\d+)\.(\d+)\.\d+/);
+        if (m) libssl = `${m[1]}.${m[2]}.x`;
+      } catch { /* 继续 */ }
+    }
+    const arch = process.arch === 'arm64' ? 'arm64' : '';
+    if (family === 'musl') {
+      return arch ? `schema-engine-linux-musl-${arch}-openssl-${libssl}` : 'schema-engine-linux-musl';
+    }
+    const archSuffix = arch ? `-${arch}` : '';
+    const libsslSuffix = libssl ? `-openssl-${libssl}` : '';
+    return `schema-engine-${family}${archSuffix}${libsslSuffix}`;
+  } catch {
+    return null;
+  }
+}
+
+function getPrismaSchemaEnginePath() {
+  const enginesDir = path.join(PROJECT_ROOT, 'runtime', 'prisma-engines');
+  if (!fs.existsSync(enginesDir)) return null;
+  const engines = fs
+    .readdirSync(enginesDir)
+    .filter((f) => f.startsWith('schema-engine') && !f.endsWith('.sha256'));
+  if (engines.length === 0) return null;
+  if (IS_WINDOWS) {
+    const win = engines.find((f) => f === 'schema-engine-windows.exe');
+    return path.join(enginesDir, win || engines[0]);
+  }
+  // Linux：优先平台匹配二进制，回退静态 debian（glibc 通用），最后任意非 windows
+  const detected = detectLinuxSchemaEngineName();
+  if (detected) {
+    const match = engines.find((f) => f === detected);
+    if (match) return path.join(enginesDir, match);
+  }
+  const fallback =
+    engines.find((f) => f === 'schema-engine-debian-openssl-1.1.x') ||
+    engines.find((f) => !f.includes('windows')) ||
+    engines[0];
+  return path.join(enginesDir, fallback);
+}
 
 // 从 .env 文件读取端口配置
 const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
@@ -66,6 +144,7 @@ function getPorts() {
     postgresql: 5432,
     redis: 6379,
     cooperate: 3091,
+    conversion: 3100,
   };
 
   try {
@@ -82,6 +161,9 @@ function getPorts() {
       redis: parseInt(envConfig.REDIS_PORT || '6379', 10) || defaults.redis,
       cooperate:
         parseInt(envConfig.COOPERATE_PORT || '3091', 10) || defaults.cooperate,
+      conversion:
+        parseInt(envConfig.CONVERSION_SERVICE_PORT || '3100', 10) ||
+        defaults.conversion,
     };
   } catch (err) {
     return defaults;
@@ -94,6 +176,54 @@ const PORTS = getPorts();
 // 超时配置
 const MAX_STARTUP_WAIT = 120000; // 120秒
 const HEALTH_CHECK_INTERVAL = 2000; // 2秒
+
+/**
+ * 转换服务（conversion-service）启动配置（与 start.js 逻辑一致，D5：验收器独立，
+ * 用本文件自己的 parseEnvFileSimple 而非 lib/*）。
+ * 仅当后端 FUNCTION_EXECUTOR=conversion-service 时启用；Redis 连接/密码从后端 .env 同步。
+ */
+function getConversionServiceConfig() {
+  const dist = path.join(
+    PROJECT_ROOT,
+    'packages',
+    'conversion-service',
+    'dist',
+    'server.js'
+  );
+  const envConfig = parseEnvFileSimple(BACKEND_ENV_PATH);
+  const executor = (envConfig.FUNCTION_EXECUTOR || 'process-pool').toLowerCase();
+  if (executor !== 'conversion-service') {
+    return { enabled: false, dist, env: {} };
+  }
+  const redisHost = envConfig.REDIS_HOST || 'localhost';
+  const redisPort = envConfig.REDIS_PORT || '6379';
+  const redisDb = envConfig.REDIS_DB || '0';
+  const redisPassword = envConfig.REDIS_PASSWORD || '';
+  const auth = redisPassword ? `:${redisPassword}@` : '';
+  const env = {
+    NODE_ENV: 'production',
+    CONVERSION_SERVICE_PORT: String(PORTS.conversion),
+    REDIS_URL: `redis://${auth}${redisHost}:${redisPort}/${redisDb}`,
+    QUEUE_DRIVER: 'redis',
+    ...(envConfig.INTERNAL_SERVICE_SECRET
+      ? { INTERNAL_SERVICE_SECRET: envConfig.INTERNAL_SERVICE_SECRET }
+      : {}),
+    // S1-2 批量管理路由鉴权（同 start.js）：注入 CONVERSION_SERVICE_SECRET，
+    // 使验收器拉起的转换服务能校验后端批量路由的 X-Conversion-Service-Secret 头。
+    ...(envConfig.CONVERSION_SERVICE_SECRET
+      ? { CONVERSION_SERVICE_SECRET: envConfig.CONVERSION_SERVICE_SECRET }
+      : {}),
+  };
+  // mxcad 二进制绝对路径（同 start.js：conversion-service dist 布局下 PROJECT_ROOT 会算错）
+  // 跨平台误配置回退走 lib/mxcad-path.js（同 start.js）：后端自身会回退 Linux 上的 Windows
+  // .exe 配置，但转换服务直接读该 env 无守卫——原样注入会让它去 spawn 部署包里不存在的
+  // runtime/windows/mxcad/mxcadassembly.exe → 每次转换 ENOENT。
+  const mxcadAssemblyRaw = resolveMxcadAssemblyPath(envConfig);
+  env.MXCAD_ASSEMBLY_PATH = path.isAbsolute(mxcadAssemblyRaw)
+    ? mxcadAssemblyRaw
+    : path.join(PROJECT_ROOT, mxcadAssemblyRaw);
+  return { enabled: true, dist, env };
+}
 
 // 可执行文件路径
 const NODE_EXE = USE_RUNTIME
@@ -204,6 +334,11 @@ function runPnpm(args, options = {}) {
     // Prisma: 使用已下载的二进制，不要联网下载
     PRISMA_CLI_BINARY_TARGETS: PRISMA_BINARY_TARGETS,
   };
+  // Prisma schema-engine 预置二进制（离线 migrate deploy 用，见 getPrismaSchemaEnginePath）
+  const schemaEnginePath = getPrismaSchemaEnginePath();
+  if (schemaEnginePath) {
+    env.PRISMA_SCHEMA_ENGINE_BINARY = schemaEnginePath;
+  }
 
   if (PNPM_JS && fs.existsSync(PNPM_JS)) {
     return runCommand(NODE_EXE, [PNPM_JS, ...args], { ...options, env });
@@ -428,6 +563,12 @@ async function step2_InstallDeps() {
  */
 async function step3_StartInfrastructure() {
   logStep(3, 7, '启动基础服务...');
+
+  // 生成 .env 空白密钥（SESSION_SECRET/JWT_SECRET/PII_*/REDIS_PASSWORD/INTERNAL_SERVICE_SECRET）。
+  // 验收器不跑 start.js（其 fillEmptySecrets 生成密钥），须自行补齐——否则后端生产模式
+  // 校验 SESSION_SECRET/REDIS_PASSWORD 缺失而启动失败。redis-manager.js 从 .env 读
+  // REDIS_PASSWORD 起 Redis（--requirepass），后端从 .env 读同值连接，须先于基础服务启动生成。
+  fillEmptySecrets(BACKEND_ENV_PATH);
 
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
 
@@ -685,6 +826,52 @@ async function step6_StartFrontend() {
   }
 
   logSuccess('前端服务已就绪');
+
+  // 转换服务（仅 FUNCTION_EXECUTOR=conversion-service 时）：Redis 连接/密码从后端 .env 同步
+  const conversion = getConversionServiceConfig();
+  if (conversion.enabled) {
+    if (!fs.existsSync(conversion.dist)) {
+      // S9-4：FUNCTION_EXECUTOR=conversion-service 但部署包未含产物属配置/包不一致，
+      // 验收器须捕获（而非降级跳过）——否则断网门禁会"通过"一个转换服务未运行的坏部署
+      logError(
+        'FUNCTION_EXECUTOR=conversion-service 但转换服务构建产物不存在（' +
+          conversion.dist +
+          '）——部署包与配置不一致，验收失败'
+      );
+      return false;
+    } else {
+      log('info', '启动转换服务...');
+      const conversionConfig = {
+        name: 'conversion',
+        script: conversion.dist,
+        cwd: path.join(PROJECT_ROOT, 'packages', 'conversion-service'),
+        autorestart: true,
+        watch: false,
+        max_restarts: 10,
+        env: conversion.env,
+      };
+      const conversionTempConfig = path.join(DATA_DIR, 'pm2-conversion.config.js');
+      fs.writeFileSync(
+        conversionTempConfig,
+        `module.exports = { apps: [${JSON.stringify(conversionConfig)}] };`
+      );
+      if (!runPm2(['start', conversionTempConfig])) {
+        logError('转换服务启动失败');
+        return false;
+      }
+      log('info', '等待转换服务...');
+      if (
+        !(await waitForService('Conversion', () =>
+          checkHealth(PORTS.conversion, '/health')
+        ))
+      ) {
+        logError('转换服务启动超时');
+        return false;
+      }
+      logSuccess('转换服务已就绪');
+    }
+  }
+
   return true;
 }
 
@@ -696,7 +883,8 @@ async function step7_FinalVerification() {
 
   let allPassed = true;
 
-  // 检查各服务状态
+  // 检查各服务状态（ADR-0059 决策 8：全服务健康检查）
+  // optional=true 的服务（cooperate）未就绪只 warn 不 hard-fail（边缘环境可能未安装）
   const services = [
     { name: 'PostgreSQL', port: PORTS.postgresql, type: 'tcp' },
     { name: 'Redis', port: PORTS.redis, type: 'tcp' },
@@ -708,7 +896,19 @@ async function step7_FinalVerification() {
       type: 'http',
     },
     { name: 'Frontend', port: PORTS.frontend, path: '/', type: 'http' },
+    { name: 'Cooperate', port: PORTS.cooperate, type: 'tcp', optional: true },
   ];
+
+  // 转换服务（仅 FUNCTION_EXECUTOR=conversion-service 时纳入健康检查）
+  const conversion = getConversionServiceConfig();
+  if (conversion.enabled && fs.existsSync(conversion.dist)) {
+    services.push({
+      name: 'Conversion',
+      port: PORTS.conversion,
+      path: '/health',
+      type: 'http',
+    });
+  }
 
   for (const service of services) {
     let isReady;
@@ -720,6 +920,11 @@ async function step7_FinalVerification() {
 
     if (isReady) {
       logSuccess(`${service.name}: 端口 ${service.port} 正常`);
+    } else if (service.optional) {
+      log(
+        'warn',
+        `${service.name}: 端口 ${service.port} 无响应（可选服务，可能未安装，不阻断）`
+      );
     } else {
       logError(`${service.name}: 端口 ${service.port} 无响应`);
       allPassed = false;

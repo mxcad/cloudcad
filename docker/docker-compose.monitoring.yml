@@ -37,7 +37,8 @@ services:
       - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - ./data/monitoring/prometheus:/prometheus
     ports:
-      - '${PROM_PORT:-9090}:9090'
+      # #418 端口收口：监控栈仅本机可访问（Grafana 经本机端口或 SSH 隧道访问）
+      - '127.0.0.1:${PROM_PORT:-9090}:9090'
     networks:
       - monitoring-network
       - cloudcad-network
@@ -58,7 +59,8 @@ services:
       - ./monitoring/loki/local-config.yaml:/etc/loki/local-config.yaml:ro
       - ./data/monitoring/loki:/loki
     ports:
-      - '${LOKI_PORT:-3100}:3100'
+      # #418 端口收口：Loki 仅本机可访问
+      - '127.0.0.1:${LOKI_PORT:-3100}:3100'
     networks:
       - monitoring-network
     logging:
@@ -84,7 +86,8 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./data/monitoring/grafana:/var/lib/grafana
     ports:
-      - '${GRAFANA_PORT:-3005}:3000'
+      # #418 端口收口：Grafana 仅本机可访问
+      - '127.0.0.1:${GRAFANA_PORT:-3005}:3000'
     depends_on:
       - prometheus
       - loki
@@ -118,7 +121,8 @@ services:
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ./data/monitoring/alertmanager:/alertmanager
     ports:
-      - '${ALERTMANAGER_PORT:-9093}:9093'
+      # #418 端口收口：Alertmanager 仅本机可访问
+      - '127.0.0.1:${ALERTMANAGER_PORT:-9093}:9093'
     networks:
       - monitoring-network
     logging:

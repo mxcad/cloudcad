@@ -51,6 +51,23 @@ const LOGIN_RESULT = {
   refreshToken: 'rt-dual',
 };
 
+/**
+ * 构造合法未过期 JWT：AuthContext 的 validateToken effect 会解析 exp 判定过期，
+ * 非 JWT 假数据会被按「失效 token」清除登录态（生产 token 均为 JWT）
+ */
+const makeJwt = (expSecondsFromNow = 3600): string => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const payload = btoa(
+    JSON.stringify({
+      exp: Math.floor(Date.now() / 1000) + expSecondsFromNow,
+      sub: 'u9',
+    })
+  );
+  return `${header}.${payload}.test-signature`;
+};
+
+const TXN_JWT = makeJwt();
+
 function setHash(value: string) {
   window.history.replaceState({}, '', `#${value}`);
 }
@@ -156,7 +173,7 @@ describe('wechat dual-instance (AuthContext provider + Login page)', () => {
         data: {
           status: 'completed',
           action: 'login',
-          accessToken: 'at-dual-txn',
+          accessToken: TXN_JWT,
           refreshToken: 'rt-dual-txn',
           user: { id: 'u9', username: 'txn-user' },
         },
@@ -168,7 +185,7 @@ describe('wechat dual-instance (AuthContext provider + Login page)', () => {
       await vi.advanceTimersByTimeAsync(WECHAT_POLL_INTERVAL_MS);
     });
 
-    expect(localStorage.getItem('accessToken')).toBe('at-dual-txn');
+    expect(localStorage.getItem('accessToken')).toBe(TXN_JWT);
     expect(navigate).toHaveBeenCalledWith('/home', { replace: true });
   });
 

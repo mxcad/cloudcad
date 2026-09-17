@@ -20,14 +20,13 @@ import {
   DailyRegistrationsStatsDto,
   PurchasesTierBreakdownDto,
   PurchasesTotalsDto,
+  StatsOverviewDto,
 } from './dto/admin-stats.dto';
 
 /** 统计切日固定按东八区（UTC+8）自然日 */
 const CST_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-/** 区间上限：365 个自然日（含首尾） */
-const MAX_RANGE_DAYS = 365;
 /** 缺省统计范围：最近 30 个自然日（含今天） */
 const DEFAULT_RANGE_DAYS = 30;
 
@@ -56,6 +55,10 @@ interface RefundCountRow {
   count: number;
 }
 
+interface OverviewCountRow {
+  count: number;
+}
+
 interface PurchaseTotalsRow {
   orderCount: number;
   userCount: number;
@@ -72,7 +75,7 @@ interface TierBreakdownRow {
 }
 
 /**
- * 运营统计服务——每日新增用户数、每日会员购买数的实时聚合视图。
+ * 运营统计服务——总量概览、每日新增用户数、每日会员购买数的实时聚合视图。
  *
  * 口径（CONTEXT.md）：
  * - 每日新增用户：users.createdAt 按日聚合，排除软删账号（deletedAt IS NULL）
@@ -83,6 +86,29 @@ interface TierBreakdownRow {
 @Injectable()
 export class AdminStatsService {
   constructor(private readonly prisma: DatabaseService) {}
+
+  /**
+   * 运营总量概览（与统计区间无关的当前存量）：
+   * - totalUsers：当前用户总数（排除软删/注销账号）
+   * - paidUsers：累计付费用户数（历史上任意成功支付过去重计数）
+   */
+  async getOverview(): Promise<StatsOverviewDto> {
+    const userRows = await this.prisma.$queryRaw<OverviewCountRow[]>`
+      SELECT COUNT(*)::int AS "count"
+      FROM users
+      WHERE "deletedAt" IS NULL
+    `;
+    const paidRows = await this.prisma.$queryRaw<OverviewCountRow[]>`
+      SELECT COUNT(DISTINCT "userId")::int AS "count"
+      FROM payment_orders
+      WHERE "status" = ${OrderStatus.SUCCEEDED}
+    `;
+
+    return {
+      totalUsers: userRows[0]?.count ?? 0,
+      paidUsers: paidRows[0]?.count ?? 0,
+    };
+  }
 
   /**
    * 每日新增用户统计。provider 可选过滤注册来源。
@@ -238,7 +264,7 @@ export class AdminStatsService {
   /**
    * 解析并校验统计区间：
    * - 参数必须为合法 YYYY-MM-DD（拒绝 2026-02-31 类溢出日期）
-   * - start ≤ end，跨度 ≤ 365 天
+   * - start ≤ end（运营可查任意跨度，不设上限）
    * - 缺省 endDate=今天（东八区）；缺省 startDate=end-29 天
    */
   private resolveRange(startDate?: string, endDate?: string): ResolvedRange {
@@ -261,11 +287,6 @@ export class AdminStatsService {
 
     if (startDayUtcMs > endDayUtcMs) {
       throw new BadRequestException('startDate 不能晚于 endDate');
-    }
-
-    const spanDays = (endDayUtcMs - startDayUtcMs) / MS_PER_DAY + 1;
-    if (spanDays > MAX_RANGE_DAYS) {
-      throw new BadRequestException(`统计区间不能超过 ${MAX_RANGE_DAYS} 天`);
     }
 
     return {

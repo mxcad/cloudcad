@@ -4,6 +4,7 @@ import { ClsService } from 'nestjs-cls';
 import * as http from 'http';
 import * as https from 'https';
 import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
+import { internalServiceSecretHeader } from '../common/utils/internal-service-auth';
 import type {
   IFunctionExecutor,
   ConversionTask,
@@ -18,6 +19,8 @@ export class HttpConversionExecutor implements IFunctionExecutor {
   private readonly useHttps: boolean;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
+  /** #419：内部服务共享密钥（空则不带头，向后兼容本地开发） */
+  private readonly secretHeaders: Record<string, string>;
 
   constructor(
     private readonly configService: ConfigService,
@@ -31,6 +34,9 @@ export class HttpConversionExecutor implements IFunctionExecutor {
     );
     this.pollTimeoutMs = Number(
       this.configService.get<string>('CONVERSION_SERVICE_POLL_TIMEOUT') || 300000,
+    );
+    this.secretHeaders = internalServiceSecretHeader(
+      this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
     );
   }
 
@@ -85,9 +91,38 @@ export class HttpConversionExecutor implements IFunctionExecutor {
           }
         : undefined,
       error: response.error,
+      // 永久失败标记（S6-7）：conversion-service GET /tasks/:taskId 透传（仅 conversion-service 模式有）
+      permanent: response.permanent === true,
+      // 排队位置（S6-5）：conversion-service GET /tasks/:taskId 透传（仅排队中任务有意义，否则 null）
+      queuePosition:
+        typeof response.queuePosition === 'number'
+          ? response.queuePosition
+          : undefined,
       createdAt: new Date(response.createdAt),
       updatedAt: new Date(response.updatedAt),
     };
+  }
+
+  /**
+   * 取消任务（#463）：转发到 conversion-service 的取消路由
+   * （排队中出队 / 运行中杀 mxcadassembly 进程组）。
+   */
+  async cancelTask(taskId: string): Promise<{
+    ok: boolean;
+    status?: string;
+    reason?: string;
+  }> {
+    try {
+      const response = await this.request(
+        `/v1/conversions/tasks/${encodeURIComponent(taskId)}/cancel`,
+        'POST'
+      );
+      return { ok: true, status: response.status };
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      // 409（终态不可取消）/ 404（任务不存在）等：透传为 ok=false + reason
+      return { ok: false, reason: errMsg };
+    }
   }
 
   private async waitForTerminal(taskId: string): Promise<ConversionResult> {
@@ -138,6 +173,8 @@ export class HttpConversionExecutor implements IFunctionExecutor {
             },
             'http-conversion',
           ),
+          // #419：内部服务共享密钥
+          ...this.secretHeaders,
         },
         timeout: 300000,
       };

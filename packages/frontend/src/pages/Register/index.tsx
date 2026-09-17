@@ -84,11 +84,44 @@ export const Register: React.FC = () => {
   // Watch password for strength indicator
   const passwordValue = watch('password');
 
+  // 注册成功后跳回移动端 URL（window.open 跨域 redirect 模式，与 Login 页对齐）：
+  // 移动端经 getPCRegisterUrl(redirect) 打开本页，注册成功自动登录后带 token 跳回，
+  // 移动端 extractTokensFromUrl 写入 token 并同步原标签页
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
+      const params = new URLSearchParams(location.search);
+      const redirectParam = params.get('redirect');
+      if (redirectParam) {
+        try {
+          const redirectUrl = new URL(redirectParam, window.location.origin);
+          if (redirectUrl.origin !== window.location.origin) {
+            // 跨域 redirect（移动端 window.open 打开）：带 token 跳回移动端
+            const accessToken = localStorage.getItem('accessToken');
+            if (accessToken) {
+              redirectUrl.searchParams.set('accessToken', accessToken);
+              const refreshToken = localStorage.getItem('refreshToken');
+              if (refreshToken) {
+                redirectUrl.searchParams.set('refreshToken', refreshToken);
+              }
+              const user = localStorage.getItem('user');
+              if (user) {
+                redirectUrl.searchParams.set('user', user);
+              }
+              window.location.href = redirectUrl.toString();
+              return;
+            }
+          } else {
+            // 同域 redirect：token 已在共享 localStorage，直接跳回
+            navigate(redirectParam, { replace: true });
+            return;
+          }
+        } catch {
+          // redirect 不是合法 URL，回退首页
+        }
+      }
       navigate('/', { replace: true });
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, location.search]);
 
   // 检查是否有预填信息（从登录页跳转过来）
   useEffect(() => {

@@ -83,3 +83,23 @@ scrape_configs:
             duration_ms: duration
       - labels:
           status:
+
+  # 系统安全日志：sshd（/var/log/secure 或 /var/log/auth.log）+ fail2ban（#418 边界防护）
+  # 与端口收口 / fail2ban 封禁 / 应用层暴力破解告警同库可查，LogQL 见 docs/ops/ssh-hardening.md
+  # 两个 __path__ 均可能不存在（发行版差异 / 未装 fail2ban），promtail 对缺失文件静默跳过
+  - job_name: cloudcad-security-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: cloudcad
+          host: '{{ NODE_NAME }}'
+          env: '{{ ENV }}'
+          log_type: system
+          __path__: '/var/log/secure,/var/log/auth.log,/var/log/fail2ban.log'
+    pipeline_stages:
+      - regex:
+          source: filename
+          expression: '/var/log/(?P<src>secure|auth\.log|fail2ban\.log)$'
+      - labels:
+          src:

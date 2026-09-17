@@ -28,6 +28,7 @@ import {
 } from './interfaces/jwt-payload.interface';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import { Audit } from '../common/decorators/audit.decorator';
+import { maskAccount, maskEmail, maskPhone } from '../common/pii/pii-crypto.service';
 
 import {
   REGISTRATION_SERVICE,
@@ -59,6 +60,7 @@ import { membershipTierOf } from '../vip/membership-tier';
 import type { AuthenticatedUser } from '../common/types/request.types';
 import { USER_SERVICE, IUserService, IUserDetail } from '../common/interfaces/user-service.interface';
 import { IAuthFacade } from './interfaces/auth-facade.interface';
+import { PasswordPolicyService } from './services/password-policy.service';
 
 @Injectable()
 export class AuthFacadeService implements IAuthFacade {
@@ -78,12 +80,17 @@ export class AuthFacadeService implements IAuthFacade {
     private readonly smsVerificationService: SmsVerificationService,
     private readonly membershipService: MembershipService,
     @Inject(USER_SERVICE) private readonly userService: IUserService,
+    private readonly passwordPolicyService: PasswordPolicyService,
   ) {}
 
   @Audit(AuditAction.USER_REGISTER, ResourceType.USER, {
     details: (_result, args) => {
       const [registerDto] = args as [RegisterDto];
-      return { email: registerDto.email, username: registerDto.username };
+      // #417：审计 details 邮箱部分掩码，防明文 PII 落库/导出
+      return {
+        email: registerDto.email ? maskEmail(registerDto.email) : undefined,
+        username: registerDto.username,
+      };
     },
   })
   async register(
@@ -96,7 +103,8 @@ export class AuthFacadeService implements IAuthFacade {
 
   @Audit(AuditAction.USER_VERIFY_EMAIL, ResourceType.USER, {
     when: (result) => Boolean((result as { accessToken?: string } | null)?.accessToken),
-    details: (_result, args) => ({ email: args[0] as string }),
+    // #417：审计 details 邮箱部分掩码
+    details: (_result, args) => ({ email: maskEmail(args[0] as string) }),
   })
   async verifyEmailAndActivate(
     email: string,
@@ -109,7 +117,8 @@ export class AuthFacadeService implements IAuthFacade {
   @Audit(AuditAction.USER_LOGIN, ResourceType.USER, {
     details: (_result, args) => {
       const [loginDto] = args as [LoginDto];
-      return { account: loginDto.account, loginMethod: 'password' };
+      // #417：account 可能是 email/phone/username，按形态部分掩码（username 原样）
+      return { account: maskAccount(loginDto.account), loginMethod: 'password' };
     },
   })
   async login(
@@ -120,8 +129,9 @@ export class AuthFacadeService implements IAuthFacade {
   }
 
   @Audit(AuditAction.USER_LOGIN, ResourceType.USER, {
+    // #417：审计 details 手机号部分掩码（138****5678）
     details: (_result, args) => ({
-      phone: args[0] as string,
+      phone: maskPhone(args[0] as string),
       loginMethod: 'phone_code',
     }),
   })
@@ -134,9 +144,10 @@ export class AuthFacadeService implements IAuthFacade {
   }
 
   @Audit(AuditAction.USER_REGISTER, ResourceType.USER, {
+    // #417：审计 details 手机号部分掩码
     details: (_result, args) => {
       const [registerDto] = args as [RegisterDto & { phone: string; code: string }];
-      return { phone: registerDto.phone, username: registerDto.username };
+      return { phone: maskPhone(registerDto.phone), username: registerDto.username };
     },
   })
   async registerByPhone(
@@ -217,7 +228,8 @@ export class AuthFacadeService implements IAuthFacade {
   @Audit(AuditAction.USER_BIND_EMAIL, ResourceType.USER, {
     resourceId: (_result, args) => args[0] as string,
     userId: (_result, args) => args[0] as string,
-    details: (_result, args) => ({ email: args[1] as string }),
+    // #417：审计 details 邮箱部分掩码
+    details: (_result, args) => ({ email: maskEmail(args[1] as string) }),
   })
   async verifyBindEmail(
     userId: string,
@@ -231,7 +243,8 @@ export class AuthFacadeService implements IAuthFacade {
     resourceId: (_result, args) => args[0] as string,
     userId: (_result, args) => args[0] as string,
     success: (result) => Boolean((result as { success?: boolean } | null)?.success),
-    details: (_result, args) => ({ phone: args[1] as string }),
+    // #417：审计 details 手机号部分掩码
+    details: (_result, args) => ({ phone: maskPhone(args[1] as string) }),
   })
   async bindPhone(
     userId: string,
@@ -258,7 +271,8 @@ export class AuthFacadeService implements IAuthFacade {
     resourceId: (_result, args) => args[0] as string,
     userId: (_result, args) => args[0] as string,
     success: (result) => Boolean((result as { success?: boolean } | null)?.success),
-    details: (_result, args) => ({ phone: args[1] as string }),
+    // #417：审计 details 手机号部分掩码
+    details: (_result, args) => ({ phone: maskPhone(args[1] as string) }),
   })
   async rebindPhone(
     userId: string,
@@ -286,7 +300,8 @@ export class AuthFacadeService implements IAuthFacade {
     resourceId: (_result, args) => args[0] as string,
     userId: (_result, args) => args[0] as string,
     success: (result) => Boolean((result as { success?: boolean } | null)?.success),
-    details: (_result, args) => ({ email: args[1] as string }),
+    // #417：审计 details 邮箱部分掩码
+    details: (_result, args) => ({ email: maskEmail(args[1] as string) }),
   })
   async rebindEmail(
     userId: string,
@@ -366,8 +381,9 @@ export class AuthFacadeService implements IAuthFacade {
   }
 
   @Audit(AuditAction.USER_LOGIN, ResourceType.USER, {
+    // #417：审计 details 手机号部分掩码
     details: (_result, args) => ({
-      phone: args[0] as string,
+      phone: maskPhone(args[0] as string),
       loginMethod: 'phone_verification',
     }),
   })
@@ -380,8 +396,9 @@ export class AuthFacadeService implements IAuthFacade {
   }
 
   @Audit(AuditAction.USER_BIND_EMAIL, ResourceType.USER, {
+    // #417：审计 details 邮箱部分掩码
     details: (_result, args) => ({
-      email: args[1] as string,
+      email: maskEmail(args[1] as string),
       loginMethod: 'bind_email',
     }),
   })
@@ -395,8 +412,9 @@ export class AuthFacadeService implements IAuthFacade {
   }
 
   @Audit(AuditAction.USER_BIND_PHONE, ResourceType.USER, {
+    // #417：审计 details 手机号部分掩码
     details: (_result, args) => ({
-      phone: args[1] as string,
+      phone: maskPhone(args[1] as string),
       loginMethod: 'bind_phone',
     }),
   })
@@ -410,10 +428,15 @@ export class AuthFacadeService implements IAuthFacade {
   }
 
   @Audit(AuditAction.USER_REGISTER, ResourceType.USER, {
+    // #417：审计 details 邮箱/手机号部分掩码
     details: (_result, args) => {
       const [email] = args as [string];
       const [, , registerData] = args as [string, string, { phone: string; username: string }];
-      return { email, phone: registerData.phone, username: registerData.username };
+      return {
+        email: email ? maskEmail(email) : undefined,
+        phone: registerData.phone ? maskPhone(registerData.phone) : undefined,
+        username: registerData.username,
+      };
     },
   })
   async verifyEmailAndRegisterPhone(
@@ -469,12 +492,28 @@ export class AuthFacadeService implements IAuthFacade {
     // 均保证响应（会被前端写入 localStorage）不含任何密码信息
     const safeUser = { ...freshUser } as IUserDetail & { password?: string };
     delete safeUser.password;
+
+    // #416 等保 8.1.4.1：仅 ADMIN 角色补口令到期状态（180 天到期/首登未改密 + 提前 14 天软提示），
+    // 供前端刷新时展示强改引导/提示条。普通用户不做 180 天判定，不返回这两个字段。
+    const isAdmin = freshUser.role?.name === 'ADMIN';
+    const passwordChangeStatus = isAdmin
+      ? this.passwordPolicyService.getPasswordChangeStatus(
+          freshUser.passwordChangedAt ?? null
+        )
+      : null;
+
     return {
       ...safeUser,
       membershipTierLevel: membership.tierLevel,
       membershipExpiresAt: membership.expiresAt,
       isVip: membership.tierLevel > 0,
       membershipTier: membershipTierOf(membership.tierLevel),
+      ...(isAdmin && passwordChangeStatus?.required
+        ? { passwordChangeRequired: passwordChangeStatus.required }
+        : {}),
+      ...(isAdmin && passwordChangeStatus?.expiringSoon
+        ? { passwordExpiringSoon: true }
+        : {}),
     };
   }
 }

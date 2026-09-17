@@ -21,6 +21,14 @@ import { AlertLevel } from '../../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { TaskRunService } from '../../task-run/task-run.service';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../../task-run/task-run.constants';
+import { CleanupMetricsService } from '../../metrics/cleanup-metrics.service';
+
+/**
+ * 定时 cron 表达式：@Cron 装饰器与手动触发注册表（任务清单展示）共用同一来源，防止漂移
+ */
+const CACHE_WARNING_CHECK_CRON = CronExpression.EVERY_10_MINUTES;
+const CACHE_STATS_LOG_CRON = CronExpression.EVERY_HOUR;
+const CACHE_HEALTH_CHECK_CRON = CronExpression.EVERY_DAY_AT_MIDNIGHT;
 
 @Injectable()
 export class CacheCleanupScheduler {
@@ -31,19 +39,26 @@ export class CacheCleanupScheduler {
     private readonly cacheMonitorService: CacheMonitorService,
     private readonly alertService: AlertService,
     private readonly runtimeConfigService: RuntimeConfigService,
-    private readonly taskRunService: TaskRunService
+    private readonly taskRunService: TaskRunService,
+    private readonly cleanupMetrics: CleanupMetricsService
   ) {
     // 手动触发注册表（#210）
     this.taskRunService.register(TASK_NAMES.CACHE_CLEANUP.WARNING_CHECK, {
       description: '缓存监控告警检查',
+      schedule: CACHE_WARNING_CHECK_CRON,
+      scheduleLabel: '每 10 分钟',
       execute: () => this.cacheWarningCheckTask(),
     });
     this.taskRunService.register(TASK_NAMES.CACHE_CLEANUP.STATS_LOG, {
       description: '权限缓存统计记录',
+      schedule: CACHE_STATS_LOG_CRON,
+      scheduleLabel: '每小时',
       execute: () => this.logCacheStatsTask(),
     });
     this.taskRunService.register(TASK_NAMES.CACHE_CLEANUP.HEALTH_CHECK, {
       description: '缓存健康状态记录',
+      schedule: CACHE_HEALTH_CHECK_CRON,
+      scheduleLabel: '每天 00:00',
       execute: () => this.logHealthStatusTask(),
     });
   }
@@ -55,7 +70,7 @@ export class CacheCleanupScheduler {
   /**
    * 每 10 分钟执行一次缓存清理
    */
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CACHE_WARNING_CHECK_CRON)
   async handleCacheCleanup() {
     const enabled = await this.isEnabled(TASK_ENABLED_KEYS.CACHE_CLEANUP);
     if (!enabled) {
@@ -79,8 +94,16 @@ export class CacheCleanupScheduler {
    */
   private async cacheWarningCheckTask(): Promise<void> {
     // 检查缓存警告并上报告警（#242 定案：cache-monitor 触发源）
+    const startedAt = Date.now();
     const warnings = await this.cacheMonitorService.checkWarningItems();
     await this.raiseCacheWarnings(warnings);
+
+    // 耗时观测（#325）：本任务不删记录，仅记录运行时长
+    this.cleanupMetrics.observe({
+      task: TASK_NAMES.CACHE_CLEANUP.WARNING_CHECK,
+      durationSeconds: (Date.now() - startedAt) / 1000,
+    });
+
     if (warnings.length > 0) {
       this.logger.warn(
         `缓存警告: ${warnings.map((w) => w.message).join('; ')}`
@@ -130,7 +153,7 @@ export class CacheCleanupScheduler {
   /**
    * 每小时记录缓存统计信息
    */
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CACHE_STATS_LOG_CRON)
   async logCacheStats() {
     const enabled = await this.isEnabled(TASK_ENABLED_KEYS.CACHE_CLEANUP);
     if (!enabled) {
@@ -152,7 +175,14 @@ export class CacheCleanupScheduler {
    * 权限缓存统计记录裸执行（定时 + 手动触发共用）
    */
   private async logCacheStatsTask(): Promise<void> {
+    const startedAt = Date.now();
     const stats = await this.cacheService.getStats();
+
+    this.cleanupMetrics.observe({
+      task: TASK_NAMES.CACHE_CLEANUP.STATS_LOG,
+      durationSeconds: (Date.now() - startedAt) / 1000,
+    });
+
     this.logger.log(
       `权限缓存统计 - 缓存条目: ${stats.totalEntries}, 容量: ${stats.capacity}, 内存使用: ${stats.memoryUsage}, 命中率: ${stats.hitRate.toFixed(2)}%`
     );
@@ -161,7 +191,7 @@ export class CacheCleanupScheduler {
   /**
    * 每天记录健康状态
    */
-  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  @Cron(CACHE_HEALTH_CHECK_CRON)
   async logHealthStatus() {
     const enabled = await this.isEnabled(TASK_ENABLED_KEYS.CACHE_CLEANUP);
     if (!enabled) {
@@ -184,7 +214,14 @@ export class CacheCleanupScheduler {
    * 缓存健康状态记录裸执行（定时 + 手动触发共用）
    */
   private async logHealthStatusTask(): Promise<void> {
+    const startedAt = Date.now();
     const healthStatus = await this.cacheMonitorService.getHealthStatus();
+
+    this.cleanupMetrics.observe({
+      task: TASK_NAMES.CACHE_CLEANUP.HEALTH_CHECK,
+      durationSeconds: (Date.now() - startedAt) / 1000,
+    });
+
     this.logger.log(
       `缓存健康状态 - L1: ${healthStatus.L1.status}, L2: ${healthStatus.L2.status}, 整体: ${healthStatus.overall}`
     );

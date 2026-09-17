@@ -17,6 +17,7 @@ import {
 import { FileSystemNode } from '../../types/filesystem';
 import { triggerBlobDownload } from '../../utils/download';
 import { CAD_EXTENSIONS } from '../../utils/fileUtils';
+import { useBatchDownload } from './useBatchDownload';
 
 import { handleError, getErrorMessage } from '../../utils/errorHandler';
 import { isTourModeActive } from '../../utils/tourMode';
@@ -52,6 +53,7 @@ export const useFileSystemNavigation = ({
   mode = 'project',
 }: UseFileSystemNavigationProps) => {
   const navigate = useNavigate();
+  const { createSingleFormatTask } = useBatchDownload(showToast);
 
   // 下载格式模态框状态
   const [showDownloadFormatModal, setShowDownloadFormatModal] = useState(false);
@@ -225,9 +227,37 @@ export const useFileSystemNavigation = ({
         width?: string;
         height?: string;
         colorPolicy?: 'mono' | 'color';
-      }
+      },
+      dwgOptions?: { dwgVersion: number }
     ) => {
       if (!downloadingNode) return;
+
+      // dwg/dxf/pdf 且属于项目文件 → 走异步下载队列（BatchDownloadJob），
+      // HTTP 立即返回，进度/自动下载由 SSE 驱动；mxweb 或库文件保持同步直下
+      if (
+        format !== 'mxweb' &&
+        downloadingNode.projectId &&
+        !downloadingNode.libraryKey
+      ) {
+        const fileName = downloadingNode.originalName || downloadingNode.name;
+        const taskId = await createSingleFormatTask(
+          downloadingNode.id,
+          fileName,
+          format,
+          {
+            projectId: downloadingNode.projectId,
+            dwgVersion: dwgOptions?.dwgVersion,
+            width: pdfOptions?.width,
+            height: pdfOptions?.height,
+            colorPolicy: pdfOptions?.colorPolicy,
+          }
+        );
+        if (taskId) {
+          setShowDownloadFormatModal(false);
+          setDownloadingNode(null);
+        }
+        return;
+      }
 
       try {
         const fileName = downloadingNode.originalName || downloadingNode.name;
@@ -236,7 +266,7 @@ export const useFileSystemNavigation = ({
 
         const result = await downloadControllerDownloadNodeWithFormat({
           path: { nodeId: downloadingNode.id },
-          query: { format, ...pdfOptions },
+          query: { format, ...pdfOptions, ...dwgOptions },
           parseAs: 'blob',
         });
         // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出（对照
@@ -261,7 +291,7 @@ export const useFileSystemNavigation = ({
         showToast(errorMessage, 'error');
       }
     },
-    [downloadingNode, showToast]
+    [downloadingNode, showToast, createSingleFormatTask]
   );
 
   return {

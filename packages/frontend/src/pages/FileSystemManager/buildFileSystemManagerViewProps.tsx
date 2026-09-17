@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scissors, Copy, Trash2, RotateCcw, Download } from 'lucide-react';
+import { Scissors, Copy, Trash2, RotateCcw, Download, ArrowLeft } from 'lucide-react';
 import MxCadUploader from '@/components/MxCadUploader';
 import type { FileSystemNode } from '@/types/filesystem';
 import type { FileSystemHeaderProps } from './FileSystemHeader';
@@ -87,10 +87,15 @@ function buildHeaderProps(a: Actions): FileSystemHeaderProps {
     onSearchFiltersChange: fs.handleFiltersChange,
     onSearchQueryChange: fs.handleSearchQueryChange,
     // 撤销/重做按钮（命令栈 fileSystemUndoRedoStore，与快捷键同源）
-    canUndo: a.undoStack.length > 0,
-    canRedo: a.redoStack.length > 0,
-    onUndo: () => clipboard.clipboardHandleUndo(),
-    onRedo: () => clipboard.clipboardHandleRedo(),
+    // 根目录（项目列表）下隐藏：项目管理操作（新建/删除/重命名项目）暂不支持撤销
+    ...(a.isAtRoot
+      ? {}
+      : {
+          canUndo: a.undoStack.length > 0,
+          canRedo: a.redoStack.length > 0,
+          onUndo: () => clipboard.clipboardHandleUndo(),
+          onRedo: () => clipboard.clipboardHandleRedo(),
+        }),
   };
 }
 
@@ -206,7 +211,13 @@ function buildContentProps(a: Actions): FileSystemContentProps {
     onOpenFileLocation: urlEffects.handleOpenFileLocation,
     onCopyClipboard: urlEffects.handleCopyClipboard,
     onCut: urlEffects.handleCut,
-    onFolderDownload: urlEffects.handleFolderDownload,
+    // 文件夹打包走批量下载内核（mode='zip'），受 batchDownloadEnabled 门控；
+    // 未开放时不注入回调 → batch_download_folder 动作因 visibilityCheck 要求
+    // onFolderDownload 而自动隐藏（否则菜单可见、请求 403，与多选栏「批量下载」
+    // 按钮的隐藏行为不一致）。
+    onFolderDownload: a.batchDownloadEnabled
+      ? urlEffects.handleFolderDownload
+      : undefined,
     onCopyPath: urlEffects.handleCopyPath,
     onCreateFolderInCurrentDir: () => fs.setShowCreateFolderModal(true),
     onCreateDrawingInCurrentDir: () => fs.setShowCreateDrawingModal(true),
@@ -267,6 +278,15 @@ function buildBatchBarProps(a: Actions): BatchActionBarProps | null {
         variant: 'danger',
         disabled: !eachSelectedCanDelete || !canRestore,
         onClick: () => fs.handleBatchDelete(true),
+      },
+      {
+        key: 'exit-trash',
+        label: t('退出'),
+        icon: ArrowLeft,
+        onClick: () => {
+          fs.clearSelection();
+          fs.handleToggleTrashView();
+        },
       },
     ];
   } else if (isAtRoot) {

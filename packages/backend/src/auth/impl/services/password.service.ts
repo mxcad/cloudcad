@@ -4,6 +4,7 @@ import * as bcrypt from 'bcryptjs';
 import type { IUserRepository, IEmailVerificationService, ISmsVerificationService, IRuntimeConfigService, ITokenBlacklistService, IPasswordService } from '@cloudcad/contracts';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
+import { PasswordPolicyService } from '../../services/password-policy.service';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
@@ -17,7 +18,8 @@ export class PasswordService implements IPasswordService {
     @Inject('CONFIG') private readonly runtimeConfigService: IRuntimeConfigService,
     private authTokenService: AuthTokenService,
     @Inject('TOKEN_BLACKLIST') private readonly tokenBlacklistService: ITokenBlacklistService,
-    private accountRateLimitService: AccountRateLimitService
+    private accountRateLimitService: AccountRateLimitService,
+    private passwordPolicyService: PasswordPolicyService
   ) {}
 
   async validateUser(email: string, password: string): Promise<Record<string, unknown> | null> {
@@ -120,8 +122,12 @@ export class PasswordService implements IPasswordService {
 
     if (!user) { throw new UnauthorizedException(I18nContext.current()?.t('error.user.not_found') ?? '用户不存在'); }
 
+    // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
+    this.passwordPolicyService.assertPasswordPolicy(newPassword);
+
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await this.userRepo.update(user.id, { password: hashedPassword } as any);
+    // 记录口令修改时间（#416）
+    await this.userRepo.update(user.id, { password: hashedPassword, passwordChangedAt: new Date() } as any);
     await this.authTokenService.deleteAllRefreshTokens(user.id);
     await this.tokenBlacklistService.removeUserFromBlacklist(user.id);
 

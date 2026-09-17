@@ -8,6 +8,8 @@ import { UsersService } from './users.service';
 import { UserCrudService } from './services/user-crud.service';
 import { UserStatusService } from './services/user-status.service';
 import { UserPasswordService } from './services/user-password.service';
+import { DatabaseService } from '../database/database.service';
+import { PiiCryptoService } from '../common/pii/pii-crypto.service';
 
 describe('UsersService.syncWechatAvatar', () => {
   let service: UsersService;
@@ -33,6 +35,15 @@ describe('UsersService.syncWechatAvatar', () => {
         { provide: UserPasswordService, useValue: {} },
         { provide: ConfigService, useValue: configService },
         { provide: ClsService, useValue: { get: jest.fn() } },
+        { provide: DatabaseService, useValue: {} },
+        {
+          provide: PiiCryptoService,
+          useValue: {
+            emailHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            phoneHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            derivePiiFields: jest.fn(() => ({})),
+          },
+        },
       ],
     }).compile();
 

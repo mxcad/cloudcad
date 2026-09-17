@@ -1,0 +1,34 @@
+# CloudCAD Windows 部署包验证镜像（ADR-0059 决策 8）
+# 模拟用户 Windows 环境：解压 .7z 部署包后直接运行 verify-deploy.js（断网 --network none）
+#
+# 使用方式：
+#   docker build -f runtime/docker/Dockerfile.windows-deploy-verify \
+#       --build-arg PACKAGE=cloudcad-deploy-{VERSION}-{DATE}-windows.7z \
+#       -t cloudcad-verify-windows .
+#   docker run --rm --network none cloudcad-verify-windows
+#
+# 设计原则：
+#   - Docker 只是模拟用户的干净 Windows 环境
+#   - 构建期联网下载 7z（运行时 --network none 无法联网，须预置解压工具）
+#   - 运行时用内嵌 node（runtime/windows/node/node.exe）跑 verify-deploy.js
+#     （verify-deploy.js 跨平台：启动 postgres/redis/backend/frontend/cooperate/config-service + 全服务健康检查）
+
+ARG BASE_IMAGE=mcr.microsoft.com/windows/servercore:ltsc2022
+FROM ${BASE_IMAGE}
+
+# 构建期联网：下载 7z（用于运行时解压 .7z 部署包）
+# servercore 自带 PowerShell（Invoke-WebRequest）。7z 版本固定，便于复现。
+RUN powershell -NoProfile -Command ^
+  "Invoke-WebRequest -Uri 'https://www.7-zip.org/a/7z2409-x64.exe' -OutFile 'C:\7z-setup.exe'; ^
+   Start-Process -FilePath 'C:\7z-setup.exe' -ArgumentList '/S','/D=C:\7z' -Wait; ^
+   Remove-Item 'C:\7z-setup.exe' -Force"
+
+# 复制 .7z 部署包
+ARG PACKAGE=cloudcad-deploy-windows.7z
+COPY release/${PACKAGE} C:\app-package.7z
+
+WORKDIR C:\app
+
+# 运行验证（--network none）：7z 解压 + 内嵌 node 跑 verify-deploy.js
+# verify-deploy.js 默认停止服务后退出（成功 exit 0 / 失败 exit 1）
+CMD ["powershell", "-NoProfile", "-Command", "C:\\7z\\7z.exe x -y -oC:\\app C:\\app-package.7z; C:\\app\\runtime\\windows\\node\\node.exe C:\\app\\runtime\\scripts\\verify-deploy.js"]

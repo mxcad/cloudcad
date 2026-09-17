@@ -255,6 +255,14 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
   },
   {
+    key: 'backupEnabled',
+    type: 'boolean',
+    category: 'system',
+    description: '是否启用数据库定时备份（每日全量 pg_dump）',
+    defaultValue: true,
+    isPublic: false,
+  },
+  {
     key: 'userCancelGraceDays',
     type: 'number',
     category: 'user',
@@ -318,6 +326,14 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: false,
     isPublic: true,
   },
+  {
+    key: 'collaborationDomains',
+    type: 'string',
+    category: 'collaboration',
+    description: '协同功能域名白名单（逗号分隔，仅这些域名可使用协同功能）',
+    defaultValue: '',
+    isPublic: true,
+  },
 
   // 批量下载配置
   {
@@ -346,6 +362,17 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     category: 'device',
     description: '设备授权前端页面域名（用于构造 verification_uri_complete）',
     defaultValue: 'http://localhost:3000',
+    isPublic: false,
+  },
+
+  // 安全合规：管理员 TOTP 双因素总开关（#415 等保 8.1.4.1(d)）
+  {
+    key: 'mfaEnforceEnabled',
+    type: 'boolean',
+    category: 'system',
+    description:
+      '强制管理员启用 TOTP 双因素。开启后：未绑定者登录被锁定至绑定页、已绑定者登录必须带动态码；关闭时 TOTP 完全不生效（默认关闭，含已绑定者也无需动态码）',
+    defaultValue: false,
     isPublic: false,
   },
 ];

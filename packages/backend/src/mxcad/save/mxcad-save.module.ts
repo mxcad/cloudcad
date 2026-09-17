@@ -27,6 +27,7 @@ import { MxcadConversionModule } from '../conversion/mxcad-conversion.module';
 import { MxcadExternalRefModule } from '../external-ref/mxcad-external-ref.module';
 import { StorageModule } from '../../storage/storage.module';
 import { AuditLogModule } from '../../audit/audit-log.module';
+import { StorageQuotaModule } from '../../file-system/storage-quota/storage-quota.module';
 import { SaveAsService } from './save-as.service';
 import { MxcadSaveService } from './mxcad-save.service';
 import { SaveController } from './save.controller';
@@ -58,6 +59,7 @@ import { SaveController } from './save.controller';
     MxcadExternalRefModule,
     StorageModule,
     AuditLogModule,
+    StorageQuotaModule,
   ],
   controllers: [SaveController],
   providers: [

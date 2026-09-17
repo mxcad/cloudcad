@@ -3,6 +3,7 @@ import { DatabaseService } from '../../database/database.service';
 import { PASSWORD_HASHER, IPasswordHasher } from '../interfaces/password-hasher.interface';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
+import { PasswordPolicyService } from '../../auth/services/password-policy.service';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class UserPasswordService {
     @Inject(PASSWORD_HASHER)
     private readonly passwordHasher: IPasswordHasher,
     private readonly auditLogService: AuditLogService,
+    private readonly passwordPolicyService: PasswordPolicyService,
   ) {}
 
   async validatePassword(
@@ -55,11 +57,18 @@ export class UserPasswordService {
         }
       }
 
+      // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
+      this.passwordPolicyService.assertPasswordPolicy(newPassword);
+
       const hashedPassword = await this.passwordHasher.hash(newPassword);
 
       await this.prisma.user.update({
         where: { id: userId },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          // 记录口令修改时间（#416）
+          passwordChangedAt: new Date(),
+        },
       });
 
       await this.prisma.refreshToken.deleteMany({

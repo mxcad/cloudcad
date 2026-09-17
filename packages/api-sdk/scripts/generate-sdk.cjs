@@ -28,27 +28,34 @@ const runner = path.join(
 );
 
 const CLEANUP_PREFIX = 'src.openapi-ts-cleanup-';
-const RETRY_TIMES = 3;
+const RETRY_TIMES = 8;
 const RETRY_DELAY_MS = 500;
 
 function syncDelay(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
+// Windows 下刚生成的文件可能被杀软/编辑器短暂锁定（瞬态 EPERM）。
+// rmSync 内置重试处理单文件级锁，外层递增退避处理目录级句柄释放延迟。
 function rmDirSyncWithRetry(dir, label) {
   for (let attempt = 1; attempt <= RETRY_TIMES; attempt++) {
     try {
-      fs.rmSync(dir, { force: true, recursive: true });
+      fs.rmSync(dir, {
+        force: true,
+        recursive: true,
+        maxRetries: 10,
+        retryDelay: 300,
+      });
       return true;
     } catch (err) {
       if (attempt < RETRY_TIMES) {
-        syncDelay(RETRY_DELAY_MS);
+        syncDelay(RETRY_DELAY_MS * attempt);
       } else {
         console.warn(`[generate-sdk] ${label} 清理失败: ${err.message}`);
       }
     }
   }
-  return false;
+  return !fs.existsSync(dir);
 }
 
 // 1. 清理历史残留的临时目录（上次运行 rename 后删除失败留下的）
@@ -71,7 +78,9 @@ if (fs.existsSync(outputDir)) {
       renamed = true;
     } catch (err) {
       if (attempt < RETRY_TIMES) {
-        syncDelay(RETRY_DELAY_MS);
+        syncDelay(RETRY_DELAY_MS * attempt);
+        // rename 期间目录可能已被并发清理，存在性复查避免误报
+        if (!fs.existsSync(outputDir)) break;
       } else {
         console.warn(
           `[generate-sdk] 输出目录 rename 失败（${err.message}），回退为直接删除`

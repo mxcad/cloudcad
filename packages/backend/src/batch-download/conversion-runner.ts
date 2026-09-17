@@ -8,10 +8,14 @@ import type { IMxcadConversionService } from '../mxcad/interfaces/mxcad-conversi
 import type { ConvertServerFileParam } from '../mxcad/types/mxcad-context.types';
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
+import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
+import { PublicFileService } from '../public-file/public-file.service';
+import { CadDownloadFormat } from '../file-system/dto/download-node.dto';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
+import { internalServiceSecretHeader } from '../common/utils';
 
 class Semaphore {
   private current = 0;
@@ -69,7 +73,14 @@ export interface WorkflowConvertTask {
 }
 
 export interface ConvertRequest {
-  node: { id: string; fileHash?: string; path?: string; name: string };
+  node: {
+    id: string;
+    fileHash?: string;
+    path?: string;
+    name: string;
+    /** 节点 updatedAt：转换缓存 key 的失效维度（节点更新→key 变→旧缓存失效，ADR-0060） */
+    updatedAt?: Date;
+  };
   format: string;
   pdfParams?: {
     width?: string;
@@ -87,6 +98,7 @@ export class ConversionRunner {
   private readonly delegateWorkflow: boolean;
   private readonly conversionServiceUrl: string;
   private readonly conversionServiceSecret: string;
+  private readonly internalSecretHeaders: Record<string, string>;
   private readonly workflowPollIntervalMs: number;
   private readonly workflowTimeoutMs: number;
   private readonly workflowHttpTimeoutMs: number;
@@ -98,7 +110,9 @@ export class ConversionRunner {
     @Inject(IStorageService) private readonly storageService: any,
     private readonly storageManager: StorageManager,
     private readonly configService: ConfigService,
-    private readonly restrictionEngine: RestrictionEngine
+    private readonly restrictionEngine: RestrictionEngine,
+    private readonly fileDownloadExportService: FileDownloadExportService,
+    private readonly publicFileService: PublicFileService
   ) {
     const batchConfig = this.configService.get('batchDownload', {
       infer: true,
@@ -121,9 +135,37 @@ export class ConversionRunner {
     );
     this.conversionServiceSecret =
       typeof envSecret === 'string' && envSecret ? envSecret : '';
+    // #419：统一内网共享密钥 header（与旧 X-Conversion-Service-Secret 并存，服务端任一匹配即放行）
+    this.internalSecretHeaders = internalServiceSecretHeader(
+      this.configService.get<string>('INTERNAL_SERVICE_SECRET')
+    );
     this.workflowPollIntervalMs = batchConfig?.workflowPollIntervalMs || 1500;
     this.workflowTimeoutMs = batchConfig?.workflowTimeoutMs || 10 * 60 * 1000;
     this.workflowHttpTimeoutMs = Math.min(this.workflowTimeoutMs, 60_000);
+  }
+
+  /**
+   * 解析转换源文件（内容寻址快照）：
+   * - node.path 存在：快照工作副本到 uploads/{hash}.mxweb（既有行为）
+   * - 否则 node.fileHash 存在（CAD 编辑器内存导出上传的临时文件）：按 fileHash 在 uploads
+   *   目录定位（源文件已内容寻址 uploads/{fileHash}.mxweb，无需再快照）
+   * - 都无返回 null（调用方记错）
+   */
+  private async resolveSource(
+    node: ConvertRequest['node']
+  ): Promise<{ snapshotPath: string; hash: string } | null> {
+    if (node.path) {
+      return this.fileDownloadExportService.snapshotMxweb(node);
+    }
+    if (node.fileHash) {
+      const resolvedPath = await this.publicFileService.findMxwebFile(
+        node.fileHash
+      );
+      return resolvedPath
+        ? { snapshotPath: resolvedPath, hash: node.fileHash }
+        : null;
+    }
+    return null;
   }
 
   /**
@@ -231,8 +273,7 @@ export class ConversionRunner {
       filePath: '',
       format: requests[i]!.format,
       success: false,
-      error:
-        quotaMessages[i] ?? '图纸转换过于频繁，请稍后再试',
+      error: quotaMessages[i] ?? '图纸转换过于频繁，请稍后再试',
     });
 
     // 开关关闭或处于 workflow 熔断期：直接走进程内转换
@@ -245,51 +286,47 @@ export class ConversionRunner {
           return this.convertInProcess(r.node, r.format, r.pdfParams, userId);
         })
       );
-      await Promise.all(
-        results.map((r, i) => releaseIfReserved(i, r.success))
-      );
+      await Promise.all(results.map((r, i) => releaseIfReserved(i, r.success)));
       return results;
     }
 
     const results: ConversionResult[] = new Array(requests.length);
-    const valid: Array<{ index: number; request: ConvertRequest }> = [];
+    const valid: Array<{
+      index: number;
+      request: ConvertRequest;
+      snapshot: { snapshotPath: string; hash: string };
+    }> = [];
 
-    requests.forEach((request, index) => {
+    // 步骤 1：提交时快照工作副本到 uploads/{hash}.mxweb（内容寻址、不可变），转换读快照而非可变工作副本
+    for (let index = 0; index < requests.length; index++) {
+      const request = requests[index]!;
       if (!reserved[index]) {
         results[index] = quotaFailure(index);
-        return;
+        continue;
       }
-      if (!request.node.path) {
+      // 源文件解析：node.path 走快照；fileHash-only（内存导出）按 fileHash 定位
+      const snapshot = await this.resolveSource(request.node);
+      if (!snapshot) {
         results[index] = {
           filePath: '',
           format: request.format,
           success: false,
-          error: 'File path is missing',
+          error: 'Source file not found',
         };
-        return;
+        continue;
       }
-      const fullPath = this.storageManager.getFullPath(request.node.path);
-      if (!fs.existsSync(fullPath)) {
-        results[index] = {
-          filePath: '',
-          format: request.format,
-          success: false,
-          error: 'MXWEB file not found',
-        };
-        return;
-      }
-      valid.push({ index, request });
-    });
+      valid.push({ index, request, snapshot });
+    }
 
     if (valid.length === 0) {
-      await Promise.all(
-        results.map((r, i) => releaseIfReserved(i, r.success))
-      );
+      await Promise.all(results.map((r, i) => releaseIfReserved(i, r.success)));
       return results;
     }
 
     try {
-      const tasks = valid.map((v) => this.buildWorkflowTask(v.request));
+      const tasks = valid.map((v) =>
+        this.buildWorkflowTask(v.request, v.snapshot)
+      );
       const { taskId } = await this.submitBatch(tasks);
       const terminal = await this.pollTask(taskId);
       const byId = new Map(terminal.results.map((r) => [r.id, r]));
@@ -330,9 +367,7 @@ export class ConversionRunner {
         };
       });
 
-      await Promise.all(
-        results.map((r, i) => releaseIfReserved(i, r.success))
-      );
+      await Promise.all(results.map((r, i) => releaseIfReserved(i, r.success)));
       return results;
     } catch (err) {
       this.markWorkflowUnavailable();
@@ -352,34 +387,39 @@ export class ConversionRunner {
       fallback.forEach((r, i) => {
         results[valid[i].index] = r;
       });
-      await Promise.all(
-        results.map((r, i) => releaseIfReserved(i, r.success))
-      );
+      await Promise.all(results.map((r, i) => releaseIfReserved(i, r.success)));
       return results;
     }
   }
 
-  private buildWorkflowTask(request: ConvertRequest): WorkflowConvertTask {
+  private buildWorkflowTask(
+    request: ConvertRequest,
+    snapshot: { snapshotPath: string; hash: string }
+  ): WorkflowConvertTask {
     const node = request.node;
-    const ext = path.extname(node.name).toLowerCase();
     const targetExt =
       request.format === 'dwg'
         ? '.dwg'
         : request.format === 'dxf'
           ? '.dxf'
           : '.pdf';
-    const targetFilename = `${path
-      .basename(node.name, ext)
-      .replace(/[<>:"|?*]/g, '_')
-      .replace(/\.\./g, '_')
-      .replace(/~/g, '_')}${targetExt}`;
+    const cadFormat =
+      request.format === 'dwg'
+        ? CadDownloadFormat.DWG
+        : request.format === 'dxf'
+          ? CadDownloadFormat.DXF
+          : CadDownloadFormat.PDF;
+    const paramKey = this.fileDownloadExportService.buildParamKey(
+      cadFormat,
+      request.pdfParams
+    );
     const task: WorkflowConvertTask = {
       id: `${node.id}:${request.format}`,
-      srcPath: this.storageManager
-        .getFullPath(node.path as string)
-        .replace(/\\/g, '/'),
+      // 步骤 2：srcPath 指内容寻址快照（uploads/{hash}.mxweb）；outname 版本绑定（{hash}-{paramKey}{targetExt}）
+      // → 产物落 uploads/{hash}-{paramKey}{targetExt}（= 缓存路径，内容寻址）；ZIP 条目名仍用原文件名（sanitized，独立计算）
+      srcPath: snapshot.snapshotPath.replace(/\\/g, '/'),
       fileHash: node.fileHash || '',
-      outname: targetFilename,
+      outname: `${snapshot.hash}-${paramKey}${targetExt}`,
     };
 
     if (request.format === 'pdf') {
@@ -467,7 +507,10 @@ export class ConversionRunner {
         port: url.port || (useHttps ? 443 : 80),
         path: url.pathname + url.search,
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.internalSecretHeaders,
+        },
         timeout: this.workflowHttpTimeoutMs,
       };
       if (this.conversionServiceSecret) {
@@ -514,44 +557,44 @@ export class ConversionRunner {
   ): Promise<ConversionResult> {
     return this.semaphore.runWithLock(async () => {
       try {
-        if (!node.path) {
+        // 步骤 1：解析源文件——node.path 走工作副本快照；fileHash-only（内存导出）按 fileHash 定位
+        const snapshot = await this.resolveSource(node);
+        if (!snapshot) {
           return {
             filePath: '',
             format,
             success: false,
-            error: 'File path is missing',
+            error: 'Source file not found',
           };
         }
 
-        const ext = path.extname(node.name).toLowerCase();
-        const mxwebPath = node.path;
-        const mxwebFullPath = this.storageManager.getFullPath(mxwebPath);
-
-        const mxwebExists = fs.existsSync(mxwebFullPath);
-        if (!mxwebExists) {
-          return {
-            filePath: '',
-            format,
-            success: false,
-            error: 'MXWEB file not found',
-          };
-        }
-
-        const originalFilename = node.name;
         const targetExt =
           format === 'dwg' ? '.dwg' : format === 'dxf' ? '.dxf' : '.pdf';
-        const targetFilename = `${path
-          .basename(originalFilename, ext)
-          .replace(/[<>:"|?*]/g, '_')
-          .replace(/\.\./g, '_')
-          .replace(/~/g, '_')}${targetExt}`;
+        const paramKey = this.fileDownloadExportService.buildParamKey(
+          format as CadDownloadFormat,
+          pdfParams
+        );
+        // 产物版本绑定：outname = {hash}-{paramKey}{targetExt}，产物落 srcPath 同目录（uploads/{hash}-{paramKey}{targetExt} = 缓存路径）
+        const outname = `${snapshot.hash}-${paramKey}${targetExt}`;
+
+        // 转换缓存命中（同 hash+格式参数）：直接复用缓存产物，不再起 mxcadassembly（ADR-0060）
+        const cachedPath =
+          this.fileDownloadExportService.getFreshConversionCachePath(
+            snapshot.hash,
+            format as CadDownloadFormat,
+            pdfParams
+          );
+        if (cachedPath) {
+          this.logger.log(`批量转换缓存命中: ${node.name} -> ${outname}`);
+          return { filePath: cachedPath, format, success: true };
+        }
 
         const conversionOptions: ConvertServerFileParam = {
-          srcPath: mxwebFullPath.replace(/\\/g, '/'),
+          srcPath: snapshot.snapshotPath.replace(/\\/g, '/'),
           fileHash: node.fileHash || '',
           nodeId: node.id,
           userId,
-          outname: targetFilename,
+          outname,
           createPreloadingData: false,
           priority: 'low',
         };
@@ -576,19 +619,28 @@ export class ConversionRunner {
           return { filePath: '', format, success: false, error: errMsg };
         }
 
-        const mxwebDir = path.dirname(node.path);
-        const targetRelativePath = `${mxwebDir}/${targetFilename}`;
-        const targetFullPath =
-          this.storageManager.getFullPath(targetRelativePath);
+        // 引擎把 outname 写到 srcPath 同目录（uploads/）：产物 = uploads/{hash}{targetExt}
+        const targetFullPath = path.join(
+          path.dirname(snapshot.snapshotPath),
+          outname
+        );
 
         if (!fs.existsSync(targetFullPath)) {
           return {
             filePath: '',
             format,
             success: false,
-            error: `Converted file not found: ${targetFilename}`,
+            error: `Converted file not found: ${outname}`,
           };
         }
+
+        // 转换产物写入缓存目录复用（copy 而非 rename，ZIP 装配仍需原文件；ADR-0060）
+        this.fileDownloadExportService.storeConversionCache(
+          snapshot.hash,
+          format as CadDownloadFormat,
+          targetFullPath,
+          pdfParams
+        );
 
         return { filePath: targetFullPath, format, success: true };
       } catch (err) {
@@ -601,6 +653,15 @@ export class ConversionRunner {
   }
 
   async cleanupConvertedFile(filePath: string): Promise<void> {
+    // 步骤 1：跳过 uploads/ 下内容寻址条目（共享快照/产物缓存，不能被首个任务 unlink）
+    const mxcadUploadPath = this.configService.get<string>('mxcadUploadPath') || '';
+    if (mxcadUploadPath) {
+      const uploadsRoot = mxcadUploadPath.replace(/\\/g, '/');
+      const normalized = filePath.replace(/\\/g, '/');
+      if (normalized.startsWith(`${uploadsRoot}/`)) {
+        return;
+      }
+    }
     try {
       if (fs.existsSync(filePath)) {
         await fs.promises.unlink(filePath);

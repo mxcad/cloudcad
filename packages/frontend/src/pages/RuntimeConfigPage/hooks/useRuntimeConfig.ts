@@ -15,7 +15,6 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
 import { handleError } from '@/utils/errorHandler';
-import { setUploadMaxFileSize } from '@/utils/mxcadUploadUtils';
 import { queryKeys } from '@/lib/queryKeys';
 import {
   Mail,
@@ -134,14 +133,13 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const queryClient = useQueryClient();
 
   /**
-   * 保存/重置 maxFileSize 后，同步前端上传限制并刷新公开配置缓存，
+   * 保存/重置 maxFileSize 后，刷新公开配置缓存，
    * 保证同一会话内图纸上传限制即时生效（无需刷新页面）。
    * 仅 maxFileSize 为公开配置（fontMaxFileSize/extRefMaxFileSize 非公开，后端读库即时生效，无需刷新）。
    */
   const applyMaxFileSizeSideEffects = useCallback(
-    async (key: string, syncValue?: string | number | boolean) => {
+    async (key: string) => {
       if (key !== 'maxFileSize') return;
-      if (syncValue !== undefined) setUploadMaxFileSize(Number(syncValue));
       await queryClient.invalidateQueries({
         queryKey: queryKeys.runtimeConfig.public,
       });
@@ -225,7 +223,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
           return next;
         });
         await fetchConfigs();
-        await applyMaxFileSizeSideEffects(key, value);
+        await applyMaxFileSizeSideEffects(key);
       } catch (error: unknown) {
         handleError(error, t('保存配置失败'));
         showToast(

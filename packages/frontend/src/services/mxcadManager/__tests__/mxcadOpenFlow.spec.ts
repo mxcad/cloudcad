@@ -17,6 +17,12 @@ vi.mock('mxcad', () => ({
   MxCpp: { getCurrentMxCAD: vi.fn() },
 }));
 
+// mxcad-app 真实库顶层代码依赖完整浏览器 DOM（createCursor → getContext('2d') 等），
+// happy-dom 无法加载 → import 阶段崩溃。mxcadOpenFlow 经 mxcadInstanceManager
+// 间接 import mxcad-app，故在此 mock（与 mxcadInstanceManager.spec 一致）。
+vi.mock('mxcad-app/style', () => ({}));
+vi.mock('mxcad-app', () => ({ MxCADView: vi.fn() }));
+
 vi.mock('@/languages', () => ({
   t: (msg: string) => msg,
 }));

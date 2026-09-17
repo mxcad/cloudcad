@@ -4,13 +4,14 @@ import {
   Prisma,
   Permission,
   ProjectPermission,
-  UserStatus,
 } from '@cloudcad/db';
 import { PrismaPg } from '@prisma/adapter-pg';
-import * as bcrypt from 'bcryptjs';
 import {
   ProjectRole as ProjectRoleEnum,
   DEFAULT_PROJECT_ROLE_PERMISSIONS,
+  SystemRole,
+  SYSTEM_ROLE_PERMISSIONS,
+  SYSTEM_ROLE_LEVELS,
 } from '@cloudcad/contracts';
 
 // 手动构建DATABASE_URL，确保格式正确
@@ -35,67 +36,8 @@ const prisma = new PrismaClient({
   adapter,
 });
 
-/**
- * 系统权限定义（与 schema.prisma 中的 Permission 枚举一致）
- */
-const SYSTEM_PERMISSIONS: Permission[] = [
-  Permission.SYSTEM_USER_READ,
-  Permission.SYSTEM_USER_CREATE,
-  Permission.SYSTEM_USER_UPDATE,
-  Permission.SYSTEM_USER_DELETE,
-  Permission.SYSTEM_USER_MEMBERSHIP_MANAGE,
-  Permission.SYSTEM_ROLE_READ,
-  Permission.SYSTEM_ROLE_CREATE,
-  Permission.SYSTEM_ROLE_UPDATE,
-  Permission.SYSTEM_ROLE_DELETE,
-  Permission.SYSTEM_ROLE_PERMISSION_MANAGE,
-  Permission.SYSTEM_FONT_READ,
-  Permission.SYSTEM_FONT_UPLOAD,
-  Permission.SYSTEM_FONT_DELETE,
-  Permission.SYSTEM_FONT_DOWNLOAD,
-  Permission.SYSTEM_ADMIN,
-  Permission.SYSTEM_BILLING_READ,
-  Permission.SYSTEM_BILLING_WRITE,
-  Permission.SYSTEM_MONITOR,
-  Permission.SYSTEM_CONFIG_READ,
-  Permission.SYSTEM_CONFIG_WRITE,
-  Permission.SYSTEM_IP_BLACKLIST_MANAGE,
-  Permission.SYSTEM_IP_WHITELIST_MANAGE,
-  Permission.LIBRARY_DRAWING_MANAGE,
-  Permission.LIBRARY_BLOCK_MANAGE,
-];
-
-/**
- * 角色权限配置规则 - 与 SYSTEM_ROLE_PERMISSIONS 保持一致
- */
-const rolePermissionRules = {
-  // 系统管理员：所有权限
-  admin: SYSTEM_PERMISSIONS,
-
-  // 用户管理员：用户和角色管理权限
-  user_manager: [
-    Permission.SYSTEM_USER_READ,
-    Permission.SYSTEM_USER_CREATE,
-    Permission.SYSTEM_USER_UPDATE,
-    Permission.SYSTEM_USER_DELETE,
-    Permission.SYSTEM_ROLE_READ,
-    Permission.SYSTEM_ROLE_CREATE,
-    Permission.SYSTEM_ROLE_UPDATE,
-    Permission.SYSTEM_ROLE_DELETE,
-    Permission.SYSTEM_ROLE_PERMISSION_MANAGE,
-  ],
-
-  // 字体管理员：字体管理权限
-  font_manager: [
-    Permission.SYSTEM_FONT_READ,
-    Permission.SYSTEM_FONT_UPLOAD,
-    Permission.SYSTEM_FONT_DELETE,
-    Permission.SYSTEM_FONT_DOWNLOAD,
-  ],
-
-  // 普通用户：无系统权限
-  user: [] as Permission[],
-};
+// 系统角色权限定义来源于 SYSTEM_ROLE_PERMISSIONS（@cloudcad/contracts 单一来源），
+// 不再在此内联维护 SYSTEM_PERMISSIONS / rolePermissionRules，避免与角色权限定义漂移
 
 /**
  * 为角色分配权限（先删除旧权限，再创建新权限）
@@ -125,31 +67,38 @@ async function assignPermissionsToRole(
 async function main() {
   console.log('开始种子数据初始化...');
 
-  // 定义所有系统角色
+  // 定义所有系统角色（权限/层级均来源于 @cloudcad/contracts 单一来源）
   const systemRoles = [
     {
-      name: 'ADMIN',
+      name: SystemRole.ADMIN,
       description: '系统管理员，拥有所有权限',
-      level: 100,
-      permissions: rolePermissionRules.admin,
+      level: SYSTEM_ROLE_LEVELS[SystemRole.ADMIN],
+      permissions: SYSTEM_ROLE_PERMISSIONS[SystemRole.ADMIN],
     },
     {
-      name: 'USER_MANAGER',
+      name: SystemRole.AUDIT_ADMIN,
+      description:
+        '审计管理员，管理审计数据（查询/导出/清理），三权分立（等保 8.5.2）',
+      level: SYSTEM_ROLE_LEVELS[SystemRole.AUDIT_ADMIN],
+      permissions: SYSTEM_ROLE_PERMISSIONS[SystemRole.AUDIT_ADMIN],
+    },
+    {
+      name: SystemRole.USER_MANAGER,
       description: '用户管理员，管理系统用户和角色',
-      level: 50,
-      permissions: rolePermissionRules.user_manager,
+      level: SYSTEM_ROLE_LEVELS[SystemRole.USER_MANAGER],
+      permissions: SYSTEM_ROLE_PERMISSIONS[SystemRole.USER_MANAGER],
     },
     {
-      name: 'FONT_MANAGER',
+      name: SystemRole.FONT_MANAGER,
       description: '字体管理员，管理系统字体库',
-      level: 50,
-      permissions: rolePermissionRules.font_manager,
+      level: SYSTEM_ROLE_LEVELS[SystemRole.FONT_MANAGER],
+      permissions: SYSTEM_ROLE_PERMISSIONS[SystemRole.FONT_MANAGER],
     },
     {
-      name: 'USER',
+      name: SystemRole.USER,
       description: '普通用户，基础权限',
-      level: 0,
-      permissions: rolePermissionRules.user,
+      level: SYSTEM_ROLE_LEVELS[SystemRole.USER],
+      permissions: SYSTEM_ROLE_PERMISSIONS[SystemRole.USER],
     },
   ];
 
@@ -235,56 +184,10 @@ async function main() {
     }
   }
 
-  // 创建默认管理员账户（如果不存在）
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@cloudcad.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';
-  
-  console.log('处理管理员账户...');
-  
-  const existingAdmin = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { email: adminEmail },
-        { username: 'admin' }
-      ]
-    }
-  });
-  
-  if (existingAdmin) {
-    console.log('  管理员账户已存在，跳过创建');
-  } else {
-    // 查找 ADMIN 角色
-    const adminRole = await prisma.role.findFirst({
-      where: { name: 'ADMIN' }
-    });
-    
-    if (!adminRole) {
-      console.error('  错误：未找到 ADMIN 角色');
-      return;
-    }
-    
-    // 哈希密码
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    
-    // 创建管理员账户
-    await prisma.user.create({
-      data: {
-        username: 'admin',
-        email: adminEmail,
-        password: hashedPassword,
-        nickname: '系统管理员',
-        roleId: adminRole.id,
-        status: UserStatus.ACTIVE,
-        emailVerified: true,
-        emailVerifiedAt: new Date(),
-        provider: 'LOCAL'
-      }
-    });
-    
-    console.log('  管理员账户已创建');
-    console.log(`  邮箱: ${adminEmail}`);
-    console.log(`  密码: ${adminPassword}`);
-  }
+  // 初始管理员账户由后端 initialization.service 单一来源创建（onModuleInit →
+  // checkAndCreateInitialAdmin，密码取部署生成的 INITIAL_ADMIN_PASSWORD，并打首登改密标记）。
+  // seed 不再建 admin：此前 seed 用 ADMIN_PASSWORD（缺省 Admin@123）抢先建 admin，
+  // 后端见 userCount>0 即跳过，导致部署生成的 INITIAL_ADMIN_PASSWORD 落空、无法登录。
 
   // 创建 VIP 体系种子数据
   await seedConfigKeyRegistry(prisma);
@@ -301,13 +204,64 @@ async function seedConfigKeyRegistry(prisma: PrismaClient) {
   });
 
   const keys = [
-    { key: 'quota.personal_storage_mb', type: 'number', label: '个人空间容量(MB)', defaultValue: 50, description: '用户个人私人空间的上限，单位 MB', sortOrder: 1 },
-    { key: 'quota.conversion_window_count', type: 'number', label: '每窗口转换次数', defaultValue: 10, description: '每窗口内图纸格式转换次数上限（PDF/DXF/DWG 统一计数）', sortOrder: 2 },
-    { key: 'quota.conversion_window_hours', type: 'number', label: '转换窗口(小时)', defaultValue: 2, description: '转换频率限制窗口小时数', sortOrder: 3 },
-    { key: 'quota.save_window_count', type: 'number', label: '每窗口保存次数', defaultValue: 300, description: '每窗口内图纸覆盖保存（转 bin）次数上限，窗口小时数复用转换窗口', sortOrder: 4 },
-    { key: 'quota.history_window_count', type: 'number', label: '每窗口历史版本查看次数', defaultValue: 300, description: '每窗口内查看图纸历史版本（bin 转 mxweb）次数上限，窗口小时数复用转换窗口', sortOrder: 5 },
-    { key: 'quota.project_size_mb', type: 'number', label: '项目体积上限(MB)', defaultValue: 100, description: '用户可参与的项目的最大体积，逐项目独立计算', sortOrder: 6 },
-    { key: 'quota.max_projects', type: 'number', label: '最大创建项目数', defaultValue: 5, description: '用户最多可创建的项目总数', sortOrder: 7 },
+    {
+      key: 'quota.personal_storage_mb',
+      type: 'number',
+      label: '个人空间容量(MB)',
+      defaultValue: 50,
+      description: '用户个人私人空间的上限，单位 MB',
+      sortOrder: 1,
+    },
+    {
+      key: 'quota.conversion_window_count',
+      type: 'number',
+      label: '每窗口转换次数',
+      defaultValue: 10,
+      description: '每窗口内图纸格式转换次数上限（PDF/DXF/DWG 统一计数）',
+      sortOrder: 2,
+    },
+    {
+      key: 'quota.conversion_window_hours',
+      type: 'number',
+      label: '转换窗口(小时)',
+      defaultValue: 2,
+      description: '转换频率限制窗口小时数',
+      sortOrder: 3,
+    },
+    {
+      key: 'quota.save_window_count',
+      type: 'number',
+      label: '每窗口保存次数',
+      defaultValue: 300,
+      description:
+        '每窗口内图纸覆盖保存（转 bin）次数上限，窗口小时数复用转换窗口',
+      sortOrder: 4,
+    },
+    {
+      key: 'quota.history_window_count',
+      type: 'number',
+      label: '每窗口历史版本查看次数',
+      defaultValue: 300,
+      description:
+        '每窗口内查看图纸历史版本（bin 转 mxweb）次数上限，窗口小时数复用转换窗口',
+      sortOrder: 5,
+    },
+    {
+      key: 'quota.project_size_mb',
+      type: 'number',
+      label: '项目体积上限(MB)',
+      defaultValue: 100,
+      description: '用户可参与的项目的最大体积，逐项目独立计算',
+      sortOrder: 6,
+    },
+    {
+      key: 'quota.max_projects',
+      type: 'number',
+      label: '最大创建项目数',
+      defaultValue: 5,
+      description: '用户最多可创建的项目总数',
+      sortOrder: 7,
+    },
   ];
 
   // 按 key 幂等补齐：已有配置不覆盖，缺失配置才创建
@@ -323,10 +277,66 @@ async function seedConfigKeyRegistry(prisma: PrismaClient) {
 
 async function seedVipTiers(prisma: PrismaClient) {
   const tiers = [
-    { level: 0, name: 'VIP0', baseMonthlyPrice: 0, isActive: true, configs: { 'quota.personal_storage_mb': 50, 'quota.conversion_window_count': 10, 'quota.conversion_window_hours': 2, 'quota.save_window_count': 300, 'quota.history_window_count': 300, 'quota.project_size_mb': 100, 'quota.max_projects': 5 } },
-    { level: 1, name: 'VIP1', baseMonthlyPrice: 1500, isActive: true, configs: { 'quota.personal_storage_mb': 200, 'quota.conversion_window_count': 100, 'quota.conversion_window_hours': 2, 'quota.save_window_count': 500, 'quota.history_window_count': 500, 'quota.project_size_mb': 500, 'quota.max_projects': 20 } },
-    { level: 2, name: 'VIP2', baseMonthlyPrice: 3000, isActive: true, configs: { 'quota.personal_storage_mb': 500, 'quota.conversion_window_count': 1000, 'quota.conversion_window_hours': 2, 'quota.save_window_count': 2000, 'quota.history_window_count': 2000, 'quota.project_size_mb': 2000, 'quota.max_projects': 50 } },
-    { level: 3, name: 'VIP3', baseMonthlyPrice: 6000, isActive: true, configs: { 'quota.personal_storage_mb': 2000, 'quota.conversion_window_count': 5000, 'quota.conversion_window_hours': 2, 'quota.save_window_count': 5000, 'quota.history_window_count': 5000, 'quota.project_size_mb': 10000, 'quota.max_projects': 200 } },
+    {
+      level: 0,
+      name: 'VIP0',
+      baseMonthlyPrice: 0,
+      isActive: true,
+      configs: {
+        'quota.personal_storage_mb': 50,
+        'quota.conversion_window_count': 10,
+        'quota.conversion_window_hours': 2,
+        'quota.save_window_count': 300,
+        'quota.history_window_count': 300,
+        'quota.project_size_mb': 100,
+        'quota.max_projects': 5,
+      },
+    },
+    {
+      level: 1,
+      name: 'VIP1',
+      baseMonthlyPrice: 1500,
+      isActive: true,
+      configs: {
+        'quota.personal_storage_mb': 200,
+        'quota.conversion_window_count': 100,
+        'quota.conversion_window_hours': 2,
+        'quota.save_window_count': 500,
+        'quota.history_window_count': 500,
+        'quota.project_size_mb': 500,
+        'quota.max_projects': 20,
+      },
+    },
+    {
+      level: 2,
+      name: 'VIP2',
+      baseMonthlyPrice: 3000,
+      isActive: true,
+      configs: {
+        'quota.personal_storage_mb': 500,
+        'quota.conversion_window_count': 1000,
+        'quota.conversion_window_hours': 2,
+        'quota.save_window_count': 2000,
+        'quota.history_window_count': 2000,
+        'quota.project_size_mb': 2000,
+        'quota.max_projects': 50,
+      },
+    },
+    {
+      level: 3,
+      name: 'VIP3',
+      baseMonthlyPrice: 6000,
+      isActive: true,
+      configs: {
+        'quota.personal_storage_mb': 2000,
+        'quota.conversion_window_count': 5000,
+        'quota.conversion_window_hours': 2,
+        'quota.save_window_count': 5000,
+        'quota.history_window_count': 5000,
+        'quota.project_size_mb': 10000,
+        'quota.max_projects': 200,
+      },
+    },
   ];
 
   // 按 level 幂等补齐：已有等级不覆盖，缺失等级才创建
@@ -356,7 +366,9 @@ async function seedDurationPricings(prisma: PrismaClient) {
     { months: 12, multiplierBps: 7000, label: '12个月', sortOrder: 12 },
   ];
 
-  const existing = await prisma.durationPricing.findMany({ select: { months: true } });
+  const existing = await prisma.durationPricing.findMany({
+    select: { months: true },
+  });
   const existingMonths = new Set(existing.map((d) => d.months));
   const missing = durations.filter((d) => !existingMonths.has(d.months));
 

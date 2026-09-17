@@ -20,6 +20,16 @@ import { TaskRunStatus, TaskRunTrigger } from './enums/task-run.enum';
 export interface TaskRunner {
   /** 任务描述（用于手动触发 API 展示） */
   description: string;
+  /**
+   * 定时 cron 表达式（与 @Cron 装饰器同源，用于任务清单展示）。
+   * 省略 = 无独立定时（随宿主任务执行或仅手动触发），API 返回 null
+   */
+  schedule?: string;
+  /**
+   * 定时的人类可读描述（任务清单主展示，如「每天 02:00」）。
+   * 省略 = 无独立定时，API 返回 null
+   */
+  scheduleLabel?: string;
   /** 裸执行函数：不做开关检查、不做 TaskRun 记录，由 TaskRunService.run 统一包装 */
   execute: () => Promise<unknown>;
 }
@@ -57,10 +67,17 @@ export class TaskRunService {
     return this.runners.get(taskName);
   }
 
-  listRunners(): { taskName: string; description: string }[] {
+  listRunners(): {
+    taskName: string;
+    description: string;
+    schedule: string | null;
+    scheduleLabel: string | null;
+  }[] {
     return [...this.runners.entries()].map(([taskName, runner]) => ({
       taskName,
       description: runner.description,
+      schedule: runner.schedule ?? null,
+      scheduleLabel: runner.scheduleLabel ?? null,
     }));
   }
 
@@ -151,7 +168,7 @@ export class TaskRunService {
   }
 
   /**
-   * 清理超过保留期的 TaskRun 记录（#271：无界增长治理，默认保留 30 天）。
+   * 清理超过保留期的 TaskRun 记录（#271 无界增长治理；#326 默认保留 180 天）。
    * 按 startedAt 删除（已具备 [taskName, startedAt] / [status, startedAt] 索引前缀；
    * 保留期删除以 startedAt 单列为径，schema 已补 @@index([startedAt])）。
    * 失败不抛出：清理属后台运维，不影响主流程（记录失败仅记日志，与 record() 一致）。

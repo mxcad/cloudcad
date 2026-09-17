@@ -28,6 +28,7 @@ import type { LibraryType } from '../types';
 import { buildResourceItems } from '../buildResourceItems';
 import { useLibraryCategories } from './useLibraryCategories';
 import { useProjectProjects } from './useProjectProjects';
+import { usePersistentTabState } from './usePersistentTabState';
 
 export interface UseProjectDrawingsDataOptions {
   projectId?: string;
@@ -37,6 +38,8 @@ export interface UseProjectDrawingsDataOptions {
   isModified?: boolean;
   libraryType?: LibraryType;
   visible: boolean;
+  /** 子tab标识，用于持久化状态（仅非库模式使用） */
+  tabId?: string;
 }
 
 /**
@@ -53,6 +56,7 @@ export function useProjectDrawingsData({
   isModified = false,
   libraryType,
   visible,
+  tabId,
 }: UseProjectDrawingsDataOptions) {
   const { user } = useAuth();
   const { hasPermission } = usePermission();
@@ -67,6 +71,31 @@ export function useProjectDrawingsData({
       : hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE));
 
   const [pageSize, setPageSize] = useState(30);
+
+  // 使用持久化状态 hook
+  const {
+    selectedProjectId,
+    setSelectedProjectId,
+    breadcrumb,
+    setBreadcrumb,
+    searchQuery,
+    setSearchQuery,
+    currentPage: currentPageState,
+    setCurrentPage: setCurrentPageState,
+  } = usePersistentTabState({
+    tabId,
+    isLibraryMode,
+    visible,
+    initialProjectId: projectId,
+    isPersonalSpace,
+  });
+
+  // UI hook — toast 委托全局 ToastStack（见 useFileSystemUI 说明）
+  const { showToast } = useFileSystemUI();
+
+  const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
+  const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
+  const redoStack = useFileSystemUndoRedoStore((s) => s.redoStack);
 
   // 解析分类路径，从右往左找第一个非'all'的节点ID。
   const getCategoryNodeId = (
@@ -101,24 +130,8 @@ export function useProjectDrawingsData({
   } = useLibraryCategories(isLibraryMode, libraryType, visible);
 
   // UI state
-  const [searchQuery, setSearchQuery] = useState('');
   const [projectRefreshKey, setProjectRefreshKey] = useState(0);
   const [projectFilter, setProjectFilter] = useState<ProjectFilterType>('all');
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    isPersonalSpace ? projectId || null : null
-  );
-  const [breadcrumb, setBreadcrumb] = useState<{ id: string; name: string }[]>(
-    []
-  );
-
-  // UI hook — toast 委托全局 ToastStack（见 useFileSystemUI 说明）
-  const { showToast } = useFileSystemUI();
-
-  const pushAction = useFileSystemUndoRedoStore((s) => s.pushAction);
-  const undoStack = useFileSystemUndoRedoStore((s) => s.undoStack);
-  const redoStack = useFileSystemUndoRedoStore((s) => s.redoStack);
-
-  // ── 多选（内核：batch-only + canManageLibrary 批量开关） ──────────
   const selection = useFileBrowserSelection({
     nodes: loader.nodes,
     multiple: 'batch-only',

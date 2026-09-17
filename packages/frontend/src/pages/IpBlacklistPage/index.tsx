@@ -39,8 +39,16 @@ function formatTime(value: string): string {
   return new Date(value).toLocaleString();
 }
 
-export default function IpBlacklistPage() {
-  useDocumentTitle(t('IP 黑名单'));
+/**
+ * @param embedded 嵌入 IP 访问控制 Tab 时为 true：隐藏独立页头与外边距
+ * （标题由外层 Tab 承担）
+ */
+export default function IpBlacklistPage({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
+  useDocumentTitle(t('IP 黑名单'), embedded);
 
   const [page, setPage] = useState(1);
   const [addOpen, setAddOpen] = useState(false);
@@ -165,12 +173,35 @@ export default function IpBlacklistPage() {
   });
 
   return (
-    <div className="h-full flex flex-col overflow-hidden p-6 text-text-secondary">
-      <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
-        <div className="flex-shrink-0 flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-text-primary">
-            {t('IP 黑名单')}
-          </h1>
+    <div
+      className={
+        embedded
+          ? 'h-full flex flex-col overflow-hidden text-text-secondary'
+          : 'h-full flex flex-col overflow-hidden p-6 text-text-secondary'
+      }
+    >
+      <div
+        className={
+          embedded
+            ? 'w-full flex flex-col flex-1 min-h-0'
+            : 'max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0'
+        }
+      >
+        <div
+          className={
+            embedded
+              ? 'flex-shrink-0 flex items-center justify-between mb-4'
+              : 'flex-shrink-0 flex items-center justify-between mb-6'
+          }
+        >
+          {/* 保留占位节点：embedded 时无标题，justify-between 仍需两个子项才能把工具栏推右 */}
+          <div className="flex items-center gap-2">
+            {!embedded && (
+              <h1 className="text-2xl font-bold text-text-primary">
+                {t('IP 黑名单')}
+              </h1>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search

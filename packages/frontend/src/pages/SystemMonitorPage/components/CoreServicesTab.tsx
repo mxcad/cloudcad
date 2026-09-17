@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { t } from '@/languages';
 import { ServiceCard } from '../ServiceCard';
-import { QueueStatsCard } from '../QueueStatsCard';
 import type { SystemHealth } from '../types';
 import styles from '../SystemMonitorPage.module.css';
 
@@ -60,14 +59,6 @@ export const CoreServicesTab: React.FC<CoreServicesTabProps> = ({
             loading={false}
           />
         </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <h2>{t('转换队列')}</h2>
-        </div>
-
-        <QueueStatsCard />
       </section>
 
       <section className={styles.section}>

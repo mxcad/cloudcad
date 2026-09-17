@@ -7,9 +7,17 @@ export function apiSdkHotReload() {
     name: 'api-sdk-hot-reload',
     configureServer(server) {
       const root = server.config.root;
-      const apiSdkSrc = path.resolve(root, '../../api-sdk/src');
+      // SDK 与本前端包同为 packages/ 下的兄弟包：packages/<frontend>/../api-sdk/src。
+      // 统一成正斜杠：chokidar 回调里的 file 是正斜杠，反斜杠会导致 triggerReload 的
+      // startsWith 永远不匹配。路径写错时若静默 return，SDK 变更就永远不失效模块图
+      //（表现为浏览器拿到旧 SDK，且同一文件可能以 /@id/ 与 /@fs/ 两种 URL 各执行一次），
+      // 必须显式告警。
+      const apiSdkSrc = path.resolve(root, '../api-sdk/src').replace(/\\/g, '/');
 
-      if (!fs.existsSync(apiSdkSrc)) return;
+      if (!fs.existsSync(apiSdkSrc)) {
+        console.warn(`[api-sdk-hot-reload] 未找到 ${apiSdkSrc}，SDK 热更新已禁用`);
+        return;
+      }
 
       server.watcher.add(apiSdkSrc);
 

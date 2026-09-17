@@ -99,13 +99,40 @@ describe('AdminStatsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('跨度超过 365 天抛出 BadRequestException', async () => {
-      await expect(
-        service.getDailyRegistrations({
-          startDate: '2024-01-01',
-          endDate: '2026-08-25',
-        })
-      ).rejects.toThrow(BadRequestException);
+    it('跨度超过 365 天（约两年）可正常查询，序列零填充完整', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await service.getDailyRegistrations({
+        startDate: '2024-01-01',
+        endDate: '2026-08-25',
+      });
+
+      expect(result.series).toHaveLength(968);
+      expect(result.series[0].date).toBe('2024-01-01');
+      expect(result.series[967].date).toBe('2026-08-25');
+      expect(result.total).toBe(0);
+    });
+  });
+
+  describe('getOverview', () => {
+    it('返回当前用户总数与累计付费用户数（两次独立聚合）', async () => {
+      mockPrisma.$queryRaw
+        .mockResolvedValueOnce([{ count: 1234 }])
+        .mockResolvedValueOnce([{ count: 56 }]);
+
+      const result = await service.getOverview();
+
+      expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(2);
+      expect(queryParams(1)[0]).toBe('SUCCEEDED');
+      expect(result).toEqual({ totalUsers: 1234, paidUsers: 56 });
+    });
+
+    it('空结果兜底为 0', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([]);
+
+      const result = await service.getOverview();
+
+      expect(result).toEqual({ totalUsers: 0, paidUsers: 0 });
     });
   });
 

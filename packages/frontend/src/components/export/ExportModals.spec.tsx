@@ -60,6 +60,22 @@ vi.mock('@/utils/download', () => ({
   triggerBlobDownload: vi.fn(),
 }));
 
+// 单格式非阻塞转换下载入口：CAD 编辑器导出（内存 blob 上传后按 hash 建任务）走 createFileHashTask；
+// createSingleFormatTask（nodeId 制）保留供渲染树其他消费方
+const {
+  createSingleFormatTaskMock,
+  createFileHashTaskMock,
+} = vi.hoisted(() => ({
+  createSingleFormatTaskMock: vi.fn().mockResolvedValue('task-1'),
+  createFileHashTaskMock: vi.fn().mockResolvedValue('task-1'),
+}));
+vi.mock('@/hooks/file-system', () => ({
+  useBatchDownload: () => ({
+    createSingleFormatTask: createSingleFormatTaskMock,
+    createFileHashTask: createFileHashTaskMock,
+  }),
+}));
+
 vi.mock('@/utils/errorHandler', () => ({
   getErrorMessage: (e: unknown) => (e instanceof Error ? e.message : String(e)),
 }));
@@ -166,6 +182,7 @@ import {
   publicFileControllerConvertAndDownload,
 } from '@/api-sdk';
 import { triggerBlobDownload } from '@/utils/download';
+import { uploadFile } from '@/utils/mxcadUploadUtils';
 import { saveAsFileDialog } from 'mxcad';
 import { emit, clearDrawingSessionListeners } from '@/services/drawingSession';
 import { CAD_EVENTS } from '@/constants/events';
@@ -248,7 +265,7 @@ describe('ExportModals', () => {
     expect(screen.queryByText('选择下载格式')).toBeNull();
   });
 
-  it('EXPORT_PDF 打开 PDF 导出弹窗，导出走转换+本地保存', async () => {
+  it('EXPORT_PDF 打开 PDF 导出弹窗，导出上传 blob 后建非阻塞转换任务', async () => {
     renderExportModals();
 
     act(() => {
@@ -260,20 +277,30 @@ describe('ExportModals', () => {
     expect(screen.getByText('导出 PDF')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('导出'));
+    // 上传（skipDb，不落 DB 节点）
     await waitFor(() => {
-      expect(publicFileControllerConvertAndDownload).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(saveAsFileDialog).toHaveBeenCalledWith(
-        expect.objectContaining({ filename: 'drawing.pdf' })
+      expect(uploadFile).toHaveBeenCalledWith(
+        expect.objectContaining({ skipDb: true, forceUpload: true })
       );
     });
+    // 按 hash 建非阻塞转换任务（SSE 终态自动下载）
+    await waitFor(() => {
+      expect(createFileHashTaskMock).toHaveBeenCalledWith(
+        'mock-hash',
+        'drawing.dwg',
+        'pdf',
+        { width: '2000', height: '2000', colorPolicy: 'mono' }
+      );
+    });
+    // 非阻塞：不触发原生保存对话框
+    expect(saveAsFileDialog).not.toHaveBeenCalled();
+    // 点导出立即关闭弹框
     await waitFor(() => {
       expect(screen.queryByText('导出 PDF')).toBeNull();
     });
   });
 
-  it('EXPORT_DWG 打开 DWG 导出弹窗，导出走 saveAsFileDialog', async () => {
+  it('EXPORT_DWG 打开 DWG 导出弹窗，导出上传 blob 后建非阻塞转换任务', async () => {
     renderExportModals();
 
     act(() => {
@@ -287,9 +314,18 @@ describe('ExportModals', () => {
 
     fireEvent.click(screen.getByText('导出'));
     await waitFor(() => {
-      expect(saveAsFileDialog).toHaveBeenCalledWith(
-        expect.objectContaining({ filename: 'drawing.dwg' })
+      expect(createFileHashTaskMock).toHaveBeenCalledWith(
+        'mock-hash',
+        'drawing.dwg',
+        'dwg',
+        { dwgVersion: 23 }
       );
+    });
+    // 非阻塞：不触发原生保存对话框
+    expect(saveAsFileDialog).not.toHaveBeenCalled();
+    // 点导出立即关闭弹框
+    await waitFor(() => {
+      expect(screen.queryByText('导出 DWG')).toBeNull();
     });
   });
 

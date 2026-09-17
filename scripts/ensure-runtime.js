@@ -37,6 +37,17 @@ const IS_WINDOWS = os.platform() === 'win32';
 const RUNTIME_DOWNLOAD_URL = process.env.RUNTIME_DOWNLOAD_URL || '';
 const RUNTIME_RELEASE_TAG = process.env.RUNTIME_RELEASE_TAG || 'mxcad-stable';
 
+// ADR-0059：标准组件（node/pg/redis/svn）从 runtime-deps 内容寻址包拉取（dev 机开箱即用）
+// opt-out：CLOUDCAD_SKIP_STD_RUNTIME=1 整体跳过标准组件自动拉取（技术用户自管）
+const SKIP_STD_RUNTIME = process.env.CLOUDCAD_SKIP_STD_RUNTIME === '1';
+// runtime 依赖包 Release tag（与 .github/workflows/runtime-deps.yml 上传的 tag 一致）
+const RUNTIME_DEPS_REPO = process.env.RUNTIME_DEPS_REPO || 'mxcad/cloudcad';
+const RUNTIME_DEPS_TAG = process.env.RUNTIME_DEPS_TAG || 'runtime-deps';
+// 组件版本指纹（与 scripts/pack-runtime-deps.js 的 COMPONENT_VERSIONS 单一事实源一致）
+const COMPONENT_VERSIONS = { node: '20.19.5', postgres: '15', redis: '5' };
+// 统一下载助手（多源有序回退 + 内置公开镜像 + 超时判定，见 ADR-0059 决策 9）
+const { downloadFile } = require('./lib/download-sources');
+
 function log(msg) {
   console.log(`[Ensure-Runtime] ${msg}`);
 }
@@ -54,6 +65,61 @@ function getArchSuffix() {
   if (IS_WINDOWS) return 'x64';
   const archMap = { x64: 'x86_64', arm64: 'aarch64', arm: 'armv7l', ia32: 'i686' };
   return archMap[process.arch] || process.arch;
+}
+
+/**
+ * 组件版本指纹（与 scripts/pack-runtime-deps.js 的 COMPONENT_VERSIONS 一致）：
+ *   node20.19.5-pg15-redis5
+ */
+function versionFingerprint() {
+  return `node${COMPONENT_VERSIONS.node}-pg${COMPONENT_VERSIONS.postgres}-redis${COMPONENT_VERSIONS.redis}`;
+}
+
+/**
+ * runtime 依赖包资产名（确定性，与 pack-runtime-deps.js assetName 一致）。
+ * @param {string} osTag  发行版 tier（centos7/ubuntu22/rocky9）或 windows
+ * @param {string} arch   x86_64 / x64
+ */
+function runtimeDepsAssetName(osTag, arch) {
+  return `cloudcad-runtime-deps-${osTag}-${arch}-${versionFingerprint()}.tar.gz`;
+}
+
+/**
+ * 探测 Linux 发行版 → 映射到最近 tier（glibc 向后兼容：低 tier 二进制跑高 glibc 系统安全）。
+ *   centos/rhel 7 → centos7；ubuntu → ubuntu22；rocky/rhel 8/9 → rocky9；debian → ubuntu22；
+ *   未知/无法探测 → centos7（最安全：glibc 2.17 全系统可跑）。
+ * 可用 CLOUDCAD_RUNTIME_TIER 显式覆盖（centos7/ubuntu22/rocky9）。
+ * @returns {string|null} tier 名；Windows 返回 null
+ */
+function detectLinuxTier() {
+  if (IS_WINDOWS) return null;
+  if (process.env.CLOUDCAD_RUNTIME_TIER) return process.env.CLOUDCAD_RUNTIME_TIER;
+  try {
+    const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
+    const get = (key) => {
+      const m = osRelease.match(new RegExp(`^${key}=(.*)$`, 'm'));
+      return m ? m[1].trim().replace(/^"|"$/g, '') : '';
+    };
+    const id = get('ID').toLowerCase();
+    const idLike = get('ID_LIKE').toLowerCase();
+    const versionId = get('VERSION_ID');
+    const isRhelFamily = /rhel|fedora/.test(`${id} ${idLike}`);
+    const isRocky = id.includes('rocky');
+    const isCentos = id.includes('centos');
+    const isUbuntu = id.includes('ubuntu');
+    const isDebian = id.includes('debian');
+    if (isCentos && versionId.startsWith('7')) return 'centos7';
+    if (isRocky) return 'rocky9';
+    if (isRhelFamily) {
+      // RHEL 系：8/9 → rocky9；7 → centos7
+      return versionId.startsWith('7') ? 'centos7' : 'rocky9';
+    }
+    if (isUbuntu) return 'ubuntu22';
+    if (isDebian) return 'ubuntu22';
+    return 'centos7'; // 未知发行版：用最安全 tier（glibc 2.17，全系统可跑）
+  } catch {
+    return 'centos7';
+  }
 }
 
 /**
@@ -136,6 +202,52 @@ function requiredProductDirs() {
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+/**
+ * 确保标准组件（node/pg/redis/svn）就绪：从 runtime-deps 内容寻址包下载解压到 runtime/<platform>/。
+ * 幂等：runtime/<platform>/node 目录存在=包已解压，跳过（零开销）。
+ * 多源回退：经 WP9 downloadFile（GitHub 主源 → 内置公开镜像 → 用户自定义源）。
+ * @returns {Promise<boolean>} 是否就绪（含已就绪跳过 / opt-out 跳过）
+ */
+async function ensureStandardComponents() {
+  if (SKIP_STD_RUNTIME) {
+    log('CLOUDCAD_SKIP_STD_RUNTIME=1，跳过标准组件自动拉取（技术用户自管 node/pg/redis/svn）');
+    return true;
+  }
+  const platform = IS_WINDOWS ? 'windows' : 'linux';
+  const arch = getArchSuffix();
+  const platformDir = path.join(RUNTIME_DIR, platform);
+  const nodeDir = path.join(platformDir, 'node');
+
+  // 幂等：node 目录存在=runtime-deps 包已解压
+  if (dirHasContent(nodeDir)) {
+    log(`✓ 标准组件已就绪: ${platform}/（runtime-deps 包已解压）`);
+    return true;
+  }
+
+  // 构造 runtime-deps 包名 + 下载源
+  const osTag = IS_WINDOWS ? 'windows' : detectLinuxTier();
+  const asset = runtimeDepsAssetName(osTag, arch);
+  const canonicalUrl = `https://github.com/${RUNTIME_DEPS_REPO}/releases/download/${RUNTIME_DEPS_TAG}/${asset}`;
+  log(`标准组件缺失，下载 runtime-deps 包（tier=${osTag}, arch=${arch}）: ${asset}`);
+
+  const tmpFile = path.join(PROJECT_ROOT, `runtime-deps-download-${Date.now()}.tar.gz`);
+  try {
+    const { url, bytes } = await downloadFile(canonicalUrl, tmpFile, {
+      onTry: (src) => log(`  尝试源: ${src.label}`),
+    });
+    log(`✓ 已下载 (${(bytes / 1024 / 1024).toFixed(1)} MB) 自 ${url}`);
+    ensureDir(platformDir);
+    extractTarGz(tmpFile, platformDir);
+    log(`✓ 标准组件就绪: ${platform}/（node/postgres/redis/subversion）`);
+    return true;
+  } catch (e) {
+    error(`标准组件下载失败: ${e.message}`);
+    return false;
+  } finally {
+    if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+  }
 }
 
 /**
@@ -236,9 +348,9 @@ async function resolveAssetName(component, assetPrefix) {
 }
 
 async function main() {
+  // 1. 产品二进制（mxcad / mxversion）
   const required = requiredProductDirs();
   const missing = [];
-
   for (const item of required) {
     const abs = path.join(PROJECT_ROOT, item.rel);
     if (dirHasContent(abs)) {
@@ -248,27 +360,36 @@ async function main() {
     }
   }
 
+  let productOk = true;
   if (missing.length === 0) {
     log('✓ 产品二进制全部就绪，无需下载');
-    return 0;
+  } else {
+    log(`检测到 ${missing.length} 个产品二进制缺失，尝试下载...`);
+    for (const item of missing) {
+      const abs = path.join(PROJECT_ROOT, item.rel);
+      const ok = await downloadProduct(item.component, item.assetPrefix, abs);
+      if (!ok) productOk = false;
+    }
+    if (!productOk) {
+      log('');
+      log('提示：无法自动获取产品二进制。请通过以下任一方式补齐：');
+      log('  1. 解压离线部署包（内嵌完整 mxcad/mxversion）');
+      log('  2. 手动将产物放置到 runtime/对应目录');
+      log('  3. 设置 RUNTIME_DOWNLOAD_URLS 指向可访问的镜像（逗号分隔，前者优先）');
+    }
   }
 
-  log(`检测到 ${missing.length} 个产品二进制缺失，尝试下载...`);
-  let allOk = true;
-  for (const item of missing) {
-    const abs = path.join(PROJECT_ROOT, item.rel);
-    const ok = await downloadProduct(item.component, item.assetPrefix, abs);
-    if (!ok) allOk = false;
-  }
+  // 2. 标准组件（node/pg/redis/svn）——runtime-deps 内容寻址包
+  const stdOk = await ensureStandardComponents();
 
-  if (!allOk) {
+  if (!productOk || !stdOk) {
     log('');
-    log('提示：无法自动获取产品二进制。请通过以下任一方式补齐：');
-    log('  1. 解压离线部署包（内嵌完整 mxcad/mxversion）');
-    log('  2. 手动将产物放置到 runtime/对应目录');
-    log('  3. 设置 RUNTIME_DOWNLOAD_URL 指向可访问的镜像');
+    log('部分运行时未就绪。手动补齐方式：');
+    log('  - 产品二进制: 解压离线部署包 / 手动放置 runtime/ 对应目录 / 设 RUNTIME_DOWNLOAD_URLS');
+    log('  - 标准组件:   手动放置 runtime/<platform>/{node,postgres,redis,subversion} / 设 CLOUDCAD_RUNTIME_TIER');
     return 1;
   }
+  log('✓ 运行时全部就绪（产品二进制 + 标准组件）');
   return 0;
 }
 
@@ -281,4 +402,8 @@ module.exports = {
   dirHasContent,
   getArchSuffix,
   downloadProduct,
+  ensureStandardComponents,
+  detectLinuxTier,
+  runtimeDepsAssetName,
+  versionFingerprint,
 };

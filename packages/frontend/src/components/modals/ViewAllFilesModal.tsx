@@ -55,13 +55,7 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
             {getErrorMessage(filesQuery.error) || t('加载失败')}
           </p>
         </div>
-      ) : loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-16 rounded-xl skeleton-theme" />
-          ))}
-        </div>
-      ) : files.length > 0 ? (
+      ) : loading ? null : files.length > 0 ? (
         <div className="space-y-1">
           {files.map((file) => (
             <FileItem

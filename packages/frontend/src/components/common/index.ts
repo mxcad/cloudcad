@@ -8,5 +8,3 @@
 
 export { ResourceList } from './ResourceList';
 export type { ResourceItem, CategoryOption, ViewMode } from './ResourceList';
-
-export { VersionHistoryDropdown } from './VersionHistoryDropdown';
