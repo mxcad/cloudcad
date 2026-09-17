@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { t } from '@/languages';
-import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
+import { useSupportContact } from '@/hooks/useSupportContact';
 
 interface SupportModalProps {
   onClose: () => void;
@@ -16,10 +16,10 @@ export const SupportModal: React.FC<SupportModalProps> = ({
   variant = 'disabled',
   cleanupDays = 30,
 }) => {
-  // 客服联系方式读取运行时配置（缺省回退硬编码兜底值）
-  const { config } = useRuntimeConfig();
-  const supportEmail = config.supportEmail || 'support@cloudcad.com';
-  const supportPhone = config.supportPhone || '400-123-4567';
+  const support = useSupportContact();
+  const supportEmail = support.email;
+  const supportPhone = support.phone;
+  const supportHours = support.hours;
 
   const isDeactivated = variant === 'deactivated';
 
@@ -77,7 +77,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
               {t('工作时间：')}
             </span>
             <span style={{ color: 'var(--text-secondary)' }}>
-              {t('周一至周五 9:00-18:00')}
+              {supportHours}
             </span>
           </div>
         </div>

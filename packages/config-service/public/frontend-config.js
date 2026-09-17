@@ -136,7 +136,11 @@ const FRONTEND_CONFIG = (function () {
   }
 
   function renderBrandConfigSection() {
-    const logoUrl = currentBrandConfig.logo || '/brand/logo.png';
+    const cfg = currentBrandConfig;
+    const logoUrl = cfg.logo || '/brand/logo.png';
+    const support = cfg.support || {};
+    const legal = cfg.legal || {};
+    const identities = legal.identities || {};
     return `
       <div class="brand-config-section" id="brandConfigSection">
         <div class="section-actions">
@@ -150,7 +154,15 @@ const FRONTEND_CONFIG = (function () {
         <div class="brand-form">
           <div class="form-group">
             <label>应用标题</label>
-            <input type="text" id="brandTitle" value="${escapeHtml(currentBrandConfig.title || '')}" placeholder="请输入应用标题" maxlength="100" />
+            <input type="text" id="brandTitle" value="${escapeHtml(cfg.title || '')}" placeholder="请输入应用标题" maxlength="100" />
+          </div>
+          <div class="form-group">
+            <label>标签（tagline，留空不显示）</label>
+            <input type="text" id="brandTagline" value="${escapeHtml(cfg.tagline || '')}" placeholder="选填" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>Logo 路径</label>
+            <input type="text" id="brandLogo" value="${escapeHtml(cfg.logo || '')}" placeholder="/logo.png" maxlength="200" />
           </div>
           <div class="form-group">
             <label>当前 Logo</label>
@@ -158,6 +170,68 @@ const FRONTEND_CONFIG = (function () {
               <img src="${escapeHtml(logoUrl)}" style="max-width: 200px; max-height: 60px;" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';" />
               <span style="color:#666;display:none">未设置 Logo</span>
             </div>
+          </div>
+          <div class="form-group">
+            <label>侧边栏副标题</label>
+            <input type="text" id="brandSubtitle" value="${escapeHtml(cfg.subtitle || '')}" placeholder="留空用内置默认值" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>文档地址</label>
+            <input type="text" id="brandDocsUrl" value="${escapeHtml(cfg.docsUrl || '')}" placeholder="留空用内置默认值" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>版权年份</label>
+            <input type="text" id="brandCopyrightYear" value="${escapeHtml(cfg.copyrightYear || '')}" placeholder="例如 2026" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>版权持有者</label>
+            <input type="text" id="brandCopyrightHolder" value="${escapeHtml(cfg.copyrightHolder || '')}" placeholder="留空用内置默认值" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>版权行模板（支持 {year} {appName} 占位符）</label>
+            <input type="text" id="brandCopyrightLine" value="${escapeHtml(cfg.copyrightLine || '')}" placeholder="© {year} {appName}. All rights reserved." maxlength="200" />
+          </div>
+
+          <h4 style="margin:20px 0 8px">客服（客服弹框 + 法务正文同源；后端运行时配置优先级更高）</h4>
+          <div class="form-group">
+            <label>客服邮箱</label>
+            <input type="text" id="brandSupportEmail" value="${escapeHtml(support.email || '')}" placeholder="留空用内置默认值" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>客服电话</label>
+            <input type="text" id="brandSupportPhone" value="${escapeHtml(support.phone || '')}" placeholder="留空用内置默认值" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>客服时间</label>
+            <input type="text" id="brandSupportHours" value="${escapeHtml(support.hours || '')}" placeholder="例如 周一至周五 9:00-18:00" maxlength="200" />
+          </div>
+
+          <h4 style="margin:20px 0 8px">法务文本</h4>
+          <div class="form-group">
+            <label>产品短名（法务正文占位符 {{productShortName}}）</label>
+            <input type="text" id="brandLegalProductShortName" value="${escapeHtml(legal.productShortName || '')}" placeholder="CloudCAD" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>产品全称（单值，覆盖全部语言；留空用内置按语言值）</label>
+            <input type="text" id="brandLegalProductName" value="${escapeHtml(legal.productName || '')}" placeholder="留空用内置按语言值" maxlength="200" />
+          </div>
+
+          <h4 style="margin:20px 0 8px">签约主体（按语言，法务侧唯一必须本地化的字段）</h4>
+          <div class="form-group">
+            <label>简体中文（zh-CN）</label>
+            <input type="text" id="brandLegalEntity_zh-CN" value="${escapeHtml((identities['zh-CN'] || {}).entityName || '')}" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>繁體中文（zh-TW）</label>
+            <input type="text" id="brandLegalEntity_zh-TW" value="${escapeHtml((identities['zh-TW'] || {}).entityName || '')}" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>English（en-US）</label>
+            <input type="text" id="brandLegalEntity_en-US" value="${escapeHtml((identities['en-US'] || {}).entityName || '')}" maxlength="200" />
+          </div>
+          <div class="form-group">
+            <label>한국어（ko-KR）</label>
+            <input type="text" id="brandLegalEntity_ko-KR" value="${escapeHtml((identities['ko-KR'] || {}).entityName || '')}" maxlength="200" />
           </div>
         </div>
       </div>
@@ -254,7 +328,10 @@ const FRONTEND_CONFIG = (function () {
 
   async function saveBrandConfig(container) {
     const section = container.querySelector('.brand-config-section');
-    const title = section.querySelector('#brandTitle').value;
+    const value = (id) => {
+      const el = section.querySelector('#' + id);
+      return el ? el.value : '';
+    };
 
     const btn = section.querySelector('[data-action="saveBrandConfig"]');
     setButtonLoading(btn, true);
@@ -266,7 +343,31 @@ const FRONTEND_CONFIG = (function () {
           'Content-Type': 'application/json',
           Authorization: 'Bearer ' + token,
         },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({
+          title: value('brandTitle'),
+          logo: value('brandLogo'),
+          tagline: value('brandTagline'),
+          subtitle: value('brandSubtitle'),
+          docsUrl: value('brandDocsUrl'),
+          copyrightYear: value('brandCopyrightYear'),
+          copyrightHolder: value('brandCopyrightHolder'),
+          copyrightLine: value('brandCopyrightLine'),
+          support: {
+            email: value('brandSupportEmail'),
+            phone: value('brandSupportPhone'),
+            hours: value('brandSupportHours'),
+          },
+          legal: {
+            productShortName: value('brandLegalProductShortName'),
+            productName: value('brandLegalProductName'),
+            identities: {
+              'zh-CN': { entityName: value('brandLegalEntity_zh-CN') },
+              'zh-TW': { entityName: value('brandLegalEntity_zh-TW') },
+              'en-US': { entityName: value('brandLegalEntity_en-US') },
+              'ko-KR': { entityName: value('brandLegalEntity_ko-KR') },
+            },
+          },
+        }),
       });
       const data = await res.json();
       setButtonLoading(btn, false);

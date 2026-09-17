@@ -24,6 +24,7 @@
  * 失败（凭证过期/无效）→ 极简错误页 + 「前往登录」按钮。
  */
 
+import { getCopyrightLine } from '@/constants/appConfig';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { sessionTransferControllerConsume } from '@/api-sdk';
@@ -155,7 +156,7 @@ export const SessionTransfer: React.FC = () => {
       <div className={styles.authContainer}>
         {state === 'loading' ? renderLoading() : renderError()}
         <p className={styles.copyright}>
-          © 2026 {appName}. All rights reserved.
+          {getCopyrightLine(appName)}
         </p>
       </div>
     </div>

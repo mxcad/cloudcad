@@ -177,7 +177,7 @@ describe('Login', () => {
     });
     render(<Login />);
     expect(screen.getByText('账号已被禁用')).toBeTruthy();
-    expect(screen.getByText('support@cloudcad.com')).toBeTruthy();
+    expect(screen.getByText('710714273@qq.com')).toBeTruthy();
   });
 
   it('renders deactivated support modal with cleanup days when account is past grace period', () => {
@@ -191,7 +191,7 @@ describe('Login', () => {
     expect(screen.getByText('账号已注销')).toBeTruthy();
     // 正文为多文本节点拼接，用正则断言插值后的完整文案
     expect(screen.getByText(/数据将在 30 天后彻底删除，逾期无法恢复/)).toBeTruthy();
-    expect(screen.getByText('support@cloudcad.com')).toBeTruthy();
+    expect(screen.getByText('710714273@qq.com')).toBeTruthy();
   });
 
   it('switches tab when phone login tab is clicked', () => {

@@ -1,3 +1,4 @@
+import { resolveSupportContact } from '@/constants/appConfig';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -76,9 +77,11 @@ export const ForgotPassword: React.FC = () => {
 
     if (!result) {
       if (forgotPassword.error?.includes('账号已被禁用')) {
+        // 客服联系方式走唯一出口，不再各自硬编码
+        const support = resolveSupportContact(runtimeConfig);
         setSupportInfo({
-          supportEmail: 'support@cloudcad.com',
-          supportPhone: '400-123-4567',
+          supportEmail: support.email,
+          supportPhone: support.phone,
         });
         forgotPassword.setError(null);
       }

@@ -1,3 +1,4 @@
+import { useSupportContact } from '@/hooks/useSupportContact';
 import { t } from '@/languages';
 import styles from '../ForgotPassword.module.css';
 
@@ -10,6 +11,8 @@ export const SupportModal: React.FC<SupportModalProps> = ({
   open,
   onClose,
 }) => {
+  const support = useSupportContact();
+
   if (!open) return null;
 
   return (
@@ -31,18 +34,21 @@ export const SupportModal: React.FC<SupportModalProps> = ({
                 {t('客服邮箱：')}
               </span>
               <a
-                href="mailto:support@cloudcad.com"
+                href={`mailto:${support.email}`}
                 className={styles.supportContactLink}
               >
-                support@cloudcad.com
+                {support.email}
               </a>
             </div>
             <div className={styles.supportContactItem}>
               <span className={styles.supportContactLabel}>
                 {t('客服电话：')}
               </span>
-              <a href="tel:400-123-4567" className={styles.supportContactLink}>
-                400-123-4567
+              <a
+                href={`tel:${support.phone}`}
+                className={styles.supportContactLink}
+              >
+                {support.phone}
               </a>
             </div>
             <div className={styles.supportContactItem}>
@@ -50,7 +56,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({
                 {t('工作时间：')}
               </span>
               <span className={styles.supportContactValue}>
-                {t('周一至周日 9:00-18:00')}
+                {support.hours}
               </span>
             </div>
           </div>

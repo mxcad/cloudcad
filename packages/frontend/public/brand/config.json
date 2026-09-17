@@ -1,4 +1,42 @@
 {
   "title": "梦想网页CAD实时协同平台",
-  "logo": "/logo.png"
+  "logo": "/logo.png",
+  "tagline": "",
+  "copyrightYear": "2026",
+  "copyrightHolder": "Chengdu Dreamkaide Technology Co., Ltd.",
+  "copyrightLine": "© {year} {appName}. All rights reserved.",
+  "support": {
+    "email": "710714273@qq.com",
+    "phone": "17381962637",
+    "hours": "周一至周五 9:00-18:00"
+  },
+  "docsUrl": "https://help.mxdraw.com/",
+  "subtitle": "CAD 协同平台",
+  "legal": {
+    "productShortName": "CloudCAD",
+    "identities": {
+      "zh-CN": {
+        "entityName": "成都梦想凯德科技有限公司"
+      },
+      "zh-TW": {
+        "entityName": "成都夢想凱德科技有限公司"
+      },
+      "en-US": {
+        "entityName": "Chengdu Dreamkaide Technology Co., Ltd."
+      },
+      "ko-KR": {
+        "entityName": "청두 드림카이드 테크놀로지 유한공사"
+      }
+    }
+  },
+  "apps": {
+    "cadview": {
+      "title": "梦想网页CAD实时协同平台",
+      "tagline": ""
+    },
+    "mxcadweb": {
+      "title": "梦想网页CAD实时协同平台",
+      "tagline": ""
+    }
+  }
 }

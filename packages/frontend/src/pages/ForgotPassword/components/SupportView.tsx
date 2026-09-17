@@ -1,3 +1,4 @@
+import { getCopyrightLine } from '@/constants/appConfig';
 import { Mail } from 'lucide-react';
 import { Phone } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
@@ -91,7 +92,7 @@ export const SupportView: React.FC<SupportViewProps> = ({
           </Button>
         </div>
       </div>
-      <p className={styles.copyright}>© 2026 {appName}. All rights reserved.</p>
+      <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
     </div>
   </div>
 );

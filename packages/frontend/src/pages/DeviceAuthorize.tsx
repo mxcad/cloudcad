@@ -10,6 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { getCopyrightLine } from '@/constants/appConfig';
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { deviceAuthControllerAuthorizeDevice } from '@/api-sdk';
@@ -365,9 +366,7 @@ export const DeviceAuthorize: React.FC = () => {
       </div>
       <div className={styles.authContainer}>
         {renderPage()}
-        <p className={styles.copyright}>
-          © 2026 {appName}. All rights reserved.
-        </p>
+        <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
       </div>
     </div>
   );

@@ -1,21 +1,13 @@
 import React from 'react';
 import { useBrandConfig } from '../contexts/BrandContext';
-import { t } from '@/languages';
 import './Logo.css';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
-  showSubtitle?: boolean;
   animated?: boolean;
-  iconOnly?: boolean;
 }
 
-export const Logo: React.FC<LogoProps> = ({
-  size = 'md',
-  showSubtitle = true,
-  animated = true,
-  iconOnly = false,
-}) => {
+export const Logo: React.FC<LogoProps> = ({ size = 'md', animated = true }) => {
   const { config } = useBrandConfig();
   const logoSrc = config?.logo || '/logo.png';
 
@@ -43,30 +35,11 @@ export const Logo: React.FC<LogoProps> = ({
     </div>
   );
 
-  if (iconOnly) {
-    return (
-      <div
-        className={`logo logo--icon-only ${sizeClasses[size]} ${animated ? 'logo--animated' : ''}`}
-      >
-        {iconContent}
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`logo ${sizeClasses[size]} ${animated ? 'logo--animated' : ''}`}
+      className={`logo logo--icon-only ${sizeClasses[size]} ${animated ? 'logo--animated' : ''}`}
     >
       {iconContent}
-
-      {/* Logo 文字 */}
-      <div className="logo__text">
-        <h1 className="logo__title">
-          <span className="logo__title--brand">{t('梦想')}</span>
-          <span className="logo__title--product">{t('网页')}</span>
-        </h1>
-        {showSubtitle && <p className="logo__subtitle">{t('CAD 协同平台')}</p>}
-      </div>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { getCopyrightLine } from '@/constants/appConfig';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -421,9 +422,7 @@ export const PhoneVerification: React.FC = () => {
           </div>
         </div>
 
-        <p className={styles.copyright}>
-          &copy; 2026 {appName}. All rights reserved.
-        </p>
+        <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
       </div>
     </div>
   );

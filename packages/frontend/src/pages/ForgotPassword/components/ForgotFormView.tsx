@@ -1,3 +1,4 @@
+import { getCopyrightLine } from '@/constants/appConfig';
 import type { UseFormRegister, UseFormHandleSubmit } from 'react-hook-form';
 import { Mail } from 'lucide-react';
 import { Phone } from 'lucide-react';
@@ -220,7 +221,7 @@ export const ForgotFormView: React.FC<ForgotFormViewProps> = ({
         </div>
       </div>
 
-      <p className={styles.copyright}>© 2026 {appName}. All rights reserved.</p>
+      <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
     </div>
   </div>
 );

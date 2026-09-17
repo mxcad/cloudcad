@@ -5,8 +5,13 @@
   "main": "server.js",
   "scripts": {
     "dev": "node -e process.exit(0)",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/"
   },
-  "keywords": ["cloudcad", "config", "deployment"],
+  "keywords": [
+    "cloudcad",
+    "config",
+    "deployment"
+  ],
   "license": "MIT"
 }

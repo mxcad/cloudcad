@@ -14,6 +14,7 @@ import { useMembership } from '@/hooks/useMembership';
 import {
   getAppBrandConfig,
   getDefaultAppBrandConfig,
+  getCopyrightLine,
   type AppBrandConfig,
 } from '@/constants/appConfig';
 import { Tab, Tabs, Button } from '@/components/ui';
@@ -411,7 +412,7 @@ export const Login: React.FC = () => {
 
         {/* 版权信息 */}
         <p className={styles.copyright}>
-          © 2026 {appName}. All rights reserved. ·{' '}
+          {getCopyrightLine(appName)} ·{' '}
           <Link to="/privacy" className={styles.legalLink}>
             {t('隐私政策')}
           </Link>{' '}

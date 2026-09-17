@@ -1,3 +1,4 @@
+import { getCopyrightLine } from '@/constants/appConfig';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -36,7 +37,7 @@ export const RegisterLayout: React.FC<RegisterLayoutProps> = ({
       <div className={styles.registerContainer}>
         {children}
         <p className={styles.copyright}>
-          © 2026 {appName}. All rights reserved. ·{' '}
+          {getCopyrightLine(appName)} ·{' '}
           <Link to="/privacy" className={styles.legalLink}>
             {t('隐私政策')}
           </Link>{' '}

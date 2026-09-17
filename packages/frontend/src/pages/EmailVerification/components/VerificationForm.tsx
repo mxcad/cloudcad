@@ -1,3 +1,4 @@
+import { getCopyrightLine } from '@/constants/appConfig';
 import React from 'react';
 import { Mail } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
@@ -256,9 +257,7 @@ export const VerificationForm: React.FC<VerificationFormProps> = ({
           </div>
         </div>
 
-        <p className={styles.copyright}>
-          © 2026 {appName}. All rights reserved.
-        </p>
+        <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React from 'react';
+import { getBrandProfile, getCopyrightLine } from '@/constants/appConfig';
 import { t } from '@/languages';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
@@ -54,7 +55,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({
         <div className={styles.legalContent}>{children}</div>
 
         <footer className={styles.legalFooter}>
-          © 2026 Chengdu Dreamkaide Technology Co., Ltd. · {title}
+          {getCopyrightLine(getBrandProfile().copyrightHolder)} · {title}
         </footer>
       </article>
     </div>

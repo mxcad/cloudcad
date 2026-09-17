@@ -1,3 +1,4 @@
+import { getCopyrightLine } from '@/constants/appConfig';
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -318,9 +319,7 @@ export const ResetPassword: React.FC = () => {
           </div>
         </div>
 
-        <p className={styles.copyright}>
-          © 2026 {appName}. All rights reserved.
-        </p>
+        <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
       </div>
     </div>
   );
