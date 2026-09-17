@@ -62,7 +62,6 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   supportEmail: '',
   supportPhone: '',
   allowRegister: true,
-  systemNotice: '',
   wechatEnabled: false,
   wechatAutoRegister: false,
   maxFileSize: 100,

@@ -13,7 +13,6 @@ export type PublicRuntimeConfig = {
   supportEmail: string;
   supportPhone: string;
   allowRegister: boolean;
-  systemNotice: string;
   wechatEnabled: boolean;
   wechatAutoRegister: boolean;
   maxFileSize: number;
@@ -40,7 +39,6 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   supportEmail: '',
   supportPhone: '',
   allowRegister: true,
-  systemNotice: '',
   wechatEnabled: false,
   wechatAutoRegister: false,
   maxFileSize: 100,
@@ -80,7 +78,6 @@ function mapPublicConfig(
     supportEmail: String(data.supportEmail ?? ''),
     supportPhone: String(data.supportPhone ?? ''),
     allowRegister: Boolean(data.allowRegister ?? true),
-    systemNotice: String(data.systemNotice ?? ''),
     wechatEnabled: Boolean(data.wechatEnabled ?? false),
     wechatAutoRegister: Boolean(data.wechatAutoRegister ?? false),
     maxFileSize: Number(data.maxFileSize ?? 100),

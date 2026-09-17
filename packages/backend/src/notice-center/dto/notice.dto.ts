@@ -79,7 +79,8 @@ export class CreateNoticeDto {
   @ApiPropertyOptional({
     type: String,
     format: 'date-time',
-    description: '生效开始时间；为空表示发布即生效。未来的 startAt 不会立即推送，由定时任务到点处理',
+    description:
+      '生效开始时间；为空表示发布即生效。未来的 startAt 不会立即推送，由定时任务到点处理',
   })
   @IsOptional()
   @IsISO8601()
@@ -147,28 +148,51 @@ export class NoticeResponseDto {
   @ApiProperty({ description: '正文' })
   body!: string;
 
-  @ApiPropertyOptional({ description: '定向用户 ID，null 表示广播' })
+  @ApiPropertyOptional({
+    type: String,
+    description: '定向用户 ID，null 表示广播',
+  })
   userId!: string | null;
 
-  @ApiPropertyOptional({ description: '生效开始时间' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: '生效开始时间',
+  })
   startAt!: Date | null;
 
-  @ApiPropertyOptional({ description: '自动失效时间' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: '自动失效时间',
+  })
   endAt!: Date | null;
 
   @ApiProperty({ description: '到期自动下线' })
   autoExpire!: boolean;
 
-  @ApiPropertyOptional({ description: '发布时间，null 表示草稿' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: '发布时间，null 表示草稿',
+  })
   publishedAt!: Date | null;
 
-  @ApiPropertyOptional({ description: '已推送时间（null 表示待定时任务推送）' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: '已推送时间（null 表示待定时任务推送）',
+  })
   notifiedAt!: Date | null;
 
-  @ApiPropertyOptional({ description: '下线时间，null 表示未下线' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: '下线时间，null 表示未下线',
+  })
   retractedAt!: Date | null;
 
-  @ApiPropertyOptional({ description: '发布人 ID' })
+  @ApiPropertyOptional({ type: String, description: '发布人 ID' })
   publishedById!: string | null;
 
   @ApiProperty({ description: '创建时间' })

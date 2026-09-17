@@ -26,6 +26,7 @@ import { useAuth } from './contexts/AuthContext';
 import { RuntimeConfigProvider } from './contexts/RuntimeConfigContext';
 import { TourProvider } from './contexts/TourContext';
 import { GlobalTourRenderer } from './components/tour';
+import { NoticeProvider } from './components/notice';
 import PlanSelectOverlay from './components/billing/PlanSelectOverlay';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
@@ -737,10 +738,12 @@ function App() {
       <Router>
         <RuntimeConfigProvider>
           <TourProvider>
-            <AppContent />
-            {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
-            <GlobalTourRenderer />
-            <PlanSelectOverlay />
+            <NoticeProvider>
+              <AppContent />
+              {/* 全局引导渲染 - 使用 Portal 渲染到 body 末尾，确保覆盖所有元素 */}
+              <GlobalTourRenderer />
+              <PlanSelectOverlay />
+            </NoticeProvider>
           </TourProvider>
         </RuntimeConfigProvider>
       </Router>

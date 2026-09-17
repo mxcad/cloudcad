@@ -48,7 +48,6 @@ vi.mock('@/contexts/RuntimeConfigContext', () => ({
       supportEmail: '',
       supportPhone: '',
       allowRegister: true,
-      systemNotice: '',
       wechatEnabled: false,
       wechatAutoRegister: false,
       maxFileSize: 100,
@@ -324,7 +323,9 @@ function installDefaultHandlers() {
     http.get('/api/v1/library/drawing/all-files/:nodeId', ({ request }) => {
       searchRequests(request.url);
       const search = new URL(request.url).searchParams.get('search') || '';
-      const filtered = rootFixture().nodes.filter((n) => n.name.includes(search));
+      const filtered = rootFixture().nodes.filter((n) =>
+        n.name.includes(search)
+      );
       return HttpResponse.json({
         nodes: filtered,
         total: filtered.length,
@@ -359,7 +360,10 @@ function installDefaultHandlers() {
       async ({ request, params }) => {
         const body = (await request.json()) as { targetParentId?: string };
         moveRequests(params.nodeId, body.targetParentId);
-        return HttpResponse.json({ id: params.nodeId, parentId: body.targetParentId });
+        return HttpResponse.json({
+          id: params.nodeId,
+          parentId: body.targetParentId,
+        });
       }
     ),
     http.post('/api/v1/library/drawing/folders', () =>
@@ -598,7 +602,9 @@ describe('LibraryManager — 上传图纸入库', () => {
 
     expect(screen.queryByTestId('upload-trigger')).not.toBeInTheDocument();
     expect(screen.queryByText('批量导入')).not.toBeInTheDocument();
-    expect(document.querySelector('[data-tour="create-folder-btn"]')).toBeNull();
+    expect(
+      document.querySelector('[data-tour="create-folder-btn"]')
+    ).toBeNull();
   });
 });
 
@@ -844,7 +850,9 @@ describe('LibraryManager — 与 useLibraryOperations 的组合行为', () => {
       getFileItem('n1').querySelector('[data-testid="download-btn"]')!
     );
 
-    expect(await screen.findByTestId('download-format-modal')).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('download-format-modal')
+    ).toBeInTheDocument();
     expect(screen.getByTestId('download-file-name').textContent).toBe('a.dwg');
 
     fireEvent.click(screen.getByTestId('download-confirm'));

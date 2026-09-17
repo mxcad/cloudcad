@@ -3945,21 +3945,15 @@ export type NoticeResponseDto = {
     /**
      * 定向用户 ID，null 表示广播
      */
-    userId?: {
-        [key: string]: unknown;
-    };
+    userId?: string;
     /**
      * 生效开始时间
      */
-    startAt?: {
-        [key: string]: unknown;
-    };
+    startAt?: string;
     /**
      * 自动失效时间
      */
-    endAt?: {
-        [key: string]: unknown;
-    };
+    endAt?: string;
     /**
      * 到期自动下线
      */
@@ -3967,27 +3961,19 @@ export type NoticeResponseDto = {
     /**
      * 发布时间，null 表示草稿
      */
-    publishedAt?: {
-        [key: string]: unknown;
-    };
+    publishedAt?: string;
     /**
      * 已推送时间（null 表示待定时任务推送）
      */
-    notifiedAt?: {
-        [key: string]: unknown;
-    };
+    notifiedAt?: string;
     /**
      * 下线时间，null 表示未下线
      */
-    retractedAt?: {
-        [key: string]: unknown;
-    };
+    retractedAt?: string;
     /**
      * 发布人 ID
      */
-    publishedById?: {
-        [key: string]: unknown;
-    };
+    publishedById?: string;
     /**
      * 创建时间
      */

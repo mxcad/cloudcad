@@ -1036,6 +1036,32 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(`${baseURL}/api/v1/mxcad/conversion/quota`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [[undefined, { status: 200 }]] as [
+      any,
+      { status: number },
+    ][];
+
+    const [body, init] =
+      resultArray[
+        next(`get /api/v1/mxcad/conversion/quota`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(`${baseURL}/api/v1/mxcad/conversion/tasks`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -1600,38 +1626,31 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
-  http.post(
-    `${baseURL}/api/v1/conversion-monitor/known-bad/reset`,
-    async ({ request }) => {
-      const shouldEchoRequestBody = false;
-      let requestJson = null;
-      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
-        try {
-          requestJson = await request.clone().json();
-        } catch (e) {
-          requestJson = null;
-        }
+  http.post(`${baseURL}/api/v1/billing/orders/auto`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
       }
-
-      const resultArray = [
-        [
-          await getConversionMonitorControllerResetKnownBad200Response(),
-          { status: 200 },
-        ],
-      ] as [any, { status: number }][];
-
-      const [body, init] =
-        resultArray[
-          next(`post /api/v1/conversion-monitor/known-bad/reset`) %
-            resultArray.length
-        ];
-      const responseJson =
-        requestJson && body && typeof body === 'object' && !Array.isArray(body)
-          ? { ...body, ...requestJson }
-          : body;
-      return HttpResponse.json(responseJson, init);
     }
-  ),
+
+    const resultArray = [
+      [await getBillingControllerAutoCreateOrder201Response(), { status: 201 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/billing/orders/auto`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(`${baseURL}/api/v1/device/oauth/token`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -2155,6 +2174,34 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(`${baseURL}/api/v1/notices/stream/ticket`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getNoticeCenterControllerIssueTicket200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/notices/stream/ticket`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(
     `${baseURL}/api/v1/public-file/ext-reference/upload`,
     async ({ request }) => {
@@ -2809,37 +2856,6 @@ export const handlers = [
     return HttpResponse.json(responseJson, init);
   }),
   http.get(
-    `${baseURL}/api/v1/conversion-monitor/known-bad`,
-    async ({ request }) => {
-      const shouldEchoRequestBody = false;
-      let requestJson = null;
-      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
-        try {
-          requestJson = await request.clone().json();
-        } catch (e) {
-          requestJson = null;
-        }
-      }
-
-      const resultArray = [
-        [
-          await getConversionMonitorControllerListKnownBad200Response(),
-          { status: 200 },
-        ],
-      ] as [any, { status: number }][];
-
-      const [body, init] =
-        resultArray[
-          next(`get /api/v1/conversion-monitor/known-bad`) % resultArray.length
-        ];
-      const responseJson =
-        requestJson && body && typeof body === 'object' && !Array.isArray(body)
-          ? { ...body, ...requestJson }
-          : body;
-      return HttpResponse.json(responseJson, init);
-    }
-  ),
-  http.get(
     `${baseURL}/api/v1/conversion-monitor/stats`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -3099,6 +3115,53 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`get /api/v1/library/drawing`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(`${baseURL}/api/v1/notices/current`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getNoticeCenterControllerGetCurrent200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/notices/current`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(`${baseURL}/api/v1/notices/stream`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [[undefined, { status: 200 }]] as [
+      any,
+      { status: number },
+    ][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/notices/stream`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -4902,6 +4965,29 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(`${baseURL}/api/v1/notices`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getNoticeCenterControllerListAll200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/notices`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(`${baseURL}/api/v1/roles`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -4991,6 +5077,29 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`get /api/v1/users`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.post(`${baseURL}/api/v1/notices`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getNoticeCenterControllerCreate201Response(), { status: 201 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`post /api/v1/notices`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -5704,6 +5813,36 @@ export const handlers = [
       const [body, init] =
         resultArray[
           next(`post /api/v1/mxcad/conversion/tasks/:taskId/cancel`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/mxcad/conversion/tasks/:taskId/retry`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 201 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/mxcad/conversion/tasks/:taskId/retry`) %
             resultArray.length
         ];
       const responseJson =
@@ -8534,6 +8673,31 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(`${baseURL}/api/v1/notices/:id/retract`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getNoticeCenterControllerRetract200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/notices/:id/retract`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(
     `${baseURL}/api/v1/projects/:projectId/project-roles`,
     async ({ request }) => {
@@ -8893,6 +9057,29 @@ export const handlers = [
 
     const [body, init] =
       resultArray[next(`get /api/v1/users/:id`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.patch(`${baseURL}/api/v1/notices/:id`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('patch')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getNoticeCenterControllerUpdate200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`patch /api/v1/notices/:id`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -10711,6 +10898,26 @@ export function getUsersControllerChangePassword200Response() {
 }
 
 export function getBillingControllerCreateOrder201Response() {
+  return {
+    id: faker.string.uuid(),
+    orderNo: faker.lorem.words(),
+    vipTierId: faker.string.uuid(),
+    months: faker.number.int(),
+    amount: faker.number.int(),
+    status: 'PENDING',
+    gateway: 'mock',
+    gatewayOrderId: faker.string.uuid(),
+    codeUrl: faker.internet.url(),
+    payParams: {},
+    redirectUrl: faker.internet.url(),
+    vipTierName: 'VIP1',
+    durationLabel: '3个月',
+    priceYuan: faker.number.int(),
+    createdAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getBillingControllerAutoCreateOrder201Response() {
   return {
     id: faker.string.uuid(),
     orderNo: faker.lorem.words(),
@@ -12989,7 +13196,6 @@ export function getConversionTaskControllerListTasksdefaultResponse() {
         taskStatus: faker.lorem.words(),
         progress: 42,
         error: faker.lorem.words(),
-        permanent: true,
         queuePosition: 2,
         updatedAt: faker.lorem.words(),
       }));
@@ -13014,7 +13220,6 @@ export function getConversionTaskControllerListHistorydefaultResponse() {
         taskStatus: faker.lorem.words(),
         progress: 42,
         error: faker.lorem.words(),
-        permanent: true,
         queuePosition: 2,
         updatedAt: faker.lorem.words(),
       }));
@@ -13324,6 +13529,126 @@ export function getQueueControllerGetQueueStats200Response() {
     runningCount: faker.number.int(),
     maxConcurrent: faker.number.int(),
     timeout: faker.number.int(),
+  };
+}
+
+export function getNoticeCenterControllerGetCurrent200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      id: faker.string.uuid(),
+      kind: faker.lorem.words(),
+      level: faker.lorem.words(),
+      title: faker.lorem.words(),
+      body: faker.lorem.words(),
+      userId: faker.string.uuid(),
+      startAt: faker.date.anytime().toISOString(),
+      endAt: faker.date.anytime().toISOString(),
+      autoExpire: faker.datatype.boolean(),
+      publishedAt: faker.date.anytime().toISOString(),
+      notifiedAt: faker.date.anytime().toISOString(),
+      retractedAt: faker.date.anytime().toISOString(),
+      publishedById: faker.string.uuid(),
+      createdAt: faker.date.anytime().toISOString(),
+      updatedAt: faker.date.anytime().toISOString(),
+    }));
+  })();
+}
+
+export function getNoticeCenterControllerIssueTicket200Response() {
+  return {
+    ticket: faker.lorem.words(),
+  };
+}
+
+export function getNoticeCenterControllerListAll200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      id: faker.string.uuid(),
+      kind: faker.lorem.words(),
+      level: faker.lorem.words(),
+      title: faker.lorem.words(),
+      body: faker.lorem.words(),
+      userId: faker.string.uuid(),
+      startAt: faker.date.anytime().toISOString(),
+      endAt: faker.date.anytime().toISOString(),
+      autoExpire: faker.datatype.boolean(),
+      publishedAt: faker.date.anytime().toISOString(),
+      notifiedAt: faker.date.anytime().toISOString(),
+      retractedAt: faker.date.anytime().toISOString(),
+      publishedById: faker.string.uuid(),
+      createdAt: faker.date.anytime().toISOString(),
+      updatedAt: faker.date.anytime().toISOString(),
+    }));
+  })();
+}
+
+export function getNoticeCenterControllerCreate201Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getNoticeCenterControllerUpdate200Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getNoticeCenterControllerRetract200Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
   };
 }
 
@@ -14565,32 +14890,6 @@ export function getConversionMonitorControllerGetStats200Response() {
   };
 }
 
-export function getConversionMonitorControllerListKnownBad200Response() {
-  return {
-    items: (() => {
-      const arrayMin = 1;
-      const arrayMax = MAX_ARRAY_LENGTH;
-      const safeMin = Math.min(arrayMin, arrayMax);
-      return [
-        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) => ({
-        contentKey: faker.lorem.words(),
-        reason: faker.lorem.words(),
-        markedAt: faker.number.int(),
-      }));
-    })(),
-    total: faker.number.int(),
-  };
-}
-
-export function getConversionMonitorControllerResetKnownBad200Response() {
-  return {
-    reset: faker.number.int(),
-    all: faker.datatype.boolean(),
-    unsupported: faker.datatype.boolean(),
-  };
-}
-
 export function getConversionMonitorControllerListTasks200Response() {
   return {
     items: (() => {
@@ -14609,7 +14908,6 @@ export function getConversionMonitorControllerListTasks200Response() {
         startedAt: {},
         completedAt: {},
         error: faker.lorem.words(),
-        permanent: faker.datatype.boolean(),
         contentKey: faker.lorem.words(),
       }));
     })(),
