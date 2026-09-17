@@ -40,7 +40,6 @@ describe('默认值（接口未返回或失败时）', () => {
       conversionGuestWindowHours: 2,
       conversionGuestLimit: 5,
       freeExportDownloadEnabled: false,
-      systemNotice: '',
       collaborationEnabled: false,
       collaborationDomains: '',
       batchDownloadEnabled: false,
@@ -74,7 +73,6 @@ describe('字段解析', () => {
         conversionGuestWindowHours: 48,
         conversionGuestLimit: 100,
         freeExportDownloadEnabled: true,
-        systemNotice: '维护中',
         collaborationEnabled: true,
         collaborationDomains: 'mxdraw.com,*.mxdraw.cn',
         batchDownloadEnabled: true,
@@ -105,5 +103,28 @@ describe('字段解析', () => {
     expect(config.value.maxFileSize).toBe(100);
     expect(config.value.supportEmail).toBe('');
     expect(config.value.collaborationDomains).toBe('');
+  });
+
+  it('布尔型严格判型：字符串与数字都不当真值，一律回退默认值', async () => {
+    mockGetPublicConfigs.mockResolvedValue({
+      data: {
+        allowRegister: 'false',
+        wechatEnabled: 0,
+        wechatAutoRegister: '0',
+        freeExportDownloadEnabled: '',
+        batchDownloadEnabled: null,
+        collaborationEnabled: undefined,
+        mailEnabled: false,
+      },
+    });
+    const { config } = await loadConfig();
+    await vi.waitFor(() => expect(config.value.mailEnabled).toBe(false));
+
+    expect(config.value.allowRegister).toBe(true);
+    expect(config.value.wechatEnabled).toBe(false);
+    expect(config.value.wechatAutoRegister).toBe(false);
+    expect(config.value.freeExportDownloadEnabled).toBe(false);
+    expect(config.value.batchDownloadEnabled).toBe(false);
+    expect(config.value.collaborationEnabled).toBe(false);
   });
 });

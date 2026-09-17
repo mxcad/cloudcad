@@ -38,8 +38,6 @@ export interface PublicRuntimeConfig {
   conversionGuestLimit: number;
   /** 免费用户（含游客）是否允许导出下载转换 */
   freeExportDownloadEnabled: boolean;
-  /** 系统公告 */
-  systemNotice: string;
   /** 协同编辑开关 */
   collaborationEnabled: boolean;
   /** 协同可用域名白名单（逗号分隔字符串，非数组） */
@@ -63,7 +61,6 @@ const DEFAULTS: PublicRuntimeConfig = {
   conversionGuestWindowHours: 2,
   conversionGuestLimit: 5,
   freeExportDownloadEnabled: false,
-  systemNotice: '',
   collaborationEnabled: false,
   collaborationDomains: '',
   batchDownloadEnabled: false,
@@ -71,7 +68,8 @@ const DEFAULTS: PublicRuntimeConfig = {
 
 function boolField(data: Record<string, unknown>, key: string, fallback: boolean): boolean {
   const value = data[key];
-  // 严格判型：'false' / 0 这类非布尔值不能当真值（Boolean('false') === true）
+  // 严格判型：'false' / 0 / 'no' 这类非布尔值不能当真值（Boolean('false') === true），
+  // 与同文件 stringField / numberField 保持一致的判型策略
   return typeof value === 'boolean' ? value : fallback;
 }
 
@@ -132,7 +130,6 @@ async function fetchConfig(): Promise<void> {
             'freeExportDownloadEnabled',
             DEFAULTS.freeExportDownloadEnabled
           ),
-          systemNotice: stringField(data, 'systemNotice', DEFAULTS.systemNotice),
           collaborationEnabled: boolField(data, 'collaborationEnabled', DEFAULTS.collaborationEnabled),
           collaborationDomains: stringField(
             data,

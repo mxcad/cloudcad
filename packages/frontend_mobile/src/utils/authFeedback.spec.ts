@@ -124,6 +124,17 @@ describe('errorCode', () => {
     expect(errorCode(null)).toBeNull();
     expect(errorCode('text')).toBeNull();
   });
+
+  it('顶层是数值型 code 时回退查 error.data.code（responseTransformer 形态）', () => {
+    expect(
+      errorCode(Object.assign(new Error('x'), { code: 400, data: { code: 'BAD_REQUEST' } }))
+    ).toBe('BAD_REQUEST');
+  });
+
+  it('data.code 不是字符串时不回退', () => {
+    expect(errorCode({ code: 400, data: { code: 500 } })).toBeNull();
+    expect(errorCode({ code: 400, data: { code: '' } })).toBeNull();
+  });
 });
 
 describe('errMsg', () => {

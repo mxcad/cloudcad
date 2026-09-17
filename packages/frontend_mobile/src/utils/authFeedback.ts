@@ -110,7 +110,7 @@ export function errMsg(e: unknown, fallback: string): string {
  *
  * 普通路径下 body 就是错误体，code 在顶层；
  * apiConfig.responseTransformer 抛出的 Error 则把数值型 code 挂在自己身上、
- * 原始错误体挂在 data 里，所以顶层不是字符串时再查 data.code。
+ * 原始错误体挂在 data 里，所以顶层不是字符串时才回退查 data.code。
  */
 export function errorCode(e: unknown): string | null {
   const body = asRecord(e)
