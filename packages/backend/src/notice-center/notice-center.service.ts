@@ -40,10 +40,7 @@ import {
   NOTICE_TICKET_TTL_SECONDS,
   type NoticeEvent,
 } from './notice.types';
-import type {
-  CreateNoticeDto,
-  UpdateNoticeDto,
-} from './dto/notice.dto';
+import type { CreateNoticeDto, UpdateNoticeDto } from './dto/notice.dto';
 
 /** Prisma 的 `lte` 不匹配 NULL，必须写成 OR 形式；拆成片段避免两个 AND 键互相覆盖 */
 function startAtOr(now: Date): unknown[] {
@@ -64,7 +61,7 @@ export class NoticeCenterService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    @InjectRedis() private readonly redis: Redis,
+    @InjectRedis() private readonly redis: Redis
   ) {}
 
   /**
@@ -94,10 +91,7 @@ export class NoticeCenterService {
     return this.prisma.notice.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
-  async create(
-    dto: CreateNoticeDto,
-    publishedById: string
-  ): Promise<Notice> {
+  async create(dto: CreateNoticeDto, publishedById: string): Promise<Notice> {
     this.assertKind(dto.kind);
     this.assertLevel(dto.level ?? 'info');
     const autoExpire = dto.autoExpire ?? false;
@@ -245,11 +239,29 @@ export class NoticeCenterService {
     return ticket;
   }
 
-  /** 原子取用 ticket（getdel 语义），无效或已消费返回 null */
+  /**
+   * Lua GETDEL：原子「读 + 删」，并发下仅首个请求能取到值（一次性）。
+   * 不用原生 GETDEL 命令——部署环境存在 Redis < 6.2（无该命令，报
+   * `ERR unknown command getdel`）；Lua 脚本在所有受支持版本上等价。
+   */
+  private static readonly REDEEM_LUA_SCRIPT = `
+    local value = redis.call('GET', KEYS[1])
+    if value then
+      redis.call('DEL', KEYS[1])
+    end
+    return value
+  `;
+
+  /** 原子取用 ticket（Lua GETDEL 语义），无效或已消费返回 null */
   async redeemTicket(ticket: string): Promise<string | null> {
     if (!ticket) return null;
-    const userId = await this.redis.getdel(NOTICE_TICKET_PREFIX + ticket);
-    return userId ?? null;
+    const result = await this.redis.eval(
+      NoticeCenterService.REDEEM_LUA_SCRIPT,
+      1,
+      NOTICE_TICKET_PREFIX + ticket
+    );
+    // Lua 返回 userId 字符串或 nil（ioredis 转 null）；eval 返回类型 unknown，按契约收窄
+    return typeof result === 'string' ? result : null;
   }
 
   private async publishEvent(event: NoticeEvent): Promise<boolean> {

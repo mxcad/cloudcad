@@ -36,7 +36,7 @@ describe('NoticeCenterService', () => {
   const mockRedis = {
     get: jest.fn(),
     set: jest.fn(),
-    getdel: jest.fn(),
+    eval: jest.fn(),
     publish: jest.fn(),
   };
 
@@ -78,7 +78,7 @@ describe('NoticeCenterService', () => {
     mockPrisma.notice.updateMany.mockResolvedValue({ count: 1 });
     mockRedis.publish.mockResolvedValue(1);
     mockRedis.set.mockResolvedValue('OK');
-    mockRedis.getdel.mockResolvedValue(null);
+    mockRedis.eval.mockResolvedValue(null);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -318,14 +318,18 @@ describe('NoticeCenterService', () => {
       );
     });
 
-    it('兑换走 getdel 原子取用并返回 userId', async () => {
-      mockRedis.getdel.mockResolvedValue('u_1');
+    it('兑换走 Lua GETDEL 原子取用并返回 userId', async () => {
+      mockRedis.eval.mockResolvedValue('u_1');
       await expect(service.redeemTicket('tk')).resolves.toBe('u_1');
-      expect(mockRedis.getdel).toHaveBeenCalledWith(NOTICE_TICKET_PREFIX + 'tk');
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("redis.call('GET', KEYS[1])"),
+        1,
+        NOTICE_TICKET_PREFIX + 'tk'
+      );
     });
 
     it('无效或空 ticket 返回 null', async () => {
-      mockRedis.getdel.mockResolvedValue(null);
+      mockRedis.eval.mockResolvedValue(null);
       await expect(service.redeemTicket('bad')).resolves.toBeNull();
       await expect(service.redeemTicket('')).resolves.toBeNull();
     });
