@@ -385,3 +385,49 @@ thumbnail dataURL / collab base64（标准 base64）均无同类缺陷。
 `removeTask` 置 cancelled 会被 success 路径复活成 processing，已删除任务重新出现在
 列表。补与 catch 对称的取消判定（`task` 在 await 前被赋 'uploading'，TS 收窄类型须
 断言回 `UploadTask`）。新增回归用例（可控挂起上传 → 在途移除 → resolve 后仍 cancelled）。
+
+---
+
+## 7. storage-service（统一文件管理层，端口 3200，纯 Node 零依赖）
+
+### 7.1 file-handler._resolvePath 前缀判界缺 path.sep 后缀（已修）
+
+**现象**：`_resolvePath` 用 `filePath.replace(/\.\./g,'_').replace(/~/g,'_')` 中和相对
+遍历后 `path.resolve(FILES_DATA_PATH, cleaned)`，再用**裸** `absolute.startsWith(
+path.resolve(FILES_DATA_PATH))` 判越界——缺 `+ path.sep` 后缀，与 5.1/5.3 同类。
+
+**根因**：`..`/`~` 替换挡住了相对遍历，但**绝对路径**（POSIX `/…files-123-evil/x`、
+Windows 盘符 `D:\…files-123-evil\x`）不含 `..`/`~`，原样经 `path.resolve` 落到
+「同名前缀兄弟目录」，裸 startsWith 误放行。
+
+**威胁面评估**：storage-service 是内网服务，`server.js` 的 `checkSecret`（#419）对除
+`/health` 与客户端直传 `POST /v1/files/upload` 外的全部路由校验 `x-internal-service-secret`
+共享密钥，调用方为持密钥的 backend（可信）。且 upload 路径的 `filePath` 恒取
+`tokenData.path`（backend 签发的 JWT，服务端已校验），`body.path` 仅为无 JWT path 时的
+死回退。故该缺陷现实可利用性低，属**防御性收紧**（与 5.3 定性一致），非可现实利用越界。
+
+**修复**：`_resolvePath` 判界改 `startsWith(base + path.sep)`。base 本身（非子路径）
+不再被读/写命中，但真实用法恒为 `YYYYMM/nodeId/…` 子路径，无合法用法被破坏。
+新增回归测试 `file-handler.test.js`「绝对路径逃逸到同名前缀兄弟目录必被拒」
+（先断言前缀匹配成立证明缺陷前提，再断言 throws），9/9 绿。
+
+### 7.2 审查结论（无缺陷，记录）
+
+- **鉴权模型正确（非缺陷）**：`server.js checkSecret`（#419）对除 `/health`（只读探活）
+  与 `POST /v1/files/upload`（客户端直传，走 JWT 上传令牌）外的全部路由校验
+  `x-internal-service-secret`。`INTERNAL_SERVICE_SECRET` 空值=本地开发/未启用（向后兼容
+  开关，生产必配）。CORS `Access-Control-Allow-Origin: *` 看似宽松，但
+  `Access-Control-Allow-Headers` **刻意不含** `X-Internal-Service-Secret`——跨源浏览器
+  预检即拦，攻击者无法从浏览器发出内部密钥头，故内部端点对浏览器实际不可达。
+  曾一度误判「GET/PUT/DELETE 无鉴权」，读 server.js 后澄清为内网共享密钥隔离路线，不修。
+- **svn-agent.js 无命令注入**：`spawn(process.execPath, [mxToolPath, ...args])` 传参数
+  数组（非 exec 经 shell），`filePath`/`message` 特殊字符不被 shell 解释；带 30s 超时 +
+  cat 50MB maxBuffer（spawn 无内置 maxBuffer，手动统计字节超限 SIGKILL）。正确。
+- **token.js / utils.verifyToken**：HS256 HMAC 签名比对 + exp 过期校验，签名不符/过期
+  一律返回 null（fail-closed）。正确。
+- **lru-cache.js**：标准 LRU + TTL，超 maxFileSize 不入缓存、满则逐最旧、get 命中重排
+  键序，逻辑正确。
+- **观察项（不修）**：`router.js` 加载多节点路由表（groups[].basePath）并只在 `/health`
+  暴露 `getNodes()`（prefix/node），但 file-handler 实际读写恒用 `FILES_DATA_PATH`，
+  groups 的 basePath 未参与真实文件路由——多节点路由属「已接线但未完全实现」的预留能力，
+  非缺陷（不修，避免过度实现；若将来启用须让 file-handler 按 prefix 选 basePath）。

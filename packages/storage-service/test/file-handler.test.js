@@ -52,6 +52,15 @@ describe('FileHandler', () => {
     assert.ok(!resolved.includes('..'));
   });
 
+  it('should reject an absolute path escaping to a prefix-sibling directory', () => {
+    // base 的同名前缀兄弟目录：裸 startsWith(base) 会误放行（前缀匹配成立），
+    // 补 + path.sep 后绝对路径落到兄弟目录必须被拒绝。
+    const siblingDir = path.resolve(dataDir) + '-evil';
+    const evilPath = path.join(siblingDir, 'foo.txt');
+    assert.ok(evilPath.startsWith(path.resolve(dataDir))); // 证明前缀匹配成立（缺陷前提）
+    assert.throws(() => handler._resolvePath(evilPath), /Path traversal/);
+  });
+
   it('should serve hot files from cache', async () => {
     const beforeStats = handler.getCacheStats();
     await handler.read('202607/node1/a.dwg'); // miss (or hit from prior)
