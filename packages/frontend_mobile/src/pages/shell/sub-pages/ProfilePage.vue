@@ -793,7 +793,7 @@ onUnmounted(stopCountdown)
       <van-button size="small" round @click="loadProfile">{{ t('重试') }}</van-button>
     </div>
 
-    <template v-else>
+    <div v-else class="profile-scroll">
       <!-- ═══ 用户头部 ═══ -->
       <div class="profile-header">
         <div class="avatar" @click="pickAvatar">
@@ -912,7 +912,7 @@ onUnmounted(stopCountdown)
 
       <!-- ═══ 退出登录 ═══ -->
       <button class="logout-btn" @click="onLogout">{{ t('退出登录') }}</button>
-    </template>
+    </div>
 
     <!-- ═══ 用户名 / 昵称编辑 ═══ -->
     <van-popup v-model:show="showTextDialog" position="bottom" round :style="{ height: '42%' }">
@@ -1098,6 +1098,14 @@ onUnmounted(stopCountdown)
   background: var(--bg-primary);
   padding-bottom: 32px;
   overflow: hidden;
+}
+
+/* .subpage 自身 overflow:hidden 不滚动，须由内部容器提供滚动区（同 .share-list/.member-list），
+   否则首屏以下的内容会被裁掉且无法下滑 */
+.profile-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .loading-state {
