@@ -58,10 +58,7 @@ function getProcessCmdline(pid) {
       return res.stdout || '';
     }
     const raw = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
-    return raw
-      .split('\0')
-      .filter(Boolean)
-      .join(' ');
+    return raw.split('\0').filter(Boolean).join(' ');
   } catch {
     return '';
   }

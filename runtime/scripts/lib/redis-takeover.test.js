@@ -57,16 +57,28 @@ test('空 cmdline / 空 dataDir → 无法确认归属', () => {
 // ---------- detectRedisOwnership ----------
 
 test('PID 未知（空）→ unknown，不触碰', () => {
-  assert.equal(detectRedisOwnership(null, OUR_DATA_DIR, () => OUR_CMDLINE), 'unknown');
-  assert.equal(detectRedisOwnership(undefined, OUR_DATA_DIR, () => OUR_CMDLINE), 'unknown');
+  assert.equal(
+    detectRedisOwnership(null, OUR_DATA_DIR, () => OUR_CMDLINE),
+    'unknown'
+  );
+  assert.equal(
+    detectRedisOwnership(undefined, OUR_DATA_DIR, () => OUR_CMDLINE),
+    'unknown'
+  );
 });
 
 test('cmdline 不可读（空串）→ unknown，不触碰', () => {
-  assert.equal(detectRedisOwnership(14584, OUR_DATA_DIR, () => ''), 'unknown');
+  assert.equal(
+    detectRedisOwnership(14584, OUR_DATA_DIR, () => ''),
+    'unknown'
+  );
 });
 
 test('cmdline 含本部署 data/redis 目录 → ours，可接管', () => {
-  assert.equal(detectRedisOwnership(14584, OUR_DATA_DIR, () => OUR_CMDLINE), 'ours');
+  assert.equal(
+    detectRedisOwnership(14584, OUR_DATA_DIR, () => OUR_CMDLINE),
+    'ours'
+  );
 });
 
 test('cmdline 指向其他部署目录 → foreign，不触碰', () => {
