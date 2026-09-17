@@ -524,3 +524,31 @@ download / delete 三端点各前置拦截（download 端点对 token 内 filena
 
 **验证**：`pnpm test` 6/6 绿（5 例 mock 覆盖正常/超时升级/spawn 失败/非零退出/onChild 取消，
 1 例真实子进程验证孙进程随进程树被杀——非「进程能起来」的假绿）；`pnpm type-check` 0 错。
+
+---
+
+## 10. backend file-system（文件树 / 搜索 / 下载 / 校验，扩展审查）
+
+审查范围：search（查询解析 + FTS）、file-download（导出/下载）、file-tree（节点创建/路径）、
+file-validation（文件名/扩展名/魔数校验）+ 共用的 FileUtils / StorageManager。
+
+审查结论（**无缺陷**）：该模块路径处理有分层校验，未发现路径遍历 / 注入 / SQL 注入：
+- **search 无 SQL 注入**：`FtsQueryBuilder.matchIds` 用 `Prisma.sql` 模板，`plainto_tsquery('simple',
+  ${keyword})` 的 `${keyword}` 是绑定参数（非字符串拼接），`LIMIT ${maxResults}` 是数值；
+  `parseSortFilter` 的 `sortBy` 校验白名单 `['name','createdAt','updatedAt','size']`。
+- **file-download 无遍历/注入**：文件系统路径全部来自 DB 的 `node.path`（系统生成，受信）；
+  用户可控值均净化——pdf 参数经 `buildParamKey` 的 `[^a-zA-Z0-9]` 白名单、转换产物名经
+  `[<>:"|?*]`/`..`/`~` 替换、ZIP 条目名经 `sanitizeFileName`（`/`\` `\`→`_` + 控制字符 + 长度）。
+  快照/缓存 key 用 md5(内容) 内容寻址，无用户输入拼路径。
+- **file-tree createFileNode 无遍历**：存储文件名 = `${nodeId}${extension}`（nodeId 为系统
+  UUID），`extension` 经 `allowedExtensions` 白名单校验；路径由 `StorageManager.allocateNodeStorage`
+  用系统生成的 `targetDirectory/nodeId` 构建，再经 `localStorageProvider.validatePath`（5.3 已修
+  的包含性校验）兜底。
+- **file-validation / FileUtils 校验严格**：`validateFilename` 用严格白名单
+  `^[\u4e00-\u9fa5a-zA-Z0-9._\-\s]+$`（不含 `/`\` `\`/`<>:"|?*`）+ 拒前导点 + 拒危险字符；
+  `sanitizeFilename` 剥离 `..`/分隔符/控制字符；扩展名走 `allowedExtensions` 白名单 + 魔数校验
+  （DWG/DXF 结构）。多层防御，用户输入无法拼出越界路径。
+
+**范围说明**：本模块 30+ 文件，本节覆盖其安全关键路径（搜索/下载/创建/校验 + 路径构建）。
+其余读取类方法（getNode/getChildren/getTrashItems/resolvePath 等）走 Prisma 参数化查询 +
+权限过滤（file-permission 已在第 3 节审查），无独立路径拼接风险。
