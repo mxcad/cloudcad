@@ -339,3 +339,49 @@ Node `path.resolve` 对 Windows 盘符相对路径（`C:x/…`，不命中 isAbs
 可替换模块模式）；upload-token 端点走全局 JWT 守卫（无 @Public）+ path 校验
 （`..`/`~`/绝对/盘符前缀全拒）+ 共享密钥 HS256 签发，storage-service 侧不查库校验；
 http-storage.provider 的 key 全走 encodeURIComponent 无本地路径拼接。
+
+---
+
+## 6. frontend 核心（token / 上传）
+
+### 6.1 JWT payload 解码 base64url 缺陷（已修 e8bc7b6）
+
+后端 access token payload 含 `sub`（用户 UUID）+ `jti`（randomUUID）+ 中文用户名。
+JWT 标准用 base64url（`-`/`_`）编码 payload，而前端 `atob(segment)` 只认 base64
+（`+`/`/`）。实测：纯 ASCII 用户名 token 的 base64url 段几乎不含 `-`/`_`（0/200），
+但**中文用户名 token 约 23.5% 含 `-`/`_`（47/200）**，原 `atob` 直接抛
+`Invalid character` → 两处静默失效：
+- `tokenUtils.isAccessTokenExpired` 恒返回 true（有效 token 被当过期）
+- `tokenRefresh.getTokenRemainingMs` 返回 null → **主动刷新（过期前 5min）+
+  `ensureFreshAuthCookie` cookie 保活全部静默失效**，mxcad 引擎 `<img>` 外部参照
+  请求（只带 cookie 不带 Bearer）1h 后 401 破图。
+
+修法：`tokenUtils` 新增 `decodeJwtPayload` 唯一出口（base64url→base64 + 补 padding +
+**TextDecoder UTF-8 还原**——atob 返回 latin1 串，直接 JSON.parse 中文会乱码），
+`isAccessTokenExpired` 与 `getTokenRemainingMs` 共用。新增 tokenUtils.spec.ts 6 例
+（固定向量 payload 段含 `-`，旧实现必失败）。全仓其余 atob 调用点核对：collab
+participant（非 JWT，try/catch 兜底）、wechat temp token（已做 base64url 转换）、
+thumbnail dataURL / collab base64（标准 base64）均无同类缺陷。
+
+### 6.2 分片合并 fileAlreadyExist 判定层级错误（已修 68e79d4）
+
+`mxcadUploadUtils.uploadFile` 合并请求响应经 responseTransformer 解包后 `ret` 在
+`data` 内（与末片上传分支 `uploadData.data.ret` 同层，SDK 类型 `UploadFileResponseDto`
+= `{nodeId?, tz?, ret?}` 证实）。原合并路径查外层 `mergeData.ret` 恒为 undefined →
+**全片已存在 + skip 策略重传**时 `isUseServerExistingFile` 误报 false（目录导入把
+「跳过」计入「成功」，nodeId 仍正确故文件可正常打开）。修为 `mergeData.data?.ret`。
+新增回归用例。
+
+> ⚠️ 提交纪律披露：68e79d4 用 `git add -A -- mxcadUploadUtils.ts` 时，该文件工作树
+> 本就含并行会话未提交的 forceUpload 分片门控改动（impl + 其 spec 用例，初始 git status
+> 已标 M），被一并带入本次提交。该改动完整且 9/9 测试绿，无功能损害，但属误收并行
+> 工作；本会话其余提交（public-file/share/storage/JWT/uploadManager）涉及文件均不在
+> 初始脏集，已逐一核对干净。后续对「初始已 M 的文件」改用 hunk 级精确暂存。
+
+### 6.3 UploadManager 在途取消复活（已修 f1fbac9）
+
+`executeTask` 的 catch 分支有 `status === 'cancelled'` 判定，但 **success 路径**在
+`await uploadSingleFile` 返回后无条件 `task.status = 'processing'`——上传在途时
+`removeTask` 置 cancelled 会被 success 路径复活成 processing，已删除任务重新出现在
+列表。补与 catch 对称的取消判定（`task` 在 await 前被赋 'uploading'，TS 收窄类型须
+断言回 `UploadTask`）。新增回归用例（可控挂起上传 → 在途移除 → resolve 后仍 cancelled）。
