@@ -1232,3 +1232,37 @@ HEAD 本就非 prettier-clean（预存长行漂移，我新增行不在 diff 中
   调用方**（仅模块注册）——属孤儿代码（AGENTS.md 反模式，架构问题非安全缺陷），按「不删既有
   死代码」原则记录不处理。
 - `ownership` 为空壳模块（#228，AGENTS.md 已登记），无逻辑。
+
+---
+
+## 24. frontend + frontend_mobile（无新缺陷）
+
+两个前端审查 XSS、token 存储、路由守卫、开放重定向四类安全面，均未发现可利用缺陷。
+
+### 24.1 frontend（React）：无 XSS 向量 + 路由守卫正确 + token 双模
+
+- **XSS**：全仓**无 `dangerouslySetInnerHTML`**（React 自动转义插值，主向量不存在）。仅有的
+  两处 `innerHTML`/`document.write`：
+  - `mxcadCheck.ts:90` `dialog.innerHTML` 只插值 i18n 静态串 `${t('发现相同文件')}`，用户可控
+    文件名经 `escapeHtml(filename)`（L146）转义 → 安全。
+  - `annotation.ts:231` `newWindow.document.write('<img src="' + imageData + '"/>')`：`imageData`
+    是 CAD 引擎 `createCanvasImageData` 生成的 base64 data URL（引擎产物非用户文本；base64 字符集
+    `[A-Za-z0-9+/=]` 无 `"`/`<`/`&`，无法逃逸 `src` 属性），且落在 `window.open()` 独立弹窗
+    （爆炸半径小）→ 低风险观察项，非缺陷。
+  - `utils/sanitize.ts` 的 `escapeHtml`（纯字符串替换，无 DOM 依赖）在 5 处用于用户可控串。
+- **路由守卫**：`App.tsx` 的 `ProtectedRoute` 用 `useAuth()` 等 token 校验（`loading` 感知，
+  避免 reload 闪烁重定向），`!isAuthenticated` 才 `Navigate` 登录 → 无加载期绕过。
+- **token 存储**：文档化双模——浏览器 httpOnly cookie 为主（CSRF 受控），桌面 EXE 用
+  localStorage Bearer token 兜底（非 cookie 无 CSRF 面，`clientSetup.ts`/`tokenRefresh.ts`
+  注释明确说明）。`AuthContext` 初始化后异步 `authControllerGetProfile` 验证，本地过期 token
+  直接降级游客不发起请求，10s 超时防 API 挂起卡死。
+
+### 24.2 frontend_mobile（Vue）：无 v-html + 路由守卫含开放重定向防护
+
+- **XSS**：全仓**无 `v-html`**（Vue 自动转义插值，主向量不存在）。
+- **token 存储**：`useAuthState.ts` 用 localStorage 存 accessToken/refreshToken/user——移动
+  H5/WebView 无 httpOnly cookie 场景，localStorage 是标准机制。
+- **路由守卫**：`router/index.ts#beforeEach`——`hasValidToken()`（纯 JWT exp 客户端门控，
+  真鉴权在服务端 API）；已登录访问认证页跳回 redirect 目标，**开放重定向防护**
+  `redirect.startsWith('/') && !redirect.startsWith('//')`（防 `//evil.com` 协议相对跳转），
+  非法回落 `/shell`；未登录访问需登录子页跳 `/login?redirect=to.fullPath`。
