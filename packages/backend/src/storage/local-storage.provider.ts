@@ -117,11 +117,14 @@ export class LocalStorageProvider {
     }
 
     // 检查路径是否在允许的目录内（仅对相对路径）
+    // 必须带 path.sep 后缀比较：key='.' 解析为 basePath 本身时裸 startsWith 会放行，
+    // 现收紧为必须严格位于其内；后缀比较同时防 basePath 的同名前缀兄弟目录
+    // （如 files-evil）在路径解析语义变化时被误判为内部
     if (!path.isAbsolute(key)) {
       const fullPath = path.resolve(this.basePath, key);
       const normalizedBasePath = path.resolve(this.basePath);
 
-      if (!fullPath.startsWith(normalizedBasePath)) {
+      if (!fullPath.startsWith(normalizedBasePath + path.sep)) {
         throw new BadRequestException(I18nContext.current()?.t('error.storage.path_out_of_bounds') ?? '路径超出允许的范围');
       }
     }
