@@ -852,3 +852,20 @@ path.sep)`（加 `path.sep` 防 `root+"evil"` 兄弟目录前缀误判），逃�
 library/thumbnail/version-control 53 例全绿；**后端全量单测 180 suites / 2474 tests 全绿**；
 `pnpm type-check` 0 错。改动行 prettier 干净（两 service 文件 HEAD 本就非 prettier-clean，按项目
 约定不 `--write` 重排既有行）。
+
+### 16.2 infra 其余文件——无新缺陷（结论）
+
+逐文件审查 mxcad infra 剩余文件，均无用户输入可达的注入/遍历/越权：
+- `thumbnail-generation.service.ts`：`MxWebDwg2Jpg.exe` 经**参数文件**传参（`cadFilePath` 写入
+  `paramFilePath`，命令只引用该文件路径）→ **无 shell 注入**；`outputDir`/`cadFilePath` 由
+  materializer 传入 = 配置上传路径 + MD5 `fileHash`，非用户输入；`checkThumbnailExists`/
+  `uploadThumbnail` 用 DB `node.path` + 固定 `thumbnail.jpg`。
+- `file-system.service.ts`：低层文件工具（exists/mkdir/delete/mergeChunks/writeStatusFile），
+  入参均由调用方（upload/conversion，已审）传 hash/配置路径，本层无独立用户输入入口。
+- `thumbnail-utils.ts`：纯函数（固定 `thumbnail.jpg` 名、find/has/mime），无路径拼接风险。
+- `cache-manager.service.ts`：内存 TTL 缓存，key 为 Map 键非文件路径。
+- `linux-init.service.ts`：`execAsync` 命令（pgrep/pkill/chmod/mkdir/cp）全部用**配置派生路径**
+  （`mxcad.assemblyPath` 环境变量）且双引号包裹，非用户输入 → 无命令注入（仅运维误配 .env 才
+  可能，非用户可利用）。
+- `thumbnail.controller.ts`（16.1 已述）：`node.path` 已 `.replace(/\.\./g,'_')` 剥离，无遍历。
+→ infra 模块整体干净，无需再改。
