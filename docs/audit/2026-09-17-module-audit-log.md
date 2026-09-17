@@ -750,3 +750,30 @@ L156/L159），并被复用于：UI 展示、批量下载 zip 条目名（`tryAd
 
 **验证**：batch-download 无代码改动，无需跑测试；结论基于逐文件路径追踪（controller/service/job/
 job-context/orchestrator/archive-writer/folder-expander 全读）。
+
+## 15. backend mxcad upload（图纸上传入口）——body.name 未清洗
+
+### 15.1 body.name 落库前未清洗——已修（daa0dc1）
+
+**缺陷**：`mxcad-upload.controller.uploadFile` 的 `name` 取自**客户端可控 JSON 字段 `body.name`**
+（非 multer `file.originalname`），DTO `UploadFilesDto.name` 仅 `@IsString()`——无路径遍历/字符/
+长度校验。该值经 `ingest`→`createFileNode` 原样落库为节点 `name`/`originalName`（`file-tree`
+L156/L159），并被复用于：UI 展示、批量下载 zip 条目名（`tryAddOriginal` 直接用 `fileName`）、同名
+去重（`name:{equals,mode:'insensitive'}`）。
+
+**影响判定**：物理存储文件名 = ``${nodeId}${extension}``（`file-tree` L176，**非** `body.name`）
+→ **无服务端文件写遍历**；展示 React 转义无 XSS；Content-Disposition 已兜底。故属**输入校验卫生
+缺口（低-中危）**，非可利用服务端漏洞。但 `..`/路径段进入 `name`/`originalName` 会污染展示与
+批量下载 zip 条目名（14.2 的根因），故修。
+
+**修复**：`uploadFile` 边界（必填校验后）加 `body.name = FileUtils.sanitizeFilename(body.name)`。
+**关键决策=选 `sanitizeFilename`（非白名单）而非 `validateFilename`（白名单）**：`validateFilename`
+的正则 `^[\u4e00-\u9fa5a-zA-Z0-9._\-\s]+$` 会**拒括号/加号等合法字符**（如「图纸 (1).dwg」——Windows
+自动生成的常见名），直接套用会造成**上传功能回归**；`sanitizeFilename` 用 `path.basename` 去路径段 +
+去 `..`/危险字符 `<>:"|?*` + 去首尾点/空格 + 拒空，**保留合法特殊字符**，安全且不误伤。
+
+**回归测试**：mxcad-upload.controller.spec 新增 3 例（有牙齿）——①`../../evil.dwg` 清洗为 `evil.dwg`
+后进 ingest（旧代码传原串，断言 basename 失败）；②`..` 清洗后为空 → 400 且不进 ingest（旧代码不抛、
+ingest 被调，双断言失败）；③`图纸 (1).dwg` 原样保留（守「勿用白名单误拒」的回归）。
+
+**验证**：`pnpm jest mxcad-upload.controller.spec` 11/11 绿（含 3 例新回归）；`pnpm type-check` 0 错。
