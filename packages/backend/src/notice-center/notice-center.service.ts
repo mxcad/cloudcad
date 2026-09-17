@@ -47,8 +47,13 @@ function startAtOr(now: Date): unknown[] {
   return [{ startAt: null }, { startAt: { lte: now } }];
 }
 
+/**
+ * endAt 时间窗作为一个 AND 片段传入。两个分支必须包在同一个 OR 节点里：
+ * 直接平铺进 AND 会变成「endAt 为 NULL」与「endAt 晚于当前」的合取，恒为假，
+ * getEffective 会永远返回空列表（发布后前端永远收不到公告）。
+ */
 function endAtAnd(now: Date): unknown[] {
-  return [{ endAt: null }, { endAt: { gt: now } }];
+  return [{ OR: [{ endAt: null }, { endAt: { gt: now } }] }];
 }
 
 function toDate(value: string | Date | undefined | null): Date | null {

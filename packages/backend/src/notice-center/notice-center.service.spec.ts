@@ -114,11 +114,17 @@ describe('NoticeCenterService', () => {
       ]);
     });
 
-    it('endAt 时间窗合并进 AND，不被受众条件覆盖', async () => {
+    it('endAt 两分支包在同一个 OR 节点里（平铺进 AND 会变成合取，恒为假）', async () => {
       await service.getEffective();
       const where = mockPrisma.notice.findMany.mock.calls[0][0].where;
-      expect(where.AND).toContainEqual({ endAt: null });
-      expect(where.AND).toContainEqual({ endAt: { gt: expect.any(Date) } });
+      // AND 是合取：平铺 { endAt: null } 与 { endAt: { gt } } 会同时要求
+      // endAt 为空且晚于当前，任何记录都不满足 → getEffective 恒返回空数组，
+      // 发布后前端永远收不到公告。必须包成单个 OR 节点作为 AND 片段。
+      expect(where.AND).toContainEqual({
+        OR: [{ endAt: null }, { endAt: { gt: expect.any(Date) } }],
+      });
+      expect(where.AND).not.toContainEqual({ endAt: null });
+      expect(where.AND).not.toContainEqual({ endAt: { gt: expect.any(Date) } });
       expect(where.AND).toContainEqual({ userId: null });
     });
   });
