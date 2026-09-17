@@ -24,6 +24,7 @@
 >
 > **例外说明**：
 > - `conversion` 归类为可替换，活跃接口 `IMxcadConversionService`（token: `MXCAD_CONVERSION_SERVICE`）已保留。同文件中 `IFileConversionService` 是死代码（0 消费者）所以被删除。
+> - `function-executor` 归类为可替换，活跃接口 `IFunctionExecutor`（token: `IFunctionExecutor`）有 **3 个实现**（`ProcessPoolExecutor` 嵌入式 / `HttpConversionExecutor` 独立转换服务 / `CloudFaaSExecutor` 云函数），6 个跨模块消费者（conversion-task / async-conversion / conversion-reconciliation / node-trash / conversion-monitor / health-queue）。容器侧由 `function-executor.module.ts` 的 `useFactory` 按 `FUNCTION_EXECUTOR` 配置一次选定 adapter；消费者一律只注入 token，不做 mode 字符串分支（队列/耗时统计与任务列表也走 seam，见 ADR-0058/0067）。
 > - `permission` 归类为可替换，活跃接口 `IPermissionService` / `IProjectPermissionService` 已保留。`file-system/file-permission` 子模块的 `IFileSystemPermissionService` 是死代码（10+ 消费者全部注入具体类，从未使用 token）所以被删除。
 > - `cache` 归类为内部服务，`interfaces/` 目录下若保留纯数据类型（DTO-like interface，如 `ICachePerformanceMetrics`、`ICacheHealthStatus`），不作为服务抽象使用，则不违反规则。
 

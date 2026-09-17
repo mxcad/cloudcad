@@ -16,13 +16,13 @@
 | 启动清理 | `LinuxInitService.onModuleInit` 调 `pkill -f mxcadassembly`，后端（重）启动清掉上次崩溃/重启遗留的孤儿（仅 Linux，事故平台；Windows 启动清理列后续可选） |
 | 并发统一收口 | `convertFile` 与两条 `convertBinToMxweb` 路径（进程池 / version-history 直连）**全部收进同一个 `conversionRateLimiter`**（cap = min(CPU核数, `upload.conversionMaxConcurrent`)，prod=3）。此前 `convertBinToMxweb` 走进程池时被独立 `RateLimiter(4)` 限、version-history 直连则**完全裸奔**，两池相加可超 CPU 核数（最坏 3+4=7）。收口后真实 mxcadassembly 进程数 ≤ 限流器 cap |
 | cwd 竞态 | 删 `process.chdir` 全局改目录，改 per-spawn `cwd`，消除并发转换下的全局 cwd 竞态 |
-| 超时可配 | `TIMEOUT_FILE_CONVERSION`（默认 60000ms），`file-conversion.service` 构造器读取替换硬编码 |
+| 超时可配 | `TIMEOUT_FILE_CONVERSION`（默认 180000ms，见 `config/configuration.ts`），`file-conversion.service` 构造器读取替换硬编码 |
 
 ### 2. 批量下载路径接入结果缓存（待实施）
 
-现有转换产物缓存（`file-download-export.service.ts` 的 `buildConversionCacheKey` + `isConversionCacheFresh`）**只覆盖同步单文件下载路径**；批量下载路径（事故主路径）完全不走缓存，缓存 key 用 `nodeId + updatedAt + 格式参数`、**不防并发**（3 格式并发时缓存文件未落盘，各自触发一次真实转换）。
+现有转换产物缓存（`file-download-export.service.ts` 的 `buildConversionCacheKey` + `isConversionCacheFresh`）**只覆盖同步单文件下载路径**；批量下载路径（事故主路径）完全不走缓存，缓存 key 是**内容寻址**的 `{文件内容 hash}-{格式参数 key}`（同内容不同节点天然共享）、**不防并发**（3 格式并发时缓存文件未落盘，各自触发一次真实转换）。
 
-**决策**：批量下载路径（`conversion-runner.convertInProcess` / `processDelegated`）复用同一套结果缓存——同 `nodeId+updatedAt+format` 命中缓存则回读、不再起 mxcadassembly。让「重文件反复重提交」从「每轮真实转换 3 次」降为「首转 3 次 + 后续秒回」。key 已含 `updatedAt`（节点更新自然失效），语义正确。
+**决策**：批量下载路径（`conversion-runner.convertInProcess` / `processDelegated`）复用同一套结果缓存——同 `nodeId+updatedAt+format` 命中缓存则回读、不再起 mxcadassembly。让「重文件反复重提交」从「每轮真实转换 3 次」降为「首转 3 次 + 后续秒回」。key 由文件内容 hash 派生（内容变化自然失效，比 `updatedAt` 更精确：同内容跨节点复用），语义正确。
 
 ### 3. 批量路径并行度削峰（待实施）
 
@@ -30,21 +30,23 @@
 
 **决策**：批量内并行度削到 **2**（或按文件大小自适应：小文件并行、大文件串行）。8 核机器上 2 个重转换 + 常驻服务已接近打满，削到 2 让单个转换 CPU 充足、更可能 60s 内转完 → 缓存能落盘 → 破失败循环。批量非「秒出」场景，慢一点可接受。
 
-### 4. 超时保持 60s 默认，仅确保可调（已实施读取，文档待补）
+### 4. 超时默认值（已被取代）
 
-**决策**：`TIMEOUT_FILE_CONVERSION` 保持 60s 默认，**不调大**。重文件转不完的正解是「算一次→缓存复用」+「削峰让单转换 60s 内转完」，而非每次同步硬扛 180s（盲目调大会让卡死任务占槽更久、队列更长）。运维可经 env 调大应对个别超大文件。
+**原决策（已废）**：`TIMEOUT_FILE_CONVERSION` 保持 60s 默认，不调大；重文件转不完的正解是「算一次→缓存复用」+「削峰让单转换 60s 内转完」。
+
+**现状（2026-09 起）**：默认值已上调为 **180000ms**（`config/configuration.ts` 的 `TIMEOUT_FILE_CONVERSION`，`file-conversion.service` 构造器读取）。上调理由与原否决理由并不冲突：§2 的结果缓存已实施（同内容只真转一次），因此把单次硬扛时间放宽不再放大「重复真实转换」的开销，而能把超大文件从「必超时」拉回「能完成并落缓存」。运维仍可按需经 env 调整。原否决条目见下条标注。
 
 ## 否决的备选（核心资产：为什么不做）
 
 - **in-flight 并发去重**（同 srcPath+format 共享 in-flight promise）：**否决**。事故里「3 并发」是 **DWG/DXF/PDF 三个不同格式** = 3 个**不同**转换（不同缓存 key），去重（按 srcPath+format）合并不了；它只能合并「同格式并发重复」（双击/两人同下），是更窄的场景，复杂度（key 正确性 + 失败传播 + 槽位计数）不成比例。靠「缓存 + 限流器」兜底即可。
-- **调大 60s 超时**：**否决**。根因是 CPU 饥饿（3 并发 + 常驻服务抢 8 核）导致单转换慢，不是 60s 本身太短；调大只让卡死任务占槽更久。
+- **调大 60s 超时**：**否决**（原 60s 基线下的判断）。根因是 CPU 饥饿（3 并发 + 常驻服务抢 8 核）导致单转换慢，不是 60s 本身太短；调大只让卡死任务占槽更久。**已被取代**：§2 结果缓存落地后该前提（每次同步硬扛都等于真实转换）不再成立，默认值随之后调为 180s（见 §4）。
 - **同步→异步（重文件走 taskId+poll）**：**本轮否决**。前端从同步 fetch 改 taskId+poll 是架构级改动（前端 + 后端），风险高；先靠「削峰 + 缓存」让同步路径 60s 内转完，个别超大文件不够用时**单独立票**做异步（可复用 conversion-service 独立的 upload=120s/export=180s 超时体系）。
 - **批量保持并行 3**：**否决**。加剧 CPU 饥饿，正是事故放大器。
 
 ## 实施状态
 
 - **已实施**：进程组杀除、启动清理、并发统一收口（含 `convertBinToMxweb` 收进同一限流器 + 并发上限测试）、cwd 竞态消除、超时读取配置（§1）；批量并行度削峰 `BATCH_DOWNLOAD_MAX_CONCURRENCY` 默认 3→2（§3）；运维文档 `docs/ops/conversion-tuning.md`（§4）；批量路径接入结果缓存（§2）。
-  - §2 接线（4 文件）：`FileDownloadExportService` 暴露 `getFreshConversionCachePath`/`storeConversionCache`（`buildConversionCacheKey` 参数收窄为 `{id,updatedAt}`，单文件调用点兼容）；`ConvertRequest.node` 补 `updatedAt`；`batch-download-orchestrator` 两处 node `select` 补 `updatedAt` + `tryConvert` 透传；`ConversionRunner` 注入 `FileDownloadExportService`，`convertInProcess` 转换前查缓存命中则回读、转换成功后 **copy**（非 rename，ZIP 装配仍需原文件）写缓存。单文件与批量共享同一缓存目录 + key（`nodeId+updatedAt+格式参数`），双向命中复用。
+  - §2 接线（4 文件）：`FileDownloadExportService` 暴露 `getFreshConversionCachePath`/`storeConversionCache`（`buildConversionCacheKey(hash, format, pdfParams)` 改为内容寻址（缓存文件名 = `{hash}-{paramKey}{ext}`），单文件与批量共用）；`ConvertRequest.node` 补 `updatedAt`；`batch-download-orchestrator` 两处 node `select` 补 `updatedAt` + `tryConvert` 透传；`ConversionRunner` 注入 `FileDownloadExportService`，`convertInProcess` 转换前查缓存命中则回读、转换成功后 **copy**（非 rename，ZIP 装配仍需原文件）写缓存。单文件与批量共享同一缓存目录 + key（`{文件内容 hash}-{格式参数 key}`），双向命中复用；`paramKey` 覆盖 pdf 尺寸/色彩策略、dwgVersion、格式名，参数不同即视为不同缓存条目。
 - **延后单独立票**：重文件同步→异步（§否决备选第 3 条）。
 
 ## 影响面

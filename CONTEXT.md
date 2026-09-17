@@ -134,12 +134,32 @@ CAD 工程图纸中使用的文字渲染资源，包括 SHX 形字体和 TrueTyp
 _避免_: 字型、文字样式
 
 **转换引擎（Conversion Engine）**:
-文件格式转换的底层执行子系统。通过调用 `mxcadassembly.exe` 二进制，支持 DWG/DXF ↔ mxweb、CAD → PDF、缩略图生成、BIN 分片/合并等。以 `convertFile(source, targetFormat)` 单一入口暴露，内部按目标格式路由到不同的转换参数。由 ADR-0014 定义的**函数工作流服务**统一管理，不再是后端子进程。
+文件格式转换的底层执行子系统。通过调用 `mxcadassembly.exe` 二进制，支持 DWG/DXF ↔ mxweb、CAD → PDF、缩略图生成、BIN 分片/合并等。以 `convertFile(options: ConversionOptions)` 单一入口暴露（两级参数契约的 HTTP 层形状），内部按目标格式派生引擎参数。引擎进程由谁启动取决于部署模式：**嵌入式模式下 mxcadassembly 就是后端进程 spawn 的子进程**（`@cloudcad/engine-exec` 单一模块统一 spawn/参数装配/输出解析），只有自托管模式才由 conversion-service 的 worker 池执行。
 _避免_: 转换函数、转换微服务
 
 **函数工作流服务（Function Workflow Service）**:
-转换引擎的托管运行时。对外暴露 `convertFile` 统一转换入口，内部按转换类型（DWG→mxweb、PDF、缩略图等）路由执行。支持三种部署模式（ADR-0016）：嵌入式（作为后端 NestJS 模块，子进程池执行）、自托管（独立 HTTP 服务 + Redis 队列 + Docker Worker 池）、云 FaaS（通过 `IFunctionExecutor` 适配器委托给华为云 FunctionGraph / 阿里云 FC / AWS Lambda，HTTP APIG 触发，不依赖对象存储）。任务状态由函数工作流服务自身维护，是唯一权威源。
+转换引擎的托管运行时。对外暴露 `convertFile` 统一转换入口，内部按转换类型（DWG→mxweb、PDF、缩略图等）路由执行。支持三种部署模式（ADR-0016）：嵌入式（作为后端 NestJS 模块，子进程池执行）、自托管（独立 HTTP 服务 + Redis 队列 + Docker Worker 池）、云 FaaS（通过 `IFunctionExecutor` 适配器委托给华为云 FunctionGraph / 阿里云 FC / AWS Lambda，HTTP APIG 触发，不依赖对象存储）。在途引擎任务簿记（taskId → PENDING/PROCESSING/…）由执行器侧维护；**节点级状态（`FileStatus`）的权威源在后端 DB**，由转换对账兜住卡死记录。
 _避免_: 转换服务、转换微服务
+
+**统一任务层（Unified Task Layer）**:
+`IFunctionExecutor` 之上、所有转换调用方的公共层——提交/查态/取消/统计/明细/清队列这一组任务原语只有一处契约，三种部署模式只是它的不同 adapter。新增部署模式或新增任务原语都只动这一层（新增原语建议做成可选方法，调用方按 `undefined` 降级），禁止调用方各自重新判断 `FUNCTION_EXECUTOR` 值。
+_避免_: 任务中间件、转换网关、执行器工厂
+
+**转换任务（Conversion Task）**:
+提交给统一任务层的一条转换单元（`ConversionTask`：id / type / params / priority），执行态由 `TaskStatus` 描述（PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED，含 progress、result、errorCategory、errorCode、queuePosition）。注意与节点级 `FileStatus` 是两个层次：转换任务是在途引擎工作，`FileStatus` 是图纸节点持久化状态。
+_避免_: 作业、任务节点
+
+**排队位置（Queue Position）**:
+`TaskStatus.queuePosition` —— 任务在其优先级信号量 acquire 队列中的 1-based 序号，仅「PENDING 且已入队」有意义；运行中、未入队、终态一律为 undefined。用于前端展示「前方还有 N 个」。
+_避免_: 队列长度（那是队列统计里的 queueLength，不是单个任务的位置）
+
+**转换结果缓存（Conversion Result Cache）**:
+**内容寻址**的转换产物缓存：条目名 `{文件内容 hash}-{格式参数 key}{ext}`，由 `FileDownloadExportService.buildConversionCacheKey(hash, format, pdfParams)` 单一出口派生（格式参数 key 覆盖 pdf 尺寸/色彩策略、dwgVersion、格式名），`getFreshConversionCachePath` / `storeConversionCache` 读写。单文件导出与批量下载共用同一目录与同一 key，双向命中复用；按 mtime 做惰性 TTL 检查，过期即删。命中缓存不占用转换配额。
+_避免_: 转换缓存 key、下载缓存
+
+**转换对账（Conversion Reconciliation）**:
+`ConversionReconciliationService` 定时（默认 5 分钟，启动后延迟 30 秒，宽限期默认 30 分钟，单批上限 200）扫描「`FileStatus`=PROCESSING 且 updatedAt 早于宽限期」的节点，与执行器侧在途任务簿记比对后按 `NodeStatusTransitioner` 修正状态，防止 backend / conversion-service 重启导致节点永久卡死（用户无法打开也无法重试）。
+_避免_: 状态同步、任务回收
 
 **存储服务（Storage Service）**:
 统一文件管理层，接管所有 `data/` 目录（`files/`、`uploads/`、`exports/`、`conversion/`）。以 HTTP 网关对外暴露文件读写和 SVN 操作 API。数据按目录组（`YYYYMM` / `YYYYMM_N`）分片到不同存储节点，每个节点维护独立的 SVN 工作副本和仓库。路由表由存储服务维护，`FileSystemNode.path` 不变。支持嵌入式（本地文件系统）和独立 HTTP 服务两种模式。CDN/ESA 缓存挂载在存储服务前，通过 URL 的 `?t=updatedAt&v=version` 参数破坏缓存。
@@ -428,7 +448,7 @@ _Avoid_: 上传凭证、存储 Token
 _Avoid_: 转换队列、任务队列
 
 **最终一致性转换（Final Consistency Conversion）**:
-转换任务的状态权威源在 Function Workflow Service，不在后端 DB。Backend 提交任务后通过回调或轮询获知结果。定时 reconciler 扫描 stuck 的 PROCESSING 记录并恢复。
+两层状态：节点级 `FileStatus` 的权威源在**后端 DB**（提交即置 PROCESSING，回调/轮询拿结果后落终态）；在途引擎任务簿记在执行器侧（进程池为进程内 Map，独立服务在远端 TaskStore）。提交是 fire-and-forget，backend/conversion-service 重启会丢 promise → 定时对账（默认 5 分钟，宽限 30 分钟）扫描卡死的 PROCESSING 节点并恢复。
 _Avoid_: 强一致性、同步等待
 
 **URL 缓存失效（Cache Invalidation by URL Mutation）**:
@@ -436,7 +456,7 @@ _Avoid_: 强一致性、同步等待
 _Avoid_: 缓存清除、手动刷新
 
 **IFunctionExecutor（函数执行器接口）**:
-转换引擎的统一抽象接口，定义 `invoke(task)` 和 `getTaskStatus(taskId)` 两个方法。所有部署模式（embedded/standalone/cloud-faas）共享此接口。实现类：`ProcessPoolExecutor`（子进程池）、`HttpConversionExecutor`（HTTP）、`CloudFaaSExecutor`（云函数）。
+转换引擎的统一抽象接口（token: `IFunctionExecutor`，3 个实现：`ProcessPoolExecutor` 子进程池 / `HttpConversionExecutor` HTTP / `CloudFaaSExecutor` 云函数）。方法面：`invoke(task)` 提交、`getTaskStatus(taskId)` 查态、`cancelTask?` 取消（仅独立服务有进程组/可出队）、`queueStats()` 与 `durationStats()` 统计（无排队队列的形态返回 null）、`listTasks?` 逐任务明细、`clearQueue?` 清队列。容器侧由 `function-executor.module` 的 `useFactory` 按 `FUNCTION_EXECUTOR` **一次**选定 adapter；消费者一律只注入 token——批量下载、单文件导出、异步转换、对账、监控、健康检查都不再按 mode 字符串分支，统计口径也全部走 seam（监控不再自己持 HTTP 客户端、不再镜像执行器内部字段名）。
 _Avoid_: 转换服务、执行器
 
 **IStorageProvider（存储提供者接口）**:
