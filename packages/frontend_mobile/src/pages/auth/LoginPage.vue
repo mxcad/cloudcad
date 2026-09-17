@@ -230,8 +230,15 @@ onUnmounted(stopCountdown)
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 16px;
   overflow-y: auto;
+}
+
+/* label 只有 2 个字，vant 默认给 label 留 6.2em，把「请输入用户名、邮箱或手机号」
+   的尾部挤到卡片外被截断；收窄 label 列并减小水平内边距，把宽度让给输入区 */
+.auth-page .van-field {
+  --van-field-label-width: 5.5em;
+  --van-field-padding-horizontal: 12px;
 }
 
 .auth-card {
