@@ -3,6 +3,7 @@ import { ref, computed, watch, defineComponent } from "vue";
 
 import { uiConfig } from "@/config/uiConfig";
 import { t } from "@/languages";
+import type { MxToolbarItem } from "@/types/mx-toolbar-item";
 import { useVoerkaI18n } from "@voerkai18n/vue";
 
 export const useToolbarData = () => {

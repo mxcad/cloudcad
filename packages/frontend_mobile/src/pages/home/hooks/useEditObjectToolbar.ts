@@ -1,6 +1,7 @@
 import { callCommand } from "@/plugins/mxcad/command"
 import { McObject, MxCADUtility, MxCpp } from "mxcad"
 import { ref, nextTick, onMounted } from "vue"
+import type { MxToolbarItem } from "@/types/mx-toolbar-item"
 export const useEditObjectToolbar = () => {
     // ‍  对象编辑操作
 // ‍ Object editing operation

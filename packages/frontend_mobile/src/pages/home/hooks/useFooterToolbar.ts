@@ -1,6 +1,7 @@
 import { callCommand } from "@/plugins/mxcad/command"
 import { useToggle } from "@vueuse/core"
 import { ref, nextTick } from "vue"
+import type { MxToolbarItem } from "@/types/mx-toolbar-item"
 
 export const useFooterToolbar = () => {
     const left = ref(0)

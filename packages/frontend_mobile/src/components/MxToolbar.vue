@@ -4,6 +4,7 @@ import BScroll from '@better-scroll/core'
 import MxIcon from '@/components/MxIcon.vue'
 import { t } from '@/languages'
 import { useVoerkaI18n } from '@voerkai18n/vue'
+import type { MxToolbarItem } from '@/types/mx-toolbar-item'
 
 const i18n = useVoerkaI18n()
 const translate = (key: string) => {
