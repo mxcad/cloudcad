@@ -322,7 +322,7 @@ function formatSize(bytes: number): string {
           @contextmenu.prevent="onItemClick(item)"
         >
           <div v-if="item.isFolder" class="grid-thumb grid-thumb--folder">
-            <FolderIcon size="100%" />
+            <FolderIcon size="72%" />
           </div>
           <div v-else class="grid-thumb grid-thumb--file">
             <span class="thumb-ext" :style="{ color: extColor(item.ext) }">{{ item.ext }}</span>
@@ -332,7 +332,7 @@ function formatSize(bytes: number): string {
           <span v-if="!item.isFolder" class="grid-meta">{{ item.time }}</span>
           <!-- 单条目操作菜单入口（A-03）：列表行 ellipsis / 网格角标，长按仍为多选 -->
           <button class="grid-more" @click.stop="emit('itemMenu', item)">
-            <van-icon name="ellipsis" size="14" />
+            <van-icon name="ellipsis" size="16" />
           </button>
         </div>
         <div v-if="items.length > 0" class="load-more-footer">
@@ -372,8 +372,10 @@ function formatSize(bytes: number): string {
           <span v-if="!item.isFolder" class="list-ext" :style="{ color: extColor(item.ext), borderColor: extColor(item.ext) }">
             {{ item.ext }}
           </span>
-          <!-- 单条目操作菜单入口（A-03）：原死控件接线 -->
-          <van-icon name="ellipsis" class="list-more" size="16" @click.stop="emit('itemMenu', item)" />
+          <!-- 单条目操作菜单入口（A-03）：原死控件接线；与网格角标同为 28px 圆形热区 -->
+          <button class="list-more" @click.stop="emit('itemMenu', item)">
+            <van-icon name="ellipsis" size="16" />
+          </button>
         </div>
         <div v-if="items.length > 0" class="load-more-footer">
           <van-loading v-if="loading" size="18" />
@@ -580,7 +582,8 @@ function formatSize(bytes: number): string {
 
 .grid-thumb {
   width: 100%;
-  aspect-ratio: 1;
+  /* 4/3 横向缩略图：卡片更紧凑，图标不再占满整屏高 */
+  aspect-ratio: 4 / 3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -605,9 +608,10 @@ function formatSize(bytes: number): string {
 
 .thumb-img {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  /* 留出内边距：缩略图照片与文件夹图标视觉分量一致，不撑满整块 */
+  inset: 16%;
+  width: 68%;
+  height: 68%;
   object-fit: contain;
   border-radius: inherit;
 }
@@ -705,18 +709,28 @@ function formatSize(bytes: number): string {
 }
 
 .list-more {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
   color: var(--text-tertiary);
-  flex-shrink: 0;
   cursor: pointer;
 }
 
-/* 网格模式单条目菜单角标（A-03） */
+/* 网格模式单条目菜单角标（A-03）：顶/右 10px = 卡片 8px padding + 1px 缩略图内缩，
+   整个热区落在黑框内，不再探出卡片/缩略图边界 */
 .grid-more {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 24px;
-  height: 24px;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
   border-radius: 50%;
