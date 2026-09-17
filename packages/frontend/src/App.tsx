@@ -116,6 +116,7 @@ const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'));
 const AdminStatsPage = lazy(() => import('./pages/AdminStatsPage'));
 // IP 访问控制（黑名单 / 白名单 / 高危访问尝试 三 Tab；子页面由容器静态引用，同 chunk）
 const IpAccessControlPage = lazy(() => import('./pages/IpAccessControlPage'));
+const NoticeCenterPage = lazy(() => import('./pages/NoticeCenterPage'));
 
 // ============================================================================
 // 路由保护组件
@@ -685,6 +686,20 @@ function AppContent() {
                       >
                         <Suspense fallback={<PageLoader />}>
                           <RuntimeConfigPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 通知管理（发布公告/下线）- 需要 SYSTEM_CONFIG_READ 权限 */}
+                  <Route
+                    path="/admin/notices"
+                    element={
+                      <PermissionRoute
+                        permission={SystemPermission.SYSTEM_CONFIG_READ}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <NoticeCenterPage />
                         </Suspense>
                       </PermissionRoute>
                     }

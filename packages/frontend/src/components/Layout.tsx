@@ -40,6 +40,7 @@ import { ShieldCheck } from 'lucide-react';
 import { Type } from 'lucide-react';
 import { Activity } from 'lucide-react';
 import { ScrollText } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
@@ -351,6 +352,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         icon: Activity,
         label: t('系统监控'),
         visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
+      },
+      {
+        to: '/admin/notices',
+        icon: Bell,
+        label: t('通知管理'),
+        visible: hasPermission(SystemPermission.SYSTEM_CONFIG_READ),
       },
     ],
     [hasPermission, hasAnyPermission]

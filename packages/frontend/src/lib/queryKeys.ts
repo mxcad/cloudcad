@@ -52,6 +52,12 @@ export const queryKeys = {
     all: ['users'] as const,
   },
 
+  // ─── Notices (公告管理) ───────────────────────────────────────────
+  notices: {
+    all: ['notices'] as const,
+    listAll: ['notices', 'listAll'] as const,
+  },
+
   // ─── Roles ────────────────────────────────────────────────────────
   roles: {
     all: ['roles'] as const,

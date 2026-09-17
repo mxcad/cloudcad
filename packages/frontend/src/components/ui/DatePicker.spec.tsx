@@ -198,4 +198,124 @@ describe('DatePicker', () => {
 
     expect(screen.getByDisplayValue('2026年8月15日')).toBeTruthy();
   });
+
+  const isoAt = (y: number, m: number, d: number, h: number, min: number) =>
+    new Date(y, m - 1, d, h, min, 0, 0).toISOString();
+
+  const openPanel = () => fireEvent.click(screen.getByPlaceholderText('选择日期'));
+
+  // happy-dom 下 getByLabelText 取不到组件的 aria-label，时/分输入框按占位符定位
+  const timeInputs = () =>
+    screen.getAllByPlaceholderText('00') as HTMLInputElement[];
+
+  const pickTime = (hour: string, minute: string) => {
+    const [hourInput, minuteInput] = timeInputs();
+    fireEvent.change(hourInput, { target: { value: hour } });
+    fireEvent.change(minuteInput, { target: { value: minute } });
+  };
+
+  describe('withTime', () => {
+    it('面板渲染时/分输入框，选择日期后输出含分时的 ISO（秒/毫秒归零）', () => {
+      const onChange = vi.fn();
+      render(<DatePicker value={undefined} onChange={onChange} withTime />);
+
+      openPanel();
+      pickTime('09', '30');
+      fireEvent.click(screen.getAllByText('15')[0]);
+
+      expect(onChange).toHaveBeenCalledWith(isoAt(2026, 8, 15, 9, 30));
+    });
+
+    it('换一天保留已填时分（日历只给日期，时/分沿用面板草稿）', () => {
+      const onChange = vi.fn();
+      render(
+        <DatePicker value={isoAt(2026, 8, 15, 9, 30)} onChange={onChange} withTime />
+      );
+
+      openPanel();
+      // type="number" 的输入框在 happy-dom 下返回数值而非字符串
+      expect(timeInputs()[0]).toHaveValue(9);
+      expect(timeInputs()[1]).toHaveValue(30);
+      fireEvent.click(screen.getAllByText('20')[0]);
+
+      expect(onChange).toHaveBeenCalledWith(isoAt(2026, 8, 20, 9, 30));
+    });
+
+    it('「今天」取当前时分而非当天末', () => {
+      vi.setSystemTime(new Date(2026, 7, 6, 14, 5, 12, 777));
+      const onChange = vi.fn();
+      render(<DatePicker value={undefined} onChange={onChange} withTime />);
+
+      openPanel();
+      fireEvent.click(screen.getByText('今天'));
+
+      expect(onChange).toHaveBeenCalledWith(isoAt(2026, 8, 6, 14, 5));
+    });
+
+    it('越界时分被夹取（时 0-23、分 0-59，空串按 0）', () => {
+      const onChange = vi.fn();
+      const first = render(<DatePicker value={undefined} onChange={onChange} withTime />);
+
+      openPanel();
+      pickTime('99', '75');
+      fireEvent.click(screen.getAllByText('15')[0]);
+      expect(onChange).toHaveBeenCalledWith(isoAt(2026, 8, 15, 23, 59));
+
+      // 重开面板后草稿已按提交值对齐；清空输入按 0 处理
+      // （必须先 unmount，否则 document 里有两个占位输入框）
+      first.unmount();
+      render(
+        <DatePicker
+          value={isoAt(2026, 8, 15, 23, 59)}
+          onChange={onChange}
+          withTime
+        />
+      );
+      openPanel();
+      pickTime('', '');
+      fireEvent.click(screen.getAllByText('16')[0]);
+      expect(onChange).toHaveBeenLastCalledWith(isoAt(2026, 8, 16, 0, 0));
+    });
+
+    it('minDate 禁用逻辑与 withTime 无关（只按日期粒度）', () => {
+      const onChange = vi.fn();
+      render(
+        <DatePicker
+          value={undefined}
+          onChange={onChange}
+          minDate={isoOf(2026, 8, 6)}
+          withTime
+        />
+      );
+
+      openPanel();
+      const pastDay = screen.getAllByText('5')[0].closest('button');
+      fireEvent.click(pastDay!);
+      expect(onChange).not.toHaveBeenCalled();
+
+      pickTime('08', '00');
+      fireEvent.click(screen.getAllByText('6')[0]);
+      expect(onChange).toHaveBeenCalledWith(isoAt(2026, 8, 6, 8, 0));
+    });
+
+    it('输入框显示已选时分', () => {
+      render(
+        <DatePicker
+          value={isoAt(2026, 8, 15, 9, 30)}
+          onChange={vi.fn()}
+          withTime
+        />
+      );
+
+      const trigger = screen.getByDisplayValue(/2026/) as HTMLInputElement;
+      expect(trigger.value).toContain('09:30');
+    });
+
+    it('未开启 withTime 时不渲染时/分输入框', () => {
+      render(<DatePicker value={undefined} onChange={vi.fn()} />);
+
+      openPanel();
+      expect(screen.queryAllByPlaceholderText('00')).toHaveLength(0);
+    });
+  });
 });

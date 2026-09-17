@@ -5,7 +5,7 @@
         "ko-KR": "로드 중...",
         "$files": [
             "src/App.tsx(2973-2983)",
-            "src/components/Layout.tsx(22239-22249)",
+            "src/components/Layout.tsx(22445-22455)",
             "src/components/LoadingOverlay.tsx(2729-2739)",
             "src/components/WorkListPanel.tsx(1882-1892)",
             "src/components/common/FileListGrid.tsx(7305-7315)",
@@ -40,7 +40,7 @@
         "en-US": "Loading CAD editor ..",
         "ko-KR": "CAD 편집기를 로드하는 중입니다...",
         "$files": [
-            "src/App.tsx(8490-8509)"
+            "src/App.tsx(8564-8583)"
         ],
         "$id": 4666
     },
@@ -64,7 +64,7 @@
             "src/components/BreadcrumbNavigation.tsx(6191-6197)",
             "src/components/DirectoryImportDialog.tsx(16270-16276)",
             "src/components/DirectoryImportDialog.tsx(16626-16632)",
-            "src/components/Layout.tsx(30675-30681)",
+            "src/components/Layout.tsx(30881-30887)",
             "src/contexts/NotificationContext.tsx(2213-2219)",
             "src/contexts/NotificationContext.tsx(2477-2483)",
             "src/contexts/NotificationContext.tsx(2707-2713)",
@@ -126,6 +126,7 @@
             "src/pages/IpWhitelistPage/components/AddEntryModal.tsx(5897-5903)",
             "src/pages/IpWhitelistPage/components/RemoveEntryModal.tsx(2287-2293)",
             "src/pages/LibraryManager/components/LibraryManagerModals.tsx(3509-3515)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(10373-10379)",
             "src/pages/Profile/hooks/useEmailProfile.ts(8660-8666)",
             "src/pages/Profile/hooks/usePhoneProfile.ts(8492-8498)",
             "src/pages/RoleManagement/components/DeleteRoleModal.tsx(700-706)",
@@ -348,7 +349,7 @@
         "ko-KR": "사용자",
         "$files": [
             "src/components/CollabWorkCard.tsx(2985-2991)",
-            "src/components/Layout.tsx(21855-21861)",
+            "src/components/Layout.tsx(22061-22067)",
             "src/pages/AuditLogPage/constants.ts(1501-1507)",
             "src/pages/Dashboard/index.tsx(8211-8217)",
             "src/pages/Profile/ProfileHeader.tsx(2655-2661)",
@@ -827,6 +828,7 @@
             "src/components/modals/VersionHistoryModal.tsx(2036-2042)",
             "src/pages/FontLibrary/components/UploadFontModal.tsx(4389-4395)",
             "src/pages/ForgotPassword/components/SupportModal.tsx(2176-2182)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8501-8507)",
             "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(4405-4411)"
         ],
         "$id": 927
@@ -1023,7 +1025,7 @@
         "en-US": "System Administrator",
         "ko-KR": "시스템 관리자",
         "$files": [
-            "src/components/Layout.tsx(6347-6356)",
+            "src/components/Layout.tsx(6385-6394)",
             "src/pages/Profile/ProfileHeader.tsx(2786-2795)",
             "src/pages/Profile/ProfileInfoTab.tsx(8477-8486)",
             "src/pages/FontLibrary/components/FontListView.tsx(4024-4033)"
@@ -1035,7 +1037,7 @@
         "en-US": "User administrator",
         "ko-KR": "사용자 관리자",
         "$files": [
-            "src/components/Layout.tsx(6380-6389)"
+            "src/components/Layout.tsx(6418-6427)"
         ],
         "$id": 2645
     },
@@ -1044,7 +1046,7 @@
         "en-US": "Font Manager",
         "ko-KR": "글꼴 관리자",
         "$files": [
-            "src/components/Layout.tsx(6413-6422)"
+            "src/components/Layout.tsx(6451-6460)"
         ],
         "$id": 2646
     },
@@ -1053,7 +1055,7 @@
         "en-US": "Regular user",
         "ko-KR": "일반 사용자",
         "$files": [
-            "src/components/Layout.tsx(6438-6446)",
+            "src/components/Layout.tsx(6476-6484)",
             "src/pages/Profile/ProfileHeader.tsx(2799-2807)",
             "src/pages/Profile/ProfileInfoTab.tsx(8490-8498)"
         ],
@@ -1064,7 +1066,7 @@
         "en-US": "Project Manager",
         "ko-KR": "프로젝트 관리자",
         "$files": [
-            "src/components/Layout.tsx(6465-6473)"
+            "src/components/Layout.tsx(6503-6511)"
         ],
         "$id": 2647
     },
@@ -1073,7 +1075,7 @@
         "en-US": "visitor",
         "ko-KR": "방문객",
         "$files": [
-            "src/components/Layout.tsx(6490-6496)"
+            "src/components/Layout.tsx(6528-6534)"
         ],
         "$id": 2648
     },
@@ -1082,7 +1084,7 @@
         "en-US": "Dashboard",
         "ko-KR": "대시보드",
         "$files": [
-            "src/components/Layout.tsx(7723-7730)",
+            "src/components/Layout.tsx(7761-7768)",
             "src/pages/Dashboard/index.tsx(2028-2035)"
         ],
         "$id": 1013
@@ -1092,7 +1094,7 @@
         "en-US": "project management",
         "ko-KR": "프로젝트 관리",
         "$files": [
-            "src/components/Layout.tsx(7845-7853)",
+            "src/components/Layout.tsx(7883-7891)",
             "src/constants/permissions.ts(6744-6752)",
             "src/components/sidebar/SidebarTabBar.tsx(1112-1120)",
             "src/components/sidebar/SidebarTrigger.tsx(1644-1652)",
@@ -1108,7 +1110,7 @@
         "en-US": "Personal space",
         "ko-KR": "개인 공간",
         "$files": [
-            "src/components/Layout.tsx(8011-8019)",
+            "src/components/Layout.tsx(8049-8057)",
             "src/hooks/useCollabWorks.ts(12675-12683)",
             "src/components/modals/SaveAsModal.tsx(6342-6350)",
             "src/components/modals/SaveAsModal.tsx(9229-9237)",
@@ -1129,7 +1131,7 @@
         "en-US": "Sharing Management",
         "ko-KR": "공유 관리",
         "$files": [
-            "src/components/Layout.tsx(8173-8181)",
+            "src/components/Layout.tsx(8211-8219)",
             "src/pages/ShareManagePage/index.tsx(1417-1425)"
         ],
         "$id": 2650
@@ -1139,7 +1141,7 @@
         "en-US": "Personal info",
         "ko-KR": "개인 정보",
         "$files": [
-            "src/components/Layout.tsx(8289-8297)",
+            "src/components/Layout.tsx(8327-8335)",
             "src/pages/Profile/index.tsx(2492-2500)"
         ],
         "$id": 1143
@@ -1149,7 +1151,7 @@
         "en-US": "Public repository",
         "ko-KR": "공용 저장소",
         "$files": [
-            "src/components/Layout.tsx(8408-8417)",
+            "src/components/Layout.tsx(8446-8455)",
             "src/constants/permissions.ts(6553-6562)"
         ],
         "$id": 1132
@@ -1159,7 +1161,7 @@
         "en-US": "Font library",
         "ko-KR": "글꼴 라이브러리",
         "$files": [
-            "src/components/Layout.tsx(8658-8665)",
+            "src/components/Layout.tsx(8696-8703)",
             "src/pages/FontLibrary/index.tsx(796-803)"
         ],
         "$id": 1075
@@ -1169,7 +1171,7 @@
         "en-US": "User Management",
         "ko-KR": "사용자 관리",
         "$files": [
-            "src/components/Layout.tsx(8816-8824)",
+            "src/components/Layout.tsx(8854-8862)",
             "src/pages/UserManagement/index.tsx(1956-1964)",
             "src/pages/UserManagement/index.tsx(18917-18925)",
             "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts(1802-1810)"
@@ -1181,7 +1183,7 @@
         "en-US": "Role permissions",
         "ko-KR": "역할 권한",
         "$files": [
-            "src/components/Layout.tsx(8981-8989)",
+            "src/components/Layout.tsx(9019-9027)",
             "src/pages/RoleManagement/index.tsx(1127-1135)"
         ],
         "$id": 1206
@@ -1191,7 +1193,7 @@
         "en-US": "Payment Management",
         "ko-KR": "지불 관리",
         "$files": [
-            "src/components/Layout.tsx(9189-9197)",
+            "src/components/Layout.tsx(9227-9235)",
             "src/pages/AdminBillingPage/index.tsx(1364-1372)",
             "src/pages/AdminBillingPage/index.tsx(2239-2247)"
         ],
@@ -1202,7 +1204,7 @@
         "en-US": "IP Access Control",
         "ko-KR": "IP 액세스 제어",
         "$files": [
-            "src/components/Layout.tsx(9482-9493)",
+            "src/components/Layout.tsx(9520-9531)",
             "src/pages/IpAccessControlPage/index.tsx(1719-1730)",
             "src/pages/IpAccessControlPage/index.tsx(2627-2638)"
         ],
@@ -1213,7 +1215,7 @@
         "en-US": "audit log",
         "ko-KR": "감사 로그",
         "$files": [
-            "src/components/Layout.tsx(9861-9869)",
+            "src/components/Layout.tsx(9899-9907)",
             "src/pages/AuditLogPage/index.tsx(1194-1202)",
             "src/pages/AuditLogPage/index.tsx(5636-5644)"
         ],
@@ -1224,19 +1226,30 @@
         "en-US": "System monitoring",
         "ko-KR": "시스템 모니터링",
         "$files": [
-            "src/components/Layout.tsx(10146-10154)",
+            "src/components/Layout.tsx(10184-10192)",
             "src/constants/permissions.ts(6239-6247)",
             "src/pages/SystemMonitorPage/index.tsx(1778-1786)",
             "src/pages/SystemMonitorPage/index.tsx(3994-4002)"
         ],
         "$id": 1246
     },
+    "通知管理": {
+        "zh-TW": "通知管理",
+        "en-US": "通知管理",
+        "ko-KR": "通知管理",
+        "$files": [
+            "src/components/Layout.tsx(10348-10356)",
+            "src/pages/NoticeCenterPage/index.tsx(1493-1501)",
+            "src/pages/NoticeCenterPage/index.tsx(3126-3134)"
+        ],
+        "$id": 8119
+    },
     "关闭菜单": {
         "zh-TW": "關閉選單",
         "en-US": "Close menu",
         "ko-KR": "메뉴 닫기",
         "$files": [
-            "src/components/Layout.tsx(14408-14416)"
+            "src/components/Layout.tsx(14614-14622)"
         ],
         "$id": 4691
     },
@@ -1245,7 +1258,7 @@
         "en-US": "Main Menu",
         "ko-KR": "메인 메뉴",
         "$files": [
-            "src/components/Layout.tsx(14873-14880)"
+            "src/components/Layout.tsx(15079-15086)"
         ],
         "$id": 2655
     },
@@ -1254,7 +1267,7 @@
         "en-US": "System Administration",
         "ko-KR": "시스템 관리",
         "$files": [
-            "src/components/Layout.tsx(15768-15776)",
+            "src/components/Layout.tsx(15974-15982)",
             "src/constants/permissions.ts(6064-6072)"
         ],
         "$id": 2656
@@ -1264,7 +1277,7 @@
         "en-US": "Personal space storage",
         "ko-KR": "개인 공간 스토리지",
         "$files": [
-            "src/components/Layout.tsx(16813-16823)"
+            "src/components/Layout.tsx(17019-17029)"
         ],
         "$id": 7423
     },
@@ -1273,7 +1286,7 @@
         "en-US": "⚠️  Storage space has exceeded the limit",
         "ko-KR": "⚠️ 스토리지 공간이 초과되었습니다.",
         "$files": [
-            "src/components/Layout.tsx(18315-18329)"
+            "src/components/Layout.tsx(18521-18535)"
         ],
         "$id": 2658
     },
@@ -1282,7 +1295,7 @@
         "en-US": "Upgrade VIP for more storage",
         "ko-KR": "멤버십을 업그레이드하면 저장 공간을 확장할 수 있습니다",
         "$files": [
-            "src/components/Layout.tsx(18445-18460)",
+            "src/components/Layout.tsx(18651-18666)",
             "src/components/billing/PlanSelectOverlay.tsx(2057-2072)"
         ],
         "$id": 6079
@@ -1292,7 +1305,7 @@
         "en-US": "Go to Purchase",
         "ko-KR": "구매하러 가기",
         "$files": [
-            "src/components/Layout.tsx(18831-18838)",
+            "src/components/Layout.tsx(19037-19044)",
             "src/utils/quotaUpgradeGuide.ts(3190-3197)",
             "src/utils/vipFeatureGuide.ts(2253-2260)"
         ],
@@ -1303,7 +1316,7 @@
         "en-US": "Unable to load storage information",
         "ko-KR": "스토리지 정보를 로드할 수 없습니다.",
         "$files": [
-            "src/components/Layout.tsx(19052-19064)"
+            "src/components/Layout.tsx(19258-19270)"
         ],
         "$id": 2660
     },
@@ -1312,7 +1325,7 @@
         "en-US": "View Guidance Center",
         "ko-KR": "부트 센터 보기",
         "$files": [
-            "src/components/Layout.tsx(19405-19415)"
+            "src/components/Layout.tsx(19611-19621)"
         ],
         "$id": 2661
     },
@@ -1321,7 +1334,7 @@
         "en-US": "Help guide",
         "ko-KR": "도움말 부트",
         "$files": [
-            "src/components/Layout.tsx(19994-20002)"
+            "src/components/Layout.tsx(20200-20208)"
         ],
         "$id": 2662
     },
@@ -1330,7 +1343,7 @@
         "en-US": "In progress",
         "ko-KR": "진행 중",
         "$files": [
-            "src/components/Layout.tsx(20151-20158)"
+            "src/components/Layout.tsx(20357-20364)"
         ],
         "$id": 2663
     },
@@ -1339,7 +1352,7 @@
         "en-US": "unknown role",
         "ko-KR": "알 수 없는 역할",
         "$files": [
-            "src/components/Layout.tsx(22394-22402)",
+            "src/components/Layout.tsx(22600-22608)",
             "src/pages/UserManagement/UserTable.tsx(6145-6153)"
         ],
         "$id": 2665
@@ -1349,7 +1362,7 @@
         "en-US": "Personal Settings",
         "ko-KR": "개인 설정",
         "$files": [
-            "src/components/Layout.tsx(23355-23363)"
+            "src/components/Layout.tsx(23561-23569)"
         ],
         "$id": 2666
     },
@@ -1358,7 +1371,7 @@
         "en-US": "Log out",
         "ko-KR": "로그아웃",
         "$files": [
-            "src/components/Layout.tsx(23756-23764)"
+            "src/components/Layout.tsx(23962-23970)"
         ],
         "$id": 2667
     },
@@ -1367,7 +1380,7 @@
         "en-US": "Return to CAD Editor",
         "ko-KR": "CAD 편집기로 돌아가기",
         "$files": [
-            "src/components/Layout.tsx(24937-24949)"
+            "src/components/Layout.tsx(25143-25155)"
         ],
         "$id": 6172
     },
@@ -1376,8 +1389,8 @@
         "en-US": "File queue",
         "ko-KR": "파일 대기열",
         "$files": [
-            "src/components/Layout.tsx(25912-25920)",
-            "src/components/Layout.tsx(26237-26245)",
+            "src/components/Layout.tsx(26118-26126)",
+            "src/components/Layout.tsx(26443-26451)",
             "src/components/conversion-panel/ConversionPanel.tsx(18276-18284)"
         ],
         "$id": 8026
@@ -1387,8 +1400,8 @@
         "en-US": "System Settings",
         "ko-KR": "시스템 설정",
         "$files": [
-            "src/components/Layout.tsx(27656-27664)",
-            "src/components/Layout.tsx(28023-28031)"
+            "src/components/Layout.tsx(27862-27870)",
+            "src/components/Layout.tsx(28229-28237)"
         ],
         "$id": 2668
     },
@@ -1397,7 +1410,7 @@
         "en-US": "Your administrator password is about to expire, please change it in advance",
         "ko-KR": "관리자 암호가 만료됩니다. 미리 수정하십시오.",
         "$files": [
-            "src/components/Layout.tsx(29507-29528)"
+            "src/components/Layout.tsx(29713-29734)"
         ],
         "$id": 7736
     },
@@ -1406,7 +1419,7 @@
         "en-US": "Change password",
         "ko-KR": "비밀번호 변경",
         "$files": [
-            "src/components/Layout.tsx(29758-29766)",
+            "src/components/Layout.tsx(29964-29972)",
             "src/pages/AuditLogPage/constants.ts(841-849)",
             "src/pages/Profile/index.tsx(9224-9232)",
             "src/pages/Profile/ProfileInfoTab.tsx(8094-8102)",
@@ -1419,8 +1432,8 @@
         "en-US": "Confirm to log out and log in",
         "ko-KR": "로그아웃 확인",
         "$files": [
-            "src/components/Layout.tsx(30445-30455)",
-            "src/components/Layout.tsx(31695-31705)"
+            "src/components/Layout.tsx(30651-30661)",
+            "src/components/Layout.tsx(31901-31911)"
         ],
         "$id": 2669
     },
@@ -1429,7 +1442,7 @@
         "en-US": "Exiting ..",
         "ko-KR": "종료 중...",
         "$files": [
-            "src/components/Layout.tsx(31079-31089)"
+            "src/components/Layout.tsx(31285-31295)"
         ],
         "$id": 2670
     },
@@ -1438,7 +1451,7 @@
         "en-US": "Confirm exit",
         "ko-KR": "종료 확인",
         "$files": [
-            "src/components/Layout.tsx(31155-31163)"
+            "src/components/Layout.tsx(31361-31369)"
         ],
         "$id": 2671
     },
@@ -1447,7 +1460,7 @@
         "en-US": "Are you sure you want to exit {appName}? After logging out, you need to log in again to access system functions.",
         "ko-KR": "_ _ $_ $_ $_ $_ 을 (를) 종료하시겠습니까?시스템 기능에 액세스하려면 종료 후 다시 로그인해야 합니다.",
         "$files": [
-            "src/components/Layout.tsx(31816-31874)"
+            "src/components/Layout.tsx(32022-32080)"
         ],
         "$id": 2672
     },
@@ -1639,6 +1652,7 @@
             "src/pages/FileSystemManager/FileSystemContextMenu.tsx(7054-7060)",
             "src/pages/FileSystemManager/FileSystemContextMenu.tsx(9440-9446)",
             "src/pages/FileSystemManager/FileSystemHeader.tsx(9512-9518)",
+            "src/pages/NoticeCenterPage/index.tsx(3386-3392)",
             "src/components/ProjectDrawingsPanel/components/ProjectPanelView.tsx(4973-4979)",
             "src/components/ProjectDrawingsPanel/components/ProjectPanelView.tsx(6134-6140)",
             "src/pages/AdminBillingPage/components/DurationsTab.tsx(1113-1119)",
@@ -2659,8 +2673,8 @@
             "src/hooks/useCollabWorks.ts(6715-6721)",
             "src/components/modals/ExternalReferenceModal.tsx(9954-9960)",
             "src/components/modals/ExternalReferencePanel.tsx(5174-5180)",
-            "src/components/sidebar/SidebarTabBar.tsx(1214-1220)",
-            "src/components/ProjectDrawingsPanel/index.tsx(5547-5553)"
+            "src/components/ProjectDrawingsPanel/index.tsx(5547-5553)",
+            "src/components/sidebar/SidebarTabBar.tsx(1214-1220)"
         ],
         "$id": 873
     },
@@ -6580,6 +6594,7 @@
         "$files": [
             "src/components/file-item/fileActionConfig.tsx(9684-9690)",
             "src/components/file-item/fileActionConfig.tsx(9708-9714)",
+            "src/pages/NoticeCenterPage/index.tsx(8443-8449)",
             "src/pages/UserManagement/UserTable.tsx(8007-8013)",
             "src/pages/AdminBillingPage/components/DurationsTab.tsx(3442-3448)",
             "src/pages/AdminBillingPage/components/TiersTab.tsx(3121-3127)"
@@ -7354,6 +7369,7 @@
         "ko-KR": "상태",
         "$files": [
             "src/components/modals/ExternalReferenceModal.tsx(6051-6057)",
+            "src/pages/NoticeCenterPage/index.tsx(5022-5028)",
             "src/pages/UserManagement/UserTable.tsx(4690-4696)",
             "src/pages/AdminBillingPage/components/OrdersTab.tsx(3666-3672)",
             "src/pages/AdminBillingPage/components/RefundApplicationsTab.tsx(3227-3233)",
@@ -7380,7 +7396,9 @@
         "en-US": "Type",
         "ko-KR": "유형",
         "$files": [
-            "src/components/modals/ExternalReferenceModal.tsx(6675-6681)"
+            "src/components/modals/ExternalReferenceModal.tsx(6675-6681)",
+            "src/pages/NoticeCenterPage/index.tsx(4900-4906)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(5642-5648)"
         ],
         "$id": 1355
     },
@@ -7989,7 +8007,7 @@
             "src/components/modals/OperationHistoryModal.tsx(5174-5180)",
             "src/components/search/SearchFilters.tsx(2582-2588)",
             "src/components/search/SearchFilters.tsx(5625-5631)",
-            "src/components/ui/DatePicker.tsx(9549-9555)"
+            "src/components/ui/DatePicker.tsx(9553-9559)"
         ],
         "$id": 2902
     },
@@ -8304,6 +8322,7 @@
             "src/services/mxcadManager/saveSequences.ts(2274-2282)",
             "src/services/mxcadManager/saveSequences.ts(8077-8085)",
             "src/components/modals/hooks/useSaveAs.ts(5152-5160)",
+            "src/pages/NoticeCenterPage/hooks/useNotices.ts(2451-2459)",
             "src/pages/RoleManagement/hooks/useProjectRoleTemplates.ts(2755-2763)",
             "src/pages/RoleManagement/hooks/useSystemRoleCrud.ts(3021-3029)",
             "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts(7225-7233)"
@@ -9006,6 +9025,7 @@
             "src/components/modals/ShareDialog.tsx(14585-14591)",
             "src/pages/IpBlacklistPage/index.tsx(10662-10668)",
             "src/pages/IpWhitelistPage/index.tsx(11817-11823)",
+            "src/pages/NoticeCenterPage/index.tsx(5266-5272)",
             "src/pages/SecurityAccessAttemptPage/index.tsx(6831-6837)",
             "src/pages/UserManagement/UserTable.tsx(4749-4755)",
             "src/pages/AdminBillingPage/components/OrdersTab.tsx(4033-4039)",
@@ -9355,6 +9375,81 @@
             "src/components/permission/PermissionAssignment.tsx(10882-10901)"
         ],
         "$id": 4915
+    },
+    "已修改": {
+        "zh-TW": "已修改",
+        "en-US": "Modified",
+        "ko-KR": "수정됨",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/buildResourceItems.tsx(1182-1189)",
+            "src/pages/RuntimeConfigPage/ConfigCard.tsx(3318-3325)"
+        ],
+        "$id": 4918
+    },
+    "未找到匹配的内容": {
+        "zh-TW": "未找到匹配的內容",
+        "en-US": "No matching content found",
+        "ko-KR": "일치하는 컨텐트를 찾을 수 없습니다.",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(5481-5493)"
+        ],
+        "$id": 4921
+    },
+    "图块": {
+        "zh-TW": "圖塊",
+        "en-US": "tile",
+        "ko-KR": "그림 블록",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(5583-5589)"
+        ],
+        "$id": 4922
+    },
+    "内容": {
+        "zh-TW": "內容",
+        "en-US": "content",
+        "ko-KR": "콘텐츠",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(5593-5599)"
+        ],
+        "$id": 4923
+    },
+    "移动到分类": {
+        "zh-TW": "移動到分類",
+        "en-US": "Move to Category",
+        "ko-KR": "분류로 이동",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(8643-8652)"
+        ],
+        "$id": 5865
+    },
+    "复制到分类": {
+        "zh-TW": "複製到分類",
+        "en-US": "Copy to Category",
+        "ko-KR": "분류로 복사",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(8841-8850)"
+        ],
+        "$id": 5866
+    },
+    "移动到此": {
+        "zh-TW": "移動到此",
+        "en-US": "Move here",
+        "ko-KR": "여기로 이동",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(12504-12512)",
+            "src/hooks/file-browser/useFileBrowserModals.ts(5958-5966)"
+        ],
+        "$id": 4924
+    },
+    "复制到此": {
+        "zh-TW": "複製到此",
+        "en-US": "Copy here",
+        "ko-KR": "여기로 복사",
+        "$files": [
+            "src/components/ProjectDrawingsPanel/index.tsx(12516-12524)",
+            "src/hooks/file-browser/useFileBrowserModals.ts(5974-5982)"
+        ],
+        "$id": 4925
     },
     "DWG 图纸": {
         "zh-TW": "DWG圖紙",
@@ -9739,7 +9834,7 @@
         "$files": [
             "src/components/search/SearchInput.tsx(1443-1449)",
             "src/components/ui/Autocomplete.tsx(2202-2208)",
-            "src/components/ui/DatePicker.tsx(9658-9664)",
+            "src/components/ui/DatePicker.tsx(9662-9668)",
             "src/components/ui/Select.tsx(4774-4780)",
             "src/components/ui/Select.tsx(21918-21924)",
             "src/pages/FontLibrary/components/FontToolbar.tsx(1963-1969)"
@@ -9877,81 +9972,6 @@
             "src/components/sidebar/SidebarTrigger.tsx(5466-5478)"
         ],
         "$id": 4936
-    },
-    "已修改": {
-        "zh-TW": "已修改",
-        "en-US": "Modified",
-        "ko-KR": "수정됨",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/buildResourceItems.tsx(1182-1189)",
-            "src/pages/RuntimeConfigPage/ConfigCard.tsx(3318-3325)"
-        ],
-        "$id": 4918
-    },
-    "未找到匹配的内容": {
-        "zh-TW": "未找到匹配的內容",
-        "en-US": "No matching content found",
-        "ko-KR": "일치하는 컨텐트를 찾을 수 없습니다.",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(5481-5493)"
-        ],
-        "$id": 4921
-    },
-    "图块": {
-        "zh-TW": "圖塊",
-        "en-US": "tile",
-        "ko-KR": "그림 블록",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(5583-5589)"
-        ],
-        "$id": 4922
-    },
-    "内容": {
-        "zh-TW": "內容",
-        "en-US": "content",
-        "ko-KR": "콘텐츠",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(5593-5599)"
-        ],
-        "$id": 4923
-    },
-    "移动到分类": {
-        "zh-TW": "移動到分類",
-        "en-US": "Move to Category",
-        "ko-KR": "분류로 이동",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(8643-8652)"
-        ],
-        "$id": 5865
-    },
-    "复制到分类": {
-        "zh-TW": "複製到分類",
-        "en-US": "Copy to Category",
-        "ko-KR": "분류로 복사",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(8841-8850)"
-        ],
-        "$id": 5866
-    },
-    "移动到此": {
-        "zh-TW": "移動到此",
-        "en-US": "Move here",
-        "ko-KR": "여기로 이동",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(12504-12512)",
-            "src/hooks/file-browser/useFileBrowserModals.ts(5958-5966)"
-        ],
-        "$id": 4924
-    },
-    "复制到此": {
-        "zh-TW": "複製到此",
-        "en-US": "Copy here",
-        "ko-KR": "여기로 복사",
-        "$files": [
-            "src/components/ProjectDrawingsPanel/index.tsx(12516-12524)",
-            "src/hooks/file-browser/useFileBrowserModals.ts(5974-5982)"
-        ],
-        "$id": 4925
     },
     "{count} 步": {
         "zh-TW": "{count}步",
@@ -10238,7 +10258,7 @@
         "en-US": "Select a date",
         "ko-KR": "날짜 선택",
         "$files": [
-            "src/components/ui/DatePicker.tsx(3484-3492)",
+            "src/components/ui/DatePicker.tsx(3498-3506)",
             "src/pages/IpBlacklistPage/components/AddEntryModal.tsx(4926-4934)",
             "src/pages/IpWhitelistPage/components/AddEntryModal.tsx(4975-4983)"
         ],
@@ -10249,7 +10269,7 @@
         "en-US": "小时",
         "ko-KR": "小时",
         "$files": [
-            "src/components/ui/DatePicker.tsx(8374-8380)"
+            "src/components/ui/DatePicker.tsx(8407-8413)"
         ],
         "$id": 8016
     },
@@ -10258,7 +10278,7 @@
         "en-US": "时",
         "ko-KR": "时",
         "$files": [
-            "src/components/ui/DatePicker.tsx(8666-8671)"
+            "src/components/ui/DatePicker.tsx(8658-8663)"
         ],
         "$id": 8017
     },
@@ -10267,7 +10287,7 @@
         "en-US": "分钟",
         "ko-KR": "分钟",
         "$files": [
-            "src/components/ui/DatePicker.tsx(8944-8950)"
+            "src/components/ui/DatePicker.tsx(8936-8942)"
         ],
         "$id": 8018
     },
@@ -10276,7 +10296,7 @@
         "en-US": "分",
         "ko-KR": "分",
         "$files": [
-            "src/components/ui/DatePicker.tsx(9238-9243)"
+            "src/components/ui/DatePicker.tsx(9242-9247)"
         ],
         "$id": 8019
     },
@@ -14282,6 +14302,145 @@
         ],
         "$id": 1410
     },
+    "下线公告": {
+        "zh-TW": "下线公告",
+        "en-US": "下线公告",
+        "ko-KR": "下线公告",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(2550-2558)"
+        ],
+        "$id": 8120
+    },
+    "下线后所有用户将立即不再看到「{title}」。": {
+        "zh-TW": "下线后所有用户将立即不再看到「{title}」。",
+        "en-US": "下线后所有用户将立即不再看到「{title}」。",
+        "ko-KR": "下线后所有用户将立即不再看到「{title}」。",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(2578-2606)"
+        ],
+        "$id": 8121
+    },
+    "下线": {
+        "zh-TW": "下线",
+        "en-US": "下线",
+        "ko-KR": "下线",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(2699-2705)",
+            "src/pages/NoticeCenterPage/index.tsx(8972-8978)"
+        ],
+        "$id": 8122
+    },
+    "发布公告": {
+        "zh-TW": "发布公告",
+        "en-US": "发布公告",
+        "ko-KR": "发布公告",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(3509-3517)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(5444-5452)"
+        ],
+        "$id": 8123
+    },
+    "暂无公告": {
+        "zh-TW": "暂无公告",
+        "en-US": "暂无公告",
+        "ko-KR": "暂无公告",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(4545-4553)"
+        ],
+        "$id": 8124
+    },
+    "标题": {
+        "zh-TW": "标题",
+        "en-US": "标题",
+        "ko-KR": "标题",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(4839-4845)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(6708-6714)"
+        ],
+        "$id": 8125
+    },
+    "级别": {
+        "zh-TW": "級別",
+        "en-US": "Level",
+        "ko-KR": "레벨",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(4961-4967)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(6195-6201)",
+            "src/pages/SystemMonitorPage/components/AlertHistoryTab.tsx(2116-2122)"
+        ],
+        "$id": 1983
+    },
+    "生效开始": {
+        "zh-TW": "生效开始",
+        "en-US": "生效开始",
+        "ko-KR": "生效开始",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(5081-5089)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8146-8154)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8794-8802)"
+        ],
+        "$id": 8126
+    },
+    "失效时间": {
+        "zh-TW": "失效时间",
+        "en-US": "失效时间",
+        "ko-KR": "失效时间",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(5142-5150)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8320-8328)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(9208-9216)"
+        ],
+        "$id": 8127
+    },
+    "发布时间": {
+        "zh-TW": "发布时间",
+        "en-US": "发布时间",
+        "ko-KR": "发布时间",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(5203-5211)"
+        ],
+        "$id": 8128
+    },
+    "发布即生效": {
+        "zh-TW": "发布即生效",
+        "en-US": "发布即生效",
+        "ko-KR": "发布即生效",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(7265-7274)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8256-8265)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(9021-9030)"
+        ],
+        "$id": 8129
+    },
+    "不自动失效": {
+        "zh-TW": "不自动失效",
+        "en-US": "不自动失效",
+        "ko-KR": "不自动失效",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(7572-7581)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8394-8403)",
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(9431-9440)"
+        ],
+        "$id": 8130
+    },
+    "未发布": {
+        "zh-TW": "未发布",
+        "en-US": "未发布",
+        "ko-KR": "未发布",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(7858-7865)"
+        ],
+        "$id": 8131
+    },
+    "发布公告后会实时推送给所有在线用户；未填写生效开始时间则立即弹出。": {
+        "zh-TW": "发布公告后会实时推送给所有在线用户；未填写生效开始时间则立即弹出。",
+        "en-US": "发布公告后会实时推送给所有在线用户；未填写生效开始时间则立即弹出。",
+        "ko-KR": "发布公告后会实时推送给所有在线用户；未填写生效开始时间则立即弹出。",
+        "$files": [
+            "src/pages/NoticeCenterPage/index.tsx(9336-9386)"
+        ],
+        "$id": 8132
+    },
     "微信绑定成功": {
         "zh-TW": "微信綁定成功",
         "en-US": "WeChat bind successful",
@@ -14843,7 +15002,8 @@
         "en-US": "Update failed",
         "ko-KR": "업데이트 실패",
         "$files": [
-            "src/pages/Profile/ProfileInfoTab.tsx(4467-4475)"
+            "src/pages/Profile/ProfileInfoTab.tsx(4467-4475)",
+            "src/pages/NoticeCenterPage/hooks/useNotices.ts(3315-3323)"
         ],
         "$id": 5148
     },
@@ -16703,8 +16863,8 @@
         "en-US": "Uploading print file...",
         "ko-KR": "인쇄 파일 업로드 중...",
         "$files": [
-            "src/services/mxcadManager/initMxCAD.ts(2544-2559)",
-            "src/services/mxcadManager/initMxCAD.ts(2995-3010)"
+            "src/services/mxcadManager/initMxCAD.ts(2667-2682)",
+            "src/services/mxcadManager/initMxCAD.ts(3118-3133)"
         ],
         "$id": 977
     },
@@ -16713,7 +16873,7 @@
         "en-US": "Print conversion in progress...",
         "ko-KR": "인쇄 변환 중...",
         "$files": [
-            "src/services/mxcadManager/initMxCAD.ts(2962-2974)"
+            "src/services/mxcadManager/initMxCAD.ts(3085-3097)"
         ],
         "$id": 978
     },
@@ -16722,8 +16882,8 @@
         "en-US": "Uploading clip file...",
         "ko-KR": "클립 파일 업로드 중...",
         "$files": [
-            "src/services/mxcadManager/initMxCAD.ts(4255-4270)",
-            "src/services/mxcadManager/initMxCAD.ts(4704-4719)"
+            "src/services/mxcadManager/initMxCAD.ts(4378-4393)",
+            "src/services/mxcadManager/initMxCAD.ts(4827-4842)"
         ],
         "$id": 979
     },
@@ -16732,7 +16892,7 @@
         "en-US": "Clip conversion in progress...",
         "ko-KR": "클립 변환 중...",
         "$files": [
-            "src/services/mxcadManager/initMxCAD.ts(4671-4683)"
+            "src/services/mxcadManager/initMxCAD.ts(4794-4806)"
         ],
         "$id": 980
     },
@@ -16741,8 +16901,8 @@
         "en-US": "Uploading file...",
         "ko-KR": "파일 업로드 중...",
         "$files": [
-            "src/services/mxcadManager/initMxCAD.ts(5935-5948)",
-            "src/services/mxcadManager/initMxCAD.ts(6270-6283)",
+            "src/services/mxcadManager/initMxCAD.ts(6058-6071)",
+            "src/services/mxcadManager/initMxCAD.ts(6393-6406)",
             "src/services/mxcadManager/mxcadOpenFile.ts(17975-17988)",
             "src/services/mxcadManager/mxcadOpenFile.ts(18264-18277)"
         ],
@@ -16753,7 +16913,7 @@
         "en-US": "Drawing conversion in progress...",
         "ko-KR": "도면 변환 중...",
         "$files": [
-            "src/services/mxcadManager/initMxCAD.ts(6187-6199)",
+            "src/services/mxcadManager/initMxCAD.ts(6310-6322)",
             "src/services/mxcadManager/mxcadOpenFile.ts(18188-18200)",
             "src/services/mxcadManager/mxcadOpenFile.ts(18417-18429)"
         ],
@@ -18323,133 +18483,6 @@
         ],
         "$id": 7093
     },
-    "快捷操作": {
-        "zh-TW": "快捷操作",
-        "en-US": "Quick actions",
-        "ko-KR": "빠른 작업",
-        "$files": [
-            "src/pages/Dashboard/components/QuickActionsSection.tsx(510-518)"
-        ],
-        "$id": 1033
-    },
-    "上传图纸": {
-        "zh-TW": "上傳圖紙",
-        "en-US": "Upload drawing",
-        "ko-KR": "도면 업로드",
-        "$files": [
-            "src/pages/Dashboard/components/QuickActionsSection.tsx(793-801)"
-        ],
-        "$id": 1035
-    },
-    "查看全部": {
-        "zh-TW": "查看全部",
-        "en-US": "View all",
-        "ko-KR": "전체 보기",
-        "$files": [
-            "src/pages/Dashboard/components/RecentFilesSection.tsx(867-875)",
-            "src/pages/Dashboard/components/RecentProjectsSection.tsx(876-884)"
-        ],
-        "$id": 1029
-    },
-    "暂无文件，上传您的第一个图纸": {
-        "zh-TW": "暫無檔案,上傳您的第一個圖紙",
-        "en-US": "No files yet. Upload your first drawing",
-        "ko-KR": "파일이 없습니다. 첫 번째 도면을 업로드하세요",
-        "$files": [
-            "src/pages/Dashboard/components/RecentFilesSection.tsx(1612-1630)"
-        ],
-        "$id": 1030
-    },
-    "暂无项目，创建您的第一个项目": {
-        "zh-TW": "暫無項目,創建您的第一個項目",
-        "en-US": "No projects yet. Create your first project",
-        "ko-KR": "프로젝트가 없습니다. 첫 번째 프로젝트를 만드세요",
-        "$files": [
-            "src/pages/Dashboard/components/RecentProjectsSection.tsx(2027-2045)"
-        ],
-        "$id": 1032
-    },
-    "活跃项目": {
-        "zh-TW": "活躍項目",
-        "en-US": "Active projects",
-        "ko-KR": "활성 프로젝트",
-        "$files": [
-            "src/pages/Dashboard/components/StatsGrid.tsx(1114-1122)"
-        ],
-        "$id": 1023
-    },
-    "图纸文件": {
-        "zh-TW": "圖紙檔案",
-        "en-US": "Drawing files",
-        "ko-KR": "도면 파일",
-        "$files": [
-            "src/pages/Dashboard/components/StatsGrid.tsx(1275-1283)"
-        ],
-        "$id": 1024
-    },
-    "今日上传": {
-        "zh-TW": "今日上傳",
-        "en-US": "Today's uploads",
-        "ko-KR": "오늘 업로드",
-        "$files": [
-            "src/pages/Dashboard/components/StatsGrid.tsx(1498-1506)"
-        ],
-        "$id": 1025
-    },
-    "存储使用": {
-        "zh-TW": "存儲使用",
-        "en-US": "Storage usage",
-        "ko-KR": "저장소 사용량",
-        "$files": [
-            "src/pages/Dashboard/components/StatsGrid.tsx(1708-1716)"
-        ],
-        "$id": 1027
-    },
-    "共 ": {
-        "zh-TW": "共",
-        "en-US": "together",
-        "ko-KR": "공",
-        "$files": [
-            "src/pages/Dashboard/components/StatsGrid.tsx(1828-1834)"
-        ],
-        "$id": 2759
-    },
-    "创建成功！": {
-        "zh-TW": "創建成功！",
-        "en-US": "Created successfully!",
-        "ko-KR": "생성 성공!",
-        "$files": [
-            "src/pages/Dashboard/components/SuccessBanner.tsx(610-619)"
-        ],
-        "$id": 2758
-    },
-    "，": {
-        "zh-TW": ",",
-        "en-US": ",",
-        "ko-KR": ",",
-        "$files": [
-            "src/pages/Dashboard/components/WelcomeBanner.tsx(1083-1088)"
-        ],
-        "$id": 4765
-    },
-    "欢迎使用 {appName}，开始您的设计工作": {
-        "zh-TW": "歡迎使用{appName},開始您的設計工作",
-        "en-US": "Welcome to start your design work with {appName}",
-        "ko-KR": "_ _ $_ $_ $_ _ 를 사용하여 설계 작업을 시작합니다.",
-        "$files": [
-            "src/pages/Dashboard/components/WelcomeBanner.tsx(1215-1242)"
-        ],
-        "$id": 8003
-    },
-    "刷新仪表盘数据": {
-        "zh-TW": "重繪儀錶盤數據",
-        "en-US": "Refresh dashboard data",
-        "ko-KR": "대시보드 데이터 새로고침",
-        "$files": [
-            "src/pages/Dashboard/components/WelcomeBanner.tsx(1487-1498)"
-        ],
-        "$id": 1020
-    },
     "邮箱验证成功！": {
         "zh-TW": "郵箱驗證成功！",
         "en-US": "Email verified successfully!",
@@ -18593,6 +18626,133 @@
             "src/pages/EmailVerification/components/VerificationForm.tsx(7298-7310)"
         ],
         "$id": 1069
+    },
+    "快捷操作": {
+        "zh-TW": "快捷操作",
+        "en-US": "Quick actions",
+        "ko-KR": "빠른 작업",
+        "$files": [
+            "src/pages/Dashboard/components/QuickActionsSection.tsx(510-518)"
+        ],
+        "$id": 1033
+    },
+    "上传图纸": {
+        "zh-TW": "上傳圖紙",
+        "en-US": "Upload drawing",
+        "ko-KR": "도면 업로드",
+        "$files": [
+            "src/pages/Dashboard/components/QuickActionsSection.tsx(793-801)"
+        ],
+        "$id": 1035
+    },
+    "查看全部": {
+        "zh-TW": "查看全部",
+        "en-US": "View all",
+        "ko-KR": "전체 보기",
+        "$files": [
+            "src/pages/Dashboard/components/RecentFilesSection.tsx(867-875)",
+            "src/pages/Dashboard/components/RecentProjectsSection.tsx(876-884)"
+        ],
+        "$id": 1029
+    },
+    "暂无文件，上传您的第一个图纸": {
+        "zh-TW": "暫無檔案,上傳您的第一個圖紙",
+        "en-US": "No files yet. Upload your first drawing",
+        "ko-KR": "파일이 없습니다. 첫 번째 도면을 업로드하세요",
+        "$files": [
+            "src/pages/Dashboard/components/RecentFilesSection.tsx(1612-1630)"
+        ],
+        "$id": 1030
+    },
+    "暂无项目，创建您的第一个项目": {
+        "zh-TW": "暫無項目,創建您的第一個項目",
+        "en-US": "No projects yet. Create your first project",
+        "ko-KR": "프로젝트가 없습니다. 첫 번째 프로젝트를 만드세요",
+        "$files": [
+            "src/pages/Dashboard/components/RecentProjectsSection.tsx(2027-2045)"
+        ],
+        "$id": 1032
+    },
+    "活跃项目": {
+        "zh-TW": "活躍項目",
+        "en-US": "Active projects",
+        "ko-KR": "활성 프로젝트",
+        "$files": [
+            "src/pages/Dashboard/components/StatsGrid.tsx(1114-1122)"
+        ],
+        "$id": 1023
+    },
+    "图纸文件": {
+        "zh-TW": "圖紙檔案",
+        "en-US": "Drawing files",
+        "ko-KR": "도면 파일",
+        "$files": [
+            "src/pages/Dashboard/components/StatsGrid.tsx(1275-1283)"
+        ],
+        "$id": 1024
+    },
+    "今日上传": {
+        "zh-TW": "今日上傳",
+        "en-US": "Today's uploads",
+        "ko-KR": "오늘 업로드",
+        "$files": [
+            "src/pages/Dashboard/components/StatsGrid.tsx(1498-1506)"
+        ],
+        "$id": 1025
+    },
+    "存储使用": {
+        "zh-TW": "存儲使用",
+        "en-US": "Storage usage",
+        "ko-KR": "저장소 사용량",
+        "$files": [
+            "src/pages/Dashboard/components/StatsGrid.tsx(1708-1716)"
+        ],
+        "$id": 1027
+    },
+    "共 ": {
+        "zh-TW": "共",
+        "en-US": "together",
+        "ko-KR": "공",
+        "$files": [
+            "src/pages/Dashboard/components/StatsGrid.tsx(1828-1834)"
+        ],
+        "$id": 2759
+    },
+    "创建成功！": {
+        "zh-TW": "創建成功！",
+        "en-US": "Created successfully!",
+        "ko-KR": "생성 성공!",
+        "$files": [
+            "src/pages/Dashboard/components/SuccessBanner.tsx(610-619)"
+        ],
+        "$id": 2758
+    },
+    "，": {
+        "zh-TW": ",",
+        "en-US": ",",
+        "ko-KR": ",",
+        "$files": [
+            "src/pages/Dashboard/components/WelcomeBanner.tsx(1083-1088)"
+        ],
+        "$id": 4765
+    },
+    "欢迎使用 {appName}，开始您的设计工作": {
+        "zh-TW": "歡迎使用{appName},開始您的設計工作",
+        "en-US": "Welcome to start your design work with {appName}",
+        "ko-KR": "_ _ $_ $_ $_ _ 를 사용하여 설계 작업을 시작합니다.",
+        "$files": [
+            "src/pages/Dashboard/components/WelcomeBanner.tsx(1215-1242)"
+        ],
+        "$id": 8003
+    },
+    "刷新仪表盘数据": {
+        "zh-TW": "重繪儀錶盤數據",
+        "en-US": "Refresh dashboard data",
+        "ko-KR": "대시보드 데이터 새로고침",
+        "$files": [
+            "src/pages/Dashboard/components/WelcomeBanner.tsx(1487-1498)"
+        ],
+        "$id": 1020
     },
     "邮箱地址缺失，请重新注册": {
         "zh-TW": "郵箱地址缺失,請重新注册",
@@ -19776,6 +19936,215 @@
         ],
         "$id": 1482
     },
+    "请输入标题": {
+        "zh-TW": "请输入标题",
+        "en-US": "请输入标题",
+        "ko-KR": "请输入标题",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(4356-4365)"
+        ],
+        "$id": 8133
+    },
+    "标题不能超过 {count} 字": {
+        "zh-TW": "标题不能超过 {count} 字",
+        "en-US": "标题不能超过 {count} 字",
+        "ko-KR": "标题不能超过 {count} 字",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(4437-4457)"
+        ],
+        "$id": 8134
+    },
+    "请输入正文": {
+        "zh-TW": "请输入正文",
+        "en-US": "请输入正文",
+        "ko-KR": "请输入正文",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(4554-4563)"
+        ],
+        "$id": 8135
+    },
+    "正文不能超过 {count} 字": {
+        "zh-TW": "正文不能超过 {count} 字",
+        "en-US": "正文不能超过 {count} 字",
+        "ko-KR": "正文不能超过 {count} 字",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(4632-4652)"
+        ],
+        "$id": 8136
+    },
+    "启用自动过期必须填写失效时间": {
+        "zh-TW": "启用自动过期必须填写失效时间",
+        "en-US": "启用自动过期必须填写失效时间",
+        "ko-KR": "启用自动过期必须填写失效时间",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(4801-4819)"
+        ],
+        "$id": 8137
+    },
+    "失效时间必须晚于生效开始时间": {
+        "zh-TW": "失效时间必须晚于生效开始时间",
+        "en-US": "失效时间必须晚于生效开始时间",
+        "ko-KR": "失效时间必须晚于生效开始时间",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(5000-5018)"
+        ],
+        "$id": 8138
+    },
+    "编辑公告": {
+        "zh-TW": "编辑公告",
+        "en-US": "编辑公告",
+        "ko-KR": "编辑公告",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(5432-5440)"
+        ],
+        "$id": 8139
+    },
+    "类型发布后不可修改": {
+        "zh-TW": "类型发布后不可修改",
+        "en-US": "类型发布后不可修改",
+        "ko-KR": "类型发布后不可修改",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(6112-6125)"
+        ],
+        "$id": 8140
+    },
+    "如：系统将于 30 分钟后停机维护": {
+        "zh-TW": "如：系统将于 30 分钟后停机维护",
+        "en-US": "如：系统将于 30 分钟后停机维护",
+        "ko-KR": "如：系统将于 30 分钟后停机维护",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(7009-7030)"
+        ],
+        "$id": 8141
+    },
+    "正文": {
+        "zh-TW": "正文",
+        "en-US": "正文",
+        "ko-KR": "正文",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(7314-7320)"
+        ],
+        "$id": 8142
+    },
+    "公告正文，支持换行": {
+        "zh-TW": "公告正文，支持换行",
+        "en-US": "公告正文，支持换行",
+        "ko-KR": "公告正文，支持换行",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(7586-7599)"
+        ],
+        "$id": 8143
+    },
+    "自动过期": {
+        "zh-TW": "自动过期",
+        "en-US": "自动过期",
+        "ko-KR": "自动过期",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8458-8466)"
+        ],
+        "$id": 8144
+    },
+    "开启": {
+        "zh-TW": "開啟",
+        "en-US": "Open",
+        "ko-KR": "오픈",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8491-8497)",
+            "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(4395-4401)"
+        ],
+        "$id": 7562
+    },
+    "需要调整时间窗，请下线后重新发布。": {
+        "zh-TW": "需要调整时间窗，请下线后重新发布。",
+        "en-US": "需要调整时间窗，请下线后重新发布。",
+        "ko-KR": "需要调整时间窗，请下线后重新发布。",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(8602-8623)"
+        ],
+        "$id": 8145
+    },
+    "到期自动下线（需填写失效时间）": {
+        "zh-TW": "到期自动下线（需填写失效时间）",
+        "en-US": "到期自动下线（需填写失效时间）",
+        "ko-KR": "到期自动下线（需填写失效时间）",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(9834-9853)"
+        ],
+        "$id": 8146
+    },
+    "已设置为未来时间：到点后由定时任务推送，不会立即弹出。": {
+        "zh-TW": "已设置为未来时间：到点后由定时任务推送，不会立即弹出。",
+        "en-US": "已设置为未来时间：到点后由定时任务推送，不会立即弹出。",
+        "ko-KR": "已设置为未来时间：到点后由定时任务推送，不会立即弹出。",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(10010-10066)"
+        ],
+        "$id": 8147
+    },
+    "不填写生效开始时间则发布后立刻推送给所有用户。": {
+        "zh-TW": "不填写生效开始时间则发布后立刻推送给所有用户。",
+        "en-US": "不填写生效开始时间则发布后立刻推送给所有用户。",
+        "ko-KR": "不填写生效开始时间则发布后立刻推送给所有用户。",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(10113-10140)"
+        ],
+        "$id": 8148
+    },
+    "保存修改": {
+        "zh-TW": "保存修改",
+        "en-US": "Save changes",
+        "ko-KR": "수정 사항 저장",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(10477-10485)",
+            "src/pages/UserManagement/UserModals/EditUserModal.tsx(3783-3791)"
+        ],
+        "$id": 5373
+    },
+    "立即发布": {
+        "zh-TW": "立即发布",
+        "en-US": "立即发布",
+        "ko-KR": "立即发布",
+        "$files": [
+            "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx(10489-10497)"
+        ],
+        "$id": 8149
+    },
+    "公告已保存": {
+        "zh-TW": "公告已保存",
+        "en-US": "公告已保存",
+        "ko-KR": "公告已保存",
+        "$files": [
+            "src/pages/NoticeCenterPage/hooks/useNotices.ts(2200-2209)"
+        ],
+        "$id": 8150
+    },
+    "公告已更新": {
+        "zh-TW": "公告已更新",
+        "en-US": "公告已更新",
+        "ko-KR": "公告已更新",
+        "$files": [
+            "src/pages/NoticeCenterPage/hooks/useNotices.ts(3110-3119)"
+        ],
+        "$id": 8151
+    },
+    "公告已下线": {
+        "zh-TW": "公告已下线",
+        "en-US": "公告已下线",
+        "ko-KR": "公告已下线",
+        "$files": [
+            "src/pages/NoticeCenterPage/hooks/useNotices.ts(3713-3722)"
+        ],
+        "$id": 8152
+    },
+    "下线失败": {
+        "zh-TW": "下线失败",
+        "en-US": "下线失败",
+        "ko-KR": "下线失败",
+        "$files": [
+            "src/pages/NoticeCenterPage/hooks/useNotices.ts(3918-3926)"
+        ],
+        "$id": 8153
+    },
     "账户已注销。{days} 天内重新登录可自动取消注销，逾期需联系客服恢复；30 天后数据将被彻底删除。": {
         "zh-TW": "帳戶已註銷。 {days}天內重新登入可自動取消註銷,逾期需聯系客服恢復； 30天后數據將被徹底删除。",
         "en-US": "The account has been cancelled. __Logging in again within $_ $_ $__ days will automatically cancel the cancellation. If overdue, please contact customer service for recovery; After 30 days, the data will be completely deleted.",
@@ -20671,15 +21040,6 @@
             "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx(1219-1239)"
         ],
         "$id": 6351
-    },
-    "级别": {
-        "zh-TW": "級別",
-        "en-US": "Level",
-        "ko-KR": "레벨",
-        "$files": [
-            "src/pages/SystemMonitorPage/components/AlertHistoryTab.tsx(2116-2122)"
-        ],
-        "$id": 1983
     },
     "消息": {
         "zh-TW": "訊息",
@@ -21584,15 +21944,6 @@
         ],
         "$id": 6178
     },
-    "开启": {
-        "zh-TW": "開啟",
-        "en-US": "Open",
-        "ko-KR": "오픈",
-        "$files": [
-            "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(4395-4401)"
-        ],
-        "$id": 7562
-    },
     "自动扩容": {
         "zh-TW": "自動擴容",
         "en-US": "Auto Scaling",
@@ -22181,15 +22532,6 @@
         ],
         "$id": 1245
     },
-    "加载用户列表失败": {
-        "zh-TW": "加載用戶列表失敗",
-        "en-US": "Failed to load user list",
-        "ko-KR": "사용자 목록 로드 실패",
-        "$files": [
-            "src/pages/UserManagement/hooks/useUserCRUD.ts(4292-4304)"
-        ],
-        "$id": 5357
-    },
     "添加新用户": {
         "zh-TW": "添加新用戶",
         "en-US": "Add new user",
@@ -22306,15 +22648,6 @@
             "src/pages/UserManagement/UserModals/DeleteUserConfirm.tsx(2881-2907)"
         ],
         "$id": 5372
-    },
-    "保存修改": {
-        "zh-TW": "保存修改",
-        "en-US": "Save changes",
-        "ko-KR": "수정 사항 저장",
-        "$files": [
-            "src/pages/UserManagement/UserModals/EditUserModal.tsx(3783-3791)"
-        ],
-        "$id": 5373
     },
     "（留空则不修改）": {
         "zh-TW": "(留空則不修改)",
@@ -22527,6 +22860,15 @@
             "src/pages/UserManagement/UserModals/MembershipManageModal.tsx(14975-15010)"
         ],
         "$id": 6029
+    },
+    "加载用户列表失败": {
+        "zh-TW": "加載用戶列表失敗",
+        "en-US": "Failed to load user list",
+        "ko-KR": "사용자 목록 로드 실패",
+        "$files": [
+            "src/pages/UserManagement/hooks/useUserCRUD.ts(4292-4304)"
+        ],
+        "$id": 5357
     },
     "指定第一点:": {
         "zh-TW": "指定第一點：",

@@ -21,6 +21,11 @@ export interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  /**
+   * 开启时分选择（本地时区，秒/毫秒归零）。默认 false = 只选日期并回填当天
+   * 23:59:59.999，现有消费方的 expiresAt > now 判定语义不变。
+   */
+  withTime?: boolean;
   /** ISO 8601 字符串；早于此日期的日期不可选（本地日期粒度，当天可选） */
   minDate?: string;
   /** ISO 8601 字符串；晚于此日期的日期不可选（本地日期粒度，当天可选） */
@@ -37,12 +42,57 @@ const LOCALES: Record<string, Locale> = {
   'ko-KR': ko,
 };
 
-/** 解析 ISO 字符串为本地日期（时分秒归零）；非法返回 undefined */
-function toLocalDate(value?: string): Date | undefined {
+/** 解析 ISO 字符串为本地日期；withTime=false 时归零到当天 0 点 */
+function toLocalDate(
+  value: string | undefined,
+  withTime = false
+): Date | undefined {
   if (!value) return undefined;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (!withTime)
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    0,
+    0
+  );
+}
+
+/** 本地日期 → ISO（保留时分，秒/毫秒归零，满足后端 @IsISO8601） */
+function toIsoStartOfMinute(date: Date): string {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    0,
+    0
+  ).toISOString();
+}
+
+/** 面板时/分输入框的草稿值（保留空串，允许边输入边删） */
+type TimeDraft = { hour: string; minute: string };
+
+/** 从已提交值回填时/分草稿；未选择或非法时按 00:00 起步 */
+function readTimeDraft(value: string | undefined): TimeDraft {
+  const date = value ? new Date(value) : undefined;
+  if (!date || Number.isNaN(date.getTime()))
+    return { hour: '00', minute: '00' };
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return { hour: pad(date.getHours()), minute: pad(date.getMinutes()) };
+}
+
+/** 空串按 0 处理，越界夹到区间内；解析结果不回流输入框 */
+function parseDraftPart(raw: string, max: number): number {
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed)) return 0;
+  return Math.min(Math.max(parsed, 0), max);
 }
 
 /** 本地日期 → ISO（当天 23:59:59.999，与后端 expiresAt > now 判定对齐） */
@@ -73,6 +123,7 @@ export function DatePicker({
   placeholder = t('选择日期'),
   disabled = false,
   size = 'md',
+  withTime = false,
   minDate,
   maxDate,
   open: controlledOpen,
@@ -91,7 +142,25 @@ export function DatePicker({
     },
     [controlledOpen, onOpenChange]
   );
-  const selected = useMemo(() => toLocalDate(value), [value]);
+  const selected = useMemo(
+    () => toLocalDate(value, withTime),
+    [value, withTime]
+  );
+  // 时/分草稿按原文保存（不让 "1" 被格式化回 "01" 打断连续输入），
+  // 只在已提交值变化时重新对齐
+  const [timeDraft, setTimeDraft] = useState<TimeDraft>(() =>
+    readTimeDraft(value)
+  );
+  useEffect(() => {
+    setTimeDraft(readTimeDraft(value));
+  }, [value]);
+  const selectedTime = useMemo(
+    () => ({
+      hour: parseDraftPart(timeDraft.hour, 23),
+      minute: parseDraftPart(timeDraft.minute, 59),
+    }),
+    [timeDraft]
+  );
   const minLocalDate = useMemo(
     () => (minDate ? toLocalDate(minDate) : undefined),
     [minDate]
@@ -137,16 +206,37 @@ export function DatePicker({
         year: 'numeric',
         month: 'short',
         day: 'numeric',
+        ...(withTime ? { hour: '2-digit', minute: '2-digit' } : {}),
       }).format(selected)
     : '';
 
+  // 日历只给日期，时/分沿用面板草稿（换一天不丢已填时刻）
   const handleSelect = (date: Date | undefined) => {
-    if (date) onChange(toIsoEndOfDay(date));
+    if (date) {
+      if (withTime) {
+        onChange(
+          toIsoStartOfMinute(
+            new Date(
+              date.getFullYear(),
+              date.getMonth(),
+              date.getDate(),
+              selectedTime.hour,
+              selectedTime.minute,
+              0,
+              0
+            )
+          )
+        );
+      } else {
+        onChange(toIsoEndOfDay(date));
+      }
+    }
     setOpen(false);
   };
 
   const handleToday = () => {
-    onChange(toIsoEndOfDay(new Date()));
+    const now = new Date();
+    onChange(withTime ? toIsoStartOfMinute(now) : toIsoEndOfDay(now));
     setOpen(false);
   };
 
@@ -186,6 +276,45 @@ export function DatePicker({
               }).format(date),
           }}
         />
+        {withTime && (
+          <div className="flex items-center gap-1 px-2 pt-2">
+            <Input
+              type="number"
+              size="xs"
+              wrapperClassName="w-14"
+              min={0}
+              max={23}
+              value={timeDraft.hour}
+              placeholder="00"
+              aria-label={t('小时')}
+              onChange={(event) =>
+                setTimeDraft((prev) => ({ ...prev, hour: event.target.value }))
+              }
+            />
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {t('时')}
+            </span>
+            <Input
+              type="number"
+              size="xs"
+              wrapperClassName="w-14"
+              min={0}
+              max={59}
+              value={timeDraft.minute}
+              placeholder="00"
+              aria-label={t('分钟')}
+              onChange={(event) =>
+                setTimeDraft((prev) => ({
+                  ...prev,
+                  minute: event.target.value,
+                }))
+              }
+            />
+            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+              {t('分')}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between border-t border-[var(--border-default)] p-2">
           <Button
             variant="ghost"
