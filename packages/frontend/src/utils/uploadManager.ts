@@ -387,6 +387,15 @@ export class UploadManager {
         }
       );
 
+      // 上传期间任务被移除（cancelled）：不再进入 processing，与 catch 分支的
+      // 取消判定对称——否则已删除的在传任务会被 success 路径复活成 processing
+      // （task 在 await 前被赋 'uploading'，TS 已收窄类型，须断言回 UploadTask）
+      if ((task as UploadTask).status === 'cancelled') {
+        this.activeCount--;
+        this.processQueue();
+        return;
+      }
+
       task.progress = 100;
       task.result = result;
       task.status = 'processing';

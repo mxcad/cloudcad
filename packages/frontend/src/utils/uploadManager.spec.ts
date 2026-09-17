@@ -185,6 +185,31 @@ describe('UploadManager 上传历史', () => {
     expect(records.find((r) => r.id === task.id)).toBeUndefined();
   });
 
+  it('上传进行中移除任务：上传完成后不复活为 processing（与 catch 分支对称）', async () => {
+    const mgr = new UploadManager({ maxConcurrent: 1 });
+    const file = makeFile('a.dwg');
+    // 可控的挂起上传：先让任务停在 uploading，再移除，最后才 resolve
+    let resolveUpload: (v: unknown) => void = () => {};
+    vi.mocked(uploadSingleFile).mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpload = resolve;
+      })
+    );
+    mgr.addFiles([file], 'root');
+    const [task] = mgr.getTasks();
+    await waitForStatus(mgr, task.id, 'uploading');
+
+    // 上传在途时移除 → cancelled
+    mgr.removeTask(task.id);
+    expect(mgr.getTask(task.id)?.status).toBe('cancelled');
+
+    // 上传完成（resolve）后，success 路径不得把状态改回 processing
+    resolveUpload(mockUploadResult(file));
+    // 冲刷微任务，让 executeTask 的 await 续体执行完
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mgr.getTask(task.id)?.status).toBe('cancelled');
+  });
+
   it('历史上限 50 条：超出按 updatedAt 倒序保留最近 50 条', () => {
     const mgr = new UploadManager({ maxConcurrent: 1 });
     // 直接注入终态任务（绕过上传流程），验证持久化裁剪（私有成员仅测试可达）
