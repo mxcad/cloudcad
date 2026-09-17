@@ -687,3 +687,66 @@ validatePath）→ 操作继续推进 → 断言失败（有牙齿）。
 文件由 `filePath`/`directoryPath` 决定，**filePath 未与 projectId 做归属绑定**。跨项目越权需知道
 目标 nodeId（存储布局 `YYYYMM/nodeId` 中 nodeId 为随机 UUID，不可猜测），故实际风险低；若要根治
 应改为按 filePath 解析归属项目再校验（属权限模型调整，非本点范围，留待专项）。
+
+## 14. backend batch-download（批量下载：zip 打包 / 单文件直出 / 合并 / 下载端点）
+
+审查范围：batch-download.controller（下载/合并/进度端点）、batch-download.service（任务生命周期 +
+下载路径解析 + 合并）、batch-download-job（状态机 + 编排）、job-context（archiveEntries 构建 +
+zip 名清洗 + 产物清单）、batch-download-orchestrator（源文件/转换产物入包）、archive-writer
+（archiver 写盘）、folder-expander（文件夹展开）。重点：zip 打包/下载链路是否存在路径遍历 /
+zip-slip / 任意文件读。
+
+### 14.1 服务端路径全部由服务端生成，无用户可控串进入落盘/读取位置——无缺陷
+
+逐一核对「用户可控串是否进入磁盘路径位置」：
+
+- **主 zip 落盘名**：`job-context.createArchive` 以 `this.jobId`（Prisma UUID）为 `archiveName`，
+  `archive-writer` 落盘 `path.join(outputDir, `${archiveName}.zip`)` → UUID 不含 `..`/分隔符，安全。
+- **下载路径解析**：`service.getDownloadPath` 用 `path.resolve(exportDir, job.zipPath)`，而
+  `job.zipPath = path.basename(zipPath)`（仅 `<jobId>.zip`，无路径段）→ 恒收敛在 exportDir 内。
+  清理任务同用 `path.resolve(exportDir, job.zipPath)`，一致。
+- **单文件直出（individual）**：`service.getItemDownload` 直接读 `item.sourcePath`。`sourcePath`
+  由 orchestrator 生成——源文件 = `fileDownloadExportService.getFullPath(node.path)`（存储内部布局
+  `YYYYMM/nodeId/...`），转换产物 = `conversionRunner` 的 `result.filePath`（转换输出目录）。**两者皆
+  服务端生成的绝对路径，非用户输入**。
+- **物理存储文件名**：`file-tree.createFileNode` 落盘名 = ``${fileNode.id}${extension}``（nodeId +
+  扩展名），**不是**用户传入的 `name` → 即便 `name` 含 `..` 也不影响物理路径。
+- **合并 zip**：`service.mergeZip` 的 `archiveName = merged-${Date.now()}`（服务端生成），条目名取
+  `path.basename(fullPath)` 或 manifest 名（经 `sanitizeZipName`），安全。
+- **Content-Disposition**：三个下载端点均用 `path.basename` 取文件名 + `encodeURIComponent` +
+  `replace(/[^\x20-\x7E]/g,'_')` 兜底（去 CRLF/引号）→ 无响应头注入。
+
+结论：**无服务端路径遍历 / 任意文件读 / zip-slip（服务端只创建 zip，从不解包）**。
+
+### 14.2 zip 条目名 `..` 段缺口——客户端侧低风险，根因在上游，不在本模块修
+
+- `job-context.sanitizeZipName` 已去控制字符、归一 `\`→`/`、去首尾 `/`、200 截断、去重，但**未剥离
+  `..` 段**；`addEmptyDirectories` 的空目录条目（`${dir}/`）更未过 `sanitizeZipName`。故若节点名/
+  文件夹名含 `..`，zip 条目名可带 `..`。
+- **判为客户端侧低风险而非服务端缺陷**：本模块只**创建** zip（`archive.append`），从不解包；`..`
+  条目名只在下拉用户本地解包时才可能触发 zip-slip，而现代 OS 解包器（Windows/macOS/7-Zip）默认
+  已防护。在服务端剥离 `..` 属对客户端侧问题的过度防御（违反「不过度实现」），且治标不治本。
+- **真正根因在上游**（见 14.3）：节点名/文件夹名能含 `..` 是因为上传入口未清洗文件名。
+
+### 14.3 跨模块发现：mxcad 上传 `body.name` 未清洗（记入 mxcad upload 模块审查，届时修）
+
+**发现**：`mxcad-upload.controller.uploadFile` 的 `name` 取自 **JSON body 字段 `body.name`**（非
+multer `file.originalname`），DTO `UploadFilesDto.name` 仅 `@IsString()`——**无路径遍历/字符白名单/
+长度校验**。该值经 `ingest`→`createFileNode` 原样落库为节点 `name`/`originalName`（`file-tree`
+L156/L159），并被复用于：UI 展示、批量下载 zip 条目名（`tryAddOriginal` 直接用 `fileName`）、同名
+去重（`name:{equals,mode:'insensitive'}`）。
+
+**影响评估**：
+- 物理存储安全（落盘名 = nodeId+ext，见 14.1）；
+- 展示：React 默认转义，无 XSS；
+- 批量下载 zip 条目名可带 `..`（14.2，客户端侧低风险）；
+- Content-Disposition 已兜底（14.1）。
+→ 属**输入校验卫生缺口（低-中危）**，非服务端可利用漏洞。
+
+**决策**：按「一个模块一个点」纪律，本模块（batch-download）不改；在**mxcad upload 模块审查时**
+于上传边界（controller/ingest 入口）用既有 `FileUtils.sanitizeFilename`（去路径分隔符/控制字符、
+255 截断、拒 `.`/`..`）统一清洗 `body.name`——这是「单一事实源」边界，一次修好可保护全部下游
+（展示/zip/去重/存储）。**mxcad upload 属高热高并发区，届时须先核工作区归属再动手。**
+
+**验证**：batch-download 无代码改动，无需跑测试；结论基于逐文件路径追踪（controller/service/job/
+job-context/orchestrator/archive-writer/folder-expander 全读）。
