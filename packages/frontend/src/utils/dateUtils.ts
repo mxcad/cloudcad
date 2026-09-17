@@ -9,11 +9,16 @@
 // materials.
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
-import { t } from '@/languages';
+import { i18nScope, t } from '@/languages';
 
 /**
  * 日期工具函数
+ *
+ * locale 取运行时激活语言（i18nScope.activeLanguage），而非硬编码 zh-CN：
+ * en-US / zh-TW / ko-KR 界面下日期格式应与界面语言一致。
  */
+const locale = () => i18nScope.activeLanguage;
+
 
 /**
  * 格式化日期时间为本地字符串
@@ -28,7 +33,7 @@ export function formatDateTime(date: string | Date | number): string {
     return '-';
   }
 
-  return d.toLocaleString('zh-CN', {
+  return d.toLocaleString(locale(), {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -48,7 +53,7 @@ export function formatDateTimeWithSeconds(
       ? new Date(date)
       : date;
 
-  return d.toLocaleString('zh-CN', {
+  return d.toLocaleString(locale(), {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -71,7 +76,7 @@ export function formatDate(date: string | Date | number): string {
     return '-';
   }
 
-  return d.toLocaleDateString('zh-CN', {
+  return d.toLocaleDateString(locale(), {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -91,7 +96,7 @@ export function formatTime(date: string | Date | number): string {
     return '-';
   }
 
-  return d.toLocaleTimeString('zh-CN', {
+  return d.toLocaleTimeString(locale(), {
     hour: '2-digit',
     minute: '2-digit',
   });

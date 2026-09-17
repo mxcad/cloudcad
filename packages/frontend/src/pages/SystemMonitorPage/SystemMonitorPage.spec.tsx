@@ -45,6 +45,8 @@ vi.mock('@/languages', () => ({
           vars[key] !== undefined ? vars[key] : ''
         )
       : m,
+  // dateUtils 读 i18nScope.activeLanguage 决定日期 locale
+  i18nScope: { activeLanguage: 'zh-CN' },
 }));
 vi.mock('@/api-sdk', () => ({
   healthControllerCheck: vi.fn(() =>
