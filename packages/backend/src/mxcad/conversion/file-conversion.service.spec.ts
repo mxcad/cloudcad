@@ -799,8 +799,8 @@ describe("FileConversionService", () => {
 		});
 	});
 
-	// ==================== 失败分类与确定性失败负缓存（process-pool 对齐 conversion-service） ====================
-	describe("失败分类与确定性失败负缓存", () => {
+	// ==================== 失败分类（process-pool 对齐 conversion-service） ====================
+	describe("失败分类", () => {
 		it("进程被信号杀死（exitCode=null）归为瞬态，并给出可定位的进程未启动文案", async () => {
 			setRun(() => ({
 				stdout: "",
@@ -874,7 +874,7 @@ describe("FileConversionService", () => {
 			expect(r.error).toContain("garbled engine output");
 		});
 
-		it("确定性失败命中负缓存后短路，不再 spawn 引擎", async () => {
+		it("同参数重试必须真实执行转换（不短路，永久失败机制已移除）", async () => {
 			setRun(() => ({
 				stdout: '{"code":1,"message":"read file error"}',
 				stderr: "",
@@ -887,62 +887,10 @@ describe("FileConversionService", () => {
 			expect(first.isOk).toBe(false);
 			expect(first.transient).toBe(false);
 
+			// 同一输入重试不再被短路，必须真实再跑一遍引擎
 			const second = await service.convertFile(options);
 			expect(second.isOk).toBe(false);
-			expect(second.transient).toBe(false);
-			expect(second.error).toContain("内容不可转换");
-			expect(second.error).toContain("read file error");
-			// 第二次不再真实执行转换
-			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
-		});
-
-		it("瞬态失败（超时）不写入负缓存，同参数可重试", async () => {
-			setRun(() => ({
-				stdout: "",
-				stderr: "timeout",
-				exitCode: null,
-				signal: "SIGTERM",
-				timedOut: true,
-			}));
-			const options = { srcPath: "/tmp/slow.dwg", fileHash: "slow1" };
-			const first = await service.convertFile(options);
-			expect(first.transient).toBe(true);
-
-			// 引擎恢复后同参数重试必须真实执行（瞬态失败不污染负缓存）
-			setRun(() => ({
-				stdout: '{"code":0}',
-				stderr: "",
-				exitCode: 0,
-				signal: null,
-				timedOut: false,
-			}));
-			const second = await service.convertFile(options);
-			expect(second.isOk).toBe(true);
-			expect(runMxcadAssembly).toHaveBeenCalledTimes(2);
-		});
-
-		it("同 fileHash 不同 cmd/outname 视为不同内容身份，不互相短路", async () => {
-			setRun(() => ({
-				stdout: '{"code":1,"message":"read file error"}',
-				stderr: "",
-				exitCode: 1,
-				signal: null,
-				timedOut: false,
-			}));
-			await service.convertFile({
-				srcPath: "/tmp/same.dwg",
-				fileHash: "same",
-				outname: "a.mxweb",
-				cmd: "to_mxweb",
-			});
-			const r = await service.convertFile({
-				srcPath: "/tmp/same.dwg",
-				fileHash: "same",
-				outname: "b.pdf",
-				cmd: "print_to_pdf",
-			});
-			expect(r.isOk).toBe(false);
-			expect(r.error).not.toContain("内容不可转换");
+			expect(second.error).toBe("read file error");
 			expect(runMxcadAssembly).toHaveBeenCalledTimes(2);
 		});
 
