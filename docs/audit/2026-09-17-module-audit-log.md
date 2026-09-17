@@ -1178,3 +1178,57 @@ HEAD 本就非 prettier-clean（预存长行漂移，我新增行不在 diff 中
 - `internal-alert`（宿主机运维脚本入站）`@Public()` + `InternalSecretGuard`：
   `isInternalServiceSecretValid` 用 `crypto.timingSafeEqual` + 长度预检（防时序侧信道），
   **fail-close**（服务端未配 secret 一律拒绝，未配密钥不向全网开放告警注入入口）。
+
+---
+
+## 23. backend 剩余模块（audit/common/config/cooperate/database/health/ip-whitelist/metrics/notification/ownership/redis/security/task-run/storage-management/cache-architecture/assets，无新缺陷）
+
+对 backend 全部剩余模块做收尾扫描：raw SQL 注入、路径遍历、命令注入、WebSocket 鉴权、
+邮件注入、控制器鉴权。均未发现可利用缺陷。
+
+### 23.1 audit：`month` 服务端派生，raw SQL 参数化
+
+- `audit-archive.service.ts` 的 `month` 全部来自 `log.createdAt.toISOString().slice(0,7)` 或
+  PG `to_char("createdAt",'YYYY-MM')`——**结构上恒为 `YYYY-MM`**（4 位数字+连字符+2 位数字），
+  不可能含路径分隔符或 SQL 载荷；`$queryRaw` 只内插 `${cutoff}`（Date，参数化）。
+- `path.join(archivePath, `${month}.csv`)` 中 `month` 无分隔符，`archivePath` 来自 config →
+  无遍历。哈希链（#420）`SHA-256(${month}|${sha256}|${prevHash})` 纯内存字符串，无注入面。
+
+### 23.2 common：`resolveStoragePath` 仅 version-control 消费且已 `validatePath` 守卫
+
+- `FileUtils.resolveStoragePath`（`path.resolve(baseDir, storagePath)`，本身不做 containment）
+  全仓仅 2 个调用方，均在 `mx-version-control.provider.ts`（`getFileHistory` L826 /
+  `getFileContentAtRevision` L1066），且两处**先调 `FileUtils.validatePath(filePath, filesDataPath)`**
+  （containment 校验）再 resolve → 无遍历（印证 §13）。
+- `ancestor-query.service.ts` 的 `$queryRaw`（递归 CTE，`depth < 50` 上界）内插
+  `${uniqueIds}::text[]`（参数化数组）+ `${deletedFilter}`（固定 `Prisma.sql`/`empty` 片段）→
+  无注入。
+- `resolveWithinRoot`（L393）为 16/17/18/19 复用的单一 containment helper，本身健壮。
+
+### 23.3 控制器鉴权全覆盖
+
+- conversion-monitor / cache-monitor / metrics（`MetricsAccessGuard`）/ task-run（`SYSTEM_MONITOR`
+  + `SYSTEM_ADMIN`）/ security（`SYSTEM_IP_WHITELIST_MANAGE`）/ ip-whitelist
+  （`SYSTEM_IP_WHITELIST_MANAGE`）均类级或逐路由挂 `PermissionsGuard`/`RolesGuard` + 系统权限。
+- `health` 仅 `live` 端点 `@Public()`（健康检查设计如此，不暴露数据），详细端点 `SYSTEM_MONITOR`。
+
+### 23.4 cooperate：WebSocket 鉴权与 JwtStrategy 对齐
+
+- `cooperate-auth.service.ts#authenticateJwt`：`jwt.verify(token, jwtSecret)` + **仅接受 access
+  token**（拒 refresh token）+ `TokenBlacklistService` 黑名单校验，逻辑与 `JwtStrategy.validate`
+  对齐 → 无 token 伪造/越权面。
+
+### 23.5 notification：Nodemailer 内置头部清洗
+
+- `email.service.ts` 走 `@nestjs-modules/mailer`（Nodemailer）：`subject` 含告警元数据
+  （`input.title`/`source`/`messageKey`，服务端生成非用户原始输入），Nodemailer 默认对头部字段
+  的 `\r\n` 做清洗（防 header 注入）；模板 `context` 变量经模板引擎默认转义 → 无邮件注入/HTML 注入。
+
+### 23.6 纯内部服务（无 HTTP 面）
+
+- database（`$queryRaw SELECT 1` 健康检查，无内插）、redis（连接管理）、config（`PROJECT_ROOT`
+  + config 路径 `path.resolve`）、assets 均无用户输入面。
+- `storage-management/FileCopyService` 的 `copyFile`/`copyDirectory`/`deleteDirectory` 全仓**无外部
+  调用方**（仅模块注册）——属孤儿代码（AGENTS.md 反模式，架构问题非安全缺陷），按「不删既有
+  死代码」原则记录不处理。
+- `ownership` 为空壳模块（#228，AGENTS.md 已登记），无逻辑。
