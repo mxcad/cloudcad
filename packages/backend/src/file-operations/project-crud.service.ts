@@ -158,7 +158,12 @@ export class ProjectCrudService {
       }
 
       const parent = await this.prisma.fileSystemNode.findUnique({
-        where: { id: parentId },
+        // deletedAt: null —— 父节点必须是存活容器。若允许在回收站文件夹下建文件夹，
+        // 新文件夹（存活）会被埋入已删子树，且其下仍可继续上传文件（createFileNode 只查
+        // 直接父）；该回收站文件夹后续彻底删除时 getSubtreeIds/getSubtreeFiles（默认含
+        // 存活后代）会连带物理删除这棵存活子树（DB 行 + 存储），造成不可逆数据丢失。
+        // 与 moveNode/copyNode/createFileNode 的已删父节点门禁一致。
+        where: { id: parentId, deletedAt: null },
         select: { id: true, nodeType: true, projectId: true },
       });
 

@@ -246,7 +246,7 @@ describe('ProjectCrudService', () => {
 
       expect(result).toEqual(mockFolder);
       expect(prisma.fileSystemNode.findUnique).toHaveBeenCalledWith({
-        where: { id: parentId },
+        where: { id: parentId, deletedAt: null },
         select: { id: true, nodeType: true, projectId: true },
       });
       // 文件夹创建审计（FOLDER_CREATE，ResourceType.FOLDER）
@@ -277,6 +277,29 @@ describe('ProjectCrudService', () => {
       await expect(
         service.createNode(userId, 'Test', { parentId: 'node-1' })
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw when parent folder is in trash (deletedAt set) — 防在回收站下建文件夹致存活子树被连带硬删', async () => {
+      const parentId = 'trash-folder';
+      // 模拟真实 DB 的 deletedAt 过滤：请求 deletedAt:null 时已删父节点不匹配返 null；
+      // 旧代码 where 无 deletedAt（undefined）则返回已删父节点，创建会继续推进（回归测试的「牙齿」）
+      prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) =>
+        where.deletedAt === null
+          ? Promise.resolve(null)
+          : Promise.resolve({
+              id: parentId,
+              nodeType: NodeType.FOLDER,
+              projectId: 'project-1',
+              deletedAt: new Date(),
+            })
+      );
+
+      await expect(
+        service.createNode(userId, 'Folder', { parentId })
+      ).rejects.toThrow(NotFoundException);
+      // 未进入权限断言与创建
+      expect(mockNodeMutationGuard.assertMutationAllowed).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.create).not.toHaveBeenCalled();
     });
 
     it('should throw when PROJECT_OWNER role does not exist', async () => {

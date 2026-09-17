@@ -552,3 +552,64 @@ file-validation（文件名/扩展名/魔数校验）+ 共用的 FileUtils / Sto
 **范围说明**：本模块 30+ 文件，本节覆盖其安全关键路径（搜索/下载/创建/校验 + 路径构建）。
 其余读取类方法（getNode/getChildren/getTrashItems/resolvePath 等）走 Prisma 参数化查询 +
 权限过滤（file-permission 已在第 3 节审查），无独立路径拼接风险。
+
+---
+
+## 11. backend file-operations（移动 / 复制 / 删除 / 项目 CRUD，扩展审查）
+
+审查范围：node-copy-move（移动/复制 + 批量）、node-name（重命名/唯一名）、node-mutation.guard
+（ADR-0037 变更不变量统一入口）、node-trash（软删/硬删/恢复/回收站 + 在途转换取消）、
+project-crud（项目/文件夹创建 + 项目更新/查询）。
+
+### 11.1 「容器目标必须是存活节点」不变量在 move/copy/建文件夹三处缺失 → 存活子树被连带硬删（已修）
+
+**缺陷（不可逆数据丢失）**：`moveNode` / `copyNode`（node-copy-move.service.ts）与
+`createNode` 建文件夹分支（project-crud.service.ts）取目标父节点时均用
+`findUnique({ where: { id: targetParentId } })`——**不带 `deletedAt: null`**。而同一不变量在
+`createFileNode`（file-tree，`deletedAt: null`）与 `restoreNode`（node-trash，`parentNode.deletedAt`
+即抛「父节点已被删除」）处都有门禁，唯独这三处漏了。
+
+**为何是数据丢失而非仅语义错**：`TreeWalker.getSubtreeIds` 默认 `includeDeleted: true`、
+`getSubtreeFiles` 完全不过滤 `deletedAt`——两者都**包含存活后代**。于是链路成立：
+1. 把存活节点移入/复制到回收站文件夹 T（或直接在 T 下建文件夹再上传文件，`createFileNode` 只查
+   直接父、T 的子文件夹本身存活故放行）→ 存活子树被埋入 T 的已删子树，在活树中不可见；
+2. T 后续被彻底删除（`permanentlyDeleteNode`/`permanentlyDeleteProject`）→ `getSubtreeIds(T)`/
+   `getSubtreeFiles(T)` 把这棵**存活**子树一并纳入 → `deleteMany` 删 DB 行 + `deleteFileFromStorage`
+   删物理存储。存活文件从未进过回收站即被物理销毁。
+
+**可达性**：移动/复制/建文件夹的目标 id 均由客户端传入，`NodeMutationGuard` 只校验归属/角色、
+不校验 `deletedAt`，故持有该回收站文件夹归属的用户即可触发（前端不会提供已删目录作目标，但
+API 是安全边界）。
+
+**修复（最小、对齐既有约定）**：三处目标父节点查询统一加 `deletedAt: null`。已删目标解析为
+null → 复用既有 `target_parent_not_found` / `parent_not_found` 错误（404），**零新增 i18n 键**
+（若改用独立「父节点已删除」提示需动 4 个语言文件，过度实现）。`node.controller.ts` 与
+`library.controller.ts` 均经 `NodeCopyMoveService` 收口，一处修复覆盖文件侧 + 资源库侧全部入口。
+
+**回归测试（有牙齿）**：mock 按 `where.deletedAt === null` 模拟真实 DB 的 `deletedAt` 过滤——
+旧代码 where 无该字段（`undefined`）时 mock 返回已删父节点、操作继续推进（断言落库/权限断言
+被调用而失败），新代码 where 带 `deletedAt: null` 时 mock 返 null、抛 404。move/copy/建文件夹
+各 1 例，共 3 例。
+
+**验证**：`pnpm jest file-operations` 6 套件 149/149 绿（含 3 例新回归）；`pnpm type-check` 0 错。
+
+### 11.2 其余审查结论（无缺陷 / 观察项，记录）
+
+- **node-name**：`generateUniqueName`/`checkNameUniqueness` 均带 `deletedAt: null`，重名后缀用
+  转义正则取 maxCounter，正确。
+- **node-mutation.guard（ADR-0037）**：权限（归属分派）→ 跨项目 6 域矩阵 → 配额，序列完整；
+  库源 move 恒拒、库源 copy 豁免源权限（公开复制）、跨根配额归目标 owner，语义正确。
+- **node-trash**：软删/硬删/恢复/清空回收站在途转换取消（best-effort，硬删排在事务前）、
+  级联恢复、`deleteFileFromStorage` 的 `nodeDirectoryPath.endsWith(nodeId)` 路径校验 + fileHash
+  引用计数去重，均正确。
+- **project-crud**：项目创建走系统权限 `PROJECT_CREATE` + 项目数配额 + 事务内模板角色复制；
+  查询 `sortBy` 白名单；更新/转移设置经 `assertMutationAllowed`/Controller 权限。无缺陷。
+
+**观察项（不修，有理由）**：
+- `NodeTrashService.softDeleteDescendants` / `deleteDescendantsWithFiles` / `deleteFileIfNotReferenced`
+  **无生产调用者**（仅 spec 引用）——`deleteNode` 软删走的是内联级联（只置 `deletedAt`，不迁移
+  子节点 `fileStatus`），而这两个方法是「更完整」的独立实现（含 PROCESSING→FAILED→DELETED 迁移）。
+  按 AGENTS.md「未激活代码标注 + 登记 issue，不擅自删」，此处仅记录，不动代码。
+- 内联软删级联不迁移子节点 `fileStatus` 的语义差异：删除时子树内 PROCESSING 文件恢复后会停在
+  PROCESSING（`cancelInflightConversions` 已清 taskId，不会完成）。属低概率边界（删除瞬间恰有在途
+  转换 + 随后恢复），且不影响数据安全，记录为观察项。

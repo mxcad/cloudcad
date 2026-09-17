@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { NodeType, FileStatus } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
@@ -582,6 +582,47 @@ describe('NodeCopyMoveService', () => {
 
       expect(treeWalker.getSubtreeIds).not.toHaveBeenCalled();
       expect(prisma.fileSystemNode.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('moveNode/copyNode — 目标父节点在回收站的门禁（防移入回收站致存活节点被连带硬删）', () => {
+    // folder-trash 已删除：模拟真实 DB 的 deletedAt 过滤——请求 deletedAt:null 时已删行不匹配返 null；
+    // 旧代码 where 无 deletedAt 字段（undefined）则返回已删行，操作会继续推进（回归测试的「牙齿」）
+    const trashTargetMock = () => {
+      prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) => {
+        if (where.id === 'node-1') return Promise.resolve(fileNode());
+        if (where.id === 'folder-trash') {
+          return where.deletedAt === null
+            ? Promise.resolve(null)
+            : Promise.resolve({
+                id: 'folder-trash',
+                nodeType: NodeType.FOLDER,
+                projectId: 'proj-1',
+                deletedAt: new Date(),
+              });
+        }
+        return Promise.resolve(null);
+      });
+    };
+
+    it('moveNode：目标父节点已删除（回收站）→ 拒绝，不做权限断言、不落库', async () => {
+      trashTargetMock();
+
+      await expect(
+        service.moveNode('node-1', 'folder-trash', 'user-1')
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(nodeMutationGuard.assertMutationAllowed).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+    });
+
+    it('copyNode：目标父节点已删除（回收站）→ 拒绝，不物理复制、不落库', async () => {
+      trashTargetMock();
+
+      await expect(
+        service.copyNode('node-1', 'folder-trash', 'user-1')
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(storageManager.copyNodeDirectory).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.create).not.toHaveBeenCalled();
     });
   });
 });

@@ -108,7 +108,11 @@ export class NodeCopyMoveService {
       }
 
       const targetParent = await this.prisma.fileSystemNode.findUnique({
-        where: { id: targetParentId },
+        // deletedAt: null —— 目标父节点必须是存活容器。若允许移入回收站文件夹，
+        // 存活节点会被埋入已删子树；该文件夹后续彻底删除时 getSubtreeIds/
+        // getSubtreeFiles（默认含存活后代）会连带物理删除该存活节点（DB 行 + 存储），
+        // 造成不可逆数据丢失。与 createFileNode / restoreNode 的已删父节点门禁一致。
+        where: { id: targetParentId, deletedAt: null },
         select: { nodeType: true, projectId: true },
       });
       if (!targetParent) {
@@ -291,7 +295,9 @@ export class NodeCopyMoveService {
       }
 
       const targetParent = await this.prisma.fileSystemNode.findUnique({
-        where: { id: targetParentId },
+        // deletedAt: null —— 同 moveNode：拒绝以回收站文件夹为复制目标，
+        // 防止存活副本被埋入已删子树后随其彻底删除被连带物理删除。
+        where: { id: targetParentId, deletedAt: null },
         select: { nodeType: true },
       });
       if (!targetParent) {
