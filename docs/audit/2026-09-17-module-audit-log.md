@@ -953,3 +953,58 @@ hash → `passwd.dwg` 无分隔符、分片 chunk+hash 均剥离、无 hash 时 
 全绿；`pnpm type-check` 0 错。`multer-path.utils.ts`/`spec` prettier-clean；`mxcad-core.module.ts`
 HEAD 本就非 prettier-clean（`runtimeMaxFileSizeMB`/`controllers` 两行预存漂移，按约定不 `--write`），
 仅确保我新增的 import 行单行干净。
+
+## 19. mxcad external-ref / node / services 子模块 — 外部参照文件名路径遍历（任意文件读/写）——已修
+
+**范围**：`mxcad/external-ref/*`（controller / facade / update / ref / validator / preloading /
+handler）、`mxcad/node/filesystem-node.service.ts`、`mxcad/services/chunk-upload-manager.service.ts`。
+
+**入口与鉴权**：`external-ref.controller.ts` 全部端点挂 `RequireProjectPermissionGuard` +
+`CAD_EXTERNAL_REFERENCE`/`FILE_OPEN`（登录 + 项目权限），故非未鉴权漏洞，但 `fileName`/
+`extRefFileName` 来自 URL/body 未校验，属**已鉴权任意文件读/写**。
+
+### 19.1 四处 `fileName`/`extRefFileName` 直接拼路径——已修（basename）
+
+| 方法 | 文件 | 风险 |
+|---|---|---|
+| `getExternalRefDownloadPath(nodeId, fileName)` | external-reference-update.service.ts | `path.join(storageRoot, extRefDir, fileName)` 作下载路径 → 任意文件读 |
+| `checkExists(nodeId, fileName)` | external-reference-update.service.ts | `path.join(storageRoot, extRefDir, targetFileName)` → 任意路径存在性探测 |
+| `handleExternalReferenceFile(…, extRefFileName, …)` | external-ref.service.ts | 拷贝目标 `path.join(dir, extRefFileName)` → 任意路径写 |
+| `handleExternalReferenceImage(…, extRefFileName, …)` | external-ref.service.ts | 同上（图片） |
+
+**修复**：各方法 `try {` 后首行加 `fileName = path.basename(fileName);` /
+`extRefFileName = path.basename(extRefFileName);`（`basename` 结果恒无 `/`/`\`，`join(root,…)` 必落
+root 内；合法参照名无分隔符，no-op）。与 16/17/18 同缺陷类、同修法。
+
+**上传侧已安全（无需再修）**：`ext-ref-validator.validateFileName` 已拒 `..`/`/`/`\`/非法字符
+（仅作用于 `body.ext_ref_file`）；`body.originalXrefName` 受 preloading 引用名匹配约束（L57-60）；
+且拷贝回调（19.1 两处）已 basename，故 `storageFileName = originalXrefName || ext_ref_file` 即便含
+`../` 也被剥离。`ingest → materialize` 的落盘路径由 `nodeId`（UUID）+ hash 派生，不直接用 `name`。
+
+### 19.2 死代码：`external-reference-handler.service.ts` 的遍历——记录不修
+
+`ExternalReferenceHandler.handleExternalReferenceRequest` 的 `path.join(storageRoot, fileName)`
+（L113/L121）同样有遍历，但该 provider **在 module 里注册却未 export**（`exports` 仅
+`I_EXTERNAL_REF_FACADE`）且无任何 controller 注入 → 不可达。按「不过度实现」原则记录不修（若日后
+接线须先补 basename）。
+
+### 19.3 观察项（低危，记录不修）
+
+- **chunk 目录读路径未 basename**：`file-system.service.getChunkTempDirPath(hash)` =
+  `join(tempPath, chunk_${hash})`、`upload-utility.checkChunkExistsInStorage` 同构，均不 basename，
+  而 multer **写**路径已 basename（18）。`hash` 仅 `@IsString()`（预期为 MD5 32hex）。影响极小：读路径
+  仅探测 `uploads/chunk_X/Y_X` 形态的受限路径（存在性/大小），非任意文件；实际写已 basename。记为
+  一致性观察项，不修（避免再动 upload 模块 + 影响可忽略）。
+- **filesystem-node.service.ts L124-130 预存破损 JSDoc**：`/**` 未闭合吞掉下一方法注释（纯注释、
+  可编译）。预存、装饰性，按外科原则不修。
+
+**回归测试**：新建 `external-reference-update.service.spec.ts` 3 例——`getExternalRefDownloadPath`
+遍历 `../../../etc/passwd` → 候选路径全落 root 内且返回 null、合法 `A1.dwg` → 解析 `abc123/A1.dwg.mxweb`；
+`checkExists` 遍历 → 目标路径落 root 内且返回 false。坑：`resetMocks:true` 会清空模块级
+`mockResolvedValue`（`getExtRefDirName` 变 undefined → `path.join(root, undefined, …)` 抛 TypeError，
+`access` 从未被调）→ 所有 mock 实现须在 `beforeEach`（reset 之后）重设；`fs/promises` 导出不可
+`spyOn`（非 configurable）→ 用 `jest.mock('fs/promises', factory)` + `(fsPromises.access as jest.Mock)`。
+
+**验证**：`pnpm jest external-ref external-reference-update` 2 suites / 16 tests 全绿；
+`pnpm type-check` 0 错。spec 新文件 prettier-clean（已 `--write`）；两个 service 文件 HEAD 本就非
+prettier-clean（大量预存长行漂移，我新增的 basename 行不在 diff 中），按约定不 `--write`。

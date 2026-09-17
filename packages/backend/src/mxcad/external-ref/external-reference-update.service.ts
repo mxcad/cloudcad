@@ -297,6 +297,9 @@ export class ExternalReferenceUpdateService {
    */
   async checkExists(nodeId: string, fileName: string): Promise<boolean> {
     try {
+      // 路径遍历防护：fileName 来自客户端（未校验），basename 剥离路径段，
+      // 确保目标路径不逃逸 storageRootPath
+      fileName = path.basename(fileName);
       const sourceNode = await this.fileSystemNodeService.findById(nodeId);
       if (!sourceNode || !sourceNode.path) {
         this.logger.debug(
@@ -606,6 +609,9 @@ export class ExternalReferenceUpdateService {
    */
   async getExternalRefDownloadPath(nodeId: string, fileName: string): Promise<string | null> {
     try {
+      // 路径遍历防护：fileName 来自 URL 参数（未校验），basename 剥离任何路径段，
+      // 确保候选路径不逃逸 storageRootPath，否则可读取服务器任意文件
+      fileName = path.basename(fileName);
       const storageRootPath = await this.getStorageRootPath(nodeId);
       const extRefDirName = await this.extRefPreloadingService.getExtRefDirName(nodeId);
       const ext = path.extname(fileName).toLowerCase();

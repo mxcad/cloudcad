@@ -53,6 +53,9 @@ export class ExternalRefService {
     srcFilePath: string
   ): Promise<void> {
     try {
+      // 路径遍历防护：extRefFileName 来自客户端（originalXrefName 不经 validateFileName），
+      // basename 剥离路径段，确保拷贝目标不逃逸 externalRefDir
+      extRefFileName = path.basename(extRefFileName);
       this.logger.log(
         `[handleExternalReferenceFile] 开始处理: extRefHash=${extRefHash}, srcDwgNodeId=${srcDwgNodeId}, extRefFileName=${extRefFileName}`
       );
@@ -115,6 +118,9 @@ export class ExternalRefService {
     context: FileSystemNodeContext
   ): Promise<void> {
     try {
+      // 路径遍历防护：extRefFileName 来自客户端（originalXrefName 不经 validateFileName），
+      // basename 剥离路径段，确保拷贝目标不逃逸 externalRefDir
+      extRefFileName = path.basename(extRefFileName);
       this.logger.log(
         `[handleExternalReferenceImage] 开始处理: srcDwgNodeId=${srcDwgNodeId}, extRefFileName=${extRefFileName}`
       );
