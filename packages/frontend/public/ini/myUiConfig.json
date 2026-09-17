@@ -13,6 +13,12 @@
   "isShowUseAiFunctionButton": false,
   "headerTopBarCustomRightBtns": [
     {
+      "cmd": "Mx_ToggleFileQueue",
+      "icon": "cloudcad-kegouxuanliebiao",
+      "prompt": "文件队列",
+      "openPromptDelay": 700
+    },
+    {
       "icon": "qiehuan",
       "cmd": "Mx_switchSketchesAndNotesUiMode",
       "prompt": "切换UI模式",
