@@ -126,7 +126,22 @@ function getAllServicesStatus() {
   }
 }
 
+/**
+ * 服务名白名单校验：serviceName 来自 URL 路径段，系统 PM2 回退路径走 `shell:true`
+ * （Windows），未校验的 `&`/`;` 等元字符会致命令注入。只允许 PM2_SERVICES 内的精确
+ * 名称（无元字符），从源头杜绝注入。
+ */
+function assertKnownService(serviceName) {
+  if (typeof serviceName !== 'string' || !PM2_SERVICES.includes(serviceName)) {
+    return { success: false, error: '非法的服务名' };
+  }
+  return null;
+}
+
 function restartService(serviceName) {
+  const invalid = assertKnownService(serviceName);
+  if (invalid) return invalid;
+
   if (serviceName === 'config-service') {
     return { success: false, error: '不能重启配置中心服务' };
   }
@@ -137,6 +152,9 @@ function restartService(serviceName) {
 }
 
 function stopService(serviceName) {
+  const invalid = assertKnownService(serviceName);
+  if (invalid) return invalid;
+
   if (serviceName === 'config-service') {
     return { success: false, error: '不能停止配置中心服务' };
   }
@@ -147,6 +165,9 @@ function stopService(serviceName) {
 }
 
 function startService(serviceName) {
+  const invalid = assertKnownService(serviceName);
+  if (invalid) return invalid;
+
   if (serviceName === 'config-service') {
     return { success: false, error: '配置中心服务已在运行' };
   }

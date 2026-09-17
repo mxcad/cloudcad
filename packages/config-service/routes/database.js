@@ -8,6 +8,7 @@ const {
   backupDatabase,
   restoreDatabase,
   cleanupOldBackups,
+  isValidBackupFilename,
 } = require('../lib/db-backup');
 const fs = require('fs');
 const path = require('path');
@@ -109,6 +110,13 @@ async function handle(req, res, pathname, method) {
       return true;
     }
 
+    // 纵深防御：token 内的 filename 在 download-token 端点已校验，此处再校验一次
+    // 防任意文件读（filename 经 path.join 拼 BACKUP_DIR，无校验可越界读任意文件）
+    if (!isValidBackupFilename(filename)) {
+      sendJson(res, 400, { error: '非法的备份文件名' });
+      return true;
+    }
+
     const filePath = path.join(BACKUP_DIR, filename);
 
     if (!fs.existsSync(filePath)) {
@@ -133,7 +141,13 @@ async function handle(req, res, pathname, method) {
     const { filename } = body;
 
     if (!filename) {
-      sendJson(res, 400, { error: '需要指定文件名' });
+      sendJson(res, 400, { success: false, error: '需要指定文件名' });
+      return true;
+    }
+
+    // 只允许为合法备份文件签发下载凭证，否则可借 download 端点读任意文件
+    if (!isValidBackupFilename(filename)) {
+      sendJson(res, 400, { success: false, error: '非法的备份文件名' });
       return true;
     }
 
@@ -147,6 +161,13 @@ async function handle(req, res, pathname, method) {
     if (!session) return true;
 
     const filename = decodeURIComponent(pathname.split('/').pop());
+
+    // filename 经 decodeURIComponent 还原（%2e%2e%2f → ../），无校验可越界删任意文件
+    if (!isValidBackupFilename(filename)) {
+      sendJson(res, 400, { success: false, error: '非法的备份文件名' });
+      return true;
+    }
+
     const filePath = path.join(BACKUP_DIR, filename);
 
     if (!fs.existsSync(filePath)) {

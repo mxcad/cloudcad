@@ -126,3 +126,36 @@ describe('pm2 调用解析（部署包根目录 pm2 包装脚本已移除后的�
     assert.equal(result.stdout, '[]');
   });
 });
+
+// 服务名白名单回归：serviceName 来自 URL 路径段，系统 PM2 回退路径走 shell:true
+// （Windows），未校验的 & / ; 元字符会致命令注入。白名单外一律前置拒绝、不触达 pm2。
+describe('pm2 服务名白名单（命令注入回归）', () => {
+  const { restartService, stopService, startService } = require('../lib/pm2');
+
+  it('restartService 拒绝含 shell 元字符的服务名', () => {
+    assert.deepEqual(restartService('x & whoami'), {
+      success: false,
+      error: '非法的服务名',
+    });
+  });
+
+  it('stopService 拒绝白名单外的服务名', () => {
+    assert.deepEqual(stopService('nonexistent'), {
+      success: false,
+      error: '非法的服务名',
+    });
+  });
+
+  it('startService 拒绝含路径遍历元字符的服务名', () => {
+    assert.deepEqual(startService('../etc/passwd'), {
+      success: false,
+      error: '非法的服务名',
+    });
+  });
+
+  it('白名单内的服务名不被白名单拦截（config-service 走专属分支）', () => {
+    const result = restartService('config-service');
+    assert.equal(result.success, false);
+    assert.notEqual(result.error, '非法的服务名');
+  });
+});

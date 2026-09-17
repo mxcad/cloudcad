@@ -431,3 +431,71 @@ Windows 盘符 `D:\…files-123-evil\x`）不含 `..`/`~`，原样经 `path.reso
   暴露 `getNodes()`（prefix/node），但 file-handler 实际读写恒用 `FILES_DATA_PATH`，
   groups 的 basePath 未参与真实文件路由——多节点路由属「已接线但未完全实现」的预留能力，
   非缺陷（不修，避免过度实现；若将来启用须让 file-handler 按 prefix 选 basePath）。
+
+---
+
+## 8. config-service（部署配置中心，端口 3002，纯 Node 0 依赖，INITIAL_ADMIN_PASSWORD 鉴权）
+
+### 8.1 database 备份文件名未校验 → 命令注入 + 路径遍历（已修）
+
+**现象**：`routes/database.js` 三个端点把用户可控的 `filename` 直接 `path.join(BACKUP_DIR,
+filename)` 后做文件操作，无任何格式校验：
+- `/api/db/restore`（POST，`body.filename`）→ `restoreDatabase(filename)` →
+  `spawnSync(psqlPath, args, { shell: process.platform === 'win32' })`——**Windows 下
+  `shell:true` + 未净化参数 = 命令注入（RCE）**（Node 文档明确警告；实测 `spawnSync(...,
+  {shell:true})` 参数含 `&` 即执行第二段命令）。同时 `path.join` 无包含性校验可越界读。
+- `/api/db/download-token`（POST，`body.filename`）→ `createDownloadToken(filename)` →
+  `/api/db/download/:token`（GET）→ `path.join(BACKUP_DIR, filename)` → **任意文件读**。
+- `/api/db/backup/:filename`（DELETE）→ `decodeURIComponent(pathname.split('/').pop())`
+  → `path.join(BACKUP_DIR, filename)` → `fs.unlinkSync`——**任意文件删**（URL 解析器保留
+  `%2e%2e%2f`，`decodeURIComponent` 还原成 `../`，实测 `path.join` 越出 BACKUP_DIR）。
+
+**威胁面**：三端点均需管理员会话（`authMiddleware`）。但 `INITIAL_ADMIN_PASSWORD` 未配置时
+回落默认密码 `admin123`（弱、众所周知），且 CORS `*`，故「可达 3002 + 知道/猜到密码」即可
+RCE / 删任意文件。属真实输入校验缺陷（非过度实现），修复为格式白名单校验。
+
+**修复**：`lib/db-backup.js` 新增 `isValidBackupFilename(filename)` 唯一事实源
+（`^db_backup_[\w-]+\.sql$`，与 `backupDatabase` 生成格式一致；无 `/`\` `\`/`..` 排除遍历，
+无 `&`/`;`/`|`/空格 排除注入），`listBackupFiles` 的过滤也改用它（对真实备份文件行为不变，
+对畸形名更严格）。`restoreDatabase` 顶部前置拦截；`database.js` 的 download-token /
+download / delete 三端点各前置拦截（download 端点对 token 内 filename 再校验一次作纵深防御）。
+
+**验证**：新增 `test/db-backup.test.js`（`isValidBackupFilename` 5 例覆盖合法/遍历/注入/
+非字符串 + `restoreDatabase` 非法名前置拦截 2 例，断言即旧缺陷行为有牙齿——旧代码对
+`../../etc/passwd` 返回「备份文件不存在」而非「非法的备份文件名」）；config-service 全量
+`node --test test/` 46/46 绿。
+
+### 8.2 pm2 服务控制服务名未白名单 → 命令注入（已修）
+
+**现象**：`routes/service.js` 的 `restart/stop/start` 端点从 URL 路径段取 `serviceName`
+（`pathname.split('/')[3]`）传给 `lib/pm2.js` 的 `restartService/stopService/startService`，
+后者 `runPm2Command(['<cmd>', serviceName])`。系统 PM2 回退路径（无内嵌 runtime 时）
+`shell: isWindows`（Windows 为 true）——`serviceName` 含字面 `&`/`;` 等元字符即命令注入
+（实测 URL 路径段保留字面 `&`，`split('/')[3]` 得 `x&whoami`）。原代码仅拦 `config-service`，
+其余任意名放行。
+
+**修复**：`lib/pm2.js` 新增 `assertKnownService(serviceName)`（只允许 `PM2_SERVICES` 内的
+精确名称，无元字符），三个控制函数顶部前置拦截。从源头杜绝注入（白名单名不可能含元字符）。
+
+**验证**：`test/pm2.test.js` 新增 4 例（`restartService('x & whoami')` /
+`stopService('nonexistent')` / `startService('../etc/passwd')` 均返回「非法的服务名」且
+不触达 pm2；`restartService('config-service')` 不被白名单误拦、走专属分支）。46/46 绿。
+
+### 8.3 审查结论（无缺陷 / 观察项，记录）
+
+- **system-config.js 无注入**：改密端点（`/api/password/database`、`/api/password/redis`）
+  的 `spawnSync(psql/redis-cli, …, { shell: false })` 全部 **shell:false**（与 db-backup 的
+  shell:true 不同），参数不经 shell 解释；SQL 侧 `ALTER USER` 对 user/password 做了
+  `"`/`'` 转义。正确。
+- **brand.js 无路径缺陷**：`uploadLogo(buffer, mimeType)` 写固定 `LOGO_PATH`（multipart 的
+  filename 不参与路径拼接），校验 MIME 白名单 + 2MB 上限。`updateConfig` 透传未声明字段是
+  文档化的有意设计（前端「存在才覆盖」合并），非缺陷。
+- **静态文件 startsWith 前缀缺陷不可达（不修）**：`server.js` 静态路由用
+  `filePath.startsWith(PUBLIC_DIR/FRONTEND_DIST_DIR)`（缺 `+ path.sep`），但 pathname 来自
+  WHATWG `new URL().pathname`（已剥离 `..` 段）且**不做 decodeURIComponent**，故 filePath 恒
+  落在两个目录内、无法构造前缀兄弟路径——与 storage-service（有 decodeURIComponent 还原 `..`）
+  不同，此处为不可达的冗余防御，不修（避免过度实现）。
+- **观察项（不修）**：①`INITIAL_ADMIN_PASSWORD` 未配置时回落默认密码 `admin123`（部署应
+  强制配置，代码已 log warn，属部署约束非代码逻辑缺陷）；②`env.js updateEnvFile` 对
+  `/api/config` PUT 的 key 无白名单（可写任意 env 键），但调用方为受信管理员且是配置中心
+  本职，加白名单属过度实现；③CORS `*` 由会话令牌鉴权兜底（敏感操作均需有效 session）。

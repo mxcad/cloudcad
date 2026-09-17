@@ -5,12 +5,22 @@ const { log } = require('./utils');
 const { BACKUP_DIR, ENV_PATH, RUNTIME_DIR } = require('./constants');
 const { parseEnvFile } = require('./env');
 
+/**
+ * 备份文件名格式校验（唯一事实源，与 backupDatabase 生成的 `db_backup_<ISO 时间戳>.sql`
+ * 一致）。严格 `^db_backup_[\w-]+\.sql$`：
+ * - 无 `/` `\` `..` → 排除路径遍历（decodeURIComponent 会把 %2e%2e%2f 还原成 ..）；
+ * - 无 shell 元字符（& ; | 空格等）→ 排除 restore 走 `shell:true` 时的命令注入。
+ */
+function isValidBackupFilename(filename) {
+  return typeof filename === 'string' && /^db_backup_[\w-]+\.sql$/.test(filename);
+}
+
 function listBackupFiles() {
   if (!fs.existsSync(BACKUP_DIR)) return [];
 
   return fs
     .readdirSync(BACKUP_DIR)
-    .filter((file) => file.startsWith('db_backup_') && file.endsWith('.sql'))
+    .filter((file) => isValidBackupFilename(file))
     .map((file) => {
       const fullPath = path.join(BACKUP_DIR, file);
       const stats = fs.statSync(fullPath);
@@ -148,6 +158,10 @@ async function backupDatabase() {
 }
 
 async function restoreDatabase(filename) {
+  // filename 来自请求体，restore 走 shell:true（Windows）——非法格式会致路径遍历 + 命令注入
+  if (!isValidBackupFilename(filename)) {
+    return { success: false, error: '非法的备份文件名' };
+  }
   const backupFile = path.join(BACKUP_DIR, filename);
 
   if (!fs.existsSync(backupFile)) {
@@ -223,6 +237,7 @@ module.exports = {
   backupDatabase,
   restoreDatabase,
   cleanupOldBackups,
+  isValidBackupFilename,
   getPgDumpPath,
   getPsqlPath,
   getRedisCliPath,
