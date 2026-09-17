@@ -230,3 +230,50 @@ permission-cache.service.ts / context-permission.strategy.ts / store-permission.
   用户禁用实际走 DB status=非ACTIVE 路径（jwt.strategy 每请求查），用户黑名单检查
   恒 false 属遗留防御；`client_type: 'exe'` 只写不读（预留字段，exe 客户端可能解码
   自用，不删）。
+
+### 4.2 auth 其余链路审查结论 + 明文密码决策（无代码改动）
+
+**已读且无缺陷**：
+- `registration.service.ts`：限流前置、防枚举统一文案、微信 tempToken 校验、
+  冷静期/邮箱验证分支完整。
+- `mfa.service.ts` / `totp.ts`：TOTP secret AES-256-GCM 密文存库（密钥 SHA-256
+  归一化）、setup 幂等复用、RFC 6238 自实现（HMAC-SHA1/6 位/30s/±1 窗/恒定时间比较）
+  正确；解密失败/格式非法一律返回 false 不泄露。
+- `session-transfer.service.ts`：一次性转移凭证（Redis 60s TTL）+ Lua GETDEL 原子
+  消费即焚（杜绝重放）+ 旧会话彻底销毁（旧 access 黑名单 + 旧 web refresh 删除 +
+  session regenerate 防会话固定）+ 新会话建立；redirect 仅接受同源单斜杠路径（排除
+  `//` 协议相对）；跨用户替换有显式日志。
+- `account-rate-limit.service.ts`：频率限流（INCR+EXPIRE 滑动窗口）+ 失败锁定
+  （独立 key，阈值内累计→锁定期，锁期内正确密码也拒绝）+ Redis 故障降级进程内计数
+  + 暴力破解 P1 告警；主流程锁期内不再记失败，进程内「窗口重置丢锁」边界不可达。
+- `csrf.guard.ts`：double-submit cookie（cookie+header 恒定时间比较）+ Bearer 存在
+  时跳过（Authorization 头不跨源自动附带，CSRF 天然免疫）+ 轮换 token；前端每次
+  请求重读 cookie（clientSetup.ts），主流程恒带 Bearer 故 CSRF 仅在 cookie-only
+  回退路径生效，轮换并发竞态为理论边界。
+- `auth.controller.ts`（974 行）：薄控制器，全部委托 IAuthFacade/WechatCallbackService，
+  仅含 cookie 设置（secure 按协议自适应，修离线 http 部署 cookie 被丢弃）+ 微信端点
+  Cache-Control: no-store（state/txn/code 防 CDN 缓存串号），无业务逻辑违规。
+- `local-auth.provider.ts`：手机/微信/邮箱各登录注册路径均有限流前置 + 验证码校验 +
+  防枚举统一文案 + ADMIN 禁走普通入口 + 注销冷静期恢复；手机自动注册用随机强密码
+  （randomBytes(9) base64url 12 位 + '!Aa'）。
+- `admin-auth.service.ts`：安全分层完整——IP 黑名单（最前置）→ IP 白名单（fail-close，
+  白名单外不消耗账号查询/限流/密码比对）→ 限流 → 防枚举 → 角色门禁 → 密码 → TOTP
+  MFA（总闸 mfaEnforceEnabled，未绑定引导/缺码 MFA_REQUIRED/错码计限流+审计）→
+  口令定期更换判定。
+
+**决策：注册邮箱验证路径在 Redis 存明文密码（15 分钟窗口）——记录为已知权衡，不修**
+
+`registration.service.ts` 在 `requireEmailVerification=true` 时把 `{email, username,
+password, ...}`（含**明文密码**）存 `register:pending:<email>`（Redis，15min TTL），
+邮箱验证通过后 `verifyEmailAndActivate` 读出明文调 `userService.create()`（内部再
+`passwordHasher.hash()` 落库）。
+
+- **为何是弱点**：明文凭据进缓存层，Redis dump/备份/日志可能含明文密码（DB 侧只有
+  哈希，离线爆破慢；Redis 侧是明文）。
+- **为何是有限/可接受**：窗口短（15min）、Redis 为本地受信基础设施、这是异步邮箱验证
+  注册的标准做法（替代 UX——验证后要求重输密码——更差）。
+- **为何不修（过度实现判断）**：正确修法（注册时即哈希、Redis 只存哈希）需要
+  `CreateUserDto` 契约支持「预哈希密码」字段（否则 `create()` 会二次哈希致登录失效），
+  属跨 `@cloudcad/contracts` + user-crud + registration 的多文件契约重构，超出「单点
+  手术」范围。记为后续独立票（若做：CreateUserDto 加 `preHashedPassword?` 或
+  `passwordHashed: boolean`，user-crud 据此跳过 hash，registration 先 hash 再存 Redis）。
