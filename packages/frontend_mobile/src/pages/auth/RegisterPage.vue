@@ -138,8 +138,7 @@ async function handleRegister() {
           nickname: nickname.value.trim() || undefined,
         },
       })
-      const data = unwrap<{ accessToken: string; refreshToken?: string; user?: unknown }>(res)
-      finishRegister(data)
+      finishRegister(unwrap(res))
     } else {
       const res = await authControllerRegister({
         body: {
@@ -150,9 +149,7 @@ async function handleRegister() {
           wechatTempToken,
         },
       })
-      const data = unwrap<{ accessToken?: string; refreshToken?: string; user?: unknown; email?: string }>(
-        res
-      )
+      const data = unwrap<{ accessToken?: string; refreshToken?: string; user?: unknown; email?: string }>(res)
       // 后端返回 email 表示账号已建但邮箱未验证，需先去验证页拿 token
       if (data.email && !data.accessToken) {
         void router.replace({
@@ -162,15 +159,8 @@ async function handleRegister() {
         })
         return
       }
-      if (data.accessToken) {
-        finishRegister({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          user: data.user,
-        })
-      } else {
-        throw new Error(t('注册失败，请重试'))
-      }
+      if (data.accessToken) finishRegister(data)
+      else throw new Error(t('注册失败，请重试'))
     }
   } catch (e) {
     error.value = errMsg(toError(e), t('注册失败，请重试'))

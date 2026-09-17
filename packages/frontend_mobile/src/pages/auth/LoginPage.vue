@@ -190,8 +190,6 @@ const wechat = useWechatLogin({
     error.value = message
   },
 })
-// 模板绑定须解构成顶层 ref 才会自动解包（对象属性里的 ref 不解包）
-const wechatOpening = wechat.opening
 
 onMounted(() => {
   const errorParam = route.query.wechat_error
@@ -302,9 +300,9 @@ onMounted(() => {
         <div class="auth-divider">
           <span>{{ t('其他方式登录') }}</span>
         </div>
-        <button class="wechat-btn" type="button" :disabled="wechatOpening" @click="wechat.open">
+        <button class="wechat-btn" type="button" :disabled="wechat.opening" @click="wechat.open">
           <van-icon name="chat-o" />
-          {{ wechatOpening ? t('正在跳转…') : t('微信登录') }}
+          {{ wechat.opening ? t('正在跳转…') : t('微信登录') }}
         </button>
       </template>
 
