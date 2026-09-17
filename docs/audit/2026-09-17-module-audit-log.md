@@ -499,3 +499,28 @@ download / delete 三端点各前置拦截（download 端点对 token 内 filena
   强制配置，代码已 log warn，属部署约束非代码逻辑缺陷）；②`env.js updateEnvFile` 对
   `/api/config` PUT 的 key 无白名单（可写任意 env 键），但调用方为受信管理员且是配置中心
   本职，加白名单属过度实现；③CORS `*` 由会话令牌鉴权兜底（敏感操作均需有效 session）。
+
+---
+
+## 9. engine-exec（mxcadAssembly 引擎执行层，backend 与 conversion-service 共用）
+
+审查结论（**无缺陷**）：`runMxcadAssembly` 是引擎协议（spawn/参数转义/超时杀树/输出捕获）
+的唯一实现。逐分支核对：
+- **Windows 参数转义正确**：`windowsVerbatimArguments: !isLinux`（Windows 下 = true，Linux
+  下 = false 且该选项无效）——含双引号 JSON 的 `arg` 原样传入，避免 Node 默认转义把 `"` 变
+  `\"` 致 mxcadassembly 解析不到 srcpath（aaf2626 回归的修复，单测钉住 Linux 选项形状）。
+- **进程组/进程树杀除正确**：Linux `detached:true` 使子进程成新组 leader，`kill(-pid)` 杀整组
+  （不波及 backend 自身）；Windows `taskkill /PID <pid> /T /F` 杀进程树。`<pid>` 是 `child.pid`
+  数值，拼进 taskkill 命令无注入面。
+- **超时升级正确**：`timeoutMs` 后 SIGTERM 杀组，`killEscalationMs` 后未退再 SIGKILL；`settled`
+  标志防重复 resolve；`error`/`close` 双事件先到先结算；始终 resolve（调用方解析 stdout 的
+  `{"code":...}`，退出码恒 2123 不判成败）。
+- **取消机制（#431）正确**：`onChild` 回调 kill 句柄走 SIGTERM→SIGKILL 升级。
+
+**观察项（不修，过度实现判断）**：`onChild` 取消路径的升级计时器是局部变量 `t`（已 unref），
+未赋给外层 `escalateTimer`，故 `finish` 不会清它——但子进程被杀后 `close` 触发 `finish`，该
+`timer` 到期再 `killTree` 对已死进程组是幂等 no-op（try/catch 兜底），且 unref 不阻塞退出，
+无实际危害。追踪它属过度实现，不动。
+
+**验证**：`pnpm test` 6/6 绿（5 例 mock 覆盖正常/超时升级/spawn 失败/非零退出/onChild 取消，
+1 例真实子进程验证孙进程随进程树被杀——非「进程能起来」的假绿）；`pnpm type-check` 0 错。
