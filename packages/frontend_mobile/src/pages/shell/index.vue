@@ -15,7 +15,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useVoerkaI18n } from '@voerkai18n/vue'
 import { showDialog } from 'vant'
 import { useShellStack } from '../../stores/shellStack'
-import { t } from '../../languages'
+import { t, i18nScope } from '../../languages'
 import { useUser } from '../../composables/useUser'
 import Home from '../home/index.vue'
 import FileBrowserPage from './sub-pages/FileBrowserPage.vue'
@@ -60,6 +60,16 @@ watch(
   () => store.syncFromRoute(route.path),
   { immediate: true }
 )
+
+// 从项目详情/个人空间打开图纸后，顶栏左侧出「返回」箭头回到来源页
+const hasReturnTarget = computed(() => !!store.returnTarget)
+
+function backToList() {
+  const target = store.returnTarget
+  if (!target) return
+  // 目标子页 onMounted 消费 returnTarget 还原文件夹位置后自行清除
+  router.push(target.path)
+}
 
 // ── 图纸库/图块库抽屉 ──
 const libraryOpen = ref(false)
@@ -142,7 +152,10 @@ const sheetItems = computed<SheetItem[]>(() => [
 
 async function onLanguageSelect(action: SheetItem) {
   showLanguageSheet.value = false
-  if (action.value) await i18n.changeLanguage(action.value)
+  if (!action.value) return
+  // @voerkai18n/vue 的 useVoerkaI18n 返回 changeLanguage 时漏了 bind（React 版已 bind），
+  // this 指向 hook 返回的普通对象 → this.refresh is not a function，故改调 scope.change
+  await i18nScope.change(action.value)
 }
 
 /** 退出登录确认（与个人中心同口径），确认后清会话并回登录页 */
@@ -199,10 +212,14 @@ defineExpose({
 <template>
   <div class="shell">
     <header v-show="!hasSubpage" class="shell-topbar">
-      <span class="shell-spacer" aria-hidden="true" />
+      <span class="shell-spacer">
+        <button v-if="hasReturnTarget" class="entry-btn entry-back" :aria-label="t('返回')" @click="backToList">
+          <van-icon name="arrow-left" size="22" />
+        </button>
+      </span>
       <h1 class="shell-title">CloudCAD</h1>
       <nav class="shell-entries">
-        <button class="entry-plus" aria-label="更多" @click="openSheet">
+        <button class="entry-btn" aria-label="更多" @click="openSheet">
           <van-icon name="plus" size="24" />
         </button>
       </nav>
@@ -332,6 +349,8 @@ defineExpose({
 
 .shell-spacer {
   width: 48px;
+  display: flex;
+  align-items: center;
 }
 
 .shell-title {
@@ -351,7 +370,7 @@ defineExpose({
   justify-content: flex-end;
 }
 
-.entry-plus {
+.entry-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -366,6 +385,10 @@ defineExpose({
   &:active {
     background: var(--list-hover);
   }
+}
+
+.entry-back {
+  font-size: 22px;
 }
 
 .editor-root {
