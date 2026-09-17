@@ -16,6 +16,7 @@ import { t } from '@/languages'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isEmail, isPhone, isContactType, type ContactType } from '@/utils/authValidation'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import { redirectQueryOf } from '@/utils/authNavigate'
 
 const CONTACT_TYPE_KEY = 'forgotContactType'
 const CONTACT_VALUE_KEY = 'forgotContactValue'
@@ -85,17 +86,13 @@ async function handleSubmit() {
 }
 
 function goReset() {
-  void router.replace({ path: '/reset-password' })
+  void router.replace({ path: '/reset-password', query: { ...redirectQueryOf(route.query) } })
 }
 
 function goLogin() {
   sessionStorage.removeItem(CONTACT_TYPE_KEY)
   sessionStorage.removeItem(CONTACT_VALUE_KEY)
-  const redirect = (route.query.redirect as string) || ''
-  void router.replace({
-    path: '/login',
-    query: redirect && redirect !== '/shell' ? { redirect } : {},
-  })
+  void router.replace({ path: '/login', query: { ...redirectQueryOf(route.query) } })
 }
 </script>
 

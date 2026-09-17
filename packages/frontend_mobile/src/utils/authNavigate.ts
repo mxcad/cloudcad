@@ -42,3 +42,15 @@ export function navigateAfterAuth(currentQuery: Record<string, unknown>): void {
   // 用 { path } 传会被当作路径解析、query 静默丢弃
   void router.replace(target)
 }
+
+/**
+ * 取当前页 query.redirect 并透传给中转页。
+ * 登录/注册中途常被后端拦去邮箱验证、手机验证、注册补齐或找回密码，
+ * 这些跳转若不带上 redirect，验证通过后 navigateAfterAuth 只能回退壳根，
+ * 用户就被丢回 /shell 而不是原本要进的子页。用法：
+ *   query: { email, ...redirectQueryOf(route.query) }
+ * 无可携带目标（缺省/非法/壳根/认证页自身）时返回空对象，不会写入 redirect: /shell。
+ */
+export function redirectQueryOf(query: Record<string, unknown>): Record<string, string> {
+  return buildRedirectQuery(resolveRedirectTarget(query.redirect))
+}

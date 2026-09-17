@@ -27,7 +27,7 @@ import {
   applyAuthResponse,
   setRegisterPhonePending,
 } from '@/utils/authSession'
-import { navigateAfterAuth } from '@/utils/authNavigate'
+import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isPhone, isCode, isEmail, getPasswordStrength } from '@/utils/authValidation'
 import { useCountdown } from '@/composables/useCountdown'
@@ -123,6 +123,7 @@ async function handleRegister() {
         })
         void router.replace({
           path: '/verify-email',
+          query: { ...redirectQueryOf(route.query) },
           state: { message: t('请先验证邮箱，完成注册') },
         })
         return
@@ -156,6 +157,7 @@ async function handleRegister() {
       if (data.email && !data.accessToken) {
         void router.replace({
           path: '/verify-email',
+          query: { ...redirectQueryOf(route.query) },
           state: { email: data.email, message: t('请验证邮箱以完成注册') },
         })
         return
@@ -178,11 +180,7 @@ async function handleRegister() {
 }
 
 function goLogin() {
-  const redirect = (route.query.redirect as string) || ''
-  void router.replace({
-    path: '/login',
-    query: redirect && redirect !== '/shell' ? { redirect } : {},
-  })
+  void router.replace({ path: '/login', query: { ...redirectQueryOf(route.query) } })
 }
 
 onMounted(() => {

@@ -23,7 +23,7 @@ import {
 import { showToast } from 'vant'
 import { t } from '@/languages'
 import { applyAuthResponse } from '@/utils/authSession'
-import { navigateAfterAuth } from '@/utils/authNavigate'
+import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate'
 import {
   toError,
   unwrap,
@@ -71,12 +71,22 @@ function finishLogin(data: {
   navigateAfterAuth(route.query as Record<string, unknown>)
 }
 
+/** 验证页表单数据走 state（不进地址栏），但 redirect 必须走 query：
+ *  验证页靠 route.query 调 navigateAfterAuth 落点，塞进 state 会丢失、只能回壳根 */
 function gotoVerifyEmail(state: { email?: string; tempToken?: string; mode?: 'bind' }) {
-  void router.replace({ path: '/verify-email', state })
+  void router.replace({
+    path: '/verify-email',
+    query: { ...redirectQueryOf(route.query) },
+    state,
+  })
 }
 
 function gotoVerifyPhone(state: { phone?: string; tempToken?: string; mode?: 'bind' }) {
-  void router.replace({ path: '/verify-phone', state })
+  void router.replace({
+    path: '/verify-phone',
+    query: { ...redirectQueryOf(route.query) },
+    state,
+  })
 }
 
 /**
@@ -157,19 +167,11 @@ async function handlePhoneLogin() {
 }
 
 function goRegister() {
-  const redirect = (route.query.redirect as string) || ''
-  void router.replace({
-    path: '/register',
-    query: redirect && redirect !== '/shell' ? { redirect } : {},
-  })
+  void router.replace({ path: '/register', query: { ...redirectQueryOf(route.query) } })
 }
 
 function goForgotPassword() {
-  const redirect = (route.query.redirect as string) || ''
-  void router.replace({
-    path: '/forgot-password',
-    query: redirect && redirect !== '/shell' ? { redirect } : {},
-  })
+  void router.replace({ path: '/forgot-password', query: { ...redirectQueryOf(route.query) } })
 }
 
 // ── 微信登录：入口由运行时配置控制，回调经事务轮询 ──
@@ -177,7 +179,10 @@ const wechat = useWechatLogin({
   onLoginSuccess: finishLogin,
   onNeedRegister: (tempToken) => {
     sessionStorage.setItem('wechatTempToken', tempToken)
-    void router.replace('/register?wechat=1')
+    void router.replace({
+      path: '/register',
+      query: { wechat: '1', ...redirectQueryOf(route.query) },
+    })
   },
   onNeedBindEmail: (tempToken) => gotoVerifyEmail({ tempToken, mode: 'bind' }),
   onNeedBindPhone: (tempToken) => gotoVerifyPhone({ tempToken, mode: 'bind' }),
@@ -191,13 +196,13 @@ const wechatOpening = wechat.opening
 onMounted(() => {
   const errorParam = route.query.wechat_error
   if (typeof errorParam === 'string' && errorParam) {
-    void router.replace({ path: '/login' })
+    void router.replace({ path: '/login', query: { ...redirectQueryOf(route.query) } })
     error.value = `${t('微信登录失败')}：${decodeURIComponent(errorParam)}`
     return
   }
   const txn = takeWechatTxn(route)
   if (!txn) return
-  void router.replace({ path: '/login' })
+  void router.replace({ path: '/login', query: { ...redirectQueryOf(route.query) } })
   void wechat.poll(txn, 0)
 })
 </script>

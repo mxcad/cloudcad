@@ -30,7 +30,7 @@ import {
   clearRegisterPhonePending,
   getRegisterPhonePending,
 } from '@/utils/authSession'
-import { navigateAfterAuth } from '@/utils/authNavigate'
+import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isEmail, isCode } from '@/utils/authValidation'
 import { CODE_COOLDOWN_SECONDS, useCountdown } from '@/composables/useCountdown'
@@ -141,7 +141,7 @@ async function handleVerify() {
 
 function goLogin() {
   if (pending) clearRegisterPhonePending()
-  void router.replace({ path: '/login' })
+  void router.replace({ path: '/login', query: { ...redirectQueryOf(route.query) } })
 }
 
 onMounted(() => {
