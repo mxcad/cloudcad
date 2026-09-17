@@ -42,11 +42,16 @@ const {
 } = require('../lib/proc');
 const state = require('../lib/state');
 // isPortOpen 单一实现位于 lib/health（infra 直接复用，避免重复实现）
-const { isPortOpen } = require('../lib/health');
+const { isPortOpen, waitPortReleased } = require('../lib/health');
 const { log } = require('../lib/logger');
 const {
   detectRedisOwnership,
   stopRedisProcess,
+  loadRedisPassword,
+  loadRedisHost,
+  probeRedisAuth,
+  setRedisPasswordAtRuntime,
+  persistRedisConfig,
 } = require('../lib/redis-takeover');
 
 /**
@@ -69,6 +74,18 @@ async function startInfrastructure(_usePm2 = true) {
 
   const pm2Available = !!(PM2_JS && fs.existsSync(PM2_JS) && USE_RUNTIME);
 
+  // #419 升级路径前置门禁：PM2 的 `redis` app 为 online 只说明包装进程存活，
+  // 不代表数据实例用了 .env 密码（包装进程见端口已占即采纳现有实例），
+  // 故必须在端口扫描 / 短路复用之前独立探测。
+  // 'taken-over' 时 redis 端口已释放，下方扫描会自然进入 reconcile 以 --requirepass 重拉；
+  // 'configured' 表示外部实例密码已按 .env 生效（本轮运行中设好或上一轮已设），实例继续
+  // 运行、数据不动，reconcile 不把它当"端口被外部进程占用"的冲突，而是把 PM2 包装进程
+  // 拉起以采纳该实例；
+  // 'blocked' 表示无法自动修复，中止部署。
+  const redisGate = pm2Available ? await ensureRedisPasswordManaged() : 'ok';
+  if (redisGate === 'blocked') return false;
+  const redisPasswordConfigured = redisGate === 'configured';
+
   // 逐服务检测端口 + PM2 托管状态，判定"缺失"与"重复/残留"。
   // 这是 Q1 的核心：端口状态与 PM2 状态必须一致，不一致即视为待清理的重复实例。
   const portOpenMap = {};
@@ -88,14 +105,18 @@ async function startInfrastructure(_usePm2 = true) {
         'yellow',
         '[警告] 检测到基础服务端口已占用，但本目录 PM2 未在托管（可能是前台残留/另一部署目录的服务/外部进程），尝试理顺 PM2 托管...'
       );
-      return reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap);
+      return reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap, {
+        redisPasswordConfigured,
+      });
     }
     log('green', '[✓] 基础服务已在运行，复用现有实例（不重启）');
     return true;
   }
 
   if (pm2Available) {
-    return reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap);
+    return reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap, {
+      redisPasswordConfigured,
+    });
   }
 
   // PM2 不可用：回退前台 spawn（纯开发环境兜底）
@@ -112,6 +133,169 @@ async function startInfrastructure(_usePm2 = true) {
  */
 function areAllInfraOnline(pm2StatusMap) {
   return INFRA_SERVICE_APPS.every((name) => pm2StatusMap[name] === 'online');
+}
+
+/**
+ * 升级路径强制门禁（#419）：已运行的 redis 实例必须接受 .env 的 REDIS_PASSWORD。
+ *
+ * 为什么不复用 reconcile 里"端口开但 PM2 未托管"的分支：PM2 的 `redis` app 为
+ * online 只说明 redis-manager 包装进程存活——包装进程见端口已占即采纳现有实例
+ * 进入 keepAlive（见 redis-manager main()），实际承载数据的 redis-server 可能仍是
+ * 升级前的无密码旧实例。那种情况下 `allPortsOpen + areAllInfraOnline` 会判定"健康
+ * 复用"，旧实例永远不被设密，后端 AUTH 恒 NOAUTH。
+ *
+ * @returns {Promise<'ok'|'taken-over'|'blocked'|'configured'>}
+ *   ok         无需再处理：端口未开 / 未配置密码 / 实例密码正确 / 无法判定
+ *   configured 6379 上的外部实例（系统装的 redis）密码已按 .env 生效——本轮运行中
+ *              改密成功（CONFIG SET + CONFIG REWRITE）或上一轮已设好。实例继续运行
+ *              （未杀进程），调用方须把 PM2 的 redis 包装进程拉起以采纳该实例——
+ *              否则端口被外部进程占用会被误报成冲突，且 pm2 status 恒显示 stopped
+ *   taken-over 已停掉本部署旧实例并等端口释放，后续流程以 --requirepass 重拉
+ *   blocked    无法自动修复（归属非本部署 / 归属无法确认 / 停止失败 / 端口未释放），
+ *              调用方中止部署
+ */
+async function ensureRedisPasswordManaged() {
+  const password = loadRedisPassword();
+  if (!password) {
+    // 部署入口 setupOffline → fillEmptySecrets 本应生成该值；走到这里说明 .env 仍为空。
+    // 此时 redis-manager 会以无密码模式拉起实例，后端生产配置校验会拒绝启动。
+    log(
+      'yellow',
+      '  [警告] .env 未配置 REDIS_PASSWORD，跳过 redis 密码校验（将以无密码模式拉起，后端生产配置校验会拒绝启动）...'
+    );
+    return 'ok';
+  }
+  const redisHost = loadRedisHost();
+  if (!(await isPortOpen(PORTS.redis, redisHost))) return 'ok';
+
+  const { state: probe, reason } = await probeRedisAuth(
+    redisHost,
+    PORTS.redis,
+    password
+  );
+  if (probe === 'ok') {
+    // 密码已正确。本部署实例或另一部署目录的实例交给 reconcile 按常规处理；
+    // 系统实例（apt/systemd）密码正确但不在 PM2 托管内，返回 'configured' 让
+    // reconcile 把包装进程拉起采纳它——否则每次运行都误报"端口被外部进程占用"。
+    const pid = getPidByPort(PORTS.redis);
+    if (
+      pid &&
+      detectRedisOwnership(pid) !== 'ours' &&
+      !isForeignCloudCadRuntimeProcess(pid)
+    ) {
+      return 'configured';
+    }
+    return 'ok';
+  }
+  if (probe === 'unknown') {
+    log(
+      'yellow',
+      `  [警告] 无法确认 redis（${redisHost}:${PORTS.redis}）的认证状态（${reason}），跳过密码校验...`
+    );
+    return 'ok';
+  }
+  const desc = probe === 'noauth' ? '未设密码' : '密码与 .env 不一致';
+
+  // 无密码实例直接在运行中改密（`CONFIG SET requirepass`）：不需要先 AUTH，
+  // 因此不依赖进程归属、不杀进程、不动数据、无停机。实例可能是系统装的 redis
+  // （apt/systemd，归属必然判成 foreign），那种情况下只有停进程才真有丢数据风险，
+  // 而 CONFIG SET 完全安全——这是"老无密码实例"的首选修复。
+  // 生效范围是该进程存活期；任何后续重启都由 redis-manager 以
+  // --requirepass <.env> 拉起（见 redis-manager startRedis），密码不会回退。
+  if (probe === 'noauth') {
+    log(
+      'yellow',
+      `  redis（${redisHost}:${PORTS.redis}）未设密码，正在运行中重置为 .env 的 REDIS_PASSWORD（不停止实例）...`
+    );
+    const set = await setRedisPasswordAtRuntime(
+      redisHost,
+      PORTS.redis,
+      password
+    );
+    if (set.ok) {
+      const check = await probeRedisAuth(redisHost, PORTS.redis, password);
+      if (check.state === 'ok') {
+        log(
+          'green',
+          '  [✓] redis 密码已设为 .env 的 REDIS_PASSWORD（未重启实例，数据不受影响）'
+        );
+        // 运行期设置只对该进程生效；写回实例自己的配置文件，否则 systemd 等
+        // 独立托管的系统 redis 重启后会回到无密码，后端 AUTH 立刻 NOAUTH。
+        const persist = await persistRedisConfig(
+          redisHost,
+          PORTS.redis,
+          password
+        );
+        if (persist.ok) {
+          log('green', '  [✓] 密码已写回实例配置文件，重启后仍生效');
+        } else {
+          log(
+            'yellow',
+            `  [提示] 密码未持久化到配置文件（${persist.reason}）：若该实例由命令行参数启动属正常（每次拉起由 --requirepass 注入）；若由 systemd 独立托管，重启后会回到无密码，下次 start.sh 会自动再设一次`
+          );
+        }
+        return 'configured';
+      }
+      log(
+        'yellow',
+        `  [警告] 改密后复核认证状态仍为 ${check.state}，回退到停止旧实例后按 --requirepass 重拉...`
+      );
+    } else {
+      log(
+        'yellow',
+        `  [警告] 运行中改密失败（${set.reason}），回退到停止旧实例后按 --requirepass 重拉...`
+      );
+    }
+  }
+
+  const pid = getPidByPort(PORTS.redis);
+  const ownership = detectRedisOwnership(pid);
+  if (ownership !== 'ours') {
+    const otherDeploy = pid && isForeignCloudCadRuntimeProcess(pid);
+    if (!pid || ownership === 'unknown') {
+      log(
+        'red',
+        `  [错误] redis 端口 ${PORTS.redis} 上的实例${desc}，但无法读取其进程归属（lsof/netstat 缺失？）`
+      );
+      log(
+        'cyan',
+        '  无法确认归属即无法安全接管，部署中止。请手动确认占用 6379 的进程后重跑（或安装 lsof 便于自动识别）。'
+      );
+      return 'blocked';
+    }
+    log(
+      'red',
+      `  [错误] redis 端口 ${PORTS.redis} 由非本部署实例占用（${desc}），且不接受 .env 的 REDIS_PASSWORD`
+    );
+    const hint = otherDeploy
+      ? '  自动接管会覆盖另一部署目录实例的数据，部署中止。请在该目录执行 stop 释放端口后重跑，或在 .env 把 REDIS_PASSWORD 设为该实例的密码。'
+      : probe === 'wrongpass'
+        ? '  该实例已设了另一个密码：运行时改密须先用旧密码 AUTH，我们不知道旧密码，而停掉他人实例可能丢失其数据，因此不自动处理，部署中止。请在 .env 把 REDIS_PASSWORD 设为该实例的密码，或确认其数据可弃后停止该实例再重跑。'
+        : '  自动接管会覆盖他人实例的数据，部署中止。请在 .env 把 REDIS_PASSWORD 设为该实例的密码，或停止该实例后重跑。';
+    log('cyan', hint);
+    return 'blocked';
+  }
+
+  log(
+    'yellow',
+    `  [清理] redis 端口 ${PORTS.redis} 上的旧实例（PID ${pid}）${desc}，停止并交 PM2 按 .env REDIS_PASSWORD 重新拉起...`
+  );
+  if (!stopRedisProcess(pid)) {
+    log('red', `  [错误] 停止旧 redis 实例 (PID ${pid}) 失败，部署中止。`);
+    return 'blocked';
+  }
+  // 等端口真正释放：旧实例收到 SIGTERM 需优雅退出并落盘 AOF；若仍处半关闭状态，
+  // redis-manager 的 keepAlive 会误判"已在运行"采纳临终实例，反复退出被 PM2 重启。
+  const released = await waitPortReleased(PORTS.redis, 15000);
+  if (!released) {
+    log(
+      'red',
+      `  [错误] 旧 redis 实例 (PID ${pid}) 已发停止信号但端口 ${PORTS.redis} 未释放，部署中止。请手动确认后重跑。`
+    );
+    return 'blocked';
+  }
+  log('green', '  [✓] 旧实例已停止，端口已释放，交 PM2 按 .env 密码重新拉起');
+  return 'taken-over';
 }
 
 /**
@@ -201,8 +385,19 @@ function stopForeignService(appName, pid) {
  *      "停止对方服务起自己的"（经对方 PM2_HOME 停止，防 autorestart 竞态）或中止部署；
  *    - 本目录残留（本 runtime 进程 / node 进程）：先按 PID 清掉（避免双实例）再交 PM2 启动；
  *    - 外部系统服务（系统自带 PG/Redis）：告警跳过，不误杀。
+ *
+ * @param {object} [opts]
+ * @param {boolean} [opts.redisPasswordConfigured] 前置门禁确认占用 6379 的外部实例
+ *   （系统装的 redis）密码已按 .env 生效：本轮运行中改密成功（CONFIG SET +
+ *   CONFIG REWRITE）或上一轮已设好。此时数据实例不动，但不报"端口被外部进程占用，
+ *   未接管"的冲突告警，而是把 PM2 的 redis 包装进程拉起/重启以纳入托管——包装进程
+ *   采纳现有实例，不会重启数据实例。
  */
-async function reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap) {
+async function reconcileInfrastructureWithPm2(
+  portOpenMap,
+  pm2StatusMap,
+  { redisPasswordConfigured = false } = {}
+) {
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
   const onlineApps = new Set(
     getPm2StatusList()
@@ -279,12 +474,28 @@ async function reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap) {
         // 清理后需重查端口，但此处直接交给 PM2 启动（start 幂等，若仍占用会失败）
         toStart.push(appName);
       } else if (appName === 'redis') {
-        // 端口被非 PM2 托管进程占用：不误杀。redis 额外做归属确认（升级路径 #419）：
-        // 占用实例 cmdline 含本部署 data/redis 目录 → 本部署旧实例（可能无密码/
-        // 密码不一致，且不在 PM2 托管内）→ 停掉并交 PM2 重启（redis-manager 按
-        // .env REDIS_PASSWORD 以 --requirepass 拉起，密码持久化 + 纳入托管）；
-        // 非本部署实例 / 归属未知 → 不触碰，落入下方冲突告警。
-        if (detectRedisOwnership(pid) === 'ours') {
+        // 前置门禁已运行中设好密码：密码正确、实例不动（不杀进程、数据不受影响），
+        // 只需把 PM2 的 redis 包装进程拉起纳入托管。包装进程见端口已占即采纳现有
+        // 实例进入 keepAlive，因此不会重启/替换系统实例——这是全套基础服务统一
+        // PM2 托管的既定形态（否则 pm2 status 恒显示 stopped，运维侧无法判断状态）。
+        if (redisPasswordConfigured) {
+          log(
+            'cyan',
+            `  [提示] redis 端口 ${PORTS.redis} 由系统实例提供（PID ${pid || '未知'}），密码与 .env 一致；拉起 PM2 包装进程采纳该实例（不重启实例）...`
+          );
+          // 已注册（可能处于 stopped）走 restart，未注册走 start——与下方"端口未开"
+          // 分支的判定一致；对未注册 app 发 restart 会直接报错并中止部署。
+          if (getPm2AppStatus(appName) === 'unknown') {
+            toStart.push(appName);
+          } else {
+            toRestart.push(appName);
+          }
+        } else if (detectRedisOwnership(pid) === 'ours') {
+          // 端口被非 PM2 托管进程占用：不误杀。redis 额外做归属确认（升级路径 #419）：
+          // 占用实例 cmdline 含本部署 data/redis 目录 → 本部署旧实例（可能无密码/
+          // 密码不一致，且不在 PM2 托管内）→ 停掉并交 PM2 重启（redis-manager 按
+          // .env REDIS_PASSWORD 以 --requirepass 拉起，密码持久化 + 纳入托管）；
+          // 非本部署实例 / 归属未知 → 不触碰，落入下方冲突告警。
           log(
             'yellow',
             `  [清理] redis 端口 ${PORTS.redis} 被本部署旧无托管实例占用 (PID ${pid})，停止并交 PM2 重启（按 .env REDIS_PASSWORD 设密）...`

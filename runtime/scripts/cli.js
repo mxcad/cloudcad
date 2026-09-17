@@ -21,6 +21,7 @@ const crypto = require('crypto');
 const {
   setup: setupOffline,
   checkPrismaClientExists,
+  fillEmptySecrets,
 } = require('./setup-offline');
 
 // 导入配置更新器
@@ -288,6 +289,10 @@ async function bootstrap() {
         if (merged !== envContent) {
           fs.writeFileSync(BACKEND_ENV_PATH, merged, 'utf8');
           log('green', '[✓] 已合并 .env.example 新增配置项');
+          // setupOffline 的 fillEmptySecrets 在本合并之前已执行过：合并新带进来的
+          // 空白密钥（如 REDIS_PASSWORD=）须当次补全，否则要等下一次运行才生成，
+          // 本次部署会因密钥缺失被后端生产配置校验拒绝启动。
+          fillEmptySecrets(BACKEND_ENV_PATH);
         }
       } catch (err) {
         log('yellow', `[警告] 合并 .env.example 时出错: ${err.message}`);

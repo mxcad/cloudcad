@@ -13,6 +13,10 @@ const os = require('os');
 const PLATFORM = os.platform();
 const IS_WINDOWS = PLATFORM === 'win32';
 
+// 密码解析与 redis-cli 路径统一从 lib 取（单一事实源：门禁探测与实际生效的
+// 密码不能漂移）。注意 redis-takeover 是纯函数库（无顶层副作用），require 安全。
+const { loadRedisPassword, getRedisCliPath } = require('./lib/redis-takeover');
+
 // 配置
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const RUNTIME_DIR = path.resolve(__dirname, '..');
@@ -23,45 +27,9 @@ const PLATFORM_DIR = IS_WINDOWS
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
-const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
 
 // Redis 端口（从环境变量读取）
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
-
-/**
- * 从 .env 文件加载 REDIS_PASSWORD 配置
- * @returns {string|null} Redis 密码，无密码返回 null
- */
-function loadRedisPassword() {
-  // 优先从环境变量读取
-  if (process.env.REDIS_PASSWORD && process.env.REDIS_PASSWORD.trim()) {
-    return process.env.REDIS_PASSWORD.trim();
-  }
-  
-  // 从 .env 文件读取
-  if (fs.existsSync(BACKEND_ENV_PATH)) {
-    try {
-      const envContent = fs.readFileSync(BACKEND_ENV_PATH, 'utf-8');
-      const lines = envContent.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('REDIS_PASSWORD=')) {
-          const value = trimmed.substring('REDIS_PASSWORD='.length).trim();
-          // 移除可能的引号
-          if ((value.startsWith('"') && value.endsWith('"')) ||
-              (value.startsWith("'") && value.endsWith("'"))) {
-            return value.slice(1, -1);
-          }
-          return value || null;
-        }
-      }
-    } catch (err) {
-      // 读取失败，使用默认值
-    }
-  }
-  
-  return null;
-}
 
 // 可执行文件路径
 const redisServer = USE_RUNTIME
@@ -268,11 +236,7 @@ async function stopRedis() {
   
   log('info', '停止 Redis...');
   
-  const redisCli = USE_RUNTIME
-    ? (IS_WINDOWS
-        ? path.join(PLATFORM_DIR, 'redis', 'redis-cli.exe')
-        : path.join(PLATFORM_DIR, 'redis', 'redis-cli'))
-    : 'redis-cli';
+  const redisCli = getRedisCliPath();
   
   // 加载 Redis 密码配置
   const redisPassword = loadRedisPassword();
