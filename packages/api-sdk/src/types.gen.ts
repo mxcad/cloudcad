@@ -3921,6 +3921,144 @@ export type QueueStatsDto = {
     timeout: number;
 };
 
+export type NoticeResponseDto = {
+    /**
+     * 通知 ID
+     */
+    id: string;
+    /**
+     * 通知类型
+     */
+    kind: string;
+    /**
+     * 通知级别
+     */
+    level: string;
+    /**
+     * 标题
+     */
+    title: string;
+    /**
+     * 正文
+     */
+    body: string;
+    /**
+     * 定向用户 ID，null 表示广播
+     */
+    userId?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 生效开始时间
+     */
+    startAt?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 自动失效时间
+     */
+    endAt?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 到期自动下线
+     */
+    autoExpire: boolean;
+    /**
+     * 发布时间，null 表示草稿
+     */
+    publishedAt?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 已推送时间（null 表示待定时任务推送）
+     */
+    notifiedAt?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 下线时间，null 表示未下线
+     */
+    retractedAt?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 发布人 ID
+     */
+    publishedById?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 更新时间
+     */
+    updatedAt: string;
+};
+
+export type NoticeTicketDto = {
+    /**
+     * 一次性连接票据，5 分钟内有效，连接时立即失效
+     */
+    ticket: string;
+};
+
+export type CreateNoticeDto = {
+    /**
+     * 通知类型
+     */
+    kind: 'system' | 'download';
+    /**
+     * 通知级别，驱动弹框配色与队列优先级
+     */
+    level: 'info' | 'warning' | 'danger';
+    /**
+     * 标题，按管理员填写的原文渲染，不走 i18n
+     */
+    title: string;
+    /**
+     * 正文纯文本，支持换行，按原文渲染，不走 i18n
+     */
+    body: string;
+    /**
+     * 定向用户 ID；为空表示广播给所有用户
+     */
+    userId?: string;
+    /**
+     * 生效开始时间；为空表示发布即生效。未来的 startAt 不会立即推送，由定时任务到点处理
+     */
+    startAt?: string;
+    /**
+     * 失效时间；为空表示手动下线
+     */
+    endAt?: string;
+    /**
+     * 到期自动下线（依赖 endAt）
+     */
+    autoExpire?: boolean;
+    /**
+     * false = 保存为草稿（不发布、不推送）
+     */
+    publishNow?: boolean;
+};
+
+export type UpdateNoticeDto = {
+    /**
+     * 通知级别
+     */
+    level?: 'info' | 'warning' | 'danger';
+    /**
+     * 标题（后端原文）
+     */
+    title?: string;
+    /**
+     * 正文（后端原文，支持换行）
+     */
+    body?: string;
+};
+
 export type UploadExtReferenceDto = {
     /**
      * 源图纸文件的哈希值（主图纸文件的 hash）
@@ -10578,6 +10716,122 @@ export type QueueControllerGetQueueStatsResponses = {
 };
 
 export type QueueControllerGetQueueStatsResponse = QueueControllerGetQueueStatsResponses[keyof QueueControllerGetQueueStatsResponses];
+
+export type NoticeCenterControllerGetCurrentData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices/current';
+};
+
+export type NoticeCenterControllerGetCurrentResponses = {
+    /**
+     * 生效中的通知列表
+     */
+    200: Array<NoticeResponseDto>;
+};
+
+export type NoticeCenterControllerGetCurrentResponse = NoticeCenterControllerGetCurrentResponses[keyof NoticeCenterControllerGetCurrentResponses];
+
+export type NoticeCenterControllerIssueTicketData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices/stream/ticket';
+};
+
+export type NoticeCenterControllerIssueTicketResponses = {
+    /**
+     * 一次性票据（5 分钟内有效，连接时立即失效）
+     */
+    200: NoticeTicketDto;
+};
+
+export type NoticeCenterControllerIssueTicketResponse = NoticeCenterControllerIssueTicketResponses[keyof NoticeCenterControllerIssueTicketResponses];
+
+export type NoticeCenterControllerOpenStreamData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * POST /notices/stream/ticket 获取
+         */
+        ticket: string;
+    };
+    url: '/api/v1/notices/stream';
+};
+
+export type NoticeCenterControllerOpenStreamResponses = {
+    200: unknown;
+};
+
+export type NoticeCenterControllerListAllData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices';
+};
+
+export type NoticeCenterControllerListAllResponses = {
+    /**
+     * 全部通知
+     */
+    200: Array<NoticeResponseDto>;
+};
+
+export type NoticeCenterControllerListAllResponse = NoticeCenterControllerListAllResponses[keyof NoticeCenterControllerListAllResponses];
+
+export type NoticeCenterControllerCreateData = {
+    body: CreateNoticeDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices';
+};
+
+export type NoticeCenterControllerCreateResponses = {
+    /**
+     * 已创建
+     */
+    201: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerCreateResponse = NoticeCenterControllerCreateResponses[keyof NoticeCenterControllerCreateResponses];
+
+export type NoticeCenterControllerUpdateData = {
+    body: UpdateNoticeDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}';
+};
+
+export type NoticeCenterControllerUpdateResponses = {
+    /**
+     * 已更新
+     */
+    200: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerUpdateResponse = NoticeCenterControllerUpdateResponses[keyof NoticeCenterControllerUpdateResponses];
+
+export type NoticeCenterControllerRetractData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}/retract';
+};
+
+export type NoticeCenterControllerRetractResponses = {
+    /**
+     * 已下线
+     */
+    200: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerRetractResponse = NoticeCenterControllerRetractResponses[keyof NoticeCenterControllerRetractResponses];
 
 export type PublicFileControllerAccessFileData = {
     body?: never;

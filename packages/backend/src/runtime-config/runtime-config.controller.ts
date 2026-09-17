@@ -63,7 +63,6 @@ export class RuntimeConfigController {
       supportEmail: 'support@example.com',
       supportPhone: '400-123-4567',
       allowRegister: true,
-      systemNotice: '系统维护中',
     },
   })
   async getPublicConfigs(): Promise<Record<string, string | number | boolean>> {

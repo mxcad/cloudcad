@@ -69,6 +69,7 @@ import { AlertModule } from './alert/alert.module';
 import { TaskRunModule } from './task-run/task-run.module';
 import { BackupModule } from './backup/backup.module';
 import { ConversionMonitorModule } from './conversion-monitor/conversion-monitor.module';
+import { NoticeCenterModule } from './notice-center/notice-center.module';
 
 // env 文件查找路径：支持多种运行模式
 // 1. 部署模式 (pkg/node)：优先从运行目录查找 (process.cwd())
@@ -218,6 +219,7 @@ const logLevel = process.env.LOG_LEVEL || (isProduction ? 'warn' : 'debug');
     AuditLogModule,
     VersionControlModule,
     RuntimeConfigModule,
+    NoticeCenterModule,
     PublicFileModule,
     LibraryModule,
     ShareModule,

@@ -805,3 +805,28 @@ model TaskRun {
   @@index([startedAt])
   @@map("task_runs")
 }
+
+// 通用通知（部署公告 / 定向推送），非运维告警（AlertRecord）。
+// kind/level 用 String 而非 Prisma 枚举：枚举不能直接 @ApiProperty，且公告类型会随业务增长。
+// publishedAt=null AND retractedAt=null = 草稿；retractedAt!=null = 已下线。
+// notifiedAt 用于 CAS 抢占「推送过」状态，多实例下保证同一次迁移只 emit 一次。
+model Notice {
+  id            String    @id @default(cuid())
+  kind          String
+  level         String    @default("info")
+  title         String
+  body          String
+  userId        String?
+  startAt       DateTime?
+  endAt         DateTime?
+  autoExpire    Boolean   @default(false)
+  publishedAt   DateTime?
+  notifiedAt    DateTime?
+  retractedAt   DateTime?
+  publishedById String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([publishedAt, startAt, endAt])
+  @@map("notices")
+}

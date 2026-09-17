@@ -307,15 +307,10 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
   },
 
-  // 系统配置
-  {
-    key: 'systemNotice',
-    type: 'string',
-    category: 'system',
-    description: '系统公告',
-    defaultValue: '',
-    isPublic: true,
-  },
+  // 系统公告已迁到 notice-center 模块（notices 表 + SSE 实时推送），
+  // 运行时配置不再暴露 systemNotice —— 留在这里会变成「填了没反应」的陷阱字段。
+  // 存量 DB 行会成为惰性孤儿键（仍进 public 响应，但已无任何读取方），不做删行迁移，
+  // 避免静默清掉某个部署环境正在生效的公告。
 
   // 协同配置
   {
