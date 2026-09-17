@@ -803,17 +803,16 @@ onMounted(() => {
   <div class="subpage">
     <van-nav-bar :title="projectName" left-arrow @click-left="() => router.back()" />
 
-    <!-- B-15 项目上传配额（对齐 PC FileSystemHeader：进度条 + 90%/超限阈值配色） -->
-    <div v-if="activeTab === 0 && projectQuota && projectQuota.limit > 0" class="quota-bar">
-      <span class="quota-label">{{ t('上传上限') }}</span>
-      <div class="quota-track">
-        <div class="quota-fill" :style="{ width: quotaPercent + '%', background: quotaColor }" />
-      </div>
-      <span class="quota-text">{{ quotaText }}</span>
-    </div>
-
     <van-tabs v-model:active="activeTab" line-width="28" class="detail-tabs">
       <van-tab title="文件">
+        <!-- B-15 项目上传配额（对齐 PC FileSystemHeader：进度条 + 90%/超限阈值配色） -->
+        <div v-if="projectQuota && projectQuota.limit > 0" class="quota-bar">
+          <span class="quota-label">{{ t('上传上限') }}</span>
+          <div class="quota-track">
+            <div class="quota-fill" :style="{ width: quotaPercent + '%', background: quotaColor }" />
+          </div>
+          <span class="quota-text">{{ quotaText }}</span>
+        </div>
         <div v-if="fileError && projectFiles.length === 0" class="state-box">
           <span class="state-text">{{ fileError }}</span>
           <van-button size="small" round @click="loadFiles">重试</van-button>
