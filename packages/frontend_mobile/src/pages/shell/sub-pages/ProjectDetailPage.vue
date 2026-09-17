@@ -287,12 +287,26 @@ function onMemberSearchInput(val: string) {
 
 function selectUser(user: any) {
   selectedUser.value = user
-  showAddMember.value = false
   // Auto-select first non-owner role
   if (roles.value.length > 0) {
     const firstRole = roles.value.find((r: any) => !r.isOwnerRole)
     selectedRoleId.value = firstRole?.id ?? roles.value[0]?.id ?? ''
   }
+}
+
+// 每次打开都从「选用户」第一步重来：清掉上次的搜索词/结果/已选用户/角色，
+// 同时重拉角色（首次拉取失败时角色列表为空，确认按钮会永久禁用）
+function openAddMemberDialog() {
+  if (memberSearchTimer.value) {
+    clearTimeout(memberSearchTimer.value)
+    memberSearchTimer.value = null
+  }
+  searchKeyword.value = ''
+  searchResults.value = []
+  selectedUser.value = null
+  selectedRoleId.value = ''
+  showAddMember.value = true
+  loadRoles()
 }
 
 async function onAddMemberConfirm() {
@@ -326,6 +340,7 @@ async function onRemoveMember(member: any) {
     await showDialog({
       title: '移除成员',
       message: `确定移除成员 ${member.nickname ?? member.username ?? member.email ?? '未知'} 吗？`,
+      showCancelButton: true,
     })
     showLoadingToast({ message: '移除中...', forbidClick: true })
     const res = await memberControllerRemoveProjectMember({
@@ -450,7 +465,7 @@ type FabAction = ActionSheetAction & { key: FabActionKey }
 const fabActions = computed<FabAction[]>(() => [
   { key: 'createFolder', name: t('新建文件夹'), icon: 'bag-o' },
   { key: 'createDrawing', name: t('新建图纸'), icon: 'description' },
-  { key: 'uploadFile', name: t('上传文件'), icon: 'upload' },
+  { key: 'uploadFile', name: t('上传文件'), icon: 'arrow-up' },
   { key: 'downloadTasks', name: t('下载任务'), icon: 'down' },
 ])
 
@@ -862,7 +877,7 @@ onMounted(() => {
         <div v-else class="member-list">
           <div class="member-header">
             <span class="member-count">{{ members.length }} 人</span>
-            <button v-if="canManageMembers" class="add-member-btn" @click="showAddMember = true">
+            <button v-if="canManageMembers" class="add-member-btn" @click="openAddMemberDialog">
               <van-icon name="plus" size="14" />
               添加成员
             </button>
@@ -1300,12 +1315,47 @@ onMounted(() => {
 .member-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
+/* 行内角色 chip。vant 自带的 ▼ 是绝对定位（right:-4px），会探出 bar 背景外（即用户看到的
+   「右侧图标有一半不在背景内」），改成关掉它、由 item 的流内伪元素画三角，位置不再依赖箭头宽度。
+   圆角加在 bar 上而非容器上——容器 overflow:hidden 可能裁掉绝对定位的角色面板。 */
 .role-dropdown {
-  min-width: 80px;
+  flex-shrink: 0;
+
+  :deep(.van-dropdown-menu__bar) {
+    height: 32px;
+    background: var(--bg-secondary);
+    box-shadow: none;
+    border-radius: 6px;
+  }
+
+  :deep(.van-dropdown-menu__item) {
+    gap: 6px;
+    padding: 0 10px 0 12px;
+  }
+
+  :deep(.van-dropdown-menu__title) {
+    padding: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  :deep(.van-dropdown-menu__title:after) {
+    display: none;
+  }
+
+  :deep(.van-dropdown-menu__item::after) {
+    content: '';
+    flex-shrink: 0;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--text-tertiary);
+  }
 }
 
 .member-remove-btn {
