@@ -7,8 +7,9 @@
  *
  * 设计：
  * - getSharedEntries()        —— 两类包共享的条目（单一事实源）
- * - getDeployIncludeList()    —— 全量部署包 = 共享 + deploy 独有（平台运行时/store/说明）
- * - getUpgradeIncludeList()   —— 增量升级包 = 共享（不含平台运行时与部署说明）
+ * - getLaunchScriptEntries()  —— 启动/停止入口脚本（deploy 独有，理由见函数头注释）
+ * - getDeployIncludeList()    —— 全量部署包 = 共享 + 入口脚本 + deploy 独有（平台运行时/store/说明）
+ * - getUpgradeIncludeList()   —— 增量升级包 = 共享（不含平台运行时、部署说明与入口脚本）
  *
  * 顺序约定：deploy 独有的平台运行时与 store 须保持在 pnpm-lock.yaml 之前，
  * 部署说明保持在末尾 —— 与原 pack-offline.js 两处清单的复制顺序逐字节一致，
@@ -135,15 +136,28 @@ function getSharedEntries() {
     { src: 'pnpm-lock.yaml', dest: 'pnpm-lock.yaml' },
     { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml' },
     { src: 'package.json', dest: 'package.json' },
-    // 启动/停止脚本（单一事实源 = scripts/pack-lib/templates/，
-    // 仓库根目录不常驻这些文件，打包时复制到部署包/升级包根目录）
+  ];
+}
+
+// 启动/停止入口脚本（单一事实源 = scripts/pack-lib/templates/，仓库根目录不常驻这些文件）
+//
+// 【deploy 独有，upgrade 不含】理由两条，缺一条该设计就不成立：
+// 1. 升级包不含 runtime/linux 与 .pnpm-store-deploy，无法独立启动，只能解压覆盖
+//    在既有部署之上；包内入口脚本唯一作用就是覆盖目标机已存在的同名文件。
+// 2. Windows 打包机（pack-linux-deploy.js --upgrade 无条件 SKIP_PLATFORM_GUARD=1）
+//    直打 tar.gz 时，tar 无法从 NTFS 读出 Unix 执行位（实测 bsdtar 全部写 0666），
+//    于是升级包把部署包带的 -rwxr-xr-x 入口脚本覆盖成 0666，用户 ./start.sh 报
+//    Permission denied。入口脚本只是几行 exec 包装，业务逻辑全在 runtime/scripts/
+//    cli.js（已在共享清单内、随升级包更新），故升级包不需要自带。
+function getLaunchScriptEntries() {
+  return [
     { src: 'scripts/pack-lib/templates/cloudcad.bat', dest: 'cloudcad.bat' },
     { src: 'scripts/pack-lib/templates/cloudcad.sh', dest: 'cloudcad.sh' },
     { src: 'scripts/pack-lib/templates/start.bat', dest: 'start.bat' },
     { src: 'scripts/pack-lib/templates/start.sh', dest: 'start.sh' },
     { src: 'scripts/pack-lib/templates/stop.bat', dest: 'stop.bat' },
     { src: 'scripts/pack-lib/templates/stop.sh', dest: 'stop.sh' },
-    // 离线命令行入口模板（部署包/升级包根目录附带，方便打开离线 Node shell）
+    // 离线命令行入口模板（部署包根目录附带，方便打开离线 Node shell）
     { src: 'scripts/pack-lib/templates/cloudcad-shell.sh', dest: 'cloudcad-shell.sh' },
     { src: 'scripts/pack-lib/templates/cloudcad-shell.cmd', dest: 'cloudcad-shell.cmd' },
   ];
@@ -163,9 +177,10 @@ function appendPrivateEntries(items, variant) {
 
 /**
  * 全量部署包正向清单
- * = 共享条目，其中：
+ * = 共享条目 + 启动入口脚本，其中：
  *   - 平台运行时二进制（deploy 独有）插在 ecosystem 之后、pnpm-lock.yaml 之前
  *   - 生产依赖 store（deploy 独有）紧随平台运行时
+ *   - 启动入口脚本（deploy 独有）在 package.json 之后、部署说明之前
  *   - 部署说明（deploy 独有）保持在末尾
  */
 function getDeployIncludeList(platform, variant = 'oss') {
@@ -185,6 +200,8 @@ function getDeployIncludeList(platform, variant = 'oss') {
       });
     }
   }
+  // deploy 独有：启动/停止入口脚本（追加在部署说明之前，保持历史复制顺序不变）
+  for (const entry of getLaunchScriptEntries()) items.push(entry);
   // deploy 独有：部署说明文档（末尾）
   items.push({ src: '部署说明.txt', dest: '部署说明.txt' });
 
@@ -193,7 +210,7 @@ function getDeployIncludeList(platform, variant = 'oss') {
 
 /**
  * 增量升级包正向清单
- * = 共享条目（不含平台运行时二进制 / 完整 store / 部署说明）
+ * = 共享条目（不含平台运行时二进制 / 完整 store / 部署说明 / 启动入口脚本）
  * 依赖更新由目标机自动完成：start → cli.js bootstrap → shouldReinstallDependencies
  * （.deploy-lock-hash vs pnpm-lock.yaml 对比）→ 不一致时自动 pnpm install --offline --prod
  */
@@ -204,6 +221,7 @@ function getUpgradeIncludeList(platform, variant = 'oss') {
 
 module.exports = {
   getSharedEntries,
+  getLaunchScriptEntries,
   getDeployIncludeList,
   getUpgradeIncludeList,
 };
