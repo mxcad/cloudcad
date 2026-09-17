@@ -17,7 +17,7 @@ import React, {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { Loader2, X, Search, ListTodo } from 'lucide-react';
+import { X, Search, ListTodo } from 'lucide-react';
 import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
 import { getApiBaseUrl } from '@/config/apiConfig';
@@ -31,6 +31,7 @@ import {
 } from '@/stores/conversionQueueStore';
 import { useBatchDownload } from '@/hooks/file-system/useBatchDownload';
 import { usePanelAutoCollapse } from '@/hooks/conversion/usePanelAutoCollapse';
+import { useConversionQuota } from '@/hooks/conversion/useConversionQuota';
 import { useUploadManager } from '@/hooks/useUploadManager';
 import type { UploadTask } from '@/utils/uploadManager';
 import { ConversionTab } from './ConversionTab';
@@ -38,7 +39,7 @@ import { DownloadTab } from './DownloadTab';
 import { UploadTab } from './UploadTab';
 import './ConversionPanel.css';
 
-/** 拖动判定阈值（px）：pointerdown 后位移小于该值视为「点击」（收起态药丸点击展开），超过才进入拖动 */
+/** 拖动判定阈值（px）：header pointerdown 后位移小于该值视为「点击」，不进入拖动 */
 const DRAG_THRESHOLD_PX = 5;
 /** 滚动容器距底部多少 px 时触发加载下一页历史 */
 const LOAD_MORE_THRESHOLD_PX = 48;
@@ -51,7 +52,7 @@ const PANEL_EDGE_MARGIN = 8;
 /**
  * 把 store 里的 position + size 按面板尺寸 clamp 回视口内（窗口 resize / 展开面板共用）。
  *
- * 药丸拖动时按药丸自身尺寸 clamp（约 50×40），同一 position 展开成 320×420 面板必然越界，
+ * 上次持久化的位置是按更小/更大的尺寸记录的，同一 position 换尺寸后必然可能越界，
  * 故展开前必须按面板尺寸重算一次——否则首帧渲染在屏外，要手动拖一下 header 才弹回。
  * position 为 null 时面板走 CSS 右下角默认定位，天然在屏内，无需处理。
  */
@@ -80,12 +81,29 @@ function clampPanelToViewport(): void {
   if (x !== pos.x || y !== pos.y) state.setPosition({ x, y });
 }
 
+/**
+ * 切换文件队列面板显隐（#497：悬浮药丸已取消，入口只剩这两处）。
+ *
+ * 顶栏按钮（Layout）与 CAD 命令 Mx_ToggleFileQueue 共用。展开时先按面板尺寸 clamp 回
+ * 视口内，保证首帧就在屏内；走 setCollapsed 清掉任务驱动标记，故用户显式打开的面板
+ * 不会被「无 active 任务后延迟自动收起」收掉。
+ */
+export function toggleFileQueuePanel(): void {
+  const state = useConversionQueueStore.getState();
+  if (state.collapsed) {
+    clampPanelToViewport();
+    state.setCollapsed(false);
+  } else {
+    state.setCollapsed(true);
+  }
+}
+
 // ==================== ConversionPanel ====================
 
 /**
  * 统一队列面板（#471 / #475 / S6 / #476）
  *
- * 悬浮可拖动按钮（默认右下角，常驻可见，S6-2）+ 展开面板，内含三个 tab：
+ * 可拖动的浮动面板（默认右下角，位置 + 尺寸持久化，#476）+ 三个 tab：
  * - 转换 tab：云端 + 本地结合列表（live active+failed + 本地）+ 云端已完成历史（分页滚动加载）。
  *   云端行 = 用户的文件（DB fileSystemNode），仅「打开」；本地行 = 临时日志（localStorage 自动过期），纯展示。
  * - 下载 tab：批量下载任务（useBatchDownloadStore，进度 + ZIP/逐个下载）。记录由后端 cron 自动过期，不做手动删除。
@@ -118,7 +136,16 @@ export function ConversionPanel() {
     refreshHistory,
     loadMoreHistory,
     cancelTask,
+    retryTask,
   } = useConversionQueueStore();
+
+  /** 转换配额（ADR-0043 只读）：本窗口剩余额度，仅展示 */
+  const { quota, refresh: refreshQuota } = useConversionQuota();
+
+  /** 失败任务重试（原地重新排队，不占配额、不重新上传；完成后刷新配额条） */
+  const handleRetry = (task: ConversionTask) => {
+    void retryTask(task).then(() => refreshQuota());
+  };
 
   /** 下载/上传 tab 独立搜索词（转换 tab 用 store 的 search，因其触发历史重取；三 tab 各持一词，切 tab 互不串扰） */
   const [downloadSearch, setDownloadSearch] = useState('');
@@ -251,13 +278,6 @@ export function ConversionPanel() {
     expandByTask();
   }, [expandByTask]);
 
-  // 用户显式展开（点击药丸）：走 setCollapsed 清掉任务驱动标记，面板保持用户
-  // 选择的状态，不因无任务被自动收起
-  const expandPanelByUser = useCallback(() => {
-    clampPanelToViewport();
-    setCollapsed(false);
-  }, [setCollapsed]);
-
   const { activeDownloadCount } = usePanelAutoCollapse({
     hasActive,
     activeCount,
@@ -271,62 +291,58 @@ export function ConversionPanel() {
   });
   const hasActiveDownload = activeDownloadCount > 0;
 
-  // 拖动 + 点击逻辑（收起态药丸 / 展开态 header 共用）：
+  // 拖动逻辑（展开态 header）：
   // - pointerdown 记录指针相对定位盒的偏移（position 为视口绝对坐标，应用到外层 portal position: fixed），
   //   避免按下瞬间元素跳到指针处；
-  // - 位移小于 DRAG_THRESHOLD_PX 视为「点击」，pointerup 时回调 onNoMove（收起态药丸点击展开），超过才拖动；
+  // - 位移小于 DRAG_THRESHOLD_PX 视为「点击」，不进入拖动；
   // - 位置 clamp 在视口内。
-  const beginDrag = useCallback(
-    (e: React.PointerEvent, onNoMove?: () => void) => {
-      // 收起态：药丸自身即定位盒；展开态：从 header 拖动 → 所属面板是定位盒
-      const box =
-        (e.currentTarget as HTMLElement).closest('.conversion-panel') ??
-        e.currentTarget;
-      const rect = (box as HTMLElement).getBoundingClientRect();
-      const state = {
-        dx: e.clientX - rect.left,
-        dy: e.clientY - rect.top,
-        width: rect.width,
-        height: rect.height,
-        startX: e.clientX,
-        startY: e.clientY,
-        moved: false,
-      };
-      e.preventDefault();
+  const beginDrag = useCallback((e: React.PointerEvent) => {
+    // 从 header 拖动 → 所属面板是定位盒
+    const box =
+      (e.currentTarget as HTMLElement).closest('.conversion-panel') ??
+      e.currentTarget;
+    const rect = (box as HTMLElement).getBoundingClientRect();
+    const state = {
+      dx: e.clientX - rect.left,
+      dy: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+      startX: e.clientX,
+      startY: e.clientY,
+      moved: false,
+    };
+    e.preventDefault();
 
-      const onMove = (ev: PointerEvent) => {
-        if (!state.moved) {
-          // 未超阈值 = 点击，不拖动
-          if (
-            Math.abs(ev.clientX - state.startX) < DRAG_THRESHOLD_PX &&
-            Math.abs(ev.clientY - state.startY) < DRAG_THRESHOLD_PX
-          ) {
-            return;
-          }
-          state.moved = true;
+    const onMove = (ev: PointerEvent) => {
+      if (!state.moved) {
+        // 未超阈值 = 点击，不拖动
+        if (
+          Math.abs(ev.clientX - state.startX) < DRAG_THRESHOLD_PX &&
+          Math.abs(ev.clientY - state.startY) < DRAG_THRESHOLD_PX
+        ) {
+          return;
         }
-        const x = Math.min(
-          Math.max(8, ev.clientX - state.dx),
-          Math.max(8, window.innerWidth - state.width - 8)
-        );
-        const y = Math.min(
-          Math.max(8, ev.clientY - state.dy),
-          Math.max(8, window.innerHeight - state.height - 8)
-        );
-        setPosition({ x, y });
-      };
-      const endDrag = () => {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', endDrag);
-        window.removeEventListener('pointercancel', endDrag);
-        if (!state.moved && onNoMove) onNoMove();
-      };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', endDrag);
-      window.addEventListener('pointercancel', endDrag);
-    },
-    [setPosition]
-  );
+        state.moved = true;
+      }
+      const x = Math.min(
+        Math.max(8, ev.clientX - state.dx),
+        Math.max(8, window.innerWidth - state.width - 8)
+      );
+      const y = Math.min(
+        Math.max(8, ev.clientY - state.dy),
+        Math.max(8, window.innerHeight - state.height - 8)
+      );
+      setPosition({ x, y });
+    };
+    const endDrag = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', endDrag);
+      window.removeEventListener('pointercancel', endDrag);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+  }, [setPosition]);
 
   // 边缘/角落 resize（#476）：四边（e/w/s/n）+ 四角（se/sw/ne/nw）手柄。
   // - pointerdown 记录起点 + 起始宽高 + 左上角（position 为 null 时先固定到当前 rect，保证缩放基准一致）；
@@ -488,206 +504,205 @@ export function ConversionPanel() {
     ? { left: position.x, top: position.y, right: 'auto', bottom: 'auto' }
     : {};
 
+  // 隐藏态不渲染任何可见元素（#497 取消悬浮药丸）：入口迁移到顶栏按钮（Layout）
+  // 与 CAD 命令 Mx_ToggleFileQueue。拖拽 + 8 向缩放 + 位置持久化在展开态保留。
+  if (collapsed) return null;
+
   return createPortal(
     <div
       className="conversion-panel-portal"
       style={{ zIndex: Z_LAYERS.CONVERSION_PANEL, ...buttonStyle }}
     >
-      {collapsed ? (
+      <div
+        className="conversion-panel"
+        style={{ width: size.width, height: size.height }}
+      >
+        {/* 头部（可拖动 + 隐藏按钮：隐藏后无任何可见元素，入口只剩顶栏按钮 + CAD 命令） */}
         <div
-          className="conversion-collapsed"
-          onPointerDown={(e) => beginDrag(e, expandPanelByUser)}
-          title={t('点击展开转换队列，拖动调整位置')}
+          className="conversion-header"
+          onPointerDown={(e) => beginDrag(e)}
+          title={t('拖动调整位置')}
         >
-          {hasActive || uploadActiveCount > 0 || hasActiveDownload ? (
-            <Loader2 size={18} className="conv-icon spin" />
-          ) : (
-            <ListTodo size={18} />
-          )}
-          {activeCount + uploadActiveCount + (hasActiveDownload ? 1 : 0) >
-            0 && (
-            <span className="conv-badge">
-              {activeCount + uploadActiveCount + (hasActiveDownload ? 1 : 0)}
-            </span>
-          )}
+          <span className="conversion-title">
+            <ListTodo size={14} />
+            {t('文件队列')}
+            {activeCount + uploadActiveCount + (hasActiveDownload ? 1 : 0) >
+              0 && (
+              <span className="conv-badge">
+                {activeCount +
+                  uploadActiveCount +
+                  (hasActiveDownload ? 1 : 0)}
+              </span>
+            )}
+          </span>
+
+          <button
+            className="conv-collapse"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setCollapsed(true)}
+            title={t('隐藏')}
+            aria-label={t('隐藏')}
+          >
+            <X size={14} />
+          </button>
         </div>
-      ) : (
+
+        {/* 转换配额条（ADR-0043 只读）：本窗口剩余额度，登录用户按 userId、游客按 IP */}
+        {quota && (
+          <div className="conversion-quota">
+            {quota.unlimited
+              ? t('转换次数不限')
+              : t('本 {h} 小时剩 {n}/{m} 次', {
+                h: quota.windowHours,
+                n: quota.remaining,
+                m: quota.limit,
+              })}
+          </div>
+        )}
+
+        {/* Tab 切换：转换 / 下载 / 上传，每个 tab 独立；role=tablist + 左右方向键切换（roving tabindex） */}
         <div
-          className="conversion-panel"
-          style={{ width: size.width, height: size.height }}
+          className="conversion-tabs"
+          role="tablist"
+          onKeyDown={handleTabKeyDown}
         >
-          {/* 头部（可拖动 + 收起按钮：点击收起为悬浮药丸，D1 常驻入口） */}
-          <div
-            className="conversion-header"
-            onPointerDown={(e) => beginDrag(e)}
-            title={t('拖动调整位置')}
+          <button
+            ref={(el) => {
+              tabRefs.current.conversion = el;
+            }}
+            role="tab"
+            aria-selected={activeTab === 'conversion'}
+            tabIndex={activeTab === 'conversion' ? 0 : -1}
+            className={`conversion-tab ${activeTab === 'conversion' ? 'active' : ''}`}
+            onClick={() => setActiveTab('conversion')}
           >
-            <span className="conversion-title">
-              <ListTodo size={14} />
-              {t('转换队列')}
-              {activeCount + uploadActiveCount + (hasActiveDownload ? 1 : 0) >
-                0 && (
-                <span className="conv-badge">
-                  {activeCount +
-                    uploadActiveCount +
-                    (hasActiveDownload ? 1 : 0)}
-                </span>
-              )}
-            </span>
-
-            <button
-              className="conv-collapse"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => setCollapsed(true)}
-              title={t('收起')}
-            >
-              <X size={14} />
-            </button>
-          </div>
-
-           {/* Tab 切换：转换 / 下载 / 上传，每个 tab 独立；role=tablist + 左右方向键切换（roving tabindex） */}
-          <div
-            className="conversion-tabs"
-            role="tablist"
-            onKeyDown={handleTabKeyDown}
+            {t('转换')}
+            {activeCount > 0 && (
+              <span className="conv-badge">{activeCount}</span>
+            )}
+          </button>
+          <button
+            ref={(el) => {
+              tabRefs.current.download = el;
+            }}
+            role="tab"
+            aria-selected={activeTab === 'download'}
+            tabIndex={activeTab === 'download' ? 0 : -1}
+            className={`conversion-tab ${activeTab === 'download' ? 'active' : ''}`}
+            onClick={() => setActiveTab('download')}
           >
-            <button
-              ref={(el) => {
-                tabRefs.current.conversion = el;
-              }}
-              role="tab"
-              aria-selected={activeTab === 'conversion'}
-              tabIndex={activeTab === 'conversion' ? 0 : -1}
-              className={`conversion-tab ${activeTab === 'conversion' ? 'active' : ''}`}
-              onClick={() => setActiveTab('conversion')}
-            >
-              {t('转换')}
-              {activeCount > 0 && (
-                <span className="conv-badge">{activeCount}</span>
-              )}
-            </button>
-            <button
-              ref={(el) => {
-                tabRefs.current.download = el;
-              }}
-              role="tab"
-              aria-selected={activeTab === 'download'}
-              tabIndex={activeTab === 'download' ? 0 : -1}
-              className={`conversion-tab ${activeTab === 'download' ? 'active' : ''}`}
-              onClick={() => setActiveTab('download')}
-            >
-              {t('下载')}
-              {activeDownloadCount > 0 && (
-                <span className="conv-badge">{activeDownloadCount}</span>
-              )}
-            </button>
-            <button
-              ref={(el) => {
-                tabRefs.current.upload = el;
-              }}
-              role="tab"
-              aria-selected={activeTab === 'upload'}
-              tabIndex={activeTab === 'upload' ? 0 : -1}
-              className={`conversion-tab ${activeTab === 'upload' ? 'active' : ''}`}
-              onClick={() => setActiveTab('upload')}
-            >
-              {t('上传')}
-              {uploadStats.uploading + uploadStats.waiting + uploadStats.paused > 0 && (
-                <span className="conv-badge">
-                  {uploadStats.uploading + uploadStats.waiting + uploadStats.paused}
-                </span>
-              )}
-            </button>
-          </div>
+            {t('下载')}
+            {activeDownloadCount > 0 && (
+              <span className="conv-badge">{activeDownloadCount}</span>
+            )}
+          </button>
+          <button
+            ref={(el) => {
+              tabRefs.current.upload = el;
+            }}
+            role="tab"
+            aria-selected={activeTab === 'upload'}
+            tabIndex={activeTab === 'upload' ? 0 : -1}
+            className={`conversion-tab ${activeTab === 'upload' ? 'active' : ''}`}
+            onClick={() => setActiveTab('upload')}
+          >
+            {t('上传')}
+            {uploadStats.uploading + uploadStats.waiting + uploadStats.paused > 0 && (
+              <span className="conv-badge">
+                {uploadStats.uploading + uploadStats.waiting + uploadStats.paused}
+              </span>
+            )}
+          </button>
+        </div>
 
-          {/* 搜索框（三 tab 各持独立搜索词，随激活 tab 切换；转换 tab 额外触发历史重取） */}
-          <div className="conversion-search">
-            <Search size={13} />
-            <input
-              value={activeSearch}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              placeholder={t('搜索文件名...')}
-            />
-          </div>
+        {/* 搜索框（三 tab 各持独立搜索词，随激活 tab 切换；转换 tab 额外触发历史重取） */}
+        <div className="conversion-search">
+          <Search size={13} />
+          <input
+            value={activeSearch}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder={t('搜索文件名...')}
+          />
+        </div>
 
-          {/* 上传区块（仅上传 tab 显示；常显，无任务时显示空态，历史任务由 UploadManager 从 localStorage 恢复） */}
-          {activeTab === 'upload' && (
-            <UploadTab search={uploadSearch} onOpen={handleOpenUpload} />
-          )}
+        {/* 上传区块（仅上传 tab 显示；常显，无任务时显示空态，历史任务由 UploadManager 从 localStorage 恢复） */}
+        {activeTab === 'upload' && (
+          <UploadTab search={uploadSearch} onOpen={handleOpenUpload} />
+        )}
 
-          {/* 转换/下载区块（live/本地在前 + 已完成历史在后，滚动加载更多）。
-              上传 tab 不渲染：上传区块自持滚动容器，独占 body 区域 */}
-          {activeTab !== 'upload' && (
-            <div
-              className="conversion-body"
-              onScroll={handleBodyScroll}
-            >
-              {activeTab === 'conversion' && (
+        {/* 转换/下载区块（live/本地在前 + 已完成历史在后，滚动加载更多）。
+            上传 tab 不渲染：上传区块自持滚动容器，独占 body 区域 */}
+        {activeTab !== 'upload' && (
+          <div
+            className="conversion-body"
+            onScroll={handleBodyScroll}
+          >
+            {activeTab === 'conversion' && (
                 <ConversionTab
                   filteredTasks={filteredTasks}
                   filteredHistory={filteredHistory}
                   search={search}
                   onOpen={handleOpen}
                   onCancel={cancelTask}
+                  onRetry={handleRetry}
                   historyLoading={historyLoading}
                   historyHasMore={historyHasMore}
                   historyCount={history.length}
                 />
-              )}
+            )}
 
-              {activeTab === 'download' && (
-                <DownloadTab
-                  search={downloadSearch}
-                  onRetry={retryDownloadTask}
-                  onRetryFailed={retryDownloadFailedItems}
-                />
-              )}
-            </div>
-          )}
+            {activeTab === 'download' && (
+              <DownloadTab
+                search={downloadSearch}
+                onRetry={retryDownloadTask}
+                onRetryFailed={retryDownloadFailedItems}
+              />
+            )}
+          </div>
+        )}
 
-          {/* 边缘/角落 resize 手柄（#476）：四边（左/右/上/下）+ 四角 */}
-          <div
-            className="conversion-resize-right"
-            onPointerDown={(e) => beginResize(e, 'e')}
-            title={t('拖动调整宽度')}
-          />
-          <div
-            className="conversion-resize-left"
-            onPointerDown={(e) => beginResize(e, 'w')}
-            title={t('拖动调整宽度')}
-          />
-          <div
-            className="conversion-resize-bottom"
-            onPointerDown={(e) => beginResize(e, 's')}
-            title={t('拖动调整高度')}
-          />
-          <div
-            className="conversion-resize-top"
-            onPointerDown={(e) => beginResize(e, 'n')}
-            title={t('拖动调整高度')}
-          />
-          <div
-            className="conversion-resize-corner-se"
-            onPointerDown={(e) => beginResize(e, 'se')}
-            title={t('拖动调整大小')}
-          />
-          <div
-            className="conversion-resize-corner-nw"
-            onPointerDown={(e) => beginResize(e, 'nw')}
-            title={t('拖动调整大小')}
-          />
-          <div
-            className="conversion-resize-corner-ne"
-            onPointerDown={(e) => beginResize(e, 'ne')}
-            title={t('拖动调整大小')}
-          />
-          <div
-            className="conversion-resize-corner-sw"
-            onPointerDown={(e) => beginResize(e, 'sw')}
-            title={t('拖动调整大小')}
-          />
-        </div>
-      )}
+        {/* 边缘/角落 resize 手柄（#476）：四边（左/右/上/下）+ 四角 */}
+        <div
+          className="conversion-resize-right"
+          onPointerDown={(e) => beginResize(e, 'e')}
+          title={t('拖动调整宽度')}
+        />
+        <div
+          className="conversion-resize-left"
+          onPointerDown={(e) => beginResize(e, 'w')}
+          title={t('拖动调整宽度')}
+        />
+        <div
+          className="conversion-resize-bottom"
+          onPointerDown={(e) => beginResize(e, 's')}
+          title={t('拖动调整高度')}
+        />
+        <div
+          className="conversion-resize-top"
+          onPointerDown={(e) => beginResize(e, 'n')}
+          title={t('拖动调整高度')}
+        />
+        <div
+          className="conversion-resize-corner-se"
+          onPointerDown={(e) => beginResize(e, 'se')}
+          title={t('拖动调整大小')}
+        />
+        <div
+          className="conversion-resize-corner-nw"
+          onPointerDown={(e) => beginResize(e, 'nw')}
+          title={t('拖动调整大小')}
+        />
+        <div
+          className="conversion-resize-corner-ne"
+          onPointerDown={(e) => beginResize(e, 'ne')}
+          title={t('拖动调整大小')}
+        />
+        <div
+          className="conversion-resize-corner-sw"
+          onPointerDown={(e) => beginResize(e, 'sw')}
+          title={t('拖动调整大小')}
+        />
+      </div>
     </div>,
     document.body
   );

@@ -197,7 +197,6 @@ export class UnifiedConversionService {
     };
   }
 
-
   /**
    * 统一状态查询（#469）：当前用户可访问的、taskId 非空且处于进行中/失败的节点转换。
    * 对进行中（PROCESSING/UPLOADING）的节点解析实时任务状态（executor.getTaskStatus）。
@@ -232,7 +231,6 @@ export class UnifiedConversionService {
       let taskStatus: string | undefined;
       let error: string | undefined;
       let progress: number | undefined;
-      let permanent: boolean | undefined;
       let queuePosition: number | undefined;
       if (node.taskId) {
         const inProgress =
@@ -249,15 +247,13 @@ export class UnifiedConversionService {
             // S6-5：透传排队位置（仅排队中任务有意义，运行中/未入队为 undefined）
             queuePosition = status.queuePosition;
           } else if (fileStatus === FileStatus.FAILED) {
-            // S6-7：FAILED 节点据任务记录取 permanent + error。节点 fileStatus 为终态真相
-            //（taskStatus 不覆盖，面板据 fileStatus 展示「失败」），permanent 让面板区分
-            //「永久失败」（重试无意义）与普通「转换失败」；任务记录丢失（404）时 catch 降级。
+            // FAILED 节点据任务记录取 error。节点 fileStatus 为终态真相（taskStatus
+            // 不覆盖，面板据 fileStatus 展示「失败」）；任务记录丢失（404）时 catch 降级。
             error = status.error;
-            permanent = status.permanent;
           }
         } catch {
           if (inProgress) taskStatus = 'UNKNOWN';
-          // FAILED 节点任务记录丢失：降级为普通失败（error/permanent 保持 undefined）
+          // FAILED 节点任务记录丢失：降级为普通失败（error 保持 undefined）
         }
       }
       tasks.push({
@@ -268,7 +264,6 @@ export class UnifiedConversionService {
         taskStatus,
         progress,
         error,
-        permanent,
         queuePosition,
         updatedAt: node.updatedAt.toISOString(),
       });

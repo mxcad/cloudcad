@@ -8,7 +8,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import React from 'react';
-import { ConversionPanel } from './ConversionPanel';
+import { ConversionPanel, toggleFileQueuePanel } from './ConversionPanel';
 import {
   useConversionQueueStore,
   type ConversionTask,
@@ -16,6 +16,8 @@ import {
 import {
   conversionTaskControllerListTasks,
   conversionTaskControllerListHistory,
+  conversionTaskControllerRetryTask,
+  conversionTaskControllerGetQuota,
   batchDownloadControllerRetryTask,
   batchDownloadControllerRetryFailedItems,
   batchDownloadControllerGetUserTasks,
@@ -36,6 +38,24 @@ vi.mock('@/api-sdk', () => ({
       error: undefined,
       data: { tasks: [], total: 0, hasMore: false },
     }),
+  // 转换重试：失败行的「重试转换」按钮经 store.retryTask 调用
+  conversionTaskControllerRetryTask: vi.fn().mockResolvedValue({
+    error: undefined,
+    data: { taskId: 'retried-1' },
+  }),
+  // 转换配额条：useConversionQuota 挂载时拉取
+  conversionTaskControllerGetQuota: vi.fn().mockResolvedValue({
+    error: undefined,
+    data: {
+      limit: 10,
+      used: 3,
+      remaining: 7,
+      windowHours: 24,
+      unlimited: false,
+      resetsAt: null,
+      scope: 'ip',
+    },
+  }),
   // 批量下载重试（P1-3）：DownloadTab 重试按钮经 useBatchDownload.retryTask 调用
   batchDownloadControllerRetryTask: vi.fn(),
   // 批量下载部分失败重试（P1-3）：「仅重试失败项」按钮经 useBatchDownload.retryFailedItems 调用
@@ -53,6 +73,12 @@ vi.mock('@/api-sdk', () => ({
 const mockGetValidToken = vi.hoisted(() => vi.fn());
 vi.mock('@/utils/tokenUtils', () => ({
   getValidToken: (...args: unknown[]) => mockGetValidToken(...args),
+}));
+
+// useAuth 可控（配额条按 userId 分桶；默认游客 = 不传 userId）
+const mockUseAuth = vi.hoisted(() => vi.fn());
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: (...args: unknown[]) => mockUseAuth(...args),
 }));
 
 // 上传管理器可控（默认空任务；上传区块测试时覆盖 tasks/stats）
@@ -100,13 +126,40 @@ const emptyUploadStats = {
 beforeEach(() => {
   cleanup();
   mockGetValidToken.mockReset(); // 默认返回 undefined（游客，不订阅 SSE）
+  mockUseAuth.mockReset(); // 默认游客（配额端点不传 userId，按 IP 分桶）
+  mockUseAuth.mockReturnValue({ user: undefined, token: undefined, loading: false });
   // SDK mock 归位到顶部默认值：历史用例（476/510/563/600）用 mockResolvedValue
   // 做永久覆盖，若不重置会泄漏到后续用例——面板挂载时 refreshHistory 清空 fixture
   // history 并载入泄漏数据（h1/h2），导致「删除历史」断言拿到 nodeId 'h1'。
+  // listTasks 归位到顶部默认值：用例用 mockResolvedValueOnce 注入任务后，若不清除
+  // mockResolvedValue 队列，会在后续用例挂载时再刷新一次云端并泄漏任务
+  vi.mocked(conversionTaskControllerListTasks).mockReset();
+  vi.mocked(conversionTaskControllerListTasks).mockResolvedValue({
+    error: undefined,
+    data: { tasks: [], total: 0 },
+  });
   vi.mocked(conversionTaskControllerListHistory).mockReset();
   vi.mocked(conversionTaskControllerListHistory).mockResolvedValue({
     error: undefined,
     data: { tasks: [], total: 0, hasMore: false },
+  });
+  vi.mocked(conversionTaskControllerRetryTask).mockReset();
+  vi.mocked(conversionTaskControllerRetryTask).mockResolvedValue({
+    error: undefined,
+    data: { taskId: 'retried-1' },
+  });
+  vi.mocked(conversionTaskControllerGetQuota).mockReset();
+  vi.mocked(conversionTaskControllerGetQuota).mockResolvedValue({
+    error: undefined,
+    data: {
+      limit: 10,
+      used: 3,
+      remaining: 7,
+      windowHours: 24,
+      unlimited: false,
+      resetsAt: null,
+      scope: 'ip',
+    },
   });
   vi.mocked(batchDownloadControllerRetryTask).mockReset();
   vi.mocked(batchDownloadControllerRetryTask).mockResolvedValue({
@@ -163,20 +216,43 @@ afterEach(() => {
 });
 
 describe('ConversionPanel', () => {
-  it('常驻：无任务时也渲染悬浮按钮（S6-2）', async () => {
+  it('默认收起：面板不渲染任何可见元素（#497 取消悬浮药丸）', async () => {
     await renderPanel();
-    // 无任务时轻量收起态（.conversion-collapsed 始终渲染）
-    expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+    expect(document.querySelector('.conversion-panel')).toBeNull();
+    expect(document.querySelector('.conversion-panel-portal')).toBeNull();
   });
 
-  it('拖动收起按钮：position 写入 store 并应用到外层 portal（回归：left/top 曾挂内层 relative 元素致按钮飞出视口）', async () => {
+  it('toggleFileQueuePanel 切换显隐（顶栏按钮 + CAD 命令共用入口）', async () => {
     await renderPanel();
-    const pill = document.querySelector('.conversion-collapsed')!;
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+    expect(document.querySelector('.conversion-panel')).toBeNull();
+
+    // 展开：setCollapsed(false) 清掉任务驱动标记（手动打开不被 8s 自动收起）
+    act(() => toggleFileQueuePanel());
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
+    expect(document.querySelector('.conversion-panel')).toBeTruthy();
+
+    // 再切一次 → 回到隐藏态，DOM 上无任何残留
+    act(() => toggleFileQueuePanel());
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+    expect(document.querySelector('.conversion-panel')).toBeNull();
+  });
+
+  it('拖动 header：position 写入 store 并应用到外层 portal（回归：left/top 曾挂内层 relative 元素致面板飞出视口）', async () => {
+    useConversionQueueStore.setState({
+      collapsed: false,
+      position: { x: 100, y: 100 },
+    });
+    await renderPanel();
+    const header = document.querySelector('.conversion-header')!;
+    const panel = document.querySelector('.conversion-panel')!;
     const portal = document.querySelector('.conversion-panel-portal')!;
 
     // pointerdown（happy-dom 的 getBoundingClientRect 全 0 → 偏移量 = 指针坐标）
     await act(async () => {
-      pill.dispatchEvent(
+      header.dispatchEvent(
         new MouseEvent('pointerdown', {
           clientX: 100,
           clientY: 100,
@@ -184,7 +260,18 @@ describe('ConversionPanel', () => {
         })
       );
     });
-    // pointermove → position 写入 store（x = 150-100，y = 120-100）
+    // pointermove 未超阈值 → 视为点击，不拖动
+    await act(async () => {
+      window.dispatchEvent(
+        new MouseEvent('pointermove', { clientX: 101, clientY: 101 })
+      );
+    });
+    expect(useConversionQueueStore.getState().position).toEqual({
+      x: 100,
+      y: 100,
+    });
+
+    // pointermove 超阈值 → position 写入 store（x = 150-100，y = 120-100）
     await act(async () => {
       window.dispatchEvent(
         new MouseEvent('pointermove', { clientX: 150, clientY: 120 })
@@ -194,11 +281,11 @@ describe('ConversionPanel', () => {
       x: 50,
       y: 20,
     });
-    // left/top 必须挂在外层 portal（position: fixed，视口绝对坐标），而非内层药丸
+    // left/top 必须挂在外层 portal（position: fixed，视口绝对坐标），而非内层面板
     expect(portal.style.left).toBe('50px');
     expect(portal.style.top).toBe('20px');
-    expect(pill.style.left).toBe('');
-    expect(pill.style.top).toBe('');
+    expect(panel.style.left).toBe('');
+    expect(panel.style.top).toBe('');
 
     // pointerup 结束拖动，position 保留（不回退默认右下角）
     await act(async () => {
@@ -208,52 +295,18 @@ describe('ConversionPanel', () => {
       x: 50,
       y: 20,
     });
-    // 拖动（超阈值）不视为点击 → 面板不展开
-    expect(useConversionQueueStore.getState().collapsed).toBe(true);
-  });
-
-  it('点击收起药丸（未超拖动阈值）展开面板（回归：点击药丸本体原先无任何反应）', async () => {
-    await renderPanel();
-    const pill = document.querySelector('.conversion-collapsed')!;
-
-    // pointerdown + pointerup 同位置（无位移）→ 视为点击 → 展开
-    await act(async () => {
-      pill.dispatchEvent(
-        new MouseEvent('pointerdown', { clientX: 100, clientY: 100, bubbles: true })
-      );
-      pill.dispatchEvent(
-        new MouseEvent('pointerup', { clientX: 100, clientY: 100, bubbles: true })
-      );
-    });
-    expect(useConversionQueueStore.getState().collapsed).toBe(false);
-    expect(document.querySelector('.conversion-panel')).toBeTruthy();
-  });
-
-  it('收起态药丸无内嵌按钮（药丸本体即唯一点击目标，冗余 X 已移除）', async () => {
-    await renderPanel();
-    const pill = document.querySelector('.conversion-collapsed')!;
-    // 内嵌按钮会 stopPropagation 吞掉药丸点击并造成重复入口
-    expect(pill.querySelector('button')).toBeNull();
   });
 
   it('展开时把越界 position 按面板尺寸 clamp 回视口内（首帧即入屏，无需手动拖动）', async () => {
-    // 药丸（约 50x40）拖动时按自身尺寸 clamp，合法停到视口最右/最下沿；
-    // 同一 position 展开成 320x420 面板必然越界——展开前须按面板尺寸重算。
+    // 持久化的 position 可能在视口最右/最下沿，同一位置展开成 320x420 面板必然越界——
+    // 展开前须按面板尺寸重算。
     useConversionQueueStore.setState({
       collapsed: true,
       position: { x: window.innerWidth - 40, y: window.innerHeight - 30 },
       size: { width: 320, height: 420 },
     });
     await renderPanel();
-    const pill = document.querySelector('.conversion-collapsed')!;
-    await act(async () => {
-      pill.dispatchEvent(
-        new MouseEvent('pointerdown', { clientX: 100, clientY: 100, bubbles: true })
-      );
-      pill.dispatchEvent(
-        new MouseEvent('pointerup', { clientX: 100, clientY: 100, bubbles: true })
-      );
-    });
+    act(() => toggleFileQueuePanel());
 
     const { position, size } = useConversionQueueStore.getState();
     expect(position).toBeTruthy();
@@ -267,35 +320,27 @@ describe('ConversionPanel', () => {
     expect(portal.style.top).toBe(`${position!.y}px`);
   });
 
-  it('点击 header 收起按钮收起面板（展开态手动关闭 → 只剩悬浮药丸）', async () => {
+  it('点击 header 隐藏按钮收起面板（#497：收起后无任何可见元素，不是药丸）', async () => {
     useConversionQueueStore.setState({ collapsed: false });
     await renderPanel();
     const collapseBtn = document.querySelector('.conv-collapse')!;
     expect(collapseBtn).toBeTruthy();
 
-    // 点击收起按钮 → setCollapsed(true) → 面板收起为药丸（.conversion-panel 消失，.conversion-collapsed 出现）
+    // 点击隐藏按钮 → setCollapsed(true) → .conversion-panel 与 portal 一起卸载
     await act(async () => {
       collapseBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(useConversionQueueStore.getState().collapsed).toBe(true);
-    expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
     expect(document.querySelector('.conversion-panel')).toBeNull();
+    expect(document.querySelector('.conversion-panel-portal')).toBeNull();
   });
 
   it('手动展开后面板不因无任务而自动收起：用户显式打开不受自动收起定时影响', async () => {
     vi.useFakeTimers();
     await renderPanel();
-    const pill = document.querySelector('.conversion-collapsed')!;
 
-    // 点击药丸 → 用户显式展开（autoDismissable=false）
-    await act(async () => {
-      pill.dispatchEvent(
-        new MouseEvent('pointerdown', { clientX: 100, clientY: 100, bubbles: true })
-      );
-      pill.dispatchEvent(
-        new MouseEvent('pointerup', { clientX: 100, clientY: 100, bubbles: true })
-      );
-    });
+    // toggleFileQueuePanel → 用户显式展开（autoDismissable=false）
+    act(() => toggleFileQueuePanel());
     expect(useConversionQueueStore.getState().collapsed).toBe(false);
     expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
     expect(document.querySelector('.conversion-panel')).toBeTruthy();
@@ -329,7 +374,7 @@ describe('ConversionPanel', () => {
     expect(document.body.textContent).toContain('42%');
   });
 
-  it('active 任务显示角标计数', async () => {
+  it('展开态 active 任务显示角标计数（#497：隐藏态无角标，入口角标在 Layout）', async () => {
     useConversionQueueStore.setState({
       tasks: [
         {
@@ -347,7 +392,7 @@ describe('ConversionPanel', () => {
           createdAt: Date.now(),
         },
       ],
-      collapsed: true,
+      collapsed: false,
     });
     await renderPanel();
     // 角标显示 active 任务数（2）
@@ -360,38 +405,125 @@ describe('ConversionPanel', () => {
     expect(document.querySelector('.conversion-empty')).toBeTruthy();
   });
 
-  it('永久失败任务展示「永久失败」标签，区别于普通「转换失败」（S6-7）', async () => {
-    // 经 refreshCloud 映射：云端 FAILED 节点 + permanent 标记（#465 known-bad 命中）
+  it('云端 FAILED 节点展示「转换失败」标签', async () => {
+    // 经 refreshCloud 映射：云端 FAILED 节点 → 面板展示「转换失败」
     vi.mocked(conversionTaskControllerListTasks).mockResolvedValueOnce({
       error: undefined,
       data: {
         tasks: [
           {
-            nodeId: 'cloud-perm',
-            name: 'perm.dwg',
+            nodeId: 'cloud-failed',
+            name: 'fail.dwg',
             fileStatus: 'FAILED',
-            taskId: 'task-perm',
+            taskId: 'task-failed',
             updatedAt: new Date().toISOString(),
-            permanent: true,
-          },
-          {
-            nodeId: 'cloud-plain',
-            name: 'plain.dwg',
-            fileStatus: 'FAILED',
-            taskId: 'task-plain',
-            updatedAt: new Date().toISOString(),
-            permanent: false,
           },
         ],
-        total: 2,
+        total: 1,
       },
     } as never);
     useConversionQueueStore.setState({ collapsed: false });
     await renderPanel();
-    // 永久失败任务：状态标签为「永久失败」（i18n key 在测试环境回退为 key 本身）
-    expect(document.body.textContent).toContain('永久失败');
-    // 普通失败任务：状态标签为「转换失败」（非永久失败，可重试）
+    // i18n key 在测试环境回退为 key 本身
     expect(document.body.textContent).toContain('转换失败');
+  });
+
+  it('失败云端任务显示「重试转换」按钮：点击调重试端点并原地置回排队中（不重新上传、不占配额）', async () => {
+    // 首拉（挂载）= FAILED；重试后 store 内 refreshCloud 再拉一次 = 已重新排队
+    vi.mocked(conversionTaskControllerListTasks)
+      .mockResolvedValueOnce({
+        error: undefined,
+        data: {
+          tasks: [
+            {
+              nodeId: 'cloud-retry',
+              name: 'retry.dwg',
+              fileStatus: 'FAILED',
+              taskId: 'task-retry',
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+          total: 1,
+        },
+      } as never)
+      .mockResolvedValue({
+        error: undefined,
+        data: {
+          tasks: [
+            {
+              nodeId: 'cloud-retry',
+              name: 'retry.dwg',
+              fileStatus: 'PROCESSING',
+              taskId: 'task-retry-new',
+              taskStatus: 'PENDING',
+              updatedAt: new Date().toISOString(),
+            },
+          ],
+          total: 1,
+        },
+      } as never);
+    useConversionQueueStore.setState({ collapsed: false });
+    await renderPanel();
+
+    const row = document.querySelector('.conversion-row')!;
+    expect(row).toBeTruthy();
+    const retryBtn = row.querySelector(
+      `button[aria-label="${t('重试转换')}"]`
+    )!;
+    expect(retryBtn).toBeTruthy();
+
+    await act(async () => {
+      retryBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    // 后端重试接口按新 taskId 返回；前端按 nodeId 合并覆盖同一节点
+    expect(conversionTaskControllerRetryTask).toHaveBeenCalledWith({
+      path: { taskId: 'task-retry' },
+    });
+    // 乐观置回排队中 + 云端列表已刷新
+    await waitFor(() => {
+      expect(document.body.textContent).toContain('排队中');
+    });
+  });
+
+  it('配额条：header 与 tab 之间显示本窗口剩余额度（ADR-0043 只读，游客按 IP 分桶）', async () => {
+    useConversionQueueStore.setState({ collapsed: false });
+    await renderPanel();
+    // useConversionQuota 挂载时异步拉取
+    await waitFor(() => {
+      expect(
+        document.querySelector('.conversion-quota')?.textContent
+      ).toContain('24');
+    });
+    // 游客不传 userId（后端按 request.ip 分桶）
+    expect(conversionTaskControllerGetQuota).toHaveBeenCalledWith({ query: {} });
+  });
+
+  it('配额条：登录用户带 userId 拉取，额度不限时显示「转换次数不限」', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1' },
+      token: 't',
+      loading: false,
+    });
+    vi.mocked(conversionTaskControllerGetQuota).mockResolvedValueOnce({
+      error: undefined,
+      data: {
+        limit: 0,
+        used: 0,
+        remaining: 0,
+        windowHours: 0,
+        unlimited: true,
+        resetsAt: null,
+        scope: 'user',
+      },
+    } as never);
+    useConversionQueueStore.setState({ collapsed: false });
+    await renderPanel();
+    await waitFor(() => {
+      expect(document.body.textContent).toContain(t('转换次数不限'));
+    });
+    expect(conversionTaskControllerGetQuota).toHaveBeenCalledWith({
+      query: { userId: 'user-1' },
+    });
   });
 
   it('排队中任务显示排队位置「第 N 位」（S6-5）', async () => {
@@ -440,11 +572,11 @@ describe('ConversionPanel', () => {
     await renderPanel();
     // 初始展开
     expect(document.querySelector('.conversion-panel')).toBeTruthy();
-    // 推进 8s（AUTO_COLLAPSE_DELAY_MS）→ 自动收起
+    // 推进 8s（AUTO_COLLAPSE_DELAY_MS）→ 自动收起（#497：收起后 DOM 上无任何元素）
     await act(async () => {
       await vi.advanceTimersByTimeAsync(8000);
     });
-    expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
+    expect(document.querySelector('.conversion-panel-portal')).toBeNull();
     expect(document.querySelector('.conversion-panel')).toBeNull();
   });
 
@@ -486,9 +618,9 @@ describe('ConversionPanel', () => {
     });
     await renderPanel();
     await flushSettled();
-    // 存量任务是 hydrate 的基线，不是本会话新动作：面板保持收起
+    // 存量任务是 hydrate 的基线，不是本会话新动作：面板保持收起（不渲染任何元素）
     expect(useConversionQueueStore.getState().collapsed).toBe(true);
-    expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
+    expect(document.querySelector('.conversion-panel-portal')).toBeNull();
     expect(document.querySelector('.conversion-panel')).toBeNull();
   });
 
@@ -785,8 +917,8 @@ describe('ConversionPanel', () => {
     const result = await act(async () =>
       render(<ConversionPanel />)
     );
-    // 初始收起态（药丸可见，面板未展开）
-    expect(document.querySelector('.conversion-collapsed')).toBeTruthy();
+    // 初始收起态（#497：不渲染任何可见元素）
+    expect(document.querySelector('.conversion-panel-portal')).toBeNull();
     expect(document.querySelector('.conversion-panel')).toBeNull();
 
     // 模拟上传图纸入队（活跃数 0 → 1）
@@ -805,8 +937,8 @@ describe('ConversionPanel', () => {
       result.rerender(<ConversionPanel />);
     });
 
-    // 面板自动展开（收起态药丸消失，展开态出现）
-    expect(document.querySelector('.conversion-collapsed')).toBeNull();
+    // 面板自动展开（隐藏态 DOM 出现展开态）
+    expect(document.querySelector('.conversion-panel-portal')).toBeTruthy();
     expect(document.querySelector('.conversion-panel')).toBeTruthy();
     expect(useConversionQueueStore.getState().collapsed).toBe(false);
     // 自动切到上传 tab（默认转换 tab 不再选中）
@@ -923,7 +1055,7 @@ describe('ConversionPanel', () => {
     await renderPanel();
 
     // 「打开」按钮存在（title = t('打开')）
-    const openBtn = document.querySelector('button[title="打开"]');
+    const openBtn = document.querySelector('button[aria-label="打开"]');
     expect(openBtn).toBeTruthy();
     // 点击 → 新标签页打开 /cad-editor/node-h1
     await act(async () => {
@@ -1271,7 +1403,7 @@ describe('ConversionPanel', () => {
       ) as HTMLElement;
       fireEvent.click(downloadTab);
       const row = document.querySelector('.conversion-row-download')!;
-      const retryBtn = row.querySelector(`button[title="${t('重试')}"]`)!;
+      const retryBtn = row.querySelector(`button[aria-label="${t('重试')}"]`)!;
       expect(retryBtn).toBeTruthy();
 
       await act(async () => {
@@ -1314,7 +1446,7 @@ describe('ConversionPanel', () => {
       fireEvent.click(downloadTab);
       const row = document.querySelector('.conversion-row-download')!;
       const retryFailedBtn = row.querySelector(
-        `button[title="${t('仅重试失败项')}"]`
+        `button[aria-label="${t('仅重试失败项')}"]`
       )!;
       expect(retryFailedBtn).toBeTruthy();
 
@@ -1365,7 +1497,7 @@ describe('ConversionPanel', () => {
       ) as HTMLElement;
       fireEvent.click(uploadTab);
       const openBtn = document.querySelector(
-        `button[title="${t('打开')}"]`
+        `button[aria-label="${t('打开')}"]`
       )!;
       expect(openBtn).toBeTruthy();
 

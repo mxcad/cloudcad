@@ -16,6 +16,7 @@ import {
   conversionTaskControllerSubmitTask,
   conversionTaskControllerCancelTask,
   conversionTaskControllerListHistory,
+  conversionTaskControllerRetryTask,
 } from '@/api-sdk';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { t } from '@/languages';
@@ -48,8 +49,6 @@ export interface ConversionTask {
   /** cloud：转换任务 ID（取消用） */
   taskId?: string;
   createdAt: number;
-  /** 永久失败（#465 负缓存命中） */
-  permanent?: boolean;
   /** 转换进度 0-100（S4-2，仅进行中任务；黑盒未上报时 undefined） */
   progress?: number;
   /** 排队位置（S6-5，仅排队中任务有意义；运行中/未入队 undefined） */
@@ -236,6 +235,11 @@ interface ConversionQueueState {
   ) => void;
   /** 取消任务（cloud + taskId 时调后端；否则仅本地标记） */
   cancelTask: (task: ConversionTask) => Promise<boolean>;
+  /**
+   * 重试失败的转换任务（cloud + taskId）：后端原地重新排队并返回新 taskId，
+   * 成功即刷新云端列表（同一 nodeId 合并覆盖）。不重新上传、不占配额、无次数上限。
+   */
+  retryTask: (task: ConversionTask) => Promise<boolean>;
   setCollapsed: (collapsed: boolean) => void;
   /**
    * 任务驱动的自动展开：展开并标记为「无任务后可自动收起」。
@@ -284,8 +288,6 @@ export const useConversionQueueStore = create<ConversionQueueState>(
             createdAt: new Date(item.updatedAt).getTime(),
             progress: item.progress,
             error: item.error,
-            // S6-7：永久失败标记（云端 known-bad 命中）→ 面板展示「永久失败」
-            permanent: item.permanent,
             // S6-5：排队位置（仅排队中任务有意义）→ 面板展示「第 N 位」
             queuePosition: item.queuePosition,
           })
@@ -349,7 +351,6 @@ export const useConversionQueueStore = create<ConversionQueueState>(
           createdAt: new Date(item.updatedAt).getTime(),
           progress: item.progress,
           error: item.error,
-          permanent: item.permanent,
           queuePosition: item.queuePosition,
         }));
         set((state) => ({
@@ -476,6 +477,31 @@ export const useConversionQueueStore = create<ConversionQueueState>(
       // 本地任务：仅本地标记取消（无后端可取消）
       get().updateTaskStatus(task.id, 'cancelled');
       return true;
+    },
+
+    retryTask: async (task) => {
+      if (task.source !== 'cloud' || !task.taskId) return false;
+      // 乐观置为排队中（清掉失败原因），让用户即时看到重试生效
+      get().updateTaskStatus(task.id, 'pending', { error: undefined });
+      try {
+        const res = await conversionTaskControllerRetryTask({
+          path: { taskId: task.taskId },
+        });
+        if (res.error) {
+          get().updateTaskStatus(task.id, 'failed', {
+            error: getErrorMessage(res.error) || t('重试失败'),
+          });
+          return false;
+        }
+        // 新 taskId 落在同一 nodeId 上：刷新云端列表按 nodeId 合并覆盖
+        await get().refreshCloud();
+        return true;
+      } catch (err) {
+        get().updateTaskStatus(task.id, 'failed', {
+          error: getErrorMessage(err) || t('重试失败'),
+        });
+        return false;
+      }
     },
 
     // 用户显式控制（点击药丸 / 顶栏入口）：清掉「任务驱动」标记，面板保持用户

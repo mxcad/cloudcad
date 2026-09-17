@@ -56,24 +56,21 @@ export class ConversionTaskItemDto {
   @ApiPropertyOptional({ description: '转换任务 ID' })
   taskId?: string;
 
-  @ApiPropertyOptional({ description: '任务执行状态 (PENDING|PROCESSING|COMPLETED|FAILED|CANCELLED|UNKNOWN)' })
+  @ApiPropertyOptional({
+    description:
+      '任务执行状态 (PENDING|PROCESSING|COMPLETED|FAILED|CANCELLED|UNKNOWN)',
+  })
   taskStatus?: string;
 
   @ApiPropertyOptional({
-    description: '转换进度 0-100（仅进行中任务，S4-2；黑盒未上报时为 undefined）',
+    description:
+      '转换进度 0-100（仅进行中任务，S4-2；黑盒未上报时为 undefined）',
     example: 42,
   })
   progress?: number;
 
   @ApiPropertyOptional({ description: '错误信息' })
   error?: string;
-
-  @ApiPropertyOptional({
-    description:
-      '永久失败标记（#465 负缓存命中，S6-7）：true 表示重试注定再失败，面板展示「永久失败」',
-    example: true,
-  })
-  permanent?: boolean;
 
   @ApiPropertyOptional({
     description:
@@ -105,7 +102,10 @@ export class ConversionHistoryQueryDto {
   })
   limit?: number;
 
-  @ApiPropertyOptional({ description: '偏移量（分页游标，默认 0）', example: 0 })
+  @ApiPropertyOptional({
+    description: '偏移量（分页游标，默认 0）',
+    example: 0,
+  })
   offset?: number;
 
   @ApiPropertyOptional({
@@ -124,4 +124,43 @@ export class ConversionHistoryResponseDto {
 
   @ApiProperty({ description: '是否还有更多（offset + tasks.length < total）' })
   hasMore: boolean;
+}
+
+/**
+ * 失败任务重试响应：重试 = 原图纸原地重新排队（不重新上传、节点保留、不占配额），
+ * 生成新的 taskId；前端按 nodeId 合并同一节点的历史任务。
+ */
+export class RetryConversionTaskResponseDto {
+  @ApiProperty({ description: '重试后生成的新转换任务 ID' })
+  taskId: string;
+
+  @ApiProperty({ description: '重试的原节点 ID（前端据此合并同一节点的任务）' })
+  nodeId: string;
+}
+
+/**
+ * 当前调用者的转换配额（ADR-0043）：本窗口已用次数 / 上限。
+ * 登录用户按 userId 窗口，游客按 IP 窗口（scope 区分）。
+ */
+export class ConversionQuotaDto {
+  @ApiProperty({ description: '本窗口转换次数上限（unlimited 时为 0）' })
+  limit: number;
+
+  @ApiProperty({ description: '本窗口已用次数' })
+  used: number;
+
+  @ApiProperty({ description: '本窗口剩余次数（unlimited 时为 0）' })
+  remaining: number;
+
+  @ApiProperty({ description: '窗口小时数' })
+  windowHours: number;
+
+  @ApiProperty({ description: '是否不限额（limit <= 0）', example: false })
+  unlimited: boolean;
+
+  @ApiProperty({ nullable: true, description: '窗口重置时刻（ISO 字符串）' })
+  resetsAt: string | null;
+
+  @ApiProperty({ description: '窗口归属：ip（游客）或 user（登录）' })
+  scope: 'ip' | 'user';
 }

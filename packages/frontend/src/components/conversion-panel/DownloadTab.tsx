@@ -8,6 +8,7 @@ import {
   RefreshCw,
   RotateCcw,
 } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { t } from '@/languages';
 import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
 import { useBatchDownload } from '@/hooks/file-system/useBatchDownload';
@@ -144,32 +145,48 @@ const DownloadTaskRow: React.FC<DownloadTaskRowProps> = ({
       </div>
       <div className="conversion-row-actions">
         {isCompleted && (
-          <button
-            title={task.mode === 'individual' ? t('下载') : t('下载ZIP')}
-            onClick={() => onDownload(task)}
+          <Tooltip
+            content={task.mode === 'individual' ? t('下载') : t('下载ZIP')}
           >
-            <Download size={13} />
-          </button>
+            <button
+              aria-label={task.mode === 'individual' ? t('下载') : t('下载ZIP')}
+              onClick={() => onDownload(task)}
+            >
+              <Download size={13} />
+            </button>
+          </Tooltip>
         )}
         {isActive && task.status === 'PENDING' && (
-          <button title={t('取消')} onClick={() => onCancel(task.taskId)}>
-            <XCircle size={13} />
-          </button>
+          <Tooltip content={t('取消')}>
+            <button
+              aria-label={t('取消')}
+              onClick={() => onCancel(task.taskId)}
+            >
+              <XCircle size={13} />
+            </button>
+          </Tooltip>
         )}
         {task.status === 'FAILED' && (
-          <button title={t('重试')} onClick={() => onRetry(task.taskId)}>
-            <RefreshCw size={13} />
-          </button>
+          <Tooltip content={t('重试')}>
+            <button
+              aria-label={t('重试')}
+              onClick={() => onRetry(task.taskId)}
+            >
+              <RefreshCw size={13} />
+            </button>
+          </Tooltip>
         )}
         {task.status === 'FAILED' &&
           task.errors &&
           task.errors.length > 0 && (
+          <Tooltip content={t('仅重试失败项')}>
             <button
-              title={t('仅重试失败项')}
+              aria-label={t('仅重试失败项')}
               onClick={() => onRetryFailed(task.taskId)}
             >
               <RotateCcw size={13} />
             </button>
+          </Tooltip>
           )}
       </div>
     </div>
@@ -246,11 +263,7 @@ export const DownloadTab: React.FC<DownloadTabProps> = ({
         />
       ))}
       {hiddenCount > 0 && (
-        <button
-          className="conversion-load-more"
-          onClick={loadMore}
-          title={t('加载更多（剩余 {count} 项）', { count: String(hiddenCount) })}
-        >
+        <button className="conversion-load-more" onClick={loadMore}>
           {t('加载更多（剩余 {count} 项）', { count: String(hiddenCount) })}
         </button>
       )}

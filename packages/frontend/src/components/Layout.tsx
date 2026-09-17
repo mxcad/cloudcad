@@ -21,6 +21,11 @@ import { Logo } from './Logo';
 import { InteractiveBackground } from './InteractiveBackground';
 import { useTour } from '../contexts/TourContext';
 import { useStorageQuota } from '../hooks/useStorageQuota';
+import {
+  useConversionQueueStore,
+  countActiveTasks,
+} from '../stores/conversionQueueStore';
+import { toggleFileQueuePanel } from './conversion-panel/ConversionPanel';
 import MembershipBadge from './billing/MembershipBadge';
 import { t, $t } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
@@ -49,6 +54,7 @@ import {
   User,
   DollarSign,
   Home,
+  ListTodo,
 } from 'lucide-react';
 import { Menu } from './ui/Menu';
 
@@ -171,7 +177,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const { logout, user, loading } = useAuth();
   const { hasPermission, hasAnyPermission } = usePermission();
   const { config: runtimeConfig } = useRuntimeConfig();
-  const { config: brandConfig } = useBrandConfig();
+  const { config: brandConfig, profile: brandProfile } = useBrandConfig();
   const { isDark } = useTheme();
   const { isActive: isTourActive, openTourCenter } = useTour();
   const isMobile = useIsMobile();
@@ -187,6 +193,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
   // 存储空间
   const { data: storageInfo } = useStorageQuota();
+
+  // 文件队列：进行中任务数（角标）+ 面板当前是否展开（按钮高亮）。
+  // 面板本体在 App 层按路由挂载，这里只读 store 做入口指示。
+  const queueActiveCount = useConversionQueueStore((s) =>
+    countActiveTasks(s.tasks)
+  );
+  const queuePanelOpen = useConversionQueueStore((s) => !s.collapsed);
 
   // 角色名称映射
   const getRoleDisplayName = useCallback((roleName: string): string => {
@@ -433,8 +446,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               title={appName}
               onClick={() => setSidebarOpen(false)}
             >
-              {/* Logo 组件 - 仅图标模式 */}
-              <Logo iconOnly={true} animated={false} />
+              {/* Logo 组件 - 仅图标模式（文字由下方品牌块渲染） */}
+              <Logo animated={false} />
 
               {/* 品牌名称 */}
               <div className="flex flex-col">
@@ -445,12 +458,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 >
                   {appName}
                 </span>
-                {/* 副标题 */}
+                {/* 副标题（品牌配置 subtitle） */}
                 <span
                   className="text-[11px] font-medium tracking-wide mt-0.5"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  {t('CAD 协同平台')}
+                  {brandProfile.subtitle}
                 </span>
               </div>
             </a>
@@ -766,6 +779,39 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
               <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {formattedDate}
               </span>
+            </div>
+
+            {/* 文件队列入口（#497：悬浮药丸已取消，面板显隐只剩此按钮 + CAD 命令 Mx_ToggleFileQueue） */}
+            <div className="p-0.5">
+              <Tooltip content={t('文件队列')}>
+                <Button
+                  variant="secondary"
+                  className={`relative rounded-xl transition-all duration-300 ease-out
+                             hover:scale-110 active:scale-95
+                             hover:bg-[var(--bg-tertiary)] group`}
+                  aria-label={t('文件队列')}
+                  aria-pressed={queuePanelOpen}
+                  onClick={() => toggleFileQueuePanel()}
+                >
+                  <ListTodo
+                    size={20}
+                    className={`group-hover:text-[var(--accent-500)] ${
+                      queuePanelOpen
+                        ? 'text-[var(--accent-500)]'
+                        : 'text-[var(--text-tertiary)]'
+                    }`}
+                  />
+                  {queueActiveCount > 0 && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 flex items-center justify-center
+                                 min-w-[16px] h-[16px] px-1 rounded-full text-[10px] font-semibold
+                                 text-[var(--text-inverse)] bg-[var(--primary-500)]"
+                    >
+                      {queueActiveCount}
+                    </span>
+                  )}
+                </Button>
+              </Tooltip>
             </div>
 
             {/* 语言切换 */}

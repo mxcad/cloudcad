@@ -11,6 +11,7 @@ import {
   X,
   ExternalLink,
 } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { t } from '@/languages';
 import { useUploadManager } from '@/hooks/useUploadManager';
 import type { UploadTask } from '@/utils/uploadManager';
@@ -159,63 +160,73 @@ function UploadRow({
 
       <div className="upload-task-actions">
         {task.status === 'waiting' && (
-          <button
-            title={t('暂停')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onPause(task.id);
-            }}
-          >
-            <Pause size={12} />
-          </button>
+          <Tooltip content={t('暂停')}>
+            <button
+              aria-label={t('暂停')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPause(task.id);
+              }}
+            >
+              <Pause size={12} />
+            </button>
+          </Tooltip>
         )}
         {task.status === 'uploading' && (
-          <button
-            className="remove"
-            title={t('取消上传')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(task.id);
-            }}
-          >
-            <X size={12} />
-          </button>
+          <Tooltip content={t('取消上传')}>
+            <button
+              className="remove"
+              aria-label={t('取消上传')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(task.id);
+              }}
+            >
+              <X size={12} />
+            </button>
+          </Tooltip>
         )}
         {task.status === 'paused' && (
-          <button
-            title={t('恢复')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onResume(task.id);
-            }}
-          >
-            <Play size={12} />
-          </button>
+          <Tooltip content={t('恢复')}>
+            <button
+              aria-label={t('恢复')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onResume(task.id);
+              }}
+            >
+              <Play size={12} />
+            </button>
+          </Tooltip>
         )}
         {/* 完成态「打开」：上传结果带 nodeId（转换产物）→ 新标签页打开 CAD 编辑器 */}
         {task.status === 'done' && task.result?.nodeId && (
-          <button
-            title={t('打开')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen(task);
-            }}
-          >
-            <ExternalLink size={12} />
-          </button>
+          <Tooltip content={t('打开')}>
+            <button
+              aria-label={t('打开')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen(task);
+              }}
+            >
+              <ExternalLink size={12} />
+            </button>
+          </Tooltip>
         )}
         {/* 失败任务仅在有 File 对象时可重试；从历史恢复的失败任务无 File 对象，不提供重试入口 */}
         {task.status === 'failed' && task.file && (
-          <button
-            className="retry"
-            title={t('重试')}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRetry(task.id);
-            }}
-          >
-            <RefreshCw size={12} />
-          </button>
+          <Tooltip content={t('重试')}>
+            <button
+              className="retry"
+              aria-label={t('重试')}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetry(task.id);
+              }}
+            >
+              <RefreshCw size={12} />
+            </button>
+          </Tooltip>
         )}
       </div>
     </div>
@@ -294,11 +305,7 @@ export const UploadTab: React.FC<UploadTabProps> = ({ search, onOpen }) => {
           />
         ))}
         {hiddenCount > 0 && (
-          <button
-            className="conversion-load-more"
-            onClick={loadMore}
-            title={t('加载更多（剩余 {count} 项）', { count: String(hiddenCount) })}
-          >
+          <button className="conversion-load-more" onClick={loadMore}>
             {t('加载更多（剩余 {count} 项）', { count: String(hiddenCount) })}
           </button>
         )}

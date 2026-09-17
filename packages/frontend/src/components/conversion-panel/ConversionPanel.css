@@ -1,4 +1,4 @@
-/* 统一转换队列面板（#471 / #475）—— 悬浮可拖动按钮 + 展开面板 */
+/* 文件队列面板（#471 / #475 / #497）—— 可拖动浮动面板，隐藏态不渲染任何元素 */
 
 /* 默认右下角（S6-4）：与面板注释一致；拖动后由内联 left/top（视口绝对坐标）覆盖 bottom/right。
    位置必须挂在这个 fixed 容器上——内层元素是 relative/static，left/top 会变成偏移量导致飞出视口 */
@@ -27,27 +27,13 @@
   }
 }
 
-/* 折叠态：悬浮按钮（定位由外层 .conversion-panel-portal 承担，此处不加 position） */
-.conversion-collapsed {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: 999px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  cursor: grab;
-  user-select: none;
-  touch-action: none;
-}
-
-.conversion-collapsed:hover {
-  border-color: var(--primary-500);
-}
-
-.conversion-collapsed:active {
-  cursor: grabbing;
+/* 转换配额条（ADR-0043 只读）：header 与 tab 切换条之间的一行提示 */
+.conversion-quota {
+  padding: 4px 12px;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .conv-badge {

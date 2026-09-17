@@ -19,6 +19,7 @@ import {
   ApiResponse,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Public } from '../../auth/decorators/public.decorator';
 import { Response, Request as ExpressRequest } from 'express';
 import { UnifiedConversionService } from './conversion-task.service';
 import { ConversionTaskSseService } from './conversion-task.sse.service';
@@ -28,6 +29,8 @@ import {
   SubmitConversionTaskResponseDto,
   ConversionTaskListResponseDto,
   ConversionHistoryResponseDto,
+  RetryConversionTaskResponseDto,
+  ConversionQuotaDto,
 } from './dto/conversion-task.dto';
 
 /**
@@ -47,7 +50,9 @@ export class ConversionTaskController {
   ) {}
 
   @Post('tasks')
-  @ApiOperation({ summary: '统一提交转换任务（open + nodeId / download + nodeId + format）' })
+  @ApiOperation({
+    summary: '统一提交转换任务（open + nodeId / download + nodeId + format）',
+  })
   @ApiResponse({ type: SubmitConversionTaskResponseDto })
   async submitTask(
     @Body() dto: SubmitConversionTaskDto,
@@ -66,7 +71,9 @@ export class ConversionTaskController {
   @Get('tasks')
   @ApiOperation({ summary: '统一查询当前用户的转换任务（云端数据源）' })
   @ApiResponse({ type: ConversionTaskListResponseDto })
-  async listTasks(@Req() request: MxCadRequest): Promise<ConversionTaskListResponseDto> {
+  async listTasks(
+    @Req() request: MxCadRequest
+  ): Promise<ConversionTaskListResponseDto> {
     const userId = request.user?.id;
     if (!userId) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
@@ -80,9 +87,21 @@ export class ConversionTaskController {
    */
   @Get('history')
   @ApiOperation({ summary: '分页查询当前用户已完成的转换历史（COMPLETED）' })
-  @ApiQuery({ name: 'limit', required: false, description: '每页数量（默认 20，最大 50）' })
-  @ApiQuery({ name: 'offset', required: false, description: '偏移量（分页游标，默认 0）' })
-  @ApiQuery({ name: 'search', required: false, description: '按文件名模糊搜索（空=不过滤）' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '每页数量（默认 20，最大 50）',
+  })
+  @ApiQuery({
+    name: 'offset',
+    required: false,
+    description: '偏移量（分页游标，默认 0）',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: '按文件名模糊搜索（空=不过滤）',
+  })
   @ApiResponse({ type: ConversionHistoryResponseDto })
   async listHistory(
     @Req() request: MxCadRequest,
@@ -112,7 +131,11 @@ export class ConversionTaskController {
   @Get('tasks/stream')
   @Header('Cache-Control', 'no-cache')
   @ApiOperation({ summary: '转换任务状态实时推送（SSE，per-user 长连接）' })
-  @ApiQuery({ name: 'token', required: false, description: 'JWT token for SSE auth' })
+  @ApiQuery({
+    name: 'token',
+    required: false,
+    description: 'JWT token for SSE auth',
+  })
   async streamTasks(
     @Req() request: ExpressRequest,
     @Res() res: Response
@@ -133,5 +156,41 @@ export class ConversionTaskController {
       `Conversion task ${taskId} cancel: ok=${result.ok} ${result.reason ?? ''}`
     );
     return result;
+  }
+
+  @Post('tasks/:taskId/retry')
+  @ApiOperation({
+    summary: '重试失败的转换任务（原地重新排队，不重新上传、不占配额）',
+  })
+  @ApiParam({ name: 'taskId', description: '要重试的转换任务 ID' })
+  async retryTask(
+    @Param('taskId') taskId: string,
+    @Req() request: MxCadRequest
+  ): Promise<RetryConversionTaskResponseDto> {
+    const userId = request.user?.id;
+    if (!userId)
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    const result = await this.unifiedConversionService.retryTask(
+      taskId,
+      userId
+    );
+    this.logger.log(
+      `Conversion task ${taskId} retry by user ${userId}: new=${result.taskId}`
+    );
+    return result;
+  }
+
+  /**
+   * 当前调用者的转换配额（ADR-0043，只读不占位）：@Public 端点，
+   * 游客按 IP 窗口、登录用户按 userId 窗口（scope 区分）。
+   */
+  @Public()
+  @Get('quota')
+  @ApiOperation({ summary: '当前调用者的转换配额（本窗口已用/上限）' })
+  async getQuota(
+    @Req() request: ExpressRequest,
+    @Query('userId') userId?: string
+  ): Promise<ConversionQuotaDto> {
+    return this.unifiedConversionService.getQuota(userId, request.ip);
   }
 }

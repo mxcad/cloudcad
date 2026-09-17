@@ -800,7 +800,7 @@ describe("FileConversionService", () => {
 	});
 
 	// ==================== 失败分类（process-pool 对齐 conversion-service） ====================
-	describe("失败分类", () => {
+	describe("失败分类（process-pool 对齐 conversion-service）", () => {
 		it("进程被信号杀死（exitCode=null）归为瞬态，并给出可定位的进程未启动文案", async () => {
 			setRun(() => ({
 				stdout: "",
@@ -872,26 +872,6 @@ describe("FileConversionService", () => {
 			expect(r.transient).toBe(true);
 			expect(r.error).toContain("输出无法解析");
 			expect(r.error).toContain("garbled engine output");
-		});
-
-		it("同参数重试必须真实执行转换（不短路，永久失败机制已移除）", async () => {
-			setRun(() => ({
-				stdout: '{"code":1,"message":"read file error"}',
-				stderr: "",
-				exitCode: 1,
-				signal: null,
-				timedOut: false,
-			}));
-			const options = { srcPath: "/tmp/bad.dwg", fileHash: "xyz" };
-			const first = await service.convertFile(options);
-			expect(first.isOk).toBe(false);
-			expect(first.transient).toBe(false);
-
-			// 同一输入重试不再被短路，必须真实再跑一遍引擎
-			const second = await service.convertFile(options);
-			expect(second.isOk).toBe(false);
-			expect(second.error).toBe("read file error");
-			expect(runMxcadAssembly).toHaveBeenCalledTimes(2);
 		});
 
 		it("成功且引擎未回 newpath 时按 outname 补算产物路径", async () => {

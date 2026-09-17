@@ -11,6 +11,7 @@ import { OpenFileCommand, OpenFileNoCacheCommand } from './openFileCommand';
 import { SaveToCloudCommand } from './saveToCloud';
 import { InsertImageCommand } from './insertImageCommand';
 import { ShareCommand } from './shareCommand';
+import { ToggleFileQueueCommand } from './toggleFileQueue';
 import { CommandRegistry } from './types';
 
 CommandRegistry.register(new ExportPDFCommand());

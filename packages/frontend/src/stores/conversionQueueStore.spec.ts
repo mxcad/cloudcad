@@ -12,17 +12,20 @@ vi.mock('@/api-sdk', () => ({
   conversionTaskControllerSubmitTask: vi.fn(),
   conversionTaskControllerCancelTask: vi.fn(),
   conversionTaskControllerListHistory: vi.fn(),
+  conversionTaskControllerRetryTask: vi.fn(),
 }));
 
 import {
   conversionTaskControllerListTasks,
   conversionTaskControllerSubmitTask,
   conversionTaskControllerListHistory,
+  conversionTaskControllerRetryTask,
 } from '@/api-sdk';
 
 const mockedList = vi.mocked(conversionTaskControllerListTasks);
 const mockedSubmit = vi.mocked(conversionTaskControllerSubmitTask);
 const mockedHistory = vi.mocked(conversionTaskControllerListHistory);
+const mockedRetry = vi.mocked(conversionTaskControllerRetryTask);
 
 const LOCAL_KEY = 'cloudcad.conversion.local-tasks';
 const PANEL_UI_KEY = 'cloudcad.conversion.panel-ui';
@@ -184,17 +187,17 @@ describe('conversionQueueStore 云端合并', () => {
     expect(cloud?.progress).toBe(42);
   });
 
-  it('refreshCloud 透传任务 permanent（S6-7，面板展示「永久失败」）', async () => {
+  it('refreshCloud 将云端 FAILED 节点映射为 failed 状态', async () => {
     mockedList.mockResolvedValue({
       error: undefined,
       data: {
         tasks: [
           {
-            nodeId: 'node-perm',
-            name: 'perm.dwg',
+            nodeId: 'node-failed',
+            name: 'fail.dwg',
             fileStatus: 'FAILED',
-            taskId: 'task-perm',
-            permanent: true,
+            taskId: 'task-failed',
+            error: '转换失败',
             updatedAt: '2026-09-01T00:00:00Z',
           },
         ],
@@ -204,9 +207,9 @@ describe('conversionQueueStore 云端合并', () => {
     await useConversionQueueStore.getState().refreshCloud();
     const cloud = useConversionQueueStore
       .getState()
-      .tasks.find((t) => t.id === 'node-perm');
-    expect(cloud?.permanent).toBe(true);
+      .tasks.find((t) => t.id === 'node-failed');
     expect(cloud?.status).toBe('failed');
+    expect(cloud?.error).toBe('转换失败');
   });
 
   it('refreshCloud 失败时记录 cloudError（不抛错）', async () => {
@@ -216,6 +219,106 @@ describe('conversionQueueStore 云端合并', () => {
     } as never);
     await useConversionQueueStore.getState().refreshCloud();
     expect(useConversionQueueStore.getState().cloudError).toBeTruthy();
+  });
+});
+
+describe('conversionQueueStore retryTask（原地重新排队，不重新上传、不占配额、无次数上限）', () => {
+  const cloudTask = {
+    id: 'node-retry',
+    name: 'retry.dwg',
+    status: 'failed' as const,
+    source: 'cloud' as const,
+    nodeId: 'node-retry',
+    taskId: 'task-retry',
+    createdAt: 1000,
+    error: 'read file error',
+  };
+
+  it('成功：调重试端点、按 nodeId 合并新 taskId、任务回到排队中', async () => {
+    mockedList.mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'node-retry',
+            name: 'retry.dwg',
+            fileStatus: 'PROCESSING',
+            taskId: 'task-retry-new',
+            taskStatus: 'PENDING',
+            updatedAt: '2026-09-17T00:00:00Z',
+          },
+        ],
+        total: 1,
+      },
+    } as never);
+    mockedRetry.mockResolvedValue({
+      error: undefined,
+      data: { taskId: 'task-retry-new', nodeId: 'node-retry' },
+    } as never);
+    useConversionQueueStore.setState({ tasks: [cloudTask] });
+
+    const ok = await useConversionQueueStore.getState().retryTask(cloudTask);
+
+    expect(ok).toBe(true);
+    expect(mockedRetry).toHaveBeenCalledWith({ path: { taskId: 'task-retry' } });
+    const task = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.id === 'node-retry');
+    // taskStatus=PENDING → pending（与乐观置入的排队中一致）
+    expect(task?.status).toBe('pending');
+    expect(task?.taskId).toBe('task-retry-new');
+    expect(task?.error).toBeUndefined();
+  });
+
+  it('后端拒绝（非 FAILED 节点等）：回退失败态并写入错误原因', async () => {
+    mockedRetry.mockResolvedValue({
+      error: new Error('not retryable'),
+      data: undefined,
+    } as never);
+    useConversionQueueStore.setState({ tasks: [cloudTask] });
+
+    const ok = await useConversionQueueStore.getState().retryTask(cloudTask);
+
+    expect(ok).toBe(false);
+    const task = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.id === 'node-retry');
+    expect(task?.status).toBe('failed');
+    expect(task?.error).toBeTruthy();
+  });
+
+  it('网络异常（reject）：走失败分支，不抛错', async () => {
+    mockedRetry.mockRejectedValueOnce(new Error('network'));
+    useConversionQueueStore.setState({ tasks: [cloudTask] });
+
+    const ok = await useConversionQueueStore.getState().retryTask(cloudTask);
+
+    expect(ok).toBe(false);
+    const task = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.id === 'node-retry');
+    expect(task?.status).toBe('failed');
+    expect(task?.error).toContain('network');
+  });
+
+  it('本地任务无后端可重试：直接返回 false，不发请求也不改状态', async () => {
+    const localTask = {
+      id: 'local-retry',
+      name: 'local.dwg',
+      status: 'failed' as const,
+      source: 'local' as const,
+      createdAt: 1000,
+    };
+    useConversionQueueStore.setState({ tasks: [localTask] });
+
+    const ok = await useConversionQueueStore.getState().retryTask(localTask);
+
+    expect(ok).toBe(false);
+    expect(mockedRetry).not.toHaveBeenCalled();
+    const task = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.id === 'local-retry');
+    expect(task?.status).toBe('failed');
   });
 });
 

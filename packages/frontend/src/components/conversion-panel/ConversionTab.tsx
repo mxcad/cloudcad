@@ -6,8 +6,10 @@ import {
   XCircle,
   X,
   ExternalLink,
+  RotateCcw,
 } from 'lucide-react';
 import { t } from '@/languages';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { formatDateTime, getRelativeTime } from '@/utils/dateUtils';
 import type {
   ConversionTask,
@@ -52,7 +54,7 @@ const STATUS_META: Record<
  * 转换 Tab 组件
  *
  * 云端 + 本地结合列表：live 任务（active + failed + 本地）在前，云端已完成历史在后（分页滚动加载）。
- * 行内仅提供「打开」（完成且关联节点）与「取消」（排队中的云端任务）：
+ * 行内提供「打开」（完成且关联节点）、「取消」（排队中的云端任务）与「重试」（失败的云端任务）：
  * 本地记录是临时日志（自动过期），云端记录是文件本身（从文件浏览器管理），均不提供删除。
  */
 interface ConversionTabProps {
@@ -62,6 +64,8 @@ interface ConversionTabProps {
   search: string;
   onOpen: (task: ConversionTask) => void;
   onCancel: (task: ConversionTask) => void;
+  /** 重试失败的转换（原地重新排队，不重新上传、不占配额、无次数上限） */
+  onRetry: (task: ConversionTask) => void;
   historyLoading: boolean;
   historyHasMore: boolean;
   historyCount: number;
@@ -73,6 +77,7 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
   search,
   onOpen,
   onCancel,
+  onRetry,
   historyLoading,
   historyHasMore,
   historyCount,
@@ -93,6 +98,9 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           task.source === 'cloud' &&
           !!task.taskId;
         const canOpen = task.status === 'completed' && !!task.nodeId;
+        // 仅失败的云端任务可重试（后端只接受 FAILED 节点）；无上限
+        const canRetry =
+          task.status === 'failed' && task.source === 'cloud' && !!task.taskId;
         return (
           <div key={task.id} className={`conversion-row ${meta.className}`}>
             <div className="conversion-row-main">
@@ -102,7 +110,7 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                   {task.name}
                 </span>
                 <span className={`conversion-row-status ${meta.className}`}>
-                  {task.permanent ? t('永久失败') : meta.label}
+                  {meta.label}
                   {task.status === 'processing' &&
                     typeof task.progress === 'number' &&
                     ` ${Math.round(task.progress)}%`}
@@ -124,14 +132,28 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
             </div>
             <div className="conversion-row-actions">
               {canCancel && (
-                <button title={t('取消')} onClick={() => onCancel(task)}>
-                  <X size={13} />
-                </button>
+                <Tooltip content={t('取消')}>
+                  <button aria-label={t('取消')} onClick={() => onCancel(task)}>
+                    <X size={13} />
+                  </button>
+                </Tooltip>
+              )}
+              {canRetry && (
+                <Tooltip content={t('重试转换')}>
+                  <button
+                    aria-label={t('重试转换')}
+                    onClick={() => onRetry(task)}
+                  >
+                    <RotateCcw size={13} />
+                  </button>
+                </Tooltip>
               )}
               {canOpen && (
-                <button title={t('打开')} onClick={() => onOpen(task)}>
-                  <ExternalLink size={13} />
-                </button>
+                <Tooltip content={t('打开')}>
+                  <button aria-label={t('打开')} onClick={() => onOpen(task)}>
+                    <ExternalLink size={13} />
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -173,9 +195,11 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
             </div>
             <div className="conversion-row-actions">
               {canOpen && (
-                <button title={t('打开')} onClick={() => onOpen(task)}>
-                  <ExternalLink size={13} />
-                </button>
+                <Tooltip content={t('打开')}>
+                  <button aria-label={t('打开')} onClick={() => onOpen(task)}>
+                    <ExternalLink size={13} />
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>

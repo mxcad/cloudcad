@@ -10,12 +10,13 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { UnifiedConversionService } from './conversion-task.service';
 import { AsyncConversionService } from './async-conversion.service';
 import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
+import { RestrictionEngine } from '../../vip/restriction-engine.service';
 
 describe('UnifiedConversionService', () => {
   let service: UnifiedConversionService;
@@ -24,11 +25,12 @@ describe('UnifiedConversionService', () => {
     convertNodeForExport: jest.Mock;
   };
   let executor: { getTaskStatus: jest.Mock };
+  let restrictionEngine: { getConversionQuotaState: jest.Mock };
   let prisma: {
     fileSystemNode: {
+      findFirst: jest.Mock;
       findMany: jest.Mock;
       count: jest.Mock;
-      findFirst: jest.Mock;
     };
   };
 
@@ -48,23 +50,26 @@ describe('UnifiedConversionService', () => {
           useValue: { invoke: jest.fn(), getTaskStatus: jest.fn() },
         },
         {
+          provide: RestrictionEngine,
+          useValue: { getConversionQuotaState: jest.fn() },
+        },
+        {
           provide: DatabaseService,
           useValue: {
             fileSystemNode: {
+              findFirst: jest.fn(),
               findMany: jest.fn(),
               count: jest.fn(),
-              findFirst: jest.fn(),
             },
           },
         },
       ],
     }).compile();
 
-    service = module.get<UnifiedConversionService>(
-      UnifiedConversionService
-    );
+    service = module.get<UnifiedConversionService>(UnifiedConversionService);
     asyncConversionService = module.get(AsyncConversionService);
     executor = module.get(IFunctionExecutor);
+    restrictionEngine = module.get(RestrictionEngine);
     prisma = module.get(DatabaseService);
   });
 
@@ -135,7 +140,9 @@ describe('UnifiedConversionService', () => {
           'user-1'
         )
       ).rejects.toThrow(BadRequestException);
-      expect(asyncConversionService.convertNodeForExport).not.toHaveBeenCalled();
+      expect(
+        asyncConversionService.convertNodeForExport
+      ).not.toHaveBeenCalled();
     });
 
     it('下载类型缺 userId（游客）时抛 BadRequestException', async () => {
@@ -145,7 +152,9 @@ describe('UnifiedConversionService', () => {
           target: { nodeId: 'node-1', format: 'dwg' },
         })
       ).rejects.toThrow(BadRequestException);
-      expect(asyncConversionService.convertNodeForExport).not.toHaveBeenCalled();
+      expect(
+        asyncConversionService.convertNodeForExport
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -158,10 +167,12 @@ describe('UnifiedConversionService', () => {
     });
 
     it('conversion-service 模式（executor.cancelTask 存在）时转发', async () => {
-      (executor as unknown as { cancelTask: jest.Mock }).cancelTask = jest.fn().mockResolvedValue({
-        ok: true,
-        status: 'CANCELLED',
-      });
+      (executor as unknown as { cancelTask: jest.Mock }).cancelTask = jest
+        .fn()
+        .mockResolvedValue({
+          ok: true,
+          status: 'CANCELLED',
+        });
       const result = await service.cancelTask('task-1');
       expect(result).toEqual({ ok: true, status: 'CANCELLED' });
     });
@@ -213,7 +224,7 @@ describe('UnifiedConversionService', () => {
       expect(executor.getTaskStatus).toHaveBeenCalledWith('task-1');
     });
 
-    it('失败节点据任务记录取 permanent + error（S6-7：taskStatus 仍空，节点态为终态真相）', async () => {
+    it('失败节点据任务记录取 error（taskStatus 仍空，节点态为终态真相）', async () => {
       prisma.fileSystemNode.findMany.mockResolvedValue([
         {
           id: 'node-2',
@@ -226,26 +237,24 @@ describe('UnifiedConversionService', () => {
       executor.getTaskStatus.mockResolvedValue({
         taskId: 'task-2',
         status: 'FAILED',
-        error: '永久失败（内容不可转换）：解析失败',
-        permanent: true,
+        error: '转换失败：解析失败',
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
       const result = await service.listTasks('user-1');
       // 节点 fileStatus=FAILED 是终态真相 → taskStatus 不覆盖（保持 undefined，面板据 fileStatus 展示「失败」）
-      // permanent + error 从任务记录透传（面板据 permanent 展示「永久失败」）
+      // error 从任务记录透传
       expect(result.tasks[0]).toMatchObject({
         nodeId: 'node-2',
         fileStatus: 'FAILED',
         taskStatus: undefined,
-        error: '永久失败（内容不可转换）：解析失败',
-        permanent: true,
+        error: '转换失败：解析失败',
       });
       expect(executor.getTaskStatus).toHaveBeenCalledWith('task-2');
     });
 
-    it('失败节点任务记录丢失（404）时降级为普通失败（无 permanent/error，S6-7）', async () => {
+    it('失败节点任务记录丢失（404）时降级为普通失败（无 error）', async () => {
       prisma.fileSystemNode.findMany.mockResolvedValue([
         {
           id: 'node-5',
@@ -263,34 +272,8 @@ describe('UnifiedConversionService', () => {
         fileStatus: 'FAILED',
         taskStatus: undefined,
         error: undefined,
-        permanent: undefined,
       });
       expect(executor.getTaskStatus).toHaveBeenCalledWith('task-5');
-    });
-
-    it('失败节点非永久失败（permanent=false）时不透传 permanent（S6-7）', async () => {
-      prisma.fileSystemNode.findMany.mockResolvedValue([
-        {
-          id: 'node-6',
-          name: 'f.dwg',
-          fileStatus: 'FAILED',
-          taskId: 'task-6',
-          updatedAt: new Date('2026-09-01T00:00:00Z'),
-        },
-      ]);
-      executor.getTaskStatus.mockResolvedValue({
-        taskId: 'task-6',
-        status: 'FAILED',
-        error: '瞬时失败（超时）',
-        permanent: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      const result = await service.listTasks('user-1');
-      // permanent=false（非永久失败）→ 面板展示普通「转换失败」
-      expect(result.tasks[0].permanent).toBe(false);
-      expect(result.tasks[0].error).toBe('瞬时失败（超时）');
     });
 
     it('进行中节点任务状态解析失败时降级为 UNKNOWN', async () => {
@@ -519,11 +502,13 @@ describe('UnifiedConversionService', () => {
       expect(prisma.fileSystemNode.findFirst).toHaveBeenCalledWith({
         where: {
           taskId: 'task-other',
-          deletedAt: null,
           OR: expect.any(Array),
         },
         select: { id: true, fileStatus: true, deletedAt: true },
       });
+      // 刻意不过滤 deletedAt：否则「文件已删除」会被误报成「任务不存在」
+      expect(prisma.fileSystemNode.findFirst.mock.calls[0][0].where.deletedAt)
+        .toBeUndefined();
       expect(asyncConversionService.convertNode).not.toHaveBeenCalled();
     });
 
@@ -564,8 +549,66 @@ describe('UnifiedConversionService', () => {
         'node-1',
         2
       );
+      // 原地重跑：不删节点、不重新上传。mock 只声明了 findFirst/findMany/count，
+      // 任何 delete/deleteMany/update 调用都会 TypeError，用例通过即等价断言无破坏性 DB 操作
+      expect(Object.keys(prisma.fileSystemNode)).toEqual([
+        'findFirst',
+        'findMany',
+        'count',
+      ]);
       expect(result).toEqual({ taskId: 'task-new', nodeId: 'node-1' });
     });
   });
-});
 
+  describe('getQuota', () => {
+    it('不限额窗口（limit <= 0）：unlimited=true、remaining=0、resetsAt 映射为 ISO 字符串', async () => {
+      restrictionEngine.getConversionQuotaState.mockResolvedValue({
+        scope: 'ip',
+        limit: 0,
+        used: 3,
+        windowHours: 2,
+        resetsAt: new Date('2026-09-01T02:00:00.000Z'),
+      });
+
+      const result = await service.getQuota(undefined, '1.2.3.4');
+      expect(restrictionEngine.getConversionQuotaState).toHaveBeenCalledWith(
+        undefined,
+        '1.2.3.4'
+      );
+      expect(result).toEqual({
+        limit: 0,
+        used: 3,
+        remaining: 0,
+        windowHours: 2,
+        unlimited: true,
+        resetsAt: '2026-09-01T02:00:00.000Z',
+        scope: 'ip',
+      });
+    });
+
+    it('有限窗口（登录用户）：unlimited=false，remaining = limit - used（下限 0）', async () => {
+      restrictionEngine.getConversionQuotaState.mockResolvedValue({
+        scope: 'user',
+        limit: 10,
+        used: 7,
+        windowHours: 2,
+        resetsAt: new Date('2026-09-01T02:00:00.000Z'),
+      });
+
+      const result = await service.getQuota('user-1', '1.2.3.4');
+      expect(restrictionEngine.getConversionQuotaState).toHaveBeenCalledWith(
+        'user-1',
+        '1.2.3.4'
+      );
+      expect(result.unlimited).toBe(false);
+      expect(result.remaining).toBe(3);
+      expect(result).toMatchObject({
+        limit: 10,
+        used: 7,
+        windowHours: 2,
+        scope: 'user',
+        resetsAt: '2026-09-01T02:00:00.000Z',
+      });
+    });
+  });
+});
