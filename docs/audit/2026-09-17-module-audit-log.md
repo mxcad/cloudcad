@@ -1266,3 +1266,48 @@ HEAD 本就非 prettier-clean（预存长行漂移，我新增行不在 diff 中
   真鉴权在服务端 API）；已登录访问认证页跳回 redirect 目标，**开放重定向防护**
   `redirect.startsWith('/') && !redirect.startsWith('//')`（防 `//evil.com` 协议相对跳转），
   非法回落 `/shell`；未登录访问需登录子页跳 `/login?redirect=to.fullPath`。
+
+---
+
+## 25. 公共包（mxVersionTool/impl-mx）+ 前端 API 规范 + backend shell-exec 收尾（无新缺陷）
+
+### 25.1 前端 API 调用规范：正确遵守（无 fetch 直连后端）
+
+- 全仓 `fetch(` 扫描，真实调用仅 3 处，全属 AGENTS.md 允许的例外：
+  - `config/getConfig.ts`——通用配置加载器，**ADR-0034 豁免清单**（加载任意配置 URL，非后端 API，
+    注释明确）。
+  - `constants/appConfig.ts` `fetch(BRAND_CONFIG_URL)`——config-service(3002) 品牌配置（logo 等
+    静态资源），非后端 API。
+  - `services/mxcadManager/cmd/insertImageCommand.ts` `fetch(img.url)`——图片 URL（非 JSON 资源，
+    AGENTS.md 例外）。
+- 其余 `refetch()` 均为 React Query 的 `refetch` 函数（误报）。后端 API 一律走 `@/api-sdk`。
+
+### 25.2 mxVersionTool：CLI 包装全走无 shell 执行器，shell 执行器是死代码
+
+- `mx-executor.js` 三个执行器：`executeCommand`（`exec`，**经 shell**）、`executeSpawn`（`spawn`，
+  args 数组）、`executeExecFile`（`execFile`，args 数组）。
+- 全仓（含 backend）**`executeCommand` 零调用方**——死导出，无命令注入面。
+- 实际 CLI 包装全部走无 shell 执行器：`mximport.js`→`executeSpawn`、`mxcat.js`→`executeExecFile`、
+  `mxlog.js`→`executeSpawn`；args 以**数组**构造（`['import', importPath, repoUrl]`），各值独立元素，
+  即使 `filePath`/`repoUrl`/`username` 含 shell 元字符也按字面传递、无 shell 解释 → 无注入。
+- backend 的 `*Async`（`promisify(mxImport/mxCat/mxLog)`）即这些包装，安全。
+- 观察项（非缺陷）：`mxcat.js` 用 `--password <明文>` 数组参数（进程列表可见），`mxlog.js` 用
+  `--password-from-env`（更优）——属进程可见性差异，非命令注入，本地服务端进程，不处理。
+
+### 25.3 backend shell-based `exec`/`execSync` 三处：内插值均被结构/config 约束，无注入
+
+- `storage-management/disk-monitor.service.ts`（`execSync`）：`df -k "${drivePath}"` 的
+  `drivePath` 恒为 `path.parse(resolvedPath).root`（驱动器根 `D:\`/`/`，结构上无 shell 元字符）；
+  `resolvedPath` 来自 config（`filesDataPath`/`exportDir`）非用户输入。WMIC/PowerShell 分支同理。
+- `mxcad/infra/linux-init.service.ts`（`execAsync`）：`pgrep`/`pkill` 静态命令；`chmod`/`mkdir`
+  插值 `mxcadBinPath`/`mxcadDir`/`mxSoPath`/`localeTargetPath` 全来自 config（`mxcad.assemblyPath`
+  或硬编码 runtime 路径）非用户输入。
+- `mxcad/infra/thumbnail-generation.service.ts`（`execAsync`）：`cmd` = config 工具路径
+  `dwg2JpgPath` + 服务端生成的临时参数文件名（`Date.now()` + `Math.random()`），无用户输入。
+- 结论：虽经 shell，但内插值要么是静态命令、要么是 config 路径、要么是结构约束值（驱动器根）、
+  要么是服务端生成的随机名，**无一来自用户可控输入** → 无命令注入。
+
+### 25.4 impl-mx：私有实现包，无进程派生面
+
+- 全包 grep `spawn`/`execFile`/`child_process` 零命中——纯 TS 实现包（`IMPL` 动态加载），
+  无命令注入/路径遍历面。
