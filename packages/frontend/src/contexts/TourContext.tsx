@@ -24,6 +24,7 @@ import { useVoerkaI18n } from '@voerkai18n/react';
 import { useAuth } from './AuthContext';
 import { i18nScope } from '@/languages';
 import { useIsMobile } from '../lib/useIsMobile';
+import { isDesktopOrigin } from '../lib/desktopOrigin';
 import { setTourModeActive } from '../utils/tourMode';
 
 /** localStorage 存储键名 */
@@ -265,6 +266,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({
 
     // 移动端不显示首次引导弹框
     if (isMobile) return;
+
+    // 桌面端 EXE 打开的会话不自动弹首次引导弹框（用户可经侧边栏「帮助引导」手动查看）
+    if (isDesktopOrigin()) return;
 
     // 从 localStorage 检查 dismissed 状态
     const dismissed = loadDismissedState();

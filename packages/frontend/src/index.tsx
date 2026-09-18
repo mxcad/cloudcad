@@ -46,6 +46,7 @@ import {
   getMobileRedirectConfig,
   getMobileRedirectUrl,
 } from './utils/mobileRedirect';
+import { markDesktopOrigin } from './lib/desktopOrigin';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -115,5 +116,9 @@ const root: ReactDOM.Root =
   ((window as unknown as Record<string, unknown>)
     .__cloudCAD_root as ReactDOM.Root) ?? ReactDOM.createRoot(rootElement);
 (window as unknown as Record<string, unknown>).__cloudCAD_root = root;
+
+// 桌面端 EXE 打开的入口 URL 写入来源标记（须在 React 渲染前，
+// 供 TourContext 判断是否跳过首次引导弹框）
+markDesktopOrigin();
 
 root.render(<AppInitializer />);
