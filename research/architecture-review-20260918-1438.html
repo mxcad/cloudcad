@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CloudCAD 转换面架构评审 · 2026-09-18</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose", flowchart: { htmlLabels: true } });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 5 5; }
+      .leak { stroke: #dc2626; }
+      .deep { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .band { border-left-width: 4px; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .diag-scroll { overflow-x: auto; }
+      article { scroll-margin-top: 2rem; }
+      .badge-strong { background:#d1fae5; color:#047857; }
+      .badge-explore { background:#fef3c7; color:#b45309; }
+      .badge-spec { background:#e2e8f0; color:#475569; }
+      .tag { background:#eef2ff; color:#4338ca; }
+      .num { font-variant-numeric: tabular-nums; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-800 font-sans antialiased">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-14">
+
+      <header class="space-y-3">
+        <h1 class="font-serif text-3xl font-bold text-slate-900">CloudCAD 转换面架构评审</h1>
+        <p class="text-sm text-slate-500">2026-09-18 · 范围：backend 转换模块 + function-executor + conversion-service + contracts + 全部转换调用方 + 前端/移动端任务面</p>
+        <div class="flex flex-wrap gap-4 text-xs text-slate-500 pt-2">
+          <span><span class="inline-block w-3 h-3 border-2 border-slate-400 align-middle mr-1"></span>module</span>
+          <span><span class="inline-block w-5 border-t-2 border-dashed border-slate-400 align-middle mr-1"></span>seam</span>
+          <span><span class="inline-block w-5 border-t-2 border-red-600 align-middle mr-1"></span>泄漏 / 未守住</span>
+          <span><span class="inline-block w-3 h-3 deep align-middle mr-1"></span>deep module</span>
+        </div>
+      </header>
+
+      <!-- ============ 全景 ============ -->
+      <section class="space-y-4">
+        <h2 class="font-serif text-xl font-semibold text-slate-900 border-b border-slate-200 pb-2">模式与分支全景</h2>
+        <p class="text-sm text-slate-600">实测 37 个 backend 文件（8054 行含 spec）+ conversion-service 14 个源文件 + 前端任务面。以下每一行都是一个真实的分支点，全部带 <span class="mono text-xs">file:line</span>。</p>
+
+        <div class="grid md:grid-cols-2 gap-3 text-sm">
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">部署模式 · 3 态 · 3 个开关</h3>
+            <p class="text-slate-700">唯一在 seam 上：<span class="mono text-xs">function-executor.module.ts:23</span> 的 <span class="mono text-xs">switch(FUNCTION_EXECUTOR)</span>。</p>
+            <p class="text-slate-700">内联在业务逻辑：<span class="mono text-xs">file-conversion.service.ts:181-183</span> 自读 <span class="mono text-xs">FUNCTION_EXECUTOR</span>，派生 <span class="mono text-xs">:365</span> 与 <span class="mono text-xs">:883</span> 两个转发守卫。</p>
+            <p class="text-slate-700">第三个独立开关：<span class="mono text-xs">batch-download/conversion-runner.ts:114</span> <span class="mono text-xs">delegateWorkflow</span>（分支点 <span class="mono text-xs">:332</span>），与 <span class="mono text-xs">FUNCTION_EXECUTOR</span> 互不约束。</p>
+            <p class="text-slate-500 text-xs">conversion-service 内部 0 模式感知 —— 模式判别 100% 在 backend 侧。</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">平台 Linux/Windows · 同一逻辑 5 份</h3>
+            <ul class="text-slate-700 space-y-1">
+              <li class="mono text-xs">file-conversion.service.ts:145 / :378-380 / :907-909</li>
+              <li class="mono text-xs">conversion-service mxcad/runner.ts:77 / :80-82 / :85</li>
+              <li class="mono text-xs">engine-exec/mxcad-exec.ts:64 / :74-80 / :89-106</li>
+              <li class="mono text-xs">conversion-service lib/constants.ts:46-51</li>
+              <li class="mono text-xs">test/e2e-real-conversion.test.ts:22-34（第 5 份向上查找）</li>
+            </ul>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">优先级 · 3 套词汇表</h3>
+            <p class="mono text-xs text-slate-700">1|2|3 &nbsp;<span class="text-slate-400">function-executor.interface.ts:9</span></p>
+            <p class="mono text-xs text-slate-700">'high'|'low' &nbsp;<span class="text-slate-400">file-conversion.interface.ts:150</span></p>
+            <p class="mono text-xs text-slate-700">'critical'|'high'|'low' &nbsp;<span class="text-slate-400">rate-limiter.ts:3</span></p>
+            <p class="text-slate-700">唯一映射点 <span class="mono text-xs">:373</span> 把 <span class="mono text-xs">'high'</span> 折叠为 <span class="mono text-xs">2</span> —— <strong class="text-red-600">'critical' 在整个转换链路不可达</strong>。</p>
+            <p class="text-slate-700">上界硬编码：<span class="mono text-xs">worker-pool.ts:282, :450</span> 两次 <span class="mono text-xs">for (level=1..3)</span>，与 <span class="mono text-xs">PRIORITY_CONFIG</span> 键集无编译期绑定。</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">任务状态 · 5 套词汇表</h3>
+            <ul class="text-slate-700 space-y-1">
+              <li><span class="mono text-xs">task-store.ts:10</span> 5 值（含 CANCELLED）</li>
+              <li><span class="mono text-xs">process-pool.executor.ts:14-21</span> 4 值 —— 缺 CANCELLED</li>
+              <li><span class="mono text-xs">conversion-runner.ts:494-500</span> 6 值 —— 含服务从不产生的 RUNNING/QUEUED/ACCEPTED</li>
+              <li><span class="mono text-xs">cloud-faas providers</span> 缺 status 时回 <span class="mono text-xs">'UNKNOWN'</span>，不在联合里</li>
+              <li><span class="mono text-xs">routes/conversions.ts:328-351</span> <span class="mono text-xs">waitForTask</span> 不认 CANCELLED —— 被取消的任务空转到 180s 后谎报 TIMEOUT</li>
+            </ul>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">超时 · 6 个独立默认值</h3>
+            <ul class="text-slate-700 mono text-xs space-y-1">
+              <li>180 s &nbsp;引擎 <span class="text-slate-400">file-conversion:174-178</span></li>
+              <li>600 s &nbsp;内层 limiter <span class="text-slate-400">rate-limiter.ts:52</span></li>
+              <li>600 s &nbsp;外层 limiter <span class="text-slate-400">process-pool:38</span></li>
+              <li>180/180/120 s + 60/60/40 s <span class="text-slate-400">lib/constants.ts:38-42</span></li>
+              <li>300 s &nbsp;poll <span class="text-slate-400">http-conversion:61-63</span></li>
+              <li>600 s &nbsp;workflow <span class="text-slate-400">conversion-runner:134-135</span></li>
+            </ul>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">taskId · 5 种格式，无单一来源</h3>
+            <ul class="text-slate-700 mono text-xs space-y-1">
+              <li>async_{nodeId}_{ts} <span class="text-slate-400">async:40,105</span></li>
+              <li>async_export_{nodeId}_{ts} <span class="text-slate-400">async:149</span></li>
+              <li>cs_{ts}_{rand} <span class="text-slate-400">file-conversion:593</span></li>
+              <li>task_{ts}_{substr} <span class="text-slate-400">file-conversion:654</span></li>
+              <li>{node.id}:{format} <span class="text-slate-400">conversion-runner:461</span></li>
+              <li>fw_… <span class="text-slate-400">conversion-service lib/utils:42（legacy 化石）</span></li>
+            </ul>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">任务类型 · 跨线即消失</h3>
+            <p class="text-slate-700">backend <span class="mono text-xs">ConversionTask</span> 是 3 元判别联合（<span class="mono text-xs">function-executor.interface.ts:19-30</span>）；conversion-service 只认字面量 <span class="mono text-xs">'batch'</span>（<span class="mono text-xs">worker-pool.ts:366</span>）。</p>
+            <p class="text-slate-700"><span class="mono text-xs">'generateBinFiles'</span> 在独立服务模式<strong class="text-red-600">无任何处理器</strong>。</p>
+            <p class="text-slate-700"><span class="mono text-xs">http-conversion.executor.ts:76-79</span> 把 type 塞进 params，但 <span class="mono text-xs">routes/conversions.ts:117-124</span> 构造任务时从不设置 type —— 类型判别信息跨线即丢失。</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
+            <h3 class="text-xs uppercase tracking-wider text-slate-400">队列驱动 · 默认值与部署模板分叉</h3>
+            <p class="text-slate-700">收敛良好：驱动分支全在 <span class="mono text-xs">TaskStore</span> 一类内（<span class="mono text-xs">:106, :132-138, :325</span>），worker-pool/routes/runner 完全不感知。</p>
+            <p class="text-slate-700">但 <span class="mono text-xs">lib/constants.ts:55</span> 默认 <span class="mono text-xs">local</span>，而 <span class="mono text-xs">.env.example:8</span>、<span class="mono text-xs">docker-compose.standalone.yml:135</span>、<span class="mono text-xs">verify-deploy.js:207</span> 全用 <span class="mono text-xs">redis</span>。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ CANDIDATES ============ -->
+      <section id="candidates" class="space-y-12">
+
+        <!-- ===== C1 ===== -->
+        <article id="c1" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge-strong text-xs font-semibold px-2.5 py-1 rounded-full">Strong</span>
+              <span class="tag text-xs px-2 py-1 rounded-full">in-process</span>
+            </div>
+            <h3 class="font-serif text-xl font-semibold text-slate-900">1 · 把三份引擎调用管线收敛成一个 deep module</h3>
+            <p class="text-xs text-slate-500">file-conversion.service.ts:329-575 与 :850-996 是同一份 250 行流程的两次实现；conversion-service 的 runner 是第三份。</p>
+          </div>
+
+          <div class="mono text-xs text-slate-600 bg-stone-100 rounded-md p-3">
+            packages/backend/src/mxcad/conversion/file-conversion.service.ts (997 行)<br/>
+            packages/conversion-service/mxcad/runner.ts (238 行)<br/>
+            packages/engine-exec/mxcad-exec.ts (151 行)<br/>
+            packages/contracts/src/conversion/mxcad-engine-contract.ts (341 行)
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — 两份内联 + 一份跨进程</h4>
+              <div class="rounded-lg border border-slate-200 p-3 diag-scroll">
+                <pre class="mermaid">
+flowchart TB
+  subgraph FC["file-conversion.service.ts · 997 行"]
+    direction TB
+    A["executeConversion :329-575"] --> A1["resolveToAbsolutePath :341"]
+    A1 --> A2["buildEngineParams :347"]
+    A2 --> A3["平台分支 单引号 JSON + cwd :378-391"]
+    A3 --> A4["runMxcadAssembly :385"]
+    A4 --> A5["超时采信 :410-428"]
+    A5 --> A6["输出解析 :464-529"]
+    A6 --> A7["异常 salvage :530-574"]
+    B["executeBinToMxweb :850-996"] --> B1["resolveToAbsolutePath x2 :866"]
+    B1 --> B2["buildEngineParams :876"]
+    B2 --> B3["平台分支 单引号 JSON + cwd :907-920"]
+    B3 --> B4["runMxcadAssembly :914"]
+    B4 --> B5["超时采信 :929-937"]
+    B5 --> B6["输出解析 :951-975"]
+    B6 --> B7["异常 salvage :976-995"]
+  end
+  C["conversion-service<br/>mxcad/runner.ts"] --> C1["_parseOutput / _withNewpath<br/>:225-235 / :172-184"]
+  classDef dup fill:#fee2e2,stroke:#dc2626,stroke-width:2px;
+  class A5,A6,A7,B5,B6,B7,A3,B3 dup
+                </pre>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — 一个 module 三个消费者</h4>
+              <div class="rounded-lg border border-slate-200 p-3 diag-scroll">
+                <pre class="mermaid">
+flowchart TB
+  E1["convertFile 进程内"] --> M
+  E2["binToMxweb 进程内"] --> M
+  E3["conversion-service runner"] --> M
+  M["引擎调用 module"]
+  M --> R["MxCadConversionResult"]
+  subgraph M["引擎调用 module · 唯一实现"]
+    direction TB
+    M1["参数序列化 平台分支"]
+    M2["spawn + 进程组 teardown"]
+    M3["超时采信 未启动分类"]
+    M4["输出解析 parseEngineOutput"]
+    M5["失败分类 isTransientFailure"]
+    M6["newpath 补齐"]
+  end
+  classDef deepnode fill:#0f172a,color:#f8fafc,stroke:#0f172a,stroke-width:2px;
+  class M deepnode
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Problem</h4>
+              <p class="text-slate-700">两条 <span class="mono text-xs">convertFile</span> 分支逐段同构（路径解析 / 参数装配 / 平台分支 / 超时采信 / 输出解析 / 异常 salvage），逐字重复的片段至少 4 处；conversion-service 的 runner 又独立复刻了超时采信、输出解析、newpath 补齐。同一概念理解一次要读三个文件。</p>
+            </div>
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Solution</h4>
+              <p class="text-slate-700">把「平台感知的参数序列化 + spawn/teardown + 超时与未启动分类 + 输出解析 + 失败分类 + newpath 补齐」合成一个 module，<span class="mono text-xs">executeConversion</span> 与 <span class="mono text-xs">executeBinToMxweb</span> 退化为薄调用方。engine-exec 已承担 spawn，本 module 承接其上的全部判定逻辑。</p>
+            </div>
+          </div>
+
+          <div class="text-sm">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</h4>
+            <ul class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+              <li>· locality：失败分类集中在一个 module</li>
+              <li>· 删除 250 行重复流程</li>
+              <li>· 平台分支 5 份 → 1 份</li>
+              <li>· newpath 补齐 8 处 → 1 处</li>
+              <li>· 超时采信竞态一处可测</li>
+              <li>· 两种部署模式结论一致</li>
+            </ul>
+          </div>
+
+          <div class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <strong>与 ADR-0069 的边界：</strong>契约文件 <span class="mono text-xs">:15-17</span> 明确把「路径绝对化/归一（各 adapter 的环境行为）」排除在纯函数契约之外。本 module 属 IO 层，<strong>不进 contracts</strong>（scan:purity 门禁会红灯），应落在 engine-exec 一侧或 backend 内 —— ADR-0069 的逃逸口第 4 条正是这个方向。另外 runner 与 backend 在 signal 分支的救回策略已出现真实差异（<span class="mono text-xs">runner.ts:107-108</span> 注释自述「与 backend 进程内路径一致」，但代码上 backend <span class="mono text-xs">:445</span> 合并了 exitCode==null 与 signal 两类而 runner 分开），这是收敛的直接收益。
+          </div>
+
+          <div class="text-xs text-slate-500">
+            跨模式行为分叉（收敛后可消除）：<strong>per-call timeout 在转发模式下被忽略</strong> —— 进程内默认 180 s，转发走 <span class="mono text-xs">PRIORITY_CONFIG[level].timeout</span>，level 3 = 120 s；<strong>debugNodeId 在转发模式下被</strong> <span class="mono text-xs">pickContractFields</span> 丢弃，<span class="mono text-xs">saveConversionDebugInfo</span> 永不执行。
+          </div>
+        </article>
+
+        <!-- ===== C2 ===== -->
+        <article id="c2" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge-strong text-xs font-semibold px-2.5 py-1 rounded-full">Strong</span>
+              <span class="tag text-xs px-2 py-1 rounded-full">ports &amp; adapters</span>
+            </div>
+            <h3 class="font-serif text-xl font-semibold text-slate-900">2 · 部署模式只留一个 seam</h3>
+            <p class="text-xs text-slate-500">三种部署模式由 3 个互不约束的开关控制，其中 2 个不在 seam 上。</p>
+          </div>
+
+          <div class="mono text-xs text-slate-600 bg-stone-100 rounded-md p-3">
+            packages/backend/src/function-executor/function-executor.module.ts:23-31<br/>
+            packages/backend/src/mxcad/conversion/file-conversion.service.ts:181-183, :365, :883<br/>
+            packages/backend/src/batch-download/conversion-runner.ts:114-122, :332
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — 三个开关，两个在业务逻辑里</h4>
+              <div class="rounded-lg border border-slate-200 p-3 diag-scroll">
+                <pre class="mermaid">
+flowchart TB
+  A["module 工厂<br/>switch FUNCTION_EXECUTOR<br/>:23-31"] -.正确的 seam.-> S["IFunctionExecutor token"]
+  B["file-conversion.service<br/>自读 FUNCTION_EXECUTOR :181<br/>useConversionService :183"] -.-> B1["转发守卫 :365"]
+  B -.-> B2["转发守卫 :883"]
+  C["conversion-runner<br/>delegateWorkflow :114<br/>+ URL 三级回落 :116-122"] -.-> C1["if shouldDelegateWorkflow :332"]
+  B1 --> E["conversion-service"]
+  B2 --> E
+  C1 --> E
+  B1 -.-> X["递归死锁<br/>f2df958 删守卫<br/>d9c3fa1 修复"]
+  classDef bad stroke:#dc2626,stroke-width:2px,fill:#fee2e2;
+  class B,B1,B2,C,C1 bad
+  classDef seam stroke:#059669,stroke-width:2px,stroke-dasharray:5 5;
+  class A seam
+                </pre>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — 只有一个选择点</h4>
+              <div class="rounded-lg border border-slate-200 p-3 diag-scroll">
+                <pre class="mermaid">
+flowchart TB
+  F["module 工厂<br/>唯一选择点"] -.seam.-> S["IFunctionExecutor"]
+  S --> P["ProcessPoolExecutor"]
+  S --> H["HttpConversionExecutor"]
+  S --> F1["CloudFaaSExecutor"]
+  H --> E["conversion-service"]
+  subgraph CALL["全部调用方"]
+    D1["convertFile"]
+    D2["batch download"]
+    D3["ingest / export / history"]
+  end
+  CALL --> S
+  classDef seam stroke:#059669,stroke-width:2px,stroke-dasharray:5 5;
+  class F seam
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Problem</h4>
+              <p class="text-slate-700">业务 module 自己读部署模式字符串来决定是否走 seam，必须与工厂的默认值手写保持一致；<span class="mono text-xs">delegateWorkflow</span> 是又一个正交开关，可与 <span class="mono text-xs">FUNCTION_EXECUTOR</span> 相互不一致。d9c3fa1 修的递归死锁正出在这条守卫上。</p>
+            </div>
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Solution</h4>
+              <p class="text-slate-700">删掉 <span class="mono text-xs">useConversionService</span> 字段与两处守卫，把「转发还是进程内」的判断移入 module 工厂选出的 adapter 内部；批量下载的 <span class="mono text-xs">delegateWorkflow</span> 归并到同一 seam，不再自持 <span class="mono text-xs">ConversionServiceClient</span>。</p>
+            </div>
+          </div>
+
+          <div class="text-sm">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</h4>
+            <ul class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+              <li>· 模式判断点 3 → 1</li>
+              <li>· 消除默认值双写</li>
+              <li>· 同类死锁失去产生空间</li>
+              <li>· leverage：新增模式只动工厂</li>
+              <li>· 两个正交开关互相矛盾不再可能</li>
+              <li>· 测试可断言 seam 而非字符串</li>
+            </ul>
+          </div>
+
+          <div class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <strong>与 ADR-0016 的冲突：</strong>ADR-0016 后果条明确「消费者一律只注入 token」，CONTEXT.md 的「统一任务层」定义也写明「禁止调用方各自重新判断 <span class="mono text-xs">FUNCTION_EXECUTOR</span> 值」。当前 <span class="mono text-xs">file-conversion.service.ts:181-183</span> 与该条相悖 —— 这不是要重开 ADR，而是补上一处未按 ADR 落实的实现。
+          </div>
+        </article>
+
+        <!-- ===== C3 ===== -->
+        <article id="c3" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge-strong text-xs font-semibold px-2.5 py-1 rounded-full">Strong</span>
+              <span class="tag text-xs px-2 py-1 rounded-full">in-process</span>
+            </div>
+            <h3 class="font-serif text-xl font-semibold text-slate-900">3 · 转换结果缓存只留一个 module 一个目录</h3>
+            <p class="text-xs text-slate-500">key 模板 7 处，写入方与清理方指向不同目录，委托路径从不查缓存。</p>
+          </div>
+
+          <div class="mono text-xs text-slate-600 bg-stone-100 rounded-md p-3">
+            packages/backend/src/file-system/file-download/file-download-export.service.ts:111-216<br/>
+            packages/backend/src/batch-download/conversion-runner.ts:456-479, :549-604<br/>
+            packages/backend/src/batch-download/batch-download-cleanup.service.ts:55-58<br/>
+            packages/backend/src/mxcad/conversion/async-conversion.service.ts:136-184
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — key 7 处，目录两读法</h4>
+              <div class="rounded-lg border border-slate-200 p-3 diag-scroll">
+                <pre class="mermaid">
+flowchart TB
+  subgraph KEYS["key 模板 {hash}-{paramKey}{ext} · 7 处"]
+    K1["buildConversionCacheKey :139<br/>不含 ext"]
+    K2["ext 由调用方各自补<br/>:185 :205 :301 :596"]
+    K3["conversion-runner :466<br/>内联重写"]
+    K4["conversion-runner :554<br/>内联重写"]
+  end
+  W["写入 data/uploads<br/>mxcadUploadPath 优先<br/>file-download-export:87"]
+  L["清理 data/exports/conversion-cache<br/>batchConfig.conversionCacheDir<br/>cleanup:55"]
+  W -.->|定时 cron 扫的不是<br/>实际写缓存的目录| L
+  P1["单文件导出 :598"] --> C["缓存目录"]
+  P2["批量进程内 :557"] --> C
+  P3["批量委托 :378-444"] -.漏查.-> C
+  C --> W
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fee2e2;
+  class K3,K4,P3,L leak
+                </pre>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — 一个入口三类调用</h4>
+              <div class="rounded-lg border border-slate-200 p-3 diag-scroll">
+                <pre class="mermaid">
+flowchart TB
+  subgraph CACHE["转换结果缓存 module · 唯一"]
+    direction TB
+    CK["key 派生 含 ext"]
+    DIR["目录 单一来源"]
+    CHK["getFresh 命中判断"]
+    STO["store 写入"]
+  end
+  A1["单文件导出"] --> CHK
+  A2["批量 进程内"] --> CHK
+  A3["批量 委托"] --> CHK
+  CHK --> STO
+  CRON["定时清理"] --> DIR
+  classDef deepnode fill:#0f172a,color:#f8fafc,stroke:#0f172a,stroke-width:2px;
+  class CACHE deepnode
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Problem</h4>
+              <p class="text-slate-700">写缓存的 <span class="mono text-xs">mxcadUploadPath</span> 默认非空（<span class="mono text-xs">data/uploads</span>），清理 cron 扫的是 <span class="mono text-xs">batchConfig.conversionCacheDir</span>（默认 <span class="mono text-xs">data/exports/conversion-cache</span>）—— <strong>孤儿缓存永不被清扫</strong>。委托路径每次提交都真转，即使新鲜产物已在位。另有 3 种写入语义并存（copy / rename / rename 降级直传）。</p>
+            </div>
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Solution</h4>
+              <p class="text-slate-700">把 key 派生（含 ext）、目录解析、新鲜度判断、写入、清理源全部收进一个 module，写方与清理由同一个目录出口取值；委托路径在提交前先过同一个命中判断。</p>
+            </div>
+          </div>
+
+          <div class="text-sm">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</h4>
+            <ul class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+              <li>· key 模板 7 → 1</li>
+              <li>· 目录错配缺陷消失</li>
+              <li>· 委托路径可命中缓存</li>
+              <li>· 写入语义 3 种 → 1 种</li>
+              <li>· 清理 cron 扫对目录</li>
+              <li>· 一个测试可锁死目录一致性</li>
+            </ul>
+          </div>
+
+          <div class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <strong>与 ADR-0060 §2 的冲突：</strong>ADR 声明「单文件与批量共用同一缓存目录与同一 key，双向命中复用」为<strong>已实施</strong>。实测目录读法不同源、委托路径无命中检查、<span class="mono text-xs">ConvertRequest.node.updatedAt</span> 是死字段（<span class="mono text-xs">conversion-runner.ts</span> 内 grep 零命中，实际失效维度是内容 hash）。现有测试无法捕获：<span class="mono text-xs">conversion-runner.delegate.spec.ts</span> 的 8 例从未断言缓存行为；两侧 spec 各自独立注入目录，没有一个测试断言两者同值。这是「ADR 声称已实施但未成立」，值得按 expand-contract 收尾票处理。
+          </div>
+
+          <div class="text-xs text-slate-500">
+            另一处必然 miss：<span class="mono text-xs">SubmitConversionTaskDto.target</span>（<span class="mono text-xs">dto/conversion-task.dto.ts:22-30</span>）只有 nodeId/version/format，无 width/height/colorPolicy/dwgVersion —— 异步预转换用默认值构造 key <span class="mono text-xs">{hash}-pdf-2000x2000-mono</span>，单文件下载带真实参数查 <span class="mono text-xs">{hash}-pdf-3000x3000-color</span>，<strong>#474 的「预转换→下载秒回」闭环只在默认 PDF 参数下成立</strong>。附带两个死参数：<span class="mono text-xs">convertNodeForExport</span> 的 <span class="mono text-xs">priority</span> 仅用于日志（<span class="mono text-xs">:181</span>）、<span class="mono text-xs">ConvertRequest.node.updatedAt</span>。
+          </div>
+        </article>
+
+        <!-- ===== C4 ===== -->
+        <article id="c4" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge-strong text-xs font-semibold px-2.5 py-1 rounded-full">Strong</span>
+              <span class="tag text-xs px-2 py-1 rounded-full">in-process</span>
+            </div>
+            <h3 class="font-serif text-xl font-semibold text-slate-900">4 · 引擎字段形状全部从 ENGINE_INPUT_FIELDS 派生</h3>
+            <p class="text-xs text-slate-500">唯一事实源有 21 个字段；backend 侧另有 4 份手写清单，其中一份让 11 个引擎字段永不可达。</p>
+          </div>
+
+          <div class="mono text-xs text-slate-600 bg-stone-100 rounded-md p-3">
+            packages/contracts/src/conversion/mxcad-engine-contract.ts:30-52 (21 字段)<br/>
+            packages/backend/src/mxcad/types/mxcad-context.types.ts:55-90<br/>
+            packages/backend/src/mxcad/conversion/file-conversion.service.ts:756-769, :80-87<br/>
+            packages/backend/src/batch-download/conversion-runner.ts:61-70, :460-469
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — 21 字段，4 份手写子集</h4>
+              <div class="rounded-lg border border-slate-200 p-4 space-y-3">
+                <div class="deep rounded-md p-3 text-slate-100">
+                  <div class="text-xs uppercase tracking-wider opacity-70 mb-1">ENGINE_INPUT_FIELDS · 唯一事实源</div>
+                  <div class="num text-2xl font-bold">21</div>
+                  <div class="text-xs opacity-70">contracts mxcad-engine-contract.ts:30-52</div>
+                </div>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center gap-3">
+                    <div class="w-32 h-10 rounded bg-slate-200 flex items-center justify-center border-2 border-slate-300"><span class="num font-bold text-lg">17</span></div>
+                    <div class="text-xs text-slate-600 leading-tight">ConvertServerFileParam<br/><span class="mono">mxcad-context.types.ts:55-90</span></div>
+                    <span class="text-xs text-slate-400">覆盖 10/21</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="w-32 h-10 rounded bg-red-200 flex items-center justify-center border-2 border-red-400"><span class="num font-bold text-lg text-red-800">12</span></div>
+                    <div class="text-xs text-slate-600 leading-tight">convertServerFile 映射体<br/><span class="mono">file-conversion.service.ts:756-769</span></div>
+                    <span class="text-xs text-red-700 font-medium">丢 11 字段</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="w-32 h-10 rounded bg-amber-200 flex items-center justify-center border-2 border-amber-400"><span class="num font-bold text-lg text-amber-800">7</span></div>
+                    <div class="text-xs text-slate-600 leading-tight">WorkflowConvertTask<br/><span class="mono">conversion-runner.ts:61-70</span></div>
+                    <span class="text-xs text-slate-400">Object.assign 拼装</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="w-32 h-10 rounded bg-emerald-200 flex items-center justify-center border-2 border-emerald-400"><span class="text-xs font-bold text-emerald-800">派生</span></div>
+                    <div class="text-xs text-slate-600 leading-tight">pickContractFields<br/><span class="mono">:80-87</span></div>
+                    <span class="text-xs text-emerald-700">唯一正确的一份</span>
+                  </div>
+                </div>
+                <div class="rounded-md border border-red-300 bg-red-50 p-2.5 text-xs text-red-900">
+                  经 <span class="mono">/convertServerFile</span> 入口<strong>不可达的 11 个引擎字段</strong>：outpath · compression · roate_angle · view_angle · layout_name · bd_pt1_x · bd_pt1_y · bd_pt2_x · bd_pt2_y · open_file_md5 · create_clip_block
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">After — 一份清单派生全部形状</h4>
+              <div class="rounded-lg border border-slate-200 p-4 space-y-3">
+                <div class="deep rounded-md p-3 text-slate-100 text-center">
+                  <div class="text-xs uppercase tracking-wider opacity-70 mb-1">ENGINE_INPUT_FIELDS · 唯一事实源</div>
+                  <div class="num text-2xl font-bold">21</div>
+                </div>
+                <svg viewBox="0 0 320 130" class="w-full">
+                  <path d="M160 60 L60 100" class="seam" stroke="#059669" stroke-width="2" fill="none" marker-end="url(#a)"/>
+                  <path d="M160 60 L160 100" class="seam" stroke="#059669" stroke-width="2" fill="none" marker-end="url(#a)"/>
+                  <path d="M160 60 L260 100" class="seam" stroke="#059669" stroke-width="2" fill="none" marker-end="url(#a)"/>
+                  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#059669"/></marker></defs>
+                  <text x="160" y="40" text-anchor="middle" class="text-[10px] uppercase tracking-wider" fill="#334155">派生</text>
+                  <rect x="10" y="96" width="100" height="30" rx="5" fill="#e2e8f0" stroke="#64748b"/><text x="60" y="115" text-anchor="middle" fill="#334155" font-size="10">ConvertServerFileParam</text>
+                  <rect x="110" y="96" width="100" height="30" rx="5" fill="#e2e8f0" stroke="#64748b"/><text x="160" y="115" text-anchor="middle" fill="#334155" font-size="10">ConversionTask params</text>
+                  <rect x="210" y="96" width="100" height="30" rx="5" fill="#e2e8f0" stroke="#64748b"/><text x="260" y="115" text-anchor="middle" fill="#334155" font-size="10">WorkflowConvertTask</text>
+                </svg>
+                <div class="rounded-md border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900">
+                  新增引擎字段仍只改 <span class="mono">ENGINE_INPUT_FIELDS</span> 一处；所有子形状随之变化，编译期即报错而非运行期静默丢弃。
+                </div>
+                <div class="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900">
+                  当前唯一的锁定点是 <span class="mono">contracts/test/mxcad-engine-contract.test.js:35-81</span> 的一次手写 20 字段 deepEqual —— <strong>新增字段不会被自动发现</strong>。<span class="mono">buildEngineParams</span> 覆盖 21/21，但这是手写 if 块与清单的隐式对应，代码中无 1:1 派生机制。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Problem</h4>
+              <p class="text-slate-700">ADR-0069 把「字段清单只有一份」固化进了转换引擎契约，但派生铁律只覆盖了 <span class="mono text-xs">buildEngineParams</span> / <span class="mono text-xs">CONTENT_KEY_FIELDS</span>，没有覆盖另外三个入口形状。<span class="mono text-xs">convertServerFile</span> 至今没有裁剪框通道 —— 契约文件头注释记录的 368ca55 历史事故正是这 6 个字段漏抄导致 <span class="mono text-xs">cut_dwg</span>/<span class="mono text-xs">print_to_pdf</span> 静默回 <span class="mono text-xs">{"message":"false"}</span>。</p>
+            </div>
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Solution</h4>
+              <p class="text-slate-700">让三个入口形状都按 <span class="mono text-xs">ENGINE_INPUT_FIELDS</span> 派生（子集声明或类型投影），而不是各自手写枚举；同时给 <span class="mono text-xs">buildEngineParams</span> 加一条逐字段覆盖断言，让新增字段自动进测试。</p>
+            </div>
+          </div>
+
+          <div class="text-sm">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</h4>
+            <ul class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+              <li>· 手写清单 4 份 → 1 份</li>
+              <li>· 11 个字段不再静默丢弃</li>
+              <li>· 新增字段编译期即报警</li>
+              <li>· 派生铁律覆盖全部入口</li>
+              <li>· 字段级测试自动扩展</li>
+              <li>· 跨线字段漂移可见</li>
+            </ul>
+          </div>
+
+          <div class="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <strong>文档漂移：</strong>三处注释的编排字段清单互不相同 —— <span class="mono text-xs">mxcad-engine-contract.ts:59-62</span> 列 9 项且含 <strong>不存在的</strong> <span class="mono text-xs">nodeId</span>（实际字段是 <span class="mono text-xs">debugNodeId</span>）；<span class="mono text-xs">function-executor.interface.ts:17</span> 列 4 项；<span class="mono text-xs">file-conversion.service.ts:76</span> 列 5 项加省略号。另有 3 个死字段：<span class="mono text-xs">ConversionOptions.async</span> / <span class="mono text-xs">resultposturl</span>（读的是 <span class="mono text-xs">ConvertServerFileParam</span> 的同名字段）、<span class="mono text-xs">traceid</span>（全仓零读取）。
+          </div>
+        </article>
+
+        <!-- ===== C5 ===== -->
+        <article id="c5" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge-explore text-xs font-semibold px-2.5 py-1 rounded-full">Worth exploring</span>
+              <span class="tag text-xs px-2 py-1 rounded-full">ports &amp; adapters</span>
+            </div>
+            <h3 class="font-serif text-xl font-semibold text-slate-900">5 · 统一任务层补上缺失的提交入口</h3>
+            <p class="text-xs text-slate-500">19 个转换执行点中 14 个绕过 executor seam；5 套状态词汇表、5 种 taskId 格式、终态从不清 taskId。</p>
+          </div>
+
+          <div class="mono text-xs text-slate-600 bg-stone-100 rounded-md p-3">
+            packages/backend/src/mxcad/conversion/conversion-task.service.ts:64-106<br/>
+            packages/backend/src/mxcad/conversion/async-conversion.service.ts:32-184<br/>
+            packages/backend/src/mxcad/upload/drawing-ingest.service.ts:671, :749, :898, :1159<br/>
+            packages/backend/src/public-file/public-file.service.ts:224, :481<br/>
+            packages/backend/src/mxcad/core/mxcad-version-history.service.ts:605, :728<br/>
+            packages/backend/src/mxcad/infra/mxcad-file-access.controller.ts:164-210
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-3 diag-scroll">
+            <pre class="mermaid">
+flowchart LR
+  subgraph BYPASS["绕过 executor seam · 14 处"]
+    direction TB
+    B1["drawing-ingest x4 :671 :749 :898 :1159"]
+    B2["public-file x2 :224 :481"]
+    B3["version-history x2 :605 :728"]
+    B4["file-download-export x2 :336 :657"]
+    B5["conversion-runner :581"]
+    B6["file-conversion :799"]
+    B7["mxcad-file-access controller :177"]
+  end
+  subgraph SEAM["统一任务层 · 2 处"]
+    direction TB
+    S1["AsyncConversionService.convertNode :69"]
+    S2["forwardViaExecutor :618"]
+  end
+  B1 -->|convertFile 直连| X["FileConversionService"]
+  B2 -->|convertFile 直连| X
+  B3 -->|convertFile 直连| X
+  B4 -->|convertServerFile 直连| X
+  B5 -->|convertServerFile 直连| X
+  B6 -->|convertFile 直连| X
+  B7 -->|convertServerFile 直连| X
+  S1 --> T["executor.invoke"]
+  S2 --> T
+  X --> T2["进程内 spawn"]
+  T --> T2
+  classDef bypass stroke:#dc2626,stroke-width:2px,fill:#fee2e2;
+  class B1,B2,B3,B4,B5,B6,B7 bypass
+            </pre>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Problem</h4>
+              <p class="text-slate-700">CONTEXT.md 的「统一任务层」定义写明提交/查态/取消/统计/明细/清队列只有一处契约，但实际只有 2 处走了 seam。直接后果：<strong>重复提交会覆盖 taskId</strong> —— <span class="mono text-xs">submitTask</span> 无 nodeId 去重，<span class="mono text-xs">async-conversion.service.ts:42-45</span> 无条件覆盖 <span class="mono text-xs">data: { taskId }</span>，旧任务在途但面板不再跟踪，只能靠对账兜底。终态迁移从不清 <span class="mono text-xs">taskId</span>，靠 <span class="mono text-xs">listTasks</span> 的 status 过滤掩盖。</p>
+            </div>
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Solution</h4>
+              <p class="text-slate-700">提交入口收成一个 module，由它统一负责：nodeId 去重、taskId 生成（一种格式）、priority 词汇表翻译（一套）、终态清 taskId、以及是否走 executor 的判断。14 个直连点改为薄调用方。注意 <span class="mono text-xs">mxcad-file-access.controller.ts:164-210</span> 是把转换写在 controller 层 —— 顺带移到 service。</p>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-3 text-xs">
+            <div class="rounded-md border border-slate-200 bg-stone-50 p-3">
+              <div class="uppercase tracking-wider text-slate-400 mb-1">去重守卫</div>
+              <p class="text-slate-600">仅 2 处且都在任务层之外：<span class="mono">batch-download-job.ts:83-87</span>（job 重入）、<span class="mono">version-history:290-320</span>（historyConversionLocks）。<span class="mono">submitTask</span> 零去重。</p>
+            </div>
+            <div class="rounded-md border border-slate-200 bg-stone-50 p-3">
+              <div class="uppercase tracking-wider text-slate-400 mb-1">频率门控位置</div>
+              <p class="text-slate-600">ADR-0043 要求「只在转换执行点」，但 <span class="mono">batch-download.service.ts:92,252,304</span> 在<strong>任务创建前</strong>做导出门控，形成第二个门控层。</p>
+            </div>
+            <div class="rounded-md border border-slate-200 bg-stone-50 p-3">
+              <div class="uppercase tracking-wider text-slate-400 mb-1">轮询语义不等价</div>
+              <p class="text-slate-600"><span class="mono">http-conversion:162-195</span> 白名单终态；<span class="mono">conversion-runner:486-524</span> 黑名单活跃态且含服务从不产生的状态。两处打同一端点。</p>
+            </div>
+          </div>
+
+          <div class="text-sm">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</h4>
+            <ul class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+              <li>· 提交入口 2 → 1</li>
+              <li>· taskId 5 格式 → 1 格式</li>
+              <li>· priority 3 词汇表 → 1 套</li>
+              <li>· 终态清 taskId 一处生效</li>
+              <li>· 重复提交不再覆盖引用</li>
+              <li>· critical 档位可达或明确删除</li>
+            </ul>
+          </div>
+
+          <div class="text-xs text-slate-500">
+            <strong>顺带确认守住的一条：</strong>FileStatus 写入全部经 <span class="mono text-xs">NodeStatusTransitioner</span>，转换范围内无一处 inline prisma 写 <span class="mono text-xs">fileStatus</span>（grep 命中的 <span class="mono text-xs">fileStatus:</span> 均为 findMany 读过滤器）。这是 ADR-0035/0037 的正面成果，不需要动。另：该 transitioner 本身 43 行、无 spec —— 唯一的状态机写入封装零测试。
+          </div>
+        </article>
+
+        <!-- ===== C6 ===== -->
+        <article id="c6" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge-explore text-xs font-semibold px-2.5 py-1 rounded-full">Worth exploring</span>
+              <span class="tag text-xs px-2 py-1 rounded-full">mock</span>
+            </div>
+            <h3 class="font-serif text-xl font-semibold text-slate-900">6 · 前端转换面收敛到一个状态词汇表与一组原语</h3>
+            <p class="text-xs text-slate-500">status→UI 映射 12 处 3 套词汇表；轮询定时器 8 份手写；SSE 生命周期 3 份；「等待文件就绪」5 套机制。</p>
+          </div>
+
+          <div class="mono text-xs text-slate-600 bg-stone-100 rounded-md p-3">
+            packages/frontend/src/components/conversion-panel/{ConversionTab,DownloadTab,UploadTab}.tsx<br/>
+            packages/frontend/src/stores/conversionQueueStore.ts (676 行)<br/>
+            packages/frontend/src/services/mxcadManager/mxcadOpenFile.ts<br/>
+            packages/frontend/src/hooks/conversion/{useConversionPolling,useConversionQuota,usePanelAutoCollapse}.ts<br/>
+            packages/frontend_mobile/src/pages/shell/components/BatchDownloadPanel.vue
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — 轮询定时器 8 份，无共享抽象</h4>
+              <div class="space-y-1.5">
+                <div class="band border-red-400 bg-red-50 px-3 py-1.5 text-xs"><span class="mono text-slate-700">ConversionPanel.tsx:250</span> setInterval 5 s · 不查 visibility</div>
+                <div class="band border-red-400 bg-red-50 px-3 py-1.5 text-xs"><span class="mono text-slate-700">mxcadOpenFile.ts:136-176</span> for 60×2 s · 每轮额外 refreshCloud</div>
+                <div class="band border-red-400 bg-red-50 px-3 py-1.5 text-xs"><span class="mono text-slate-700">useBatchDownload.ts:420</span> for(;;) + setTimeout 2 s</div>
+                <div class="band border-amber-400 bg-amber-50 px-3 py-1.5 text-xs"><span class="mono text-slate-700">useNoticeStream.ts:79</span> 30 s + visibility 门控 · <span class="text-emerald-700">唯一一份</span></div>
+                <div class="band border-red-400 bg-red-50 px-3 py-1.5 text-xs"><span class="mono text-slate-700">useConversionQueue.ts:41 与 :81</span> 两份逐行同形的 30 s</div>
+                <div class="band border-red-400 bg-red-50 px-3 py-1.5 text-xs"><span class="mono text-slate-700">mobile useBatchDownload.ts:153</span> start/stop + onUnmounted</div>
+                <div class="band border-slate-300 bg-slate-50 px-3 py-1.5 text-xs"><span class="mono text-slate-500">mobile utils/interval.ts:35</span> 通用工具已存在 · <span class="text-red-600 font-medium">转换路径全未使用</span></div>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Before — 状态词汇表 3 套</h4>
+              <div class="space-y-2">
+                <div class="rounded-md border border-slate-200 bg-white p-2.5">
+                  <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">lowercase · ConversionTab.tsx:23-52</div>
+                  <div class="text-xs text-slate-600">STATUS_META 单一 Record（label+icon+className 合一）· 4 处 label 映射</div>
+                </div>
+                <div class="rounded-md border border-slate-200 bg-white p-2.5">
+                  <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">UPPERCASE · DownloadTab.tsx:22-103</div>
+                  <div class="text-xs text-slate-600">STATUS_LABELS + getStatusIcon + getStatusClassName + 行内派生 · 同一判据 3 份</div>
+                </div>
+                <div class="rounded-md border border-slate-200 bg-white p-2.5">
+                  <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">上传专用 · UploadTab.tsx:26-118</div>
+                  <div class="text-xs text-slate-600">waiting/uploading/done/failed/paused/cancelled · label+颜色+class 各一 switch</div>
+                </div>
+                <div class="rounded-md border border-slate-200 bg-white p-2.5">
+                  <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">监控页 + 移动端</div>
+                  <div class="text-xs text-slate-600">ConversionQueueTab.tsx:469-490 内联三元 ×2；BatchDownloadPanel.vue:39-61 文案又不同</div>
+                </div>
+                <div class="rounded-md border border-red-300 bg-red-50 p-2.5 text-xs text-red-900">
+                  终态判据两套不兼容：<span class="mono">:93-97</span> 小写三态 vs <span class="mono">useConversionPolling.ts:83-86</span> 大写 Set(FAILED, DELETED) 无 CANCELLED。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-200 p-4">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">「等待文件就绪」· 5 套机制，判据不同</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs">
+                <thead><tr class="text-left text-slate-400 uppercase tracking-wider"><th class="pb-2 pr-3">机制</th><th class="pb-2 pr-3">端点</th><th class="pb-2 pr-3">就绪判据</th><th class="pb-2">调用方</th></tr></thead>
+                <tbody class="text-slate-700">
+                  <tr class="border-t border-slate-100"><td class="py-1.5 pr-3"><span class="mono">waitForFileReady</span> :119</td><td class="py-1.5 pr-3">getNode 60×2 s</td><td class="py-1.5 pr-3 font-medium text-red-600">fileHash &amp; path 存在</td><td class="py-1.5">openUploadedFile / MxCadUploader / useFileDropUpload</td></tr>
+                  <tr class="border-t border-slate-100"><td class="py-1.5 pr-3"><span class="mono">waitForConversion</span> :105</td><td class="py-1.5 pr-3">conversion status 2 s/120 s</td><td class="py-1.5 pr-3 font-medium text-red-600">fileStatus==='COMPLETED'</td><td class="py-1.5">仅 useCadFileLoader</td></tr>
+                  <tr class="border-t border-slate-100"><td class="py-1.5 pr-3">面板轮询 + SSE</td><td class="py-1.5 pr-3">listTasks / tasks stream</td><td class="py-1.5 pr-3">列表级，无 per-node 决议</td><td class="py-1.5">面板自身</td></tr>
+                  <tr class="border-t border-slate-100"><td class="py-1.5 pr-3">按文件 SSE :473</td><td class="py-1.5 pr-3">file-stream?hash=</td><td class="py-1.5 pr-3">帧 status ∈ 终态</td><td class="py-1.5">handlePublicUpload（游客）</td></tr>
+                  <tr class="border-t border-slate-100"><td class="py-1.5 pr-3">移动端</td><td class="py-1.5 pr-3">无</td><td class="py-1.5 pr-3 font-medium text-red-600">!fileHash 立即 throw</td><td class="py-1.5">useFileLoader:188 / useShareFileLoad:27</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-xs text-slate-500 mt-2">注释与实现不符：<span class="mono">ConversionPanel.tsx:483</span> 称编辑器走 <span class="mono">waitForFileReady</span>，实际新标签页走 <span class="mono">useCadFileLoader → waitForConversion</span>。另外 <span class="mono">waitForFileReady</span> 每轮后额外 <span class="mono">refreshCloud</span>（:173）+ 入口处再调一次（:133）—— 单次上传等待最多产生 60 次云端任务列表请求，是面板之外最重的转换流量来源。移动端失败后靠 <span class="mono">message.includes('文件尚未转换完成')</span> 字符串反查分类（useFileLoader:350、useShareFileLoad:64）。</p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Problem</h4>
+              <p class="text-slate-700">同一状态在不同文件用三套词汇表渲染，终态判据两套互不兼容；「打开一张 PROCESSING 图纸」有 5 条不同判据的等待路径，其中移动端根本没有等待机制；12 处状态映射零单测（ConversionTab/DownloadTab/UploadTab 均无 spec）。</p>
+            </div>
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Solution</h4>
+              <p class="text-slate-700">一个状态词汇表 module（后端 TaskStatus 为源，前端一次性投影出 label/icon/class）；一个轮询原语（复用已有 visibility 门控的 <span class="mono text-xs">useNoticeStream</span> 形状，PC 与移动端共用间隔常量）；一个等待就绪原语，统一判据为 <span class="mono text-xs">fileStatus</span> 终态而非 <span class="mono text-xs">fileHash</span> 存在。</p>
+            </div>
+          </div>
+
+          <div class="text-sm">
+            <h4 class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</h4>
+            <ul class="grid md:grid-cols-2 gap-x-6 gap-y-1 text-slate-700">
+              <li>· 状态映射 12 → 1</li>
+              <li>· 等待机制 5 → 1</li>
+              <li>· 轮询定时器 8 → 1 原语</li>
+              <li>· 后台标签页停止轮询</li>
+              <li>· 上传等待 60 次请求可降</li>
+              <li>· 移动端获得等待能力</li>
+            </ul>
+          </div>
+
+          <div class="rounded-md border border-slate-200 bg-stone-50 p-3 text-xs text-slate-600">
+            <strong>浅模块与孤儿：</strong><span class="mono">useConversionPolling</span> 这个 React hook 自身（:212-266）<strong>零消费者</strong>，唯一被 import 的是其内部的 <span class="mono">waitForConversion</span>；<span class="mono">usePanelAutoCollapse</span> 165 行、9 个入参，对外只输出 1 个值 <span class="mono">activeDownloadCount</span>，其余全是副作用；<span class="mono">useConversionQuota</span> 返回 3 字段但 <span class="mono">isLoading</span> 无人读；<span class="mono">mergeRecentHistory</span> 声明为公开 action 却无外部消费者。另 <span class="mono">conversionQueueStore.ts</span> 一个 store 混装 4 类状态（任务 CRUD / 历史分页 / 面板几何含 localStorage 持久化 / 面板开关），几何状态无任何外部读取方。轮询常量定义在 store 内（:78）而非 <span class="mono">constants/timeouts.ts</span>，与文件头「所有轮询常量必须引用此处」的约定相悖。
+          </div>
+        </article>
+
+        <!-- ===== C7 ===== -->
+        <article id="c7" class="rounded-xl border border-slate-200 bg-white p-6 space-y-5 shadow-sm">
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge-spec text-xs font-semibold px-2.5 py-1 rounded-full">Speculative</span>
+              <span class="tag text-xs px-2 py-1 rounded-full">ports &amp; adapters</span>
+            </div>
+            <h3 class="font-serif text-xl font-semibold text-slate-900">7 · 云 FaaS provider 的三份样板与 270 行零测试</h3>
+            <p class="text-xs text-slate-500">三个 provider 各一份 HTTPS + 签名样板，签名算法全裸；types.ts 是孤儿；provider 返回的 'UNKNOWN' 在联合之外。</p>
+          </div>
+
+          <div class="mono text-xs text-slate-600 bg-stone-100 rounded-md p-3">
+            packages/backend/src/function-executor/cloud-faas/cloud-faas.executor.ts (82 行)<br/>
+            packages/backend/src/function-executor/cloud-faas/providers/{huawei,aliyun,aws}.executor.ts (81/85/104)<br/>
+            packages/backend/src/function-executor/cloud-faas/types.ts (15 行)
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4 text-sm">
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Problem</h4>
+              <ul class="text-slate-700 space-y-1">
+                <li>· <span class="mono">types.ts</span> 的 <span class="mono">CloudFaaSConfig</span> / <span class="mono">CloudFaaSProvider</span> 零消费者 —— 三个 provider 各自读 ConfigService，类型完全没被使用</li>
+                <li>· provider 返回类型与 <span class="mono">FaasProvider</span> 接口签名逐字重复 3 遍（huawei:19,34 / aliyun:19,34 / aws:21,40），改一处要改 4 处</li>
+                <li>· 声明的 <span class="mono">progress?: number</span> 三个 provider 恒不返回</li>
+                <li>· 缺 status 时回 <span class="mono">'UNKNOWN'</span>，<span class="mono">:52</span> 强转为 <span class="mono">TaskStatus['status']</span> —— 运行期出现契约外值</li>
+                <li>· <span class="mono">errorCode</span> 进程内模式从不填，<span class="mono">CloudFaaS</span> 也不填；失败码哨兵值两个（<span class="mono">-1</span> vs <span class="mono">-2</span>）无文档</li>
+              </ul>
+            </div>
+            <div class="space-y-2">
+              <h4 class="text-xs uppercase tracking-wider text-slate-400">Solution</h4>
+              <p class="text-slate-700">把「HTTPS POST + timeout + 错误处理」提为一个 provider 共享的 HTTP 原语，三个 provider 只剩签名差异；<span class="mono">FaasProvider</span> 接口由 types.ts 定义并被真实引用（否则删除）；把 <span class="mono">'UNKNOWN'</span> 纳入联合或映射为已知失败态。</p>
+              <div class="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 mt-2">
+                <strong>测试盲区：</strong>270 行含 3 套签名算法（Huawei HMAC-SHA256 / Aliyun FC sha1 / AWS SigV4 + key derivation）<strong>全部 0 测试</strong>。唯一的 <span class="mono">cloud-faas.executor.spec.ts</span>（14 例）把三个 provider 全 mock 掉了。这是三模式里唯一没有任何真实行为覆盖的模式。
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-md border border-slate-200 bg-stone-50 p-3 text-xs text-slate-600">
+            <strong>同族的其它样板（收敛收益较小，单列以免淹没）：</strong>① 定时器生命周期样板在 3 个服务里同构（reconciliation :58-104 / failed-node-cleanup :61-109 / monitor :100-122）；② <span class="mono">error instanceof Error ? error.message : String(error)</span> 11 处跨 7 文件；③ <span class="mono">conversion-task.service.ts</span> 的 i18n 回落样板 8 处，中文字符串同时充当 fallback 与文档；④ 三个 FaaS provider 之外，POST+timeout 样板还有 <span class="mono">file-conversion.service.ts:689-724</span> 的 postCallback 与 conversion-service <span class="mono">services/callback.ts:40-66</span> 的 _post —— 跨两个进程近乎逐字；⑤ 整数配置解析两种写法（cleanup 的 <span class="mono">parseIntConfig</span> vs reconciliation 两份 inline）；⑥ <span class="mono">MAX_TERMINAL_RETAIN = 500</span> 写两次（task-store.ts:8 / process-pool.executor.ts:24），淘汰策略不同（Map 迭代序 vs push+shift 数组）。
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ============ TOP ============ -->
+      <section id="top-recommendation" class="rounded-xl deep p-6 space-y-3 text-slate-100 shadow">
+        <div class="text-xs uppercase tracking-wider text-emerald-300 font-semibold">Top recommendation</div>
+        <h3 class="font-serif text-2xl font-bold">先做 3 —— 转换结果缓存的目录错配是正在发生的缺陷</h3>
+        <p class="text-sm text-slate-300">七项里只有一项不是「代码形状难看」而是「行为已错」：缓存写入 <span class="mono text-xs">data/uploads</span>，定时清理扫 <span class="mono text-xs">data/exports/conversion-cache</span>，孤儿转换产物永久驻留；委托路径每次提交都真转，即使新鲜产物已在位。ADR-0060 §2 把「单文件与批量共用同一目录与同一 key，双向命中复用」记为<strong>已实施</strong>，实测未成立，且两个 spec 各自独立注入目录、delegate spec 的 8 例从未断言缓存行为 —— 现有测试结构上就看不见这个缺陷。</p>
+        <p class="text-sm text-slate-300">第二优先是 <a href="#c1" class="text-emerald-300 underline underline-offset-2">1（三份引擎调用管线）</a>：它是最大的重复簇，也是跨模式行为分叉（180 s vs 120 s 超时、debugNodeId 被丢、signal 分支救回策略不一致）的共同来源，收敛后这三处分叉自然消失。随后是 <a href="#c2" class="text-emerald-300 underline underline-offset-2">2（模式开关）</a>——d9c3fa1 刚用恢复字符串守卫的方式止血，但守卫所在的那行代码正是 ADR-0016 要求删除的东西。</p>
+      </section>
+
+      <footer class="text-xs text-slate-400 pt-2 border-t border-slate-200">
+        <p>评审范围：37 个 backend 转换/执行器/监控文件（8054 行含 spec）+ conversion-service 14 个源文件 + contracts + engine-exec + 全部转换调用方 + PC/移动端任务面。</p>
+        <p>已确认守住、不在候选内：<span class="mono">FileStatus</span> 写入 100% 经 NodeStatusTransitioner（转换范围零 inline prisma）；队列驱动分支收敛在 TaskStore 一类内；<span class="mono">CONTENT_KEY_FIELDS</span> 由 <span class="mono">ENGINE_INPUT_FIELDS</span> 派生且 <span class="mono">content-dedup.test.ts</span> 有逐字段断言；<span class="mono">mxcad-engine-contract.ts</span> 纯度干净（零 import、零 IO）；<span class="mono">snapshotMxweb</span> 单一实现 3 个调用点。</p>
+        <p>待拍板：7 项中哪一项要进入 grilling。</p>
+      </footer>
+
+    </main>
+  </body>
+</html>
