@@ -56,6 +56,7 @@ pnpm type-check     # tsc --noEmit
 pnpm lint           # eslint
 pnpm format:check   # prettier --check
 pnpm depcruise      # 依赖分层门禁自检（ADR-0028）
+pnpm i18n           # 一键：提取 + 自动翻译 + 编译（新增 t() 文案默认路径）
 pnpm i18n:extract   # 提取翻译文本
 pnpm i18n:compile   # 编译语言包
 ```
@@ -118,10 +119,14 @@ t('剩余 {days} 天').replace('{days}', String(membership.daysRemaining));
 
 ### 工作流
 
+**默认路径 —— 源码中用 `t()` 包装的文案**：跑一次 `pnpm i18n` 即可全自动完成，无需分步执行或手填翻译：
+
 1. 源码中使用 `t("中文文本")` 包装需翻译的内容
-2. `pnpm i18n:extract` — 扫描源码，自动将新文本加入 `translates/messages/default.json`（自动分配 `$id`，其他语言先占位为中文原文）
-3. `pnpm i18nAutoTranslate`（百度）或 `pnpm i18nAutoTranslateAi`（qwen）— 自动翻译占位文本（需 API key；无 key 时可在 `default.json` 手填翻译，`extract` sync 模式会保留已翻译字段不覆盖）
-4. `pnpm i18n:compile` — 编译为 TS 语言包
+2. `pnpm i18n` — 一键命令（= `i18n:extract` → `i18nAutoTranslate` → `i18n:compile`）：扫描源码提取新文本（自动分配 `$id`）→ 自动翻译占位文本（百度）→ 编译为 TS 语言包
+
+**特殊路径 —— 非源码提取的文本**（环境变量、数据库配置等）：才需要手动在 `translates/messages/db-strings.json` 添加键并填写翻译，然后重新运行 `pnpm i18n` 编译生效。
+
+> 无 API key 时 `i18nAutoTranslate` 无法翻译：可改在 `default.json` 手填翻译（`extract` sync 模式会保留已翻译字段不覆盖），再跑 `pnpm i18n:compile`。
 
 > **铁律**：`default.json` 由 `i18n:extract` 维护，新增文案**禁止手写进 default.json**——先写 `t('中文')` 源码再跑 extract；否则 extract 重跑时格式被规范化、`$id` 被重排、死键被清除。非源码提取文本（环境变量/DB 配置等）走 `db-strings.json`（手动维护，永不被覆盖）。
 >
