@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 // 与 mxcadOpenFile.ts 同源导入（相对路径），确保测试与被测代码引用同一 store 实例
 import { useConversionQueueStore } from '../../stores/conversionQueueStore';
-import { handlePublicUpload, waitForFileReady } from './mxcadOpenFile';
+import {
+  handlePublicUpload,
+  waitForFileReady,
+  openUploadedFile,
+  handleOpenFileCommand,
+} from './mxcadOpenFile';
 import { emit } from '../drawingSession';
 import { calculateFileHash } from '../../utils/hashUtils';
 import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
@@ -9,7 +14,16 @@ import {
   mxcadUploadControllerCheckFileExist,
   conversionTaskControllerListTasks,
   nodeControllerGetNode,
+  nodeControllerGetRootNode,
 } from '@/api-sdk';
+import {
+  showGlobalLoading,
+  hideGlobalLoading,
+} from '../loadingService';
+import {
+  confirmExitCollaborationIfNeeded,
+  checkAndConfirmUnsavedChanges,
+} from './mxcadCollaboration';
 
 // mxcadManager 是全局单例（模块加载即 MxCADManager.getInstance() 拉起 CAD 引擎，测试环境崩溃），
 // 必须 mock 整个模块。用 vi.hoisted 共享同一个 openFile mock，确保 mxcadOpenFile.ts 与测试引用同一实例。
@@ -41,7 +55,10 @@ vi.mock('@/utils/errorHandler', () => ({
 vi.mock('../../utils/hashUtils', () => ({ calculateFileHash: vi.fn() }));
 vi.mock('../../utils/mxcadUploadUtils', () => ({ uploadMxCadFile: vi.fn() }));
 vi.mock('@/utils/mxcadUtils', () => ({
-  UrlHelper: { buildUrl: vi.fn(() => '') },
+  UrlHelper: {
+    buildUrl: vi.fn(() => ''),
+    buildMxCadFileUrl: vi.fn((path: string) => `/mock/${path}`),
+  },
 }));
 vi.mock('@/constants/storage.constants', () => ({ StoragePathConstants: {} }));
 vi.mock('@/utils/notificationEvents', () => ({ globalShowToast: vi.fn() }));
@@ -52,10 +69,14 @@ vi.mock('../loadingService', () => ({
   setLoadingProgress: vi.fn(),
 }));
 vi.mock('../../stores/useCADEditorStore', () => ({
-  useCADEditorStore: vi.fn(() => ({})),
+  useCADEditorStore: Object.assign(vi.fn(() => ({})), {
+    getState: () => ({ currentFileInfo: null }),
+  }),
 }));
 vi.mock('../../stores/fileSystemStore', () => ({
-  useFileSystemStore: vi.fn(() => ({})),
+  useFileSystemStore: Object.assign(vi.fn(() => ({})), {
+    getState: () => ({ personalSpaceId: 'ps-1' }),
+  }),
 }));
 vi.mock('../drawingSession', () => ({
   emitFileOpened: vi.fn(),
@@ -65,7 +86,11 @@ vi.mock('../drawingSession', () => ({
 vi.mock('./mxcadManager', () => ({ mxcadManager: { openFile: mockOpenFile } }));
 vi.mock('./mxcadTypes', () => ({
   DEFAULT_MESSAGES: {},
-  FILE_UPLOAD_CONFIG: { chunkSize: 1 },
+  FILE_UPLOAD_CONFIG: {
+    chunkSize: 1,
+    FILE_PICKER_ID: 'mx-cad-file-picker',
+    ALLOWED_EXTENSIONS: '',
+  },
 }));
 vi.mock('./mxcadCollaboration', () => ({
   confirmExitCollaborationIfNeeded: vi.fn(() => Promise.resolve(true)),
@@ -84,6 +109,11 @@ const mockUploadMxCadFile = vi.mocked(uploadMxCadFile);
 const mockEmit = vi.mocked(emit);
 const mockNodeControllerGetNode = vi.mocked(nodeControllerGetNode);
 const mockListTasks = vi.mocked(conversionTaskControllerListTasks);
+const mockNodeControllerGetRootNode = vi.mocked(nodeControllerGetRootNode);
+const mockShowGlobalLoading = vi.mocked(showGlobalLoading);
+const mockHideGlobalLoading = vi.mocked(hideGlobalLoading);
+const mockConfirmExitCollab = vi.mocked(confirmExitCollaborationIfNeeded);
+const mockCheckUnsaved = vi.mocked(checkAndConfirmUnsavedChanges);
 
 function makeFile(name: string, size = 100): File {
   return new File([new Uint8Array(size)], name, {
@@ -323,8 +353,8 @@ describe('S6-1/S6-6 主上传路径：waitForFileReady 轮询期间重拉云端�
     const result = await waitForFileReady('node-1', 5, 1);
 
     expect(result).toMatchObject({ fileHash: 'hash123' });
-    // 入口 1 次 + 未就绪轮询 2 次 = ≥ 3 次；关键断言：> 1（证明轮询期间重拉，
-    // 而非仅入口一次——否则新上传的云端任务（node.taskId 稍后才写入）会被漏掉）
+    // 首轮触达 1 次 + 未就绪轮询 2 次 = 3 次；关键断言：> 1（证明轮询期间重拉，
+    // 否则新上传的云端任务（node.taskId 稍后才写入）会被漏掉）
     expect(mockListTasks.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -385,3 +415,219 @@ describe('S6-1/S6-6 主上传路径：waitForFileReady 轮询期间重拉云端�
     expect(mockNodeControllerGetNode).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('打开图纸不拉起转换面板：只有确有在途转换才触达', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 登录用户（有 token）：refreshCloud 的 token 门控放行，便于断言「是否真拉过云端」
+    localStorage.setItem('accessToken', 'test-token');
+    mockListTasks.mockResolvedValue({
+      error: undefined,
+      data: { tasks: [], total: 0 },
+    });
+    // 面板默认收起：expandByTask 只对收起态生效，故以收起态作为判据
+    useConversionQueueStore.setState({
+      tasks: [],
+      collapsed: true,
+      autoDismissable: false,
+    });
+  });
+
+  it('文件已就绪（打开已转换完成的图纸）：不触达转换面板、不拉云端', async () => {
+    // 侧边栏「打开图纸」→ openUploadedFile → waitForFileReady：已转换文件首轮即返回，
+    // 不应拉起面板——面板只由真实的上传 / 导出下载 / 转换动作拉起
+    mockNodeControllerGetNode.mockResolvedValue({
+      data: { fileHash: 'h', path: '/p', name: 'a.dwg', parentId: 'p' },
+    });
+
+    await waitForFileReady('node-1', 5, 1);
+
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(false);
+    expect(mockListTasks).not.toHaveBeenCalled();
+  });
+
+  it('文件未就绪（确有在途转换）：展开面板并标记为可自动收起', async () => {
+    mockNodeControllerGetNode
+      .mockResolvedValueOnce({ data: { fileStatus: 'PROCESSING' } })
+      .mockResolvedValue({
+        data: { fileHash: 'h', path: '/p', name: 'a.dwg', parentId: 'p' },
+      });
+
+    await waitForFileReady('node-1', 5, 1);
+
+    expect(useConversionQueueStore.getState().collapsed).toBe(false);
+    expect(useConversionQueueStore.getState().autoDismissable).toBe(true);
+  });
+
+  it('节点 FAILED（打开链路失败保留真实文件）：失败短路同样不触达面板', async () => {
+    mockNodeControllerGetNode.mockResolvedValue({
+      data: { fileStatus: 'FAILED' },
+    });
+
+    await expect(waitForFileReady('node-1', 5, 1)).rejects.toThrow(
+      '该文件转换失败，请检查文件内容'
+    );
+    expect(useConversionQueueStore.getState().collapsed).toBe(true);
+    expect(mockListTasks).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 转换等待期不再锁编辑器（转换面板提供进度反馈）+ 打开前复查守卫。
+ * 回归目标：解锁后转换完成自动打开不得静默丢弃用户在等待窗口内做的编辑。
+ */
+describe('转换等待期解锁 + 打开前 guardBeforeOpen 复查', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 登录用户：waitForFileReady 的 refreshCloud token 门控放行
+    localStorage.setItem('accessToken', 'test-token');
+    mockListTasks.mockResolvedValue({
+      error: undefined,
+      data: { tasks: [], total: 0 },
+    });
+    useConversionQueueStore.setState({ tasks: [] });
+  });
+
+  it('handlePublicUpload：上传完成后立即摘遮罩（转换等待期不锁编辑器）', async () => {
+    mockCalculateFileHash.mockResolvedValue('hash123');
+    mockCheckFileExist.mockResolvedValue({ data: { exists: false } });
+    mockUploadMxCadFile.mockResolvedValue(undefined);
+
+    const uploadPromise = handlePublicUpload(makeFile('drawing.dwg'));
+    // SSE 建连发生在上传完成之后（waitPublicFileConverted）
+    await vi.waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+
+    // 遮罩只覆盖哈希+上传：show 一次、hide 一次，且 hide 在上传完成之后
+    // （即 SSE 转换等待期间 globalLoading 已为 false，编辑器可交互）
+    expect(mockShowGlobalLoading).toHaveBeenCalledTimes(1);
+    expect(mockHideGlobalLoading).toHaveBeenCalledTimes(1);
+    expect(mockHideGlobalLoading.mock.invocationCallOrder[0]!).toBeGreaterThan(
+      mockUploadMxCadFile.mock.invocationCallOrder[0]!
+    );
+
+    // 收尾：SSE 终态让 promise 正常结束
+    MockEventSource.instances[0].send('FAILED', 'hash123');
+    await uploadPromise;
+  });
+
+  it('openUploadedFile：转换等待中用户取消未保存守卫 → 不打开、不抛错', async () => {
+    mockCheckUnsaved.mockResolvedValueOnce(false);
+    mockNodeControllerGetNode.mockResolvedValue({
+      data: {
+        fileHash: 'h',
+        path: '/p',
+        name: 'a.dwg',
+        parentId: 'parent-1',
+      },
+    });
+    mockNodeControllerGetRootNode.mockResolvedValue({ data: null });
+
+    await expect(openUploadedFile('node-1', 'target-1')).resolves.toBeUndefined();
+
+    expect(mockCheckUnsaved).toHaveBeenCalled();
+    expect(mockOpenFile).not.toHaveBeenCalled();
+  });
+
+  it('openUploadedFile：守卫通过 → 打开；守卫在 openFile 前、loading 只在打开时显示（等待期不显示）', async () => {
+    mockNodeControllerGetNode.mockResolvedValue({
+      data: {
+        fileHash: 'h',
+        path: '/p',
+        name: 'a.dwg',
+        parentId: 'parent-1',
+      },
+    });
+    mockNodeControllerGetRootNode.mockResolvedValue({ data: null });
+    mockOpenFile.mockResolvedValue(undefined);
+
+    await openUploadedFile('node-1', 'target-1');
+
+    expect(mockOpenFile).toHaveBeenCalledTimes(1);
+    // 守卫先于打开执行
+    expect(mockCheckUnsaved.mock.invocationCallOrder[0]!).toBeLessThan(
+      mockOpenFile.mock.invocationCallOrder[0]!
+    );
+    // 等待期不显示遮罩：唯一的 show 发生在节点查询（等待）之后
+    expect(mockShowGlobalLoading).toHaveBeenCalledTimes(1);
+    expect(mockShowGlobalLoading.mock.invocationCallOrder[0]!).toBeGreaterThan(
+      mockNodeControllerGetNode.mock.invocationCallOrder[0]!
+    );
+  });
+
+  it('公开路径打开回调：用户取消守卫 → 任务置 cancelled（终态，面板不卡 processing）、不打开', async () => {
+    console.log('[DBG7] emit calls at test start:', mockEmit.mock.calls.length);
+    mockCalculateFileHash.mockResolvedValue('hash123');
+    mockCheckFileExist.mockResolvedValue({ data: { exists: true } });
+    mockCheckUnsaved.mockResolvedValueOnce(false);
+
+    await handlePublicUpload(makeFile('drawing.dwg'));
+
+    const allLocal = useConversionQueueStore
+      .getState()
+      .tasks.filter((t) => t.source === 'local');
+    console.log('[DBG6] local tasks count:', allLocal.length, allLocal.map((t) => t.id));
+    console.log('[DBG10] emit calls after upload:', mockEmit.mock.calls.length);
+    if (mockEmit.mock.calls.length) {
+      const cb0 = (mockEmit.mock.calls[0]?.[1] as { callback: () => Promise<void> }).callback;
+      console.log('[DBG10] cb0 source:', cb0.toString().slice(0, 120));
+    }
+    const localTask = allLocal[allLocal.length - 1]!;
+    await capturedCallback();
+    const afterAll = useConversionQueueStore
+      .getState()
+      .tasks.filter((t) => t.source === 'local');
+    console.log('[DBG6] after cb:', afterAll.map((t) => [t.id, t.status]));
+
+    const after = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.id === localTask.id)!;
+    expect(after.status).toBe('cancelled');
+    expect(mockOpenFile).not.toHaveBeenCalled();
+  });
+
+  it('本地 mxweb 打开：守卫取消 → 不打开、清遮罩（入口从未查过未保存，打开点是唯一检查点）', async () => {
+    mockCheckUnsaved.mockResolvedValueOnce(false);
+    mockCalculateFileHash.mockResolvedValue('localhash');
+    installFakeIndexedDB();
+
+    await handleOpenFileCommand();
+    const picker = document.getElementById(
+      'mx-cad-file-picker'
+    ) as HTMLInputElement;
+    Object.defineProperty(picker, 'files', { value: [makeFile('a.mxweb')] });
+    await picker.onchange?.({ target: picker } as unknown as Event);
+
+    expect(mockCheckUnsaved).toHaveBeenCalled();
+    expect(mockOpenFile).not.toHaveBeenCalled();
+    expect(mockHideGlobalLoading).toHaveBeenCalled();
+  });
+});
+
+/**
+ * openLocalMxwebFile 的 IndexedDB 最小 fake：open/get 均以微任务触发 onsuccess，
+ * get 返回 truthy（缓存命中 → needsWrite=false，跳过 arrayBuffer 写入路径）。
+ */
+function installFakeIndexedDB(): void {
+  const req = (result?: unknown) => {
+    const r: {
+      onsuccess?: () => void;
+      onerror?: () => void;
+      result?: unknown;
+    } = { result };
+    queueMicrotask(() => r.onsuccess?.());
+    return r;
+  };
+  const db = {
+    transaction: () => ({
+      objectStore: () => ({
+        get: () => req(new Uint8Array(1)),
+        put: () => req(),
+      }),
+    }),
+    close: vi.fn(),
+  };
+  (globalThis as Record<string, unknown>).indexedDB = { open: () => req(db) };
+}

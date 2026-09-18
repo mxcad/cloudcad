@@ -116,6 +116,19 @@ async function getProjectId(
   return projectId;
 }
 
+/**
+ * 替换当前文档前的复查守卫：转换等待期编辑器不再被遮罩锁死，用户可能在此期间
+ * 编辑了当前图纸或加入协同，而入口检查只覆盖发起时刻、不覆盖等待窗口。
+ * 首开场景（无文档、非协同）两个检查均为 no-op。
+ * 返回 false（用户取消）时调用方不得继续打开。
+ */
+export async function guardBeforeOpen(): Promise<boolean> {
+  const a = await confirmExitCollaborationIfNeeded();
+  const b = a ? await checkAndConfirmUnsavedChanges() : false;
+  console.log('[DBG5] guardBeforeOpen -> collabOk=', a, 'unsavedOk=', b);
+  return b;
+}
+
 export async function waitForFileReady(
   nodeId: string,
   maxAttempts: number = 60,
@@ -126,17 +139,6 @@ export async function waitForFileReady(
   name: string;
   parentId: string;
 } | null> {
-  // 统一转换面板（#470/#472）：让面板感知该节点的在途转换（云端列表），
-  // 面板悬浮按钮据此可见并轮询；waitForFileReady 继续等待就绪后打开文件。
-  // 同时广播到其他标签页：它们的轮询与 SSE 都被门控到 hasActive，不广播就永远
-  // 看不到本标签页刚发起的转换（角标恒 0、面板不展开）
-  const queueStore = useConversionQueueStore.getState();
-  void queueStore.refreshCloud();
-  // 打开文件是用户显式动作，直接展开面板，不经过 settled 基线门控：
-  // settled 竞态下（refreshCloud #2 先于 #1 完成）新任务被算进基线，
-  // isGrowthAfterSettle 永远 false，面板不展开
-  queueStore.expandByTask();
-  broadcastConversionActivity();
   setLoadingProgress(0);
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const fileInfoResponse = await nodeControllerGetNode({ path: { nodeId } });
@@ -168,13 +170,27 @@ export async function waitForFileReady(
         parentId: fileInfo.parentId || '',
       };
     }
+    // 走到这里 = 节点尚未就绪 = 确有在途转换。统一转换面板（#470/#472）让面板感知
+    // 该节点的在途转换（云端列表），面板悬浮按钮据此可见并轮询；同时广播到其他标签页
+    // （它们的轮询与 SSE 都门控到 hasActive，不广播就永远看不到本标签页发起的转换）。
+    // 仅首轮（刚进入等待）触达一次，后续轮次靠下面的 refreshCloud 刷新状态。
+    // 打开已转换完成的文件首轮即返回、不会走到这里，故「打开图纸」本身不拉起面板——
+    // 面板只由真实的上传 / 导出下载 / 转换动作拉起。
+    // 直接展开、不经过 settled 基线门控：settled 竞态下（refreshCloud #2 先于 #1 完成）
+    // 新任务被算进基线，isGrowthAfterSettle 永远 false，面板不展开。
+    if (attempt === 1) {
+      const queueStore = useConversionQueueStore.getState();
+      void queueStore.refreshCloud();
+      queueStore.expandByTask();
+      broadcastConversionActivity();
+    }
     if (attempt < maxAttempts) {
       setLoadingMessage(
         `${t('文件转换中，请稍候...')} (${attempt}/${maxAttempts})`
       );
       // S6-1/S6-6 主上传路径：新上传的云端任务（node.taskId）由后台转换（fire-and-forget）
-      // 稍后才写入，入口的 refreshCloud（函数顶部）可能早于其写入而漏掉。每轮等待后重拉
-      // 云端列表，确保该任务在 node.taskId 写入后 ≤ 一个轮询间隔内进入面板（消除竞态）。
+      // 稍后才写入，首轮探测可能早于其写入而漏掉。每轮等待后重拉云端列表，确保该任务在
+      // node.taskId 写入后 ≤ 一个轮询间隔内进入面板（消除竞态）。
       void useConversionQueueStore.getState().refreshCloud();
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
@@ -188,14 +204,16 @@ export async function openUploadedFile(
 ): Promise<void> {
   const collabOk = await confirmExitCollaborationIfNeeded();
   if (!collabOk) return;
-  showGlobalLoading(t(DEFAULT_MESSAGES.OPENING_FILE));
+  // 转换等待期不再锁编辑器（转换面板提供进度反馈）；全局 loading 只覆盖引擎打开本身
   const fileInfo = await waitForFileReady(newNodeId);
   if (!fileInfo) {
-    hideGlobalLoading();
     throw new Error(t('文件转换未完成，请稍后在文件列表中查看'));
   }
   const projectId = await getProjectId(uploadTargetNodeId, newNodeId);
   const mxcadFileUrl = UrlHelper.buildMxCadFileUrl(fileInfo.path);
+  // 转换等待期编辑器可交互：用户可能在此期间编辑了当前图纸/加入协同，打开前复查
+  if (!(await guardBeforeOpen())) return;
+  showGlobalLoading(t(DEFAULT_MESSAGES.OPENING_FILE));
   try {
     await mxcadManager.openFile({
       url: mxcadFileUrl,
@@ -391,6 +409,12 @@ async function openLocalMxwebFile(
     }
     db.close();
     setLoadingMessage(t('正在打开文件...'));
+    // 打开前复查（入口从未查过未保存，这是唯一检查点）：算哈希/写缓存期间
+    // 用户可能编辑了当前图纸
+    if (!(await guardBeforeOpen())) {
+      hideGlobalLoading();
+      return;
+    }
     await mxcadManager.openFile({
       url: virtualUrl,
       noCache,
@@ -434,6 +458,14 @@ async function openPublicMxweb(
   localTaskId: string
 ): Promise<void> {
   const { updateTaskStatus } = useConversionQueueStore.getState();
+  console.log('[DBG9] openPublicMxweb ENTER id=', localTaskId);
+  // 转换等待期编辑器可交互：打开前复查；用户取消则不打开，任务置 cancelled（终态，
+  // 避免面板卡在 processing；文件已转换完成，可稍后从面板重新打开）
+  if (!(await guardBeforeOpen())) {
+    updateTaskStatus(localTaskId, 'cancelled');
+    console.log('[DBG8] openPublicMxweb cancelled path, id=', localTaskId, 'store now=', useConversionQueueStore.getState().tasks.map((t) => [t.id, t.status]));
+    return;
+  }
   try {
     showGlobalLoading(t('正在打开文件...'));
     const ext = file.name.includes('.')
@@ -560,7 +592,7 @@ export async function handlePublicUpload(
           fileHash: hash,
           fileName: file.name,
           noCache: noCache ?? false,
-          callback: () => openPublicMxweb(file, hash, noCache, localTaskId),
+          callback: () => { console.log('[DBG11] callback INVOKED id=', localTaskId); return openPublicMxweb(file, hash, noCache, localTaskId); },
         });
         return;
       }
@@ -579,13 +611,14 @@ export async function handlePublicUpload(
           );
       },
     });
-    // 上传/合并请求立即返回（转换后台跑）：等按文件 SSE 终态事件（latest-wins）
-    setLoadingMessage(t('图纸转换中...'));
+    // 上传/合并请求立即返回（转换后台跑）：等按文件 SSE 终态事件（latest-wins）。
+    // 转换等待期不再锁编辑器（转换面板提供进度反馈）：全局 loading 只覆盖
+    // 哈希计算与上传，打开时由 openPublicMxweb 重新 show
+    hideGlobalLoading();
     const { status } = await waitPublicFileConverted(hash);
     if (status === 'FAILED') {
       if (hash === currentPublicOpenHash) {
-        // 用户正在等的文件失败：清 loading 并提示
-        hideGlobalLoading();
+        // 用户正在等的文件失败：提示（loading 已在上传完成后清除）
         globalShowToast(t('该文件转换失败，请检查文件内容'), 'error');
       }
       updateTaskStatus(localTaskId, 'failed', {
@@ -598,13 +631,12 @@ export async function handlePublicUpload(
       updateTaskStatus(localTaskId, 'completed');
       return;
     }
-    // 转换完成且是最近打开的文件：打开 mxweb
-    hideGlobalLoading();
+    // 转换完成且是最近打开的文件：打开 mxweb（loading 归 openPublicMxweb 管）
     emit(CAD_EVENTS.PUBLIC_FILE_UPLOADED, {
       fileHash: hash,
       fileName: file.name,
       noCache: noCache ?? false,
-      callback: () => openPublicMxweb(file, hash, noCache, localTaskId),
+      callback: () => { console.log('[DBG11] callback INVOKED id=', localTaskId); return openPublicMxweb(file, hash, noCache, localTaskId); },
     });
   } catch (error) {
     hideGlobalLoading();
