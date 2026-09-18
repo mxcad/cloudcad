@@ -831,6 +831,62 @@ describe("FileConversionService", () => {
 			// 进程内 spawn 被调用
 			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
 		});
+
+		it("process-pool 模式：executor 已接线时 convertFile 也不得转发（回归：f2df958 删模式守卫致 convertFile↔invoke 无限递归死锁）", async () => {
+			// 生产 process-pool 模式下 IFunctionExecutor = ProcessPoolExecutor，其 executeTask
+			// 回调本服务 convertFile。转发分支若缺模式守卫，convertFile → invoke → convertFile → …
+			// 递归到两个限流器槽位耗尽，最内层任务入队永不开始（超时只覆盖运行中任务）→ 死锁：
+			// 节点恒 PROCESSING、前端恒轮询 /mxcad/conversion/tasks、引擎进程从未启动。
+			const mockExecutor = {
+				invoke: jest.fn(() => {
+					throw new Error("process-pool 模式不得转发 convertFile 到执行器");
+				}),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode() },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(true);
+			// process-pool 模式不得调用执行器（调用即递归）
+			expect(mockExecutor.invoke).not.toHaveBeenCalled();
+			// 进程内 spawn 恰好一次
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
+			await module.close();
+		});
+
+		it("process-pool 模式：executor 已接线时 convertBinToMxweb 也不得转发（同守卫同回归）", async () => {
+			const mockExecutor = {
+				invoke: jest.fn(() => {
+					throw new Error("process-pool 模式不得转发 convertBinToMxweb 到执行器");
+				}),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode() },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
+			expect(r.success).toBe(true);
+			expect(mockExecutor.invoke).not.toHaveBeenCalled();
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
+			await module.close();
+		});
 	});
 
 	// ==================== 失败分类（process-pool 对齐 conversion-service） ====================

@@ -98,6 +98,16 @@ export class FileConversionService implements IMxcadConversionService {
 	/** 单次 mxcadassembly 转换超时（毫秒），来自 timeout.fileConversion，默认 180000 */
 	private readonly conversionTimeoutMs: number;
 	/**
+	 * FUNCTION_EXECUTOR 部署模式。
+	 * - 'process-pool'（默认）：本服务内直接 spawn mxcadassembly（进程内）。ProcessPoolExecutor
+	 *   的 executeTask 正是回调本服务 convertFile，故 process-pool 模式**不得**走转发分支——
+	 *   否则 convertFile → invoke → convertFile → … 无限递归，两个限流器槽位耗尽后死锁
+	 *   （最内层任务入队永不开始，超时只覆盖运行中任务），节点恒 PROCESSING。
+	 * - 'conversion-service'：转发到独立转换服务（经 IFunctionExecutor=HttpConversionExecutor，
+	 *   其内部 POST /v1/conversions/async/convertFile + 轮询终态，不回调本服务，无递归）。
+	 */
+	private readonly useConversionService: boolean;
+	/**
 	 * 独立转换服务执行器的惰性解析缓存。
 	 * 用 ModuleRef 延迟获取而非构造注入，规避 FileConversionService ↔ ProcessPoolExecutor
 	 * 的构造期循环依赖（ProcessPoolExecutor 依赖 MXCAD_CONVERSION_SERVICE=FileConversionService）。
@@ -167,6 +177,13 @@ export class FileConversionService implements IMxcadConversionService {
 				? timeoutMs
 				: 180000;
 
+		// 部署模式：仅 conversion-service 模式切转发分支，其余（默认 process-pool）保持进程内 spawn
+		const executorMode =
+			this.configService.get<string>("FUNCTION_EXECUTOR") || "process-pool";
+		this.useConversionService = executorMode === "conversion-service";
+		if (this.useConversionService) {
+			this.logger.log("转换部署模式=conversion-service：转换请求转发到独立转换服务");
+		}
 	}
 
 	/**
@@ -342,7 +359,10 @@ export class FileConversionService implements IMxcadConversionService {
 			// pickContractFields 按 ENGINE_INPUT_FIELDS 唯一清单取字段（srcPath/compression 用已解析有效值），
 			// 与进程内 buildEngineParams 结果等价，且不会再漏抄字段。
 			// 默认 process-pool 模式走下方进程内 spawn，行为不变。
-			if (this.getFunctionExecutor()) {
+			// 守卫必须含 useConversionService：process-pool 模式 IFunctionExecutor 解析到
+			// ProcessPoolExecutor（其 executeTask 回调本服务 convertFile），仅判执行器存在
+			// 会致 convertFile↔invoke 无限递归死锁（f2df958 曾删此守卫，2026-09-18 回归）。
+			if (this.useConversionService && this.getFunctionExecutor()) {
 				return await this.forwardViaExecutor(
 					"convertFile",
 					pickContractFields({
@@ -859,7 +879,8 @@ export class FileConversionService implements IMxcadConversionService {
 			// 同 convertFile：转换服务 MxcadRunner 按驼峰 srcPath 读源路径（非小写 srcpath），
 			// binToMxweb 额外带 outpath（输出目录）。srcPath/outpath 用已解析绝对路径，
 			// 转换服务 _resolvePath 原样返回。runner 按 outpath 有无区分 binToMxweb/convertFile。
-			if (this.getFunctionExecutor()) {
+			// 守卫同 convertFile 须含 useConversionService（process-pool 模式不得转发，防递归死锁）。
+			if (this.useConversionService && this.getFunctionExecutor()) {
 				const result = await this.forwardViaExecutor(
 					"convertBinToMxweb",
 					binRequest,
