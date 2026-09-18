@@ -156,8 +156,8 @@ COPY scripts ./scripts
 COPY runtime ./runtime
 COPY tsconfig.json ./
 
-# 复制启动/停止脚本
-COPY start.sh stop.sh ./
+# 启动/停止入口脚本不再常驻仓库根目录，单一事实源 = scripts/pack-lib/templates/
+# （已随上方 COPY scripts ./scripts 进入上下文，容器内 pack-offline.js 按 manifest 取用，无需单独 COPY）
 
 # ===== mxcad 二进制处理 =====
 # mxcad（mxcadassembly + 字体 + SystemLib 覆盖版）是源码静态资产，不属于
