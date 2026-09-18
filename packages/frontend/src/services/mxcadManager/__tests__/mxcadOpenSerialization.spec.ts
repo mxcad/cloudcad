@@ -177,6 +177,7 @@ async function flush(): Promise<void> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.__MxCADView__ = undefined;
   state.opens.length = 0;
   state.viewInstances = 0;
   state.engineListenerRegistrations.length = 0;

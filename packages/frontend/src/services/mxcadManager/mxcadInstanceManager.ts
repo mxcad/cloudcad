@@ -48,6 +48,18 @@ export interface PendingOpenInfo {
  */
 let currentShareToken: string | null = null;
 
+/**
+ * MxCADView 引擎内部用模块级变量做全局单例守卫（V4），置位后永不复位。
+ * 本模块重评估（HMR / 模块图变化）后 this.mxcadView 归零但引擎 V4 仍在，
+ * 第二次 new 命中守卫只 console.log 不抛异常，实例静默损坏。
+ * window 级引用跨模块重评估存活，作为引擎 V4 的代理判据。
+ */
+declare global {
+  interface Window {
+    __MxCADView__?: MxCADView;
+  }
+}
+
 /** 设置当前 shareToken（openFile 时调用） */
 export function setCurrentShareToken(token: string | null): void {
   currentShareToken = token;
@@ -475,18 +487,8 @@ export class MxCADInstanceManager {
     // 而 MxCADView 必须严格单实例（见 createInstance 守卫）
     if (this.engineListenersInstalled) return;
     this.engineListenersInstalled = true;
-    MxFun.on('mxcadApplicationCreatedMxCADObject', async () => {
-      this.isInitialized = true;
-      this.attachFileOpenListener();
-      this.setupDocumentModifyListener();
-      applyVipExportIcons();
-      // VIP 命令前置门控：Mx_ExportPDF/DWG/DXF、Mx_PrintDialog、showDWGCutDialog
-      // 在命令触发时先校验会员再放行（与 VIP 图标替换同源，见 vipCommandGuard）
-      installVipCommandGuard();
-      // QSave 后 Ctrl+S 落回引擎内置保存（绕过自定义 Mx_QSave 流程） 通过addCommand 直接覆盖为空的实现
-      setTimeout(() => {
-        MxFun.addCommand('Mx_QSave', () => {});
-      }, 2000);
+    MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
+      this.runInitializationSideEffects();
     });
   }
 
@@ -506,19 +508,44 @@ export class MxCADInstanceManager {
       // MxCADView 严格单实例：引擎只支持一个视图，重复 new 会创建第二份
       // 全局监听并丢失共享状态
       if (this.mxcadView) return;
+      // 模块重评估后 this.mxcadView 丢失但引擎全局守卫仍在：
+      // 从 window 恢复引用，避免重复 new 命中引擎守卫返回损坏实例
+      if (window.__MxCADView__) {
+        this.mxcadView = window.__MxCADView__;
+        this.isInitialized = true;
+        this.engineListenersInstalled = true;
+        // 引擎事件 mxcadApplicationCreatedMxCADObject 已派发过，
+        // 监听器不会再触发，直接执行初始化副作用
+        this.runInitializationSideEffects();
+        return;
+      }
       // 确保 auth_token cookie 新鲜：config.openFile 的引擎内部请求只携带 cookie，
       // 若 token 临近过期，WASM 加载期间可能过期导致 401
       await ensureFreshAuthCookie();
       const viewOptions = buildViewOptions();
       this.mxcadView = new MxCADView(viewOptions);
+      window.__MxCADView__ = this.mxcadView;
       this.setupInitializationListener();
       this.mxcadView.create();
     } catch (error) {
       console.error('MxCADView 实例创建失败', error);
       this.mxcadView = null;
       this.isInitialized = false;
+      window.__MxCADView__ = undefined;
       throw error;
     }
+  }
+
+  /** 引擎初始化副作用（mxcadApplicationCreatedMxCADObject 事件回调体） */
+  private runInitializationSideEffects(): void {
+    this.isInitialized = true;
+    this.attachFileOpenListener();
+    this.setupDocumentModifyListener();
+    applyVipExportIcons();
+    installVipCommandGuard();
+    setTimeout(() => {
+      MxFun.addCommand('Mx_QSave', () => {});
+    }, 2000);
   }
 
   /** 打开文件（委托 MxCADOpenFlow；所有打开入口经串行队列，不重叠） */
