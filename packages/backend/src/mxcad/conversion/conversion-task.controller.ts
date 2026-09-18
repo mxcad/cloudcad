@@ -191,6 +191,12 @@ export class ConversionTaskController {
   @Public()
   @Get('quota')
   @ApiOperation({ summary: '当前调用者的转换配额（本窗口已用/上限）' })
+  @ApiResponse({ type: ConversionQuotaDto })
+  @ApiQuery({
+    name: 'userId',
+    required: false,
+    description: '显式指定用户窗口；省略时按已登录身份或客户端 IP 窗口',
+  })
   async getQuota(
     @Req() request: ExpressRequest,
     @Query('userId') userId?: string

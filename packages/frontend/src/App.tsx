@@ -691,12 +691,17 @@ function AppContent() {
                     }
                   />
 
-                  {/* 通知管理（发布公告/下线）- 需要 SYSTEM_CONFIG_READ 权限 */}
+                  {/*
+                    通知管理（发布公告/编辑/下线）- 需要 SYSTEM_CONFIG_WRITE 权限。
+                    WRITE 依赖 READ（见 permission-dependencies.constants.ts），故用
+                    WRITE 判定即可同时保证读权限；只授 READ 的管理员不该看到写按钮
+                    （否则点击后只得到 403 + 通用 toast）
+                  */}
                   <Route
                     path="/admin/notices"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_CONFIG_READ}
+                        permission={SystemPermission.SYSTEM_CONFIG_WRITE}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <NoticeCenterPage />

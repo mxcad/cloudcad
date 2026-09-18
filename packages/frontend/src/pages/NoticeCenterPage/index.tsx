@@ -27,6 +27,7 @@ import {
 import {
   useCreateNotice,
   useNoticeList,
+  usePublishNotice,
   useRetractNotice,
   useUpdateNotice,
 } from './hooks/useNotices';
@@ -45,6 +46,7 @@ export default function NoticeCenterPage() {
   const { items, loading, refetch } = useNoticeList();
   const createMutation = useCreateNotice(() => setFormOpen(false));
   const updateMutation = useUpdateNotice(() => setEditing(null));
+  const publishMutation = usePublishNotice();
   const retractMutation = useRetractNotice();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -212,6 +214,19 @@ export default function NoticeCenterPage() {
                     </td>
                     <td className="text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
+                        {deriveNoticeStatus(notice) === 'draft' && (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            disabled={publishMutation.isPending}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              publishMutation.mutate({ id: notice.id });
+                            }}
+                          >
+                            {t('发布')}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="xs"
@@ -250,7 +265,7 @@ export default function NoticeCenterPage() {
           style={{ color: 'var(--text-tertiary)' }}
         >
           {t(
-            '发布公告后会实时推送给所有在线用户；未填写生效开始时间则立即弹出。'
+            '发布公告后用户最长 30 秒内收到（轮询）；未填写生效开始时间则立即弹出。'
           )}
         </div>
       </div>

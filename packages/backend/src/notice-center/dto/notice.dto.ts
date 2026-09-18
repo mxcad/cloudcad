@@ -23,6 +23,7 @@ import {
   IsBoolean,
   IsIn,
   IsISO8601,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -57,6 +58,7 @@ export class CreateNoticeDto {
     example: '系统将于 30 分钟后停机维护',
   })
   @IsString()
+  @IsNotEmpty()
   @MaxLength(200)
   title!: string;
 
@@ -65,6 +67,7 @@ export class CreateNoticeDto {
     example: '本次维护涉及转换服务升级，届时文件转换与格式导出会中断。',
   })
   @IsString()
+  @IsNotEmpty()
   @MaxLength(4000)
   body!: string;
 
@@ -122,12 +125,14 @@ export class UpdateNoticeDto {
   @ApiPropertyOptional({ description: '标题（后端原文）' })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(200)
   title?: string;
 
   @ApiPropertyOptional({ description: '正文（后端原文，支持换行）' })
   @IsOptional()
   @IsString()
+  @IsNotEmpty()
   @MaxLength(4000)
   body?: string;
 }

@@ -169,6 +169,21 @@ export class NoticeCenterController {
     return this.noticeService.create(dto, userId);
   }
 
+  /** 发布草稿：草稿经 publishNow=false 保存，此前无端点能使其对外生效 */
+  @Post(':id/publish')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @ApiOperation({ summary: '发布草稿' })
+  @ApiResponse({ status: 200, description: '已发布', type: NoticeResponseDto })
+  async publish(
+    @Param('id') id: string,
+    @Req() req: Request
+  ): Promise<NoticeResponseDto> {
+    const userId = (req.user as { id: string }).id;
+    return this.noticeService.publish(id, userId);
+  }
+
   /** 部分更新文案与级别；v1 禁止改 startAt/endAt/userId（见 dto 文件头注释） */
   @Patch(':id')
   @UseGuards(PermissionsGuard)

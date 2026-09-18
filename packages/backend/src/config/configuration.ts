@@ -325,7 +325,8 @@ export default (): AppConfig => {
             : 'runtime/linux/mxcad/fonts')
       ),
       frontendPath: resolvePath(
-        process.env.FRONTEND_FONTS_PATH || 'frontend/dist/mxcadAppAssets/fonts'
+        process.env.FRONTEND_FONTS_PATH ||
+          'frontend/dist/mxcad-app/mxcadAppAssets/fonts'
       ),
     },
 

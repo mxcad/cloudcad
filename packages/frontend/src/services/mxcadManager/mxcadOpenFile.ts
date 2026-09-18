@@ -24,7 +24,10 @@ import {
 } from '../loadingService';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
 import { useFileSystemStore } from '../../stores/fileSystemStore';
-import { useConversionQueueStore } from '../../stores/conversionQueueStore';
+import {
+  broadcastConversionActivity,
+  useConversionQueueStore,
+} from '../../stores/conversionQueueStore';
 import { mxcadManager } from './mxcadManager';
 import { emitFileOpened, setCacheTimestamp, emit } from '../drawingSession';
 import { DEFAULT_MESSAGES, FILE_UPLOAD_CONFIG } from './mxcadTypes';
@@ -125,7 +128,10 @@ export async function waitForFileReady(
 } | null> {
   // 统一转换面板（#470/#472）：让面板感知该节点的在途转换（云端列表），
   // 面板悬浮按钮据此可见并轮询；waitForFileReady 继续等待就绪后打开文件。
+  // 同时广播到其他标签页：它们的轮询与 SSE 都被门控到 hasActive，不广播就永远
+  // 看不到本标签页刚发起的转换（角标恒 0、面板不展开）
   void useConversionQueueStore.getState().refreshCloud();
+  broadcastConversionActivity();
   setLoadingProgress(0);
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const fileInfoResponse = await nodeControllerGetNode({ path: { nodeId } });

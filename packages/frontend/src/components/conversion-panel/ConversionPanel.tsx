@@ -234,22 +234,32 @@ export function ConversionPanel() {
     settleInitial(true);
   }, [settled, cloudLoading, downloadSynced]);
 
-  // 有进行中任务时轮询（S4-3 兜底：SSE 断连 / 事件丢失 / 项目成员无 per-owner 通道时，
-  // 5s 轮询保证最终一致；SSE 正常时提供 sub-5s 实时推送，二者叠加无害——refreshCloud 幂等）。
+  // 有进行中任务或面板展开时轮询（S4-3 兜底：SSE 断连 / 事件丢失 / 项目成员无
+  // per-owner 通道时，5s 轮询保证最终一致；SSE 正常时提供 sub-5s 实时推送，二者叠加
+  // 无害——refreshCloud 幂等）。
+  //
+  // 不能只门控到 hasActive：任务列表只由 refreshCloud 填充，而 refreshCloud 的触发点
+  // 全在这个门控之内，hasActive 一旦为 false 就再也无法变回 true —— 面板永久失明
+  // （另一标签页发起的转换不显示、不自动展开、顶栏角标恒 0）。展开态用户在看着面板，
+  // 5s 拉取是合理成本；折叠且无任务时轮询与 SSE 都关，省连接；跨标签页发起的任务由
+  // store 的 BroadcastChannel 唤醒本标签页。
   // 面板对游客 / 登录用户一视同仁：store.refreshCloud 内部已按 token 门控云端拉取
   // （游客无云端任务时 no-op，本地任务照常显示），故面板层不再按 token 掐断
   useEffect(() => {
-    if (!hasActive) return;
+    if (!hasActive && collapsed) return;
     const interval = setInterval(() => {
       refreshCloud();
     }, CONVERSION_POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [hasActive, refreshCloud]);
+  }, [hasActive, collapsed, refreshCloud]);
 
   // S4-3：SSE 实时推送（per-user 长连接）——任务终态变更时后端 emit，前端收到即 refreshCloud。
+  // 门控到 hasActive：无进行中任务时不订阅（省常驻连接，HTTP/1.1 下避免占满浏览器 6 连接
+  // 池致普通请求排队）；有任务时订阅 + 5s 轮询叠加，保证角标/列表实时刷新。
   // token 走 query（EventSource 无法带 Authorization header，与 batch-download SSE 一致）。
   // 游客（无 token）/ 非浏览器环境（无 EventSource）不订阅；SSE 失败/断连时关闭（轮询兜底）。
   useEffect(() => {
+    if (!hasActive) return;
     const token = getValidToken();
     if (!token || typeof EventSource === 'undefined') return;
     const url = `${getApiBaseUrl()}/v1/mxcad/conversion/tasks/stream?token=${encodeURIComponent(token)}`;
@@ -266,11 +276,21 @@ export function ConversionPanel() {
     return () => {
       es.close();
     };
-  }, [refreshCloud]);
+  }, [hasActive, refreshCloud]);
 
-  // 面板展开时拉取最新已完成历史（保证打开面板即见历史记录，#476）
+  // 面板展开时拉取最新已完成历史 + 进行中任务（保证打开面板即见完整列表，#476）。
+  // 进行中列表必须一并刷：refreshCloud 的所有触发点都被门控到 hasActive，而手动展开
+  // 是用户唯一的「我知道可能有新任务」信号，不收这里就会看到陈旧的进行中列表。
+  // refreshCloud 只挂在「折叠 → 展开」这一跳：初次挂载的云端拉取已由上面的挂载 effect
+  // 负责（collapsed=false 的挂载态 wasCollapsed 恒为 false），跳过可避免挂载即重复拉取
+  const prevCollapsedRef = useRef(collapsed);
   useEffect(() => {
-    if (!collapsed) refreshHistory();
+    const wasCollapsed = prevCollapsedRef.current;
+    prevCollapsedRef.current = collapsed;
+    if (!collapsed) {
+      refreshHistory();
+      if (wasCollapsed) refreshCloud();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsed]);
 

@@ -47,6 +47,11 @@ function startAtOr(now: Date): unknown[] {
   return [{ startAt: null }, { startAt: { lte: now } }];
 }
 
+/** 生效开始时间为空时视为「立即可生效」，等价于当前时刻 */
+function startAtOrNow(startAt: Date | null): Date {
+  return startAt ?? new Date();
+}
+
 /**
  * endAt 时间窗作为一个 AND 片段传入。两个分支必须包在同一个 OR 节点里：
  * 直接平铺进 AND 会变成「endAt 为 NULL」与「endAt 晚于当前」的合取，恒为假，
@@ -100,14 +105,23 @@ export class NoticeCenterService {
     this.assertKind(dto.kind);
     this.assertLevel(dto.level ?? 'info');
     const autoExpire = dto.autoExpire ?? false;
+    const startAt = toDate(dto.startAt);
     const endAt = toDate(dto.endAt);
     if (autoExpire && !endAt) {
       throw new BadRequestException('autoExpire 为 true 时必须提供 endAt');
     }
+    // 跨字段校验：UI 挡得住、直调 API 挡不住。endAt 落在过去时公告发布后永不
+    // 生效（publishedAt 被置为 now 而 endAt <= now），下一分钟 cron 就自动下线，
+    // 表现是「我发了公告但没人看到」
+    if (endAt && endAt <= startAtOrNow(startAt)) {
+      throw new BadRequestException('失效时间必须晚于当前时间');
+    }
+    if (startAt && endAt && endAt <= startAt) {
+      throw new BadRequestException('失效时间必须晚于生效开始时间');
+    }
 
     const publishNow = dto.publishNow ?? true;
     const now = new Date();
-    const startAt = toDate(dto.startAt);
 
     const notice = await this.prisma.notice.create({
       data: {
@@ -131,6 +145,35 @@ export class NoticeCenterService {
     }
 
     return notice;
+  }
+
+  /**
+   * 发布草稿。草稿只允许改文案、不可下线（retract 拒绝草稿），此前缺这个端点，
+   * 草稿是「能保存、既发不出也撤不掉」的死分支。
+   *
+   * endAt 可能在草稿停留期间已过期，此时发布会让公告立即被 cron 下线，直接拒绝。
+   * startAt 在未来时只落库不推送，交给 cron 到点处理（与 create 同语义）。
+   */
+  async publish(id: string, publishedById: string): Promise<Notice> {
+    const existing = await this.prisma.notice.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('通知不存在');
+    if (existing.publishedAt !== null) {
+      throw new BadRequestException('该通知已发布');
+    }
+    const now = new Date();
+    if (existing.endAt && existing.endAt <= now) {
+      throw new BadRequestException('失效时间已过，请先下线后重新发布');
+    }
+
+    const updated = await this.prisma.notice.update({
+      where: { id },
+      data: { publishedAt: now, publishedById },
+    });
+
+    if (this.isWithinWindow(updated.startAt, updated.endAt, now)) {
+      await this.publishEvent({ type: 'publish', notice: updated });
+    }
+    return updated;
   }
 
   async update(id: string, dto: UpdateNoticeDto): Promise<Notice> {

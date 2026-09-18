@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   noticeCenterControllerCreate,
   noticeCenterControllerListAll,
+  noticeCenterControllerPublish,
   noticeCenterControllerRetract,
   noticeCenterControllerUpdate,
 } from '@/api-sdk';
@@ -53,7 +54,7 @@ export function useCreateNotice(onSuccess?: () => void) {
         level: values.level,
         title: values.title.trim(),
         body: values.body.trim(),
-        // 后端没有「发布草稿」接口，草稿一旦保存就发不出来了，故恒为立即发布
+        // 表单无「保存草稿」开关，恒为立即发布（草稿只能经 API 创建，由「发布」按钮转正）
         publishNow: true,
         autoExpire: values.autoExpire,
       };
@@ -104,6 +105,28 @@ export function useUpdateNotice(onSuccess?: () => void) {
     },
     onError: (error) => {
       globalShowToast(getErrorMessage(error) || t('更新失败'), 'error');
+    },
+  });
+}
+
+/** 发布草稿：草稿只允许改文案、不可下线，需要一个显式动作才能对外生效 */
+export function usePublishNotice(onSuccess?: () => void) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const res = await noticeCenterControllerPublish({ path: { id } });
+      if (res.error) throw res.error;
+      return res.data;
+    },
+    onSuccess: () => {
+      globalShowToast(t('公告已发布'), 'success');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notices.all });
+      onSuccess?.();
+    },
+    onError: (error) => {
+      // 透传后端真实原因（已发布 / 失效时间已过等）
+      globalShowToast(getErrorMessage(error) || t('发布失败'), 'error');
     },
   });
 }

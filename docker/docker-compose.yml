@@ -105,7 +105,7 @@ services:
       MXCAD_ASSEMBLY_PATH: /app/runtime/linux/mxcad/mxcadassembly
       MXCAD_FONTS_PATH: /app/runtime/linux/mxcad/fonts
       # 前端字体目录（nginx 静态资源）
-      FRONTEND_FONTS_PATH: /var/www/html/mxcadAppAssets/fonts
+      FRONTEND_FONTS_PATH: /var/www/html/mxcad-app/mxcadAppAssets/fonts
       # 邮件配置
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}

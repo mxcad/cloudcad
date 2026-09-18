@@ -217,9 +217,13 @@ function serveStaticFile(res, filePath, urlPath, options) {
       'Content-Type': mimeType,
     };
 
-    // 静态资源缓存
+    // 静态资源缓存。/mxcad-app/* 是运行时原样 dist（index.js、chunks/ 均无 hash），
+    // 部署模型是「覆盖服务器 mxcad-app/ 目录即热更新」，强缓存会让已访问用户永久拿到
+    // 旧入口，故改按校验下发
     if (!filePath.endsWith('.html')) {
-      headers['Cache-Control'] = 'public, max-age=31536000';
+      headers['Cache-Control'] = urlPath.startsWith('/mxcad-app/')
+        ? 'no-cache'
+        : 'public, max-age=31536000';
     }
 
     // WASM 支持

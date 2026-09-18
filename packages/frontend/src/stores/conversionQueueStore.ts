@@ -558,3 +558,34 @@ export function countActiveTasks(tasks: ConversionTask[]): number {
     (t) => t.status === 'pending' || t.status === 'processing'
   ).length;
 }
+
+/**
+ * 跨标签页转换活动广播。
+ *
+ * 面板的 5s 轮询与 SSE 订阅都门控到「有进行中任务」以省常驻连接，这制造了一个
+ * 盲区：本标签页 hasActive=false 时既不轮询也不订阅，而任务列表只由 refreshCloud
+ * 填充、refreshCloud 的触发点又都在门控之内 —— 另一标签页发起的转换在本标签页
+ * 永远不可见（列表为空、不自动展开、顶栏角标恒 0）。
+ *
+ * 通道只承载「有标签页可能触发了转换」这一事实，不携带任务数据：接收方无条件
+ * refreshCloud（内部已按 token 门控，游客 no-op）。模式同 NoticeProvider 的
+ * 已读广播。模块加载即建通道，保证只浏览页面、从未发起转换的标签页也能收；
+ * 非浏览器环境（无 BroadcastChannel）降级为 no-op。
+ */
+const CONVERSION_ACTIVITY_CHANNEL = 'cloudcad.conversion.activity';
+
+const conversionActivityChannel: BroadcastChannel | null =
+  typeof BroadcastChannel === 'undefined'
+    ? null
+    : (() => {
+        const channel = new BroadcastChannel(CONVERSION_ACTIVITY_CHANNEL);
+        channel.onmessage = () => {
+          void useConversionQueueStore.getState().refreshCloud();
+        };
+        return channel;
+      })();
+
+/** 通知其他标签页有转换活动：发起方已本地 refreshCloud 后再调用 */
+export function broadcastConversionActivity(): void {
+  conversionActivityChannel?.postMessage({ type: 'conversion-activity' });
+}

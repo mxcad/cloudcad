@@ -182,6 +182,8 @@ export function NoticeFormModal({
     if (!isEdit) {
       if (values.autoExpire && !values.endAt) {
         next.endAt = t('启用自动过期必须填写失效时间');
+      } else if (values.endAt && new Date(values.endAt).getTime() <= Date.now()) {
+        next.endAt = t('失效时间必须晚于当前时间');
       } else if (
         values.startAt &&
         values.endAt &&
@@ -335,6 +337,7 @@ export function NoticeFormModal({
                   withTime
                   placeholder={t('不自动失效')}
                   size="lg"
+                  minDate={new Date().toISOString()}
                 />
                 <FieldError message={errors.endAt} />
               </div>

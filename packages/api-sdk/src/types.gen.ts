@@ -3206,6 +3206,39 @@ export type ConversionHistoryResponseDto = {
     hasMore: boolean;
 };
 
+export type ConversionQuotaDto = {
+    /**
+     * 本窗口转换次数上限（unlimited 时为 0）
+     */
+    limit: number;
+    /**
+     * 本窗口已用次数
+     */
+    used: number;
+    /**
+     * 本窗口剩余次数（unlimited 时为 0）
+     */
+    remaining: number;
+    /**
+     * 窗口小时数
+     */
+    windowHours: number;
+    /**
+     * 是否不限额（limit <= 0）
+     */
+    unlimited: boolean;
+    /**
+     * 窗口重置时刻（ISO 字符串）
+     */
+    resetsAt: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 窗口归属：ip（游客）或 user（登录）
+     */
+    scope: string;
+};
+
 export type SaveMxwebDto = {
     /**
      * mxweb 文件（与 hash 二选一）
@@ -9690,15 +9723,20 @@ export type ConversionTaskControllerRetryTaskResponses = {
 export type ConversionTaskControllerGetQuotaData = {
     body?: never;
     path?: never;
-    query: {
-        userId: string;
+    query?: {
+        /**
+         * 显式指定用户窗口；省略时按已登录身份或客户端 IP 窗口
+         */
+        userId?: string;
     };
     url: '/api/v1/mxcad/conversion/quota';
 };
 
 export type ConversionTaskControllerGetQuotaResponses = {
-    200: unknown;
+    default: ConversionQuotaDto;
 };
+
+export type ConversionTaskControllerGetQuotaResponse = ConversionTaskControllerGetQuotaResponses[keyof ConversionTaskControllerGetQuotaResponses];
 
 export type SaveControllerSaveMxwebToNodeData = {
     body: SaveMxwebDto;
@@ -10754,6 +10792,24 @@ export type NoticeCenterControllerCreateResponses = {
 };
 
 export type NoticeCenterControllerCreateResponse = NoticeCenterControllerCreateResponses[keyof NoticeCenterControllerCreateResponses];
+
+export type NoticeCenterControllerPublishData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}/publish';
+};
+
+export type NoticeCenterControllerPublishResponses = {
+    /**
+     * 已发布
+     */
+    200: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerPublishResponse = NoticeCenterControllerPublishResponses[keyof NoticeCenterControllerPublishResponses];
 
 export type NoticeCenterControllerUpdateData = {
     body: UpdateNoticeDto;

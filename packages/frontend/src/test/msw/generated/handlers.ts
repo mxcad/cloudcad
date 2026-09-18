@@ -1018,10 +1018,12 @@ export const handlers = [
       }
     }
 
-    const resultArray = [[undefined, { status: 200 }]] as [
-      any,
-      { status: number },
-    ][];
+    const resultArray = [
+      [
+        await getConversionTaskControllerGetQuotadefaultResponse(),
+        { status: 500 },
+      ],
+    ] as [any, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -8620,6 +8622,31 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(`${baseURL}/api/v1/notices/:id/publish`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getNoticeCenterControllerPublish200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/notices/:id/publish`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(`${baseURL}/api/v1/notices/:id/retract`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -13192,6 +13219,18 @@ export function getConversionTaskControllerListHistorydefaultResponse() {
   };
 }
 
+export function getConversionTaskControllerGetQuotadefaultResponse() {
+  return {
+    limit: faker.number.int(),
+    used: faker.number.int(),
+    remaining: faker.number.int(),
+    windowHours: faker.number.int(),
+    unlimited: faker.datatype.boolean(),
+    resetsAt: {},
+    scope: faker.lorem.words(),
+  };
+}
+
 export function getSaveControllerSaveMxwebToNode200Response() {
   return {
     nodeId: faker.string.uuid(),
@@ -13559,6 +13598,26 @@ export function getNoticeCenterControllerListAll200Response() {
 }
 
 export function getNoticeCenterControllerCreate201Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getNoticeCenterControllerPublish200Response() {
   return {
     id: faker.string.uuid(),
     kind: faker.lorem.words(),

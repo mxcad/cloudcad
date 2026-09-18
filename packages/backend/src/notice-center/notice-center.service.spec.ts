@@ -185,6 +185,141 @@ describe('NoticeCenterService', () => {
         service.create({ kind: 'system', title: 't', body: 'b' }, 'admin_1')
       ).resolves.toEqual(expect.any(Object));
     });
+
+    it('endAt 落在过去时拒绝（发布后永不生效，1 分钟内被 cron 下线）', async () => {
+      await expect(
+        service.create(
+          {
+            kind: 'system',
+            title: 't',
+            body: 'b',
+            endAt: new Date(Date.now() - 1000).toISOString(),
+          },
+          'a'
+        )
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('endAt 早于或等于 startAt 拒绝', async () => {
+      await expect(
+        service.create(
+          {
+            kind: 'system',
+            title: 't',
+            body: 'b',
+            startAt: new Date(Date.now() + 3600_000).toISOString(),
+            endAt: new Date(Date.now() + 1800_000).toISOString(),
+          },
+          'a'
+        )
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.create(
+          {
+            kind: 'system',
+            title: 't',
+            body: 'b',
+            startAt: new Date(Date.now() + 3600_000).toISOString(),
+            endAt: new Date(Date.now() + 3600_000).toISOString(),
+          },
+          'a'
+        )
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('endAt 在未来且晚于 startAt 通过', async () => {
+      await expect(
+        service.create(
+          {
+            kind: 'system',
+            title: 't',
+            body: 'b',
+            startAt: new Date(Date.now() + 1800_000).toISOString(),
+            endAt: new Date(Date.now() + 3600_000).toISOString(),
+          },
+          'a'
+        )
+      ).resolves.toEqual(expect.any(Object));
+    });
+  });
+
+  describe('publish', () => {
+    it('不存在的通知抛 NotFound', async () => {
+      await expect(service.publish('missing', 'admin_1')).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('已发布的通知拒绝重复发布', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(makeNotice());
+      await expect(
+        service.publish('notice_1', 'admin_1')
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('失效时间已过的草稿拒绝发布（发布会立即被 cron 下线）', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(
+        makeNotice({
+          publishedAt: null,
+          endAt: new Date(Date.now() - 1000),
+        })
+      );
+      await expect(
+        service.publish('notice_1', 'admin_1')
+      ).rejects.toThrow(BadRequestException);
+      expect(mockPrisma.notice.update).not.toHaveBeenCalled();
+    });
+
+    it('草稿发布：置 publishedAt 与 publishedById，当前在窗口内则推送', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(
+        makeNotice({ publishedAt: null, publishedById: null })
+      );
+      const notice = await service.publish('notice_1', 'admin_2');
+      expect(mockPrisma.notice.update).toHaveBeenCalledWith({
+        where: { id: 'notice_1' },
+        data: {
+          publishedAt: expect.any(Date),
+          publishedById: 'admin_2',
+        },
+      });
+      expect(notice.publishedAt).not.toBeNull();
+      expect(mockRedis.publish).toHaveBeenCalledWith(
+        NOTICE_EVENTS_CHANNEL,
+        expect.stringContaining('"type":"publish"')
+      );
+    });
+
+    it('startAt 在未来的草稿发布但不立即推送（交给定时任务）', async () => {
+      const futureStart = new Date(Date.now() + 3600_000);
+      mockPrisma.notice.findUnique.mockResolvedValue(
+        makeNotice({
+          publishedAt: null,
+          publishedById: null,
+          startAt: futureStart,
+        })
+      );
+      // update 的 mock 默认只回显传入的 data，须显式带上原行的 startAt，
+      // 否则 isWithinWindow 看到的是 null startAt 而误判为当前已生效
+      mockPrisma.notice.update.mockResolvedValue(
+        makeNotice({
+          publishedAt: new Date(),
+          publishedById: 'admin_2',
+          startAt: futureStart,
+        })
+      );
+      await service.publish('notice_1', 'admin_2');
+      expect(mockRedis.publish).not.toHaveBeenCalled();
+    });
+
+    it('推送失败不阻断发布（定时任务兜底重试）', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(
+        makeNotice({ publishedAt: null, publishedById: null })
+      );
+      mockRedis.publish.mockRejectedValue(new Error('redis down'));
+      await expect(
+        service.publish('notice_1', 'admin_2')
+      ).resolves.toEqual(expect.any(Object));
+    });
   });
 
   describe('update', () => {
