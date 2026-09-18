@@ -210,6 +210,7 @@ beforeEach(() => {
     search: '',
     cloudLoading: false,
     cloudError: null,
+    cloudTruncated: false,
   });
 });
 
@@ -406,6 +407,61 @@ describe('ConversionPanel', () => {
     useConversionQueueStore.setState({ collapsed: false });
     await renderPanel();
     expect(document.querySelector('.conversion-empty')).toBeTruthy();
+  });
+
+  it('云端拉取失败时显示错误提示，不整块替换成空态', async () => {
+    // 空 error 对象 = 无 message 的网络失败：getErrorMessage 回落到统一文案
+    vi.mocked(conversionTaskControllerListTasks).mockResolvedValueOnce({
+      error: {},
+      data: undefined,
+    } as never);
+    // 展开面板会触发 refreshHistory 重置分页，故历史也走真实通道返回
+    vi.mocked(conversionTaskControllerListHistory).mockResolvedValueOnce({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'h-1',
+            name: 'history.dwg',
+            fileStatus: 'COMPLETED',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+        hasMore: false,
+      },
+    } as never);
+    useConversionQueueStore.setState({ collapsed: false });
+    await renderPanel();
+
+    expect(document.querySelector('.conversion-cloud-error')).toBeTruthy();
+    expect(document.body.textContent).toContain('请求失败，请检查网络或联系管理员');
+    // 已加载的历史仍在（失败不降级为空态）
+    expect(document.body.textContent).toContain('history.dwg');
+    expect(document.querySelector('.conversion-empty')).toBeNull();
+  });
+
+  it('云端列表达到后端上限时显示截断提示', async () => {
+    // 后端 MAX_LIST=50 截断：达到上限即视为可能有更早记录被静默截断
+    vi.mocked(conversionTaskControllerListTasks).mockResolvedValueOnce({
+      error: undefined,
+      data: {
+        tasks: Array.from({ length: 50 }, (_, i) => ({
+          nodeId: `c-${i}`,
+          name: `task-${i}.dwg`,
+          fileStatus: 'PROCESSING',
+          taskId: `task-${i}`,
+          updatedAt: new Date().toISOString(),
+        })),
+        total: 50,
+      },
+    } as never);
+    useConversionQueueStore.setState({ collapsed: false });
+    await renderPanel();
+
+    expect(document.body.textContent).toContain(
+      t('仅显示最近 {n} 条进行中/失败记录', { n: 50 })
+    );
   });
 
   it('云端 FAILED 节点展示「转换失败」标签', async () => {
@@ -715,9 +771,25 @@ describe('ConversionPanel', () => {
     );
   });
 
-  it('S4-3：登录用户订阅 SSE（EventSource），收到消息触发 refreshCloud；卸载后关闭', async () => {
-    // 登录用户（有 token）→ 订阅 SSE
+  it('S4-3：有进行中任务的登录用户订阅 SSE（EventSource），收到消息触发 refreshCloud；卸载后关闭', async () => {
+    // 登录用户（有 token）+ 有进行中任务（hasActive=true）→ 订阅 SSE
     mockGetValidToken.mockReturnValue('test-token');
+    // 造一个进行中任务使 hasActive=true（SSE 门控条件）
+    vi.mocked(conversionTaskControllerListTasks).mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'cloud-1',
+            name: 'new.dwg',
+            fileStatus: 'PROCESSING',
+            taskId: 'task-1',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+      },
+    } as never);
 
     // happy-dom 无 EventSource，mock 一个可控实现
     class MockEventSource {
@@ -739,8 +811,8 @@ describe('ConversionPanel', () => {
     MockEventSource.instances = [];
     await renderPanel();
 
-    // 登录用户 → 建立 SSE 连接（URL 含 stream 路径 + token 走 query）
-    expect(MockEventSource.instances).toHaveLength(1);
+    // 等初始 hydrate（refreshCloud 拉到进行中任务，hasActive=true）→ 建 SSE
+    await waitFor(() => expect(MockEventSource.instances).toHaveLength(1));
     expect(MockEventSource.instances[0].url).toContain(
       '/v1/mxcad/conversion/tasks/stream?token=test-token'
     );
@@ -758,6 +830,34 @@ describe('ConversionPanel', () => {
     // 卸载（cleanup）→ 关闭 EventSource
     cleanup();
     expect(MockEventSource.instances[0].closed).toBe(true);
+  });
+
+  it('S4-3：无进行中任务不订阅 SSE（hasActive 门控，省常驻连接）', async () => {
+    // 登录用户（有 token）但无进行中任务 → 不订阅 SSE
+    mockGetValidToken.mockReturnValue('test-token');
+    // listTasks 默认返回空任务（beforeEach 已设）→ hasActive=false
+    class MockEventSource {
+      static instances: MockEventSource[] = [];
+      url: string;
+      onmessage: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      closed = false;
+      constructor(url: string) {
+        this.url = url;
+        MockEventSource.instances.push(this);
+      }
+      close() {
+        this.closed = true;
+      }
+    }
+    (globalThis as Record<string, unknown>).EventSource = MockEventSource;
+
+    MockEventSource.instances = [];
+    await renderPanel();
+    await flushSettled();
+
+    // 无进行中任务 → 不建立 SSE 连接
+    expect(MockEventSource.instances).toHaveLength(0);
   });
 
   it('S4-3：游客（无 token）不订阅 SSE', async () => {

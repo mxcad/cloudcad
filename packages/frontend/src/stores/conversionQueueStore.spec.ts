@@ -49,6 +49,7 @@ beforeEach(() => {
     search: '',
     cloudLoading: false,
     cloudError: null,
+    cloudTruncated: false,
   });
   vi.clearAllMocks();
 });
@@ -483,26 +484,54 @@ describe('conversionQueueStore 自动收起来源标记（autoDismissable）', (
 });
 
 describe('conversionQueueStore 终态过期清理（S6-5）', () => {
-  it('refreshCloud 清理超过 TTL 的本地终态任务（localStorage 不永久驻留）', async () => {
+  it('refreshCloud 按 terminalAt（终态时刻）清理本地终态任务', async () => {
     mockedList.mockResolvedValue({ error: undefined, data: { tasks: [], total: 0 } } as never);
     const now = Date.now();
-    // 过期终态任务（createdAt 在 31 分钟前）+ 新鲜终态任务（createdAt 在 1 分钟前）
-    const oldCompleted: ConversionTask = {
+    // 过期：终态时刻在 TTL（7 天）之外
+    const oldTerminal: ConversionTask = {
       id: 'local-old',
       name: 'old.dwg',
       status: 'completed',
       source: 'local',
-      createdAt: now - 31 * 60 * 1000,
+      createdAt: now - 6 * 60 * 1000,
+      terminalAt: now - 8 * 24 * 60 * 60 * 1000,
     };
-    const freshCompleted: ConversionTask = {
+    // 新鲜：终态时刻在 TTL 内
+    const freshTerminal: ConversionTask = {
       id: 'local-fresh',
       name: 'fresh.dwg',
       status: 'completed',
       source: 'local',
-      createdAt: now - 1 * 60 * 1000,
+      createdAt: now - 6 * 60 * 1000,
+      terminalAt: now - 1 * 60 * 1000,
+    };
+    // 长耗时转换：提交已 40 分钟（旧实现按 createdAt 起算 30 分钟 TTL 会误杀），
+    // 但终态只发生在 1 分钟前 → 必须保留
+    const longRunning: ConversionTask = {
+      id: 'local-long',
+      name: 'long.dwg',
+      status: 'failed',
+      source: 'local',
+      createdAt: now - 40 * 60 * 1000,
+      terminalAt: now - 1 * 60 * 1000,
+    };
+    // 历史数据无 terminalAt：回落 createdAt 判定
+    const legacyExpired: ConversionTask = {
+      id: 'local-legacy-old',
+      name: 'legacy-old.dwg',
+      status: 'completed',
+      source: 'local',
+      createdAt: now - 8 * 24 * 60 * 60 * 1000,
+    };
+    const legacyFresh: ConversionTask = {
+      id: 'local-legacy-fresh',
+      name: 'legacy-fresh.dwg',
+      status: 'completed',
+      source: 'local',
+      createdAt: now - 1 * 60 * 60 * 1000,
     };
     useConversionQueueStore.setState({
-      tasks: [oldCompleted, freshCompleted],
+      tasks: [oldTerminal, freshTerminal, longRunning, legacyExpired, legacyFresh],
     });
 
     await useConversionQueueStore.getState().refreshCloud();
@@ -510,10 +539,58 @@ describe('conversionQueueStore 终态过期清理（S6-5）', () => {
     const tasks = useConversionQueueStore.getState().tasks;
     expect(tasks.some((t) => t.id === 'local-old')).toBe(false);
     expect(tasks.some((t) => t.id === 'local-fresh')).toBe(true);
-    // 清理同步到 localStorage
+    expect(tasks.some((t) => t.id === 'local-long')).toBe(true);
+    expect(tasks.some((t) => t.id === 'local-legacy-old')).toBe(false);
+    expect(tasks.some((t) => t.id === 'local-legacy-fresh')).toBe(true);
+    // 清理同步到 localStorage（过期条目不再被写回）
     const stored = JSON.parse(localStorage.getItem(LOCAL_KEY)!);
     expect(stored.some((t: ConversionTask) => t.id === 'local-old')).toBe(false);
-    expect(stored.some((t: ConversionTask) => t.id === 'local-fresh')).toBe(true);
+    expect(stored.some((t: ConversionTask) => t.id === 'local-long')).toBe(true);
+  });
+
+  it('updateTaskStatus 进入终态写 terminalAt、离开终态清掉', () => {
+    useConversionQueueStore.getState().addLocalTask({
+      id: 'local-1',
+      name: 'a.dwg',
+      status: 'processing',
+    });
+    expect(useConversionQueueStore.getState().tasks[0].terminalAt).toBeUndefined();
+
+    useConversionQueueStore.getState().updateTaskStatus('local-1', 'completed');
+    const done = useConversionQueueStore.getState().tasks[0];
+    expect(done.status).toBe('completed');
+    expect(done.terminalAt).toBeTruthy();
+
+    // 重试回到排队中：终态时间清掉，避免旧终态污染下一轮 TTL 判定
+    useConversionQueueStore.getState().updateTaskStatus('local-1', 'pending');
+    expect(useConversionQueueStore.getState().tasks[0].terminalAt).toBeUndefined();
+  });
+
+  it('刷新页面残留 active 本地任务置 failed 时写 terminalAt（loadLocalTasks）', async () => {
+    // loadLocalTasks 只在模块加载时执行一次，需 resetModules 后重新导入才能真正覆盖
+    vi.resetModules();
+    localStorage.removeItem(LOCAL_KEY);
+    localStorage.removeItem(PANEL_UI_KEY);
+    const now = Date.now();
+    localStorage.setItem(
+      LOCAL_KEY,
+      JSON.stringify([
+        {
+          id: 'local-residual',
+          name: 'r.dwg',
+          status: 'processing',
+          source: 'local',
+          createdAt: now - 5 * 60 * 1000,
+        },
+      ])
+    );
+    const mod = await import('./conversionQueueStore');
+    const initial = mod.useConversionQueueStore.getState().tasks;
+    expect(initial).toHaveLength(1);
+    expect(initial[0].status).toBe('failed');
+    // 终态时刻是刷新这一刻，不是任务提交时刻（否则长任务刷新后立即被判过期）
+    expect(typeof initial[0].terminalAt).toBe('number');
+    expect(initial[0].terminalAt).toBeGreaterThanOrEqual(now);
   });
 
   it('active（processing）任务不随过期清理移除', async () => {
@@ -773,6 +850,185 @@ describe('conversionQueueStore 历史分页（#476）', () => {
     expect(state.cloudError).toBeTruthy();
     expect(state.historyLoading).toBe(false);
     expect(state.history).toHaveLength(0);
+  });
+
+  it('游客（无 token）loadMoreHistory no-op：不发请求、复位 loading 与 hasMore', async () => {
+    localStorage.removeItem('accessToken');
+    useConversionQueueStore.setState({ historyLoading: true, historyHasMore: true });
+
+    await useConversionQueueStore.getState().loadMoreHistory();
+
+    expect(mockedHistory).not.toHaveBeenCalled();
+    const state = useConversionQueueStore.getState();
+    expect(state.historyLoading).toBe(false);
+    expect(state.historyHasMore).toBe(false);
+    expect(state.history).toHaveLength(0);
+  });
+
+  it('mergeRecentHistory 增量合并：新完成条目插头部，已翻页内容与 offset 不动', async () => {
+    // 先加载一页历史（模拟用户已翻到第 2 页）
+    mockedHistory.mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'h1',
+            name: 'h1.dwg',
+            fileStatus: 'COMPLETED',
+            updatedAt: '2026-08-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+        hasMore: true,
+      },
+    } as never);
+    await useConversionQueueStore.getState().loadMoreHistory();
+    mockedHistory.mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'h2',
+            name: 'h2.dwg',
+            fileStatus: 'COMPLETED',
+            updatedAt: '2026-08-02T00:00:00Z',
+          },
+        ],
+        total: 1,
+        hasMore: true,
+      },
+    } as never);
+    await useConversionQueueStore.getState().loadMoreHistory();
+    expect(useConversionQueueStore.getState().historyOffset).toBe(2);
+
+    // 新完成的条目 + 已加载条目（时间被更新）
+    mockedHistory.mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'h3',
+            name: 'h3.dwg',
+            fileStatus: 'COMPLETED',
+            updatedAt: '2026-09-01T00:00:00Z',
+          },
+          {
+            nodeId: 'h1',
+            name: 'h1-renamed.dwg',
+            fileStatus: 'COMPLETED',
+            updatedAt: '2026-09-02T00:00:00Z',
+          },
+        ],
+        total: 3,
+        hasMore: false,
+      },
+    } as never);
+    await useConversionQueueStore.getState().mergeRecentHistory();
+
+    const state = useConversionQueueStore.getState();
+    // 新条目 h3 在最前，已加载条目保持在后且顺序不变
+    expect(state.history.map((t) => t.id)).toEqual(['h3', 'h1', 'h2']);
+    // 已加载条目原地更新（拿到最新状态/时间），不丢
+    expect(state.history[1].name).toBe('h1-renamed.dwg');
+    // 只拉第一页（offset=0），且不改翻页游标
+    expect(mockedHistory).toHaveBeenLastCalledWith({
+      query: { limit: String(20), offset: '0' },
+    });
+    expect(state.historyOffset).toBe(2);
+    expect(state.historyTotal).toBe(3);
+  });
+
+  it('mergeRecentHistory 游客 no-op：无 token 不发请求', async () => {
+    localStorage.removeItem('accessToken');
+    await useConversionQueueStore.getState().mergeRecentHistory();
+    expect(mockedHistory).not.toHaveBeenCalled();
+  });
+
+  it('refreshCloud 检测到云端任务从进行中/失败中消失 → 触发 mergeRecentHistory', async () => {
+    // 第一轮：有一个进行中的云端任务
+    mockedList.mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'c1',
+            name: 'c1.dwg',
+            fileStatus: 'PROCESSING',
+            taskId: 't1',
+            updatedAt: '2026-09-01T00:00:00Z',
+          },
+        ],
+        total: 1,
+      },
+    } as never);
+    mockedHistory.mockResolvedValue({
+      error: undefined,
+      data: { tasks: [], total: 0, hasMore: false },
+    } as never);
+    await useConversionQueueStore.getState().refreshCloud();
+    expect(mockedHistory).not.toHaveBeenCalled();
+    expect(useConversionQueueStore.getState().tasks[0].id).toBe('c1');
+
+    // 第二轮：任务已完成（后端 listTasks 不再返回 COMPLETED）
+    mockedList.mockResolvedValue({
+      error: undefined,
+      data: { tasks: [], total: 0 },
+    } as never);
+    mockedHistory.mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'c1',
+            name: 'c1.dwg',
+            fileStatus: 'COMPLETED',
+            updatedAt: '2026-09-01T01:00:00Z',
+          },
+        ],
+        total: 1,
+        hasMore: false,
+      },
+    } as never);
+    await useConversionQueueStore.getState().refreshCloud();
+    // mergeRecentHistory 是 fire-and-forget，等它落地
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockedHistory).toHaveBeenCalledTimes(1);
+    expect(useConversionQueueStore.getState().history[0].id).toBe('c1');
+    // live 列表里已完成任务消失
+    expect(useConversionQueueStore.getState().tasks.some((t) => t.id === 'c1')).toBe(false);
+  });
+
+  it('refreshCloud 首轮无既有云端任务时不触发 mergeRecentHistory', async () => {
+    mockedList.mockResolvedValue({
+      error: undefined,
+      data: { tasks: [], total: 0 },
+    } as never);
+    await useConversionQueueStore.getState().refreshCloud();
+    expect(mockedHistory).not.toHaveBeenCalled();
+  });
+
+  it('云端任务达到后端上限（50）时置 cloudTruncated，未达上限为 false', async () => {
+    const fifty = Array.from({ length: 50 }, (_, i) => ({
+      nodeId: `c${i}`,
+      name: `c${i}.dwg`,
+      fileStatus: 'PROCESSING',
+      taskId: `t${i}`,
+      updatedAt: new Date().toISOString(),
+    }));
+    mockedList.mockResolvedValue({
+      error: undefined,
+      data: { tasks: fifty, total: 50 },
+    } as never);
+    await useConversionQueueStore.getState().refreshCloud();
+    expect(useConversionQueueStore.getState().cloudTruncated).toBe(true);
+
+    mockedList.mockResolvedValue({
+      error: undefined,
+      data: { tasks: fifty.slice(0, 49), total: 49 },
+    } as never);
+    await useConversionQueueStore.getState().refreshCloud();
+    expect(useConversionQueueStore.getState().cloudTruncated).toBe(false);
   });
 });
 

@@ -120,6 +120,8 @@ export function ConversionPanel() {
     collapsed,
     autoDismissable,
     cloudLoading,
+    cloudError,
+    cloudTruncated,
     position,
     size,
     search,
@@ -672,6 +674,8 @@ export function ConversionPanel() {
                   historyLoading={historyLoading}
                   historyHasMore={historyHasMore}
                   historyCount={history.length}
+                  cloudError={cloudError}
+                  cloudTruncated={cloudTruncated}
                 />
             )}
 

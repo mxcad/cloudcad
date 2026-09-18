@@ -62,7 +62,7 @@
   background: var(--bg-secondary);
 }
 
-/* 展开态 header 收起按钮（X）：点击收起为悬浮药丸（D1 常驻入口） */
+/* 展开态 header 收起按钮（X）：点击收起面板（隐藏态无可见元素，入口只剩顶栏按钮 + CAD 命令） */
 .conv-collapse {
   display: inline-flex;
   align-items: center;
@@ -441,6 +441,18 @@
   padding: 10px;
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* 云端拉取失败提示（401 / 网络 / DB 异常）：此前静默表现为空列表 */
+.conversion-cloud-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--warning, var(--text-muted));
+  border-bottom: 1px solid var(--border, var(--text-muted));
 }
 
 /* ==================== 上传区块（自 UploadPanel 迁移，#476） ==================== */

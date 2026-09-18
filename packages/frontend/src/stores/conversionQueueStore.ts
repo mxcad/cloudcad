@@ -18,6 +18,7 @@ import {
   conversionTaskControllerListHistory,
   conversionTaskControllerRetryTask,
 } from '@/api-sdk';
+import type { ConversionTaskItemDto } from '@/api-sdk';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { getValidToken } from '@/utils/tokenUtils';
 import { t } from '@/languages';
@@ -54,6 +55,8 @@ export interface ConversionTask {
   progress?: number;
   /** 排队位置（S6-5，仅排队中任务有意义；运行中/未入队 undefined） */
   queuePosition?: number;
+  /** 进入终态（completed/failed/cancelled）的时刻；终态任务 TTL 从此起算 */
+  terminalAt?: number;
   error?: string;
   /**
    * 失败性质分类（仅 FAILED 有意义，结构化过线，替代按错误文案判断）：
@@ -77,8 +80,14 @@ export const CONVERSION_POLL_INTERVAL_MS = 5000;
  * 终态（completed/failed/cancelled）本地任务保留时长（S6-5）。
  * 超过后在 refreshCloud 时清理，避免 localStorage 永久驻留（游客/公开图纸
  * 只记本地，终态后无跟踪价值）。active（pending/processing）任务不受影响。
+ *
+ * 从 **terminalAt（进入终态的时刻）** 起算而非 createdAt（提交时刻）：
+ * 此前的实现按提交时刻起算 30 分钟，长耗时转换完成后只剩很短窗口即被清理，
+ * 且清理会经 persistLocalTasks 从 localStorage 物理删除、不可恢复。
  */
-const TERMINAL_TASK_TTL_MS = 30 * 60 * 1000;
+const TERMINAL_TASK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** 云端进行中/失败列表后端上限（MAX_LIST）：达到即视为可能被静默截断 */
+export const CLOUD_LIST_CAP = 50;
 
 /** 任务是否为终态（completed/failed/cancelled） */
 function isTerminalStatus(status: ConversionTaskStatus): boolean {
@@ -92,15 +101,29 @@ function isActiveStatus(status: ConversionTaskStatus): boolean {
   return status === 'pending' || status === 'processing';
 }
 
-/** 清理超过 TTL 的终态本地任务（active 任务保留） */
+/** 清理超过 TTL 的终态本地任务（active 任务保留）。
+ * TTL 从 terminalAt（进入终态的时刻）起算；无 terminalAt 的历史数据回落 createdAt。 */
 function pruneExpiredTerminalTasks(
   tasks: ConversionTask[],
   now: number = Date.now()
 ): ConversionTask[] {
   return tasks.filter((t) => {
     if (t.source !== 'local' || !isTerminalStatus(t.status)) return true;
-    return now - t.createdAt < TERMINAL_TASK_TTL_MS;
+    return now - (t.terminalAt ?? t.createdAt) < TERMINAL_TASK_TTL_MS;
   });
+}
+
+/** 带终态时间的转换任务：进入终态时记录 terminalAt（TTL 起算点），
+ * 离开终态时清掉（重试回到 pending 后不再受终态保留约束） */
+function withTerminalAt(
+  task: ConversionTask,
+  status: ConversionTaskStatus,
+  now: number = Date.now()
+): ConversionTask {
+  if (isTerminalStatus(status)) {
+    return { ...task, status, terminalAt: task.terminalAt ?? now };
+  }
+  return { ...task, status, terminalAt: undefined };
 }
 
 function mapToTaskStatus(
@@ -116,6 +139,25 @@ function mapToTaskStatus(
   return 'processing';
 }
 
+/** 后端任务条目 → 面板任务（云端 live 列表与历史分页共用，映射口径唯一） */
+function mapTaskItem(
+  item: ConversionTaskItemDto
+): ConversionTask {
+  return {
+    id: item.nodeId,
+    name: item.name,
+    status: mapToTaskStatus(item.fileStatus, item.taskStatus),
+    source: 'cloud',
+    nodeId: item.nodeId,
+    taskId: item.taskId,
+    createdAt: new Date(item.updatedAt).getTime(),
+    progress: item.progress,
+    error: item.error,
+    errorCategory: item.errorCategory,
+    queuePosition: item.queuePosition,
+  };
+}
+
 function loadLocalTasks(): ConversionTask[] {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -125,9 +167,10 @@ function loadLocalTasks(): ConversionTask[] {
     const now = Date.now();
     const tasks = (arr as ConversionTask[]).map((t) =>
       // 残留 active（pending/processing）本地任务：页面刷新后其 SSE 等待已中断、
-      // 无法续等（游客无云端任务列表可刷新），置 failed 避免面板永远「转换中」
+      // 无法续等（游客无云端任务列表可刷新），置 failed 避免面板永远「转换中」。
+      // 同时写 terminalAt：终态 TTL 从此刻起算，否则刷新后立刻被判过期清理
       t.source === 'local' && isActiveStatus(t.status)
-        ? { ...t, status: 'failed' as ConversionTaskStatus }
+        ? withTerminalAt(t, 'failed', now)
         : t
     );
     return pruneExpiredTerminalTasks(tasks, now);
@@ -225,9 +268,13 @@ interface ConversionQueueState {
   search: string;
   cloudLoading: boolean;
   cloudError: string | null;
+  /** 云端进行中/失败列表是否达到后端上限（可能被静默截断，面板需提示） */
+  cloudTruncated: boolean;
 
   /** 拉取云端任务并合并到列表 */
   refreshCloud: () => Promise<void>;
+  /** 增量刷新历史头部（不重置已翻页内容）：任务刚完成时调用 */
+  mergeRecentHistory: () => Promise<void>;
   /** 重置历史并加载第一页（面板展开时调用，保证最新） */
   refreshHistory: () => Promise<void>;
   /** 追加加载下一页历史（滚动到底触发） */
@@ -286,6 +333,7 @@ export const useConversionQueueStore = create<ConversionQueueState>(
     search: '',
     cloudLoading: false,
     cloudError: null,
+    cloudTruncated: false,
 
     refreshCloud: async () => {
       // 面板是「本地 + 云端」统一任务列表：游客有本地任务、登录用户有云端 + 本地，
@@ -298,23 +346,15 @@ export const useConversionQueueStore = create<ConversionQueueState>(
         const res = await conversionTaskControllerListTasks();
         // SDK 默认不抛错：失败时错误在 res.error
         if (res.error) throw res.error;
-        const cloudTasks: ConversionTask[] = (res.data?.tasks ?? []).map(
-          (item) => ({
-            id: item.nodeId,
-            name: item.name,
-            status: mapToTaskStatus(item.fileStatus, item.taskStatus),
-            source: 'cloud',
-            nodeId: item.nodeId,
-            taskId: item.taskId,
-            createdAt: new Date(item.updatedAt).getTime(),
-            progress: item.progress,
-            error: item.error,
-            // 失败性质分类（结构化过线）→ 面板据此门控 content-error 的重试
-            errorCategory: item.errorCategory,
-            // S6-5：排队位置（仅排队中任务有意义）→ 面板展示「第 N 位」
-            queuePosition: item.queuePosition,
-          })
-        );
+        const cloudTasks = (res.data?.tasks ?? []).map(mapTaskItem);
+        // 有云端任务从「进行中/失败」中消失（刚完成）→ 增量刷新历史头部。
+        // 后端 listTasks 不含 COMPLETED，完成瞬间该行会从 live 列表蒸发，而历史只在
+        // 面板展开时才刷新（refreshHistory 重置分页），此处补齐这个空窗。
+        const currentCloudIds = new Set(cloudTasks.map((t) => t.id));
+        const droppedCloudIds = get().tasks
+          .filter((t) => t.source === 'cloud')
+          .filter((t) => !currentCloudIds.has(t.id))
+          .map((t) => t.id);
         set((state) => {
           // 云端任务按 nodeId 覆盖/新增；本地任务保留（先清理过期终态任务，S6-5）
           const localTasks = pruneExpiredTerminalTasks(state.tasks).filter(
@@ -326,8 +366,16 @@ export const useConversionQueueStore = create<ConversionQueueState>(
             (a, b) => b.createdAt - a.createdAt
           );
           persistLocalTasks(merged);
-          return { tasks: merged, cloudLoading: false };
+          return {
+            tasks: merged,
+            cloudLoading: false,
+            // 达到后端 MAX_LIST 上限 → 可能有更早的进行中/失败记录被静默截断
+            cloudTruncated: cloudTasks.length >= CLOUD_LIST_CAP,
+          };
         });
+        if (droppedCloudIds.length > 0) {
+          void get().mergeRecentHistory();
+        }
       } catch (err) {
         set({
           cloudLoading: false,
@@ -347,8 +395,54 @@ export const useConversionQueueStore = create<ConversionQueueState>(
       await get().loadMoreHistory();
     },
 
+    /**
+     * 增量刷新历史头部（不重置已翻页内容）。
+     *
+     * 场景：任务刚完成 → 从 live 列表消失（后端 listTasks 不含 COMPLETED），
+     * 而 refreshHistory 会重置分页把用户从第 N 页拉回第 1 页。此处只拉第一页，
+     * 新完成条目插到头部、已有条目原地更新，已翻页内容不动。
+     */
+    mergeRecentHistory: async () => {
+      if (!getValidToken() || get().historyLoading) return;
+      set({ historyLoading: true });
+      try {
+        const res = await conversionTaskControllerListHistory({
+          query: { limit: String(HISTORY_PAGE_SIZE), offset: '0' },
+        });
+        if (res.error) throw res.error;
+        const fresh = (res.data?.tasks ?? []).map(mapTaskItem);
+        set((state) => {
+          const loadedIds = new Set(state.history.map((h) => h.id));
+          // 已在已加载页中的条目原地更新（状态/时间可能变了），其余保留顺序
+          const kept = state.history.map((h) => {
+            const upd = fresh.find((f) => f.id === h.id);
+            return upd ?? h;
+          });
+          // 新条目插到最前，去重（与已翻页内容/并发 refreshHistory 可能重叠）
+          const added = fresh.filter((t) => !loadedIds.has(t.id));
+          return {
+            history: [...added, ...kept],
+            // 只刷新总数，不动 offset（已翻页内容与顺序不变，翻页游标继续有效）
+            historyTotal: res.data?.total ?? state.historyTotal,
+            historyLoading: false,
+          };
+        });
+      } catch (err) {
+        set({
+          historyLoading: false,
+          cloudError: getErrorMessage(err) || t('获取转换历史失败'),
+        });
+      }
+    },
+
     /** 追加加载下一页历史（滚动到底触发）；loading 防重入 */
     loadMoreHistory: async () => {
+      // 与 refreshCloud 同形的 token 门控：历史是云端数据，游客请求后端必然 401
+      // （后端 userId 为空即抛 UNAUTHORIZED），且此前该错误被静默吞掉、表现为空列表
+      if (!getValidToken()) {
+        set({ historyLoading: false, historyHasMore: false });
+        return;
+      }
       if (get().historyLoading) return;
       set({ historyLoading: true });
       try {
@@ -363,19 +457,7 @@ export const useConversionQueueStore = create<ConversionQueueState>(
           },
         });
         if (res.error) throw res.error;
-        const items = res.data?.tasks ?? [];
-        const newTasks: ConversionTask[] = items.map((item) => ({
-          id: item.nodeId,
-          name: item.name,
-          status: mapToTaskStatus(item.fileStatus, item.taskStatus),
-          source: 'cloud',
-          nodeId: item.nodeId,
-          taskId: item.taskId,
-          createdAt: new Date(item.updatedAt).getTime(),
-          progress: item.progress,
-          error: item.error,
-          queuePosition: item.queuePosition,
-        }));
+        const newTasks = (res.data?.tasks ?? []).map(mapTaskItem);
         set((state) => ({
           history: [...state.history, ...newTasks],
           historyOffset: offset + newTasks.length,
@@ -442,6 +524,8 @@ export const useConversionQueueStore = create<ConversionQueueState>(
           id: task.id,
           name: task.name,
           status,
+          // 终态输入（如提交失败）同时记录 terminalAt：TTL 从终态时刻起算
+          terminalAt: isTerminalStatus(status) ? Date.now() : undefined,
           source: 'local',
           taskId: task.taskId,
           createdAt: task.createdAt ?? Date.now(),
@@ -467,7 +551,8 @@ export const useConversionQueueStore = create<ConversionQueueState>(
     updateTaskStatus: (id, status, extra) => {
       set((state) => {
         const tasks = state.tasks.map((t) =>
-          t.id === id ? { ...t, status, ...extra } : t
+          // 进入终态记 terminalAt（TTL 起算点），离开终态（如重试回 pending）清掉
+          t.id === id ? { ...withTerminalAt(t, status), ...extra } : t
         );
         persistLocalTasks(tasks);
         return { tasks };

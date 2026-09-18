@@ -15,6 +15,7 @@ import type {
   ConversionTask,
   ConversionTaskStatus,
 } from '@/stores/conversionQueueStore';
+import { CLOUD_LIST_CAP } from '@/stores/conversionQueueStore';
 
 /**
  * 转换任务状态元信息（标签 + 图标 + 行类名）
@@ -69,6 +70,14 @@ interface ConversionTabProps {
   historyLoading: boolean;
   historyHasMore: boolean;
   historyCount: number;
+  /**
+   * 云端拉取失败文案（401 / 网络 / DB 异常）。
+   * 此前 store 记录了 cloudError 但从不渲染，失败一律表现为空列表，
+   * 用户无法区分「没有记录」和「拉取失败」。
+   */
+  cloudError?: string | null;
+  /** 云端进行中/失败列表是否达到后端上限（可能存在更早记录被静默截断） */
+  cloudTruncated?: boolean;
 }
 
 export const ConversionTab: React.FC<ConversionTabProps> = ({
@@ -81,9 +90,18 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
   historyLoading,
   historyHasMore,
   historyCount,
+  cloudError,
+  cloudTruncated,
 }) => {
   return (
     <>
+      {/* 云端拉取失败：保留已加载内容 + 顶部提示，不整块替换成空态 */}
+      {cloudError && (
+        <div className="conversion-cloud-error" role="alert">
+          <AlertCircle size={12} className="conv-icon" />
+          <span>{cloudError}</span>
+        </div>
+      )}
       {/* 空态按本 tab 自身行数判断（与下载/上传 tab 同款语义，不受其他 tab 任务数影响）；
           搜索过滤掉全部行时显示「无匹配结果」 */}
       {filteredTasks.length === 0 && filteredHistory.length === 0 && (
@@ -171,6 +189,13 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           </div>
         );
       })}
+      {/* 后端 listTasks 无分页（MAX_LIST=50）：达到上限时可能有更早的进行中/失败
+          记录被静默截断，给出提示避免用户误判为「记录丢失」 */}
+      {cloudTruncated && (
+        <div className="conversion-loadmore">
+          {t('仅显示最近 {n} 条进行中/失败记录', { n: CLOUD_LIST_CAP })}
+        </div>
+      )}
       {/* 有 live 任务且有历史时，插入「历史记录」分隔条，帮助用户区分当前任务与历史 */}
       {filteredTasks.length > 0 && filteredHistory.length > 0 && (
         <div className="conversion-divider">
