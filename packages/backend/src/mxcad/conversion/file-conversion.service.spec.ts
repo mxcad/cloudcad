@@ -307,6 +307,90 @@ describe("FileConversionService", () => {
 		});
 	});
 
+	// ===== convertServerFile 引擎字段透传（368ca55 回归锁）=====
+	// 入口映射曾手写 12 字段，丢 11 个引擎字段（裁剪框/打印角度/布局/压缩等），
+	// cut_dwg/print_to_pdf 拿不到区域信息静默回 {"message":"false"}。
+	describe("convertServerFile 引擎字段透传", () => {
+		it("全 21 引擎字段（含裁剪框/打印角度/布局/压缩/outpath）透传到 convertFile", async () => {
+			const convertFileSpy = jest
+				.spyOn(service, "convertFile")
+				.mockResolvedValue({ isOk: true, ret: { code: 0 } });
+
+			await service.convertServerFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				nodeId: "node-1",
+				outpath: "/tmp/out",
+				compression: false,
+				roate_angle: 90,
+				view_angle: 0,
+				layout_name: "Model",
+				bd_pt1_x: "10",
+				bd_pt1_y: "20",
+				bd_pt2_x: "30",
+				bd_pt2_y: "40",
+				open_file_md5: "md5-1",
+				create_clip_block: false,
+				outname: "out.dwg",
+				cmd: "cut_dwg",
+				width: 3000,
+				height: "2000",
+				colorPolicy: "color",
+				outjpg: "width=800",
+				dwgVersion: 2018,
+				createPreloadingData: false,
+			});
+
+			expect(convertFileSpy).toHaveBeenCalledWith({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				outpath: "/tmp/out",
+				compression: false,
+				roate_angle: 90,
+				view_angle: 0,
+				layout_name: "Model",
+				bd_pt1_x: "10",
+				bd_pt1_y: "20",
+				bd_pt2_x: "30",
+				bd_pt2_y: "40",
+				open_file_md5: "md5-1",
+				create_clip_block: false,
+				outname: "out.dwg",
+				cmd: "cut_dwg",
+				// 入口允许 number，引擎侧统一字符串
+				width: "3000",
+				height: "2000",
+				colorPolicy: "color",
+				outjpg: "width=800",
+				dwgVersion: 2018,
+				createPreloadingData: false,
+			});
+			convertFileSpy.mockRestore();
+		});
+
+		it("srcPath/fileHash 兼容旧 API 小写命名回落", async () => {
+			const convertFileSpy = jest
+				.spyOn(service, "convertFile")
+				.mockResolvedValue({ isOk: true, ret: { code: 0 } });
+
+			await service.convertServerFile({
+				srcPath: "",
+				srcpath: "/tmp/legacy.dwg",
+				fileHash: "",
+				src_file_md5: "legacy-md5",
+				nodeId: "node-1",
+			});
+
+			expect(convertFileSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					srcPath: "/tmp/legacy.dwg",
+					fileHash: "legacy-md5",
+				})
+			);
+			convertFileSpy.mockRestore();
+		});
+	});
+
 	// ===== skipExportGate：内部转换跳过导出下载门控 =====
 	it("should skip export gate when skipExportGate is set (internal conversion)", async () => {
 		setRun(() => ({

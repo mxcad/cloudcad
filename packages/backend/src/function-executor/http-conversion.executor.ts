@@ -181,6 +181,18 @@ export class HttpConversionExecutor implements IFunctionExecutor {
             errorCode: status.errorCode,
           };
         }
+        // CANCELLED 是终态（#431 取消机制）：此前漏在轮询白名单外，被取消的任务
+        // 空转到 pollTimeout（默认 300s）后谎报 "timed out"。ConversionResult 是
+        // 二值联合，取消映射为 FAILED——上游（convertNode.handleResult 等）据此
+        // 把节点置 FAILED（诚实终态，可重试），而非靠对账兜底。
+        if (status.status === 'CANCELLED') {
+          return {
+            taskId,
+            status: 'FAILED',
+            error:
+              status.error || 'Conversion task was cancelled',
+          };
+        }
       } catch (error: unknown) {
         const errMsg = error instanceof Error ? error.message : String(error);
         this.logger.warn(`Task status poll failed for ${taskId}: ${errMsg}`);

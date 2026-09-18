@@ -86,6 +86,28 @@ function pickContractFields(options: ConversionOptions): ConversionRequest {
 	return picked as ConversionRequest;
 }
 
+/**
+ * 从 convertServerFile 入口参数中挑选契约定义的引擎输入字段（camelCase）。
+ *
+ * 与 pickContractFields 同形、同源于 ENGINE_INPUT_FIELDS 唯一清单：入口形状
+ * （ConvertServerFileParam）与映射各只维护一份，新增引擎字段自动进映射，
+ * 不再靠手写枚举（此前此处手写 12 字段，丢 11 个引擎字段——裁剪框/打印角度/
+ * 布局/压缩等经此入口永不可达，368ca55 同类事故）。width/height 引擎侧是
+ * 字符串，入口允许 number，在此统一 String()。
+ */
+function pickEngineFields(
+	param: ConvertServerFileParam,
+): Partial<ConversionOptions> {
+	const picked: Partial<Record<EngineInputField, unknown>> = {};
+	for (const field of ENGINE_INPUT_FIELDS) {
+		const value = (param as Partial<Record<EngineInputField, unknown>>)[field];
+		if (value === undefined) continue;
+		picked[field] =
+			field === 'width' || field === 'height' ? String(value) : value;
+	}
+	return picked as Partial<ConversionOptions>;
+}
+
 @Injectable()
 export class FileConversionService implements IMxcadConversionService {
 	private readonly logger = new Logger(FileConversionService.name);
@@ -754,17 +776,14 @@ export class FileConversionService implements IMxcadConversionService {
 			}
 
 			const conversionOptions: ConversionOptions = {
+				// 引擎字段按 ENGINE_INPUT_FIELDS 唯一清单派生（全 21 字段，含裁剪框/
+				// 打印角度/布局/压缩等），不再手写枚举——手写 12 字段曾让 11 个引擎
+				// 字段经此入口永不可达（368ca55 同类事故：漏抄字段引擎静默回 "false"）。
+				// srcPath/fileHash 兼容旧 API 小写命名，由下方显式值覆盖派生值。
+				...pickEngineFields(param),
 				srcPath: param.srcPath || param.srcpath || '',
 				fileHash: param.fileHash || param.src_file_md5 || '',
 				userId: param.userId,
-				createPreloadingData: param.createPreloadingData ?? true,
-				outname: param.outname,
-				cmd: param.cmd,
-				width: param.width ? String(param.width) : undefined,
-				height: param.height ? String(param.height) : undefined,
-				colorPolicy: param.colorPolicy,
-				outjpg: param.outjpg,
-				dwgVersion: param.dwgVersion,
 				priority: param.priority,
 			};
 

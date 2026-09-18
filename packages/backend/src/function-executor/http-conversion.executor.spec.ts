@@ -145,6 +145,30 @@ describe('HttpConversionExecutor', () => {
       expect(result).toMatchObject({ status: 'FAILED', error: 'convert error' });
     });
 
+    it('should return FAILED (not poll until timeout) when the task is CANCELLED', async () => {
+      port = await startServer((req, res) => {
+        if (req.method === 'POST') {
+          res.writeHead(202, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ taskId: 'fw_4' }));
+          return;
+        }
+        // 取消不携带 error（task-store.cancel 只改状态）
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ taskId: 'fw_4', status: 'CANCELLED' }));
+      });
+      executor = await createExecutor();
+
+      const t0 = Date.now();
+      const result = await executor.invoke(makeTask());
+
+      expect(result).toMatchObject({
+        status: 'FAILED',
+        error: 'Conversion task was cancelled',
+      });
+      // pollTimeout=2000ms：CANCELLED 终态应首轮轮询即返回，不空转到超时谎报 timed out
+      expect(Date.now() - t0).toBeLessThan(1500);
+    });
+
     it('should return FAILED when submission is rejected', async () => {
       port = await startServer((_req, res) => {
         res.writeHead(500, { 'Content-Type': 'application/json' });

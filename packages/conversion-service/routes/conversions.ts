@@ -343,6 +343,21 @@ function waitForTask(
           errorCode: task.errorCode ?? null,
         });
       }
+      // CANCELLED 是终态（#431 取消机制）：此前漏在终态白名单外，被取消的任务
+      // 空转到超时后谎报 TIMEOUT。取消不写 error（task-store.cancel 只改状态），
+      // error 为 null 属正常。
+      if (task.status === 'CANCELLED') {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        return resolve({
+          taskId,
+          status: 'CANCELLED',
+          error: task.error,
+          errorCategory: task.errorCategory ?? null,
+          errorCode: task.errorCode ?? null,
+        });
+      }
       if (Date.now() - start > timeout) {
         if (settled) return;
         settled = true;

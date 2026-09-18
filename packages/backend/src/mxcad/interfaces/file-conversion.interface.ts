@@ -66,6 +66,11 @@ export interface ConversionOptions {
   srcPath: string;
   /** 文件哈希 */
   fileHash: string;
+  /**
+   * bin→mxweb 方向的输出目录（引擎字段 outpath，与 ConversionRequest 对齐）。
+   * buildEngineParams 见 outpath 存在即走 binToMxweb 分支（不携带内容哈希）。
+   */
+  outpath?: string;
   /** 发起转换的用户 ID（游客/匿名不传）；用于导出下载方向（mxweb→其他）的会员门控 */
   userId?: string;
   /** 是否创建预加载数据 */

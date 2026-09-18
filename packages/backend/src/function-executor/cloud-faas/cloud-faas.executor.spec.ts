@@ -129,6 +129,21 @@ describe('CloudFaaSExecutor', () => {
         progress: 25,
       });
     });
+
+    it('should map out-of-union status (UNKNOWN) to FAILED, not leak it as-is', async () => {
+      // provider 响应缺 status 时回 'UNKNOWN'（契约外值）：
+      // 强转塞进 TaskStatus 联合会让前端状态映射崩或显示错
+      providerInstance.getTaskStatus.mockResolvedValue({
+        status: 'UNKNOWN',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      });
+      const executor = await createExecutor();
+
+      const status = await executor.getTaskStatus('task_1');
+
+      expect(status.status).toBe('FAILED');
+    });
   });
 
   describe('when selecting provider', () => {

@@ -51,4 +51,15 @@ describe('S1-3 同步 convertFile 客户端断开 abort', () => {
     const result = await waitForTask('t1', store, 300);
     assert.equal(result.status, 'TIMEOUT');
   });
+
+  it('CANCELLED 是终态：立即 resolve CANCELLED，不再空转到超时谎报 TIMEOUT', async () => {
+    const store = makeStore('CANCELLED');
+    const t0 = Date.now();
+    const result = await waitForTask('t1', store, 60000);
+    assert.equal(result.status, 'CANCELLED');
+    assert.ok(
+      Date.now() - t0 < 5000,
+      `CANCELLED 应快速 resolve，实际耗时 ${Date.now() - t0}ms`
+    );
+  });
 });

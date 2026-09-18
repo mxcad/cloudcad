@@ -17,6 +17,20 @@ interface FaasProvider {
   getTaskStatus(taskId: string): Promise<{ status: string; progress?: number; error?: string; createdAt: string; updatedAt: string }>;
 }
 
+/**
+ * TaskStatus 状态联合的全集（与 function-executor.interface.ts 的
+ * TaskStatus['status'] 同步）。provider 响应缺 status 时回 'UNKNOWN'
+ * （契约外值），getTaskStatus 据此校验：未命中的值映射为已知失败态 FAILED，
+ * 而非强转塞进联合——运行期契约外值会让前端状态映射崩或显示错。
+ */
+const KNOWN_TASK_STATUSES: readonly TaskStatus['status'][] = [
+  'PENDING',
+  'PROCESSING',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+];
+
 @Injectable()
 export class CloudFaaSExecutor implements IFunctionExecutor {
   private readonly logger = new Logger(CloudFaaSExecutor.name);
@@ -49,7 +63,12 @@ export class CloudFaaSExecutor implements IFunctionExecutor {
     const result = await this.provider.getTaskStatus(taskId);
     return {
       taskId,
-      status: result.status as TaskStatus['status'],
+      // 契约外值（如 provider 缺 status 回的 'UNKNOWN'）映射为已知失败态 FAILED
+      status: (KNOWN_TASK_STATUSES as readonly string[]).includes(
+        result.status,
+      )
+        ? (result.status as TaskStatus['status'])
+        : 'FAILED',
       progress: result.progress,
       error: result.error,
       createdAt: new Date(result.createdAt),

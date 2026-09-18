@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { NotFoundException } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AsyncConversionService } from './async-conversion.service';
@@ -40,6 +41,17 @@ describe('AsyncConversionService', () => {
         },
         // S4-3：EventEmitter2 全局可用（EventEmitterModule.forRoot），此处以 mock 提供
         { provide: EventEmitter2, useValue: eventEmitter },
+        // convertNodeForExport 经 ModuleRef 惰性解析 FileDownloadExportService，
+        // 以 mock 提供避免测试容器解析真实服务
+        {
+          provide: ModuleRef,
+          useValue: {
+            get: jest.fn().mockReturnValue({
+              // 须返回 Promise：convertNodeForExport 对返回值直接 .then()
+              precomputeExport: jest.fn().mockResolvedValue(undefined),
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -75,6 +87,147 @@ describe('AsyncConversionService', () => {
       const result = await service.getNodeConversionStatus('node-1');
       expect(result.fileStatus).toBe('COMPLETED');
       expect(result.taskId).toBeUndefined();
+    });
+  });
+
+  describe('convertNode 去重守卫（重复提交覆盖 taskId 修复）', () => {
+    it('在途任务（PROCESSING + taskId）：返回已有 taskId，不覆盖、不 transition、不 invoke', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      const executor = (
+        service as unknown as { executor: { invoke: jest.Mock } }
+      ).executor;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: FileStatus.PROCESSING,
+        taskId: 'async_node-1_111',
+        path: null,
+      });
+
+      const result = await service.convertNode('node-1');
+
+      expect(result).toBe('async_node-1_111');
+      expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+      expect(executor.invoke).not.toHaveBeenCalled();
+    });
+
+    it('在途任务（UPLOADING + taskId，上传链路 registerTask 写入）：同样返回已有 taskId', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: FileStatus.UPLOADING,
+        taskId: 'async_node-1_222',
+        path: null,
+      });
+
+      const result = await service.convertNode('node-1');
+
+      expect(result).toBe('async_node-1_222');
+      expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+    });
+
+    it('终态残留 taskId（FAILED）：不阻塞重新提交，生成新 taskId 并 invoke', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      const executor = (
+        service as unknown as { executor: { invoke: jest.Mock } }
+      ).executor;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: FileStatus.FAILED,
+        taskId: 'async_node-1_old',
+        path: null,
+      });
+      prisma.fileSystemNode.update.mockResolvedValue({});
+      executor.invoke.mockResolvedValue({ status: 'COMPLETED' });
+
+      const result = await service.convertNode('node-1');
+
+      expect(result).toMatch(/^async_node-1_\d+$/);
+      expect(result).not.toBe('async_node-1_old');
+      expect(prisma.fileSystemNode.update).toHaveBeenCalledWith({
+        where: { id: 'node-1' },
+        data: { taskId: result },
+      });
+      expect(executor.invoke).toHaveBeenCalledTimes(1);
+    });
+
+    it('convertNodeForExport 同守卫：在途任务返回已有 taskId，不覆盖、不预转换', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      const moduleRef = (
+        service as unknown as { moduleRef: { get: jest.Mock } }
+      ).moduleRef;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: FileStatus.PROCESSING,
+        taskId: 'async_node-1_333',
+        path: null,
+      });
+
+      const result = await service.convertNodeForExport(
+        'node-1',
+        'pdf',
+        'user-1'
+      );
+
+      expect(result).toBe('async_node-1_333');
+      expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+      expect(moduleRef.get).not.toHaveBeenCalled();
+    });
+
+    it('convertNodeForExport 终态残留 taskId（COMPLETED）：生成新 taskId 并预转换', async () => {
+      const prisma = (
+        service as unknown as {
+          prisma: {
+            fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+          };
+        }
+      ).prisma;
+      const moduleRef = (
+        service as unknown as { moduleRef: { get: jest.Mock } }
+      ).moduleRef;
+      prisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        fileStatus: FileStatus.COMPLETED,
+        taskId: 'async_export_node-1_old',
+        path: null,
+      });
+      prisma.fileSystemNode.update.mockResolvedValue({});
+
+      const result = await service.convertNodeForExport(
+        'node-1',
+        'pdf',
+        'user-1'
+      );
+
+      expect(result).toMatch(/^async_export_node-1_\d+$/);
+      expect(result).not.toBe('async_export_node-1_old');
+      expect(moduleRef.get).toHaveBeenCalledWith(
+        expect.anything(),
+        { strict: false }
+      );
     });
   });
 

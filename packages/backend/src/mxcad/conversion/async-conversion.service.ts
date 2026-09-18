@@ -37,6 +37,16 @@ export class AsyncConversionService {
       throw new Error(`Node not found: ${nodeId}`);
     }
 
+    // 去重守卫：节点已有在途任务时直接返回已有 taskId，不覆盖 node.taskId——
+    // 重复提交（用户连点转换）不再让在途旧任务失去面板跟踪（只能靠对账兜底）。
+    const inFlight = this.inFlightTaskId(node);
+    if (inFlight) {
+      this.logger.log(
+        `Node ${nodeId} already has in-flight conversion task ${inFlight}; returning existing taskId without overwriting`
+      );
+      return inFlight;
+    }
+
     const taskId = `async_${nodeId}_${Date.now()}`;
 
     await this.prisma.fileSystemNode.update({
@@ -144,6 +154,16 @@ export class AsyncConversionService {
     });
     if (!node) {
       throw new Error(`Node not found: ${nodeId}`);
+    }
+
+    // 同 convertNode 的去重守卫：节点已有在途任务（打开转换或前一次导出）时
+    // 返回已有 taskId，不覆盖——双击下载不再丢失在途任务跟踪。
+    const inFlight = this.inFlightTaskId(node);
+    if (inFlight) {
+      this.logger.log(
+        `Node ${nodeId} already has in-flight task ${inFlight}; returning existing taskId without overwriting`
+      );
+      return inFlight;
     }
 
     const taskId = `async_export_${nodeId}_${Date.now()}`;
@@ -303,6 +323,28 @@ export class AsyncConversionService {
         `Failed to emit conversion-task SSE event for node ${nodeId}: ${(err as Error).message}`
       );
     }
+  }
+
+  /**
+   * 去重守卫判据（convertNode / convertNodeForExport 共用）：
+   * 节点已有在途任务时返回其 taskId，否则 null。
+   *
+   * 在途判定与 listTasks 的 inProgress 一致：taskId 非空且 fileStatus ∈
+   * {PROCESSING, UPLOADING}。终态（FAILED/COMPLETED）的残留 taskId 不算在途，
+   * 不阻塞重新提交（retryTask 走 convertNode，要求 FAILED，同样不受阻）。
+   */
+  private inFlightTaskId(node: {
+    taskId: string | null;
+    fileStatus: string | null;
+  }): string | null {
+    if (!node.taskId) return null;
+    if (
+      node.fileStatus !== FileStatus.PROCESSING &&
+      node.fileStatus !== FileStatus.UPLOADING
+    ) {
+      return null;
+    }
+    return node.taskId;
   }
 
   private async resolveNodePath(nodePath: string): Promise<string> {
