@@ -48,7 +48,9 @@ export async function initMxCADConfig(currentFile?: {
 }) {
   const { mxcadApp } = await import('mxcad-app');
   const configUrl = window.location.origin;
-  mxcadApp.setStaticAssetPath('/mxcadAppAssets/');
+  // 与 mxcadAssetsPlugin 的 outputDir（mxcad-app/mxcadAppAssets）保持一致：
+  // 整个 mxcad-app 目录 = npm 包 dist 原样，可整体覆盖更新
+  mxcadApp.setStaticAssetPath('/mxcad-app/mxcadAppAssets/');
   mxcadApp.initConfig({
     uiConfig: `${configUrl}/ini/myUiConfig.json`,
     sketchesUiConfig: `${configUrl}/ini/mySketchesAndNotesUiConfig.json`,
