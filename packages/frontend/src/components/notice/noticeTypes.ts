@@ -29,57 +29,6 @@ export const NOTICE_LEVEL_PRIORITY: Record<string, number> = {
   danger: 3,
 };
 
-/**
- * SSE 事件载荷。
- *
- * `snapshot` 是建连后服务端下发的当前全量，`publish`/`update`/`retract` 是增量。
- * 建连顺序是「先订阅、后发快照」，两步之间发布的公告会同时出现在快照和事件里，
- * 由消费方按 id 合并去重 —— 重复到达无副作用，遗漏才会丢公告。
- */
-export type NoticeSseEvent =
-  | { type: 'snapshot'; notices: Notice[] }
-  | { type: 'publish'; notice: Notice }
-  | { type: 'update'; notice: Notice }
-  | { type: 'retract'; noticeId: string }
-  | { type: 'unknown' };
-
-/**
- * 解析一条 SSE 文本帧。
- *
- * 全部走防御式校验：脏帧返回 'unknown' 而不是抛错，避免单条坏消息
- * 打断整条连接（EventSource 的 onmessage 抛错不会自动重连，只会静默停摆）。
- */
-export function parseNoticeEvent(raw: string): NoticeSseEvent {
-  let data: unknown;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    return { type: 'unknown' };
-  }
-
-  if (!data || typeof data !== 'object') return { type: 'unknown' };
-  const obj = data as Record<string, unknown>;
-
-  switch (obj.type) {
-    case 'snapshot':
-      return {
-        type: 'snapshot',
-        notices: Array.isArray(obj.notices) ? (obj.notices as Notice[]) : [],
-      };
-    case 'publish':
-    case 'update':
-      return obj.notice && typeof obj.notice === 'object'
-        ? { type: obj.type, notice: obj.notice as Notice }
-        : { type: 'unknown' };
-    case 'retract':
-      return typeof obj.noticeId === 'string'
-        ? { type: 'retract', noticeId: obj.noticeId }
-        : { type: 'unknown' };
-    default:
-      return { type: 'unknown' };
-  }
-}
-
 /** 取一条通知的排序时间戳（发布时间，缺失时退回创建时间） */
 function noticeTimestamp(notice: Notice): number {
   const raw = notice.publishedAt ?? notice.createdAt ?? null;

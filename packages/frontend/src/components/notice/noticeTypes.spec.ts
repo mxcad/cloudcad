@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { parseNoticeEvent, sortNotices, type Notice } from './noticeTypes';
+import { sortNotices, type Notice } from './noticeTypes';
 
 function notice(overrides: Partial<Notice> = {}): Notice {
   return {
@@ -27,71 +27,6 @@ function notice(overrides: Partial<Notice> = {}): Notice {
     ...overrides,
   };
 }
-
-describe('parseNoticeEvent', () => {
-  it('解析 snapshot 事件', () => {
-    const list = [notice({ id: 'n_1' }), notice({ id: 'n_2' })];
-    expect(parseNoticeEvent(JSON.stringify({ type: 'snapshot', notices: list }))).toEqual({
-      type: 'snapshot',
-      notices: list,
-    });
-  });
-
-  it('snapshot 缺 notices 时返回空数组而不是崩溃', () => {
-    expect(parseNoticeEvent(JSON.stringify({ type: 'snapshot' }))).toEqual({
-      type: 'snapshot',
-      notices: [],
-    });
-  });
-
-  it('解析 publish 事件', () => {
-    expect(parseNoticeEvent(JSON.stringify({ type: 'publish', notice: notice() }))).toEqual({
-      type: 'publish',
-      notice: notice(),
-    });
-  });
-
-  it('解析 update 事件', () => {
-    const event = parseNoticeEvent(
-      JSON.stringify({ type: 'update', notice: notice({ title: '新标题' }) })
-    );
-    expect(event).toEqual({ type: 'update', notice: notice({ title: '新标题' }) });
-  });
-
-  it('解析 retract 事件', () => {
-    expect(parseNoticeEvent(JSON.stringify({ type: 'retract', noticeId: 'n_1' }))).toEqual({
-      type: 'retract',
-      noticeId: 'n_1',
-    });
-  });
-
-  it('非法 JSON 返回 unknown（不抛错，不断流）', () => {
-    expect(parseNoticeEvent('{ 不是 JSON')).toEqual({ type: 'unknown' });
-  });
-
-  it('空字符串与 null 返回 unknown', () => {
-    expect(parseNoticeEvent('')).toEqual({ type: 'unknown' });
-    expect(parseNoticeEvent('null')).toEqual({ type: 'unknown' });
-  });
-
-  it('未知 type 返回 unknown', () => {
-    expect(parseNoticeEvent(JSON.stringify({ type: 'heartbeat' }))).toEqual({
-      type: 'unknown',
-    });
-  });
-
-  it('publish 缺 notice 返回 unknown', () => {
-    expect(parseNoticeEvent(JSON.stringify({ type: 'publish' }))).toEqual({
-      type: 'unknown',
-    });
-  });
-
-  it('retract 的 noticeId 不是字符串时返回 unknown', () => {
-    expect(parseNoticeEvent(JSON.stringify({ type: 'retract', noticeId: 42 }))).toEqual({
-      type: 'unknown',
-    });
-  });
-});
 
 describe('sortNotices', () => {
   it('按级别降序排序（danger > warning > info）', () => {

@@ -30,7 +30,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 
 import {
   isAcknowledged,
@@ -75,8 +74,7 @@ export function filterUnacknowledged(
 export const NoticeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { isAuthenticated } = useAuth();
-  const { notices } = useNoticeStream(true, isAuthenticated);
+  const { notices } = useNoticeStream(true);
   const [acks, setAcks] = useState<NoticeAckMap>(() => readAcks());
   const ackChannelRef = useRef<BroadcastChannel | null>(null);
 

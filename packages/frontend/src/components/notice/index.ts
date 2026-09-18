@@ -35,9 +35,5 @@ export {
   pruneExpiredAcks,
 } from './noticeAck';
 export type { NoticeAckMap } from './noticeAck';
-export {
-  NOTICE_LEVEL_PRIORITY,
-  parseNoticeEvent,
-  sortNotices,
-} from './noticeTypes';
-export type { Notice, NoticeSseEvent } from './noticeTypes';
+export { NOTICE_LEVEL_PRIORITY, sortNotices } from './noticeTypes';
+export type { Notice } from './noticeTypes';

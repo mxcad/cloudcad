@@ -24,30 +24,13 @@ import { NOTICE_ACK_STORAGE_KEY } from './noticeAck';
 import { filterUnacknowledged } from './NoticeProvider';
 import type { Notice } from './noticeTypes';
 
-// 关掉 SSE：游客/无 EventSource 走纯轮询路径，避免测试里起长连接
-const mockGetValidToken = vi.hoisted(() =>
-  vi.fn<[], string | null>(() => null)
-);
-vi.mock('@/utils/tokenUtils', () => ({
-  getValidToken: (...args: unknown[]) => mockGetValidToken(...args),
-}));
-
-// 不引整个 AuthProvider（会拖入登录流程），只 stub 登录态
-const mockIsAuthenticated = vi.hoisted(() => vi.fn<[], boolean>(() => false));
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({ isAuthenticated: mockIsAuthenticated() }),
-}));
-
+// 通知流现为纯 30s 轮询（无 SSE），stub 轮询端点 GET /current
 const mockGetCurrent = vi.hoisted(() =>
   vi.fn().mockResolvedValue({ error: undefined, data: [] })
 );
 vi.mock('@/api-sdk', () => ({
   noticeCenterControllerGetCurrent: (...args: unknown[]) =>
     mockGetCurrent(...args),
-  noticeCenterControllerIssueTicket: vi.fn().mockResolvedValue({
-    error: undefined,
-    data: { ticket: 'ticket-1' },
-  }),
 }));
 
 import { t } from '@/languages';
@@ -182,6 +165,18 @@ describe('NoticeProvider', () => {
 
     await expectActive('none');
     await expectPending(0);
+  });
+
+  it('页面变可见时补拉一次公告（visibilitychange）', async () => {
+    renderProvider([notice({ id: 'n_1' })]);
+    // 挂载即拉已发生一次
+    await waitFor(() => expect(mockGetCurrent).toHaveBeenCalled());
+    const callsAfterMount = mockGetCurrent.mock.calls.length;
+    // 模拟页面从隐藏变可见：应补拉一次
+    document.dispatchEvent(new Event('visibilitychange'));
+    await waitFor(() =>
+      expect(mockGetCurrent.mock.calls.length).toBeGreaterThan(callsAfterMount)
+    );
   });
 });
 
