@@ -329,8 +329,8 @@ describe('S6-1/S6-6 主上传路径：waitForFileReady 轮询期间重拉云端�
   });
 
   it('节点 FAILED：立即抛失败（不再空等满 maxAttempts 报「文件转换未完成」）', async () => {
-    // 后端转换失败保留 FAILED 节点（不再硬删）：若继续轮询会空等满 maxAttempts
-    // （默认 60×2s=120s）才报「文件转换未完成」，用户误以为还在转换。
+    // 打开/导出链路失败保留 FAILED 节点（真实文件不删）：若继续轮询会空等满
+    // maxAttempts（默认 60×2s=120s）才报「文件转换未完成」，用户误以为还在转换。
     mockNodeControllerGetNode.mockResolvedValue({
       data: { fileStatus: 'FAILED' },
     });
@@ -339,6 +339,31 @@ describe('S6-1/S6-6 主上传路径：waitForFileReady 轮询期间重拉云端�
       '该文件转换失败，请检查文件内容'
     );
     // 立即失败：只查一次节点，未进入轮询等待
+    expect(mockNodeControllerGetNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('节点被删（404 NOT_FOUND，上传链路失败即删）：抛转换失败文案而非裸 404', async () => {
+    // 上传链路转换/落盘失败后节点被删除（不留 node 记录）：轮询查到 404 NOT_FOUND
+    // 即失败信号，给出与 FAILED 一致的失败文案，而非「节点不存在」。
+    mockNodeControllerGetNode.mockResolvedValue({
+      error: { code: 'NOT_FOUND', message: '节点不存在' },
+    });
+
+    await expect(waitForFileReady('node-1', 60, 2000)).rejects.toThrow(
+      '该文件转换失败，请检查文件内容'
+    );
+    // 立即失败：只查一次节点，未进入轮询等待
+    expect(mockNodeControllerGetNode).toHaveBeenCalledTimes(1);
+  });
+
+  it('节点查询其他错误（非 404）：透传真实原因，不误判为转换失败', async () => {
+    mockNodeControllerGetNode.mockResolvedValue({
+      error: { code: 'INTERNAL_SERVER_ERROR', message: '服务器繁忙' },
+    });
+
+    await expect(waitForFileReady('node-1', 60, 2000)).rejects.toThrow(
+      '服务器繁忙'
+    );
     expect(mockNodeControllerGetNode).toHaveBeenCalledTimes(1);
   });
 

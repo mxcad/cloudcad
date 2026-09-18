@@ -16,6 +16,7 @@ import { ConversionReconciliationService } from './conversion-reconciliation.ser
 import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
+import { NodeTrashService } from '../../file-operations/node-trash.service';
 import { FileStatus } from '../../common/enums/file-status.enum';
 
 describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', () => {
@@ -23,6 +24,7 @@ describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', (
   let prisma: { fileSystemNode: { findMany: jest.Mock } };
   let executor: { getTaskStatus: jest.Mock };
   let transitioner: { transition: jest.Mock };
+  let nodeTrashService: { deleteNode: jest.Mock };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -34,6 +36,7 @@ describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', (
         },
         { provide: IFunctionExecutor, useValue: { getTaskStatus: jest.fn() } },
         { provide: NodeStatusTransitioner, useValue: { transition: jest.fn() } },
+        { provide: NodeTrashService, useValue: { deleteNode: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(undefined) } },
       ],
     }).compile();
@@ -42,12 +45,14 @@ describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', (
     prisma = module.get(DatabaseService);
     executor = module.get(IFunctionExecutor);
     transitioner = module.get(NodeStatusTransitioner);
+    nodeTrashService = module.get(NodeTrashService);
   });
 
-  const stuckNode = (id: string, taskId: string) => ({
+  const stuckNode = (id: string, taskId: string, path: string | null = null) => ({
     id,
     fileStatus: FileStatus.PROCESSING,
     taskId,
+    path,
   });
 
   it('任务 COMPLETED → node 置 COMPLETED', async () => {
@@ -58,12 +63,24 @@ describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', (
     expect(transitioner.transition).toHaveBeenCalledWith('n1', FileStatus.PROCESSING, FileStatus.COMPLETED);
   });
 
-  it('任务 FAILED → node 置 FAILED', async () => {
-    prisma.fileSystemNode.findMany.mockResolvedValue([stuckNode('n1', 'task-1')]);
+  it('任务 FAILED + 真实文件（path!=null）→ node 置 FAILED（保留）', async () => {
+    prisma.fileSystemNode.findMany.mockResolvedValue([
+      stuckNode('n1', 'task-1', '/files/202601/node1/a.dwg'),
+    ]);
     executor.getTaskStatus.mockResolvedValue({ taskId: 'task-1', status: 'FAILED' });
     const result = await service.reconcile();
     expect(result).toEqual({ checked: 1, recovered: 1 });
     expect(transitioner.transition).toHaveBeenCalledWith('n1', FileStatus.PROCESSING, FileStatus.FAILED);
+    expect(nodeTrashService.deleteNode).not.toHaveBeenCalled();
+  });
+
+  it('任务 FAILED + 上传幽灵（path=null）→ 删除节点（不留 FAILED 记录）', async () => {
+    prisma.fileSystemNode.findMany.mockResolvedValue([stuckNode('n1', 'task-1')]);
+    executor.getTaskStatus.mockResolvedValue({ taskId: 'task-1', status: 'FAILED' });
+    const result = await service.reconcile();
+    expect(result).toEqual({ checked: 1, recovered: 1 });
+    expect(transitioner.transition).not.toHaveBeenCalled();
+    expect(nodeTrashService.deleteNode).toHaveBeenCalledWith('n1', true);
   });
 
   it('任务 PENDING（仍在跑）→ 跳过不转换', async () => {
@@ -82,12 +99,24 @@ describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', (
     expect(transitioner.transition).not.toHaveBeenCalled();
   });
 
-  it('任务丢失（getTaskStatus 抛错）→ node 置 FAILED', async () => {
-    prisma.fileSystemNode.findMany.mockResolvedValue([stuckNode('n1', 'task-1')]);
+  it('任务丢失（getTaskStatus 抛错）+ 真实文件（path!=null）→ node 置 FAILED', async () => {
+    prisma.fileSystemNode.findMany.mockResolvedValue([
+      stuckNode('n1', 'task-1', '/files/202601/node1/a.dwg'),
+    ]);
     executor.getTaskStatus.mockRejectedValue(new Error('HTTP 404 for GET /v1/conversions/tasks/task-1'));
     const result = await service.reconcile();
     expect(result).toEqual({ checked: 1, recovered: 1 });
     expect(transitioner.transition).toHaveBeenCalledWith('n1', FileStatus.PROCESSING, FileStatus.FAILED);
+    expect(nodeTrashService.deleteNode).not.toHaveBeenCalled();
+  });
+
+  it('任务丢失（getTaskStatus 抛错）+ 上传幽灵（path=null）→ 删除节点', async () => {
+    prisma.fileSystemNode.findMany.mockResolvedValue([stuckNode('n1', 'task-1')]);
+    executor.getTaskStatus.mockRejectedValue(new Error('HTTP 404 for GET /v1/conversions/tasks/task-1'));
+    const result = await service.reconcile();
+    expect(result).toEqual({ checked: 1, recovered: 1 });
+    expect(transitioner.transition).not.toHaveBeenCalled();
+    expect(nodeTrashService.deleteNode).toHaveBeenCalledWith('n1', true);
   });
 
   it('无卡死 node → checked=0 recovered=0，不查任务状态', async () => {

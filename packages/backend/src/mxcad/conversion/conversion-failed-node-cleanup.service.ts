@@ -29,13 +29,18 @@ const MAX_CLEANUP_BATCH = 200;
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 /**
- * 转换失败节点清理服务
+ * 转换失败节点清理服务（兜底）
  *
- * 上传链路（DrawingIngestService）终态失败时节点置 FAILED 但**不立即删除**：
- * FAILED 行在保留窗口内是失败的唯一可见面（文件夹红色 × 徽标 + 转换面板「云端」
- * 列表据 fileStatus=FAILED 展示失败原因），用户据此知道上传失败了、而不是文件
- * 凭空消失。窗口到期后由本服务彻底删除，保证 FAILED 行不会永久堆积、不需要
- * 用户手动清理。
+ * 上传链路（DrawingIngestService）转换/落盘失败时**立即删除**未成功节点（不留
+ * FAILED 记录，产品要求：没有转换成功都不保留 node 数据库记录）。本服务是兜底：
+ * 清理那些**没被立即删掉的** FAILED 上传幽灵节点——
+ * - 存量数据：本改动上线前遗留的 FAILED 节点；
+ * - 崩溃恢复：backend 重启导致在途转换丢失，ConversionReconciliationService 把
+ *   卡死的上传节点置 FAILED（path=null），由本服务到期清理。
+ *
+ * 只清 `path=null` 的 FAILED 节点（上传幽灵，从未落盘）。`path` 已就位的 FAILED
+ * 节点是打开/导出失败的**真实文件**，保留 FAILED 供用户重试或手动处理——此前无
+ * 此过滤会把真实文件也在保留窗口后误删（丢用户数据）。
  *
  * 失败时刻的真实错误已同步写入审计日志（AuditAction.FILE_UPLOAD, success=false），
  * 节点上无 error 字段，因此删除节点不丢诊断信息。
@@ -139,6 +144,10 @@ export class ConversionFailedNodeCleanupService
       where: {
         deletedAt: null,
         fileStatus: FileStatus.FAILED,
+        // 只清上传幽灵节点（path=null，从未落盘分配存储）。path 已就位的 FAILED
+        // 节点是打开/导出失败的**真实文件**，删了会丢用户数据——保留 FAILED 供
+        // 用户重试或手动处理。此前无此过滤，会把真实文件也在保留窗口后误删。
+        path: null,
         updatedAt: { lte: cutoff },
       },
       select: { id: true, name: true, updatedAt: true },

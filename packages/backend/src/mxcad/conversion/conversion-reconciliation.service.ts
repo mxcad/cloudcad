@@ -22,6 +22,7 @@ import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
 import { FileStatus } from '../../common/enums/file-status.enum';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
+import { NodeTrashService } from '../../file-operations/node-trash.service';
 
 /** 宽限期（分钟）：node 处于 PROCESSING 且 updatedAt 早于 now - grace 才视为"卡死" */
 const DEFAULT_STUCK_GRACE_MINUTES = 30;
@@ -42,9 +43,11 @@ const MAX_RECONCILE_BATCH = 200;
  * 本服务定时（默认 5min）+ 启动延迟一次扫描"卡死"的 node（PROCESSING + taskId 非空 +
  * updatedAt 超宽限期），按 executor 实时任务状态恢复：
  * - COMPLETED → node 置 COMPLETED
- * - FAILED → node 置 FAILED
+ * - FAILED / 任务丢失（getTaskStatus 抛 404）→ 按 path 分流：
+ *   - path=null（上传幽灵，从未落盘）→ 直接删除（不留 FAILED 记录，与上传链路
+ *     失败即删一致）；
+ *   - path!=null（已存在的真实文件）→ 置 FAILED，保留供用户重试或手动处理。
  * - PENDING / PROCESSING（仍在跑）→ 跳过（只是慢）
- * - 任务丢失（getTaskStatus 抛 404）→ node 置 FAILED（提示用户重试）
  *
  * 状态转换经 NodeStatusTransitioner（状态机校验）。宽限期避免误伤正常长转换
  * （转换 timeout 上限 180s，30min 远超）。
@@ -61,6 +64,7 @@ export class ConversionReconciliationService {
     @Inject(IFunctionExecutor) private readonly executor: IFunctionExecutor,
     private readonly prisma: DatabaseService,
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
+    private readonly nodeTrashService: NodeTrashService,
     private readonly configService: ConfigService
   ) {
     const graceRaw = this.configService.get<string>('CONVERSION_STUCK_GRACE_MINUTES');
@@ -128,7 +132,7 @@ export class ConversionReconciliationService {
         fileStatus: { in: [FileStatus.PROCESSING] },
         updatedAt: { lt: cutoff },
       },
-      select: { id: true, fileStatus: true, taskId: true },
+      select: { id: true, fileStatus: true, taskId: true, path: true },
       take: MAX_RECONCILE_BATCH,
     });
 
@@ -142,20 +146,46 @@ export class ConversionReconciliationService {
           recovered++;
           this.logger.log(`[Reconciliation] node ${node.id} 任务已完成 → COMPLETED`);
         } else if (status.status === 'FAILED') {
-          await this.nodeStatusTransitioner.transition(node.id, from, FileStatus.FAILED);
+          await this.resolveFailure(node, from);
           recovered++;
-          this.logger.log(`[Reconciliation] node ${node.id} 任务已失败 → FAILED`);
         }
         // PENDING / PROCESSING：任务仍在跑（只是慢），跳过
       } catch {
-        // 任务丢失（404 / conversion-service 重启）：node 置 FAILED，提示用户重试
-        await this.nodeStatusTransitioner.transition(node.id, from, FileStatus.FAILED);
+        // 任务丢失（404 / conversion-service 重启）：按 path 分流处理
+        await this.resolveFailure(node, from);
         recovered++;
         this.logger.warn(
-          `[Reconciliation] node ${node.id} 任务 ${node.taskId} 丢失 → FAILED`
+          `[Reconciliation] node ${node.id} 任务 ${node.taskId} 丢失 → 按 path 分流`
         );
       }
     }
     return { checked: nodes.length, recovered };
+  }
+
+  /**
+   * 卡死节点失败分流（与「不留存未成功 node 记录」一致）：
+   * - `path = null`（上传幽灵，从未落盘）→ 直接删除，不留 FAILED 记录；
+   * - `path != null`（已存在的真实文件）→ 置 FAILED，保留供用户重试或手动处理。
+   * 删除失败不阻塞整批（节点可能已被并发删除），仅记日志。
+   */
+  private async resolveFailure(
+    node: { id: string; path: string | null },
+    from: FileStatus | null
+  ): Promise<void> {
+    if (node.path === null) {
+      try {
+        await this.nodeTrashService.deleteNode(node.id, true);
+        this.logger.log(`[Reconciliation] node ${node.id} 上传幽灵 → 已删除`);
+      } catch (error) {
+        this.logger.warn(
+          `[Reconciliation] node ${node.id} 删除失败（不阻塞）: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+      return;
+    }
+    await this.nodeStatusTransitioner.transition(node.id, from, FileStatus.FAILED);
+    this.logger.log(`[Reconciliation] node ${node.id} 真实文件 → FAILED（保留）`);
   }
 }

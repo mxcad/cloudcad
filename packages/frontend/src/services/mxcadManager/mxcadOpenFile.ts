@@ -137,11 +137,20 @@ export async function waitForFileReady(
     const fileInfoResponse = await nodeControllerGetNode({ path: { nodeId } });
     // SDK 默认不抛错：API 失败（404/500）与"仍在转换中"必须区分，
     // 否则失败会被误报为"文件转换未完成"（历史 bug）
-    if (fileInfoResponse.error) throw fileInfoResponse.error;
+    if (fileInfoResponse.error) {
+      // 上传链路转换/落盘失败后节点被删除（后端不再留存未成功 node 记录）：
+      // 404 NOT_FOUND 即失败信号，给出与 FAILED 一致的失败文案，而非裸 404
+      // 「节点不存在」。其他错误（网络/500）透传真实原因。
+      const code = (fileInfoResponse.error as { code?: string })?.code;
+      if (code === 'NOT_FOUND') {
+        throw new Error(t('该文件转换失败，请检查文件内容'));
+      }
+      throw fileInfoResponse.error;
+    }
     const fileInfo = fileInfoResponse.data;
     if (!fileInfo) return null;
-    // 后端转换失败保留 FAILED 节点（不再硬删），若继续轮询会空等满 maxAttempts
-    // （默认 60×2s=120s）才报「文件转换未完成」，用户误以为还在转换。
+    // 打开/导出链路失败保留 FAILED 节点（真实文件不删），若继续轮询会空等满
+    // maxAttempts（默认 60×2s=120s）才报「文件转换未完成」，用户误以为还在转换。
     // 这里立即失败并给出与 useCadFileLoader 一致的失败文案。
     if (fileInfo.fileStatus === 'FAILED') {
       throw new Error(t('该文件转换失败，请检查文件内容'));

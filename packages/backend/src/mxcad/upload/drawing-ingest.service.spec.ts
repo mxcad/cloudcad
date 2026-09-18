@@ -28,6 +28,7 @@ import { FileNodeMaterializer } from './file-node-materializer.service';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { CONVERSION_FILE_CHANNEL } from '../conversion/conversion-task-sse.constants';
+import { DatabaseService } from '../../database/database.service';
 
 describe('DrawingIngestService', () => {
   let service: DrawingIngestService;
@@ -104,6 +105,12 @@ describe('DrawingIngestService', () => {
 
   const mockEventEmitter = { emit: jest.fn() };
 
+  const mockPrisma = {
+    fileSystemNode: {
+      findUnique: jest.fn(),
+    },
+  };
+
   function fileSource(
     overrides?: Partial<Extract<IngestSource, { kind: 'file' }>>
   ): IngestSource {
@@ -153,6 +160,7 @@ describe('DrawingIngestService', () => {
         },
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: DatabaseService, useValue: mockPrisma },
       ],
     }).compile();
     service = module.get<DrawingIngestService>(DrawingIngestService);
@@ -274,7 +282,7 @@ describe('DrawingIngestService', () => {
       }
     }
 
-    it('上传立即返回 kOk（节点 PROCESSING），转换失败在后台释放占位 + 保留 FAILED 节点', async () => {
+    it('上传立即返回 kOk（节点 PROCESSING），转换失败在后台释放占位 + 删除未成功节点', async () => {
       mockFileConversionService.needsConversion.mockReturnValue(true);
       mockFileSystemService.getFileSize.mockResolvedValue(1024);
       mockFileTreeService.createFileNode.mockResolvedValue({ id: 'cad1' });
@@ -283,6 +291,12 @@ describe('DrawingIngestService', () => {
         ret: { code: 1 },
         error: 'read file error',
         transient: true,
+      });
+      // 失败节点清理时读到的节点态：PROCESSING + path=null（上传幽灵，未落盘）
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        fileStatus: FileStatus.PROCESSING,
+        deletedAt: null,
+        path: null,
       });
 
       // 上传请求立即返回 kOk（不阻塞等待转换），节点保持 PROCESSING
@@ -299,17 +313,20 @@ describe('DrawingIngestService', () => {
       // 冲刷后台转换任务微任务链（fire-and-forget，mock 立即 resolve 故任务已完成）
       await flushMicrotasks();
 
-      // 后台任务：转换失败 → 释放占位 + 节点 FAILED + 保留节点（不硬删）
+      // 后台任务：转换失败 → 释放占位 + 删除未成功节点（不留 FAILED 记录）
       expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
         'user1'
       );
-      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
-        'cad1',
-        FileStatus.PROCESSING,
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(FileStatus),
         FileStatus.FAILED
       );
-      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
-      // 失败原因在失败瞬间写审计（节点无 error 字段，保留窗口到期会删节点）
+      expect(mockNodeTrashService.deleteNode).toHaveBeenCalledWith(
+        'cad1',
+        true
+      );
+      // 失败原因在失败瞬间写审计（删节点不丢诊断信息）
       expect(mockAuditLogService.log).toHaveBeenCalledWith(
         AuditAction.FILE_UPLOAD,
         ResourceType.FILE,
@@ -331,7 +348,7 @@ describe('DrawingIngestService', () => {
       );
     });
 
-    it('落盘失败：置 FAILED 不硬删，审计 failureStage=materialize', async () => {
+    it('落盘失败：删除未成功节点（不置 FAILED），审计 failureStage=materialize', async () => {
       mockFileConversionService.needsConversion.mockReturnValue(true);
       mockFileSystemService.getFileSize.mockResolvedValue(1024);
       mockFileTreeService.createFileNode.mockResolvedValue({ id: 'cad1' });
@@ -340,6 +357,12 @@ describe('DrawingIngestService', () => {
         ret: { code: 0 },
       });
       mockMaterializer.materialize.mockResolvedValue(null);
+      // 落盘失败节点态：PROCESSING + path=null（未落盘）
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        fileStatus: FileStatus.PROCESSING,
+        deletedAt: null,
+        path: null,
+      });
 
       const result = await service.ingest(fileSource(), target());
       expect(result).toEqual({
@@ -350,9 +373,9 @@ describe('DrawingIngestService', () => {
 
       await flushMicrotasks();
 
-      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
-        'cad1',
-        FileStatus.PROCESSING,
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(FileStatus),
         FileStatus.FAILED
       );
       expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
@@ -360,7 +383,10 @@ describe('DrawingIngestService', () => {
         expect.any(FileStatus),
         FileStatus.COMPLETED
       );
-      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockNodeTrashService.deleteNode).toHaveBeenCalledWith(
+        'cad1',
+        true
+      );
       expect(mockAuditLogService.log).toHaveBeenCalledWith(
         AuditAction.FILE_UPLOAD,
         ResourceType.FILE,
@@ -655,8 +681,14 @@ describe('DrawingIngestService', () => {
       expect(transitions).toContain(FileStatus.COMPLETED);
     });
 
-    it('落盘失败：置 FAILED 不硬删，且不把 COMPLETED 置上', async () => {
+    it('落盘失败：删除未成功节点（不置 FAILED），且不把 COMPLETED 置上', async () => {
       mockMaterializer.materialize.mockResolvedValue(null);
+      // 落盘失败节点态：PROCESSING + path=null（未落盘）
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        fileStatus: FileStatus.PROCESSING,
+        deletedAt: null,
+        path: null,
+      });
 
       const result = await service.ingest(chunksSource(), target());
       expect(result).toEqual({
@@ -667,9 +699,9 @@ describe('DrawingIngestService', () => {
 
       await flushMicrotasks();
 
-      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
-        'node-1',
-        FileStatus.PROCESSING,
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(FileStatus),
         FileStatus.FAILED
       );
       expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
@@ -677,7 +709,10 @@ describe('DrawingIngestService', () => {
         expect.any(FileStatus),
         FileStatus.COMPLETED
       );
-      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockNodeTrashService.deleteNode).toHaveBeenCalledWith(
+        'node-1',
+        true
+      );
       expect(mockAuditLogService.log).toHaveBeenCalledWith(
         AuditAction.FILE_UPLOAD,
         ResourceType.FILE,
@@ -701,12 +736,18 @@ describe('DrawingIngestService', () => {
       );
     });
 
-    it('转换失败：置 FAILED + 审计 failureStage=conversion，不进落盘', async () => {
+    it('转换失败：删除未成功节点（不置 FAILED）+ 审计 failureStage=conversion，不进落盘', async () => {
       mockFileConversionService.convertFile.mockResolvedValue({
         isOk: false,
         ret: { code: 1 },
         error: 'read file error',
         transient: false,
+      });
+      // 转换失败节点态：PROCESSING + path=null（未落盘）
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        fileStatus: FileStatus.PROCESSING,
+        deletedAt: null,
+        path: null,
       });
 
       const result = await service.ingest(chunksSource(), target());
@@ -718,13 +759,16 @@ describe('DrawingIngestService', () => {
 
       await flushMicrotasks();
 
-      expect(mockNodeStatusTransitioner.transition).toHaveBeenCalledWith(
-        'node-1',
-        FileStatus.PROCESSING,
+      expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(FileStatus),
         FileStatus.FAILED
       );
       expect(mockMaterializer.materialize).not.toHaveBeenCalled();
-      expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
+      expect(mockNodeTrashService.deleteNode).toHaveBeenCalledWith(
+        'node-1',
+        true
+      );
       expect(mockAuditLogService.log).toHaveBeenCalledWith(
         AuditAction.FILE_UPLOAD,
         ResourceType.FILE,

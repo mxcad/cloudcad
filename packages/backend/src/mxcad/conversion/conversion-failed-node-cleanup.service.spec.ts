@@ -72,7 +72,7 @@ describe('ConversionFailedNodeCleanupService', () => {
       );
     });
 
-    it('查询条件：仅未删除的 FAILED 节点，updatedAt 不晚于 cutoff，批量上限 200', async () => {
+    it('查询条件：仅未删除的 FAILED 上传幽灵节点（path=null），updatedAt 不晚于 cutoff，批量上限 200', async () => {
       mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
       service = await createService();
 
@@ -83,6 +83,8 @@ describe('ConversionFailedNodeCleanupService', () => {
         where: {
           deletedAt: null,
           fileStatus: FileStatus.FAILED,
+          // 只清上传幽灵（path=null）；path 已就位的真实文件不删（防误删用户数据）
+          path: null,
           updatedAt: { lte: expectedCutoff },
         },
         select: { id: true, name: true, updatedAt: true },
