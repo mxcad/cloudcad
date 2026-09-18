@@ -48,6 +48,8 @@ export interface ConversionTask {
   source: ConversionTaskSource;
   /** cloud：关联节点 ID */
   nodeId?: string;
+  /** local：文件哈希（游客/公开路径打开用，构造 /api/v1/public-file/access/ URL） */
+  fileHash?: string;
   /** cloud：转换任务 ID（取消用） */
   taskId?: string;
   createdAt: number;
@@ -287,6 +289,7 @@ interface ConversionQueueState {
     name: string;
     status?: ConversionTaskStatus;
     taskId?: string;
+    fileHash?: string;
     createdAt?: number;
     error?: string;
   }) => void;
@@ -528,6 +531,7 @@ export const useConversionQueueStore = create<ConversionQueueState>(
           terminalAt: isTerminalStatus(status) ? Date.now() : undefined,
           source: 'local',
           taskId: task.taskId,
+          fileHash: task.fileHash,
           createdAt: task.createdAt ?? Date.now(),
           error: task.error,
         };

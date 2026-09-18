@@ -14,6 +14,8 @@ export interface FileOpenedDetail {
   fileUrl?: string;
   fileName?: string;
   libraryKey?: 'drawing' | 'block';
+  /** 本地任务（游客/公开路径）：fileId 为空时的文件哈希，用于构造 ?hash= URL */
+  fileHash?: string;
 }
 
 /** 引擎 openFileComplete 信号 payload（对应原 mxcad-file-open-complete window 事件） */

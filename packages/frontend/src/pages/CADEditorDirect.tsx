@@ -117,6 +117,7 @@ export const CADEditorDirect: React.FC = () => {
     versionParam,
     nodeIdParam,
     urlProjectId,
+    hashParam,
   } = useFileRouteParser();
 
   // 始终以 loading 状态初始化，确保 CAD 引擎异步初始化期间
@@ -324,6 +325,7 @@ export const CADEditorDirect: React.FC = () => {
       versionParam,
       nodeIdParam,
       shareFileNameParam,
+      hashParam,
       hasLibraryDrawingManage: hasPermission(
         SystemPermission.LIBRARY_DRAWING_MANAGE
       ),
@@ -350,6 +352,7 @@ export const CADEditorDirect: React.FC = () => {
         projectId,
         libraryKey,
         fileName,
+        fileHash,
       }) => {
         if (!libraryKey) {
           setCurrentProjectId(projectId);
@@ -358,8 +361,11 @@ export const CADEditorDirect: React.FC = () => {
           setCurrentProjectId(null);
           patchSessionFlags({ projectId: null });
         }
-        const url =
-          libraryKey === 'drawing'
+        // 本地任务（游客/公开路径）：fileId 为空、fileHash 非空，URL 用 ?hash= 标识，
+        // ?fileName= 携带转换前文件名（刷新后保留显示名）
+        const url = !openedFileId && fileHash
+          ? `/cad-editor?hash=${fileHash}${fileName ? `&fileName=${encodeURIComponent(fileName)}` : ''}`
+          : libraryKey === 'drawing'
             ? `/cad-editor/${openedFileId}?library=drawing`
             : libraryKey === 'block'
               ? `/cad-editor/${openedFileId}?library=block`

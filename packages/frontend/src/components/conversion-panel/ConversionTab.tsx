@@ -115,7 +115,8 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           task.status === 'pending' &&
           task.source === 'cloud' &&
           !!task.taskId;
-        const canOpen = task.status === 'completed' && !!task.nodeId;
+        const canOpen =
+          task.status === 'completed' && (!!task.nodeId || !!task.fileHash);
         // 内容性永久失败（content-error）：同一输入重试注定再失败，不提供重试入口；
         // 其余失败（环境性可重试）才显示重试。失败性质由后端结构化下发（errorCategory）。
         const isContentError = task.errorCategory === 'content-error';
@@ -204,7 +205,8 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
       )}
       {filteredHistory.map((task) => {
         const meta = STATUS_META[task.status];
-        const canOpen = task.status === 'completed' && !!task.nodeId;
+        const canOpen =
+          task.status === 'completed' && (!!task.nodeId || !!task.fileHash);
         return (
           <div
             key={`history-${task.id}`}

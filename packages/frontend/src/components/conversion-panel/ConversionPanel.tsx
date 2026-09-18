@@ -483,6 +483,14 @@ export function ConversionPanel() {
     // 完成且关联节点 → 新标签页打开 CAD 编辑器（编辑器走 waitForFileReady 等待就绪）
     if (task.nodeId) {
       window.open(`/cad-editor/${task.nodeId}`, '_blank', 'noopener');
+    } else if (task.fileHash) {
+      // 本地任务（游客/公开路径）：按 fileHash 走公开文件打开，
+      // ?fileName= 携带转换前文件名供编辑器显示（缺失时回退 hash.mxweb）
+      window.open(
+        `/cad-editor?hash=${task.fileHash}&fileName=${encodeURIComponent(task.name)}`,
+        '_blank',
+        'noopener'
+      );
     }
   };
 

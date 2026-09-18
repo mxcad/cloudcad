@@ -130,7 +130,12 @@ export async function waitForFileReady(
   // 面板悬浮按钮据此可见并轮询；waitForFileReady 继续等待就绪后打开文件。
   // 同时广播到其他标签页：它们的轮询与 SSE 都被门控到 hasActive，不广播就永远
   // 看不到本标签页刚发起的转换（角标恒 0、面板不展开）
-  void useConversionQueueStore.getState().refreshCloud();
+  const queueStore = useConversionQueueStore.getState();
+  void queueStore.refreshCloud();
+  // 打开文件是用户显式动作，直接展开面板，不经过 settled 基线门控：
+  // settled 竞态下（refreshCloud #2 先于 #1 完成）新任务被算进基线，
+  // isGrowthAfterSettle 永远 false，面板不展开
+  queueStore.expandByTask();
   broadcastConversionActivity();
   setLoadingProgress(0);
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -450,6 +455,14 @@ async function openPublicMxweb(
     });
     hideGlobalLoading();
     updateTaskStatus(localTaskId, 'completed');
+    // 打开成功后更新浏览器 URL（?hash= + ?fileName=），对齐节点打开的 onFileOpened 行为
+    emitFileOpened({
+      fileId: '',
+      parentId: null,
+      projectId: null,
+      fileName: file.name,
+      fileHash: hash,
+    });
   } catch (error) {
     hideGlobalLoading();
     updateTaskStatus(localTaskId, 'failed', {
@@ -526,6 +539,8 @@ export async function handlePublicUpload(
   try {
     showGlobalLoading(t('正在计算文件哈希...'));
     const hash = await calculateFileHash(file);
+    // 补 fileHash：面板「打开」按钮用此构造公开路径 URL
+    updateTaskStatus(localTaskId, 'processing', { fileHash: hash });
     // latest-wins：最近打开的文件优先（每次打开新文件覆盖）
     currentPublicOpenHash = hash;
     if (!noCache) {

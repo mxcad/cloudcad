@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CAD_EVENTS } from '@/constants/events';
-import { subscribe, setCacheTimestamp } from '@/services/drawingSession';
+import {
+  subscribe,
+  setCacheTimestamp,
+  emitFileOpened,
+} from '@/services/drawingSession';
 import type { FileOpenedDetail } from '@/services/drawingSession';
 import {
   nodeControllerGetNode,
@@ -52,6 +56,8 @@ export interface CadFileLoaderState {
   versionParam: string | null;
   nodeIdParam: string | null;
   shareFileNameParam: string | null;
+  /** 本地任务（游客/公开路径）按 fileHash 打开图纸 */
+  hashParam: string | null;
   hasLibraryDrawingManage: boolean;
   hasLibraryBlockManage: boolean;
   isInitializedRef: React.MutableRefObject<boolean>;
@@ -88,6 +94,7 @@ export function useCadFileLoader(
     versionParam,
     nodeIdParam,
     shareFileNameParam,
+    hashParam,
     hasLibraryDrawingManage,
     hasLibraryBlockManage,
     isInitializedRef,
@@ -116,8 +123,9 @@ export function useCadFileLoader(
     // 协同链接（URL 带合法 collabWorkId）：跳过文件打开，由 useCollabActions 的
     // auto-join（joinWork）直接加入协同并加载协同文件；引擎初始化由 useHomeInit 兜底。
     // 不再依赖「恰好没有 fileId」的 URL 形态（隐式跳过）。
-    if (!fileId || collabWorkId) return;
-    if (isAuthenticated && !personalSpaceId) return;
+    // 本地任务（?hash=）：无 fileId，按 fileHash 走公开文件打开
+    if ((!fileId && !hashParam) || collabWorkId) return;
+    if (isAuthenticated && !personalSpaceId && !hashParam) return;
 
     let cancelled = false;
 
@@ -129,6 +137,141 @@ export function useCadFileLoader(
         const { mxcadManager, setNavigateFunction } =
           await import('../services/mxcadManager');
         if (cancelled) return;
+
+        // 打开目标 URL 与文件信息：本地任务（?hash=）与节点打开共用 doOpenMxFile
+        let mxcadFileUrl!: string;
+        let fileInfoForOpen!: {
+          fileId: string;
+          parentId: string | null;
+          projectId: string | null | undefined;
+          name: string;
+          personalSpaceId: string | null;
+          libraryKey?: 'drawing' | 'block';
+          fromPlatform?: boolean;
+          fromShare?: boolean;
+          fileHash?: string;
+        };
+        let onOpenSuccess: () => void = () => {};
+
+        const doOpenMxFile = async (skipFileOpen = false) => {
+          // 视图已创建（引擎单实例仍存活）→ 直接发打开命令。组件卸载再挂载时
+          // isInitializedRef 归零而 isCreated() 仍为 true；若只等就绪不发命令，
+          // 图纸被静默跳过，且 loadedFileUrlRef 已写入 → 后续重跑命中 URL 相等
+          // 守卫永久不打开。
+          if (mxcadManager.isCreated()) {
+            isInitializedRef.current = true;
+            mxcadManager.showMxCAD(true);
+            // 引擎可能仍在初始化（WASM 加载中），等就绪再发命令避免命令丢失
+            await waitForEngineReady(mxcadManager, () => cancelled);
+            if (cancelled) return;
+            showGlobalLoading(t('正在加载图纸...'));
+            await mxcadManager.openFile({
+              url: mxcadFileUrl,
+              fileInfo: fileInfoForOpen,
+              onSuccess: onOpenSuccess,
+            });
+            hideGlobalLoading();
+            loadedFileUrlRef.current = mxcadFileUrl;
+            if (fileId) currentFileIdRef.current = fileId;
+            onLoading(false);
+            return;
+          }
+
+          const { initThemeSync, initMxCADConfig } =
+            await import('../services/mxcadManager');
+          if (cancelled) return;
+
+          await initMxCADConfig(fileInfoForOpen);
+          if (cancelled) return;
+
+          // 引擎挂载前不显示容器：提前 showMxCAD(true) 会露出尚未渲染 mxcad-app 的空白容器
+          // （白屏闪烁），且与编辑器骨架屏遮罩同时存在造成"两重 loading"。
+          // 加载期间由骨架屏（loading 遮罩）覆盖，容器显示延后到引擎就绪（2 RAF）之后。
+          await mxcadManager.initializeMxCADView();
+          if (cancelled) return;
+
+          await initThemeSync();
+          if (cancelled) return;
+
+          isInitializedRef.current = true;
+          loadedFileUrlRef.current = mxcadFileUrl;
+          if (fileId) currentFileIdRef.current = fileId;
+
+          // 等待引擎真正就绪（WASM 加载 + 引擎对象创建，mxcadApplicationCreatedMxCADObject 事件）：
+          // initializeMxCADView 仅保证 mxcad-app 视图挂载即 resolve，此时引擎仍在初始化
+          // （首次加载 WASM / 大图纸场景可能数秒）。提前 showMxCAD(true) 并关闭骨架屏会露出
+          // 空白画布，期间无任何 loading 反馈（#349）。
+          await waitForEngineReady(mxcadManager, () => cancelled);
+          if (cancelled) return;
+
+          if (!skipFileOpen) {
+            // 首开必须等默认空模板的 openFileComplete 再发 __openWebFile__：引擎同一时刻
+            // 只能打开一个文档，重叠的第二次打开会锁死首次打开的 hideLoading/openFileComplete
+            // （由 openFile 的串行队列保证不重叠），且失败能走 retCall + 60s 超时而不是静默卡住。
+            // 成功后 openSession 写入 currentFileInfo 并设置图纸名标题，无需再 restoreEditorTitle。
+            await mxcadManager.openFile({
+              url: mxcadFileUrl,
+              fileInfo: fileInfoForOpen,
+              onSuccess: onOpenSuccess,
+            });
+          }
+
+          // 引擎已挂载（再等 2 RAF 保证 canvas 渲染）再显示容器，避免空白区透出背景
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          );
+
+          if (!cancelled) {
+            // 引擎已就绪再显示容器，避免空白区透出背景
+            mxcadManager.showMxCAD(true);
+            onLoading(false);
+            onStoreLoading(false);
+          }
+        };
+
+        // 本地任务（?hash=）：按 fileHash 走公开文件打开，不走节点查询，
+        // 但复用 doOpenMxFile 的正常打开序列（等引擎就绪 + 首开等空模板）
+        if (hashParam) {
+          const mxwebFilename = `${hashParam}.mxweb`;
+          // 显示名用转换前文件名（URL ?fileName= 携带，面板打开时注入）；
+          // 缺失时回退内部访问名 hash.mxweb
+          const displayName = shareFileNameParam || mxwebFilename;
+          mxcadFileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
+          fileInfoForOpen = {
+            fileId: '',
+            parentId: null,
+            projectId: null,
+            name: displayName,
+            personalSpaceId: null,
+            fileHash: hashParam,
+          };
+          setFromShare(false);
+          setNavigateFunction(navigate);
+
+          if (isInitializedRef.current && mxcadManager.isCreated()) {
+            if (loadedFileUrlRef.current === mxcadFileUrl) {
+              mxcadManager.showMxCAD(true);
+              onLoading(false);
+              return;
+            }
+          }
+
+          await doOpenMxFile(false);
+          if (cancelled) return;
+          // 打开成功后更新浏览器 URL（对齐节点打开的 onFileOpened 行为），
+          // 刷新后可凭 ?hash= 重新打开同一文件（?fileName= 保留显示名）
+          emitFileOpened({
+            fileId: '',
+            parentId: null,
+            projectId: null,
+            fileName: displayName,
+            fileHash: hashParam,
+          });
+          return;
+        }
+
+        // hashParam 分支已 return，此处 fileId 必非空（入口守卫保证二者至少其一）
+        if (!fileId) return;
 
         let file: {
           fileHash?: string;
@@ -304,7 +447,7 @@ export function useCadFileLoader(
         setFromShare(!!shareTokenParam);
         setNavigateFunction(navigate);
 
-        const fileInfoForOpen = {
+        fileInfoForOpen = {
           fileId: file.id || '',
           parentId: shareTokenParam ? null : file.parentId || null,
           projectId: shareTokenParam ? null : projectId,
@@ -320,7 +463,7 @@ export function useCadFileLoader(
           fromShare: !!shareTokenParam,
         };
 
-        const onOpenSuccess = () => {
+        onOpenSuccess = () => {
           if (projectId && !libraryKeyParam && !shareTokenParam) {
             setStoreProjectId(projectId);
           } else if (!libraryKeyParam) {
@@ -328,7 +471,6 @@ export function useCadFileLoader(
           }
         };
 
-        let mxcadFileUrl!: string;
         let cacheTimestamp: number | undefined;
 
         if (versionParam) {
@@ -365,82 +507,6 @@ export function useCadFileLoader(
           }
         }
 
-        const doOpenMxFile = async (skipFileOpen = false) => {
-          // 视图已创建（引擎单实例仍存活）→ 直接发打开命令。组件卸载再挂载时
-          // isInitializedRef 归零而 isCreated() 仍为 true；若只等就绪不发命令，
-          // 图纸被静默跳过，且 loadedFileUrlRef 已写入 → 后续重跑命中 URL 相等
-          // 守卫永久不打开。
-          if (mxcadManager.isCreated()) {
-            isInitializedRef.current = true;
-            mxcadManager.showMxCAD(true);
-            // 引擎可能仍在初始化（WASM 加载中），等就绪再发命令避免命令丢失
-            await waitForEngineReady(mxcadManager, () => cancelled);
-            if (cancelled) return;
-            showGlobalLoading(t('正在加载图纸...'));
-            await mxcadManager.openFile({
-              url: mxcadFileUrl,
-              fileInfo: fileInfoForOpen,
-              onSuccess: onOpenSuccess,
-            });
-            hideGlobalLoading();
-            loadedFileUrlRef.current = mxcadFileUrl;
-            currentFileIdRef.current = fileId;
-            onLoading(false);
-            return;
-          }
-
-          const { initThemeSync, initMxCADConfig } =
-            await import('../services/mxcadManager');
-          if (cancelled) return;
-
-          await initMxCADConfig(file);
-          if (cancelled) return;
-
-          // 引擎挂载前不显示容器：提前 showMxCAD(true) 会露出尚未渲染 mxcad-app 的空白容器
-          // （白屏闪烁），且与编辑器骨架屏遮罩同时存在造成"两重 loading"。
-          // 加载期间由骨架屏（loading 遮罩）覆盖，容器显示延后到引擎就绪（2 RAF）之后。
-          await mxcadManager.initializeMxCADView();
-          if (cancelled) return;
-
-          await initThemeSync();
-          if (cancelled) return;
-
-          isInitializedRef.current = true;
-          loadedFileUrlRef.current = mxcadFileUrl;
-          currentFileIdRef.current = fileId;
-
-          // 等待引擎真正就绪（WASM 加载 + 引擎对象创建，mxcadApplicationCreatedMxCADObject 事件）：
-          // initializeMxCADView 仅保证 mxcad-app 视图挂载即 resolve，此时引擎仍在初始化
-          // （首次加载 WASM / 大图纸场景可能数秒）。提前 showMxCAD(true) 并关闭骨架屏会露出
-          // 空白画布，期间无任何 loading 反馈（#349）。
-          await waitForEngineReady(mxcadManager, () => cancelled);
-          if (cancelled) return;
-
-          if (!skipFileOpen) {
-            // 首开必须等默认空模板的 openFileComplete 再发 __openWebFile__：引擎同一时刻
-            // 只能打开一个文档，重叠的第二次打开会锁死首次打开的 hideLoading/openFileComplete
-            // （由 openFile 的串行队列保证不重叠），且失败能走 retCall + 60s 超时而不是静默卡住。
-            // 成功后 openSession 写入 currentFileInfo 并设置图纸名标题，无需再 restoreEditorTitle。
-            await mxcadManager.openFile({
-              url: mxcadFileUrl,
-              fileInfo: fileInfoForOpen,
-              onSuccess: onOpenSuccess,
-            });
-          }
-
-          // 引擎已挂载（再等 2 RAF 保证 canvas 渲染）再显示容器，避免空白区透出背景
-          await new Promise<void>((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-          );
-
-          if (!cancelled) {
-            // 引擎已就绪再显示容器，避免空白区透出背景
-            mxcadManager.showMxCAD(true);
-            onLoading(false);
-            onStoreLoading(false);
-          }
-        };
-
         await doOpenMxFile(false);
       } catch (error) {
         if (!cancelled) {
@@ -469,6 +535,8 @@ export function useCadFileLoader(
     };
   }, [
     fileId,
+    hashParam,
+    shareFileNameParam,
     collabWorkId,
     isActive,
     versionParam,

@@ -14,6 +14,8 @@ export interface FileRouteParams {
   versionParam: string | null;
   nodeIdParam: string | null;
   urlProjectId: string;
+  /** 本地任务（游客/公开路径）按 fileHash 打开图纸 */
+  hashParam: string | null;
 }
 
 export function useFileRouteParser(): FileRouteParams {
@@ -64,6 +66,7 @@ export function useFileRouteParser(): FileRouteParams {
     () => searchParams.get('nodeId') || '',
     [searchParams]
   );
+  const hashParam = useMemo(() => searchParams.get('hash'), [searchParams]);
 
   return {
     fileId,
@@ -77,6 +80,7 @@ export function useFileRouteParser(): FileRouteParams {
     versionParam,
     nodeIdParam,
     urlProjectId,
+    hashParam,
   };
 }
 
