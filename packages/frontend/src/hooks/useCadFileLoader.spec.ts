@@ -12,14 +12,31 @@ import {
 } from '@/services/drawingSession';
 import { CAD_EVENTS } from '@/constants/events';
 
-const { mxcadManagerMock, initMxCADConfigMock } = vi.hoisted(() => ({
+const {
+  mxcadManagerMock,
+  initMxCADConfigMock,
+  guardBeforeOpenMock,
+  queueStoreMock,
+  broadcastConversionActivityMock,
+  showGlobalLoadingMock,
+  hideGlobalLoadingMock,
+} = vi.hoisted(() => ({
   mxcadManagerMock: {
     isCreated: vi.fn(() => false),
     isReady: vi.fn(() => true),
     openFile: vi.fn(async () => {}),
     showMxCAD: vi.fn(),
+    initializeMxCADView: vi.fn(async () => {}),
   },
   initMxCADConfigMock: vi.fn(async () => {}),
+  guardBeforeOpenMock: vi.fn(async () => true),
+  queueStoreMock: {
+    refreshCloud: vi.fn(),
+    expandByTask: vi.fn(),
+  },
+  broadcastConversionActivityMock: vi.fn(),
+  showGlobalLoadingMock: vi.fn(),
+  hideGlobalLoadingMock: vi.fn(),
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -43,10 +60,15 @@ vi.mock('@/services/mxcadManager', () => ({
   restoreEditorTitle: vi.fn(),
   hasDocumentLoaded: vi.fn(() => false),
   waitForDocumentLoaded: vi.fn(async () => true),
+  guardBeforeOpen: guardBeforeOpenMock,
 }));
 vi.mock('@/services/loadingService', () => ({
-  showGlobalLoading: vi.fn(),
-  hideGlobalLoading: vi.fn(),
+  showGlobalLoading: showGlobalLoadingMock,
+  hideGlobalLoading: hideGlobalLoadingMock,
+}));
+vi.mock('@/stores/conversionQueueStore', () => ({
+  useConversionQueueStore: { getState: () => queueStoreMock },
+  broadcastConversionActivity: broadcastConversionActivityMock,
 }));
 vi.mock('./conversion/useConversionPolling', () => ({
   waitForConversion: vi.fn(async () => ({ completed: true })),
@@ -107,6 +129,7 @@ function createFns(): CadFileLoaderCallbacks {
     setStoreFileName: vi.fn(),
     setFromShare: vi.fn(),
     setStoreProjectId: vi.fn(),
+    onFileOpened: vi.fn(),
     onNewFile: vi.fn(),
   };
 }
@@ -260,5 +283,146 @@ describe('useCadFileLoader — 视图已创建时仍必须发打开命令', () =
 
     expect(mxcadManagerMock.openFile).not.toHaveBeenCalled();
     expect(mxcadManagerMock.showMxCAD).toHaveBeenCalled();
+  });
+});
+
+describe('useCadFileLoader — 转换等待期不锁编辑器 + 打开前守卫复查', () => {
+  const PROCESSING_FILE = {
+    id: 'f-1',
+    path: null,
+    fileHash: null,
+    isRoot: true,
+    name: 'a.dwg',
+    updatedAt: '2026-09-16T10:00:00Z',
+    fileStatus: 'PROCESSING',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mxcadManagerMock.isCreated.mockReturnValue(true);
+    mxcadManagerMock.isReady.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    clearDrawingSessionListeners();
+  });
+
+  it('转换等待：展开面板 + 重拉云端 + 跨标签页广播，等待期不显示全屏遮罩', async () => {
+    // 首查 PROCESSING（无 fileHash）→ 进入转换等待；转换完成后重查得到就绪节点
+    mockedGetNode
+      .mockReturnValueOnce({ data: PROCESSING_FILE, error: undefined })
+      .mockReturnValueOnce({ data: FILE, error: undefined });
+
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            fileId: 'f-1',
+            isActive: true,
+            isAuthenticated: true,
+            personalSpaceId: 'ps-1',
+          }),
+          createFns()
+        )
+    );
+    await flush();
+
+    expect(mxcadManagerMock.openFile).toHaveBeenCalledTimes(1);
+    expect(queueStoreMock.expandByTask).toHaveBeenCalled();
+    expect(queueStoreMock.refreshCloud).toHaveBeenCalled();
+    expect(broadcastConversionActivityMock).toHaveBeenCalled();
+    // 等待期不显示「文件转换中」遮罩（转换面板提供进度反馈）；
+    // 唯一的 show 是打开时的「正在加载图纸...」
+    const showMessages = showGlobalLoadingMock.mock.calls.map((c) => c[0]);
+    expect(showMessages).not.toContain('文件转换中，请稍候...');
+    expect(showMessages).toContain('正在加载图纸...');
+  });
+
+  it('转换等待：用户取消守卫 → 不打开、不记录打开状态（onFileOpened 不触发）', async () => {
+    guardBeforeOpenMock.mockResolvedValueOnce(false);
+    mockedGetNode
+      .mockReturnValueOnce({ data: PROCESSING_FILE, error: undefined })
+      .mockReturnValueOnce({ data: FILE, error: undefined });
+
+    const fns = createFns();
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            fileId: 'f-1',
+            isActive: true,
+            isAuthenticated: true,
+            personalSpaceId: 'ps-1',
+          }),
+          fns
+        )
+    );
+    await flush();
+
+    expect(guardBeforeOpenMock).toHaveBeenCalled();
+    expect(mxcadManagerMock.openFile).not.toHaveBeenCalled();
+    expect(fns.onFileOpened).not.toHaveBeenCalled();
+    expect(fns.onError).not.toHaveBeenCalledWith(expect.any(String));
+  });
+});
+
+describe('useCadFileLoader — 首开（?hash= 直接进入）打开期必须有 loading', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 首次进入：引擎视图尚未创建（isCreated=false）→ 走初始化 + 首开打开分支
+    mxcadManagerMock.isCreated.mockReturnValue(false);
+    mxcadManagerMock.isReady.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    clearDrawingSessionListeners();
+  });
+
+  it('?hash= 首开发 __openWebFile__（openFile）期间显示全局 loading，打开结束即摘', async () => {
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            hashParam: '6dab381a35f2691743d8258b84534f8a',
+            shareFileNameParam: '七幕地下-电气施工图.DWG',
+            isActive: true,
+          }),
+          createFns()
+        )
+    );
+    await vi.waitFor(() =>
+      expect(mxcadManagerMock.openFile).toHaveBeenCalledTimes(1)
+    );
+
+    const showOrder = showGlobalLoadingMock.mock.invocationCallOrder[0]!;
+    const openOrder = mxcadManagerMock.openFile.mock.invocationCallOrder[0]!;
+    const hideOrder = hideGlobalLoadingMock.mock.invocationCallOrder[0]!;
+    // 容器此刻尚未 showMxCAD（延后到 RAF 之后），打开期只有全局遮罩提供反馈
+    expect(showOrder).toBeLessThan(openOrder);
+    expect(showGlobalLoadingMock.mock.calls[0]![0]).toBe('正在加载图纸...');
+    expect(hideOrder).toBeGreaterThan(openOrder);
+  });
+
+  it('首开打开失败（openFile 抛错）→ 遮罩同样摘除，不永久 loading', async () => {
+    mxcadManagerMock.openFile.mockRejectedValueOnce(new Error('文件打开超时'));
+
+    const fns = createFns();
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            hashParam: '6dab381a35f2691743d8258b84534f8a',
+            shareFileNameParam: '图纸.DWG',
+            isActive: true,
+          }),
+          fns
+        )
+    );
+    await vi.waitFor(() => expect(hideGlobalLoadingMock).toHaveBeenCalled());
+
+    expect(showGlobalLoadingMock).toHaveBeenCalledWith('正在加载图纸...');
+    expect(hideGlobalLoadingMock).toHaveBeenCalled();
+    // 失败原因透传，不用「CAD编辑器初始化失败」兜底误导用户
+    expect(fns.onError).toHaveBeenCalledWith('文件打开超时');
   });
 });

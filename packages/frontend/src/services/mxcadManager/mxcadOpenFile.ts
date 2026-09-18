@@ -124,9 +124,7 @@ async function getProjectId(
  */
 export async function guardBeforeOpen(): Promise<boolean> {
   const a = await confirmExitCollaborationIfNeeded();
-  const b = a ? await checkAndConfirmUnsavedChanges() : false;
-  console.log('[DBG5] guardBeforeOpen -> collabOk=', a, 'unsavedOk=', b);
-  return b;
+  return a ? checkAndConfirmUnsavedChanges() : false;
 }
 
 export async function waitForFileReady(
@@ -458,12 +456,10 @@ async function openPublicMxweb(
   localTaskId: string
 ): Promise<void> {
   const { updateTaskStatus } = useConversionQueueStore.getState();
-  console.log('[DBG9] openPublicMxweb ENTER id=', localTaskId);
   // 转换等待期编辑器可交互：打开前复查；用户取消则不打开，任务置 cancelled（终态，
   // 避免面板卡在 processing；文件已转换完成，可稍后从面板重新打开）
   if (!(await guardBeforeOpen())) {
     updateTaskStatus(localTaskId, 'cancelled');
-    console.log('[DBG8] openPublicMxweb cancelled path, id=', localTaskId, 'store now=', useConversionQueueStore.getState().tasks.map((t) => [t.id, t.status]));
     return;
   }
   try {
@@ -592,7 +588,7 @@ export async function handlePublicUpload(
           fileHash: hash,
           fileName: file.name,
           noCache: noCache ?? false,
-          callback: () => { console.log('[DBG11] callback INVOKED id=', localTaskId); return openPublicMxweb(file, hash, noCache, localTaskId); },
+          callback: () => openPublicMxweb(file, hash, noCache, localTaskId),
         });
         return;
       }
@@ -636,7 +632,7 @@ export async function handlePublicUpload(
       fileHash: hash,
       fileName: file.name,
       noCache: noCache ?? false,
-      callback: () => { console.log('[DBG11] callback INVOKED id=', localTaskId); return openPublicMxweb(file, hash, noCache, localTaskId); },
+      callback: () => openPublicMxweb(file, hash, noCache, localTaskId),
     });
   } catch (error) {
     hideGlobalLoading();

@@ -558,28 +558,16 @@ describe('转换等待期解锁 + 打开前 guardBeforeOpen 复查', () => {
   });
 
   it('公开路径打开回调：用户取消守卫 → 任务置 cancelled（终态，面板不卡 processing）、不打开', async () => {
-    console.log('[DBG7] emit calls at test start:', mockEmit.mock.calls.length);
     mockCalculateFileHash.mockResolvedValue('hash123');
     mockCheckFileExist.mockResolvedValue({ data: { exists: true } });
     mockCheckUnsaved.mockResolvedValueOnce(false);
 
     await handlePublicUpload(makeFile('drawing.dwg'));
 
-    const allLocal = useConversionQueueStore
+    const localTask = useConversionQueueStore
       .getState()
-      .tasks.filter((t) => t.source === 'local');
-    console.log('[DBG6] local tasks count:', allLocal.length, allLocal.map((t) => t.id));
-    console.log('[DBG10] emit calls after upload:', mockEmit.mock.calls.length);
-    if (mockEmit.mock.calls.length) {
-      const cb0 = (mockEmit.mock.calls[0]?.[1] as { callback: () => Promise<void> }).callback;
-      console.log('[DBG10] cb0 source:', cb0.toString().slice(0, 120));
-    }
-    const localTask = allLocal[allLocal.length - 1]!;
-    await capturedCallback();
-    const afterAll = useConversionQueueStore
-      .getState()
-      .tasks.filter((t) => t.source === 'local');
-    console.log('[DBG6] after cb:', afterAll.map((t) => [t.id, t.status]));
+      .tasks.find((t) => t.source === 'local')!;
+    await capturedCallback()();
 
     const after = useConversionQueueStore
       .getState()

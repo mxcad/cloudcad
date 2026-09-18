@@ -57,6 +57,7 @@ export {
   openLibraryBlock,
   waitForFileReady,
   handlePublicUpload,
+  guardBeforeOpen,
 } from './mxcadOpenFile';
 
 // ==================== 私人空间 ID ====================

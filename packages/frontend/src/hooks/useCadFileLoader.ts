@@ -19,6 +19,10 @@ import {
   hideGlobalLoading,
 } from '@/services/loadingService';
 import { waitForConversion } from './conversion/useConversionPolling';
+import {
+  broadcastConversionActivity,
+  useConversionQueueStore,
+} from '@/stores/conversionQueueStore';
 import { VIEW_INIT_TIMEOUT_MS } from '@/services/mxcadManager/mxcadTypes';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -134,7 +138,7 @@ export function useCadFileLoader(
       onStoreError(null);
 
       try {
-        const { mxcadManager, setNavigateFunction } =
+        const { mxcadManager, setNavigateFunction, guardBeforeOpen } =
           await import('../services/mxcadManager');
         if (cancelled) return;
 
@@ -153,7 +157,12 @@ export function useCadFileLoader(
         };
         let onOpenSuccess: () => void = () => {};
 
-        const doOpenMxFile = async (skipFileOpen = false) => {
+        const doOpenMxFile = async (skipFileOpen = false): Promise<boolean> => {
+          // 替换文档前复查：转换等待期编辑器不再被遮罩锁死，用户可能在此期间
+          // 编辑了当前图纸/加入协同（入口检查只覆盖发起时刻）；首开场景无文档，
+          // 守卫为 no-op。取消（false）时不打开、不记录当前文件状态。
+          if (!(await guardBeforeOpen())) return false;
+          if (cancelled) return false;
           // 视图已创建（引擎单实例仍存活）→ 直接发打开命令。组件卸载再挂载时
           // isInitializedRef 归零而 isCreated() 仍为 true；若只等就绪不发命令，
           // 图纸被静默跳过，且 loadedFileUrlRef 已写入 → 后续重跑命中 URL 相等
@@ -163,7 +172,7 @@ export function useCadFileLoader(
             mxcadManager.showMxCAD(true);
             // 引擎可能仍在初始化（WASM 加载中），等就绪再发命令避免命令丢失
             await waitForEngineReady(mxcadManager, () => cancelled);
-            if (cancelled) return;
+            if (cancelled) return false;
             showGlobalLoading(t('正在加载图纸...'));
             await mxcadManager.openFile({
               url: mxcadFileUrl,
@@ -174,24 +183,24 @@ export function useCadFileLoader(
             loadedFileUrlRef.current = mxcadFileUrl;
             if (fileId) currentFileIdRef.current = fileId;
             onLoading(false);
-            return;
+            return true;
           }
 
           const { initThemeSync, initMxCADConfig } =
             await import('../services/mxcadManager');
-          if (cancelled) return;
+          if (cancelled) return false;
 
           await initMxCADConfig(fileInfoForOpen);
-          if (cancelled) return;
+          if (cancelled) return false;
 
           // 引擎挂载前不显示容器：提前 showMxCAD(true) 会露出尚未渲染 mxcad-app 的空白容器
           // （白屏闪烁），且与编辑器骨架屏遮罩同时存在造成"两重 loading"。
           // 加载期间由骨架屏（loading 遮罩）覆盖，容器显示延后到引擎就绪（2 RAF）之后。
           await mxcadManager.initializeMxCADView();
-          if (cancelled) return;
+          if (cancelled) return false;
 
           await initThemeSync();
-          if (cancelled) return;
+          if (cancelled) return false;
 
           isInitializedRef.current = true;
           loadedFileUrlRef.current = mxcadFileUrl;
@@ -202,18 +211,26 @@ export function useCadFileLoader(
           // （首次加载 WASM / 大图纸场景可能数秒）。提前 showMxCAD(true) 并关闭骨架屏会露出
           // 空白画布，期间无任何 loading 反馈（#349）。
           await waitForEngineReady(mxcadManager, () => cancelled);
-          if (cancelled) return;
+          if (cancelled) return false;
 
           if (!skipFileOpen) {
             // 首开必须等默认空模板的 openFileComplete 再发 __openWebFile__：引擎同一时刻
             // 只能打开一个文档，重叠的第二次打开会锁死首次打开的 hideLoading/openFileComplete
             // （由 openFile 的串行队列保证不重叠），且失败能走 retCall + 60s 超时而不是静默卡住。
             // 成功后 openSession 写入 currentFileInfo 并设置图纸名标题，无需再 restoreEditorTitle。
-            await mxcadManager.openFile({
-              url: mxcadFileUrl,
-              fileInfo: fileInfoForOpen,
-              onSuccess: onOpenSuccess,
-            });
+            // 容器此刻尚未 showMxCAD（延后到下方 RAF 之后），打开期由全局 loading 遮罩提供反馈：
+            // ?hash= 等首开路径发 __openWebFile__ 时若无遮罩，页面上没有任何「正在打开」迹象。
+            showGlobalLoading(t('正在加载图纸...'));
+            try {
+              await mxcadManager.openFile({
+                url: mxcadFileUrl,
+                fileInfo: fileInfoForOpen,
+                onSuccess: onOpenSuccess,
+              });
+            } finally {
+              // 打开失败（retCall 非 0 / 60s 超时）也要摘遮罩，否则永久 loading
+              hideGlobalLoading();
+            }
           }
 
           // 引擎已挂载（再等 2 RAF 保证 canvas 渲染）再显示容器，避免空白区透出背景
@@ -227,6 +244,7 @@ export function useCadFileLoader(
             onLoading(false);
             onStoreLoading(false);
           }
+          return true;
         };
 
         // 本地任务（?hash=）：按 fileHash 走公开文件打开，不走节点查询，
@@ -256,8 +274,10 @@ export function useCadFileLoader(
             }
           }
 
-          await doOpenMxFile(false);
+          const opened = await doOpenMxFile(false);
           if (cancelled) return;
+          // 守卫取消（打开被用户拒绝）：不记录打开状态、不改 URL
+          if (!opened) return;
           // 打开成功后更新浏览器 URL（对齐节点打开的 onFileOpened 行为），
           // 刷新后可凭 ?hash= 重新打开同一文件（?fileName= 保留显示名）
           emitFileOpened({
@@ -370,12 +390,16 @@ export function useCadFileLoader(
             fileStatus === 'UPLOADING' ||
             fileStatus === 'PROCESSING')
         ) {
-          showGlobalLoading(t('文件转换中，请稍候...'));
+          // 转换等待期不再锁编辑器（转换面板提供进度反馈）：展开面板 + 拉云端
+          // 列表 + 跨标签页广播，让该在途任务可见
+          const queueStore = useConversionQueueStore.getState();
+          void queueStore.refreshCloud();
+          queueStore.expandByTask();
+          broadcastConversionActivity();
           const conversion = await waitForConversion(fileId, {
             autoTrigger: fileStatus !== 'PROCESSING',
             shouldContinue: () => !cancelled,
           });
-          hideGlobalLoading();
           if (cancelled) return;
           if (!conversion.completed) {
             const isTerminalFailure =
