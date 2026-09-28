@@ -39,6 +39,21 @@ import { NodeUtils } from '../../common/utils/node-utils';
 import { ClsService } from 'nestjs-cls';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 
+/**
+ * 转换产物缓存文件名判据：`{hash}-{paramKey}{ext}`。
+ * hash = 32 位 md5 hex；paramKey 与 buildParamKey 同形（pdf-{w}x{h}-{color} /
+ * dwg[-vN] / dxf[-vN]，参数段为 safe() 后的 ≤8 位字母数字）；ext 与
+ * conversionTargetExt 一致（.pdf/.dwg/.dxf）。
+ * 清理 cron 用它在缓存目录中只删转换产物，不误删同目录的内容寻址快照
+ * （{hash}.mxweb）与其他文件。
+ */
+const CONVERSION_CACHE_ENTRY_RE =
+  /^[0-9a-f]{32}-(?:pdf-[a-zA-Z0-9]{0,8}x[a-zA-Z0-9]{0,8}-[a-zA-Z0-9]{0,8}\.pdf|dwg(?:-v\d+)?\.dwg|dxf(?:-v\d+)?\.dxf)$/;
+
+export function isConversionCacheEntry(entryName: string): boolean {
+  return CONVERSION_CACHE_ENTRY_RE.test(entryName);
+}
+
 @Injectable()
 export class FileDownloadExportService {
   private readonly logger = new Logger(FileDownloadExportService.name);

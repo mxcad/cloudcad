@@ -13,6 +13,7 @@ import {
   CleanupMetricsService,
 } from '../metrics/cleanup-metrics.service';
 import { isInUploadsCache } from './upload-cache.util';
+import { isConversionCacheEntry } from '../file-system/file-download/file-download-export.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -52,10 +53,15 @@ export class BatchDownloadCleanupService {
     this.exportDir = batchConfig.exportDir;
     this.zipRetentionHours = batchConfig.zipRetentionHours;
     this.dbRetentionDays = batchConfig.dbRetentionDays;
-    this.conversionCacheDir = batchConfig.conversionCacheDir || '';
-    this.conversionCacheTtlHours = batchConfig.conversionCacheTtlHours || 0;
+    // 目录必须与写入方（FileDownloadExportService）同源：mxcadUploadPath 优先。
+    // 写入方缓存目录解析为 mxcadUploadPath || conversionCacheDir（默认 data/uploads），
+    // 若此处只读 conversionCacheDir（默认 data/exports/conversion-cache），清理扫的是
+    // 空目录，真实缓存目录里的孤儿产物永不被清扫。
     this.mxcadUploadPath =
       this.configService.get<string>('mxcadUploadPath') || '';
+    this.conversionCacheDir =
+      this.mxcadUploadPath || batchConfig.conversionCacheDir || '';
+    this.conversionCacheTtlHours = batchConfig.conversionCacheTtlHours || 0;
 
     // 手动触发注册表（#210）
     this.taskRunService.register(TASK_NAMES.BATCH_DOWNLOAD.ZIP_CLEANUP, {
@@ -199,6 +205,8 @@ export class BatchDownloadCleanupService {
    * 过期转换产物缓存清理裸执行（定时 + 手动触发共用）。
    * 缓存 key 含 fileHash：文件变动后旧 key 永不再命中，惰性 TTL 触不到，
    * 必须定时按 mtime 清扫，否则孤儿缓存无限累积。
+   * 缓存目录与写入方同源（默认 data/uploads，与内容寻址快照 {hash}.mxweb 同目录），
+   * 故只删符合缓存文件名模式（{hash}-{paramKey}{ext}）的条目，快照与其他文件绝不删除。
    */
   private async cleanupExpiredConversionCacheTask(): Promise<void> {
     if (!this.conversionCacheDir || !this.conversionCacheTtlHours) return;
@@ -216,6 +224,7 @@ export class BatchDownloadCleanupService {
     }
 
     for (const entry of entries) {
+      if (!isConversionCacheEntry(entry)) continue; // 非转换产物（快照等）不动
       const fullPath = path.join(this.conversionCacheDir, entry);
       try {
         const stat = await fs.promises.stat(fullPath);

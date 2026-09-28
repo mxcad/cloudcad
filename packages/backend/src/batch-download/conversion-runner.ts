@@ -75,8 +75,6 @@ export interface ConvertRequest {
     fileHash?: string;
     path?: string;
     name: string;
-    /** 节点 updatedAt：转换缓存 key 的失效维度（节点更新→key 变→旧缓存失效，ADR-0060） */
-    updatedAt?: Date;
   };
   format: string;
   pdfParams?: {
@@ -364,6 +362,23 @@ export class ConversionRunner {
           format: request.format,
           success: false,
           error: 'Source file not found',
+        };
+        continue;
+      }
+      // 转换缓存命中（同 hash+格式参数）：直接复用新鲜产物，不提交转换服务
+      // （与进程内 convertInProcess 路径一致，ADR-0060；配额随 success 在尾部释放）
+      const cachedPath =
+        this.fileDownloadExportService.getFreshConversionCachePath(
+          snapshot.hash,
+          request.format as CadDownloadFormat,
+          request.pdfParams
+        );
+      if (cachedPath) {
+        this.logger.log(`批量转换缓存命中: ${request.node.name} -> ${cachedPath}`);
+        results[index] = {
+          filePath: cachedPath,
+          format: request.format,
+          success: true,
         };
         continue;
       }

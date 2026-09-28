@@ -46,6 +46,7 @@ describe('ConversionRunner (delegate workflow)', () => {
   let server: http.Server;
   let port: number;
   let mockConversionService: any;
+  let mockExportService: any;
   let submittedBatches: Array<{ tasks: any[] }>;
 
   const mockNode = {
@@ -130,7 +131,7 @@ describe('ConversionRunner (delegate workflow)', () => {
         },
         {
           provide: FileDownloadExportService,
-          useValue: {
+          useValue: (mockExportService = {
             getFreshConversionCachePath: jest.fn().mockReturnValue(null),
             storeConversionCache: jest.fn(),
             snapshotMxweb: jest.fn().mockResolvedValue({
@@ -147,7 +148,7 @@ describe('ConversionRunner (delegate workflow)', () => {
                 return params?.dwgVersion ? `dxf-v${params.dwgVersion}` : 'dxf';
               }
             }),
-          },
+          }),
         },
         // fileHash-only（内存导出）源文件定位：默认命中 uploads/{fileHash}.mxweb
         {
@@ -471,6 +472,36 @@ describe('ConversionRunner (delegate workflow)', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBe('Source file not found');
     expect(postCalled).toBe(false);
+  });
+
+  it('should reuse fresh conversion cache without submitting to workflow (delegate path)', async () => {
+    submittedBatches = [];
+
+    port = await startServer(async (req, res) => {
+      const url = new URL(req.url || '/', 'http://localhost');
+      if (
+        req.method === 'POST' &&
+        url.pathname === '/v1/conversions/batchConvert'
+      ) {
+        submittedBatches.push({ tasks: JSON.parse(await collectBody(req)).tasks });
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ taskId: 'fw_5', status: 'COMPLETED' }));
+    });
+
+    service = await createService(true);
+    // 新鲜缓存命中：委托路径应与进程内路径一致，直接复用产物、不提交转换服务
+    mockExportService.getFreshConversionCachePath.mockReturnValue(
+      `/data/uploads/${contentHash}-dwg.dwg`
+    );
+
+    const result = await service.convertFile(mockNode, 'dwg');
+
+    expect(result.success).toBe(true);
+    expect(result.filePath).toBe(`/data/uploads/${contentHash}-dwg.dwg`);
+    // 缓存命中 → 不提交 workflow，也不走进程内转换
+    expect(submittedBatches).toHaveLength(0);
+    expect(mockConversionService.convertServerFile).not.toHaveBeenCalled();
   });
 
   it('should not delegate when switch is off (keeps in-process behavior)', async () => {

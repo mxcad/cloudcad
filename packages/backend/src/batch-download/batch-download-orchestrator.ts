@@ -77,8 +77,6 @@ export class BatchDownloadOrchestrator {
             extension: true,
             nodeType: true,
             size: true,
-            // 转换缓存 key 的失效维度（节点更新→缓存失效，ADR-0060）
-            updatedAt: true,
           },
         });
       }
@@ -336,7 +334,6 @@ export class BatchDownloadOrchestrator {
         fileHash: node.fileHash,
         path: node.path,
         name: fileName,
-        updatedAt: node.updatedAt,
       },
       format,
       pdfParams,

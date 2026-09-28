@@ -220,7 +220,11 @@ describe('BatchDownloadCleanupService', () => {
 		});
 
 		it('observes conversion cache cleanup with freed bytes', async () => {
-			const cacheFile = path.join(tempCacheDir, 'expired.bin');
+			// 文件名须符合缓存产物模式 {hash}-{paramKey}{ext}，否则被清理判据跳过
+			const cacheFile = path.join(
+				tempCacheDir,
+				`${'a'.repeat(32)}-pdf-2000x2000-mono.pdf`
+			);
 			fs.writeFileSync(cacheFile, 'c'.repeat(512));
 			// mtime 回拨 2h，使 TTL=1h 的过期判定命中
 			const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
@@ -234,6 +238,86 @@ describe('BatchDownloadCleanupService', () => {
 				spaceFreedBytes: 512,
 				durationSeconds: expect.any(Number),
 			});
+		});
+
+		it('skips non-cache files (snapshots / other) in the cache dir', async () => {
+			const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
+			// 内容寻址快照 {hash}.mxweb：与缓存产物同目录，过期也绝不删除
+			const snapshot = path.join(tempCacheDir, `${'b'.repeat(32)}.mxweb`);
+			// 非缓存产物（.bak 后缀不匹配模式）
+			const other = path.join(
+				tempCacheDir,
+				`${'c'.repeat(32)}-pdf-2000x2000-mono.pdf.bak`
+			);
+			// 符合模式的过期缓存产物 → 应删除
+			const cacheFile = path.join(
+				tempCacheDir,
+				`${'d'.repeat(32)}-dwg-v2018.dwg`
+			);
+			for (const f of [snapshot, other, cacheFile]) {
+				fs.writeFileSync(f, 'x');
+				fs.utimesSync(f, past, past);
+			}
+
+			await service.cleanupExpiredConversionCache();
+
+			expect(fs.existsSync(cacheFile)).toBe(false);
+			expect(fs.existsSync(snapshot)).toBe(true);
+			expect(fs.existsSync(other)).toBe(true);
+		});
+	});
+
+	describe('conversion cache cleanup directory parity (C3)', () => {
+		// 写入方（FileDownloadExportService）缓存目录解析为 mxcadUploadPath || conversionCacheDir，
+		// 清理方必须同源，否则真实缓存目录里的孤儿产物永不被清扫。
+		it('scans mxcadUploadPath (writer dir) when configured, not batchConfig.conversionCacheDir', async () => {
+			const uploadsDir = fs.mkdtempSync(
+				path.join(os.tmpdir(), 'bd-uploads-c3-')
+			);
+			const past = new Date(Date.now() - 2 * 60 * 60 * 1000);
+			// 真实缓存目录（uploads）里的过期产物 → 应清扫
+			const expired = path.join(
+				uploadsDir,
+				`${'a'.repeat(32)}-pdf-2000x2000-mono.pdf`
+			);
+			fs.writeFileSync(expired, 'x'.repeat(128));
+			fs.utimesSync(expired, past, past);
+			// 旧目录（batchConfig.conversionCacheDir）里的同模式过期文件：写入方不再写此处，清理也不应碰
+			const stale = path.join(tempCacheDir, `${'e'.repeat(32)}-dwg.dwg`);
+			fs.writeFileSync(stale, 'y');
+			fs.utimesSync(stale, past, past);
+
+			mockConfigService.get.mockImplementation((key: string) => {
+				if (key === 'mxcadUploadPath') return uploadsDir;
+				return {
+					exportDir: tempExportDir,
+					zipRetentionHours: 24,
+					dbRetentionDays: 7,
+					conversionCacheDir: tempCacheDir,
+					conversionCacheTtlHours: 1,
+				};
+			});
+			const module = await Test.createTestingModule({
+				providers: [
+					BatchDownloadCleanupService,
+					{ provide: DatabaseService, useValue: mockPrisma },
+					{ provide: ConfigService, useValue: mockConfigService },
+					{
+						provide: RuntimeConfigService,
+						useValue: mockRuntimeConfigService,
+					},
+					{ provide: AlertService, useValue: mockAlertService },
+					{ provide: TaskRunService, useValue: mockTaskRunService },
+					{ provide: CleanupMetricsService, useValue: mockCleanupMetrics },
+				],
+			}).compile();
+			service = module.get(BatchDownloadCleanupService);
+
+			await service.cleanupExpiredConversionCache();
+
+			expect(fs.existsSync(expired)).toBe(false);
+			expect(fs.existsSync(stale)).toBe(true);
+			fs.rmSync(uploadsDir, { recursive: true, force: true });
 		});
 	});
 

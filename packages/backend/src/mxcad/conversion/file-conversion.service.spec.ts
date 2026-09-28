@@ -794,6 +794,54 @@ describe("FileConversionService", () => {
 			await module.close();
 		});
 
+		it("conversion-service 模式：转发失败且带 debugNodeId 时落盘调试信息（与进程内路径对齐）", async () => {
+			const mockExecutor = {
+				invoke: jest.fn(async () => ({
+					taskId: "cs_1",
+					status: "FAILED",
+					error: "conversion service down",
+					metadata: { code: 1, message: "read file error" },
+				})),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+			const saveDebug = jest
+				.spyOn(
+					svc as unknown as {
+						saveConversionDebugInfo: (i: unknown) => Promise<void>;
+					},
+					"saveConversionDebugInfo"
+				)
+				.mockResolvedValue(undefined);
+
+			const r = await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				debugNodeId: "node-debug-1",
+			});
+
+			expect(r.isOk).toBe(false);
+			// 回归：转发模式早退曾绕过全部进程内调试落盘点，失败现场丢失
+			expect(saveDebug).toHaveBeenCalledTimes(1);
+			const arg = saveDebug.mock.calls[0][0] as {
+				nodeId: string;
+				stdout: string;
+			};
+			expect(arg.nodeId).toBe("node-debug-1");
+			// 引擎输出（metadata）作为 stdout 落盘
+			expect(arg.stdout).toContain("read file error");
+			await module.close();
+		});
+
 		// 失败性质由转换服务结构化下发（errorCategory），backend 按字段判定 transient，
 		// 不再匹配错误文案。唯一不可重试分类是 content-error（引擎非 0 code，同一输入
 		// 重试注定再失败）；未携带分类（老版本转换服务 / 上游提交失败）按瞬态处理。

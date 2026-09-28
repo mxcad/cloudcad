@@ -393,6 +393,7 @@ export class FileConversionService implements IMxcadConversionService {
 						compression,
 					}),
 					options.priority === "low" ? 3 : 2,
+					options.debugNodeId,
 				);
 			}
 
@@ -611,6 +612,9 @@ export class FileConversionService implements IMxcadConversionService {
 		taskType: "convertFile" | "convertBinToMxweb",
 		param: ConversionRequest,
 		priority: 1 | 2 | 3,
+		// 编排字段不进契约（pickContractFields 已剔除），调试信息落盘单独透传——
+		// 否则转发模式失败时 saveConversionDebugInfo 永不执行，运维丢失失败现场
+		debugNodeId?: string,
 	): Promise<ConversionResult> {
 		const taskId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 		// taskType 是 ConversionTask 三元联合中「convertFile | convertBinToMxweb」两元子集，
@@ -629,6 +633,17 @@ export class FileConversionService implements IMxcadConversionService {
 			// 执行器缺失是部署/接线问题，重试可能成功 → 瞬态。
 			const err = "conversion-service executor unavailable";
 			this.logger.error(`转换服务执行器不可用（${taskType}）：${err}`);
+			if (debugNodeId) {
+				await this.saveConversionDebugInfo({
+					nodeId: debugNodeId,
+					srcPath: param.srcPath || "",
+					commandStr: `forwarded to conversion-service (${taskType}), no local command`,
+					exitCode: -1,
+					stdout: "",
+					stderr: "",
+					errorMessage: err,
+				});
+			}
 			return {
 				isOk: false,
 				ret: { code: -2, message: err },
@@ -660,6 +675,19 @@ export class FileConversionService implements IMxcadConversionService {
 		// 靠 includes 子串侥幸命中，runner 改文案即静默翻转 transient 语义。
 		// errorCode 缺省回落 -1（与旧实现一致），缺分类按瞬态处理。
 		const transient = isTransientFailure(result.errorCategory);
+		if (debugNodeId) {
+			// 转发模式失败现场落盘（与进程内路径对齐）：引擎输出在 metadata，无本地命令/stderr
+			const metadata = result.metadata;
+			await this.saveConversionDebugInfo({
+				nodeId: debugNodeId,
+				srcPath: param.srcPath || "",
+				commandStr: `forwarded to conversion-service (${taskType}), no local command`,
+				exitCode: result.errorCode ?? -1,
+				stdout: metadata ? JSON.stringify(metadata) : "",
+				stderr: "",
+				errorMessage: result.error || "转换服务失败",
+			});
+		}
 		return {
 			isOk: false,
 			ret: { code: result.errorCode ?? -1, message: result.error },

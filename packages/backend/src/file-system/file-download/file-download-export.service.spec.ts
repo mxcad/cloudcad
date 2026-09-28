@@ -19,7 +19,32 @@ import { AuditLogger } from '../../audit/audit-logger.service';
 import { ClsService } from 'nestjs-cls';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { CadDownloadFormat } from '../dto/download-node.dto';
-import { FileDownloadExportService } from './file-download-export.service';
+import {
+  FileDownloadExportService,
+  isConversionCacheEntry,
+} from './file-download-export.service';
+
+describe('isConversionCacheEntry（清理 cron 的缓存产物判据）', () => {
+  const H = 'a'.repeat(32);
+  it('accepts all buildParamKey shapes with matching ext', () => {
+    expect(isConversionCacheEntry(`${H}-pdf-2000x2000-mono.pdf`)).toBe(true);
+    expect(isConversionCacheEntry(`${H}-pdf-4000x3000-color.pdf`)).toBe(true);
+    expect(isConversionCacheEntry(`${H}-dwg.dwg`)).toBe(true);
+    expect(isConversionCacheEntry(`${H}-dwg-v2018.dwg`)).toBe(true);
+    expect(isConversionCacheEntry(`${H}-dxf.dxf`)).toBe(true);
+    expect(isConversionCacheEntry(`${H}-dxf-v2010.dxf`)).toBe(true);
+  });
+  it('rejects snapshots, non-cache files, malformed hash/ext', () => {
+    expect(isConversionCacheEntry(`${H}.mxweb`)).toBe(false); // 内容寻址快照
+    expect(isConversionCacheEntry(`${H}-pdf-2000x2000-mono.pdf.bak`)).toBe(
+      false
+    );
+    expect(isConversionCacheEntry('expired.bin')).toBe(false);
+    expect(isConversionCacheEntry(`${'f'.repeat(31)}-dwg.dwg`)).toBe(false); // 31 位 hash
+    expect(isConversionCacheEntry(`${'g'.repeat(32)}-dwg.dwg`)).toBe(false); // 非 hex
+    expect(isConversionCacheEntry(`${H}-pdf-2000x2000-mono.dwg`)).toBe(false); // ext 不符
+  });
+});
 
 function collectStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
   return new Promise((resolve, reject) => {
