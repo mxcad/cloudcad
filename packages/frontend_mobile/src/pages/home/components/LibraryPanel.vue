@@ -375,14 +375,17 @@ async function onItemClick(node: FileSystemNodeDto) {
   }
 
   if (props.libraryType === 'block') {
-    // 图块 → 插入：抽屉收缩到最低让画布可见（用户能看到块插入位置），抽屉仍可拖回继续选块
+    // 图块 → 插入：关闭库抽屉。不能只 snapTo 收缩——FloatingPopup 的全屏 overlay
+    // 在 show=false 前一直存在，画布点击会被它吞掉，插入点/比例/旋转交互无法操作。
+    // 关闭方式与 openDrawing 成功路径一致；继续选块从菜单重开图块库
     const filePath = getNodeFileUrl(node)
     MxFun.sendStringToExecute('Mx_Insert', {
       filePath,
       name: stripExt(node.name),
       isBlockLibrary: true,
     })
-    floatingPopupRef.value?.snapTo(0)
+    floatingPopupRef.value?.resetPreservedHeight()
+    innerShow.value = false
   } else {
     // 图纸 → 打开
     await openDrawing(node)
