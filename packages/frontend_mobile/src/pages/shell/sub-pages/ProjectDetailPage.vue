@@ -37,6 +37,7 @@ import { formatNodeAsItems, formatSize } from '@/composables/useNodeFormatter'
 import { useShellFileOpen } from '@/composables/useShellFileOpen'
 import { useShellStack } from '@/stores/shellStack'
 import { calculateFileHash } from '@/utils/hashUtils'
+import { cachedApiUrl } from '@/utils/apiConfig'
 import { uploadFile } from '@/services/mobileUploadService'
 import { validateName } from '@/utils/validateName'
 import { ProjectPermission, getProjectRoleDisplayName } from '@/utils/projectPermissions'
@@ -485,7 +486,7 @@ function onSelectionAction(action: 'download' | 'delete' | 'move' | 'copy', item
   } else if (action === 'download') {
     for (const item of items) {
       const a = document.createElement('a')
-      a.href = `/api/v1/file-system/nodes/${item.id}/download?t=${Date.now()}`
+      a.href = cachedApiUrl(`/file-system/nodes/${item.id}/download`)
       a.download = item.name
       a.style.display = 'none'
       document.body.appendChild(a)

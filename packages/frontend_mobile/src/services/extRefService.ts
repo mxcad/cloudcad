@@ -47,40 +47,39 @@ export async function checkExternalReferences(
   }
 }
 
+/**
+ * 上传外部参照图片。
+ *
+ * 失败即抛（SDK error 或请求异常），不返回 boolean 谎言——调用方据此区分
+ * 「上传成功」与「上传失败」，避免对用户报假成功。
+ */
 export async function uploadExtRefImage(params: {
   nodeId: string;
   file: File;
   srcDwgfileHash: string;
   extRefFile: string;
-}): Promise<boolean> {
-  try {
-    const result = await mxcadExternalRefControllerUploadExtReferenceImage({
-      path: { nodeId: params.nodeId },
-      body: {
-        file: params.file,
-        hash: params.srcDwgfileHash,
-        ext_ref_file: params.extRefFile,
-      },
-    });
-    return !result.error;
-  } catch {
-    return false;
-  }
+}): Promise<void> {
+  const result = await mxcadExternalRefControllerUploadExtReferenceImage({
+    path: { nodeId: params.nodeId },
+    body: {
+      file: params.file,
+      hash: params.srcDwgfileHash,
+      ext_ref_file: params.extRefFile,
+    },
+  });
+  if (result.error) throw result.error;
 }
 
+/** 上传外部参照 dwg。失败即抛，契约同 uploadExtRefImage。 */
 export async function uploadExtRefDwg(params: {
   nodeId: string;
   file: File;
-}): Promise<boolean> {
-  try {
-    const result = await mxcadExternalRefControllerUploadExtReferenceDwg({
-      path: { nodeId: params.nodeId },
-      body: { file: params.file, ext_ref_file: '' },
-    });
-    return !result.error;
-  } catch {
-    return false;
-  }
+}): Promise<void> {
+  const result = await mxcadExternalRefControllerUploadExtReferenceDwg({
+    path: { nodeId: params.nodeId },
+    body: { file: params.file, ext_ref_file: '' },
+  });
+  if (result.error) throw result.error;
 }
 
 export function parseExtRefFileNames(

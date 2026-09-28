@@ -27,7 +27,7 @@ import {
   darkenColor,
   areLinesCollinear,
   copyAttribute,
-} from "./m_mx_fillet";
+} from "./kernel";
 import { addCommand } from "@/plugins/mxcad/command";
 import { t } from "@/languages";
 

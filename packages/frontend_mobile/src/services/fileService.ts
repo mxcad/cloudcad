@@ -2,7 +2,7 @@ import {
   nodeControllerGetNode,
 } from '../api-sdk';
 import type { FileSystemNodeDto } from '../api-sdk';
-import { getApiBaseUrl } from '../utils/apiConfig';
+import { cachedApiUrl } from '../utils/apiConfig';
 
 /**
  * Build mxweb file access URL from file path.
@@ -10,18 +10,9 @@ import { getApiBaseUrl } from '../utils/apiConfig';
  * Library files use different base paths (handled outside this function).
  */
 export function buildMxwebUrl(filePath: string, revision?: number): string {
-  const apiBaseUrl = getApiBaseUrl();
-  const baseUrl = (() => {
-    try {
-      return new URL(apiBaseUrl).origin;
-    } catch {
-      return '';
-    }
-  })();
-  const timestamp = Date.now();
   const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
-  const vParam = revision !== undefined ? `&v=${revision}` : '';
-  return `${baseUrl}/api/v1/mxcad/filesData/${cleanPath}?t=${timestamp}${vParam}`;
+  const url = cachedApiUrl(`/mxcad/filesData/${cleanPath}`);
+  return revision !== undefined ? `${url}&v=${revision}` : url;
 }
 
 /**

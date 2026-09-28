@@ -11,6 +11,26 @@ export function getApiBaseUrl(): string {
   return '/api';
 }
 
+/** API 源地址（origin）。配置为相对路径或非法时返回空串，调用方退化为相对路径。 */
+export function getApiOrigin(): string {
+  try {
+    return new URL(getApiBaseUrl()).origin;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * 拼带缓存打散的绝对 API URL，强制浏览器/CDN 取最新资源。
+ *
+ * 唯一出口：文件流、下载、锚点下载等「内容可变但 URL 相同」的资源一律走这里，
+ * 各调用方不再各自 new URL + Date.now()。需要额外查询参数时在其后追加 `&k=v`。
+ * 注意：库文件/缩略图等用稳定缓存键（文件 updatedAt）的 URL 不要走这里。
+ */
+export function cachedApiUrl(path: string): string {
+  return `${getApiOrigin()}/api/v1${path}?t=${Date.now()}`;
+}
+
 let refreshPromise: Promise<boolean> | null = null;
 
 function getAccessToken(): string | undefined {
@@ -69,13 +89,7 @@ async function tryRefreshToken(): Promise<boolean> {
 const nativeFetch = globalThis.fetch.bind(globalThis);
 
 export function setupApiClient(): void {
-  const apiBaseUrl = getApiBaseUrl();
-  let baseUrl: string;
-  try {
-    baseUrl = new URL(apiBaseUrl).origin;
-  } catch {
-    baseUrl = '';
-  }
+  const baseUrl = getApiOrigin();
 
   client.setConfig({
     baseUrl,

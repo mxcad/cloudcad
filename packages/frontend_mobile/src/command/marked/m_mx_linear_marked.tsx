@@ -16,7 +16,7 @@ import { MxFun, MxType } from "mxdraw";
 import { MxCADUiPrPoint, McDbDimension, MxCpp, McObjectId, McCmColor, MxCADUiPrString, MxCADUiPrAngle, McDbArc, McDbCircle, McDbEntity, McDbLine, McDbPolyline, McGePoint3d, McGeVector3d, MxCADResbuf, MxCADUiPrEntity, MxCADUtility } from "mxcad";
 import { DetailedResult, MrxDbgUiPrBaseReturn, McEdGetPointWorldDrawObject } from "mxdraw"
 import { addCommand } from "@/plugins/mxcad/command";
-import { calculateDistanceFromPointToLine } from "../m_mx_fillet";
+import { calculateDistanceFromPointToLine } from "../kernel";
 import { showConfirmDialog, Field, showToast } from "vant";
 import { ref } from "vue";
 import { t } from "@/languages";

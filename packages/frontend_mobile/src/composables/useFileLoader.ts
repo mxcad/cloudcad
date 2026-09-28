@@ -502,9 +502,13 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
     })
       .then(async () => {
         if (!canManageExtRef) return;
+        // 上传失败即抛，这里不吞：只要有一个失败就不报成功，
+        // 用户重新打开图纸会再次进入缺失参照检查。
+        let allOk = true;
         for (const ref of needUpload) {
           const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
-          if (file) {
+          if (!file) continue;
+          try {
             if (ref.type === 'img') {
               await uploadExtRefImage({
                 nodeId,
@@ -515,9 +519,11 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
             } else {
               await uploadExtRefDwg({ nodeId, file });
             }
+          } catch {
+            allOk = false;
           }
         }
-        showToast('外部参照上传完成');
+        if (allOk) showToast(t('外部参照上传完成'));
       })
       .catch(() => {});
   } catch {

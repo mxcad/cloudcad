@@ -22,6 +22,7 @@ import {
   batchDownloadControllerRetryFailedItems,
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { BatchDownloadTaskDto } from '@cloudcad/api-sdk/types.gen'
+import { cachedApiUrl } from '@/utils/apiConfig'
 
 export interface BatchTaskItem extends BatchDownloadTaskDto {
   /** 展示名（文件夹名 / 首个文件名），由创建方传入 */
@@ -115,7 +116,7 @@ export function useBatchDownload() {
   /** zip 完成下载（锚点） */
   function downloadZip(taskId: string) {
     const a = document.createElement('a')
-    a.href = `/api/v1/file-system/batch-download/${taskId}/download?t=${Date.now()}`
+    a.href = cachedApiUrl(`/file-system/batch-download/${taskId}/download`)
     a.download = ''
     a.style.display = 'none'
     document.body.appendChild(a)

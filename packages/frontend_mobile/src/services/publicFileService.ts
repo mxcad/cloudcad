@@ -2,7 +2,7 @@ import {
   publicFileControllerGetPreloadingData,
   publicFileControllerCheckExtReference,
 } from '../api-sdk';
-import { getApiBaseUrl } from '../utils/apiConfig';
+import { cachedApiUrl } from '../utils/apiConfig';
 
 export interface PublicPreloadingData {
   tz: boolean;
@@ -15,6 +15,14 @@ export function isHashLike(id: string): boolean {
   return /^[a-f0-9]{32}$/i.test(id);
 }
 
+/**
+ * 取公开图纸的预加载数据。
+ *
+ * 契约：`null` = 暂时取不到（转换未就绪、后端报错或网络失败三态合一）。
+ * 这个坍缩是**故意的**——useFileLoader.getPublicPreloadingDataWithRetry 依赖
+ * null 触发重试，改成抛错会打断重试循环。代价是后端 500 会被当作
+ * 「还在转换」静默重试 10×2s。
+ */
 export async function getPublicPreloadingData(
   hash: string
 ): Promise<PublicPreloadingData | null> {
@@ -29,6 +37,12 @@ export async function getPublicPreloadingData(
   }
 }
 
+/**
+ * 查公开外部参照是否已就位。
+ *
+ * 契约：`false` = 未就位或查询失败。偏向「让用户看到缺失提示」这一侧，
+ * 因此查询失败不会静默放过缺失的参照。
+ */
 export async function checkPublicExtReference(
   srcHash: string,
   fileName: string
@@ -45,14 +59,5 @@ export async function checkPublicExtReference(
 }
 
 export function buildPublicMxwebUrl(hash: string): string {
-  const apiBaseUrl = getApiBaseUrl();
-  const baseUrl = (() => {
-    try {
-      return new URL(apiBaseUrl).origin;
-    } catch {
-      return '';
-    }
-  })();
-  const timestamp = Date.now();
-  return `${baseUrl}/api/v1/public-file/access/${hash}.mxweb?t=${timestamp}`;
+  return cachedApiUrl(`/public-file/access/${hash}.mxweb`);
 }

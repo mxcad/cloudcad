@@ -37,6 +37,7 @@ import { formatNodeAsItems, formatTime } from '@/composables/useNodeFormatter'
 import { useShellFileOpen } from '@/composables/useShellFileOpen'
 import { useShellStack } from '@/stores/shellStack'
 import { calculateFileHash } from '@/utils/hashUtils'
+import { cachedApiUrl } from '@/utils/apiConfig'
 import { uploadFile } from '@/services/mobileUploadService'
 import { validateName } from '@/utils/validateName'
 import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.gen'
@@ -234,7 +235,7 @@ function onPersonalSelectionAction(action: 'download' | 'delete' | 'move' | 'cop
     openFolderPicker(action, items)
   } else if (action === 'download') {
     for (const item of items) {
-      const url = `/api/v1/file-system/nodes/${item.id}/download?t=${Date.now()}`
+      const url = cachedApiUrl(`/file-system/nodes/${item.id}/download`)
       const a = document.createElement('a')
       a.href = url
       a.download = item.name

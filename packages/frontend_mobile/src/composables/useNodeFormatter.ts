@@ -65,5 +65,6 @@ export function formatTime(isoString: string): string {
   }
   if (diffDay < 7) return `${diffDay} 天前`
   if (diffDay < 30) return `${Math.floor(diffDay / 7)} 周前`
-  return `${diffDay} 天前`
+  if (diffDay < 365) return `${Math.floor(diffDay / 30)} 个月前`
+  return `${Math.floor(diffDay / 365)} 年前`
 }
