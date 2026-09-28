@@ -1,0 +1,6782 @@
+[
+  {
+    "type": "cycle",
+    "from": "src/services/mxcadManager/cmd/insertImageCommand.ts",
+    "to": "src/services/mxcadManager/cmd/types.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/services/mxcadManager/cmd/types.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/saveFile.ts",
+        "dependencyTypes": ["local", "type-only", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/saveSequences.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/cmd/insertImageCommand.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/services/mxcadManager/mxcadCollaboration.ts",
+    "to": "src/services/mxcadManager/mxcadHelpers.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/services/mxcadManager/mxcadHelpers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadManager.ts",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadCollaboration.ts",
+        "dependencyTypes": ["local", "dynamic-import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/services/mxcadManager/mxcadHelpers.ts",
+    "to": "src/services/mxcadManager/mxcadManager.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/services/mxcadManager/mxcadManager.ts",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadHelpers.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/services/mxcadManager/mxcadInstanceManager.ts",
+    "to": "src/services/mxcadManager/mxcadHelpers.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/services/mxcadManager/mxcadHelpers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadManager.ts",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadInstanceManager.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/services/mxcadManager/mxcadInstanceManager.ts",
+    "to": "src/services/mxcadManager/mxcadOpenFlow.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/services/mxcadManager/mxcadOpenFlow.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadInstanceManager.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/services/mxcadManager/mxcadOpenFlow.ts",
+    "to": "src/services/mxcadManager/mxcadHelpers.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/services/mxcadManager/mxcadHelpers.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadManager.ts",
+        "dependencyTypes": ["local", "dynamic-import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadInstanceManager.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "src/services/mxcadManager/mxcadOpenFlow.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DeactivateModal.tsx",
+    "to": "src/pages/AdminBillingPage/hooks/useTierManagement.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DeleteTierModal.tsx",
+    "to": "src/pages/AdminBillingPage/hooks/useTierManagement.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationFormModal.tsx",
+    "to": "src/pages/AdminBillingPage/hooks/useTierManagement.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationsTab.tsx",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationsTab.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/MockCallbackModal.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/OrdersTab.tsx",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/OrdersTab.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundApplicationsTab.tsx",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundApplicationsTab.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundModal.tsx",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundModal.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/ReviewRefundModal.tsx",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/ReviewRefundModal.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TierFormModal.tsx",
+    "to": "src/pages/AdminBillingPage/hooks/useTierManagement.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TiersTab.tsx",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TiersTab.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/hooks/useOrderManagement.ts",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/hooks/useOrderManagement.ts",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/hooks/useRefundApplications.ts",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/hooks/useRefundApplications.ts",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/hooks/useTierManagement.ts",
+    "to": "src/pages/AdminBillingPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/hooks/useTierManagement.ts",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/DeactivateModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/DeleteTierModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/DurationFormModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/DurationsTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/MockCallbackModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/OrdersTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/RefundApplicationsTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/RefundModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/ReviewRefundModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/TierFormModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/components/TiersTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/hooks/useOrderManagement.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/hooks/useRefundApplications.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/hooks/useTierManagement.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/index.tsx",
+    "to": "src/pages/AdminBillingPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminLogin/index.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminLogin/index.tsx",
+    "to": "src/pages/Login/components/LoginHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminMfaSetup/index.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminMfaSetup/index.tsx",
+    "to": "src/pages/Login/components/LoginHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminPasswordChange/index.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminPasswordChange/index.tsx",
+    "to": "src/pages/Login/components/LoginHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminPasswordChange/index.tsx",
+    "to": "src/pages/Profile/hooks/usePasswordChange.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminStatsPage/components/PurchasesSection.tsx",
+    "to": "src/pages/AdminStatsPage/AdminStatsPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminStatsPage/components/RegistrationsSection.tsx",
+    "to": "src/pages/AdminStatsPage/AdminStatsPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminStatsPage/index.tsx",
+    "to": "src/pages/AdminStatsPage/AdminStatsPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminStatsPage/index.tsx",
+    "to": "src/pages/AdminStatsPage/components/PurchasesSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminStatsPage/index.tsx",
+    "to": "src/pages/AdminStatsPage/components/RegistrationsSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminStatsPage/index.tsx",
+    "to": "src/pages/AdminStatsPage/hooks/useAdminStats.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "to": "src/pages/AuditLogPage/AuditLogPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "to": "src/pages/AuditLogPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "to": "src/pages/AuditLogPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditLogTable.tsx",
+    "to": "src/pages/AuditLogPage/AuditLogPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditLogTable.tsx",
+    "to": "src/pages/AuditLogPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditStatsGrid.tsx",
+    "to": "src/pages/AuditLogPage/AuditLogPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/constants.ts",
+    "to": "src/pages/AuditLogPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/AuditLogPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/components/AuditLogTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/components/AuditStatsGrid.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/hooks/useAuditLog.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/pages/AuditLogPage/utils/exportAuditCsv.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/utils/exportAuditCsv.ts",
+    "to": "src/pages/AuditLogPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/components/QuickActionsSection.tsx",
+    "to": "src/pages/Dashboard/components/QuickAction.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/components/StatsGrid.tsx",
+    "to": "src/pages/Dashboard/components/StatCard.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/index.tsx",
+    "to": "src/pages/Dashboard/components/ErrorBanner.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/index.tsx",
+    "to": "src/pages/Dashboard/components/QuickActionsSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/index.tsx",
+    "to": "src/pages/Dashboard/components/RecentFilesSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/index.tsx",
+    "to": "src/pages/Dashboard/components/RecentProjectsSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/index.tsx",
+    "to": "src/pages/Dashboard/components/StatsGrid.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/index.tsx",
+    "to": "src/pages/Dashboard/components/SuccessBanner.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/index.tsx",
+    "to": "src/pages/Dashboard/components/WelcomeBanner.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/components/SuccessView.tsx",
+    "to": "src/pages/EmailVerification/EmailVerification.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/components/VerificationForm.tsx",
+    "to": "src/pages/EmailVerification/EmailVerification.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/components/VerificationForm.tsx",
+    "to": "src/pages/EmailVerification/hooks/useEmailVerificationForm.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/hooks/useResendEmail.ts",
+    "to": "src/pages/EmailVerification/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/index.tsx",
+    "to": "src/pages/EmailVerification/components/SuccessView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/index.tsx",
+    "to": "src/pages/EmailVerification/components/VerificationForm.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/index.tsx",
+    "to": "src/pages/EmailVerification/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/index.tsx",
+    "to": "src/pages/EmailVerification/hooks/useEmailVerificationForm.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/index.tsx",
+    "to": "src/pages/EmailVerification/hooks/useResendEmail.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemContextMenu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemContentMenu.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemNodePermissionProps.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContextMenu.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemNodeContextMenu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContextMenu.tsx",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemNodePermissionProps.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemManagerView.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemManagerView.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemManagerView.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemModals.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemManagerView.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemStates.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemManagerView.tsx",
+    "to": "src/pages/FileSystemManager/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemNodeContextMenu.tsx",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemNodePermissionProps.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemModals.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemStates.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemManagerActions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "to": "src/pages/FileSystemManager/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/hooks/useFileSystemManagerActions.ts",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemManagerData.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/hooks/useFileSystemManagerActions.ts",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemManagerEffects.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/hooks/useFileSystemManagerActions.ts",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemUrlEffects.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/hooks/useFileSystemManagerActions.ts",
+    "to": "src/pages/FileSystemManager/hooks/useNodePermissions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/hooks/useFileSystemNodePermissionProps.ts",
+    "to": "src/pages/FileSystemManager/hooks/useNodePermissions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/index.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemManagerView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/index.tsx",
+    "to": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/index.tsx",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemManagerActions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/index.tsx",
+    "to": "src/pages/FileSystemManager/hooks/useFileSystemManagerData.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/types.ts",
+    "to": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/types.ts",
+    "to": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/types.ts",
+    "to": "src/pages/FileSystemManager/FileSystemModals.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/types.ts",
+    "to": "src/pages/FileSystemManager/FileSystemStates.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontGridView.tsx",
+    "to": "src/pages/FontLibrary/fontTypeConfig.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontListView.tsx",
+    "to": "src/pages/FontLibrary/components/FontListView.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontListView.tsx",
+    "to": "src/pages/FontLibrary/fontTypeConfig.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontToolbar.tsx",
+    "to": "src/pages/FontLibrary/fontTypeConfig.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/index.tsx",
+    "to": "src/pages/FontLibrary/components/FontGridView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/index.tsx",
+    "to": "src/pages/FontLibrary/components/FontListView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/index.tsx",
+    "to": "src/pages/FontLibrary/components/FontPageHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/index.tsx",
+    "to": "src/pages/FontLibrary/components/FontToolbar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/index.tsx",
+    "to": "src/pages/FontLibrary/components/UploadFontModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/index.tsx",
+    "to": "src/pages/FontLibrary/hooks/useFontLibrary.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/ForgotFormView.tsx",
+    "to": "src/pages/ForgotPassword/ForgotPassword.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/ForgotFormView.tsx",
+    "to": "src/pages/ForgotPassword/forgotPasswordSchema.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/NoChannelView.tsx",
+    "to": "src/pages/ForgotPassword/ForgotPassword.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/SuccessView.tsx",
+    "to": "src/pages/ForgotPassword/ForgotPassword.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/SupportModal.tsx",
+    "to": "src/pages/ForgotPassword/ForgotPassword.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/SupportView.tsx",
+    "to": "src/pages/ForgotPassword/ForgotPassword.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/index.tsx",
+    "to": "src/pages/ForgotPassword/components/ForgotFormView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/index.tsx",
+    "to": "src/pages/ForgotPassword/components/NoChannelView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/index.tsx",
+    "to": "src/pages/ForgotPassword/components/SuccessView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/index.tsx",
+    "to": "src/pages/ForgotPassword/components/SupportModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/index.tsx",
+    "to": "src/pages/ForgotPassword/components/SupportView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/index.tsx",
+    "to": "src/pages/ForgotPassword/forgotPasswordSchema.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/index.tsx",
+    "to": "src/pages/ForgotPassword/useForgotPassword.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpAccessControlPage/index.tsx",
+    "to": "src/pages/IpAccessControlPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpAccessControlPage/index.tsx",
+    "to": "src/pages/IpBlacklistPage/index.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpAccessControlPage/index.tsx",
+    "to": "src/pages/IpWhitelistPage/index.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpAccessControlPage/index.tsx",
+    "to": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/AddEntryModal.tsx",
+    "to": "src/pages/IpBlacklistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/RemoveEntryModal.tsx",
+    "to": "src/pages/IpBlacklistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/hooks/useIpBlacklist.ts",
+    "to": "src/pages/IpBlacklistPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/hooks/useIpBlacklist.ts",
+    "to": "src/pages/IpBlacklistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/pages/IpBlacklistPage/components/AddEntryModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/pages/IpBlacklistPage/components/RemoveEntryModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/pages/IpBlacklistPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/pages/IpBlacklistPage/hooks/useIpBlacklist.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/pages/IpBlacklistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/AddEntryModal.tsx",
+    "to": "src/pages/IpWhitelistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/RemoveEntryModal.tsx",
+    "to": "src/pages/IpWhitelistPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/RemoveEntryModal.tsx",
+    "to": "src/pages/IpWhitelistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/constants.ts",
+    "to": "src/pages/IpWhitelistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/hooks/useIpWhitelist.ts",
+    "to": "src/pages/IpWhitelistPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/hooks/useIpWhitelist.ts",
+    "to": "src/pages/IpWhitelistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/pages/IpWhitelistPage/components/AddEntryModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/pages/IpWhitelistPage/components/RemoveEntryModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/pages/IpWhitelistPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/pages/IpWhitelistPage/hooks/useIpWhitelist.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/pages/IpWhitelistPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Legal/LegalPage.tsx",
+    "to": "src/pages/Legal/legal.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Legal/PrivacyPolicyPage.tsx",
+    "to": "src/pages/Legal/LegalPage.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Legal/TermsOfServicePage.tsx",
+    "to": "src/pages/Legal/LegalPage.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Legal/index.ts",
+    "to": "src/pages/Legal/LegalPage.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Legal/index.ts",
+    "to": "src/pages/Legal/PrivacyPolicyPage.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Legal/index.ts",
+    "to": "src/pages/Legal/TermsOfServicePage.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerContent.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerContent.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemStates.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerContent.tsx",
+    "to": "src/pages/LibraryManager/components/LibraryManagerEmptyView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerHeader.tsx",
+    "to": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/index.tsx",
+    "to": "src/pages/LibraryManager/components/LibraryManagerContent.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/index.tsx",
+    "to": "src/pages/LibraryManager/components/LibraryManagerExtraActions.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/index.tsx",
+    "to": "src/pages/LibraryManager/components/LibraryManagerHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/index.tsx",
+    "to": "src/pages/LibraryManager/components/LibraryManagerModals.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/index.tsx",
+    "to": "src/pages/LibraryManager/hooks/useLibraryActions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/index.tsx",
+    "to": "src/pages/LibraryManager/hooks/useLibraryClipboardActions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/AccountLoginForm.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/LoginHeader.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/PhoneLoginForm.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/WechatLoginButton.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/hooks/useLoginForm.ts",
+    "to": "src/pages/Login/hooks/loginFormSchema.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/index.tsx",
+    "to": "src/pages/Login/Login.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/index.tsx",
+    "to": "src/pages/Login/components/AccountLoginForm.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/index.tsx",
+    "to": "src/pages/Login/components/LoginHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/index.tsx",
+    "to": "src/pages/Login/components/PhoneLoginForm.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/index.tsx",
+    "to": "src/pages/Login/components/SupportModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/index.tsx",
+    "to": "src/pages/Login/components/WechatLoginButton.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/index.tsx",
+    "to": "src/pages/Login/hooks/useLoginForm.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/pages/NoticeCenterPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/pages/NoticeCenterPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/constants.ts",
+    "to": "src/pages/NoticeCenterPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/hooks/useNotices.ts",
+    "to": "src/pages/NoticeCenterPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/hooks/useNotices.ts",
+    "to": "src/pages/NoticeCenterPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/pages/NoticeCenterPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/pages/NoticeCenterPage/hooks/useNotices.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/pages/NoticeCenterPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileDeactivateTab.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileDeactivateTab.tsx",
+    "to": "src/pages/Profile/WechatDeactivateConfirm.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileEmailTab.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileHeader.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileInfoTab.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileInfoTab.tsx",
+    "to": "src/pages/Profile/hooks/useProfileUpdate.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfilePasswordTab.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfilePhoneTab.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileWechatTab.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/WechatDeactivateConfirm.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/useDeactivateProfile.ts",
+    "to": "src/pages/Profile/hooks/useAccountDeactivate.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/useDeactivateProfile.ts",
+    "to": "src/pages/Profile/hooks/useCountdown.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/useDeactivateProfile.ts",
+    "to": "src/pages/Profile/hooks/usePhoneBind.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/useEmailProfile.ts",
+    "to": "src/pages/Profile/hooks/useCountdown.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/useEmailProfile.ts",
+    "to": "src/pages/Profile/hooks/useEmailBind.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/usePasswordProfile.ts",
+    "to": "src/pages/Profile/hooks/usePasswordChange.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/usePhoneProfile.ts",
+    "to": "src/pages/Profile/hooks/useCountdown.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/hooks/usePhoneProfile.ts",
+    "to": "src/pages/Profile/hooks/usePhoneBind.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/Profile.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/ProfileDeactivateTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/ProfileEmailTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/ProfileHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/ProfileInfoTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/ProfilePasswordTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/ProfilePhoneTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/ProfileWechatTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/hooks/useDeactivateProfile.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/hooks/useEmailProfile.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/hooks/usePasswordProfile.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/hooks/usePhoneProfile.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/index.tsx",
+    "to": "src/pages/Profile/hooks/useWechatBind.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/BasicInfoStep.tsx",
+    "to": "src/pages/Register/hooks/registerFormSchema.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/BasicInfoStep.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/BasicInfoStep.tsx",
+    "to": "src/pages/Register/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/PasswordStep.tsx",
+    "to": "src/pages/Register/hooks/registerFormSchema.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/PasswordStep.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/PasswordStep.tsx",
+    "to": "src/pages/Register/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/RegisterBrand.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/RegisterClosed.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/RegisterFooter.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/RegisterLayout.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/RegisterSteps.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/hooks/useRegisterForm.ts",
+    "to": "src/pages/Register/hooks/registerFormSchema.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/BasicInfoStep.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/PasswordStep.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/RegisterBrand.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/RegisterClosed.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/RegisterFooter.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/RegisterLayout.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/RegisterSteps.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/hooks/usePhoneVerification.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/hooks/useRegisterForm.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/index.tsx",
+    "to": "src/pages/Register/register.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/DeleteRoleModal.tsx",
+    "to": "src/pages/RoleManagement/RoleManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/ErrorModal.tsx",
+    "to": "src/pages/RoleManagement/RoleManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/ProjectRolesSection.tsx",
+    "to": "src/pages/RoleManagement/RoleManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/ProjectRolesSection.tsx",
+    "to": "src/pages/RoleManagement/components/RoleCard.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/ProjectRolesSection.tsx",
+    "to": "src/pages/RoleManagement/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/RoleCard.tsx",
+    "to": "src/pages/RoleManagement/RoleManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/RoleCard.tsx",
+    "to": "src/pages/RoleManagement/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/RoleHeader.tsx",
+    "to": "src/pages/RoleManagement/RoleManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/SystemRolesSection.tsx",
+    "to": "src/pages/RoleManagement/RoleManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/SystemRolesSection.tsx",
+    "to": "src/pages/RoleManagement/components/RoleCard.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/SystemRolesSection.tsx",
+    "to": "src/pages/RoleManagement/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/hooks/useProjectRoleTemplates.ts",
+    "to": "src/pages/RoleManagement/hooks/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/hooks/useProjectRoleTemplates.ts",
+    "to": "src/pages/RoleManagement/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/hooks/useRoleData.ts",
+    "to": "src/pages/RoleManagement/hooks/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/hooks/useRoleData.ts",
+    "to": "src/pages/RoleManagement/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/hooks/useRoleDelete.ts",
+    "to": "src/pages/RoleManagement/hooks/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/hooks/useSystemRoleCrud.ts",
+    "to": "src/pages/RoleManagement/hooks/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/hooks/useSystemRoleCrud.ts",
+    "to": "src/pages/RoleManagement/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/RoleManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/components/DeleteRoleModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/components/ErrorModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/components/ProjectRolesSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/components/RoleHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/components/SystemRolesSection.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/hooks/useProjectRoleTemplates.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/hooks/useRoleData.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/hooks/useRoleDelete.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/hooks/useRoleFeedback.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/index.tsx",
+    "to": "src/pages/RoleManagement/hooks/useSystemRoleCrud.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigCard.tsx",
+    "to": "src/pages/RuntimeConfigPage/ConfigInput.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigCard.tsx",
+    "to": "src/pages/RuntimeConfigPage/RuntimeConfigPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigCard.tsx",
+    "to": "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigInput.tsx",
+    "to": "src/pages/RuntimeConfigPage/RuntimeConfigPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigInput.tsx",
+    "to": "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/PageHeader.tsx",
+    "to": "src/pages/RuntimeConfigPage/RuntimeConfigPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/PageHeader.tsx",
+    "to": "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/index.tsx",
+    "to": "src/pages/RuntimeConfigPage/ConfigCard.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/index.tsx",
+    "to": "src/pages/RuntimeConfigPage/PageHeader.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/index.tsx",
+    "to": "src/pages/RuntimeConfigPage/RuntimeConfigPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/index.tsx",
+    "to": "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/hooks/useSecurityAccessAttempt.ts",
+    "to": "src/pages/SecurityAccessAttemptPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/hooks/useSecurityAccessAttempt.ts",
+    "to": "src/pages/SecurityAccessAttemptPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "to": "src/pages/SecurityAccessAttemptPage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "to": "src/pages/SecurityAccessAttemptPage/hooks/useSecurityAccessAttempt.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "to": "src/pages/SecurityAccessAttemptPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareModals.tsx",
+    "to": "src/pages/ShareManagePage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareStateView.tsx",
+    "to": "src/pages/ShareManagePage/ShareManagePage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareTable.tsx",
+    "to": "src/pages/ShareManagePage/ShareManagePage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareTable.tsx",
+    "to": "src/pages/ShareManagePage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareTable.tsx",
+    "to": "src/pages/ShareManagePage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareToolbar.tsx",
+    "to": "src/pages/ShareManagePage/ShareManagePage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/constants.ts",
+    "to": "src/pages/ShareManagePage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/hooks/useShareActions.ts",
+    "to": "src/pages/ShareManagePage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/hooks/useShareData.ts",
+    "to": "src/pages/ShareManagePage/constants.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/hooks/useShareData.ts",
+    "to": "src/pages/ShareManagePage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/pages/ShareManagePage/ShareManagePage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/pages/ShareManagePage/components/ShareModals.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/pages/ShareManagePage/components/ShareStateView.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/pages/ShareManagePage/components/ShareTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/pages/ShareManagePage/components/ShareToolbar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/pages/ShareManagePage/hooks/useShareActions.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/pages/ShareManagePage/hooks/useShareData.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/ServiceCard.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/AlertHistoryTab.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/AlertHistoryTab.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useAlertHistory.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/BackgroundTasksTab.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/BackgroundTasksTab.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useBackgroundTasks.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/BackgroundTasksTab.tsx",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheHealthCards.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheHealthCards.tsx",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "to": "src/pages/SystemMonitorPage/components/CacheHealthCards.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "to": "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "to": "src/pages/SystemMonitorPage/components/CacheSummaryCards.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "to": "src/pages/SystemMonitorPage/components/CacheTrendCharts.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "to": "src/pages/SystemMonitorPage/components/CacheWarningsPanel.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useCacheMonitor.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheSummaryCards.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheSummaryCards.tsx",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheTrendCharts.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheTrendCharts.tsx",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CacheWarningsPanel.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CoreServicesTab.tsx",
+    "to": "src/pages/SystemMonitorPage/ServiceCard.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CoreServicesTab.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/CoreServicesTab.tsx",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/hooks/useAlertHistory.ts",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/hooks/useBackgroundTasks.ts",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/hooks/useCacheMonitor.ts",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/hooks/useConversionQueue.ts",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/hooks/useCoreServices.ts",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/SystemMonitorPage.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/components/AlertHistoryTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/components/BackgroundTasksTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/components/CoreServicesTab.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useAlertHistory.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useBackgroundTasks.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useCacheMonitor.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useConversionQueue.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/hooks/useCoreServices.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/index.tsx",
+    "to": "src/pages/SystemMonitorPage/types.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/CreateUserModal.tsx",
+    "to": "src/pages/UserManagement/UserManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/DeleteUserConfirm.tsx",
+    "to": "src/pages/UserManagement/UserManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/EditUserModal.tsx",
+    "to": "src/pages/UserManagement/UserManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/MembershipManageModal.tsx",
+    "to": "src/pages/UserManagement/UserManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserSearchBar.tsx",
+    "to": "src/pages/UserManagement/UserManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserTable.tsx",
+    "to": "src/pages/UserManagement/UserManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/hooks/useUserForm.ts",
+    "to": "src/pages/UserManagement/hooks/userFormSchema.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/AdminStatsPage/index.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/UserManagement.module.css",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/UserModals/CreateUserModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/UserModals/DeleteUserConfirm.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/UserModals/EditUserModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/UserModals/MembershipManageModal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/UserSearchBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/UserTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/hooks/useUserCRUD.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/pages/UserManagement/hooks/useUserSearch.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-page-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/App.tsx",
+    "to": "src/components/ui/NoPermissionPage.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/BreadcrumbNavigation.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/BreadcrumbNavigation.tsx",
+    "to": "src/components/ui/Menu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/BreadcrumbNavigation.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/BreadcrumbNavigation.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/CollabShareModal.tsx",
+    "to": "src/components/common/ShareLinkBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/CollabShareModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/CollabShareModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/CollabWorkCard.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/CollabWorkCard.tsx",
+    "to": "src/components/ui/UserAvatar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/CurrentFilePanel.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/DirectoryImportDialog.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/DirectoryImportDialog.tsx",
+    "to": "src/components/ui/Checkbox.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/DirectoryImportDialog.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileItem.tsx",
+    "to": "src/components/file-item/fileActionConfig.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileItem.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileItem.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileSystemToolbar.tsx",
+    "to": "src/components/common/ViewToggle.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileSystemToolbar.tsx",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileSystemToolbar.tsx",
+    "to": "src/components/search/SearchInput.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileSystemToolbar.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/FileSystemToolbar.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/LanguageSwitcher.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/LanguageSwitcher.tsx",
+    "to": "src/components/ui/Menu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/LanguageSwitcher.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/Layout.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/Layout.tsx",
+    "to": "src/components/ui/Menu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/Layout.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/Layout.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/Layout.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/Layout.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/Layout.tsx",
+    "to": "src/components/ui/UserAvatar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/MxCadUploader.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/MxCadUploader.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/ThemeToggle.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/ThemeToggle.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/WorkListPanel.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/auth/LoginPrompt.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/auth/LoginPrompt.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/billing/WechatPayButton.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/billing/WechatPayModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversion-panel/ConversionPanel.tsx",
+    "to": "src/hooks/file-system/useBatchDownload.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversion-panel/ConversionTab.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversion-panel/DownloadTab.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversion-panel/DownloadTab.tsx",
+    "to": "src/hooks/file-system/useBatchDownload.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversion-panel/UploadTab.tsx",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/conversion-panel/UploadTab.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/drop-indicator/DropIndicator.tsx",
+    "to": "src/services/mxcadManager/mxcadTypes.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/BatchDownloadDialog.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/BatchDownloadDialog.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/BatchDownloadDialog.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/BatchDownloadDialog.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/BatchDownloadProgress.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/BatchDownloadProgress.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/BatchDownloadProgress.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ConfirmRevokeModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ConfirmRevokeModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/CreateFolderModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/CreateFolderModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/CreateFolderModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/DownloadFormatModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/DownloadFormatModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/DownloadFormatModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/DownloadFormatModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/DwgExportModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/DwgExportModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/DwgExportModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/EditExpiryModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/EditExpiryModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/EditExpiryModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ExternalReferenceModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ExternalReferenceModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ExternalReferenceModal.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ExternalReferenceModal.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ExternalReferencePanel.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ExternalReferencePanel.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ExternalReferencePanel.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ImagePreviewModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ImagePreviewModal.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/LibrarySelectFolderModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/LibrarySelectFolderModal.tsx",
+    "to": "src/components/ui/FileTree.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/LibrarySelectFolderModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/MembersModal.tsx",
+    "to": "src/components/ui/Autocomplete.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/MembersModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/MembersModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/MembersModal.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/MembersModal.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/MembersModal.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/MembersModal.tsx",
+    "to": "src/components/ui/UserAvatar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/NewDrawingModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/NewDrawingModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/NewDrawingModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/DatePicker.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/Pagination.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/OperationHistoryModal.tsx",
+    "to": "src/components/ui/UserAvatar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/PdfExportModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/PdfExportModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/PdfExportModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/PdfExportModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectModal.tsx",
+    "to": "src/components/ui/Textarea.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectRolesModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectRolesModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectRolesModal.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ProjectRolesModal.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/RenameModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/RenameModal.tsx",
+    "to": "src/components/ui/FileNameInput.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/RenameModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SaveAsModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SaveAsModal.tsx",
+    "to": "src/components/ui/FileNameInput.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SaveAsModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SaveAsModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SelectFileModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SelectFileModal.tsx",
+    "to": "src/components/ui/FileTree.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SelectFileModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SelectFileModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SelectFolderModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SelectFolderModal.tsx",
+    "to": "src/components/ui/FileTree.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/SelectFolderModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ShareDialog.tsx",
+    "to": "src/components/common/ShareLinkBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ShareDialog.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ShareDialog.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ShareDialog.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/VersionHistoryModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/VersionHistoryModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ViewAllFilesModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/modals/ViewAllProjectsModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/permission/PermissionAssignment.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/permission/PermissionAssignment.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/permission/PermissionAssignment.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/permission/PermissionAssignment.tsx",
+    "to": "src/components/ui/Section.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/sidebar/SidebarTabBar.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/sidebar/SidebarTrigger.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/components/sidebar/hooks/useAutoSelectSubTab.ts",
+    "to": "src/services/mxcadManager/mxcadTypes.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/contexts/AuthContext.tsx",
+    "to": "src/services/mxcadManager/saveDefaults.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/contexts/NotificationContext.tsx",
+    "to": "src/components/ui/Toast.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/contexts/useAuthActions.ts",
+    "to": "src/services/mxcadManager/saveDefaults.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/useCadFileLoader.ts",
+    "to": "src/services/mxcadManager/mxcadTypes.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/useLibrary.ts",
+    "to": "src/hooks/file-browser/useFileBrowserSelection.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DeactivateModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DeactivateModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DeleteTierModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DeleteTierModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationFormModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationFormModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationsTab.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationsTab.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/DurationsTab.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/MockCallbackModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/MockCallbackModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/OrdersTab.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/OrdersTab.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/OrdersTab.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/OrdersTab.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundApplicationsTab.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundApplicationsTab.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundApplicationsTab.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/RefundModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/ReviewRefundModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/ReviewRefundModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/ReviewRefundModal.tsx",
+    "to": "src/components/ui/Textarea.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TierFormModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TierFormModal.tsx",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TierFormModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TierFormModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TiersTab.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TiersTab.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminBillingPage/components/TiersTab.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminLogin/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminMfaSetup/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminPasswordChange/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AdminStatsPage/index.tsx",
+    "to": "src/components/ui/DatePicker.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "to": "src/components/ui/DatePicker.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditFilterSection.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditLogTable.tsx",
+    "to": "src/components/common/SelectableTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditLogTable.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/components/AuditLogTable.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/AuditLogPage/index.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/CADEditorDirect.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/components/QuickActionsSection.tsx",
+    "to": "src/components/ui/Section.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/components/RecentFilesSection.tsx",
+    "to": "src/components/ui/Section.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/components/RecentProjectsSection.tsx",
+    "to": "src/components/ui/Section.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Dashboard/components/StatCard.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/DeviceAuthorize.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/EmailVerification/components/VerificationForm.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContent.tsx",
+    "to": "src/components/common/FileListGrid.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContextMenu.tsx",
+    "to": "src/components/common/EmptyContextMenu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemContextMenu.tsx",
+    "to": "src/components/ui/Menu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemHeader.tsx",
+    "to": "src/components/ui/Tooltip.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemManagerView.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemModals.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemModals.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemNodeContextMenu.tsx",
+    "to": "src/components/file-item/fileActionConfig.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemNodeContextMenu.tsx",
+    "to": "src/components/ui/Menu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/FileSystemStates.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FileSystemManager/types.ts",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontGridView.tsx",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontGridView.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontListView.tsx",
+    "to": "src/components/common/SelectableTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontListView.tsx",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontListView.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontPageHeader.tsx",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontToolbar.tsx",
+    "to": "src/components/common/ViewToggle.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/FontToolbar.tsx",
+    "to": "src/components/search/SearchInput.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/UploadFontModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/UploadFontModal.tsx",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/components/UploadFontModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/fontTypeConfig.ts",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/FontLibrary/index.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/ForgotFormView.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/NoChannelView.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ForgotPassword/components/SupportView.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/DatePicker.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Textarea.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/RemoveEntryModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/components/RemoveEntryModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/components/common/SelectableTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpBlacklistPage/index.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/DatePicker.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/AddEntryModal.tsx",
+    "to": "src/components/ui/Textarea.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/RemoveEntryModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/components/RemoveEntryModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/components/common/SelectableTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/components/ui/Menu.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/IpWhitelistPage/index.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerEmptyView.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerExtraActions.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerExtraActions.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerModals.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerModals.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/components/LibraryManagerModals.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/LibraryManager/index.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/AccountLoginForm.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/PhoneLoginForm.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/SupportModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Login/components/WechatLoginButton.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/MemberCenter.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/MemberCenter.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/MemberCenter.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/MemberCenter.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/MemberCenter.tsx",
+    "to": "src/components/ui/Textarea.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/components/ui/Checkbox.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/components/ui/DatePicker.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/components/NoticeFormModal.tsx",
+    "to": "src/components/ui/Textarea.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/constants.ts",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/components/common/SelectableTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/NoticeCenterPage/index.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/PhoneVerification.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileDeactivateTab.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileEmailTab.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileHeader.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileHeader.tsx",
+    "to": "src/components/ui/UserAvatar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileInfoTab.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileInfoTab.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfileInfoTab.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfilePasswordTab.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Profile/ProfilePhoneTab.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/BasicInfoStep.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/PasswordStep.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/RegisterClosed.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/Register/RegisterFooter.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ResetPassword.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/DeleteRoleModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/ErrorModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RoleManagement/components/RoleHeader.tsx",
+    "to": "src/components/search/SearchInput.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigCard.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigCard.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigInput.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigInput.tsx",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/RuntimeConfigPage/ConfigInput.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "to": "src/components/ui/Card.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SecurityAccessAttemptPage/index.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SessionTransfer/index.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareStateView.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareTable.tsx",
+    "to": "src/components/common/SelectableTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareTable.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareTable.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareToolbar.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/components/ShareToolbar.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/hooks/useShareData.ts",
+    "to": "src/hooks/file-browser/useFileBrowserSelection.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/ShareManagePage/index.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/AlertHistoryTab.tsx",
+    "to": "src/components/ui/Pagination.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/SystemMonitorPage/components/AlertHistoryTab.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/CreateUserModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/CreateUserModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/CreateUserModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/CreateUserModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/DeleteUserConfirm.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/DeleteUserConfirm.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/EditUserModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/EditUserModal.tsx",
+    "to": "src/components/ui/Input.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/EditUserModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/EditUserModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/EditUserModal.tsx",
+    "to": "src/components/ui/UserAvatar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/MembershipManageModal.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/MembershipManageModal.tsx",
+    "to": "src/components/ui/DatePicker.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/MembershipManageModal.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserModals/MembershipManageModal.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserSearchBar.tsx",
+    "to": "src/components/search/SearchInput.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserSearchBar.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserTable.tsx",
+    "to": "src/components/common/SelectableTable.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserTable.tsx",
+    "to": "src/components/ui/Button.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserTable.tsx",
+    "to": "src/components/ui/Tag.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserTable.tsx",
+    "to": "src/components/ui/TruncateText.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/UserTable.tsx",
+    "to": "src/components/ui/UserAvatar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/components/common/BatchActionBar.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/components/ui/Modal.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/pages/UserManagement/index.tsx",
+    "to": "src/components/ui/Select.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/stores/useCADEditorStore.ts",
+    "to": "src/services/mxcadManager/mxcadTypes.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/utils/fileUtils.ts",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/utils/notificationEvents.ts",
+    "to": "src/components/ui/Toast.tsx",
+    "rule": {
+      "severity": "warn",
+      "name": "no-deep-path-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/contexts/NotificationContext.tsx",
+    "to": "src/components/notification/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/contexts/NotificationContext.tsx",
+    "to": "src/components/ui/Toast.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-browser/buildNodeActions.ts",
+    "to": "src/components/file-item/fileActionConfig.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-browser/fileBrowserTypes.ts",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-browser/fileBrowserTypes.ts",
+    "to": "src/components/ui/Pagination.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-browser/useFileBrowserData.ts",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-system/trashQuery.ts",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-system/useFileSystemData.ts",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-system/useFileSystemData.ts",
+    "to": "src/components/ui/Pagination.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-system/useFileSystemSearch.ts",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-system/useFileSystemUI.ts",
+    "to": "src/components/ui/Toast.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-system/useTrashView.ts",
+    "to": "src/components/search/SearchFilters.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/hooks/file-system/useTrashView.ts",
+    "to": "src/components/ui/Pagination.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/services/mxcadManager/cmd/toggleFileQueue.ts",
+    "to": "src/components/conversion-panel/ConversionPanel.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-l2-to-l3"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/utils/fileUtils.ts",
+    "to": "src/components/ui/FileSize.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-upward-from-l1"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/utils/notificationEvents.ts",
+    "to": "src/components/ui/Toast.tsx",
+    "rule": {
+      "severity": "error",
+      "name": "no-upward-from-l1"
+    }
+  }
+]
