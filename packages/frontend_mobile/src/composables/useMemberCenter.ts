@@ -32,6 +32,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import { useUser } from './useUser'
 import { t } from '@/languages'
+import { unwrap, errMsg } from '@/utils/apiError'
 import {
   type BillingOrder,
   type ConfigRegistryEntry,
@@ -59,27 +60,6 @@ const QR_SIZE_PX = 200
 /** 支付流程阶段：idle 未开始 / creating 下单中 / qr 扫码等待 /
  *  awaiting MWEB 跳回后等待结果 / success 已支付 / error 失败 */
 export type PayPhase = 'idle' | 'creating' | 'qr' | 'awaiting' | 'success' | 'error'
-
-/** 把 SDK 的 error 字段统一成带后端 message 的 Error */
-function toError(err: unknown): Error {
-  if (err instanceof Error) return err
-  const raw = err as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return new Error(raw.message)
-  return new Error(String(err))
-}
-
-function unwrap<T>(res: { error?: unknown; data?: unknown }): T {
-  if (res.error) throw toError(res.error)
-  return (res.data ?? {}) as T
-}
-
-/** 后端随 Accept-Language 返回 i18n 文案，直接透传 */
-function errMsg(e: unknown, fallback: string): string {
-  if (e instanceof Error && e.message) return e.message
-  const raw = e as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return raw.message
-  return fallback
-}
 
 /** 支付成功后同步会员字段到 localStorage.user（VIP 门控的数据源） */
 function syncMembershipToLocalUser(profile: MembershipLike): void {

@@ -47,6 +47,7 @@ import { useAuthState } from '@/composables/useAuthState'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import { navigateToLogin } from '@/utils/authNavigate'
 import { getPCForgotPasswordUrl } from '@/utils/apiConfig'
+import { unwrap, errMsg } from '@/utils/apiError'
 import {
   membershipBadge,
   membershipExpiry,
@@ -85,27 +86,6 @@ interface StorageInfo {
   total: number
   remaining: number
   usagePercent: number
-}
-
-/** SDK 响应解包：error 统一转成带后端 message 的 Error */
-function toError(err: unknown): Error {
-  if (err instanceof Error) return err
-  const raw = err as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return new Error(raw.message)
-  return new Error(String(err))
-}
-
-function unwrap<T>(res: { error?: unknown; data?: unknown }): T {
-  if (res.error) throw toError(res.error)
-  return (res.data ?? {}) as T
-}
-
-/** 后端随 Accept-Language 返回 i18n 文案，直接透传 */
-function errMsg(e: unknown, fallback: string): string {
-  if (e instanceof Error && e.message) return e.message
-  const raw = e as Record<string, unknown> | null
-  if (raw && typeof raw.message === 'string' && raw.message) return raw.message
-  return fallback
 }
 
 const router = useRouter()
