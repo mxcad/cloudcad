@@ -19,7 +19,8 @@ async function m_mx_fillet() {
     const getRadius = async () => {
       const getDist = new MxCADUiPrDist()
       getDist.setDynamicInputType(DynamicInputType.kDistanceInput)
-      getDist.setKeyWords(`${t("指定圆角半径")}<${radius.toFixed(4)}>`)
+      // 提示文案要传给 setMessage，setKeyWords 只接受 [选项(字母)] 语法
+      getDist.setMessage(`${t("指定圆角半径")}<${radius.toFixed(4)}>`)
       const val = await getDist.go()
       if (getDist.getStatus() === MrxDbgUiPrBaseReturn.kCancel) return
       if (getDist.getStatus() === MrxDbgUiPrBaseReturn.kNone) return radius

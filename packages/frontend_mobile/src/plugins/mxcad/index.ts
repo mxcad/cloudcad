@@ -2,6 +2,7 @@ import { currentLayerNameHistoryState } from "@/command/layer/currentLayerNameHi
 import { McObject } from "mxcad";
 import { getParamsFromUrl } from "@/utils/paramsFromUrl";
 import { MxFun } from "mxdraw";
+import { registerCommand } from "./command";
 import { openMxWeb } from "./openMxWeb";
 import { t } from "@/languages";
 /** 创建MxCad APP控件 **/
@@ -35,7 +36,7 @@ export const createMxCAD = async (fileUrl?: string) => {
     mode = "SharedArrayBuffer" in window ? "2d" : "2d-st";
   }
   if (mode === "st") {
-    mode === "2d-st";
+    mode = "2d-st";
   }
 
   mxcad.on("init", () => {
@@ -82,6 +83,12 @@ export const createMxCAD = async (fileUrl?: string) => {
   });
 
   await initReady;
+
+  // src/command/** 在 main.ts 模块求值期就调用了 addCommand，那一刻
+  // store.state.MxFun 还是 null（MxFun 由 mxdraw 的 mxfun() 异步加载），
+  // 所以全部命令都被排进了队列。init_mxcad 之后引擎可用，这里才真正注册；
+  // 不排空的话 src/command/** 下的命令全是静默 no-op。
+  registerCommand();
 
   mxcad.on("openFileComplete", () => {
     currentLayerNameHistoryState.value = [];

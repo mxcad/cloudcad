@@ -6,8 +6,11 @@ import { t } from "@/languages";
 async function m_mx_extend() {
     let filter = new MxCADResbuf();
     let isByWindow = false
-    let getPoint!: MrxDbgUiPrPoint
+    // 只有触发取消时才会回调 getPoint，正常点选图元时它可能从未赋值
+    let getPoint: MrxDbgUiPrPoint | undefined
     let ss!: MxCADSelectionSet
+    // 隐含边延伸模式：MxDrawExtendAssist.DoExtend 没有这个入参，
+    // 目前没有任何引擎 API 可以开启它，开关是无效的（见 docs/mobile-mxcad-blindspots.md）
     let isExtend = false
     filter.AddMcDbEntityTypes("LINE,LWPOLYLINE,ARC");
     let aryId = MxCADUtility.getCurrentSelect(filter);
@@ -16,8 +19,8 @@ async function m_mx_extend() {
         getPoint = _getPoint
         ss = _ss
       });
-      if (getPoint.getStatus() === MrxDbgUiPrBaseReturn.kCancel) return
-      if (getPoint.getStatus() === MrxDbgUiPrBaseReturn.kNone) {
+      if (getPoint?.getStatus() === MrxDbgUiPrBaseReturn.kCancel) return
+      if (getPoint?.getStatus() === MrxDbgUiPrBaseReturn.kNone) {
         if (aryId.length === 0) {
           ss.allSelect(filter)
           ss.forEach((val) => {
@@ -43,14 +46,16 @@ async function m_mx_extend() {
       let ss = new MxCADSelectionSet();
       ss.isWhileSelect = false;
       ss.isSelectHighlight = false;
-      let getPoint!: MrxDbgUiPrPoint
+      let getPoint: MrxDbgUiPrPoint | undefined
+      // 关键词回调只在 userSelect 回调里赋值，未赋值时不能直接解引用
+      const pick = (kw: string) => getPoint?.isKeyWordPicked(kw) ?? false
       if (!await ss.userSelect(t("选择要延伸的对象"), filter, (_getPoint) => {
         getPoint = _getPoint
         getPoint.setKeyWords(`[${t("栏选")}(F)/${t("窗交")}(C)/${t("边")}(E)${cachings.length > 0 ? "/" + t("放弃") + "(U)" : ""}]`)
       })) {
         break;
       }
-      if (getPoint.isKeyWordPicked("F")) {
+      if (pick("F")) {
         const points = await getHurdleSelectionPoints()
         if (!points) break;
         const pl = new McDbPolyline()
@@ -70,11 +75,11 @@ async function m_mx_extend() {
         })
         continue;
       }
-      if (getPoint.isKeyWordPicked("C")) {
+      if (pick("C")) {
         isByWindow = true
         continue;
       }
-      if (getPoint.isKeyWordPicked("E")) {
+      if (pick("E")) {
         const getKey = new MxCADUiPrKeyWord()
         getKey.setMessage(`${t("指定隐含边延伸模式")}<${isExtend ? t("延伸") : t("不延伸")}>`)
         getKey.setKeyWords(`[${t("延伸")}(E)/${t("不延伸")}(N)]`)
@@ -93,7 +98,7 @@ async function m_mx_extend() {
           }
         }
       }
-      if (getPoint.isKeyWordPicked("U")) {
+      if (pick("U")) {
         const [ids, ents] = cachings.pop() || []
 
         ids?.forEach((id) => {
