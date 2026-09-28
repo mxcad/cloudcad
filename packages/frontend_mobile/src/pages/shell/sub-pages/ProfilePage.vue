@@ -17,602 +17,135 @@
  *   实名认证（无任何后端 API）、登录设备管理（/auth/device 是设备授权而非会话管理）、
  *   升级会员（PATCH /users/:id/membership 需 SYSTEM_USER_MEMBERSHIP_MANAGE 管理端权限）、
  *   微信绑定（OAuth 全页跳转，PC 亦由 runtimeConfig.wechatEnabled 关闭）
+ *
+ * 编排全部在 composable，本文件只留接线与页面级动作（退出登录 / 跳 PC 页 / 进会员中心）：
+ *   useProfileData        资料读取 + 存储配额 + 展示派生 + 用户名/昵称编辑
+ *   useProfileAvatar      头像上传
+ *   useAccountCredentials 邮箱/手机 绑定·换绑·解绑（含验证码倒计时）
+ *   useProfilePassword    修改/设置密码（含改密后重登）
  */
-import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  usersControllerGetProfile,
-  usersControllerUpdateProfile,
-  usersControllerChangePassword,
-  usersControllerUploadAvatar,
-  usersControllerGetDashboardStats,
-  authControllerLogin,
-  authControllerLogout,
-  authControllerSendBindEmailCode,
-  authControllerVerifyBindEmail,
-  authControllerSendUnbindEmailCode,
-  authControllerVerifyUnbindEmailCode,
-  authControllerUnbindEmail,
-  authControllerRebindEmail,
-  authControllerSendSmsCode,
-  authControllerBindPhone,
-  authControllerSendUnbindPhoneCode,
-  authControllerVerifyUnbindPhoneCode,
-  authControllerUnbindPhone,
-  authControllerRebindPhone,
-} from '@cloudcad/api-sdk/sdk.gen'
-import { showToast, showDialog, showFailToast, showSuccessToast } from 'vant'
+import { authControllerLogout } from '@cloudcad/api-sdk/sdk.gen'
+import { showDialog, showFailToast } from 'vant'
 import { t } from '@/languages'
 import { useAuthState } from '@/composables/useAuthState'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
+import { useProfileAvatar } from '@/composables/useProfileAvatar'
+import { useProfileData } from '@/composables/useProfileData'
+import { useProfilePassword } from '@/composables/useProfilePassword'
+import { useAccountCredentials } from '@/composables/useAccountCredentials'
+import { formatSize } from '@/composables/useNodeFormatter'
 import { navigateToLogin } from '@/utils/authNavigate'
 import { getPCForgotPasswordUrl } from '@/utils/apiConfig'
-import { unwrap, errMsg } from '@/utils/apiError'
-import {
-  membershipBadge,
-  membershipExpiry,
-  maskPhone,
-  avatarInitial,
-  displayName,
-} from '@/utils/profileDisplay'
-import { formatSize } from '@/composables/useNodeFormatter'
-
-interface UserProfile {
-  id?: string
-  username?: string
-  nickname?: string
-  phone?: string | null
-  phoneVerified?: boolean
-  email?: string
-  avatar?: string
-  /** 0=VIP0 免费；1/2/3...=有效会员档位 */
-  membershipTierLevel?: number
-  membershipTier?: string
-  membershipExpiresAt?: string | null
-  isVip?: boolean
-  /** 手机/微信注册用户可能未设置密码 */
-  hasPassword?: boolean
-  provider?: string
-  /** ACTIVE / INACTIVE / SUSPENDED（UserStatus） */
-  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
-  role?: { id: string; name: string; description?: string; isSystem: boolean }
-  createdAt?: string
-  updatedAt?: string
-}
-
-/** 个人空间存储配额（UserDashboardStatsDto.storage） */
-interface StorageInfo {
-  used: number
-  total: number
-  remaining: number
-  usagePercent: number
-}
+import { unwrap } from '@/utils/apiError'
+import { avatarInitial, displayName } from '@/utils/profileDisplay'
 
 const router = useRouter()
-const profile = ref<UserProfile>({})
-const loading = ref(true)
-const error = ref('')
-const submitting = ref(false)
-const { setGuest, setAuthenticated } = useAuthState()
+const { setGuest } = useAuthState()
 
-async function loadProfile() {
-  loading.value = true
-  error.value = ''
-  try {
-    profile.value = unwrap(await usersControllerGetProfile())
-  } catch (e) {
-    console.error('[Profile] loadProfile:', e)
-    error.value = t('加载失败')
-  } finally {
-    loading.value = false
-  }
-}
+const {
+  profile,
+  loading,
+  error,
+  loadProfile,
+  storageInfo,
+  loadStats,
+  storagePercent,
+  storageColor,
+  isVip,
+  vipBadge,
+  vipExpireDate,
+  vipDaysRemaining,
+  vipExpiringSoon,
+  roleLabel,
+  statusLabel,
+  statusTone,
+  createdAtText,
+  accountGroup,
+  securityGroup,
+  showTextDialog,
+  editField,
+  editValue,
+  savingText,
+  textMaxLength,
+  textPlaceholder,
+  canSubmitText,
+  openTextEdit,
+  onTextConfirm,
+} = useProfileData()
 
-// ═══ 存储配额用量（D-12）═══
-// GET /users/stats/me → UserDashboardStatsDto.storage；失败静默（配额条不显示），
-// 不把整页打成错误态——资料本身已加载成功
-const storageInfo = ref<StorageInfo | null>(null)
+const { avatarInputRef, uploadingAvatar, avatarImgFailed, pickAvatar, onAvatarChange } =
+  useProfileAvatar(() => loadProfile())
 
-async function loadStats() {
-  try {
-    const data = unwrap<{ storage?: StorageInfo }>(await usersControllerGetDashboardStats())
-    const s = data.storage
-    if (s && typeof s.total === 'number' && s.total > 0) storageInfo.value = s
-  } catch (e) {
-    console.error('[Profile] loadStats:', e)
-    storageInfo.value = null
-  }
-}
+const {
+  showCodeDialog,
+  codeFeature,
+  codeStep,
+  newAccountValue,
+  oldCode,
+  newCode,
+  codeMsg,
+  codeErr,
+  sendingCode,
+  submittingCode,
+  countdown,
+  oldTargetLabel,
+  codeDialogTitle,
+  codePrimaryLabel,
+  canSubmitCode,
+  closeCodeDialog,
+  sendOldCode,
+  sendNewCode,
+  onCodePrimary,
+  showAccountSheet,
+  accountSheetTitle,
+  accountSheetActions,
+  openAccountSheet,
+  onAccountSheetSelect,
+  showUnbindDialog,
+  unbindTitle,
+  unbindTargetLabel,
+  canSubmitUnbind,
+  unbindCode,
+  unbindMsg,
+  unbindErr,
+  sendUnbindCode,
+  confirmUnbind,
+  closeUnbindDialog,
+} = useAccountCredentials(profile, () => loadProfile())
 
-const storagePercent = computed(() => {
-  const s = storageInfo.value
-  if (!s) return null
-  const pct = typeof s.usagePercent === 'number' ? s.usagePercent : (s.total > 0 ? (s.used / s.total) * 100 : 0)
-  return Math.min(Math.max(pct, 0), 100)
-})
+const {
+  showPwdDialog,
+  oldPassword,
+  newPassword,
+  confirmPassword,
+  pwdErr,
+  submittingPwd,
+  showOldPwd,
+  showNewPwd,
+  showConfirmPwd,
+  oldPwdType,
+  newPwdType,
+  confirmPwdType,
+  toggleVisible,
+  isSettingPassword,
+  pwdTitle,
+  pwdConfirmLabel,
+  newPwdPlaceholder,
+  pwdStrength,
+  pwdStrengthWidth,
+  pwdSuggestions,
+  canSubmitPwd,
+  openPwdDialog,
+  onChangePassword,
+} = useProfilePassword(profile, () => loadProfile())
 
-const storageColor = computed(() => {
-  const pct = storagePercent.value ?? 0
-  if (pct > 90) return 'var(--error, #ef4444)'
-  if (pct > 70) return 'var(--warning, #f59e0b)'
-  return 'var(--accent, #00a99e)'
-})
-
-// ── 显示值（字段映射集中在 @/utils/profileDisplay，契约由 spec 锁定）──
-const isVip = computed(() => !!profile.value.isVip)
-const vipBadge = computed(() => membershipBadge(profile.value))
-const vipExpireDate = computed(() => membershipExpiry(profile.value))
-
-// 会员到期预警（D-11）：有效会员且剩余 ≤7 天；expiresAt 为 null 表示永久，不算到期
-const vipDaysRemaining = computed(() => {
-  const raw = profile.value.membershipExpiresAt
-  if (!profile.value.isVip || !raw) return null
-  const expire = new Date(raw).getTime()
-  if (Number.isNaN(expire)) return null
-  return Math.ceil((expire - Date.now()) / 86400000)
-})
-const vipExpiringSoon = computed(() => {
-  const days = vipDaysRemaining.value
-  return days !== null && days > 0 && days <= 7
-})
-
-// 账号元信息（D-02）：角色按 name === 'ADMIN' 判定（与 PC usePermission.isAdmin 同口径）
-const roleLabel = computed(() => (profile.value.role?.name === 'ADMIN' ? t('系统管理员') : t('普通用户')))
-const statusLabel = computed(() =>
-  profile.value.status === 'INACTIVE' ? t('未激活') : profile.value.status === 'SUSPENDED' ? t('已禁用') : t('正常')
-)
-const statusTone = computed(() =>
-  profile.value.status === 'ACTIVE' ? 'ok' : profile.value.status === 'INACTIVE' ? 'warn' : 'err'
-)
-const createdAtText = computed(() => {
-  const raw = profile.value.createdAt
-  if (!raw) return ''
-  const date = new Date(raw)
-  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
-})
-
-interface AccountEntry {
-  label: string
-  value: string
-  action: string
-  /** 已验证标记（D-03）：邮箱=已绑定；手机号=phoneVerified */
-  verified?: boolean
-}
-
-const accountGroup = computed<AccountEntry[]>(() => [
-  { label: t('用户名'), value: profile.value.username ?? '—', action: 'edit-username' },
-  { label: t('昵称'), value: profile.value.nickname ?? '—', action: 'edit-nickname' },
-  {
-    label: t('邮箱'),
-    value: profile.value.email ?? '—',
-    action: 'edit-email',
-    // 后端无 emailVerified 字段：邮箱绑定即视为已验证
-    verified: !!profile.value.email,
-  },
-  {
-    label: t('手机号'),
-    value: maskPhone(profile.value.phone) || '—',
-    action: 'edit-phone',
-    // 手机号有独立 phoneVerified 标记（后台导入/管理员代绑可能未验证）
-    verified: !!profile.value.phone && profile.value.phoneVerified === true,
-  },
-])
-
-const securityGroup = computed(() => [
-  { label: profile.value.hasPassword === false ? t('设置密码') : t('修改密码'), value: '', action: 'change-password' },
-])
-
-// ═══ 用户名 / 昵称编辑 ═══
-type TextField = 'username' | 'nickname'
-const showTextDialog = ref(false)
-const editField = ref<TextField>('nickname')
-const editValue = ref('')
-
-const textMaxLength = computed(() => (editField.value === 'username' ? 20 : 50))
-const textPlaceholder = computed(() =>
-  editField.value === 'username' ? t('请输入用户名（3-20 个字符）') : t('请输入昵称（最多 50 个字符）')
-)
-const canSubmitText = computed(() => {
-  const v = editValue.value.trim()
-  if (!v) return false
-  if (editField.value === 'username') return v.length >= 3
-  return true
-})
-
-function openTextEdit(field: TextField) {
-  editField.value = field
-  editValue.value = field === 'username'
-    ? (profile.value.username ?? '')
-    : (profile.value.nickname ?? '')
-  showTextDialog.value = true
-}
-
-async function onTextConfirm() {
-  if (!canSubmitText.value || submitting.value) return
-  submitting.value = true
-  try {
-    const body = editField.value === 'username'
-      ? { username: editValue.value.trim() }
-      : { nickname: editValue.value.trim() }
-    unwrap(await usersControllerUpdateProfile({ body }))
-    showSuccessToast(editField.value === 'username' ? t('用户名已更新') : t('昵称已更新'))
-    showTextDialog.value = false
-    await loadProfile()
-  } catch (e) {
-    showFailToast(errMsg(e, t('更新失败')))
-  } finally {
-    submitting.value = false
-  }
-}
-
-// ═══ 邮箱 / 手机号 绑定·换绑（验证码）═══
-type CodeFeature = 'email' | 'phone'
-type CodeStep = 'verifyOld' | 'inputNew' | 'verifyNew'
-
-const showCodeDialog = ref(false)
-const codeFeature = ref<CodeFeature>('email')
-const codeStep = ref<CodeStep>('inputNew')
-const newAccountValue = ref('')
-const oldCode = ref('')
-const newCode = ref('')
-const unbindToken = ref('')
-const codeMsg = ref('')
-const codeErr = ref('')
-const sendingCode = ref(false)
-const countdown = ref(0)
-
-let countdownTimer: ReturnType<typeof setInterval> | null = null
-
-function startCountdown(seconds = 60) {
-  stopCountdown()
-  countdown.value = seconds
-  countdownTimer = setInterval(() => {
-    countdown.value = Math.max(0, countdown.value - 1)
-    if (countdown.value === 0) stopCountdown()
-  }, 1000)
-}
-
-function stopCountdown() {
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-    countdownTimer = null
-  }
-}
-
-const isReassign = computed(() => (codeFeature.value === 'email'
-  ? !!profile.value.email
-  : !!profile.value.phone
-))
-
-const accountLabel = computed(() => (codeFeature.value === 'email' ? t('邮箱') : t('手机号')))
-const oldTargetLabel = computed(() =>
-  codeFeature.value === 'email'
-    ? (profile.value.email ?? t('原邮箱'))
-    : (maskPhone(profile.value.phone) || t('原手机号'))
-)
-const codeDialogTitle = computed(() =>
-  isReassign.value ? t('更换') + accountLabel.value : t('绑定') + accountLabel.value
-)
-const codePrimaryLabel = computed(() => {
-  if (codeStep.value === 'verifyOld') return submitting.value ? t('验证中…') : t('验证')
-  if (codeStep.value === 'inputNew') return sendingCode.value ? t('发送中…') : t('发送验证码')
-  return submitting.value ? t('提交中…') : (isReassign.value ? t('确认更换') : t('确认绑定'))
-})
-const canSubmitCode = computed(() => {
-  if (codeStep.value === 'verifyOld') return CODE_RE.test(oldCode.value)
-  if (codeStep.value === 'inputNew') return validNewValue()
-  return CODE_RE.test(newCode.value)
-})
-
-const PHONE_RE = /^1[3-9]\d{9}$/
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-// 验证码 6 位数字：与 PC 端及后端验证码位数一致（此前为 4-8 位，可接受后端不发的码宽）
-const CODE_RE = /^\d{6}$/
-
-function validNewValue(): boolean {
-  const v = newAccountValue.value.trim()
-  if (!v) return false
-  return codeFeature.value === 'phone' ? PHONE_RE.test(v) : EMAIL_RE.test(v)
-}
-
-function openCodeEditor(feature: CodeFeature) {
-  codeFeature.value = feature
-  newAccountValue.value = ''
-  oldCode.value = ''
-  newCode.value = ''
-  unbindToken.value = ''
-  codeMsg.value = ''
-  codeErr.value = ''
-  countdown.value = 0
-  stopCountdown()
-  codeStep.value = isReassign.value ? 'verifyOld' : 'inputNew'
-  showCodeDialog.value = true
-}
-
-function closeCodeDialog() {
-  stopCountdown()
-  countdown.value = 0
-  showCodeDialog.value = false
-}
-
-/** 换绑第一步：发码到原值并验证，换取换绑令牌 */
-async function sendOldCode() {
-  if (sendingCode.value) return
-  codeErr.value = ''
-  sendingCode.value = true
-  try {
-    const res = codeFeature.value === 'email'
-      ? await authControllerSendUnbindEmailCode()
-      : await authControllerSendUnbindPhoneCode()
-    unwrap(res)
-    codeMsg.value = t('验证码已发送')
-    startCountdown()
-  } catch (e) {
-    codeMsg.value = ''
-    codeErr.value = errMsg(e, t('验证码发送失败'))
-  } finally {
-    sendingCode.value = false
-  }
-}
-
-async function submitOldCode() {
-  if (!CODE_RE.test(oldCode.value) || submitting.value) return
-  submitting.value = true
-  codeErr.value = ''
-  try {
-    const res = codeFeature.value === 'email'
-      ? await authControllerVerifyUnbindEmailCode({ body: { code: oldCode.value } })
-      : await authControllerVerifyUnbindPhoneCode({ body: { code: oldCode.value } })
-    const data = unwrap<{ success?: boolean; message?: string; token?: string }>(res)
-    if (!data.token) throw new Error(data.message || t('验证失败'))
-    unbindToken.value = data.token
-    oldCode.value = ''
-    codeErr.value = ''
-    codeMsg.value = t('验证通过')
-    codeStep.value = 'inputNew'
-  } catch (e) {
-    codeErr.value = errMsg(e, t('验证失败'))
-  } finally {
-    submitting.value = false
-  }
-}
-
-/** 发码到新值；advance=true 时发送成功后进入验证码步骤 */
-async function sendNewCode(advance: boolean) {
-  if (!validNewValue()) {
-    codeErr.value = codeFeature.value === 'phone' ? t('请输入正确的手机号') : t('请输入正确的邮箱')
-    return
-  }
-  if (sendingCode.value) return
-  codeErr.value = ''
-  sendingCode.value = true
-  try {
-    const res = codeFeature.value === 'email'
-      ? await authControllerSendBindEmailCode({
-          body: { email: newAccountValue.value.trim(), isRebind: isReassign.value },
-        })
-      : await authControllerSendSmsCode({
-          body: { phone: newAccountValue.value.trim(), scene: 'bind' },
-        })
-    unwrap(res)
-    codeMsg.value = t('验证码已发送')
-    startCountdown()
-    if (advance) codeStep.value = 'verifyNew'
-  } catch (e) {
-    codeMsg.value = ''
-    codeErr.value = errMsg(e, t('验证码发送失败'))
-  } finally {
-    sendingCode.value = false
-  }
-}
-
-async function submitNewCode() {
-  if (!validNewValue() || !CODE_RE.test(newCode.value) || submitting.value) return
-  if (isReassign.value && !unbindToken.value) {
-    codeErr.value = t('请先验证原账号信息')
-    return
-  }
-  submitting.value = true
-  codeErr.value = ''
-  try {
-    const value = newAccountValue.value.trim()
-    const res = codeFeature.value === 'email'
-      ? (isReassign.value
-          ? await authControllerRebindEmail({ body: { email: value, code: newCode.value, token: unbindToken.value } })
-          : await authControllerVerifyBindEmail({ body: { email: value, code: newCode.value } }))
-      : (isReassign.value
-          ? await authControllerRebindPhone({ body: { phone: value, code: newCode.value, token: unbindToken.value } })
-          : await authControllerBindPhone({ body: { phone: value, code: newCode.value } }))
-    const data = unwrap<{ success?: boolean; message?: string }>(res)
-    if (data.success === false) throw new Error(data.message || t('操作失败'))
-    showSuccessToast(accountLabel.value + (isReassign.value ? t('已更换') : t('已绑定')))
-    closeCodeDialog()
-    await loadProfile()
-  } catch (e) {
-    codeErr.value = errMsg(e, t('操作失败'))
-  } finally {
-    submitting.value = false
-  }
-}
-
-function onCodePrimary() {
-  if (codeStep.value === 'verifyOld') return submitOldCode()
-  if (codeStep.value === 'inputNew') return sendNewCode(true)
-  return submitNewCode()
-}
-
-// ═══ 修改密码（D-06/D-07/D-08/D-15）═══
-const showPwdDialog = ref(false)
-const oldPassword = ref('')
-const newPassword = ref('')
-const confirmPassword = ref('')
-const pwdErr = ref('')
-
-// 密码可见性切换（D-15）：Vant van-field 无内置眼睛切换，用 right-icon 手动实现
-const showOldPwd = ref(false)
-const showNewPwd = ref(false)
-const showConfirmPwd = ref(false)
-const oldPwdType = computed(() => (showOldPwd.value ? 'text' : 'password'))
-const newPwdType = computed(() => (showNewPwd.value ? 'text' : 'password'))
-const confirmPwdType = computed(() => (showConfirmPwd.value ? 'text' : 'password'))
-function toggleVisible(target: 'old' | 'new' | 'confirm') {
-  if (target === 'old') showOldPwd.value = !showOldPwd.value
-  if (target === 'new') showNewPwd.value = !showNewPwd.value
-  if (target === 'confirm') showConfirmPwd.value = !showConfirmPwd.value
-}
-
-// hasPassword === false：手机/微信注册用户尚未设置密码，此页是「设置」而非「修改」
-const isSettingPassword = computed(() => profile.value.hasPassword === false)
-
-const pwdTitle = computed(() => (isSettingPassword.value ? t('设置密码') : t('修改密码')))
-const pwdConfirmLabel = computed(() => (submitting.value ? t('提交中…') : (isSettingPassword.value ? t('设置密码') : t('确认修改'))))
-const newPwdPlaceholder = computed(() => (isSettingPassword.value ? t('至少8位，包含大小写字母和数字') : t('请输入新密码（至少 6 位）')))
-
-// 强度打分（D-06）：与 PC usePasswordProfile.getPasswordStrength 同口径
-const pwdStrength = computed(() => {
-  const pwd = newPassword.value
-  if (!pwd) return { score: 0, label: '', color: '' }
-  let score = 0
-  if (pwd.length >= 8) score++
-  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++
-  if (/\d/.test(pwd)) score++
-  if (/[^a-zA-Z0-9]/.test(pwd)) score++
-  const levels = [
-    { label: t('太弱'), color: '#ef4444' },
-    { label: t('较弱'), color: '#f97316' },
-    { label: t('一般'), color: '#eab308' },
-    { label: t('较强'), color: '#22c55e' },
-    { label: t('很强'), color: '#10b981' },
-  ]
-  const level = levels[score] ?? levels[0]!
-  return { score, label: level.label, color: level.color }
-})
-
-const pwdStrengthWidth = computed(() => `${(pwdStrength.value.score / 4) * 100}%`)
-
-// 建议清单里已完成项打勾（D-06）：让用户看到差什么，而不是只看到颜色
-const pwdSuggestions = computed(() => [
-  { text: t('密码长度至少 8 个字符'), ok: newPassword.value.length >= 8 },
-  { text: t('包含大小写字母和数字'), ok: /[a-z]/.test(newPassword.value) && /[A-Z]/.test(newPassword.value) && /\d/.test(newPassword.value) },
-  { text: t('包含特殊字符'), ok: /[^a-zA-Z0-9]/.test(newPassword.value) },
-  { text: t('不要在多个网站使用相同的密码'), ok: false },
-])
-
-const canSubmitPwd = computed(() =>
-  newPassword.value.length >= 6 &&
-  newPassword.value === confirmPassword.value &&
-  (!isSettingPassword.value ? oldPassword.value.length > 0 : true)
-)
-
-function openPwdDialog() {
-  oldPassword.value = ''
-  newPassword.value = ''
-  confirmPassword.value = ''
-  pwdErr.value = ''
-  showOldPwd.value = false
-  showNewPwd.value = false
-  showConfirmPwd.value = false
-  showPwdDialog.value = true
-}
-
-/** 改密后用新密码重新登录，保持会话不中断（D-08） */
-async function reloginWithNewPassword(): Promise<boolean> {
-  const account = profile.value.username ?? profile.value.email ?? ''
-  if (!account) return false
-  try {
-    const res = await authControllerLogin({ body: { account, password: newPassword.value } })
-    const data = unwrap<Record<string, unknown>>(res)
-    const accessToken = data.accessToken ?? data.access_token
-    if (!accessToken) return false
-    localStorage.setItem('accessToken', String(accessToken))
-    const refreshToken = data.refreshToken ?? data.refresh_token
-    if (refreshToken) localStorage.setItem('refreshToken', String(refreshToken))
-    if (data.user) localStorage.setItem('user', JSON.stringify(data.user))
-    setAuthenticated()
-    return true
-  } catch (e) {
-    console.error('[Profile] relogin after password change:', e)
-    return false
-  }
-}
-
-async function onChangePassword() {
-  if (!canSubmitPwd.value || submitting.value) return
-  submitting.value = true
-  pwdErr.value = ''
-  try {
-    unwrap(await usersControllerChangePassword({
-      body: {
-        oldPassword: isSettingPassword.value ? undefined : oldPassword.value,
-        newPassword: newPassword.value,
-      },
-    }))
-    showPwdDialog.value = false
-
-    // 改密后旧凭证可能已失效：用新密码重新登录换取新 token
-    const relogged = await reloginWithNewPassword()
-    if (relogged) {
-      showSuccessToast(isSettingPassword.value ? t('密码已设置成功') : t('密码已修改成功'))
-      await loadProfile()
-      return
-    }
-
-    // 重登失败：先告知，再清凭证回 guest 态——登录引导弹窗会接着提示用新密码登录
-    await showDialog({
-      title: t('需要重新登录'),
-      message: t('密码已修改成功，请使用新密码登录。'),
-    })
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('user')
-    setGuest()
-  } catch (e) {
-    pwdErr.value = errMsg(e, t('修改失败'))
-  } finally {
-    submitting.value = false
-  }
-}
-
-// ═══ 入口分发 ═══
-// 邮箱/手机已绑定时给「更换/解绑」两选项（ActionSheet 是移动端多选入口的标准形态）；
-// 未绑定时只有一个动作，直接进弹窗，不多加一层选择
-const showAccountSheet = ref(false)
-const accountSheetFeature = ref<CodeFeature>('email')
-
-function isAccountBound(feature: CodeFeature): boolean {
-  return feature === 'email' ? !!profile.value.email : !!profile.value.phone
-}
-
-const accountSheetTitle = computed(() => (accountSheetFeature.value === 'email' ? t('邮箱') : t('手机号')))
-
-const accountSheetActions = computed(() =>
-  isAccountBound(accountSheetFeature.value)
-    ? [
-        { key: 'reassign', name: t('更换') },
-        { key: 'unbind', name: t('解绑'), color: '#ff4444' },
-      ]
-    : [{ key: 'bind', name: t('绑定') }]
-)
-
-function openAccountSheet(feature: CodeFeature) {
-  accountSheetFeature.value = feature
-  showAccountSheet.value = true
-}
-
-function onAccountSheetSelect(action: { key?: string }) {
-  showAccountSheet.value = false
-  if (action.key === 'unbind') return openUnbind(accountSheetFeature.value)
-  openCodeEditor(accountSheetFeature.value)
-}
-
+/** 账号信息行点击：文本字段直接进编辑，邮箱/手机先进「绑定/更换/解绑」选择 */
 function onAccountClick(action: string) {
-  if (action === 'edit-username' || action === 'edit-nickname') {
-    openTextEdit(action === 'edit-username' ? 'username' : 'nickname')
-  } else if (action === 'edit-phone') {
-    openAccountSheet('phone')
-  } else if (action === 'edit-email') {
-    openAccountSheet('email')
-  }
+  if (action === 'edit-username') return openTextEdit('username')
+  if (action === 'edit-nickname') return openTextEdit('nickname')
+  if (action === 'edit-phone') return openAccountSheet('phone')
+  if (action === 'edit-email') return openAccountSheet('email')
 }
 
 function onSecurityClick(action: string) {
@@ -628,117 +161,6 @@ function openPCPage(url: string) {
 /** 进入原生会员中心（ADR-0068）：购买 / 续费 / 升级 / 退款全在移动端完成 */
 function openMemberCenter(): void {
   router.push('/shell/member')
-}
-
-// ═══ 头像上传（D-01）═══
-// image/jfif：部分移动端浏览器/WebView 用它标识 JFIF 标准 JPEG（文件后缀常为 .jfif）
-const AVATAR_ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/jfif']
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024
-const avatarInputRef = ref<HTMLInputElement | null>(null)
-const uploadingAvatar = ref(false)
-// 头像 URL 加载失败（过期签名/服务不可达）→ 回落到首字母占位
-const avatarImgFailed = ref(false)
-
-function pickAvatar() {
-  avatarInputRef.value?.click()
-}
-
-async function onAvatarChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-  if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
-    showFailToast(t('仅支持 PNG、JPEG、GIF、WebP 格式的图片'))
-    return
-  }
-  if (file.size > AVATAR_MAX_BYTES) {
-    showFailToast(t('头像文件大小不能超过 5MB'))
-    return
-  }
-  uploadingAvatar.value = true
-  try {
-    unwrap(await usersControllerUploadAvatar({ body: { file } as never }))
-    // 头像 URL 对用户是稳定的（/api/v1/users/avatar/:id），src 不变浏览器不会重新请求；
-    // 上一次 404 已置真 avatarImgFailed 并卸载 img，须复位让新头像重新加载
-    avatarImgFailed.value = false
-    showSuccessToast(t('头像更新成功'))
-    await loadProfile()
-  } catch (e) {
-    showFailToast(errMsg(e, t('头像上传失败')))
-  } finally {
-    uploadingAvatar.value = false
-  }
-}
-
-// ═══ 解绑邮箱 / 手机号（D-05）═══
-// 流程与换绑第一步相同（发码到原值 → 输码），但校验通过后直接解绑、不换新值。
-// 后端要求账号至少保留一种登录方式（密码/手机/微信），违规由后端 400 兜底。
-const showUnbindDialog = ref(false)
-const unbindFeature = ref<CodeFeature>('email')
-const unbindCode = ref('')
-const unbindMsg = ref('')
-const unbindErr = ref('')
-
-const unbindTitle = computed(() => (unbindFeature.value === 'email' ? t('解绑邮箱') : t('解绑手机号')))
-const unbindTargetLabel = computed(() =>
-  unbindFeature.value === 'email' ? (profile.value.email ?? t('原邮箱')) : (maskPhone(profile.value.phone) || t('原手机号'))
-)
-const canSubmitUnbind = computed(() => CODE_RE.test(unbindCode.value))
-
-function openUnbind(feature: CodeFeature) {
-  unbindFeature.value = feature
-  unbindCode.value = ''
-  unbindMsg.value = ''
-  unbindErr.value = ''
-  countdown.value = 0
-  stopCountdown()
-  showUnbindDialog.value = true
-}
-
-async function sendUnbindCode() {
-  if (sendingCode.value) return
-  unbindErr.value = ''
-  sendingCode.value = true
-  try {
-    const res = unbindFeature.value === 'email'
-      ? await authControllerSendUnbindEmailCode()
-      : await authControllerSendUnbindPhoneCode()
-    unwrap(res)
-    unbindMsg.value = t('验证码已发送')
-    startCountdown()
-  } catch (e) {
-    unbindMsg.value = ''
-    unbindErr.value = errMsg(e, t('验证码发送失败'))
-  } finally {
-    sendingCode.value = false
-  }
-}
-
-async function confirmUnbind() {
-  if (!canSubmitUnbind.value || submitting.value) return
-  submitting.value = true
-  unbindErr.value = ''
-  try {
-    const res = unbindFeature.value === 'email'
-      ? await authControllerUnbindEmail({ body: { code: unbindCode.value } })
-      : await authControllerUnbindPhone({ body: { code: unbindCode.value } })
-    const data = unwrap<{ success?: boolean; message?: string }>(res)
-    if (data.success === false) throw new Error(data.message || t('解绑失败'))
-    showSuccessToast(t('已解绑'))
-    closeUnbindDialog()
-    await loadProfile()
-  } catch (e) {
-    unbindErr.value = errMsg(e, t('解绑失败'))
-  } finally {
-    submitting.value = false
-  }
-}
-
-function closeUnbindDialog() {
-  stopCountdown()
-  countdown.value = 0
-  showUnbindDialog.value = false
 }
 
 async function onLogout() {
@@ -767,13 +189,14 @@ async function onLogout() {
   }
 }
 
-// 未登录引导：guest/token_expired 态自动跳原生登录页（同 tab 带 redirect 回跳）；登录完成后加载资料
+// 未登录引导：guest/token_expired 态自动跳原生登录页（同 tab 带 redirect 回跳）；
+// 登录完成后加载资料与存储配额
 useLoginPrompt(() => {
   void loadProfile()
   void loadStats()
 })
-onUnmounted(stopCountdown)
 </script>
+
 
 <template>
   <div class="subpage">
@@ -927,8 +350,8 @@ onUnmounted(stopCountdown)
           />
           <p v-if="editField === 'username'" class="field-tip">{{ t('用户名每月最多修改 3 次') }}</p>
         </div>
-        <button class="primary-btn" :disabled="!canSubmitText || submitting" @click="onTextConfirm">
-          {{ submitting ? t('保存中…') : t('保存') }}
+        <button class="primary-btn" :disabled="!canSubmitText || savingText" @click="onTextConfirm">
+          {{ savingText ? t('保存中…') : t('保存') }}
         </button>
       </div>
     </van-popup>
@@ -972,7 +395,7 @@ onUnmounted(stopCountdown)
           <div v-if="codeErr" class="field-error">{{ codeErr }}</div>
           <div v-else-if="codeMsg" class="field-tip">{{ codeMsg }}</div>
         </div>
-        <button class="primary-btn" :disabled="!canSubmitCode || sendingCode || submitting" @click="onCodePrimary">
+        <button class="primary-btn" :disabled="!canSubmitCode || sendingCode || submittingCode" @click="onCodePrimary">
           {{ codePrimaryLabel }}
         </button>
       </div>
@@ -1042,7 +465,7 @@ onUnmounted(stopCountdown)
             </div>
           </div>
         </div>
-        <button class="primary-btn" :disabled="!canSubmitPwd || submitting" @click="onChangePassword">
+        <button class="primary-btn" :disabled="!canSubmitPwd || submittingPwd" @click="onChangePassword">
           {{ pwdConfirmLabel }}
         </button>
       </div>
@@ -1068,8 +491,8 @@ onUnmounted(stopCountdown)
           <div v-if="unbindErr" class="field-error">{{ unbindErr }}</div>
           <div v-else-if="unbindMsg" class="field-tip">{{ unbindMsg }}</div>
         </div>
-        <button class="primary-btn danger" :disabled="!canSubmitUnbind || sendingCode || submitting" @click="confirmUnbind">
-          {{ submitting ? t('提交中…') : t('确认解绑') }}
+        <button class="primary-btn danger" :disabled="!canSubmitUnbind || sendingCode || submittingCode" @click="confirmUnbind">
+          {{ submittingCode ? t('提交中…') : t('确认解绑') }}
         </button>
       </div>
     </van-popup>
