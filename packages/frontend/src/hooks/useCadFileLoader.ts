@@ -23,31 +23,9 @@ import {
   broadcastConversionActivity,
   useConversionQueueStore,
 } from '@/stores/conversionQueueStore';
-import { VIEW_INIT_TIMEOUT_MS } from '@/services/mxcadManager/mxcadTypes';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { globalShowToast, globalShowConfirm } from '@/utils/notificationEvents';
-
-/**
- * 等待 CAD 引擎真正就绪（WASM 加载 + 引擎对象创建，mxcadApplicationCreatedMxCADObject 事件）。
- *
- * initializeMxCADView 仅保证 mxcad-app 视图挂载即 resolve，引擎初始化是异步的；
- * 提前显示容器会露出空白画布，因此骨架屏需保持到引擎就绪（#349）。
- * 超时（VIEW_INIT_TIMEOUT_MS）后按就绪处理兜底，避免永久卡住骨架屏。
- */
-async function waitForEngineReady(
-  mxcadManager: { isReady(): boolean },
-  shouldCancel: () => boolean
-): Promise<void> {
-  const startedAt = Date.now();
-  while (
-    !mxcadManager.isReady() &&
-    Date.now() - startedAt < VIEW_INIT_TIMEOUT_MS
-  ) {
-    if (shouldCancel()) return;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-}
 
 export interface CadFileLoaderState {
   fileId: string | null;
@@ -175,7 +153,9 @@ export function useCadFileLoader(
             isInitializedRef.current = true;
             mxcadManager.showMxCAD(true);
             // 引擎可能仍在初始化（WASM 加载中），等就绪再发命令避免命令丢失
-            await waitForEngineReady(mxcadManager, () => cancelled);
+            await mxcadManager.ensureEngineReady({
+              shouldCancel: () => cancelled,
+            });
             if (cancelled) return false;
             await openUnderLoading({
               loadingMessage: t('正在加载图纸...'),
@@ -215,7 +195,9 @@ export function useCadFileLoader(
           // initializeMxCADView 仅保证 mxcad-app 视图挂载即 resolve，此时引擎仍在初始化
           // （首次加载 WASM / 大图纸场景可能数秒）。提前 showMxCAD(true) 并关闭骨架屏会露出
           // 空白画布，期间无任何 loading 反馈（#349）。
-          await waitForEngineReady(mxcadManager, () => cancelled);
+          await mxcadManager.ensureEngineReady({
+            shouldCancel: () => cancelled,
+          });
           if (cancelled) return false;
 
           if (!skipFileOpen) {

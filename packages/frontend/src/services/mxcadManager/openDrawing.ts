@@ -87,10 +87,13 @@ export async function openUnderLoading(plan: {
   loadingMessage: string;
   /** 在 loading 遮罩内构造最终打开载荷（引擎就绪等待、节点信息补全、URL 构造等） */
   prepare: () => Promise<OpenFilePayload>;
-}): Promise<void> {
+}): Promise<OpenFilePayload> {
   showGlobalLoading(plan.loadingMessage);
   try {
-    await mxcadManager.openFile(await plan.prepare());
+    const payload = await plan.prepare();
+    await mxcadManager.openFile(payload);
+    // 返回最终载荷供调用方做打开完成记录（emitFileOpened 等），避免闭包变量偷传
+    return payload;
   } finally {
     hideGlobalLoading();
   }
@@ -195,11 +198,9 @@ async function openFromLibrary(req: {
   nodePath?: string;
   updatedAt?: string;
 }): Promise<void> {
-  let libraryFileUrl = '';
-  let finalFileName = '';
   try {
     if (!(await guardBeforeOpen())) return;
-    await openUnderLoading({
+    const payload = await openUnderLoading({
       loadingMessage: t(DEFAULT_MESSAGES.OPENING_FILE),
       prepare: async () => {
         let fileName = req.fileName;
@@ -233,13 +234,12 @@ async function openFromLibrary(req: {
         }
         if (!nodePath) throw new Error(t('无法获取文件路径'));
         if (!fileName) throw new Error(t('无法获取文件名'));
-        libraryFileUrl = `/api/v1/library/${req.libraryKey}/filesData/${nodePath}`;
+        let libraryFileUrl = `/api/v1/library/${req.libraryKey}/filesData/${nodePath}`;
         if (updatedAt) {
           const cacheTimestamp = new Date(updatedAt).getTime();
           libraryFileUrl += `?t=${cacheTimestamp}`;
           setCacheTimestamp(cacheTimestamp);
         }
-        finalFileName = fileName;
         return {
           url: libraryFileUrl,
           fileInfo: {
@@ -258,8 +258,8 @@ async function openFromLibrary(req: {
       fileId: req.nodeId,
       parentId: null,
       projectId: null,
-      fileUrl: libraryFileUrl,
-      fileName: finalFileName,
+      fileUrl: payload.url,
+      fileName: payload.fileInfo?.name ?? '',
       libraryKey: req.libraryKey,
     });
   } catch (error) {
@@ -385,7 +385,11 @@ async function openFromExternalRef(req: { url: string }): Promise<void> {
             fileId: '',
             parentId: null,
             projectId: null,
-            name: req.url.split('/').pop()?.replace(/\.mxweb$/, '') || '',
+            name:
+              req.url
+                .split('/')
+                .pop()
+                ?.replace(/\.mxweb$/, '') || '',
             personalSpaceId: null,
           },
         };

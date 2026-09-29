@@ -24,6 +24,7 @@ const {
   mxcadManagerMock: {
     isCreated: vi.fn(() => false),
     isReady: vi.fn(() => true),
+    ensureEngineReady: vi.fn(async () => true),
     openFile: vi.fn(async () => {}),
     showMxCAD: vi.fn(),
     initializeMxCADView: vi.fn(async () => {}),

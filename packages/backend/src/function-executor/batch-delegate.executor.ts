@@ -13,6 +13,13 @@ import type {
   ExecutorDurationStats,
 } from './function-executor.interface';
 
+/** conversion-service 任务查态响应：批量明细在 result.results（旧顶层 results 兼容） */
+interface ConversionTaskStatusResponse {
+  status?: string;
+  result?: { results?: BatchConversionResult['results'] };
+  results?: BatchConversionResult['results'];
+}
+
 /**
  * 批量委托装饰器执行器（BATCH_DOWNLOAD_DELEGATE_WORKFLOW）。
  *
@@ -138,21 +145,18 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
 
     try {
       for (;;) {
-        const result = await this.client.request(
+        const result = (await this.client.request(
           `/v1/conversions/tasks/${encodeURIComponent(batchId)}`,
           'GET'
-        );
-        const status = (result as { status?: string })?.status as
-          | string
-          | undefined;
-        const results =
-          (result as any)?.result?.results || (result as any)?.results;
+        )) as ConversionTaskStatusResponse;
+        const status = result.status;
+        const results = result.result?.results || result.results;
 
         if (Array.isArray(results)) {
           return { results };
         }
         if (status && !activeStates.has(status)) {
-          return { results: (result as any)?.result?.results || [] };
+          return { results: result.result?.results || [] };
         }
         if (Date.now() >= deadline) {
           throw new Error(`Workflow task ${batchId} timed out`);
