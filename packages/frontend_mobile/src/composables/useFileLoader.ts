@@ -9,6 +9,8 @@ import {
   clearMxwebCache,
 } from '../services/mxwebCacheService';
 import { classifyApiError } from '../utils/errorHandler';
+import { errMsg, errorKind, typedError } from '../utils/apiError';
+import type { ErrorType } from '../stores/editor';
 import {
   getPreloadingData,
   checkExternalReferences,
@@ -183,10 +185,10 @@ export function useFileLoader() {
 
       // 2. 校验（与 PC L730-L745 对齐）
       if (nodeInfo.deletedAt) {
-        throw new Error(t('文件已被删除'));
+        throw typedError('deleted', t('文件已被删除'));
       }
       if (!nodeInfo.fileHash) {
-        throw new Error(t('文件尚未转换完成'));
+        throw typedError('converting', t('文件尚未转换完成'));
       }
 
       // 3. 设置文件信息到 store
@@ -330,27 +332,33 @@ export function useFileLoader() {
         }
         return true;
       } else {
-        throw new Error(t('打开文件失败'));
+        throw typedError('open-failed', t('打开文件失败'));
       }
     } catch (e: unknown) {
-      const classified = classifyApiError(e);
-      let message = classified.message;
-      let errorType = classified.type;
+      // 类别判定读 typed error 的 kind（errorKind 单一出口），不再用 message 字符串反推
+      const kind = errorKind(e);
+      let message: string;
+      let errorType: ErrorType;
 
-      // 精确错误处理（与 PC L704-L716 对齐）
-      const axiosError = e as { response?: { status?: number } };
-      if (axiosError.response?.status === 401) {
+      if (kind === 'unauthorized') {
         message = t('请登录后访问此文件');
         errorType = 'auth';
-      } else if (axiosError.response?.status === 404) {
+      } else if (kind === 'not-found') {
         message = t('文件不存在或已被删除');
         errorType = 'not-found';
-      } else if (message.includes('文件已被删除')) {
+      } else if (kind === 'deleted') {
+        message = errMsg(e, t('文件已被删除'));
         errorType = 'not-found';
-      } else if (message.includes('文件尚未转换完成')) {
+      } else if (kind === 'converting') {
+        message = errMsg(e, t('文件尚未转换完成'));
         errorType = 'converting';
-      } else if (message.includes('打开文件失败')) {
+      } else if (kind === 'open-failed') {
+        message = errMsg(e, t('打开文件失败'));
         errorType = 'open-failed';
+      } else {
+        const classified = classifyApiError(e);
+        message = classified.message;
+        errorType = classified.type;
       }
 
       error.value = message;
@@ -403,22 +411,27 @@ export function useFileLoader() {
         loading.value = false;
         return true;
       } else {
-        throw new Error(t('打开文件失败'));
+        throw typedError('open-failed', t('打开文件失败'));
       }
     } catch (e: unknown) {
-      const classified = classifyApiError(e);
-      let message = classified.message;
-      let errorType = classified.type;
+      // 类别判定读 typed error 的 kind（errorKind 单一出口），不再用 message 字符串反推
+      const kind = errorKind(e);
+      let message: string;
+      let errorType: ErrorType;
 
-      const axiosError = e as { response?: { status?: number } };
-      if (axiosError.response?.status === 401) {
+      if (kind === 'unauthorized') {
         message = t('请登录后访问此文件');
         errorType = 'auth';
-      } else if (axiosError.response?.status === 404) {
+      } else if (kind === 'not-found' || kind === 'deleted') {
         message = t('文件不存在或已被删除');
         errorType = 'not-found';
-      } else if (message.includes('打开文件失败')) {
+      } else if (kind === 'open-failed') {
+        message = errMsg(e, t('打开文件失败'));
         errorType = 'open-failed';
+      } else {
+        const classified = classifyApiError(e);
+        message = classified.message;
+        errorType = classified.type;
       }
 
       error.value = message;

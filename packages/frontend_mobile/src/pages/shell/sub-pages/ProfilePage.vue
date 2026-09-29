@@ -28,28 +28,29 @@
  *   useProfileDeactivate  账号注销（动态验证方式 + 冷静期，对齐 PC ProfileDeactivateTab）
  *   useWechatAccount      微信授权整页跳转（注销验证 / 绑定，回调经 #wechat_result 回传）
  */
-import { onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { authControllerLogout } from '@cloudcad/api-sdk/sdk.gen'
-import { showDialog, showFailToast, showToast } from 'vant'
-import { t } from '@/languages'
-import { useAuthState } from '@/composables/useAuthState'
-import { useLoginPrompt } from '@/composables/useLoginPrompt'
-import { useProfileAvatar } from '@/composables/useProfileAvatar'
-import { useProfileData } from '@/composables/useProfileData'
-import { useProfilePassword } from '@/composables/useProfilePassword'
-import { useAccountCredentials } from '@/composables/useAccountCredentials'
-import { useProfileDeactivate } from '@/composables/useProfileDeactivate'
-import { useWechatAccount, parseWechatResult } from '@/composables/useWechatAccount'
-import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
-import { formatSize } from '@/composables/useNodeFormatter'
-import { navigateToLogin } from '@/utils/authNavigate'
-import { unwrap, errMsg, toError, errorCode } from '@/utils/apiError'
-import { avatarInitial, displayName } from '@/utils/profileDisplay'
+import { onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { showDialog, showFailToast, showToast } from 'vant';
+import { t } from '@/languages';
+import { useAuthState } from '@/composables/useAuthState';
+import { useLoginPrompt } from '@/composables/useLoginPrompt';
+import { useProfileAvatar } from '@/composables/useProfileAvatar';
+import { useProfileData } from '@/composables/useProfileData';
+import { useProfilePassword } from '@/composables/useProfilePassword';
+import { useAccountCredentials } from '@/composables/useAccountCredentials';
+import { useProfileDeactivate } from '@/composables/useProfileDeactivate';
+import {
+  useWechatAccount,
+  parseWechatResult,
+} from '@/composables/useWechatAccount';
+import { useRuntimeConfig } from '@/composables/useRuntimeConfig';
+import { formatSize } from '@/composables/useNodeFormatter';
+import { logout as logoutSession } from '@/utils/authSession';
+import { errMsg, toError, errorCode } from '@/utils/apiError';
+import { avatarInitial, displayName } from '@/utils/profileDisplay';
 
-const route = useRoute()
-const router = useRouter()
-const { setGuest } = useAuthState()
+const route = useRoute();
+const router = useRouter();
 
 const {
   profile,
@@ -80,10 +81,15 @@ const {
   canSubmitText,
   openTextEdit,
   onTextConfirm,
-} = useProfileData()
+} = useProfileData();
 
-const { avatarInputRef, uploadingAvatar, avatarImgFailed, pickAvatar, onAvatarChange } =
-  useProfileAvatar(() => loadProfile())
+const {
+  avatarInputRef,
+  uploadingAvatar,
+  avatarImgFailed,
+  pickAvatar,
+  onAvatarChange,
+} = useProfileAvatar(() => loadProfile());
 
 const {
   showCodeDialog,
@@ -120,7 +126,7 @@ const {
   sendUnbindCode,
   confirmUnbind,
   closeUnbindDialog,
-} = useAccountCredentials(profile, () => loadProfile())
+} = useAccountCredentials(profile, () => loadProfile());
 
 const {
   showPwdDialog,
@@ -146,24 +152,20 @@ const {
   canSubmitPwd,
   openPwdDialog,
   onChangePassword,
-} = useProfilePassword(profile, () => loadProfile())
+} = useProfilePassword(profile, () => loadProfile());
 
-/** 登出（无确认弹窗）：注销成功后自动登出用；API 失败也清本地态（账号已注销） */
+/** 登出（无确认弹窗）：注销成功后自动登出用；统一失败协议见 authSession.logout
+ *  （API 失败 toast 后仍清本地态并跳登录） */
 async function doLogout() {
-  try {
-    unwrap(await authControllerLogout())
-  } catch (e) {
-    console.error('[Profile] logout after deactivate:', e)
-  }
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
-  localStorage.removeItem('user')
-  setGuest()
-  navigateToLogin()
+  await logoutSession();
 }
 
-const { config } = useRuntimeConfig()
-const { openAuth, bindWechat: bindWechatApi, unbindWechat: unbindWechatApi } = useWechatAccount()
+const { config } = useRuntimeConfig();
+const {
+  openAuth,
+  bindWechat: bindWechatApi,
+  unbindWechat: unbindWechatApi,
+} = useWechatAccount();
 const {
   graceDays: deactivateGraceDays,
   showSheet: showDeactivateSheet,
@@ -186,14 +188,14 @@ const {
   sendPhoneCode: sendDeactivatePhoneCode,
   sendEmailCode: sendDeactivateEmailCode,
   submit: submitDeactivate,
-} = useProfileDeactivate(profile, () => void doLogout())
+} = useProfileDeactivate(profile, () => void doLogout());
 
 /** 注销的微信验证：整页跳转授权，回调经 /profile#wechat_result 回传 */
 async function onDeactivateWechatAuth() {
   try {
-    await openAuth('deactivate')
+    await openAuth('deactivate');
   } catch (e) {
-    showFailToast(errMsg(toError(e), t('获取授权链接失败')))
+    showFailToast(errMsg(toError(e), t('获取授权链接失败')));
   }
 }
 
@@ -201,11 +203,11 @@ async function onDeactivateWechatAuth() {
 async function onWechatCellClick() {
   if (!profile.value?.wechatId) {
     try {
-      await openAuth('bind')
+      await openAuth('bind');
     } catch (e) {
-      showFailToast(errMsg(toError(e), t('获取授权链接失败')))
+      showFailToast(errMsg(toError(e), t('获取授权链接失败')));
     }
-    return
+    return;
   }
   try {
     await showDialog({
@@ -214,87 +216,89 @@ async function onWechatCellClick() {
       showCancelButton: true,
       confirmButtonText: t('确认解绑'),
       cancelButtonText: t('取消'),
-    })
+    });
   } catch {
-    return
+    return;
   }
   try {
-    await unbindWechatApi()
-    showToast(t('微信解绑成功'))
-    void loadProfile()
+    await unbindWechatApi();
+    showToast(t('微信解绑成功'));
+    void loadProfile();
   } catch (e) {
-    showFailToast(errMsg(toError(e), t('解绑失败')))
+    showFailToast(errMsg(toError(e), t('解绑失败')));
   }
 }
 
 /** 绑定回调消费（#wechat_result purpose=bind）：调 bind，409 冲突询问是否接管（同 PC） */
 async function handleBindResult(code: string, state: string) {
   try {
-    await bindWechatApi(code, state)
-    showToast(t('微信绑定成功'))
-    void loadProfile()
-    return
+    await bindWechatApi(code, state);
+    showToast(t('微信绑定成功'));
+    void loadProfile();
+    return;
   } catch (e) {
     if (errorCode(e) !== 'CONFLICT') {
-      showFailToast(errMsg(e, t('绑定失败')))
-      return
+      showFailToast(errMsg(e, t('绑定失败')));
+      return;
     }
   }
   try {
     await showDialog({
       title: t('绑定微信'),
-      message: t('该微信已绑定其他账号，是否解绑该账号的微信并绑定到当前账号？'),
+      message: t(
+        '该微信已绑定其他账号，是否解绑该账号的微信并绑定到当前账号？'
+      ),
       showCancelButton: true,
       confirmButtonText: t('确认接管绑定'),
       cancelButtonText: t('取消'),
-    })
+    });
   } catch {
-    showFailToast(t('该微信已绑定其他账号'))
-    return
+    showFailToast(t('该微信已绑定其他账号'));
+    return;
   }
   try {
-    await bindWechatApi(code, state, true)
-    showToast(t('微信绑定成功'))
-    void loadProfile()
+    await bindWechatApi(code, state, true);
+    showToast(t('微信绑定成功'));
+    void loadProfile();
   } catch (e) {
-    showFailToast(errMsg(e, t('绑定失败')))
+    showFailToast(errMsg(e, t('绑定失败')));
   }
 }
 
 onMounted(() => {
   // 微信授权回调：解析 #wechat_result 后清 hash，避免刷新重复消费
-  const result = parseWechatResult(route.hash)
-  if (!result) return
-  void router.replace({ path: '/shell/profile' })
+  const result = parseWechatResult(route.hash);
+  if (!result) return;
+  void router.replace({ path: '/shell/profile' });
   if (result.purpose === 'deactivate') {
-    setDeactivateWechatCode(result.code)
-    openDeactivate('wechat')
-    showToast(t('微信授权完成，确认注销时自动验证'))
+    setDeactivateWechatCode(result.code);
+    openDeactivate('wechat');
+    showToast(t('微信授权完成，确认注销时自动验证'));
   } else if (result.purpose === 'bind') {
-    void handleBindResult(result.code, result.state)
+    void handleBindResult(result.code, result.state);
   }
-})
+});
 
 /** 账号信息行点击：文本字段直接进编辑，邮箱/手机先进「绑定/更换/解绑」选择 */
 function onAccountClick(action: string) {
-  if (action === 'edit-username') return openTextEdit('username')
-  if (action === 'edit-nickname') return openTextEdit('nickname')
-  if (action === 'edit-phone') return openAccountSheet('phone')
-  if (action === 'edit-email') return openAccountSheet('email')
+  if (action === 'edit-username') return openTextEdit('username');
+  if (action === 'edit-nickname') return openTextEdit('nickname');
+  if (action === 'edit-phone') return openAccountSheet('phone');
+  if (action === 'edit-email') return openAccountSheet('email');
 }
 
 function onSecurityClick(action: string) {
-  if (action === 'change-password') openPwdDialog()
+  if (action === 'change-password') openPwdDialog();
 }
 
 /** 忘记密码：页内导航到原生页（路由守卫已放行已登录用户进入 /forgot-password、/reset-password） */
 function openForgotPassword() {
-  void router.push('/forgot-password')
+  void router.push('/forgot-password');
 }
 
 /** 进入原生会员中心（ADR-0068）：购买 / 续费 / 升级 / 退款全在移动端完成 */
 function openMemberCenter(): void {
-  router.push('/shell/member')
+  router.push('/shell/member');
 }
 
 async function onLogout() {
@@ -305,36 +309,31 @@ async function onLogout() {
       showCancelButton: true,
       confirmButtonText: t('退出登录'),
       cancelButtonText: t('取消'),
-    })
+    });
   } catch {
-    return
+    return;
   }
 
-  try {
-    unwrap(await authControllerLogout())
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    localStorage.removeItem('user')
-    setGuest()
-    navigateToLogin()
-  } catch (e) {
-    console.error('[Profile] logout error:', e)
-    showFailToast(t('退出失败，请重试'))
-  }
+  // 统一失败协议（authSession.logout）：API 失败 toast 后**仍然**清本地会话并跳登录
+  // （废止旧「失败不清、只 toast 重试」协议——后端登出失败不应把用户困在不可用会话里）
+  await logoutSession();
 }
 
 // 未登录引导：guest/token_expired 态自动跳原生登录页（同 tab 带 redirect 回跳）；
 // 登录完成后加载资料与存储配额
 useLoginPrompt(() => {
-  void loadProfile()
-  void loadStats()
-})
+  void loadProfile();
+  void loadStats();
+});
 </script>
-
 
 <template>
   <div class="subpage">
-    <van-nav-bar :title="t('个人中心')" left-arrow @click-left="() => router.back()" />
+    <van-nav-bar
+      :title="t('个人中心')"
+      left-arrow
+      @click-left="() => router.back()"
+    />
 
     <div v-if="loading && !profile.username" class="loading-state">
       <van-loading size="32" />
@@ -342,7 +341,9 @@ useLoginPrompt(() => {
 
     <div v-else-if="error" class="error-state">
       <span class="error-text">{{ error }}</span>
-      <van-button size="small" round @click="loadProfile">{{ t('重试') }}</van-button>
+      <van-button size="small" round @click="loadProfile">{{
+        t('重试')
+      }}</van-button>
     </div>
 
     <div v-else class="profile-scroll">
@@ -356,7 +357,9 @@ useLoginPrompt(() => {
             fit="cover"
             @error="avatarImgFailed = true"
           />
-          <span v-else class="avatar-text">{{ avatarInitial(displayName(profile)) }}</span>
+          <span v-else class="avatar-text">{{
+            avatarInitial(displayName(profile))
+          }}</span>
           <div v-if="uploadingAvatar" class="avatar-overlay">
             <van-loading size="16" />
           </div>
@@ -367,7 +370,9 @@ useLoginPrompt(() => {
         <div class="user-info">
           <div class="user-name-row">
             <span class="user-name">{{ displayName(profile) || '—' }}</span>
-            <span v-if="isVip && vipBadge" class="vip-badge">{{ vipBadge }}</span>
+            <span v-if="isVip && vipBadge" class="vip-badge">{{
+              vipBadge
+            }}</span>
           </div>
           <span v-if="isVip" class="vip-expire">
             {{ t('会员有效期至') }} {{ vipExpireDate || t('永久') }}
@@ -386,7 +391,11 @@ useLoginPrompt(() => {
       <!-- ═══ 会员到期预警（D-11）═══ -->
       <div v-if="vipExpiringSoon" class="vip-warning">
         <van-icon name="warning-o" size="14" />
-        <span>{{ t('会员即将到期，剩余 {days} 天，请及时续费', { days: String(vipDaysRemaining) }) }}</span>
+        <span>{{
+          t('会员即将到期，剩余 {days} 天，请及时续费', {
+            days: String(vipDaysRemaining),
+          })
+        }}</span>
       </div>
 
       <!-- ═══ 会员（D-10）：购买 / 续费 / 升级 / 退款走原生会员中心（ADR-0068）═══ -->
@@ -405,15 +414,29 @@ useLoginPrompt(() => {
         <div class="section-title">{{ t('存储空间') }}</div>
         <div class="storage-box">
           <div class="storage-line">
-            <span>{{ t('已用 {size}', { size: formatSize(storageInfo.used) }) }}</span>
-            <span>{{ t('总计 {size}', { size: formatSize(storageInfo.total) }) }}</span>
+            <span>{{
+              t('已用 {size}', { size: formatSize(storageInfo.used) })
+            }}</span>
+            <span>{{
+              t('总计 {size}', { size: formatSize(storageInfo.total) })
+            }}</span>
           </div>
           <div class="storage-track">
-            <div class="storage-fill" :style="{ width: (storagePercent ?? 0) + '%', background: storageColor }" />
+            <div
+              class="storage-fill"
+              :style="{
+                width: (storagePercent ?? 0) + '%',
+                background: storageColor,
+              }"
+            />
           </div>
           <div class="storage-line below">
-            <span>{{ t('剩余 {size}', { size: formatSize(storageInfo.remaining) }) }}</span>
-            <span>{{ t('使用率 {pct}%', { pct: (storagePercent ?? 0).toFixed(1) }) }}</span>
+            <span>{{
+              t('剩余 {size}', { size: formatSize(storageInfo.remaining) })
+            }}</span>
+            <span>{{
+              t('使用率 {pct}%', { pct: (storagePercent ?? 0).toFixed(1) })
+            }}</span>
           </div>
         </div>
       </van-cell-group>
@@ -430,7 +453,11 @@ useLoginPrompt(() => {
         >
           <template #value>
             <span class="cell-value">{{ item.value }}</span>
-            <van-icon v-if="item.verified" name="passed" class="verified-mark" />
+            <van-icon
+              v-if="item.verified"
+              name="passed"
+              class="verified-mark"
+            />
           </template>
         </van-cell>
       </van-cell-group>
@@ -439,14 +466,22 @@ useLoginPrompt(() => {
       <van-cell-group class="section">
         <div class="section-title">{{ t('账号详情') }}</div>
         <van-cell :title="t('账户角色')">
-          <template #value><span class="meta-tag">{{ roleLabel }}</span></template>
+          <template #value
+            ><span class="meta-tag">{{ roleLabel }}</span></template
+          >
         </van-cell>
         <van-cell :title="t('账户状态')">
           <template #value>
-            <span class="meta-tag" :class="'meta-' + statusTone">{{ statusLabel }}</span>
+            <span class="meta-tag" :class="'meta-' + statusTone">{{
+              statusLabel
+            }}</span>
           </template>
         </van-cell>
-        <van-cell v-if="createdAtText" :title="t('创建时间')" :value="createdAtText" />
+        <van-cell
+          v-if="createdAtText"
+          :title="t('创建时间')"
+          :value="createdAtText"
+        />
       </van-cell-group>
 
       <!-- ═══ 账号安全 ═══ -->
@@ -466,7 +501,11 @@ useLoginPrompt(() => {
           is-link
           @click="onWechatCellClick"
         />
-        <van-cell :title="t('忘记密码？')" is-link @click="openForgotPassword" />
+        <van-cell
+          :title="t('忘记密码？')"
+          is-link
+          @click="openForgotPassword"
+        />
         <van-cell
           v-if="deactivateMethodOptions.length"
           :title="t('注销账号')"
@@ -480,11 +519,20 @@ useLoginPrompt(() => {
     </div>
 
     <!-- ═══ 用户名 / 昵称编辑 ═══ -->
-    <van-popup v-model:show="showTextDialog" position="bottom" round :style="{ height: '42%' }">
+    <van-popup
+      v-model:show="showTextDialog"
+      position="bottom"
+      round
+      :style="{ height: '42%' }"
+    >
       <div class="form-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="showTextDialog = false">{{ t('取消') }}</button>
-          <span class="panel-title">{{ editField === 'username' ? t('修改用户名') : t('修改昵称') }}</span>
+          <button class="panel-cancel" @click="showTextDialog = false">
+            {{ t('取消') }}
+          </button>
+          <span class="panel-title">{{
+            editField === 'username' ? t('修改用户名') : t('修改昵称')
+          }}</span>
           <span class="panel-spacer"></span>
         </div>
         <div class="panel-body">
@@ -495,19 +543,32 @@ useLoginPrompt(() => {
             clearable
             @keyup.enter="onTextConfirm"
           />
-          <p v-if="editField === 'username'" class="field-tip">{{ t('用户名每月最多修改 3 次') }}</p>
+          <p v-if="editField === 'username'" class="field-tip">
+            {{ t('用户名每月最多修改 3 次') }}
+          </p>
         </div>
-        <button class="primary-btn" :disabled="!canSubmitText || savingText" @click="onTextConfirm">
+        <button
+          class="primary-btn"
+          :disabled="!canSubmitText || savingText"
+          @click="onTextConfirm"
+        >
           {{ savingText ? t('保存中…') : t('保存') }}
         </button>
       </div>
     </van-popup>
 
     <!-- ═══ 邮箱 / 手机号 验证码 ═══ -->
-    <van-popup v-model:show="showCodeDialog" position="bottom" round :style="{ height: '56%' }">
+    <van-popup
+      v-model:show="showCodeDialog"
+      position="bottom"
+      round
+      :style="{ height: '56%' }"
+    >
       <div class="form-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="closeCodeDialog">{{ t('取消') }}</button>
+          <button class="panel-cancel" @click="closeCodeDialog">
+            {{ t('取消') }}
+          </button>
           <span class="panel-title">{{ codeDialogTitle }}</span>
           <span class="panel-spacer"></span>
         </div>
@@ -516,9 +577,23 @@ useLoginPrompt(() => {
             <p class="field-hint">
               {{ t('验证码已发送至') }}{{ oldTargetLabel }}
             </p>
-            <van-field v-model="oldCode" type="digit" maxlength="6" :placeholder="t('请输入验证码')" clearable />
-            <button class="resend-btn" :disabled="countdown > 0 || sendingCode" @click="sendOldCode">
-              {{ countdown > 0 ? `${t('重新发送')}（${countdown}s）` : t('发送验证码') }}
+            <van-field
+              v-model="oldCode"
+              type="digit"
+              maxlength="6"
+              :placeholder="t('请输入验证码')"
+              clearable
+            />
+            <button
+              class="resend-btn"
+              :disabled="countdown > 0 || sendingCode"
+              @click="sendOldCode"
+            >
+              {{
+                countdown > 0
+                  ? `${t('重新发送')}（${countdown}s）`
+                  : t('发送验证码')
+              }}
             </button>
           </template>
 
@@ -527,14 +602,32 @@ useLoginPrompt(() => {
               v-model="newAccountValue"
               :type="codeFeature === 'phone' ? 'tel' : 'text'"
               :maxlength="codeFeature === 'phone' ? 11 : 100"
-              :placeholder="codeFeature === 'phone' ? t('请输入新的手机号') : t('请输入新的邮箱地址')"
+              :placeholder="
+                codeFeature === 'phone'
+                  ? t('请输入新的手机号')
+                  : t('请输入新的邮箱地址')
+              "
               :disabled="codeStep === 'verifyNew'"
               clearable
             />
             <template v-if="codeStep === 'verifyNew'">
-              <van-field v-model="newCode" type="digit" maxlength="6" :placeholder="t('请输入验证码')" clearable />
-              <button class="resend-btn" :disabled="countdown > 0 || sendingCode" @click="sendNewCode(false)">
-                {{ countdown > 0 ? `${t('重新发送')}（${countdown}s）` : t('重新发送验证码') }}
+              <van-field
+                v-model="newCode"
+                type="digit"
+                maxlength="6"
+                :placeholder="t('请输入验证码')"
+                clearable
+              />
+              <button
+                class="resend-btn"
+                :disabled="countdown > 0 || sendingCode"
+                @click="sendNewCode(false)"
+              >
+                {{
+                  countdown > 0
+                    ? `${t('重新发送')}（${countdown}s）`
+                    : t('重新发送验证码')
+                }}
               </button>
             </template>
           </template>
@@ -542,23 +635,38 @@ useLoginPrompt(() => {
           <div v-if="codeErr" class="field-error">{{ codeErr }}</div>
           <div v-else-if="codeMsg" class="field-tip">{{ codeMsg }}</div>
         </div>
-        <button class="primary-btn" :disabled="!canSubmitCode || sendingCode || submittingCode" @click="onCodePrimary">
+        <button
+          class="primary-btn"
+          :disabled="!canSubmitCode || sendingCode || submittingCode"
+          @click="onCodePrimary"
+        >
           {{ codePrimaryLabel }}
         </button>
       </div>
     </van-popup>
 
     <!-- ═══ 修改 / 设置密码（D-06/D-07/D-15）═══ -->
-    <van-popup v-model:show="showPwdDialog" position="bottom" round :style="{ height: '76%' }">
+    <van-popup
+      v-model:show="showPwdDialog"
+      position="bottom"
+      round
+      :style="{ height: '76%' }"
+    >
       <div class="form-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="showPwdDialog = false">{{ t('取消') }}</button>
+          <button class="panel-cancel" @click="showPwdDialog = false">
+            {{ t('取消') }}
+          </button>
           <span class="panel-title">{{ pwdTitle }}</span>
           <span class="panel-spacer"></span>
         </div>
         <div class="panel-body">
           <p v-if="isSettingPassword" class="pwd-hint">
-            {{ t('您的账户是通过手机号或微信自动创建的，尚未设置密码。设置密码后可使用账号密码登录。') }}
+            {{
+              t(
+                '您的账户是通过手机号或微信自动创建的，尚未设置密码。设置密码后可使用账号密码登录。'
+              )
+            }}
           </p>
 
           <van-field
@@ -569,7 +677,10 @@ useLoginPrompt(() => {
             clearable
           >
             <template #right-icon>
-              <van-icon :name="showOldPwd ? 'eye' : 'eye-o'" @click="toggleVisible('old')" />
+              <van-icon
+                :name="showOldPwd ? 'eye' : 'eye-o'"
+                @click="toggleVisible('old')"
+              />
             </template>
           </van-field>
 
@@ -580,15 +691,28 @@ useLoginPrompt(() => {
             clearable
           >
             <template #right-icon>
-              <van-icon :name="showNewPwd ? 'eye' : 'eye-o'" @click="toggleVisible('new')" />
+              <van-icon
+                :name="showNewPwd ? 'eye' : 'eye-o'"
+                @click="toggleVisible('new')"
+              />
             </template>
           </van-field>
 
           <div v-if="newPassword" class="pwd-strength">
             <div class="strength-bar">
-              <div class="strength-fill" :style="{ width: pwdStrengthWidth, background: pwdStrength.color }" />
+              <div
+                class="strength-fill"
+                :style="{
+                  width: pwdStrengthWidth,
+                  background: pwdStrength.color,
+                }"
+              />
             </div>
-            <span class="strength-label" :style="{ color: pwdStrength.color }">{{ pwdStrength.label }}</span>
+            <span
+              class="strength-label"
+              :style="{ color: pwdStrength.color }"
+              >{{ pwdStrength.label }}</span
+            >
           </div>
 
           <van-field
@@ -598,7 +722,10 @@ useLoginPrompt(() => {
             clearable
           >
             <template #right-icon>
-              <van-icon :name="showConfirmPwd ? 'eye' : 'eye-o'" @click="toggleVisible('confirm')" />
+              <van-icon
+                :name="showConfirmPwd ? 'eye' : 'eye-o'"
+                @click="toggleVisible('confirm')"
+              />
             </template>
           </van-field>
 
@@ -607,22 +734,37 @@ useLoginPrompt(() => {
           <div v-if="newPassword" class="pwd-tips">
             <div class="tips-title">{{ t('安全建议') }}</div>
             <div v-for="(tip, i) in pwdSuggestions" :key="i" class="tips-item">
-              <van-icon :name="tip.ok ? 'passed' : 'info-o'" class="tips-icon" :class="{ ok: tip.ok }" />
+              <van-icon
+                :name="tip.ok ? 'passed' : 'info-o'"
+                class="tips-icon"
+                :class="{ ok: tip.ok }"
+              />
               <span>{{ tip.text }}</span>
             </div>
           </div>
         </div>
-        <button class="primary-btn" :disabled="!canSubmitPwd || submittingPwd" @click="onChangePassword">
+        <button
+          class="primary-btn"
+          :disabled="!canSubmitPwd || submittingPwd"
+          @click="onChangePassword"
+        >
           {{ pwdConfirmLabel }}
         </button>
       </div>
     </van-popup>
 
     <!-- ═══ 解绑邮箱 / 手机号（D-05）═══ -->
-    <van-popup v-model:show="showUnbindDialog" position="bottom" round :style="{ height: '46%' }">
+    <van-popup
+      v-model:show="showUnbindDialog"
+      position="bottom"
+      round
+      :style="{ height: '46%' }"
+    >
       <div class="form-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="closeUnbindDialog">{{ t('取消') }}</button>
+          <button class="panel-cancel" @click="closeUnbindDialog">
+            {{ t('取消') }}
+          </button>
           <span class="panel-title">{{ unbindTitle }}</span>
           <span class="panel-spacer"></span>
         </div>
@@ -630,25 +772,54 @@ useLoginPrompt(() => {
           <p class="field-hint">
             {{ t('验证码将发送至') }}{{ unbindTargetLabel }}
           </p>
-          <van-field v-model="unbindCode" type="digit" maxlength="6" :placeholder="t('请输入验证码')" clearable />
-          <button class="resend-btn" :disabled="countdown > 0 || sendingCode" @click="sendUnbindCode">
-            {{ countdown > 0 ? `${t('重新发送')}（${countdown}s）` : t('发送验证码') }}
+          <van-field
+            v-model="unbindCode"
+            type="digit"
+            maxlength="6"
+            :placeholder="t('请输入验证码')"
+            clearable
+          />
+          <button
+            class="resend-btn"
+            :disabled="countdown > 0 || sendingCode"
+            @click="sendUnbindCode"
+          >
+            {{
+              countdown > 0
+                ? `${t('重新发送')}（${countdown}s）`
+                : t('发送验证码')
+            }}
           </button>
-          <p class="field-tip">{{ t('解绑后将无法通过该账号登录，账号至少需要保留一种登录方式。') }}</p>
+          <p class="field-tip">
+            {{
+              t('解绑后将无法通过该账号登录，账号至少需要保留一种登录方式。')
+            }}
+          </p>
           <div v-if="unbindErr" class="field-error">{{ unbindErr }}</div>
           <div v-else-if="unbindMsg" class="field-tip">{{ unbindMsg }}</div>
         </div>
-        <button class="primary-btn danger" :disabled="!canSubmitUnbind || sendingCode || submittingCode" @click="confirmUnbind">
+        <button
+          class="primary-btn danger"
+          :disabled="!canSubmitUnbind || sendingCode || submittingCode"
+          @click="confirmUnbind"
+        >
           {{ submittingCode ? t('提交中…') : t('确认解绑') }}
         </button>
       </div>
     </van-popup>
 
     <!-- ═══ 账号注销（D-09，对齐 PC ProfileDeactivateTab）═══ -->
-    <van-popup v-model:show="showDeactivateSheet" position="bottom" round :style="{ height: '72%' }">
+    <van-popup
+      v-model:show="showDeactivateSheet"
+      position="bottom"
+      round
+      :style="{ height: '72%' }"
+    >
       <div class="form-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="closeDeactivate()">{{ t('取消') }}</button>
+          <button class="panel-cancel" @click="closeDeactivate()">
+            {{ t('取消') }}
+          </button>
           <span class="panel-title">{{ t('注销账号') }}</span>
           <span class="panel-spacer"></span>
         </div>
@@ -659,13 +830,22 @@ useLoginPrompt(() => {
           <template v-else>
             <p class="field-hint">
               {{
-                t('注销账户后，{days} 天内重新登录可自动取消注销；逾期需联系客服恢复。30 天后账户数据将被彻底删除。', {
-                  days: String(deactivateGraceDays),
-                })
+                t(
+                  '注销账户后，{days} 天内重新登录可自动取消注销；逾期需联系客服恢复。30 天后账户数据将被彻底删除。',
+                  {
+                    days: String(deactivateGraceDays),
+                  }
+                )
               }}
             </p>
             <ul class="deactivate-warnings">
-              <li>{{ t('冷静期内（{days} 天）重新登录可自动取消注销', { days: String(deactivateGraceDays) }) }}</li>
+              <li>
+                {{
+                  t('冷静期内（{days} 天）重新登录可自动取消注销', {
+                    days: String(deactivateGraceDays),
+                  })
+                }}
+              </li>
               <li>{{ t('冷静期过后需联系客服恢复账户') }}</li>
               <li>{{ t('30 天后账户数据将被彻底删除，无法恢复') }}</li>
             </ul>
@@ -739,16 +919,26 @@ useLoginPrompt(() => {
               </button>
             </template>
 
-            <van-checkbox v-model="deactivateConfirmed" class="deactivate-confirm">
+            <van-checkbox
+              v-model="deactivateConfirmed"
+              class="deactivate-confirm"
+            >
               {{ t('我已了解注销的后果，并确认注销') }}
             </van-checkbox>
 
-            <div v-if="deactivateErr" class="field-error">{{ deactivateErr }}</div>
+            <div v-if="deactivateErr" class="field-error">
+              {{ deactivateErr }}
+            </div>
           </template>
         </div>
         <button
           class="primary-btn danger"
-          :disabled="!deactivateSuccessMsg && (!canSubmitDeactivate || !deactivateConfirmed || deactivateSubmitting)"
+          :disabled="
+            !deactivateSuccessMsg &&
+            (!canSubmitDeactivate ||
+              !deactivateConfirmed ||
+              deactivateSubmitting)
+          "
           @click="submitDeactivate()"
         >
           {{ deactivateSubmitting ? t('注销中…') : t('确认注销') }}
@@ -1224,7 +1414,9 @@ useLoginPrompt(() => {
 .strength-fill {
   height: 100%;
   border-radius: 2px;
-  transition: width 0.25s ease, background 0.25s ease;
+  transition:
+    width 0.25s ease,
+    background 0.25s ease;
 }
 
 .strength-label {

@@ -8,32 +8,23 @@
  * 认证页（/login、/register）不走 <router-view>（App.vue 直接渲染 <Shell /> 以保持 CAD 编辑器 WebGL 存活），
  * 而是按 route.path 条件渲染为全屏覆盖层。
  */
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import Shell from './pages/shell/index.vue'
-import LoginPage from './pages/auth/LoginPage.vue'
-import RegisterPage from './pages/auth/RegisterPage.vue'
-import VerifyEmailPage from './pages/auth/VerifyEmailPage.vue'
-import VerifyPhonePage from './pages/auth/VerifyPhonePage.vue'
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage.vue'
-import ResetPasswordPage from './pages/auth/ResetPasswordPage.vue'
-import AuthBackButton from './pages/auth/AuthBackButton.vue'
-import NoticeDialog from './components/NoticeDialog.vue'
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import Shell from './pages/shell/index.vue';
+import LoginPage from './pages/auth/LoginPage.vue';
+import RegisterPage from './pages/auth/RegisterPage.vue';
+import VerifyEmailPage from './pages/auth/VerifyEmailPage.vue';
+import VerifyPhonePage from './pages/auth/VerifyPhonePage.vue';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage.vue';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage.vue';
+import AuthBackButton from './pages/auth/AuthBackButton.vue';
+import NoticeDialog from './components/NoticeDialog.vue';
+import { AUTH_PAGE_PATHS } from '@/utils/authSession';
 
-/** 认证覆盖层路由，与下方 v-if 链保持一一对应 */
-const AUTH_ROUTE_PATHS = [
-  '/login',
-  '/register',
-  '/verify-email',
-  '/verify-phone',
-  '/forgot-password',
-  '/reset-password',
-]
+/** 认证覆盖层路由单源见 authSession.AUTH_PAGE_PATHS（router 守卫共用），与下方 v-if 链保持一一对应 */
+const isAuthPage = computed(() => AUTH_PAGE_PATHS.includes(route.path));
 
-/** 任一认证覆盖层打开时，都提供「返回首页」出口 */
-const isAuthPage = computed(() => AUTH_ROUTE_PATHS.includes(route.path))
-
-const route = useRoute()
+const route = useRoute();
 </script>
 
 <template>

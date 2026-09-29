@@ -1,31 +1,10 @@
 import { t } from '@/languages';
+import { errorKind } from './apiError';
 
 export interface ClassifiedError {
   type: 'auth' | 'permission' | 'not-found' | 'server' | 'network' | 'abort' | 'converting' | 'open-failed' | 'unknown';
   message: string;
   status?: number;
-}
-
-export function isNetworkError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const msg = String((error as Record<string, unknown>).message || '');
-  return (
-    msg.includes('Network Error') ||
-    msg.includes('ECONNREFUSED') ||
-    msg.includes('ETIMEDOUT') ||
-    msg.includes('ENOTFOUND') ||
-    msg.includes('network') ||
-    msg.includes('Network')
-  );
-}
-
-export function isAuthError(error: unknown): boolean {
-  if (error && typeof error === 'object') {
-    const e = error as Record<string, unknown>;
-    if (e.status === 401 || e.statusCode === 401) return true;
-    if ((e.response as Record<string, unknown>)?.status === 401) return true;
-  }
-  return false;
 }
 
 export function isPermissionError(error: unknown): boolean {
@@ -34,15 +13,6 @@ export function isPermissionError(error: unknown): boolean {
     if (e.status === 403 || e.statusCode === 403) return true;
     if ((e.response as Record<string, unknown>)?.status === 403) return true;
     if (e.isPermissionError === true) return true;
-  }
-  return false;
-}
-
-export function isNotFoundError(error: unknown): boolean {
-  if (error && typeof error === 'object') {
-    const e = error as Record<string, unknown>;
-    if (e.status === 404 || e.statusCode === 404) return true;
-    if ((e.response as Record<string, unknown>)?.status === 404) return true;
   }
   return false;
 }
@@ -70,20 +40,26 @@ export function isAbortError(error: unknown): boolean {
   );
 }
 
+/**
+ * UI 层错误分类：类别判定委托 apiError.errorKind（单一出口），本文件只负责
+ * 分类名 → 本地化文案的映射。typed error 的 kind（deleted/converting/open-failed）
+ * 由 useFileLoader 等 catch 点直接消费，不走本函数。
+ */
 export function classifyApiError(error: unknown): ClassifiedError {
   if (isAbortError(error)) {
     return { type: 'abort', message: t('请求已取消') };
   }
-  if (isNetworkError(error)) {
+  const kind = errorKind(error);
+  if (kind === 'network') {
     return { type: 'network', message: t('网络连接失败，请检查网络') };
   }
-  if (isAuthError(error)) {
+  if (kind === 'unauthorized') {
     return { type: 'auth', message: t('请登录后访问此文件') };
   }
-  if (isPermissionError(error)) {
+  if (kind === 'forbidden' || kind === 'deactivated') {
     return { type: 'permission', message: t('没有执行此操作的权限') };
   }
-  if (isNotFoundError(error)) {
+  if (kind === 'not-found' || kind === 'deleted') {
     return { type: 'not-found', message: t('文件不存在或已被删除') };
   }
   if (isServerError(error)) {

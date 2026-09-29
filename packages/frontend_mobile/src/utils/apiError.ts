@@ -126,3 +126,112 @@ export function errorCode(e: unknown): string | null {
 export function errorDetail<K extends keyof ApiErrorBody>(e: unknown, key: K): ApiErrorBody[K] {
   return ((asRecord(e) ?? {}) as Partial<ApiErrorBody>)[key]
 }
+
+// ── typed error：错误类别单一出口 ──
+//
+// 历史：throw 点抛本地化文案 new Error(t('文件已被删除'))，catch 点用
+// message.includes('文件已被删除') 字符串反推错误类别——非中文 locale 下
+// message 被翻译，专属错误 UI 永远不可达。改为 throw 点直接携带 kind，
+// catch 点读 kind；任意来源错误的类别判定统一走 errorKind()。
+
+/** 错误类别（按实际 catch 分支归纳） */
+export type ApiErrorKind =
+  | 'deleted' // 文件已被删除（deletedAt）
+  | 'converting' // 文件尚未转换完成（无 fileHash）
+  | 'open-failed' // 引擎打开 mxweb 失败
+  | 'not-found' // 404 / 分享链接失效
+  | 'network' // 网络异常 / 离线
+  | 'unauthorized' // 401 / UNAUTHORIZED / AUTH_TOKEN_*
+  | 'forbidden' // 403 / PERMISSION_DENIED / FORBIDDEN
+  | 'deactivated' // 账号被禁用 / 注销
+  | 'unknown'
+
+const API_ERROR_KINDS: readonly string[] = [
+  'deleted',
+  'converting',
+  'open-failed',
+  'not-found',
+  'network',
+  'unauthorized',
+  'forbidden',
+  'deactivated',
+  'unknown',
+]
+
+function isApiErrorKind(value: unknown): value is ApiErrorKind {
+  return typeof value === 'string' && API_ERROR_KINDS.includes(value)
+}
+
+/** 后端字符串业务码 → kind（SDK 对非 2xx throw body，无 status 字段，401 靠 code） */
+const CODE_KINDS: Record<string, ApiErrorKind> = {
+  ACCOUNT_DEACTIVATED: 'deactivated',
+  UNAUTHORIZED: 'unauthorized',
+  AUTH_TOKEN_EXPIRED: 'unauthorized',
+  AUTH_TOKEN_INVALID: 'unauthorized',
+  AUTH_TOKEN_MISSING: 'unauthorized',
+  FORBIDDEN: 'forbidden',
+  PERMISSION_DENIED: 'forbidden',
+}
+
+const NETWORK_CODES = new Set([
+  'ERR_NETWORK',
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'ENOTFOUND',
+])
+
+/** 网络形态判定（合并原 errorHandler.isNetworkError 与 useAuthState._isNetworkError 两套规则） */
+function isNetworkLike(e: Record<string, unknown>): boolean {
+  const code = e.code
+  if (typeof code === 'string' && NETWORK_CODES.has(code)) return true
+  const name = typeof e.name === 'string' ? e.name : ''
+  const message = typeof e.message === 'string' ? e.message : ''
+  if (
+    name === 'TypeError' &&
+    (message.includes('NetworkError') || message.includes('Failed to fetch'))
+  ) {
+    return true
+  }
+  return (
+    message.includes('Network Error') ||
+    message.includes('ECONNREFUSED') ||
+    message.includes('ETIMEDOUT') ||
+    message.includes('ENOTFOUND') ||
+    message.includes('network') ||
+    message.includes('Network')
+  )
+}
+
+/** 携带类别的错误：throw 点用它替代裸 Error + 文案反推（message 仍是本地化文案供展示） */
+export interface TypedApiError extends ApiError {
+  kind: ApiErrorKind
+}
+
+export function typedError(kind: ApiErrorKind, message: string): TypedApiError {
+  return Object.assign(new Error(message), { kind }) as TypedApiError
+}
+
+/**
+ * 任意错误的类别判定单一出口。优先级：
+ *   typed kind → HTTP status / 数值 code（401/403/404）→ 字符串业务码 → 网络形态 → unknown
+ */
+export function errorKind(e: unknown): ApiErrorKind {
+  const rec = asRecord(e)
+  if (!rec) return 'unknown'
+  if (isApiErrorKind(rec.kind)) return rec.kind
+  if (rec.isPermissionError === true) return 'forbidden'
+  const status = [rec.code, rec.status, rec.statusCode, asRecord(rec.response)?.status].find(
+    (v) => typeof v === 'number'
+  )
+  if (status === 401) return 'unauthorized'
+  if (status === 403) return 'forbidden'
+  if (status === 404) return 'not-found'
+  const code = errorCode(e)
+  if (code) {
+    const kind = CODE_KINDS[code]
+    if (kind) return kind
+  }
+  if (isNetworkLike(rec)) return 'network'
+  return 'unknown'
+}

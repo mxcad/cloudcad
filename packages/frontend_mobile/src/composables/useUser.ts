@@ -1,6 +1,8 @@
 import { ref, readonly, onMounted, getCurrentInstance } from 'vue';
-import { navigateToLogin } from '../utils/authNavigate';
-import { authControllerLogout } from '../api-sdk';
+import {
+  logout as logoutSession,
+  onSessionChanged,
+} from '../utils/authSession';
 
 interface UserInfo {
   id: string;
@@ -58,10 +60,25 @@ function hasAuth(): boolean {
 const user = ref<UserInfo | null>(readUserFromStorage());
 const isAuthenticated = ref(hasAuth());
 
+function refreshUserState() {
+  user.value = readUserFromStorage();
+  isAuthenticated.value = hasAuth();
+}
+
+// 会话唯一出口（authSession）写入/清理后同步本状态机；
+// 注册在模块加载时完成，早于任何组件调用 useUser()
+onSessionChanged((event) => {
+  if (event === 'written') {
+    refreshUserState();
+    return;
+  }
+  user.value = null;
+  isAuthenticated.value = false;
+});
+
 export function useUser() {
   function refresh() {
-    user.value = readUserFromStorage();
-    isAuthenticated.value = hasAuth();
+    refreshUserState();
   }
 
   if (getCurrentInstance()) {
@@ -71,30 +88,28 @@ export function useUser() {
   }
 
   async function logout() {
-    try {
-      await authControllerLogout();
-    } catch {
-      // 后端登出失败不影响本地清理
-    }
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    user.value = null;
-    isAuthenticated.value = false;
-    navigateToLogin();
+    // 统一失败协议在 authSession.logout：API 失败 toast 后仍清会话并跳登录
+    await logoutSession();
   }
 
   function hasPermission(permission: string): boolean {
     if (!user.value) return false;
-    const rolePermissions = (user.value as unknown as Record<string, unknown>).role as
-      Record<string, unknown> | undefined;
-    if (!rolePermissions?.permissions || !Array.isArray(rolePermissions.permissions)) {
+    const rolePermissions = (user.value as unknown as Record<string, unknown>)
+      .role as Record<string, unknown> | undefined;
+    if (
+      !rolePermissions?.permissions ||
+      !Array.isArray(rolePermissions.permissions)
+    ) {
       return false;
     }
     for (const p of rolePermissions.permissions) {
       if (typeof p === 'string' && p === permission) return true;
-      if (p && typeof (p as Record<string, unknown>).permission === 'string' &&
-        (p as Record<string, unknown>).permission === permission) return true;
+      if (
+        p &&
+        typeof (p as Record<string, unknown>).permission === 'string' &&
+        (p as Record<string, unknown>).permission === permission
+      )
+        return true;
     }
     return false;
   }

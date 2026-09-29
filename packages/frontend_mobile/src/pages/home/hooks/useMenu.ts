@@ -1,16 +1,25 @@
-import { uiConfig } from "@/config/uiConfig"
-import { t } from "@/languages"
-import { addCommand, callCommand } from "@/plugins/mxcad/command"
-import { exportDrawing, showDwgOptionsDialog, showPdfOptionsDialog } from "@/services/exportService"
-import { canExportDownloadGate } from "@/services/permissionService"
-import { useVoerkaI18n } from "@voerkai18n/vue"
-import { MxCpp } from "mxcad"
-import { PopoverAction, showToast } from "vant"
-import { ref, computed } from "vue"
-import { saveToCloudTrigger, saveAsToCloudTrigger, saveLoginRequiredTrigger } from "../../../composables/useSaveAs"
-import { useUser } from "../../../composables/useUser"
-import { useRuntimeConfig } from "../../../composables/useRuntimeConfig"
-import { useShellMode } from "@/composables/useShellMode"
+import { uiConfig } from '@/config/uiConfig';
+import { t } from '@/languages';
+import { addCommand, callCommand } from '@/plugins/mxcad/command';
+import {
+  exportDrawing,
+  showDwgOptionsDialog,
+  showPdfOptionsDialog,
+} from '@/services/exportService';
+import { canExportDownloadGate } from '@/services/permissionService';
+import { useVoerkaI18n } from '@voerkai18n/vue';
+import { MxCpp } from 'mxcad';
+import { PopoverAction, showToast } from 'vant';
+import { ref, computed } from 'vue';
+import { isTokenExpired, readToken } from '@/utils/authSession';
+import {
+  saveToCloudTrigger,
+  saveAsToCloudTrigger,
+  saveLoginRequiredTrigger,
+} from '../../../composables/useSaveAs';
+import { useUser } from '../../../composables/useUser';
+import { useRuntimeConfig } from '../../../composables/useRuntimeConfig';
+import { useShellMode } from '@/composables/useShellMode';
 
 /**
  * M7 编辑器菜单裁剪：壳模式下，「打开文件」入口（OpenDwg）从编辑器菜单剥离，
@@ -24,217 +33,226 @@ const SHELL_REMOVED_CMDS = new Set([
   'OpenDwg',
   'OpenDwg_DoNotUseCache',
   'Mx_languages',
-])
+]);
 
 function isShellMenuCmd(cmd: string): boolean {
-  return SHELL_REMOVED_CMDS.has(cmd)
+  return SHELL_REMOVED_CMDS.has(cmd);
 }
 
 // 导出下载会员门控的实现在 services/permissionService.ts（库抽屉 LibraryPanel 直接引用），
 // 此处转出以兼容本文件既有的导入方。
-export { canExportDownloadGate }
-
-function isTokenExpired(): boolean {
-  try {
-    const token = localStorage.getItem('accessToken')
-    if (!token) return true
-    const payload = JSON.parse(atob(token.split('.')[1] || ''))
-    if (!payload.exp) return true
-    return payload.exp * 1000 <= Date.now()
-  } catch {
-    return true
-  }
-}
+export { canExportDownloadGate };
 
 export const useMenu = () => {
-    const i18n = useVoerkaI18n()
-    const isShowMenu = ref(false)
-    const { user } = useUser()
-    const { config } = useRuntimeConfig()
-    const { isShellMode } = useShellMode()
+  const i18n = useVoerkaI18n();
+  const isShowMenu = ref(false);
+  const { user } = useUser();
+  const { config } = useRuntimeConfig();
+  const { isShellMode } = useShellMode();
 
-    const canExportDownload = (): boolean =>
-        canExportDownloadGate(user.value, config.value.freeExportDownloadEnabled)
+  const canExportDownload = (): boolean =>
+    canExportDownloadGate(user.value, config.value.freeExportDownloadEnabled);
 
-    // 导出下载为 VIP 专属功能：菜单项用主题强调色标识（vant PopoverAction.color 作用于
-    // 图标与文字），无需独立 VIP 图标；移动端 UI 完全可控，不依赖 mxcad-app 图标替换。
-    // 标识色跟随运行时开关 freeExportDownloadEnabled：开关开放后导出人人可用，恢复正常样式。
-    const EXPORT_VIP_COLOR = 'var(--accent)'
+  // 导出下载为 VIP 专属功能：菜单项用主题强调色标识（vant PopoverAction.color 作用于
+  // 图标与文字），无需独立 VIP 图标；移动端 UI 完全可控，不依赖 mxcad-app 图标替换。
+  // 标识色跟随运行时开关 freeExportDownloadEnabled：开关开放后导出人人可用，恢复正常样式。
+  const EXPORT_VIP_COLOR = 'var(--accent)';
 
-    const buildExportActions = (): PopoverAction[] => {
-        const vipColor = config.value.freeExportDownloadEnabled
-            ? undefined
-            : EXPORT_VIP_COLOR
-        return [
-            {
-                // MXWEB 是源格式：纯前端导出、不做转换，因此不走 VIP 门控（与 PC 一致）
-                text: '导出 MXWEB',
-                icon: 'geshi',
-                call: async () => {
-                    isShowMenu.value = false
-                    await exportDrawing('mxweb')
-                }
-            },
-            {
-                text: '导出 PDF',
-                icon: 'pdf',
-                color: vipColor,
-                call: async () => {
-                    if (!canExportDownload()) return
-                    isShowMenu.value = false
-   
-                    const pdfOptions = await showPdfOptionsDialog()
-                    if (pdfOptions) {
-                        exportDrawing('pdf', undefined, pdfOptions)
-                    }
-                }
-            },
-            {
-                text: '导出 DWG',
-                icon: 'Dwg',
-                color: vipColor,
-                call: async () => {
-                    if (!canExportDownload()) return
-                    isShowMenu.value = false
-     
-                    const dwgVersion = await showDwgOptionsDialog('dwg')
-                    if (dwgVersion) {
-                        exportDrawing('dwg', undefined, undefined, { dwgVersion })
-                    }
-                }
-            },
-            {
-                text: '导出 DXF',
-                icon: 'DXF',
-                color: vipColor,
-                call: async () => {
-                    if (!canExportDownload()) return
-                    isShowMenu.value = false
+  const buildExportActions = (): PopoverAction[] => {
+    const vipColor = config.value.freeExportDownloadEnabled
+      ? undefined
+      : EXPORT_VIP_COLOR;
+    return [
+      {
+        // MXWEB 是源格式：纯前端导出、不做转换，因此不走 VIP 门控（与 PC 一致）
+        text: '导出 MXWEB',
+        icon: 'geshi',
+        call: async () => {
+          isShowMenu.value = false;
+          await exportDrawing('mxweb');
+        },
+      },
+      {
+        text: '导出 PDF',
+        icon: 'pdf',
+        color: vipColor,
+        call: async () => {
+          if (!canExportDownload()) return;
+          isShowMenu.value = false;
 
-                    const dwgVersion = await showDwgOptionsDialog('dxf')
-                    if (dwgVersion) {
-                        exportDrawing('dxf', undefined, undefined, { dwgVersion })
-                    }
-                }
-            },
-        ]
-    }
+          const pdfOptions = await showPdfOptionsDialog();
+          if (pdfOptions) {
+            exportDrawing('pdf', undefined, pdfOptions);
+          }
+        },
+      },
+      {
+        text: '导出 DWG',
+        icon: 'Dwg',
+        color: vipColor,
+        call: async () => {
+          if (!canExportDownload()) return;
+          isShowMenu.value = false;
 
-    const showExportSubMenu = () => {
-        setTimeout(() => {
-            isShowMenu.value = true
-            // 每次打开时重建，读取最新运行时开关状态（freeExportDownloadEnabled）
-            actions.value = buildExportActions()
-        }, 200)
-    }
+          const dwgVersion = await showDwgOptionsDialog('dwg');
+          if (dwgVersion) {
+            exportDrawing('dwg', undefined, undefined, { dwgVersion });
+          }
+        },
+      },
+      {
+        text: '导出 DXF',
+        icon: 'DXF',
+        color: vipColor,
+        call: async () => {
+          if (!canExportDownload()) return;
+          isShowMenu.value = false;
 
-    const getDefaultMenuData = () => {
-        let items = [...uiConfig.headerMenuData?.map((item)=> {
-            const copy = Object.assign({} as Record<string, unknown>, item)
-            if (copy.cmd === 'Mx_export' || copy.cmd === 'Mx_saveDwg' || copy.cmd === 'Mx_exportPDF') {
-                copy.call = showExportSubMenu
-            }
-            if (copy.cmd === 'Mx_versionHistory') {
-                copy.call = () => {
-                    window.dispatchEvent(new CustomEvent('open-version-history'))
-                }
-            }
-            return copy
-        })||[]]
+          const dwgVersion = await showDwgOptionsDialog('dxf');
+          if (dwgVersion) {
+            exportDrawing('dxf', undefined, undefined, { dwgVersion });
+          }
+        },
+      },
+    ];
+  };
 
-        // M7 壳模式：编辑器菜单剥离文件管理入口（库/打开图纸）与账号设置入口（语言/退出登录），
-        // 迁移到壳子页导航与壳顶栏「+」菜单
-        if (isShellMode.value) {
-            items = items.filter(item => !isShellMenuCmd((item as Record<string, unknown>).cmd as string))
+  const showExportSubMenu = () => {
+    setTimeout(() => {
+      isShowMenu.value = true;
+      // 每次打开时重建，读取最新运行时开关状态（freeExportDownloadEnabled）
+      actions.value = buildExportActions();
+    }, 200);
+  };
+
+  const getDefaultMenuData = () => {
+    let items = [
+      ...(uiConfig.headerMenuData?.map((item) => {
+        const copy = Object.assign({} as Record<string, unknown>, item);
+        if (
+          copy.cmd === 'Mx_export' ||
+          copy.cmd === 'Mx_saveDwg' ||
+          copy.cmd === 'Mx_exportPDF'
+        ) {
+          copy.call = showExportSubMenu;
         }
-        return items
-    }
-    const actions = ref<PopoverAction[]>(getDefaultMenuData())
-    addCommand("Mx_NewFile", () => {
-        window.dispatchEvent(new CustomEvent('mxcad-new-file'))
-    })
-    addCommand("Mx_versionHistory", () => {
-        window.dispatchEvent(new CustomEvent('open-version-history'))
-    })
-    addCommand("Mx_layouts", () => {
-        setTimeout(() => {
-            isShowMenu.value = true
-            const layouts = MxCpp.App.getCurrentMxCAD().getAllLayoutName()
-            const _layouts: PopoverAction[] = []
-            layouts.forEach((name) => {
-                const call = () => {
-                    isShowMenu.value = false
-                    MxCpp.App.getCurrentMxCAD().setCurrentLayout(name)
-                }
-                if (name === "Model") {
-                    _layouts.unshift({
-                        text: name,
-                        call
-                    })
-                } else {
-                    _layouts.push({
-                        text: name,
-                        call
-                    })
-                }
-            })
-            actions.value = _layouts
-        }, 200)
-    })
-    addCommand("Mx_ShowCollaborate", () => {
-        window.dispatchEvent(new CustomEvent('mxcad-show-collaborate'))
-    })
-    addCommand("Mx_ShowDrawingLibrary", () => {
-        if (isShellMode.value) {
-            window.dispatchEvent(new CustomEvent('mxcad-shell-navigate', { detail: '/shell/library/drawing' }))
-            return
+        if (copy.cmd === 'Mx_versionHistory') {
+          copy.call = () => {
+            window.dispatchEvent(new CustomEvent('open-version-history'));
+          };
         }
-        window.dispatchEvent(new CustomEvent('mxcad-show-library', { detail: 'drawing' }))
-    })
-    addCommand("Mx_ShowBlockLibrary", () => {
-        if (isShellMode.value) {
-            window.dispatchEvent(new CustomEvent('mxcad-shell-navigate', { detail: '/shell/library/block' }))
-            return
+        return copy;
+      }) || []),
+    ];
+
+    // M7 壳模式：编辑器菜单剥离文件管理入口（库/打开图纸）与账号设置入口（语言/退出登录），
+    // 迁移到壳子页导航与壳顶栏「+」菜单
+    if (isShellMode.value) {
+      items = items.filter(
+        (item) =>
+          !isShellMenuCmd((item as Record<string, unknown>).cmd as string)
+      );
+    }
+    return items;
+  };
+  const actions = ref<PopoverAction[]>(getDefaultMenuData());
+  addCommand('Mx_NewFile', () => {
+    window.dispatchEvent(new CustomEvent('mxcad-new-file'));
+  });
+  addCommand('Mx_versionHistory', () => {
+    window.dispatchEvent(new CustomEvent('open-version-history'));
+  });
+  addCommand('Mx_layouts', () => {
+    setTimeout(() => {
+      isShowMenu.value = true;
+      const layouts = MxCpp.App.getCurrentMxCAD().getAllLayoutName();
+      const _layouts: PopoverAction[] = [];
+      layouts.forEach((name) => {
+        const call = () => {
+          isShowMenu.value = false;
+          MxCpp.App.getCurrentMxCAD().setCurrentLayout(name);
+        };
+        if (name === 'Model') {
+          _layouts.unshift({
+            text: name,
+            call,
+          });
+        } else {
+          _layouts.push({
+            text: name,
+            call,
+          });
         }
-        window.dispatchEvent(new CustomEvent('mxcad-show-library', { detail: 'block' }))
-    })
-    addCommand("Mx_export", showExportSubMenu)
-    addCommand("Mx_saveDwg", showExportSubMenu)
-    addCommand("Mx_exportPDF", showExportSubMenu)
-    // 分享当前图纸：home/index.vue 监听 mxcad-share-current 打开分享底部弹窗
-    addCommand("Mx_Share", () => {
-        window.dispatchEvent(new CustomEvent('mxcad-share-current'))
-    })
-    addCommand("Mx_SaveToCloud", () => {
-        saveToCloudTrigger.value++
-    })
-    addCommand("Mx_SaveAsToCloud", () => {
-        const { isAuthenticated } = useUser()
-        if (!isAuthenticated.value || isTokenExpired()) {
-            saveLoginRequiredTrigger.value++
-            return
-        }
-        saveAsToCloudTrigger.value++
-    })
-    const onSelectMenu = (action: PopoverAction) => {
-        action.cmd && callCommand(action.cmd)
-        action.call && action.call()
+      });
+      actions.value = _layouts;
+    }, 200);
+  });
+  addCommand('Mx_ShowCollaborate', () => {
+    window.dispatchEvent(new CustomEvent('mxcad-show-collaborate'));
+  });
+  addCommand('Mx_ShowDrawingLibrary', () => {
+    if (isShellMode.value) {
+      window.dispatchEvent(
+        new CustomEvent('mxcad-shell-navigate', {
+          detail: '/shell/library/drawing',
+        })
+      );
+      return;
     }
-    const onCloseMenu = () => {
-        actions.value = getDefaultMenuData()
+    window.dispatchEvent(
+      new CustomEvent('mxcad-show-library', { detail: 'drawing' })
+    );
+  });
+  addCommand('Mx_ShowBlockLibrary', () => {
+    if (isShellMode.value) {
+      window.dispatchEvent(
+        new CustomEvent('mxcad-shell-navigate', {
+          detail: '/shell/library/block',
+        })
+      );
+      return;
     }
-    const translatedActions = computed(() => {
-        // access activeLanguage to re-evaluate on language change
-        void i18n.activeLanguage
-        return actions.value.map((item) => ({
-            ...item,
-            text: item.text ? t(item.text) : item.text
-        }))
-    })
-    return {
-        isShowMenu,
-        actions: translatedActions,
-        onSelectMenu,
-        onCloseMenu
+    window.dispatchEvent(
+      new CustomEvent('mxcad-show-library', { detail: 'block' })
+    );
+  });
+  addCommand('Mx_export', showExportSubMenu);
+  addCommand('Mx_saveDwg', showExportSubMenu);
+  addCommand('Mx_exportPDF', showExportSubMenu);
+  // 分享当前图纸：home/index.vue 监听 mxcad-share-current 打开分享底部弹窗
+  addCommand('Mx_Share', () => {
+    window.dispatchEvent(new CustomEvent('mxcad-share-current'));
+  });
+  addCommand('Mx_SaveToCloud', () => {
+    saveToCloudTrigger.value++;
+  });
+  addCommand('Mx_SaveAsToCloud', () => {
+    const { isAuthenticated } = useUser();
+    if (!isAuthenticated.value || isTokenExpired(readToken())) {
+      saveLoginRequiredTrigger.value++;
+      return;
     }
-}
+    saveAsToCloudTrigger.value++;
+  });
+  const onSelectMenu = (action: PopoverAction) => {
+    action.cmd && callCommand(action.cmd);
+    action.call && action.call();
+  };
+  const onCloseMenu = () => {
+    actions.value = getDefaultMenuData();
+  };
+  const translatedActions = computed(() => {
+    // access activeLanguage to re-evaluate on language change
+    void i18n.activeLanguage;
+    return actions.value.map((item) => ({
+      ...item,
+      text: item.text ? t(item.text) : item.text,
+    }));
+  });
+  return {
+    isShowMenu,
+    actions: translatedActions,
+    onSelectMenu,
+    onCloseMenu,
+  };
+};

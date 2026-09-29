@@ -1,7 +1,13 @@
 import { t, i18nScope } from '@/languages';
 import { client } from '@cloudcad/api-sdk/client.gen';
 import { authControllerRefreshToken } from '../api-sdk';
-import { classifyApiError, isPermissionError, isAbortError } from './errorHandler';
+import { clearSession, readToken } from './authSession';
+import { errorKind } from './apiError';
+import {
+  classifyApiError,
+  isPermissionError,
+  isAbortError,
+} from './errorHandler';
 import { showToast } from 'vant';
 
 export function getApiBaseUrl(): string {
@@ -34,13 +40,7 @@ export function cachedApiUrl(path: string): string {
 let refreshPromise: Promise<boolean> | null = null;
 
 function getAccessToken(): string | undefined {
-  try {
-    const token = localStorage.getItem('accessToken');
-    if (token && token !== 'undefined' && token !== 'null') return token;
-  } catch {
-    // localStorage 不可用时忽略
-  }
-  return undefined;
+  return readToken() ?? undefined;
 }
 
 function getRefreshToken(): string | null {
@@ -61,7 +61,22 @@ function setRefreshToken(token: string): void {
   localStorage.setItem('refreshToken', token);
 }
 
-async function tryRefreshToken(): Promise<boolean> {
+/**
+ * 唯一刷新出口：并发调用共享同一 in-flight promise，避免轮换制 refresh token 被重复消费。
+ * fetch 层 401 刷新与 useAuthState 启动/错误刷新都汇入此函数，不再各自发请求互相作废。
+ * 确定性认证失败（401/UNAUTHORIZED，refresh token 已失效）时清除本地 token，避免反复重试；
+ * 网络错误保留 token 供重试。
+ */
+export function refreshTokensOnce(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = doRefreshTokens().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+async function doRefreshTokens(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 
@@ -78,9 +93,23 @@ async function tryRefreshToken(): Promise<boolean> {
       return true;
     }
     return false;
-  } catch {
+  } catch (error) {
+    // SDK 对非 2xx 直接 throw 解析后的 JSON body（无 status 字段），401 时 code 为 'UNAUTHORIZED'
+    if (isDefinitiveAuthError(error)) {
+      // 走会话唯一清理出口（同步 useAuthState/useUser 状态机）
+      clearSession();
+    }
     return false;
   }
+}
+
+/**
+ * 确定性认证失败：后端 401/UNAUTHORIZED（refresh token 失效、用户禁用等），不可重试。
+ * 判定委托 apiError.errorKind（unauthorized = 401/UNAUTHORIZED/AUTH_TOKEN_*），语义不变：
+ * SDK 对非 2xx throw body 无 status 字段，401 检测靠 code；网络错误归 network 不会被误清。
+ */
+function isDefinitiveAuthError(error: unknown): boolean {
+  return errorKind(error) === 'unauthorized';
 }
 
 // ── 401 刷新 — fetch 层覆写，与 PC packages/frontend/src/config/clientSetup.ts 对齐 ──
@@ -101,10 +130,8 @@ export function setupApiClient(): void {
         const code = typedData.code;
         if (typeof code === 'number' && code !== 0) {
           const message = String(typedData.message || t('业务处理失败'));
-          const error: Error & { code?: number; data?: unknown } = Object.assign(
-            new Error(message),
-            { code, data: typedData },
-          );
+          const error: Error & { code?: number; data?: unknown } =
+            Object.assign(new Error(message), { code, data: typedData });
           throw error;
         }
         if ('data' in typedData) {
@@ -120,22 +147,19 @@ export function setupApiClient(): void {
       let response = await nativeFetch(input, init);
 
       if (response.status === 401) {
-        const url = typeof input === 'string'
-          ? input
-          : input instanceof URL
-            ? input.href
-            : (input as Request).url;
+        const url =
+          typeof input === 'string'
+            ? input
+            : input instanceof URL
+              ? input.href
+              : (input as Request).url;
         const isAuthEndpoint =
           url.includes('/auth/login') ||
           url.includes('/auth/refresh') ||
           url.includes('/auth/forgot-password') ||
           url.includes('/auth/reset-password');
         if (!isAuthEndpoint) {
-          if (!refreshPromise) {
-            refreshPromise = tryRefreshToken();
-          }
-          const refreshed = await refreshPromise;
-          refreshPromise = null;
+          const refreshed = await refreshTokensOnce();
           if (refreshed) {
             const token = getAccessToken();
             const headers = new Headers(init?.headers);
@@ -198,33 +222,4 @@ export function handleApiError(error: unknown, context?: string): string {
   const message = `${prefix}${classified.message}`;
   showToast(message);
   return message;
-}
-
-/**
- * 获取 PC 端登录页面 URL。
- * 移动端通过 window.open 打开，PC 端登录后 redirect 回移动端 URL 带回 token。
- * 同端口 storage 事件触发原标签页同步认证状态。
- * @param redirectUrl 登录成功后要跳转的移动端 URL
- */
-export function getPCLoginUrl(redirectUrl?: string): string {
-  let url: string;
-  if (import.meta.env.DEV) {
-    url = 'http://localhost:3000/login';
-  } else {
-    url = '/login';
-  }
-  if (redirectUrl) {
-    url += `?redirect=${encodeURIComponent(redirectUrl)}`;
-  }
-  return url;
-}
-
-/**
- * 获取 PC 端忘记密码页面 URL。
- * 移动端不承载原生认证流程（ADR-0062），忘记密码走 PC 页；不带 redirect，
- * 完成重置后用户在 PC 重新登录。
- * DEV/prod 分支沿用 getPCLoginUrl，避免第二处 import.meta.env 引用。
- */
-export function getPCForgotPasswordUrl(): string {
-  return getPCLoginUrl().replace('/login', '/forgot-password');
 }

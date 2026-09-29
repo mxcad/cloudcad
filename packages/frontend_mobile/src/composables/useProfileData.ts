@@ -35,6 +35,8 @@ export interface UserProfile {
   isVip?: boolean
   /** 手机/微信注册用户可能未设置密码 */
   hasPassword?: boolean
+  /** 绑定的微信 openid（有值即可用微信验证/绑定态展示） */
+  wechatId?: string | null
   provider?: string
   /** ACTIVE / INACTIVE / SUSPENDED（UserStatus） */
   status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'

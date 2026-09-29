@@ -14,8 +14,13 @@ import {
 } from '../api-sdk';
 import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { processPendingImages } from '../services/pendingImageService';
-import { buildCacheKey, clearMxwebCache, setMxwebCache } from '../services/mxwebCacheService';
+import {
+  buildCacheKey,
+  clearMxwebCache,
+  setMxwebCache,
+} from '../services/mxwebCacheService';
 import { handleApiError } from '../utils/apiConfig';
+import { isTokenExpired, readToken } from '../utils/authSession';
 import { showToast, showLoadingToast, closeToast } from 'vant';
 import { PERMISSIONS } from '../services/permissionService';
 
@@ -26,18 +31,6 @@ export interface SaveResult {
   message?: string;
 }
 
-function isAccessTokenExpired(): boolean {
-  try {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return true;
-    const payload = JSON.parse(atob(token.split('.')[1] || ''));
-    if (!payload.exp) return true;
-    return payload.exp * 1000 <= Date.now();
-  } catch {
-    return true;
-  }
-}
-
 function checkLibraryPermission(): boolean {
   try {
     const userStr = localStorage.getItem('user');
@@ -45,7 +38,9 @@ function checkLibraryPermission(): boolean {
     const userData = JSON.parse(userStr);
     const permissions = userData?.role?.permissions || [];
     const permStrings = permissions
-      .map((p: unknown) => (typeof p === 'string' ? p : (p as Record<string, unknown>)?.permission))
+      .map((p: unknown) =>
+        typeof p === 'string' ? p : (p as Record<string, unknown>)?.permission
+      )
       .filter(Boolean) as string[];
     return (
       permStrings.includes(PERMISSIONS.LIBRARY_DRAWING_MANAGE) ||
@@ -60,11 +55,12 @@ function checkLibraryPermission(): boolean {
 async function updateCacheAndState(
   nodeId: string,
   blob: Blob,
-  editorState: ReturnType<typeof useEditorState>,
+  editorState: ReturnType<typeof useEditorState>
 ): Promise<void> {
   try {
     const nodeResult = await nodeControllerGetNode({ path: { nodeId } });
-    const nodeInfo = nodeResult.data as { updatedAt?: string; path?: string } | undefined;
+    const nodeInfo = nodeResult.data as
+      { updatedAt?: string; path?: string } | undefined;
     if (!nodeInfo) return;
 
     // 更新乐观锁时间戳
@@ -98,17 +94,25 @@ export function useSave() {
   async function save(commitMessage?: string): Promise<SaveResult> {
     const state = editorState.state;
 
-    if (!isAuthenticated.value || isAccessTokenExpired()) {
+    if (!isAuthenticated.value || isTokenExpired(readToken())) {
       return { success: false, needLogin: true, message: t('请先登录') };
     }
 
     // 检查当前文件是否已被删除
     if (state.isCurrentFileDeleted) {
-      return { success: false, needSaveAs: true, message: t('当前图纸已被删除，请另存为新文件') };
+      return {
+        success: false,
+        needSaveAs: true,
+        message: t('当前图纸已被删除，请另存为新文件'),
+      };
     }
 
     saving.value = true;
-    showLoadingToast({ message: t('正在保存文件...'), forbidClick: true, duration: 0 });
+    showLoadingToast({
+      message: t('正在保存文件...'),
+      forbidClick: true,
+      duration: 0,
+    });
 
     try {
       if (state.isPublicFile) {
@@ -120,7 +124,11 @@ export function useSave() {
       if (!state.permissions.canSave && state.fileId) {
         saving.value = false;
         closeToast();
-        return { success: false, needSaveAs: true, message: t('没有保存权限，请另存为') };
+        return {
+          success: false,
+          needSaveAs: true,
+          message: t('没有保存权限，请另存为'),
+        };
       }
 
       const blob = await getMxwebBlob();
@@ -128,32 +136,48 @@ export function useSave() {
       if (!state.fileId) {
         saving.value = false;
         closeToast();
-        return { success: false, needSaveAs: true, message: t('请另存为到云图') };
+        return {
+          success: false,
+          needSaveAs: true,
+          message: t('请另存为到云图'),
+        };
       }
 
       // 远程检查文件是否存在（处理跨会话/跨用户删除）
       try {
-        const nodeResp = await nodeControllerGetNode({ path: { nodeId: state.fileId }, throwOnError: true });
+        const nodeResp = await nodeControllerGetNode({
+          path: { nodeId: state.fileId },
+          throwOnError: true,
+        });
         const node = nodeResp.data;
         if (node?.fileStatus === 'DELETED' || node?.deletedAt) {
           editorState.setIsCurrentFileDeleted(true);
           saving.value = false;
           closeToast();
-          return { success: false, needSaveAs: true, message: t('当前图纸已被删除，请另存为新文件') };
+          return {
+            success: false,
+            needSaveAs: true,
+            message: t('当前图纸已被删除，请另存为新文件'),
+          };
         }
       } catch {
         // 404 → 节点已被永久删除
         editorState.setIsCurrentFileDeleted(true);
         saving.value = false;
         closeToast();
-        return { success: false, needSaveAs: true, message: t('当前图纸已被删除，请另存为新文件') };
+        return {
+          success: false,
+          needSaveAs: true,
+          message: t('当前图纸已被删除，请另存为新文件'),
+        };
       }
 
       let personalSpaceId: string | null = null;
       try {
         const result = await projectControllerGetPersonalSpace();
         if (!result.error) {
-          personalSpaceId = (result.data as unknown as { id: string })?.id || null;
+          personalSpaceId =
+            (result.data as unknown as { id: string })?.id || null;
         }
       } catch {
         personalSpaceId = null;
@@ -164,10 +188,19 @@ export function useSave() {
       const libraryKey = fileInfo?.libraryKey as string | undefined;
       const projectId = fileInfo?.projectId as string | undefined;
 
-      const isMyDrawing = !!(personalSpaceId && parentId && parentId === personalSpaceId);
+      const isMyDrawing = !!(
+        personalSpaceId &&
+        parentId &&
+        parentId === personalSpaceId
+      );
 
       if (isMyDrawing) {
-        await saveToNode(state.fileId, blob, commitMessage, state.expectedTimestamp);
+        await saveToNode(
+          state.fileId,
+          blob,
+          commitMessage,
+          state.expectedTimestamp
+        );
         // 后处理：缓存更新 + 状态重置
         await updateCacheAndState(state.fileId, blob, editorState);
         await processPendingImages(state.fileId).catch(() => {});
@@ -196,12 +229,21 @@ export function useSave() {
         }
         saving.value = false;
         closeToast();
-        return { success: false, needSaveAs: true, message: t('无资源库管理权限，请另存为到其他位置') };
+        return {
+          success: false,
+          needSaveAs: true,
+          message: t('无资源库管理权限，请另存为到其他位置'),
+        };
       }
 
       if (projectId && state.permissions.canSave) {
         try {
-          await saveToNode(state.fileId, blob, commitMessage, state.expectedTimestamp);
+          await saveToNode(
+            state.fileId,
+            blob,
+            commitMessage,
+            state.expectedTimestamp
+          );
           // 后处理：缓存更新 + 状态重置
           await updateCacheAndState(state.fileId, blob, editorState);
           await processPendingImages(state.fileId).catch(() => {});
