@@ -326,6 +326,15 @@ async function onUpdateMemberRole(member: any, roleId: string) {
 
 const ownerRoleId = computed(() => roles.value.find((r: any) => r.isOwnerRole)?.id)
 
+// 角色下拉选项必须是稳定引用：DropdownMenu 的渲染 effect 会在 item.renderTitle()
+// 里读到该 prop，模板内联 filter/map 每次渲染都是新数组 → 触发自身重渲染死循环
+// （Maximum recursive updates exceeded in component <van-dropdown-menu>）
+const memberRoleOptions = computed(() =>
+  roles.value
+    .filter((r: any) => !r.isOwnerRole)
+    .map((r: any) => ({ text: getProjectRoleDisplayName(r.name), value: r.id }))
+)
+
 function isOwner(member: any): boolean {
   return member.projectRoleId === ownerRoleId.value
 }
@@ -953,8 +962,8 @@ onMounted(() => {
             <div v-if="canManageMembers && !isOwner(m) && !isSelf(m)" class="member-actions">
               <van-dropdown-menu class="role-dropdown">
                 <van-dropdown-item
-                  :options="roles.filter(r => !r.isOwnerRole).map(r => ({ text: getProjectRoleDisplayName(r.name), value: r.id }))"
-                  v-model="m.projectRoleId"
+                  :options="memberRoleOptions"
+                  :model-value="m.projectRoleId"
                   @change="(val: any) => onUpdateMemberRole(m, val)"
                 />
               </van-dropdown-menu>
