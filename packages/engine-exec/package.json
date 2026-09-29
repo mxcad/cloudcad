@@ -16,6 +16,9 @@
     "type-check": "tsc --noEmit",
     "test": "tsc && node --test dist/test/"
   },
+  "dependencies": {
+    "@cloudcad/contracts": "workspace:*"
+  },
   "keywords": [
     "cloudcad",
     "mxcad",

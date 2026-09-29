@@ -2,33 +2,37 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import type { ConversionRequest } from '@cloudcad/contracts';
+import { parseEngineOutput } from '@cloudcad/contracts';
 import MxcadRunner, { ConversionExecutionError } from '../mxcad/runner';
 
-describe('MxcadRunner._parseOutput', () => {
+// 引擎输出解析的唯一实现已下沉到 @cloudcad/contracts 的 parseEngineOutput
+// （MxcadRunner 不再有 _parseOutput 副本）：backend 与 conversion-service 共用同一份。
+// 失败表现为抛错而非返回 null——失败性质由 interpretEngineRun 归为 output-unparseable。
+describe('parseEngineOutput', () => {
   it('should parse valid JSON output', () => {
-    const parsed = new MxcadRunner()._parseOutput('some log\n{"code":0,"newpath":"/out/a.mxweb"}');
-    assert.equal(parsed?.code, 0);
-    assert.equal(parsed?.newpath, '/out/a.mxweb');
+    const parsed = parseEngineOutput('some log\n{"code":0,"newpath":"/out/a.mxweb"}');
+    assert.equal(parsed.code, 0);
+    assert.equal(parsed.newpath, '/out/a.mxweb');
   });
 
   it('should extract JSON after leading log noise', () => {
-    const parsed = new MxcadRunner()._parseOutput(
+    const parsed = parseEngineOutput(
       'INFO: start\nWARN: skip\n{"code":1,"message":"boom"}'
     );
-    assert.equal(parsed?.code, 1);
-    assert.equal(parsed?.message, 'boom');
+    assert.equal(parsed.code, 1);
+    assert.equal(parsed.message, 'boom');
   });
 
-  it('畸形输出返回 null（解析失败不再伪装成 code=1 的结果对象，否则失败性质会丢失）', () => {
-    assert.equal(new MxcadRunner()._parseOutput('mxcad produced garbage output'), null);
+  it('畸形输出抛错（解析失败不再伪装成 code=1 的结果对象，否则失败性质会丢失）', () => {
+    assert.throws(() => parseEngineOutput('mxcad produced garbage output'));
   });
 
-  it('截断 JSON 返回 null', () => {
-    assert.equal(new MxcadRunner()._parseOutput('{"code":0,"newpath":'), null);
+  it('截断 JSON 抛错', () => {
+    assert.throws(() => parseEngineOutput('{"code":0,"newpath":'));
   });
 
-  it('缺 code 字段的 JSON 返回 null（不能当成 code=undefined 的成功）', () => {
-    assert.equal(new MxcadRunner()._parseOutput('{"newpath":"/out/a.mxweb"}'), null);
+  it('缺 code 字段的 JSON 抛错（不能当成 code=undefined 的成功）', () => {
+    assert.throws(() => parseEngineOutput('{"newpath":"/out/a.mxweb"}'));
   });
 });
 

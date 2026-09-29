@@ -392,6 +392,10 @@ importers:
         version: 5.9.3
 
   packages/engine-exec:
+    dependencies:
+      '@cloudcad/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       '@types/node':
         specifier: ^22.10.7
@@ -14769,7 +14773,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.9
       estree-walker: 2.0.2
-      picomatch: 4.0.4
+      picomatch: 4.0.5
     optionalDependencies:
       rollup: 3.30.0
 
@@ -23601,7 +23605,7 @@ snapshots:
       magic-string: 0.30.21
       mlly: 1.8.2
       pathe: 2.0.3
-      picomatch: 4.0.4
+      picomatch: 4.0.5
       pkg-types: 1.3.1
       scule: 1.3.0
       strip-literal: 2.1.1
@@ -23667,7 +23671,7 @@ snapshots:
     dependencies:
       '@jridgewell/remapping': 2.3.5
       acorn: 8.17.0
-      picomatch: 4.0.4
+      picomatch: 4.0.5
       webpack-virtual-modules: 0.6.2
 
   unplugin@3.3.0(esbuild@0.28.1)(rollup@3.30.0)(vite@4.5.14(@types/node@22.20.0)(lightningcss@1.32.0)(sass@1.101.0)(terser@5.14.2))(webpack@5.106.2(esbuild@0.28.1)(lightningcss@1.32.0)(postcss@8.5.26)):

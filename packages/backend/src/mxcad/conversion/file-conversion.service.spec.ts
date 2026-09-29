@@ -2,9 +2,12 @@
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
 /////////////////////////////////////////////////////////////////////////////////
-jest.mock("@cloudcad/engine-exec", () => ({
-	runMxcadAssembly: jest.fn(),
-}));
+// 只 mock 真正起子进程的 runMxcadAssembly；结果解读层（interpretEngineRun /
+// salvageSuccessResult / resolveEngineNewpath）是纯函数，保持真实实现——它正是被测对象之一。
+jest.mock("@cloudcad/engine-exec", () => {
+	const actual = jest.requireActual("@cloudcad/engine-exec");
+	return { ...actual, runMxcadAssembly: jest.fn() };
+});
 
 import * as path from "path";
 import { runMxcadAssembly } from "@cloudcad/engine-exec";
@@ -676,6 +679,7 @@ describe("FileConversionService", () => {
 
 		it("conversion-service 模式：convertFile 经 IFunctionExecutor 转发，不 spawn 进程", async () => {
 			const mockExecutor = {
+				isRemote: true,
 				invoke: jest.fn(async () => ({
 					taskId: "cs_1",
 					status: "COMPLETED",
@@ -706,6 +710,7 @@ describe("FileConversionService", () => {
 
 		it("conversion-service 模式：转发参数为 ConversionOptions 驼峰形状（srcPath 非 srcpath），防契约断裂", async () => {
 			const mockExecutor = {
+				isRemote: true,
 				invoke: jest.fn(async () => ({
 					taskId: "cs_1",
 					status: "COMPLETED",
@@ -769,6 +774,7 @@ describe("FileConversionService", () => {
 
 		it("conversion-service 模式：转发失败时返回 isOk=false 与错误信息", async () => {
 			const mockExecutor = {
+				isRemote: true,
 				invoke: jest.fn(async () => ({
 					taskId: "cs_1",
 					status: "FAILED",
@@ -796,6 +802,7 @@ describe("FileConversionService", () => {
 
 		it("conversion-service 模式：转发失败且带 debugNodeId 时落盘调试信息（与进程内路径对齐）", async () => {
 			const mockExecutor = {
+				isRemote: true,
 				invoke: jest.fn(async () => ({
 					taskId: "cs_1",
 					status: "FAILED",
@@ -857,6 +864,7 @@ describe("FileConversionService", () => {
 			"conversion-service 模式：errorCategory=%s errorCode=%s 归类 transient=%s",
 			async (errorCategory, errorCode, expectedTransient) => {
 				const mockExecutor = {
+					isRemote: true,
 					invoke: jest.fn(async () => ({
 						taskId: "cs_1",
 						status: "FAILED",
@@ -890,6 +898,7 @@ describe("FileConversionService", () => {
 			// 与上一个用例逐字相同的文案「转换超时」，但分类是 content-error：
 			// 旧实现按 includes('转换超时') 判 transient=true，此处证明分类只认结构化字段。
 			const mockExecutor = {
+				isRemote: true,
 				invoke: jest.fn(async () => ({
 					taskId: "cs_1",
 					status: "FAILED",
@@ -921,6 +930,7 @@ describe("FileConversionService", () => {
 			// {code, message}（无 newpath 键），runner 成功时补 newpath: ''，
 			// getTaskStatus 映射 outputPath = raw.newpath ?? raw.outputPath = ''（空串非 nullish）。
 			const mockExecutor = {
+				isRemote: true,
 				invoke: jest.fn(async () => ({
 					taskId: "cs_1",
 					status: "COMPLETED",
@@ -966,10 +976,12 @@ describe("FileConversionService", () => {
 
 		it("process-pool 模式：executor 已接线时 convertFile 也不得转发（回归：f2df958 删模式守卫致 convertFile↔invoke 无限递归死锁）", async () => {
 			// 生产 process-pool 模式下 IFunctionExecutor = ProcessPoolExecutor，其 executeTask
-			// 回调本服务 convertFile。转发分支若缺模式守卫，convertFile → invoke → convertFile → …
+			// 回调本服务 convertFile。转发分支若缺 isRemote 判定（f2df958 曾删掉原先的模式守卫），
+			// convertFile → invoke → convertFile → …
 			// 递归到两个限流器槽位耗尽，最内层任务入队永不开始（超时只覆盖运行中任务）→ 死锁：
 			// 节点恒 PROCESSING、前端恒轮询 /mxcad/conversion/tasks、引擎进程从未启动。
 			const mockExecutor = {
+				isRemote: false,
 				invoke: jest.fn(() => {
 					throw new Error("process-pool 模式不得转发 convertFile 到执行器");
 				}),
@@ -997,6 +1009,7 @@ describe("FileConversionService", () => {
 
 		it("process-pool 模式：executor 已接线时 convertBinToMxweb 也不得转发（同守卫同回归）", async () => {
 			const mockExecutor = {
+				isRemote: false,
 				invoke: jest.fn(() => {
 					throw new Error("process-pool 模式不得转发 convertBinToMxweb 到执行器");
 				}),
@@ -1015,6 +1028,64 @@ describe("FileConversionService", () => {
 
 			const r = await svc.convertBinToMxweb("/tmp/f.bin", "/tmp/out", "f.mxweb");
 			expect(r.success).toBe(true);
+			expect(mockExecutor.invoke).not.toHaveBeenCalled();
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
+			await module.close();
+		});
+
+		it("执行器未声明 isRemote 时不得转发（fail-closed：漏声明只退化为进程内 spawn，恒安全）", async () => {
+			// 守卫按 `=== true` 判定：执行器漏声明 isRemote（如仅实现 invoke/getTaskStatus 的测试桩）
+			// 时一律走进程内 spawn。误判为可转发则 convertFile↔invoke 无限递归死锁，误判为本地
+			// 最多退化为进程内 spawn——故缺省取安全方向。
+			const mockExecutor = {
+				invoke: jest.fn(() => {
+					throw new Error("未声明 isRemote 的执行器不得转发");
+				}),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode() },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(true);
+			expect(mockExecutor.invoke).not.toHaveBeenCalled();
+			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
+			await module.close();
+		});
+
+		it("FUNCTION_EXECUTOR 配置不再决定转发：远端判定只认执行器自声明的 isRemote", async () => {
+			// 重构前配置被读两次（service 内 useConversionService + 模块内 provider 选择），
+			// 两者可不同步——service 判可转发而执行器是本地实现即死锁。现在配置只由
+			// FunctionExecutorModule 读一次，service 完全不看配置：即便配置写着 conversion-service，
+			// 只要注入的执行器声明 isRemote=false 就走进程内 spawn。
+			const mockExecutor = {
+				isRemote: false,
+				invoke: jest.fn(() => {
+					throw new Error("配置声明 conversion-service 但执行器为本地，不得转发");
+				}),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			const r = await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			expect(r.isOk).toBe(true);
 			expect(mockExecutor.invoke).not.toHaveBeenCalled();
 			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
 			await module.close();
