@@ -260,7 +260,7 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 | 1 数据层统一 | ✅ 完成 | 2026-09-29 | 032a974 | 项目详情页文件列表改用 useUnifiedFileList，消除两域漂移 |
 | 2 回收站 | ✅ 完成 | 2026-09-29 | d51c4d9 | 统一回收站页（项目/个人空间双 scope：恢复/彻底删除/清空/来源徽章）+ useTrashList.spec 18 例 |
 | 3 项目重命名/删除+tab 名 | ✅ 完成 | 2026-09-29 | e958eb1 | 项目长按菜单重命名/删除（软删进回收站）+ tab 名「我的项目」+ useProjectActions.spec 7 例 |
-| 4 全局搜索 | ⬜ 未开始 | — | — | |
+| 4 全局搜索 | ✅ 完成 | 2026-09-29 | 996a18e | 三 scope 递归搜索：tab0 global 混合结果（项目卡片+文件行+来源徽章）/ personal_space / project_files；useProjectSearch + useUnifiedFileList 搜索分支，20 例 spec |
 | 5 小项 | ⬜ 未开始 | — | — | |
 
 **整体 DoD**：5 阶段全部 ✅；`pnpm type-check` 0 错；`pnpm test` 全绿；`pnpm build` 成功；develop 分支 5 个 commit 可追溯。
@@ -270,8 +270,9 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 | # | 风险/问题 | 处理 |
 |---|----------|------|
 | R1 | `UnifiedFileList` 的 FAB 渲染与 `breadcrumb=[]` 的空条行为未逐行确认 | 阶段 2 动手时先读模板确认，按 §5 阶段 2 任务清单加 `showFab` prop 与空条守卫 |
-| R2 | `nodeControllerSearch` 响应节点是否带 `ancestorPath` 未实测 | 阶段 4 先核实（看后端 search 各分支的 include/映射）；不带就不显示来源徽章，**禁止前端自行拼路径** |
+| R2 | ~~`nodeControllerSearch` 响应节点是否带 `ancestorPath` 未实测~~ 已核实（阶段 4）：后端 `search.service.ts` 的 `injectAncestorPaths` 在 searchProjectFiles/searchAllProjects/searchLibrary/searchPersonalSpace 均注入 `ancestorPath`（名称路径 `"根 > 父1 > 父2"`，**无节点 id**）；global scope 的文件命中经 searchAllProjects 注入、项目命中为根节点无该字段。故来源徽章直接渲染 `ancestorPath`（非空才显示）；文件夹命中无法还原面包屑 → 移动端「进入」= 跳所属项目根/个人空间 tab（PC 用新标签+高亮，不适用移动端） |
 | R3 | `ShareLinkSheet` 入参是否依赖编辑器上下文未确认 | 阶段 5 先读组件定方案（§5 阶段 5 给了两分支） |
 | R4 | 并发会话可能随时改到 `useUnifiedFileList.ts` 周边文件（其当前仅 CRLF 差异无内容改动） | 每阶段开工前重查 `git status`；若该文件出现内容级在途改动，停下报告，勿叠加 |
 | R5 | `node_modules/.bin` 曾被并发会话清空 | 命令报 command not found 时根目录 `CI=true pnpm install` 恢复 |
 | R6 | 项目删除的 403 文案与通用错误文案的区分 | 阶段 3 用 `handleApiError` 现有能力，403 统一走权限错误文案（grep 已有 key） |
+| R7 | 计划外缺陷（阶段 4 发现，未修）：`useUnifiedFileList.goBackTo(-1)`（面包屑「根目录」）把 `currentFolderId` 置 null 而非根 id → `loadNodes` 无目标早退，列表停留在上一子文件夹的旧内容。个人空间 tab 与项目详情页均受影响（阶段 1 既有代码）。修复=一行（置 `rootId`），但属数据层导航语义，留待用户裁定是否单独立票 |
