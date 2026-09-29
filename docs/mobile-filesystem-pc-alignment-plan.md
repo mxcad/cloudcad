@@ -268,7 +268,7 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 | 二期 h 列表内版本历史 | ✅ 完成 | 2026-09-29 | 0bf2d3b | 文件项菜单「版本历史」→ VersionHistoryPopup 显式 target（projectId+path 取自节点，无需先开编辑器）；useVersionHistory.loadHistory 加可选 target 参数（编辑器路径不变）；选中版本 URL 带 ?v= 走统一打开入口；FileListItem 补 projectId 字段 |
 | 二期 i18n | ✅ 完成 | 2026-09-29 | d470a18 | 40 新键（b/d/g/h）extract+compile；顺带移除零引用的死键 2024「上传中 {pct}%」；恢复 831/852（仍被 useFileLoader 三元内引用、extract 扫描器不可见，防 en/ko 翻译丢失） |
 
-**整体 DoD**：5 阶段 + 二期 b/d/g/h 全部 ✅；`pnpm type-check` 我的范围 0 错（auth 页等预存错误不属本工作）；`pnpm test` 382/382 全绿；`pnpm build` 成功；develop 分支 7 个 commit 可追溯。
+**整体 DoD**：5 阶段 + 二期 b/d/g/h 全部 ✅，R7 留票已修（`e809e64`）；`pnpm type-check` 本工作范围 0 错（auth 页 7 错 + m_mx_find_text JSX 错为预存，属其他工作流）；`pnpm test` 382/382 全绿；`pnpm build` 成功；develop 分支 commit 可追溯（032a974/d51c4d9/e958eb1/996a18e/9436b26 + 0bf2d3b/d470a18/002bd81 + e809e64）。
 
 ## 9. 已知风险与开放问题
 
@@ -280,4 +280,4 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 | R4 | 并发会话可能随时改到 `useUnifiedFileList.ts` 周边文件（其当前仅 CRLF 差异无内容改动） | 每阶段开工前重查 `git status`；若该文件出现内容级在途改动，停下报告，勿叠加 |
 | R5 | `node_modules/.bin` 曾被并发会话清空 | 命令报 command not found 时根目录 `CI=true pnpm install` 恢复 |
 | R6 | 项目删除的 403 文案与通用错误文案的区分 | 阶段 3 用 `handleApiError` 现有能力，403 统一走权限错误文案（grep 已有 key） |
-| R7 | 计划外缺陷（阶段 4 发现，未修）：`useUnifiedFileList.goBackTo(-1)`（面包屑「根目录」）把 `currentFolderId` 置 null 而非根 id → `loadNodes` 无目标早退，列表停留在上一子文件夹的旧内容。个人空间 tab 与项目详情页均受影响（阶段 1 既有代码）。修复=一行（置 `rootId`），但属数据层导航语义，留待用户裁定是否单独立票 |
+| R7 | ~~计划外缺陷（阶段 4 发现，未修）：`useUnifiedFileList.goBackTo(-1)`（面包屑「根目录」）把 `currentFolderId` 置 null 而非根 id → `loadNodes` 无目标早退，列表停留在上一子文件夹的旧内容~~ **已修（2026-09-29，`e809e64`）**：回根置 `rootId`，`loadNodes` 重查根子节点；回归用例同步改为断言根 id + 根子节点重查 + 回根不覆盖存档（persistLocation 的 `=== rootId` 跳过分支天然兼容） |
