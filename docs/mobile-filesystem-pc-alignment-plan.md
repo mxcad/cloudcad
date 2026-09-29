@@ -127,10 +127,10 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 **目标**：`ProjectDetailPage` 的文件列表数据层从手写 `loadFiles` 切换到 `useUnifiedFileList('project')`，消除两域漂移。
 
 任务清单：
-- [ ] 通读 `ProjectDetailPage.vue`，标出文件列表数据逻辑全部（loadFiles/分页/排序/搜索/面包屑/loadMore/下拉刷新/配额条与上传禁用联动）
-- [ ] 与 `useUnifiedFileList` 能力逐项比对；composable 缺的能力**加进 composable**（两域共用），项目页特有的行为（如权限门控上传）留在页面层
-- [ ] `ProjectDetailPage` 改用 composable，删除手写 loadFiles 及其孤儿引用
-- [ ] 确认 `loadRootNode` 语义覆盖项目根（项目页入口传 projectId 作根）
+- [x] 通读 `ProjectDetailPage.vue`，标出文件列表数据逻辑全部（loadFiles/分页/排序/搜索/面包屑/loadMore/下拉刷新/配额条与上传禁用联动）
+- [x] 与 `useUnifiedFileList` 能力逐项比对；composable 缺的能力**加进 composable**（两域共用），项目页特有的行为（如权限门控上传）留在页面层
+- [x] `ProjectDetailPage` 改用 composable，删除手写 loadFiles 及其孤儿引用
+- [x] 确认 `loadRootNode` 语义覆盖项目根（项目页入口传 projectId 作根）
 
 **验证**：`pnpm type-check` 0 错；`pnpm test` 全绿；`grep -n "loadFiles" ProjectDetailPage.vue` 零命中；代码走查：数据流（加载/分页/排序/搜索/面包屑/刷新）与重构前一致。
 **提交**：`refactor(mobile): 项目详情页文件列表改用 useUnifiedFileList，消除两域数据层漂移`
@@ -140,7 +140,7 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 **目标**：`FileBrowserPage` 第 3 个 tab「回收站」= 统一回收站页（scope chips：项目/个人空间）。
 
 任务清单：
-- [ ] 新建 `composables/useTrashList.ts`（薄 composable，API 如下）：
+- [x] 新建 `composables/useTrashList.ts`（薄 composable，API 如下）：
   ```ts
   useTrashList(personalSpaceId: Ref<string | null>)
   // state: scope('projects'|'personal'), nodes(FileSystemNodeDto[]), loading, error,
@@ -156,7 +156,7 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
   //   clear()           → scope==='projects' ? trashControllerClearTrash() : trashControllerClearProjectTrash({path:{projectId:personalSpaceId.value}})
   // 每个动作成功后：toast + 回第 1 页重载；失败：error toast（403 显示权限错误文案）
   ```
-- [ ] `FileBrowserPage.vue` 加第 3 个 `van-tab title="回收站"`：
+- [x] `FileBrowserPage.vue` 加第 3 个 `van-tab title="回收站"`：
   - scope chips（项目/个人空间）——复用项目筛选的 `filter-chip` 样式
   - `van-search`（关键词）+ 排序入口（复用个人 tab 的排序 ActionSheet 模式）
   - 复用 `UnifiedFileList`：`items`=trash 节点格式化、`breadcrumb=[]`、隐藏 FAB、`showToolbar` 保留（搜索+排序+视图切换）
@@ -165,14 +165,14 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
   - 页头「清空回收站」按钮 → van-dialog 强确认（危险色，文案说明不可恢复）
   - 来源徽章：每条显示 `ancestorPath`（格式化为浅色小字，参照 PC FileItem searchPathBadge 的位置）
   - 已删项目根：`isRoot && nodeType==='PROJECT'` → 用 `ProjectIcon`（`components/FileIcons`）
-- [ ] `UnifiedFileList.vue` 必要小改（不破坏现有两域调用）：
+- [x] `UnifiedFileList.vue` 必要小改（不破坏现有两域调用）：
   - 加 `showFab?: boolean`（默认 true）；trash tab 传 false
   - `selectionAction` emit 类型扩为 `'download'|'delete'|'move'|'copy'|'restore'|'permanentDelete'`
   - 确认 `breadcrumb=[]` 时面包屑条不渲染（若会渲染空条，加守卫）
   - 来源徽章：若 `FileListItem` 无 `ancestorPath`，在 `useNodeFormatter.ts` 加**可选字段** `ancestorPath?: string`（`formatNodeAsItem` 透传 `node.ancestorPath`），`UnifiedFileList` 在 list/grid 项上渲染（仅非空时）
-- [ ] 权限：personal scope 全动作可见；projects scope 不建逐条权限查询，后端 403 → 权限错误 toast（v1 简化，决策已定）
-- [ ] i18n：新文案（回收站、项目、个人空间（scope chip 文案）、恢复、彻底删除、清空回收站、已恢复、已彻底删除、清空确认文案、权限错误等）→ 先 grep 语言文件查已有 key 复用，再 `t()` 写入 → `pnpm i18n:extract && pnpm i18n:compile`
-- [ ] 测试：新建 `composables/useTrashList.spec.ts`（mock SDK 函数）覆盖：scope 切换重载、load/分页/搜索防抖/排序、restore 根 vs 非根分支、批量恢复、彻底删除单条/批量、clear 两 scope 分支、失败 toast 路径
+- [x] 权限：personal scope 全动作可见；projects scope 不建逐条权限查询，后端 403 → 权限错误 toast（v1 简化，决策已定）
+- [x] i18n：新文案（回收站、项目、个人空间（scope chip 文案）、恢复、彻底删除、清空回收站、已恢复、已彻底删除、清空确认文案、权限错误等）→ 先 grep 语言文件查已有 key 复用，再 `t()` 写入 → `pnpm i18n:extract && pnpm i18n:compile`
+- [x] 测试：新建 `composables/useTrashList.spec.ts`（mock SDK 函数）覆盖：scope 切换重载、load/分页/搜索防抖/排序、restore 根 vs 非根分支、批量恢复、彻底删除单条/批量、clear 两 scope 分支、失败 toast 路径
 
 **验证**：`pnpm type-check` 0 错；`pnpm test` 全绿（含新 spec）；现有两域（项目 tab/个人空间 tab）行为不变（UnifiedFileList 改动处走查）。
 **提交**：`feat(mobile): 回收站统一页（项目/个人空间双 scope：恢复/彻底删除/清空/来源徽章）`
@@ -182,14 +182,14 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 **目标**：我的项目 tab 补齐项目级操作，tab 名对齐 PC。
 
 任务清单：
-- [ ] `FileBrowserPage.vue` tab0 标题「项目」→ `t('我的项目')`（注意：i18n key 变更会影响语言文件，extract 后核对）
-- [ ] 项目卡片操作入口：先读现有卡片交互（点击=进入项目）。加**长按菜单**（与文件项一致的 action-sheet 模式）：**重命名 / 删除（危险色）**
+- [x] `FileBrowserPage.vue` tab0 标题「项目」→ `t('我的项目')`（注意：i18n key 变更会影响语言文件，extract 后核对）
+- [x] 项目卡片操作入口：先读现有卡片交互（点击=进入项目）。加**长按菜单**（与文件项一致的 action-sheet 模式）：**重命名 / 删除（危险色）**
   - 重命名：参照 `RenameNodePopup.vue` 模式（输入框+名称校验复用 `utils/validateName.ts`）→ `projectControllerUpdateProject({ path:{projectId}, body:{ name } })`（`UpdateNodeDto` 全可选，只传 name 不碰 description）
   - 删除：van-dialog 强确认（说明：删除后进回收站可恢复）→ `projectControllerDeleteProject({ path:{projectId}, query:{ permanently: false } })`（**permanently 必填**）
   - 成功后刷新项目列表（loadProjects）；403 → 权限错误 toast
-- [ ] 逻辑抽到 `composables/useProjectActions.ts`（可测性），页面只做接线
-- [ ] i18n + extract + compile
-- [ ] 测试：`useProjectActions.spec.ts`（重命名成功/校验失败/403、删除成功/403/取消）
+- [x] 逻辑抽到 `composables/useProjectActions.ts`（可测性），页面只做接线
+- [x] i18n + extract + compile
+- [x] 测试：`useProjectActions.spec.ts`（重命名成功/校验失败/403、删除成功/403/取消）
 
 **验证**：`pnpm type-check` 0 错；`pnpm test` 全绿。
 **提交**：`feat(mobile): 项目重命名/删除 + tab 名统一「我的项目」`
@@ -199,19 +199,19 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 **目标**：三个 scope 的递归搜索（D6）。
 
 任务清单：
-- [ ] `useUnifiedFileList.ts` 搜索行为改造：
+- [x] `useUnifiedFileList.ts` 搜索行为改造：
   - 新增 `rootId` ref（`loadRootNode` 时记录）
   - `debouncedSearch` 非空时改走 `nodeControllerSearch`：
     - domain `personal` → `{ keyword, scope: 'personal_space', page, limit: 30, sortBy, sortOrder }`
     - domain `project` → `{ keyword, scope: 'project_files', projectId: rootId, page, limit: 30, sortBy, sortOrder }`
   - 搜索态：`nodes` = 搜索结果；`enterFolder` 时先清搜索（对齐 PC 上下文切换清搜索）；清空搜索词 → 回 `getChildren` 正常列表
   - 搜索结果交互：文件夹→进入、文件→打开（沿用现有 itemClick 分发）
-- [ ] `FileBrowserPage.vue` tab0（我的项目）：
+- [x] `FileBrowserPage.vue` tab0（我的项目）：
   - `keyword` 非空 → `nodeControllerSearch({ query: { keyword, scope: 'global', filter: projectFilter, page, limit: 30 } })`
   - 混合结果渲染：`nodeType==='PROJECT'` 命中 → 项目卡片样式（点击进入项目）；文件/文件夹命中 → 文件行（点=打开/进入）+ 来源徽章（`ancestorPath`，先核实搜索响应是否返回该字段，**不返回就不显示徽章**，勿自行拼）
   - `keyword` 为空 → 回 `projectControllerGetProjects` 正常列表（保留现有筛选/分页逻辑）
-- [ ] i18n（搜索 placeholder、无结果文案——先 grep 已有 key）+ extract + compile
-- [ ] 测试：新建 `composables/useUnifiedFileList.spec.ts`（mock SDK）覆盖：搜索 scope 派生（personal/project）、搜索结果替换、清空搜索回退、enterFolder 清搜索；tab0 global 搜索逻辑若留在页面层则抽 composable 后测
+- [x] i18n（搜索 placeholder、无结果文案——先 grep 已有 key）+ extract + compile
+- [x] 测试：新建 `composables/useUnifiedFileList.spec.ts`（mock SDK）覆盖：搜索 scope 派生（personal/project）、搜索结果替换、清空搜索回退、enterFolder 清搜索；tab0 global 搜索逻辑若留在页面层则抽 composable 后测
 
 **验证**：`pnpm type-check` 0 错；`pnpm test` 全绿。
 **提交**：`feat(mobile): 全局递归搜索（global/project_files/personal_space 三 scope 对齐 PC）`
