@@ -911,6 +911,24 @@ async function prepareDeployStore(variant = 'oss') {
 }
 
 /**
+ * mxcad 系列 dist 源目录（--private-mxcad）。默认相对路径基于 PROJECT_ROOT，
+ * 可用环境变量单独覆盖某个包。packDeploy 与 packUpgrade 共用，避免两份清单漂移。
+ */
+function getDistTargets() {
+  return {
+    'mxcad-app':
+      process.env.MXCAD_APP_DIST_SRC ||
+      path.join(PROJECT_ROOT, '..', 'Sample', 'Edit', 'MXCADAppVuetify3', 'lib', 'dist'),
+    mxcad:
+      process.env.MXCAD_DIST_SRC ||
+      path.join(PROJECT_ROOT, '..', 'MxDrawPlugin', 'mxcad', 'dist'),
+    mxdraw:
+      process.env.MXDRAW_DIST_SRC ||
+      path.join(PROJECT_ROOT, '..', 'MxDrawPlugin', 'mxdraw', 'dist'),
+  };
+}
+
+/**
  * 替换 mxcad 系列包 dist（私有修改，不进 git）并重建前端产物。
  *
  * 用外部目录的 dist 覆盖 node_modules/<pkg>/dist，然后 build 对应前端：
@@ -932,14 +950,17 @@ function replaceAndBuildDists(targets) {
   };
   for (const [pkg, src] of Object.entries(targets)) {
     const pkgDir = pkgDirs[pkg] || 'packages/frontend';
-    const dest = path.join(PROJECT_ROOT, pkgDir, 'node_modules', pkg, 'dist');
+    // src 指向 dist 目录，取其父目录作为包根（含 package.json、packToolPlugin 等）。
+    // 必须 path.resolve：env 覆盖允许相对路径，裸 dirname('dist') 返回 '.' 会复制整个 CWD
+    const srcPkgRoot = path.dirname(path.resolve(src));
     if (!fs.existsSync(src)) {
       error(`${pkg} dist 源目录不存在: ${src}`);
       throw new Error(`${pkg} dist 源目录不存在`);
     }
-    log(`替换 ${pkg} dist: ${src} → ${dest}`);
+    const dest = path.join(PROJECT_ROOT, pkgDir, 'node_modules', pkg);
+    log(`替换 ${pkg}: ${srcPkgRoot} → ${dest}`);
     fs.rmSync(dest, { recursive: true, force: true });
-    fs.cpSync(src, dest, { recursive: true });
+    fs.cpSync(srcPkgRoot, dest, { recursive: true });
   }
   // 必须 cd 进包目录跑裸 pnpm build（同 buildFrontendLocally）。不能用
   // `pnpm --filter <pkg> build` + cwd: PROJECT_ROOT：pnpm 会把 INIT_CWD 设成仓库根，
@@ -1499,20 +1520,9 @@ async function packDeploy(platform, variant = 'oss') {
   // 后续 prepareDeployStore 重置 node_modules 不影响。
   // 默认相对路径基于 PROJECT_ROOT，可用环境变量单独覆盖某个包。
   if (process.env.PRIVATE_MXCAD === '1') {
-    const distTargets = {
-      'mxcad-app':
-        process.env.MXCAD_APP_DIST_SRC ||
-        path.join(PROJECT_ROOT, '..', 'Sample', 'Edit', 'MXCADAppVuetify3', 'lib', 'dist'),
-      mxcad:
-        process.env.MXCAD_DIST_SRC ||
-        path.join(PROJECT_ROOT, '..', 'MxDrawPlugin', 'mxcad', 'dist'),
-      mxdraw:
-        process.env.MXDRAW_DIST_SRC ||
-        path.join(PROJECT_ROOT, '..', 'MxDrawPlugin', 'mxdraw', 'dist'),
-    };
     log('');
     log('[2] 替换 mxcad 系列 dist（私有版本）...');
-    replaceAndBuildDists(distTargets);
+    replaceAndBuildDists(getDistTargets());
   }
 
   // 3. 验证生产依赖 store + 补充全平台 Prisma 引擎（复用 Docker 已建 store，不重装）
@@ -1646,6 +1656,15 @@ async function packUpgrade(platform, variant = 'oss') {
 
   // 前端为纯静态产物：始终强制重build（PC + 移动端），保证最新源码
   buildFrontendLocally();
+
+  // 可选：替换 mxcad 系列 dist（私有修改）并重建前端产物。放 buildFrontendLocally
+  // 之后，保证私有产物是最终态（该函数自身会重建受影响的端）。upgrade 不调
+  // prepareDeployStore，devDeps（vite）不被剔除，故无 deploy 的顺序约束。
+  if (process.env.PRIVATE_MXCAD === '1') {
+    log('');
+    log('替换 mxcad 系列 dist（私有版本）...');
+    replaceAndBuildDists(getDistTargets());
+  }
 
   // 路线 B：升级包不带 store，复用目标机已有部署包 store 离线补装依赖
   // （首次部署必须用部署包打底；依赖变更由目标机 shouldReinstallDependencies 判定）
