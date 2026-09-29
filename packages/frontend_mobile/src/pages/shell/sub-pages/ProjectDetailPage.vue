@@ -36,6 +36,8 @@ import { usersControllerSearchUsers } from '@cloudcad/api-sdk/sdk.gen'
 import { formatNodeAsItems, formatSize } from '@/composables/useNodeFormatter'
 import { useShellFileOpen } from '@/composables/useShellFileOpen'
 import { useShellStack } from '@/stores/shellStack'
+import ShareCurrentPopup from '@/pages/home/components/ShareCurrentPopup.vue'
+import { runUploadPool } from '@/utils/uploadPool'
 import { calculateFileHash } from '@/utils/hashUtils'
 import { cachedApiUrl } from '@/utils/apiConfig'
 import { uploadFile } from '@/services/mobileUploadService'
@@ -90,22 +92,19 @@ const fileSortBy = computed(() => fileList.sortBy.value)
 const fileSortOrder = computed(() => fileList.sortOrder.value)
 
 /**
- * 初始化文件列表：以项目 id 为根加载第一层。
+ * 初始化文件列表：以项目 id 为根加载第一层（loadRootNode 记录 rootId，
+ * 供 project_files 搜索 scope 与位置持久化 key 使用）。
  * 打开图纸返回 → 用返回前的 folderId/面包屑覆盖根态（仍只发一次请求）。
  */
 function initFileList() {
   if (!projectId.value) return
   const target = shellStack.returnTarget
   shellStack.clearReturnTarget()
-  if (target?.folderId && target.breadcrumbs?.length) {
-    fileList.currentFolderId.value = target.folderId
-    fileList.breadcrumbs.value = target.breadcrumbs
-  } else {
-    fileList.currentFolderId.value = projectId.value
-    fileList.breadcrumbs.value = []
-  }
-  fileList.page.value = 1
-  fileList.loadNodes()
+  const override =
+    target?.folderId && target.breadcrumbs?.length
+      ? { folderId: target.folderId, breadcrumbs: target.breadcrumbs }
+      : undefined
+  void fileList.loadRootNode(projectId.value, override)
 }
 
 /** A-15 下拉刷新 → 回到第一页整页重查（顺带刷新配额用量） */
@@ -472,6 +471,8 @@ const menuActions = computed(() => {
     { name: t('打开') },
     // 文件 → 格式转换下载（A-06）；文件夹 → 打包下载（A-08）
     isFolder ? { name: t('打包下载') } : { name: t('格式转换下载') },
+    // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
+    ...(isFolder ? [] : [{ name: t('分享') }]),
     { name: t('重命名') },
     { name: t('移动') },
     { name: t('复制') },
@@ -495,6 +496,8 @@ function onMenuAction(action: { name: string }) {
     openFormatDownload(target)
   } else if (action.name === t('打包下载')) {
     void downloadFolder(target)
+  } else if (action.name === t('分享')) {
+    openShare(target)
   } else if (action.name === t('重命名')) {
     renameTarget.value = target
     showRename.value = true
@@ -503,6 +506,15 @@ function onMenuAction(action: { name: string }) {
   } else if (action.name === t('删除')) {
     batchDelete([target])
   }
+}
+
+// ── 列表内分享入口（阶段 5）：文件项菜单 → ShareCurrentPopup（有效期/二维码/已有分享/撤销）──
+const showSharePopup = ref(false)
+const shareTarget = ref<{ id: string; name: string } | null>(null)
+
+function openShare(target: { id: string; name: string }) {
+  shareTarget.value = target
+  showSharePopup.value = true
 }
 
 // ── A-06 格式转换下载（底部弹窗选格式 → downloadControllerDownloadNodeWithFormat blob）──
@@ -689,36 +701,29 @@ function triggerFileUpload() {
  */
 async function onFileInputChange(e: Event) {
   const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+  const files = Array.from(input.files ?? [])
+  input.value = ''
+  if (files.length === 0) return
 
   const parentId = fileList.currentFolderId.value ?? projectId.value
   if (!parentId) return
 
+  // 多文件上传（阶段 5）：并发 2，逐文件独立成功/失败 toast，全部结束后统一重载一次
   showLoadingToast({ message: t('上传中...'), forbidClick: true, duration: 0 })
   try {
-    const hash = await calculateFileHash(file)
-    await uploadFile({
-      file,
-      hash,
-      nodeId: parentId,
-      onProgress: (pct) => {
-        closeToast()
-        showLoadingToast({
-          message: t('上传中 {pct}%', { pct: String(Math.round(pct)) }),
-          forbidClick: true,
-          duration: 0,
-        })
+    await runUploadPool(
+      files,
+      async (file) => {
+        const hash = await calculateFileHash(file)
+        await uploadFile({ file, hash, nodeId: parentId })
       },
-    })
-    closeToast()
-    showToast(t('上传成功'))
-    fileList.refresh()
-  } catch (e) {
-    closeToast()
-    showToast(t('上传失败，请重试'))
+      (_file, ok) => {
+        showToast(ok ? t('上传成功') : t('上传失败，请重试'))
+      },
+    )
   } finally {
-    input.value = ''
+    closeToast()
+    await fileList.refresh()
   }
 }
 
@@ -976,9 +981,17 @@ onMounted(() => {
     <input
       ref="fileInputRef"
       type="file"
+      multiple
       accept=".mxweb,.dwg,.dxf,.xlsx,.pdf,.jpg,.png,.zip,.rar,.7z"
       style="display:none"
       @change="onFileInputChange"
+    />
+
+    <!-- 列表内分享（阶段 5）：文件项菜单「分享」打开 -->
+    <ShareCurrentPopup
+      v-model:show="showSharePopup"
+      :file-id="shareTarget?.id ?? ''"
+      :file-name="shareTarget?.name ?? ''"
     />
 
     <!-- 单条目操作菜单（A-03）+ 重命名（A-04）+ 移动/复制选文件夹（A-05） -->

@@ -3,6 +3,7 @@ import { useUnifiedFileList } from './useUnifiedFileList'
 
 vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
   nodeControllerGetChildren: vi.fn(),
+  nodeControllerGetNode: vi.fn(),
   nodeControllerSearch: vi.fn(),
 }))
 vi.mock('@/languages', () => ({
@@ -13,7 +14,11 @@ vi.mock('@/languages', () => ({
   },
 }))
 
-import { nodeControllerGetChildren, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
+import {
+  nodeControllerGetChildren,
+  nodeControllerGetNode,
+  nodeControllerSearch,
+} from '@cloudcad/api-sdk/sdk.gen'
 
 function resolveWith<T extends (...args: never[]) => unknown>(fn: T, response: unknown) {
   vi.mocked(fn).mockResolvedValue(response as never)
@@ -29,6 +34,7 @@ describe('useUnifiedFileList 统一数据层（阶段 4 搜索分支）', () => 
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     resolveWith(nodeControllerGetChildren, nodePage())
     resolveWith(nodeControllerSearch, nodePage())
     errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -160,5 +166,90 @@ describe('useUnifiedFileList 统一数据层（阶段 4 搜索分支）', () => 
     c.setSearch('图纸')
     await vi.waitFor(() => expect(c.error.value).toBe('加载失败'))
     expect(c.loading.value).toBe(false)
+  })
+
+  // ── 位置持久化（阶段 5）──
+  it('enterFolder：personal 域写入 fs_breadcrumb_personal 存档', async () => {
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    c.enterFolder({ id: 'folder-1', name: '文件夹一' } as never)
+    const saved = JSON.parse(localStorage.getItem('fs_breadcrumb_personal') ?? 'null')
+    expect(saved).toEqual({ folderId: 'folder-1', breadcrumbs: [{ id: 'folder-1', name: '文件夹一' }] })
+  })
+
+  it('enterFolder：project 域存档 key 含 projectId', async () => {
+    const c = useUnifiedFileList('project')
+    await c.loadRootNode('proj-7')
+    c.enterFolder({ id: 'folder-9', name: '目录' } as never)
+    const saved = JSON.parse(localStorage.getItem('fs_breadcrumb_project_proj-7') ?? 'null')
+    expect(saved?.folderId).toBe('folder-9')
+    // personal key 不受 project 域影响
+    expect(localStorage.getItem('fs_breadcrumb_personal')).toBeNull()
+  })
+
+  it('goBackTo(-1) 回根：不写存档（currentFolderId=null 跳过）', async () => {
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    c.enterFolder({ id: 'folder-1', name: '文件夹一' } as never)
+    expect(localStorage.getItem('fs_breadcrumb_personal')).not.toBeNull()
+    c.goBackTo(-1)
+    expect(c.currentFolderId.value).toBeNull()
+    // 回根不覆盖存档（仍保留上次离开位置）
+    const saved = JSON.parse(localStorage.getItem('fs_breadcrumb_personal') ?? 'null')
+    expect(saved?.folderId).toBe('folder-1')
+  })
+
+  it('loadRootNode：还原存档位置（节点仍存在 → getChildren 按存档加载）', async () => {
+    localStorage.setItem(
+      'fs_breadcrumb_personal',
+      JSON.stringify({ folderId: 'saved-1', breadcrumbs: [{ id: 'saved-1', name: '存档目录' }] }),
+    )
+    vi.mocked(nodeControllerGetNode).mockResolvedValue({ data: { id: 'saved-1' } } as never)
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    expect(c.currentFolderId.value).toBe('saved-1')
+    expect(c.breadcrumbs.value).toEqual([{ id: 'saved-1', name: '存档目录' }])
+    expect(vi.mocked(nodeControllerGetChildren)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { nodeId: 'saved-1' } }),
+    )
+  })
+
+  it('loadRootNode：存档节点已删除 → 清存档回根目录', async () => {
+    localStorage.setItem(
+      'fs_breadcrumb_personal',
+      JSON.stringify({ folderId: 'gone-1', breadcrumbs: [{ id: 'gone-1', name: '已删' }] }),
+    )
+    vi.mocked(nodeControllerGetNode).mockRejectedValue(new Error('404'))
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    expect(c.currentFolderId.value).toBe('space-1')
+    expect(c.breadcrumbs.value).toEqual([])
+    expect(localStorage.getItem('fs_breadcrumb_personal')).toBeNull()
+    expect(vi.mocked(nodeControllerGetChildren)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { nodeId: 'space-1' } }),
+    )
+  })
+
+  it('loadRootNode：override 优先于存档（returnTarget 场景不读 localStorage）', async () => {
+    localStorage.setItem(
+      'fs_breadcrumb_personal',
+      JSON.stringify({ folderId: 'saved-1', breadcrumbs: [{ id: 'saved-1', name: '存档目录' }] }),
+    )
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1', {
+      folderId: 'rt-1',
+      breadcrumbs: [{ id: 'rt-1', name: '返回目标' }],
+    })
+    expect(c.currentFolderId.value).toBe('rt-1')
+    expect(c.breadcrumbs.value).toEqual([{ id: 'rt-1', name: '返回目标' }])
+    expect(vi.mocked(nodeControllerGetNode)).not.toHaveBeenCalled()
+  })
+
+  it('loadRootNode：存档 JSON 损坏 → 静默回根目录', async () => {
+    localStorage.setItem('fs_breadcrumb_personal', '{broken json')
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    expect(c.currentFolderId.value).toBe('space-1')
+    expect(vi.mocked(nodeControllerGetNode)).not.toHaveBeenCalled()
   })
 })

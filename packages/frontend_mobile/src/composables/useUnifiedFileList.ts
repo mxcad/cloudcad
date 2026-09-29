@@ -9,7 +9,11 @@
  * nodeController 分支复用文件系统节点层级遍历逻辑。
  */
 import { ref, computed, shallowRef } from 'vue'
-import { nodeControllerGetChildren, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
+import {
+  nodeControllerGetChildren,
+  nodeControllerGetNode,
+  nodeControllerSearch,
+} from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto, NodeListResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
 
@@ -48,6 +52,46 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
   const breadcrumbs = ref<BreadcrumbItem[]>([])
   // 根节点 id（loadRootNode 记录）：project 域搜索 scope=project_files 时作 projectId
   const rootId = ref<string | null>(null)
+
+  // ── 位置持久化（阶段 5）：跨会话还原离开前的文件夹位置 ──
+  // personal 域 = fs_breadcrumb_personal；project 域 = fs_breadcrumb_project_{projectId}（每项目独立）
+  function storageKey(): string {
+    return domain === 'project' ? `fs_breadcrumb_project_${rootId.value ?? ''}` : STORAGE_KEY
+  }
+
+  function persistLocation() {
+    if (!rootId.value || !currentFolderId.value || currentFolderId.value === rootId.value) return
+    try {
+      localStorage.setItem(
+        storageKey(),
+        JSON.stringify({ folderId: currentFolderId.value, breadcrumbs: breadcrumbs.value }),
+      )
+    } catch {
+      // localStorage 不可用（隐私模式/超配额）→ 静默跳过
+    }
+  }
+
+  function readSavedLocation(): { folderId: string; breadcrumbs: BreadcrumbItem[] } | null {
+    try {
+      const raw = localStorage.getItem(storageKey())
+      if (!raw) return null
+      const parsed = JSON.parse(raw) as { folderId?: unknown; breadcrumbs?: unknown }
+      if (typeof parsed?.folderId === 'string' && Array.isArray(parsed.breadcrumbs)) {
+        return { folderId: parsed.folderId, breadcrumbs: parsed.breadcrumbs as BreadcrumbItem[] }
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  function clearSavedLocation() {
+    try {
+      localStorage.removeItem(storageKey())
+    } catch {
+      // 忽略
+    }
+  }
 
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   function setSearch(val: string) {
@@ -181,6 +225,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     currentFolderId.value = folder.id
     if (searchText.value || debouncedSearch.value) resetSearchState()
     page.value = 1
+    persistLocation()
     loadNodes()
   }
 
@@ -195,6 +240,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
       currentFolderId.value = breadcrumbs.value[index]?.id ?? null
     }
     page.value = 1
+    persistLocation()
     loadNodes()
   }
 
@@ -232,11 +278,33 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
   }
 
   // 项目/个人空间的根节点加载
-  async function loadRootNode(rootNodeId: string) {
+  // override：显式初始位置（如「打开图纸返回」的 returnTarget）——优先于持久化存档
+  async function loadRootNode(
+    rootNodeId: string,
+    override?: { folderId: string; breadcrumbs: BreadcrumbItem[] },
+  ) {
     rootId.value = rootNodeId
     currentFolderId.value = rootNodeId
     breadcrumbs.value = []
     page.value = 1
+
+    if (override) {
+      currentFolderId.value = override.folderId
+      breadcrumbs.value = override.breadcrumbs
+    } else {
+      // 位置持久化：有存档则还原离开前的文件夹（验证节点仍存在，失败清存档回根目录）
+      const saved = readSavedLocation()
+      if (saved && saved.folderId !== rootNodeId) {
+        try {
+          const res = await nodeControllerGetNode({ path: { nodeId: saved.folderId } })
+          if (res.error) throw new Error(String(res.error))
+          currentFolderId.value = saved.folderId
+          breadcrumbs.value = saved.breadcrumbs
+        } catch {
+          clearSavedLocation()
+        }
+      }
+    }
     await loadNodes()
   }
 
