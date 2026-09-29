@@ -268,7 +268,8 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     if (searchText.value || debouncedSearch.value) resetSearchState()
     if (index < 0) {
       breadcrumbs.value = []
-      currentFolderId.value = null
+      // R7：回根=根 id（非 null），否则 loadNodes 无目标早退、列表停在上一子文件夹旧内容
+      currentFolderId.value = rootId.value
     } else {
       breadcrumbs.value = breadcrumbs.value.slice(0, index + 1)
       currentFolderId.value = breadcrumbs.value[index]?.id ?? null

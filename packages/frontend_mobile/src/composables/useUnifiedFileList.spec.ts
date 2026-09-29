@@ -187,14 +187,25 @@ describe('useUnifiedFileList 统一数据层（阶段 4 搜索分支）', () => 
     expect(localStorage.getItem('fs_breadcrumb_personal')).toBeNull()
   })
 
-  it('goBackTo(-1) 回根：不写存档（currentFolderId=null 跳过）', async () => {
+  it('goBackTo(-1) 回根：currentFolderId 置根 id 并重查根子节点（R7 回归）', async () => {
+    resolveWith(nodeControllerGetChildren, nodePage([{ id: 'folder-1', name: '文件夹一' }]))
     const c = useUnifiedFileList('personal')
     await c.loadRootNode('space-1')
     c.enterFolder({ id: 'folder-1', name: '文件夹一' } as never)
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
     expect(localStorage.getItem('fs_breadcrumb_personal')).not.toBeNull()
+    vi.clearAllMocks()
+
     c.goBackTo(-1)
-    expect(c.currentFolderId.value).toBeNull()
-    // 回根不覆盖存档（仍保留上次离开位置）
+    // R7 修复前置 null → loadNodes 早退、列表停在旧内容；修复后=根 id
+    expect(c.currentFolderId.value).toBe('space-1')
+    expect(c.breadcrumbs.value).toEqual([])
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
+    // 回根重查根子节点（而非早退）
+    expect(vi.mocked(nodeControllerGetChildren)).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { nodeId: 'space-1' } }),
+    )
+    // 回根不覆盖存档（currentFolderId===rootId 跳过持久化，仍保留上次离开位置）
     const saved = JSON.parse(localStorage.getItem('fs_breadcrumb_personal') ?? 'null')
     expect(saved?.folderId).toBe('folder-1')
   })
