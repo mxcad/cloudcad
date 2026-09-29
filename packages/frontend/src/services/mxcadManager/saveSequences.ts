@@ -1,6 +1,5 @@
 import { t } from '@/languages';
 import { saveControllerSaveMxwebToNode } from '@/api-sdk';
-import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { handleError, getErrorMessage } from '@/utils/errorHandler';
 import {
   showGlobalLoading,
@@ -16,7 +15,11 @@ import {
   saveCurrentDrawingToBlob,
   showSaveAsDialog,
 } from './mxcadHelpers';
-import { setModified, patchSession } from '../drawingSession';
+import {
+  setModified,
+  patchSession,
+  notifyNodesDeleted,
+} from '../drawingSession';
 import { writeFileCacheToIndexedDB } from './mxcadCache';
 import { processPendingImages } from './cmd/insertImageCommand';
 import { showSaveConfirmDialog } from './saveDialogs';
@@ -75,7 +78,9 @@ export async function saveToNodeFile(
     const nodeResp = await deps.sdk.getNode(fileInfo.fileId);
     const node = nodeResp.data;
     if (node?.fileStatus === 'DELETED' || node?.deletedAt) {
-      useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+      // 保存的是当前打开文件（生产不变量：fileInfo.fileId === currentFileId），
+      // 会话置已删除标记后走另存为
+      notifyNodesDeleted([fileInfo.fileId]);
       globalShowToast(t('当前图纸已被删除，保存将另存为新文件'), 'warning');
       const fileName = getFileInfo()?.name || 'untitled';
       await showSaveAsDialog(personalSpaceId, fileName);
@@ -86,7 +91,9 @@ export async function saveToNodeFile(
     // 其他错误（网络/500）必须透传真实原因，避免服务器故障时误导用户走另存为
     const code = (error as { code?: string })?.code;
     if (code === 'NOT_FOUND') {
-      useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+      // 保存的是当前打开文件（生产不变量：fileInfo.fileId === currentFileId），
+      // 会话置已删除标记后走另存为
+      notifyNodesDeleted([fileInfo.fileId]);
       globalShowToast(t('当前图纸已被删除，保存将另存为新文件'), 'warning');
       const fileName = getFileInfo()?.name || 'untitled';
       await showSaveAsDialog(personalSpaceId, fileName);

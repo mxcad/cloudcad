@@ -10,6 +10,8 @@ import {
   setModified,
   getModified,
   clearCurrentFileDeleted,
+  notifyNodesDeleted,
+  notifyNodesRestored,
   setCurrentFileUrl,
   getCurrentFileUrl,
   setCacheTimestamp,
@@ -171,6 +173,40 @@ describe('openSession / closeSession — 唯一 writer', () => {
   it('clearCurrentFileDeleted 清除已删除标记（另存为成功/新建文件）', () => {
     useCADEditorStore.getState().setIsCurrentFileDeleted(true);
     clearCurrentFileDeleted();
+    expect(useCADEditorStore.getState().isCurrentFileDeleted).toBe(false);
+  });
+});
+
+describe('notifyNodesDeleted / notifyNodesRestored — 文件系统动作通知', () => {
+  it('删除命中的是当前打开文件 → 置已删除标记', () => {
+    openSession(sampleInfo);
+    notifyNodesDeleted(['file-1']);
+    expect(useCADEditorStore.getState().isCurrentFileDeleted).toBe(true);
+  });
+
+  it('删除的不是当前打开文件 → 不置标记', () => {
+    openSession(sampleInfo);
+    notifyNodesDeleted(['other-node']);
+    expect(useCADEditorStore.getState().isCurrentFileDeleted).toBe(false);
+  });
+
+  it('恢复当前打开文件 → 清已删除标记', () => {
+    openSession(sampleInfo);
+    useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+    notifyNodesRestored(['file-1']);
+    expect(useCADEditorStore.getState().isCurrentFileDeleted).toBe(false);
+  });
+
+  it('恢复的不是当前打开文件 → 标记不动', () => {
+    openSession(sampleInfo);
+    useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+    notifyNodesRestored(['other-node']);
+    expect(useCADEditorStore.getState().isCurrentFileDeleted).toBe(true);
+  });
+
+  it('无当前会话（currentFileId 为空）→ 通知为 no-op', () => {
+    notifyNodesDeleted(['file-1']);
+    notifyNodesRestored(['file-1']);
     expect(useCADEditorStore.getState().isCurrentFileDeleted).toBe(false);
   });
 });

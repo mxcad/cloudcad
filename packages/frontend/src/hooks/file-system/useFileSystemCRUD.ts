@@ -26,6 +26,10 @@ import {
 import { nodeControllerBatchDeleteNodes } from '@/api-sdk';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
+import {
+  notifyNodesDeleted,
+  notifyNodesRestored,
+} from '@/services/drawingSession';
 
 import { t } from '@/languages';
 import { queryKeys } from '@/lib/queryKeys';
@@ -458,11 +462,8 @@ export const useFileSystemCRUD = ({
               'success'
             );
 
-            // 如果删除的是当前 CAD 编辑器中打开的文件，标记为已删除
-            const { currentFileId } = useCADEditorStore.getState();
-            if (currentFileId && currentFileId === node.id) {
-              useCADEditorStore.getState().setIsCurrentFileDeleted(true);
-            }
+            // 如果删除的是当前 CAD 编辑器中打开的文件，会话置已删除标记
+            notifyNodesDeleted([node.id]);
 
             if (!permanently) {
               const deletedNodeId = node.id;
@@ -479,11 +480,8 @@ export const useFileSystemCRUD = ({
                     query: { permanently: false },
                     throwOnError: true,
                   });
-                  // 重做删除，若当前文件被重删则标记
-                  const { currentFileId } = useCADEditorStore.getState();
-                  if (currentFileId && currentFileId === deletedNodeId) {
-                    useCADEditorStore.getState().setIsCurrentFileDeleted(true);
-                  }
+                  // 重做删除，若当前文件被重删则会话置标记
+                  notifyNodesDeleted([deletedNodeId]);
                 },
                 rollback: async () => {
                   if (deletedIsRoot) {
@@ -499,11 +497,8 @@ export const useFileSystemCRUD = ({
                       throwOnError: true,
                     });
                   }
-                  // 撤销删除后节点已恢复，若当前文件被恢复则清除标记
-                  const { currentFileId } = useCADEditorStore.getState();
-                  if (currentFileId && currentFileId === deletedNodeId) {
-                    useCADEditorStore.getState().setIsCurrentFileDeleted(false);
-                  }
+                  // 撤销删除后节点已恢复，若当前文件被恢复则会话清标记
+                  notifyNodesRestored([deletedNodeId]);
                 },
               });
             } else {
@@ -589,11 +584,8 @@ export const useFileSystemCRUD = ({
               );
             }
 
-            // 如果批量删除中包含当前 CAD 编辑器中打开的文件，标记为已删除
-            const { currentFileId: curId } = useCADEditorStore.getState();
-            if (curId && nodeIds.includes(curId)) {
-              useCADEditorStore.getState().setIsCurrentFileDeleted(true);
-            }
+            // 如果批量删除中包含当前 CAD 编辑器中打开的文件，会话置已删除标记
+            notifyNodesDeleted(nodeIds);
 
             if (!permanently) {
               pushAction({

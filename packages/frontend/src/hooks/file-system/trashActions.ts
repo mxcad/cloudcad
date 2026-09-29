@@ -19,6 +19,10 @@ import {
 } from '@/api-sdk';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import {
+  notifyNodesDeleted,
+  notifyNodesRestored,
+} from '@/services/drawingSession';
 
 import { t } from '@/languages';
 import { queryKeys } from '@/lib/queryKeys';
@@ -85,10 +89,8 @@ export const useTrashActions = ({
               });
             }
             showToast(t('已恢复 ') + '"' + node.name + '"', 'success');
-            const { currentFileId } = useCADEditorStore.getState();
-            if (currentFileId && currentFileId === node.id) {
-              useCADEditorStore.getState().setIsCurrentFileDeleted(false);
-            }
+            // 恢复的是当前打开文件则会话清已删除标记
+            notifyNodesRestored([node.id]);
             loadData();
             queryClient.invalidateQueries({
               queryKey: queryKeys.fileSystem.storageQuota,
@@ -157,13 +159,7 @@ export const useTrashActions = ({
       'warning',
       t('恢复')
     );
-  }, [
-    showConfirm,
-    loadData,
-    showToast,
-    urlProjectId,
-    queryClient,
-  ]);
+  }, [showConfirm, loadData, showToast, urlProjectId, queryClient]);
 
   /** 清空回收站后检查当前打开的文件是否受到影响 */
   async function checkCurrentFileAfterTrashClear(): Promise<void> {
@@ -176,11 +172,11 @@ export const useTrashActions = ({
       });
       const node = nodeResp.data;
       if (node?.fileStatus === 'DELETED' || node?.deletedAt) {
-        useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+        notifyNodesDeleted([currentFileId]);
       }
     } catch {
       // 404 → 节点已被永久删除
-      useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+      notifyNodesDeleted([currentFileId]);
     }
   }
 

@@ -104,6 +104,26 @@ export function clearCurrentFileDeleted(): void {
   useCADEditorStore.getState().setIsCurrentFileDeleted(false);
 }
 
+/**
+ * 文件系统动作 → 会话通知：「这些节点已被删除（含服务端 404/DELETED 检测）」。
+ * 「删的是当前打开文件才置位」的 id 匹配推导收进 implementation——文件系统
+ * hook / 保存序列只报 id 列表，禁止再各自复制 currentFileId 比对（ADR-0039）。
+ */
+export function notifyNodesDeleted(nodeIds: readonly string[]): void {
+  const { currentFileId } = useCADEditorStore.getState();
+  if (currentFileId && nodeIds.includes(currentFileId)) {
+    useCADEditorStore.getState().setIsCurrentFileDeleted(true);
+  }
+}
+
+/** 文件系统动作 → 会话通知：「这些节点已被恢复 / 撤销删除」 */
+export function notifyNodesRestored(nodeIds: readonly string[]): void {
+  const { currentFileId } = useCADEditorStore.getState();
+  if (currentFileId && nodeIds.includes(currentFileId)) {
+    useCADEditorStore.getState().setIsCurrentFileDeleted(false);
+  }
+}
+
 /** 脏标记非 React 读取（协同检查、beforeunload 等） */
 export function getModified(): boolean {
   return useCADEditorStore.getState().isDirty;

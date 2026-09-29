@@ -18,6 +18,8 @@ export {
   setModified,
   getModified,
   clearCurrentFileDeleted,
+  notifyNodesDeleted,
+  notifyNodesRestored,
   setCurrentFileUrl,
   getCurrentFileUrl,
   setCacheTimestamp,

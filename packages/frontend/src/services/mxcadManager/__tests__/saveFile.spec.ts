@@ -83,6 +83,7 @@ function resetStore(): void {
   useCADEditorStore.setState({
     isCurrentFileDeleted: false,
     currentFileInfo: null,
+    currentFileId: null,
   });
   resetSessionRuntime();
 }
@@ -375,6 +376,8 @@ describe('saveCurrentFile — 单入口判别（node / library / saveAs）', () 
   });
 
   it('节点已删除（fileStatus DELETED）→ 置标记 + 另存为', async () => {
+    // 生产不变量：保存的是当前打开文件（notifyNodesDeleted 按 currentFileId 匹配置位）
+    useCADEditorStore.setState({ currentFileId: 'node-abc' });
     const deps = makeDeps({
       sdk: {
         getNode: vi.fn().mockResolvedValue({
@@ -390,6 +393,7 @@ describe('saveCurrentFile — 单入口判别（node / library / saveAs）', () 
   });
 
   it('节点查询返回 NOT_FOUND（已删除）→ 按已删除处理（另存为）', async () => {
+    useCADEditorStore.setState({ currentFileId: 'node-abc' });
     const deps = makeDeps({
       sdk: {
         getNode: vi
