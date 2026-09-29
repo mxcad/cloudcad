@@ -20,13 +20,10 @@ import {
   useFileLoader,
   checkFileExternalRefs,
   checkPublicFileExternalRefs,
-  type FileOpenOptions,
 } from '../../composables/useFileLoader';
+import { openDrawing } from '../../services/drawingOpener';
 import { uploadThumbnailForNode } from '../../services/thumbnailService';
-import {
-  isHashLike,
-
-} from '../../services/publicFileService';
+import { isHashLike } from '../../services/publicFileService';
 import { checkLibraryPermissions } from '../../services/permissionService';
 import { useEditorState } from '../../composables/useEditorState';
 import { useSave } from '../../composables/useSave';
@@ -37,20 +34,13 @@ import {
 } from '../../composables/useSaveAs';
 import { useUser } from '../../composables/useUser';
 
-import {
-  showToast,
-  showConfirmDialog,
-} from 'vant';
+import { showToast, showConfirmDialog } from 'vant';
 import { showToastOnce } from '@/utils/toast';
 
 import { navigateToLogin, navigateToRegister } from '@/utils/authNavigate';
 import { navigateBack } from '../../utils/navigateBack';
-import {
-  exitCollaborationIfNeeded,
-
-} from '../../composables/useCooperate';
+import { exitCollaborationIfNeeded } from '../../composables/useCooperate';
 import { useCollabAutoJoin } from '../../composables/useCollabAutoJoin';
-import { useShareFileLoad } from '../../composables/useShareFileLoad';
 import { useRuntimeConfig } from '../../composables/useRuntimeConfig';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
 import SaveAsSheet from './components/SaveAsSheet.vue';
@@ -146,8 +136,6 @@ const {
   loading: fileLoading,
   error: fileError,
   progress: fileProgress,
-  loadByNodeId,
-  loadByHash,
   getFileIdFromUrl,
   getNodeIdFromUrl,
   getHashFromUrl,
@@ -168,12 +156,18 @@ const isPublicFile = computed(() => editorState.state.isPublicFile);
 const progressMessage = computed(() => {
   const stage = editorState.state.progressStage;
   switch (stage) {
-    case 'uploading': return t('上传中...');
-    case 'converting': return t('正在转换...');
-    case 'opening': return t('正在打开图纸...');
-    case 'fetching-info': return t('正在获取文件信息...');
-    case 'loading-cache': return t('正在从缓存加载图纸...');
-    default: return fileProgress.value || t('加载中...');
+    case 'uploading':
+      return t('上传中...');
+    case 'converting':
+      return t('正在转换...');
+    case 'opening':
+      return t('正在打开图纸...');
+    case 'fetching-info':
+      return t('正在获取文件信息...');
+    case 'loading-cache':
+      return t('正在从缓存加载图纸...');
+    default:
+      return fileProgress.value || t('加载中...');
   }
 });
 
@@ -181,24 +175,37 @@ const displayError = computed(() => fileError.value || editorState.state.error);
 
 const errorIcon = computed(() => {
   switch (editorState.state.errorType) {
-    case 'auth': return 'info-o';
-    case 'permission': return 'info-o';
-    case 'not-found': return 'search';
-    case 'network': return 'wifi';
-    case 'converting': return 'underway-o';
-    case 'server': return 'warning-o';
-    default: return 'warning-o';
+    case 'auth':
+      return 'info-o';
+    case 'permission':
+      return 'info-o';
+    case 'not-found':
+      return 'search';
+    case 'network':
+      return 'wifi';
+    case 'converting':
+      return 'underway-o';
+    case 'server':
+      return 'warning-o';
+    default:
+      return 'warning-o';
   }
 });
 
 const errorColor = computed(() => {
   switch (editorState.state.errorType) {
-    case 'auth': return '#ff976a';
-    case 'permission': return '#ff976a';
-    case 'not-found': return '#ff976a';
-    case 'network': return '#ff976a';
-    case 'converting': return '#ff976a';
-    default: return '#ff4444';
+    case 'auth':
+      return '#ff976a';
+    case 'permission':
+      return '#ff976a';
+    case 'not-found':
+      return '#ff976a';
+    case 'network':
+      return '#ff976a';
+    case 'converting':
+      return '#ff976a';
+    default:
+      return '#ff4444';
   }
 });
 
@@ -241,7 +248,9 @@ const pendingCommitMessage = ref('');
 const canManageLibrary = ref(false);
 const showVersionHistory = ref(false);
 const showLoginPrompt = ref(false);
-const pendingActionAfterLogin = ref<'save' | 'saveAs' | 'version-history' | null>(null);
+const pendingActionAfterLogin = ref<
+  'save' | 'saveAs' | 'version-history' | null
+>(null);
 const { config: runtimeConfig } = useRuntimeConfig();
 const showCooperate = ref(false);
 const showCollabDisabled = ref(false);
@@ -250,16 +259,16 @@ const insertBlockParams = ref<BlockInfoItem | null>(null);
 
 const onInsertBlockConfirm = () => {
   // 图块插入完成后不需要重新打开抽屉（已改用子页导航）
-}
+};
 
 const onInsertBlockComplete = () => {
   // 插入完成后不再自动重新打开库抽屉
   // 用户可通过菜单手动打开
-}
+};
 
 const onInsertBlockClose = () => {
-  showInsertBlock.value = false
-}
+  showInsertBlock.value = false;
+};
 
 checkLibraryPermissions().then((result) => {
   canManageLibrary.value = result.canManageDrawing || result.canManageBlock;
@@ -319,13 +328,13 @@ function onShowVersionHistory() {
 
 function onLoginPromptLogin(target: 'login' | 'register' = 'login') {
   if (pendingActionAfterLogin.value) {
-    sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value)
-    pendingActionAfterLogin.value = null
+    sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value);
+    pendingActionAfterLogin.value = null;
   }
-  showLoginPrompt.value = false
+  showLoginPrompt.value = false;
   // 原生登录页（同 tab，带 redirect 回跳当前编辑器）；登录完成后由下方 watch 恢复待执行动作
-  if (target === 'register') navigateToRegister()
-  else navigateToLogin()
+  if (target === 'register') navigateToRegister();
+  else navigateToLogin();
 }
 
 function onLoginPromptClose() {
@@ -334,17 +343,16 @@ function onLoginPromptClose() {
 
 // 原生登录完成后（同 tab 无 storage 事件）恢复登录后待执行动作（保存/另存/版本历史）
 watch(isAuthenticated, (authed) => {
-  if (!authed) return
-  const pending = sessionStorage.getItem('pendingAction')
-  if (!pending) return
-  sessionStorage.removeItem('pendingAction')
+  if (!authed) return;
+  const pending = sessionStorage.getItem('pendingAction');
+  if (!pending) return;
+  sessionStorage.removeItem('pendingAction');
   setTimeout(() => {
-    if (pending === 'save') showCommitDialog.value = true
-    else if (pending === 'saveAs') showSaveAsSheet.value = true
-    else if (pending === 'version-history')
-      showVersionHistory.value = true
-  }, 500)
-})
+    if (pending === 'save') showCommitDialog.value = true;
+    else if (pending === 'saveAs') showSaveAsSheet.value = true;
+    else if (pending === 'version-history') showVersionHistory.value = true;
+  }, 500);
+});
 
 async function handleNewFile() {
   exitCollaborationIfNeeded();
@@ -394,7 +402,11 @@ const handleShowInsertBlock = (e: Event) => {
 const handleShowLibrary = (e: Event) => {
   const libraryType = ((e as CustomEvent).detail as LibraryType) ?? 'drawing';
   // 库是浮在画布上的抽屉，由壳统一打开（见 shell/index.vue 的 handleShellNavigate）
-  window.dispatchEvent(new CustomEvent('mxcad-shell-navigate', { detail: `/shell/library/${libraryType}` }));
+  window.dispatchEvent(
+    new CustomEvent('mxcad-shell-navigate', {
+      detail: `/shell/library/${libraryType}`,
+    })
+  );
 };
 
 // E-07 分享当前图纸：编辑器菜单经 mxcad-share-current 事件唤起
@@ -423,7 +435,10 @@ onMounted(async () => {
     window.removeEventListener('open-version-history', onShowVersionHistory);
     window.removeEventListener('mxcad-new-file', handleNewFile);
     window.removeEventListener('mxcad-show-collaborate', handleShowCollaborate);
-    window.removeEventListener('mxcad-show-insert-block', handleShowInsertBlock);
+    window.removeEventListener(
+      'mxcad-show-insert-block',
+      handleShowInsertBlock
+    );
     window.removeEventListener('mxcad-show-library', handleShowLibrary);
     window.removeEventListener('mxcad-share-current', handleShareCurrent);
     window.removeEventListener('beforeunload', onBeforeUnloadHandler);
@@ -499,16 +514,21 @@ onMounted(async () => {
     }
   }
 
-  // ====== 分享链接处理（使用 useShareFileLoad） ======
+  // ====== 分享链接处理（drawingOpener 统一入口） ======
   if (shareToken && fileId && !collabWorkId) {
-    const loaded = await useShareFileLoad(
-      shareToken,
-      fileId,
-      createMxCAD,
-      initEditObjectToolbar
-    );
-    if (loaded) return;
-    // 分享加载失败时已设置 error → 暂停后续流程，展示 error overlay
+    // 引擎创建 + 事件绑定 + 工具栏与非分享流一致。旧 useShareFileLoad 的
+    // 「引擎初始化即带文件加载」单步改为两步：先建空引擎，再经 openMxWeb
+    // 打开——多一层 deletedAt/fileHash 校验，且带 Authorization/x-share-token 头
+    const mxcad = await createMxCAD();
+    mxcad.on('databaseModify', () => {
+      editorState.setIsModified(true);
+    });
+    mxcad.on('openFileComplete', () => {
+      editorState.setIsModified(false);
+    });
+    initEditObjectToolbar(mxcad);
+    // 打开失败时 error/errorType 已设置 → 展示 error overlay
+    await openDrawing({ source: 'share', token: shareToken, nodeId: fileId });
     return;
   }
 
@@ -523,41 +543,29 @@ onMounted(async () => {
     // 公开文件没有服务端节点（fileId 存的是 hash），跳过
     const { fileId, isPublicFile } = editorState.state;
     if (fileId && !isPublicFile) {
-      uploadThumbnailForNode(fileId, { waitForRender: true }).catch(() => { });
+      uploadThumbnailForNode(fileId, { waitForRender: true }).catch(() => {});
     }
   });
 
   initEditObjectToolbar(mxcad);
 
-  // ====== 根据文件源打开图纸 ======
-  const openOptions: FileOpenOptions = {};
-  let fileSource: 'project' | 'library' | 'share' | 'public' | 'none' = 'none';
-
-  if (libraryKey) {
-    openOptions.libraryKey = libraryKey;
-    fileSource = 'library';
-  } else if (shareToken) {
-    openOptions.shareToken = shareToken;
-    fileSource = 'share';
-  }
-
+  // ====== 根据文件源打开图纸（drawingOpener 统一入口） ======
   if (fileId) {
-    fileSource = fileSource === 'none' ? 'project' : fileSource;
-    const ok = await loadByNodeId(
-      fileId,
-      Object.keys(openOptions).length ? openOptions : undefined
+    const ok = await openDrawing(
+      libraryKey
+        ? { source: 'library', libraryKey, nodeId: fileId }
+        : { source: 'node', nodeId: fileId }
     );
 
     if (ok) {
       editorState.setCurrentVersion(getVersionFromUrl());
-      if (fileSource === 'project') {
+      if (!libraryKey) {
         checkFileExternalRefs(fileId);
       }
     }
   } else if (fileHash && isHashLike(fileHash)) {
-    fileSource = 'public';
     editorState.setIsPublicFile(true);
-    const ok = await loadByHash(fileHash);
+    const ok = await openDrawing({ source: 'hash', hash: fileHash });
     if (ok) {
       editorState.setCurrentVersion(getVersionFromUrl());
       checkPublicFileExternalRefs(fileHash);
@@ -598,10 +606,17 @@ setViewportHeight();
   <div class="mxCanvasBox">
     <div class="header">
       <span class="draw_name">{{ drawName }}</span>
-      <span v-if="currentVersion" class="version-badge">r{{ currentVersion }}</span>
+      <span v-if="currentVersion" class="version-badge"
+        >r{{ currentVersion }}</span
+      >
       <div class="top_toolbar">
-        <button class="item" :disabled="saving || isPublicFile || !editorState.state.permissions.canSave
-          " @click="callCommand('Mx_SaveToCloud')">
+        <button
+          class="item"
+          :disabled="
+            saving || isPublicFile || !editorState.state.permissions.canSave
+          "
+          @click="callCommand('Mx_SaveToCloud')"
+        >
           <MxIcon icon="baocun" isDefault class="zoomed"></MxIcon>
         </button>
         <button class="item" @click="callCommand('Mx_ZoomE')">
@@ -611,10 +626,20 @@ setViewportHeight();
           <MxIcon icon="huitui" isDefault class="zoomed"></MxIcon>
         </button>
         <button class="item" @click="selectColor">
-          <div class="color_box zoomed" :style="{ backgroundColor: color }"></div>
+          <div
+            class="color_box zoomed"
+            :style="{ backgroundColor: color }"
+          ></div>
         </button>
-        <van-popover class="menu" v-model:show="isShowMenu" icon-prefix="mxicon" placement="bottom-end"
-          :actions="actions" @select="onSelectMenu" @closed="onCloseMenu">
+        <van-popover
+          class="menu"
+          v-model:show="isShowMenu"
+          icon-prefix="mxicon"
+          placement="bottom-end"
+          :actions="actions"
+          @select="onSelectMenu"
+          @closed="onCloseMenu"
+        >
           <template #reference>
             <button class="item">
               <MxIcon icon="caidan" isDefault class="zoomed"></MxIcon>
@@ -625,8 +650,14 @@ setViewportHeight();
     </div>
     <div class="cmd_operation_btn_list" v-if="isRunCmd">
       <template v-if="cmdTipObj?.keys">
-        <van-button color="#363636c4" size="small" style="margin-right: 5px; margin-bottom: 5px"
-          v-for="item in cmdTipObj.keys" @click.stop="item?.key && sendInputCmd(item.key)">{{ item.label }}</van-button>
+        <van-button
+          color="#363636c4"
+          size="small"
+          style="margin-right: 5px; margin-bottom: 5px"
+          v-for="item in cmdTipObj.keys"
+          @click.stop="item?.key && sendInputCmd(item.key)"
+          >{{ item.label }}</van-button
+        >
       </template>
 
       <button class="item zoomed" @click.stop="stopRunCmd">
@@ -638,57 +669,104 @@ setViewportHeight();
     </div>
     <div class="colorPicker" v-show="isShowColorPicker"></div>
 
-
-
     <!-- 模拟鼠标指针 -->
     <!-- 针头 -->
     <div class="singleArrow" ref="needle">
       <div class="singleArrow_tip" ref="arrowTip"></div>
     </div>
     <!-- 针柄 -->
-    <button class="needle-handle ring" ref="handle" @touchstart="onTouchstart"></button>
+    <button
+      class="needle-handle ring"
+      ref="handle"
+      @touchstart="onTouchstart"
+    ></button>
 
     <!-- Loading overlay -->
-    <div class="loading-overlay" v-if="fileLoading || editorState.state.loading">
+    <div
+      class="loading-overlay"
+      v-if="fileLoading || editorState.state.loading"
+    >
       <div class="loading-content">
         <van-loading color="#fff" type="spinner" />
         <p class="loading-text">{{ progressMessage }}</p>
-        <div v-if="editorState.state.progressStage === 'uploading'" class="upload-progress-bar">
-          <div class="upload-progress-fill" :style="{ width: Math.round(editorState.state.uploadProgress) + '%' }"></div>
-          <span class="upload-progress-text">{{ Math.round(editorState.state.uploadProgress) }}%</span>
+        <div
+          v-if="editorState.state.progressStage === 'uploading'"
+          class="upload-progress-bar"
+        >
+          <div
+            class="upload-progress-fill"
+            :style="{
+              width: Math.round(editorState.state.uploadProgress) + '%',
+            }"
+          ></div>
+          <span class="upload-progress-text"
+            >{{ Math.round(editorState.state.uploadProgress) }}%</span
+          >
         </div>
       </div>
     </div>
     <!-- Error overlay -->
-    <div class="loading-overlay" v-if="displayError && !fileLoading && !editorState.state.loading"
-      @click="dismissError">
+    <div
+      class="loading-overlay"
+      v-if="displayError && !fileLoading && !editorState.state.loading"
+      @click="dismissError"
+    >
       <div class="loading-content">
         <van-icon :name="errorIcon" :color="errorColor" size="56" />
         <p class="loading-text">{{ displayError }}</p>
       </div>
     </div>
-    <CommitMessageDialog v-if="showCommitDialog" @confirm="onCommitConfirm" @cancel="showCommitDialog = false" />
-    <SaveAsSheet :show="showSaveAsSheet" :current-file-name="editorState.state.fileName"
-      :can-manage-library="canManageLibrary" :current-node-id="editorState.state.fileId || undefined"
-      @close="onSaveAsClose" @success="onSaveAsSuccess" @login-required="showLoginPrompt = true" />
-    <VersionHistoryPopup v-if="showVersionHistory" @close="showVersionHistory = false" />
-    <LoginPromptPopup v-if="showLoginPrompt" @login="onLoginPromptLogin('login')"
-      @register="onLoginPromptLogin('register')" @close="onLoginPromptClose" />
+    <CommitMessageDialog
+      v-if="showCommitDialog"
+      @confirm="onCommitConfirm"
+      @cancel="showCommitDialog = false"
+    />
+    <SaveAsSheet
+      :show="showSaveAsSheet"
+      :current-file-name="editorState.state.fileName"
+      :can-manage-library="canManageLibrary"
+      :current-node-id="editorState.state.fileId || undefined"
+      @close="onSaveAsClose"
+      @success="onSaveAsSuccess"
+      @login-required="showLoginPrompt = true"
+    />
+    <VersionHistoryPopup
+      v-if="showVersionHistory"
+      @close="showVersionHistory = false"
+    />
+    <LoginPromptPopup
+      v-if="showLoginPrompt"
+      @login="onLoginPromptLogin('login')"
+      @register="onLoginPromptLogin('register')"
+      @close="onLoginPromptClose"
+    />
     <CooperatePopup v-if="showCooperate" @close="showCooperate = false" />
     <ShareCurrentPopup
       v-model:show="showShareCurrent"
       :file-id="editorState.state.fileId ?? ''"
       :file-name="editorState.state.fileName"
     />
-    <van-dialog v-model:show="showCollabDisabled" :title="t('提示')" @confirm="showCollabDisabled = false">
-      <div style="padding: 16px 20px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
+    <van-dialog
+      v-model:show="showCollabDisabled"
+      :title="t('提示')"
+      @confirm="showCollabDisabled = false"
+    >
+      <div
+        style="
+          padding: 16px 20px;
+          font-size: 14px;
+          line-height: 1.6;
+          color: var(--text-secondary);
+        "
+      >
         <span>{{ t('实时协同只支持私有化部署，请点击') }}</span>
         <a
           href="https://help.mxdraw.com/"
           target="_blank"
           rel="noopener noreferrer"
-          style="color: var(--primary); text-decoration: underline;"
-        >{{ t('查看文档') }}</a>
+          style="color: var(--primary); text-decoration: underline"
+          >{{ t('查看文档') }}</a
+        >
         <span>{{ t('或者联系客服') }}</span>
       </div>
     </van-dialog>
@@ -705,34 +783,56 @@ setViewportHeight();
     <div class="history_box">
       <transition name="slide">
         <div class="history_btn_list" v-if="state">
-          <button v-for="item in historyBtnList" class="history_btn zoomed" @click.stop="onHistoryBtnClick(item)">
+          <button
+            v-for="item in historyBtnList"
+            class="history_btn zoomed"
+            @click.stop="onHistoryBtnClick(item)"
+          >
             <div class="history_btn_content">
-              <MxIcon :icon="item.icon" :isDefault="item.isIconDefault"></MxIcon>
+              <MxIcon
+                :icon="item.icon"
+                :isDefault="item.isIconDefault"
+              ></MxIcon>
             </div>
           </button>
         </div>
       </transition>
       <button class="history_btn" @click.stop="() => toggle()">
-        <van-icon class="history_btn_icon" :name="state
-          ? './mxcustomui/history_close.png'
-          : './mxcustomui/history_open.png'
-          "></van-icon>
+        <van-icon
+          class="history_btn_icon"
+          :name="
+            state
+              ? './mxcustomui/history_close.png'
+              : './mxcustomui/history_open.png'
+          "
+        ></van-icon>
       </button>
     </div>
     <div class="footer">
-      <MxToolbar class="object_editing_toolbar" :items="objectEditingToolbarItems" v-show="isShowObjectEditingToolbar"
-        @tap="onObjectEditingBtnTap" />
+      <MxToolbar
+        class="object_editing_toolbar"
+        :items="objectEditingToolbarItems"
+        v-show="isShowObjectEditingToolbar"
+        @tap="onObjectEditingBtnTap"
+      />
       <transition name="fade">
         <div class="bubble_dialog" v-if="currentItem && currentItem.list">
           <div class="bubble_dialog_box chamfer">
             <div class="bubble_dialog_content chamfer">
-              <MxToolbar class="bubble_dialog_content_toolbar" :items="currentItem.list" @tap="onClick" />
+              <MxToolbar
+                class="bubble_dialog_content_toolbar"
+                :items="currentItem.list"
+                @tap="onClick"
+              />
             </div>
           </div>
           <div class="arrow_box">
-            <div class="arrow" :style="{
-              left: left + 'px',
-            }"></div>
+            <div
+              class="arrow"
+              :style="{
+                left: left + 'px',
+              }"
+            ></div>
           </div>
         </div>
       </transition>
@@ -740,10 +840,9 @@ setViewportHeight();
     </div>
   </div>
 </template>
-<style lang='scss'>
+<style lang="scss">
 .van-popover__arrow {
-  --van-popover-light-background:  var(--accent-secondary);
-
+  --van-popover-light-background: var(--accent-secondary);
 }
 
 .van-popover__content {
@@ -767,9 +866,8 @@ setViewportHeight();
   }
 
   .van-hairline--bottom:after {
-    border-bottom-width: 0
+    border-bottom-width: 0;
   }
-
 }
 </style>
 <style scoped lang="scss">
@@ -897,18 +995,30 @@ setViewportHeight();
 
 .chamfer {
   background:
-    linear-gradient(135deg,
-      transparent var(--leftTopChamferDist, 3px),
-      var(--leftTopChamferColor, var(--accent)) 0) top left,
-    linear-gradient(-135deg,
-      transparent var(--rightTopChamferDist, 3px),
-      var(--rightTopChamferColor, var(--accent)) 0) top right,
-    linear-gradient(-45deg,
-      transparent var(--rightBottomChamferDist, 3px),
-      var(--rightBottomChamferColor, var(--accent)) 0) bottom right,
-    linear-gradient(45deg,
-      transparent var(--leftBottomChamferDist, 3px),
-      var(--leftBottomChamferColor, var(--accent)) 0) bottom left;
+    linear-gradient(
+        135deg,
+        transparent var(--leftTopChamferDist, 3px),
+        var(--leftTopChamferColor, var(--accent)) 0
+      )
+      top left,
+    linear-gradient(
+        -135deg,
+        transparent var(--rightTopChamferDist, 3px),
+        var(--rightTopChamferColor, var(--accent)) 0
+      )
+      top right,
+    linear-gradient(
+        -45deg,
+        transparent var(--rightBottomChamferDist, 3px),
+        var(--rightBottomChamferColor, var(--accent)) 0
+      )
+      bottom right,
+    linear-gradient(
+        45deg,
+        transparent var(--leftBottomChamferDist, 3px),
+        var(--leftBottomChamferColor, var(--accent)) 0
+      )
+      bottom left;
   background-size: var(--bgSize1, 50.1%) var(--bgSize2, 50.1%);
   background-repeat: no-repeat;
 }
@@ -1024,7 +1134,11 @@ setViewportHeight();
       display: flex;
       align-items: center;
       height: 100%;
-      background-color: color-mix(in srgb, var(--bg-tertiary) 85%, transparent 15%);
+      background-color: color-mix(
+        in srgb,
+        var(--bg-tertiary) 85%,
+        transparent 15%
+      );
       border-radius: var(--van-radius-md);
       --zoomed-scale: 1.5;
       --icon-size: 24px;
