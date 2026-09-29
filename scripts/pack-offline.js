@@ -26,7 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { execSync, spawn } = require('child_process');
+const { execSync, spawn, spawnSync } = require('child_process');
 const crypto = require('crypto');
 
 // 打包清单单一事实源（全量部署包 / 增量升级包 共享条目，P9 收敛双清单硬编码）
@@ -141,6 +141,109 @@ function calcLockHash() {
 }
 
 /**
+ * 打包前置守卫：开发服务器存活时拒绝打包（仅 Windows）
+ *
+ * Windows 上 vite 启动即 dlopen native addon（lightningcss / swc / oxc-sys 等）并
+ * 长期持有文件句柄，此类文件无法被 unlink；而打包以 --store-dir 重建 workspace
+ * node_modules 时要删除并重铺这些包目录 → EPERM 失败，且恢复步骤连带失效，
+ * 留下一个 node_modules 被掏空、.bin 全丢且无人知晓的破损 dev 环境。
+ * 打包是离线操作，前置阻断成本低于事后修复。
+ *
+ * --allow-dev-running 或 ALLOW_DEV_RUNNING=1 可跳过（CI 环境无 dev server）。
+ */
+function assertNoDevServerRunning(allowDevRunning) {
+  if (os.platform() !== 'win32') return;
+  if (allowDevRunning || process.env.ALLOW_DEV_RUNNING === '1') return;
+
+  // 逐条查命令行，避免整表输出经 shell 变量中转产生编码问题
+  const rows = [];
+  let cursor = -1;
+  for (let i = 0; i < 200; i++) {
+    cursor = spawnSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Select-Object -Skip ${cursor} -First 1 Id, CommandLine | ConvertTo-Csv -NoTypeInformation`,
+      ],
+      { encoding: 'utf8' }
+    );
+    const line = (cursor.stdout || '').trim().split('\n')[0];
+    if (!line) break;
+    const m = line.match(/^(\d+),\s*"?(.*?)"$/);
+    if (!m || Number(m[1]) === process.pid) continue;
+    rows.push(m[1]);
+  }
+
+  const found = rows.filter((cmd) => /(?:corepack[\/\\]dist[\/\\]pnpm\.js|\.bin[\/\\]?\.\.[\/\\]vite[\/\\]bin[\/\\]vite\.js|nest\.js start --watch)/.test(cmd));
+  if (found.length === 0) return;
+
+  error('');
+  error('检测到开发服务器正在运行，已中止打包：');
+  for (const pid of found) error(`  - PID ${pid}`);
+  error('');
+  error('原因：vite / nest --watch 会 dlopen native 依赖（lightningcss / swc / oxc-sys 等）');
+  error('      并长期持有文件句柄，Windows 下这些文件无法被 pnpm unlink，');
+  error('      打包重建 node_modules 时会 EPERM 失败，并连带令恢复步骤失效，');
+  error('      留下 node_modules 被掏空、.bin 全丢且无人知晓的破损 dev 环境。');
+  error('');
+  error('请先关闭开发服务器（pnpm dev 按 Ctrl+C，或 taskkill /F /IM node.exe），再执行打包。');
+  error('必须带存活 dev server 打包时，加 --allow-dev-running 或设 ALLOW_DEV_RUNNING=1。');
+  process.exit(1);
+}
+
+/**
+ * 诊断 dev 环境锁死程度（restoreNodeModules 失败后调用）
+ *
+ * 返回锁住的 native addon 列表与结论。用 rmSync 直接尝试移除：Windows 对已打开
+ * 的文件会跳过而不报错，因此它天然能区分「可删」「被占用」两类文件。
+ */
+function diagnoseLockedNodeModules() {
+  const dir = path.join(PROJECT_ROOT, 'node_modules');
+  if (!fs.existsSync(dir)) return '';
+  let removed = false;
+  try {
+    fs.rmSync(dir, { recursive: true, force: true });
+    removed = !fs.existsSync(dir);
+  } catch (e) {}
+
+  if (removed) {
+    return 'node_modules 可完整移除，失败可能出在安装阶段的其他环节，直接重跑 pnpm install --frozen-lockfile 恢复即可';
+  }
+  const kept = fs.readdirSync(dir).filter((entry) => fs.existsSync(path.join(dir, entry)));
+  const locked = kept.filter((entry) => entry === '.pnpm');
+  const lockedFiles = [];
+  if (locked.length > 0) {
+    const scopeDir = path.join(dir, '.pnpm');
+    for (const scope of fs.readdirSync(scopeDir)) {
+      const nodeDir = path.join(scopeDir, scope, 'node_modules');
+      if (!fs.existsSync(nodeDir)) continue;
+      for (const pkg of fs.readdirSync(nodeDir)) {
+        const pkgDir = path.join(nodeDir, pkg);
+        let files = [];
+        try {
+          files = fs.readdirSync(pkgDir);
+        } catch (e) {
+          continue;
+        }
+        for (const file of files) {
+          const p = path.join(pkgDir, file);
+          try {
+            fs.unlinkSync(p);
+          } catch (e) {
+            if (e.code === 'EPERM' || e.code === 'EBUSY') lockedFiles.push(`${pkg}/${file}`);
+          }
+        }
+      }
+    }
+  }
+  return lockedFiles.length > 0
+    ? `以下文件仍被进程占用（需先关闭相关进程）：${lockedFiles.join('、')}`
+    : 'node_modules 中仍有文件无法移除，请关闭占用进程后重跑打包（或手动执行 pnpm install --frozen-lockfile 恢复）';
+}
+
+/**
  * 打包完成后恢复开发环境 node_modules
  *
  * 打包流程（prepareDeployStore）会以 --prod 模式重建工作区
@@ -182,7 +285,12 @@ function restoreNodeModules() {
         logFile,
         `[${new Date().toISOString()}] FAIL: ${cmd}\n${(err.stderr || err.message || '').toString()}\n`
       );
-      log(`⚠ 开发环境恢复步骤失败（${cmd}），详见 ${logFile}`);
+      const detail = diagnoseLockedNodeModules();
+      if (detail) {
+        fs.appendFileSync(logFile, `[${new Date().toISOString()}] DIAG: ${detail}\n`);
+        log(`⚠ ${detail}`);
+      }
+      log(`✗ 开发环境恢复未完成（步骤「${cmd}」失败），详见 ${logFile}。请重跑打包或手动执行 pnpm install --frozen-lockfile 恢复`);
       return;
     }
   }
@@ -433,8 +541,14 @@ async function installFullDeps(variant = 'oss') {
   // conversion-service 现依赖 @cloudcad/contracts（ADR-0069）与 @cloudcad/engine-exec，
   // 与 backend 一样须在 install filter 内，否则打包机建不出它们的 workspace 链接；
   // 构建它还需要 typescript（devDep）。
+  //
+  // private variant 不加 --frozen-lockfile：impl-mx 是 gitignore 的私有包，不在
+  // 提交的 pnpm-lock.yaml 里（否则无 impl-mx 目录的 oss 打包机 / CI 会因 lockfile
+  // 引用缺失的 workspace 包而 frozen install 失败）。私有打包机上有 impl-mx 目录，
+  // 首次 install 须同步 lockfile（补回 impl-mx importer）才能继续，故用非 frozen；
+  // oss variant 的 lockfile 与 workspace 一致，保持 frozen 以保证可复现。
   const filter = variant === 'private'
-    ? 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service --filter @cloudcad/impl-mx'
+    ? 'pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service --filter @cloudcad/impl-mx'
     : 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service';
 
   try {
@@ -610,8 +724,12 @@ function getDeployStoreInstallFilter(variant = 'oss') {
   // @cloudcad/contracts（ADR-0069），若不在 filter 里，目标机 --prod 安装不会建
   // 它们的 node_modules workspace 链接，dist 里的 require('@cloudcad/contracts') /
   // require('@cloudcad/engine-exec') 解析失败（backend 转换路径炸、3100 起不来）。
+  //
+  // private variant 不加 --frozen-lockfile：impl-mx 是 gitignore 的私有包，不在
+  // 提交的 pnpm-lock.yaml 里，私有打包机首次 store 安装须同步 lockfile（补回
+  // impl-mx importer）才能解析，故用非 frozen（与 installFullDeps 一致）。
   return variant === 'private'
-    ? 'pnpm --filter backend --filter @cloudcad/impl-mx --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --frozen-lockfile --prod'
+    ? 'pnpm --filter backend --filter @cloudcad/impl-mx --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --prod'
     : 'pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --frozen-lockfile --prod';
 }
 
@@ -790,6 +908,60 @@ async function prepareDeployStore(variant = 'oss') {
   bundlePrismaSchemaEngine();
 
   log(`✓ ${storeName} 准备完成 (${storeCheck.count} 个包)`);
+}
+
+/**
+ * 替换 mxcad 系列包 dist（私有修改，不进 git）并重建前端产物。
+ *
+ * 用外部目录的 dist 覆盖 node_modules/<pkg>/dist，然后 build 对应前端：
+ *   - mxcad-app → PC 端（vite closeBundle cpSync 到 dist/mxcad-app/）
+ *   - mxcad / mxdraw → 移动端（Vite 正常打包进 bundle）
+ *
+ * 必须在最后一次 pnpm install 之后执行（prepareDeployStore 的 install 会重置
+ * node_modules）。用 fs.cpSync 覆盖而非原地编辑——后者会写穿 pnpm store 的
+ * 硬链接，污染 .pnpm-store。
+ *
+ * @param {Object<string, string>} targets - { 包名: 源 dist 目录（绝对或相对路径） }
+ */
+function replaceAndBuildDists(targets) {
+  // 每个包在 workspace 中所属的包目录（决定 node_modules 位置）
+  const pkgDirs = {
+    'mxcad-app': 'packages/frontend',
+    mxcad: 'packages/frontend_mobile',
+    mxdraw: 'packages/frontend_mobile',
+  };
+  for (const [pkg, src] of Object.entries(targets)) {
+    const pkgDir = pkgDirs[pkg] || 'packages/frontend';
+    const dest = path.join(PROJECT_ROOT, pkgDir, 'node_modules', pkg, 'dist');
+    if (!fs.existsSync(src)) {
+      error(`${pkg} dist 源目录不存在: ${src}`);
+      throw new Error(`${pkg} dist 源目录不存在`);
+    }
+    log(`替换 ${pkg} dist: ${src} → ${dest}`);
+    fs.rmSync(dest, { recursive: true, force: true });
+    fs.cpSync(src, dest, { recursive: true });
+  }
+  // 必须 cd 进包目录跑裸 pnpm build（同 buildFrontendLocally）。不能用
+  // `pnpm --filter <pkg> build` + cwd: PROJECT_ROOT：pnpm 会把 INIT_CWD 设成仓库根，
+  // @voerkai18n/plugins 按 INIT_CWD 解析 i18n 目录（仓库根无 src/ → 回落 <仓库根>/languages），
+  // 找不到 messages/idMap.json 直接 ENOENT，vite 配置加载阶段即失败。
+  if (targets['mxcad-app']) {
+    log('✓ mxcad-app 已替换，重建前端产物...');
+    execSync('pnpm build', {
+      cwd: path.join(PROJECT_ROOT, 'packages/frontend'),
+      stdio: 'inherit',
+      encoding: 'utf8',
+    });
+  }
+  if (targets['mxcad'] || targets['mxdraw']) {
+    log('✓ mxcad/mxdraw 已替换，重建移动端产物...');
+    execSync('pnpm build', {
+      cwd: path.join(PROJECT_ROOT, 'packages/frontend_mobile'),
+      stdio: 'inherit',
+      encoding: 'utf8',
+    });
+  }
+  log('✓ 前端产物已重建');
 }
 
 /**
@@ -1082,9 +1254,76 @@ function assertLinuxRuntimeComponents() {
 }
 
 /**
+ * 一方脚本行尾/编码出包前校验（门禁）。
+ *
+ * 背景（2026-09-29 事故）：bat 模板被批量改写为 LF 行尾后，离线包内
+ * start.bat/stop.bat 在 cmd.exe 下整行解析错乱——LF + GBK 中文在 CP936 下
+ * 把 echo/exit/if 行切碎成 'cho'、'/b'、'tarting' 等碎片命令，部署入口全废
+ * （cmd 实测复现）；CRLF + GBK 为唯一实证正确的形态，UTF-8 + chcp 65001
+ * 方案实测同样不可靠。sh 相反：bash 要求纯 LF，CRLF 导致 bad interpreter
+ * 与命令尾随 \r 报错。
+ * 行尾差异在 git diff 中不可见（autocrlf 归一化），提交管道无门禁，
+ * 故在打包前对随包的一方脚本逐字节断言，防坏脚本静默出包。
+ * 检出侧由 .gitattributes（bat/cmd eol=crlf、sh eol=lf）保证，本门禁是打包侧。
+ */
+function assertScriptLineEndings() {
+  const targets = [
+    // 入口脚本模板（目录内 .bat/.cmd/.sh 全部进包）
+    path.join(PROJECT_ROOT, 'scripts', 'pack-lib', 'templates'),
+    // 运行时脚本（整目录进包）
+    path.join(PROJECT_ROOT, 'runtime', 'scripts'),
+  ];
+  const problems = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(p);
+      } else if (/\.(bat|cmd|sh)$/i.test(entry.name)) {
+        const rel = path.relative(PROJECT_ROOT, p);
+        const buf = fs.readFileSync(p);
+        const hasBom =
+          buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
+        if (hasBom) {
+          problems.push(`${rel}: 含 BOM（bat/sh 均不得带 BOM）`);
+        } else if (/\.(bat|cmd)$/i.test(entry.name)) {
+          // cmd.exe 要求 CRLF：存在独立 LF 即解析错乱
+          for (let i = 0; i < buf.length; i++) {
+            if (buf[i] === 0x0a && (i === 0 || buf[i - 1] !== 0x0d)) {
+              problems.push(`${rel}: 存在独立 LF（bat/cmd 必须 CRLF 行尾）`);
+              break;
+            }
+          }
+        } else {
+          // bash 要求纯 LF：存在任何 CR 即坏
+          for (let i = 0; i < buf.length; i++) {
+            if (buf[i] === 0x0d) {
+              problems.push(`${rel}: 存在 CR（sh 必须 LF 行尾）`);
+              break;
+            }
+          }
+        }
+      }
+    }
+  };
+  for (const dir of targets) {
+    if (fs.existsSync(dir)) walk(dir);
+  }
+  if (problems.length > 0) {
+    error(`脚本行尾校验失败，中止打包:\n  ${problems.join('\n  ')}`);
+    error('修复方式:');
+    error('  - 按 .gitattributes 重新检出归一化（bat/cmd eol=crlf、sh eol=lf）');
+    error('  - 或手工转换行尾（bat/cmd → CRLF、sh → LF），均不得加 BOM');
+    process.exit(1);
+  }
+  log('脚本行尾校验通过（bat/cmd=CRLF、sh=LF、无 BOM）');
+}
+
+/**
  * 部署包：复制文件到临时目录
  */
 function prepareDeployDir(platform, variant = 'oss') {
+  assertScriptLineEndings();
   const tempDir = path.join(PROJECT_ROOT, 'temp', `deploy-${Date.now()}`);
 
   // 清理可能存在的旧目录
@@ -1240,6 +1479,7 @@ async function packDeploy(platform, variant = 'oss') {
         cwd: PROJECT_ROOT,
         stdio: 'inherit',
         encoding: 'utf8',
+        env: { ...process.env, CI: 'true' },
       });
     } catch (err) {
       error(`根依赖安装失败，无法继续打包：${err.message.split('\n')[0]}`);
@@ -1248,19 +1488,42 @@ async function packDeploy(platform, variant = 'oss') {
   }
 
   // 1. 构建（前端已在本地预构建，dist/ 已 COPY 入容器）
-  log('[1/3] 构建后端...');
+  log('[1] 构建后端...');
   if (!(await buildProject(variant))) {
     process.exit(1);
   }
 
-  // 2. 验证生产依赖 store + 补充全平台 Prisma 引擎（复用 Docker 已建 store，不重装）
+  // 2. 可选：替换 mxcad 系列 dist（私有修改，不进 git）并重建前端产物。
+  // 必须在 prepareDeployStore 之前——该步 --prod install 会剔除 devDeps（vite），
+  // 前端 build 需要 vite。前端产物是 packages/frontend/dist（磁盘文件），
+  // 后续 prepareDeployStore 重置 node_modules 不影响。
+  // 默认相对路径基于 PROJECT_ROOT，可用环境变量单独覆盖某个包。
+  if (process.env.PRIVATE_MXCAD === '1') {
+    const distTargets = {
+      'mxcad-app':
+        process.env.MXCAD_APP_DIST_SRC ||
+        path.join(PROJECT_ROOT, '..', 'Sample', 'Edit', 'MXCADAppVuetify3', 'lib', 'dist'),
+      mxcad:
+        process.env.MXCAD_DIST_SRC ||
+        path.join(PROJECT_ROOT, '..', 'MxDrawPlugin', 'mxcad', 'dist'),
+      mxdraw:
+        process.env.MXDRAW_DIST_SRC ||
+        path.join(PROJECT_ROOT, '..', 'MxDrawPlugin', 'mxdraw', 'dist'),
+    };
+    log('');
+    log('[2] 替换 mxcad 系列 dist（私有版本）...');
+    replaceAndBuildDists(distTargets);
+  }
+
+  // 3. 验证生产依赖 store + 补充全平台 Prisma 引擎（复用 Docker 已建 store，不重装）
   log('');
-  log('[2/3] 准备生产依赖 store...');
+  log('[3] 准备生产依赖 store...');
   await prepareDeployStore(variant);
 
-  // 3. 准备打包目录
+
+  // 4. 准备打包目录
   log('');
-  log('[3/3] 打包...');
+  log('[4] 打包...');
   const tempDir = prepareDeployDir(platform, variant);
 
   try {
@@ -1367,6 +1630,9 @@ async function packUpgrade(platform, variant = 'oss') {
   log(`目标平台: ${platform === 'win' ? 'Windows' : 'Linux'}`);
   log(`Variant: ${variant}`);
   log('');
+
+  // 升级包同样携带 runtime/scripts，行尾门禁与部署包一致
+  assertScriptLineEndings();
 
   // 0. 构建产物（始终重新构建，保证升级包是最新源码产物）
   // 后端链路（backend/db/contracts，private 含 impl-mx）：始终强制重build
@@ -1592,6 +1858,19 @@ async function main() {
     if (v === 'oss' || v === 'private') variant = v;
     else { error(`不支持的 variant: ${v}，可选 oss/private`); process.exit(1); }
   }
+
+  // --private-mxcad：用本地私有 dist 替换 mxcad 系列包（不进 git，不指定路径）。
+  // 默认相对路径（基于 PROJECT_ROOT）：
+  //   ../Sample/Edit/MXCADAppVuetify3/lib/dist → mxcad-app（PC 端）
+  //   ../MxDrawPlugin/mxcad/dist                → mxcad（移动端）
+  //   ../MxDrawPlugin/mxdraw/dist               → mxdraw（移动端）
+  // 也支持环境变量 PRIVATE_MXCAD=1。
+  if (args.includes('--private-mxcad') || process.env.PRIVATE_MXCAD === '1') {
+    process.env.PRIVATE_MXCAD = '1';
+  }
+
+  // 打包会重建 workspace node_modules，开发服务器存活时须先阻断（deploy / upgrade 均会波及）
+  assertNoDevServerRunning(args.includes('--allow-dev-running'));
 
   try {
     if (mode === 'deploy') {

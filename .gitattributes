@@ -1,0 +1,10 @@
+# 脚本行尾固化（2026-09-29 事故：bat 模板被批量改写为 LF 后，离线部署包内
+# start.bat/stop.bat 等在 cmd.exe 下整行解析错乱——LF+GBK 中文在 CP936 下
+# 实测把 echo/exit/if 行切碎成 'cho'、'/b' 等碎片命令；CRLF+GBK 正常。
+# 同时排除 autocrlf 配置漂移：无本文件时 LF 入库 + LF 落盘，任何机器都炸。）
+#
+# bat/cmd：cmd.exe 要求 CRLF（且不加 BOM；UTF-8+chcp 65001 方案实测同样不可靠）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# sh：bash 要求纯 LF（CRLF 导致 bad interpreter / 命令尾随 \r 报错）
+*.sh text eol=lf
