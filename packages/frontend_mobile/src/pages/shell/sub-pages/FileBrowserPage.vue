@@ -36,6 +36,7 @@ import { useViewMode } from '@/composables/useViewMode'
 import { useTrashList } from '@/composables/useTrashList'
 import type { TrashScope } from '@/composables/useTrashList'
 import { useProjectActions } from '@/composables/useProjectActions'
+import { useProjectSearch } from '@/composables/useProjectSearch'
 import { formatNodeAsItems, formatTime } from '@/composables/useNodeFormatter'
 import type { FileListItem } from '@/composables/useNodeFormatter'
 import { useShellFileOpen } from '@/composables/useShellFileOpen'
@@ -53,7 +54,7 @@ import RenameNodePopup from '../components/RenameNodePopup.vue'
 import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
 import BatchDownloadPanel from '../components/BatchDownloadPanel.vue'
 import type { DownloadFormatPayload } from '../components/DownloadFormatPopup.vue'
-import { ProjectIcon } from '../../../components/FileIcons'
+import { ProjectIcon, FolderIcon } from '../../../components/FileIcons'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 
 const router = useRouter()
@@ -92,7 +93,6 @@ async function loadProjects(append = false) {
         page: projectPage.value,
         limit: 20,
         filter: projectFilter.value,
-        ...(keyword.value ? { search: keyword.value } : {}),
         sortBy: 'updatedAt',
         sortOrder: 'desc',
       },
@@ -125,22 +125,54 @@ function onProjectScroll(e: Event) {
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) loadMoreProjects()
 }
 
-// 搜索防抖：300ms 后回到第一页重查（服务端 search 参数）
+// ── 全局递归搜索（keyword 非空 → scope=global：项目命中 + 文件/文件夹命中混合结果）──
+const projectSearch = useProjectSearch()
+const searchItems = computed(() => formatNodeAsItems(projectSearch.results.value))
+
+function onSearchResultScroll(e: Event) {
+  const el = e.target as HTMLElement
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) projectSearch.loadMore()
+}
+
+// 全局搜索结果交互：项目命中→进入项目；文件夹命中→进入所属项目根
+//（ancestorPath 是无 id 的名称路径，无法还原面包屑，徽章展示原路径）；文件命中→打开
+function onSearchResultClick(item: FileListItem) {
+  if (item.nodeType === 'PROJECT') {
+    router.push(`/shell/file/project/${item.id}`)
+    return
+  }
+  if (item.isFolder) {
+    const node = projectSearch.results.value.find((n) => n.id === item.id)
+    if (node?.projectId) router.push(`/shell/file/project/${node.projectId}`)
+    else activeTab.value = 1
+    return
+  }
+  void openFromList(item.id, { path: '/shell/file', tab: 0 })
+}
+
+// 搜索防抖：300ms 后 keyword 非空切全局递归搜索，清空回正常项目列表
 let projectSearchTimer: ReturnType<typeof setTimeout> | null = null
 watch(keyword, () => {
   if (activeTab.value !== 0) return
   if (projectSearchTimer) clearTimeout(projectSearchTimer)
   projectSearchTimer = setTimeout(() => {
-    projectPage.value = 1
-    loadProjects()
+    if (keyword.value) {
+      projectSearch.searchFromFirstPage(keyword.value, projectFilter.value)
+    } else {
+      projectSearch.clear()
+    }
   }, 300)
 })
 
-// A-11 切换筛选维度（全部/我创建的/我加入的）→ 回到第一页重查
+// A-11 切换筛选维度（全部/我创建的/我加入的）→ 回到第一页重查（keyword 非空时重查全局搜索）
 watch(projectFilter, () => {
   if (activeTab.value !== 0) return
-  projectPage.value = 1
-  loadProjects()
+  if (keyword.value) {
+    projectSearch.searchFromFirstPage(keyword.value, projectFilter.value)
+  } else {
+    projectPage.value = 1
+    loadProjects()
+  }
 })
 
 const personalFileList = useUnifiedFileList('personal')
@@ -790,8 +822,56 @@ async function onFileInputChange(e: Event) {
           </button>
         </div>
         <div class="search-bar">
-          <van-search v-model="keyword" placeholder="搜索项目" shape="round" />
+          <van-search v-model="keyword" :placeholder="t('搜索项目或文件')" shape="round" />
         </div>
+        <!-- 全局搜索态（keyword 非空）：混合结果 = 项目命中（项目卡片）+ 文件/文件夹命中（文件行 + 来源徽章） -->
+        <template v-if="keyword">
+          <div v-if="projectSearch.error.value && projectSearch.results.value.length === 0" class="state-box">
+            <span class="state-text">{{ projectSearch.error.value }}</span>
+            <van-button size="small" round @click="projectSearch.searchFromFirstPage(keyword, projectFilter)">重试</van-button>
+          </div>
+          <div v-else-if="projectSearch.loading.value && projectSearch.results.value.length === 0" class="state-box">
+            <van-loading size="24" />
+            <span class="state-text">加载中...</span>
+          </div>
+          <div v-else-if="projectSearch.results.value.length === 0" class="state-box">
+            <span class="state-text">{{ t('未找到相关项目或文件') }}</span>
+          </div>
+          <div v-else class="project-grid" @scroll.passive="onSearchResultScroll">
+            <template v-for="item in searchItems" :key="item.id">
+              <div v-if="item.nodeType === 'PROJECT'" class="project-card" @click="onSearchResultClick(item)">
+                <div class="card-header">
+                  <span class="card-name">{{ item.name }}</span>
+                </div>
+                <div class="card-body">
+                  <div class="card-thumb">
+                    <ProjectIcon size="100%" />
+                  </div>
+                </div>
+                <div class="card-footer">
+                  <span class="card-time">{{ item.time }}</span>
+                </div>
+              </div>
+              <div v-else class="search-row" @click="onSearchResultClick(item)">
+                <div class="search-row-icon" :class="item.isFolder ? 'search-row-icon--folder' : 'search-row-icon--file'">
+                  <FolderIcon v-if="item.isFolder" :size="20" />
+                  <van-icon v-else name="description" size="20" />
+                </div>
+                <div class="search-row-body">
+                  <span class="search-row-name">{{ item.name }}</span>
+                  <span class="search-row-sub">{{ item.isFolder ? t('文件夹') : `${item.time ?? ''} · ${item.size ?? ''}` }}</span>
+                  <span v-if="item.ancestorPath" class="search-row-source">{{ item.ancestorPath }}</span>
+                </div>
+              </div>
+            </template>
+            <div v-if="projectSearch.results.value.length > 0" class="grid-footer">
+              <van-loading v-if="projectSearch.loading.value" size="20" />
+              <span v-else-if="!projectSearch.hasMore.value" class="state-text">没有更多了</span>
+            </div>
+          </div>
+        </template>
+        <!-- 正常项目列表（keyword 为空） -->
+        <template v-else>
         <div v-if="projectError && projects.length === 0" class="state-box">
           <span class="state-text">{{ projectError }}</span>
           <van-button size="small" round @click="loadProjects">重试</van-button>
@@ -832,6 +912,7 @@ async function onFileInputChange(e: Event) {
             <span v-else-if="!projectHasMore" class="state-text">没有更多了</span>
           </div>
         </div>
+        </template>
       </van-tab>
 
       <van-tab title="个人空间">
@@ -1219,6 +1300,76 @@ async function onFileInputChange(e: Event) {
   align-items: center;
   justify-content: center;
   padding: 10px 0;
+}
+
+// 全局搜索文件/文件夹命中行（跨两列，与项目卡片混排）
+.search-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--divider);
+
+  &:active {
+    opacity: 0.85;
+    transform: scale(0.99);
+  }
+}
+
+.search-row-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--bg-tertiary);
+
+  &--folder {
+    color: var(--accent);
+  }
+
+  &--file {
+    color: var(--text-secondary);
+  }
+}
+
+.search-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-row-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-row-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-row-source {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fab {

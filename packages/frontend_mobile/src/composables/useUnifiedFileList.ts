@@ -9,7 +9,7 @@
  * nodeController 分支复用文件系统节点层级遍历逻辑。
  */
 import { ref, computed, shallowRef } from 'vue'
-import { nodeControllerGetChildren } from '@cloudcad/api-sdk/sdk.gen'
+import { nodeControllerGetChildren, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto, NodeListResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
 
@@ -46,6 +46,8 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
 
   const currentFolderId = ref<string | null>(null)
   const breadcrumbs = ref<BreadcrumbItem[]>([])
+  // 根节点 id（loadRootNode 记录）：project 域搜索 scope=project_files 时作 projectId
+  const rootId = ref<string | null>(null)
 
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   function setSearch(val: string) {
@@ -76,8 +78,23 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     return currentFolderId.value
   }
 
+  // 搜索 scope 派生：personal → personal_space；project → project_files（需 rootId）
+  function searchScope(): 'personal_space' | 'project_files' | null {
+    if (domain === 'personal') return 'personal_space'
+    return rootId.value ? 'project_files' : null
+  }
+
   // ── 加载节点列表 ──
   async function loadNodes() {
+    // 搜索态：改走 nodeControllerSearch 递归全 scope 搜索（结果替换当前文件夹列表）
+    if (debouncedSearch.value) {
+      const scope = searchScope()
+      if (scope) {
+        await loadSearch(scope)
+        return
+      }
+    }
+
     const targetId = resolveTargetId()
     if (!targetId) {
       // 无目标节点（尚未 loadRootNode 设置根）
@@ -110,6 +127,48 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
       totalPages.value = data.totalPages ?? 1
     } catch (e) {
       console.error('[useUnifiedFileList] loadNodes:', e)
+      error.value = t('加载失败')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ── 加载搜索结果（递归全 scope，替换当前文件夹列表）──
+  async function loadSearch(scope: 'personal_space' | 'project_files') {
+    loading.value = true
+    error.value = ''
+
+    try {
+      const query =
+        scope === 'personal_space'
+          ? {
+              keyword: debouncedSearch.value,
+              scope,
+              page: page.value,
+              limit: 30,
+              sortBy: sortBy.value,
+              sortOrder: sortOrder.value,
+            }
+          : {
+              keyword: debouncedSearch.value,
+              scope,
+              projectId: rootId.value ?? undefined,
+              page: page.value,
+              limit: 30,
+              sortBy: sortBy.value,
+              sortOrder: sortOrder.value,
+            }
+      const res = await nodeControllerSearch({ query } as any)
+
+      if (res.error) throw new Error(String(res.error))
+      const data = (res.data ?? {}) as unknown as NodeListResponseDto
+      nodes.value = page.value === 1
+        ? (data.nodes ?? [])
+        : [...nodes.value, ...(data.nodes ?? [])]
+      total.value = data.total ?? 0
+      totalPages.value = data.totalPages ?? 1
+    } catch (e) {
+      console.error('[useUnifiedFileList] loadSearch:', e)
       error.value = t('加载失败')
     } finally {
       loading.value = false
@@ -174,6 +233,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
 
   // 项目/个人空间的根节点加载
   async function loadRootNode(rootNodeId: string) {
+    rootId.value = rootNodeId
     currentFolderId.value = rootNodeId
     breadcrumbs.value = []
     page.value = 1
@@ -190,7 +250,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     loadNodes, loadMore, refresh,
     isFolder,
     getThumbnailUrl,
-    currentFolderId, breadcrumbs,
+    currentFolderId, breadcrumbs, rootId,
     enterFolder, goBackTo,
     loadRootNode,
   }
