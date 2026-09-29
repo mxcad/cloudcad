@@ -177,7 +177,7 @@ pnpm build                  # i18n compile → vite build
 | 模块健康 | 新建模块前三问（有无消费者/有无测试/是否值得独立，<5 文件并入相关模块）；无消费者代码删或标注；未激活模块必须 JSDoc 标注 + 登记 issue；迁移（expand-contract）必须排收尾票禁双轨 | backend-coding-standards, #228, #234 |
 | 可替换模块设计 | 需要 OSS/Pro/TOB 不同实现的模块，统一使用接口 + DI token + @Optional() 模式。现有参考：IAuthProvider、IPermissionStore、IUserService、StorageProvider | replaceable-module |
 | 类型获取 | 数据层类型从 `@cloudcad/db`（Prisma 模型/枚举/Prisma namespace，禁 `import from '@prisma/client'`）、业务类型从 `@cloudcad/contracts`、HTTP DTO 由 api-sdk 自动生成不手动定义；接口方法不得 `any` | ADR-0026/0027, backend-coding-standards |
-| 后端格式化 | 全仓统一 Prettier（根目录 `.prettierrc`）；后端无 Biome | backend-coding-standards |
+| Prettier 配置漂移 | 工具统一 Prettier（后端无 Biome），但**只有 `packages/frontend`（PC）真实符合根 `.prettierrc`（semi/宽 80）**；`packages/backend` 与 `packages/frontend_mobile` 的既有代码在根配置下 `prettier --check` 本身就失败（移动端=无分号/宽 100），故根 `pnpm format:check`/`format` 对这两包不构成门禁、`--write` 会制造整文件假 diff | 见下方反模式表「对 frontend_mobile/backend 跑 prettier --write」 |
 | Prisma v7 | schema 变更后类型可能变 `ModelNameOmit`；枚举不可直接 `@ApiProperty` | prisma-database |
 | Express v5 | `session.destroy()`/`save()` 返回 `Promise<void>` | backend-coding-standards |
 | CAD 引擎黑盒 | `mxcadManager` 单例，`CADEditorDirect` 全局叠加层保 WebGL | cad-engine-integration |
@@ -220,6 +220,7 @@ pnpm build                  # i18n compile → vite build
 | 用浏览器自动化（Playwright MCP 等）打开页面/登录/截图来诊断问题 | **禁止默认调用浏览器操作**（`playwright_browser_*` 系列工具）：耗时且需登录态，多数问题可通过读代码、查日志（后端 NestJS Logger / 浏览器 console）、直接请求后端接口（`Invoke-WebRequest`/curl 带 cookie/token）验证。浏览器操作仅在用户明确要求时才使用 |
 | 把 `exec`（经 shell）改成 `spawn`（无壳）却不验证参数传递语义 | `exec` 经 cmd.exe 传原始参数，`spawn` 由 Node 转义（含 `"` 的参数变 `\"`）——mxcad 转换因此报 `read file error`（aaf2626 回归，`mxcad-exec.ts` 加 `windowsVerbatimArguments` 修复）。改进程启动方式必须用**真实子进程**对照复现（默认 vs `windowsVerbatimArguments`），不能只看"进程能起来"；且 mxcadassembly 退出码恒 2123，成败只认 JSON stdout |
 | CLI/部署脚本/打包工具中硬编码产品名（`CloudCAD` / 中文名） | **产品名单一事实源**：用户可见品牌名一律从 `runtime/scripts/lib/branding.js`（`PRODUCT_NAME`）引用（JS `require`）或由 `scripts/sync-brand.js` 统一同步。改产品名只改 branding.js + 追加旧名到 `sync-brand.js` 的 `CN_LEGACY`，再跑 `pnpm brand:sync`（打包入口已自动执行）。静态文件里的逻辑标识（`cloudcad` 小写：包名/命令名/DB 名/`CloudCAD-PM2`/`CloudCAD fixed wrapper` 等）**禁止替换**；`.md` 文档不进自动同步 |
+| 对 `packages/frontend_mobile` / `packages/backend` 文件跑 `prettier --write`（根配置），或对 markdown 文件跑 prettier | 只有 `packages/frontend`（PC）符合根 `.prettierrc`；另两包 HEAD 基线本身 check 失败，`--write` 制造整文件假 diff（移动端 1600+ 行/后端 100+ 行），prettier 的 markdown 还会把 `*` 强调标记重写为 `_`、**破坏内容**（CONTEXT.md 的 `SYSTEM_USER_*` 权限通配符被改成 `SYSTEM_USER__`，2026-09-28 事故：eea9051 误格式化 4 文件+CONTEXT.md，564677a 修复）。**`--write` 前必须先对 HEAD 基线跑 `prettier --check`**（`git show HEAD:<path> > <仓库内带真实扩展名的临时文件>` 再 check——无扩展名临时文件 parser 推断失败会静默 0 warn，造成「HEAD 干净」假阳性）；基线不过就不 write，手写匹配周边风格。含 `*` 通配符的 md 文件一律不跑 prettier。根 `pnpm format`/`check:fix`（`prettier --write .`）同样会重写全仓两包，勿跑 |
 
 > **钩子**：`.opencode/plugins/block-dangerous-git.ts` 会在 bash 工具执行前拦截上述 git 恢复/回退/暂存/切分支命令（含 `git -C <dir>` 变体、`-f/--force` 强制标志、`git stash` 全部形式、`git checkout <branch>`/`-b`、`git switch` 等），并默认拦截 `git worktree` 命令。误拦截需豁免时，先与用户确认并在注释说明原因。
 
