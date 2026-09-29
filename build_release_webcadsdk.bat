@@ -1,0 +1,1 @@
+(call pnpm run pack:offline:win:private-mxcad)
