@@ -145,14 +145,15 @@ function areAllInfraOnline(pm2StatusMap) {
  * 复用"，旧实例永远不被设密，后端 AUTH 恒 NOAUTH。
  *
  * @returns {Promise<'ok'|'taken-over'|'blocked'|'configured'>}
- *   ok         无需再处理：端口未开 / 未配置密码 / 实例密码正确 / 无法判定
+ *   ok         无需再处理：端口未开 / 未配置密码 / 实例密码正确
  *   configured 6379 上的外部实例（系统装的 redis）密码已按 .env 生效——本轮运行中
  *              改密成功（CONFIG SET + CONFIG REWRITE）或上一轮已设好。实例继续运行
  *              （未杀进程），调用方须把 PM2 的 redis 包装进程拉起以采纳该实例——
  *              否则端口被外部进程占用会被误报成冲突，且 pm2 status 恒显示 stopped
- *   taken-over 已停掉本部署旧实例并等端口释放，后续流程以 --requirepass 重拉
- *   blocked    无法自动修复（归属非本部署 / 归属无法确认 / 停止失败 / 端口未释放），
- *              调用方中止部署
+ *   taken-over 端口上不接受 .env 密码的实例（本部署旧实例/另一部署目录/人工或系统
+ *              实例，归属不影响动作）已停止并等端口释放，后续流程以 --requirepass
+ *              重拉本目录实例。数据按各自 --dir 隔离，停止进程不删数据
+ *   blocked    无法自动修复（无法定位占用 PID / 停止失败 / 端口未释放），调用方中止
  */
 async function ensureRedisPasswordManaged() {
   const password = loadRedisPassword();
@@ -190,11 +191,15 @@ async function ensureRedisPasswordManaged() {
   if (probe === 'unknown') {
     log(
       'yellow',
-      `  [警告] 无法确认 redis（${redisHost}:${PORTS.redis}）的认证状态（${reason}），跳过密码校验...`
+      `  [警告] 无法确认 redis（${redisHost}:${PORTS.redis}）的认证状态（${reason}），按不可信实例处理：停止重拉...`
     );
-    return 'ok';
   }
-  const desc = probe === 'noauth' ? '未设密码' : '密码与 .env 不一致';
+  const desc =
+    probe === 'noauth'
+      ? '未设密码'
+      : probe === 'unknown'
+        ? '认证状态未知'
+        : '密码与 .env 不一致';
 
   // 无密码实例直接在运行中改密（`CONFIG SET requirepass`）：不需要先 AUTH，
   // 因此不依赖进程归属、不杀进程、不动数据、无停机。实例可能是系统装的 redis
@@ -248,41 +253,41 @@ async function ensureRedisPasswordManaged() {
     }
   }
 
+  // 统一接管：无论归属（本部署旧实例/另一部署目录/人工或系统实例），只要端口上
+  // 的实例不接受 .env 的 REDIS_PASSWORD，就必须让位——本目录 start 的语义是
+  // "启动后项目必须可用"，否则后端 AUTH 恒失败而 PM2 侧 redis 却显示 online。
+  // 实例数据按各自 --dir 隔离，停止进程不删数据（SIGTERM 优雅落盘/taskkill 强杀）。
   const pid = getPidByPort(PORTS.redis);
-  const ownership = detectRedisOwnership(pid);
-  if (ownership !== 'ours') {
-    const otherDeploy = pid && isForeignCloudCadRuntimeProcess(pid);
-    if (!pid || ownership === 'unknown') {
-      log(
-        'red',
-        `  [错误] redis 端口 ${PORTS.redis} 上的实例${desc}，但无法读取其进程归属（lsof/netstat 缺失？）`
-      );
-      log(
-        'cyan',
-        '  无法确认归属即无法安全接管，部署中止。请手动确认占用 6379 的进程后重跑（或安装 lsof 便于自动识别）。'
-      );
-      return 'blocked';
-    }
+  if (!pid) {
     log(
       'red',
-      `  [错误] redis 端口 ${PORTS.redis} 由非本部署实例占用（${desc}），且不接受 .env 的 REDIS_PASSWORD`
+      `  [错误] redis 端口 ${PORTS.redis} 上的实例${desc}，但无法定位其进程（netstat/lsof 失败？）`
     );
-    const hint = otherDeploy
-      ? '  自动接管会覆盖另一部署目录实例的数据，部署中止。请在该目录执行 stop 释放端口后重跑，或在 .env 把 REDIS_PASSWORD 设为该实例的密码。'
-      : probe === 'wrongpass'
-        ? '  该实例已设了另一个密码：运行时改密须先用旧密码 AUTH，我们不知道旧密码，而停掉他人实例可能丢失其数据，因此不自动处理，部署中止。请在 .env 把 REDIS_PASSWORD 设为该实例的密码，或确认其数据可弃后停止该实例再重跑。'
-        : '  自动接管会覆盖他人实例的数据，部署中止。请在 .env 把 REDIS_PASSWORD 设为该实例的密码，或停止该实例后重跑。';
-    log('cyan', hint);
     return 'blocked';
   }
-
+  const ownership = detectRedisOwnership(pid);
+  const origin =
+    ownership === 'ours'
+      ? '本部署旧实例'
+      : isForeignCloudCadRuntimeProcess(pid)
+        ? '另一部署目录实例'
+        : '外部/系统实例';
   log(
     'yellow',
-    `  [清理] redis 端口 ${PORTS.redis} 上的旧实例（PID ${pid}）${desc}，停止并交 PM2 按 .env REDIS_PASSWORD 重新拉起...`
+    `  [接管] redis 端口 ${PORTS.redis} 由${origin}占用（PID ${pid}）${desc}，停止并按 .env REDIS_PASSWORD 重新拉起...`
   );
+  // 先停 PM2 的 redis 包装进程（若在本机 PM2 中处于托管）：否则其 keepAlive
+  // 会在实例被停后 5 秒内重拉旧实例，与下方端口释放等待形成竞态。
+  if (getPm2AppStatus('redis') === 'online') {
+    runPm2(['stop', 'redis'], { silent: true });
+  }
+  // taskkill 可能与 PM2 stop 的杀树并发（目标处于"正在终止"时报错），单次
+  // 报错不代表失败——以端口最终释放为接管成功的准绳。
   if (!stopRedisProcess(pid)) {
-    log('red', `  [错误] 停止旧 redis 实例 (PID ${pid}) 失败，部署中止。`);
-    return 'blocked';
+    log(
+      'yellow',
+      `  [警告] 停止 redis 实例 (PID ${pid}) 的信号未确认成功，以端口释放为准继续等待...`
+    );
   }
   // 等端口真正释放：旧实例收到 SIGTERM 需优雅退出并落盘 AOF；若仍处半关闭状态，
   // redis-manager 的 keepAlive 会误判"已在运行"采纳临终实例，反复退出被 PM2 重启。
@@ -290,11 +295,11 @@ async function ensureRedisPasswordManaged() {
   if (!released) {
     log(
       'red',
-      `  [错误] 旧 redis 实例 (PID ${pid}) 已发停止信号但端口 ${PORTS.redis} 未释放，部署中止。请手动确认后重跑。`
+      `  [错误] redis 实例 (PID ${pid}) 已发停止信号但端口 ${PORTS.redis} 未释放，部署中止。请手动确认后重跑。`
     );
     return 'blocked';
   }
-  log('green', '  [✓] 旧实例已停止，端口已释放，交 PM2 按 .env 密码重新拉起');
+  log('green', '  [✓] 占用实例已停止，端口已释放，交 PM2 按 .env 密码重新拉起');
   return 'taken-over';
 }
 
@@ -393,14 +398,35 @@ function stopForeignService(appName, pid) {
  *   未接管"的冲突告警，而是把 PM2 的 redis 包装进程拉起/重启以纳入托管——包装进程
  *   采纳现有实例，不会重启数据实例。
  */
+/**
+ * 判断 PM2 app 的注册信息（pm_cwd）是否属于本部署目录。
+ *
+ * Windows 上 PM2 daemon 全机唯一（命名管道寻址，PM2_HOME 只决定文件位置），
+ * 多个部署目录共写同一份 app 注册表：先注册者恒赢，后 start 的目录对同名 app
+ * 发 `pm2 restart` 跑的还是别家脚本（别家 .env/数据目录）——redis 的表现为
+ * "start 成功、PM2 online，但本目录后端 AUTH 恒失败"。
+ * @param {{pm2_env?: {pm_cwd?: string, cwd?: string}}} entry pm2 jlist 单项
+ * @returns {boolean} true=属于本目录（或无法判定，按本目录处理维持现行为）
+ */
+function isPm2AppFromThisProject(entry) {
+  const cwd =
+    entry && entry.pm2_env && (entry.pm2_env.pm_cwd || entry.pm2_env.cwd);
+  if (!cwd) return true;
+  const norm = (p) => String(p).toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
+  const root = norm(PROJECT_ROOT);
+  const c = norm(cwd);
+  return c === root || c.startsWith(`${root}/`);
+}
+
 async function reconcileInfrastructureWithPm2(
   portOpenMap,
   pm2StatusMap,
   { redisPasswordConfigured = false } = {}
 ) {
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
+  const pm2Entries = getPm2StatusList();
   const onlineApps = new Set(
-    getPm2StatusList()
+    pm2Entries
       .filter((a) => a.pm2_env && a.pm2_env.status === 'online')
       .map((a) => a.name)
   );
@@ -412,8 +438,36 @@ async function reconcileInfrastructureWithPm2(
   for (const appName of INFRA_SERVICE_APPS) {
     const portKey = INFRA_APP_TO_PORT_KEY[appName];
     const portOpen = portOpenMap[appName];
+    const pm2Entry = pm2Entries.find((a) => a.name === appName);
+    const foreignRedis =
+      appName === 'redis' && pm2Entry && !isPm2AppFromThisProject(pm2Entry);
+    if (pm2Entry && !isPm2AppFromThisProject(pm2Entry) && appName !== 'redis') {
+      log(
+        'yellow',
+        `  [提示] PM2 中 ${appName} 的注册信息来自另一部署目录（${pm2Entry.pm2_env.pm_cwd}），本次沿用其脚本与数据；redis 会强制切换为本目录。`
+      );
+    }
 
     if (portOpen && onlineApps.has(appName)) {
+      if (foreignRedis) {
+        // redis 定义属于另一部署目录：restart 跑的是别家 redis-manager（别家
+        // .env 密码/别家数据目录），本目录后端 AUTH 必失败。删除别家定义、
+        // 停掉其 redis-server（数据按 --dir 隔离，不删数据），用本目录定义重拉。
+        log(
+          'yellow',
+          `  [接管] PM2 中的 redis 定义属于另一部署目录（${pm2Entry.pm2_env.pm_cwd}），删除并用本目录配置重拉...`
+        );
+        runPm2(['delete', appName], { silent: true });
+        const pid = getPidByPort(PORTS[portKey]);
+        if (pid) {
+          stopRedisProcess(pid);
+          for (let i = 0; i < 10 && (await isPortOpen(PORTS.redis)); i++) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+          }
+        }
+        toStart.push(appName);
+        continue;
+      }
       // 端口开 + PM2 online：健康，复用
       continue;
     }
@@ -485,7 +539,11 @@ async function reconcileInfrastructureWithPm2(
           );
           // 已注册（可能处于 stopped）走 restart，未注册走 start——与下方"端口未开"
           // 分支的判定一致；对未注册 app 发 restart 会直接报错并中止部署。
-          if (getPm2AppStatus(appName) === 'unknown') {
+          // 定义属于另一部署目录时同样删除重注册（restart 会跑别家脚本）。
+          if (foreignRedis) {
+            runPm2(['delete', appName], { silent: true });
+            toStart.push(appName);
+          } else if (getPm2AppStatus(appName) === 'unknown') {
             toStart.push(appName);
           } else {
             toRestart.push(appName);
@@ -512,6 +570,10 @@ async function reconcileInfrastructureWithPm2(
             for (let i = 0; i < 10 && (await isPortOpen(PORTS.redis)); i++) {
               await new Promise((resolve) => setTimeout(resolve, 300));
             }
+            if (foreignRedis) {
+              // 定义属于另一部署目录：删除重注册，否则 PM2 拉起的还是别家脚本
+              runPm2(['delete', appName], { silent: true });
+            }
             toStart.push('redis');
           }
         } else {
@@ -524,8 +586,17 @@ async function reconcileInfrastructureWithPm2(
       continue;
     }
 
-    // 端口未开：若 PM2 已注册但停止 → restart；否则 start
+    // 端口未开：若 PM2 已注册但停止 → restart；否则 start。
+    // redis 定义属于另一部署目录时必须删除重注册（Windows 全机唯一 PM2 daemon，
+    // restart 跑的是先注册的别家脚本——别家 .env 密码/别家数据目录）。
     if (getPm2AppStatus(appName) === 'unknown') {
+      toStart.push(appName);
+    } else if (foreignRedis) {
+      log(
+        'yellow',
+        '  [接管] PM2 中的 redis 定义属于另一部署目录，删除并用本目录配置重新注册...'
+      );
+      runPm2(['delete', appName], { silent: true });
       toStart.push(appName);
     } else {
       toRestart.push(appName);

@@ -15,7 +15,12 @@ const IS_WINDOWS = PLATFORM === 'win32';
 
 // 密码解析与 redis-cli 路径统一从 lib 取（单一事实源：门禁探测与实际生效的
 // 密码不能漂移）。注意 redis-takeover 是纯函数库（无顶层副作用），require 安全。
-const { loadRedisPassword, getRedisCliPath } = require('./lib/redis-takeover');
+const {
+  loadRedisPassword,
+  getRedisCliPath,
+  probeRedisAuth,
+  setRedisPasswordAtRuntime,
+} = require('./lib/redis-takeover');
 
 // 配置
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
@@ -90,6 +95,129 @@ function isRunning() {
   });
 }
 
+// 查找占用端口的进程 PID（Windows netstat / Linux ss、lsof），失败返回 null
+function getPidByPort(port) {
+  try {
+    if (IS_WINDOWS) {
+      const res = spawnSync('netstat', ['-ano', '-p', 'TCP'], {
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 8000,
+      });
+      const line = (res.stdout || '')
+        .split('\n')
+        .find((l) => l.includes(`:${port}`) && l.includes('LISTENING'));
+      if (!line) return null;
+      const pid = parseInt(line.trim().split(/\s+/).pop(), 10);
+      return Number.isFinite(pid) && pid > 0 ? pid : null;
+    }
+    const ss = spawnSync('ss', ['-tlnp'], { encoding: 'utf8', timeout: 8000 });
+    const ssLine = (ss.stdout || '')
+      .split('\n')
+      .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));
+    if (ssLine) {
+      const m = /pid=(\d+)/.exec(ssLine);
+      if (m) return parseInt(m[1], 10);
+    }
+    const lsof = spawnSync(
+      'lsof',
+      ['-t', '-i', `:${port}`, '-sTCP:LISTEN'],
+      { encoding: 'utf8', timeout: 8000 }
+    );
+    const lsofPid = parseInt((lsof.stdout || '').trim(), 10);
+    return Number.isFinite(lsofPid) && lsofPid > 0 ? lsofPid : null;
+  } catch {
+    return null;
+  }
+}
+
+// 按 PID 强制停止：Windows taskkill /T /F（连包装层一起杀树）；Linux
+// SIGTERM（redis 优雅退出落盘 AOF）→ 等待 → 仍未退出再 SIGKILL
+function killPid(pid) {
+  if (!pid) return false;
+  try {
+    if (IS_WINDOWS) {
+      const res = spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+        stdio: 'pipe',
+        windowsHide: true,
+        timeout: 10000,
+      });
+      return res.status === 0 || res.status === 128;
+    }
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch (err) {
+      return err.code === 'ESRCH';
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// 等待端口释放（killPid 后 redis 退出/落盘需要时间）
+async function waitPortReleased(timeoutMs) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (!(await isRunning())) return true;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  return !(await isRunning());
+}
+
+// Linux SIGTERM 后等待进程退出，超时升级 SIGKILL（Windows taskkill /F 无需升级）
+async function escalateKill(pid) {
+  if (IS_WINDOWS) return killPid(pid);
+  if (!killPid(pid)) return false;
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    try {
+      process.kill(pid, 0);
+    } catch (err) {
+      return err.code === 'ESRCH';
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  try {
+    process.kill(pid, 'SIGKILL');
+  } catch {
+    /* 已退出 */
+  }
+  return true;
+}
+
+/**
+ * 停掉端口上的实例（不管它是谁的）：先试 redis-cli 优雅 shutdown（无密码实例
+ * 可成），不行再按 PID 强杀。用于"端口被不接受本目录 .env 密码的实例占用"时
+ * 让位重起，以及 stop 命令的强制兜底。
+ */
+async function stopPortInstance() {
+  const redisCli = getRedisCliPath();
+  spawnSync(redisCli, ['shutdown', 'nosave'], {
+    stdio: 'pipe',
+    timeout: 5000,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  if (!(await isRunning())) return true;
+
+  const pid = getPidByPort(REDIS_PORT);
+  if (!pid) {
+    log('error', `无法定位占用端口 ${REDIS_PORT} 的进程，停止失败`);
+    return false;
+  }
+  log('warn', `优雅停止未生效，强制停止进程 (PID ${pid})...`);
+  if (!(await escalateKill(pid))) {
+    log('error', `强制停止进程 (PID ${pid}) 失败`);
+    return false;
+  }
+  const released = await waitPortReleased(10000);
+  if (!released) {
+    log('error', `进程已终止但端口 ${REDIS_PORT} 仍未释放`);
+    return false;
+  }
+  return true;
+}
+
 // 启动 Redis
 function startRedis() {
   return new Promise((resolve, reject) => {
@@ -116,7 +244,9 @@ function startRedis() {
     const redisProcess = spawn(redisServer, redisArgs, {
       stdio: 'inherit',
       windowsHide: true,
-      shell: IS_WINDOWS,
+      // 不走 shell：数组传参由 Node 处理引用，路径含空格也安全；走 shell 时
+      // redisProcess 是 cmd.exe 包装层，停止信号只杀得到 cmd.exe，
+      // redis-server.exe 会孤儿化继续占端口（Windows 下"redis 停不掉"的根因）
       detached: false,
       env: REDIS_LIB_DIR
         ? { ...process.env, LD_LIBRARY_PATH: `${REDIS_LIB_DIR}:${process.env.LD_LIBRARY_PATH || ''}` }
@@ -207,15 +337,58 @@ async function keepAlive() {
   return checkInterval;
 }
 
+/**
+ * 端口已被监听时，确保该实例接受本目录 .env 的 REDIS_PASSWORD：
+ * - 密码正确 → 采纳（keepAlive 托管语义不变）；
+ * - 无密码实例 → 运行中 CONFIG SET 设密（不停机、不动数据）后采纳；
+ * - 密码不一致（另一部署目录/人工拉的实例）→ 停掉它，重起本目录实例。
+ * 不做这个校验的后果：本目录后端 AUTH 恒失败，而 PM2 的 redis app 却显示
+ * online——故障被包装进程的"健康"状态伪装，只能靠重启电脑清场。
+ * @returns {Promise<'adopted'|'restarted'|'failed'>}
+ */
+async function ensurePortInstanceUsable() {
+  const password = loadRedisPassword();
+  if (!password) return 'adopted'; // 无密码模式：维持既有采纳行为
+
+  const probe = await probeRedisAuth('127.0.0.1', REDIS_PORT, password);
+  if (probe.state === 'ok') return 'adopted';
+
+  if (probe.state === 'noauth') {
+    log('warn', '端口上的 redis 实例未设密码，运行中设置为 .env 的 REDIS_PASSWORD...');
+    const set = await setRedisPasswordAtRuntime('127.0.0.1', REDIS_PORT, password);
+    if (set.ok) {
+      log('info', '[✓] 密码已设置（未重启实例，数据不受影响）');
+      return 'adopted';
+    }
+    log('warn', `运行中设密失败（${set.reason}），转为一停一起...`);
+  } else {
+    log(
+      'warn',
+      `端口 ${REDIS_PORT} 上的 redis 实例密码与 .env 不一致（${probe.reason || '另一部署目录或人工实例'}），停止并重起本目录实例...`
+    );
+  }
+
+  if (!(await stopPortInstance())) return 'failed';
+  return 'restarted';
+}
+
 async function main() {
   // 检查是否已在运行
   if (await isRunning()) {
-    log('info', `Redis 已在运行（端口 ${REDIS_PORT}）`);
-    log('info', '保持进程存活以维持 PM2 状态...');
-    await keepAlive();
-    return;
+    const action = await ensurePortInstanceUsable();
+    if (action === 'failed') {
+      log('error', '无法让端口上的 redis 实例接受本目录配置，退出（PM2 将标记 errored）');
+      process.exit(1);
+    }
+    if (action === 'adopted') {
+      log('info', `Redis 已在运行（端口 ${REDIS_PORT}）`);
+      log('info', '保持进程存活以维持 PM2 状态...');
+      await keepAlive();
+      return;
+    }
+    // 'restarted'：旧实例已清掉，继续走下方 startRedis 拉起本目录实例
   }
-  
+
   // 启动 Redis（startRedis 内部循环等待端口就绪，避免慢盘/AOF 加载误判超时）
   try {
     await startRedis();
@@ -227,43 +400,53 @@ async function main() {
   }
 }
 
-// 停止 Redis
+// 停止 Redis：先走 redis-cli 优雅 shutdown（本目录密码），失败（常见：端口上
+// 是另一部署目录/人工实例，密码与本目录 .env 不一致，shutdown 被 NOAUTH 拒绝）
+// 则按 PID 强杀兜底——stop 必须保证端口真正释放，否则整条"停了再起"链路失效。
 async function stopRedis() {
   if (!await isRunning()) {
     log('info', 'Redis 未运行');
     return true;
   }
-  
+
   log('info', '停止 Redis...');
-  
+
   const redisCli = getRedisCliPath();
-  
+
   // 加载 Redis 密码配置
   const redisPassword = loadRedisPassword();
-  
+
   // 构建 redis-cli 参数
   const cliArgs = [];
   if (redisPassword) {
     cliArgs.push('-a', redisPassword);
   }
   cliArgs.push('shutdown', 'nosave');
-  
+
   const result = spawnSync(redisCli, cliArgs, {
     stdio: 'pipe',
-    shell: IS_WINDOWS,
     timeout: 5000,
   });
-  
+  if (result.status !== 0 && result.stderr) {
+    // 不静默：密码不一致/连接失败等必须留痕，否则"看起来停了其实没停"
+    log('warn', `redis-cli shutdown 未成功: ${String(result.stderr).trim().slice(0, 200)}`);
+  }
+
   // 等待一下再检查
   await new Promise(resolve => setTimeout(resolve, 1000));
-  
+
   if (!await isRunning()) {
     log('info', 'Redis 已停止');
     return true;
   }
-  
-  log('warn', 'Redis 停止可能失败');
-  return false;
+
+  log('warn', '优雅停止未生效，强制停止...');
+  if (!(await stopPortInstance())) {
+    log('error', 'Redis 停止失败，端口仍被占用');
+    return false;
+  }
+  log('info', 'Redis 已停止');
+  return true;
 }
 
 // 命令行支持

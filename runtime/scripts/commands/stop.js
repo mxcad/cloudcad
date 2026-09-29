@@ -8,9 +8,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const { RUNTIME_DIR, NODE_EXE, PM2_JS } = require('../lib/context');
+const { RUNTIME_DIR, NODE_EXE, PM2_JS, PORTS } = require('../lib/context');
 const { log } = require('../lib/logger');
-const { runCommand, runPm2 } = require('../lib/proc');
+const { runCommand, runPm2, getPidByPort } = require('../lib/proc');
+const { isPortOpen, waitPortReleased } = require('../lib/health');
+const { stopRedisProcess } = require('../lib/redis-takeover');
 const state = require('../lib/state');
 
 /**
@@ -79,6 +81,26 @@ async function stopInfrastructure() {
   if (fs.existsSync(redisManagerScript)) {
     log('cyan', '停止 Redis...');
     runCommand(NODE_EXE, [redisManagerScript, 'stop'], { silent: true });
+    // 兜底校验：redis-manager stop 内部已有强杀回退，这里守最后一道门——
+    // 端口上若是另一部署目录/人工实例（密码与本目录 .env 不一致，shutdown 被
+    // NOAUTH 拒绝），必须按 PID 强杀，否则"停止"只是假象，下次 start 采纳
+    // 残留实例后端恒连接失败。
+    if (!(await waitPortReleased(PORTS.redis, 12000))) {
+      const pid = getPidByPort(PORTS.redis);
+      if (pid) {
+        log('yellow', `  redis 仍有残留实例 (PID ${pid})，强制停止...`);
+        stopRedisProcess(pid);
+        await waitPortReleased(PORTS.redis, 10000);
+      }
+    }
+    if (await isPortOpen(PORTS.redis)) {
+      log(
+        'red',
+        `  [错误] Redis 端口 ${PORTS.redis} 仍被占用，停止未完成。请手动确认占用进程（netstat -ano | findstr :${PORTS.redis}）。`
+      );
+    } else {
+      log('cyan', '  Redis 已停止，端口已释放');
+    }
   }
 
   log('green', '[✓] 所有服务已停止（PM2 服务定义已保留，可随时重新启动）');

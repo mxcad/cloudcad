@@ -130,7 +130,13 @@ function stopRedisProcess(pid) {
         windowsHide: true,
       });
       // 退出码：0=成功终止；128=目标不存在（已退出，视为已停止）
-      return result.status === 0 || result.status === 128;
+      if (result.status === 0 || result.status === 128) return true;
+      // 失败原因必须可见（spawn ENOENT / 拒绝访问等），否则调用方的
+      // "停止失败"无从排查
+      console.error(
+        `[redis-takeover] taskkill /PID ${pid} 失败: status=${result.status} error=${result.error ? result.error.code : ''} stderr=${String(result.stderr || '').trim().slice(0, 120)}`
+      );
+      return false;
     }
     process.kill(pid, 'SIGTERM');
     return true;
