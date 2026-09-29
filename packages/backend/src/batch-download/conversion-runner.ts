@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+﻿import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
@@ -9,10 +9,16 @@ import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
 import { PublicFileService } from '../public-file/public-file.service';
 import { CadDownloadFormat } from '../file-system/dto/download-node.dto';
+import {
+  IFunctionExecutor,
+  type BatchConversionTask,
+} from '../function-executor/function-executor.interface';
+import {
+  formatUnsupportedMessage,
+  resolveOutputFormat,
+} from '../file-system/file-download/format-policy';
 import * as path from 'path';
 import * as fs from 'fs';
-import { internalServiceSecretHeader } from '../common/utils';
-import { ConversionServiceClient } from '../common/utils/conversion-service-client';
 
 class Semaphore {
   private current = 0;
@@ -58,17 +64,6 @@ export interface ConversionResult {
   error?: string;
 }
 
-export interface WorkflowConvertTask {
-  id: string;
-  srcPath: string;
-  fileHash: string;
-  outname: string;
-  width?: string;
-  height?: string;
-  colorPolicy?: string;
-  dwgVersion?: number;
-}
-
 export interface ConvertRequest {
   node: {
     id: string;
@@ -90,62 +85,24 @@ export class ConversionRunner {
   private readonly logger = new Logger(ConversionRunner.name);
   private mxCadConversionService: IMxcadConversionService | null = null;
   private semaphore: Semaphore;
-  private readonly delegateWorkflow: boolean;
-  private readonly client: ConversionServiceClient;
-  private readonly workflowPollIntervalMs: number;
-  private readonly workflowTimeoutMs: number;
-  private workflowCooldownUntil = 0;
-  private static readonly WORKFLOW_COOLDOWN_MS = 60_000;
 
   constructor(
     private readonly moduleRef: ModuleRef,
     private readonly configService: ConfigService,
     private readonly restrictionEngine: RestrictionEngine,
     private readonly fileDownloadExportService: FileDownloadExportService,
-    private readonly publicFileService: PublicFileService
+    private readonly publicFileService: PublicFileService,
+    // 统一任务层 seam：注入的执行器带可选批量原语（submitBatch/waitBatch，
+    // BATCH_DOWNLOAD_DELEGATE_WORKFLOW 时由 FunctionExecutorModule 包装）则批量
+    // 委托 conversion-service；否则逐项进程内转换。
+    @Inject(IFunctionExecutor)
+    private readonly executor: IFunctionExecutor
   ) {
     const batchConfig = this.configService.get('batchDownload', {
       infer: true,
     });
     const maxConcurrency = batchConfig?.maxConcurrency || 3;
     this.semaphore = new Semaphore(maxConcurrency);
-    this.delegateWorkflow = !!batchConfig?.delegateWorkflow;
-
-    const workflowUrl = batchConfig?.conversionServiceUrl;
-    const envWorkflowUrl = this.configService.get<string>(
-      'CONVERSION_SERVICE_URL'
-    );
-    const baseUrl =
-      typeof workflowUrl === 'string' && workflowUrl
-        ? workflowUrl
-        : typeof envWorkflowUrl === 'string' && envWorkflowUrl
-          ? envWorkflowUrl
-          : 'http://localhost:3100';
-    const envSecret = this.configService.get<string>(
-      'CONVERSION_SERVICE_SECRET'
-    );
-    const conversionServiceSecret =
-      typeof envSecret === 'string' && envSecret ? envSecret : '';
-
-    // 单请求超时取轮询总超时的较小值与 60s 的下限：轮询超时负责整体兜底，
-    // 单请求超时只防一个连接挂住
-    this.workflowTimeoutMs = batchConfig?.workflowTimeoutMs || 10 * 60 * 1000;
-    this.workflowPollIntervalMs = batchConfig?.workflowPollIntervalMs || 1500;
-    this.client = new ConversionServiceClient({
-      baseUrl,
-      timeoutMs: Math.min(this.workflowTimeoutMs, 60_000),
-      // #419：统一内网共享密钥 header（与旧 X-Conversion-Service-Secret 并存，
-      // 服务端任一匹配即放行）
-      headers: {
-        'Content-Type': 'application/json',
-        ...internalServiceSecretHeader(
-          this.configService.get<string>('INTERNAL_SERVICE_SECRET')
-        ),
-        ...(conversionServiceSecret
-          ? { 'X-Conversion-Service-Secret': conversionServiceSecret }
-          : {}),
-      },
-    });
   }
 
   /**
@@ -175,9 +132,10 @@ export class ConversionRunner {
   /**
    * 目标格式派生：输出扩展名、下载格式枚举、引擎参数。
    *
-   * 委托路径（buildWorkflowTask）与进程内路径（convertInProcess）共用，
-   * 否则默认值（'2000' / 'mono'）与格式分支要各写一份——漏抄即静默丢参数
-   * （368ca55 漏抄 6 个裁剪框字段即此类）。
+   * 单一事实源在 FormatPolicy.resolveOutputFormat（委托路径 buildBatchTask 与
+   * 进程内路径 convertInProcess 共用，默认值与格式分支不再各写一份——漏抄即
+   * 静默丢参数，368ca55 漏抄 6 个裁剪框字段即此类）。直取格式（mxweb/original）
+   * 与未知格式显式报错，不再静默当成 PDF 产出错误内容。
    */
   private resolveTarget(
     format: string,
@@ -192,48 +150,26 @@ export class ConversionRunner {
       dwgVersion?: number;
     };
   } {
-    const targetExt =
-      format === 'dwg' ? '.dwg' : format === 'dxf' ? '.dxf' : '.pdf';
-    const cadFormat =
-      format === 'dwg'
-        ? CadDownloadFormat.DWG
-        : format === 'dxf'
-          ? CadDownloadFormat.DXF
-          : CadDownloadFormat.PDF;
-
-    const params: {
-      width?: string;
-      height?: string;
-      colorPolicy?: string;
-      dwgVersion?: number;
-    } = {};
-    if (format === 'pdf') {
-      params.width = pdfParams?.width || '2000';
-      params.height = pdfParams?.height || '2000';
-      params.colorPolicy = pdfParams?.colorPolicy || 'mono';
+    const resolved = resolveOutputFormat(format, pdfParams);
+    if (!resolved.needsConversion || !resolved.cadFormat) {
+      throw new Error(formatUnsupportedMessage(format));
     }
-    if ((format === 'dwg' || format === 'dxf') && pdfParams?.dwgVersion) {
-      params.dwgVersion = pdfParams.dwgVersion;
-    }
-    return { targetExt, cadFormat, params };
+    return {
+      targetExt: resolved.targetExt,
+      cadFormat: resolved.cadFormat,
+      params: resolved.engineParams ?? {},
+    };
   }
 
   /**
-   * 是否委托 conversion-service 服务（与熔断状态无关的开关）
+   * 注入的执行器是否带批量原语（BATCH_DOWNLOAD_DELEGATE_WORKFLOW 包装出的
+   * 委托能力）。批量下载编排层据此选择批量路径；本类据此选择委托或逐项进程内。
    */
-  isDelegated(): boolean {
-    return this.delegateWorkflow;
-  }
-
-  private shouldDelegateWorkflow(): boolean {
-    if (!this.delegateWorkflow) return false;
-    if (Date.now() < this.workflowCooldownUntil) return false;
-    return true;
-  }
-
-  private markWorkflowUnavailable(): void {
-    this.workflowCooldownUntil =
-      Date.now() + ConversionRunner.WORKFLOW_COOLDOWN_MS;
+  hasBatchDelegate(): boolean {
+    return (
+      typeof this.executor?.submitBatch === 'function' &&
+      typeof this.executor?.waitBatch === 'function'
+    );
   }
 
   private async getConversionService(): Promise<IMxcadConversionService> {
@@ -248,8 +184,9 @@ export class ConversionRunner {
 
   /**
    * 转换单个文件。
-   * - 委托开启时提交单个任务给 conversion-service（batchConvert 支持单任务），workflow 不可达自动回退进程内转换。
-   * - 委托关闭时进程内调用 mxcad conversionService（Semaphore 限流）。
+   * - 注入的执行器带批量原语时提交单个任务给 conversion-service（batchConvert 支持单任务），
+   *   workflow 不可达自动回退进程内转换。
+   * - 否则进程内调用 mxcad conversionService（Semaphore 限流）。
    * @param userId 批量下载发起用户（ADR-0043：转换频率限制在转换执行点占位；超限返回失败结果）
    */
   async convertFile(
@@ -266,10 +203,12 @@ export class ConversionRunner {
   }
 
   /**
-   * 批量转换（委托 conversion-service）：
-   * 一次性提交所有任务到 POST /v1/conversions/batchConvert，轮询 GET /v1/conversions/tasks/:taskId 直至终态，
-   * 收集 results 中 success=true 的 outputPath 并按入参顺序映射为 ConversionResult。
-   * workflow 服务不可达时记录错误并逐任务回退进程内转换。
+   * 批量转换：
+   * - 执行器带批量原语时，一次性提交所有任务到 conversion-service
+   *   （POST /v1/conversions/batchConvert，经 executor.submitBatch/waitBatch），
+   *   收集 results 中 success=true 的 outputPath 并按入参顺序映射为 ConversionResult；
+   *   服务不可达/熔断时记录错误并逐任务回退进程内转换。
+   * - 否则逐任务进程内转换。
    * @param userId 批量下载发起用户（ADR-0043：每个转换任务占位一次，失败任务释放）
    */
   async convertMany(
@@ -326,8 +265,8 @@ export class ConversionRunner {
       error: quotaMessages[i] ?? '图纸转换过于频繁，请稍后再试',
     });
 
-    // 开关关闭或处于 workflow 熔断期：直接走进程内转换
-    if (!this.shouldDelegateWorkflow()) {
+    // 执行器无批量原语（或执行器未接线）：直接走进程内转换
+    if (!this.hasBatchDelegate()) {
       const results = await Promise.all(
         requests.map((r, i) => {
           if (!reserved[i]) {
@@ -354,6 +293,18 @@ export class ConversionRunner {
         results[index] = quotaFailure(index);
         continue;
       }
+      // 直取格式（mxweb/original）/未知格式不进转换层：显式报错而非静默当 PDF
+      // 产出错误内容（fileHash-only 项请求直取格式时源无法直取，同样报错）
+      const resolved = resolveOutputFormat(request.format, request.pdfParams);
+      if (!resolved.needsConversion || !resolved.cadFormat) {
+        results[index] = {
+          filePath: '',
+          format: request.format,
+          success: false,
+          error: formatUnsupportedMessage(request.format),
+        };
+        continue;
+      }
       // 源文件解析：node.path 走快照；fileHash-only（内存导出）按 fileHash 定位
       const snapshot = await this.resolveSource(request.node);
       if (!snapshot) {
@@ -370,11 +321,13 @@ export class ConversionRunner {
       const cachedPath =
         this.fileDownloadExportService.getFreshConversionCachePath(
           snapshot.hash,
-          request.format as CadDownloadFormat,
+          resolved.cadFormat,
           request.pdfParams
         );
       if (cachedPath) {
-        this.logger.log(`批量转换缓存命中: ${request.node.name} -> ${cachedPath}`);
+        this.logger.log(
+          `批量转换缓存命中: ${request.node.name} -> ${cachedPath}`
+        );
         results[index] = {
           filePath: cachedPath,
           format: request.format,
@@ -392,10 +345,10 @@ export class ConversionRunner {
 
     try {
       const tasks = valid.map((v) =>
-        this.buildWorkflowTask(v.request, v.snapshot)
+        this.buildBatchTask(v.request, v.snapshot)
       );
-      const { taskId } = await this.submitBatch(tasks);
-      const terminal = await this.pollTask(taskId);
+      const { batchId } = await this.executor.submitBatch!(tasks);
+      const terminal = await this.executor.waitBatch!(batchId);
       const byId = new Map(terminal.results.map((r) => [r.id, r]));
 
       valid.forEach((v) => {
@@ -437,9 +390,8 @@ export class ConversionRunner {
       await Promise.all(results.map((r, i) => releaseIfReserved(i, r.success)));
       return results;
     } catch (err) {
-      this.markWorkflowUnavailable();
       this.logger.warn(
-        `Workflow conversion unavailable (${err.message}), falling back to in-process for ${valid.length} task(s)`
+        `Workflow conversion unavailable (${(err as Error).message}), falling back to in-process for ${valid.length} task(s)`
       );
       const fallback = await Promise.all(
         valid.map((v) =>
@@ -459,10 +411,10 @@ export class ConversionRunner {
     }
   }
 
-  private buildWorkflowTask(
+  private buildBatchTask(
     request: ConvertRequest,
     snapshot: { snapshotPath: string; hash: string }
-  ): WorkflowConvertTask {
+  ): BatchConversionTask {
     const node = request.node;
     const { targetExt, cadFormat, params } = this.resolveTarget(
       request.format,
@@ -472,70 +424,15 @@ export class ConversionRunner {
       cadFormat,
       request.pdfParams
     );
-    const task: WorkflowConvertTask = {
+    return {
       id: `${node.id}:${request.format}`,
       // 步骤 2：srcPath 指内容寻址快照（uploads/{hash}.mxweb）；outname 版本绑定（{hash}-{paramKey}{targetExt}）
       // → 产物落 uploads/{hash}-{paramKey}{targetExt}（= 缓存路径，内容寻址）；ZIP 条目名仍用原文件名（sanitized，独立计算）
       srcPath: snapshot.snapshotPath.replace(/\\/g, '/'),
       fileHash: node.fileHash || '',
       outname: `${snapshot.hash}-${paramKey}${targetExt}`,
+      ...params,
     };
-    Object.assign(task, params);
-    return task;
-  }
-
-  private async submitBatch(
-    tasks: WorkflowConvertTask[]
-  ): Promise<{ taskId: string }> {
-    const result = await this.client.request<{ taskId?: string }>(
-      '/v1/conversions/batchConvert',
-      'POST',
-      { tasks }
-    );
-    if (!result?.taskId) {
-      throw new Error('Workflow batchConvert returned no taskId');
-    }
-    return { taskId: result.taskId };
-  }
-
-  private async pollTask(taskId: string): Promise<{
-    results: Array<{
-      id: string;
-      success: boolean;
-      outputPath?: string;
-      error?: string;
-    }>;
-  }> {
-    const activeStates = new Set([
-      'PENDING',
-      'PROCESSING',
-      'RUNNING',
-      'QUEUED',
-      'ACCEPTED',
-    ]);
-    const deadline = Date.now() + this.workflowTimeoutMs;
-
-    for (;;) {
-      const result = await this.client.request(
-        `/v1/conversions/tasks/${encodeURIComponent(taskId)}`,
-        'GET'
-      );
-      const status = (result as { status?: string })?.status as
-        string | undefined;
-      const results =
-        (result as any)?.result?.results || (result as any)?.results;
-
-      if (Array.isArray(results)) {
-        return { results };
-      }
-      if (status && !activeStates.has(status)) {
-        return { results: (result as any)?.result?.results || [] };
-      }
-      if (Date.now() >= deadline) {
-        throw new Error(`Workflow task ${taskId} timed out`);
-      }
-      await new Promise((r) => setTimeout(r, this.workflowPollIntervalMs));
-    }
   }
 
   private async convertInProcess(
@@ -572,7 +469,7 @@ export class ConversionRunner {
         const cachedPath =
           this.fileDownloadExportService.getFreshConversionCachePath(
             snapshot.hash,
-            format as CadDownloadFormat,
+            cadFormat,
             pdfParams
           );
         if (cachedPath) {
@@ -618,7 +515,7 @@ export class ConversionRunner {
         // 转换产物写入缓存目录复用（copy 而非 rename，ZIP 装配仍需原文件；ADR-0060）
         this.fileDownloadExportService.storeConversionCache(
           snapshot.hash,
-          format as CadDownloadFormat,
+          cadFormat,
           targetFullPath,
           pdfParams
         );
@@ -635,7 +532,8 @@ export class ConversionRunner {
 
   async cleanupConvertedFile(filePath: string): Promise<void> {
     // 步骤 1：跳过 uploads/ 下内容寻址条目（共享快照/产物缓存，不能被首个任务 unlink）
-    const mxcadUploadPath = this.configService.get<string>('mxcadUploadPath') || '';
+    const mxcadUploadPath =
+      this.configService.get<string>('mxcadUploadPath') || '';
     if (mxcadUploadPath) {
       const uploadsRoot = mxcadUploadPath.replace(/\\/g, '/');
       const normalized = filePath.replace(/\\/g, '/');

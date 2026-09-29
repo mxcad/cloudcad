@@ -7,6 +7,10 @@ import { ConversionRunner } from './conversion-runner';
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
 import { PublicFileService } from '../public-file/public-file.service';
+import {
+  IFunctionExecutor,
+  type BatchConversionResult,
+} from '../function-executor/function-executor.interface';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 
@@ -30,6 +34,8 @@ describe('ConversionRunner', () => {
   let mockRestrictionEngine: any;
   let mockFileDownloadExportService: any;
   let mockPublicFileService: any;
+  // 统一任务层 seam：默认无批量原语（进程内路径）；批量用例动态挂 submitBatch/waitBatch
+  let mockExecutor: Record<string, any>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -97,6 +103,14 @@ describe('ConversionRunner', () => {
       findMxwebFile: jest.fn().mockResolvedValue(null),
     };
 
+    mockExecutor = {
+      isRemote: false,
+      invoke: jest.fn(),
+      getTaskStatus: jest.fn(),
+      queueStats: jest.fn().mockResolvedValue(null),
+      durationStats: jest.fn().mockResolvedValue(null),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConversionRunner,
@@ -110,6 +124,7 @@ describe('ConversionRunner', () => {
           useValue: mockFileDownloadExportService,
         },
         { provide: PublicFileService, useValue: mockPublicFileService },
+        { provide: IFunctionExecutor, useValue: mockExecutor },
       ],
     }).compile();
 
@@ -356,6 +371,199 @@ describe('ConversionRunner', () => {
       expect(
         mockFileDownloadExportService.storeConversionCache
       ).toHaveBeenCalled();
+    });
+  });
+
+  describe('批量委托路径（执行器带批量原语）', () => {
+    const okBatch = (results: BatchConversionResult['results']): void => {
+      mockExecutor.submitBatch = jest
+        .fn()
+        .mockResolvedValue({ batchId: 'fw_1' });
+      mockExecutor.waitBatch = jest
+        .fn()
+        .mockResolvedValue({ results });
+    };
+
+    it('单任务：提交批量并按结果映射 success，不起进程内转换', async () => {
+      okBatch([
+        {
+          id: 'node-1:dwg',
+          success: true,
+          outputPath: '/data/files/projects/p1/drawing.dwg',
+        },
+      ]);
+
+      const result = await service.convertFile(mockNode, 'dwg');
+
+      expect(result.success).toBe(true);
+      expect(result.filePath).toBe('/data/files/projects/p1/drawing.dwg');
+      expect(result.format).toBe('dwg');
+      expect(mockConversionService.convertServerFile).not.toHaveBeenCalled();
+      // 提交时快照：srcPath 指内容寻址快照，outname 版本绑定
+      expect(mockExecutor.submitBatch).toHaveBeenCalledWith([
+        {
+          id: 'node-1:dwg',
+          srcPath: `/data/uploads/${contentHash}.mxweb`,
+          fileHash: 'hash123',
+          outname: `${contentHash}-dwg.dwg`,
+        },
+      ]);
+      expect(mockExecutor.waitBatch).toHaveBeenCalledWith('fw_1');
+    });
+
+    it('多任务一次提交：pdf 默认参数随任务下发，结果按序映射（含失败 error）', async () => {
+      okBatch([
+        {
+          id: 'node-1:pdf',
+          success: true,
+          outputPath: '/data/files/projects/p1/drawing.pdf',
+        },
+        { id: 'node-2:pdf', success: false, error: 'engine boom' },
+      ]);
+
+      const results = await service.convertMany([
+        { node: mockNode, format: 'pdf' },
+        {
+          node: {
+            id: 'node-2',
+            fileHash: 'hash2',
+            path: 'projects/p1/other.mxweb',
+            name: 'other.dwg',
+          },
+          format: 'pdf',
+          pdfParams: { width: '4000', height: '3000', colorPolicy: 'color' },
+        },
+      ]);
+
+      const tasks = mockExecutor.submitBatch.mock.calls[0][0];
+      expect(tasks).toHaveLength(2);
+      // 两节点 readFile 内容相同（mock）→ 同一 contentHash → 同一快照
+      expect(tasks[0]).toEqual({
+        id: 'node-1:pdf',
+        srcPath: `/data/uploads/${contentHash}.mxweb`,
+        fileHash: 'hash123',
+        outname: `${contentHash}-pdf-2000x2000-mono.pdf`,
+        width: '2000',
+        height: '2000',
+        colorPolicy: 'mono',
+      });
+      expect(tasks[1]).toEqual({
+        id: 'node-2:pdf',
+        srcPath: `/data/uploads/${contentHash}.mxweb`,
+        fileHash: 'hash2',
+        outname: `${contentHash}-pdf-4000x3000-color.pdf`,
+        width: '4000',
+        height: '3000',
+        colorPolicy: 'color',
+      });
+
+      expect(results[0].success).toBe(true);
+      expect(results[0].filePath).toBe('/data/files/projects/p1/drawing.pdf');
+      expect(results[1].success).toBe(false);
+      expect(results[1].error).toBe('engine boom');
+      expect(mockConversionService.convertServerFile).not.toHaveBeenCalled();
+    });
+
+    it('提交失败（不可达/熔断）：回退进程内逐项转换', async () => {
+      mockExecutor.submitBatch = jest.fn().mockRejectedValue(new Error('boom'));
+      mockExecutor.waitBatch = jest.fn();
+      mockConversionService.convertServerFile.mockResolvedValue({ code: 0 });
+
+      const result = await service.convertFile(mockNode, 'dwg');
+
+      expect(result.success).toBe(true);
+      expect(mockExecutor.waitBatch).not.toHaveBeenCalled();
+      expect(mockConversionService.convertServerFile).toHaveBeenCalledTimes(1);
+    });
+
+    it('缓存命中：直接复用产物，不提交批量', async () => {
+      okBatch([]);
+      mockFileDownloadExportService.getFreshConversionCachePath.mockReturnValue(
+        `/data/uploads/${contentHash}-dwg.dwg`
+      );
+
+      const result = await service.convertFile(mockNode, 'dwg');
+
+      expect(result.success).toBe(true);
+      expect(result.filePath).toBe(`/data/uploads/${contentHash}-dwg.dwg`);
+      expect(mockExecutor.submitBatch).not.toHaveBeenCalled();
+      expect(mockConversionService.convertServerFile).not.toHaveBeenCalled();
+    });
+
+    it('源文件缺失：返回错误且不提交批量', async () => {
+      okBatch([]);
+      mockFileDownloadExportService.snapshotMxweb.mockResolvedValue(null);
+
+      const result = await service.convertFile(mockNode, 'dwg');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Source file not found');
+      expect(mockExecutor.submitBatch).not.toHaveBeenCalled();
+    });
+
+    it('批量结果缺对应 id：映射为 no result 错误', async () => {
+      okBatch([{ id: 'other:dwg', success: true, outputPath: '/x.dwg' }]);
+
+      const result = await service.convertFile(mockNode, 'dwg');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Workflow returned no result for task');
+    });
+
+    it('批量结果 success 但缺 outputPath：映射为 Converted file not found', async () => {
+      okBatch([{ id: 'node-1:dwg', success: true }]);
+
+      const result = await service.convertFile(mockNode, 'dwg');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Converted file not found');
+    });
+  });
+
+  describe('格式决策（FormatPolicy 单一出口）', () => {
+    it('未知格式：进程内路径显式报错，不起转换', async () => {
+      const result = await service.convertFile(mockNode, 'step');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('不支持的下载格式: step');
+      expect(mockConversionService.convertServerFile).not.toHaveBeenCalled();
+    });
+
+    it('直取格式（mxweb）进转换层：显式报错而非静默当 PDF 产出错误内容', async () => {
+      const result = await service.convertFile(mockNode, 'mxweb');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('不支持的下载格式: mxweb');
+      expect(mockConversionService.convertServerFile).not.toHaveBeenCalled();
+    });
+
+    it('委托路径混合直取格式：该任务显式报错，其余任务照常提交批量', async () => {
+      mockExecutor.submitBatch = jest
+        .fn()
+        .mockResolvedValue({ batchId: 'fw_1' });
+      mockExecutor.waitBatch = jest.fn().mockResolvedValue({
+        results: [
+          {
+            id: 'node-1:dwg',
+            success: true,
+            outputPath: '/data/files/projects/p1/drawing.dwg',
+          },
+        ],
+      });
+
+      const results = await service.convertMany([
+        { node: mockNode, format: 'dwg' },
+        { node: mockNode, format: 'mxweb' },
+      ]);
+
+      expect(results[0].success).toBe(true);
+      expect(results[1].success).toBe(false);
+      expect(results[1].error).toBe('不支持的下载格式: mxweb');
+      // 只有可转换格式进入批量提交
+      expect(mockExecutor.submitBatch).toHaveBeenCalledTimes(1);
+      const tasks = mockExecutor.submitBatch.mock.calls[0][0];
+      expect(tasks).toHaveLength(1);
+      expect(tasks[0].id).toBe('node-1:dwg');
     });
   });
 });

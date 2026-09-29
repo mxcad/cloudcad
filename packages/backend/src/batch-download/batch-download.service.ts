@@ -22,6 +22,7 @@ import { BatchDownloadJob } from './batch-download-job';
 import { ArchiveWriter, type ArchiveEntry } from './archive-writer';
 import { FolderExpanderService } from './folder-expander.service';
 import { RestrictionEngine } from '../vip/restriction-engine.service';
+import { isDirectFormat } from '../file-system/file-download/format-policy';
 import type {
   BatchProgressEvent,
   BatchDownloadTaskPage,
@@ -235,10 +236,7 @@ export class BatchDownloadService {
    * 用 updateMany + where status=FAILED 做原子条件更新：并发双重试只有第一个
    * 成功，第二个拿 409，不再出现两条独立 processJob 写同一行。
    */
-  async retryTask(
-    taskId: string,
-    userId: string
-  ): Promise<{ taskId: string }> {
+  async retryTask(taskId: string, userId: string): Promise<{ taskId: string }> {
     const job = await this.prisma.batchDownloadJob.findUnique({
       where: { id: taskId },
     });
@@ -444,7 +442,9 @@ export class BatchDownloadService {
     }
 
     if (entries.length === 0) {
-      throw new BadRequestException('No downloadable files in the selected tasks');
+      throw new BadRequestException(
+        'No downloadable files in the selected tasks'
+      );
     }
 
     const archiveName = `merged-${Date.now()}`;
@@ -522,12 +522,13 @@ export class BatchDownloadService {
 
   /**
    * 是否含导出下载方向格式（dwg/dxf/pdf，非 mxweb/original）。
+   * 直取格式判断单一事实源在 FormatPolicy（isDirectFormat）：
    * 纯 mxweb/original 下载走 orchestrator 的 tryAddOriginal（不转换、不受会员门控），
-   * 仅当任一 item 请求非 mxweb/original 格式时才触发导出下载会员门控。
+   * 仅当任一 item 请求非直取格式时才触发导出下载会员门控。
    */
   private hasExportFormat(fileList: BatchFileItem[]): boolean {
     return fileList.some((item) =>
-      item.formats.some((f) => f !== 'mxweb' && f !== 'original')
+      item.formats.some((f) => !isDirectFormat(f))
     );
   }
 

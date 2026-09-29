@@ -36,7 +36,7 @@ function createMocks() {
   };
   const archiveWriter = { createArchive: jest.fn() };
   const conversionRunner = {
-    isDelegated: jest.fn().mockReturnValue(false),
+    hasBatchDelegate: jest.fn().mockReturnValue(false),
     convertFile: jest.fn(),
     convertMany: jest.fn(),
     cleanupConvertedFile: jest.fn(),
@@ -402,7 +402,6 @@ describe('BatchDownloadJob', () => {
       folderExpander.expandFolderItems.mockResolvedValue([
         { nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] },
       ]);
-      conversionRunner.isDelegated.mockReturnValue(false);
       orchestrator.processItem.mockResolvedValue(undefined);
 
       await job.start('job-1');
@@ -420,7 +419,7 @@ describe('BatchDownloadJob', () => {
       expect(orchestrator.processItem).toHaveBeenCalled();
     });
 
-    it('should delegate when conversion runner is in delegated mode', async () => {
+    it('should delegate when conversion executor has batch primitives', async () => {
       const { job, prisma, folderExpander, conversionRunner, orchestrator } =
         createMocks();
       prisma.batchDownloadJob.findUnique.mockResolvedValue({
@@ -431,7 +430,7 @@ describe('BatchDownloadJob', () => {
       folderExpander.expandFolderItems.mockResolvedValue([
         { nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] },
       ]);
-      conversionRunner.isDelegated.mockReturnValue(true);
+      conversionRunner.hasBatchDelegate.mockReturnValue(true);
       orchestrator.processDelegated.mockResolvedValue(undefined);
 
       await job.start('job-1');
@@ -458,7 +457,6 @@ describe('BatchDownloadJob', () => {
       folderExpander.expandFolderItems.mockResolvedValue([
         { nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] },
       ]);
-      conversionRunner.isDelegated.mockReturnValue(false);
       orchestrator.processItem.mockImplementation(async (item: any, ctx: any) => {
         await ctx.recordError('n1', 'a.dwg (pdf)', 'conversion failed');
       });
@@ -498,7 +496,6 @@ describe('BatchDownloadJob', () => {
         folderExpander.expandFolderItems.mockResolvedValue([
           { nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] },
         ]);
-        conversionRunner.isDelegated.mockReturnValue(false);
         orchestrator.processItem.mockImplementation(async (item, ctx: any) => {
           ctx.archiveEntries.push({ name: 'a.pdf', stream: {} });
         });
@@ -561,7 +558,6 @@ describe('BatchDownloadJob', () => {
         folderExpander.expandFolderItems.mockResolvedValue([
           { nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] },
         ]);
-        conversionRunner.isDelegated.mockReturnValue(false);
         orchestrator.processItem.mockImplementation(async (item, ctx: any) => {
           ctx.archiveEntries.push({ name: 'a.pdf', stream: {} });
         });
@@ -602,7 +598,6 @@ describe('BatchDownloadJob', () => {
       folderExpander.expandFolderItems.mockResolvedValue([
         { nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] },
       ]);
-      conversionRunner.isDelegated.mockReturnValue(false);
       // 阻塞在 processItem，确保第一次 start 仍处于运行态
       let release!: () => void;
       orchestrator.processItem.mockImplementation(
@@ -631,7 +626,6 @@ describe('BatchDownloadJob', () => {
         fileList: [],
       });
       folderExpander.expandFolderItems.mockResolvedValue([]);
-      conversionRunner.isDelegated.mockReturnValue(false);
       orchestrator.processItem.mockResolvedValue(undefined);
 
       await job.start('job-1');

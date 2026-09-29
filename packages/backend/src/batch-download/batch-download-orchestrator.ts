@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
+import { resolveOutputFormat } from '../file-system/file-download/format-policy';
 import { ConversionRunner } from './conversion-runner';
 import { JobContext } from './job-context';
 import { isInUploadsCache } from './upload-cache.util';
@@ -112,20 +113,11 @@ export class BatchDownloadOrchestrator {
         // 路由只看请求格式、不看源文件 ext：mxweb 源 + dwg/dxf/pdf 必须走转换
         // （快照最新 mxweb → 排队转换，与单文件 downloadNodeWithFormat 一致）；
         // 仅 original/mxweb 格式直取源文件。fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）
-        if (!isFileHashItem && (format === 'original' || format === 'mxweb')) {
+        const resolved = resolveOutputFormat(format, item);
+        if (!isFileHashItem && !resolved.needsConversion) {
           await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
           ctx.completedCount++;
         } else {
-          const pdfParams =
-            format === 'pdf'
-              ? {
-                  width: item.width || '2000',
-                  height: item.height || '2000',
-                  colorPolicy: item.colorPolicy || 'mono',
-                }
-              : (format === 'dwg' || format === 'dxf') && item.dwgVersion
-                ? { dwgVersion: item.dwgVersion }
-                : undefined;
           pending.push({
             node,
             fileName,
@@ -133,7 +125,7 @@ export class BatchDownloadOrchestrator {
             prefix,
             label,
             format,
-            pdfParams,
+            pdfParams: resolved.engineParams,
           });
         }
       }
@@ -244,7 +236,8 @@ export class BatchDownloadOrchestrator {
       // 路由只看请求格式、不看源文件 ext：mxweb 源 + dwg/dxf/pdf 必须走转换
       // （快照最新 mxweb → 排队转换，与单文件 downloadNodeWithFormat 一致）；
       // 仅 original/mxweb 格式直取源文件。fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）
-      if (!isFileHashItem && (format === 'original' || format === 'mxweb')) {
+      const resolved = resolveOutputFormat(format, item);
+      if (!isFileHashItem && !resolved.needsConversion) {
         await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
       } else {
         await this.tryConvert(
@@ -252,7 +245,7 @@ export class BatchDownloadOrchestrator {
           fileName,
           ext,
           format,
-          item,
+          resolved.engineParams,
           prefix,
           label,
           ctx
@@ -313,21 +306,18 @@ export class BatchDownloadOrchestrator {
     fileName: string,
     ext: string,
     format: string,
-    item: any,
+    pdfParams:
+      | {
+          width?: string;
+          height?: string;
+          colorPolicy?: string;
+          dwgVersion?: number;
+        }
+      | undefined,
     prefix: string,
     label: string,
     ctx: JobContext
   ): Promise<void> {
-    const pdfParams =
-      format === 'pdf'
-        ? {
-            width: item.width || '2000',
-            height: item.height || '2000',
-            colorPolicy: item.colorPolicy || 'mono',
-          }
-        : (format === 'dwg' || format === 'dxf') && item.dwgVersion
-          ? { dwgVersion: item.dwgVersion }
-          : undefined;
     const result = await this.conversionRunner.convertFile(
       {
         id: node.id,

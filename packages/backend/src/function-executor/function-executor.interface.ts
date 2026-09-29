@@ -173,9 +173,50 @@ export interface ExecutorTaskRecord {
   contentKey?: string;
 }
 
+/**
+ * 批量转换任务（可选批量原语 submitBatch/waitBatch 的入参）。
+ * 形状来自批量下载委托协议：srcPath 指内容寻址快照（uploads/{hash}.mxweb），
+ * outname 版本绑定（{hash}-{paramKey}{targetExt} → 产物落缓存路径）。
+ */
+export interface BatchConversionTask {
+  id: string;
+  srcPath: string;
+  fileHash: string;
+  outname: string;
+  width?: string;
+  height?: string;
+  colorPolicy?: string;
+  dwgVersion?: number;
+}
+
+/** 批量转换的单任务终态结果（id 与提交时任务的 id 对应） */
+export interface BatchConversionResultItem {
+  id: string;
+  success: boolean;
+  outputPath?: string;
+  error?: string;
+}
+
+/** 批量转换终态结果 */
+export interface BatchConversionResult {
+  results: BatchConversionResultItem[];
+}
+
 export const IFunctionExecutor = 'IFunctionExecutor';
 
 export interface IFunctionExecutor {
+  /**
+   * 是否为远端执行器（经 HTTP 提交到独立转换服务，不回调本进程）。
+   *
+   * false = 本进程内执行，其 invoke 可能回调 FileConversionService.convertFile，
+   * 故 FileConversionService 不得向它转发——否则 convertFile → invoke → convertFile
+   * 无限递归，两个限流器槽位耗尽后死锁（f2df958：节点恒 PROCESSING，引擎进程从未启动）。
+   * 运行时按 `=== true` 判定（fail-closed）：误判为本地最多退化为进程内 spawn（恒安全），
+   * 误判为远端则死锁。执行器选择本身仍在 FunctionExecutorModule 按 FUNCTION_EXECUTOR
+   * 一处决定，本字段只声明「能否被转发」这一能力，不再让调用方读配置字符串分支。
+   */
+  readonly isRemote: boolean;
+
   /**
    * 提交并执行转换任务
    * 在嵌入式模式下同步等待完成；在异步模式下返回 COMPLETED 或 FAILED
@@ -211,4 +252,18 @@ export interface IFunctionExecutor {
 
   /** 清空排队中任务，返回被取消数（可选；无排队队列的执行器不实现）。 */
   clearQueue?(): number;
+
+  /**
+   * 批量提交（可选）。一次性提交所有转换任务（如 conversion-service 的
+   * POST /v1/conversions/batchConvert），返回批量任务 id。
+   * 服务不可达/处于熔断期时抛错，调用方据此降级（逐任务 invoke 或进程内转换）。
+   * 与 waitBatch 成对实现；未实现时批量下载调用方走逐任务路径。
+   */
+  submitBatch?(tasks: BatchConversionTask[]): Promise<{ batchId: string }>;
+
+  /**
+   * 等待批量任务终态（可选，与 submitBatch 成对实现）：轮询批量任务直至
+   * results 就绪或进入终态；超时/不可达抛错。results 的 id 与提交时任务 id 对应。
+   */
+  waitBatch?(batchId: string): Promise<BatchConversionResult>;
 }

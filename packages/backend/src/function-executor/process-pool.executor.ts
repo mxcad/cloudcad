@@ -26,6 +26,8 @@ const MAX_TERMINAL_RETAIN = 500;
 @Injectable()
 export class ProcessPoolExecutor implements IFunctionExecutor {
   private readonly logger = new Logger(ProcessPoolExecutor.name);
+  /** 进程内执行：executeTask 回调 FileConversionService.convertFile，故不得作为转发目标 */
+  readonly isRemote = false;
   private readonly taskStore = new Map<string, TaskRecord>();
   private readonly rateLimiter: RateLimiter;
   /** 终态任务 id 的入队顺序（Map 淘汰依据；仅终态 id 入列，每个任务只入列一次） */

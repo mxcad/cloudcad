@@ -1,5 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   IFunctionExecutor,
   ConversionTask,
@@ -8,14 +7,10 @@ import type {
   ExecutorQueueStats,
   ExecutorDurationStats,
 } from '../function-executor.interface';
-import { HuaweiExecutor } from './providers/huawei.executor';
-import { AliyunExecutor } from './providers/aliyun.executor';
-import { LambdaExecutor } from './providers/aws.executor';
-
-interface FaasProvider {
-  invoke(task: ConversionTask): Promise<{ status: string; outputPath?: string; error?: string; metadata?: Record<string, unknown> }>;
-  getTaskStatus(taskId: string): Promise<{ status: string; progress?: number; error?: string; createdAt: string; updatedAt: string }>;
-}
+import {
+  FaaS_PROVIDER,
+  type FaasProvider,
+} from './interfaces/faas-provider.interface';
 
 /**
  * TaskStatus 状态联合的全集（与 function-executor.interface.ts 的
@@ -34,12 +29,16 @@ const KNOWN_TASK_STATUSES: readonly TaskStatus['status'][] = [
 @Injectable()
 export class CloudFaaSExecutor implements IFunctionExecutor {
   private readonly logger = new Logger(CloudFaaSExecutor.name);
-  private readonly provider: FaasProvider;
+  /**
+   * 云函数执行器语义上属远端，但当前 cloud-faas 模式下 FileConversionService 未使用
+   * 它执行 convertFile（恒进程内 spawn），保持 false 以维持既有行为。是否改为转发需
+   * 先端到端验证 forwardViaExecutor ↔ FaasProvider 的载荷契约（本服务的 forwardViaExecutor
+   * 假定 result.metadata 承载引擎输出，而 cloud-faas 的 metadata 来自供应商侧）。
+   */
+  readonly isRemote = false;
 
-  constructor(private readonly configService: ConfigService) {
-    const providerName = this.configService.get<string>('CLOUD_FAAS_PROVIDER') || 'huawei';
-    this.provider = this.createProvider(providerName);
-    this.logger.log(`CloudFaaSExecutor 初始化, provider=${providerName}`);
+  constructor(@Inject(FaaS_PROVIDER) private readonly provider: FaasProvider) {
+    this.logger.log('CloudFaaSExecutor 初始化');
   }
 
   async invoke(task: ConversionTask): Promise<ConversionResult> {
@@ -83,19 +82,5 @@ export class CloudFaaSExecutor implements IFunctionExecutor {
 
   async durationStats(): Promise<ExecutorDurationStats | null> {
     return null;
-  }
-
-  private createProvider(name: string): FaasProvider {
-    switch (name) {
-      case 'huawei':
-        return new HuaweiExecutor(this.configService);
-      case 'aliyun':
-        return new AliyunExecutor(this.configService);
-      case 'aws':
-        return new LambdaExecutor(this.configService);
-      default:
-        this.logger.warn(`Unknown FaaS provider: ${name}, falling back to huawei`);
-        return new HuaweiExecutor(this.configService);
-    }
   }
 }

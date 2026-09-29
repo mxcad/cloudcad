@@ -38,6 +38,12 @@ import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { NodeUtils } from '../../common/utils/node-utils';
 import { ClsService } from 'nestjs-cls';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
+import {
+  conversionTargetExt,
+  formatUnsupportedMessage,
+  isConvertibleSourceExt,
+  resolveOutputFormat,
+} from './format-policy';
 
 /**
  * 转换产物缓存文件名判据：`{hash}-{paramKey}{ext}`。
@@ -85,7 +91,7 @@ export class FileDownloadExportService {
     private readonly moduleRef: ModuleRef,
     private readonly auditLogger: AuditLogger,
     private readonly cls: ClsService,
-    private readonly restrictionEngine: RestrictionEngine,
+    private readonly restrictionEngine: RestrictionEngine
   ) {
     const limits = this.configService.get('fileLimits', { infer: true });
     this.fileLimits = {
@@ -97,10 +103,15 @@ export class FileDownloadExportService {
       maxFilenameLength: limits.maxFilenameLength,
       maxRecursionDepth: limits.maxRecursionDepth,
     };
-    const batchConfig = this.configService.get('batchDownload', { infer: true });
-    this.mxcadUploadPath = this.configService.get<string>('mxcadUploadPath') || '';
-    this.conversionCacheDir = this.mxcadUploadPath || batchConfig?.conversionCacheDir || '';
-    this.conversionCacheTtlMs = (batchConfig?.conversionCacheTtlHours || 0) * 60 * 60 * 1000;
+    const batchConfig = this.configService.get('batchDownload', {
+      infer: true,
+    });
+    this.mxcadUploadPath =
+      this.configService.get<string>('mxcadUploadPath') || '';
+    this.conversionCacheDir =
+      this.mxcadUploadPath || batchConfig?.conversionCacheDir || '';
+    this.conversionCacheTtlMs =
+      (batchConfig?.conversionCacheTtlHours || 0) * 60 * 60 * 1000;
   }
 
   /**
@@ -109,7 +120,9 @@ export class FileDownloadExportService {
    * hash = md5(工作副本内容)，与 version-history 缓存一致；快照已存在则复用。
    * 返回 null 表示无法快照（路径缺失 / 工作副本不存在 / 未配置 uploads 目录）。
    */
-  async snapshotMxweb(node: { path?: string }): Promise<{ snapshotPath: string; hash: string } | null> {
+  async snapshotMxweb(node: {
+    path?: string;
+  }): Promise<{ snapshotPath: string; hash: string } | null> {
     if (!node.path || !this.mxcadUploadPath) return null;
     const workingCopyFullPath = this.storageManager.getFullPath(node.path);
     if (!fs.existsSync(workingCopyFullPath)) return null;
@@ -125,9 +138,15 @@ export class FileDownloadExportService {
   /** 构造格式参数键（pdf 尺寸/颜色、dwg/dxf 版本），不同参数互不污染 */
   buildParamKey(
     format: CadDownloadFormat,
-    pdfParams?: { width?: string; height?: string; colorPolicy?: string; dwgVersion?: number }
+    pdfParams?: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: number;
+    }
   ): string {
-    const safe = (v: string | undefined) => (v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+    const safe = (v: string | undefined) =>
+      (v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
     if (format === CadDownloadFormat.PDF) {
       return `pdf-${safe(pdfParams?.width) || '2000'}x${safe(pdfParams?.height) || '2000'}-${safe(pdfParams?.colorPolicy) || 'mono'}`;
     } else if (format === CadDownloadFormat.DWG) {
@@ -147,7 +166,12 @@ export class FileDownloadExportService {
   buildConversionCacheKey(
     hash: string,
     format: CadDownloadFormat,
-    pdfParams?: { width?: string; height?: string; colorPolicy?: string; dwgVersion?: number }
+    pdfParams?: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: number;
+    }
   ): string | null {
     if (!this.conversionCacheDir || !this.conversionCacheTtlMs) return null;
     if (!hash) return null;
@@ -176,13 +200,6 @@ export class FileDownloadExportService {
     }
   }
 
-  /** 转换目标扩展名（dwg/dxf/pdf）：缓存文件名后缀与转换产物一致 */
-  private conversionTargetExt(format: CadDownloadFormat): string {
-    if (format === CadDownloadFormat.DWG) return '.dwg';
-    if (format === CadDownloadFormat.DXF) return '.dxf';
-    return '.pdf';
-  }
-
   /**
    * 查转换缓存：同 hash+格式参数 命中且未过 TTL 返回缓存文件绝对路径，否则 null。
    * 供批量下载路径复用（与单文件 downloadNodeWithFormat 共享同一缓存目录与 key），
@@ -191,13 +208,18 @@ export class FileDownloadExportService {
   getFreshConversionCachePath(
     hash: string,
     format: CadDownloadFormat,
-    pdfParams?: { width?: string; height?: string; colorPolicy?: string; dwgVersion?: number }
+    pdfParams?: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: number;
+    }
   ): string | null {
     const cacheKey = this.buildConversionCacheKey(hash, format, pdfParams);
     if (!cacheKey) return null;
     const cachePath = path.join(
       this.conversionCacheDir,
-      `${cacheKey}${this.conversionTargetExt(format)}`
+      `${cacheKey}${conversionTargetExt(format)}`
     );
     return this.isConversionCacheFresh(cachePath) ? cachePath : null;
   }
@@ -211,13 +233,18 @@ export class FileDownloadExportService {
     hash: string,
     format: CadDownloadFormat,
     srcFilePath: string,
-    pdfParams?: { width?: string; height?: string; colorPolicy?: string; dwgVersion?: number }
+    pdfParams?: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: number;
+    }
   ): void {
     const cacheKey = this.buildConversionCacheKey(hash, format, pdfParams);
     if (!cacheKey) return;
     const cachePath = path.join(
       this.conversionCacheDir,
-      `${cacheKey}${this.conversionTargetExt(format)}`
+      `${cacheKey}${conversionTargetExt(format)}`
     );
     if (srcFilePath === cachePath) return;
     try {
@@ -236,13 +263,18 @@ export class FileDownloadExportService {
       await fsPromises.unlink(filePath);
       this.logger.log(`临时转换文件已删除: ${filePath}`);
     } catch (error) {
-      this.logger.warn(`删除临时文件失败: ${filePath}, error: ${(error as Error).message}`);
+      this.logger.warn(
+        `删除临时文件失败: ${filePath}, error: ${(error as Error).message}`
+      );
     }
   }
 
   private async getMxCadConversionService(): Promise<IMxcadConversionService> {
     if (!this.mxCadConversionService) {
-      this.mxCadConversionService = this.moduleRef.get<IMxcadConversionService>(MXCAD_CONVERSION_SERVICE, { strict: false });
+      this.mxCadConversionService = this.moduleRef.get<IMxcadConversionService>(
+        MXCAD_CONVERSION_SERVICE,
+        { strict: false }
+      );
     }
     return this.mxCadConversionService;
   }
@@ -273,7 +305,9 @@ export class FileDownloadExportService {
       where: { id: nodeId },
     });
     if (!node) {
-      throw new NotFoundException(I18nContext.current()?.t('error.node.not_found') ?? '节点不存在');
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
+      );
     }
     if (node.nodeType !== NodeType.FILE) {
       // 目录/非文件节点无格式转换可预计算
@@ -286,32 +320,40 @@ export class FileDownloadExportService {
     if (format === CadDownloadFormat.MXWEB) {
       return { alreadyCached: true, cacheKey: null };
     }
-    // 非 CAD 文件：无格式转换
-    if (!['.dwg', '.dxf', '.mxweb'].includes(ext)) {
+    // 非 CAD 文件：无格式转换（可转换源扩展名单一事实源在 FormatPolicy）
+    if (!isConvertibleSourceExt(ext)) {
       return { alreadyCached: false, cacheKey: null };
     }
     if (!node.path) {
-      throw new NotFoundException(I18nContext.current()?.t('error.file_extra.path_not_exist') ?? '文件路径不存在');
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.file_extra.path_not_exist') ??
+          '文件路径不存在'
+      );
     }
     const mxwebPath = node.path;
     if (!(await this.storageService.fileExists(mxwebPath))) {
-      throw new NotFoundException(I18nContext.current()?.t('error.file.mxweb_not_found') ?? 'MXWEB 文件不存在，请确认文件已转换完成');
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.file.mxweb_not_found') ??
+          'MXWEB 文件不存在，请确认文件已转换完成'
+      );
     }
 
-    let targetExt: string;
-    if (format === CadDownloadFormat.DWG) {
-      targetExt = '.dwg';
-    } else if (format === CadDownloadFormat.DXF) {
-      targetExt = '.dxf';
-    } else {
-      targetExt = '.pdf';
-    }
-    const targetFilename = `${path.basename(originalFilename, ext).replace(/[<>:"|?*]/g, '_').replace(/\.\./g, '_').replace(/~/g, '_')}${targetExt}`;
+    // 格式决策单一出口（FormatPolicy）：targetExt/引擎参数默认值由此派生；
+    // 未知格式在此显式抛错，不再静默当 PDF 产出错误内容
+    const resolved = resolveOutputFormat(format, pdfParams);
+    const targetExt = resolved.targetExt;
+    const targetFilename = `${path
+      .basename(originalFilename, ext)
+      .replace(/[<>:"|?*]/g, '_')
+      .replace(/\.\./g, '_')
+      .replace(/~/g, '_')}${targetExt}`;
 
     // 步骤 2：快照工作副本到 uploads/{hash}.mxweb（内容寻址），缓存键 {hash}-{paramKey}
     const snapshot = await this.snapshotMxweb(node);
     const hash = snapshot?.hash;
-    const cacheKey = hash ? this.buildConversionCacheKey(hash, format, pdfParams) : null;
+    const cacheKey = hash
+      ? this.buildConversionCacheKey(hash, format, pdfParams)
+      : null;
     const cachePath = cacheKey
       ? path.join(this.conversionCacheDir, `${cacheKey}${targetExt}`)
       : null;
@@ -324,7 +366,9 @@ export class FileDownloadExportService {
       await this.restrictionEngine.reserveConversionCountOrThrow(userId);
     }
 
-    const srcPath = (snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)).replace(/\\/g, '/');
+    const srcPath = (
+      snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)
+    ).replace(/\\/g, '/');
     const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
 
     const conversionOptions: ConvertServerFileParam = {
@@ -335,26 +379,24 @@ export class FileDownloadExportService {
       outname,
       createPreloadingData: false,
     };
-    if (format === CadDownloadFormat.PDF) {
-      conversionOptions.width = pdfParams?.width || '2000';
-      conversionOptions.height = pdfParams?.height || '2000';
-      conversionOptions.colorPolicy = pdfParams?.colorPolicy || 'mono';
-    }
-    if (
-      (format === CadDownloadFormat.DWG || format === CadDownloadFormat.DXF) &&
-      pdfParams?.dwgVersion
-    ) {
-      conversionOptions.dwgVersion = pdfParams.dwgVersion;
+    // 引擎参数默认值单一出口（FormatPolicy）：pdf 补齐 2000/2000/mono，dwg/dxf 仅透传 dwgVersion
+    if (resolved.engineParams) {
+      Object.assign(conversionOptions, resolved.engineParams);
     }
 
     const mxCadConversionService = await this.getMxCadConversionService();
-    const result = await mxCadConversionService.convertServerFile(conversionOptions);
+    const result =
+      await mxCadConversionService.convertServerFile(conversionOptions);
     if (result.code !== 0) {
       const errMsg = result.message || '文件转换失败';
       if (userId) {
         await this.restrictionEngine.releaseConversionCount(userId);
       }
-      throw new BadRequestException(I18nContext.current()?.t('error.file_extra.conversion_failed_detail', { args: { error: errMsg } }) ?? `文件转换失败: ${errMsg}`);
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.file_extra.conversion_failed_detail', {
+          args: { error: errMsg },
+        }) ?? `文件转换失败: ${errMsg}`
+      );
     }
 
     // 引擎把 outname 写到 srcPath 同目录：产物 = dirname(srcPath)/outname
@@ -363,7 +405,11 @@ export class FileDownloadExportService {
       if (userId) {
         await this.restrictionEngine.releaseConversionCount(userId);
       }
-      throw new NotFoundException(I18nContext.current()?.t('error.file_extra.converted_file_not_exist', { args: { path: outname } }) ?? `转换后的文件不存在: ${outname}`);
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.file_extra.converted_file_not_exist', {
+          args: { path: outname },
+        }) ?? `转换后的文件不存在: ${outname}`
+      );
     }
     // 产物移入缓存目录（内容寻址时产物已在缓存位置，无需移动）
     if (cachePath && targetFullPath !== cachePath) {
@@ -372,11 +418,15 @@ export class FileDownloadExportService {
         fs.renameSync(targetFullPath, cachePath);
       } catch (moveErr) {
         // 缓存目录不可写时降级：产物留在原路径，后续 downloadNodeWithFormat 直读
-        this.logger.warn(`预转换缓存写入失败，产物留在原路径直读: ${(moveErr as Error).message}`);
+        this.logger.warn(
+          `预转换缓存写入失败，产物留在原路径直读: ${(moveErr as Error).message}`
+        );
       }
     }
 
-    this.logger.log(`预转换完成: ${originalFilename} -> ${outname} (${nodeId}) by user ${userId}`);
+    this.logger.log(
+      `预转换完成: ${originalFilename} -> ${outname} (${nodeId}) by user ${userId}`
+    );
     return { alreadyCached: false, cacheKey };
   }
 
@@ -400,7 +450,10 @@ export class FileDownloadExportService {
 
   private getStoragePath(node: PrismaFileSystemNode): string {
     if (!node.path) {
-      throw new NotFoundException(I18nContext.current()?.t('error.file_extra.path_not_exist') ?? '文件路径不存在');
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.file_extra.path_not_exist') ??
+          '文件路径不存在'
+      );
     }
     return this.storageManager.getFullPath(node.path);
   }
@@ -430,7 +483,9 @@ export class FileDownloadExportService {
       });
 
       if (!node) {
-        throw new NotFoundException(I18nContext.current()?.t('error.node.not_found') ?? '节点不存在');
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
+        );
       }
 
       if (node.nodeType === NodeType.FILE) {
@@ -475,7 +530,7 @@ export class FileDownloadExportService {
       return zipResult;
     } catch (error) {
       this.logger.error(`节点下载失败: ${error.message}`, error.stack);
-      
+
       await this.auditLogger.audit({
         action: AuditAction.FILE_DOWNLOAD,
         resourceType: ResourceType.FILE,
@@ -484,7 +539,7 @@ export class FileDownloadExportService {
         success: false,
         errorMessage: error.message,
       });
-      
+
       throw error;
     }
   }
@@ -512,13 +567,15 @@ export class FileDownloadExportService {
       });
 
       if (!node) {
-        throw new NotFoundException(I18nContext.current()?.t('error.node.not_found') ?? '节点不存在');
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
+        );
       }
 
       if (node.nodeType !== NodeType.FILE) {
         const zipResult = await this.downloadNodeAsZip(nodeId, userId);
         this.logger.log(`目录下载: ${node.name} (${nodeId}) by user ${userId}`);
-        
+
         await this.auditLogger.audit({
           action: AuditAction.FILE_DOWNLOAD,
           resourceType: ResourceType.FOLDER,
@@ -527,13 +584,14 @@ export class FileDownloadExportService {
           success: true,
           details: { folderName: node.name, format: 'zip' },
         });
-        
+
         return zipResult;
       }
 
       const originalFilename = node.originalName || node.name;
       const ext = path.extname(originalFilename).toLowerCase();
-      const isCadFile = ['.dwg', '.dxf', '.mxweb'].includes(ext);
+      // 可转换源扩展名判断单一事实源在 FormatPolicy（isConvertibleSourceExt）
+      const isCadFile = isConvertibleSourceExt(ext);
 
       if (!isCadFile) {
         const stream = await this.getFileStream(node.path);
@@ -551,30 +609,37 @@ export class FileDownloadExportService {
           success: true,
           details: { filename: originalFilename, format: 'original' },
         });
-        
+
         return { stream, filename: originalFilename, mimeType };
       }
 
       if (!node.path) {
-        throw new NotFoundException(I18nContext.current()?.t('error.file_extra.path_not_exist') ?? '文件路径不存在');
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.file_extra.path_not_exist') ??
+            '文件路径不存在'
+        );
       }
       const mxwebPath = node.path;
 
       const mxwebExists = await this.storageService.fileExists(mxwebPath);
 
       if (!mxwebExists) {
-        throw new NotFoundException(I18nContext.current()?.t('error.file.mxweb_not_found') ?? 'MXWEB 文件不存在，请确认文件已转换完成');
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.file.mxweb_not_found') ??
+            'MXWEB 文件不存在，请确认文件已转换完成'
+        );
       }
 
       switch (format) {
         case CadDownloadFormat.MXWEB: {
           const stream = await this.getFileStream(mxwebPath);
-          const mxwebFilename = ext === '.mxweb' ? originalFilename : `${originalFilename}.mxweb`;
+          const mxwebFilename =
+            ext === '.mxweb' ? originalFilename : `${originalFilename}.mxweb`;
           const mimeType = NodeUtils.getMimeType(mxwebFilename);
           this.logger.log(
             `文件下载（MXWEB）: ${originalFilename} -> ${mxwebFilename} (${nodeId}) by user ${userId}`
           );
-          
+
           await this.auditLogger.audit({
             action: AuditAction.FILE_DOWNLOAD,
             resourceType: ResourceType.FILE,
@@ -583,22 +648,21 @@ export class FileDownloadExportService {
             success: true,
             details: { filename: originalFilename, format: 'mxweb' },
           });
-          
+
           return { stream, filename: mxwebFilename, mimeType };
         }
 
         case CadDownloadFormat.DWG:
         case CadDownloadFormat.DXF:
         case CadDownloadFormat.PDF: {
-          let targetExt: string;
-          if (format === CadDownloadFormat.DWG) {
-            targetExt = '.dwg';
-          } else if (format === CadDownloadFormat.DXF) {
-            targetExt = '.dxf';
-          } else {
-            targetExt = '.pdf';
-          }
-          const targetFilename = `${path.basename(originalFilename, ext).replace(/[<>:"|?*]/g, '_').replace(/\.\./g, '_').replace(/~/g, '_')}${targetExt}`;
+          // 格式决策单一出口（FormatPolicy）：targetExt/引擎参数默认值由此派生
+          const resolved = resolveOutputFormat(format, pdfParams);
+          const targetExt = resolved.targetExt;
+          const targetFilename = `${path
+            .basename(originalFilename, ext)
+            .replace(/[<>:"|?*]/g, '_')
+            .replace(/\.\./g, '_')
+            .replace(/~/g, '_')}${targetExt}`;
 
           // ── 步骤 2：快照工作副本到 uploads/{hash}.mxweb（内容寻址、不可变），缓存键 {hash}-{paramKey} ──
           // 转换读快照而非可变工作副本，避免执行时读到被覆盖的版本。
@@ -606,7 +670,9 @@ export class FileDownloadExportService {
           // 注意：命中检查必须先于转换配额占位——缓存命中不发生真实转换，不应扣次数。
           const snapshot = await this.snapshotMxweb(node);
           const hash = snapshot?.hash;
-          const cacheKey = hash ? this.buildConversionCacheKey(hash, format, pdfParams) : null;
+          const cacheKey = hash
+            ? this.buildConversionCacheKey(hash, format, pdfParams)
+            : null;
           const cachePath = cacheKey
             ? path.join(this.conversionCacheDir, `${cacheKey}${targetExt}`)
             : null;
@@ -622,7 +688,11 @@ export class FileDownloadExportService {
               resourceId: nodeId,
               userId,
               success: true,
-              details: { filename: originalFilename, format: format.toLowerCase(), cacheHit: true },
+              details: {
+                filename: originalFilename,
+                format: format.toLowerCase(),
+                cacheHit: true,
+              },
             });
 
             return {
@@ -638,7 +708,9 @@ export class FileDownloadExportService {
             await this.restrictionEngine.reserveConversionCountOrThrow(userId);
           }
 
-          const srcPath = (snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)).replace(/\\/g, '/');
+          const srcPath = (
+            snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)
+          ).replace(/\\/g, '/');
           const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
 
           const conversionOptions: ConvertServerFileParam = {
@@ -650,26 +722,18 @@ export class FileDownloadExportService {
             createPreloadingData: false,
           };
 
-          if (format === CadDownloadFormat.PDF) {
-            conversionOptions.width = pdfParams?.width || '2000';
-            conversionOptions.height = pdfParams?.height || '2000';
-            conversionOptions.colorPolicy = pdfParams?.colorPolicy || 'mono';
+          // 引擎参数默认值单一出口（FormatPolicy）：pdf 补齐 2000/2000/mono，dwg/dxf 仅透传 dwgVersion
+          if (resolved.engineParams) {
+            Object.assign(conversionOptions, resolved.engineParams);
           }
 
-          if (
-            (format === CadDownloadFormat.DWG || format === CadDownloadFormat.DXF) &&
-            pdfParams?.dwgVersion
-          ) {
-            conversionOptions.dwgVersion = pdfParams.dwgVersion;
-          }
-
-          this.logger.log(
-            `开始转换文件: ${originalFilename} -> ${outname}`
-          );
+          this.logger.log(`开始转换文件: ${originalFilename} -> ${outname}`);
           let result;
           try {
-            const mxCadConversionService = await this.getMxCadConversionService();
-            result = await mxCadConversionService.convertServerFile(conversionOptions);
+            const mxCadConversionService =
+              await this.getMxCadConversionService();
+            result =
+              await mxCadConversionService.convertServerFile(conversionOptions);
           } catch (error) {
             if (userId) {
               await this.restrictionEngine.releaseConversionCount(userId);
@@ -683,14 +747,24 @@ export class FileDownloadExportService {
             if (userId) {
               await this.restrictionEngine.releaseConversionCount(userId);
             }
-            throw new BadRequestException(I18nContext.current()?.t('error.file_extra.conversion_failed_detail', { args: { error: errMsg } }) ?? `文件转换失败: ${errMsg}`);
+            throw new BadRequestException(
+              I18nContext.current()?.t(
+                'error.file_extra.conversion_failed_detail',
+                { args: { error: errMsg } }
+              ) ?? `文件转换失败: ${errMsg}`
+            );
           }
 
           // 引擎把 outname 写到 srcPath 同目录：产物 = dirname(srcPath)/outname
           const targetFullPath = path.join(path.dirname(srcPath), outname);
 
           if (!fs.existsSync(targetFullPath)) {
-            throw new NotFoundException(I18nContext.current()?.t('error.file_extra.converted_file_not_exist', { args: { path: outname } }) ?? `转换后的文件不存在: ${outname}`);
+            throw new NotFoundException(
+              I18nContext.current()?.t(
+                'error.file_extra.converted_file_not_exist',
+                { args: { path: outname } }
+              ) ?? `转换后的文件不存在: ${outname}`
+            );
           }
 
           let convertedStream: fs.ReadStream;
@@ -703,7 +777,9 @@ export class FileDownloadExportService {
               fs.renameSync(targetFullPath, cachePath);
               convertedStream = fs.createReadStream(cachePath);
             } catch (moveErr) {
-              this.logger.warn(`转换缓存写入失败，降级直传: ${(moveErr as Error).message}`);
+              this.logger.warn(
+                `转换缓存写入失败，降级直传: ${(moveErr as Error).message}`
+              );
               convertedStream = fs.createReadStream(targetFullPath);
               convertedStream.on('end', async () => {
                 await this.cleanupConvertedTempFile(targetFullPath);
@@ -738,16 +814,19 @@ export class FileDownloadExportService {
           this.logger.log(
             `文件下载（${format.toUpperCase()}）: ${originalFilename} -> ${targetFilename} (${nodeId}) by user ${userId}`
           );
-          
+
           await this.auditLogger.audit({
             action: AuditAction.FILE_DOWNLOAD,
             resourceType: ResourceType.FILE,
             resourceId: nodeId,
             userId,
             success: true,
-            details: { filename: originalFilename, format: format.toLowerCase() },
+            details: {
+              filename: originalFilename,
+              format: format.toLowerCase(),
+            },
           });
-          
+
           return {
             stream: convertedStream,
             filename: targetFilename,
@@ -757,11 +836,11 @@ export class FileDownloadExportService {
         }
 
         default:
-          throw new BadRequestException(I18nContext.current()?.t('error.file_extra.download_format_unsupported_detail', { args: { format } }) ?? `不支持的下载格式: ${format}`);
+          throw new BadRequestException(formatUnsupportedMessage(format));
       }
     } catch (error) {
       this.logger.error(`多格式下载失败: ${error.message}`, error.stack);
-      
+
       await this.auditLogger.audit({
         action: AuditAction.FILE_DOWNLOAD,
         resourceType: ResourceType.FILE,
@@ -770,7 +849,7 @@ export class FileDownloadExportService {
         success: false,
         errorMessage: error.message,
       });
-      
+
       throw error;
     }
   }
@@ -789,7 +868,9 @@ export class FileDownloadExportService {
       });
 
       if (!node) {
-        throw new NotFoundException(I18nContext.current()?.t('error.node.not_found') ?? '节点不存在');
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
+        );
       }
 
       const output = new PassThrough();
@@ -821,20 +902,25 @@ export class FileDownloadExportService {
       this.logger.log(
         `目录压缩下载: ${node.name} (${nodeId}), files: ${result.fileCount}, size: ${result.totalSize} bytes by user ${userId}`
       );
-      
+
       await this.auditLogger.audit({
         action: AuditAction.FILE_DOWNLOAD,
         resourceType: ResourceType.FOLDER,
         resourceId: nodeId,
         userId,
         success: true,
-        details: { folderName: node.name, fileCount: result.fileCount, totalSize: result.totalSize, format: 'zip' },
+        details: {
+          folderName: node.name,
+          fileCount: result.fileCount,
+          totalSize: result.totalSize,
+          format: 'zip',
+        },
       });
 
       return { stream: output, filename, mimeType };
     } catch (error) {
       this.logger.error(`目录压缩下载失败: ${error.message}`, error.stack);
-      
+
       await this.auditLogger.audit({
         action: AuditAction.FILE_DOWNLOAD,
         resourceType: ResourceType.FOLDER,
@@ -843,7 +929,7 @@ export class FileDownloadExportService {
         success: false,
         errorMessage: error.message,
       });
-      
+
       throw error;
     }
   }
@@ -858,7 +944,10 @@ export class FileDownloadExportService {
   ): Promise<{ totalSize: number; fileCount: number }> {
     if (depth > this.fileLimits.zipMaxDepth) {
       this.logger.warn(`目录深度超过限制: ${depth}`);
-      throw new BadRequestException(I18nContext.current()?.t('error.file.directory_not_exist') ?? '目录深度超过限制');
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.file.directory_not_exist') ??
+          '目录深度超过限制'
+      );
     }
 
     const node = await this.prisma.fileSystemNode.findUnique({
@@ -872,7 +961,11 @@ export class FileDownloadExportService {
     if (node.nodeType === NodeType.FILE && node.path) {
       if (node.size && node.size > this.fileLimits.zipMaxSingleFileSize) {
         this.logger.warn(`文件大小超过限制: ${node.name} (${node.size} bytes)`);
-        throw new BadRequestException(I18nContext.current()?.t('error.file_extra.size_exceeded_with_name', { args: { name: node.name } }) ?? `文件大小超过限制: ${node.name}`);
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.file_extra.size_exceeded_with_name', {
+            args: { name: node.name },
+          }) ?? `文件大小超过限制: ${node.name}`
+        );
       }
 
       const filename = node.originalName || node.name;
@@ -904,8 +997,14 @@ export class FileDownloadExportService {
         this.logger.warn(
           `添加文件到压缩包失败: ${node.name} - ${error.message}`
         );
-        if (stream && typeof (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy === 'function') {
-          (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy();
+        if (
+          stream &&
+          typeof (stream as NodeJS.ReadableStream & { destroy?: () => void })
+            .destroy === 'function'
+        ) {
+          (
+            stream as NodeJS.ReadableStream & { destroy?: () => void }
+          ).destroy();
         }
         throw error;
       }
@@ -937,11 +1036,17 @@ export class FileDownloadExportService {
 
         if (currentTotalSize > this.fileLimits.zipMaxTotalSize) {
           this.logger.warn(`压缩包总大小超过限制: ${currentTotalSize} bytes`);
-          throw new BadRequestException(I18nContext.current()?.t('error.file.total_size_exceeded') ?? '压缩包总大小超过限制');
+          throw new BadRequestException(
+            I18nContext.current()?.t('error.file.total_size_exceeded') ??
+              '压缩包总大小超过限制'
+          );
         }
         if (currentFileCount > this.fileLimits.zipMaxFileCount) {
           this.logger.warn(`文件数量超过限制: ${currentFileCount}`);
-          throw new BadRequestException(I18nContext.current()?.t('error.file.count_exceeded') ?? '文件数量超过限制');
+          throw new BadRequestException(
+            I18nContext.current()?.t('error.file.count_exceeded') ??
+              '文件数量超过限制'
+          );
         }
       }
     }
@@ -964,7 +1069,10 @@ export class FileDownloadExportService {
    */
   getFullPath(nodePath: string): string {
     if (!nodePath) {
-      throw new NotFoundException(I18nContext.current()?.t('error.file_extra.path_not_exist') ?? '文件路径不存在');
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.file_extra.path_not_exist') ??
+          '文件路径不存在'
+      );
     }
     return this.storageManager.getFullPath(nodePath);
   }
@@ -977,5 +1085,4 @@ export class FileDownloadExportService {
   async isLibraryNode(nodeId: string): Promise<boolean> {
     return await this.permissionService.isLibraryNode(nodeId);
   }
-
 }

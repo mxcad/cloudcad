@@ -13,6 +13,7 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { AlertModule } from '../alert/alert.module';
 import { TaskRunModule } from '../task-run/task-run.module';
 import { MetricsModule } from '../metrics/metrics.module';
+import { FunctionExecutorModule } from '../function-executor/function-executor.module';
 import { BatchDownloadController } from './batch-download.controller';
 import { BatchDownloadService } from './batch-download.service';
 import { BatchDownloadOrchestrator } from './batch-download-orchestrator';
@@ -40,6 +41,8 @@ import { ProgressTrackerService } from './progress-tracker.service';
     AlertModule,
     TaskRunModule,
     MetricsModule,
+    // ConversionRunner 按 IFunctionExecutor 的批量原语决定委托/进程内路径
+    FunctionExecutorModule,
   ],
   controllers: [BatchDownloadController],
   providers: [

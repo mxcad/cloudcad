@@ -211,7 +211,10 @@ export class BatchDownloadJob {
     try {
       if (!(await ctx.load())) return;
 
-      if (this.conversionRunner.isDelegated()) {
+      // 编排路径按转换执行器的批量委托能力选择（BATCH_DOWNLOAD_DELEGATE_WORKFLOW
+      // 时 FunctionExecutorModule 包装出的执行器带批量原语）：批量收集一次提交；
+      // 否则逐项进程内转换。部署模式分支不再泄漏进本模块。
+      if (this.conversionRunner.hasBatchDelegate()) {
         await this.orchestrator.processDelegated(ctx, () =>
           this.isTerminated(jobId)
         );

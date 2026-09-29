@@ -4,25 +4,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Test } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
-import { CloudFaaSExecutor } from './cloud-faas.executor';
-import { HuaweiExecutor } from './providers/huawei.executor';
-import { AliyunExecutor } from './providers/aliyun.executor';
-import { LambdaExecutor } from './providers/aws.executor';
 import type {
   ConversionTask,
   IFunctionExecutor,
 } from '../function-executor.interface';
-
-jest.mock('./providers/huawei.executor', () => ({
-  HuaweiExecutor: jest.fn(),
-}));
-jest.mock('./providers/aliyun.executor', () => ({
-  AliyunExecutor: jest.fn(),
-}));
-jest.mock('./providers/aws.executor', () => ({
-  LambdaExecutor: jest.fn(),
-}));
+import { CloudFaaSExecutor } from './cloud-faas.executor';
+import { FaaS_PROVIDER } from './interfaces/faas-provider.interface';
 
 function makeTask(overrides: Partial<ConversionTask> = {}): ConversionTask {
   // ConversionTask 改为按 type 判别的联合后，{...默认值, ...overrides} 的展开结果
@@ -37,19 +24,12 @@ function makeTask(overrides: Partial<ConversionTask> = {}): ConversionTask {
   } as ConversionTask;
 }
 
-function makeConfigService(overrides: Record<string, string> = {}) {
-  return {
-    get: jest.fn((key: string) => overrides[key] ?? undefined),
-  };
-}
-
 describe('CloudFaaSExecutor', () => {
   let providerInstance: { invoke: jest.Mock; getTaskStatus: jest.Mock };
-  const HuaweiMock = HuaweiExecutor as unknown as jest.Mock;
-  const AliyunMock = AliyunExecutor as unknown as jest.Mock;
-  const LambdaMock = LambdaExecutor as unknown as jest.Mock;
 
   beforeEach(() => {
+    // jest.config.cjs 开了 clearMocks+restoreMocks+resetMocks，假 provider
+    // 每用例新建并当场挂 mockResolvedValue，不依赖跨用例的累积状态。
     providerInstance = {
       invoke: jest.fn().mockResolvedValue({
         status: 'COMPLETED',
@@ -63,17 +43,11 @@ describe('CloudFaaSExecutor', () => {
         updatedAt: '2026-01-01T00:00:00.000Z',
       }),
     };
-    HuaweiMock.mockImplementation(() => providerInstance);
-    AliyunMock.mockImplementation(() => providerInstance);
-    LambdaMock.mockImplementation(() => providerInstance);
   });
 
-  const createExecutor = async (config: Record<string, string> = {}) => {
+  const createExecutor = async () => {
     const module = await Test.createTestingModule({
-      providers: [
-        CloudFaaSExecutor,
-        { provide: ConfigService, useValue: makeConfigService(config) },
-      ],
+      providers: [CloudFaaSExecutor, { provide: FaaS_PROVIDER, useValue: providerInstance }],
     }).compile();
     return module.get(CloudFaaSExecutor);
   };
@@ -146,34 +120,6 @@ describe('CloudFaaSExecutor', () => {
     });
   });
 
-  describe('when selecting provider', () => {
-    it('should use huawei by default', async () => {
-      await createExecutor();
-
-      expect(HuaweiMock).toHaveBeenCalled();
-      expect(AliyunMock).not.toHaveBeenCalled();
-      expect(LambdaMock).not.toHaveBeenCalled();
-    });
-
-    it('should use CLOUD_FAAS_PROVIDER to pick aliyun', async () => {
-      await createExecutor({ CLOUD_FAAS_PROVIDER: 'aliyun' });
-
-      expect(AliyunMock).toHaveBeenCalled();
-      expect(HuaweiMock).not.toHaveBeenCalled();
-    });
-
-    it('should use CLOUD_FAAS_PROVIDER to pick aws', async () => {
-      await createExecutor({ CLOUD_FAAS_PROVIDER: 'aws' });
-
-      expect(LambdaMock).toHaveBeenCalled();
-      expect(HuaweiMock).not.toHaveBeenCalled();
-    });
-
-    it('should fall back to huawei for unknown provider', async () => {
-      await createExecutor({ CLOUD_FAAS_PROVIDER: 'tencent' });
-
-      expect(HuaweiMock).toHaveBeenCalled();
-    });
   describe('observability via the seam', () => {
     it('should report no queue and no duration samples (cloud provider schedules)', async () => {
       const executor = (await createExecutor()) as IFunctionExecutor;
@@ -183,6 +129,5 @@ describe('CloudFaaSExecutor', () => {
       expect(executor.listTasks).toBeUndefined();
       expect(executor.clearQueue).toBeUndefined();
     });
-  });
   });
 });

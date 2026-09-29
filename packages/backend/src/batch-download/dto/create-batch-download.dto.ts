@@ -9,20 +9,15 @@ import {
   ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { OUTPUT_FORMATS } from '../../file-system/file-download/format-policy';
 
 /**
- * 批量/单文件格式下载支持的目标格式。
- * mxweb/original 走 orchestrator 的 tryAddOriginal 直通（不转换、不受会员门控），
- * dwg/dxf/pdf 走转换。必须是白名单：orchestrator 对未知格式不回退报错，
- * conversion-runner 的 targetExt 三元会把它当成 PDF 产物（静默产出错误内容）。
+ * 批量/单文件格式下载支持的目标格式（白名单单一事实源在 FormatPolicy 的
+ * OUTPUT_FORMATS）：mxweb/original 走 orchestrator 的 tryAddOriginal 直通
+ * （不转换、不受会员门控），dwg/dxf/pdf 走转换。未知格式在 FormatPolicy
+ * resolveOutputFormat 处显式报错（不再静默产出错误内容）。
  */
-export const BATCH_DOWNLOAD_FORMATS = [
-  'mxweb',
-  'dwg',
-  'dxf',
-  'pdf',
-  'original',
-] as const;
+export const BATCH_DOWNLOAD_FORMATS = OUTPUT_FORMATS;
 
 export class BatchFileItem {
   @ApiProperty({

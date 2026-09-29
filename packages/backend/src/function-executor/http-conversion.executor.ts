@@ -34,6 +34,8 @@ function toErrorCode(value: unknown): number | undefined {
 @Injectable()
 export class HttpConversionExecutor implements IFunctionExecutor {
   private readonly logger = new Logger(HttpConversionExecutor.name);
+  /** 远端执行：经 HTTP 提交到独立转换服务，不回调本服务，无递归风险 */
+  readonly isRemote = true;
   private readonly client: ConversionServiceClient;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
