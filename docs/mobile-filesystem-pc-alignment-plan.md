@@ -218,16 +218,15 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 ### 阶段 5：小项（分享入口 / 多文件上传 / 位置持久化）
 
 任务清单：
-- [ ] **列表内分享入口**：先读 `ShareLinkSheet.vue` 与 `ShareCurrentPopup.vue`，确认 ShareLinkSheet 入参是否依赖编辑器当前图纸上下文：
-  - 若入参 = nodeId+name（解耦）→ 文件项长按菜单（非文件夹）加「分享」→ 打开 ShareLinkSheet
-  - 若强依赖编辑器上下文 → 新建轻量分享弹窗，复用 `shareControllerCreateShare/GetFileShares/RevokeShare`（参照 ShareManagePage 的调用方式）
-- [ ] **多文件上传**：`FileBrowserPage` 的 file input 加 `multiple`；`onFileInputChange` 改为遍历 `Array.from(input.files)`，并发 2~3（简单 Promise 池，勿引库）；每文件独立 toast（成功/失败），全部完成后 `loadNodes` 一次；上传目标域逻辑不变（个人 tab=个人空间；ProjectDetailPage 的上传入口同样改 multiple）
-- [ ] **位置持久化**：`useUnifiedFileList` 启用已定义的 `STORAGE_KEY`：
-  - `currentFolderId`/`breadcrumbs` 变化 → `localStorage.setItem(key, JSON.stringify({ folderId, breadcrumbs }))`
-  - `loadRootNode` 后：有存档 → 恢复 `currentFolderId`+`breadcrumbs`，并 `nodeControllerGetNode` 验证节点存在（404/失败 → 清存档回根目录）
+- [x] **列表内分享入口**：已读两组件——`ShareCurrentPopup` 入参 = `{ fileId, fileName }`（解耦，不依赖编辑器上下文）→ 文件项菜单（非文件夹）加「分享」→ 打开 ShareCurrentPopup（全套 UI：有效期/二维码/已有分享/撤销，优于最小 ShareLinkSheet）
+- [x] **多文件上传**：file input 加 `multiple`；`onFileInputChange` 遍历 `Array.from(input.files)` 走 `runUploadPool`（`utils/uploadPool.ts`，并发 2 纯 Promise 池零依赖）；逐文件独立成功/失败 toast，全部结束后统一重载一次；两页（FileBrowserPage 个人 tab / ProjectDetailPage）同改
+- [x] **位置持久化**：`useUnifiedFileList` 启用 `STORAGE_KEY`：
+  - `enterFolder`/`goBackTo` → `persistLocation()`（根目录不写，避免覆盖离开位置）
+  - `loadRootNode`：有存档 → `nodeControllerGetNode` 验证节点存在 → 恢复 `currentFolderId`+`breadcrumbs`；失败/存档损坏 → 清存档回根目录
   - key：personal 域 = `fs_breadcrumb_personal`；project 域 = `fs_breadcrumb_project_{projectId}`（每项目独立）
-- [ ] i18n + extract + compile
-- [ ] 测试：位置持久化读写/恢复失败回退；多文件上传并发与失败隔离（mock uploadFile）
+  - `loadRootNode(override)` 参数承接「打开图纸返回」的 returnTarget（优先于存档，两页 initFileList 改走 loadRootNode 顺带补上 rootId）
+- [x] i18n + extract + compile（零新增 key：分享/上传成功/上传失败，请重试/上传中... 均已有；「上传中 {pct}%」因进度 toast 移除而闲置，随并发会话下次 extract 自然清）
+- [x] 测试：`uploadPool.spec.ts` 4 例（并发上限/失败隔离/空列表）+ `useUnifiedFileList.spec.ts` 持久化 7 例（读写/key 隔离/回退不覆盖/还原/节点已删清存档/override/损坏存档）
 
 **验证**：`pnpm type-check` 0 错；`pnpm test` 全绿；`pnpm build` 成功。
 **提交**：`feat(mobile): 文件列表分享入口 + 多文件上传 + 文件夹位置跨会话持久化`
@@ -261,7 +260,7 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 | 2 回收站 | ✅ 完成 | 2026-09-29 | d51c4d9 | 统一回收站页（项目/个人空间双 scope：恢复/彻底删除/清空/来源徽章）+ useTrashList.spec 18 例 |
 | 3 项目重命名/删除+tab 名 | ✅ 完成 | 2026-09-29 | e958eb1 | 项目长按菜单重命名/删除（软删进回收站）+ tab 名「我的项目」+ useProjectActions.spec 7 例 |
 | 4 全局搜索 | ✅ 完成 | 2026-09-29 | 996a18e | 三 scope 递归搜索：tab0 global 混合结果（项目卡片+文件行+来源徽章）/ personal_space / project_files；useProjectSearch + useUnifiedFileList 搜索分支，20 例 spec |
-| 5 小项 | ⬜ 未开始 | — | — | |
+| 5 小项 | ✅ 完成 | 2026-09-29 | 9436b26 | 列表内分享（ShareCurrentPopup 解耦复用）+ 多文件上传（runUploadPool 并发 2）+ 位置持久化（存档还原+节点验证回退）；11 例新 spec；initFileList 改走 loadRootNode 补 rootId |
 
 **整体 DoD**：5 阶段全部 ✅；`pnpm type-check` 0 错；`pnpm test` 全绿；`pnpm build` 成功；develop 分支 5 个 commit 可追溯。
 
@@ -271,7 +270,7 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 |---|----------|------|
 | R1 | `UnifiedFileList` 的 FAB 渲染与 `breadcrumb=[]` 的空条行为未逐行确认 | 阶段 2 动手时先读模板确认，按 §5 阶段 2 任务清单加 `showFab` prop 与空条守卫 |
 | R2 | ~~`nodeControllerSearch` 响应节点是否带 `ancestorPath` 未实测~~ 已核实（阶段 4）：后端 `search.service.ts` 的 `injectAncestorPaths` 在 searchProjectFiles/searchAllProjects/searchLibrary/searchPersonalSpace 均注入 `ancestorPath`（名称路径 `"根 > 父1 > 父2"`，**无节点 id**）；global scope 的文件命中经 searchAllProjects 注入、项目命中为根节点无该字段。故来源徽章直接渲染 `ancestorPath`（非空才显示）；文件夹命中无法还原面包屑 → 移动端「进入」= 跳所属项目根/个人空间 tab（PC 用新标签+高亮，不适用移动端） |
-| R3 | `ShareLinkSheet` 入参是否依赖编辑器上下文未确认 | 阶段 5 先读组件定方案（§5 阶段 5 给了两分支） |
+| R3 | ~~`ShareLinkSheet` 入参是否依赖编辑器上下文未确认~~ 已核实（阶段 5）：`ShareCurrentPopup` 入参 = `{ fileId, fileName }`（`withDefaults`，解耦、不依赖编辑器上下文）→ 直接复用全套分享 UI（有效期/二维码/已有分享/撤销），文件项菜单加「分享」打开；`ShareLinkSheet` 仅作其内部剪贴板降级 sheet，不单独作入口 |
 | R4 | 并发会话可能随时改到 `useUnifiedFileList.ts` 周边文件（其当前仅 CRLF 差异无内容改动） | 每阶段开工前重查 `git status`；若该文件出现内容级在途改动，停下报告，勿叠加 |
 | R5 | `node_modules/.bin` 曾被并发会话清空 | 命令报 command not found 时根目录 `CI=true pnpm install` 恢复 |
 | R6 | 项目删除的 403 文案与通用错误文案的区分 | 阶段 3 用 `handleApiError` 现有能力，403 统一走权限错误文案（grep 已有 key） |
