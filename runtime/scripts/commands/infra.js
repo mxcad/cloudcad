@@ -2,8 +2,9 @@
  * @fileoverview 基础设施启动命令（PostgreSQL/Redis/Cooperate/配置中心）
  *
  * Step A-1 机械拆分自 runtime/scripts/cli.js：
- * - startInfrastructure：cli.js:527-623
- * - isServiceRunning：cli.js:1901-1909
+ * - startInfrastructure
+ * - isServiceRunning
+ * （原注释里的 cli.js 行号在拆分后会漂移，故不记录）
  *
  * 依赖方向：commands → lib + foreground/registry（PM2 分支独立实现，前台分支保持现状）。
  * 前台分支的 childProcesses 经 lib/state 共享。
@@ -415,7 +416,13 @@ function isPm2AppFromThisProject(entry) {
   const norm = (p) => String(p).toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
   const root = norm(PROJECT_ROOT);
   const c = norm(cwd);
-  return c === root || c.startsWith(`${root}/`);
+  if (c === root) return true;
+  if (!c.startsWith(`${root}/`)) return false;
+  // cwd 在本仓库内：部署包解包进仓库（release/...）时其目录是本仓库的前缀，
+  // 但它是独立部署目录（pack-offline 写入 .deploy 标记，开发仓库没有）。
+  // 纯前缀匹配会误判为本项目 → reconcile 对别家定义发 restart，跑别家脚本
+  // （别家 .env 密码/数据目录），本目录后端 AUTH 恒失败。
+  return !fs.existsSync(path.join(String(cwd), '.deploy'));
 }
 
 async function reconcileInfrastructureWithPm2(
@@ -803,4 +810,5 @@ module.exports = {
   setupPm2Startup,
   areAllInfraOnline,
   reconcileInfrastructureWithPm2,
+  isPm2AppFromThisProject,
 };
