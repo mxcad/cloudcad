@@ -20,6 +20,8 @@ export interface FileListItem {
   isRoot?: boolean
   /** 原位置路径（回收站/搜索结果来源徽章，仅非空时渲染） */
   ancestorPath?: string
+  /** 所属项目 id（版本历史 API 的 projectId 入参；个人空间文件为个人空间节点 id） */
+  projectId?: string
 }
 
 export function formatNodeAsItem(node: FileSystemNodeDto): FileListItem {
@@ -38,6 +40,7 @@ export function formatNodeAsItem(node: FileSystemNodeDto): FileListItem {
     nodeType: node.nodeType,
     isRoot: node.isRoot,
     ancestorPath: node.ancestorPath,
+    projectId: node.projectId,
   }
 }
 

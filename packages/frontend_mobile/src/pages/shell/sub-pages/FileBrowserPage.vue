@@ -14,7 +14,7 @@
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast, showLoadingToast, closeToast, showDialog, showSuccessToast, showFailToast } from 'vant'
+import { showToast, showLoadingToast, closeToast, showDialog, showConfirmDialog, showSuccessToast, showFailToast } from 'vant'
 import type { ActionSheetAction } from 'vant'
 import {
   projectControllerGetProjects,
@@ -50,6 +50,8 @@ import { useBatchDownload } from '@/composables/useBatchDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
 import type { SelectionActionKey } from '../components/UnifiedFileList.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
+import { useTransferTargets } from '@/composables/useTransferTargets'
+import { useCrossProjectTransfer } from '@/composables/useCrossProjectTransfer'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
 import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
 import BatchDownloadPanel from '../components/BatchDownloadPanel.vue'
@@ -57,6 +59,9 @@ import type { DownloadFormatPayload } from '../components/DownloadFormatPopup.vu
 import { ProjectIcon, FolderIcon } from '../../../components/FileIcons'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import ShareCurrentPopup from '@/pages/home/components/ShareCurrentPopup.vue'
+import VersionHistoryPopup from '@/pages/home/components/VersionHistoryPopup.vue'
+import FileFilterPopup from '@/pages/shell/components/FileFilterPopup.vue'
+import type { FileListFilters } from '@/composables/useUnifiedFileList'
 import { runUploadPool } from '@/utils/uploadPool'
 
 const router = useRouter()
@@ -475,7 +480,7 @@ async function batchDelete(items: Array<{ id: string; name: string }>) {
 }
 
 // ── 单条目操作菜单（A-03）+ 重命名（A-04）+ 移动/复制（A-05）+ 格式下载（A-06）+ 文件夹下载（A-08）──
-const menuTarget = ref<{ id: string; name: string; isFolder?: boolean; path?: string } | null>(null)
+const menuTarget = ref<{ id: string; name: string; isFolder?: boolean; path?: string; projectId?: string } | null>(null)
 const showMenuSheet = ref(false)
 const menuActions = computed(() => {
   const isFolder = !!menuTarget.value?.isFolder
@@ -485,6 +490,8 @@ const menuActions = computed(() => {
     isFolder ? { name: t('打包下载') } : { name: t('格式转换下载') },
     // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
     ...(isFolder ? [] : [{ name: t('分享') }]),
+    // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
+    ...(isFolder ? [] : [{ name: t('版本历史') }]),
     { name: t('重命名') },
     { name: t('移动') },
     { name: t('复制') },
@@ -493,7 +500,7 @@ const menuActions = computed(() => {
   return actions
 })
 
-function onItemMenu(item: { id: string; name: string; isFolder?: boolean; path?: string }) {
+function onItemMenu(item: { id: string; name: string; isFolder?: boolean; path?: string; projectId?: string }) {
   menuTarget.value = item
   showMenuSheet.value = true
 }
@@ -510,6 +517,8 @@ function onMenuAction(action: { name: string }) {
     void downloadFolder(target)
   } else if (action.name === t('分享')) {
     openShare(target)
+  } else if (action.name === t('版本历史')) {
+    openVersionHistory(target)
   } else if (action.name === t('重命名')) {
     renameTarget.value = target
     showRename.value = true
@@ -527,6 +536,44 @@ const shareTarget = ref<{ id: string; name: string } | null>(null)
 function openShare(target: { id: string; name: string }) {
   shareTarget.value = target
   showSharePopup.value = true
+}
+
+// ── 列表内版本历史（二期 h）：VersionHistoryPopup 显式 target（projectId+path 取自节点）──
+const showVersionPopup = ref(false)
+const versionTarget = ref<{ projectId: string; filePath: string; fileId?: string } | null>(null)
+
+function openVersionHistory(target: { id: string; path?: string; projectId?: string }) {
+  if (!target.path) {
+    showToast(t('该文件没有版本信息'))
+    return
+  }
+  versionTarget.value = {
+    projectId: target.projectId ?? personalFileList.rootId.value ?? '',
+    filePath: target.path,
+    fileId: target.id,
+  }
+  showVersionPopup.value = true
+}
+
+/** 选中历史版本：URL 带 ?v= 版本号（loadByNodeId 从 URL 读取加载历史版本），
+ *  走统一打开入口；打开成功后 router.replace('/shell') 会清掉 query，不影响下次正常打开 */
+function onOpenHistoricalVersion(payload: { nodeId: string; revision: number }) {
+  const url = new URL(window.location.href)
+  url.searchParams.set('v', String(payload.revision))
+  history.replaceState(history.state, '', url.toString())
+  void openFromList(payload.nodeId, {
+    path: '/shell/file',
+    tab: 1,
+    folderId: personalFileList.currentFolderId.value,
+    breadcrumbs: personalFileList.breadcrumbs.value,
+  })
+}
+
+// ── 高级筛选（二期 d）：确认后交 composable 统一织入 getChildren/search 请求 ──
+const showFilterPopup = ref(false)
+
+function onFilterApply(filters: FileListFilters) {
+  personalFileList.setFilters(filters)
 }
 
 // ── A-06 格式转换下载（底部弹窗选格式 → downloadControllerDownloadNodeWithFormat blob）──
@@ -622,21 +669,35 @@ const showFolderPicker = ref(false)
 const folderPickerOp = ref<'move' | 'copy' | null>(null)
 const folderPickerItems = ref<Array<{ id: string; name: string }>>([])
 
-function openFolderPicker(op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
-  if (!personalFileList.currentFolderId.value) {
+// ── 二期 g 跨项目移动/复制：目标根=个人空间+我的项目，切根实时预判六域矩阵 ──
+const transferTargets = useTransferTargets()
+const crossTransfer = useCrossProjectTransfer()
+
+async function openFolderPicker(op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
+  if (!personalSpaceId.value) {
     showFailToast(t('文件夹未就绪，请稍后再试'))
     return
   }
   folderPickerOp.value = op
   folderPickerItems.value = items
+  // 拉目标根（含个人空间）+ 源设置（源=个人空间，无项目转移设置）；初始根=个人空间根（对齐 PC 从根下钻）
+  await transferTargets.load(personalSpaceId.value)
+  await crossTransfer.init({ id: personalSpaceId.value, name: t('个人空间'), domain: 'personalSpace' }, op)
   showFolderPicker.value = true
 }
 
-async function onFolderPickerSelect(folder: { id: string; name: string }) {
-  const op = folderPickerOp.value
-  const items = folderPickerItems.value
-  if (!op) return
-  showFolderPicker.value = false
+async function onPickerRootChange(rootId: string) {
+  await crossTransfer.onRootChange(rootId, transferTargets.roots.value)
+}
+
+/** 后端错误透传：403 策略被拒/权限/配额 等文案直接展示，不吞成通用「移动失败」 */
+function transferErrorMessage(e: unknown, op: 'move' | 'copy'): string {
+  const msg = e instanceof Error ? e.message : ''
+  if (msg) return msg
+  return op === 'move' ? t('移动失败') : t('复制失败')
+}
+
+async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
   showLoadingToast({ message: op === 'move' ? t('移动中...') : t('复制中...'), forbidClick: true })
   try {
     const res = items.length === 1
@@ -652,8 +713,29 @@ async function onFolderPickerSelect(folder: { id: string; name: string }) {
     await personalFileList.loadNodes()
   } catch (e) {
     closeToast()
-    showFailToast(op === 'move' ? t('移动失败') : t('复制失败'))
+    showFailToast(transferErrorMessage(e, op))
   }
+}
+
+async function onFolderPickerSelect(folder: { id: string; name: string; rootId: string }) {
+  const op = folderPickerOp.value
+  const items = folderPickerItems.value
+  if (!op) return
+  showFolderPicker.value = false
+  // 跨项目 move：个人空间文件将被移走，二次确认（对齐 PC）
+  if (op === 'move' && crossTransfer.isCrossProject.value) {
+    try {
+      await showConfirmDialog({
+        title: t('跨项目移动'),
+        message: t('将把 {count} 个项目移动到目标项目，源项目的文件将被移走，确定？', { count: String(items.length) }),
+        confirmButtonText: t('确定'),
+        cancelButtonText: t('取消'),
+      })
+    } catch {
+      return // 取消
+    }
+  }
+  void doMoveOrCopy(folder, op, items)
 }
 
 // ── 新建项目弹窗 ──
@@ -941,6 +1023,7 @@ async function onFileInputChange(e: Event) {
           :load-more-failed="personalFileList.loadMoreFailed.value"
           :sort-by="personalFileList.sortBy.value"
           :sort-order="personalFileList.sortOrder.value"
+          :filter-active="personalFileList.hasActiveFilters.value"
           @item-click="onPersonalItemClick"
           @item-menu="onItemMenu"
           @breadcrumb-click="personalFileList.goBackTo"
@@ -951,6 +1034,7 @@ async function onFileInputChange(e: Event) {
           @load-more-retry="personalFileList.retryLoadMore"
           @refresh="personalFileList.refresh"
           @sort-change="personalFileList.setSort"
+          @filter="showFilterPopup = true"
           @fab-click="openCreateFolderDialog"
         />
       </van-tab>
@@ -1083,6 +1167,21 @@ async function onFileInputChange(e: Event) {
       :file-name="shareTarget?.name ?? ''"
     />
 
+    <!-- 列表内版本历史（二期 h）：文件项菜单「版本历史」打开，选中版本走统一打开入口 -->
+    <VersionHistoryPopup
+      v-if="showVersionPopup"
+      :target="versionTarget ?? undefined"
+      @open-version="onOpenHistoricalVersion"
+      @close="showVersionPopup = false"
+    />
+
+    <!-- 高级筛选（二期 d）：工具栏筛选按钮打开，确认后由 composable 统一织入请求 -->
+    <FileFilterPopup
+      v-model:show="showFilterPopup"
+      :model-value="personalFileList.filters.value"
+      @apply="onFilterApply"
+    />
+
     <!-- 单条目操作菜单（A-03）+ 重命名（A-04）+ 移动/复制选文件夹（A-05） -->
     <van-action-sheet
       v-model:show="showMenuSheet"
@@ -1119,10 +1218,13 @@ async function onFileInputChange(e: Event) {
     />
     <NodeFolderPicker
       v-model:show="showFolderPicker"
-      :root-id="personalFileList.currentFolderId.value ?? ''"
+      :root-id="personalSpaceId ?? ''"
       :root-name="t('个人空间')"
       :exclude-ids="folderPickerItems.map((i) => i.id)"
+      :roots="transferTargets.roots.value"
+      :disabled-reason="crossTransfer.disabledReason.value"
       @select="onFolderPickerSelect"
+      @root-change="onPickerRootChange"
     />
     <DownloadFormatPopup
       v-model:show="showFormatPopup"

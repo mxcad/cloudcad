@@ -24,6 +24,17 @@ interface BreadcrumbItem {
   name: string
 }
 
+/** 高级筛选（二期 d）：参数名与后端 QueryChildrenDto / SearchDto 一致（extension 逗号分隔多选，时间 ISO 字符串，大小字节） */
+export interface FileListFilters {
+  extension?: string
+  createdAtFrom?: string
+  createdAtTo?: string
+  modifiedAtFrom?: string
+  modifiedAtTo?: string
+  sizeMin?: number
+  sizeMax?: number
+}
+
 export function useUnifiedFileList(domain: UnifiedDomain) {
   const STORAGE_KEY = `fs_breadcrumb_${domain}`
 
@@ -52,6 +63,37 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
   const breadcrumbs = ref<BreadcrumbItem[]>([])
   // 根节点 id（loadRootNode 记录）：project 域搜索 scope=project_files 时作 projectId
   const rootId = ref<string | null>(null)
+
+  // ── 高级筛选（二期 d）：扩展名/创建+修改时间区间/大小区间 ──
+  const filters = ref<FileListFilters>({})
+
+  const hasActiveFilters = computed(() => Object.keys(filters.value).length > 0)
+
+  function filterQueryParams(): Record<string, unknown> {
+    const f = filters.value
+    return {
+      ...(f.extension ? { extension: f.extension } : {}),
+      ...(f.createdAtFrom ? { createdAtFrom: f.createdAtFrom } : {}),
+      ...(f.createdAtTo ? { createdAtTo: f.createdAtTo } : {}),
+      ...(f.modifiedAtFrom ? { modifiedAtFrom: f.modifiedAtFrom } : {}),
+      ...(f.modifiedAtTo ? { modifiedAtTo: f.modifiedAtTo } : {}),
+      ...(f.sizeMin !== undefined ? { sizeMin: f.sizeMin } : {}),
+      ...(f.sizeMax !== undefined ? { sizeMax: f.sizeMax } : {}),
+    }
+  }
+
+  // 筛选变更即回第一页重查（getChildren 与 search 两路都生效）
+  function setFilters(next: FileListFilters) {
+    filters.value = next
+    page.value = 1
+    loadNodes()
+  }
+
+  function clearFilters() {
+    filters.value = {}
+    page.value = 1
+    loadNodes()
+  }
 
   // ── 位置持久化（阶段 5）：跨会话还原离开前的文件夹位置 ──
   // personal 域 = fs_breadcrumb_personal；project 域 = fs_breadcrumb_project_{projectId}（每项目独立）
@@ -159,6 +201,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
           sortBy: sortBy.value,
           sortOrder: sortOrder.value,
           ...(debouncedSearch.value ? { search: debouncedSearch.value } : {}),
+          ...filterQueryParams(),
         },
       } as any)
 
@@ -183,25 +226,16 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     error.value = ''
 
     try {
-      const query =
-        scope === 'personal_space'
-          ? {
-              keyword: debouncedSearch.value,
-              scope,
-              page: page.value,
-              limit: 30,
-              sortBy: sortBy.value,
-              sortOrder: sortOrder.value,
-            }
-          : {
-              keyword: debouncedSearch.value,
-              scope,
-              projectId: rootId.value ?? undefined,
-              page: page.value,
-              limit: 30,
-              sortBy: sortBy.value,
-              sortOrder: sortOrder.value,
-            }
+      const query = {
+        keyword: debouncedSearch.value,
+        scope,
+        page: page.value,
+        limit: 30,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value,
+        ...filterQueryParams(),
+        ...(scope === 'project_files' ? { projectId: rootId.value ?? undefined } : {}),
+      }
       const res = await nodeControllerSearch({ query } as any)
 
       if (res.error) throw new Error(String(res.error))
@@ -321,5 +355,6 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     currentFolderId, breadcrumbs, rootId,
     enterFolder, goBackTo,
     loadRootNode,
+    filters, hasActiveFilters, setFilters, clearFilters,
   }
 }

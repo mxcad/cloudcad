@@ -4,8 +4,18 @@ import { t } from '@/languages';
 import { useVersionHistory, type VersionEntry } from '../../../composables/useVersionHistory';
 import FloatingPopup from "../../../components/FloatingPopup.vue"
 
+const props = withDefaults(
+  defineProps<{
+    /** 显式目标（列表内入口：文件未打开编辑器）；缺省走编辑器当前图纸 */
+    target?: { projectId: string; filePath: string; fileId?: string }
+  }>(),
+  { target: undefined }
+);
+
 const emit = defineEmits<{
   (e: 'close'): void;
+  /** 列表内入口选中历史版本：由页面负责打开该文件（带 ?v= 版本号） */
+  (e: 'open-version', payload: { nodeId: string; revision: number }): void;
 }>();
 
 const show = ref(true);
@@ -20,7 +30,7 @@ const displayEntries = computed(() =>
 );
 
 onMounted(() => {
-  loadHistory();
+  loadHistory(props.target);
 });
 
 function onClose() {
@@ -30,7 +40,12 @@ function onClose() {
 }
 
 function onSelectVersion(entry: VersionEntry) {
-  openHistoricalVersion(entry.revision);
+  if (props.target?.fileId) {
+    // 列表内入口：文件未打开编辑器，交给页面走统一打开入口（URL 带 ?v= 版本号）
+    emit('open-version', { nodeId: props.target.fileId, revision: entry.revision });
+  } else {
+    openHistoricalVersion(entry.revision);
+  }
   onClose();
 }
 
@@ -61,7 +76,7 @@ function formatDate(dateStr: string): string {
     <div v-else-if="error" class="error-state">
       <van-icon name="warning-o" color="var(--danger)" size="40" />
       <p>{{ error }}</p>
-      <van-button size="small" @click="loadHistory">{{ t('重试') }}</van-button>
+      <van-button size="small" @click="loadHistory(target)">{{ t('重试') }}</van-button>
     </div>
 
     <template v-else-if="entries.length === 0">

@@ -12,6 +12,12 @@ export interface VersionEntry {
   userName?: string;
 }
 
+/** 显式版本历史目标（列表内入口：文件未打开编辑器，直接传节点的 projectId+path） */
+export interface VersionHistoryTarget {
+  projectId: string;
+  filePath: string;
+}
+
 const loading = ref(false);
 const entries = ref<VersionEntry[]>([]);
 const totalCount = ref(0);
@@ -20,12 +26,20 @@ const error = ref<string | null>(null);
 export function useVersionHistory() {
   const editorState = useEditorState();
 
-  async function loadHistory(): Promise<void> {
-    const state = editorState.state;
-    const fileInfo = state.fileInfo as Record<string, unknown> | null;
+  async function loadHistory(target?: VersionHistoryTarget): Promise<void> {
+    let projectId: string;
+    let filePath: string;
 
-    const projectId = state.projectId || (fileInfo?.parentId as string) || '';
-    const filePath = (fileInfo?.path as string) || '';
+    if (target) {
+      projectId = target.projectId;
+      filePath = target.filePath;
+    } else {
+      const state = editorState.state;
+      const fileInfo = state.fileInfo as Record<string, unknown> | null;
+
+      projectId = state.projectId || (fileInfo?.parentId as string) || '';
+      filePath = (fileInfo?.path as string) || '';
+    }
 
     if (!projectId || !filePath) {
       error.value = t('缺少项目信息或文件路径');

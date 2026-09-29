@@ -253,3 +253,93 @@ describe('useUnifiedFileList 统一数据层（阶段 4 搜索分支）', () => 
     expect(vi.mocked(nodeControllerGetNode)).not.toHaveBeenCalled()
   })
 })
+
+describe('useUnifiedFileList 高级筛选（二期 d）', () => {
+  let errorSpy: { mockRestore: () => void }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    resolveWith(nodeControllerGetChildren, nodePage())
+    resolveWith(nodeControllerSearch, nodePage())
+    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  })
+  afterEach(() => {
+    errorSpy.mockRestore()
+  })
+
+  it('无筛选：getChildren query 不含任何筛选键', async () => {
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    expect(c.hasActiveFilters.value).toBe(false)
+    const call = vi.mocked(nodeControllerGetChildren).mock.calls.at(-1)?.[0] as {
+      query: Record<string, unknown>
+    }
+    for (const k of ['extension', 'createdAtFrom', 'createdAtTo', 'modifiedAtFrom', 'modifiedAtTo', 'sizeMin', 'sizeMax']) {
+      expect(call.query[k]).toBeUndefined()
+    }
+  })
+
+  it('setFilters：回第一页重查，getChildren query 带全部筛选参数', async () => {
+    resolveWith(nodeControllerGetChildren, nodePage([{ id: 'f-1', name: '子目录' }], 1, 2))
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    c.enterFolder({ id: 'f-1', name: '子目录' } as never)
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
+    // 先翻页到第 2 页，验证 setFilters 重置回第 1 页
+    c.loadMore()
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
+    expect(c.page.value).toBe(2)
+
+    c.setFilters({ extension: 'dwg,mxweb', createdAtFrom: '2026-01-01T00:00:00.000Z', sizeMax: 1048576 })
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
+    expect(c.hasActiveFilters.value).toBe(true)
+    expect(c.page.value).toBe(1)
+    const call = vi.mocked(nodeControllerGetChildren).mock.calls.at(-1)?.[0] as {
+      query: Record<string, unknown>
+    }
+    expect(call.query).toMatchObject({
+      extension: 'dwg,mxweb',
+      createdAtFrom: '2026-01-01T00:00:00.000Z',
+      sizeMax: 1048576,
+      page: 1,
+    })
+    // 未设置的筛选键不出现
+    expect(call.query.createdAtTo).toBeUndefined()
+    expect(call.query.sizeMin).toBeUndefined()
+    expect(call.query.modifiedAtFrom).toBeUndefined()
+  })
+
+  it('搜索态 setFilters：筛选参数同时传给 search', async () => {
+    const c = useUnifiedFileList('project')
+    await c.loadRootNode('proj-1')
+    c.setSearch('图纸')
+    await vi.waitFor(() => expect(vi.mocked(nodeControllerSearch)).toHaveBeenCalled())
+    vi.clearAllMocks()
+
+    c.setFilters({ sizeMin: 1024 })
+    await vi.waitFor(() => expect(vi.mocked(nodeControllerSearch)).toHaveBeenCalled())
+    const call = vi.mocked(nodeControllerSearch).mock.calls.at(-1)?.[0] as {
+      query: Record<string, unknown>
+    }
+    expect(call.query).toMatchObject({ keyword: '图纸', sizeMin: 1024, page: 1 })
+    expect(call.query.sizeMax).toBeUndefined()
+  })
+
+  it('clearFilters：清空筛选并回第一页重查（query 无筛选键）', async () => {
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    c.setFilters({ extension: 'pdf' })
+    await vi.waitFor(() => expect(c.hasActiveFilters.value).toBe(true))
+    vi.clearAllMocks()
+
+    c.clearFilters()
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
+    expect(c.hasActiveFilters.value).toBe(false)
+    expect(c.page.value).toBe(1)
+    const call = vi.mocked(nodeControllerGetChildren).mock.calls.at(-1)?.[0] as {
+      query: Record<string, unknown>
+    }
+    expect(call.query.extension).toBeUndefined()
+  })
+})

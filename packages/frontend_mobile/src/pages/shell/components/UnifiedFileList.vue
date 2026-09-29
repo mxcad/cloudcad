@@ -54,6 +54,8 @@ const props = withDefaults(
     emptyIcon?: string
     /** 多选操作项（不传沿用默认的 下载/移动/复制/删除；回收站传 恢复/彻底删除） */
     selectionActions?: SelectionActionDef[]
+    /** 是否有生效的高级筛选（二期 d）：筛选按钮高亮 */
+    filterActive?: boolean
   }>(),
   {
     showToolbar: true,
@@ -65,6 +67,7 @@ const props = withDefaults(
     sortBy: 'updatedAt',
     sortOrder: 'desc',
     showFab: true,
+    filterActive: false,
   }
 )
 
@@ -80,6 +83,8 @@ const emit = defineEmits<{
   loadMoreRetry: []
   refresh: []
   sortChange: [sortBy: SortField, sortOrder: SortOrder]
+  /** 工具栏筛选按钮（二期 d）：父组件打开 FileFilterPopup */
+  filter: []
   'update:keyword': [keyword: string]
 }>()
 
@@ -299,6 +304,10 @@ async function onPullRefresh() {
         <!-- A-10 排序（ActionSheet 选字段，同字段再点反转方向） -->
         <button class="mode-btn" @click="showSortSheet = true">
           <van-icon name="sort" size="18" />
+        </button>
+        <!-- 二期 d 高级筛选（格式/大小/时间区间），有生效筛选时高亮 -->
+        <button :class="['mode-btn', { active: filterActive }]" @click="emit('filter')">
+          <van-icon name="filter-o" size="18" />
         </button>
       </div>
     </div>
