@@ -35,7 +35,6 @@ import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import {
-  showGlobalLoading,
   hideGlobalLoading,
   getLoadingState,
 } from '../services/loadingService';
@@ -556,42 +555,10 @@ export const CADEditorDirect: React.FC = () => {
     const decodedUrl = decodeURIComponent(fileUrl);
 
     const openExternalRef = async () => {
-      try {
-        showGlobalLoading(t('正在打开外部参照...'));
-        const { mxcadManager } = await import('../services/mxcadManager');
-        const maxWait = 20000;
-        const startTime = Date.now();
-
-        // 等待 CAD 引擎完全初始化（包括 isInitialized）
-        while (!mxcadManager.isReady() && Date.now() - startTime < maxWait) {
-          await new Promise((r) => setTimeout(r, 300));
-        }
-        if (!mxcadManager.isReady()) {
-          hideGlobalLoading();
-          throw new Error('CAD 引擎未初始化');
-        }
-
-        // 无需额外等初始文件打开完成：openFile 经 enqueueOpen 排队，会在真正发起
-        // __openWebFile__ 之前等当前文档加载完成（避免引擎报 "cannot start a new open"）。
-        await mxcadManager.openFile({
-          url: decodedUrl,
-          fileInfo: {
-            fileId: '',
-            parentId: null,
-            projectId: null,
-            name:
-              decodedUrl
-                .split('/')
-                .pop()
-                ?.replace(/\.mxweb$/, '') || '',
-            personalSpaceId: null,
-          },
-        });
-        hideGlobalLoading();
-      } catch {
-        globalShowToast(t('打开外部参照失败'), 'error');
-        hideGlobalLoading();
-      }
+      // 打开序列（loading 配对、引擎就绪等待、openFile、失败 toast）收敛在
+      // openDrawing(external-ref)，内部已含错误收尾、不会 reject
+      const { openDrawing } = await import('../services/mxcadManager');
+      await openDrawing({ source: 'external-ref', url: decodedUrl });
     };
 
     openExternalRef();

@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 // 与 mxcadOpenFile.ts 同源导入（相对路径），确保测试与被测代码引用同一 store 实例
 import { useConversionQueueStore } from '../../stores/conversionQueueStore';
-import {
-  handlePublicUpload,
-  waitForFileReady,
-  openUploadedFile,
-  handleOpenFileCommand,
-} from './mxcadOpenFile';
+// handlePublicUpload/handleOpenFileCommand 留在 mxcadOpenFile；
+// openUploadedFile/waitForFileReady 已迁至 openDrawing（打开序列深模块）
+import { handlePublicUpload, handleOpenFileCommand } from './mxcadOpenFile';
+import { openUploadedFile, waitForFileReady } from './openDrawing';
 import { emit } from '../drawingSession';
 import { calculateFileHash } from '../../utils/hashUtils';
 import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';

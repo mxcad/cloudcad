@@ -52,13 +52,15 @@ export {
 } from './mxcadCollaboration';
 
 export {
+  openDrawing,
   openUploadedFile,
-  openLibraryDrawing,
-  openLibraryBlock,
   waitForFileReady,
-  handlePublicUpload,
   guardBeforeOpen,
-} from './mxcadOpenFile';
+  openUnderLoading,
+} from './openDrawing';
+export type { OpenDrawingRequest } from './openDrawing';
+
+export { handlePublicUpload, handleOpenFileCommand } from './mxcadOpenFile';
 
 // ==================== 私人空间 ID ====================
 

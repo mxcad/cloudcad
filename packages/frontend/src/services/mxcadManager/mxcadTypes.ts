@@ -145,6 +145,12 @@ export const FILE_OPEN_RETRY_CONFIG = {
 /** MxCADView 初始化等待超时（ms）：openFile 在视图未就绪时等待初始化完成 */
 export const VIEW_INIT_TIMEOUT_MS = 60000;
 
+/** 外部参照打开前的引擎就绪等待超时（ms）：超时按失败处理（区别于首开的超时兜底继续） */
+export const EXTERNAL_REF_READY_TIMEOUT_MS = 20_000;
+
+/** 引擎就绪等待轮询间隔（ms）：ensureEngineReady 唯一轮询实现使用 */
+export const ENGINE_READY_POLL_INTERVAL_MS = 200;
+
 /** 缩略图配置 */
 export const THUMBNAIL_CONFIG = {
   MIN_DRAWING_SIZE: 100,

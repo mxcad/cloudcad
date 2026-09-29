@@ -66,6 +66,16 @@ export class MxCADManager {
   isReady(): boolean {
     return this.instanceManager.isReady();
   }
+  /**
+   * 等待引擎就绪（唯一轮询实现，见 MxCADInstanceManager.ensureEngineReady）。
+   * 返回 false = 超时仍未就绪 / 被 shouldCancel 取消，超时语义由调用方决定。
+   */
+  async ensureEngineReady(opts?: {
+    timeoutMs?: number;
+    shouldCancel?: () => boolean;
+  }): Promise<boolean> {
+    return this.instanceManager.ensureEngineReady(opts);
+  }
   /** 是否有正在打开中的图纸（pendingOpenInfo 未消费：成功 openSession / 失败回滚前） */
   hasPendingOpen(): boolean {
     return this.instanceManager.getPendingOpenInfo() !== null;

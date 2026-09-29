@@ -138,8 +138,12 @@ export function useCadFileLoader(
       onStoreError(null);
 
       try {
-        const { mxcadManager, setNavigateFunction, guardBeforeOpen } =
-          await import('../services/mxcadManager');
+        const {
+          mxcadManager,
+          setNavigateFunction,
+          guardBeforeOpen,
+          openUnderLoading,
+        } = await import('../services/mxcadManager');
         if (cancelled) return;
 
         // 打开目标 URL 与文件信息：本地任务（?hash=）与节点打开共用 doOpenMxFile
@@ -173,13 +177,14 @@ export function useCadFileLoader(
             // 引擎可能仍在初始化（WASM 加载中），等就绪再发命令避免命令丢失
             await waitForEngineReady(mxcadManager, () => cancelled);
             if (cancelled) return false;
-            showGlobalLoading(t('正在加载图纸...'));
-            await mxcadManager.openFile({
-              url: mxcadFileUrl,
-              fileInfo: fileInfoForOpen,
-              onSuccess: onOpenSuccess,
+            await openUnderLoading({
+              loadingMessage: t('正在加载图纸...'),
+              prepare: async () => ({
+                url: mxcadFileUrl,
+                fileInfo: fileInfoForOpen,
+                onSuccess: onOpenSuccess,
+              }),
             });
-            hideGlobalLoading();
             loadedFileUrlRef.current = mxcadFileUrl;
             if (fileId) currentFileIdRef.current = fileId;
             onLoading(false);
@@ -220,17 +225,15 @@ export function useCadFileLoader(
             // 成功后 openSession 写入 currentFileInfo 并设置图纸名标题，无需再 restoreEditorTitle。
             // 容器此刻尚未 showMxCAD（延后到下方 RAF 之后），打开期由全局 loading 遮罩提供反馈：
             // ?hash= 等首开路径发 __openWebFile__ 时若无遮罩，页面上没有任何「正在打开」迹象。
-            showGlobalLoading(t('正在加载图纸...'));
-            try {
-              await mxcadManager.openFile({
+            // openUnderLoading 保证打开失败也摘遮罩（否则永久 loading）。
+            await openUnderLoading({
+              loadingMessage: t('正在加载图纸...'),
+              prepare: async () => ({
                 url: mxcadFileUrl,
                 fileInfo: fileInfoForOpen,
                 onSuccess: onOpenSuccess,
-              });
-            } finally {
-              // 打开失败（retCall 非 0 / 60s 超时）也要摘遮罩，否则永久 loading
-              hideGlobalLoading();
-            }
+              }),
+            });
           }
 
           // 引擎已挂载（再等 2 RAF 保证 canvas 渲染）再显示容器，避免空白区透出背景

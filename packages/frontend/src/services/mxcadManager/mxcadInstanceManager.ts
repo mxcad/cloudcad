@@ -10,6 +10,7 @@ import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
 import type { CurrentFileInfo, OpenFilePayload } from './mxcadTypes';
+import { VIEW_INIT_TIMEOUT_MS, ENGINE_READY_POLL_INTERVAL_MS } from './mxcadTypes';
 import { MxCADOpenFlow } from './mxcadOpenFlow';
 import { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
 import {
@@ -602,5 +603,32 @@ export class MxCADInstanceManager {
   }
   isReady(): boolean {
     return this.isInitialized && this.mxcadView !== null;
+  }
+
+  /**
+   * 等待引擎就绪（WASM 加载 + 引擎对象创建，mxcadApplicationCreatedMxCADObject 事件）
+   * 的唯一轮询实现。initPromise 存在时 await 之（初始化完成即重查），否则按固定间隔轮询。
+   *
+   * 超时语义由调用方决定：返回 false（未就绪）时，首开路径按就绪兜底继续（避免永久卡
+   * 骨架屏），外部参照 / openFile 等待路径按失败处理。shouldCancel 返回 true 立即返回 false。
+   */
+  async ensureEngineReady(opts?: {
+    timeoutMs?: number;
+    shouldCancel?: () => boolean;
+  }): Promise<boolean> {
+    const timeoutMs = opts?.timeoutMs ?? VIEW_INIT_TIMEOUT_MS;
+    const startedAt = Date.now();
+    while (!this.isReady() && Date.now() - startedAt < timeoutMs) {
+      if (opts?.shouldCancel?.()) return false;
+      const initPromise = this.getInitPromise();
+      if (initPromise) {
+        await initPromise;
+      } else {
+        await new Promise((resolve) =>
+          setTimeout(resolve, ENGINE_READY_POLL_INTERVAL_MS)
+        );
+      }
+    }
+    return this.isReady();
   }
 }

@@ -175,12 +175,17 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           if (hasSystemPermission) {
             onDrawingOpen(n, libraryType);
           } else {
-            import('@/services/mxcadManager').then(({ openLibraryDrawing }) => {
-              openLibraryDrawing(n.id, n.name, n.path || '', n.updatedAt).catch(
-                (error: unknown) => {
-                  handleError(error, 'useFileItemRenderer: 打开图纸库文件失败');
-                }
-              );
+            import('@/services/mxcadManager').then(({ openDrawing }) => {
+              openDrawing({
+                source: 'library',
+                libraryKey: 'drawing',
+                nodeId: n.id,
+                fileName: n.name,
+                nodePath: n.path || '',
+                updatedAt: n.updatedAt,
+              }).catch((error: unknown) => {
+                handleError(error, 'useFileItemRenderer: 打开图纸库文件失败');
+              });
             });
           }
         } else {

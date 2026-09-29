@@ -35,24 +35,17 @@ export const useDrawingOpener = (isAuthenticated: boolean) => {
       try {
         // 如果是库文件，使用新的打开方式
         if (libraryType === 'drawing' || libraryType === 'block') {
-          const { openLibraryDrawing, openLibraryBlock } =
+          const { openDrawing } =
             await import('../../../services/mxcadManager');
 
-          if (libraryType === 'drawing') {
-            await openLibraryDrawing(
-              node.id,
-              node.name,
-              node.path,
-              node.updatedAt
-            );
-          } else {
-            await openLibraryBlock(
-              node.id,
-              node.name,
-              node.path,
-              node.updatedAt
-            );
-          }
+          await openDrawing({
+            source: 'library',
+            libraryKey: libraryType,
+            nodeId: node.id,
+            fileName: node.name,
+            nodePath: node.path,
+            updatedAt: node.updatedAt,
+          });
           return;
         }
 

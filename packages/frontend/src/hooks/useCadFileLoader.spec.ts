@@ -61,6 +61,28 @@ vi.mock('@/services/mxcadManager', () => ({
   hasDocumentLoaded: vi.fn(() => false),
   waitForDocumentLoaded: vi.fn(async () => true),
   guardBeforeOpen: guardBeforeOpenMock,
+  // openUnderLoading 透传实现：与真实实现相同的 loading 配对语义
+  // （show → prepare → mxcadManager.openFile → finally hide），
+  // 使 spec 中 showGlobalLoading/hideGlobalLoading/openFile 的顺序断言保持有效
+  openUnderLoading: vi.fn(
+    async (
+      plan: {
+        loadingMessage: string;
+        prepare: () => Promise<{
+          url: string;
+          fileInfo?: unknown;
+          onSuccess?: () => void;
+        }>;
+      } // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock 工厂内引用 hoisted 变量
+    ) => {
+      showGlobalLoadingMock(plan.loadingMessage);
+      try {
+        await mxcadManagerMock.openFile(await plan.prepare());
+      } finally {
+        hideGlobalLoadingMock();
+      }
+    }
+  ),
 }));
 vi.mock('@/services/loadingService', () => ({
   showGlobalLoading: showGlobalLoadingMock,

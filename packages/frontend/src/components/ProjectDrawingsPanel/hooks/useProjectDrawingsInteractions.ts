@@ -212,13 +212,15 @@ export function useProjectDrawingsInteractions({
           return;
         }
         if (libraryType === 'drawing') {
-          import('@/services/mxcadManager').then(({ openLibraryDrawing }) => {
-            openLibraryDrawing(
-              node.id,
-              node.name,
-              node.path || '',
-              node.updatedAt
-            ).catch((error: unknown) => {
+          import('@/services/mxcadManager').then(({ openDrawing }) => {
+            openDrawing({
+              source: 'library',
+              libraryKey: 'drawing',
+              nodeId: node.id,
+              fileName: node.name,
+              nodePath: node.path || '',
+              updatedAt: node.updatedAt,
+            }).catch((error: unknown) => {
               handleError(error, 'ProjectDrawingsPanel: 打开图纸库文件失败');
             });
           });

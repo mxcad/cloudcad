@@ -13,6 +13,9 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { clearDrawingSessionListeners } from '@/services/drawingSession';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { CADEditorDirect } from './CADEditorDirect';
+// 静态触发 barrel mock 工厂求值：真实 openDrawing 模块链（含 mxcadCollaboration→mxcad）
+// 须在模块加载期就绪，否则 effect 内的动态 import 首次求值会挤占下方 500ms 性能断言窗口
+import '../services/mxcadManager';
 
 const { subscriptions } = vi.hoisted(() => ({
   subscriptions: [] as boolean[],
@@ -21,6 +24,7 @@ const { subscriptions } = vi.hoisted(() => ({
 const { mxcadManagerMock } = vi.hoisted(() => ({
   mxcadManagerMock: {
     isReady: vi.fn(() => true),
+    ensureEngineReady: vi.fn(async () => true),
     hasPendingOpen: vi.fn(() => false),
     getCurrentFileName: vi.fn(() => 'empty_template.mxweb'),
     openFile: vi.fn(async () => {}),
@@ -159,12 +163,22 @@ vi.mock('@voerkai18n/react', async (importOriginal) => {
 vi.mock('mxcad-app', () => ({
   mxcadApp: { i18nScope: { on: vi.fn(), off: vi.fn() } },
 }));
-vi.mock('../services/mxcadManager', () => ({
+vi.mock('../services/mxcadManager/mxcadManager', () => ({
   mxcadManager: mxcadManagerMock,
-  setPersonalSpaceId: vi.fn(),
-  setOpenedBackInfo: vi.fn(),
-  refreshFileName: vi.fn(),
 }));
+// barrel 不整体展开真实重导出链（会拖进 mxcadBootstrap→cmd/* 的 mxcad SDK 类继承，
+// 测试环境不可用），只按需加载真实的 openDrawing 供外部参照路径动态 import 使用；
+// 其 './mxcadManager' 直连依赖由上方 mock 接管
+vi.mock('../services/mxcadManager', async () => {
+  const { openDrawing } = await import('../services/mxcadManager/openDrawing');
+  return {
+    mxcadManager: mxcadManagerMock,
+    setPersonalSpaceId: vi.fn(),
+    setOpenedBackInfo: vi.fn(),
+    refreshFileName: vi.fn(),
+    openDrawing,
+  };
+});
 
 const EXTERNAL_REF_URL = '/api/v1/mxcad/external-ref-view/node-1/a.mxweb';
 
