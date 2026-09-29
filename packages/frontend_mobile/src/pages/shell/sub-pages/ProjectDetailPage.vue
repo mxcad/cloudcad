@@ -44,6 +44,7 @@ import { ProjectPermission, getProjectRoleDisplayName } from '@/utils/projectPer
 import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.gen'
 import { useBatchDownload } from '@/composables/useBatchDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
+import type { SelectionActionKey } from '../components/UnifiedFileList.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
 import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
@@ -418,7 +419,7 @@ function onFabSheetSelect(action: FabAction) {
 }
 
 // ── 多选操作（B-03/B-17：move/copy 接线）──
-function onSelectionAction(action: 'download' | 'delete' | 'move' | 'copy', items: Array<{ id: string; name: string }>) {
+function onSelectionAction(action: SelectionActionKey, items: Array<{ id: string; name: string }>) {
   if (action === 'delete') {
     batchDelete(items)
   } else if (action === 'move' || action === 'copy') {

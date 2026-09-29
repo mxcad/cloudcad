@@ -1,3 +1,8 @@
+<script lang="ts">
+// 多选操作项 key（回收站扩展 restore/permanentDelete；父组件 selectionAction handler 按此类型标注）
+export type SelectionActionKey = 'download' | 'delete' | 'move' | 'copy' | 'restore' | 'permanentDelete'
+</script>
+
 <script setup lang="ts">
 /**
  * 统一文件列表组件（M2 实施）—— 文件浏览器 / 项目详情共用，改一次两域同变。
@@ -13,11 +18,17 @@ import { ref, watch, computed } from 'vue'
 import { t } from '@/languages'
 import type { UnifiedDomain } from '../../../composables/useUnifiedFileList'
 import type { FileListItem } from '../../../composables/useNodeFormatter'
-import { FolderIcon } from '../../../components/FileIcons'
+import { FolderIcon, ProjectIcon } from '../../../components/FileIcons'
 
 type ListItem = FileListItem
 type SortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
 type SortOrder = 'asc' | 'desc'
+
+interface SelectionActionDef {
+  key: SelectionActionKey
+  label: string
+  danger?: boolean
+}
 
 const props = withDefaults(
   defineProps<{
@@ -35,6 +46,14 @@ const props = withDefaults(
     /** 当前排序字段（A-10），仅用于展示方向标记 */
     sortBy?: SortField
     sortOrder?: SortOrder
+    /** 空态是否显示「新建文件夹」入口（回收站等无新建语义的列表传 false） */
+    showFab?: boolean
+    /** 空态文案（不传则按 domain 派生） */
+    emptyText?: string
+    /** 空态图标（不传沿用默认的 friends-o） */
+    emptyIcon?: string
+    /** 多选操作项（不传沿用默认的 下载/移动/复制/删除；回收站传 恢复/彻底删除） */
+    selectionActions?: SelectionActionDef[]
   }>(),
   {
     showToolbar: true,
@@ -45,6 +64,7 @@ const props = withDefaults(
     loadMoreFailed: false,
     sortBy: 'updatedAt',
     sortOrder: 'desc',
+    showFab: true,
   }
 )
 
@@ -54,7 +74,7 @@ const emit = defineEmits<{
   modeChange: [mode: 'grid' | 'list']
   breadcrumbClick: [index: number]
   fabClick: []
-  selectionAction: [action: 'download' | 'delete' | 'move' | 'copy', items: ListItem[]]
+  selectionAction: [action: SelectionActionKey, items: ListItem[]]
   search: [keyword: string]
   loadMore: []
   loadMoreRetry: []
@@ -167,12 +187,33 @@ function exitSelectionMode() {
   selected.value = new Set()
 }
 
-function onSelectionAction(action: 'download' | 'delete' | 'move' | 'copy') {
+// 多选操作项由父组件注入（回收站传 恢复/彻底删除），不传沿用默认四项
+const selectionActions = computed<SelectionActionDef[]>(() =>
+  props.selectionActions ?? [
+    { key: 'download', label: t('下载') },
+    { key: 'move', label: t('移动') },
+    { key: 'copy', label: t('复制') },
+    { key: 'delete', label: t('删除'), danger: true },
+  ]
+)
+
+function onSelectionAction(action: SelectionActionKey) {
   const selectedItems = props.items.filter((i) => selected.value.has(i.id))
   if (selectedItems.length === 0) return
   // 选中项在 emit 时已捕获，父组件异步处理（确认/选文件夹）期间可安全退出多选
   emit('selectionAction', action, selectedItems)
   exitSelectionMode()
+}
+
+// 空态文案/图标：默认按 domain 派生，回收站等场景可由父组件覆盖
+const emptyText = computed(() =>
+  props.emptyText || (props.domain === 'project' ? t('暂无项目文件') : t('个人空间空空如也'))
+)
+const emptyIcon = computed(() => props.emptyIcon || 'friends-o')
+
+// 网格缩略图：已删项目根用项目图标（与普通文件夹区分），其余文件夹用文件夹图标
+function isProjectRoot(item: ListItem): boolean {
+  return !!item.isFolder && item.nodeType === 'PROJECT'
 }
 
 // A-19 全选：作用于当前已加载页（服务端分页下与 PC「全选当前视图」语义一致）
@@ -290,12 +331,12 @@ async function onPullRefresh() {
     <!-- ═══ 空态 ═══ -->
     <div v-else-if="!loading && items.length === 0" class="empty-state">
       <div class="empty-icon">
-        <van-icon name="friends-o" size="48" />
+        <van-icon :name="emptyIcon" size="48" />
       </div>
       <span class="empty-text">
-        {{ domain === 'project' ? t('暂无项目文件') : t('个人空间空空如也') }}
+        {{ emptyText }}
       </span>
-      <button class="empty-action" @click="emit('fabClick')">
+      <button v-if="showFab" class="empty-action" @click="emit('fabClick')">
         {{ t('新建文件夹') }}
       </button>
     </div>
@@ -316,7 +357,8 @@ async function onPullRefresh() {
           @contextmenu.prevent="onItemClick(item)"
         >
           <div v-if="item.isFolder" class="grid-thumb grid-thumb--folder">
-            <FolderIcon size="72%" />
+            <ProjectIcon v-if="isProjectRoot(item)" size="72%" />
+            <FolderIcon v-else size="72%" />
           </div>
           <div v-else class="grid-thumb grid-thumb--file">
             <span class="thumb-ext" :style="{ color: extColor(item.ext) }">{{ item.ext }}</span>
@@ -324,6 +366,7 @@ async function onPullRefresh() {
           </div>
           <span class="grid-name">{{ stripExt(item.name) }}</span>
           <span v-if="!item.isFolder" class="grid-meta">{{ item.time }}</span>
+          <span v-if="item.ancestorPath" class="grid-source">{{ item.ancestorPath }}</span>
           <!-- 单条目操作菜单入口（A-03）：列表行 ellipsis / 网格角标，长按仍为多选 -->
           <button class="grid-more" @click.stop="emit('itemMenu', item)">
             <van-icon name="ellipsis" size="16" />
@@ -356,12 +399,14 @@ async function onPullRefresh() {
           @contextmenu.prevent="onItemClick(item)"
         >
           <div class="list-icon" :class="item.isFolder ? 'list-icon--folder' : 'list-icon--file'">
-            <FolderIcon v-if="item.isFolder" :size="20" />
+            <ProjectIcon v-if="isProjectRoot(item)" :size="20" />
+            <FolderIcon v-else-if="item.isFolder" :size="20" />
             <van-icon v-else name="description" size="20" />
           </div>
           <div class="list-body">
             <span class="list-name">{{ stripExt(item.name) }}</span>
             <span class="list-sub">{{ item.isFolder ? t('文件夹') : `${item.time} · ${item.size}` }}</span>
+            <span v-if="item.ancestorPath" class="list-sub list-source">{{ item.ancestorPath }}</span>
           </div>
           <span v-if="!item.isFolder" class="list-ext" :style="{ color: extColor(item.ext), borderColor: extColor(item.ext) }">
             {{ item.ext }}
@@ -393,10 +438,14 @@ async function onPullRefresh() {
       </button>
       <span class="sel-count">{{ t('已选 {count} 项', { count: String(selected.size) }) }}</span>
       <div class="sel-actions">
-        <button @click="onSelectionAction('download')">{{ t('下载') }}</button>
-        <button @click="onSelectionAction('move')">{{ t('移动') }}</button>
-        <button @click="onSelectionAction('copy')">{{ t('复制') }}</button>
-        <button class="sel-del" @click="onSelectionAction('delete')">{{ t('删除') }}</button>
+        <button
+          v-for="a in selectionActions"
+          :key="a.key"
+          :class="{ 'sel-del': a.danger }"
+          @click="onSelectionAction(a.key)"
+        >
+          {{ a.label }}
+        </button>
       </div>
       <button class="sel-cancel" @click="exitSelectionMode">{{ t('取消') }}</button>
     </div>
@@ -627,6 +676,20 @@ async function onPullRefresh() {
   padding-bottom: 6px;
 }
 
+/* 来源徽章（回收站原位置路径）：浅色小字，不抢占名称的视觉分量 */
+.grid-source {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  opacity: 0.75;
+  padding: 0 8px 6px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ── 清单模式 ── */
 .file-list {
   flex: 1;
@@ -690,6 +753,14 @@ async function onPullRefresh() {
 .list-sub {
   font-size: 11px;
   color: var(--text-tertiary);
+}
+
+/* 来源徽章（回收站原位置路径）：第三行浅色小字，长路径 ellipsis 裁切 */
+.list-source {
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .list-ext {

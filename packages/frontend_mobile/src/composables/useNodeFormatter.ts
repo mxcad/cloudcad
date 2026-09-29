@@ -14,6 +14,12 @@ export interface FileListItem {
   isFolder?: boolean
   thumb?: string
   path?: string
+  /** 节点类型（回收站里的项目根按项目图标展示，与普通文件夹区分） */
+  nodeType?: string
+  /** 是否根节点（回收站恢复分支：根节点走批量恢复接口） */
+  isRoot?: boolean
+  /** 原位置路径（回收站/搜索结果来源徽章，仅非空时渲染） */
+  ancestorPath?: string
 }
 
 export function formatNodeAsItem(node: FileSystemNodeDto): FileListItem {
@@ -29,6 +35,9 @@ export function formatNodeAsItem(node: FileSystemNodeDto): FileListItem {
     time,
     isFolder: node.isFolder || node.nodeType === 'FOLDER',
     path: node.path,
+    nodeType: node.nodeType,
+    isRoot: node.isRoot,
+    ancestorPath: node.ancestorPath,
   }
 }
 
