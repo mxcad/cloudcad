@@ -1,6 +1,6 @@
 # 移动端文件系统 ↔ PC 功能对齐 —— 计划清单
 
-> **状态**: 执行中
+> **状态**: 5 阶段 + 二期 b/d/g/h 已完成（2026-09-29）；二期余项（SSE 实时进度/回收站项目筛选/保留时间倒计时）未做
 > **最后更新**: 2026-09-29
 > **分支**: develop（主分支 main 只收正式版本，本工作全部在 develop 做）
 > **工作包**: `packages/frontend_mobile`（Vue 3 + Vite 4 + vant + VoerkaI18n）
@@ -116,8 +116,9 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 ### 4.1 本轮（5 阶段，见 §5）
 回收站（阶段2）、项目重命名/删除+tab 名（阶段3）、全局搜索（阶段4）、列表内分享/多文件上传/位置持久化（阶段5）、两域数据层统一（阶段1，工程前置）。
 
-### 4.2 二期（明确不做，勿顺手做）
-项目操作历史、高级筛选、跨项目移动/复制（转移矩阵）、列表内版本历史入口、SSE 实时进度、回收站项目筛选、保留时间倒计时。
+### 4.2 二期
+**已完成（2026-09-29，用户明确立项实施，见 §8）**：项目操作历史（b）、高级筛选（d）、跨项目移动/复制（g，转移矩阵 ADR-0054 前端预判）、列表内版本历史入口（h）。
+**仍未做**：SSE 实时进度、回收站项目筛选、保留时间倒计时。
 
 ## 5. 执行计划
 
@@ -261,8 +262,13 @@ pnpm i18n:extract && pnpm i18n:compile   # i18n 变更后必跑（-D/-f/-e 参�
 | 3 项目重命名/删除+tab 名 | ✅ 完成 | 2026-09-29 | e958eb1 | 项目长按菜单重命名/删除（软删进回收站）+ tab 名「我的项目」+ useProjectActions.spec 7 例 |
 | 4 全局搜索 | ✅ 完成 | 2026-09-29 | 996a18e | 三 scope 递归搜索：tab0 global 混合结果（项目卡片+文件行+来源徽章）/ personal_space / project_files；useProjectSearch + useUnifiedFileList 搜索分支，20 例 spec |
 | 5 小项 | ✅ 完成 | 2026-09-29 | 9436b26 | 列表内分享（ShareCurrentPopup 解耦复用）+ 多文件上传（runUploadPool 并发 2）+ 位置持久化（存档还原+节点验证回退）；11 例新 spec；initFileList 改走 loadRootNode 补 rootId |
+| 二期 b 操作历史 | ✅ 完成 | 2026-09-29 | 0bf2d3b | 项目 nav-bar 入口 → ProjectAuditLogPopup（今天/昨天/更早三桶分组+操作/成员筛选+分页）；定位=文件走统一打开入口/文件夹取父目录跳位；FILE_DELETE 等不可定位动作不显示定位；useProjectAuditLog.spec 9 例 |
+| 二期 d 高级筛选 | ✅ 完成 | 2026-09-29 | 0bf2d3b | FileFilterPopup（扩展名多选/创建+修改时间区间/大小区间）→ useUnifiedFileList.setFilters 统一织入 getChildren/search 两路请求（服务端筛选，参数名对齐后端 QueryChildrenDto/SearchDto）；筛选按钮高亮+变更回第一页；筛选用例 4 例 |
+| 二期 g 跨项目移动/复制 | ✅ 完成 | 2026-09-29 | 0bf2d3b | transferPolicy.ts 六域矩阵前端预判（与后端 node-mutation.guard 同语义：库源 move 恒拒/出向+入向双查/设置缺失保守拒）+ useTransferTargets（个人空间+我的项目根列表）+ useCrossProjectTransfer（切根实时重算）；NodeFolderPicker 加根切换器+disabledReason 红字禁用；跨项目 move 二次确认；后端错误透传（403 策略/权限/配额文案不吞成通用失败）；transferPolicy.spec 11 例 |
+| 二期 h 列表内版本历史 | ✅ 完成 | 2026-09-29 | 0bf2d3b | 文件项菜单「版本历史」→ VersionHistoryPopup 显式 target（projectId+path 取自节点，无需先开编辑器）；useVersionHistory.loadHistory 加可选 target 参数（编辑器路径不变）；选中版本 URL 带 ?v= 走统一打开入口；FileListItem 补 projectId 字段 |
+| 二期 i18n | ✅ 完成 | 2026-09-29 | d470a18 | 40 新键（b/d/g/h）extract+compile；顺带移除零引用的死键 2024「上传中 {pct}%」；恢复 831/852（仍被 useFileLoader 三元内引用、extract 扫描器不可见，防 en/ko 翻译丢失） |
 
-**整体 DoD**：5 阶段全部 ✅；`pnpm type-check` 0 错；`pnpm test` 全绿；`pnpm build` 成功；develop 分支 5 个 commit 可追溯。
+**整体 DoD**：5 阶段 + 二期 b/d/g/h 全部 ✅；`pnpm type-check` 我的范围 0 错（auth 页等预存错误不属本工作）；`pnpm test` 382/382 全绿；`pnpm build` 成功；develop 分支 7 个 commit 可追溯。
 
 ## 9. 已知风险与开放问题
 
