@@ -35,6 +35,7 @@ import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { useViewMode } from '@/composables/useViewMode'
 import { useTrashList } from '@/composables/useTrashList'
 import type { TrashScope } from '@/composables/useTrashList'
+import { useProjectActions } from '@/composables/useProjectActions'
 import { formatNodeAsItems, formatTime } from '@/composables/useNodeFormatter'
 import type { FileListItem } from '@/composables/useNodeFormatter'
 import { useShellFileOpen } from '@/composables/useShellFileOpen'
@@ -223,6 +224,57 @@ useLoginPrompt(() => {
 
 function onProjectClick(project: ProjectCard) {
   router.push(`/shell/file/project/${project.id}`)
+}
+
+// ── 项目级操作（长按卡片菜单：重命名 / 删除）──
+const projectActions = useProjectActions(() => loadProjects())
+const projectMenuTarget = ref<ProjectCard | null>(null)
+const showProjectMenuSheet = ref(false)
+const projectMenuActions = computed(() => [
+  { name: t('重命名') },
+  { name: t('删除'), color: '#ee0a24' },
+])
+const showProjectRename = ref(false)
+const projectRenameTarget = ref<ProjectCard | null>(null)
+
+// 长按检测（与 UnifiedFileList 文件项同套 500ms 手势）：触发后抑制随后的 click
+const projectLongPressTriggered = ref(false)
+let projectLongPressTimer: ReturnType<typeof setTimeout> | null = null
+
+function onProjectTouchStart(project: ProjectCard) {
+  projectLongPressTriggered.value = false
+  projectLongPressTimer = setTimeout(() => {
+    projectLongPressTriggered.value = true
+    projectMenuTarget.value = project
+    showProjectMenuSheet.value = true
+    if (navigator.vibrate) navigator.vibrate(10)
+  }, 500)
+}
+
+function cancelProjectLongPress() {
+  if (projectLongPressTimer) {
+    clearTimeout(projectLongPressTimer)
+    projectLongPressTimer = null
+  }
+}
+
+function onProjectMenuAction(action: { name: string }) {
+  showProjectMenuSheet.value = false
+  const target = projectMenuTarget.value
+  if (!target) return
+  if (action.name === t('重命名')) {
+    projectRenameTarget.value = target
+    showProjectRename.value = true
+  } else if (action.name === t('删除')) {
+    void projectActions.remove(target.id, target.name)
+  }
+}
+
+function onProjectRenameConfirm(name: string) {
+  const target = projectRenameTarget.value
+  if (!target) return
+  showProjectRename.value = false
+  void projectActions.rename(target.id, name)
 }
 
 async function onPersonalItemClick(item: { id: string; name: string; isFolder?: boolean; path?: string }) {
@@ -725,7 +777,7 @@ async function onFileInputChange(e: Event) {
     <van-nav-bar title="文件" left-arrow @click-left="() => router.back()" />
 
     <van-tabs v-model:active="activeTab" line-width="28" class="file-tabs">
-      <van-tab title="项目">
+      <van-tab :title="t('我的项目')">
         <!-- A-11 项目筛选（对齐 PC ProjectFilterTabs：全部/我创建的/我加入的） -->
         <div class="project-filter">
           <button
@@ -756,7 +808,11 @@ async function onFileInputChange(e: Event) {
             v-for="p in projects"
             :key="p.id"
             class="project-card"
-            @click="onProjectClick(p)"
+            @click="projectLongPressTriggered ? undefined : onProjectClick(p)"
+            @touchstart.passive="onProjectTouchStart(p)"
+            @touchend="cancelProjectLongPress"
+            @touchmove="cancelProjectLongPress"
+            @contextmenu.prevent="projectMenuTarget = p; showProjectMenuSheet = true"
           >
             <div class="card-header">
               <span class="card-name">{{ p.name }}</span>
@@ -808,7 +864,7 @@ async function onFileInputChange(e: Event) {
         />
       </van-tab>
 
-      <van-tab title="回收站">
+      <van-tab :title="t('回收站')">
         <!-- scope chips：项目（全局）/ 个人空间 -->
         <div class="project-filter">
           <button
@@ -941,6 +997,20 @@ async function onFileInputChange(e: Event) {
       :actions="trashMenuActions"
       @select="onTrashMenuAction"
       @close="trashMenuTarget = null"
+    />
+    <!-- 项目长按菜单：重命名 / 删除 -->
+    <van-action-sheet
+      v-model:show="showProjectMenuSheet"
+      :actions="projectMenuActions"
+      @select="onProjectMenuAction"
+      @close="projectMenuTarget = null"
+    />
+    <!-- 项目重命名弹窗（复用 RenameNodePopup，项目无扩展名）-->
+    <RenameNodePopup
+      v-model:show="showProjectRename"
+      :initial-name="projectRenameTarget?.name ?? ''"
+      :keep-extension="false"
+      @confirm="onProjectRenameConfirm"
     />
     <RenameNodePopup
       v-model:show="showRename"
