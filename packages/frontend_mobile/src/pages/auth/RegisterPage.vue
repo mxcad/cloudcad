@@ -14,47 +14,42 @@
  * 微信入口：`?wechat=1` 时读 sessionStorage.wechatTempToken 随注册请求带上；
  * 非微信进入清掉旧值，避免上一轮微信授权残留污染普通注册。
  */
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   authControllerRegister,
   authControllerRegisterByPhone,
   authControllerSendSmsCode,
-} from '@cloudcad/api-sdk/sdk.gen';
-import { showToast } from 'vant';
-import { t } from '@/languages';
+} from '@cloudcad/api-sdk/sdk.gen'
+import { showToast } from 'vant'
+import { t } from '@/languages'
 import {
   applyAuthResponse,
   setRegisterPhonePending,
-} from '@/utils/authSession';
-import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate';
-import { toError, unwrap, errMsg } from '@/utils/authFeedback';
-import {
-  isPhone,
-  isCode,
-  isEmail,
-  getPasswordStrength,
-} from '@/utils/authValidation';
-import { useCountdown } from '@/composables/useCountdown';
-import { useRuntimeConfig } from '@/composables/useRuntimeConfig';
-import { useRegisterFieldCheck } from '@/composables/useRegisterFieldCheck';
+} from '@/utils/authSession'
+import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate'
+import { toError, unwrap, errMsg } from '@/utils/authFeedback'
+import { isPhone, isCode, isEmail, getPasswordStrength } from '@/utils/authValidation'
+import { useCountdown } from '@/composables/useCountdown'
+import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import { useRegisterFieldCheck } from '@/composables/useRegisterFieldCheck'
 
-const route = useRoute();
-const router = useRouter();
-const { config } = useRuntimeConfig();
+const route = useRoute()
+const router = useRouter()
+const { config } = useRuntimeConfig()
 
-const phone = ref('');
-const code = ref('');
-const email = ref('');
-const username = ref('');
-const password = ref('');
-const nickname = ref('');
-const showPassword = ref(false);
+const phone = ref('')
+const code = ref('')
+const email = ref('')
+const username = ref('')
+const password = ref('')
+const nickname = ref('')
+const showPassword = ref(false)
 
-const submitting = ref(false);
-const sendingCode = ref(false);
-const error = ref('');
-const { countdown, start: countdownStart, isReady } = useCountdown();
+const submitting = ref(false)
+const sendingCode = ref(false)
+const error = ref('')
+const { countdown, start: countdownStart, isReady } = useCountdown()
 
 // 唯一性预检（对齐 PC）：提交前查用户名/邮箱，发码前查手机号
 const {
@@ -63,25 +58,21 @@ const {
   phoneTaken,
   checkBeforeSubmit,
   checkPhoneBeforeSendCode,
-} = useRegisterFieldCheck({ username, email, phone });
+} = useRegisterFieldCheck({ username, email, phone })
 
 // ── 分支开关（运行时配置驱动） ──
-const closed = computed(() => !config.value.allowRegister);
-const needEmail = computed(
-  () => config.value.mailEnabled && config.value.requireEmailVerification
-);
-const needPhoneCode = computed(
-  () => config.value.smsEnabled && config.value.requirePhoneVerification
-);
+const closed = computed(() => !config.value.allowRegister)
+const needEmail = computed(() => config.value.mailEnabled && config.value.requireEmailVerification)
+const needPhoneCode = computed(() => config.value.smsEnabled && config.value.requirePhoneVerification)
 
-const phoneValid = computed(() => isPhone(phone.value));
-const codeValid = computed(() => isCode(code.value));
-const emailValid = computed(() => !needEmail.value || isEmail(email.value));
+const phoneValid = computed(() => isPhone(phone.value))
+const codeValid = computed(() => isCode(code.value))
+const emailValid = computed(() => !needEmail.value || isEmail(email.value))
 const usernameValid = computed(
   () => username.value.trim().length >= 3 && username.value.trim().length <= 20
-);
-const passwordValid = computed(() => password.value.length >= 6);
-const strength = computed(() => getPasswordStrength(password.value));
+)
+const passwordValid = computed(() => password.value.length >= 6)
+const strength = computed(() => getPasswordStrength(password.value))
 
 const canSubmit = computed(
   () =>
@@ -89,56 +80,53 @@ const canSubmit = computed(
     passwordValid.value &&
     emailValid.value &&
     (!needPhoneCode.value || (phoneValid.value && codeValid.value))
-);
+)
 
 async function handleSendCode() {
-  if (!phoneValid.value || sendingCode.value || !isReady()) return;
-  sendingCode.value = true;
-  error.value = '';
+  if (!phoneValid.value || sendingCode.value || !isReady()) return
+  sendingCode.value = true
+  error.value = ''
   try {
     // 发码前先查手机号是否已被注册（同 PC）：被占用行内报错不发码，预检失败按发码失败处理
-    const outcome = await checkPhoneBeforeSendCode();
-    if (outcome === 'taken') return;
-    if (outcome === 'error') throw new Error(t('验证码发送失败'));
+    const outcome = await checkPhoneBeforeSendCode()
+    if (outcome === 'taken') return
+    if (outcome === 'error') throw new Error(t('验证码发送失败'))
 
-    const res = await authControllerSendSmsCode({
-      body: { phone: phone.value.trim(), scene: 'register' },
-    });
-    if (res.error) throw toError(res.error);
-    showToast(t('验证码已发送'));
-    countdownStart();
+    const res = await authControllerSendSmsCode({ body: { phone: phone.value.trim(), scene: 'register' } })
+    if (res.error) throw toError(res.error)
+    showToast(t('验证码已发送'))
+    countdownStart()
   } catch (e) {
-    error.value = errMsg(e, t('验证码发送失败'));
+    error.value = errMsg(e, t('验证码发送失败'))
   } finally {
-    sendingCode.value = false;
+    sendingCode.value = false
   }
 }
 
 function finishRegister(data: {
-  accessToken: string;
-  refreshToken?: string;
-  user?: unknown;
+  accessToken: string
+  refreshToken?: string
+  user?: unknown
 }) {
-  applyAuthResponse(data);
-  showToast(t('注册成功'));
-  clearWechatTempToken();
-  navigateAfterAuth(route.query as Record<string, unknown>);
+  applyAuthResponse(data)
+  showToast(t('注册成功'))
+  clearWechatTempToken()
+  navigateAfterAuth(route.query as Record<string, unknown>)
 }
 
 function clearWechatTempToken() {
-  if (route.query.wechat === '1') sessionStorage.removeItem('wechatTempToken');
+  if (route.query.wechat === '1') sessionStorage.removeItem('wechatTempToken')
 }
 
 async function handleRegister() {
-  if (!canSubmit.value || submitting.value) return;
-  submitting.value = true;
-  error.value = '';
-  const wechatTempToken =
-    sessionStorage.getItem('wechatTempToken') || undefined;
+  if (!canSubmit.value || submitting.value) return
+  submitting.value = true
+  error.value = ''
+  const wechatTempToken = sessionStorage.getItem('wechatTempToken') || undefined
   try {
     // 唯一性预检（同 PC）：用户名/邮箱被占用则阻断提交、行内报错
-    const unique = await checkBeforeSubmit();
-    if (!unique) return;
+    const unique = await checkBeforeSubmit()
+    if (!unique) return
 
     if (needPhoneCode.value) {
       if (needEmail.value) {
@@ -149,13 +137,13 @@ async function handleRegister() {
           username: username.value.trim(),
           password: password.value,
           nickname: nickname.value.trim() || undefined,
-        });
+        })
         void router.replace({
           path: '/verify-email',
           query: { ...redirectQueryOf(route.query) },
           state: { message: t('请先验证邮箱，完成注册') },
-        });
-        return;
+        })
+        return
       }
 
       const res = await authControllerRegisterByPhone({
@@ -166,8 +154,8 @@ async function handleRegister() {
           password: password.value,
           nickname: nickname.value.trim() || undefined,
         },
-      });
-      finishRegister(unwrap(res));
+      })
+      finishRegister(unwrap(res))
     } else {
       const res = await authControllerRegister({
         body: {
@@ -177,42 +165,34 @@ async function handleRegister() {
           email: needEmail.value ? email.value.trim() : undefined,
           wechatTempToken,
         },
-      });
-      const data = unwrap<{
-        accessToken?: string;
-        refreshToken?: string;
-        user?: unknown;
-        email?: string;
-      }>(res);
+      })
+      const data = unwrap<{ accessToken?: string; refreshToken?: string; user?: unknown; email?: string }>(res)
       // 后端返回 email 表示账号已建但邮箱未验证，需先去验证页拿 token
       if (data.email && !data.accessToken) {
         void router.replace({
           path: '/verify-email',
           query: { ...redirectQueryOf(route.query) },
           state: { email: data.email, message: t('请验证邮箱以完成注册') },
-        });
-        return;
+        })
+        return
       }
-      if (data.accessToken) finishRegister(data);
-      else throw new Error(t('注册失败，请重试'));
+      if (data.accessToken) finishRegister(data)
+      else throw new Error(t('注册失败，请重试'))
     }
   } catch (e) {
-    error.value = errMsg(toError(e), t('注册失败，请重试'));
+    error.value = errMsg(toError(e), t('注册失败，请重试'))
   } finally {
-    submitting.value = false;
+    submitting.value = false
   }
 }
 
 function goLogin() {
-  void router.replace({
-    path: '/login',
-    query: { ...redirectQueryOf(route.query) },
-  });
+  void router.replace({ path: '/login', query: { ...redirectQueryOf(route.query) } })
 }
 
 onMounted(() => {
-  if (route.query.wechat !== '1') sessionStorage.removeItem('wechatTempToken');
-});
+  if (route.query.wechat !== '1') sessionStorage.removeItem('wechatTempToken')
+})
 </script>
 
 <template>
@@ -221,15 +201,11 @@ onMounted(() => {
       <template v-if="closed">
         <div class="auth-header">
           <h1 class="auth-title">{{ t('注册已关闭') }}</h1>
-          <p class="auth-subtitle">
-            {{ t('系统管理员已关闭新用户注册功能。') }}
-          </p>
+          <p class="auth-subtitle">{{ t('系统管理员已关闭新用户注册功能。') }}</p>
         </div>
         <div class="form-body">
           <p class="notice">{{ t('如有疑问，请联系管理员。') }}</p>
-          <button class="primary-btn" type="button" @click="goLogin">
-            {{ t('返回登录') }}
-          </button>
+          <button class="primary-btn" type="button" @click="goLogin">{{ t('返回登录') }}</button>
         </div>
       </template>
 
@@ -249,9 +225,7 @@ onMounted(() => {
               maxlength="11"
               clearable
             />
-            <p v-if="phoneTaken" class="field-error">
-              {{ t('该手机号已被注册') }}
-            </p>
+            <p v-if="phoneTaken" class="field-error">{{ t('该手机号已被注册') }}</p>
             <van-field
               v-model="code"
               type="digit"
@@ -289,9 +263,7 @@ onMounted(() => {
             maxlength="20"
             clearable
           />
-          <p v-if="usernameTaken" class="field-error">
-            {{ t('用户名已被使用') }}
-          </p>
+          <p v-if="usernameTaken" class="field-error">{{ t('用户名已被使用') }}</p>
           <van-field
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
@@ -310,10 +282,7 @@ onMounted(() => {
             <div class="strength-bar">
               <div
                 class="strength-fill"
-                :style="{
-                  width: `${(strength.score / 4) * 100}%`,
-                  background: strength.color,
-                }"
+                :style="{ width: `${(strength.score / 4) * 100}%`, background: strength.color }"
               />
             </div>
             <p class="hint" :style="{ color: strength.color }">
@@ -328,12 +297,7 @@ onMounted(() => {
             clearable
           />
 
-          <button
-            class="primary-btn"
-            type="button"
-            :disabled="!canSubmit || submitting"
-            @click="handleRegister"
-          >
+          <button class="primary-btn" type="button" :disabled="!canSubmit || submitting" @click="handleRegister">
             {{ submitting ? t('注册中…') : t('立即注册') }}
           </button>
         </div>
@@ -342,9 +306,7 @@ onMounted(() => {
 
         <div class="auth-footer">
           <span>{{ t('已有账号？') }}</span>
-          <button class="link-btn" type="button" @click="goLogin">
-            {{ t('去登录') }}
-          </button>
+          <button class="link-btn" type="button" @click="goLogin">{{ t('去登录') }}</button>
         </div>
       </template>
     </div>
@@ -372,8 +334,6 @@ onMounted(() => {
 .strength-fill {
   height: 100%;
   border-radius: 2px;
-  transition:
-    width 0.2s ease,
-    background 0.2s ease;
+  transition: width 0.2s ease, background 0.2s ease;
 }
 </style>

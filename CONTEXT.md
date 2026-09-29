@@ -17,17 +17,15 @@ _避免_: 文件夹（folder 是另一种节点类型）、FileNode（旧称）
 
 **角色（Role）**:
 用户在某范围内的身份标签，决定其可执行的操作集合。分两个独立维度：
-
 - **系统角色（System Role）**：控制后台管理功能。ADMIN（全部权限）> USER_MANAGER（用户/角色管理）> FONT_MANAGER（字体库管理）> USER（基础权限）。含继承层级。
 - **项目角色（Project Role）**：控制项目内文件操作。OWNER（全部权限）> ADMIN（管理+编辑）> EDITOR（编辑但不能创建）> MEMBER（基本操作）> VIEWER（只读）。与系统角色完全解耦。**项目角色模板**（ADR-0051）：系统管理员维护"创建项目时的默认角色"（可增删，OWNER 模板保底不可删、模板名不可改）；项目创建时复制模板为项目自己的角色，项目内完全自治（可增删改含改名；项目所有者使用的角色不可删，数据驱动）；删除在用角色时成员自动降级为项目内可用角色，项目内永远保证至少存在一个非所有者角色——删光时自动重建默认项目成员角色（删除自愈）。私人空间与公开资源库零角色（分别按 ownerId / 系统权限判断）。
-  _避免_: 权限组、用户组、职位
+_避免_: 权限组、用户组、职位
 
 **权限（Permission）**:
 一个具体的原子操作许可，授予角色后生效。分两个维度：
-
-- **系统权限（System Permission）**：后台管理操作（SYSTEM_USER__、SYSTEM_ROLE__、SYSTEM_FONT__、SYSTEM_ADMIN、SYSTEM_MONITOR、LIBRARY___MANAGE、STORAGE_QUOTA、PROJECT_CREATE 等）。
-- **项目权限（Project Permission）**：项目内操作（FILE__、CAD_SAVE、CAD_EXTERNAL_REFERENCE、VERSION_READ、PROJECT__ 等）。
-  _避免_: 权利、许可
+- **系统权限（System Permission）**：后台管理操作（SYSTEM_USER_*、SYSTEM_ROLE_*、SYSTEM_FONT_*、SYSTEM_ADMIN、SYSTEM_MONITOR、LIBRARY_*_MANAGE、STORAGE_QUOTA、PROJECT_CREATE 等）。
+- **项目权限（Project Permission）**：项目内操作（FILE_*、CAD_SAVE、CAD_EXTERNAL_REFERENCE、VERSION_READ、PROJECT_* 等）。
+_避免_: 权利、许可
 
 **文件状态（FileStatus）**:
 FileSystemNode 在上传/转换管道中的生命周期状态。流转路径为：UPLOADING（上传中）→ PROCESSING（格式转换中）→ COMPLETED（完成）或 FAILED（转换失败）。已删除节点标记为 DELETED。
@@ -50,7 +48,6 @@ _避免_: 项目动态、活动记录
 
 **外部参照磁盘文件命名**:
 外部参照文件按「源文件全名 + .mxweb」存储在源图纸目录下的外部参照子目录中，形如 `data/files/{日期}/{nodeId}/{src_file_md5}/{fileName}.mxweb`。
-
 - DWG/DXF 外部参照：`A1.dwg` → `A1.dwg.mxweb`（保留原始扩展名，追加 `.mxweb`，**勿剥掉扩展名**）
 - 图片外部参照：`image.png` → `image.png`（保持原名，不追加后缀）
 - 外部参照子目录名取自 `preloading.json` 的 `src_file_md5`，降级为 `nodeId`
@@ -70,6 +67,7 @@ _避免_: 已删除、垃圾箱
 **秒传（Instant Upload / Dedup）**:
 上传流程的前置守卫——上传前先通过文件 hash 检查文件是否已存在于存储中。若已存在（命中）则跳过整个分片上传流程，直接复用已有数据创建 FileSystemNode；未命中才进入分片上传。
 _避免_: 去重上传、快速上传
+
 
 **存储配额（Storage Quota）**:
 用户可使用的存储空间上限。由用户的 VIP 等级配置中 `quota.personal_storage_mb` 决定。上传文件前主动检查配额是否充足，超出时阻止。改为用户级限制，不再存储于 FileSystemNode 节点。
@@ -117,12 +115,11 @@ _避免_: 落盘服务、存储分配器（指子步骤）
 
 **认证提供者（AuthProvider）**:
 可替换的认证实现插件。每个 AuthProvider 通过实现一组标准接口（认证、OAuth、短信、密码重置、账号绑定、Token 管理）提供完整的认证能力。系统支持三个层级的提供者：
-
 - **OSS AuthProvider**（开源）：完整的参考实现（密码/微信/SMS/邮箱绑定），随开源仓库发布
 - **Pro AuthProvider**（公司内部私有）：增强安全版本（风险检测、MFA 等），通过私有包隔离
 - **Custom AuthProvider**（TOB 客户）：企业自有认证对接（LDAP/SAML/AD），仅实现需要的接口
-  选择机制：DI 容器通过配置决定加载哪个 provider，Controller 不感知具体实现。
-  _避免_: 认证插件、认证适配器
+选择机制：DI 容器通过配置决定加载哪个 provider，Controller 不感知具体实现。
+_避免_: 认证插件、认证适配器
 
 **OssAuthProvider**:
 开箱即用的认证参考实现，包含密码登录注册、微信登录、短信验证、邮箱绑定等全功能。行为与先前的 LocalAuthProvider 一致。随开源代码发布，可被 Pro/TOB provider 完整替换。
@@ -318,22 +315,22 @@ Layer 3: 业务编排层
 
 **模块状态（Module Health）**:
 后端模块除三层分层外，还需处于以下健康状态之一，新模块必须能回答三问（有无消费者/有无测试/是否值得独立）：
-
 - **已激活**：有消费者、有测试、被 app.module 装配并实际生效（如 permission、file-operations）
 - **已实现未接线**：能力完整但生产链路未接入（如 policy-engine、ownership 空壳），必须 JSDoc 标注状态 + 登记 issue，不得"假装生效"
 - **迁移中（双轨）**：expand-contract 迁移的中间态，必须排收尾票（contract 旧路径退休），禁止无限期双轨（如 storage vs storage-provider）
 - **孤儿（孤儿服务/孤儿 barrel/空壳模块）**：无消费者，一律删除或标注
-  _实例与决策见 issue #228（模块健康盘点）、#234（存储迁移收尾）_
+_实例与决策见 issue #228（模块健康盘点）、#234（存储迁移收尾）_
 
 ## 图纸归属
 
 一张图纸有且仅有一种归属，见以上术语定义：[项目](#项目project)、[私人空间](#私人空间personal-space)、[资源库](#资源库library)。
 
 归属的关键行为差异：
-
 - **项目**：保存需检查 CAD_SAVE 权限
 - **私人空间**：保存时直接原位覆盖，无需权限检查
 - **资源库**：无版本管理（不提交 SVN），保存时直接覆盖 mxweb
+
+
 
 **VIP 等级（VIP Tier）**:
 用户的订阅等级标识，线性等级体系（VIP0 → VIP1 → VIP2 → VIP3...），高级别拥有低级别的全部权限。每级存完整扁平配置。**VIP0 为系统固有默认等级**（所有账号注册即拥有的免费基线，永久有效）：不可创建、不可下架、不可删除，名称/价格不可修改（仅权益配置可编辑），由 `VipTierService` 的 `FREE_TIER_LEVEL` 守卫强制（ADR-0053）；`GET /vip/tiers` 恒返回 level 0，前端消费方不得重复硬编码免费选项。高级别有过期时间，过期后降级为 VIP0。产品体系不存在"永久会员"商品；代码中 `expiresAt: null 且等级 > 0` 仅为历史/异常数据兼容状态（如旧官网同步），不得按商品开发或推广（ADR-0042）。
