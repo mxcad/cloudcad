@@ -58,6 +58,19 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     }, 300)
   }
 
+  // 清搜索词（对齐 PC：上下文切换即清搜索）。同步取消未触发的防抖定时器，
+  // 否则定时器会晚一步把旧关键词写回 debouncedSearch，导致清搜索失效。
+  // 本函数只改状态，加载由调用方统一触发（enterFolder/goBackTo 各只发一次请求）
+  function resetSearchState() {
+    if (searchTimer) {
+      clearTimeout(searchTimer)
+      searchTimer = null
+    }
+    searchText.value = ''
+    debouncedSearch.value = ''
+    page.value = 1
+  }
+
   // ── 解析目标节点 ID ──
   function resolveTargetId(): string | null {
     return currentFolderId.value
@@ -107,12 +120,14 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
   function enterFolder(folder: FileSystemNodeDto) {
     breadcrumbs.value.push({ id: folder.id, name: folder.name })
     currentFolderId.value = folder.id
+    if (searchText.value || debouncedSearch.value) resetSearchState()
     page.value = 1
     loadNodes()
   }
 
   // ── 面包屑返回 ──
   function goBackTo(index: number) {
+    if (searchText.value || debouncedSearch.value) resetSearchState()
     if (index < 0) {
       breadcrumbs.value = []
       currentFolderId.value = null
@@ -139,10 +154,11 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     loadNodes()
   }
 
-  // 手动刷新（A-15）：下拉刷新 / 刷新按钮 → 回到第一页整页重查
-  function refresh() {
+  // 手动刷新（A-15）：下拉刷新 / 刷新按钮 → 回到第一页整页重查。
+  // 返回 loadNodes 的 Promise，供「创建/删除后 await 重载完成再走后续」的调用方使用
+  function refresh(): Promise<void> {
     page.value = 1
-    loadNodes()
+    return loadNodes()
   }
 
   function isFolder(node: FileSystemNodeDto): boolean {

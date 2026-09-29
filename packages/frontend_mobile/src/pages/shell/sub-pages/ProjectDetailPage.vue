@@ -2,7 +2,7 @@
 /**
  * 子页：项目详情 —— Tab：文件 / 成员。
  *
- *   文件 Tab：UnifiedFileList(domain='project') + 面包屑 + nodeControllerGetChildren
+ *   文件 Tab：useUnifiedFileList('project') 数据层 + UnifiedFileList 展示（与个人空间同一套）
  *   成员 Tab：memberControllerGetProjectMembers
  *
  * projectId 从路由参数获取。
@@ -11,12 +11,12 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showDialog, showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant'
 import { t } from '@/languages'
-import { nodeControllerGetChildren } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerCreateFolder } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerBatchDeleteNodes } from '@cloudcad/api-sdk/sdk.gen'
 import type { ActionSheetAction } from 'vant'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
 import { useViewMode } from '@/composables/useViewMode'
+import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { projectControllerGetProject, projectControllerGetProjectQuota } from '@cloudcad/api-sdk/sdk.gen'
 import {
   memberControllerGetProjectMembers,
@@ -56,17 +56,12 @@ const projectId = computed(() => (route.params.id as string) ?? '')
 
 const activeTab = ref(0)
 const projectName = ref('项目')
-const projectFiles = ref<any[]>([])
-const fileLoading = ref(false)
-const fileError = ref('')
-const fileBreadcrumbs = ref<Array<{ id: string; name: string }>>([])
+
+// 文件列表数据层统一走 useUnifiedFileList（与个人空间同一套加载/分页/排序/搜索/面包屑逻辑），
+// 项目页只保留本页特有的编排：项目根初始化、返回还原、配额条、权限门控
+const fileList = useUnifiedFileList('project')
 // A-16 视图模式（网格/清单）持久化，与个人空间各自记住
 const fileMode = useViewMode('project')
-const currentFolderId = ref<string | null>(null)
-
-// A-10 排序（后端 getChildren 的 ALLOWED_SORT 白名单，越界抛 400）
-const fileSortBy = ref<'name' | 'createdAt' | 'updatedAt' | 'size'>('updatedAt')
-const fileSortOrder = ref<'asc' | 'desc'>('desc')
 
 const members = ref<any[]>([])
 const memberLoading = ref(false)
@@ -75,88 +70,47 @@ const memberError = ref('')
 const shellStack = useShellStack()
 const { openFromList } = useShellFileOpen()
 
-const fileSearch = ref('')
-const filePage = ref(1)
-const fileTotalPages = ref(1)
-const fileLoadingMore = ref(false)
-// A-14 加载更多失败标记（区别于首屏失败 → 整页错误 + 重试）
-const fileLoadMoreFailed = ref(false)
-let fileSearchTimer: ReturnType<typeof setTimeout> | null = null
+// 缩略图地址按节点 id 派生（网格模式占位）
+const projectFiles = computed(() =>
+  formatNodeAsItems(fileList.nodes.value).map((item) => ({
+    ...item,
+    thumb: fileList.getThumbnailUrl(item.id),
+  }))
+)
+
+// 模板读取包装（fileList 是普通对象，非 ref，模板不会自动解包）
+const fileLoading = computed(() => fileList.loading.value)
+const fileError = computed(() => fileList.error.value)
+const fileBreadcrumbs = computed(() => fileList.breadcrumbs.value)
+const fileSearch = computed(() => fileList.searchText.value)
+const fileHasMore = computed(() => fileList.hasMore.value)
+const fileLoadMoreFailed = computed(() => fileList.loadMoreFailed.value)
+const fileSortBy = computed(() => fileList.sortBy.value)
+const fileSortOrder = computed(() => fileList.sortOrder.value)
 
 /**
- * 加载文件列表。page=1 替换（首屏/切换文件夹/搜索），page>1 追加（滚动加载更多）。
- * 搜索走服务端 search 参数（匹配名称或描述），与 PC 端一致。
+ * 初始化文件列表：以项目 id 为根加载第一层。
+ * 打开图纸返回 → 用返回前的 folderId/面包屑覆盖根态（仍只发一次请求）。
  */
-async function loadFiles(page = 1) {
+function initFileList() {
   if (!projectId.value) return
-  if (page === 1) fileLoading.value = true
-  else fileLoadingMore.value = true
-  fileError.value = ''
-  fileLoadMoreFailed.value = false
-  try {
-    const search = fileSearch.value.trim()
-    const res = await nodeControllerGetChildren({
-      path: { nodeId: currentFolderId.value ?? projectId.value },
-      query: {
-        page,
-        limit: 50,
-        sortBy: fileSortBy.value,
-        sortOrder: fileSortOrder.value,
-        ...(search ? { search } : {}),
-      },
-    } as any)
-
-    if (res.error) throw new Error(String(res.error))
-    const data = (res.data ?? {}) as { nodes?: any[]; totalPages?: number }
-    const items = formatNodeAsItems(data.nodes ?? []).map((item) => ({
-      ...item,
-      thumb: `/api/v1/file-system/nodes/${item.id}/thumbnail`,
-    }))
-    projectFiles.value = page === 1 ? items : [...projectFiles.value, ...items]
-    fileTotalPages.value = data.totalPages ?? 1
-    filePage.value = page
-  } catch (e) {
-    fileError.value = '加载文件失败'
-    // A-14 加载更多失败：已加载内容保留，只出底部重试条；
-    // filePage 未前进（成功才赋值），重试重跑目标页不会重复追加
-    fileLoadMoreFailed.value = page > 1
-  } finally {
-    fileLoading.value = false
-    fileLoadingMore.value = false
+  const target = shellStack.returnTarget
+  shellStack.clearReturnTarget()
+  if (target?.folderId && target.breadcrumbs?.length) {
+    fileList.currentFolderId.value = target.folderId
+    fileList.breadcrumbs.value = target.breadcrumbs
+  } else {
+    fileList.currentFolderId.value = projectId.value
+    fileList.breadcrumbs.value = []
   }
-}
-
-/** 搜索（UnifiedFileList 上抛关键词，300ms 防抖后回到第一页重查） */
-function onFileSearch() {
-  if (fileSearchTimer) clearTimeout(fileSearchTimer)
-  fileSearchTimer = setTimeout(() => {
-    loadFiles(1)
-  }, 300)
-}
-
-/** 滚动接近底部：还有下一页则追加加载 */
-function onFileLoadMore() {
-  if (fileLoading.value || fileLoadingMore.value) return
-  if (filePage.value >= fileTotalPages.value) return
-  loadFiles(filePage.value + 1)
-}
-
-/** A-14 加载更多失败后重试（filePage 未前进，重跑目标页） */
-function retryLoadMoreFiles() {
-  loadFiles(filePage.value + 1)
+  fileList.page.value = 1
+  fileList.loadNodes()
 }
 
 /** A-15 下拉刷新 → 回到第一页整页重查（顺带刷新配额用量） */
 function refreshFiles() {
-  loadFiles(1)
+  fileList.refresh()
   loadProjectQuota()
-}
-
-/** A-10 排序切换（方向由 UnifiedFileList 计算后上抛） */
-function onFileSortChange(by: 'name' | 'createdAt' | 'updatedAt' | 'size', order: 'asc' | 'desc') {
-  fileSortBy.value = by
-  fileSortOrder.value = order
-  loadFiles(1)
 }
 
 async function loadProjectInfo() {
@@ -413,30 +367,16 @@ function getRoleName(id: string): string {
 /** 文件夹下钻 + 图纸打开（打开走 useShellFileOpen，补齐文件上下文与缓存） */
 function enterFolder(item: any) {
   if (item.isFolder) {
-    currentFolderId.value = item.id
-    fileBreadcrumbs.value.push({ id: item.id, name: item.name })
-    fileSearch.value = ''
-    loadFiles(1)
+    const raw = fileList.nodes.value.find((n) => n.id === item.id)
+    if (raw) fileList.enterFolder(raw)
     return
   }
 
   void openFromList(item.id, {
     path: `/shell/file/project/${projectId.value}`,
-    folderId: currentFolderId.value,
-    breadcrumbs: fileBreadcrumbs.value,
+    folderId: fileList.currentFolderId.value,
+    breadcrumbs: fileList.breadcrumbs.value,
   })
-}
-
-function goBackTo(index: number) {
-  if (index < 0) {
-    currentFolderId.value = null
-    fileBreadcrumbs.value = []
-  } else {
-    fileBreadcrumbs.value = fileBreadcrumbs.value.slice(0, index + 1)
-    currentFolderId.value = fileBreadcrumbs.value[index]?.id ?? null
-  }
-  fileSearch.value = ''
-  loadFiles(1)
 }
 
 function onModeChange(m: 'grid' | 'list') {
@@ -515,7 +455,7 @@ async function batchDelete(items: Array<{ id: string; name: string }>) {
     closeToast()
     if (res.error) throw new Error(String(res.error))
     showSuccessToast(t('删除成功'))
-    await loadFiles(1)
+    fileList.refresh()
   } catch (e) {
     closeToast()
     showFailToast(t('删除失败'))
@@ -646,7 +586,7 @@ async function onRenameConfirm(name: string) {
     closeToast()
     if (res.error) throw new Error(String(res.error))
     showSuccessToast(t('重命名成功'))
-    await loadFiles(1)
+    fileList.refresh()
   } catch (e) {
     closeToast()
     showFailToast(t('重命名失败'))
@@ -658,7 +598,7 @@ const folderPickerOp = ref<'move' | 'copy' | null>(null)
 const folderPickerItems = ref<Array<{ id: string; name: string }>>([])
 
 function openFolderPicker(op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
-  const rootId = currentFolderId.value ?? projectId.value
+  const rootId = fileList.currentFolderId.value ?? projectId.value
   if (!rootId) {
     showFailToast(t('文件夹未就绪，请稍后再试'))
     return
@@ -685,7 +625,7 @@ async function onFolderPickerSelect(folder: { id: string; name: string }) {
     closeToast()
     if (res.error) throw new Error(String(res.error))
     showSuccessToast(op === 'move' ? t('移动成功') : t('复制成功'))
-    await loadFiles(1)
+    fileList.refresh()
   } catch (e) {
     closeToast()
     showFailToast(op === 'move' ? t('移动失败') : t('复制失败'))
@@ -704,7 +644,7 @@ async function onCreateFolderConfirm() {
     showToast(validation.error || t('文件夹名称无效'))
     return
   }
-  const parentId = currentFolderId.value ?? projectId.value
+  const parentId = fileList.currentFolderId.value ?? projectId.value
   if (!parentId) return
 
   showCreateFolderDialog.value = false
@@ -717,7 +657,7 @@ async function onCreateFolderConfirm() {
     closeToast()
     if (res.error) throw new Error(String(res.error))
     showToast('文件夹创建成功')
-    await loadFiles()
+    fileList.refresh()
   } catch (e) {
     closeToast()
     showToast('创建失败，请重试')
@@ -731,8 +671,8 @@ const {
   openCreateDrawingDialog,
   onCreateDrawingConfirm,
 } = useCreateDrawing(
-  () => currentFolderId.value ?? projectId.value,
-  () => loadFiles(),
+  () => fileList.currentFolderId.value ?? projectId.value,
+  () => fileList.refresh(),
 )
 
 // ── 文件上传 ──
@@ -751,7 +691,7 @@ async function onFileInputChange(e: Event) {
   const file = input.files?.[0]
   if (!file) return
 
-  const parentId = currentFolderId.value ?? projectId.value
+  const parentId = fileList.currentFolderId.value ?? projectId.value
   if (!parentId) return
 
   showLoadingToast({ message: t('上传中...'), forbidClick: true, duration: 0 })
@@ -772,7 +712,7 @@ async function onFileInputChange(e: Event) {
     })
     closeToast()
     showToast(t('上传成功'))
-    await loadFiles()
+    fileList.refresh()
   } catch (e) {
     closeToast()
     showToast(t('上传失败，请重试'))
@@ -794,16 +734,8 @@ const memberRows = computed(() =>
 )
 
 onMounted(() => {
-  // 打开图纸返回：还原打开前所在的文件夹（loadFiles 读 currentFolderId）
-  const target = shellStack.returnTarget
-  if (target?.folderId && target.breadcrumbs?.length) {
-    currentFolderId.value = target.folderId
-    fileBreadcrumbs.value = target.breadcrumbs
-  }
-  shellStack.clearReturnTarget()
-
   loadProjectInfo()
-  loadFiles()
+  initFileList()
   loadMembers()
   loadRoles()
   loadProjectPermissions()
@@ -827,7 +759,7 @@ onMounted(() => {
         </div>
         <div v-if="fileError && projectFiles.length === 0" class="state-box">
           <span class="state-text">{{ fileError }}</span>
-          <van-button size="small" round @click="loadFiles">重试</van-button>
+          <van-button size="small" round @click="fileList.loadNodes">重试</van-button>
         </div>
         <UnifiedFileList
           v-else
@@ -837,21 +769,20 @@ onMounted(() => {
           :breadcrumb="fileBreadcrumbs"
           :mode="fileMode"
           :keyword="fileSearch"
-          :has-more="filePage < fileTotalPages"
+          :has-more="fileHasMore"
           :load-more-failed="fileLoadMoreFailed"
           :sort-by="fileSortBy"
           :sort-order="fileSortOrder"
           @item-click="enterFolder"
           @item-menu="onItemMenu"
-          @breadcrumb-click="goBackTo"
+          @breadcrumb-click="fileList.goBackTo"
           @mode-change="onModeChange"
           @selection-action="onSelectionAction"
-          @search="onFileSearch"
-          @update:keyword="fileSearch = $event"
-          @load-more="onFileLoadMore"
-          @load-more-retry="retryLoadMoreFiles"
+          @search="fileList.setSearch"
+          @load-more="fileList.loadMore"
+          @load-more-retry="fileList.retryLoadMore"
           @refresh="refreshFiles"
-          @sort-change="onFileSortChange"
+          @sort-change="fileList.setSort"
           @fab-click="openCreateFolderDialog"
         />
       </van-tab>
@@ -1064,7 +995,7 @@ onMounted(() => {
     />
     <NodeFolderPicker
       v-model:show="showFolderPicker"
-      :root-id="currentFolderId ?? projectId"
+      :root-id="fileList.currentFolderId.value ?? projectId"
       :root-name="projectName"
       :exclude-ids="folderPickerItems.map((i) => i.id)"
       @select="onFolderPickerSelect"
