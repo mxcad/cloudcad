@@ -5,7 +5,7 @@
  * - listBackupFiles / formatSize / getPgDumpPath / getPsqlPath
  *   getPostgresLibPath / getRuntimeLibPaths / getDbEnv / checkDatabaseExists
  *   isDatabaseEmpty / backupDatabase / listBackups / promptSelectBackup
- *   restoreDatabase / cleanupOldBackups
+ *   restoreDatabase / cleanupOldBackups / databaseBackupMenu
  *
  * 依赖方向：commands → lib。被 commands/migrate、commands/start 引用。
  */
@@ -25,9 +25,9 @@ const {
   NODE_EXE,
   PNPM_JS,
 } = require('../lib/context');
-const { colors, log } = require('../lib/logger');
+const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { parseEnvFile } = require('../lib/env');
-const { promptConfirm } = require('../lib/prompt');
+const { prompt, promptConfirm } = require('../lib/prompt');
 
 /**
  * 列出所有备份文件
@@ -527,6 +527,64 @@ async function cleanupOldBackups(maxBackups = 10) {
   return { deleted, kept: backups.length - deleted };
 }
 
+/**
+ * 数据库备份与恢复子菜单（交互式）
+ *
+ * Step A-1 机械拆分自 runtime/scripts/cli.js 的 databaseBackupMenu（行号会随拆分漂移，不记）。
+ */
+async function databaseBackupMenu() {
+  while (true) {
+    clearScreen();
+    printHeader();
+    log('bright', '>>> 数据库备份与恢复');
+    console.log('');
+
+    console.log(`${colors.cyan}请选择操作：${colors.reset}`);
+    console.log('');
+    console.log(`  ${colors.cyan}[1]${colors.reset} 手动备份数据库`);
+    console.log(`  ${colors.cyan}[2]${colors.reset} 恢复数据库`);
+    console.log(`  ${colors.cyan}[3]${colors.reset} 查看备份列表`);
+    console.log(`  ${colors.cyan}[4]${colors.reset} 清理旧备份`);
+    console.log(`  ${colors.cyan}[q]${colors.reset} 返回主菜单`);
+    console.log('');
+
+    const choice = await prompt();
+
+    switch (choice) {
+      case '1':
+        await backupDatabase();
+        break;
+      case '2':
+        await restoreDatabase();
+        break;
+      case '3':
+        await listBackups();
+        break;
+      case '4':
+        await cleanupOldBackups();
+        break;
+      case 'q':
+        return;
+      default:
+        log('red', '无效选项');
+    }
+
+    if (choice !== 'q') {
+      console.log('');
+      await new Promise((resolve) => {
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+        });
+        rl.question(`${colors.bright}按回车键继续...${colors.reset}`, () => {
+          rl.close();
+          resolve();
+        });
+      });
+    }
+  }
+}
+
 module.exports = {
   listBackupFiles,
   formatSize,
@@ -540,4 +598,5 @@ module.exports = {
   promptSelectBackup,
   restoreDatabase,
   cleanupOldBackups,
+  databaseBackupMenu,
 };

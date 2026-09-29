@@ -5,10 +5,12 @@
  *   node runtime/scripts/cli.js
  *
  * 功能：
- *   - 开发模式：启动基础服务 + 数据库迁移 + 前后端开发服务器
- *   - 部署模式：启动基础服务 + 数据库迁移 + 构建部署
- *   - 基础服务：仅启动 PostgreSQL/Redis/Cooperate
- *   - 数据库操作：迁移、种子数据
+ *   - 交互式菜单：按 常用 / 部署与数据库 / 高级 / 开发环境 分组
+ *     （数据在 commands/menu-sections.js，过滤与渲染在 lib/menu.js）；
+ *     按平台与部署形态过滤——Windows 不显示 Linux 初始化，
+ *     部署包（.deploy 标记）不显示开发模式/种子等仅开发机项
+ *   - 命令行参数：dev / deploy / start / stop / migrate / seed / db:* /
+ *     status / logs / init / version:check / version:verify / mfa:totp-unbind
  */
 
 const readline = require('readline');
@@ -112,105 +114,49 @@ const {
   stopInfrastructure,
   killAllInfrastructure,
 } = require('./commands/stop');
-const { startOnly, startMode } = require('./commands/start');
+const { startMode } = require('./commands/start');
 const { devMode } = require('./commands/dev');
 const { deployMode } = require('./commands/deploy');
 const { mfaTotpUnbind } = require('./commands/mfa');
 
 
-async function databaseBackupMenu() {
-  while (true) {
-    clearScreen();
-    printHeader();
-    log('bright', '>>> 数据库备份与恢复');
-    console.log('');
-
-    console.log(`${colors.cyan}请选择操作：${colors.reset}`);
-    console.log('');
-    console.log(`  ${colors.cyan}[1]${colors.reset} 手动备份数据库`);
-    console.log(`  ${colors.cyan}[2]${colors.reset} 恢复数据库`);
-    console.log(`  ${colors.cyan}[3]${colors.reset} 查看备份列表`);
-    console.log(`  ${colors.cyan}[4]${colors.reset} 清理旧备份`);
-    console.log(`  ${colors.cyan}[q]${colors.reset} 返回主菜单`);
-    console.log('');
-
-    const choice = await prompt();
-
-    switch (choice) {
-      case '1':
-        await backupDatabase();
-        break;
-      case '2':
-        await restoreDatabase();
-        break;
-      case '3':
-        await listBackups();
-        break;
-      case '4':
-        await cleanupOldBackups();
-        break;
-      case 'q':
-        return;
-      default:
-        log('red', '无效选项');
-    }
-
-    if (choice !== 'q') {
-      console.log('');
-      await new Promise((resolve) => {
-        const rl = readline.createInterface({
-          input: process.stdin,
-          output: process.stdout,
-        });
-        rl.question(`${colors.bright}按回车键继续...${colors.reset}`, () => {
-          rl.close();
-          resolve();
-        });
-      });
-    }
-  }
-}
-
 // ==================== 交互式菜单 ====================
+// 数据（分组 + 可见性标记）在 commands/menu-sections.js，
+// 过滤/编号/渲染逻辑在 lib/menu.js（纯函数，node --test 覆盖）。
 
-const menuItems = [
-  { key: '1', label: '开发模式', action: devMode },
-  { key: '2', label: '部署模式', action: deployMode },
-  { key: '3', label: '启动基础服务', action: startOnly },
-  { key: '4', label: '启动服务（含前后端）', action: startMode },
-  { key: '5', label: '数据库迁移', action: runDatabaseMigration },
-  { key: '6', label: '数据库种子', action: runDatabaseSeed },
-  { key: '7', label: 'Linux 初始化（首次部署）', action: linuxInit },
-  { key: '8', label: '查看状态', action: viewStatus },
-  { key: '9', label: '查看日志', action: viewLogs },
-  { key: '10', label: '数据库备份与恢复', action: databaseBackupMenu },
-  { key: 's', label: '图纸版本检查', action: () => versionHelper.runHealthCheck({ silent: false }) },
-  { key: 'v', label: '图纸版本验证', action: () => versionHelper.runVerification({ silent: false }) },
-  { key: 'u', label: '解绑管理员 TOTP（#415 恢复通道）', action: () => mfaTotpUnbind() },
-  { key: '0', label: '停止服务', action: stopInfrastructure },
-  { key: 'q', label: '退出', action: () => process.exit(0) },
-];
+const { menuSections } = require('./commands/menu-sections');
+const { buildVisibleMenu, formatMenu } = require('./lib/menu');
+
+// 部署机判据：仓库根存在 .deploy 标记（pack-offline 打部署/升级包时写入，
+// 开发仓库无此文件）。部署包只装生产依赖，开发模式/种子对其隐藏。
+const IS_DEPLOY_PACKAGE = fs.existsSync(path.join(PROJECT_ROOT, '.deploy'));
 
 async function showMenu() {
   clearScreen();
   printHeader();
 
-  console.log(`${colors.bright}请选择操作：${colors.reset}`);
-  console.log('');
-
-  for (const item of menuItems) {
-    console.log(`  ${colors.cyan}[${item.key}]${colors.reset} ${item.label}`);
+  const sections = buildVisibleMenu(menuSections, {
+    isLinux: IS_LINUX,
+    isWindows: IS_WINDOWS,
+    isDeployPackage: IS_DEPLOY_PACKAGE,
+  });
+  for (const line of formatMenu(sections)) {
+    console.log(line);
   }
 
-  console.log('');
+  return sections.flatMap((s) => s.items);
 }
 
 async function main() {
   while (true) {
-    await showMenu();
+    const visibleItems = await showMenu();
     const choice = await prompt();
 
-    const item = menuItems.find((m) => m.key === choice);
+    if (choice === 'q') {
+      process.exit(0);
+    }
+
+    const item = visibleItems.find((m) => m.key === choice);
 
     if (item) {
       await item.action();
