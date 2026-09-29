@@ -9,6 +9,8 @@ node_modules/
 runtime/windows/
 runtime/linux/
 runtime/cache/
+# schema-engine 二进制（bundlePrismaSchemaEngine 打包时置入，141MB，不入库）
+runtime/prisma-engines/
 !runtime/scripts/
 !runtime/ecosystem.config.js
 !runtime/README.md
@@ -74,6 +76,8 @@ pnpm-debug.log*
 
 # Deploy lock hash (记录已安装的依赖版本，不应提�?
 .deploy-lock-hash
+# 部署包标记（pack-offline 写入，cli.js 据此隐藏仅开发机菜单项）；入库会让所有开发机丢菜单
+.deploy
 
 # Generated files
 **/swagger_json.json
@@ -158,6 +162,9 @@ packages/mxcadassembly/
 
 # i18n 备份文件
 *.bak.*.json
+# voerkai18n INIT_CWD 误建目录：用 pnpm --filter/-r 从仓库根跑会让插件把
+# 真实 src/languages 解析成 <仓库根>/languages 并建空目录，须忽略
+/languages/
 
 # 文件同步产物
 file-sync/
