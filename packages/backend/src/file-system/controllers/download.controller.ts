@@ -304,12 +304,14 @@ export class DownloadController {
     try {
       const format = query.format || CadDownloadFormat.MXWEB;
 
+      // 引擎参数默认值单一出口（FormatPolicy）：透传原始查询值，缺失字段由
+      // 服务端 resolveOutputFormat 补默认（2000/2000/mono），此处不再预填副本
       const pdfParams =
         format === CadDownloadFormat.PDF
           ? {
-              width: query.width || '2000',
-              height: query.height || '2000',
-              colorPolicy: query.colorPolicy || 'mono',
+              width: query.width,
+              height: query.height,
+              colorPolicy: query.colorPolicy,
             }
           : (format === CadDownloadFormat.DWG ||
                 format === CadDownloadFormat.DXF) &&

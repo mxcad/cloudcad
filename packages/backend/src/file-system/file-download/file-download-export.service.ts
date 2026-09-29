@@ -147,12 +147,15 @@ export class FileDownloadExportService {
   ): string {
     const safe = (v: string | undefined) =>
       (v || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8);
+    // 引擎参数默认值单一出口（FormatPolicy）：缓存 key 从与转换同一份
+    // resolved 参数派生，避免第二份默认值副本与实际转换参数漂移
+    const engineParams = resolveOutputFormat(format, pdfParams).engineParams;
     if (format === CadDownloadFormat.PDF) {
-      return `pdf-${safe(pdfParams?.width) || '2000'}x${safe(pdfParams?.height) || '2000'}-${safe(pdfParams?.colorPolicy) || 'mono'}`;
+      return `pdf-${safe(engineParams?.width)}x${safe(engineParams?.height)}-${safe(engineParams?.colorPolicy)}`;
     } else if (format === CadDownloadFormat.DWG) {
-      return pdfParams?.dwgVersion ? `dwg-v${pdfParams.dwgVersion}` : 'dwg';
+      return engineParams?.dwgVersion ? `dwg-v${engineParams.dwgVersion}` : 'dwg';
     } else {
-      return pdfParams?.dwgVersion ? `dxf-v${pdfParams.dwgVersion}` : 'dxf';
+      return engineParams?.dwgVersion ? `dxf-v${engineParams.dwgVersion}` : 'dxf';
     }
   }
 

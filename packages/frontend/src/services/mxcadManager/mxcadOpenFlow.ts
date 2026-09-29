@@ -2,7 +2,7 @@ import { MxFun } from 'mxdraw';
 import { FetchAttributes } from 'mxcad';
 import { t } from '@/languages';
 import { ensureFreshAuthCookie } from '@/config/clientSetup';
-import { FILE_OPEN_RETRY_CONFIG, VIEW_INIT_TIMEOUT_MS } from './mxcadTypes';
+import { FILE_OPEN_RETRY_CONFIG } from './mxcadTypes';
 import type { OpenFilePayload } from './mxcadTypes';
 import { getCurrentFileUrl, setCurrentFileUrl } from '../drawingSession';
 import { getFileInfo, restoreEditorTitle } from './mxcadHelpers';
@@ -35,19 +35,10 @@ export class MxCADOpenFlow {
       return this.openFile(payload);
     }
 
-    // 初始化进行中（或视图已创建但引擎尚未就绪）：轮询等待
-    const startedAt = Date.now();
-    while (Date.now() - startedAt < VIEW_INIT_TIMEOUT_MS) {
-      if (this.manager.isReady()) break;
-      const initPromise = this.manager.getInitPromise();
-      if (initPromise) {
-        await initPromise;
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      }
-    }
-
-    if (!this.manager.isReady()) {
+    // 初始化进行中（或视图已创建但引擎尚未就绪）：委托唯一轮询实现
+    // （超时语义：ensureEngineReady 默认 VIEW_INIT_TIMEOUT_MS，未就绪返回 false）
+    const ready = await this.manager.ensureEngineReady();
+    if (!ready) {
       throw new Error(t('MxCADView 实例未初始化'));
     }
     await this.openFile(payload);
