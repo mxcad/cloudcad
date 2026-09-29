@@ -150,8 +150,8 @@ _避免_: 转换函数、转换微服务
 _避免_: 转换服务、转换微服务
 
 **统一任务层（Unified Task Layer）**:
-`IFunctionExecutor` 之上、所有转换调用方的公共层——提交/查态/取消/统计/明细/清队列这一组任务原语只有一处契约，三种部署模式只是它的不同 adapter。新增部署模式或新增任务原语都只动这一层（新增原语建议做成可选方法，调用方按 `undefined` 降级），禁止调用方各自重新判断 `FUNCTION_EXECUTOR` 值。
-_避免_: 任务中间件、转换网关、执行器工厂
+`IFunctionExecutor` 之上、所有转换调用方的公共层——提交/查态/取消/统计/明细/清队列这一组任务原语只有一处契约，三种部署模式只是它的不同 adapter；**批量提交/等待（`submitBatch?`/`waitBatch?`）是同一 interface 的可选原语**，批量下载经 token 消费、无批量原语时按 `undefined` 降级为逐项进程内转换。「批量外包」由 `BATCH_DOWNLOAD_DELEGATE_WORKFLOW` 在 function-executor factory 一处选中 batch-delegate 装饰器 adapter（批量原语走 conversion-service HTTP，其余原语透传 base）实现，是 `FUNCTION_EXECUTOR` 选型之外的唯一部署开关，禁止调用方各自重新判断部署模式值。
+_避免_: 任务中间件、转换网关、执行器工厂、批量专用 HTTP 客户端
 
 **转换任务（Conversion Task）**:
 提交给统一任务层的一条转换单元（`ConversionTask`：id / type / params / priority），执行态由 `TaskStatus` 描述（PENDING / PROCESSING / COMPLETED / FAILED / CANCELLED，含 progress、result、errorCategory、errorCode、queuePosition）。注意与节点级 `FileStatus` 是两个层次：转换任务是在途引擎工作，`FileStatus` 是图纸节点持久化状态。
@@ -214,8 +214,12 @@ _Avoid_: 协作、实时协作
 _Avoid_: 会话、session
 
 **图纸会话（Drawing Session）**:
-由 `services/drawingSession/` 深模块管理的「编辑器当前打开图纸」会话状态。`openSession(info)` / `closeSession()` 为唯一 writer（编排 `useCADEditorStore` 相关字段 + 切换/重置）；引擎→UI 信号经类型化事件 bus（`subscribe(event, cb)`，补全 CAD_EVENTS 与 payload 类型）取代散落的 window 裸字符串事件；`isModified` 脏标记由 session 持有并发布，侧边栏订阅而非 1s 轮询。与「协同会话（Work）」的区别：图纸会话是本地编辑会话状态，协同会话是 mxcad 协作连接。
+由 `services/drawingSession/` 深模块管理的「编辑器当前打开图纸」会话状态。`openSession(info)` / `closeSession()` 为唯一 writer（编排 `useCADEditorStore` 相关字段 + 切换/重置）；引擎→UI 信号经类型化事件 bus（`subscribe(event, cb)`，补全 CAD_EVENTS 与 payload 类型）取代散落的 window 裸字符串事件；`isModified` 脏标记由 session 持有并发布，侧边栏订阅而非 1s 轮询；**「当前文件被外部删除/恢复」标记（isCurrentFileDeleted）的全生命周期归 session**——文件系统动作/保存序列经 `notifyNodesDeleted(nodeIds)` / `notifyNodesRestored(nodeIds)` 通知，「删的是当前文件才置位」的 id 匹配推导收进实现，禁止调用方各自比对 currentFileId。与「协同会话（Work）」的区别：图纸会话是本地编辑会话状态，协同会话是 mxcad 协作连接。
 _避免_: 编辑器状态（指 store 本身）、当前文件状态、session 直译
+
+**图纸打开序列（Drawing Open Sequence）**:
+「打开一张图纸」的编排深模块——打开前守卫、全局 loading 配对、URL 构造（缓存戳）、引擎打开命令、打开完成事件与错误收尾只有一处实现。PC 端入口为 `services/mxcadManager/openDrawing.ts` 的 `openDrawing(req)`（判别联合：library / node / public-hash / external-ref，图纸库/图块库孪生折叠为 libraryKey 参数）；移动端入口为 `services/drawingOpener.ts` 的 `openDrawing(req)`（node / library / share / hash），实现载体为 useFileLoader。调用方只描述「打开什么」；成功时编辑器会话状态（fileId/permissions/projectId 等）由 interface 契约保证完整——绕过它直拼 URL 打开会静默退化（保存变另存为、缩略图不上传）。引擎层打开命令（PC `mxcadOpenFlow.openFile`、移动 `openMxWeb`）是其下游实现，不是编排入口。
+_避免_: 打开文件服务、openFile 包装器（指编排层）
 
 **私有化部署（Private Deployment / TOB）**:
 面向企业客户的部署模式——客户在自己的基础设施上部署完整 CloudCAD 栈（含 PostgreSQL、Redis、SVN、mxcadassembly 协同服务等），由客户自行运维。协同功能（Collaboration）仅在私有化部署下可用，通过运行时配置 `collaboration_enabled` 控制开关。
