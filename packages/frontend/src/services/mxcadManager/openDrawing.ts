@@ -221,11 +221,9 @@ async function openFromLibrary(req: {
           const node = nodeResponse.data;
           if (!node) {
             throw new Error(
-              t(
-                req.libraryKey === 'drawing'
-                  ? '无法获取图纸库文件信息'
-                  : '无法获取图块库文件信息'
-              )
+              req.libraryKey === 'drawing'
+                ? t('无法获取图纸库文件信息')
+                : t('无法获取图块库文件信息')
             );
           }
           fileName = fileName || node.name;
