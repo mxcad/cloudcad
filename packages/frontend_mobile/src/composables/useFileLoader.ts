@@ -180,7 +180,12 @@ export function useFileLoader() {
       const nodeInfo = await fetchFileNode(fileId, options);
 
       if (!nodeInfo) {
-        throw new Error(t('文件不存在'));
+        // 分享源节点解析为空 = 链接失效（对齐被删除的 useShareFileLoad 专属文案；
+        // key 已被 i18n extract 清除，voerka 缺 key 回退源文本，extract 后重新收键）
+        throw typedError(
+          'not-found',
+          t(options?.shareToken ? '分享链接不存在或已失效' : '文件不存在')
+        );
       }
 
       // 2. 校验（与 PC L730-L745 对齐）
@@ -344,7 +349,12 @@ export function useFileLoader() {
         message = t('请登录后访问此文件');
         errorType = 'auth';
       } else if (kind === 'not-found') {
-        message = t('文件不存在或已被删除');
+        // 分享源 404 用分享专属文案（对齐被删除的 useShareFileLoad）
+        message = t(
+          options?.shareToken
+            ? '分享链接不存在或已失效'
+            : '文件不存在或已被删除'
+        );
         errorType = 'not-found';
       } else if (kind === 'deleted') {
         message = errMsg(e, t('文件已被删除'));

@@ -476,6 +476,23 @@ describe('ConversionRunner', () => {
       expect(mockConversionService.convertServerFile).toHaveBeenCalledTimes(1);
     });
 
+    it('等待失败（waitBatch 拒绝/超时/熔断）：回退进程内逐项转换', async () => {
+      mockExecutor.submitBatch = jest
+        .fn()
+        .mockResolvedValue({ batchId: 'fw_1' });
+      mockExecutor.waitBatch = jest
+        .fn()
+        .mockRejectedValue(new Error('poll timeout'));
+      mockConversionService.convertServerFile.mockResolvedValue({ code: 0 });
+
+      const result = await service.convertFile(mockNode, 'dwg');
+
+      expect(result.success).toBe(true);
+      expect(mockExecutor.submitBatch).toHaveBeenCalledTimes(1);
+      expect(mockExecutor.waitBatch).toHaveBeenCalledTimes(1);
+      expect(mockConversionService.convertServerFile).toHaveBeenCalledTimes(1);
+    });
+
     it('缓存命中：直接复用产物，不提交批量', async () => {
       okBatch([]);
       mockFileDownloadExportService.getFreshConversionCachePath.mockReturnValue(

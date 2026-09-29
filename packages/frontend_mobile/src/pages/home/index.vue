@@ -518,17 +518,28 @@ onMounted(async () => {
   if (shareToken && fileId && !collabWorkId) {
     // 引擎创建 + 事件绑定 + 工具栏与非分享流一致。旧 useShareFileLoad 的
     // 「引擎初始化即带文件加载」单步改为两步：先建空引擎，再经 openMxWeb
-    // 打开——多一层 deletedAt/fileHash 校验，且带 Authorization/x-share-token 头
-    const mxcad = await createMxCAD();
-    mxcad.on('databaseModify', () => {
-      editorState.setIsModified(true);
-    });
-    mxcad.on('openFileComplete', () => {
-      editorState.setIsModified(false);
-    });
-    initEditObjectToolbar(mxcad);
-    // 打开失败时 error/errorType 已设置 → 展示 error overlay
-    await openDrawing({ source: 'share', token: shareToken, nodeId: fileId });
+    // 打开——多一层 deletedAt/fileHash 校验，且带 Authorization/x-share-token 头。
+    // loading 遮罩须覆盖引擎创建期（旧 useShareFileLoad 入口即置 loading）
+    editorState.setLoading(true);
+    editorState.setProgressStage('fetching-info');
+    try {
+      const mxcad = await createMxCAD();
+      mxcad.on('databaseModify', () => {
+        editorState.setIsModified(true);
+      });
+      mxcad.on('openFileComplete', () => {
+        editorState.setIsModified(false);
+      });
+      initEditObjectToolbar(mxcad);
+      // 打开失败时 error/errorType 已设置 → 展示 error overlay
+      await openDrawing({ source: 'share', token: shareToken, nodeId: fileId });
+    } catch (e) {
+      // openDrawing 内部错误已自处理（error/loading 收尾）；这里只兜
+      // 引擎创建/事件绑定/工具栏初始化失败，避免 loading 永久卡住
+      editorState.setLoading(false);
+      editorState.setError(e instanceof Error ? e.message : t('打开文件失败'));
+      editorState.setErrorType('unknown');
+    }
     return;
   }
 

@@ -341,6 +341,11 @@ export class FileDownloadExportService {
     // 格式决策单一出口（FormatPolicy）：targetExt/引擎参数默认值由此派生；
     // 未知格式在此显式抛错，不再静默当 PDF 产出错误内容
     const resolved = resolveOutputFormat(format, pdfParams);
+    if (!resolved.needsConversion) {
+      // 直取格式（original/mxweb）没有可预转换的产物：显式报错，
+      // 与 conversion-runner 的直取格式守卫同文案（否则会产出无扩展名垃圾文件）
+      throw new BadRequestException(formatUnsupportedMessage(format));
+    }
     const targetExt = resolved.targetExt;
     const targetFilename = `${path
       .basename(originalFilename, ext)

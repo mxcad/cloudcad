@@ -282,6 +282,24 @@ describe('useCadFileLoader — 视图已创建时仍必须发打开命令', () =
     expect(mxcadManagerMock.openFile).toHaveBeenCalledTimes(1);
   });
 
+  it('引擎就绪等待委托 manager.ensureEngineReady（携带 shouldCancel，锁定委托契约）', async () => {
+    const isInitializedRef = { current: false };
+    const deps = createDeps({
+      fileId: 'f-1',
+      isActive: true,
+      isAuthenticated: true,
+      personalSpaceId: 'ps-1',
+      isInitializedRef,
+    });
+
+    renderHook(() => useCadFileLoader(deps, createFns()));
+    await flush();
+
+    expect(mxcadManagerMock.ensureEngineReady).toHaveBeenCalledWith(
+      expect.objectContaining({ shouldCancel: expect.any(Function) })
+    );
+  });
+
   it('同一 URL 已打开（isInitializedRef=true 且 URL 相等）→ 不重复发起打开', async () => {
     const loadedFileUrlRef = {
       current: `/api/v1/mxcad/filesData/${FILE.path}?t=${new Date(

@@ -2,7 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
-import { resolveOutputFormat } from '../file-system/file-download/format-policy';
+import {
+  resolveOutputFormat,
+  formatUnsupportedMessage,
+} from '../file-system/file-download/format-policy';
 import { ConversionRunner } from './conversion-runner';
 import { JobContext } from './job-context';
 import { isInUploadsCache } from './upload-cache.util';
@@ -113,7 +116,19 @@ export class BatchDownloadOrchestrator {
         // 路由只看请求格式、不看源文件 ext：mxweb 源 + dwg/dxf/pdf 必须走转换
         // （快照最新 mxweb → 排队转换，与单文件 downloadNodeWithFormat 一致）；
         // 仅 original/mxweb 格式直取源文件。fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）
-        const resolved = resolveOutputFormat(format, item);
+        let resolved: ReturnType<typeof resolveOutputFormat>;
+        try {
+          resolved = resolveOutputFormat(format, item);
+        } catch {
+          // 未知/不可路由格式：降为 item 级错误（显式报错），
+          // 不让单个坏格式把整个 job 打成 FAILED（历史脏数据/直写 DB 可达）
+          await ctx.recordError(
+            item.nodeId ?? item.fileHash,
+            fileName,
+            formatUnsupportedMessage(format)
+          );
+          continue;
+        }
         if (!isFileHashItem && !resolved.needsConversion) {
           await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
           ctx.completedCount++;
@@ -236,7 +251,19 @@ export class BatchDownloadOrchestrator {
       // 路由只看请求格式、不看源文件 ext：mxweb 源 + dwg/dxf/pdf 必须走转换
       // （快照最新 mxweb → 排队转换，与单文件 downloadNodeWithFormat 一致）；
       // 仅 original/mxweb 格式直取源文件。fileHash-only 项恒转换（源恒 .mxweb、请求恒 dwg/dxf/pdf）
-      const resolved = resolveOutputFormat(format, item);
+      let resolved: ReturnType<typeof resolveOutputFormat>;
+      try {
+        resolved = resolveOutputFormat(format, item);
+      } catch {
+        // 未知/不可路由格式：降为 item 级错误（显式报错），
+        // 不让单个坏格式把整个 job 打成 FAILED（历史脏数据/直写 DB 可达）
+        await ctx.recordError(
+          item.nodeId ?? item.fileHash,
+          fileName,
+          formatUnsupportedMessage(format)
+        );
+        continue;
+      }
       if (!isFileHashItem && !resolved.needsConversion) {
         await this.tryAddOriginal(node, format, fileName, prefix, label, ctx);
       } else {
