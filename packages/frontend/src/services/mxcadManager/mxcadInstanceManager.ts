@@ -27,6 +27,7 @@ import {
 import {
   getFileInfo,
   setEditorFileName,
+  isEmptyDocumentName,
   restoreEditorTitle,
   refreshFileName,
 } from './mxcadHelpers';
@@ -67,9 +68,6 @@ export function setCurrentShareToken(token: string | null): void {
   currentShareToken = token;
 }
 
-/** 引擎的默认空模板文件名：currentFileName 停留在这两个值说明还没有真正打开过图纸 */
-const EMPTY_DOCUMENT_NAMES = ['empty_template.mxweb', 'empty.mxweb'];
-
 /**
  * 等待「当前文档加载完成」的超时（ms）。只用于等默认空模板这一次加载，
  * 与打开图纸的 60s 超时不是一个量级。引擎一旦派发过 openFileComplete
@@ -98,7 +96,7 @@ export function hasDocumentLoaded(manager: {
   getCurrentFileName(): string | null;
 }): boolean {
   const name = manager.getCurrentFileName();
-  return !!name && !EMPTY_DOCUMENT_NAMES.includes(name);
+  return !!name && !isEmptyDocumentName(name);
 }
 
 /**

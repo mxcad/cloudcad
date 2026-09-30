@@ -10,6 +10,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { pickFiles } from '@/utils/pickFiles';
 import {
   mxcadExternalRefControllerGetPreloadingData,
   mxcadExternalRefControllerCheckExternalReference,
@@ -402,53 +403,42 @@ export const useExternalReferenceUpload = (
     [fetchPreloadingData, checkReferenceExists]
   );
 
+  /** 将新选中的文件按名匹配进缺失列表，未匹配的提示（selectFiles / selectAndUploadFiles 共用） */
+  const applySelectedFiles = useCallback((selectedFiles: File[]) => {
+    setFiles((prevFiles) => {
+      const newFiles = prevFiles.map((f) => {
+        const matchedFile = selectedFiles.find((sf) => sf.name === f.name);
+        if (matchedFile) {
+          return {
+            ...f,
+            source: matchedFile,
+            uploadState: 'notSelected' as UploadState,
+          };
+        }
+        return f;
+      });
+
+      // 提示未匹配的文件
+      selectedFiles.forEach((sf) => {
+        if (!prevFiles.some((f) => f.name === sf.name)) {
+          globalShowToast(t(`未找到匹配的缺失文件: ${sf.name}`), 'warning');
+        }
+      });
+
+      return newFiles;
+    });
+  }, []);
   /**
    * 选择文件（不上传）
    */
   const selectFiles = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.dwg,image/*';
-    input.multiple = true;
-    input.style.display = 'none';
-    document.body.appendChild(input);
-
-    input.onchange = () => {
-      if (!input.files) {
-        document.body.removeChild(input);
-        return;
+    void pickFiles({ accept: '.dwg,image/*', multiple: true }).then(
+      (selectedFiles) => {
+        if (selectedFiles.length === 0) return;
+        applySelectedFiles(selectedFiles);
       }
-
-      const selectedFiles = Array.from(input.files);
-      document.body.removeChild(input);
-
-      // 更新文件列表，使用不可变更新避免状态突变
-      setFiles((prevFiles) => {
-        const newFiles = prevFiles.map((f) => {
-          const matchedFile = selectedFiles.find((sf) => sf.name === f.name);
-          if (matchedFile) {
-            return {
-              ...f,
-              source: matchedFile,
-              uploadState: 'notSelected' as UploadState,
-            };
-          }
-          return f;
-        });
-
-        // 提示未匹配的文件
-        selectedFiles.forEach((sf) => {
-          if (!prevFiles.some((f) => f.name === sf.name)) {
-            globalShowToast(t(`未找到匹配的缺失文件: ${sf.name}`), 'warning');
-          }
-        });
-
-        return newFiles;
-      });
-    };
-
-    input.click();
-  }, []);
+    );
+  }, [applySelectedFiles]);
 
   /**
    * 上传文件
@@ -692,30 +682,16 @@ export const useExternalReferenceUpload = (
    */
   const selectAndUploadFiles = useCallback(
     (targetFile?: ExternalReferenceFile) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-
-      // 替换模式：根据目标文件类型设置过滤器；普通模式：接受所有支持的类型
-      if (targetFile) {
-        input.accept = targetFile.type === 'ref' ? '.dwg,.dxf' : 'image/*';
-      } else {
-        input.accept = '.dwg,image/*';
-      }
-
-      // 替换模式只选单个文件
-      input.multiple = !targetFile;
-      input.style.display = 'none';
-      document.body.appendChild(input);
-
-      input.onchange = async () => {
-        if (!input.files) {
-          document.body.removeChild(input);
-          return;
-        }
-
-        const selectedFiles = Array.from(input.files);
-        document.body.removeChild(input);
-
+      // 替换模式：根据目标文件类型设置过滤器、只选单个文件；普通模式全类型多选
+      const pickPromise = pickFiles({
+        accept: targetFile
+          ? targetFile.type === 'ref'
+            ? '.dwg,.dxf'
+            : 'image/*'
+          : '.dwg,image/*',
+        multiple: !targetFile,
+      }).then((selectedFiles) => {
+        if (selectedFiles.length === 0) return;
         if (targetFile) {
           // 替换模式：直接设置目标文件
           setFiles((prevFiles) =>
@@ -733,44 +709,19 @@ export const useExternalReferenceUpload = (
           );
         } else {
           // 普通模式：按文件名匹配
-          setFiles((prevFiles) => {
-            const newFiles = prevFiles.map((f) => {
-              const matchedFile = selectedFiles.find(
-                (sf) => sf.name === f.name
-              );
-              if (matchedFile) {
-                return {
-                  ...f,
-                  source: matchedFile,
-                  uploadState: 'notSelected' as UploadState,
-                };
-              }
-              return f;
-            });
-
-            selectedFiles.forEach((sf) => {
-              if (!prevFiles.some((f) => f.name === sf.name)) {
-                globalShowToast(
-                  t('未找到匹配的缺失文件: {name}', { name: sf.name }),
-                  'warning'
-                );
-              }
-            });
-
-            return newFiles;
-          });
+          applySelectedFiles(selectedFiles);
         }
+      });
 
+      void (async () => {
+        await pickPromise;
         // 等待状态更新后再开始上传
         await new Promise((resolve) => setTimeout(resolve, 50));
-
         // 自动开始上传
         await uploadFiles();
-      };
-
-      input.click();
+      })();
     },
-    []
+    [applySelectedFiles, uploadFiles]
   );
 
   /**

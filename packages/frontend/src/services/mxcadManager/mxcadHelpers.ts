@@ -17,14 +17,23 @@ export function getFileInfo() {
   return useCADEditorStore.getState().currentFileInfo;
 }
 
+/** 引擎的默认空模板文件名：currentFileName 停留在这两个值说明还没有真正打开过图纸 */
+const EMPTY_DOCUMENT_NAMES = ['empty_template.mxweb', 'empty.mxweb'];
+
+/** 引擎当前文件是否为默认空模板（还没有真正打开过图纸）。唯一判据，勿在他处硬编码文件名 */
+export function isEmptyDocumentName(
+  name: string | null | undefined
+): boolean {
+  return !!name && EMPTY_DOCUMENT_NAMES.includes(name);
+}
+
 export function formatEditorFileName(fileName: string): string {
   const isLoggedIn = isAuthenticated();
   const { isInCollaboration } = useCADEditorStore.getState();
   const prefixes: string[] = [];
   if (isInCollaboration) prefixes.push(t('[协同中]'));
   if (!isLoggedIn) prefixes.push(t('[未登录]'));
-  if (fileName === 'empty_template.mxweb' || fileName === 'empty.mxweb')
-    return prefixes.join(' - ');
+  if (isEmptyDocumentName(fileName)) return prefixes.join(' - ');
   if (prefixes.length === 0) return ` - ${fileName}`;
   return `${prefixes.join(' - ')} - ${fileName}`;
 }

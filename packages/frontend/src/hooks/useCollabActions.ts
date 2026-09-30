@@ -9,6 +9,7 @@ import {
   getCooperate,
   exitCurrentCollaboration,
 } from '../services/mxcadManager';
+import { isEmptyDocumentName } from '../services/mxcadManager/mxcadHelpers';
 import {
   patchSession,
   patchSessionFlags,
@@ -462,7 +463,7 @@ export function useCollabActions(
             try {
               const mxCAD = MxCpp.getCurrentMxCAD();
               const fn = mxCAD?.getCurrentFileName?.();
-              if (fn && fn !== 'empty_template.mxweb' && fn !== 'empty.mxweb') {
+              if (fn && !isEmptyDocumentName(fn)) {
                 patchSession({ name: fn });
                 refreshFileName();
               }
@@ -474,11 +475,7 @@ export function useCollabActions(
               try {
                 const mxCAD = MxCpp.getCurrentMxCAD();
                 const fn = mxCAD?.getCurrentFileName?.();
-                if (
-                  fn &&
-                  fn !== 'empty_template.mxweb' &&
-                  fn !== 'empty.mxweb'
-                ) {
+                if (fn && !isEmptyDocumentName(fn)) {
                   patchSession({ name: fn });
                   refreshFileName();
                 }

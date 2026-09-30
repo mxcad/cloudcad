@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useCallback, useMemo, useState } from 'react';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useFileSystemUI } from '@/hooks/file-system';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import {
@@ -16,7 +17,6 @@ import { useProjectPermissions } from '@/hooks/useProjectPermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermission } from '@/hooks/usePermission';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
-import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { SystemPermission } from '@/constants/permissions';
 import { ProjectPermission } from '@/constants/permissions';
 import { useVersionHistory } from '@/hooks/useVersionHistory';
@@ -245,26 +245,7 @@ export function useProjectDrawingsData({
   // Version history (now using selectedProjectId)
   const vh = useVersionHistory({ projectId: selectedProjectId });
 
-  // ── 动作/弹窗内核（剪贴板/移动复制/拖拽/SelectFolder 收敛） ──────
-  const { showConfirm: showConfirmPromise } = useConfirmDialog();
-  const showConfirm = useCallback(
-    (
-      title: string,
-      message: string,
-      onConfirm: () => void | Promise<void>,
-      type?: 'danger' | 'warning' | 'info',
-      confirmText?: string
-    ) => {
-      showConfirmPromise({ title, message, type, confirmText }).then(
-        (confirmed) => {
-          if (confirmed) {
-            onConfirm();
-          }
-        }
-      );
-    },
-    [showConfirmPromise]
-  );
+  const showConfirm = useConfirmAction();
 
   const fileBrowser = useFileBrowserActions({
     data: {

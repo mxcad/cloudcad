@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Crown, X, Minus, Plus } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { usePlanSelectStore } from '@/stores/planSelectStore';
-import {
-  vipControllerGetActiveTiers,
-  vipControllerGetActiveDurations,
-  billingControllerCreateOrder,
-} from '@/api-sdk';
+import { billingControllerCreateOrder } from '@/api-sdk';
 import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { useMembership } from '@/hooks/useMembership';
-import { useAuth } from '@/contexts/AuthContext';
+import {
+  fetchVipOffering,
+  detectTradeType,
+  type VipTier,
+  type DurationPricing,
+} from '@/hooks/billing/useVipOffering';
+import { usePaymentRefresh } from '@/hooks/billing/usePaymentRefresh';
 import { useTierConfigRegistry } from '@/hooks/useTierConfigRegistry';
-import { queryKeys } from '@/lib/queryKeys';
 import {
   formatConfigValueShort,
   getConfigLabel,
@@ -26,21 +26,6 @@ import {
   calculateOriginalPriceInCents,
 } from '@/utils/priceUtils';
 import WechatPayButton from './WechatPayButton';
-
-interface VipTier {
-  id: string;
-  level: number;
-  name: string;
-  baseMonthlyPrice: number;
-  configs: Record<string, unknown>;
-}
-
-interface DurationPricing {
-  id: string;
-  months: number;
-  multiplierBps: number;
-  label: string;
-}
 
 interface OrderResult {
   orderNo: string;
@@ -96,8 +81,7 @@ export default function PlanSelectOverlay() {
   const reason = usePlanSelectStore((s) => s.reason);
   const initialTierLevel = usePlanSelectStore((s) => s.initialTierLevel);
   const membership = useMembership();
-  const { refreshUser } = useAuth();
-  const queryClient = useQueryClient();
+  const refreshAfterPayment = usePaymentRefresh();
   const [loading, setLoading] = useState(false);
   const { registry } = useTierConfigRegistry();
   const [tiers, setTiers] = useState<VipTier[]>([]);
@@ -183,20 +167,15 @@ export default function PlanSelectOverlay() {
     const abort = new AbortController();
     (async () => {
       try {
-        const [tiersRes, durRes] = await Promise.all([
-          vipControllerGetActiveTiers({ signal: abort.signal }),
-          vipControllerGetActiveDurations({ signal: abort.signal }),
-        ]);
-        // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-        // （此前失败静默显示"暂无可用方案"，误导用户以为未配置套餐）
-        if (tiersRes?.error) throw tiersRes.error;
-        if (durRes?.error) throw durRes.error;
+        // SDK 默认不抛错：fetchVipOffering 内部把 result.error 显式抛出，
+        // 让 catch 记录真实原因（此前失败静默显示"暂无可用方案"，误导用户以为未配置套餐）
+        const { tiers: allTiers, durations: durData } =
+          await fetchVipOffering(abort.signal);
         const currentLevel = membership?.tierLevel ?? 0;
         const isVip = membership?.isVip ?? false;
-        const tiersData = ((tiersRes?.data ?? []) as VipTier[])
+        const tiersData = allTiers
           .filter((t) => t.level > 0)
           .filter((t) => !isVip || t.level >= currentLevel);
-        const durData = (durRes?.data ?? []) as DurationPricing[];
         setTiers(tiersData);
         setDurations(durData);
         if (tiersData.length > 0) {
@@ -215,15 +194,6 @@ export default function PlanSelectOverlay() {
     })();
     return () => abort.abort();
   }, [isOpen, membership?.isVip, membership?.tierLevel, initialTierLevel]);
-
-  const detectTradeType = useCallback(():
-    'JSAPI' | 'NATIVE' | 'MWEB' | 'APP' => {
-    const ua = navigator.userAgent;
-    // 微信浏览器内降级为 NATIVE（展示二维码，长按识别支付），系统暂无公众号 openid 获取流程，JSAPI 缺 openid 会下单失败
-    if (/MicroMessenger/i.test(ua)) return 'NATIVE';
-    if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) return 'MWEB';
-    return 'NATIVE';
-  }, []);
 
   const handleBuy = useCallback(async () => {
     if (!selectedTier || !matchedDuration) return;
@@ -254,14 +224,7 @@ export default function PlanSelectOverlay() {
       if (orderData?.status === 'SUCCEEDED') {
         // 对账兜底：复用的 PENDING 单在微信侧已支付（回调丢失）时后端直接
         // 完成订单并返回终态，刷新会员并关闭弹窗（与支付成功链路同效）
-        try {
-          await refreshUser();
-          await queryClient.invalidateQueries({
-            queryKey: queryKeys.fileSystem.storageQuota,
-          });
-        } catch {
-          // 刷新失败不阻断关闭，页面可手动刷新兜底
-        }
+        await refreshAfterPayment();
         close();
         return;
       }
@@ -291,24 +254,15 @@ export default function PlanSelectOverlay() {
     detectTradeType,
     setPurchasing,
     setPaymentOrder,
-    refreshUser,
-    queryClient,
+    refreshAfterPayment,
     close,
   ]);
 
   // 支付成功后刷新 AuthContext.user，保证 useMembership 相关的会员 UI 即时更新
   const handlePaymentSuccess = useCallback(async () => {
-    try {
-      await refreshUser();
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.fileSystem.storageQuota,
-      });
-    } catch {
-      // 刷新失败不阻塞关闭，页面可手动刷新兜底
-    } finally {
-      close();
-    }
-  }, [refreshUser, queryClient, close]);
+    await refreshAfterPayment();
+    close();
+  }, [refreshAfterPayment, close]);
 
   const handlePaymentError = useCallback((msg: string) => {
     setOrderError(msg);

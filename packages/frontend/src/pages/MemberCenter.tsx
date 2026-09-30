@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   Crown,
   Shield,
@@ -29,8 +28,6 @@ import { formatFileSize } from '@/utils/fileUtils';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import {
-  vipControllerGetActiveTiers,
-  vipControllerGetActiveDurations,
   billingControllerGetOrders,
   billingControllerRepayOrder,
   billingControllerApplyRefund,
@@ -38,8 +35,13 @@ import {
 } from '@/api-sdk';
 import WechatPayModal from '@/components/billing/WechatPayModal';
 import { useTierConfigRegistry } from '@/hooks/useTierConfigRegistry';
+import {
+  useVipOffering,
+  detectTradeType,
+  type VipTier,
+} from '@/hooks/billing/useVipOffering';
+import { usePaymentRefresh } from '@/hooks/billing/usePaymentRefresh';
 import { formatConfigValue, getConfigLabel } from '@/utils/tierConfigUtils';
-import { queryKeys } from '@/lib/queryKeys';
 import { centsToYuan } from '@/utils/priceUtils';
 import {
   BENEFIT_ITEMS,
@@ -47,21 +49,6 @@ import {
   buildConversionBenefitItem,
   buildConversionFaq,
 } from './memberCenterContent';
-
-interface VipTier {
-  id: string;
-  level: number;
-  name: string;
-  baseMonthlyPrice: number;
-  configs: Record<string, unknown>;
-}
-
-interface DurationPricing {
-  id: string;
-  months: number;
-  multiplierBps: number;
-  label: string;
-}
 
 interface OrderItem {
   id: string;
@@ -102,17 +89,15 @@ const STATUS_COLORS: Record<string, TagVariant> = {
 
 export default function MemberCenter() {
   const membership = useMembership();
-  const { loading: authLoading, refreshUser } = useAuth();
+  const { loading: authLoading } = useAuth();
   const { data: storageInfo } = useStorageQuota();
-  const queryClient = useQueryClient();
+  const { tiers, loading } = useVipOffering();
+  const refreshAfterPayment = usePaymentRefresh();
   const [searchParams, setSearchParams] = useSearchParams();
   const globalOpen = usePlanSelectStore((s) => s.open);
 
-  const [tiers, setTiers] = useState<VipTier[]>([]);
-  const [durations, setDurations] = useState<DurationPricing[]>([]);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
   const { registry } = useTierConfigRegistry();
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [selectedTierIdx, setSelectedTierIdx] = useState(0);
@@ -191,28 +176,6 @@ export default function MemberCenter() {
     }
     return items;
   }, [conversionWindowHours, conversionWindowCount, isVip]);
-
-  useEffect(() => {
-    const abort = new AbortController();
-    (async () => {
-      try {
-        const [tiersRes, durRes] = await Promise.all([
-          vipControllerGetActiveTiers({ signal: abort.signal }),
-          vipControllerGetActiveDurations({ signal: abort.signal }),
-        ]);
-        // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-        // （此前失败静默显示"暂无可用方案"，误导用户以为未配置套餐）
-        if (tiersRes?.error) throw tiersRes.error;
-        if (durRes?.error) throw durRes.error;
-        setTiers((tiersRes?.data ?? []) as VipTier[]);
-        setDurations((durRes?.data ?? []) as DurationPricing[]);
-      } catch (error) {
-        console.error('[MemberCenter] 加载会员套餐失败:', error);
-      }
-      setLoading(false);
-    })();
-    return () => abort.abort();
-  }, []);
 
   // 拉取最近订单（订单历史 + 支付成功后刷新）
   const loadOrders = useCallback(async () => {
@@ -297,14 +260,7 @@ export default function MemberCenter() {
     setRepayLoading(true);
     setRepayError('');
     try {
-      const ua = navigator.userAgent;
-      // 微信浏览器内降级为 NATIVE（展示二维码，长按识别支付），系统暂无公众号 openid 获取流程，JSAPI 缺 openid 会下单失败
-      const tradeType: 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP' =
-        /MicroMessenger/i.test(ua)
-          ? 'NATIVE'
-          : /Mobi|Android|iPhone|iPad|iPod/i.test(ua)
-            ? 'MWEB'
-            : 'NATIVE';
+      const tradeType = detectTradeType();
       const res = await billingControllerRepayOrder({
         path: { orderNo },
         body: { tradeType },
@@ -317,14 +273,7 @@ export default function MemberCenter() {
         // 对账兜底：后端确认微信侧已支付并完成订单（回调丢失场景），
         // 提示已开通并刷新会员状态/订单列表，而非误导性的"状态已变更"
         globalShowToast(t('该订单已支付成功，会员已开通'), 'success');
-        try {
-          await refreshUser();
-          await queryClient.invalidateQueries({
-            queryKey: queryKeys.fileSystem.storageQuota,
-          });
-        } catch {
-          // 刷新失败不阻断提示，页面可手动刷新兜底
-        }
+        await refreshAfterPayment();
         await loadOrders();
         return;
       }
@@ -348,7 +297,7 @@ export default function MemberCenter() {
     } finally {
       setRepayLoading(false);
     }
-  }, [refreshUser, queryClient, loadOrders]);
+  }, [refreshAfterPayment, loadOrders]);
 
   const handleApplyRefund = useCallback(async () => {
     if (!refundTarget) return;
@@ -1106,14 +1055,7 @@ export default function MemberCenter() {
           setRepayPayment(null);
           setRepayError('');
           // 支付成功后刷新会员状态 + 订单列表，避免整页刷新才更新
-          try {
-            await refreshUser();
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.fileSystem.storageQuota,
-            });
-          } catch {
-            // 刷新失败不阻塞后续
-          }
+          await refreshAfterPayment();
           loadOrders();
         }}
         onError={(msg) => setRepayError(msg)}
@@ -1177,14 +1119,7 @@ export default function MemberCenter() {
           setAutoPayment(null);
           setAutoError('');
           // 支付成功后刷新会员状态 + 订单列表，避免整页刷新才更新
-          try {
-            await refreshUser();
-            await queryClient.invalidateQueries({
-              queryKey: queryKeys.fileSystem.storageQuota,
-            });
-          } catch {
-            // 刷新失败不阻塞后续
-          }
+          await refreshAfterPayment();
           loadOrders();
         }}
         onError={(msg) => setAutoError(msg)}

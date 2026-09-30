@@ -26,7 +26,8 @@
  * - useTrashView: 回收站子域（视图状态/查询/恢复/清空/面包屑/门控）
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { useFileSystemData } from './useFileSystemData';
@@ -38,7 +39,6 @@ import { useFileSystemRouting } from './useFileSystemRouting';
 import { useFileSystemEffects } from './useFileSystemEffects';
 import { useFileBrowserSelection } from '../file-browser/useFileBrowserSelection';
 import { useTrashView } from './useTrashView';
-import { useConfirmDialog } from '@/contexts/NotificationContext';
 import type { ProjectFilterType } from '@/api-sdk';
 import type { FileSystemNode } from '@/types/filesystem';
 
@@ -94,26 +94,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
   // UI Hook (Toast) — 委托全局 ToastStack（见 useFileSystemUI 说明）
   const { showToast } = useFileSystemUI();
 
-  // Confirm Dialog - adapt Promise-based API to callback-style
-  const { showConfirm: showConfirmPromise } = useConfirmDialog();
-  const showConfirm = useCallback(
-    (
-      title: string,
-      message: string,
-      onConfirm: () => void | Promise<void>,
-      type?: 'danger' | 'warning' | 'info',
-      confirmText?: string
-    ) => {
-      showConfirmPromise({ title, message, type, confirmText }).then(
-        (confirmed) => {
-          if (confirmed) {
-            onConfirm();
-          }
-        }
-      );
-    },
-    [showConfirmPromise]
-  );
+  const showConfirm = useConfirmAction();
 
   // Search Hook
   const {

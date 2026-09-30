@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useCopy } from '../../hooks/useCopy';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
@@ -30,10 +29,10 @@ import {
 } from '@/api-sdk';
 import type { ShareListItemDto } from '@/api-sdk';
 import { ConfirmRevokeModal } from './ConfirmRevokeModal';
+import { ExpirationPicker } from './ExpirationPicker';
 import { ShareLinkBar } from '@/components/common/ShareLinkBar';
 import {
   ExpirationOption,
-  getExpirationLabels,
   EXPIRATION_VALUES,
   formatExpiryDate,
 } from '@/constants/share';
@@ -606,44 +605,12 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
           <div className="share-dialog-create-section">
             <span className="share-dialog-create-label">{t('有效期')}</span>
-            <div className="share-dialog-expiration-group">
-              {(Object.keys(getExpirationLabels()) as ExpirationOption[]).map(
-                (key) => (
-                  <Button
-                    key={key}
-                    variant={expiration === key ? 'primary' : 'outline'}
-                    size="xs"
-                    onClick={() => setExpiration(key)}
-                  >
-                    {getExpirationLabels()[key]}
-                  </Button>
-                )
-              )}
-            </div>
-            {expiration === 'custom' && (
-              <div className="share-dialog-custom-days">
-                <div style={{ width: '60px' }}>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={365}
-                    size="sm"
-                    value={customDays}
-                    onChange={(e) =>
-                      setCustomDays(
-                        Math.max(
-                          1,
-                          Math.min(365, parseInt(e.target.value) || 1)
-                        )
-                      )
-                    }
-                  />
-                </div>
-                <span className="share-dialog-custom-label">
-                  {t('天后过期')}
-                </span>
-              </div>
-            )}
+            <ExpirationPicker
+              expiration={expiration}
+              onExpirationChange={setExpiration}
+              customDays={customDays}
+              onCustomDaysChange={setCustomDays}
+            />
           </div>
 
           <Button
@@ -662,39 +629,12 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       <div className="share-dialog-create-body">
         <div className="share-dialog-create-section">
           <span className="share-dialog-create-label">{t('有效期')}</span>
-          <div className="share-dialog-expiration-group">
-            {(Object.keys(getExpirationLabels()) as ExpirationOption[]).map(
-              (key) => (
-                <Button
-                  key={key}
-                  variant={expiration === key ? 'primary' : 'outline'}
-                  size="xs"
-                  onClick={() => setExpiration(key)}
-                >
-                  {getExpirationLabels()[key]}
-                </Button>
-              )
-            )}
-          </div>
-          {expiration === 'custom' && (
-            <div className="share-dialog-custom-days">
-              <div style={{ width: '60px' }}>
-                <Input
-                  type="number"
-                  min={1}
-                  max={365}
-                  size="sm"
-                  value={customDays}
-                  onChange={(e) =>
-                    setCustomDays(
-                      Math.max(1, Math.min(365, parseInt(e.target.value) || 1))
-                    )
-                  }
-                />
-              </div>
-              <span className="share-dialog-custom-label">{t('天后过期')}</span>
-            </div>
-          )}
+          <ExpirationPicker
+            expiration={expiration}
+            onExpirationChange={setExpiration}
+            customDays={customDays}
+            onCustomDaysChange={setCustomDays}
+          />
         </div>
 
         <Button

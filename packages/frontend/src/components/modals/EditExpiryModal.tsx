@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { t } from '@/languages';
 import {
   ExpirationOption,
-  getExpirationLabels,
   detectExpiration,
   computeExpiresAt,
 } from '@/constants/share';
+import { ExpirationPicker } from './ExpirationPicker';
 
 interface EditExpiryModalProps {
   isOpen: boolean;
@@ -70,53 +69,12 @@ export const EditExpiryModal: React.FC<EditExpiryModalProps> = ({
           >
             {t('有效期')}
           </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {(Object.keys(getExpirationLabels()) as ExpirationOption[]).map(
-              (key) => (
-                <Button
-                  key={key}
-                  variant={expiration === key ? 'primary' : 'outline'}
-                  size="xs"
-                  onClick={() => setExpiration(key)}
-                >
-                  {getExpirationLabels()[key]}
-                </Button>
-              )
-            )}
-          </div>
-          {expiration === 'custom' && (
-            <div
-              style={{
-                marginTop: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <div style={{ width: '60px' }}>
-                <Input
-                  type="number"
-                  min={1}
-                  max={365}
-                  size="sm"
-                  value={customDays}
-                  onChange={(e) =>
-                    setCustomDays(
-                      Math.max(1, Math.min(365, parseInt(e.target.value) || 1))
-                    )
-                  }
-                />
-              </div>
-              <span
-                style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--text-tertiary)',
-                }}
-              >
-                {t('天后过期')}
-              </span>
-            </div>
-          )}
+          <ExpirationPicker
+            expiration={expiration}
+            onExpirationChange={setExpiration}
+            customDays={customDays}
+            onCustomDaysChange={setCustomDays}
+          />
         </div>
         <div
           style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}

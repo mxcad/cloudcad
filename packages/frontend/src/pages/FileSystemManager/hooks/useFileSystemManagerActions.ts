@@ -1,10 +1,10 @@
 import { useCallback, useRef } from 'react';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { useVersionHistory } from '@/hooks/useVersionHistory';
 import { useSelectionShortcuts } from '@/hooks/common/useSelectionShortcuts';
 import { useFileBrowserActions } from '@/hooks/file-browser';
 import { useFileBrowserModals } from '@/hooks/file-browser';
-import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { useFileSystemUrlEffects } from './useFileSystemUrlEffects';
 import { useNodePermissions } from './useNodePermissions';
 import { useFileSystemManagerEffects } from './useFileSystemManagerEffects';
@@ -68,25 +68,7 @@ export function useFileSystemManagerActions({
 
   const { nodes, currentNode, urlProjectId, urlNodeId } = fs;
 
-  const { showConfirm: showConfirmPromise } = useConfirmDialog();
-  const showConfirm = useCallback(
-    (
-      title: string,
-      message: string,
-      onConfirm: () => void | Promise<void>,
-      type?: 'danger' | 'warning' | 'info',
-      confirmText?: string
-    ) => {
-      showConfirmPromise({ title, message, type, confirmText }).then(
-        (confirmed) => {
-          if (confirmed) {
-            onConfirm();
-          }
-        }
-      );
-    },
-    [showConfirmPromise]
-  );
+  const showConfirm = useConfirmAction();
 
   // ── FileBrowserCore 内核：剪贴板 / 移动复制 / 拖拽 / SelectFolder ──
   const fileBrowserActions = useFileBrowserActions({

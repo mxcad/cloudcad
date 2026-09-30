@@ -9,6 +9,10 @@ vi.mock('@/stores/useCADEditorStore', () => ({
 }));
 
 vi.mock('../mxcadHelpers', () => ({
+  isEmptyDocumentName: vi.fn(
+    (name: string | null | undefined) =>
+      !!name && ['empty_template.mxweb', 'empty.mxweb'].includes(name)
+  ),
   getFileInfo: vi.fn(),
 }));
 

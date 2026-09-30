@@ -4,10 +4,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useCallback, useState } from 'react';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { nodeControllerUpdateNode } from '@/api-sdk';
 import { useFileSystemNavigation } from '@/hooks/file-system';
 import { useLibraryOperations } from '@/hooks/library/useLibraryOperations';
-import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
 import { handleError, getErrorMessage } from '@/utils/errorHandler';
 import { t } from '@/languages';
@@ -48,27 +48,7 @@ export function useProjectDrawingsActions({
     showToast,
   } = data;
 
-  const { showConfirm: showConfirmPromise } = useConfirmDialog();
-
-  // Adapt Promise-based showConfirm to callback-style
-  const showConfirm = useCallback(
-    (
-      title: string,
-      message: string,
-      onConfirm: () => void | Promise<void>,
-      type?: 'danger' | 'warning' | 'info',
-      confirmText?: string
-    ) => {
-      showConfirmPromise({ title, message, type, confirmText }).then(
-        (confirmed) => {
-          if (confirmed) {
-            onConfirm();
-          }
-        }
-      );
-    },
-    [showConfirmPromise]
-  );
+  const showConfirm = useConfirmAction();
 
   // Library operations
   const libraryOperations = useLibraryOperations({

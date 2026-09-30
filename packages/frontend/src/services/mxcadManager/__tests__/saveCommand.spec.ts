@@ -17,6 +17,10 @@ vi.mock('@/utils/notificationEvents', () => ({
 }));
 
 vi.mock('../mxcadHelpers', () => ({
+  isEmptyDocumentName: vi.fn(
+    (name: string | null | undefined) =>
+      !!name && ['empty_template.mxweb', 'empty.mxweb'].includes(name)
+  ),
   getPersonalSpaceId: vi.fn().mockResolvedValue('ps-1'),
   showSaveAsDialog: vi.fn().mockResolvedValue(undefined),
   triggerSaveAs: vi.fn().mockResolvedValue(undefined),

@@ -86,6 +86,10 @@ vi.mock('@/services/drawingSession', () => ({
   setCurrentFileUrl: vi.fn(),
 }));
 vi.mock('../mxcadHelpers', () => ({
+  isEmptyDocumentName: vi.fn(
+    (name: string | null | undefined) =>
+      !!name && ['empty_template.mxweb', 'empty.mxweb'].includes(name)
+  ),
   getFileInfo: vi.fn(),
   setEditorFileName: vi.fn(),
   restoreEditorTitle: vi.fn(),
