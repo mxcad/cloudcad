@@ -1,58 +1,36 @@
 import { useUIStore } from '../stores/uiStore';
 
-let loadingRefCount = 0;
-let loadingSource: string | null = null;
+/**
+ * 全局 loading 的命名门面（非 React 调用方的消费形态）。
+ * 引用计数不变式实现在 uiStore 内部（globalLoading === true ⟺ refCount > 0），
+ * 这里不再持有任何镜像状态。
+ */
 
-export const showGlobalLoading = (message?: string, source?: string): void => {
-  loadingRefCount++;
-  loadingSource = source || 'unknown';
-  useUIStore.setState({
-    globalLoading: true,
-    loadingMessage: message || '',
-    loadingProgress: 0,
-  });
+export const showGlobalLoading = (message?: string, _source?: string): void => {
+  useUIStore.getState().showGlobalLoading(message);
 };
 
-export const hideGlobalLoading = (source?: string): void => {
-  if (loadingRefCount <= 0) {
-    // hide 幂等：全局 loading 为引用计数模型，监听器兜底与调用方显式 hide 可能同时触发。
-    // 且 openFile 在"文件已打开"等路径不会触发 openFileComplete 事件（此时只有调用方 hide），
-    // 因此不能只依赖单一来源。refCount 为 0 时 hide 是无害的 no-op，仅记录调试信息。
-    if (import.meta.env?.DEV) {
-      // eslint-disable-next-line no-console
-      console.debug(
-        `[Loading] hide called but refCount already 0, source:${source || 'unknown'}`
-      );
-    }
-    return;
+export const hideGlobalLoading = (_source?: string): void => {
+  const { loadingRefCount, hideGlobalLoading: hide } =
+    useUIStore.getState();
+  if (loadingRefCount <= 0 && import.meta.env?.DEV) {
+    // hide 幂等：refCount 为 0 时 hide 是无害 no-op，仅记录调试信息
+    // eslint-disable-next-line no-console
+    console.debug('[Loading] hide called but refCount already 0');
   }
-  loadingRefCount--;
-  if (loadingRefCount === 0) {
-    loadingSource = null;
-    useUIStore.setState({
-      globalLoading: false,
-      loadingMessage: '',
-      loadingProgress: 0,
-    });
-  }
+  hide();
 };
 
 export const setLoadingMessage = (message: string): void => {
-  useUIStore.setState({ loadingMessage: message });
+  useUIStore.getState().setLoadingMessage(message);
 };
 
 export const setLoadingProgress = (progress: number): void => {
-  useUIStore.setState({ loadingProgress: progress });
+  useUIStore.getState().setLoadingProgress(progress);
 };
 
-export const resetLoading = (source?: string): void => {
-  loadingRefCount = 0;
-  loadingSource = null;
-  useUIStore.setState({
-    globalLoading: false,
-    loadingMessage: '',
-    loadingProgress: 0,
-  });
+export const resetLoading = (): void => {
+  useUIStore.getState().resetLoading();
 };
 
 export const getLoadingState = () => {
@@ -61,7 +39,7 @@ export const getLoadingState = () => {
     globalLoading: store.globalLoading,
     loadingMessage: store.loadingMessage,
     loadingProgress: store.loadingProgress,
-    refCount: loadingRefCount,
-    source: loadingSource,
+    refCount: store.loadingRefCount,
+    source: null as string | null,
   };
 };

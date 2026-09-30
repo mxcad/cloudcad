@@ -28,6 +28,11 @@ export interface FileSystemClipboardState {
     sourceProjectId: string,
     options?: SetClipboardOptions
   ) => void;
+  /** 异步补写源域快照（copy/cut 先入剪贴板、transfer 设置查询返回后调用），禁止绕过 action 裸 setState */
+  setClipboardSource: (source: {
+    sourceRootKind?: TransferRootKind;
+    sourceTransferSettings?: ProjectTransferSettings | null;
+  }) => void;
   clearClipboard: () => void;
 }
 
@@ -58,6 +63,13 @@ export const useFileSystemClipboardStore = create<FileSystemClipboardState>(
         sourceRootKind,
         sourceTransferSettings,
       });
+    },
+
+    setClipboardSource: ({
+      sourceRootKind = 'project',
+      sourceTransferSettings = null,
+    }) => {
+      set({ sourceRootKind, sourceTransferSettings });
     },
 
     clearClipboard: () => {

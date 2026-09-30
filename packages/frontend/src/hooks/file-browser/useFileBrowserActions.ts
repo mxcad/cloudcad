@@ -294,10 +294,9 @@ export const useFileBrowserActions = ({
       sourceRootKind === 'project'
         ? await getProjectTransferSettings(projectId)
         : null;
-    useFileSystemClipboardStore.setState({
-      sourceRootKind,
-      sourceTransferSettings: settings,
-    });
+    useFileSystemClipboardStore
+      .getState()
+      .setClipboardSource({ sourceRootKind, sourceTransferSettings: settings });
   }, [mode, projectId, getProjectTransferSettings]);
 
   const clipboardSourceProjectId = useFileSystemClipboardStore(

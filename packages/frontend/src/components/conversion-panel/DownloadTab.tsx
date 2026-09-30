@@ -214,7 +214,7 @@ export const DownloadTab: React.FC<DownloadTabProps> = ({
   onRetry,
   onRetryFailed,
 }) => {
-  const { tasks: downloadTasks } = useBatchDownloadStore();
+  const downloadTasks = useBatchDownloadStore((s) => s.tasks);
   const { downloadAllItems, downloadZip, cancelTask } = useBatchDownload();
 
   const filteredTasks = downloadTasks.filter((task) => {

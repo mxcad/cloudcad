@@ -25,7 +25,7 @@ import { useAuth } from './AuthContext';
 import { i18nScope } from '@/languages';
 import { useIsMobile } from '../lib/useIsMobile';
 import { isDesktopOrigin } from '../lib/desktopOrigin';
-import { setTourModeActive } from '../utils/tourMode';
+import { setTourModeActive, useIsTourModeActive } from '../utils/tourMode';
 
 /** localStorage 存储键名 */
 const TOUR_DISMISSED_KEY = 'cloudcad_tour_dismissed';
@@ -38,7 +38,6 @@ const TOUR_COMPLETED_KEY = 'cloudcad_tour_completed';
  *      navigate-to-projects 完成 → 弹栈启动 create-project
  *      create-project 完成 → 弹栈启动 project-management-full
  */
-const pendingTargetGuidesStack: string[] = [];
 
 /**
  * 从 localStorage 读取 dismissed 状态
@@ -234,8 +233,12 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     loadCompletedGuides()
   );
   const [isActive, setIsActive] = useState(false);
-  /** 引导模式状态（用于控制特定行为，如 CAD 文件在当前页面打开） */
-  const [isTourMode, setIsTourMode] = useState(false);
+  // 待续引导栈（前置引导完成后接着启动的目标引导）。归属 Provider 实例，
+  // 不再用模块级变量（会跨会话残留且绕过 React 生命周期）
+  const pendingTargetGuidesStackRef = useRef<string[]>([]);
+  /** 引导模式状态（用于控制特定行为，如 CAD 文件在当前页面打开）。
+   * 唯一事实源是 tourMode store（非 React 层同源可读），此处只是响应式投影 */
+  const isTourMode = useIsTourModeActive();
   const [currentGuide, setCurrentGuide] = useState<TourGuide | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isTourCenterOpen, setIsTourCenterOpen] = useState(false);
@@ -352,9 +355,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({
           // 执行 resolve
           if (condition.resolve?.guideId) {
             // 将当前目标引导压入栈
-            pendingTargetGuidesStack.push(guideId);
+            pendingTargetGuidesStackRef.current.push(guideId);
             console.log(
-              `[Tour] Pushed target guide to stack: ${guideId}, stack: [${pendingTargetGuidesStack.join(', ')}]`
+              `[Tour] Pushed target guide to stack: ${guideId}, stack: [${pendingTargetGuidesStackRef.current.join(', ')}]`
             );
 
             // 获取前置引导
@@ -366,7 +369,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({
                 `[Tour] Prerequisite guide not found: ${condition.resolve.guideId}`
               );
               // 移除压入的引导
-              pendingTargetGuidesStack.pop();
+              pendingTargetGuidesStackRef.current.pop();
               return { canStart: false };
             }
 
@@ -424,7 +427,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({
       originalLocationRef.current = location.pathname;
 
       // 开启引导模式
-      setIsTourMode(true);
       setTourModeActive(true);
 
       // 设置引导状态
@@ -523,10 +525,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     );
 
     // 检查栈是否有待继续的引导
-    if (pendingTargetGuidesStack.length > 0) {
-      const nextGuideId = pendingTargetGuidesStack.pop()!;
+    if (pendingTargetGuidesStackRef.current.length > 0) {
+      const nextGuideId = pendingTargetGuidesStackRef.current.pop()!;
       console.log(
-        `[Tour] Popped target guide from stack: ${nextGuideId}, remaining: [${pendingTargetGuidesStack.join(', ')}]`
+        `[Tour] Popped target guide from stack: ${nextGuideId}, remaining: [${pendingTargetGuidesStackRef.current.join(', ')}]`
       );
 
       // 延迟启动，等待当前引导完全关闭，并重新检查前置条件
@@ -537,7 +539,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     }
 
     // 没有待继续的引导，关闭引导模式
-    setIsTourMode(false);
     setTourModeActive(false);
 
     // 导航回用户原本的页面（使用 window.location 重新访问）
@@ -593,15 +594,14 @@ export const TourProvider: React.FC<TourProviderProps> = ({
     setCurrentStep(0);
 
     // 清空待继续的引导栈，防止跳过当前引导后继续启动栈中的引导
-    if (pendingTargetGuidesStack.length > 0) {
+    if (pendingTargetGuidesStackRef.current.length > 0) {
       console.log(
-        `[Tour] Clearing pending target guides stack on skip: [${pendingTargetGuidesStack.join(', ')}]`
+        `[Tour] Clearing pending target guides stack on skip: [${pendingTargetGuidesStackRef.current.join(', ')}]`
       );
-      pendingTargetGuidesStack.length = 0;
+      pendingTargetGuidesStackRef.current.length = 0;
     }
 
     // 关闭引导模式
-    setIsTourMode(false);
     setTourModeActive(false);
 
     // 导航回用户原本的页面（使用 window.location 重新访问）

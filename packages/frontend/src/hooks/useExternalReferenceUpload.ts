@@ -54,7 +54,8 @@ import { useUIStore } from '../stores/uiStore';
 export const useExternalReferenceUpload = (
   config: UseExternalReferenceUploadConfig
 ): UseExternalReferenceUploadReturn => {
-  const { setGlobalLoading, setLoadingMessage } = useUIStore();
+  const { showGlobalLoading: storeShowLoading, hideGlobalLoading: storeHideLoading, setLoadingMessage } =
+    useUIStore();
   const [localLoading, setLocalLoading] = useState(false);
   const [files, setFiles] = useState<ExternalReferenceFile[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -478,7 +479,7 @@ export const useExternalReferenceUpload = (
       return;
     }
     setLocalLoading(true);
-    setGlobalLoading(true, t('正在上传外部参照...'));
+    storeShowLoading(t('正在上传外部参照...'));
 
     const id = uploadTargetIdRef.current || identifierRef.current;
 
@@ -587,8 +588,8 @@ export const useExternalReferenceUpload = (
     }
 
     setLocalLoading(false);
-    setGlobalLoading(false);
-  }, [config.nodeId, config.onError, usePublicUpload, setGlobalLoading]);
+    storeHideLoading();
+  }, [config.nodeId, config.onError, usePublicUpload, storeShowLoading, storeHideLoading]);
 
   /**
    * 关闭模态框
