@@ -11,6 +11,7 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { Response, Request } from 'express';
 import { FileTypeDetector } from '../utils/file-type-detector';
+import { cachedArtifactFileName } from '../utils/conversion-artifact';
 import { IVersionControl, VERSION_CONTROL_TOKEN } from '../../version-control/interfaces/version-control.interface';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { I18nContext } from 'nestjs-i18n';
@@ -710,7 +711,9 @@ export class MxcadVersionHistoryService {
         .update(originalBuffer)
         .digest('hex');
       const ext = originalExt.substring(1);
-      const cachedMxwebName = `${fileHash}.${ext}.mxweb`;
+      // 与摄入路径（upload-utility / drawing-ingest）共用同一产物命名出口，
+      // 否则本服务的缓存命中判定与秒传存在性检查会给出相反结论
+      const cachedMxwebName = cachedArtifactFileName(fileHash, baseBeforeMxweb);
       const cachedMxwebPath = path.join(
         mxcadUploadPath,
         cachedMxwebName

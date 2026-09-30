@@ -9,6 +9,8 @@ jest.mock("@cloudcad/engine-exec", () => {
 	return { ...actual, runMxcadAssembly: jest.fn() };
 });
 
+import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import { runMxcadAssembly } from "@cloudcad/engine-exec";
 import { ConfigService } from "@nestjs/config";
@@ -307,6 +309,182 @@ describe("FileConversionService", () => {
 					userId: "free-user",
 				})
 			).rejects.toMatchObject({ name: "VipFeatureRequiredException" });
+		});
+	});
+
+	// ===== 转换前产物就位短路（缓存命中不再 spawn 引擎）=====
+	// 缓存判定此前只在摄入边界（ingestWholeFile 的 !forceUpload 秒传分支），
+	// 导致 forceUpload / ingestChunks / ingestNoNodePreview / convertNode·retryTask
+	// 共 5 条路径绕过缓存——产物已在磁盘上却仍重新转换。此 describe 锁死那道短路：
+	// 命中时零引擎调用，任何门禁条件不满足时一律回落真实转换。
+	describe("转换前产物就位短路", () => {
+		let uploadDir: string;
+
+		async function createServiceWithUploadPath(
+			dir: string
+		): Promise<FileConversionService> {
+			const module: TestingModule = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{
+						provide: ConfigService,
+						useValue: {
+							get: jest.fn((key: string) => {
+								if (key === "mxcad")
+									return {
+										assemblyPath: "/fake/mxcadassembly.exe",
+										fileExt: ".mxweb",
+										compression: true,
+									};
+								if (key === "upload")
+									return { maxConcurrent: 2, conversionMaxConcurrent: 2 };
+								if (key === "mxcadUploadPath") return dir;
+								return undefined;
+							}),
+						},
+					},
+				],
+			})
+				.setLogger({
+					log: jest.fn(),
+					error: jest.fn(),
+					warn: jest.fn(),
+					debug: jest.fn(),
+					verbose: jest.fn(),
+				})
+				.compile();
+			return module.get<FileConversionService>(FileConversionService);
+		}
+
+		beforeEach(() => {
+			uploadDir = fs.mkdtempSync(path.join(os.tmpdir(), "conv-cache-"));
+		});
+
+		afterEach(() => {
+			fs.rmSync(uploadDir, { recursive: true, force: true });
+		});
+
+		it("产物已就位：直接返回成功，不 spawn 引擎", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "mxweb-bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			const r = await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+			});
+
+			expect(r.isOk).toBe(true);
+			expect(r.ret).toMatchObject({ code: 0, newpath: "" });
+			expect(mockRun).not.toHaveBeenCalled();
+		});
+
+		it("产物不存在：回落真实转换", async () => {
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			const r = await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+			});
+
+			expect(r.isOk).toBe(true);
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("空文件产物视为未完成：回落真实转换", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("源扩展名不同则产物名不同：回落真实转换", async () => {
+			// 产物名含源扩展名，dxf 不能命中 dwg 的缓存
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({ srcPath: "/tmp/f.dxf", fileHash: "abc" });
+
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("导出方向（.mxweb 源）产物位置不可推导：回落真实转换", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.mxweb.mxweb"), "bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({
+				srcPath: "/tmp/f.mxweb",
+				fileHash: "abc",
+				outname: "out.dwg",
+			});
+
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("自定义产物名（outname）不参与短路", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				outname: "out.dwg",
+			});
+
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("bin→mxweb（outpath）不参与短路", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				outpath: "/other/dir",
+			});
+
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("特殊命令（cmd=cut_dwg）不参与短路", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				cmd: "cut_dwg",
+			});
+
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("无 fileHash 不参与短路（产物名不可推导）", async () => {
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "" });
+
+			expect(mockRun).toHaveBeenCalledTimes(1);
 		});
 	});
 

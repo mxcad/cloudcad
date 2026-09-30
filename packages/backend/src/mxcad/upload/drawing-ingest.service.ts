@@ -21,6 +21,7 @@ import { CacheManagerService } from '../infra/cache-manager.service';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { UploadUtilityService } from './upload-utility.service';
+import { cachedArtifactFileName } from '../utils/conversion-artifact';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
@@ -345,8 +346,7 @@ export class DrawingIngestService {
   ): Promise<IngestResult> {
     const { filePath, fileHash: hash, name, size, forceUpload } = source;
     const context = this.targetToContext(target);
-    const uploadPath =
-      this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
+    const uploadPath = this.mxcadUploadPath;
 
     const fileExists =
       !forceUpload &&
@@ -1323,8 +1323,6 @@ export class DrawingIngestService {
     const context = this.targetToContext(target);
     const fileMd5 = hashFile;
     const tmpDir = this.fileSystemService.getChunkTempDirPath(fileMd5);
-    const uploadPath =
-      this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
 
     this.logger.log(
       `[DrawingIngest.chunks] 开始合并转换: userId=${context.userId}, nodeId=${context.nodeId}, fileHash=${fileMd5}, fileName=${fileName}, chunks=${chunks}, srcDwgNodeId=${context.srcDwgNodeId}`
@@ -1589,7 +1587,7 @@ export class DrawingIngestService {
     convertedExt: string,
     context: FileSystemNodeContext
   ): Promise<IngestResult> {
-    const targetFile = `${fileHash}.${suffix}${convertedExt}`;
+    const targetFile = cachedArtifactFileName(fileHash, filename, convertedExt);
     const localPath = this.fileSystemService.getMd5Path(targetFile);
     const localExists = await this.fileSystemService.exists(localPath);
     if (!localExists) {

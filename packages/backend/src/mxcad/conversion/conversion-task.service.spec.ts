@@ -224,6 +224,31 @@ describe('UnifiedConversionService', () => {
       expect(executor.getTaskStatus).toHaveBeenCalledWith('task-1');
     });
 
+    it('查询条件：进行中始终可见，FAILED 仅最近 7 天内可见，访问过滤走 AND', async () => {
+      prisma.fileSystemNode.findMany.mockResolvedValue([]);
+      await service.listTasks('user-1');
+      const where = (
+        prisma.fileSystemNode.findMany as unknown as jest.Mock
+      ).mock.calls[0][0].where;
+
+      // 终态不清 taskId：FAILED 永久滞留会让用户每次打开图纸都在队列里看到旧记录
+      expect(where.taskId).toEqual({ not: null });
+      expect(where.OR).toHaveLength(2);
+      expect(where.OR[0]).toEqual({
+        fileStatus: { in: ['PROCESSING', 'UPLOADING'] },
+      });
+      expect(where.OR[1].fileStatus).toBe('FAILED');
+      // updatedAt.gte 是运行期计算的时间窗，只断言存在且为近期过去时刻
+      expect(where.OR[1].updatedAt.gte).toBeInstanceOf(Date);
+      const since = where.OR[1].updatedAt.gte.getTime();
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      expect(Date.now() - since).toBeGreaterThanOrEqual(sevenDaysMs - 5000);
+      expect(Date.now() - since).toBeLessThanOrEqual(sevenDaysMs + 5000);
+      // 访问过滤改为 AND：与 fileStatus 是合取而非析取
+      expect(Array.isArray(where.AND)).toBe(true);
+      expect(where.AND).toHaveLength(1);
+    });
+
     it('失败节点据任务记录取 error（taskStatus 仍空，节点态为终态真相）', async () => {
       prisma.fileSystemNode.findMany.mockResolvedValue([
         {
@@ -477,19 +502,23 @@ describe('UnifiedConversionService', () => {
       expect(call.skip).toBe(0);
     });
 
-    it('范围：where 含 nodeType=FILE + fileStatus=COMPLETED + ownerId=用户（只列自己账号文件，不要求 taskId），count 复用同一 where', async () => {
+    it('范围：where 含 nodeType=FILE + ownerId=用户（只列自己账号文件，不要求 taskId），count 复用同一 where', async () => {
       prisma.fileSystemNode.findMany.mockResolvedValue([]);
       prisma.fileSystemNode.count.mockResolvedValue(0);
 
       await service.listHistory('user-1');
       const call = prisma.fileSystemNode.findMany.mock.calls[0][0];
       expect(call.where.nodeType).toBe('FILE');
-      expect(call.where.fileStatus).toBe('COMPLETED');
+      // 状态条件走 OR：已完成（可打开）+ 近 7 天失败（FAILED 已从 listTasks 的
+      // live 区移入历史区，是失败记录的落点）
+      expect(call.where.OR).toHaveLength(2);
+      expect(call.where.OR[0].fileStatus).toBe('COMPLETED');
+      expect(call.where.OR[1].fileStatus).toBe('FAILED');
+      expect(call.where.OR[1].updatedAt.gte).toBeInstanceOf(Date);
       // 历史不要求 taskId 非空（绝大多数已完成文件 taskId 为 null）
       expect(call.where.taskId).toBeUndefined();
       // 只列归当前用户所有（ownerId=userId）的文件，不含"所在项目的他人文件"
       expect(call.where.ownerId).toBe('user-1');
-      expect(call.where.OR).toBeUndefined();
       expect(prisma.fileSystemNode.count).toHaveBeenCalledWith({
         where: call.where,
       });

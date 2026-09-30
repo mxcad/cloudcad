@@ -26,6 +26,13 @@ import {
 /** 面板云端列表上限（#469）：只取最近的任务，避免全表扫描 */
 const MAX_LIST = 50;
 
+/**
+ * 失败节点在「待转换列表」中的可见时长，与前端本地任务的 TERMINAL_TASK_TTL_MS 对齐。
+ * 超出后 FAILED 节点不再进面板列表——终态不清 taskId，否则永久滞留会让用户每次打开
+ * 图纸都在队列里看到一条无关的旧记录。
+ */
+const FAILED_LIST_VISIBLE_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** 历史分页：每页默认 / 上限（#476） */
 const HISTORY_DEFAULT_LIMIT = 20;
 const HISTORY_MAX_LIMIT = 50;
@@ -210,10 +217,20 @@ export class UnifiedConversionService {
         deletedAt: null,
         deletedByCascade: false,
         taskId: { not: null },
-        fileStatus: {
-          in: [FileStatus.PROCESSING, FileStatus.UPLOADING, FileStatus.FAILED],
-        },
-        OR: this.buildAccessFilter(userId),
+        OR: [
+          // 进行中任务始终可见
+          {
+            fileStatus: {
+              in: [FileStatus.PROCESSING, FileStatus.UPLOADING],
+            },
+          },
+          // 失败任务仅在 FAILED_LIST_VISIBLE_MS 内可见（见常量注释）
+          {
+            fileStatus: FileStatus.FAILED,
+            updatedAt: { gte: new Date(Date.now() - FAILED_LIST_VISIBLE_MS) },
+          },
+        ],
+        AND: this.buildAccessFilter(userId),
       },
       select: {
         id: true,
@@ -311,8 +328,17 @@ export class UnifiedConversionService {
       deletedAt: null,
       deletedByCascade: false,
       nodeType: NodeType.FILE,
-      fileStatus: FileStatus.COMPLETED,
       ownerId: userId,
+      // 历史 = 可打开的已完成文件 + 近 FAILED_LIST_VISIBLE_MS 内的失败记录。
+      // 失败记录从 listTasks 的 live 区移入历史区后仍需可见且可重试；超窗的失败
+      // 不在此列（listTasks 也不返回），等于彻底清出面板。
+      OR: [
+        { fileStatus: FileStatus.COMPLETED },
+        {
+          fileStatus: FileStatus.FAILED,
+          updatedAt: { gte: new Date(Date.now() - FAILED_LIST_VISIBLE_MS) },
+        },
+      ],
       ...(trimmedSearch ? { name: { contains: trimmedSearch } } : {}),
     };
 

@@ -53,6 +53,7 @@ import type {
 	EngineInputField,
 	MxCadEngineParams,
 } from "@cloudcad/contracts";
+import { cachedArtifactReady } from "../utils/conversion-artifact";
 
 /**
  * 从转换选项中挑选契约定义的引擎输入字段（camelCase），丢弃 undefined 字段。
@@ -102,6 +103,7 @@ export class FileConversionService implements IMxcadConversionService {
 	private readonly compression: boolean;
 	private readonly conversionRateLimiter: RateLimiter;
 	private readonly mxcadDebugPath: string;
+	private readonly mxcadUploadPath: string;
 	/** 单次 mxcadassembly 转换超时（毫秒），来自 timeout.fileConversion，默认 180000 */
 	private readonly conversionTimeoutMs: number;
 	/**
@@ -165,6 +167,11 @@ export class FileConversionService implements IMxcadConversionService {
 		this.compression = mxcadConfig?.compression !== false;
 
 		this.mxcadDebugPath = this.configService.get<string>('mxcadDebugPath') || path.join(projectRoot, 'data', 'debug');
+
+		// 与 UploadUtilityService 同一配置键与同一相对路径默认值：产物命名与目录形态
+		// 必须一致，否则本服务的就位检查会与秒传存在性检查给出相反结论。
+		this.mxcadUploadPath =
+			this.configService.get('mxcadUploadPath') || '../../uploads';
 
 		// 转换超时可经 env TIMEOUT_FILE_CONVERSION 调整（默认 180000，
 		// 与 conversion-service 1/2 级超时对齐；大图纸常超 60s，旧默认会把慢转换误杀）
@@ -313,11 +320,52 @@ export class FileConversionService implements IMxcadConversionService {
 	}
 
 	/**
+	 * 转换前产物就位短路：产物已存在且非空则直接返回成功，不再 spawn 引擎。
+	 *
+	 * 缓存判定此前只存在于摄入边界（ingestWholeFile 的 `!forceUpload` 秒传分支），
+	 * 因此 5 条路径的冗余转换全部绕过它：forceUpload、分片合并 ingestChunks、
+	 * 无节点 ingestNoNodePreview、面板触发 convertNode / retryTask，以及本方法自身。
+	 * 这 5 条最终都汇聚到 convertFile，在此加一道即全部覆盖。
+	 *
+	 * 仅对「打开方向」的默认产物命名生效（源 CAD → 上传目录
+	 * `<hash>.<源扩展名>.mxweb`）。导出方向（.mxweb 源）、bin→mxweb（outpath）、
+	 * 自定义产物名或命令（outname/cmd）的产物位置不可推导，一律回落真实转换。
+	 * 产物不在、或任何 fs 异常一律返回 null 走原逻辑，fail-closed。
+	 */
+	private cachedConversionResult(
+		options: ConversionOptions
+	): ConversionResult | null {
+		if (
+			!options.fileHash ||
+			options.outpath !== undefined ||
+			options.outname ||
+			options.cmd ||
+			this.isExportDirection(options.srcPath)
+		) {
+			return null;
+		}
+
+		if (!cachedArtifactReady(this.mxcadUploadPath, options.fileHash, options.srcPath)) {
+			return null;
+		}
+
+		this.logger.log(
+			`转换产物已就位，跳过引擎执行: ${path.basename(options.srcPath)}`
+		);
+		// newpath 与真实转换保持一致为 ''：本方向引擎不回 newpath，
+		// resolveEngineNewpath 的回落值即 ''，调用方按既有语义处理。
+		return { isOk: true, ret: { code: 0, message: "ok", newpath: "" } };
+	}
+
+	/**
 	 * 实际执行文件转换（内部方法）
 	 */
 	private async executeConversion(
 		options: ConversionOptions,
 	): Promise<ConversionResult> {
+		const cached = this.cachedConversionResult(options);
+		if (cached) return cached;
+
 		let stdout = "";
 		let stderr = "";
 		let commandStr = "";

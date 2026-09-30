@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeNameService } from '../../file-operations/node-name.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
+import { cachedArtifactFileName } from '../utils/conversion-artifact';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { IStorageService } from '../../storage/interfaces/storage-service.interface';
@@ -44,12 +45,15 @@ export class UploadUtilityService {
         return size;
       }
 
-      const uploadPath =
-        this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
-      const allFiles = await this.fileSystemService.readDirectory(uploadPath);
+      const allFiles = await this.fileSystemService.readDirectory(
+        this.mxcadUploadPath
+      );
       const relatedFiles = allFiles.filter((file) => file.startsWith(fileHash));
       if (relatedFiles.length > 0) {
-        const firstFile = path.join(uploadPath, relatedFiles[0]);
+        const firstFile = path.join(
+          this.mxcadUploadPath,
+          relatedFiles[0]
+        );
         return await this.fileSystemService.getFileSize(firstFile);
       }
 
@@ -65,9 +69,7 @@ export class UploadUtilityService {
     originalFilename: string
   ): Promise<boolean> {
     const targetFile = this.getConvertedFileName(fileHash, originalFilename);
-    const uploadPath =
-      this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
-    const localPath = path.join(uploadPath, targetFile);
+    const localPath = path.join(this.mxcadUploadPath, targetFile);
     const existsInLocal = fs.existsSync(localPath);
 
     if (!existsInLocal) {
@@ -90,19 +92,14 @@ export class UploadUtilityService {
   }
 
   getConvertedFileName(fileHash: string, originalFilename: string): string {
-    const suffix = originalFilename.substring(
-      originalFilename.lastIndexOf('.') + 1
-    );
-    return `${fileHash}.${suffix}.mxweb`;
+    return cachedArtifactFileName(fileHash, originalFilename);
   }
 
   async checkChunkExistsInStorage(
     fileHash: string,
     chunkIndex: number
   ): Promise<boolean> {
-    const uploadPath =
-      this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
-    const chunkDir = path.join(uploadPath, `chunk_${fileHash}`);
+    const chunkDir = path.join(this.mxcadUploadPath, `chunk_${fileHash}`);
 
     if (!fs.existsSync(chunkDir)) {
       return false;
