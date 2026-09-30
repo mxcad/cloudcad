@@ -99,11 +99,17 @@ export class DatabaseService
     const isDev = process.env.NODE_ENV !== 'production';
     if (isDev) this.logger.log('正在连接数据库...');
 
+    const dbConfig = this.configService.get<DatabaseConfig>('database', {
+      infer: true,
+    });
     try {
-      const connectPromise = this.$connect();
-      const timeout = this.configService.get('database', {
-        infer: true,
-      })!.connectionTimeoutMillis;
+      // 用真实查询而非 $connect() 判定连通：Prisma 7 的 $connect() 走驱动
+      // adapter 时只建连接池、不校验库名，库名配错会误报「连接成功」
+      // （实测 2026-09-30：DATABASE_URL 指向不存在的库，$connect() 返回成功、
+      // 错误延后到首个查询才暴露）。真实查询才会触发服务端断开并报出
+      // database does not exist，否则这段优雅提示对最常见的配置错误形同虚设。
+      const connectPromise = this.$queryRaw`SELECT 1`;
+      const timeout = dbConfig!.connectionTimeoutMillis;
       // 超时 Promise：仅用于 Promise.race 超时控制，永远只 reject 不 resolve
       const timeoutPromise = new Promise<void>((_, reject) =>
         setTimeout(
@@ -121,7 +127,13 @@ export class DatabaseService
         this.logger.log(`数据库连接成功 (${duration}ms)`);
       }
     } catch (error) {
-      this.logger.error('数据库连接失败:', error);
+      // 带上连接目标：P1017 只说「连不上」，不指出试图连的是哪个库。库名写错时
+      // postgres 会先接受 TCP 连接再立即断开（库不存在），报的就是这类模糊错误，
+      // 带上 host:port/database 才能一眼看出是库名配错还是网络不通。
+      this.logger.error(
+        `数据库连接失败 (${dbConfig!.host}:${dbConfig!.port}/${dbConfig!.database}):`,
+        error
+      );
       throw error;
     }
   }

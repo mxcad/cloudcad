@@ -38,6 +38,14 @@ const CACHE_TTL = 3600; // 1 小时
 export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService {
   private readonly logger = new Logger(RuntimeConfigService.name);
 
+  /**
+   * 启动期标记。模块实例化（含 MulterModule.registerAsync 等 useFactory）发生在
+   * 任何 onModuleInit 之前，此期间数据库是否可达尚未验证；此时抛错会让进程直接崩在
+   * 实例化阶段，DatabaseService.onModuleInit 的带超时优雅错误提示根本走不到。
+   * 启动期允许降级、启动结束后必须抛错——启动失败仍由 onModuleInit 统一报出。
+   */
+  private startupPhase = true;
+
   constructor(
     private readonly prisma: DatabaseService,
     @InjectRedis() private readonly redis: Redis
@@ -48,6 +56,9 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
    * 优化：使用异步并行同步，不阻塞启动
    */
   async onModuleInit() {
+    // 实例化期已结束：此后数据库故障必须抛错，不能静默降级
+    this.startupPhase = false;
+
     // 异步同步配置，不阻塞启动
     this.syncDefaultConfigs().catch((error) => {
       this.logger.error('运行时配置同步失败:', error);
@@ -125,10 +136,23 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       return (defaultValue ?? (def?.defaultValue as T)) as T;
     }
 
-    // 3. 查数据库
-    const config = await this.prisma.runtimeConfig.findUnique({
-      where: { key },
-    });
+    // 3. 查数据库。启动期数据库不可达时降级用默认值，不再抛错：
+    //    MulterModule.registerAsync 的 useFactory 等在模块实例化期 await 此处查库，
+    //    早于任何 onModuleInit 执行；一旦抛错进程直接崩在实例化阶段，
+    //    DatabaseService.onModuleInit 的带超时优雅错误提示根本走不到
+    //    （实例：2026-09-30 部署包 start 在 PG 未就绪时崩在 multer 注册，
+    //    而非报出「数据库连接失败/超时」）。启动失败仍由 onModuleInit 统一报出
+    //    （DatabaseService 会抛错使启动中止），故此处降级不会掩盖真实故障；
+    //    运行期保持抛错，不静默降级。
+    const config = await this.prisma.runtimeConfig
+      .findUnique({ where: { key } })
+      .catch((error) => {
+        if (!this.startupPhase) throw error;
+        this.logger.warn(
+          `读取运行时配置失败，启动期降级用默认值 (${key}): ${(error as Error).message}`
+        );
+        return null;
+      });
 
     if (!config) {
       // 4. 使用传入的默认值或配置定义中的默认值

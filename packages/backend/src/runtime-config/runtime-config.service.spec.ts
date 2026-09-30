@@ -3,7 +3,11 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import {
+	BadRequestException,
+	Logger,
+	NotFoundException,
+} from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { DatabaseService } from "../database/database.service";
 import { RuntimeConfigService } from "./runtime-config.service";
@@ -85,6 +89,50 @@ describe("RuntimeConfigService", () => {
 
 			const result = await service.getValue("mailEnabled");
 			expect(result).toBe(false); // From RUNTIME_CONFIG_DEFINITIONS
+		});
+	});
+
+	// ==================== getValue 启动期降级 ====================
+	// 回归：MulterModule.registerAsync 的 useFactory 在模块实例化期（早于任何
+	// onModuleInit）await getValue 查库，数据库不可达时若抛错，进程崩在实例化
+	// 阶段，DatabaseService.onModuleInit 的带超时优雅错误提示走不到。
+	describe("getValue 启动期/运行期降级", () => {
+		// 模拟实例化期数据库不可达（P1017：缓存 miss + 查询失败）
+		const dbDown = () => {
+			mockRedis.get.mockResolvedValue(null);
+			mockPrisma.runtimeConfig.findUnique.mockRejectedValue(
+				new Error("P1017: Can't reach database server"),
+			);
+		};
+
+		it("启动期数据库不可达 → 降级返回调用方默认值，不抛错", async () => {
+			const warnSpy = jest.spyOn(Logger.prototype, "warn");
+			dbDown();
+
+			const result = await service.getValue("maxFileSize", 500);
+
+			expect(result).toBe(500);
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining("启动期降级用默认值"),
+			);
+		});
+
+		it("启动期数据库不可达且未传默认值 → 回落到配置定义默认值", async () => {
+			dbDown();
+
+			// maxFileSize 在 RUNTIME_CONFIG_DEFINITIONS 中的默认值是 100
+			expect(await service.getValue("maxFileSize")).toBe(100);
+		});
+
+		it("运行期（onModuleInit 之后）数据库不可达 → 抛错，不静默降级", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+			await service.onModuleInit();
+
+			dbDown();
+
+			await expect(service.getValue("maxFileSize", 500)).rejects.toThrow(
+				"Can't reach database server",
+			);
 		});
 	});
 
