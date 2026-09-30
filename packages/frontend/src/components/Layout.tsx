@@ -14,6 +14,7 @@ import { TruncateText } from './ui/TruncateText';
 import { UserAvatar } from './ui/UserAvatar';
 import { formatFileSize } from '../utils/fileUtils';
 import { ThemeToggle } from './ThemeToggle';
+import { MobileOpenButton } from './MobileOpenButton';
 import { NoticeBanner } from './notice';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useTheme } from '../contexts/ThemeContext';
@@ -795,6 +796,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 </Button>
               </Tooltip>
             </div>
+
+            {/* 用手机端打开（不可映射路径或开关关闭时不渲染） */}
+            <MobileOpenButton />
 
             {/* 语言切换 */}
             <div className="p-0.5">

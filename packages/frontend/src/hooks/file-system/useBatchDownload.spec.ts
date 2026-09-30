@@ -18,7 +18,11 @@ vi.mock('@/config/apiConfig', () => ({
   getApiBaseUrl: () => 'http://localhost:3001/api/v1',
 }));
 
-vi.mock('@/utils/tokenUtils', () => ({
+// 只覆盖 getValidToken，其余导出透传真实实现——否则 tokenUtils 新增导出
+// （如 decodeJwtPayload）会被这个桩吞掉，凡是有测试间接引入 tokenRefresh 的
+// spec 都在模块求值期炸 No "decodeJwtPayload" export is defined
+vi.mock('@/utils/tokenUtils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/utils/tokenUtils')>()),
   getValidToken: () => 'test-token',
 }));
 
