@@ -133,6 +133,32 @@ export function setSpaNavigate(fn: (path: string) => void): void {
   spaNavigate = fn;
 }
 
+/**
+ * SPA 优先导航，未注入时整页降级。
+ *
+ * 整页刷新会重建 CAD 编辑器的 WebGL 上下文，产生白屏闪烁。调用方只描述目标
+ * path，降级策略集中在这一处。
+ */
+export function navigateSpaOrReload(path: string): void {
+  if (spaNavigate) {
+    spaNavigate(path);
+  } else {
+    window.location.href = path;
+  }
+}
+
+/** 拼「登录后回当前页」的 URL。path 缺省取当前 pathname+search。 */
+export function buildLoginUrl(
+  path: string = window.location.pathname + window.location.search
+): string {
+  return `/login?redirect=${encodeURIComponent(path)}`;
+}
+
+/** 跳登录页（带当前页 redirect），SPA 优先。 */
+export function redirectToLogin(): void {
+  navigateSpaOrReload(buildLoginUrl());
+}
+
 function getCurrentReturnUrl(): string {
   const path =
     window.location.pathname + window.location.search + window.location.hash;
@@ -230,13 +256,7 @@ export function handleTokenRefreshFailure() {
   }
 
   const returnUrl = getCurrentReturnUrl();
-  const loginUrl = `/login?redirect=${encodeURIComponent(returnUrl)}`;
-
-  if (spaNavigate) {
-    spaNavigate(loginUrl);
-  } else {
-    window.location.href = loginUrl;
-  }
+  navigateSpaOrReload(buildLoginUrl(returnUrl));
 }
 
 /**

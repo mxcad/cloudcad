@@ -409,6 +409,9 @@ importers:
       '@cloudcad/api-sdk':
         specifier: workspace:*
         version: link:../api-sdk
+      '@cloudcad/platform':
+        specifier: workspace:*
+        version: link:../platform
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.4.0(react-hook-form@7.80.0(react@19.2.7))
@@ -632,6 +635,9 @@ importers:
       '@cloudcad/api-sdk':
         specifier: workspace:*
         version: link:../api-sdk
+      '@cloudcad/platform':
+        specifier: workspace:*
+        version: link:../platform
       '@jaames/iro':
         specifier: ^5.5.2
         version: 5.5.2
@@ -804,6 +810,12 @@ importers:
         version: 3.2.7(@types/node@26.1.2)(happy-dom@20.10.6)(jiti@2.7.0)(jsdom@27.4.0(@noble/hashes@2.4.0))(lightningcss@1.32.0)(msw@2.14.6(@types/node@26.1.2)(typescript@5.9.3))(sass@1.101.0)(terser@5.48.0)(tsx@4.22.4)(yaml@2.9.0)
 
   packages/mxVersionTool: {}
+
+  packages/platform:
+    devDependencies:
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
 
   packages/storage-service: {}
 

@@ -74,6 +74,8 @@ CloudCAD 架构决策记录（`docs/adr/`）。编号唯一；`superseded` 表�
 | [0068](0068-mobile-native-member-center.md) | `accepted` | 0068 — 移动端原生会员中心：购买/续费/升级/微信支付/订单/退款全在移动端完成（后端 billing/vip 零改动，交易类型按 UA 分流 MWEB/NATIVE，MWEB 回跳靠 localStorage 恢复） |
 | [0069](0069-mxcad-engine-contract-and-contracts-purity.md) | `accepted` | 0069 — mxcad 两级参数契约收进 @cloudcad/contracts（唯一 builder/parser + CONTENT_KEY_FIELDS 派生 + ConversionTask 判别联合删 printToPdf）+ contracts 纯函数式契约准入四条与纯度门禁 |
 
+| [0070](0070-platform-package-and-pc-mobile-url-interop.md) | `accepted` | 0070 — `@cloudcad/platform` 跨端公共层（准入四条：纯函数/不绑框架/不绑端/重复已成立）+ PC↔移动端 URL 互通走「语义等价 + 双向翻译层」（映射表单一事实源、两端参数名同名铁律、移动端 URL 形态固定 `base?query#path`）+ 双向逃生入口 + 消灭整页重载 + 守卫异步刷新 |
+
 ## 规则
 
 - 新 ADR 编号 = 当前最大编号 + 1；被取代的决策在原 ADR 中标注 `**Status**: superseded by ADR-NNNN`。

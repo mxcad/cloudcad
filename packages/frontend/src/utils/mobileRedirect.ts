@@ -15,6 +15,10 @@
  * 移动端约定：业务参数在 **hash 之前**（`/mxcad_mobile/?fileId=x#/shell`），
  * 因为移动端的 `useFileLoader` 读的是 `window.location.search`。所以这里拼的
  * URL 形态固定为 `base?query#path`，改动前请先确认移动端读取位置未变。
+ *
+ * 反向兜底：移动端 URL 被复制到 PC 浏览器打开时，PC 部署点会收到
+ * `/mxcad_mobile/...` 并落到空白 Layout。这里识别该前缀后原样跳回移动端站点
+ * （`buildMobilePassthroughUrl`），不做翻译——URL 本来就是移动端的形态。
  */
 
 import {
@@ -52,6 +56,53 @@ export function getMobileBaseUrl(
 ): string {
   if (import.meta.env.DEV) return 'http://localhost:7001/';
   return config?.mobilePageUrl || `/${config?.mobileAccessPath || 'mxcad_mobile'}/`;
+}
+
+/** 移动端部署子路径（默认 `mxcad_mobile`） */
+export function getMobileAccessPath(
+  config: MobileRedirectConfig | undefined
+): string {
+  return config?.mobileAccessPath || 'mxcad_mobile';
+}
+
+/**
+ * 当前 URL 是否已经是移动端形态。
+ *
+ * 移动端用户复制手机地址栏给同事、同事在 PC 浏览器打开就会命中：PC 部署点收到
+ * `/mxcad_mobile/...` 会落到受保护路由的空白 Layout。这种情况不做翻译——URL
+ * 本来就是移动端的，直接回到移动端站点。
+ */
+export function isMobileAccessPath(
+  pathname: string,
+  accessPath: string
+): boolean {
+  return pathname === `/${accessPath}` || pathname.startsWith(`/${accessPath}/`);
+}
+
+/**
+ * 纯函数：移动端形态 URL → 移动端站点 URL（原样保留 path / search / hash）。
+ *
+ * hash 必须保留：移动端是 hash 路由，业务路径就在 `#` 之后。
+ *
+ * 异域部署（`mobilePageUrl` 指向另一台主机）时不能盲拼原 path——移动端站点
+ * 未必也部署在 `/mxcad_mobile` 子路径下，此时取配置里 base 自己的 pathname，
+ * 只保留移动端自身的 hash 路由部分。
+ */
+export function buildMobilePassthroughUrl(
+  config: MobileRedirectConfig | undefined,
+  current: { pathname: string; search: string; hash: string }
+): string | null {
+  const base = getMobileBaseUrl(config);
+  let resolved: URL;
+  try {
+    resolved = new URL(base, window.location.origin);
+  } catch {
+    return null;
+  }
+
+  const sameOrigin = resolved.origin === window.location.origin;
+  const path = sameOrigin ? current.pathname : resolved.pathname;
+  return `${resolved.origin}${path}${current.search}${current.hash}`;
 }
 
 export interface MobileRedirectInput {
@@ -146,6 +197,18 @@ export async function performMobileRedirectIfNeeded(): Promise<boolean> {
   const config = await getMobileRedirectConfig();
   const pathname = window.location.pathname;
   const ua = currentUA();
+
+  if (isMobileAccessPath(pathname, getMobileAccessPath(config))) {
+    const url = buildMobilePassthroughUrl(config, {
+      pathname,
+      search: window.location.search,
+      hash: window.location.hash,
+    });
+    if (url) {
+      window.location.replace(url);
+      return true;
+    }
+  }
 
   if (
     !shouldRedirectToMobile({

@@ -2,6 +2,7 @@ import { isAuthenticated } from '@/utils/authCheck';
 import { globalShowConfirm } from '@/utils/notificationEvents';
 import { t } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from './quotaUpgradeGuide';
+import { redirectToLogin } from '@/config/tokenRefresh';
 
 /** 后端 VIP 专属功能门控业务错误码（VipFeatureRequiredException 响应 code） */
 export const VIP_FEATURE_REQUIRED_CODE = 'VIP_FEATURE_REQUIRED';
@@ -58,7 +59,7 @@ export async function handleVipFeatureRequiredError(
       'pendingVipPurchase',
       JSON.stringify({ restrictionKey: EXPORT_DOWNLOAD_FEATURE })
     );
-    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    redirectToLogin();
     return;
   }
 

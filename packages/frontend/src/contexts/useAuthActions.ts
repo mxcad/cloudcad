@@ -15,6 +15,7 @@ import { t } from '@/languages';
 import {
   triggerProactiveRefresh,
   cancelProactiveRefresh,
+  redirectToLogin,
 } from '@/config/clientSetup';
 import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
@@ -355,9 +356,10 @@ export function useAuthActions({
       }
 
       // 5. 跳转到登录页（保留当前页面作为 redirect，登录成功后跳回原页面）
+      // 走 SPA 优先：整页刷新会重建 CAD 编辑器 WebGL 上下文，登出瞬间白屏闪烁
       const currentPath = window.location.pathname + window.location.search;
       if (currentPath !== '/login' && currentPath !== '/register') {
-        window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+        redirectToLogin();
       }
     }
   }, [setToken, setUser]);

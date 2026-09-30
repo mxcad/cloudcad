@@ -1,0 +1,21 @@
+{
+  "name": "@cloudcad/platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CloudCAD 跨端公共层——PC / 移动端（以及未来的 App、Electron、平板）共用的纯函数与纯数据。准入规则见 README.md。",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}
