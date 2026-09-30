@@ -1301,21 +1301,26 @@ useLoginPrompt(() => {
 .account-section :deep(.van-cell__value) {
   flex: 1;
   min-width: 0;
+  /* flex + align-items:center：已绑定的勾与右侧箭头同垂直中线对齐——原 block 布局下
+     勾落在文本基线上，与箭头错位；justify-content:flex-end 保留原右对齐。 */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
-/* display:inline-block + max-width:100%：短值收缩到自身宽度（不占满），长值封顶在
-   可用宽度并真正渲染省略号——display:flex 下的裸文本节点不会出 ellipsis，是硬剪。
-   text-align:left 保证超长时从左起裁成「1245…@…」而非反向裁掉邮箱头部。 */
+/* 值作为 flex 项：min-width:0 允许收缩，overflow+ellipsis 保证长邮箱真正渲染省略号
+   （flex 项里的裸文本节点不会出 ellipsis，须 overflow:hidden 才能硬剪）。 */
 .cell-value {
-  display: inline-block;
   max-width: 100%;
-  text-align: left;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .verified-mark {
+  flex: none;
   color: var(--accent, #00a99e);
 }
 

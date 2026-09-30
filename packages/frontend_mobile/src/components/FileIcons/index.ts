@@ -1,2 +1,7 @@
 export { default as FolderIcon } from './FolderIcon.vue'
 export { default as ProjectIcon } from './ProjectIcon.vue'
+export { default as DwgIcon } from './DwgIcon.vue'
+export { default as DxfIcon } from './DxfIcon.vue'
+export { default as PdfIcon } from './PdfIcon.vue'
+export { default as ImageIcon } from './ImageIcon.vue'
+export { default as FileIcon } from './FileIcon.vue'

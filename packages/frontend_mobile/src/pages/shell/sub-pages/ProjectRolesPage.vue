@@ -46,7 +46,8 @@ import type {
 
 const route = useRoute()
 const router = useRouter()
-const projectId = computed(() => (route.params.id as string) ?? '')
+// 路由参数名与 @cloudcad/platform 映射表共用（router/index.ts）
+const projectId = computed(() => (route.params.projectId as string) ?? '')
 
 // ── 角色列表 ──
 const roles = ref<ProjectRoleDto[]>([])

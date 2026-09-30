@@ -7,7 +7,7 @@
       "cmd": "Mx_NewFile"
     },
     {
-      "text": "打开",
+      "text": "打开文件",
       "cmd": "OpenDwg",
       "icon": "dakai"
     },

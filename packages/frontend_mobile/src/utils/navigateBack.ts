@@ -21,9 +21,9 @@ const PC_PATHS = {
 } as const;
 
 /**
- * 获取 PC 端云图基础 URL
+ * 获取 PC 端云图基础 URL（origin，不带结尾斜杠）
  */
-function getPcBaseUrl(): string {
+export function getPcBaseUrl(): string {
   if (import.meta.env.DEV) {
     return 'http://localhost:3000';
   }

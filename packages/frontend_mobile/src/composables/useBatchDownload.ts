@@ -15,6 +15,7 @@
 import { ref, onUnmounted } from 'vue'
 import {
   batchDownloadControllerCreateTask,
+  batchDownloadControllerCreateSingleFileTask,
   batchDownloadControllerGetUserTasks,
   batchDownloadControllerGetFolderFiles,
   batchDownloadControllerCancelTask,
@@ -113,10 +114,63 @@ export function useBatchDownload() {
     await createZipTask(files, opts)
   }
 
+  /**
+   * 单文件格式转换下载任务（dwg/dxf/pdf 走异步队列，对齐 PC createSingleFormatTask）。
+   *
+   * 同步 download-with-format 对慢转换会挂起至超时（PC 因此把转换格式全走异步）：
+   * 后端内核复用批量任务表（mode='individual' 单项），HTTP 立即返回 taskId，
+   * 转换完成后由任务面板的单项下载（items/0/download）取产物。返回 taskId，失败抛错。
+   */
+  async function createSingleFormatTask(
+    nodeId: string,
+    fileName: string,
+    format: string,
+    opts: {
+      dwgVersion?: number
+      width?: string
+      height?: string
+      colorPolicy?: string
+      projectId?: string
+    } = {}
+  ): Promise<string> {
+    const res = await batchDownloadControllerCreateSingleFileTask({
+      body: {
+        nodeId,
+        fileName,
+        format,
+        ...(opts.dwgVersion ? { dwgVersion: opts.dwgVersion } : {}),
+        ...(opts.width ? { width: opts.width } : {}),
+        ...(opts.height ? { height: opts.height } : {}),
+        ...(opts.colorPolicy ? { colorPolicy: opts.colorPolicy } : {}),
+        ...(opts.projectId ? { projectId: opts.projectId } : {}),
+      },
+    } as never)
+    if (res.error) throw new Error(String(res.error))
+    const data = (res.data ?? {}) as { taskId?: string }
+    const taskId = data.taskId
+    if (taskId) {
+      // 本地记录展示名（服务端任务 DTO 不含 name），与 zip 任务同口径
+      tasks.value = tasks.value.map((t) => (t.taskId === taskId ? { ...t, name: fileName } : t))
+    }
+    await loadTasks()
+    return taskId ?? ''
+  }
+
   /** zip 完成下载（锚点） */
   function downloadZip(taskId: string) {
     const a = document.createElement('a')
     a.href = cachedApiUrl(`/file-system/batch-download/${taskId}/download`)
+    a.download = ''
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  /** individual 任务单项产物下载（锚点）：单文件任务只有 1 项，固定 items/0/download */
+  function downloadSingleFileItem(taskId: string) {
+    const a = document.createElement('a')
+    a.href = cachedApiUrl(`/file-system/batch-download/${taskId}/items/0/download`)
     a.download = ''
     a.style.display = 'none'
     document.body.appendChild(a)
@@ -173,7 +227,9 @@ export function useBatchDownload() {
     loadTasks,
     createZipTask,
     createFolderZipTask,
+    createSingleFormatTask,
     downloadZip,
+    downloadSingleFileItem,
     cancelTask,
     retryTask,
     retryFailedItems,

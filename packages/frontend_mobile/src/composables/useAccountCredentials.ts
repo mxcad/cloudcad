@@ -235,6 +235,11 @@ export function useAccountCredentials(profile: Ref<UserProfile>, refresh: () => 
 
   function openAccountSheet(feature: ContactType) {
     accountSheetFeature.value = feature
+    // 未绑定只有一个动作（绑定），直接进绑定弹窗，不多加一层选择（对齐 bug 报告 + 上方文档意图）
+    if (!isAccountBound(feature)) {
+      openCodeEditor(feature)
+      return
+    }
     showAccountSheet.value = true
   }
 

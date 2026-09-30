@@ -415,8 +415,14 @@ const handleShareCurrent = () => {
   showShareCurrent.value = true;
 };
 
-function onBeforeUnloadHandler() {
+function onBeforeUnloadHandler(e: BeforeUnloadEvent) {
   exitCollaborationIfNeeded();
+  // 有未保存更改时拦截刷新/关闭：触发浏览器原生「离开页面？」确认（对齐 PC mxcadBootstrap）
+  // 移动端无多窗口，刷新/关闭是唯一丢失图纸的途径，必须拦截
+  if (editorState.state.isModified) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
 }
 
 onMounted(async () => {

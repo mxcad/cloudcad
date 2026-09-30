@@ -1,6 +1,8 @@
 import { ref, readonly } from 'vue';
 import { versionControlControllerGetFileHistory } from '../api-sdk';
 import { useEditorState } from './useEditorState';
+import { openDrawing } from '../services/drawingOpener';
+import type { DrawingOpenRequest } from '../services/drawingOpener';
 import { showToast } from 'vant';
 import { t } from '@/languages';
 
@@ -82,16 +84,44 @@ export function useVersionHistory() {
     }
   }
 
-  function openHistoricalVersion(revision: number): void {
+  /** 由当前编辑器状态还原 openDrawing 请求，保留分享/资源库来源语义 */
+  function buildCurrentFileRequest(): DrawingOpenRequest | null {
     const fileId = editorState.state.fileId;
-    if (!fileId) {
+    if (!fileId) return null;
+
+    // 分享链接的来源标记只在 URL 上（editorState 不存 shareToken）
+    const shareToken = new URLSearchParams(window.location.search).get('shareToken');
+    if (shareToken) return { source: 'share', token: shareToken, nodeId: fileId };
+
+    const libraryKey = editorState.state.libraryKey;
+    if (libraryKey) return { source: 'library', libraryKey, nodeId: fileId };
+
+    return { source: 'node', nodeId: fileId };
+  }
+
+  /**
+   * 打开历史版本：更新 hash 之前的 ?v= 后原地重载文件，不整站刷新。
+   *
+   * useFileLoader 从 window.location.search 读版本号（hash 路由下 # 之后不参与），
+   * 所以用 replaceState 原地改 search，与 stores/editor.ts 的 resetNewFile 同口径；
+   * 原实现走 window.location.href 会销毁并重建 WebGL 引擎实例。
+   */
+  async function openHistoricalVersion(revision: number): Promise<boolean> {
+    const request = buildCurrentFileRequest();
+    if (!request) {
       showToast(t('无法打开历史版本：缺少文件ID'));
-      return;
+      return false;
     }
 
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.set('v', String(revision));
-    window.location.href = currentUrl.toString();
+    window.history.replaceState(history.state, '', currentUrl.toString());
+
+    try {
+      return await openDrawing(request);
+    } catch {
+      return false;
+    }
   }
 
   function reset() {

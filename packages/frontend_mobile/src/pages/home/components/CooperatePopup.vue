@@ -3,11 +3,13 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { t } from '@/languages';
 import { parseWorkData, getWorkCreator, parseUserData, type Work } from '../../../composables/useCooperate';
 import { useUser } from '../../../composables/useUser';
+import { useSave } from '../../../composables/useSave';
 import { useEditorStore } from '../../../stores/editor';
 import { useCollabStore } from '../../../stores/collab';
 import { storeToRefs } from 'pinia';
 import { showConfirmDialog } from 'vant';
 import FloatingPopup from '../../../components/FloatingPopup.vue';
+import DialogBase from '../../../components/DialogBase.vue';
 import WorkCard, { type WorkDisplay } from '../../../components/WorkCard.vue';
 
 const emit = defineEmits<{
@@ -192,20 +194,47 @@ const totalWorksCount = computed(() =>
 
 // --- Handlers ---
 
-async function checkUnsavedBeforeAction(): Promise<boolean> {
-  if (editorStore.state.isModified) {
-    try {
-      await showConfirmDialog({
-        title: t('未保存的更改'),
-        message: t('当前图纸有未保存的更改，确定要继续吗？'),
-        confirmButtonText: t('确定'),
-        cancelButtonText: t('取消'),
-      });
-    } catch {
-      return false;
-    }
+// 创建/加入协同前的未保存更改守卫：三按钮「保存/不保存/取消」（对齐 PC showUnsavedChangesDialog）
+// 旧版只有「确定(丢弃)/取消」，无法先保存——有未保存更改时点确定即丢更改，属数据丢失风险
+const { save: saveCollab } = useSave();
+const savingUnsaved = ref(false);
+const showUnsavedDialog = ref(false);
+let unsavedResolve: ((ok: boolean) => void) | null = null;
+
+function checkUnsavedBeforeAction(): Promise<boolean> {
+  if (!editorStore.state.isModified) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    unsavedResolve = resolve;
+    showUnsavedDialog.value = true;
+  });
+}
+
+function finishUnsaved(ok: boolean) {
+  showUnsavedDialog.value = false;
+  unsavedResolve?.(ok);
+  unsavedResolve = null;
+}
+
+async function onUnsavedSave() {
+  savingUnsaved.value = true;
+  try {
+    const res = await saveCollab();
+    savingUnsaved.value = false;
+    // 保存成功才继续；失败（无权限/需另存为等）则中止，防丢更改（save 已弹原因提示）
+    finishUnsaved(res.success);
+  } catch {
+    savingUnsaved.value = false;
+    finishUnsaved(false);
   }
-  return true;
+}
+
+function onUnsavedDiscard() {
+  editorStore.setIsModified(false);
+  finishUnsaved(true);
+}
+
+function onUnsavedCancel() {
+  finishUnsaved(false);
 }
 
 function handleCreateWork() {
@@ -372,6 +401,20 @@ function mapUser() {
     </template>
 
   </FloatingPopup>
+
+  <!-- 未保存更改三按钮守卫（保存/不保存/取消），对齐 PC -->
+  <DialogBase :show="showUnsavedDialog" :title="t('未保存的更改')" @close="onUnsavedCancel">
+    <p class="unsaved-msg">{{ t('当前图纸有未保存的更改，是否保存？') }}</p>
+    <template #footer>
+      <div class="unsaved-footer">
+        <van-button plain block @click="onUnsavedCancel">{{ t('取消') }}</van-button>
+        <van-button plain block @click="onUnsavedDiscard">{{ t('不保存') }}</van-button>
+        <van-button type="primary" block :loading="savingUnsaved" @click="onUnsavedSave">
+          {{ t('保存') }}
+        </van-button>
+      </div>
+    </template>
+  </DialogBase>
 </template>
 
 <style scoped lang="scss">
@@ -562,5 +605,22 @@ function mapUser() {
   color: var(--danger);
   background: var(--van-background);
   border: 1px solid var(--danger);
+}
+
+/* ===== 未保存更改三按钮守卫 ===== */
+.unsaved-msg {
+  margin: 0;
+}
+
+.unsaved-footer {
+  display: flex;
+  gap: var(--popup-footer-gap);
+  padding: 0 var(--space-lg) var(--space-lg);
+  padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+
+  :deep(.van-button) {
+    font-size: var(--font-size-body);
+    border-radius: var(--radius-md);
+  }
 }
 </style>

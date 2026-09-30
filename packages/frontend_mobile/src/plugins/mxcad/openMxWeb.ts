@@ -2,10 +2,16 @@ import { t } from '@/languages';
 import { MxCpp } from 'mxcad';
 import { showToastOnce } from '@/utils/toast';
 
-export function openMxWeb(
-  url: string,
-  options?: { requestHeaders?: Record<string, string> }
-) {
+export interface OpenMxWebOptions {
+  requestHeaders?: Record<string, string>;
+  /**
+   * 引擎 fetch 标志位。「无缓存打开」传 LOAD_TO_MEMORY | PERSIST_FILE | REPLACE，
+   * 强制绕过 IndexedDB 与浏览器缓存重新拉取；不传则用引擎默认（走缓存）。
+   */
+  fetchAttributes?: number;
+}
+
+export function openMxWeb(url: string, options?: OpenMxWebOptions) {
   return new Promise<boolean>((res) => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -38,7 +44,8 @@ export function openMxWeb(
           }
         },
         undefined,
-        headers
+        headers,
+        options?.fetchAttributes
       );
       if (!isOpen) res(false);
     } catch (e) {

@@ -2,6 +2,7 @@ import { useRouter } from 'vue-router';
 import { showFailToast } from 'vant';
 import { t } from '@/languages';
 import { useEditorState } from '@/composables/useEditorState';
+import { useOpenGuard } from '@/composables/useOpenGuard';
 import { openDrawing } from '@/services/drawingOpener';
 import { useShellStack, type ShellReturnTarget } from '@/stores/shellStack';
 
@@ -22,11 +23,15 @@ export function useShellFileOpen() {
   const router = useRouter();
   const editorState = useEditorState();
   const shellStack = useShellStack();
+  const { guardBeforeOpen } = useOpenGuard();
 
   async function openFromList(
     nodeId: string,
     returnTarget: ShellReturnTarget
   ): Promise<boolean> {
+    // 打开新图纸前有未保存更改则确认（共享守卫，见 useOpenGuard）
+    if (!(await guardBeforeOpen())) return false;
+
     shellStack.setReturnTarget(returnTarget);
 
     // 清掉上一次的文件上下文与错误（保留 isModified/isActive/loading）

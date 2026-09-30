@@ -102,9 +102,8 @@ watch(keyword, () => {
 
 watch(filter, () => loadShares())
 
-function shareBaseUrl(shareId: string): string {
-  return `${location.origin}/share/${shareId}`
-}
+// 分享链接一律取后端返回的 url（ShareListItemDto.url 必填）。
+// 不本地拼 `/share/{id}`——两端路由表里都没有 `/share/:token`，拼出来是死链。
 
 // 到期时间展示（对齐 PC formatExpiryDate）：null=永不过期，否则本地化日期
 function formatExpiryDate(dateStr: string | null): string {
@@ -263,7 +262,12 @@ function onActionSheetSelect(action: { name: string; className?: string }) {
   const item = activeShare.value
   if (!item) return
 
-  const url = item.url || shareBaseUrl(item.token)
+  const url = item.url
+  // 撤销走 token，不依赖链接；其余动作都基于 url，缺失时给可见提示而非静默无动作
+  if (!url && action.name !== t('撤销分享')) {
+    showToast(t('链接生成失败，请重试'))
+    return
+  }
 
   if (action.name === t('打开')) {
     window.open(url, '_blank')
@@ -328,7 +332,11 @@ watch(
       createdQrDataUrl.value = ''
       return
     }
-    const url = info.url || shareBaseUrl(info.token)
+    const url = info.url
+    if (!url) {
+      createdQrDataUrl.value = ''
+      return
+    }
     try {
       createdQrDataUrl.value = await QRCode.toDataURL(url, { width: 160, margin: 1 })
     } catch {
@@ -418,8 +426,8 @@ async function handleCreateShare() {
 }
 
 async function copyCreatedLink() {
-  if (!createdShareInfo.value) return
-  const url = createdShareInfo.value.url || shareBaseUrl(createdShareInfo.value.token)
+  const url = createdShareInfo.value?.url
+  if (!url) return
   void copyLinkWithFallback(url)
 }
 
@@ -600,7 +608,7 @@ watch(
             <span class="success-text">{{ t('分享链接已创建') }}</span>
             <img v-if="createdQrDataUrl" class="qr-image qr-image--inline" :src="createdQrDataUrl" alt="QR" />
             <div class="share-url-row">
-              <input class="share-url-input" :value="createdShareInfo.url || shareBaseUrl(createdShareInfo.token)" readonly />
+              <input class="share-url-input" :value="createdShareInfo.url" readonly />
               <button class="copy-btn" @click="copyCreatedLink">{{ t('复制') }}</button>
             </div>
             <div class="expire-hint">

@@ -12,7 +12,7 @@
 
 import { ref, watch, reactive } from 'vue'
 import { useStorage } from '@vueuse/core'
-import { showToast, showLoadingToast, closeToast, showConfirmDialog } from 'vant'
+import { showToast, showLoadingToast, closeToast, showConfirmDialog, showFailToast } from 'vant'
 import { MxType } from 'mxdraw'
 import {
   MxCpp,
@@ -27,6 +27,7 @@ import type { McObjectId, McDbBlockTableRecord } from 'mxcad'
 import { t } from '@/languages'
 import { showFilePicker, FilePickerResult } from '@/composables/useNativeFilePicker'
 import { buildPublicMxwebUrl } from '@/services/publicFileService'
+import { waitPublicConversion } from '@/services/conversionStream'
 
 export interface BlockInfoItem {
   name: string
@@ -130,23 +131,34 @@ export function useInsertBlock() {
   // ──── 浏览文件（独立模式）── 对齐 OpenDwg 命令的文件处理 ────
   const openFile = async () => {
     return new Promise<void>((resolve) => {
-      showFilePicker((param: FilePickerResult) => {
+      showFilePicker(async (param: FilePickerResult) => {
         const name = param.name.replace(/\.[^/.]+$/, '')
 
+        let filePath: string
         if (param.type === 'mxweb') {
-          // .mxweb 直接用 blob URL
-          const filePath = URL.createObjectURL(param.file.source)
-          const newItem: BlockInfoItem = { name, filePath, id: filePath }
-          list.value.unshift(newItem)
-          currentItem.value = newItem
+          // .mxweb 是源格式：引擎直接读，不上传不转换，以 blob URL 就地打开
+          filePath = URL.createObjectURL(param.file.source)
         } else {
-          // .dwg / .dxf 已通过 showFilePicker 上传 → 用 public-file/access URL
-          const filePath = buildPublicMxwebUrl(param.hash)
-          const newItem: BlockInfoItem = { name, filePath, id: filePath }
-          list.value.unshift(newItem)
-          currentItem.value = newItem
+          // .dwg / .dxf 已上传，但服务端转换可能还没落盘：access 端点按 hash
+          // 找 mxweb，未就位直接 404，引擎只会报「图块加载失败」（无进度无重试），
+          // 所以必须先拿到转换终态再拼 URL（与「打开文件」命令同一等待逻辑）
+          showLoadingToast({ message: t('转换中'), forbidClick: true, duration: 0 })
+          try {
+            const status = await waitPublicConversion(param.hash)
+            if (status !== 'COMPLETED') {
+              showFailToast(t('转换失败'))
+              resolve()
+              return
+            }
+          } finally {
+            closeToast()
+          }
+          filePath = buildPublicMxwebUrl(param.hash)
         }
 
+        const newItem: BlockInfoItem = { name, filePath, id: filePath }
+        list.value.unshift(newItem)
+        currentItem.value = newItem
         resolve()
       })
     })

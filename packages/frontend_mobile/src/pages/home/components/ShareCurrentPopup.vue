@@ -89,9 +89,10 @@ function expiresIn(exp: Expiration): number | undefined {
   }[exp]
 }
 
-function shareUrl(token: string): string {
-  return `${location.origin}/share/${token}`
-}
+// 分享链接一律取后端返回的 url（CreateShareResponseDto.url 必填）。
+// 不本地拼 `/share/{token}`——PC 端只有 `/shares`（管理页）、移动端路由表里也没有
+// `/share/:token`，拼出来是两端都打不开的死链。后端漏返回 url 时宁可显示为空并
+// 提示失败，也不生成一个静默失效的链接。
 
 async function loadExistingShares() {
   if (!props.fileId) return
@@ -137,9 +138,12 @@ async function handleCreate() {
       return
     }
     created.value = { token: raw.token, url: raw.url, expiresAt: raw.expiresAt }
-    const url = raw.url || shareUrl(raw.token)
+    if (!raw.url) {
+      showToast(t('创建失败，请重试'))
+      return
+    }
     try {
-      qrDataUrl.value = await QRCode.toDataURL(url, { width: 160, margin: 1 })
+      qrDataUrl.value = await QRCode.toDataURL(raw.url, { width: 160, margin: 1 })
     } catch {
       qrDataUrl.value = ''
     }
@@ -156,8 +160,8 @@ const showLinkSheet = ref(false)
 const linkSheetUrl = ref('')
 
 async function copyLink() {
-  if (!created.value) return
-  const url = created.value.url || shareUrl(created.value.token)
+  const url = created.value?.url
+  if (!url) return
   const result = await copyText(url)
   if (result === 'failed') {
     linkSheetUrl.value = url
@@ -284,7 +288,7 @@ function onClose() {
               <img v-if="qrDataUrl" :src="qrDataUrl" :alt="t('分享二维码')" class="sc-qr-img" />
             </div>
             <div class="sc-link">
-              <input class="sc-link-input" :value="created.url || shareUrl(created.token)" readonly />
+              <input class="sc-link-input" :value="created.url || ''" readonly />
               <button class="sc-copy" @click="copyLink">{{ t('复制') }}</button>
             </div>
             <div class="sc-expiry-note">

@@ -18,6 +18,7 @@ const {
   loading,
   loadTasks,
   downloadZip,
+  downloadSingleFileItem,
   cancelTask,
   retryFailedItems,
   startPolling,
@@ -36,12 +37,12 @@ watch(
   }
 )
 
-function statusText(status: string): string {
+function statusText(status: string, mode?: string): string {
   switch (status) {
     case 'PENDING':
       return t('等待中')
     case 'PROCESSING':
-      return t('打包中')
+      return mode === 'individual' ? t('转换中') : t('打包中')
     case 'COMPLETED':
       return t('已完成')
     case 'FAILED':
@@ -70,7 +71,9 @@ function displayName(task: BatchTaskItem): string {
 }
 
 function onDownload(task: BatchTaskItem) {
-  downloadZip(task.taskId)
+  // individual（单文件格式转换）走单项产物下载，zip 走打包下载
+  if (task.mode === 'individual') downloadSingleFileItem(task.taskId)
+  else downloadZip(task.taskId)
 }
 
 async function onCancel(task: BatchTaskItem) {
@@ -118,7 +121,7 @@ async function onRetryFailed(task: BatchTaskItem) {
         <div v-for="task in tasks" :key="task.taskId" class="bd-item">
           <div class="bd-item-top">
             <span class="bd-item-name">{{ displayName(task) }}</span>
-            <span class="bd-status" :class="statusClass(task.status)">{{ statusText(task.status) }}</span>
+            <span class="bd-status" :class="statusClass(task.status)">{{ statusText(task.status, task.mode) }}</span>
           </div>
           <div class="bd-progress-row">
             <van-progress

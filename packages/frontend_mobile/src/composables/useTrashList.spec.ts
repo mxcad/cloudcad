@@ -106,6 +106,46 @@ describe('useTrashList 回收站数据层', () => {
     expect(vi.mocked(trashControllerGetTrash)).not.toHaveBeenCalled()
   })
 
+  it('project scope：setSelectedProject 后 load 带选定 projectId', async () => {
+    resolveWith(trashControllerGetTrash, trashPage([{ id: 'x' }]))
+    const c = setup()
+    c.setScope('project')
+    c.setSelectedProject('proj-9')
+    await vi.waitFor(() => expect(c.nodes.value).toHaveLength(1))
+    expect(vi.mocked(trashControllerGetTrash)).toHaveBeenLastCalledWith({
+      query: expect.objectContaining({ projectId: 'proj-9' }),
+    })
+  })
+
+  it('project scope 未选项目：不发请求，列表置空', async () => {
+    const c = setup()
+    c.setScope('project')
+    await vi.waitFor(() => expect(c.nodes.value).toEqual([]))
+    expect(vi.mocked(trashControllerGetTrash)).not.toHaveBeenCalled()
+  })
+
+  it('clear project scope：清空选定项目子树（非全局）', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const c = setup()
+    c.setScope('project')
+    c.setSelectedProject('proj-9')
+    await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-9'))
+    await c.clear()
+    expect(vi.mocked(trashControllerClearProjectTrash)).toHaveBeenCalledWith({ path: { projectId: 'proj-9' } })
+    expect(vi.mocked(trashControllerClearTrash)).not.toHaveBeenCalled()
+  })
+
+  it('setScope 切离 project：清空选定项目 id', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const c = setup()
+    c.setScope('project')
+    c.setSelectedProject('proj-9')
+    await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-9'))
+    c.setScope('projects')
+    await vi.waitFor(() => expect(c.scope.value).toBe('projects'))
+    expect(c.selectedProjectId.value).toBeNull()
+  })
+
   it('loadMore：翻页追加，page 递增，到底后 hasMore=false', async () => {
     resolveWith(trashControllerGetTrash, trashPage([{ id: 'a' }], 1, 2))
     const c = setup()
@@ -148,6 +188,28 @@ describe('useTrashList 回收站数据层', () => {
         query: expect.objectContaining({ sortBy: 'name', sortOrder: 'asc', page: 1 }),
       }),
     )
+  })
+
+  it('setFilters：扩展名筛选回第 1 页带 extension，filterActive 高亮', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const c = setup()
+    c.setFilters({ extension: '.dwg,.dxf' })
+    await vi.waitFor(() =>
+      expect(vi.mocked(trashControllerGetTrash)).toHaveBeenCalledWith({
+        query: expect.objectContaining({ extension: '.dwg,.dxf', page: 1 }),
+      }),
+    )
+    expect(c.filterActive.value).toBe(true)
+  })
+
+  it('setScope 切换清空扩展名筛选', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const c = setup()
+    c.setFilters({ extension: '.dwg' })
+    await vi.waitFor(() => expect(c.filterActive.value).toBe(true))
+    c.setScope('personal')
+    await vi.waitFor(() => expect(c.scope.value).toBe('personal'))
+    expect(c.filterActive.value).toBe(false)
   })
 
   it('setScope 切换清空搜索词', async () => {

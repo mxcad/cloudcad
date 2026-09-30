@@ -11,11 +11,21 @@ import { ref, watch, computed } from 'vue'
 import { t } from '@/languages'
 import type { FileListFilters } from '@/composables/useUnifiedFileList'
 
-const props = defineProps<{
-  show: boolean
-  /** 当前已生效的筛选（重新打开时回填） */
-  modelValue?: FileListFilters
-}>()
+const props = withDefaults(
+  defineProps<{
+    show: boolean
+    /** 当前已生效的筛选（重新打开时回填） */
+    modelValue?: FileListFilters
+    /**
+     * 显示的筛选维度（默认全部）。回收站接口只支持扩展名（search/extension/sort），
+     * 大小/时间会被后端忽略 → 回收站传 ['extension'] 避免误导。
+     */
+    sections?: Array<'extension' | 'size' | 'modified' | 'created'>
+  }>(),
+  {
+    sections: () => ['extension', 'size', 'modified', 'created'],
+  }
+)
 
 const emit = defineEmits<{
   (e: 'update:show', val: boolean): void
@@ -154,15 +164,20 @@ function onPickerConfirm({ selectedValues }: { selectedValues: string[] }) {
 
 function buildFilters(): FileListFilters {
   const out: FileListFilters = {}
-  if (selectedExts.value.length > 0) out.extension = selectedExts.value.join(',')
-  if (sizePreset.value > 0) Object.assign(out, SIZE_PRESETS[sizePreset.value].params)
-  if (modifiedPreset.value >= 0) {
-    out.modifiedAtFrom = localStartOfDayIso(TIME_PRESETS[modifiedPreset.value].days - 1)
+  const s = props.sections
+  if (s.includes('extension') && selectedExts.value.length > 0) out.extension = selectedExts.value.join(',')
+  if (s.includes('size') && sizePreset.value > 0) Object.assign(out, SIZE_PRESETS[sizePreset.value].params)
+  if (s.includes('modified')) {
+    if (modifiedPreset.value >= 0) {
+      out.modifiedAtFrom = localStartOfDayIso(TIME_PRESETS[modifiedPreset.value].days - 1)
+    }
+    if (modifiedFrom.value) out.modifiedAtFrom = dateOnlyToIso(modifiedFrom.value)
+    if (modifiedTo.value) out.modifiedAtTo = dateOnlyToIso(modifiedTo.value)
   }
-  if (modifiedFrom.value) out.modifiedAtFrom = dateOnlyToIso(modifiedFrom.value)
-  if (modifiedTo.value) out.modifiedAtTo = dateOnlyToIso(modifiedTo.value)
-  if (createdFrom.value) out.createdAtFrom = dateOnlyToIso(createdFrom.value)
-  if (createdTo.value) out.createdAtTo = dateOnlyToIso(createdTo.value)
+  if (s.includes('created')) {
+    if (createdFrom.value) out.createdAtFrom = dateOnlyToIso(createdFrom.value)
+    if (createdTo.value) out.createdAtTo = dateOnlyToIso(createdTo.value)
+  }
   return out
 }
 
@@ -192,7 +207,7 @@ function onReset() {
 
       <div class="fp-body">
         <!-- 文件格式 -->
-        <div class="fp-section">
+        <div v-if="props.sections.includes('extension')" class="fp-section">
           <div class="fp-section-title">{{ t('文件格式') }}</div>
           <div class="fp-chips">
             <button
@@ -207,7 +222,7 @@ function onReset() {
         </div>
 
         <!-- 文件大小 -->
-        <div class="fp-section">
+        <div v-if="props.sections.includes('size')" class="fp-section">
           <div class="fp-section-title">{{ t('文件大小') }}</div>
           <div class="fp-chips">
             <button
@@ -222,7 +237,7 @@ function onReset() {
         </div>
 
         <!-- 修改时间 -->
-        <div class="fp-section">
+        <div v-if="props.sections.includes('modified')" class="fp-section">
           <div class="fp-section-title">{{ t('修改时间') }}</div>
           <div class="fp-chips">
             <button
@@ -246,7 +261,7 @@ function onReset() {
         </div>
 
         <!-- 创建时间 -->
-        <div class="fp-section">
+        <div v-if="props.sections.includes('created')" class="fp-section">
           <div class="fp-section-title">{{ t('创建时间') }}</div>
           <div class="fp-range">
             <button class="fp-date" @click="openPicker('createdFrom')">

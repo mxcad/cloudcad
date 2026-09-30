@@ -1,7 +1,7 @@
 import { calculateFileHash } from '@/utils/hashUtils';
-import { uploadFile, MobileUploadResult } from '@/services/mobileUploadService';
-import { handleApiError } from '@/utils/apiConfig';
+import { uploadFile, getFileExt, MobileUploadResult } from '@/services/mobileUploadService';
 import { useEditorStore } from '@/stores/editor';
+import { showFailToast } from 'vant';
 import { t } from '@/languages';
 
 const PICKER_ID = 'mxcad-native-file-picker';
@@ -19,6 +19,12 @@ export interface FilePickerResult {
   isUseServerExistingFile: boolean;
 }
 
+/**
+ * 源格式：引擎能直接读的格式。这类文件不走上传——既不需要服务端转换，
+ * 也不占存储与转换配额；调用方以 blob URL 直接打开 file.source。
+ */
+const SOURCE_FORMATS = new Set(['mxweb']);
+
 type FilePickerCallback = (result: FilePickerResult) => void;
 
 function getPickerEl(): HTMLInputElement {
@@ -34,7 +40,11 @@ function getPickerEl(): HTMLInputElement {
   return picker;
 }
 
-export function showFilePicker(callback: FilePickerCallback, noCache = false, showLoading = false): void {
+export function showFilePicker(
+  callback: FilePickerCallback,
+  noCache = false,
+  showLoading = false
+): void {
   const input = getPickerEl();
 
   input.onchange = async (e: Event) => {
@@ -44,14 +54,46 @@ export function showFilePicker(callback: FilePickerCallback, noCache = false, sh
     const file = files[0];
     const editorStore = useEditorStore();
 
+    // 遮罩只在出错时复位：成功路径的 loading 交由调用方按阶段推进（uploading →
+    // converting → opening），这里无条件关掉会让转换/打开阶段失去遮罩
+    const resetLoading = (): void => {
+      if (!showLoading) return;
+      editorStore.setLoading(false);
+      editorStore.setProgressStage('idle');
+    };
+
     if (showLoading) {
       editorStore.setProgressStage('uploading');
       editorStore.setLoading(true);
     }
 
+    let hash: string;
     try {
-      const hash = await calculateFileHash(file);
+      hash = await calculateFileHash(file);
+    } catch (err) {
+      // 读文件失败（损坏/被回收），此时尚未发起任何上传
+      console.error('File hash failed:', err);
+      resetLoading();
+      showFailToast(t('文件上传失败'));
+      return;
+    }
 
+    const ext = getFileExt(file.name);
+    // 源格式不上传：调用方以 blob URL 直接打开 file.source
+    if (SOURCE_FORMATS.has(ext)) {
+      callback({
+        hash,
+        type: ext,
+        ext,
+        name: file.name,
+        size: file.size,
+        file: { name: file.name, source: file },
+        isUseServerExistingFile: false,
+      });
+      return;
+    }
+
+    try {
       const result: MobileUploadResult = await uploadFile({
         file,
         hash,
@@ -77,12 +119,9 @@ export function showFilePicker(callback: FilePickerCallback, noCache = false, sh
         isUseServerExistingFile: result.isUseServerExistingFile,
       });
     } catch (err) {
+      // 上传失败的 toast 由 mobileUploadService 负责，这里不重复提示
       console.error('File upload failed:', err);
-      if (showLoading) {
-        editorStore.setLoading(false);
-        editorStore.setProgressStage('idle');
-      }
-      handleApiError(err, t('文件上传失败'));
+      resetLoading();
     }
   };
 

@@ -28,7 +28,7 @@ export interface MobileUploadResult {
   isUseServerExistingFile: boolean;
 }
 
-function getFileExt(name: string): string {
+export function getFileExt(name: string): string {
   const dot = name.lastIndexOf('.');
   return dot >= 0 ? name.substring(dot + 1).toLowerCase() : '';
 }

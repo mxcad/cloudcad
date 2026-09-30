@@ -190,6 +190,9 @@ const wechat = useWechatLogin({
     error.value = message
   },
 })
+// opening 是嵌套 Ref（useWechatLogin 返回普通对象，模板不解包嵌套 ref），
+// 提升为顶层绑定供模板自动解包，否则 :disabled 恒为 truthy、按钮恒禁用
+const wechatOpening = wechat.opening
 
 onMounted(() => {
   const errorParam = route.query.wechat_error
@@ -300,9 +303,9 @@ onMounted(() => {
         <div class="auth-divider">
           <span>{{ t('其他方式登录') }}</span>
         </div>
-        <button class="wechat-btn" type="button" :disabled="wechat.opening" @click="wechat.open">
+        <button class="wechat-btn" type="button" :disabled="wechatOpening" @click="wechat.open">
           <van-icon name="chat-o" />
-          {{ wechat.opening ? t('正在跳转…') : t('微信登录') }}
+          {{ wechatOpening ? t('正在跳转…') : t('微信登录') }}
         </button>
       </template>
 

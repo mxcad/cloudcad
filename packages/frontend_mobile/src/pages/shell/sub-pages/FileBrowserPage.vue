@@ -13,7 +13,7 @@
  * FAB 上下文敏感：项目 Tab → 新建项目；个人空间 → 新建文件夹/上传
  */
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast, showDialog, showConfirmDialog, showSuccessToast, showFailToast } from 'vant'
 import type { ActionSheetAction } from 'vant'
 import {
@@ -27,10 +27,11 @@ import {
   nodeControllerCopyNode,
   nodeControllerBatchMoveNodes,
   nodeControllerBatchCopyNodes,
+  memberControllerGetUserProjectPermissions,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
-import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType } from '@cloudcad/api-sdk/types.gen'
+import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType, BatchOperationResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { useViewMode } from '@/composables/useViewMode'
 import { useTrashList } from '@/composables/useTrashList'
@@ -52,7 +53,9 @@ import type { SelectionActionKey } from '../components/UnifiedFileList.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
 import { useTransferTargets } from '@/composables/useTransferTargets'
 import { useCrossProjectTransfer } from '@/composables/useCrossProjectTransfer'
+import { useFileSystemClipboard } from '@/stores/fileSystemClipboard'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
+import ProjectEditPopup from '../components/ProjectEditPopup.vue'
 import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
 import BatchDownloadPanel from '../components/BatchDownloadPanel.vue'
 import type { DownloadFormatPayload } from '../components/DownloadFormatPopup.vue'
@@ -65,7 +68,11 @@ import type { FileListFilters } from '@/composables/useUnifiedFileList'
 import { runUploadPool } from '@/utils/uploadPool'
 
 const router = useRouter()
-const activeTab = ref(0)
+const route = useRoute()
+// 0=我的项目 1=个人空间 2=回收站。?domain=personal 是 PC /personal-space 落地时的
+// 语义标记（映射表固定注入），首次直接停在个人空间而不是项目列表。
+// 初始 Tab 的数据由 useLoginPrompt 的 immediate watch 按 activeTab 分流加载。
+const activeTab = ref(route.query.domain === 'personal' ? 1 : 0)
 const keyword = ref('')
 
 // A-11 项目筛选（对齐 PC ProjectFilterTabs：all/owned/joined，后端 QueryProjectsDto.filter）
@@ -79,6 +86,7 @@ const projectFilterOptions: Array<{ value: ProjectFilterType; label: string }> =
 interface ProjectCard {
   id: string
   name: string
+  description: string
   files: number
   updated: string
 }
@@ -109,6 +117,7 @@ async function loadProjects(append = false) {
     const cards = (data.nodes ?? []).map((n: FileSystemNodeDto) => ({
       id: n.id,
       name: n.name,
+      description: n.description ?? '',
       files: n.childrenCount ?? 0,
       updated: formatTime(n.updatedAt),
     }))
@@ -267,27 +276,50 @@ function onProjectClick(project: ProjectCard) {
   router.push(`/shell/file/project/${project.id}`)
 }
 
-// ── 项目级操作（长按卡片菜单：重命名 / 删除）──
+// ── 项目级操作（卡片「更多」/长按/右键：权限门控的管理菜单，对齐 PC 项目卡片菜单 + 详情页管理入口）──
 const projectActions = useProjectActions(() => loadProjects())
 const projectMenuTarget = ref<ProjectCard | null>(null)
 const showProjectMenuSheet = ref(false)
-const projectMenuActions = computed(() => [
-  { name: t('重命名') },
-  { name: t('删除'), color: '#ee0a24' },
-])
-const showProjectRename = ref(false)
-const projectRenameTarget = ref<ProjectCard | null>(null)
+const projectPermissions = ref<string[]>([])
+
+type ProjectMenuKey = 'edit' | 'members' | 'roles' | 'transfer' | 'history' | 'delete'
+type ProjectMenuItem = { name: string; key: ProjectMenuKey; color?: string }
+
+const projectMenuActions = computed<ProjectMenuItem[]>(() => {
+  const perms = projectPermissions.value
+  const actions: ProjectMenuItem[] = []
+  if (perms.includes('PROJECT_UPDATE')) actions.push({ name: t('编辑项目'), key: 'edit' })
+  actions.push({ name: t('成员'), key: 'members' })
+  if (perms.includes('PROJECT_ROLE_MANAGE')) actions.push({ name: t('角色管理'), key: 'roles' })
+  if (perms.includes('PROJECT_TRANSFER_MANAGE')) actions.push({ name: t('跨项目转移'), key: 'transfer' })
+  actions.push({ name: t('操作历史'), key: 'history' })
+  if (perms.includes('PROJECT_DELETE')) actions.push({ name: t('删除项目'), key: 'delete', color: '#ee0a24' })
+  return actions
+})
+
+const showProjectEdit = ref(false)
 
 // 长按检测（与 UnifiedFileList 文件项同套 500ms 手势）：触发后抑制随后的 click
 const projectLongPressTriggered = ref(false)
 let projectLongPressTimer: ReturnType<typeof setTimeout> | null = null
 
+/** 打开项目操作菜单：先拉该项目的权限（门控菜单项），再弹菜单；拉取失败回退为仅基础项 */
+async function openProjectMenu(project: ProjectCard) {
+  projectMenuTarget.value = project
+  try {
+    const res = await memberControllerGetUserProjectPermissions({ path: { projectId: project.id } })
+    projectPermissions.value = (res.data?.permissions as string[] | undefined) ?? []
+  } catch {
+    projectPermissions.value = []
+  }
+  showProjectMenuSheet.value = true
+}
+
 function onProjectTouchStart(project: ProjectCard) {
   projectLongPressTriggered.value = false
   projectLongPressTimer = setTimeout(() => {
     projectLongPressTriggered.value = true
-    projectMenuTarget.value = project
-    showProjectMenuSheet.value = true
+    void openProjectMenu(project)
     if (navigator.vibrate) navigator.vibrate(10)
   }, 500)
 }
@@ -299,23 +331,42 @@ function cancelProjectLongPress() {
   }
 }
 
-function onProjectMenuAction(action: { name: string }) {
+function onProjectMenuAction(action: ProjectMenuItem) {
   showProjectMenuSheet.value = false
   const target = projectMenuTarget.value
   if (!target) return
-  if (action.name === t('重命名')) {
-    projectRenameTarget.value = target
-    showProjectRename.value = true
-  } else if (action.name === t('删除')) {
-    void projectActions.remove(target.id, target.name)
+  switch (action.key) {
+    case 'edit':
+      showProjectEdit.value = true
+      break
+    case 'members':
+      router.push(`/shell/file/project/${target.id}?manage=members`)
+      break
+    case 'roles':
+      router.push(`/shell/file/project/${target.id}?manage=roles`)
+      break
+    case 'transfer':
+      router.push(`/shell/file/project/${target.id}?manage=transfer`)
+      break
+    case 'history':
+      router.push(`/shell/file/project/${target.id}?manage=history`)
+      break
+    case 'delete':
+      void projectActions.remove(target.id, target.name)
+      break
   }
 }
 
-function onProjectRenameConfirm(name: string) {
-  const target = projectRenameTarget.value
+/** 编辑项目（名称+描述）：成功后本地同步卡片，避免列表名与详情不一致 */
+async function onProjectEditConfirm(payload: { name: string; description: string }) {
+  const target = projectMenuTarget.value
   if (!target) return
-  showProjectRename.value = false
-  void projectActions.rename(target.id, name)
+  showProjectEdit.value = false
+  const ok = await projectActions.update(target.id, payload)
+  if (ok) {
+    target.name = payload.name
+    target.description = payload.description
+  }
 }
 
 async function onPersonalItemClick(item: { id: string; name: string; isFolder?: boolean; path?: string }) {
@@ -338,9 +389,11 @@ function onPersonalModeChange(m: 'grid' | 'list') {
   personalMode.value = m
 }
 
-// ── 回收站（第 3 个 tab：统一回收站，项目/个人空间双 scope）──
+// ── 回收站（第 3 个 tab：项目列表/项目内/个人空间 三 scope，对齐 PC 按上下文区分）──
 const trashList = useTrashList(personalSpaceId)
 const trashScope = computed(() => trashList.scope.value)
+// 顶层 ref，模板自动解包；作为项目内回收站下拉的 model-value（单一事实源=composable）
+const trashSelectedProjectId = trashList.selectedProjectId
 const trashItems = computed(() => formatNodeAsItems(trashList.nodes.value))
 const trashLoading = computed(() => trashList.loading.value)
 const trashHasMore = computed(() => trashList.hasMore.value)
@@ -350,13 +403,41 @@ const trashSortOrder = computed(() => trashList.sortOrder.value)
 const trashTotal = computed(() => trashList.total.value)
 
 const trashScopeOptions: Array<{ value: TrashScope; label: string }> = [
-  { value: 'projects', label: t('项目') },
+  { value: 'projects', label: t('项目列表') },
+  { value: 'project', label: t('项目内') },
   { value: 'personal', label: t('个人空间') },
 ]
 
+// 项目内回收站：选定项目下拉（复用 useTransferTargets 的项目根列表，进入该 scope 时 lazy 拉取）
+const trashTargets = useTransferTargets()
+const trashProjectOptions = computed(() =>
+  trashTargets.roots.value
+    .filter((r) => r.domain === 'project')
+    .map((r) => ({ text: r.name, value: r.id })),
+)
+const selectedTrashProjectName = computed(() => {
+  const id = trashList.selectedProjectId.value
+  if (!id) return ''
+  return trashProjectOptions.value.find((o) => o.value === id)?.text ?? ''
+})
+
 function onTrashScope(scope: TrashScope) {
   if (scope === 'personal') void ensurePersonalSpaceId()
+  if (scope === 'project' && trashTargets.roots.value.length === 0) {
+    void trashTargets.load(personalSpaceId.value)
+  }
   trashList.setScope(scope)
+}
+
+function onTrashProjectChange(id: string | number) {
+  trashList.setSelectedProject(String(id))
+}
+
+// 回收站高级筛选：仅扩展名（回收站接口不支持大小/时间，避免误导）
+const showTrashFilterPopup = ref(false)
+const trashFilterActive = trashList.filterActive
+function onTrashFilterApply(filters: FileListFilters) {
+  trashList.setFilters({ extension: filters.extension })
 }
 
 // 多选操作项：恢复 / 彻底删除（危险色）
@@ -433,12 +514,20 @@ async function onClearTrash() {
   await trashList.clear()
 }
 
-// ── 多选操作（B-03/B-17：move/copy 接线）──
+// ── 多选操作（B-03/B-17：move 接线；Bug6：复制/剪切写剪贴板）──
 function onPersonalSelectionAction(action: SelectionActionKey, items: Array<{ id: string; name: string }>) {
   if (action === 'delete') {
     batchDelete(items)
-  } else if (action === 'move' || action === 'copy') {
-    openFolderPicker(action, items)
+  } else if (action === 'copy' || action === 'cut') {
+    // 剪贴板（Bug6）：源根=个人空间；粘贴条由 UnifiedFileList 读取全局剪贴板展示
+    clipboard.setClipboard(items.map((i) => i.id), action, personalSpaceId.value ?? '', 'personalSpace')
+    showSuccessToast(
+      action === 'cut'
+        ? t('已剪切 {count} 项', { count: String(items.length) })
+        : t('已复制 {count} 项', { count: String(items.length) })
+    )
+  } else if (action === 'move') {
+    openFolderPicker('move', items)
   } else if (action === 'download') {
     for (const item of items) {
       const url = cachedApiUrl(`/file-system/nodes/${item.id}/download`)
@@ -576,7 +665,13 @@ function onFilterApply(filters: FileListFilters) {
   personalFileList.setFilters(filters)
 }
 
-// ── A-06 格式转换下载（底部弹窗选格式 → downloadControllerDownloadNodeWithFormat blob）──
+// ── A-07 批量下载任务面板（zip 打包 + 单文件格式转换共用，3s 轮询）──
+const { createFolderZipTask, createSingleFormatTask } = useBatchDownload()
+const showBatchPanel = ref(false)
+
+// ── A-06 格式转换下载（底部弹窗选格式）──
+// 转换格式（dwg/dxf/pdf）走异步单文件任务队列（对齐 PC）：同步 download-with-format
+// 对慢转换会挂起至超时；mxweb/original 无转换开销，保持同步直下
 const showFormatPopup = ref(false)
 const formatTarget = ref<{ id: string; name: string } | null>(null)
 
@@ -588,20 +683,31 @@ function openFormatDownload(target: { id: string; name: string }) {
 async function onFormatDownloadConfirm(payload: DownloadFormatPayload) {
   const target = formatTarget.value
   if (!target) return
+
+  if (payload.format !== 'mxweb') {
+    showLoadingToast({ message: t('创建下载任务...'), forbidClick: true })
+    try {
+      await createSingleFormatTask(target.id, target.name, payload.format, {
+        dwgVersion: payload.dwgOptions?.dwgVersion,
+        width: payload.pdfOptions?.width,
+        height: payload.pdfOptions?.height,
+        colorPolicy: payload.pdfOptions?.colorPolicy,
+      })
+      closeToast()
+      showSuccessToast(t('已加入下载队列'))
+      showBatchPanel.value = true
+    } catch (e) {
+      closeToast()
+      showFailToast(t('创建下载任务失败'))
+    }
+    return
+  }
+
   showLoadingToast({ message: t('下载中...'), forbidClick: true })
   try {
-    const query: Record<string, unknown> = { format: payload.format }
-    if (payload.pdfOptions) {
-      query.width = payload.pdfOptions.width
-      query.height = payload.pdfOptions.height
-      query.colorPolicy = payload.pdfOptions.colorPolicy
-    }
-    if (payload.dwgOptions) {
-      query.dwgVersion = payload.dwgOptions.dwgVersion
-    }
     const res = await downloadControllerDownloadNodeWithFormat({
       path: { nodeId: target.id },
-      query,
+      query: { format: payload.format },
       parseAs: 'blob',
     } as never)
     closeToast()
@@ -624,10 +730,6 @@ async function onFormatDownloadConfirm(payload: DownloadFormatPayload) {
     showFailToast(t('下载失败'))
   }
 }
-
-// ── A-08 文件夹打包下载 + A-07 批量下载任务面板 ──
-const { createFolderZipTask } = useBatchDownload()
-const showBatchPanel = ref(false)
 
 async function downloadFolder(target: { id: string; name: string }) {
   showLoadingToast({ message: t('正在创建打包任务...'), forbidClick: true })
@@ -673,6 +775,39 @@ const folderPickerItems = ref<Array<{ id: string; name: string }>>([])
 const transferTargets = useTransferTargets()
 const crossTransfer = useCrossProjectTransfer()
 
+// ── Bug6 剪贴板粘贴：把剪贴板内容粘贴到当前文件夹（cut→move 成功后清空）──
+const clipboard = useFileSystemClipboard()
+
+function onClearPaste() {
+  clipboard.clearClipboard()
+}
+
+async function onPaste() {
+  if (!clipboard.hasItems || !clipboard.mode) return
+  const mode = clipboard.mode
+  const targetId = personalFileList.currentFolderId.value ?? personalSpaceId.value
+  if (!targetId) {
+    showFailToast(t('无法确定粘贴位置'))
+    return
+  }
+  const op = mode === 'cut' ? 'move' : 'copy'
+  // 跨根剪切（源项目→个人空间等）：文件将从源移走，二次确认（对齐 PC）
+  if (mode === 'cut' && clipboard.sourceRootId && clipboard.sourceRootId !== (personalSpaceId.value ?? '')) {
+    try {
+      await showConfirmDialog({
+        title: t('跨项目移动'),
+        message: t('将把 {count} 个项目移动到当前文件夹，源项目的文件将被移走，确定？', { count: String(clipboard.itemIds.length) }),
+        confirmButtonText: t('确定'),
+        cancelButtonText: t('取消'),
+      })
+    } catch {
+      return
+    }
+  }
+  const items = clipboard.itemIds.map((id) => ({ id, name: '' }))
+  void doMoveOrCopy({ id: targetId, name: '' }, op, items, true)
+}
+
 async function openFolderPicker(op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
   if (!personalSpaceId.value) {
     showFailToast(t('文件夹未就绪，请稍后再试'))
@@ -697,8 +832,8 @@ function transferErrorMessage(e: unknown, op: 'move' | 'copy'): string {
   return op === 'move' ? t('移动失败') : t('复制失败')
 }
 
-async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
-  showLoadingToast({ message: op === 'move' ? t('移动中...') : t('复制中...'), forbidClick: true })
+async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | 'copy', items: Array<{ id: string; name: string }>, isClipboardPaste = false) {
+  showLoadingToast({ message: isClipboardPaste ? t('粘贴中...') : op === 'move' ? t('移动中...') : t('复制中...'), forbidClick: true })
   try {
     const res = items.length === 1
       ? op === 'move'
@@ -709,7 +844,21 @@ async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | '
         : await nodeControllerBatchCopyNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
     closeToast()
     if (res.error) throw new Error(String(res.error))
-    showSuccessToast(op === 'move' ? t('移动成功') : t('复制成功'))
+    // 批量操作部分成功：透传成功/失败计数（对齐 PC「成功移动 N 项，M 项失败」）
+    const data = res.data as BatchOperationResponseDto | undefined
+    const failed = items.length > 1 ? (data?.failedCount ?? 0) : 0
+    if (failed > 0) {
+      const n = String(data?.successCount ?? 0)
+      const m = String(failed)
+      showFailToast(op === 'move' ? t('成功移动 {n} 项，{m} 项失败', { n, m }) : t('成功复制 {n} 项，{m} 项失败', { n, m }))
+    } else {
+      showSuccessToast(isClipboardPaste ? t('粘贴成功') : op === 'move' ? t('移动成功') : t('复制成功'))
+    }
+    // 剪切粘贴：只要有项成功就清空剪贴板（对齐 PC movedIds.length>0；全失败保留可重试；复制粘贴保留）
+    if (isClipboardPaste && op === 'move') {
+      const moved = items.length === 1 ? 1 : (data?.successCount ?? 0)
+      if (moved > 0) clipboard.clearClipboard()
+    }
     await personalFileList.loadNodes()
   } catch (e) {
     closeToast()
@@ -757,7 +906,7 @@ async function onCreateProjectConfirm() {
     if (res.error) throw new Error(String(res.error))
     const data = res.data as { id?: string; name?: string }
     closeToast()
-    showToast('项目创建成功')
+    showToast(t('项目创建成功'))
     if (data?.id) {
       router.push(`/shell/file/project/${data.id}`)
     } else {
@@ -837,7 +986,7 @@ async function onCreateFolderConfirm() {
     })
     closeToast()
     if (res.error) throw new Error(String(res.error))
-    showToast('文件夹创建成功')
+    showToast(t('文件夹创建成功'))
     await personalFileList.loadNodes()
   } catch (e) {
     closeToast()
@@ -984,8 +1133,12 @@ async function onFileInputChange(e: Event) {
             @touchstart.passive="onProjectTouchStart(p)"
             @touchend="cancelProjectLongPress"
             @touchmove="cancelProjectLongPress"
-            @contextmenu.prevent="projectMenuTarget = p; showProjectMenuSheet = true"
+            @contextmenu.prevent="openProjectMenu(p)"
           >
+            <!-- 项目管理入口（对齐 PC 项目卡片菜单；长按手势保留） -->
+            <button class="card-more" @click.stop="openProjectMenu(p)" :aria-label="t('更多')">
+              <van-icon name="ellipsis" size="16" />
+            </button>
             <div class="card-header">
               <span class="card-name">{{ p.name }}</span>
             </div>
@@ -1024,6 +1177,7 @@ async function onFileInputChange(e: Event) {
           :sort-by="personalFileList.sortBy.value"
           :sort-order="personalFileList.sortOrder.value"
           :filter-active="personalFileList.hasActiveFilters.value"
+          :enable-paste="true"
           @item-click="onPersonalItemClick"
           @item-menu="onItemMenu"
           @breadcrumb-click="personalFileList.goBackTo"
@@ -1036,11 +1190,13 @@ async function onFileInputChange(e: Event) {
           @sort-change="personalFileList.setSort"
           @filter="showFilterPopup = true"
           @fab-click="openCreateFolderDialog"
+          @paste="onPaste"
+          @clear-paste="onClearPaste"
         />
       </van-tab>
 
       <van-tab :title="t('回收站')">
-        <!-- scope chips：项目（全局）/ 个人空间 -->
+        <!-- scope chips：项目列表（全局）/ 项目内（选定项目）/ 个人空间 -->
         <div class="project-filter">
           <button
             v-for="opt in trashScopeOptions"
@@ -1051,6 +1207,19 @@ async function onFileInputChange(e: Event) {
             {{ opt.label }}
           </button>
         </div>
+        <!-- 项目内回收站：选定项目下拉（未选定时列表为空，由空态提示选择）-->
+        <van-dropdown-menu
+          v-if="trashScope === 'project'"
+          class="trash-project-dropdown"
+          active-color="var(--primary)"
+        >
+          <van-dropdown-item
+            :model-value="trashSelectedProjectId"
+            :title="selectedTrashProjectName || t('选择项目')"
+            :options="trashProjectOptions"
+            @change="onTrashProjectChange"
+          />
+        </van-dropdown-menu>
         <!-- 页头：项数 + 清空回收站（随当前 scope 生效） -->
         <div class="trash-header">
           <span class="trash-count">{{ t('共 {count} 项', { count: String(trashTotal) }) }}</span>
@@ -1066,17 +1235,25 @@ async function onFileInputChange(e: Event) {
           :sort-by="trashSortBy"
           :sort-order="trashSortOrder"
           :show-fab="false"
-          :empty-text="t('回收站是空的')"
+          :empty-text="trashScope === 'project' && !trashSelectedProjectId ? t('请选择要查看的项目') : t('回收站是空的')"
           empty-icon="delete-o"
           :selection-actions="trashSelectionActions"
+          :filter-active="trashFilterActive"
           @item-click="onTrashItemMenu"
           @item-menu="onTrashItemMenu"
           @selection-action="onTrashSelectionAction"
           @search="trashList.setSearch"
+          @filter="showTrashFilterPopup = true"
           @load-more="trashList.loadMore"
           @load-more-retry="trashList.retryLoadMore"
           @refresh="trashList.refresh"
           @sort-change="trashList.setSort"
+        />
+        <!-- 回收站高级筛选：仅文件格式（回收站接口不支持大小/时间）-->
+        <FileFilterPopup
+          v-model:show="showTrashFilterPopup"
+          :sections="['extension']"
+          @apply="onTrashFilterApply"
         />
       </van-tab>
     </van-tabs>
@@ -1196,19 +1373,19 @@ async function onFileInputChange(e: Event) {
       @select="onTrashMenuAction"
       @close="trashMenuTarget = null"
     />
-    <!-- 项目长按菜单：重命名 / 删除 -->
+    <!-- 项目卡片管理菜单：编辑/成员/角色/转移/历史/删除（权限门控，对齐 PC）-->
     <van-action-sheet
       v-model:show="showProjectMenuSheet"
       :actions="projectMenuActions"
       @select="onProjectMenuAction"
       @close="projectMenuTarget = null"
     />
-    <!-- 项目重命名弹窗（复用 RenameNodePopup，项目无扩展名）-->
-    <RenameNodePopup
-      v-model:show="showProjectRename"
-      :initial-name="projectRenameTarget?.name ?? ''"
-      :keep-extension="false"
-      @confirm="onProjectRenameConfirm"
+    <!-- 项目编辑弹窗（名称+描述，对齐 PC ProjectModal 编辑模式）-->
+    <ProjectEditPopup
+      v-model:show="showProjectEdit"
+      :initial-name="projectMenuTarget?.name ?? ''"
+      :initial-description="projectMenuTarget?.description ?? ''"
+      @confirm="onProjectEditConfirm"
     />
     <RenameNodePopup
       v-model:show="showRename"
@@ -1363,8 +1540,28 @@ async function onFileInputChange(e: Event) {
   }
 }
 
+/* 卡片菜单角标（对齐 UnifiedFileList grid-more：28px 热区、半透明圆底） */
+.card-more {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1;
+}
+
 .card-header {
-  padding: 10px 12px 0;
+  /* 右侧留出 40px，避免项目名探入「更多」角标热区 */
+  padding: 10px 40px 0 12px;
 }
 
 .card-name {

@@ -1,8 +1,9 @@
 /**
  * 回收站数据层（薄 composable，复用 UnifiedFileList 展示组件）
  *
- * 双 scope：
- *   projects = 全局回收站（可访问项目内的已删条目 + 已删项目根，不含个人空间文件）
+ * 三 scope（对齐 PC 回收站按上下文区分）：
+ *   projects = 项目列表回收站（全局：可访问项目内的已删条目 + 已删项目根 + 个人空间已删条目，projectId 不传）
+ *   project  = 项目内回收站（projectId=selectedProjectId，取该项目子树的已删条目）
  *   personal = 个人空间回收站（projectId=personalSpaceId，按子树取数）
  *
  * 后端接口全部现成，零后端改动：
@@ -27,7 +28,7 @@ import { t } from '@/languages'
 import { showSuccessToast, showFailToast } from 'vant'
 import { errorKind, errMsg } from '@/utils/apiError'
 
-export type TrashScope = 'projects' | 'personal'
+export type TrashScope = 'projects' | 'project' | 'personal'
 export type TrashSortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
 export type TrashSortOrder = 'asc' | 'desc'
 
@@ -35,6 +36,10 @@ const PAGE_SIZE = 30
 
 export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
   const scope = ref<TrashScope>('projects')
+  // 'project' scope 下选定的项目 id（项目内回收站）；未选定时列表为空，由 UI 提示选择
+  const selectedProjectId = ref<string | null>(null)
+  // 高级筛选：扩展名 csv（回收站接口仅支持 search/extension/sort，大小/时间会被后端忽略）
+  const extension = ref('')
   const nodes = ref<FileSystemNodeDto[]>([])
   const loading = ref(false)
   const error = ref('')
@@ -59,8 +64,16 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
 
   // ── 列表加载 ──
   async function load() {
-    // 个人 scope 依赖个人空间根 id；未就绪时不发起请求（避免误落到全局回收站）
+    // personal scope 依赖个人空间根 id；project scope 依赖选定的项目 id；
+    // 未就绪时不发起请求（避免 personal/project 误落到全局回收站）
     if (scope.value === 'personal' && !personalSpaceId.value) {
+      nodes.value = []
+      total.value = 0
+      totalPages.value = 1
+      error.value = ''
+      return
+    }
+    if (scope.value === 'project' && !selectedProjectId.value) {
       nodes.value = []
       total.value = 0
       totalPages.value = 1
@@ -71,13 +84,19 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     loading.value = true
     error.value = ''
     try {
-      const projectId = scope.value === 'personal' ? personalSpaceId.value ?? undefined : undefined
+      const projectId =
+        scope.value === 'personal'
+          ? personalSpaceId.value ?? undefined
+          : scope.value === 'project'
+            ? selectedProjectId.value ?? undefined
+            : undefined
       const res = await trashControllerGetTrash({
         query: {
           projectId,
           page: page.value,
           limit: PAGE_SIZE,
           search: debouncedSearch.value || undefined,
+          extension: extension.value || undefined,
           sortBy: sortBy.value,
           sortOrder: sortOrder.value,
         },
@@ -141,6 +160,14 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     load()
   }
 
+  // ── 高级筛选：扩展名（回收站接口仅支持 search/extension/sort，大小/时间会被忽略）──
+  const filterActive = computed(() => extension.value !== '')
+  function setFilters(filters: { extension?: string }) {
+    extension.value = filters.extension ?? ''
+    page.value = 1
+    load()
+  }
+
   // ── scope 切换：清搜索 + 回第 1 页 + 重载 ──
   function setScope(next: TrashScope) {
     if (next === scope.value) return
@@ -151,6 +178,17 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     }
     searchText.value = ''
     debouncedSearch.value = ''
+    extension.value = ''
+    page.value = 1
+    // 切走 project scope 时清空选定项目，避免残留 id 影响其他 scope
+    if (next !== 'project') selectedProjectId.value = null
+    load()
+  }
+
+  // 选定项目（'project' scope 的项目内回收站）：切换项目后回第 1 页重载
+  function setSelectedProject(id: string) {
+    if (id === selectedProjectId.value) return
+    selectedProjectId.value = id
     page.value = 1
     load()
   }
@@ -214,7 +252,14 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
       const res =
         scope.value === 'projects'
           ? await trashControllerClearTrash()
-          : await trashControllerClearProjectTrash({ path: { projectId: personalSpaceId.value ?? '' } })
+          : await trashControllerClearProjectTrash({
+              path: {
+                projectId:
+                  scope.value === 'project'
+                    ? selectedProjectId.value ?? ''
+                    : personalSpaceId.value ?? '',
+              },
+            })
       if (res.error) throw res.error
       showSuccessToast(t('回收站已清空'))
       await reload()
@@ -224,12 +269,12 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
   }
 
   return {
-    scope, nodes, loading, error, page, totalPages, total,
+    scope, selectedProjectId, nodes, loading, error, page, totalPages, total,
     searchText, debouncedSearch,
     sortBy, sortOrder,
-    loadMoreFailed, hasMore, isEmpty,
+    loadMoreFailed, hasMore, isEmpty, filterActive,
     load, reload, loadMore, retryLoadMore, refresh,
-    setSearch, setSort, setScope,
+    setSearch, setSort, setScope, setSelectedProject, setFilters,
     restore, restoreBatch,
     permanentDelete, permanentDeleteBatch,
     clear,

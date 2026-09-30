@@ -20,7 +20,7 @@ import type { ActionSheetAction } from 'vant'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
 import { useViewMode } from '@/composables/useViewMode'
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
-import { projectControllerGetProject, projectControllerGetProjectQuota } from '@cloudcad/api-sdk/sdk.gen'
+import { projectControllerGetProject, projectControllerGetProjectQuota, projectControllerGetPersonalSpace } from '@cloudcad/api-sdk/sdk.gen'
 import {
   memberControllerGetProjectMembers,
   memberControllerAddProjectMember,
@@ -56,14 +56,20 @@ import type { SelectionActionKey } from '../components/UnifiedFileList.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
 import { useTransferTargets } from '@/composables/useTransferTargets'
 import { useCrossProjectTransfer } from '@/composables/useCrossProjectTransfer'
+import { useFileSystemClipboard } from '@/stores/fileSystemClipboard'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
 import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
 import BatchDownloadPanel from '../components/BatchDownloadPanel.vue'
 import type { DownloadFormatPayload } from '../components/DownloadFormatPopup.vue'
+import ProjectEditPopup from '../components/ProjectEditPopup.vue'
+import ProjectTransferSettingsPopup from '../components/ProjectTransferSettingsPopup.vue'
+import { useProjectActions } from '@/composables/useProjectActions'
+import type { ProjectDto, BatchOperationResponseDto } from '@cloudcad/api-sdk/types.gen'
 
 const route = useRoute()
 const router = useRouter()
-const projectId = computed(() => (route.params.id as string) ?? '')
+// 路由参数名与 @cloudcad/platform 映射表共用（router/index.ts）
+const projectId = computed(() => (route.params.projectId as string) ?? '')
 
 const activeTab = ref(0)
 const projectName = ref('项目')
@@ -121,6 +127,9 @@ function refreshFiles() {
   loadProjectQuota()
 }
 
+// 完整 ProjectDto（name/description + 6 个转移设置字段）：编辑弹窗与转移设置弹窗的数据源
+const projectInfo = ref<ProjectDto | null>(null)
+
 async function loadProjectInfo() {
   if (!projectId.value) return
   try {
@@ -128,8 +137,11 @@ async function loadProjectInfo() {
       path: { projectId: projectId.value },
     } as any)
     if (!res.error) {
-      const data = res.data as any
-      projectName.value = data?.name ?? '项目'
+      const data = res.data as ProjectDto | undefined
+      if (data) {
+        projectInfo.value = data
+        projectName.value = data.name ?? '项目'
+      }
     }
   } catch (e) {
     projectName.value = `项目 ${projectId.value.slice(0, 6)}`
@@ -262,7 +274,7 @@ function openAddMemberDialog() {
 
 async function onAddMemberConfirm() {
   if (!selectedUser.value || !selectedRoleId.value) {
-    showFailToast('请选择用户和角色')
+    showFailToast(t('请选择用户和角色'))
     return
   }
   showLoadingToast({ message: '添加中...', forbidClick: true })
@@ -276,7 +288,7 @@ async function onAddMemberConfirm() {
     } as any)
     if (res.error) throw new Error(String(res.error))
     closeToast()
-    showSuccessToast('成员添加成功')
+    showSuccessToast(t('成员添加成功'))
     showAddMember.value = false
     selectedUser.value = null
     await loadMembers()
@@ -299,7 +311,7 @@ async function onRemoveMember(member: any) {
     } as any)
     if (res.error) throw new Error(String(res.error))
     closeToast()
-    showSuccessToast('成员已移除')
+    showSuccessToast(t('成员已移除'))
     await loadMembers()
   } catch (e: any) {
     if (e !== 'cancel') {
@@ -371,6 +383,17 @@ const canManageRoles = computed(() =>
   projectPermissions.value.includes(ProjectPermission.PROJECT_ROLE_MANAGE)
 )
 
+// 项目管理菜单权限门控（对齐 PC 逐项目权限拉取；加载期悲观隐藏）
+const canUpdateProject = computed(() =>
+  projectPermissions.value.includes(ProjectPermission.PROJECT_UPDATE)
+)
+const canDeleteProject = computed(() =>
+  projectPermissions.value.includes(ProjectPermission.PROJECT_DELETE)
+)
+const canManageTransfer = computed(() =>
+  projectPermissions.value.includes(ProjectPermission.PROJECT_TRANSFER_MANAGE)
+)
+
 function goRoleManagement() {
   router.push(`/shell/file/project/${projectId.value}/roles`)
 }
@@ -438,8 +461,16 @@ function onFabSheetSelect(action: FabAction) {
 function onSelectionAction(action: SelectionActionKey, items: Array<{ id: string; name: string }>) {
   if (action === 'delete') {
     batchDelete(items)
-  } else if (action === 'move' || action === 'copy') {
-    openFolderPicker(action, items)
+  } else if (action === 'copy' || action === 'cut') {
+    // 剪贴板（Bug6）：源根=当前项目
+    clipboard.setClipboard(items.map((i) => i.id), action, projectId.value, 'project')
+    showSuccessToast(
+      action === 'cut'
+        ? t('已剪切 {count} 项', { count: String(items.length) })
+        : t('已复制 {count} 项', { count: String(items.length) })
+    )
+  } else if (action === 'move') {
+    openFolderPicker('move', items)
   } else if (action === 'download') {
     for (const item of items) {
       const a = document.createElement('a')
@@ -603,7 +634,89 @@ async function onAuditLocate(log: AuditLogItem) {
   })
 }
 
-// ── A-06 格式转换下载（底部弹窗选格式 → downloadControllerDownloadNodeWithFormat blob）──
+// ── 项目管理菜单（nav-bar「更多」：编辑/成员/角色/转移设置/历史/删除，对齐 PC 项目卡片菜单）──
+const showManageSheet = ref(false)
+const showEditPopup = ref(false)
+const showTransferSettings = ref(false)
+
+type ManageActionKey = 'edit' | 'members' | 'roles' | 'transferSettings' | 'history' | 'delete'
+type ManageAction = ActionSheetAction & { key: ManageActionKey }
+
+const manageActions = computed<ManageAction[]>(() => {
+  const actions: ManageAction[] = []
+  if (canUpdateProject.value) actions.push({ key: 'edit', name: t('编辑项目') })
+  actions.push({ key: 'members', name: t('成员') })
+  if (canManageRoles.value) actions.push({ key: 'roles', name: t('角色管理') })
+  if (canManageTransfer.value) actions.push({ key: 'transferSettings', name: t('跨项目转移') })
+  actions.push({ key: 'history', name: t('操作历史') })
+  if (canDeleteProject.value) actions.push({ key: 'delete', name: t('删除项目'), color: '#ee0a24' })
+  return actions
+})
+
+function onManageAction(action: ManageAction) {
+  showManageSheet.value = false
+  switch (action.key) {
+    case 'edit':
+      showEditPopup.value = true
+      break
+    case 'members':
+      activeTab.value = 1
+      break
+    case 'roles':
+      goRoleManagement()
+      break
+    case 'transferSettings':
+      showTransferSettings.value = true
+      break
+    case 'history':
+      showAuditPopup.value = true
+      break
+    case 'delete':
+      void onManageDelete()
+      break
+  }
+}
+
+// 项目级操作（编辑/删除/转让）集中在 useProjectActions；详情页的统一刷新只刷项目信息
+const projectActions = useProjectActions(async () => {
+  await loadProjectInfo()
+})
+
+/** 删除项目：成功后回退项目列表（文件浏览器） */
+async function onManageDelete() {
+  const ok = await projectActions.remove(projectId.value, projectName.value)
+  if (ok) router.back()
+}
+
+/** 编辑项目（名称+描述）：composable 的刷新会更新 projectInfo，名称本地同步 */
+async function onEditProjectConfirm(payload: { name: string; description: string }) {
+  showEditPopup.value = false
+  const ok = await projectActions.update(projectId.value, payload)
+  if (ok) projectName.value = payload.name
+}
+
+/** 转移设置已保存（选择即保存）：更新本地 ProjectDto 缓存 */
+function onTransferSettingsSaved(settings: Partial<ProjectDto>) {
+  if (projectInfo.value) {
+    projectInfo.value = { ...projectInfo.value, ...settings }
+  }
+}
+
+/** 转让所有权（成员行按钮）：成功后重载成员+权限（转让后自己的权限会变化） */
+async function onTransferOwnership(member: { id: string; name: string }) {
+  const ok = await projectActions.transferOwnership(projectId.value, member)
+  if (ok) {
+    await Promise.all([loadMembers(), loadProjectPermissions()])
+  }
+}
+
+// ── A-07 批量下载任务面板（zip 打包 + 单文件格式转换共用，3s 轮询）──
+const { createFolderZipTask, createSingleFormatTask } = useBatchDownload()
+const showBatchPanel = ref(false)
+
+// ── A-06 格式转换下载（底部弹窗选格式）──
+// 转换格式（dwg/dxf/pdf）走异步单文件任务队列（对齐 PC）：同步 download-with-format
+// 对慢转换会挂起至超时；mxweb/original 无转换开销，保持同步直下
 const showFormatPopup = ref(false)
 const formatTarget = ref<{ id: string; name: string } | null>(null)
 
@@ -615,20 +728,31 @@ function openFormatDownload(target: { id: string; name: string }) {
 async function onFormatDownloadConfirm(payload: DownloadFormatPayload) {
   const target = formatTarget.value
   if (!target) return
+
+  if (payload.format !== 'mxweb') {
+    showLoadingToast({ message: t('创建下载任务...'), forbidClick: true })
+    try {
+      await createSingleFormatTask(target.id, target.name, payload.format, {
+        dwgVersion: payload.dwgOptions?.dwgVersion,
+        width: payload.pdfOptions?.width,
+        height: payload.pdfOptions?.height,
+        colorPolicy: payload.pdfOptions?.colorPolicy,
+      })
+      closeToast()
+      showSuccessToast(t('已加入下载队列'))
+      showBatchPanel.value = true
+    } catch (e) {
+      closeToast()
+      showFailToast(t('创建下载任务失败'))
+    }
+    return
+  }
+
   showLoadingToast({ message: t('下载中...'), forbidClick: true })
   try {
-    const query: Record<string, unknown> = { format: payload.format }
-    if (payload.pdfOptions) {
-      query.width = payload.pdfOptions.width
-      query.height = payload.pdfOptions.height
-      query.colorPolicy = payload.pdfOptions.colorPolicy
-    }
-    if (payload.dwgOptions) {
-      query.dwgVersion = payload.dwgOptions.dwgVersion
-    }
     const res = await downloadControllerDownloadNodeWithFormat({
       path: { nodeId: target.id },
-      query,
+      query: { format: payload.format },
       parseAs: 'blob',
     } as never)
     closeToast()
@@ -651,10 +775,6 @@ async function onFormatDownloadConfirm(payload: DownloadFormatPayload) {
     showFailToast(t('下载失败'))
   }
 }
-
-// ── A-08 文件夹打包下载 + A-07 批量下载任务面板 ──
-const { createFolderZipTask } = useBatchDownload()
-const showBatchPanel = ref(false)
 
 async function downloadFolder(target: { id: string; name: string; projectId?: string }) {
   showLoadingToast({ message: t('正在创建打包任务...'), forbidClick: true })
@@ -700,6 +820,49 @@ const folderPickerItems = ref<Array<{ id: string; name: string }>>([])
 const transferTargets = useTransferTargets()
 const crossTransfer = useCrossProjectTransfer()
 
+// 个人空间根 id：移动/复制目标含个人空间（对齐 PC），惰性取一次；取不到则回落仅列我的项目
+const personalSpaceId = ref<string | null>(null)
+async function ensurePersonalSpaceId() {
+  if (personalSpaceId.value) return
+  const res = await projectControllerGetPersonalSpace()
+  if (res.error) return
+  const space = res.data as { id?: string } | undefined
+  if (space?.id) personalSpaceId.value = space.id
+}
+
+// ── Bug6 剪贴板粘贴：把剪贴板内容粘贴到当前文件夹（cut→move 成功后清空）──
+const clipboard = useFileSystemClipboard()
+
+function onClearPaste() {
+  clipboard.clearClipboard()
+}
+
+async function onPaste() {
+  if (!clipboard.hasItems || !clipboard.mode) return
+  const mode = clipboard.mode
+  const targetId = fileList.currentFolderId.value ?? projectId.value
+  if (!targetId) {
+    showFailToast(t('无法确定粘贴位置'))
+    return
+  }
+  const op = mode === 'cut' ? 'move' : 'copy'
+  // 跨根剪切（源=其他项目/个人空间）：文件将从源移走，二次确认（对齐 PC）
+  if (mode === 'cut' && clipboard.sourceRootId && clipboard.sourceRootId !== projectId.value) {
+    try {
+      await showConfirmDialog({
+        title: t('跨项目移动'),
+        message: t('将把 {count} 个项目移动到当前文件夹，源项目的文件将被移走，确定？', { count: String(clipboard.itemIds.length) }),
+        confirmButtonText: t('确定'),
+        cancelButtonText: t('取消'),
+      })
+    } catch {
+      return
+    }
+  }
+  const items = clipboard.itemIds.map((id) => ({ id, name: '' }))
+  void doMoveOrCopy({ id: targetId, name: '' }, op, items, true)
+}
+
 async function openFolderPicker(op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
   const rootId = fileList.currentFolderId.value ?? projectId.value
   if (!rootId) {
@@ -708,8 +871,9 @@ async function openFolderPicker(op: 'move' | 'copy', items: Array<{ id: string; 
   }
   folderPickerOp.value = op
   folderPickerItems.value = items
-  // 拉目标根 + 源项目转移设置（源=当前项目）
-  await transferTargets.load(null) // 项目页无个人空间根，仅列我的项目
+  // 拉目标根（含个人空间）+ 源项目转移设置（源=当前项目）
+  await ensurePersonalSpaceId()
+  await transferTargets.load(personalSpaceId.value)
   await crossTransfer.init({ id: projectId.value, name: projectName.value, domain: 'project' }, op)
   showFolderPicker.value = true
 }
@@ -725,8 +889,8 @@ function transferErrorMessage(e: unknown, op: 'move' | 'copy'): string {
   return op === 'move' ? t('移动失败') : t('复制失败')
 }
 
-async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
-  showLoadingToast({ message: op === 'move' ? t('移动中...') : t('复制中...'), forbidClick: true })
+async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | 'copy', items: Array<{ id: string; name: string }>, isClipboardPaste = false) {
+  showLoadingToast({ message: isClipboardPaste ? t('粘贴中...') : op === 'move' ? t('移动中...') : t('复制中...'), forbidClick: true })
   try {
     const res = items.length === 1
       ? op === 'move'
@@ -737,7 +901,21 @@ async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | '
         : await nodeControllerBatchCopyNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
     closeToast()
     if (res.error) throw new Error(String(res.error))
-    showSuccessToast(op === 'move' ? t('移动成功') : t('复制成功'))
+    // 批量操作部分成功：透传成功/失败计数（对齐 PC「成功移动 N 项，M 项失败」）
+    const data = res.data as BatchOperationResponseDto | undefined
+    const failed = items.length > 1 ? (data?.failedCount ?? 0) : 0
+    if (failed > 0) {
+      const n = String(data?.successCount ?? 0)
+      const m = String(failed)
+      showFailToast(op === 'move' ? t('成功移动 {n} 项，{m} 项失败', { n, m }) : t('成功复制 {n} 项，{m} 项失败', { n, m }))
+    } else {
+      showSuccessToast(isClipboardPaste ? t('粘贴成功') : op === 'move' ? t('移动成功') : t('复制成功'))
+    }
+    // 剪切粘贴：只要有项成功就清空剪贴板（对齐 PC movedIds.length>0；全失败保留可重试；复制粘贴保留）
+    if (isClipboardPaste && op === 'move') {
+      const moved = items.length === 1 ? 1 : (data?.successCount ?? 0)
+      if (moved > 0) clipboard.clearClipboard()
+    }
     fileList.refresh()
   } catch (e) {
     closeToast()
@@ -790,7 +968,7 @@ async function onCreateFolderConfirm() {
     })
     closeToast()
     if (res.error) throw new Error(String(res.error))
-    showToast('文件夹创建成功')
+    showToast(t('文件夹创建成功'))
     fileList.refresh()
   } catch (e) {
     closeToast()
@@ -867,15 +1045,26 @@ onMounted(() => {
   loadRoles()
   loadProjectPermissions()
   loadProjectQuota()
+  // 从项目列表卡片管理菜单深链进入（?manage=members|roles|transfer|history）：直达对应管理区
+  const manage = route.query.manage
+  if (manage === 'roles') {
+    goRoleManagement()
+  } else if (manage === 'members') {
+    activeTab.value = 1
+  } else if (manage === 'history') {
+    showAuditPopup.value = true
+  } else if (manage === 'transfer') {
+    showTransferSettings.value = true
+  }
 })
 </script>
 
 <template>
   <div class="subpage">
     <van-nav-bar :title="projectName" left-arrow @click-left="() => router.back()">
-      <!-- 二期 b 操作历史：成员可查（后端 ProjectAuditGuard 兜底 403） -->
+      <!-- 项目管理入口（对齐 PC 项目卡片「…」菜单：编辑/成员/角色/转移设置/历史/删除） -->
       <template #right>
-        <van-icon name="todo-list-o" size="20" @click="showAuditPopup = true" />
+        <van-icon name="ellipsis" size="20" @click="showManageSheet = true" />
       </template>
     </van-nav-bar>
 
@@ -906,6 +1095,7 @@ onMounted(() => {
           :sort-by="fileSortBy"
           :sort-order="fileSortOrder"
           :filter-active="fileList.hasActiveFilters.value"
+          :enable-paste="true"
           @item-click="enterFolder"
           @item-menu="onItemMenu"
           @breadcrumb-click="fileList.goBackTo"
@@ -918,6 +1108,8 @@ onMounted(() => {
           @sort-change="fileList.setSort"
           @filter="showFilterPopup = true"
           @fab-click="openCreateFolderDialog"
+          @paste="onPaste"
+          @clear-paste="onClearPaste"
         />
       </van-tab>
 
@@ -967,6 +1159,10 @@ onMounted(() => {
                   @change="(val: any) => onUpdateMemberRole(m, val)"
                 />
               </van-dropdown-menu>
+              <!-- 转让所有权（对齐 PC MembersModal 转让按钮；后端要求 PROJECT_TRANSFER） -->
+              <button class="member-transfer-btn" @click="onTransferOwnership(m)">
+                <van-icon name="exchange" size="16" />
+              </button>
               <button class="member-remove-btn" @click="onRemoveMember(m)">
                 <van-icon name="delete-o" size="16" />
               </button>
@@ -1137,12 +1333,33 @@ onMounted(() => {
       @apply="onFilterApply"
     />
 
-    <!-- 操作历史（二期 b）：nav-bar 入口打开，定位=文件打开图纸/文件夹跳父目录 -->
+    <!-- 操作历史（二期 b）：管理菜单「操作历史」打开，定位=文件打开图纸/文件夹跳父目录 -->
     <ProjectAuditLogPopup
       :show="showAuditPopup"
       :project-id="projectId"
       @close="showAuditPopup = false"
       @locate="onAuditLocate"
+    />
+
+    <!-- 项目管理菜单（nav-bar「更多」：编辑/成员/角色/转移设置/历史/删除，按权限门控） -->
+    <van-action-sheet
+      v-model:show="showManageSheet"
+      :actions="manageActions"
+      @select="onManageAction"
+    />
+    <!-- 编辑项目（名称+描述，对齐 PC ProjectModal 编辑模式） -->
+    <ProjectEditPopup
+      v-model:show="showEditPopup"
+      :initial-name="projectName"
+      :initial-description="projectInfo?.description ?? ''"
+      @confirm="onEditProjectConfirm"
+    />
+    <!-- 跨项目转移设置（6 域 × 四态，选择即保存；PROJECT_TRANSFER_MANAGE 门控） -->
+    <ProjectTransferSettingsPopup
+      v-model:show="showTransferSettings"
+      :project-id="projectId"
+      :settings="projectInfo ?? {}"
+      @saved="onTransferSettingsSaved"
     />
 
     <!-- 单条目操作菜单（A-03）+ 重命名（A-04）+ 移动/复制选文件夹（A-05） -->
@@ -1463,6 +1680,7 @@ onMounted(() => {
   }
 }
 
+.member-transfer-btn,
 .member-remove-btn {
   border: none;
   background: none;

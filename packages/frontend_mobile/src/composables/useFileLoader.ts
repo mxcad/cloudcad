@@ -180,11 +180,12 @@ export function useFileLoader() {
       const nodeInfo = await fetchFileNode(fileId, options);
 
       if (!nodeInfo) {
-        // 分享源节点解析为空 = 链接失效（对齐被删除的 useShareFileLoad 专属文案；
-        // key 已被 i18n extract 清除，voerka 缺 key 回退源文本，extract 后重新收键）
+        // 分享源节点解析为空 = 链接失效（对齐被删除的 useShareFileLoad 专属文案）。
+        // 三元必须放在 t() 外：voerkai18n extract 扫描器只认 t() 内直接的字符串字面量，
+        // t(cond ? 'a' : 'b') 的两个键会被静默删除（PC 1419/1422 同根因）。
         throw typedError(
           'not-found',
-          t(options?.shareToken ? '分享链接不存在或已失效' : '文件不存在')
+          options?.shareToken ? t('分享链接不存在或已失效') : t('文件不存在')
         );
       }
 
@@ -453,21 +454,6 @@ export function useFileLoader() {
     }
   }
 
-  /**
-   * Try to load file from URL params. Returns true if a fileId or hash was found and loading started.
-   */
-  async function loadFromUrl(): Promise<boolean> {
-    const fileId = getFileIdFromUrl();
-    if (fileId) {
-      return await loadByNodeId(fileId);
-    }
-    const fileHash = getHashFromUrl();
-    if (fileHash) {
-      return await loadByHash(fileHash);
-    }
-    return false;
-  }
-
   function clearError() {
     error.value = null;
     editorState.setErrorType(null);
@@ -479,7 +465,6 @@ export function useFileLoader() {
     progress: readonly(progress),
     loadByNodeId,
     loadByHash,
-    loadFromUrl,
     getFileIdFromUrl,
     getNodeIdFromUrl,
     getHashFromUrl,

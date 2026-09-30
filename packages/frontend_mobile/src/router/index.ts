@@ -11,6 +11,9 @@
  * 路由守卫：未登录访问需登录子页（/shell/file、/shell/share、/shell/profile）→ 直接跳 /login?redirect=...；
  * 已登录访问 /login|/register 等认证页 → 跳回 redirect 目标或 /shell（例外：/forgot-password、
  * /reset-password 允许已登录进入——Profile 页「忘记密码」入口面向已登录用户）。/shell 根（编辑器）公开可游客使用。
+ *
+ * 守卫是异步的：accessToken 过期但 refreshToken 有效时先静默刷新再判定（见 hasValidAuth），
+ * 否则冷启动会误把「可续期会话」判成未登录而弹登录页。
  */
 import {
   createRouter,
@@ -20,9 +23,11 @@ import {
 import {
   AUTH_PAGE_PATHS,
   isTokenExpired,
+  onSessionChanged,
   readToken,
   resolveRedirectTarget,
 } from '@/utils/authSession';
+import { refreshTokensOnce } from '@/utils/apiConfig';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -80,13 +85,15 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../pages/shell/sub-pages/FileBrowserPage.vue'),
       },
       {
-        path: 'file/project/:id',
+        // 参数名须为 :projectId：与 @cloudcad/platform 路由映射表的反向解析共用
+        // renderPathPattern，参数名不同名会渲染出空路径段。
+        path: 'file/project/:projectId',
         name: 'ProjectDetail',
         component: () =>
           import('../pages/shell/sub-pages/ProjectDetailPage.vue'),
       },
       {
-        path: 'file/project/:id/roles',
+        path: 'file/project/:projectId/roles',
         name: 'ProjectRoles',
         component: () =>
           import('../pages/shell/sub-pages/ProjectRolesPage.vue'),
@@ -129,15 +136,65 @@ function hasValidToken(): boolean {
   return !!token && !isTokenExpired(token);
 }
 
+/**
+ * 守卫等待刷新的上限。@hey-api 生成的 client 没有内置超时（apiConfig 的 fetch
+ * 覆写也只处理重试），刷新请求挂住会让导航永久 pending，故守卫侧自己兜上限。
+ */
+const REFRESH_GUARD_TIMEOUT_MS = 4000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+/**
+ * 可续期的登录态判定：accessToken 有效即已登录；否则先静默刷新一次再判定。
+ *
+ * 必须异步：accessToken 过期但 refreshToken 仍有效时（冷启动最典型——
+ * useAuthState.initFromStorage 的静默刷新还没回来，守卫已同步判完），
+ * 纯 exp 检查会把「可续期会话」误判成未登录，把刚登录的用户弹回 /login。
+ *
+ * 判定结果按会话缓存：刷新失败（含超时、网络错误）后不再每次导航都重试；
+ * 会话写入/清理时（onSessionChanged）重置，重新允许尝试。in-flight 期间并发
+ * 导航共享同一个 promise，不会在刷新未返回前抢先弹登录页。
+ *
+ * 刷新走 apiConfig.refreshTokensOnce 唯一出口（与 fetch 层 401 刷新共享 in-flight
+ * 去重，不会重复消费轮换制 refresh token）。
+ */
+let authRefreshOutcome: Promise<boolean> | null = null;
+onSessionChanged(() => {
+  authRefreshOutcome = null;
+});
+
+export function hasValidAuth(): Promise<boolean> {
+  if (hasValidToken()) return Promise.resolve(true);
+  if (authRefreshOutcome) return authRefreshOutcome;
+  authRefreshOutcome = withTimeout(refreshTokensOnce(), REFRESH_GUARD_TIMEOUT_MS)
+    .then((ok) => ok && hasValidToken())
+    .catch(() => false);
+  return authRefreshOutcome;
+}
+
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const isAuthPage = AUTH_PAGE_PATHS.includes(to.path);
   const needsAuth = AUTH_REQUIRED_PREFIXES.some((p) => to.path.startsWith(p));
-  const authed = hasValidToken();
+  const authed = await hasValidAuth();
 
   // 已登录访问认证页 → 跳回 redirect 目标（同源内部路径）或壳根
   // （/forgot-password、/reset-password 例外：Profile 页入口面向已登录用户）

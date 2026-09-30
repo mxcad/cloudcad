@@ -4,6 +4,7 @@ import { useProjectActions } from './useProjectActions'
 vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
   projectControllerUpdateProject: vi.fn(),
   projectControllerDeleteProject: vi.fn(),
+  memberControllerTransferProject: vi.fn(),
 }))
 vi.mock('vant', () => ({
   showLoadingToast: vi.fn(),
@@ -28,7 +29,11 @@ vi.mock('@/utils/apiError', () => ({
   }),
 }))
 
-import { projectControllerUpdateProject, projectControllerDeleteProject } from '@cloudcad/api-sdk/sdk.gen'
+import {
+  projectControllerUpdateProject,
+  projectControllerDeleteProject,
+  memberControllerTransferProject,
+} from '@cloudcad/api-sdk/sdk.gen'
 import { showSuccessToast, showFailToast, showDialog } from 'vant'
 import { errorKind } from '@/utils/apiError'
 
@@ -50,6 +55,7 @@ describe('useProjectActions 项目操作', () => {
     vi.clearAllMocks()
     resolveWith(projectControllerUpdateProject, { data: {} })
     resolveWith(projectControllerDeleteProject, { data: {} })
+    resolveWith(memberControllerTransferProject, { data: {} })
     // showDialog 默认确认（resolve）；取消用例单独 override 为 reject
     vi.mocked(showDialog).mockResolvedValue(undefined as never)
     warnSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -121,6 +127,74 @@ describe('useProjectActions 项目操作', () => {
     await c.remove(PROJECT_ID, '旧项目')
     expect(vi.mocked(showFailToast)).toHaveBeenCalledWith('没有执行此操作的权限')
     expect(vi.mocked(showSuccessToast)).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('update 成功：PATCH 传 name+description + 保存文案 + 刷新 + 返回 true', async () => {
+    const { c, refresh } = setup()
+    const ok = await c.update(PROJECT_ID, { name: '新项目', description: '项目描述' })
+    expect(ok).toBe(true)
+    expect(vi.mocked(projectControllerUpdateProject)).toHaveBeenCalledWith({
+      path: { projectId: PROJECT_ID },
+      body: { name: '新项目', description: '项目描述' },
+    })
+    expect(vi.mocked(showSuccessToast)).toHaveBeenCalledWith('保存成功')
+    expect(refresh).toHaveBeenCalled()
+  })
+
+  it('update 空名称：不调 API，返回 false', async () => {
+    const { c, refresh } = setup()
+    const ok = await c.update(PROJECT_ID, { name: '  ', description: '项目描述' })
+    expect(ok).toBe(false)
+    expect(vi.mocked(projectControllerUpdateProject)).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('update 403：显示权限错误文案，返回 false，不刷新', async () => {
+    vi.mocked(errorKind).mockReturnValue('forbidden')
+    vi.mocked(projectControllerUpdateProject).mockRejectedValue(new Error('no perm'))
+    const { c, refresh } = setup()
+    const ok = await c.update(PROJECT_ID, { name: '新项目', description: '' })
+    expect(ok).toBe(false)
+    expect(vi.mocked(showFailToast)).toHaveBeenCalledWith('没有执行此操作的权限')
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('transferOwnership 确认：POST newOwnerId + 转让文案 + 刷新 + 返回 true', async () => {
+    const { c, refresh } = setup()
+    const ok = await c.transferOwnership(PROJECT_ID, { id: 'user-2', name: '张三' })
+    expect(ok).toBe(true)
+    expect(vi.mocked(showDialog)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: '转让项目所有权',
+        confirmButtonText: '确认转让',
+        showCancelButton: true,
+      }),
+    )
+    expect(vi.mocked(memberControllerTransferProject)).toHaveBeenCalledWith({
+      path: { projectId: PROJECT_ID },
+      body: { newOwnerId: 'user-2' },
+    })
+    expect(vi.mocked(showSuccessToast)).toHaveBeenCalledWith('转让成功')
+    expect(refresh).toHaveBeenCalled()
+  })
+
+  it('transferOwnership 取消：不调 API，返回 false', async () => {
+    vi.mocked(showDialog).mockRejectedValue(new Error('cancel'))
+    const { c, refresh } = setup()
+    const ok = await c.transferOwnership(PROJECT_ID, { id: 'user-2', name: '张三' })
+    expect(ok).toBe(false)
+    expect(vi.mocked(memberControllerTransferProject)).not.toHaveBeenCalled()
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('transferOwnership 403：显示权限错误文案，返回 false，不刷新', async () => {
+    vi.mocked(errorKind).mockReturnValue('forbidden')
+    vi.mocked(memberControllerTransferProject).mockRejectedValue(new Error('no perm'))
+    const { c, refresh } = setup()
+    const ok = await c.transferOwnership(PROJECT_ID, { id: 'user-2', name: '张三' })
+    expect(ok).toBe(false)
+    expect(vi.mocked(showFailToast)).toHaveBeenCalledWith('没有执行此操作的权限')
     expect(refresh).not.toHaveBeenCalled()
   })
 })

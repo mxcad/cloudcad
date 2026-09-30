@@ -1,6 +1,7 @@
 <script lang="ts">
 // 多选操作项 key（回收站扩展 restore/permanentDelete；父组件 selectionAction handler 按此类型标注）
-export type SelectionActionKey = 'download' | 'delete' | 'move' | 'copy' | 'restore' | 'permanentDelete'
+// cut/copy=写入剪贴板（对齐 PC），move=单条目菜单的移动到文件夹（picker）
+export type SelectionActionKey = 'download' | 'delete' | 'move' | 'copy' | 'cut' | 'restore' | 'permanentDelete'
 </script>
 
 <script setup lang="ts">
@@ -18,7 +19,16 @@ import { ref, watch, computed } from 'vue'
 import { t } from '@/languages'
 import type { UnifiedDomain } from '../../../composables/useUnifiedFileList'
 import type { FileListItem } from '../../../composables/useNodeFormatter'
-import { FolderIcon, ProjectIcon } from '../../../components/FileIcons'
+import {
+  FolderIcon,
+  ProjectIcon,
+  DwgIcon,
+  DxfIcon,
+  PdfIcon,
+  ImageIcon,
+  FileIcon,
+} from '../../../components/FileIcons'
+import { useFileSystemClipboard } from '../../../stores/fileSystemClipboard'
 
 type ListItem = FileListItem
 type SortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
@@ -52,10 +62,12 @@ const props = withDefaults(
     emptyText?: string
     /** 空态图标（不传沿用默认的 friends-o） */
     emptyIcon?: string
-    /** 多选操作项（不传沿用默认的 下载/移动/复制/删除；回收站传 恢复/彻底删除） */
+    /** 多选操作项（不传沿用默认的 复制/剪切/下载/删除；回收站传 恢复/彻底删除） */
     selectionActions?: SelectionActionDef[]
     /** 是否有生效的高级筛选（二期 d）：筛选按钮高亮 */
     filterActive?: boolean
+    /** 是否启用剪贴板「粘贴」条（文件夹视图传 true；项目列表/回收站传 false） */
+    enablePaste?: boolean
   }>(),
   {
     showToolbar: true,
@@ -68,6 +80,7 @@ const props = withDefaults(
     sortOrder: 'desc',
     showFab: true,
     filterActive: false,
+    enablePaste: false,
   }
 )
 
@@ -85,6 +98,10 @@ const emit = defineEmits<{
   sortChange: [sortBy: SortField, sortOrder: SortOrder]
   /** 工具栏筛选按钮（二期 d）：父组件打开 FileFilterPopup */
   filter: []
+  /** 剪贴板「粘贴」（Bug6）：父组件把剪贴板内容粘贴到当前文件夹 */
+  paste: []
+  /** 剪贴板「清空」：父组件清空剪贴板 */
+  clearPaste: []
   'update:keyword': [keyword: string]
 }>()
 
@@ -145,8 +162,22 @@ function stripExt(name: string): string {
   return dot > 0 ? name.slice(0, dot) : name
 }
 
-// mock 缩略图（网格模式占位色块）
-const folderThumb = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23161616" width="100" height="100"/><text x="50" y="60" font-size="40" text-anchor="middle" fill="%23ff976a">📁</text></svg>'
+// 按扩展名返回默认文件图标（对齐 PC getFileIconComponent：dwg/dxf/pdf/图片/通用兜底）
+const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'gif', 'webp']
+function fileIconFor(item: ListItem) {
+  const ext = (item.ext || '').toLowerCase()
+  if (ext === 'dwg') return DwgIcon
+  if (ext === 'dxf') return DxfIcon
+  if (ext === 'pdf') return PdfIcon
+  if (IMAGE_EXTS.includes(ext)) return ImageIcon
+  return FileIcon
+}
+
+// 缩略图加载失败标记：失败后隐藏 <img>，露出底层按后缀的默认图标（替代旧的文件夹 emoji 兜底）
+const thumbErrors = ref<Set<string>>(new Set())
+function onThumbError(id: string) {
+  thumbErrors.value.add(id)
+}
 
 // ── 长按多选 ──
 const isSelectionMode = ref(false)
@@ -193,14 +224,19 @@ function exitSelectionMode() {
 }
 
 // 多选操作项由父组件注入（回收站传 恢复/彻底删除），不传沿用默认四项
+// 复制/剪切=写入剪贴板（对齐 PC 多选剪贴板），粘贴见工具栏粘贴条
 const selectionActions = computed<SelectionActionDef[]>(() =>
   props.selectionActions ?? [
-    { key: 'download', label: t('下载') },
-    { key: 'move', label: t('移动') },
     { key: 'copy', label: t('复制') },
+    { key: 'cut', label: t('剪切') },
+    { key: 'download', label: t('下载') },
     { key: 'delete', label: t('删除'), danger: true },
   ]
 )
+
+// 剪贴板（Bug6）：粘贴条读取全局剪贴板状态；仅 enablePaste 的文件夹视图展示
+const clipboard = useFileSystemClipboard()
+const showPasteBar = computed(() => props.enablePaste && clipboard.hasItems)
 
 function onSelectionAction(action: SelectionActionKey) {
   const selectedItems = props.items.filter((i) => selected.value.has(i.id))
@@ -312,6 +348,16 @@ async function onPullRefresh() {
       </div>
     </div>
 
+    <!-- ═══ 剪贴板粘贴条（Bug6）：文件夹视图且剪贴板非空时展示 ═══ -->
+    <div v-if="showPasteBar" class="paste-bar">
+      <van-icon name="description" size="16" class="paste-bar-icon" />
+      <span class="paste-bar-text">
+        {{ clipboard.mode === 'cut' ? t('已剪切 {count} 项', { count: String(clipboard.itemIds.length) }) : t('已复制 {count} 项', { count: String(clipboard.itemIds.length) }) }}
+      </span>
+      <button class="paste-bar-btn" @click="emit('paste')">{{ t('粘贴') }}</button>
+      <button class="paste-bar-clear" @click="emit('clearPaste')">{{ t('清空') }}</button>
+    </div>
+
     <!-- ═══ 面包屑 ═══ -->
     <div v-if="breadcrumb.length > 0" class="breadcrumb">
       <span
@@ -370,8 +416,13 @@ async function onPullRefresh() {
             <FolderIcon v-else size="72%" />
           </div>
           <div v-else class="grid-thumb grid-thumb--file">
-            <span class="thumb-ext" :style="{ color: extColor(item.ext) }">{{ item.ext }}</span>
-            <img v-if="item.thumb" :src="item.thumb" class="thumb-img" @error="($event.target as HTMLImageElement).src = folderThumb" />
+            <component :is="fileIconFor(item)" class="thumb-icon" size="72%" />
+            <img
+              v-if="item.thumb && !thumbErrors.has(item.id)"
+              :src="item.thumb"
+              class="thumb-img"
+              @error="onThumbError(item.id)"
+            />
           </div>
           <span class="grid-name">{{ stripExt(item.name) }}</span>
           <span v-if="!item.isFolder" class="grid-meta">{{ item.time }}</span>
@@ -410,7 +461,7 @@ async function onPullRefresh() {
           <div class="list-icon" :class="item.isFolder ? 'list-icon--folder' : 'list-icon--file'">
             <ProjectIcon v-if="isProjectRoot(item)" :size="20" />
             <FolderIcon v-else-if="item.isFolder" :size="20" />
-            <van-icon v-else name="description" size="20" />
+            <component v-else :is="fileIconFor(item)" :size="20" />
           </div>
           <div class="list-body">
             <span class="list-name">{{ stripExt(item.name) }}</span>
@@ -651,11 +702,9 @@ async function onPullRefresh() {
   }
 }
 
-.thumb-ext {
+.thumb-icon {
   position: relative;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  z-index: 0;
 }
 
 .thumb-img {
@@ -902,5 +951,50 @@ async function onPullRefresh() {
   color: var(--accent);
   font-size: 12px;
   flex: none;
+}
+
+/* ── 剪贴板粘贴条（Bug6）── */
+.paste-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border-bottom: 0.5px solid var(--divider);
+}
+
+.paste-bar-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.paste-bar-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paste-bar-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 14px;
+  padding: 5px 14px;
+  background: var(--accent, #00a99e);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.paste-bar-clear {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  padding: 4px 6px;
 }
 </style>
