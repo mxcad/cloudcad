@@ -6,8 +6,8 @@ import { useUIStore } from '../stores/uiStore';
  * 这里不再持有任何镜像状态。
  */
 
-export const showGlobalLoading = (message?: string, _source?: string): void => {
-  useUIStore.getState().showGlobalLoading(message);
+export const showGlobalLoading = (message?: string, source?: string): void => {
+  useUIStore.getState().showGlobalLoading(message, source);
 };
 
 export const hideGlobalLoading = (_source?: string): void => {
@@ -40,6 +40,6 @@ export const getLoadingState = () => {
     loadingMessage: store.loadingMessage,
     loadingProgress: store.loadingProgress,
     refCount: store.loadingRefCount,
-    source: null as string | null,
+    source: store.loadingSource,
   };
 };

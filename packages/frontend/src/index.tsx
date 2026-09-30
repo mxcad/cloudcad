@@ -41,11 +41,7 @@ import './styles/icon.js';
 import './components/drop-indicator/DropIndicator.css';
 import './config/clientSetup';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { isMobile } from './utils/isMobile';
-import {
-  getMobileRedirectConfig,
-  getMobileRedirectUrl,
-} from './utils/mobileRedirect';
+import { performMobileRedirectIfNeeded } from './utils/mobileRedirect';
 import { markDesktopOrigin } from './lib/desktopOrigin';
 
 const rootElement = document.getElementById('root');
@@ -53,10 +49,9 @@ if (!rootElement) {
   throw new Error('Could not find root element to mount to');
 }
 
-// 移动端预检 Promise：在 React 渲染前启动，initApp 中 await 它以确保跳转优先于 mxcad-app 加载
-const mobileCheckPromise = isMobile()
-  ? getMobileRedirectConfig().then((config) => getMobileRedirectUrl(config))
-  : null;
+// 移动端预检：在 React 渲染前启动，initApp 中 await 它以确保跳转优先于 mxcad-app 加载。
+// SPA 客户端导航由 App.tsx 的 MobileRouteGuard 处理，同一个出口、跳过首次渲染。
+const mobileCheckPromise = performMobileRedirectIfNeeded();
 
 const AppInitializer: React.FC = () => {
   useEffect(() => {
@@ -79,17 +74,8 @@ const AppInitializer: React.FC = () => {
         clearTimeout(timeoutId);
       }
 
-      // 2. 移动端预检：仅 CAD 编辑器路由 + 移动设备 → 跳转到移动端 H5 编辑器
-      if (
-        mobileCheckPromise &&
-        window.location.pathname.startsWith('/cad-editor')
-      ) {
-        const redirectUrl = await mobileCheckPromise;
-        if (redirectUrl) {
-          window.location.replace(redirectUrl);
-          return;
-        }
-      }
+      // 2. 移动端预检：可映射路由 + 移动姿态 → 跳转到移动端 H5
+      if (await mobileCheckPromise) return;
     };
 
     initApp();

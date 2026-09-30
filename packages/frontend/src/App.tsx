@@ -39,11 +39,7 @@ import NoPermissionPage from './components/ui/NoPermissionPage';
 import { i18nScope, t } from '@/languages';
 import { useVoerkaI18n } from '@voerkai18n/react';
 import { setSpaNavigate } from './config/clientSetup';
-import { isMobile } from './utils/isMobile';
-import {
-  getMobileRedirectConfig,
-  getMobileRedirectUrl,
-} from './utils/mobileRedirect';
+import { performMobileRedirectIfNeeded } from './utils/mobileRedirect';
 import { isConversionPanelRoute } from './utils/conversionPanelRoute';
 
 // ============================================================================
@@ -784,25 +780,23 @@ function App() {
 export default App;
 
 /**
- * 移动端路由守卫 — 检测客户端导航到 CAD 编辑器路由时，自动跳转到移动端 H5 编辑器。
- * 处理 React Router 客户端导航场景（index.tsx 的初始加载检查无法覆盖）。
+ * 移动端路由守卫 — 检测客户端导航到可映射路由时，自动跳转到移动端 H5。
+ *
+ * 判定与 URL 生成在 mobileRedirect 里（唯一出口），这里只负责响应 SPA 导航。
+ * 首次渲染跳过：那次加载已由 index.tsx 的渲染前预检处理，两处都跑会重复
+ * fetch 配置并重复 replace。
  */
 function MobileRouteGuard() {
   const location = useLocation();
-  const isCadRoute =
-    location.pathname === '/' || location.pathname.startsWith('/cad-editor');
+  const firstRender = useRef(true);
 
   useEffect(() => {
-    if (!isCadRoute) return;
-    if (!isMobile()) return;
-
-    getMobileRedirectConfig().then((config) => {
-      const redirectUrl = getMobileRedirectUrl(config);
-      if (redirectUrl) {
-        window.location.replace(redirectUrl);
-      }
-    });
-  }, [isCadRoute]);
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    void performMobileRedirectIfNeeded();
+  }, [location.pathname, location.search]);
 
   return null;
 }

@@ -76,7 +76,7 @@ export const SessionTransfer: React.FC = () => {
     }
     attempted.current = true;
 
-    // ① 清旧凭证（五键）+ 取消旧主动刷新定时器
+    // ① 清旧凭证（三键）+ 用户级内存缓存 + 取消旧主动刷新定时器
     cancelProactiveRefresh();
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');

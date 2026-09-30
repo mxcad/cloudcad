@@ -20,8 +20,11 @@ export interface UIState {
   loadingMessage: string;
   loadingProgress: number;
   loadingRefCount: number;
+  /** 最近一次 show 的来源标识（如 autoJoin/handleJoin），归零时清空；
+   *  CADEditorDirect 的 OPEN_COMPLETE 兜底 hide 据此避开协同流程自管的 loading */
+  loadingSource: string | null;
   /** 进入全局 loading（引用计数 +1） */
-  showGlobalLoading: (message?: string) => void;
+  showGlobalLoading: (message?: string, source?: string) => void;
   /** 退出一层全局 loading（引用计数 -1，归零才真正隐藏；0 时为无害 no-op） */
   hideGlobalLoading: () => void;
   /** 强制清零（登出等全局复位场景） */
@@ -35,19 +38,27 @@ export const useUIStore = create<UIState>((set) => ({
   loadingMessage: '',
   loadingProgress: 0,
   loadingRefCount: 0,
-  showGlobalLoading: (message = '') =>
+  loadingSource: null,
+  showGlobalLoading: (message = '', source?: string) =>
     set((state) => ({
       globalLoading: true,
       loadingRefCount: state.loadingRefCount + 1,
       loadingMessage: message,
       loadingProgress: 0,
+      loadingSource: source || 'unknown',
     })),
   hideGlobalLoading: () =>
     set((state) => {
       if (state.loadingRefCount <= 0) return state;
       const loadingRefCount = state.loadingRefCount - 1;
       return loadingRefCount === 0
-        ? { globalLoading: false, loadingMessage: '', loadingProgress: 0, loadingRefCount }
+        ? {
+            globalLoading: false,
+            loadingMessage: '',
+            loadingProgress: 0,
+            loadingRefCount,
+            loadingSource: null,
+          }
         : { loadingRefCount };
     }),
   resetLoading: () =>
@@ -56,6 +67,7 @@ export const useUIStore = create<UIState>((set) => ({
       loadingMessage: '',
       loadingProgress: 0,
       loadingRefCount: 0,
+      loadingSource: null,
     }),
   setLoadingMessage: (message) => set({ loadingMessage: message }),
   setLoadingProgress: (progress) => set({ loadingProgress: progress }),

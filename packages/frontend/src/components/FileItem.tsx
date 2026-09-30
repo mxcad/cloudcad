@@ -65,8 +65,6 @@ interface FileItemProps {
   selected?: boolean;
   isSelected?: boolean;
   isActive?: boolean;
-  isTrashView?: boolean;
-  isDragging?: boolean;
   viewMode?: 'grid' | 'list';
   /** 紧凑模式：用于 Dashboard 等简化场景，隐藏菜单和选择框 */
   compact?: boolean;
@@ -102,8 +100,6 @@ interface FileItemProps {
   isRubberBanding?: boolean;
   /** 框选刚结束 ref（阻止残留 click 导致文件打开） */
   rubberBandJustEndedRef?: React.MutableRefObject<boolean>;
-  /** 当前已选中的条目总数（用于多选场景右键菜单） */
-  selectedCount?: number;
   /** 搜索结果模式 */
   isSearchResult?: boolean;
   /** 项目列表级别（搜索结果需显示项目名称） */
@@ -117,14 +113,6 @@ interface FileItemProps {
   onCopyPath?: (node: FileSystemNode) => void;
   /** 当前目录的祖先路径（用于搜索结果中隐藏同目录文件的路径） */
   currentAncestorPath?: string;
-  /** 批量删除选中项 */
-  onBatchDelete?: () => void;
-  /** 批量移动选中项 */
-  onBatchMove?: () => void;
-  /** 批量复制选中项 */
-  onBatchCopy?: () => void;
-  /** 批量恢复选中项 */
-  onBatchRestore?: () => void;
   onSelect?: (
     nodeId: string,
     isMultiSelect?: boolean,
@@ -180,11 +168,6 @@ export const FileItem: React.FC<FileItemProps> = ({
   doubleClickHint = t('请单击打开'),
   isRubberBanding = false,
   rubberBandJustEndedRef,
-  selectedCount = 0,
-  onBatchDelete,
-  onBatchMove,
-  onBatchCopy,
-  onBatchRestore,
   onSelect,
   onEnter,
   onDownload,

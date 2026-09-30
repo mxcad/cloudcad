@@ -125,10 +125,10 @@ async function openLocalMxwebFile(
           });
         }
         db.close();
+        setLoadingMessage(t('正在打开文件...'));
         // 打开前复查（入口从未查过未保存，这是唯一检查点）：算哈希/写缓存期间
         // 用户可能编辑了当前图纸。取消不是失败，用哨兵静默退出
         if (!(await guardBeforeOpen())) throw new OpenGuardCancelled();
-        setLoadingMessage(t('正在打开文件...'));
         return {
           url: virtualUrl,
           noCache,

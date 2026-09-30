@@ -198,7 +198,9 @@ function buildViewOptions(openFile?: string) {
     );
     if (mxcadMatch) {
       const baseDir = mxcadMatch[1];
-      let url = `/api/v1/mxcad/filesData/${baseDir}/${fileName}`;
+      let url = UrlHelper.buildMxwebFileUrl({
+        nodePath: `${baseDir}/${fileName}`,
+      });
       if (currentShareToken)
         url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
       return url;

@@ -99,6 +99,8 @@ export function useBatchDownload(
       subscribeBatchTaskProgress(taskId, {
         onTerminal,
         onToast: showToast,
+        // 终态/出错/取消关闭连接时同步清实例标记，retryTask 才能重新订阅
+        onClosed: () => mySubscriptionsRef.current.delete(taskId),
       });
     },
     [showToast]
@@ -459,7 +461,7 @@ export function useBatchDownload(
         });
         if (result.error) throw result.error;
         updateTask(taskId, { status: 'PROCESSING' });
-        // 失败时进度 SSE 已关闭并从订阅表移除，重试后须重新订阅才能收到新进度
+        // 失败时进度 SSE 已关闭（onClosed 清实例订阅标记），重试后须重新订阅才能收到新进度
         subscribeToProgressSSE(taskId);
         showToast?.(t('已重新加入下载队列'), 'info');
       } catch (err) {

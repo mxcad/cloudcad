@@ -8,8 +8,8 @@ import {
   refreshFileName,
   getCooperate,
   exitCurrentCollaboration,
+  isEmptyDocumentName,
 } from '../services/mxcadManager';
-import { isEmptyDocumentName } from '../services/mxcadManager/mxcadHelpers';
 import {
   patchSession,
   patchSessionFlags,

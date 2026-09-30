@@ -101,7 +101,7 @@ describe('SessionTransfer', () => {
       expect(window.location.replace).toHaveBeenCalled();
     });
 
-    // ① 清旧：五键被清除（setAccessToken/setRefreshToken 被 mock，不会真正写回）
+    // ① 清旧：三键被清除（setAccessToken/setRefreshToken 被 mock，不会真正写回）
     expect(localStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('refreshToken')).toBeNull();
     // personalSpaceId 清理已迁移到 zustand 内存态（原 localStorage key 无写入者，已死）

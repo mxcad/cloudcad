@@ -422,7 +422,10 @@ export const useExternalReferenceUpload = (
       // 提示未匹配的文件
       selectedFiles.forEach((sf) => {
         if (!prevFiles.some((f) => f.name === sf.name)) {
-          globalShowToast(t(`未找到匹配的缺失文件: ${sf.name}`), 'warning');
+          globalShowToast(
+            t('未找到匹配的缺失文件: {name}', { name: sf.name }),
+            'warning'
+          );
         }
       });
 

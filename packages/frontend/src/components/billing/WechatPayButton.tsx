@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { currentUA, isMobileByUA, isWechatByUA } from '@cloudcad/platform';
 import { Button } from '@/components/ui/Button';
 import { QRCodeSVG } from 'qrcode.react';
 import { billingControllerQueryOrder } from '@/api-sdk';
@@ -40,14 +41,12 @@ export default function WechatPayButton({
   const [errorMsg, setErrorMsg] = useState('');
   const redirectAttempted = useRef(false);
 
-  const isWeChat = useMemo(
-    () => /MicroMessenger/i.test(navigator.userAgent),
-    []
-  );
-  const isMobile = useMemo(
-    () => /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
-    []
-  );
+  // UA 在页面生命周期内不变，取一次即可。
+  // 判定逻辑在 @cloudcad/platform 与移动端共用一份——这里原先的
+  // /Mobi|Android|iPhone|iPad|iPod/i 比 utils/isMobile.ts 多认一个 Mobi，
+  // 同一个「是不是移动端」判定跑出过两种结果。
+  const isWeChat = useMemo(() => isWechatByUA(currentUA()), []);
+  const isMobile = useMemo(() => isMobileByUA(currentUA()), []);
 
   const invokeWechatPay = useCallback(() => {
     return new Promise<void>((resolve, reject) => {

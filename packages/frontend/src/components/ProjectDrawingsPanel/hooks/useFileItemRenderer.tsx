@@ -12,8 +12,10 @@ import { SystemPermission } from '@/constants/permissions';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import type { ViewMode, ResourceItem } from '@/components/common';
 import { handleError } from '@/utils/errorHandler';
-import { UrlHelper } from '@/utils/mxcadUtils';
+// 深路径叶子导入（仅依赖 mxcad/mxdraw）。不走 services/mxcadManager barrel：
+// barrel 急加载 mxcad-app 重副作用链，组件/测试模块图会被拖垮（ADR-0029 深路径禁令在此让位于副作用隔离）
 import { insertBlockFromLibrary } from '@/services/mxcadManager/cmd/insertBlockCommand';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import { CAD_EXTENSIONS } from '@/utils/fileUtils';
 import { t } from '@/languages';
 

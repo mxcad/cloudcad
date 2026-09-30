@@ -26,6 +26,9 @@ interface ProgressSubscription {
   refs: number;
   onTerminal: Set<(task: BatchTask | undefined) => void>;
   onToast: Set<(message: string, type: BatchDownloadToastType) => void>;
+  /** 连接关闭（终态/出错/取消）时的实例侧清理回调：清除实例订阅标记，
+   *  retryTask 才能对同一任务重新订阅（基线行为） */
+  onClosed: Set<() => void>;
 }
 
 const activeSSEs = new Map<string, ProgressSubscription>();
@@ -44,8 +47,10 @@ export function tryMarkAutoDownloaded(taskId: string): boolean {
 function closeEntry(taskId: string): void {
   const entry = activeSSEs.get(taskId);
   if (!entry) return;
+  // 先出表再回调：onClosed 里实例可能触发 release（unmount 竞态），此时应查无此条
   activeSSEs.delete(taskId);
   entry.es.close();
+  entry.onClosed.forEach((fn) => fn());
 }
 
 /**
@@ -56,6 +61,7 @@ export function subscribeBatchTaskProgress(
   handlers?: {
     onTerminal?: (task: BatchTask | undefined) => void;
     onToast?: (message: string, type: BatchDownloadToastType) => void;
+    onClosed?: () => void;
   }
 ): void {
   const existing = activeSSEs.get(taskId);
@@ -63,6 +69,7 @@ export function subscribeBatchTaskProgress(
     existing.refs++;
     if (handlers?.onTerminal) existing.onTerminal.add(handlers.onTerminal);
     if (handlers?.onToast) existing.onToast.add(handlers.onToast);
+    if (handlers?.onClosed) existing.onClosed.add(handlers.onClosed);
     return;
   }
 
@@ -77,9 +84,11 @@ export function subscribeBatchTaskProgress(
     refs: 1,
     onTerminal: new Set(),
     onToast: new Set(),
+    onClosed: new Set(),
   };
   if (handlers?.onTerminal) entry.onTerminal.add(handlers.onTerminal);
   if (handlers?.onToast) entry.onToast.add(handlers.onToast);
+  if (handlers?.onClosed) entry.onClosed.add(handlers.onClosed);
   activeSSEs.set(taskId, entry);
 
   es.onmessage = (event) => {

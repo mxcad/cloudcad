@@ -7,8 +7,9 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useFileItemRenderer } from './useFileItemRenderer';
 import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { handleError } from '@/utils/errorHandler';
-import { UrlHelper } from '@/utils/mxcadUtils';
+// 深路径叶子导入（见 useFileItemRenderer 同款注释）
 import { insertBlockFromLibrary } from '@/services/mxcadManager/cmd/insertBlockCommand';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import { FileSystemNode } from '@/types/filesystem';
 import { SystemPermission } from '@/constants/permissions';
 import { t } from '@/languages';

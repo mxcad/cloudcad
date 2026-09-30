@@ -493,3 +493,31 @@ describe('useBatchDownload — 终态自动下载全局去重（回归：每实�
     expect(showToast).toHaveBeenCalledWith('批量下载完成', 'success');
   });
 });
+
+describe('useBatchDownload — SSE 关闭后重试可重订阅（回归：实例订阅标记残留曾把 retryTask 跳过）', () => {
+  const completedMsg = JSON.stringify({
+    status: 'FAILED',
+    completedCount: 0,
+    totalCount: 1,
+    errorCount: 1,
+  });
+
+  it('SSE 终态关闭连接后 retryTask 新建 EventSource（不清实例标记则被跳过）', async () => {
+    const mockRetry = batchDownloadControllerRetryTask as ReturnType<
+      typeof vi.fn
+    >;
+    mockRetry.mockResolvedValue({ data: {}, error: undefined });
+    const a = renderHook(() => useBatchDownload());
+    await a.result.current.createZipTask([fileItem]);
+
+    // FAILED 终态推送 → 连接关闭
+    act(() => {
+      FakeEventSource.instances[0].onmessage?.({ data: completedMsg });
+    });
+    expect(FakeEventSource.instances[0].close).toHaveBeenCalled();
+
+    // 重试：必须能重新订阅（新建 EventSource）
+    await a.result.current.retryTask('task-1');
+    expect(FakeEventSource.instances).toHaveLength(2);
+  });
+});

@@ -65,6 +65,27 @@ describe('uiStore — Loading（引用计数模型）', () => {
     expect(useUIStore.getState().loadingProgress).toBe(50);
   });
 
+  it('loadingSource：show 记录（last-writer-wins）、hide 不改、归零/reset 才清（CADEditorDirect 兜底守卫依赖）', () => {
+    const { showGlobalLoading, hideGlobalLoading, resetLoading } =
+      useUIStore.getState();
+    showGlobalLoading('协同', 'autoJoin');
+    expect(useUIStore.getState().loadingSource).toBe('autoJoin');
+    // 后写的 show 未带 source：按基线语义覆盖为 'unknown'（last-writer-wins）
+    showGlobalLoading('打开图纸');
+    expect(useUIStore.getState().loadingSource).toBe('unknown');
+    // hide 只减计数，不改 source（守卫在活跃期读取）
+    hideGlobalLoading();
+    expect(useUIStore.getState().loadingRefCount).toBe(1);
+    expect(useUIStore.getState().loadingSource).toBe('unknown');
+    // 归零清空
+    hideGlobalLoading();
+    expect(useUIStore.getState().loadingSource).toBeNull();
+    // resetLoading 强制清
+    showGlobalLoading('x', 'src');
+    resetLoading();
+    expect(useUIStore.getState().loadingSource).toBeNull();
+  });
+
   it('resetLoading 强制清零（含引用计数）', () => {
     useUIStore.getState().showGlobalLoading('test');
     useUIStore.getState().showGlobalLoading();
