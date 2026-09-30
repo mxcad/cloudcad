@@ -4,7 +4,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useCallback, useRef } from 'react';
-import { MxFun } from 'mxdraw';
 import { libraryControllerGetBlockNode } from '@/api-sdk';
 import type { FileSystemNode } from '@/types/filesystem';
 import { FileItem } from '@/components/FileItem';
@@ -14,6 +13,7 @@ import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import type { ViewMode, ResourceItem } from '@/components/common';
 import { handleError } from '@/utils/errorHandler';
 import { UrlHelper } from '@/utils/mxcadUtils';
+import { insertBlockFromLibrary } from '@/services/mxcadManager/cmd/insertBlockCommand';
 import { CAD_EXTENSIONS } from '@/utils/fileUtils';
 import { t } from '@/languages';
 
@@ -122,12 +122,6 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           return;
         }
         try {
-          const { MxCpp } = await import('mxcad');
-          const mxcad = MxCpp.getCurrentMxCAD();
-          if (!mxcad) {
-            showToast(t('请先打开一张图纸，然后再插入图块'), 'warning');
-            return;
-          }
           let latestUpdatedAt = blockNode.updatedAt;
           try {
             const response = await libraryControllerGetBlockNode({
@@ -142,16 +136,16 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           const timestamp = latestUpdatedAt
             ? new Date(latestUpdatedAt).getTime()
             : Date.now();
-          const cmdParam = {
-            filePath: UrlHelper.buildMxwebFileUrl({
-              nodePath: blockNode.path ?? '',
-              libraryKey: 'block',
-              cacheTimestamp: timestamp,
-            }),
-            name: blockNode.name,
-            isBlockLibrary: true,
-          };
-          MxFun.sendStringToExecute('Mx_Insert', cmdParam);
+          const filePath = UrlHelper.buildMxwebFileUrl({
+            nodePath: blockNode.path ?? '',
+            libraryKey: 'block',
+            cacheTimestamp: timestamp,
+          });
+          const ok = insertBlockFromLibrary(filePath, blockNode.name);
+          if (!ok) {
+            showToast(t('请先打开一张图纸，然后再插入图块'), 'warning');
+            return;
+          }
           showToast(t(`正在插入图块：${blockNode.name}`), 'success');
         } catch (error: unknown) {
           handleError(error, 'useFileItemRenderer: ' + t('插入图块失败'));

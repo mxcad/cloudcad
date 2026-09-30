@@ -8,6 +8,7 @@ import { getCurrentFileUrl, setCurrentFileUrl } from '../drawingSession';
 import { getFileInfo, restoreEditorTitle } from './mxcadHelpers';
 import type { MxCADInstanceManager } from './mxcadInstanceManager';
 import { setCurrentShareToken } from './mxcadInstanceManager';
+import { extractShareTokenFromUrl } from './mxcadHelpers';
 
 /**
  * MxCAD 文件打开流程（从 MxCADInstanceManager 拆分）
@@ -62,12 +63,7 @@ export class MxCADOpenFlow {
     setCurrentFileUrl(payload.url);
     // 更新模块级 shareToken（供 extReferenceUrlResolver 使用）
     // WASM 层的 HTTP 请求不携带 requestHeaders，只能通过 URL 传递认证信息
-    try {
-      const urlObj = new URL(payload.url, window.location.origin);
-      setCurrentShareToken(urlObj.searchParams.get('shareToken'));
-    } catch {
-      setCurrentShareToken(null);
-    }
+    setCurrentShareToken(extractShareTokenFromUrl(payload.url));
     const currentFileName = this.manager.getCurrentFileName();
     const targetFileName = payload.url.split('/').pop();
     // 早退：引擎当前文件名与目标一致**且**会话记录匹配（同一文件真正成功打开过）才跳过。
@@ -108,16 +104,7 @@ export class MxCADOpenFlow {
         }
         setCurrentFileUrl(previousUrl);
         // 恢复之前的 shareToken
-        try {
-          if (previousUrl) {
-            const urlObj = new URL(previousUrl, window.location.origin);
-            setCurrentShareToken(urlObj.searchParams.get('shareToken'));
-          } else {
-            setCurrentShareToken(null);
-          }
-        } catch {
-          setCurrentShareToken(null);
-        }
+        setCurrentShareToken(extractShareTokenFromUrl(previousUrl));
       };
       const timeout = setTimeout(() => {
         fail(new Error(t('文件打开超时')));
@@ -164,11 +151,7 @@ export class MxCADOpenFlow {
         const token = localStorage.getItem('accessToken');
         // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
         // 后端 authorizeFilesDataAccess 支持 query + header 双路检测
-        let shareToken: string | null = null;
-        try {
-          const urlObj = new URL(payload.url, window.location.origin);
-          shareToken = urlObj.searchParams.get('shareToken');
-        } catch { /* ignore */ }
+        const shareToken = extractShareTokenFromUrl(payload.url);
         const baseHeaders: Record<string, string> = {};
         if (token) baseHeaders.Authorization = `Bearer ${token}`;
         if (shareToken) baseHeaders['x-share-token'] = shareToken;
@@ -267,11 +250,7 @@ export class MxCADOpenFlow {
           const token = localStorage.getItem('accessToken');
           const url = currentMxwebUrl;
           // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
-          let shareToken: string | null = null;
-          try {
-            const urlObj = new URL(url, window.location.origin);
-            shareToken = urlObj.searchParams.get('shareToken');
-          } catch { /* ignore */ }
+          const shareToken = extractShareTokenFromUrl(url);
           const baseHeaders: Record<string, string> = {};
           if (token) baseHeaders.Authorization = `Bearer ${token}`;
           if (shareToken) baseHeaders['x-share-token'] = shareToken;

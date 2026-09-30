@@ -10,6 +10,7 @@ import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
 import { UrlHelper } from '@/utils/mxcadUtils';
+import { extractShareTokenFromUrl } from './mxcadHelpers';
 import type { CurrentFileInfo, OpenFilePayload } from './mxcadTypes';
 import { VIEW_INIT_TIMEOUT_MS, ENGINE_READY_POLL_INTERVAL_MS } from './mxcadTypes';
 import { MxCADOpenFlow } from './mxcadOpenFlow';
@@ -160,12 +161,7 @@ function buildViewOptions(openFile?: string) {
   const token = localStorage.getItem('accessToken');
   // 从 openFile URL 提取 shareToken（共享图纸场景）
   if (openFile) {
-    try {
-      const urlObj = new URL(openFile, window.location.origin);
-      currentShareToken = urlObj.searchParams.get('shareToken');
-    } catch {
-      /* ignore */
-    }
+    currentShareToken = extractShareTokenFromUrl(openFile);
   }
   const baseHeaders: Record<string, string> = {};
   if (token) baseHeaders.Authorization = `Bearer ${token}`;

@@ -8,7 +8,7 @@ import { useFileItemRenderer } from './useFileItemRenderer';
 import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { handleError } from '@/utils/errorHandler';
 import { UrlHelper } from '@/utils/mxcadUtils';
-import { MxFun } from 'mxdraw';
+import { insertBlockFromLibrary } from '@/services/mxcadManager/cmd/insertBlockCommand';
 import { FileSystemNode } from '@/types/filesystem';
 import { SystemPermission } from '@/constants/permissions';
 import { t } from '@/languages';
@@ -230,11 +230,7 @@ export function useProjectDrawingsInteractions({
             nodePath: node.path ?? '',
             libraryKey: 'block',
           });
-          MxFun.sendStringToExecute('Mx_Insert', {
-            filePath: mxwebUrl,
-            name: node.name,
-            isBlockLibrary: true,
-          });
+          insertBlockFromLibrary(mxwebUrl, node.name);
         }
         return;
       }

@@ -17,6 +17,21 @@ export function getFileInfo() {
   return useCADEditorStore.getState().currentFileInfo;
 }
 
+/**
+ * 从 mxweb 访问 URL 提取 shareToken（共享图纸场景唯一提取出口）。
+ * 非法 URL 返回 null。WASM 层请求不携带 requestHeaders，token 只能走 URL/头传递。
+ */
+export function extractShareTokenFromUrl(
+  url: string | null | undefined
+): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url, window.location.origin).searchParams.get('shareToken');
+  } catch {
+    return null;
+  }
+}
+
 /** 引擎的默认空模板文件名：currentFileName 停留在这两个值说明还没有真正打开过图纸 */
 const EMPTY_DOCUMENT_NAMES = ['empty_template.mxweb', 'empty.mxweb'];
 

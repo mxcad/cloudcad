@@ -21,7 +21,7 @@ import { mxcadManager } from './mxcadManager';
 import { emit } from '../drawingSession';
 import { FILE_UPLOAD_CONFIG } from './mxcadTypes';
 import { confirmExitCollaborationIfNeeded } from './mxcadCollaboration';
-import { guardBeforeOpen, openDrawing } from './openDrawing';
+import { guardBeforeOpen, openDrawing, openUnderLoading } from './openDrawing';
 import { CAD_EXTENSIONS } from '../../utils/fileUtils';
 import { CAD_EVENTS } from '@/constants/events';
 import { getApiBaseUrl } from '@/config/apiConfig';
@@ -81,66 +81,70 @@ async function getUploadTargetNodeId(): Promise<string> {
   }
 }
 
+/** openUnderLoading prepare 内的「守卫取消」信号：静默返回，不走失败 toast */
+class OpenGuardCancelled extends Error {}
+
 async function openLocalMxwebFile(
   file: File,
   noCache?: boolean
 ): Promise<void> {
   try {
-    showGlobalLoading(t('正在计算文件哈希...'));
-    const hash = await calculateFileHash(file);
-    const virtualUrl = `${StoragePathConstants.LOCAL_MXWEB_CACHE_PREFIX}/${hash}${StoragePathConstants.MXWEB_EXTENSION}`;
-    setLoadingMessage(t('正在检查本地缓存...'));
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('emscripten_filesystem', 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
-    let needsWrite = true;
-    if (!noCache) {
-      const existingData = await new Promise<unknown>((resolve, reject) => {
-        const getRequest = db
-          .transaction(['FILES'], 'readonly')
-          .objectStore('FILES')
-          .get(virtualUrl);
-        getRequest.onerror = () => reject(getRequest.error);
-        getRequest.onsuccess = () => resolve(getRequest.result);
-      });
-      if (existingData) needsWrite = false;
-    }
-    if (needsWrite) {
-      setLoadingMessage(t('正在缓存文件...'));
-      const arrayBuffer = await file.arrayBuffer();
-      const transaction = db.transaction(['FILES'], 'readwrite');
-      const objectStore = transaction.objectStore('FILES');
-      await new Promise<void>((resolve, reject) => {
-        const putRequest = objectStore.put(arrayBuffer, virtualUrl);
-        putRequest.onerror = () => reject(putRequest.error);
-        putRequest.onsuccess = () => resolve();
-      });
-    }
-    db.close();
-    setLoadingMessage(t('正在打开文件...'));
-    // 打开前复查（入口从未查过未保存，这是唯一检查点）：算哈希/写缓存期间
-    // 用户可能编辑了当前图纸
-    if (!(await guardBeforeOpen())) {
-      hideGlobalLoading();
-      return;
-    }
-    await mxcadManager.openFile({
-      url: virtualUrl,
-      noCache,
-      fileInfo: {
-        fileId: '',
-        parentId: null,
-        projectId: null,
-        name: file.name,
-        personalSpaceId: null,
-        fileHash: hash,
+    // loading 配对（show/finally hide）统一交给 openUnderLoading，本模块不再自配对
+    await openUnderLoading({
+      loadingMessage: t('正在计算文件哈希...'),
+      prepare: async () => {
+        const hash = await calculateFileHash(file);
+        const virtualUrl = `${StoragePathConstants.LOCAL_MXWEB_CACHE_PREFIX}/${hash}${StoragePathConstants.MXWEB_EXTENSION}`;
+        setLoadingMessage(t('正在检查本地缓存...'));
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open('emscripten_filesystem', 1);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+        let needsWrite = true;
+        if (!noCache) {
+          const existingData = await new Promise<unknown>((resolve, reject) => {
+            const getRequest = db
+              .transaction(['FILES'], 'readonly')
+              .objectStore('FILES')
+              .get(virtualUrl);
+            getRequest.onerror = () => reject(getRequest.error);
+            getRequest.onsuccess = () => resolve(getRequest.result);
+          });
+          if (existingData) needsWrite = false;
+        }
+        if (needsWrite) {
+          setLoadingMessage(t('正在缓存文件...'));
+          const arrayBuffer = await file.arrayBuffer();
+          const transaction = db.transaction(['FILES'], 'readwrite');
+          const objectStore = transaction.objectStore('FILES');
+          await new Promise<void>((resolve, reject) => {
+            const putRequest = objectStore.put(arrayBuffer, virtualUrl);
+            putRequest.onerror = () => reject(putRequest.error);
+            putRequest.onsuccess = () => resolve();
+          });
+        }
+        db.close();
+        // 打开前复查（入口从未查过未保存，这是唯一检查点）：算哈希/写缓存期间
+        // 用户可能编辑了当前图纸。取消不是失败，用哨兵静默退出
+        if (!(await guardBeforeOpen())) throw new OpenGuardCancelled();
+        setLoadingMessage(t('正在打开文件...'));
+        return {
+          url: virtualUrl,
+          noCache,
+          fileInfo: {
+            fileId: '',
+            parentId: null,
+            projectId: null,
+            name: file.name,
+            personalSpaceId: null,
+            fileHash: hash,
+          },
+        } as Parameters<typeof mxcadManager.openFile>[0];
       },
     });
-    hideGlobalLoading();
   } catch (error) {
-    hideGlobalLoading();
+    if (error instanceof OpenGuardCancelled) return;
     const errorMessage =
       error instanceof Error ? error.message : t('打开文件失败');
     globalShowToast(errorMessage, 'error');
