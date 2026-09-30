@@ -187,7 +187,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userMenuWidth, setUserMenuWidth] = useState(0);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -214,12 +213,6 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     return roleMap[roleName] || roleName;
   }, []);
 
-  // 时钟更新
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   // 测量用户触发器宽度
   useEffect(() => {
     if (showUserMenu && userMenuRef.current) {
@@ -239,33 +232,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // 格式化时间
-  const formattedTime = useMemo(() => {
-    return currentTime.toLocaleTimeString('zh-CN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-  }, [currentTime]);
-
-  const formattedDate = useMemo(() => {
-    return currentTime.toLocaleDateString('zh-CN', {
-      month: 'short',
-      day: 'numeric',
-      weekday: 'short',
-    });
-  }, [currentTime]);
-
   // 导航菜单项配置
   const menuItems = useMemo(
     () => [
       {
+        section: 'main',
         to: '/dashboard',
         icon: LayoutDashboard,
         label: t('仪表盘'),
         visible: true,
       },
       {
+        section: 'main',
         to: '/projects',
         icon: FolderOpen,
         label: t('项目管理'),
@@ -273,6 +251,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         dataTour: 'sidebar-projects',
       },
       {
+        section: 'main',
         to: '/personal-space',
         icon: FileText,
         label: t('个人空间'),
@@ -280,18 +259,21 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         dataTour: 'sidebar-personal-space',
       },
       {
+        section: 'main',
         to: '/shares',
         icon: Share2,
         label: t('分享管理'),
         visible: true,
       },
       {
+        section: 'main',
         to: '/profile',
         icon: User,
         label: t('个人资料'),
         visible: true,
       },
       {
+        section: 'admin',
         to: '/library',
         icon: Library,
         label: t('公共资源库'),
@@ -300,18 +282,21 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
           hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE),
       },
       {
+        section: 'admin',
         to: '/font-library',
         icon: Type,
         label: t('字体库'),
         visible: hasPermission(SystemPermission.SYSTEM_FONT_READ),
       },
       {
+        section: 'admin',
         to: '/users',
         icon: Users,
         label: t('用户管理'),
         visible: hasPermission(SystemPermission.SYSTEM_USER_READ),
       },
       {
+        section: 'admin',
         to: '/roles',
         icon: ShieldCheck,
         label: t('角色权限'),
@@ -319,6 +304,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         dataTour: 'sidebar-roles',
       },
       {
+        section: 'admin',
         to: '/admin/billing',
         icon: DollarSign,
         label: t('支付管理'),
@@ -327,6 +313,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         visible: hasPermission(SystemPermission.SYSTEM_BILLING_READ),
       },
       {
+        section: 'admin',
         to: '/admin/ip-access',
         icon: Shield,
         label: t('IP 访问控制'),
@@ -338,6 +325,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         ]),
       },
       {
+        section: 'admin',
         to: '/audit-logs',
         icon: ScrollText,
         label: t('审计日志'),
@@ -348,12 +336,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         ]),
       },
       {
+        section: 'admin',
         to: '/system-monitor',
         icon: Activity,
         label: t('系统监控'),
         visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
       },
       {
+        section: 'admin',
         to: '/admin/notices',
         icon: Bell,
         label: t('通知管理'),
@@ -494,8 +484,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 {t('主菜单')}
               </p>
               {menuItems
-                .filter((item) => item.visible)
-                .slice(0, 5)
+                .filter((item) => item.section === 'main' && item.visible)
                 .map((item) => (
                   <NavItem
                     key={item.to}
@@ -507,7 +496,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
 
             {/* 管理菜单 */}
-            {menuItems.some((item, idx) => idx >= 6 && item.visible) && (
+            {menuItems.some((item) => item.section === 'admin' && item.visible) && (
               <div
                 className="pt-2 border-t"
                 style={{ borderColor: 'var(--border-default)' }}
@@ -519,7 +508,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   {t('系统管理')}
                 </p>
                 {menuItems
-                  .filter((item, idx) => idx >= 5 && item.visible)
+                  .filter((item) => item.section === 'admin' && item.visible)
                   .map((item) => (
                     <NavItem
                       key={item.to}
@@ -771,21 +760,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 
           {/* 右侧工具栏 */}
           <div className="flex items-center gap-1 sm:gap-2">
-            {/* 时间显示 */}
-            <div
-              className="hidden md:flex flex-col items-end mr-4 px-3 py-1.5 rounded-lg"
-              style={{ background: 'var(--bg-tertiary)' }}
-            >
-              <span
-                className="text-sm font-semibold"
-                style={{ color: 'var(--text-primary)' }}
-              >
-                {formattedTime}
-              </span>
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {formattedDate}
-              </span>
-            </div>
+            {/* 时间显示（独立组件：每秒跳动的 state 不再拖累整棵侧边栏重渲染） */}
+            <SidebarClock />
 
             {/* 文件队列入口（#497：悬浮药丸已取消，面板显隐只剩此按钮 + CAD 命令 Mx_ToggleFileQueue） */}
             <div className="p-0.5">
@@ -960,3 +936,38 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
 };
 
 export default Layout;
+
+/** 顶栏时钟：每秒跳动的 state 收在本组件内，不拖累 Layout 整树重渲染 */
+function SidebarClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const formattedTime = now.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const formattedDate = now.toLocaleDateString('zh-CN', {
+    month: 'short',
+    day: 'numeric',
+    weekday: 'short',
+  });
+  return (
+    <div
+      className="hidden md:flex flex-col items-end mr-4 px-3 py-1.5 rounded-lg"
+      style={{ background: 'var(--bg-tertiary)' }}
+    >
+      <span
+        className="text-sm font-semibold"
+        style={{ color: 'var(--text-primary)' }}
+      >
+        {formattedTime}
+      </span>
+      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+        {formattedDate}
+      </span>
+    </div>
+  );
+}

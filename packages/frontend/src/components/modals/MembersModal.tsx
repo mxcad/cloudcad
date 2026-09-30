@@ -31,6 +31,17 @@ import { t, $t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import type { ProjectMemberDto, UserResponseDto } from '@/api-sdk';
 
+/** SDK error 的成员操作错误映射（4 个 handler 共用：FORBIDDEN/BAD_REQUEST 专属文案，其余兜底） */
+function getMemberActionError(
+  error: unknown,
+  messages: { forbidden: string; badRequest?: string; fallback: string }
+): string {
+  const code = (error as { code?: string }).code;
+  if (code === 'FORBIDDEN') return messages.forbidden;
+  if (code === 'BAD_REQUEST' && messages.badRequest) return messages.badRequest;
+  return getErrorMessage(error) || messages.fallback;
+}
+
 interface Member extends ProjectMemberDto {
   // 添加 userId 作为 id 的别名以保持兼容性
   userId: string;
@@ -250,11 +261,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     } catch (error) {
       // SDK error 是后端 body 对象（含 code 字段，无 response.status），
       // 403/400 判断用 code 字段（FORBIDDEN/BAD_REQUEST）
-      if ((error as { code?: string }).code === 'FORBIDDEN') {
-        setErrorMessage(t('没有权限添加成员'));
-      } else {
-        setErrorMessage(getErrorMessage(error) || t('添加成员失败，请重试'));
-      }
+      setErrorMessage(
+        getMemberActionError(error, {
+          forbidden: t('没有权限添加成员'),
+          fallback: t('添加成员失败，请重试'),
+        })
+      );
     } finally {
       setAdding(false);
     }
@@ -270,11 +282,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
       refreshProjectPermissions(projectId);
     } catch (error) {
-      if ((error as { code?: string }).code === 'FORBIDDEN') {
-        setErrorMessage(t('没有权限移除成员'));
-      } else {
-        setErrorMessage(getErrorMessage(error) || t('移除成员失败，请重试'));
-      }
+      setErrorMessage(
+        getMemberActionError(error, {
+          forbidden: t('没有权限移除成员'),
+          fallback: t('移除成员失败，请重试'),
+        })
+      );
     }
   };
 
@@ -302,13 +315,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setCanManageMembers(newCanManage);
       setCanAssignRoles(newCanAssign);
     } catch (error) {
-      if ((error as { code?: string }).code === 'FORBIDDEN') {
-        setErrorMessage(t('没有权限更新成员角色'));
-      } else if ((error as { code?: string }).code === 'BAD_REQUEST') {
-        setErrorMessage(t('不能修改项目所有者的角色'));
-      } else {
-        setErrorMessage(getErrorMessage(error) || t('更新角色失败，请重试'));
-      }
+      setErrorMessage(
+        getMemberActionError(error, {
+          forbidden: t('没有权限更新成员角色'),
+          badRequest: t('不能修改项目所有者的角色'),
+          fallback: t('更新角色失败，请重试'),
+        })
+      );
     }
   };
 
@@ -331,11 +344,12 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setShowTransferModal(false);
       setTransferTarget(null);
     } catch (error) {
-      if ((error as { code?: string }).code === 'FORBIDDEN') {
-        setErrorMessage(t('没有权限转让项目'));
-      } else {
-        setErrorMessage(getErrorMessage(error) || t('转让项目失败，请重试'));
-      }
+      setErrorMessage(
+        getMemberActionError(error, {
+          forbidden: t('没有权限转让项目'),
+          fallback: t('转让项目失败，请重试'),
+        })
+      );
     } finally {
       setTransferring(false);
     }

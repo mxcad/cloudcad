@@ -589,6 +589,45 @@ export const FileItem: React.FC<FileItemProps> = ({
     node?.ancestorPath,
   ]);
 
+
+  // 外参上传/预览/下载三件套（grid 与 list 渲染分支共用，勿在分支内复制）
+  const externalRefModals = (
+    <>
+          <ExternalReferencePanel
+            isOpen={externalReferenceUpload.isOpen}
+            files={externalReferenceUpload.files}
+            loading={externalReferenceUpload.loading}
+            mode="active"
+            onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
+            onReplace={externalReferenceUpload.replaceFile}
+            onDownload={handleDownloadXref}
+            onView={handleViewXref}
+            onRefresh={externalReferenceUpload.refresh}
+            onComplete={externalReferenceUpload.complete}
+            onClose={externalReferenceUpload.close}
+          />
+          <ImagePreviewModal
+            isOpen={!!previewXref}
+            src={previewXref?.url || ''}
+            alt={previewXref?.file.name || ''}
+            onClose={() => {
+              revokeXrefViewBlobUrl(previewXref?.url || '');
+              setPreviewXref(null);
+            }}
+          />
+          <DownloadFormatModal
+            isOpen={showExtRefFormatModal}
+            fileName={downloadingExtRefFile?.name || ''}
+            onClose={() => {
+              setShowExtRefFormatModal(false);
+              setDownloadingExtRefFile(null);
+            }}
+            onDownload={handleExtRefFormatDownload}
+            loading={extRefDownloading}
+          />
+    </>
+  );
+
   if (!node) {
     console.warn('[FileItem] node is undefined or null');
     return null;
@@ -746,38 +785,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             />
           </div>
 
-          <ExternalReferencePanel
-            isOpen={externalReferenceUpload.isOpen}
-            files={externalReferenceUpload.files}
-            loading={externalReferenceUpload.loading}
-            mode="active"
-            onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
-            onReplace={externalReferenceUpload.replaceFile}
-            onDownload={handleDownloadXref}
-            onView={handleViewXref}
-            onRefresh={externalReferenceUpload.refresh}
-            onComplete={externalReferenceUpload.complete}
-            onClose={externalReferenceUpload.close}
-          />
-          <ImagePreviewModal
-            isOpen={!!previewXref}
-            src={previewXref?.url || ''}
-            alt={previewXref?.file.name || ''}
-            onClose={() => {
-              revokeXrefViewBlobUrl(previewXref?.url || '');
-              setPreviewXref(null);
-            }}
-          />
-          <DownloadFormatModal
-            isOpen={showExtRefFormatModal}
-            fileName={downloadingExtRefFile?.name || ''}
-            onClose={() => {
-              setShowExtRefFormatModal(false);
-              setDownloadingExtRefFile(null);
-            }}
-            onDownload={handleExtRefFormatDownload}
-            loading={extRefDownloading}
-          />
+          {externalRefModals}
         </Card>
       </>
     );
@@ -1033,46 +1041,8 @@ export const FileItem: React.FC<FileItemProps> = ({
           )}
         </div>
 
-        <ExternalReferencePanel
-          isOpen={externalReferenceUpload.isOpen}
-          files={externalReferenceUpload.files}
-          loading={externalReferenceUpload.loading}
-          mode="active"
-          onSelectAndUpload={externalReferenceUpload.selectAndUploadFiles}
-          onReplace={externalReferenceUpload.replaceFile}
-          onDownload={handleDownloadXref}
-          onView={handleViewXref}
-          onRefresh={externalReferenceUpload.refresh}
-          onComplete={externalReferenceUpload.complete}
-          onClose={externalReferenceUpload.close}
-        />
-        <ImagePreviewModal
-          isOpen={!!previewXref}
-          src={previewXref?.url || ''}
-          alt={previewXref?.file.name || ''}
-          onClose={() => {
-            revokeXrefViewBlobUrl(previewXref?.url || '');
-            setPreviewXref(null);
-          }}
-        />
-        <DownloadFormatModal
-          isOpen={showExtRefFormatModal}
-          fileName={downloadingExtRefFile?.name || ''}
-          onClose={() => {
-            setShowExtRefFormatModal(false);
-            setDownloadingExtRefFile(null);
-          }}
-          onDownload={handleExtRefFormatDownload}
-          loading={extRefDownloading}
-        />
+        {externalRefModals}
       </div>
     </>
   );
-};
-
-export const FileIconComponent: React.FC<{
-  node: FileSystemNode;
-  size?: number;
-}> = ({ node, size = 48 }) => {
-  return null;
 };
