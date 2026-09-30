@@ -92,14 +92,14 @@ const TERMINAL_TASK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const CLOUD_LIST_CAP = 50;
 
 /** 任务是否为终态（completed/failed/cancelled） */
-function isTerminalStatus(status: ConversionTaskStatus): boolean {
+export function isTerminalStatus(status: ConversionTaskStatus): boolean {
   return (
     status === 'completed' || status === 'failed' || status === 'cancelled'
   );
 }
 
-/** 任务是否 active（pending/processing） */
-function isActiveStatus(status: ConversionTaskStatus): boolean {
+/** 任务是否为 active（pending/processing）——「待转换列表」的落位判据唯一出口 */
+export function isActiveStatus(status: ConversionTaskStatus): boolean {
   return status === 'pending' || status === 'processing';
 }
 
@@ -535,8 +535,18 @@ export const useConversionQueueStore = create<ConversionQueueState>(
           createdAt: task.createdAt ?? Date.now(),
           error: task.error,
         };
-        // 去重（同 id 覆盖）
-        const rest = state.tasks.filter((t) => t.id !== task.id);
+        // 去重：本地任务的 id 是调用方自造的时间戳（`local_public_${Date.now()}`），
+        // 按 id 去重永远 miss，同一文件重复打开会堆积成 N 条独立行。改以 fileHash
+        // 作身份（最新一次打开覆盖旧行，与 handlePublicUpload 的 latest-wins 一致）；
+        // 无 fileHash 的记录（如 submitTask 失败兜底）只能按 id 去重。
+        const rest = state.tasks.filter(
+          (t) =>
+            !(
+              task.fileHash
+                ? t.source === 'local' && t.fileHash === task.fileHash
+                : t.id === task.id
+            )
+        );
         const tasks = [newTask, ...rest].slice(0, MAX_LOCAL_TASKS + 50);
         persistLocalTasks(tasks);
         // 新增 active（pending/processing）任务自动展开面板（S6-3）；终态记录不展开
@@ -638,14 +648,12 @@ export const useConversionQueueStore = create<ConversionQueueState>(
 
 /** 是否有进行中（pending/processing）任务 —— 决定悬浮按钮可见性 */
 export function hasActiveTask(tasks: ConversionTask[]): boolean {
-  return tasks.some((t) => t.status === 'pending' || t.status === 'processing');
+  return tasks.some((t) => isActiveStatus(t.status));
 }
 
 /** 进行中任务数 —— 悬浮按钮角标 */
 export function countActiveTasks(tasks: ConversionTask[]): number {
-  return tasks.filter(
-    (t) => t.status === 'pending' || t.status === 'processing'
-  ).length;
+  return tasks.filter((t) => isActiveStatus(t.status)).length;
 }
 
 /**

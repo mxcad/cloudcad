@@ -93,6 +93,14 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
   cloudError,
   cloudTruncated,
 }) => {
+  // 「重试」可用性单一判据：content-error（内容性永久失败，同输入重试注定再失败）
+  // 不提供重试；本地记录无后端任务可重试。live 区与历史区共用。
+  const canRetryTask = (task: ConversionTask): boolean =>
+    task.errorCategory !== 'content-error' &&
+    task.status === 'failed' &&
+    task.source === 'cloud' &&
+    !!task.taskId;
+
   return (
     <>
       {/* 云端拉取失败：保留已加载内容 + 顶部提示，不整块替换成空态 */}
@@ -117,14 +125,9 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           !!task.taskId;
         const canOpen =
           task.status === 'completed' && (!!task.nodeId || !!task.fileHash);
-        // 内容性永久失败（content-error）：同一输入重试注定再失败，不提供重试入口；
-        // 其余失败（环境性可重试）才显示重试。失败性质由后端结构化下发（errorCategory）。
+        // 失败性质由后端结构化下发（errorCategory），重试可用性见 canRetryTask
         const isContentError = task.errorCategory === 'content-error';
-        const canRetry =
-          !isContentError &&
-          task.status === 'failed' &&
-          task.source === 'cloud' &&
-          !!task.taskId;
+        const canRetry = canRetryTask(task);
         return (
           <div key={task.id} className={`conversion-row ${meta.className}`}>
             <div className="conversion-row-main">
@@ -207,6 +210,8 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
         const meta = STATUS_META[task.status];
         const canOpen =
           task.status === 'completed' && (!!task.nodeId || !!task.fileHash);
+        // 失败记录从 live 区移入历史区后仍要可重试（与 live 区同一判据）
+        const canRetry = canRetryTask(task);
         return (
           <div
             key={`history-${task.id}`}
@@ -233,6 +238,16 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
               </div>
             </div>
             <div className="conversion-row-actions">
+              {canRetry && (
+                <Tooltip content={t('重试转换')}>
+                  <button
+                    aria-label={t('重试转换')}
+                    onClick={() => onRetry(task)}
+                  >
+                    <RotateCcw size={13} />
+                  </button>
+                </Tooltip>
+              )}
               {canOpen && (
                 <Tooltip content={t('打开')}>
                   <button aria-label={t('打开')} onClick={() => onOpen(task)}>

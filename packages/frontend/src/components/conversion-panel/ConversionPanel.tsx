@@ -26,6 +26,7 @@ import {
   useConversionQueueStore,
   hasActiveTask,
   countActiveTasks,
+  isActiveStatus,
   CONVERSION_POLL_INTERVAL_MS,
   type ConversionTask,
 } from '@/stores/conversionQueueStore';
@@ -476,8 +477,20 @@ export function ConversionPanel() {
   // 搜索过滤：同时作用于 live/本地任务 与 已完成历史
   const matchName = (name: string) =>
     !search || name.toLowerCase().includes(search.toLowerCase());
-  const filteredTasks = tasks.filter((task) => matchName(task.name));
-  const filteredHistory = history.filter((task) => matchName(task.name));
+  // 「待转换列表」只放确有在途（pending/processing）的任务——队列语义就是「正在
+  // 需要转换的」。终态（完成/失败/取消）一律归入历史记录区：此前终态行与在途行混排
+  // 且本地终态保留 7 天，用户看到的是「队列里总有一堆已完成的东西」。
+  // 本地终态行不会出现在 history（listHistory 只返回云端的 ownerId 节点），故在此
+  // 与云端历史合并后按转换时刻倒序，用户仍能在历史记录里打开/重试旧任务。
+  const filteredTasks = tasks.filter(
+    (task) => isActiveStatus(task.status) && matchName(task.name)
+  );
+  const filteredHistory = [
+    ...history.filter((task) => matchName(task.name)),
+    ...tasks.filter(
+      (task) => !isActiveStatus(task.status) && matchName(task.name)
+    ),
+  ].sort((a, b) => b.createdAt - a.createdAt);
 
   const handleOpen = (task: ConversionTask) => {
     // 完成且关联节点 → 新标签页打开 CAD 编辑器（编辑器走 waitForFileReady 等待就绪）

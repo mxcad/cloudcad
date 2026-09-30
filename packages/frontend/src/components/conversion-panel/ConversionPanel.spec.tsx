@@ -1455,10 +1455,11 @@ describe('ConversionPanel', () => {
     });
 
     it('live 任务与历史同时存在时渲染「历史记录」分隔条', async () => {
+      // live 区只放确有在途（pending/processing）的任务，故这里用 processing
       const liveTask: ConversionTask = {
         id: 'local-3',
         name: 'live.dwg',
-        status: 'completed',
+        status: 'processing',
         source: 'local',
         createdAt: Date.now(),
       };
@@ -1481,6 +1482,31 @@ describe('ConversionPanel', () => {
       const divider = document.querySelector('.conversion-divider');
       expect(divider).toBeTruthy();
       expect(divider!.textContent).toContain('历史记录');
+    });
+
+    it('终态任务不进 live 区（队列只放正在需要转换的），但仍在历史记录里可见', async () => {
+      const finishedTask: ConversionTask = {
+        id: 'local-done',
+        name: 'done.dwg',
+        status: 'completed',
+        source: 'local',
+        nodeId: undefined,
+        fileHash: 'hash-done',
+        createdAt: Date.now(),
+      };
+      useConversionQueueStore.setState({ collapsed: false, tasks: [] });
+      await renderPanel();
+      await act(async () => {
+        useConversionQueueStore.setState({
+          tasks: [finishedTask],
+          history: [],
+        });
+      });
+      // 无 live 行 → 无「历史记录」分隔条；但该行仍渲染（在历史区），可打开
+      expect(document.querySelector('.conversion-divider')).toBeNull();
+      expect(document.body.textContent).toContain('done.dwg');
+      const openBtn = document.querySelector(`button[aria-label="${t('打开')}"]`);
+      expect(openBtn).toBeTruthy();
     });
   });
 
