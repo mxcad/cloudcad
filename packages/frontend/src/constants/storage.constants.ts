@@ -24,6 +24,9 @@ export class StoragePathConstants {
   /** MXWEB 文件访问路径前缀 */
   static readonly MXWEB_ACCESS_PREFIX = '/api/v1/mxcad/';
 
+  /** 图纸库/图块库 MXWEB 文件访问路径前缀（后接 drawing|block） */
+  static readonly LIBRARY_ACCESS_PREFIX = '/api/v1/library/';
+
   /** 日期格式 */
   static readonly DATE_FORMAT = 'YYYYMM';
 

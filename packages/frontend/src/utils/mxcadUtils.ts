@@ -97,9 +97,57 @@ export class UrlHelper {
   }
 
   /**
-   * 构建 MxCAD 文件访问 URL
+   * 构建 mxweb 文件访问 URL（唯一出口）
+   *
+   * 协议格式：
+   * - 项目/个人空间：/api/v1/mxcad/filesData/{nodePath}
+   * - 图纸库/图块库：/api/v1/library/{libraryKey}/filesData/{nodePath}
+   * 查询参数按 version → t（缓存时间戳）→ shareToken 顺序拼接。
+   *
+   * @param opts.nodePath 节点路径（格式：YYYYMM/nodeId/file.dwg.mxweb，缺 filesData/ 前缀时自动补齐）
+   */
+  static buildMxwebFileUrl(opts: {
+    nodePath: string;
+    libraryKey?: 'drawing' | 'block';
+    version?: string;
+    cacheTimestamp?: number;
+    shareToken?: string;
+  }): string {
+    let nodePath = opts.nodePath;
+    // 如果路径不以 filesData/ 开头，自动添加
+    if (!nodePath.startsWith(StoragePathConstants.STORAGE_PATH_PREFIX + '/')) {
+      nodePath = `${StoragePathConstants.STORAGE_PATH_PREFIX}/${nodePath}`;
+    }
+
+    const prefix = opts.libraryKey
+      ? `${StoragePathConstants.LIBRARY_ACCESS_PREFIX}${opts.libraryKey}/`
+      : StoragePathConstants.MXWEB_ACCESS_PREFIX;
+    let url = `${prefix}${nodePath}`;
+
+    const params: string[] = [];
+    if (opts.version !== undefined) params.push(`v=${opts.version}`);
+    if (opts.cacheTimestamp !== undefined)
+      params.push(`t=${opts.cacheTimestamp}`);
+    if (opts.shareToken) params.push(`shareToken=${opts.shareToken}`);
+    if (params.length > 0) url += `?${params.join('&')}`;
+    return url;
+  }
+
+  /**
+   * 从 mxweb 文件访问 URL 中提取节点路径（buildMxwebFileUrl 的逆操作）
+   * @returns 形如 YYYYMM/nodeId/file.dwg.mxweb 的路径；非 mxweb 访问 URL（如公共分享）返回 null
+   */
+  static extractMxwebFilePath(url: string): string | null {
+    const match = url.match(
+      /\/api\/v1\/(?:mxcad|library\/(?:drawing|block))\/filesData\/([^?]+)/
+    );
+    return match?.[1] ?? null;
+  }
+
+  /**
+   * 构建 MxCAD 文件访问 URL（带路径校验）
    * @param nodePath 节点路径（格式：YYYYMM/nodeId/file.dwg.mxweb 或 filesData/YYYYMM/nodeId/file.dwg.mxweb）
-   * @returns MxCAD 文件访问 URL（格式：/api/mxcad/filesData/YYYYMM/nodeId/file.dwg.mxweb）
+   * @returns MxCAD 文件访问 URL（格式：/api/v1/mxcad/filesData/YYYYMM/nodeId/file.dwg.mxweb）
    */
   static buildMxCadFileUrl(nodePath: string): string {
     // 如果路径不以 filesData/ 开头，自动添加
@@ -113,8 +161,7 @@ export class UrlHelper {
       throw new Error(t('无效的节点路径格式'));
     }
 
-    // 使用常量拼接路径
-    return `${StoragePathConstants.MXWEB_ACCESS_PREFIX}${nodePath}`;
+    return this.buildMxwebFileUrl({ nodePath });
   }
 }
 

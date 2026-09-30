@@ -51,7 +51,10 @@ import {
   batchDownloadControllerRetryTask,
   batchDownloadControllerGetUserTasks,
 } from '@/api-sdk';
-import { getBatchTaskProgress } from '@/utils/download';
+import {
+  getBatchTaskProgress,
+  downloadBatchItem,
+} from '@/utils/download';
 import { useBatchDownload } from './useBatchDownload';
 import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
 
@@ -73,11 +76,18 @@ const mockGetUserTasks = batchDownloadControllerGetUserTasks as ReturnType<
 
 // happy-dom 无 EventSource：subscribeToProgressSSE 抛 ReferenceError 落进 catch → 返回 null
 class FakeEventSource {
+  static instances: FakeEventSource[] = [];
   close = vi.fn();
+  onmessage: ((event: { data: string }) => void) | null = null;
+  onerror: (() => void) | null = null;
+  constructor(public url: string) {
+    FakeEventSource.instances.push(this);
+  }
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  FakeEventSource.instances = [];
   vi.stubGlobal('EventSource', FakeEventSource);
   useBatchDownloadStore.setState({ tasks: [] });
   mockCreate.mockResolvedValue({ data: { taskId: 'task-1' }, error: undefined });
@@ -399,5 +409,87 @@ describe('useBatchDownload — 单文件格式下载走独立路由（回归：�
     });
     // 批量下载路由必须未被调用——否则批量开关关闭时内存导出会被 403 拦掉
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useBatchDownload — SSE 单例共享（回归：多实例曾各建一条 EventSource）', () => {
+  it('两个实例订阅同一 taskId 只建一条 EventSource（引用计数共享）', async () => {
+    const a = renderHook(() => useBatchDownload());
+    await a.result.current.createZipTask([fileItem]);
+
+    const b = renderHook(() => useBatchDownload());
+    act(() => {
+      b.result.current.subscribeToProgressSSE('task-1');
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+
+    a.unmount();
+    const es = FakeEventSource.instances[0];
+    // 另一实例仍订阅，连接不关
+    expect(es.close).not.toHaveBeenCalled();
+
+    b.unmount();
+    // 最后一个释放者关闭连接
+    expect(es.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('同实例重复订阅不递增引用（防泄漏）', async () => {
+    const a = renderHook(() => useBatchDownload());
+    await a.result.current.createZipTask([fileItem]);
+    act(() => {
+      a.result.current.subscribeToProgressSSE('task-1');
+    });
+    act(() => {
+      a.result.current.subscribeToProgressSSE('task-1');
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+    a.unmount();
+    // 引用计数仍为 1（重复订阅被跳过），一次释放即关闭
+    expect(FakeEventSource.instances[0].close).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useBatchDownload — 终态自动下载全局去重（回归：每实例一份防重表会重复触发下载）', () => {
+  const completedMsg = JSON.stringify({
+    status: 'COMPLETED',
+    completedCount: 1,
+    totalCount: 1,
+    errorCount: 0,
+    zipPath: '/tmp/z.zip',
+  });
+
+  it('SSE 重连重复推送终态只自动下载一次（全局防重表）', async () => {
+    (downloadBatchItem as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+    });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+
+    const es = FakeEventSource.instances[0];
+    // 首次终态推送：触发自动下载
+    act(() => {
+      es.onmessage?.({ data: completedMsg });
+    });
+    // 模拟 SSE 重连后重复推送同一条终态
+    act(() => {
+      es.onmessage?.({ data: completedMsg });
+    });
+
+    expect(downloadBatchItem).toHaveBeenCalledTimes(1);
+  });
+
+  it('终态 COMPLETED 通过订阅实例的 showToast 提示一次', async () => {
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createZipTask([fileItem]);
+
+    act(() => {
+      FakeEventSource.instances[0].onmessage?.({ data: completedMsg });
+    });
+
+    expect(showToast).toHaveBeenCalledWith('批量下载完成', 'success');
   });
 });

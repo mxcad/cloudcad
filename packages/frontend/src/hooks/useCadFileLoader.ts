@@ -25,6 +25,7 @@ import {
 } from '@/stores/conversionQueueStore';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import { globalShowToast, globalShowConfirm } from '@/utils/notificationEvents';
 
 export interface CadFileLoaderState {
@@ -481,31 +482,47 @@ export function useCadFileLoader(
         };
 
         let cacheTimestamp: number | undefined;
+        const isLibraryUrl =
+          libraryKeyParam === 'drawing' || libraryKeyParam === 'block';
+        const urlLibraryKey = isLibraryUrl
+          ? (libraryKeyParam as 'drawing' | 'block')
+          : undefined;
+
+        if (!file.path) {
+          // 无路径时无法构造 mxweb 访问 URL（此前会拼出 /filesData/undefined 的死链）
+          const msg = t('无法构造文件访问URL');
+          onError(msg);
+          onStoreError(msg);
+          onLoading(false);
+          onStoreLoading(false);
+          return;
+        }
 
         if (versionParam) {
-          if (libraryKeyParam === 'drawing' || libraryKeyParam === 'block') {
-            mxcadFileUrl = `/api/v1/library/${libraryKeyParam}/filesData/${file.path}?v=${versionParam}`;
-          } else {
-            mxcadFileUrl = `/api/v1/mxcad/filesData/${file.path}?v=${versionParam}${shareTokenParam ? `&shareToken=${shareTokenParam}` : ''}`;
-          }
+          mxcadFileUrl = UrlHelper.buildMxwebFileUrl({
+            nodePath: file.path,
+            libraryKey: urlLibraryKey,
+            version: versionParam,
+            // library 形式的 URL 不携带 shareToken（维持既有协议，认证走请求头）
+            shareToken: isLibraryUrl ? undefined : shareTokenParam || undefined,
+          });
           setCacheTimestamp(undefined);
+        } else if (file.updatedAt) {
+          cacheTimestamp = new Date(file.updatedAt).getTime();
+          mxcadFileUrl = UrlHelper.buildMxwebFileUrl({
+            nodePath: file.path,
+            libraryKey: urlLibraryKey,
+            cacheTimestamp,
+            shareToken: isLibraryUrl ? undefined : shareTokenParam || undefined,
+          });
+          setCacheTimestamp(cacheTimestamp);
         } else {
-          if (file.updatedAt) {
-            cacheTimestamp = new Date(file.updatedAt).getTime();
-            if (libraryKeyParam === 'drawing' || libraryKeyParam === 'block') {
-              mxcadFileUrl = `/api/v1/library/${libraryKeyParam}/filesData/${file.path}?t=${cacheTimestamp}`;
-            } else {
-              mxcadFileUrl = `/api/v1/mxcad/filesData/${file.path}?t=${cacheTimestamp}${shareTokenParam ? `&shareToken=${shareTokenParam}` : ''}`;
-            }
-            setCacheTimestamp(cacheTimestamp);
-          } else {
-            const msg = t('无法构造文件访问URL');
-            onError(msg);
-            onStoreError(msg);
-            onLoading(false);
-            onStoreLoading(false);
-            return;
-          }
+          const msg = t('无法构造文件访问URL');
+          onError(msg);
+          onStoreError(msg);
+          onLoading(false);
+          onStoreLoading(false);
+          return;
         }
 
         if (isInitializedRef.current && mxcadManager.isCreated()) {

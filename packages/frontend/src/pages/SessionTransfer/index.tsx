@@ -28,6 +28,7 @@ import { getCopyrightLine } from '@/constants/appConfig';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { sessionTransferControllerConsume } from '@/api-sdk';
+import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
 import { cancelProactiveRefresh } from '@/config/tokenRefresh';
 import { useBrandConfig } from '../../contexts/BrandContext';
@@ -80,8 +81,8 @@ export const SessionTransfer: React.FC = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    localStorage.removeItem('personalSpaceId');
-    localStorage.removeItem('mxcad-personal-space-id');
+    // 会话转移是 SPA 流程不整页刷新：清掉上一会话的用户级内存缓存（跨账号残留防护）
+    useFileSystemStore.getState().setPersonalSpaceId(null);
 
     (async () => {
       try {

@@ -7,6 +7,7 @@ import {
   setLoadingMessage,
 } from '@/services/loadingService';
 import { calculateFileHash } from '@/utils/hashUtils';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
 import { globalShowToast } from '@/utils/notificationEvents';
 import { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
@@ -171,7 +172,9 @@ export async function saveToNodeFile(
         });
       }
       if (updatedNode.path) {
-        const basePath = `/api/v1/mxcad/filesData/${updatedNode.path}`;
+        const basePath = UrlHelper.buildMxwebFileUrl({
+          nodePath: updatedNode.path,
+        });
         const timestamp = updatedNode.updatedAt
           ? new Date(updatedNode.updatedAt).getTime()
           : Date.now();
@@ -255,10 +258,10 @@ export async function saveLibraryFile(
       deps
     );
 
-    const basePath =
-      libraryKey === 'drawing'
-        ? `/api/v1/library/drawing/filesData/${nodePath}`
-        : `/api/v1/library/block/filesData/${nodePath}`;
+    const basePath = UrlHelper.buildMxwebFileUrl({
+      nodePath,
+      libraryKey: libraryKey === 'drawing' ? 'drawing' : 'block',
+    });
 
     const updatedAt = await getNodeUpdatedAt(fileId, libraryKey, deps);
     const timestamp = updatedAt ? new Date(updatedAt).getTime() : Date.now();

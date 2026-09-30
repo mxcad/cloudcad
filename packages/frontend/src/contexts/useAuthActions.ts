@@ -19,6 +19,7 @@ import {
 import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
 import { clearSavePermissionCache } from '@/services/mxcadManager/saveDefaults';
+import { useFileSystemStore } from '@/stores/fileSystemStore';
 
 export interface User extends UserDto {
   membershipTierLevel?: number;
@@ -101,7 +102,6 @@ export function useAuthActions({
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.removeItem('personalSpaceId');
       setToken(accessToken);
       userData && setUser(userData);
       triggerProactiveRefresh();
@@ -129,7 +129,6 @@ export function useAuthActions({
       setAccessToken(accessToken);
       setRefreshToken(refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.removeItem('personalSpaceId');
       setToken(accessToken);
       setUser(userData);
       triggerProactiveRefresh();
@@ -329,15 +328,10 @@ export function useAuthActions({
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
-      localStorage.removeItem('personalSpaceId'); // 清除私人空间 ID 缓存
 
-      // 清除其他可能的缓存
-      try {
-        // 清除 mxcad 相关缓存
-        localStorage.removeItem('mxcad-personal-space-id');
-      } catch (error) {
-        console.warn('[AuthContext] 清除额外缓存失败:', error);
-      }
+      // 清除用户级内存缓存（personalSpaceId 跨账号残留会把文件存错空间；
+      // 登出时若停留在 /login 不发生整页刷新，必须显式重置）
+      useFileSystemStore.getState().setPersonalSpaceId(null);
 
       // 3. 更新状态
       setToken(null);

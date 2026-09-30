@@ -232,11 +232,16 @@ async function openFromLibrary(req: {
         }
         if (!nodePath) throw new Error(t('无法获取文件路径'));
         if (!fileName) throw new Error(t('无法获取文件名'));
-        let libraryFileUrl = `/api/v1/library/${req.libraryKey}/filesData/${nodePath}`;
-        if (updatedAt) {
-          const cacheTimestamp = new Date(updatedAt).getTime();
-          libraryFileUrl += `?t=${cacheTimestamp}`;
-          setCacheTimestamp(cacheTimestamp);
+        const libraryCacheTimestamp = updatedAt
+          ? new Date(updatedAt).getTime()
+          : undefined;
+        const libraryFileUrl = UrlHelper.buildMxwebFileUrl({
+          nodePath,
+          libraryKey: req.libraryKey,
+          cacheTimestamp: libraryCacheTimestamp,
+        });
+        if (libraryCacheTimestamp !== undefined) {
+          setCacheTimestamp(libraryCacheTimestamp);
         }
         return {
           url: libraryFileUrl,

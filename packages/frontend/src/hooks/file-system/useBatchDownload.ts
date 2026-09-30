@@ -13,8 +13,6 @@ import {
   batchDownloadControllerRetryFailedItems,
   type CreateSingleFormatDownloadDto,
 } from '@/api-sdk';
-import { getApiBaseUrl } from '@/config/apiConfig';
-import { getValidToken } from '@/utils/tokenUtils';
 import {
   downloadBatchZip,
   downloadBatchItem,
@@ -24,8 +22,12 @@ import {
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { isVipFeatureRequiredError } from '@/utils/vipFeatureGuide';
-
-const API_BASE = getApiBaseUrl();
+import {
+  subscribeBatchTaskProgress,
+  releaseBatchTaskProgress,
+  closeBatchTaskProgress,
+  tryMarkAutoDownloaded,
+} from '@/services/batchDownloadProgress';
 
 export function useBatchDownload(
   showToast?: (
@@ -35,11 +37,8 @@ export function useBatchDownload(
 ) {
   const { tasks, addTask, updateTask, removeTask, setProgressTaskId } =
     useBatchDownloadStore();
-  const activeSSEs = useRef<Map<string, EventSource>>(new Map());
-  /** 已触发过自动下载的 taskId 集合（SSE 重连可能重复推送终态，防重复触发浏览器下载） */
-  const autoDownloadedRef = useRef<Set<string>>(new Set());
-
-  const apiUrl = (path: string) => `${API_BASE}/v1${path}`;
+  /** 本实例已订阅的任务：卸载时逐个释放引用（SSE 连接本身是全局单例，按引用计数共享） */
+  const mySubscriptionsRef = useRef<Set<string>>(new Set());
 
   const createZipTask = useCallback(
     async (
@@ -94,60 +93,15 @@ export function useBatchDownload(
 
   const subscribeToProgressSSE = useCallback(
     (taskId: string, onTerminal?: (task: BatchTask | undefined) => void) => {
-      if (activeSSEs.current.has(taskId)) return;
-
-      const token = getValidToken();
-      const params = token ? `?token=${encodeURIComponent(token)}` : '';
-      const url = apiUrl(
-        `/file-system/batch-download/${taskId}/progress${params}`
-      );
-
-      // eslint-disable-next-line no-restricted-syntax -- 豁免：batch-download 任务进度 SSE（SDK 无 SSE 形态，token 走 query，ADR-0034 豁免清单）
-      const es = new EventSource(url);
-      activeSSEs.current.set(taskId, es);
-
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          updateTask(taskId, {
-            status: data.status,
-            totalCount: data.totalCount,
-            completedCount: data.completedCount,
-            errorCount: data.errorCount,
-            currentFile: data.currentFile,
-            errors: data.errors,
-            zipPath: data.zipPath,
-          });
-
-          if (data.status === 'COMPLETED') {
-            es.close();
-            activeSSEs.current.delete(taskId);
-            showToast?.(t('批量下载完成'), 'success');
-            onTerminal?.(
-              useBatchDownloadStore
-                .getState()
-                .tasks.find((t) => t.taskId === taskId)
-            );
-          } else if (data.status === 'FAILED') {
-            es.close();
-            activeSSEs.current.delete(taskId);
-            showToast?.(t('批量下载失败'), 'error');
-          } else if (data.status === 'CANCELLED') {
-            es.close();
-            activeSSEs.current.delete(taskId);
-            showToast?.(t('批量下载已取消'), 'info');
-          }
-        } catch {
-          // ignore: 忽略单个 SSE 消息解析失败（重连由 EventSource 自动处理）
-        }
-      };
-
-      es.onerror = () => {
-        es.close();
-        activeSSEs.current.delete(taskId);
-      };
+      // 同实例重复订阅直接跳过（引用计数按实例递增，重复订阅会泄漏引用）
+      if (mySubscriptionsRef.current.has(taskId)) return;
+      mySubscriptionsRef.current.add(taskId);
+      subscribeBatchTaskProgress(taskId, {
+        onTerminal,
+        onToast: showToast,
+      });
     },
-    [updateTask, showToast]
+    [showToast]
   );
 
   const createIndividualTask = useCallback(
@@ -266,9 +220,8 @@ export function useBatchDownload(
             completedTask &&
             completedTask.status === 'COMPLETED' &&
             completedTask.autoDownload &&
-            !autoDownloadedRef.current.has(taskId)
+            tryMarkAutoDownloaded(taskId)
           ) {
-            autoDownloadedRef.current.add(taskId);
             void downloadAllItems(completedTask);
           }
         });
@@ -485,11 +438,8 @@ export function useBatchDownload(
         // SDK 默认不抛错：失败时错误在 result.error。不检查会把任务标记为
         // 已取消并弹"批量下载已取消"，实际后端取消失败仍在后台执行
         if (result.error) throw result.error;
-        const es = activeSSEs.current.get(taskId);
-        if (es) {
-          es.close();
-          activeSSEs.current.delete(taskId);
-        }
+        closeBatchTaskProgress(taskId);
+        mySubscriptionsRef.current.delete(taskId);
         updateTask(taskId, { status: 'CANCELLED' });
         showToast?.(t('批量下载已取消'), 'info');
       } catch (err) {
@@ -509,7 +459,7 @@ export function useBatchDownload(
         });
         if (result.error) throw result.error;
         updateTask(taskId, { status: 'PROCESSING' });
-        // 失败时进度 SSE 已关闭并从 activeSSEs 移除，重试后须重新订阅才能收到新进度
+        // 失败时进度 SSE 已关闭并从订阅表移除，重试后须重新订阅才能收到新进度
         subscribeToProgressSSE(taskId);
         showToast?.(t('已重新加入下载队列'), 'info');
       } catch (err) {
@@ -597,9 +547,10 @@ export function useBatchDownload(
   );
 
   useEffect(() => {
+    const subscriptions = mySubscriptionsRef.current;
     return () => {
-      activeSSEs.current.forEach((es) => es.close());
-      activeSSEs.current.clear();
+      subscriptions.forEach((taskId) => releaseBatchTaskProgress(taskId));
+      subscriptions.clear();
     };
   }, []);
 

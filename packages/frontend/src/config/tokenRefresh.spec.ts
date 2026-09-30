@@ -22,6 +22,7 @@ import {
   setAuthFailureCallback,
   cancelLoginRedirect,
 } from './tokenRefresh';
+import { useFileSystemStore } from '@/stores/fileSystemStore';
 
 const spyNavigate = vi.fn();
 const spyAuthFailure = vi.fn();
@@ -56,8 +57,7 @@ describe('handleTokenRefreshFailure', () => {
     localStorage.setItem('accessToken', 'expired-access');
     localStorage.setItem('refreshToken', 'expired-refresh');
     localStorage.setItem('user', JSON.stringify({ id: 1 }));
-    localStorage.setItem('personalSpaceId', 'ps-1');
-    localStorage.setItem('mxcad-personal-space-id', 'ps-2');
+    useFileSystemStore.getState().setPersonalSpaceId('ps-1');
     setPath('/cad-editor');
 
     handleTokenRefreshFailure();
@@ -66,8 +66,8 @@ describe('handleTokenRefreshFailure', () => {
     expect(localStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('refreshToken')).toBeNull();
     expect(localStorage.getItem('user')).toBeNull();
-    expect(localStorage.getItem('personalSpaceId')).toBeNull();
-    expect(localStorage.getItem('mxcad-personal-space-id')).toBeNull();
+    // personalSpaceId 清理已迁移到 zustand 内存态（原 localStorage key 无写入者，已死）
+    expect(useFileSystemStore.getState().personalSpaceId).toBeNull();
     expect(spyAuthFailure).toHaveBeenCalledTimes(1);
   });
 

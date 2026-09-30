@@ -5,6 +5,7 @@
 
 import { authControllerRefreshToken } from '@/api-sdk';
 import { isCADRoute } from '@/utils/hasRoute';
+import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { ADMIN_LOGIN_PATH } from '@/constants/adminLoginConfig';
 import {
   decodeJwtPayload,
@@ -167,8 +168,9 @@ function clearAuthState() {
   removeAccessToken();
   removeRefreshToken();
   localStorage.removeItem('user');
-  localStorage.removeItem('personalSpaceId');
-  localStorage.removeItem('mxcad-personal-space-id');
+  // clearAuthState 走 spaNavigate（SPA 导航不整页刷新），zustand 内存态不会自动清空：
+  // personalSpaceId 跨账号残留会在 getPersonalSpaceId 网络失败时把文件存进上一个用户的空间
+  useFileSystemStore.getState().setPersonalSpaceId(null);
   // 立即通知 React 状态（AuthContext 清除 user/token → 降级游客模式 / ProtectedRoute 跳登录）
   if (authFailureCallback) {
     authFailureCallback();

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useFileItemRenderer } from './useFileItemRenderer';
 import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { handleError } from '@/utils/errorHandler';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import { MxFun } from 'mxdraw';
 import { FileSystemNode } from '@/types/filesystem';
 import { SystemPermission } from '@/constants/permissions';
@@ -225,7 +226,10 @@ export function useProjectDrawingsInteractions({
             });
           });
         } else {
-          const mxwebUrl = `/api/v1/library/block/filesData/${node.path}`;
+          const mxwebUrl = UrlHelper.buildMxwebFileUrl({
+            nodePath: node.path ?? '',
+            libraryKey: 'block',
+          });
           MxFun.sendStringToExecute('Mx_Insert', {
             filePath: mxwebUrl,
             name: node.name,

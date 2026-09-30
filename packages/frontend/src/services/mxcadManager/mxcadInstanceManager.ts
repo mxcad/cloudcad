@@ -9,6 +9,7 @@ import { t } from '@/languages';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import type { CurrentFileInfo, OpenFilePayload } from './mxcadTypes';
 import { VIEW_INIT_TIMEOUT_MS, ENGINE_READY_POLL_INTERVAL_MS } from './mxcadTypes';
 import { MxCADOpenFlow } from './mxcadOpenFlow';
@@ -285,14 +286,7 @@ async function handleOpenCompleteSideEffects(): Promise<void> {
     const currentMxwebUrl = getCurrentFileUrl();
     if (cacheTimestamp && getFileInfo() && currentMxwebUrl) {
       try {
-        const urlWithoutTimestamp = currentMxwebUrl.replace(/\?t=\d+$/, '');
-        const mxcadPathMatch = urlWithoutTimestamp.match(
-          /\/api\/mxcad\/filesData\/(.*)/
-        );
-        const libraryPathMatch = urlWithoutTimestamp.match(
-          /\/api\/library\/drawing\/filesData\/(.*)/
-        );
-        const filePath = mxcadPathMatch?.[1] || libraryPathMatch?.[1];
+        const filePath = UrlHelper.extractMxwebFilePath(currentMxwebUrl);
         if (filePath) await clearOldMxwebCache(filePath, cacheTimestamp);
       } catch (error) {
         handleError(error, 'mxcadManager: clearOldCache');

@@ -13,6 +13,7 @@ import { SystemPermission } from '@/constants/permissions';
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import type { ViewMode, ResourceItem } from '@/components/common';
 import { handleError } from '@/utils/errorHandler';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import { CAD_EXTENSIONS } from '@/utils/fileUtils';
 import { t } from '@/languages';
 
@@ -138,12 +139,15 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           } catch {
             /* ignore */
           }
-          const filesPath = `/api/v1/library/block/filesData/${blockNode.path}`;
           const timestamp = latestUpdatedAt
             ? new Date(latestUpdatedAt).getTime()
             : Date.now();
           const cmdParam = {
-            filePath: `${filesPath}?t=${timestamp}`,
+            filePath: UrlHelper.buildMxwebFileUrl({
+              nodePath: blockNode.path ?? '',
+              libraryKey: 'block',
+              cacheTimestamp: timestamp,
+            }),
             name: blockNode.name,
             isBlockLibrary: true,
           };

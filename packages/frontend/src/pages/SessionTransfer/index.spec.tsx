@@ -22,6 +22,7 @@ import { useBrandConfig } from '../../contexts/BrandContext';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { SessionTransfer } from './index';
+import { useFileSystemStore } from '@/stores/fileSystemStore';
 
 vi.mock('@/api-sdk', () => ({
   sessionTransferControllerConsume: vi.fn(),
@@ -85,7 +86,7 @@ describe('SessionTransfer', () => {
     // 预置旧凭证，验证「清旧」
     localStorage.setItem('accessToken', 'old-access');
     localStorage.setItem('refreshToken', 'old-refresh');
-    localStorage.setItem('personalSpaceId', 'old-space');
+    useFileSystemStore.getState().setPersonalSpaceId('old-space');
     vi.mocked(sessionTransferControllerConsume).mockResolvedValue({
       data: {
         accessToken: 'new-access',
@@ -103,7 +104,8 @@ describe('SessionTransfer', () => {
     // ① 清旧：五键被清除（setAccessToken/setRefreshToken 被 mock，不会真正写回）
     expect(localStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('refreshToken')).toBeNull();
-    expect(localStorage.getItem('personalSpaceId')).toBeNull();
+    // personalSpaceId 清理已迁移到 zustand 内存态（原 localStorage key 无写入者，已死）
+    expect(useFileSystemStore.getState().personalSpaceId).toBeNull();
     expect(cancelProactiveRefresh).toHaveBeenCalled();
     // ② 消费一次性凭证
     expect(sessionTransferControllerConsume).toHaveBeenCalledWith({
