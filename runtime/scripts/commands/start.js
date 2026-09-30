@@ -24,6 +24,7 @@ const {
   NODE_EXE,
   PM2_JS,
   getMobileAccessPath,
+  OPS_ENTRY,
 } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { getAdminLoginPath } = require('../lib/admin-login');
@@ -628,7 +629,7 @@ async function startMode() {
     console.log(`  ${colors.cyan}pnpm build${colors.reset}`);
     console.log('');
     log('cyan', '或使用部署模式（包含构建）：');
-    console.log(`  ${colors.cyan}./cloudcad.sh deploy${colors.reset}`);
+    console.log(`  ${colors.cyan}${OPS_ENTRY} deploy${colors.reset}`);
     console.log('');
 
     const rl = readline.createInterface({

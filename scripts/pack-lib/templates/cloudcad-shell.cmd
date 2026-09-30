@@ -1,9 +1,11 @@
 @echo off
 title 梦想网页CAD实时协同平台 命令行（离线 Node.js 环境）
-cd /d "%~dp0"
+REM 入口脚本位于 runtime\，部署根目录为其上一级
+cd /d "%~dp0.."
+set "APP_ROOT=%CD%"
 
 REM 使用内嵌的离线 Node.js 运行时
-set "NODE_DIR=%~dp0runtime\windows\node"
+set "NODE_DIR=%APP_ROOT%\runtime\windows\node"
 set "NODE_EXE=%NODE_DIR%\node.exe"
 
 if not exist "%NODE_EXE%" (
@@ -15,7 +17,7 @@ if not exist "%NODE_EXE%" (
 
 REM 将离线 node 加入 PATH，并设置 PM2_HOME 到本项目（隔离系统 pm2）
 set "PATH=%NODE_DIR%;%PATH%"
-set "PM2_HOME=%~dp0data\pm2"
+set "PM2_HOME=%APP_ROOT%\data\pm2"
 
 REM 禁用 Corepack 严格检查，支持离线部署
 set COREPACK_ENABLE_STRICT=0

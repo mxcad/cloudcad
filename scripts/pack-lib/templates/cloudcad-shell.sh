@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # 梦想网页CAD实时协同平台 命令行入口 —— 打开一个已加载离线 Node.js 环境的 shell
-# 模板文件（scripts/pack-lib/templates/），随部署包/升级包复制到项目根目录。
-# 用法：在项目根目录执行  ./cloudcad-shell.sh  或  source cloudcad-shell.sh
+# 模板文件（scripts/pack-lib/templates/），随部署包复制到 runtime/。
+# 用法：在部署根目录执行  runtime/cloudcad-shell.sh  或  source runtime/cloudcad-shell.sh
 # 也可双击执行（Linux 桌面），效果等价于 source 后进入子 shell。
 set -e
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 入口脚本位于 runtime/，部署根目录为其上一级
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # 优先 Linux 离线运行时，回退到 Windows（Git Bash on Windows 场景）

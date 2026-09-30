@@ -49,7 +49,7 @@
 > 仅当 D1=A（前台保留）时验收
 > 依据 Q0 决策（基础服务统一 PM2 托管）：前台模式仅应用层走前台 spawn，
 > 基础服务（PG/Redis/协同/配置中心）由 PM2 托管**保持常驻**，Ctrl+C 只停应用层。
-> 全部停止请用 `cloudcad.sh stop`（stopInfrastructure）。
+> 全部停止请用 `runtime/cloudcad.* stop`（stopInfrastructure）。
 
 - [ ] 选择 `[2] 前台运行`
 - [ ] 应用层（backend/frontend）前台 spawn 并显示横幅
@@ -73,11 +73,13 @@
 - [ ] `pack:upgrade:win` 产物为业务产物全集，**不含 `.pnpm-store-deploy`**（路线 B，复用目标机既有部署包 store 离线补装）
 - [ ] 包内 `.deploy` 标记存在
 - [ ] 包内 `runtime/ecosystem.config.js` 完整
+- [ ] 根目录布局：只有 `start`/`stop` 入口（按平台单份，Linux 只出 .sh、Windows 只出 .bat/.cmd），运维入口（`cloudcad.*`、`cloudcad-shell.*`）在 `runtime/` 下；`setup` 运行时生成的 `project-env.sh` 也落在 `runtime/` 下、不回到包根
+- [ ] `runtime/project-env.sh` 实际可用：`source` 后在项目子目录内 `node`/`pnpm` 命中离线运行时、在包外回落全局命令（Git Bash 的 `$PWD` 为 `/d/...` 形态，须与 `D:/...` 归一化后比较；守卫函数 `_in_project` 不得被 `unset`）
 - [ ] manifest 清单单一事实源正确（`scripts/pack-lib/manifest.js`：deploy/upgrade 共享条目一致，`pack-offline.js` 委托 manifest 无重复硬编码）
 
 ## V7 — CLI 冒烟
 
-- [ ] `./cloudcad.sh --help` 输出与基线一致（拆分后逐字节 diff）
+- [ ] `runtime/cloudcad.sh --help`（Linux）/ `runtime\cloudcad.bat --help`（Windows）输出符合预期
 - [ ] 全部子命令可 dispatch：dev / deploy / start / stop / migrate / seed / db:backup / db:restore / db:list / db:cleanup / init / status / logs / version:check / version:verify
 - [ ] 未知命令报错提示正常
 

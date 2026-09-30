@@ -34,6 +34,10 @@ const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const PM2_HOME = path.join(DATA_DIR, 'pm2');
 
+// 运维入口脚本的展示路径（仅用于终端提示文案）：
+// 部署包根目录只保留 start/stop 两个启动入口，交互菜单入口在 runtime/ 下。
+const OPS_ENTRY = IS_WINDOWS ? 'runtime\\cloudcad.bat' : 'runtime/cloudcad.sh';
+
 // 从 myServerConfig.json 读取移动端访问路径名
 function getMobileAccessPath() {
   const root = PROJECT_ROOT;
@@ -147,6 +151,7 @@ module.exports = {
   USE_RUNTIME,
   DATA_DIR,
   PM2_HOME,
+  OPS_ENTRY,
   BACKEND_ENV_PATH,
   PORTS,
   getPorts,

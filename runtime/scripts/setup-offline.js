@@ -24,6 +24,7 @@ const os = require('os');
 const { execSync, spawn } = require('child_process');
 const { PRODUCT_NAME } = require('./lib/branding');
 const { brandBox } = require('./lib/logger');
+const { OPS_ENTRY } = require('./lib/context');
 
 // ==================== 平台配置 ====================
 
@@ -423,7 +424,9 @@ exec "\$basedir/${nodeRelPath}" "\$basedir/${targetRelPath}" "\$@"
  * @returns {boolean}
  */
 function createProjectEnvFile() {
-  const envPath = path.join(PROJECT_ROOT, 'project-env.sh');
+  // 部署包根目录只保留 start/stop 两个启动入口，环境文件归入 runtime/。
+  // 文件内部路径全部锚定 _PROJECT_ROOT（部署根目录绝对路径），落位不影响解析。
+  const envPath = path.join(PROJECT_ROOT, 'runtime', 'project-env.sh');
   const projectRootUnix = PROJECT_ROOT.replace(/\\/g, '/');
 
   // 离线 node 可执行文件（相对 PROJECT_ROOT，Unix 风格路径）
@@ -462,7 +465,7 @@ function createProjectEnvFile() {
 # Git Bash shell functions for offline runtime auto-detection
 #
 # Usage: Add the following line to ~/.bashrc or ~/.zshrc:
-#   source "${projectRootUnix}/project-env.sh"
+#   source "${projectRootUnix}/runtime/project-env.sh"
 #
 # Then in any project subdirectory, type pnpm/node/npm/npx directly.
 # Outside the project, the global command is used automatically.
@@ -473,16 +476,27 @@ _NODE_DIR="\${_PROJECT_ROOT}/${nodeDirRel}"
 _NPM_BIN="\${_PROJECT_ROOT}/${npmBinRel}"
 _PNPM_CLI="\${_PROJECT_ROOT}/${pnpmCliRel}"
 
-# 仅当当前目录位于项目目录内时，才使用离线运行时
+# 仅当当前目录位于项目目录内时，才使用离线运行时。
+# _PROJECT_ROOT 是 Node 生成的 Windows 形态绝对路径（D:/foo），而 Git Bash 里的
+# $PWD 是 Unix 形态（/d/foo），直接比较恒不相等，故先把 $PWD 归一化成 Windows 形态。
+# Linux 上两边都是 Unix 形态：非单字符盘符的路径原样透传，不参与归一化。
 _in_project() {
-  local dir="\$PWD"
-  while [[ "\$dir" != "/" ]]; do
-    if [[ "\$dir" == "\${_PROJECT_ROOT}" ]]; then
-      return 0
-    fi
-    dir="\$(dirname "\$dir")"
-  done
-  return 1
+  local cwd stripped drive winroot
+  cwd="\$PWD"
+  case "\$cwd" in
+    /*/*)
+      stripped="\${cwd#/}"
+      drive="\${stripped%%/*}"
+      case "\$drive" in
+        [a-z]|[A-Z])
+          winroot="\$(printf '%s' "\$drive" | tr '[:lower:]' '[:upper:]'):/\${stripped#*/}"
+          ;;
+        *) winroot="\$cwd" ;;
+      esac
+      ;;
+    *) winroot="\$cwd" ;;
+  esac
+  [[ "\$winroot" == "\${_PROJECT_ROOT}" || "\$winroot" == "\${_PROJECT_ROOT}"/* ]]
 }
 
 # node 直接指向离线 node
@@ -525,7 +539,9 @@ pnpm() {
   fi
 }
 
-unset _in_project
+# 注：切勿在此 unset 上面的守卫函数 —— bash 的 unset 会连函数定义一起删除，
+# 导致 node/npm/npx/pnpm 四个 wrapper 判定 _in_project 时报 command not found，
+# 恒走全局分支，离线运行时永不生效（下划线前缀即为此处保留的私有函数）。
 `;
 
   fs.writeFileSync(envPath, content, { encoding: 'utf8' });
@@ -1030,10 +1046,10 @@ function setup(options = {}) {
     log('1. 依赖已通过 pnpm install --offline 从 .pnpm-store 重建');
     log('2. .env 配置文件已从 .env.example 自动创建');
     log('3. 配置文件已增量更新（只新增配置项，不修改已有配置）');
-    log('4. 部署/运维命令由 cloudcad.sh 统一处理，自动使用离线 Node.js');
+    log(`4. 部署/运维命令由 ${OPS_ENTRY} 统一处理，自动使用离线 Node.js`);
     log('5. Git Bash 用户: 将以下命令加入 ~/.bashrc，即可在项目子目录使用:');
     const projectRootUnix = PROJECT_ROOT.replace(/\\/g, '/');
-    log('   source ' + projectRootUnix + '/project-env.sh');
+    log('   source ' + projectRootUnix + '/runtime/project-env.sh');
     if (prismaReady) {
       log('6. Prisma Client 已就绪（来自部署包）');
     } else {
@@ -1066,10 +1082,10 @@ function main() {
   log('1. SVN 仓库目录已迁移: data/svn-repo → data/mx-repo（如存在旧目录）');
   log('2. 依赖已通过 pnpm install --offline 从 .pnpm-store 重建');
   log('3. .env 配置文件已从 .env.example 自动创建');
-  log('4. 部署/运维命令由 cloudcad.sh 统一处理，自动使用离线 Node.js');
+  log(`4. 部署/运维命令由 ${OPS_ENTRY} 统一处理，自动使用离线 Node.js`);
   log('5. Git Bash: 执行以下命令即可在项目子目录直接使用 pnpm:');
   const projectRootUnix = PROJECT_ROOT.replace(/\\/g, '/');
-  log('   source ' + projectRootUnix + '/project-env.sh');
+  log('   source ' + projectRootUnix + '/runtime/project-env.sh');
   console.log('');
 }
 

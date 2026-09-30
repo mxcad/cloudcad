@@ -6,10 +6,11 @@
  * 消除"改一处漏一处"的双清单硬编码漂移。
  *
  * 设计：
- * - getSharedEntries()        —— 两类包共享的条目（单一事实源）
- * - getLaunchScriptEntries()  —— 启动/停止入口脚本（deploy 独有，理由见函数头注释）
- * - getDeployIncludeList()    —— 全量部署包 = 共享 + 入口脚本 + deploy 独有（平台运行时/store/说明）
- * - getUpgradeIncludeList()   —— 增量升级包 = 共享（不含平台运行时、部署说明与入口脚本）
+ * - getSharedEntries()          —— 两类包共享的条目（单一事实源）
+ * - getLaunchScriptEntries()    —— 部署包根目录的 start/stop 入口（deploy 独有，理由见函数头注释）
+ * - getRuntimeScriptEntries()   —— runtime/ 下的运维入口（cloudcad.* / cloudcad-shell.*，deploy 独有）
+ * - getDeployIncludeList()      —— 全量部署包 = 共享 + 入口脚本 + deploy 独有（平台运行时/store/说明）
+ * - getUpgradeIncludeList()     —— 增量升级包 = 共享（不含平台运行时、部署说明与入口脚本）
  *
  * 顺序约定：deploy 独有的平台运行时与 store 须保持在 pnpm-lock.yaml 之前，
  * 部署说明保持在末尾 —— 与原 pack-offline.js 两处清单的复制顺序逐字节一致，
@@ -152,6 +153,11 @@ function getSharedEntries() {
 
 // 启动/停止入口脚本（单一事实源 = scripts/pack-lib/templates/，仓库根目录不常驻这些文件）
 //
+// 部署包根目录布局：根目录只放 start / stop 两个启动入口，运维入口
+// （交互菜单 cloudcad.*、离线 Node shell cloudcad-shell.*）收入 runtime/；
+// 且每个平台只出一份脚本（Windows 只出 .bat/.cmd，Linux 只出 .sh），
+// 不再双平台脚本一起打包。
+//
 // 【deploy 独有，upgrade 不含】理由两条，缺一条该设计就不成立：
 // 1. 升级包不含 runtime/linux 与 .pnpm-store-deploy，无法独立启动，只能解压覆盖
 //    在既有部署之上；包内入口脚本唯一作用就是覆盖目标机已存在的同名文件。
@@ -160,18 +166,40 @@ function getSharedEntries() {
 //    于是升级包把部署包带的 -rwxr-xr-x 入口脚本覆盖成 0666，用户 ./start.sh 报
 //    Permission denied。入口脚本只是几行 exec 包装，业务逻辑全在 runtime/scripts/
 //    cli.js（已在共享清单内、随升级包更新），故升级包不需要自带。
-function getLaunchScriptEntries() {
-  return [
-    { src: 'scripts/pack-lib/templates/cloudcad.bat', dest: 'cloudcad.bat' },
-    { src: 'scripts/pack-lib/templates/cloudcad.sh', dest: 'cloudcad.sh' },
-    { src: 'scripts/pack-lib/templates/start.bat', dest: 'start.bat' },
-    { src: 'scripts/pack-lib/templates/start.sh', dest: 'start.sh' },
-    { src: 'scripts/pack-lib/templates/stop.bat', dest: 'stop.bat' },
-    { src: 'scripts/pack-lib/templates/stop.sh', dest: 'stop.sh' },
-    // 离线命令行入口模板（部署包根目录附带，方便打开离线 Node shell）
-    { src: 'scripts/pack-lib/templates/cloudcad-shell.sh', dest: 'cloudcad-shell.sh' },
-    { src: 'scripts/pack-lib/templates/cloudcad-shell.cmd', dest: 'cloudcad-shell.cmd' },
-  ];
+const TEMPLATES_DIR = 'scripts/pack-lib/templates';
+
+// 入口脚本按平台分组：root = 部署包根目录，runtime = 部署包 runtime/ 下
+const LAUNCH_SCRIPTS = {
+  linux: {
+    root: ['start.sh', 'stop.sh'],
+    runtime: ['cloudcad.sh', 'cloudcad-shell.sh'],
+  },
+  win: {
+    root: ['start.bat', 'stop.bat'],
+    runtime: ['cloudcad.bat', 'cloudcad-shell.cmd'],
+  },
+};
+
+function pickLaunchScripts(platform) {
+  return LAUNCH_SCRIPTS[platform === 'linux' ? 'linux' : 'win'];
+}
+
+// destDir 为空 = 落在部署包根目录
+function scriptEntries(names, destDir) {
+  return names.map((name) => ({
+    src: `${TEMPLATES_DIR}/${name}`,
+    dest: destDir ? `${destDir}/${name}` : name,
+  }));
+}
+
+// 部署包根目录入口：仅 start / stop（当前平台的一份）
+function getLaunchScriptEntries(platform) {
+  return scriptEntries(pickLaunchScripts(platform).root);
+}
+
+// 运维入口：交互菜单 + 离线 Node shell，收入 runtime/（当前平台的一份）
+function getRuntimeScriptEntries(platform) {
+  return scriptEntries(pickLaunchScripts(platform).runtime, 'runtime');
 }
 
 // 私有 variant 额外包含 impl-mx/dist（append 到末尾，与历史一致）
@@ -191,7 +219,8 @@ function appendPrivateEntries(items, variant) {
  * = 共享条目 + 启动入口脚本，其中：
  *   - 平台运行时二进制（deploy 独有）插在 ecosystem 之后、pnpm-lock.yaml 之前
  *   - 生产依赖 store（deploy 独有）紧随平台运行时
- *   - 启动入口脚本（deploy 独有）在 package.json 之后、部署说明之前
+ *   - 启动入口脚本（deploy 独有）在 package.json 之后、部署说明之前：
+ *     根目录只出 start/stop，运维入口出在 runtime/
  *   - 部署说明（deploy 独有）保持在末尾
  */
 function getDeployIncludeList(platform, variant = 'oss') {
@@ -212,7 +241,8 @@ function getDeployIncludeList(platform, variant = 'oss') {
     }
   }
   // deploy 独有：启动/停止入口脚本（追加在部署说明之前，保持历史复制顺序不变）
-  for (const entry of getLaunchScriptEntries()) items.push(entry);
+  for (const entry of getLaunchScriptEntries(platform)) items.push(entry);
+  for (const entry of getRuntimeScriptEntries(platform)) items.push(entry);
   // deploy 独有：部署说明文档（末尾）
   items.push({ src: '部署说明.txt', dest: '部署说明.txt' });
 
@@ -233,6 +263,7 @@ function getUpgradeIncludeList(platform, variant = 'oss') {
 module.exports = {
   getSharedEntries,
   getLaunchScriptEntries,
+  getRuntimeScriptEntries,
   getDeployIncludeList,
   getUpgradeIncludeList,
 };

@@ -94,7 +94,10 @@ RUN if command -v apt-get &> /dev/null; then \
     node --version
 
 # 安装 pnpm 9.15.9 和 pm2（项目要求 pnpm >= 9.15.9）
-RUN npm install -g pnpm@9.15.9 pm2
+# 两者都钉死精确版本：pm2 原来不写版本，每次构建镜像都实时解析 registry 取 latest，
+# 打包镜像不可复现。pm2 版本与 runtime/windows/node/package-lock.json（Windows 便携
+# 运行时）保持一致，避免 Linux/Windows 部署包内 pm2 版本分叉。
+RUN npm install -g pnpm@9.15.9 pm2@5.4.3
 
 # 设置工作目录
 WORKDIR /app

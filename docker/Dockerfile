@@ -22,6 +22,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/api-sdk/package.json ./packages/api-sdk/
 COPY packages/config-service/package.json ./packages/config-service/
+COPY packages/engine-exec/package.json ./packages/engine-exec/
 
 # 安装所有依赖（单独一层，代码改动不会触发重新安装）
 # --ignore-scripts 跳过其他包的 postinstall，避免本地依赖问题
@@ -46,13 +47,18 @@ WORKDIR /app
 # 复制 mxVersionTool 源代码（后端依赖此包）
 COPY packages/mxVersionTool ./packages/mxVersionTool
 
-# 复制 db / contracts 源码（backend prebuild 会在容器内构建这两个包）
+# 复制 db / contracts / engine-exec 源码（backend 的 prebuild 会在容器内构建这三个包）
 COPY packages/db/src ./packages/db/src
 COPY packages/db/prisma ./packages/db/prisma
 COPY packages/db/prisma.config.ts ./packages/db/
 COPY packages/db/tsconfig.json ./packages/db/
 COPY packages/contracts/src ./packages/contracts/src
 COPY packages/contracts/tsconfig.json ./packages/contracts/
+# engine-exec 的 TS 源文件在包根目录（无 src/），4 个根文件只互相引用，不依赖 test/。
+# 不能拷 test/：.dockerignore 的 `**/*.test.ts` 会排除其全部文件，COPY 目录会报
+# "no source files were specified" 直接中断构建（tsc 少编译 test 不影响运行时产物）。
+COPY packages/engine-exec/*.ts ./packages/engine-exec/
+COPY packages/engine-exec/tsconfig.json ./packages/engine-exec/
 
 # 复制后端源代码（只有代码改动才会触发此层重建）
 COPY packages/backend/src ./packages/backend/src
@@ -130,6 +136,7 @@ COPY packages/backend/package.json ./packages/backend/
 COPY packages/mxVersionTool/package.json ./packages/mxVersionTool/
 COPY packages/db/package.json ./packages/db/
 COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/engine-exec/package.json ./packages/engine-exec/
 
 # 复制 Prisma schema 和 migrations（生产迁移需要）
 COPY packages/db/prisma ./packages/db/prisma
@@ -138,26 +145,32 @@ COPY packages/backend/prisma ./packages/backend/prisma
 COPY packages/backend/prisma.config.ts ./packages/backend/
 
 # 安装生产依赖 + Prisma CLI（用于 migrate deploy）
-RUN pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --frozen-lockfile --ignore-scripts
+# 本镜像 filter = backend 运行时依赖闭包（含 mx-version-tool；不跑 3100 故不含 conversion-service）
+# 离线部署包 filter 见 pack-offline.js getDeployStoreInstallFilter（含 conversion-service、不含 mx-version-tool）——两者口径不同，勿互抄
+RUN pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --ignore-scripts
 
 # 生成 Prisma Client
 RUN pnpm --filter backend exec prisma generate
 
 # 移除 devDependencies 减小镜像体积（保留 prisma CLI）
-RUN pnpm --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --frozen-lockfile --prod || \
-    pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --frozen-lockfile --prod
+RUN pnpm --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod || \
+    pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod
 
 # 重新安装 prisma 和 tsx（migrate deploy 需要）
-RUN pnpm --filter backend add prisma@^7.1.0 tsx --ignore-scripts
+# 必须钉死精确版本：原写法 `add prisma@^7.1.0 tsx`（tsx 完全无版本）在构建期实时解析
+# registry，解析结果随时间漂移且无人记录，导致同一 tag 的镜像不可复现。
+RUN pnpm --filter backend add prisma@7.8.0 tsx@4.22.4 --ignore-scripts
 
 # 复制 mxVersionTool 源代码
 COPY packages/mxVersionTool ./packages/mxVersionTool
 
 # 复制构建产物（只有构建结果变化才会更新）
-# backend dist + @cloudcad/db/@cloudcad/contracts 的 dist（backend 运行时 require 它们）
+# backend dist + @cloudcad/db / @cloudcad/contracts / @cloudcad/engine-exec 的 dist
+# （backend 运行时 require 这三个包；漏 engine-exec 会在加载转换服务时 MODULE_NOT_FOUND）
 COPY --from=backend-builder /app/packages/backend/dist ./packages/backend/dist
 COPY --from=backend-builder /app/packages/db/dist ./packages/db/dist
 COPY --from=backend-builder /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=backend-builder /app/packages/engine-exec/dist ./packages/engine-exec/dist
 # frontend/dist 已包含合并后的移动端 dist（路径由 myServerConfig.json 的 mobileAccessPath 控制）
 COPY --from=frontend-builder /app/packages/frontend/dist /var/www/html
 

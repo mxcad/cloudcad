@@ -24,7 +24,7 @@ function setupSignalHandlers() {
     console.log('\n');
     // Q0 理顺：前台模式 Ctrl+C 只停"应用层"（backend/frontend 前台 spawn），
     // 基础服务（PG/Redis/协同/配置中心）由 PM2 托管，保持常驻，不随前台退出。
-    // 手动停止全部服务请用 `cloudcad.sh stop`（stopInfrastructure）。
+    // 手动停止全部服务请用 `runtime/cloudcad.* stop`（stopInfrastructure）。
     log('yellow', '[信号] 正在停止应用层服务（基础服务保持常驻）...');
     cleanupForeground();
     await stopAppServices();

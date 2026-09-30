@@ -6,6 +6,7 @@
  */
 
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
+const { OPS_ENTRY } = require('../lib/context');
 
 function showHelp() {
   clearScreen();
@@ -13,7 +14,7 @@ function showHelp() {
   log('bright', '>>> 帮助信息');
   console.log('');
   console.log(`${colors.cyan}用法：${colors.reset}`);
-  console.log(`  ${colors.green}./cloudcad.sh <命令> [选项]${colors.reset}`);
+  console.log(`  ${colors.green}${OPS_ENTRY} <命令> [选项]${colors.reset}`);
   console.log('');
   console.log(`${colors.cyan}命令：${colors.reset}`);
   console.log(
@@ -78,25 +79,25 @@ function showHelp() {
   console.log('');
   console.log(`${colors.cyan}示例：${colors.reset}`);
   console.log(
-    `  ${colors.yellow}./cloudcad.sh start${colors.reset}           # 启动服务`
+    `  ${colors.yellow}${OPS_ENTRY} start${colors.reset}           # 启动服务`
   );
   console.log(
-    `  ${colors.yellow}./cloudcad.sh deploy${colors.reset}         # 部署模式`
+    `  ${colors.yellow}${OPS_ENTRY} deploy${colors.reset}         # 部署模式`
   );
   console.log(
-    `  ${colors.yellow}./cloudcad.sh stop${colors.reset}          # 停止服务`
+    `  ${colors.yellow}${OPS_ENTRY} stop${colors.reset}          # 停止服务`
   );
   console.log(
-    `  ${colors.yellow}./cloudcad.sh logs${colors.reset}          # 查看日志`
+    `  ${colors.yellow}${OPS_ENTRY} logs${colors.reset}          # 查看日志`
   );
   console.log(
-    `  ${colors.yellow}./cloudcad.sh db:backup${colors.reset}     # 手动备份数据库`
+    `  ${colors.yellow}${OPS_ENTRY} db:backup${colors.reset}     # 手动备份数据库`
   );
   console.log(
-    `  ${colors.yellow}./cloudcad.sh db:list${colors.reset}       # 查看备份列表`
+    `  ${colors.yellow}${OPS_ENTRY} db:list${colors.reset}       # 查看备份列表`
   );
   console.log(
-    `  ${colors.yellow}./cloudcad.sh db:restore${colors.reset}    # 恢复数据库`
+    `  ${colors.yellow}${OPS_ENTRY} db:restore${colors.reset}    # 恢复数据库`
   );
 }
 

@@ -887,10 +887,12 @@ function createCloudcadSh(outputDir) {
   const content = `#!/bin/bash
 # ${PRODUCT_NAME} 运维管理中心
 
-cd "$(dirname "$0")"
+# 入口脚本位于 runtime/，部署根目录为其上一级
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
 # 使用内嵌的 Node.js
-NODE_EXE="./runtime/linux/node/bin/node"
+NODE_EXE="$SCRIPT_DIR/linux/node/bin/node"
 
 if [ ! -f "$NODE_EXE" ]; then
     echo "[错误] 找不到 Node.js 运行时: $NODE_EXE"
@@ -901,8 +903,9 @@ fi
 exec "$NODE_EXE" runtime/scripts/cli.js "$@"
 `;
 
-  // 根目录脚本的单一事实源 = scripts/pack-lib/templates/，
-  // 打包时由 manifest 复制到部署包/升级包根目录，仓库根目录不常驻
+  // 单一事实源 = scripts/pack-lib/templates/cloudcad.sh（git 内维护），
+  // manifest 在打包时复制到部署包的 runtime/ 下；此处内容须与模板逐字节一致，
+  // 否则每次 Linux 运行时提取都会把模板回滚成旧路径版本。
   const shPath = path.join(
     PROJECT_ROOT,
     'scripts',

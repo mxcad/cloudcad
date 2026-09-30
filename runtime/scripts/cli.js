@@ -56,8 +56,8 @@ const {
   getPorts,
   getMobileAccessPath,
   NODE_EXE,
-  PM2_JS,
   PNPM_JS,
+  OPS_ENTRY,
 } = require('./lib/context');
 
 // ==================== 工具函数（拆分至 lib/*） ====================
@@ -185,15 +185,26 @@ async function main() {
  * 先完成离线环境设置，再执行后续逻辑
  */
 async function bootstrap() {
-  // 首先设置离线环境（必须在其他操作前完成）
-  // 这会复制 .env.example → .env（如果 .env 不存在）
-  const success = await setupOffline({
-    silent: true,
-    deployBackendOnly: isDeployMode, // 部署模式只装后端依赖
-  });
+  // 先完成离线环境设置（部署包解包后首次运行会装依赖、建 .env、跑 ConfigUpdater）。
+  //
+  // stop / kill-all 不做：它们是清理动作，不该有"重新配置前端"的副作用。实测
+  // `cli.js stop` 会重写前端 dist 下 49 个配置文件并各留一份 .bak（内容虽相同，
+  // 但把"停止服务"变成"改用户配置"），也让日志被无关输出淹没。
+  // stop 不受运行时完整性约束：stopInfrastructure 对 PM2 缺失已做降级（跳过
+  // pm2 stop all，直接跑 pg-manager/redis-manager 与目录归属残留清理），且
+  // NODE_EXE 只取决于 USE_RUNTIME（runtime/<platform> 是否存在）而与 PM2 无关。
+  // 清理动作必须最大限度可用——它正是"停不掉"时的最后出口。
+  const isStopOnlyCommand = args[0] === 'stop' || args[0] === 'kill-all';
 
-  if (!success) {
-    process.exit(1);
+  if (!isStopOnlyCommand) {
+    const success = await setupOffline({
+      silent: true,
+      deployBackendOnly: isDeployMode, // 部署模式只装后端依赖
+    });
+
+    if (!success) {
+      process.exit(1);
+    }
   }
 
   // 会启动服务的命令（首次部署时触发密码交互确认）：
@@ -216,7 +227,11 @@ async function bootstrap() {
     }
   }
 
-  if (isStartupCommand && !passwordInitialized) {
+  // 只有启动类命令才可能触发密码交互。stop/kill-all 是纯清理动作，必须跳过：
+  // 它们不该有"合并 .env.example / 跑 ConfigUpdater"的副作用——否则"停止服务"
+  // 会顺手改用户配置（后端 .env 与前端 dist 下的配置文件），日志也会被数百行
+  // 无关输出淹没，排查"stop 到底停没停干净"时看不清关键行。
+  if (!isStopOnlyCommand && isStartupCommand && !passwordInitialized) {
     // 首次部署 + 启动类命令：走密码交互确认
     // （确认后写入 PASSWORD_INITIALIZED=1，后续启动命令不再重复触发）
     state.isFirstDeploy = true;
@@ -298,7 +313,12 @@ async function bootstrap() {
       else if (args[0] === 'mfa:totp-unbind') {
         await mfaTotpUnbind(args[1]);
       } else {
-        await cmd();
+        const result = await cmd();
+        // `stop` 返回 false 表示仍有进程占用本目录（数据目录未释放、部署包不可删除）。
+        // 必须给非 0 退出码，否则批处理/卸载脚本会把"停不掉"当成功继续删除目录。
+        if (args[0] === 'stop' && result === false) {
+          process.exit(1);
+        }
       }
     } else {
       log('red', `未知命令: ${args[0]}`);
@@ -318,7 +338,7 @@ async function bootstrap() {
       log('cyan', '  version:check      : 图纸版本部署前检查');
       log('cyan', '  version:verify     : 图纸版本部署后验证');
       log('cyan', '');
-      log('cyan', '查看帮助: ./cloudcad.sh --help');
+      log('cyan', `查看帮助: ${OPS_ENTRY} --help`);
       process.exit(1);
     }
   } else {

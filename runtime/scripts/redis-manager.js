@@ -10,6 +10,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+const { readEnvInt } = require('./lib/env');
+
 const PLATFORM = os.platform();
 const IS_WINDOWS = PLATFORM === 'win32';
 
@@ -33,8 +35,16 @@ const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
 
-// Redis 端口（从环境变量读取）
-const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
+// 后端 .env 路径：PM2 拉起本脚本时不注入业务端口，直调
+// （`node redis-manager.js status|stop`）时环境变量通常也没设——若不回落 .env
+// 就会去探 6379 默认端口，判定与实际操作全错。解析走 lib/env.js readEnvInt
+// （此前本文件自写一份 `^key=\d+` 正则）。
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+
+// Redis 端口：环境变量优先，否则取后端 .env 的 REDIS_PORT（单一事实源）
+const REDIS_PORT =
+  parseInt(process.env.REDIS_PORT || '0', 10) ||
+  readEnvInt(BACKEND_ENV_PATH, 'REDIS_PORT', 6379);
 
 // 可执行文件路径
 const redisServer = USE_RUNTIME
@@ -233,14 +243,32 @@ function startRedis() {
       '--appendonly', 'yes'
     ];
     
-    // 如果配置了密码，添加 requirepass 参数
+    // requirepass 走配置文件而非命令行参数：命令行对机器上所有本机会话可见
+    // （Get-CimInstance Win32_Process / tasklist / Process Explorer），密码会随
+    // 进程列表泄漏。配置文件落在数据目录下，权限随数据目录走。
+    // --port/--dir/--appendonly 必须留在命令行：detectRedisOwnership 靠 cmdline
+    // 里的数据目录判实例归属，移进配置文件会让整套接管逻辑失效。
     if (redisPassword) {
-      redisArgs.push('--requirepass', redisPassword);
-      log('info', '已配置 Redis 密码认证');
+      const authConf = path.join(REDIS_DATA_DIR, 'cloudcad-redis-auth.conf');
+      const quoted = redisPassword.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      try {
+        fs.writeFileSync(authConf, `requirepass "${quoted}"\n`, 'utf8');
+        try {
+          fs.chmodSync(authConf, 0o600);
+        } catch {
+          /* Windows 无 POSIX 权限位，chmod 无效但无害 */
+        }
+        redisArgs.unshift(authConf);
+        log('info', '已配置 Redis 密码认证（经配置文件传入，不出现在进程列表）');
+      } catch (err) {
+        // 配置文件写不进去（只读盘等）就退回命令行参数：可见性退让，但不能因此拒绝启动
+        log('warn', `写入 redis 密码配置文件失败（${err.message}），退回 --requirepass 命令行参数`);
+        redisArgs.push('--requirepass', redisPassword);
+      }
     } else {
       log('info', 'Redis 无密码模式');
     }
-    
+
     const redisProcess = spawn(redisServer, redisArgs, {
       stdio: 'inherit',
       windowsHide: true,
@@ -416,16 +444,17 @@ async function stopRedis() {
   // 加载 Redis 密码配置
   const redisPassword = loadRedisPassword();
 
-  // 构建 redis-cli 参数
-  const cliArgs = [];
-  if (redisPassword) {
-    cliArgs.push('-a', redisPassword);
-  }
-  cliArgs.push('shutdown', 'nosave');
+  // 构建 redis-cli 参数。密码走 REDISCLI_AUTH 环境变量而非 `-a` 参数——
+  // 命令行对本机所有会话可见（Get-CimInstance Win32_Process / tasklist /
+  // Process Explorer），env 只进子进程。与 stop.js 的 stopRedisForDataDir 同口径。
+  const cliArgs = ['shutdown', 'nosave'];
+  const cliEnv = { ...process.env };
+  if (redisPassword) cliEnv.REDISCLI_AUTH = redisPassword;
 
   const result = spawnSync(redisCli, cliArgs, {
     stdio: 'pipe',
     timeout: 5000,
+    env: cliEnv,
   });
   if (result.status !== 0 && result.stderr) {
     // 不静默：密码不一致/连接失败等必须留痕，否则"看起来停了其实没停"

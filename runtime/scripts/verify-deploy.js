@@ -546,6 +546,13 @@ async function step2_InstallDeps() {
       'install',
       '--offline',
       '--prod',
+      // --store-dir 显式指定（比 NPM_CONFIG_STORE_DIR 环境变量可靠，见
+      // pack-offline.js verifyDeployStoreOffline）；上方 env 保留以兼容嵌套 pnpm 调用
+      '--store-dir',
+      storePath,
+      // frozen：部署包内 package.json 与 pnpm-lock.yaml 同源，不一致时立即报错而非
+      // 在目标机静默改写 lockfile
+      '--frozen-lockfile',
       '--reporter=append-only',
     ],
     {

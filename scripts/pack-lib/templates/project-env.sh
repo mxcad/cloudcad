@@ -2,10 +2,12 @@
 # 梦想网页CAD实时协同平台 project environment
 # Git Bash shell functions for offline runtime auto-detection
 #
-# 模板文件（scripts/pack-lib/templates/）。部署/本地安装时由
-# runtime/scripts/setup-offline.js 自动生成到项目根目录（内容按实际安装路径生成）。
+# 参考样例，不进部署包（manifest.js 不引用本文件，勿当成模板直接复制）。
+# 真实内容由 runtime/scripts/setup-offline.js 的 createProjectEnvFile() 在部署/本地
+# 安装时生成到 <部署根目录>/runtime/project-env.sh（路径按实际安装位置动态拼）。
+# 本文件内的绝对路径是开发者本机快照，无占位符，不可用于生产。
 # Usage: Add the following line to ~/.bashrc or ~/.zshrc:
-#   source "<项目根目录>/project-env.sh"
+#   source "<部署根目录>/runtime/project-env.sh"
 #
 # Then in any project subdirectory, type pnpm/node/npm/npx directly.
 # Outside the project, the global command is used automatically.
@@ -16,16 +18,27 @@ _NODE_DIR="${_PROJECT_ROOT}/runtime/windows/node"
 _NPM_BIN="${_PROJECT_ROOT}/runtime/windows/node"
 _PNPM_CLI="${_PROJECT_ROOT}/runtime/windows/node/node_modules/pnpm/bin/pnpm.cjs"
 
-# 仅当当前目录位于项目目录内时，才使用离线运行时
+# 仅当当前目录位于项目目录内时，才使用离线运行时。
+# _PROJECT_ROOT 是 Node 生成的 Windows 形态绝对路径（D:/foo），而 Git Bash 里的
+# $PWD 是 Unix 形态（/d/foo），直接比较恒不相等，故先把 $PWD 归一化成 Windows 形态。
+# Linux 上两边都是 Unix 形态：非单字符盘符的路径原样透传，不参与归一化。
 _in_project() {
-  local dir="$PWD"
-  while [[ "$dir" != "/" ]]; do
-    if [[ "$dir" == "${_PROJECT_ROOT}" ]]; then
-      return 0
-    fi
-    dir="$(dirname "$dir")"
-  done
-  return 1
+  local cwd stripped drive winroot
+  cwd="$PWD"
+  case "$cwd" in
+    /*/*)
+      stripped="${cwd#/}"
+      drive="${stripped%%/*}"
+      case "$drive" in
+        [a-z]|[A-Z])
+          winroot="$(printf '%s' "$drive" | tr '[:lower:]' '[:upper:]'):/${stripped#*/}"
+          ;;
+        *) winroot="$cwd" ;;
+      esac
+      ;;
+    *) winroot="$cwd" ;;
+  esac
+  [[ "$winroot" == "${_PROJECT_ROOT}" || "$winroot" == "${_PROJECT_ROOT}"/* ]]
 }
 
 # node 直接指向离线 node
@@ -68,4 +81,6 @@ pnpm() {
   fi
 }
 
-unset _in_project
+# 注：切勿在此 unset 上面的守卫函数 —— bash 的 unset 会连函数定义一起删除，
+# 导致 node/npm/npx/pnpm 四个 wrapper 判定 _in_project 时报 command not found，
+# 恒走全局分支，离线运行时永不生效（下划线前缀即为此处保留的私有函数）。

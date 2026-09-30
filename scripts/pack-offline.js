@@ -1289,7 +1289,7 @@ function assertLinuxRuntimeComponents() {
  */
 function assertScriptLineEndings() {
   const targets = [
-    // 入口脚本模板（目录内 .bat/.cmd/.sh 全部进包）
+    // 入口脚本模板：模板目录两平台全量校验（实际进包按平台筛选，见 pack-lib/manifest.js）
     path.join(PROJECT_ROOT, 'scripts', 'pack-lib', 'templates'),
     // 运行时脚本（整目录进包）
     path.join(PROJECT_ROOT, 'runtime', 'scripts'),
@@ -1495,8 +1495,15 @@ async function packDeploy(platform, variant = 'oss') {
     }
 
     log('[0/3] 确保根依赖完整（pnpm install）...');
+    // oss：--frozen-lockfile。裸 `pnpm install` 在 lockfile 与 package.json 不一致时会
+    // 静默改写 pnpm-lock.yaml，让"打包"变成"改依赖"的入口；frozen 改为失败即报错，
+    // 由人显式 `pnpm install` 更新 lockfile 后再打包。
+    // private：保持非 frozen——impl-mx 是 gitignore 的私有包，不在提交的 lockfile 里，
+    // 首次 install 必须同步 lockfile（补回 impl-mx importer）才能继续（同 installFullDeps）。
+    const rootInstall =
+      variant === 'private' ? 'pnpm install' : 'pnpm install --frozen-lockfile';
     try {
-      execSync('pnpm install', {
+      execSync(rootInstall, {
         cwd: PROJECT_ROOT,
         stdio: 'inherit',
         encoding: 'utf8',

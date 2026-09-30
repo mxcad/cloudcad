@@ -72,6 +72,21 @@ jobs:
         with:
           version: 9.15.9
 
+      # 缓存 pnpm store（key 含 lockfile 哈希）：依赖未增减时后续发版零下载。
+      # 与 ci.yml 对齐——此前 release 两个 job 都无缓存，每次发版重下全量依赖 + 产品二进制。
+      - name: 获取 pnpm 存储目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 设置 pnpm 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       # 若需 arm 架构，启用 QEMU 模拟（GitHub 无免费 arm runner）
       # - name: 设置 QEMU 多架构模拟
       #   uses: docker/setup-qemu-action@v3
@@ -199,6 +214,20 @@ jobs:
         with:
           version: 9.15.9
 
+      # 缓存 pnpm store（与 ci.yml / 上方 Linux job 对齐）
+      - name: 获取 pnpm 存储目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 设置 pnpm 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @cloudcad/db build
       - run: pnpm --filter @cloudcad/contracts build
@@ -253,8 +282,11 @@ jobs:
 
       # 生成生产依赖离线 store（Windows 不走 Docker，须本机构建 .pnpm-store-deploy，
       # 否则 pack-offline.js 的 prepareDeployStore 会因 store 缺失报 "Docker store 缺失"）
+      # filter 清单必须与 scripts/pack-offline.js 的 getDeployStoreInstallFilter 逐字一致
+      # （ADR-0069：少 filter 一个包 → 目标机 --prod 装不出它的 workspace 链接 → dist 里的
+      # require 解析失败）。此前这里漏了 engine-exec / conversion-service。
       - name: 生成生产依赖 store
-        run: pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts install --frozen-lockfile --prod --store-dir .pnpm-store-deploy
+        run: pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --frozen-lockfile --prod --store-dir .pnpm-store-deploy
 
       # 打包 Windows 部署包
       - name: 打包 Windows 部署包

@@ -43,6 +43,29 @@ function parseEnvFileSimple(filePath) {
 }
 
 /**
+ * 从 .env 读取单个键的整数值（取不到或非正数返回 fallback）。
+ *
+ * pg-manager / redis-manager / ecosystem.config 此前各写一份
+ * `^key\s*=\s*(\d+)` 正则，只吃裸数字：.env 写成 `DB_PORT="5432"` 就静默读不到、
+ * 回落默认端口（后端连不上库，stop 还会探测到错误端口）。统一走 parseEnvFileSimple
+ * ——它会剥引号——解析口径只此一处。
+ * @param {string} filePath .env 路径（不存在时返回 fallback，不抛错）
+ * @param {string} key
+ * @param {number} fallback
+ * @returns {number}
+ */
+function readEnvInt(filePath, key, fallback) {
+  let parsed;
+  try {
+    parsed = parseEnvFileSimple(filePath);
+  } catch {
+    return fallback;
+  }
+  const n = parseInt(parsed[key], 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/**
  * 解析 .env 文件（完整版）
  * @param {string} filePath .env 文件路径
  * @returns {Object} 键值对
@@ -91,6 +114,7 @@ function updateEnvFile(filePath, updates, examplePath) {
 
 module.exports = {
   parseEnvFileSimple,
+  readEnvInt,
   parseEnvFile,
   updateEnvFile,
 };

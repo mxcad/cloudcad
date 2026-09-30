@@ -428,6 +428,95 @@ function isForeignCloudCadRuntimeProcess(pid) {
   return /\/runtime\/(windows|linux|macos)\//.test(exeNorm);
 }
 
+/**
+ * 一次性读取全机进程的 pid / 名称 / 命令行 / 可执行文件路径。
+ *
+ * 判断"停止后是否还有进程占用本部署目录"必须扫进程表：Windows 上 PM2 用
+ * SIGINT/SIGTERM 终止 node 包装进程时不会执行其信号处理器，pg-manager 里
+ * `process.on('SIGINT')` 中的 pg_ctl stop 因此永不执行，而 postgres 由
+ * pg_ctl 直接 spawn（不是包装进程的子进程），于是 postgres.exe 残留并锁定
+ * 数据目录。已有 getProcessExecutablePath 是逐 pid 起一个 powershell 进程，
+ * 此处一次取全。
+ * 查询失败**抛错**，不返回空表：空表在 stop 语境里语义是"没有残留进程 =
+ * 可以删包"，而查询失败语义是"不知道有没有残留"。两者共用 [] 会让 stop 在
+ * 探测失效时谎报成功，卸载脚本接着删一个仍被占用的目录——正是本原语要防的
+ * 失败模式（调用方 commands/stop.js 捕获后按"未停干净"处理，fail-closed）。
+ * @returns {Array<{pid:number,name:string,cmdline:string,exe:string}>}
+ * @throws {Error} 进程表查询失败（powershell 非零退出/超时、JSON 解析失败、/proc 不可读）
+ */
+function getProcessCmdlines() {
+  if (IS_WINDOWS) {
+    // shell 必须为 false：脚本含 | 与括号，交给 cmd.exe 解析会被拆成碎片命令
+    // （'Select-Object' 不是内部或外部命令，退出码 255、stdout 空）。
+    const res = spawnSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        'Get-CimInstance Win32_Process | Select-Object ProcessId,Name,CommandLine,ExecutablePath | ConvertTo-Json -Compress -Depth 1',
+      ],
+      {
+        encoding: 'utf8',
+        // 进程多时 JSON 会超 spawnSync 默认 1MB maxBuffer，截断后 JSON.parse
+        // 失败。这里显式放大——截断会让 stop 因解析失败误判"未停干净"。
+        maxBuffer: 16 * 1024 * 1024,
+        shell: false,
+        timeout: 20000,
+        windowsHide: true,
+      }
+    );
+    if (res.error) throw res.error;
+    if (res.status !== 0) {
+      throw new Error(
+        `进程表查询失败（powershell 退出码 ${res.status}）: ` +
+          String(res.stderr || '').trim().slice(0, 200)
+      );
+    }
+    let rows;
+    try {
+      rows = JSON.parse((res.stdout || '').trim() || '[]');
+    } catch (err) {
+      throw new Error(`进程表 JSON 解析失败: ${err.message}`);
+    }
+    return (Array.isArray(rows) ? rows : [rows])
+      .filter((r) => r && Number.isFinite(Number(r.ProcessId)))
+      .map((r) => ({
+        pid: Number(r.ProcessId),
+        name: String(r.Name || ''),
+        cmdline: String(r.CommandLine || ''),
+        exe: String(r.ExecutablePath || ''),
+      }));
+  }
+
+  const out = [];
+  for (const dir of fs.readdirSync('/proc')) {
+    if (!/^\d+$/.test(dir)) continue;
+    let raw;
+    try {
+      raw = fs.readFileSync(`/proc/${dir}/cmdline`, 'utf8');
+    } catch {
+      // 进程在读 cmdline 的瞬间退出是正常现象，跳过而不是让整次查询失败
+      continue;
+    }
+    const args = raw.split('\0').filter(Boolean);
+    if (args.length === 0) continue;
+    let exe = '';
+    try {
+      exe = fs.readlinkSync(`/proc/${dir}/exe`);
+    } catch {
+      /* exe 不可读时留空 */
+    }
+    out.push({
+      pid: Number(dir),
+      name: path.basename(args[0]),
+      cmdline: args.join(' '),
+      exe,
+    });
+  }
+  return out;
+}
+
 function runInNewWindow(title, command, args) {
   if (IS_WINDOWS) {
     const cmd =
@@ -466,4 +555,5 @@ module.exports = {
   getProcessExecutablePath,
   isOurRuntimeProcess,
   isForeignCloudCadRuntimeProcess,
+  getProcessCmdlines,
 };

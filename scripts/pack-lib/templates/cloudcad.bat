@@ -1,10 +1,11 @@
 @echo off
 title 梦想网页CAD实时协同平台 运维管理
 
-cd /d "%~dp0"
+REM 入口脚本位于 runtime\，部署根目录为其上一级
+cd /d "%~dp0.."
 
 REM 使用离线 Node.js
-set "NODE_EXE=%~dp0runtime\windows\node\node.exe"
+set "NODE_EXE=%~dp0windows\node\node.exe"
 
 if not exist "%NODE_EXE%" (
     echo [错误] 离线 Node.js 不存在: %NODE_EXE%

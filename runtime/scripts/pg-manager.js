@@ -12,6 +12,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+const { readEnvInt } = require('./lib/env');
+
 const PLATFORM = os.platform();
 const IS_WINDOWS = PLATFORM === 'win32';
 const IS_LINUX = PLATFORM === 'linux';
@@ -61,8 +63,14 @@ const pg_isready = USE_RUNTIME
     )
   : 'pg_isready';
 
-// PostgreSQL 端口（从环境变量读取）
-const PG_PORT = parseInt(process.env.DB_PORT || '5432', 10);
+// 后端 .env 路径：PM2 拉起本脚本时不注入业务端口，必须从文件读（单一事实源）。
+// 解析走 lib/env.js readEnvInt ——此前本文件自写一份 `^key=\d+` 正则。
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+
+// PostgreSQL 端口：环境变量优先，否则取后端 .env 的 DB_PORT（单一事实源）
+const PG_PORT =
+  parseInt(process.env.DB_PORT || '0', 10) ||
+  readEnvInt(BACKEND_ENV_PATH, 'DB_PORT', 5432);
 
 // Linux 下需要设置 LD_LIBRARY_PATH
 const PG_LIB_DIR =
@@ -492,9 +500,9 @@ function initDatabase() {
 }
 
 // 检查 PostgreSQL 是否运行
-// 连续失败阈值：pg_isready 在高负载/连接风暴下可能单次超时或假阴性，
-// 若单次失败即触发重启，会造成"数据库反复重启"的恶性循环。
-// 必须连续 CONSECUTIVE_FAIL_THRESHOLD 次检测失败才判定 PG 已退出。
+// 连续失败阈值只用于 main() 的重启判断防抖：pg_isready 在高负载/连接风暴下
+// 可能单次超时或假阴性，若单次失败即触发重启，会造成"数据库反复重启"的恶性循环。
+// 注意它不改变 isRunning() 的返回语义——后者必须严格等于"确认在运行"。
 const CONSECUTIVE_FAIL_THRESHOLD = 3;
 let consecutiveFailCount = 0;
 
@@ -512,16 +520,19 @@ function isRunning() {
       }
     );
     const ok = result.status === 0;
-    // 只有真正连续多次失败才判定退出；恢复成功即清零
     if (ok) {
       consecutiveFailCount = 0;
       return true;
     }
+    // 失败计数只喂给 main() 的重启防抖，不改变本函数语义。
+    // isRunning 必须严格等于"确认在运行"：曾写成"连续失败即返回 true"，
+    // 结果 stopPostgres 把已停的库当在运行去停（恒报"停止可能失败"），
+    // startPostgres 把已停的库当已在运行直接返回（库根本没起来）。
     consecutiveFailCount += 1;
-    return consecutiveFailCount >= CONSECUTIVE_FAIL_THRESHOLD;
+    return false;
   } catch (e) {
     consecutiveFailCount += 1;
-    return consecutiveFailCount >= CONSECUTIVE_FAIL_THRESHOLD;
+    return false;
   }
 }
 
@@ -734,6 +745,10 @@ function startPostgres() {
     return false;
   }
 
+  // -t 30 是 pg_ctl 自己的等待上限；spawnSync 的 timeout 是外层保险——
+  // pg_ctl 在 Windows 下经 cmd 包装（shell: true）时可能等不到子进程句柄关闭
+  // 而无限期挂住，实测 `node pg-manager.js start` 会一直不返回（postgres 其实
+  // 已就绪）。此处给 pg_ctl 的 30s 留 15s 余量。
   const result = spawnSync(
     pg_ctl,
     [
@@ -750,9 +765,23 @@ function startPostgres() {
       stdio: 'inherit',
       shell: IS_WINDOWS,
       windowsHide: true,
+      timeout: 45000,
       env: getEnv({ PGDATA: PG_DATA_DIR, PGUSER: 'postgres' }),
     }
   );
+
+  if (result.error && result.error.code === 'ETIMEDOUT') {
+    // 外层超时：pg_ctl 未返回，但 postgres 可能已就绪。用 pg_isready 判实际状态，
+    // 而不是恒报"启动失败"——后者会让 PM2 反复重启包装进程。
+    log('warn', `pg_ctl start 超时（${result.error.code}），改用 pg_isready 确认实际状态...`);
+    if (isRunning()) {
+      log('info', 'PostgreSQL 启动成功（pg_ctl 未返回但服务已就绪）');
+      return true;
+    }
+    log('error', 'PostgreSQL 启动失败（pg_ctl 超时且服务未就绪）');
+    logTail(logFile);
+    return false;
+  }
 
   if (result.status === 0) {
     log('info', 'PostgreSQL 启动成功');
@@ -766,8 +795,14 @@ function startPostgres() {
 
 // 停止 PostgreSQL
 function stopPostgres() {
-  if (!isRunning()) {
-    log('info', 'PostgreSQL 未运行');
+  const lockFile = path.join(PG_DATA_DIR, 'postmaster.pid');
+  // 用 postmaster.pid 而不是 isRunning() 做前置判断：后者经 pg_isready 探端口，
+  // 一旦本目录实际端口与 .env 的 DB_PORT 不一致（例如另一部署目录的库先占了
+  // 5432）就会误判"在运行"，进而对空数据目录执行 pg_ctl stop。
+  // postmaster.pid 由 postmaster 独占持有并负责清理，是"数据目录是否被占用"的
+  // 直接判据，且与端口配置无关。
+  if (!fs.existsSync(lockFile)) {
+    log('info', 'PostgreSQL 未运行（无 postmaster.pid）');
     return true;
   }
 
@@ -824,7 +859,7 @@ function stopPostgres() {
       });
       if (result.status === 0) {
         log('info', 'PostgreSQL 已停止');
-        return true;
+        return !fs.existsSync(lockFile);
       }
     }
 
@@ -839,11 +874,21 @@ function stopPostgres() {
       stdio: 'inherit',
       shell: IS_WINDOWS,
       windowsHide: true,
+      timeout: 45000,
       env: getEnv(),
     }
   );
 
+  // pg_ctl -w 成功只代表它等到了停机信号；数据目录是否真的释放要看锁文件。
+  // `-m fast` 是崩溃安全停机（完成 WAL 落盘、干净关闭），不会破坏数据。
   if (result.status === 0) {
+    if (fs.existsSync(lockFile)) {
+      log(
+        'warn',
+        'pg_ctl 已返回但 postmaster.pid 仍在，PostgreSQL 可能尚未完全退出'
+      );
+      return false;
+    }
     log('info', 'PostgreSQL 已停止');
     return true;
   }
@@ -884,7 +929,8 @@ function main() {
 
   // 保持进程运行，定期检查状态
   const checkInterval = setInterval(() => {
-    if (!isRunning()) {
+    // 连续失败达阈值才重启（isRunning 已恢复为"确认在运行"语义，单点失败不再等价于退出）
+    if (!isRunning() && consecutiveFailCount >= CONSECUTIVE_FAIL_THRESHOLD) {
       log('warn', 'PostgreSQL 进程已退出，尝试重启...');
       if (!startPostgres()) {
         log('error', 'PostgreSQL 重启失败');

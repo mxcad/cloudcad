@@ -446,20 +446,28 @@ async function reconcileInfrastructureWithPm2(
     const portKey = INFRA_APP_TO_PORT_KEY[appName];
     const portOpen = portOpenMap[appName];
     const pm2Entry = pm2Entries.find((a) => a.name === appName);
-    const foreignRedis =
-      appName === 'redis' && pm2Entry && !isPm2AppFromThisProject(pm2Entry);
-    if (pm2Entry && !isPm2AppFromThisProject(pm2Entry) && appName !== 'redis') {
+    // PM2 定义属于另一部署目录。Windows 上 PM2 daemon 全机唯一、PM2_HOME 只决定
+    // 文件位置：先注册者恒赢，后 start 的目录若对同名 app 发 restart，跑的还是
+    // 别家脚本（别家 .env 密钥 / 别家数据目录）——本目录的库连接或 REDIS AUTH
+    // 必然错配，且从输出上看不出差别。
+    // redis 另有密码门禁授权强制接管；其余服务不能静默沿用——那等于拿别人的库
+    // 当自己的库，数据错配的后果由本目录用户承担。
+    const foreignApp = !!pm2Entry && !isPm2AppFromThisProject(pm2Entry);
+    if (foreignApp) {
       log(
         'yellow',
-        `  [提示] PM2 中 ${appName} 的注册信息来自另一部署目录（${pm2Entry.pm2_env.pm_cwd}），本次沿用其脚本与数据；redis 会强制切换为本目录。`
+        `  [提示] PM2 中 ${appName} 的注册信息来自另一部署目录（${pm2Entry.pm2_env.pm_cwd}），将用本目录配置重新注册`
       );
     }
 
     if (portOpen && onlineApps.has(appName)) {
-      if (foreignRedis) {
+      if (foreignApp && appName === 'redis') {
         // redis 定义属于另一部署目录：restart 跑的是别家 redis-manager（别家
         // .env 密码/别家数据目录），本目录后端 AUTH 必失败。删除别家定义、
         // 停掉其 redis-server（数据按 --dir 隔离，不删数据），用本目录定义重拉。
+        // 这里用 stopRedisProcess 而非 killTree：pm2 delete 只杀 node 包装进程，
+        // Windows 上信号处理器不执行，redis-server 会成孤儿；SHUTDOWN SAVE 是
+        // 优雅停机（落盘 AOF），killTree 是硬杀（可能截断 AOF）。
         log(
           'yellow',
           `  [接管] PM2 中的 redis 定义属于另一部署目录（${pm2Entry.pm2_env.pm_cwd}），删除并用本目录配置重拉...`
@@ -474,6 +482,22 @@ async function reconcileInfrastructureWithPm2(
         }
         toStart.push(appName);
         continue;
+      }
+      if (foreignApp) {
+        // 非 redis 的服务：端口上的实例是**另一部署目录的项目**在提供（PM2 online
+        // 说明其包装进程在跑，即它启动了自身数据目录的库）。静默沿用等于拿别人的
+        // 库当自己的库、本目录 .env 密钥与之错位，且输出上看不出差别，故必须显式
+        // 中止而非接管。杀对方的库属于对方项目的停机，须由人决定，本流程不做自动
+        // 接管（redis 例外：密码门禁已授权让位，且 redis 数据按 --dir 隔离）。
+        log(
+          'red',
+          `  [错误] ${appName} 端口 ${PORTS[portKey]} 上的实例由另一部署目录（${pm2Entry.pm2_env.pm_cwd}）提供，本次不接管（不会误删/误改对方的库）`
+        );
+        log(
+          'cyan',
+          '  继续方式：先在另一部署目录停止该服务后重跑；或修改本目录 .env 的端口配置避开冲突。'
+        );
+        return false;
       }
       // 端口开 + PM2 online：健康，复用
       continue;
@@ -547,7 +571,7 @@ async function reconcileInfrastructureWithPm2(
           // 已注册（可能处于 stopped）走 restart，未注册走 start——与下方"端口未开"
           // 分支的判定一致；对未注册 app 发 restart 会直接报错并中止部署。
           // 定义属于另一部署目录时同样删除重注册（restart 会跑别家脚本）。
-          if (foreignRedis) {
+          if (foreignApp) {
             runPm2(['delete', appName], { silent: true });
             toStart.push(appName);
           } else if (getPm2AppStatus(appName) === 'unknown') {
@@ -577,7 +601,7 @@ async function reconcileInfrastructureWithPm2(
             for (let i = 0; i < 10 && (await isPortOpen(PORTS.redis)); i++) {
               await new Promise((resolve) => setTimeout(resolve, 300));
             }
-            if (foreignRedis) {
+            if (foreignApp) {
               // 定义属于另一部署目录：删除重注册，否则 PM2 拉起的还是别家脚本
               runPm2(['delete', appName], { silent: true });
             }
@@ -594,14 +618,15 @@ async function reconcileInfrastructureWithPm2(
     }
 
     // 端口未开：若 PM2 已注册但停止 → restart；否则 start。
-    // redis 定义属于另一部署目录时必须删除重注册（Windows 全机唯一 PM2 daemon，
-    // restart 跑的是先注册的别家脚本——别家 .env 密码/别家数据目录）。
+    // 定义属于另一部署目录时必须删除重注册——对已注册的 app 发 restart 跑的是
+    // 先注册的别家脚本（别家 .env 密钥 / 别家数据目录），本目录配置完全不生效。
+    // 此处端口空闲，删除只影响注册表条目，不涉及任何运行中的进程，也不碰对方的库。
     if (getPm2AppStatus(appName) === 'unknown') {
       toStart.push(appName);
-    } else if (foreignRedis) {
+    } else if (foreignApp) {
       log(
         'yellow',
-        '  [接管] PM2 中的 redis 定义属于另一部署目录，删除并用本目录配置重新注册...'
+        `  [接管] PM2 中的 ${appName} 定义属于另一部署目录（端口空闲），删除并用本目录配置重新注册...`
       );
       runPm2(['delete', appName], { silent: true });
       toStart.push(appName);

@@ -14,6 +14,9 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// 后端 .env 的整型读取统一走 lib/env.js（此前本文件三处各写一份 `^key=\d+` 正则）
+const { readEnvInt } = require('./scripts/lib/env');
+
 const PLATFORM = os.platform();
 const IS_WINDOWS = PLATFORM === 'win32';
 const IS_LINUX = PLATFORM === 'linux';
@@ -91,6 +94,15 @@ ensureDir(DATA_DIR);
 ensureDir(LOGS_DIR);
 ensureDir(REDIS_DATA_DIR);
 
+// 读取后端 .env 的端口配置。
+// PM2 不注入业务端口（只透传本文件 env 段），包装脚本拿不到实际端口就会回落
+// 默认值：后端连不上库，stop 也会探测到错误端口（"停止"只是假象）。
+// 解析统一走 lib/env.js readEnvInt（会剥引号，`.env` 写 `DB_PORT="5432"` 也能读）。
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+
+const DB_PORT = readEnvInt(BACKEND_ENV_PATH, 'DB_PORT', 5432);
+const REDIS_PORT = readEnvInt(BACKEND_ENV_PATH, 'REDIS_PORT', 6379);
+
 // PM2 应用配置
 const apps = [];
 
@@ -167,7 +179,7 @@ if (PG_RUNTIME_EXISTS) {
       // 获取 PostgreSQL lib 目录和 share 目录
       const pgLibDir = path.join(PLATFORM_DIR, 'postgres', 'lib');
       const pgShareDir = path.join(PLATFORM_DIR, 'postgres', 'share', 'postgresql', '15');
-      
+
       // 以 postgres 用户身份初始化（设置 LD_LIBRARY_PATH 和 -L 指定 share 目录）
       const result = spawnSync(
         'su',
@@ -227,6 +239,7 @@ if (PG_RUNTIME_EXISTS) {
     wait_ready: true,
     env: {
       PGDATA: PG_DATA_DIR,
+      DB_PORT: String(DB_PORT),
     },
   });
 
@@ -247,6 +260,9 @@ if (PG_RUNTIME_EXISTS) {
     max_restarts: 10,
     min_uptime: '5s',
     kill_timeout: 10000,
+    env: {
+      REDIS_PORT: String(REDIS_PORT),
+    },
   });
 
   // 协同服务 - 使用包装脚本管理
@@ -283,15 +299,7 @@ const configServiceScript = path.join(
 );
 if (fs.existsSync(configServiceScript)) {
   // 读取端口配置
-  let configServicePort = 3002;
-  const backendEnvPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
-  if (fs.existsSync(backendEnvPath)) {
-    const envContent = fs.readFileSync(backendEnvPath, 'utf8');
-    const match = envContent.match(/CONFIG_SERVICE_PORT\s*=\s*(\d+)/);
-    if (match) {
-      configServicePort = parseInt(match[1], 10);
-    }
-  }
+  const configServicePort = readEnvInt(BACKEND_ENV_PATH, 'CONFIG_SERVICE_PORT', 3002);
 
   apps.push({
     name: 'config-service',
