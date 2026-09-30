@@ -219,15 +219,15 @@ export async function handlePublicUpload(
   // S6-1/S6-6：游客/公开路径登记本地转换任务（无 nodeId → 本地任务，面板据此可见）。
   // 云端路径（登录用户）已由 node.taskId + refreshCloud 覆盖；此处补齐游客/公开路径。
   // 任务在打开文件成功时置 completed、失败时置 failed（callback 是异步打开入口）。
+  // 登记点刻意放在缓存检查未命中之后（见下方）：秒传命中 = 零转换，不属「正在需要
+  // 转换」，不该进队列——此前在算 hash 之前就先塞一条 processing 行，每次打开都会
+  // 留下一条与是否命中缓存无关的记录。
   const localTaskId = `local_public_${Date.now()}`;
   const { addLocalTask, updateTaskStatus } =
     useConversionQueueStore.getState();
-  addLocalTask({ id: localTaskId, name: file.name, status: 'processing' });
   try {
     showGlobalLoading(t('正在计算文件哈希...'));
     const hash = await calculateFileHash(file);
-    // 补 fileHash：面板「打开」按钮用此构造公开路径 URL
-    updateTaskStatus(localTaskId, 'processing', { fileHash: hash });
     // latest-wins：最近打开的文件优先（每次打开新文件覆盖）
     currentPublicOpenHash = hash;
     if (!noCache) {
@@ -241,7 +241,8 @@ export async function handlePublicUpload(
         },
       });
       if (existData.data?.exists) {
-        // mxweb 已就位（秒传）：直接打开
+        // mxweb 已就位（秒传）：直接打开。零转换不进队列，故此路径不登记任务，
+        // localTaskId 无对应记录，openFromPublicHash 的状态回写是 no-op
         hideGlobalLoading();
         emit(CAD_EVENTS.PUBLIC_FILE_UPLOADED, {
           fileHash: hash,
@@ -259,6 +260,14 @@ export async function handlePublicUpload(
         return;
       }
     }
+    // 缓存未命中 = 确实需要上传 + 转换，此刻才登记本地任务；fileHash 一并写入，
+    // 面板「打开」按钮据此构造公开路径 URL
+    addLocalTask({
+      id: localTaskId,
+      name: file.name,
+      status: 'processing',
+      fileHash: hash,
+    });
     setLoadingMessage(t('正在上传文件...'));
     await uploadMxCadFile({
       file,

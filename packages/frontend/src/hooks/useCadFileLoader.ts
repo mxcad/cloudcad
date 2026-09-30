@@ -368,13 +368,16 @@ export function useCadFileLoader(
 
         const fileStatus = file.fileStatus || '';
 
-        // 异步转换场景：文件未完成转换时，先触发/轮询等待转换完成再打开
+        // 异步转换场景：文件未完成转换时，先触发/轮询等待转换完成再打开。
+        // 就绪判据用 `fileHash && path`（与 waitForFileReady / openFromNode 对齐）：
+        // path 由落盘才写入，是产物真的就位的最强信号。此前按 fileStatus 判定，
+        // 对「path 已就位但状态仍为 UPLOADING/PROCESSING」的节点会误判未就绪并
+        // autoTrigger 重新发起一次转换 + 最长 120s 轮询，而双击入口（判据②）对同一
+        // 文件秒开——同一份缓存两条入口给出相反结论。
         if (
           !libraryKeyParam &&
           !shareTokenParam &&
-          (!file.fileHash ||
-            fileStatus === 'UPLOADING' ||
-            fileStatus === 'PROCESSING')
+          !(file.fileHash && file.path)
         ) {
           // 转换等待期不再锁编辑器（转换面板提供进度反馈）：展开面板 + 拉云端
           // 列表 + 跨标签页广播，让该在途任务可见

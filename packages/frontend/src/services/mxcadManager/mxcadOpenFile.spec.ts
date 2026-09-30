@@ -8,6 +8,7 @@ import { openUploadedFile, waitForFileReady } from './openDrawing';
 import { emit } from '../drawingSession';
 import { calculateFileHash } from '../../utils/hashUtils';
 import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
+import { globalShowToast } from '@/utils/notificationEvents';
 import {
   mxcadUploadControllerCheckFileExist,
   conversionTaskControllerListTasks,
@@ -112,6 +113,7 @@ const mockShowGlobalLoading = vi.mocked(showGlobalLoading);
 const mockHideGlobalLoading = vi.mocked(hideGlobalLoading);
 const mockConfirmExitCollab = vi.mocked(confirmExitCollaborationIfNeeded);
 const mockCheckUnsaved = vi.mocked(checkAndConfirmUnsavedChanges);
+const mockGlobalShowToast = vi.mocked(globalShowToast);
 
 function makeFile(name: string, size = 100): File {
   return new File([new Uint8Array(size)], name, {
@@ -162,47 +164,40 @@ describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUp
     useConversionQueueStore.setState({ tasks: [] });
   });
 
-  it('缓存命中：登记本地任务(processing)，callback 成功后置 completed', async () => {
+  it('缓存命中：零转换不进队列，callback 仍直接打开', async () => {
     mockCalculateFileHash.mockResolvedValue('hash123');
     mockCheckFileExist.mockResolvedValue({ data: { exists: true } });
     mockOpenFile.mockResolvedValue(undefined);
 
     await handlePublicUpload(makeFile('drawing.dwg'));
 
-    const localTask = useConversionQueueStore
-      .getState()
-      .tasks.find((t) => t.source === 'local');
-    expect(localTask).toBeDefined();
-    expect(localTask!.status).toBe('processing');
-    expect(localTask!.name).toBe('drawing.dwg');
+    // 秒传命中 = 零转换，不属于「正在需要转换」，不该进队列
+    expect(
+      useConversionQueueStore
+        .getState()
+        .tasks.filter((t) => t.source === 'local')
+    ).toHaveLength(0);
 
-    const cb = capturedCallback();
-    await cb();
-
-    const after = useConversionQueueStore
-      .getState()
-      .tasks.find((t) => t.id === localTask!.id)!;
-    expect(after.status).toBe('completed');
+    await capturedCallback()();
+    expect(mockOpenFile).toHaveBeenCalled();
   });
 
-  it('缓存命中：callback 打开失败时置 failed（含 error）', async () => {
+  it('缓存命中：无任务可回写，callback 打开失败仍走通用提示', async () => {
     mockCalculateFileHash.mockResolvedValue('hash123');
     mockCheckFileExist.mockResolvedValue({ data: { exists: true } });
     mockOpenFile.mockRejectedValue(new Error('open failed'));
 
     await handlePublicUpload(makeFile('drawing.dwg'));
 
-    const localTask = useConversionQueueStore
-      .getState()
-      .tasks.find((t) => t.source === 'local')!;
-    const cb = capturedCallback();
-    await cb();
+    expect(
+      useConversionQueueStore
+        .getState()
+        .tasks.filter((t) => t.source === 'local')
+    ).toHaveLength(0);
 
-    const after = useConversionQueueStore
-      .getState()
-      .tasks.find((t) => t.id === localTask.id)!;
-    expect(after.status).toBe('failed');
-    expect(after.error).toBe('open failed');
+    await capturedCallback()();
+    // 面板无记录不代表失败被吞：错误提示仍要到位
+    expect(mockGlobalShowToast).toHaveBeenCalledWith('open failed', 'error');
   });
 
   it('缓存未命中：上传后立即返回，等按文件 SSE COMPLETED 才 emit 打开，callback 成功后置 completed', async () => {
@@ -309,16 +304,19 @@ describe('S6-1/S6-6 游客/公开路径登记本地转换任务（handlePublicUp
     expect(taskB.status).toBe('completed');
   });
 
-  it('外层异常（hash 计算失败）：本地任务置 failed（含 error）', async () => {
+  it('外层异常（hash 计算失败）：未登记任务（登记点在缓存检查之后），失败仍提示', async () => {
     mockCalculateFileHash.mockRejectedValue(new Error('hash failed'));
 
     await handlePublicUpload(makeFile('drawing.dwg'));
 
-    const localTask = useConversionQueueStore
-      .getState()
-      .tasks.find((t) => t.source === 'local')!;
-    expect(localTask.status).toBe('failed');
-    expect(localTask.error).toBe('hash failed');
+    // hash 失败发生在登记点之前：队列里不该留下任何「失败的转换」——
+    // 没有转换需要被等待，登记只会污染队列
+    expect(
+      useConversionQueueStore
+        .getState()
+        .tasks.filter((t) => t.source === 'local')
+    ).toHaveLength(0);
+    expect(mockGlobalShowToast).toHaveBeenCalledWith('hash failed', 'error');
   });
 });
 
@@ -555,22 +553,21 @@ describe('转换等待期解锁 + 打开前 guardBeforeOpen 复查', () => {
     );
   });
 
-  it('公开路径打开回调：用户取消守卫 → 任务置 cancelled（终态，面板不卡 processing）、不打开', async () => {
+  it('公开路径打开回调：用户取消守卫 → 不打开（缓存命中无任务，状态回写是 no-op）', async () => {
     mockCalculateFileHash.mockResolvedValue('hash123');
     mockCheckFileExist.mockResolvedValue({ data: { exists: true } });
     mockCheckUnsaved.mockResolvedValueOnce(false);
 
     await handlePublicUpload(makeFile('drawing.dwg'));
 
-    const localTask = useConversionQueueStore
-      .getState()
-      .tasks.find((t) => t.source === 'local')!;
-    await capturedCallback()();
+    // 缓存命中不登记任务：cancelled 回写找不到记录，队列保持为空
+    expect(
+      useConversionQueueStore
+        .getState()
+        .tasks.filter((t) => t.source === 'local')
+    ).toHaveLength(0);
 
-    const after = useConversionQueueStore
-      .getState()
-      .tasks.find((t) => t.id === localTask.id)!;
-    expect(after.status).toBe('cancelled');
+    await capturedCallback()();
     expect(mockOpenFile).not.toHaveBeenCalled();
   });
 
