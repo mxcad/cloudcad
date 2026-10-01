@@ -19,6 +19,10 @@ import { StorageManager } from '../storage-management/services/storage-manager.s
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
 import { PreloadingDataDto, PreloadingFileInfoDto } from '../mxcad/dto/preloading-data.dto';
+import {
+  findArtifactByHash,
+  isArtifactReady,
+} from '../mxcad/utils/conversion-artifact';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -60,12 +64,10 @@ export class PublicFileService {
    * 如果 uploads 目录未找到，则通过 DB 查询 fileHash 匹配的节点，从存储路径读取
    */
   async findMxwebFile(hash: string): Promise<string | null> {
-    const files = await this.uploadService.findFilesByPrefix(hash);
-    const mxwebFile = files.find(
-      (f) => f.startsWith(hash) && f.endsWith('.mxweb')
-    );
-    if (mxwebFile) {
-      return path.join(this.uploadService.getUploadPath(), mxwebFile);
+    const uploadPath = this.uploadService.getUploadPath();
+    const mxwebFile = findArtifactByHash(uploadPath, hash);
+    if (mxwebFile && isArtifactReady(path.join(uploadPath, mxwebFile))) {
+      return path.join(uploadPath, mxwebFile);
     }
 
     // 未在 uploads 目录找到，尝试查询 DB 中 fileHash 匹配的节点
@@ -332,10 +334,7 @@ export class PublicFileService {
 
     try {
       // 查找 uploads 目录中以 hash 开头的 mxweb 文件
-      const files = await this.uploadService.findFilesByPrefix(hash);
-      const mxwebFile = files.find(
-        (f) => f.startsWith(hash) && f.endsWith('.mxweb')
-      );
+      const mxwebFile = findArtifactByHash(uploadPath, hash);
 
       if (mxwebFile) {
         // 构造预加载数据文件名：{mxweb文件名}_preloading.json

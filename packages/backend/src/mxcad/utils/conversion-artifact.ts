@@ -60,23 +60,62 @@ export function cachedArtifactPath(
 }
 
 /**
- * 转换产物是否已就位：是普通文件且非空。
+ * 单一就位判据：路径指向一个普通文件且非空。
  *
- * 空文件视为未完成（引擎可能刚建句柄就失败），与秒传存在性检查同一判据。
- * 任何 fs 异常一律视为未就位——调用方回落到真实转换，fail-closed。
+ * 空文件视为未完成（引擎可能刚建句柄就失败），任何 fs 异常一律视为未就位
+ * （调用方回落到真实转换 / 报「不存在」，fail-closed）。全仓判定「转换产物是否
+ * 就位」必须走这一处——此前 4 处只查存在、4 处连存在都不查大小，0 字节产物会被
+ * 误判为已就位。
  */
+export function isArtifactReady(filePath: string): boolean {
+  try {
+    const stats = fs.statSync(filePath);
+    return stats.isFile() && stats.size > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** 转换产物是否已就位（精确命名形态：已知源文件名）。 */
 export function cachedArtifactReady(
   uploadDir: string,
   fileHash: string,
   sourceFilename: string,
   convertedExt: string = '.mxweb'
 ): boolean {
+  return isArtifactReady(
+    cachedArtifactPath(uploadDir, fileHash, sourceFilename, convertedExt)
+  );
+}
+
+/**
+ * 按 hash 前缀在上传目录中查找产物文件名（源文件名未知时的降级形态）。
+ *
+ * 匹配约定与精确命名同源：产物名为 `<hash>.<源扩展名><产物扩展名>`，故只认
+ * `<hash>` 前缀 + `<产物扩展名>` 后缀。目录不存在或无匹配返回 null。
+ */
+export function findArtifactByHash(
+  uploadDir: string,
+  fileHash: string,
+  convertedExt: string = '.mxweb'
+): string | null {
+  let files: string[];
   try {
-    const stats = fs.statSync(
-      cachedArtifactPath(uploadDir, fileHash, sourceFilename, convertedExt)
-    );
-    return stats.isFile() && stats.size > 0;
+    files = fs.readdirSync(uploadDir);
   } catch {
-    return false;
+    return null;
   }
+  return (
+    files.find((f) => f.startsWith(fileHash) && f.endsWith(convertedExt)) ?? null
+  );
+}
+
+/** 按 hash 前缀判定产物是否就位（扫描 + 非空判据）。 */
+export function isArtifactReadyByHash(
+  uploadDir: string,
+  fileHash: string,
+  convertedExt: string = '.mxweb'
+): boolean {
+  const name = findArtifactByHash(uploadDir, fileHash, convertedExt);
+  return name ? isArtifactReady(path.join(uploadDir, name)) : false;
 }

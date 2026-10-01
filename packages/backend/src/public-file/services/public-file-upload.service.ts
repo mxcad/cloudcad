@@ -40,14 +40,6 @@ export class PublicFileUploadService {
   }
 
   /**
-   * 查找 uploads 目录中以指定前缀开头的文件
-   */
-  async findFilesByPrefix(prefix: string): Promise<string[]> {
-    const files = await FileUtils.readDirectory(this.uploadPath);
-    return files.filter((f) => f.startsWith(prefix));
-  }
-
-  /**
    * 获取 uploads 目录路径
    */
   getUploadPath(): string {

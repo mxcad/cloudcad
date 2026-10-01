@@ -20,6 +20,10 @@ import { IMxcadSaveService } from '../interfaces/mxcad-save.interface';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
+import {
+  findArtifactByHash,
+  isArtifactReady,
+} from '../utils/conversion-artifact';
 import { AppConfig } from '../../config/app.config';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 import { I18nContext } from 'nestjs-i18n';
@@ -318,11 +322,8 @@ export class MxcadSaveService implements IMxcadSaveService {
 
       const uploadsDir =
         this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
-      const files = await fsPromises.readdir(uploadsDir);
-      const mxwebFile = files.find(
-        (f) => f.startsWith(fileHash) && f.endsWith('.mxweb')
-      );
-      if (!mxwebFile) {
+      const mxwebFile = findArtifactByHash(uploadsDir, fileHash);
+      if (!mxwebFile || !isArtifactReady(path.join(uploadsDir, mxwebFile))) {
         return {
           success: false,
           message:

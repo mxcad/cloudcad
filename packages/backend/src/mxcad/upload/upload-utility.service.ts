@@ -8,7 +8,10 @@ import { ConfigService } from '@nestjs/config';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeNameService } from '../../file-operations/node-name.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
-import { cachedArtifactFileName } from '../utils/conversion-artifact';
+import {
+  cachedArtifactFileName,
+  cachedArtifactReady,
+} from '../utils/conversion-artifact';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { IStorageService } from '../../storage/interfaces/storage-service.interface';
@@ -68,27 +71,7 @@ export class UploadUtilityService {
     fileHash: string,
     originalFilename: string
   ): Promise<boolean> {
-    const targetFile = this.getConvertedFileName(fileHash, originalFilename);
-    const localPath = path.join(this.mxcadUploadPath, targetFile);
-    const existsInLocal = fs.existsSync(localPath);
-
-    if (!existsInLocal) {
-      return false;
-    }
-
-    try {
-      const fd = fs.openSync(localPath, 'r');
-      const stats = fs.fstatSync(fd);
-      fs.closeSync(fd);
-
-      if (stats.size === 0) {
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      return false;
-    }
+    return cachedArtifactReady(this.mxcadUploadPath, fileHash, originalFilename);
   }
 
   getConvertedFileName(fileHash: string, originalFilename: string): string {

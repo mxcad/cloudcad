@@ -23,6 +23,10 @@ import {
 import * as path from 'path';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
+import {
+  findArtifactByHash,
+  isArtifactReady,
+} from '../utils/conversion-artifact';
 import * as crypto from 'crypto';
 import { NodeType } from '@cloudcad/db';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
@@ -293,11 +297,8 @@ export class SaveAsService {
       const uploadPath =
         this.configService.get('mxcadUploadPath', { infer: true }) ||
         path.join(process.cwd(), 'uploads');
-      const files = await fsPromises.readdir(uploadPath);
-      const mxwebFile = files.find(
-        (f) => f.startsWith(fileHash) && f.endsWith('.mxweb')
-      );
-      if (!mxwebFile) {
+      const mxwebFile = findArtifactByHash(uploadPath, fileHash);
+      if (!mxwebFile || !isArtifactReady(path.join(uploadPath, mxwebFile))) {
         return { success: false, message: `上传文件不存在: ${fileHash}` };
       }
 

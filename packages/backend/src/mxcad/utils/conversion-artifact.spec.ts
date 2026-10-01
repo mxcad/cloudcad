@@ -10,6 +10,9 @@ import {
   cachedArtifactFileName,
   cachedArtifactPath,
   cachedArtifactReady,
+  findArtifactByHash,
+  isArtifactReady,
+  isArtifactReadyByHash,
   sourceExtension,
 } from './conversion-artifact';
 
@@ -119,6 +122,105 @@ describe('conversion-artifact', () => {
       expect(cachedArtifactReady(tmpDir, 'def', 'plan.dwg')).toBe(false);
       // 不同源扩展名（产物名含源扩展名，不能串到相邻格式的缓存）
       expect(cachedArtifactReady(tmpDir, 'abc', 'plan.dxf')).toBe(false);
+    });
+  });
+
+  describe('isArtifactReady', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cconv-'));
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('非空普通文件返回 true', () => {
+      const p = path.join(tmpDir, 'a.dwg.mxweb');
+      fs.writeFileSync(p, 'bytes');
+      expect(isArtifactReady(p)).toBe(true);
+    });
+
+    it('空文件返回 false（引擎刚建句柄即失败）', () => {
+      const p = path.join(tmpDir, 'a.dwg.mxweb');
+      fs.writeFileSync(p, '');
+      expect(isArtifactReady(p)).toBe(false);
+    });
+
+    it('目录返回 false（非普通文件）', () => {
+      const p = path.join(tmpDir, 'a.dwg.mxweb');
+      fs.mkdirSync(p);
+      expect(isArtifactReady(p)).toBe(false);
+    });
+
+    it('不存在返回 false', () => {
+      expect(isArtifactReady(path.join(tmpDir, 'nope.mxweb'))).toBe(false);
+    });
+  });
+
+  describe('findArtifactByHash', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cconv-'));
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('命中 <hash>.<源扩展名>.mxweb', () => {
+      fs.writeFileSync(path.join(tmpDir, 'abc.dwg.mxweb'), 'bytes');
+      expect(findArtifactByHash(tmpDir, 'abc')).toBe('abc.dwg.mxweb');
+    });
+
+    it('不同 hash 前缀不命中', () => {
+      fs.writeFileSync(path.join(tmpDir, 'abc.dwg.mxweb'), 'bytes');
+      expect(findArtifactByHash(tmpDir, 'def')).toBeNull();
+    });
+
+    it('不同产物扩展名不命中（默认 .mxweb）', () => {
+      fs.writeFileSync(path.join(tmpDir, 'abc.dwg.pdf'), 'bytes');
+      expect(findArtifactByHash(tmpDir, 'abc')).toBeNull();
+      expect(findArtifactByHash(tmpDir, 'abc', '.pdf')).toBe('abc.dwg.pdf');
+    });
+
+    it('目录不存在返回 null', () => {
+      expect(
+        findArtifactByHash(path.join(tmpDir, 'no-such-dir'), 'abc')
+      ).toBeNull();
+    });
+
+    it('空文件也算命中（只认命名，就位判据由 isArtifactReadyByHash 负责）', () => {
+      fs.writeFileSync(path.join(tmpDir, 'abc.dwg.mxweb'), '');
+      expect(findArtifactByHash(tmpDir, 'abc')).toBe('abc.dwg.mxweb');
+    });
+  });
+
+  describe('isArtifactReadyByHash', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cconv-'));
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('非空产物返回 true', () => {
+      fs.writeFileSync(path.join(tmpDir, 'abc.dwg.mxweb'), 'bytes');
+      expect(isArtifactReadyByHash(tmpDir, 'abc')).toBe(true);
+    });
+
+    it('空产物返回 false（0 字节不算就位）', () => {
+      fs.writeFileSync(path.join(tmpDir, 'abc.dwg.mxweb'), '');
+      expect(isArtifactReadyByHash(tmpDir, 'abc')).toBe(false);
+    });
+
+    it('无匹配返回 false', () => {
+      expect(isArtifactReadyByHash(tmpDir, 'abc')).toBe(false);
     });
   });
 });

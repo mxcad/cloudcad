@@ -21,7 +21,11 @@ import { CacheManagerService } from '../infra/cache-manager.service';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 import { MxUploadReturn } from '../enums/mxcad-return.enum';
 import { UploadUtilityService } from './upload-utility.service';
-import { cachedArtifactFileName } from '../utils/conversion-artifact';
+import {
+  cachedArtifactFileName,
+  isArtifactReady,
+  isArtifactReadyByHash,
+} from '../utils/conversion-artifact';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
@@ -1074,14 +1078,7 @@ export class DrawingIngestService {
 
   /** 该 hash 的 mxweb 是否已在 uploads 目录就位（与 public-file findMxwebFile 同判据：<hash>.<ext>.mxweb） */
   private async isNoNodeMxwebInPlace(hash: string): Promise<boolean> {
-    try {
-      const files = await this.fileSystemService.readDirectory(
-        this.mxcadUploadPath
-      );
-      return files.some((f) => f.startsWith(hash) && f.endsWith('.mxweb'));
-    } catch {
-      return false;
-    }
+    return isArtifactReadyByHash(this.mxcadUploadPath, hash);
   }
 
   /**
@@ -1603,8 +1600,7 @@ export class DrawingIngestService {
   ): Promise<IngestResult> {
     const targetFile = cachedArtifactFileName(fileHash, filename, convertedExt);
     const localPath = this.fileSystemService.getMd5Path(targetFile);
-    const localExists = await this.fileSystemService.exists(localPath);
-    if (!localExists) {
+    if (!isArtifactReady(localPath)) {
       return { ret: MxUploadReturn.kFileNoExist };
     }
 

@@ -11,7 +11,10 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { Response, Request } from 'express';
 import { FileTypeDetector } from '../utils/file-type-detector';
-import { cachedArtifactFileName } from '../utils/conversion-artifact';
+import {
+  cachedArtifactFileName,
+  isArtifactReady,
+} from '../utils/conversion-artifact';
 import { IVersionControl, VERSION_CONTROL_TOKEN } from '../../version-control/interfaces/version-control.interface';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { I18nContext } from 'nestjs-i18n';
@@ -719,7 +722,7 @@ export class MxcadVersionHistoryService {
         cachedMxwebName
       );
 
-      if (fs.existsSync(cachedMxwebPath)) {
+      if (isArtifactReady(cachedMxwebPath)) {
         buffer = await fsPromises.readFile(cachedMxwebPath);
         this.logger.log(`uploads 缓存命中: ${cachedMxwebName}`);
       } else {

@@ -29,6 +29,10 @@ import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { CONVERSION_FILE_CHANNEL } from '../conversion/conversion-task-sse.constants';
 import { DatabaseService } from '../../database/database.service';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { cachedArtifactFileName } from '../utils/conversion-artifact';
 
 describe('DrawingIngestService', () => {
   let service: DrawingIngestService;
@@ -199,9 +203,23 @@ describe('DrawingIngestService', () => {
   });
 
   describe('冲突策略三分支（秒传落盘）', () => {
+    let tmpDir: string;
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cconv-ingest-'));
+      // performFileExistenceCheck 现走 conversion-artifact.isArtifactReady（真实 fs），
+      // 故 getMd5Path 指向真实临时目录，秒传落盘前须落真实产物
+      mockFileSystemService.getMd5Path.mockImplementation((p: string) =>
+        path.join(tmpDir, p)
+      );
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
     function setupExistingFile() {
       mockUploadUtilityService.checkFileExistsInStorage.mockResolvedValue(true);
-      mockFileSystemService.exists.mockResolvedValue(true);
       mockFileSystemService.getFileSize.mockResolvedValue(1024);
       mockFileTreeService.getChildren.mockResolvedValue({
         nodes: [
@@ -212,6 +230,12 @@ describe('DrawingIngestService', () => {
           },
         ],
       });
+      // resetMocks 会清空 mockReturnValue，须显式设定产物扩展名，再据此落真实产物
+      mockFileConversionService.getConvertedExtension.mockReturnValue('.mxweb');
+      fs.writeFileSync(
+        path.join(tmpDir, cachedArtifactFileName('hash1', 'upload.dwg', '.mxweb')),
+        'x'
+      );
     }
 
     it('skip：同名文件已存在时提前返回 kFileAlreadyExist，不落盘', async () => {
