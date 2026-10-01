@@ -42,15 +42,23 @@ export function isEmptyDocumentName(
   return !!name && EMPTY_DOCUMENT_NAMES.includes(name);
 }
 
-export function formatEditorFileName(fileName: string): string {
-  const isLoggedIn = isAuthenticated();
-  const { isInCollaboration } = useCADEditorStore.getState();
+/** 编辑器当前文件标识（含 [协同中]/[未登录] 前缀）；无文件/默认空模板返回 '' */
+export function editorDisplayName(fileName: string | null): string {
   const prefixes: string[] = [];
-  if (isInCollaboration) prefixes.push(t('[协同中]'));
-  if (!isLoggedIn) prefixes.push(t('[未登录]'));
-  if (isEmptyDocumentName(fileName)) return prefixes.join(' - ');
-  if (prefixes.length === 0) return ` - ${fileName}`;
-  return `${prefixes.join(' - ')} - ${fileName}`;
+  if (useCADEditorStore.getState().isInCollaboration) {
+    prefixes.push(t('[协同中]'));
+  }
+  if (!isAuthenticated()) prefixes.push(t('[未登录]'));
+  if (!fileName || isEmptyDocumentName(fileName)) return prefixes.join(' - ');
+  return prefixes.length === 0
+    ? fileName
+    : `${prefixes.join(' - ')} - ${fileName}`;
+}
+
+export function formatEditorFileName(fileName: string): string {
+  if (isEmptyDocumentName(fileName)) return editorDisplayName(fileName);
+  const display = editorDisplayName(fileName);
+  return display ? ` - ${display}` : ` - `;
 }
 
 /**
@@ -58,11 +66,18 @@ export function formatEditorFileName(fileName: string): string {
  * 显示的唯一入口）。成功路径由 handleOpenCompleteSideEffects / refreshFileName 调用；
  * 打开失败时引擎会把 currentFileName 置为 URL 尾部的 mxweb 内部访问文件名
  * （如 <md5>.dwg.mxweb?t=...），需用本函数修正为图纸名。
+ *
+ * 同时同步引擎内部的 _name（useFileName().setFileName）：引擎自身在
+ * openFileComplete 时写 fileName.value = " - " + _name，而前端从未经过引擎的
+ * openWebFile 包装（直接发 __openWebFile__ → mxcad.openWebFile），_name 不会
+ * 自动更新。不在此同步，本函数写入的标题会被引擎立刻覆盖回上一张图纸的旧名。
  */
 export function setEditorFileName(fileName: string): void {
   try {
-    globalThis.MxPluginContext.useFileName().fileName.value =
-      formatEditorFileName(fileName);
+    const { fileName: titleRef, setFileName } =
+      globalThis.MxPluginContext.useFileName();
+    if (!isEmptyDocumentName(fileName)) setFileName?.(fileName);
+    titleRef.value = formatEditorFileName(fileName);
   } catch (error) {
     console.error('[setEditorFileName] 刷新文件名失败:', error);
   }

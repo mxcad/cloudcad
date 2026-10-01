@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
  * getPersonalSpaceId 回退行为回归测试
@@ -57,7 +57,13 @@ vi.mock('../../drawingSession', () => ({
   emit: vi.fn(),
 }));
 
-import { getPersonalSpaceId, triggerSaveAs } from '../mxcadHelpers';
+import {
+  getPersonalSpaceId,
+  triggerSaveAs,
+  setEditorFileName,
+  editorDisplayName,
+  formatEditorFileName,
+} from '../mxcadHelpers';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { emit } from '../../drawingSession';
@@ -249,5 +255,93 @@ describe('triggerSaveAs — 项目图纸 CAD_SAVE 门控（无权限 = 无另存
       expect.anything()
     );
     mocks.hasPendingOpen.mockReturnValue(false);
+  });
+});
+
+
+describe('setEditorFileName — 同步引擎内部 _name（回归：新建/打开后标题被覆盖回旧名）', () => {
+  // 历史 bug：前端只写 fileName.value，而引擎自己在 openFileComplete 时执行
+  // fileName.value = " - " + _name；_name 只有引擎的 openWebFile 包装会更新，
+  // 前端直接发 __openWebFile__ 绕过它 → 新建/打开后标题被引擎立刻覆盖成上一张图纸的旧名
+  const fileNameRef = { value: '' };
+  let setFileName: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fileNameRef.value = ' - old.dwg';
+    setFileName = vi.fn();
+    vi.stubGlobal('MxPluginContext', {
+      useFileName: () => ({ fileName: fileNameRef, setFileName }),
+    });
+    useCADEditorStore.getState().setCollaborationState({
+      isInCollaboration: false,
+      workId: null,
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('写入标题的同时同步 _name，避免引擎 openFileComplete 覆盖回旧名', () => {
+    setEditorFileName('new.dwg');
+
+    expect(fileNameRef.value).toBe(' - new.dwg');
+    expect(setFileName).toHaveBeenCalledWith('new.dwg');
+  });
+
+  it('默认空模板不写 _name（避免污染引擎的「无图纸」判据），只保留状态前缀', () => {
+    setEditorFileName('empty_template.mxweb');
+
+    expect(fileNameRef.value).toBe('');
+    expect(setFileName).not.toHaveBeenCalled();
+  });
+
+  it('协同中的前缀写进标题但不同步进 _name（_name 只承载文件名）', () => {
+    useCADEditorStore.getState().setCollaborationState({
+      isInCollaboration: true,
+      workId: 9,
+    });
+
+    setEditorFileName('drawing.dwg');
+
+    expect(fileNameRef.value).toBe(' - [协同中] - drawing.dwg');
+    expect(setFileName).toHaveBeenCalledWith('drawing.dwg');
+  });
+
+  it('引擎未暴露 setFileName 时只写标题，不抛错', () => {
+    vi.stubGlobal('MxPluginContext', { useFileName: () => ({ fileName: fileNameRef }) });
+
+    expect(() => setEditorFileName('new.dwg')).not.toThrow();
+    expect(fileNameRef.value).toBe(' - new.dwg');
+  });
+});
+
+describe('editorDisplayName / formatEditorFileName — 显示名与标签标题共用同一判据', () => {
+  beforeEach(() => {
+    useCADEditorStore.getState().setCollaborationState({
+      isInCollaboration: false,
+      workId: null,
+    });
+  });
+
+  it('有文件 → 返回文件名；无文件 / 空模板 → 返回空串', () => {
+    expect(editorDisplayName('drawing.dwg')).toBe('drawing.dwg');
+    expect(editorDisplayName('')).toBe('');
+    expect(editorDisplayName(null)).toBe('');
+    expect(editorDisplayName('empty.mxweb')).toBe('');
+  });
+
+  it('协同中 → 前缀拼在文件名前', () => {
+    useCADEditorStore.getState().setCollaborationState({
+      isInCollaboration: true,
+      workId: 9,
+    });
+    expect(editorDisplayName('drawing.dwg')).toBe('[协同中] - drawing.dwg');
+  });
+
+  it('formatEditorFileName 保持既有 " - 名" 形态（编辑器标题栏渲染约定）', () => {
+    expect(formatEditorFileName('drawing.dwg')).toBe(' - drawing.dwg');
+    expect(formatEditorFileName('')).toBe(' - ');
+    expect(formatEditorFileName('empty_template.mxweb')).toBe('');
   });
 });

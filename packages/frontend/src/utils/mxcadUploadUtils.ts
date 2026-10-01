@@ -77,6 +77,8 @@ export interface MxCadUploadOptions {
   conflictStrategy?: 'skip' | 'overwrite' | 'rename';
   /** 强制上传，跳过秒传检查（无缓存打开时使用） */
   forceUpload?: boolean;
+  /** 强制重新转换：绕过服务端转换产物缓存（无缓存打开时使用） */
+  forceConvert?: boolean;
   /** 跳过 DB/转换/SVN 等后续操作，仅上传文件到 uploads 目录 */
   skipDb?: boolean;
   /** 开始上传回调 */
@@ -156,12 +158,18 @@ export async function uploadFile(
     nodeId,
     conflictStrategy,
     forceUpload,
+    forceConvert,
     skipDb,
     onBeginUpload,
     onProgress,
     onFileQueued,
     maxSize,
   } = options;
+
+  // 显式 false 不能上送：multipart 序列化把 boolean 转成字符串（"false"），后端
+  // enableImplicitConversion 按 Boolean("false")===true 处理，普通打开会被误判成
+  // 强制重转。故 false 时省略该字段（与 forceUpload / skipDb 的既有约定一致）。
+  const forceConvertField = forceConvert ? { forceConvert: true } : {};
 
   // 验证文件类型
   if (!validateFileType(file)) {
@@ -245,6 +253,7 @@ export async function uploadFile(
         conflictStrategy,
         file: safeFile,
         forceUpload,
+        ...forceConvertField,
       },
     });
     throwOnSdkError(uploadData, t('服务器处理出错'), safeName);
@@ -317,6 +326,9 @@ export async function uploadFile(
           file: chunk,
           skipDb,
           forceUpload,
+          // 后端最后一个分片会自动触发合并，forceConvert 只在合并时生效，
+          // 故每个分片都要带（末尾的显式合并请求是幂等兜底）
+          ...forceConvertField,
         },
       });
       throwOnSdkError(uploadData, t('服务器处理出错'), safeName);
@@ -383,6 +395,7 @@ export async function uploadFile(
       conflictStrategy: conflictStrategy,
       skipDb,
       forceUpload,
+      ...forceConvertField,
     },
   });
   throwOnSdkError(mergeData, t('服务器处理出错'), safeName);

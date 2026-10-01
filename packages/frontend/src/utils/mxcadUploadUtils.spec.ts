@@ -185,6 +185,50 @@ describe('mxcadUploadUtils 分片上传（并发 3 + 显式合并）', () => {
     expect(result.isInstantUpload).toBe(false);
   });
 
+  it('forceConvert=true：分片与合并请求体都带上，用于绕过服务端转换产物缓存', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: true } });
+    mocks.uploadFile.mockImplementation(async ({ body }) => {
+      if (body.chunk !== undefined) return { data: { ret: 'kOk' } };
+      return { data: { ret: 'kOk', nodeId: 'node-merged' } };
+    });
+
+    await mod.uploadFile({
+      file,
+      hash: 'h12',
+      nodeId: 'n1',
+      forceUpload: true,
+      forceConvert: true,
+    });
+
+    const { chunkCalls, mergeCalls } = splitCalls();
+    expect(chunkCalls).toHaveLength(3);
+    expect(mergeCalls).toHaveLength(1);
+    for (const call of [...chunkCalls, ...mergeCalls]) {
+      expect(call[0].body.forceConvert).toBe(true);
+    }
+  });
+
+  it('forceConvert 省略或 false：请求体不带该字段（"false" 上送会被后端误判为强制重转）', async () => {
+    const mod = await loadFreshModule();
+    const file = makeFile(12); // 3 分片
+    mocks.checkChunkExist.mockResolvedValue({ data: { exists: false } });
+    mocks.uploadFile.mockImplementation(async ({ body }) => {
+      if (body.chunk !== undefined) return { data: { ret: 'kOk' } };
+      return { data: { ret: 'kOk', nodeId: 'node-merged' } };
+    });
+
+    for (const forceConvert of [undefined, false]) {
+      mocks.uploadFile.mockClear();
+      await mod.uploadFile({ file, hash: 'h12', nodeId: 'n1', forceConvert });
+      const { chunkCalls, mergeCalls } = splitCalls();
+      for (const call of [...chunkCalls, ...mergeCalls]) {
+        expect(call[0].body).not.toHaveProperty('forceConvert');
+      }
+    }
+  });
+
   it('skip 策略：末片上传返回 fileAlreadyExist → 提前返回 isUseServerExistingFile，不发合并', async () => {
     const mod = await loadFreshModule();
     const file = makeFile(12); // 3 分片

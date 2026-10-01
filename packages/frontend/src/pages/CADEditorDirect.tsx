@@ -68,7 +68,11 @@ declare global {
         create?: { formData?: Record<string, string> };
       };
     };
-    useFileName: () => { fileName: { value: string } };
+    useFileName: () => {
+      fileName: { value: string };
+      /** 引擎内部当前文件名（openFileComplete 时用它刷标题），非必填以兼容旧引擎 */
+      setFileName?: (name: string) => void;
+    };
     useMessage: () => {
       info: (msg: string) => void;
       success: (msg: string) => void;
@@ -90,6 +94,13 @@ import { useCollabShare } from '../hooks/useCollabShare';
 import { useFileInsert } from '../hooks/useFileInsert';
 import { useHomeInit } from '../hooks/useHomeInit';
 import { useSidebarContentReady } from '../hooks/useSidebarContentReady';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import {
+  buildCadEditorUrl,
+  getCadEditorBackUrl,
+  parseCADEditorRoute,
+} from '../utils/cadEditorRoute';
+import { editorDisplayName } from '../services/mxcadManager';
 
 export const CADEditorDirect: React.FC = () => {
   const navigate = useNavigate();
@@ -197,6 +208,11 @@ export const CADEditorDirect: React.FC = () => {
   const externalReferenceUpload = useExternalReferenceUpload(
     externalReferenceConfig
   );
+
+  // 浏览器标签标题随当前文件同步：编辑器标题栏走引擎 useFileName，标签标题此前从不更新，
+  // 打开/新建图纸后一直停留上一页的标题。编辑器不可见时跳过，交回当前页面。
+  const currentFileName = useCADEditorStore((s) => s.currentFileName);
+  useDocumentTitle(editorDisplayName(currentFileName), !isActive);
 
   // 用 ref 包装避免 effect 依赖不稳定对象导致重复执行
   const externalReferenceUploadRef = useRef(externalReferenceUpload);
@@ -360,15 +376,19 @@ export const CADEditorDirect: React.FC = () => {
           setCurrentProjectId(null);
           patchSessionFlags({ projectId: null });
         }
-        // 本地任务（游客/公开路径）：fileId 为空、fileHash 非空，URL 用 ?hash= 标识，
-        // ?fileName= 携带转换前文件名（刷新后保留显示名）
-        const url = !openedFileId && fileHash
-          ? `/cad-editor?hash=${fileHash}${fileName ? `&fileName=${encodeURIComponent(fileName)}` : ''}`
-          : libraryKey === 'drawing'
-            ? `/cad-editor/${openedFileId}?library=drawing`
-            : libraryKey === 'block'
-              ? `/cad-editor/${openedFileId}?library=block`
-              : `/cad-editor/${openedFileId}?nodeId=${parentId}`;
+        // URL 由文件身份派生（唯一合成出口）：无云端节点身份的新建/本地文件不携带
+        // fileId 路径段与 nodeId；back（返回地址）跨文件保留；v 归属于声明它的文件，
+        // 只有 URL 里的文件与本次打开的一致才保留，避免切换文件时串用上一张的版本号
+        const urlFileId = parseCADEditorRoute(window.location.pathname) ?? '';
+        const url = buildCadEditorUrl({
+          fileId: openedFileId,
+          parentId,
+          libraryKey,
+          fileHash,
+          fileName,
+          version: urlFileId === (openedFileId || '') ? versionParam : null,
+          back: getCadEditorBackUrl(),
+        });
         window.history.replaceState(null, '', url);
         currentFileIdRef.current = openedFileId;
         patchSessionFlags({ fileId: openedFileId, fileName: fileName || null });

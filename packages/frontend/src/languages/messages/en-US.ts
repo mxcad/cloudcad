@@ -2469,5 +2469,6 @@ export default  {
     "1000128": "Current project does not allow cross-project transfer",
     "1000129": "Source project policy does not allow {action}, blocked",
     "1000130": "Current project policy does not allow {action}, blocked",
-    "1000131": "Open on mobile"
+    "1000131": "Open on mobile",
+    "1000132": "Drag to adjust position, double-click to reset"
 }

@@ -12,6 +12,7 @@
  */
 export {
   openSession,
+  newSession,
   closeSession,
   patchSession,
   patchSessionFlags,

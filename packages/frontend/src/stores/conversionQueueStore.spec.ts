@@ -3,6 +3,7 @@ import {
   useConversionQueueStore,
   hasActiveTask,
   countActiveTasks,
+  DEFAULT_PANEL_SIZE,
   type ConversionTask,
 } from './conversionQueueStore';
 
@@ -1039,8 +1040,23 @@ describe('conversionQueueStore 面板位置/尺寸持久化（#476）', () => {
     expect(raw).toBeTruthy();
     const parsed = JSON.parse(raw!);
     expect(parsed.position).toEqual({ x: 100, y: 200 });
-    // size 一并持久化（默认 320×420）
+    // size 一并持久化（当前 size，beforeEach 设为 320×420）
     expect(parsed.size).toEqual({ width: 320, height: 420 });
+  });
+
+  it('resetPanelUi 复位：position 回 null + size 回默认并持久化（#476 扩展）', () => {
+    // 模拟拖走后的旧状态
+    useConversionQueueStore.getState().setPosition({ x: 50, y: 60 });
+    useConversionQueueStore.getState().setSize({ width: 500, height: 600 });
+    useConversionQueueStore.getState().resetPanelUi();
+
+    const { position, size } = useConversionQueueStore.getState();
+    expect(position).toBeNull();
+    expect(size).toEqual(DEFAULT_PANEL_SIZE);
+    // 一次性持久化：position null + 默认 size
+    const parsed = JSON.parse(localStorage.getItem(PANEL_UI_KEY)!);
+    expect(parsed.position).toBeNull();
+    expect(parsed.size).toEqual(DEFAULT_PANEL_SIZE);
   });
 
   it('setSize 写入 localStorage（含当前 position）', () => {

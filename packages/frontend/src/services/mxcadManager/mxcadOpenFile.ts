@@ -18,7 +18,7 @@ import {
   useConversionQueueStore,
 } from '../../stores/conversionQueueStore';
 import { mxcadManager } from './mxcadManager';
-import { emit } from '../drawingSession';
+import { emit, emitFileOpened } from '../drawingSession';
 import { FILE_UPLOAD_CONFIG } from './mxcadTypes';
 import { confirmExitCollaborationIfNeeded } from './mxcadCollaboration';
 import { guardBeforeOpen, openDrawing, openUnderLoading } from './openDrawing';
@@ -142,6 +142,16 @@ async function openLocalMxwebFile(
           },
         } as Parameters<typeof mxcadManager.openFile>[0];
       },
+    });
+    // 打开成功后同步浏览器 URL（对齐 openDrawing 各分支的 emitFileOpened）。
+    // 本地 mxweb 只落在引擎本地虚拟盘 + IndexedDB，URL 无法重开；也不写 ?hash=：
+    // 刷新时 useCadFileLoader 会把 ?hash= 当成公开文件 access URL 去服务端取，
+    // 取不到就开出一张空图。故与「新建图纸」一致——URL 清到无身份参数的 /cad-editor。
+    emitFileOpened({
+      fileId: '',
+      parentId: null,
+      projectId: null,
+      fileName: file.name,
     });
   } catch (error) {
     if (error instanceof OpenGuardCancelled) return;
@@ -274,6 +284,9 @@ export async function handlePublicUpload(
       hash,
       nodeId: '',
       forceUpload: true,
+      // noCache 打开：绕过服务端转换产物缓存强制重转（forceUpload 只管重新上传字节，
+      // 到不了 convertFile 的产物就位短路，故需独立标志）
+      forceConvert: noCache ?? false,
       onProgress: (percentage: number) => {
         if (percentage === 100) setLoadingMessage(t('图纸转换中...'));
         else
@@ -349,7 +362,8 @@ export async function handleOpenFileCommand(noCache?: boolean) {
       const selectedFile = files[0];
       if (selectedFile) {
         if (isMxwebFile(selectedFile.name)) {
-          await openLocalMxwebFile(selectedFile);
+          // noCache 必须透传：.mxweb 不走上传/转换，缓存只在本地虚拟盘 + 引擎 fetch 两层
+          await openLocalMxwebFile(selectedFile, noCache);
           picker.value = '';
           return;
         }

@@ -4,6 +4,7 @@ import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { CAD_EVENTS } from '@/constants/events';
 import {
   openSession,
+  newSession,
   closeSession,
   patchSession,
   patchSessionFlags,
@@ -418,5 +419,74 @@ describe('useDrawingSession — React 薄读 hook', () => {
     const first = result.current;
     rerender();
     expect(result.current).toBe(first);
+  });
+});
+
+
+describe('newSession — 新建图纸 / 无云端节点文件（清干净上一张的文件身份）', () => {
+  // 历史 bug：新建图纸只 patch 部分字段，新图纸继承了旧图纸的 currentFileInfo /
+  // currentProjectId / fromShare，保存归属与权限判断全部落在已关闭的旧文件上
+  const newFileInfo = {
+    fileId: '',
+    parentId: null,
+    projectId: null,
+    name: 'new.dwg',
+    personalSpaceId: null,
+  };
+
+  it('替换旧文件身份后写入新文件信息', () => {
+    openSession(sampleInfo);
+    newSession(newFileInfo);
+
+    const state = useCADEditorStore.getState();
+    expect(state.currentFileInfo).toEqual(newFileInfo);
+    expect(state.currentFileId).toBe('');
+    expect(state.currentFileName).toBe('new.dwg');
+    expect(state.currentProjectId).toBeNull();
+  });
+
+  it('清掉脏标记、已删除标记、个人空间模式与分享态', () => {
+    openSession(sampleInfo);
+    const store = useCADEditorStore.getState();
+    store.setIsDirty(true);
+    store.setIsCurrentFileDeleted(true);
+    store.setIsPersonalSpaceMode(true);
+    store.setFromShare(true);
+
+    newSession(newFileInfo);
+
+    const state = useCADEditorStore.getState();
+    expect(state.isDirty).toBe(false);
+    expect(state.isCurrentFileDeleted).toBe(false);
+    expect(state.isPersonalSpaceMode).toBe(false);
+    expect(state.fromShare).toBe(false);
+  });
+
+  it('清掉旧文件遗留的 back-info', () => {
+    openSession(sampleInfo);
+    useCADEditorStore.getState().setOpenedBackInfo('/projects/project-1', 'file-1');
+
+    newSession(newFileInfo);
+
+    const state = useCADEditorStore.getState();
+    expect(state.openedBackUrl).toBeNull();
+    expect(state.openedInitialFileId).toBeNull();
+  });
+
+  it('不重置编辑器生命周期字段与协同会话（各自的服务负责收尾）', () => {
+    openSession(sampleInfo);
+    useCADEditorStore.setState({ isActive: true, error: 'boom' });
+    useCADEditorStore.getState().setCollaborationState({
+      isInCollaboration: true,
+      workId: 9,
+    });
+
+    newSession(newFileInfo);
+
+    const state = useCADEditorStore.getState();
+    expect(state.isActive).toBe(true);
+    expect(state.error).toBe('boom');
+    expect(state.isInCollaboration).toBe(true);
+    expect(state.collaborationWorkId).toBe(9);
   });
 });

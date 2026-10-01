@@ -11,6 +11,7 @@ import React from 'react';
 import { ConversionPanel, toggleFileQueuePanel } from './ConversionPanel';
 import {
   useConversionQueueStore,
+  DEFAULT_PANEL_SIZE,
   type ConversionTask,
 } from '@/stores/conversionQueueStore';
 import {
@@ -298,6 +299,50 @@ describe('ConversionPanel', () => {
     expect(useConversionQueueStore.getState().position).toEqual({
       x: 50,
       y: 20,
+    });
+  });
+
+  it('双击 header 复位：position 回 null（默认右下角）+ size 回默认尺寸（#476 扩展）', async () => {
+    // 模拟「拖走后一直停在旧位置」：非默认 position + 非默认 size
+    useConversionQueueStore.setState({
+      collapsed: false,
+      position: { x: 123, y: 456 },
+      size: { width: 500, height: 600 },
+    });
+    await renderPanel();
+    const header = document.querySelector('.conversion-header')!;
+
+    // 双击标题栏 → 复位到默认右下角（position null）+ 默认尺寸
+    await act(async () => {
+      header.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    });
+
+    const { position, size } = useConversionQueueStore.getState();
+    expect(position).toBeNull();
+    expect(size).toEqual(DEFAULT_PANEL_SIZE);
+    // position null → 外层 portal 无内联 left/top（走 CSS 默认右下角）
+    const portal = document.querySelector('.conversion-panel-portal')!;
+    expect(portal.style.left).toBe('');
+    expect(portal.style.top).toBe('');
+  });
+
+  it('双击隐藏按钮不触发复位（onDoubleClick stopPropagation 隔离，不冒泡到 header）', async () => {
+    useConversionQueueStore.setState({
+      collapsed: false,
+      position: { x: 123, y: 456 },
+    });
+    await renderPanel();
+    const collapseBtn = document.querySelector('.conv-collapse')!;
+
+    // 双击 X 按钮的 dblclick 部分：按钮 onDoubleClick stopPropagation，
+    // 不冒泡到 header → 不触发 resetPanelUi，position 保持（若去掉 stopPropagation 则会被复位成 null）
+    await act(async () => {
+      collapseBtn.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    });
+
+    expect(useConversionQueueStore.getState().position).toEqual({
+      x: 123,
+      y: 456,
     });
   });
 

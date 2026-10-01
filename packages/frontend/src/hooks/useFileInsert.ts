@@ -32,12 +32,9 @@ export function useFileInsert({
           try {
             const { openUploadedFile } =
               await import('../services/mxcadManager');
+            // URL 由打开成功事件（onFileOpened）统一写入，这里不再抢先写：
+            // 抢先写会让失败打开留下「已打开」的假 URL
             await openUploadedFile(file.nodeId, personalSpaceId || '');
-            window.history.replaceState(
-              null,
-              '',
-              `/cad-editor/${file.nodeId}?nodeId=${personalSpaceId || ''}`
-            );
           } catch (error) {
             showToast(getErrorMessage(error), 'error');
           }
@@ -72,15 +69,8 @@ export function useFileInsert({
 
         const { openUploadedFile } = await import('../services/mxcadManager');
 
-        window.history.replaceState(
-          null,
-          '',
-          `/cad-editor/${file.nodeId}?nodeId=${uploadTargetNodeId}`
-        );
-
+        // URL 与 currentFileIdRef 同样由打开成功事件统一写入，不在打开前抢先写
         await openUploadedFile(file.nodeId, uploadTargetNodeId);
-
-        currentFileIdRef.current = file.nodeId;
       } catch (error) {
         showToast(
           error instanceof Error ? error.message : t('打开文件失败'),

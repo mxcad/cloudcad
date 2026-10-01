@@ -72,8 +72,8 @@ const LOCAL_STORAGE_KEY = 'cloudcad.conversion.local-tasks';
 const MAX_LOCAL_TASKS = 100;
 /** 面板 UI（位置 + 尺寸）持久化 key（#476）：刷新后保留位置与宽高 */
 const PANEL_UI_STORAGE_KEY = 'cloudcad.conversion.panel-ui';
-/** 面板默认尺寸（#476） */
-const DEFAULT_PANEL_SIZE = { width: 320, height: 420 };
+/** 面板默认尺寸（#476）：导出供双击复位 / 测试引用 */
+export const DEFAULT_PANEL_SIZE = { width: 400, height: 540 };
 /** 历史分页每页数量（#476） */
 const HISTORY_PAGE_SIZE = 20;
 /** 非终态任务的轮询间隔（有进行中任务时拉取云端） */
@@ -316,6 +316,11 @@ interface ConversionQueueState {
   expandByTask: () => void;
   setPosition: (position: { x: number; y: number } | null) => void;
   setSize: (size: { width: number; height: number }) => void;
+  /**
+   * 双击标题栏复位（#476 扩展）：位置回 null（走 CSS 默认右下角）+ 尺寸回默认，
+   * 一次性持久化。用于把拖走的旧位置拉回默认右下角。
+   */
+  resetPanelUi: () => void;
   setSearch: (search: string) => void;
 }
 
@@ -641,6 +646,10 @@ export const useConversionQueueStore = create<ConversionQueueState>(
     setSize: (size) => {
       set({ size });
       persistPanelUi(get().position, size);
+    },
+    resetPanelUi: () => {
+      set({ position: null, size: { ...DEFAULT_PANEL_SIZE } });
+      persistPanelUi(null, { ...DEFAULT_PANEL_SIZE });
     },
     setSearch: (search) => set({ search }),
   })

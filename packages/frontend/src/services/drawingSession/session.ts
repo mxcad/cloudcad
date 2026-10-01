@@ -57,6 +57,29 @@ export function openSession(info: OpenFileInfo): void {
   store.setIsCurrentFileDeleted(false);
 }
 
+/**
+ * 唯一 writer：新建图纸 / 打开无云端节点的本地文档（替换当前会话）。
+ *
+ * 必须先清掉上一张图纸的全部文件身份再记录新文件——若只 patch 部分字段，
+ * 新图纸会继承旧图纸的 currentFileInfo / projectId / fromShare / 脏标记，
+ * 后续保存归属与权限判断全部落在已关闭的旧文件上。
+ * 不触碰编辑器生命周期（isActive/loading/error）、权限位与协同会话：
+ * 新建图纸不等于退出协同，那由协同层自行收尾。
+ */
+export function newSession(info: OpenFileInfo): void {
+  const store = useCADEditorStore.getState();
+  store.setCurrentFileInfo(null);
+  store.setCurrentFileId(null);
+  store.setCurrentFileName(null);
+  store.setCurrentProjectId(null);
+  store.setIsPersonalSpaceMode(false);
+  store.setFromShare(false);
+  store.setIsDirty(false);
+  store.setIsCurrentFileDeleted(false);
+  store.clearOpenedBackInfo();
+  openSession(info);
+}
+
 /** 唯一 writer：关闭图纸（退出登录等场景），脏标记一并复位，引擎侧运行态一并重置 */
 export function closeSession(): void {
   const store = useCADEditorStore.getState();

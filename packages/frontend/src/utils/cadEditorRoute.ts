@@ -29,3 +29,47 @@ export function getCadEditorBackUrl(): string | null {
   const back = new URLSearchParams(search).get('back');
   return back && !isCadEditorEntry(back) ? back : null;
 }
+
+/**
+ * CAD 编辑器 URL 的唯一合成出口（由「当前开着的文件身份」派生，不由各调用方手拼）。
+ *
+ * 规则：无云端节点身份的文件（新建图纸、本地 mxweb、外部参照）URL 不携带
+ * 任何身份参数——`fileId` 路径段、`nodeId`、`hash` 一律不出现；
+ * 只有云端节点文件才写 `/cad-editor/:fileId`。
+ * `back`（返回地址）不属于文件身份，跨文件切换时保留。
+ */
+export function buildCadEditorUrl(params: {
+  /** 云端节点 ID；空串 = 无云端节点（新建图纸 / 本地 mxweb） */
+  fileId: string;
+  /** 父节点 / 项目 ID，随节点文件写入 ?nodeId= */
+  parentId?: string | null;
+  /** 资源库文件（图纸库 / 图块库） */
+  libraryKey?: 'drawing' | 'block' | null;
+  /** 本地任务（游客/公开路径）按 fileHash 打开时的标识 */
+  fileHash?: string | null;
+  /** 文件名，随 ?hash= 写入（刷新后保留显示名） */
+  fileName?: string | null;
+  /** 跨文件切换保留的返回地址 */
+  back?: string | null;
+  /** 打开某个版本时的版本号 */
+  version?: string | null;
+}): string {
+  const path = params.fileId ? `/cad-editor/${params.fileId}` : '/cad-editor';
+  const search = new URLSearchParams();
+  if (params.fileHash && !params.fileId) {
+    search.set('hash', params.fileHash);
+    if (params.fileName) search.set('fileName', params.fileName);
+  }
+  if (params.fileId) {
+    if (params.libraryKey) {
+      search.set('library', params.libraryKey);
+    } else if (params.parentId) {
+      search.set('nodeId', params.parentId);
+    }
+  }
+  if (params.version) search.set('v', params.version);
+  if (params.back) search.set('back', params.back);
+
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+}

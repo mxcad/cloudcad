@@ -133,6 +133,7 @@ export function ConversionPanel() {
     expandByTask,
     setPosition,
     setSize,
+    resetPanelUi,
 
     setSearch,
     refreshCloud,
@@ -564,11 +565,12 @@ export function ConversionPanel() {
         className="conversion-panel"
         style={{ width: size.width, height: size.height }}
       >
-        {/* 头部（可拖动 + 隐藏按钮：隐藏后无任何可见元素，入口只剩顶栏按钮 + CAD 命令） */}
+        {/* 头部（可拖动 + 双击复位 + 隐藏按钮：隐藏后无任何可见元素，入口只剩顶栏按钮 + CAD 命令） */}
         <div
           className="conversion-header"
           onPointerDown={(e) => beginDrag(e)}
-          title={t('拖动调整位置')}
+          onDoubleClick={resetPanelUi}
+          title={t('拖动调整位置，双击复位')}
         >
           <span className="conversion-title">
             <ListTodo size={14} />
@@ -586,6 +588,7 @@ export function ConversionPanel() {
           <button
             className="conv-collapse"
             onPointerDown={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
             onClick={() => setCollapsed(true)}
             title={t('隐藏')}
             aria-label={t('隐藏')}

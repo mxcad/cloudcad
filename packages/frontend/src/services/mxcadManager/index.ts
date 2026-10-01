@@ -30,7 +30,12 @@ export { CSS_CLASSES } from './mxcadTypes';
 
 export { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
 
-export { refreshFileName, isEmptyDocumentName, extractShareTokenFromUrl } from './mxcadHelpers';
+export {
+  refreshFileName,
+  isEmptyDocumentName,
+  editorDisplayName,
+  extractShareTokenFromUrl,
+} from './mxcadHelpers';
 export { insertBlockFromLibrary } from './cmd/insertBlockCommand';
 
 export {
