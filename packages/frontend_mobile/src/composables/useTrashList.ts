@@ -36,7 +36,7 @@ const PAGE_SIZE = 30
 
 export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
   const scope = ref<TrashScope>('projects')
-  // 'project' scope 下选定的项目 id（项目内回收站）；未选定时列表为空，由 UI 提示选择
+  // 'project' scope 下选定的项目 id（项目内回收站，由 setScope('project', id) 一次设定）
   const selectedProjectId = ref<string | null>(null)
   // 高级筛选：扩展名 csv（回收站接口仅支持 search/extension/sort，大小/时间会被后端忽略）
   const extension = ref('')
@@ -169,8 +169,9 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
   }
 
   // ── scope 切换：清搜索 + 回第 1 页 + 重载 ──
-  function setScope(next: TrashScope) {
-    if (next === scope.value) return
+  // 'project' scope 可带 projectId 一次到位（避免先切 scope 再选项目连发两次请求）
+  function setScope(next: TrashScope, projectId?: string) {
+    if (next === scope.value && (next !== 'project' || projectId === selectedProjectId.value)) return
     scope.value = next
     if (searchTimer) {
       clearTimeout(searchTimer)
@@ -181,15 +182,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     extension.value = ''
     page.value = 1
     // 切走 project scope 时清空选定项目，避免残留 id 影响其他 scope
-    if (next !== 'project') selectedProjectId.value = null
-    load()
-  }
-
-  // 选定项目（'project' scope 的项目内回收站）：切换项目后回第 1 页重载
-  function setSelectedProject(id: string) {
-    if (id === selectedProjectId.value) return
-    selectedProjectId.value = id
-    page.value = 1
+    selectedProjectId.value = next === 'project' ? projectId ?? null : null
     load()
   }
 
@@ -274,7 +267,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     sortBy, sortOrder,
     loadMoreFailed, hasMore, isEmpty, filterActive,
     load, reload, loadMore, retryLoadMore, refresh,
-    setSearch, setSort, setScope, setSelectedProject, setFilters,
+    setSearch, setSort, setScope, setFilters,
     restore, restoreBatch,
     permanentDelete, permanentDeleteBatch,
     clear,

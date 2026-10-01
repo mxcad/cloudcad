@@ -99,6 +99,8 @@ export function showFilePicker(
         hash,
         nodeId: '',
         forceUpload: noCache,
+        // 无缓存打开还要绕过服务端转换产物缓存，否则重传后仍不重转
+        forceConvert: noCache,
         onProgress: (pct) => {
           if (showLoading) {
             editorStore.setUploadProgress(pct);

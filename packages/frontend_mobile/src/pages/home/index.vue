@@ -7,7 +7,7 @@ import { uiConfig } from '@/config/uiConfig';
 import BScroll from '@better-scroll/core';
 import ObserveDOM from '@better-scroll/observe-dom';
 import ObserveImage from '@better-scroll/observe-image';
-import { McCmColor, MxCpp } from 'mxcad';
+import { McCmColor, McObject, MxCpp } from 'mxcad';
 import { useColorPicker } from './useColorPicker';
 import iro from '@jaames/iro';
 import { useMenu } from './hooks/useMenu';
@@ -33,6 +33,8 @@ import {
   saveToCloudTrigger,
 } from '../../composables/useSaveAs';
 import { useUser } from '../../composables/useUser';
+import { useCollabStore } from '../../stores/collab';
+import { editorDisplayName } from '@/utils/editorFileName';
 
 import { showToast, showConfirmDialog } from 'vant';
 import { showToastOnce } from '@/utils/toast';
@@ -143,12 +145,21 @@ const {
   clearError,
 } = useFileLoader();
 const editorState = useEditorState();
-const drawName = computed(() => {
-  if (editorState.state.isInCollaboration) {
-    return `${t('[协同中]')} ${editorState.state.fileName}`;
-  }
-  return editorState.state.fileName;
-});
+const collabStore = useCollabStore();
+
+/**
+ * 当前打开的原始图纸名。协同图纸以协同 store 的 fileNameCache（按 drawingId
+ * 反查节点名）为准，再回退到会话里的 fileName（来自 work_data 的 drawingName，
+ * 是建 work 时的快照，可能为空或已过期）——与 PC 端 fileNameCache 优先于
+ * drawingName 的判据一致。
+ */
+function currentDrawingName(): string {
+  const state = editorState.state;
+  return collabStore.fileNameCache[state.fileId || ''] || state.fileName;
+}
+
+// 标题唯一出口：前缀（[协同中]/[未登录]）与空模板名抑制在 editorDisplayName 内
+const drawName = computed(() => editorDisplayName(currentDrawingName()));
 const isInCollaboration = computed(() => editorState.state.isInCollaboration);
 const currentVersion = computed(() => editorState.state.currentVersion);
 const isPublicFile = computed(() => editorState.state.isPublicFile);
@@ -425,6 +436,40 @@ function onBeforeUnloadHandler(e: BeforeUnloadEvent) {
   }
 }
 
+/**
+ * 挂载引擎实例级监听器并返回解绑函数。
+ *
+ * 引擎是单例（createMxCAD 幂等），组件重挂载时这些监听器会在同一引擎上累积：
+ * databaseModify 重复调 setIsModified（幂等无害），但 openFileComplete 会重复
+ * 触发缩略图上传（真副作用）。故保存监听器引用、卸载时 mxcad.off 解绑。
+ * uploadThumbnail 仅非分享/非协同的正常打开流需要（对齐原实现）。
+ */
+function attachEngineListeners(
+  mxcad: McObject,
+  options: { uploadThumbnail?: boolean } = {}
+): () => void {
+  const onDatabaseModify = () => {
+    editorState.setIsModified(true);
+  };
+  const onOpenFileComplete = () => {
+    editorState.setIsModified(false);
+    if (options.uploadThumbnail) {
+      // 打开文件后异步生成并上传缩略图（参考 PC setupFileOpenListener）；
+      // 公开文件没有服务端节点（fileId 存的是 hash），跳过
+      const { fileId, isPublicFile } = editorState.state;
+      if (fileId && !isPublicFile) {
+        uploadThumbnailForNode(fileId, { waitForRender: true }).catch(() => {});
+      }
+    }
+  };
+  mxcad.on('databaseModify', onDatabaseModify);
+  mxcad.on('openFileComplete', onOpenFileComplete);
+  return () => {
+    mxcad.off('databaseModify', onDatabaseModify);
+    mxcad.off('openFileComplete', onOpenFileComplete);
+  };
+}
+
 onMounted(async () => {
   window.addEventListener('open-version-history', onShowVersionHistory);
   window.addEventListener('mxcad-new-file', handleNewFile);
@@ -436,6 +481,9 @@ onMounted(async () => {
 
   // Auto-join cleanup reference
   let autoJoinCleanup: (() => void) | null = null;
+  // 引擎实例级监听器 / 对象编辑工具栏的解绑函数（引擎是单例，重挂载须解绑防累积）
+  let engineListenerCleanup: (() => void) | null = null;
+  let editObjectToolbarCleanup: (() => void) | null = null;
 
   onBeforeUnmount(() => {
     window.removeEventListener('open-version-history', onShowVersionHistory);
@@ -449,6 +497,8 @@ onMounted(async () => {
     window.removeEventListener('mxcad-share-current', handleShareCurrent);
     window.removeEventListener('beforeunload', onBeforeUnloadHandler);
     autoJoinCleanup?.();
+    engineListenerCleanup?.();
+    editObjectToolbarCleanup?.();
     // 离开页面时退出当前协同会话
     exitCollaborationIfNeeded();
     // 组件卸载时重置协同分享状态（与 PC CADEditorDirect.tsx cleanup 对齐）
@@ -488,13 +538,8 @@ onMounted(async () => {
       });
       // 协同模式下只初始化 CAD 引擎，不打开文件（由协同 SDK 自动加载）
       const mxcad = await createMxCAD();
-      mxcad.on('databaseModify', () => {
-        editorState.setIsModified(true);
-      });
-      mxcad.on('openFileComplete', () => {
-        editorState.setIsModified(false);
-      });
-      initEditObjectToolbar(mxcad);
+      engineListenerCleanup = attachEngineListeners(mxcad);
+      editObjectToolbarCleanup = initEditObjectToolbar(mxcad);
       editorState.setFileName(t('协作图纸'));
       const { startAutoJoin } = useCollabAutoJoin(user);
       autoJoinCleanup = startAutoJoin(workId);
@@ -530,13 +575,8 @@ onMounted(async () => {
     editorState.setProgressStage('fetching-info');
     try {
       const mxcad = await createMxCAD();
-      mxcad.on('databaseModify', () => {
-        editorState.setIsModified(true);
-      });
-      mxcad.on('openFileComplete', () => {
-        editorState.setIsModified(false);
-      });
-      initEditObjectToolbar(mxcad);
+      engineListenerCleanup = attachEngineListeners(mxcad);
+      editObjectToolbarCleanup = initEditObjectToolbar(mxcad);
       // 打开失败时 error/errorType 已设置 → 展示 error overlay
       await openDrawing({ source: 'share', token: shareToken, nodeId: fileId });
     } catch (e) {
@@ -551,20 +591,10 @@ onMounted(async () => {
 
   // ====== 初始化 CAD 引擎（非分享链接） ======
   const mxcad = await createMxCAD();
-  mxcad.on('databaseModify', () => {
-    editorState.setIsModified(true);
+  engineListenerCleanup = attachEngineListeners(mxcad, {
+    uploadThumbnail: true,
   });
-  mxcad.on('openFileComplete', () => {
-    editorState.setIsModified(false);
-    // 打开文件后异步生成并上传缩略图（参考 PC setupFileOpenListener）；
-    // 公开文件没有服务端节点（fileId 存的是 hash），跳过
-    const { fileId, isPublicFile } = editorState.state;
-    if (fileId && !isPublicFile) {
-      uploadThumbnailForNode(fileId, { waitForRender: true }).catch(() => {});
-    }
-  });
-
-  initEditObjectToolbar(mxcad);
+  editObjectToolbarCleanup = initEditObjectToolbar(mxcad);
 
   // ====== 根据文件源打开图纸（drawingOpener 统一入口） ======
   if (fileId) {
@@ -740,7 +770,7 @@ setViewportHeight();
     />
     <SaveAsSheet
       :show="showSaveAsSheet"
-      :current-file-name="editorState.state.fileName"
+      :current-file-name="currentDrawingName()"
       :can-manage-library="canManageLibrary"
       :current-node-id="editorState.state.fileId || undefined"
       @close="onSaveAsClose"
@@ -761,7 +791,7 @@ setViewportHeight();
     <ShareCurrentPopup
       v-model:show="showShareCurrent"
       :file-id="editorState.state.fileId ?? ''"
-      :file-name="editorState.state.fileName"
+      :file-name="currentDrawingName()"
     />
     <van-dialog
       v-model:show="showCollabDisabled"

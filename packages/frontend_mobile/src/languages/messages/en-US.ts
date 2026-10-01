@@ -1084,5 +1084,6 @@ export default  {
     "3629": "Folder created",
     "3630": "Please select a user and role",
     "3631": "Member added",
-    "3632": "Member removed"
+    "3632": "Member removed",
+    "1412": "[Not logged in]"
 }

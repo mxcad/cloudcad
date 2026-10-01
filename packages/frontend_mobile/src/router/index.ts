@@ -75,46 +75,51 @@ const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // 壳根（编辑器）。App.vue 静态渲染 <Shell />（不走 router-view，保 WebGL 存活），
+    // 此记录只为让 /shell 是已声明路径（404 兜底判 route.matched.length）。
     path: '/shell',
     name: 'Shell',
     component: () => import('../pages/shell/index.vue'),
-    children: [
-      {
-        path: 'file',
-        name: 'FileBrowser',
-        component: () => import('../pages/shell/sub-pages/FileBrowserPage.vue'),
-      },
-      {
-        // 参数名须为 :projectId：与 @cloudcad/platform 路由映射表的反向解析共用
-        // renderPathPattern，参数名不同名会渲染出空路径段。
-        path: 'file/project/:projectId',
-        name: 'ProjectDetail',
-        component: () =>
-          import('../pages/shell/sub-pages/ProjectDetailPage.vue'),
-      },
-      {
-        path: 'file/project/:projectId/roles',
-        name: 'ProjectRoles',
-        component: () =>
-          import('../pages/shell/sub-pages/ProjectRolesPage.vue'),
-      },
-      {
-        path: 'share',
-        name: 'ShareManage',
-        component: () => import('../pages/shell/sub-pages/ShareManagePage.vue'),
-      },
-      {
-        path: 'profile',
-        name: 'Profile',
-        component: () => import('../pages/shell/sub-pages/ProfilePage.vue'),
-      },
-      {
-        path: 'member',
-        name: 'MemberCenter',
-        component: () =>
-          import('../pages/shell/sub-pages/MemberCenterPage.vue'),
-      },
-    ],
+  },
+  {
+    // 子页必须是顶层记录而非 /shell 的 children：App.vue 不走 <router-view>，
+    // Shell 覆盖层里的 <router-view> 处于第 0 层；children 嵌套会让它渲染
+    // matched[0]=Shell 本身——每进一个子页就重挂一套 Shell+Home（编辑器），
+    // 深链 ?fileId= 被重新消费 → 图纸重复打开、引擎重复初始化。
+    // 拍平后第 0 层直接渲染子页；路径与名称不变，ADR-0070 映射表不受影响。
+    path: '/shell/file',
+    name: 'FileBrowser',
+    component: () => import('../pages/shell/sub-pages/FileBrowserPage.vue'),
+  },
+  {
+    // 参数名须为 :projectId：与 @cloudcad/platform 路由映射表的反向解析共用
+    // renderPathPattern，参数名不同名会渲染出空路径段。
+    path: '/shell/file/project/:projectId',
+    name: 'ProjectDetail',
+    component: () =>
+      import('../pages/shell/sub-pages/ProjectDetailPage.vue'),
+  },
+  {
+    path: '/shell/file/project/:projectId/roles',
+    name: 'ProjectRoles',
+    component: () =>
+      import('../pages/shell/sub-pages/ProjectRolesPage.vue'),
+  },
+  {
+    path: '/shell/share',
+    name: 'ShareManage',
+    component: () => import('../pages/shell/sub-pages/ShareManagePage.vue'),
+  },
+  {
+    path: '/shell/profile',
+    name: 'Profile',
+    component: () => import('../pages/shell/sub-pages/ProfilePage.vue'),
+  },
+  {
+    path: '/shell/member',
+    name: 'MemberCenter',
+    component: () =>
+      import('../pages/shell/sub-pages/MemberCenterPage.vue'),
   },
 ];
 

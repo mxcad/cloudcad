@@ -12,11 +12,11 @@ import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
 import { copyText } from '@/utils/clipboard'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
-import { shareControllerListShares, shareControllerRevokeShare, shareControllerCreateShare, shareControllerUpdateShare, projectControllerGetPersonalSpace } from '@cloudcad/api-sdk/sdk.gen'
+import { shareControllerListShares, shareControllerRevokeShare, shareControllerCreateShare, shareControllerUpdateShare, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
+import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import QRCode from 'qrcode'
 import { t } from '@/languages'
-import { extractExtension, formatNodeAsItems } from '@/composables/useNodeFormatter'
-import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
+import { extractExtension } from '@/composables/useNodeFormatter'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 
 interface ShareItem {
@@ -306,7 +306,6 @@ useLoginPrompt(() => loadShares())
 
 // ── 新建分享弹窗 ──
 const showCreateSharePopup = ref(false)
-const personalFilesStore = useUnifiedFileList('personal')
 const createLoading = ref(false)
 const createError = ref('')
 
@@ -315,8 +314,23 @@ interface CreateFileOption {
   name: string
 }
 
+// 可选文件 = 「个人空间子树」+「我所属项目的文件」两个搜索 scope 的并集（按 id 去重、翻页累积）：
+// 两个 scope 递归覆盖文件夹内层与项目文件，只列个人空间根第一页会让大量文件选不到。
+// 重叠节点靠 id 去重（个人空间下的项目文件同时命中两个 scope）。
+// 不传 type：searchAllProjects 不按 nodeType 过滤会返回文件夹，文件夹过滤一律放客户端，
+// 同时保证 LIBRARY_DRAWING 等后端同样允许分享的节点类型不被服务端筛掉。
+const SHARE_FILE_SCOPES = ['personal_space', 'all_projects'] as const
+const SHARE_FILE_PAGE_SIZE = 50
+
+const fileKeyword = ref('')
 const fileOptions = ref<CreateFileOption[]>([])
 const selectedFileId = ref('')
+const fileLoading = ref(false)
+const fileError = ref('')
+const filePage = ref(1)
+const fileTotalPages = ref(1)
+
+const fileHasMore = computed(() => filePage.value < fileTotalPages.value)
 
 const expirationOptions = ref<'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom'>('7d')
 const customDays = ref(1)
@@ -360,26 +374,88 @@ function expiresIn(expiration: 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d
   return values[expiration]
 }
 
-async function loadCreateFiles() {
+async function searchShareFiles(scope: 'personal_space' | 'all_projects', page: number) {
+  const res = await nodeControllerSearch({
+    query: {
+      keyword: fileKeyword.value.trim(),
+      scope,
+      page,
+      limit: SHARE_FILE_PAGE_SIZE,
+      sortBy: 'updatedAt',
+      sortOrder: 'desc',
+    },
+  } as any)
+  if (res.error) throw new Error(String(res.error))
+  const data = (res.data ?? {}) as { nodes?: FileSystemNodeDto[]; totalPages?: number }
+  return { nodes: data.nodes ?? [], totalPages: data.totalPages ?? 1 }
+}
+
+// reset=true（打开弹窗 / 改搜索词）从第一页重建列表并清空选中；
+// reset=false（加载更多）在当前已加载结果上追加去重后的新节点。
+// fileSearchGen 防止「上一轮翻页 / 上一次搜索」的结果覆盖新一轮重建后的列表。
+async function loadShareFiles(reset: boolean) {
+  if (fileLoading.value) return
+  if (reset) {
+    fileSearchGen++
+    filePage.value = 1
+    fileTotalPages.value = 1
+    fileOptions.value = []
+    selectedFileId.value = ''
+  }
+  const gen = fileSearchGen
+  fileLoading.value = true
+  fileError.value = ''
   try {
-    const res = await projectControllerGetPersonalSpace()
-    if (res.error) throw new Error(String(res.error))
-    const space = res.data as any
-    if (space?.id) {
-      await personalFilesStore.loadRootNode(space.id)
-    }
-  } catch {
-    // 个人空间加载失败不影响弹窗展示
+    const pages = await Promise.all(SHARE_FILE_SCOPES.map((scope) => searchShareFiles(scope, filePage.value)))
+    if (gen !== fileSearchGen) return
+    const seen = new Set(fileOptions.value.map((f) => f.id))
+    const incoming = pages
+      .flatMap((p) => p.nodes)
+      .filter((n) => !!n?.id && !n.isFolder)
+      .filter((n) => !seen.has(n.id))
+      .map((n) => ({ id: n.id, name: n.name || t('未知文件') }))
+    fileOptions.value = [...fileOptions.value, ...incoming]
+    fileTotalPages.value = Math.max(...pages.map((p) => p.totalPages))
+  } catch (e) {
+    console.error('[ShareManagePage] loadShareFiles:', e)
+    fileError.value = t('加载失败，点击重试')
+  } finally {
+    fileLoading.value = false
   }
 }
+
+function loadMoreShareFiles() {
+  filePage.value += 1
+  void loadShareFiles(false)
+}
+
+// 重试探当前页（不重建列表）：翻页失败时已加载的结果保留，只补失败那一页
+function retryFileLoad() {
+  void loadShareFiles(false)
+}
+
+let fileSearchGen = 0
+let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(fileKeyword, () => {
+  const gen = ++fileSearchGen
+  clearTimeout(fileSearchTimer)
+  fileSearchTimer = setTimeout(async () => {
+    if (gen !== fileSearchGen) return
+    await loadShareFiles(true)
+  }, 300)
+})
 
 function openCreateSharePopup() {
   showCreateSharePopup.value = true
   createdShareInfo.value = null
   expirationOptions.value = '7d'
-  selectedFileId.value = ''
+  // 作废上一次搜索残留的防抖任务，否则会在直调之后再刷一次列表
+  fileSearchGen++
+  clearTimeout(fileSearchTimer)
+  fileKeyword.value = ''
   createError.value = ''
-  void loadCreateFiles()
+  void loadShareFiles(true)
 }
 
 function selectFile(id: string) {
@@ -450,15 +526,6 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
   return labels[expiration] || expiration
 }
 
-// 监听 nodes 变化，构建可选文件列表
-watch(
-  () => personalFilesStore.nodes.value,
-  (nodes) => {
-    fileOptions.value = formatNodeAsItems(nodes)
-      .filter(item => !item.isFolder)
-      .map(item => ({ id: item.id, name: item.name }))
-  }
-)
 </script>
 
 <template>
@@ -621,22 +688,41 @@ watch(
         <template v-else>
           <div class="file-section">
             <div class="section-title">{{ t('选择文件') }}</div>
-            <div v-if="fileOptions.length === 0" class="file-empty">
-              <van-icon name="search" size="24" />
-              <span>{{ t('暂无可分享的文件') }}</span>
+            <van-search
+              v-model="fileKeyword"
+              class="file-search"
+              shape="round"
+              clearable
+              :placeholder="t('搜索文件')"
+            />
+            <div v-if="fileError" class="file-empty file-error" @click="retryFileLoad">
+              <van-icon name="warning-o" size="24" />
+              <span>{{ fileError }}</span>
             </div>
-            <div v-else class="file-list">
-              <div
-                v-for="f in fileOptions"
-                :key="f.id"
-                :class="['file-option', { selected: selectedFileId === f.id }]"
-                @click="selectFile(f.id)"
-              >
-                <van-icon name="photo-o" size="18" />
-                <span class="file-option-name">{{ f.name }}</span>
-                <van-icon v-if="selectedFileId === f.id" name="passed" size="16" color="var(--accent)" />
+            <template v-else>
+              <div v-if="fileLoading && fileOptions.length === 0" class="file-empty">
+                <van-loading size="22" />
               </div>
-            </div>
+              <div v-else-if="fileOptions.length === 0" class="file-empty">
+                <van-icon name="search" size="24" />
+                <span>{{ t('暂无可分享的文件') }}</span>
+              </div>
+              <div v-else class="file-list">
+                <div
+                  v-for="f in fileOptions"
+                  :key="f.id"
+                  :class="['file-option', { selected: selectedFileId === f.id }]"
+                  @click="selectFile(f.id)"
+                >
+                  <van-icon name="photo-o" size="18" />
+                  <span class="file-option-name">{{ f.name }}</span>
+                  <van-icon v-if="selectedFileId === f.id" name="passed" size="16" color="var(--accent)" />
+                </div>
+                <button v-if="fileHasMore && !fileLoading" class="file-more" @click="loadMoreShareFiles">
+                  {{ t('加载更多') }}
+                </button>
+              </div>
+            </template>
           </div>
 
           <div class="expire-section">
@@ -888,6 +974,16 @@ watch(
   overflow-y: auto;
 }
 
+.file-search {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
 .file-list {
   display: flex;
   flex-direction: column;
@@ -923,6 +1019,22 @@ watch(
   white-space: nowrap;
 }
 
+.file-more {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 0;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
 .file-empty {
   display: flex;
   flex-direction: column;
@@ -931,6 +1043,10 @@ watch(
   padding: 24px 0;
   color: var(--text-tertiary);
   font-size: 13px;
+
+  &.file-error {
+    cursor: pointer;
+  }
 }
 
 .expire-chips {

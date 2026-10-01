@@ -80,6 +80,14 @@ export function useFileLoader() {
   }
 
   /**
+   * 从 URL 获取显示文件名（公开/本地 mxweb 路径）：PC 端转换面板打开时以
+   * ?fileName= 携带转换前的原文件名，缺失时由调用方回退内部访问名 <hash>.mxweb
+   */
+  function getFileNameFromUrl(): string | null {
+    return new URLSearchParams(window.location.search).get('fileName') || null;
+  }
+
+  /**
    * 从 URL 获取版本号
    */
   function getVersionFromUrl(): number | undefined {
@@ -197,11 +205,19 @@ export function useFileLoader() {
         throw typedError('converting', t('文件尚未转换完成'));
       }
 
-      // 3. 设置文件信息到 store
+      // 3. 设置文件信息到 store（文件名留到打开成功后写，见下方 commitOpen）
       editorState.setFileId(fileId);
       editorState.setFileInfo(nodeInfo as unknown as Record<string, unknown>);
-      editorState.setFileName(nodeInfo.name || '');
       editorState.setUpdatedAt(nodeInfo.updatedAt || null);
+
+      // 只在打开成功后记录文件名并标记活动（对齐 PC：禁止在成功前写，
+      // 打开失败时标题不残留目标图纸名，也不误触缩略图上传/保存归属）
+      const commitOpen = () => {
+        editorState.setFileName(nodeInfo.name || '');
+        editorState.setIsActive(true);
+        editorState.setLoading(false);
+        loading.value = false;
+      };
 
       // 4. 确定项目根节点（与 PC L762-L777 对齐）
       let projectId: string | null = nodeInfo.parentId || null;
@@ -291,9 +307,7 @@ export function useFileLoader() {
           const opened = await openMxWeb(objectUrl);
           URL.revokeObjectURL(objectUrl);
           if (opened) {
-            editorState.setIsActive(true);
-            editorState.setLoading(false);
-            loading.value = false;
+            commitOpen();
             return true;
           }
         }
@@ -305,9 +319,7 @@ export function useFileLoader() {
       const opened = await openMxWeb(mxwebUrl);
 
       if (opened) {
-        editorState.setIsActive(true);
-        editorState.setLoading(false);
-        loading.value = false;
+        commitOpen();
 
         // 9. 缓存文件到 IndexedDB（供下次快速打开）
         if (cacheTimestamp !== undefined) {
@@ -399,10 +411,13 @@ export function useFileLoader() {
       editorState.setProgressStage('fetching-info');
       const preloadData = await getPublicPreloadingData(hash);
 
+      // 显示名用转换前原文件名（URL ?fileName= 携带，对齐 PC 的 shareFileNameParam）；
+      // 缺失时回退内部访问名 <hash>.mxweb，不做截断——截断哈希在标题栏不可读
+      const hashFileName = getFileNameFromUrl() || `${hash}.mxweb`;
+
       editorState.setFileInfo(
         preloadData as unknown as Record<string, unknown>
       );
-      editorState.setFileName(`${hash.slice(0, 8)}.mxweb`);
       editorState.setProjectId(null);
       editorState.setPermissions({
         canSave: false,
@@ -417,6 +432,7 @@ export function useFileLoader() {
       const opened = await openMxWeb(mxwebUrl);
 
       if (opened) {
+        editorState.setFileName(hashFileName);
         editorState.setIsActive(true);
         editorState.setLoading(false);
         loading.value = false;
@@ -468,6 +484,7 @@ export function useFileLoader() {
     getFileIdFromUrl,
     getNodeIdFromUrl,
     getHashFromUrl,
+    getFileNameFromUrl,
     getVersionFromUrl,
     clearError,
   };

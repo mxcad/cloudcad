@@ -5,11 +5,55 @@ import { MxFun } from "mxdraw";
 import { registerCommand } from "./command";
 import { openMxWeb } from "./openMxWeb";
 import { t } from "@/languages";
-/** 创建MxCad APP控件 **/
-/**Create MxCad APP Control
- 
+
+/**
+ * 引擎单例守卫（对齐 PC MxCADInstanceManager）。
+ *
+ * McObject 引擎只支持单实例：重复 new + create 会拉起第二份 WASM 引擎、
+ * 重复加载 wasm 与 shx 字体（控制台里 MxCAD TryVersion / replace [*.shx]
+ * 成对出现即此症状）。模块级引用 + window 级引用双保险：
+ *  - 模块级 mxcadSingleton：同一模块实例内 createMxCAD 多次调用只初始化一次；
+ *  - window.__MxCAD_MOBILE__：模块重评估（HMR / 模块图变化）后模块级引用归零
+ *    但引擎仍在，从 window 恢复引用，避免重复 create 命中引擎内部守卫返回损坏实例
+ *    （PC 用 window.__MxCADView__ 做同样的事）。
  */
-export const createMxCAD = async (fileUrl?: string) => {
+declare global {
+  interface Window {
+    __MxCAD_MOBILE__?: McObject;
+  }
+}
+
+let mxcadSingleton: McObject | null = null;
+let mxcadInitPromise: Promise<McObject> | null = null;
+
+/**
+ * 创建/获取 MxCad 引擎（幂等）。
+ * 首次调用真正 new McObject + create；之后（含并发调用、组件重挂载、
+ * 模块重评估）一律返回同一实例，不再重复初始化。
+ */
+export const createMxCAD = (fileUrl?: string): Promise<McObject> => {
+  if (mxcadSingleton) return Promise.resolve(mxcadSingleton);
+  if (window.__MxCAD_MOBILE__) {
+    mxcadSingleton = window.__MxCAD_MOBILE__;
+    return Promise.resolve(mxcadSingleton);
+  }
+  if (mxcadInitPromise) return mxcadInitPromise;
+  mxcadInitPromise = doCreateMxCAD(fileUrl)
+    .then((mxcad) => {
+      mxcadSingleton = mxcad;
+      window.__MxCAD_MOBILE__ = mxcad;
+      return mxcad;
+    })
+    .catch((e) => {
+      // 初始化失败复位，允许后续重试（成功路径 mxcadSingleton 已置位，不会走到这）
+      mxcadInitPromise = null;
+      throw e;
+    });
+  return mxcadInitPromise;
+};
+
+/** 真正执行 new McObject + create 的初始化体（只会被调用一次） */
+async function doCreateMxCAD(fileUrl?: string): Promise<McObject> {
   const mxcad = new McObject();
 
   let {

@@ -35,7 +35,6 @@ import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType, Batc
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { useViewMode } from '@/composables/useViewMode'
 import { useTrashList } from '@/composables/useTrashList'
-import type { TrashScope } from '@/composables/useTrashList'
 import { useProjectActions } from '@/composables/useProjectActions'
 import { useProjectSearch } from '@/composables/useProjectSearch'
 import { formatNodeAsItems, formatTime } from '@/composables/useNodeFormatter'
@@ -223,10 +222,12 @@ async function loadPersonalSpace() {
   try {
     await ensurePersonalSpaceId()
     if (personalSpaceId.value) {
-      // 打开图纸返回：优先还原打开前所在的文件夹（消费一次）；否则走位置持久化存档
-      const target = shellStack.returnTarget
+      // 打开图纸返回：优先还原打开前所在的文件夹（消费一次）；否则走位置持久化存档。
+      // takeReturnTargetForTab 校验归属：项目详情页写入的目标不带 tab，若未校验就把
+      // 项目子文件夹还原成个人空间的位置（点个人空间却看到项目里的界面，且该目标被
+      // 消费掉后「再切一次」才恢复正常）。
+      const target = shellStack.takeReturnTargetForTab(1)
       if (target?.folderId && target.breadcrumbs?.length) {
-        shellStack.clearReturnTarget()
         await personalFileList.loadRootNode(personalSpaceId.value, {
           folderId: target.folderId,
           breadcrumbs: target.breadcrumbs,
@@ -247,8 +248,10 @@ watch(activeTab, (tab) => {
   } else if (tab === 1) {
     loadPersonalSpace()
   } else {
-    // 回收站 tab：确保个人空间根就绪后再加载当前 scope（personal scope 依赖它）
+    // 回收站 tab：确保个人空间根就绪后再加载当前 scope（personal scope 依赖它）；
+    // 并预取项目列表供范围下拉展开时直接选择（已拉取则跳过）
     void ensurePersonalSpaceId().finally(() => trashList.load())
+    void loadTrashTargets()
   }
 })
 
@@ -269,6 +272,7 @@ useLoginPrompt(() => {
     loadPersonalSpace()
   } else {
     void ensurePersonalSpaceId().finally(() => trashList.load())
+    void loadTrashTargets()
   }
 })
 
@@ -389,10 +393,10 @@ function onPersonalModeChange(m: 'grid' | 'list') {
   personalMode.value = m
 }
 
-// ── 回收站（第 3 个 tab：项目列表/项目内/个人空间 三 scope，对齐 PC 按上下文区分）──
+// ── 回收站（第 3 个 tab：项目列表/个人空间/具体项目 三 scope，对齐 PC 按上下文区分）──
 const trashList = useTrashList(personalSpaceId)
 const trashScope = computed(() => trashList.scope.value)
-// 顶层 ref，模板自动解包；作为项目内回收站下拉的 model-value（单一事实源=composable）
+// 顶层 ref，模板自动解包；项目内回收站选中的项目 id（单一事实源=composable）
 const trashSelectedProjectId = trashList.selectedProjectId
 const trashItems = computed(() => formatNodeAsItems(trashList.nodes.value))
 const trashLoading = computed(() => trashList.loading.value)
@@ -402,35 +406,53 @@ const trashSortBy = computed(() => trashList.sortBy.value)
 const trashSortOrder = computed(() => trashList.sortOrder.value)
 const trashTotal = computed(() => trashList.total.value)
 
-const trashScopeOptions: Array<{ value: TrashScope; label: string }> = [
-  { value: 'projects', label: t('项目列表') },
-  { value: 'project', label: t('项目内') },
-  { value: 'personal', label: t('个人空间') },
-]
-
-// 项目内回收站：选定项目下拉（复用 useTransferTargets 的项目根列表，进入该 scope 时 lazy 拉取）
+// 范围选择：项目列表 / 个人空间 / 具体项目 合为一个下拉
+// （原为 chip 行 + 点「项目内」后才出现的二级项目下拉，两步改一步）
+const TRASH_PROJECT_PREFIX = 'proj:'
 const trashTargets = useTransferTargets()
 const trashProjectOptions = computed(() =>
   trashTargets.roots.value
     .filter((r) => r.domain === 'project')
     .map((r) => ({ text: r.name, value: r.id })),
 )
-const selectedTrashProjectName = computed(() => {
-  const id = trashList.selectedProjectId.value
-  if (!id) return ''
-  return trashProjectOptions.value.find((o) => o.value === id)?.text ?? ''
+// 下拉选中值：'projects' | 'personal' | `proj:<projectId>`
+const trashTarget = computed(() =>
+  trashScope.value === 'personal'
+    ? 'personal'
+    : trashScope.value === 'project'
+      ? `${TRASH_PROJECT_PREFIX}${trashSelectedProjectId.value ?? ''}`
+      : 'projects',
+)
+const trashTargetOptions = computed(() => [
+  { text: t('项目列表'), value: 'projects' },
+  { text: t('个人空间'), value: 'personal' },
+  ...trashProjectOptions.value.map((p) => ({ text: p.text, value: `${TRASH_PROJECT_PREFIX}${p.value}` })),
+])
+const trashTargetTitle = computed(() => {
+  if (trashTarget.value === 'personal') return t('个人空间')
+  if (trashTarget.value === 'projects') return t('项目列表')
+  return trashProjectOptions.value.find((p) => p.value === trashSelectedProjectId.value)?.text ?? t('选择项目')
 })
 
-function onTrashScope(scope: TrashScope) {
-  if (scope === 'personal') void ensurePersonalSpaceId()
-  if (scope === 'project' && trashTargets.roots.value.length === 0) {
-    void trashTargets.load(personalSpaceId.value)
-  }
-  trashList.setScope(scope)
+// 项目列表按需拉取（项目可能很多，仅下拉展开时首次请求）
+async function loadTrashTargets() {
+  if (trashTargets.roots.value.length > 0) return
+  await ensurePersonalSpaceId()
+  if (trashTargets.roots.value.length === 0) await trashTargets.load(personalSpaceId.value)
 }
 
-function onTrashProjectChange(id: string | number) {
-  trashList.setSelectedProject(String(id))
+function onTrashTargetChange(val: string | number | boolean) {
+  const v = String(val)
+  if (v === 'projects') {
+    trashList.setScope('projects')
+    return
+  }
+  if (v === 'personal') {
+    void ensurePersonalSpaceId()
+    trashList.setScope('personal')
+    return
+  }
+  if (v.startsWith(TRASH_PROJECT_PREFIX)) trashList.setScope('project', v.slice(TRASH_PROJECT_PREFIX.length))
 }
 
 // 回收站高级筛选：仅扩展名（回收站接口不支持大小/时间，避免误导）
@@ -1196,32 +1218,16 @@ async function onFileInputChange(e: Event) {
       </van-tab>
 
       <van-tab :title="t('回收站')">
-        <!-- scope chips：项目列表（全局）/ 项目内（选定项目）/ 个人空间 -->
-        <div class="project-filter">
-          <button
-            v-for="opt in trashScopeOptions"
-            :key="opt.value"
-            :class="['filter-chip', { active: trashScope === opt.value }]"
-            @click="onTrashScope(opt.value)"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
-        <!-- 项目内回收站：选定项目下拉（未选定时列表为空，由空态提示选择）-->
-        <van-dropdown-menu
-          v-if="trashScope === 'project'"
-          class="trash-project-dropdown"
-          active-color="var(--primary)"
-        >
-          <van-dropdown-item
-            :model-value="trashSelectedProjectId"
-            :title="selectedTrashProjectName || t('选择项目')"
-            :options="trashProjectOptions"
-            @change="onTrashProjectChange"
-          />
-        </van-dropdown-menu>
-        <!-- 页头：项数 + 清空回收站（随当前 scope 生效） -->
-        <div class="trash-header">
+        <!-- 范围选择 + 项数 + 清空 合并为一行：项目列表 / 个人空间 / 具体项目 一步选完 -->
+        <div class="trash-toolbar">
+          <van-dropdown-menu class="trash-target-dropdown" active-color="var(--primary)">
+            <van-dropdown-item
+              :model-value="trashTarget"
+              :title="trashTargetTitle"
+              :options="trashTargetOptions"
+              @change="onTrashTargetChange"
+            />
+          </van-dropdown-menu>
           <span class="trash-count">{{ t('共 {count} 项', { count: String(trashTotal) }) }}</span>
           <button class="trash-clear" @click="onClearTrash">{{ t('清空回收站') }}</button>
         </div>
@@ -1235,7 +1241,7 @@ async function onFileInputChange(e: Event) {
           :sort-by="trashSortBy"
           :sort-order="trashSortOrder"
           :show-fab="false"
-          :empty-text="trashScope === 'project' && !trashSelectedProjectId ? t('请选择要查看的项目') : t('回收站是空的')"
+          :empty-text="t('回收站是空的')"
           empty-icon="delete-o"
           :selection-actions="trashSelectionActions"
           :filter-active="trashFilterActive"
@@ -1453,21 +1459,65 @@ async function onFileInputChange(e: Event) {
   }
 }
 
-/* 回收站页头：项数 + 清空按钮（随当前 scope 生效） */
-.trash-header {
+/* 回收站工具条：范围选择下拉 + 项数 + 清空
+   （原 chip 行 + 项目内二级下拉 + 页头 三行合成一行） */
+.trash-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   padding: 8px 14px 0;
   flex: none;
 }
 
+.trash-target-dropdown {
+  flex: 1 1 auto;
+  min-width: 0;
+
+  :deep(.van-dropdown-menu__bar) {
+    height: 32px;
+    background: var(--bg-secondary);
+    box-shadow: none;
+    border-radius: 6px;
+  }
+
+  :deep(.van-dropdown-menu__item) {
+    gap: 4px;
+    padding: 0 10px 0 12px;
+  }
+
+  :deep(.van-dropdown-menu__title) {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    max-width: 130px;
+  }
+
+  :deep(.van-dropdown-menu__title:after) {
+    display: none;
+  }
+
+  :deep(.van-dropdown-menu__item::after) {
+    content: '';
+    flex-shrink: 0;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid var(--text-tertiary);
+  }
+}
+
 .trash-count {
+  flex: none;
   font-size: 12px;
   color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .trash-clear {
+  flex: none;
   border: none;
   background: transparent;
   color: #ee0a24;

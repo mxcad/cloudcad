@@ -1,5 +1,5 @@
 import { callCommand } from "@/plugins/mxcad/command"
-import { McObject, MxCADUtility, MxCpp } from "mxcad"
+import { McObject, McObjectId, MxCADUtility, MxCpp } from "mxcad"
 import { ref, nextTick, onMounted } from "vue"
 import type { MxToolbarItem } from "@/types/mx-toolbar-item"
 export const useEditObjectToolbar = () => {
@@ -47,9 +47,9 @@ export const useEditObjectToolbar = () => {
         }
         item.cmd && callCommand(item.cmd)
     }
-    const initEditObjectToolbar = (mxcad: McObject)=> {
+    const initEditObjectToolbar = (mxcad: McObject): (() => void) => {
         let isSelect = false
-        mxcad.on("selectChange", (ids) => {
+        const onSelectChange = (ids: McObjectId[]) => {
             if (ids.length > 0) {
                 isShowObjectEditingToolbar.value = true
                 isSelect = true
@@ -57,9 +57,9 @@ export const useEditObjectToolbar = () => {
             } else {
                 isShowObjectEditingToolbar.value = false
             }
-        })
-    
-        mxcad.on("init_mxcad", () => {
+        }
+
+        const onInitMxcad = () => {
             const canvas = mxcad.getMxDrawObject().getCanvas()
             canvas.addEventListener("touchstart", () => {
                 const ids = MxCADUtility.getCurrentSelect()
@@ -67,8 +67,17 @@ export const useEditObjectToolbar = () => {
                     isShowObjectEditingToolbar.value = false
                 }
             })
-        })
-    } 
+        }
+
+        mxcad.on("selectChange", onSelectChange)
+        mxcad.on("init_mxcad", onInitMxcad)
+        // 引擎是单例（createMxCAD 幂等），组件重挂载时监听器会在同一引擎上累积，
+        // 返回清理函数供 onBeforeUnmount 解绑，避免 selectChange 重复触发
+        return () => {
+            mxcad.off("selectChange", onSelectChange)
+            mxcad.off("init_mxcad", onInitMxcad)
+        }
+    }
     return {
         isShowObjectEditingToolbar,
         objectEditingToolbarItems,

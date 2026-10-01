@@ -47,6 +47,21 @@ export const useShellStack = defineStore('shellStack', () => {
     returnTarget.value = target
   }
 
+  /**
+   * 消费（取出即清除）属于指定 Tab 的返回目标。
+   *
+   * returnTarget 是跨子页共享的全局栈：项目详情页打开图纸时写入的目标不带 tab
+   * （返回路径就是项目详情页本身）。消费者若只认 folderId/面包屑而不校验归属，
+   * 会把项目子文件夹的位置当成自己的初始位置还原——表现为「点个人空间还是项目里的界面」。
+   * 不匹配时不动栈、返回 null（壳顶栏「返回」箭头仍能指向那个来源页）。
+   */
+  function takeReturnTargetForTab(tab: number): ShellReturnTarget | null {
+    const target = returnTarget.value
+    if (!target || target.tab !== tab) return null
+    returnTarget.value = null
+    return target
+  }
+
   function clearReturnTarget() {
     returnTarget.value = null
   }
@@ -91,6 +106,7 @@ export const useShellStack = defineStore('shellStack', () => {
     hasSubpage,
     returnTarget,
     setReturnTarget,
+    takeReturnTargetForTab,
     clearReturnTarget,
     push,
     pop,

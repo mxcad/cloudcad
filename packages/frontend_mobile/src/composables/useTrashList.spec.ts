@@ -106,12 +106,12 @@ describe('useTrashList 回收站数据层', () => {
     expect(vi.mocked(trashControllerGetTrash)).not.toHaveBeenCalled()
   })
 
-  it('project scope：setSelectedProject 后 load 带选定 projectId', async () => {
+  it('project scope：setScope 带 projectId 一次到位，load 带选定 projectId', async () => {
     resolveWith(trashControllerGetTrash, trashPage([{ id: 'x' }]))
     const c = setup()
-    c.setScope('project')
-    c.setSelectedProject('proj-9')
+    c.setScope('project', 'proj-9')
     await vi.waitFor(() => expect(c.nodes.value).toHaveLength(1))
+    expect(c.selectedProjectId.value).toBe('proj-9')
     expect(vi.mocked(trashControllerGetTrash)).toHaveBeenLastCalledWith({
       query: expect.objectContaining({ projectId: 'proj-9' }),
     })
@@ -124,11 +124,33 @@ describe('useTrashList 回收站数据层', () => {
     expect(vi.mocked(trashControllerGetTrash)).not.toHaveBeenCalled()
   })
 
+  it('同一 project scope 换项目：只多发一次请求，不带旧 projectId', async () => {
+    resolveWith(trashControllerGetTrash, trashPage([{ id: 'x' }]))
+    const c = setup()
+    c.setScope('project', 'proj-9')
+    await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-9'))
+    const callsBefore = vi.mocked(trashControllerGetTrash).mock.calls.length
+    c.setScope('project', 'proj-10')
+    await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-10'))
+    expect(vi.mocked(trashControllerGetTrash).mock.calls.length).toBe(callsBefore + 1)
+    expect(vi.mocked(trashControllerGetTrash)).toHaveBeenLastCalledWith({
+      query: expect.objectContaining({ projectId: 'proj-10' }),
+    })
+  })
+
+  it('同一 project scope 重复选同一项目：不重复请求', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const c = setup()
+    c.setScope('project', 'proj-9')
+    await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-9'))
+    c.setScope('project', 'proj-9')
+    expect(vi.mocked(trashControllerGetTrash)).toHaveBeenCalledTimes(1)
+  })
+
   it('clear project scope：清空选定项目子树（非全局）', async () => {
     resolveWith(trashControllerGetTrash, trashPage())
     const c = setup()
-    c.setScope('project')
-    c.setSelectedProject('proj-9')
+    c.setScope('project', 'proj-9')
     await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-9'))
     await c.clear()
     expect(vi.mocked(trashControllerClearProjectTrash)).toHaveBeenCalledWith({ path: { projectId: 'proj-9' } })
@@ -138,8 +160,7 @@ describe('useTrashList 回收站数据层', () => {
   it('setScope 切离 project：清空选定项目 id', async () => {
     resolveWith(trashControllerGetTrash, trashPage())
     const c = setup()
-    c.setScope('project')
-    c.setSelectedProject('proj-9')
+    c.setScope('project', 'proj-9')
     await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-9'))
     c.setScope('projects')
     await vi.waitFor(() => expect(c.scope.value).toBe('projects'))

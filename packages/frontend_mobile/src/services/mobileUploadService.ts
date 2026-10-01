@@ -12,6 +12,7 @@ export interface MobileUploadOptions {
   hash: string;
   nodeId: string;
   forceUpload?: boolean;
+  forceConvert?: boolean;
   skipDb?: boolean;
   onBeginUpload?: () => void;
   onProgress?: (percentage: number) => void;
@@ -41,11 +42,17 @@ export async function uploadFile(
     hash,
     nodeId,
     forceUpload,
+    forceConvert,
     skipDb,
     onBeginUpload,
     onProgress,
     onFileQueued,
   } = options;
+
+  // 显式 false 不能上送：multipart 把 boolean 序列化成字符串（"false"），后端
+  // enableImplicitConversion 按 Boolean("false")===true 处理，普通打开会被误判成
+  // 强制重转。故 false 时省略该字段（与 forceUpload 的既有约定一致）。
+  const forceConvertField = forceConvert ? { forceConvert: true } : {};
 
   onFileQueued?.(file);
 
@@ -93,6 +100,8 @@ export async function uploadFile(
         size: file.size,
         nodeId,
         file: safeFile,
+        forceUpload,
+        ...forceConvertField,
       },
     });
 
@@ -116,18 +125,22 @@ export async function uploadFile(
     const end = Math.min(start + chunkSize, file.size);
     const chunk = file.slice(start, end);
 
-    const chunkData = await mxcadUploadControllerCheckChunkExist({
-      body: {
-        chunk: chunkIndex,
-        chunks: totalChunks,
-        size: chunk.size,
-        fileHash: hash,
-        filename: safeName,
-        nodeId,
-      },
-    });
+    let shouldUpload = true;
+    if (!forceUpload) {
+      const chunkData = await mxcadUploadControllerCheckChunkExist({
+        body: {
+          chunk: chunkIndex,
+          chunks: totalChunks,
+          size: chunk.size,
+          fileHash: hash,
+          filename: safeName,
+          nodeId,
+        },
+      });
+      shouldUpload = !chunkData.data?.exists;
+    }
 
-    if (chunkData.data?.exists) {
+    if (!shouldUpload) {
       onProgress?.(((chunkIndex + 1) / totalChunks) * 100);
       continue;
     }
@@ -142,6 +155,9 @@ export async function uploadFile(
         nodeId,
         file: chunk,
         skipDb,
+        forceUpload,
+        // 后端最后一个分片自动触发合并，forceConvert 只在合并时生效，故每片都要带
+        ...forceConvertField,
       },
     });
 
