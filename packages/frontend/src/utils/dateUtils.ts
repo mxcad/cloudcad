@@ -10,6 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 import { i18nScope, t } from '@/languages';
+import {
+  relativeTime,
+  formatDate as _formatDate,
+  formatDateTime as _formatDateTime,
+  formatDateTimeWithSeconds as _formatDateTimeWithSeconds,
+} from '@cloudcad/platform';
 
 /**
  * 日期工具函数
@@ -24,22 +30,7 @@ const locale = () => i18nScope.activeLanguage;
  * 格式化日期时间为本地字符串
  */
 export function formatDateTime(date: string | Date | number): string {
-  const d =
-    typeof date === 'string' || typeof date === 'number'
-      ? new Date(date)
-      : date;
-
-  if (isNaN(d.getTime())) {
-    return '-';
-  }
-
-  return d.toLocaleString(locale(), {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return _formatDateTime(date);
 }
 
 /**
@@ -48,39 +39,14 @@ export function formatDateTime(date: string | Date | number): string {
 export function formatDateTimeWithSeconds(
   date: string | Date | number
 ): string {
-  const d =
-    typeof date === 'string' || typeof date === 'number'
-      ? new Date(date)
-      : date;
-
-  return d.toLocaleString(locale(), {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  return _formatDateTimeWithSeconds(date);
 }
 
 /**
  * 格式化日期为本地字符串
  */
 export function formatDate(date: string | Date | number): string {
-  const d =
-    typeof date === 'string' || typeof date === 'number'
-      ? new Date(date)
-      : date;
-
-  if (isNaN(d.getTime())) {
-    return '-';
-  }
-
-  return d.toLocaleDateString(locale(), {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
+  return _formatDate(date);
 }
 
 /**
@@ -106,28 +72,21 @@ export function formatTime(date: string | Date | number): string {
  * 获取相对时间描述
  */
 export function getRelativeTime(date: string | Date | number): string {
-  const d =
-    typeof date === 'string' || typeof date === 'number'
-      ? new Date(date)
-      : date;
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-
-  const seconds = Math.floor(diff / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (seconds < 60) {
-    return t('刚刚');
-  } else if (minutes < 60) {
-    return minutes + t('分钟前');
-  } else if (hours < 24) {
-    return hours + t('小时前');
-  } else if (days < 30) {
-    return days + t('天前');
-  } else {
-    return formatDate(d);
+  const r = relativeTime(date);
+  if (r.tier === 'just_now') return t('刚刚');
+  switch (r.unit) {
+    case 'minute':
+      return `${r.value}${t('分钟前')}`;
+    case 'hour':
+      return `${r.value}${t('小时前')}`;
+    case 'day':
+      return `${r.value}${t('天前')}`;
+    case 'week':
+      return `${r.value}${t('周前')}`;
+    case 'month':
+      return `${r.value}${t('个月前')}`;
+    case 'year':
+      return `${r.value}${t('年前')}`;
   }
 }
 

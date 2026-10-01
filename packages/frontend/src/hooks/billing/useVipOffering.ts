@@ -3,6 +3,7 @@ import {
   vipControllerGetActiveTiers,
   vipControllerGetActiveDurations,
 } from '@/api-sdk';
+import { isMobileByUA, isWechatByUA } from '@cloudcad/platform';
 
 /** 会员套餐档位（上架中） */
 export interface VipTier {
@@ -50,8 +51,8 @@ export async function fetchVipOffering(signal?: AbortSignal): Promise<{
  */
 export function detectTradeType(): 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP' {
   const ua = navigator.userAgent;
-  if (/MicroMessenger/i.test(ua)) return 'NATIVE';
-  if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) return 'MWEB';
+  if (isWechatByUA(ua)) return 'NATIVE';
+  if (isMobileByUA(ua)) return 'MWEB';
   return 'NATIVE';
 }
 

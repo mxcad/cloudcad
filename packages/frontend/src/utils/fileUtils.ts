@@ -13,6 +13,7 @@
 import { FileSystemNode } from '../types/filesystem';
 import { API_BASE_URL } from '../config/apiConfig';
 import { t } from '@/languages';
+import { checkFileName, relativeTime } from '@cloudcad/platform';
 import { formatFileSize as _formatFileSize } from '../components/ui/FileSize';
 
 export const formatFileSize = _formatFileSize;
@@ -55,30 +56,21 @@ export const formatDate = (dateString: string) => {
  * 格式化相对时间（如"2小时前"、"昨天"）
  */
 export const formatRelativeTime = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffSec < 60) {
-    return t('刚刚');
-  } else if (diffMin < 60) {
-    return `${diffMin}${t('分钟前')}`;
-  } else if (diffHour < 24) {
-    return `${diffHour}${t('小时前')}`;
-  } else if (diffDay === 1) {
-    return t('昨天');
-  } else if (diffDay < 7) {
-    return `${diffDay}${t('天前')}`;
-  } else if (diffDay < 30) {
-    return `${Math.floor(diffDay / 7)}${t('周前')}`;
-  } else if (diffDay < 365) {
-    return `${Math.floor(diffDay / 30)}${t('个月前')}`;
-  } else {
-    return `${Math.floor(diffDay / 365)}${t('年前')}`;
+  const r = relativeTime(dateString);
+  if (r.tier === 'just_now') return t('刚刚');
+  switch (r.unit) {
+    case 'minute':
+      return `${r.value}${t('分钟前')}`;
+    case 'hour':
+      return `${r.value}${t('小时前')}`;
+    case 'day':
+      return `${r.value}${t('天前')}`;
+    case 'week':
+      return `${r.value}${t('周前')}`;
+    case 'month':
+      return `${r.value}${t('个月前')}`;
+    case 'year':
+      return `${r.value}${t('年前')}`;
   }
 };
 
@@ -207,34 +199,23 @@ export function validateFolderName(name: string): {
   valid: boolean;
   error?: string;
 } {
-  const trimmedName = name.trim();
+  // 判定规则收敛到 @cloudcad/platform 的 checkFileName（与移动端共用），
+  // 这里只负责把 reasonCode 映射成本端 i18n 文案
+  const result = checkFileName(name);
+  if (result.valid) return { valid: true };
 
-  if (!trimmedName) {
-    return { valid: false, error: t('名称不能为空') };
+  switch (result.reason) {
+    case 'empty':
+      return { valid: false, error: t('名称不能为空') };
+    case 'too_long':
+      return { valid: false, error: t('名称长度不能超过 255 个字符') };
+    case 'illegal_chars':
+      return { valid: false, error: t('名称包含非法字符：< > : " | ? * / \\') };
+    case 'control_chars':
+      return { valid: false, error: t('名称包含非法字符') };
+    case 'reserved_name':
+      return { valid: false, error: t('该名称为系统保留名称') };
+    case 'dot_edges':
+      return { valid: false, error: t('名称不能以点开头或结尾') };
   }
-
-  if (trimmedName.length > 255) {
-    return { valid: false, error: t('名称长度不能超过 255 个字符') };
-  }
-
-  const illegalChars = /[<>:"|?*/\\]/;
-  if (illegalChars.test(trimmedName)) {
-    return { valid: false, error: t('名称包含非法字符：< > : " | ? * / \\') };
-  }
-
-  // eslint-disable-next-line no-control-regex
-  if (/[\x00-\x1F\x7F]/u.test(trimmedName)) {
-    return { valid: false, error: t('名称包含非法字符') };
-  }
-
-  const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
-  if (reservedNames.test(trimmedName)) {
-    return { valid: false, error: t('该名称为系统保留名称') };
-  }
-
-  if (trimmedName.startsWith('.') || trimmedName.endsWith('.')) {
-    return { valid: false, error: t('名称不能以点开头或结尾') };
-  }
-
-  return { valid: true };
 }

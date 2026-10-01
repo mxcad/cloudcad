@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { formatBytes } from '@cloudcad/platform';
 
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
 export type SizeUnit = (typeof UNITS)[number];
@@ -7,12 +8,7 @@ const MAX_SAFE_BYTES = Number.MAX_SAFE_INTEGER;
 const MAX_DISPLAY_DECIMALS = 4;
 
 export function formatFileSize(bytes: number | null | undefined): string {
-  if (!bytes) return '-';
-  const i = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(BASE)),
-    UNITS.length - 1
-  );
-  return parseFloat((bytes / Math.pow(BASE, i)).toFixed(2)) + ' ' + UNITS[i];
+  return formatBytes(bytes);
 }
 
 export function toBytes(value: number, unit: SizeUnit): number {

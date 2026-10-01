@@ -1,5 +1,9 @@
 import { projectControllerGetProject } from '@/api-sdk';
 import type { TransferMode } from '@/types/filesystem';
+import {
+  evaluateCrossProjectTransfer as platformEvaluateCrossProjectTransfer,
+  type TransferDomain,
+} from '@cloudcad/platform';
 
 /**
  * 跨项目转移（粘贴/移动/复制）策略评估 —— 对齐后端
@@ -51,6 +55,8 @@ export const TRANSFER_BLOCK_REASONS = {
   SOURCE_MODE_MISMATCH: '源项目跨项目策略不允许{action}，已禁止',
   /** 目标项目入向策略与操作类型不匹配 */
   TARGET_MODE_MISMATCH: '当前项目跨项目策略不允许{action}，已禁止',
+  /** 源为资源库且操作为移动 → 系统规则恒拒绝（copy 豁免） */
+  LIBRARY_MOVE_FORBIDDEN: '不能从资源库移出文件',
 } as const;
 
 export type TransferBlockReasonKey =
@@ -62,51 +68,15 @@ export interface CrossProjectTransferVerdict {
   reasonKey?: TransferBlockReasonKey;
 }
 
-/** 出向字段选择：源为项目时，按目标域类型取 transferOut* 字段（对齐后端 TRANSFER_OUT_FIELD） */
-const TRANSFER_OUT_FIELD: Record<
-  TransferRootKind,
-  keyof ProjectTransferSettings
-> = {
-  project: 'transferOutToProject',
-  'personal-space': 'transferOutToPersonalSpace',
-  library: 'transferOutToLibrary',
-};
-
-/** 入向字段选择：目标为项目时，按源域类型取 transferIn* 字段（对齐后端 TRANSFER_IN_FIELD） */
-const TRANSFER_IN_FIELD: Record<
-  TransferRootKind,
-  keyof ProjectTransferSettings
-> = {
-  project: 'transferInFromProject',
-  'personal-space': 'transferInFromPersonalSpace',
-  library: 'transferInFromLibrary',
-};
-
-/**
- * 策略是否放行指定操作（对齐后端 modeAllows）：
- * ALL 全放行；COPY_ONLY 仅复制；MOVE_ONLY 仅移动；NONE 拒绝。
- * 注意：此处仅处理非 null 设置，null 由调用方在 evaluate 中按「保守拒绝」处理
- * （区别于后端「非项目根 null=恒允许」——前端无法区分查询失败与非项目根，
- * 故由调用方通过 rootKind 跳过检查，真正进入检查时 null 即视为不可确认）。
- */
-function operationAllows(
-  operation: TransferOperation,
-  setting: TransferMode
-): boolean {
-  if (setting === 'ALL') return true;
-  if (operation === 'copy') return setting === 'COPY_ONLY';
-  return setting === 'MOVE_ONLY';
+/** PC 归属根类型（`'personal-space'` kebab）→ platform 域（`'personalSpace'` camel） */
+function toPlatformDomain(kind: TransferRootKind): TransferDomain {
+  return kind === 'personal-space' ? 'personalSpace' : kind;
 }
 
 /**
  * 评估跨项目转移是否允许（粘贴/移动/复制共用）。
- *
- * 判定规则（与后端 6 域矩阵一致）：
- * - 同项目或任一侧域非项目根（sourceRootKind / targetRootKind 非 'project'）时，
- *   仅对项目侧做策略检查；非项目侧无字段恒允许。
- * - 出向：sourceRootKind === 'project' 时查 sourceSettings[transferOut*目标域]；
- * - 入向：targetRootKind === 'project' 时查 targetSettings[transferIn*源域]；
- * - 两向都放行才 allowed；任一设置缺失（null）→ 保守拒绝（FORBIDDEN）。
+ * 判定口径已收敛到 `@cloudcad/platform` 的 `evaluateCrossProjectTransfer`
+ * （6 域矩阵 + 库-move 预判，与移动端共用）；本函数只做入参映射 + 枚举→i18n 源串映射。
  */
 export function evaluateCrossProjectTransfer(params: {
   operation: TransferOperation;
@@ -131,6 +101,7 @@ export function evaluateCrossProjectTransfer(params: {
     targetSettings,
   } = params;
 
+  // 同项目/无 id：无跨项目约束（保留原短路，避免空 id 误入 6 域检查）
   if (
     !sourceProjectId ||
     !targetProjectId ||
@@ -139,39 +110,23 @@ export function evaluateCrossProjectTransfer(params: {
     return { allowed: true, crossProject: false };
   }
 
-  // 出向：源为项目时，按目标域类型查 transferOut* 字段
-  if (sourceRootKind === 'project') {
-    const field = TRANSFER_OUT_FIELD[targetRootKind];
-    const setting = sourceSettings?.[field];
-    if (setting == null || !operationAllows(operation, setting)) {
-      return {
-        allowed: false,
-        crossProject: true,
-        reasonKey:
-          setting == null
-            ? TRANSFER_BLOCK_REASONS.SOURCE_PROJECT_FORBIDDEN
-            : TRANSFER_BLOCK_REASONS.SOURCE_MODE_MISMATCH,
-      };
-    }
-  }
+  // 判定口径已收敛到 @cloudcad/platform（与移动端共用，含库-move 预判），
+  // 本文件只做入参映射 + 枚举→i18n 源串映射。
+  const verdict = platformEvaluateCrossProjectTransfer({
+    operation,
+    source: { id: sourceProjectId, domain: toPlatformDomain(sourceRootKind) },
+    target: { id: targetProjectId, domain: toPlatformDomain(targetRootKind) },
+    sourceSettings: sourceSettings ?? null,
+    targetSettings: targetSettings ?? null,
+  });
 
-  // 入向：目标为项目时，按源域类型查 transferIn* 字段
-  if (targetRootKind === 'project') {
-    const field = TRANSFER_IN_FIELD[sourceRootKind];
-    const setting = targetSettings?.[field];
-    if (setting == null || !operationAllows(operation, setting)) {
-      return {
-        allowed: false,
-        crossProject: true,
-        reasonKey:
-          setting == null
-            ? TRANSFER_BLOCK_REASONS.TARGET_PROJECT_FORBIDDEN
-            : TRANSFER_BLOCK_REASONS.TARGET_MODE_MISMATCH,
-      };
-    }
-  }
-
-  return { allowed: true, crossProject: true };
+  return {
+    allowed: verdict.allowed,
+    crossProject: verdict.crossProject,
+    reasonKey: verdict.reason
+      ? TRANSFER_BLOCK_REASONS[verdict.reason]
+      : undefined,
+  };
 }
 
 /** 剪贴板模式（向后兼容粘贴场景） */

@@ -15,6 +15,7 @@ import {
   formatFileSize,
   getFileIcon,
   formatDate,
+  formatRelativeTime,
   isCadFile,
   isImageFile,
   isPdfFile,
@@ -47,6 +48,40 @@ describe('fileUtils', () => {
 
     it('should handle large files', () => {
       expect(formatFileSize(1024 * 1024 * 1024 * 5)).toBe('5 GB');
+    });
+
+    it('should format TB (platform 口径 B~TB 上界)', () => {
+      expect(formatFileSize(1024 * 1024 * 1024 * 1024)).toBe('1 TB');
+      expect(formatFileSize(1024 * 1024 * 1024 * 1024 * 3)).toBe('3 TB');
+    });
+  });
+
+  describe('formatRelativeTime', () => {
+    it('just_now / 分钟 / 小时 档', () => {
+      expect(
+        formatRelativeTime(new Date(Date.now() - 30_000).toISOString())
+      ).toBe('刚刚');
+      expect(
+        formatRelativeTime(new Date(Date.now() - 5 * 60_000).toISOString())
+      ).toBe('5分钟前');
+      expect(
+        formatRelativeTime(new Date(Date.now() - 3 * 3_600_000).toISOString())
+      ).toBe('3小时前');
+    });
+
+    it('天 / 周 / 月 / 年 档（无「昨天」特例、无绝对日期回退）', () => {
+      expect(
+        formatRelativeTime(new Date(Date.now() - 1 * 86_400_000).toISOString())
+      ).toBe('1天前');
+      expect(
+        formatRelativeTime(new Date(Date.now() - 10 * 86_400_000).toISOString())
+      ).toBe('1周前');
+      expect(
+        formatRelativeTime(new Date(Date.now() - 45 * 86_400_000).toISOString())
+      ).toBe('1个月前');
+      expect(
+        formatRelativeTime(new Date(Date.now() - 400 * 86_400_000).toISOString())
+      ).toBe('1年前');
     });
   });
 

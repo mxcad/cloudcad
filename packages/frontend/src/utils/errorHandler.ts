@@ -15,6 +15,11 @@
  * 提供一致的错误处理和用户反馈
  */
 
+import {
+  isAbortError as _isAbortError,
+  isServerError as _isServerError,
+} from '@cloudcad/platform';
+
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export interface AppError {
@@ -125,44 +130,7 @@ export const isNetworkError = (error: unknown): boolean => {
  * @param error - 错误对象
  * @returns boolean - 是否为请求取消错误
  */
-export const isAbortError = (error: unknown): boolean => {
-  // 检查 apiClient 设置的标志
-  if (typeof error === 'object' && error !== null) {
-    if ('isAborted' in error && (error as { isAborted?: boolean }).isAborted) {
-      return true;
-    }
-    // 检查 axios 错误码
-    const axiosError = error as { code?: string };
-    if (
-      axiosError.code === 'ERR_CANCELED' ||
-      axiosError.code === 'ERR_FR_TXN_CANCELLED'
-    ) {
-      return true;
-    }
-  }
-
-  if (error instanceof Error) {
-    // AbortController 取消
-    if (error.name === 'AbortError') {
-      return true;
-    }
-    // Axios CanceledError
-    if (error.name === 'CanceledError') {
-      return true;
-    }
-    // Axios 取消消息（某些版本）
-    if (error.message === 'canceled') {
-      return true;
-    }
-  }
-
-  // 检查 DOMException (AbortController)
-  if (error instanceof DOMException && error.name === 'AbortError') {
-    return true;
-  }
-
-  return false;
-};
+export const isAbortError = (error: unknown): boolean => _isAbortError(error);
 
 /**
  * 检查是否为认证错误
@@ -185,12 +153,4 @@ import { t } from '@/languages';
  * @param error - 错误对象
  * @returns boolean - 是否为服务器错误
  */
-export const isServerError = (error: unknown): boolean => {
-  if (typeof error === 'object' && error !== null) {
-    const err = error as { response?: { status?: number } };
-    const status = err.response?.status;
-    return status !== undefined && status >= 500 && status < 600;
-  }
-
-  return false;
-};
+export const isServerError = (error: unknown): boolean => _isServerError(error);

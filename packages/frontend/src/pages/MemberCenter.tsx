@@ -43,6 +43,7 @@ import {
 import { usePaymentRefresh } from '@/hooks/billing/usePaymentRefresh';
 import { formatConfigValue, getConfigLabel } from '@/utils/tierConfigUtils';
 import { centsToYuan } from '@/utils/priceUtils';
+import { usagePercent } from '@cloudcad/platform';
 import {
   BENEFIT_ITEMS,
   FAQ_ITEMS,
@@ -328,10 +329,13 @@ export default function MemberCenter() {
 
   const tierForPrice = paidTiers[selectedTierIdx] ?? paidTiers[0] ?? null;
 
-  const getQuotaValue = useCallback((tier: VipTier, key: string): string => {
-    const cfg = tier.configs as Record<string, unknown>;
-    return formatConfigValue(key, cfg[key]);
-  }, []);
+  const getQuotaValue = useCallback(
+    (tier: VipTier, key: string): string => {
+      const cfg = tier.configs as Record<string, unknown>;
+      return formatConfigValue(key, cfg[key], registry);
+    },
+    [registry]
+  );
 
   if (!MEMBERSHIP_ENABLED) {
     return (
@@ -685,6 +689,11 @@ export default function MemberCenter() {
                   const currentVal = currentCfg?.[key];
                   const hasStorageGauge =
                     key === 'quota.personal_storage_mb' && storageInfo;
+                  // 存储用量百分比：由 used/total 计算（收敛到 @cloudcad/platform，
+                  // 与后端 storage-info.service 的 usagePercent 同公式）
+                  const storagePct = hasStorageGauge
+                    ? usagePercent(storageInfo!.used, storageInfo!.total)
+                    : 0;
                   const label =
                     getConfigLabel(registry, key) || t(fallbackTitle);
 
@@ -708,7 +717,7 @@ export default function MemberCenter() {
                             {currentVal !== undefined && (
                               <Tag variant="primary" size="sm">
                                 {t('当前: {val}', {
-                                  val: formatConfigValue(key, currentVal),
+                                  val: formatConfigValue(key, currentVal, registry),
                                 })}
                               </Tag>
                             )}
@@ -739,11 +748,11 @@ export default function MemberCenter() {
                                 <div
                                   className="h-full rounded-full transition-all duration-500"
                                   style={{
-                                    width: `${Math.min(storageInfo!.usagePercent ?? 0, 100)}%`,
+                                    width: `${storagePct}%`,
                                     background:
-                                      (storageInfo!.usagePercent ?? 0) > 90
+                                      storagePct > 90
                                         ? 'var(--error)'
-                                        : (storageInfo!.usagePercent ?? 0) > 70
+                                        : storagePct > 70
                                           ? 'var(--warning)'
                                           : color,
                                   }}
@@ -754,9 +763,7 @@ export default function MemberCenter() {
                                 style={{ color: 'var(--text-tertiary)' }}
                               >
                                 {t('使用率 {pct}%', {
-                                  pct: String(
-                                    (storageInfo!.usagePercent ?? 0).toFixed(1)
-                                  ),
+                                  pct: String(storagePct.toFixed(1)),
                                 })}
                               </div>
                             </div>

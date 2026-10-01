@@ -3,8 +3,7 @@ import {
   getBrandProfile,
   type BrandSupport,
 } from '@/constants/appConfig';
-
-const LEGAL_PLACEHOLDER_RE = /\{\{\s*([a-zA-Z][a-zA-Z0-9]*)\s*\}\}/g;
+import { resolvePlaceholders } from '@cloudcad/platform';
 
 /**
  * 解析法务正文里的品牌占位符。
@@ -14,6 +13,7 @@ const LEGAL_PLACEHOLDER_RE = /\{\{\s*([a-zA-Z][a-zA-Z0-9]*)\s*\}\}/g;
  * `{{双花括号}}` 占位符并在这一处自行替换。刻意区别于 i18n 的 `{单花括号}`
  * flexvars，避免被二次插值。
  *
+ * 替换实现收敛到 @cloudcad/platform 的 resolvePlaceholders（与移动端共用）；
  * 未知占位符原样保留：配置漏项时页面会直接显示 `{{xxx}}`，比静默吞掉更容易被发现。
  */
 export function resolveLegalText(
@@ -33,5 +33,5 @@ export function resolveLegalText(
     supportEmail: contact.email,
   };
 
-  return text.replace(LEGAL_PLACEHOLDER_RE, (match, key) => vars[key] ?? match);
+  return resolvePlaceholders(text, vars);
 }

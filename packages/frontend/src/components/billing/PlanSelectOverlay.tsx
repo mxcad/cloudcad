@@ -149,7 +149,7 @@ export default function PlanSelectOverlay() {
   const features = useMemo(() => {
     return configEntries.map(([k, v]) => {
       const label = getConfigLabel(registry, k);
-      const val = formatConfigValueShort(k, v);
+      const val = formatConfigValueShort(k, v, registry);
       return `${label}: ${val}`;
     });
   }, [configEntries, registry]);

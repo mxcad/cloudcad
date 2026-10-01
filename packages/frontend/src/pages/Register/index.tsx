@@ -9,6 +9,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useRegisterForm } from './hooks/useRegisterForm';
 import { usePhoneVerification } from './hooks/usePhoneVerification';
 import { t } from '@/languages';
+import { scorePasswordStrength } from '@cloudcad/platform';
 import { RegisterLayout } from './RegisterLayout';
 import { RegisterClosed } from './RegisterClosed';
 import { RegisterBrand } from './RegisterBrand';
@@ -160,11 +161,8 @@ export const Register: React.FC = () => {
     password: string
   ): { strength: number; label: string; color: string } => {
     if (!password) return { strength: 0, label: '', color: '' };
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-    if (/\d/.test(password)) score++;
-    if (/[^a-zA-Z0-9]/.test(password)) score++;
+    // 评分收敛到 @cloudcad/platform（与移动端共用），这里只映射本端标签/颜色
+    const score = scorePasswordStrength(password);
 
     const levels = [
       { label: t('太弱'), color: '#ef4444' },

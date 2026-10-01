@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePasswordChange } from './usePasswordChange';
 import { usersControllerUploadAvatar } from '@/api-sdk';
 import { t } from '@/languages';
+import { scorePasswordStrength } from '@cloudcad/platform';
 
 export interface PasswordStrengthResult {
   strength: number;
@@ -41,11 +42,8 @@ export function usePasswordProfile({
 
   const getPasswordStrength = (password: string): PasswordStrengthResult => {
     if (!password) return { strength: 0, label: '', color: '' };
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-    if (/\d/.test(password)) score++;
-    if (/[^a-zA-Z0-9]/.test(password)) score++;
+    // 评分收敛到 @cloudcad/platform（与移动端共用），这里只映射本端标签/颜色
+    const score = scorePasswordStrength(password);
     const levels = [
       { label: t('太弱'), color: '#ef4444' },
       { label: t('较弱'), color: '#f97316' },

@@ -1,7 +1,13 @@
 import { t } from '@/languages';
+import {
+  SHARE_EXPIRATION_VALUES,
+  computeExpiresAtIso,
+  detectShareExpiration,
+  isShareExpired,
+} from '@cloudcad/platform';
+import type { ShareExpirationOption } from '@cloudcad/platform';
 
-export type ExpirationOption =
-  'immediate' | 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom';
+export type ExpirationOption = ShareExpirationOption;
 
 export function getExpirationLabels(): Record<ExpirationOption, string> {
   return {
@@ -17,46 +23,21 @@ export function getExpirationLabels(): Record<ExpirationOption, string> {
   };
 }
 
-export const EXPIRATION_VALUES: Record<
-  Exclude<ExpirationOption, 'immediate' | 'never' | 'custom'>,
-  number
-> = {
-  '2h': 7200,
-  '6h': 21600,
-  '12h': 43200,
-  '1d': 86400,
-  '3d': 259200,
-  '7d': 604800,
-};
+// 预设秒数 / 反推选中项 / 到期时间计算 / 过期判定已收敛到 @cloudcad/platform（与移动端共用）
+export const EXPIRATION_VALUES = SHARE_EXPIRATION_VALUES;
 
 export function detectExpiration(expiresAt: string | null): {
   option: ExpirationOption;
   customDays: number;
 } {
-  if (!expiresAt) return { option: 'never', customDays: 1 };
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return { option: 'immediate', customDays: 1 };
-  if (diff <= 7200 * 1000) return { option: '2h', customDays: 1 };
-  if (diff <= 21600 * 1000) return { option: '6h', customDays: 1 };
-  if (diff <= 43200 * 1000) return { option: '12h', customDays: 1 };
-  if (diff <= 86400 * 1000) return { option: '1d', customDays: 1 };
-  if (diff <= 259200 * 1000) return { option: '3d', customDays: 1 };
-  if (diff <= 604800 * 1000) return { option: '7d', customDays: 1 };
-  return { option: 'custom', customDays: Math.ceil(diff / (86400 * 1000)) };
+  return detectShareExpiration(expiresAt);
 }
 
 export function computeExpiresAt(
   expiration: ExpirationOption,
   customDays: number
 ): string | null {
-  if (expiration === 'immediate')
-    return new Date(Date.now() - 1000).toISOString();
-  if (expiration === 'never') return null;
-  if (expiration === 'custom')
-    return new Date(Date.now() + customDays * 86400 * 1000).toISOString();
-  return new Date(
-    Date.now() + EXPIRATION_VALUES[expiration] * 1000
-  ).toISOString();
+  return computeExpiresAtIso(expiration, customDays);
 }
 
 export function formatExpiryDate(dateStr: string | null): string {
@@ -69,6 +50,5 @@ export function formatExpiryDate(dateStr: string | null): string {
 }
 
 export function isExpired(expiresAt: string | null): boolean {
-  if (!expiresAt) return false;
-  return new Date(expiresAt).getTime() <= Date.now();
+  return isShareExpired(expiresAt);
 }

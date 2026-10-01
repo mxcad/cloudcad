@@ -1,9 +1,17 @@
+import {
+  centsToYuan as platformCentsToYuan,
+  orderAmountCents,
+  originalAmountCents,
+} from '@cloudcad/platform';
+
 export function formatYuan(yuan: number): string {
   return yuan.toFixed(2);
 }
 
+// 计价公式与分→元换算已收敛到 @cloudcad/platform（与移动端共用，
+// 公式与后端 BillingService.createOrder 一致）
 export function centsToYuan(cents: number): string {
-  return formatYuan(cents / 100);
+  return platformCentsToYuan(cents);
 }
 
 /**
@@ -16,7 +24,7 @@ export function calculatePriceInCents(
   multiplierBps: number,
   months: number
 ): number {
-  return Math.round((baseMonthlyPrice * multiplierBps * months) / 10000);
+  return orderAmountCents(baseMonthlyPrice, multiplierBps, months);
 }
 
 /**
@@ -26,5 +34,5 @@ export function calculateOriginalPriceInCents(
   baseMonthlyPrice: number,
   months: number
 ): number {
-  return Math.round(baseMonthlyPrice * months);
+  return originalAmountCents(baseMonthlyPrice, months);
 }

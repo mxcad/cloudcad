@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { t } from '@/languages';
 import { Z_LAYERS } from '@/constants/layers';
+import { formatBytes as formatFileSize } from '@cloudcad/platform';
 
 interface ExternalReferencePanelProps {
   isOpen: boolean;
@@ -26,18 +27,6 @@ interface ExternalReferencePanelProps {
   onRefresh: () => void;
   onComplete: () => void;
   onClose: () => void;
-}
-
-function formatFileSize(bytes?: number): string {
-  if (bytes === undefined || bytes === 0) return '--';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
 }
 
 export const ExternalReferencePanel: React.FC<ExternalReferencePanelProps> = ({

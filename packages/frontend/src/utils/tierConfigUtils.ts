@@ -1,4 +1,5 @@
 import { t } from '@/languages';
+import { resolveQuotaValue } from '@cloudcad/platform';
 
 export interface ConfigRegistryEntry {
   id: string;
@@ -53,18 +54,37 @@ const QUOTA_FORMATTERS: Record<
     t('{hours} 小时/窗口', { hours: String(v) }),
 };
 
-function formatQuota(key: string, value: unknown, style: FormatStyle): string {
-  const v = Number(value) || 0;
+// 数值解析收敛到 @cloudcad/platform 的 resolveQuotaValue（与移动端共用）：
+// 档位配置优先，缺键/非数字回落 registry 默认值（ADR-0043，与后端回落语义一致）
+function formatQuota(
+  key: string,
+  value: unknown,
+  style: FormatStyle,
+  registry?: RegistryMap
+): string {
+  const v = resolveQuotaValue(
+    value === undefined ? undefined : { [key]: value },
+    key,
+    registry
+  );
   const fmt = QUOTA_FORMATTERS[key];
   return fmt ? fmt(v, style) : String(v);
 }
 
-export function formatConfigValue(key: string, value: unknown): string {
-  return formatQuota(key, value, 'full');
+export function formatConfigValue(
+  key: string,
+  value: unknown,
+  registry?: RegistryMap
+): string {
+  return formatQuota(key, value, 'full', registry);
 }
 
-export function formatConfigValueShort(key: string, value: unknown): string {
-  return formatQuota(key, value, 'short');
+export function formatConfigValueShort(
+  key: string,
+  value: unknown,
+  registry?: RegistryMap
+): string {
+  return formatQuota(key, value, 'short', registry);
 }
 
 const KEY_ALIASES: Record<string, string> = {

@@ -65,58 +65,36 @@ afterEach(() => {
 
 const FIXED = new Date(2026, 8, 17, 12, 30, 45);
 
-describe('locale 取运行时激活语言', () => {
-  it('默认 zh-CN', () => {
-    expect(captureIntl(() => formatDateTime(FIXED))[0]?.locale).toBe('zh-CN');
+describe('绝对日期/时间（固定格式，locale 无关，口径收敛到 platform）', () => {
+  it('formatDate / formatDateTime / formatDateTimeWithSeconds 固定 ISO-like 格式', () => {
+    expect(formatDate(FIXED)).toBe('2026-09-17');
+    expect(formatDateTime(FIXED)).toBe('2026-09-17 12:30');
+    expect(formatDateTimeWithSeconds(FIXED)).toBe('2026-09-17 12:30:45');
   });
 
-  it('en-US 界面下不再输出 zh-CN 格式', () => {
+  it('与界面语言无关（en-US 下仍是固定格式，不再走 Intl）', () => {
     lang.current = 'en-US';
-    expect(captureIntl(() => formatDateTime(FIXED))[0]?.locale).toBe('en-US');
-    expect(captureIntl(() => formatDateTimeWithSeconds(FIXED))[0]?.locale).toBe('en-US');
-    expect(captureIntl(() => formatDate(FIXED))[0]?.locale).toBe('en-US');
+    expect(formatDate(FIXED)).toBe('2026-09-17');
+    expect(formatDateTime(FIXED)).toBe('2026-09-17 12:30');
+    expect(captureIntl(() => formatDateTime(FIXED))).toHaveLength(0);
+  });
+
+  it('formatTime 仍按运行时语言本地化（PC 独有 time-only，未收敛）', () => {
+    expect(captureIntl(() => formatTime(FIXED))[0]?.locale).toBe('zh-CN');
+    lang.current = 'en-US';
     expect(captureIntl(() => formatTime(FIXED))[0]?.locale).toBe('en-US');
-  });
-
-  it('ko-KR 界面下四个函数统一跟随', () => {
-    lang.current = 'ko-KR';
-    const locales = [
-      captureIntl(() => formatDateTime(FIXED))[0]?.locale,
-      captureIntl(() => formatDateTimeWithSeconds(FIXED))[0]?.locale,
-      captureIntl(() => formatDate(FIXED))[0]?.locale,
-      captureIntl(() => formatTime(FIXED))[0]?.locale,
-    ];
-    expect(locales).toEqual(['ko-KR', 'ko-KR', 'ko-KR', 'ko-KR']);
-  });
-
-  it('zh-TW 界面下跟随', () => {
-    lang.current = 'zh-TW';
-    expect(captureIntl(() => formatDate(FIXED))[0]?.locale).toBe('zh-TW');
-  });
-
-  it('含秒的变体声明 second，其余三个不声明', () => {
-    const withSeconds = captureIntl(() => formatDateTimeWithSeconds(FIXED))[0];
-    const withoutSeconds = captureIntl(() => formatDateTime(FIXED))[0];
-    expect(withSeconds?.options.second).toBe('2-digit');
-    expect(withoutSeconds?.options.second).toBeUndefined();
-  });
-
-  it('四个函数的 method 选择正确（dateTime→toLocaleString、date→toLocaleDateString、time→toLocaleTimeString）', () => {
-    expect(captureIntl(() => formatDateTime(FIXED))[0]?.method).toBe('toLocaleString');
-    expect(captureIntl(() => formatDate(FIXED))[0]?.method).toBe('toLocaleDateString');
-    expect(captureIntl(() => formatTime(FIXED))[0]?.method).toBe('toLocaleTimeString');
   });
 });
 
 describe('非法日期', () => {
-  it('formatDateTime / formatDate / formatTime 回退 "-"', () => {
-    expect(formatDateTime('not-a-date')).toBe('-');
-    expect(formatDate('not-a-date')).toBe('-');
-    expect(formatTime('not-a-date')).toBe('-');
+  it('formatDateTime / formatDate / formatDateTimeWithSeconds 回退空串（口径统一到 platform）', () => {
+    expect(formatDateTime('not-a-date')).toBe('');
+    expect(formatDate('not-a-date')).toBe('');
+    expect(formatDateTimeWithSeconds('not-a-date')).toBe('');
   });
 
-  it('非法输入不进 Intl 格式化路径', () => {
-    expect(captureIntl(() => formatDateTime('not-a-date'))).toHaveLength(0);
+  it('formatTime 仍回退 "-"（PC 独有 time-only，未收敛）', () => {
+    expect(formatTime('not-a-date')).toBe('-');
   });
 });
 
@@ -131,10 +109,10 @@ describe('getRelativeTime', () => {
     expect(getRelativeTime(new Date(Date.now() - 2 * 86_400_000))).toBe('2天前');
   });
 
-  it('超过 30 天回退为日期字符串（非相对文案）', () => {
-    const result = getRelativeTime(new Date(Date.now() - 45 * 86_400_000));
-    expect(result).toMatch(/^\d{4}/);
-    expect(result).not.toMatch(/(刚刚|分钟前|小时前|天前)$/);
+  it('周 / 月 / 年 档（统一相对表述，无绝对日期回退）', () => {
+    expect(getRelativeTime(new Date(Date.now() - 10 * 86_400_000))).toBe('1周前');
+    expect(getRelativeTime(new Date(Date.now() - 45 * 86_400_000))).toBe('1个月前');
+    expect(getRelativeTime(new Date(Date.now() - 400 * 86_400_000))).toBe('1年前');
   });
 });
 
