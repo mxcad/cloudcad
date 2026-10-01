@@ -182,6 +182,11 @@ jobs:
           node scripts/check-generated-clean.js
           pnpm --filter frontend type-check
 
+      - name: 运行 platform 跨端公共层单元测试
+        run: |
+          cd packages/platform
+          pnpm test
+
       - name: 运行前端单元测试
         run: |
           cd packages/frontend

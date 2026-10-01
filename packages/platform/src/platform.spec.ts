@@ -19,7 +19,7 @@ import {
   resolveMobileRoute,
   resolvePcPath,
   shouldUseMobilePresentation,
-} from '@cloudcad/platform';
+} from './index';
 
 describe('@cloudcad/platform · env/device', () => {
   const UA = {
