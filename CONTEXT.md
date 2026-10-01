@@ -221,6 +221,10 @@ _避免_: 编辑器状态（指 store 本身）、当前文件状态、session �
 「打开一张图纸」的编排深模块——打开前守卫、全局 loading 配对、URL 构造（缓存戳）、引擎打开命令、打开完成事件与错误收尾只有一处实现。PC 端入口为 `services/mxcadManager/openDrawing.ts` 的 `openDrawing(req)`（判别联合：library / node / public-hash / external-ref，图纸库/图块库孪生折叠为 libraryKey 参数）；移动端入口为 `services/drawingOpener.ts` 的 `openDrawing(req)`（node / library / share / hash），实现载体为 useFileLoader。调用方只描述「打开什么」；成功时编辑器会话状态（fileId/permissions/projectId 等）由 interface 契约保证完整——绕过它直拼 URL 打开会静默退化（保存变另存为、缩略图不上传）。引擎层打开命令（PC `mxcadOpenFlow.openFile`、移动 `openMxWeb`）是其下游实现，不是编排入口。
 _避免_: 打开文件服务、openFile 包装器（指编排层）
 
+**运维中心（Ops Center）**:
+私有化部署场景的网页运维入口，是运维 CLI（cloudcad 入口）全部运维能力的可视化形态——服务状态与启停、部署/升级、数据库迁移、备份恢复、日志查看与打包、管理员 TOTP 解绑。面向部署机运维人员（可以是零运维经验的人），与产品管理后台（业务面，面向系统管理员）是两个独立入口。域约束：承载它的服务在部署全程存活（部署会停应用层，运维中心不能随之失联）。
+_避免_: 部署中心、运维后台、控制台
+
 **私有化部署（Private Deployment / TOB）**:
 面向企业客户的部署模式——客户在自己的基础设施上部署完整 CloudCAD 栈（含 PostgreSQL、Redis、SVN、mxcadassembly 协同服务等），由客户自行运维。协同功能（Collaboration）仅在私有化部署下可用，通过运行时配置 `collaboration_enabled` 控制开关。
 _Avoid_: 离线部署、自托管

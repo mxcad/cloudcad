@@ -21,6 +21,7 @@ const routes = [
   require('./routes/runtime-config'),
   require('./routes/database'),
   require('./routes/service'),
+  require('./routes/ops'),
 ];
 
 async function handleRequest(req, res) {

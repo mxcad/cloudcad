@@ -1790,6 +1790,7 @@
         <!-- 标签页 -->
         <div class="tabs">
           <div class="tab" data-tab="services">服务管理</div>
+          <div class="tab" data-tab="ops">运维中心</div>
           <div class="tab" data-tab="frontend">前端配置</div>
           <div class="tab" data-tab="config">环境配置</div>
           <div class="tab" data-tab="database">数据库备份</div>
@@ -1905,6 +1906,80 @@
           </div>
         </div>
 
+        <!-- 运维中心（ADR-0071） -->
+        <div id="opsTab" class="card hidden">
+          <!-- 当前任务进度 -->
+          <div id="opsTaskPanel" class="hidden" style="background:#0d0d1a;border-radius:8px;padding:16px;margin-bottom:20px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+              <h3 style="margin:0;border:none;padding:0;font-size:16px" id="opsTaskTitle">任务</h3>
+              <span id="opsTaskStatus" style="font-size:13px;font-weight:bold"></span>
+            </div>
+            <div style="font-size:12px;color:#888;margin-bottom:8px" id="opsTaskMeta"></div>
+            <pre id="opsTaskLines" style="max-height:260px;overflow-y:auto;background:#05050c;border:1px solid #333;border-radius:6px;padding:10px;font-size:12px;line-height:1.6;color:#9fd6ff;white-space:pre-wrap;margin:0 0 10px 0"></pre>
+            <div id="opsTaskResult" style="font-size:13px"></div>
+          </div>
+
+          <!-- 常用操作 -->
+          <h3 style="color:#00d9ff;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px">服务操作</h3>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+            <button class="btn btn-primary" id="opsStartBtn">启动服务</button>
+            <button class="btn btn-warning" id="opsStopAppsBtn">停止应用服务</button>
+            <button class="btn btn-danger" id="opsStopAllBtn">完全停止（危险）</button>
+          </div>
+          <div style="font-size:12px;color:#888;margin-bottom:24px">
+            启动 = 拉起基础服务与前后端（已在运行的不重启）；停止应用服务 = 只停后端/前端/转换，数据库保持在线；完全停止 = 连数据库一起停，本页面将随之失联，恢复需到服务器运行 start。
+          </div>
+
+          <!-- 部署 / 升级 -->
+          <h3 style="color:#00d9ff;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px">部署 / 升级</h3>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+            <label style="color:#aaa;font-size:14px;display:flex;align-items:center;gap:6px">
+              <input type="radio" name="opsBuildMode" value="skip" checked /> 使用现有构建产物（推荐）
+            </label>
+            <label style="color:#aaa;font-size:14px;display:flex;align-items:center;gap:6px">
+              <input type="radio" name="opsBuildMode" value="build" /> 重新构建
+            </label>
+            <button class="btn btn-primary" id="opsDeployBtn">开始部署</button>
+          </div>
+          <div style="font-size:12px;color:#888;margin-bottom:24px">
+            部署向导会自动完成：停止应用 → 版本检查 → 数据库迁移 → 构建（可选）→ 启动 → 版本验证。全程进度在上方任务面板展示。
+          </div>
+
+          <!-- 数据库迁移 -->
+          <h3 style="color:#00d9ff;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px">数据库</h3>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:24px">
+            <button class="btn btn-primary" id="opsMigrateBtn">执行数据库迁移</button>
+            <span style="font-size:12px;color:#888">应用 schema 变更；迁移前自动备份，备份失败会中止</span>
+          </div>
+
+          <!-- 日志中心 -->
+          <h3 style="color:#00d9ff;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px">日志中心</h3>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+            <button class="btn btn-secondary" id="opsLogsRefreshBtn">刷新日志位置</button>
+            <label style="color:#aaa;font-size:14px">仅最近
+              <input type="number" id="opsLogDays" value="0" min="0" style="width:60px;padding:6px;border:1px solid #333;border-radius:6px;background:#1a1a2e;color:#fff;font-size:13px" /> 天（0=全部）
+            </label>
+            <button class="btn btn-primary" id="opsLogBundleBtn">打包全部日志</button>
+          </div>
+          <div id="opsLogLocations" style="font-size:13px;color:#aaa;margin-bottom:16px">点击「刷新日志位置」查看全部日志文件</div>
+          <div id="opsLogViewBox" class="hidden" style="margin-bottom:24px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <strong id="opsLogViewName" style="color:#00d9ff;font-size:13px"></strong>
+              <button class="btn btn-secondary" id="opsLogViewRefreshBtn" style="font-size:12px">刷新</button>
+            </div>
+            <pre id="opsLogViewLines" style="max-height:300px;overflow:auto;background:#05050c;border:1px solid #333;border-radius:6px;padding:10px;font-size:12px;line-height:1.6;color:#9fd6ff;white-space:pre-wrap;margin:0"></pre>
+          </div>
+
+          <!-- 管理员 TOTP 解绑 -->
+          <h3 style="color:#00d9ff;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px">管理员 TOTP 解绑</h3>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="opsMfaUsername" placeholder="管理员用户名"
+              style="width:200px;padding:8px;border:1px solid #333;border-radius:6px;background:#1a1a2e;color:#fff;font-size:14px" />
+            <button class="btn btn-danger" id="opsMfaUnbindBtn">解绑 TOTP</button>
+            <span style="font-size:12px;color:#888">管理员丢失验证器时的恢复通道，操作写入审计</span>
+          </div>
+        </div>
+
         <!-- 恢复确认模态框 -->
         <div id="restoreModal" class="modal-overlay hidden">
           <div class="modal-content">
@@ -1993,11 +2068,15 @@
             document
               .getElementById('databaseTab')
               .classList.toggle('hidden', tabName !== 'database');
+            document
+              .getElementById('opsTab')
+              .classList.toggle('hidden', tabName !== 'ops');
 
             if (tabName === 'services') loadServices();
             if (tabName === 'frontend') loadFrontendConfig();
             if (tabName === 'config') loadConfig();
             if (tabName === 'database') loadBackups();
+            if (tabName === 'ops') onOpsTabActivated();
           });
         });
 
@@ -2024,12 +2103,357 @@
               e.target.value !== 'CONFIRM';
           });
 
+        // 运维中心事件绑定（ADR-0071）
+        document.getElementById('opsStartBtn').addEventListener('click', opsStart);
+        document
+          .getElementById('opsStopAppsBtn')
+          .addEventListener('click', opsStopApps);
+        document
+          .getElementById('opsStopAllBtn')
+          .addEventListener('click', opsStopAll);
+        document
+          .getElementById('opsDeployBtn')
+          .addEventListener('click', opsDeploy);
+        document
+          .getElementById('opsMigrateBtn')
+          .addEventListener('click', opsMigrate);
+        document
+          .getElementById('opsMfaUnbindBtn')
+          .addEventListener('click', opsMfaUnbind);
+        document
+          .getElementById('opsLogsRefreshBtn')
+          .addEventListener('click', loadLogLocations);
+        document
+          .getElementById('opsLogBundleBtn')
+          .addEventListener('click', opsLogBundle);
+        document
+          .getElementById('opsLogViewRefreshBtn')
+          .addEventListener('click', () => {
+            if (currentViewLog) viewLogFile(currentViewLog);
+          });
+
         if (token) {
           checkAuth();
         } else {
           showLogin();
         }
       });
+
+      // ==================== 运维中心（ADR-0071） ====================
+      let opsPollTimer = null;
+      let currentViewLog = null;
+
+      function opsApi(pathname, options = {}) {
+        return fetch(pathname, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + token,
+            ...(options.headers || {}),
+          },
+        });
+      }
+
+      function handleOps401(res) {
+        if (res.status === 401) {
+          localStorage.removeItem('config_token');
+          token = '';
+          showLogin();
+          return true;
+        }
+        return false;
+      }
+
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[c]);
+      }
+
+      function onOpsTabActivated() {
+        refreshOpsTask();
+        loadLogLocations();
+      }
+
+      const OPS_STATUS_TEXT = {
+        running: '⏳ 执行中',
+        success: '✅ 已完成',
+        failed: '❌ 失败',
+        interrupted: '⚠️ 已中断',
+      };
+      const OPS_STATUS_COLOR = {
+        running: '#f39c12',
+        success: '#2ecc71',
+        failed: '#e74c3c',
+        interrupted: '#e67e22',
+      };
+
+      function renderOpsTask(task) {
+        const panel = document.getElementById('opsTaskPanel');
+        if (!task) {
+          panel.classList.add('hidden');
+          stopOpsPolling();
+          return;
+        }
+        panel.classList.remove('hidden');
+        document.getElementById('opsTaskTitle').textContent =
+          task.label || task.kind;
+        const st = document.getElementById('opsTaskStatus');
+        st.textContent = OPS_STATUS_TEXT[task.status] || task.status;
+        st.style.color = OPS_STATUS_COLOR[task.status] || '#aaa';
+        document.getElementById('opsTaskMeta').textContent =
+          '开始: ' + (task.startedAt || '-') +
+          (task.finishedAt ? '    结束: ' + task.finishedAt : '');
+        const lines = document.getElementById('opsTaskLines');
+        lines.textContent =
+          (task.lines || []).join('\n') || '（暂无输出，任务启动中...）';
+        lines.scrollTop = lines.scrollHeight;
+
+        const resultBox = document.getElementById('opsTaskResult');
+        resultBox.innerHTML = '';
+        if (task.status === 'failed' && task.error) {
+          resultBox.innerHTML =
+            '<span style="color:#e74c3c">错误: ' +
+            escapeHtml(task.error) +
+            '</span>';
+        }
+        if (task.result && task.result.outPath) {
+          const filename = task.result.outPath.split(/[\\/]/).pop();
+          const label = document.createElement('span');
+          label.style.cssText = 'color:#aaa;font-size:13px';
+          label.textContent =
+            '日志包: ' + task.result.outPath + '（' +
+            Math.round((task.result.zipSize || 0) / 1024) + ' KB） ';
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-primary';
+          btn.style.fontSize = '12px';
+          btn.textContent = '下载';
+          btn.onclick = () => downloadLogBundle(filename);
+          resultBox.appendChild(label);
+          resultBox.appendChild(btn);
+        }
+        if (task.status === 'running') startOpsPolling();
+        else stopOpsPolling();
+      }
+
+      function startOpsPolling() {
+        if (opsPollTimer) return;
+        opsPollTimer = setInterval(refreshOpsTask, 2000);
+      }
+
+      function stopOpsPolling() {
+        if (opsPollTimer) {
+          clearInterval(opsPollTimer);
+          opsPollTimer = null;
+        }
+      }
+
+      async function refreshOpsTask() {
+        try {
+          const res = await opsApi('/api/ops/current-task');
+          if (handleOps401(res)) return;
+          const data = await res.json();
+          renderOpsTask(data.task);
+        } catch {
+          // 服务重启中（如完全停止后），忽略单次轮询失败
+        }
+      }
+
+      async function opsStartJob(pathname, body, confirmText) {
+        if (confirmText && !confirm(confirmText)) return;
+        try {
+          const res = await opsApi(pathname, {
+            method: 'POST',
+            body: JSON.stringify(body || {}),
+          });
+          if (handleOps401(res)) return;
+          const data = await res.json().catch(() => ({}));
+          if (res.status === 409) {
+            alert(data.error || '已有任务正在执行，请等待其完成');
+            if (data.task) renderOpsTask(data.task);
+            return;
+          }
+          if (!res.ok) {
+            alert(data.error || '操作失败');
+            return;
+          }
+          if (data.task) renderOpsTask(data.task);
+        } catch (err) {
+          alert('请求失败: ' + err.message);
+        }
+      }
+
+      function opsStart() {
+        opsStartJob('/api/ops/start');
+      }
+
+      function opsStopApps() {
+        opsStartJob(
+          '/api/ops/stop-apps',
+          {},
+          '确认停止应用服务（backend/frontend/conversion）？数据库与缓存保持在线。'
+        );
+      }
+
+      function opsStopAll() {
+        if (
+          !confirm(
+            '⚠️ 完全停止将连数据库、缓存和本页面一起停掉，恢复需到服务器运行 start。\n确定继续？'
+          )
+        )
+          return;
+        const input = prompt('此操作无法通过本页面撤销。输入 STOP 确认：');
+        if (input !== 'STOP') return;
+        opsStartJob('/api/ops/stop-all', { confirm: 'STOP' });
+      }
+
+      function opsDeploy() {
+        const mode = document.querySelector(
+          'input[name="opsBuildMode"]:checked'
+        ).value;
+        opsStartJob(
+          '/api/ops/deploy',
+          { skipBuild: mode === 'skip' },
+          '确认开始部署/升级？部署期间服务会短暂中断。'
+        );
+      }
+
+      function opsMigrate() {
+        opsStartJob(
+          '/api/ops/migrate',
+          {},
+          '确认执行数据库迁移？迁移前会自动备份，备份失败会中止。'
+        );
+      }
+
+      async function opsMfaUnbind() {
+        const username = document
+          .getElementById('opsMfaUsername')
+          .value.trim();
+        if (!username) {
+          alert('请输入管理员用户名');
+          return;
+        }
+        if (!confirm('确认解除管理员「' + username + '」的 TOTP 双因素？'))
+          return;
+        if (
+          !confirm(
+            '再次确认：解绑后该管理员仅需密码即可登录，此操作将写入审计日志。'
+          )
+        )
+          return;
+        try {
+          const res = await opsApi('/api/ops/mfa-unbind', {
+            method: 'POST',
+            body: JSON.stringify({ username }),
+          });
+          if (handleOps401(res)) return;
+          const data = await res.json().catch(() => ({}));
+          alert(data.message || data.error || '操作完成');
+        } catch (err) {
+          alert('请求失败: ' + err.message);
+        }
+      }
+
+      async function loadLogLocations() {
+        const box = document.getElementById('opsLogLocations');
+        try {
+          const res = await opsApi('/api/ops/logs/locations');
+          if (handleOps401(res)) return;
+          const data = await res.json();
+          if (!data.success) {
+            box.textContent = '加载失败: ' + (data.error || '');
+            return;
+          }
+          box.innerHTML = '';
+          (data.groups || []).forEach((g) => {
+            const wrap = document.createElement('div');
+            wrap.style.marginBottom = '10px';
+            const title = document.createElement('div');
+            title.textContent =
+              '■ ' + g.service + (g.exists ? '' : '（目录尚未生成）');
+            title.style.color = '#888';
+            wrap.appendChild(title);
+            const dir = document.createElement('div');
+            dir.textContent = g.dir;
+            dir.style.cssText = 'font-size:12px;color:#555;margin:2px 0 4px 0';
+            wrap.appendChild(dir);
+            (g.files || []).forEach((f) => {
+              const link = document.createElement('a');
+              link.href = 'javascript:void(0)';
+              link.textContent = f.name + '  ' + f.sizeText + '  ' + f.mtimeText;
+              link.style.cssText =
+                'display:block;color:#00d9ff;font-size:12px;margin-left:12px;text-decoration:none;cursor:pointer';
+              link.onclick = () => viewLogFile(g.slug + '/' + f.name);
+              wrap.appendChild(link);
+            });
+            box.appendChild(wrap);
+          });
+        } catch (err) {
+          box.textContent = '加载失败: ' + err.message;
+        }
+      }
+
+      async function viewLogFile(zipName) {
+        currentViewLog = zipName;
+        document.getElementById('opsLogViewBox').classList.remove('hidden');
+        document.getElementById('opsLogViewName').textContent = zipName;
+        const pre = document.getElementById('opsLogViewLines');
+        try {
+          const res = await opsApi(
+            '/api/ops/logs/view?file=' +
+              encodeURIComponent(zipName) +
+              '&lines=300'
+          );
+          if (handleOps401(res)) return;
+          const data = await res.json();
+          if (!data.ok) {
+            pre.textContent = '读取失败: ' + (data.error || '');
+            return;
+          }
+          pre.textContent = data.lines.join('\n') || '（空文件）';
+          pre.scrollTop = pre.scrollHeight;
+        } catch (err) {
+          pre.textContent = '读取失败: ' + err.message;
+        }
+      }
+
+      async function opsLogBundle() {
+        const days =
+          parseInt(document.getElementById('opsLogDays').value, 10) || 0;
+        opsStartJob(
+          '/api/ops/logs/bundle',
+          { days },
+          days > 0
+            ? '打包最近 ' + days + ' 天日志？'
+            : '打包全部日志？日志较多时需要一点时间。'
+        );
+      }
+
+      async function downloadLogBundle(filename) {
+        try {
+          const res = await opsApi('/api/ops/logs/bundle-download-token', {
+            method: 'POST',
+            body: JSON.stringify({ filename }),
+          });
+          if (handleOps401(res)) return;
+          const data = await res.json();
+          if (!data.success) {
+            alert(data.error || '获取下载凭证失败');
+            return;
+          }
+          window.open(
+            '/api/ops/logs/download?token=' +
+              encodeURIComponent(data.downloadToken)
+          );
+        } catch (err) {
+          alert('请求失败: ' + err.message);
+        }
+      }
 
       function showLogin() {
         document.getElementById('loginPage').classList.remove('hidden');

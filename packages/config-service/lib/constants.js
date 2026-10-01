@@ -25,6 +25,8 @@ const PM2_SERVICES = [
   'config-service',
   'backend',
   'frontend',
+  // CLI（commands/start.js）注册的应用层转换服务；缺它仪表盘会缺一行
+  'conversion',
 ];
 
 const CONFIG_GROUPS = [

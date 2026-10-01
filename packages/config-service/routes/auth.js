@@ -23,10 +23,18 @@ async function handle(req, res, pathname, method) {
 
     const body = await parseBody(req);
     const env = parseEnvFile(ENV_PATH);
-    if (!env.INITIAL_ADMIN_PASSWORD) {
-      log('warn', 'INITIAL_ADMIN_PASSWORD 未设置，使用默认密码（不安全）');
+    const adminPassword = env.INITIAL_ADMIN_PASSWORD;
+
+    // ADR-0071：删除 admin123 默认密码回退——INITIAL_ADMIN_PASSWORD 未设置时
+    // 一律拒绝登录（backend 侧该 env 本就必填无缺省，等保 8.1.4.1）
+    if (!adminPassword) {
+      log('warn', 'INITIAL_ADMIN_PASSWORD 未设置，拒绝登录');
+      sendJson(res, 403, {
+        error:
+          '运维密码未初始化：请在服务器运行运维入口（runtime/cloudcad.bat 或 runtime/cloudcad.sh），按提示完成密码设置后重试。',
+      });
+      return true;
     }
-    const adminPassword = env.INITIAL_ADMIN_PASSWORD || 'admin123';
 
     if (body.password === adminPassword) {
       recordLoginAttempt(ip, true);
@@ -68,10 +76,17 @@ async function handle(req, res, pathname, method) {
     }
 
     const env = parseEnvFile(ENV_PATH);
-    if (!env.INITIAL_ADMIN_PASSWORD) {
-      log('warn', 'INITIAL_ADMIN_PASSWORD 未设置，使用默认密码（不安全）');
+    const currentPassword = env.INITIAL_ADMIN_PASSWORD;
+
+    // ADR-0071：删除 admin123 默认密码回退（同登录）
+    if (!currentPassword) {
+      log('warn', 'INITIAL_ADMIN_PASSWORD 未设置，拒绝修改密码');
+      sendJson(res, 403, {
+        error:
+          '运维密码未初始化：请先在服务器运行运维入口完成密码设置，再修改密码。',
+      });
+      return true;
     }
-    const currentPassword = env.INITIAL_ADMIN_PASSWORD || 'admin123';
 
     if (oldPassword !== currentPassword) {
       sendJson(res, 400, { error: '旧密码错误' });
