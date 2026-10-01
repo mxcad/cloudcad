@@ -1,4 +1,5 @@
 import { t } from '@/languages';
+import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import { AuditAction, ResourceType } from './types';
 import type { AuditFilters } from './types';
 
@@ -80,14 +81,6 @@ export const getActionDisplayName = (action: string): string =>
 export const getResourceTypeDisplayName = (resourceType: string): string =>
   t(RESOURCE_TYPE_MAP[resourceType] || resourceType);
 
-export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-};
+// 审计时间戳口径已收敛到 @cloudcad/platform（经 dateUtils 唯一出口，固定格式可排序，CSV 导出同口径）
+export const formatDate = (dateString: string): string =>
+  formatDateTimeWithSeconds(dateString);

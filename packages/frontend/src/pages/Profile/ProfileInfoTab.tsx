@@ -21,6 +21,7 @@ import { useProfileUpdate } from './hooks/useProfileUpdate';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import { t } from '@/languages';
+import { formatDateTime } from '../../utils/dateUtils';
 import styles from './Profile.module.css';
 
 const ICON_CLASS_MAP: Record<string, string | undefined> = {
@@ -122,21 +123,9 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
     }
   }, [user, isEditing]);
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return '-';
-    }
-  };
+  // 绝对日期口径已收敛到 @cloudcad/platform（经 dateUtils 唯一出口，与移动端共用）；空/无效保留 '-'
+  const formatDate = (dateStr?: string) =>
+    dateStr ? formatDateTime(dateStr) || '-' : '-';
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

@@ -8,6 +8,7 @@ import { useFileBrowserSelection } from '@/hooks/file-browser';
 import { usePermission } from '../../../hooks/usePermission';
 import { useNotification } from '../../../contexts/NotificationContext';
 import { getErrorMessage } from '../../../utils/errorHandler';
+import { formatDateTime } from '../../../utils/dateUtils';
 import { SystemPermission } from '../../../constants/permissions';
 import { triggerBlobDownload } from '../../../utils/download';
 import { t } from '@/languages';
@@ -303,16 +304,8 @@ export function useFontLibrary(): UseFontLibraryReturn {
     }
   };
 
-  const formatDate = (date: string | Date): string => {
-    const d = new Date(date);
-    return d.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // 绝对日期口径已收敛到 @cloudcad/platform（经 dateUtils 唯一出口，与移动端共用）
+  const formatDate = (date: string | Date): string => formatDateTime(date);
 
   const stats = useMemo(() => {
     const totalSize = fonts.reduce((sum, f) => sum + f.size, 0);

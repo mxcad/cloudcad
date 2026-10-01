@@ -15,8 +15,12 @@ import { API_BASE_URL } from '../config/apiConfig';
 import { t } from '@/languages';
 import { checkFileName, relativeTime } from '@cloudcad/platform';
 import { formatFileSize as _formatFileSize } from '../components/ui/FileSize';
+import { formatDateTime as _formatDateTime } from './dateUtils';
 
 export const formatFileSize = _formatFileSize;
+// 绝对日期时间口径已收敛到 @cloudcad/platform（经 dateUtils 唯一出口，与移动端共用）；
+// 原实现即「日期+时间」，故对接 formatDateTime 而非 date-only 的 formatDate
+export const formatDate = _formatDateTime;
 
 export const getFileIcon = (node: FileSystemNode) => {
   if (node.isFolder) {
@@ -39,17 +43,6 @@ export const getFileIcon = (node: FileSystemNode) => {
     default:
       return '📄';
   }
-};
-
-export const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 };
 
 /**

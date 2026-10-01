@@ -196,18 +196,17 @@ describe('fileUtils', () => {
   });
 
   describe('formatDate', () => {
-    it('should format date to Chinese locale', () => {
-      const dateString = '2024-01-15T10:30:00.000Z';
-      const formatted = formatDate(dateString);
+    it('should format date to fixed ISO-like format (platform 口径)', () => {
+      const formatted = formatDate('2024-01-15T10:30:00.000Z');
 
       // Should include year, month, day, hour, minute
       expect(formatted).toContain('2024');
       expect(formatted).toContain(':'); // Time separator
     });
 
-    it('should handle invalid date', () => {
+    it('should return empty string for invalid date', () => {
       const formatted = formatDate('invalid-date');
-      expect(formatted).toBe('Invalid Date');
+      expect(formatted).toBe('');
     });
   });
 

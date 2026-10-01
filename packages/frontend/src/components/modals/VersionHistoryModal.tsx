@@ -5,6 +5,7 @@ import type { MxLogEntryDto } from '@/api-sdk';
 import { FileSystemNode } from '../../types/filesystem';
 import { History } from 'lucide-react';
 import { t } from '@/languages';
+import { getRelativeTime } from '../../utils/dateUtils';
 import {
   toVersionDisplayList,
   extractUserNote,
@@ -37,33 +38,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   onClose,
   onOpenVersion,
 }) => {
-  const formatDate = (date: string | Date) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) {
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      if (hours === 0) {
-        const minutes = Math.floor(diff / (1000 * 60));
-        return minutes <= 1 ? t('刚刚') : t(`${minutes}分钟前`);
-      }
-      return t(`${hours}小时前`);
-    } else if (days === 1) {
-      return t('昨天');
-    } else if (days < 7) {
-      return t(`${days}天前`);
-    }
-
-    return d.toLocaleDateString('zh-CN', {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
+  // 相对时间口径已收敛到 @cloudcad/platform（经 dateUtils 唯一出口，与移动端共用）
   return (
     <Modal
       isOpen={isOpen}
@@ -185,7 +160,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                       className="flex-shrink-0"
                       style={{ color: 'var(--text-muted)' }}
                     >
-                      {formatDate(entry.date)}
+                      {getRelativeTime(entry.date)}
                     </span>
 
                     {/* 用户说明 */}

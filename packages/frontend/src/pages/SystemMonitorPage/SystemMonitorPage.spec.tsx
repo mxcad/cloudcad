@@ -416,7 +416,7 @@ describe('SystemMonitorPage', () => {
     expect(await screen.findByText('缓存摘要')).toBeInTheDocument();
     expect(await screen.findByText('92.50%')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
-    expect(screen.getByText('1.00 MB')).toBeInTheDocument();
+    expect(screen.getByText('1 MB')).toBeInTheDocument();
     expect(screen.getAllByText('缓存健康状态').length).toBeGreaterThan(0);
     expect(screen.getByText('L1 内存缓存')).toBeInTheDocument();
     expect(screen.getByText('L2 Redis 缓存')).toBeInTheDocument();
