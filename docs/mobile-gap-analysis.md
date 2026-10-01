@@ -1,12 +1,16 @@
 # 移动端 vs PC 端功能差距清单（Mobile Gap Tracker）
 
-> 2026-09-10 生成，基于 `packages/frontend_mobile` 与 `packages/frontend` 代码级对比（4 个域逐文件通读）。
+> 初版 2026-09-10（4 域逐文件通读）；**2026-10-01 全面重审**：逐条对照当前代码更新状态，
+> 新增「§0 platform 包收敛」区——目标不只是补齐功能，而是把两端重复的功能逻辑/函数收进
+> `@cloudcad/platform` 单一实现，保证功能一致且以后差异只改一处（准入四条见包 README）。
+>
 > 每条：`ID / 缺口 / PC 参照 / 移动端做法 / 优先级 / 状态`。
 >
-> **状态图例**：⬜ 未开始 | 🚧 进行中 | ✅ 已完成 | ⏸ 待用户确认 | ➖ 移动端不适用（附说明）
+> **状态图例**：⬜ 未开始 | 🚧 进行中 | ✅ 已完成 | ⏸ 待用户确认 | ➖ 不适用/排除（附说明）
 >
-> **完成顺序**：P0（安全/数据风险）→ P1（高频日常）→ P2（体验/信息密度）→ P3（大块功能）。
-> 同一条缺口在多个页面复用时只列一处，其余页面引用 ID。
+> **范围**：只对照**普通用户**功能；管理员功能（用户/角色管理、审计日志、系统监控、
+> IP 访问控制、运营统计、支付管理、通知管理、运行时配置、字体库 `SYSTEM_FONT_READ`、
+> 公共资源库 `LIBRARY_*_MANAGE`）不纳入。
 
 ## 移动端 UI/UX 转译原则（所有条目通用）
 
@@ -18,8 +22,44 @@
 | 拖拽上传/拖拽移动 | 点按上传；「移动到文件夹」ActionSheet + 文件夹选择弹窗 |
 | hover 行内按钮 | 列表行常驻 ellipsis 按钮 |
 | 表格列排序 | 排序 ActionSheet / van-dropdown-menu |
-| Dashboard 首页 | 暂不做（移动端入口=文件浏览器，见 A-30） |
+| Dashboard 首页 | ➖ 移动端入口=文件浏览器（A-30） |
 | 新标签页打开 | ➖ 不适用（触屏无多标签），ActionSheet 提供「打开文件所在位置」 |
+
+---
+
+## §0. platform 包收敛清单（2026-10-01 新增，本台账最高优先级）
+
+> 目标：两端重复的**非 UI 业务语义**收进 `@cloudcad/platform`（纯函数/纯数据、不绑框架、
+> 不绑端、重复已成立）。收敛后两端各自只剩薄适配（i18n 文案、UI 形态留在端包）。
+> 迁移方式：渐进式，一次一处；每处 = platform 加纯函数 → 两端改调用 → 两端 type-check+测试。
+
+| ID | 逻辑 | 现状拷贝（实测） | platform 目标 | 状态 |
+|---|---|---|---|---|
+| P-01 | 分享有效期：预设值表 + 检测现有有效期 → 预设 + 计算 expiresAt（ISO）/ expiresIn（秒）+ 是否过期 | **3 份**：PC `constants/share.ts`（EXPIRATION_VALUES/detectExpiration/computeExpiresAt/isExpired）；移动端 `ShareManagePage.vue`（expiresIn()/computeRenewExpiresAt()/formatExpiryDate/状态判定）；移动端 `ShareCurrentPopup.vue`（expiresIn()/expirationItems/formatExpiry） | `src/share/expiry.ts`：`SHARE_EXPIRATION_VALUES`（秒，纯数据）+ `detectShareExpiration(expiresAt, now?)` + `computeExpiresAtIso(option, customDays, now?)` + `computeExpiresInSeconds(option, customDays, now?)` + `isShareExpired(expiresAt, now?)`。文案（「永不过期」等）留端包 | ✅ 2026-10-01：PC `constants/share.ts` 变薄适配（保留 i18n 标签/日期格式化）；移动端两 Vue 的 expiresIn/computeRenewExpiresAt/状态判定全改调用；顺带修 PC detectExpiration 无 NaN 兜底、custom 天数无 ≥1 钳制两处 |
+| P-02 | 会员计价：订单金额（分）= round(月价×multiplierBps×月数/10000)、原价、分→元 | **2 份**：PC `utils/priceUtils.ts`（calculatePriceInCents/calculateOriginalPriceInCents/centsToYuan/formatYuan）；移动端 `utils/billing.ts`（orderAmountCents/centsToYuan，公式注释同后端 BillingService.createOrder） | `src/billing/price.ts`：`orderAmountCents(baseMonthlyPrice, multiplierBps, months)` + `originalAmountCents(baseMonthlyPrice, months)` + `centsToYuan(cents)`（加 `Number.isFinite` 兜底，取移动端更稳的版本） | ✅ 2026-10-01：PC `priceUtils.ts` 变薄适配（formatYuan 保留，入参是元非分）；移动端 `billing.ts` 保留对象签名包装后委托 |
+| P-03 | 微信 UA 检测 | **3 份重复 + platform 已有 1 份**：platform `env/device.ts` `isWechatByUA(ua)`/`WECHAT_UA_PATTERN` 已存在；PC `hooks/billing/useVipOffering.ts:53` 内联 `/MicroMessenger/i`；移动端 `utils/browserDetect.ts` 整文件就是它；移动端 `utils/billing.ts:141` `WECHAT_RE` 又一份 | 不新增——PC/移动端 3 处改为调用 platform `isWechatByUA`（移动端 `browserDetect.ts` 变薄适配 `isWechatByUA(currentUA())`，或直接删文件改调用点） | ✅ 2026-10-01：PC `detectTradeType` 改 `isWechatByUA`+`isMobileByUA`（移动正则顺带补了 webos）；移动端 `browserDetect.ts`/`billing.ts` 均改委托 |
+| P-04 | 存储用量百分比（total≤0→0、clamp 0-100） | **3 份**：移动端 `utils/billing.ts` `usagePercent(used,total)`；移动端 `composables/useProfileData.ts:100-105` 内联（后端 usagePercent 缺失时前端算）；PC `MemberCenter.tsx:742-758` 内联 `Math.min(usagePercent??0,100)` | `src/billing/quota.ts`：`usagePercent(used, total)`（与 P-02 同模块） | ✅ 2026-10-01：三处全接线——移动端 `billing.ts` 委托、`useProfileData.ts` 回落路径委托（后端值优先语义保留）、PC `MemberCenter.tsx` 改由 used/total 计算（与后端 storage-info.service 同公式，缺 usagePercent 时从 0 变为真实值=顺带修） |
+| P-05 | 档位配额值解析（档位配置优先，缺键回落 registry 默认值，非数字归零） | **语义不一致**：移动端 `utils/billing.ts` `resolveQuotaValue(configs,key,registry)` 有 registry 回落（注释引 ADR-0043 与后端 MembershipService 一致）；PC `utils/tierConfigUtils.ts` `formatConfigValue` 直接 `Number(v)\|\|0` **无回落**——同一档位在两端可能显示不同配额 | `src/billing/quota.ts`：`resolveQuotaValue(configs, key, registry?)`（移动端语义为准，PC 改调用后两端显示对齐=顺带修一致性 bug）。i18n 格式化（「{size}GB」等）留端包 | ✅ 2026-10-01：移动端 `billing.ts` 委托；PC `tierConfigUtils.ts` formatConfigValue/Short 加可选 registry 参数走 platform，3 个调用点（MemberCenter×2 + PlanSelectOverlay）传 registry。残留：PC `MemberCenter.getEffectiveConfig`（转换窗口值）是「0=未设置→回落」的业务规则非展示格式化，语义与 platform 不同，未动（需产品裁定 0 值语义） |
+| P-06 | 法务文本品牌占位符解析（`{{entityName}}` 等双花括号 → 品牌实体） | **PC 独有**：`lib/legalText.ts` `resolveLegalText(text, language, support)`——纯替换核心 + 品牌实体映射。移动端无合规页（见 §H），但一旦做合规页必须同源 | `src/legal/placeholder.ts`：`resolvePlaceholders(text, vars)` 通用纯函数（未知占位符原样保留语义保留）；品牌实体映射（getBrandLegalNames）留端包 appConfig | ✅ 2026-10-01（随 §H 一起做）：PC `legalText.ts` 变薄适配（15/15 spec 绿）；移动端 `languages/legal/index.ts` 用同一实现解析 5 种占位符 |
+| P-07 | 文件大小格式化 | **显示口径不一致**：PC `components/ui/FileSize.tsx` `formatFileSize`（log 选单位 B~TB、2 位小数、空→'-'）；移动端 `composables/useNodeFormatter.ts` `formatSize`（仅 B/KB/MB、1 位小数） | ✅ 2026-10-01：platform `formatBytes(bytes)`（`src/format/bytes.ts`，纯计算：log 选单位 B~TB、`parseFloat(toFixed(2))` 去尾零、空/0→'-'，单位符号为通用记号非 i18n）；**决策**：统一 PC 主口径（B~TB、2 位小数去尾零、'-'）；**实收 4 份**（§0 原记 2 份，扫描发现 PC `ExternalReferencePanel.tsx:31` 另有一份分叉本地副本 B~GB/1 位小数/空→'--'）：PC `FileSize.tsx` formatFileSize 变薄适配（保留 toBytes/fromBytes/FileSizeInput 输入组件，非跨端重复）+ PC `fileUtils.ts` 重导出（不变，仍指向 FileSize.tsx）+ PC `ExternalReferencePanel.tsx` 删本地副本改引 platform（'--'→'-'、1→2 位小数、补 TB）+ 移动端 `formatSize` 变薄适配（B/KB/MB→B~TB、1→2 位小数去尾零）；PC `fileUtils.spec` 补 TB 用例、移动端 `useNodeFormatter.spec` 补 formatSize 用例；PC 37/37 绿、移动端 4/4 绿、platform/PC type-check 0 错 | ✅ |
+| P-08 | 编辑器菜单配置（命令覆盖） | **两份数据**：PC `public/ini/myUiConfig.json`（tab/cmd/list 结构，196 命令，经 config-service 下发）；移动端 `public/mxUIConfig.json`（headerMenuData 结构，55 命令）。引擎 UI 模式不同，结构不同名，不能直接合并 | ✅ 2026-10-01 裁定+审计：不合并数据（结构不同名、引擎 UI 模式不同）；命令覆盖审计完成（§E E-30~E-33）——E-30 查证**非真缺口**（移动端「选中实体浮层工具栏」useEditObjectToolbar 已覆盖修改类命令，触控正解，台账原「菜单未挂」判断过时）；E-31（剪贴板/选择）/E-32（DWG 对比）/E-33（属性面板）为**移动端功能补缺**（低/中优），非 platform 收敛，转 §E 独立跟踪 | ✅ |
+| P-09 | 文件名合法性校验（空/长度 255/非法字符/控制字符/Windows 保留名/首尾点） | **2 份逐字节同规则**：PC `utils/fileUtils.ts` `validateFolderName`；移动端 `utils/validateName.ts`（注释自认「移植 PC」） | `src/files/name-rules.ts`：`checkFileName(name) → { valid, reasonCode }`（reasonCode 枚举，i18n 文案留端包各自映射）；两端改调用 | ✅ 2026-10-01：platform `checkFileName`（6 reasonCode，判定顺序=空→长度→非法→控制→保留名→首尾点）；PC `validateFolderName` + 移动端 `validateName` 均变薄适配（switch reasonCode→本端 i18n，规则逐字节等价已核对 HEAD）；新增移动端 `validateName.spec.ts` 10 例（锁 6 reasonCode 契约 + 适配映射）；移动端全量 469/469 绿、PC `fileUtils.spec.ts` 34/34 绿、platform/PC type-check 0 错 |
+| P-10 | 跨项目转移/粘贴预判（六域矩阵：出向 `transferOut*` / 入向 `transferIn*` / 设置缺失保守拒绝） | **2 份核心相同但已分叉**：PC `lib/crossProjectPaste.ts` `evaluateCrossProjectTransfer`（id+rootKind 入参、`TRANSFER_BLOCK_REASONS` 枚举 key、返回含 `crossProject`）；移动端 `utils/transferPolicy.ts` `evaluateCrossProjectTransfer`（`TransferRoot` 入参、中文 reasonKey+`reasonParams`、**多一条「源为库且 move 恒拒绝」**——PC 该规则在 UI 层 `onMove=!isLibraryMode` 而非预判层） | ✅ 2026-10-01：platform `evaluateCrossProjectTransfer({operation,source:{id,domain},target:{id,domain},sourceSettings,targetSettings}) → {allowed,crossProject,reason?}`（`src/transfer/policy.ts`，6 域矩阵 + 库-move 预判 + null 保守拒绝，reason 为 `TransferBlockReason` 枚举）；**决策**：①库-move 禁令收进预判层（两端统一；PC 原 UI 层 `onMove=!isLibraryMode` 保留为按钮禁用，预判层补同规则成双重守卫）；②入参统一为 `{id,domain}`（两端各自薄适配、公共 API 不变：PC 映射 kebab `personal-space`→camel `personalSpace` + 保留空 id 短路，移动端 `TransferRoot`→`{id,domain}`）；③reason 统一为枚举（两端映射→本端 i18n 源串）；PC `crossProjectPaste.ts` + 移动端 `transferPolicy.ts` 均变薄适配（删各自 6 域/`operationAllows`/`modeAllows` 逻辑）；PC 新增 i18n 键 1000133「不能从资源库移出文件」（idMap+4 ts——PC 原无库-move 预判、现经 platform 可达故必须补）；PC `crossProjectPaste.spec` 15/15 + 移动端 `transferPolicy.spec` 11/11 绿、双端 type-check 0 错（移动端预存错全在并发会话 auth 页）；移动端 i18n 5 条 reason 源串已补（idMap 3659-3663 + 4 ts，翻译对齐 PC 1000127-1000133；**zh-TW/ko-KR 为 CRLF 行尾**须 `\r\n` 匹配，idMap/zh-CN/en-US 为 LF）| ✅ |
+| P-11 | API 错误分类谓词（`isAbortError` / `isServerError` / `isPermissionError`） | **2 份实现不一致**：PC `utils/errorHandler.ts`（`isAborted` 标志 / `message==='canceled'`）；移动端 `utils/errorHandler.ts`（`name==='AbortError'` / `msg.includes('aborted')` 等，判定更宽）+ `classifyApiError` 已委托 `apiError.errorKind` 单一出口 | ✅ 2026-10-01：platform `isAbortError`/`isPermissionError`/`isServerError`（`src/errors/classify.ts`，纯谓词，**并集更宽**：isAbort=标志+axios code+name+message 子串任一命中；permission=403（status/statusCode/response.status + isPermissionError 标志）；server=500-599（同三源））；**决策**：取并集（任一端命中特征都算命中，消灭跨端边界不一致）；移动端 3 谓词变薄适配（`classifyApiError`/`apiConfig` 消费方零改动）+ PC `isAbortError`/`isServerError` 变薄适配；**残留**：PC `isAuthError`（401+403，语义≠permission=403）与 `isNetworkError` 是 PC 独有**死代码**（全仓无消费者），非本次 3 谓词之一，未动（AGENTS.md 死代码只提不删）；PC `errorHandler.spec` 2 例 + 移动端 `errorHandler.spec` 6 例锁并集契约、移动端 `apiConfig.spec` 5/5 绿、platform/PC type-check 0 错 | ✅ |
+| P-12 | 日期/时间格式化（`formatDateTime` / `formatDate` / `formatTime`） | **2 份显示口径不一致**（同 P-07）：PC `utils/dateUtils.ts`（Intl 多语言、含秒/相对时间/ISO 互转）；移动端 `composables/useNodeFormatter.ts` `formatTime` + `utils/billing.ts` `formatDate/formatDateTime` | ✅ 2026-10-01：platform `formatDate`/`formatDateTime`/`formatDateTimeWithSeconds`（`src/format/date.ts`，纯计算，**固定 ISO-like 格式** `YYYY-MM-DD[ HH:mm[:ss]]`、locale 无关、空/无效→''）；**决策**：统一为固定格式（纯/确定/可排序/无歧义，适合审计·操作·版本历史时间戳；移动端本即固定格式故零改动，PC 由 Intl 本地化改固定——**产品可改**，如需本地化把 platform `datePart` 换 `toLocaleString(locale,opts)` 即可、端包不动）；PC `formatDateTime`/`formatDateTimeWithSeconds`/`formatDate` 变薄适配（`formatTime` 是 PC 独有 time-only `HH:mm`、无移动端对应，未收敛仍走 Intl）+ 移动端 `billing.ts` `formatDateTime`/`formatDate` 变薄适配（行为不变）；PC `dateUtils.spec` 重写（固定格式 + `formatTime` 仍本地化 + 无效→''）14/14 绿、移动端 `billing.spec` 26/26 零改动绿；platform/PC type-check 0 错 | ✅ |
+| P-13 | 相对时间格式化（「X分钟前 / X小时前 / X天前」） | **3 份分叉**：PC `utils/dateUtils.ts` `getRelativeTime`（刚刚/分/时/天 4 档 + 回落绝对日期，转换面板用）；PC `utils/fileUtils.ts` `formatRelativeTime`（刚刚/分/时/**昨天**/天/周/月/年 8 档，文件列表用）；移动端 `composables/useNodeFormatter.ts` `formatTime`（刚刚/分/**HH:MM 时钟时刻**/天/周/月/年，<24h 走时钟） | ✅ 2026-10-01：platform `relativeTime(input, now?) → { tier:'just_now' } \| { tier:'amount'; unit; value }`（`src/format/relative.ts`，纯计算 分/时/天/周/月/年，<60s→just_now，未来/负值归 just_now）；**决策**：粒度取并集（分/时/天/周/月/年），<24h 统一「X小时前」（弃 HH:MM 时钟档 + 弃「昨天」特例 + 弃绝对日期回退——2/3 实现本就走「X年前」无回退）；PC `getRelativeTime`+`formatRelativeTime` + 移动端 `formatTime` 均变薄适配（switch unit→本端文案，PC 走 `t()`、移动端保留硬编码中文——该文案本非 i18n）；PC `dateUtils.spec` 更新（周/月/年档）+ `fileUtils.spec` 新增 `formatRelativeTime` 2 例 + 移动端新增 `useNodeFormatter.spec` 3 例；PC 53/53 绿、移动端 3/3 绿、platform/PC type-check 0 错（移动端 type-check 预存错全在并发会话 auth 页） | ✅ |
+| P-14 | 密码强度打分（长度≥8 / 大小写齐 / 含数字 / 含特殊字符 → 0-4） | **3 份逐字节同**：PC `pages/Profile/hooks/usePasswordProfile.ts` `getPasswordStrength`；PC `pages/Register/index.tsx` `getPasswordStrength`（PC 内重复）；移动端 `utils/authValidation.ts` `getPasswordStrength`（注释自认「与 PC 同评分口径」） | `src/auth/password-strength.ts`：`scorePasswordStrength(password) → 0-4`（纯打分）；标签（「太弱」等 i18n）与颜色（PC 硬编码 hex / 移动端 CSS token）留端包按 score 映射 | ✅ 2026-10-01：三处均改薄适配（委托 platform 打分，保留本端 label/color）；移动端 `authValidation.spec.ts` +3 例锁 0-4 契约（16/16）；移动端全量 472/472 绿、PC type-check 0 错 |
+
+> **穷尽扫描结论（2026-10-01，两轮）**：
+> - 第一轮 `utils`/`lib`/`composables` 全量比对 → P-01~P-09 可干净收敛（P-09 完成）；P-10~P-12 分叉需产品裁定。
+> - 第二轮扩到 `hooks`/`pages`/`constants`/`stores`/组件内联 → 又找到 **P-14 密码强度打分**（3 份逐字节同，已完成）+ **P-13 相对时间**（3 份分叉，⏸）。
+> - **排除（不满足准入四条，绑 Web 端/非纯）**：`clipboard.ts`（读写 `navigator.clipboard`/`document.execCommand`+DOM）、`hashUtils.ts`（`FileReader` + PC 独有 LRU 已分叉）、`tokenUtils.ts`/`authSession.ts`（`localStorage`/`sessionStorage` IO + 结构分叉）、`download.ts` `triggerBlobDownload`（DOM `<a>` 下载）、`notificationEvents.ts` `globalShowToast` 等（DOM CustomEvent 总线）。
+> - **排除（关注点不同 / 实现路径不同，非重复）**：`permissionUtils.ts`（PC 异步 API 权限判定）vs `projectPermissions.ts`（移动端纯权限分组/依赖）、`versionHistory.ts`（PC 纯展示转换 `toVersionDisplayList`/`extractUserNote`，移动端无对应）vs `useVersionHistory.ts`（composable）、文件类型分类（PC 后端 `node.extension`+emoji vs 移动端 `extractExtension`+Vue 组件、无 CAD 常量）、`auditActionTemplates.ts`/`useProjectAuditLog.ts`（i18n 文案模板留端包）、搜索（两端均框架+API 绑定）。
+
+**收敛纪律**：
+- 每处收敛完成后在本表勾 ✅ 并注明提交；两端旧实现**删掉或留成薄适配**，不留双轨（ADR-0026 expand-contract 教训）。
+- platform 包禁止 i18n 文案——凡带 `t()` 的函数只收敛「纯判定/纯计算」部分，文案映射留在端包。
+- 门禁：`pnpm --filter @cloudcad/platform type-check` + 两端 type-check + 两端测试。
 
 ---
 
@@ -27,45 +67,46 @@
 
 ### P0 安全/数据
 
-- [ ] **A-01 节点权限门控**：按节点 `canEdit/canDelete/canCopy/canMove` 隐藏/禁用操作（PC `FileSystemContent.tsx:199-225` 加载期悲观隐藏）。移动端：列表项数据带权限字段，无权限的操作在 ActionSheet 中不显示或禁用 + Tooltip 文案。
-- [ ] **A-02 删除前权限校验 + 彻底删除选项**：PC `useFileSystemCRUD.ts:343-366` 删除前校验、含「彻底删除」选项。移动端：删除 ActionSheet 提供「删除（进回收站）/彻底删除」两项，彻底删除需二次确认。
+- [x] **A-01 节点权限门控**：✅（2026-10-01 重审：项目卡片/管理菜单已按 `memberControllerGetUserProjectPermissions` 门控；文件项级 canEdit/canDelete 门控仍部分依赖后端 403 透传，可接受）
+- [x] **A-02 删除前权限校验 + 彻底删除选项**：✅ 删除走回收站（permanently:false）+ 回收站内「彻底删除」二次确认（红字）
 
 ### P1 高频日常
 
-- [x] **A-03 单条目操作菜单**：列表行 ellipsis 按钮（现 `UnifiedFileList.vue:260` 是死控件）+ 长按 ActionSheet：打开/重命名/移动/复制/下载/分享/版本历史/拷贝路径/删除。PC 参照 `FileSystemContextMenu.tsx` + `FileItem.tsx:964-1031` 行内按钮。✅ 已实施（2026-09-10）：列表行 ellipsis + 网格角标按钮均 emit `itemMenu`，两父页弹 `van-action-sheet`（打开/重命名/移动/复制/删除，删除红字）；长按仍为多选。✅ 2026-09-11 追加（Batch 3）：菜单按 `isFolder` 分叉——文件项「格式转换下载」（A-06）/ 文件夹项「打包下载」（A-08）。分享/版本历史/拷贝路径 3 项（A-27/A-28/A-29）待后续批次。
-- [x] **A-04 重命名**：底部弹窗输入（保留扩展名 + 名称合法性校验：非法字符/保留名/长度/首尾点，PC `validateFolderName` L64-97）。✅ 已实施（2026-09-10）：`RenameNodePopup.vue`（keepExtension 时扩展名静态展示）+ 两页 `nodeControllerUpdateNode` 接线。
-- [x] **A-05 移动/复制（单条 + 批量）**：文件夹选择底部弹窗（目录树/面包屑导航，非 PC 的 SelectFolderModal 全屏）。✅ 已实施（2026-09-10）：`NodeFolderPicker.vue`（getChildren 逐级下钻 + 面包屑回退 + 源文件夹禁选）；单条 `nodeControllerMoveNode/CopyNode`、批量 `nodeControllerBatchMoveNodes/BatchCopyNodes`；源文件夹自身不可选为目标，子树内目标由后端拒绝 + toast 兜底。
-- [x] **A-06 下载格式转换**：ActionSheet 选格式（dwg/dxf/pdf/mxweb）→ 底部弹窗选 DWG 版本/PDF 纸张/色彩（复用 PC `DownloadFormatModal` 字段，移动端底部弹窗形态）。✅ 已实施（2026-09-11）：`DownloadFormatPopup.vue`（格式 chip + DWG 版本 23/25/27/29/33 + PDF 宽高/黑白彩色，打开即重置默认值）；两页文件项菜单「格式转换下载」→ `downloadControllerDownloadNodeWithFormat({ query:{format,...}, parseAs:'blob' })` → `URL.createObjectURL` 触发下载（已确认移动端 `responseTransformer` 对 Blob 透传，Blob 无 `code` 键）。
-- [x] **A-10 排序控件**：van-dropdown 或 ActionSheet（更新时间/创建时间/名称/大小，升降序）。✅ 已实施（2026-09-11，Batch 4）：`UnifiedFileList.vue` 工具栏 sort 按钮 → `van-action-sheet`（修改时间/创建时间/名称/大小，subname 显示 ↑/↓ 当前方向）；同字段再点反转、切字段用自然默认方向（名称升序、其余降序）→ emit `sortChange`；`useUnifiedFileList.setSort` 与 `ProjectDetailPage.onFileSortChange` 带 `sortBy`/`sortOrder` 回到第一页重查。后端白名单 `ALLOWED_SORT=['name','createdAt','updatedAt','size']`（`file-tree.service.ts:516`），越界抛 400 `error.file_extra.sort_unsupported`。
-- [x] **A-11 项目筛选 Tab**：「全部/我创建的/我加入的」van-tabs 或 chips（PC `ProjectFilterTabs.tsx`）。✅ 已实施（2026-09-11，Batch 4）：`FileBrowserPage.vue` 项目 Tab 顶部水平滚动 chips（全部/我创建的/我加入的，对齐 PC `ProjectFilterTabs.tsx` 的 all/owned/joined）→ `projectControllerGetProjects({ query:{ filter } })`（`QueryProjectsDto.filter` 注释 all-全部/owned-我创建的/joined-我加入的）+ watch 回第一页重查。
-- [x] **A-19 全选**：多选模式下顶部「全选」开关。✅ 已实施（2026-09-11，Batch 4）：`UnifiedFileList.vue` 多选栏左侧「全选/取消全选」（`checked`/`circle` 图标 + `allSelected` computed），作用于当前已加载页（服务端分页下与 PC「全选当前视图」语义一致，不做跨页全选）；计数文案改 `t('已选 {count} 项')`。
-- [ ] **A-22 多文件上传**：input 加 `multiple`，逐个走上传管线，进度合并展示。
+- [x] **A-03 单条目操作菜单**：✅ 列表行 ellipsis + 网格角标 + 长按；菜单=打开/格式转换下载(文件)|打包下载(文件夹)/分享/版本历史/重命名/移动/复制/删除
+- [x] **A-04 重命名**：✅ `RenameNodePopup`（保留扩展名 + validateName）
+- [x] **A-05 移动/复制（单条 + 批量 + 跨项目）**：✅ `NodeFolderPicker` + 六域矩阵预判（useCrossProjectTransfer）+ 跨项目 move 二次确认
+- [x] **A-06 下载格式转换**：✅ `DownloadFormatPopup`（dwg/dxf/pdf 走异步任务队列，mxweb/original 同步直下）
+- [x] **A-10 排序控件**：✅ 排序 ActionSheet（修改时间/创建时间/名称/大小）
+- [x] **A-11 项目筛选 Tab**：✅ chips（全部/我创建的/我加入的）
+- [x] **A-19 全选**：✅ 多选栏「全选/取消全选」（当前已加载页）
+- [x] **A-22 多文件上传**：✅ input multiple + `runUploadPool`（并发 2，逐文件 toast）
+- [x] **A-29a 单条目剪贴板复制/剪切**：✅ 2026-10-01 两页单条目 ActionSheet 补「复制到剪贴板」「剪切」（与「移动到…/复制到…」语义区分对齐 PC），handler 写 `useFileSystemClipboard`（cut/copy 模式）+ toast；`fileSystemClipboard.spec.ts` 新增
+- [x] **A-29b 搜索结果「打开所在位置」**：✅ 2026-10-01 文件夹命中点按改为**进入该文件夹**（`router.push({path:'/shell/file/project/:id', query:{folderId: 节点id}})`，不再只跳项目根丢位置）；文件/文件夹命中**长按**（500ms 手势，与项目卡片同套）弹 ActionSheet「打开所在位置」→ 定位**父文件夹**（`query:{folderId: parentId}`，对齐 PC open_file_location）。ProjectDetailPage `initFileList` 消费 `route.query.folderId` 走 `loadRootNode(override)`（面包屑无法还原——ancestorPath 无 id，留空）；底层 `loadRootNode` override 机制已有 composable spec 覆盖。高亮（PC `?highlight=`）移动端未做（列表无高亮滚动机制，留待后续）
 
 ### P2 体验/信息密度
 
-- [x] **A-07 批量下载任务体系**：zip 打包/进度/取消/重试失败项（PC `useBatchDownload.ts` 全套）。移动端：任务列表底部弹窗 + 进度条。✅ 已实施（2026-09-11）：`useBatchDownload.ts` composable（GetUserTasks 列表/CancelTask/RetryFailedItems/DownloadZip 锚点）+ `BatchDownloadPanel.vue` 底部弹窗（任务卡 + `van-progress` 进度条 + 状态标 + 失败计数 + 下载/取消/重试失败项按钮）；面板打开期间 3s 轮询进度（移动端无 SSE，`onUnmounted` 清 timer）；两页 FAB 新增「下载任务」入口。
-- [x] **A-08 文件夹下载**：ActionSheet「下载文件夹」→ zip。✅ 已实施（2026-09-11）：文件夹项菜单「打包下载」→ `batchDownloadControllerGetFolderFiles`（递归树 `{nodeId,fileName,isFolder,children}`）→ 前端 `flattenFolderTree` 展平为 `BatchFileItem[]`（relativePath 由嵌套目录名拼接）→ `batchDownloadControllerCreateTask({ mode:'zip' })` → 打开任务面板看进度。空文件夹 toast 兜底。
-- [ ] **A-12 项目卡片信息**：描述（2 行截断）、成员数、真实封面缩略图（PC `FileItemInfo.tsx:43-106`）。
-- [ ] **A-13 配额进度条**：顶部或卡片底部 used/limit，>90% 变色（PC `FileSystemHeader.tsx:267-304`）。
-- [x] **A-14 加载更多失败重试条**：列表已有内容时底部失败条 + 重试，不整页替换（PC `FileSystemContent.tsx:86-91`）。✅ 已实施（2026-09-11，Batch 4）：`useUnifiedFileList.loadMoreFailed`（`error!=='' && page>1`）+ `retryLoadMore`——`loadMore` 已把 page 推到失败页，重试重跑当前页不会重复追加已加载页；`UnifiedFileList` 两种模式 footer 在 loading 与「没有更多了」之间插入「加载失败，点击重试」；项目详情侧对称 `fileLoadMoreFailed`（catch 时 `page>1`）+ `retryLoadMoreFiles`。首屏失败仍走整页错误 + 重试按钮。
-- [x] **A-15 手动刷新**：下拉刷新（van-list onPullRefresh）替代 PC 刷新按钮。✅ 已实施（2026-09-11，Batch 4）：`UnifiedFileList` 把网格/清单两种模式包进 `van-pull-refresh`（`:items-length="items.length"`，列表不足一个屏时手势会自动静默失效，避免误判为 bug）→ emit `refresh` → composable `refresh()`（page=1 整页重查）；`onPullRefresh` 等父组件 loading 回落后再收起动画，8s 兜底防请求挂死。CSS 坑：Vant `__track` 只有 `height:100%` 不是 flex 容器，必须补 `display:flex;flex-direction:column;min-height:0`，否则内部滚动容器的 `flex:1` 失效、列表被 `overflow:hidden` 裁掉。
-- [x] **A-16 视图模式持久化**：网格/列表存 localStorage。✅ 已实施（2026-09-11，Batch 4）：新增 `src/composables/useViewMode.ts`（key `fs_view_mode_<scope>`，watch 自动落盘，非法值回落网格）；个人空间 `useViewMode('personal')`、项目详情 `useViewMode('project')` 各自记住（PC 也按用户持久化视图偏好）；`UnifiedFileList` 加 `watch(props.mode)` 与内部展示态同步。
-- [ ] **A-20 回收站**：独立子视图（恢复/批量恢复/清空/彻底删除），入口=列表页顶部切换或菜单项。
-- [ ] **A-23 新建项目支持描述**：创建弹窗加描述字段（500 字）。
-- [x] **A-24 名称合法性校验**：新建文件夹/项目/图纸共用 `validateName`（与 A-04 同函数）。✅ 已实施（2026-09-10）：`src/utils/validateName.ts`（移植 PC `validateFolderName` 全规则）；已接入两页新建文件夹 + `useCreateDrawing`（名称非空时校验）。新建项目弹窗暂无名称输入框，待 B-11 项目改名时一并接入。
-- [ ] **A-25 转换失败徽标**：fileStatus=FAILED 红标（PC `FileItemInfo.tsx:67-79`）。
-- [ ] **A-27 版本历史入口（文件项级）**：ActionSheet「版本历史」→ 底部弹窗列表（可打开历史版本）。
-- [ ] **A-28 文件项分享入口**：ActionSheet「分享」→ 复用 ShareManagePage 的分享创建弹窗。
-- [ ] **A-29 打开文件所在位置/拷贝路径**：ActionSheet 两项。
+- [x] **A-07 批量下载任务体系**：✅ `useBatchDownload` + `BatchDownloadPanel`（3s 轮询）
+- [x] **A-08 文件夹下载**：✅ 打包下载 → zip 任务
+- [x] **A-12 项目卡片信息**：✅ 2026-10-01 网格项目根卡片补描述（2 行截断 `.grid-desc`）+ 成员数（`{count} 个成员` 新键 3657）；FileListItem 加 `description`/`memberCount` 映射。**真实封面缩略图留待**：移动端无项目封面数据源（`/file-system/nodes/{id}/thumbnail` 仅文件），需后端补项目封面端点后再做
+- [x] **A-13 配额进度条**：✅ 项目详情页配额条（B-15）；个人空间无配额概念（对齐 PC，PC 个人空间也不显示）
+- [x] **A-14 加载更多失败重试条**：✅
+- [x] **A-15 手动刷新**：✅ 下拉刷新
+- [x] **A-16 视图模式持久化**：✅ `useViewMode`（personal/project 各自记住）
+- [x] **A-20 回收站**：✅ 第 3 个 tab（项目列表/个人空间/具体项目三 scope 下拉 + 恢复/彻底删除/清空 + 扩展名筛选）
+- [x] **A-23 新建项目支持描述**：✅ `ProjectEditPopup`（名称+描述，编辑入口在卡片菜单/详情页管理菜单）
+- [x] **A-24 名称合法性校验**：✅ `validateName`（→ 见 P-09 收敛）
+- [x] **A-25 转换失败徽标**：✅ 2026-10-01 UnifiedFileList 网格+清单均加 `isFailed`（`!isFolder && fileStatus==='FAILED'`）红标「转换失败」（复用 i18n 866）；FileListItem 加 `fileStatus` 映射
+- [x] **A-27 版本历史入口（文件项级）**：✅ `VersionHistoryPopup`（显式 target，选中版本 `?v=` 打开）
+- [x] **A-28 文件项分享入口**：✅ `ShareCurrentPopup`（有效期/二维码/已有分享/撤销）
 
 ### P3 大块/低价值
 
-- [ ] **A-09 搜索高级筛选**：格式/大小/时间筛选面板（底部弹窗形态）。
-- [ ] **A-17 每页条数选择器** ➖ 移动端无限滚动为主，暂不做。
-- [ ] **A-18 面包屑路径可编辑重命名** ➖ 移动端低价值，暂不做。
-- [ ] **A-21 撤销/重做 + 剪贴板复制剪切粘贴**：PC 命令栈形态，移动端暂不做（有回收站 A-20 兜底）。
-- [ ] **A-26 外部参照管理**：缺失参照上传/预览/格式下载（PC `FileItem.tsx:234-339`）。
-- [ ] **A-30 Dashboard 首页**（统计卡/最近文件/快捷操作/横幅）：⏸ 移动端入口定位待确认，暂不做。
+- [x] **A-09 搜索高级筛选**：✅ `FileFilterPopup`（格式/大小/时间区间；回收站仅格式）
+- [➖] **A-17 每页条数选择器**：➖ 无限滚动为主
+- [➖] **A-18 面包屑路径可编辑重命名**：➖ 桌面形态
+- [➖] **A-21 撤销/重做命令栈**：➖ PC 命令栈形态（fileSystemUndoRedoStore），移动端有回收站兜底，不做
+- [x] **A-26 外部参照管理**：✅（被动形态）打开图纸时检测缺失参照 → `ExternalRefUploadPopup` 上传（PC 是 FileItem hover 主动入口 + 打开时被动检测；移动端保留被动入口，交互形态不同但能力覆盖）
+- [➖] **A-30 Dashboard 首页**：➖ 移动端入口定位=文件浏览器（2026-09-10 已裁定）
 
 ---
 
@@ -73,33 +114,26 @@
 
 ### P0 安全/数据
 
-- [x] **B-01 修复搜索框死控件**：`UnifiedFileList` emit `search` 未绑定 → 绑定后传搜索参数给 `loadFiles`。✅ 已实施（2026-09-10）：`UnifiedFileList` 加 `keyword` prop + `update:keyword` emit，`ProjectDetailPage` 绑定 `fileSearch` 300ms 防抖 → `loadFiles(1)` 带 `search` 参数。
-- [x] **B-02 修复分页**：`loadMore` 未绑定，`limit:50` 一次拉完 → 绑定滚动加载。✅ 已实施（2026-09-10）：`loadFiles(page)` 支持追加，`onFileLoadMore` 滚动加载，`hasMore = filePage < fileTotalPages`，进入文件夹/返回时重置搜索与页码。
-- [x] **B-03 修复 move/copy 死操作**：多选栏 emit 了 move/copy 但无处理 → 接 A-05 实现（或先隐藏死按钮）。✅ 已实施（2026-09-10）：多选栏新增「移动/复制」按钮，两父页 `onSelectionAction` 接 `NodeFolderPicker` + 批量 move/copy API；多选栏操作触发后退出多选（选中项已捕获）。
-- [x] **B-04 成员自我保护**：`isSelf` 时禁用「移除」「改角色」控件 + 提示文案（PC `MembersModal.tsx:673,798-804`）。✅ 已实施（2026-09-10）：`useUser()` 取当前用户 ID，`isSelf(m)` 为真时整行 `member-actions`（改角色下拉 + 移除按钮）不渲染。
-- [x] **B-05 成员管理权限门控**：无 `PROJECT_MEMBER_MANAGE` 权限时隐藏「添加成员」与移除/改角色控件（PC `MembersModal.tsx:202-207,393-418`）。✅ 已实施（2026-09-10）：`memberControllerGetUserProjectPermissions` 拉取项目权限，`canManageMembers = permissions.includes('PROJECT_MEMBER_MANAGE')`（对齐 PC `permissionUtils`），失败时悲观隐藏；「添加成员」按钮与成员操作区均受控。
+- [x] **B-01 搜索框**：✅ / **B-02 分页**：✅ / **B-03 move/copy 接线**：✅
+- [x] **B-04 成员自我保护**：✅ isSelf 不渲染操作区 / **B-05 成员管理权限门控**：✅ PROJECT_MEMBER_MANAGE
+- [➖] **B-06 改角色后刷新自身权限**：⏸ 2026-10-01 查证**非真缺口**，不改代码。两端角色下拉都禁用自改（移动端 `ProjectDetailPage.vue:1162` `v-if="... && !isSelf(m)"`；PC `MembersModal.tsx:818` `disabled={!canManageMembers || isSelf}`），故「改角色后自身权限变化」在 UI 上不可能发生——改的是**别人**的角色，自身权限不变，`loadProjectPermissions()` 恒返回同值（加了是 no-op + 每次改角色多发一次请求）。唯一真实场景「转让所有权后自身权限变」已在移动端 `onTransferOwnership`（`ProjectDetailPage.vue:717`）`Promise.all([loadMembers(), loadProjectPermissions()])` 覆盖。PC `MembersModal.tsx:305-313` 的 re-check 同样是防御性代码（自改被禁）
 
 ### P1 高频
 
-- [ ] **B-06 改角色后刷新自身权限**：改完重查 `checkPermission` 刷新 UI 可用性（PC `MembersModal.tsx:294-303`）。
-- [ ] **B-07 转让项目所有权**：成员 ActionSheet「转让所有」→ 确认弹窗（含「降级为管理员、不可撤销」警示，PC `MembersModal.tsx:315-342`）。
-- [ ] **B-08 成员真实头像 + 邮箱展示**：`member.avatar` 替代 `user-o` 图标；行内显示 email（无则「无邮箱」）。
-- [ ] **B-09 按角色筛选成员**：van-dropdown 角色筛选。
-- [ ] **B-10 精细化错误文案**：FORBIDDEN→「没有权限」、BAD_REQUEST→「不能修改项目所有者的角色」（PC `MembersModal.tsx:253-311`）。
-- [ ] **B-11 项目改名/改描述**：顶部标题旁编辑入口 → 底部弹窗（名称 100 字/描述 500 字计数，PC `ProjectModal.tsx:170-203`）。
-- [ ] **B-12 删除项目**：设置区「删除项目」→ 确认弹窗（「删除后将移至回收站」，PC `useProjectDrawingsInteractions.ts:173-188`）。
-- [x] **B-15 配额用量条**：used/limit 进度条 + 升级引导（PC `FileSystemHeader.tsx:269-301`）。✅ 已实施（2026-09-11，Batch 4）：`ProjectDetailPage.vue` nav-bar 下方配额条（仅文件 Tab 且 `limit>0` 显示）→ `projectControllerGetProjectQuota({ path:{ projectId } })`（`ProjectQuotaDto {projectId,used,limit}`，used 仅计源文件大小、limit 随 VIP 等级）；进度条 + `used/limit` 文案，配色对齐 PC（`used>limit` 红 `--error`、`>90%` 黄 `--warning`、否则 `--accent`）；下拉刷新顺带刷新配额。配额加载失败静默（展示性信息，不阻断文件列表）。**升级引导不在本批**（PC 该处也无跳转），随 D-02 个人空间配额一并做。
-- [x] **B-16 文件重命名**：复用 A-04。✅ 已实施（2026-09-10）：项目文件 ellipsis 菜单「重命名」→ `RenameNodePopup` → `nodeControllerUpdateNode`。
-- [x] **B-17 文件移动/复制**：复用 A-05。✅ 已实施（2026-09-10）：项目文件 ellipsis 菜单「移动/复制」+ 多选栏 → `NodeFolderPicker`（root=当前文件夹/项目根）→ 单条/批量 API。
-- [x] **B-18 下载格式选择**：复用 A-06。✅ 已实施（2026-09-11）：随 A-06 落地（项目文件 ellipsis 菜单「格式转换下载」→ `DownloadFormatPopup`）。
-- [ ] **B-19 版本历史**：复用 A-27。
-- [x] **B-20 手动刷新**：下拉刷新。✅ 已实施（2026-09-11，Batch 4）：随 A-15 落地（项目详情 `@refresh="refreshFiles"`，同时刷新配额）。
+- [x] **B-07 转让项目所有权**：✅ 成员行「转让」按钮 → `projectActions.transferOwnership` + 成功后重载成员+权限
+- [x] **B-08 成员真实头像 + 邮箱展示**：✅ 2026-10-01 ProjectDetailPage memberRows 加 `avatar`；`m.avatar` 有值用 `van-image`（`avatarErrors` Set 逐 id @error 回落 `user-o`），`m.email` 有值渲染副行（无则不渲染，无占位）
+- [x] **B-09 按角色筛选成员**：✅ 2026-10-01 ProjectDetailPage 成员列表头加角色筛选下拉（`roleFilterOptions` 含所有角色含所有者，稳定 computed 防 DropdownMenu 递归）；`filteredMemberRows` 按 `projectRoleId` 过滤 + 人数联动 + 筛空态「没有符合条件的成员」（新键 3655/3656）
+- [ ] **B-10 精细化错误文案**：🚧 部分——move/copy 已透传后端错误（transferErrorMessage）；成员操作仍 `e?.message || '移除失败'`（后端 i18n 消息已透传，可接受，低优）
+- [x] **B-11 项目改名/改描述**：✅ ProjectEditPopup
+- [x] **B-12 删除项目**：✅ 管理菜单「删除项目」→ useProjectActions.remove（确认+回退）
+- [x] **B-15 配额用量条**：✅
+- [x] **B-16 文件重命名 / B-17 移动复制 / B-18 下载格式 / B-19 版本历史 / B-20 手动刷新**：✅
 
 ### P2
 
-- [x] **B-21 批量下载对话框**：复用 A-07。✅ 已实施（2026-09-11）：随 A-07 落地（FAB「下载任务」→ `BatchDownloadPanel`）。
-- [ ] **B-13 角色模板管理**：角色 CRUD + 权限配置（PC `ProjectRolesModal.tsx`）。移动端：角色管理底部弹窗 + 权限勾选列表。
-- [ ] **B-14 项目操作历史**：底部弹窗时间线（复用 PC `OperationHistoryModal` 数据，移动端按时间分组）。
+- [x] **B-21 批量下载对话框**：✅
+- [x] **B-13 角色模板管理**：✅ `ProjectRolesPage.vue`（独立路由 /roles）
+- [x] **B-14 项目操作历史**：✅ `ProjectAuditLogPopup`（三桶分组+定位：文件打开图纸/文件夹跳父目录）
 
 ---
 
@@ -107,31 +141,30 @@
 
 ### P0
 
-- [x] **C-01 撤销二次确认**：ActionSheet「撤销分享」→ `showConfirmDialog`（PC `ConfirmRevokeModal`）。✅ 已实施（2026-09-10）：`onRevokeShare` 前置 `showConfirmDialog`（撤销后该分享链接将立即失效，确定撤销？/ 撤销 / 取消），取消则不执行。
+- [x] **C-01 撤销二次确认**：✅（token 传参修复已随 Batch 6 落地）
 
 ### P1
 
-- [x] **C-02 修改有效期（续期）**：列表项「续期」→ 底部弹窗选有效期（PC `EditExpiryModal` + `shareControllerUpdateShare`）。✅ 已实施（2026-09-11）：ActionSheet「修改有效期」→ 底部弹窗 7 个有效期 chip（2h/6h/12h/1d/3d/7d/永不过期）→ `shareControllerUpdateShare({ path:{token}, body:{expiresAt} })`（null=永不过期，SDK DTO 类型松需 `as never`，与 PC 一致）。
-- [x] **C-10 二维码**：创建后底部弹窗显示二维码（160px）+ URL 复制；列表项「查看二维码」入口（PC `ShareDialog.tsx:859-868`）。✅ 已实施（2026-09-11）：用已存在的 `qrcode` 依赖 `toDataURL`（PC 用 `qrcode.react` 的 QRCodeSVG）—— 创建成功面板内嵌 160px + ActionSheet「查看二维码」→ 200px 弹窗 + URL 复制；`createdShareInfo` watch 生成，失败静默降级。
-- [x] **C-06 创建时间字段**：卡片/列表补 createdAt。✅ 已实施（2026-09-11）：列表项 stat 行补「创建 {日期}」（`toLocaleDateString`，对齐 PC createdAt 列）。
-- [x] **C-07 URL 展示 + 打开分享页**：截断显示 URL + 「打开」动作（PC `ShareTable.tsx:138-198`）。✅ 已实施（2026-09-11）：列表项新增截断 URL 行（>25 字符加 ...，monospace）+ ActionSheet「打开」`window.open(url,'_blank')`。
-- [x] **C-16 状态判定修正（附带修复）**：移动端原 `s.status` 读后端字段恒 undefined → 全部判「有效」，已过期/已撤销筛选 tab 与状态标是死代码。✅ 已实施（2026-09-11）：核实后端 `listShares` 无 status 字段（撤销=软删 `deletedAt` 不出现在列表）→ 改客户端由 `expiresAt` 判定（对齐 PC `isExpired`）；`status` 收窄为 `active|expired`，删除「已撤销」filter tab 与 revoked 分支；`ShareItem` 补 `token`（续期/URL 兜底需要）与 `createdAt`。
+- [x] **C-02 修改有效期（续期）**：✅ 7 档 + 永不过期（→ P-01 收敛；PC 另有「自定义天数/立即过期」见 C-11/C-12）
+- [x] **C-10 二维码**：✅ 创建面板内嵌 160px + 列表项「查看二维码」
+- [x] **C-06 创建时间字段**：✅ / **C-07 URL 展示 + 打开**：✅
+- [x] **C-16 状态判定修正**：✅ 客户端 expiresAt 判定（→ P-01 收敛 isShareExpired）
 
 ### P2
 
-- [ ] **C-03 多选 + 批量撤销**：多选模式 + 批量撤销 + 成功/失败计数（PC `useShareActions.ts:80-108`）。
-- [ ] **C-04 排序**：创建时间/有效期/次数排序 ActionSheet（PC `SORTABLE_COLUMNS`）。
-- [ ] **C-05 分页/加载更多**：滚动加载替代固定 `pageSize:50`。
-- [ ] **C-11 自定义天数**：补 `customDays` 输入 UI（现死代码，1-365 天）。
-- [ ] **C-12 「立即过期」选项**：有效期选项补 immediate。
-- [ ] **C-13 复制成功行内反馈**：该行图标变 ✓ 2 秒（替代/补充 toast）。
-- [ ] **C-14 加载失败底条**：列表已有内容时底部失败条 + 重试，不整页替换。
-- [ ] **C-15 空态「清除搜索」**：搜索无结果时一键清除关键词。
+- [x] **C-03 多选 + 批量撤销**：✅ 2026-10-01 长按进多选（500ms 手势，与文件列表/项目卡片同套）+ 点按切换选中（纯 CSS 圆圈勾选指示，不依赖 vant 图标名）+ 底部操作栏「取消/全选/批量撤销」；批量撤销=逐个 `shareControllerRevokeShare` 循环 + 成功/失败计数 toast（对齐 PC `handleBatchRevoke`，后端无批量端点）；多选时隐藏 FAB
+- [x] **C-04 排序**：✅ 2026-10-01 ShareManagePage 筛选条右侧加排序按钮（ActionSheet 选字段：创建时间/有效期/次数，同字段切方向↑↓）；`sortBy`/`sortOrder` 走服务端 `shareControllerListShares`（API 原生支持），watch 变化回第一页重拉；「次数」新键 3658
+- [x] **C-05 分页/加载更多**：✅ 2026-10-01 `loadShares(append)` page 累加 + `shareHasMore`（total/pageSize 推算，后端 ShareListResponseDto 无 totalPages）+ 列表 `@scroll` 触底加载 + 底条（加载中/没有更多了）；keyword/filter 变化回第一页
+- [x] **C-11 自定义天数**：✅ 2026-10-01 续期弹窗补「自定义天数」档 + 天数输入（1-365 钳制，`computeExpiresAtIso(option, days)` 走 platform）；`openRenewPopup` 改用 `detectShareExpiration` 反推初始档+天数（对齐 PC EditExpiryModal）。**注**：移动端创建弹窗的 `customDays` 原是死代码（模板从未渲染 custom 档/输入框），本次只补续期弹窗；创建弹窗补 custom 档留待后续（PC ShareDialog 有，属另一缺口）
+- [x] **C-12 「立即过期」选项**：✅ 2026-10-01 续期弹窗补「立即过期」档（`computeExpiresAtIso` 返回 now-1s，后端视为已过期）；创建弹窗不加（新建即过期无意义，PC 因共用 ExpirationPicker 才显示，属 PC 小瑕疵）
+- [ ] **C-13 复制成功行内反馈**：⬜ PC copiedToken 该行图标变 ✓ 2s；移动端仅 toast（可接受，低优）
+- [x] **C-14 加载失败底条**：✅ 2026-10-01 `loadMoreFailed` 与整页 `error` 分离——翻页失败保留已加载列表、底条「加载失败，点击重试」（重跑当前页不重复追加）；首屏失败才整页错误态
+- [x] **C-15 空态「清除搜索」**：✅ 2026-10-01 搜索无结果时文案改「未找到相关分享」+「清除搜索」按钮（清空 keyword）；无关键词时保持「暂无分享」+「新建分享」
 
 ### P3
 
-- [ ] **C-08 新建分享文件选择器**：搜索 + 文件夹树 + 多选 + 跨目录（PC `SelectFileModal.tsx`）。移动端：底部弹窗目录树 + 搜索 + 多选。
-- [ ] **C-09 批量分享**：多文件逐个生成 + (done/total) 进度 + 失败项展示（PC `ShareDialog.tsx:258-342`）。
+- [x] **C-08 新建分享文件选择器**：✅ 双 scope（personal_space+all_projects）并集去重 + 搜索 + 加载更多 + 错误可重试（2026-10-01 修复恒空问题）
+- [ ] **C-09 批量分享**：⏸ 留待（高复杂，2026-10-01 评估）PC 文件选择器可多选 → 逐个生成 + (done/total) 进度；移动端选择器单选（selectedFileId 单值）。修：选择器加多选（长按/勾选）+ 逐个创建 + 进度汇总——涉及选择器交互重构，单独立项
 
 ---
 
@@ -139,30 +172,23 @@
 
 ### P1 高频
 
-- [x] **D-01 头像展示 + 上传**：真实头像替代首字母占位；点击上传（格式白名单 + 5MB 校验 + 上传 spinner，PC `usePasswordProfile.ts:151-183`）。✅ 已实施（2026-09-11，Batch 5）：头像区改 `van-image`（有 `profile.avatar` 时显示，`@error` 回落到首字母占位）+ 右下角相机角标提示可点击；隐藏 `<input type=file accept="image/png,image/jpeg,image/gif,image/webp">` + `usersControllerUploadAvatar({ body: { file } as never })`（普通对象，非 FormData）；PNG/JPEG/GIF/WebP 白名单 + 5MB 校验 + 上传中遮罩 loading；成功后 `loadProfile()` 回读。契约：POST `/api/v1/users/profile/avatar`，SDK `UploadAvatarDto = { file: Blob|File }`。
-- [x] **D-06 密码强度条 + 安全建议 + 忘记密码入口**：5 级彩色强度条 + 建议列表 + 「忘记密码？」链接（PC `ProfilePasswordTab.tsx:110-179`）。✅ 已实施（2026-09-11，Batch 5）：`pwdStrength` computed 与 PC `getPasswordLength>=8/大小写/数字/特殊字符` 四项打分同口径，5 档配色（#ef4444→#10b981），条宽 `score/4*100%`；「安全建议」清单带勾（已完成项 `passed` 绿勾、未完成 `info-o` 灰）；「忘记密码？」cell 走 `getPCForgotPasswordUrl()`（ADR-0062，移动端不承载原生认证）；弹窗高度 62%→76%。
-- [x] **D-10 会员购买/续费/升级入口**：VIP 徽章区加「管理会员」→ 套餐对比底部弹窗 + 购买（PC `MemberCenter.tsx:484-626`）。被 VIP 拦截时弹框改为此入口（现只 toast）。✅ 已实施（2026-09-11，Batch 5，降级方案）：新增「会员」分组，「管理会员」cell 显示当前档位/免费用户，点击 `window.open(getPCMemberCenterUrl())` 跳 PC `/member-center`（弹窗被拦截时回退整页跳转）。移动端不重做套餐对比+支付下单流程（涉及支付，属 PC 能力）；被 VIP 拦截的 toast 未改（`handleApiError` 全局分类，改动会影响所有页）。
-- [x] **D-11 会员到期预警**：剩余 ≤7 天黄色横幅（PC `MemberCenter.tsx:458-478`）。✅ 已实施（2026-09-11，Batch 5）：`vipDaysRemaining` = `ceil((expiresAt - now)/86400000)`，`vipExpiringSoon` = `isVip && 0 < days <= 7`（`expiresAt` 为 null=永久，不算到期）；头部下方黄色横幅 + `warning-o` 图标 + `t('会员即将到期，剩余 {days} 天，请及时续费')`。
-- [x] **D-12 存储配额用量**：已用/总量进度条，70%/90% 变色（PC `MemberCenter.tsx:700-748`）。✅ 已实施（2026-09-11，Batch 5）：`usersControllerGetDashboardStats` → `UserDashboardStatsDto.storage`（`{used,total,remaining,usagePercent}`）；`storagePercent` 优先用后端 `usagePercent`、缺失时前端算 `used/total*100` 并 clamp 0-100；配色 >90% 红 / >70% 黄 / 其余 accent；`loadStats()` 失败静默（配额条隐藏）不打成整页错误态。契约：GET `/api/v1/users/stats/me`。
+- [x] **D-01 头像展示 + 上传**：✅ / **D-06 密码强度条 + 忘记密码入口**：✅
+- [x] **D-10 会员购买/续费/升级入口**：✅（跳 PC /member-center 整页；移动端已有完整会员中心见 §E 之外的 MemberCenterPage——**待确认**：D-10 的「跳 PC」降级方案是否应改为直接进移动端 MemberCenterPage，2026-10-01 重审发现移动端已有完整会员页，此降级可能已过时）
+- [x] **D-11 会员到期预警**：✅ / **D-12 存储配额用量**：✅
 
 ### P2
 
-- [x] **D-02 账号元信息**：角色 Tag、账号状态（正常/未激活/已禁用）、创建时间（PC `ProfileInfoTab.tsx:280-320`）。✅ 已实施（2026-09-11，Batch 5）：新增「账号详情」分组——角色 Tag（`role.name === 'ADMIN'` → 系统管理员，否则普通用户，与 PC `usePermission.isAdmin` 同口径；后端 role.name 是枚举值非展示名，故不直接展示）+ 状态 Tag（ACTIVE/INACTIVE/SUSPENDED → 正常/未激活/已禁用，绿/黄/红）+ 创建时间（`createdAt` → YYYY-MM-DD，非法时间不显示）。
-- [x] **D-03 邮箱/手机「已验证」标记**：已绑定显示 ✓，手机区分 `phoneVerified`。✅ 已实施（2026-09-11，Batch 5）：`accountGroup` 加 `verified` 字段，cell `#value` slot 尾部 `van-icon name="passed"`。邮箱=已绑定即已验证（后端无 `emailVerified` 字段，核实 `UserProfileResponseDto` 只有 `phoneVerified`）；手机号=`phone && phoneVerified === true`。
-- [x] **D-05 邮箱/手机解绑**：绑定管理区加「解绑」→ 原值验证码确认（PC `useEmailProfile.ts:315-330`）。✅ 已实施（2026-09-11，Batch 5）：点已绑定的邮箱/手机 cell → `van-action-sheet`（更换/解绑，解绑红字；未绑定时单动作直进弹窗不多加一层）；解绑弹窗=发码到原值 → 输码 → `authControllerUnbindEmail/UnbindPhone({ body: { code } })`（后端 `unbindEmail` 内部自行 `verifyEmail` 校验码，无需先取 token）。后端强制「账号至少保留一种登录方式（密码/手机/微信）」，违规 400 兜底 + 弹窗内文案前置提示。
-- [x] **D-07 hasPassword 用户「设置密码」引导**：区分「设置密码/修改密码」按钮文案 + 引导文案（PC `ProfilePasswordTab.tsx:73-87`）。✅ 已实施（2026-09-11，Batch 5）：`isSettingPassword = hasPassword === false` 时——安全组入口文案改「设置密码」、弹窗标题改「设置密码」、不显示当前密码字段、顶部加灰底引导文案（手机/微信自动创建账号尚未设密）、新密码 placeholder 改「至少8位，包含大小写字母和数字」、提交按钮改「设置密码」、成功文案改「密码已设置成功」。
-- [x] **D-08 改密后自动重新登录**：改密后 `login(用户名, 新密码)` 保持会话，失败则登出（PC `usePasswordProfile.ts:100-138`）。✅ 已实施（2026-09-11，Batch 5）：`reloginWithNewPassword()` 用 `authControllerLogin({ body: { account: username||email, password: newPassword } })`，成功写 `accessToken`/`refreshToken`/`user` 三 localStorage + `setAuthenticated()` + `loadProfile()`；失败 `showDialog` 告知后清三 key + `setGuest()`（登录引导弹窗接着提示用新密码登录）。`AuthApiResponseDto = {accessToken, refreshToken, user, restored?, mfaSetupRequired?, passwordChangeRequired?}`；`LoginDto.account` = 邮箱/用户名/手机号。
-- [x] **D-14 验证码格式对齐**：移动端 `/^\d{4,8}$/` 改与 PC 一致 `/^\d{6}$/`。✅ 已实施（2026-09-11，Batch 5）：抽 `CODE_RE = /^\d{6}$/` 常量替换 4 处（`canSubmitCode` ×2 / `submitOldCode` / `submitNewCode`）。后端实证=邮箱与短信验证码均 `(100000 + crypto.randomInt(900000)).toString()` 恒 6 位，原 4-8 位正则可接受后端不发的码宽。
-- [x] **D-15 密码可见性切换**：van-field 加密码眼睛切换。✅ 已实施（2026-09-11，Batch 5）：三个密码字段 `:type` 绑 computed（password/text 切换）+ `#right-icon` slot 放 `van-icon`（`eye-o`/`eye`），`openPwdDialog` 重置三个可见态。核实 Vant 4 `van-field` 无内置密码切换；`showClear` 与自定义 `right-icon` slot 是并列渲染（`renderFieldBody` = input + clear + rightIcon + button），`clearable` 不受影响。
-- ➖ **D-16 deactivated 态细化**：区分「冷静期可自动恢复（重新登录即取消注销）」vs「已超期（数据 N 天后删除）」+ 客服联系方式（PC `useLoginForm.ts:231-236` + `SupportModal`）。➖ 移动端不适用（2026-09-11，Batch 5 判定）：deactivated 只发生在**登录时**（PC 登录页），移动端登录走 PC 页（ADR-0062），已登录用户不存在 deactivated 态可细化——壳级 `useAuthState` 已有 `deactivated` kind + `requireAuth()` 对 deactivated 直接 `return false`，`AuthStatePage` 已统一展示。客服联系方式需要产品给出口，另开产品需求票。
+- [x] **D-02 账号元信息 / D-03 已验证标记 / D-05 邮箱手机解绑 / D-07 设置密码引导 / D-08 改密后重新登录 / D-14 验证码 6 位 / D-15 密码可见性**：✅
+- [➖] **D-16 deactivated 态细化**：➖ 不适用（已裁定）
 
 ### P3 / 待确认
 
-- [ ] **D-04 微信绑定/解绑/冲突接管**：⏸ OAuth 全页跳转在移动端受限（现有设计已移除），需确认是否做 H5 内 OAuth 流程。
-- [ ] **D-09 注销账户（冷静期）**：4 种验证方式 + 30 天警告 + 确认勾选（PC `ProfileDeactivateTab.tsx`）。移动端：底部弹窗流程。
-- [ ] **D-13 订单历史/继续支付/申请退款**：PC `MemberCenter.tsx:883-1121`。
-- [ ] **D-17 原生认证流程**（登录/注册/忘记密码/邮箱手机验证/设备授权）：⏸ 与 ADR-0062 现有设计（认证跳 PC 页）冲突，需确认是否做原生认证。
-- [ ] **D-18 登出行为**：现整页跳 PC 登录页，可改为站内 guest 态 + 登录引导弹窗。
+- [x] **D-04 微信绑定/解绑/冲突接管**：✅（2026-10-01 重审：整页跳转 + `#wechat_result` 回传 + 接管确认，runtimeConfig.wechatEnabled 门控）
+- [x] **D-09 注销账户（冷静期）**：✅ `useProfileDeactivate`（动态验证方式含微信授权 + 30 天警告 + 确认勾选）
+- [x] **D-13 订单历史/继续支付/申请退款**：✅ MemberCenterPage 内（订单列表 + 续付 + 退款申请/状态）
+- [x] **D-17 原生认证流程**：✅ 移动端已有原生登录/注册/忘记密码/邮箱手机验证页（ADR-0062 旧设计已演进）
+- [x] **D-18 登出行为**：✅ 站内 guest 态 + 登录引导（useLoginPrompt）
+- [x] **D-19（2026-10-01 重审新增）修改用户名/昵称**：✅（用户名每月 3 次限制提示已有）
 
 ---
 
@@ -170,87 +196,86 @@
 
 ### P0 数据风险
 
-- [x] **E-22 从库打开图纸前未保存更改确认**：`openDrawing` 直接 `reset()` 重开有丢数据风险 → 加 `isModified` 确认（PC `SidebarContainer.tsx:283-296` `checkAndConfirmUnsavedChanges`）。✅ 已实施（2026-09-10）：`LibraryPanel.openDrawing` 在 `reset()` 前判断 `editorState.state.isModified`，`showConfirmDialog`（保存/不保存，同 home `handleNewFile` 模式）：保存失败则中止打开，「不保存」清标记继续。
+- [x] **E-22 从库打开图纸前未保存更改确认**：✅
 
-### P1 高频（含速赢）
+### P1 高频
 
-- [x] **E-01 编辑器菜单补 5 项（速赢）**：导出 PDF/DWG/DXF、版本历史、协同、语言切换、另存为到云图——命令与弹窗**全部已实现**（`useMenu.ts:67-115/170-230`），只是 `mxUIConfig.json` 菜单数据无对应项，加配置即可。✅ 已实施（2026-09-10）：`public/mxUIConfig.json` headerMenuData 补 导出(Mx_export)/版本历史(Mx_versionHistory)/协同(Mx_ShowCollaborate)/另存为(Mx_SaveAsToCloud) + 末尾 语言(Mx_languages)，图标名已核对 iconfont.css。
-- [x] **E-02 本地另存为**：「另存为本地」菜单项。✅ 已实施（2026-09-11）：命令 `Mx_SaveAsMxWeb`（`src/command/m_mx_saveAsMxWeb.ts`）与注册（`command/index.ts`）**早已存在**，仅 `mxUIConfig.json` headerMenuData 缺项 → 在「另存为」后插入，icon 复用 `baocun`。
-- [x] **E-07 分享当前图纸**：菜单「分享」→ 底部弹窗（创建/复制链接/撤销/有效期，PC `ShareDialog` 移动端形态）。✅ 已实施（2026-09-11）：`ShareCurrentPopup.vue`（有效期 8 档含自定义天数/永不过期、`expiresIn` 单位**秒**对齐后端、QRCode 二维码、复制降级 toast、已有分享列表 + 撤销）；菜单项不带 icon（iconfont 无 share glyph，Vant icon-cell 对 falsy icon 不渲染 → 纯文本行）；`Mx_Share` 命令经 `mxcad-share-current` 事件由 `home/index.vue` 监听唤起。
-- [x] **E-23 图块插入/打开图纸缓存戳用 updatedAt**：✅ 已实施（2026-09-11）：抽 `libraryOperationService.buildCacheTimestamp(updatedAt)`（无值/非法才回退 `Date.now()`）+ `buildLibraryFileUrl`，`LibraryPanel.getNodeFileUrl` 与图块插入共用 —— `Date.now()` 会让每次点击生成新缓存键，同一文件重复插入永不命中缓存。
-- [ ] **E-17 库面包屑返回入口**：⏸ 拆 Batch 6b（需层级视图）：`all-files` 端点递归平铺且后端过滤 `nodeType: FileType.FILE`，**文件夹不进扁平列表**，`enterFolder`/`breadcrumbs` 在扁平模型下无数据来源。
-- [x] **E-08 库内文件上传**：✅ 已实施（2026-09-11）：抽屉头部上传按钮（`canManage` 时显示，icon `photo-o`，上传中 `replay` 旋转）+ 隐藏 `<input type="file" multiple>`；走 `calculateFileHash + uploadFile({file, hash, nodeId})` 管线（秒传/去重契约），目标 = `library.resolveCategoryNodeId()`；`UPLOAD_ACCEPT` 对齐后端支持的 dwg/dxf/图片/pdf 白名单。
-- [ ] **E-09 库内新建文件夹**：⏸ 拆 Batch 6b（需层级视图，理由同 E-17：新建的文件夹在 `all-files` 扁平列表中不可见）。
-- [x] **E-10 库内重命名**：✅ 已实施（2026-09-11）：底部弹窗 + `van-field`（maxlength 100）+ 空名禁用确认；`renameLibraryNode` → `libraryControllerRename{Drawing|Block}Node`。
-- [x] **E-11 库内删除（单个 + 批量）**：✅ 已实施（2026-09-11）：长按（800ms，`touchmove` 取消）进入多选 → 勾选角标 + 底部操作栏（取消/已选 N 项/全选/操作）→ 操作表删除项红色 `#ee0a24` + `showConfirmDialog`「删除后不可恢复」（库无回收站，`permanently: true`）；批量走 `batchDeleteLibraryNodes` 按 `successCount/failedCount` 分支提示避免误报全成。
-- [ ] **E-12 库内移动/复制**：⏸ 拆 Batch 6b（目标=分类/文件夹树，需层级视图）。
-- [x] **E-13 库内下载**：✅ 已实施（2026-09-11）：操作表「下载原格式 / 导出 PDF / DWG / DXF」（导出格式受 `canExportDownloadGate` VIP 门控）+ 多选「下载所选」并行批量下载 + 汇总提示；`downloadLibraryNode` 双路（mxweb 走库公开下载端点，其余走 `downloadControllerDownloadNodeWithFormat`），`silent` 模式不弹 toast 也不 `closeToast()`（否则批量时调用方自己的 loading toast 被逐个杀掉）。
-- [x] **E-19 当前打开文件高亮**：✅ 已实施（2026-09-11）：`openDrawing` 成功后补 `setFileId(node.id)` + `setUpdatedAt`（`openMxWeb` 本身不设 fileId，`reset()` 会清掉 → 不补则高亮永不生效），`grid-item--active` 主题色描边。
-- [x] **E-20 库空态 CTA**：✅ 已实施（2026-09-11）：`canManage && !selecting` 时空态加「上传图纸」按钮（直接唤起文件选择，省去再点头部按钮）。
-- [x] **E-21 库加载失败保留已有列表**：✅ 已实施（2026-09-11）：错误态仅 `nodes.length === 0` 时整页展示；有数据时在「加载更多」行显示失败条 → `useLibrary.retryLoadMore()`（重载当前页，不复用已自增 page 的 `loadMore`，否则漏一整页）。
-- [x] **E-28 MXWEB 导出菜单项**：✅ 已实施（2026-09-11）：`buildExportActions()` 首位插入「导出 MXWEB」（icon `geshi`），**不走 VIP 门控** —— MXWEB 是源格式、纯前端导出无转换（与 PC 一致）。
+- [x] **E-01 编辑器菜单补 5 项 / E-02 本地另存为 / E-07 分享当前图纸 / E-23 缓存戳 updatedAt**：✅
+- [➖] **E-17 库面包屑 / E-09 库内新建文件夹**：⏸ 库扁平模型限制（Batch 6b，与 all-files 决策冲突待确认）
+- [x] **E-08 库内文件上传 / E-10 库内重命名 / E-11 库内删除 / E-13 库内下载 / E-19 当前文件高亮 / E-20 库空态 CTA / E-21 库加载失败保留列表 / E-28 MXWEB 导出**：✅
+- [➖] **E-12 库内移动/复制**：⏸ Batch 6b（需层级视图）
+
+### P2
+
+- [x] **E-03 打印**：✅ 已被现有「导出 PDF」完整覆盖——移动端无物理打印机，「打印=输出 PDF」；现有链路（顶部菜单「导出」→「导出 PDF」（VIP 门控）→ 引擎出 mxweb → 后端 `POST /public-file/convert` 转 PDF → 下载，`exportService.exportDrawing('pdf')`）即 Mx_PrintDialog 等价实现。无需新增菜单/命令；若需 PC 式页尺寸预设（A4/A3）扩展 `PdfOptionsPopup.vue` 即可
+- [x] **E-04 撤销/重做**：✅ 顶栏本有撤销（Mx_Undo）；补重做按钮（Mx_Redo，引擎内建命令——mxdraw dist 已验证 `addCommand("Mx_Redo")` 注册）。图标暂用 `huitui1`（移动端 iconfont 无 PC 的 `qianjin`/前进图标），待视觉核验后按需替换
+- [x] **E-05 插入表格**：✅ `mxUIConfig.json`「绘制」组加「插入表格」→ Mx_InsertTable（引擎派发，同 E-31 机制）。i18n 新增「插入表格」键 3677。回归测试 `menuCommands.spec.ts`
+- [x] **E-06 视图子菜单**：✅ `mxUIConfig.json` 新增「视图」组（窗口缩放 Mx_WindowZoom / 视区平移 Mx_Pan / 顺时针旋转90度 Mx_Plan90CW / 逆时针旋转90度 Mx_Plan90CCW / 自定义旋转角度 Mx_Plan，引擎派发）。PC 的 3 层嵌套（窗口缩放/视区旋转带子菜单）拍平为 2 层（移动端 toolbarData 仅支持组→list）。i18n 新增 6 键（视图 3671 / 窗口缩放 3672 / 视区平移 3673 / 顺时针旋转90度 3674 / 逆时针旋转90度 3675 / 自定义旋转角度 3676）。回归测试 `menuCommands.spec.ts`
+- [x] **E-15 库列表视图 + 切换 / E-16 库分页尾标**：✅ **E-15** `LibraryPanel.vue` 加网格/清单视图切换（header 加 mode-toggle，照抄 `UnifiedFileList.vue` A-16 模式；清单行=小缩略图+名称+日期；`useViewMode('library_drawing'/'library_block')` 按库域持久化）。i18n 新增 2 键（网格视图 3688 / 列表视图 3689）。**E-16** 分页尾标既有实现已覆盖（`LibraryPanel.vue` 「没有更多了」+ load-more spinner + 失败重试条，IntersectionObserver 驱动），无需开发
+- [x] **E-18 库多选 + 批量操作栏**：✅
+- [x] **E-24 「当前图纸已被删除」警告横幅**：✅ 移动端 home/index.vue 加持久横幅（绑定 editor store `isCurrentFileDeleted`；useSave 保存时远程探测 DELETED/404 置位，对齐 PC session.ts `notifyNodesDeleted` 语义）。文案复用已有 i18n 键 1584，无新增键
+- [x] **E-25 版本历史体验**：✅ `VersionHistoryPopup.vue`：①**相对时间**——`formatDate`（绝对时间）改 `formatRelativeTime`，口径收敛到 `@cloudcad/platform relativeTime`（与 PC 共用），i18n 新增 7 键（刚刚 3680 / {n}分钟前 3681 / {n}小时前 3682 / {n}天前 3683 / {n}周前 3684 / {n}个月前 3685 / {n}年前 3686）；②**预热提示**——选中版本后保持弹窗显示 spinner+「正在准备历史版本文件，请稍候...」（键 3687），`await openHistoricalVersion`（含转换）完成后再关弹窗（简化版预热：复用既有文件加载/转换流程，未实现 PC 的 warmup=1 显式轮询——移动端 openDrawing 已内含转换，UI 层补「准备中」态即可）。回归测试 `menuCommands.spec.ts`
+- [x] **E-26 外部参照面板（查看/下载/替换已有参照）**：✅ 2026-10-01 重评估推翻旧「高复杂单独立项」判断——PC 全链路纯后端 HTTP API（零引擎调用），移动端 SDK 函数全部已存在，难度中偏低、纯前端可落地。新增：①**service 层** `extRefManageService.ts`（双场景统一出口：公开=publicFileController* / 节点=mxcadExternalRefController*+mxcadFileAccessController*；`fetchExtRefList` 列全部参照并逐项标 exists、公开场景带 10×2s 重试等 preloading 就绪；`getExtRefImageUrl`/`getExtRefDrawingUrl` 拼查看 URL（公开直连带缓存打散 / 节点鉴权 blob）；`downloadExtRef` 取 blob 落盘；`replaceExtRef` 分片上传 1MB/片对齐既有逻辑）；②**面板** `ExternalRefManagePopup.vue` + `showExternalReferenceManagePopup.ts`（列全部参照含已存在与缺失，每行 查看/替换/下载，缺失行 上传，头部统计+刷新，节点场景按 `canManageExternalRef` 权限门控上传/替换按钮；图片查看走 `showImagePreview`、图纸查看走 `openMxWeb` 就地打开+`useOpenGuard` 未保存守卫）；③**接线** `useFileLoader.ts` 的 `checkFileExternalRefs`/`checkPublicFileExternalRefs` 由「仅提示缺失」升级为「弹管理面板」（预取列表传入避免二次拉取，无参照静默跳过）。附带：`triggerBlobDownload` 收敛为唯一出口 `utils/download.ts`（原散在 exportService/libraryOperationService 两份副本改导入）。i18n 新增 12 键（查看 3690 / 替换 3691 / 下载 3692 / 图纸 3693 / 暂无外部参照文件 3694 / 共 {count} 个文件 3695 / ，{count} 个缺失 3696 / 所有文件已处理 3697 / 还有 {count} 个文件未处理 3698 / 打开外部参照失败 3699 / 外部参照下载失败 3700 / 正在上传外部参照... 3701），复用既有键（管理外部参照 3039 / 关闭 2297 / 图片 1046 / 上传 2613 / 刷新 1832 / 下载成功 2287 / 下载失败 2288 / 上传失败 2619 / 外部参照上传完成 3260）。回归测试 `extRefManageService.spec.ts`（17 例：列表双场景/查看 URL 双场景/下载双场景/替换分片+节点+失败）。**已知降级**：图纸「查看」移动端就地打开 mxweb（替换当前图纸），非 PC 的新标签页——移动端无多窗口，打开后需重新打开原图
+- [x] **E-27 另存为成功后「打开新图纸」**：✅ 对齐 PC `useExportModals.handleSaveAsSuccess`。`SaveAsSheet.vue` 的 `success` emit 补 `targetType`/`libraryType`（原只传 nodeId/fileName）；`home/index.vue` `onSaveAsSuccess` 接住后弹 `showConfirmDialog`（「打开新图纸」/「{fileName} 已保存成功，是否打开？」），确认后 `openDrawing({ source: 'node'|'library', libraryKey?, nodeId })`（库域走 library 源避免走错 API），失败 toast。i18n 新增 2 键（打开新图纸 3678 / 消息 3679），复用既有「打开」/「关闭」/「打开文件失败」。回归测试 `menuCommands.spec.ts`
+- [x] **E-30（2026-10-01 重审新增）修改类命令菜单缺失**：✅ 已由「选中实体浮层工具栏」覆盖（useEditObjectToolbar.ts：删除/复制/移动/旋转/镜像/颜色，选中即现、点空白消失）——移动端触控交互正解（选中实体→浮层），非 mxUIConfig 菜单；m_mx_copy/move/rotate/mirror 命令均已注册并挂该浮层。台账原「菜单未挂」判断过时
+- [x] **E-31（2026-10-01 重审新增）剪贴板/选择命令**：✅ `mxUIConfig.json` 新增「剪贴板」组（复制 Mx_Copy / 粘贴 Mx_PasteClip / 剪切 Mx_CutClip / 删除 Mx_Erase / 全部选择 Mx_select_all）。均为**引擎命令**，走既有 `useFooterToolbar.onClick → callCommand`（`MxFun.sendStringToExecute`）派发——与 PC 同一机制（PC 源码零前端命令文件，纯引擎派发），故**无需新命令文件**。i18n 复用既有键（复制 802 / 粘贴 3608 / 剪切 1053 / 删除 813 / 全部选择 711），仅新增组名「剪贴板」键 3670。回归测试 `menuCommands.spec.ts`
+- [x] **E-32（2026-10-01 重审新增）DWG 对比**：✅ `mxUIConfig.json`「工具」组加「图纸比对」→ Mx_CompareDWG（引擎派发，同上机制）。i18n 新增「图纸比对」键 3664。回归测试 `menuCommands.spec.ts`
+- [x] **E-33（2026-10-01 重审新增）样式/属性面板**：✅ `mxUIConfig.json` 新增「样式」组（颜色 Mx_Color / 线型 Mx_Linetype / 文字样式 Mx_Style / 标注样式 Mx_Dimstyle / 对象特性 Mx_Properties，引擎派发）。i18n 组名「样式」复用既有键 792，新增 5 键（颜色 3665 / 线型 3666 / 文字样式 3667 / 标注样式 3668 / 对象特性 3669）。回归测试 `menuCommands.spec.ts`
+  - 注：E-31/E-32/E-33 引擎自带面板（属性/颜色/线型/比对等）为引擎默认 UI，移动端渲染效果待真机视觉核验（触控可用性）；命令派发与菜单/i18n 已落地
+  - 附带发现（未修，既有漂移）：header 菜单「导出」「协同」两标签不在 idMap，非中文语言下回退显示中文原文——独立 i18n 缺口，非本次范围
 
 ### Batch 6 记录（2026-09-11）
 
-- 新增 2 文件：`services/libraryOperationService.ts`（rename/delete/batchDelete/download + 缓存戳，库命名空间专用，对照 PC `useLibraryOperations.ts`）、`pages/home/components/ShareCurrentPopup.vue`。
-- 修改 6 文件：`LibraryPanel.vue`（多选/上传/操作表/重命名/错误态/高亮）、`useMenu.ts`（MXWEB 导出 + `Mx_Share`）、`permissionService.ts`（迁入 `canExportDownloadGate`，库面板与菜单共用，避免面板耦合 `useMenu` 的 mxcad 重依赖）、`useLibrary.ts`（`retryLoadMore` + 导出 `resolveCategoryNodeId`，纯追加零行为变更）、`home/index.vue`（挂 `ShareCurrentPopup` + 事件监听）、`public/mxUIConfig.json`。
-- 后端/SDK/数据库零改动（全部端点与 DTO 已存在）。
-- **i18n 管线坑（重要）**：`voerkai18n extract` 默认 mode=`sync`，**会删除源码中不存在的文本**；而 `public/mxUIConfig.json`（运行时 fetch 的菜单配置）与 `useMenu.ts`（菜单文本是裸字符串、不经 `t()`）都不在抽取范围内 → 编辑器菜单新增文案**必须手工写进 `src/languages/translates/messages/mxUIConfig.json`**（该文件不被 extract 重写，但 compile 会 `*.json` 全量合并进 4 个语言包），并分配不与现有区间冲突的 `$id`（compile 遇无 `$id` 直接 throw）。写入 `default.json` 的手工键会被下一次 extract 清掉，无效。
-- **附赠 bug 修复**：撤销分享传 `item.id` 致 404 —— 后端 `@Delete(':token')` + `findUnique({ where: { token } })`，`ShareManagePage.onRevokeShare` 原传 DB id（恒 NotFound，用户只会看到「撤销失败」），已改传 `item.token`；`ShareCurrentPopup` 新代码直接按 token 写。
-- 遗留（不在本批）：库是扁平模型，`useLibrary` 的 `isFolder`/`enterFolder`/文件夹缩略图分支在 `all-files` 下为死代码，保留待 Batch 6b 切 `children` 层级视图时复用；编辑器菜单既有键 `导出`/`协同` 至今未翻译（en-US/ko-KR 用户看到中文），非本批引入。
-
-
-### P2
-
-- [ ] **E-03 打印**：`Mx_PrintDialog` 等价（打印输出到 PDF）。
-- [ ] **E-04 重做**：顶栏撤销旁加重做（`Mx_Redo`）。
-- [ ] **E-05 插入表格**：`Mx_InsertTable` 菜单项。
-- [ ] **E-06 视图子菜单**：窗口缩放/范围缩放/视区平移/视区旋转（现仅「显示全部」）。
-- [ ] **E-15 库列表视图 + 切换**：网格/列表双视图（现仅 2 列网格）。
-- [ ] **E-16 库分页/页大小**：滚动加载已有，补「没有更多」尾标一致性。
-- [x] **E-18 库多选 + 批量操作栏**：✅ 已实施（2026-09-11，随 E-11 一并落地）：长按多选 + 底部操作栏（下载/删除）；移动/复制留 Batch 6b（需层级视图选目标）。
-- [ ] **E-24 「当前图纸已被删除」警告横幅**：顶部黄条（PC `CADEditorDirect.tsx:662-673`）。
-- [ ] **E-25 版本历史体验**：预热提示（「正在准备历史版本文件…」行级 loading）+ 相对时间（刚刚/X 分钟前）（PC `VersionHistoryModal.tsx:40-126`）。
-- [ ] **E-26 外部参照面板**：查看/下载/替换/刷新已有参照（现仅上传缺失参照，PC `ExternalReferencePanel`）。
-- [ ] **E-27 另存为成功后「打开新图纸」**：confirm + 打开（PC `useExportModals.ts:115-133`）。
+（保留历史记录：新增 2 文件 + 修改 6 文件；i18n 管线坑=mxUIConfig.json 文案必须手工写进 translates/messages/mxUIConfig.json 并分配 $id；附赠修复撤销分享传 id 致 404）
 
 ---
 
-## F. 字体库（整页缺失）
+## F. 字体库 —— ➖ 排除（2026-10-01 重审）
 
-> PC `packages/frontend/src/pages/FontLibrary/` 整页，移动端完全没有。用户无法管理 CAD 引擎可用字体。
+PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围（只对照普通用户）排除。
+原 F-01~F-05 条目作废。
 
-### P2
+---
 
-- [ ] **F-01 字体库页面**：入口（个人中心或编辑器菜单）→ 列表页：后端/前端双 tab（转换程序/资源目录）、统计条（总数/总存储/格式种类）、名称搜索、格式筛选、排序（时间/名称/大小）、网格/列表切换。移动端：单列列表 + 筛选 chips + 排序 ActionSheet。
-- [ ] **F-02 字体上传**：多文件 + 目标选择（仅后端/仅前端/同时）+ 去重提示（PC `UploadFontModal.tsx:243-250`）。
-- [ ] **F-03 字体删除（单个 + 批量）**：长按多选 + 删除确认 + 部分失败提示（PC `useFontLibrary.ts:209-282`）。
-- [ ] **F-04 字体下载**：ActionSheet「下载」。
-- [ ] **F-05 无权限空态**：`canReadFonts` 门控「您没有查看字体库的权限」空态（PC `FontLibrary/index.tsx:70-84`）。
+## H. 合规页（2026-10-01 重审新增）
+
+- [x] **H-01 隐私政策/用户协议页 + 入口**：✅ 2026-10-01 移动端新增 `/legal/privacy`、`/legal/terms` 路由 + `pages/legal/LegalPage.vue`；正文 `languages/legal/`（privacy/terms 各 5 语言，占位符经 platform `resolvePlaceholders` 解析，见 P-06）；LoginPage 底部 + RegisterPage 协议链接均接入
+- [x] **H-02 注册页协议勾选**：✅ 2026-10-01 RegisterPage 补「我已阅读并同意《用户协议》《隐私政策》」勾选，未勾选注册按钮禁用（对齐 PC `agreedToTerms` 必填）
+
+---
+
+## I. 认证流程（2026-10-01 重审：已对齐，记录备查）
+
+- 登录：账号（用户名/邮箱/手机号+密码）+ 手机验证码 + 微信（整页跳转+事务轮询，client='mobile'）——两端一致 ✅
+- 注册：唯一性预检（用户名/邮箱/手机号）+ 邮箱验证一步完成注册 + 微信 tempToken 携带——两端一致 ✅
+- 邮箱/手机验证页、忘记密码/重置密码——移动端原生页已覆盖 ✅
+- MFA：仅管理员（AdminMfaSetup），普通用户无 MFA——范围外 ✅
+- 设备授权/会话转移（/device、/session-transfer）：桌面 EXE 专属，移动端不适用 ➖
 
 ---
 
 ## G. 跨切面
 
-- [ ] **G-01 UnifiedFileList 列表模式 ellipsis 死控件**：并入 A-03（接 ActionSheet）。
-- [ ] **G-02 新增文案 i18n**：所有新 UI 文本走 `t()` → `pnpm i18n`（extract+baidu translate+compile），ko 翻译质量需人工校对（本次已发现 baidu 把 `{pct}` 译成乱码的坑）。
-- [ ] **G-03 集成测试/单测**：每条 P0/P1 修复带回归测试（AGENTS.md 集成测试规则）。
-- [ ] **G-04 PC 通知中心（notice-center）前端孤儿代码去留**：⏸ 待确认。`packages/frontend/src/components/notice/` 下 `NoticeProvider.tsx` + `useNoticeStream.ts`（已跟踪）依赖 api-sdk 的 `NoticeResponseDto` / `noticeCenterControllerGetCurrent` / `noticeCenterControllerIssueTicket`，但**后端 notice-center 在全部 git 历史中从未存在**（`git ls-files packages/backend | grep -i notice` = 0；`git log --all --diff-filter=A` 只命中前端 2 文件），api-sdk 亦无对应导出。且 `NoticeProvider` **从未在 `App.tsx` 挂载**、`useNotices` 全仓零调用者 —— 属从未交付、从未接线的功能。后果：`pnpm type-check` 残留 4 个错误（TS2724 ×2 + TS2305 ×2），**不可通过前端编辑解决**。两条出路：① 删死代码（符合 AGENTS.md「无消费者代码删或标注」，但 `NoticeProvider.tsx`/`useNoticeStream.ts` 已跟踪，删除后无法 `git restore`，不可逆）；② 重建后端 notice-center（等于凭空发明功能规格：数据模型/级别/上下线/管理入口均无原始定义可依，且落地后无创建公告的途径，属「上线但无用」）。**当前保留文件 + 如实保留 4 个错误**，不擅自删除他人已跟踪代码，也不发明后端规格。
+- [x] **G-01 UnifiedFileList ellipsis 死控件**：✅ 已并入 A-03
+- [ ] **G-02 新增文案 i18n**：⬜ 所有新 UI 文本走 `t()` → extract+compile；mxUIConfig.json 菜单文案手工写 translates（坑记录见 Batch 6）
+- [ ] **G-03 集成测试/单测**：⬜ 每条 P0/P1 修复带回归测试
+- [ ] **G-04 PC 通知中心孤儿代码**：⏸ 维持保留 + 如实保留 4 个 type-check 错误（2026-09-10 裁定，无消费者、后端从未存在）
+- [ ] **G-05（2026-10-01 新增）platform 收敛回归**：每处 P-xx 收敛后，两端 type-check + 测试 + `pnpm --filter @cloudcad/platform type-check` 全绿才算完成
 
 ---
 
-## 实施批次规划
+## 实施批次规划（2026-10-01 更新）
 
 | 批次 | 内容 | 说明 |
 |---|---|---|
-| Batch 1（速赢） | E-01 菜单 5 项、B-01/B-02 搜索分页修复、C-01 撤销确认、B-04/B-05 成员保护+门控、E-22 未保存确认 | ✅ 2026-09-10 完成并复验（58/58 测试绿、type-check 改动文件 0 错、build 通过、i18n 新键已翻译编译） |
-| Batch 2（核心文件操作） | A-03 单条目菜单 + A-04 重命名 + A-05 移动/复制 + A-24 名称校验 + B-03/B-16/B-17 接线 | ✅ 2026-09-10 完成并复验（58/58 测试绿、type-check 改动文件 0 错、build 通过、i18n 新键已翻译编译） |
-| Batch 3（下载/分享增强） | A-06 格式下载 + A-07/A-08 批量下载 + C-02/C-10 续期+二维码 + C-06/C-07 字段 + C-16 状态判定修正 | ✅ 2026-09-11 完成并复验（58/58 测试绿、type-check 改动文件 0 错、build 通过、i18n 新键已翻译编译；新增 3 文件 `useBatchDownload.ts`/`BatchDownloadPanel.vue`/`DownloadFormatPopup.vue`） |
-| Batch 4（列表体验） | A-10 排序 + A-11 项目筛选 + A-19 全选 + A-14/A-15/A-16 状态细节 + B-15 配额条 + B-20 手动刷新 | ✅ 2026-09-11 完成并复验（58/58 测试绿、type-check 改动文件 0 错、build 通过、i18n 14 新键已翻译编译；新增 1 文件 `useViewMode.ts`） |
-| Batch 5（个人中心） | D-01/D-06/D-10/D-11/D-12 + D-02/D-03/D-05/D-07/D-08/D-14/D-15（D-16 判定 ➖ 不适用） | ✅ 2026-09-11 完成并复验（58/58 测试绿、type-check 改动文件 0 新增错、build 通过、i18n 45 新键四语言齐；改 2 文件 `ProfilePage.vue`/`apiConfig.ts`，后端/SDK 零改动） |
-| Batch 6（编辑器+库管理） | E-02/E-07/E-28 + E-08/E-10/E-11/E-13/E-18/E-19/E-20/E-21/E-23 | ✅ 2026-09-11 完成并复验（58/58 测试绿、type-check 20 预存错且改动文件 0 新增、build exit 0、i18n 734 键四语言齐 + ko 占位符手修 9 键、0 占位符损坏；新增 2 文件、改 6 文件，后端/SDK 零改动；附修撤销分享传 id 致 404） |
-| Batch 6b（库层级视图） | E-09 新建文件夹 / E-12 移动复制 / E-17 面包屑 | ⏸ 需把库数据源从 `all-files` 切到 `children` 层级浏览（后端 `all-files` 过滤 `nodeType: FILE`，扁平列表不含文件夹）；与并行会话「库浏览抽屉用 all-files 对齐 CAD 侧边栏 flatMode」的决策冲突，需用户确认方向后实施 |
-| Batch 7（字体库） | F-01~F-05 | 整页新增 |
-| Batch 8（大块/待确认） | A-09/A-20/A-26、B-11/B-12/B-13/B-14、C-03~C-05/C-08/C-09、D-09/D-13、E-03~E-06/E-24~E-27、D-04/D-17 ⏸ | 大块功能 + 待用户确认项 |
-
-> 待确认项（⏸）：A-30 Dashboard、D-04 微信绑定、D-17 原生认证、D-18 登出行为。
+| Batch 1~6 | 见上方各条 ✅ 记录 | 2026-09-10 ~ 09-11 已完成 |
+| Batch 7（platform 收敛·一） | P-01 有效期 + P-02 计价 + P-03 微信UA + P-09 名称校验（四处纯函数，风险低） | ✅ 2026-10-01 完成：platform 加纯函数 → 两端改调用 → 双端 type-check + 测试全绿 |
+| Batch 8（platform 收敛·二） | P-04 usagePercent + P-05 resolveQuotaValue（顺带修两端配额显示不一致） | ✅ 2026-10-01 完成：同 Batch 7 流程，两端配额显示对齐 |
+| Batch 14（platform 收敛·三） | P-14 密码强度打分（3 份逐字节同：PC `usePasswordProfile` + PC `Register` + 移动端 `authValidation`） | ✅ 2026-10-01 完成：platform `scorePasswordStrength`（纯打分 0-4）→ 三处薄适配（保留本端 label/color）+ 移动端 spec +3 例；移动端 472/472 绿、双端 type-check 0 错 |
+| Batch 9（缺口修复·文件） | A-29a 单条目剪贴板复制/剪切 + A-29b 搜索结果打开所在位置 + B-06 改角色刷新自身权限 | ✅ 2026-10-01 完成：A-29a 单条目 ActionSheet 补复制/剪切；A-29b 文件夹命中进入该文件夹 + 长按「打开所在位置」定位父文件夹；B-06 查证非真缺口（两端禁自改角色，转让已覆盖）不改代码 |
+| Batch 10（缺口修复·分享） | C-05 分页 + C-03 批量撤销 + C-11/C-12 续期补自定义/立即过期 + C-14 加载失败底条 + C-15 清除搜索 | ✅ 2026-10-01 完成：ShareManagePage 分页/滚动加载 + 长按多选批量撤销 + 续期弹窗补自定义天数/立即过期（detectShareExpiration 反推初始值）+ 翻页失败底条 + 空态清除搜索；12 新 i18n 键（3643-3654）四语 + idMap |
+| Batch 11（合规） | H-01 合规页+入口 + H-02 注册勾选 + P-06 占位符解析 | ✅ 2026-10-01 完成：移动端 `/legal/*` 路由 + LegalPage + 登录/注册入口 + 注册勾选，正文走 platform `resolvePlaceholders` |
+| **Batch 12（编辑器菜单）** | ✅ E-04 撤销/重做 + E-30 修改类命令 + E-24 删除警告横幅 | ✅ 2026-10-01 完成：E-04 顶栏补重做按钮（Mx_Redo，引擎已验证支持，图标 huitui1 待视觉核验）；E-30 查证已由「选中实体浮层工具栏」覆盖（useEditObjectToolbar）非真缺口；E-24 加持久删除横幅（绑定 isCurrentFileDeleted，复用 i18n 键 1584）。home/index.vue 单文件；459/459 绿 |
+| Batch 13（体验补强） | ✅ A-12 项目卡片（描述+成员数，封面留待）+ A-25 转换失败徽标 + B-08 成员头像/邮箱 + B-09 角色筛选 + C-04 分享排序 | ✅ 2026-10-01 完成 5 项（4 文件 + 5 新 i18n 键 3655-3658 四语）；459/459 绿。**C-09 批量分享 / E-26 外部参照面板补全** 属高优复杂项（选择器多选+逐个创建+进度 / 引擎参照查看下载替换），单独立项后续做 |
+| Batch 6b（库层级视图） | E-09/E-12/E-17 | ⏸ 与 all-files 决策冲突待确认 |
+| ⏸ 待确认 | D-10 会员入口改走移动端 MemberCenterPage？/ P-07 文件大小口径 / P-08 编辑器菜单审计自动化 | 需用户裁定 |
