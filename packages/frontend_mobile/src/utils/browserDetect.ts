@@ -1,12 +1,14 @@
+import { isWechatByUA } from '@cloudcad/platform';
+
 /**
  * 浏览器环境检测工具
  */
 
 /**
  * 检测是否为微信浏览器
- * 微信浏览器的 User-Agent 中包含 MicroMessenger
+ * 判定收敛到 @cloudcad/platform 的 isWechatByUA（与 PC 共用）
  */
 export function isWechatBrowser(): boolean {
   if (typeof navigator === 'undefined') return false;
-  return /MicroMessenger/i.test(navigator.userAgent);
+  return isWechatByUA(navigator.userAgent);
 }

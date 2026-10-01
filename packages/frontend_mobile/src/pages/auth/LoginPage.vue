@@ -170,6 +170,11 @@ function goRegister() {
   void router.replace({ path: '/register', query: { ...redirectQueryOf(route.query) } })
 }
 
+/** 合规页（H-01）：push 而非 replace，返回键能回到登录页 */
+function goLegal(doc: 'privacy' | 'terms') {
+  void router.push({ path: `/legal/${doc}` })
+}
+
 function goForgotPassword() {
   void router.replace({ path: '/forgot-password', query: { ...redirectQueryOf(route.query) } })
 }
@@ -317,6 +322,12 @@ onMounted(() => {
         <template v-else>
           <span>{{ t('注册已关闭') }}</span>
         </template>
+        <!-- 合规入口（H-01，对齐 PC 登录页底部） -->
+        <div class="legal-links">
+          <button class="link-btn" type="button" @click="goLegal('privacy')">{{ t('隐私政策') }}</button>
+          <span class="legal-sep">·</span>
+          <button class="link-btn" type="button" @click="goLegal('terms')">{{ t('用户协议') }}</button>
+        </div>
       </div>
     </div>
   </div>
@@ -363,6 +374,20 @@ onMounted(() => {
   &:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+}
+
+/* 合规入口独占一行（auth-footer 是 flex 行，flex-basis 100% 强制换行） */
+.legal-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-basis: 100%;
+  margin-top: 4px;
+
+  .legal-sep {
+    color: var(--text-muted);
   }
 }
 </style>

@@ -46,6 +46,22 @@
         </div>
         <div class="header-meta">
           <span class="total-count">{{ t('共') }} {{ library.total.value }} {{ t('项') }}</span>
+          <div class="mode-toggle">
+            <button
+              :class="['mode-btn', { active: mode === 'grid' }]"
+              :aria-label="t('网格视图')"
+              @click="mode = 'grid'"
+            >
+              <van-icon name="apps-o" size="16" />
+            </button>
+            <button
+              :class="['mode-btn', { active: mode === 'list' }]"
+              :aria-label="t('列表视图')"
+              @click="mode = 'list'"
+            >
+              <van-icon name="bars" size="16" />
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -78,7 +94,7 @@
       </div>
 
       <!-- 网格 -->
-      <div v-else class="item-grid">
+      <div v-else-if="mode === 'grid'" class="item-grid">
         <div
           v-for="node in library.nodes.value"
           :key="node.id"
@@ -113,6 +129,48 @@
             @error="onImgError($event, node.id)"
           />
           <div class="item-meta">
+            <span class="item-name">{{ stripExt(node.name) }}</span>
+            <span v-if="formatDate(node.updatedAt)" class="item-date">{{ formatDate(node.updatedAt) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 清单（E-15） -->
+      <div v-else class="item-list">
+        <div
+          v-for="node in library.nodes.value"
+          :key="node.id"
+          class="list-item"
+          :class="{
+            'list-item--active': isActive(node),
+            'list-item--selected': isSelected(node),
+          }"
+          @click="onItemClick(node)"
+          @touchstart="onTouchStart($event, node)"
+          @touchmove="onTouchMove"
+          @touchend="onTouchEnd"
+          @touchcancel="onTouchEnd"
+        >
+          <van-icon
+            v-if="selecting"
+            class="select-mark"
+            :name="isSelected(node) ? 'checked' : 'circle'"
+            size="20"
+          />
+          <div v-if="library.isFolder(node)" class="list-thumb list-thumb--folder">
+            <van-icon name="bag-o" size="24" />
+          </div>
+          <div v-else-if="failedImages[node.id]" class="list-thumb list-thumb--file">
+            <van-icon name="description" size="24" />
+          </div>
+          <img
+            v-else
+            class="list-thumb"
+            :src="library.getThumbnailUrl(node.id)"
+            loading="lazy"
+            @error="onImgError($event, node.id)"
+          />
+          <div class="list-body">
             <span class="item-name">{{ stripExt(node.name) }}</span>
             <span v-if="formatDate(node.updatedAt)" class="item-date">{{ formatDate(node.updatedAt) }}</span>
           </div>
@@ -245,6 +303,7 @@ import { t } from '@/languages'
 import { MxFun } from 'mxdraw'
 import FloatingPopup from '@/components/FloatingPopup.vue'
 import { useLibrary, LibraryType } from '@/composables/useLibrary'
+import { useViewMode } from '@/composables/useViewMode'
 import { openMxWeb } from '@/plugins/mxcad/openMxWeb'
 import { useEditorState } from '@/composables/useEditorState'
 import { useSave } from '@/composables/useSave'
@@ -286,6 +345,8 @@ const innerShow = computed({
 const floatingPopupRef = ref<InstanceType<typeof FloatingPopup>>()
 
 const library = useLibrary(props.libraryType)
+// E-15 库列表视图切换（网格/清单），按库域持久化（对齐 UnifiedFileList A-16）
+const mode = useViewMode(`library_${props.libraryType}`)
 const { save: saveAction } = useSave()
 const editorState = useEditorState()
 const { user, hasPermission } = useUser()
@@ -861,6 +922,32 @@ watch(
   color: var(--text-tertiary);
 }
 
+/* E-15 视图切换 */
+.mode-toggle {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-elevated);
+  color: var(--text-tertiary);
+  cursor: pointer;
+
+  &.active {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(16, 174, 165, 0.08);
+  }
+}
+
 /* ── 列表 ── */
 .library-body {
   flex: 1;
@@ -968,6 +1055,67 @@ watch(
   font-size: 10px;
   color: var(--text-tertiary);
   line-height: 1;
+}
+
+/* ── E-15 清单模式 ── */
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.list-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+
+  &:active {
+    opacity: 0.7;
+  }
+
+  &--active {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+  }
+
+  &--selected {
+    border-color: var(--primary);
+    background: rgba(16, 174, 165, 0.08);
+  }
+}
+
+.list-thumb {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-color);
+
+  &--folder,
+  &--file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+  }
+}
+
+.list-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .item-name {
+    text-align: left;
+  }
 }
 
 /* ── 加载更多 ── */

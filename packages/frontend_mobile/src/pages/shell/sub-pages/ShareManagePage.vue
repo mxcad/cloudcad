@@ -18,6 +18,13 @@ import QRCode from 'qrcode'
 import { t } from '@/languages'
 import { extractExtension } from '@/composables/useNodeFormatter'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
+import {
+  computeExpiresAtIso,
+  computeExpiresInSeconds,
+  detectShareExpiration,
+  isShareExpired,
+  type ShareExpirationOption,
+} from '@cloudcad/platform'
 
 interface ShareItem {
   id: string
@@ -41,6 +48,14 @@ const shares = ref<ShareItem[]>([])
 const loading = ref(false)
 const error = ref('')
 
+// C-05 分页/滚动加载（对齐 PC ShareTable 分页）：page 累加 + hasMore；
+// C-14 翻页失败保留已加载列表，底条重试（loadMoreFailed 与整页 error 分离）
+const sharePageSize = 20
+const sharePage = ref(1)
+const shareTotal = ref(0)
+const loadMoreFailed = ref(false)
+const shareHasMore = computed(() => sharePage.value < Math.ceil(shareTotal.value / sharePageSize))
+
 // 操作面板（vant 无 showActionSheet 函数式 API，改用 ActionSheet 组件）
 const actionSheetShow = ref(false)
 const actionSheetActions = ref<Array<{ name: string; className?: string }>>([])
@@ -52,27 +67,63 @@ const filterItems = [
   { key: 'expired' as const, label: t('已过期') },
 ]
 
-async function loadShares() {
+// C-04 分享列表排序（服务端 sortBy/sortOrder，对齐 PC SORTABLE_COLUMNS）
+const sortBy = ref<'createdAt' | 'expiresAt' | 'usedCount'>('createdAt')
+const sortOrder = ref<'asc' | 'desc'>('desc')
+const showSortSheet = ref(false)
+
+const sortOptions = [
+  { field: 'createdAt' as const, label: t('创建时间') },
+  { field: 'expiresAt' as const, label: t('有效期') },
+  { field: 'usedCount' as const, label: t('次数') },
+]
+
+const sortSheetActions = computed(() =>
+  sortOptions.map((o) => ({
+    name: o.label,
+    subname: sortBy.value === o.field ? (sortOrder.value === 'asc' ? '↑' : '↓') : '',
+  }))
+)
+
+function onSortSelect(action: { name: string }) {
+  showSortSheet.value = false
+  const opt = sortOptions.find((o) => o.label === action.name)
+  if (!opt) return
+  if (sortBy.value === opt.field) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortBy.value = opt.field
+    sortOrder.value = 'desc'
+  }
+}
+
+async function loadShares(append = false) {
   loading.value = true
-  error.value = ''
+  if (!append) {
+    sharePage.value = 1
+    error.value = ''
+    loadMoreFailed.value = false
+  }
   try {
     const res = await shareControllerListShares({
       query: {
-        page: 1,
-        pageSize: 50,
+        page: sharePage.value,
+        pageSize: sharePageSize,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value,
         ...(keyword.value ? { search: keyword.value } : {}),
       },
     })
     if (res.error) throw new Error(String(res.error))
-    const data = (res.data ?? {}) as { items?: Array<any> }
+    const data = (res.data ?? {}) as { items?: Array<any>; total?: number }
     const rawShares = data.items ?? []
 
-    shares.value = rawShares.map((s: any) => {
+    const mapped = rawShares.map((s: any) => {
       const fileName = s.fileName ?? t('未知文件')
       const ext = extractExtension(fileName)
       const expiresAt: string | null = s.expiresAt ?? null
       // 状态由过期时间客户端判定（对齐 PC isExpired）：有 expiresAt 且已过期 → expired
-      const expired = !!expiresAt && new Date(expiresAt).getTime() <= Date.now()
+      const expired = isShareExpired(expiresAt)
       const status: 'active' | 'expired' = expired ? 'expired' : 'active'
 
       return {
@@ -89,11 +140,32 @@ async function loadShares() {
         expiresAt,
       }
     })
+    shareTotal.value = data.total ?? 0
+    shares.value = append ? [...shares.value, ...mapped] : mapped
+    loadMoreFailed.value = false
   } catch (e) {
-    error.value = t('加载失败')
+    // C-14：翻页失败保留已加载列表（底条重试）；首屏失败才整页错误态
+    if (append) loadMoreFailed.value = true
+    else error.value = t('加载失败')
   } finally {
     loading.value = false
   }
+}
+
+function loadMoreShares() {
+  if (loading.value || loadMoreFailed.value || !shareHasMore.value) return
+  sharePage.value++
+  loadShares(true)
+}
+
+function retryLoadMore() {
+  // page 已指向失败页，直接重跑当前页（不会重复追加）
+  loadShares(true)
+}
+
+function onShareListScroll(e: Event) {
+  const el = e.target as HTMLElement
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) loadMoreShares()
 }
 
 watch(keyword, () => {
@@ -101,6 +173,9 @@ watch(keyword, () => {
 })
 
 watch(filter, () => loadShares())
+
+// C-04 排序变化回第一页重拉
+watch([sortBy, sortOrder], () => loadShares())
 
 // 分享链接一律取后端返回的 url（ShareListItemDto.url 必填）。
 // 不本地拼 `/share/{id}`——两端路由表里都没有 `/share/:token`，拼出来是死链。
@@ -155,34 +230,121 @@ async function onRevokeShare(token: string) {
   }
 }
 
+// ── C-03 多选 + 批量撤销（对齐 PC ShareTable 行选择 + BatchActionBar）──
+// 长按进入多选（与文件列表/项目卡片同套 500ms 手势）；底部操作栏「批量撤销」
+const isSelecting = ref(false)
+const selectedTokens = ref<string[]>([])
+const batchRevoking = ref(false)
+let shareLongPressTimer: ReturnType<typeof setTimeout> | null = null
+const shareLongPressTriggered = ref(false)
+
+function onShareTouchStart(item: ShareItem) {
+  shareLongPressTriggered.value = false
+  shareLongPressTimer = setTimeout(() => {
+    shareLongPressTriggered.value = true
+    if (!isSelecting.value) {
+      isSelecting.value = true
+      selectedTokens.value = [item.token]
+    }
+    if (navigator.vibrate) navigator.vibrate(10)
+  }, 500)
+}
+
+function cancelShareLongPress() {
+  if (shareLongPressTimer) {
+    clearTimeout(shareLongPressTimer)
+    shareLongPressTimer = null
+  }
+}
+
+function toggleSelect(token: string) {
+  const idx = selectedTokens.value.indexOf(token)
+  if (idx >= 0) selectedTokens.value.splice(idx, 1)
+  else selectedTokens.value.push(token)
+  if (selectedTokens.value.length === 0) isSelecting.value = false
+}
+
+function selectAllShares() {
+  selectedTokens.value = filteredShares.value.map((s) => s.token).filter(Boolean)
+}
+
+function exitSelecting() {
+  isSelecting.value = false
+  selectedTokens.value = []
+}
+
+async function onBatchRevoke() {
+  const tokens = selectedTokens.value.slice()
+  if (tokens.length === 0) return
+  try {
+    await showConfirmDialog({
+      title: t('批量撤销'),
+      message: t('确定撤销 {count} 个分享？撤销后链接立即失效。', { count: String(tokens.length) }),
+      confirmButtonText: t('撤销'),
+      cancelButtonText: t('取消'),
+    })
+  } catch {
+    return // 用户取消
+  }
+  batchRevoking.value = true
+  let successCount = 0
+  let failCount = 0
+  for (const token of tokens) {
+    try {
+      const res = await shareControllerRevokeShare({ path: { token } })
+      if (res.error) failCount++
+      else successCount++
+    } catch {
+      failCount++
+    }
+  }
+  batchRevoking.value = false
+  exitSelecting()
+  if (successCount > 0) {
+    showToast(
+      failCount > 0
+        ? t('已撤销 {a} 个，{b} 个失败', { a: String(successCount), b: String(failCount) })
+        : t('已撤销 {count} 个分享', { count: String(successCount) })
+    )
+  } else if (failCount > 0) {
+    showToast(t('撤销失败 {count} 个', { count: String(failCount) }))
+  }
+  loadShares()
+}
+
 // ── C-02 修改有效期（续期）底部弹窗（对齐 PC EditExpiryModal）──
+// C-11/C-12：补「自定义天数」+「立即过期」两档（PC EditExpiryModal 两处都有）
 const showRenewPopup = ref(false)
 const renewTarget = ref<{ token: string; expiresAt: string | null } | null>(null)
-const renewExpiration = ref<'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d'>('7d')
+const renewExpiration = ref<ShareExpirationOption>('7d')
+const renewCustomDays = ref(1)
 const renewSaving = ref(false)
 
-const renewExpirationOptions = [
-  { key: '2h' as const, label: t('2 小时') },
-  { key: '6h' as const, label: t('6 小时') },
-  { key: '12h' as const, label: t('12 小时') },
-  { key: '1d' as const, label: t('1 天') },
-  { key: '3d' as const, label: t('3 天') },
-  { key: '7d' as const, label: t('7 天') },
-  { key: 'never' as const, label: t('永不过期') },
+const renewExpirationOptions: Array<{ key: ShareExpirationOption; label: string }> = [
+  { key: '2h', label: t('2 小时') },
+  { key: '6h', label: t('6 小时') },
+  { key: '12h', label: t('12 小时') },
+  { key: '1d', label: t('1 天') },
+  { key: '3d', label: t('3 天') },
+  { key: '7d', label: t('7 天') },
+  { key: 'custom', label: t('自定义天数') },
+  { key: 'immediate', label: t('立即过期') },
+  { key: 'never', label: t('永不过期') },
 ]
 
 function openRenewPopup(item: ShareItem) {
   renewTarget.value = { token: item.token, expiresAt: item.expiresAt ?? null }
-  renewExpiration.value = '7d'
+  // 对齐 PC EditExpiryModal：按现有 expiresAt 反推初始选中项 + 自定义天数
+  const detected = detectShareExpiration(item.expiresAt ?? null)
+  renewExpiration.value = detected.option
+  renewCustomDays.value = detected.customDays
   showRenewPopup.value = true
 }
 
+// 续期到期时间计算收敛到 @cloudcad/platform（与 PC 共用）；自定义天数钳制 1-365
 function computeRenewExpiresAt(): string | null {
-  if (renewExpiration.value === 'never') return null
-  const values: Record<string, number> = {
-    '2h': 7200, '6h': 21600, '12h': 43200, '1d': 86400, '3d': 259200, '7d': 604800,
-  }
-  return new Date(Date.now() + (values[renewExpiration.value] ?? 0) * 1000).toISOString()
+  const days = Math.max(1, Math.min(365, Math.round(renewCustomDays.value) || 1))
+  return computeExpiresAtIso(renewExpiration.value, days)
 }
 
 async function onRenewConfirm() {
@@ -243,6 +405,16 @@ function copyQrUrl() {
 }
 
 function onShareClick(item: ShareItem) {
+  // 长按触发后抑制随后的 click
+  if (shareLongPressTriggered.value) {
+    shareLongPressTriggered.value = false
+    return
+  }
+  // C-03 多选模式：点按切换选中（不进 action sheet）
+  if (isSelecting.value) {
+    toggleSelect(item.token)
+    return
+  }
   // 对齐 PC ShareTable 行操作：打开 / 复制链接 / 修改有效期 / 撤销（二维码为移动端补充入口）
   const actions: Array<{ name: string; className?: string }> = [
     { name: t('打开') },
@@ -360,18 +532,9 @@ watch(
   { immediate: true }
 )
 
+// 创建分享的 expiresIn（秒）计算收敛到 @cloudcad/platform（与 PC 共用）
 function expiresIn(expiration: 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom'): number | undefined {
-  if (expiration === 'never') return undefined
-  if (expiration === 'custom') return customDays.value * 86400
-  const values: Record<string, number> = {
-    '2h': 7200,
-    '6h': 21600,
-    '12h': 43200,
-    '1d': 86400,
-    '3d': 259200,
-    '7d': 604800,
-  }
-  return values[expiration]
+  return computeExpiresInSeconds(expiration, customDays.value)
 }
 
 async function searchShareFiles(scope: 'personal_space' | 'all_projects', page: number) {
@@ -545,7 +708,17 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
       >
         {{ f.label }}
       </button>
+      <!-- C-04 排序入口：右侧对齐，点开 ActionSheet 选字段/切方向 -->
+      <button class="filter-btn sort-btn" @click="showSortSheet = true">
+        <van-icon name="sort" size="14" />
+        {{ sortOptions.find((o) => o.field === sortBy)?.label }}
+      </button>
     </div>
+    <van-action-sheet
+      v-model:show="showSortSheet"
+      :actions="sortSheetActions"
+      @select="onSortSelect"
+    />
 
     <div v-if="loading && filteredShares.length === 0" class="state-box">
       <van-loading size="24" />
@@ -559,20 +732,32 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
 
     <div v-else-if="filteredShares.length === 0" class="state-box">
       <van-icon name="share-o" size="48" />
-      <span class="state-text">{{ t('暂无分享') }}</span>
-      <button class="empty-action" @click="onFabClick">
+      <span class="state-text">{{ keyword ? t('未找到相关分享') : t('暂无分享') }}</span>
+      <button v-if="keyword" class="empty-action" @click="keyword = ''">
+        <van-icon name="search" size="12" />
+        {{ t('清除搜索') }}
+      </button>
+      <button v-else class="empty-action" @click="onFabClick">
         <van-icon name="plus" size="12" />
         {{ t('新建分享') }}
       </button>
     </div>
 
-    <div v-else class="share-list">
+    <div v-else class="share-list" @scroll.passive="onShareListScroll">
       <div
         v-for="s in filteredShares"
         :key="s.id"
-        class="share-item"
+        :class="['share-item', { 'share-item--selected': isSelecting && selectedTokens.includes(s.token) }]"
         @click="onShareClick(s)"
+        @touchstart.passive="onShareTouchStart(s)"
+        @touchend="cancelShareLongPress"
+        @touchmove="cancelShareLongPress"
       >
+        <!-- C-03 多选模式：选中指示（纯 CSS 圆圈勾选，不依赖 vant 图标名）-->
+        <span
+          v-if="isSelecting"
+          :class="['share-select-dot', { 'share-select-dot--on': selectedTokens.includes(s.token) }]"
+        />
         <div class="share-left">
           <div class="share-name">
             <span class="share-title">{{ s.name }}</span>
@@ -595,9 +780,39 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
           {{ s.statusText }}
         </div>
       </div>
+      <!-- C-05/C-14：滚动加载底条（加载中/失败重试/没有更多）-->
+      <div class="share-list-footer">
+        <van-loading v-if="loading" size="20" />
+        <van-button
+          v-else-if="loadMoreFailed"
+          size="small"
+          round
+          plain
+          type="danger"
+          @click="retryLoadMore"
+        >
+          {{ t('加载失败，点击重试') }}
+        </van-button>
+        <span v-else-if="!shareHasMore" class="state-text">{{ t('没有更多了') }}</span>
+      </div>
     </div>
 
-    <button class="fab" :aria-label="t('新建分享')" @click="onFabClick">
+    <!-- C-03 多选模式底部操作栏（取消/全选/批量撤销）-->
+    <div v-if="isSelecting" class="select-bar">
+      <button class="select-bar-btn" @click="exitSelecting">{{ t('取消') }}</button>
+      <button class="select-bar-btn" @click="selectAllShares">
+        {{ t('全选') }}（{{ filteredShares.length }}）
+      </button>
+      <button
+        class="select-bar-btn select-bar-btn--danger"
+        :disabled="selectedTokens.length === 0 || batchRevoking"
+        @click="onBatchRevoke"
+      >
+        {{ batchRevoking ? t('撤销中...') : `${t('批量撤销')}（${selectedTokens.length}）` }}
+      </button>
+    </div>
+
+    <button v-if="!isSelecting" class="fab" :aria-label="t('新建分享')" @click="onFabClick">
       <van-icon name="plus" />
     </button>
 
@@ -629,6 +844,17 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
             >
               {{ opt.label }}
             </button>
+          </div>
+          <!-- C-11 自定义天数输入（1-365，对齐 PC ExpirationPicker）-->
+          <div v-if="renewExpiration === 'custom'" class="custom-days-row">
+            <input
+              v-model.number="renewCustomDays"
+              class="custom-days-input"
+              type="number"
+              min="1"
+              max="365"
+            />
+            <span class="custom-days-unit">{{ t('天后过期') }}</span>
           </div>
         </div>
       </div>
@@ -781,6 +1007,14 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
   }
 }
 
+/* C-04 排序按钮：右侧对齐（margin-left:auto），与筛选按钮同风格 */
+.sort-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .state-box {
   display: flex;
   flex-direction: column;
@@ -813,6 +1047,13 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
   padding: 0 14px;
 }
 
+.share-list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0 16px;
+}
+
 .share-item {
   display: flex;
   align-items: center;
@@ -824,6 +1065,37 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
   &:active {
     opacity: 0.8;
   }
+}
+
+.share-item--selected {
+  background: rgba(0, 169, 158, 0.06);
+}
+
+.share-select-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  background: transparent;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.share-select-dot--on {
+  background: var(--accent);
+}
+
+.share-select-dot--on::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .share-left {
@@ -901,6 +1173,44 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
   &:active {
     opacity: 0.85;
   }
+}
+
+/* C-03 多选模式底部操作栏 */
+.select-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--bg-primary);
+  border-top: 0.5px solid var(--divider);
+  z-index: 100;
+}
+
+.select-bar-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+
+  &:active {
+    opacity: 0.85;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.select-bar-btn--danger {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* ═══ 新建分享弹窗 ═══ */
@@ -1171,6 +1481,28 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
 .renew-body {
   flex: 1;
   overflow-y: auto;
+}
+
+.custom-days-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.custom-days-input {
+  width: 72px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-primary, #ddd);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.custom-days-unit {
+  font-size: 12px;
+  color: var(--text-tertiary);
 }
 
 /* ═══ C-10 二维码 ═══ */

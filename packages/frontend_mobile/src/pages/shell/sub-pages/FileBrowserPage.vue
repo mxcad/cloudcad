@@ -149,20 +149,55 @@ function onSearchResultScroll(e: Event) {
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) projectSearch.loadMore()
 }
 
-// 全局搜索结果交互：项目命中→进入项目；文件夹命中→进入所属项目根
-//（ancestorPath 是无 id 的名称路径，无法还原面包屑，徽章展示原路径）；文件命中→打开
+// 全局搜索结果交互：项目命中→进入项目；文件夹命中→进入该文件夹（A-29b，URL 带
+// ?folderId= 由项目详情页定位到该文件夹，不再只跳项目根丢失位置）；文件命中→打开
 function onSearchResultClick(item: FileListItem) {
   if (item.nodeType === 'PROJECT') {
     router.push(`/shell/file/project/${item.id}`)
     return
   }
+  const node = projectSearch.results.value.find((n) => n.id === item.id)
   if (item.isFolder) {
-    const node = projectSearch.results.value.find((n) => n.id === item.id)
-    if (node?.projectId) router.push(`/shell/file/project/${node.projectId}`)
-    else activeTab.value = 1
+    if (node?.projectId) {
+      router.push({ path: `/shell/file/project/${node.projectId}`, query: { folderId: item.id } })
+    } else activeTab.value = 1
     return
   }
   void openFromList(item.id, { path: '/shell/file', tab: 0 })
+}
+
+// A-29b 搜索结果行长按 →「打开所在位置」（定位父文件夹，对齐 PC open_file_location）。
+// 与项目卡片同套 500ms 手势；触发后抑制随后的 click。
+const searchRowLongPressTriggered = ref(false)
+let searchRowLongPressTimer: ReturnType<typeof setTimeout> | null = null
+const showSearchRowMenu = ref(false)
+const searchRowMenuTarget = ref<FileListItem | null>(null)
+
+function onSearchRowTouchStart(item: FileListItem) {
+  searchRowLongPressTriggered.value = false
+  searchRowLongPressTimer = setTimeout(() => {
+    searchRowLongPressTriggered.value = true
+    searchRowMenuTarget.value = item
+    showSearchRowMenu.value = true
+    if (navigator.vibrate) navigator.vibrate(10)
+  }, 500)
+}
+
+function cancelSearchRowLongPress() {
+  if (searchRowLongPressTimer) {
+    clearTimeout(searchRowLongPressTimer)
+    searchRowLongPressTimer = null
+  }
+}
+
+function onSearchRowMenuSelect() {
+  showSearchRowMenu.value = false
+  const item = searchRowMenuTarget.value
+  if (!item) return
+  const node = projectSearch.results.value.find((n) => n.id === item.id)
+  if (!node?.projectId || !node.parentId) return
+  // 定位父文件夹（ancestorPath 无 id 无法还原面包屑，breadcrumbs 留空，列表定位到父文件夹）
+  router.push({ path: `/shell/file/project/${node.projectId}`, query: { folderId: node.parentId } })
 }
 
 // 搜索防抖：300ms 后 keyword 非空切全局递归搜索，清空回正常项目列表
@@ -604,8 +639,11 @@ const menuActions = computed(() => {
     // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
     ...(isFolder ? [] : [{ name: t('版本历史') }]),
     { name: t('重命名') },
-    { name: t('移动') },
-    { name: t('复制') },
+    // A-29a：文件夹操作（移动到…/复制到…）与剪贴板操作（复制到剪贴板/剪切）对齐 PC 语义区分
+    { name: t('移动到...') },
+    { name: t('复制到...') },
+    { name: t('复制到剪贴板') },
+    { name: t('剪切') },
     { name: t('删除'), color: '#ee0a24' },
   ]
   return actions
@@ -633,8 +671,13 @@ function onMenuAction(action: { name: string }) {
   } else if (action.name === t('重命名')) {
     renameTarget.value = target
     showRename.value = true
-  } else if (action.name === t('移动') || action.name === t('复制')) {
-    openFolderPicker(action.name === t('移动') ? 'move' : 'copy', [target])
+  } else if (action.name === t('移动到...') || action.name === t('复制到...')) {
+    openFolderPicker(action.name === t('移动到...') ? 'move' : 'copy', [target])
+  } else if (action.name === t('复制到剪贴板') || action.name === t('剪切')) {
+    // A-29a：单条目剪贴板（对齐 PC copy_clipboard/cut；粘贴条由 UnifiedFileList 读取全局剪贴板展示）
+    const mode = action.name === t('剪切') ? 'cut' : 'copy'
+    clipboard.setClipboard([target.id], mode, personalSpaceId.value ?? '', 'personalSpace')
+    showSuccessToast(mode === 'cut' ? t('已剪切') : t('已复制'))
   } else if (action.name === t('删除')) {
     batchDelete([target])
   }
@@ -1115,7 +1158,14 @@ async function onFileInputChange(e: Event) {
                   <span class="card-time">{{ item.time }}</span>
                 </div>
               </div>
-              <div v-else class="search-row" @click="onSearchResultClick(item)">
+              <div
+                v-else
+                class="search-row"
+                @click="searchRowLongPressTriggered ? undefined : onSearchResultClick(item)"
+                @touchstart.passive="onSearchRowTouchStart(item)"
+                @touchend="cancelSearchRowLongPress"
+                @touchmove="cancelSearchRowLongPress"
+              >
                 <div class="search-row-icon" :class="item.isFolder ? 'search-row-icon--folder' : 'search-row-icon--file'">
                   <FolderIcon v-if="item.isFolder" :size="20" />
                   <van-icon v-else name="description" size="20" />
@@ -1385,6 +1435,13 @@ async function onFileInputChange(e: Event) {
       :actions="projectMenuActions"
       @select="onProjectMenuAction"
       @close="projectMenuTarget = null"
+    />
+    <!-- A-29b 搜索结果行长按菜单：打开所在位置（定位父文件夹，对齐 PC open_file_location）-->
+    <van-action-sheet
+      v-model:show="showSearchRowMenu"
+      :actions="[{ name: t('打开所在位置') }]"
+      @select="onSearchRowMenuSelect"
+      @close="searchRowMenuTarget = null"
     />
     <!-- 项目编辑弹窗（名称+描述，对齐 PC ProjectModal 编辑模式）-->
     <ProjectEditPopup

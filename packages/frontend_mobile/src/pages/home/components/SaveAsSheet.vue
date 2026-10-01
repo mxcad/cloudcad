@@ -24,7 +24,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'success', result: { nodeId: string; fileName: string }): void;
+  (e: 'success', result: { nodeId: string; fileName: string; targetType: SaveTargetType; libraryType?: LibraryType }): void;
   (e: 'login-required'): void;
 }>();
 
@@ -158,7 +158,12 @@ async function handleSave() {
 
     if (result.success) {
       showToast(t('保存成功'));
-      emit('success', { nodeId: result.nodeId || '', fileName: saveAs.fileName.value });
+      emit('success', {
+        nodeId: result.nodeId || '',
+        fileName: saveAs.fileName.value,
+        targetType: saveAs.targetType.value,
+        libraryType: saveAs.targetType.value === 'library' ? saveAs.libraryType.value : undefined,
+      });
       emit('close');
     } else {
       error.value = result.message || t('保存失败');

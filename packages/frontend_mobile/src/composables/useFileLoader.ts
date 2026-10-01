@@ -12,21 +12,12 @@ import { classifyApiError } from '../utils/errorHandler';
 import { errMsg, errorKind, typedError } from '../utils/apiError';
 import type { ErrorType } from '../stores/editor';
 import {
-  getPreloadingData,
-  checkExternalReferences,
-  uploadExtRefImage,
-  uploadExtRefDwg,
-} from '../services/extRefService';
-import {
   isHashLike,
   getPublicPreloadingData,
   buildPublicMxwebUrl,
-  checkPublicExtReference,
-  type PublicPreloadingData,
 } from '../services/publicFileService';
-import { parseExtRefFileNames } from '../services/extRefService';
-import { showExternalReferenceUploadPopup } from '@/plugins/vant/components/popup/showExternalReferenceUploadPopup';
-import { showDialog, showToast } from 'vant';
+import { fetchExtRefList } from '../services/extRefManageService';
+import { showExternalReferenceManagePopup } from '@/plugins/vant/components/popup/showExternalReferenceManagePopup';
 import {
   nodeControllerGetNode,
   nodeControllerGetRootNode,
@@ -490,137 +481,37 @@ export function useFileLoader() {
   };
 }
 
+/**
+ * 打开节点图纸后检查外部参照（E-26）：列出全部参照（含已存在与缺失），
+ * 有则弹管理面板（查看/下载/替换/上传 + 刷新）。无参照或取数失败则静默跳过。
+ */
 export async function checkFileExternalRefs(nodeId: string): Promise<void> {
   try {
-    const preloadData = await getPreloadingData(nodeId);
-    if (!preloadData) return;
-
-    const refNames = parseExtRefFileNames([
-      ...(preloadData.images || []),
-      ...(preloadData.externalReference || []),
-    ]);
-    if (refNames.length === 0) return;
-
-    const missingRefs = await checkExternalReferences(nodeId);
-    const missingMap = new Map(missingRefs.map((r) => [r.name, r]));
-
-    const needUpload = refNames.filter(
-      (r) =>
-        !r.name.startsWith('http://') &&
-        !r.name.startsWith('https://') &&
-        missingMap.has(r.name)
-    );
-    if (needUpload.length === 0) return;
-
-    const fileList = needUpload.map((f) => f.name).join('\n');
+    const ctx = { identifier: nodeId, isPublic: false };
+    const items = await fetchExtRefList(ctx);
+    if (items.length === 0) return;
     const { state } = useEditorState();
-    const canManageExtRef = state.permissions.canManageExternalRef;
-
-    showDialog({
-      title: t('缺失外部参照文件'),
-      message: canManageExtRef
-        ? t(`以下文件需要上传:\n${fileList}`)
-        : t(`以下外部参照文件缺失:\n${fileList}\n\n请联系管理员上传`),
-      showCancelButton: true,
-      confirmButtonText: canManageExtRef ? t('上传文件') : t('知道了'),
-      cancelButtonText: t('跳过'),
-    })
-      .then(async () => {
-        if (!canManageExtRef) return;
-        // 上传失败即抛，这里不吞：只要有一个失败就不报成功，
-        // 用户重新打开图纸会再次进入缺失参照检查。
-        let allOk = true;
-        for (const ref of needUpload) {
-          const file = await pickFile(ref.type === 'img' ? 'image/*' : '.dwg');
-          if (!file) continue;
-          try {
-            if (ref.type === 'img') {
-              await uploadExtRefImage({
-                nodeId,
-                file,
-                srcDwgfileHash: preloadData.hash,
-                extRefFile: ref.name,
-              });
-            } else {
-              await uploadExtRefDwg({ nodeId, file });
-            }
-          } catch {
-            allOk = false;
-          }
-        }
-        if (allOk) showToast(t('外部参照上传完成'));
-      })
-      .catch(() => {});
+    const canManage = state.permissions.canManageExternalRef;
+    await showExternalReferenceManagePopup({ ctx, initialFiles: items, canManage });
   } catch {
     // Silently fail - file can still open without refs
   }
 }
 
-async function getPublicPreloadingDataWithRetry(
-  hash: string,
-  maxRetries = 10,
-  delayMs = 2000
-): Promise<PublicPreloadingData | null> {
-  for (let i = 0; i < maxRetries; i++) {
-    const data = await getPublicPreloadingData(hash);
-    if (data) return data;
-    if (i < maxRetries - 1) {
-      await new Promise((r) => setTimeout(r, delayMs));
-    }
-  }
-  return null;
-}
-
+/**
+ * 打开公开图纸后检查外部参照（E-26）：preloading 数据可能尚未生成（转换中），
+ * 故带重试拉取；有参照则弹管理面板。恒返回 true（不阻塞打开流程）。
+ */
 export async function checkPublicFileExternalRefs(
   hash: string
 ): Promise<boolean> {
   try {
-    const preloadData = await getPublicPreloadingDataWithRetry(hash);
-    if (!preloadData) return true;
-
-    const refs = parseExtRefFileNames([
-      ...(preloadData.images || []).filter(
-        (img: string) =>
-          !img.startsWith('http://') && !img.startsWith('https://')
-      ),
-      ...(preloadData.externalReference || []),
-    ]);
-    if (refs.length === 0) return true;
-
-    const missingRefs: { name: string; type: 'img' | 'ref' }[] = [];
-    for (const ref of refs) {
-      const exists = await checkPublicExtReference(hash, ref.name);
-      if (!exists) {
-        missingRefs.push(ref);
-      }
-    }
-    if (missingRefs.length === 0) return true;
-
-    await showExternalReferenceUploadPopup({
-      images: missingRefs.filter((r) => r.type === 'img').map((r) => r.name),
-      externalReference: missingRefs
-        .filter((r) => r.type === 'ref')
-        .map((r) => r.name),
-      hash,
-    });
-
+    const ctx = { identifier: hash, isPublic: true };
+    const items = await fetchExtRefList(ctx, { retry: true });
+    if (items.length === 0) return true;
+    await showExternalReferenceManagePopup({ ctx, initialFiles: items });
     return true;
   } catch {
     return true;
   }
-}
-
-function pickFile(accept: string): Promise<File | null> {
-  return new Promise((resolve) => {
-    const el = document.createElement('input');
-    el.type = 'file';
-    el.accept = accept;
-    el.style.display = 'none';
-    document.body.appendChild(el);
-    el.onchange = () => {
-      document.body.removeChild(el);
-      resolve(el.files?.[0] || null);
-    };
-    el.click();
-  });
 }

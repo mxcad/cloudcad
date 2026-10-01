@@ -22,6 +22,7 @@ import {
 import type { LibraryType } from '@/composables/useLibrary'
 import { t } from '@/languages'
 import { showLoadingToast, showSuccessToast, showFailToast, closeToast } from 'vant'
+import { triggerBlobDownload } from '@/utils/download'
 
 export type LibraryDownloadFormat = 'mxweb' | 'pdf' | 'dwg' | 'dxf'
 
@@ -177,14 +178,3 @@ export async function downloadLibraryNode(
   }
 }
 
-function triggerBlobDownload(blob: Blob, fileName: string): void {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  a.style.display = 'none'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}

@@ -257,6 +257,11 @@ function isProjectRoot(item: ListItem): boolean {
   return !!item.isFolder && item.nodeType === 'PROJECT'
 }
 
+// A-25 转换失败红标：fileStatus=FAILED 的文件节点（文件夹不显示）
+function isFailed(item: ListItem): boolean {
+  return !item.isFolder && item.fileStatus === 'FAILED'
+}
+
 // A-19 全选：作用于当前已加载页（服务端分页下与 PC「全选当前视图」语义一致）
 const allSelected = computed(() => props.items.length > 0 && props.items.every((i) => selected.value.has(i.id)))
 
@@ -425,6 +430,15 @@ async function onPullRefresh() {
             />
           </div>
           <span class="grid-name">{{ stripExt(item.name) }}</span>
+          <span v-if="isFailed(item)" class="failed-badge">
+            <van-icon name="cross" size="12" />
+            {{ t('转换失败') }}
+          </span>
+          <!-- A-12 项目根卡片：描述（2 行截断）+ 成员数（对齐 PC FileItemInfo metaStats） -->
+          <span v-if="isProjectRoot(item) && item.description" class="grid-desc">{{ item.description }}</span>
+          <span v-if="isProjectRoot(item) && item.memberCount !== undefined" class="grid-meta grid-meta--project">
+            {{ t('{count} 个成员', { count: String(item.memberCount) }) }}
+          </span>
           <span v-if="!item.isFolder" class="grid-meta">{{ item.time }}</span>
           <span v-if="item.ancestorPath" class="grid-source">{{ item.ancestorPath }}</span>
           <!-- 单条目操作菜单入口（A-03）：列表行 ellipsis / 网格角标，长按仍为多选 -->
@@ -465,6 +479,10 @@ async function onPullRefresh() {
           </div>
           <div class="list-body">
             <span class="list-name">{{ stripExt(item.name) }}</span>
+            <span v-if="isFailed(item)" class="failed-badge">
+              <van-icon name="cross" size="12" />
+              {{ t('转换失败') }}
+            </span>
             <span class="list-sub">{{ item.isFolder ? t('文件夹') : `${item.time} · ${item.size}` }}</span>
             <span v-if="item.ancestorPath" class="list-sub list-source">{{ item.ancestorPath }}</span>
           </div>
@@ -734,6 +752,26 @@ async function onPullRefresh() {
   padding-bottom: 6px;
 }
 
+/* A-12 项目根卡片描述：2 行截断，浅色小字居中 */
+.grid-desc {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  padding: 0 8px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* A-12 项目根卡片成员数：与文件时间 meta 同风格，上留少量间距 */
+.grid-meta--project {
+  padding-top: 2px;
+}
+
 /* 来源徽章（回收站原位置路径）：浅色小字，不抢占名称的视觉分量 */
 .grid-source {
   font-size: 10px;
@@ -746,6 +784,16 @@ async function onPullRefresh() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A-25 转换失败红标：红色小字 + × 图标，网格（居中）/清单（左对齐）通用 */
+.failed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--danger);
 }
 
 /* ── 清单模式 ── */

@@ -4,6 +4,7 @@
  * 用于将 api-sdk 返回的节点数据适配到 UnifiedFileList 组件的 ListItem 类型。
  */
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
+import { relativeTime, formatBytes } from '@cloudcad/platform'
 
 export interface FileListItem {
   id: string
@@ -22,6 +23,12 @@ export interface FileListItem {
   ancestorPath?: string
   /** 所属项目 id（版本历史 API 的 projectId 入参；个人空间文件为个人空间节点 id） */
   projectId?: string
+  /** 文件状态（FAILED 显示「转换失败」红标，对齐 PC FileItemInfo failedBadge） */
+  fileStatus?: string
+  /** 节点描述（项目根卡片 footer 展示，2 行截断，对齐 PC FileItemInfo descriptionText） */
+  description?: string
+  /** 成员数量（项目根卡片元数据行，对齐 PC FileItemInfo metaStats） */
+  memberCount?: number
 }
 
 export function formatNodeAsItem(node: FileSystemNodeDto): FileListItem {
@@ -41,6 +48,9 @@ export function formatNodeAsItem(node: FileSystemNodeDto): FileListItem {
     isRoot: node.isRoot,
     ancestorPath: node.ancestorPath,
     projectId: node.projectId,
+    fileStatus: node.fileStatus,
+    description: node.description,
+    memberCount: node.memberCount,
   }
 }
 
@@ -55,28 +65,24 @@ export function extractExtension(name: string): string {
 }
 
 export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return formatBytes(bytes)
 }
 
 export function formatTime(isoString: string): string {
-  const now = new Date()
-  const target = new Date(isoString)
-  const diffMs = now.getTime() - target.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHour = Math.floor(diffMs / 3600000)
-  const diffDay = Math.floor(diffMs / 86400000)
-
-  if (diffMin < 1) return '刚刚'
-  if (diffMin < 60) return `${diffMin} 分钟前`
-  if (diffHour < 24) {
-    const h = target.getHours().toString().padStart(2, '0')
-    const m = target.getMinutes().toString().padStart(2, '0')
-    return `${h}:${m}`
+  const r = relativeTime(isoString)
+  if (r.tier === 'just_now') return '刚刚'
+  switch (r.unit) {
+    case 'minute':
+      return `${r.value} 分钟前`
+    case 'hour':
+      return `${r.value} 小时前`
+    case 'day':
+      return `${r.value} 天前`
+    case 'week':
+      return `${r.value} 周前`
+    case 'month':
+      return `${r.value} 个月前`
+    case 'year':
+      return `${r.value} 年前`
   }
-  if (diffDay < 7) return `${diffDay} 天前`
-  if (diffDay < 30) return `${Math.floor(diffDay / 7)} 周前`
-  if (diffDay < 365) return `${Math.floor(diffDay / 30)} 个月前`
-  return `${Math.floor(diffDay / 365)} 年前`
 }

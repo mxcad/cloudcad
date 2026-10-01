@@ -16,6 +16,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import { showFailToast, showSuccessToast } from 'vant'
 import { t } from '@/languages'
+import { usagePercent } from '@cloudcad/platform'
 import { unwrap, errMsg } from '@/utils/apiError'
 import { maskPhone, membershipBadge, membershipExpiry } from '@/utils/profileDisplay'
 
@@ -100,7 +101,8 @@ export function useProfileData() {
   const storagePercent = computed(() => {
     const s = storageInfo.value
     if (!s) return null
-    const pct = typeof s.usagePercent === 'number' ? s.usagePercent : (s.total > 0 ? (s.used / s.total) * 100 : 0)
+    // 后端返回 usagePercent 优先；缺失时由 used/total 计算（收敛到 @cloudcad/platform）
+    const pct = typeof s.usagePercent === 'number' ? s.usagePercent : usagePercent(s.used, s.total)
     return Math.min(Math.max(pct, 0), 100)
   })
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { scorePasswordStrength } from '@cloudcad/platform';
 import {
   isPhone,
   isEmail,
@@ -92,5 +93,24 @@ describe('getPasswordStrength', () => {
     expect(getPasswordStrength('1').color).toBe('var(--warning)');
     expect(getPasswordStrength('Abcdefgh').color).toBe('var(--strength-medium)');
     expect(getPasswordStrength('Abcdef1!').color).toBe('var(--strength-strong)');
+  });
+});
+
+// 评分纯函数（@cloudcad/platform，PC/移动端共用）——锁 0-4 打分契约
+describe('scorePasswordStrength (platform)', () => {
+  it('空密码 0 分', () => {
+    expect(scorePasswordStrength('')).toBe(0);
+  });
+
+  it('四条件各 1 分：长度≥8 / 大小写齐 / 数字 / 特殊字符', () => {
+    expect(scorePasswordStrength('abcdefgh')).toBe(1); // 仅长度
+    expect(scorePasswordStrength('Abcdefgh')).toBe(2); // 长度 + 大小写
+    expect(scorePasswordStrength('Abcdefg1')).toBe(3); // + 数字
+    expect(scorePasswordStrength('Abcdef1!')).toBe(4); // + 特殊字符
+  });
+
+  it('长度不足 8 时长度项不计分', () => {
+    expect(scorePasswordStrength('Ab1!')).toBe(3); // 大小写 + 数字 + 特殊，无长度
+    expect(scorePasswordStrength('ab')).toBe(0);
   });
 });

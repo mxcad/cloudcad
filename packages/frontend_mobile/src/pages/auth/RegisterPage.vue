@@ -74,13 +74,22 @@ const usernameValid = computed(
 const passwordValid = computed(() => password.value.length >= 6)
 const strength = computed(() => getPasswordStrength(password.value))
 
+// 协议勾选（H-02，对齐 PC 注册页 agreedToTerms 必填）：未勾选时按钮禁用
+const agreed = ref(false)
+
 const canSubmit = computed(
   () =>
+    agreed.value &&
     usernameValid.value &&
     passwordValid.value &&
     emailValid.value &&
     (!needPhoneCode.value || (phoneValid.value && codeValid.value))
 )
+
+/** 合规页（H-01）：push 而非 replace，返回键能回到注册页 */
+function goLegal(doc: 'privacy' | 'terms') {
+  void router.push({ path: `/legal/${doc}` })
+}
 
 async function handleSendCode() {
   if (!phoneValid.value || sendingCode.value || !isReady()) return
@@ -297,6 +306,17 @@ onMounted(() => {
             clearable
           />
 
+          <!-- 协议勾选（H-02，对齐 PC 注册页）：未勾选注册按钮禁用 -->
+          <label class="agreement">
+            <van-checkbox v-model="agreed" icon-size="16" shape="square" />
+            <span class="agreement-text">
+              {{ t('我已阅读并同意') }}
+              <button class="agreement-link" type="button" @click="goLegal('terms')">{{ '《' }}{{ t('用户协议') }}{{ '》' }}</button>
+              {{ t('和') }}
+              <button class="agreement-link" type="button" @click="goLegal('privacy')">{{ '《' }}{{ t('隐私政策') }}{{ '》' }}</button>
+            </span>
+          </label>
+
           <button class="primary-btn" type="button" :disabled="!canSubmit || submitting" @click="handleRegister">
             {{ submitting ? t('注册中…') : t('立即注册') }}
           </button>
@@ -335,5 +355,29 @@ onMounted(() => {
   height: 100%;
   border-radius: 2px;
   transition: width 0.2s ease, background 0.2s ease;
+}
+
+/* 协议勾选（H-02） */
+.agreement {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.agreement-text {
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+
+.agreement-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: var(--font-size-caption);
+  color: var(--accent);
+  cursor: pointer;
 }
 </style>

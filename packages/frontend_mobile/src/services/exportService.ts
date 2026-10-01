@@ -2,6 +2,7 @@ import { getMxwebBlob } from './saveService';
 import { uploadFileForConversion } from './uploadService';
 import { publicFileControllerConvertAndDownload } from '../api-sdk';
 import { handleApiError } from '../utils/apiConfig';
+import { triggerBlobDownload } from '../utils/download';
 import { showToast } from 'vant';
 import { t } from '@/languages';
 import { createApp } from 'vue';
@@ -37,7 +38,7 @@ export async function exportDrawing(
   const blob = await getMxwebBlob();
 
   if (format === 'mxweb') {
-    downloadBlob(blob, `${baseName}.mxweb`);
+    triggerBlobDownload(blob, `${baseName}.mxweb`);
     showToast(t('下载完成'));
     return;
   }
@@ -76,22 +77,11 @@ export async function exportDrawing(
       return;
     }
 
-    downloadBlob(convertedBlob, `${baseName}.${format}`);
+    triggerBlobDownload(convertedBlob, `${baseName}.${format}`);
     showToast(t('下载完成'));
   } catch (e) {
     handleApiError(e, t('转换失败'));
   }
-}
-
-function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = fileName;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 export function showDwgOptionsDialog(format: 'dwg' | 'dxf'): Promise<number | null> {

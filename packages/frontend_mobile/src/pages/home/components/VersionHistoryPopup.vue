@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { t } from '@/languages';
+import { relativeTime } from '@cloudcad/platform';
 import { useVersionHistory, type VersionEntry } from '../../../composables/useVersionHistory';
 import FloatingPopup from "../../../components/FloatingPopup.vue"
 
@@ -39,28 +40,37 @@ function onClose() {
   emit('close');
 }
 
-function onSelectVersion(entry: VersionEntry) {
+// E-25 预热：选中版本后保持弹窗显示「准备中」，待文件加载（含转换）完成再关
+const preparing = ref(false);
+
+async function onSelectVersion(entry: VersionEntry) {
   if (props.target?.fileId) {
     // 列表内入口：文件未打开编辑器，交给页面走统一打开入口（URL 带 ?v= 版本号）
     emit('open-version', { nodeId: props.target.fileId, revision: entry.revision });
-  } else {
-    openHistoricalVersion(entry.revision);
+    onClose();
+    return;
   }
-  onClose();
+  preparing.value = true;
+  try {
+    await openHistoricalVersion(entry.revision);
+  } finally {
+    preparing.value = false;
+    onClose();
+  }
 }
 
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return dateStr;
+// E-25 相对时间：对齐 PC VersionHistoryModal，口径收敛到 @cloudcad/platform relativeTime
+function formatRelativeTime(dateStr: string): string {
+  const r = relativeTime(dateStr);
+  if (r.tier === 'just_now') return t('刚刚');
+  switch (r.unit) {
+    case 'minute': return t('{n} 分钟前', { n: r.value });
+    case 'hour': return t('{n} 小时前', { n: r.value });
+    case 'day': return t('{n} 天前', { n: r.value });
+    case 'week': return t('{n} 周前', { n: r.value });
+    case 'month': return t('{n} 个月前', { n: r.value });
+    case 'year': return t('{n} 年前', { n: r.value });
+    default: return dateStr;
   }
 }
 </script>
@@ -72,6 +82,11 @@ function formatDate(dateStr: string): string {
     @close="onClose"
   >
     <van-loading v-if="loading" class="loading-state" />
+
+    <div v-else-if="preparing" class="loading-state">
+      <van-loading size="24" />
+      <p class="preparing-text">{{ t('正在准备历史版本文件，请稍候...') }}</p>
+    </div>
 
     <div v-else-if="error" class="error-state">
       <van-icon name="warning-o" color="var(--danger)" size="40" />
@@ -95,7 +110,7 @@ function formatDate(dateStr: string): string {
           <div class="version-message">{{ entry.message || t('无说明') }}</div>
           <div class="version-meta">
             <span class="version-author">{{ entry.author || entry.userName || t('未知') }}</span>
-            <span class="version-date">{{ formatDate(entry.date) }}</span>
+            <span class="version-date">{{ formatRelativeTime(entry.date) }}</span>
           </div>
         </div>
         <van-icon name="arrow" class="version-arrow" />
@@ -107,6 +122,15 @@ function formatDate(dateStr: string): string {
 <style scoped lang="scss">
 .loading-state {
   margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.preparing-text {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
 }
 
 .error-state {

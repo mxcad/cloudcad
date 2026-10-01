@@ -1,5 +1,10 @@
 import { t } from '@/languages';
 import { errorKind } from './apiError';
+import {
+  isAbortError as platformIsAbortError,
+  isPermissionError as platformIsPermissionError,
+  isServerError as platformIsServerError,
+} from '@cloudcad/platform';
 
 export interface ClassifiedError {
   type: 'auth' | 'permission' | 'not-found' | 'server' | 'network' | 'abort' | 'converting' | 'open-failed' | 'unknown';
@@ -7,37 +12,17 @@ export interface ClassifiedError {
   status?: number;
 }
 
+// 判定口径已收敛到 @cloudcad/platform（与 PC 共用，并集更宽），本文件只做透传。
 export function isPermissionError(error: unknown): boolean {
-  if (error && typeof error === 'object') {
-    const e = error as Record<string, unknown>;
-    if (e.status === 403 || e.statusCode === 403) return true;
-    if ((e.response as Record<string, unknown>)?.status === 403) return true;
-    if (e.isPermissionError === true) return true;
-  }
-  return false;
+  return platformIsPermissionError(error);
 }
 
 export function isServerError(error: unknown): boolean {
-  if (error && typeof error === 'object') {
-    const e = error as Record<string, unknown>;
-    const status = e.status || e.statusCode || (e.response as Record<string, unknown>)?.status;
-    return typeof status === 'number' && status >= 500 && status < 600;
-  }
-  return false;
+  return platformIsServerError(error);
 }
 
 export function isAbortError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const e = error as Record<string, unknown>;
-  const name = String(e.name || '');
-  const msg = String(e.message || '');
-  return (
-    name === 'AbortError' ||
-    name === 'CanceledError' ||
-    msg.includes('aborted') ||
-    msg.includes('canceled') ||
-    msg.includes('ERR_CANCELED')
-  );
+  return platformIsAbortError(error);
 }
 
 /**

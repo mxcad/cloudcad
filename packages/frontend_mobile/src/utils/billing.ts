@@ -10,7 +10,19 @@
  * 金额全链路单位为「分」（baseMonthlyPrice / amount），展示统一除以 100。
  * 计价公式与后端 BillingService.createOrder 一致：
  *   amount = round(baseMonthlyPrice * multiplierBps * months / 10000)
+ * 公式 / 配额解析 / 用量百分比 / 微信 UA 判定已收敛到 @cloudcad/platform（与 PC 共用），
+ * 本文件保留移动端特有的对象签名包装与数据契约。
  */
+
+import {
+  centsToYuan as platformCentsToYuan,
+  formatDateTime as platformFormatDateTime,
+  formatDate as platformFormatDate,
+  isWechatByUA,
+  orderAmountCents as platformOrderAmountCents,
+  resolveQuotaValue as platformResolveQuotaValue,
+  usagePercent as platformUsagePercent,
+} from '@cloudcad/platform'
 
 /** 订单状态（后端 OrderStatus 枚举，Prisma 同名） */
 export type OrderStatus =
@@ -138,13 +150,11 @@ export interface PendingPayment {
   tradeType: MobileTradeType
 }
 
-const WECHAT_RE = /MicroMessenger/i
-
 /** 运行在微信内置浏览器时返回 true（决定用 MWEB 还是 NATIVE） */
 export function isWechatBrowser(
   ua: string = typeof navigator === 'undefined' ? '' : navigator.userAgent,
 ): boolean {
-  return WECHAT_RE.test(ua)
+  return isWechatByUA(ua)
 }
 
 /** 移动端下单交易类型：微信内 → MWEB，系统浏览器 → NATIVE */
@@ -154,20 +164,17 @@ export function pickTradeType(
   return isWechatBrowser(ua) ? 'MWEB' : 'NATIVE'
 }
 
-/** 订单金额（分），与后端计价公式一致 */
+/** 订单金额（分），与后端计价公式一致（公式在 @cloudcad/platform） */
 export function orderAmountCents(
   tier: Pick<VipTier, 'baseMonthlyPrice'>,
   duration: Pick<DurationPricing, 'multiplierBps' | 'months'>,
 ): number {
-  return Math.round(
-    (tier.baseMonthlyPrice * duration.multiplierBps * duration.months) / 10000,
-  )
+  return platformOrderAmountCents(tier.baseMonthlyPrice, duration.multiplierBps, duration.months)
 }
 
 /** 分 → 元，固定两位小数（1990 → '19.90'） */
 export function centsToYuan(cents: number): string {
-  if (!Number.isFinite(cents)) return '0.00'
-  return (cents / 100).toFixed(2)
+  return platformCentsToYuan(cents)
 }
 
 /** 时长按 sortOrder 升序，同序时按 months 升序兜底 */
@@ -183,31 +190,19 @@ export function sortTiers(list: VipTier[]): VipTier[] {
 /**
  * 解析某档位的配额值：档位配置优先，缺键回落 registry 默认值（与后端
  * MembershipService 的回落语义一致，ADR-0043）。非数字一律归零。
+ * 实现收敛到 @cloudcad/platform（与 PC 共用）。
  */
 export function resolveQuotaValue(
   configs: Record<string, unknown> | undefined,
   key: string,
   registry?: Map<string, ConfigRegistryEntry>,
 ): number {
-  const direct = toNumber(configs?.[key])
-  if (direct !== null) return direct
-  return toNumber(registry?.get(key)?.defaultValue) ?? 0
+  return platformResolveQuotaValue(configs, key, registry)
 }
 
-function toNumber(raw: unknown): number | null {
-  if (typeof raw === 'number' && Number.isFinite(raw)) return raw
-  if (typeof raw === 'string' && raw.trim() !== '') {
-    const n = Number(raw)
-    if (Number.isFinite(n)) return n
-  }
-  return null
-}
-
-/** 用量百分比（total 非正时返回 0，封顶 100） */
+/** 用量百分比（total 非正时返回 0，封顶 100）。实现收敛到 @cloudcad/platform。 */
 export function usagePercent(used: number, total: number): number {
-  if (!Number.isFinite(total) || total <= 0) return 0
-  if (!Number.isFinite(used) || used < 0) return 0
-  return Math.min(100, (used / total) * 100)
+  return platformUsagePercent(used, total)
 }
 
 /** 订单当前审核中的退款申请，无则 null */
@@ -228,22 +223,14 @@ export function canRepay(order: BillingOrder): boolean {
   return order.status === 'PENDING'
 }
 
-/** '2026-09-15 14:30'；非法/空返回空串 */
+/** '2026-09-15 14:30'；非法/空返回空串（口径收敛到 @cloudcad/platform，与 PC 共用） */
 export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+  return platformFormatDateTime(iso)
 }
 
-/** 日期 '2026-09-15'；非法/空返回空串 */
+/** 日期 '2026-09-15'；非法/空返回空串（口径收敛到 @cloudcad/platform，与 PC 共用） */
 export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+  return platformFormatDate(iso)
 }
 
 /**

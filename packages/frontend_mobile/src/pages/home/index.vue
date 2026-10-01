@@ -312,8 +312,35 @@ function onSaveAsClose() {
   showSaveAsSheet.value = false;
 }
 
-function onSaveAsSuccess() {
+async function onSaveAsSuccess(result: {
+  nodeId: string;
+  fileName: string;
+  targetType: 'personal' | 'project' | 'library';
+  libraryType?: 'drawing' | 'block';
+}) {
   showSaveAsSheet.value = false;
+  if (!result.nodeId) return;
+
+  // E-27：另存为成功后询问是否打开新图纸（对齐 PC useExportModals.handleSaveAsSuccess）
+  try {
+    await showConfirmDialog({
+      title: t('打开新图纸'),
+      message: t('{fileName} 已保存成功，是否打开？', { fileName: result.fileName }),
+      confirmButtonText: t('打开'),
+      cancelButtonText: t('关闭'),
+    });
+  } catch {
+    return; // 点「关闭」
+  }
+
+  const ok = await openDrawing(
+    result.targetType === 'library' && result.libraryType
+      ? { source: 'library', libraryKey: result.libraryType, nodeId: result.nodeId }
+      : { source: 'node', nodeId: result.nodeId }
+  );
+  if (!ok) {
+    showToast(t('打开文件失败'));
+  }
 }
 
 function onShowVersionHistory() {
@@ -672,6 +699,9 @@ setViewportHeight();
         <button class="item" @click="callCommand('Mx_Undo')">
           <MxIcon icon="huitui" isDefault class="zoomed"></MxIcon>
         </button>
+        <button class="item" @click="callCommand('Mx_Redo')">
+          <MxIcon icon="huitui1" isDefault class="zoomed"></MxIcon>
+        </button>
         <button class="item" @click="selectColor">
           <div
             class="color_box zoomed"
@@ -694,6 +724,13 @@ setViewportHeight();
           </template>
         </van-popover>
       </div>
+    </div>
+    <!-- 当前图纸已被删除警告横幅 -->
+    <div
+      class="deleted-banner"
+      v-if="editorState.state.isCurrentFileDeleted"
+    >
+      <span>{{ t('当前图纸已被删除，请另存为新文件') }}</span>
     </div>
     <div class="cmd_operation_btn_list" v-if="isRunCmd">
       <template v-if="cmdTipObj?.keys">
@@ -1195,6 +1232,22 @@ setViewportHeight();
         margin-right: 5px;
       }
     }
+  }
+
+  .deleted-banner {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    font-size: var(--font-size-sm);
+    color: var(--warning);
+    background-color: color-mix(in srgb, var(--warning) 18%, var(--bg-secondary));
+    border-bottom: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
   }
 
   .footer {

@@ -109,6 +109,7 @@
         { "name": "椭圆", "icon": "tuoyuan", "cmd": "m_mx_elliptical" },
         { "name": "多线段", "icon": "duoxianduan", "cmd": "m_mx_polyline" },
         { "name": "插入块", "icon": "chuangjiankuai1", "cmd": "Mx_Insert" },
+        { "name": "插入表格", "icon": "juxing", "cmd": "Mx_InsertTable" },
         { "name": "点", "icon": "dian", "cmd": "m_mx_point" }
       ]
     },
@@ -122,6 +123,17 @@
         { "name": "偏移", "icon": "pianyi", "cmd": "m_mx_offset" },
         { "name": "圆角", "icon": "yuanjiao", "cmd": "m_mx_fillet" },
         { "name": "倒角", "icon": "daojiao", "cmd": "m_mx_chamfer" }
+      ]
+    },
+    {
+      "name": "视图",
+      "icon": "suofang",
+      "list": [
+        { "name": "窗口缩放", "icon": "chuangkousuofang", "cmd": "Mx_WindowZoom" },
+        { "name": "视区平移", "icon": "pianyi", "cmd": "Mx_Pan" },
+        { "name": "顺时针旋转90度", "icon": "xuanzhuan", "cmd": "Mx_Plan90CW" },
+        { "name": "逆时针旋转90度", "icon": "xuanzhuan", "cmd": "Mx_Plan90CCW" },
+        { "name": "自定义旋转角度", "icon": "xuanzhuan", "cmd": "Mx_Plan" }
       ]
     },
     {
@@ -244,7 +256,30 @@
       "icon": "gongju",
       "isIconDefault": true,
       "list": [
-        { "name": "查找文字", "icon": "wenzichazhao", "cmd": "m_mx_find_text" }
+        { "name": "查找文字", "icon": "wenzichazhao", "cmd": "m_mx_find_text" },
+        { "name": "图纸比对", "icon": "bidui", "cmd": "Mx_CompareDWG" }
+      ]
+    },
+    {
+      "name": "剪贴板",
+      "icon": "fuzhi",
+      "list": [
+        { "name": "复制", "icon": "fuzhi", "cmd": "Mx_Copy" },
+        { "name": "粘贴", "icon": "niantie", "cmd": "Mx_PasteClip" },
+        { "name": "剪切", "icon": "jianqie", "cmd": "Mx_CutClip" },
+        { "name": "删除", "icon": "shanchu", "cmd": "Mx_Erase" },
+        { "name": "全部选择", "icon": "quanbuxuanze", "cmd": "Mx_select_all" }
+      ]
+    },
+    {
+      "name": "样式",
+      "icon": "yanse",
+      "list": [
+        { "name": "颜色", "icon": "yanse", "cmd": "Mx_Color" },
+        { "name": "线型", "icon": "xianxing", "cmd": "Mx_Linetype" },
+        { "name": "文字样式", "icon": "wenziyangshi", "cmd": "Mx_Style" },
+        { "name": "标注样式", "icon": "shentubiaozhu", "cmd": "Mx_Dimstyle" },
+        { "name": "对象特性", "icon": "a-4-8duixiangtexing", "cmd": "Mx_Properties" }
       ]
     }
   ]

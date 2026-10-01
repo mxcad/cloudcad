@@ -114,10 +114,15 @@ function initFileList() {
   if (!projectId.value) return
   const target = shellStack.returnTarget
   shellStack.clearReturnTarget()
+  // A-29b 搜索结果「进入文件夹 / 打开所在位置」：URL 带 ?folderId= 定位到指定文件夹
+  //（ancestorPath 无 id 无法还原面包屑，breadcrumbs 留空，列表定位到该文件夹）
+  const queryFolderId = route.query.folderId as string | undefined
   const override =
     target?.folderId && target.breadcrumbs?.length
       ? { folderId: target.folderId, breadcrumbs: target.breadcrumbs }
-      : undefined
+      : queryFolderId
+        ? { folderId: queryFolderId, breadcrumbs: [] }
+        : undefined
   void fileList.loadRootNode(projectId.value, override)
 }
 
@@ -524,8 +529,11 @@ const menuActions = computed(() => {
     // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
     ...(isFolder ? [] : [{ name: t('版本历史') }]),
     { name: t('重命名') },
-    { name: t('移动') },
-    { name: t('复制') },
+    // A-29a：文件夹操作（移动到…/复制到…）与剪贴板操作（复制到剪贴板/剪切）对齐 PC 语义区分
+    { name: t('移动到...') },
+    { name: t('复制到...') },
+    { name: t('复制到剪贴板') },
+    { name: t('剪切') },
     { name: t('删除'), color: '#ee0a24' },
   ]
   return actions
@@ -553,8 +561,13 @@ function onMenuAction(action: { name: string }) {
   } else if (action.name === t('重命名')) {
     renameTarget.value = target
     showRename.value = true
-  } else if (action.name === t('移动') || action.name === t('复制')) {
-    openFolderPicker(action.name === t('移动') ? 'move' : 'copy', [target])
+  } else if (action.name === t('移动到...') || action.name === t('复制到...')) {
+    openFolderPicker(action.name === t('移动到...') ? 'move' : 'copy', [target])
+  } else if (action.name === t('复制到剪贴板') || action.name === t('剪切')) {
+    // A-29a：单条目剪贴板（对齐 PC copy_clipboard/cut；粘贴条由 UnifiedFileList 读取全局剪贴板展示）
+    const mode = action.name === t('剪切') ? 'cut' : 'copy'
+    clipboard.setClipboard([target.id], mode, projectId.value, 'project')
+    showSuccessToast(mode === 'cut' ? t('已剪切') : t('已复制'))
   } else if (action.name === t('删除')) {
     batchDelete([target])
   }
@@ -1035,7 +1048,29 @@ const memberRows = computed(() =>
     projectRoleId: m.projectRoleId,
     email: m.email ?? '',
     username: m.username ?? '',
+    avatar: m.avatar ?? '',
   }))
+)
+
+// B-08 成员头像加载失败回落图标（逐 id 记录，避免整列回退）
+const avatarErrors = ref<Set<string>>(new Set())
+function onAvatarError(id: string) {
+  avatarErrors.value.add(id)
+}
+
+// B-09 按角色筛选成员（对齐 PC MembersModal filterRoleId；选项含所有角色含所有者）
+const filterRoleId = ref('')
+const roleFilterOptions = computed(() => [
+  { text: t('所有角色'), value: '' },
+  ...roles.value.map((r: any) => ({
+    text: getProjectRoleDisplayName(r.name),
+    value: r.id,
+  })),
+])
+const filteredMemberRows = computed(() =>
+  filterRoleId.value
+    ? memberRows.value.filter((m) => m.projectRoleId === filterRoleId.value)
+    : memberRows.value
 )
 
 onMounted(() => {
@@ -1124,7 +1159,16 @@ onMounted(() => {
         <div v-else class="member-list">
           <!-- 0 成员时列表头仍要保留角色管理入口（PC 端按权限恒显示，不依赖成员数） -->
           <div v-if="members.length > 0 || canManageRoles || canManageMembers" class="member-header">
-            <span v-if="members.length > 0" class="member-count">{{ members.length }} 人</span>
+            <div class="member-header-left">
+              <span v-if="members.length > 0" class="member-count">{{ filteredMemberRows.length }} 人</span>
+              <van-dropdown-menu v-if="members.length > 0" class="role-filter-dropdown">
+                <van-dropdown-item
+                  :options="roleFilterOptions"
+                  :model-value="filterRoleId"
+                  @change="(val: any) => (filterRoleId = val)"
+                />
+              </van-dropdown-menu>
+            </div>
             <div class="member-header-actions">
               <button v-if="canManageRoles" class="add-member-btn" @click="goRoleManagement">
                 <van-icon name="apps-o" size="14" />
@@ -1139,16 +1183,27 @@ onMounted(() => {
           <div v-if="members.length === 0" class="state-box">
             <span class="state-text">暂无成员</span>
           </div>
+          <div v-else-if="filteredMemberRows.length === 0" class="state-box">
+            <span class="state-text">{{ t('没有符合条件的成员') }}</span>
+          </div>
           <div
-            v-for="m in memberRows"
+            v-for="m in filteredMemberRows"
             :key="m.id"
             class="member-row"
           >
             <div class="member-avatar">
-              <van-icon name="user-o" size="20" />
+              <van-image
+                v-if="m.avatar && !avatarErrors.has(m.id)"
+                :src="m.avatar"
+                class="member-avatar-img"
+                fit="cover"
+                @error="onAvatarError(m.id)"
+              />
+              <van-icon v-else name="user-o" size="20" />
             </div>
             <div class="member-info">
               <span class="member-name">{{ m.name }}</span>
+              <span v-if="m.email" class="member-email">{{ m.email }}</span>
               <span class="member-role">{{ m.role }}</span>
             </div>
             <div v-if="canManageMembers && !isOwner(m) && !isSelf(m)" class="member-actions">
@@ -1513,6 +1568,14 @@ onMounted(() => {
   color: var(--text-secondary);
   background: var(--bg-tertiary);
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* B-08 成员真实头像：铺满圆形容器，加载失败回落 user-o 图标 */
+.member-avatar-img {
+  width: 38px;
+  height: 38px;
+  display: block;
 }
 
 .member-info {
@@ -1526,6 +1589,15 @@ onMounted(() => {
 .member-name {
   font-size: 14px;
   color: var(--text-primary);
+}
+
+/* B-08 成员邮箱副行：无邮箱则不渲染（模板 v-if），不显示占位 */
+.member-email {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .member-role {
@@ -1614,6 +1686,13 @@ onMounted(() => {
   padding: 8px 0;
 }
 
+/* B-09 左侧分组：人数 + 角色筛选下拉，与右侧操作按钮 space-between 对齐 */
+.member-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .member-header-actions {
   display: flex;
   align-items: center;
@@ -1641,10 +1720,11 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-/* 行内角色 chip。vant 自带的 ▼ 是绝对定位（right:-4px），会探出 bar 背景外（即用户看到的
+/* 行内角色 chip + B-09 列表头角色筛选。vant 自带的 ▼ 是绝对定位（right:-4px），会探出 bar 背景外（即用户看到的
    「右侧图标有一半不在背景内」），改成关掉它、由 item 的流内伪元素画三角，位置不再依赖箭头宽度。
    圆角加在 bar 上而非容器上——容器 overflow:hidden 可能裁掉绝对定位的角色面板。 */
-.role-dropdown {
+.role-dropdown,
+.role-filter-dropdown {
   flex-shrink: 0;
 
   :deep(.van-dropdown-menu__bar) {

@@ -17,6 +17,7 @@ import VerifyEmailPage from './pages/auth/VerifyEmailPage.vue';
 import VerifyPhonePage from './pages/auth/VerifyPhonePage.vue';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage.vue';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage.vue';
+import LegalPage from './pages/legal/LegalPage.vue';
 import AuthBackButton from './pages/auth/AuthBackButton.vue';
 import NotFoundPage from './pages/NotFoundPage.vue';
 import NoticeDialog from './components/NoticeDialog.vue';
@@ -24,6 +25,15 @@ import { AUTH_PAGE_PATHS } from '@/utils/authSession';
 
 /** 认证覆盖层路由单源见 authSession.AUTH_PAGE_PATHS（router 守卫共用），与下方 v-if 链保持一一对应 */
 const isAuthPage = computed(() => AUTH_PAGE_PATHS.includes(route.path));
+
+// 合规页（H-01）：公开覆盖层，登录态/游客态都渲染（不在 AUTH_PAGE_PATHS，守卫不弹跳）
+const legalDoc = computed<'privacy' | 'terms' | null>(() =>
+  route.path === '/legal/privacy'
+    ? 'privacy'
+    : route.path === '/legal/terms'
+      ? 'terms'
+      : null
+);
 
 // 未在 router/index.ts 声明的路径（抄来的 PC 路径、手输错）matched 为空数组。
 // 不给路由表加 path:'*'——RouteRecordRaw 必须有 component/redirect/children，
@@ -53,6 +63,7 @@ const route = useRoute();
     <VerifyPhonePage v-else-if="route.path === '/verify-phone'" />
     <ForgotPasswordPage v-else-if="route.path === '/forgot-password'" />
     <ResetPasswordPage v-else-if="route.path === '/reset-password'" />
+    <LegalPage v-else-if="legalDoc" :doc="legalDoc" />
     <!-- 兜底覆盖层：路由表里查不到的路径显示（见 isNotFound） -->
     <NotFoundPage v-else-if="isNotFound" />
 

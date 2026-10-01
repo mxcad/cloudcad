@@ -18,6 +18,10 @@ import {
   shareControllerRevokeShare,
   shareControllerGetFileShares,
 } from '@cloudcad/api-sdk/sdk.gen'
+import {
+  computeExpiresInSeconds,
+  isShareExpired,
+} from '@cloudcad/platform'
 
 type Expiration = '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom' | 'never'
 
@@ -76,17 +80,9 @@ const expirationItems: Array<{ value: Expiration; label: string }> = [
   { value: 'never', label: t('永不过期') },
 ]
 
+// 预设秒数收敛到 @cloudcad/platform（与 PC 共用）
 function expiresIn(exp: Expiration): number | undefined {
-  if (exp === 'never') return undefined
-  if (exp === 'custom') return Math.max(1, customDays.value) * 86400
-  return {
-    '2h': 7200,
-    '6h': 21600,
-    '12h': 43200,
-    '1d': 86400,
-    '3d': 259200,
-    '7d': 604800,
-  }[exp]
+  return computeExpiresInSeconds(exp, customDays.value)
 }
 
 // 分享链接一律取后端返回的 url（CreateShareResponseDto.url 必填）。
@@ -194,13 +190,6 @@ async function handleRevoke(item: FileShareItem) {
   }
 }
 
-function isShareExpired(item: FileShareItem): boolean {
-  if (!item.expiresAt) return false
-  const exp = new Date(item.expiresAt).getTime()
-  if (Number.isNaN(exp)) return false
-  return exp <= Date.now()
-}
-
 function formatExpiry(dateStr?: string | null): string {
   if (!dateStr) return t('永不过期')
   const d = new Date(dateStr)
@@ -306,7 +295,7 @@ function onClose() {
               <div v-for="item in existingShares" :key="item.id" class="sc-share-item">
                 <div class="sc-share-info">
                   <span class="sc-share-expiry">{{ formatExpiry(item.expiresAt) }}</span>
-                  <span v-if="isShareExpired(item)" class="sc-share-status">{{ t('已过期') }}</span>
+                  <span v-if="isShareExpired(item.expiresAt ?? null)" class="sc-share-status">{{ t('已过期') }}</span>
                   <span v-if="typeof item.usedCount === 'number'" class="sc-share-used">
                     {{ t('已访问 {count} 次', { count: String(item.usedCount) }) }}
                   </span>

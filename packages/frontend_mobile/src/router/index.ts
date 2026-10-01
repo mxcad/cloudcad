@@ -65,6 +65,19 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/auth/ResetPasswordPage.vue'),
   },
   {
+    // 合规页（H-01）：公开路由（登录态与游客态都可访问，对齐 PC /privacy /terms）。
+    // 不在 AUTH_PAGE_PATHS 里——守卫对认证页会弹跳已登录用户，合规页不能弹。
+    // App.vue 按 route.path 渲染覆盖层并传 doc，路由表只为声明路径（404 判定用）。
+    path: '/legal/privacy',
+    name: 'LegalPrivacy',
+    component: () => import('../pages/legal/LegalPage.vue'),
+  },
+  {
+    path: '/legal/terms',
+    name: 'LegalTerms',
+    component: () => import('../pages/legal/LegalPage.vue'),
+  },
+  {
     // 微信绑定/注销授权回调桥接：后端固定重定向到 PC 路径 /profile#wechat_result=...，
     // 移动端 Profile 页在 /shell/profile，保留 hash 转发过去由页面消费
     path: '/profile',
