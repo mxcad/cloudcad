@@ -27,10 +27,12 @@ const {
   OPS_ENTRY,
 } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
+const { promptChoice } = require('../lib/prompt');
 const { getAdminLoginPath } = require('../lib/admin-login');
 const {
   runPm2,
   getPm2AppStatus,
+  getPm2StatusList,
   getPidByPort,
   isNodePid,
   isOurRuntimeProcess,
@@ -47,7 +49,7 @@ const { parseEnvFile } = require('../lib/env');
 const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
 const { promptConfirm } = require('../lib/prompt');
 const state = require('../lib/state');
-const { startInfrastructure } = require('./infra');
+const { startInfrastructure, isPm2AppFromThisProject } = require('./infra');
 const { stopAppServices } = require('./stop');
 const { runSetupWizard, showCurrentPasswords } = require('./setup-wizard');
 const { setupSignalHandlers } = require('../foreground/registry');
@@ -172,6 +174,94 @@ function shouldRestartAppServices(backendStatus, frontendStatus) {
 }
 
 /**
+ * PM2 注册的应用层服务名（与 pm2-deploy.config.js 生成的 apps[].name 一致）。
+ * conversion 仅在 FUNCTION_EXECUTOR=conversion-service 时注册；归属判定按名字查表、
+ * 查不到 entry 即跳过，故无条件列出不会误伤未启用的转换服务。
+ */
+const APP_PM2_NAMES = ['backend', 'frontend', 'conversion'];
+
+/** PM2 注册的基础服务名（与 ecosystem.config.js 的 app name 一致）。 */
+const INFRA_PM2_NAMES = ['postgresql', 'redis', 'cooperate', 'config-service'];
+
+/**
+ * 前置归属审计门禁：PM2 注册表中存在**属于另一部署目录且处于 online** 的 cloudcad
+ * 服务定义时整体中止，不做任何接管动作。
+ *
+ * Windows 上 PM2 daemon 全机唯一（命名管道寻址，PM2_HOME 只决定文件位置），多个部署
+ * 目录共写同一份 app 注册表。基础服务层已有 foreignApp 防护（infra.js），应用层曾一直
+ * 缺失——`pm2 restart <config>` 对同名已注册 app 复用注册表里的旧定义，config 里的新
+ * 定义被完全忽略。于是两个部署包混用时：基础服务被换成新包（新 .env 密钥/新数据目录），
+ * backend/frontend 却仍是旧包定义（旧 .env 密钥），本目录后端用旧 REDIS_PASSWORD 连
+ * 新 redis → AUTH 恒失败（ERR invalid password），且输出上看仍是"正在重启更新"，
+ * 差别完全不可见。
+ *
+ * 门禁必须前置到 startInfrastructure 之前：它有两个破坏性入口——
+ * ensureRedisPasswordManaged 在密码不符时会 SHUTDOWN 掉 6379 上的实例、
+ * reconcileInfrastructureWithPm2 会对别家定义 `pm2 delete` 并重拉本目录定义。
+ * 若这些先执行、随后应用层才发现冲突而中止，就留下"基础服务已换新包、应用层仍是
+ * 旧包"的半接管态，且旧 redis 已被 SHUTDOWN 无法回退。
+ *
+ * 只拦 online 的别家定义（PM2 报告其包装进程存活，即对方项目仍在服务），不探端口
+ * ——避免"端口探测失败"被漏判成可接管。stopped/errored 的别家定义是安全的：删除只
+ * 影响注册表条目，不涉及任何运行中进程，也不碰对方的库（数据按各自 data/ 目录隔离）。
+ * 这与基础层"非 redis 服务不做自动接管、停机须由人决定"的既有取舍一致。
+ *
+ * @returns {boolean} true=可继续；false=存在冲突，调用方中止
+ */
+async function assertNoForeignAppConflict() {
+  const entries = getPm2StatusList();
+  const conflicts = [];
+  for (const appName of [...INFRA_PM2_NAMES, ...APP_PM2_NAMES]) {
+    const entry = entries.find((a) => a.name === appName);
+    if (!entry || isPm2AppFromThisProject(entry)) continue;
+    if (!entry.pm2_env || entry.pm2_env.status !== 'online') continue;
+    conflicts.push(`${appName}（${entry.pm2_env.pm_cwd || '未知目录'}）`);
+  }
+  if (conflicts.length === 0) return true;
+
+  log(
+    'red',
+    `  [错误] 检测到以下服务由另一部署目录提供且仍在运行：${conflicts.join('、')}`
+  );
+  log(
+    'red',
+    '  本次不接管——不会误删/误改对方正在提供的服务与其数据库，否则本目录会用错配密钥连接。'
+  );
+  log(
+    'cyan',
+    `  继续方式：先在旧部署目录运行 ${OPS_ENTRY} stop（或该目录的 stop.bat），` +
+      '确认端口全部释放后重跑本流程。'
+  );
+  return false;
+}
+
+/**
+ * 删除 PM2 注册表中属于**另一部署目录**的应用层服务定义。
+ *
+ * `pm2 restart <config>` 对同名已注册 app 复用注册表里的旧定义（旧 cwd/旧 script/
+ * 旧 .env 密钥），config 里的新定义被完全忽略——不清理的话本目录应用层配置不生效，
+ * 且输出上仍是"检测到服务已注册，正在重启更新..."，差别不可见。这与基础层 infra.js
+ * 对别家定义的处置一致（先 `pm2 delete` 再用本目录配置重新注册）。
+ *
+ * 只在 assertNoForeignAppConflict 已拦下 online 冲突之后调用，故此处被 delete 的条目
+ * 必然处于 stopped/errored，不会终止对方正在运行的服务。
+ * @param {string[]} names 本次要注册的应用层服务名
+ */
+function deleteForeignAppDefinitions(names) {
+  const entries = getPm2StatusList();
+  const foreign = names.filter((name) => {
+    const entry = entries.find((a) => a.name === name);
+    return !!entry && !isPm2AppFromThisProject(entry);
+  });
+  if (foreign.length === 0) return;
+  log(
+    'yellow',
+    `  [接管] PM2 中 ${foreign.join(', ')} 的注册信息来自另一部署目录，删除后用本目录配置重新注册...`
+  );
+  runPm2(['delete', ...foreign], { silent: true });
+}
+
+/**
  * 后端构建产物入口（单一事实源）。
  * 已验证 nest build（outDir=dist，rootDir=null）实际输出为 packages/backend/dist/main.js
  * （main.ts 在 src/ 下，编译到 dist 根），而非 dist/src/main.js。
@@ -277,14 +367,6 @@ async function startAppServices(mode, onReady) {
 
   if (mode === 'pm2') {
     // PM2 后台模式
-    // 用"是否已注册"（unknown = 未注册）而非"是否 online"判断 start/restart：
-    // - 已注册（online/stopped/errored/launching）→ restart（pm2 start 已注册 app 会报 already launched）
-    // - 都未注册（unknown）→ start
-    // 这修复"多次 start 后台模式"时，stop 过的 backend/frontend 被重复 start 的问题。
-    const backendStatus = getPm2AppStatus('backend');
-    const frontendStatus = getPm2AppStatus('frontend');
-    const anyRegistered = shouldRestartAppServices(backendStatus, frontendStatus);
-
     // 后端服务环境变量
     const backendEnv = {
       NODE_ENV: 'production',
@@ -332,11 +414,25 @@ async function startAppServices(mode, onReady) {
       });
     }
 
+    // 先清理别家定义，再判定 start/restart：别家定义对 `pm2 restart` 会复用注册表里的
+    // 旧定义（旧 cwd/旧 script/旧 .env 密钥），本目录配置完全不生效（见
+    // deleteForeignAppDefinitions）。必须在清理之后取值——否则别家定义仍算"已注册"，
+    // 会误走 restart 去跑别家脚本。
+    deleteForeignAppDefinitions(apps.map((a) => a.name));
+
     const tempConfigPath = path.join(DATA_DIR, 'pm2-deploy.config.js');
     fs.writeFileSync(
       tempConfigPath,
       `module.exports = { apps: [${apps.map((a) => JSON.stringify(a)).join(', ')}] };`
     );
+
+    // 用"是否已注册"（unknown = 未注册）而非"是否 online"判断 start/restart：
+    // - 已注册（online/stopped/errored/launching）→ restart（pm2 start 已注册 app 会报 already launched）
+    // - 都未注册（unknown）→ start
+    // 这修复"多次 start 后台模式"时，stop 过的 backend/frontend 被重复 start 的问题。
+    const backendStatus = getPm2AppStatus('backend');
+    const frontendStatus = getPm2AppStatus('frontend');
+    const anyRegistered = shouldRestartAppServices(backendStatus, frontendStatus);
 
     if (anyRegistered) {
       log('yellow', '检测到服务已注册（PM2），正在重启更新...');
@@ -615,7 +711,9 @@ async function testConnection() {
   return dbOk && redisOk;
 }
 
-async function startMode() {
+// options 非空 = 非交互调用（运维中心 ADR-0071）：{ mode: 'pm2'|'foreground' }。
+// 返回 true/false 表示启动成败；交互调用行为不变。
+async function startMode(options = null) {
   // 检查构建产物是否存在（后端入口统一走 getBackendDist，见 startAppServices）
   const backendDist = getBackendDist();
   const frontendDist = path.join(PROJECT_ROOT, 'packages', 'frontend', 'dist');
@@ -631,6 +729,11 @@ async function startMode() {
     log('cyan', '或使用部署模式（包含构建）：');
     console.log(`  ${colors.cyan}${OPS_ENTRY} deploy${colors.reset}`);
     console.log('');
+
+    if (options) {
+      log('red', '非交互模式：构建产物缺失，已中止启动');
+      return false;
+    }
 
     const rl = readline.createInterface({
       input: process.stdin,
@@ -649,31 +752,33 @@ async function startMode() {
     log('yellow', '[警告] 前端构建产物不存在，前端服务将不可用');
   }
 
-  // 询问启动模式
-  console.log('');
-  console.log(`${colors.cyan}请选择启动模式：${colors.reset}`);
-  console.log('');
-  console.log(`  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式）`);
-  console.log(
-    `  ${colors.cyan}[2]${colors.reset} 前台运行（终端关闭则服务退出）`
-  );
-  console.log('');
+  // 确定启动模式
+  let usePm2;
+  if (options) {
+    usePm2 = options.mode !== 'foreground';
+    log('cyan', `启动模式: ${usePm2 ? 'PM2 后台运行' : '前台运行'}（非交互）`);
+  } else {
+    // 询问启动模式
+    console.log('');
+    console.log(`${colors.cyan}请选择启动模式：${colors.reset}`);
+    console.log('');
+    console.log(`  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式）`);
+    console.log(
+      `  ${colors.cyan}[2]${colors.reset} 前台运行（终端关闭则服务退出）`
+    );
+    console.log('');
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+    // 只接受 1/2（空输入=默认 1）；3 等任意输入不再被静默当成默认项
+    const choice = await promptChoice(
+      `${colors.bright}请输入选项 [1]: ${colors.reset}`,
+      ['1', '2'],
+      '1'
+    );
 
-  const choice = await new Promise((resolve) => {
-    rl.question(`${colors.bright}请输入选项 [1]: ${colors.reset}`, (ans) => {
-      rl.close();
-      resolve(ans.trim() || '1');
-    });
-  });
+    console.log('');
 
-  console.log('');
-
-  const usePm2 = choice !== '2';
+    usePm2 = choice !== '2';
+  }
 
   // 只停止应用层（后端/前端），保留基础服务：避免切换模式时旧后端占用 3001 端口
   // 导致新实例 EADDRINUSE；基础服务由 startInfrastructure 幂等复用，不重启。
@@ -684,20 +789,25 @@ async function startMode() {
     // PM2 模式
     if (!PM2_JS || !fs.existsSync(PM2_JS) || !USE_RUNTIME) {
       log('yellow', '[提示] PM2 不可用，将使用前台模式启动');
-      await startAppServicesWithInfra('foreground');
+      return (await startAppServicesWithInfra('foreground', options)) !== false;
     } else {
-      await startAppServicesWithInfra('pm2');
+      return (await startAppServicesWithInfra('pm2', options)) !== false;
     }
   } else {
     // 前台模式
-    await startAppServicesWithInfra('foreground');
+    return (await startAppServicesWithInfra('foreground', options)) !== false;
   }
 }
 
 /**
- * 启动基础服务 + 应用服务（用于 startMode）
+ * 启动基础服务 + 应用服务（用于 startMode）。
+ * options 非空 = 非交互调用：基础服务未就绪时不询问重配、直接中止（return false）。
  */
-async function startAppServicesWithInfra(mode) {
+async function startAppServicesWithInfra(mode, options = null) {
+  // 前置归属审计门禁：必须早于 startInfrastructure 的任何破坏性动作（见函数注释）。
+  // 失败时不打印 "[1/2] 启动基础服务..."，避免让调用者误以为已进入启动流程。
+  if (!(await assertNoForeignAppConflict())) return false;
+
   log('blue', '[1/2] 启动基础服务...');
 
   // 统一走 startInfrastructure（P2.5 双实现合一 + Q0 统一 PM2 托管）：
@@ -705,7 +815,7 @@ async function startAppServicesWithInfra(mode) {
   // - 纯开发环境（PM2 不可用）：前台 spawn 兜底
   // mode 参数仍传递给应用层（startAppServices），基础服务不再按 mode 分叉。
   if (!(await startInfrastructure(mode === 'pm2'))) {
-    return;
+    return false;
   }
 
   // 等待基础服务就绪
@@ -720,6 +830,13 @@ async function startAppServicesWithInfra(mode) {
     } catch (err) {
       log('red', `[错误] ${err.message}`);
       console.log('');
+
+      if (options) {
+        // 非交互（运维中心）：不进入重配向导，直接中止——
+        // 配置问题应到「环境配置」页或 CLI 密码向导里解决后重试
+        log('red', '非交互模式：基础服务未就绪，已中止启动');
+        return false;
+      }
 
       const rl = readline.createInterface({
         input: process.stdin,
@@ -751,12 +868,17 @@ async function startAppServicesWithInfra(mode) {
   // 启动应用服务
   log('blue', '[2/2] 启动应用服务...');
   await startAppServices(mode);
+  return true;
 }
 
 module.exports = {
   waitForServicesForeground,
   startAppServices,
   shouldRestartAppServices,
+  assertNoForeignAppConflict,
+  deleteForeignAppDefinitions,
+  APP_PM2_NAMES,
+  INFRA_PM2_NAMES,
   startOnly,
   testConnection,
   startMode,

@@ -21,6 +21,6 @@ if exist ".deploy" (
     echo Starting 梦想网页CAD实时协同平台 ^(deploy mode^)...
     "%NODE_EXE%" runtime\scripts\cli.js deploy --skip-build
 ) else (
-    "%NODE_EXE%" runtime\scripts\cli.js
+    "%NODE_EXE%" runtime\scripts\cli.js start
 )
 pause

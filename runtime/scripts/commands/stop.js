@@ -25,6 +25,7 @@ const {
   runPm2,
   getProcessCmdlines,
   getPm2StatusList,
+  getPm2AppStatus,
   killTree,
 } = require('../lib/proc');
 const state = require('../lib/state');
@@ -405,16 +406,19 @@ function stopAppLayerProcesses() {
  */
 async function stopResidualServices() {
   const before = listOurResidualProcesses();
-  if (before.length === 0) {
-    log('cyan', '  本目录无残留服务进程');
-    return true;
-  }
   log(
     'cyan',
-    `  发现 PM2 遗留的本目录服务进程（${before.length} 个），按目录归属清理...`
+    before.length > 0
+      ? `  发现 PM2 遗留的本目录服务进程（${before.length} 个），按目录归属清理...`
+      : '  本目录未发现残留服务进程，仍按目录归属复查应用层...'
   );
 
   // 先停应用层：后端/前端仍在跑时会持续连库，先停它们再动 PG/Redis。
+  // 无条件执行——不被 before 是否为空门控。本目录应用层的 PM2 fork 包装进程 cmdline
+  // 只含 ProcessContainerFork.js（业务脚本路径在 env 里、不在 cmdline），exe 又可能是
+  // 全局 node 而非本目录 node，listOurResidualProcesses 的两条归属判据都可能漏掉它，
+  // 于是 before 为空而应用层仍在跑。该函数自带归属判定，无匹配时返回 'already-stopped'，
+  // 多调用一次无副作用。
   const appLayer = stopAppLayerProcesses();
   if (appLayer === 'failed') {
     log('red', '  [错误] 应用层进程未能停止');
@@ -491,7 +495,31 @@ async function stopInfrastructure() {
       'cyan',
       `  停止本目录 PM2 托管的服务（保留服务定义）: ${ownedApps.join(', ')}...`
     );
-    runPm2(['stop', ...ownedApps], { silent: true });
+    const stopOk = runPm2(['stop', ...ownedApps], { silent: true });
+    // `pm2 stop` 的返回值不可信，必须以注册表状态为准复核：PM2 内部即使 kill 失败
+    // 也不向客户端报错（ActionMethods 先置 STOPPED 再检查 err，仅 timeout 才升级
+    // ERRORED，两种情况都是 cb(null, ...)）。此处若不复核，"未全部转停"会被吞掉，
+    // 第 3 步的进程表终检又可能漏检本目录应用层的 PM2 fork 包装进程（其 cmdline 只
+    // 含 ProcessContainerFork.js、业务脚本路径在 env 里，见 listOurAppProcesses），
+    // 于是 stop 谎报"文件已释放"而实际 backend 仍在跑——下一次 start 就会拿这份
+    // 存活但已停止态的定义做 restart，跑出旧 .env 密钥。
+    const stillRunning = stopOk
+      ? ownedApps.filter((name) => {
+          const status = getPm2AppStatus(name);
+          return status === 'online' || status === 'launching';
+        })
+      : ownedApps;
+    if (stillRunning.length) {
+      log(
+        'red',
+        `  [错误] PM2 未能停止以下服务（仍处运行态）: ${stillRunning.join(', ')}`
+      );
+      log(
+        'red',
+        '  本次停止不完整，部署包文件可能仍被占用——请勿删除该目录。可用 kill-all 兜底或重启机器后再删。'
+      );
+      return false;
+    }
   }
 
   // 2. 兜底：PG/Redis 各自的 manager 也执行一次自带停止（幂等，已停即跳过）。
@@ -600,6 +628,8 @@ async function killAllInfrastructure() {
 module.exports = {
   stopInfrastructure,
   stopAppServices,
+  stopResidualServices,
+  stopAppLayerProcesses,
   killAllInfrastructure,
   // 导出归属判据供单元测试与部署侧排查（"停掉了但为什么不能删包"）
   listOurResidualProcesses,

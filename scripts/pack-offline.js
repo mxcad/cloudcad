@@ -28,6 +28,7 @@ const path = require('path');
 const os = require('os');
 const { execSync, spawn, spawnSync } = require('child_process');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 // 打包清单单一事实源（全量部署包 / 增量升级包 共享条目，P9 收敛双清单硬编码）
 const {
@@ -929,6 +930,38 @@ function getDistTargets() {
 }
 
 /**
+ * 解压包内 dist/ 下所有 .gz 文件（等价 mxcad-app 的 postinstall.js，只做 gunzip）。
+ *
+ * 私有 mxcad-app dist 只发 .gz（大 chunk 如 chunks/lib.js 仅 .gz），而前端
+ * mxcadRuntimePlugin 按未压缩路径（/mxcad-app/chunks/lib.js）加载；cpSync 覆盖
+ * 不触发 postinstall，须在此手动解压，否则 ESM 链断在 146 字节 shim 的
+ * `import './chunks/lib.js'`。已存在未压缩版本则跳过（与 postinstall 一致）。
+ * mxcad/mxdraw 私有 dist 无 .gz，此函数对其为 no-op。
+ *
+ * @returns {number} 实际解压的文件数
+ */
+function gunzipDistGzFiles(dest) {
+  const distDir = path.join(dest, 'dist');
+  if (!fs.existsSync(distDir)) return 0;
+  let count = 0;
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(p);
+      } else if (entry.name.endsWith('.gz')) {
+        const out = p.slice(0, -3);
+        if (fs.existsSync(out)) continue;
+        fs.writeFileSync(out, zlib.gunzipSync(fs.readFileSync(p)));
+        count++;
+      }
+    }
+  };
+  walk(distDir);
+  return count;
+}
+
+/**
  * 替换 mxcad 系列包 dist（私有修改，不进 git）并重建前端产物。
  *
  * 用外部目录的 dist 覆盖 node_modules/<pkg>/dist，然后 build 对应前端：
@@ -950,17 +983,22 @@ function replaceAndBuildDists(targets) {
   };
   for (const [pkg, src] of Object.entries(targets)) {
     const pkgDir = pkgDirs[pkg] || 'packages/frontend';
-    // src 指向 dist 目录，取其父目录作为包根（含 package.json、packToolPlugin 等）。
-    // 必须 path.resolve：env 覆盖允许相对路径，裸 dirname('dist') 返回 '.' 会复制整个 CWD
-    const srcPkgRoot = path.dirname(path.resolve(src));
-    if (!fs.existsSync(src)) {
-      error(`${pkg} dist 源目录不存在: ${src}`);
+    // src 指向 dist 目录。只覆盖 dist，保留原 package.json 等——整包根复制会带入
+    // node_modules/、src/、vite.config.ts 等干扰构建（手动验证过只覆盖 dist 才正常）。
+    const srcDist = path.resolve(src);
+    if (!fs.existsSync(srcDist)) {
+      error(`${pkg} dist 源目录不存在: ${srcDist}`);
       throw new Error(`${pkg} dist 源目录不存在`);
     }
     const dest = path.join(PROJECT_ROOT, pkgDir, 'node_modules', pkg);
-    log(`替换 ${pkg}: ${srcPkgRoot} → ${dest}`);
-    fs.rmSync(dest, { recursive: true, force: true });
-    fs.cpSync(srcPkgRoot, dest, { recursive: true });
+    const destDist = path.join(dest, 'dist');
+    log(`替换 ${pkg} dist: ${srcDist} → ${destDist}`);
+    fs.rmSync(destDist, { recursive: true, force: true });
+    fs.cpSync(srcDist, destDist, { recursive: true });
+    // 私有 mxcad-app dist 只发 .gz，cpSync 不触发 postinstall，须手动解压
+    // 未压缩 chunk（chunks/lib.js 等），否则前端 ESM 链断在 shim。
+    const gzCount = gunzipDistGzFiles(dest);
+    if (gzCount > 0) log(`✓ ${pkg} 解压 ${gzCount} 个 .gz（等价 postinstall）`);
   }
   // 必须 cd 进包目录跑裸 pnpm build（同 buildFrontendLocally）。不能用
   // `pnpm --filter <pkg> build` + cwd: PROJECT_ROOT：pnpm 会把 INIT_CWD 设成仓库根，

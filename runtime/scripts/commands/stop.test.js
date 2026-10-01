@@ -11,7 +11,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { PROJECT_ROOT, DATA_DIR } = require('../lib/context');
+const { PROJECT_ROOT, DATA_DIR, PM2_JS } = require('../lib/context');
 
 /**
  * 以给定的进程表快照重新加载 stop.js。
@@ -400,4 +400,119 @@ test('pm2OwnedApps：jlist 失败 / 空注册表 → 空数组（不得升级为
 
   const { pm2OwnedApps: whenEmpty } = loadStopWithPm2(() => []);
   assert.deepEqual(whenEmpty(), []);
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// stop 不得谎报成功：PM2 报成功但进程仍在 / 残留探测漏检应用层
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * 以"PM2 谎报成功"的注册表快照重新加载 stop.js。
+ *
+ * 只让 PM2_JS 这一个路径 existsSync 为 true（使 pm2OwnedApps 生效），其余磁盘分支
+ * （manager 脚本 / pg_ctl / 数据目录）全关，让流程直奔被测分支。
+ */
+function loadStopWithPm2Lie({ pm2Entries, appStatus, rows }) {
+  const fs = require('fs');
+  const procPath = require.resolve('../lib/proc');
+  const proc = require(procPath);
+  const fgPath = require.resolve('../foreground/registry');
+  const loggerPath = require.resolve('../lib/logger');
+  const logger = require(loggerPath);
+  const origExists = fs.existsSync;
+  const origGetCmdlines = proc.getProcessCmdlines;
+  const origStatusList = proc.getPm2StatusList;
+  const origAppStatus = proc.getPm2AppStatus;
+  const origRunPm2 = proc.runPm2;
+  const origKillTree = proc.killTree;
+  const origLog = logger.log;
+  const origFg = require.cache[fgPath];
+
+  const kills = [];
+  fs.existsSync = (p) => String(p) === String(PM2_JS);
+  proc.getProcessCmdlines = () => rows;
+  proc.getPm2StatusList = () =>
+    pm2Entries.map(([name, cwd]) => ({
+      name,
+      pm2_env: { pm_cwd: cwd, pm_exec_path: '' },
+    }));
+  proc.getPm2AppStatus = (name) => appStatus[name] || 'unknown';
+  proc.runPm2 = () => true;
+  proc.killTree = (pid) => {
+    kills.push(pid);
+    return true;
+  };
+  logger.log = () => {};
+  require.cache[fgPath] = {
+    id: fgPath,
+    filename: fgPath,
+    loaded: true,
+    exports: { cleanupForeground: () => {} },
+  };
+  delete require.cache[require.resolve('./stop')];
+
+  return {
+    stop: require('./stop'),
+    kills,
+    restore() {
+      fs.existsSync = origExists;
+      proc.getProcessCmdlines = origGetCmdlines;
+      proc.getPm2StatusList = origStatusList;
+      proc.getPm2AppStatus = origAppStatus;
+      proc.runPm2 = origRunPm2;
+      proc.killTree = origKillTree;
+      logger.log = origLog;
+      if (origFg) require.cache[fgPath] = origFg;
+      else delete require.cache[fgPath];
+      delete require.cache[require.resolve('./stop')];
+      require('./stop');
+    },
+  };
+}
+
+test('PM2 谎报成功但注册表仍 online → stopInfrastructure 返回 false', async () => {
+  // 回归背景：PM2 内部即使 kill 失败也不向客户端报错（ActionMethods 先置 STOPPED
+  // 再检查 err，仅 timeout 才升级 ERRORED，两种都是 cb(null, ...)）。原实现丢弃了
+  // runPm2 的返回值，"未全部转停"被吞掉；第 3 步的进程表终检又可能漏检本目录应用层
+  // 的 PM2 fork 包装进程（cmdline 只含 ProcessContainerFork.js、业务脚本路径在 env
+  // 里，exe 还可能是全局 node），于是 stop 谎报"文件已释放"而实际 backend 仍在跑。
+  // 下一次 start 就会拿这份存活定义做 restart，跑出旧 .env 密钥（ERR invalid password）。
+  const h = loadStopWithPm2Lie({
+    pm2Entries: [['backend', `${PROJECT_ROOT}/packages/backend`]],
+    appStatus: { backend: 'online' },
+    rows: [],
+  });
+  try {
+    assert.equal(await h.stop.stopInfrastructure(), false);
+  } finally {
+    h.restore();
+  }
+});
+
+test('stopResidualServices：残留探测为空但应用层可匹配 → 仍清理（不被短路跳过）', async () => {
+  // 回归背景：原实现在 listOurResidualProcesses 为空时直接 return true，
+  // stopAppLayerProcesses 被短路跳过。但"前台 spawn 的 backend"（exe=全局 node、
+  // cmdline 含 packages/backend/dist/main.js）两条判据都不命中
+  // listOurResidualProcesses（exe 不在本目录、cmdline 不含 data/），却能被
+  // listOurAppProcesses 命中（cmdline 含本目录 + 应用入口正则）。短路会让这类应用层
+  // 残留永久占用 3001，部署包删不掉。
+  const root = PROJECT_ROOT.replace(/\\/g, '/');
+  const h = loadStopWithPm2Lie({
+    pm2Entries: [],
+    appStatus: {},
+    rows: [
+      {
+        pid: 777,
+        name: 'node.exe',
+        cmdline: `"D:/nodejs/node.exe" "${root}/packages/backend/dist/main.js"`,
+        exe: 'D:/nodejs/node.exe',
+      },
+    ],
+  });
+  try {
+    await h.stop.stopResidualServices();
+    assert.deepEqual(h.kills, [777]);
+  } finally {
+    h.restore();
+  }
 });

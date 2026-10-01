@@ -41,6 +41,15 @@ function showHelp() {
     `  ${colors.green}status${colors.reset}             查看服务状态`
   );
   console.log(`  ${colors.green}logs${colors.reset}              查看服务日志`);
+  console.log(
+    `  ${colors.green}logs:locations${colors.reset}      列出全部日志文件位置`
+  );
+  console.log(
+    `  ${colors.green}logs:bundle --days N${colors.reset}  打包全部日志为 zip（可选最近 N 天）`
+  );
+  console.log(
+    `  ${colors.green}start:infra${colors.reset}         仅启动基础服务（排障用）`
+  );
   console.log('');
   console.log(`${colors.cyan}数据库备份与恢复：${colors.reset}`);
   console.log(

@@ -18,7 +18,7 @@ const { startOnly, startMode } = require('./start');
 const { stopInfrastructure } = require('./stop');
 const { linuxInit } = require('./init');
 const { runDatabaseMigration, runDatabaseSeed } = require('./migrate');
-const { viewStatus, viewLogs } = require('./status');
+const { viewStatus, logCenterMenu } = require('./status');
 const { databaseBackupMenu } = require('./db-backup');
 const { mfaTotpUnbind } = require('./mfa');
 const versionHelper = require('../drawing-version-helper');
@@ -33,7 +33,11 @@ const menuSections = [
         action: startMode,
       },
       { label: '查看服务状态', action: viewStatus },
-      { label: '查看服务日志', action: viewLogs },
+      {
+        label: '查看服务日志',
+        desc: '实时 / 位置一览 / 打包',
+        action: logCenterMenu,
+      },
       { label: '停止服务', action: stopInfrastructure },
     ],
   },
@@ -70,16 +74,22 @@ const menuSections = [
         label: '仅启动基础服务',
         desc: '只起 PG/Redis/协同，排障用',
         action: startOnly,
+        // 排障三项仅开发机显示（部署包用户用不上）；部署包内的部署流程会
+        // 自动执行版本检查/验证，工程师可在部署包用 `start:infra`/
+        // `version:check`/`version:verify` 子命令排障
+        scope: 'dev',
       },
       {
         label: '图纸版本检查',
         desc: '部署前检查版本仓库',
         action: () => versionHelper.runHealthCheck({ silent: false }),
+        scope: 'dev',
       },
       {
         label: '图纸版本验证',
         desc: '部署后验证版本仓库',
         action: () => versionHelper.runVerification({ silent: false }),
+        scope: 'dev',
       },
       {
         label: '解绑管理员 TOTP',

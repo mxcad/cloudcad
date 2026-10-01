@@ -12,57 +12,69 @@ const readline = require('readline');
 const { PROJECT_ROOT, PORTS } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { runPnpm } = require('../lib/proc');
+const { promptChoice } = require('../lib/prompt');
 const { waitForPort } = require('../lib/health');
 const versionHelper = require('../drawing-version-helper');
 const { startInfrastructure, setupPm2Startup } = require('./infra');
 const { stopAppServices } = require('./stop');
 const { runDatabaseMigration, runPiiBackfill } = require('./migrate');
-const { startAppServices } = require('./start');
+const { startAppServices, assertNoForeignAppConflict } = require('./start');
 const { rimdir } = require('./dev');
+const { runWithDeployLog } = require('../lib/deploy-log');
 
-async function deployMode(skipBuild = false) {
+async function deployModeImpl(skipBuild = false, options = null) {
   clearScreen();
   printHeader();
   log('bright', '>>> 部署模式');
   console.log('');
 
-  // 0. 询问启动模式（一开始就确定）
-  console.log(`${colors.cyan}请选择启动模式：${colors.reset}`);
-  console.log('');
-  console.log(
-    `  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式，推荐）`
-  );
-  console.log(
-    `  ${colors.cyan}[2]${colors.reset} 前台运行（终端关闭则服务退出）`
-  );
-  console.log('');
+  // 0. 确定启动模式。options 非空 = 非交互调用（运维中心 ADR-0071）：
+  //    不打印菜单、不询问，mode 固定由 options.mode 决定（缺省 pm2）。
+  let usePm2;
+  if (options) {
+    usePm2 = options.mode !== 'foreground';
+    log('cyan', `启动模式: ${usePm2 ? 'PM2 后台运行' : '前台运行'}（非交互）`);
+    console.log('');
+  } else {
+    console.log(`${colors.cyan}请选择启动模式：${colors.reset}`);
+    console.log('');
+    console.log(
+      `  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式，推荐）`
+    );
+    console.log(
+      `  ${colors.cyan}[2]${colors.reset} 前台运行（终端关闭则服务退出）`
+    );
+    console.log('');
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+    // 只接受 1/2（空输入=默认 1）；3 等任意输入不再被静默当成默认项
+    const modeChoice = await promptChoice(
+      `${colors.bright}请输入选项 [1]: ${colors.reset}`,
+      ['1', '2'],
+      '1'
+    );
 
-  const modeChoice = await new Promise((resolve) => {
-    rl.question(`${colors.bright}请输入选项 [1]: ${colors.reset}`, (ans) => {
-      rl.close();
-      resolve(ans.trim() || '1');
-    });
-  });
+    usePm2 = modeChoice !== '2';
 
-  const usePm2 = modeChoice !== '2';
-
-  console.log('');
+    console.log('');
+  }
 
   // 0. 只停止应用层（后端/前端），保留基础服务。
   //    避免切换前后台/重复启动时，PM2 旧后端占用 3001 端口导致前台启动 EADDRINUSE。
   //    基础服务（PG/Redis）由下方 startInfrastructure 幂等复用，不重启。
   await stopAppServices();
 
+  // 前置归属审计门禁：必须早于 startInfrastructure 的任何破坏性动作（见 start.js 注释）。
+  // 部署路径直接调 startInfrastructure + startAppServices、不经 startAppServicesWithInfra，
+  // 故此处必须独立把关——否则打包部署（用户的主要升级路径）会成为跨目录混用的绕过口：
+  // 基础服务被换成新包（新 .env 密钥），backend/frontend 沿用旧包定义，本目录后端用旧
+  // REDIS_PASSWORD 连新 redis → AUTH 恒失败（ERR invalid password）。
+  if (!(await assertNoForeignAppConflict())) return false;
+
   // 1. 启动基础服务（幂等：已在运行则复用，不重启）
   //    基础服务（PG/Redis 等）是有状态的数据服务，切换前后台/重复启动时
   //    若已在运行则应复用，避免每次全量停止重建造成数据中断。
   if (!(await startInfrastructure(usePm2))) {
-    return;
+    return false;
   }
 
   // 等待基础服务就绪
@@ -72,7 +84,7 @@ async function deployMode(skipBuild = false) {
     await waitForPort(PORTS.redis, 'Redis', 30000);
   } catch (err) {
     log('red', `[错误] ${err.message}`);
-    return;
+    return false;
   }
 
   // 2. 图纸版本部署前检查
@@ -80,7 +92,7 @@ async function deployMode(skipBuild = false) {
   const healthResult = await versionHelper.runHealthCheck({ silent: false });
   if (healthResult.failures > 0) {
     log('red', '[错误] 图纸版本检查未通过，请修复后重新部署');
-    return;
+    return false;
   }
   if (healthResult.warnings > 0) {
     log('yellow', '[警告] 图纸版本检查存在警告，继续部署...');
@@ -90,7 +102,7 @@ async function deployMode(skipBuild = false) {
 
   // 3. 数据库迁移（依赖已在 setupOffline 中安装）
   if (!(await runDatabaseMigration())) {
-    return;
+    return false;
   }
 
   // 3.5 PII 字段级加密存量回填（#417 等保 8.1.4.8）：migration 应用后、读切换代码
@@ -98,7 +110,7 @@ async function deployMode(skipBuild = false) {
   //     幂等：已回填则秒跳过（升级部署无额外开销）。失败则中止部署——读切换代码
   //     查 HMAC 列，若存量行 HMAC 列缺失，存量用户登录/查重会落空。
   if (!(await runPiiBackfill())) {
-    return;
+    return false;
   }
 
   // 3. 检测是否已有构建产物
@@ -119,7 +131,7 @@ async function deployMode(skipBuild = false) {
   if (skipBuild) {
     if (!hasBackendDist) {
       log('red', '[错误] 指定了 --skip-build 但构建产物不存在');
-      return;
+      return false;
     }
       log('green', '[4/6] 跳过构建，使用现有 dist');
     shouldBuild = false;
@@ -131,23 +143,32 @@ async function deployMode(skipBuild = false) {
     log('cyan', '  移动端 dist: ' + (hasMobileDist ? '✓ 存在' : '✗ 不存在'));
     console.log('');
 
-    // 询问用户是否重新构建
-    const rl2 = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    const answer = await new Promise((resolve) => {
-      rl2.question(
-        `${colors.yellow}是否重新构建？(y/N): ${colors.reset}`,
-        (ans) => {
-          rl2.close();
-          resolve(ans.trim().toLowerCase());
-        }
+    if (options) {
+      // 非交互（运维中心）：是否重建由 options.rebuild 决定，缺省不重建
+      shouldBuild = options.rebuild === true;
+      log(
+        'cyan',
+        `非交互模式：${shouldBuild ? '重新构建' : '使用现有构建产物'}`
       );
-    });
+    } else {
+      // 询问用户是否重新构建
+      const rl2 = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
 
-    shouldBuild = answer === 'y' || answer === 'yes';
+      const answer = await new Promise((resolve) => {
+        rl2.question(
+          `${colors.yellow}是否重新构建？(y/N): ${colors.reset}`,
+          (ans) => {
+            rl2.close();
+            resolve(ans.trim().toLowerCase());
+          }
+        );
+      });
+
+      shouldBuild = answer === 'y' || answer === 'yes';
+    }
 
     if (!shouldBuild) {
       log('green', '[✓] 跳过构建，使用现有 dist');
@@ -166,7 +187,7 @@ async function deployMode(skipBuild = false) {
 
     if (!runPnpm(['build'])) {
       log('red', '[错误] 构建失败');
-      return;
+      return false;
     }
 
     log('green', '[✓] 构建完成');
@@ -212,6 +233,15 @@ async function deployMode(skipBuild = false) {
     //    配置失败完全静默，不报错、不中断部署（由 setupPm2Startup 内部吞掉）。
     await setupPm2Startup();
   }
+  return true;
+}
+
+// 部署 / 升级全程控制台输出镜像落盘到 data/logs/deploy/（日志中心可打包，
+// 部署现场可事后追溯）。包装函数与实现分离，实现保持原样不被重排。
+// options（ADR-0071 运维中心非交互调用）：{ mode: 'pm2'|'foreground', rebuild: boolean }，
+// 缺省 null 保持原交互行为。返回 true/false 表示部署成败（交互调用方无需关心）。
+async function deployMode(skipBuild = false, options = null) {
+  return runWithDeployLog('deploy', () => deployModeImpl(skipBuild, options));
 }
 
 module.exports = {

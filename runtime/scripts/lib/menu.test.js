@@ -31,7 +31,7 @@ function visibleLabels(env) {
     .map((i) => i.label);
 }
 
-test('Windows + 部署包：无 Linux 初始化、无开发模式/种子', () => {
+test('Windows + 部署包：无 Linux 初始化、无开发模式/种子、无排障三项', () => {
   const labels = visibleLabels(ENVS.winDeploy);
   assert.ok(!labels.includes('Linux 初始化（首次部署）'));
   assert.ok(!labels.includes('开发模式'));
@@ -43,6 +43,24 @@ test('Linux + 部署包：有 Linux 初始化，仍无开发模式/种子', () =
   assert.ok(labels.includes('Linux 初始化（首次部署）'));
   assert.ok(!labels.includes('开发模式'));
   assert.ok(!labels.includes('数据库种子'));
+});
+
+test('排障三项（仅启动基础服务/版本检查/版本验证）仅开发机可见', () => {
+  // 部署包用户用不上排障项（版本检查/验证由部署流程自动执行）；工程师在
+  // 部署包可用 start:infra / version:check / version:verify 子命令
+  const troubleshoot = ['仅启动基础服务', '图纸版本检查', '图纸版本验证'];
+  for (const env of [ENVS.winDeploy, ENVS.linuxDeploy]) {
+    const labels = visibleLabels(env);
+    for (const label of troubleshoot) {
+      assert.ok(!labels.includes(label), `${label} 不应在部署包（${env}）可见`);
+    }
+  }
+  for (const env of [ENVS.winDev, ENVS.linuxDev]) {
+    const labels = visibleLabels(env);
+    for (const label of troubleshoot) {
+      assert.ok(labels.includes(label), `${label} 应在开发机（${env}）可见`);
+    }
+  }
 });
 
 test('开发机（无 .deploy 标记）：两个平台都显示开发模式/种子', () => {
@@ -57,11 +75,12 @@ test('Windows 开发机：无 Linux 初始化', () => {
 });
 
 test('菜单项总数守恒（防静默丢项：旧平铺 14 项拆分后一项不能少）', () => {
-  // linuxDev = 全量 14 项；winDev 少 Linux 初始化；部署包再少 开发模式/数据库种子
+  // linuxDev = 全量 14 项；winDev 少 Linux 初始化；部署包再少 开发模式/种子 +
+  // 排障三项（仅启动基础服务/版本检查/版本验证，scope:'dev'）
   assert.equal(visibleLabels(ENVS.linuxDev).length, 14);
   assert.equal(visibleLabels(ENVS.winDev).length, 13);
-  assert.equal(visibleLabels(ENVS.linuxDeploy).length, 12);
-  assert.equal(visibleLabels(ENVS.winDeploy).length, 11);
+  assert.equal(visibleLabels(ENVS.linuxDeploy).length, 9);
+  assert.equal(visibleLabels(ENVS.winDeploy).length, 8);
 });
 
 test('编号跨 section 连续 1..N，无重复无跳号', () => {

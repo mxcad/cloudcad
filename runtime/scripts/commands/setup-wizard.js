@@ -10,6 +10,9 @@
  * - autoSetupAndShowPasswords：cli.js:2558-2613
  * - showCurrentPasswords：cli.js:1696-1724
  *
+ * 首次部署确认后额外落一份根目录凭据备份（DEPLOY-PASSWORDS.txt，见 lib/credentials.js）：
+ * 随机密码只在终端一次性显示，用户没复制就走就找不回（数据库密码丢失只能重装数据目录）。
+ *
  * 依赖方向：commands → lib。共享可变状态 isFirstDeploy 经 lib/state（A-2 收口）。
  */
 
@@ -23,6 +26,7 @@ const { PRODUCT_NAME } = require('../lib/branding');
 const { colors, log, brandBox } = require('../lib/logger');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { getAdminLoginPath } = require('../lib/admin-login');
+const { saveCredentialBackup, credentialFilePath } = require('../lib/credentials');
 const {
   promptPassword,
   promptPasswordWithConfirm,
@@ -244,9 +248,13 @@ async function runSetupWizard() {
 
     if (confirm === 'n' || confirm === 'no') {
       rl.close();
-      // 删除 .env 文件，以便下次运行时重新进入引导配置
+      // 删除 .env 与凭据备份，以便下次运行时重新进入引导配置
+      // （备份必须同步删：.env 已删而 txt 还在，会留下一份过期的密码快照）
       if (fs.existsSync(BACKEND_ENV_PATH)) {
         fs.unlinkSync(BACKEND_ENV_PATH);
+      }
+      if (fs.existsSync(credentialFilePath())) {
+        fs.unlinkSync(credentialFilePath());
       }
       console.log('');
       log('yellow', '已取消配置，请重新运行');
@@ -280,6 +288,8 @@ async function runSetupWizard() {
 
     updateEnvFile(BACKEND_ENV_PATH, updates);
     log('green', '[✓] 配置完成！');
+    // 该分支先打印密码后落盘，故备份紧随落盘之后写（取消分支会删 .env，也已同步删备份）
+    saveCredentialBackup(updates, envConfig);
   } finally {
     rl.close();
   }
@@ -347,6 +357,7 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
     updates.REDIS_PASSWORD = redisPassword;
     updates.INITIAL_ADMIN_PASSWORD = adminPassword;
     writeFinalEnv(updates, envConfig);
+    saveCredentialBackup(updates, envConfig);
     return true;
   }
 
@@ -415,8 +426,9 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   }
   rl.close();
 
-  // 写入 .env
+  // 写入 .env，并落一份根目录凭据备份（随机密码在终端只显示一次）
   writeFinalEnv(updates, envConfig);
+  const credential = saveCredentialBackup(updates, envConfig);
 
   // 展示最终生效的密码
   console.log('');
@@ -428,6 +440,9 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${updates.REDIS_PASSWORD}`);
   console.log(`  ${colors.bright}管理员账号:${colors.reset} ${envConfig.INITIAL_ADMIN_USERNAME || 'admin'}`);
   console.log(`  ${colors.bright}管理员密码:${colors.reset}    ${updates.INITIAL_ADMIN_PASSWORD}`);
+  if (credential.ok) {
+    console.log(`  ${colors.bright}凭据备份:${colors.reset}   ${credential.path}`);
+  }
   console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
   console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
@@ -438,13 +453,14 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
 
   // 展示最终密码后暂停等待，避免后续服务启动日志刷屏覆盖密码
   // 确保用户记录下确认后的密码，再继续启动部署
+  const backupNote = credential.ok ? `（已保存到 ${credential.path}）` : '';
   await new Promise((resolve) => {
     const confirmRl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
     });
     confirmRl.question(
-      `${colors.yellow}请记录以上确认后的密码，按回车键继续部署...${colors.reset}`,
+      `${colors.yellow}请记录以上确认后的密码${backupNote}，按回车键继续部署...${colors.reset}`,
       () => {
         confirmRl.close();
         resolve();

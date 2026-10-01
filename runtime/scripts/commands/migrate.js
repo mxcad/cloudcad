@@ -510,7 +510,9 @@ async function getDatabaseSize(host, port, user, dbName) {
   }
 }
 
-async function runDatabaseMigration() {
+// options 非空 = 非交互调用（运维中心 ADR-0071）：迁移前备份失败时不再询问，
+// 一律中止（安全默认）。缺省 null 保持原交互行为。
+async function runDatabaseMigration(options = null) {
   log('blue', '[2/3] 执行数据库迁移...');
 
   // 检查 .env 文件是否存在
@@ -568,6 +570,12 @@ async function runDatabaseMigration() {
       log('yellow', '⚠️  数据库备份失败！');
       log('yellow', '如果继续部署，迁移失败时将无法恢复数据。');
       console.log('');
+
+      if (options) {
+        // 非交互（运维中心）：备份失败一律中止，请先解决备份问题再迁移
+        log('yellow', '非交互模式：备份失败，已中止迁移。');
+        return false;
+      }
 
       const confirmed = await promptConfirm('是否继续部署？(yes/no): ');
       if (!confirmed) {

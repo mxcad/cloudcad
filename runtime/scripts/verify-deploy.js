@@ -1093,4 +1093,7 @@ async function main() {
   process.exit(success ? 0 : 1);
 }
 
-main();
+// 验证全程输出镜像落盘 data/logs/deploy/（main 内部大量 process.exit，
+// deploy-log 用同步追加写保证退出前日志不丢尾）
+const { runWithDeployLog } = require('./lib/deploy-log');
+runWithDeployLog('verify-deploy', () => main());

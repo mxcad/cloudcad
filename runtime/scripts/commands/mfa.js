@@ -72,15 +72,21 @@ function promptUsername() {
 /**
  * 解绑指定管理员的 TOTP 双因素并写入 MFA_UNBIND 审计。
  * @param {string} [usernameArg] CLI 传入的用户名；缺省时交互输入。
+ * @param {{confirmed?: boolean}} [options] 非交互调用（运维中心 ADR-0071）：
+ *   confirmed=true 跳过确认提问（网页侧已做双重确认）。
+ * @returns {{ok: boolean, message: string}} 结果与面向用户的消息
  */
-async function mfaTotpUnbind(usernameArg) {
+async function mfaTotpUnbind(usernameArg, options = null) {
   let username = (usernameArg || '').trim();
   if (!username) {
+    if (options) {
+      return { ok: false, message: '未提供用户名' };
+    }
     username = await promptUsername();
   }
   if (!username) {
     log('red', '未提供用户名，已取消');
-    return;
+    return { ok: false, message: '未提供用户名' };
   }
 
   log('yellow', `准备解绑 TOTP 双因素：${username}`);
@@ -95,17 +101,17 @@ async function mfaTotpUnbind(usernameArg) {
     );
     if (!q.ok) {
       log('red', `查询失败：${q.stderr}`);
-      return;
+      return { ok: false, message: `查询失败：${q.stderr}` };
     }
     if (!q.stdout) {
       log('red', `用户不存在：${username}`);
-      return;
+      return { ok: false, message: `用户不存在：${username}` };
     }
     const [id, uname, role, totpEnabled] = q.stdout.split('|');
     user = { id, username: uname, role, totpEnabled: totpEnabled === 't' };
   } catch (err) {
     log('red', `查询失败：${err.message}`);
-    return;
+    return { ok: false, message: `查询失败：${err.message}` };
   }
 
   if (user.role !== 'ADMIN') {
@@ -113,20 +119,26 @@ async function mfaTotpUnbind(usernameArg) {
       'red',
       `目标用户角色为 ${user.role || '未知'}（非 ADMIN），禁止解绑 TOTP`
     );
-    return;
+    return {
+      ok: false,
+      message: `目标用户角色为 ${user.role || '未知'}（非 ADMIN），禁止解绑`,
+    };
   }
   if (!user.totpEnabled) {
     log('yellow', `该管理员未启用 TOTP（totpEnabled=false），无需解绑`);
-    return;
+    return { ok: false, message: '该管理员未启用 TOTP，无需解绑' };
   }
 
   // 2. 确认（高危操作：解除管理员双因素）
-  const confirmed = await promptConfirm(
-    `确认解除管理员 ${user.username} 的 TOTP 双因素？此操作立即生效（yes/no）：`
-  );
+  let confirmed = options?.confirmed === true;
+  if (!confirmed) {
+    confirmed = await promptConfirm(
+      `确认解除管理员 ${user.username} 的 TOTP 双因素？此操作立即生效（yes/no）：`
+    );
+  }
   if (!confirmed) {
     log('yellow', '已取消');
-    return;
+    return { ok: false, message: '已取消' };
   }
 
   // 3. 解绑：清空密文 + 置未启用
@@ -137,7 +149,10 @@ async function mfaTotpUnbind(usernameArg) {
   );
   if (!upd.ok || !/UPDATE 1/.test(upd.stdout)) {
     log('red', `解绑失败：${upd.stderr || upd.stdout || '未更新任何行'}`);
-    return;
+    return {
+      ok: false,
+      message: `解绑失败：${upd.stderr || upd.stdout || '未更新任何行'}`,
+    };
   }
 
   // 4. 写入 MFA_UNBIND 审计（source=ops_cli，便于安全回溯）
@@ -158,10 +173,17 @@ async function mfaTotpUnbind(usernameArg) {
   if (!ins.ok) {
     // 解绑已生效，审计失败不应回滚（数据已改），仅告警
     log('yellow', `解绑已生效，但审计写入失败：${ins.stderr}`);
-    return;
+    return {
+      ok: true,
+      message: `已解除 TOTP，但审计写入失败：${ins.stderr}`,
+    };
   }
 
   log('green', `已解除管理员 ${user.username} 的 TOTP 双因素（MFA_UNBIND 审计已写入）`);
+  return {
+    ok: true,
+    message: `已解除管理员 ${user.username} 的 TOTP 双因素`,
+  };
 }
 
 module.exports = { mfaTotpUnbind };

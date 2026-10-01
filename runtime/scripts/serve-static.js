@@ -260,6 +260,21 @@ function createServer(options) {
     const mobilePrefix = '/' + options.mobilePath;
     if (urlPath === mobilePrefix || urlPath.startsWith(mobilePrefix + '/')) {
       const mobileRelPath = urlPath.replace(new RegExp('^' + mobilePrefix), '') || '/';
+
+      // cooperate 模式引擎文件加载：/buf/$<name>.mxb<N>.wgh → 实际文件 <name>
+      // 私有 mxcad/mxdraw（1.0.399+/0.1.389+）走此协议，官方旧版不走。
+      // <name> 是 URL 解码后的文件名（可能含路径），直接映射到 mobileDir 下。
+      const wghMatch = mobileRelPath.match(/^\/buf\/\$(.+)\.mxb\d+\.wgh$/);
+      if (wghMatch) {
+        const wghName = wghMatch[1];
+        const wghFilePath = path.join(options.mobileDir, wghName);
+        if (fs.existsSync(wghFilePath)) {
+          serveStaticFile(res, wghFilePath, urlPath, { ...options, dir: options.mobileDir });
+          return;
+        }
+        // 文件不存在时落到下面 SPA fallback（返回 404 或 index.html）
+      }
+
       let filePath = path.join(options.mobileDir, mobileRelPath);
 
       if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {

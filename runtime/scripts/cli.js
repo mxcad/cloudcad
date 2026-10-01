@@ -84,6 +84,7 @@ const {
   promptPasswordWithConfirm,
 } = require('./lib/prompt');
 const state = require('./lib/state');
+const { hasNonAscii } = require('./lib/deploy-path');
 
 // ==================== 运维操作留痕（#418） ====================
 // 每次 CLI 调用记 start 行；进程退出记 exit 行（含退出码）。
@@ -96,6 +97,9 @@ installExitHook();
 const {
   viewStatus,
   viewLogs,
+  logCenterMenu,
+  showLogLocations,
+  bundleLogsCommand,
 } = require('./commands/status');
 const { linuxInit } = require('./commands/init');
 const { autoSetupAndShowPasswords } = require('./commands/setup-wizard');
@@ -114,7 +118,7 @@ const {
   stopInfrastructure,
   killAllInfrastructure,
 } = require('./commands/stop');
-const { startMode } = require('./commands/start');
+const { startMode, startOnly } = require('./commands/start');
 const { devMode } = require('./commands/dev');
 const { deployMode } = require('./commands/deploy');
 const { mfaTotpUnbind } = require('./commands/mfa');
@@ -195,6 +199,23 @@ async function bootstrap() {
   // NODE_EXE 只取决于 USE_RUNTIME（runtime/<platform> 是否存在）而与 PM2 无关。
   // 清理动作必须最大限度可用——它正是"停不掉"时的最后出口。
   const isStopOnlyCommand = args[0] === 'stop' || args[0] === 'kill-all';
+
+  // 部署目录含中文会导致 PostgreSQL / Redis / CAD 转换引擎无法工作，须在启动
+  // 任何服务前拦下。PROJECT_ROOT 来自 lib/context（= 各入口脚本的 %~dp0 与
+  // dirname "$0"），一处检查即覆盖 start / deploy / 交互菜单双平台入口。
+  // 检测按 Unicode 码点判定，不用 cmd findstr 正则（CP936 下不匹配 GBK 高位字节）。
+  //
+  // stop / kill-all 放行：中文路径下若已把服务起起来了（例如本检查上线前的旧包），
+  // stop 就是唯一的停止出口——拦下等于把用户锁在坏状态里。
+  if (!isStopOnlyCommand && hasNonAscii(PROJECT_ROOT)) {
+    log('red', '部署目录包含中文，无法启动');
+    log('cyan', `当前目录: ${PROJECT_ROOT}`);
+    log('cyan', '');
+    log('cyan', '中文路径会导致数据库、缓存与 CAD 转换引擎无法正常工作。');
+    log('cyan', '请将本程序重新解压到纯英文路径（例如 D:\\CloudCAD），');
+    log('cyan', '或将当前目录整体移动到纯英文路径后再启动。');
+    process.exit(1);
+  }
 
   if (!isStopOnlyCommand) {
     const success = await setupOffline({
@@ -285,6 +306,9 @@ async function bootstrap() {
       init: linuxInit,
       status: viewStatus,
       logs: viewLogs,
+      'logs:locations': showLogLocations,
+      'logs:bundle': bundleLogsCommand,
+      'start:infra': startOnly,
       'version:check': () => versionHelper.runHealthCheck({ silent: false }),
       'version:verify': () => versionHelper.runVerification({ silent: false }),
       'mfa:totp-unbind': () => mfaTotpUnbind(),
@@ -312,6 +336,15 @@ async function bootstrap() {
       // 支持 mfa:totp-unbind <username>（#415 管理员 TOTP 解绑恢复）
       else if (args[0] === 'mfa:totp-unbind') {
         await mfaTotpUnbind(args[1]);
+      }
+      // 支持 logs:bundle --days N（仅打包最近 N 天；缺省=全部）
+      else if (args[0] === 'logs:bundle') {
+        const daysIndex = args.indexOf('--days');
+        const days =
+          daysIndex !== -1 && args[daysIndex + 1]
+            ? parseInt(args[daysIndex + 1], 10)
+            : 0;
+        await bundleLogsCommand(Number.isFinite(days) && days > 0 ? days : 0);
       } else {
         const result = await cmd();
         // `stop` 返回 false 表示仍有进程占用本目录（数据目录未释放、部署包不可删除）。
@@ -324,7 +357,7 @@ async function bootstrap() {
       log('red', `未知命令: ${args[0]}`);
       log(
         'cyan',
-        '可用命令: dev, deploy, start, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, version:check, version:verify, mfa:totp-unbind'
+        '可用命令: dev, deploy, start, start:infra, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, logs:locations, logs:bundle, version:check, version:verify, mfa:totp-unbind'
       );
       log('cyan', '  deploy             : 交互式部署，询问是否构建');
       log(
@@ -335,6 +368,9 @@ async function bootstrap() {
       log('cyan', '  db:restore [文件]  : 恢复数据库（可选指定备份文件）');
       log('cyan', '  db:list            : 查看备份列表');
       log('cyan', '  db:cleanup --keep N: 清理旧备份，保留 N 个（默认 10）');
+      log('cyan', '  logs:locations     : 列出全部日志文件位置');
+      log('cyan', '  logs:bundle [--days N]: 打包全部日志为 zip（可选最近 N 天）');
+      log('cyan', '  start:infra        : 仅启动基础服务（排障用）');
       log('cyan', '  version:check      : 图纸版本部署前检查');
       log('cyan', '  version:verify     : 图纸版本部署后验证');
       log('cyan', '');

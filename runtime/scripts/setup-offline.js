@@ -1108,5 +1108,8 @@ module.exports = {
 };
 
 if (require.main === module) {
-  main();
+  // 独立运行时镜像落盘到 data/logs/deploy/；经 cli.js bootstrap 调用时是
+  // silent 模式且每次命令都会跑，不镜像（否则每条命令都生成一个日志文件）
+  const { runWithDeployLog } = require('./lib/deploy-log');
+  runWithDeployLog('setup-offline', () => main());
 }

@@ -84,6 +84,8 @@ pnpm-debug.log*
 .deploy-lock-hash
 # 部署包标记（pack-offline 写入，cli.js 据此隐藏仅开发机菜单项）；入库会让所有开发机丢菜单
 .deploy
+# 首次部署凭据备份（明文密码，setup-wizard 落到部署包根目录）；本机跑 cli 会产生，勿提交
+DEPLOY-PASSWORDS.txt
 
 # Generated files
 **/swagger_json.json

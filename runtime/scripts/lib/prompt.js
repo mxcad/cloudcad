@@ -6,13 +6,15 @@
  * - promptConfirm：cli.js:1027-1041
  * - promptPassword：cli.js:2892-2920
  * - promptPasswordWithConfirm：cli.js:2930-2953
+ * - promptChoice：deploy.js / start.js 启动模式菜单收敛（原内联 readline，
+ *   判据 `choice !== '2'` 把 3、abc 等任意输入静默当成默认项）
  *
  * 依赖方向铁律：lib 只允许 require 其他 lib 或独立模块，禁止 require commands。
  */
 
 const readline = require('readline');
 
-const { colors } = require('./logger');
+const { colors, log } = require('./logger');
 
 /**
  * 通用交互式输入
@@ -29,6 +31,74 @@ function prompt() {
       resolve(answer.trim());
     });
   });
+}
+
+/**
+ * 选项菜单输入：只接受给定选项，非法输入当场报错并重问
+ *
+ * 旧写法 `choice !== '2'` 把任何非 '2' 输入（3、abc、q…）静默当成默认项，
+ * 用户输错选项时程序照跑不误且看不出自己输错了。这里改成显式白名单：
+ * 非法输入立即回显错误并重新提问，空输入才落到默认项。
+ *
+ * @param {string} message 提示文本，如 `请输入选项 [1]: `
+ * @param {string[]} choices 合法输入列表（trim 后全等比较）
+ * @param {string} def 默认值：空输入或 stdin 结束时返回
+ * @returns {Promise<string>} 一定属于 choices 的输入
+ */
+async function promptChoice(message, choices, def) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    // 提示走 options：createInterface 的初始化在微任务里才跑完，
+    // 构造后立即调 rl.prompt(message) 传参会被静默忽略（显示成默认 '> '）
+    prompt: message,
+  });
+
+  // 用常驻 'line' 监听排队，而不是每次 await rl.question：管道输入会把多行一次性
+  // 交给 readline，第二行会在重问的 question 回调注册之前就被丢弃——那正是
+  // 「输错选项还被当成默认项」的同型故障。
+  const queued = [];
+  const waiters = [];
+  let ended = false;
+  rl.on('line', (line) => {
+    const wait = waiters.shift();
+    if (wait) wait(line.trim());
+    else queued.push(line.trim());
+  });
+  rl.on('close', () => {
+    ended = true;
+    while (waiters.length) waiters.shift()('');
+  });
+
+  const take = () => {
+    if (queued.length > 0) return Promise.resolve(queued.shift());
+    // stdin 已结束且末尾没有换行时 readline 不会再吐行，返回空串（=默认项）
+    if (ended) return Promise.resolve('');
+    return new Promise((resolve) => waiters.push(resolve));
+  };
+
+  let choice = def;
+  for (;;) {
+    rl.prompt();
+    const raw = await take();
+    if (raw === '') {
+      choice = def;
+      break;
+    }
+    if (choices.includes(raw)) {
+      choice = raw;
+      break;
+    }
+    log(
+      'red',
+      `[错误] 无效选项「${raw}」，请输入 ${choices.join(' / ')}（直接回车=${def}）`
+    );
+    // stdin 已结束就重问不到，退回默认项
+    if (ended) break;
+  }
+
+  if (!ended) rl.close();
+  return choice;
 }
 
 /**
@@ -121,6 +191,7 @@ async function promptPasswordWithConfirm(rl, promptText, defaultAction = '') {
 
 module.exports = {
   prompt,
+  promptChoice,
   promptConfirm,
   promptPassword,
   promptPasswordWithConfirm,
