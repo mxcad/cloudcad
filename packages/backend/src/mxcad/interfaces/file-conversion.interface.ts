@@ -77,6 +77,15 @@ export interface ConversionOptions {
   createPreloadingData?: boolean;
   /** 压缩选项 */
   compression?: boolean;
+  /**
+   * 强制重新转换：绕过「转换前产物就位短路」，即使 `<hash>.<源扩展名>.mxweb` 已就位
+   * 也真实调用引擎（产物同名覆盖）。对应「无缓存打开」语义。
+   *
+   * 与 forceUpload 正交：forceUpload 管上传字节/秒传，本字段只管转换产物缓存。
+   * 编排字段——不在 @cloudcad/contracts 的 ENGINE_INPUT_FIELDS 中，故不会被
+   * pickContractFields 转发给 conversion-service，也不进 buildEngineParams 的引擎参数。
+   */
+  forceConvert?: boolean;
   /** 超时时间（毫秒） */
   timeout?: number;
   /** 输出文件名（用于 savedwg、savepdf、print_to_pdf、cut_dwg、cut_mxweb 等接口）

@@ -331,11 +331,16 @@ export class FileConversionService implements IMxcadConversionService {
 	 * `<hash>.<源扩展名>.mxweb`）。导出方向（.mxweb 源）、bin→mxweb（outpath）、
 	 * 自定义产物名或命令（outname/cmd）的产物位置不可推导，一律回落真实转换。
 	 * 产物不在、或任何 fs 异常一律返回 null 走原逻辑，fail-closed。
+	 *
+	 * `forceConvert`（「无缓存打开」）显式要求重转，产物即使已就位也回落真实转换、
+	 * 同名覆盖。判定在此层而非调用点：本方法在 isRemote 转发分支之前执行，
+	 * 故本地执行与 conversion-service 两种部署模式都被覆盖。
 	 */
 	private cachedConversionResult(
 		options: ConversionOptions
 	): ConversionResult | null {
 		if (
+			options.forceConvert ||
 			!options.fileHash ||
 			options.outpath !== undefined ||
 			options.outname ||

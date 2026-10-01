@@ -56,6 +56,8 @@ export type IngestSource =
       name: string;
       size: number;
       forceUpload?: boolean;
+      /** 「无缓存打开」：绕过转换产物就位短路强制重转（仅无节点预览路径生效） */
+      forceConvert?: boolean;
       /** 游客上传场景的客户端 IP（转换频率限制按 IP 计数，ADR-0043） */
       ip?: string;
     }
@@ -66,6 +68,8 @@ export type IngestSource =
       size: number;
       chunkCount: number;
       skipDb?: boolean;
+      /** 「无缓存打开」：同 kind:'file' 的 forceConvert（无节点预览路径生效） */
+      forceConvert?: boolean;
       ip?: string;
     };
 
@@ -344,12 +348,15 @@ export class DrawingIngestService {
     source: Extract<IngestSource, { kind: 'file' }>,
     target: IngestTarget
   ): Promise<IngestResult> {
-    const { filePath, fileHash: hash, name, size, forceUpload } = source;
+    const { filePath, fileHash: hash, name, size, forceUpload, forceConvert } = source;
     const context = this.targetToContext(target);
     const uploadPath = this.mxcadUploadPath;
 
+    // forceConvert 也须跳过秒传：秒传命中即 return，ingestNoNodePreview 不会启动，
+    // flag 到不了转换层——「无缓存打开」会在上传阶段就被拦下、根本不重转。
     const fileExists =
       !forceUpload &&
+      !forceConvert &&
       (await this.uploadUtilityService.checkFileExistsInStorage(hash, name));
     if (fileExists) {
       this.logger.log(`[DrawingIngest.ingest] 文件已存在，执行秒传: ${name}`);
@@ -632,6 +639,7 @@ export class DrawingIngestService {
       fileSize: size,
       context,
       source,
+      forceConvert: source.forceConvert,
     });
     this.logger.log(
       `[DrawingIngest.ingest] 无节点场景（CAD 编辑器打开），跳过节点创建，异步转换: ${name}`
@@ -1093,6 +1101,8 @@ export class DrawingIngestService {
     fileSize: number;
     context: FileSystemNodeContext;
     source: { ip?: string };
+    /** 「无缓存打开」：强制重转，绕过转换产物就位短路（同名覆盖） */
+    forceConvert?: boolean;
     /** 分片场景的 chunk 临时目录（合并后清理）；整包场景为 undefined */
     tmpDir?: string;
     /** 分片场景的合并缓存 key（合并后清理）；整包场景为 undefined */
@@ -1105,6 +1115,7 @@ export class DrawingIngestService {
       fileSize,
       context,
       source,
+      forceConvert,
       tmpDir,
       mergeKey,
     } = args;
@@ -1160,6 +1171,7 @@ export class DrawingIngestService {
           srcPath: filepath,
           fileHash: hash,
           createPreloadingData: true,
+          forceConvert,
         });
         if (result.isOk) {
           setStatus('COMPLETED');
@@ -1319,6 +1331,7 @@ export class DrawingIngestService {
       size: fileSize,
       chunkCount: chunks,
       skipDb,
+      forceConvert,
     } = source;
     const context = this.targetToContext(target);
     const fileMd5 = hashFile;
@@ -1493,6 +1506,7 @@ export class DrawingIngestService {
           fileSize,
           context,
           source,
+          forceConvert,
           tmpDir,
           mergeKey,
         });

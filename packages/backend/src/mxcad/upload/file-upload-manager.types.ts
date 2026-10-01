@@ -13,6 +13,8 @@ export interface UploadChunkOptions {
   chunks: number;
   context: import('../node/filesystem-node.service').FileSystemNodeContext;
   skipDb?: boolean;
+  /** 「无缓存打开」：合并后强制重转，透传到 ingest → convertFile */
+  forceConvert?: boolean;
 }
 
 export interface MergeResult {

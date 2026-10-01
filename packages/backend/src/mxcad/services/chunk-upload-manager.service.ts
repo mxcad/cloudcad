@@ -113,6 +113,7 @@ export class ChunkUploadManagerService {
             size,
             chunkCount: chunks,
             skipDb: options.skipDb,
+            forceConvert: options.forceConvert,
             ip: context.ip,
           },
           {

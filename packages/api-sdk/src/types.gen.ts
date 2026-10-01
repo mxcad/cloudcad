@@ -3574,9 +3574,13 @@ export type UploadFilesDto = {
      */
     skipDb?: boolean;
     /**
-     * 强制重新上传和转换，跳过文件存在性检查（秒传）
+     * 强制重新上传字节，跳过文件存在性检查（秒传）。不重新转换，见 forceConvert
      */
     forceUpload?: boolean;
+    /**
+     * 强制重新转换：即使转换产物已就位也真实调用引擎（同名覆盖）。仅对无节点打开/预览生效
+     */
+    forceConvert?: boolean;
 };
 
 export type UploadFileResponseDto = {

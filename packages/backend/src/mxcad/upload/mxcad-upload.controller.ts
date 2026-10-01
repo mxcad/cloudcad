@@ -250,6 +250,7 @@ export class MxcadUploadController {
           chunks: body.chunks,
           context,
           skipDb: body.skipDb,
+          forceConvert: body.forceConvert,
         });
         result = uploadResult as MergeResult;
       } else if (body.chunk !== undefined) {
@@ -275,6 +276,7 @@ export class MxcadUploadController {
           chunks: body.chunks,
           context,
           skipDb: body.skipDb,
+          forceConvert: body.forceConvert,
         });
         result = uploadResult as MergeResult;
       } else {
@@ -286,6 +288,7 @@ export class MxcadUploadController {
             name: body.name,
             size: body.size,
             forceUpload: body.forceUpload,
+            forceConvert: body.forceConvert,
             ip: context.ip,
           },
           {

@@ -380,6 +380,39 @@ describe("FileConversionService", () => {
 			expect(mockRun).not.toHaveBeenCalled();
 		});
 
+		// 「无缓存打开」= 产物已就位也必须重转（同名覆盖）。forceUpload 只跳过
+		// 摄入边界的秒传，打不到这里，故短路判据需独立 forceConvert 放行。
+		it("forceConvert=true：产物已就位也回落真实转换", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "mxweb-bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			const r = await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				forceConvert: true,
+			});
+
+			expect(r.isOk).toBe(true);
+			expect(mockRun).toHaveBeenCalledTimes(1);
+		});
+
+		it("forceConvert=false：仍走短路（标志是显式 opt-in，不是关短路）", async () => {
+			fs.writeFileSync(path.join(uploadDir, "abc.dwg.mxweb"), "mxweb-bytes");
+			const svc = await createServiceWithUploadPath(uploadDir);
+			const mockRun = runMxcadAssembly as unknown as jest.Mock;
+			mockRun.mockClear();
+
+			await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				forceConvert: false,
+			});
+
+			expect(mockRun).not.toHaveBeenCalled();
+		});
+
 		it("产物不存在：回落真实转换", async () => {
 			const svc = await createServiceWithUploadPath(uploadDir);
 			const mockRun = runMxcadAssembly as unknown as jest.Mock;
