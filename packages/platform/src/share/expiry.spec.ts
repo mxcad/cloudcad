@@ -16,23 +16,18 @@ const DAY = 86400 * SECOND;
 describe('@cloudcad/platform · share/expiry', () => {
   describe('detectShareExpiration', () => {
     it('null → never', () => {
-      expect(detectShareExpiration(null, NOW)).toEqual({
-        option: 'never',
-        customDays: 1,
-      });
+      expect(detectShareExpiration(null, NOW)).toEqual({ option: 'never' });
     });
 
     it('非法日期（NaN）→ never（回归：NaN 兜底）', () => {
       expect(detectShareExpiration('not-a-date', NOW)).toEqual({
         option: 'never',
-        customDays: 1,
       });
     });
 
     it('已过期 → immediate', () => {
       expect(detectShareExpiration(iso(NOW - 1000), NOW)).toEqual({
         option: 'immediate',
-        customDays: 1,
       });
     });
 
@@ -55,6 +50,19 @@ describe('@cloudcad/platform · share/expiry', () => {
       expect(detectShareExpiration(iso(NOW + 604800 * SECOND), NOW).option).toBe(
         '7d'
       );
+    });
+
+    it('只有 custom 分支带天数，其余分支不出现该字段', () => {
+      const nonCustom = [
+        detectShareExpiration(null, NOW),
+        detectShareExpiration(iso(NOW - 1000), NOW),
+        detectShareExpiration(iso(NOW + 3600 * SECOND), NOW),
+        detectShareExpiration(iso(NOW + 86400 * SECOND), NOW),
+      ];
+      for (const d of nonCustom) {
+        expect(d.option).not.toBe('custom');
+        expect('customDays' in d).toBe(false);
+      }
     });
 
     it('超 7 天 → custom 且天数向上取整', () => {

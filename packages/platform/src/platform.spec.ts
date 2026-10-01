@@ -7,19 +7,21 @@ import {
   ROUTE_ALIASES,
   authTransferParamNames,
   buildAuthTransferQuery,
-  compilePathPattern,
   isMappableRoute,
   isMobileByUA,
   isTouchDevice,
   isWechatByUA,
-  matchPathPattern,
   parseAuthTransferQuery,
-  parseSearch,
-  renderPathPattern,
   resolveMobileRoute,
   resolvePcPath,
   shouldUseMobilePresentation,
 } from './index';
+import {
+  compilePathPattern,
+  matchPathPattern,
+  renderPathPattern,
+} from './routes/match';
+import { parseSearch } from './routes/resolve';
 
 describe('@cloudcad/platform · env/device', () => {
   const UA = {

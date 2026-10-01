@@ -14,6 +14,7 @@ import {
   usersControllerChangePassword,
 } from '@cloudcad/api-sdk/sdk.gen';
 import { showDialog, showSuccessToast } from 'vant';
+import { scorePasswordStrength } from '@cloudcad/platform';
 import { t } from '@/languages';
 import { applyAuthResponse, clearSession } from '@/utils/authSession';
 import { unwrap, errMsg } from '@/utils/apiError';
@@ -64,15 +65,12 @@ export function useProfilePassword(
       : t('请输入新密码（至少 6 位）')
   );
 
-  // 强度打分（D-06）：与 PC usePasswordProfile.getPasswordStrength 同口径
+  // 强度打分（D-06）：评分收敛到 @cloudcad/platform 的 scorePasswordStrength
+  // （与 PC 共用，此前本文件手写一份 4 条判定并靠注释维持同步）；这里只映射本端标签与颜色。
   const pwdStrength = computed(() => {
     const pwd = newPassword.value;
     if (!pwd) return { score: 0, label: '', color: '' };
-    let score = 0;
-    if (pwd.length >= 8) score++;
-    if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++;
-    if (/\d/.test(pwd)) score++;
-    if (/[^a-zA-Z0-9]/.test(pwd)) score++;
+    const score = scorePasswordStrength(pwd);
     const levels = [
       { label: t('太弱'), color: '#ef4444' },
       { label: t('较弱'), color: '#f97316' },

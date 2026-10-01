@@ -4,7 +4,10 @@
  * 此前 7 个页面各复制一份 PHONE_RE / EMAIL_RE / CODE_RE 与本地
  * type ContactType，其中两处 EMAIL_RE 的正则还写得不一致。收敛到这里。
  */
-import { scorePasswordStrength } from '@cloudcad/platform'
+import {
+  scorePasswordStrength,
+  type PasswordStrengthScore,
+} from '@cloudcad/platform'
 
 const PHONE_RE = /^1[3-9]\d{9}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -39,7 +42,7 @@ export function isContactType(value: unknown): value is ContactType {
  * 颜色走 token（不用 PC 的硬编码 hex），供注册与改密页共用。
  */
 export interface PasswordStrengthInfo {
-  score: 0 | 1 | 2 | 3 | 4
+  score: PasswordStrengthScore
   label: string
   color: string
 }
@@ -58,7 +61,7 @@ export function getPasswordStrength(password: string): PasswordStrengthInfo {
   if (!password) return { score: 0, label: '', color: '' }
 
   // 评分收敛到 @cloudcad/platform（与 PC 共用），这里只映射本端标签/颜色
-  const level = scorePasswordStrength(password) as 0 | 1 | 2 | 3 | 4
+  const level = scorePasswordStrength(password)
   return {
     score: level,
     label: STRENGTH_LABELS[level] ?? STRENGTH_LABELS[0],

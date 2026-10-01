@@ -2,13 +2,20 @@
  * 跨项目移动/复制的策略预判编排（二期 g，页面级）。
  *
  * 打开文件夹选择器前 init(source) 拉源项目设置；切目标根时 onRootChange 拉目标设置并
- * 重算六域矩阵判定（evaluateCrossProjectTransfer）。disabledReason 非空 → 选择器禁用确认+红字。
+ * 重算六域矩阵判定（precheckTransfer）。disabledReason 非空 → 选择器禁用确认+红字。
  * 后端仍是最终裁决（权限/配额/策略），这里只做确认前预判，避免用户走完流程才被 403。
  */
 import { ref, computed } from 'vue'
 import { t } from '@/languages'
-import type { TransferRoot, TransferSettings, TransferVerdict } from '@/utils/transferPolicy'
-import { evaluateCrossProjectTransfer, fetchProjectTransferSettings } from '@/utils/transferPolicy'
+import type {
+  LocalizedTransferVerdict,
+  TransferRoot,
+  TransferSettings,
+} from '@/utils/transferPolicy'
+import {
+  fetchProjectTransferSettings,
+  precheckTransfer,
+} from '@/utils/transferPolicy'
 
 export function useCrossProjectTransfer() {
   const sourceRoot = ref<TransferRoot | null>(null)
@@ -16,7 +23,7 @@ export function useCrossProjectTransfer() {
   const operation = ref<'move' | 'copy'>('move')
   const sourceSettings = ref<TransferSettings | null>(null)
   const targetSettings = ref<TransferSettings | null>(null)
-  const verdict = ref<TransferVerdict>({ allowed: true })
+  const verdict = ref<LocalizedTransferVerdict>({ allowed: true })
 
   async function init(source: TransferRoot, op: 'move' | 'copy'): Promise<void> {
     sourceRoot.value = source
@@ -38,7 +45,7 @@ export function useCrossProjectTransfer() {
 
   function reevaluate(): void {
     if (!sourceRoot.value || !targetRoot.value) return
-    verdict.value = evaluateCrossProjectTransfer(
+    verdict.value = precheckTransfer(
       sourceRoot.value,
       targetRoot.value,
       operation.value,

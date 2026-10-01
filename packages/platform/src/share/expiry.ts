@@ -35,8 +35,25 @@ export const SHARE_EXPIRATION_VALUES: Record<
   '7d': 604800,
 };
 
+/**
+ * 自定义天数的默认值：反推不出天数时续期弹窗输入框的初值。
+ * 两端共用——否则同一个弹窗在两端会开出不同的默认天数。
+ */
+export const SHARE_CUSTOM_DAYS_DEFAULT = 1;
+
+/**
+ * 反推结果。天数只在 `custom` 分支存在；其余分支不返回该字段，
+ * 调用方用自己的默认值（`SHARE_CUSTOM_DAYS_DEFAULT`）填输入框。
+ * 这样「非 custom 分支的天数无意义」变成结构事实，
+ * 而不是藏在返回值里要求调用方知道的约定。
+ */
+export type ShareExpirationDetection =
+  | { option: Exclude<ShareExpirationOption, 'custom'> }
+  | { option: 'custom'; customDays: number };
+
 const SECOND = 1000;
-const DAY_MS = 86400 * SECOND;
+const SECONDS_PER_DAY = 86400;
+const DAY_MS = SECONDS_PER_DAY * SECOND;
 
 /**
  * 由现有 expiresAt 反推应选中的预设项（续期弹窗初始值）。
@@ -45,24 +62,26 @@ const DAY_MS = 86400 * SECOND;
 export function detectShareExpiration(
   expiresAt: string | null,
   now: number = Date.now()
-): { option: ShareExpirationOption; customDays: number } {
-  if (!expiresAt) return { option: 'never', customDays: 1 };
+): ShareExpirationDetection {
+  if (!expiresAt) return { option: 'never' };
   const diff = new Date(expiresAt).getTime() - now;
-  if (Number.isNaN(diff)) return { option: 'never', customDays: 1 };
-  if (diff <= 0) return { option: 'immediate', customDays: 1 };
-  if (diff <= SHARE_EXPIRATION_VALUES['2h'] * SECOND)
-    return { option: '2h', customDays: 1 };
-  if (diff <= SHARE_EXPIRATION_VALUES['6h'] * SECOND)
-    return { option: '6h', customDays: 1 };
-  if (diff <= SHARE_EXPIRATION_VALUES['12h'] * SECOND)
-    return { option: '12h', customDays: 1 };
-  if (diff <= SHARE_EXPIRATION_VALUES['1d'] * SECOND)
-    return { option: '1d', customDays: 1 };
-  if (diff <= SHARE_EXPIRATION_VALUES['3d'] * SECOND)
-    return { option: '3d', customDays: 1 };
-  if (diff <= SHARE_EXPIRATION_VALUES['7d'] * SECOND)
-    return { option: '7d', customDays: 1 };
+  if (Number.isNaN(diff)) return { option: 'never' };
+  if (diff <= 0) return { option: 'immediate' };
+  if (diff <= SHARE_EXPIRATION_VALUES['2h'] * SECOND) return { option: '2h' };
+  if (diff <= SHARE_EXPIRATION_VALUES['6h'] * SECOND) return { option: '6h' };
+  if (diff <= SHARE_EXPIRATION_VALUES['12h'] * SECOND) return { option: '12h' };
+  if (diff <= SHARE_EXPIRATION_VALUES['1d'] * SECOND) return { option: '1d' };
+  if (diff <= SHARE_EXPIRATION_VALUES['3d'] * SECOND) return { option: '3d' };
+  if (diff <= SHARE_EXPIRATION_VALUES['7d'] * SECOND) return { option: '7d' };
   return { option: 'custom', customDays: Math.ceil(diff / DAY_MS) };
+}
+
+/**
+ * 自定义天数的下界钳制。创建与修改两条提交路径必须用同一个钳制，
+ * 否则「3 天」在两端语义一致但同一选项的两个入口会算出不同到期时间。
+ */
+function clampCustomDays(days: number): number {
+  return Math.max(1, days);
 }
 
 /**
@@ -75,10 +94,9 @@ export function computeExpiresAtIso(
   now: number = Date.now()
 ): string | null {
   if (option === 'never') return null;
-  if (option === 'immediate')
-    return new Date(now - SECOND).toISOString();
+  if (option === 'immediate') return new Date(now - SECOND).toISOString();
   if (option === 'custom')
-    return new Date(now + Math.max(1, customDays) * DAY_MS).toISOString();
+    return new Date(now + clampCustomDays(customDays) * DAY_MS).toISOString();
   return new Date(now + SHARE_EXPIRATION_VALUES[option] * SECOND).toISOString();
 }
 
@@ -92,7 +110,7 @@ export function computeExpiresInSeconds(
 ): number | undefined {
   if (option === 'never') return undefined;
   if (option === 'immediate') return 1;
-  if (option === 'custom') return Math.max(1, customDays) * 86400;
+  if (option === 'custom') return clampCustomDays(customDays) * SECONDS_PER_DAY;
   return SHARE_EXPIRATION_VALUES[option];
 }
 

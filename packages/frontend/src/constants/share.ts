@@ -1,6 +1,7 @@
 import { t } from '@/languages';
 import {
   SHARE_EXPIRATION_VALUES,
+  SHARE_CUSTOM_DAYS_DEFAULT,
   computeExpiresAtIso,
   detectShareExpiration,
   isShareExpired,
@@ -26,11 +27,18 @@ export function getExpirationLabels(): Record<ExpirationOption, string> {
 // 预设秒数 / 反推选中项 / 到期时间计算 / 过期判定已收敛到 @cloudcad/platform（与移动端共用）
 export const EXPIRATION_VALUES = SHARE_EXPIRATION_VALUES;
 
+/**
+ * 反推续期弹窗的初始选中项 + 自定义天数。
+ * platform 只在 custom 分支返回天数；其余分支的输入框初值由端侧统一默认值填。
+ */
 export function detectExpiration(expiresAt: string | null): {
   option: ExpirationOption;
   customDays: number;
 } {
-  return detectShareExpiration(expiresAt);
+  const detected = detectShareExpiration(expiresAt);
+  return detected.option === 'custom'
+    ? { option: 'custom', customDays: detected.customDays }
+    : { option: detected.option, customDays: SHARE_CUSTOM_DAYS_DEFAULT };
 }
 
 export function computeExpiresAt(

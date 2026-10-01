@@ -1,5 +1,9 @@
 import { ref, readonly, onMounted, getCurrentInstance } from 'vue';
 import {
+  authTransferParamNames,
+  parseAuthTransferQuery,
+} from '@cloudcad/platform';
+import {
   logout as logoutSession,
   onSessionChanged,
 } from '../utils/authSession';
@@ -16,24 +20,28 @@ interface UserInfo {
  * 新标签页加载时运行，存入 localStorage 后自动关闭。
  */
 function extractTokensFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const accessToken = params.get('accessToken');
-  if (!accessToken) return;
+  // 解析与参数名清单走 @cloudcad/platform（与 PC 拼参数侧共用同一份协议）。
+  // 此前本文件手写 4 个字面量参数名：协议新增参数时这里的删除清单不会跟着长，
+  // 已消费的凭证会残留在地址栏。
+  const parsed = parseAuthTransferQuery(
+    new URLSearchParams(window.location.search)
+  );
+  if (!parsed.credentials) return;
+
+  const { accessToken, refreshToken, user } = parsed.credentials;
   localStorage.setItem('accessToken', accessToken);
-  const refreshToken = params.get('refreshToken');
   if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-  const user = params.get('user');
   if (user) localStorage.setItem('user', user);
+
   const url = new URL(window.location.href);
-  url.searchParams.delete('accessToken');
-  url.searchParams.delete('refreshToken');
-  url.searchParams.delete('user');
+  for (const name of authTransferParamNames()) {
+    url.searchParams.delete(name);
+  }
   window.history.replaceState({}, '', url.toString());
-  // 只有 popup 窗口（移动端登录流程）才关闭自身，
-  // 直接重定向（PC→移动端）时不关闭
-  // _redirect=1 由桌面端 getMobileRedirectUrl() 注入，标记为桌面→移动端重定向
-  const isRedirect = params.get('_redirect') === '1';
-  if (window.opener && !isRedirect) {
+
+  // 只有 popup 窗口（移动端登录流程）才关闭自身；
+  // _redirect=1 由桌面端注入标记桌面→移动端重定向，此时不关闭
+  if (window.opener && !parsed.isRedirect) {
     window.close();
   }
 }

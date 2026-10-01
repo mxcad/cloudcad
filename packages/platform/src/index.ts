@@ -2,6 +2,10 @@
  * @cloudcad/platform — 跨端公共层。
  *
  * 准入规则见包根 README.md：纯函数 / 纯数据、不绑框架、不绑端、重复已成立。
+ *
+ * 本 barrel 只导出**产品接口**：两端共同遵守的契约数据 + 消费端实际调用的函数。
+ * `src/routes/match.ts` 的路径 pattern 编译/匹配是 `resolve.ts` 的内部机制，
+ * 不从这里导出——需要它的测试直接按模块路径导入（内部接缝，非对外契约）。
  */
 
 // ── 环境探测 ──
@@ -40,14 +44,6 @@ export {
 } from './routes/aliases';
 export type { RouteAlias, MobileToPcAlias } from './routes/aliases';
 export {
-  compilePathPattern,
-  splitPathname,
-  matchPathPattern,
-  renderPathPattern,
-} from './routes/match';
-export type { PathSegment } from './routes/match';
-export {
-  parseSearch,
   isMappableRoute,
   resolveMobileRoute,
   resolvePcPath,
@@ -57,12 +53,16 @@ export type { ResolvedRoute } from './routes/resolve';
 // ── 分享有效期（纯计算，文案留端包） ──
 export {
   SHARE_EXPIRATION_VALUES,
+  SHARE_CUSTOM_DAYS_DEFAULT,
   detectShareExpiration,
   computeExpiresAtIso,
   computeExpiresInSeconds,
   isShareExpired,
 } from './share/expiry';
-export type { ShareExpirationOption } from './share/expiry';
+export type {
+  ShareExpirationOption,
+  ShareExpirationDetection,
+} from './share/expiry';
 
 // ── 会员计价与配额（纯计算） ──
 export {
@@ -81,6 +81,7 @@ export { resolvePlaceholders } from './legal/placeholder';
 
 // ── 密码强度评分（纯计算 0-4，标签/颜色留端包） ──
 export { scorePasswordStrength } from './auth/password-strength';
+export type { PasswordStrengthScore } from './auth/password-strength';
 
 // ── 相对时间（纯计算 tier/unit/value，文案留端包） ──
 export { relativeTime } from './format/relative';

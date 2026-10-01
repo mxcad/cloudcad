@@ -9,34 +9,30 @@
  *   - 设置缺失（null）→ 保守拒绝（与 PC crossProjectPaste 语义一致）
  * 本文件只做入参映射（TransferRoot → {id, domain}）+ 枚举→本端 i18n 源串映射
  * （reasonKey/reasonParams 供 UI 展示）。后端仍是最终裁决（权限/配额/策略）。
+ *
+ * 命名刻意与 platform 区分：platform 的 `TransferVerdict` 返回 reason 枚举、
+ * 本文件的 `LocalizedTransferVerdict` 返回 i18n 源串——两者是不同契约，
+ * 同名会让 platform 侧改动在移动端静默漂移。`TransferSettings`/`TransferDomain`
+ * 直接复用 platform 定义（不再本地重声明一份）。
  */
 import { projectControllerGetProject } from '@cloudcad/api-sdk/sdk.gen'
-import type { CrossProjectTransferModeEnum } from '@cloudcad/api-sdk/types.gen'
 import {
   evaluateCrossProjectTransfer as platformEvaluateCrossProjectTransfer,
   type TransferBlockReason,
+  type TransferDomain,
+  type TransferSettings,
 } from '@cloudcad/platform'
 
-export type TransferMode = CrossProjectTransferModeEnum | null
-
-export interface TransferSettings {
-  transferOutToProject?: TransferMode
-  transferOutToPersonalSpace?: TransferMode
-  transferOutToLibrary?: TransferMode
-  transferInFromProject?: TransferMode
-  transferInFromPersonalSpace?: TransferMode
-  transferInFromLibrary?: TransferMode
-}
-
-export type RootDomain = 'project' | 'personalSpace' | 'library'
+export type { TransferDomain, TransferSettings }
 
 export interface TransferRoot {
   id: string
   name: string
-  domain: RootDomain
+  domain: TransferDomain
 }
 
-export interface TransferVerdict {
+/** 预判结果（本地化形态）：platform 的 reason 枚举已在此换成本端 i18n 源串 */
+export interface LocalizedTransferVerdict {
   allowed: boolean
   /** 被拒原因 i18n 源文本 key（reasonParams 供 {action} 插值） */
   reasonKey?: string
@@ -52,15 +48,17 @@ const REASON_TEXT: Record<TransferBlockReason, { text: string; action?: boolean 
   LIBRARY_MOVE_FORBIDDEN: { text: '不能从资源库移出文件' },
 }
 
-export function evaluateCrossProjectTransfer(
+/**
+ * 转移预判入口。判定本体在 @cloudcad/platform（6 域矩阵 + 库-move 预判，与 PC 共用），
+ * 这里只做入参映射 + 枚举→本端 i18n 源串映射。
+ */
+export function precheckTransfer(
   source: TransferRoot,
   target: TransferRoot,
   operation: 'move' | 'copy',
   sourceSettings: TransferSettings | null,
   targetSettings: TransferSettings | null,
-): TransferVerdict {
-  // 判定口径已收敛到 @cloudcad/platform（与 PC 共用，6 域矩阵 + 库-move 预判），
-  // 本文件只做入参映射 + 枚举→本端 i18n 源串映射。
+): LocalizedTransferVerdict {
   const verdict = platformEvaluateCrossProjectTransfer({
     operation,
     source: { id: source.id, domain: source.domain },

@@ -19,6 +19,7 @@ import { t } from '@/languages'
 import { extractExtension } from '@/composables/useNodeFormatter'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import {
+  SHARE_CUSTOM_DAYS_DEFAULT,
   computeExpiresAtIso,
   computeExpiresInSeconds,
   detectShareExpiration,
@@ -337,7 +338,9 @@ function openRenewPopup(item: ShareItem) {
   // 对齐 PC EditExpiryModal：按现有 expiresAt 反推初始选中项 + 自定义天数
   const detected = detectShareExpiration(item.expiresAt ?? null)
   renewExpiration.value = detected.option
-  renewCustomDays.value = detected.customDays
+  // platform 只在 custom 分支返回天数，其余分支的输入框初值走统一默认值
+  renewCustomDays.value =
+    detected.option === 'custom' ? detected.customDays : SHARE_CUSTOM_DAYS_DEFAULT
   showRenewPopup.value = true
 }
 
