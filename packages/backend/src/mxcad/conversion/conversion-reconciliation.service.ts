@@ -22,7 +22,7 @@ import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
 import { FileStatus } from '../../common/enums/file-status.enum';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
-import { NodeTrashService } from '../../file-operations/node-trash.service';
+import { UploadGhostService } from './upload-ghost.service';
 
 /** 宽限期（分钟）：node 处于 PROCESSING 且 updatedAt 早于 now - grace 才视为"卡死" */
 const DEFAULT_STUCK_GRACE_MINUTES = 30;
@@ -64,7 +64,7 @@ export class ConversionReconciliationService {
     @Inject(IFunctionExecutor) private readonly executor: IFunctionExecutor,
     private readonly prisma: DatabaseService,
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
-    private readonly nodeTrashService: NodeTrashService,
+    private readonly uploadGhostService: UploadGhostService,
     private readonly configService: ConfigService
   ) {
     const graceRaw = this.configService.get<string>('CONVERSION_STUCK_GRACE_MINUTES');
@@ -164,25 +164,16 @@ export class ConversionReconciliationService {
 
   /**
    * 卡死节点失败分流（与「不留存未成功 node 记录」一致）：
-   * - `path = null`（上传幽灵，从未落盘）→ 直接删除，不留 FAILED 记录；
+   * - 上传幽灵（path=null，判定与处置见 UploadGhostService 单一出口）→ 直接删除，
+   *   不留 FAILED 记录；
    * - `path != null`（已存在的真实文件）→ 置 FAILED，保留供用户重试或手动处理。
-   * 删除失败不阻塞整批（节点可能已被并发删除），仅记日志。
    */
   private async resolveFailure(
     node: { id: string; path: string | null },
     from: FileStatus | null
   ): Promise<void> {
-    if (node.path === null) {
-      try {
-        await this.nodeTrashService.deleteNode(node.id, true);
-        this.logger.log(`[Reconciliation] node ${node.id} 上传幽灵 → 已删除`);
-      } catch (error) {
-        this.logger.warn(
-          `[Reconciliation] node ${node.id} 删除失败（不阻塞）: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
+    if (this.uploadGhostService.isGhost(node)) {
+      await this.uploadGhostService.purgeGhostNode(node.id);
       return;
     }
     await this.nodeStatusTransitioner.transition(node.id, from, FileStatus.FAILED);

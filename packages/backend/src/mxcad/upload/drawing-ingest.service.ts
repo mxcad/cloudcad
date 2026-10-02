@@ -12,6 +12,8 @@ import { FileSystemService as MxFileSystemService } from '../infra/file-system.s
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { ConversionResult } from '../interfaces/file-conversion.interface';
 import { AsyncConversionService } from '../conversion/async-conversion.service';
+import { UploadGhostService } from '../conversion/upload-ghost.service';
+import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
 import {
   CONVERSION_FILE_CHANNEL,
   type ConversionFileSseEvent,
@@ -141,6 +143,7 @@ export class DrawingIngestService {
     private readonly fileSystemService: MxFileSystemService,
     private readonly fileTreeService: FileTreeService,
     private readonly nodeTrashService: NodeTrashService,
+    private readonly uploadGhostService: UploadGhostService,
     private readonly cacheManager: CacheManagerService,
     private readonly fileConversionService: FileConversionService,
     private readonly uploadUtilityService: UploadUtilityService,
@@ -153,8 +156,7 @@ export class DrawingIngestService {
     private readonly eventEmitter: EventEmitter2,
     private readonly prisma: DatabaseService
   ) {
-    this.mxcadUploadPath =
-      this.configService.get('mxcadUploadPath') || '../../uploads';
+    this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
     this.filesDataPath =
       this.configService.get('filesDataPath') || '../../filesData';
   }
@@ -231,16 +233,10 @@ export class DrawingIngestService {
 
   /**
    * 失败节点清理：转换 / 落盘未成功的节点**不留存**（产品要求：没有转换成功
-   * 都不保留 node 数据库记录）。读节点当前态——存在、未删、非 COMPLETED 且
-   * path=null（上传幽灵，从未落盘分配存储）才硬删；已 COMPLETED（落盘成功后
-   * 才抛的异常，文件已真实落盘）或 path 已就位 / 已删 / 不存在 → no-op，避免
-   * 误删真实文件。
-   *
-   * 用 deleteNode(id, true) 彻底删除而非移回收站：这些节点是 FILE 且 path=null
-   * （skipFileCopy），无子节点、无存储目录，软删进回收站只会留一条打不开的死
-   * 记录。userId 传空 → NodeTrashService 跳过 FILE_DELETE 审计埋点，避免系统
-   * 清理被记成用户删除。删除失败不阻塞（节点可能已被并发删除），仅记日志。
-   * 失败原因的真实记录在 logUploadFailure 的审计里，删节点不丢诊断信息。
+   * 都不保留 node 数据库记录）。读节点当前态——存在、未删、非 COMPLETED
+   * （落盘成功后才抛的异常，文件已真实落盘）且是上传幽灵（path=null，判定与
+   * 处置规则见 UploadGhostService 单一出口）→ 硬删；其余情况 no-op，避免误删
+   * 真实文件。
    */
   private async purgeFailedNode(nodeId: string): Promise<void> {
     try {
@@ -250,9 +246,10 @@ export class DrawingIngestService {
       });
       if (!node || node.deletedAt) return;
       if (node.fileStatus === FileStatus.COMPLETED) return;
-      if (node.path !== null) return;
-      await this.nodeTrashService.deleteNode(nodeId, true);
-      this.logger.log(`[DrawingIngest.purge] 失败节点已删除: ${nodeId}`);
+      if (!this.uploadGhostService.isGhost(node)) return;
+      if (await this.uploadGhostService.purgeGhostNode(nodeId)) {
+        this.logger.log(`[DrawingIngest.purge] 失败节点已删除: ${nodeId}`);
+      }
     } catch (error) {
       this.logger.warn(
         `[DrawingIngest.purge] 失败节点删除失败（不阻塞）: ${nodeId} (${

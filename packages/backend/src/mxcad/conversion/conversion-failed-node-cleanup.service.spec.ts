@@ -15,6 +15,7 @@ import { ConfigService } from '@nestjs/config';
 import { FileStatus } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
+import { UploadGhostService } from './upload-ghost.service';
 import { ConversionFailedNodeCleanupService } from './conversion-failed-node-cleanup.service';
 
 describe('ConversionFailedNodeCleanupService', () => {
@@ -28,6 +29,7 @@ describe('ConversionFailedNodeCleanupService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ConversionFailedNodeCleanupService,
+        UploadGhostService,
         {
           provide: ConfigService,
           useValue: { get: jest.fn((k: string) => config[k]) },

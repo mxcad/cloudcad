@@ -7,12 +7,18 @@ import { ConversionFailedNodeCleanupService } from './conversion-failed-node-cle
 import { ConversionStatusController } from './conversion-status.controller';
 import { ConversionTaskController } from './conversion-task.controller';
 import { ConversionTaskSseService } from './conversion-task.sse.service';
+import { UploadGhostService } from './upload-ghost.service';
 import { MXCAD_CONVERSION_SERVICE } from '../interfaces/mxcad-service-tokens';
 import { FunctionExecutorModule } from '../../function-executor/function-executor.module';
 import { FileOperationsModule } from '../../file-operations/file-operations.module';
+import { StorageManagementModule } from '../../storage-management/storage-management.module';
 
 @Module({
-  imports: [forwardRef(() => FunctionExecutorModule), FileOperationsModule],
+  imports: [
+    forwardRef(() => FunctionExecutorModule),
+    FileOperationsModule,
+    StorageManagementModule,
+  ],
   controllers: [ConversionStatusController, ConversionTaskController],
   providers: [
     FileConversionService,
@@ -21,6 +27,7 @@ import { FileOperationsModule } from '../../file-operations/file-operations.modu
     ConversionReconciliationService,
     ConversionFailedNodeCleanupService,
     ConversionTaskSseService,
+    UploadGhostService,
     { provide: MXCAD_CONVERSION_SERVICE, useExisting: FileConversionService },
   ],
   exports: [
@@ -28,6 +35,7 @@ import { FileOperationsModule } from '../../file-operations/file-operations.modu
     AsyncConversionService,
     UnifiedConversionService,
     MXCAD_CONVERSION_SERVICE,
+    UploadGhostService,
   ],
 })
 export class MxcadConversionModule {}

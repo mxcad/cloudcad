@@ -9,6 +9,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NodeType, FileStatus } from '@cloudcad/db';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
+import { UploadGhostService } from '../conversion/upload-ghost.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
 import { AsyncConversionService } from '../conversion/async-conversion.service';
@@ -145,6 +146,7 @@ describe('DrawingIngestService', () => {
         { provide: MxFileSystemService, useValue: mockFileSystemService },
         { provide: FileTreeService, useValue: mockFileTreeService },
         { provide: NodeTrashService, useValue: mockNodeTrashService },
+        UploadGhostService,
         { provide: CacheManagerService, useValue: mockCacheManager },
         {
           provide: FileConversionService,

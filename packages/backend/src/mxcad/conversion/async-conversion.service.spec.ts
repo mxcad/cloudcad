@@ -11,6 +11,7 @@ import { AsyncConversionService } from './async-conversion.service';
 import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
+import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { FileStatus } from '../../common/enums/file-status.enum';
 
 describe('AsyncConversionService', () => {
@@ -38,6 +39,11 @@ describe('AsyncConversionService', () => {
         {
           provide: NodeStatusTransitioner,
           useValue: { transition: jest.fn() },
+        },
+        {
+          // node.path → 绝对路径的正典出口，getFullPath 原样回传便于断言 srcPath
+          provide: StorageManager,
+          useValue: { getFullPath: jest.fn((p: string) => `/abs/${p}`) },
         },
         // S4-3：EventEmitter2 全局可用（EventEmitterModule.forRoot），此处以 mock 提供
         { provide: EventEmitter2, useValue: eventEmitter },

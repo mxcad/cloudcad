@@ -8,6 +8,7 @@ import type {
   ConversionResult,
 } from '../../function-executor/function-executor.interface';
 import { FileStatus } from '../../common/enums/file-status.enum';
+import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { FileDownloadExportService } from '../../file-system/file-download/file-download-export.service';
 import { CadDownloadFormat } from '../../file-system/dto/download-node.dto';
@@ -25,6 +26,7 @@ export class AsyncConversionService {
     private readonly executor: IFunctionExecutor,
     private readonly prisma: DatabaseService,
     private readonly nodeStatusTransitioner: NodeStatusTransitioner,
+    private readonly storageManager: StorageManager,
     private readonly moduleRef: ModuleRef,
     private readonly eventEmitter: EventEmitter2
   ) {}
@@ -60,7 +62,10 @@ export class AsyncConversionService {
       FileStatus.PROCESSING
     );
 
-    const srcPath = node.path ? await this.resolveNodePath(node.path) : '';
+    // node.path（相对存储根）→ 绝对路径走 StorageManager 正典，与其他 node.path
+    // 消费方（缩略图/外参照/保存）同一 base，禁再自配 fallback（旧 homedir 兜底
+    // 与权威配置默认值不相等，自托管模式下错误路径会跨 HTTP 传给转换服务）
+    const srcPath = node.path ? this.storageManager.getFullPath(node.path) : '';
 
     const task: ConversionTask = {
       id: taskId,
@@ -345,13 +350,5 @@ export class AsyncConversionService {
       return null;
     }
     return node.taskId;
-  }
-
-  private async resolveNodePath(nodePath: string): Promise<string> {
-    const { default: path } = await import('path');
-    const { default: os } = await import('os');
-    const filesDataPath =
-      process.env.FILES_DATA_PATH || path.join(os.homedir(), 'filesData');
-    return path.resolve(filesDataPath, nodePath);
   }
 }

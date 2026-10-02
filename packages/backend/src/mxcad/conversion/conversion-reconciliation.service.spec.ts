@@ -17,6 +17,7 @@ import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
+import { UploadGhostService } from './upload-ghost.service';
 import { FileStatus } from '../../common/enums/file-status.enum';
 
 describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', () => {
@@ -37,6 +38,7 @@ describe('ConversionReconciliationService（S5-3 卡死 node 恢复对账）', (
         { provide: IFunctionExecutor, useValue: { getTaskStatus: jest.fn() } },
         { provide: NodeStatusTransitioner, useValue: { transition: jest.fn() } },
         { provide: NodeTrashService, useValue: { deleteNode: jest.fn() } },
+        UploadGhostService,
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(undefined) } },
       ],
     }).compile();

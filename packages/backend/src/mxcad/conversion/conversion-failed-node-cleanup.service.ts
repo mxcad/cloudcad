@@ -16,7 +16,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { FileStatus } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
-import { NodeTrashService } from '../../file-operations/node-trash.service';
+import { UploadGhostService } from './upload-ghost.service';
 
 /** 默认保留窗口（小时）：FAILED 节点在此窗口内可见，到期彻底删除 */
 const DEFAULT_FAILED_NODE_RETENTION_HOURS = 24;
@@ -65,7 +65,7 @@ export class ConversionFailedNodeCleanupService
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly nodeTrashService: NodeTrashService,
+    private readonly uploadGhostService: UploadGhostService,
     private readonly configService: ConfigService
   ) {
     this.retentionHours = this.parseIntConfig(
@@ -160,16 +160,9 @@ export class ConversionFailedNodeCleanupService
 
     let deleted = 0;
     for (const node of stale) {
-      try {
-        await this.nodeTrashService.deleteNode(node.id, true);
+      // 单个节点失败不中断整批（purgeGhostNode 内部吞错返回 false），留待下次扫描
+      if (await this.uploadGhostService.purgeGhostNode(node.id)) {
         deleted += 1;
-      } catch (error) {
-        // 单个节点失败不中断整批，留待下次扫描
-        this.logger.warn(
-          `[FailedNodeCleanup] FAILED 节点删除失败，留待下次扫描: ${node.id} (${
-            error instanceof Error ? error.message : String(error)
-          })`
-        );
       }
     }
     return { scanned: stale.length, deleted };
