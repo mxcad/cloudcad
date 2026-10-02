@@ -74,7 +74,14 @@ export class TokenBlacklistService implements OnModuleInit, ITokenBlacklistServi
   }
 
   /**
-   * 将用户的所有Token添加到黑名单
+   * 将用户的所有Token添加到黑名单（用户级吊销，防御纵深）。
+   *
+   * 当前无写入方——注销/暂停已由各鉴权路径的 DB 实时判定兜底：jwt.strategy /
+   * refresh-token.strategy / cooperate-auth / jwt.strategy.executor 均按
+   * `deletedAt: null` + `status !== 'ACTIVE'` 拒绝，故注销后 access token 在下一次
+   * 请求即失效，无需依赖本黑名单。本方法保留给「不改变用户状态即吊销全部会话」的场景
+   * （强制下线 / 口令泄露应急）；若接线，须在触发点（deactivate/restore/改密）成对
+   * 调用 blacklistUserTokens / removeUserFromBlacklist，否则恢复的用户会被误拒。
    * @param userId 用户ID
    */
   async blacklistUserTokens(userId: string): Promise<void> {

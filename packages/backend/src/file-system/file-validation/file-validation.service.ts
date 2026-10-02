@@ -27,6 +27,15 @@ export interface FileTypeConfig {
   magicNumbers?: number[][]; // 文件魔数（Magic Number），支持多模式匹配
 }
 
+/**
+ * 文件上传校验服务（扩展名/MIME/大小/魔数/文件名）。
+ *
+ * ⚠️ 未接线（unactivated，零消费者）：上传管道（drawing-ingest / upload-utility /
+ * file-node-materializer）均未调用本服务，魔数校验（防伪造扩展名——把可执行文件改名
+ * .dwg 上传）从未生效；上传实际只按扩展名派生 MIME，无内容级校验。接线需在文件落盘后
+ * 读文件头做魔数校验，属上传链路重构（独立任务），勿就地扩展。
+ * 依据 AGENTS.md「未激活模块必须 JSDoc 标注 + 登记 issue」标注。
+ */
 @Injectable()
 export class FileValidationService {
   private readonly logger = new Logger(FileValidationService.name);
