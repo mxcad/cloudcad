@@ -57,8 +57,9 @@ export class BatchDownloadCleanupService {
     // 写入方缓存目录解析为 mxcadUploadPath || conversionCacheDir（默认 data/uploads），
     // 若此处只读 conversionCacheDir（默认 data/exports/conversion-cache），清理扫的是
     // 空目录，真实缓存目录里的孤儿产物永不被清扫。
-    this.mxcadUploadPath =
-      this.configService.get<string>('mxcadUploadPath') || '';
+    // 注意：此处刻意不走 resolveMxcadUploadDir——它的缺省默认值会让 || 回退链
+    // （mxcadUploadPath || conversionCacheDir）永不触发，配置未设时清理将扫错目录。
+    this.mxcadUploadPath = this.configService.get<string>('mxcadUploadPath') || '';
     this.conversionCacheDir =
       this.mxcadUploadPath || batchConfig.conversionCacheDir || '';
     this.conversionCacheTtlHours = batchConfig.conversionCacheTtlHours || 0;

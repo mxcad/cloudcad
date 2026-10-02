@@ -19,6 +19,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { RateLimiter } from "../../common/concurrency/rate-limiter";
+import { resolveMxcadUploadDir } from "../../common/utils/mxcad-upload-dir";
 import type {
 	ConversionOptions,
 	ConversionResult,
@@ -170,8 +171,8 @@ export class FileConversionService implements IMxcadConversionService {
 
 		// 与 UploadUtilityService 同一配置键与同一相对路径默认值：产物命名与目录形态
 		// 必须一致，否则本服务的就位检查会与秒传存在性检查给出相反结论。
-		this.mxcadUploadPath =
-			this.configService.get('mxcadUploadPath') || '../../uploads';
+		// 键与默认值的唯一出口 = resolveMxcadUploadDir（本赋值即其消费点之一）。
+		this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
 
 		// 转换超时可经 env TIMEOUT_FILE_CONVERSION 调整（默认 180000，
 		// 与 conversion-service 1/2 级超时对齐；大图纸常超 60s，旧默认会把慢转换误杀）

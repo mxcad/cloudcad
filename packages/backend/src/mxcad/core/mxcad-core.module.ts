@@ -23,6 +23,7 @@ import { AppConfig } from '../../config/app.config';
 import { JwtModule } from '@nestjs/jwt';
 import { DatabaseModule } from '../../database/database.module';
 import { CommonModule } from '../../common/common.module';
+import { buildMulterUploadLimits } from '../../common/utils/multer-upload-limits';
 import { FileSystemModule } from '../../file-system/file-system.module';
 import { FilePermissionModule } from '../../file-system/file-permission/file-permission.module';
 import { StorageQuotaModule } from '../../file-system/storage-quota/storage-quota.module';
@@ -74,14 +75,6 @@ import { buildMulterChunkDir, buildMulterFilename } from './multer-path.utils';
         const config = configService.get('mxcadUploadPath', { infer: true });
         const tempPath = configService.get('mxcadTempPath', { infer: true });
 
-        // multer 的 fileSize 是 HTTP 层的粗粒度防护网，业务层精确限制由运行时配置
-        // maxFileSize 实时校验（checkChunkExist 等）。此处上限 = max(运行时 maxFileSize, 固定安全下限)，
-        // 确保上限始终不低于配置，调大 maxFileSize 即可放行，multer 永不收紧到配置之下。
-        const runtimeMaxFileSizeMB = await runtimeConfigService.getValue<number>('maxFileSize', 500);
-        const runtimeMaxBytes = runtimeMaxFileSizeMB * 1024 * 1024;
-        const safetyCeilingBytes = 512 * 1024 * 1024; // 固定兜底，防错误配置导致 multer 成为更紧的限制
-        const maxFileSize = Math.max(runtimeMaxBytes, safetyCeilingBytes);
-
         return {
           storage: diskStorage({
             destination: (req, file, cb) => {
@@ -101,7 +94,7 @@ import { buildMulterChunkDir, buildMulterFilename } from './multer-path.utils';
             },
           }),
           limits: {
-            fileSize: maxFileSize,
+            ...(await buildMulterUploadLimits(runtimeConfigService)),
             fields: 20,
             fieldSize: 10 * 1024 * 1024,
           },

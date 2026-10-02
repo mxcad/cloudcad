@@ -36,6 +36,7 @@ import { I18nContext } from 'nestjs-i18n';
 import { AuditLogger } from '../../audit/audit-logger.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { NodeUtils } from '../../common/utils/node-utils';
+import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
 import { ClsService } from 'nestjs-cls';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import {
@@ -106,8 +107,7 @@ export class FileDownloadExportService {
     const batchConfig = this.configService.get('batchDownload', {
       infer: true,
     });
-    this.mxcadUploadPath =
-      this.configService.get<string>('mxcadUploadPath') || '';
+    this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
     this.conversionCacheDir =
       this.mxcadUploadPath || batchConfig?.conversionCacheDir || '';
     this.conversionCacheTtlMs =

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resolveMxcadUploadDir } from '../common/utils/mxcad-upload-dir';
 import { DatabaseService } from '../database/database.service';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
 import {
@@ -23,8 +24,7 @@ export class BatchDownloadOrchestrator {
     private readonly conversionRunner: ConversionRunner,
     private readonly configService: ConfigService
   ) {
-    this.mxcadUploadPath =
-      this.configService.get<string>('mxcadUploadPath') || '';
+    this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
   }
 
   /**

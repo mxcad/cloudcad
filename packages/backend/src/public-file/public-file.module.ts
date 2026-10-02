@@ -23,6 +23,7 @@ import { MxcadCoreModule } from '../mxcad/core/mxcad-core.module';
 import { MxcadConversionModule } from '../mxcad/conversion/mxcad-conversion.module';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
+import { buildMulterUploadLimits } from '../common/utils/multer-upload-limits';
 
 @Module({
   imports: [
@@ -35,17 +36,10 @@ import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
       imports: [ConfigModule, RuntimeConfigModule],
       inject: [ConfigService, RuntimeConfigService],
       useFactory: async (configService: ConfigService, runtimeConfigService: RuntimeConfigService) => {
-        // multer 的 fileSize 是 HTTP 层粗粒度防护网，业务层精确限制由运行时配置 maxFileSize
-        // 实时校验（public-file.controller 等）。此处上限 = max(运行时 maxFileSize, 固定安全下限)，
-        // 确保 multer 永不收紧到配置之下，调大 maxFileSize 即可放行。
-        const runtimeMaxFileSizeMB = await runtimeConfigService.getValue<number>('maxFileSize', 500);
-        const runtimeMaxBytes = runtimeMaxFileSizeMB * 1024 * 1024;
-        const safetyCeilingBytes = 512 * 1024 * 1024; // 固定兜底，防错误配置导致 multer 成为更紧的限制
-        const fileSize = Math.max(runtimeMaxBytes, safetyCeilingBytes);
         return {
           storage: memoryStorage(),
           limits: {
-            fileSize,
+            ...(await buildMulterUploadLimits(runtimeConfigService)),
             fields: 20,
             fieldSize: 1024 * 1024,
           },

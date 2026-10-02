@@ -9,6 +9,7 @@
   Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resolveMxcadUploadDir } from '../common/utils/mxcad-upload-dir';
 import { DatabaseService } from '../database/database.service';
 import { DiskMonitorService } from '../storage-management/services/disk-monitor.service';
 import {
@@ -60,8 +61,7 @@ export class BatchDownloadService {
     });
     this.exportDir = batchConfig.exportDir;
     this.minDiskSpace = batchConfig.minDiskSpace;
-    this.mxcadUploadPath =
-      this.configService.get<string>('mxcadUploadPath') || '';
+    this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
     fsPromises.mkdir(this.exportDir, { recursive: true }).catch(() => {});
   }
 

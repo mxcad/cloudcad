@@ -5,6 +5,7 @@
 
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeNameService } from '../../file-operations/node-name.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
@@ -32,8 +33,7 @@ export class UploadUtilityService {
     private readonly storageManager: StorageManager,
     @Inject(IStorageService) private readonly storageService: IStorageService
   ) {
-    this.mxcadUploadPath =
-      this.configService.get('mxcadUploadPath') || '../../uploads';
+    this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
   }
 
   async getFileSize(

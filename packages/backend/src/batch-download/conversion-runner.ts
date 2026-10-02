@@ -1,5 +1,6 @@
 ﻿import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resolveMxcadUploadDir } from '../common/utils/mxcad-upload-dir';
 import { ModuleRef } from '@nestjs/core';
 import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
 import type { IMxcadConversionService } from '../mxcad/interfaces/mxcad-conversion.interface';
@@ -532,8 +533,7 @@ export class ConversionRunner {
 
   async cleanupConvertedFile(filePath: string): Promise<void> {
     // 步骤 1：跳过 uploads/ 下内容寻址条目（共享快照/产物缓存，不能被首个任务 unlink）
-    const mxcadUploadPath =
-      this.configService.get<string>('mxcadUploadPath') || '';
+    const mxcadUploadPath = resolveMxcadUploadDir(this.configService);
     if (mxcadUploadPath) {
       const uploadsRoot = mxcadUploadPath.replace(/\\/g, '/');
       const normalized = filePath.replace(/\\/g, '/');
