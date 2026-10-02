@@ -83,7 +83,7 @@ function showHelp() {
     `  ${colors.green}PM2 后台模式${colors.reset}  服务在后台运行，关闭终端不影响`
   );
   console.log(
-    `  ${colors.green}前台模式${colors.reset}     服务在前台运行，关闭终端则服务停止`
+    `  ${colors.green}前台模式${colors.reset}     服务在前台运行，关闭终端即停止全部服务（可删部署目录）`
   );
   console.log('');
   console.log(`${colors.cyan}示例：${colors.reset}`);

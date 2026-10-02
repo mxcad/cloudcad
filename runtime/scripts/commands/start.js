@@ -153,7 +153,7 @@ async function waitForServicesForeground(backendProcess, backendOutput) {
   log('green', '║  API文档: http://localhost:' + PORTS.backend + '/api/docs ║');
   log('green', '║  管理员: http://localhost:' + PORTS.frontend + getAdminLoginPath() + '  ║');
   log('green', '╠══════════════════════════════════════════════════════════╣');
-  log('green', '║  停止:  Ctrl+C                                          ║');
+  log('green', '║  停止: Ctrl+C / 关闭终端（停止全部服务）               ║');
   log('green', '╚══════════════════════════════════════════════════════════╝');
 
   // 打开浏览器
@@ -640,21 +640,23 @@ async function startAppServices(mode, onReady) {
       }
     }
 
-    // 前台模式：等待所有进程退出
-    await new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        let allExited = true;
+    // 前台模式：常驻监督，直到终端关闭 / Ctrl+C（信号处理器触发全量停止并退出）。
+    // 不再在子进程全部退出时退出 CLI——保持 CLI 存活，确保「关终端 = 全停」始终
+    // 成立（覆盖后端崩溃后关终端的场景）。子进程崩溃仅记录日志，不退出。
+    await new Promise(() => {
+      // setInterval 保持事件循环存活，直到信号处理器 process.exit(0) 终止进程。
+      setInterval(() => {
         for (const proc of state.childProcesses) {
-          if (!proc.killed && !proc.exitCode) {
-            allExited = false;
-            break;
+          if (proc.exitCode !== null && !proc._crashLogged) {
+            proc._crashLogged = true;
+            log(
+              'red',
+              `[警告] 子进程退出（退出码 ${proc.exitCode}），服务可能不可用`
+            );
           }
         }
-        if (allExited) {
-          clearInterval(checkInterval);
-          resolve();
-        }
-      }, 1000);
+      }, 2000);
+      // 不 resolve——CLI 常驻，直到信号处理器 process.exit(0)
     });
   }
 }
@@ -764,7 +766,7 @@ async function startMode(options = null) {
     console.log('');
     console.log(`  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式）`);
     console.log(
-      `  ${colors.cyan}[2]${colors.reset} 前台运行（终端关闭则服务退出）`
+      `  ${colors.cyan}[2]${colors.reset} 前台运行（关闭终端即停止全部服务，可直接删除部署目录）`
     );
     console.log('');
 

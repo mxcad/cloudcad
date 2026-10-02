@@ -479,7 +479,8 @@ async function stopInfrastructure() {
   log('blue', '停止所有服务...');
 
   // 0. 停止前台模式（spawn 启动）的兜底子进程（cleanupForeground 全清）
-  //    延迟 require 避免与 foreground/registry（它顶层 require 本模块）形成加载时循环依赖。
+  //    延迟 require（历史循环依赖防护：registry 曾顶层 require 本模块；现 registry
+  //    改走 detached 全量停止、不再 require 本模块，保留惰性加载以隔离加载顺序）。
   const { cleanupForeground } = require('../foreground/registry');
   cleanupForeground();
 

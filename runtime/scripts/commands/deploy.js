@@ -42,7 +42,7 @@ async function deployModeImpl(skipBuild = false, options = null) {
       `  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式，推荐）`
     );
     console.log(
-      `  ${colors.cyan}[2]${colors.reset} 前台运行（终端关闭则服务退出）`
+      `  ${colors.cyan}[2]${colors.reset} 前台运行（关闭终端即停止全部服务，可直接删除部署目录）`
     );
     console.log('');
 
