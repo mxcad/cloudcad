@@ -76,21 +76,21 @@ export class MxcadFileAccessController {
   ) {
     const filename = this.extractPath(path);
     if (!filename) return res.status(400).json({ code: -1, message: I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径' });
-    if (req.method !== 'HEAD') {
-      try {
-        await this.authorizeFilesDataAccess(filename, req);
-      } catch (error) {
-        if (error instanceof NotFoundException) return res.status(404).json({ code: -1, message: error.message });
-        if (error instanceof UnauthorizedException || error instanceof ForbiddenException) return res.status(401).json({ code: -1, message: error.message });
-        throw error;
-      }
+    try {
+      await this.authorizeFilesDataAccess(filename, req);
+    } catch (error) {
+      if (error instanceof NotFoundException) return res.status(404).json({ code: -1, message: error.message });
+      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) return res.status(401).json({ code: -1, message: error.message });
+      throw error;
     }
     if (version) return this.handleFilesDataFileRequest(filename, res, req, false, version, warmup === '1' || warmup === 'true');
     return this.mxcadFileHandler.serveFile(filename, res);
   }
 
   @Head('filesData/*path')
+  @OptionalAuth()
   @ApiResponse({ status: 200, description: '成功获取文件信息' })
+  @ApiResponse({ status: 401, description: '未登录' })
   @ApiResponse({ status: 404, description: '文件不存在' })
   @ApiQuery({ name: 'v', required: false, description: '历史版本号' })
   @ApiQuery({ name: 'shareToken', required: false, description: '分享访问令牌' })
@@ -98,13 +98,19 @@ export class MxcadFileAccessController {
     @Res() res: Response,
     @Req() req: Request,
     @Param('path') path: string,
-    @Query('v') version?: string,
-    @Query('shareToken') shareToken?: string
+    @Query('v') version?: string
   ) {
     const filename = this.extractPath(path);
     if (!filename) return res.status(400).json({ code: -1, message: I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径' });
-    if (shareToken) {
-      try { await this.authorizeFilesDataAccess(filename, req); } catch { return res.status(401).json({ code: -1, message: I18nContext.current()?.t('error.file.no_access') ?? '没有文件访问权限' }); }
+    // HEAD 与 GET 同一鉴权：此前仅 shareToken 存在时才鉴权，匿名 HEAD 可探测
+    // filesData 文件存在性（200/404）与 Content-Length。authorizeFilesDataAccess
+    // 内部已读 req.query.shareToken / x-share-token / referer，无需单独传参。
+    try {
+      await this.authorizeFilesDataAccess(filename, req);
+    } catch (error) {
+      if (error instanceof NotFoundException) return res.status(404).json({ code: -1, message: error.message });
+      if (error instanceof UnauthorizedException || error instanceof ForbiddenException) return res.status(401).json({ code: -1, message: error.message });
+      throw error;
     }
     if (version) return this.handleFilesDataFileRequest(filename, res, req, true, version);
     return this.mxcadFileHandler.serveFile(filename, res);
