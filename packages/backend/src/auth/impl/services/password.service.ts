@@ -32,7 +32,7 @@ export class PasswordService implements IPasswordService {
         : false;
       if (isPasswordValid) {
         const { password: _, ...result } = user;
-        return result as any;
+        return result;
       }
     }
     return null;
@@ -131,7 +131,7 @@ export class PasswordService implements IPasswordService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     // 记录口令修改时间（#416）
-    await this.userRepo.update(user.id, { password: hashedPassword, passwordChangedAt: new Date() } as any);
+    await this.userRepo.update(user.id, { password: hashedPassword, passwordChangedAt: new Date() });
     await this.authTokenService.deleteAllRefreshTokens(user.id);
     await this.tokenBlacklistService.removeUserFromBlacklist(user.id);
 

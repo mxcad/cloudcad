@@ -55,7 +55,7 @@ export class JobContext {
     [];
   readonly archiveEntries: Array<{
     name: string;
-    stream: NodeJS.ReadableStream;
+    stream: Readable;
     /** 产物在存储区的相对路径（individual 模式单文件直出依据；zip 模式忽略） */
     sourcePath?: string;
     /** 是否转换临时产物（true=下载后可删；false=源文件，绝不删除） */

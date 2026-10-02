@@ -333,7 +333,7 @@ export class MxcadFileAccessController {
       || (req.headers['x-share-token'] as string | undefined)
       || this.extractShareTokenFromReferer(req);
     if (shareToken) { await this.shareService.validateShareFileAccess(shareToken, normalizedFilename); return; }
-    const userId = (req as any).user?.id;
+    const userId = (req as Request & { user?: { id?: string } }).user?.id;
     if (!userId) throw new UnauthorizedException(I18nContext.current()?.t('error.auth.login_required') ?? '请先登录');
 
     // 路径格式: YYYYMM/{nodeId}/... 从路径提取 nodeId 校验节点权限

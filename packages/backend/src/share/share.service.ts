@@ -6,7 +6,7 @@
   BadRequestException,
   Inject,
 } from '@nestjs/common';
-import { NodeType } from '@cloudcad/db';
+import { NodeType, Prisma } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import { IPROJECT_PERMISSION_SERVICE, IProjectPermissionService } from '../roles/interfaces/project-permission-service.interface';
 import { IPERMISSION_SERVICE, IPermissionService } from '../permission/interfaces/permission-service.interface';
@@ -269,7 +269,7 @@ export class ShareService {
     const sortBy = query.sortBy ?? 'createdAt';
     const sortOrder = query.sortOrder ?? 'desc';
 
-    const where: any = {
+    const where: Prisma.FileShareWhereInput = {
       createdBy: userId,
       deletedAt: null,
     };
@@ -431,7 +431,7 @@ export class ShareService {
       throw new NotFoundException(I18nContext.current()?.t('error.share.revoked') ?? '分享链接已撤销');
     }
 
-    const data: any = {};
+    const data: Prisma.FileShareUpdateInput = {};
     if (dto.expiresAt !== undefined) {
       data.expiresAt = dto.expiresAt === null ? null : new Date(dto.expiresAt);
     }

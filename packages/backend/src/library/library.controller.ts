@@ -30,6 +30,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { Response } from 'express';
+import type { IncomingMessage } from 'http';
 import {
   AuthenticatedRequest,
 } from '../common/types/request.types';
@@ -385,7 +386,7 @@ export class LibraryController {
   ) {
     // 兼容 Express 通配符参数的两种形态：数组或内部 toString() 成的逗号字符串
     const filename = (Array.isArray(filePath) ? filePath.join('/') : filePath).replace(/,/g, '/');
-    const referer = (req as any)?.headers?.referer || 'N/A';
+    const referer = (req as unknown as IncomingMessage).headers?.referer || 'N/A';
     this.logger.log(`[Block file access] path: ${filename}, from: ${referer}`);
     return this.libraryService.serveFile(filename, res);
   }

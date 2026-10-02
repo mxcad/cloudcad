@@ -20,10 +20,7 @@ import { IMxcadSaveService } from '../interfaces/mxcad-save.interface';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import path from 'path';
-import {
-  findArtifactByHash,
-  isArtifactReady,
-} from '../utils/conversion-artifact';
+import { findReadyArtifactByHash } from '../utils/conversion-artifact';
 import { AppConfig } from '../../config/app.config';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 import { I18nContext } from 'nestjs-i18n';
@@ -322,8 +319,8 @@ export class MxcadSaveService implements IMxcadSaveService {
 
       const uploadsDir =
         this.mxcadUploadPath || path.join(process.cwd(), 'uploads');
-      const mxwebFile = findArtifactByHash(uploadsDir, fileHash);
-      if (!mxwebFile || !isArtifactReady(path.join(uploadsDir, mxwebFile))) {
+      const mxwebFile = findReadyArtifactByHash(uploadsDir, fileHash);
+      if (!mxwebFile) {
         return {
           success: false,
           message:
@@ -336,7 +333,7 @@ export class MxcadSaveService implements IMxcadSaveService {
 
       const mxwebSourcePath = path.join(uploadsDir, mxwebFile);
 
-      const fileProxy: Express.Multer.File = {
+      const fileProxy = {
         fieldname: 'file',
         originalname: mxwebFile,
         encoding: '7bit',
@@ -345,9 +342,7 @@ export class MxcadSaveService implements IMxcadSaveService {
         filename: mxwebFile,
         path: mxwebSourcePath,
         size: (await fsPromises.stat(mxwebSourcePath)).size,
-        stream: null as any,
-        buffer: null as any,
-      };
+      } as Express.Multer.File;
 
       return this.saveMxwebFile(
         nodeId,

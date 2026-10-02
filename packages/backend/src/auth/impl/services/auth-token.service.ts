@@ -30,7 +30,8 @@ export class AuthTokenService implements IAuthTokenService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
         // jti 保证同一秒内多次签发 access token 也不相同（避免同一秒签发 token 冲突/复用）
-        { sub: user.id, email: user.email, username: user.username, role: (user.role as any)?.name || 'USER', type: 'access', jti: randomUUID() },
+        { sub: user.id, email: user.email, username: user.username, role: user.role?.name || 'USER', type: 'access', jti: randomUUID() },
+        // expiresIn 要求 StringValue|number（jsonwebtoken 模板字面量），配置值是 string，需 cast
         { secret: jwtSecret, expiresIn: accessExpiresIn as any }
       ),
       this.jwtService.signAsync(
@@ -147,7 +148,7 @@ export class AuthTokenService implements IAuthTokenService {
 
       if (req?.session) {
         try {
-          await (req.session as any).destroy();
+          await req.session.destroy();
           this.logger.log(`用户 Session 已销毁：${userId}`);
         } catch (err) {
           this.logger.error(`Session 销毁失败：${err instanceof Error ? err.message : String(err)}`);

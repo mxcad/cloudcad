@@ -237,13 +237,13 @@ export class AccountBindingService implements IAccountBindingService {
       await this.userRepo.update(existingUser.id, {
         wechatId: null,
         provider: 'LOCAL',
-      } as any);
+      });
       this.logger.warn(
         `[wechat bind] 接管绑定: openid=${openid} 从用户 ${existingUser.id}(${existingUser.username}) 迁移到用户 ${userId}`
       );
     }
 
-    await this.userRepo.update(userId, { wechatId: openid, provider: 'WECHAT' } as any);
+    await this.userRepo.update(userId, { wechatId: openid, provider: 'WECHAT' });
     this.logger.log(`微信绑定成功: 用户ID ${userId}, openid: ${openid}`);
     return { success: true, message: I18nContext.current()?.t('success.wechat_bind_success') ?? '微信绑定成功' };
   }
@@ -260,7 +260,7 @@ export class AccountBindingService implements IAccountBindingService {
       throw new BadRequestException(I18nContext.current()?.t('error.account_binding.keep_one_login_method_password_email_phone') ?? '至少需要保留一种登录方式（设置密码、绑定邮箱或绑定手机）');
     }
 
-    await this.userRepo.update(userId, { wechatId: null, provider: hasEmail || hasPhone || hasPassword ? 'LOCAL' : 'WECHAT' } as any);
+    await this.userRepo.update(userId, { wechatId: null, provider: hasEmail || hasPhone || hasPassword ? 'LOCAL' : 'WECHAT' });
     this.logger.log(`微信解绑成功: 用户ID ${userId}`);
     return { success: true, message: I18nContext.current()?.t('success.wechat_unbound') ?? '微信解绑成功' };
   }
@@ -288,7 +288,7 @@ export class AccountBindingService implements IAccountBindingService {
       throw new BadRequestException(I18nContext.current()?.t('error.account_binding.keep_one_login_method_password_phone_wechat') ?? '至少需要保留一种登录方式（设置密码、绑定手机或绑定微信）');
     }
 
-    await this.userRepo.update(userId, { email: null, emailVerified: false, emailVerifiedAt: null } as any);
+    await this.userRepo.update(userId, { email: null, emailVerified: false, emailVerifiedAt: null });
     this.logger.log(`邮箱解绑成功: 用户ID ${userId}`);
     return { success: true, message: I18nContext.current()?.t('success.email_unbound') ?? '邮箱解绑成功' };
   }
@@ -315,7 +315,7 @@ export class AccountBindingService implements IAccountBindingService {
       throw new BadRequestException(I18nContext.current()?.t('error.account_binding.keep_one_login_method_password_email_wechat') ?? '至少需要保留一种登录方式（设置密码、绑定邮箱或绑定微信）');
     }
 
-    await this.userRepo.update(userId, { phone: null, phoneVerified: false, phoneVerifiedAt: null } as any);
+    await this.userRepo.update(userId, { phone: null, phoneVerified: false, phoneVerifiedAt: null });
     this.logger.log(`手机号解绑成功: 用户ID ${userId}`);
     return { success: true, message: I18nContext.current()?.t('success.phone_unbound') ?? '手机号解绑成功' };
   }

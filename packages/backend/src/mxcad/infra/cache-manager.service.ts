@@ -21,7 +21,7 @@ export interface CacheItem<T> {
 @Injectable()
 export class CacheManagerService {
   private readonly logger = new Logger(CacheManagerService.name);
-  private readonly caches: Map<string, Map<string, CacheItem<any>>> = new Map();
+  private readonly caches: Map<string, Map<string, CacheItem<unknown>>> = new Map();
   private readonly defaultTTL: number;
 
   constructor(private readonly configService: ConfigService) {
@@ -57,7 +57,7 @@ export class CacheManagerService {
     }
 
     this.logger.debug(`缓存命中: ${cacheName}:${key}`);
-    return item.data;
+    return item.data as T;
   }
 
   /**

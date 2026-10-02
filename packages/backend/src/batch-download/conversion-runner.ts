@@ -66,10 +66,11 @@ export interface ConversionResult {
 }
 
 export interface ConvertRequest {
+  // fileHash/path 可空：真实 DB 节点（Prisma 可空字段）与 fileHash-only 合成节点（path 恒 null）共用
   node: {
     id: string;
-    fileHash?: string;
-    path?: string;
+    fileHash?: string | null;
+    path?: string | null;
     name: string;
   };
   format: string;
@@ -117,7 +118,11 @@ export class ConversionRunner {
     node: ConvertRequest['node']
   ): Promise<{ snapshotPath: string; hash: string } | null> {
     if (node.path) {
-      return this.fileDownloadExportService.snapshotMxweb(node);
+      // 传收窄后的字面量而非整对象：snapshotMxweb 形参 path 非可空，
+      // 整对象（path?: string | null）无法直接赋值
+      return this.fileDownloadExportService.snapshotMxweb({
+        path: node.path,
+      });
     }
     if (node.fileHash) {
       const resolvedPath = await this.publicFileService.findMxwebFile(

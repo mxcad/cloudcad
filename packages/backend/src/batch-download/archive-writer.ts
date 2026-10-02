@@ -3,10 +3,11 @@ import * as archiver from 'archiver';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
+import { Readable } from 'stream';
 
 export interface ArchiveEntry {
   name: string;
-  stream: any;
+  stream: Readable;
 }
 
 @Injectable()
@@ -58,7 +59,7 @@ export class ArchiveWriter {
         reject(new Error(`Archive creation error: ${err.message}`));
       });
 
-      archive.pipe(output as any);
+      archive.pipe(output);
 
       for (const entry of entries) {
         archive.append(entry.stream, { name: entry.name });

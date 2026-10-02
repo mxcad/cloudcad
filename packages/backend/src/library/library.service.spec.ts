@@ -20,6 +20,7 @@ import { FileDownloadHandlerService } from '../file-system/file-download/file-do
 import { MxcadFileHandlerService } from '../mxcad/core/mxcad-file-handler.service';
 import { MXCAD_SAVE_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
 import { LibraryService } from './library.service';
+import { AuthenticatedRequest } from '../common/types/request.types';
 
 jest.mock('fs', () => {
   const actual = jest.requireActual('fs');
@@ -145,7 +146,7 @@ describe('LibraryService.saveLibraryAs', () => {
     const result = await service.saveLibraryAs(
       uploadFile as any,
       { targetParentId: 'lib-root', fileName: 'test.mxweb' },
-      { user: { id: 'user-1' } },
+      { user: { id: 'user-1' } } as AuthenticatedRequest,
       'block'
     );
 
@@ -191,7 +192,7 @@ describe('LibraryService.saveLibraryAs', () => {
     const result = await service.saveLibraryAs(
       uploadFile as any,
       { targetParentId: 'lib-folder', fileName: 'test.mxweb' },
-      { user: { id: 'user-1' } },
+      { user: { id: 'user-1' } } as AuthenticatedRequest,
       'drawing'
     );
 
@@ -213,7 +214,7 @@ describe('LibraryService.saveLibraryAs', () => {
       service.saveLibraryAs(
         uploadFile as any,
         { targetParentId: 'proj-folder', fileName: 'test.mxweb' },
-        { user: { id: 'user-1' } },
+        { user: { id: 'user-1' } } as AuthenticatedRequest,
         'drawing'
       )
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -230,7 +231,7 @@ describe('LibraryService.saveLibraryAs', () => {
       service.saveLibraryAs(
         uploadFile as any,
         { targetParentId: 'block-root', fileName: 'test.mxweb' },
-        { user: { id: 'user-1' } },
+        { user: { id: 'user-1' } } as AuthenticatedRequest,
         'drawing'
       )
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -250,7 +251,7 @@ describe('LibraryService.saveLibraryAs', () => {
       service.saveLibraryAs(
         uploadFile as any,
         { targetParentId: 'lib-file', fileName: 'test.mxweb' },
-        { user: { id: 'user-1' } },
+        { user: { id: 'user-1' } } as AuthenticatedRequest,
         'drawing'
       )
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -263,7 +264,7 @@ describe('LibraryService.saveLibraryAs', () => {
       service.saveLibraryAs(
         uploadFile as any,
         { targetParentId: 'missing', fileName: 'test.mxweb' },
-        { user: { id: 'user-1' } },
+        { user: { id: 'user-1' } } as AuthenticatedRequest,
         'drawing'
       )
     ).rejects.toThrow('Target folder does not exist');
@@ -277,7 +278,7 @@ describe('LibraryService.saveLibraryAs', () => {
       service.saveLibraryAs(
         badFile as any,
         { targetParentId: 'lib-root', fileName: 'test' },
-        { user: { id: 'user-1' } },
+        { user: { id: 'user-1' } } as AuthenticatedRequest,
         'drawing'
       )
     ).rejects.toBeInstanceOf(BadRequestException);

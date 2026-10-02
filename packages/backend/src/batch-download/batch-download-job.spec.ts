@@ -587,6 +587,70 @@ describe('BatchDownloadJob', () => {
       }
     });
 
+    it('should clean up converted files only after the archive is written (no ENOENT)', async () => {
+      const {
+        job,
+        prisma,
+        folderExpander,
+        conversionRunner,
+        orchestrator,
+        configService,
+        archiveWriter,
+      } = createMocks();
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bdj-'));
+      const zipPath = path.join(tmpDir, 'job-1.zip');
+      fs.writeFileSync(zipPath, 'zip');
+      try {
+        prisma.batchDownloadJob.findUnique.mockResolvedValue({
+          id: 'job-1',
+          status: 'PENDING',
+          fileList: [{ nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] }],
+        });
+        folderExpander.expandFolderItems.mockResolvedValue([
+          { nodeId: 'n1', fileName: 'a.dwg', formats: ['pdf'] },
+        ]);
+        // 模拟 orchestrator 把转换产物同时登记进 archiveEntries（archiver 惰性读
+        // createReadStream）与 convertedFiles（待清理），且产物落在节点存储目录
+        // （temp=true，非 uploads/）——正是「先清理后打包」会 ENOENT 的场景
+        const convertedFile = path.join(tmpDir, 'node-storage', 'a.pdf');
+        orchestrator.processItem.mockImplementation(async (_item, ctx: any) => {
+          ctx.archiveEntries.push({
+            name: 'a.pdf',
+            stream: {},
+            sourcePath: convertedFile,
+            temp: true,
+          });
+          ctx.convertedFiles.push(convertedFile);
+        });
+        configService.get.mockImplementation((key: string) => {
+          if (key === 'batchDownload')
+            return { exportDir: tmpDir, minDiskSpace: 1024 };
+          if (key === 'fileLimits') return { zipCompressionLevel: 1 };
+          return {};
+        });
+        archiveWriter.createArchive.mockResolvedValue(zipPath);
+        jest.spyOn((job as any).logger, 'log').mockImplementation(() => {});
+
+        await job.start('job-1');
+        await new Promise((r) => setTimeout(r, 30));
+
+        // 关键断言：清理必须在打包之后。archiver 惰性读 createReadStream，
+        // 若先 unlink 非 uploads/ 产物，流读取时 ENOENT → archive error → job FAILED
+        expect(archiveWriter.createArchive).toHaveBeenCalledTimes(1);
+        expect(conversionRunner.cleanupConvertedFile).toHaveBeenCalledWith(
+          convertedFile
+        );
+        const archiveOrder = (archiveWriter.createArchive as jest.Mock)
+          .mock.invocationCallOrder[0];
+        const cleanupOrder = (
+          conversionRunner.cleanupConvertedFile as jest.Mock
+        ).mock.invocationCallOrder[0];
+        expect(cleanupOrder).toBeGreaterThan(archiveOrder);
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
     it('should ignore a duplicate start while the job is still running', async () => {
       const { job, prisma, folderExpander, conversionRunner, orchestrator } =
         createMocks();

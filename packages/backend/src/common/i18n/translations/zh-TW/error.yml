@@ -350,6 +350,7 @@ ip_whitelist:
 
 admin_auth:
   ip_not_allowed: "當前 IP 不在管理員白名單中，禁止登入"
+  ip_blocked: "當前 IP 已被加入黑名單，禁止登入"
 
 mfa:
   required: "請輸入雙因素認證動態碼"

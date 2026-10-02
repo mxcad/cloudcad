@@ -10,8 +10,24 @@ import {
 import { ConversionRunner } from './conversion-runner';
 import { JobContext } from './job-context';
 import { isInUploadsCache } from './upload-cache.util';
+import type { BatchFileItem } from './dto/create-batch-download.dto';
 import * as fs from 'fs';
 import * as path from 'path';
+
+/**
+ * 批量下载节点：真实 DB 节点（select 子集）或 fileHash-only 合成节点（path 恒 null）。
+ * nodeType 用 string：真实节点是 NodeType 枚举、合成节点是 'FILE' 字面量，判定点只比对 'FILE'。
+ */
+interface BatchDownloadNode {
+  id: string;
+  name: string;
+  originalName?: string | null;
+  path?: string | null;
+  fileHash?: string | null;
+  extension?: string | null;
+  nodeType: string;
+  size?: number | null;
+}
 
 @Injectable()
 export class BatchDownloadOrchestrator {
@@ -37,7 +53,7 @@ export class BatchDownloadOrchestrator {
     isTerminated: () => boolean
   ): Promise<void> {
     const pending: Array<{
-      node: any;
+      node: BatchDownloadNode;
       fileName: string;
       ext: string;
       prefix: string;
@@ -55,7 +71,7 @@ export class BatchDownloadOrchestrator {
       if (isTerminated()) return;
       // fileHash-only 项（CAD 编辑器内存导出）：无 DB 节点，构造合成节点
       //（path 缺失，源文件由 conversion-runner 按 fileHash 解析）
-      let node: any;
+      let node: BatchDownloadNode | null;
       let isFileHashItem = false;
       if (!item.nodeId && item.fileHash) {
         const name = item.fileName;
@@ -184,13 +200,13 @@ export class BatchDownloadOrchestrator {
   }
 
   async processItem(
-    item: any,
+    item: BatchFileItem & { relativePath?: string },
     ctx: JobContext,
     isTerminated: () => boolean
   ): Promise<void> {
     // fileHash-only 项（CAD 编辑器内存导出）：无 DB 节点，构造合成节点
     //（path 缺失，源文件由 conversion-runner 按 fileHash 解析）
-    let node: any;
+    let node: BatchDownloadNode | null;
     let isFileHashItem = false;
     if (!item.nodeId && item.fileHash) {
       const name = item.fileName;
@@ -286,7 +302,7 @@ export class BatchDownloadOrchestrator {
   }
 
   private async tryAddOriginal(
-    node: any,
+    node: BatchDownloadNode,
     format: string,
     fileName: string,
     prefix: string,
@@ -294,6 +310,17 @@ export class BatchDownloadOrchestrator {
     ctx: JobContext
   ): Promise<void> {
     try {
+      // 直取格式必有 path（调用方已守卫）；显式短路让 node.path 收窄为 string，
+      // 避免对 getFullPath(string) 传可空值
+      if (!node.path) {
+        ctx.errorCount++;
+        ctx.errors.push({
+          nodeId: node.id,
+          fileName: label,
+          error: 'File path is missing',
+        });
+        return;
+      }
       const fullPath = this.fileDownloadExportService.getFullPath(node.path);
       if (!fs.existsSync(fullPath)) {
         ctx.errorCount++;
@@ -329,7 +356,7 @@ export class BatchDownloadOrchestrator {
   }
 
   private async tryConvert(
-    node: any,
+    node: BatchDownloadNode,
     fileName: string,
     ext: string,
     format: string,

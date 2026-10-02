@@ -15,6 +15,20 @@ import { AuditLogService } from './audit-log.service';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import { ClsService } from 'nestjs-cls';
 
+/** audit 日志消息约定结构（context==='audit' 时写入数据库；字段见 writeToAudit 注释） */
+interface AuditMessage {
+  action: string;
+  resourceType: string;
+  resourceId?: string;
+  projectId?: string;
+  resourceName?: string;
+  userId: string;
+  success?: boolean;
+  errorMessage?: string;
+  details?: Record<string, unknown>;
+  params?: Record<string, unknown> | null;
+}
+
 let auditLoggerInstance: AuditLogger | null = null;
 
 /**
@@ -44,7 +58,7 @@ export class AuditLogger extends ConsoleLogger {
     this.auditLogService = service;
   }
 
-  log(message: any, context?: string): void {
+  log(message: AuditMessage, context?: string): void {
     // 调用父类 log 方法保证控制台输出
     super.log(message, context);
 
@@ -70,7 +84,7 @@ export class AuditLogger extends ConsoleLogger {
     userId: string;
     success: boolean;
     errorMessage?: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
     params?: Record<string, unknown> | null;
   }): Promise<void> {
     if (!this.auditLogService) {
@@ -102,9 +116,9 @@ export class AuditLogger extends ConsoleLogger {
     );
   }
 
-  private async writeToAudit(message: any): Promise<void> {
+  private async writeToAudit(message: AuditMessage): Promise<void> {
     // 按约定，audit 日志消息格式为：
-    // { action: 'USER_LOGIN', resourceType: 'USER', resourceId?: string, projectId?: string, resourceName?: string, userId: string, success: boolean, errorMessage?: string, details?: any, params?: object }
+    // { action: 'USER_LOGIN', resourceType: 'USER', resourceId?: string, projectId?: string, resourceName?: string, userId: string, success: boolean, errorMessage?: string, details?: Record<string, unknown>, params?: object }
     // 此外，ipAddress 和 userAgent 可从请求上下文中获取，但此处暂不处理，需要时可从 message 中提取。
     const { action, resourceType, resourceId, projectId, resourceName, userId, success, errorMessage, details, params } = message;
 

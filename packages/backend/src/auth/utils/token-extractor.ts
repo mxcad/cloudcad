@@ -1,4 +1,12 @@
-export function extractTokenFromRequest(request: any): string | null {
+/** Token 提取所需的 request 最小形状：Authorization header / auth_token cookie */
+interface TokenRequest {
+  headers?: { authorization?: string; cookie?: string };
+  cookies?: { auth_token?: string };
+}
+
+export function extractTokenFromRequest(
+  request: TokenRequest | null
+): string | null {
   if (request?.headers?.authorization) {
     const authHeader = request.headers.authorization;
     if (authHeader.startsWith('Bearer ')) {

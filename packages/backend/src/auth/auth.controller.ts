@@ -199,7 +199,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<{ message: string }> {
     // 优先 JWT 认证用户，其次 Session 用户
-    const userId = (req as any).user?.id || (request.session as any)?.userId;
+    const userId = req.user?.id || request.session?.userId;
 
     if (userId) {
       const accessToken = request.headers.authorization?.replace('Bearer ', '');

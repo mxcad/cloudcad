@@ -5,6 +5,14 @@ import { ProjectPermission } from '../common/enums/permissions.enum';
 import { NodeType } from '@cloudcad/db';
 import type { BatchFileItem } from './dto/create-batch-download.dto';
 
+/** 文件夹递归文件树节点：isFolder=true 时 children 为同构子节点 */
+export interface FolderFileNode {
+  nodeId: string;
+  fileName: string;
+  isFolder: boolean;
+  children?: FolderFileNode[];
+}
+
 @Injectable()
 export class FolderExpanderService {
   private readonly logger = new Logger(FolderExpanderService.name);
@@ -82,7 +90,7 @@ export class FolderExpanderService {
 
   async getFolderFilesRecursive(
     nodeId: string, userId: string,
-  ): Promise<{ nodeId: string; fileName: string; isFolder: boolean; children?: any[] }> {
+  ): Promise<FolderFileNode> {
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },
       select: { id: true, name: true, originalName: true, nodeType: true, projectId: true },
@@ -103,7 +111,7 @@ export class FolderExpanderService {
       where: { parentId: nodeId, deletedAt: null },
       select: { id: true, name: true, originalName: true, nodeType: true },
     });
-    const result: any[] = [];
+    const result: FolderFileNode[] = [];
     for (const child of children) {
       if (child.nodeType === NodeType.FILE) {
         result.push({ nodeId: child.id, fileName: child.originalName || child.name, isFolder: false });

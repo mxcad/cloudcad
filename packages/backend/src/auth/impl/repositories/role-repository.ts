@@ -7,6 +7,6 @@ export class RoleRepository implements IRoleRepository {
   constructor(private readonly prisma: DatabaseService) {}
 
   async findByName(name: string): Promise<RoleRecord | null> {
-    return this.prisma.role.findFirst({ where: { name } }) as any;
+    return this.prisma.role.findFirst({ where: { name } });
   }
 }

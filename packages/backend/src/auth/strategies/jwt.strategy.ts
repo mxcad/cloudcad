@@ -25,6 +25,16 @@ import { I18nContext } from 'nestjs-i18n';
 
 import { extractTokenFromRequest } from '../utils/token-extractor';
 
+/**
+ * Passport JWT 请求最小形状：extractedJwtToken 在 jwtFromRequest 与 validate 间
+ * 经 request 传递（passport 无全局类型增强，用结构接口精确化而非 any）。
+ */
+interface JwtStrategyRequest {
+  headers?: Record<string, string | string[] | undefined>;
+  cookies?: Record<string, string | undefined>;
+  extractedJwtToken?: string;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name);
@@ -51,14 +61,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     super({
-      jwtFromRequest: (request: any) => {
+      jwtFromRequest: (request: JwtStrategyRequest) => {
         const token = ExtractJwt.fromExtractors([
           ExtractJwt.fromAuthHeaderAsBearerToken(),
           (req) => extractTokenFromRequest(req),
         ])(request);
 
         if (token && request) {
-          (request as any).extractedJwtToken = token;
+          request.extractedJwtToken = token;
         }
         return token;
       },
@@ -77,7 +87,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       configService.get<string>('node.env') === 'development';
   }
 
-  async validate(request: any, payload: {
+  async validate(request: JwtStrategyRequest, payload: {
     sub: string;
     email: string;
     username: string;

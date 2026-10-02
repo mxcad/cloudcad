@@ -28,7 +28,14 @@ function resolveEnforceMode(): boolean {
   return process.env.WECHAT_IP_GUARD_ENFORCE === 'true';
 }
 
-function getClientIp(req: any): string {
+/** 取客户端 IP 所需的 request 最小形状（Express req 的结构子集） */
+interface ClientIpRequest {
+  headers?: Record<string, string | string[] | undefined>;
+  ip?: string;
+  connection?: { remoteAddress?: string };
+}
+
+function getClientIp(req: ClientIpRequest): string {
   const forwarded = req.headers?.['x-forwarded-for'];
   if (typeof forwarded === 'string') {
     const ip = forwarded.split(',')[0].trim();

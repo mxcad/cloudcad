@@ -17,11 +17,16 @@ import {
   IPermissionService,
 } from '../permission/interfaces/permission-service.interface';
 import { SystemPermission } from '../common/enums/permissions.enum';
-import { NodeType, BatchJobStatus } from '@cloudcad/db';
+import { NodeType, BatchJobStatus, Prisma } from '@cloudcad/db';
+import { Response, Request } from 'express';
 import { SseManager } from './sse-manager';
 import { BatchDownloadJob } from './batch-download-job';
 import { ArchiveWriter, type ArchiveEntry } from './archive-writer';
-import { FolderExpanderService } from './folder-expander.service';
+import {
+  FolderExpanderService,
+  type FolderFileNode,
+} from './folder-expander.service';
+import type { IndividualItemManifest } from './job-context';
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { isDirectFormat } from '../file-system/file-download/format-policy';
 import type {
@@ -165,7 +170,7 @@ export class BatchDownloadService {
         userId,
         projectId: effectiveProjectId,
         status: BatchJobStatus.PENDING,
-        fileList: fileList as any,
+        fileList: fileList as unknown as Prisma.InputJsonValue,
         mode,
         totalCount: totalFormatCount,
         completedCount: 0,
@@ -203,7 +208,9 @@ export class BatchDownloadService {
       totalCount: job.totalCount,
       completedCount: job.completedCount,
       errorCount: job.errorCount,
-      errors: (job.errors as any) || undefined,
+      errors:
+        (job.errors as Array<{ nodeId: string; fileName: string; error: string }> | null) ||
+        undefined,
       zipPath: job.zipPath || undefined,
       zipSize: job.zipSize || undefined,
       itemNames: this.deriveItemNames(job),
@@ -320,7 +327,7 @@ export class BatchDownloadService {
         userId,
         projectId: job.projectId,
         status: BatchJobStatus.PENDING,
-        fileList: failedFileList as any,
+        fileList: failedFileList as unknown as Prisma.InputJsonValue,
         mode: job.mode,
         totalCount: totalFormatCount,
         completedCount: 0,
@@ -376,7 +383,8 @@ export class BatchDownloadService {
     if (job.mode !== 'individual')
       throw new BadRequestException('Task is not an individual download');
 
-    const manifest = (job.itemsManifest as any[]) || [];
+    const manifest =
+      (job.itemsManifest as unknown as IndividualItemManifest[] | null) || [];
     const item = manifest.find((m) => m.index === itemIndex);
     if (!item || !item.sourcePath) return null;
     if (!fs.existsSync(item.sourcePath)) return null;
@@ -419,7 +427,8 @@ export class BatchDownloadService {
       }
 
       if (job.mode === 'individual') {
-        const manifest = (job.itemsManifest as any[]) || [];
+        const manifest =
+      (job.itemsManifest as unknown as IndividualItemManifest[] | null) || [];
         for (const item of manifest) {
           if (!item.sourcePath || !item.name) continue;
           if (!fs.existsSync(item.sourcePath)) continue;
@@ -482,12 +491,7 @@ export class BatchDownloadService {
   async getFolderFilesRecursive(
     nodeId: string,
     userId: string
-  ): Promise<{
-    nodeId: string;
-    fileName: string;
-    isFolder: boolean;
-    children?: any[];
-  }> {
+  ): Promise<FolderFileNode> {
     return this.folderExpander.getFolderFilesRecursive(nodeId, userId);
   }
 
@@ -512,7 +516,9 @@ export class BatchDownloadService {
       totalCount: job.totalCount,
       completedCount: job.completedCount,
       errorCount: job.errorCount,
-      errors: (job.errors as any) || undefined,
+      errors:
+        (job.errors as Array<{ nodeId: string; fileName: string; error: string }> | null) ||
+        undefined,
       zipPath: job.zipPath || undefined,
       zipSize: job.zipSize || undefined,
       itemNames: this.deriveItemNames(job),
@@ -553,7 +559,11 @@ export class BatchDownloadService {
     });
   }
 
-  async getProgressForSse(taskId: string, res: any, req: any): Promise<void> {
+  async getProgressForSse(
+    taskId: string,
+    res: Response,
+    req: Request
+  ): Promise<void> {
     await this.sseManager.streamProgress(taskId, res, req, (userId: string) =>
       this.getProgress(taskId, userId)
     );

@@ -1298,16 +1298,8 @@ export class BillingService {
 
   // 对账：订单被 cron 标记 TIMEOUT/CLOSED 后收到回调，向网关确认是否已支付
   private async reconcileTerminatedOrder(
-    tx: any,
-    order: {
-      id: string;
-      status: string;
-      userId: string;
-      amount: number;
-      months: number | null;
-      gateway: string;
-      vipTier: { level: number; baseMonthlyPrice: number } | null;
-    },
+    tx: PrismaType.TransactionClient,
+    order: PrismaType.PaymentOrderGetPayload<{ include: { vipTier: true } }>,
     verified: WebhookVerifyResult
   ): Promise<void> {
     try {
@@ -1338,12 +1330,8 @@ export class BillingService {
   }
 
   private async activateMembershipForOrder(
-    tx: any,
-    order: {
-      userId: string;
-      months: number | null;
-      vipTier: { level: number; baseMonthlyPrice: number } | null;
-    }
+    tx: PrismaType.TransactionClient,
+    order: PrismaType.PaymentOrderGetPayload<{ include: { vipTier: true } }>
   ): Promise<void> {
     if (!order.vipTier) return;
     const durationDays = (order.months ?? 1) * MONTH_DAYS;

@@ -92,10 +92,11 @@ export class SseManager {
   }
 
   private resolveUserId(req: Request, res: Response): string | null {
-    const user = (req as any).user as { id?: string } | undefined;
+    // JWT strategy 将解码用户挂到 req.user（无全局 Express 类型增强，用精确 cast）
+    const user = (req as { user?: { id?: string } }).user;
     if (user?.id) return user.id;
 
-    const token = (req.query as any)?.token;
+    const token = req.query.token as string | undefined;
     if (token) {
       try {
         const decoded = verify(token, this.jwtSecret) as { id: string };

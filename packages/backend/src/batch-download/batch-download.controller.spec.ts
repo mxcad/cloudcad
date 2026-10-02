@@ -222,13 +222,13 @@ describe('BatchDownloadController', () => {
   });
 
   describe('cancelTask', () => {
-    it('should cancel a task and return success message', async () => {
+    it('should cancel a task (void; ResponseInterceptor 统一包装，不手包 message)', async () => {
       mockService.cancelTask.mockResolvedValue(undefined);
 
       const result = await controller.cancelTask('task-1', mockRequest());
 
       expect(mockService.cancelTask).toHaveBeenCalledWith('task-1', 'user-1');
-      expect(result).toEqual({ message: 'Task cancelled' });
+      expect(result).toBeUndefined();
     });
   });
 

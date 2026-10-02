@@ -38,7 +38,7 @@ import {
   CadDownloadFormat,
   type DownloadNodeQueryDto,
 } from '../dto/download-node.dto';
-import { NodeType } from '@cloudcad/db';
+import { FileSystemNode, NodeType } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
 import {
   findThumbnailSync,
@@ -84,7 +84,7 @@ export class DownloadController {
   ) {
     const userId = (req.user as { id?: string })?.id;
 
-    let node: any;
+    let node: FileSystemNode;
     try {
       node = await this.fileTreeService.getNodeIgnoreDeleted(nodeId);
     } catch {
@@ -188,7 +188,7 @@ export class DownloadController {
     });
   }
 
-  private sendDefaultFallback(res: Response, req?: ExpressRequest, node?: any) {
+  private sendDefaultFallback(res: Response, req?: ExpressRequest, node?: FileSystemNode) {
     const ext = node?.extension || path.extname(node?.name || '').toLowerCase();
     const defaultFile = getDefaultThumbnailFileName(ext);
     const defaultPath = path.join(this.DEFAULT_THUMBNAILS_DIR, defaultFile);

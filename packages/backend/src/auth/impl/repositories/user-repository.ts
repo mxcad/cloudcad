@@ -3,6 +3,41 @@ import { DatabaseService } from '../../../database/database.service';
 import { PiiCryptoService } from '../../../common/pii/pii-crypto.service';
 import type { IUserRepository, UserRecord } from '@cloudcad/contracts';
 
+/**
+ * Prisma User 查询结果（含 role 关系 select 子集）的输入形状——toUserRecord 的唯一输入类型。
+ * 字段与本类各查询的 include/select 对齐；比 any 精确，让 raw→UserRecord 映射受类型检查。
+ */
+interface RawUserWithRole {
+  id: string;
+  email: string | null;
+  emailEnc: string | null;
+  username: string;
+  nickname: string | null;
+  avatar: string | null;
+  password: string | null;
+  phone: string | null;
+  phoneEnc: string | null;
+  phoneVerified: boolean;
+  emailVerified: boolean;
+  emailVerifiedAt: Date | null;
+  phoneVerifiedAt: Date | null;
+  wechatId: string | null;
+  provider: string | null;
+  roleId: string | null;
+  status: string;
+  deletedAt: Date | null;
+  deactivatedBy: string | null;
+  totpEnabled: boolean;
+  passwordChangedAt: Date | null;
+  role: {
+    id: string;
+    name: string;
+    description: string | null;
+    isSystem: boolean;
+    permissions: Array<{ permission: string }>;
+  } | null;
+}
+
 @Injectable()
 export class UserRepository implements IUserRepository {
   private readonly logger = new Logger(UserRepository.name);
@@ -32,7 +67,7 @@ export class UserRepository implements IUserRepository {
     return plaintext ?? null;
   }
 
-  private toUserRecord(raw: any): UserRecord {
+  private toUserRecord(raw: RawUserWithRole | null): UserRecord {
     if (!raw) return null;
     return {
       id: raw.id,
@@ -59,7 +94,7 @@ export class UserRepository implements IUserRepository {
         name: raw.role.name,
         description: raw.role.description ?? null,
         isSystem: raw.role.isSystem,
-        permissions: raw.role.permissions?.map((p: any) => ({ permission: p.permission })) ?? [],
+        permissions: raw.role.permissions?.map((p) => ({ permission: p.permission })) ?? [],
       } : null,
     };
   }
@@ -71,7 +106,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async findByEmail(email: string): Promise<UserRecord | null> {
@@ -85,7 +120,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async findByUsername(username: string): Promise<UserRecord | null> {
@@ -95,7 +130,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async findByPhone(phone: string): Promise<UserRecord | null> {
@@ -109,7 +144,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async findByWechatId(wechatId: string): Promise<UserRecord | null> {
@@ -119,7 +154,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async findLoginUserIncludingDeleted(account: string): Promise<UserRecord | null> {
@@ -140,7 +175,7 @@ export class UserRepository implements IUserRepository {
         membership: { select: { tierLevel: true, expiresAt: true } },
       },
     });
-    const record = this.toUserRecord(raw as any);
+    const record = this.toUserRecord(raw);
     if (!record) return null;
     return {
       ...record,
@@ -156,7 +191,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async findByWechatIdIncludingDeleted(wechatId: string): Promise<UserRecord | null> {
@@ -166,7 +201,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async create(data: Record<string, unknown>): Promise<UserRecord> {
@@ -181,7 +216,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async update(id: string, data: Record<string, unknown>): Promise<UserRecord> {
@@ -197,7 +232,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async markPhoneVerified(id: string, phone: string): Promise<UserRecord> {
@@ -213,7 +248,7 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 
   async markEmailVerified(id: string, email: string): Promise<UserRecord> {
@@ -229,6 +264,6 @@ export class UserRepository implements IUserRepository {
         role: { select: { id: true, name: true, description: true, isSystem: true, permissions: { select: { permission: true } } } },
       },
     });
-    return this.toUserRecord(raw as any);
+    return this.toUserRecord(raw);
   }
 }

@@ -350,6 +350,7 @@ ip_whitelist:
 
 admin_auth:
   ip_not_allowed: "현재 IP가 관리자 화이트리스트에 없어 로그인이 거부되었습니다"
+  ip_blocked: "현재 IP가 블랙리스트에 있어 로그인이 거부되었습니다"
 
 mfa:
   required: "이중 인증 동적 코드를 입력해 주세요"

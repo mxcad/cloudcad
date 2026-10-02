@@ -13,6 +13,7 @@ import {
   CleanupMetricsService,
 } from '../metrics/cleanup-metrics.service';
 import { isInUploadsCache } from './upload-cache.util';
+import type { IndividualItemManifest } from './job-context';
 import { isConversionCacheEntry } from '../file-system/file-download/file-download-export.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -302,7 +303,8 @@ export class BatchDownloadCleanupService {
     let cleanedFiles = 0;
     let failedCount = 0;
     for (const job of expiredIndividualJobs) {
-      const manifest = (job.itemsManifest as any[]) || [];
+      const manifest =
+        (job.itemsManifest as unknown as IndividualItemManifest[] | null) || [];
       for (const item of manifest) {
         // uploads/ 下产物是内容寻址共享缓存，由 mtime 缓存清理统一回收；
         // 任务级 unlink 会把共享缓存条目提前删除（历史行可能仍存 temp:true）

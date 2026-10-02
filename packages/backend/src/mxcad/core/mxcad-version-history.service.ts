@@ -511,7 +511,7 @@ export class MxcadVersionHistoryService {
 
     // bin→mxweb 与 mxweb→bin（保存）一致按用户限频：仅在真正执行转换时占位，
     // 缓存命中（含等待同一转换的其他请求）直接返回不占位；游客（分享访问）无 userId 不限制。
-    const userId = (req as any).user?.id as string | undefined;
+    const userId = (req as Request & { user?: { id?: string } }).user?.id;
     let quotaReserved = false;
     if (userId) {
       try {

@@ -246,7 +246,6 @@ export class BatchDownloadJob {
       }
 
       ctx.addEmptyDirectories();
-      await ctx.cleanupConvertedFiles();
 
       // 全部失败（errorCount > 0 且 completedCount === errorCount）→ FAILED，
       // 不产出 ZIP；error.json 仅随部分失败任务的 ZIP 打包
@@ -257,7 +256,16 @@ export class BatchDownloadJob {
 
       ctx.addErrorLog();
 
-      const archive = await ctx.createArchive();
+      // archiver 惰性读 createReadStream：清理必须在 ZIP 落盘之后，
+      // 否则非 uploads/ 的转换产物（temp=true，落在节点存储目录）在流读取前
+      // 被 unlink → ENOENT → archive error → 整个 job FAILED。
+      // finally 保证打包失败/抛错时同样清理，不泄漏 temp 产物。
+      let archive: { zipPath: string; zipSize: number } | null = null;
+      try {
+        archive = await ctx.createArchive();
+      } finally {
+        await ctx.cleanupConvertedFiles();
+      }
       if (archive) {
         const accepted = await ctx.finalizeCompleted(
           archive.zipPath,

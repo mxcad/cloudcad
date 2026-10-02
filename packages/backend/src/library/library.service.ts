@@ -16,7 +16,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { NodeType } from '@cloudcad/db';
+import { FileSystemNode, NodeType } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
@@ -36,6 +36,7 @@ import { IMxcadSaveService } from '../mxcad/interfaces/mxcad-save.interface';
 import { MXCAD_SAVE_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
 import { Inject } from '@nestjs/common';
 import { Response } from 'express';
+import { AuthenticatedRequest } from '../common/types/request.types';
 import * as path from 'path';
 import * as fs from 'fs';
 import { createHash } from 'crypto';
@@ -216,7 +217,7 @@ export class LibraryService {
   async saveLibraryAs(
     file: Express.Multer.File,
     dto: SaveLibraryAsDto,
-    req: any,
+    req: AuthenticatedRequest,
     libraryKey: LibraryType
   ) {
     try {
@@ -319,8 +320,8 @@ export class LibraryService {
     return true;
   }
 
-  async serveLibraryThumbnail(nodeId: string, res: Response, req: any) {
-    let node: any;
+  async serveLibraryThumbnail(nodeId: string, res: Response, req: AuthenticatedRequest) {
+    let node: FileSystemNode;
     try {
       node = await this.fileTreeService.getNodeIgnoreDeleted(nodeId);
     } catch {

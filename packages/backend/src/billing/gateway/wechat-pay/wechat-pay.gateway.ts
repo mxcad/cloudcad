@@ -364,8 +364,10 @@ export class WechatPayGateway implements PaymentGateway {
           const raw = Buffer.concat(chunks).toString('utf-8');
           if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
             this.logger.warn(`wechat http error: status=${res.statusCode} body=${raw}`);
-            const err = new Error(`HTTP ${res.statusCode}`);
-            (err as any).statusCode = res.statusCode;
+            const err: Error & { statusCode?: number } = new Error(
+              `HTTP ${res.statusCode}`
+            );
+            err.statusCode = res.statusCode;
             reject(err);
             return;
           }
@@ -378,8 +380,8 @@ export class WechatPayGateway implements PaymentGateway {
       });
       req.on('timeout', () => {
         req.destroy();
-        const err = new Error('request timeout');
-        (err as any).code = 'ETIMEDOUT';
+        const err: Error & { code?: string } = new Error('request timeout');
+        err.code = 'ETIMEDOUT';
         reject(err);
       });
 

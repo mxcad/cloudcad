@@ -267,7 +267,10 @@ export class SearchService implements ISearchService {
       total,
       params.page,
       limit,
-      (node) => ({ childrenCount: (node._count as any)?.children, memberCount: (node._count as any)?.projectMembers }),
+      (node) => {
+        const count = node._count as { children?: number; projectMembers?: number } | undefined;
+        return { childrenCount: count?.children, memberCount: count?.projectMembers };
+      },
     );
   }
 

@@ -219,7 +219,7 @@ export class BatchDownloadController {
   ) {
     const userId = this.getUserId(req);
     await this.batchDownloadService.cancelTask(taskId, userId);
-    return { message: 'Task cancelled' };
+    return;
   }
 
   @Post(':taskId/retry')
@@ -231,7 +231,7 @@ export class BatchDownloadController {
   ) {
     const userId = this.getUserId(req);
     const result = await this.batchDownloadService.retryTask(taskId, userId);
-    return { ...result, message: 'Task retry started' };
+    return result;
   }
 
   @Post(':taskId/retry-failed')
@@ -248,7 +248,7 @@ export class BatchDownloadController {
       taskId,
       userId
     );
-    return { ...result, message: 'Failed items retry started' };
+    return result;
   }
 
   @Get('tasks')

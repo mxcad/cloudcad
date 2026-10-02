@@ -350,6 +350,7 @@ ip_whitelist:
 
 admin_auth:
   ip_not_allowed: "Your IP is not in the admin whitelist; login is forbidden"
+  ip_blocked: "Your IP is blacklisted; login is forbidden"
 
 mfa:
   required: "Two-factor authentication code is required"
