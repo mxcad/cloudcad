@@ -406,10 +406,14 @@ export class MxcadFileAccessController {
       const pathParts = normalizedFilename.split('/');
       const nodeId = pathParts[0];
       const node = await this.fileSystemNodeService.findFileByIdNotDeleted(nodeId, { id: true, name: true, ownerId: true, parentId: true, nodeType: true });
-      if (node) {
-        const permission = await this.externalRefFacade.checkFileAccessPermission(node.id, userId, userId);
-        if (!permission) return res.status(401).json({ code: -1, message: 'Unauthorized' });
+      // fail-closed：节点查不到/已删除/非 FILE 一律 404。此前 node 查不到会跳过
+      // 权限检查直接落存储，任何登录用户知道已删文件的 nodeId 仍可读取磁盘文件
+      // （IDOR，与 folder-expander 同类）。合法外参文件必有存活 FILE 节点，不受影响。
+      if (!node) {
+        return res.status(404).json({ code: -1, message: I18nContext.current()?.t('error.file.not_found') ?? '文件不存在' });
       }
+      const permission = await this.externalRefFacade.checkFileAccessPermission(node.id, userId, userId);
+      if (!permission) return res.status(401).json({ code: -1, message: 'Unauthorized' });
       const ext = path.extname(normalizedFilename).toLowerCase();
       const possiblePaths: string[] = [];
       if (ext === this.mxCadFileExt) possiblePaths.push(`mxcad/file/${normalizedFilename}`);

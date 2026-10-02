@@ -5,6 +5,8 @@ function createController(mocks: {
   permissionService?: any;
   fileSystemNodeService?: any;
   shareService?: any;
+  storageService?: any;
+  externalRefFacade?: any;
 }) {
   const configService = {
     get: jest.fn((key: string) => (key === 'filesDataPath' ? '/fake/filesData' : undefined)),
@@ -13,12 +15,18 @@ function createController(mocks: {
     mocks.fileHandler || { serveFile: jest.fn() },
     {} as any, // versionHistoryService
     configService as any,
-    {} as any, // storageService
+    mocks.storageService || { fileExists: jest.fn().mockResolvedValue(false), getFileStream: jest.fn(), getFileInfo: jest.fn() },
     mocks.permissionService || { getNodeAccessRole: jest.fn().mockResolvedValue('VIEWER') },
-    mocks.fileSystemNodeService || { findById: jest.fn().mockResolvedValue({ id: 'node-1' }) },
+    mocks.fileSystemNodeService || {
+      findById: jest.fn().mockResolvedValue({ id: 'node-1' }),
+      findFileByIdNotDeleted: jest.fn().mockResolvedValue(null),
+    },
     mocks.shareService || { validateShareFileAccess: jest.fn().mockResolvedValue(undefined) },
     {} as any, // conversionService
-    {} as any, // externalRefFacade
+    mocks.externalRefFacade || {
+      validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
+      checkFileAccessPermission: jest.fn().mockResolvedValue(true),
+    },
     {} as any, // restrictionEngine
   );
 }
@@ -117,6 +125,84 @@ describe('MxcadFileAccessController filesData 鉴权（HEAD/GET 同一出口）'
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(serveFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getFile（file/*path 外参取数，handleFileRequest 鉴权）', () => {
+    it('节点查不到/已删除时 404 且不触碰存储——已删文件 IDOR 回归', async () => {
+      const fileExists = jest.fn().mockResolvedValue(true); // 磁盘上文件仍在
+      const getFileStream = jest.fn();
+      const findFileByIdNotDeleted = jest.fn().mockResolvedValue(null); // 节点已删
+      const controller = createController({
+        storageService: { fileExists, getFileStream, getFileInfo: jest.fn() },
+        fileSystemNodeService: { findFileByIdNotDeleted },
+        externalRefFacade: {
+          validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
+          checkFileAccessPermission: jest.fn().mockResolvedValue(true),
+        },
+      });
+      const res = makeRes();
+      const req: any = { headers: {}, query: {}, session: undefined };
+
+      await controller.getFile(res, req, 'node-deleted/a.mxweb');
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(getFileStream).not.toHaveBeenCalled();
+      // 节点查不到时不应再做权限判定（直接 fail-closed）
+      expect(
+        (controller as any).externalRefFacade.checkFileAccessPermission
+      ).not.toHaveBeenCalled();
+    });
+
+    it('节点存在但无访问权限时 401', async () => {
+      const getFileStream = jest.fn();
+      const controller = createController({
+        storageService: {
+          fileExists: jest.fn().mockResolvedValue(true),
+          getFileStream,
+          getFileInfo: jest.fn(),
+        },
+        fileSystemNodeService: {
+          findFileByIdNotDeleted: jest.fn().mockResolvedValue({ id: 'node-1' }),
+        },
+        externalRefFacade: {
+          validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
+          checkFileAccessPermission: jest.fn().mockResolvedValue(false),
+        },
+      });
+      const res = makeRes();
+      const req: any = { headers: {}, query: {}, session: undefined };
+
+      await controller.getFile(res, req, 'node-1/a.mxweb');
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(getFileStream).not.toHaveBeenCalled();
+    });
+
+    it('节点存在且有权限且存储命中时正常取流', async () => {
+      const stream: any = { on: jest.fn().mockReturnThis(), pipe: jest.fn() };
+      const getFileStream = jest.fn().mockResolvedValue(stream);
+      const controller = createController({
+        storageService: {
+          fileExists: jest.fn().mockResolvedValue(true),
+          getFileStream,
+          getFileInfo: jest.fn().mockResolvedValue(null),
+        },
+        fileSystemNodeService: {
+          findFileByIdNotDeleted: jest.fn().mockResolvedValue({ id: 'node-1' }),
+        },
+        externalRefFacade: {
+          validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
+          checkFileAccessPermission: jest.fn().mockResolvedValue(true),
+        },
+      });
+      const res = makeRes();
+      const req: any = { headers: {}, query: {}, session: undefined };
+
+      await controller.getFile(res, req, 'node-1/a.mxweb');
+
+      expect(getFileStream).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
     });
   });
 });
