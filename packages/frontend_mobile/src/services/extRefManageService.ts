@@ -20,6 +20,7 @@ import {
   mxcadFileAccessControllerViewExternalRef,
 } from '../api-sdk';
 import { cachedApiUrl } from '../utils/apiConfig';
+import { publicFileAccessPath } from '../utils/mxwebUrl';
 import { triggerBlobDownload } from '../utils/download';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
 import {
@@ -136,7 +137,9 @@ export async function getExtRefImageUrl(
 ): Promise<string> {
   if (ctx.isPublic) {
     return cachedApiUrl(
-      `/public-file/access/${encodeURIComponent(ctx.identifier)}/${encodeURIComponent(name)}`
+      publicFileAccessPath(
+        `${encodeURIComponent(ctx.identifier)}/${encodeURIComponent(name)}`
+      )
     );
   }
   const result = await mxcadFileAccessControllerViewExternalRef({
@@ -150,7 +153,9 @@ export async function getExtRefImageUrl(
 export function getExtRefDrawingUrl(ctx: ExtRefContext, name: string): string {
   if (ctx.isPublic) {
     return cachedApiUrl(
-      `/public-file/access/${encodeURIComponent(ctx.identifier)}/${encodeURIComponent(name)}.mxweb`
+      publicFileAccessPath(
+        `${encodeURIComponent(ctx.identifier)}/${encodeURIComponent(name)}.mxweb`
+      )
     );
   }
   return cachedApiUrl(

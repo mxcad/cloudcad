@@ -3,6 +3,7 @@ import {
   publicFileControllerCheckExtReference,
 } from '../api-sdk';
 import { cachedApiUrl } from '../utils/apiConfig';
+import { publicFileAccessPath } from '../utils/mxwebUrl';
 
 export interface PublicPreloadingData {
   tz: boolean;
@@ -59,5 +60,5 @@ export async function checkPublicExtReference(
 }
 
 export function buildPublicMxwebUrl(hash: string): string {
-  return cachedApiUrl(`/public-file/access/${hash}.mxweb`);
+  return cachedApiUrl(publicFileAccessPath(`${hash}.mxweb`));
 }

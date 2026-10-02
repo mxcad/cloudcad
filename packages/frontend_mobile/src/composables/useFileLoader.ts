@@ -27,6 +27,7 @@ import {
 } from '../api-sdk';
 import type { FileSystemNodeDto } from '../api-sdk';
 import { t } from '@/languages';
+import { buildMxwebFileUrl, resolveCacheTimestamp } from '../utils/mxwebUrl';
 
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -122,9 +123,9 @@ export function useFileLoader() {
 
   /**
    * 构造 mxweb 文件访问 URL。
-   * 与 PC 端 CADEditorDirect.tsx L826-L854 对齐：
-   * - 当前版本：使用 updatedAt 时间戳作为 t 参数，用于缓存版本标识
-   * - 历史版本：使用 v 参数
+   * 协议知识走 utils/mxwebUrl 唯一出口（与 PC 端 buildMxwebFileUrl 同构）：
+   * - 当前版本：t= 缓存时间戳（updatedAt 缺失/非法回退 Date.now()，不再抛错）
+   * - 历史版本：v 参数
    */
   function buildFileUrl(
     file: FileSystemNodeDto,
@@ -135,22 +136,69 @@ export function useFileLoader() {
 
     if (version !== undefined) {
       // 历史版本 — 使用 v 参数，不设缓存时间戳（PC：setCacheTimestamp(undefined)）
-      const url = options?.libraryKey
-        ? `/api/v1/library/${options.libraryKey}/filesData/${file.path}?v=${version}`
-        : `/api/v1/mxcad/filesData/${file.path}?v=${version}${options?.shareToken ? `&shareToken=${options.shareToken}` : ''}`;
-      return { url, cacheTimestamp: undefined };
+      return {
+        url: buildMxwebFileUrl(file.path, {
+          libraryKey: options?.libraryKey,
+          version,
+        }),
+        cacheTimestamp: undefined,
+      };
     }
 
     // 当前版本 — 使用 updatedAt 时间戳作为缓存版本标识
-    if (!file.updatedAt) throw new Error(t('无法构造文件访问URL'));
-    const cacheTimestamp = new Date(file.updatedAt).getTime();
-    if (isNaN(cacheTimestamp)) throw new Error(t('文件更新时间无效'));
+    const cacheTimestamp = resolveCacheTimestamp(file.updatedAt);
+    return {
+      url: buildMxwebFileUrl(file.path, {
+        libraryKey: options?.libraryKey,
+        cacheTimestamp,
+        shareToken: options?.libraryKey ? undefined : options?.shareToken,
+      }),
+      cacheTimestamp,
+    };
+  }
 
-    const url = options?.libraryKey
-      ? `/api/v1/library/${options.libraryKey}/filesData/${file.path}?t=${cacheTimestamp}`
-      : `/api/v1/mxcad/filesData/${file.path}?t=${cacheTimestamp}${options?.shareToken ? `&shareToken=${options.shareToken}` : ''}`;
+  /**
+   * 打开失败 →（message, errorType）映射与落状态的唯一出口。原先 loadByNodeId /
+   * loadByHash 各持一份 if/else 链且已分叉；统一后共用同一判定。两处被对齐的
+   * 既有差异：loadByHash 的 deleted 分支从固定文案改为透出后端详情（对齐
+   * loadByNodeId）、converting 从分类器回落改为专用文案/type。
+   * kind 判定读 typed error 的 kind（errorKind 单一出口），不再用 message 反推。
+   */
+  function handleOpenError(e: unknown, shareToken?: string): boolean {
+    const kind = errorKind(e);
+    let message: string;
+    let errorType: ErrorType;
 
-    return { url, cacheTimestamp };
+    if (kind === 'unauthorized') {
+      message = t('请登录后访问此文件');
+      errorType = 'auth';
+    } else if (kind === 'not-found') {
+      // 分享源 404 用分享专属文案（对齐被删除的 useShareFileLoad）
+      message = t(
+        shareToken ? '分享链接不存在或已失效' : '文件不存在或已被删除'
+      );
+      errorType = 'not-found';
+    } else if (kind === 'deleted') {
+      message = errMsg(e, t('文件已被删除'));
+      errorType = 'not-found';
+    } else if (kind === 'converting') {
+      message = errMsg(e, t('文件尚未转换完成'));
+      errorType = 'converting';
+    } else if (kind === 'open-failed') {
+      message = errMsg(e, t('打开文件失败'));
+      errorType = 'open-failed';
+    } else {
+      const classified = classifyApiError(e);
+      message = classified.message;
+      errorType = classified.type;
+    }
+
+    error.value = message;
+    editorState.setError(message);
+    editorState.setErrorType(errorType);
+    editorState.setLoading(false);
+    loading.value = false;
+    return false;
   }
 
   /**
@@ -344,43 +392,7 @@ export function useFileLoader() {
         throw typedError('open-failed', t('打开文件失败'));
       }
     } catch (e: unknown) {
-      // 类别判定读 typed error 的 kind（errorKind 单一出口），不再用 message 字符串反推
-      const kind = errorKind(e);
-      let message: string;
-      let errorType: ErrorType;
-
-      if (kind === 'unauthorized') {
-        message = t('请登录后访问此文件');
-        errorType = 'auth';
-      } else if (kind === 'not-found') {
-        // 分享源 404 用分享专属文案（对齐被删除的 useShareFileLoad）
-        message = t(
-          options?.shareToken
-            ? '分享链接不存在或已失效'
-            : '文件不存在或已被删除'
-        );
-        errorType = 'not-found';
-      } else if (kind === 'deleted') {
-        message = errMsg(e, t('文件已被删除'));
-        errorType = 'not-found';
-      } else if (kind === 'converting') {
-        message = errMsg(e, t('文件尚未转换完成'));
-        errorType = 'converting';
-      } else if (kind === 'open-failed') {
-        message = errMsg(e, t('打开文件失败'));
-        errorType = 'open-failed';
-      } else {
-        const classified = classifyApiError(e);
-        message = classified.message;
-        errorType = classified.type;
-      }
-
-      error.value = message;
-      editorState.setError(message);
-      editorState.setErrorType(errorType);
-      editorState.setLoading(false);
-      loading.value = false;
-      return false;
+      return handleOpenError(e, options?.shareToken);
     }
   }
 
@@ -432,32 +444,7 @@ export function useFileLoader() {
         throw typedError('open-failed', t('打开文件失败'));
       }
     } catch (e: unknown) {
-      // 类别判定读 typed error 的 kind（errorKind 单一出口），不再用 message 字符串反推
-      const kind = errorKind(e);
-      let message: string;
-      let errorType: ErrorType;
-
-      if (kind === 'unauthorized') {
-        message = t('请登录后访问此文件');
-        errorType = 'auth';
-      } else if (kind === 'not-found' || kind === 'deleted') {
-        message = t('文件不存在或已被删除');
-        errorType = 'not-found';
-      } else if (kind === 'open-failed') {
-        message = errMsg(e, t('打开文件失败'));
-        errorType = 'open-failed';
-      } else {
-        const classified = classifyApiError(e);
-        message = classified.message;
-        errorType = classified.type;
-      }
-
-      error.value = message;
-      editorState.setError(message);
-      editorState.setErrorType(errorType);
-      editorState.setLoading(false);
-      loading.value = false;
-      return false;
+      return handleOpenError(e);
     }
   }
 

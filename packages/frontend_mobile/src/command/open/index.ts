@@ -2,6 +2,7 @@ import { openMxWeb } from '@/plugins/mxcad/openMxWeb';
 import { showFilePicker, FilePickerResult } from '@/composables/useNativeFilePicker';
 import { showToastOnce } from '@/utils/toast';
 import { cachedApiUrl } from '@/utils/apiConfig';
+import { publicFileAccessPath } from '@/utils/mxwebUrl';
 import { waitPublicConversion } from '@/services/conversionStream';
 import { checkPublicFileExternalRefs } from '@/composables/useFileLoader';
 import { useEditorState } from '@/composables/useEditorState';
@@ -82,7 +83,7 @@ async function openConvertedCad(
 
   editorState.setProgressStage('opening');
   const url = cachedApiUrl(
-    `/public-file/access/${param.hash}.${param.ext}.mxweb`
+    publicFileAccessPath(`${param.hash}.${param.ext}.mxweb`)
   );
   const opened = await openMxWeb(url, {
     fetchAttributes: noCache ? NO_CACHE_FETCH_ATTRIBUTES : undefined,

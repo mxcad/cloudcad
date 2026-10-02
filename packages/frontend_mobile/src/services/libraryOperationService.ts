@@ -23,6 +23,7 @@ import type { LibraryType } from '@/composables/useLibrary'
 import { t } from '@/languages'
 import { showLoadingToast, showSuccessToast, showFailToast, closeToast } from 'vant'
 import { triggerBlobDownload } from '@/utils/download'
+import { buildMxwebFileUrl, resolveCacheTimestamp } from '@/utils/mxwebUrl'
 
 export type LibraryDownloadFormat = 'mxweb' | 'pdf' | 'dwg' | 'dxf'
 
@@ -31,24 +32,18 @@ export interface BatchDeleteResult {
   failedCount: number
 }
 
-/**
- * 库文件直链的缓存破坏时间戳：取节点 updatedAt（服务端内容的稳定标识）。
- * 用 Date.now() 会让每次点击都生成新缓存键，同一文件重复插入永不命中缓存。
- */
-export function buildCacheTimestamp(updatedAt?: string | null): number {
-  if (!updatedAt) return Date.now()
-  const ms = new Date(updatedAt).getTime()
-  return Number.isNaN(ms) ? Date.now() : ms
-}
-
-/** 拼接库文件直链（filesData 为公开端点，?t= 用于绕过浏览器/CDN 缓存） */
+/** 拼接库文件直链（filesData 为公开端点，?t= 用于绕过浏览器/CDN 缓存）。
+ *  协议与缓存戳口径走 utils/mxwebUrl 唯一出口。 */
 export function buildLibraryFileUrl(
   libraryType: LibraryType,
   filePath: string,
   updatedAt?: string | null,
 ): string {
   if (!filePath) return ''
-  return `/api/v1/library/${libraryType}/filesData/${filePath}?t=${buildCacheTimestamp(updatedAt)}`
+  return buildMxwebFileUrl(filePath, {
+    libraryKey: libraryType,
+    cacheTimestamp: resolveCacheTimestamp(updatedAt),
+  })
 }
 
 /** 重命名库节点（PATCH /api/v1/library/{type}/nodes/{nodeId}） */
