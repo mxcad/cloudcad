@@ -37,7 +37,9 @@ export class ProjectPermissionStrategy implements OwnershipPermissionStrategy {
   ): Promise<void> {
     const projectId = node.projectId;
     if (!projectId) {
-      if (node.ownerId && node.ownerId !== userId) {
+      // fail-closed：ownerId 为 null（异常数据）同样拒绝，与 folder-expander 修复
+      // 方向一致——此前 `node.ownerId &&` 让 ownerId=null 的节点对任意用户放行
+      if (node.ownerId !== userId) {
         throw new ForbiddenException(
           I18nContext.current()?.t('error.auth.permission_denied') ??
             '您没有权限执行此操作'

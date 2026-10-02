@@ -41,10 +41,10 @@ describe('PersonalPermissionStrategy', () => {
   });
 
   describe('when ownerId 为空', () => {
-    it('放行（原 guard 语义）', async () => {
+    it('fail-closed 拒绝（IDOR 回归：ownerId=null 异常数据不再对任意用户放行）', async () => {
       await expect(
         strategy.assertCan('user-2', 'upload', node({ ownerId: null }))
-      ).resolves.toBeUndefined();
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

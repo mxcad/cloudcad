@@ -14,7 +14,9 @@ export class PersonalPermissionStrategy implements OwnershipPermissionStrategy {
     _action: MutationAction,
     node: OwnershipNode
   ): Promise<void> {
-    if (node.ownerId && node.ownerId !== userId) {
+    // fail-closed：ownerId 为 null（异常数据）同样拒绝——此前 `node.ownerId &&`
+    // 让 ownerId=null 的个人空间节点对任意用户放行（与 folder-expander 同类）
+    if (node.ownerId !== userId) {
       throw new ForbiddenException(
         I18nContext.current()?.t('error.file.no_personal_space_access') ??
           '您没有权限访问该个人空间'

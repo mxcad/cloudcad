@@ -122,10 +122,10 @@ describe('ProjectPermissionStrategy', () => {
   });
 
   describe('when 无 projectId', () => {
-    it('ownerId 为空时放行', async () => {
+    it('ownerId 为空时 fail-closed 拒绝（IDOR 回归）', async () => {
       await expect(
         strategy.assertCan('user-2', 'update', node({ projectId: null, ownerId: null }))
-      ).resolves.toBeUndefined();
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('ownerId 与 userId 相同且非根类型时放行', async () => {
