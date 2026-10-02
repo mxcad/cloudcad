@@ -21,7 +21,7 @@ import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
 import { PreloadingDataDto, PreloadingFileInfoDto } from '../mxcad/dto/preloading-data.dto';
 import {
   findArtifactByHash,
-  isArtifactReady,
+  findReadyArtifactByHash,
 } from '../mxcad/utils/conversion-artifact';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -65,8 +65,8 @@ export class PublicFileService {
    */
   async findMxwebFile(hash: string): Promise<string | null> {
     const uploadPath = this.uploadService.getUploadPath();
-    const mxwebFile = findArtifactByHash(uploadPath, hash);
-    if (mxwebFile && isArtifactReady(path.join(uploadPath, mxwebFile))) {
+    const mxwebFile = findReadyArtifactByHash(uploadPath, hash);
+    if (mxwebFile) {
       return path.join(uploadPath, mxwebFile);
     }
 
@@ -333,7 +333,10 @@ export class PublicFileService {
     const uploadPath = this.uploadService.getUploadPath();
 
     try {
-      // 查找 uploads 目录中以 hash 开头的 mxweb 文件
+      // 查找 uploads 目录中以 hash 开头的 mxweb 文件。
+      // 刻意用 findArtifactByHash（不要求就位）而非 findReadyArtifactByHash：
+      // 0 字节的 mxweb 仍可能配着有效的 _preloading.json，就位判据由下面
+      // 的 json 存在性检查承担。
       const mxwebFile = findArtifactByHash(uploadPath, hash);
 
       if (mxwebFile) {

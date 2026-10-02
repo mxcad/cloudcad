@@ -93,6 +93,9 @@ export function cachedArtifactReady(
  *
  * 匹配约定与精确命名同源：产物名为 `<hash>.<源扩展名><产物扩展名>`，故只认
  * `<hash>` 前缀 + `<产物扩展名>` 后缀。目录不存在或无匹配返回 null。
+ *
+ * **注意：只认「有这个名字」，不保证产物非空**——引擎可能刚建句柄就失败留下
+ * 0 字节文件。需要就位判据的调用方用 `findReadyArtifactByHash`。
  */
 export function findArtifactByHash(
   uploadDir: string,
@@ -110,12 +113,26 @@ export function findArtifactByHash(
   );
 }
 
+/**
+ * 按 hash 前缀查找**已就位**的产物文件名；未就位（无匹配或 0 字节）返回 null。
+ *
+ * 「扫描形态且调用方还需要文件名」的组合此前在 3 处手写为
+ * `findArtifactByHash(...) + isArtifactReady(...)`，就位判据被复制进了调用方。
+ */
+export function findReadyArtifactByHash(
+  uploadDir: string,
+  fileHash: string,
+  convertedExt: string = '.mxweb'
+): string | null {
+  const name = findArtifactByHash(uploadDir, fileHash, convertedExt);
+  return name && isArtifactReady(path.join(uploadDir, name)) ? name : null;
+}
+
 /** 按 hash 前缀判定产物是否就位（扫描 + 非空判据）。 */
 export function isArtifactReadyByHash(
   uploadDir: string,
   fileHash: string,
   convertedExt: string = '.mxweb'
 ): boolean {
-  const name = findArtifactByHash(uploadDir, fileHash, convertedExt);
-  return name ? isArtifactReady(path.join(uploadDir, name)) : false;
+  return findReadyArtifactByHash(uploadDir, fileHash, convertedExt) !== null;
 }

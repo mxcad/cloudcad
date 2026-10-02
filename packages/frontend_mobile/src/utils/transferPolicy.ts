@@ -7,19 +7,20 @@
  *   - 出向：源为项目 → 查 transferOutTo{目标域}
  *   - 入向：目标为项目 → 查 transferInFrom{源域}
  *   - 设置缺失（null）→ 保守拒绝（与 PC crossProjectPaste 语义一致）
- * 本文件只做入参映射（TransferRoot → {id, domain}）+ 枚举→本端 i18n 源串映射
- * （reasonKey/reasonParams 供 UI 展示）。后端仍是最终裁决（权限/配额/策略）。
+ * 本文件只做枚举→本端 i18n 源串映射（reasonKey/reasonParams 供 UI 展示）。
+ * 后端仍是最终裁决（权限/配额/策略）。
  *
  * 命名刻意与 platform 区分：platform 的 `TransferVerdict` 返回 reason 枚举、
  * 本文件的 `LocalizedTransferVerdict` 返回 i18n 源串——两者是不同契约，
  * 同名会让 platform 侧改动在移动端静默漂移。`TransferSettings`/`TransferDomain`
- * 直接复用 platform 定义（不再本地重声明一份）。
+ * /`TransferRootRef` 直接复用 platform 定义（不再本地重声明一份）。
  */
 import { projectControllerGetProject } from '@cloudcad/api-sdk/sdk.gen'
 import {
   evaluateCrossProjectTransfer as platformEvaluateCrossProjectTransfer,
   type TransferBlockReason,
   type TransferDomain,
+  type TransferRootRef,
   type TransferSettings,
 } from '@cloudcad/platform'
 
@@ -50,19 +51,20 @@ const REASON_TEXT: Record<TransferBlockReason, { text: string; action?: boolean 
 
 /**
  * 转移预判入口。判定本体在 @cloudcad/platform（6 域矩阵 + 库-move 预判，与 PC 共用），
- * 这里只做入参映射 + 枚举→本端 i18n 源串映射。
+ * 这里只做枚举→本端 i18n 源串映射。入参只要 `{ id, domain }`——选择器列表项
+ * （TransferRoot）多带的 name 是展示用的，预判不读，故不要求调用方提供。
  */
 export function precheckTransfer(
-  source: TransferRoot,
-  target: TransferRoot,
+  source: TransferRootRef,
+  target: TransferRootRef,
   operation: 'move' | 'copy',
   sourceSettings: TransferSettings | null,
   targetSettings: TransferSettings | null,
 ): LocalizedTransferVerdict {
   const verdict = platformEvaluateCrossProjectTransfer({
     operation,
-    source: { id: source.id, domain: source.domain },
-    target: { id: target.id, domain: target.domain },
+    source,
+    target,
     sourceSettings: sourceSettings ?? null,
     targetSettings: targetSettings ?? null,
   })
