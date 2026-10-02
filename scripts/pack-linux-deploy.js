@@ -370,6 +370,8 @@ ${PRODUCT_NAME} Linux 部署包打包入口
     2. 在容器内执行: node scripts/extract-linux-runtime.js && node scripts/pack-offline.js --deploy --linux
     3. 输出: release/cloudcad-deploy-{VERSION}-{DATE}-{OS}-{ARCH}.tar.gz
     例: cloudcad-deploy-1.0.0-20260618-ubuntu22-x86_64.tar.gz
+    （Linux 打包机也可免 Docker 本机直打: pnpm pack:offline:linux 或 bash scripts/pack-linux-local.sh，
+      生产依赖 store 首次联网自动创建/补齐；Windows 机器只能走上面的 Docker 容器通道）
 
 验证部署包（独立脚本）：
   node scripts/verify-linux-deploy.js            验证最新包

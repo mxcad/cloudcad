@@ -526,9 +526,9 @@ pnpm deploy:reset     # 删除所有数据
 ### 离线打包
 
 ```powershell
-pnpm pack:offline:win     # Windows 离线包
-pnpm pack:offline:linux   # Linux 离线包
-pnpm pack:offline:all     # 所有平台
+pnpm pack:offline:win     # Windows 离线包（Windows 打包机本机直打）
+pnpm pack:offline:linux   # Linux 离线包（Linux 打包机本机直打；Windows 机器走 pnpm pack:linux-deploy Docker 通道）
+pnpm pack:offline:all     # 不支持：两平台 store 平台强相关，须在各自打包机分别打包
 ```
 
 ---

@@ -183,4 +183,7 @@ RUN if [ "${USE_SYSTEM_LIB}" = "true" ]; then \
 # 默认命令：提取运行时 + 打包（部署包模式）
 # 升级包模式（PACK_MODE=upgrade）：跳过运行时提取（升级包不含 runtime 二进制），
 # 直接使用镜像层缓存的 .pnpm-store-deploy 做增量提取
-CMD ["sh", "-c", "if [ \"${PACK_MODE}\" = \"upgrade\" ]; then node scripts/pack-offline.js --upgrade --linux --variant ${VARIANT:-oss}; else node scripts/extract-linux-runtime.js --output runtime/linux && mkdir -p runtime/linux/mxcad && cp -r -f /opt/mxcad-runtime/. runtime/linux/mxcad/ && node scripts/pack-offline.js --deploy --linux --variant ${VARIANT:-oss}; fi"]
+# PACK_IN_CONTAINER=1：告知 pack-offline.js 处于容器内——store 由本 Dockerfile 构建期
+# 一次性装好（单一事实源），脚本只校验不安装；原生打包机（无此变量）允许联网创建/补齐
+# store，见 pack-offline.js 的 IN_CONTAINER 分流
+CMD ["sh", "-c", "export PACK_IN_CONTAINER=1; if [ \"${PACK_MODE}\" = \"upgrade\" ]; then node scripts/pack-offline.js --upgrade --linux --variant ${VARIANT:-oss}; else node scripts/extract-linux-runtime.js --output runtime/linux && mkdir -p runtime/linux/mxcad && cp -r -f /opt/mxcad-runtime/. runtime/linux/mxcad/ && node scripts/pack-offline.js --deploy --linux --variant ${VARIANT:-oss}; fi"]

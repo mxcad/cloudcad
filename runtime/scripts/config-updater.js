@@ -744,6 +744,21 @@ function mergeExampleIntoEnv(envContent, exampleContent) {
 }
 
 /**
+ * .env 值转义（唯一转义约定，与 parseEnvFile/parseEnvFileSimple 的剥引号逻辑配对）：
+ * 含 shell 敏感字符（#、空白、$、反引号、!、&、|、;、<、>）的值必须加双引号——
+ * 否则 dotenv 把 # 当行内注释：以 # 开头的口令解析为空值（后端首次启动创建
+ * 管理员失败、PM2 反复重启），# 在中间的口令被静默截断（用户拿到的口令 ≠ 实际口令）。
+ * 所有写 .env 的路径（updateEnvFile、setup-offline fillEmptySecrets、config-service
+ * updateEnvFile）必须走本函数，不得裸写值。
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeEnvValue(value) {
+  const s = String(value);
+  return /[#\s$`!&|;<>]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s;
+}
+
+/**
  * 更新 .env 文件（增强版）
  *
  * 对比原版 cli.js updateEnvFile() 的增强：
@@ -774,9 +789,7 @@ function updateEnvFile(filePath, updates, examplePath) {
 
   for (const [key, newValue] of Object.entries(updates)) {
     const idx = keyIndex.get(key);
-    const escapedValue = /[#\s$`!&|;<>]/.test(String(newValue))
-      ? `"${String(newValue).replace(/"/g, '\\"')}"`
-      : String(newValue);
+    const escapedValue = escapeEnvValue(newValue);
 
     if (idx !== undefined) {
       // 更新已有 KEY
@@ -846,6 +859,7 @@ module.exports = {
   serializeBlocks,
   mergeExampleIntoEnv,
   updateEnvFile,
+  escapeEnvValue,
 
   // 包装函数
   updateFrontendConfigsWrapper,

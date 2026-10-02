@@ -25,6 +25,9 @@ const { execSync, spawn } = require('child_process');
 const { PRODUCT_NAME } = require('./lib/branding');
 const { brandBox } = require('./lib/logger');
 const { OPS_ENTRY } = require('./lib/context');
+// .env 值转义唯一出口（config-updater）：生成的口令含 #/$/! 等字符，
+// 裸写会被 dotenv 当注释截断，见 escapeEnvValue 注释
+const { escapeEnvValue } = require('./config-updater');
 
 // ==================== 平台配置 ====================
 
@@ -815,17 +818,24 @@ function fillEmptySecrets(envFile) {
   for (const key of secrets) {
     const regex = new RegExp(`^${key}=[ \\t]*$`, 'm');
     if (regex.test(content)) {
-      content = content.replace(regex, `${key}=${generateSecret()}`);
+      // escapeEnvValue：hex 密钥不含敏感字符原样写入，含敏感字符则加引号
+      content = content.replace(
+        regex,
+        `${key}=${escapeEnvValue(generateSecret())}`
+      );
       log(`  ✓ 自动生成 ${key}`);
       changed = true;
     }
   }
   // #416 等保 8.1.4.1：INITIAL_ADMIN_PASSWORD 必填无缺省——首次部署生成符合策略的强随机口令
+  // 强随机口令必含 !@#$%^&* 等特殊字符，必须走 escapeEnvValue 加引号：
+  // 裸写时 dotenv 把 # 当行内注释，以 # 开头的口令解析为空值 → 后端首次启动
+  // 创建管理员失败、PM2 反复重启；# 在中间的口令被静默截断（用户拿到的 ≠ 实际）
   const adminPasswordRegex = /^INITIAL_ADMIN_PASSWORD=[ \t]*$/m;
   if (adminPasswordRegex.test(content)) {
     content = content.replace(
       adminPasswordRegex,
-      `INITIAL_ADMIN_PASSWORD=${generateStrongPassword()}`
+      `INITIAL_ADMIN_PASSWORD=${escapeEnvValue(generateStrongPassword())}`
     );
     log('  ✓ 自动生成 INITIAL_ADMIN_PASSWORD（强随机口令，请妥善保存）');
     changed = true;

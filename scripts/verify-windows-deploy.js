@@ -134,9 +134,17 @@ async function main() {
 
   // 1. 构建验证镜像
   log('[1/2] 构建 Windows 验证镜像...');
-  runCommand(
-    `docker build -t ${VERIFY_IMAGE_NAME} -f "${dockerfilePath}" --build-arg PACKAGE=${packageName} --build-arg BASE_IMAGE=${BASE_IMAGE} "${PROJECT_ROOT}"`
-  );
+  // 同 Linux 验证：根 .dockerignore 排除 /release，context 须为仅含部署包的 temp 目录（硬链接）
+  const ctxDir = path.join(PROJECT_ROOT, 'temp', `verify-ctx-${process.pid}`);
+  try {
+    fs.mkdirSync(path.join(ctxDir, 'release'), { recursive: true });
+    fs.linkSync(packageFile, path.join(ctxDir, 'release', packageName));
+    runCommand(
+      `docker build -t ${VERIFY_IMAGE_NAME} -f "${dockerfilePath}" --build-arg PACKAGE=${packageName} --build-arg BASE_IMAGE=${BASE_IMAGE} "${ctxDir}"`
+    );
+  } finally {
+    fs.rmSync(ctxDir, { recursive: true, force: true });
+  }
   log('✓ 验证镜像构建完成');
 
   // 2. 断网验证

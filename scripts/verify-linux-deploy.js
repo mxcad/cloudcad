@@ -135,8 +135,18 @@ async function buildVerifyImage(packageFile, os = 'ubuntu22') {
   }
   
   log(`基础镜像: ${baseImage}`);
-  await runCommand(`docker build -t ${imageName} -f "${dockerfilePath}" --build-arg PACKAGE=${packageName} --build-arg BASE_IMAGE=${baseImage} "${PROJECT_ROOT}"`);
-  
+  // 根 .dockerignore 排除 /release（防大包拖慢 pack 镜像 context），以 PROJECT_ROOT
+  // 为 context 构建验证镜像时 COPY release/${PACKAGE} 必然 not found。
+  // 改用最小 context：仅含部署包的 temp 目录（硬链接零拷贝，构建后清理）。
+  const ctxDir = path.join(PROJECT_ROOT, 'temp', `verify-ctx-${process.pid}`);
+  try {
+    fs.mkdirSync(path.join(ctxDir, 'release'), { recursive: true });
+    fs.linkSync(packageFile, path.join(ctxDir, 'release', packageName));
+    await runCommand(`docker build -t ${imageName} -f "${dockerfilePath}" --build-arg PACKAGE=${packageName} --build-arg BASE_IMAGE=${baseImage} "${ctxDir}"`);
+  } finally {
+    fs.rmSync(ctxDir, { recursive: true, force: true });
+  }
+
   log('✓ 验证镜像构建完成');
   return imageName;
 }

@@ -951,19 +951,19 @@ async function step7_FinalVerification() {
   log('info', 'PM2 服务状态:');
   runPm2(['status']);
 
-  // 检查日志是否有错误
-  console.log('');
-  log('info', '检查日志错误...');
-
-  const errorKeywords = [
-    'Error:',
-    'error',
-    'ERROR',
-    'Exception',
-    'failed',
-    'Failed',
-    'FAILED',
-  ];
+  // 检查日志是否有错误（行级匹配，不是整文件子串）：
+  // 旧逻辑对整文件 includes('failed')，RouterExplorer 启动期路由注册日志里的
+  // 路由名（如 /batch-download/:taskId/retry-failed）会误报导致验证恒失败。
+  // 真实错误有明确标记：Nest console 的 ERROR 级别、Error:/Exception 异常前缀
+  // （Prisma/未捕获异常/堆栈）、PG 的 FATAL。LOG/WARN 级别（路由注册、健康检查、
+  // 可选服务未安装等）不算错误。
+  const ERROR_LINE_RE = /\bERROR\b|Error:|Exception|FATAL/;
+  // 良性行（启动/停止期瞬态，非真实错误）：
+  // - PG 在数据库创建前的探测（"database ... does not exist"）——部署随后会建库并
+  //   跑迁移，若真建库失败，后端端口健康检查（依赖连库）早已失败，此处不重复判
+  // - 停止服务时 PG 主动断连（"terminating connection due to administrator command"）
+  const HARMLESS_LINE_RE =
+    /FATAL:\s+database .* does not exist|FATAL:\s+terminating connection due to administrator command/;
   const logFiles = fs.existsSync(LOGS_DIR) ? fs.readdirSync(LOGS_DIR) : [];
   let hasErrors = false;
 
@@ -972,15 +972,19 @@ async function step7_FinalVerification() {
       const logPath = path.join(LOGS_DIR, logFile);
       const content = fs.readFileSync(logPath, 'utf8');
 
-      for (const keyword of errorKeywords) {
-        if (content.includes(keyword)) {
-          log('warn', `${logFile} 包含错误关键词: ${keyword}`);
-          hasErrors = true;
-          // 输出最后 20 行
-          const lines = content.split('\n').slice(-20).join('\n');
-          console.log(lines);
-          break;
-        }
+      const badLines = content
+        .split('\n')
+        .filter(
+          (line) => ERROR_LINE_RE.test(line) && !HARMLESS_LINE_RE.test(line)
+        );
+      if (badLines.length > 0) {
+        log(
+          'warn',
+          `${logFile} 含 ${badLines.length} 行错误: ${badLines[0].trim().slice(0, 200)}`
+        );
+        hasErrors = true;
+        // 输出命中的前 10 行（不是最后 20 行——命中行可能在文件任意位置）
+        badLines.slice(0, 10).forEach((l) => console.log(l));
       }
     }
   }

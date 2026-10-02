@@ -58,6 +58,14 @@ const DATE = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 // 品牌单一事实源（runtime/scripts/lib/branding.js）
 const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 
+// 容器内打包标记：由 Dockerfile.linux-deploy 的 CMD 设置（export PACK_IN_CONTAINER=1）。
+// 分流原则：
+//   - 容器内：store 由 Dockerfile 构建期一次性装好（单一事实源），本脚本只校验不安装；
+//   - 原生打包机（Windows / Linux 本机直打）：允许首次联网创建 store、缺包联网补齐。
+// 注意：不能用 os.platform() 判断——原生 Linux 打包机同样是非 win32，
+// 旧逻辑把「非 win32」当「容器」，导致 Linux 本机直打无 store 自举通道、误报 Docker 缺失。
+const IN_CONTAINER = process.env.PACK_IN_CONTAINER === '1';
+
 // ==================== 公共工具函数 ====================
 
 // ==================== 公共工具函数 ====================
@@ -142,54 +150,72 @@ function calcLockHash() {
 }
 
 /**
- * 打包前置守卫：开发服务器存活时拒绝打包（仅 Windows）
+ * 打包前置守卫：开发服务器存活时拒绝打包（原生打包机：Windows / Linux）
  *
- * Windows 上 vite 启动即 dlopen native addon（lightningcss / swc / oxc-sys 等）并
- * 长期持有文件句柄，此类文件无法被 unlink；而打包以 --store-dir 重建 workspace
- * node_modules 时要删除并重铺这些包目录 → EPERM 失败，且恢复步骤连带失效，
- * 留下一个 node_modules 被掏空、.bin 全丢且无人知晓的破损 dev 环境。
- * 打包是离线操作，前置阻断成本低于事后修复。
+ * vite / nest --watch 长期占用 node_modules 与 dist：Windows 上 dlopen native
+ * addon（lightningcss / swc / oxc-sys 等）后文件句柄无法被 pnpm unlink，
+ * 打包重建 node_modules 会 EPERM 失败，且恢复步骤连带失效，
+ * 留下一个 node_modules 被掏空、.bin 全丢且无人知晓的破损 dev 环境；
+ * Linux 上文件可 unlink，但打包 --prod 重建 node_modules + 清 dist 同样会
+ * 打挂存活 dev server。打包是离线操作，前置阻断成本低于事后修复。
+ * 容器内为一次性环境，无 dev 场景，直接跳过。
  *
  * --allow-dev-running 或 ALLOW_DEV_RUNNING=1 可跳过（CI 环境无 dev server）。
  */
 function assertNoDevServerRunning(allowDevRunning) {
-  if (os.platform() !== 'win32') return;
+  if (IN_CONTAINER) return;
   if (allowDevRunning || process.env.ALLOW_DEV_RUNNING === '1') return;
 
-  // 逐条查命令行，避免整表输出经 shell 变量中转产生编码问题
-  const rows = [];
-  let cursor = -1;
-  for (let i = 0; i < 200; i++) {
-    cursor = spawnSync(
-      'powershell',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Select-Object -Skip ${cursor} -First 1 Id, CommandLine | ConvertTo-Csv -NoTypeInformation`,
-      ],
-      { encoding: 'utf8' }
-    );
-    const line = (cursor.stdout || '').trim().split('\n')[0];
-    if (!line) break;
-    const m = line.match(/^(\d+),\s*"?(.*?)"$/);
-    if (!m || Number(m[1]) === process.pid) continue;
-    rows.push(m[1]);
+  let found = [];
+
+  if (os.platform() === 'win32') {
+    // 逐条查命令行，避免整表输出经 shell 变量中转产生编码问题
+    const rows = [];
+    let cursor = -1;
+    for (let i = 0; i < 200; i++) {
+      cursor = spawnSync(
+        'powershell',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Select-Object -Skip ${cursor} -First 1 Id, CommandLine | ConvertTo-Csv -NoTypeInformation`,
+        ],
+        { encoding: 'utf8' }
+      );
+      const line = (cursor.stdout || '').trim().split('\n')[0];
+      if (!line) break;
+      const m = line.match(/^(\d+),\s*"?(.*?)"$/);
+      if (!m || Number(m[1]) === process.pid) continue;
+      rows.push(m[1]);
+    }
+    found = rows.filter((cmd) => /(?:corepack[\/\\]dist[\/\\]pnpm\.js|\.bin[\/\\]?\.\.[\/\\]vite[\/\\]bin[\/\\]vite\.js|nest\.js start --watch)/.test(cmd));
+  } else if (os.platform() === 'linux') {
+    // Linux：ps 枚举进程命令行（procps 为开发机标配；ps 不可用时不阻断，与 Windows 探测失败同语义）
+    const res = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' });
+    if (res.status === 0) {
+      for (const line of (res.stdout || '').split('\n')) {
+        const m = line.match(/^\s*(\d+)\s+(.*)$/);
+        if (!m || Number(m[1]) === process.pid) continue;
+        // 与 Windows 判据同族：corepack pnpm / vite（.bin 符号链接或解析后路径）/ nest --watch
+        if (/(?:corepack[\/]dist[\/]pnpm\.js|\.bin[\/]vite(\s|$)|vite[\/]bin[\/]vite\.js|nest\.js start --watch)/.test(m[2])) {
+          found.push(m[1]);
+        }
+      }
+    }
   }
 
-  const found = rows.filter((cmd) => /(?:corepack[\/\\]dist[\/\\]pnpm\.js|\.bin[\/\\]?\.\.[\/\\]vite[\/\\]bin[\/\\]vite\.js|nest\.js start --watch)/.test(cmd));
   if (found.length === 0) return;
 
   error('');
   error('检测到开发服务器正在运行，已中止打包：');
   for (const pid of found) error(`  - PID ${pid}`);
   error('');
-  error('原因：vite / nest --watch 会 dlopen native 依赖（lightningcss / swc / oxc-sys 等）');
-  error('      并长期持有文件句柄，Windows 下这些文件无法被 pnpm unlink，');
-  error('      打包重建 node_modules 时会 EPERM 失败，并连带令恢复步骤失效，');
-  error('      留下 node_modules 被掏空、.bin 全丢且无人知晓的破损 dev 环境。');
+  error('原因：vite / nest --watch 长期占用 node_modules 与 dist，打包以 --prod');
+  error('      重建 node_modules 并清理构建产物，会打挂存活的开发环境');
+  error('      （Windows 下文件句柄还会致 EPERM，留下破损的 node_modules）。');
   error('');
-  error('请先关闭开发服务器（pnpm dev 按 Ctrl+C，或 taskkill /F /IM node.exe），再执行打包。');
+  error('请先关闭开发服务器（pnpm dev 按 Ctrl+C），再执行打包。');
   error('必须带存活 dev server 打包时，加 --allow-dev-running 或设 ALLOW_DEV_RUNNING=1。');
   process.exit(1);
 }
@@ -254,10 +280,10 @@ function diagnoseLockedNodeModules() {
  * 且 @cloudcad/db 无 postinstall 时 client 必须显式 db:generate + build 才会进入 dist）。
  * 执行时注入 CI=true，令 pnpm 跳过 "Proceed? (Y/n)" 等交互确认，避免打包流程被挂起。
  * 恢复失败不阻断打包结果，但需明确告警。
- * 仅 Windows 开发机生效（Linux 容器内为一次性环境，容器销毁即恢复；且容器内无 dev 场景）。
+ * 原生打包机（Windows / Linux 本机直打）生效；容器内为一次性环境，容器销毁即恢复。
  */
 function restoreNodeModules() {
-  if (os.platform() !== 'win32') return;
+  if (IN_CONTAINER) return;
 
   const logFile = path.join(OUTPUT_DIR, 'node_modules-restore.log');
   ensureDir(OUTPUT_DIR);
@@ -613,16 +639,16 @@ async function buildProject(variant = 'oss') {
   }
 
   // 确保 backend 依赖已安装（db:generate 需要 prisma CLI）。
-  // 仅 Windows 本机打包路径生效——Linux 容器依赖由 Dockerfile `--filter backend` 装好，
-  // 不在此处补装（installFullDeps 会 cleanNodeModules + 联网重装，破坏容器）。
-  if (os.platform() === 'win32') {
+  // 原生打包机（Windows / Linux 本机直打）生效——容器内依赖由 Dockerfile `--filter backend`
+  // 装好，不在此处补装（installFullDeps 会 cleanNodeModules + 联网重装，破坏容器）。
+  if (!IN_CONTAINER) {
     const prismaBin = path.join(
       PROJECT_ROOT,
       'packages',
       'backend',
       'node_modules',
       '.bin',
-      'prisma.cmd'
+      os.platform() === 'win32' ? 'prisma.cmd' : 'prisma'
     );
     if (!fs.existsSync(prismaBin)) {
       log('⚠ backend 未安装 prisma，自动补装依赖（联网）...');
@@ -766,13 +792,14 @@ function verifyDeployStoreOffline(storePath, variant = 'oss') {
  *
  * 流程：
  *   1. 离线预演校验（verifyDeployStoreOffline）——完整则直接返回（零副作用，无网络开销）；
- *   2. 缺包时按平台分流：
- *      - Windows 打包：自动联网补齐（不带 --offline，用 --store-dir 可靠落盘到指定 store），再离线复验；
- *      - Linux 容器打包：不自动补齐（容器 store 是 Dockerfile 一次性构建、含平台相关二进制，
+ *   2. 缺包时按环境分流：
+ *      - 原生打包机（Windows / Linux 本机直打）：自动联网补齐（不带 --offline，用 --store-dir
+ *        可靠落盘到指定 store），再离线复验；
+ *      - 容器内：不自动补齐（容器 store 是 Dockerfile 一次性构建、含平台相关二进制，
  *        自动补齐可能混入错误平台二进制/用默认 store 重装破坏结构），改为直接出包失败拦截。
  *   3. 补齐/校验后离线复验 —— 仍缺则 error + throw，出包失败。
  *
- * 注意：Windows 补齐命令不带 cleanNodeModules，保持增量语义（不破坏开发 node_modules）。
+ * 注意：补齐命令不带 cleanNodeModules，保持增量语义（不破坏开发 node_modules）。
  *
  * @param {string} storePath - store 目录
  * @param {string} variant - oss | private
@@ -784,14 +811,14 @@ function ensureDeployStoreComplete(storePath, variant = 'oss', storeName = '.pnp
     return true;
   }
 
-  // Linux 容器路径：不自动补齐，直接出包失败（保护平台 store）。
-  // Windows 本机路径：自动联网补齐。
-  if (os.platform() !== 'win32') {
+  // 容器内：不自动补齐，直接出包失败（容器 store 由 Dockerfile 一次性构建，单一事实源）。
+  // 原生打包机（Windows / Linux 本机直打）：自动联网补齐。
+  if (IN_CONTAINER) {
     error(
-      `${storeName} 离线解析缺包——Linux 容器路径不自动补齐（避免破坏平台相关 store）。` +
+      `${storeName} 离线解析缺包——容器内不自动补齐（避免破坏平台相关 store）。` +
         '请检查 Dockerfile 依赖层是否完整（pnpm install --store-dir .pnpm-store-deploy）。'
     );
-    throw new Error('Linux 部署 store 不完整');
+    throw new Error('容器部署 store 不完整');
   }
 
   log(`⚠ ${storeName} 离线解析缺包，自动联网补齐...`);
@@ -830,12 +857,14 @@ async function prepareDeployStore(variant = 'oss') {
   const storeName = '.pnpm-store-deploy';
   const storePath = path.join(PROJECT_ROOT, storeName);
 
-  // store 来源分流：
-  //   - Linux 通道：容器内由 Dockerfile `pnpm install --store-dir /app/.pnpm-store-deploy`
+  // store 来源分流（store 含平台相关原生二进制，宿主平台必须与目标平台一致，
+  // 由 packDeploy 的平台强校验保证）：
+  //   - 容器内：由 Dockerfile `pnpm install --store-dir /app/.pnpm-store-deploy`
   //     构建期写好，本函数只校验，不重装（重装会 cleanNodeModules + 用错误 store
   //     增量安装，产出残缺 store——历史教训）；缺失或为空直接失败。
-  //   - Windows 本机直打：无容器镜像可复用，首次打包时由本函数联网创建（pnpm install
-  //     --store-dir 落盘，无 cleanNodeModules），随后进入与缺包补齐相同的离线复验门禁。
+  //   - 原生打包机（Windows / Linux 本机直打）：无容器镜像可复用，首次打包时由本函数
+  //     联网创建（pnpm install --store-dir 落盘，无 cleanNodeModules），随后进入与
+  //     缺包补齐相同的离线复验门禁。
   //
   // 调用顺序：本函数在 buildProject 之后执行（packDeploy 步骤 2/3），因为 --prod install
   // 会剔除整个 workspace 的 devDependencies，先构建可保住 tsc/vite；devDeps 由 finally 的
@@ -843,9 +872,10 @@ async function prepareDeployStore(variant = 'oss') {
 
   let storeCheck;
 
-  // 1. store 缺失或为空：Windows 本机直打首次联网创建（上次中断可能留下空目录，同样走创建）
+  // 1. store 缺失或为空：原生打包机首次联网创建（上次中断可能留下空目录，同样走创建）；
+  //    容器内缺失直接失败（store 只能来自 Dockerfile 构建期安装）
   if (!fs.existsSync(storePath)) {
-    if (os.platform() !== 'win32') {
+    if (IN_CONTAINER) {
       error(`${storeName} 不存在——Docker 构建可能未正确安装依赖`);
       throw new Error('Docker store 缺失');
     }
@@ -853,7 +883,7 @@ async function prepareDeployStore(variant = 'oss') {
   } else {
     const preCheck = verifyDeployStore(storePath);
     if (!preCheck.valid && preCheck.reason === 'store/v3/files 目录不存在') {
-      if (os.platform() !== 'win32') {
+      if (IN_CONTAINER) {
         error(`${storeName} ${preCheck.reason}——Docker 构建可能未正确安装依赖`);
         throw new Error('Docker store 缺失');
       }
@@ -919,7 +949,7 @@ function getDistTargets() {
   return {
     'mxcad-app':
       process.env.MXCAD_APP_DIST_SRC ||
-      path.join(PROJECT_ROOT, '..', 'Sample', 'Edit', 'MXCADAppVuetify3', 'lib', 'dist'),
+      path.join(PROJECT_ROOT, '..', 'Sample', 'Edit', 'MxCADAppVuetify3', 'lib', 'dist'),
     mxcad:
       process.env.MXCAD_DIST_SRC ||
       path.join(PROJECT_ROOT, '..', 'MxDrawPlugin', 'mxcad', 'dist'),
@@ -1481,6 +1511,24 @@ async function packDeploy(platform, variant = 'oss') {
   log(`Variant: ${variant}`);
   log('');
 
+  // 平台强校验（fail-fast，与升级包同一原则）：部署包的生产依赖 store 含平台相关
+  // 原生二进制（esbuild/swc/prisma engine 等），只能在与目标平台一致的宿主上产出。
+  // 跨平台直打会产出 store 平台错配的坏包（历史教训），故直接拒绝：
+  //   - win 包：仅 Windows 打包机（本机直打）
+  //   - linux 包：仅 Linux 环境（Linux 打包机本机直打，或容器内——容器由
+  //     pack-linux-deploy.js 驱动，store 由 Dockerfile 构建期装好）
+  const hostPlatform = os.platform();
+  if (platform === 'win' && hostPlatform !== 'win32') {
+    error('Windows 部署包只能在 Windows 打包机产出（store 含 Windows 原生二进制）');
+    error('请使用 Windows 打包机运行: pnpm pack:offline:win');
+    process.exit(1);
+  }
+  if (platform === 'linux' && hostPlatform !== 'linux') {
+    error('Linux 部署包只能在 Linux 环境产出：Linux 打包机直接运行本脚本（本机直打），或 Windows 上走 Docker 容器通道');
+    error('Windows 打包机请使用: pnpm pack:linux-deploy');
+    process.exit(1);
+  }
+
   // 检查 Linux runtime
   if (platform === 'linux' || platform === 'all') {
     const linuxRuntime = path.join(PROJECT_ROOT, 'runtime', 'linux');
@@ -1501,34 +1549,36 @@ async function packDeploy(platform, variant = 'oss') {
     assertWindowsRuntimeComponents();
   }
 
-  // 本机 Windows 打包路径：先重建运行时 node 工具依赖，再确保根依赖完整。
-  // Linux 打包路径（容器/本机）跳过——容器依赖由 Dockerfile `pnpm install
-  // --store-dir .pnpm-store-deploy` 在构建阶段装好，重装会破坏 store 创建；
-  // 本机 Linux 打包通常也是按容器流程准备依赖。
-  if (os.platform() === 'win32') {
-    // 运行时 node 工具（pnpm/pm2）依赖：以 package.json + package-lock.json 为
-    // 唯一事实源重建，确保打进部署包的 node 运行时干净、版本对齐（不被 IDE 缓存
-    // 或漂移版本污染）。需联网 npm ci（实测约 30s）。无网打包机可用环境变量
-    // SKIP_NODE_TOOLS_REBUILD=1 跳过。
-    log('[0/3] 重建运行时 node 工具依赖（pnpm/pm2）...');
-    const rebuildNodeTools = path.join(
-      PROJECT_ROOT,
-      'scripts',
-      'reinstall-node-tools.js'
-    );
-    if (process.env.SKIP_NODE_TOOLS_REBUILD === '1') {
-      log('  已通过 SKIP_NODE_TOOLS_REBUILD=1 跳过（打包机无网或已手动重建）。');
-      log('  警告：请确保 runtime/windows/node 的 node_modules 是干净、版本对齐的，否则部署包会携带脏运行时。');
-    } else {
-      try {
-        execSync(`node "${rebuildNodeTools}"`, {
-          cwd: PROJECT_ROOT,
-          stdio: 'inherit',
-          encoding: 'utf8',
-        });
-      } catch (err) {
-        error(`运行时 node 工具重建失败，中止打包：${err.message.split('\n')[0]}`);
-        throw err;
+  // 原生打包机路径：确保根依赖完整（tsc/vite/prisma 等 dev deps）；
+  // Windows 打包机额外先重建运行时 node 工具依赖（产物进 runtime/windows/node）。
+  // 容器内依赖由 Dockerfile `pnpm install --store-dir .pnpm-store-deploy` 在构建阶段
+  // 装好，不在此处重装（重装会破坏容器环境）。
+  if (!IN_CONTAINER) {
+    // 运行时 node 工具（pnpm/pm2）依赖：仅 Windows 打包机（产物进 runtime/windows/node，
+    // Linux 包不含该目录）。以 package.json + package-lock.json 为唯一事实源重建，
+    // 确保打进部署包的 node 运行时干净、版本对齐（不被 IDE 缓存或漂移版本污染）。
+    // 需联网 npm ci（实测约 30s）。无网打包机可用环境变量 SKIP_NODE_TOOLS_REBUILD=1 跳过。
+    if (os.platform() === 'win32') {
+      log('[0/3] 重建运行时 node 工具依赖（pnpm/pm2）...');
+      const rebuildNodeTools = path.join(
+        PROJECT_ROOT,
+        'scripts',
+        'reinstall-node-tools.js'
+      );
+      if (process.env.SKIP_NODE_TOOLS_REBUILD === '1') {
+        log('  已通过 SKIP_NODE_TOOLS_REBUILD=1 跳过（打包机无网或已手动重建）。');
+        log('  警告：请确保 runtime/windows/node 的 node_modules 是干净、版本对齐的，否则部署包会携带脏运行时。');
+      } else {
+        try {
+          execSync(`node "${rebuildNodeTools}"`, {
+            cwd: PROJECT_ROOT,
+            stdio: 'inherit',
+            encoding: 'utf8',
+          });
+        } catch (err) {
+          error(`运行时 node 工具重建失败，中止打包：${err.message.split('\n')[0]}`);
+          throw err;
+        }
       }
     }
 
@@ -1925,7 +1975,7 @@ async function main() {
 
   // --private-mxcad：用本地私有 dist 替换 mxcad 系列包（不进 git，不指定路径）。
   // 默认相对路径（基于 PROJECT_ROOT）：
-  //   ../Sample/Edit/MXCADAppVuetify3/lib/dist → mxcad-app（PC 端）
+  //   ../Sample/Edit/MxCADAppVuetify3/lib/dist → mxcad-app（PC 端）
   //   ../MxDrawPlugin/mxcad/dist                → mxcad（移动端）
   //   ../MxDrawPlugin/mxdraw/dist               → mxdraw（移动端）
   // 也支持环境变量 PRIVATE_MXCAD=1。
@@ -1939,9 +1989,12 @@ async function main() {
   try {
     if (mode === 'deploy') {
       if (platform === 'all') {
-        await packDeploy('win', variant);
-        log('');
-        await packDeploy('linux', variant);
+        // 单宿主无法同时产出两平台部署包（store 平台强相关，见 packDeploy 平台强校验）：
+        // Windows 包在 Windows 打包机打，Linux 包在 Linux 打包机/容器通道打
+        error('部署包不支持 --all：请分别在对应打包机打包');
+        error('  Windows 打包机: pnpm pack:offline:win');
+        error('  Linux 打包机: pnpm pack:offline:linux（或 Windows 上走 Docker 容器通道 pnpm pack:linux-deploy）');
+        process.exit(1);
       } else {
         await packDeploy(platform, variant);
       }

@@ -96,28 +96,62 @@ export class LinuxInitService implements OnModuleInit {
    * 后端(重)启动时杀掉上次崩溃/重启遗留的 mxcadassembly 进程，防止其持续占用 CPU。
    * 转换进程组杀除（mxcad-exec.ts）是主防线，本方法为兜底：进程组杀除仍可能因
    * 极端情况（如内核态卡死）留下残留，启动时统一清掉。
+   *
+   * 不得误杀协同引擎：cooperate-manager.js 启动时也会 spawn 一个 mxcadassembly
+   * （协同模式，命令行含 run_cooperate_server），它是存活服务进程而非遗留孤儿。
+   * 后端启动晚于协同服务，按模式全杀会杀掉刚启动的协同引擎，协同功能直接失效
+   * （端口 3091 无响应）——故先按 /proc/<pid>/cmdline 排除协同模式再按 PID 杀。
    */
   private async killLeftoverMxcadAssembly(): Promise<void> {
     try {
-      // 先列出遗留进程（便于日志），再 pkill -f 按命令行匹配杀掉
-      // 无匹配进程时 pgrep/pkill 退出码为 1，用 `|| true` 避免 exec 抛错
-      const { stdout } = await execAsync('pgrep -f mxcadassembly || true');
-      const leftover = stdout
+      // 先列出候选进程（便于日志）
+      // 无匹配进程时 pgrep 退出码为 1，用 `|| true` 避免 exec 抛错
+      // 模式必须写成 [m]xcadassembly（方括号技巧）：exec 经 sh -c 执行，
+      // 包装 shell 的命令行本身含裸模式串，pgrep -f 会自匹配并 SIGKILL
+      // 包装 shell，exec 报 "Command failed"，该 WARN 会误触发部署包断网验证
+      // 的日志错误关键词检查（verify-deploy.js）
+      const { stdout } = await execAsync('pgrep -f "[m]xcadassembly" || true');
+      const candidates = stdout
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
 
-      if (leftover.length === 0) {
+      if (candidates.length === 0) {
         this.logger.log('无遗留 mxcadassembly 进程');
         return;
       }
 
-      await execAsync('pkill -9 -f mxcadassembly || true');
+      // 排除协同引擎（命令行含 run_cooperate_server）：存活服务进程，不是遗留孤儿；
+      // 读不到 /proc/<pid>/cmdline 视为进程已退出，同样跳过
+      const orphans = candidates.filter((pid) => {
+        try {
+          const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+          return !cmdline.includes('run_cooperate_server');
+        } catch {
+          return false;
+        }
+      });
+
+      if (orphans.length === 0) {
+        this.logger.log(
+          `检测到 ${candidates.length} 个 mxcadassembly 进程，均为协同引擎或已退出进程，无需清理`,
+        );
+        return;
+      }
+
+      // 按 PID 杀（不做模式匹配，无自匹配风险）
+      for (const pid of orphans) {
+        try {
+          process.kill(Number(pid), 'SIGKILL');
+        } catch {
+          // 进程已退出
+        }
+      }
       this.logger.warn(
-        `已清理 ${leftover.length} 个遗留 mxcadassembly 孤儿进程: ${leftover.join(', ')}`,
+        `已清理 ${orphans.length} 个遗留 mxcadassembly 孤儿进程: ${orphans.join(', ')}`,
       );
     } catch (error) {
-      // pgrep/pkill 可能不存在（极少见）或执行失败，均不阻塞启动
+      // pgrep 可能不存在（极少见）或执行失败，均不阻塞启动
       this.logger.warn(
         `清理遗留 mxcadassembly 进程失败（忽略）: ${error.message}`,
       );
