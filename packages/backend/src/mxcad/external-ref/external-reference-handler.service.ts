@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { DatabaseService } from '../../database/database.service';
+import { setContentDisposition } from '../../common/utils/content-disposition';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
 import * as path from 'path';
@@ -229,7 +230,7 @@ export class ExternalReferenceHandler {
 
     // 设置响应头
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    setContentDisposition(res, fileName, 'inline');
     res.setHeader('Content-Length', fileStats.size);
     res.setHeader('Cache-Control', 'public, max-age=3600'); // 缓存 1 小时
     res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问

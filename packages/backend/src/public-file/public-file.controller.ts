@@ -43,6 +43,7 @@ import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { setContentDisposition } from '../common/utils/content-disposition';
 
 import { I18nContext } from 'nestjs-i18n';
 const ALLOWED_EXT_REFERENCE_EXTENSIONS = [
@@ -112,10 +113,7 @@ export class PublicFileController {
 
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Length', fileStats.size);
-      res.setHeader(
-        'Content-Disposition',
-        `inline; filename="${encodeURIComponent(path.basename(filePath))}"`
-      );
+      setContentDisposition(res, path.basename(filePath), 'inline');
       res.setHeader('Cache-Control', 'public, max-age=3600');
       res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -174,7 +172,7 @@ export class PublicFileController {
 
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Length', fileStats.size);
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(filePath))}"`);
+      setContentDisposition(res, path.basename(filePath), 'inline');
       res.setHeader('Cache-Control', 'public, max-age=3600');
       res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -393,10 +391,7 @@ export class PublicFileController {
 
       res.setHeader('Content-Type', result.mimeType);
       res.setHeader('Content-Length', result.buffer.length);
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${encodeURIComponent(result.filename)}"`,
-      );
+      setContentDisposition(res, result.filename);
       res.setHeader('Access-Control-Allow-Origin', '*');
 
       res.send(result.buffer);

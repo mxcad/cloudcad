@@ -32,6 +32,7 @@ import {
 } from './dto/create-batch-download.dto';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { I18nContext } from 'nestjs-i18n';
+import { setContentDisposition } from '../common/utils/content-disposition';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -130,13 +131,8 @@ export class BatchDownloadController {
     );
     const filename = path.basename(filePath);
     const stat = fs.statSync(filePath);
-    const encodedFilename = encodeURIComponent(filename);
-    const fallbackFilename = filename.replace(/[^\x20-\x7E]/g, '_');
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
-    );
+    setContentDisposition(res, filename);
     res.setHeader('Content-Length', stat.size.toString());
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
@@ -169,13 +165,8 @@ export class BatchDownloadController {
       return res.status(404).json({ message: 'Item not available' });
     }
     const stat = fs.statSync(item.fullPath);
-    const encodedFilename = encodeURIComponent(item.name);
-    const fallbackFilename = item.name.replace(/[^\x20-\x7E]/g, '_');
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
-    );
+    setContentDisposition(res, item.name);
     res.setHeader('Content-Length', stat.size.toString());
     const stream = fs.createReadStream(item.fullPath);
     stream.pipe(res);
@@ -204,13 +195,8 @@ export class BatchDownloadController {
     );
     const filename = path.basename(zipPath);
     const stat = fs.statSync(zipPath);
-    const encodedFilename = encodeURIComponent(filename);
-    const fallbackFilename = filename.replace(/[^\x20-\x7E]/g, '_');
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
-    );
+    setContentDisposition(res, filename);
     res.setHeader('Content-Length', stat.size.toString());
     const stream = fs.createReadStream(zipPath);
     stream.pipe(res);

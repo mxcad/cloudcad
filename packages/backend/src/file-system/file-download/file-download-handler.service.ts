@@ -18,6 +18,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { NodeType } from '@cloudcad/db';
+import { setContentDisposition } from '../../common/utils/content-disposition';
 import { FileTreeService } from '../file-tree/file-tree.service';
 import { FileDownloadExportService } from './file-download-export.service';
 
@@ -63,12 +64,7 @@ export class FileDownloadHandlerService {
       res.setHeader('Content-Type', mimeType);
 
       // 3. 设置 Content-Disposition（支持中文文件名）
-      const encodedFilename = encodeURIComponent(filename);
-      const fallbackFilename = filename.replace(/[^\x20-\x7E]/g, '_');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
-      );
+      setContentDisposition(res, filename);
 
       // 4. 设置 ETag 和 Cache-Control
       const node = await this.fileTreeService.getNode(nodeId);

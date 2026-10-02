@@ -14,6 +14,7 @@ import { RequireProjectPermissionGuard } from '../../common/guards/require-proje
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CrossNodeDownloadService } from '../file-download/cross-node-download.service';
+import { setContentDisposition } from '../../common/utils/content-disposition';
 
 class BatchDownloadBody {
   nodeIds: string[];
@@ -42,7 +43,7 @@ export class BatchDownloadController {
       await this.crossNodeDownloadService.createBatchZip(body.nodeIds, userId);
 
     res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    setContentDisposition(res, filename);
     res.setHeader('Cache-Control', 'no-cache');
 
     stream.pipe(res);

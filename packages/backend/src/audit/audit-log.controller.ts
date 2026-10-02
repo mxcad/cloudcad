@@ -50,6 +50,7 @@ import {
 } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { AuthenticatedRequest } from '../common/types/request.types';
+import { setContentDisposition } from '../common/utils/content-disposition';
 import { AuditExportDto } from './dto/audit-export.dto';
 import { AuditCleanupDto } from './dto/audit-cleanup.dto';
 import { AuditArchiveService } from './audit-archive.service';
@@ -222,12 +223,8 @@ export class AuditLogController {
       }
     );
 
-    const encodedFilename = encodeURIComponent(filename);
     res.setHeader('Content-Type', mimeType);
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`
-    );
+    setContentDisposition(res, filename);
     res.send(buffer);
   }
 

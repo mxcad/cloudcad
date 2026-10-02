@@ -5,6 +5,7 @@ import { DatabaseService } from '../../database/database.service';
 import * as path from 'path';
 import * as fs from 'fs';
 import { FileUtils } from '../../common/utils/file-utils';
+import { setContentDisposition } from '../../common/utils/content-disposition';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -177,12 +178,7 @@ export class MxcadFileHandlerService {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
-    // 对文件名进行编码，避免中文等非 ASCII 字符导致的响应头错误
-    const encodedFilename = encodeURIComponent(path.basename(filePath));
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="${encodedFilename}"; filename*=UTF-8''${encodedFilename}`
-    );
+    setContentDisposition(res, path.basename(filePath), 'inline');
 
     // 创建文件流并返回
     const fileStream = fs.createReadStream(filePath);

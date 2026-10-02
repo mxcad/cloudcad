@@ -25,6 +25,7 @@ import type { Request as ExpressRequest, Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
+import { setContentDisposition } from '../../common/utils/content-disposition';
 import { LibraryPublicAccess } from '../../common/decorators/library-public.decorator';
 import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
@@ -343,12 +344,7 @@ export class DownloadController {
 
       res.setHeader('Content-Type', mimeType);
 
-      const encodedFilename = encodeURIComponent(filename);
-      const fallbackFilename = filename.replace(/[^\x20-\x7E]/g, '_');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${fallbackFilename}"; filename*=UTF-8''${encodedFilename}`
-      );
+      setContentDisposition(res, filename);
 
       const node = await this.fileTreeService.getNode(nodeId);
       if (

@@ -34,6 +34,7 @@ import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
+import { setContentDisposition } from '../../common/utils/content-disposition';
 
 @ApiTags('MxCAD 文件访问')
 @Controller('mxcad')
@@ -155,7 +156,7 @@ export class MxcadFileAccessController {
 
     if (downloadFormat === 'mxweb' || isImageFile) {
       res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+      setContentDisposition(res, fileName);
       const readStream = createReadStream(filePath);
       readStream.pipe(res);
       return;
@@ -211,7 +212,7 @@ export class MxcadFileAccessController {
     }
 
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(outName)}"`);
+    setContentDisposition(res, outName);
     const readStream = createReadStream(outPath);
     readStream.pipe(res);
 
@@ -255,7 +256,7 @@ export class MxcadFileAccessController {
       res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Length', fileStats.size);
       // 显示逻辑文件名（A1.dwg），而非磁盘文件名（A1.dwg.mxweb）
-      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(fileName)}"`);
+      setContentDisposition(res, fileName, 'inline');
       // 外部参照可被替换，URL 不变但内容会变，禁止浏览器 HTTP 缓存，否则替换后查看仍显示旧图
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -318,7 +319,7 @@ export class MxcadFileAccessController {
       }
       const fileStream = await this.storageService.getFileStream(actualStorageKey);
       res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `inline; filename="${path.basename(actualStorageKey)}"`);
+      setContentDisposition(res, path.basename(actualStorageKey), 'inline');
       fileStream.pipe(res);
     } catch (error) {
       this.logger.error(`[getNonCadFile] 获取文件失败: ${error.message}`);

@@ -42,6 +42,7 @@ import type { Request } from 'express';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
+import { buildContentDisposition } from '../common/utils/content-disposition';
 import { FontsService } from './fonts.service';
 import { UploadFontDto, DeleteFontDto, FontUploadTarget, BatchDeleteFontDto } from './dto/font.dto';
 import { BatchOperationResponseDto } from '../file-system/dto/file-system-response.dto';
@@ -201,10 +202,10 @@ export class FontsController {
   ) {
     const result = await this.fontsService.downloadFont(fileName, location);
 
-    // 设置 Content-Disposition 响应头
+    // 设置 Content-Disposition 响应头（支持中文文件名）
     return new StreamableFile(result.stream, {
       type: 'application/octet-stream',
-      disposition: `attachment; filename="${encodeURIComponent(result.fileName)}"`,
+      disposition: buildContentDisposition(result.fileName),
     });
   }
 }
