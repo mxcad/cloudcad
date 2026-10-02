@@ -18,7 +18,8 @@
  * 与 PC 端共用同一批后端接口与同一个 ack 存储键，已读状态跨端不冲突
  * （PC 与手机各存各的，属预期行为）。
  *
- * 纯函数（排序 / ack 读写）与组合式状态分离，便于单测直接断言。
+ * 纯函数（排序 / ack 读写）已收编到 utils/noticeAck.ts（与 PC 端同构），
+ * 本文件只保留组合式状态。以下 re-export 维持既有对外 API，消费方零改动。
  * 模块级状态沿用 useAuthState 的既有范式，唯一消费者是 App.vue 的挂载点。
  */
 import {
@@ -30,112 +31,33 @@ import {
   type Ref,
 } from 'vue';
 import { noticeCenterControllerGetCurrent } from '../api-sdk';
-import type { NoticeResponseDto } from '@cloudcad/api-sdk';
+import {
+  filterUnacknowledged,
+  pruneExpiredAcks,
+  readAcks,
+  sortNotices,
+  writeAcks,
+  type Notice,
+  type NoticeAckMap,
+} from '../utils/noticeAck';
 
-export type Notice = NoticeResponseDto;
+export {
+  filterUnacknowledged,
+  isAcknowledged,
+  readAcks,
+  sortNotices,
+  writeAcks,
+  NOTICE_ACK_STORAGE_KEY as NOTICE_ACK_STORAGE_KEY_FOR_TEST,
+} from '../utils/noticeAck';
+export type { Notice } from '../utils/noticeAck';
 
 /** 轮询间隔：与后端 Cache-Control（10s）配合，10s 内不重复请求 */
 const NOTICE_POLL_INTERVAL_MS = 30_000;
 
-/** 已读 TTL：每条通知每个设备在 24h 内只提醒一次 */
-const NOTICE_ACK_TTL_MS = 24 * 60 * 60 * 1000;
-
-/** 与 PC 端共用同一键，便于排查；两端互不读取对方进程内的状态 */
-const NOTICE_ACK_STORAGE_KEY = 'cloudcad_notice_acks';
-
-/** 级别 → 优先级，数字越大越先弹。未知级别排最后 */
-const LEVEL_PRIORITY: Record<string, number> = {
-  info: 1,
-  warning: 2,
-  danger: 3,
-};
-
-/** 取一条通知的排序时间戳（发布时间，缺失时退回创建时间） */
-function noticeTimestamp(notice: Notice): number {
-  const raw = notice.publishedAt ?? notice.createdAt ?? null;
-  if (!raw) return 0;
-  const time = new Date(raw).getTime();
-  return Number.isFinite(time) ? time : 0;
-}
-
-/**
- * 排序：级别降序 → 发布时间降序 → id 升序。
- * id 兜底保证稳定排序：同一条通知被推两次时顺序不抖动。
- */
-export function sortNotices(list: Notice[]): Notice[] {
-  return [...list].sort((a, b) => {
-    const byLevel =
-      (LEVEL_PRIORITY[b.level] ?? 0) - (LEVEL_PRIORITY[a.level] ?? 0);
-    if (byLevel !== 0) return byLevel;
-    const byTime = noticeTimestamp(b) - noticeTimestamp(a);
-    if (byTime !== 0) return byTime;
-    return a.id.localeCompare(b.id);
-  });
-}
-
-type AckMap = Record<string, number>;
-
-/** 读取已读记录。解析失败返回空表而不是抛错（存储被污染不该让应用崩掉） */
-export function readAcks(storage: Storage = localStorage): AckMap {
-  let raw: string | null;
-  try {
-    raw = storage.getItem(NOTICE_ACK_STORAGE_KEY);
-  } catch {
-    return {};
-  }
-  if (!raw) return {};
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return {};
-  }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-
-  const acks: AckMap = {};
-  for (const [id, at] of Object.entries(parsed as Record<string, unknown>)) {
-    if (typeof at === 'number' && Number.isFinite(at)) acks[id] = at;
-  }
-  return acks;
-}
-
-/** 写入已读记录。配额满/隐私模式静默失败（下次启动会重新提醒，属可接受降级） */
-export function writeAcks(acks: AckMap, storage: Storage = localStorage): void {
-  try {
-    storage.setItem(NOTICE_ACK_STORAGE_KEY, JSON.stringify(acks));
-  } catch {
-    // 忽略：已读只是体验优化，不是数据安全边界
-  }
-}
-
-/** TTL 内是否已读过 */
-export function isAcknowledged(
-  acks: AckMap,
-  noticeId: string,
-  now: number,
-  ttlMs: number = NOTICE_ACK_TTL_MS
-): boolean {
-  const at = acks[noticeId];
-  return typeof at === 'number' && now - at < ttlMs;
-}
-
-/** 过滤出未读的通知（入参已排序，只做筛选以保持顺序） */
-export function filterUnacknowledged(
-  notices: Notice[],
-  acks: AckMap,
-  now: number,
-  ttlMs: number = NOTICE_ACK_TTL_MS
-): Notice[] {
-  return notices.filter(
-    (notice) => !isAcknowledged(acks, notice.id, now, ttlMs)
-  );
-}
-
 // ── 组合式状态 ──────────────────────────────────────────
 
 const notices = ref<Notice[]>([]);
-const acks = ref<AckMap>(readAcks());
+const acks = ref<NoticeAckMap>(readAcks());
 
 const pending = computed(() =>
   filterUnacknowledged(notices.value, acks.value, Date.now())
@@ -177,18 +99,14 @@ function stopPolling(): void {
 /** 标记已读（落盘后更新响应式状态） */
 function acknowledge(notice: Notice): void {
   const now = Date.now();
-  const next: AckMap = { ...acks.value, [notice.id]: now };
+  const next: NoticeAckMap = { ...acks.value, [notice.id]: now };
   acks.value = next;
   writeAcks(next);
 }
 
 /** 过期记录清理，防止 localStorage 随公告数量增长 */
 function pruneAcks(): void {
-  const now = Date.now();
-  const kept: AckMap = {};
-  for (const [id, at] of Object.entries(acks.value)) {
-    if (now - at < NOTICE_ACK_TTL_MS) kept[id] = at;
-  }
+  const kept = pruneExpiredAcks(acks.value, Date.now());
   acks.value = kept;
   writeAcks(kept);
 }
@@ -226,5 +144,3 @@ export function useNoticeStream(): UseNoticeStream {
 
   return { notices, pending, active, acknowledge, refresh: fetchCurrent };
 }
-
-export const NOTICE_ACK_STORAGE_KEY_FOR_TEST = NOTICE_ACK_STORAGE_KEY;
