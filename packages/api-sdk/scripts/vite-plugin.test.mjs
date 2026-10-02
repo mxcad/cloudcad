@@ -7,10 +7,15 @@
 // resolvedId 去重，但浏览器 ESM 缓存按 URL 去重——同一文件执行两次，`client` 成为两个实例，
 // responseTransformer 配置落在无人使用的实例上，所有接口都返回未解包信封。
 import assert from 'node:assert/strict'
+import path from 'node:path'
 import { apiSdkHotReload } from './vite-plugin.js'
 
-const SDK_SRC = 'D:/web/MXCADOnline/cloudcad/packages/api-sdk/src'
-const MOBILE_ROOT = 'D:/web/MXCADOnline/cloudcad/packages/frontend_mobile'
+// 从测试文件位置推导真实路径（曾硬编码本机绝对路径，换机器/CI 即失效）。
+// SDK_SRC 统一成正斜杠，与插件内 replace(/\\/g, '/') 的归一化结果对齐。
+const SDK_SRC = path.resolve(import.meta.dirname, '../src').replace(/\\/g, '/')
+// 模拟任意与 api-sdk 同级的前端包作为 vite root（插件按 root 的兄弟目录找 ../api-sdk/src）
+// 测试文件在 packages/api-sdk/scripts/ 下，同级包目录需回退两级
+const MOBILE_ROOT = path.resolve(import.meta.dirname, '../../frontend_mobile')
 
 /** 构造最小可用的 Vite dev server 替身，记录插件的全部副作用 */
 function makeServer(root = MOBILE_ROOT) {

@@ -11,45 +11,139 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 /**
- * 缓存统计 DTO（管理后台视图）
+ * 权限缓存统计（PermissionCacheService.getStats 原样返回）
  */
-export class AdminCacheStatsDto {
-  @ApiProperty({ description: '缓存条目数' })
-  size: number;
+export class CacheStatsDto {
+  @ApiProperty({ description: '缓存条目总数' })
+  totalEntries: number;
 
-  @ApiProperty({ description: '命中次数' })
-  hits: number;
+  @ApiProperty({ description: '缓存容量上限' })
+  capacity: number;
 
-  @ApiProperty({ description: '未命中次数' })
-  misses: number;
+  @ApiProperty({ description: '内存占用（人类可读）' })
+  memoryUsage: string;
 
   @ApiProperty({ description: '命中率' })
   hitRate: number;
 }
 
 /**
- * 缓存统计响应 DTO
+ * 权限缓存清理结果
  */
-export class CacheStatsResponseDto {
-  @ApiProperty({ description: '提示消息' })
-  message: string;
-
-  @ApiProperty({ description: '缓存统计数据', type: () => AdminCacheStatsDto })
-  data: AdminCacheStatsDto;
+export class CacheCleanupResultDto {
+  @ApiProperty({ description: '清理的缓存条目数' })
+  cleanedEntries: number;
 }
 
 /**
- * 缓存清理响应 DTO
+ * 用户权限缓存清理结果
  */
-export class CacheCleanupResponseDto {
-  @ApiProperty({ description: '提示消息' })
-  message: string;
+export class UserCacheClearResultDto {
+  @ApiProperty({ description: '已清除缓存的用户 ID' })
+  userId: string;
 }
 
 /**
- * 用户缓存清理响应 DTO
+ * 存储清理结果（StorageCleanupService.CleanupResult 原样返回）
  */
-export class UserCacheClearResponseDto {
-  @ApiProperty({ description: '提示消息' })
-  message: string;
+export class StorageCleanupResultDto {
+  @ApiProperty({ description: '是否成功' })
+  success: boolean;
+
+  @ApiProperty({ description: '删除的节点数' })
+  deletedNodes: number;
+
+  @ApiProperty({ description: '删除的目录数' })
+  deletedDirectories: number;
+
+  @ApiProperty({ description: '释放字节数（基于 size 元数据估算）' })
+  freedSpace: number;
+
+  @ApiProperty({ description: '错误信息列表' })
+  errors: string[];
+}
+
+/**
+ * 待清理存储统计
+ */
+export class PendingCleanupStatsDto {
+  @ApiProperty({ description: '待清理文件数' })
+  total: number;
+
+  @ApiProperty({ description: '过期时间点（ISO 字符串）' })
+  expiryDate: string;
+
+  @ApiProperty({ description: '清理延迟天数' })
+  delayDays: number;
+}
+
+/**
+ * 本地孤立文件信息
+ */
+export class LocalOrphanItemDto {
+  @ApiProperty({ description: '节点 ID' })
+  nodeId: string;
+
+  @ApiProperty({ description: '所在目录' })
+  directory: string;
+
+  @ApiProperty({ description: '文件大小（字节）' })
+  sizeBytes: number;
+}
+
+/**
+ * DB 孤立记录信息
+ */
+export class DbOrphanItemDto {
+  @ApiProperty({ description: '节点 ID' })
+  nodeId: string;
+
+  @ApiProperty({ description: '文件名' })
+  name: string;
+
+  @ApiProperty({ description: '所属项目 ID' })
+  projectId: string;
+}
+
+/**
+ * 孤儿文件统计
+ */
+export class OrphanStatsDto {
+  @ApiProperty({ description: '本地孤立文件数' })
+  localOrphanCount: number;
+
+  @ApiProperty({ description: '本地孤立文件总大小（字节）' })
+  localOrphanTotalSize: number;
+
+  @ApiProperty({ description: 'DB 孤立记录数' })
+  dbOrphanCount: number;
+
+  @ApiProperty({ description: '本地孤立文件列表', type: [LocalOrphanItemDto] })
+  localOrphans: LocalOrphanItemDto[];
+
+  @ApiProperty({ description: 'DB 孤立记录列表', type: [DbOrphanItemDto] })
+  dbOrphans: DbOrphanItemDto[];
+}
+
+/**
+ * 标记删除文件统计
+ */
+export class DeletedFileStatsDto {
+  @ApiProperty({ description: '回收站文件数' })
+  trashCount: number;
+
+  @ApiProperty({ description: '已标记物理存储待清理文件数' })
+  storageMarkedCount: number;
+
+  @ApiProperty({ description: '已删除项目数' })
+  deletedProjectCount: number;
+
+  @ApiProperty({ description: '本地孤立文件数' })
+  localOrphanCount: number;
+
+  @ApiProperty({ description: '本地孤立文件总大小（字节）' })
+  localOrphanTotalSize: number;
+
+  @ApiProperty({ description: 'DB 孤立记录数' })
+  dbOrphanCount: number;
 }

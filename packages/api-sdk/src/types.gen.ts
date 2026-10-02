@@ -3887,48 +3887,155 @@ export type DailyPurchasesStatsDto = {
     byTier: Array<PurchasesTierBreakdownDto>;
 };
 
-export type AdminCacheStatsDto = {
+export type CacheStatsDto = {
     /**
-     * 缓存条目数
+     * 缓存条目总数
      */
-    size: number;
+    totalEntries: number;
     /**
-     * 命中次数
+     * 缓存容量上限
      */
-    hits: number;
+    capacity: number;
     /**
-     * 未命中次数
+     * 内存占用（人类可读）
      */
-    misses: number;
+    memoryUsage: string;
     /**
      * 命中率
      */
     hitRate: number;
 };
 
-export type CacheStatsResponseDto = {
+export type CacheCleanupResultDto = {
     /**
-     * 提示消息
+     * 清理的缓存条目数
      */
-    message: string;
-    /**
-     * 缓存统计数据
-     */
-    data: AdminCacheStatsDto;
+    cleanedEntries: number;
 };
 
-export type CacheCleanupResponseDto = {
+export type UserCacheClearResultDto = {
     /**
-     * 提示消息
+     * 已清除缓存的用户 ID
      */
-    message: string;
+    userId: string;
 };
 
-export type UserCacheClearResponseDto = {
+export type StorageCleanupResultDto = {
     /**
-     * 提示消息
+     * 是否成功
      */
-    message: string;
+    success: boolean;
+    /**
+     * 删除的节点数
+     */
+    deletedNodes: number;
+    /**
+     * 删除的目录数
+     */
+    deletedDirectories: number;
+    /**
+     * 释放字节数（基于 size 元数据估算）
+     */
+    freedSpace: number;
+    /**
+     * 错误信息列表
+     */
+    errors: Array<string>;
+};
+
+export type PendingCleanupStatsDto = {
+    /**
+     * 待清理文件数
+     */
+    total: number;
+    /**
+     * 过期时间点（ISO 字符串）
+     */
+    expiryDate: string;
+    /**
+     * 清理延迟天数
+     */
+    delayDays: number;
+};
+
+export type LocalOrphanItemDto = {
+    /**
+     * 节点 ID
+     */
+    nodeId: string;
+    /**
+     * 所在目录
+     */
+    directory: string;
+    /**
+     * 文件大小（字节）
+     */
+    sizeBytes: number;
+};
+
+export type DbOrphanItemDto = {
+    /**
+     * 节点 ID
+     */
+    nodeId: string;
+    /**
+     * 文件名
+     */
+    name: string;
+    /**
+     * 所属项目 ID
+     */
+    projectId: string;
+};
+
+export type OrphanStatsDto = {
+    /**
+     * 本地孤立文件数
+     */
+    localOrphanCount: number;
+    /**
+     * 本地孤立文件总大小（字节）
+     */
+    localOrphanTotalSize: number;
+    /**
+     * DB 孤立记录数
+     */
+    dbOrphanCount: number;
+    /**
+     * 本地孤立文件列表
+     */
+    localOrphans: Array<LocalOrphanItemDto>;
+    /**
+     * DB 孤立记录列表
+     */
+    dbOrphans: Array<DbOrphanItemDto>;
+};
+
+export type DeletedFileStatsDto = {
+    /**
+     * 回收站文件数
+     */
+    trashCount: number;
+    /**
+     * 已标记物理存储待清理文件数
+     */
+    storageMarkedCount: number;
+    /**
+     * 已删除项目数
+     */
+    deletedProjectCount: number;
+    /**
+     * 本地孤立文件数
+     */
+    localOrphanCount: number;
+    /**
+     * 本地孤立文件总大小（字节）
+     */
+    localOrphanTotalSize: number;
+    /**
+     * DB 孤立记录数
+     */
+    dbOrphanCount: number;
 };
 
 export type QueueStatsDto = {
@@ -10388,7 +10495,7 @@ export type AdminControllerGetCacheStatsResponses = {
     /**
      * 获取权限缓存统计成功
      */
-    200: CacheStatsResponseDto;
+    200: CacheStatsDto;
 };
 
 export type AdminControllerGetCacheStatsResponse = AdminControllerGetCacheStatsResponses[keyof AdminControllerGetCacheStatsResponses];
@@ -10404,7 +10511,7 @@ export type AdminControllerCleanupCacheResponses = {
     /**
      * 缓存清理完成
      */
-    200: CacheCleanupResponseDto;
+    200: CacheCleanupResultDto;
 };
 
 export type AdminControllerCleanupCacheResponse = AdminControllerCleanupCacheResponses[keyof AdminControllerCleanupCacheResponses];
@@ -10422,7 +10529,7 @@ export type AdminControllerClearUserCacheResponses = {
     /**
      * 用户权限缓存已清除
      */
-    200: UserCacheClearResponseDto;
+    200: UserCacheClearResultDto;
 };
 
 export type AdminControllerClearUserCacheResponse = AdminControllerClearUserCacheResponses[keyof AdminControllerClearUserCacheResponses];
@@ -10443,8 +10550,10 @@ export type AdminControllerCleanupStorageResponses = {
     /**
      * 存储清理完成
      */
-    200: unknown;
+    200: StorageCleanupResultDto;
 };
+
+export type AdminControllerCleanupStorageResponse = AdminControllerCleanupStorageResponses[keyof AdminControllerCleanupStorageResponses];
 
 export type AdminControllerGetCleanupStatsData = {
     body?: never;
@@ -10457,8 +10566,10 @@ export type AdminControllerGetCleanupStatsResponses = {
     /**
      * 获取待清理存储统计成功
      */
-    200: unknown;
+    200: PendingCleanupStatsDto;
 };
+
+export type AdminControllerGetCleanupStatsResponse = AdminControllerGetCleanupStatsResponses[keyof AdminControllerGetCleanupStatsResponses];
 
 export type AdminControllerGetOrphanStatsData = {
     body?: never;
@@ -10471,8 +10582,10 @@ export type AdminControllerGetOrphanStatsResponses = {
     /**
      * 获取孤儿文件统计成功
      */
-    200: unknown;
+    200: OrphanStatsDto;
 };
+
+export type AdminControllerGetOrphanStatsResponse = AdminControllerGetOrphanStatsResponses[keyof AdminControllerGetOrphanStatsResponses];
 
 export type AdminControllerCleanupOrphansData = {
     body?: never;
@@ -10485,8 +10598,10 @@ export type AdminControllerCleanupOrphansResponses = {
     /**
      * 孤儿文件清理完成
      */
-    200: unknown;
+    200: StorageCleanupResultDto;
 };
+
+export type AdminControllerCleanupOrphansResponse = AdminControllerCleanupOrphansResponses[keyof AdminControllerCleanupOrphansResponses];
 
 export type AdminControllerGetDeletedFileStatsData = {
     body?: never;
@@ -10499,8 +10614,10 @@ export type AdminControllerGetDeletedFileStatsResponses = {
     /**
      * 获取标记删除文件统计成功
      */
-    200: unknown;
+    200: DeletedFileStatsDto;
 };
+
+export type AdminControllerGetDeletedFileStatsResponse = AdminControllerGetDeletedFileStatsResponses[keyof AdminControllerGetDeletedFileStatsResponses];
 
 export type HealthControllerLivenessData = {
     body?: never;

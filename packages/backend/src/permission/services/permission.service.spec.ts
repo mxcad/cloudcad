@@ -30,7 +30,6 @@ describe('PermissionService', () => {
   };
 
   const mockRoleInheritanceService = {
-    getRolePermissions: jest.fn(),
     checkUserPermissionWithInheritance: jest.fn(),
     clearRoleCache: jest.fn(),
   };
@@ -41,7 +40,6 @@ describe('PermissionService', () => {
 
   const mockStoreStrategy: jest.Mocked<IStorePermissionStrategy> = {
     checkSystemPermission: jest.fn(),
-    checkSystemPermissionsBatch: jest.fn(),
     clearUserCache: jest.fn(),
   };
 
@@ -170,111 +168,6 @@ describe('PermissionService', () => {
   });
 
   // =========================================================================
-  // getUserPermissions
-  // =========================================================================
-
-  describe('getUserPermissions', () => {
-    it('should return permissions from RoleInheritanceService', async () => {
-      const user = {
-        id: 'user-001',
-        email: 'test@example.com',
-        username: 'testuser',
-        role: { id: 'role-1', name: 'ADMIN', isSystem: true },
-        status: 'ACTIVE',
-      };
-      const expectedPermissions = [SystemPermission.SYSTEM_USER_READ, SystemPermission.SYSTEM_USER_CREATE];
-
-      mockRoleInheritanceService.getRolePermissions.mockResolvedValue(expectedPermissions);
-
-      const result = await service.getUserPermissions(user);
-
-      expect(mockRoleInheritanceService.getRolePermissions).toHaveBeenCalledWith(
-        user.role.name as SystemRole
-      );
-      expect(result).toEqual(expectedPermissions);
-    });
-
-    it('should return empty array when user has no role', async () => {
-      const user = {
-        id: 'user-001',
-        email: 'test@example.com',
-        username: 'testuser',
-        role: null as any,
-        status: 'ACTIVE',
-      };
-
-      const result = await service.getUserPermissions(user);
-
-      expect(result).toEqual([]);
-      expect(mockRoleInheritanceService.getRolePermissions).not.toHaveBeenCalled();
-    });
-
-    it('should return empty array when RoleInheritanceService throws', async () => {
-      const user = {
-        id: 'user-001',
-        email: 'test@example.com',
-        username: 'testuser',
-        role: { id: 'role-1', name: 'ADMIN', isSystem: true },
-        status: 'ACTIVE',
-      };
-
-      mockRoleInheritanceService.getRolePermissions.mockRejectedValue(new Error('DB error'));
-
-      const result = await service.getUserPermissions(user);
-
-      expect(result).toEqual([]);
-    });
-  });
-
-  // =========================================================================
-  // hasRole
-  // =========================================================================
-
-  describe('hasRole', () => {
-    it('should return true when user role matches one of the specified roles', () => {
-      const user = {
-        id: 'user-001',
-        email: 'test@example.com',
-        username: 'testuser',
-        role: { id: 'role-1', name: 'ADMIN', isSystem: true },
-        status: 'ACTIVE',
-      };
-
-      const result = service.hasRole(user, ['ADMIN', 'USER']);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when user role does not match any specified role', () => {
-      const user = {
-        id: 'user-001',
-        email: 'test@example.com',
-        username: 'testuser',
-        role: { id: 'role-1', name: 'USER', isSystem: true },
-        status: 'ACTIVE',
-      };
-
-      const result = service.hasRole(user, ['ADMIN']);
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when user has no role name', () => {
-      const user = {
-        id: 'user-001',
-        email: 'test@example.com',
-        username: 'testuser',
-        role: { id: 'role-1', name: '', isSystem: true },
-        status: 'ACTIVE',
-      };
-
-      const result = service.hasRole(user, ['ADMIN']);
-
-      expect(result).toBe(false);
-    });
-  });
-
-  // =========================================================================
   // checkSystemPermissionWithContext
   // =========================================================================
 
@@ -341,96 +234,6 @@ describe('PermissionService', () => {
       );
 
       expect(result).toBe(false);
-    });
-  });
-
-  // =========================================================================
-  // checkSystemPermissionsBatch
-  // =========================================================================
-
-  describe('checkSystemPermissionsBatch', () => {
-    const userId = 'user-001';
-    const permissions = [
-      SystemPermission.SYSTEM_USER_READ,
-      SystemPermission.SYSTEM_USER_CREATE,
-      SystemPermission.SYSTEM_ADMIN,
-    ];
-
-    it('should delegate to store strategy when available', async () => {
-      const storeResult = new Map<SystemPermission, boolean>();
-      storeResult.set(SystemPermission.SYSTEM_USER_READ, true);
-      storeResult.set(SystemPermission.SYSTEM_USER_CREATE, false);
-      storeResult.set(SystemPermission.SYSTEM_ADMIN, true);
-      mockStoreStrategy.checkSystemPermissionsBatch.mockResolvedValue(storeResult);
-
-      const result = await service.checkSystemPermissionsBatch(userId, permissions);
-
-      expect(mockStoreStrategy.checkSystemPermissionsBatch).toHaveBeenCalledWith(userId, permissions);
-      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(true);
-      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
-    });
-
-    it('should return cached results for permissions already in cache', async () => {
-      mockStoreStrategy.checkSystemPermissionsBatch.mockResolvedValue(null);
-      mockCacheService.get.mockImplementation((key: string) => {
-        if (key === `system_perm:${userId}:${SystemPermission.SYSTEM_USER_READ}`) return Promise.resolve(true);
-        if (key === `system_perm:${userId}:${SystemPermission.SYSTEM_USER_CREATE}`) return Promise.resolve(false);
-        return Promise.resolve(null);
-      });
-
-      mockPrisma.user.findUnique.mockResolvedValue({
-        role: { name: 'ADMIN' },
-      });
-      mockRoleInheritanceService.getRolePermissions.mockResolvedValue([
-        SystemPermission.SYSTEM_USER_READ,
-        SystemPermission.SYSTEM_USER_CREATE,
-        SystemPermission.SYSTEM_ADMIN,
-      ]);
-
-      const result = await service.checkSystemPermissionsBatch(userId, permissions);
-
-      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(true);
-      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
-      expect(result.get(SystemPermission.SYSTEM_ADMIN)).toBe(true);
-    });
-
-    it('should return false for all permissions when user has no role', async () => {
-      mockStoreStrategy.checkSystemPermissionsBatch.mockResolvedValue(null);
-      mockCacheService.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue(null);
-
-      const result = await service.checkSystemPermissionsBatch(userId, permissions);
-
-      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(false);
-      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
-      expect(result.get(SystemPermission.SYSTEM_ADMIN)).toBe(false);
-    });
-
-    it('should return false for all uncached permissions on error', async () => {
-      mockStoreStrategy.checkSystemPermissionsBatch.mockResolvedValue(null);
-      mockCacheService.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockRejectedValue(new Error('DB error'));
-
-      const result = await service.checkSystemPermissionsBatch(userId, permissions);
-
-      expect(result.get(SystemPermission.SYSTEM_USER_READ)).toBe(false);
-      expect(result.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
-      expect(result.get(SystemPermission.SYSTEM_ADMIN)).toBe(false);
-    });
-
-    it('should cache uncached permission results', async () => {
-      mockStoreStrategy.checkSystemPermissionsBatch.mockResolvedValue(null);
-      mockCacheService.get.mockResolvedValue(null);
-      mockPrisma.user.findUnique.mockResolvedValue({
-        role: { name: 'ADMIN' },
-      });
-      mockRoleInheritanceService.getRolePermissions.mockResolvedValue([
-        SystemPermission.SYSTEM_USER_READ,
-      ]);
-
-      await service.checkSystemPermissionsBatch(userId, permissions);
-
-      expect(mockCacheService.set).toHaveBeenCalledTimes(permissions.length);
     });
   });
 

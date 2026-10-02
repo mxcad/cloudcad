@@ -1,7 +1,8 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
-  client: '@hey-api/client-fetch',
+  // 注意：openapi-ts 0.9x 只解析 plugins，顶层 client 键已废弃（写它无效且误导），
+  // 客户端由下方 plugins 里的 @hey-api/client-fetch 指定。
   input: '../../swagger_json.json',
   output: 'src',
   plugins: [

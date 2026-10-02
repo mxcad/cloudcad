@@ -8,7 +8,6 @@ describe('StorePermissionStrategy', () => {
 
   const mockPermissionStore = {
     checkSystemPermission: jest.fn(),
-    getUserSystemPermissions: jest.fn(),
     clearUserCache: jest.fn(),
   };
 
@@ -31,19 +30,6 @@ describe('StorePermissionStrategy', () => {
       expect(mockPermissionStore.checkSystemPermission).toHaveBeenCalledWith('user-1', SystemPermission.SYSTEM_ADMIN);
     });
 
-    it('should delegate checkSystemPermissionsBatch', async () => {
-      mockPermissionStore.getUserSystemPermissions.mockResolvedValue([
-        SystemPermission.SYSTEM_USER_READ,
-        SystemPermission.SYSTEM_ADMIN,
-      ]);
-      const result = await strategy.checkSystemPermissionsBatch('user-1', [
-        SystemPermission.SYSTEM_USER_READ,
-        SystemPermission.SYSTEM_USER_CREATE,
-      ]);
-      expect(result!.get(SystemPermission.SYSTEM_USER_READ)).toBe(true);
-      expect(result!.get(SystemPermission.SYSTEM_USER_CREATE)).toBe(false);
-    });
-
     it('should delegate clearUserCache', async () => {
       const result = await strategy.clearUserCache('user-1');
       expect(result).toBe(true);
@@ -63,11 +49,6 @@ describe('StorePermissionStrategy', () => {
 
     it('should return null from checkSystemPermission', async () => {
       const result = await strategy.checkSystemPermission('user-1', SystemPermission.SYSTEM_ADMIN);
-      expect(result).toBeNull();
-    });
-
-    it('should return null from checkSystemPermissionsBatch', async () => {
-      const result = await strategy.checkSystemPermissionsBatch('user-1', [SystemPermission.SYSTEM_ADMIN]);
       expect(result).toBeNull();
     });
 

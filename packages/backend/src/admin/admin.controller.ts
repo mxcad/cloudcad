@@ -38,9 +38,13 @@ import { PermissionCacheService } from '../permission/services/permission-cache.
 import { StorageCleanupService } from '../storage-management/services/storage-cleanup.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import {
-  CacheStatsResponseDto,
-  CacheCleanupResponseDto,
-  UserCacheClearResponseDto,
+  CacheStatsDto,
+  CacheCleanupResultDto,
+  UserCacheClearResultDto,
+  StorageCleanupResultDto,
+  PendingCleanupStatsDto,
+  OrphanStatsDto,
+  DeletedFileStatsDto,
 } from './dto/admin-response.dto';
 import { AdminStatsService } from './admin-stats.service';
 import {
@@ -157,14 +161,10 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '获取权限缓存统计成功',
-    type: CacheStatsResponseDto,
+    type: CacheStatsDto,
   })
   async getCacheStats() {
-    const stats = await this.cacheService.getStats();
-    return {
-      message: '权限缓存统计',
-      data: stats,
-    };
+    return this.cacheService.getStats();
   }
 
   @Post('permissions/cache/cleanup')
@@ -173,14 +173,11 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '缓存清理完成',
-    type: CacheCleanupResponseDto,
+    type: CacheCleanupResultDto,
   })
   async cleanupCache() {
     const cleaned = await this.cacheService.cleanup();
-    return {
-      message: '缓存清理完成',
-      data: { cleanedEntries: cleaned },
-    };
+    return { cleanedEntries: cleaned };
   }
 
   @Delete('permissions/cache/user/:userId')
@@ -189,13 +186,11 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '用户权限缓存已清除',
-    type: UserCacheClearResponseDto,
+    type: UserCacheClearResultDto,
   })
   async clearUserCache(@Param('userId') userId: string) {
     await this.cacheService.clearUserCache(userId);
-    return {
-      message: `用户 ${userId} 的权限缓存已清除`,
-    };
+    return { userId };
   }
 
   @Post('storage/cleanup')
@@ -204,6 +199,7 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '存储清理完成',
+    type: StorageCleanupResultDto,
   })
   @ApiQuery({
     name: 'delayDays',
@@ -212,16 +208,7 @@ export class AdminController {
     description: '清理延迟天数（覆盖默认值）',
   })
   async cleanupStorage(@Query('delayDays') delayDays?: number) {
-    const result = await this.storageCleanupService.manualCleanup(delayDays);
-    return {
-      message: '存储清理完成',
-      data: {
-        deletedNodes: result.deletedNodes,
-        deletedDirectories: result.deletedDirectories,
-        freedSpace: result.freedSpace,
-        errors: result.errors,
-      },
-    };
+    return this.storageCleanupService.manualCleanup(delayDays);
   }
 
   @Get('storage/cleanup/stats')
@@ -230,13 +217,10 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '获取待清理存储统计成功',
+    type: PendingCleanupStatsDto,
   })
   async getCleanupStats() {
-    const stats = await this.storageCleanupService.getPendingCleanupStats();
-    return {
-      message: '待清理存储统计',
-      data: stats,
-    };
+    return this.storageCleanupService.getPendingCleanupStats();
   }
 
   // ────────────────────────────────────────────────────────────
@@ -249,26 +233,24 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '获取孤儿文件统计成功',
+    type: OrphanStatsDto,
   })
   async getOrphanStats() {
     const stats = await this.storageCleanupService.getOrphanStats();
     return {
-      message: '孤儿文件统计',
-      data: {
-        localOrphanCount: stats.localOrphanCount,
-        localOrphanTotalSize: stats.localOrphanTotalSize,
-        dbOrphanCount: stats.dbOrphanCount,
-        localOrphans: stats.localOrphans.map((o) => ({
-          nodeId: o.nodeId,
-          directory: o.directory,
-          sizeBytes: o.sizeBytes,
-        })),
-        dbOrphans: stats.dbOrphans.map((o) => ({
-          nodeId: o.nodeId,
-          name: o.name,
-          projectId: o.projectId,
-        })),
-      },
+      localOrphanCount: stats.localOrphanCount,
+      localOrphanTotalSize: stats.localOrphanTotalSize,
+      dbOrphanCount: stats.dbOrphanCount,
+      localOrphans: stats.localOrphans.map((o) => ({
+        nodeId: o.nodeId,
+        directory: o.directory,
+        sizeBytes: o.sizeBytes,
+      })),
+      dbOrphans: stats.dbOrphans.map((o) => ({
+        nodeId: o.nodeId,
+        name: o.name,
+        projectId: o.projectId,
+      })),
     };
   }
 
@@ -278,18 +260,10 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '孤儿文件清理完成',
+    type: StorageCleanupResultDto,
   })
   async cleanupOrphans() {
-    const result = await this.storageCleanupService.cleanupOrphans();
-    return {
-      message: '孤儿文件清理完成',
-      data: {
-        deletedNodes: result.deletedNodes,
-        deletedDirectories: result.deletedDirectories,
-        freedSpace: result.freedSpace,
-        errors: result.errors,
-      },
-    };
+    return this.storageCleanupService.cleanupOrphans();
   }
 
   // ────────────────────────────────────────────────────────────
@@ -304,12 +278,9 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: '获取标记删除文件统计成功',
+    type: DeletedFileStatsDto,
   })
   async getDeletedFileStats() {
-    const stats = await this.storageCleanupService.getDeletedFileStats();
-    return {
-      message: '标记删除文件统计',
-      data: stats,
-    };
+    return this.storageCleanupService.getDeletedFileStats();
   }
 }

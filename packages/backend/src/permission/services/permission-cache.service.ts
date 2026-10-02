@@ -17,13 +17,11 @@ import {
   OnModuleDestroy,
   Inject,
   Optional,
-  InternalServerErrorException,
   forwardRef,
 } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
-import { I18nContext } from 'nestjs-i18n';
-import { SystemPermission, ProjectPermission } from '../../common/enums/permissions.enum';
+import { SystemPermission } from '../../common/enums/permissions.enum';
 import { MultiLevelCacheService } from '../../cache-architecture/services/multi-level-cache.service';
 import { CacheKeyUtil } from '../../cache-architecture/utils/cache-key.utils';
 import {
@@ -164,21 +162,25 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
       switch (event.type) {
         case 'user':
           if (event.id) {
-            this.clearUserCacheInternal(event.id);
+            // fire-and-forget：内部方法捕获异常，不会产生 unhandledRejection
+            void this.clearUserCacheInternal(event.id);
           }
           break;
         case 'project':
           if (event.id) {
-            this.clearProjectCacheInternal(event.id);
+            // fire-and-forget：内部方法捕获异常，不会产生 unhandledRejection
+            void this.clearProjectCacheInternal(event.id);
           }
           break;
         case 'role':
           if (event.id) {
-            this.clearRoleCacheInternal(event.id);
+            // fire-and-forget：内部方法捕获异常，不会产生 unhandledRejection
+            void this.clearRoleCacheInternal(event.id);
           }
           break;
         case 'all':
-          this.clearAllCacheInternal();
+          // fire-and-forget：内部方法捕获异常，不会产生 unhandledRejection
+          void this.clearAllCacheInternal();
           break;
         case 'pattern': {
           // 兼容旧实例广播的 {type:'pattern', id} 事件（pattern 字段为独立字段后引入）
@@ -225,26 +227,6 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 生成缓存键
-   */
-  private generateCacheKey(
-    type: 'user' | 'project',
-    id: string,
-    permission?: SystemPermission | ProjectPermission
-  ): string {
-    const idNum = parseInt(id, 10);
-
-    switch (type) {
-      case 'user':
-        return CacheKeyUtil.userPermissions(idNum);
-      case 'project':
-        return CacheKeyUtil.projectPermissions(idNum);
-      default:
-        throw new InternalServerErrorException(I18nContext.current()?.t('error.cache.unsupported_level') ?? `不支持的缓存类型: ${type}`);
-    }
-  }
-
-  /**
    * 设置缓存
    */
   async set<T>(
@@ -270,15 +252,6 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * 批量删除缓存
-   */
-  async deleteMany(keys: string[]): Promise<void> {
-    if (keys.length > 0) {
-      this.multiLevelCache.deleteMany(keys);
-    }
-  }
-
-  /**
    * 清除用户缓存（公共接口）
    */
   async clearUserCache(userId: string): Promise<void> {
@@ -293,15 +266,15 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
 
     // 先发布事件，确保其他实例也清除缓存
     await this.publishInvalidationEvent('user', userId, 'clearUserCache');
-    // 然后执行本地清除
-    this.clearUserCacheInternal(userId);
+    // 然后执行本地清除（await：删除完成才算清除生效）
+    await this.clearUserCacheInternal(userId);
   }
 
   /**
    * 清除用户缓存（内部实现，不发布事件）
-   * 使用多级缓存进行删除
+   * 使用多级缓存进行删除，失败仅记录不抛出
    */
-  private clearUserCacheInternal(userId: string): void {
+  private async clearUserCacheInternal(userId: string): Promise<void> {
     const userIdNum = parseInt(userId, 10);
     // 生成需要删除的缓存键
     const keysToDelete = [
@@ -316,7 +289,13 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
     ];
 
     // 使用多级缓存进行删除
-    this.multiLevelCache.deleteMany(keysToDelete);
+    try {
+      await this.multiLevelCache.deleteMany(keysToDelete);
+    } catch (error: unknown) {
+      this.logger.error(
+        `清除用户缓存失败: ${userId} - ${(error as Error).message}`
+      );
+    }
     this.logger.debug(`清除用户 ${userId} 的 ${keysToDelete.length} 个缓存`);
   }
 
@@ -339,14 +318,15 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
       projectId,
       'clearProjectCache'
     );
-    // 然后执行本地清除
-    this.clearProjectCacheInternal(projectId);
+    // 然后执行本地清除（await：删除完成才算清除生效）
+    await this.clearProjectCacheInternal(projectId);
   }
 
   /**
-   * 清除项目缓存（内部实现）
+   * 清除项目缓存（内部实现，不发布事件）
+   * 失败仅记录不抛出
    */
-  private clearProjectCacheInternal(projectId: string): void {
+  private async clearProjectCacheInternal(projectId: string): Promise<void> {
     const projectIdNum = parseInt(projectId, 10);
     // 生成需要删除的缓存键
     const keysToDelete = [
@@ -354,7 +334,13 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
       CacheKeyUtil.project(projectIdNum),
     ];
 
-    this.multiLevelCache.deleteMany(keysToDelete);
+    try {
+      await this.multiLevelCache.deleteMany(keysToDelete);
+    } catch (error: unknown) {
+      this.logger.error(
+        `清除项目缓存失败: ${projectId} - ${(error as Error).message}`
+      );
+    }
     this.logger.debug(`清除项目 ${projectId} 的 ${keysToDelete.length} 个缓存`);
   }
 
@@ -380,14 +366,15 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
 
     // 先发布事件
     await this.publishInvalidationEvent('role', roleName, 'clearRoleCache');
-    // 然后执行本地清除
-    this.clearRoleCacheInternal(roleName);
+    // 然后执行本地清除（await：删除完成才算清除生效）
+    await this.clearRoleCacheInternal(roleName);
   }
 
   /**
-   * 清除角色缓存（内部实现）
+   * 清除角色缓存（内部实现，不发布事件）
+   * 失败仅记录不抛出
    */
-  private clearRoleCacheInternal(roleName: string): void {
+  private async clearRoleCacheInternal(roleName: string): Promise<void> {
     const keysToDelete = [
       CacheKeyUtil.custom('role', roleName),
       // 删除该角色的权限缓存
@@ -395,65 +382,32 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
       `role:path:${roleName}`,
     ];
 
-    this.multiLevelCache.deleteMany(keysToDelete);
+    try {
+      await this.multiLevelCache.deleteMany(keysToDelete);
+    } catch (error: unknown) {
+      this.logger.error(
+        `清除角色缓存失败: ${roleName} - ${(error as Error).message}`
+      );
+    }
     this.logger.debug(`清除角色 ${roleName} 的 ${keysToDelete.length} 个缓存`);
   }
 
   /**
-   * 清除所有缓存（公共接口）
+   * 清除所有缓存（内部实现，不发布事件）
+   * 保留 'all' 频道订阅：滚动部署期间旧实例仍可能广播 all 事件，失败仅记录不抛出
    */
-  async clearAllCache(): Promise<void> {
-    // 更新所有版本号
-    if (this.cacheVersionService) {
-      await Promise.all([
-        this.cacheVersionService.updateVersion(
-          CacheVersionType.USER_PERMISSIONS,
-          undefined,
-          'All user permissions cleared'
-        ),
-        this.cacheVersionService.updateVersion(
-          CacheVersionType.PROJECT_PERMISSIONS,
-          undefined,
-          'All project permissions cleared'
-        ),
-        this.cacheVersionService.updateVersion(
-          CacheVersionType.ROLE_PERMISSIONS,
-          undefined,
-          'All role permissions cleared'
-        ),
-      ]);
+  private async clearAllCacheInternal(): Promise<void> {
+    try {
+      await this.multiLevelCache.clear();
+    } catch (error: unknown) {
+      this.logger.error(`清除所有缓存失败: ${(error as Error).message}`);
     }
-
-    // 先发布事件
-    await this.publishInvalidationEvent('all', undefined, 'clearAllCache');
-    // 然后执行本地清除
-    this.clearAllCacheInternal();
-  }
-
-  /**
-   * 清除所有缓存（内部实现）
-   */
-  private clearAllCacheInternal(): void {
-    this.multiLevelCache.clear();
     this.logger.debug('清除所有缓存');
   }
 
   /**
-   * 根据模式清除缓存（公共接口）
-   * @param pattern 缓存键模式（支持 * 和 ? 通配符）
-   * 注意：本方法 resolve 不代表缓存已清——本地删除失败仅记录日志（见 clearPatternInternal），
-   * 调用方若依赖"失效即生效"需自行感知（安全敏感场景请复核日志）。
-   */
-  async clearPattern(pattern: string): Promise<void> {
-    // 先发布事件，确保其他实例也清除缓存
-    await this.publishInvalidationEvent('pattern', undefined, 'clearPattern', pattern);
-    // 然后执行本地清除
-    await this.clearPatternInternal(pattern);
-  }
-
-  /**
    * 根据模式清除缓存（内部实现，不发布事件）
-   * 供本实例公共接口与远端失效事件处理调用，失败仅记录不抛出
+   * 保留 'pattern' 频道订阅：滚动部署期间旧实例仍可能广播 pattern 事件，失败仅记录不抛出
    */
   private async clearPatternInternal(pattern: string): Promise<void> {
     try {
@@ -464,84 +418,6 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
         `根据模式清除缓存失败: ${pattern} - ${(error as Error).message}`
       );
     }
-  }
-
-  /**
-   * 缓存用户系统权限
-   */
-  async cacheUserPermissions(
-    userId: string,
-    permissions: SystemPermission[]
-  ): Promise<void> {
-    const key = this.generateCacheKey('user', userId);
-    await this.set(key, permissions);
-  }
-
-  /**
-   * 获取用户系统权限缓存
-   */
-  async getUserPermissions(userId: string): Promise<SystemPermission[] | null> {
-    const key = this.generateCacheKey('user', userId);
-    return this.get<SystemPermission[]>(key);
-  }
-
-  /**
-   * 缓存用户角色
-   */
-  async cacheUserRole(userId: string, role: string): Promise<void> {
-    const key = CacheKeyUtil.user(parseInt(userId, 10));
-    await this.set(key, role, 10 * 60); // 用户角色缓存 10 分钟
-  }
-
-  /**
-   * 获取用户角色缓存
-   */
-  async getUserRole(userId: string): Promise<string | null> {
-    const key = CacheKeyUtil.user(parseInt(userId, 10));
-    return this.get<string>(key);
-  }
-
-  /**
-   * 缓存项目权限
-   */
-  async cacheProjectPermissions(
-    projectId: string,
-    permissions: ProjectPermission[]
-  ): Promise<void> {
-    const key = this.generateCacheKey('project', projectId);
-    await this.set(key, permissions);
-  }
-
-  /**
-   * 获取项目权限缓存
-   */
-  async getProjectPermissions(
-    projectId: string
-  ): Promise<ProjectPermission[] | null> {
-    const key = this.generateCacheKey('project', projectId);
-    return this.get<ProjectPermission[]>(key);
-  }
-
-  /**
-   * 获取或加载用户权限
-   */
-  async getOrLoadUserPermissions(
-    userId: string,
-    loader: () => Promise<SystemPermission[]>
-  ): Promise<SystemPermission[]> {
-    const key = this.generateCacheKey('user', userId);
-    return this.multiLevelCache.getOrLoad(key, loader);
-  }
-
-  /**
-   * 获取或加载项目权限
-   */
-  async getOrLoadProjectPermissions(
-    projectId: string,
-    loader: () => Promise<ProjectPermission[]>
-  ): Promise<ProjectPermission[]> {
-    const key = this.generateCacheKey('project', projectId);
-    return this.multiLevelCache.getOrLoad(key, loader);
   }
 
   /**
@@ -557,14 +433,6 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
       return cleaned;
     }
     return 0;
-  }
-
-  /**
-   * 获取缓存大小
-   */
-  async size(): Promise<number> {
-    const stats = await this.multiLevelCache.getStats();
-    return stats.summary.totalRequests;
   }
 
   /**

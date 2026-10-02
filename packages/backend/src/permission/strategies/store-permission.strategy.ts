@@ -6,7 +6,6 @@ export const ISTORE_PERMISSION_STRATEGY = 'IStorePermissionStrategy';
 
 export interface IStorePermissionStrategy {
   checkSystemPermission(userId: string, permission: SystemPermission): Promise<boolean | null>;
-  checkSystemPermissionsBatch(userId: string, permissions: SystemPermission[]): Promise<Map<SystemPermission, boolean> | null>;
   clearUserCache(userId: string): Promise<boolean>;
 }
 
@@ -17,10 +16,6 @@ export class StorePermissionStrategy implements IStorePermissionStrategy {
     private readonly permissionStore?: IPermissionStore,
   ) {}
 
-  isEnabled(): boolean {
-    return !!this.permissionStore;
-  }
-
   async checkSystemPermission(
     userId: string,
     permission: SystemPermission,
@@ -29,25 +24,9 @@ export class StorePermissionStrategy implements IStorePermissionStrategy {
     return this.permissionStore.checkSystemPermission(userId, permission);
   }
 
-  async checkSystemPermissionsBatch(
-    userId: string,
-    permissions: SystemPermission[],
-  ): Promise<Map<SystemPermission, boolean> | null> {
-    if (!this.permissionStore) return null;
-
-    const userPermissions = await this.permissionStore.getUserSystemPermissions(userId);
-    const results = new Map<SystemPermission, boolean>();
-    for (const permission of permissions) {
-      results.set(permission, userPermissions.includes(permission));
-    }
-    return results;
-  }
-
   async clearUserCache(userId: string): Promise<boolean> {
     if (!this.permissionStore) return false;
     await this.permissionStore.clearUserCache(userId);
     return true;
   }
-
-
 }

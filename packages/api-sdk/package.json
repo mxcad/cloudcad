@@ -16,7 +16,8 @@
   },
   "scripts": {
     "generate:sdk": "node scripts/generate-sdk.cjs",
-    "test": "node scripts/vite-plugin.test.mjs"
+    "test": "node scripts/vite-plugin.test.mjs",
+    "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@hey-api/client-fetch": "^0.13.1",

@@ -19,6 +19,7 @@ import * as crypto from 'crypto';
 
 import { I18nContext } from 'nestjs-i18n';
 import type { IEmailVerificationService } from '@cloudcad/contracts';
+import { AppConfig } from '../config/app.config';
 @Injectable()
 export class EmailVerificationService implements IEmailVerificationService {
   private readonly codeTTL: number;
@@ -27,7 +28,7 @@ export class EmailVerificationService implements IEmailVerificationService {
 
   constructor(
     private readonly emailService: EmailService,
-    private readonly configService: ConfigService,
+    private readonly configService: ConfigService<AppConfig>,
     @InjectRedis() private readonly redis: Redis
   ) {
     const cacheTTL = this.configService.get('cacheTTL', { infer: true });
@@ -49,7 +50,7 @@ export class EmailVerificationService implements IEmailVerificationService {
     return `email_verification:verify_attempts:${email}:${today}`;
   }
 
-  async generateVerificationToken(email: string): Promise<string> {
+  private async generateVerificationToken(email: string): Promise<string> {
     const code = (100000 + crypto.randomInt(900000)).toString();
 
     const key = this.getCodeKey(email);
@@ -85,23 +86,25 @@ export class EmailVerificationService implements IEmailVerificationService {
     }
 
     if (storedCode !== code) {
-      const attempts = parseInt((await this.redis.get(attemptsKey)) || '0', 10);
+      // incr 原子计数后按返回值判定，避免并发错答时 get→incr 竞态绕过次数上限
+      const attempts = await this.redis.incr(attemptsKey);
       const remainingAttempts = this.maxVerifyAttempts - attempts;
 
-      if (remainingAttempts <= 0) {
+      if (remainingAttempts < 0) {
         await this.redis.del(key);
         await this.redis.del(attemptsKey);
         throw new BadRequestException(I18nContext.current()?.t('error.auth.verification_attempts_exhausted') ?? '验证次数已用完，请重新获取验证码');
       }
 
-      await this.redis.incr(attemptsKey);
       const ttl = await this.redis.ttl(key);
       if (ttl > 0) {
         await this.redis.expire(attemptsKey, ttl);
       }
 
       throw new BadRequestException(
-        `验证码错误，剩余 ${remainingAttempts - 1} 次尝试机会`
+        I18nContext.current()?.t('success.verification_code_error_remaining', {
+          args: { count: remainingAttempts },
+        }) ?? `验证码错误，剩余 ${remainingAttempts} 次尝试机会`
       );
     }
 

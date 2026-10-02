@@ -14,7 +14,7 @@ import { PermissionCacheService } from './permission-cache.service';
 import { RoleInheritanceService } from './role-inheritance.service';
 import { PermissionContext } from '../../common/utils/permission.utils';
 import { CACHE_TTL } from '../../common/constants/cache.constants';
-import { IPermissionService, UserWithPermissions } from '../interfaces/permission-service.interface';
+import { IPermissionService } from '../interfaces/permission-service.interface';
 import type { IStorePermissionStrategy, IContextPermissionStrategy } from '../strategies';
 import { ISTORE_PERMISSION_STRATEGY, ICONTEXT_PERMISSION_STRATEGY } from '../strategies';
 import { DatabaseService } from '../../database/database.service';
@@ -70,20 +70,6 @@ export class PermissionService implements IPermissionService {
     }
   }
 
-  async getUserPermissions(user: UserWithPermissions): Promise<SystemPermission[]> {
-    try {
-      if (!user.role) return [];
-      return await this.roleInheritanceService.getRolePermissions(user.role.name as SystemRole);
-    } catch (error) {
-      this.logger.error(`获取用户权限失败: ${(error as Error).message}`, (error as Error).stack);
-      return [];
-    }
-  }
-
-  hasRole(user: UserWithPermissions, roleNames: string[]): boolean {
-    return roleNames.includes(user.role?.name || '');
-  }
-
   async checkSystemPermissionWithContext(
     userId: string,
     permission: SystemPermission,
@@ -117,57 +103,6 @@ export class PermissionService implements IPermissionService {
     if (user?.role) {
       await this.roleInheritanceService.clearRoleCache(user.role.name as SystemRole);
     }
-  }
-
-  async checkSystemPermissionsBatch(
-    userId: string,
-    permissions: SystemPermission[]
-  ): Promise<Map<SystemPermission, boolean>> {
-    const storeResults = await this.storeStrategy.checkSystemPermissionsBatch(userId, permissions);
-    if (storeResults !== null) return storeResults;
-
-    const results = new Map<SystemPermission, boolean>();
-    const uncachedPermissions: SystemPermission[] = [];
-
-    for (const permission of permissions) {
-      const cached = await this.cacheService.get<boolean>(systemPermCacheKey(userId, permission));
-      if (cached !== null) {
-        results.set(permission, cached);
-      } else {
-        uncachedPermissions.push(permission);
-      }
-    }
-
-    if (uncachedPermissions.length > 0) {
-      try {
-        const user = await this.prisma.user.findUnique({
-          where: { id: userId, deletedAt: null },
-          select: { role: { select: { name: true } } },
-        });
-
-        if (!user?.role) {
-          for (const permission of uncachedPermissions) {
-            results.set(permission, false);
-          }
-          return results;
-        }
-
-        const userPermissions = await this.roleInheritanceService.getRolePermissions(user.role.name as SystemRole);
-
-        for (const permission of uncachedPermissions) {
-          const hasPermission = userPermissions.includes(permission);
-          results.set(permission, hasPermission);
-          await this.cacheService.set(systemPermCacheKey(userId, permission), hasPermission, CACHE_TTL.SYSTEM_PERMISSION);
-        }
-      } catch (error) {
-        this.logger.error(`批量检查系统权限失败: ${(error as Error).message}`, (error as Error).stack);
-        for (const permission of uncachedPermissions) {
-          results.set(permission, false);
-        }
-      }
-    }
-
-    return results;
   }
 
   private logPermissionDenied(

@@ -21,31 +21,6 @@ import { PermissionCacheService } from './permission-cache.service';
 import { CACHE_TTL } from '../../common/constants/cache.constants';
 
 /**
- * 角色基本信息接口
- */
-interface RoleBasicInfo {
-  id: string;
-  name: string;
-  description: string | null;
-  category: string;
-  level: number;
-  isSystem: boolean;
-}
-
-/**
- * 角色层级节点接口
- */
-export interface RoleHierarchyNode {
-  id: string;
-  name: string;
-  description?: string;
-  category: string;
-  level: number;
-  isSystem: boolean;
-  children: RoleHierarchyNode[];
-}
-
-/**
  * 角色继承服务
  *
  * 功能：
@@ -151,9 +126,9 @@ export class RoleInheritanceService implements OnModuleInit {
   async forceRefreshRolePermissions(
     roleName: SystemRole
   ): Promise<SystemPermission[]> {
-    // 先清除缓存
+    // 先清除缓存（必须 await：delete 未完成就重新获取，可能读到旧缓存）
     const cacheKey = `role:permissions:${roleName}`;
-    this.cacheService.delete(cacheKey);
+    await this.cacheService.delete(cacheKey);
 
     // 重新获取权限
     return this.getRolePermissions(roleName);
@@ -199,119 +174,6 @@ export class RoleInheritanceService implements OnModuleInit {
     }
 
     return ids;
-  }
-
-  /**
-   * 检查角色是否继承自另一个角色
-   *
-   * @param childRoleName 子角色名称
-   * @param parentRoleName 父角色名称
-   * @returns 是否继承自该父角色
-   */
-  async isInheritedFrom(
-    childRoleName: SystemRole,
-    parentRoleName: SystemRole
-  ): Promise<boolean> {
-    const cacheKey = `role:inherit:${childRoleName}:${parentRoleName}`;
-    const cached = await this.cacheService.get<boolean>(cacheKey);
-
-    if (cached !== null) {
-      return cached;
-    }
-
-    try {
-      // 获取继承路径
-      const ancestors = await this.collectAncestorNames(childRoleName, 0);
-
-      // 检查父角色是否在继承路径中
-      const hasInheritance = ancestors.includes(parentRoleName);
-
-      this.cacheService.set(
-        cacheKey,
-        hasInheritance,
-        CACHE_TTL.ROLE_INHERITANCE
-      );
-      return hasInheritance;
-    } catch (error) {
-      this.logger.error(
-        `检查角色继承关系失败: ${(error as Error).message}`,
-        (error as Error).stack
-      );
-      // 出错时回退到安全策略
-      return false;
-    }
-  }
-
-  /**
-   * 递归收集角色及其所有祖先角色的名称
-   */
-  private async collectAncestorNames(
-    roleName: string,
-    depth: number
-  ): Promise<string[]> {
-    if (depth >= RoleInheritanceService.MAX_HIERARCHY_DEPTH) {
-      return [];
-    }
-
-    const role = await this.prisma.role.findFirst({
-      where: { name: roleName },
-      orderBy: { level: 'desc' },
-      select: { name: true, parentId: true },
-    });
-
-    if (!role) {
-      return [];
-    }
-
-    const names = [role.name];
-
-    // 递归获取父角色
-    if (role.parentId) {
-      const parentRole = await this.prisma.role.findUnique({
-        where: { id: role.parentId },
-        select: { name: true },
-      });
-
-      if (parentRole) {
-        const parentNames = await this.collectAncestorNames(
-          parentRole.name,
-          depth + 1
-        );
-        names.push(...parentNames);
-      }
-    }
-
-    return names;
-  }
-
-  /**
-   * 获取角色层级路径
-   *
-   * @param roleName 角色名称
-   * @returns 从根角色到当前角色的路径（数组）
-   */
-  async getRoleHierarchyPath(roleName: SystemRole): Promise<string[]> {
-    const cacheKey = `role:path:${roleName}`;
-    const cached = await this.cacheService.get<string[]>(cacheKey);
-
-    if (cached !== null) {
-      return cached;
-    }
-
-    try {
-      // 获取继承路径并反转（从根角色到当前角色）
-      const ancestors = await this.collectAncestorNames(roleName, 0);
-      const path = ancestors.reverse();
-
-      this.cacheService.set(cacheKey, path, CACHE_TTL.ROLE_HIERARCHY_PATH);
-      return path;
-    } catch (error) {
-      this.logger.error(
-        `获取角色层级路径失败: ${(error as Error).message}`,
-        (error as Error).stack
-      );
-      return [];
-    }
   }
 
   /**
@@ -371,112 +233,16 @@ export class RoleInheritanceService implements OnModuleInit {
    * @param roleName 角色名称
    */
   async clearRoleCache(roleName: SystemRole): Promise<void> {
+    // 必须 await：调用方（如 roles.service）在 await 后可能立即重查权限，
+    // 未等待删除完成会读到旧缓存
     const cacheKey = `role:permissions:${roleName}`;
-    this.cacheService.delete(cacheKey);
+    await this.cacheService.delete(cacheKey);
 
     // 清除层级路径缓存
     const pathKey = `role:path:${roleName}`;
-    this.cacheService.delete(pathKey);
+    await this.cacheService.delete(pathKey);
 
-    // 同时清除该角色的所有继承关系缓存
-    // 由于缓存键包含角色名，这里无法精确匹配，需要在实际使用时清除相关缓存
     this.logger.debug(`清除角色权限缓存: ${roleName}`);
-  }
-
-  /**
-   * 递归清除角色权限缓存（包括所有子角色）
-   *
-   * @param roleName 角色名称
-   */
-  async clearRoleCacheRecursive(roleName: SystemRole): Promise<void> {
-    // 清除当前角色缓存
-    await this.clearRoleCache(roleName);
-
-    try {
-      // 查找所有子角色
-      const currentRole = await this.prisma.role.findFirst({
-        where: { name: roleName },
-        orderBy: { level: 'desc' },
-        select: { id: true },
-      });
-
-      if (!currentRole) {
-        return;
-      }
-
-      const children = await this.prisma.role.findMany({
-        where: { parentId: currentRole.id },
-        select: { name: true },
-      });
-
-      // 递归清除子角色缓存
-      for (const child of children) {
-        await this.clearRoleCacheRecursive(child.name as SystemRole);
-      }
-
-      this.logger.debug(
-        `递归清除角色权限缓存（含子角色）: ${roleName} (${children.length} 个子角色)`
-      );
-    } catch (error) {
-      this.logger.error(`递归清除角色缓存失败: ${error.message}`, error.stack);
-    }
-  }
-
-  /**
-   * 获取所有角色的层级关系
-   *
-   * @returns 角色层级关系树
-   */
-  async getRoleHierarchyTree(): Promise<RoleHierarchyNode[]> {
-    try {
-      // 获取所有顶级角色（parentId 为 null）
-      const topRoles = await this.prisma.role.findMany({
-        where: { parentId: null },
-        orderBy: { name: 'asc' },
-      });
-
-      const tree: RoleHierarchyNode[] = [];
-
-      for (const role of topRoles) {
-        const node = await this.buildHierarchyNode(role);
-        tree.push(node);
-      }
-
-      return tree;
-    } catch (error) {
-      this.logger.error(`获取角色层级树失败: ${error.message}`, error.stack);
-      return [];
-    }
-  }
-
-  /**
-   * 递归构建层级节点
-   */
-  private async buildHierarchyNode(
-    role: RoleBasicInfo
-  ): Promise<RoleHierarchyNode> {
-    // 获取子角色
-    const children = await this.prisma.role.findMany({
-      where: { parentId: role.id },
-      orderBy: { name: 'asc' },
-    });
-
-    const childNodes: RoleHierarchyNode[] = [];
-
-    for (const child of children) {
-      const childNode = await this.buildHierarchyNode(child as RoleBasicInfo);
-      childNodes.push(childNode);
-    }
-
-    return {
-      id: role.id,
-      name: role.name,
-      description: role.description || undefined,
-      category: role.category,
-      level: role.level,
-      isSystem: role.isSystem,
-      children: childNodes,
-    };
   }
 
   /**

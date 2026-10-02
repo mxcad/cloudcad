@@ -74,42 +74,6 @@ describe('PermissionCacheService', () => {
   });
 
   // =========================================================================
-  // clearPattern
-  // =========================================================================
-
-  describe('clearPattern', () => {
-    describe('when clearing by pattern', () => {
-      it('should publish pattern invalidation event and clear locally', async () => {
-        mockRedis.publish.mockResolvedValue(1);
-
-        await service.clearPattern('policy:*');
-
-        expect(mockRedis.publish).toHaveBeenCalledWith(
-          'permission:cache:invalidation:pattern',
-          expect.stringContaining('"type":"pattern"')
-        );
-        expect(mockRedis.publish).toHaveBeenCalledWith(
-          'permission:cache:invalidation:pattern',
-          expect.stringContaining('"pattern":"policy:*"')
-        );
-        expect(mockMultiLevelCache.deleteByPattern).toHaveBeenCalledWith(
-          'policy:*'
-        );
-      });
-
-      it('should clear config pattern locally', async () => {
-        mockRedis.publish.mockResolvedValue(1);
-
-        await service.clearPattern('policy_config:*');
-
-        expect(mockMultiLevelCache.deleteByPattern).toHaveBeenCalledWith(
-          'policy_config:*'
-        );
-      });
-    });
-  });
-
-  // =========================================================================
   // pattern invalidation event handling
   // =========================================================================
 

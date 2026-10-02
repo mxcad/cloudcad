@@ -18,8 +18,8 @@ packages/api-sdk/
 │   ├── client.gen.ts         # HTTP 客户端实例（自动生成）
 │   ├── sdk.gen.ts            # API 调用方法（自动生成）
 │   ├── types.gen.ts          # DTO 类型定义（自动生成）
-│   ├── client/               # 自定义客户端扩展
-│   └── core/                 # 核心工具函数
+│   ├── client/               # 客户端运行时（自动生成，勿手改）
+│   └── core/                 # 核心工具函数（自动生成，勿手改）
 ├── scripts/
 │   └── generate-sdk.cjs      # SDK 生成脚本
 ├── openapi-ts.config.ts      # @hey-api/openapi-ts 配置
@@ -45,15 +45,15 @@ SDK 生成流程：
 
 ```typescript
 // 前端/移动端通过桥接层导入
-import { client } from '@cloudcad/api-sdk/client';
-import { getProjects, listFiles } from '@cloudcad/api-sdk/sdk.gen';
+import { client } from '@cloudcad/api-sdk/client.gen';
+import { projectControllerGetProjects } from '@cloudcad/api-sdk';
 ```
 
 ### 调用 API
 
 ```typescript
-const { data, error } = await getProjects({
-  query: { page: 1, pageSize: 20 },
+const { data, error } = await projectControllerGetProjects({
+  query: { page: 1, limit: 20 },
 });
 
 // 或使用 client 直接请求
@@ -63,11 +63,11 @@ const res = await client.get('/api/v1/projects');
 ### multipart 上传
 
 ```typescript
-import { uploadFile } from '@cloudcad/api-sdk/sdk.gen';
+import { mxcadUploadControllerUploadFile } from '@cloudcad/api-sdk';
 
 // 传普通对象（SDK 的 formDataBodySerializer 自动序列化为 FormData，file 可为 Blob/File）
 // ⚠️ 禁止传原生 FormData：Object.entries(FormData) 返回 []，所有字段会被静默丢弃
-const { data } = await uploadFile({
+const { data } = await mxcadUploadControllerUploadFile({
   body: { file, hash, nodeId } as never,
 });
 ```
