@@ -20,6 +20,7 @@ function createController(mocks: {
     mocks.fileSystemNodeService || {
       findById: jest.fn().mockResolvedValue({ id: 'node-1' }),
       findFileByIdNotDeleted: jest.fn().mockResolvedValue(null),
+      findByPath: jest.fn().mockResolvedValue(null),
     },
     mocks.shareService || { validateShareFileAccess: jest.fn().mockResolvedValue(undefined) },
     {} as any, // conversionService
@@ -202,6 +203,71 @@ describe('MxcadFileAccessController filesData 鉴权（HEAD/GET 同一出口）'
       await controller.getFile(res, req, 'node-1/a.mxweb');
 
       expect(getFileStream).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getNonCadFile（files/:storageKey 取数 fail-closed）', () => {
+    it('匿名（无 user）返回 401 且绝不取流', async () => {
+      const getFileStream = jest.fn();
+      const controller = createController({
+        storageService: { fileExists: jest.fn(), getFileStream, getFileInfo: jest.fn() },
+      });
+      const res = makeRes();
+      const req: any = { user: undefined };
+
+      await controller.getNonCadFile(res, req, 'rawkey.mxweb');
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(getFileStream).not.toHaveBeenCalled();
+    });
+
+    it('原始 storageKey 无法解析到节点时 404 且绝不取流——根目录裸读 IDOR 回归', async () => {
+      const getFileStream = jest.fn();
+      const controller = createController({
+        storageService: { fileExists: jest.fn(), getFileStream, getFileInfo: jest.fn() },
+        // 单段 key 不触发 findByPath；即便触发也返回 null
+        fileSystemNodeService: { findByPath: jest.fn().mockResolvedValue(null) },
+      });
+      const res = makeRes();
+      const req: any = { user: { id: 'user-1' } };
+
+      await controller.getNonCadFile(res, req, 'rawkey.mxweb');
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(getFileStream).not.toHaveBeenCalled();
+    });
+
+    it('节点存在但无访问权限时 401 且绝不取流', async () => {
+      const getFileStream = jest.fn();
+      const controller = createController({
+        storageService: { fileExists: jest.fn(), getFileStream, getFileInfo: jest.fn() },
+        fileSystemNodeService: { findByPath: jest.fn().mockResolvedValue({ id: 'node-1', extension: '.mxweb' }) },
+        permissionService: { getNodeAccessRole: jest.fn().mockResolvedValue(null) },
+      });
+      const res = makeRes();
+      const req: any = { user: { id: 'user-1' } };
+
+      await controller.getNonCadFile(res, req, 'files/space-1');
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(getFileStream).not.toHaveBeenCalled();
+    });
+
+    it('节点存在且有权限时按节点派生 key 正常取流', async () => {
+      const stream: any = { on: jest.fn().mockReturnThis(), pipe: jest.fn() };
+      const getFileStream = jest.fn().mockResolvedValue(stream);
+      const controller = createController({
+        storageService: { fileExists: jest.fn(), getFileStream, getFileInfo: jest.fn() },
+        fileSystemNodeService: { findByPath: jest.fn().mockResolvedValue({ id: 'node-1', extension: '.mxweb' }) },
+        permissionService: { getNodeAccessRole: jest.fn().mockResolvedValue('VIEWER') },
+      });
+      const res = makeRes();
+      const req: any = { user: { id: 'user-1' } };
+
+      await controller.getNonCadFile(res, req, 'files/space-1');
+
+      expect(getFileStream).toHaveBeenCalledWith('mxcad/file/node-1.mxweb');
       expect(res.status).not.toHaveBeenCalled();
     });
   });

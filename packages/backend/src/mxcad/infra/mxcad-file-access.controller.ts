@@ -305,24 +305,41 @@ export class MxcadFileAccessController {
   @Get('files/:storageKey')
   @ApiBearerAuth()
   @ApiResponse({ status: 200, description: '成功获取文件' })
+  @ApiResponse({ status: 401, description: '未登录或无权限' })
   @ApiResponse({ status: 404, description: '文件不存在' })
-  async getNonCadFile(@Param('storageKey') storageKey: string, @Res() res: Response) {
+  async getNonCadFile(
+    @Res() res: Response,
+    @Req() req: MxCadRequest,
+    @Param('storageKey') storageKey: string
+  ) {
     try {
       if (!storageKey || storageKey.includes('..') || storageKey.includes('\\')) {
         return res.status(400).json({ code: -1, message: I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径' });
       }
-      let actualStorageKey = storageKey;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ code: -1, message: I18nContext.current()?.t('error.auth.login_required') ?? '请先登录' });
+      }
+      let node: any = null;
       if (storageKey.startsWith('files/')) {
         try {
-          const node = await this.fileSystemNodeService.findByPath(storageKey);
-          if (node) {
-            const extension = node.extension?.toLowerCase() || '';
-            actualStorageKey = `mxcad/file/${node.id}${extension}`;
-          }
+          node = await this.fileSystemNodeService.findByPath(storageKey);
         } catch (queryError) {
           this.logger.warn(`[getNonCadFile] 查询节点失败: ${queryError.message}`);
         }
       }
+      // fail-closed：storageKey 必须解析到存活节点且用户有访问权限才 serve。
+      // 此前未解析到节点时直接 getFileStream(storageKey) 直读 filesDataPath 根目录
+      // 任意文件且零权限检查（IDOR，与 folder-expander 同类）——任何登录用户可读。
+      if (!node) {
+        return res.status(404).json({ code: -1, message: I18nContext.current()?.t('error.file.not_found') ?? '文件不存在' });
+      }
+      const hasAccess = await this.permissionService.getNodeAccessRole(userId, node.id);
+      if (!hasAccess) {
+        return res.status(401).json({ code: -1, message: I18nContext.current()?.t('error.file.no_access') ?? '没有文件访问权限' });
+      }
+      const extension = node.extension?.toLowerCase() || '';
+      const actualStorageKey = `mxcad/file/${node.id}${extension}`;
       const fileStream = await this.storageService.getFileStream(actualStorageKey);
       res.setHeader('Content-Type', 'application/octet-stream');
       setContentDisposition(res, path.basename(actualStorageKey), 'inline');
