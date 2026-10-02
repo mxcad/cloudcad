@@ -19,6 +19,11 @@ import {
   shareControllerGetFileShares,
 } from '@cloudcad/api-sdk/sdk.gen'
 import {
+  SHARE_CUSTOM_DAYS_DEFAULT,
+  SHARE_CUSTOM_DAYS_MAX,
+  SHARE_CUSTOM_DAYS_MIN,
+  SHARE_EXPIRATION_DEFAULT,
+  clampCustomDays,
   computeExpiresInSeconds,
   isShareExpired,
 } from '@cloudcad/platform'
@@ -61,8 +66,8 @@ const visible = computed({
 // 壳模式下登录走 PC 页：未登录时给引导，不发起请求
 const { isAuthenticated } = useAuthState()
 
-const expiration = ref<Expiration>('7d')
-const customDays = ref(1)
+const expiration = ref(SHARE_EXPIRATION_DEFAULT)
+const customDays = ref(SHARE_CUSTOM_DAYS_DEFAULT)
 const creating = ref(false)
 const created = ref<{ token: string; url?: string; expiresAt?: string | null } | null>(null)
 const qrDataUrl = ref('')
@@ -83,6 +88,11 @@ const expirationItems: Array<{ value: Expiration; label: string }> = [
 // 预设秒数收敛到 @cloudcad/platform（与 PC 共用）
 function expiresIn(exp: Expiration): number | undefined {
   return computeExpiresInSeconds(exp, customDays.value)
+}
+
+// 自定义天数输入实时钳制：显示=保存（van-field 回传字符串，Number() 归一后走同一 clampCustomDays）
+function onCustomDaysInput(v: string | number) {
+  customDays.value = clampCustomDays(Number(v))
 }
 
 // 分享链接一律取后端返回的 url（CreateShareResponseDto.url 必填）。
@@ -202,8 +212,8 @@ watch(
   () => props.show,
   (val) => {
     if (val) {
-      expiration.value = '7d'
-      customDays.value = 1
+      expiration.value = SHARE_EXPIRATION_DEFAULT
+      customDays.value = SHARE_CUSTOM_DAYS_DEFAULT
       created.value = null
       qrDataUrl.value = ''
       void loadExistingShares()
@@ -258,11 +268,14 @@ function onClose() {
             </div>
             <van-field
               v-if="expiration === 'custom'"
-              v-model="customDays"
+              :model-value="customDays"
               type="number"
               :label="t('天数')"
               :placeholder="t('请输入天数')"
               input-align="right"
+              :min="SHARE_CUSTOM_DAYS_MIN"
+              :max="SHARE_CUSTOM_DAYS_MAX"
+              @update:model-value="onCustomDaysInput"
             />
           </div>
 

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   SHARE_EXPIRATION_VALUES,
+  SHARE_CUSTOM_DAYS_DEFAULT,
+  SHARE_CUSTOM_DAYS_MAX,
+  SHARE_CUSTOM_DAYS_MIN,
+  clampCustomDays,
   computeExpiresAtIso,
   computeExpiresInSeconds,
   detectShareExpiration,
@@ -75,6 +79,13 @@ describe('@cloudcad/platform · share/expiry', () => {
         customDays: 8,
       });
     });
+
+    it('反推天数同样过上限钳制（输入框显示值等于提交后保存值）', () => {
+      expect(detectShareExpiration(iso(NOW + 500 * DAY), NOW)).toEqual({
+        option: 'custom',
+        customDays: SHARE_CUSTOM_DAYS_MAX,
+      });
+    });
   });
 
   describe('computeExpiresAtIso', () => {
@@ -88,10 +99,27 @@ describe('@cloudcad/platform · share/expiry', () => {
       expect(computeExpiresAtIso('7d', 1, NOW)).toBe(iso(NOW + 604800 * SECOND));
     });
 
-    it('custom 天数钳制最小 1', () => {
+    it('custom 天数钳制到区间 [MIN, MAX]', () => {
       expect(computeExpiresAtIso('custom', 0, NOW)).toBe(iso(NOW + DAY));
       expect(computeExpiresAtIso('custom', -3, NOW)).toBe(iso(NOW + DAY));
       expect(computeExpiresAtIso('custom', 3, NOW)).toBe(iso(NOW + 3 * DAY));
+      expect(computeExpiresAtIso('custom', 500, NOW)).toBe(
+        iso(NOW + SHARE_CUSTOM_DAYS_MAX * DAY)
+      );
+    });
+
+    it('custom 天数缺失/越界：NaN 回落默认、+∞ 钳到 MAX，不抛 RangeError', () => {
+      // 回归：Math.max 不拦 NaN，曾让 new Date(NaN).toISOString() 抛
+      // RangeError: Invalid time value（端侧 parseInt('') 空输入也是这个形态）
+      expect(computeExpiresAtIso('custom', Number.NaN, NOW)).toBe(
+        iso(NOW + SHARE_CUSTOM_DAYS_DEFAULT * DAY)
+      );
+      expect(computeExpiresAtIso('custom', Number.POSITIVE_INFINITY, NOW)).toBe(
+        iso(NOW + SHARE_CUSTOM_DAYS_MAX * DAY)
+      );
+      expect(computeExpiresAtIso('custom', '' as unknown as number, NOW)).toBe(
+        iso(NOW + SHARE_CUSTOM_DAYS_MIN * DAY)
+      );
     });
   });
 
@@ -101,10 +129,22 @@ describe('@cloudcad/platform · share/expiry', () => {
       expect(computeExpiresInSeconds('immediate', 1)).toBe(1);
     });
 
-    it('预设 → 预设秒数；custom 钳制最小 1 天', () => {
+    it('预设 → 预设秒数；custom 钳制到区间 [MIN, MAX]', () => {
       expect(computeExpiresInSeconds('7d', 1)).toBe(SHARE_EXPIRATION_VALUES['7d']);
       expect(computeExpiresInSeconds('custom', 0)).toBe(86400);
       expect(computeExpiresInSeconds('custom', 3)).toBe(3 * 86400);
+      expect(computeExpiresInSeconds('custom', 500)).toBe(
+        SHARE_CUSTOM_DAYS_MAX * 86400
+      );
+    });
+
+    it('custom 天数缺失/越界：NaN 回落默认、+∞ 钳到 MAX，不返回 NaN', () => {
+      expect(computeExpiresInSeconds('custom', Number.NaN)).toBe(
+        SHARE_CUSTOM_DAYS_DEFAULT * 86400
+      );
+      expect(computeExpiresInSeconds('custom', Number.POSITIVE_INFINITY)).toBe(
+        SHARE_CUSTOM_DAYS_MAX * 86400
+      );
     });
   });
 
@@ -115,6 +155,30 @@ describe('@cloudcad/platform · share/expiry', () => {
       expect(isShareExpired(iso(NOW - 1000), NOW)).toBe(true);
       expect(isShareExpired(iso(NOW + 1000), NOW)).toBe(false);
       expect(isShareExpired('not-a-date', NOW)).toBe(false);
+    });
+  });
+
+  describe('clampCustomDays（公开钳制：端侧输入框显示=保存的单一来源）', () => {
+    it('区间内原样返回', () => {
+      expect(clampCustomDays(1)).toBe(SHARE_CUSTOM_DAYS_MIN);
+      expect(clampCustomDays(3)).toBe(3);
+      expect(clampCustomDays(365)).toBe(SHARE_CUSTOM_DAYS_MAX);
+    });
+
+    it('越界钳到边界：0/负→MIN，>MAX→MAX', () => {
+      expect(clampCustomDays(0)).toBe(SHARE_CUSTOM_DAYS_MIN);
+      expect(clampCustomDays(-3)).toBe(SHARE_CUSTOM_DAYS_MIN);
+      expect(clampCustomDays(500)).toBe(SHARE_CUSTOM_DAYS_MAX);
+    });
+
+    it('NaN 回落默认；±∞ 钳到边界（单调，非「缺失」）', () => {
+      expect(clampCustomDays(Number.NaN)).toBe(SHARE_CUSTOM_DAYS_DEFAULT);
+      expect(clampCustomDays(Number.POSITIVE_INFINITY)).toBe(
+        SHARE_CUSTOM_DAYS_MAX
+      );
+      expect(clampCustomDays(Number.NEGATIVE_INFINITY)).toBe(
+        SHARE_CUSTOM_DAYS_MIN
+      );
     });
   });
 });

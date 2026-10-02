@@ -20,6 +20,10 @@ import { extractExtension } from '@/composables/useNodeFormatter'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import {
   SHARE_CUSTOM_DAYS_DEFAULT,
+  SHARE_CUSTOM_DAYS_MAX,
+  SHARE_CUSTOM_DAYS_MIN,
+  SHARE_EXPIRATION_DEFAULT,
+  clampCustomDays,
   computeExpiresAtIso,
   computeExpiresInSeconds,
   detectShareExpiration,
@@ -317,8 +321,9 @@ async function onBatchRevoke() {
 // C-11/C-12：补「自定义天数」+「立即过期」两档（PC EditExpiryModal 两处都有）
 const showRenewPopup = ref(false)
 const renewTarget = ref<{ token: string; expiresAt: string | null } | null>(null)
-const renewExpiration = ref<ShareExpirationOption>('7d')
-const renewCustomDays = ref(1)
+// 保留显式类型：反推出期的分享会预置 'immediate'，超出 SHARE_EXPIRATION_DEFAULT 的类型
+const renewExpiration = ref<ShareExpirationOption>(SHARE_EXPIRATION_DEFAULT)
+const renewCustomDays = ref(SHARE_CUSTOM_DAYS_DEFAULT)
 const renewSaving = ref(false)
 
 const renewExpirationOptions: Array<{ key: ShareExpirationOption; label: string }> = [
@@ -344,10 +349,16 @@ function openRenewPopup(item: ShareItem) {
   showRenewPopup.value = true
 }
 
-// 续期到期时间计算收敛到 @cloudcad/platform（与 PC 共用）；自定义天数钳制 1-365
+// 续期到期时间计算与自定义天数上下界钳制都收敛到 @cloudcad/platform（与 PC 共用）
 function computeRenewExpiresAt(): string | null {
-  const days = Math.max(1, Math.min(365, Math.round(renewCustomDays.value) || 1))
-  return computeExpiresAtIso(renewExpiration.value, days)
+  return computeExpiresAtIso(renewExpiration.value, renewCustomDays.value)
+}
+
+// 自定义天数输入实时钳制：显示=保存（与提交路径、PC 输入框同一 clampCustomDays）
+function onRenewDaysInput(e: Event) {
+  renewCustomDays.value = clampCustomDays(
+    parseInt((e.target as HTMLInputElement).value, 10)
+  )
 }
 
 async function onRenewConfirm() {
@@ -507,8 +518,8 @@ const fileTotalPages = ref(1)
 
 const fileHasMore = computed(() => filePage.value < fileTotalPages.value)
 
-const expirationOptions = ref<'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom'>('7d')
-const customDays = ref(1)
+const expirationOptions = ref(SHARE_EXPIRATION_DEFAULT)
+const customDays = ref(SHARE_CUSTOM_DAYS_DEFAULT)
 
 const createdShareInfo = ref<{ token: string; url: string; expiresAt?: string | null } | null>(null)
 
@@ -550,7 +561,7 @@ async function searchShareFiles(scope: 'personal_space' | 'all_projects', page: 
       sortBy: 'updatedAt',
       sortOrder: 'desc',
     },
-  } as any)
+  })
   if (res.error) throw new Error(String(res.error))
   const data = (res.data ?? {}) as { nodes?: FileSystemNodeDto[]; totalPages?: number }
   return { nodes: data.nodes ?? [], totalPages: data.totalPages ?? 1 }
@@ -615,7 +626,7 @@ watch(fileKeyword, () => {
 function openCreateSharePopup() {
   showCreateSharePopup.value = true
   createdShareInfo.value = null
-  expirationOptions.value = '7d'
+  expirationOptions.value = SHARE_EXPIRATION_DEFAULT
   // 作废上一次搜索残留的防抖任务，否则会在直调之后再刷一次列表
   fileSearchGen++
   clearTimeout(fileSearchTimer)
@@ -848,14 +859,15 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
               {{ opt.label }}
             </button>
           </div>
-          <!-- C-11 自定义天数输入（1-365，对齐 PC ExpirationPicker）-->
+          <!-- C-11 自定义天数输入（1-365，对齐 PC ExpirationPicker）：受控钳制，显示=保存 -->
           <div v-if="renewExpiration === 'custom'" class="custom-days-row">
             <input
-              v-model.number="renewCustomDays"
+              :value="renewCustomDays"
               class="custom-days-input"
               type="number"
-              min="1"
-              max="365"
+              :min="SHARE_CUSTOM_DAYS_MIN"
+              :max="SHARE_CUSTOM_DAYS_MAX"
+              @input="onRenewDaysInput"
             />
             <span class="custom-days-unit">{{ t('天后过期') }}</span>
           </div>

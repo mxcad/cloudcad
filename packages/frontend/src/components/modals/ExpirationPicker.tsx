@@ -1,6 +1,12 @@
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { ExpirationOption, getExpirationLabels } from '@/constants/share';
+import {
+  ExpirationOption,
+  SHARE_CUSTOM_DAYS_MAX,
+  SHARE_CUSTOM_DAYS_MIN,
+  clampCustomDays,
+  getExpirationLabels,
+} from '@/constants/share';
 import { t } from '@/languages';
 
 interface ExpirationPickerProps {
@@ -54,14 +60,12 @@ export function ExpirationPicker({
           <div style={{ width: '60px' }}>
             <Input
               type="number"
-              min={1}
-              max={365}
+              min={SHARE_CUSTOM_DAYS_MIN}
+              max={SHARE_CUSTOM_DAYS_MAX}
               size="sm"
               value={customDays}
               onChange={(e) =>
-                onCustomDaysChange(
-                  Math.max(1, Math.min(365, parseInt(e.target.value) || 1))
-                )
+                onCustomDaysChange(clampCustomDays(parseInt(e.target.value, 10)))
               }
             />
           </div>

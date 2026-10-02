@@ -53,10 +53,14 @@ export type { ResolvedRoute } from './routes/resolve';
 // ── 分享有效期（纯计算，文案留端包） ──
 export {
   SHARE_EXPIRATION_VALUES,
+  SHARE_EXPIRATION_DEFAULT,
   SHARE_CUSTOM_DAYS_DEFAULT,
+  SHARE_CUSTOM_DAYS_MIN,
+  SHARE_CUSTOM_DAYS_MAX,
   detectShareExpiration,
   computeExpiresAtIso,
   computeExpiresInSeconds,
+  clampCustomDays,
   isShareExpired,
 } from './share/expiry';
 export type {

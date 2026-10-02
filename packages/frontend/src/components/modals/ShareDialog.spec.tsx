@@ -131,4 +131,50 @@ describe('ShareDialog 批量分享', () => {
     // 部分失败时不自动关闭
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it('「立即过期」提交 expiresIn=1 秒（回归：曾按无有效期创建）', async () => {
+    vi.mocked(shareControllerCreateShare).mockResolvedValue({
+      data: {
+        token: 'tok-1',
+        url: '/cad-editor/f1?shareToken=tok-1',
+        expiresAt: null,
+      },
+    } as never);
+
+    render(<ShareDialog isOpen onClose={vi.fn()} files={files} />);
+    fireEvent.click(screen.getByText('立即过期'));
+    fireEvent.click(screen.getByText('批量生成分享链接'));
+
+    await waitFor(() => expect(shareControllerCreateShare).toHaveBeenCalled(), {
+      timeout: 3000,
+    });
+    // 修复前 expiresIn 为 undefined（不传字段=永不过期），与「立即过期」按钮语义相反
+    expect(shareControllerCreateShare).toHaveBeenCalledWith({
+      body: { fileId: 'f1', expiresIn: 1 },
+    });
+  });
+
+  it('自定义天数超上限按 365 天提交（回归：曾不钳制直乘 86400）', async () => {
+    vi.mocked(shareControllerCreateShare).mockResolvedValue({
+      data: {
+        token: 'tok-1',
+        url: '/cad-editor/f1?shareToken=tok-1',
+        expiresAt: null,
+      },
+    } as never);
+
+    render(<ShareDialog isOpen onClose={vi.fn()} files={files} />);
+    fireEvent.click(screen.getByText('自定义'));
+    fireEvent.change(screen.getByDisplayValue('1'), {
+      target: { value: '500' },
+    });
+    fireEvent.click(screen.getByText('批量生成分享链接'));
+
+    await waitFor(() => expect(shareControllerCreateShare).toHaveBeenCalled(), {
+      timeout: 3000,
+    });
+    expect(shareControllerCreateShare).toHaveBeenCalledWith({
+      body: { fileId: 'f1', expiresIn: 365 * 86400 },
+    });
+  });
 });

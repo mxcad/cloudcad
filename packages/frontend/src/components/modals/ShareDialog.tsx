@@ -33,7 +33,9 @@ import { ExpirationPicker } from './ExpirationPicker';
 import { ShareLinkBar } from '@/components/common/ShareLinkBar';
 import {
   ExpirationOption,
-  EXPIRATION_VALUES,
+  SHARE_CUSTOM_DAYS_DEFAULT,
+  SHARE_EXPIRATION_DEFAULT,
+  computeExpiresIn,
   formatExpiryDate,
 } from '@/constants/share';
 import { t } from '@/languages';
@@ -103,8 +105,11 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   );
   const isBatch = effectiveFiles.length > 1;
 
-  const [expiration, setExpiration] = useState<ExpirationOption>('7d');
-  const [customDays, setCustomDays] = useState(1);
+  // 保留显式类型：选择器本身提供「立即过期」档位，状态类型宽于默认值类型
+  const [expiration, setExpiration] = useState<ExpirationOption>(
+    SHARE_EXPIRATION_DEFAULT
+  );
+  const [customDays, setCustomDays] = useState(SHARE_CUSTOM_DAYS_DEFAULT);
 
   const [shareInfo, setShareInfo] = useState<ShareInfo | null>(null);
   const [batchResults, setBatchResults] = useState<BatchShareResult[]>([]);
@@ -184,8 +189,8 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       setShareInfo(null);
       setBatchResults([]);
       prevFileIdRef.current = null;
-      setExpiration('7d');
-      setCustomDays(1);
+      setExpiration(SHARE_EXPIRATION_DEFAULT);
+      setCustomDays(SHARE_CUSTOM_DAYS_DEFAULT);
       setItems([]);
       setListError(null);
       resetShareItemCopy();
@@ -225,14 +230,9 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
       return;
     }
 
-    let expiresIn: number | undefined;
-    if (expiration === 'never' || expiration === 'immediate') {
-      expiresIn = undefined;
-    } else if (expiration === 'custom') {
-      expiresIn = customDays * 86400;
-    } else {
-      expiresIn = EXPIRATION_VALUES[expiration];
-    }
+    // expiresIn（秒）统一由 @cloudcad/platform 算：custom 的上下界钳制、
+    // 以及「立即过期」= 1 秒，都不在本文件重写一遍。
+    const expiresIn = computeExpiresIn(expiration, customDays);
 
     setLoading(true);
     try {
@@ -271,14 +271,9 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   }, [resolvedFileId, expiration, customDays, showToast, fetchShares]);
 
   const createBatchShares = useCallback(async () => {
-    let expiresIn: number | undefined;
-    if (expiration === 'never' || expiration === 'immediate') {
-      expiresIn = undefined;
-    } else if (expiration === 'custom') {
-      expiresIn = customDays * 86400;
-    } else {
-      expiresIn = EXPIRATION_VALUES[expiration];
-    }
+    // expiresIn（秒）统一由 @cloudcad/platform 算：custom 的上下界钳制、
+    // 以及「立即过期」= 1 秒，都不在本文件重写一遍。
+    const expiresIn = computeExpiresIn(expiration, customDays);
 
     setLoading(true);
     const results: BatchShareResult[] = [];
@@ -436,8 +431,8 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
             variant="primary"
             size="sm"
             onClick={() => {
-              setExpiration('7d');
-              setCustomDays(1);
+              setExpiration(SHARE_EXPIRATION_DEFAULT);
+              setCustomDays(SHARE_CUSTOM_DAYS_DEFAULT);
               setView('create');
             }}
           >
@@ -481,8 +476,8 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
               size="sm"
               style={{ marginTop: '12px' }}
               onClick={() => {
-                setExpiration('7d');
-                setCustomDays(1);
+                setExpiration(SHARE_EXPIRATION_DEFAULT);
+                setCustomDays(SHARE_CUSTOM_DAYS_DEFAULT);
                 setView('create');
               }}
             >

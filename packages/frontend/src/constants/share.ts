@@ -1,14 +1,28 @@
 import { t } from '@/languages';
 import {
-  SHARE_EXPIRATION_VALUES,
+  SHARE_EXPIRATION_DEFAULT,
   SHARE_CUSTOM_DAYS_DEFAULT,
+  SHARE_CUSTOM_DAYS_MIN,
+  SHARE_CUSTOM_DAYS_MAX,
   computeExpiresAtIso,
+  computeExpiresInSeconds,
   detectShareExpiration,
+  clampCustomDays,
   isShareExpired,
 } from '@cloudcad/platform';
 import type { ShareExpirationOption } from '@cloudcad/platform';
 
 export type ExpirationOption = ShareExpirationOption;
+
+// 弹窗初值契约（默认档位/默认天数）与天数区间：输入框 min/max 提示与
+// 提交时钳制、以及各弹窗的重置路径都引这里的同一来源
+export {
+  SHARE_EXPIRATION_DEFAULT,
+  SHARE_CUSTOM_DAYS_DEFAULT,
+  SHARE_CUSTOM_DAYS_MIN,
+  SHARE_CUSTOM_DAYS_MAX,
+  clampCustomDays,
+};
 
 export function getExpirationLabels(): Record<ExpirationOption, string> {
   return {
@@ -23,9 +37,6 @@ export function getExpirationLabels(): Record<ExpirationOption, string> {
     immediate: t('立即过期'),
   };
 }
-
-// 预设秒数 / 反推选中项 / 到期时间计算 / 过期判定已收敛到 @cloudcad/platform（与移动端共用）
-export const EXPIRATION_VALUES = SHARE_EXPIRATION_VALUES;
 
 /**
  * 反推续期弹窗的初始选中项 + 自定义天数。
@@ -46,6 +57,14 @@ export function computeExpiresAt(
   customDays: number
 ): string | null {
   return computeExpiresAtIso(expiration, customDays);
+}
+
+/** 创建分享要提交的 expiresIn（秒）。never→undefined（不传该字段）。 */
+export function computeExpiresIn(
+  expiration: ExpirationOption,
+  customDays: number
+): number | undefined {
+  return computeExpiresInSeconds(expiration, customDays);
 }
 
 export function formatExpiryDate(dateStr: string | null): string {

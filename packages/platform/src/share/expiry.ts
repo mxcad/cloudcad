@@ -36,10 +36,32 @@ export const SHARE_EXPIRATION_VALUES: Record<
 };
 
 /**
- * 自定义天数的默认值：反推不出天数时续期弹窗输入框的初值。
- * 两端共用——否则同一个弹窗在两端会开出不同的默认天数。
+ * 新建分享弹窗的默认选中档位（含「重置为默认」）。
+ *
+ * 与 `SHARE_CUSTOM_DAYS_DEFAULT` 同属「弹窗初值」契约：档位与天数是成对重置的
+ * （两端的每个重置点都是「档位 + 天数」两行），各端各写一个字面量的话，
+ * 改默认分享时长要跨两个端包各找一遍。
+ *
+ * 类型排除了 `immediate`——默认就立即过期是无效初值，且端侧选项列表本就不提供它。
  */
-export const SHARE_CUSTOM_DAYS_DEFAULT = 1;
+export const SHARE_EXPIRATION_DEFAULT: Exclude<
+  ShareExpirationOption,
+  'immediate'
+> = '7d';
+
+/**
+ * 自定义天数的合法区间与默认值。
+ *
+ * 区间是这份契约的一部分，不是调用方的实现细节：`customDays` 以裸 `number`
+ * 进出两个计算函数，若边界只在调用方记住，就会有入口漏钳制——此前 PC 创建分享
+ * 与移动端两个创建入口都不设上限，同一份 500 天输入在不同入口算出不同到期时间。
+ * 端侧输入框的 `min`/`max` 提示也引这两个常量，避免提示与钳制各写一份。
+ */
+export const SHARE_CUSTOM_DAYS_MIN = 1;
+export const SHARE_CUSTOM_DAYS_MAX = 365;
+
+/** 反推不出天数时续期弹窗输入框的初值，也是天数缺失（NaN）时的回落值；恰等于 MIN，故 0/空输入钳到 MIN 后与它同值。 */
+export const SHARE_CUSTOM_DAYS_DEFAULT = SHARE_CUSTOM_DAYS_MIN;
 
 /**
  * 反推结果。天数只在 `custom` 分支存在；其余分支不返回该字段，
@@ -58,6 +80,9 @@ const DAY_MS = SECONDS_PER_DAY * SECOND;
 /**
  * 由现有 expiresAt 反推应选中的预设项（续期弹窗初始值）。
  * `now` 缺省取 Date.now()，测试可注入。
+ *
+ * 反推出的天数同样过钳制：输入框显示的天数必须等于提交后会保存的天数，
+ * 否则会显示 500 而存成 365。仅存量越界分享（旧端不设上限时创建）会触发。
  */
 export function detectShareExpiration(
   expiresAt: string | null,
@@ -73,15 +98,29 @@ export function detectShareExpiration(
   if (diff <= SHARE_EXPIRATION_VALUES['1d'] * SECOND) return { option: '1d' };
   if (diff <= SHARE_EXPIRATION_VALUES['3d'] * SECOND) return { option: '3d' };
   if (diff <= SHARE_EXPIRATION_VALUES['7d'] * SECOND) return { option: '7d' };
-  return { option: 'custom', customDays: Math.ceil(diff / DAY_MS) };
+  return {
+    option: 'custom',
+    customDays: clampCustomDays(Math.ceil(diff / DAY_MS)),
+  };
 }
 
 /**
- * 自定义天数的下界钳制。创建与修改两条提交路径必须用同一个钳制，
- * 否则「3 天」在两端语义一致但同一选项的两个入口会算出不同到期时间。
+ * 自定义天数的上下界钳制——创建/修改两条提交路径**和端侧输入框的实时显示**
+ * 都必须走这一个口径，保证「输入框显示的天数 = 提交后会保存的天数」。
+ *
+ * 端侧输入框若只靠 HTML `min`/`max` 提示而不钳制用户键入值，就会出现「显示 500、
+ * 存成 365」的跨端不一致（PC 每键钳制、移动端只靠提示时）。故导出为公开钳制，
+ * 两端输入框的 `onChange` 都调它，而非各自手写 `Math.max(MIN, Math.min(MAX, …))`。
+ *
+ * 只有 NaN 回落到默认天数：`Math.max` 不拦 NaN，让它直通会让
+ * `computeExpiresAtIso` 抛 `RangeError: Invalid time value`、
+ * `computeExpiresInSeconds` 返回 NaN。±Infinity 是越界值而非缺失值，
+ * 照钳制语义投到边界（+∞→MAX、-∞→MIN），保证结果对有限输入单调不减——
+ * 若把 +∞ 也归入「缺失」，500 天会存成 365 而 ∞ 天反而存成 1，越界越大结果越小。
  */
-function clampCustomDays(days: number): number {
-  return Math.max(1, days);
+export function clampCustomDays(days: number): number {
+  if (Number.isNaN(days)) return SHARE_CUSTOM_DAYS_DEFAULT;
+  return Math.max(SHARE_CUSTOM_DAYS_MIN, Math.min(SHARE_CUSTOM_DAYS_MAX, days));
 }
 
 /**
