@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('mxcad-app/style', () => ({}));
 vi.mock('mxcad-app', () => ({ MxCADView: vi.fn() }));
@@ -6,7 +6,7 @@ vi.mock('mxcad-app', () => ({ MxCADView: vi.fn() }));
 // 两个 vi.mock 工厂会互相覆盖，故在同一个工厂里同时提供两侧导出
 vi.mock('mxcad', () => ({
   MxCpp: { getCurrentMxCAD: vi.fn() },
-  MxFun: { on: vi.fn(), removeCommand: vi.fn() },
+  MxFun: { on: vi.fn(), removeCommand: vi.fn(), addCommand: vi.fn() },
 }));
 vi.mock('@/api-sdk', () => ({
   thumbnailControllerCheckThumbnail: vi.fn(),
@@ -51,6 +51,12 @@ vi.mock('./mxcadOpenFlow', () => ({
     }
   },
 }));
+vi.mock('../cmd/rebindMxCommands', () => ({ rebindMxCommands: vi.fn() }));
+vi.mock('../applyVipExportIcons', () => ({ applyVipExportIcons: vi.fn() }));
+vi.mock('../vipCommandGuard', () => ({ installVipCommandGuard: vi.fn() }));
+vi.mock('@/config/tokenRefresh', () => ({
+  ensureFreshAuthCookie: vi.fn(async () => true),
+}));
 
 import { MxCADInstanceManager } from '../mxcadInstanceManager';
 import {
@@ -65,6 +71,8 @@ import {
 } from '../mxcadHelpers';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { handleError } from '@/utils/errorHandler';
+import { rebindMxCommands } from '../cmd/rebindMxCommands';
+import { MxFun } from 'mxdraw';
 
 /**
  * 回归（用户反馈）：CAD 编辑器侧边栏打开图纸失败时，当前文件状态（title/currentFileInfo）
@@ -83,6 +91,7 @@ function internals(manager: MxCADInstanceManager) {
   return manager as unknown as {
     mxcadView: unknown;
     attachFileOpenListener: (retries?: number) => void;
+    setupInitializationListener: () => void;
   };
 }
 
@@ -298,5 +307,61 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
     expect(mxdraw.addEvent).toHaveBeenCalledTimes(1);
     internals(manager).attachFileOpenListener();
     expect(mxdraw.addEvent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('MxCADInstanceManager.runInitializationSideEffects — 引擎 init 后夺回前端命令', () => {
+  // 引擎内置命令的注册在 mxcadApplicationCreatedMxCADObject **之后**才发生
+  // （打包产物里 addCommand("Mx_NewFile") / addCommand("Mx_Save") 位于该事件派发点之后
+  // 约 120KB），会覆盖前端同名命令。故引擎就绪时必须重绑两次：立即一次 + 2s 后再一次。
+  // HMR 后 window.__MxCADView__ 恢复路径不会再派发该事件，光靠事件订阅会漏绑。
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    window.__MxCADView__ = undefined;
+  });
+
+  afterEach(() => {
+    window.__MxCADView__ = undefined;
+    vi.useRealTimers();
+  });
+
+  it('HMR 恢复路径也重新绑定前端命令（立即 + 延迟各一次）', async () => {
+    window.__MxCADView__ = {
+      mxcad: {
+        getMxDrawObject: () => ({ addEvent: vi.fn(), removeEventFuction: vi.fn() }),
+        on: vi.fn(),
+      },
+    } as unknown as (typeof window)['__MxCADView__'];
+
+    await new MxCADInstanceManager().createInstance();
+
+    expect(rebindMxCommands).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(2000);
+    expect(rebindMxCommands).toHaveBeenCalledTimes(2);
+  });
+
+  it('延迟重绑是夺回的关键：引擎晚注册后仍用前端命令', () => {
+    let engineReadyCallback: (() => void) | undefined;
+    const onSpy = vi
+      .mocked(MxFun.on)
+      .mockImplementation((event: string, handler: () => void) => {
+        if (event === 'mxcadApplicationCreatedMxCADObject') {
+          engineReadyCallback = handler;
+        }
+      });
+
+    internals(new MxCADInstanceManager()).setupInitializationListener();
+    expect(onSpy).toHaveBeenCalledWith(
+      'mxcadApplicationCreatedMxCADObject',
+      expect.any(Function)
+    );
+
+    engineReadyCallback?.();
+    expect(rebindMxCommands).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(2000);
+    expect(rebindMxCommands).toHaveBeenCalledTimes(2);
   });
 });

@@ -22,35 +22,27 @@ import 'mxcad-app/style';
 import { MxFun } from 'mxdraw';
 import { MxCpp } from 'mxcad';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
-import { getFileInfo, saveCurrentDrawingToBlob } from './mxcadHelpers';
 import { exitCollaborationIfNeeded } from './mxcadCollaboration';
 import { getModified } from '../drawingSession';
 import { bridgeEngineExportFileEvent } from './engineEventBridge';
-import { CommandRegistry } from './cmd/types';
-import { saveCurrentFile, createDefaultSaveDeps } from './saveFile';
-import type { CurrentFileInfo } from './mxcadTypes';
 import './cmd/index';
+import { rebindMxCommands } from './cmd/rebindMxCommands';
 
 // ==================== 模块级命令自动桥接 ====================
+//
+// 本模块加载期绑一次不够：引擎初始化时 `registerCommand()` 会把它自己的内置命令
+// 灌进 `MxFun`，同名命令按注册名**覆盖**先前注册者——`Mx_NewFile` 就是撞名的一个
+// （引擎版 = 弹确认框 → `mxcad.newFile()`）。被覆盖后点「新建图纸」走的是引擎那条，
+// 前端的会话清理 / 标题 / URL 全都不生效。
+// 故引擎初始化后必须夺回前端入口：`mxcadApplicationCreatedMxCADObject` 在
+// registerCommand() 之后派发，订阅它再绑一次；引擎就绪的权威回调
+// runInitializationSideEffects 也会再绑（覆盖 HMR 后 __MxCADView__ 恢复路径）。
 
-function buildContext() {
-  const fileInfo = getFileInfo();
-  const deps = createDefaultSaveDeps();
-  return {
-    fileName: fileInfo?.name || 'untitled',
-    fileInfo,
-    saveDrawingToBlob: saveCurrentDrawingToBlob,
-    saveFile: (fi: CurrentFileInfo) => saveCurrentFile(fi, deps),
-    sdk: deps.sdk,
-    permissions: deps.permissions,
-  };
-}
+rebindMxCommands();
 
-for (const cmd of CommandRegistry.getAll()) {
-  MxFun.addCommand(cmd.name, async () => {
-    await CommandRegistry.execute(cmd.name, buildContext());
-  });
-}
+MxFun.on('mxcadApplicationCreatedMxCADObject', () => {
+  rebindMxCommands();
+});
 
 // ==================== beforeunload 处理器 ====================
 
