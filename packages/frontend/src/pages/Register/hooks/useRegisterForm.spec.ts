@@ -12,6 +12,10 @@ vi.mock('@/api-sdk', () => ({
   authControllerCheckFieldUniqueness: vi.fn(),
 }));
 
+vi.mock('@/contexts/NotificationContext', () => ({
+  useConfirmDialog: () => ({ showConfirm: vi.fn().mockResolvedValue(true) }),
+}));
+
 const navigate = vi.fn();
 
 vi.mock('react-router-dom', () => ({
@@ -38,6 +42,7 @@ vi.mock('react-hook-form', async (importOriginal) => {
         confirmPassword: 'Password123!',
         agreedToTerms: true,
       })),
+      setValue: vi.fn(),
       trigger: vi.fn().mockResolvedValue(true),
     })),
   };

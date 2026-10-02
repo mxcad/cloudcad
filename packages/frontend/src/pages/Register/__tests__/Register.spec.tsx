@@ -42,6 +42,13 @@ vi.mock('@/contexts/ThemeContext', () => ({
 
 vi.mock('@/hooks/useDocumentTitle', () => ({ useDocumentTitle: vi.fn() }));
 
+const showConfirmMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/contexts/NotificationContext', () => ({
+  useConfirmDialog: () => ({ showConfirm: showConfirmMock }),
+  useNotification: () => ({ showToast: vi.fn(), showConfirm: showConfirmMock }),
+}));
+
 vi.mock('@/components/ThemeToggle', () => ({
   ThemeToggle: () => <div />,
 }));
@@ -178,7 +185,8 @@ describe('Register', () => {
     expect(screen.getAllByText(/隐私政策/).length).toBeGreaterThan(0);
   });
 
-  it('blocks proceeding until the agreement checkbox is checked', async () => {
+  it('shows confirm dialog when agreement is unchecked; cancel keeps step 1 with error', async () => {
+    showConfirmMock.mockResolvedValue(false);
     mockConfig();
     renderRegister();
 
@@ -188,11 +196,38 @@ describe('Register', () => {
     fireEvent.click(screen.getByRole('button', { name: '下一步' }));
 
     await waitFor(() => {
+      expect(showConfirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({ confirmText: '同意并继续' })
+      );
+    });
+    await waitFor(() => {
       expect(
         screen.getByText('请先阅读并同意《用户协议》和《隐私政策》')
       ).toBeTruthy();
     });
     expect(screen.getByText('创建账户')).toBeTruthy();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
+
+  it('auto-checks the agreement and proceeds when the user confirms the dialog', async () => {
+    showConfirmMock.mockResolvedValue(true);
+    mockConfig();
+    renderRegister();
+
+    fireEvent.change(screen.getByLabelText(/用户名/), {
+      target: { value: 'testuser' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '下一步' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('设置密码')).toBeTruthy();
+    });
+    // 返回第一步验证协议已被自动勾选（值保留在表单中）
+    fireEvent.click(screen.getByRole('button', { name: '返回' }));
+    await waitFor(() => {
+      expect(screen.getByText('创建账户')).toBeTruthy();
+    });
+    expect(screen.getByRole('checkbox')).toBeChecked();
   });
 
   it('renders phone fields when sms registration is enabled', () => {

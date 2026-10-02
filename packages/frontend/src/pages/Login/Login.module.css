@@ -395,6 +395,8 @@
 .register-text {
   font-size: var(--text-md);
   color: var(--text-tertiary);
+  /* 文案+按钮保持同一行，窄视口下不拆行 */
+  white-space: nowrap;
 }
 
 .register-link {

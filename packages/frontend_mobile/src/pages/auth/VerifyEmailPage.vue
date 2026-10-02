@@ -45,7 +45,9 @@ interface VerifyEmailState {
 const route = useRoute()
 const router = useRouter()
 
-const state = (route.state ?? {}) as VerifyEmailState
+// 导航 state 由 router.replace({ state }) 写入 history.state（vue-router v4 的 route
+// 对象无 state 属性，hash 路由整页刷新后 route.state 恒 undefined，须读 history.state）
+const state = (history.state as VerifyEmailState | null) ?? {}
 const bindMode = state.mode === 'bind'
 const tempToken = typeof state.tempToken === 'string' ? state.tempToken : ''
 

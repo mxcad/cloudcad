@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { authControllerCheckFieldUniqueness } from '@/api-sdk';
 import type { RegisterDto } from '@/api-sdk';
 import { t } from '@/languages';
@@ -76,6 +77,7 @@ export function useRegisterForm(
 
   const navigate = useNavigate();
   const { register: registerUser, registerByPhone } = useAuth();
+  const { showConfirm } = useConfirmDialog();
 
   const wechatNickname = useWechatNickname(isWechatRegister);
 
@@ -98,6 +100,7 @@ export function useRegisterForm(
     watch,
     setError: setFieldError,
     getValues,
+    setValue,
     trigger,
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
@@ -208,13 +211,38 @@ export function useRegisterForm(
         });
       }
 
+      // 未勾选协议不直接报错拦截：弹确认框，用户确认后自动勾选并继续
+      if (!getValues().agreedToTerms) {
+        const confirmed = await showConfirm({
+          title: t('注册确认'),
+          message: t('请先阅读并同意《用户协议》和《隐私政策》'),
+          confirmText: t('同意并继续'),
+          type: 'info',
+        });
+        if (!confirmed) {
+          setExternalErrors((prev) => ({
+            ...prev,
+            agreedToTerms: t('请先阅读并同意《用户协议》和《隐私政策》'),
+          }));
+          return;
+        }
+        setValue('agreedToTerms', true);
+      }
+
       const isValid = await validateStep1();
       if (isValid) {
         setExternalErrors({});
         setCurrentStep((prev) => prev + 1);
       }
     },
-    [validateStep1, smsEnabled, requirePhoneVerification]
+    [
+      validateStep1,
+      smsEnabled,
+      requirePhoneVerification,
+      showConfirm,
+      setValue,
+      getValues,
+    ]
   );
 
   const handleBack = useCallback(() => {

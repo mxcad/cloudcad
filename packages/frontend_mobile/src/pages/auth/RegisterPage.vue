@@ -185,7 +185,8 @@ async function handleRegister() {
         })
         return
       }
-      if (data.accessToken) finishRegister(data)
+      const { accessToken, refreshToken, user } = data
+      if (accessToken) finishRegister({ accessToken, refreshToken, user })
       else throw new Error(t('注册失败，请重试'))
     }
   } catch (e) {

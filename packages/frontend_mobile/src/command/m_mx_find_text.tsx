@@ -119,17 +119,15 @@ export async function m_mx_find_text() {
   const res = await showConfirmDialog({
     title: t("请输入要查找的文字"),
     message: () => (
-      <div>
-        <Field
-          v-model={searchText.value}
-          label={t("内容")}
-          placeholder={t("请输入搜索的文字")}
-          border
-          clearable
-          clickable
-          autofocus
-        ></Field>
-      </div>
+      <Field
+        v-model={searchText.value}
+        label={t("内容")}
+        placeholder={t("请输入搜索的文字")}
+        border
+        clearable
+        clickable
+        autofocus
+      ></Field>
     ),
   });
 

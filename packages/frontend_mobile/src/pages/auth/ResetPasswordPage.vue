@@ -51,7 +51,9 @@ onMounted(() => {
   contact.value = storedValue || ''
 })
 
-function buildBody(extra: { code?: string; newPassword?: string; confirmPassword?: string }) {
+function buildBody<T extends { code?: string; newPassword?: string; confirmPassword?: string }>(
+  extra: T
+): { email?: string; phone?: string; validateContact: string } & T {
   return {
     email: contactType.value === 'email' ? contact.value.trim() || undefined : undefined,
     phone: contactType.value === 'phone' ? contact.value.trim() || undefined : undefined,

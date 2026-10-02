@@ -57,7 +57,6 @@ declare module 'vue' {
     VanSwitch: typeof import('vant/es')['Switch']
     VanTab: typeof import('vant/es')['Tab']
     VanTabs: typeof import('vant/es')['Tabs']
-    VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
     WorkCard: typeof import('./src/components/WorkCard.vue')['default']
   }
 }
@@ -109,6 +108,5 @@ declare global {
   const VanSwitch: typeof import('vant/es')['Switch']
   const VanTab: typeof import('vant/es')['Tab']
   const VanTabs: typeof import('vant/es')['Tabs']
-  const VanTextEllipsis: typeof import('vant/es')['TextEllipsis']
   const WorkCard: typeof import('./src/components/WorkCard.vue')['default']
 }

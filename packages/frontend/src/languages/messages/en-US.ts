@@ -2471,5 +2471,7 @@ export default  {
     "1000130": "Current project policy does not allow {action}, blocked",
     "1000131": "Open on mobile",
     "1000132": "Drag to adjust position, double-click to reset",
-    "1000133": "Cannot move files out of the library"
+    "1000133": "Cannot move files out of the library",
+    "1000134": "Registration Confirmation",
+    "1000135": "Agree and Continue"
 }
