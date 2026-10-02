@@ -24,7 +24,10 @@ import { confirmExitCollaborationIfNeeded } from './mxcadCollaboration';
 import { guardBeforeOpen, openDrawing, openUnderLoading } from './openDrawing';
 import { CAD_EXTENSIONS } from '../../utils/fileUtils';
 import { CAD_EVENTS } from '@/constants/events';
-import { getApiBaseUrl } from '@/config/apiConfig';
+import {
+  openEventStream,
+  type EventStreamHandle,
+} from '@/services/eventStream';
 
 function isMxwebFile(filename: string): boolean {
   return filename.toLowerCase().endsWith('.mxweb');
@@ -178,47 +181,42 @@ const PUBLIC_CONVERSION_WAIT_TIMEOUT_MS = 5 * 60 * 1000;
  * 后端 `GET /api/v1/mxcad/conversion/file-stream?hash=<hash>`：建连先推当前状态
  * （PROCESSING/COMPLETED/FAILED，处理「订阅前已转完」竞态），再推完成事件即断流。
  * 终态（COMPLETED/FAILED）时 resolve；EventSource 不可用或超时（服务端转换任务
- * 丢失）按失败处理。断连时 EventSource 自动重连，重连后后端重推当前状态。
+ * 丢失）按失败处理。断连时 EventSource 自动重连（closeOnError=false），重连后
+ * 后端重推当前状态。接线走 services/eventStream 唯一出口。
  */
 function waitPublicFileConverted(
   hash: string
 ): Promise<{ status: 'COMPLETED' | 'FAILED' }> {
   return new Promise((resolve) => {
-    if (typeof EventSource === 'undefined') {
-      resolve({ status: 'FAILED' });
-      return;
-    }
     let settled = false;
-    // eslint-disable-next-line no-restricted-syntax -- 豁免：无节点转换完成 SSE（SDK 无 SSE 形态，公开端点无 token，ADR-0034 豁免清单，参照 ConversionPanel 转换任务 SSE）
-    const es = new EventSource(
-      `${getApiBaseUrl()}/v1/mxcad/conversion/file-stream?hash=${encodeURIComponent(hash)}`
-    );
+    let handle: EventStreamHandle | null = null;
     const finish = (status: 'COMPLETED' | 'FAILED'): void => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
-      es.close();
+      handle?.close();
       resolve({ status });
     };
-    const timer = setTimeout(
-      () => finish('FAILED'),
-      PUBLIC_CONVERSION_WAIT_TIMEOUT_MS
-    );
-    es.onmessage = (event: MessageEvent) => {
-      try {
-        const payload = JSON.parse(event.data) as {
-          hash?: string;
-          status?: string;
-        };
+    handle = openEventStream({
+      path: '/v1/mxcad/conversion/file-stream',
+      query: { hash },
+      timeoutMs: PUBLIC_CONVERSION_WAIT_TIMEOUT_MS,
+      closeOnError: false,
+      onFrame: (data) => {
+        const payload = data as { status?: string };
         if (payload.status === 'COMPLETED' || payload.status === 'FAILED') {
           finish(payload.status);
         }
         // PROCESSING（建连当前状态）→ 继续等待完成事件
-      } catch {
-        // 忽略畸形帧
-      }
-    };
-    // 断连由 EventSource 自动重连（重连后后端重推当前状态），无需手动处理
+      },
+      onClose: (reason) => {
+        // 超时（error 不会到达：closeOnError=false）→ 服务端任务丢失，判失败
+        if (reason === 'timeout') finish('FAILED');
+      },
+    });
+    if (!handle) {
+      // 非浏览器环境（无 EventSource）按失败处理
+      finish('FAILED');
+    }
   });
 }
 

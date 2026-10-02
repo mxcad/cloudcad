@@ -57,6 +57,9 @@ vi.mock('@/utils/mxcadUtils', () => ({
   UrlHelper: {
     buildUrl: vi.fn(() => ''),
     buildMxCadFileUrl: vi.fn((path: string) => `/mock/${path}`),
+    buildPublicFileAccessUrl: vi.fn(
+      (name: string) => `/mock/public-file/access/${name}`
+    ),
   },
 }));
 vi.mock('@/constants/storage.constants', () => ({ StoragePathConstants: {} }));

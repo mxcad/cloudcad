@@ -837,10 +837,11 @@ describe('ConversionPanel', () => {
     } as never);
 
     // happy-dom 无 EventSource，mock 一个可控实现
+    // （onmessage 按真实 MessageEvent 契约传帧：eventStream 出口解析 event.data）
     class MockEventSource {
       static instances: MockEventSource[] = [];
       url: string;
-      onmessage: (() => void) | null = null;
+      onmessage: ((event: { data: string }) => void) | null = null;
       onerror: (() => void) | null = null;
       closed = false;
       constructor(url: string) {
@@ -866,7 +867,7 @@ describe('ConversionPanel', () => {
     const listTasksBefore =
       vi.mocked(conversionTaskControllerListTasks).mock.calls.length;
     await act(async () => {
-      MockEventSource.instances[0].onmessage?.();
+      MockEventSource.instances[0].onmessage?.({ data: '{}' });
     });
     expect(
       vi.mocked(conversionTaskControllerListTasks).mock.calls.length

@@ -1,5 +1,5 @@
-import { getApiBaseUrl } from '@/config/apiConfig';
 import { getValidToken } from '@/utils/tokenUtils';
+import { openEventStream } from '@/services/eventStream';
 import {
   useBatchDownloadStore,
   type BatchTask,
@@ -11,17 +11,15 @@ import { t } from '@/languages';
  *
  * useBatchDownload 会被多个组件同时实例化（ConversionPanel 与 DownloadTab 父子
  * 同时挂载、导出弹窗、下载管理器），SSE 连接必须按 taskId 全局唯一并引用计数：
- * - 同一任务多个实例订阅只建一条 EventSource（此前每实例各建一条，同任务多连接）
+ * - 同一任务多个实例订阅只建一条连接（此前每实例各建一条，同任务多连接）
  * - 终态自动下载去重表全局唯一（此前每实例一份 useRef，跨实例会重复触发浏览器下载）
  * - 实例卸载只减引用，最后一个释放者关闭连接（对齐原「卸载即关」语义）
  */
 
-const API_BASE = getApiBaseUrl();
-
 export type BatchDownloadToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface ProgressSubscription {
-  es: EventSource;
+  handle: NonNullable<ReturnType<typeof openEventStream>>;
   /** 订阅实例数：>0 保持连接，归零关闭 */
   refs: number;
   onTerminal: Set<(task: BatchTask | undefined) => void>;
@@ -49,7 +47,7 @@ function closeEntry(taskId: string): void {
   if (!entry) return;
   // 先出表再回调：onClosed 里实例可能触发 release（unmount 竞态），此时应查无此条
   activeSSEs.delete(taskId);
-  entry.es.close();
+  entry.handle.close();
   entry.onClosed.forEach((fn) => fn());
 }
 
@@ -74,13 +72,58 @@ export function subscribeBatchTaskProgress(
   }
 
   const token = getValidToken();
-  const params = token ? `?token=${encodeURIComponent(token)}` : '';
-  const url = `${API_BASE}/v1/file-system/batch-download/${taskId}/progress${params}`;
+  // 连接建立/关流/畸形帧忽略走 eventStream 唯一出口；本模块只管引用计数与终态分发
+  const handle = openEventStream({
+    path: `/v1/file-system/batch-download/${taskId}/progress`,
+    query: token ? { token } : undefined,
+    onFrame: (data) => {
+      // 终态已 closeEntry 出表后到达的迟到帧直接忽略
+      const current = activeSSEs.get(taskId);
+      if (!current) return;
+      const payload = data as {
+        status?: string;
+        totalCount?: number;
+        completedCount?: number;
+        errorCount?: number;
+        currentFile?: string;
+        errors?: unknown;
+        zipPath?: string;
+      };
+      useBatchDownloadStore.getState().updateTask(taskId, {
+        status: payload.status as BatchTask['status'],
+        totalCount: payload.totalCount,
+        completedCount: payload.completedCount,
+        errorCount: payload.errorCount,
+        currentFile: payload.currentFile,
+        errors: payload.errors as BatchTask['errors'],
+        zipPath: payload.zipPath,
+      });
 
-  // eslint-disable-next-line no-restricted-syntax -- 豁免：batch-download 任务进度 SSE（SDK 无 SSE 形态，token 走 query，ADR-0034 豁免清单）
-  const es = new EventSource(url);
+      if (payload.status === 'COMPLETED') {
+        closeEntry(taskId);
+        current.onToast.forEach((fn) => fn(t('批量下载完成'), 'success'));
+        const task = useBatchDownloadStore
+          .getState()
+          .tasks.find((item) => item.taskId === taskId);
+        current.onTerminal.forEach((fn) => fn(task));
+      } else if (payload.status === 'FAILED') {
+        closeEntry(taskId);
+        current.onToast.forEach((fn) => fn(t('批量下载失败'), 'error'));
+      } else if (payload.status === 'CANCELLED') {
+        closeEntry(taskId);
+        current.onToast.forEach((fn) => fn(t('批量下载已取消'), 'info'));
+      }
+    },
+    // 出错即关流（清实例订阅标记，retryTask 可重新订阅；轮询/重订阅兜底）
+    onClose: () => closeEntry(taskId),
+  });
+  if (!handle) {
+    // 非浏览器环境（无 EventSource）：不建连也不登记，实例侧进度由轮询兜底
+    return;
+  }
+
   const entry: ProgressSubscription = {
-    es,
+    handle,
     refs: 1,
     onTerminal: new Set(),
     onToast: new Set(),
@@ -90,42 +133,6 @@ export function subscribeBatchTaskProgress(
   if (handlers?.onToast) entry.onToast.add(handlers.onToast);
   if (handlers?.onClosed) entry.onClosed.add(handlers.onClosed);
   activeSSEs.set(taskId, entry);
-
-  es.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      useBatchDownloadStore.getState().updateTask(taskId, {
-        status: data.status,
-        totalCount: data.totalCount,
-        completedCount: data.completedCount,
-        errorCount: data.errorCount,
-        currentFile: data.currentFile,
-        errors: data.errors,
-        zipPath: data.zipPath,
-      });
-
-      if (data.status === 'COMPLETED') {
-        closeEntry(taskId);
-        entry.onToast.forEach((fn) => fn(t('批量下载完成'), 'success'));
-        const task = useBatchDownloadStore
-          .getState()
-          .tasks.find((item) => item.taskId === taskId);
-        entry.onTerminal.forEach((fn) => fn(task));
-      } else if (data.status === 'FAILED') {
-        closeEntry(taskId);
-        entry.onToast.forEach((fn) => fn(t('批量下载失败'), 'error'));
-      } else if (data.status === 'CANCELLED') {
-        closeEntry(taskId);
-        entry.onToast.forEach((fn) => fn(t('批量下载已取消'), 'info'));
-      }
-    } catch {
-      // ignore: 忽略单个 SSE 消息解析失败（重连由 EventSource 自动处理）
-    }
-  };
-
-  es.onerror = () => {
-    closeEntry(taskId);
-  };
 }
 
 /**

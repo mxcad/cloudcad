@@ -20,7 +20,7 @@ import { createPortal } from 'react-dom';
 import { X, Search, ListTodo } from 'lucide-react';
 import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
-import { getApiBaseUrl } from '@/config/apiConfig';
+import { openEventStream } from '@/services/eventStream';
 import { getValidToken } from '@/utils/tokenUtils';
 import {
   useConversionQueueStore,
@@ -260,25 +260,23 @@ export function ConversionPanel() {
   // S4-3：SSE 实时推送（per-user 长连接）——任务终态变更时后端 emit，前端收到即 refreshCloud。
   // 门控到 hasActive：无进行中任务时不订阅（省常驻连接，HTTP/1.1 下避免占满浏览器 6 连接
   // 池致普通请求排队）；有任务时订阅 + 5s 轮询叠加，保证角标/列表实时刷新。
-  // token 走 query（EventSource 无法带 Authorization header，与 batch-download SSE 一致）。
-  // 游客（无 token）/ 非浏览器环境（无 EventSource）不订阅；SSE 失败/断连时关闭（轮询兜底）。
+  // 接线走 services/eventStream 唯一出口（token 走 query，游客不订阅）；SSE 失败/断连
+  // 由出口关流（轮询兜底）；非浏览器环境（无 EventSource）返回 null 不订阅。
   useEffect(() => {
     if (!hasActive) return;
     const token = getValidToken();
-    if (!token || typeof EventSource === 'undefined') return;
-    const url = `${getApiBaseUrl()}/v1/mxcad/conversion/tasks/stream?token=${encodeURIComponent(token)}`;
-    // eslint-disable-next-line no-restricted-syntax -- 豁免：转换任务状态 SSE（SDK 无 SSE 形态，token 走 query，ADR-0034 豁免清单，参照 useBatchDownload）
-    const es = new EventSource(url);
-    es.onmessage = () => {
-      // 任意消息（初始刷新信号 / 状态变更 / 保活注释不触发）→ 刷新云端列表
-      refreshCloud();
-    };
-    es.onerror = () => {
-      // SSE 失败/断连：关闭（5s 轮询兜底继续刷新）
-      es.close();
-    };
+    if (!token) return;
+    const handle = openEventStream({
+      path: '/v1/mxcad/conversion/tasks/stream',
+      query: { token },
+      onFrame: () => {
+        // 任意消息（初始刷新信号 / 状态变更 / 保活注释不触发）→ 刷新云端列表
+        refreshCloud();
+      },
+    });
+    if (!handle) return;
     return () => {
-      es.close();
+      handle.close();
     };
   }, [hasActive, refreshCloud]);
 
