@@ -37,8 +37,10 @@ describe('RateLimiter', () => {
       expect(stats.sampleCount).toBe(1);
       expect(stats.p50DurationMs).toBeGreaterThanOrEqual(25);
       expect(stats.p95DurationMs).toBeGreaterThanOrEqual(25);
-      // 单任务无需排队，等待时长应为 0
-      expect(stats.p50WaitMs).toBe(0);
+      // 单任务无需排队，等待时长应≈0。queuedAt/startedAt 各取一次 Date.now()（毫秒
+      // 分辨率），高负载下两次取值可能跨毫秒边界得 1，故用容差断言而非精确 0——
+      // 真正的排队等待会是数十 ms 量级，10ms 上限仍能区分「未排队」与「已排队」。
+      expect(stats.p50WaitMs).toBeLessThanOrEqual(10);
     });
 
     it('should keep the sample buffer bounded at 500', async () => {
