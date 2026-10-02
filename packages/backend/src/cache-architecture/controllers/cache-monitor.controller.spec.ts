@@ -58,6 +58,8 @@ describe('CacheMonitorController', () => {
 
   const mockPermissionService = {
     checkSystemPermission: jest.fn(),
+    // PermissionsGuard 统一走上下文感知检查，委托给基础检查使既有 setup/断言继续有效
+    checkSystemPermissionWithContext: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -107,6 +109,10 @@ describe('CacheMonitorController', () => {
     mockPermissionService.checkSystemPermission.mockImplementation(
       async (_userId: string, permission: SystemPermission) =>
         permission === SystemPermission.SYSTEM_MONITOR
+    );
+    mockPermissionService.checkSystemPermissionWithContext.mockImplementation(
+      (userId: string, permission: SystemPermission) =>
+        mockPermissionService.checkSystemPermission(userId, permission)
     );
 
     moduleRef = await Test.createTestingModule({

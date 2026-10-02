@@ -15,6 +15,8 @@ describe('MetricsAccessGuard', () => {
 
   const permissionServiceMock = {
     checkSystemPermission: jest.fn(),
+    // PermissionsGuard 统一走上下文感知检查，委托给基础检查使既有 setup/断言继续有效
+    checkSystemPermissionWithContext: jest.fn(),
   };
 
   let guard: MetricsAccessGuard;
@@ -31,6 +33,10 @@ describe('MetricsAccessGuard', () => {
     // jest 配置含 resetMocks，外部定义的 mock 实现会被清空，需在 beforeEach 重设
     reflectorMock.getAllAndOverride.mockImplementation((key: string) =>
       key === PERMISSIONS_KEY ? [SystemPermission.SYSTEM_MONITOR] : undefined,
+    );
+    permissionServiceMock.checkSystemPermissionWithContext.mockImplementation(
+      (userId: string, permission: SystemPermission) =>
+        permissionServiceMock.checkSystemPermission(userId, permission),
     );
     guard = new MetricsAccessGuard(
       reflectorMock as unknown as Reflector,

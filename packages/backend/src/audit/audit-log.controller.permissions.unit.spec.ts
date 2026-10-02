@@ -69,8 +69,11 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
 
   const mockPermissionService: {
     checkSystemPermission: jest.Mock;
+    checkSystemPermissionWithContext: jest.Mock;
   } = {
     checkSystemPermission: jest.fn(),
+    // PermissionsGuard 统一走上下文感知检查，委托给基础检查使既有 setup/断言继续有效
+    checkSystemPermissionWithContext: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -133,6 +136,10 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
     mockPermissionService.checkSystemPermission.mockImplementation(
       async (_userId: string, permission: SystemPermission) =>
         owned.includes(permission)
+    );
+    mockPermissionService.checkSystemPermissionWithContext.mockImplementation(
+      (userId: string, permission: SystemPermission) =>
+        mockPermissionService.checkSystemPermission(userId, permission)
     );
   };
 

@@ -23,7 +23,7 @@ describe('PermissionsGuard', () => {
 
   beforeEach(async () => {
     reflector = { getAllAndOverride: jest.fn() };
-    permissionService = { checkSystemPermission: jest.fn() };
+    permissionService = { checkSystemPermissionWithContext: jest.fn() };
 
     reflector.getAllAndOverride.mockImplementation((key: string) => {
       if (key === PERMISSIONS_KEY) {
@@ -56,19 +56,32 @@ describe('PermissionsGuard', () => {
     }) as any;
 
   it('checks system permission by userId and allows when granted', async () => {
-    permissionService.checkSystemPermission.mockResolvedValue(true);
+    permissionService.checkSystemPermissionWithContext.mockResolvedValue(true);
 
     const result = await guard.canActivate(buildContext({ id: 'user-1' }));
 
     expect(result).toBe(true);
-    expect(permissionService.checkSystemPermission).toHaveBeenCalledWith(
+    expect(permissionService.checkSystemPermissionWithContext).toHaveBeenCalledWith(
       'user-1',
-      SystemPermission.LIBRARY_DRAWING_MANAGE
+      SystemPermission.LIBRARY_DRAWING_MANAGE,
+      expect.objectContaining({ time: expect.any(Date) })
     );
   });
 
+  it('passes time-only context (no ipAddress/userAgent, 避免 verifyUserExists 每请求额外 DB 查询)', async () => {
+    permissionService.checkSystemPermissionWithContext.mockResolvedValue(true);
+
+    await guard.canActivate(buildContext({ id: 'user-1' }));
+
+    const [, , context] =
+      permissionService.checkSystemPermissionWithContext.mock.calls[0];
+    expect(context.time).toBeInstanceOf(Date);
+    expect(context.ipAddress).toBeUndefined();
+    expect(context.userAgent).toBeUndefined();
+  });
+
   it('throws ForbiddenException when permission is missing', async () => {
-    permissionService.checkSystemPermission.mockResolvedValue(false);
+    permissionService.checkSystemPermissionWithContext.mockResolvedValue(false);
 
     await expect(
       guard.canActivate(buildContext({ id: 'user-1' }))

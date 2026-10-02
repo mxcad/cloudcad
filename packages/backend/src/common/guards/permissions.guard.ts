@@ -29,6 +29,7 @@ import {
 } from '../decorators/require-permissions.decorator';
 import { SystemPermission } from '../enums/permissions.enum';
 import { IS_OPTIONAL_AUTH_KEY } from '../../auth/decorators/optional-auth.decorator';
+import { PermissionContext } from '../utils/permission.utils';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -84,11 +85,15 @@ export class PermissionsGuard implements CanActivate {
     }
 
     // 按用户实际权限检查（基于 userId 实时解析用户当前角色 + 继承，走 system_perm 缓存），
-    // 不依赖 JWT/请求中的角色名，避免角色级缓存残留导致"有权限却被拒"
+    // 不依赖 JWT/请求中的角色名，避免角色级缓存残留导致"有权限却被拒"。
+    // 走 checkSystemPermissionWithContext 统一接入上下文规则（ContextPermissionStrategy
+    // 的非工作时间敏感删除拦截）；上下文只带 time——带 ipAddress/userAgent 会触发
+    // verifyUserExists 每次请求额外一次 DB 查询。
     const hasPermission = await this.checkSystemPermissionsByUser(
       userId,
       requiredPermissions,
-      mode
+      mode,
+      { time: new Date() }
     );
 
     if (!hasPermission) {
@@ -102,19 +107,22 @@ export class PermissionsGuard implements CanActivate {
   }
 
   /**
-   * 按用户检查系统权限（基于 userId 查用户当前角色权限 + 继承）
+   * 按用户检查系统权限（基于 userId 查用户当前角色权限 + 继承），
+   * 统一走上下文感知检查（基础权限 + 上下文规则）
    */
   private async checkSystemPermissionsByUser(
     userId: string,
     requiredPermissions: SystemPermission[],
-    mode: PermissionCheckMode
+    mode: PermissionCheckMode,
+    context: PermissionContext
   ): Promise<boolean> {
     if (mode === PermissionCheckMode.ALL) {
       for (const permission of requiredPermissions) {
         const hasPermission =
-          await this.permissionService.checkSystemPermission(
+          await this.permissionService.checkSystemPermissionWithContext(
             userId,
-            permission
+            permission,
+            context
           );
         if (!hasPermission) {
           return false;
@@ -124,9 +132,10 @@ export class PermissionsGuard implements CanActivate {
     } else {
       for (const permission of requiredPermissions) {
         const hasPermission =
-          await this.permissionService.checkSystemPermission(
+          await this.permissionService.checkSystemPermissionWithContext(
             userId,
-            permission
+            permission,
+            context
           );
         if (hasPermission) {
           return true;
