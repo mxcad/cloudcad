@@ -276,6 +276,7 @@ function getPidByPort(port) {
       const res = spawnSync('netstat', ['-ano', '-p', 'TCP'], {
         encoding: 'utf8',
         windowsHide: true,
+        timeout: 8000,
       });
       const line = (res.stdout || '')
         .split('\n')
@@ -285,13 +286,23 @@ function getPidByPort(port) {
       const pid = parseInt(parts[parts.length - 1], 10);
       return Number.isFinite(pid) && pid > 0 ? pid : null;
     }
-    // Linux/macOS：lsof 优先，netstat 兜底
+    // Linux：ss 优先（iproute2，最小化发行版默认带，无 lsof 也能探测），
+    // lsof / netstat 兜底；统一 timeout 防探测命令挂起
+    const ss = spawnSync('ss', ['-tlnp'], { encoding: 'utf8', timeout: 8000 });
+    const ssLine = (ss.stdout || '')
+      .split('\n')
+      .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));
+    if (ssLine) {
+      const m = /pid=(\d+)/.exec(ssLine);
+      if (m) return parseInt(m[1], 10);
+    }
     const lsof = spawnSync('lsof', ['-t', '-i', `:${port}`, '-sTCP:LISTEN'], {
       encoding: 'utf8',
+      timeout: 8000,
     });
     const lsofPid = parseInt((lsof.stdout || '').trim(), 10);
     if (Number.isFinite(lsofPid) && lsofPid > 0) return lsofPid;
-    const netstat = spawnSync('netstat', ['-tlnp'], { encoding: 'utf8' });
+    const netstat = spawnSync('netstat', ['-tlnp'], { encoding: 'utf8', timeout: 8000 });
     const line = (netstat.stdout || '')
       .split('\n')
       .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));

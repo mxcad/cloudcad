@@ -17,9 +17,7 @@ const os = require('os');
 
 // ==================== 路径与配置 ====================
 
-const PLATFORM = os.platform();
-const IS_WINDOWS = PLATFORM === 'win32';
-const IS_LINUX = PLATFORM === 'linux';
+const { IS_WINDOWS, IS_LINUX } = require('./lib/context');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const RUNTIME_DIR = path.resolve(__dirname, '..');

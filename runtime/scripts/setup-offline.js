@@ -20,20 +20,13 @@
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const { execSync, spawn } = require('child_process');
 const { PRODUCT_NAME } = require('./lib/branding');
 const { brandBox } = require('./lib/logger');
-const { OPS_ENTRY } = require('./lib/context');
+const { OPS_ENTRY, PLATFORM, IS_WINDOWS, IS_LINUX } = require('./lib/context');
 // .env 值转义唯一出口（config-updater）：生成的口令含 #/$/! 等字符，
 // 裸写会被 dotenv 当注释截断，见 escapeEnvValue 注释
 const { escapeEnvValue } = require('./config-updater');
-
-// ==================== 平台配置 ====================
-
-const PLATFORM = os.platform();
-const IS_WINDOWS = PLATFORM === 'win32';
-const IS_LINUX = PLATFORM === 'linux';
 
 // 项目根目录
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');

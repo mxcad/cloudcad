@@ -12,16 +12,13 @@ const { spawn, spawnSync, execSync } = require('child_process');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 const { PRODUCT_NAME } = require('./lib/branding');
 const { resolveMxcadAssemblyPath } = require('./lib/mxcad-path');
 const { fillEmptySecrets } = require('./setup-offline');
 
 // ==================== 配置 ====================
 
-const PLATFORM = os.platform();
-const IS_WINDOWS = PLATFORM === 'win32';
-const IS_LINUX = PLATFORM === 'linux';
+const { PLATFORM, IS_WINDOWS, IS_LINUX } = require('./lib/context');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const RUNTIME_DIR = path.resolve(__dirname, '..');

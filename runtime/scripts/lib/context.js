@@ -124,16 +124,7 @@ const NODE_EXE = USE_RUNTIME
   : 'node';
 
 const PM2_JS = USE_RUNTIME
-  ? IS_WINDOWS
-    ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pm2', 'bin', 'pm2')
-    : path.join(
-        PLATFORM_DIR,
-        'node',
-        'node_modules',
-        'pm2',
-        'bin',
-        'pm2'
-      )
+  ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pm2', 'bin', 'pm2')
   : null;
 
 // 使用真正的 pnpm.cjs，而不是 corepack 代理（离线环境下 corepack 会尝试联网）

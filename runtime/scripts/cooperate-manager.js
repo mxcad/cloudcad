@@ -16,11 +16,8 @@ const { spawn, spawnSync } = require('child_process');
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
 
-const PLATFORM = os.platform();
-const IS_WINDOWS = PLATFORM === 'win32';
-const IS_LINUX = PLATFORM === 'linux';
+const { IS_WINDOWS, IS_LINUX } = require('./lib/context');
 
 // 配置
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');

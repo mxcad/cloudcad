@@ -13,10 +13,9 @@
  * 依赖方向：lib 只允许 require 其他 lib 或独立模块；本模块仅依赖 node 内置。
  */
 
-const os = require('os');
 const path = require('path');
 
-const IS_LINUX = os.platform() === 'linux';
+const { IS_LINUX } = require('./context');
 
 const LINUX_DEFAULT = 'runtime/linux/mxcad/mxcadassembly';
 const WINDOWS_DEFAULT = 'runtime/windows/mxcad/mxcadassembly.exe';

@@ -8,12 +8,10 @@ const { spawn, spawnSync } = require('child_process');
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
-
 const { readEnvInt } = require('./lib/env');
 
-const PLATFORM = os.platform();
-const IS_WINDOWS = PLATFORM === 'win32';
+const { IS_WINDOWS } = require('./lib/context');
+const { getPidByPort } = require('./lib/proc');
 
 // 密码解析与 redis-cli 路径统一从 lib 取（单一事实源：门禁探测与实际生效的
 // 密码不能漂移）。注意 redis-takeover 是纯函数库（无顶层副作用），require 安全。
@@ -103,42 +101,6 @@ function isRunning() {
       }
     }, 2000);
   });
-}
-
-// 查找占用端口的进程 PID（Windows netstat / Linux ss、lsof），失败返回 null
-function getPidByPort(port) {
-  try {
-    if (IS_WINDOWS) {
-      const res = spawnSync('netstat', ['-ano', '-p', 'TCP'], {
-        encoding: 'utf8',
-        windowsHide: true,
-        timeout: 8000,
-      });
-      const line = (res.stdout || '')
-        .split('\n')
-        .find((l) => l.includes(`:${port}`) && l.includes('LISTENING'));
-      if (!line) return null;
-      const pid = parseInt(line.trim().split(/\s+/).pop(), 10);
-      return Number.isFinite(pid) && pid > 0 ? pid : null;
-    }
-    const ss = spawnSync('ss', ['-tlnp'], { encoding: 'utf8', timeout: 8000 });
-    const ssLine = (ss.stdout || '')
-      .split('\n')
-      .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));
-    if (ssLine) {
-      const m = /pid=(\d+)/.exec(ssLine);
-      if (m) return parseInt(m[1], 10);
-    }
-    const lsof = spawnSync(
-      'lsof',
-      ['-t', '-i', `:${port}`, '-sTCP:LISTEN'],
-      { encoding: 'utf8', timeout: 8000 }
-    );
-    const lsofPid = parseInt((lsof.stdout || '').trim(), 10);
-    return Number.isFinite(lsofPid) && lsofPid > 0 ? lsofPid : null;
-  } catch {
-    return null;
-  }
 }
 
 // 按 PID 强制停止：Windows taskkill /T /F（连包装层一起杀树）；Linux
