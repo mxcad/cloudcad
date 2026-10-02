@@ -112,6 +112,15 @@ export function useCadFileLoader(
 
     let cancelled = false;
 
+    // 失败终态单出口：双轨写入（组件 state + store）同值同序收在一处，避免
+    // onError/onStoreError、onLoading/onStoreLoading 每个失败分支手抄四行
+    const fail = (msg: string): void => {
+      onError(msg);
+      onStoreError(msg);
+      onLoading(false);
+      onStoreLoading(false);
+    };
+
     const loadFile = async () => {
       onError(null);
       onStoreError(null);
@@ -240,7 +249,7 @@ export function useCadFileLoader(
           // 显示名用转换前文件名（URL ?fileName= 携带，面板打开时注入）；
           // 缺失时回退内部访问名 hash.mxweb
           const displayName = shareFileNameParam || mxwebFilename;
-          mxcadFileUrl = `/api/v1/public-file/access/${mxwebFilename}`;
+          mxcadFileUrl = UrlHelper.buildPublicFileAccessUrl(mxwebFilename);
           fileInfoForOpen = {
             fileId: '',
             parentId: null,
@@ -316,11 +325,7 @@ export function useCadFileLoader(
           } catch (err) {
             // catch 仅兜底：SDK 不抛错时真实错误已在上面显式抛出，
             // 这里透传后端消息（"分享已过期"等），不再固定"分享文件不存在或已失效"
-            const msg = getErrorMessage(err) || t('分享文件不存在或已失效');
-            onError(msg);
-            onStoreError(msg);
-            onLoading(false);
-            onStoreLoading(false);
+            fail(getErrorMessage(err) || t('分享文件不存在或已失效'));
             return;
           }
         } else {
@@ -340,29 +345,18 @@ export function useCadFileLoader(
             else
               msg =
                 getErrorMessage(error) || t('获取文件信息失败，请检查网络连接');
-            onError(msg);
-            onStoreError(msg);
-            onLoading(false);
-            onStoreLoading(false);
+            fail(msg);
             return;
           }
         }
 
         if (!file) {
-          const msg = t('文件不存在');
-          onError(msg);
-          onStoreError(msg);
-          onLoading(false);
-          onStoreLoading(false);
+          fail(t('文件不存在'));
           return;
         }
 
         if (file.deletedAt) {
-          const msg = t('文件已被删除');
-          onError(msg);
-          onStoreError(msg);
-          onLoading(false);
-          onStoreLoading(false);
+          fail(t('文件已被删除'));
           return;
         }
 
@@ -405,10 +399,7 @@ export function useCadFileLoader(
             const msg = isTerminalFailure
               ? t('文件转换失败，无法打开文件')
               : t('文件尚未转换完成');
-            onError(msg);
-            onStoreError(msg);
-            onLoading(false);
-            onStoreLoading(false);
+            fail(msg);
             return;
           }
           // 转换完成，重新获取节点信息（fileHash/path/updatedAt 可能已更新）
@@ -423,11 +414,7 @@ export function useCadFileLoader(
         }
 
         if (!file.fileHash) {
-          const msg = t('文件尚未转换完成');
-          onError(msg);
-          onStoreError(msg);
-          onLoading(false);
-          onStoreLoading(false);
+          fail(t('文件尚未转换完成'));
           return;
         }
 
@@ -493,11 +480,7 @@ export function useCadFileLoader(
 
         if (!file.path) {
           // 无路径时无法构造 mxweb 访问 URL（此前会拼出 /filesData/undefined 的死链）
-          const msg = t('无法构造文件访问URL');
-          onError(msg);
-          onStoreError(msg);
-          onLoading(false);
-          onStoreLoading(false);
+          fail(t('无法构造文件访问URL'));
           return;
         }
 
@@ -510,8 +493,9 @@ export function useCadFileLoader(
             shareToken: isLibraryUrl ? undefined : shareTokenParam || undefined,
           });
           setCacheTimestamp(undefined);
-        } else if (file.updatedAt) {
-          cacheTimestamp = new Date(file.updatedAt).getTime();
+        } else {
+          // updatedAt 缺失/非法时回落 Date.now()（强制新鲜），不再产出 NaN 或报错
+          cacheTimestamp = UrlHelper.resolveCacheTimestamp(file.updatedAt);
           mxcadFileUrl = UrlHelper.buildMxwebFileUrl({
             nodePath: file.path,
             libraryKey: urlLibraryKey,
@@ -519,13 +503,6 @@ export function useCadFileLoader(
             shareToken: isLibraryUrl ? undefined : shareTokenParam || undefined,
           });
           setCacheTimestamp(cacheTimestamp);
-        } else {
-          const msg = t('无法构造文件访问URL');
-          onError(msg);
-          onStoreError(msg);
-          onLoading(false);
-          onStoreLoading(false);
-          return;
         }
 
         if (isInitializedRef.current && mxcadManager.isCreated()) {
@@ -549,10 +526,7 @@ export function useCadFileLoader(
           // 失败必须显式 toast：会话仍停留在上一张图纸（currentFileInfo 未更新），
           // 用户若未察觉失败会继续对旧图纸操作（保存命中旧项目权限判定）
           globalShowToast(t('图纸打开失败：{msg}', { msg }), 'error');
-          onError(msg);
-          onStoreError(msg);
-          onLoading(false);
-          onStoreLoading(false);
+          fail(msg);
         }
       }
     };

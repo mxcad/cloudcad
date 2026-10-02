@@ -334,7 +334,7 @@ async function openFromPublicHash(req: {
           : '';
         const mxwebFilename = `${req.fileHash}${ext}.mxweb`;
         return {
-          url: `/api/v1/public-file/access/${mxwebFilename}`,
+          url: UrlHelper.buildPublicFileAccessUrl(mxwebFilename),
           noCache: req.noCache,
           fileInfo: {
             fileId: '',

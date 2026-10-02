@@ -90,6 +90,9 @@ export class UrlHelper {
   // 存储路径常量
   private static readonly STORAGE_PATH_PREFIX = 'filesData/';
   private static readonly MXWEB_EXTENSION = '.mxweb';
+  // 公开文件（游客/未登录场景）访问前缀
+  private static readonly PUBLIC_FILE_ACCESS_PREFIX =
+    '/api/v1/public-file/access/';
 
   static getFileIdFromPath(pathname: string): string {
     const pathSegments = pathname.split('/');
@@ -162,6 +165,55 @@ export class UrlHelper {
     }
 
     return this.buildMxwebFileUrl({ nodePath });
+  }
+
+  /**
+   * 构建公开文件访问 URL（唯一出口）
+   *
+   * 协议格式：
+   * - 文件本体：/api/v1/public-file/access/{hash}[.原扩展名].mxweb
+   * - 外部参照（未登录）：/api/v1/public-file/access/{rawHash}/{fileName}
+   * accessName 由调用方按上述形态拼好后传入（各段是否 encodeURIComponent
+   * 与既有行为一致，由调用方决定）；query 按 t（缓存戳）→ shareToken 顺序拼接。
+   */
+  static buildPublicFileAccessUrl(
+    accessName: string,
+    opts?: { cacheBust?: boolean; shareToken?: string }
+  ): string {
+    let url = `${this.PUBLIC_FILE_ACCESS_PREFIX}${accessName}`;
+    const params: string[] = [];
+    if (opts?.cacheBust) params.push(`t=${Date.now()}`);
+    if (opts?.shareToken)
+      params.push(`shareToken=${encodeURIComponent(opts.shareToken)}`);
+    if (params.length > 0) url += `?${params.join('&')}`;
+    return url;
+  }
+
+  /**
+   * 从 updatedAt 推导 t= 缓存时间戳。缺失或无法解析时回退 Date.now()——
+   * 宁可强制一次新鲜请求，也不产出 t=NaN 的死缓存 URL（此前各构造点分别
+   * 「产出 NaN / 回落 Date.now() / 抛错」，此为唯一口径）。
+   */
+  static resolveCacheTimestamp(updatedAt?: string | null): number {
+    const ts = updatedAt ? new Date(updatedAt).getTime() : NaN;
+    return Number.isFinite(ts) ? ts : Date.now();
+  }
+
+  /**
+   * 从公开文件访问 URL 提取 hash 段（外部参照解析用）；非该形态返回 null
+   */
+  static extractPublicFileHash(url: string): string | null {
+    const match = url.match(/\/api\/v1\/public-file\/access\/([^/?#]+)/);
+    return match?.[1] ?? null;
+  }
+
+  /**
+   * 从 mxweb 访问 URL 提取节点基底目录（YYYYMM/nodeId，外部参照拼子路径用）；
+   * 非 mxcad filesData 形态返回 null
+   */
+  static extractMxwebBaseDir(url: string): string | null {
+    const match = url.match(/\/api\/v1\/mxcad\/filesData\/([^/]+\/[^/]+)\//);
+    return match?.[1] ?? null;
   }
 }
 

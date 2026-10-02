@@ -27,6 +27,7 @@ import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { ExportModals } from '@/components/export';
 import type { ExportModalsHandle } from '@/components/export';
 import { ImagePreviewModal } from '../components/modals/ImagePreviewModal';
+import { UrlHelper } from '@/utils/mxcadUtils';
 import { ShareDialog } from '../components/modals/ShareDialog';
 import { Button } from '@/components/ui/Button';
 import { ExternalReferencePanel } from '../components/modals/ExternalReferencePanel';
@@ -461,7 +462,10 @@ export const CADEditorDirect: React.FC = () => {
           // 未登录场景：public-file/access 无鉴权，可直接加载。
           // 该接口返回 Cache-Control: max-age=3600，外部参照替换后 URL 不变会命中缓存显示旧图，
           // 故追加时间戳参数绕过浏览器 HTTP 缓存
-          const url = `/api/v1/public-file/access/${encodeURIComponent(currentFileHash)}/${encodeURIComponent(file.name)}?t=${Date.now()}`;
+          const url = UrlHelper.buildPublicFileAccessUrl(
+            `${encodeURIComponent(currentFileHash)}/${encodeURIComponent(file.name)}`,
+            { cacheBust: true }
+          );
           setPreviewXref((prev) => {
             if (prev && prev.url !== url) revokeXrefViewBlobUrl(prev.url);
             return { file, url };
@@ -483,7 +487,10 @@ export const CADEditorDirect: React.FC = () => {
         if (!xrefId) return;
         // 同图片：public-file/access 有 1 小时浏览器缓存，追加时间戳确保替换后打开的是最新 mxweb
         const fileUrl = currentFileHash
-          ? `/api/v1/public-file/access/${encodeURIComponent(currentFileHash!)}/${encodeURIComponent(file.name)}.mxweb?t=${Date.now()}`
+          ? UrlHelper.buildPublicFileAccessUrl(
+              `${encodeURIComponent(currentFileHash!)}/${encodeURIComponent(file.name)}.mxweb`,
+              { cacheBust: true }
+            )
           : `/api/v1/mxcad/external-ref-view/${encodeURIComponent(fileId!)}/${encodeURIComponent(file.name)}`;
         window.open(
           `/cad-editor?fileUrl=${encodeURIComponent(fileUrl)}`,
@@ -503,7 +510,10 @@ export const CADEditorDirect: React.FC = () => {
         if (currentFileHash) {
           // 未登录场景：public-file/access 无鉴权，可直接下载。
           // 追加时间戳绕过浏览器缓存，确保下载的是替换后的最新图片
-          const downloadUrl = `/api/v1/public-file/access/${encodeURIComponent(currentFileHash)}/${encodeURIComponent(file.name)}?t=${Date.now()}`;
+          const downloadUrl = UrlHelper.buildPublicFileAccessUrl(
+            `${encodeURIComponent(currentFileHash)}/${encodeURIComponent(file.name)}`,
+            { cacheBust: true }
+          );
           const a = document.createElement('a');
           a.href = downloadUrl;
           a.download = file.name;

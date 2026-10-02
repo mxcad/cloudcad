@@ -35,6 +35,7 @@ import {
 import { MxCADContainerManager } from './mxcadContainerManager';
 import { clearOldMxwebCache } from './mxcadCache';
 import { applyVipExportIcons } from './applyVipExportIcons';
+import { rebindMxCommands } from './cmd/rebindMxCommands';
 import { installVipCommandGuard } from './vipCommandGuard';
 import { ensureFreshAuthCookie } from '@/config/tokenRefresh';
 
@@ -176,34 +177,26 @@ function buildViewOptions(openFile?: string) {
 
     // 使用模块级 currentShareToken（在 openFile 时已设置）
     // WASM 层的 HTTP 请求不携带 requestHeaders，只能通过 URL 传递认证信息
+    const shareToken = currentShareToken || undefined;
 
+    // 未登录（public-hash）场景：hash 段提取 + 去掉 .mxweb/原扩展名还原 rawHash
     if (activeUrl.includes('/public-file/access/')) {
-      const parts = activeUrl.split('/');
-      const hashIndex = parts.indexOf('access') + 1;
-      if (hashIndex < parts.length) {
-        const hash = parts[hashIndex];
-        if (hash) {
-          const rawHash = hash.replace(/(?:\.[^.]+)?\.mxweb$/i, '');
-          let url = `/api/v1/public-file/access/${rawHash}/${fileName}`;
-          if (currentShareToken)
-            url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
-          return url;
-        }
+      const hash = UrlHelper.extractPublicFileHash(activeUrl);
+      if (hash) {
+        const rawHash = hash.replace(/(?:\.[^.]+)?\.mxweb$/i, '');
+        return UrlHelper.buildPublicFileAccessUrl(`${rawHash}/${fileName}`, {
+          shareToken,
+        });
       }
     }
     // activeUrl 格式: /api/v1/mxcad/filesData/YYYYMM/{nodeId}/{file}.mxweb?t=...
     // 提取 YYYYMM/{nodeId} 作为基底目录
-    const mxcadMatch = activeUrl.match(
-      /\/api\/v1\/mxcad\/filesData\/([^/]+\/[^/]+)\//
-    );
-    if (mxcadMatch) {
-      const baseDir = mxcadMatch[1];
-      let url = UrlHelper.buildMxwebFileUrl({
+    const baseDir = UrlHelper.extractMxwebBaseDir(activeUrl);
+    if (baseDir) {
+      return UrlHelper.buildMxwebFileUrl({
         nodePath: `${baseDir}/${fileName}`,
+        shareToken,
       });
-      if (currentShareToken)
-        url += `?shareToken=${encodeURIComponent(currentShareToken)}`;
-      return url;
     }
     return fileName;
   };
@@ -533,9 +526,17 @@ export class MxCADInstanceManager {
     this.attachFileOpenListener();
     this.setupDocumentModifyListener();
     applyVipExportIcons();
+    // 引擎 registerCommand() 已覆盖前端同名命令（Mx_NewFile / Mx_Save），此刻夺回。
+    // 必须在 installVipCommandGuard() 冻结 MxFun 之前；这条路径也覆盖 HMR 后
+    // window.__MxCADView__ 恢复（该路径不会再派发 mxcadApplicationCreatedMxCADObject）。
+    rebindMxCommands();
     installVipCommandGuard();
+    // 引擎内置命令的注册在 mxcadApplicationCreatedMxCADObject 之后才发生
+    // （打包产物里 addCommand("Mx_NewFile") 位于该事件派发点之后约 120KB），
+    // 故上面同步重绑仍会被覆盖——延迟一次夺回，与 Mx_QSave 的禁用同一时机。
     setTimeout(() => {
       MxFun.addCommand('Mx_QSave', () => {});
+      rebindMxCommands();
     }, 2000);
   }
 

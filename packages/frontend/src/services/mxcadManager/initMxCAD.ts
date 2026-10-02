@@ -1,3 +1,5 @@
+import { UrlHelper } from '@/utils/mxcadUtils';
+
 let isThemeSyncInitialized = false;
 
 export async function initThemeSync(): Promise<void> {
@@ -206,7 +208,7 @@ export async function initMxCADConfig(currentFile?: {
       const ext = file.name.includes('.')
         ? file.name.substring(file.name.lastIndexOf('.'))
         : '';
-      const fileUrl = `/api/v1/public-file/access/${hash}${ext}.mxweb`;
+      const fileUrl = UrlHelper.buildPublicFileAccessUrl(`${hash}${ext}.mxweb`);
       hideGlobalLoading();
       return { fileUrl };
     },
