@@ -13,6 +13,11 @@ const { log } = require('../lib/utils');
  *   ],
  *   "defaultBasePath": "/home/user/filesData"
  * }
+ *
+ * 现状（单节点部署）：路由表仅被加载并供 /health 的 nodes 字段上报（getNodes）；
+ * 文件读写（FileHandler）仍走固定 FILES_DATA_PATH，未按 prefix 转发到不同节点——
+ * ADR-0015 的多节点路由尚未接线。单节点部署无路由表，行为正确；要启用多节点，
+ * 需在 FileHandler 侧实现 prefix→节点的解析与转发（本类目前只提供表加载与上报）。
  */
 class StorageRouter {
   constructor() {

@@ -61,7 +61,7 @@ async function loadRoles() {
   try {
     const res = await rolesControllerGetProjectRolesByProject({
       path: { projectId: projectId.value },
-    } as any)
+    })
     if (res.error) throw res.error
     roles.value = res.data ?? []
     roleError.value = ''
@@ -80,7 +80,7 @@ async function loadProjectPermissions() {
   try {
     const res = await memberControllerGetUserProjectPermissions({
       path: { projectId: projectId.value },
-    } as any)
+    })
     if (res.error) return
     projectPermissions.value = res.data?.permissions ?? []
   } catch {
@@ -188,13 +188,13 @@ async function onSaveRole() {
   try {
     const res = editingRole.value
       ? await projectRolesControllerUpdateProjectRole({
-          path: { projectId: projectId.value, id: editingRole.value.id } as any,
+          path: { projectId: projectId.value, id: editingRole.value.id },
           body,
-        } as any)
+        })
       : await projectRolesControllerCreateProjectRole({
-          path: { projectId: projectId.value } as any,
+          path: { projectId: projectId.value },
           body,
-        } as any)
+        })
     if (res.error) throw res.error
     closeToast()
     showSuccessToast(editingRole.value ? t('角色已更新') : t('角色已创建'))
@@ -232,8 +232,8 @@ async function onDeleteRole(role: ProjectRoleDto) {
   showLoadingToast({ message: t('删除中...'), forbidClick: true })
   try {
     const res = await projectRolesControllerDeleteProjectRole({
-      path: { projectId: projectId.value, id: role.id } as any,
-    } as any)
+      path: { projectId: projectId.value, id: role.id },
+    })
     if (res.error) throw res.error
     closeToast()
     showSuccessToast(t('角色已删除'))

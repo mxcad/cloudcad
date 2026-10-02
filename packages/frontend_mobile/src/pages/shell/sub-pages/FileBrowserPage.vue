@@ -821,7 +821,7 @@ async function onRenameConfirm(name: string) {
     const res = await nodeControllerUpdateNode({
       path: { nodeId: target.id },
       body: { name },
-    } as any)
+    })
     closeToast()
     if (res.error) throw new Error(String(res.error))
     showSuccessToast(t('重命名成功'))
@@ -902,8 +902,8 @@ async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | '
   try {
     const res = items.length === 1
       ? op === 'move'
-        ? await nodeControllerMoveNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } } as any)
-        : await nodeControllerCopyNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } } as any)
+        ? await nodeControllerMoveNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } })
+        : await nodeControllerCopyNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } })
       : op === 'move'
         ? await nodeControllerBatchMoveNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
         : await nodeControllerBatchCopyNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })

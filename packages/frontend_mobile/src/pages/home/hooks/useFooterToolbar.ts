@@ -44,7 +44,6 @@ export const useFooterToolbar = () => {
 // ‍ Click the button
 
     const onClick = async (_: MouseEvent, item: MxToolbarItem) => {
-        console.log(item.cmd)
         if (item.cmd) callCommand(item.cmd)
         currentItem.value = null
         actionIndex = -1
@@ -58,7 +57,7 @@ export const useFooterToolbar = () => {
             return false
         })
         if (historyIndex >= 0) {
-            const historyItem = historyBtnList.value.splice(historyIndex, 1) as any
+            const historyItem = historyBtnList.value.splice(historyIndex, 1)
             historyBtnList.value.unshift(historyItem[0])
         } else {
             historyBtnList.value.unshift(item)

@@ -64,7 +64,14 @@ import type { DownloadFormatPayload } from '../components/DownloadFormatPopup.vu
 import ProjectEditPopup from '../components/ProjectEditPopup.vue'
 import ProjectTransferSettingsPopup from '../components/ProjectTransferSettingsPopup.vue'
 import { useProjectActions } from '@/composables/useProjectActions'
-import type { ProjectDto, BatchOperationResponseDto } from '@cloudcad/api-sdk/types.gen'
+import type {
+  ProjectDto,
+  BatchOperationResponseDto,
+  ProjectMemberDto,
+  ProjectRoleDto,
+  UserResponseDto,
+  ProjectQuotaDto,
+} from '@cloudcad/api-sdk/types.gen'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,7 +87,7 @@ const fileList = useUnifiedFileList('project')
 // A-16 视图模式（网格/清单）持久化，与个人空间各自记住
 const fileMode = useViewMode('project')
 
-const members = ref<any[]>([])
+const members = ref<ProjectMemberDto[]>([])
 const memberLoading = ref(false)
 const memberError = ref('')
 
@@ -140,7 +147,7 @@ async function loadProjectInfo() {
   try {
     const res = await projectControllerGetProject({
       path: { projectId: projectId.value },
-    } as any)
+    })
     if (!res.error) {
       const data = res.data as ProjectDto | undefined
       if (data) {
@@ -181,9 +188,9 @@ async function loadProjectQuota() {
   try {
     const res = await projectControllerGetProjectQuota({
       path: { projectId: projectId.value },
-    } as any)
+    })
     if (res.error) return
-    const data = res.data as { used?: number; limit?: number } | undefined
+    const data = res.data as ProjectQuotaDto | undefined
     if (data && typeof data.limit === 'number') {
       projectQuota.value = { used: data.used ?? 0, limit: data.limit }
     }
@@ -198,9 +205,9 @@ async function loadMembers() {
   try {
     const res = await memberControllerGetProjectMembers({
       path: { projectId: projectId.value },
-    } as any)
+    })
     if (res.error) throw new Error(String(res.error))
-    members.value = (res.data as any[]) ?? []
+    members.value = res.data ?? []
   } catch (e) {
     memberError.value = '加载成员失败'
   } finally {
@@ -209,11 +216,11 @@ async function loadMembers() {
 }
 
 // ── 成员管理 ──
-const roles = ref<any[]>([])
+const roles = ref<ProjectRoleDto[]>([])
 const showAddMember = ref(false)
 const searchKeyword = ref('')
-const searchResults = ref<any[]>([])
-const selectedUser = ref<any>(null)
+const searchResults = ref<UserResponseDto[]>([])
+const selectedUser = ref<UserResponseDto | null>(null)
 const selectedRoleId = ref<string>('')
 const memberSearchTimer = ref<ReturnType<typeof setTimeout> | null>(null)
 
@@ -221,9 +228,9 @@ async function loadRoles() {
   try {
     const res = await rolesControllerGetProjectRolesByProject({
       path: { projectId: projectId.value },
-    } as any)
+    })
     if (!res.error) {
-      roles.value = (res.data as any[]) ?? []
+      roles.value = res.data ?? []
     }
   } catch (e) {
     console.error('loadRoles error:', e)
@@ -240,12 +247,12 @@ function onMemberSearchInput(val: string) {
     }
     try {
       const res = await usersControllerSearchUsers({
-        query: { search: val, limit: 10 } as any,
-      } as any)
+        query: { search: val, limit: 10 },
+      })
       if (!res.error) {
         // Filter out existing members
-        const existingIds = new Set(members.value.map((m: any) => m.id))
-        searchResults.value = ((res.data as any)?.users ?? []).filter((u: any) => !existingIds.has(u.id))
+        const existingIds = new Set(members.value.map((m) => m.id))
+        searchResults.value = (res.data?.users ?? []).filter((u) => !existingIds.has(u.id))
       }
     } catch (e) {
       console.error('searchUsers error:', e)
@@ -253,11 +260,11 @@ function onMemberSearchInput(val: string) {
   }, 300)
 }
 
-function selectUser(user: any) {
+function selectUser(user: UserResponseDto) {
   selectedUser.value = user
   // Auto-select first non-owner role
   if (roles.value.length > 0) {
-    const firstRole = roles.value.find((r: any) => !r.isOwnerRole)
+    const firstRole = roles.value.find((r) => !r.isOwnerRole)
     selectedRoleId.value = firstRole?.id ?? roles.value[0]?.id ?? ''
   }
 }
@@ -285,74 +292,74 @@ async function onAddMemberConfirm() {
   showLoadingToast({ message: '添加中...', forbidClick: true })
   try {
     const res = await memberControllerAddProjectMember({
-      path: { projectId: projectId.value } as any,
+      path: { projectId: projectId.value },
       body: {
         userId: selectedUser.value.id,
         projectRoleId: selectedRoleId.value,
-      } as any,
-    } as any)
+      },
+    })
     if (res.error) throw new Error(String(res.error))
     closeToast()
     showSuccessToast(t('成员添加成功'))
     showAddMember.value = false
     selectedUser.value = null
     await loadMembers()
-  } catch (e: any) {
+  } catch (e) {
     closeToast()
-    showFailToast(e?.message || '添加失败')
+    showFailToast(e instanceof Error ? e.message : '添加失败')
   }
 }
 
-async function onRemoveMember(member: any) {
+async function onRemoveMember(member: { id: string; name: string }) {
   try {
     await showDialog({
       title: '移除成员',
-      message: `确定移除成员 ${member.nickname ?? member.username ?? member.email ?? '未知'} 吗？`,
+      message: `确定移除成员 ${member.name} 吗？`,
       showCancelButton: true,
     })
     showLoadingToast({ message: '移除中...', forbidClick: true })
     const res = await memberControllerRemoveProjectMember({
-      path: { projectId: projectId.value, userId: member.id } as any,
-    } as any)
+      path: { projectId: projectId.value, userId: member.id },
+    })
     if (res.error) throw new Error(String(res.error))
     closeToast()
     showSuccessToast(t('成员已移除'))
     await loadMembers()
-  } catch (e: any) {
+  } catch (e) {
     if (e !== 'cancel') {
       closeToast()
-      showFailToast(e?.message || '移除失败')
+      showFailToast(e instanceof Error ? e.message : '移除失败')
     }
   }
 }
 
-async function onUpdateMemberRole(member: any, roleId: string) {
+async function onUpdateMemberRole(member: { id: string; projectRoleId: string }, roleId: string) {
   if (roleId === member.projectRoleId) return
   try {
     const res = await memberControllerUpdateProjectMember({
-      path: { projectId: projectId.value, userId: member.id } as any,
-      body: { projectRoleId: roleId } as any,
-    } as any)
+      path: { projectId: projectId.value, userId: member.id },
+      body: { projectRoleId: roleId },
+    })
     if (res.error) throw new Error(String(res.error))
     showSuccessToast('角色已更新')
     await loadMembers()
-  } catch (e: any) {
-    showFailToast(e?.message || '更新失败')
+  } catch (e) {
+    showFailToast(e instanceof Error ? e.message : '更新失败')
   }
 }
 
-const ownerRoleId = computed(() => roles.value.find((r: any) => r.isOwnerRole)?.id)
+const ownerRoleId = computed(() => roles.value.find((r) => r.isOwnerRole)?.id)
 
 // 角色下拉选项必须是稳定引用：DropdownMenu 的渲染 effect 会在 item.renderTitle()
 // 里读到该 prop，模板内联 filter/map 每次渲染都是新数组 → 触发自身重渲染死循环
 // （Maximum recursive updates exceeded in component <van-dropdown-menu>）
 const memberRoleOptions = computed(() =>
   roles.value
-    .filter((r: any) => !r.isOwnerRole)
-    .map((r: any) => ({ text: getProjectRoleDisplayName(r.name), value: r.id }))
+    .filter((r) => !r.isOwnerRole)
+    .map((r) => ({ text: getProjectRoleDisplayName(r.name), value: r.id }))
 )
 
-function isOwner(member: any): boolean {
+function isOwner(member: { projectRoleId: string }): boolean {
   return member.projectRoleId === ownerRoleId.value
 }
 
@@ -361,7 +368,7 @@ function isOwner(member: any): boolean {
 const { user: currentUser } = useUser()
 const currentUserId = computed(() => currentUser.value?.id ?? '')
 
-function isSelf(member: any): boolean {
+function isSelf(member: { id: string }): boolean {
   return !!member.id && member.id === currentUserId.value
 }
 
@@ -371,7 +378,7 @@ async function loadProjectPermissions() {
   try {
     const res = await memberControllerGetUserProjectPermissions({
       path: { projectId: projectId.value },
-    } as any)
+    })
     if (res.error) return
     projectPermissions.value = res.data?.permissions ?? []
   } catch {
@@ -404,13 +411,13 @@ function goRoleManagement() {
 }
 
 function getRoleName(id: string): string {
-  const role = roles.value.find((r: any) => r.id === id)
+  const role = roles.value.find((r) => r.id === id)
   if (!role) return t('未知角色')
   return getProjectRoleDisplayName(role.name)
 }
 
 /** 文件夹下钻 + 图纸打开（打开走 useShellFileOpen，补齐文件上下文与缓存） */
-function enterFolder(item: any) {
+function enterFolder(item: { id: string; isFolder?: boolean }) {
   if (item.isFolder) {
     const raw = fileList.nodes.value.find((n) => n.id === item.id)
     if (raw) fileList.enterFolder(raw)
@@ -814,7 +821,7 @@ async function onRenameConfirm(name: string) {
     const res = await nodeControllerUpdateNode({
       path: { nodeId: target.id },
       body: { name },
-    } as any)
+    })
     closeToast()
     if (res.error) throw new Error(String(res.error))
     showSuccessToast(t('重命名成功'))
@@ -907,8 +914,8 @@ async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | '
   try {
     const res = items.length === 1
       ? op === 'move'
-        ? await nodeControllerMoveNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } } as any)
-        : await nodeControllerCopyNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } } as any)
+        ? await nodeControllerMoveNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } })
+        : await nodeControllerCopyNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } })
       : op === 'move'
         ? await nodeControllerBatchMoveNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
         : await nodeControllerBatchCopyNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
@@ -1040,10 +1047,10 @@ async function onFileInputChange(e: Event) {
 }
 
 const memberRows = computed(() =>
-  members.value.map((m: any) => ({
+  members.value.map((m) => ({
     id: m.id,
     name: m.nickname ?? m.username ?? m.email ?? '未知',
-    role: getProjectRoleDisplayName(m.projectRoleName ?? m.role?.name ?? 'PROJECT_MEMBER'),
+    role: getProjectRoleDisplayName(m.projectRoleName ?? 'PROJECT_MEMBER'),
     joinedAt: m.joinedAt ?? '',
     projectRoleId: m.projectRoleId,
     email: m.email ?? '',
@@ -1062,7 +1069,7 @@ function onAvatarError(id: string) {
 const filterRoleId = ref('')
 const roleFilterOptions = computed(() => [
   { text: t('所有角色'), value: '' },
-  ...roles.value.map((r: any) => ({
+  ...roles.value.map((r) => ({
     text: getProjectRoleDisplayName(r.name),
     value: r.id,
   })),
@@ -1165,7 +1172,7 @@ onMounted(() => {
                 <van-dropdown-item
                   :options="roleFilterOptions"
                   :model-value="filterRoleId"
-                  @change="(val: any) => (filterRoleId = val)"
+                  @change="(val: string) => (filterRoleId = val)"
                 />
               </van-dropdown-menu>
             </div>
@@ -1211,7 +1218,7 @@ onMounted(() => {
                 <van-dropdown-item
                   :options="memberRoleOptions"
                   :model-value="m.projectRoleId"
-                  @change="(val: any) => onUpdateMemberRole(m, val)"
+                  @change="(val: string) => onUpdateMemberRole(m, val)"
                 />
               </van-dropdown-menu>
               <!-- 转让所有权（对齐 PC MembersModal 转让按钮；后端要求 PROJECT_TRANSFER） -->

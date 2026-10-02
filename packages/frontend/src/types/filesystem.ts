@@ -55,8 +55,9 @@ export interface AncestorItem {
   isRoot: boolean;
 }
 
-/** 跨项目转移模式（与后端 CrossProjectTransferMode 枚举对齐） */
-export type TransferMode = 'NONE' | 'COPY_ONLY' | 'MOVE_ONLY' | 'ALL';
+/** 跨项目转移模式（单一事实源 @cloudcad/platform，与后端 CrossProjectTransferMode 枚举对齐） */
+import type { TransferMode } from '@cloudcad/platform';
+export type { TransferMode };
 
 /** 跨项目转移 6 域设置（项目根节点，PROJECT_TRANSFER_MANAGE 管理） */
 export interface TransferSettings {

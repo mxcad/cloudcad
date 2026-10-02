@@ -209,7 +209,7 @@ export function useVersionHistory({
 
       const back = getCadEditorBackUrl();
       const url = `/cad-editor/${node.id}?nodeId=${node.parentId}&v=${revision}${back ? `&back=${encodeURIComponent(back)}` : ''}`;
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener');
     },
     [versionHistoryNode]
   );

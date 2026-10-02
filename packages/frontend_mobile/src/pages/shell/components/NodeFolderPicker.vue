@@ -68,7 +68,7 @@ async function loadFolders() {
     const res = await nodeControllerGetChildren({
       path: { nodeId: currentId.value ?? root },
       query: { page: 1, limit: 100 },
-    } as any)
+    })
     if (res.error) return
     const nodes = (res.data?.nodes ?? []) as FileSystemNodeDto[]
     folders.value = nodes.filter((n) => n.isFolder || n.nodeType === 'FOLDER')

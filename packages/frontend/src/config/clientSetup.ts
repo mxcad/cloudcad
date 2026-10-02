@@ -33,8 +33,8 @@ export {
 } from './tokenRefresh';
 
 // ── 1. Base URL & Envelope Unwrap ─────────────────────────────
-// SDK 路由已含 /api/v1/ 前缀（@hey-api/openapi-ts 从 servers 字段自动添加），
-// baseUrl 只需保留协议+主机
+// SDK 路由已含 /api/v1/ 前缀（OpenAPI paths 自带 /api/v1，openapi-ts 配
+// baseUrl:false 禁用 servers 提取以避免 /api/v1/api/v1 双前缀），baseUrl 只需保留协议+主机
 const apiBaseUrl = getApiBaseUrl();
 let baseUrl: string;
 try {

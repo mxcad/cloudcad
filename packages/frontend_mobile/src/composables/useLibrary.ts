@@ -212,7 +212,7 @@ export function useLibrary(libraryType: LibraryType) {
     error.value = ''
 
     try {
-      const queryParams: Record<string, unknown> = {
+      const queryParams: { page: number; limit: number; search?: string } = {
         page: page.value,
         limit: 30,
       }
@@ -222,7 +222,7 @@ export function useLibrary(libraryType: LibraryType) {
 
       const res = await api.getAllFiles({
         path: { nodeId: targetId },
-        query: queryParams as any,
+        query: queryParams,
       })
 
       if (res.error) {

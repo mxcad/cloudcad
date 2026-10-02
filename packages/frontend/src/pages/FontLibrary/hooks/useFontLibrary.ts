@@ -288,10 +288,9 @@ export function useFontLibrary(): UseFontLibraryReturn {
         path: { fileName: fontName },
         query: { location: activeTab },
       });
+      // SDK 返回的 response 是标准 Response（无 .data 属性），字体二进制只可能落在 data
       let blob: Blob;
-      if (response && (response as any).data instanceof Blob) {
-        blob = (response as any).data;
-      } else if (data instanceof Blob) {
+      if (data instanceof Blob) {
         blob = data;
       } else {
         throw new Error(t('无法获取字体文件数据'));

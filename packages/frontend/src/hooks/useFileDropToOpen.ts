@@ -130,33 +130,29 @@ export function useFileDropToOpen() {
 
   useEffect(() => {
     let cancelled = false;
+    // 容器引用提升到 effect 作用域：cleanup 直接解绑，无需在 DOM 元素上挂 __dragDropCleanup
+    let container: HTMLElement | null = null;
 
     const setupDragDrop = async () => {
-      const container = await waitForContainer();
-      if (!container || cancelled) return;
+      const el = await waitForContainer();
+      if (!el || cancelled) return;
+      container = el;
 
-      container.addEventListener('dragenter', handleDragEnter);
-      container.addEventListener('dragover', handleDragOver);
-      container.addEventListener('dragleave', handleDragLeave);
-      container.addEventListener('drop', handleDrop);
-
-      // 存储清理函数需要的引用
-      (container as any).__dragDropCleanup = () => {
-        container.removeEventListener('dragenter', handleDragEnter);
-        container.removeEventListener('dragover', handleDragOver);
-        container.removeEventListener('dragleave', handleDragLeave);
-        container.removeEventListener('drop', handleDrop);
-      };
+      el.addEventListener('dragenter', handleDragEnter);
+      el.addEventListener('dragover', handleDragOver);
+      el.addEventListener('dragleave', handleDragLeave);
+      el.addEventListener('drop', handleDrop);
     };
 
     setupDragDrop();
 
     return () => {
       cancelled = true;
-      const container = document.getElementById(CSS_CLASSES.GLOBAL_CONTAINER);
-      if (container && (container as any).__dragDropCleanup) {
-        (container as any).__dragDropCleanup();
-        delete (container as any).__dragDropCleanup;
+      if (container) {
+        container.removeEventListener('dragenter', handleDragEnter);
+        container.removeEventListener('dragover', handleDragOver);
+        container.removeEventListener('dragleave', handleDragLeave);
+        container.removeEventListener('drop', handleDrop);
       }
     };
   }, [handleDragEnter, handleDragOver, handleDragLeave, handleDrop]);

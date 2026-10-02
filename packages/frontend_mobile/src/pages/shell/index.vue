@@ -103,7 +103,7 @@ function onSheetSelect(action: SheetItem) {
     void confirmLogout()
   }
   if (action.value === ACTION_OPEN_PC) {
-    window.open(pcUrl.value, '_blank')
+    window.open(pcUrl.value, '_blank', 'noopener')
   }
 }
 

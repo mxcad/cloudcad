@@ -26,13 +26,13 @@ async function fetchXrefNames(
       const result = await mxcadExternalRefControllerGetPreloadingData({
         path: { nodeId },
       });
-      const data = result?.data as any;
+      const data = result?.data;
       if (data) {
         const images = (data.images || [])
-          .map((item: any) => getXrefName(item))
+          .map((item) => getXrefName(item))
           .filter((name: string) => name.trim().length > 0);
         const refs = (data.externalReference || [])
-          .map((item: any) => getXrefName(item))
+          .map((item) => getXrefName(item))
           .filter((name: string) => name.trim().length > 0);
         return { images, refs };
       }

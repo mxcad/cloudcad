@@ -1,10 +1,11 @@
+import type { Component } from "vue"
 import { t } from "@/languages"
 import Home from "./pages/home/index.vue"
 
 interface RouteRecordRaw {
   path: string;
   name?: string;
-  component: any;
+  component: Component;
   meta?: Record<string, unknown>;
 }
 

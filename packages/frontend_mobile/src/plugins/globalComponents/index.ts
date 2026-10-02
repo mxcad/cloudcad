@@ -1,8 +1,10 @@
-import { App } from 'vue';
+import { App, type Component } from 'vue';
 // ‍  自动导入 components 目录下的所有 .vue 文件
 // ‍ Automatically import all. vue files from the components directory
 
-const modules = import.meta.globEager('../../components/**/*.vue') as any;
+const modules = import.meta.globEager<{ default: Component }>(
+  '../../components/**/*.vue'
+);
 
 export default {
   install: (app: App) => {

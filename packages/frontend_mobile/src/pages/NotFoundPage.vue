@@ -24,7 +24,7 @@ function goShell() {
 }
 
 function openOnPc() {
-  window.open(pcUrl.value, '_blank')
+  window.open(pcUrl.value, '_blank', 'noopener')
 }
 </script>
 

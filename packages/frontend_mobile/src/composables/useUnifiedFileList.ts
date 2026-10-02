@@ -69,7 +69,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
 
   const hasActiveFilters = computed(() => Object.keys(filters.value).length > 0)
 
-  function filterQueryParams(): Record<string, unknown> {
+  function filterQueryParams(): FileListFilters {
     const f = filters.value
     return {
       ...(f.extension ? { extension: f.extension } : {}),
@@ -203,7 +203,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
           ...(debouncedSearch.value ? { search: debouncedSearch.value } : {}),
           ...filterQueryParams(),
         },
-      } as any)
+      })
 
       if (res.error) throw new Error(String(res.error))
       const data = (res.data ?? {}) as unknown as NodeListResponseDto
@@ -236,7 +236,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
         ...filterQueryParams(),
         ...(scope === 'project_files' ? { projectId: rootId.value ?? undefined } : {}),
       }
-      const res = await nodeControllerSearch({ query } as any)
+      const res = await nodeControllerSearch({ query })
 
       if (res.error) throw new Error(String(res.error))
       const data = (res.data ?? {}) as unknown as NodeListResponseDto
