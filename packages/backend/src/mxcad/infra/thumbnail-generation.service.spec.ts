@@ -8,6 +8,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 const mockFindThumbnail = jest.fn();
+const mockSpawnManagedProcess = jest.fn();
+
+jest.mock('@cloudcad/engine-exec', () => ({
+  spawnManagedProcess: (...args: any[]) => mockSpawnManagedProcess(...args),
+}));
 
 jest.mock('./thumbnail-utils', () => {
   const actual = jest.requireActual('./thumbnail-utils');
@@ -44,6 +49,14 @@ describe('ThumbnailGenerationService', () => {
   beforeEach(async () => {
     mockFindThumbnail.mockReset();
     mockFindThumbnail.mockResolvedValue(null);
+    mockSpawnManagedProcess.mockReset();
+    mockSpawnManagedProcess.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+    });
     mockConfigService.get.mockReset();
     mockConfigService.get.mockImplementation((key: string) => {
       if (key === 'thumbnail') {
@@ -77,11 +90,93 @@ describe('ThumbnailGenerationService', () => {
     });
   });
 
-  describe('getThumbnailSize', () => {
-    it('should return configured thumbnail size', () => {
-      const size = service.getThumbnailSize();
-      expect(size.width).toBe(200);
-      expect(size.height).toBe(200);
+  describe('generateThumbnail（受管子进程）', () => {
+    const mockSpawnResult = (over: Record<string, unknown>) =>
+      mockSpawnManagedProcess.mockResolvedValue({
+        stdout: '',
+        stderr: '',
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
+        ...over,
+      } as never);
+
+    async function buildRealCadFile(): Promise<string> {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'thumb-cad-'));
+      const cadPath = path.join(dir, 'plan.dwg');
+      fs.writeFileSync(cadPath, 'fake-dwg');
+      return cadPath;
+    }
+
+    function useTmpTempPath() {
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'thumbnail') {
+          return {
+            autoGenerateEnabled: true,
+            width: 200,
+            height: 200,
+            dwg2JpgPath: process.execPath,
+          };
+        }
+        if (key === 'mxcadTempPath') return os.tmpdir();
+        return undefined;
+      });
+    }
+
+    it('spawn 参数带引号包裹 fileparam（verbatim 下防路径含空格被切碎）', async () => {
+      useTmpTempPath();
+      service = await buildService();
+      await service.onModuleInit();
+      const cadPath = await buildRealCadFile();
+      mockSpawnResult({});
+      await service.generateThumbnail(cadPath, os.tmpdir(), 'node-1');
+
+      expect(mockSpawnManagedProcess).toHaveBeenCalledTimes(1);
+      const [, args, opts] = mockSpawnManagedProcess.mock.calls[0];
+      expect(args[0]).toBe('cadtojpg');
+      expect(args[1]).toMatch(/^"fileparam=.+"$/);
+      expect(opts).toEqual(
+        expect.objectContaining({ timeoutMs: 60000, cwd: expect.any(String) })
+      );
+    });
+
+    it('超时被杀时返回失败且不误报成功', async () => {
+      useTmpTempPath();
+      service = await buildService();
+      await service.onModuleInit();
+      const cadPath = await buildRealCadFile();
+      mockSpawnResult({ timedOut: true, signal: 'SIGTERM', exitCode: null });
+
+      const result = await service.generateThumbnail(cadPath, os.tmpdir());
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('超时');
+    });
+
+    it('非零退出码视为失败（与原 exec 行为一致）', async () => {
+      useTmpTempPath();
+      service = await buildService();
+      await service.onModuleInit();
+      const cadPath = await buildRealCadFile();
+      mockSpawnResult({ exitCode: 1, stderr: 'boom' });
+
+      const result = await service.generateThumbnail(cadPath, os.tmpdir());
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('1');
+    });
+
+    it('进程未能启动（spawn 失败）返回失败', async () => {
+      useTmpTempPath();
+      service = await buildService();
+      await service.onModuleInit();
+      const cadPath = await buildRealCadFile();
+      mockSpawnResult({ exitCode: null, signal: null, stderr: 'ENOENT' });
+
+      const result = await service.generateThumbnail(cadPath, os.tmpdir());
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('未能启动');
     });
   });
 

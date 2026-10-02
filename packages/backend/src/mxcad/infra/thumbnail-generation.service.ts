@@ -12,25 +12,20 @@
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import { I18nContext } from 'nestjs-i18n';
+import { spawnManagedProcess } from '@cloudcad/engine-exec';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 
 import {
   findThumbnail,
-  hasThumbnail,
   getThumbnailFileName,
   THUMBNAIL_FORMATS,
-  type ThumbnailFormat,
 } from './thumbnail-utils';
-
-const execAsync = promisify(exec);
 
 /**
  * 缩略图生成结果
@@ -229,24 +224,58 @@ export class ThumbnailGenerationService implements OnModuleInit {
         await fsPromises.writeFile(paramFilePath, paramStr, 'utf8');
 
         // 构建命令：MxWebDwg2Jpg.exe cadtojpg "fileparam=..."
-        const cmd = `"${this.dwg2JpgPath}" cadtojpg "fileparam=${paramFilePath}"`;
+        // spawn + windowsVerbatimArguments 下引号要自己带进 argv 元素，与原 exec
+        // （经 cmd.exe）产出的原始命令行一致，paramFilePath 含空格时不会被切碎
+        this.logger.debug(
+          `${logPrefix} 执行缩略图生成命令: "${this.dwg2JpgPath}" cadtojpg "fileparam=${paramFilePath}"`
+        );
 
-        this.logger.debug(`${logPrefix} 执行缩略图生成命令: ${cmd}`);
-
-        // 执行命令
-        const { stdout, stderr } = await execAsync(cmd, {
-          encoding: 'utf8',
-          timeout: 60000, // 60 秒超时
-          maxBuffer: 10 * 1024 * 1024, // 10MB
-          cwd: toolDir, // 在 tool 目录下执行，依赖 DLL
-        });
+        // 受管执行（进程组 + 超时杀树 + SIGTERM→SIGKILL 升级），替换原裸 exec——
+        // exec 超时只杀 shell 子进程，原生 exe 成为孤儿（8-28 CPU 打满事故根因）
+        const result = await spawnManagedProcess(
+          this.dwg2JpgPath,
+          ['cadtojpg', `"fileparam=${paramFilePath}"`],
+          {
+            cwd: toolDir, // 在 tool 目录下执行，依赖 DLL
+            timeoutMs: 60000,
+            logger: this.logger,
+          }
+        );
 
         // 输出命令执行结果
-        if (stdout) {
-          this.logger.debug(`${logPrefix} 命令 stdout: ${stdout}`);
+        if (result.stdout) {
+          this.logger.debug(`${logPrefix} 命令 stdout: ${result.stdout}`);
         }
-        if (stderr) {
-          this.logger.debug(`${logPrefix} 命令 stderr: ${stderr}`);
+        if (result.stderr) {
+          this.logger.debug(`${logPrefix} 命令 stderr: ${result.stderr}`);
+        }
+
+        if (result.timedOut) {
+          this.logger.error(`${logPrefix} 缩略图生成超时(60s)，进程组已终止`);
+          return {
+            success: false,
+            error: '缩略图生成超时(60s)，进程已终止',
+          };
+        }
+        if (result.exitCode === null) {
+          // spawn 失败（如 ENOENT），原因已记入 stderr
+          this.logger.error(
+            `${logPrefix} 缩略图进程未能启动: ${result.stderr.trim()}`
+          );
+          return {
+            success: false,
+            error: `缩略图进程未能启动: ${result.stderr.trim() || '未知原因'}`,
+          };
+        }
+        if (result.exitCode !== 0) {
+          // 与原 execAsync 行为一致：非零退出视为失败
+          this.logger.error(
+            `${logPrefix} 缩略图进程退出码 ${result.exitCode}: ${result.stderr}`
+          );
+          return {
+            success: false,
+            error: `缩略图进程异常退出(${result.exitCode})`,
+          };
         }
 
         // 检查 exe 自动生成的缩略图文件
@@ -293,39 +322,6 @@ export class ThumbnailGenerationService implements OnModuleInit {
         error: errorMessage,
       };
     }
-  }
-
-  /**
-   * 检查指定目录是否已存在缩略图（按优先级查找 jpg > png）
-   * @param nodeDir 节点目录
-   * @returns 是否存在
-   */
-  async hasThumbnail(nodeDir: string): Promise<boolean> {
-    return hasThumbnail(nodeDir);
-  }
-
-  /**
-   * 查找节点目录中存在的缩略图（按优先级）
-   * @param nodeDir 节点目录
-   * @returns 找到的缩略图信息，未找到返回 null
-   */
-  async findThumbnail(nodeDir: string): Promise<{
-    path: string;
-    fileName: string;
-    format: ThumbnailFormat;
-    mimeType: string;
-  } | null> {
-    return findThumbnail(nodeDir);
-  }
-
-  /**
-   * 获取配置的缩略图尺寸
-   */
-  getThumbnailSize(): { width: number; height: number } {
-    return {
-      width: this.width,
-      height: this.height,
-    };
   }
 
   /**
