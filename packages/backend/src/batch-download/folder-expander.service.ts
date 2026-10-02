@@ -93,7 +93,7 @@ export class FolderExpanderService {
   ): Promise<FolderFileNode> {
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },
-      select: { id: true, name: true, originalName: true, nodeType: true, projectId: true },
+      select: { id: true, name: true, originalName: true, nodeType: true, projectId: true, ownerId: true },
     });
     if (!node) throw new NotFoundException('Node not found');
     if (node.projectId) {
@@ -103,6 +103,11 @@ export class FolderExpanderService {
       if (!hasPermission) {
         throw new ForbiddenException('Access denied');
       }
+    } else if (node.ownerId !== userId) {
+      // 个人空间/owner 归属节点：与 RequireProjectPermissionGuard 同一语义——
+      // 仅 owner 本人可访问，否则任意登录用户可枚举他人个人文件夹树（IDOR）。
+      // fail-closed：ownerId 为 null（异常数据）同样拒绝。
+      throw new ForbiddenException('Access denied');
     }
     if (node.nodeType === NodeType.FILE) {
       return { nodeId: node.id, fileName: node.originalName || node.name, isFolder: false };

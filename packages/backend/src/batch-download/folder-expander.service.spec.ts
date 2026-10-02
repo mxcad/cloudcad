@@ -142,11 +142,36 @@ describe('FolderExpanderService', () => {
 
   describe('getFolderFilesRecursive', () => {
     it('should return file node without children', async () => {
-      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'file-1', name: 'test.dwg', originalName: null, nodeType: NodeType.FILE, projectId: null });
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'file-1', name: 'test.dwg', originalName: null, nodeType: NodeType.FILE, projectId: null, ownerId: 'user-1' });
       const service = createService({ prisma: mockPrisma });
 
       const result = await service.getFolderFilesRecursive('file-1', 'user-1');
       expect(result).toEqual({ nodeId: 'file-1', fileName: 'test.dwg', isFolder: false });
+    });
+
+    it('should allow personal-space node for its owner', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'ps-folder', name: 'MySpace', originalName: null, nodeType: NodeType.FOLDER, projectId: null, ownerId: 'user-1' });
+      mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+      const service = createService({ prisma: mockPrisma });
+
+      const result = await service.getFolderFilesRecursive('ps-folder', 'user-1');
+      expect(result.isFolder).toBe(true);
+      // 个人空间不走项目权限检查
+      expect((service as any).fileSystemPermissionService.checkNodePermission).not.toHaveBeenCalled();
+    });
+
+    it('should reject personal-space node for a non-owner (IDOR regression)', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'ps-folder', name: 'MySpace', originalName: null, nodeType: NodeType.FOLDER, projectId: null, ownerId: 'user-2' });
+      const service = createService({ prisma: mockPrisma });
+
+      await expect(service.getFolderFilesRecursive('ps-folder', 'user-1')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should reject personal-space node with null ownerId (fail-closed)', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'ps-folder', name: 'MySpace', originalName: null, nodeType: NodeType.FOLDER, projectId: null, ownerId: null });
+      const service = createService({ prisma: mockPrisma });
+
+      await expect(service.getFolderFilesRecursive('ps-folder', 'user-1')).rejects.toThrow(ForbiddenException);
     });
 
     it('should return folder node with children', async () => {
