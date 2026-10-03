@@ -17,6 +17,7 @@ import {
 import { showFailToast, showSuccessToast } from 'vant'
 import { t } from '@/languages'
 import { usagePercent } from '@cloudcad/platform'
+import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { unwrap, errMsg } from '@/utils/apiError'
 import { maskPhone, membershipBadge, membershipExpiry } from '@/utils/profileDisplay'
 
@@ -69,6 +70,8 @@ export function useProfileData() {
   const profile = ref<UserProfile>({})
   const loading = ref(true)
   const error = ref('')
+  // 公开运行时配置（模块级共享 ref）：邮箱/手机行按服务开关显隐
+  const { config: runtimeConfig } = useRuntimeConfig()
 
   async function loadProfile() {
     loading.value = true
@@ -146,24 +149,32 @@ export function useProfileData() {
     return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
   })
 
-  const accountGroup = computed<AccountEntry[]>(() => [
-    { label: t('用户名'), value: profile.value.username ?? '—', action: 'edit-username' },
-    { label: t('昵称'), value: profile.value.nickname ?? '—', action: 'edit-nickname' },
-    {
-      label: t('邮箱'),
-      value: profile.value.email ?? '—',
-      action: 'edit-email',
-      // 后端无 emailVerified 字段：邮箱绑定即视为已验证
-      verified: !!profile.value.email,
-    },
-    {
-      label: t('手机号'),
-      value: maskPhone(profile.value.phone) || '—',
-      action: 'edit-phone',
-      // 手机号有独立 phoneVerified 标记（后台导入/管理员代绑可能未验证）
-      verified: !!profile.value.phone && profile.value.phoneVerified === true,
-    },
-  ])
+  const accountGroup = computed<AccountEntry[]>(() => {
+    const rows: AccountEntry[] = [
+      { label: t('用户名'), value: profile.value.username ?? '—', action: 'edit-username' },
+      { label: t('昵称'), value: profile.value.nickname ?? '—', action: 'edit-nickname' },
+    ]
+    // 邮箱/手机行与运行时服务开关联动：服务未启用时绑定/换绑/验证码能力整体不可用，行不展示（与 PC ProfileInfoTab 同口径）
+    if (runtimeConfig.value.mailEnabled) {
+      rows.push({
+        label: t('邮箱'),
+        value: profile.value.email ?? '—',
+        action: 'edit-email',
+        // 后端无 emailVerified 字段：邮箱绑定即视为已验证
+        verified: !!profile.value.email,
+      })
+    }
+    if (runtimeConfig.value.smsEnabled) {
+      rows.push({
+        label: t('手机号'),
+        value: maskPhone(profile.value.phone) || '—',
+        action: 'edit-phone',
+        // 手机号有独立 phoneVerified 标记（后台导入/管理员代绑可能未验证）
+        verified: !!profile.value.phone && profile.value.phoneVerified === true,
+      })
+    }
+    return rows
+  })
 
   const securityGroup = computed(() => [
     { label: profile.value.hasPassword === false ? t('设置密码') : t('修改密码'), value: '', action: 'change-password' },

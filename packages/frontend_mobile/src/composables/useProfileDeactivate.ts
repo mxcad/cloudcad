@@ -51,15 +51,17 @@ export function useProfileDeactivate(profile: { value: UserProfile }, onDeactiva
     isReady: emailReady,
   } = useCountdown()
 
-  /** 选项按用户数据动态生成（同 PC：条件不满足的选项不出现而非禁用） */
+  /** 选项按用户数据动态生成（同 PC：条件不满足的选项不出现而非禁用）；服务开关未启用时对应验证码发不出去，一并排除 */
   const methodOptions = computed(() => {
     const p = profile.value
     const options: { value: DeactivateMethod; label: string }[] = []
     if (p.hasPassword) options.push({ value: 'password', label: t('密码验证') })
-    if (p.phone && p.phoneVerified === true)
+    if (config.value.smsEnabled && p.phone && p.phoneVerified === true)
       options.push({ value: 'phone', label: t('手机验证码') })
-    if (p.email) options.push({ value: 'email', label: t('邮箱验证码') })
-    if (p.wechatId) options.push({ value: 'wechat', label: t('微信验证') })
+    if (config.value.mailEnabled && p.email)
+      options.push({ value: 'email', label: t('邮箱验证码') })
+    if (config.value.wechatEnabled && p.wechatId)
+      options.push({ value: 'wechat', label: t('微信验证') })
     return options
   })
 

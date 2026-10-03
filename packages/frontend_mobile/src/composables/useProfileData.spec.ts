@@ -6,6 +6,14 @@ vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
   usersControllerGetProfile: vi.fn(),
   usersControllerUpdateProfile: vi.fn(),
 }))
+// 运行时配置 mock：邮箱/手机行按服务开关显隐，默认全开保持既有断言语义；
+// 普通对象非响应式，改开关字段须在新建 composable 前生效（computed 首次求值才读得到）
+const mockRuntimeConfig = vi.hoisted(() => ({
+  value: { mailEnabled: true, smsEnabled: true, wechatEnabled: false },
+}))
+vi.mock('@/composables/useRuntimeConfig', () => ({
+  useRuntimeConfig: () => ({ config: mockRuntimeConfig }),
+}))
 
 import { usersControllerGetDashboardStats, usersControllerGetProfile, usersControllerUpdateProfile } from '@cloudcad/api-sdk/sdk.gen'
 
@@ -17,6 +25,8 @@ function resolveWith<T extends (...args: never[]) => unknown>(fn: T, response: u
 describe('useProfileData 资料读取与展示派生', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // 每用例恢复服务全开基线（开关用例会改字段）
+    mockRuntimeConfig.value = { mailEnabled: true, smsEnabled: true, wechatEnabled: false }
   })
 
   it('loadProfile 成功解包资料，失败置错误态而非抛错', async () => {
@@ -128,6 +138,26 @@ describe('useProfileData 资料读取与展示派生', () => {
 
     d.profile.value.phone = '13800138000'
     expect(d.accountGroup.value.find((e) => e.action === 'edit-phone')!.value).toBe('138****8000')
+  })
+
+  it('邮箱/手机行按运行时服务开关显隐：未启用时行整体不出现（含已绑定资料）', () => {
+    mockRuntimeConfig.value.mailEnabled = false
+    mockRuntimeConfig.value.smsEnabled = false
+    const off = useProfileData()
+    off.profile.value = { email: 'me@x.com', phone: '13800138000', phoneVerified: true }
+    expect(off.accountGroup.value.map((e) => e.action)).toEqual(['edit-username', 'edit-nickname'])
+
+    // 新建 composable（新 computed）读取恢复后的开关
+    mockRuntimeConfig.value.mailEnabled = true
+    mockRuntimeConfig.value.smsEnabled = true
+    const on = useProfileData()
+    on.profile.value = { email: 'me@x.com', phone: '13800138000', phoneVerified: true }
+    expect(on.accountGroup.value.map((e) => e.action)).toEqual([
+      'edit-username',
+      'edit-nickname',
+      'edit-email',
+      'edit-phone',
+    ])
   })
 
   it('openTextEdit 用当前值回填，canSubmitText 按字段各自校验', () => {

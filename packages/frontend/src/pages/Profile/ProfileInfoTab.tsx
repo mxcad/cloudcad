@@ -197,63 +197,68 @@ export const ProfileInfoTab: React.FC<ProfileInfoTabProps> = ({
               <span>{user?.nickname || '-'}</span>
             </InfoCard>
 
-            <InfoCard
-              icon={<Mail size={20} />}
-              iconClass="info"
-              label={t('邮箱地址')}
-              onClick={mailEnabled ? () => onNavigateTab?.('email') : undefined}
-            >
-              <span className={styles.withStatus}>
-                {typeof user?.email === 'string' ? user.email : t('未绑定')}
-                {typeof user?.email === 'string' && (
-                  <CheckCircle
-                    size={14}
-                    className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
-                  />
-                )}
-              </span>
-            </InfoCard>
+            {/* 邮箱/手机/微信卡片由运行时开关门控：服务未启用时整个能力（含既有绑定资料）不展示 */}
+            {mailEnabled && (
+              <InfoCard
+                icon={<Mail size={20} />}
+                iconClass="info"
+                label={t('邮箱地址')}
+                onClick={() => onNavigateTab?.('email')}
+              >
+                <span className={styles.withStatus}>
+                  {typeof user?.email === 'string' ? user.email : t('未绑定')}
+                  {typeof user?.email === 'string' && (
+                    <CheckCircle
+                      size={14}
+                      className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
+                    />
+                  )}
+                </span>
+              </InfoCard>
+            )}
 
-            <InfoCard
-              icon={<Phone size={20} />}
-              iconClass="success"
-              label={t('手机号')}
-              onClick={smsEnabled ? () => onNavigateTab?.('phone') : undefined}
-            >
-              <span className={styles.withStatus}>
-                {typeof user?.phone === 'string' ? user.phone : t('未绑定')}
-                {typeof user?.phone === 'string' && user?.phoneVerified && (
-                  <CheckCircle
-                    size={14}
-                    className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
-                  />
-                )}
-              </span>
-            </InfoCard>
+            {smsEnabled && (
+              <InfoCard
+                icon={<Phone size={20} />}
+                iconClass="success"
+                label={t('手机号')}
+                onClick={() => onNavigateTab?.('phone')}
+              >
+                <span className={styles.withStatus}>
+                  {typeof user?.phone === 'string' ? user.phone : t('未绑定')}
+                  {typeof user?.phone === 'string' && user?.phoneVerified && (
+                    <CheckCircle
+                      size={14}
+                      className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
+                    />
+                  )}
+                </span>
+              </InfoCard>
+            )}
 
-            <InfoCard
-              icon={<MessageCircle size={20} />}
-              iconClass="purple"
-              label={t('微信')}
-              onClick={
-                wechatEnabled ? () => onNavigateTab?.('wechat') : undefined
-              }
-            >
-              <span className={styles.withStatus}>
-                {user?.wechatId ? t('已绑定') : t('未绑定')}
-                {user?.wechatId ? (
-                  <CheckCircle
-                    size={14}
-                    className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
-                  />
-                ) : (
-                  <XCircle
-                    size={14}
-                    className={`${styles.statusIcon} ${styles.statusIconMuted}`}
-                  />
-                )}
-              </span>
-            </InfoCard>
+            {wechatEnabled && (
+              <InfoCard
+                icon={<MessageCircle size={20} />}
+                iconClass="purple"
+                label={t('微信')}
+                onClick={() => onNavigateTab?.('wechat')}
+              >
+                <span className={styles.withStatus}>
+                  {user?.wechatId ? t('已绑定') : t('未绑定')}
+                  {user?.wechatId ? (
+                    <CheckCircle
+                      size={14}
+                      className={`${styles.statusIcon} ${styles.statusIconSuccess}`}
+                    />
+                  ) : (
+                    <XCircle
+                      size={14}
+                      className={`${styles.statusIcon} ${styles.statusIconMuted}`}
+                    />
+                  )}
+                </span>
+              </InfoCard>
+            )}
 
             <InfoCard
               icon={<Key size={20} />}

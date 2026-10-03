@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { AlertTriangle, Lock, Phone, Mail, CheckCircle } from 'lucide-react';
 import { Button, Select, Checkbox } from '@/components/ui';
 import type { SelectOption } from '@/components/ui';
@@ -75,15 +75,20 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
   // 注销冷静期天数（运行时配置，默认 7）：期间重新登录自动取消注销
   const { config } = useRuntimeConfig();
   const graceDays = config.userCancelGraceDays ?? 7;
+  // 验证方式与运行时服务开关联动：服务未启用时对应验证码发不出去，选项一并隐藏
+  const mailEnabled = config.mailEnabled ?? false;
+  const smsEnabled = config.smsEnabled ?? false;
+  const wechatEnabled = config.wechatEnabled ?? false;
 
   const verificationOptions = useMemo<SelectOption[]>(() => {
     const opts: SelectOption[] = [];
     if (user?.hasPassword)
       opts.push({ value: 'password', label: t('密码验证') });
-    if (user?.phone && user.phoneVerified)
+    if (smsEnabled && user?.phone && user.phoneVerified)
       opts.push({ value: 'phone', label: t('手机验证码') });
-    if (user?.email) opts.push({ value: 'email', label: t('邮箱验证码') });
-    if (user?.wechatId)
+    if (mailEnabled && user?.email)
+      opts.push({ value: 'email', label: t('邮箱验证码') });
+    if (wechatEnabled && user?.wechatId)
       opts.push({ value: 'wechat', label: t('微信扫码验证') });
     return opts;
   }, [
@@ -92,7 +97,22 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
     user?.phoneVerified,
     user?.email,
     user?.wechatId,
+    mailEnabled,
+    smsEnabled,
+    wechatEnabled,
   ]);
+
+  // 已选验证方式被开关/绑定状态过滤掉时重置，避免停留在发不出验证码的渠道上
+  useEffect(() => {
+    if (
+      deactivateForm.verificationMethod &&
+      !verificationOptions.some(
+        (opt) => opt.value === deactivateForm.verificationMethod
+      )
+    ) {
+      onVerificationMethodChange('');
+    }
+  }, [deactivateForm.verificationMethod, verificationOptions]);
 
   const canSubmit = () => {
     if (!deactivateForm.confirmed || !deactivateForm.verificationMethod)

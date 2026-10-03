@@ -8,8 +8,14 @@ vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
   authControllerSendSmsCode: vi.fn(),
   usersControllerDeactivateAccount: vi.fn(),
 }))
+// 运行时配置 mock：服务开关默认全开（保持「按绑定状态过滤」的原断言语义），
+// 单用例可改字段验证开关关闭时选项被排除；普通对象非响应式，
+// 改完必须在 setup 前生效（新 composable 的 computed 首次求值才读得到新值）
+const mockRuntimeConfig = vi.hoisted(() => ({
+  value: { userCancelGraceDays: 7, mailEnabled: true, smsEnabled: true, wechatEnabled: true },
+}))
 vi.mock('@/composables/useRuntimeConfig', () => ({
-  useRuntimeConfig: () => ({ config: { value: { userCancelGraceDays: 7 } } }),
+  useRuntimeConfig: () => ({ config: mockRuntimeConfig }),
 }))
 
 import {
@@ -45,6 +51,8 @@ describe('useProfileDeactivate 账号注销', () => {
     vi.useFakeTimers()
     // useCountdown 在 composable 里注册 onUnmounted，测试里没有活动组件实例（同 useAccountCredentials.spec）
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    // 每用例恢复服务全开基线（开关用例会改字段）
+    mockRuntimeConfig.value = { userCancelGraceDays: 7, mailEnabled: true, smsEnabled: true, wechatEnabled: true }
   })
   afterEach(() => {
     warnSpy.mockRestore()
@@ -59,6 +67,18 @@ describe('useProfileDeactivate 账号注销', () => {
   it('无密码 + 手机未验证 + 无微信 → 只剩邮箱选项', () => {
     const { c } = setup({ hasPassword: false, phone: '13800138000', phoneVerified: false, email: 'me@example.com' })
     expect(c.methodOptions.value.map((o) => o.value)).toEqual(['email'])
+  })
+
+  it('服务开关未启用时对应验证方式被排除（验证码发不出去的渠道不再出现）', () => {
+    mockRuntimeConfig.value.smsEnabled = false
+    mockRuntimeConfig.value.mailEnabled = false
+    mockRuntimeConfig.value.wechatEnabled = false
+    const { c } = setup(fullUser)
+    // 密码验证不依赖服务开关，始终可用
+    expect(c.methodOptions.value.map((o) => o.value)).toEqual(['password'])
+    // 预设被排除的渠道 → 落回第一个可用选项
+    c.open('wechat')
+    expect(c.method.value).toBe('password')
   })
 
   it('open 默认选中第一个可用选项（优先级 密码>手机>邮箱>微信）', () => {
