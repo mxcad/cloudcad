@@ -195,8 +195,15 @@
 
 - [x] **C-29 WorkCard 协同分享复制绕过了唯一出口（P1）**：✅ C-27 收敛时漏掉的第 6 个复制点——`WorkCard.vue` 仍直接 `copyText()` + 自持 `showLinkSheet`/`linkSheetUrl` 两份回落 refs + 成功 toast（即「一份逐字重复实现」仍在）。改为调 `useShareLinkCopy`，二维码面板复制按钮加行内 ✓（`copiedKey === display.shareUrl`，与 ShareManagePage 三个复制点同判据）。`handleCopy` 从 9 行降到 3 行，删除该文件的本地回落逻辑；成功文案统一为 `已复制链接`（原「分享链接已复制」仅此文件用，键 1515 留在词表不再引用，不删——词表删除留给下次词表维护）
 - [x] **C-30 WorkCard 5 处硬编码中文未走 `t()`（P1）**：✅ `分享`×2、`退出`、`加入`×2 包 `t()`。键 2644（分享）/742（退出）复用，`加入` 为新键 **3731**（四语：加入/加入/Join/참여）——**与 PC `CollabWorkCard.tsx:126-141` 逐字一致**（PC 也用 `t('分享')`/`t('退出')`/`t('加入')`）。移动端原本连英文用户都看到中文「加入」
-- [➖] **C-28 分享列表日期格式（查证非差距，不改代码）**：➖ 台账原以为移动端 `toLocaleDateString()` 违反「日期走唯一出口」。查证后**不是差距**：PC `constants/share.ts` 的 `formatExpiryDate` 与 `ShareTable.tsx` 的 createdAt 列**同样**是 `toLocaleDateString()`，移动端逐字对齐 PC。只把移动端换成 platform `formatDate`（固定 ISO-like）会让两端显示口径不一致（`2026-10-03` vs `2026/10/3`），与「补齐差距」方向相反。正确归属=**跨端共用的本地化日期口径问题**，需 PC + 移动端同改（4 处），已排票（见文末）。P-12 的 platform 固定格式决策只覆盖审计/版本/文件时间戳，未覆盖分享
-- [x] **Batch 18 台账清尾**：✅ 关闭 C-13（与 C-27 重复合并）、D-10（台账「跳 PC /member-center」**过时**——`openMemberCenter` 已直达原生 `/shell/member`，ADR-0068）、G-04（2026-09-10 已裁定，标记 ⏸→➖）；重写 G-02 为可执行流程（`pnpm i18nCompile` 禁止运行，改手工加键 + 四语一致性校验）；G-05 确认为常驻验收纪律；排票 B-10 / P-08 自动化 / Batch 6b / G-03 / C-28 跨端日期。§C 与 §K 已无 ⬜/⏸ 遗留
+- [➖] **C-28 分享列表日期格式（查证非差距，不改代码）**：➖ 台账原以为移动端 `toLocaleDateString()` 违反「日期走唯一出口」。查证后**不是差距**：PC `constants/share.ts` 的 `formatExpiryDate` 与 `ShareTable.tsx` 的 createdAt 列**同样**是 `toLocaleDateString()`，移动端逐字对齐 PC。只把移动端换成 platform `formatDate`（固定 ISO-like）会让两端显示口径不一致（`2026-10-03` vs `2026/10/3`），与「补齐差距」方向相反。正确归属=**跨端共用的本地化日期口径问题**，需 PC + 移动端同改（4 处）。P-12 的 platform 固定格式决策只覆盖审计/版本/文件时间戳，未覆盖分享。**2026-10-03 裁定：维持现状（两端一致即无差距）**——分享列表是「读一眼」的展示场景，跟随设备 locale 的本地化日期是正常 UX；只有审计/版本/文件历史这类需要排序或复制进 Excel 的时间戳才值得用固定格式（P-12 的场景）。不动任何代码，不再排票
+- [x] **Batch 18 台账清尾**：✅ 关闭 C-13（与 C-27 重复合并）、D-10（台账「跳 PC /member-center」**过时**——`openMemberCenter` 已直达原生 `/shell/member`，ADR-0068）、G-04（2026-09-10 已裁定，标记 ⏸→➖）；重写 G-02 为可执行流程（`pnpm i18nCompile` 禁止运行，改手工加键 + 四语一致性校验）；G-05 确认为常驻验收纪律；排票 B-10 / P-08 自动化 / Batch 6b / G-03。§C 与 §K 已无 ⬜/⏸ 遗留
+
+### C-B 后端/SDK 评估（2026-10-03，无缺口）
+
+- [x] SDK 有 7 个 share 方法（Create/List/GetFileShares/Resolve/ResolveNode/Revoke/Update），PC 与移动端**消费集合完全相同**（各 6 个，2026-10-03 grep `sdk.gen.ts` + 两端源码核实）；`shareControllerResolveShare`（返回 `ResolveShareResponseDto` 分享元数据，与 `ResolveShareNode` 的文件信息相对）**两端零消费者**→ 不接线（无消费者代码不新增抽象，与 §K K-B 同口径）
+- [x] 后端 `share.controller.ts` 的 `GET :token` 与 `GET :token/node` 均 `@Public()`（分享落地页免登录），`DELETE :token` 走 `@ApiBearerAuth()`（撤销需登录）——两端鉴权语义一致，移动端无缺口
+- [x] 后端 4 个 share 端点（create/list/file/update）返回的 `url` 一律是相对 path，绝对化规则已收敛进 platform `toShareUrl`（见 C-26），前端↔SDK↔后端三层一致性闭环
+- [x] 三层影响面：本批（Batch 15~18）未改任何 DTO/Controller/schema，api-sdk 无需重生成
 
 ---
 
@@ -386,7 +393,7 @@ PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围
 | Batch 15（分享细节对齐） | C-17 创建弹窗自定义天数 + C-18 已有分享链接/复制 + C-19 删死分支 + C-20 批量进度 + C-21 errMsg 唯一出口 + C-22 撤销文案统一 + C-23 错误态/空态 + C-24 搜索防抖 + C-25 二维码 160 | ✅ 2026-10-03 完成：ShareCurrentPopup/ShareManagePage/useShareCreate/apiError 共 4 文件；`errMsg` 补裸字符串直通（修 `[object Object]` 与错误塌成兜底）；`createShares` 加 `onProgress`（不传行为不变）；新增 i18n 键 3721/3722 四语 |
 | Batch 16（实时协同对齐） | K-01~K-13 全 13 项（详见 §K） | ✅ 2026-10-03 完成：useCooperate/useCollabAutoJoin/useOpenGuard/useEditorState/collab.ts/editor.ts/CooperatePopup/WorkCard/index.vue 共 9 文件；新增 i18n 键 3723-3727 四语。最大产出=K-01 一处 `guardBeforeOpen` 覆盖 4 个打开入口 + K-08 修跨端死链。**后端无缺口**（协同是 http-proxy 黑盒，无 REST 面） |
 | Batch 17（分享链接绝对化 + 复制反馈） | C-26 `toShareUrl` 收敛进 platform + 两端薄出口（移动端 4 边界覆盖 10 消费点、PC 5 处手写拼接换共享规则）+ C-27 `useShareLinkCopy` 行内反馈 | ✅ 2026-10-03 完成：platform `share/url.ts` + spec + barrel；PC `utils/shareUrl.ts` + ShareDialog ×4 + useShareActions；移动端 `utils/shareUrl.ts` + `useShareLinkCopy`（+5 例 spec）+ ShareManagePage/ShareCurrentPopup/useShareCreate。**门禁**：platform 13/76 绿、PC type-check 0 错 + share specs 19/19、移动端 vue-tsc 0 错 + 68 文件/633 用例绿 + `vite build` 成功。**⚠ i18n 事故**：`pnpm i18nCompile`（`voerkai18n compile -t`）会把 `idMap.json` 连同 4 个语言文件一起重建成「HEAD 减去尾部 89 个键」的状态（丢 1412 + 3633-3720，含批量下载/回收站/跨项目转移/分享撤销等文案），且不补本轮新键。已 `git show HEAD:` 逐文件恢复后**手工**追加 3721-3727 四语（1181/1182 条，四语 id 集合完全一致）；**此工具当前不可信，勿再跑**，i18n 键须手工加或在工具修复后统一跑 |
-| Batch 18（分享/协同收尾） | C-29 WorkCard 协同分享复制收敛进 `useShareLinkCopy` + 行内 ✓ + C-30 WorkCard 5 处硬编码中文包 `t()`（新键 3731）+ C-28 查证非差距 + 台账清尾 | ✅ 2026-10-03 完成：`WorkCard.vue` 删本地 `copyText` + 两份回落 refs 改调 `useShareLinkCopy`（`copiedKey === display.shareUrl` 行内 ✓）；`分享`×2/`退出`/`加入`×2 包 `t()`，**与 PC `CollabWorkCard.tsx` 三个按钮文案逐字一致**。C-13 由 C-27 覆盖故合并；D-10 查证为台账过时（`router.push('/shell/member')` 直达原生 MemberCenterPage）；G-02 重写（compile 工具不可信，改手工加键 + 四语校验）；G-04/G-05 状态归位；B-10/P-08 自动化/Batch 6b/G-03/C-28 跨端日期排票见文末。**门禁**：移动端 `vue-tsc --noEmit` 0 错 + vitest 70 文件 / 647 用例全绿 | 
+| Batch 18（分享/协同收尾） | C-29 WorkCard 协同分享复制收敛进 `useShareLinkCopy` + 行内 ✓ + C-30 WorkCard 5 处硬编码中文包 `t()`（新键 3731）+ C-28 查证非差距 + 台账清尾 | ✅ 2026-10-03 完成：`WorkCard.vue` 删本地 `copyText` + 两份回落 refs 改调 `useShareLinkCopy`（`copiedKey === display.shareUrl` 行内 ✓）；`分享`×2/`退出`/`加入`×2 包 `t()`，**与 PC `CollabWorkCard.tsx` 三个按钮文案逐字一致**。C-13 由 C-27 覆盖故合并；D-10 查证为台账过时（`router.push('/shell/member')` 直达原生 MemberCenterPage）；G-02 重写（compile 工具不可信，改手工加键 + 四语校验）；G-04/G-05 状态归位；B-10/P-08 自动化/Batch 6b/G-03 排票见文末；C-28 查证非差距（后续裁定维持现状）。**门禁**：移动端 `vue-tsc --noEmit` 0 错 + vitest 70 文件 / 647 用例全绿 | 
 | ⏸ 待确认 | P-08 编辑器菜单审计自动化（命令覆盖已人工审计完成，门禁待建）/ Batch 6b 库层级视图 / G-03 测试覆盖率门禁 | 需用户裁定（明细见文末「待排票」） |
 
 ---
@@ -397,10 +404,9 @@ PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围
 
 | 项 | 内容 | 为什么不进本批 | 前置条件 |
 |---|---|---|---|
-| **C-28 跨端日期口径** | 分享相关日期两端都用 `toLocaleDateString()`（PC `constants/share.ts` `formatExpiryDate` + `ShareTable.tsx` createdAt 列；移动端 `ShareManagePage.vue` `formatExpiryDate`/`formatDate`）。若统一走 platform `formatDate`（固定 `YYYY-MM-DD`），需 **4 处同改**并同步动 PC 行为 | 单改一端会制造跨端显示不一致；P-12 的固定格式决策只覆盖审计/版本/文件时间戳 | 产品裁定：分享日期要不要也走固定格式 |
 | **B-10 精细化错误文案** | 成员操作失败兜底 `移除失败`（`ProjectDetailPage.vue:356`）是硬编码中文且 idMap 无此键 | 低优；且 `ProjectDetailPage.vue` 正被并发会话修改，动它必冲突 | 与 G-02 的 i18n 流程改造一并处理 |
 | **P-08 菜单审计自动化** | 命令覆盖已人工审计完成（E-30~E-33 结论见 §E），但审计靠手工 grep，无门禁；引擎 ini 双源结构不同名（PC `myUiConfig.json` 196 命令 vs 移动端 `mxUIConfig.json` 55 命令） | 需先裁定审计范围与判定标准（能否合并两份数据本身就是 P-08 的结论：不能） | 用户裁定 |
 | **Batch 6b 库层级视图** | E-09 库内新建文件夹 / E-12 库内移动复制 / E-17 库面包屑 | 与 all-files 决策冲突，属产品形态取舍而非技术差距 | 用户裁定 |
 | **G-03 测试覆盖率门禁** | 「每条 P0/P1 修复带回归测试」未成为硬门禁；Batch 15~18 实际做法=改逻辑的条目带 spec、纯 UI 文案条目不带 | 是否升为强制规则影响后续所有批次的工作量 | 用户裁定 |
 
-> 已关闭无需再排票：G-04（PC 通知中心孤儿代码，2026-09-10 已裁定保留）、C-13（与 C-27 重复合并）、D-10（台账过时，现状已与 PC 对齐）。
+> 已关闭无需再排票：G-04（PC 通知中心孤儿代码，2026-09-10 已裁定保留）、C-13（与 C-27 重复合并）、D-10（台账过时，现状已与 PC 对齐）、**C-28（2026-10-03 裁定维持现状——分享日期两端都用本地化日期，一致即无差距；固定格式的适用域是审计/版本/文件历史这类需排序或导出的时间戳，不含分享列表；如未来要改，须 PC + 移动端 4 处同改）**。
