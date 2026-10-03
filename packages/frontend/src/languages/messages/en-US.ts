@@ -1405,7 +1405,6 @@ export default  {
     "5346": "WeChat configuration",
     "5347": "Storage Configuration",
     "5348": "Failed to obtain configuration",
-    "5349": "Configuration saved",
     "5350": "Failed to save configuration",
     "5351": "Confirm Reset",
     "5352": "Are you sure you want to reset this configuration to its default values? This operation is irrevocable.",
