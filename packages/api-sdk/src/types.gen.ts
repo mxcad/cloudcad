@@ -10791,6 +10791,10 @@ export type ShareControllerListSharesData = {
          */
         search?: string;
         /**
+         * 按状态筛选：active=未过期（含永不过期），expired=已过期
+         */
+        status?: 'active' | 'expired';
+        /**
          * 排序字段，默认 createdAt
          */
         sortBy?: 'createdAt' | 'expiresAt' | 'usedCount';

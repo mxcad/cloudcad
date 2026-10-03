@@ -105,6 +105,7 @@ export class ShareController {
   @ApiQuery({ name: 'pageSize', required: false, type: Number, description: '每页条数，默认 20' })
   @ApiQuery({ name: 'fileId', required: false, type: String, description: '按文件筛选' })
   @ApiQuery({ name: 'search', required: false, type: String, description: '按文件名搜索' })
+  @ApiQuery({ name: 'status', required: false, enum: ['active', 'expired'], description: '按状态筛选：active=未过期（含永不过期），expired=已过期' })
   @ApiQuery({ name: 'sortBy', required: false, enum: ['createdAt', 'expiresAt', 'usedCount'], description: '排序字段，默认 createdAt' })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'], description: '排序方向，默认 desc' })
   async listShares(
@@ -112,6 +113,7 @@ export class ShareController {
     @Query('pageSize') pageSize?: string,
     @Query('fileId') fileId?: string,
     @Query('search') search?: string,
+    @Query('status') status?: 'active' | 'expired',
     @Query('sortBy') sortBy?: 'createdAt' | 'expiresAt' | 'usedCount',
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
     @Req() req?: Request,
@@ -122,6 +124,7 @@ export class ShareController {
       pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
       fileId,
       search,
+      status,
       sortBy,
       sortOrder,
     });

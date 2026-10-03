@@ -119,6 +119,9 @@ async function loadShares(append = false) {
         sortBy: sortBy.value,
         sortOrder: sortOrder.value,
         ...(keyword.value ? { search: keyword.value } : {}),
+        // P1-2：状态筛选下推到 DB。原先客户端只过滤已加载页，而 total 是服务端未过滤总数，
+        // 过滤后会出现「还能加载但已无有效项」、全选计数口径也不一致。
+        ...(filter.value === 'all' ? {} : { status: filter.value }),
       },
     })
     if (res.error) throw new Error(String(res.error))
@@ -309,7 +312,7 @@ function toggleSelect(token: string) {
 }
 
 function selectAllShares() {
-  selectedTokens.value = filteredShares.value.map((s) => s.token).filter(Boolean)
+  selectedTokens.value = shares.value.map((s) => s.token).filter(Boolean)
 }
 
 function exitSelecting() {
@@ -506,11 +509,6 @@ function statusBg(s: string): string {
   if (s === 'active') return 'rgba(0, 169, 158, 0.14)'
   return 'rgba(255, 255, 255, 0.06)'
 }
-
-const filteredShares = computed(() => {
-  if (filter.value === 'all') return shares.value
-  return shares.value.filter((s) => s.status === filter.value)
-})
 
 // 未登录引导：guest/token_expired 态自动跳原生登录页（同 tab 带 redirect 回跳）；登录完成后加载分享列表
 useLoginPrompt(() => loadShares())
@@ -795,7 +793,7 @@ function onCustomDaysInput(e: Event) {
       @select="onSortSelect"
     />
 
-    <div v-if="loading && filteredShares.length === 0" class="state-box">
+    <div v-if="loading && shares.length === 0" class="state-box">
       <van-loading size="24" />
       <span class="state-text">{{ t('加载中...') }}</span>
     </div>
@@ -805,7 +803,7 @@ function onCustomDaysInput(e: Event) {
       <van-button size="small" round @click="loadShares">{{ t('重试') }}</van-button>
     </div>
 
-    <div v-else-if="filteredShares.length === 0" class="state-box">
+    <div v-else-if="shares.length === 0" class="state-box">
       <van-icon name="share-o" size="48" />
       <span class="state-text">{{ keyword ? t('未找到相关分享') : t('暂无分享') }}</span>
       <button v-if="keyword" class="empty-action" @click="keyword = ''">
@@ -820,7 +818,7 @@ function onCustomDaysInput(e: Event) {
 
     <div v-else class="share-list" @scroll.passive="onShareListScroll">
       <div
-        v-for="s in filteredShares"
+        v-for="s in shares"
         :key="s.id"
         :class="['share-item', { 'share-item--selected': isSelecting && selectedTokens.includes(s.token) }]"
         @click="onShareClick(s)"
@@ -876,7 +874,7 @@ function onCustomDaysInput(e: Event) {
     <div v-if="isSelecting" class="select-bar">
       <button class="select-bar-btn" @click="exitSelecting">{{ t('取消') }}</button>
       <button class="select-bar-btn" @click="selectAllShares">
-        {{ t('全选') }}（{{ filteredShares.length }}）
+        {{ t('全选') }}（{{ shares.length }}）
       </button>
       <button
         class="select-bar-btn select-bar-btn--danger"
@@ -986,9 +984,14 @@ function onCustomDaysInput(e: Event) {
                 <span v-else>{{ t('复制') }}</span>
               </button>
             </div>
+            <!-- 有到期时间才拼「有效期至」句子（对齐 PC ShareDialog 的 {date} replace）；
+                 永不过期单独一行，避免出现「有效期至 永不过期」的矛盾文案 -->
             <div class="expire-hint">
               <van-icon name="clock-o" size="12" />
-              {{ formatCreatedExpiry(singleCreated.expiresAt ?? null) }}
+              <template v-if="singleCreated.expiresAt">
+                {{ t('有效期至') }} {{ formatCreatedExpiry(singleCreated.expiresAt) }}
+              </template>
+              <template v-else>{{ t('永不过期') }}</template>
             </div>
             <!-- C-33：创建成功即可撤销，不必先关闭再回列表找行（对齐 PC ShareDialog） -->
             <button class="success-revoke" @click="onRevokeCreated">

@@ -132,3 +132,65 @@ describe('ShareService.validateShareFileAccess', () => {
     ).rejects.toThrow(NotFoundException);
   });
 });
+
+/**
+ * listShares 状态筛选下推回归。
+ *
+ * 移动端「全部/有效/已过期」原先是客户端过滤已加载页，而 total 由服务端未过滤计数返回，
+ * 过滤后会出现「还能加载但已无有效项」、全选计数口径也不一致。修法是把 status 下推到 DB，
+ * 让 count 与 findMany 走同一个 where。这里锁死三种分支的 where 形状与 total 来源。
+ */
+describe('ShareService.listShares status 筛选', () => {
+  const createService = () => {
+    const count = jest.fn().mockResolvedValue(0);
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = {
+      fileShare: { count, findMany },
+      fileSystemNode: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new ShareService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never
+    );
+    return { service, count, findMany };
+  };
+
+  const capturedWhere = (mock: jest.Mock) =>
+    (mock.mock.calls[0][0].where as { OR?: Array<Record<string, unknown>> });
+
+  it('status=active：永不过期（expiresAt 为 null）或未到期', async () => {
+    const { service, count, findMany } = createService();
+    await service.listShares('user-1', { status: 'active' });
+    expect(capturedWhere(count).OR).toEqual([
+      { expiresAt: null },
+      { expiresAt: { gt: expect.any(Date) } },
+    ]);
+    // count 与 findMany 必须走同一个 where，否则 total 与列表口径不一致
+    expect(capturedWhere(findMany).OR).toEqual(capturedWhere(count).OR);
+  });
+
+  it('status=expired：expiresAt 不晚于当前时间', async () => {
+    const { service, count } = createService();
+    await service.listShares('user-1', { status: 'expired' });
+    expect(capturedWhere(count).OR).toEqual([
+      { expiresAt: { lte: expect.any(Date) } },
+    ]);
+  });
+
+  it('不传 status 或传未知值：按全部返回，不加 OR 条件', async () => {
+    for (const query of [{}, { status: 'foo' }]) {
+      const { service, count } = createService();
+      await service.listShares('user-1', query as never);
+      expect(capturedWhere(count).OR).toBeUndefined();
+    }
+  });
+
+  it('total 来自过滤后的 count，而非全量条数', async () => {
+    const { service, count } = createService();
+    count.mockResolvedValue(3);
+    const result = await service.listShares('user-1', { status: 'expired' });
+    expect(result.total).toBe(3);
+  });
+});

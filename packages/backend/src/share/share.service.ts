@@ -261,6 +261,7 @@ export class ShareService {
     pageSize?: number;
     fileId?: string;
     search?: string;
+    status?: 'active' | 'expired';
     sortBy?: 'createdAt' | 'expiresAt' | 'usedCount';
     sortOrder?: 'asc' | 'desc';
   }) {
@@ -287,6 +288,18 @@ export class ShareService {
         select: { id: true },
       });
       where.fileId = { in: matchingFiles.map((f) => f.id) };
+    }
+
+    // 状态筛选下推到 DB（与 ip-blacklist/ip-whitelist 的「未过期」判据同款）：
+    // active = 永不过期（expiresAt 为 null）或未到期；expired = 已过期。
+    // 必须下推：否则 total 是未过滤总数，客户端按过滤后列表翻页会出现「还能加载但已无有效项」。
+    // 未声明全局 ValidationPipe 的枚举转换，未知值按「全部」处理而非当作筛选。
+    if (query.status === 'active' || query.status === 'expired') {
+      const now = new Date();
+      where.OR =
+        query.status === 'expired'
+          ? [{ expiresAt: { lte: now } }]
+          : [{ expiresAt: null }, { expiresAt: { gt: now } }];
     }
 
     const [total, shares] = await Promise.all([
