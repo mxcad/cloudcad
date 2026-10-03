@@ -92,6 +92,7 @@ export class AlertRecordDto {
 
   @ApiPropertyOptional({
     description: '解决时间；未解决为 null',
+    type: Date,
     nullable: true,
   })
   resolvedAt: Date | null;
@@ -103,18 +104,29 @@ export class AlertRecordDto {
   updatedAt: Date;
 }
 
+/** 分页信息 */
+export class PaginationDto {
+  @ApiProperty({ description: '当前页码' })
+  page: number;
+
+  @ApiProperty({ description: '每页条数' })
+  limit: number;
+
+  @ApiProperty({ description: '总条数' })
+  total: number;
+
+  @ApiProperty({ description: '总页数' })
+  totalPages: number;
+}
+
 export class AlertListResponseDto {
   @ApiProperty({ type: [AlertRecordDto], description: '告警列表' })
   data: AlertRecordDto[];
 
   @ApiProperty({
     description: '分页信息',
+    type: () => PaginationDto,
     example: { page: 1, limit: 20, total: 0, totalPages: 0 },
   })
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationDto;
 }

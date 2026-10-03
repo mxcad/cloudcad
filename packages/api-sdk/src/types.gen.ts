@@ -4,25 +4,159 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}/api/v1` | (string & {});
 };
 
+export type CacheStatsDto = {
+    /**
+     * 缓存条目总数
+     */
+    totalEntries: number;
+    /**
+     * 缓存容量上限
+     */
+    capacity: number;
+    /**
+     * 内存占用（人类可读）
+     */
+    memoryUsage: string;
+    /**
+     * 命中率
+     */
+    hitRate: number;
+};
+
+export type CacheLevelStatsDto = {
+    /**
+     * L1 缓存统计
+     */
+    L1: CacheStatsDto;
+    /**
+     * L2 缓存统计
+     */
+    L2: CacheStatsDto;
+};
+
+export type CacheStatsSummaryDto = {
+    /**
+     * 总命中次数
+     */
+    totalHits: number;
+    /**
+     * 总未命中次数
+     */
+    totalMisses: number;
+    /**
+     * 总请求数
+     */
+    totalRequests: number;
+    /**
+     * 整体命中率
+     */
+    overallHitRate: number;
+    /**
+     * 总内存使用量（字节）
+     */
+    totalMemoryUsage: number;
+};
+
+export type CacheStatsDetailDto = {
+    /**
+     * L1/L2 两级缓存统计
+     */
+    levels: CacheLevelStatsDto;
+    /**
+     * 整体统计汇总
+     */
+    summary: CacheStatsSummaryDto;
+};
+
+export type CacheHealthStatusDto = {
+    /**
+     * 缓存级别
+     */
+    level: string;
+    /**
+     * 健康状态
+     */
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    /**
+     * 最后检查时间
+     */
+    lastCheckTime: string;
+    /**
+     * 可用性（0-100）
+     */
+    availability: number;
+    /**
+     * 错误信息
+     */
+    error?: string;
+};
+
+export type CacheHealthStatusDetailDto = {
+    /**
+     * L1 健康状态
+     */
+    L1: CacheHealthStatusDto;
+    /**
+     * L2 健康状态
+     */
+    L2: CacheHealthStatusDto;
+    /**
+     * 整体健康状态
+     */
+    overall: 'healthy' | 'degraded' | 'unhealthy';
+};
+
+export type CachePerformanceMetricsDto = {
+    /**
+     * 平均响应时间（毫秒）
+     */
+    avgResponseTime: number;
+    /**
+     * P50 响应时间（毫秒）
+     */
+    p50ResponseTime: number;
+    /**
+     * P95 响应时间（毫秒）
+     */
+    p95ResponseTime: number;
+    /**
+     * P99 响应时间（毫秒）
+     */
+    p99ResponseTime: number;
+    /**
+     * 吞吐量（请求/秒）
+     */
+    throughput: number;
+    /**
+     * 错误率（0-100）
+     */
+    errorRate: number;
+};
+
+export type CachePerformanceMetricsDetailDto = {
+    /**
+     * L1 性能指标
+     */
+    L1: CachePerformanceMetricsDto;
+    /**
+     * L2 性能指标
+     */
+    L2: CachePerformanceMetricsDto;
+};
+
 export type CacheMonitoringSummaryDto = {
     /**
      * 缓存统计
      */
-    stats: {
-        [key: string]: unknown;
-    };
+    stats: CacheStatsDetailDto;
     /**
      * 健康状态
      */
-    healthStatus: {
-        [key: string]: unknown;
-    };
+    healthStatus: CacheHealthStatusDetailDto;
     /**
      * 性能指标
      */
-    performanceMetrics: {
-        [key: string]: unknown;
-    };
+    performanceMetrics: CachePerformanceMetricsDetailDto;
     /**
      * 时间戳
      */
@@ -363,21 +497,15 @@ export type TaskRunDto = {
     /**
      * 结束时间；未结束为 null
      */
-    finishedAt?: {
-        [key: string]: unknown;
-    } | null;
+    finishedAt?: string | null;
     /**
      * 耗时（毫秒）
      */
-    durationMs?: {
-        [key: string]: unknown;
-    } | null;
+    durationMs?: number | null;
     /**
      * 错误摘要（失败时）
      */
-    errorSummary?: {
-        [key: string]: unknown;
-    } | null;
+    errorSummary?: string | null;
     /**
      * 触发方式
      */
@@ -385,13 +513,30 @@ export type TaskRunDto = {
     /**
      * 手动触发操作人用户 ID
      */
-    triggeredBy?: {
-        [key: string]: unknown;
-    } | null;
+    triggeredBy?: string | null;
     /**
      * 创建时间
      */
     createdAt: string;
+};
+
+export type PaginationDto = {
+    /**
+     * 当前页码
+     */
+    page: number;
+    /**
+     * 每页条数
+     */
+    limit: number;
+    /**
+     * 总条数
+     */
+    total: number;
+    /**
+     * 总页数
+     */
+    totalPages: number;
 };
 
 export type TaskRunListResponseDto = {
@@ -402,9 +547,7 @@ export type TaskRunListResponseDto = {
     /**
      * 分页信息
      */
-    pagination: {
-        [key: string]: unknown;
-    };
+    pagination: PaginationDto;
 };
 
 export type TaskInfoDto = {
@@ -419,15 +562,11 @@ export type TaskInfoDto = {
     /**
      * 定时 cron 表达式（服务器时区）；null 表示无独立定时（随宿主任务执行或仅手动触发）
      */
-    schedule?: {
-        [key: string]: unknown;
-    } | null;
+    schedule?: string | null;
     /**
      * 定时的人类可读描述（任务清单主展示，如「每天 02:00」）；null 表示无独立定时
      */
-    scheduleLabel?: {
-        [key: string]: unknown;
-    } | null;
+    scheduleLabel?: string | null;
 };
 
 export type TaskListResponseDto = {
@@ -493,9 +632,7 @@ export type AlertRecordDto = {
     /**
      * 解决时间；未解决为 null
      */
-    resolvedAt?: {
-        [key: string]: unknown;
-    } | null;
+    resolvedAt?: string | null;
     /**
      * 创建时间
      */
@@ -514,9 +651,7 @@ export type AlertListResponseDto = {
     /**
      * 分页信息
      */
-    pagination: {
-        [key: string]: unknown;
-    };
+    pagination: PaginationDto;
 };
 
 export type RegisterDto = {
@@ -2044,20 +2179,16 @@ export type SecurityAccessAttemptAggregateDto = {
      * 各拒绝原因分布（reason -> 次数）
      */
     reasons: {
-        [key: string]: unknown;
+        [key: string]: number;
     };
     /**
      * 最近一次尝试使用的账号（可能为扫描器瞎填）
      */
-    account?: {
-        [key: string]: unknown;
-    } | null;
+    account?: string | null;
     /**
      * 最近一次尝试的 User-Agent
      */
-    userAgent?: {
-        [key: string]: unknown;
-    } | null;
+    userAgent?: string | null;
     /**
      * 当前是否已在管理员 IP 白名单中
      */
@@ -2139,6 +2270,17 @@ export type UserCleanupTriggerDto = {
     delayDays?: number;
 };
 
+export type UserCleanupErrorDto = {
+    /**
+     * 用户 ID
+     */
+    userId: string;
+    /**
+     * 错误消息
+     */
+    message: string;
+};
+
 export type UserCleanupTriggerResponseDto = {
     /**
      * 消息
@@ -2187,7 +2329,7 @@ export type UserCleanupTriggerResponseDto = {
     /**
      * 错误列表
      */
-    errors: Array<string>;
+    errors: Array<UserCleanupErrorDto>;
 };
 
 /**
@@ -2347,13 +2489,14 @@ export type ProjectRoleDto = {
      * 成员数量
      */
     _count?: {
-        [key: string]: unknown;
+        members?: number;
     };
     /**
      * 关联的项目
      */
     project?: {
-        [key: string]: unknown;
+        id?: string;
+        name?: string;
     };
     /**
      * 创建时间
@@ -2746,6 +2889,21 @@ export type ParentContextDto = {
     total: number;
 };
 
+export type AncestorNodeDto = {
+    /**
+     * 节点 ID
+     */
+    id: string;
+    /**
+     * 节点名称
+     */
+    name: string;
+    /**
+     * 是否为根节点
+     */
+    isRoot: boolean;
+};
+
 export type NodeTreeResponseDto = {
     /**
      * 节点 ID
@@ -2850,9 +3008,7 @@ export type NodeTreeResponseDto = {
     /**
      * 祖先链（从根节点到当前节点的面包屑路径，含 ID/名称/isRoot）
      */
-    ancestors?: Array<{
-        [key: string]: unknown;
-    }>;
+    ancestors?: Array<AncestorNodeDto>;
 };
 
 export type NodeListResponseDto = {
@@ -3267,6 +3423,21 @@ export type ConversionStatusResponseDto = {
     error?: string;
 };
 
+export type ConversionTargetDto = {
+    /**
+     * 文件节点 ID（打开类型：登录用户打开项目文件 → 建 node）
+     */
+    nodeId?: string;
+    /**
+     * 历史版本号（下载类型）
+     */
+    version?: string;
+    /**
+     * 目标格式（下载类型）
+     */
+    format?: string;
+};
+
 export type SubmitConversionTaskDto = {
     /**
      * 任务类型
@@ -3275,9 +3446,7 @@ export type SubmitConversionTaskDto = {
     /**
      * 转换目标
      */
-    target: {
-        [key: string]: unknown;
-    };
+    target: ConversionTargetDto;
     /**
      * 优先级 1=打开（命脉）2=导出 3=后台
      */
@@ -3386,9 +3555,7 @@ export type ConversionQuotaDto = {
     /**
      * 窗口重置时刻（ISO 字符串）
      */
-    resetsAt: {
-        [key: string]: unknown;
-    } | null;
+    resetsAt: string | null;
     /**
      * 窗口归属：ip（游客）或 user（登录）
      */
@@ -4041,25 +4208,6 @@ export type DailyPurchasesStatsDto = {
      * 按会员档位细分
      */
     byTier: Array<PurchasesTierBreakdownDto>;
-};
-
-export type CacheStatsDto = {
-    /**
-     * 缓存条目总数
-     */
-    totalEntries: number;
-    /**
-     * 缓存容量上限
-     */
-    capacity: number;
-    /**
-     * 内存占用（人类可读）
-     */
-    memoryUsage: string;
-    /**
-     * 命中率
-     */
-    hitRate: number;
 };
 
 export type CacheCleanupResultDto = {
@@ -4724,6 +4872,21 @@ export type CreateSingleFormatDownloadDto = {
     libraryType?: string;
 };
 
+export type BatchDownloadErrorDto = {
+    /**
+     * 节点 ID
+     */
+    nodeId: string;
+    /**
+     * 文件名
+     */
+    fileName: string;
+    /**
+     * 错误信息
+     */
+    error: string;
+};
+
 export type BatchDownloadProgressDto = {
     taskId: string;
     status: string;
@@ -4732,7 +4895,7 @@ export type BatchDownloadProgressDto = {
     completedCount: number;
     errorCount: number;
     currentFile?: string;
-    errors?: Array<string>;
+    errors?: Array<BatchDownloadErrorDto>;
     zipPath?: string;
     itemNames?: Array<string>;
 };
@@ -4821,6 +4984,189 @@ export type BackupDeleteResultDto = {
     name: string;
 };
 
+export type ProcessPoolDurationDto = {
+    /**
+     * 样本数
+     */
+    sampleCount: number;
+    /**
+     * P50 耗时（ms）
+     */
+    p50DurationMs: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * P95 耗时（ms）
+     */
+    p95DurationMs: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * P50 等待时长（ms）
+     */
+    p50WaitMs: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * P95 等待时长（ms）
+     */
+    p95WaitMs: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type ProcessPoolStatsDto = {
+    /**
+     * 队列长度
+     */
+    queueLength: number;
+    /**
+     * 关键优先级队列长度
+     */
+    criticalPriorityQueueLength: number;
+    /**
+     * 高优先级队列长度
+     */
+    highPriorityQueueLength: number;
+    /**
+     * 低优先级队列长度
+     */
+    lowPriorityQueueLength: number;
+    /**
+     * 运行中任务数
+     */
+    runningCount: number;
+    /**
+     * 最大并发数
+     */
+    maxConcurrent: number;
+    /**
+     * 超时时间（ms）
+     */
+    timeout: number;
+    /**
+     * 耗时采样统计
+     */
+    duration: ProcessPoolDurationDto;
+};
+
+export type ConversionServiceWorkerDto = {
+    /**
+     * worker 标识
+     */
+    label: string;
+    /**
+     * 配置的最大并发数
+     */
+    maxConcurrent: number;
+    /**
+     * 当前最大并发数
+     */
+    currentMax: number;
+    /**
+     * 运行中任务数
+     */
+    running: number;
+    /**
+     * 等待任务数
+     */
+    waiting: number;
+    /**
+     * 是否自动扩缩容
+     */
+    autoScale: boolean;
+    /**
+     * 积压开始时间（epoch ms），无积压为 null
+     */
+    backlogSince: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type ConversionServiceTasksDto = {
+    /**
+     * 任务总数
+     */
+    total: number;
+    /**
+     * 等待中任务数
+     */
+    pending: number;
+    /**
+     * 处理中任务数
+     */
+    processing: number;
+    /**
+     * 已完成任务数
+     */
+    completed: number;
+    /**
+     * 失败任务数
+     */
+    failed: number;
+};
+
+export type ConversionServiceDurationDto = {
+    /**
+     * 样本数
+     */
+    sampleCount: number;
+    /**
+     * P50 耗时（ms）
+     */
+    p50Ms: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * P95 耗时（ms）
+     */
+    p95Ms: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type ConversionServiceStatsDto = {
+    /**
+     * 任务计数统计
+     */
+    tasks: ConversionServiceTasksDto;
+    /**
+     * 耗时采样统计
+     */
+    duration: ConversionServiceDurationDto;
+    /**
+     * worker 统计（按 worker key 索引）
+     */
+    workers: {
+        [key: string]: ConversionServiceWorkerDto;
+    };
+};
+
+export type ConversionQueueHistoryPointDto = {
+    /**
+     * 采样时间（epoch ms）
+     */
+    t: number;
+    /**
+     * 队列深度
+     */
+    queueDepth: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 运行中任务数
+     */
+    running: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * P95 耗时（ms）
+     */
+    p95DurationMs: {
+        [key: string]: unknown;
+    } | null;
+};
+
 export type ConversionMonitorStatsDto = {
     /**
      * 转换执行器模式
@@ -4829,25 +5175,19 @@ export type ConversionMonitorStatsDto = {
     /**
      * process-pool 模式当前统计（其他模式为 null）
      */
-    processPool?: {
-        [key: string]: unknown;
-    } | null;
+    processPool?: ProcessPoolStatsDto | null;
     /**
      * conversion-service 模式当前统计（其他模式或拉取失败为 null）
      */
-    conversionService?: {
-        [key: string]: unknown;
-    } | null;
+    conversionService?: ConversionServiceStatsDto | null;
     /**
      * conversion-service 拉取失败原因（成功为 null）
      */
-    conversionServiceError?: {
-        [key: string]: unknown;
-    } | null;
+    conversionServiceError?: string | null;
     /**
      * 24h 历史采样（30s 间隔，旧→新；重启后为空）
      */
-    history: Array<string>;
+    history: Array<ConversionQueueHistoryPointDto>;
     /**
      * 本次统计生成时间（epoch ms）
      */

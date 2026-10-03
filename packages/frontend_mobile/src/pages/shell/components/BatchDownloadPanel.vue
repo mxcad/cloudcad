@@ -8,7 +8,8 @@
 import { ref, watch } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import { t } from '@/languages'
-import { useBatchDownload, type BatchTaskItem, type BatchTaskError } from '@/composables/useBatchDownload'
+import { useBatchDownload, type BatchTaskItem } from '@/composables/useBatchDownload'
+import type { BatchDownloadErrorDto } from '@cloudcad/api-sdk/types.gen'
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
@@ -28,7 +29,7 @@ const {
 
 // 逐文件错误展开（对齐 PC BatchDownloadProgress「错误详情」卡片）：点「失败 N 项」拉 progress 端点 errors
 const expandedTaskId = ref<string | null>(null)
-const currentErrors = ref<BatchTaskError[]>([])
+const currentErrors = ref<BatchDownloadErrorDto[]>([])
 
 async function toggleErrors(task: BatchTaskItem) {
   if (expandedTaskId.value === task.taskId) {

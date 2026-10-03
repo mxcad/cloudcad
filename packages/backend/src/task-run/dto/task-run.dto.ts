@@ -91,18 +91,21 @@ export class TaskRunDto {
 
   @ApiPropertyOptional({
     description: '结束时间；未结束为 null',
+    type: Date,
     nullable: true,
   })
   finishedAt: Date | null;
 
   @ApiPropertyOptional({
     description: '耗时（毫秒）',
+    type: Number,
     nullable: true,
   })
   durationMs: number | null;
 
   @ApiPropertyOptional({
     description: '错误摘要（失败时）',
+    type: String,
     nullable: true,
   })
   errorSummary: string | null;
@@ -112,6 +115,7 @@ export class TaskRunDto {
 
   @ApiPropertyOptional({
     description: '手动触发操作人用户 ID',
+    type: String,
     nullable: true,
   })
   triggeredBy: string | null;
@@ -120,20 +124,31 @@ export class TaskRunDto {
   createdAt: Date;
 }
 
+/** 分页信息 */
+export class PaginationDto {
+  @ApiProperty({ description: '当前页码' })
+  page: number;
+
+  @ApiProperty({ description: '每页条数' })
+  limit: number;
+
+  @ApiProperty({ description: '总条数' })
+  total: number;
+
+  @ApiProperty({ description: '总页数' })
+  totalPages: number;
+}
+
 export class TaskRunListResponseDto {
   @ApiProperty({ type: [TaskRunDto], description: '任务执行记录列表' })
   data: TaskRunDto[];
 
   @ApiProperty({
     description: '分页信息',
+    type: () => PaginationDto,
     example: { page: 1, limit: 20, total: 0, totalPages: 0 },
   })
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationDto;
 }
 
 export class TaskRunTriggerResultDto {
@@ -159,6 +174,7 @@ export class TaskInfoDto {
   @ApiPropertyOptional({
     description:
       '定时 cron 表达式（服务器时区）；null 表示无独立定时（随宿主任务执行或仅手动触发）',
+    type: String,
     nullable: true,
   })
   schedule: string | null;
@@ -166,6 +182,7 @@ export class TaskInfoDto {
   @ApiPropertyOptional({
     description:
       '定时的人类可读描述（任务清单主展示，如「每天 02:00」）；null 表示无独立定时',
+    type: String,
     nullable: true,
   })
   scheduleLabel: string | null;

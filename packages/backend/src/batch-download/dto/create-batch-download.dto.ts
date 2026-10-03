@@ -209,6 +209,18 @@ export class BatchDownloadTaskDto {
   itemNames?: string[];
 }
 
+/** 批量下载错误项（节点/文件 + 错误信息） */
+export class BatchDownloadErrorDto {
+  @ApiProperty({ description: '节点 ID' })
+  nodeId: string;
+
+  @ApiProperty({ description: '文件名' })
+  fileName: string;
+
+  @ApiProperty({ description: '错误信息' })
+  error: string;
+}
+
 export class BatchDownloadProgressDto {
   @ApiProperty()
   taskId: string;
@@ -232,8 +244,8 @@ export class BatchDownloadProgressDto {
   @ApiProperty({ required: false })
   currentFile?: string;
 
-  @ApiProperty({ required: false })
-  errors?: Array<{ nodeId: string; fileName: string; error: string }>;
+  @ApiProperty({ required: false, type: [BatchDownloadErrorDto] })
+  errors?: BatchDownloadErrorDto[];
 
   @ApiProperty({ required: false })
   zipPath?: string;

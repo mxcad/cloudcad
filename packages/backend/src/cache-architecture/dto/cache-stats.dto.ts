@@ -85,36 +85,111 @@ export class CachePerformanceMetricsDto {
 }
 
 /**
+ * L1/L2 两级缓存统计
+ */
+export class CacheLevelStatsDto {
+  @ApiProperty({ description: 'L1 缓存统计', type: () => CacheStatsDto })
+  L1: CacheStatsDto;
+
+  @ApiProperty({ description: 'L2 缓存统计', type: () => CacheStatsDto })
+  L2: CacheStatsDto;
+}
+
+/**
+ * 缓存统计汇总
+ */
+export class CacheStatsSummaryDto {
+  @ApiProperty({ description: '总命中次数' })
+  totalHits: number;
+
+  @ApiProperty({ description: '总未命中次数' })
+  totalMisses: number;
+
+  @ApiProperty({ description: '总请求数' })
+  totalRequests: number;
+
+  @ApiProperty({ description: '整体命中率' })
+  overallHitRate: number;
+
+  @ApiProperty({ description: '总内存使用量（字节）' })
+  totalMemoryUsage: number;
+}
+
+/**
+ * 缓存统计（L1/L2 两级 + 汇总）
+ */
+export class CacheStatsDetailDto {
+  @ApiProperty({
+    description: 'L1/L2 两级缓存统计',
+    type: () => CacheLevelStatsDto,
+  })
+  levels: CacheLevelStatsDto;
+
+  @ApiProperty({
+    description: '整体统计汇总',
+    type: () => CacheStatsSummaryDto,
+  })
+  summary: CacheStatsSummaryDto;
+}
+
+/**
+ * 健康状态（L1/L2 两级 + 整体）
+ */
+export class CacheHealthStatusDetailDto {
+  @ApiProperty({
+    description: 'L1 健康状态',
+    type: () => CacheHealthStatusDto,
+  })
+  L1: CacheHealthStatusDto;
+
+  @ApiProperty({
+    description: 'L2 健康状态',
+    type: () => CacheHealthStatusDto,
+  })
+  L2: CacheHealthStatusDto;
+
+  @ApiProperty({
+    description: '整体健康状态',
+    enum: ['healthy', 'degraded', 'unhealthy'],
+  })
+  overall: 'healthy' | 'degraded' | 'unhealthy';
+}
+
+/**
+ * 性能指标（L1/L2 两级）
+ */
+export class CachePerformanceMetricsDetailDto {
+  @ApiProperty({
+    description: 'L1 性能指标',
+    type: () => CachePerformanceMetricsDto,
+  })
+  L1: CachePerformanceMetricsDto;
+
+  @ApiProperty({
+    description: 'L2 性能指标',
+    type: () => CachePerformanceMetricsDto,
+  })
+  L2: CachePerformanceMetricsDto;
+}
+
+/**
  * 缓存监控摘要 DTO
  */
 export class CacheMonitoringSummaryDto {
-  @ApiProperty({ description: '缓存统计' })
-  stats: {
-    levels: {
-      L1: CacheStatsDto;
-      L2: CacheStatsDto;
-    };
-    summary: {
-      totalHits: number;
-      totalMisses: number;
-      totalRequests: number;
-      overallHitRate: number;
-      totalMemoryUsage: number;
-    };
-  };
+  @ApiProperty({ description: '缓存统计', type: () => CacheStatsDetailDto })
+  stats: CacheStatsDetailDto;
 
-  @ApiProperty({ description: '健康状态' })
-  healthStatus: {
-    L1: CacheHealthStatusDto;
-    L2: CacheHealthStatusDto;
-    overall: 'healthy' | 'degraded' | 'unhealthy';
-  };
+  @ApiProperty({
+    description: '健康状态',
+    type: () => CacheHealthStatusDetailDto,
+  })
+  healthStatus: CacheHealthStatusDetailDto;
 
-  @ApiProperty({ description: '性能指标' })
-  performanceMetrics: {
-    L1: CachePerformanceMetricsDto;
-    L2: CachePerformanceMetricsDto;
-  };
+  @ApiProperty({
+    description: '性能指标',
+    type: () => CachePerformanceMetricsDetailDto,
+  })
+  performanceMetrics: CachePerformanceMetricsDetailDto;
 
   @ApiProperty({ description: '时间戳' })
   timestamp: Date;

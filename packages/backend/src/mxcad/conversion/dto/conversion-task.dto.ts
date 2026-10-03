@@ -11,6 +11,20 @@ import {
  */
 export type ConversionTaskType = 'open' | 'download';
 
+/** 转换目标（打开类型：nodeId；下载类型：version + format） */
+export class ConversionTargetDto {
+  @ApiPropertyOptional({
+    description: '文件节点 ID（打开类型：登录用户打开项目文件 → 建 node）',
+  })
+  nodeId?: string;
+
+  @ApiPropertyOptional({ description: '历史版本号（下载类型）' })
+  version?: string;
+
+  @ApiPropertyOptional({ description: '目标格式（下载类型）' })
+  format?: string;
+}
+
 export class SubmitConversionTaskDto {
   @ApiProperty({
     description: '任务类型',
@@ -19,15 +33,8 @@ export class SubmitConversionTaskDto {
   })
   type: ConversionTaskType;
 
-  @ApiProperty({ description: '转换目标' })
-  target: {
-    /** 打开类型：文件节点 ID（登录用户打开项目文件 → 建 node，云端记录） */
-    nodeId?: string;
-    /** 下载类型：历史版本号 */
-    version?: string;
-    /** 下载类型：目标格式 */
-    format?: string;
-  };
+  @ApiProperty({ description: '转换目标', type: () => ConversionTargetDto })
+  target: ConversionTargetDto;
 
   @ApiPropertyOptional({
     description: '优先级 1=打开（命脉）2=导出 3=后台',
@@ -169,7 +176,7 @@ export class ConversionQuotaDto {
   @ApiProperty({ description: '是否不限额（limit <= 0）', example: false })
   unlimited: boolean;
 
-  @ApiProperty({ nullable: true, description: '窗口重置时刻（ISO 字符串）' })
+  @ApiProperty({ nullable: true, description: '窗口重置时刻（ISO 字符串）', type: String })
   resetsAt: string | null;
 
   @ApiProperty({ description: '窗口归属：ip（游客）或 user（登录）' })

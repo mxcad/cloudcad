@@ -62,7 +62,26 @@ export class WechatLoginUserDto {
   @ApiProperty({ description: '登录方式' })
   provider: string;
 
-  @ApiProperty({ description: '角色信息' })
+  @ApiProperty({
+    description: '角色信息',
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      name: { type: 'string' },
+      description: {
+        type: 'string',
+        nullable: true,
+      },
+      isSystem: { type: 'boolean' },
+      permissions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { permission: { type: 'string' } },
+        },
+      },
+    },
+  })
   role: {
     id: string;
     name: string;

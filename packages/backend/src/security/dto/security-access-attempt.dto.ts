@@ -50,17 +50,24 @@ export class SecurityAccessAttemptAggregateDto {
 
   @ApiProperty({
     description: '各拒绝原因分布（reason -> 次数）',
+    type: 'object',
+    additionalProperties: { type: 'number' },
     example: { ip_not_allowed: 3 },
   })
   reasons: Record<string, number>;
 
   @ApiPropertyOptional({
     description: '最近一次尝试使用的账号（可能为扫描器瞎填）',
+    type: String,
     nullable: true,
   })
   account: string | null;
 
-  @ApiPropertyOptional({ description: '最近一次尝试的 User-Agent', nullable: true })
+  @ApiPropertyOptional({
+    description: '最近一次尝试的 User-Agent',
+    type: String,
+    nullable: true,
+  })
   userAgent: string | null;
 
   @ApiProperty({ description: '当前是否已在管理员 IP 白名单中' })

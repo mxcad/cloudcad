@@ -256,6 +256,20 @@ export class NodeListResponseDto {
 export class ProjectListResponseDto extends NodeListResponseDto {}
 
 /**
+ * 祖先节点 DTO（面包屑路径项：ID/名称/isRoot）
+ */
+export class AncestorNodeDto {
+  @ApiProperty({ description: '节点 ID' })
+  id: string;
+
+  @ApiProperty({ description: '节点名称' })
+  name: string;
+
+  @ApiProperty({ description: '是否为根节点' })
+  isRoot: boolean;
+}
+
+/**
  * 节点树响应 DTO
  */
 export class NodeTreeResponseDto extends FileSystemNodeDto {
@@ -268,10 +282,10 @@ export class NodeTreeResponseDto extends FileSystemNodeDto {
 
   @ApiProperty({
     description: '祖先链（从根节点到当前节点的面包屑路径，含 ID/名称/isRoot）',
-    type: () => [Object],
+    type: () => [AncestorNodeDto],
     required: false,
   })
-  ancestors?: { id: string; name: string; isRoot: boolean }[];
+  ancestors?: AncestorNodeDto[];
 }
 
 /**

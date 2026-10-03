@@ -38,6 +38,15 @@ export class UserCleanupTriggerDto {
   delayDays?: number;
 }
 
+/** 用户清理错误项（用户 + 错误消息） */
+export class UserCleanupErrorDto {
+  @ApiProperty({ description: '用户 ID' })
+  userId: string;
+
+  @ApiProperty({ description: '错误消息' })
+  message: string;
+}
+
 export class UserCleanupTriggerResponseDto {
   @ApiProperty({ description: '消息', example: '清理完成: 处理 0 个用户' })
   message: string;
@@ -72,6 +81,10 @@ export class UserCleanupTriggerResponseDto {
   @ApiProperty({ description: '标记待清理的存储数', example: 0 })
   markedForStorageCleanup: number;
 
-  @ApiProperty({ description: '错误列表', example: [] })
-  errors: Array<{ userId: string; message: string }>;
+  @ApiProperty({
+    description: '错误列表',
+    example: [],
+    type: [UserCleanupErrorDto],
+  })
+  errors: UserCleanupErrorDto[];
 }

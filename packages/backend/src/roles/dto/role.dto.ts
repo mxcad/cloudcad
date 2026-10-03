@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RoleCategory } from '../../common/enums/permissions.enum';
 import {
   SystemPermission,
@@ -114,10 +114,21 @@ export class ProjectRoleDto {
   })
   permissions: ProjectRolePermissionDto[];
 
-  @ApiProperty({ description: '成员数量', required: false })
+  @ApiPropertyOptional({
+    description: '成员数量',
+    type: 'object',
+    properties: { members: { type: 'number' } },
+  })
   _count?: { members: number };
 
-  @ApiProperty({ description: '关联的项目', required: false })
+  @ApiPropertyOptional({
+    description: '关联的项目',
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      name: { type: 'string' },
+    },
+  })
   project?: { id: string; name: string };
 
   @ApiProperty({ description: '创建时间' })
