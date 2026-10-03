@@ -36,6 +36,12 @@ const title = computed(() =>
 // 更新日期（对齐 PC LegalPage 的 updatedAt）
 const updatedAt = '2026-08-06'
 
+// 页脚版权主体：管理端可在运行时品牌配置里覆盖，未配置时回落内置默认
+// （对齐 PC BrandContext 的 copyrightHolder 语义）
+const copyrightHolder = computed(
+  () => config.value.brandProfile?.copyrightHolder || LEGAL_COPYRIGHT_HOLDER
+)
+
 async function load() {
   loading.value = true
   try {
@@ -69,7 +75,7 @@ watch(() => props.doc, load)
       <p class="legal-updated">{{ t('更新日期：{date}', { date: updatedAt }) }}</p>
       <div v-if="loading" class="legal-loading">{{ t('加载中...') }}</div>
       <div v-else class="legal-content">{{ content }}</div>
-      <footer class="legal-footer">{{ LEGAL_COPYRIGHT_HOLDER }} · {{ title }}</footer>
+      <footer class="legal-footer">{{ copyrightHolder }} · {{ title }}</footer>
     </div>
   </div>
 </template>

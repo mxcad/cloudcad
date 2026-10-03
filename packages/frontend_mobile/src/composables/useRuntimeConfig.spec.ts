@@ -43,6 +43,7 @@ describe('默认值（接口未返回或失败时）', () => {
       collaborationEnabled: false,
       collaborationDomains: '',
       batchDownloadEnabled: false,
+      brandProfile: {},
     });
   });
 
@@ -84,6 +85,46 @@ describe('字段解析', () => {
     expect(config.value.collaborationDomains).toBe('mxdraw.com,*.mxdraw.cn');
     expect(config.value.allowRegister).toBe(false);
     expect(config.value.maxFileSize).toBe(500);
+  });
+
+  it('brandProfile 按对象解析：管理端只填的字段透传，其余交给消费方回落', async () => {
+    mockGetPublicConfigs.mockResolvedValue({
+      data: {
+        brandProfile: {
+          copyrightHolder: '某某工业CAD云（成都）有限公司',
+          legal: {
+            productName: '某某工业CAD云',
+            identities: { 'zh-CN': { entityName: '某某科技有限公司' } },
+          },
+        },
+      },
+    });
+    const { config } = await loadConfig();
+    await vi.waitFor(() =>
+      expect(config.value.brandProfile.legal?.productName).toBe('某某工业CAD云')
+    );
+
+    expect(config.value.brandProfile.legal?.identities?.['zh-CN']?.entityName).toBe(
+      '某某科技有限公司'
+    );
+    // 页脚版权主体同样按对象字段透传（LegalPage 用它覆盖内置默认版权主体）
+    expect(config.value.brandProfile.copyrightHolder).toBe(
+      '某某工业CAD云（成都）有限公司'
+    );
+    // 未填写的字段保持缺省（不是 null/空串），由法务文本层回落到内置默认品牌
+    expect(config.value.brandProfile.legal?.productShortName).toBeUndefined();
+  });
+
+  it('brandProfile 类型不符时整体回退空对象，不影响其他字段', async () => {
+    mockGetPublicConfigs.mockResolvedValue({
+      data: {
+        allowRegister: false,
+        brandProfile: 'not-an-object',
+      },
+    });
+    const { config } = await loadConfig();
+    await vi.waitFor(() => expect(config.value.allowRegister).toBe(false));
+    expect(config.value.brandProfile).toEqual({});
   });
 
   it('类型不符的字段回退默认值，不整包失败', async () => {

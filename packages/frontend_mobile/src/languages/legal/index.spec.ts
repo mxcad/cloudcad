@@ -54,4 +54,53 @@ describe('loadLegalText', () => {
     expect(out.length).toBeGreaterThan(100)
     expect(out).not.toMatch(/\{\{[a-zA-Z]/)
   })
+
+  it('运行时 brandProfile 覆盖品牌占位符（产品全称 / 简称 / 运营主体）', async () => {
+    const out = await loadLegalText('terms', 'zh-CN', {
+      supportEmail: '',
+      supportPhone: '',
+      brandProfile: {
+        legal: {
+          productName: '某某工业CAD云',
+          productShortName: 'MxCAD',
+          identities: { 'zh-CN': { entityName: '某某科技有限公司' } },
+        },
+      },
+    })
+    expect(out).toContain('某某工业CAD云')
+    expect(out).toContain('MxCAD')
+    expect(out).toContain('某某科技有限公司')
+    // 内置默认品牌不再出现
+    expect(out).not.toContain('梦想网页CAD实时协同平台')
+    expect(out).not.toContain('成都梦想凯德科技有限公司')
+    expect(out).not.toMatch(/\{\{[a-zA-Z]/)
+  })
+
+  it('brandProfile 只填了部分字段：未填的仍回落内置默认', async () => {
+    const out = await loadLegalText('terms', 'zh-CN', {
+      brandProfile: { legal: { productName: '某某工业CAD云' } },
+    })
+    expect(out).toContain('某某工业CAD云')
+    expect(out).toContain(LEGAL_PRODUCT_SHORT_NAME)
+    expect(out).toContain('成都梦想凯德科技有限公司')
+  })
+
+  it('identities 只取当前语言的条目：中文名不泄漏到英文条款', async () => {
+    const brand = {
+      legal: {
+        identities: { 'zh-CN': { entityName: '某某科技有限公司' } },
+      },
+    }
+    const en = await loadLegalText('terms', 'en-US', { brandProfile: brand })
+    expect(en).not.toContain('某某科技有限公司')
+    expect(en).toContain('Chengdu Dreamkaide Technology Co., Ltd.')
+  })
+
+  it('brandProfile 缺省时与旧行为完全一致', async () => {
+    const withEmpty = await loadLegalText('terms', 'zh-CN', {
+      brandProfile: {},
+    })
+    const without = await loadLegalText('terms', 'zh-CN')
+    expect(withEmpty).toBe(without)
+  })
 })

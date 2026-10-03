@@ -4,7 +4,8 @@
  * 正文与 PC 同源（PC `languages/paragraphs/<lang>/legal-*.ts` 的拷贝，各端一份），
  * 每语言一个模块、按语言懒加载。品牌占位符（{{entityName}} 等）由
  * @cloudcad/platform 的 resolvePlaceholders 解析（与 PC 共用同一实现）；
- * 品牌实体为静态数据（对齐 PC appConfig DEFAULT_BRAND_PROFILE.legal），
+ * 品牌实体与产品名优先取运行时 `brandProfile`（管理端可改，与 PC BrandContext 同优先级），
+ * 未填时回落内置静态默认（对齐 PC appConfig DEFAULT_BRAND_PROFILE.legal），
  * 客服联系方式取运行时配置（GET /runtime-config/public）。
  */
 import { resolvePlaceholders } from '@cloudcad/platform'
@@ -52,18 +53,27 @@ const LOADERS: Record<LegalDoc, Record<string, () => Promise<{ default: string }
 /**
  * 加载指定语言的法务正文并解析品牌占位符。
  * 未知语言回落 zh-CN；客服联系方式缺省为空串（占位符解析为空，与 PC 默认值一致）。
+ *
+ * 品牌占位符的优先级与 PC 一致：运行时 `brandProfile.legal` 高于内置按语言默认值。
+ * `productName` / `productShortName` 是单值（管理端只填一份，各语言共用）；
+ * `identities` 是按语言映射，只取当前语言的条目，不跨语言借用——
+ * 否则管理端只填了中文名会让英文条款出现中文主体。
  */
 export async function loadLegalText(
   doc: LegalDoc,
   language: string,
-  config?: Pick<PublicRuntimeConfig, 'supportEmail' | 'supportPhone'>,
+  config?: Partial<
+    Pick<PublicRuntimeConfig, 'supportEmail' | 'supportPhone' | 'brandProfile'>
+  >,
 ): Promise<string> {
   const docLoaders = LOADERS[doc]
   const raw = await (docLoaders[language] ?? docLoaders['zh-CN'])()
+  const legal = config?.brandProfile?.legal
+  const identity = legal?.identities?.[language]
   const vars: Record<string, string> = {
-    productName: LEGAL_PRODUCT_NAMES[language] ?? LEGAL_PRODUCT_NAMES['zh-CN']!,
-    productShortName: LEGAL_PRODUCT_SHORT_NAME,
-    entityName: LEGAL_ENTITY_NAMES[language] ?? LEGAL_ENTITY_NAMES['zh-CN']!,
+    productName: legal?.productName ?? LEGAL_PRODUCT_NAMES[language] ?? LEGAL_PRODUCT_NAMES['zh-CN']!,
+    productShortName: legal?.productShortName ?? LEGAL_PRODUCT_SHORT_NAME,
+    entityName: identity?.entityName ?? LEGAL_ENTITY_NAMES[language] ?? LEGAL_ENTITY_NAMES['zh-CN']!,
     supportPhone: config?.supportPhone ?? '',
     supportEmail: config?.supportEmail ?? '',
   }

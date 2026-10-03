@@ -9,6 +9,21 @@ import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
  * 「注册开没开 / 要不要邮箱验证 / 微信入口显不显」，否则登录页会整块退化。
  * 新增字段时两边必须同步。
  */
+/**
+ * 运行时品牌档案里移动端用到的部分：法务条款正文的品牌占位符
+ * （产品全称 / 简称 / 运营主体）。形状与 PC `appConfig.ts` 的 `RuntimeBrandConfig.legal`
+ * 同构——管理端只填了哪些字段，DB 里就只有哪些键，故全部可选。
+ */
+export interface RuntimeBrandProfile {
+  /** 版权主体（页脚展示，对齐 PC `BrandConfig.copyrightHolder`） */
+  copyrightHolder?: string
+  legal?: {
+    productName?: string
+    productShortName?: string
+    identities?: Record<string, { entityName?: string }>
+  }
+}
+
 export interface PublicRuntimeConfig {
   /** 邮件服务开关 */
   mailEnabled: boolean;
@@ -43,7 +58,9 @@ export interface PublicRuntimeConfig {
   /** 协同可用域名白名单（逗号分隔字符串，非数组） */
   collaborationDomains: string;
   /** 批量下载开关 */
-  batchDownloadEnabled: boolean;
+  batchDownloadEnabled: boolean
+  /** 品牌档案（法务条款的品牌占位符）；缺省走移动端内置默认品牌 */
+  brandProfile: RuntimeBrandProfile
 }
 
 const DEFAULTS: PublicRuntimeConfig = {
@@ -64,6 +81,7 @@ const DEFAULTS: PublicRuntimeConfig = {
   collaborationEnabled: false,
   collaborationDomains: '',
   batchDownloadEnabled: false,
+  brandProfile: {},
 };
 
 function boolField(data: Record<string, unknown>, key: string, fallback: boolean): boolean {
@@ -81,6 +99,18 @@ function stringField(data: Record<string, unknown>, key: string, fallback: strin
 function numberField(data: Record<string, unknown>, key: string, fallback: number): number {
   const value = data[key];
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+/** 对象字段（brandProfile）：必须是普通对象，空值/数组/字符串一律回落 */
+function objectField<T extends object>(
+  data: Record<string, unknown>,
+  key: string,
+  fallback: T,
+): T {
+  const value = data[key];
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as T)
+    : fallback;
 }
 
 const config = ref<PublicRuntimeConfig>({ ...DEFAULTS });
@@ -140,6 +170,11 @@ async function fetchConfig(): Promise<void> {
             data,
             'batchDownloadEnabled',
             DEFAULTS.batchDownloadEnabled
+          ),
+          brandProfile: objectField<RuntimeBrandProfile>(
+            data,
+            'brandProfile',
+            DEFAULTS.brandProfile
           ),
         };
       }
