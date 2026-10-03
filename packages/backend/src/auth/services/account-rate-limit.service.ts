@@ -4,12 +4,9 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import { I18nContext } from 'nestjs-i18n';
 import { AlertService } from '../../alert/alert.service';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { AlertLevel } from '../../alert/enums/alert.enum';
-import type {
-  AppConfig,
-  AuthRateLimitConfig,
-  AccountLockConfig,
-} from '../../config/app.config';
+import type { AccountLockConfig } from '../../config/app.config';
 
 /**
  * 账号维度限流动作
@@ -65,42 +62,48 @@ export class AccountRateLimitService {
 
   constructor(
     @InjectRedis() private readonly redis: Redis,
-    private readonly configService: ConfigService<AppConfig>,
     private readonly alertService: AlertService,
+    private readonly runtimeConfig: RuntimeConfigService,
   ) {}
 
-  private getConfig(action: AccountRateLimitAction): AccountLimitConfig {
-    const authRateLimit = this.configService.get<AuthRateLimitConfig>('authRateLimit', { infer: true }) ?? ({} as AuthRateLimitConfig);
+  /**
+   * 限流与锁定参数每次检查时读取，支持运行时配置热生效。
+   *
+   * 取值三层（见 RuntimeConfigService.resolveValue）：
+   *   运行时配置 > .env（envKey） > 定义默认值。
+   * 原 `configService.get('authRateLimit' | 'accountLock')` 只读 .env，
+   * 迁移后管理端改限流参数无需重启即生效。
+   */
+  private async getConfig(action: AccountRateLimitAction): Promise<AccountLimitConfig> {
     switch (action) {
       case 'login':
         return {
-          max: authRateLimit.loginMax ?? 5,
-          windowSeconds: authRateLimit.loginWindowSeconds ?? 60,
+          max: await this.runtimeConfig.getValue<number>('loginRateLimitMax', 5),
+          windowSeconds: await this.runtimeConfig.getValue<number>('loginRateLimitWindowSeconds', 60),
         };
       case 'password_reset':
         return {
-          max: authRateLimit.passwordResetMax ?? 5,
-          windowSeconds: authRateLimit.passwordResetWindowSeconds ?? 3600,
+          max: await this.runtimeConfig.getValue<number>('passwordResetRateLimitMax', 5),
+          windowSeconds: await this.runtimeConfig.getValue<number>('passwordResetRateLimitWindowSeconds', 3600),
         };
       case 'register':
         return {
-          max: authRateLimit.registerMax ?? 5,
-          windowSeconds: authRateLimit.registerWindowSeconds ?? 3600,
+          max: await this.runtimeConfig.getValue<number>('registerRateLimitMax', 5),
+          windowSeconds: await this.runtimeConfig.getValue<number>('registerRateLimitWindowSeconds', 3600),
         };
       case 'order_create':
         return {
-          max: authRateLimit.orderCreateMax ?? 10,
-          windowSeconds: authRateLimit.orderCreateWindowSeconds ?? 3600,
+          max: await this.runtimeConfig.getValue<number>('orderCreateRateLimitMax', 10),
+          windowSeconds: await this.runtimeConfig.getValue<number>('orderCreateRateLimitWindowSeconds', 3600),
         };
     }
   }
 
-  private getLockConfig(): AccountLockConfig {
-    const accountLock = this.configService.get<AccountLockConfig>('accountLock', { infer: true }) ?? ({} as AccountLockConfig);
+  private async getLockConfig(): Promise<AccountLockConfig> {
     return {
-      failThreshold: accountLock.failThreshold ?? 10,
-      windowSeconds: accountLock.windowSeconds ?? 900,
-      durationSeconds: accountLock.durationSeconds ?? 1800,
+      failThreshold: await this.runtimeConfig.getValue<number>('accountLockFailThreshold', 10),
+      windowSeconds: await this.runtimeConfig.getValue<number>('accountLockWindowSeconds', 900),
+      durationSeconds: await this.runtimeConfig.getValue<number>('accountLockDurationSeconds', 1800),
     };
   }
 
@@ -159,7 +162,7 @@ export class AccountRateLimitService {
   async checkLimit(action: AccountRateLimitAction, identifier: string): Promise<void> {
     if (!identifier) return;
 
-    const { max, windowSeconds } = this.getConfig(action);
+    const { max, windowSeconds } = await this.getConfig(action);
     // max <= 0 表示禁用该维度的限流
     if (max <= 0 || windowSeconds <= 0) return;
 
@@ -282,7 +285,7 @@ export class AccountRateLimitService {
   async recordLoginFailure(identifier: string): Promise<void> {
     if (!identifier) return;
     const { failThreshold, windowSeconds, durationSeconds } =
-      this.getLockConfig();
+      await this.getLockConfig();
     // failThreshold <= 0 表示禁用失败锁定
     if (failThreshold <= 0) return;
 

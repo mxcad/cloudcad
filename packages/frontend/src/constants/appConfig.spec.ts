@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   APP_COOPERATE_URL,
@@ -10,7 +10,9 @@ import {
   getBrandLegalNames,
   getBrandProfile,
   getCopyrightLine,
+  mergeBrandOverrides,
   resolveSupportContact,
+  setRuntimeBrandConfig,
   type BrandConfig,
 } from './appConfig';
 
@@ -150,6 +152,101 @@ describe('getAppBrandConfig（5 层优先级，永不返回 null）', () => {
 
   it('默认品牌与不带 appId 的调用等价', () => {
     expect(getDefaultAppBrandConfig()).toEqual(getAppBrandConfig());
+  });
+});
+
+describe('mergeBrandOverrides（运行时 brandProfile 覆盖）', () => {
+  const base: BrandConfig = {
+    title: '静态品牌',
+    logo: '/static-logo.png',
+    tagline: '静态标语',
+    subtitle: '静态副标题',
+    docsUrl: 'https://static.example/',
+    support: { email: 'base@x.com', phone: '100', hours: '静态服务时间' },
+    legal: {
+      productShortName: '静态短名',
+      identities: {
+        'zh-CN': { entityName: '静态主体' },
+        'en-US': { entityName: 'Static entity' },
+      },
+    },
+  };
+
+  it('运行时为空对象时原样返回 base，不做任何覆盖', () => {
+    expect(mergeBrandOverrides(base, {})).toEqual(base);
+    expect(mergeBrandOverrides(null, {})).toEqual({
+      title: DEFAULT_APP_NAME,
+      logo: DEFAULT_APP_LOGO,
+    });
+  });
+
+  it('逐字段浅合并：只覆盖声明了的字段，其余保留 base', () => {
+    const merged = mergeBrandOverrides(base, { subtitle: '运行时副标题' });
+    expect(merged.subtitle).toBe('运行时副标题');
+    expect(merged.title).toBe('静态品牌');
+    expect(merged.tagline).toBe('静态标语');
+    expect(merged.docsUrl).toBe('https://static.example/');
+    expect(merged.support.hours).toBe('静态服务时间');
+  });
+
+  it('客服邮箱以 supportEmail 运行时项为准，高于 brandProfile.support', () => {
+    const merged = mergeBrandOverrides(
+      base,
+      { support: { email: 'brand@x.com', hours: '运行时服务时间' } },
+      { email: 'runtime@x.com' }
+    );
+    expect(merged.support.email).toBe('runtime@x.com');
+    // 运行时 supportEmail 未设置时回落 brandProfile，再回落 base
+    expect(merged.support.phone).toBe('100');
+    expect(merged.support.hours).toBe('运行时服务时间');
+  });
+
+  it('brandProfile.support.hours 可用于补充服务时间', () => {
+    const merged = mergeBrandOverrides(base, {
+      support: { hours: '7x24' },
+    });
+    expect(merged.support.hours).toBe('7x24');
+    expect(merged.support.email).toBe('base@x.com');
+  });
+
+  it('legal.identities 按语言浅合并，不整块替换', () => {
+    const merged = mergeBrandOverrides(base, {
+      legal: { identities: { 'zh-CN': { entityName: '运行时主体' } } },
+    });
+    expect(merged.legal.identities?.['zh-CN']).toEqual({
+      entityName: '运行时主体',
+    });
+    expect(merged.legal.identities?.['en-US']).toEqual({
+      entityName: 'Static entity',
+    });
+  });
+
+  it('base 为空时运行时字段直接生效，缺失字段回落内置默认值', () => {
+    const merged = mergeBrandOverrides(null, { title: '运行时品牌' });
+    expect(merged.title).toBe('运行时品牌');
+    expect(merged.logo).toBe(DEFAULT_APP_LOGO);
+  });
+});
+
+describe('getAppBrandConfig 的运行时覆盖层', () => {
+  afterEach(() => {
+    setRuntimeBrandConfig(null);
+  });
+
+  it('未注入运行时配置时保持静态值', () => {
+    expect(getAppBrandConfig().title).toBe(DEFAULT_APP_NAME);
+  });
+
+  it('注入运行时配置后 getAppBrandConfig / getAppName 读到覆盖值', () => {
+    setRuntimeBrandConfig({ title: '运行时品牌名' });
+    expect(getAppBrandConfig().title).toBe('运行时品牌名');
+    expect(getAppName()).toBe('运行时品牌名');
+  });
+
+  it('清除运行时配置后回落到静态值', () => {
+    setRuntimeBrandConfig({ title: '运行时品牌名' });
+    setRuntimeBrandConfig(null);
+    expect(getAppBrandConfig().title).toBe(DEFAULT_APP_NAME);
   });
 });
 

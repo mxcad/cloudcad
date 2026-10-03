@@ -54,7 +54,7 @@ describe('AuditCleanupScheduler', () => {
 	beforeEach(async () => {
 		jest.clearAllMocks();
 		mockConfigService.get.mockImplementation((key: string, def: unknown) => def);
-		mockRuntimeConfigService.getValue.mockResolvedValue(true);
+		mockRuntimeConfigService.getValue.mockImplementation(async (_key: string, def: unknown) => def);
 		mockTaskRunService.run.mockImplementation(
 			async (_taskName: string, fn: () => Promise<unknown>) => fn()
 		);
@@ -87,14 +87,14 @@ describe('AuditCleanupScheduler', () => {
 			expect(mockAlertService.raise).not.toHaveBeenCalled();
 		});
 
-		it('should use AUDIT_LOG_RETENTION_DAYS default of 183 (#322)', async () => {
+		it('should use auditRetentionDays default of 183 (#322)', async () => {
 			mockAuditLogService.cleanupOldLogs.mockResolvedValue(10);
 			mockTaskRunService.cleanupOldRuns.mockResolvedValue(0);
 
 			await scheduler.cleanupOldAuditLogs();
 
-			expect(mockConfigService.get).toHaveBeenCalledWith(
-				'audit.retentionDays',
+			expect(mockRuntimeConfigService.getValue).toHaveBeenCalledWith(
+				'auditRetentionDays',
 				183
 			);
 			expect(mockAuditLogService.cleanupOldLogs).toHaveBeenCalledWith(183);

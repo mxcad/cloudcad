@@ -124,6 +124,7 @@ const SERVER_CONFIG = (function () {
           </button>
           <button class="btn btn-secondary" id="importServerConfigBtn">导入</button>
           <button class="btn btn-secondary" id="exportServerConfigBtn">导出</button>
+          <button class="btn btn-warning" id="resetServerConfigBtn">还原默认</button>
           <button class="btn btn-secondary" id="refreshServerConfigBtn">刷新</button>
         </div>
         <input type="file" id="serverConfigJsonFile" accept=".json" style="display:none" />
@@ -283,6 +284,9 @@ const SERVER_CONFIG = (function () {
     container
       .querySelector('#exportServerConfigBtn')
       .addEventListener('click', exportJson);
+    container
+      .querySelector('#resetServerConfigBtn')
+      .addEventListener('click', resetJson);
   }
 
   async function saveConfig() {
@@ -407,6 +411,31 @@ const SERVER_CONFIG = (function () {
       }
     } catch (e) {
       showToast('导出失败: ' + e.message, 'error');
+    }
+  }
+
+  async function resetJson() {
+    if (!confirm('确定要还原服务器配置为默认吗？当前的自定义配置将被覆盖。')) {
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/server-config/reset', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast('配置已还原为默认', 'success');
+        loadConfig().then(() =>
+          renderForm(document.getElementById('serverConfigContent'))
+        );
+      } else {
+        showToast(data.error || '还原失败', 'error');
+      }
+    } catch (e) {
+      showToast('还原失败: ' + e.message, 'error');
     }
   }
 

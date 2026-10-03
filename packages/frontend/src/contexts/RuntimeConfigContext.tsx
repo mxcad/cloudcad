@@ -4,6 +4,7 @@ import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 import { queryKeys } from '@/lib/queryKeys';
 import { STALE_TIME_DEFAULT } from '@/constants/timeouts';
 import { setUploadMaxFileSize } from '@/utils/mxcadUploadUtils';
+import type { RuntimeBrandConfig } from '@/constants/appConfig';
 
 export type PublicRuntimeConfig = {
   mailEnabled: boolean;
@@ -24,6 +25,8 @@ export type PublicRuntimeConfig = {
   freeExportDownloadEnabled: boolean;
   /** 注销冷静期天数：期间重新登录自动取消注销，逾期需联系客服恢复 */
   userCancelGraceDays: number;
+  /** 品牌档案（标题/标语/Logo/版权/法务主体），覆盖前端内置默认值与 config.json */
+  brandProfile: RuntimeBrandConfig;
 };
 
 interface RuntimeConfigContextType {
@@ -47,6 +50,7 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   batchDownloadEnabled: false,
   freeExportDownloadEnabled: false,
   userCancelGraceDays: 7,
+  brandProfile: {},
 };
 
 const RuntimeConfigContext = createContext<
@@ -67,8 +71,18 @@ interface RuntimeConfigProviderProps {
   children: ReactNode;
 }
 
+/** 公开配置值：绝大多数是标量，`brandProfile` 是对象（后端 json 类型） */
+type PublicConfigValue = string | number | boolean | Record<string, unknown>;
+
+/** 把可能是字符串/数组的脏值安全收敛为品牌档案对象，非法输入视为空覆盖 */
+function toBrandConfig(value: unknown): RuntimeBrandConfig {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as RuntimeBrandConfig)
+    : {};
+}
+
 function mapPublicConfig(
-  data: Record<string, string | number | boolean>
+  data: Record<string, PublicConfigValue>
 ): PublicRuntimeConfig {
   return {
     mailEnabled: Boolean(data.mailEnabled),
@@ -86,6 +100,7 @@ function mapPublicConfig(
     batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? false),
     freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? false),
     userCancelGraceDays: Number(data.userCancelGraceDays ?? 7),
+    brandProfile: toBrandConfig(data.brandProfile),
   };
 }
 
@@ -94,7 +109,7 @@ async function fetchPublicConfigs(): Promise<PublicRuntimeConfig> {
   // SDK 默认不抛错：显式抛出使 react-query 进入 error 态，
   // 上层 useEffect 能记录真实失败原因（UI 仍按设计回退 DEFAULT_CONFIG）
   if (result.error) throw result.error;
-  const data = (result.data ?? {}) as Record<string, string | number | boolean>;
+  const data = (result.data ?? {}) as Record<string, PublicConfigValue>;
   return mapPublicConfig(data);
 }
 

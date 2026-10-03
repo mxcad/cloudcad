@@ -100,12 +100,12 @@ export class SystemAdminPage {
     // --- RuntimeConfig ---
     this.configPageTitle = page.getByRole('heading', { name: /运行时配置/ });
     this.configSearchInput = page.getByPlaceholder(/搜索配置|搜索/);
-    this.configList = page.locator('.config-card, [data-testid="config-list"]');
-    this.configItems = page.locator('.config-item, [data-testid="config-item"]');
-    this.configSaveButton = page.getByRole('button', { name: /保存所有|全部保存|保存/ });
+    this.configList = page.locator('[data-testid="rc-card"], .config-card');
+    this.configItems = page.locator('[data-testid="rc-item"], .config-item');
+    this.configSaveButton = page.locator('[data-testid="rc-save"]');
     this.configNewButton = page.getByRole('button', { name: /新建配置|添加配置|新增/ });
-    this.configStatsBar = page.locator('.stats-bar, [data-testid="config-stats"]');
-    this.configLoadingSpinner = page.locator('.loading-spinner, [data-testid="loading"]');
+    this.configStatsBar = page.locator('[data-testid="rc-stats"], .stats-bar');
+    this.configLoadingSpinner = page.locator('[data-testid="rc-loading"], .loading-spinner');
   }
 
   // ================================================================
@@ -239,8 +239,10 @@ export class SystemAdminPage {
    */
   async editConfig(key: string, value: string) {
     const item = this.configItems.filter({ hasText: key });
-    const input = item.locator('input.config-input, input:not([type="checkbox"])');
-    await input.fill(value);
+    const input = item.locator(
+      '[data-testid="rc-input"] input, [data-testid="rc-input"] textarea, input:not([type="checkbox"])'
+    );
+    await input.first().fill(value);
   }
 
   /** 保存所有待保存的配置 */

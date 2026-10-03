@@ -31,6 +31,26 @@ async function handle(req, res, pathname, method) {
     return true;
   }
 
+  if (pathname === '/api/server-config/reset' && method === 'POST') {
+    const session = authMiddleware(req, res);
+    if (!session) return true;
+
+    // 还原为仓库内置的 myServerConfig.json（与 ui/sketches/theme 的 reset 同构）
+    const config = serverConfig.resetConfig();
+
+    if (config === null) {
+      // 源配置文件缺失时不能伪装成功，否则前端提示"已还原"实际什么都没变
+      sendJson(res, 400, {
+        success: false,
+        error: '默认配置文件不存在，无法还原',
+      });
+      return true;
+    }
+
+    sendJson(res, 200, { success: true, data: config });
+    return true;
+  }
+
   if (pathname === '/api/server-config/export' && method === 'GET') {
     const session = authMiddleware(req, res);
     if (!session) return true;

@@ -697,12 +697,14 @@ test.describe('系统管理', { tag: ['@system-admin'] }, () => {
         const itemCount = await configPage.getConfigItemCount();
         if (itemCount > 0) {
           const firstItem = configPage.configItems.first();
-          const input = firstItem.locator('input.config-input');
+          const input = firstItem
+            .locator('[data-testid="rc-input"] input, [data-testid="rc-input"] textarea')
+            .first();
           if (await input.isVisible({ timeout: 3000 }).catch(() => false)) {
             const currentValue = await input.inputValue();
             await input.fill(currentValue);
 
-            const saveBtn = firstItem.locator('.save-btn');
+            const saveBtn = firstItem.locator('[data-testid="rc-save"]');
             if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
               await saveBtn.click();
 
@@ -722,11 +724,13 @@ test.describe('系统管理', { tag: ['@system-admin'] }, () => {
         await expect(configPage.pageTitle).toBeVisible({ timeout: 15000 });
 
         const sensitiveItem = configPage.page
-          .locator('.config-item')
+          .locator('[data-testid="rc-item"]')
           .filter({ hasText: /password|secret|token|key|api/i });
         const count = await sensitiveItem.count();
         if (count > 0) {
-          const sensitiveInput = sensitiveItem.first().locator('input[type="password"]');
+          const sensitiveInput = sensitiveItem
+            .first()
+            .locator('[data-testid="rc-input"] input[type="password"]');
           if (await sensitiveInput.isVisible({ timeout: 3000 }).catch(() => false)) {
             await expect(sensitiveInput).toHaveAttribute('type', 'password');
           }
@@ -739,7 +743,9 @@ test.describe('系统管理', { tag: ['@system-admin'] }, () => {
         await page.goto('/runtime-config');
         await page.waitForLoadState('networkidle');
 
-        const noAccess = page.locator('.info-banner, text=只读模式, text=无权限');
+        const noAccess = page.locator(
+          '[data-testid="rc-readonly-banner"], text=只读模式, text=无权限'
+        );
         const loginRedirect = page.locator('text=登录, input[type="password"]');
         const hasNoAccess = await noAccess.isVisible({ timeout: 10000 }).catch(() => false);
         const hasLogin = await loginRedirect.isVisible({ timeout: 5000 }).catch(() => false);

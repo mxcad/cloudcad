@@ -25,6 +25,7 @@ import { IS_PUBLIC_KEY } from '../../auth/decorators/public.decorator';
 import { I18nContext } from 'nestjs-i18n';
 import { ClsService } from 'nestjs-cls';
 import Redis from 'ioredis';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 
 /**
  * 速率限制配置接口
@@ -51,28 +52,42 @@ export class RateLimitGuard implements CanActivate {
   private readonly logger = new Logger(RateLimitGuard.name);
   private redis: Redis;
 
-  private readonly publicLimit: RateLimitConfig;
-  private readonly authenticatedLimit: RateLimitConfig;
-  private readonly loginLimit: RateLimitConfig;
-
   constructor(
     private readonly reflector: Reflector,
     private readonly cls: ClsService,
     private readonly configService: ConfigService,
+    private readonly runtimeConfig: RuntimeConfigService,
     @Inject('REDIS_CLIENT') redisClient: Redis,
   ) {
     this.redis = redisClient;
+  }
 
-    // 从环境变量读取配置，提供默认值
-    const windowMs = this.configService.get<number>('RATE_LIMIT_WINDOW_MS', 60000);
-    const publicMax = this.configService.get<number>('RATE_LIMIT_PUBLIC_MAX', 100);
-    const authMax = this.configService.get<number>('RATE_LIMIT_AUTH_MAX', 300);
-    const loginMax = this.configService.get<number>('RATE_LIMIT_LOGIN_MAX', 5);
-    const loginWindowMs = this.configService.get<number>('RATE_LIMIT_LOGIN_WINDOW_MS', 15 * 60 * 1000);
+  /**
+   * 每请求解析限流配置，使运行时配置页的修改即时生效。
+   *
+   * 取值三层（见 RuntimeConfigService.resolveValue）：运行时配置 > .env（envKey） > 默认值。
+   * 五个值并行读取，各命中 Redis 缓存即一次 GET；Redis 故障时 getValue 内部降级直查数据库。
+   * 全部读取包在 canActivate 的 try/catch 中，异常仍按既有 fail-open 语义放行。
+   */
+  private async resolveLimits(): Promise<{
+    publicLimit: RateLimitConfig;
+    authenticatedLimit: RateLimitConfig;
+    loginLimit: RateLimitConfig;
+  }> {
+    const [windowMs, publicMax, authMax, loginMax, loginWindowMs] =
+      await Promise.all([
+        this.runtimeConfig.getValue<number>('rateLimitPublicWindowMs', 60000),
+        this.runtimeConfig.getValue<number>('rateLimitPublicMax', 100),
+        this.runtimeConfig.getValue<number>('rateLimitAuthMax', 300),
+        this.runtimeConfig.getValue<number>('rateLimitLoginMax', 5),
+        this.runtimeConfig.getValue<number>('rateLimitLoginWindowMs', 15 * 60 * 1000),
+      ]);
 
-    this.publicLimit = { windowMs, maxRequests: publicMax };
-    this.authenticatedLimit = { windowMs, maxRequests: authMax };
-    this.loginLimit = { windowMs: loginWindowMs, maxRequests: loginMax };
+    return {
+      publicLimit: { windowMs, maxRequests: publicMax },
+      authenticatedLimit: { windowMs, maxRequests: authMax },
+      loginLimit: { windowMs: loginWindowMs, maxRequests: loginMax },
+    };
   }
 
   /**
@@ -187,18 +202,19 @@ export class RateLimitGuard implements CanActivate {
     // 检查是否为登录端点
     const isLoginEndpoint = this.isLoginEndpoint(request);
 
-    // 选择限流配置
+    // 选择限流配置（每请求解析，支持运行时热修改）
+    const limits = await this.resolveLimits();
     let limitConfig: RateLimitConfig;
     let limitType: string;
 
     if (isLoginEndpoint) {
-      limitConfig = this.loginLimit;
+      limitConfig = limits.loginLimit;
       limitType = '登录接口';
     } else if (isPublic) {
-      limitConfig = this.publicLimit;
+      limitConfig = limits.publicLimit;
       limitType = '公开接口';
     } else {
-      limitConfig = this.authenticatedLimit;
+      limitConfig = limits.authenticatedLimit;
       limitType = '认证接口';
     }
 

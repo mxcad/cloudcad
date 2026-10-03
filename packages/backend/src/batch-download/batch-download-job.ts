@@ -1,3 +1,4 @@
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { BatchJobStatus, Prisma } from '@cloudcad/db';
 import { ConfigService } from '@nestjs/config';
@@ -33,6 +34,7 @@ export class BatchDownloadJob {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly configService: ConfigService,
+    private readonly runtimeConfig: RuntimeConfigService,
     private readonly archiveWriter: ArchiveWriter,
     private readonly conversionRunner: ConversionRunner,
     private readonly folderExpander: FolderExpanderService,
@@ -290,6 +292,7 @@ export class BatchDownloadJob {
     const deps: JobContextDeps = {
       prisma: this.prisma,
       configService: this.configService,
+      runtimeConfig: this.runtimeConfig,
       archiveWriter: this.archiveWriter,
       conversionRunner: this.conversionRunner,
       folderExpander: this.folderExpander,

@@ -112,13 +112,67 @@ export type CacheCleanupDto = {
     pattern?: string;
 };
 
+export type ConfigEnumOptionDto = {
+    /**
+     * 值
+     */
+    value: string;
+    /**
+     * 显示标签
+     */
+    label: string;
+};
+
+export type ConfigInputMetaDto = {
+    /**
+     * 数字下限
+     */
+    min?: number;
+    /**
+     * 数字上限
+     */
+    max?: number;
+    /**
+     * 数字步长
+     */
+    step?: number;
+    /**
+     * 单位
+     */
+    unit?: string;
+    /**
+     * 枚举可选项（存在时前端渲染下拉）
+     */
+    options?: Array<ConfigEnumOptionDto>;
+    /**
+     * 字符串最大长度
+     */
+    maxLength?: number;
+    /**
+     * 多行文本
+     */
+    multiline?: boolean;
+    /**
+     * 占位提示
+     */
+    placeholder?: string;
+    /**
+     * 输入时遮罩
+     */
+    secret?: boolean;
+    /**
+     * 允许空值（清空回到默认值）
+     */
+    allowNull?: boolean;
+};
+
 export type RuntimeConfigResponseDto = {
     /**
      * 配置键名
      */
     key: string;
     /**
-     * 配置值（string | number | boolean）
+     * 配置值（string | number | boolean | object）
      */
     value: {
         [key: string]: unknown;
@@ -126,7 +180,7 @@ export type RuntimeConfigResponseDto = {
     /**
      * 值类型
      */
-    type: 'string' | 'number' | 'boolean';
+    type: 'string' | 'number' | 'boolean' | 'json';
     /**
      * 分类
      */
@@ -147,6 +201,46 @@ export type RuntimeConfigResponseDto = {
      * 最后更新时间
      */
     updatedAt: string;
+    /**
+     * 定义默认值
+     */
+    defaultValue?: {
+        [key: string]: unknown;
+    };
+    /**
+     * 当前值生效来源
+     */
+    source?: 'runtime' | 'env' | 'default';
+    /**
+     * 是否被显式修改过（区别于安装时写入的默认行）
+     */
+    isModified?: boolean;
+    /**
+     * env 层当前值（若配置了 envKey 且 env 已设置）
+     */
+    envValue?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 显示层级
+     */
+    tier?: 'user' | 'admin' | 'advanced';
+    /**
+     * 输入控件元数据
+     */
+    input?: ConfigInputMetaDto;
+    /**
+     * 影响说明：改了会怎样
+     */
+    impact?: string;
+    /**
+     * 危险项：改动需二次确认
+     */
+    dangerous?: boolean;
+    /**
+     * 改动是否即时生效
+     */
+    hot?: boolean;
 };
 
 export type RuntimeConfigDefinitionDto = {
@@ -157,7 +251,7 @@ export type RuntimeConfigDefinitionDto = {
     /**
      * 值类型
      */
-    type: 'string' | 'number' | 'boolean';
+    type: 'string' | 'number' | 'boolean' | 'json';
     /**
      * 分类
      */
@@ -167,7 +261,7 @@ export type RuntimeConfigDefinitionDto = {
      */
     description: string;
     /**
-     * 默认值（string | number | boolean）
+     * 默认值
      */
     defaultValue: {
         [key: string]: unknown;
@@ -176,15 +270,77 @@ export type RuntimeConfigDefinitionDto = {
      * 是否公开给前端
      */
     isPublic: boolean;
+    /**
+     * 显示层级
+     */
+    tier?: 'user' | 'admin' | 'advanced';
+    /**
+     * 输入控件元数据
+     */
+    input?: ConfigInputMetaDto;
+    /**
+     * 影响说明
+     */
+    impact?: string;
+    /**
+     * 危险项标记
+     */
+    dangerous?: boolean;
+    /**
+     * 即时生效标记
+     */
+    hot?: boolean;
+    /**
+     * 底层 env 变量名（部署期默认值层）
+     */
+    envKey?: string;
 };
 
 export type UpdateRuntimeConfigDto = {
     /**
-     * 配置值（string | number | boolean）
+     * 配置值（string | number | boolean | object）
      */
     val: {
         [key: string]: unknown;
     };
+};
+
+export type RuntimeConfigHistoryDto = {
+    /**
+     * 记录 ID
+     */
+    id: string;
+    /**
+     * 配置键名
+     */
+    key: string;
+    /**
+     * 修改前值（JSON 字符串）
+     */
+    oldValue?: string;
+    /**
+     * 修改后值（JSON 字符串）
+     */
+    newValue: string;
+    /**
+     * 操作人 ID
+     */
+    operatorId?: string;
+    /**
+     * 操作人 IP
+     */
+    operatorIp?: string;
+    /**
+     * 修改时间
+     */
+    createdAt: string;
+};
+
+export type ResetCategoryDto = {
+    /**
+     * 配置分类
+     */
+    category: string;
 };
 
 export type TaskRunDto = {
@@ -5129,6 +5285,48 @@ export type RuntimeConfigControllerResetConfigResponses = {
 
 export type RuntimeConfigControllerResetConfigResponse = RuntimeConfigControllerResetConfigResponses[keyof RuntimeConfigControllerResetConfigResponses];
 
+export type RuntimeConfigControllerGetConfigHistoryData = {
+    body?: never;
+    path: {
+        /**
+         * 配置键名
+         */
+        key: string;
+    };
+    query: {
+        limit: string;
+    };
+    url: '/api/v1/runtime-config/{key}/history';
+};
+
+export type RuntimeConfigControllerGetConfigHistoryResponses = {
+    /**
+     * 返回修改历史（按时间倒序）
+     */
+    200: Array<RuntimeConfigHistoryDto>;
+};
+
+export type RuntimeConfigControllerGetConfigHistoryResponse = RuntimeConfigControllerGetConfigHistoryResponses[keyof RuntimeConfigControllerGetConfigHistoryResponses];
+
+export type RuntimeConfigControllerResetCategoryData = {
+    body: ResetCategoryDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/reset-category';
+};
+
+export type RuntimeConfigControllerResetCategoryResponses = {
+    /**
+     * 重置成功
+     */
+    201: {
+        success?: boolean;
+        keys?: Array<string>;
+    };
+};
+
+export type RuntimeConfigControllerResetCategoryResponse = RuntimeConfigControllerResetCategoryResponses[keyof RuntimeConfigControllerResetCategoryResponses];
+
 export type TaskRunControllerListRunsData = {
     body?: never;
     path?: never;
@@ -9953,12 +10151,16 @@ export type MxcadFileAccessControllerGetFilesDataFileHeadData = {
         /**
          * 分享访问令牌
          */
-        shareToken?: string;
+        shareToken?: unknown;
     };
     url: '/api/v1/mxcad/filesData/{path}';
 };
 
 export type MxcadFileAccessControllerGetFilesDataFileHeadErrors = {
+    /**
+     * 未登录
+     */
+    401: unknown;
     /**
      * 文件不存在
      */
@@ -10083,6 +10285,10 @@ export type MxcadFileAccessControllerGetNonCadFileData = {
 };
 
 export type MxcadFileAccessControllerGetNonCadFileErrors = {
+    /**
+     * 未登录或无权限
+     */
+    401: unknown;
     /**
      * 文件不存在
      */

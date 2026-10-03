@@ -21,18 +21,24 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import { I18nContext } from 'nestjs-i18n';
 import { DatabaseService } from '../database/database.service';
-import {
-  RUNTIME_CONFIG_DEFINITIONS,
-} from './runtime-config.constants';
+import { RUNTIME_CONFIG_DEFINITIONS } from './runtime-config.constants';
 import {
   RuntimeConfigDefinition,
   RuntimeConfigItem,
+  RuntimeConfigValue,
   RuntimeConfigValueType,
+  RuntimeConfigHistoryEntry,
+  ConfigValueSource,
 } from './runtime-config.types';
 import type { IRuntimeConfigService } from '@cloudcad/contracts';
 
 const CACHE_PREFIX = 'runtime_config:';
 const CACHE_TTL = 3600; // 1 小时
+const TRUTHY_ENV_VALUES = ['true', '1', 'yes', 'on'];
+const FALSY_ENV_VALUES = ['false', '0', 'no', 'off'];
+
+/** env 层解析结果：`undefined` 表示该 env 未设置（回退下一层） */
+type EnvResolveResult = RuntimeConfigValue | undefined;
 
 @Injectable()
 export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService {
@@ -67,6 +73,9 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
   /**
    * 同步默认配置到数据库（仅添加不存在的配置项）
+   *
+   * 注意：写入的行 `updatedBy` 保持 null，这是「未被用户显式修改」的唯一判据——
+   * env 层默认值正因此才能在这些行上生效（见 resolveValue）。
    * 优化：使用批量操作减少数据库往返
    */
   private async syncDefaultConfigs() {
@@ -106,9 +115,97 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   }
 
   /**
+   * 三层取值解析：运行时配置（DB 已显式修改）> env（部署期注入）> 默认值。
+   *
+   * env 只作为部署期默认值层：运维仍可在 .env 注入私有化定制（不进 DB、无需迁移脚本），
+   * 但用户在运行时配置页显式改过的值优先级更高。DB 行存在但 `updatedBy` 为 null 时
+   * 视为「安装时写入的默认行」，不遮蔽 env。
+   */
+  private resolveValue(
+    def: RuntimeConfigDefinition | undefined,
+    row: { value: string; type: string; updatedBy: string | null } | null
+  ): { value: RuntimeConfigValue; source: ConfigValueSource } {
+    if (!def) {
+      return {
+        value: row ? this.parseValue(row.value, row.type as RuntimeConfigValueType) : '',
+        source: 'default',
+      };
+    }
+
+    const isModified = row != null && row.updatedBy != null;
+    if (isModified && row) {
+      return {
+        value: this.parseValue(row.value, def.type),
+        source: 'runtime',
+      };
+    }
+
+    const envValue = def.envKey
+      ? this.parseEnvValue(def.envKey, def.type)
+      : undefined;
+    if (envValue !== undefined) {
+      return { value: envValue, source: 'env' };
+    }
+
+    if (row) {
+      return {
+        value: this.parseValue(row.value, def.type),
+        source: 'default',
+      };
+    }
+
+    return { value: def.defaultValue, source: 'default' };
+  }
+
+  /**
+   * 解析 env 层的值。按配置 type 做类型归一；无法解析时返回 undefined
+   * （表示该 env 值无效，回退下一层），不抛错——env 是部署期配置，
+   * 拼错不应让运行时配置读取链路整体抛异常。
+   */
+  private parseEnvValue(
+    envKey: string,
+    type: RuntimeConfigValueType
+  ): EnvResolveResult {
+    const raw = process.env[envKey];
+    if (raw === undefined || raw.trim() === '') {
+      return undefined;
+    }
+
+    switch (type) {
+      case 'number': {
+        const n = Number(raw.trim());
+        return Number.isFinite(n) ? n : undefined;
+      }
+      case 'boolean': {
+        const lower = raw.trim().toLowerCase();
+        if (TRUTHY_ENV_VALUES.includes(lower)) return true;
+        if (FALSY_ENV_VALUES.includes(lower)) return false;
+        return undefined;
+      }
+      case 'json': {
+        try {
+          const parsed = JSON.parse(raw);
+          if (
+            parsed !== null &&
+            typeof parsed === 'object' &&
+            !Array.isArray(parsed)
+          ) {
+            return parsed as Record<string, unknown>;
+          }
+        } catch {
+          // 非法 JSON 视为未设置
+        }
+        return undefined;
+      }
+      default:
+        return raw;
+    }
+  }
+
+  /**
    * 获取单个配置值（用于内部调用）
    */
-  async getValue<T = string | number | boolean>(
+  async getValue<T = string | number | boolean | Record<string, unknown>>(
     key: string,
     defaultValue?: T
   ): Promise<T> {
@@ -144,7 +241,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     //    而非报出「数据库连接失败/超时」）。启动失败仍由 onModuleInit 统一报出
     //    （DatabaseService 会抛错使启动中止），故此处降级不会掩盖真实故障；
     //    运行期保持抛错，不静默降级。
-    const config = await this.prisma.runtimeConfig
+    const row = await this.prisma.runtimeConfig
       .findUnique({ where: { key } })
       .catch((error) => {
         if (!this.startupPhase) throw error;
@@ -154,29 +251,22 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         return null;
       });
 
-    if (!config) {
-      // 4. 使用传入的默认值或配置定义中的默认值
-      const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
-      const value = defaultValue ?? (def?.defaultValue as T);
-      return value;
-    }
+    const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
+    const { value } = this.resolveValue(def, row);
+    const result = (defaultValue ?? value) as T;
 
-    // 5. 解析值并写入缓存（写缓存失败不阻塞：下次读会重试）
-    const value = this.parseValue(
-      config.value,
-      config.type as RuntimeConfigValueType
-    );
+    // 4. 写入缓存（写缓存失败不阻塞：下次读会重试）
     try {
       await this.redis.setex(
         `${CACHE_PREFIX}${key}`,
         CACHE_TTL,
-        JSON.stringify(value)
+        JSON.stringify(result)
       );
     } catch {
       // 写缓存失败不阻塞
     }
 
-    return value as T;
+    return result;
   }
 
   /**
@@ -191,18 +281,19 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       throw new NotFoundException(I18nContext.current()?.t('error.config_extra.unknown_key', { args: { key } }) ?? `配置项不存在: ${key}`);
     }
 
+    const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
+    const { value, source } = this.resolveValue(def, config);
+
     return {
       key: config.key,
-      value: this.parseValue(
-        config.value,
-        config.type as RuntimeConfigValueType
-      ),
+      value,
       type: config.type as RuntimeConfigValueType,
       category: config.category as RuntimeConfigItem['category'],
       description: config.description,
       isPublic: config.isPublic,
       updatedBy: config.updatedBy,
       updatedAt: config.updatedAt,
+      ...this.enrichFromDefinition(def, config, value, source),
     };
   }
 
@@ -211,13 +302,22 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
    */
   async set(
     key: string,
-    value: string | number | boolean,
+    value: string | number | boolean | Record<string, unknown>,
     operatorId?: string,
     operatorIp?: string
   ): Promise<void> {
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     if (!def) {
       throw new BadRequestException(I18nContext.current()?.t('error.config_extra.unknown_key', { args: { key } }) ?? `未知的配置项: ${key}`);
+    }
+
+    const invalidReason = this.validateValue(def, value);
+    if (invalidReason) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.config_extra.invalid_value', {
+          args: { key, reason: invalidReason },
+        }) ?? `配置项 ${key} 的值无效: ${invalidReason}`
+      );
     }
 
     // 获取旧值用于日志
@@ -255,9 +355,17 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       },
     });
 
-    // 删除缓存（Redis 不可达时忽略：缓存失效是尽力而为）
+    await this.invalidateCacheKeys([key]);
+  }
+
+  /**
+   * 失效单键与公开配置聚合缓存（Redis 不可达时忽略：缓存失效是尽力而为）
+   */
+  private async invalidateCacheKeys(keys: string[]): Promise<void> {
     try {
-      await this.redis.del(`${CACHE_PREFIX}${key}`);
+      for (const key of keys) {
+        await this.redis.del(`${CACHE_PREFIX}${key}`);
+      }
       await this.redis.del(`${CACHE_PREFIX}all`);
     } catch {
       // 缓存删除失败不阻塞配置更新
@@ -265,9 +373,61 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   }
 
   /**
-   * 获取所有公开配置（供前端使用）
+   * 按配置定义校验值。返回 null 表示合法，否则返回原因。
+   * 服务端必须独立校验——前端控件不是安全边界，绕过前端直调 PUT 必须同样被拦。
    */
-  async getPublicConfigs(): Promise<Record<string, string | number | boolean>> {
+  private validateValue(
+    def: RuntimeConfigDefinition,
+    value: string | number | boolean | Record<string, unknown>
+  ): string | null {
+    switch (def.type) {
+      case 'boolean':
+        if (typeof value !== 'boolean') {
+          return '必须是布尔值';
+        }
+        return null;
+
+      case 'number': {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          return '必须是有限数字';
+        }
+        if (def.input?.min !== undefined && value < def.input.min) {
+          return `不能小于 ${def.input.min}`;
+        }
+        if (def.input?.max !== undefined && value > def.input.max) {
+          return `不能大于 ${def.input.max}`;
+        }
+        return null;
+      }
+
+      case 'string': {
+        const s = typeof value === 'string' ? value : String(value);
+        const maxLen = def.input?.maxLength;
+        if (maxLen !== undefined && s.length > maxLen) {
+          return `不能超过 ${maxLen} 个字符`;
+        }
+        return null;
+      }
+
+      case 'json': {
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+          return '必须是对象';
+        }
+        return null;
+      }
+
+      default:
+        return '未知配置类型';
+    }
+  }
+
+  /**
+   * 获取所有公开配置（供前端使用）
+   *
+   * 返回**生效值**（三层解析后的结果），保证前端看到的是真实生效的配置，
+   * 而不是安装时的默认行。
+   */
+  async getPublicConfigs(): Promise<Record<string, RuntimeConfigValue>> {
     // 1. 查缓存（Redis 不可达时降级直查数据库，不阻塞请求）
     let cached: string | null = null;
     try {
@@ -286,16 +446,17 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       where: { isPublic: true },
     });
 
-    // 3. 构建结果
-    const result: Record<string, string | number | boolean> = {};
+    // 3. 构建结果（走三层解析，env 默认值同样生效）
+    const result: Record<string, RuntimeConfigValue> = {};
     for (const config of configs) {
-      result[config.key] = this.parseValue(
-        config.value,
-        config.type as RuntimeConfigValueType
+      const def = RUNTIME_CONFIG_DEFINITIONS.find(
+        (d) => d.key === config.key
       );
+      const { value } = this.resolveValue(def, config);
+      result[config.key] = value;
     }
 
-    // 4. 写入缓存（写缓存失败不阻塞：下次读会重试）
+    // 4. 写入缓存（写缓存失败不阻塞）
     try {
       await this.redis.setex(
         `${CACHE_PREFIX}all`,
@@ -310,30 +471,81 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   }
 
   /**
-   * 获取所有配置项（管理后台使用）
+   * 获取所有配置项（管理后台使用），附带定义元数据与生效来源
    */
   async getAllConfigs(): Promise<RuntimeConfigItem[]> {
     const configs = await this.prisma.runtimeConfig.findMany({
       orderBy: [{ category: 'asc' }, { key: 'asc' }],
     });
 
-    return configs.map((config) => ({
-      key: config.key,
-      value: this.parseValue(
-        config.value,
-        config.type as RuntimeConfigValueType
-      ),
-      type: config.type as RuntimeConfigValueType,
-      category: config.category as RuntimeConfigItem['category'],
-      description: config.description,
-      isPublic: config.isPublic,
-      updatedBy: config.updatedBy,
-      updatedAt: config.updatedAt,
-    }));
+    return configs.map((config) => {
+      const def = RUNTIME_CONFIG_DEFINITIONS.find(
+        (d) => d.key === config.key
+      );
+      const { value, source } = this.resolveValue(def, config);
+      return {
+        key: config.key,
+        value,
+        type: config.type as RuntimeConfigValueType,
+        category: config.category as RuntimeConfigItem['category'],
+        description: config.description,
+        isPublic: config.isPublic,
+        updatedBy: config.updatedBy,
+        updatedAt: config.updatedAt,
+        ...this.enrichFromDefinition(def, config, value, source),
+      };
+    });
   }
 
   /**
-   * 重置配置为默认值
+   * 组装定义元数据（默认值/来源/是否修改/层级/输入元数据/影响说明/危险标记）
+   */
+  private enrichFromDefinition(
+    def: RuntimeConfigDefinition | undefined,
+    row: { value: string; updatedBy: string | null },
+    effectiveValue: RuntimeConfigValue,
+    source: ConfigValueSource
+  ): Pick<
+    RuntimeConfigItem,
+    | 'defaultValue'
+    | 'source'
+    | 'isModified'
+    | 'envValue'
+    | 'tier'
+    | 'input'
+    | 'impact'
+    | 'dangerous'
+    | 'hot'
+  > {
+    const envValue = def?.envKey
+      ? this.parseEnvValue(def.envKey, def.type)
+      : null;
+
+    const defaultValue = def?.defaultValue;
+    const isModified =
+      row.updatedBy != null ||
+      (defaultValue !== undefined &&
+        JSON.stringify(effectiveValue) !== JSON.stringify(defaultValue));
+
+    return {
+      defaultValue,
+      source,
+      isModified,
+      envValue: envValue ?? null,
+      tier: def?.tier ?? 'admin',
+      input: def?.input,
+      impact: def?.impact,
+      dangerous: def?.dangerous ?? false,
+      hot: def?.hot ?? true,
+    };
+  }
+
+  /**
+   * 重置配置为默认值。
+   *
+   * 实现为「清空显式修改标记」而非「写回默认值」：`updatedBy` 置回 null 后
+   * resolveValue 视该行为安装默认行，env 层默认值重新生效，isModified 也归零。
+   * 若走 set(def.defaultValue)，会带上操作者 id 而永久遮蔽 env 层，且 isModified 恒为 true。
    */
   async resetToDefault(
     key: string,
@@ -345,7 +557,79 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       throw new BadRequestException(I18nContext.current()?.t('error.config_extra.unknown_key', { args: { key } }) ?? `未知的配置项: ${key}`);
     }
 
-    await this.set(key, def.defaultValue, operatorId, operatorIp);
+    const defaultValueJson = JSON.stringify(def.defaultValue);
+    const oldConfig = await this.prisma.runtimeConfig.findUnique({
+      where: { key },
+    });
+
+    await this.prisma.runtimeConfig.upsert({
+      where: { key },
+      update: { value: defaultValueJson, updatedBy: null },
+      create: {
+        key,
+        value: defaultValueJson,
+        type: def.type,
+        category: def.category,
+        description: def.description,
+        isPublic: def.isPublic,
+        updatedBy: null,
+      },
+    });
+
+    // 值实际发生变化时才留审计记录（保持行不被删：getAllConfigs/get 仍需可见）
+    if (oldConfig?.value !== defaultValueJson) {
+      await this.prisma.runtimeConfigLog.create({
+        data: {
+          key,
+          oldValue: oldConfig?.value,
+          newValue: defaultValueJson,
+          operatorId,
+          operatorIp,
+        },
+      });
+    }
+
+    await this.invalidateCacheKeys([key]);
+  }
+
+  /**
+   * 按分类批量重置为默认值
+   */
+  async resetCategory(
+    category: string,
+    operatorId?: string,
+    operatorIp?: string
+  ): Promise<string[]> {
+    if (!RUNTIME_CONFIG_DEFINITIONS.some((d) => d.category === category)) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.config_extra.unknown_key', { args: { key: category } }) ?? `未知的配置分类: ${category}`
+      );
+    }
+
+    const keys = RUNTIME_CONFIG_DEFINITIONS.filter(
+      (d) => d.category === category
+    ).map((d) => d.key);
+
+    for (const key of keys) {
+      await this.resetToDefault(key, operatorId, operatorIp);
+    }
+
+    return keys;
+  }
+
+  /**
+   * 获取配置修改历史（来自 runtime_config_logs 表）
+   */
+  async getHistory(
+    key: string,
+    limit = 20
+  ): Promise<RuntimeConfigHistoryEntry[]> {
+    const limitClamped = Math.max(1, Math.min(limit, 100));
+    return this.prisma.runtimeConfigLog.findMany({
+      where: { key },
+      orderBy: { createdAt: 'desc' },
+      take: limitClamped,
+    });
   }
 
   /**
@@ -354,7 +638,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   private parseValue(
     value: string,
     type: RuntimeConfigValueType
-  ): string | number | boolean {
+  ): RuntimeConfigValue {
     try {
       const parsed = JSON.parse(value);
       switch (type) {
@@ -362,6 +646,10 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
           return Boolean(parsed);
         case 'number':
           return Number(parsed);
+        case 'json':
+          return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? (parsed as Record<string, unknown>)
+            : {};
         default:
           return String(parsed);
       }

@@ -13,13 +13,14 @@
 /**
  * 应用配置常量
  *
- * 品牌信息的唯一出口：`/brand/config.json`（部署期配置）+ 环境变量 + 内置默认值。
- * 优先级（`getAppBrandConfig`）：
- *   1. config.json `apps[appId]`
- *   2. config.json 全局字段
- *   3. `VITE_APP_{ID}_TITLE` / `VITE_APP_{ID}_TAGLINE`
- *   4. `VITE_APP_NAME` / `VITE_APP_LOGO`
- *   5. 内置默认值（'CloudCAD' / '/logo.png'）
+ * 品牌信息的唯一出口：运行时配置 + `/brand/config.json`（部署期配置）+ 环境变量 + 内置默认值。
+ * 优先级（运行时项经 `mergeBrandOverrides` 叠在 config.json 之上）：
+ *   1. 运行时 `brandProfile`（管理端可改，最高优先级）
+ *   2. config.json `apps[appId]`
+ *   3. config.json 全局字段
+ *   4. `VITE_APP_{ID}_TITLE` / `VITE_APP_{ID}_TAGLINE`
+ *   5. `VITE_APP_NAME` / `VITE_APP_LOGO`
+ *   6. 内置默认值（'CloudCAD' / '/logo.png'）
  */
 
 const BRAND_CONFIG_URL = '/brand/config.json';
@@ -94,6 +95,15 @@ export interface BrandConfig {
 
 let cachedBrandConfig: BrandConfig | null = null;
 let cachedEnvAppConfigs: Record<string, Partial<AppBrandConfig>> | null = null;
+// 运行时品牌覆盖（管理端改 brandProfile 后由 BrandProvider 注入），
+// 与 cachedBrandConfig 同为模块级缓存：注入前计算的 getAppBrandConfig 仍是静态值，
+// 因此品牌变更的生效时机是「下次加载」（后端 brandProfile 的 impact 已如此说明）。
+let runtimeBrandOverride: RuntimeBrandConfig | null = null;
+
+/** 注入运行时品牌配置（BrandProvider 在运行时配置就绪后调用） */
+export function setRuntimeBrandConfig(config: RuntimeBrandConfig | null): void {
+  runtimeBrandOverride = config;
+}
 
 const DEFAULT_BRAND_PROFILE: BrandProfile = {
   copyrightYear: '2026',
@@ -149,12 +159,17 @@ function getEnvAppConfigs(): Record<string, Partial<AppBrandConfig>> {
   return configs;
 }
 
+/** config.json + 运行时覆盖后的有效品牌配置（不带客服联系方式注入） */
+function resolveBrandConfig(): BrandConfig {
+  return mergeBrandOverrides(cachedBrandConfig, runtimeBrandOverride);
+}
+
 /**
  * 取应用品牌配置（永不返回 null）。
  * 不带 appId 时返回全局默认品牌；带 appId 时按 apps[appId] > 环境变量 > 全局 覆盖。
  */
 export function getAppBrandConfig(appId?: string): AppBrandConfig {
-  const config = cachedBrandConfig;
+  const config = resolveBrandConfig();
   const id = appId?.toLowerCase();
   const remote = id ? config?.apps?.[id] : undefined;
   const envApp = id ? getEnvAppConfigs()[id] : undefined;
@@ -187,6 +202,60 @@ function mergeLegalIdentities(
     merged[language] = { ...def[language], ...remote?.[language] };
   });
   return merged;
+}
+
+/** 运行时品牌覆盖：形状同 config.json，全部字段可选（DB 里的 `brandProfile` JSON） */
+export type RuntimeBrandConfig = Partial<BrandConfig>;
+
+/** 运行时客服联系方式（`supportEmail` / `supportPhone` 运行时配置项） */
+export interface RuntimeBrandContact {
+  email?: string;
+  phone?: string;
+}
+
+/**
+ * 三层品牌配置合并：内置默认值（`getBrandProfile` 兜底）+ `/brand/config.json`
+ * + 运行时 `brandProfile`（管理端可改，最高优先级）。
+ *
+ * 逐字段浅合并而非整块替换：只覆盖运行时声明了的字段，其余字段继续走
+ * config.json 或内置默认值——否则运维只配了 copyrightHolder 就会把标语、Logo 一起清掉。
+ * 客服邮箱/电话例外：以 `supportEmail` / `supportPhone` 运行时项为准，
+ * `brandProfile.support` 只用于补充 hours，避免客服邮箱出现双事实源。
+ */
+export function mergeBrandOverrides(
+  base: BrandConfig | null,
+  runtime?: RuntimeBrandConfig | null,
+  contact?: RuntimeBrandContact
+): BrandConfig {
+  const b: BrandConfig = base ?? {
+    title: DEFAULT_APP_NAME,
+    logo: DEFAULT_APP_LOGO,
+  };
+
+  if (!runtime || Object.keys(runtime).length === 0) return b;
+
+  const support: Partial<BrandSupport> = { ...b.support, ...runtime.support };
+  if (contact?.email) support.email = contact.email;
+  if (contact?.phone) support.phone = contact.phone;
+
+  return {
+    title: runtime.title || b.title,
+    logo: runtime.logo || b.logo,
+    tagline: runtime.tagline ?? b.tagline,
+    apps: { ...b.apps, ...runtime.apps },
+    copyrightYear: runtime.copyrightYear || b.copyrightYear,
+    copyrightHolder: runtime.copyrightHolder || b.copyrightHolder,
+    copyrightLine: runtime.copyrightLine || b.copyrightLine,
+    support,
+    docsUrl: runtime.docsUrl || b.docsUrl,
+    subtitle: runtime.subtitle || b.subtitle,
+    legal: {
+      productShortName:
+        runtime.legal?.productShortName || b.legal?.productShortName,
+      productName: runtime.legal?.productName || b.legal?.productName,
+      identities: { ...b.legal?.identities, ...runtime.legal?.identities },
+    },
+  };
 }
 
 /**

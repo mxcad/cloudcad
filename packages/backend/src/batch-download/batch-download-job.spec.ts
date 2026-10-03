@@ -48,9 +48,14 @@ function createMocks() {
     processDelegated: jest.fn(),
   };
 
+  const runtimeConfig = {
+    getValue: jest.fn().mockImplementation(async (_key: string, def: unknown) => def),
+  };
+
   const job = new BatchDownloadJob(
     prisma as any,
     configService as any,
+    runtimeConfig as any,
     archiveWriter as any,
     conversionRunner as any,
     folderExpander as any,
@@ -63,6 +68,7 @@ function createMocks() {
     prisma,
     rowStatus,
     configService,
+    runtimeConfig,
     archiveWriter,
     conversionRunner,
     folderExpander,

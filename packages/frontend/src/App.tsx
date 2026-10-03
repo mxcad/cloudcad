@@ -760,9 +760,9 @@ function App() {
   // 品牌配置已在 index.tsx 的 AppInitializer 中加载并缓存
   // BrandProvider 会使用缓存值，无需在此检查 loading 状态
   return (
-    <BrandProvider>
-      <Router>
-        <RuntimeConfigProvider>
+    <RuntimeConfigProvider>
+      <BrandProvider>
+        <Router>
           <TourProvider>
             <NoticeProvider>
               <AppContent />
@@ -771,9 +771,9 @@ function App() {
               <PlanSelectOverlay />
             </NoticeProvider>
           </TourProvider>
-        </RuntimeConfigProvider>
-      </Router>
-    </BrandProvider>
+        </Router>
+      </BrandProvider>
+    </RuntimeConfigProvider>
   );
 }
 

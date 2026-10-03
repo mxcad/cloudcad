@@ -2,7 +2,10 @@ import type { Page, Locator } from '@playwright/test';
 
 /**
  * 运行时配置页面对象
- * 对应 src/pages/RuntimeConfigPage.tsx
+ * 对应 src/pages/RuntimeConfigPage/
+ *
+ * 选择器一律走 data-testid：CSS Module 类名是哈希的，class 选择器不可靠。
+ * 行级控件用 [data-testid="rc-item"][data-key="…"] 精确定位。
  */
 export class RuntimeConfigPage {
   readonly page: Page;
@@ -11,7 +14,7 @@ export class RuntimeConfigPage {
   readonly configCards: Locator;
   readonly configItems: Locator;
   readonly searchInput: Locator;
-  readonly loadingSpinner: Locator;
+  readonly loadingState: Locator;
   readonly emptyState: Locator;
   readonly readOnlyBanner: Locator;
 
@@ -19,20 +22,20 @@ export class RuntimeConfigPage {
     this.page = page;
     // 页面标题
     this.pageTitle = page.getByRole('heading', { name: '运行时配置' });
-    // 统计栏 — 配置项/公开/待保存
-    this.statsBar = page.locator('.stats-bar');
-    // 配置分组卡片
-    this.configCards = page.locator('.config-card');
-    // 配置项
-    this.configItems = page.locator('.config-item');
-    // 搜索输入框 — RuntimeConfigPage 没有独立搜索，但预留
-    this.searchInput = page.getByPlaceholder(/搜索配置|搜索/);
+    // 统计栏 — 配置项/已修改/待保存/环境变量
+    this.statsBar = page.getByTestId('rc-stats');
+    // 配置分组卡片（带 data-category）
+    this.configCards = page.getByTestId('rc-card');
+    // 配置项（带 data-key）
+    this.configItems = page.getByTestId('rc-item');
+    // 关键词搜索（键名 / 说明 / 分类）
+    this.searchInput = page.getByTestId('rc-search');
     // 加载中
-    this.loadingSpinner = page.locator('.loading-spinner');
-    // 空状态
-    this.emptyState = page.locator('.empty-state');
+    this.loadingState = page.getByTestId('rc-loading');
+    // 空状态（搜索无结果 / 后端无配置）
+    this.emptyState = page.getByTestId('rc-empty-state');
     // 只读横幅
-    this.readOnlyBanner = page.locator('.info-banner');
+    this.readOnlyBanner = page.getByTestId('rc-readonly-banner');
   }
 
   async goto() {
@@ -51,10 +54,10 @@ export class RuntimeConfigPage {
   }
 
   /**
-   * 查找包含指定 key 的配置项
+   * 按 key 定位单个配置项行
    */
   getConfigItemByKey(key: string): Locator {
-    return this.configItems.filter({ hasText: key });
+    return this.page.locator(`[data-testid="rc-item"][data-key="${key}"]`);
   }
 
   /**
@@ -70,8 +73,9 @@ export class RuntimeConfigPage {
    * @param value 新值
    */
   async editConfigValue(key: string, value: string) {
-    const item = this.getConfigItemByKey(key);
-    const input = item.locator('input.config-input');
+    const input = this.getConfigItemByKey(key).locator(
+      '[data-testid="rc-input"] input, [data-testid="rc-input"] textarea'
+    );
     await input.fill(value);
   }
 
@@ -80,25 +84,28 @@ export class RuntimeConfigPage {
    * @param key 配置项的 key
    */
   async saveConfigItem(key: string) {
-    const item = this.getConfigItemByKey(key);
-    await item.locator('.save-btn').click();
+    await this.getConfigItemByKey(key)
+      .locator('[data-testid="rc-save"]')
+      .click();
   }
 
   /**
-   * 点击配置项的重置按钮
+   * 点击配置项的恢复默认按钮
    * @param key 配置项的 key
    */
   async resetConfigItem(key: string) {
-    const item = this.getConfigItemByKey(key);
-    await item.locator('.reset-btn').click();
+    await this.getConfigItemByKey(key)
+      .locator('[data-testid="rc-reset"]')
+      .click();
   }
 
   /**
-   * 切换 boolean 配置项
+   * 切换 boolean 配置项的开关
    * @param key 配置项的 key
    */
   async toggleConfigItem(key: string) {
-    const item = this.getConfigItemByKey(key);
-    await item.locator('.toggle-switch').click();
+    await this.getConfigItemByKey(key)
+      .locator('[data-testid="rc-input"] input[type="checkbox"]')
+      .click();
   }
 }

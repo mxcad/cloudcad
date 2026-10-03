@@ -3,167 +3,123 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ * 分类卡片：可折叠的分组容器 + 分类级批量恢复默认入口。
+ */
+
 import React from 'react';
-import { Save, RotateCcw, Eye, Sparkles } from 'lucide-react';
-import type { ConfigGroup } from './hooks/useRuntimeConfig';
-import { ConfigInput } from './ConfigInput';
+import { ChevronDown, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
 import styles from './RuntimeConfigPage.module.css';
+import { ConfigItemRow } from './ConfigItemRow';
+import type { ConfigGroup, ConfigItem } from './types';
+import type { DraftValue } from './validate';
 import { t } from '@/languages';
+
+/** 传给行组件的每组回调集合 */
+export interface RowActions {
+  drafts: Record<string, DraftValue>;
+  saving: Set<string>;
+  canManageConfig: boolean;
+  secretVisible: Set<string>;
+  fieldErrors: Record<string, string>;
+  draftOf: (item: ConfigItem) => DraftValue;
+  isDirty: (item: ConfigItem) => boolean;
+  onDraftChange: (key: string, value: DraftValue) => void;
+  onFormatJson: (key: string) => void;
+  onToggleSecret: (key: string) => void;
+  onSave: (key: string) => Promise<boolean>;
+  onReset: (key: string) => Promise<void>;
+  onShowHistory: (key: string) => void;
+}
 
 interface ConfigCardProps {
   group: ConfigGroup;
-  groupIndex: number;
-  editedValues: Record<string, string | number | boolean>;
-  saving: Set<string>;
-  canManageConfig: boolean;
-  hiddenValues: Set<string>;
-  onValueChange: (key: string, value: string | number | boolean) => void;
-  onSave: (key: string) => Promise<void>;
-  onReset: (key: string) => Promise<void>;
-  onToggleVisibility: (key: string) => void;
+  collapsed: boolean;
+  savingCategory: boolean;
+  actions: RowActions;
+  onToggleCollapsed: () => void;
+  onRequestResetCategory: () => void;
 }
 
 export const ConfigCard: React.FC<ConfigCardProps> = ({
   group,
-  groupIndex,
-  editedValues,
-  saving,
-  canManageConfig,
-  hiddenValues,
-  onValueChange,
-  onSave,
-  onReset,
-  onToggleVisibility,
+  collapsed,
+  savingCategory,
+  actions,
+  onToggleCollapsed,
+  onRequestResetCategory,
 }) => {
-  const Icon = group.icon;
-  const modifiedItems = group.items.filter(
-    (item) => editedValues[item.key] !== undefined
-  );
+  const { icon: Icon } = group;
 
   return (
-    <div
+    <section
       className={styles.configCard}
-      style={{ animationDelay: `${groupIndex * 0.05}s` }}
+      data-testid="rc-card"
+      data-category={group.category}
     >
-      {/* 卡片头部 */}
       <div className={styles.cardHeader}>
-        <div className={styles.cardTitleWrapper}>
-          <div className={styles.cardIcon}>
-            <Icon size={20} />
-          </div>
-          <div className={styles.cardTitleContent}>
-            <h2 className={styles.cardTitle}>{group.label}</h2>
-            <span className={styles.cardCount}>
-              {group.items.length}
-              {t(' 项配置')}
-            </span>
-          </div>
-        </div>
-        <div className={styles.cardActions}>
-          {modifiedItems.length > 0 && (
+        <button
+          type="button"
+          className={styles.cardHeaderToggle}
+          onClick={onToggleCollapsed}
+          aria-expanded={!collapsed}
+          data-testid="rc-card-toggle"
+        >
+          <span className={styles.cardIcon}>
+            <Icon size={18} />
+          </span>
+          <span className={styles.cardTitle}>{group.label}</span>
+          <span className={styles.cardCount}>
+            {group.items.length}
+            {t(' 项配置')}
+          </span>
+          {group.modifiedCount > 0 && (
             <Tag variant="warning">
-              {modifiedItems.length}
+              {group.modifiedCount}
               {t(' 项修改')}
             </Tag>
           )}
-        </div>
+          <ChevronDown
+            size={16}
+            className={`${styles.chevron} ${collapsed ? styles.chevronCollapsed : ''}`}
+          />
+        </button>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={RotateCcw}
+          onClick={onRequestResetCategory}
+          disabled={savingCategory}
+          loading={savingCategory}
+          data-testid="rc-reset-category"
+          tooltip={t('恢复本分类全部配置为默认值')}
+        />
       </div>
 
-      {/* 配置项列表 */}
-      <div className={styles.cardContent}>
-        <div className={styles.configList}>
-          {group.items.map((item, itemIndex) => {
-            const hasChanges = editedValues[item.key] !== undefined;
-            const isSavingItem = saving.has(item.key);
-
-            return (
-              <div
-                key={item.key}
-                className={`${styles.configItem} ${hasChanges ? styles.modified : ''}`}
-                style={{ animationDelay: `${itemIndex * 0.03}s` }}
-              >
-                <div className={styles.configInfo}>
-                  <div className={styles.configKeyWrapper}>
-                    <span className={styles.configKey}>{item.key}</span>
-                    <div className={styles.configBadges}>
-                      {item.isPublic && (
-                        <Tag variant="success" icon={Eye}>
-                          {t('公开')}
-                        </Tag>
-                      )}
-                      {hasChanges && (
-                        <Tag variant="warning" icon={Sparkles}>
-                          {t('已修改')}
-                        </Tag>
-                      )}
-                    </div>
-                  </div>
-                  {item.description && (
-                    <p className={styles.configDescription}>
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className={styles.configControls}>
-                  {item.type !== 'boolean' && (
-                    <div className={styles.inputWrapper}>
-                      <ConfigInput
-                        item={item}
-                        editedValues={editedValues}
-                        canManageConfig={canManageConfig}
-                        hiddenValues={hiddenValues}
-                        onValueChange={onValueChange}
-                        onToggleVisibility={onToggleVisibility}
-                      />
-                    </div>
-                  )}
-
-                  <div className={styles.actionButtons}>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      icon={Save}
-                      onClick={() => {
-                        void onSave(item.key);
-                      }}
-                      disabled={!hasChanges || !canManageConfig}
-                      loading={isSavingItem}
-                      className={`${styles.actionBtn} ${styles.saveBtn} ${hasChanges && !isSavingItem ? styles.active : ''}`}
-                      tooltip={t('保存')}
-                    />
-
-                    {item.type === 'boolean' && (
-                      <ConfigInput
-                        item={item}
-                        editedValues={editedValues}
-                        canManageConfig={canManageConfig}
-                        hiddenValues={hiddenValues}
-                        onValueChange={onValueChange}
-                        onToggleVisibility={onToggleVisibility}
-                      />
-                    )}
-
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      icon={RotateCcw}
-                      onClick={() => {
-                        void onReset(item.key);
-                      }}
-                      disabled={isSavingItem || !canManageConfig}
-                      className={`${styles.actionBtn} ${styles.resetBtn}`}
-                      tooltip={t('重置为默认值')}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+      {!collapsed && (
+        <div className={styles.cardContent}>
+          {group.items.map((item) => (
+            <ConfigItemRow
+              key={item.key}
+              item={item}
+              draft={actions.draftOf(item)}
+              dirty={actions.isDirty(item)}
+              saving={actions.saving.has(item.key)}
+              canManageConfig={actions.canManageConfig}
+              secretVisible={actions.secretVisible.has(item.key)}
+              fieldError={actions.fieldErrors[item.key] ?? ''}
+              onDraftChange={(value) => actions.onDraftChange(item.key, value)}
+              onFormatJson={() => actions.onFormatJson(item.key)}
+              onToggleSecret={() => actions.onToggleSecret(item.key)}
+              onSave={() => actions.onSave(item.key)}
+              onReset={() => actions.onReset(item.key)}
+              onShowHistory={() => actions.onShowHistory(item.key)}
+            />
+          ))}
         </div>
-      </div>
-    </div>
+      )}
+    </section>
   );
 };

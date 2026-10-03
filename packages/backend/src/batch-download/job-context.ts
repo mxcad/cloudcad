@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { BatchJobStatus } from '@cloudcad/db';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { ArchiveWriter } from './archive-writer';
 import { ConversionRunner } from './conversion-runner';
 import { FolderExpanderService } from './folder-expander.service';
@@ -43,6 +44,7 @@ export type JobTransitionFn = (
 export interface JobContextDeps {
   prisma: DatabaseService;
   configService: ConfigService;
+  runtimeConfig: RuntimeConfigService;
   archiveWriter: ArchiveWriter;
   conversionRunner: ConversionRunner;
   folderExpander: FolderExpanderService;
@@ -221,9 +223,11 @@ export class JobContext {
   async createArchive(): Promise<{ zipPath: string; zipSize: number } | null> {
     if (this.archiveEntries.length === 0) return null;
 
+    // 每任务读取，运行时配置页修改压缩级别后下一个下载任务即生效
     const compressionLevel =
-      this.deps.configService.get('fileLimits', { infer: true })
-        .zipCompressionLevel || 1;
+      (await this.deps.runtimeConfig.getValue<number>(
+        'fileZipCompressionLevel'
+      )) || 1;
     const zipPath = await this.deps.archiveWriter.createArchive(
       this.archiveEntries,
       this.exportDir,

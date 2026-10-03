@@ -14,10 +14,11 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Param,
   Body,
-  Post,
   Req,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -32,7 +33,10 @@ import {
   UpdateRuntimeConfigDto,
   RuntimeConfigResponseDto,
   RuntimeConfigDefinitionDto,
+  RuntimeConfigHistoryDto,
+  ResetCategoryDto,
 } from './dto/runtime-config.dto';
+import type { RuntimeConfigValue } from './runtime-config.types';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
@@ -65,7 +69,7 @@ export class RuntimeConfigController {
       allowRegister: true,
     },
   })
-  async getPublicConfigs(): Promise<Record<string, string | number | boolean>> {
+  async getPublicConfigs(): Promise<Record<string, RuntimeConfigValue>> {
     return this.runtimeConfigService.getPublicConfigs();
   }
 
@@ -176,5 +180,67 @@ export class RuntimeConfigController {
     await this.runtimeConfigService.resetToDefault(key, user.id, ip);
 
     return { success: true };
+  }
+
+  /**
+   * 获取单个配置项的修改历史
+   */
+  @Get(':key/history')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取配置项修改历史' })
+  @ApiParam({ name: 'key', description: '配置键名' })
+  @ApiResponse({
+    status: 200,
+    description: '返回修改历史（按时间倒序）',
+    type: [RuntimeConfigHistoryDto],
+  })
+  async getConfigHistory(
+    @Param('key') key: string,
+    @Query('limit') limit?: string
+  ): Promise<RuntimeConfigHistoryDto[]> {
+    const parsed = limit ? Number(limit) : undefined;
+    return this.runtimeConfigService.getHistory(
+      key,
+      parsed ?? undefined
+    );
+  }
+
+  /**
+   * 按分类批量重置为默认值
+   */
+  @Post('reset-category')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '按分类批量重置配置为默认值' })
+  @ApiResponse({
+    status: 201,
+    description: '重置成功',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        keys: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['mailEnabled', 'requireEmailVerification'],
+        },
+      },
+    },
+  })
+  async resetCategory(
+    @Body() dto: ResetCategoryDto,
+    @Req() req: Request
+  ) {
+    const user = req.user as { id: string };
+    const ip = req.ip;
+
+    const keys = await this.runtimeConfigService.resetCategory(
+      dto.category,
+      user.id,
+      ip
+    );
+
+    return { success: true, keys };
   }
 }

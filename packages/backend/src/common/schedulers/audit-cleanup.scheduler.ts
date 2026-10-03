@@ -134,9 +134,10 @@ export class AuditCleanupScheduler {
    * @returns 本次删除的记录数
    */
   private async runAuditCleanup(retentionDays?: number): Promise<number> {
+    // 每轮任务读取，运行时配置页修改后下一轮即生效（三层：运行时 > env > 默认）
     const days =
       retentionDays ??
-      this.configService.get<number>('audit.retentionDays', 183);
+      (await this.runtimeConfigService.getValue<number>('auditRetentionDays', 183));
     const archiveEnabled = this.configService.get<boolean>(
       'audit.archiveEnabled',
       false

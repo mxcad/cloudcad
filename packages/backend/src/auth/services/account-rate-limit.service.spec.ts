@@ -1,8 +1,8 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { AccountRateLimitService } from './account-rate-limit.service';
 import { AlertService } from '../../alert/alert.service';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 
 describe('AccountRateLimitService', () => {
   let service: AccountRateLimitService;
@@ -15,47 +15,44 @@ describe('AccountRateLimitService', () => {
     set: jest.fn(),
   } as any;
 
-  const mockConfigService = {
-    get: jest.fn(),
+  const mockRuntimeConfig = {
+    getValue: jest.fn(),
   };
 
   const mockAlertService = {
-    raise: jest.fn().mockResolvedValue({ id: 'alert-1' }),
+    raise: jest.fn(),
   };
 
-  const defaultConfig = {
-    loginMax: 5,
-    loginWindowSeconds: 60,
-    passwordResetMax: 5,
-    passwordResetWindowSeconds: 3600,
-    registerMax: 5,
-    registerWindowSeconds: 3600,
-  };
-
-  const defaultLockConfig = {
-    failThreshold: 10,
-    windowSeconds: 900,
-    durationSeconds: 1800,
+  /** 运行时配置键 → 默认值（与服务内 getValue 的 fallback 参数一致） */
+  const runtimeDefaults: Record<string, number> = {
+    loginRateLimitMax: 5,
+    loginRateLimitWindowSeconds: 60,
+    passwordResetRateLimitMax: 5,
+    passwordResetRateLimitWindowSeconds: 3600,
+    registerRateLimitMax: 5,
+    registerRateLimitWindowSeconds: 3600,
+    orderCreateRateLimitMax: 10,
+    orderCreateRateLimitWindowSeconds: 3600,
+    accountLockFailThreshold: 10,
+    accountLockWindowSeconds: 900,
+    accountLockDurationSeconds: 1800,
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    mockConfigService.get.mockImplementation((key: string) => {
-      if (key === 'authRateLimit') {
-        return { ...defaultConfig };
-      }
-      if (key === 'accountLock') {
-        return { ...defaultLockConfig };
-      }
-      return undefined;
-    });
+    // jest 配置了 resetMocks，describe 顶层设定的 mockImplementation 每个用例前都会被清空，
+    // 所以默认值必须在 clearAllMocks 之后重设；单用例用 mockReturnValueOnce 覆盖。
+    mockRuntimeConfig.getValue.mockImplementation(
+      async (key: string, fallback?: number) => runtimeDefaults[key] ?? fallback ?? 0
+    );
+    mockAlertService.raise.mockResolvedValue({ id: 'alert-1' });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountRateLimitService,
         { provide: 'default_IORedisModuleConnectionToken', useValue: mockRedis },
-        { provide: ConfigService, useValue: mockConfigService },
+        { provide: RuntimeConfigService, useValue: mockRuntimeConfig },
         { provide: AlertService, useValue: mockAlertService },
       ],
     }).compile();
@@ -121,12 +118,10 @@ describe('AccountRateLimitService', () => {
     });
 
     it('max 为 0 时禁用限流（不调用 Redis）', async () => {
-      mockConfigService.get.mockImplementation((key: string) => {
-        if (key === 'authRateLimit') {
-          return { ...defaultConfig, loginMax: 0 };
-        }
-        return undefined;
-      });
+      mockRuntimeConfig.getValue.mockImplementation(
+        async (key: string, fallback?: number) =>
+          key === 'loginRateLimitMax' ? 0 : runtimeDefaults[key] ?? fallback ?? 0
+      );
 
       await expect(service.checkLimit('login', 'user@example.com')).resolves.toBeUndefined();
       expect(mockRedis.incr).not.toHaveBeenCalled();
