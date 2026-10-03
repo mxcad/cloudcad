@@ -13,7 +13,8 @@ import {
  * - 出向：源为项目时，按「目标归属根类型」查 transferOut* 字段（→项目/个人空间/库）；
  * - 入向：目标为项目时，按「源归属根类型」查 transferIn* 字段；
  * - 非项目根（个人空间/库）无配置字段 → 恒允许，由归属权限兜底；
- * - 查询失败（settings 为 null）→ 保守拒绝（无法确认策略，UI 先行禁用）。
+ * - 查询失败（settings 为 null）→ 保守拒绝（无法确认策略，UI 先行禁用）；
+ * - 字段为 null（查询成功但未配置）→ 按默认放行（对齐后端 modeAllows(null → true)）。
  */
 
 /** 操作类型：move=移动（含剪贴板剪切/粘贴），copy=复制 */
@@ -47,9 +48,9 @@ export interface ProjectTransferSettings {
  * action 由调用方按操作类型传入：move → 「移动」，copy → 「复制」。
  */
 export const TRANSFER_BLOCK_REASONS = {
-  /** 源项目出向策略缺失/查询失败，无法确认允许 → 保守拒绝 */
+  /** 源项目出向策略查询失败（settings 为 null），无法确认允许 → 保守拒绝 */
   SOURCE_PROJECT_FORBIDDEN: '源项目未开放跨项目转移',
-  /** 目标项目入向策略缺失/查询失败，无法确认允许 → 保守拒绝 */
+  /** 目标项目入向策略查询失败（settings 为 null），无法确认允许 → 保守拒绝 */
   TARGET_PROJECT_FORBIDDEN: '当前项目未开放跨项目转移',
   /** 源项目出向策略与操作类型不匹配（如仅 COPY_ONLY 但当前为移动） */
   SOURCE_MODE_MISMATCH: '源项目跨项目策略不允许{action}，已禁止',

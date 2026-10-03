@@ -192,6 +192,18 @@ describe('evaluateCrossProjectTransfer（跨项目转移 6 域矩阵）', () => 
         })
       ).toEqual({ allowed: true, crossProject: true });
     });
+
+    it('入向字段为 null（查询成功但未配置）→ 按默认放行（对齐后端 modeAllows(null → true)）', () => {
+      const verdict = evaluateCrossProjectTransfer({
+        operation: 'move',
+        sourceProjectId: 'personal-space',
+        targetProjectId: PROJECT_B,
+        sourceRootKind: 'personal-space',
+        sourceSettings: null,
+        targetSettings: { transferInFromPersonalSpace: null },
+      });
+      expect(verdict).toEqual({ allowed: true, crossProject: true });
+    });
   });
 });
 

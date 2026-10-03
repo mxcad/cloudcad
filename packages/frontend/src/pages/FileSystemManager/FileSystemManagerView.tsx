@@ -67,11 +67,22 @@ export const FileSystemManagerView: React.FC<FileSystemManagerViewProps> = ({
                 </div>
               )}
 
-              {statesProps.loading ||
-              statesProps.error ||
-              statesProps.isEmpty ? (
+              {statesProps.loading || statesProps.error ? (
                 <div className="flex-1 flex items-center justify-center">
                   <FileSystemStates {...statesProps} />
+                </div>
+              ) : statesProps.isEmpty ? (
+                // 空目录同样是粘贴目标：剪贴板操作栏在空态下照常显示
+                // （loading/error 态不显示——数据未就绪，粘贴目标不可信）
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <div className="flex-1 flex items-center justify-center">
+                    <FileSystemStates {...statesProps} />
+                  </div>
+                  {batchBarProps && (
+                    <div className="@container flex justify-center pt-1 pb-3">
+                      <BatchActionBar {...batchBarProps} />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex-1 min-h-0 flex flex-col">
