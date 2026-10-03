@@ -283,7 +283,7 @@ export class FontsService implements OnModuleInit {
   async deleteFont(
     fileName: string,
     target: FontUploadTarget = FontUploadTarget.BOTH
-  ): Promise<{ message: string }> {
+  ): Promise<void> {
     try {
       // 验证文件名
       if (!fileName || fileName.includes('..') || fileName.includes('/')) {
@@ -330,9 +330,7 @@ export class FontsService implements OnModuleInit {
         throw new NotFoundException(I18nContext.current()?.t('error.font_extra.file_not_exist_by_name', { args: { name: fileName } }) ?? `字体文件 ${fileName} 不存在`);
       }
 
-      return {
-        message: I18nContext.current()?.t('success.font_deleted', { args: { name: fileName } }) ?? `字体文件 ${fileName} 删除成功`,
-      };
+      return;
     } catch (error) {
       this.logger.error(`删除字体失败: ${error.message}`, error.stack);
       if (error instanceof NotFoundException) {

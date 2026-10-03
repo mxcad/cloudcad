@@ -114,7 +114,7 @@ export class FontsController {
       const target = uploadFontDto.target || FontUploadTarget.BOTH;
 
       const results = await this.fontsService.uploadFonts(files, target);
-      return { message: I18nContext.current()?.t('success.font_upload_results', { args: { count: results.length } }) ?? `成功上传 ${results.length} 个字体文件`, fonts: results };
+      return { fonts: results };
     } catch (error) {
       this.logger.error(`上传字体失败: ${error.message}`, error.stack);
       throw error;
@@ -145,8 +145,8 @@ export class FontsController {
     try {
       const target = deleteFontDto.target || FontUploadTarget.BOTH;
 
-      const result = await this.fontsService.deleteFont(fileName, target);
-      return { message: result.message };
+      await this.fontsService.deleteFont(fileName, target);
+      return {};
     } catch (error) {
       this.logger.error(`删除字体失败: ${error.message}`, error.stack);
       throw error;

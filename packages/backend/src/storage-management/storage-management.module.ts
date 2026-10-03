@@ -4,7 +4,6 @@ import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { StorageManager } from './services/storage-manager.service';
 import { DirectoryAllocator } from './services/directory-allocator.service';
 import { FileLockService } from './services/file-lock.service';
-import { FileCopyService } from './services/file-copy.service';
 import { DiskMonitorService } from './services/disk-monitor.service';
 import { StorageCleanupService } from './services/storage-cleanup.service';
 
@@ -14,7 +13,6 @@ import { StorageCleanupService } from './services/storage-cleanup.service';
     StorageManager,
     DirectoryAllocator,
     FileLockService,
-    FileCopyService,
     DiskMonitorService,
     StorageCleanupService,
   ],
@@ -22,7 +20,6 @@ import { StorageCleanupService } from './services/storage-cleanup.service';
     StorageManager,
     DirectoryAllocator,
     FileLockService,
-    FileCopyService,
     DiskMonitorService,
     StorageCleanupService,
   ],

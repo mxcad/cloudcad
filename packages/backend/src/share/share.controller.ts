@@ -22,7 +22,6 @@ import {
 import { Request } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
 import { ShareService } from './share.service';
-import { I18nContext } from 'nestjs-i18n';
 import {
   CreateShareDto,
   CreateShareResponseDto,
@@ -94,7 +93,7 @@ export class ShareController {
   async revokeShare(@Param('token') token: string, @Req() req: Request) {
     const userId = (req.user as { id: string }).id;
     await this.shareService.revokeShare(token, userId);
-    return { message: (I18nContext.current()?.t('success.share_revoked') ?? '分享已撤销') };
+    return {};
   }
 
   @Get()

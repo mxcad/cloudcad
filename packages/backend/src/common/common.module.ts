@@ -6,7 +6,6 @@ import { StorageModule } from '../storage/storage.module';
 import { CacheArchitectureModule } from '../cache-architecture/cache-architecture.module';
 import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { ClsModule } from './cls/cls.module';
-import { FileExtensionsService } from './services/file-extensions.service';
 import { FtsQueryBuilder } from '../file-system/search/fts-query-builder';
 import { AncestorQueryService } from './services/ancestor-query.service';
 import { PiiCryptoService } from './pii/pii-crypto.service';
@@ -22,13 +21,11 @@ import { PiiCryptoService } from './pii/pii-crypto.service';
     ClsModule,
   ],
   providers: [
-    FileExtensionsService,
     FtsQueryBuilder,
     AncestorQueryService,
     PiiCryptoService,
   ],
   exports: [
-    FileExtensionsService,
     FtsQueryBuilder,
     AncestorQueryService,
     PiiCryptoService,
