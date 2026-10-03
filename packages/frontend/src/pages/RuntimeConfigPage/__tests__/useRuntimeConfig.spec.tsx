@@ -472,6 +472,49 @@ describe('useRuntimeConfig', () => {
       spy.mockRestore();
     });
 
+    it('保存任意公开配置项（非 maxFileSize）同样失效公开缓存', async () => {
+      // 回归：旧实现硬编码 `if (key !== 'maxFileSize') return`，
+      // 导致 mailEnabled / allowRegister 等其余公开项改完不刷新公开响应，
+      // 普通用户侧（VIP 导出门控、注册开关、品牌客服）一直看到旧值。
+      const spy = vi.spyOn(queryClient, 'invalidateQueries');
+      const hook = await load();
+      await act(async () => {
+        hook.result.current.handleDraftChange('user.allowRegister', true);
+      });
+      await act(async () => {
+        await hook.result.current.handleSave('user.allowRegister');
+      });
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['runtimeConfig', 'public'] });
+      spy.mockRestore();
+    });
+
+    it('保存非公开配置项不失效公开缓存', async () => {
+      const spy = vi.spyOn(queryClient, 'invalidateQueries');
+      const hook = await load();
+      await act(async () => {
+        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.other.com');
+      });
+      await act(async () => {
+        await hook.result.current.handleSave('mail.smtpHost');
+      });
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    });
+
+    it('保存后回读走静默刷新，不切全页 loading', async () => {
+      const hook = await load();
+      const before = hook.result.current.loading;
+      await act(async () => {
+        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.other.com');
+      });
+      await act(async () => {
+        await hook.result.current.handleSave('mail.smtpHost');
+      });
+      // loading 只在首次拉取时置真；保存后的回读必须静默，
+      // 否则整页闪成「正在加载配置...」并丢失滚位
+      expect(hook.result.current.loading).toBe(before);
+    });
+
     it('保存成功后重新拉取配置（回读服务端真值）', async () => {
       const hook = await load();
       await act(async () => {

@@ -144,16 +144,37 @@ export const RuntimeConfigPage: React.FC = () => {
         </div>
       )}
 
-      {/* 后端未返回任何配置 */}
-      {rc.groups.length === 0 && rc.configs.length === 0 && (
-        <div className={styles.emptyState} data-testid="rc-empty-state">
+      {/* 首次拉取失败：给出错误态与重试，而不是把失败伪装成「暂无配置项」 */}
+      {rc.configsError && rc.groups.length === 0 && (
+        <div className={styles.emptyState} data-testid="rc-error-state">
           <div className={styles.emptyIcon}>
             <Settings size={48} />
           </div>
-          <h3>{t('暂无配置项')}</h3>
-          <p>{t('系统尚未配置任何运行时参数')}</p>
+          <h3>{t('获取配置失败')}</h3>
+          <p>{rc.configsError}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void rc.retryFetch()}
+            data-testid="rc-retry"
+          >
+            {t('重试')}
+          </Button>
         </div>
       )}
+
+      {/* 后端未返回任何配置 */}
+      {rc.groups.length === 0 &&
+        rc.configs.length === 0 &&
+        !rc.configsError && (
+          <div className={styles.emptyState} data-testid="rc-empty-state">
+            <div className={styles.emptyIcon}>
+              <Settings size={48} />
+            </div>
+            <h3>{t('暂无配置项')}</h3>
+            <p>{t('系统尚未配置任何运行时参数')}</p>
+          </div>
+        )}
 
       {/* 修改历史 */}
       <ConfigHistoryPanel

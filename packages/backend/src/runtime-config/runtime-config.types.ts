@@ -126,6 +126,11 @@ export interface RuntimeConfigDefinition {
   hot?: boolean;
   /** 底层 env 变量名：作为部署期默认值层，优先于代码默认值、次于运行时配置 */
   envKey?: string;
+  /**
+   * env 层兼容别名（按顺序取第一个已设置的值）。用于历史部署已用旧变量名的配置项，
+   * 避免迁移后静默回滚到代码默认值（存量合规配置被悄悄收紧）。
+   */
+  envAliases?: string[];
 }
 
 /**

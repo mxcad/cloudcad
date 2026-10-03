@@ -25,16 +25,6 @@ import { RuntimeConfigService } from '../../../runtime-config/runtime-config.ser
 import { I18nContext } from 'nestjs-i18n';
 import type { ISmsVerificationService } from '@cloudcad/contracts';
 /**
- * 短信发送限制配置
- */
-interface SmsLimitsConfig {
-  /** 每个手机号每日发送上限 */
-  dailyLimitPerPhone: number;
-  /** 每个 IP 每小时发送上限 */
-  hourlyLimitPerIp: number;
-}
-
-/**
  * 验证码验证限制配置
  */
 interface SmsVerifyLimitsConfig {
@@ -61,7 +51,6 @@ export class SmsVerificationService implements ISmsVerificationService {
 
   private readonly codeTTL: number;
   private readonly rateLimitTTL: number;
-  private readonly limits: SmsLimitsConfig;
   private readonly verifyLimits: SmsVerifyLimitsConfig;
 
   constructor(
@@ -70,19 +59,11 @@ export class SmsVerificationService implements ISmsVerificationService {
     @InjectRedis() private readonly redis: Redis
   ) {
     const cacheTTL = this.configService.get('cacheTTL');
-    const smsConfig = this.configService.get<{ limits?: SmsLimitsConfig }>(
-      'sms'
-    );
 
     // 设置验证码有效期（默认 5 分钟）
     this.codeTTL = cacheTTL?.verificationCode ?? 300;
     // 设置发送频率限制（默认 60 秒）
     this.rateLimitTTL = cacheTTL?.verificationRateLimit ?? 60;
-    // 设置发送限制
-    this.limits = smsConfig?.limits ?? {
-      dailyLimitPerPhone: 10,
-      hourlyLimitPerIp: 20,
-    };
 
     // 设置验证限制（默认最多尝试 5 次）
     const smsVerifyConfig = this.configService.get<{
@@ -92,8 +73,10 @@ export class SmsVerificationService implements ISmsVerificationService {
       maxVerifyAttempts: 5,
     };
 
+    // 每日/每小时发送上限在 sendCode 里每次调用时读运行时配置，
+    // 构造期不打印这类值——启动时打印只会报告 env 快照，与配置页的实际生效值不符。
     this.logger.log(
-      `短信限制配置: 每日上限=${this.limits.dailyLimitPerPhone}/手机号, IP限制=${this.limits.hourlyLimitPerIp}/小时, 验证最多${this.verifyLimits.maxVerifyAttempts}次`
+      `短信验证最多${this.verifyLimits.maxVerifyAttempts}次`
     );
   }
 
@@ -230,9 +213,17 @@ export class SmsVerificationService implements ISmsVerificationService {
       10
     );
 
-    if (dailyCount >= this.limits.dailyLimitPerPhone) {
+    // 发送上限走运行时配置（每调用读取，改完即生效）。
+    // 兜底值与 definition 的 defaultValue 一致，DB 不可达时的降级语义由
+    // RuntimeConfigService.getValue 统一处理。
+    const dailyLimitPerPhone = await this.runtimeConfigService.getValue<number>(
+      'smsDailyLimitPerPhone',
+      10
+    );
+
+    if (dailyCount >= dailyLimitPerPhone) {
       throw new BadRequestException(
-        `该手机号今日发送次数已达上限（${this.limits.dailyLimitPerPhone}次），请明天再试`
+        `该手机号今日发送次数已达上限（${dailyLimitPerPhone}次），请明天再试`
       );
     }
 
@@ -240,8 +231,13 @@ export class SmsVerificationService implements ISmsVerificationService {
     if (clientIp) {
       const ipCountKey = this.getIpHourlyCountKey(clientIp);
       const ipCount = parseInt((await this.redis.get(ipCountKey)) || '0', 10);
+      const hourlyLimitPerIp =
+        await this.runtimeConfigService.getValue<number>(
+          'smsHourlyLimitPerIp',
+          20
+        );
 
-      if (ipCount >= this.limits.hourlyLimitPerIp) {
+      if (ipCount >= hourlyLimitPerIp) {
         throw new BadRequestException(I18nContext.current()?.t('error.sms_extra.network_limit') ?? `当前网络发送次数已达上限，请稍后再试`);
       }
     }

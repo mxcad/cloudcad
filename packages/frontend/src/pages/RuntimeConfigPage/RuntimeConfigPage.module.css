@@ -743,6 +743,18 @@
   white-space: nowrap;
 }
 
+/* 批量恢复预览里的高风险项标注：分类级一次确认会连危险项一起还原，
+   预览里必须与普通项区分开，否则 security 分类的 21 项被一次点掉无提示 */
+.danger-tag {
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
 /* ===== 动画 ===== */
 @keyframes slide-up {
   from {

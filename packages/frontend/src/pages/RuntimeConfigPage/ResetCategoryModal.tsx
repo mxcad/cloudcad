@@ -71,7 +71,7 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
       {group && (
         <>
           <p className={styles.modalLead}>
-            {t('将恢复以下 {n} 项配置的显式修改，恢复后取值回到代码默认值。', {
+            {t('将恢复以下 {n} 项配置的显式修改。', {
               n: String(group.items.length),
             })}
           </p>
@@ -81,7 +81,7 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
               <TerminalSquare size={13} />
               <span>
                 {t(
-                  '其中 {n} 项已由环境变量注入，恢复默认后生效值将变为环境变量值，而不是代码默认值。',
+                  '其中 {n} 项已由环境变量注入：恢复默认后取值回到环境变量值，而不是代码默认值。',
                   {
                     n: String(envItems.length),
                   }
@@ -100,6 +100,9 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
                 <span className={styles.previewDesc}>
                   {item.description ?? ''}
                 </span>
+                {item.dangerous && (
+                  <span className={styles.dangerTag}>{t('危险项')}</span>
+                )}
                 {item.isModified && (
                   <span className={styles.previewTag}>{t('将恢复')}</span>
                 )}

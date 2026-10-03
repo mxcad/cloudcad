@@ -107,13 +107,13 @@ describe("RuntimeConfigService", () => {
 			);
 		};
 
-		it("启动期数据库不可达 → 降级返回调用方默认值，不抛错", async () => {
+		it("启动期数据库不可达且传 fallback → 降级返回定义默认值，不抛错", async () => {
 			const warnSpy = jest.spyOn(Logger.prototype, "warn");
 			dbDown();
 
 			const result = await service.getValue("maxFileSize", 500);
 
-			expect(result).toBe(500);
+			expect(result).toBe(100);
 			expect(warnSpy).toHaveBeenCalledWith(
 				expect.stringContaining("启动期降级用默认值"),
 			);
@@ -208,6 +208,51 @@ describe("RuntimeConfigService", () => {
 			});
 
 			expect(await service.getValue("unknown-key")).toBe("db-default-row");
+		});
+
+		it("调用方传 fallback 且不等于三层解析结果 → 三层结果优先（fallback 不遮蔽 env）", async () => {
+			// 回归：resolveValue 永不返回 nullish，`(fallback ?? value)` 恒为 fallback，
+			// 使 93/94 个带 fallback 的调用点全部静默无效。
+			process.env.RATE_LIMIT_PUBLIC_MAX = "33";
+			try {
+				mockRedis.get.mockResolvedValue(null);
+				mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+					key: "rateLimitPublicMax",
+					value: JSON.stringify(100),
+					type: "number",
+					updatedBy: null,
+				});
+
+				expect(await service.getValue("rateLimitPublicMax", 100)).toBe(33);
+			} finally {
+				delete process.env.RATE_LIMIT_PUBLIC_MAX;
+			}
+		});
+
+		it("DB 行 updatedBy 非空且传 fallback → 运行时值优先", async () => {
+			process.env.TEST_RUNTIME_ENV = "99";
+			try {
+				mockRedis.get.mockResolvedValue(null);
+				mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+					key: "maxFileSize",
+					value: JSON.stringify(256),
+					type: "number",
+					updatedBy: "user-1",
+				});
+
+				expect(await service.getValue("maxFileSize", 500)).toBe(256);
+			} finally {
+				delete process.env.TEST_RUNTIME_ENV;
+			}
+		});
+
+		it("未登记在定义表的 key + 传 fallback → fallback 生效", async () => {
+			mockRedis.get.mockResolvedValue(null);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			expect(await service.getValue("unregistered-key", "fallback")).toBe(
+				"fallback",
+			);
 		});
 
 		it("getAllConfigs 附带来源、默认值与元数据", async () => {

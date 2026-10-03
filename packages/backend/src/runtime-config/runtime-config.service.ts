@@ -141,7 +141,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     }
 
     const envValue = def.envKey
-      ? this.parseEnvValue(def.envKey, def.type)
+      ? this.parseEnvValue(def.envKey, def.type, def.envAliases)
       : undefined;
     if (envValue !== undefined) {
       return { value: envValue, source: 'env' };
@@ -164,20 +164,26 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
    */
   private parseEnvValue(
     envKey: string,
-    type: RuntimeConfigValueType
+    type: RuntimeConfigValueType,
+    aliases?: string[]
   ): EnvResolveResult {
-    const raw = process.env[envKey];
-    if (raw === undefined || raw.trim() === '') {
+    // 主变量名优先；未设置或空串时依次尝试兼容别名
+    //（历史部署可能用旧变量名，不兼容会静默回滚到代码默认值）
+    const raw =
+      [envKey, ...(aliases ?? [])]
+        .map((name) => process.env[name]?.trim())
+        .find((value) => value !== undefined && value !== '') ?? undefined;
+    if (raw === undefined) {
       return undefined;
     }
 
     switch (type) {
       case 'number': {
-        const n = Number(raw.trim());
+        const n = Number(raw);
         return Number.isFinite(n) ? n : undefined;
       }
       case 'boolean': {
-        const lower = raw.trim().toLowerCase();
+        const lower = raw.toLowerCase();
         if (TRUTHY_ENV_VALUES.includes(lower)) return true;
         if (FALSY_ENV_VALUES.includes(lower)) return false;
         return undefined;
@@ -253,7 +259,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     const { value } = this.resolveValue(def, row);
-    const result = (defaultValue ?? value) as T;
+    // 三层解析结果优先：定义表的 defaultValue 是唯一权威默认值，env 层由 envKey 声明。
+    // 调用方 fallback 只对「未登记在 RUNTIME_CONFIG_DEFINITIONS 的 key」生效——否则
+    // resolveValue 永不返回 nullish，fallback 恒遮蔽 DB/env 层，用户在配置页改的值全部
+    // 静默无效（回归：见 spec 的「传 fallback 且 DB 值不同」用例）。
+    const result = (def ? value : (defaultValue ?? value)) as T;
 
     // 4. 写入缓存（写缓存失败不阻塞：下次读会重试）
     try {

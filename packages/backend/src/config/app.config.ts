@@ -205,12 +205,7 @@ export interface SmsConfig {
   provider: SmsProviderType;
   aliyun: AliyunSmsConfig;
   tencent: TencentSmsConfig;
-  limits: SmsLimitsConfig;
-}
-
-export interface SmsLimitsConfig {
-  dailyLimitPerPhone: number;
-  hourlyLimitPerIp: number;
+  // 每日/每小时发送上限不在此：由运行时配置承载（见 configuration.ts 同处注释）
 }
 
 export interface ThumbnailConfig {

@@ -91,10 +91,14 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
           size="sm"
           icon={RotateCcw}
           onClick={onRequestResetCategory}
-          disabled={savingCategory}
+          disabled={savingCategory || !actions.canManageConfig}
           loading={savingCategory}
           data-testid="rc-reset-category"
-          tooltip={t('恢复本分类全部配置为默认值')}
+          tooltip={
+            actions.canManageConfig
+              ? t('恢复本分类全部配置为默认值')
+              : t('只读权限：无修改配置')
+          }
         />
       </div>
 

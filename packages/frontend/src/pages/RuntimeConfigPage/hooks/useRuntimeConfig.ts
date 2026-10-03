@@ -55,6 +55,8 @@ export interface UseRuntimeConfigReturn {
   configs: ConfigItem[];
   groups: ConfigGroup[];
   loading: boolean;
+  configsError: string | null;
+  retryFetch: () => Promise<void>;
   drafts: Record<string, DraftValue>;
   fieldErrors: Record<string, string>;
   saving: Set<string>;
@@ -130,16 +132,21 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [onlyModified, setOnlyModified] = useState(false);
   /** 已展开显示的遮罩值（input.secret 项默认隐藏） */
   const [secretVisible, setSecretVisible] = useState<Set<string>>(new Set());
+  /** 首次拉取失败时的错误文案；非空时页面渲染错误态而非「暂无配置项」 */
+  const [configsError, setConfigsError] = useState<string | null>(null);
 
   const canManageConfig = hasPermission(SystemPermission.SYSTEM_CONFIG_WRITE);
 
   /**
-   * 保存/重置 maxFileSize 后刷新公开配置缓存：该项是公开配置，
-   * 前端上传限制读的是聚合后的 public 响应，不清缓存会导致同会话内上传限制不生效。
+   * 保存/重置公开配置项后刷新公开配置缓存：公开配置的前端消费者
+   *（上传限制、VIP 导出门控、品牌与客服信息）读的是聚合后的 public 响应，
+   * 不清缓存会让同会话内的改动不生效。按 isPublic 判定而非硬编码键名——
+   * 否则 15 个公开项（mailEnabled / supportEmail / collaborationDomains …）
+   * 改完仍显旧值。
    */
-  const applyMaxFileSizeSideEffects = useCallback(
-    async (key: string) => {
-      if (key !== 'maxFileSize') return;
+  const invalidatePublicConfigCache = useCallback(
+    async (isPublic: boolean) => {
+      if (!isPublic) return;
       await queryClient.invalidateQueries({
         queryKey: queryKeys.runtimeConfig.public,
       });
@@ -147,21 +154,35 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     [queryClient]
   );
 
-  const fetchConfigs = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await runtimeConfigControllerGetAllConfigs();
-      // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
-      // 否则 setConfigs(undefined) 会让后续 reduce 在渲染期崩溃
-      if (result.error) throw result.error;
-      setConfigs(toConfigItems(result.data));
-    } catch (error: unknown) {
-      handleError(error, t('获取配置失败'));
-      showToast(getErrorMessage(error) || t('获取配置失败'), 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
+  /**
+   * 拉取配置列表。`silent` 用于保存/重置后的刷新：静默模式下不切全页 loading，
+   * 否则用户刚保存一条配置，整页会闪成「正在加载配置...」并丢失滚位。
+   * 首次加载与重试走非静默模式，由页面渲染 loading / 错误态。
+   */
+  const fetchConfigs = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setConfigsError(null);
+      }
+      try {
+        const result = await runtimeConfigControllerGetAllConfigs();
+        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出
+        if (result.error) throw result.error;
+        setConfigs(toConfigItems(result.data));
+      } catch (error: unknown) {
+        // 失败不能伪装成「暂无配置项」：首次加载失败给错误态，静默刷新只 toast
+        const message = getErrorMessage(error) || t('获取配置失败');
+        handleError(error, t('获取配置失败'));
+        showToast(message, 'error');
+        if (!silent) setConfigsError(message);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [showToast]
+  );
 
   useEffect(() => {
     void fetchConfigs();
@@ -347,8 +368,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
           delete next[key];
           return next;
         });
-        await fetchConfigs();
-        await applyMaxFileSizeSideEffects(key);
+        await fetchConfigs({ silent: true });
+        await invalidatePublicConfigCache(item.isPublic);
         return true;
       } catch (error: unknown) {
         handleError(error, t('保存配置失败'));
@@ -373,7 +394,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       showConfirm,
       showToast,
       fetchConfigs,
-      applyMaxFileSizeSideEffects,
+      invalidatePublicConfigCache,
     ]
   );
 
@@ -430,8 +451,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
           delete next[key];
           return next;
         });
-        await fetchConfigs();
-        await applyMaxFileSizeSideEffects(key);
+        await fetchConfigs({ silent: true });
+        await invalidatePublicConfigCache(item.isPublic);
       } catch (error: unknown) {
         handleError(error, t('恢复默认失败'));
         showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
@@ -448,7 +469,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       showConfirm,
       showToast,
       fetchConfigs,
-      applyMaxFileSizeSideEffects,
+      invalidatePublicConfigCache,
     ]
   );
 
@@ -480,8 +501,10 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
         return next;
       });
       setFieldErrors({});
-      await fetchConfigs();
-      await applyMaxFileSizeSideEffects('maxFileSize');
+      await fetchConfigs({ silent: true });
+      await invalidatePublicConfigCache(
+        configs.some((c) => c.category === category && c.isPublic)
+      );
     } catch (error: unknown) {
       handleError(error, t('恢复默认失败'));
       showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
@@ -493,7 +516,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     configs,
     showToast,
     fetchConfigs,
-    applyMaxFileSizeSideEffects,
+    invalidatePublicConfigCache,
   ]);
 
   const resetPreviewItems = useMemo(
@@ -534,6 +557,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     configs,
     groups,
     loading,
+    configsError,
     drafts,
     fieldErrors,
     saving,
@@ -552,6 +576,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     stats,
     setKeyword,
     setOnlyModified,
+    retryFetch: () => fetchConfigs(),
     toggleCollapsed,
     setAllCollapsed,
     draftOf,

@@ -26,7 +26,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { INestApplication, VersioningType, HttpStatus } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ConfigService } from '@nestjs/config';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import request from 'supertest';
 import { AuditLogController } from './audit-log.controller';
 import { AuditLogService } from './audit-log.service';
@@ -63,8 +63,8 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
     verifyArchivedForCutoff: jest.fn(),
   };
 
-  const mockConfigService = {
-    get: jest.fn(),
+  const mockRuntimeConfigService = {
+    getValue: jest.fn(),
   };
 
   const mockPermissionService: {
@@ -95,16 +95,14 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
     mockAuditLogService.log.mockResolvedValue(undefined);
     mockAuditLogService.cleanupOldLogs.mockResolvedValue(0);
     mockAuditArchiveService.verifyArchivedForCutoff.mockResolvedValue([]);
-    mockConfigService.get.mockImplementation((key: string, def: unknown) =>
-      key === 'audit.retentionDays' ? 183 : def
-    );
+    mockRuntimeConfigService.getValue.mockResolvedValue(183);
 
     moduleRef = await Test.createTestingModule({
       controllers: [AuditLogController],
       providers: [
         { provide: AuditLogService, useValue: mockAuditLogService },
         { provide: AuditArchiveService, useValue: mockAuditArchiveService },
-        { provide: ConfigService, useValue: mockConfigService },
+        { provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
         { provide: IPERMISSION_SERVICE, useValue: mockPermissionService },
         PermissionsGuard,
         Reflector,
@@ -422,6 +420,35 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
       expect(mockAuditLogService.cleanupOldLogs).toHaveBeenCalledWith(
         183,
         'test-user'
+      );
+    });
+
+    it('保留期下限跟随运行时配置：调大到 730 后低于 730 的清理被拒（不回落 env 默认 183）', async () => {
+      // 回归：下限曾读 env（AUDIT_RETENTION_DAYS），而定时清理任务读运行时配置，
+      // 管理员把保留期改成 730 天后清理入口仍按 183 拦，两条链路互相矛盾。
+      mockRuntimeConfigService.getValue.mockResolvedValue(730);
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/audit/cleanup')
+        .send({ daysToKeep: 700, confirm: true });
+
+      expect(res.status).toBe(HttpStatus.BAD_REQUEST);
+      expect(mockAuditLogService.cleanupOldLogs).not.toHaveBeenCalled();
+      expect(mockAuditLogService.log).toHaveBeenCalledWith(
+        AuditAction.AUDIT_CLEANUP,
+        ResourceType.SYSTEM,
+        undefined,
+        'test-user',
+        false,
+        'BELOW_RETENTION_FLOOR',
+        undefined,
+        undefined,
+        undefined,
+        expect.objectContaining({
+          requestedDaysToKeep: 700,
+          effectiveDaysToKeep: 700,
+          retentionDays: 730,
+        })
       );
     });
   });

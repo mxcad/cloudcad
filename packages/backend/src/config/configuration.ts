@@ -549,18 +549,10 @@ export default (): AppConfig => {
         templateCode: process.env.TENCENT_SMS_TEMPLATE_CODE || '',
         region: process.env.TENCENT_SMS_REGION || 'ap-guangzhou',
       },
-      limits: {
-        // 每个手机号每日发送上限，默认 10 次
-        dailyLimitPerPhone: parseInt(
-          process.env.SMS_DAILY_LIMIT_PER_PHONE || '10',
-          10
-        ),
-        // 每个 IP 每小时发送上限，默认 20 次
-        hourlyLimitPerIp: parseInt(
-          process.env.SMS_HOURLY_LIMIT_PER_IP || '20',
-          10
-        ),
-      },
+      // 每日/每小时发送上限不在此处解析：已由运行时配置收录
+      // （smsDailyLimitPerPhone / smsHourlyLimitPerIp，envKey 仍为
+      // SMS_DAILY_LIMIT_PER_PHONE / SMS_HOURLY_LIMIT_PER_IP），配置页改完即生效。
+      // 在此再解析一份会让 env 快照与运行时值打架。
     },
 
     // 协同服务配置

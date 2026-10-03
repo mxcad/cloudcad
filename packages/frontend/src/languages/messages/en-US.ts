@@ -2542,5 +2542,9 @@ export default  {
     "1000204": "Confirm reset",
     "1000205": "Reset to default",
     "1000206": "Reset failed",
-    "1000207": "Failed to load change history"
+    "1000207": "Failed to load change history",
+    "1000208": "Dangerous",
+    "1000209": "Read-only: cannot modify configurations",
+    "1000210": "The explicit modifications of the following {n} items will be reset.",
+    "1000211": "{n} of them are injected via environment variables: after reset they fall back to the environment variable value, not the code default."
 }

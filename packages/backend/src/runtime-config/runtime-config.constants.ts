@@ -53,8 +53,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'user',
     impact:
-      '保存后前端下次加载即采用；字段缺失时回退到前端内置默认品牌，空串表示清空该项。',
-    hot: false,
+      '保存后前端即刻生效（BrandContext 订阅公开配置）；字段缺失时回退到前端内置默认品牌，' +
+      '需清空某字段请从 JSON 中删除该键（不支持空串清空，前端校验会拒绝）。',
   },
   {
     key: 'supportEmail',
@@ -288,16 +288,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'advanced',
     dangerous: true,
   },
-  {
-    key: 'orphanCleanupDelayDays',
-    type: 'number',
-    category: 'storage',
-    description: '孤儿文件清理延迟天数（标记后多少天可清理）',
-    defaultValue: 7,
-    isPublic: false,
-    tier: 'advanced',
-    input: { min: 1, max: 365, step: 1, unit: '天' },
-  },
+  // orphanCleanupDelayDays 刻意不收录：storageCleanupService.cleanupOrphans() 检出即删、
+  // 没有「标记后延迟 N 天」的两阶段机制，收录该字段会让 UI 承诺一个不成立的行为。
   {
     key: 'lockCleanupEnabled',
     type: 'boolean',
@@ -361,6 +353,9 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'advanced',
     envKey: 'AUDIT_RETENTION_DAYS',
+    // #322 之前只认 AUDIT_LOG_RETENTION_DAYS（configuration.ts 至今仍同时兼容两个名字）；
+    // 不给别名，存量按合规要求配置了 730 天的部署会被静默收紧回 183 天。
+    envAliases: ['AUDIT_LOG_RETENTION_DAYS'],
     input: { min: 7, max: 3650, step: 1, unit: '天' },
     impact: '早于该天数的审计日志由定时任务删除。等保 2.0 要求日志留存不少于 6 个月（183 天）。',
   },
@@ -486,57 +481,18 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'admin',
     dangerous: true,
-    hot: false,
     impact:
-      '关闭后管理员可仅凭密码登录（等保 2.0 8.1.4.1(d) 要求双因素）。此开关在启动期读取，需重启后端生效。',
+      '关闭后管理员可仅凭密码登录（等保 2.0 8.1.4.1(d) 要求双因素）。' +
+      'admin-auth 与 jwt.strategy 均每次读取，改完即生效。',
   },
-  {
-    key: 'passwordMinLength',
-    type: 'number',
-    category: 'security',
-    description: '新建/修改密码的最小长度',
-    defaultValue: 10,
-    isPublic: false,
-    tier: 'admin',
-    envKey: 'PASSWORD_POLICY_MIN_LENGTH',
-    input: { min: 6, max: 64, step: 1, unit: '字符' },
-    impact: '低于该长度的新密码会被拒绝。仅约束新设置的密码，不影响已存密码。',
-    dangerous: true,
-  },
-  {
-    key: 'passwordMaxAgeDays',
-    type: 'number',
-    category: 'security',
-    description: '管理员密码定期更换周期',
-    defaultValue: 180,
-    isPublic: false,
-    tier: 'admin',
-    envKey: 'PASSWORD_POLICY_MAX_AGE_DAYS',
-    input: { min: 1, max: 3650, step: 1, unit: '天' },
-    impact: '管理员密码超过该天数需强制更换（等保定期更换要求）；普通用户不判定。',
-  },
-  {
-    key: 'passwordExpiringSoonDays',
-    type: 'number',
-    category: 'security',
-    description: '密码到期前多少天开始软提示',
-    defaultValue: 14,
-    isPublic: false,
-    tier: 'admin',
-    envKey: 'PASSWORD_POLICY_EXPIRING_SOON_DAYS',
-    input: { min: 0, max: 90, step: 1, unit: '天' },
-  },
-  {
-    key: 'passwordChangeEnforceEnabled',
-    type: 'boolean',
-    category: 'security',
-    description: '定期更换 / 首登未改密的强制改密总开关',
-    defaultValue: false,
-    isPublic: false,
-    tier: 'admin',
-    envKey: 'PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED',
-    impact: '开启后管理员定期到期与首登未改密场景强制改密。',
-  },
+  // 口令策略 4 项（passwordMinLength / passwordMaxAgeDays / passwordExpiringSoonDays /
+  // passwordChangeEnforceEnabled）**刻意不收录**：password-policy.service 在构造期一次性
+  // 读取 configService.get('passwordPolicy') 并固化到 readonly 字段，assertPasswordPolicy
+  // 与 getPasswordChangeStatus 都是同步方法、后者被 jwt.strategy 每请求调用。
+  // 迁入运行时配置需把这两个方法改成异步并 ripple 到 4 处调用点，属于对最热安全路径的
+  // 结构性改造；且当前 env 值与这里若填的 defaultValue 完全一致，无行为缺陷。
+  // 按文件头「构造期一次性读取 → 不收录」原则保持 env + 重启语义
+  //（PASSWORD_POLICY_MIN_LENGTH / MAX_AGE_DAYS / EXPIRING_SOON_DAYS / CHANGE_ENFORCE_ENABLED）。
 
   // ───────────────────────── 安全：账号锁定与业务限流 ─────────────────────────
   // 以下 8 + 3 项在 account-rate-limit.service 的 getConfig()/getLockConfig() 中
@@ -759,16 +715,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
   },
 
   // ───────────────────────── 系统与设备 ─────────────────────────
-  {
-    key: 'oldSiteApiBase',
-    type: 'string',
-    category: 'system',
-    description: '旧官网 API 基础 URL（仅私有部署有效）',
-    defaultValue: 'https://c.mxdraw3d.com/app',
-    isPublic: false,
-    tier: 'advanced',
-    input: { maxLength: 300 },
-  },
+  // oldSiteApiBase 刻意不收录：全后端零消费者，收录等于给用户一个改了没反应的字段。
   {
     key: 'deviceAuthFrontendDomain',
     type: 'string',
@@ -800,9 +747,3 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
   // ─────────────────────────
 ];
 
-/**
- * 默认配置值映射
- */
-export const DEFAULT_RUNTIME_CONFIGS = Object.fromEntries(
-  RUNTIME_CONFIG_DEFINITIONS.map((def) => [def.key, def.defaultValue])
-) as Record<string, string | number | boolean | Record<string, unknown>>;

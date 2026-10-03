@@ -20,6 +20,7 @@ import { DatabaseModule } from '../database/database.module';
 import { CommonModule } from '../common/common.module';
 import { PermissionModule } from '../permission/permission.module';
 import { AlertModule } from '../alert/alert.module';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 import { ClsService } from 'nestjs-cls';
 
 /**
@@ -37,6 +38,7 @@ import { ClsService } from 'nestjs-cls';
     DatabaseModule,
     CommonModule,
     PermissionModule,
+    RuntimeConfigModule,
     forwardRef(() => AlertModule),
   ],
   controllers: [AuditLogController, ProjectAuditLogController],

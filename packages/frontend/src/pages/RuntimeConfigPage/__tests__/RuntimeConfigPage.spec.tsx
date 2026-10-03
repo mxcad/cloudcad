@@ -175,6 +175,8 @@ function makeReturn(
     configs,
     groups,
     loading: false,
+    configsError: null,
+    retryFetch: vi.fn().mockResolvedValue(undefined),
     drafts: {},
     fieldErrors: {},
     saving: new Set(),
@@ -502,8 +504,57 @@ describe('RuntimeConfigPage 分类批量恢复', () => {
     });
     render(<RuntimeConfigPage />);
     expect(
-      screen.getByText(/已由环境变量注入，恢复默认后生效值将变为环境变量值/)
+      screen.getByText(
+        /已由环境变量注入：恢复默认后取值回到环境变量值，而不是代码默认值/
+      )
     ).toBeTruthy();
+    // 引导语不得再声称「恢复后取值回到代码默认值」——与 env 提示自相矛盾
+    expect(
+      screen.queryByText(/恢复后取值回到代码默认值/)
+    ).toBeNull();
+  });
+
+  it('批量恢复预览里标注危险项（分类级一次确认会连危险项一起还原）', () => {
+    mockState.return = makeReturn({
+      resetPreviewCategory: 'user',
+      resetPreviewItems: mockItems.filter((i) => i.category === 'user'),
+    });
+    render(<RuntimeConfigPage />);
+    const preview = screen.getByTestId('rc-reset-preview');
+    expect(within(preview).getByText('危险项')).toBeTruthy();
+  });
+
+  it('只读权限下分类重置按钮禁用', () => {
+    mockState.return = makeReturn({ canManageConfig: false });
+    render(<RuntimeConfigPage />);
+    const buttons = screen.getAllByTestId('rc-reset-category');
+    for (const button of buttons) {
+      expect(button).toBeDisabled();
+    }
+  });
+});
+
+describe('RuntimeConfigPage 首次加载错误态', () => {
+  it('拉取失败显示错误与重试，而不是「暂无配置项」', () => {
+    mockState.return = makeReturn({
+      configs: [],
+      groups: [],
+      configsError: '网络异常',
+    });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByTestId('rc-error-state')).toBeTruthy();
+    expect(screen.getByText('获取配置失败')).toBeTruthy();
+    expect(screen.getByText('网络异常')).toBeTruthy();
+    expect(screen.queryByText('暂无配置项')).toBeNull();
+    fireEvent.click(screen.getByTestId('rc-retry'));
+    expect(mockState.return.retryFetch).toHaveBeenCalled();
+  });
+
+  it('正常空态仍显示「暂无配置项」', () => {
+    mockState.return = makeReturn({ configs: [], groups: [] });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByText('暂无配置项')).toBeTruthy();
+    expect(screen.queryByTestId('rc-error-state')).toBeNull();
   });
 });
 

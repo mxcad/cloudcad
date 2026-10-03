@@ -32,7 +32,6 @@ import {
   ApiBearerAuth,
   ApiQuery,
 } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import {
   AuditLogService,
@@ -54,6 +53,7 @@ import { setContentDisposition } from '../common/utils/content-disposition';
 import { AuditExportDto } from './dto/audit-export.dto';
 import { AuditCleanupDto } from './dto/audit-cleanup.dto';
 import { AuditArchiveService } from './audit-archive.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
 /**
  * 审计日志管理员视图
@@ -78,7 +78,7 @@ export class AuditLogController {
   constructor(
     private readonly auditLogService: AuditLogService,
     private readonly auditArchiveService: AuditArchiveService,
-    private readonly configService: ConfigService
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {}
 
   @Get('logs')
@@ -249,9 +249,11 @@ export class AuditLogController {
     @Body() dto: AuditCleanupDto
   ) {
     const userId = req.user?.id || 'unknown';
-    // 保留期下限：仅允许删除超保留期记录（默认 183 天，AUDIT_LOG_RETENTION_DAYS）
-    const retentionDays = this.configService.get<number>(
-      'audit.retentionDays',
+    // 保留期下限：仅允许删除超保留期记录。必须走运行时配置——
+    // 否则管理员把保留期改成 730 天后，定时任务按 730 天删，这里仍按 env 的
+    // 旧下限拦，两条链路不一致（曾出现 730 天部署被静默收紧回 183 天）。
+    const retentionDays = await this.runtimeConfigService.getValue<number>(
+      'auditRetentionDays',
       183
     );
     const days = dto.daysToKeep ?? retentionDays;
