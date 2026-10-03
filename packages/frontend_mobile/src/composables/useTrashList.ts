@@ -48,6 +48,22 @@ export function resolveTrashScope(
   return 'projects'
 }
 
+/**
+ * 当前 scope 对应的 projectId 来源（load 取数与 clear 清空共用）：
+ *   personal → 个人空间根 id；project → 选定项目 id；projects → 无（全局，不传）
+ * 返回原始值（可能 undefined），调用方按各自 API 形态做 nullish 归一
+ * （列表 query 用 undefined、清空 path 用 ''）。
+ */
+export function resolveTrashProjectId(
+  scope: TrashScope,
+  selectedProjectId: string | null,
+  personalSpaceId: string | null | undefined,
+): string | undefined {
+  if (scope === 'personal') return personalSpaceId ?? undefined
+  if (scope === 'project') return selectedProjectId ?? undefined
+  return undefined
+}
+
 const PAGE_SIZE = 30
 
 export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
@@ -112,12 +128,11 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     loading.value = true
     error.value = ''
     try {
-      const projectId =
-        scope.value === 'personal'
-          ? personalSpaceId.value ?? undefined
-          : scope.value === 'project'
-            ? selectedProjectId.value ?? undefined
-            : undefined
+      const projectId = resolveTrashProjectId(
+        scope.value,
+        selectedProjectId.value,
+        personalSpaceId.value,
+      )
       const res = await trashControllerGetTrash({
         query: {
           projectId,
@@ -298,9 +313,11 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
             : await trashControllerClearProjectTrash({
                 path: {
                   projectId:
-                    scope.value === 'project'
-                      ? selectedProjectId.value ?? ''
-                      : personalSpaceId.value ?? '',
+                    resolveTrashProjectId(
+                      scope.value,
+                      selectedProjectId.value,
+                      personalSpaceId.value,
+                    ) ?? '',
                 },
               })
         if (res.error) throw res.error

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ref } from 'vue'
-import { useTrashList, resolveTrashScope } from './useTrashList'
+import { useTrashList, resolveTrashScope, resolveTrashProjectId } from './useTrashList'
 
 vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
   trashControllerGetTrash: vi.fn(),
@@ -398,5 +398,21 @@ describe('resolveTrashScope（入口 props → scope）', () => {
 
   it('空串 projectId 视同未传（路由参数缺失兜底）', () => {
     expect(resolveTrashScope('', undefined)).toBe('projects')
+  })
+})
+
+describe('resolveTrashProjectId（scope → projectId 来源，load/clear 共用）', () => {
+  it('personal → 个人空间根 id（id 未就绪 null → undefined，不回退）', () => {
+    expect(resolveTrashProjectId('personal', 'proj-9', SPACE_ID)).toBe(SPACE_ID)
+    expect(resolveTrashProjectId('personal', 'proj-9', null)).toBeUndefined()
+  })
+
+  it('project → 选定项目 id（未选 null → undefined）', () => {
+    expect(resolveTrashProjectId('project', 'proj-9', SPACE_ID)).toBe('proj-9')
+    expect(resolveTrashProjectId('project', null, SPACE_ID)).toBeUndefined()
+  })
+
+  it('projects → 无（全局回收站，projectId 不传）', () => {
+    expect(resolveTrashProjectId('projects', 'proj-9', SPACE_ID)).toBeUndefined()
   })
 })
