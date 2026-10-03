@@ -3,6 +3,7 @@
  *
  * 文件浏览器（个人空间）/ 项目详情共用一套创建逻辑，
  * 通过 getTargetId / refresh 两个参数注入各自的 parentId 来源与列表刷新方式。
+ * onCreated 在创建成功后回调新建节点 id（页面据此挂「撤销=删除新节点」snackbar，对齐 PC）。
  */
 import { ref } from 'vue'
 import { showToast, showLoadingToast, closeToast, showFailToast } from 'vant'
@@ -13,6 +14,7 @@ import { validateName } from '@/utils/validateName'
 export function useCreateDrawing(
   getTargetId: () => string | null | undefined,
   refresh: () => Promise<void>,
+  onCreated?: (createdId: string) => void,
 ) {
   const showCreateDrawingDialog = ref(false)
   const drawingNameInput = ref('')
@@ -49,6 +51,9 @@ export function useCreateDrawing(
       if (res.error) throw new Error(String(res.error))
       showToast(t('图纸创建成功'))
       await refresh()
+      // 创建成功才挂撤销入口（对齐 PC：无 createdId 不入栈）
+      const createdId = (res.data as { id?: string } | undefined)?.id
+      if (createdId) onCreated?.(createdId)
     } catch (e) {
       closeToast()
       showToast(t('创建失败，请重试'))

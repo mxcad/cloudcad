@@ -1155,5 +1155,12 @@ export default  {
     "3698": "{count} file(s) pending",
     "3699": "Failed to open external reference",
     "3700": "Failed to download external reference",
-    "3701": "Uploading external reference..."
+    "3701": "Uploading external reference...",
+    "3702": "Copied {count} file(s)",
+    "3703": "Moved {count} file(s)",
+    "3704": "No items to paste",
+    "3705": "Renamed",
+    "3706": "Folder created",
+    "3707": "Drawing created",
+    "3708": "Manage external references"
 }

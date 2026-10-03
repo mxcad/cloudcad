@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useFileSystemClipboard } from './fileSystemClipboard'
+import type { TransferSettings } from '@/utils/transferPolicy'
 
 describe('useFileSystemClipboard 单条目写入（A-29a）', () => {
   beforeEach(() => {
@@ -55,5 +56,40 @@ describe('useFileSystemClipboard 单条目写入（A-29a）', () => {
     expect(clip.mode).toBeNull()
     expect(clip.sourceRootId).toBe('')
     expect(clip.hasItems).toBe(false)
+  })
+})
+
+describe('useFileSystemClipboard 源项目策略快照（跨项目粘贴预判）', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  const settings: TransferSettings = { transferOutToProject: 'ALL', transferOutToPersonalSpace: null }
+
+  it('setClipboardSource 补写快照，粘贴预判可读', () => {
+    const clip = useFileSystemClipboard()
+    clip.setClipboard(['n1'], 'cut', 'prj-1', 'project')
+    expect(clip.sourceTransferSettings).toBeNull()
+
+    clip.setClipboardSource(settings)
+    expect(clip.sourceTransferSettings).toStrictEqual(settings)
+  })
+
+  it('新写入重置快照为 null（异步快照返回前不残留旧项目的策略）', () => {
+    const clip = useFileSystemClipboard()
+    clip.setClipboard(['n1'], 'cut', 'prj-1', 'project')
+    clip.setClipboardSource(settings)
+
+    clip.setClipboard(['n2'], 'copy', 'prj-2', 'project')
+    expect(clip.sourceTransferSettings).toBeNull()
+  })
+
+  it('清空剪贴板同时清空策略快照', () => {
+    const clip = useFileSystemClipboard()
+    clip.setClipboard(['n1'], 'cut', 'prj-1', 'project')
+    clip.setClipboardSource(settings)
+    clip.clearClipboard()
+
+    expect(clip.sourceTransferSettings).toBeNull()
   })
 })

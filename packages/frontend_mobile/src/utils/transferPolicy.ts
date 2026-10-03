@@ -6,7 +6,8 @@
  *   - 源为库 → move 恒拒绝（copy 豁免源权限）
  *   - 出向：源为项目 → 查 transferOutTo{目标域}
  *   - 入向：目标为项目 → 查 transferInFrom{源域}
- *   - 设置缺失（null）→ 保守拒绝（与 PC crossProjectPaste 语义一致）
+ *   - 查询失败（settings 为 null）→ 保守拒绝；字段为 null → 按默认放行
+ *     （对齐后端 modeAllows(null → true)，与 PC crossProjectPaste 语义一致）
  * 本文件只做枚举→本端 i18n 源串映射（reasonKey/reasonParams 供 UI 展示）。
  * 后端仍是最终裁决（权限/配额/策略）。
  *

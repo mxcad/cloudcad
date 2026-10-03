@@ -73,9 +73,9 @@ export function useBatchDownload() {
     }
   }
 
-  /** 创建 zip 任务（A-07/A-08 共用） */
+  /** 创建 zip 任务（A-07/A-08 共用；多选下载传 isFolder 让后端展开文件夹，对齐 PC 批量下载） */
   async function createZipTask(
-    fileList: Array<{ nodeId: string; fileName: string; relativePath?: string }>,
+    fileList: Array<{ nodeId: string; fileName: string; relativePath?: string; isFolder?: boolean }>,
     opts: { projectId?: string; name?: string } = {}
   ) {
     const res = await batchDownloadControllerCreateTask({
@@ -85,6 +85,7 @@ export function useBatchDownload() {
           fileName: f.fileName,
           formats: [] as string[],
           ...(f.relativePath ? { relativePath: f.relativePath } : {}),
+          ...(f.isFolder ? { isFolder: true } : {}),
         })),
         ...(opts.projectId ? { projectId: opts.projectId } : {}),
         mode: 'zip',

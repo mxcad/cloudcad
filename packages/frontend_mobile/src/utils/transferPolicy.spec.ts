@@ -44,6 +44,12 @@ describe('precheckTransfer 六域矩阵预判（二期 g）', () => {
     expect(precheckTransfer(personal('ps'), project('p1'), 'copy', null, tgt).allowed).toBe(false)
   })
 
+  it('个人空间→项目：入向字段为 null（查询成功但未配置）→ 按默认放行（对齐后端 modeAllows(null → true)）', () => {
+    const tgt: TransferSettings = { ...ALL, transferInFromPersonalSpace: null }
+    expect(precheckTransfer(personal('ps'), project('p1'), 'move', null, tgt).allowed).toBe(true)
+    expect(precheckTransfer(personal('ps'), project('p1'), 'copy', null, tgt).allowed).toBe(true)
+  })
+
   it('项目→项目：出向与入向都需允许（双查）', () => {
     const src: TransferSettings = { ...ALL, transferOutToProject: 'ALL' }
     const tgt: TransferSettings = { ...ALL, transferInFromProject: 'NONE' }

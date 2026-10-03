@@ -2,6 +2,15 @@
 // 多选操作项 key（回收站扩展 restore/permanentDelete；父组件 selectionAction handler 按此类型标注）
 // cut/copy=写入剪贴板（对齐 PC），move=单条目菜单的移动到文件夹（picker）
 export type SelectionActionKey = 'download' | 'delete' | 'move' | 'copy' | 'cut' | 'restore' | 'permanentDelete'
+
+// 多选操作项定义（父组件可注入：回收站传 恢复/彻底删除；项目页按权限传 disabled 门控）
+export interface SelectionActionDef {
+  key: SelectionActionKey
+  label: string
+  danger?: boolean
+  /** 权限/策略门控：禁用该操作（对齐 PC 按权限禁用批量操作按钮） */
+  disabled?: boolean
+}
 </script>
 
 <script setup lang="ts">
@@ -29,16 +38,11 @@ import {
   FileIcon,
 } from '../../../components/FileIcons'
 import { useFileSystemClipboard } from '../../../stores/fileSystemClipboard'
+import { useMultiSelect } from '../../../composables/useMultiSelect'
 
 type ListItem = FileListItem
 type SortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
 type SortOrder = 'asc' | 'desc'
-
-interface SelectionActionDef {
-  key: SelectionActionKey
-  label: string
-  danger?: boolean
-}
 
 const props = withDefaults(
   defineProps<{
@@ -68,6 +72,10 @@ const props = withDefaults(
     filterActive?: boolean
     /** 是否启用剪贴板「粘贴」条（文件夹视图传 true；项目列表/回收站传 false） */
     enablePaste?: boolean
+    /** 粘贴禁用（跨项目转移被源/目标策略禁止，对齐 PC canPaste 门控）：禁用粘贴按钮 + 红字原因 */
+    pasteDisabled?: boolean
+    /** 粘贴禁用原因（pasteDisabled 时展示） */
+    pasteDisabledReason?: string
   }>(),
   {
     showToolbar: true,
@@ -81,6 +89,8 @@ const props = withDefaults(
     showFab: true,
     filterActive: false,
     enablePaste: false,
+    pasteDisabled: false,
+    pasteDisabledReason: '',
   }
 )
 
@@ -179,16 +189,16 @@ function onThumbError(id: string) {
   thumbErrors.value.add(id)
 }
 
-// ── 长按多选 ──
-const isSelectionMode = ref(false)
-const selected = ref<Set<string>>(new Set())
+// ── 长按多选（状态机见 useMultiSelect：导航清选中/点按切换/清空退出；手势定时器绑 touch 事件留这里）──
+const { isSelectionMode, selected, enterWith, toggleSelect, selectAll, clearSelection, exitSelectionMode } = useMultiSelect(
+  () => props.breadcrumb,
+)
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
 
 function startLongPress(item: ListItem) {
   if (isSelectionMode.value) return
   longPressTimer = setTimeout(() => {
-    isSelectionMode.value = true
-    selected.value = new Set([item.id])
+    enterWith(item)
     if (navigator.vibrate) navigator.vibrate(10)
   }, 500)
 }
@@ -208,27 +218,14 @@ function onItemClick(item: ListItem) {
   }
 }
 
-function toggleSelect(item: ListItem) {
-  const s = new Set(selected.value)
-  if (s.has(item.id)) s.delete(item.id)
-  else s.add(item.id)
-  selected.value = s
-  if (s.size === 0) {
-    isSelectionMode.value = false
-  }
-}
-
-function exitSelectionMode() {
-  isSelectionMode.value = false
-  selected.value = new Set()
-}
-
 // 多选操作项由父组件注入（回收站传 恢复/彻底删除），不传沿用默认四项
 // 复制/剪切=写入剪贴板（对齐 PC 多选剪贴板），粘贴见工具栏粘贴条
 const selectionActions = computed<SelectionActionDef[]>(() =>
   props.selectionActions ?? [
     { key: 'copy', label: t('复制') },
     { key: 'cut', label: t('剪切') },
+    // 移动=直达文件夹选择器（对齐 PC 批量栏「移动」，比剪切+粘贴更便捷）
+    { key: 'move', label: t('移动') },
     { key: 'download', label: t('下载') },
     { key: 'delete', label: t('删除'), danger: true },
   ]
@@ -267,10 +264,9 @@ const allSelected = computed(() => props.items.length > 0 && props.items.every((
 
 function toggleSelectAll() {
   if (allSelected.value) {
-    selected.value = new Set()
-    if (selected.value.size === 0) isSelectionMode.value = false
+    clearSelection()
   } else {
-    selected.value = new Set(props.items.map((i) => i.id))
+    selectAll(props.items.map((i) => i.id))
   }
 }
 
@@ -353,13 +349,23 @@ async function onPullRefresh() {
       </div>
     </div>
 
-    <!-- ═══ 剪贴板粘贴条（Bug6）：文件夹视图且剪贴板非空时展示 ═══ -->
+    <!-- ═══ 剪贴板粘贴条（Bug6）：文件夹视图且剪贴板非空时展示；跨项目被策略禁止时禁用+原因 ═══ -->
     <div v-if="showPasteBar" class="paste-bar">
       <van-icon name="description" size="16" class="paste-bar-icon" />
-      <span class="paste-bar-text">
-        {{ clipboard.mode === 'cut' ? t('已剪切 {count} 项', { count: String(clipboard.itemIds.length) }) : t('已复制 {count} 项', { count: String(clipboard.itemIds.length) }) }}
-      </span>
-      <button class="paste-bar-btn" @click="emit('paste')">{{ t('粘贴') }}</button>
+      <div class="paste-bar-main">
+        <span class="paste-bar-text">
+          {{ clipboard.mode === 'cut' ? t('已剪切 {count} 项', { count: String(clipboard.itemIds.length) }) : t('已复制 {count} 项', { count: String(clipboard.itemIds.length) }) }}
+        </span>
+        <span v-if="pasteDisabled && pasteDisabledReason" class="paste-bar-reason">{{ pasteDisabledReason }}</span>
+      </div>
+      <button
+        class="paste-bar-btn"
+        :class="{ 'paste-bar-btn--disabled': pasteDisabled }"
+        :disabled="pasteDisabled"
+        @click="emit('paste')"
+      >
+        {{ t('粘贴') }}
+      </button>
       <button class="paste-bar-clear" @click="emit('clearPaste')">{{ t('清空') }}</button>
     </div>
 
@@ -508,24 +514,27 @@ async function onPullRefresh() {
       </div>
     </van-pull-refresh>
 
-    <!-- ═══ 多选操作栏（A-19 全选/取消全选当前已加载页）═══ -->
+    <!-- ═══ 多选操作栏（A-19 全选/取消全选当前已加载页；操作项可横向滚动防溢出；权限门控禁用）═══ -->
     <div v-if="isSelectionMode && selected.size > 0" class="selection-bar">
+      <span class="sel-count">{{ t('已选 {count} 项', { count: String(selected.size) }) }}</span>
       <button class="sel-select-all" @click="toggleSelectAll">
-        <van-icon :name="allSelected ? 'checked' : 'circle'" size="16" />
+        <van-icon :name="allSelected ? 'checked' : 'circle'" size="14" />
         <span>{{ allSelected ? t('取消全选') : t('全选') }}</span>
       </button>
-      <span class="sel-count">{{ t('已选 {count} 项', { count: String(selected.size) }) }}</span>
       <div class="sel-actions">
         <button
           v-for="a in selectionActions"
           :key="a.key"
-          :class="{ 'sel-del': a.danger }"
+          :class="['sel-action', { 'sel-del': a.danger, 'sel-disabled': a.disabled }]"
+          :disabled="a.disabled"
           @click="onSelectionAction(a.key)"
         >
           {{ a.label }}
         </button>
       </div>
-      <button class="sel-cancel" @click="exitSelectionMode">{{ t('取消') }}</button>
+      <button class="sel-cancel" @click="exitSelectionMode" :aria-label="t('取消')">
+        <van-icon name="close" size="18" />
+      </button>
     </div>
 
     <!-- A-10 排序选项（subname 显示当前方向） -->
@@ -942,7 +951,9 @@ async function onPullRefresh() {
   }
 }
 
-/* ── 多选操作栏 ── */
+/* ── 多选操作栏 ──
+   布局：[已选N项] [全选] [操作项…(可横向滚动)] [✕取消]
+   操作项区 flex:1 + overflow-x:auto，窄屏下横向滚动而非撑破/裁切布局 */
 .selection-bar {
   position: absolute;
   left: 0;
@@ -953,7 +964,7 @@ async function onPullRefresh() {
   padding: 10px 14px;
   background: var(--bg-secondary);
   border-top: 0.5px solid var(--divider);
-  gap: 12px;
+  gap: 10px;
   z-index: 10;
 }
 
@@ -961,32 +972,8 @@ async function onPullRefresh() {
   font-size: 13px;
   color: var(--accent);
   font-weight: 600;
-}
-
-.sel-actions {
-  display: flex;
-  gap: 14px;
-  flex: 1;
-  justify-content: flex-end;
-
-  button {
-    border: none;
-    background: transparent;
-    color: var(--text-primary);
-    font-size: 13px;
-    padding: 4px 6px;
-
-    &.sel-del {
-      color: #ff4444;
-    }
-  }
-}
-
-.sel-cancel {
-  border: none;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-size: 13px;
+  flex: none;
+  white-space: nowrap;
 }
 
 /* A-19 全选/取消全选（当前已加载页） */
@@ -999,6 +986,57 @@ async function onPullRefresh() {
   color: var(--accent);
   font-size: 12px;
   flex: none;
+  white-space: nowrap;
+}
+
+.sel-actions {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 隐藏横向滚动条（保留滚动能力），避免视觉噪音 */
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.sel-action {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 4px 8px;
+  flex: none;
+  white-space: nowrap;
+  border-radius: 6px;
+
+  &.sel-del {
+    color: #ff4444;
+  }
+
+  /* 权限/策略门控：禁用态弱化 + 不可点 */
+  &.sel-disabled {
+    color: var(--text-tertiary);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.sel-cancel {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
 }
 
 /* ── 剪贴板粘贴条（Bug6）── */
@@ -1016,11 +1054,29 @@ async function onPullRefresh() {
   flex-shrink: 0;
 }
 
-.paste-bar-text {
+/* 文案区纵向堆叠：首行=已复制/剪切 N 项，次行（禁用时）=策略禁止原因 */
+.paste-bar-main {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.paste-bar-text {
   min-width: 0;
   font-size: 12px;
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 策略禁止原因：红色小字，不抢占首行视觉分量 */
+.paste-bar-reason {
+  min-width: 0;
+  font-size: 11px;
+  color: var(--danger, #ff4444);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1035,6 +1091,11 @@ async function onPullRefresh() {
   color: #fff;
   font-size: 13px;
   font-weight: 600;
+
+  &--disabled {
+    background: var(--bg-tertiary, rgba(0, 0, 0, 0.08));
+    color: var(--text-tertiary);
+  }
 }
 
 .paste-bar-clear {

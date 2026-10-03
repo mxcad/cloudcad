@@ -11,8 +11,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showDialog, showConfirmDialog, showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant'
 import { t } from '@/languages'
-import { nodeControllerCreateFolder } from '@cloudcad/api-sdk/sdk.gen'
-import { nodeControllerBatchDeleteNodes } from '@cloudcad/api-sdk/sdk.gen'
+import { nodeControllerCreateFolder, nodeControllerDeleteNode } from '@cloudcad/api-sdk/sdk.gen'
+import { nodeControllerBatchDeleteNodes, trashControllerRestoreTrashItems } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerGetParentContext } from '@cloudcad/api-sdk/sdk.gen'
 import ProjectAuditLogPopup from '@/pages/shell/components/ProjectAuditLogPopup.vue'
 import type { AuditLogItem } from '@/composables/useProjectAuditLog'
@@ -52,11 +52,19 @@ import { ProjectPermission, getProjectRoleDisplayName } from '@/utils/projectPer
 import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.gen'
 import { useBatchDownload } from '@/composables/useBatchDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
-import type { SelectionActionKey } from '../components/UnifiedFileList.vue'
+import type { SelectionActionKey, SelectionActionDef } from '../components/UnifiedFileList.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
 import { useTransferTargets } from '@/composables/useTransferTargets'
 import { useCrossProjectTransfer } from '@/composables/useCrossProjectTransfer'
 import { useFileSystemClipboard } from '@/stores/fileSystemClipboard'
+import { useClipboardWrite } from '@/composables/useClipboardWrite'
+import { useClipboardPaste } from '@/composables/useClipboardPaste'
+import { useUndoSnackbar } from '@/composables/useUndoSnackbar'
+import { extractMoveCopyUndoIds } from '@/utils/moveCopyUndo'
+import { filterPasteCycleItems } from '@/utils/pasteCycleGuard'
+import { isCadFileName } from '@/utils/cadFile'
+import { showExternalReferenceManagePopup } from '@/plugins/vant/components/popup/showExternalReferenceManagePopup'
+import UndoSnackbar from '@/components/UndoSnackbar.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
 import DownloadFormatPopup from '../components/DownloadFormatPopup.vue'
 import BatchDownloadPanel from '../components/BatchDownloadPanel.vue'
@@ -406,6 +414,23 @@ const canManageTransfer = computed(() =>
   projectPermissions.value.includes(ProjectPermission.PROJECT_TRANSFER_MANAGE)
 )
 
+// 多选操作权限门控（对齐 PC canBatchCopy/Move/Delete/Download：按项目 FILE_* 权限；加载期悲观禁用）
+const canCopyFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_COPY))
+const canMoveFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_MOVE))
+const canDeleteFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_DELETE))
+const canDownloadFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_DOWNLOAD))
+const canCreateFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_CREATE))
+
+// 多选操作项：注入权限门控（个人空间自持无需门控，沿用 UnifiedFileList 默认四项）
+const fileSelectionActions = computed<SelectionActionDef[]>(() => [
+  { key: 'copy', label: t('复制'), disabled: !canCopyFile.value },
+  { key: 'cut', label: t('剪切'), disabled: !canMoveFile.value },
+  // 移动=直达文件夹选择器（对齐 PC 批量栏「移动」）；权限同剪切（FILE_MOVE）
+  { key: 'move', label: t('移动'), disabled: !canMoveFile.value },
+  { key: 'download', label: t('下载'), disabled: !canDownloadFile.value },
+  { key: 'delete', label: t('删除'), danger: true, disabled: !canDeleteFile.value },
+])
+
 function goRoleManagement() {
   router.push(`/shell/file/project/${projectId.value}/roles`)
 }
@@ -474,8 +499,8 @@ function onSelectionAction(action: SelectionActionKey, items: Array<{ id: string
   if (action === 'delete') {
     batchDelete(items)
   } else if (action === 'copy' || action === 'cut') {
-    // 剪贴板（Bug6）：源根=当前项目
-    clipboard.setClipboard(items.map((i) => i.id), action, projectId.value, 'project')
+    // 剪贴板（Bug6）：源根=当前项目；write 内部快照该项目出向策略（跨项目粘贴预判用）
+    clipboardWrite.write(items.map((i) => i.id), action, projectId.value, 'project', fileList.currentFolderId.value ?? '')
     showSuccessToast(
       action === 'cut'
         ? t('已剪切 {count} 项', { count: String(items.length) })
@@ -484,16 +509,7 @@ function onSelectionAction(action: SelectionActionKey, items: Array<{ id: string
   } else if (action === 'move') {
     openFolderPicker('move', items)
   } else if (action === 'download') {
-    for (const item of items) {
-      const a = document.createElement('a')
-      a.href = cachedApiUrl(`/file-system/nodes/${item.id}/download`)
-      a.download = item.name
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-    }
-    showSuccessToast(t('开始下载 {count} 个文件', { count: String(items.length) }))
+    void downloadSelection(items)
   }
 }
 
@@ -515,7 +531,14 @@ async function batchDelete(items: Array<{ id: string; name: string }>) {
     closeToast()
     if (res.error) throw new Error(String(res.error))
     showSuccessToast(t('删除成功'))
-    fileList.refresh()
+    await fileList.refresh()
+    // 撤销：trash 恢复这批节点 + 刷新文件列表（单步撤销，顶替既有 snackbar）
+    undo.trackUndo(t('已删除 {count} 个文件', { count: String(items.length) }), async () => {
+      const r = await trashControllerRestoreTrashItems({ body: { itemIds: items.map((i) => i.id) } })
+      if (r.error) throw new Error(String(r.error))
+      showSuccessToast(t('已恢复'))
+      await fileList.refresh()
+    })
   } catch (e) {
     closeToast()
     showFailToast(t('删除失败'))
@@ -527,12 +550,16 @@ const menuTarget = ref<{ id: string; name: string; isFolder?: boolean; path?: st
 const showMenuSheet = ref(false)
 const menuActions = computed(() => {
   const isFolder = !!menuTarget.value?.isFolder
+  // CAD 图纸 → 外部参照管理（对齐 PC isCadFile && canManageExternalReference visibilityCheck）
+  const isCad = !isFolder && menuTarget.value ? isCadFileName(menuTarget.value.name) : false
+  const canManageExtRef = projectPermissions.value.includes(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   const actions: Array<{ name: string; color?: string }> = [
     { name: t('打开') },
     // 文件 → 格式转换下载（A-06）；文件夹 → 打包下载（A-08）
     isFolder ? { name: t('打包下载') } : { name: t('格式转换下载') },
     // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
     ...(isFolder ? [] : [{ name: t('分享') }]),
+    ...(isCad && canManageExtRef ? [{ name: t('外部参照管理') }] : []),
     // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
     ...(isFolder ? [] : [{ name: t('版本历史') }]),
     { name: t('重命名') },
@@ -563,6 +590,8 @@ function onMenuAction(action: { name: string }) {
     void downloadFolder(target)
   } else if (action.name === t('分享')) {
     openShare(target)
+  } else if (action.name === t('外部参照管理')) {
+    void openExternalRefManage(target)
   } else if (action.name === t('版本历史')) {
     openVersionHistory(target)
   } else if (action.name === t('重命名')) {
@@ -573,11 +602,20 @@ function onMenuAction(action: { name: string }) {
   } else if (action.name === t('复制到剪贴板') || action.name === t('剪切')) {
     // A-29a：单条目剪贴板（对齐 PC copy_clipboard/cut；粘贴条由 UnifiedFileList 读取全局剪贴板展示）
     const mode = action.name === t('剪切') ? 'cut' : 'copy'
-    clipboard.setClipboard([target.id], mode, projectId.value, 'project')
+    clipboardWrite.write([target.id], mode, projectId.value, 'project', fileList.currentFolderId.value ?? '')
     showSuccessToast(mode === 'cut' ? t('已剪切') : t('已复制'))
   } else if (action.name === t('删除')) {
     batchDelete([target])
   }
+}
+
+/** 外部参照管理（列表直达，无需先打开编辑器）：按节点拉参照列表开管理面板（查看/下载/替换/上传+刷新）；
+ *  比 PC 更正确——PC 列表菜单该项实际绑定当前编辑器上下文（checkMissingReferences(undefined)），移动端对点选文件生效 */
+async function openExternalRefManage(target: { id: string }) {
+  await showExternalReferenceManagePopup({
+    ctx: { identifier: target.id, isPublic: false },
+    canManage: true,
+  })
 }
 
 // ── 列表内分享入口（阶段 5）：文件项菜单 → ShareCurrentPopup（有效期/二维码/已有分享/撤销）──
@@ -731,8 +769,35 @@ async function onTransferOwnership(member: { id: string; name: string }) {
 }
 
 // ── A-07 批量下载任务面板（zip 打包 + 单文件格式转换共用，3s 轮询）──
-const { createFolderZipTask, createSingleFormatTask } = useBatchDownload()
+const { createZipTask, createFolderZipTask, createSingleFormatTask } = useBatchDownload()
 const showBatchPanel = ref(false)
+
+// ── 多选「下载」（对齐 PC 批量下载）：单文件直接下（可靠），多项/含文件夹走 zip 任务队列 ──
+// 旧实现循环 <a> 点击触发多文件下载，浏览器会拦截后续下载（只下第一个），故收敛到任务队列
+async function downloadSelection(items: Array<{ id: string; name: string; isFolder?: boolean }>) {
+  if (items.length === 1 && !items[0].isFolder) {
+    const a = document.createElement('a')
+    a.href = cachedApiUrl(`/file-system/nodes/${items[0].id}/download`)
+    a.download = items[0].name
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    showSuccessToast(t('开始下载 {count} 个文件', { count: '1' }))
+    return
+  }
+  showLoadingToast({ message: t('正在创建打包任务...'), forbidClick: true })
+  try {
+    const fileList = items.map((i) => ({ nodeId: i.id, fileName: i.name, isFolder: i.isFolder }))
+    await createZipTask(fileList, { name: t('下载'), projectId: projectId.value })
+    closeToast()
+    showSuccessToast(t('打包任务已创建'))
+    showBatchPanel.value = true
+  } catch (e) {
+    closeToast()
+    showFailToast(t('打包任务创建失败'))
+  }
+}
 
 // ── A-06 格式转换下载（底部弹窗选格式）──
 // 转换格式（dwg/dxf/pdf）走异步单文件任务队列（对齐 PC）：同步 download-with-format
@@ -826,6 +891,13 @@ async function onRenameConfirm(name: string) {
     if (res.error) throw new Error(String(res.error))
     showSuccessToast(t('重命名成功'))
     fileList.refresh()
+    // 撤销：回写原名（对齐 PC rename undo rollback）
+    undo.trackUndo(t('已重命名'), async () => {
+      const r = await nodeControllerUpdateNode({ path: { nodeId: target.id }, body: { name: target.name } })
+      if (r.error) throw new Error(String(r.error))
+      showSuccessToast(t('已撤销'))
+      await fileList.refresh()
+    })
   } catch (e) {
     closeToast()
     showFailToast(t('重命名失败'))
@@ -852,6 +924,18 @@ async function ensurePersonalSpaceId() {
 
 // ── Bug6 剪贴板粘贴：把剪贴板内容粘贴到当前文件夹（cut→move 成功后清空）──
 const clipboard = useFileSystemClipboard()
+// 复制/剪切写入 + 源项目 6 域出向策略快照（源=当前项目，跨项目粘贴预判前置数据）
+const clipboardWrite = useClipboardWrite()
+// 粘贴预判：目标=当前项目；策略禁止跨项目转移 → 禁用粘贴 + 原因（对齐 PC）
+const pastePolicy = useClipboardPaste(() => ({ id: projectId.value, domain: 'project' }))
+// 粘贴门控=目标权限(FILE_CREATE) + 跨项目策略（对齐 PC canPaste = enableClipboard && canCreate && verdict）
+const canPasteNow = computed(() => pastePolicy.canPaste.value && canCreateFile.value)
+const pasteDisabledReasonNow = computed(() =>
+  !canCreateFile.value ? t('没有执行此操作的权限') : pastePolicy.pasteDisabledReason.value,
+)
+
+// 删除/复制/移动撤销：操作成功后浮出撤销条，限时内点「撤销」回滚；回滚失败经 onError 弹「撤销失败」
+const undo = useUndoSnackbar(5000, () => showFailToast(t('撤销失败')))
 
 function onClearPaste() {
   clipboard.clearClipboard()
@@ -859,6 +943,11 @@ function onClearPaste() {
 
 async function onPaste() {
   if (!clipboard.hasItems || !clipboard.mode) return
+  // 粘贴被目标权限/跨项目策略禁止：粘贴条已禁用，这里兜底拦截（对齐 PC canPaste 门控）
+  if (!canPasteNow.value) {
+    showFailToast(pasteDisabledReasonNow.value || t('当前策略不允许粘贴'))
+    return
+  }
   const mode = clipboard.mode
   const targetId = fileList.currentFolderId.value ?? projectId.value
   if (!targetId) {
@@ -879,7 +968,16 @@ async function onPaste() {
       return
     }
   }
-  const items = clipboard.itemIds.map((id) => ({ id, name: '' }))
+  // 环防护（对齐 PC D2）：剔除子树包含粘贴目标的剪贴板项（移入/复制到自身后代后端恒拒，先剔除避免批量部分失败）
+  const pasteIds = filterPasteCycleItems(clipboard.itemIds, [
+    ...fileList.breadcrumbs.value.map((b) => b.id),
+    targetId,
+  ])
+  if (pasteIds.length === 0) {
+    showFailToast(t('没有可粘贴的项目'))
+    return
+  }
+  const items = pasteIds.map((id) => ({ id, name: '' }))
   void doMoveOrCopy({ id: targetId, name: '' }, op, items, true)
 }
 
@@ -931,12 +1029,45 @@ async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | '
     } else {
       showSuccessToast(isClipboardPaste ? t('粘贴成功') : op === 'move' ? t('移动成功') : t('复制成功'))
     }
+    // ── 撤销（须在剪切+粘贴清空剪贴板前捕获源文件夹）──
+    // 回滚目标=仅实际变化的项（move=successIds、copy=createdIds）；部分成功只回滚成功项（对齐 PC）
+    const undoIds = extractMoveCopyUndoIds({
+      op,
+      isSingle: items.length === 1,
+      singleResultId: (res.data as { id?: string } | undefined)?.id,
+      batchData: data,
+      originalIds: items.map((i) => i.id),
+    })
+    if (op === 'copy') {
+      // 复制撤销：删除新建副本
+      if (undoIds.length > 0) {
+        undo.trackUndo(t('已复制 {count} 个文件', { count: String(undoIds.length) }), async () => {
+          const r = await nodeControllerBatchDeleteNodes({ body: { nodeIds: undoIds, permanently: true } })
+          if (r.error) throw new Error(String(r.error))
+          showSuccessToast(t('已撤销'))
+          await fileList.refresh()
+        })
+      }
+    } else {
+      // 移动撤销：把成功移动的节点移回源文件夹（剪切+粘贴=剪贴板源文件夹；直接移动=当前浏览文件夹）
+      const sourceFolder = isClipboardPaste
+        ? clipboard.sourceFolderId
+        : (fileList.currentFolderId.value ?? '')
+      if (undoIds.length > 0 && sourceFolder) {
+        undo.trackUndo(t('已移动 {count} 个文件', { count: String(undoIds.length) }), async () => {
+          const r = await nodeControllerBatchMoveNodes({ body: { nodeIds: undoIds, targetParentId: sourceFolder } })
+          if (r.error) throw new Error(String(r.error))
+          showSuccessToast(t('已撤销'))
+          await fileList.refresh()
+        })
+      }
+    }
     // 剪切粘贴：只要有项成功就清空剪贴板（对齐 PC movedIds.length>0；全失败保留可重试；复制粘贴保留）
     if (isClipboardPaste && op === 'move') {
       const moved = items.length === 1 ? 1 : (data?.successCount ?? 0)
       if (moved > 0) clipboard.clearClipboard()
     }
-    fileList.refresh()
+    await fileList.refresh()
   } catch (e) {
     closeToast()
     showFailToast(transferErrorMessage(e, op))
@@ -990,6 +1121,16 @@ async function onCreateFolderConfirm() {
     if (res.error) throw new Error(String(res.error))
     showToast(t('文件夹创建成功'))
     fileList.refresh()
+    // 撤销：彻底删除新建文件夹（对齐 PC createFolder undo rollback）
+    const createdId = (res.data as { id?: string } | undefined)?.id
+    if (createdId) {
+      undo.trackUndo(t('已创建文件夹'), async () => {
+        const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
+        if (r.error) throw new Error(String(r.error))
+        showSuccessToast(t('已撤销'))
+        await fileList.refresh()
+      })
+    }
   } catch (e) {
     closeToast()
     showToast('创建失败，请重试')
@@ -1005,6 +1146,15 @@ const {
 } = useCreateDrawing(
   () => fileList.currentFolderId.value ?? projectId.value,
   () => fileList.refresh(),
+  // 撤销：彻底删除新建图纸（对齐 PC createDrawing undo rollback）
+  (createdId) => {
+    undo.trackUndo(t('已创建图纸'), async () => {
+      const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
+      if (r.error) throw new Error(String(r.error))
+      showSuccessToast(t('已撤销'))
+      await fileList.refresh()
+    })
+  },
 )
 
 // ── 文件上传 ──
@@ -1137,7 +1287,10 @@ onMounted(() => {
           :sort-by="fileSortBy"
           :sort-order="fileSortOrder"
           :filter-active="fileList.hasActiveFilters.value"
+          :selection-actions="fileSelectionActions"
           :enable-paste="true"
+          :paste-disabled="!canPasteNow"
+          :paste-disabled-reason="pasteDisabledReasonNow"
           @item-click="enterFolder"
           @item-menu="onItemMenu"
           @breadcrumb-click="fileList.goBackTo"
@@ -1453,6 +1606,7 @@ onMounted(() => {
       @confirm="onFormatDownloadConfirm"
     />
     <BatchDownloadPanel v-model:show="showBatchPanel" />
+    <UndoSnackbar :visible="undo.visible.value" :message="undo.message.value" @undo="undo.onUndo()" />
   </div>
 </template>
 
