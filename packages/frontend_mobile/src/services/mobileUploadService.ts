@@ -192,7 +192,7 @@ export async function uploadFile(
     isUseServerExistingFile: false,
   };
   } catch (e) {
-    handleApiError(e, t(`上传失败: ${file.name}`));
+    handleApiError(e, `${t('上传失败')}: ${file.name}`);
     throw e;
   }
 }

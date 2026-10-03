@@ -156,7 +156,7 @@
 
 ### P1
 
-- [x] **C-02 修改有效期（续期）**：✅ 9 档（2h/6h/12h/1d/3d/7d/自定义/永不过期/立即过期）（→ P-01 收敛；创建弹窗 8 档 = 不含「立即过期」，见 C-11/C-12）
+- [x] **C-02 修改有效期（续期）**：✅ 9 档（2h/6h/12h/1d/3d/7d/自定义/永不过期/立即过期）（→ P-01 收敛；创建弹窗曾 8 档不含「立即过期」，见 C-11/C-12，**Batch 20 C-37 已补齐为九档**）
 - [x] **C-10 二维码**：✅ 创建面板内嵌 160px + 列表项「查看二维码」
 - [x] **C-06 创建时间字段**：✅ / **C-07 URL 展示 + 打开**：✅
 - [x] **C-16 状态判定修正**：✅ 客户端 expiresAt 判定（→ P-01 收敛 isShareExpired）
@@ -166,8 +166,8 @@
 - [x] **C-03 多选 + 批量撤销**：✅ 2026-10-01 长按进多选（500ms 手势，与文件列表/项目卡片同套）+ 点按切换选中（纯 CSS 圆圈勾选指示，不依赖 vant 图标名）+ 底部操作栏「取消/全选/批量撤销」；批量撤销=逐个 `shareControllerRevokeShare` 循环 + 成功/失败计数 toast（对齐 PC `handleBatchRevoke`，后端无批量端点）；多选时隐藏 FAB
 - [x] **C-04 排序**：✅ 2026-10-01 ShareManagePage 筛选条右侧加排序按钮（ActionSheet 选字段：创建时间/有效期/次数，同字段切方向↑↓）；`sortBy`/`sortOrder` 走服务端 `shareControllerListShares`（API 原生支持），watch 变化回第一页重拉；「次数」新键 3658
 - [x] **C-05 分页/加载更多**：✅ 2026-10-01 `loadShares(append)` page 累加 + `shareHasMore`（total/pageSize 推算，后端 ShareListResponseDto 无 totalPages）+ 列表 `@scroll` 触底加载 + 底条（加载中/没有更多了）；keyword/filter 变化回第一页
-- [x] **C-11 自定义天数**：✅ 2026-10-01 续期弹窗补「自定义天数」档 + 天数输入（1-365 钳制，`computeExpiresAtIso(option, days)` 走 platform）；`openRenewPopup` 改用 `detectShareExpiration` 反推初始档+天数（对齐 PC EditExpiryModal）。**注**：移动端创建弹窗的 `customDays` 原是死代码（模板从未渲染 custom 档/输入框）；2026-10-03 补齐（见 C-17），创建弹窗 8 档已与 PC ShareDialog 对齐
-- [x] **C-12 「立即过期」选项**：✅ 2026-10-01 续期弹窗补「立即过期」档（`computeExpiresAtIso` 返回 now-1s，后端视为已过期）；创建弹窗不加（新建即过期无意义，PC 因共用 ExpirationPicker 才显示，属 PC 小瑕疵）
+- [x] **C-11 自定义天数**：✅ 2026-10-01 续期弹窗补「自定义天数」档 + 天数输入（1-365 钳制，`computeExpiresAtIso(option, days)` 走 platform）；`openRenewPopup` 改用 `detectShareExpiration` 反推初始档+天数（对齐 PC EditExpiryModal）。**注**：移动端创建弹窗的 `customDays` 原是死代码（模板从未渲染 custom 档/输入框）；2026-10-03 补齐（见 C-17），创建弹窗九档已与 PC ShareDialog 对齐（`immediate` 见 C-37）
+- [x] **C-12 「立即过期」选项**：✅ 2026-10-01 续期弹窗补「立即过期」档（`computeExpiresAtIso` 返回 now-1s，后端视为已过期）；创建弹窗当时未加，当时判定「PC 因共用 ExpirationPicker 才显示，属 PC 小瑕疵」——**该判定已被 C-37 推翻**：PC 创建流程确实提供九档，属移动端真实差距，Batch 20 已补
 - [x] **C-13 复制成功行内反馈**：✅ 2026-10-03 与 C-27 重复合并关闭——C-27（Batch 17）的 `useShareLinkCopy`（`copiedKey` + 按钮行内 ✓ 2s）已对齐 PC `copiedToken`；Batch 18 又补第 6 个复制点（WorkCard 协同分享二维码面板，见 C-29）。本条不再单独跟踪
 - [x] **C-14 加载失败底条**：✅ 2026-10-01 `loadMoreFailed` 与整页 `error` 分离——翻页失败保留已加载列表、底条「加载失败，点击重试」（重跑当前页不重复追加）；首屏失败才整页错误态
 - [x] **C-15 空态「清除搜索」**：✅ 2026-10-01 搜索无结果时文案改「未找到相关分享」+「清除搜索」按钮（清空 keyword）；无关键词时保持「暂无分享」+「新建分享」
@@ -201,6 +201,17 @@
 - [x] **C-32 `t()` 里做模板插值，永不命中词表（P1 国际化）**：✅ `t(\`创建协同失败，错误码: ${errorCode}\`)`、`t(\`退出协同失败，错误码: ${ret}\`)`、`t(\`图纸 ${id}...\`)`、`t(\`项目 ${id}...\`)` 都是先插值再查表 → 必然 miss，非中文用户看到中文原文。改为「只国际化前缀」的既有正确写法（同文件 `:432` 的 `加入协同失败，错误码:` 与 PC `useCollabActions.ts:219/386` 同构）。新键 **3732**「创建协同失败，错误码: 」、**3733**「退出协同失败，错误码: 」、**3734**「项目」（四语；zh-TW 沿用同族键 3725 的「協作」、ko-KR 沿用 3725 的「협업」以保持三条错误文案成组）；`图纸` 复用既有键 3693 不新增。全仓审计：`grep -rn "t(\`" src` 后移动端仅剩 1 处同类（`mobileUploadService.ts:195`，非本域且属并发会话文件，见文末排票）
 - [x] **C-33 创建成功面板不能撤销分享（P2 体验差距）**：✅ PC `ShareDialog.tsx:793-809` 的成功视图是「撤销分享 + 完成」双按钮；移动端 `ShareManagePage.vue` 的成功视图只有二维码/复制/有效期，想撤销得先关弹窗再回列表找行。补一个 `success-revoke` 按钮（复用既有键 1880「撤销分享」+ `delete-o`，红色 10% 底沿用文件内 `#ff4444` 系），走既有 `onRevokeShare(token)`，成功后清 `createdResults` 回选择态（该链接已失效）。`onRevokeShare` 因此由 void 改为 `Promise<boolean>` 供调用方判定。**`ShareCurrentPopup.vue` 刻意不改**：它的成功视图正下方就是「已有分享」列表且 `handleCreate` 已刷新该列表（`:170`），新分享在一屏内就有撤销按钮，不存在此差距
 - [x] **C-34 单条撤销不检查 SDK error 包，失败也报「已撤销」（P1 正确性）**：✅ 本仓 SDK 默认 `responseStyle`（非 `'data'`）下失败**不抛**而是回 `{ error, request, response }`，所以 `await shareControllerRevokeShare(...)` 后不检查 `res.error` 就会把 404/无权限报成成功、且刷新列表后该分享仍在。同文件批量撤销（`:322-324`）与 `ShareCurrentPopup.handleRevoke`（`:204`）都检查了，唯独单条 `onRevokeShare` 漏。补检查（全仓 135 处 `res.error` 判定为既定写法）
+
+### Batch 20（2026-10-03 分享/协同细节对齐 PC，6 项 + 1 项查证非差距）
+
+- [x] **C-35 协同卡片参与者头像上限 5→8（P2）**：✅ `WorkCard.vue` 的 `slice(0, 5)` / `> 5` / `length - 5` 三处改 8，对齐 PC `CollabWorkCard.tsx` 的 `linkUserData.slice(0, 8)`（PC 同法 `+{length - 8}`）。移动端此前只显示 5 个，8 人协同时第 6-8 人被折叠成「+3」
+- [x] **C-36 在线人数只有数字无文案（P2）**：✅ `WorkCard.vue` 的徽标补 `{{ t('在线') }}`，对齐 PC `CollabWorkCard.tsx` 的 `{onlineCount}{t('在线')}`——移动端原本只有一个裸数字 + 绿点，语义要靠猜。保留绿点（移动端活跃指示），数字与文案间留半角空格（PC 是紧贴，`3Online`/`3온라인` 会读成单词；半角空格对 zh/zh-TW 无副作用）。新键 **3735**（在线/線上/Online/온라인，四语对齐 PC idMap 896）
+- [x] **C-37 创建弹窗缺第 9 档「立即过期」（P2，与 C-12 结论相反——已改）**：✅ PC 的 `ExpirationPicker.tsx` 由 `ShareDialog`（创建）与 `EditExpiryModal`（续期）**共用**，`getExpirationLabels()` 返回九档且 `immediate` 在内，所以 PC 创建时也能选「立即过期」（`computeExpiresInSeconds('immediate')` → 1 秒，后端视为已过期）。移动端两处创建入口都只给八档，与续期弹窗（九档）不一致。补法：①`ShareManagePage.vue` 创建弹窗 chips 数组补 `'immediate'`（插在 `custom` 与 `never` 之间，与同页续期弹窗同序）；②`ShareCurrentPopup.vue` 同补。**顺带收敛**：`ShareCurrentPopup.vue` 自己复制了一份本地 `type Expiration = '2h'|...`（漏 `immediate`），是 platform `ShareExpirationOption` 的重复清单，直接删掉改用平台类型（≥2 份重复清单即缺陷）。三处 `ref(SHARE_EXPIRATION_DEFAULT)` 推断出的窄联合补显式 `ref<ShareExpirationOption>`——不加类型，补了档位后模板回写即 `TS2322`。平台 `computeExpiresAtIso`/`computeExpiresInSeconds` 对 `immediate` 已有定义（now-1s / 1 秒），创建链路零改动即通
+- [x] **C-38 创建成功面板有效期只显示日期（P2）**：✅ PC `ShareDialog.tsx:784-790` 的成功提示用 `toLocaleString()`（含时分），移动端用 `formatExpiryDate` 的 `toLocaleDateString()`，选「1 小时」时看不出到点。**只改创建成功这一处**：新增 `formatCreatedExpiry()`（`toLocaleString()`），列表行仍走 `formatExpiryDate`（`toLocaleDateString()`）——PC 也是同样分档（`constants/share.ts:73` 用 date-only，成功视图用 full），全局替换反而造出新的不一致。空值仍显示「永不过期」（PC 成功视图在 `expiresAt` 为空时整个提示不渲染，移动端显示文案更明确，属刻意的移动端差异）
+- [➖] **C-39 分享列表无「共 N 项」总数（查证非差距，不改代码）**：➖ 原判断依据「PC 有总数」不成立：PC `Pagination.tsx` 的 `simple`/`full` 两种布局都只渲染箭头/页码/跳页/页大小，**从不渲染总数文本**——「共 N 项」在 `Pagination.tsx:112` 只是一行死注释。移动端分享列表是无限滚动（无页码条），PC 是分页表格，交互形态本就不同。台账已按「不是差距」结案；附带发现「共 {count} 项」（键 3345）在四语里都存着中文原文，属下方新发现的未翻译债务
+- [➖] **C-40 PC `Pagination` 为「共 N 项」预留了 60px 宽度却从不渲染（PC 侧缺陷，非移动端差距，只记录）**：➖ C-39 查证时顺手发现：`Pagination.tsx:35` 的 `TOTAL_TEXT_W = 60` 只被 `:112` 的宽度预算消费，全文件无任何渲染分支用它——每条分页栏恒定浪费 60px 横向空间。这是 PC 侧的死预算（可能是总数功能做过又被删、预算没跟着删），不在本次移动端对齐范围，不动 PC 代码，仅登记备查
+- [x] **P1-3 移动端最后一处 `t(\`...\`)` 整串进词表（P1 国际化，C-32 收尾）**：✅ `mobileUploadService.ts:195` 的 `t(\`上传失败: ${file.name}\`)` → `` `${t('上传失败')}: ${file.name}` `，复用既有键 2619（`上传失败`，非中文用户此前看到中文）。至此全仓 `t(\`...\`)` 内插值缺陷归零
+- [x] **G-07 i18n 词表完整性回归 spec（新增，把 Batch 19 踩过的坑变成门禁）**：✅ 新增 `src/languages/messages/catalog.spec.ts`（4 例）：idMap 键唯一且值为数字、四语言 id 集合与 idMap 双向对齐且无重复 id、新增键（≥3732）在 en-US/ko-KR 必须已翻译、不得出现空白文案（`t()` 会回 falsy 静默降级成中文源码串）。Batch 19 手工加键时两次把 idMap 弄成非法 JSON（末条无尾逗号、1412 条分隔符独占一行），都是靠跑测试才发现的。移动端无 `@vue/test-utils`，组件级回归不可行，故回归落在 store/service/词表这些可单测层
 
 ### C-B 后端/SDK 评估（2026-10-03，无缺口）
 
@@ -400,23 +411,25 @@ PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围
 | Batch 17（分享链接绝对化 + 复制反馈） | C-26 `toShareUrl` 收敛进 platform + 两端薄出口（移动端 4 边界覆盖 10 消费点、PC 5 处手写拼接换共享规则）+ C-27 `useShareLinkCopy` 行内反馈 | ✅ 2026-10-03 完成：platform `share/url.ts` + spec + barrel；PC `utils/shareUrl.ts` + ShareDialog ×4 + useShareActions；移动端 `utils/shareUrl.ts` + `useShareLinkCopy`（+5 例 spec）+ ShareManagePage/ShareCurrentPopup/useShareCreate。**门禁**：platform 13/76 绿、PC type-check 0 错 + share specs 19/19、移动端 vue-tsc 0 错 + 68 文件/633 用例绿 + `vite build` 成功。**⚠ i18n 事故**：`pnpm i18nCompile`（`voerkai18n compile -t`）会把 `idMap.json` 连同 4 个语言文件一起重建成「HEAD 减去尾部 89 个键」的状态（丢 1412 + 3633-3720，含批量下载/回收站/跨项目转移/分享撤销等文案），且不补本轮新键。已 `git show HEAD:` 逐文件恢复后**手工**追加 3721-3727 四语（1181/1182 条，四语 id 集合完全一致）；**此工具当前不可信，勿再跑**，i18n 键须手工加或在工具修复后统一跑 |
 | Batch 18（分享/协同收尾） | C-29 WorkCard 协同分享复制收敛进 `useShareLinkCopy` + 行内 ✓ + C-30 WorkCard 5 处硬编码中文包 `t()`（新键 3731）+ C-28 查证非差距 + 台账清尾 | ✅ 2026-10-03 完成：`WorkCard.vue` 删本地 `copyText` + 两份回落 refs 改调 `useShareLinkCopy`（`copiedKey === display.shareUrl` 行内 ✓）；`分享`×2/`退出`/`加入`×2 包 `t()`，**与 PC `CollabWorkCard.tsx` 三个按钮文案逐字一致**。C-13 由 C-27 覆盖故合并；D-10 查证为台账过时（`router.push('/shell/member')` 直达原生 MemberCenterPage）；G-02 重写（compile 工具不可信，改手工加键 + 四语校验）；G-04/G-05 状态归位；B-10/P-08 自动化/Batch 6b/G-03 排票见文末；C-28 查证非差距（后续裁定维持现状）。**门禁**：移动端 `vue-tsc --noEmit` 0 错 + vitest 70 文件 / 647 用例全绿 | 
 | Batch 19（分享/协同收口） | C-31 WorkCard 简化版补 isJoined 分支 + `@exit` / C-32 `t()` 内模板插值改前缀式（新键 3732-3734）/ C-33 创建成功面板补撤销 / C-34 单条撤销补 `res.error` 检查 | ✅ 2026-10-03 完成：`WorkCard.vue` + `CooperatePopup.vue` + `stores/collab.ts` + `ShareManagePage.vue` 共 4 文件，另加 i18n 3 键四语（3732/3733/3734，1188 条四语 id 集合一致）。C-31 是真功能 bug（已在协同中点「加入」→ 重复 joinWork + 误弹未保存确认）；C-32/C-34 是正确性缺陷（非中文用户看到中文错误码文案 / 撤销失败报成功）。C-33 只做 ShareManagePage（ShareCurrentPopup 一屏内已有撤销入口，见 C-33 说明）。**门禁**：移动端 `vue-tsc --noEmit` 0 错 |
-| ⏸ 待确认 | P-08 编辑器菜单审计自动化（命令覆盖已人工审计完成，门禁待建）/ Batch 6b 库层级视图 / G-03 测试覆盖率门禁 | 需用户裁定（明细见文末「待排票」） |
+| Batch 20（分享/协同细节对齐 PC） | C-35 头像上限 5→8 / C-36 在线数补「在线」文案 / C-37 创建弹窗补第 9 档「立即过期」（两处入口 + 删重复类型）/ C-38 创建成功有效期含时分 / C-39 分页总数查证非差距 / C-40 PC 死预算记录 / P1-3 最后一处 `t(\`...\`)` / G-07 词表回归 spec | ✅ 2026-10-03 完成：`WorkCard.vue` + `ShareManagePage.vue` + `ShareCurrentPopup.vue` + `services/mobileUploadService.ts` 共 4 文件 + i18n 1 键四语（3735，1189 条四语 id 集合一致）+ 新增 `catalog.spec.ts`（4 例）。C-37 推翻 C-12 旧判定（PC 创建确实九档）；C-39 推翻原排票依据（PC 从不渲染总数）；G-07 把 Batch 19 手工加键两次弄坏 idMap 的坑固化成门禁。**门禁**：移动端 `vue-tsc --noEmit` 0 错、vitest 71 文件/651 例全绿、`vite build` 成功 |
+| ⏸ 待确认 | P-08 编辑器菜单审计自动化（命令覆盖已人工审计完成，门禁待建）/ Batch 6b 库层级视图 / G-03 测试覆盖率门禁 / **P1-2 分享状态筛选（后端契约变更）** / **i18n 未翻译债务（en-US 89 条 / ko-KR 90 条）** | 需用户裁定（明细见文末「待排票」） |
 
 ---
 
-## 待排票（Batch 19 收尾，2026-10-03）
+## 待排票（Batch 20 收尾，2026-10-03）
 
-以下为已查证但**不进 Batch 19** 的项。本仓台账无 issue 编号约定，故在此集中登记而非散落在各处 ⏸ 标记里：
+以下为已查证但**不进 Batch 20** 的项。本仓台账无 issue 编号约定，故在此集中登记而非散落在各处 ⏸ 标记里：
 
 | 项 | 内容 | 为什么不进本批 | 前置条件 |
 |---|---|---|---|
 | **B-10 精细化错误文案** | 成员操作失败兜底 `移除失败`（`ProjectDetailPage.vue:356`）是硬编码中文且 idMap 无此键 | 低优；且 `ProjectDetailPage.vue` 正被并发会话修改，动它必冲突 | 与 G-02 的 i18n 流程改造一并处理 |
 | **P-08 菜单审计自动化** | 命令覆盖已人工审计完成（E-30~E-33 结论见 §E），但审计靠手工 grep，无门禁；引擎 ini 双源结构不同名（PC `myUiConfig.json` 196 命令 vs 移动端 `mxUIConfig.json` 55 命令） | 需先裁定审计范围与判定标准（能否合并两份数据本身就是 P-08 的结论：不能） | 用户裁定 |
 | **Batch 6b 库层级视图** | E-09 库内新建文件夹 / E-12 库内移动复制 / E-17 库面包屑 | 与 all-files 决策冲突，属产品形态取舍而非技术差距 | 用户裁定 |
-| **G-03 测试覆盖率门禁** | 「每条 P0/P1 修复带回归测试」未成为硬门禁；Batch 15~19 实际做法=改逻辑的条目带 spec、纯 UI 文案条目不带 | 是否升为强制规则影响后续所有批次的工作量 | 用户裁定 |
-| **P1-2 分享状态筛选需后端契约变更** | 移动端「全部/有效/已过期」是纯客户端过滤（`ShareManagePage.vue:482` 只过滤已加载的页），`shareHasMore` 由服务端 `total` 推导（未过滤总数，故过滤后会出现「还能加载但已无有效项」），全选计数按过滤后计——三处口径不一致。正确修需要 list 端点支持 status 查询参数 | 涉及后端 DTO/Controller → SDK 重生成 → 两端联动，属三层一致性的完整改动，半修（只改客户端）会掩盖问题 | 后端契约变更 + SDK 重生成 + 两端同改 |
-| **P1-3 移动端 `t(\`...\`)` 剩余 1 处同类缺陷** | `mobileUploadService.ts:195` 的 `t(\`上传失败: ${file.name}\`)` 整串进词表（永不命中，非中文用户看到中文）。C-32 已把 collab.ts 4 处全改完，全仓审计后仅剩这一处 | 非分享/协同域（属上传），且 `mobileUploadService.ts` 正被并发会话修改 | 与 B-10 一并处理，或该会话收尾时顺手改 |
-| **P2 分享面板细节差异（6 项）** | 头像上限 PC 8 vs 移动 5；在线数 PC「N在线」vs 移动数字+圆点；PC 创建弹窗第 9 档「立即过期」移动端缺；有效期精度 PC `toLocaleString()` vs 移动 `toLocaleDateString()`；PC `ShareDialog` 用 `{date}` replace 拼句 vs 移动硬编码全角冒号；移动端列表无分页总数/页码 | 均为视觉/信息密度差异，不影响功能正确性与数据 | 排入下一个分享批次 |
+| **G-03 测试覆盖率门禁** | 「每条 P0/P1 修复带回归测试」未成为硬门禁；Batch 15~20 实际做法=改逻辑的条目带 spec、纯 UI 文案条目不带（Batch 20 例外地给 i18n 词表加了 spec，见 G-07） | 是否升为强制规则影响后续所有批次的工作量 | 用户裁定 |
+| **P1-2 分享状态筛选需后端契约变更** | 移动端「全部/有效/已过期」是纯客户端过滤（`ShareManagePage.vue:493` 只过滤已加载的页），`shareHasMore` 由服务端 `total` 推导（未过滤总数，故过滤后会出现「还能加载但已无有效项」），全选计数按过滤后计——三处口径不一致。正确修需要 list 端点支持 status 查询参数 | 涉及后端 DTO/Controller → SDK 重生成 → 两端联动，属三层一致性的完整改动，半修（只改客户端）会掩盖问题 | 后端契约变更 + SDK 重生成 + 两端同改 |
+| **i18n 未翻译债务（en-US 89 条 / ko-KR 90 条）** | 英文 89 条、韩文 90 条仍是中文原文（en-US：id 3260-3479 区间为主；ko-KR 另含 3099），非中文用户在这些界面看到中文。G-07 的 spec 只钉住「新增键必须翻译」，存量债务靠它挡不住 | 批量补 179 条翻译是纯文案工作、与「分享/协同对齐」无关，且需要人工校对质量（不能靠机器翻一遍就提交） | 用户裁定是否排批量翻译批次 |
+| **C-40 PC `Pagination` 60px 死预算** | `Pagination.tsx:35` 的 `TOTAL_TEXT_W = 60` 只被 `:112` 宽度预算消费，全文件无渲染分支使用，每条分页栏恒定浪费 60px 横向空间 | PC 侧改动，超出「移动端向 PC 补齐」的方向 | PC 侧单独排票 |
 | **P2-PC 侧自身不一致（非移动端差距）** | `ShareTable.tsx:196` 的 `window.open(item.url, '_blank')` 直接用相对 path（同文件复制按钮走 `shareUrl()` 绝对化，见 C-26）；移动端两处是一致的 | 修它属 PC 侧改动，超出「移动端向 PC 补齐」的方向——这是 PC 的 bug | PC 侧单独排票 |
+| **C-38 残留：创建成功提示无「有效期至」前缀** | PC `ShareDialog.tsx:786` 用 `t('有效期至: {date}').replace(...)` 拼成完整句子；移动端成功提示是「clock 图标 + 日期」，没有「有效期至」文字 | 图标已承担指示作用，成功面板纵向空间紧；且 `有效期至` 不是现有键，加它需要四语新键 | 与批量翻译批次一并处理 |
 
-> 已关闭无需再排票：G-04（PC 通知中心孤儿代码，2026-09-10 已裁定保留）、C-13（与 C-27 重复合并）、D-10（台账过时，现状已与 PC 对齐）、**C-28（2026-10-03 裁定维持现状——分享日期两端都用本地化日期，一致即无差距；固定格式的适用域是审计/版本/文件历史这类需排序或导出的时间戳，不含分享列表；如未来要改，须 PC + 移动端 4 处同改）**。
+> 已关闭无需再排票：G-04（PC 通知中心孤儿代码，2026-09-10 已裁定保留）、C-13（与 C-27 重复合并）、D-10（台账过时，现状已与 PC 对齐）、**C-28（2026-10-03 裁定维持现状——分享日期两端都用本地化日期，一致即无差距；固定格式的适用域是审计/版本/文件历史这类需排序或导出的时间戳，不含分享列表；如未来要改，须 PC + 移动端 4 处同改）**、**P1-3 与 P2 六项（Batch 20 已做，见 §C Batch 20；其中「移动端列表无分页总数」经 C-39 查证为台账原判断有误——PC 从不渲染总数文本）**。

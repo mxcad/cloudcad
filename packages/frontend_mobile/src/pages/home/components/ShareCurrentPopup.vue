@@ -25,11 +25,10 @@ import {
   SHARE_EXPIRATION_DEFAULT,
   clampCustomDays,
   computeExpiresInSeconds,
+  type ShareExpirationOption,
 } from '@cloudcad/platform'
 import { errMsg } from '@/utils/apiError'
 import { shareUrl } from '@/utils/shareUrl'
-
-type Expiration = '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom' | 'never'
 
 // 后端 getFileShares 只返回 token/url/expiresAt/createdAt/createdBy/fileName
 // （无 id、无 usedCount，且服务端已过滤掉已过期项）
@@ -67,7 +66,8 @@ const visible = computed({
 // 壳模式下登录走 PC 页：未登录时给引导，不发起请求
 const { isAuthenticated } = useAuthState()
 
-const expiration = ref(SHARE_EXPIRATION_DEFAULT)
+// 显式类型：档位含第 9 档 'immediate'（对齐 PC ExpirationPicker 九档）
+const expiration = ref<ShareExpirationOption>(SHARE_EXPIRATION_DEFAULT)
 const customDays = ref(SHARE_CUSTOM_DAYS_DEFAULT)
 const creating = ref(false)
 const created = ref<{ token: string; url?: string; expiresAt?: string | null } | null>(null)
@@ -77,7 +77,7 @@ const loadingShares = ref(false)
 // G-09：已有分享加载失败不再静默吞掉（对齐 PC 的 listError 状态）
 const sharesLoadFailed = ref(false)
 
-const expirationItems: Array<{ value: Expiration; label: string }> = [
+const expirationItems: Array<{ value: ShareExpirationOption; label: string }> = [
   { value: '2h', label: t('2 小时') },
   { value: '6h', label: t('6 小时') },
   { value: '12h', label: t('12 小时') },
@@ -85,11 +85,12 @@ const expirationItems: Array<{ value: Expiration; label: string }> = [
   { value: '3d', label: t('3 天') },
   { value: '7d', label: t('7 天') },
   { value: 'custom', label: t('自定义') },
+  { value: 'immediate', label: t('立即过期') },
   { value: 'never', label: t('永不过期') },
 ]
 
 // 预设秒数收敛到 @cloudcad/platform（与 PC 共用）
-function expiresIn(exp: Expiration): number | undefined {
+function expiresIn(exp: ShareExpirationOption): number | undefined {
   return computeExpiresInSeconds(exp, customDays.value)
 }
 

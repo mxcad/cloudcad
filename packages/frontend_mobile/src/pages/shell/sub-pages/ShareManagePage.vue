@@ -206,6 +206,17 @@ function formatExpiryDate(dateStr: string | null): string {
   }
 }
 
+// 创建成功面板的到期提示：对齐 PC ShareDialog 用 toLocaleString()（含时分）；
+// 列表行仍走 formatExpiryDate 的 toLocaleDateString()（PC 两处同为分档口径）
+function formatCreatedExpiry(dateStr: string | null): string {
+  if (!dateStr) return t('永不过期')
+  try {
+    return new Date(dateStr).toLocaleString()
+  } catch {
+    return dateStr
+  }
+}
+
 // 创建时间展示（对齐 PC createdAt 列）
 function formatDate(iso: string): string {
   if (!iso) return '-'
@@ -546,7 +557,8 @@ const fileTotalPages = ref(1)
 
 const fileHasMore = computed(() => filePage.value < fileTotalPages.value)
 
-const expirationOptions = ref(SHARE_EXPIRATION_DEFAULT)
+// 保留显式类型：创建弹窗含第 9 档 'immediate'（对齐 PC getExpirationLabels 九档）
+const expirationOptions = ref<ShareExpirationOption>(SHARE_EXPIRATION_DEFAULT)
 const customDays = ref(SHARE_CUSTOM_DAYS_DEFAULT)
 
 // M-01 批量创建结果（对齐 PC ShareDialog BatchShareResult）：单文件=长度 1，
@@ -976,7 +988,7 @@ function onCustomDaysInput(e: Event) {
             </div>
             <div class="expire-hint">
               <van-icon name="clock-o" size="12" />
-              {{ formatExpiryDate(singleCreated.expiresAt ?? null) }}
+              {{ formatCreatedExpiry(singleCreated.expiresAt ?? null) }}
             </div>
             <!-- C-33：创建成功即可撤销，不必先关闭再回列表找行（对齐 PC ShareDialog） -->
             <button class="success-revoke" @click="onRevokeCreated">
@@ -1071,7 +1083,7 @@ function onCustomDaysInput(e: Event) {
             <div class="section-title">{{ t('有效期') }}</div>
             <div class="expire-chips">
               <button
-                v-for="opt in ['2h', '6h', '12h', '1d', '3d', '7d', 'custom', 'never'] as const"
+                v-for="opt in ['2h', '6h', '12h', '1d', '3d', '7d', 'custom', 'immediate', 'never'] as const"
                 :key="opt"
                 :class="['expire-chip', { active: expirationOptions === opt }]"
                 @click="expirationOptions = opt"

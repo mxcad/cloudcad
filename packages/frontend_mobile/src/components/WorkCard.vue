@@ -110,9 +110,10 @@ async function handleCopy() {
           </template>
         </span>
       </div>
+      <!-- 在线人数：保留圆点（移动端活跃指示），补「在线」文案对齐 PC {onlineCount}在线 -->
       <span class="card-badge">
         <span class="badge-dot" />
-        {{ display.onlineCount }}
+        {{ display.onlineCount }} {{ t('在线') }}
       </span>
     </div>
 
@@ -121,7 +122,7 @@ async function handleCopy() {
       <div class="avatars">
         <span v-if="display.participants.length === 0" class="no-participants">{{ t('暂无参与者') }}</span>
         <div
-          v-for="(p, i) in display.participants.slice(0, 5)"
+          v-for="(p, i) in display.participants.slice(0, 8)"
           :key="i"
           class="avatar"
           :title="p.name"
@@ -129,8 +130,8 @@ async function handleCopy() {
           <img v-if="p.avatar" :src="p.avatar" class="avatar-img" />
           <span v-else class="avatar-initial">{{ p.name?.[0] || '?' }}</span>
         </div>
-        <div v-if="display.participants.length > 5" class="avatar avatar-more">
-          +{{ display.participants.length - 5 }}
+        <div v-if="display.participants.length > 8" class="avatar avatar-more">
+          +{{ display.participants.length - 8 }}
         </div>
       </div>
       <div class="card-actions">
