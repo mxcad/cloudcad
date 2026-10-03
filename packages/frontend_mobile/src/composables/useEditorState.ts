@@ -21,6 +21,7 @@ export function useEditorState() {
     setIsPublicFile: store.setIsPublicFile,
     setCollaborationState: store.setCollaborationState,
     setCollabShareState: store.setCollabShareState,
+    setFromShare: store.setFromShare,
     setLibraryKey: store.setLibraryKey,
     setPersonalSpaceId: store.setPersonalSpaceId,
     setIsCurrentFileDeleted: store.setIsCurrentFileDeleted,

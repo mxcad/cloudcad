@@ -1174,5 +1174,12 @@ export default  {
     "3717": "Generated {a} share links, {b} failed",
     "3718": "Failed to create share link",
     "3719": "Deleted {n} items, {m} failed",
-    "3720": "Selected {count} items, drawings convert in the chosen format"
+    "3720": "Selected {count} items, drawings convert in the chosen format",
+    "3721": "Generating share links... ({current}/{total})",
+    "3722": "This file has not been shared yet",
+    "3723": "Please check the real-time collaboration service and retry",
+    "3724": "No participants yet",
+    "3725": "Failed to join collaboration, error code: ",
+    "3726": "You are currently collaborating. Leaving this page or opening a new file will exit the current session. Continue?",
+    "3727": "Continue"
 }

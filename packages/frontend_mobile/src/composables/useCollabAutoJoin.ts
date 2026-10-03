@@ -1,7 +1,7 @@
 import { t } from '@/languages';
 import { showLoadingToast, closeToast, showToast } from 'vant';
 import { useEditorStore } from '../stores/editor';
-import { getCooperate, encodeUserData, parseWorkData, exitGuardRef } from './useCooperate';
+import { getCooperate, encodeUserData, syncSessionFromWorkData, exitGuardRef } from './useCooperate';
 import type { Ref } from 'vue';
 
 interface UserInfo {
@@ -92,19 +92,7 @@ export function useCollabAutoJoin(user: Ref<UserInfo | null>) {
             editorStore.setCollaborationState({ isInCollaboration: true, workId });
 
             // Sync drawingId, projectId, fileName, libraryKey from work_data
-            const mxCooperate = getCooperate();
-            if (!mxCooperate) return;
-            mxCooperate.getWorks((workList: { work_id: number; work_data: string }[]) => {
-              const joined = workList.find((w: { work_id: number }) => w.work_id === workId);
-              if (!joined) return;
-              const data = parseWorkData(joined.work_data);
-              if (data && data.v === 3) {
-                if (data.drawingId) editorStore.setFileId(data.drawingId);
-                if (data.projectId) editorStore.setProjectId(data.projectId);
-                if (data.drawingName) editorStore.setFileName(data.drawingName);
-                if (data.libraryKey) editorStore.setLibraryKey(data.libraryKey);
-              }
-            });
+            syncSessionFromWorkData(workId);
 
             showToast(iRet === 0 ? t('已加入协同') : t('已恢复协同连接'));
           } else if (iRet < 0) {
@@ -126,7 +114,8 @@ export function useCollabAutoJoin(user: Ref<UserInfo | null>) {
           } else {
             joinResolved = true;
             cleanup();
-            showToast(`加入协同失败，错误码: ${iRet}`);
+            // 动态错误码只国际化前缀（对齐 PC 的拼法），整串进 i18n 永不命中
+            showToast(`${t('加入协同失败，错误码: ')}${iRet}`);
             editorStore.setCollabShareState({ fromCollabShare: false, targetWorkId: null });
           }
         },

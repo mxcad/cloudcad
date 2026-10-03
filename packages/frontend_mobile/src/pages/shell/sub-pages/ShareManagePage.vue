@@ -9,7 +9,7 @@
  */
 import { ref, watch, computed } from 'vue'
 import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
-import { copyText } from '@/utils/clipboard'
+import { useShareLinkCopy } from '@/composables/useShareLinkCopy'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import { shareControllerListShares, shareControllerRevokeShare, shareControllerUpdateShare, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
@@ -17,6 +17,7 @@ import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import QRCode from 'qrcode'
 import { t } from '@/languages'
 import { extractExtension } from '@/composables/useNodeFormatter'
+import { shareUrl } from '@/utils/shareUrl'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import {
   SHARE_CUSTOM_DAYS_DEFAULT,
@@ -141,7 +142,7 @@ async function loadShares(append = false) {
         statusText: status === 'active' ? t('有效') : t('已过期'),
         expireText: formatExpiryDate(expiresAt),
         usedCount: s.usedCount ?? 0,
-        url: s.url ?? '',
+        url: shareUrl(s.url),
         createdAt: s.createdAt ?? '',
         expiresAt,
       }
@@ -174,8 +175,17 @@ function onShareListScroll(e: Event) {
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) loadMoreShares()
 }
 
+let shareSearchGen = 0
+let shareSearchTimer: ReturnType<typeof setTimeout> | undefined
+
 watch(keyword, () => {
-  loadShares()
+  // 逐字符搜索会每键一次全量请求：与同页文件选择器（fileKeyword）同一 300ms 防抖口径
+  const gen = ++shareSearchGen
+  clearTimeout(shareSearchTimer)
+  shareSearchTimer = setTimeout(() => {
+    if (gen !== shareSearchGen) return
+    loadShares()
+  }, 300)
 })
 
 watch(filter, () => loadShares())
@@ -390,33 +400,19 @@ const qrPopupDataUrl = ref('')
 async function openQrPopup(url: string) {
   qrPopupUrl.value = url
   try {
-    qrPopupDataUrl.value = await QRCode.toDataURL(url, { width: 200, margin: 1 })
+    qrPopupDataUrl.value = await QRCode.toDataURL(url, { width: 160, margin: 1 })
   } catch {
     qrPopupDataUrl.value = ''
   }
   showQrPopup.value = true
 }
 
-const showLinkSheet = ref(false)
-const linkSheetUrl = ref('')
-
-/**
- * 复制链接：两级降级都失败时弹出只读输入框，让用户手动选中复制。
- * 原降级是 showToast(url) —— toast 无法被选中复制，等于没有兜底。
- */
-async function copyLinkWithFallback(url: string) {
-  if (!url) return
-  const result = await copyText(url)
-  if (result === 'failed') {
-    linkSheetUrl.value = url
-    showLinkSheet.value = true
-    return
-  }
-  showToast(t('已复制链接'))
-}
+// 复制走唯一出口 useShareLinkCopy：copyText → 失败回落手动复制面板 → 成功行内反馈
+// （copiedKey 用 url 当键，各按钮用「copiedKey === 自己的 url」判定，对齐 PC copiedToken）
+const { copiedKey, showLinkSheet, linkSheetUrl, copy } = useShareLinkCopy()
 
 function copyQrUrl() {
-  void copyLinkWithFallback(qrPopupUrl.value)
+  void copy(qrPopupUrl.value)
 }
 
 function onShareClick(item: ShareItem) {
@@ -459,7 +455,7 @@ function onActionSheetSelect(action: { name: string; className?: string }) {
   if (action.name === t('打开')) {
     window.open(url, '_blank')
   } else if (action.name === t('复制链接')) {
-    void copyLinkWithFallback(url)
+    void copy(url)
   } else if (action.name === t('修改有效期')) {
     openRenewPopup(item)
   } else if (action.name === t('查看二维码')) {
@@ -494,6 +490,19 @@ useLoginPrompt(() => loadShares())
 // ── 新建分享弹窗 ──
 const showCreateSharePopup = ref(false)
 const createLoading = ref(false)
+// G-06 实时进度（done/total），对齐 PC ShareDialog loading 视图的 (current/total)
+const createProgress = ref<{ done: number; total: number } | null>(null)
+const createLabel = computed(() => {
+  if (!createLoading.value) return t('创建')
+  const p = createProgress.value
+  if (p && p.total > 1) {
+    return t('正在生成分享链接... ({current}/{total})', {
+      current: String(p.done),
+      total: String(p.total),
+    })
+  }
+  return t('创建中...')
+})
 const createError = ref('')
 
 interface CreateFileOption {
@@ -657,6 +666,7 @@ async function handleCreateShare() {
 
   createLoading.value = true
   createError.value = ''
+  createProgress.value = null
   const results = await createShares(
     ids.map((id) => ({
       fileId: id,
@@ -664,13 +674,17 @@ async function handleCreateShare() {
     })),
     expirationOptions.value,
     customDays.value,
+    (done, total) => {
+      createProgress.value = { done, total }
+    },
   )
   createLoading.value = false
 
   const successCount = results.filter((r) => r.success).length
   const failCount = results.length - successCount
   if (successCount === 0) {
-    createError.value = t('创建失败，请重试')
+    // G-04：全失败时透出后端本地化文案（如配额不足），而不是只有笼统提示
+    createError.value = results[0]?.error ?? t('创建失败，请重试')
     return
   }
   createdResults.value = results
@@ -685,19 +699,24 @@ async function handleCreateShare() {
   }
 }
 
-async function copyCreatedLink(result: ShareCreateResult) {
-  if (!result.url) return
-  void copyLinkWithFallback(result.url)
+function copyCreatedLink(result: ShareCreateResult) {
+  void copy(result.url)
 }
 
 function closeCreateSharePopup() {
   showCreateSharePopup.value = false
   createdResults.value = []
+  createProgress.value = null
 }
 
 // 格式化有效期文本（含当前日期）
-function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d'): string {
-  const labels: Record<'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d', string> = {
+function formatExpirationDisplay(
+  expiration: 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom' | 'immediate'
+): string {
+  const labels: Record<
+    'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom' | 'immediate',
+    string
+  > = {
     never: t('永不过期'),
     '2h': t('2 小时'),
     '6h': t('6 小时'),
@@ -705,8 +724,15 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
     '1d': t('1 天'),
     '3d': t('3 天'),
     '7d': t('7 天'),
+    custom: t('自定义天数'),
+    immediate: t('立即过期'),
   }
   return labels[expiration] || expiration
+}
+
+// 自定义天数输入实时钳制：显示=保存（与续期弹窗、PC ExpirationPicker 同一 clampCustomDays）
+function onCustomDaysInput(e: Event) {
+  customDays.value = clampCustomDays(parseInt((e.target as HTMLInputElement).value, 10))
 }
 
 </script>
@@ -894,7 +920,10 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
           <div v-else class="qr-fallback">{{ t('二维码生成失败') }}</div>
           <div class="qr-url-row">
             <input class="share-url-input" :value="qrPopupUrl" readonly />
-            <button class="copy-btn" @click="copyQrUrl">{{ t('复制') }}</button>
+            <button class="copy-btn" @click="copyQrUrl">
+              <van-icon v-if="copiedKey === qrPopupUrl" name="success" size="14" />
+              <span v-else>{{ t('复制') }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -911,7 +940,7 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
             :disabled="selectedFileIds.length === 0 || createLoading"
             @click="handleCreateShare"
           >
-            {{ createLoading ? t('创建中...') : t('创建') }}
+            {{ createLabel }}
           </button>
           <button v-else class="panel-confirm" @click="closeCreateSharePopup">{{ t('完成') }}</button>
         </div>
@@ -920,10 +949,13 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
           <div class="share-success">
             <van-icon name="checked" size="48" color="var(--accent)" />
             <span class="success-text">{{ t('分享链接已创建') }}</span>
-            <img v-if="createdQrDataUrl" class="qr-image qr-image--inline" :src="createdQrDataUrl" alt="QR" />
+            <img v-if="createdQrDataUrl" class="qr-image" :src="createdQrDataUrl" alt="QR" />
             <div class="share-url-row">
               <input class="share-url-input" :value="singleCreated.url" readonly />
-              <button class="copy-btn" @click="copyCreatedLink(singleCreated)">{{ t('复制') }}</button>
+              <button class="copy-btn" @click="copyCreatedLink(singleCreated)">
+                <van-icon v-if="copiedKey === singleCreated.url" name="success" size="14" />
+                <span v-else>{{ t('复制') }}</span>
+              </button>
             </div>
             <div class="expire-hint">
               <van-icon name="clock-o" size="12" />
@@ -954,7 +986,10 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
               <template v-if="r.success">
                 <div class="share-url-row">
                   <input class="share-url-input" :value="r.url" readonly />
-                  <button class="copy-btn" @click="copyCreatedLink(r)">{{ t('复制') }}</button>
+                  <button class="copy-btn" @click="copyCreatedLink(r)">
+                    <van-icon v-if="copiedKey === r.url" name="success" size="14" />
+                    <span v-else>{{ t('复制') }}</span>
+                  </button>
                 </div>
               </template>
               <div v-else class="batch-item-error">{{ r.error }}</div>
@@ -1014,13 +1049,25 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
             <div class="section-title">{{ t('有效期') }}</div>
             <div class="expire-chips">
               <button
-                v-for="opt in ['2h', '6h', '12h', '1d', '3d', '7d', 'never'] as const"
+                v-for="opt in ['2h', '6h', '12h', '1d', '3d', '7d', 'custom', 'never'] as const"
                 :key="opt"
                 :class="['expire-chip', { active: expirationOptions === opt }]"
                 @click="expirationOptions = opt"
               >
                 {{ formatExpirationDisplay(opt) }}
               </button>
+            </div>
+            <!-- 自定义天数输入（1-365，对齐 PC ExpirationPicker 与同页续期弹窗） -->
+            <div v-if="expirationOptions === 'custom'" class="custom-days-row">
+              <input
+                :value="customDays"
+                class="custom-days-input"
+                type="number"
+                :min="SHARE_CUSTOM_DAYS_MIN"
+                :max="SHARE_CUSTOM_DAYS_MAX"
+                @input="onCustomDaysInput"
+              />
+              <span class="custom-days-unit">{{ t('天后过期') }}</span>
             </div>
           </div>
         </template>
@@ -1659,17 +1706,12 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
 }
 
 .qr-image {
-  width: 200px;
-  height: 200px;
-  border-radius: 8px;
-  background: #fff;
-  padding: 8px;
-  box-sizing: border-box;
-}
-
-.qr-image--inline {
   width: 160px;
   height: 160px;
+  border-radius: 8px;
+  background: var(--van-white);
+  padding: 8px;
+  box-sizing: border-box;
 }
 
 .qr-fallback {

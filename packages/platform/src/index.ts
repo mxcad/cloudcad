@@ -68,6 +68,9 @@ export type {
   ShareExpirationDetection,
 } from './share/expiry';
 
+// ── 分享链接绝对化（纯计算，origin 由调用端传入） ──
+export { toShareUrl } from './share/url';
+
 // ── 会员计价与配额（纯计算） ──
 export {
   orderAmountCents,

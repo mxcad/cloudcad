@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { t } from '@/languages';
 import { showToast } from 'vant';
+import QRCode from 'qrcode';
+import FloatingPopup from './FloatingPopup.vue';
 import ShareLinkSheet from './ShareLinkSheet.vue';
 import { copyText } from '@/utils/clipboard';
 import type { Work } from '../composables/useCooperate';
@@ -35,17 +37,31 @@ const emit = defineEmits<{
 
 const showLinkSheet = ref(false);
 const linkSheetUrl = ref('');
+const showQr = ref(false);
+const qrDataUrl = ref('');
 
 async function handleShare() {
   const url = props.display.shareUrl;
-  const result = await copyText(url);
+  linkSheetUrl.value = url;
+  showQr.value = true;
+  // 与分享管理页同一渲染口径（qrcode toDataURL 160px）
+  try {
+    qrDataUrl.value = await QRCode.toDataURL(url, { width: 160, margin: 1 });
+  } catch {
+    qrDataUrl.value = '';
+    showToast(t('二维码生成失败'));
+  }
+}
+
+async function handleCopy() {
+  const result = await copyText(props.display.shareUrl);
   // 两级降级都失败：弹出只读输入框让用户手动选中复制
   if (result === 'failed') {
-    linkSheetUrl.value = url;
     showLinkSheet.value = true;
     return;
   }
   showToast(t('分享链接已复制'));
+  showQr.value = false;
 }
 </script>
 
@@ -55,6 +71,32 @@ async function handleShare() {
     :class="{ 'work-card-active': display.isJoined }"
   >
     <ShareLinkSheet v-model:show="showLinkSheet" :url="linkSheetUrl" :title="t('分享协同')" />
+
+    <!-- 协同分享二维码（对齐 PC CollabShareModal 的二维码 + 链接双通道） -->
+    <FloatingPopup
+      v-model:show="showQr"
+      :title="t('分享二维码')"
+      :anchors="[360]"
+      :draggable="false"
+      :magnetic="false"
+      :lazy-render="false"
+    >
+      <div class="qr-wrap">
+        <img v-if="qrDataUrl" :src="qrDataUrl" class="qr-img" alt="" />
+        <p v-else class="qr-error">{{ t('二维码生成失败') }}</p>
+        <input
+          class="qr-input"
+          :value="display.shareUrl"
+          readonly
+          :aria-label="t('分享链接')"
+        />
+      </div>
+      <template #footer>
+        <van-button type="primary" block round @click="handleCopy">
+          {{ t('复制') }}
+        </van-button>
+      </template>
+    </FloatingPopup>
 
     <!-- 主体行 -->
     <div class="card-main">
@@ -81,7 +123,7 @@ async function handleShare() {
     <!-- 底部行：头像 + 按钮 -->
     <div v-if="showFooter" class="card-foot">
       <div class="avatars">
-        <span v-if="display.participants.length === 0" class="no-participants">暂无参与者</span>
+        <span v-if="display.participants.length === 0" class="no-participants">{{ t('暂无参与者') }}</span>
         <div
           v-for="(p, i) in display.participants.slice(0, 5)"
           :key="i"
@@ -108,7 +150,7 @@ async function handleShare() {
           :disabled="connecting"
           @click="emit('join', display.work.work_id)"
         >
-          <van-loading v-if="connecting" color="#fff" size="14px" />
+          <van-loading v-if="connecting" color="var(--van-white)" size="14px" />
           <span v-else>加入</span>
         </button>
       </div>
@@ -122,7 +164,7 @@ async function handleShare() {
         :disabled="connecting"
         @click="emit('join', display.work.work_id)"
       >
-        <van-loading v-if="connecting" color="#fff" size="14px" />
+        <van-loading v-if="connecting" color="var(--van-white)" size="14px" />
         <span v-else>加入</span>
       </button>
     </div>
@@ -241,6 +283,45 @@ async function handleShare() {
   flex-shrink: 0;
 }
 
+/* ===== 分享二维码 ===== */
+.qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: var(--space-lg) var(--space-md) 0;
+}
+
+.qr-img {
+  width: 160px;
+  height: 160px;
+  border-radius: var(--radius-md);
+}
+
+.qr-error {
+  margin: 0;
+  width: 160px;
+  padding: 24px 0;
+  text-align: center;
+  font-size: var(--van-font-size-sm);
+  color: var(--van-text-color-3);
+  background: var(--van-background-2);
+  border-radius: var(--radius-md);
+}
+
+.qr-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  outline: none;
+}
+
 /* ===== 头像 ===== */
 .avatar {
   width: 28px;
@@ -272,7 +353,7 @@ async function handleShare() {
   align-items: center;
   justify-content: center;
   background: var(--primary);
-  color: #fff;
+  color: var(--van-white);
   font-size: 10px;
   font-weight: 600;
 }
@@ -312,12 +393,12 @@ async function handleShare() {
 
 .btn-primary {
   background: var(--btn-primary-bg, var(--primary));
-  color: #fff;
+  color: var(--van-white);
 }
 
 .btn-danger {
   background: var(--danger);
-  color: #fff;
+  color: var(--van-white);
 }
 
 .btn-outline {

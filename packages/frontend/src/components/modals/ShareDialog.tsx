@@ -39,6 +39,7 @@ import {
   formatExpiryDate,
 } from '@/constants/share';
 import { t } from '@/languages';
+import { shareUrl } from '@/utils/shareUrl';
 import './ShareManageDialog.css';
 
 interface ShareListItem {
@@ -409,13 +410,11 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   };
 
   const handleCopyItem = async (linkUrl: string, token?: string) => {
-    await copyShareItem(
-      `${window.location.origin}${linkUrl}`,
-      token ?? linkUrl
-    );
+    await copyShareItem(shareUrl(linkUrl), token ?? linkUrl);
   };
 
-  const fullUrl = shareInfo ? `${window.location.origin}${shareInfo.url}` : '';
+  // 后端返回相对 path，展示/复制/二维码统一走 platform toShareUrl（两端同一规则）
+  const fullUrl = shareUrl(shareInfo?.url);
 
   const renderListView = () => (
     <div className="share-dialog-body">
@@ -502,7 +501,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                     <div className="share-dialog-link-cell">
                       <span
                         className="share-dialog-link-text"
-                        title={`${window.location.origin}${item.url}`}
+                        title={shareUrl(item.url)}
                       >
                         {item.url}
                       </span>
@@ -714,7 +713,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                       </span>
                     </div>
                     <ShareLinkBar
-                      url={`${window.location.origin}${result.url}`}
+                      url={shareUrl(result.url)}
                       label={t('复制分享链接')}
                       showHint={false}
                       copyOptions={{

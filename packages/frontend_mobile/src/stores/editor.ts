@@ -33,6 +33,8 @@ interface EditorState {
   collaborationWorkId: number | null;
   fromCollabShare: boolean;
   targetCollabWorkId: number | null;
+  /** 当前图纸是否经普通分享链接（shareToken）打开——决定新建协同的 sourceType='share' */
+  fromShare: boolean;
   libraryKey: 'drawing' | 'block' | null;
   personalSpaceId: string | null;
   isCurrentFileDeleted: boolean;
@@ -68,6 +70,7 @@ const defaultState: EditorState = {
   collaborationWorkId: null,
   fromCollabShare: false,
   targetCollabWorkId: null,
+  fromShare: false,
   libraryKey: null,
   personalSpaceId: null,
   isCurrentFileDeleted: false,
@@ -156,6 +159,10 @@ export const useEditorStore = defineStore('editor', () => {
     state.targetCollabWorkId = targetWorkId;
   }
 
+  function setFromShare(val: boolean) {
+    state.fromShare = val;
+  }
+
   function setLibraryKey(key: 'drawing' | 'block' | null) {
     state.libraryKey = key;
   }
@@ -206,6 +213,7 @@ export const useEditorStore = defineStore('editor', () => {
     state.collaborationWorkId = null;
     state.fromCollabShare = false;
     state.targetCollabWorkId = null;
+    state.fromShare = false;
     state.libraryKey = null;
     state.personalSpaceId = null;
     state.isCurrentFileDeleted = false;
@@ -245,6 +253,7 @@ export const useEditorStore = defineStore('editor', () => {
     setIsPublicFile,
     setCollaborationState,
     setCollabShareState,
+    setFromShare,
     setLibraryKey,
     setPersonalSpaceId,
     setIsCurrentFileDeleted,

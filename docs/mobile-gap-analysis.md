@@ -156,7 +156,7 @@
 
 ### P1
 
-- [x] **C-02 修改有效期（续期）**：✅ 7 档 + 永不过期（→ P-01 收敛；PC 另有「自定义天数/立即过期」见 C-11/C-12）
+- [x] **C-02 修改有效期（续期）**：✅ 9 档（2h/6h/12h/1d/3d/7d/自定义/永不过期/立即过期）（→ P-01 收敛；创建弹窗 8 档 = 不含「立即过期」，见 C-11/C-12）
 - [x] **C-10 二维码**：✅ 创建面板内嵌 160px + 列表项「查看二维码」
 - [x] **C-06 创建时间字段**：✅ / **C-07 URL 展示 + 打开**：✅
 - [x] **C-16 状态判定修正**：✅ 客户端 expiresAt 判定（→ P-01 收敛 isShareExpired）
@@ -166,7 +166,7 @@
 - [x] **C-03 多选 + 批量撤销**：✅ 2026-10-01 长按进多选（500ms 手势，与文件列表/项目卡片同套）+ 点按切换选中（纯 CSS 圆圈勾选指示，不依赖 vant 图标名）+ 底部操作栏「取消/全选/批量撤销」；批量撤销=逐个 `shareControllerRevokeShare` 循环 + 成功/失败计数 toast（对齐 PC `handleBatchRevoke`，后端无批量端点）；多选时隐藏 FAB
 - [x] **C-04 排序**：✅ 2026-10-01 ShareManagePage 筛选条右侧加排序按钮（ActionSheet 选字段：创建时间/有效期/次数，同字段切方向↑↓）；`sortBy`/`sortOrder` 走服务端 `shareControllerListShares`（API 原生支持），watch 变化回第一页重拉；「次数」新键 3658
 - [x] **C-05 分页/加载更多**：✅ 2026-10-01 `loadShares(append)` page 累加 + `shareHasMore`（total/pageSize 推算，后端 ShareListResponseDto 无 totalPages）+ 列表 `@scroll` 触底加载 + 底条（加载中/没有更多了）；keyword/filter 变化回第一页
-- [x] **C-11 自定义天数**：✅ 2026-10-01 续期弹窗补「自定义天数」档 + 天数输入（1-365 钳制，`computeExpiresAtIso(option, days)` 走 platform）；`openRenewPopup` 改用 `detectShareExpiration` 反推初始档+天数（对齐 PC EditExpiryModal）。**注**：移动端创建弹窗的 `customDays` 原是死代码（模板从未渲染 custom 档/输入框），本次只补续期弹窗；创建弹窗补 custom 档留待后续（PC ShareDialog 有，属另一缺口）
+- [x] **C-11 自定义天数**：✅ 2026-10-01 续期弹窗补「自定义天数」档 + 天数输入（1-365 钳制，`computeExpiresAtIso(option, days)` 走 platform）；`openRenewPopup` 改用 `detectShareExpiration` 反推初始档+天数（对齐 PC EditExpiryModal）。**注**：移动端创建弹窗的 `customDays` 原是死代码（模板从未渲染 custom 档/输入框）；2026-10-03 补齐（见 C-17），创建弹窗 8 档已与 PC ShareDialog 对齐
 - [x] **C-12 「立即过期」选项**：✅ 2026-10-01 续期弹窗补「立即过期」档（`computeExpiresAtIso` 返回 now-1s，后端视为已过期）；创建弹窗不加（新建即过期无意义，PC 因共用 ExpirationPicker 才显示，属 PC 小瑕疵）
 - [ ] **C-13 复制成功行内反馈**：⬜ PC copiedToken 该行图标变 ✓ 2s；移动端仅 toast（可接受，低优）
 - [x] **C-14 加载失败底条**：✅ 2026-10-01 `loadMoreFailed` 与整页 `error` 分离——翻页失败保留已加载列表、底条「加载失败，点击重试」（重跑当前页不重复追加）；首屏失败才整页错误态
@@ -175,7 +175,21 @@
 ### P3
 
 - [x] **C-08 新建分享文件选择器**：✅ 双 scope（personal_space+all_projects）并集去重 + 搜索 + 加载更多 + 错误可重试（2026-10-01 修复恒空问题）
-- [ ] **C-09 批量分享**：⏸ 留待（高复杂，2026-10-01 评估）PC 文件选择器可多选 → 逐个生成 + (done/total) 进度；移动端选择器单选（selectedFileId 单值）。修：选择器加多选（长按/勾选）+ 逐个创建 + 进度汇总——涉及选择器交互重构，单独立项
+- [x] **C-09 批量分享**：✅ 2026-10-03 选择器改多选（`selectedFileIds` 数组 + 勾选）+ `useShareCreate.createShares` 逐文件循环（同一 expiresIn、失败隔离）+ 结果列表逐项复制；全成功自动关弹窗（对齐 PC），部分失败停留结果视图供排查。实时进度见 C-20
+
+### Batch 15（2026-10-03 分享细节对齐 PC，7 项）
+
+- [x] **C-17 创建弹窗补「自定义天数」档**：✅ ShareCurrentPopup + ShareManagePage 创建弹窗都补 `custom` 档 + 天数输入（`clampCustomDays` 1-365，实时钳制，`computeExpiresInSeconds` 走 platform）；`formatExpirationDisplay` 签名扩 `'custom' | 'immediate'` 标签
+- [x] **C-18 已有分享列表补链接 + 复制**：✅ ShareCurrentPopup 已有分享行对齐 PC ShareDialog 列表视图（链接 + 复制 + 有效期 + 撤销）；复制收敛为 `copyShareUrl` 唯一出口（创建结果与已有分享共用，失败回落 ShareLinkSheet 手动复制）
+- [x] **C-19 删死分支 + 修正列表 key**：✅ `:key="item.id"` → `item.token`（`getFileShares` 不返回 id，原 key 恒 undefined）；删 `usedCount`「已访问 N 次」分支（该端点不返回此字段）+ 删「已过期」徽标（服务端 `AND: [{ OR: [expiresAt:null, expiresAt>now] }]` 已过滤过期项，判定恒 false）+ 删 `FileShareItem` 的 `id`/`name`/`usedCount` 字段与 `isShareExpired` 导入
+- [x] **C-20 批量创建实时进度**：✅ `createShares` 加 `onProgress(done, total)`（不传行为不变），ShareManagePage 按钮显示「正在生成分享链接... (done/total)」；`useShareCreate.spec.ts` +2 例（含失败项也计进度，与 PC `batchResults.length` 语义一致）
+- [x] **C-21 错误文案走 `errMsg` 唯一出口**：✅ `errMsg` 补裸字符串直通（SDK `res.error` 常是字符串，原实现会塌成兜底文案或打印 `[object Object]`）；ShareCurrentPopup 创建/撤销、ShareManagePage 全失败提示、useShareCreate 逐文件错误全部改走 `errMsg(e, fallback)`；`apiError.spec.ts` +2 断言
+- [x] **C-22 撤销确认文案统一**：✅ 两处入口统一为「撤销后该分享链接将立即失效，确定撤销？」（原 ShareCurrentPopup 用「对方将无法继续访问该图纸」）
+- [x] **C-23 已有分享错误态/空态**：✅ 加载失败不再静默吞掉 → 错误态 + 「重试」（对齐 PC `listError`）；无分享 → 「还没有分享过这个文件」（对齐 PC 空态，新键 3722）
+- [x] **C-24 分享搜索防抖**：✅ ShareManagePage `keyword` 变化 300ms 防抖 + 代次守卫（与文件选择器 `fileKeyword` 同套模式），避免逐键重拉列表
+- [x] **C-25 二维码尺寸统一 160**：✅ QR 弹窗 200→160（与创建成功面板内嵌、PC ShareDialog QRCodeSVG 一致），删掉冗余的 `.qr-image--inline` 覆盖；`background: #fff` → `var(--van-white)`
+- [x] **C-26 分享链接相对路径**：✅ 2026-10-03 后端 4 个 share 端点（create/list/file/update）返回的 `url` 一律是相对 path，裸 path 粘进浏览器会被当成搜索词、扫码打不开。绝对化规则收敛进 `@cloudcad/platform` 的 `toShareUrl(path, origin)`（纯函数、幂等、兼容已绝对化 / 协议相对 / 尾部斜杠），两端各配一个只供 origin 的薄出口（PC `src/utils/shareUrl.ts`、移动端 `src/utils/shareUrl.ts`）。移动端在 4 个**数据边界**一次性绝对化（列表 map / `useShareCreate` 结果 / 创建成功 / 已有分享 map）→ 覆盖 10 个下游消费点（复制 / 二维码 / 打开 / 展示）；PC 5 处手写 `` ${origin}${path} `` 全部改走共享出口。**复查结论**：PC 的列表行复制本来就是绝对化（`handleCopyItem` 内部已前置 origin），此前台账「PC 不自洽」的说法有误，PC 无行为变更，只是换成共享规则
+- [x] **C-27 复制成功行内反馈**：✅ 2026-10-03 对齐 PC `copiedToken` 图标变 ✓ 2s。收敛出 `useShareLinkCopy`（移动端唯一复制出口，同时替换 ShareManagePage `copyLinkWithFallback` 与 ShareCurrentPopup `copyShareUrl` 两份逐字重复实现）：`copiedKey` 用 url 本身当键，5 个复制按钮用「copiedKey === 自己的 url」判定，连续复制复用同一定时器，卸载时清定时器；5 例 spec 覆盖成功/连续/失败回落/空 url/卸载
 
 ---
 
@@ -265,6 +279,79 @@ PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围
 
 ---
 
+## K. 实时协同（CooperatePopup + useCooperate/collab store）—— 2026-10-03 新增，Batch 16 全部完成
+
+> 后端契约前提：协同**没有 REST 面**。`/api/cooperate` 是 http-proxy 到黑盒协同进程，
+> SDK 只有 `MxCooperate` 一个客户端。移动端实际只用其中 4 个方法
+> （`createWork`/`getWorks`/`joinWork`/`exitWork`），`onEvent`/`getStatus`/`init` 两端零消费者
+> （2026-10-03 grep 核实）。故本轮所有差距都是纯前端层，后端无缺口可修。
+
+### K-01 协同中离开/切页无二次确认（P0 数据风险）
+- [x] 协同中打开新文件 / 新建文件会静默退出当前协同会话。新增 `confirmExitCollaborationIfNeeded()`
+  （useCooperate 唯一出口，非协同态直接放行），接到 `useOpenGuard.guardBeforeOpen()` 之首——
+  一处覆盖全部 4 个打开图纸入口（壳内文件打开、命令打开、另存为打开、外部参照打开），
+  另单独接 `home/index.vue` 的 `handleNewFile`。对齐 PC「先问退出协同、再问未保存」的顺序。
+  新键 3726 / 3727
+
+### K-02 分享进入的协同会话 sourceType 判不出来（P0）
+- [x] editor store 补 `fromShare` 标志（`setFromShare` + `resetFileState` 清零），
+  `index.vue` 的 shareToken 分支置位；collab.ts 的 sourceType 判定链补
+  `else if (s.fromShare) sourceType = 'share'`，排在 `fromCollabShare` 之前
+
+### K-03 未登录可发起协同（P1）
+- [x] `createWork` / `joinWork` 都先校验 `userData`，未登录 `showToast(t('请先登录'))` 并返回；
+  同时删掉 `userData?.id || ''` 的**空创建者**路径（原实现会让协同以空 creator 建出来）
+
+### K-04 轮询无保护（P1）
+- [x] `fetchWorks(showLoading, force)` 加 in-flight 守卫（`fetchingRef`，`force=true` 才覆盖——
+  内部调用改 `fetchWorks(false, true)`）；轮询间隔 8s→30s；`document.hidden` 时跳过
+
+### K-05 成员名不解析（P1）
+- [x] `resolveNames` 原被 `if (filtered.length > 0)` 包住，列表为空时永远不触发；改无条件调用
+
+### K-06 会话同步逻辑两处重复（P1）
+- [x] `syncSessionFromWorkData(workId)` 收敛为唯一出口（getWorks → parseWorkData → v===3 →
+  回写 fileId/projectId/fileName/libraryKey）；`useCollabAutoJoin` 里逐字重复的 14 行删除
+
+### K-07 joinWork 解锁点单一（P2）
+- [x] `joinWork` 订阅引擎 `openFileComplete`：收到就清 safetyTimer，并起一个 2s 兜底
+  **只释放 `connecting`/`joiningWorkId`/`joiningLockRef`**（不动 `joinResolved`、不动会话状态）。
+  刻意不做「openFileComplete 就算加入成功」——SDK 回调丢失会让 `connecting` 永久卡住
+
+### K-08 移动端协同分享链接拼成死链（P0，跨端）
+- [x] 移动端是 hash 路由，`window.location.pathname` 恒为 `/`，原实现拼出
+  `https://host/?collabWorkId=1` 会命中 PC 的受保护兜底路由 → 跳登录/仪表盘且丢 query。
+  改用固定 base `${window.location.origin}/cad-editor`（与 PC `CollabShareModal` 同一 base）
+
+### K-09 列表加载失败静默（P2）
+- [x] 新增 `fetchError` 状态 + 空列表错误态（warning 图标 + 「加载失败，请重试」+「请检查实时协同服务后重试」+ 重试按钮）；
+  未挂载时拉取走强制刷新
+
+### K-10 新建协同弹窗误报保存成功（P2）
+- [x] 未保存提示确认后 `await nextTick()` 再复核 `isModified`，用
+  `finishUnsaved(res.success && !isModified)` 判定，不再无条件报成功
+
+### K-11 WorkCard 缺二维码 + 硬编码（P2）
+- [x] 「分享协同」弹二维码面板（`QRCode.toDataURL(url, { width: 160, margin: 1 })` +
+  只读输入框 + 复制，失败回落 ShareLinkSheet）；5 处 `#fff` → `var(--van-white)`；
+  「暂无参与者」硬编码 → `t()`（新键 3724）
+
+### K-12 错误码文案 i18n 泄漏（P2）
+- [x] `t(\`加入协同失败，错误码: ${iRet}\`)` 永远不会命中（JS 先插值再交给 `t()`）；
+  改为只国际化前缀 `t('加入协同失败，错误码: ') + iRet`（与 PC 拼法一致，新键 3725）。
+  `useCollabAutoJoin` 里同一句**连 `t()` 都没有**，一并修
+
+### K-13 当前图纸分组条件过严（P2）
+- [x] `currentFileWorks.length > 0 && currentWorkId === null` → 去掉 `currentWorkId === null`
+  （已在协同中时该分组整体消失）
+
+### K-B 后端/SDK 评估（无缺口）
+- [x] 协同无 REST 端点，SDK 面为 `MxCooperate` 7 方法；移动端消费 4 个，`onEvent`/`getStatus`/`init` 两端零消费者 → 不接线（无消费者代码不新增抽象）
+- [x] PC 的显式「退出协同」也没有未保存守卫，且退出后本地文档保持打开 → 移动端明确退出路径不加守卫，只对**被动退出**（打开新文件）加确认
+- [x] 三层一致性：本轮未改任何 DTO/Controller/schema，api-sdk 无需重生成
+
+---
+
 ## G. 跨切面
 
 - [x] **G-01 UnifiedFileList ellipsis 死控件**：✅ 已并入 A-03
@@ -287,6 +374,9 @@ PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围
 | Batch 10（缺口修复·分享） | C-05 分页 + C-03 批量撤销 + C-11/C-12 续期补自定义/立即过期 + C-14 加载失败底条 + C-15 清除搜索 | ✅ 2026-10-01 完成：ShareManagePage 分页/滚动加载 + 长按多选批量撤销 + 续期弹窗补自定义天数/立即过期（detectShareExpiration 反推初始值）+ 翻页失败底条 + 空态清除搜索；12 新 i18n 键（3643-3654）四语 + idMap |
 | Batch 11（合规） | H-01 合规页+入口 + H-02 注册勾选 + P-06 占位符解析 | ✅ 2026-10-01 完成：移动端 `/legal/*` 路由 + LegalPage + 登录/注册入口 + 注册勾选，正文走 platform `resolvePlaceholders` |
 | **Batch 12（编辑器菜单）** | ✅ E-04 撤销/重做 + E-30 修改类命令 + E-24 删除警告横幅 | ✅ 2026-10-01 完成：E-04 顶栏补重做按钮（Mx_Redo，引擎已验证支持，图标 huitui1 待视觉核验）；E-30 查证已由「选中实体浮层工具栏」覆盖（useEditObjectToolbar）非真缺口；E-24 加持久删除横幅（绑定 isCurrentFileDeleted，复用 i18n 键 1584）。home/index.vue 单文件；459/459 绿 |
-| Batch 13（体验补强） | ✅ A-12 项目卡片（描述+成员数，封面留待）+ A-25 转换失败徽标 + B-08 成员头像/邮箱 + B-09 角色筛选 + C-04 分享排序 | ✅ 2026-10-01 完成 5 项（4 文件 + 5 新 i18n 键 3655-3658 四语）；459/459 绿。**C-09 批量分享 / E-26 外部参照面板补全** 属高优复杂项（选择器多选+逐个创建+进度 / 引擎参照查看下载替换），单独立项后续做 |
+| Batch 13（体验补强） | ✅ A-12 项目卡片（描述+成员数，封面留待）+ A-25 转换失败徽标 + B-08 成员头像/邮箱 + B-09 角色筛选 + C-04 分享排序 | ✅ 2026-10-01 完成 5 项（4 文件 + 5 新 i18n 键 3655-3658 四语）；459/459 绿。C-09 批量分享已在 **Batch 15** 完成；**E-26 外部参照面板补全**（引擎参照查看/下载/替换）仍单独立项 |
 | Batch 6b（库层级视图） | E-09/E-12/E-17 | ⏸ 与 all-files 决策冲突待确认 |
+| Batch 15（分享细节对齐） | C-17 创建弹窗自定义天数 + C-18 已有分享链接/复制 + C-19 删死分支 + C-20 批量进度 + C-21 errMsg 唯一出口 + C-22 撤销文案统一 + C-23 错误态/空态 + C-24 搜索防抖 + C-25 二维码 160 | ✅ 2026-10-03 完成：ShareCurrentPopup/ShareManagePage/useShareCreate/apiError 共 4 文件；`errMsg` 补裸字符串直通（修 `[object Object]` 与错误塌成兜底）；`createShares` 加 `onProgress`（不传行为不变）；新增 i18n 键 3721/3722 四语 |
+| Batch 16（实时协同对齐） | K-01~K-13 全 13 项（详见 §K） | ✅ 2026-10-03 完成：useCooperate/useCollabAutoJoin/useOpenGuard/useEditorState/collab.ts/editor.ts/CooperatePopup/WorkCard/index.vue 共 9 文件；新增 i18n 键 3723-3727 四语。最大产出=K-01 一处 `guardBeforeOpen` 覆盖 4 个打开入口 + K-08 修跨端死链。**后端无缺口**（协同是 http-proxy 黑盒，无 REST 面） |
+| Batch 17（分享链接绝对化 + 复制反馈） | C-26 `toShareUrl` 收敛进 platform + 两端薄出口（移动端 4 边界覆盖 10 消费点、PC 5 处手写拼接换共享规则）+ C-27 `useShareLinkCopy` 行内反馈 | ✅ 2026-10-03 完成：platform `share/url.ts` + spec + barrel；PC `utils/shareUrl.ts` + ShareDialog ×4 + useShareActions；移动端 `utils/shareUrl.ts` + `useShareLinkCopy`（+5 例 spec）+ ShareManagePage/ShareCurrentPopup/useShareCreate。**门禁**：platform 13/76 绿、PC type-check 0 错 + share specs 19/19、移动端 vue-tsc 0 错 + 68 文件/633 用例绿 + `vite build` 成功。**⚠ i18n 事故**：`pnpm i18nCompile`（`voerkai18n compile -t`）会把 `idMap.json` 连同 4 个语言文件一起重建成「HEAD 减去尾部 89 个键」的状态（丢 1412 + 3633-3720，含批量下载/回收站/跨项目转移/分享撤销等文案），且不补本轮新键。已 `git show HEAD:` 逐文件恢复后**手工**追加 3721-3727 四语（1181/1182 条，四语 id 集合完全一致）；**此工具当前不可信，勿再跑**，i18n 键须手工加或在工具修复后统一跑 |
 | ⏸ 待确认 | D-10 会员入口改走移动端 MemberCenterPage？/ P-08 编辑器菜单审计自动化 | 需用户裁定 |

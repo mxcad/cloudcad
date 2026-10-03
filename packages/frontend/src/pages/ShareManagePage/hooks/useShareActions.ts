@@ -9,6 +9,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { t } from '@/languages';
 import { useCopy } from '@/hooks/useCopy';
+import { shareUrl } from '@/utils/shareUrl';
 import type { ShareFileInfo, SortConfig } from '../types';
 
 interface UseShareActionsParams {
@@ -113,7 +114,7 @@ export function useShareActions({
 
   const handleCopy = useCallback(
     async (linkUrl: string, token?: string) => {
-      await copyShareItem(`${window.location.origin}${linkUrl}`, token ?? linkUrl);
+      await copyShareItem(shareUrl(linkUrl), token ?? linkUrl);
     },
     [copyShareItem]
   );

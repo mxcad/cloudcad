@@ -20,6 +20,9 @@ import { shareControllerCreateShare } from '@cloudcad/api-sdk/sdk.gen'
 
 const mockedCreate = shareControllerCreateShare as ReturnType<typeof vi.fn>
 
+/** 后端返回相对 path，结果里的 url 必须前置当前 origin 才可直接复制/扫码 */
+const origin = window.location.origin
+
 describe('useShareCreate.createShares（批量分享）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -44,9 +47,10 @@ describe('useShareCreate.createShares（批量分享）', () => {
     for (const call of mockedCreate.mock.calls) {
       expect(call[0].body.expiresIn).toBe(604800)
     }
+    // 后端返回的是相对 path，结果里必须是可复制/可扫码的绝对 URL
     expect(results).toStrictEqual([
-      { fileName: 'a.mxweb', token: 't1', url: '/share/t1', expiresAt: '2026-10-10', success: true },
-      { fileName: 'b.mxweb', token: 't1', url: '/share/t1', expiresAt: '2026-10-10', success: true },
+      { fileName: 'a.mxweb', token: 't1', url: `${origin}/share/t1`, expiresAt: '2026-10-10', success: true },
+      { fileName: 'b.mxweb', token: 't1', url: `${origin}/share/t1`, expiresAt: '2026-10-10', success: true },
     ])
   })
 
@@ -105,7 +109,38 @@ describe('useShareCreate.createShares（批量分享）', () => {
     )
 
     expect(results[0]).toMatchObject({ fileName: 'a.mxweb', success: false, error: '创建分享链接失败' })
-    expect(results[1]).toMatchObject({ fileName: 'b.mxweb', success: false, error: '创建失败，请重试' })
+    // 请求异常透出原始错误文案（errMsg 单一出口），不再一律塌成笼统兜底
+    expect(results[1]).toMatchObject({ fileName: 'b.mxweb', success: false, error: 'network down' })
     expect(results[2].success).toBe(true)
+  })
+
+  it('onProgress 每完成一个文件回调一次（done/total，对齐 PC 实时进度）', async () => {
+    mockedCreate
+      .mockResolvedValueOnce({ data: { token: 't1', url: '/share/t1', expiresAt: null }, error: null })
+      .mockResolvedValueOnce({ data: null, error: 'quota exceeded' })
+      .mockResolvedValueOnce({ data: { token: 't3', url: '/share/t3', expiresAt: null }, error: null })
+    const { createShares } = useShareCreate()
+    const progress: Array<[number, number]> = []
+    await createShares(
+      [
+        { fileId: 'f1', fileName: 'a.mxweb' },
+        { fileId: 'f2', fileName: 'b.mxweb' },
+        { fileId: 'f3', fileName: 'c.mxweb' },
+      ],
+      'never',
+      7,
+      (done, total) => progress.push([done, total])
+    )
+
+    // 失败项也算「已完成一个」，与 PC 的 batchResults.length 语义一致
+    expect(progress).toStrictEqual([[1, 3], [2, 3], [3, 3]])
+  })
+
+  it('不传 onProgress 时行为不变；后端报错文案取后端 message 而非 [object Object]', async () => {
+    mockedCreate.mockResolvedValueOnce({ data: null, error: { message: 'no quota left' } })
+    const { createShares } = useShareCreate()
+    const results = await createShares([{ fileId: 'f1', fileName: 'a.mxweb' }], 'never', 7)
+
+    expect(results[0]).toMatchObject({ success: false, error: 'no quota left' })
   })
 })

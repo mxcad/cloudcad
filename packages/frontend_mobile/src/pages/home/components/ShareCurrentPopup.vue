@@ -10,7 +10,7 @@ import { ref, watch, computed } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import QRCode from 'qrcode'
 import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
-import { copyText } from '@/utils/clipboard'
+import { useShareLinkCopy } from '@/composables/useShareLinkCopy'
 import { t } from '@/languages'
 import { useAuthState } from '@/composables/useAuthState'
 import {
@@ -25,17 +25,18 @@ import {
   SHARE_EXPIRATION_DEFAULT,
   clampCustomDays,
   computeExpiresInSeconds,
-  isShareExpired,
 } from '@cloudcad/platform'
+import { errMsg } from '@/utils/apiError'
+import { shareUrl } from '@/utils/shareUrl'
 
 type Expiration = '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom' | 'never'
 
+// 后端 getFileShares 只返回 token/url/expiresAt/createdAt/createdBy/fileName
+// （无 id、无 usedCount，且服务端已过滤掉已过期项）
 interface FileShareItem {
-  id: string
   token: string
-  name?: string
+  url?: string
   expiresAt?: string | null
-  usedCount?: number
   createdAt?: string
 }
 
@@ -73,6 +74,8 @@ const created = ref<{ token: string; url?: string; expiresAt?: string | null } |
 const qrDataUrl = ref('')
 const existingShares = ref<FileShareItem[]>([])
 const loadingShares = ref(false)
+// G-09：已有分享加载失败不再静默吞掉（对齐 PC 的 listError 状态）
+const sharesLoadFailed = ref(false)
 
 const expirationItems: Array<{ value: Expiration; label: string }> = [
   { value: '2h', label: t('2 小时') },
@@ -105,10 +108,20 @@ async function loadExistingShares() {
   loadingShares.value = true
   try {
     const res = await shareControllerGetFileShares({ path: { fileId: props.fileId } })
-    if (res.error) return
+    if (res.error) {
+      // 权限/网络错误不再静默：留错误态 + 重试，避免「已有分享」区凭空消失
+      sharesLoadFailed.value = true
+      existingShares.value = []
+      return
+    }
     const raw = res.data as FileShareItem[] | undefined
-    existingShares.value = Array.isArray(raw) ? raw : []
+    // url 在后端是相对 path，展示/复制前统一绝对化（与 ShareManagePage 同一出口）
+    existingShares.value = Array.isArray(raw)
+      ? raw.map((s) => ({ ...s, url: shareUrl(s.url) }))
+      : []
+    sharesLoadFailed.value = false
   } catch {
+    sharesLoadFailed.value = true
     existingShares.value = []
   } finally {
     loadingShares.value = false
@@ -135,7 +148,7 @@ async function handleCreate() {
       },
     })
     if (res.error) {
-      showToast(String(res.error))
+      showToast(errMsg(res.error, t('创建失败，请重试')))
       return
     }
     const raw = res.data as { token?: string; url?: string; expiresAt?: string | null } | undefined
@@ -143,7 +156,7 @@ async function handleCreate() {
       showToast(t('创建失败，请重试'))
       return
     }
-    created.value = { token: raw.token, url: raw.url, expiresAt: raw.expiresAt }
+    created.value = { token: raw.token, url: shareUrl(raw.url), expiresAt: raw.expiresAt }
     if (!raw.url) {
       showToast(t('创建失败，请重试'))
       return
@@ -155,33 +168,29 @@ async function handleCreate() {
     }
     showToast(t('分享链接已创建'))
     void loadExistingShares()
-  } catch {
-    showToast(t('创建失败，请重试'))
+  } catch (e) {
+    showToast(errMsg(e, t('创建失败，请重试')))
   } finally {
     creating.value = false
   }
 }
 
-const showLinkSheet = ref(false)
-const linkSheetUrl = ref('')
+// 复制走唯一出口 useShareLinkCopy（与 ShareManagePage 共用同一套回落 + 行内反馈）
+const { copiedKey, showLinkSheet, linkSheetUrl, copy } = useShareLinkCopy()
 
-async function copyLink() {
-  const url = created.value?.url
-  if (!url) return
-  const result = await copyText(url)
-  if (result === 'failed') {
-    linkSheetUrl.value = url
-    showLinkSheet.value = true
-    return
-  }
-  showToast(t('已复制链接'))
+function copyLink() {
+  void copy(created.value?.url ?? '')
+}
+
+function copyExistingShare(item: FileShareItem) {
+  void copy(item.url ?? '')
 }
 
 async function handleRevoke(item: FileShareItem) {
   try {
     await showConfirmDialog({
       title: t('撤销分享'),
-      message: t('撤销后对方将无法继续访问该图纸，确定撤销？'),
+      message: t('撤销后该分享链接将立即失效，确定撤销？'),
       confirmButtonText: t('撤销'),
       cancelButtonText: t('取消'),
     })
@@ -191,12 +200,16 @@ async function handleRevoke(item: FileShareItem) {
   try {
     // 撤销端点按 token 查（DELETE /api/v1/shares/:token → findUnique({ where: { token } })），
     // 传 DB id 会 404
-    await shareControllerRevokeShare({ path: { token: item.token } })
+    const res = await shareControllerRevokeShare({ path: { token: item.token } })
+    if (res.error) {
+      showToast(errMsg(res.error, t('撤销失败')))
+      return
+    }
     showToast(t('已撤销'))
     if (created.value?.token === item.token) created.value = null
     void loadExistingShares()
-  } catch {
-    showToast(t('撤销失败'))
+  } catch (e) {
+    showToast(errMsg(e, t('撤销失败')))
   }
 }
 
@@ -291,29 +304,42 @@ function onClose() {
             </div>
             <div class="sc-link">
               <input class="sc-link-input" :value="created.url || ''" readonly />
-              <button class="sc-copy" @click="copyLink">{{ t('复制') }}</button>
+              <button class="sc-copy" @click="copyLink">
+                <van-icon v-if="copiedKey === created?.url" name="success" size="14" />
+                <span v-else>{{ t('复制') }}</span>
+              </button>
             </div>
             <div class="sc-expiry-note">
               {{ t('有效期') }}：{{ formatExpiry(created.expiresAt) }}
             </div>
           </div>
 
-          <!-- 已有分享 -->
-          <div v-if="existingShares.length > 0" class="sc-section">
+          <!-- 已有分享（对齐 PC ShareDialog 列表视图：链接 + 复制 + 有效期 + 撤销） -->
+          <div v-if="!loadingShares" class="sc-section">
             <div class="sc-section-title">
-              {{ t('已有分享') }}（{{ existingShares.length }}）
+              {{ t('已有分享') }}{{ existingShares.length > 0 ? `（${existingShares.length}）` : '' }}
             </div>
-            <van-loading v-if="loadingShares" size="20" />
+            <div v-if="sharesLoadFailed" class="sc-share-empty sc-share-empty--error">
+              <van-icon name="warning-o" size="20" />
+              <span>{{ t('加载失败，请重试') }}</span>
+              <button class="sc-retry" @click="loadExistingShares">{{ t('重试') }}</button>
+            </div>
+            <div v-else-if="existingShares.length === 0" class="sc-share-empty">
+              {{ t('还没有分享过这个文件') }}
+            </div>
             <div v-else class="sc-share-list">
-              <div v-for="item in existingShares" :key="item.id" class="sc-share-item">
-                <div class="sc-share-info">
-                  <span class="sc-share-expiry">{{ formatExpiry(item.expiresAt) }}</span>
-                  <span v-if="isShareExpired(item.expiresAt ?? null)" class="sc-share-status">{{ t('已过期') }}</span>
-                  <span v-if="typeof item.usedCount === 'number'" class="sc-share-used">
-                    {{ t('已访问 {count} 次', { count: String(item.usedCount) }) }}
-                  </span>
+              <div v-for="item in existingShares" :key="item.token" class="sc-share-item">
+                <div v-if="item.url" class="sc-share-row">
+                  <input class="sc-share-url" :value="item.url" readonly />
+                  <button class="sc-share-copy" @click="copyExistingShare(item)">
+                    <van-icon v-if="copiedKey === item.url" name="success" size="14" />
+                    <span v-else>{{ t('复制') }}</span>
+                  </button>
                 </div>
-                <button class="sc-revoke" @click="handleRevoke(item)">{{ t('撤销') }}</button>
+                <div class="sc-share-row sc-share-row--meta">
+                  <span class="sc-share-expiry">{{ formatExpiry(item.expiresAt) }}</span>
+                  <button class="sc-revoke" @click="handleRevoke(item)">{{ t('撤销') }}</button>
+                </div>
               </div>
             </div>
           </div>
@@ -487,7 +513,7 @@ function onClose() {
 
 .sc-share-item {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
   background: var(--bg-elevated);
@@ -495,28 +521,65 @@ function onClose() {
   border-radius: var(--radius-md);
 }
 
-.sc-share-info {
-  flex: 1;
-  min-width: 0;
+.sc-share-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+
+  &--meta {
+    justify-content: space-between;
+  }
+}
+
+.sc-share-url {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.sc-share-copy {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
 .sc-share-expiry {
   font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.sc-share-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.sc-share-empty--error {
+  color: var(--error, #ef4444);
+}
+
+.sc-retry {
+  padding: 4px 14px;
+  font-size: 12px;
   color: var(--text-primary);
-}
-
-.sc-share-status {
-  font-size: 11px;
-  color: var(--text-tertiary);
-}
-
-.sc-share-used {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
 }
 
 .sc-revoke {

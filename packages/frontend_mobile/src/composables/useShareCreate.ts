@@ -10,6 +10,8 @@
 import { shareControllerCreateShare } from '@cloudcad/api-sdk/sdk.gen'
 import { computeExpiresInSeconds, type ShareExpirationOption } from '@cloudcad/platform'
 import { t } from '@/languages'
+import { errMsg } from '@/utils/apiError'
+import { shareUrl } from '@/utils/shareUrl'
 
 export interface ShareCreateResult {
   fileName: string
@@ -21,10 +23,16 @@ export interface ShareCreateResult {
 }
 
 export function useShareCreate() {
+  /**
+   * @param onProgress 每完成一个文件回调一次（done=已完成数，total=总数）。
+   *   对齐 PC `setBatchResults([...results])` 的实时进度（loading 视图显示 done/total）；
+   *   不传则与旧调用完全一致。
+   */
   async function createShares(
     files: Array<{ fileId: string; fileName: string }>,
     expiration: ShareExpirationOption,
-    customDays: number
+    customDays: number,
+    onProgress?: (done: number, total: number) => void
   ): Promise<ShareCreateResult[]> {
     const expiresInValue = computeExpiresInSeconds(expiration, customDays)
     const results: ShareCreateResult[] = []
@@ -43,39 +51,42 @@ export function useShareCreate() {
             url: '',
             expiresAt: null,
             success: false,
-            error: String(res.error),
-          })
-          continue
-        }
-        const raw = res.data as { token?: string; url?: string; expiresAt?: string | null } | undefined
-        if (raw && raw.token) {
-          results.push({
-            fileName: file.fileName,
-            token: raw.token,
-            url: raw.url ?? '',
-            expiresAt: raw.expiresAt ?? null,
-            success: true,
+            error: errMsg(res.error, t('创建分享链接失败')),
           })
         } else {
-          results.push({
-            fileName: file.fileName,
-            token: '',
-            url: '',
-            expiresAt: null,
-            success: false,
-            error: t('创建分享链接失败'),
-          })
+          const raw = res.data as
+            | { token?: string; url?: string; expiresAt?: string | null }
+            | undefined
+          if (raw && raw.token) {
+            results.push({
+              fileName: file.fileName,
+              token: raw.token,
+              url: shareUrl(raw.url),
+              expiresAt: raw.expiresAt ?? null,
+              success: true,
+            })
+          } else {
+            results.push({
+              fileName: file.fileName,
+              token: '',
+              url: '',
+              expiresAt: null,
+              success: false,
+              error: t('创建分享链接失败'),
+            })
+          }
         }
-      } catch {
+      } catch (e) {
         results.push({
           fileName: file.fileName,
           token: '',
           url: '',
           expiresAt: null,
           success: false,
-          error: t('创建失败，请重试'),
+          error: errMsg(e, t('创建失败，请重试')),
         })
       }
+      onProgress?.(results.length, files.length)
     }
     return results
   }

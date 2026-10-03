@@ -97,8 +97,10 @@ export function unwrap<T>(res: { error?: unknown; data?: unknown }): T {
   return (data ?? {}) as T
 }
 
-/** 展示用错误文案：Error.message → 错误体 message → 兜底文案 */
+/** 展示用错误文案：裸字符串 → Error.message → 错误体 message → 兜底文案 */
 export function errMsg(e: unknown, fallback: string): string {
+  // SDK 的 res.error 可能是裸字符串（如 'quota exceeded'），直通而非塌成兜底文案
+  if (typeof e === 'string' && e) return e
   const body = asRecord(e)
   const message = body?.message
   if (typeof message === 'string' && message) return message

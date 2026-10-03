@@ -117,7 +117,10 @@ describe('errorCode', () => {
 });
 
 describe('errMsg', () => {
-  it('Error.message 优先，其次 body.message，最后回退', () => {
+  it('裸字符串直通，其次 Error.message、body.message，最后回退', () => {
+    // SDK 的 res.error 常是裸字符串，不能塌成兜底文案
+    expect(errMsg('quota exceeded', 'fb')).toBe('quota exceeded');
+    expect(errMsg('', 'fb')).toBe('fb');
     expect(errMsg(new Error('e1'), 'fb')).toBe('e1');
     expect(errMsg({ message: 'b1' }, 'fb')).toBe('b1');
     expect(errMsg({}, 'fb')).toBe('fb');

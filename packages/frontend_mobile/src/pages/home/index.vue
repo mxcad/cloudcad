@@ -41,7 +41,10 @@ import { showToastOnce } from '@/utils/toast';
 
 import { navigateToLogin, navigateToRegister } from '@/utils/authNavigate';
 import { navigateBack } from '../../utils/navigateBack';
-import { exitCollaborationIfNeeded } from '../../composables/useCooperate';
+import {
+  exitCollaborationIfNeeded,
+  confirmExitCollaborationIfNeeded,
+} from '../../composables/useCooperate';
 import { useCollabAutoJoin } from '../../composables/useCollabAutoJoin';
 import { useRuntimeConfig } from '../../composables/useRuntimeConfig';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
@@ -393,7 +396,9 @@ watch(isAuthenticated, (authed) => {
 });
 
 async function handleNewFile() {
-  exitCollaborationIfNeeded();
+  // 新建图纸 = 退出当前协同会话（对齐 PC NewFileCommand）：先让用户知情，
+  // 取消则不弹「是否保存」也不重置会话
+  if (!(await confirmExitCollaborationIfNeeded())) return;
 
   if (editorState.state.isModified) {
     try {
@@ -598,6 +603,8 @@ onMounted(async () => {
     // 「引擎初始化即带文件加载」单步改为两步：先建空引擎，再经 openMxWeb
     // 打开——多一层 deletedAt/fileHash 校验，且带 Authorization/x-share-token 头。
     // loading 遮罩须覆盖引擎创建期（旧 useShareFileLoad 入口即置 loading）
+    // 标记会话来源为普通分享：从此图新建协同记 sourceType='share'（对齐 PC fromShare）
+    editorState.setFromShare(true);
     editorState.setLoading(true);
     editorState.setProgressStage('fetching-info');
     try {

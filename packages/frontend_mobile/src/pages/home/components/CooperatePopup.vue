@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { t } from '@/languages';
 import { parseWorkData, getWorkCreator, parseUserData, type Work } from '../../../composables/useCooperate';
 import { useUser } from '../../../composables/useUser';
@@ -25,6 +25,7 @@ const {
   works,
   currentWorkId,
   loading,
+  fetchError,
   connecting,
   creating,
   joiningWorkId,
@@ -33,7 +34,7 @@ const {
   myProjectIds,
 } = storeToRefs(collabStore);
 
-const { fetchWorks, createWork, joinWork, exitWork, startCadCheck, stopCadCheck } = collabStore;
+const { fetchWorks, createWork, joinWork, exitWork, startCadCheck, stopCadCheck, POLL_INTERVAL } = collabStore;
 
 const show = ref(true);
 
@@ -41,8 +42,13 @@ let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
   startCadCheck();
-  fetchWorks(true);
-  pollTimer = setInterval(() => fetchWorks(false), 8000);
+  fetchWorks(true, true);
+  // 轮询：与 PC POLL_INTERVAL 同频；页面不可见（切后台/锁屏）时跳过本轮，
+  // 避免手机端后台持续打请求（原 8s 频率 + 无 hidden 判断）
+  pollTimer = setInterval(() => {
+    if (document.hidden) return;
+    fetchWorks(false);
+  }, POLL_INTERVAL);
 });
 
 onBeforeUnmount(() => {
@@ -100,7 +106,10 @@ function mapWorkToDisplay(w: Work): WorkDisplay {
     } catch { /* ignore */ }
   }
 
-  const base = window.location.origin + window.location.pathname.replace(/\/+$/, '');
+  // base 固定为 PC 的 /cad-editor 路由（与 PC CollabShareModal 同源）：
+  // 移动端是 hash 路由，pathname 恒为 '/'，拼出 `https://host/?collabWorkId=1` 会命中
+  // PC 的受保护兜底路由 → 跳登录/仪表盘且丢 query，同事点开是空白编辑器而非协同会话。
+  const base = `${window.location.origin}/cad-editor`;
   const params = new URLSearchParams();
   params.set('collabWorkId', String(w.work_id));
   if (data?.drawingId) params.set('drawingId', data.drawingId);
@@ -220,8 +229,10 @@ async function onUnsavedSave() {
   try {
     const res = await saveCollab();
     savingUnsaved.value = false;
-    // 保存成功才继续；失败（无权限/需另存为等）则中止，防丢更改（save 已弹原因提示）
-    finishUnsaved(res.success);
+    // 保存接口返回 success 不等于已落盘（无权限/需另存为）：复验修改态，
+    // 仍脏则中止，避免静默丢更改（对齐 PC checkAndConfirmUnsavedChanges 的二次校验）
+    await nextTick();
+    finishUnsaved(res.success && !editorStore.state.isModified);
   } catch {
     savingUnsaved.value = false;
     finishUnsaved(false);
@@ -272,7 +283,7 @@ function handleClose() {
 }
 
 function handleRefresh() {
-  fetchWorks(true);
+  fetchWorks(true, true);
 }
 
 function mapUser() {
@@ -304,17 +315,27 @@ function mapUser() {
       <p class="state-text">{{ t('加载中...') }}</p>
     </div>
 
+    <!-- 拉取失败（服务未就绪/超时）：不伪装成「暂无活跃协同」，否则故障被读成「没有协同」 -->
+    <div v-else-if="fetchError && works.length === 0" class="state-box">
+      <van-icon name="warning-o" size="48" />
+      <p class="state-text">{{ t('加载失败，请重试') }}</p>
+      <p class="state-desc">{{ t('请检查实时协同服务后重试') }}</p>
+      <button class="state-refresh" :disabled="loading" @click="handleRefresh">
+        {{ t('重试') }}
+      </button>
+    </div>
+
     <!-- 空状态 -->
     <div v-else-if="works.length === 0" class="state-box">
-      <van-icon name="friends-o" size="48"  />
+      <van-icon name="friends-o" size="48" />
       <p class="state-text">{{ t('暂无活跃协同') }}</p>
       <p class="state-desc">{{ t('创建协同以开始实时协作') }}</p>
     </div>
 
     <!-- 主内容 -->
     <div v-else class="card-list">
-      <!-- 当前图纸 -->
-      <div v-if="currentFileWorks.length > 0 && currentWorkId === null" class="group">
+      <!-- 当前图纸：进入协同后同样保留，便于查看同图其他会话（对齐 PC 双 Tab 的当前图纸视图） -->
+      <div v-if="currentFileWorks.length > 0" class="group">
         <div class="group-title">{{ t('当前图纸') }}</div>
         <WorkCard
           v-for="w in currentFileWorks"
@@ -496,6 +517,28 @@ function mapUser() {
   margin: 0;
   font-size: var(--van-font-size-sm);
 
+}
+
+.state-refresh {
+  margin-top: var(--space-sm);
+  height: 32px;
+  padding: 0 20px;
+  font-size: var(--van-font-size-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:active:not(:disabled) {
+    opacity: 0.85;
+  }
 }
 
 /* ===== 卡片列表 ===== */
