@@ -85,7 +85,7 @@ function onConfirm() {
 
       <div class="df-file">
         <span v-if="batchCount" class="df-file-name df-file-name--batch">
-          {{ t('已选 {count} 个图纸，格式将应用于全部', { count: String(batchCount) }) }}
+          {{ t('已选 {count} 项，图纸将按所选格式转换', { count: String(batchCount) }) }}
         </span>
         <template v-else>
           <span class="df-file-label">{{ t('文件：') }}</span>

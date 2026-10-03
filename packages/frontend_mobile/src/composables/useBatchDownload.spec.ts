@@ -82,6 +82,23 @@ describe('useBatchDownload.createZipTask（多选下载）', () => {
     ])
   })
 
+  it('文件夹带格式透传（文件夹级格式由后端 expandFolderItems 递归传播到内部文件）', async () => {
+    mockedCreate.mockResolvedValue({ data: { taskId: 'task-4' }, error: null })
+    const { createZipTask } = useBatchDownload()
+    await createZipTask(
+      [
+        // 文件夹套用 PDF 格式：后端展开时把 formats 继承给内部全部文件（对齐 PC 文件夹级格式）
+        { nodeId: 'd1', fileName: '图纸目录', isFolder: true, formats: ['pdf'], width: '2000', height: '2000', colorPolicy: 'mono' },
+      ],
+      { name: '下载' },
+    )
+
+    const body = mockedCreate.mock.calls[0][0].body
+    expect(body.fileList).toStrictEqual([
+      { nodeId: 'd1', fileName: '图纸目录', formats: ['pdf'], width: '2000', height: '2000', colorPolicy: 'mono', isFolder: true },
+    ])
+  })
+
   it('传 projectId 时透传给后端', async () => {
     mockedCreate.mockResolvedValue({ data: { taskId: 'task-2' }, error: null })
     const { createZipTask } = useBatchDownload()
