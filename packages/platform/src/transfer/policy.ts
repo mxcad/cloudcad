@@ -68,7 +68,8 @@ const TRANSFER_IN_FIELD: Record<TransferDomain, keyof TransferSettings> = {
 /**
  * 策略是否放行指定操作（对齐后端 modeAllows）：
  * ALL 全放行；COPY_ONLY 仅复制；MOVE_ONLY 仅移动；NONE 拒绝。
- * 仅处理非 null 设置（null 由调用方按「保守拒绝」处理）。
+ * 仅处理非 null 设置——null/undefined 字段按默认放行（后端 modeAllows(null → true)），
+ * 只有「整份 settings 查询失败（null）」才由调用方保守拒绝。
  */
 function operationAllows(
   operation: TransferOperation,
@@ -102,15 +103,18 @@ export function evaluateCrossProjectTransfer(params: {
 
   // 出向：源为项目时，按目标域类型查 transferOut* 字段
   if (source.domain === 'project') {
-    const setting = sourceSettings?.[TRANSFER_OUT_FIELD[target.domain]] ?? null;
-    if (setting == null) {
+    if (sourceSettings == null) {
+      // 查询失败（策略未知）→ 保守拒绝
       return {
         allowed: false,
         crossProject: true,
         reason: 'SOURCE_PROJECT_FORBIDDEN',
       };
     }
-    if (!operationAllows(operation, setting)) {
+    const setting = sourceSettings[TRANSFER_OUT_FIELD[target.domain]];
+    // 字段为 null/undefined → 按默认放行（对齐后端 modeAllows(null → true)）；
+    // 仅非 null 且与操作不匹配时才拒绝
+    if (setting != null && !operationAllows(operation, setting)) {
       return {
         allowed: false,
         crossProject: true,
@@ -121,15 +125,18 @@ export function evaluateCrossProjectTransfer(params: {
 
   // 入向：目标为项目时，按源域类型查 transferIn* 字段
   if (target.domain === 'project') {
-    const setting = targetSettings?.[TRANSFER_IN_FIELD[source.domain]] ?? null;
-    if (setting == null) {
+    if (targetSettings == null) {
+      // 查询失败（策略未知）→ 保守拒绝
       return {
         allowed: false,
         crossProject: true,
         reason: 'TARGET_PROJECT_FORBIDDEN',
       };
     }
-    if (!operationAllows(operation, setting)) {
+    const setting = targetSettings[TRANSFER_IN_FIELD[source.domain]];
+    // 字段为 null/undefined → 按默认放行（对齐后端 modeAllows(null → true)）；
+    // 仅非 null 且与操作不匹配时才拒绝
+    if (setting != null && !operationAllows(operation, setting)) {
       return {
         allowed: false,
         crossProject: true,

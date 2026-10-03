@@ -95,6 +95,58 @@ describe('@cloudcad/platform · transfer/policy', () => {
     });
   });
 
+  it('字段为 null（查询成功但未配置）→ 按默认放行（对齐后端 modeAllows(null → true)）', () => {
+    // 出向：源为项目，transferOut* 字段为 null → 放行
+    expect(
+      evaluateCrossProjectTransfer({
+        operation: 'move',
+        source: P('a'),
+        target: P('ps', 'personalSpace'),
+        sourceSettings: { transferOutToPersonalSpace: null },
+        targetSettings: null,
+      })
+    ).toEqual({ allowed: true, crossProject: true });
+    // 入向：目标为项目，transferIn* 字段为 null → 放行
+    expect(
+      evaluateCrossProjectTransfer({
+        operation: 'move',
+        source: P('ps', 'personalSpace'),
+        target: P('b'),
+        sourceSettings: null,
+        targetSettings: { transferInFromPersonalSpace: null },
+      })
+    ).toEqual({ allowed: true, crossProject: true });
+  });
+
+  it('查询失败（settings 整体为 null）→ 保守拒绝，与「字段 null」区分', () => {
+    expect(
+      evaluateCrossProjectTransfer({
+        operation: 'move',
+        source: P('a'),
+        target: P('b'),
+        sourceSettings: null,
+        targetSettings: { transferInFromProject: 'ALL' },
+      })
+    ).toEqual({
+      allowed: false,
+      crossProject: true,
+      reason: 'SOURCE_PROJECT_FORBIDDEN',
+    });
+    expect(
+      evaluateCrossProjectTransfer({
+        operation: 'move',
+        source: P('ps', 'personalSpace'),
+        target: P('b'),
+        sourceSettings: null,
+        targetSettings: null,
+      })
+    ).toEqual({
+      allowed: false,
+      crossProject: true,
+      reason: 'TARGET_PROJECT_FORBIDDEN',
+    });
+  });
+
   it('入向：目标为项目按源域查 transferIn*', () => {
     const tgt: TransferSettings = { transferInFromPersonalSpace: 'COPY_ONLY' };
     expect(
