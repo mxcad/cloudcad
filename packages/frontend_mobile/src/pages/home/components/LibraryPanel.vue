@@ -229,6 +229,9 @@
     @cancel="showActionSheet = false"
   />
 
+  <!-- ═══ 下载任务（H2：「下载所选」zip 任务进度/下载入口） ═══ -->
+  <BatchDownloadPanel v-model:show="showBatchPanel" />
+
   <!-- ═══ 重命名（E-10） ═══ -->
   <van-popup v-model:show="showRename" position="bottom" round>
     <div class="rename-popup">
@@ -291,7 +294,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { showToast, showLoadingToast, closeToast, showImagePreview, showConfirmDialog } from 'vant'
+import { showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast, showImagePreview, showConfirmDialog } from 'vant'
 
 // Vant 的 ActionSheetAction 未从 'vant' 根导出（只在 lib/action-sheet 内部），
 // 且 van-action-sheet 用 name 字段（van-popover 用 text），故在此按实际使用字段声明
@@ -319,6 +322,8 @@ import {
   batchDeleteLibraryNodes,
   downloadLibraryNode,
 } from '@/services/libraryOperationService'
+import { useBatchDownload } from '@/composables/useBatchDownload'
+import BatchDownloadPanel from '@/pages/shell/components/BatchDownloadPanel.vue'
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 
 const props = withDefaults(
@@ -658,6 +663,11 @@ const showRename = ref(false)
 const renameText = ref('')
 let renameTarget: FileSystemNodeDto | null = null
 
+// H2：「下载所选」走 zip 任务队列（并行锚点下载会被浏览器拦截，仅首个生效）；
+// 任务面板复用 BatchDownloadPanel（库任务带 libraryType，后端按库根解析+库权限门控）
+const batchDownload = useBatchDownload()
+const showBatchPanel = ref(false)
+
 function openActionSheet() {
   if (selectedNodes.value.length === 0) return
   showActionSheet.value = true
@@ -721,22 +731,22 @@ async function onActionSheetSelect(action: LibraryActionItem) {
 
   if (name === t('下载所选')) {
     const nodes = selectedNodes.value
-    showLoadingToast({ message: t('正在下载 {count} 个文件', { count: String(nodes.length) }), forbidClick: true })
-    const results = await Promise.all(
-      nodes.map((node) =>
-        downloadLibraryNode(props.libraryType, node.id, node.name, 'mxweb', undefined, true),
-      ),
-    )
-    closeToast()
-    const failed = results.filter((ok) => !ok).length
-    showToast(
-      failed === 0
-        ? t('已下载 {count} 个文件', { count: String(nodes.length) })
-        : t('已下载 {ok} 个，{fail} 个失败', {
-            ok: String(nodes.length - failed),
-            fail: String(failed),
-          }),
-    )
+    // H2：收敛到 zip 任务队列（对齐文件浏览器多选下载 / PC 库批量下载内核）：
+    // 并行锚点下载无用户手势，浏览器静默拦截除首个外的全部下载
+    showLoadingToast({ message: t('创建下载任务...'), forbidClick: true })
+    try {
+      await batchDownload.createZipTask(
+        nodes.map((node) => ({ nodeId: node.id, fileName: node.name })),
+        { libraryType: props.libraryType },
+      )
+      closeToast()
+      showSuccessToast(t('已加入下载队列'))
+      showBatchPanel.value = true
+    } catch (e) {
+      closeToast()
+      const msg = e instanceof Error ? e.message : ''
+      showFailToast(msg || t('创建下载任务失败'))
+    }
     exitSelection()
     return
   }

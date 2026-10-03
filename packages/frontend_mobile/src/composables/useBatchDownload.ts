@@ -73,10 +73,11 @@ export function useBatchDownload() {
     }
   }
 
-  /** 创建 zip 任务（A-07/A-08 共用；多选下载传 isFolder 让后端展开文件夹，对齐 PC 批量下载） */
+  /** 创建 zip 任务（A-07/A-08 共用；多选下载传 isFolder 让后端展开文件夹，对齐 PC 批量下载；
+   *  资源库「下载所选」传 libraryType 让后端按库根解析节点+库权限门控，对齐 PC 库批量下载内核） */
   async function createZipTask(
     fileList: Array<{ nodeId: string; fileName: string; relativePath?: string; isFolder?: boolean }>,
-    opts: { projectId?: string; name?: string } = {}
+    opts: { projectId?: string; name?: string; libraryType?: 'drawing' | 'block' } = {}
   ) {
     const res = await batchDownloadControllerCreateTask({
       body: {
@@ -88,6 +89,7 @@ export function useBatchDownload() {
           ...(f.isFolder ? { isFolder: true } : {}),
         })),
         ...(opts.projectId ? { projectId: opts.projectId } : {}),
+        ...(opts.libraryType ? { libraryType: opts.libraryType } : {}),
         mode: 'zip',
       },
     } as never)
