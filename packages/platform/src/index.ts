@@ -125,3 +125,6 @@ export type {
   TransferBlockReason,
   TransferVerdict,
 } from './transfer/policy';
+
+// ── 协同编辑域名白名单（纯判定；hostname 由调用方传入，不读 window） ──
+export { isCollaborationAllowed } from './collaboration/domains';

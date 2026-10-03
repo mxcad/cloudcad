@@ -23,19 +23,84 @@ vi.mock('@/utils/apiConfig', () => ({
   cachedApiUrl: (p: string) => `http://test${p}`,
 }))
 
+// 批量下载开关（运行时配置）：默认放开，让既有用例只测创建语义；
+// 门控用例单独把它置 false。
+const mockBatchDownloadEnabled = { value: true }
+
+vi.mock('@/composables/useRuntimeConfig', () => ({
+  useRuntimeConfig: () => ({
+    config: { value: { batchDownloadEnabled: mockBatchDownloadEnabled.value } },
+  }),
+}))
+
+vi.mock('@/languages', () => ({
+  t: (key: string) => key,
+}))
+
 import {
   batchDownloadControllerCreateTask,
+  batchDownloadControllerCreateSingleFileTask,
   batchDownloadControllerGetUserTasks,
   batchDownloadControllerGetProgress,
+  batchDownloadControllerGetFolderFiles,
 } from '@cloudcad/api-sdk/sdk.gen'
 
 const mockedCreate = batchDownloadControllerCreateTask as ReturnType<typeof vi.fn>
 const mockedGetTasks = batchDownloadControllerGetUserTasks as ReturnType<typeof vi.fn>
 const mockedGetProgress = batchDownloadControllerGetProgress as ReturnType<typeof vi.fn>
+const mockedGetFolderFiles = batchDownloadControllerGetFolderFiles as ReturnType<typeof vi.fn>
+
+describe('批量下载门控（batchDownloadEnabled）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockBatchDownloadEnabled.value = true
+    mockedGetTasks.mockResolvedValue({ data: { tasks: [] }, error: null })
+  })
+
+  it('开关关闭时不发起创建请求，直接抛出可展示的文案', async () => {
+    mockBatchDownloadEnabled.value = false
+    const { createZipTask } = useBatchDownload()
+    await expect(
+      createZipTask([{ nodeId: 'f1', fileName: 'a.mxweb' }], { name: '下载' }),
+    ).rejects.toThrow('批量下载功能未开启')
+    expect(mockedCreate).not.toHaveBeenCalled()
+  })
+
+  it('文件夹下载同样被门控，且关闭时不做无谓的递归展开', async () => {
+    mockBatchDownloadEnabled.value = false
+    const { createFolderZipTask } = useBatchDownload()
+    await expect(createFolderZipTask('d1', { name: '图纸目录' })).rejects.toThrow(
+      '批量下载功能未开启',
+    )
+    expect(mockedGetFolderFiles).not.toHaveBeenCalled()
+    expect(mockedCreate).not.toHaveBeenCalled()
+  })
+
+  it('开关开启时正常创建（不回归）', async () => {
+    mockedCreate.mockResolvedValue({ data: { taskId: 't-1' }, error: null })
+    const { createZipTask } = useBatchDownload()
+    await createZipTask([{ nodeId: 'f1', fileName: 'a.mxweb' }], { name: '下载' })
+    expect(mockedCreate).toHaveBeenCalledTimes(1)
+  })
+
+  it('单文件格式下载不受批量下载开关限制', async () => {
+    mockBatchDownloadEnabled.value = false
+    vi.mocked(batchDownloadControllerCreateSingleFileTask).mockResolvedValue({
+      data: { taskId: 't-2' },
+      // vi.mocked 走 SDK 严格联合类型：error 必须是 undefined 而非 null
+      error: undefined,
+    })
+    const { createSingleFormatTask } = useBatchDownload()
+    await expect(
+      createSingleFormatTask('f1', 'a.dwg', 'pdf'),
+    ).resolves.toBe('t-2')
+  })
+})
 
 describe('useBatchDownload.createZipTask（多选下载）', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockBatchDownloadEnabled.value = true
     mockedGetTasks.mockResolvedValue({ data: { tasks: [] }, error: null })
   })
 

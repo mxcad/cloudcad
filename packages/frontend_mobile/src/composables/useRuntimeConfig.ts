@@ -28,13 +28,13 @@ export interface PublicRuntimeConfig {
   allowRegister: boolean;
   /** 微信登录开关 */
   wechatEnabled: boolean;
-  /** 微信登录自动创建账号（开启后无需填用户名密码） */
+  /** 微信登录自动创建账号（开启后无需填用户名密码）。后端 local-auth 强制；移动端走事务轮询，不本地预判 */
   wechatAutoRegister: boolean;
   /** 账号注销冷静期天数 */
   userCancelGraceDays: number;
-  /** 游客转换时间窗（小时） */
+  /** 游客转换时间窗（小时）。后端 restriction-engine 强制，移动端只在拿到 403 时提示 */
   conversionGuestWindowHours: number;
-  /** 游客转换次数上限 */
+  /** 游客转换次数上限。后端 restriction-engine 强制，移动端只在拿到 403 时提示 */
   conversionGuestLimit: number;
   /** 免费用户（含游客）是否允许导出下载转换 */
   freeExportDownloadEnabled: boolean;

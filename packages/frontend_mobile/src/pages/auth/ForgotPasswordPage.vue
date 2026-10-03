@@ -17,6 +17,7 @@ import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isEmail, isPhone, isContactType, type ContactType } from '@/utils/authValidation'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { redirectQueryOf } from '@/utils/authNavigate'
+import { resolveSupportContact } from '@/utils/supportContact'
 
 const CONTACT_TYPE_KEY = 'forgotContactType'
 const CONTACT_VALUE_KEY = 'forgotContactValue'
@@ -28,6 +29,9 @@ const { config } = useRuntimeConfig()
 const mailAvailable = computed(() => config.value.mailEnabled)
 const phoneAvailable = computed(() => config.value.smsEnabled)
 const noChannel = computed(() => !mailAvailable.value && !phoneAvailable.value)
+
+// 联系方式只渲染真实配置项：运行时配置为空时不编造假邮箱/假电话（见 supportContact.ts）
+const support = computed(() => resolveSupportContact(config.value))
 
 const contactType = ref<ContactType>('email')
 const contact = ref('')
@@ -106,21 +110,22 @@ function goLogin() {
         </div>
         <div class="form-body">
           <div class="contact-block">
-            <div class="contact-row">
-              <span class="contact-label">{{ t('客服邮箱：') }}</span>
-              <a :href="`mailto:${config.supportEmail || 'support@cloudcad.com'}`">
-                {{ config.supportEmail || 'support@cloudcad.com' }}
-              </a>
-            </div>
-            <div class="contact-row">
-              <span class="contact-label">{{ t('客服电话：') }}</span>
-              <a :href="`tel:${config.supportPhone || '400-123-4567'}`">
-                {{ config.supportPhone || '400-123-4567' }}
-              </a>
-            </div>
-            <div class="contact-row">
-              <span class="contact-label">{{ t('工作时间：') }}</span>
-              <span class="contact-value">{{ t('周一至周五 9:00-18:00') }}</span>
+            <template v-if="support.configured">
+              <div v-if="support.email" class="contact-row">
+                <span class="contact-label">{{ t('客服邮箱：') }}</span>
+                <a :href="`mailto:${support.email}`">{{ support.email }}</a>
+              </div>
+              <div v-if="support.phone" class="contact-row">
+                <span class="contact-label">{{ t('客服电话：') }}</span>
+                <a :href="`tel:${support.phone}`">{{ support.phone }}</a>
+              </div>
+              <div class="contact-row">
+                <span class="contact-label">{{ t('工作时间：') }}</span>
+                <span class="contact-value">{{ t('周一至周五 9:00-18:00') }}</span>
+              </div>
+            </template>
+            <div v-else class="contact-row">
+              <span class="contact-value">{{ t('如有疑问，请联系管理员。') }}</span>
             </div>
           </div>
           <button class="primary-btn" type="button" @click="goLogin">{{ t('返回登录') }}</button>

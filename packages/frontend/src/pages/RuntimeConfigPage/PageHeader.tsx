@@ -4,10 +4,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * 页面头部：标题 + 优先级与生效语义说明 + 统计条 + 只读提示。
+ * 页面头部：标题 + 生效语义说明 + 统计条 + 只读提示。
  *
- * 生效说明按 `hot` 字段如实区分：原先「修改后立即生效」与事实不符，
- * 已改为按即时生效 / 需重启服务分述。
+ * 说明面向非技术运维：不出现「取值优先级 / 即时生效」等术语，只讲
+ * 「在这里改、保存就生效」；只有真的存在需重启的项（hot === false）才提示。
  */
 
 import React from 'react';
@@ -35,13 +35,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <div className={styles.titleContent}>
             <h1 className={styles.pageTitle}>{t('运行时配置')}</h1>
             <p className={styles.pageSubtitle}>
-              {t('取值优先级：运行时配置 > 环境变量 > 代码默认值。')}
               {t(
-                '标记「即时生效」的项保存后立即生效；标记「需重启服务」的项（{n} 项）需重启后端服务后生效。',
-                {
-                  n: String(stats.restartRequired),
-                }
+                '在这里修改并保存即可，不用去改 .env 文件；这里设置的值优先于环境变量和代码默认值。'
               )}
+              {stats.restartRequired > 0 &&
+                t('其中 {n} 项需重启后端服务后才生效。', {
+                  n: String(stats.restartRequired),
+                })}
             </p>
           </div>
         </div>

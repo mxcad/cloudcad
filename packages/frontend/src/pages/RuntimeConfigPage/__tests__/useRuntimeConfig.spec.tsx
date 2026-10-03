@@ -157,6 +157,7 @@ const rawConfigs = [
     envValue: null,
     tier: 'advanced',
     input: { placeholder: '{"allow":[]}' },
+    impact: '配置错误会阻塞所有跨域请求',
     dangerous: false,
     hot: false,
   },
@@ -223,6 +224,10 @@ describe('useRuntimeConfig', () => {
   describe('拉取与归一化', () => {
     it('首屏拉取一次，归一化后按分类顺序分组，已修改项组内置顶', async () => {
       const hook = await load();
+      // 默认收起高级项会让 security 组整组消失，先展开再校验完整分类顺序
+      await act(async () => {
+        hook.result.current.setShowAdvanced(true);
+      });
       const rc = hook.result.current;
 
       expect(getAllConfigs).toHaveBeenCalledTimes(1);
@@ -764,11 +769,55 @@ describe('useRuntimeConfig', () => {
         'user.allowRegister',
       ]);
 
+      // 中文分类名可搜（搜英文 category 原值命中不了用户认知）
+      await act(async () => {
+        hook.result.current.setKeyword('安全配置');
+      });
+      expect(hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
+        'security.corsOrigins',
+      ]);
+
+      // 影响说明（改了会怎样）可搜
+      await act(async () => {
+        hook.result.current.setKeyword('跨域请求');
+      });
+      expect(hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
+        'security.corsOrigins',
+      ]);
+
       await act(async () => {
         hook.result.current.setKeyword('   ');
       });
+      // 默认收起 1 项高级项（security.corsOrigins）
       expect(hook.result.current.stats.total).toBe(7);
+      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(6);
+    });
+
+    it('默认收起高级项，展开后恢复全量；隐藏时仍可被搜索到', async () => {
+      const hook = await load();
+      expect(hook.result.current.showAdvanced).toBe(false);
+      expect(hook.result.current.advancedCount).toBe(1);
+      const keys = () =>
+        hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key));
+      expect(keys()).not.toContain('security.corsOrigins');
+
+      // 搜索时不隐藏高级项，避免「找不到」
+      await act(async () => {
+        hook.result.current.setKeyword('corsOrigins');
+      });
+      expect(keys()).toContain('security.corsOrigins');
+
+      await act(async () => {
+        hook.result.current.setKeyword('');
+        hook.result.current.setShowAdvanced(true);
+      });
+      expect(keys()).toContain('security.corsOrigins');
       expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(7);
+
+      await act(async () => {
+        hook.result.current.setShowAdvanced(false);
+      });
+      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(6);
     });
 
     it('只看已修改项时只保留 isModified 的项', async () => {
@@ -782,7 +831,7 @@ describe('useRuntimeConfig', () => {
       await act(async () => {
         hook.result.current.setOnlyModified(false);
       });
-      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(7);
+      expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(6);
     });
 
     it('折叠分类可切换，也可一键全部折叠/展开', async () => {
@@ -793,6 +842,11 @@ describe('useRuntimeConfig', () => {
       });
       expect(hook.result.current.collapsed.has('mail')).toBe(false);
 
+      // 展开高级项后「折叠全部」覆盖 security 组（默认收起时它不在可见分组内）
+      // 分两次提交：setAllCollapsed 读的是分组 memo，需等上一轮状态算完
+      await act(async () => {
+        hook.result.current.setShowAdvanced(true);
+      });
       await act(async () => {
         hook.result.current.setAllCollapsed(true);
       });

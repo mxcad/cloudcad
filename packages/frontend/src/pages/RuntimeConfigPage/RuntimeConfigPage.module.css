@@ -297,11 +297,18 @@
   min-width: 0;
 }
 
-.config-key {
-  font-family: var(--font-family-mono);
+.config-name {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-primary);
+  word-break: break-word;
+}
+
+.config-key {
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
   word-break: break-all;
 }
 
@@ -325,13 +332,6 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
-}
-
-.config-description {
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-  line-height: 1.5;
-  margin: 0;
 }
 
 /* ===== 输入控件 ===== */

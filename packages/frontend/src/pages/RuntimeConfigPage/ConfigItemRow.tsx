@@ -16,7 +16,6 @@ import {
   ShieldAlert,
   Sparkles,
   Eye,
-  Zap,
   Power,
   TerminalSquare,
   AlertCircle,
@@ -97,11 +96,7 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
       )}
       <Tag variant={TIER_VARIANT[tier]}>{TIER_LABEL[tier]}</Tag>
       <Tag variant={SOURCE_VARIANT[source]}>{SOURCE_LABEL[source]}</Tag>
-      {hot ? (
-        <Tag variant="success" icon={Zap}>
-          {t('即时生效')}
-        </Tag>
-      ) : (
+      {!hot && (
         <Tag variant="warning" icon={Power}>
           {t('需重启服务')}
         </Tag>
@@ -137,6 +132,9 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
       {/* 第一行：key + 徽标 + 控件（布尔开关）/ 操作按钮 */}
       <div className={styles.itemHeader}>
         <div className={styles.itemTitle}>
+          <span className={styles.configName}>
+            {item.description ?? item.key}
+          </span>
           <span className={styles.configKey}>{item.key}</span>
           {badges}
         </div>
@@ -178,10 +176,6 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
 
       {/* 第二行：说明与元信息 */}
       <div className={styles.itemBody}>
-        {item.description && (
-          <p className={styles.configDescription}>{item.description}</p>
-        )}
-
         {item.type !== 'boolean' && control}
 
         {/* 差异对比：默认值 → 当前值 */}

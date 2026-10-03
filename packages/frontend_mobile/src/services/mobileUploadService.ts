@@ -5,6 +5,7 @@
 } from '@cloudcad/api-sdk/sdk.gen';
 import { handleApiError } from '@/utils/apiConfig';
 import { sanitizeFileName } from '@/utils/sanitizeFileName';
+import { useRuntimeConfig } from '@/composables/useRuntimeConfig';
 import { t } from '@/languages';
 
 export interface MobileUploadOptions {
@@ -53,6 +54,19 @@ export async function uploadFile(
   // enableImplicitConversion 按 Boolean("false")===true 处理，普通打开会被误判成
   // 强制重转。故 false 时省略该字段（与 forceUpload 的既有约定一致）。
   const forceConvertField = forceConvert ? { forceConvert: true } : {};
+
+  // 上传前按运行时配置拦截超大文件：后端同样会拒，但那时用户已白等一轮哈希，
+  // 且只拿到通用的「上传失败」看不到原因。放在秒传/分片判断之前，
+  // 一处覆盖全部上传入口（本地面板、原生选文件、文件浏览器、项目详情、另存）。
+  const maxSizeMb = useRuntimeConfig().config.value.maxFileSize;
+  if (maxSizeMb > 0 && file.size > maxSizeMb * 1024 * 1024) {
+    throw new Error(
+      t('文件「{name}」超过大小上限（{size} MB）', {
+        name: file.name,
+        size: String(maxSizeMb),
+      }),
+    );
+  }
 
   onFileQueued?.(file);
 

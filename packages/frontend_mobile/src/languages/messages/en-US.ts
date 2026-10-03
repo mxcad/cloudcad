@@ -1181,5 +1181,9 @@ export default  {
     "3724": "No participants yet",
     "3725": "Failed to join collaboration, error code: ",
     "3726": "You are currently collaborating. Leaving this page or opening a new file will exit the current session. Continue?",
-    "3727": "Continue"
+    "3727": "Continue",
+    "3728": "「{name}」 exceeds the size limit ({size} MB)",
+    "3729": "Batch download is not enabled",
+    "3730": "Real-time collaboration is not enabled for this domain. Please ask an administrator to configure the collaboration domains.",
+    "3731": "Join"
 }

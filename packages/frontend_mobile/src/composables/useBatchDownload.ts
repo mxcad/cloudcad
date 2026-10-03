@@ -25,6 +25,8 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { BatchDownloadTaskDto, BatchDownloadErrorDto } from '@cloudcad/api-sdk/types.gen'
 import { cachedApiUrl } from '@/utils/apiConfig'
+import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import { t } from '@/languages'
 
 export interface BatchTaskItem extends BatchDownloadTaskDto {
   /** 展示名（文件夹名 / 首个文件名），由创建方传入 */
@@ -57,6 +59,19 @@ function flattenFolderTree(
 export function useBatchDownload() {
   const tasks = ref<BatchTaskItem[]>([])
   const loading = ref(false)
+
+  /**
+   * 批量下载门控（对齐 PC：开关关闭时不给出下载入口）。
+   *
+   * 后端 batchDownloadEnabled 默认关闭（防资源滥用）且创建接口会直接 403；
+   * 这里在发请求前拦掉，让用户立刻看到原因。
+   * 单文件下载不受此门控（原格式直下 / createSingleFormatTask 语义独立）。
+   */
+  async function assertBatchDownloadEnabled(): Promise<void> {
+    if (!useRuntimeConfig().config.value.batchDownloadEnabled) {
+      throw new Error(t('批量下载功能未开启'))
+    }
+  }
 
   async function loadTasks() {
     loading.value = true
@@ -91,6 +106,7 @@ export function useBatchDownload() {
     }>,
     opts: { projectId?: string; name?: string; libraryType?: 'drawing' | 'block' } = {}
   ) {
+    await assertBatchDownloadEnabled()
     const res = await batchDownloadControllerCreateTask({
       body: {
         fileList: fileList.map((f) => ({
@@ -125,6 +141,8 @@ export function useBatchDownload() {
     nodeId: string,
     opts: { projectId?: string; name?: string } = {}
   ) {
+    // 先门控再展开：关闭时没必要白做一次递归展开
+    await assertBatchDownloadEnabled()
     const res = await batchDownloadControllerGetFolderFiles({ path: { nodeId } } as never)
     if (res.error) throw new Error(String(res.error))
     const tree = res.data as FolderTreeNode

@@ -2546,5 +2546,9 @@ export default  {
     "1000208": "Dangerous",
     "1000209": "Read-only: cannot modify configurations",
     "1000210": "The explicit modifications of the following {n} items will be reset.",
-    "1000211": "{n} of them are injected via environment variables: after reset they fall back to the environment variable value, not the code default."
+    "1000211": "{n} of them are injected via environment variables: after reset they fall back to the environment variable value, not the code default.",
+    "1000212": "Just edit and save here — no need to touch the .env file. Values set here take priority over environment variables and code defaults.",
+    "1000213": "{n} of them take effect only after the backend service is restarted.",
+    "1000214": "Search configs (name / category / impact)",
+    "1000215": "Show advanced items ({n})"
 }

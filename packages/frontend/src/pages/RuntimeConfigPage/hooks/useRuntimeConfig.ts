@@ -70,11 +70,15 @@ export interface UseRuntimeConfigReturn {
   collapsed: Set<string>;
   keyword: string;
   onlyModified: boolean;
+  /** 默认收起的高级项条数（工具栏文案用） */
+  advancedCount: number;
+  showAdvanced: boolean;
   secretVisible: Set<string>;
   canManageConfig: boolean;
   stats: RuntimeConfigStats;
   setKeyword: (keyword: string) => void;
   setOnlyModified: (onlyModified: boolean) => void;
+  setShowAdvanced: (showAdvanced: boolean) => void;
   toggleCollapsed: (category: string) => void;
   setAllCollapsed: (collapsed: boolean) => void;
   draftOf: (item: ConfigItem) => DraftValue;
@@ -130,6 +134,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [keyword, setKeyword] = useState('');
   const [onlyModified, setOnlyModified] = useState(false);
+  /** 高级项默认收起：这类项（并发、超时、缓存 TTL、清理 cron）需要理解系统内部才敢改 */
+  const [showAdvanced, setShowAdvanced] = useState(false);
   /** 已展开显示的遮罩值（input.secret 项默认隐藏） */
   const [secretVisible, setSecretVisible] = useState<Set<string>>(new Set());
   /** 首次拉取失败时的错误文案；非空时页面渲染错误态而非「暂无配置项」 */
@@ -207,16 +213,20 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     [configs, drafts]
   );
 
-  /** 搜索 + 只看已修改 → 按分类分组（分类顺序固定，已修改项组内置顶） */
+  /** 搜索 + 只看已修改 + 高级项开关 → 按分类分组（分类顺序固定，已修改项组内置顶） */
   const groups: ConfigGroup[] = useMemo(() => {
     const q = keyword.trim().toLowerCase();
     const matched = configs.filter((item) => {
       if (onlyModified && !item.isModified) return false;
+      // 关键（搜索）时不过滤档位：藏起来的高级项也要能被搜出来
+      if (!q && !showAdvanced && item.tier === 'advanced') return false;
       if (!q) return true;
+      const categoryLabel = CATEGORY_META[item.category]?.label ?? '';
       return (
         item.key.toLowerCase().includes(q) ||
         (item.description ?? '').toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q)
+        categoryLabel.toLowerCase().includes(q) ||
+        (item.impact ?? '').toLowerCase().includes(q)
       );
     });
 
@@ -248,7 +258,12 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
         modifiedCount: items.filter((i) => i.isModified).length,
       };
     });
-  }, [configs, keyword, onlyModified]);
+  }, [configs, keyword, onlyModified, showAdvanced]);
+
+  const advancedCount = useMemo(
+    () => configs.filter((c) => c.tier === 'advanced').length,
+    [configs]
+  );
 
   const draftOf = useCallback(
     (item: ConfigItem): DraftValue => {
@@ -571,11 +586,14 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     collapsed,
     keyword,
     onlyModified,
+    advancedCount,
+    showAdvanced,
     secretVisible,
     canManageConfig,
     stats,
     setKeyword,
     setOnlyModified,
+    setShowAdvanced,
     retryFetch: () => fetchConfigs(),
     toggleCollapsed,
     setAllCollapsed,

@@ -90,7 +90,7 @@ export const RuntimeConfigPage: React.FC = () => {
             size="md"
             value={rc.keyword}
             onChange={(e) => rc.setKeyword(e.target.value)}
-            placeholder={t('搜索配置项（键名 / 说明 / 分类）')}
+            placeholder={t('搜索配置项（名称 / 分类 / 影响说明）')}
             data-testid="rc-search"
           />
         </div>
@@ -101,6 +101,18 @@ export const RuntimeConfigPage: React.FC = () => {
           label={t('只看已修改的')}
           data-testid="rc-only-modified"
         />
+        {/* 高级项默认收起，需要改并发/超时/缓存 TTL 这类内部参数时手动展开 */}
+        {rc.advancedCount > 0 && (
+          <Checkbox
+            size="sm"
+            checked={rc.showAdvanced}
+            onChange={(e) => rc.setShowAdvanced(e.target.checked)}
+            label={t('显示高级项（{n} 项）', {
+              n: String(rc.advancedCount),
+            })}
+            data-testid="rc-show-advanced"
+          />
+        )}
         <div className={styles.toolbarSpacer} />
         <Button
           variant="ghost"

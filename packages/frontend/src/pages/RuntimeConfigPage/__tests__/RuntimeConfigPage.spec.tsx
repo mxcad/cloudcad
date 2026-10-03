@@ -190,6 +190,8 @@ function makeReturn(
     collapsed: new Set(),
     keyword: '',
     onlyModified: false,
+    advancedCount: configs.filter((c) => c.tier === 'advanced').length,
+    showAdvanced: false,
     secretVisible: new Set(),
     canManageConfig: true,
     stats: {
@@ -201,6 +203,7 @@ function makeReturn(
     },
     setKeyword: vi.fn(),
     setOnlyModified: vi.fn(),
+    setShowAdvanced: vi.fn(),
     toggleCollapsed: vi.fn(),
     setAllCollapsed: vi.fn(),
     draftOf: (it) => defaultDraftOf(it),
@@ -233,7 +236,9 @@ describe('RuntimeConfigPage 渲染', () => {
     render(<RuntimeConfigPage />);
     expect(screen.getByText('运行时配置')).toBeTruthy();
     // 需重启项数（security.corsOrigins hot=false）计入说明
-    expect(screen.getByText(/需重启后端服务后生效/)).toBeTruthy();
+    expect(screen.getByText(/需重启后端服务后才生效/)).toBeTruthy();
+    // 保存即可生效的说明面向非技术用户，不出现「取值优先级」这类术语
+    expect(screen.getByText(/不用去改 \.env 文件/)).toBeTruthy();
     expect(screen.getByTestId('rc-stats')).toBeTruthy();
     const stats = within(screen.getByTestId('rc-stats'));
     expect(stats.getByText('配置项')).toBeTruthy();
@@ -265,10 +270,24 @@ describe('RuntimeConfigPage 渲染', () => {
     expect(screen.getAllByText('高级项').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('运行时修改').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('代码默认值').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('即时生效').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('即时生效')).toBeNull();
     expect(screen.getAllByText('需重启服务').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('危险').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('已修改').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('配置项标题显示中文说明，JSON 键名作副标题', () => {
+    render(<RuntimeConfigPage />);
+    const row = rowOf('mail.smtpHost');
+    expect(within(row).getByText('SMTP 服务器地址')).toBeTruthy();
+    expect(within(row).getByText('mail.smtpHost')).toBeTruthy();
+  });
+
+  it('「显示高级项」开关接线：文案含隐藏条数，点击后上报 setShowAdvanced', () => {
+    render(<RuntimeConfigPage />);
+    // 点中文标签即勾选（label 关联 input，Checkbox 把 data-testid 放在 input 上）
+    fireEvent.click(screen.getByText(/显示高级项（2 项）/));
+    expect(mockState.return.setShowAdvanced).toHaveBeenCalledWith(true);
   });
 
   it('已修改项显示「默认值 → 当前值」对比', () => {

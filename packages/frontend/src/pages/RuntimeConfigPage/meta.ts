@@ -27,14 +27,10 @@ import {
   Share2,
   Gauge,
   Database,
-  Timer,
-  List,
   Shield,
-  Activity,
   ClipboardList,
   BellRing,
   DatabaseBackup,
-  ScrollText,
 } from 'lucide-react';
 import { t } from '@/languages';
 import type {
@@ -47,7 +43,7 @@ import type {
   ConfigInputMeta,
 } from './types';
 
-/** 分类元数据：中文显示名 + 图标。key 覆盖后端 RuntimeConfigCategory 全量 */
+/** 分类元数据：中文显示名 + 图标。只登记实际有配置项的分类（后端枚举里的空分类不留空壳入口） */
 export const CATEGORY_META: Record<
   string,
   { label: string; icon: LucideIcon }
@@ -66,14 +62,10 @@ export const CATEGORY_META: Record<
   collaboration: { label: t('协同配置'), icon: Share2 },
   quota: { label: t('配额配置'), icon: Gauge },
   cache: { label: t('缓存配置'), icon: Database },
-  session: { label: t('会话配置'), icon: Timer },
-  pagination: { label: t('分页配置'), icon: List },
   security: { label: t('安全配置'), icon: Shield },
-  performance: { label: t('性能配置'), icon: Activity },
   audit: { label: t('审计配置'), icon: ClipboardList },
   alert: { label: t('告警配置'), icon: BellRing },
   backup: { label: t('备份配置'), icon: DatabaseBackup },
-  logging: { label: t('日志配置'), icon: ScrollText },
 };
 
 /** 分类展示顺序（按 CATEGORY_META 声明顺序，缺省分类追加在末尾） */

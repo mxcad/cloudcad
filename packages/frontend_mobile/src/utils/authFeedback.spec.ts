@@ -66,14 +66,22 @@ describe('showError', () => {
 });
 
 describe('showAccountDeactivatedDialog', () => {
-  it('cleanupDays 缺省 30，客服联系方式回退硬编码兜底值', () => {
+  it('cleanupDays 缺省 30', () => {
     showAccountDeactivatedDialog();
     expect(mockShowDialog).toHaveBeenCalledTimes(1);
     const arg = mockShowDialog.mock.calls[0][0] as { title: string; message: string };
     expect(arg.title).toBe('账号已注销');
     expect(arg.message).toContain('30');
-    expect(arg.message).toContain('support@cloudcad.com');
-    expect(arg.message).toContain('400-123-4567');
+  });
+
+  it('未配置客服联系方式时不编造假邮箱/假电话，改为提示联系管理员', () => {
+    showAccountDeactivatedDialog();
+    const arg = mockShowDialog.mock.calls[0][0] as { message: string };
+    expect(arg.message).not.toContain('support@cloudcad.com');
+    expect(arg.message).not.toContain('400-123-4567');
+    expect(arg.message).toContain('如有疑问，请联系管理员。');
+    // 没有任何联系方式时不单独挂一行工作时间
+    expect(arg.message).not.toContain('工作时间');
   });
 
   it('使用运行时配置的客服联系方式并透传 cleanupDays', () => {
@@ -83,5 +91,14 @@ describe('showAccountDeactivatedDialog', () => {
     expect(arg.message).toContain('45');
     expect(arg.message).toContain('cs@mx.com');
     expect(arg.message).toContain('400-000-0000');
+    expect(arg.message).toContain('工作时间');
+  });
+
+  it('只配了一项时只显示该项，空项不渲染空链接', () => {
+    mockConfig.value = { supportEmail: 'cs@mx.com', supportPhone: '   ' };
+    showAccountDeactivatedDialog();
+    const arg = mockShowDialog.mock.calls[0][0] as { message: string };
+    expect(arg.message).toContain('cs@mx.com');
+    expect(arg.message).not.toContain('tel:');
   });
 });

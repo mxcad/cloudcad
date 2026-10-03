@@ -13,6 +13,7 @@ import 'vant/es/toast/style'
 import { t } from '@/languages'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { errMsg } from './apiError'
+import { resolveSupportContact } from './supportContact'
 
 // 兼容再导出：历史消费者（LoginPage / RegisterPage / useWechatLogin 等）仍从
 // 本文件取这三个符号。新增消费者请直接 import { ... } from '@/utils/apiError'，
@@ -32,13 +33,13 @@ export function showError(e: unknown, fallback: string): void {
 /**
  * ACCOUNT_DEACTIVATED 弹窗（与 PC SupportModal variant=deactivated 同口径）：
  * 注销冷静期已过 → 弹客服信息告知「联系客服恢复 + 数据 N 天后彻底删除」。
- * cleanupDays 取自错误体，缺省 30。客服联系方式读运行时配置，缺省回退硬编码兜底值。
+ * cleanupDays 取自错误体，缺省 30。客服联系方式读运行时配置，
+ * 未配置时不编造假邮箱/假电话（见 supportContact.ts），改为提示联系管理员。
  */
 export function showAccountDeactivatedDialog(cleanupDays?: number): void {
   const days = typeof cleanupDays === 'number' && Number.isFinite(cleanupDays) ? cleanupDays : 30
   const { config } = useRuntimeConfig()
-  const supportEmail = config.value.supportEmail || 'support@cloudcad.com'
-  const supportPhone = config.value.supportPhone || '400-123-4567'
+  const support = resolveSupportContact(config.value)
 
   const contactItem = (label: string, value: string, href: string) => `
     <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
@@ -57,12 +58,22 @@ export function showAccountDeactivatedDialog(cleanupDays?: number): void {
         ${t('天后彻底删除，逾期无法恢复。')}
       </p>
       <div style="margin-top:14px">
-        ${contactItem(t('客服邮箱：'), supportEmail, `mailto:${supportEmail}`)}
-        ${contactItem(t('客服电话：'), supportPhone, `tel:${supportPhone}`)}
-        <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
-          <span style="color:var(--text-tertiary);min-width:6em">${t('工作时间：')}</span>
-          <span style="color:var(--text-secondary)">${t('周一至周五 9:00-18:00')}</span>
-        </div>
+        ${
+          support.configured
+            ? [
+                support.email
+                  ? contactItem(t('客服邮箱：'), support.email, `mailto:${support.email}`)
+                  : '',
+                support.phone
+                  ? contactItem(t('客服电话：'), support.phone, `tel:${support.phone}`)
+                  : '',
+                `<div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+                  <span style="color:var(--text-tertiary);min-width:6em">${t('工作时间：')}</span>
+                  <span style="color:var(--text-secondary)">${t('周一至周五 9:00-18:00')}</span>
+                </div>`,
+              ].join('')
+            : `<p style="color:var(--text-secondary);line-height:1.7">${t('如有疑问，请联系管理员。')}</p>`
+        }
       </div>`,
     confirmButtonText: t('我知道了'),
   })

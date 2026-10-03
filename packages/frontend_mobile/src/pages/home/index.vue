@@ -47,6 +47,7 @@ import {
 } from '../../composables/useCooperate';
 import { useCollabAutoJoin } from '../../composables/useCollabAutoJoin';
 import { useRuntimeConfig } from '../../composables/useRuntimeConfig';
+import { isCollaborationAllowed } from '@cloudcad/platform';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
 import SaveAsSheet from './components/SaveAsSheet.vue';
 import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
@@ -266,8 +267,19 @@ const pendingActionAfterLogin = ref<
   'save' | 'saveAs' | 'version-history' | null
 >(null);
 const { config: runtimeConfig } = useRuntimeConfig();
+
+// 协同入口可用性 = 功能开关 && 当前域名在白名单内。
+// 与 PC SidebarContainer（collaborationEnabled && isCollaborationAllowed）同口径，
+// 判定逻辑共用 @cloudcad/platform 的一份实现。
+const collaborationAllowed = computed(() =>
+  isCollaborationAllowed(
+    runtimeConfig.value.collaborationDomains,
+    window.location.hostname,
+  ),
+);
 const showCooperate = ref(false);
 const showCollabDisabled = ref(false);
+const collabDisabledReason = ref<'cloud' | 'domain'>('cloud');
 const showInsertBlock = ref(false);
 const insertBlockParams = ref<BlockInfoItem | null>(null);
 
@@ -430,7 +442,8 @@ async function handleNewFile() {
 }
 
 const handleShowCollaborate = () => {
-  if (!runtimeConfig.value.collaborationEnabled) {
+  if (!runtimeConfig.value.collaborationEnabled || !collaborationAllowed.value) {
+    collabDisabledReason.value = runtimeConfig.value.collaborationEnabled ? 'domain' : 'cloud';
     showCollabDisabled.value = true;
     return;
   }
@@ -555,7 +568,8 @@ onMounted(async () => {
 
   // ====== 协同分享链接（与 PC CADEditorDirect.tsx L316-L343 + CollaborateSidebar.tsx L364-L513 对齐） ======
   if (collabWorkId) {
-    if (!runtimeConfig.value.collaborationEnabled) {
+    if (!runtimeConfig.value.collaborationEnabled || !collaborationAllowed.value) {
+      collabDisabledReason.value = runtimeConfig.value.collaborationEnabled ? 'domain' : 'cloud';
       showCollabDisabled.value = true;
     }
     const workId = parseInt(collabWorkId, 10);
@@ -850,6 +864,11 @@ setViewportHeight();
           color: var(--text-secondary);
         "
       >
+        <p
+          v-if="collabDisabledReason === 'domain'"
+          style="margin: 0"
+        >{{ t('当前域名未在实时协同白名单中，请联系管理员配置协同域名。') }}</p>
+        <template v-else>
         <span>{{ t('实时协同只支持私有化部署，请点击') }}</span>
         <a
           href="https://help.mxdraw.com/"
@@ -859,6 +878,7 @@ setViewportHeight();
           >{{ t('查看文档') }}</a
         >
         <span>{{ t('或者联系客服') }}</span>
+        </template>
       </div>
     </van-dialog>
     <div v-show="showInsertBlock">

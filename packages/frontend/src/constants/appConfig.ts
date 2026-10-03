@@ -22,6 +22,7 @@
  *   5. `VITE_APP_NAME` / `VITE_APP_LOGO`
  *   6. 内置默认值（'CloudCAD' / '/logo.png'）
  */
+import { isCollaborationAllowed as isCollaborationDomainAllowed } from '@cloudcad/platform';
 
 const BRAND_CONFIG_URL = '/brand/config.json';
 
@@ -387,13 +388,13 @@ export const MEMBERSHIP_ENABLED =
 
 /**
  * 协同功能域名白名单检查
- * 仅允许白名单中的域名使用协同功能
+ * 仅允许白名单中的域名使用协同功能。
+ *
+ * 判定逻辑在 @cloudcad/platform 里与移动端共用一份（那里多处理了「全空白 / 只剩逗号」
+ * 的脏值），这里只补上读取当前域名的薄适配，保持既有调用点的单参数签名不变。
  */
-export const isCollaborationAllowed = (domains: string): boolean => {
-  if (!domains) return true;
-  const allowedDomains = domains.split(',').map((d) => d.trim().toLowerCase());
-  return allowedDomains.includes(window.location.hostname.toLowerCase());
-};
+export const isCollaborationAllowed = (domains: string): boolean =>
+  isCollaborationDomainAllowed(domains, window.location.hostname);
 
 /**
  * 分页配置
