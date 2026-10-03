@@ -1336,6 +1336,7 @@ onMounted(() => {
           :sort-order="fileSortOrder"
           :filter-active="fileList.hasActiveFilters.value"
           :selection-actions="fileSelectionActions"
+          :show-fab="canCreateFile"
           :enable-paste="true"
           :paste-disabled="!canPasteNow"
           :paste-disabled-reason="pasteDisabledReasonNow"

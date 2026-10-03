@@ -53,6 +53,18 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
 
   let searchTimer: ReturnType<typeof setTimeout> | null = null
 
+  // 破坏性动作互斥：恢复/彻底删除/清空在途时禁止二次触发（双击/连点 → 并发请求 + 二次弹窗）
+  const actionBusy = ref(false)
+  async function runExclusive(fn: () => Promise<void>) {
+    if (actionBusy.value) return
+    actionBusy.value = true
+    try {
+      await fn()
+    } finally {
+      actionBusy.value = false
+    }
+  }
+
   // 失败分类：403 → 权限文案，其余透传后端本地化文案（兜底通用失败）
   function failToast(e: unknown): void {
     if (errorKind(e) === 'forbidden') {
@@ -188,84 +200,94 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
 
   // ── 恢复：根节点（含已删项目根）走批量恢复接口，非根走单节点恢复 ──
   async function restore(item: { id: string; isRoot?: boolean }) {
-    try {
-      const res = item.isRoot
-        ? await trashControllerRestoreTrashItems({ body: { itemIds: [item.id] } })
-        : await nodeControllerRestoreNode({ path: { nodeId: item.id } })
-      if (res.error) throw res.error
-      showSuccessToast(t('已恢复'))
-      await reload()
-    } catch (e) {
-      failToast(e)
-    }
+    await runExclusive(async () => {
+      try {
+        const res = item.isRoot
+          ? await trashControllerRestoreTrashItems({ body: { itemIds: [item.id] } })
+          : await nodeControllerRestoreNode({ path: { nodeId: item.id } })
+        if (res.error) throw res.error
+        showSuccessToast(t('已恢复'))
+        await reload()
+      } catch (e) {
+        failToast(e)
+      }
+    })
   }
 
   async function restoreBatch(ids: string[]) {
     if (ids.length === 0) return
-    try {
-      const res = await trashControllerRestoreTrashItems({ body: { itemIds: ids } })
-      if (res.error) throw res.error
-      showSuccessToast(t('已恢复 {count} 项', { count: String(ids.length) }))
-      await reload()
-    } catch (e) {
-      failToast(e)
-    }
+    await runExclusive(async () => {
+      try {
+        const res = await trashControllerRestoreTrashItems({ body: { itemIds: ids } })
+        if (res.error) throw res.error
+        showSuccessToast(t('已恢复 {count} 项', { count: String(ids.length) }))
+        await reload()
+      } catch (e) {
+        failToast(e)
+      }
+    })
   }
 
   // ── 彻底删除：单条走节点删除，批量走回收站批量接口 ──
   async function permanentDelete(item: { id: string }) {
-    try {
-      const res = await nodeControllerDeleteNode({
-        path: { nodeId: item.id },
-        query: { permanently: true },
-      })
-      if (res.error) throw res.error
-      showSuccessToast(t('已彻底删除'))
-      await reload()
-    } catch (e) {
-      failToast(e)
-    }
+    await runExclusive(async () => {
+      try {
+        const res = await nodeControllerDeleteNode({
+          path: { nodeId: item.id },
+          query: { permanently: true },
+        })
+        if (res.error) throw res.error
+        showSuccessToast(t('已彻底删除'))
+        await reload()
+      } catch (e) {
+        failToast(e)
+      }
+    })
   }
 
   async function permanentDeleteBatch(ids: string[]) {
     if (ids.length === 0) return
-    try {
-      const res = await trashControllerPermanentlyDeleteTrashItems({ body: { itemIds: ids } })
-      if (res.error) throw res.error
-      showSuccessToast(t('已彻底删除 {count} 项', { count: String(ids.length) }))
-      await reload()
-    } catch (e) {
-      failToast(e)
-    }
+    await runExclusive(async () => {
+      try {
+        const res = await trashControllerPermanentlyDeleteTrashItems({ body: { itemIds: ids } })
+        if (res.error) throw res.error
+        showSuccessToast(t('已彻底删除 {count} 项', { count: String(ids.length) }))
+        await reload()
+      } catch (e) {
+        failToast(e)
+      }
+    })
   }
 
   // ── 清空：作用范围与当前 scope 的列表完全一致 ──
   async function clear() {
-    try {
-      const res =
-        scope.value === 'projects'
-          ? await trashControllerClearTrash()
-          : await trashControllerClearProjectTrash({
-              path: {
-                projectId:
-                  scope.value === 'project'
-                    ? selectedProjectId.value ?? ''
-                    : personalSpaceId.value ?? '',
-              },
-            })
-      if (res.error) throw res.error
-      showSuccessToast(t('回收站已清空'))
-      await reload()
-    } catch (e) {
-      failToast(e)
-    }
+    await runExclusive(async () => {
+      try {
+        const res =
+          scope.value === 'projects'
+            ? await trashControllerClearTrash()
+            : await trashControllerClearProjectTrash({
+                path: {
+                  projectId:
+                    scope.value === 'project'
+                      ? selectedProjectId.value ?? ''
+                      : personalSpaceId.value ?? '',
+                },
+              })
+        if (res.error) throw res.error
+        showSuccessToast(t('回收站已清空'))
+        await reload()
+      } catch (e) {
+        failToast(e)
+      }
+    })
   }
 
   return {
     scope, selectedProjectId, nodes, loading, error, page, totalPages, total,
     searchText, debouncedSearch,
     sortBy, sortOrder,
-    loadMoreFailed, hasMore, isEmpty, filterActive,
+    loadMoreFailed, hasMore, isEmpty, filterActive, actionBusy,
     load, reload, loadMore, retryLoadMore, refresh,
     setSearch, setSort, setScope, setFilters,
     restore, restoreBatch,

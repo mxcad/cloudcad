@@ -4,7 +4,10 @@
  * - 长按阈值到达 → 进入多选并选中被按项（手势定时器绑 touch 事件，留在 SFC；状态机在此）；
  * - 多选态点按切换选中；选中清空自动退出多选；
  * - 导航（面包屑变化）时清除选中：跨文件夹后 selected 是旧 id，操作项全部失效且计数残留，
- *   会卡在「已选 N 项」却点不动的状态。下拉刷新不改面包屑 → 不触发，保留选中。
+ *   会卡在「已选 N 项」却点不动的状态。
+ * - 数据源更换（搜索/换回收站 scope/刷新回第一页）不改面包屑但换列表内容：若提供了
+ *   getItemIds，则按「当前加载项 id」剪枝选中——选中项已不在加载列表的剪掉、剪空退出；
+ *   跨页滚动是追加（选中项仍在加载列表）→ 保留。
  */
 import { ref, computed, watch } from 'vue'
 
@@ -16,7 +19,7 @@ export interface BreadcrumbRef {
   name: string
 }
 
-export function useMultiSelect(getBreadcrumbs: () => BreadcrumbRef[]) {
+export function useMultiSelect(getBreadcrumbs: () => BreadcrumbRef[], getItemIds?: () => string[]) {
   const isSelectionMode = ref(false)
   const selected = ref<Set<string>>(new Set())
 
@@ -57,6 +60,28 @@ export function useMultiSelect(getBreadcrumbs: () => BreadcrumbRef[]) {
   watch(breadcrumbKey, (val, old) => {
     if (old !== undefined && val !== old) exitSelectionMode()
   })
+
+  // 数据源更换（搜索/换 scope/刷新回第一页）不改面包屑：按当前加载项 id 剪枝选中，
+  // 剪空则退出多选。跨页滚动是追加（选中项仍在）→ 不触发剪枝，保留选中。
+  if (getItemIds) {
+    const getIds = getItemIds
+    const itemIdsKey = computed(() => getIds().join('›'))
+    watch(itemIdsKey, (val, old) => {
+      if (old === undefined || val === old) return
+      if (!isSelectionMode.value) return
+      const loaded = new Set(getIds())
+      let changed = false
+      const pruned = new Set<string>()
+      for (const id of selected.value) {
+        if (loaded.has(id)) pruned.add(id)
+        else changed = true
+      }
+      if (changed) {
+        selected.value = pruned
+        if (pruned.size === 0) isSelectionMode.value = false
+      }
+    })
+  }
 
   return { isSelectionMode, selected, enterWith, toggleSelect, selectAll, clearSelection, exitSelectionMode }
 }

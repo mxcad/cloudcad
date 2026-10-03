@@ -465,6 +465,7 @@ const trashLoadMoreFailed = computed(() => trashList.loadMoreFailed.value)
 const trashSortBy = computed(() => trashList.sortBy.value)
 const trashSortOrder = computed(() => trashList.sortOrder.value)
 const trashTotal = computed(() => trashList.total.value)
+const trashActionBusy = computed(() => trashList.actionBusy.value)
 
 // 范围选择：项目列表 / 个人空间 / 具体项目 合为一个下拉
 // （原为 chip 行 + 点「项目内」后才出现的二级项目下拉，两步改一步）
@@ -1463,7 +1464,7 @@ async function onFileInputChange(e: Event) {
             />
           </van-dropdown-menu>
           <span class="trash-count">{{ t('共 {count} 项', { count: String(trashTotal) }) }}</span>
-          <button class="trash-clear" @click="onClearTrash">{{ t('清空回收站') }}</button>
+          <button class="trash-clear" :disabled="trashActionBusy" @click="onClearTrash">{{ t('清空回收站') }}</button>
         </div>
         <UnifiedFileList
           domain="personal"

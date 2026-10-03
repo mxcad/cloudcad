@@ -12,11 +12,19 @@ import { fetchProjectTransferSettings } from '@/utils/transferPolicy'
 
 export function useClipboardWrite() {
   const clipboard = useFileSystemClipboard()
+  // 代际计数防竞态：快速连切源项目复制/剪切时，只有最近一次写入的策略快照生效，
+  // 避免先切项目 A 的在途 fetch 晚于项目 B 的写入返回、把 A 的出向策略盖到 B 的剪贴板上
+  // （对齐 useClipboardPaste 的 gen 守卫）。
+  let gen = 0
 
   function write(ids: string[], mode: ClipboardMode, rootId: string, kind: ClipboardRootKind, folderId = '') {
     clipboard.setClipboard(ids, mode, rootId, kind, folderId)
     if (kind === 'project') {
-      void fetchProjectTransferSettings(rootId).then((s) => clipboard.setClipboardSource(s))
+      const myGen = ++gen
+      void fetchProjectTransferSettings(rootId).then((s) => {
+        if (myGen !== gen) return
+        clipboard.setClipboardSource(s)
+      })
     }
   }
 

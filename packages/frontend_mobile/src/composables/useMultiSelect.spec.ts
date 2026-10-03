@@ -12,17 +12,22 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { effectScope, ref } from 'vue'
 import { useMultiSelect } from './useMultiSelect'
 
-function create(initial: Array<{ id: string; name: string }> = [{ id: 'root', name: '根' }]) {
+function create(
+  initial: Array<{ id: string; name: string }> = [{ id: 'root', name: '根' }],
+  initialItemIds: string[] = ['a', 'b', 'c'],
+) {
   const scope = effectScope()
   let ms!: ReturnType<typeof useMultiSelect>
-  // 响应式源（对齐 SFC 的 props.breadcrumb；普通数组 splice 不触发 watch）
+  // 响应式源（对齐 SFC 的 props.breadcrumb / props.items；普通数组 splice 不触发 watch）
   const list = ref(initial)
+  const itemIds = ref(initialItemIds)
   scope.run(() => {
-    ms = useMultiSelect(() => list.value)
+    ms = useMultiSelect(() => list.value, () => itemIds.value)
   })
   return {
     ms,
     setBreadcrumbs: (b: Array<{ id: string; name: string }>) => (list.value = b),
+    setItemIds: (ids: string[]) => (itemIds.value = ids),
     stop: () => scope.stop(),
   }
 }
@@ -102,6 +107,48 @@ describe('useMultiSelect', () => {
     ms.clearSelection()
     expect(ms.selected.value.size).toBe(0)
     expect(ms.isSelectionMode.value).toBe(false)
+    stop()
+  })
+
+  it('数据源更换（搜索换成全新节点）剪空选中并退出多选', async () => {
+    const { ms, setItemIds, stop } = create()
+    ms.enterWith({ id: 'a' })
+    ms.toggleSelect({ id: 'b' })
+    expect(ms.selected.value.size).toBe(2)
+
+    // 搜索结果换成 a、b 都不在其中的新节点 → 剪空退出
+    setItemIds(['x', 'y'])
+    await vi.waitFor(() => {
+      expect(ms.isSelectionMode.value).toBe(false)
+      expect(ms.selected.value.size).toBe(0)
+    })
+    stop()
+  })
+
+  it('数据源更换但选中项仍在（跨页追加）保留选中', async () => {
+    const { ms, setItemIds, stop } = create()
+    ms.enterWith({ id: 'a' })
+    ms.toggleSelect({ id: 'b' })
+
+    // 翻页追加：a、b 仍在加载列表 → 保留
+    setItemIds(['a', 'b', 'c', 'd', 'e'])
+    await vi.waitFor(() => expect(ms.isSelectionMode.value).toBe(true))
+    expect([...ms.selected.value].sort()).toStrictEqual(['a', 'b'])
+    stop()
+  })
+
+  it('刷新回第一页剪掉不在的选中项、保留仍在的', async () => {
+    const { ms, setItemIds, stop } = create()
+    ms.enterWith({ id: 'a' })
+    ms.toggleSelect({ id: 'b' })
+    ms.toggleSelect({ id: 'c' })
+    expect(ms.selected.value.size).toBe(3)
+
+    // 刷新回第一页：c 不在，a、b 仍在 → 剪掉 c、保留 a、b，仍处多选态
+    setItemIds(['a', 'b'])
+    await vi.waitFor(() => expect(ms.selected.value.size).toBe(2))
+    expect([...ms.selected.value].sort()).toStrictEqual(['a', 'b'])
+    expect(ms.isSelectionMode.value).toBe(true)
     stop()
   })
 })

@@ -82,4 +82,33 @@ describe('useClipboardWrite', () => {
     expect(clip.sourceTransferSettings).toBeNull()
     expect(clip.sourceRootId).toBe('prj-2')
   })
+
+  it('快速连切源项目：晚返回的旧项目快照不覆盖新项目（防竞态）', async () => {
+    let resolveA: (s: unknown) => void
+    let resolveB: (s: unknown) => void
+    const promiseA = new Promise((r) => (resolveA = r))
+    const promiseB = new Promise((r) => (resolveB = r))
+    mockedFetch
+      .mockImplementationOnce(() => promiseA)
+      .mockImplementationOnce(() => promiseB)
+
+    const { write } = useClipboardWrite()
+    const clip = useFileSystemClipboard()
+
+    // 先切项目 A（fetch A 在途），再切项目 B（fetch B 在途）
+    write(['a1'], 'copy', 'prj-A', 'project')
+    write(['b1'], 'copy', 'prj-B', 'project')
+
+    // B 的 fetch 先返回 → 生效
+    resolveB!({ transferOutToProject: 'ALL' })
+    await vi.waitFor(() =>
+      expect(clip.sourceTransferSettings).toStrictEqual({ transferOutToProject: 'ALL' }),
+    )
+
+    // A 的 fetch 后返回（晚于 B）：无 gen 守卫会覆盖成 A 的策略；守卫应丢弃
+    resolveA!({ transferOutToProject: 'NONE' })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(clip.sourceTransferSettings).toStrictEqual({ transferOutToProject: 'ALL' })
+    expect(clip.sourceRootId).toBe('prj-B')
+  })
 })

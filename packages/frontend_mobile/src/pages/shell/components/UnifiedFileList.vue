@@ -192,12 +192,21 @@ function onThumbError(id: string) {
 // ── 长按多选（状态机见 useMultiSelect：导航清选中/点按切换/清空退出；手势定时器绑 touch 事件留这里）──
 const { isSelectionMode, selected, enterWith, toggleSelect, selectAll, clearSelection, exitSelectionMode } = useMultiSelect(
   () => props.breadcrumb,
+  // 数据源更换（搜索/换 scope/刷新回第一页）时按加载项剪枝选中，避免「已选 N 项」残留却点不动
+  () => props.items.map((i) => i.id),
 )
 let longPressTimer: ReturnType<typeof setTimeout> | null = null
+// 长按触发后抑制随后的合成 click：被动 touchstart（.passive）无法 preventDefault，
+// touchend 后浏览器仍派发 click → onItemClick 见已进多选态会 toggleSelect 把刚选中的项
+// 取消、清空后退出多选态，长按净效果=震动一下回到原状（触摸设备无法进入多选）。
+// 与 FileBrowserPage 项目卡片/搜索行同套守卫（longPressTriggered ? undefined : handler）。
+const longPressTriggered = ref(false)
 
 function startLongPress(item: ListItem) {
   if (isSelectionMode.value) return
+  longPressTriggered.value = false
   longPressTimer = setTimeout(() => {
+    longPressTriggered.value = true
     enterWith(item)
     if (navigator.vibrate) navigator.vibrate(10)
   }, 500)
@@ -416,7 +425,7 @@ async function onPullRefresh() {
           :key="item.id"
           class="grid-item"
           :class="{ 'grid-item--folder': item.isFolder, 'grid-item--selected': selected.has(item.id) }"
-          @click="onItemClick(item)"
+          @click="longPressTriggered ? undefined : onItemClick(item)"
           @touchstart.passive="startLongPress(item)"
           @touchend="cancelLongPress"
           @touchmove="cancelLongPress"
@@ -472,7 +481,7 @@ async function onPullRefresh() {
           :key="item.id"
           class="list-item"
           :class="{ 'list-item--selected': selected.has(item.id) }"
-          @click="onItemClick(item)"
+          @click="longPressTriggered ? undefined : onItemClick(item)"
           @touchstart.passive="startLongPress(item)"
           @touchend="cancelLongPress"
           @touchmove="cancelLongPress"

@@ -55,7 +55,8 @@ const emit = defineEmits<{ undo: [] }>()
   color: var(--accent);
   font-size: 15px;
   font-weight: 600;
-  padding: 4px 8px;
+  /* 触摸目标 ≥44px（移动端最小可点尺寸）：原 4px 8px 高约 26px，小屏易误触/点不到 */
+  padding: 12px 16px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
