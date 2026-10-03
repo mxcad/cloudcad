@@ -134,7 +134,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [keyword, setKeyword] = useState('');
   const [onlyModified, setOnlyModified] = useState(false);
-  /** 高级项默认收起：这类项（并发、超时、缓存 TTL、清理 cron）需要理解系统内部才敢改 */
+  /** 高级项默认收起：这类项（各接口限流阈值、压缩级别、文件锁参数）需要理解系统内部才敢改；备份/告警/清理等运维基线属 admin 档，默认展开 */
   const [showAdvanced, setShowAdvanced] = useState(false);
   /** 已展开显示的遮罩值（input.secret 项默认隐藏） */
   const [secretVisible, setSecretVisible] = useState<Set<string>>(new Set());

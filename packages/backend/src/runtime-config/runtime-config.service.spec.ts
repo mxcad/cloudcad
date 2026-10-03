@@ -560,6 +560,137 @@ describe("RuntimeConfigService", () => {
 	});
 
 
+	// ==================== 定义表元数据不变式 ====================
+	// tier / category / dangerous 只做展示分层，不参与任何权限与校验逻辑，
+	// 因此这些字段的正确性没有别的测试能拦：写错只会让配置页「分组错位、
+	// 运维基线默认看不见、该二次确认的没确认」。这里把运营上定下来的规则写成断言。
+	describe("RUNTIME_CONFIG_DEFINITIONS 元数据不变式", () => {
+		// 运维基线：系统管理员日常要动、改错后果可接受的项。
+		// 必须在 admin 档——advanced 在 PC 配置页默认整档收起，放错等于「默认看不见」。
+		const OPS_BASELINE = [
+			"backupEnabled",
+			"backupKeepLocal",
+			"backupDrillEnabled",
+			"alertEmailEnabled",
+			"alertEmailTo",
+			"alertEmailFailEscalate",
+			"alertEmailP1WindowMinutes",
+			"alertEmailP2DailyHour",
+			"auditArchiveEnabled",
+			"taskRunRetentionDays",
+			"storageCleanupEnabled",
+			"storageCleanupDelayDays",
+			"trashCleanupEnabled",
+			"trashCleanupDelayDays",
+			"orphanCleanupEnabled",
+			"lockCleanupEnabled",
+			"userCleanupEnabled",
+			"cacheCleanupEnabled",
+			"cacheMonitorEnabled",
+			"batchDownloadCleanupEnabled",
+			"deviceAuthFrontendDomain",
+		];
+
+		// 各接口限流与账号锁定：必须在同一个 security 分组的同一个 advanced 档里，
+		// 否则「调一处安全策略」要翻好几个分组。
+		const RATE_LIMIT_KEYS = [
+			"rateLimitPublicMax",
+			"rateLimitPublicWindowMs",
+			"rateLimitAuthMax",
+			"rateLimitLoginMax",
+			"rateLimitLoginWindowMs",
+			"loginRateLimitMax",
+			"loginRateLimitWindowSeconds",
+			"passwordResetRateLimitMax",
+			"passwordResetRateLimitWindowSeconds",
+			"registerRateLimitMax",
+			"registerRateLimitWindowSeconds",
+			"orderCreateRateLimitMax",
+			"orderCreateRateLimitWindowSeconds",
+			"accountLockFailThreshold",
+			"accountLockWindowSeconds",
+			"accountLockDurationSeconds",
+			"smsDailyLimitPerPhone",
+			"smsHourlyLimitPerIp",
+		];
+
+		// 与前端 packages/frontend/src/pages/RuntimeConfigPage/meta.ts 的
+		// CATEGORY_META 键集合必须一致：任一侧改动都要同步另一侧
+		// （后端新增分类 → 前端补图标与标签，否则页面掉到末尾用 key 当标签）。
+		const EXPECTED_CATEGORIES = [
+			"brand",
+			"mail",
+			"sms",
+			"file",
+			"user",
+			"system",
+			"wechat",
+			"storage",
+			"billing",
+			"collaboration",
+			"security",
+			"audit",
+			"alert",
+			"backup",
+		];
+
+		// 账号锁定的窗口与时长和阈值是一套：改一个不改另一个会互相抵消，故一起标 dangerous
+		const LOCK_SET_KEYS = ["accountLockWindowSeconds", "accountLockDurationSeconds"];
+
+		const def = (key: string) =>
+			RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
+
+		it("每项必须声明 impact（没有「改了会怎样」的项不该出现在配置页）", () => {
+			expect(RUNTIME_CONFIG_DEFINITIONS.length).toBeGreaterThan(0);
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.filter((d) => !d.impact).map((d) => d.key)
+			).toEqual([]);
+		});
+
+		it("运维基线必须在 admin 档，不能落到默认收起的 advanced", () => {
+			expect(OPS_BASELINE.filter((k) => !def(k))).toEqual([]);
+			expect(
+				OPS_BASELINE.filter((k) => def(k)?.tier !== "admin")
+			).toEqual([]);
+		});
+
+		it("限流与锁定阈值成组落在 advanced + security", () => {
+			expect(RATE_LIMIT_KEYS.filter((k) => !def(k))).toEqual([]);
+			expect(
+				RATE_LIMIT_KEYS.filter(
+					(k) =>
+						def(k)?.tier !== "advanced" ||
+						def(k)?.category !== "security"
+				)
+			).toEqual([]);
+		});
+
+		it("dangerous 只标在阈值上：次数阈值必须标记，窗口长度除账号锁定外不得标记", () => {
+			const thresholds = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => d.key.endsWith("Max") || d.key === "accountLockFailThreshold"
+			);
+			expect(thresholds.length).toBeGreaterThan(0);
+			expect(thresholds.filter((d) => !d.dangerous).map((d) => d.key)).toEqual([]);
+
+			const windows = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) =>
+					d.key.endsWith("WindowMs") ||
+					d.key.endsWith("WindowSeconds") ||
+					d.key.endsWith("DurationSeconds")
+			);
+			expect(
+				windows
+					.filter((d) => d.dangerous && !LOCK_SET_KEYS.includes(d.key))
+					.map((d) => d.key)
+			).toEqual([]);
+		});
+
+		it("分类集合闭集：与前端 CATEGORY_META 的键集合一致", () => {
+			const actual = [...new Set(RUNTIME_CONFIG_DEFINITIONS.map((d) => d.category))].sort();
+			expect(actual.filter((c) => !EXPECTED_CATEGORIES.includes(c))).toEqual([]);
+			expect(actual).toEqual([...EXPECTED_CATEGORIES].sort());
+		});
+	});
 	// ==================== 键登记完整性 ====================
 	describe("getValue 键登记完整性", () => {
 		it("业务代码读取的配置键必须都已登记（拼错的键会静默回落到 fallback，配置页改不动）", () => {

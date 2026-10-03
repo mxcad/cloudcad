@@ -820,6 +820,72 @@ describe('useRuntimeConfig', () => {
       expect(hook.result.current.groups.flatMap((g) => g.items).length).toBe(6);
     });
 
+    it('运维基线项在默认（收起高级项）时就必须可见，不被档位折叠误伤', async () => {
+      // 后端把备份 / 告警 / 清理 / 归档 / 设备授权归为 admin 档，各接口限流归为 advanced。
+      // 一旦运维基线被误放回 advanced，它会随 showAdvanced 一起消失，
+      // 用户只会以为「配置页缺了这些项」。这里用真实运维基线键名锁住默认渲染结果。
+      const mk = (
+        key: string,
+        category: string,
+        tier: 'admin' | 'advanced' = 'admin'
+      ) => ({
+        key,
+        value: true,
+        type: 'boolean',
+        category,
+        description: key,
+        isPublic: false,
+        defaultValue: true,
+        source: 'default',
+        isModified: false,
+        envValue: null,
+        tier,
+        input: {},
+        dangerous: false,
+        hot: true,
+      });
+      getAllConfigs.mockResolvedValue(ok([
+        mk('backupEnabled', 'backup'),
+        mk('alertEmailEnabled', 'alert'),
+        mk('auditArchiveEnabled', 'audit'),
+        mk('taskRunRetentionDays', 'audit'),
+        mk('storageCleanupEnabled', 'storage'),
+        mk('deviceAuthFrontendDomain', 'security'),
+        mk('rateLimitLoginMax', 'security', 'advanced'),
+      ]));
+
+      const hook = await load();
+      expect(hook.result.current.showAdvanced).toBe(false);
+      // 分组顺序即 CATEGORY_META 的登记顺序（storage < security < audit < alert < backup），
+      // 组内已修改项置顶、其余按 key 升序（本例无已修改项）
+      expect(hook.result.current.groups.map((g) => g.category)).toEqual([
+        'storage',
+        'security',
+        'audit',
+        'alert',
+        'backup',
+      ]);
+      const keys = () =>
+        hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key));
+      expect(keys()).toEqual([
+        'storageCleanupEnabled',
+        'deviceAuthFrontendDomain',
+        'auditArchiveEnabled',
+        'taskRunRetentionDays',
+        'alertEmailEnabled',
+        'backupEnabled',
+      ]);
+      // 限流阈值仍是高级项，默认收起
+      expect(keys()).not.toContain('rateLimitLoginMax');
+      expect(hook.result.current.advancedCount).toBe(1);
+
+      await act(async () => {
+        hook.result.current.setShowAdvanced(true);
+      });
+      expect(keys()).toContain('rateLimitLoginMax');
+      expect(keys().length).toBe(7);
+    });
+
     it('只看已修改项时只保留 isModified 的项', async () => {
       const hook = await load();
       await act(async () => {

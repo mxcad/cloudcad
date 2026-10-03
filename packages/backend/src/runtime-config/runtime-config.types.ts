@@ -31,37 +31,35 @@ export type RuntimeConfigValue =
 /**
  * 运行时配置分类
  */
+// 页面分组。历史遗留的 support / device / quota / cache / session / pagination /
+// performance / logging 已无定义项（碎分类合并：quota+支付→billing、cache→system、
+// device→security、客服并入 brand），从联合类型里删掉，避免类型上仍存在空壳分类。
 export type RuntimeConfigCategory =
   | 'brand'
   | 'mail'
   | 'sms'
-  | 'support'
   | 'file'
   | 'user'
   | 'system'
   | 'wechat'
   | 'storage'
   | 'billing'
-  | 'device'
   | 'collaboration'
-  | 'quota'
-  | 'cache'
-  | 'session'
-  | 'pagination'
   | 'security'
-  | 'performance'
   | 'audit'
   | 'alert'
-  | 'backup'
-  | 'logging';
+  | 'backup';
 
 /**
  * 配置项显示层级：决定在前端管理页的可见档位。
  * - `user`：客户运维即可安全修改（品牌、客服、注册开关、上传上限等）
- * - `admin`：需要一定系统理解（限流、密码策略、配额、功能开关）
- * - `advanced`：需要懂系统内部（并发、超时、缓存 TTL、清理 cron、文件限制细节）
+ * - `admin`：系统管理员的日常运维基线（备份、告警邮件、清理与归档、审计留存、功能开关）
+ * - `advanced`：需要懂系统内部才敢改的阈值（各接口限流、账号锁定、压缩级别、文件锁参数）
  *
- * 层级只做展示分档与危险确认，**不引入新的权限位**：
+ * 前端默认**整档收起 advanced**，所以运维要日常碰的项必须放 admin——放错档等于
+ * 「配置页里看不见」，用户会以为缺了配置项。
+ *
+ * 层级只做展示分档与二次确认的提示，**不引入新的权限位**：
  * 能进运行时配置页的人已持有 SYSTEM_CONFIG_READ/WRITE。
  */
 export type ConfigTier = 'user' | 'admin' | 'advanced';

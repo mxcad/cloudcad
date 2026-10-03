@@ -16,17 +16,13 @@ import {
   Palette,
   Mail,
   Smartphone,
-  LifeBuoy,
   FileText,
   Users,
   Cpu,
   MessageCircle,
   HardDrive,
   CreditCard,
-  MonitorSmartphone,
   Share2,
-  Gauge,
-  Database,
   Shield,
   ClipboardList,
   BellRing,
@@ -43,7 +39,8 @@ import type {
   ConfigInputMeta,
 } from './types';
 
-/** 分类元数据：中文显示名 + 图标。只登记实际有配置项的分类（后端枚举里的空分类不留空壳入口） */
+/** 分类元数据：显示名 + 图标。只登记实际有配置项的分类（后端已合并的碎分类不留空壳入口）。
+ * 标签必须复用已登记的 i18n 文案：未登记的中文串在非中文 locale 下会原样回落成中文。 */
 export const CATEGORY_META: Record<
   string,
   { label: string; icon: LucideIcon }
@@ -51,17 +48,13 @@ export const CATEGORY_META: Record<
   brand: { label: t('品牌与客服'), icon: Palette },
   mail: { label: t('邮件配置'), icon: Mail },
   sms: { label: t('短信配置'), icon: Smartphone },
-  support: { label: t('客服信息'), icon: LifeBuoy },
   file: { label: t('文件配置'), icon: FileText },
   user: { label: t('用户管理'), icon: Users },
   system: { label: t('系统配置'), icon: Cpu },
   wechat: { label: t('微信配置'), icon: MessageCircle },
   storage: { label: t('存储配置'), icon: HardDrive },
-  billing: { label: t('支付配置'), icon: CreditCard },
-  device: { label: t('设备授权'), icon: MonitorSmartphone },
+  billing: { label: t('配额配置'), icon: CreditCard },
   collaboration: { label: t('协同配置'), icon: Share2 },
-  quota: { label: t('配额配置'), icon: Gauge },
-  cache: { label: t('缓存配置'), icon: Database },
   security: { label: t('安全配置'), icon: Shield },
   audit: { label: t('审计配置'), icon: ClipboardList },
   alert: { label: t('告警配置'), icon: BellRing },
