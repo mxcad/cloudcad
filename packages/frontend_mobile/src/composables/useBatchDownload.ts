@@ -18,6 +18,7 @@ import {
   batchDownloadControllerCreateSingleFileTask,
   batchDownloadControllerGetUserTasks,
   batchDownloadControllerGetFolderFiles,
+  batchDownloadControllerGetProgress,
   batchDownloadControllerCancelTask,
   batchDownloadControllerRetryTask,
   batchDownloadControllerRetryFailedItems,
@@ -28,6 +29,14 @@ import { cachedApiUrl } from '@/utils/apiConfig'
 export interface BatchTaskItem extends BatchDownloadTaskDto {
   /** 展示名（文件夹名 / 首个文件名），由创建方传入 */
   name?: string
+}
+
+/** 逐文件错误（对齐 PC BatchTask.errors / 后端 BatchDownloadProgressDto.errors 真实形状；
+ *  SDK 生成的 errors?: string[] 与后端实际对象数组不符，此处按后端真实形状声明，同 PC 手动类型口径） */
+export interface BatchTaskError {
+  nodeId: string
+  fileName: string
+  error: string
 }
 
 /** 文件夹递归树节点（getFolderFilesRecursive 返回形状） */
@@ -223,6 +232,20 @@ export function useBatchDownload() {
     }
   }
 
+  /** 拉取单任务逐文件错误（progress 端点，含 errors 对象数组；任务列表端点只有 errorCount 计数）。
+   *  对齐 PC BatchDownloadProgress「错误详情」卡片：文件夹混合非 CAD 文件等场景下，
+   *  让用户看到具体哪些文件失败及原因，而非只有计数。失败静默返回空数组。 */
+  async function fetchTaskErrors(taskId: string): Promise<BatchTaskError[]> {
+    try {
+      const res = await batchDownloadControllerGetProgress({ path: { taskId } } as never)
+      if (res.error) return []
+      const data = res.data as { errors?: BatchTaskError[] } | null
+      return data?.errors ?? []
+    } catch {
+      return []
+    }
+  }
+
   // 面板打开期间轮询进度（移动端无 SSE，3s 轮询）
   let timer: ReturnType<typeof setInterval> | null = null
   function startPolling() {
@@ -251,6 +274,7 @@ export function useBatchDownload() {
     cancelTask,
     retryTask,
     retryFailedItems,
+    fetchTaskErrors,
     startPolling,
     stopPolling,
   }

@@ -14,6 +14,7 @@ vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
   batchDownloadControllerCreateSingleFileTask: vi.fn(),
   batchDownloadControllerGetUserTasks: vi.fn(),
   batchDownloadControllerGetFolderFiles: vi.fn(),
+  batchDownloadControllerGetProgress: vi.fn(),
   batchDownloadControllerCancelTask: vi.fn(),
   batchDownloadControllerRetryTask: vi.fn(),
   batchDownloadControllerRetryFailedItems: vi.fn(),
@@ -25,10 +26,12 @@ vi.mock('@/utils/apiConfig', () => ({
 import {
   batchDownloadControllerCreateTask,
   batchDownloadControllerGetUserTasks,
+  batchDownloadControllerGetProgress,
 } from '@cloudcad/api-sdk/sdk.gen'
 
 const mockedCreate = batchDownloadControllerCreateTask as ReturnType<typeof vi.fn>
 const mockedGetTasks = batchDownloadControllerGetUserTasks as ReturnType<typeof vi.fn>
+const mockedGetProgress = batchDownloadControllerGetProgress as ReturnType<typeof vi.fn>
 
 describe('useBatchDownload.createZipTask（多选下载）', () => {
   beforeEach(() => {
@@ -114,5 +117,44 @@ describe('useBatchDownload.createZipTask（多选下载）', () => {
     await expect(
       createZipTask([{ nodeId: 'f1', fileName: 'a.mxweb' }], { name: 'a.mxweb' }),
     ).rejects.toThrow('quota exceeded')
+  })
+})
+
+describe('useBatchDownload.fetchTaskErrors（逐文件错误详情，对齐 PC 错误详情卡片）', () => {
+  it('progress 端点返回 errors 对象数组 → 按 taskId 拉取并透传给调用方', async () => {
+    mockedGetProgress.mockResolvedValue({
+      data: {
+        taskId: 'task-1',
+        status: 'COMPLETED',
+        mode: 'zip',
+        totalCount: 3,
+        completedCount: 1,
+        errorCount: 2,
+        errors: [
+          { nodeId: 'n1', fileName: 'readme.txt', error: '不支持的格式' },
+          { nodeId: 'n2', fileName: 'photo.jpg', error: '转换失败' },
+        ],
+      },
+      error: null,
+    })
+    const { fetchTaskErrors } = useBatchDownload()
+    const errors = await fetchTaskErrors('task-1')
+    expect(mockedGetProgress).toHaveBeenCalledWith({ path: { taskId: 'task-1' } })
+    expect(errors).toStrictEqual([
+      { nodeId: 'n1', fileName: 'readme.txt', error: '不支持的格式' },
+      { nodeId: 'n2', fileName: 'photo.jpg', error: '转换失败' },
+    ])
+  })
+
+  it('后端报错或无 errors 字段 → 返回空数组（不抛错，面板不展开）', async () => {
+    mockedGetProgress.mockResolvedValue({ data: null, error: 'task not found' })
+    const { fetchTaskErrors } = useBatchDownload()
+    expect(await fetchTaskErrors('task-x')).toStrictEqual([])
+  })
+
+  it('网络异常 → 返回空数组（不抛错）', async () => {
+    mockedGetProgress.mockRejectedValue(new Error('network down'))
+    const { fetchTaskErrors } = useBatchDownload()
+    expect(await fetchTaskErrors('task-y')).toStrictEqual([])
   })
 })

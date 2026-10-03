@@ -5,10 +5,10 @@
  * 数据源：useBatchDownload（batchDownloadControllerGetUserTasks + 3s 轮询）。
  * 状态：PENDING 等待 / PROCESSING 打包中 / COMPLETED 已完成 / FAILED 失败 / CANCELLED 已取消
  */
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import { t } from '@/languages'
-import { useBatchDownload, type BatchTaskItem } from '@/composables/useBatchDownload'
+import { useBatchDownload, type BatchTaskItem, type BatchTaskError } from '@/composables/useBatchDownload'
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ 'update:show': [value: boolean] }>()
@@ -21,9 +21,27 @@ const {
   downloadSingleFileItem,
   cancelTask,
   retryFailedItems,
+  fetchTaskErrors,
   startPolling,
   stopPolling,
 } = useBatchDownload()
+
+// 逐文件错误展开（对齐 PC BatchDownloadProgress「错误详情」卡片）：点「失败 N 项」拉 progress 端点 errors
+const expandedTaskId = ref<string | null>(null)
+const currentErrors = ref<BatchTaskError[]>([])
+
+async function toggleErrors(task: BatchTaskItem) {
+  if (expandedTaskId.value === task.taskId) {
+    expandedTaskId.value = null
+    currentErrors.value = []
+    return
+  }
+  const errors = await fetchTaskErrors(task.taskId)
+  // 无错误详情（罕见：拉取失败或后端未返回）→ 不展开，避免空态
+  if (errors.length === 0) return
+  expandedTaskId.value = task.taskId
+  currentErrors.value = errors
+}
 
 watch(
   () => props.show,
@@ -132,7 +150,16 @@ async function onRetryFailed(task: BatchTaskItem) {
             />
             <span class="bd-count">{{ task.completedCount }}/{{ task.totalCount }}</span>
           </div>
-          <div v-if="task.errorCount" class="bd-error-count">{{ t('失败 {count} 项', { count: String(task.errorCount) }) }}</div>
+          <div v-if="task.errorCount" class="bd-error-count" @click="toggleErrors(task)">
+            <span>{{ t('失败 {count} 项', { count: String(task.errorCount) }) }}</span>
+            <van-icon :name="expandedTaskId === task.taskId ? 'arrow-up' : 'arrow-down'" size="12" />
+          </div>
+          <!-- 逐文件错误详情（对齐 PC BatchDownloadProgress「错误详情」卡片；仅展开且有错误时显示） -->
+          <div v-if="expandedTaskId === task.taskId" class="bd-error-detail">
+            <p v-for="(err, i) in currentErrors" :key="i" class="bd-error-line">
+              {{ err.fileName }}: {{ err.error }}
+            </p>
+          </div>
           <div class="bd-actions">
             <button v-if="task.status === 'COMPLETED'" class="bd-btn primary" @click="onDownload(task)">
               {{ t('下载') }}
@@ -274,8 +301,31 @@ async function onRetryFailed(task: BatchTaskItem) {
 }
 
 .bd-error-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: #ee0a24;
+  cursor: pointer;
+}
+
+.bd-error-detail {
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(238, 10, 36, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.bd-error-line {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  word-break: break-all;
 }
 
 .bd-actions {
