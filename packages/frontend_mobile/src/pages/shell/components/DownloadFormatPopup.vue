@@ -16,7 +16,8 @@ export interface DownloadFormatPayload {
   dwgOptions?: { dwgVersion: number }
 }
 
-const props = defineProps<{ show: boolean; fileName: string }>()
+// batchCount 非空=批量模式（多选下载含 CAD）：所选格式应用于全部选中图纸，文件区显示数量而非单文件名
+const props = defineProps<{ show: boolean; fileName: string; batchCount?: number }>()
 const emit = defineEmits<{
   'update:show': [value: boolean]
   confirm: [payload: DownloadFormatPayload]
@@ -83,8 +84,13 @@ function onConfirm() {
       </div>
 
       <div class="df-file">
-        <span class="df-file-label">{{ t('文件：') }}</span>
-        <span class="df-file-name">{{ fileName }}</span>
+        <span v-if="batchCount" class="df-file-name df-file-name--batch">
+          {{ t('已选 {count} 个图纸，格式将应用于全部', { count: String(batchCount) }) }}
+        </span>
+        <template v-else>
+          <span class="df-file-label">{{ t('文件：') }}</span>
+          <span class="df-file-name">{{ fileName }}</span>
+        </template>
       </div>
 
       <div class="df-section">
@@ -193,6 +199,15 @@ function onConfirm() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  /* 批量模式是完整句子（非文件名）：允许换行、去等宽、不截断 */
+  &--batch {
+    font-family: inherit;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.5;
+  }
 }
 
 .df-section {

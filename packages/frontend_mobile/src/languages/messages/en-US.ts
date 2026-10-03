@@ -1173,5 +1173,6 @@ export default  {
     "3716": "Generated {count} share links",
     "3717": "Generated {a} share links, {b} failed",
     "3718": "Failed to create share link",
-    "3719": "Deleted {n} items, {m} failed"
+    "3719": "Deleted {n} items, {m} failed",
+    "3720": "Selected {count} drawings, format applies to all"
 }

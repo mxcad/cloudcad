@@ -233,7 +233,7 @@ const selectionActions = computed<SelectionActionDef[]>(() =>
   props.selectionActions ?? [
     { key: 'copy', label: t('复制') },
     { key: 'cut', label: t('剪切') },
-    // 移动=直达文件夹选择器（对齐 PC 批量栏「移动」，比剪切+粘贴更便捷）
+    // 移动=直达文件夹选择器（移动端便捷入口，比剪切+粘贴少一步；PC 无此按钮，靠剪切+粘贴/右键「移动到…」）
     { key: 'move', label: t('移动') },
     { key: 'download', label: t('下载') },
     { key: 'delete', label: t('删除'), danger: true },

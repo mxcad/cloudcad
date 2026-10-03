@@ -430,7 +430,7 @@ const canUploadFile = computed(() => projectPermissions.value.includes(ProjectPe
 const fileSelectionActions = computed<SelectionActionDef[]>(() => [
   { key: 'copy', label: t('复制'), disabled: !canCopyFile.value },
   { key: 'cut', label: t('剪切'), disabled: !canMoveFile.value },
-  // 移动=直达文件夹选择器（对齐 PC 批量栏「移动」）；权限同剪切（FILE_MOVE）
+  // 移动=直达文件夹选择器（移动端便捷入口，比剪切+粘贴少一步；PC 无此按钮）；权限同剪切（FILE_MOVE）
   { key: 'move', label: t('移动'), disabled: !canMoveFile.value },
   { key: 'download', label: t('下载'), disabled: !canDownloadFile.value },
   { key: 'delete', label: t('删除'), danger: true, disabled: !canDeleteFile.value },
@@ -823,6 +823,15 @@ const showBatchPanel = ref(false)
 // ── 多选「下载」（对齐 PC 批量下载）：单文件直接下（可靠），多项/含文件夹走 zip 任务队列 ──
 // 旧实现循环 <a> 点击触发多文件下载，浏览器会拦截后续下载（只下第一个），故收敛到任务队列
 async function downloadSelection(items: Array<{ id: string; name: string; isFolder?: boolean }>) {
+  // 多选含 CAD 图纸 → 弹格式选择（对齐 PC 批量下载逐文件格式；移动端单一格式应用于全部选中图纸）。
+  // 单条目菜单的 CAD 下载同样可转格式，故多选下载也须支持，避免「单选能转、多选不能转」的不一致。
+  const cadFiles = items.filter((i) => !i.isFolder && isCadFileName(i.name))
+  if (cadFiles.length > 0) {
+    // 单个 CAD 文件：复用单文件格式流程（mxweb 原格式直下 / 转格式走异步任务）
+    if (items.length === 1) openFormatDownload(items[0])
+    else openBatchFormatDownload(items)
+    return
+  }
   if (items.length === 1 && !items[0].isFolder) {
     const a = document.createElement('a')
     a.href = cachedApiUrl(`/file-system/nodes/${items[0].id}/download`)
@@ -852,13 +861,29 @@ async function downloadSelection(items: Array<{ id: string; name: string; isFold
 // 对慢转换会挂起至超时；mxweb/original 无转换开销，保持同步直下
 const showFormatPopup = ref(false)
 const formatTarget = ref<{ id: string; name: string } | null>(null)
+// 批量下载格式模式（多选含 CAD）：所选格式应用于全部选中图纸，zip 任务逐文件格式（对齐 PC 批量下载）
+const formatDownloadMode = ref<'single' | 'batch'>('single')
+const batchDownloadItems = ref<Array<{ id: string; name: string; isFolder?: boolean }>>([])
+const batchCadCount = ref(0)
 
 function openFormatDownload(target: { id: string; name: string }) {
+  formatDownloadMode.value = 'single'
   formatTarget.value = target
   showFormatPopup.value = true
 }
 
+function openBatchFormatDownload(items: Array<{ id: string; name: string; isFolder?: boolean }>) {
+  batchDownloadItems.value = items
+  batchCadCount.value = items.filter((i) => !i.isFolder && isCadFileName(i.name)).length
+  formatDownloadMode.value = 'batch'
+  showFormatPopup.value = true
+}
+
 async function onFormatDownloadConfirm(payload: DownloadFormatPayload) {
+  if (formatDownloadMode.value === 'batch') {
+    await confirmBatchFormatDownload(payload)
+    return
+  }
   const target = formatTarget.value
   if (!target) return
 
@@ -906,6 +931,37 @@ async function onFormatDownloadConfirm(payload: DownloadFormatPayload) {
   } catch (e) {
     closeToast()
     showFailToast(t('下载失败'))
+  }
+}
+
+// 批量下载格式确认：所选格式应用于全部选中 CAD 图纸（zip 任务逐文件格式）；
+// 非 CAD 文件与文件夹保持原格式（文件夹按原样打包，移动端不做文件夹内逐文件转换）
+async function confirmBatchFormatDownload(payload: DownloadFormatPayload) {
+  const items = batchDownloadItems.value
+  const format = payload.format
+  showLoadingToast({ message: t('正在创建打包任务...'), forbidClick: true })
+  try {
+    const fileList = items.map((i) => {
+      const isCad = !i.isFolder && isCadFileName(i.name)
+      const apply = isCad && format !== 'mxweb'
+      return {
+        nodeId: i.id,
+        fileName: i.name,
+        isFolder: i.isFolder,
+        formats: apply ? [format] : [],
+        ...(apply && (format === 'dwg' || format === 'dxf') ? { dwgVersion: payload.dwgOptions?.dwgVersion } : {}),
+        ...(apply && format === 'pdf'
+          ? { width: payload.pdfOptions?.width, height: payload.pdfOptions?.height, colorPolicy: payload.pdfOptions?.colorPolicy }
+          : {}),
+      }
+    })
+    await createZipTask(fileList, { name: t('下载'), projectId: projectId.value })
+    closeToast()
+    showSuccessToast(t('打包任务已创建'))
+    showBatchPanel.value = true
+  } catch (e) {
+    closeToast()
+    showFailToast(t('打包任务创建失败'))
   }
 }
 
@@ -1652,6 +1708,7 @@ onMounted(() => {
     <DownloadFormatPopup
       v-model:show="showFormatPopup"
       :file-name="formatTarget?.name ?? ''"
+      :batch-count="formatDownloadMode === 'batch' ? batchCadCount : undefined"
       @confirm="onFormatDownloadConfirm"
     />
     <BatchDownloadPanel v-model:show="showBatchPanel" />

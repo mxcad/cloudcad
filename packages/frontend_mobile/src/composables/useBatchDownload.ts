@@ -76,7 +76,18 @@ export function useBatchDownload() {
   /** 创建 zip 任务（A-07/A-08 共用；多选下载传 isFolder 让后端展开文件夹，对齐 PC 批量下载；
    *  资源库「下载所选」传 libraryType 让后端按库根解析节点+库权限门控，对齐 PC 库批量下载内核） */
   async function createZipTask(
-    fileList: Array<{ nodeId: string; fileName: string; relativePath?: string; isFolder?: boolean }>,
+    fileList: Array<{
+      nodeId: string
+      fileName: string
+      relativePath?: string
+      isFolder?: boolean
+      /** 逐文件格式（dwg/dxf/pdf/mxweb）；空=原格式。多选含 CAD 时按所选格式转换，对齐 PC 批量下载 */
+      formats?: string[]
+      dwgVersion?: number
+      width?: string
+      height?: string
+      colorPolicy?: string
+    }>,
     opts: { projectId?: string; name?: string; libraryType?: 'drawing' | 'block' } = {}
   ) {
     const res = await batchDownloadControllerCreateTask({
@@ -84,9 +95,13 @@ export function useBatchDownload() {
         fileList: fileList.map((f) => ({
           nodeId: f.nodeId,
           fileName: f.fileName,
-          formats: [] as string[],
+          formats: f.formats ?? [],
           ...(f.relativePath ? { relativePath: f.relativePath } : {}),
           ...(f.isFolder ? { isFolder: true } : {}),
+          ...(f.dwgVersion ? { dwgVersion: f.dwgVersion } : {}),
+          ...(f.width ? { width: f.width } : {}),
+          ...(f.height ? { height: f.height } : {}),
+          ...(f.colorPolicy ? { colorPolicy: f.colorPolicy } : {}),
         })),
         ...(opts.projectId ? { projectId: opts.projectId } : {}),
         ...(opts.libraryType ? { libraryType: opts.libraryType } : {}),

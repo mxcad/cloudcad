@@ -56,6 +56,32 @@ describe('useBatchDownload.createZipTask（多选下载）', () => {
     ])
   })
 
+  it('逐文件格式+选项透传（多选含 CAD 转格式）：CAD 项带 formats/选项，非 CAD 项 formats=[]', async () => {
+    mockedCreate.mockResolvedValue({ data: { taskId: 'task-3' }, error: null })
+    const { createZipTask } = useBatchDownload()
+    await createZipTask(
+      [
+        // CAD 图纸转 PDF（带 PDF 选项）
+        { nodeId: 'c1', fileName: 'a.dwg', formats: ['pdf'], width: '2000', height: '2000', colorPolicy: 'mono' },
+        // CAD 图纸转 DWG（带 dwgVersion）
+        { nodeId: 'c2', fileName: 'b.dwg', formats: ['dwg'], dwgVersion: 27 },
+        // 非 CAD 文件：原格式
+        { nodeId: 'n1', fileName: 'readme.txt' },
+        // 文件夹：原格式打包
+        { nodeId: 'd1', fileName: '图纸目录', isFolder: true },
+      ],
+      { name: '下载' },
+    )
+
+    const body = mockedCreate.mock.calls[0][0].body
+    expect(body.fileList).toStrictEqual([
+      { nodeId: 'c1', fileName: 'a.dwg', formats: ['pdf'], width: '2000', height: '2000', colorPolicy: 'mono' },
+      { nodeId: 'c2', fileName: 'b.dwg', formats: ['dwg'], dwgVersion: 27 },
+      { nodeId: 'n1', fileName: 'readme.txt', formats: [] },
+      { nodeId: 'd1', fileName: '图纸目录', formats: [], isFolder: true },
+    ])
+  })
+
   it('传 projectId 时透传给后端', async () => {
     mockedCreate.mockResolvedValue({ data: { taskId: 'task-2' }, error: null })
     const { createZipTask } = useBatchDownload()
