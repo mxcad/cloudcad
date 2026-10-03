@@ -61,6 +61,9 @@ import { useUndoSnackbar } from '@/composables/useUndoSnackbar'
 import { extractMoveCopyUndoIds } from '@/utils/moveCopyUndo'
 import { filterPasteCycleItems } from '@/utils/pasteCycleGuard'
 import { isCadFileName } from '@/utils/cadFile'
+import { useNodeDownload } from '@/composables/useNodeDownload'
+import { getNodeInfo } from '@/services/fileService'
+import { warmupHistoricalVersion } from '@/services/versionWarmup'
 import { showExternalReferenceManagePopup } from '@/plugins/vant/components/popup/showExternalReferenceManagePopup'
 import UndoSnackbar from '@/components/UndoSnackbar.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
@@ -173,6 +176,11 @@ function onSearchResultClick(item: FileListItem) {
     } else activeTab.value = 1
     return
   }
+  // H1：同 onPersonalItemClick——非 CAD 文件命中直接原格式下载
+  if (!isCadFileName(item.name)) {
+    void downloadOriginal(item.id, item.name)
+    return
+  }
   void openFromList(item.id, { path: '/shell/file', tab: 0 })
 }
 
@@ -250,6 +258,7 @@ const personalError = ref('')
 const personalMode = useViewMode('personal')
 const shellStack = useShellStack()
 const { openFromList } = useShellFileOpen()
+const { downloadOriginal } = useNodeDownload()
 
 // 个人空间根 id：个人空间 tab 与回收站 personal scope 共用，惰性取一次
 const personalSpaceId = ref<string | null>(null)
@@ -424,6 +433,12 @@ async function onPersonalItemClick(item: { id: string; name: string; isFolder?: 
     if (raw) personalFileList.enterFolder(raw)
     return
   }
+  // H1：非 CAD 文件（图片/PDF/表格等）不走 CAD 编辑器——无 fileHash 会误报「尚未转换完成」。
+  // 对齐 PC handleFileOpen：CAD 扩展名走编辑器，其余直接原格式下载。
+  if (!isCadFileName(item.name)) {
+    void downloadOriginal(item.id, item.name)
+    return
+  }
 
   void openFromList(item.id, {
     path: '/shell/file',
@@ -515,7 +530,15 @@ const trashSelectionActions = computed(() => [
 
 function onTrashSelectionAction(action: SelectionActionKey, items: FileListItem[]) {
   if (action === 'restore') {
-    void trashList.restoreBatch(items.map((i) => i.id))
+    // L1：批量恢复加确认（对齐 PC trashActions.batchRestore）
+    void showConfirmDialog({
+      title: t('批量恢复'),
+      message: t('确定要恢复选中的 {count} 个项目吗？', { count: String(items.length) }),
+    })
+      .then(() => {
+        void trashList.restoreBatch(items.map((i) => i.id))
+      })
+      .catch(() => {})
   } else {
     confirmPermanentDelete(items)
   }
@@ -539,7 +562,15 @@ function onTrashMenuAction(action: { name: string }) {
   const target = trashMenuTarget.value
   if (!target) return
   if (action.name === t('恢复')) {
-    void trashList.restore({ id: target.id, isRoot: target.isRoot })
+    // L1：单条恢复加确认（对齐 PC trashActions.restore）
+    void showConfirmDialog({
+      title: t('确认恢复'),
+      message: t('确定要恢复 "{name}" 吗？', { name: target.name }),
+    })
+      .then(() => {
+        void trashList.restore({ id: target.id, isRoot: target.isRoot })
+      })
+      .catch(() => {})
   } else if (action.name === t('彻底删除')) {
     confirmPermanentDelete([target])
   }
@@ -642,8 +673,8 @@ const menuActions = computed(() => {
   const isCad = !isFolder && menuTarget.value ? isCadFileName(menuTarget.value.name) : false
   const actions: Array<{ name: string; color?: string }> = [
     { name: t('打开') },
-    // 文件 → 格式转换下载（A-06）；文件夹 → 打包下载（A-08）
-    isFolder ? { name: t('打包下载') } : { name: t('格式转换下载') },
+    // 文件 → 下载（M9：CAD 弹格式选择、非 CAD 原格式直下，对齐 PC 单一「下载」项）；文件夹 → 打包下载（A-08）
+    isFolder ? { name: t('打包下载') } : { name: t('下载') },
     // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
     ...(isFolder ? [] : [{ name: t('分享') }]),
     ...(isCad ? [{ name: t('外部参照管理') }] : []),
@@ -671,8 +702,10 @@ function onMenuAction(action: { name: string }) {
   if (!target) return
   if (action.name === t('打开')) {
     onPersonalItemClick(target)
-  } else if (action.name === t('格式转换下载')) {
-    openFormatDownload(target)
+  } else if (action.name === t('下载')) {
+    // M9：CAD → 格式选择弹窗（转换下载）；非 CAD → 原格式直下（对齐 PC handleDownload 分流）
+    if (isCadFileName(target.name)) openFormatDownload(target)
+    else void downloadOriginal(target.id, target.name)
   } else if (action.name === t('打包下载')) {
     void downloadFolder(target)
   } else if (action.name === t('分享')) {
@@ -731,9 +764,19 @@ function openVersionHistory(target: { id: string; path?: string; projectId?: str
   showVersionPopup.value = true
 }
 
-/** 选中历史版本：URL 带 ?v= 版本号（loadByNodeId 从 URL 读取加载历史版本），
- *  走统一打开入口；打开成功后 router.replace('/shell') 会清掉 query，不影响下次正常打开 */
-function onOpenHistoricalVersion(payload: { nodeId: string; revision: number }) {
+/** 选中历史版本：先预热（H3，对齐 PC）——冷路径「分片下载 + bin→mxweb 转换」可能耗时数十秒，
+ *  直接打开会被编辑器 60s 打开超时拖爆；预热完成（202→204）后才走统一打开入口（URL 带 ?v=） */
+async function onOpenHistoricalVersion(payload: { nodeId: string; revision: number }) {
+  showLoadingToast({ message: t('正在准备历史版本文件，请稍候...'), forbidClick: false })
+  try {
+    const nodeInfo = await getNodeInfo(payload.nodeId)
+    if (!nodeInfo.path) throw new Error(t('文件不存在或已被删除'))
+    await warmupHistoricalVersion(nodeInfo.path, payload.revision)
+  } catch (e) {
+    showFailToast(e instanceof Error ? e.message : t('历史版本文件准备失败，请重试'))
+    return
+  }
+  closeToast()
   const url = new URL(window.location.href)
   url.searchParams.set('v', String(payload.revision))
   history.replaceState(history.state, '', url.toString())

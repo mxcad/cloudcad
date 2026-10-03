@@ -1162,5 +1162,11 @@ export default  {
     "3705": "Renamed",
     "3706": "Folder created",
     "3707": "Drawing created",
-    "3708": "Manage external references"
+    "3708": "Manage external references",
+    "3709": "Confirm restore",
+    "3710": "Are you sure you want to restore \"{name}\"?",
+    "3711": "Batch restore",
+    "3712": "Are you sure you want to restore the selected {count} items?",
+    "3713": "Preparing the historical version timed out, please try again later",
+    "3714": "Failed to prepare the historical version file, please retry"
 }

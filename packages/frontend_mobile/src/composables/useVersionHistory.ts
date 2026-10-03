@@ -3,6 +3,7 @@ import { versionControlControllerGetFileHistory } from '../api-sdk';
 import { useEditorState } from './useEditorState';
 import { openDrawing } from '../services/drawingOpener';
 import type { DrawingOpenRequest } from '../services/drawingOpener';
+import { warmupHistoricalVersion } from '../services/versionWarmup';
 import { showToast } from 'vant';
 import { t } from '@/languages';
 
@@ -111,6 +112,19 @@ export function useVersionHistory() {
     if (!request) {
       showToast(t('无法打开历史版本：缺少文件ID'));
       return false;
+    }
+
+    // H3：先预热（对齐 PC）——冷路径「分片下载 + bin→mxweb 转换」可能耗时数十秒，
+    // 直接打开会被编辑器 60s 打开超时拖爆。弹窗「准备中」态覆盖等待；失败置 error 由弹窗展示。
+    const fileInfo = editorState.state.fileInfo as Record<string, unknown> | null;
+    const filePath = (fileInfo?.path as string) || '';
+    if (filePath) {
+      try {
+        await warmupHistoricalVersion(filePath, revision);
+      } catch (e) {
+        error.value = e instanceof Error ? e.message : t('历史版本文件准备失败，请重试');
+        return false;
+      }
     }
 
     const currentUrl = new URL(window.location.href);

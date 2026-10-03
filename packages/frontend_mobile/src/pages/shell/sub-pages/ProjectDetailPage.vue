@@ -63,6 +63,9 @@ import { useUndoSnackbar } from '@/composables/useUndoSnackbar'
 import { extractMoveCopyUndoIds } from '@/utils/moveCopyUndo'
 import { filterPasteCycleItems } from '@/utils/pasteCycleGuard'
 import { isCadFileName } from '@/utils/cadFile'
+import { useNodeDownload } from '@/composables/useNodeDownload'
+import { getNodeInfo } from '@/services/fileService'
+import { warmupHistoricalVersion } from '@/services/versionWarmup'
 import { showExternalReferenceManagePopup } from '@/plugins/vant/components/popup/showExternalReferenceManagePopup'
 import UndoSnackbar from '@/components/UndoSnackbar.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
@@ -101,6 +104,7 @@ const memberError = ref('')
 
 const shellStack = useShellStack()
 const { openFromList } = useShellFileOpen()
+const { downloadOriginal } = useNodeDownload()
 
 // 缩略图地址按节点 id 派生（网格模式占位）
 const projectFiles = computed(() =>
@@ -420,6 +424,7 @@ const canMoveFile = computed(() => projectPermissions.value.includes(ProjectPerm
 const canDeleteFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_DELETE))
 const canDownloadFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_DOWNLOAD))
 const canCreateFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_CREATE))
+const canUploadFile = computed(() => projectPermissions.value.includes(ProjectPermission.FILE_UPLOAD))
 
 // 多选操作项：注入权限门控（个人空间自持无需门控，沿用 UnifiedFileList 默认四项）
 const fileSelectionActions = computed<SelectionActionDef[]>(() => [
@@ -442,10 +447,15 @@ function getRoleName(id: string): string {
 }
 
 /** 文件夹下钻 + 图纸打开（打开走 useShellFileOpen，补齐文件上下文与缓存） */
-function enterFolder(item: { id: string; isFolder?: boolean }) {
+function enterFolder(item: { id: string; name: string; isFolder?: boolean }) {
   if (item.isFolder) {
     const raw = fileList.nodes.value.find((n) => n.id === item.id)
     if (raw) fileList.enterFolder(raw)
+    return
+  }
+  // H1：非 CAD 文件不走 CAD 编辑器，直接原格式下载（对齐 PC handleFileOpen）
+  if (!isCadFileName(item.name)) {
+    void downloadOriginal(item.id, item.name)
     return
   }
 
@@ -464,12 +474,17 @@ function onModeChange(m: 'grid' | 'list') {
 type FabActionKey = 'createFolder' | 'createDrawing' | 'uploadFile' | 'downloadTasks'
 type FabAction = ActionSheetAction & { key: FabActionKey }
 
-const fabActions = computed<FabAction[]>(() => [
-  { key: 'createFolder', name: t('新建文件夹'), icon: 'bag-o' },
-  { key: 'createDrawing', name: t('新建图纸'), icon: 'description' },
-  { key: 'uploadFile', name: t('上传文件'), icon: 'arrow-up' },
-  { key: 'downloadTasks', name: t('下载任务'), icon: 'down' },
-])
+// M6：FAB 按权限门控（对齐 PC FileSystemHeader canCreate/canUpload 为 false 时隐藏入口）
+const fabActions = computed<FabAction[]>(() => {
+  const actions: FabAction[] = []
+  if (canCreateFile.value) {
+    actions.push({ key: 'createFolder', name: t('新建文件夹'), icon: 'bag-o' })
+    actions.push({ key: 'createDrawing', name: t('新建图纸'), icon: 'description' })
+  }
+  if (canUploadFile.value) actions.push({ key: 'uploadFile', name: t('上传文件'), icon: 'arrow-up' })
+  actions.push({ key: 'downloadTasks', name: t('下载任务'), icon: 'down' })
+  return actions
+})
 
 function openCreateFolderDialog() {
   showCreateFolderDialog.value = true
@@ -553,22 +568,31 @@ const menuActions = computed(() => {
   // CAD 图纸 → 外部参照管理（对齐 PC isCadFile && canManageExternalReference visibilityCheck）
   const isCad = !isFolder && menuTarget.value ? isCadFileName(menuTarget.value.name) : false
   const canManageExtRef = projectPermissions.value.includes(ProjectPermission.CAD_EXTERNAL_REFERENCE)
+  // M5：逐项权限门控（对齐 PC fileActionConfig permissionCheck；个人空间自持无需门控，仅项目页）
+  const canEdit = projectPermissions.value.includes(ProjectPermission.FILE_EDIT)
+  const canMove = projectPermissions.value.includes(ProjectPermission.FILE_MOVE)
+  const canCopy = projectPermissions.value.includes(ProjectPermission.FILE_COPY)
+  const canDownload = projectPermissions.value.includes(ProjectPermission.FILE_DOWNLOAD)
+  const canShare = projectPermissions.value.includes(ProjectPermission.FILE_SHARE)
+  const canReadVersion = projectPermissions.value.includes(ProjectPermission.VERSION_READ)
+  const canDelete = projectPermissions.value.includes(ProjectPermission.FILE_DELETE)
   const actions: Array<{ name: string; color?: string }> = [
     { name: t('打开') },
-    // 文件 → 格式转换下载（A-06）；文件夹 → 打包下载（A-08）
-    isFolder ? { name: t('打包下载') } : { name: t('格式转换下载') },
+    // 文件 → 下载（M9：CAD 弹格式选择、非 CAD 原格式直下，对齐 PC 单一「下载」项）；文件夹 → 打包下载（A-08）
+    ...(isFolder
+      ? (canDownload ? [{ name: t('打包下载') }] : [])
+      : (canDownload ? [{ name: t('下载') }] : [])),
     // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
-    ...(isFolder ? [] : [{ name: t('分享') }]),
+    ...(!isFolder && canShare ? [{ name: t('分享') }] : []),
     ...(isCad && canManageExtRef ? [{ name: t('外部参照管理') }] : []),
     // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
-    ...(isFolder ? [] : [{ name: t('版本历史') }]),
-    { name: t('重命名') },
+    ...(!isFolder && canReadVersion ? [{ name: t('版本历史') }] : []),
+    ...(canEdit ? [{ name: t('重命名') }] : []),
     // A-29a：文件夹操作（移动到…/复制到…）与剪贴板操作（复制到剪贴板/剪切）对齐 PC 语义区分
-    { name: t('移动到...') },
-    { name: t('复制到...') },
-    { name: t('复制到剪贴板') },
-    { name: t('剪切') },
-    { name: t('删除'), color: '#ee0a24' },
+    ...(canMove ? [{ name: t('移动到...') }] : []),
+    ...(canCopy ? [{ name: t('复制到...') }, { name: t('复制到剪贴板') }] : []),
+    ...(canMove ? [{ name: t('剪切') }] : []),
+    ...(canDelete ? [{ name: t('删除'), color: '#ee0a24' }] : []),
   ]
   return actions
 })
@@ -584,8 +608,10 @@ function onMenuAction(action: { name: string }) {
   if (!target) return
   if (action.name === t('打开')) {
     enterFolder(target)
-  } else if (action.name === t('格式转换下载')) {
-    openFormatDownload(target)
+  } else if (action.name === t('下载')) {
+    // M9：CAD → 格式选择弹窗（转换下载）；非 CAD → 原格式直下（对齐 PC handleDownload 分流）
+    if (isCadFileName(target.name)) openFormatDownload(target)
+    else void downloadOriginal(target.id, target.name)
   } else if (action.name === t('打包下载')) {
     void downloadFolder(target)
   } else if (action.name === t('分享')) {
@@ -646,7 +672,18 @@ function openVersionHistory(target: { id: string; path?: string; projectId?: str
 
 /** 选中历史版本：URL 带 ?v= 版本号（loadByNodeId 从 URL 读取加载历史版本），
  *  走统一打开入口；打开成功后 router.replace('/shell') 会清掉 query，不影响下次正常打开 */
-function onOpenHistoricalVersion(payload: { nodeId: string; revision: number }) {
+/** 选中历史版本：先预热（H3，对齐 PC）再走统一打开入口（URL 带 ?v=），避免冷路径撞编辑器 60s 打开超时 */
+async function onOpenHistoricalVersion(payload: { nodeId: string; revision: number }) {
+  showLoadingToast({ message: t('正在准备历史版本文件，请稍候...'), forbidClick: false })
+  try {
+    const nodeInfo = await getNodeInfo(payload.nodeId)
+    if (!nodeInfo.path) throw new Error(t('文件不存在或已被删除'))
+    await warmupHistoricalVersion(nodeInfo.path, payload.revision)
+  } catch (e) {
+    showFailToast(e instanceof Error ? e.message : t('历史版本文件准备失败，请重试'))
+    return
+  }
+  closeToast()
   const url = new URL(window.location.href)
   url.searchParams.set('v', String(payload.revision))
   history.replaceState(history.state, '', url.toString())
@@ -684,7 +721,11 @@ async function onAuditLocate(log: AuditLogItem) {
     }
     return
   }
-  // 文件 → 走统一打开入口
+  // 文件 → 走统一打开入口（H1：非 CAD 文件名称快照判定，直下而非进编辑器）
+  if (log.resourceName && !isCadFileName(log.resourceName)) {
+    void downloadOriginal(nodeId, log.resourceName)
+    return
+  }
   void openFromList(nodeId, {
     path: `/shell/file/project/${projectId.value}`,
     folderId: fileList.currentFolderId.value,
