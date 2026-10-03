@@ -89,10 +89,19 @@ export class NodeCopyMoveService {
           projectId: true,
           size: true,
           path: true,
+          deletedAt: true,
         },
       });
 
       if (!node) {
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
+        );
+      }
+      // 源节点已软删（deletedAt 非空）→ 拒绝移动。否则会把已删节点重新挂到存活父节点下，
+      // 节点因 deletedAt 仍被过滤不出现在目标列表，表现为「粘贴成功但文件消失」的静默丢项
+      // （典型：剪切后源文件夹被他人删除再粘贴）。与目标父节点的 deletedAt: null 门禁对齐。
+      if (node.deletedAt) {
         throw new NotFoundException(
           I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
         );

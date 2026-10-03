@@ -625,4 +625,50 @@ describe('NodeCopyMoveService', () => {
       expect(prisma.fileSystemNode.create).not.toHaveBeenCalled();
     });
   });
+
+  describe('moveNode — 源节点已软删的门禁（防「粘贴成功但文件消失」静默丢项）', () => {
+    it('源节点 deletedAt 非空 → 拒绝，不做权限断言、不落库', async () => {
+      prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) => {
+        if (where.id === 'node-1') {
+          // 源节点已软删（典型：剪切后源文件夹被他人删除，级联软删子节点）
+          return Promise.resolve(fileNode({ deletedAt: new Date() }));
+        }
+        if (where.id === 'folder-b') {
+          return Promise.resolve({
+            id: 'folder-b',
+            nodeType: NodeType.FOLDER,
+            projectId: 'proj-1',
+            deletedAt: null,
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(
+        service.moveNode('node-1', 'folder-b', 'user-1')
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(nodeMutationGuard.assertMutationAllowed).not.toHaveBeenCalled();
+      expect(prisma.fileSystemNode.update).not.toHaveBeenCalled();
+    });
+
+    it('源节点存活（deletedAt 空）→ 正常放行（门禁不误伤）', async () => {
+      prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) => {
+        if (where.id === 'node-1') {
+          return Promise.resolve(fileNode({ parentId: 'folder-a', deletedAt: null }));
+        }
+        if (where.id === 'folder-b') {
+          return Promise.resolve({
+            id: 'folder-b',
+            nodeType: NodeType.FOLDER,
+            projectId: 'proj-1',
+            deletedAt: null,
+          });
+        }
+        return Promise.resolve(null);
+      });
+
+      await service.moveNode('node-1', 'folder-b', 'user-1');
+      expect(prisma.fileSystemNode.update).toHaveBeenCalled();
+    });
+  });
 });
