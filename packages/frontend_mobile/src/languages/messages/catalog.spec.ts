@@ -45,26 +45,13 @@ describe('i18n 消息目录完整性', () => {
     }
   })
 
-  // 存量未翻译债务冻结成显式区间（2026-10-03：en-US / ko-KR 各 79 条）。
-  // 区间外的任何中文即「新增漏翻」，立即红灯；补翻一段就把它从这张表里划掉。
-  const TRANSLATION_DEBT: Array<[number, number]> = [
-    [3260, 3295], // 认证 / 账户注销流程
-    [3333, 3337], // 回收站
-    [3339, 3346], // 回收站
-    [3362, 3364], // 项目 / 回收站
-    [3370, 3371], // 项目 / 回收站
-    [3451, 3453], // 操作历史面板
-    [3458, 3479], // 操作历史面板
-  ]
-  const isKnownDebt = (id: number) => TRANSLATION_DEBT.some(([a, b]) => id >= a && id <= b)
-
-  it('en-US / ko-KR 除已登记的存量债务区间外不得含中文（新增漏翻立即失败）', () => {
+  // 2026-10-03 起存量未翻译债务清零（en-US / ko-KR 各 79 条已全部补译），
+  // 故不再需要「已登记债务区间」白名单——任何中文即漏翻，立即红灯。
+  it('en-US / ko-KR 不得含中文（漏翻立即失败）', () => {
     for (const lang of ['en-US', 'ko-KR'] as const) {
       const ids = loadMessages(lang).ids
-      const offenders = Object.keys(ids)
-        .map(Number)
-        .filter((id) => /[一-龥]/.test(ids[String(id)]) && !isKnownDebt(id))
-      expect(offenders, `${lang} 出现未登记的未翻译键`).toEqual([])
+      const offenders = Object.keys(ids).filter((id) => /[一-龥]/.test(ids[id]))
+      expect(offenders, `${lang} 出现未翻译键`).toEqual([])
     }
   })
 

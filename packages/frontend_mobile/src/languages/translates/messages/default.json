@@ -8244,7 +8244,7 @@
     },
     "移动失败": {
         "zh-TW": "移動失敗",
-        "en-US": "Mobile failed",
+        "en-US": "Move failed",
         "ko-KR": "이동 실패",
         "$files": [
             "src/pages/shell/sub-pages/FileBrowserPage.vue(28158-28166)",
@@ -8324,7 +8324,7 @@
     },
     "移动成功": {
         "zh-TW": "移動成功",
-        "en-US": "Mobile successful",
+        "en-US": "Move successful",
         "ko-KR": "이동 성공",
         "$files": [
             "src/pages/shell/sub-pages/FileBrowserPage.vue(29575-29583)",
