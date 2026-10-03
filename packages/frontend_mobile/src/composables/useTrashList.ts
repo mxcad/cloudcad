@@ -1,10 +1,11 @@
 /**
- * 回收站数据层（薄 composable，复用 UnifiedFileList 展示组件）
+ * 回收站数据层（薄 composable，供 shell/components/TrashView.vue 消费）
  *
- * 三 scope（对齐 PC 回收站按上下文区分）：
- *   projects = 项目列表回收站（全局：可访问项目内的已删条目 + 已删项目根 + 个人空间已删条目，projectId 不传）
- *   project  = 项目内回收站（projectId=selectedProjectId，取该项目子树的已删条目）
- *   personal = 个人空间回收站（projectId=personalSpaceId，按子树取数）
+ * 概念对齐 PC：回收站是「当前上下文」的视图，scope 由入口上下文决定，
+ * 不再有手动选 scope 的下拉（原 FileBrowserPage 第 3 tab 方案已废弃）：
+ *   projects = 项目列表上下文（全局：可访问项目内的已删条目 + 已删项目根 + 个人空间已删条目，projectId 不传）
+ *   project  = 项目详情页上下文（projectId，取该项目子树的已删条目）
+ *   personal = 个人空间上下文（projectId=personalSpaceId，按子树取数）
  *
  * 后端接口全部现成，零后端改动：
  *   GET /trash（+projectId）· POST /trash/restore · DELETE /trash/items
@@ -13,7 +14,7 @@
  *
  * 每个动作成功后 toast + 回第 1 页重载；失败时 403 走权限文案，其余走通用失败。
  */
-import { ref, computed, type Ref } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import {
   trashControllerGetTrash,
   trashControllerRestoreTrashItems,
@@ -31,6 +32,21 @@ import { errorKind, errMsg } from '@/utils/apiError'
 export type TrashScope = 'projects' | 'project' | 'personal'
 export type TrashSortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
 export type TrashSortOrder = 'asc' | 'desc'
+
+/**
+ * 按入口传入的 props 判定回收站 scope——按「是否传入」而非「值是否非空」：
+ * 个人空间入口恒传 personalSpaceId（id 未就绪时为 null），若按真值回退到
+ * projects，id 未就绪（或取数失败）时个人 tab 会误显示全局回收站，
+ * 用户可能误清空全局回收站。
+ */
+export function resolveTrashScope(
+  projectId: string | undefined,
+  personalSpaceId: string | null | undefined,
+): TrashScope {
+  if (projectId) return 'project'
+  if (personalSpaceId !== undefined) return 'personal'
+  return 'projects'
+}
 
 const PAGE_SIZE = 30
 
@@ -182,8 +198,8 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
 
   // ── scope 切换：清搜索 + 回第 1 页 + 重载 ──
   // 'project' scope 可带 projectId 一次到位（避免先切 scope 再选项目连发两次请求）
-  function setScope(next: TrashScope, projectId?: string) {
-    if (next === scope.value && (next !== 'project' || projectId === selectedProjectId.value)) return
+  // openTrash 总是触发加载（供视图挂载/上下文切换时调用）；setScope 幂等（同 scope 不重复请求）
+  function openTrash(next: TrashScope, projectId?: string) {
     scope.value = next
     if (searchTimer) {
       clearTimeout(searchTimer)
@@ -197,6 +213,19 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     selectedProjectId.value = next === 'project' ? projectId ?? null : null
     load()
   }
+
+  function setScope(next: TrashScope, projectId?: string) {
+    if (next === scope.value && (next !== 'project' || projectId === selectedProjectId.value)) return
+    openTrash(next, projectId)
+  }
+
+  // personal scope 依赖个人空间根 id；页面异步取到 id 后补发请求（进入回收站时 id 可能尚未就绪）
+  watch(
+    personalSpaceId,
+    (id) => {
+      if (id && scope.value === 'personal') void load()
+    },
+  )
 
   // ── 恢复：根节点（含已删项目根）走批量恢复接口，非根走单节点恢复 ──
   async function restore(item: { id: string; isRoot?: boolean }) {
@@ -275,7 +304,8 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
                 },
               })
         if (res.error) throw res.error
-        showSuccessToast(t('回收站已清空'))
+        // scope 专属成功文案（对齐 PC：项目/个人空间清空报「项目回收站已清空」，全局报「回收站已清空」）
+        showSuccessToast(scope.value === 'projects' ? t('回收站已清空') : t('项目回收站已清空'))
         await reload()
       } catch (e) {
         failToast(e)
@@ -289,7 +319,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     sortBy, sortOrder,
     loadMoreFailed, hasMore, isEmpty, filterActive, actionBusy,
     load, reload, loadMore, retryLoadMore, refresh,
-    setSearch, setSort, setScope, setFilters,
+    setSearch, setSort, setScope, openTrash, setFilters,
     restore, restoreBatch,
     permanentDelete, permanentDeleteBatch,
     clear,

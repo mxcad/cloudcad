@@ -36,7 +36,6 @@ import { useCreateDrawing } from '@/composables/useCreateDrawing'
 import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType, BatchOperationResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { useViewMode } from '@/composables/useViewMode'
-import { useTrashList } from '@/composables/useTrashList'
 import { useProjectActions } from '@/composables/useProjectActions'
 import { useProjectSearch } from '@/composables/useProjectSearch'
 import { formatNodeAsItems, formatTime } from '@/composables/useNodeFormatter'
@@ -51,6 +50,7 @@ import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.
 import { useBatchDownload } from '@/composables/useBatchDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
 import type { SelectionActionKey } from '../components/UnifiedFileList.vue'
+import TrashView from '../components/TrashView.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
 import { useTransferTargets } from '@/composables/useTransferTargets'
 import { useCrossProjectTransfer } from '@/composables/useCrossProjectTransfer'
@@ -81,8 +81,10 @@ import { runUploadPool } from '@/utils/uploadPool'
 
 const router = useRouter()
 const route = useRoute()
-// 0=我的项目 1=个人空间 2=回收站。?domain=personal 是 PC /personal-space 落地时的
-// 语义标记（映射表固定注入），首次直接停在个人空间而不是项目列表。
+// 0=我的项目 1=个人空间。回收站不再是独立 tab：对齐 PC 概念，回收站是「当前上下文」的
+// 视图——nav bar 右侧入口按当前 tab 定 scope（项目列表 tab → 全局回收站，个人空间 tab →
+// 个人回收站），打开后替换 tab 内容（TrashView），左箭头返回文件列表。
+// ?domain=personal 是 PC /personal-space 落地时的语义标记（映射表固定注入），首次直接停在个人空间。
 // 初始 Tab 的数据由 useLoginPrompt 的 immediate watch 按 activeTab 分流加载。
 const activeTab = ref(route.query.domain === 'personal' ? 1 : 0)
 const keyword = ref('')
@@ -301,11 +303,6 @@ watch(activeTab, (tab) => {
     loadProjects()
   } else if (tab === 1) {
     loadPersonalSpace()
-  } else {
-    // 回收站 tab：确保个人空间根就绪后再加载当前 scope（personal scope 依赖它）；
-    // 并预取项目列表供范围下拉展开时直接选择（已拉取则跳过）
-    void ensurePersonalSpaceId().finally(() => trashList.load())
-    void loadTrashTargets()
   }
 })
 
@@ -324,9 +321,6 @@ useLoginPrompt(() => {
     loadProjects()
   } else if (activeTab.value === 1) {
     loadPersonalSpace()
-  } else {
-    void ensurePersonalSpaceId().finally(() => trashList.load())
-    void loadTrashTargets()
   }
 })
 
@@ -453,164 +447,39 @@ function onPersonalModeChange(m: 'grid' | 'list') {
   personalMode.value = m
 }
 
-// ── 回收站（第 3 个 tab：项目列表/个人空间/具体项目 三 scope，对齐 PC 按上下文区分）──
-const trashList = useTrashList(personalSpaceId)
-const trashScope = computed(() => trashList.scope.value)
-// 顶层 ref，模板自动解包；项目内回收站选中的项目 id（单一事实源=composable）
-const trashSelectedProjectId = trashList.selectedProjectId
-const trashItems = computed(() => formatNodeAsItems(trashList.nodes.value))
-const trashLoading = computed(() => trashList.loading.value)
-const trashHasMore = computed(() => trashList.hasMore.value)
-const trashLoadMoreFailed = computed(() => trashList.loadMoreFailed.value)
-const trashSortBy = computed(() => trashList.sortBy.value)
-const trashSortOrder = computed(() => trashList.sortOrder.value)
-const trashTotal = computed(() => trashList.total.value)
-const trashActionBusy = computed(() => trashList.actionBusy.value)
+// ── 回收站（对齐 PC 概念：回收站是「当前上下文」的视图，不再是独立 tab + 手动选 scope）──
+// nav bar 右侧入口按当前 tab 定 scope：我的项目 tab → 全局回收站（已删项目根 + 全部已删条目），
+// 个人空间 tab → 个人回收站。打开后 TrashView 替换 tab 内容，nav bar 左箭头返回文件列表。
+const trashContext = ref<null | 'global' | 'personal'>(null)
+// 回收站内动作成功（恢复/彻底删除/清空）后置 true；关闭回收站时据此刷新当前 tab 列表
+const trashDirty = ref(false)
 
-// 范围选择：项目列表 / 个人空间 / 具体项目 合为一个下拉
-// （原为 chip 行 + 点「项目内」后才出现的二级项目下拉，两步改一步）
-const TRASH_PROJECT_PREFIX = 'proj:'
-const trashTargets = useTransferTargets()
-const trashProjectOptions = computed(() =>
-  trashTargets.roots.value
-    .filter((r) => r.domain === 'project')
-    .map((r) => ({ text: r.name, value: r.id })),
-)
-// 下拉选中值：'projects' | 'personal' | `proj:<projectId>`
-const trashTarget = computed(() =>
-  trashScope.value === 'personal'
-    ? 'personal'
-    : trashScope.value === 'project'
-      ? `${TRASH_PROJECT_PREFIX}${trashSelectedProjectId.value ?? ''}`
-      : 'projects',
-)
-const trashTargetOptions = computed(() => [
-  { text: t('项目列表'), value: 'projects' },
-  { text: t('个人空间'), value: 'personal' },
-  ...trashProjectOptions.value.map((p) => ({ text: p.text, value: `${TRASH_PROJECT_PREFIX}${p.value}` })),
-])
-const trashTargetTitle = computed(() => {
-  if (trashTarget.value === 'personal') return t('个人空间')
-  if (trashTarget.value === 'projects') return t('项目列表')
-  return trashProjectOptions.value.find((p) => p.value === trashSelectedProjectId.value)?.text ?? t('选择项目')
-})
-
-// 项目列表按需拉取（项目可能很多，仅下拉展开时首次请求）
-async function loadTrashTargets() {
-  if (trashTargets.roots.value.length > 0) return
-  await ensurePersonalSpaceId()
-  if (trashTargets.roots.value.length === 0) await trashTargets.load(personalSpaceId.value)
+function openTrash() {
+  trashDirty.value = false
+  trashContext.value = activeTab.value === 1 ? 'personal' : 'global'
 }
 
-function onTrashTargetChange(val: string | number | boolean) {
-  const v = String(val)
-  if (v === 'projects') {
-    trashList.setScope('projects')
-    return
-  }
-  if (v === 'personal') {
-    void ensurePersonalSpaceId()
-    trashList.setScope('personal')
-    return
-  }
-  if (v.startsWith(TRASH_PROJECT_PREFIX)) trashList.setScope('project', v.slice(TRASH_PROJECT_PREFIX.length))
-}
-
-// 回收站高级筛选：仅扩展名（回收站接口不支持大小/时间，避免误导）
-const showTrashFilterPopup = ref(false)
-const trashFilterActive = trashList.filterActive
-function onTrashFilterApply(filters: FileListFilters) {
-  trashList.setFilters({ extension: filters.extension })
-}
-
-// 多选操作项：恢复 / 彻底删除（危险色）
-const trashSelectionActions = computed(() => [
-  { key: 'restore' as const, label: t('恢复') },
-  { key: 'permanentDelete' as const, label: t('彻底删除'), danger: true },
-])
-
-function onTrashSelectionAction(action: SelectionActionKey, items: FileListItem[]) {
-  if (action === 'restore') {
-    // L1：批量恢复加确认（对齐 PC trashActions.batchRestore）
-    void showConfirmDialog({
-      title: t('批量恢复'),
-      message: t('确定要恢复选中的 {count} 个项目吗？', { count: String(items.length) }),
-    })
-      .then(() => {
-        void trashList.restoreBatch(items.map((i) => i.id))
-      })
-      .catch(() => {})
-  } else {
-    confirmPermanentDelete(items)
+function closeTrash() {
+  trashContext.value = null
+  const dirty = trashDirty.value
+  trashDirty.value = false
+  if (!dirty) return
+  // 动作后背景文件列表可能已变化（恢复项重新出现/删除项消失）→ 刷新当前 tab
+  if (activeTab.value === 0) {
+    // 搜索态：重跑全局搜索（与 watch(projectFilter) 同模式），否则视图仍显示旧搜索结果
+    if (keyword.value) {
+      projectSearch.searchFromFirstPage(keyword.value, projectFilter.value)
+    } else {
+      projectPage.value = 1
+      loadProjects()
+    }
+  } else if (activeTab.value === 1) {
+    loadPersonalSpace()
   }
 }
 
-// 单条目菜单：恢复 / 彻底删除（危险色）
-const trashMenuTarget = ref<FileListItem | null>(null)
-const showTrashMenuSheet = ref(false)
-const trashMenuActions = computed(() => [
-  { name: t('恢复') },
-  { name: t('彻底删除'), color: '#ee0a24' },
-])
-
-function onTrashItemMenu(item: FileListItem) {
-  trashMenuTarget.value = item
-  showTrashMenuSheet.value = true
-}
-
-function onTrashMenuAction(action: { name: string }) {
-  showTrashMenuSheet.value = false
-  const target = trashMenuTarget.value
-  if (!target) return
-  if (action.name === t('恢复')) {
-    // L1：单条恢复加确认（对齐 PC trashActions.restore）
-    void showConfirmDialog({
-      title: t('确认恢复'),
-      message: t('确定要恢复 "{name}" 吗？', { name: target.name }),
-    })
-      .then(() => {
-        void trashList.restore({ id: target.id, isRoot: target.isRoot })
-      })
-      .catch(() => {})
-  } else if (action.name === t('彻底删除')) {
-    confirmPermanentDelete([target])
-  }
-}
-
-// 彻底删除 / 清空：强确认（危险色，说明不可恢复）
-async function confirmPermanentDelete(items: FileListItem[]) {
-  try {
-    await showDialog({
-      title: t('彻底删除'),
-      message:
-        items.length === 1
-          ? t('确定彻底删除「{name}」？删除后不可恢复。', { name: items[0].name })
-          : t('确定彻底删除 {count} 项？删除后不可恢复。', { count: String(items.length) }),
-      showCancelButton: true,
-      confirmButtonColor: '#ee0a24',
-    })
-  } catch {
-    return
-  }
-  if (items.length === 1) {
-    await trashList.permanentDelete({ id: items[0].id })
-  } else {
-    await trashList.permanentDeleteBatch(items.map((i) => i.id))
-  }
-}
-
-async function onClearTrash() {
-  try {
-    await showDialog({
-      title: t('清空回收站'),
-      message: t('确定清空回收站？当前范围的所有项目/文件将被彻底删除，不可恢复。'),
-      showCancelButton: true,
-      confirmButtonColor: '#ee0a24',
-    })
-  } catch {
-    return
-  }
-  await trashList.clear()
+function onTrashChanged() {
+  trashDirty.value = true
 }
 
 // ── 多选操作（B-03/B-17：move 接线；Bug6：复制/剪切写剪贴板）──
@@ -1357,9 +1226,19 @@ async function onFileInputChange(e: Event) {
 
 <template>
   <div class="subpage">
-    <van-nav-bar title="文件" left-arrow @click-left="() => router.back()" />
+    <!-- 回收站打开时：标题变「回收站」，左箭头返回文件列表（对齐 PC 回收站 toggle）；
+         未打开时右侧「回收站」入口按当前 tab 定 scope（项目列表 tab→全局，个人空间 tab→个人） -->
+    <van-nav-bar
+      :title="trashContext ? t('回收站') : '文件'"
+      left-arrow
+      @click-left="trashContext ? closeTrash() : router.back()"
+    >
+      <template v-if="!trashContext" #right>
+        <van-icon name="delete-o" size="20" @click="openTrash" />
+      </template>
+    </van-nav-bar>
 
-    <van-tabs v-model:active="activeTab" line-width="28" class="file-tabs">
+    <van-tabs v-show="!trashContext" v-model:active="activeTab" line-width="28" class="file-tabs">
       <van-tab :title="t('我的项目')">
         <!-- A-11 项目筛选（对齐 PC ProjectFilterTabs：全部/我创建的/我加入的） -->
         <div class="project-filter">
@@ -1514,54 +1393,20 @@ async function onFileInputChange(e: Event) {
         />
       </van-tab>
 
-      <van-tab :title="t('回收站')">
-        <!-- 范围选择 + 项数 + 清空 合并为一行：项目列表 / 个人空间 / 具体项目 一步选完 -->
-        <div class="trash-toolbar">
-          <van-dropdown-menu class="trash-target-dropdown" active-color="var(--primary)">
-            <van-dropdown-item
-              :model-value="trashTarget"
-              :title="trashTargetTitle"
-              :options="trashTargetOptions"
-              @change="onTrashTargetChange"
-            />
-          </van-dropdown-menu>
-          <span class="trash-count">{{ t('共 {count} 项', { count: String(trashTotal) }) }}</span>
-          <button class="trash-clear" :disabled="trashActionBusy" @click="onClearTrash">{{ t('清空回收站') }}</button>
-        </div>
-        <UnifiedFileList
-          domain="personal"
-          :items="trashItems"
-          :loading="trashLoading"
-          :breadcrumb="[]"
-          :has-more="trashHasMore"
-          :load-more-failed="trashLoadMoreFailed"
-          :sort-by="trashSortBy"
-          :sort-order="trashSortOrder"
-          :show-fab="false"
-          :empty-text="t('回收站是空的')"
-          empty-icon="delete-o"
-          :selection-actions="trashSelectionActions"
-          :filter-active="trashFilterActive"
-          @item-click="onTrashItemMenu"
-          @item-menu="onTrashItemMenu"
-          @selection-action="onTrashSelectionAction"
-          @search="trashList.setSearch"
-          @filter="showTrashFilterPopup = true"
-          @load-more="trashList.loadMore"
-          @load-more-retry="trashList.retryLoadMore"
-          @refresh="trashList.refresh"
-          @sort-change="trashList.setSort"
-        />
-        <!-- 回收站高级筛选：仅文件格式（回收站接口不支持大小/时间）-->
-        <FileFilterPopup
-          v-model:show="showTrashFilterPopup"
-          :sections="['extension']"
-          @apply="onTrashFilterApply"
-        />
-      </van-tab>
     </van-tabs>
 
-    <button class="fab" aria-label="新建" @click="onFabClick">
+    <!-- 回收站视图（对齐 PC：当前上下文的视图，scope 由入口 tab 决定；动作成功后关站刷新列表） -->
+    <TrashView
+      v-if="trashContext === 'global'"
+      @changed="onTrashChanged"
+    />
+    <TrashView
+      v-else-if="trashContext === 'personal'"
+      :personal-space-id="personalSpaceId"
+      @changed="onTrashChanged"
+    />
+
+    <button v-if="!trashContext" class="fab" aria-label="新建" @click="onFabClick">
       <van-icon name="plus" />
     </button>
     <van-action-sheet
@@ -1669,13 +1514,6 @@ async function onFileInputChange(e: Event) {
       @select="onMenuAction"
       @close="menuTarget = null"
     />
-    <!-- 回收站单条目菜单：恢复 / 彻底删除 -->
-    <van-action-sheet
-      v-model:show="showTrashMenuSheet"
-      :actions="trashMenuActions"
-      @select="onTrashMenuAction"
-      @close="trashMenuTarget = null"
-    />
     <!-- 项目卡片管理菜单：编辑/成员/角色/转移/历史/删除（权限门控，对齐 PC）-->
     <van-action-sheet
       v-model:show="showProjectMenuSheet"
@@ -1765,75 +1603,6 @@ async function onFileInputChange(e: Event) {
   }
 }
 
-/* 回收站工具条：范围选择下拉 + 项数 + 清空
-   （原 chip 行 + 项目内二级下拉 + 页头 三行合成一行） */
-.trash-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px 0;
-  flex: none;
-}
-
-.trash-target-dropdown {
-  flex: 1 1 auto;
-  min-width: 0;
-
-  :deep(.van-dropdown-menu__bar) {
-    height: 32px;
-    background: var(--bg-secondary);
-    box-shadow: none;
-    border-radius: 6px;
-  }
-
-  :deep(.van-dropdown-menu__item) {
-    gap: 4px;
-    padding: 0 10px 0 12px;
-  }
-
-  :deep(.van-dropdown-menu__title) {
-    flex: 1 1 auto;
-    min-width: 0;
-    padding: 0;
-    font-size: 13px;
-    color: var(--text-secondary);
-    max-width: 130px;
-  }
-
-  :deep(.van-dropdown-menu__title:after) {
-    display: none;
-  }
-
-  :deep(.van-dropdown-menu__item::after) {
-    content: '';
-    flex-shrink: 0;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 5px solid var(--text-tertiary);
-  }
-}
-
-.trash-count {
-  flex: none;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-
-.trash-clear {
-  flex: none;
-  border: none;
-  background: transparent;
-  color: #ee0a24;
-  font-size: 12px;
-  padding: 4px 6px;
-
-  &:active {
-    opacity: 0.7;
-  }
-}
 
 .file-tabs {
   flex: 1;

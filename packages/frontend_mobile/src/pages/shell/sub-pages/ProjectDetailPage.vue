@@ -53,6 +53,7 @@ import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.
 import { useBatchDownload } from '@/composables/useBatchDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
 import type { SelectionActionKey, SelectionActionDef } from '../components/UnifiedFileList.vue'
+import TrashView from '../components/TrashView.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
 import { useTransferTargets } from '@/composables/useTransferTargets'
 import { useCrossProjectTransfer } from '@/composables/useCrossProjectTransfer'
@@ -91,6 +92,18 @@ const projectId = computed(() => (route.params.projectId as string) ?? '')
 
 const activeTab = ref(0)
 const projectName = ref('项目')
+
+// 回收站（对齐 PC 概念：项目详情页的回收站 = 本项目子树的已删条目，nav bar 入口）
+const isTrashView = ref(false)
+// 回收站内动作成功（恢复/彻底删除/清空）后置 true；关闭回收站时据此刷新文件列表
+const trashDirty = ref(false)
+
+function closeTrash() {
+  isTrashView.value = false
+  const dirty = trashDirty.value
+  trashDirty.value = false
+  if (dirty) void refreshFiles()
+}
 
 // 文件列表数据层统一走 useUnifiedFileList（与个人空间同一套加载/分页/排序/搜索/面包屑逻辑），
 // 项目页只保留本页特有的编排：项目根初始化、返回还原、配额条、权限门控
@@ -318,7 +331,7 @@ async function onAddMemberConfirm() {
     await loadMembers()
   } catch (e) {
     closeToast()
-    showFailToast(e instanceof Error ? e.message : '添加失败')
+    showFailToast(e instanceof Error ? e.message : t('添加失败'))
   }
 }
 
@@ -340,7 +353,7 @@ async function onRemoveMember(member: { id: string; name: string }) {
   } catch (e) {
     if (e !== 'cancel') {
       closeToast()
-      showFailToast(e instanceof Error ? e.message : '移除失败')
+      showFailToast(e instanceof Error ? e.message : t('移除失败'))
     }
   }
 }
@@ -356,7 +369,7 @@ async function onUpdateMemberRole(member: { id: string; projectRoleId: string },
     showSuccessToast('角色已更新')
     await loadMembers()
   } catch (e) {
-    showFailToast(e instanceof Error ? e.message : '更新失败')
+    showFailToast(e instanceof Error ? e.message : t('更新失败'))
   }
 }
 
@@ -1363,14 +1376,21 @@ onMounted(() => {
 
 <template>
   <div class="subpage">
-    <van-nav-bar :title="projectName" left-arrow @click-left="() => router.back()">
-      <!-- 项目管理入口（对齐 PC 项目卡片「…」菜单：编辑/成员/角色/转移设置/历史/删除） -->
-      <template #right>
+    <!-- 回收站打开时：标题变「回收站」，左箭头返回文件列表（对齐 PC 回收站 toggle）；
+         未打开时右侧「回收站」入口（本项目子树已删条目）+ 项目管理菜单 -->
+    <van-nav-bar
+      :title="isTrashView ? t('回收站') : projectName"
+      left-arrow
+      @click-left="isTrashView ? closeTrash() : router.back()"
+    >
+      <template v-if="!isTrashView" #right>
+        <van-icon name="delete-o" size="20" @click="isTrashView = true" />
+        <!-- 项目管理入口（对齐 PC 项目卡片「…」菜单：编辑/成员/角色/转移设置/历史/删除） -->
         <van-icon name="ellipsis" size="20" @click="showManageSheet = true" />
       </template>
     </van-nav-bar>
 
-    <van-tabs v-model:active="activeTab" line-width="28" class="detail-tabs">
+    <van-tabs v-show="!isTrashView" v-model:active="activeTab" line-width="28" class="detail-tabs">
       <van-tab title="文件">
         <!-- B-15 项目上传配额（对齐 PC FileSystemHeader：进度条 + 90%/超限阈值配色） -->
         <div v-if="projectQuota && projectQuota.limit > 0" class="quota-bar">
@@ -1498,8 +1518,16 @@ onMounted(() => {
       </van-tab>
     </van-tabs>
 
+    <!-- 回收站视图（本项目子树已删条目；动作成功后关站刷新文件列表） -->
+    <TrashView
+      v-if="isTrashView"
+      :project-id="projectId"
+      :scope-label="projectName"
+      @changed="trashDirty = true"
+    />
+
     <!-- 成员 Tab 无新建内容语义（添加成员已有列表头按钮），故只在文件 Tab 显示 FAB -->
-    <button v-if="activeTab === 0" class="fab" aria-label="新建" @click="showFabSheet = true">
+    <button v-if="activeTab === 0 && !isTrashView" class="fab" aria-label="新建" @click="showFabSheet = true">
       <van-icon name="plus" />
     </button>
     <van-action-sheet

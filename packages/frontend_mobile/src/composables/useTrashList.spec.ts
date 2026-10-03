@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ref } from 'vue'
-import { useTrashList } from './useTrashList'
+import { useTrashList, resolveTrashScope } from './useTrashList'
 
 vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
   trashControllerGetTrash: vi.fn(),
@@ -288,12 +288,58 @@ describe('useTrashList 回收站数据层', () => {
     expect(vi.mocked(showSuccessToast)).toHaveBeenCalledWith('已彻底删除 3 项')
   })
 
-  it('clear projects scope：清空全局回收站', async () => {
+  it('openTrash：同 scope 也总是触发加载（视图挂载/上下文切换入口，区别于 setScope 幂等）', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const c = setup()
+    c.openTrash('projects')
+    await vi.waitFor(() => expect(vi.mocked(trashControllerGetTrash)).toHaveBeenCalledTimes(1))
+    c.openTrash('projects')
+    await vi.waitFor(() => expect(vi.mocked(trashControllerGetTrash)).toHaveBeenCalledTimes(2))
+  })
+
+  it('openTrash project scope：带 projectId 一次到位', async () => {
+    resolveWith(trashControllerGetTrash, trashPage([{ id: 'x' }]))
+    const c = setup()
+    c.openTrash('project', 'proj-9')
+    await vi.waitFor(() =>
+      expect(vi.mocked(trashControllerGetTrash)).toHaveBeenCalledWith({
+        query: expect.objectContaining({ projectId: 'proj-9' }),
+      }),
+    )
+    expect(c.selectedProjectId.value).toBe('proj-9')
+  })
+
+  it('personal scope：spaceId 后到（watch）→ 自动补发请求', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const spaceId = ref<string | null>(null)
+    const c = useTrashList(spaceId)
+    c.setScope('personal')
+    await vi.waitFor(() => expect(c.nodes.value).toEqual([]))
+    expect(vi.mocked(trashControllerGetTrash)).not.toHaveBeenCalled()
+    spaceId.value = SPACE_ID
+    await vi.waitFor(() =>
+      expect(vi.mocked(trashControllerGetTrash)).toHaveBeenCalledWith({
+        query: expect.objectContaining({ projectId: SPACE_ID }),
+      }),
+    )
+  })
+
+  it('clear projects scope：清空全局回收站 + 成功文案「回收站已清空」', async () => {
     resolveWith(trashControllerGetTrash, trashPage())
     const c = setup()
     await c.clear()
     expect(vi.mocked(trashControllerClearTrash)).toHaveBeenCalled()
     expect(vi.mocked(trashControllerClearProjectTrash)).not.toHaveBeenCalled()
+    expect(vi.mocked(showSuccessToast)).toHaveBeenCalledWith('回收站已清空')
+  })
+
+  it('clear project scope：成功文案「项目回收站已清空」（scope 专属，对齐 PC）', async () => {
+    resolveWith(trashControllerGetTrash, trashPage())
+    const c = setup()
+    c.openTrash('project', 'proj-9')
+    await vi.waitFor(() => expect(c.selectedProjectId.value).toBe('proj-9'))
+    await c.clear()
+    expect(vi.mocked(showSuccessToast)).toHaveBeenCalledWith('项目回收站已清空')
   })
 
   it('clear personal scope：清空个人空间子树', async () => {
@@ -330,5 +376,27 @@ describe('useTrashList 回收站数据层', () => {
     const c = setup()
     await c.permanentDelete({ id: 'n-1' })
     expect(vi.mocked(showFailToast)).toHaveBeenCalledWith('服务端异常')
+  })
+})
+
+describe('resolveTrashScope（入口 props → scope）', () => {
+  it('传 projectId → project scope（项目详情页入口）', () => {
+    expect(resolveTrashScope('proj-9', null)).toBe('project')
+    expect(resolveTrashScope('proj-9', SPACE_ID)).toBe('project')
+  })
+
+  it('传 personalSpaceId（含 null：id 未就绪）→ personal scope，不回退全局', () => {
+    expect(resolveTrashScope(undefined, SPACE_ID)).toBe('personal')
+    // 回归：个人空间根 id 尚未取到（null）时仍停留在 personal，
+    // 不得回退到 projects（否则个人 tab 误显示全局回收站，可被误清空）
+    expect(resolveTrashScope(undefined, null)).toBe('personal')
+  })
+
+  it('都不传 → projects scope（项目列表 tab 入口，全局回收站）', () => {
+    expect(resolveTrashScope(undefined, undefined)).toBe('projects')
+  })
+
+  it('空串 projectId 视同未传（路由参数缺失兜底）', () => {
+    expect(resolveTrashScope('', undefined)).toBe('projects')
   })
 })

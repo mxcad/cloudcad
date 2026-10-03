@@ -55,6 +55,8 @@ const props = withDefaults(
     hasMore?: boolean
     /** 搜索关键词（双向绑定，父组件可在切换文件夹时清空输入框） */
     keyword?: string
+    /** 搜索占位文案（回收站等场景传「搜索已删除的项目...」，对齐 PC） */
+    searchPlaceholder?: string
     /** 加载更多失败（A-14）：已加载内容保留时底部出重试条 */
     loadMoreFailed?: boolean
     /** 当前排序字段（A-10），仅用于展示方向标记 */
@@ -83,6 +85,7 @@ const props = withDefaults(
     mode: 'grid',
     hasMore: false,
     keyword: '',
+    searchPlaceholder: '',
     loadMoreFailed: false,
     sortBy: 'updatedAt',
     sortOrder: 'desc',
@@ -330,7 +333,7 @@ async function onPullRefresh() {
     <div v-if="showToolbar" class="list-toolbar">
       <van-search
         v-model="searchKeyword"
-        :placeholder="t('搜索文件')"
+        :placeholder="searchPlaceholder || t('搜索文件')"
         shape="round"
         style="flex:1"
       />
