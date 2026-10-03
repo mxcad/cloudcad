@@ -1188,5 +1188,7 @@ export default  {
     "3732": "Failed to create collaboration, error code: ",
     "3733": "Failed to leave collaboration, error code: ",
     "3734": "Project",
-"3735": "Online"
+"3735": "Online",
+"3736": "Removal failed",
+"3737": "Addition failed"
 }
