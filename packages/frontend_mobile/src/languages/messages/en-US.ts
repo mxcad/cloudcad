@@ -603,7 +603,6 @@ export default  {
     "2266": "Download Task",
     "2267": "There are currently no download tasks available",
     "2268": "Failed {count} item",
-    "2269": "Download",
     "2270": "Failed retry item",
     "2271": "MXWEB (original format)",
     "2272": "DWG",
@@ -1185,5 +1184,8 @@ export default  {
     "3728": "「{name}」 exceeds the size limit ({size} MB)",
     "3729": "Batch download is not enabled",
     "3730": "Real-time collaboration is not enabled for this domain. Please ask an administrator to configure the collaboration domains.",
-    "3731": "Join"
+    "3731": "Join",
+    "3732": "Failed to create collaboration, error code: ",
+    "3733": "Failed to leave collaboration, error code: ",
+    "3734": "Project"
 }

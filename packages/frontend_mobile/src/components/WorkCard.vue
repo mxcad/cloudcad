@@ -152,10 +152,16 @@ async function handleCopy() {
       </div>
     </div>
 
-    <!-- 简化版（无 footer） -->
+    <!-- 简化版（无 footer）：当前图纸组用，同样需要退出分支（对齐 PC isJoined ? 退出 : 加入） -->
     <div v-else class="card-actions">
       <button class="btn btn-outline" @click="handleShare">{{ t('分享') }}</button>
       <button
+        v-if="display.isJoined"
+        class="btn btn-danger"
+        @click="emit('exit')"
+      >{{ t('退出') }}</button>
+      <button
+        v-else
         class="btn btn-primary"
         :disabled="connecting"
         @click="emit('join', display.work.work_id)"

@@ -222,7 +222,7 @@ function truncateUrl(url: string): string {
   return url.length > 25 ? url.slice(0, 25) + '...' : url
 }
 
-async function onRevokeShare(token: string) {
+async function onRevokeShare(token: string): Promise<boolean> {
   // 撤销不可逆：二次确认防误触（对齐 PC ConfirmRevokeModal）
   try {
     await showConfirmDialog({
@@ -232,17 +232,34 @@ async function onRevokeShare(token: string) {
       cancelButtonText: t('取消'),
     })
   } catch {
-    return // 用户取消
+    return false // 用户取消
   }
   try {
     // 撤销端点按 token 查（DELETE /api/v1/shares/:token），传 DB id 会 404
-    await shareControllerRevokeShare({
+    // SDK 失败不抛而是回 { error }，必须检查——否则失败也报「已撤销」
+    const res = await shareControllerRevokeShare({
       path: { token },
     })
+    if (res.error) {
+      showToast(t('撤销失败'))
+      return false
+    }
     showToast(t('已撤销'))
     loadShares()
+    return true
   } catch (e) {
     showToast(t('撤销失败'))
+    return false
+  }
+}
+
+// C-33 创建成功面板内可直接撤销（对齐 PC ShareDialog 的「撤销分享 + 完成」双按钮）
+async function onRevokeCreated() {
+  const info = singleCreated.value
+  if (!info) return
+  if (await onRevokeShare(info.token)) {
+    // 该链接已失效，清掉成功面板回到选择态
+    createdResults.value = []
   }
 }
 
@@ -961,6 +978,11 @@ function onCustomDaysInput(e: Event) {
               <van-icon name="clock-o" size="12" />
               {{ formatExpiryDate(singleCreated.expiresAt ?? null) }}
             </div>
+            <!-- C-33：创建成功即可撤销，不必先关闭再回列表找行（对齐 PC ShareDialog） -->
+            <button class="success-revoke" @click="onRevokeCreated">
+              <van-icon name="delete-o" size="14" />
+              {{ t('撤销分享') }}
+            </button>
           </div>
         </template>
 
@@ -1626,6 +1648,24 @@ function onCustomDaysInput(e: Event) {
   gap: 4px;
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.success-revoke {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.8;
+  }
 }
 
 .create-error {

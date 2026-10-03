@@ -207,7 +207,7 @@ export const useCollabStore = defineStore('collab', () => {
             resolvedDrawings.push({ id, name: (result.data as { name: string }).name });
           }
         } catch {
-          resolvedDrawings.push({ id, name: t(`图纸 ${id.slice(0, 6)}...`) });
+          resolvedDrawings.push({ id, name: `${t('图纸')} ${id.slice(0, 6)}...` });
         }
       }),
       ...[...projectIds].map(async (id) => {
@@ -218,7 +218,7 @@ export const useCollabStore = defineStore('collab', () => {
             resolvedProjects.push({ id, name: (result.data as { name: string }).name });
           }
         } catch {
-          resolvedProjects.push({ id, name: t(`项目 ${id.slice(0, 6)}...`) });
+          resolvedProjects.push({ id, name: `${t('项目')} ${id.slice(0, 6)}...` });
         }
       }),
     ]);
@@ -284,7 +284,10 @@ export const useCollabStore = defineStore('collab', () => {
         fetchWorks(false, true);
       } else {
         const errorCode = -workid;
-        showToast(errorCode === 4 ? t('已在协同中') : t(`创建协同失败，错误码: ${errorCode}`));
+        // 动态错误码只国际化前缀（对齐 PC 的拼法），整串进 i18n 永不命中
+        showToast(
+          errorCode === 4 ? t('已在协同中') : `${t('创建协同失败，错误码: ')}${errorCode}`
+        );
       }
     };
 
@@ -443,7 +446,7 @@ export const useCollabStore = defineStore('collab', () => {
     if (cooperate) {
       const ret = cooperate.exitWork();
       if (ret !== 0) {
-        showToast(t(`退出协同失败，错误码: ${ret}`));
+        showToast(`${t('退出协同失败，错误码: ')}${ret}`);
         exitFailed = true;
       }
     }

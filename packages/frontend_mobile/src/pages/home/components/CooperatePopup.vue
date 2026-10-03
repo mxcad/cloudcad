@@ -344,6 +344,7 @@ function mapUser() {
           :connecting="joiningWorkId === w.work_id"
           :show-footer="false"
           @join="handleJoinWork"
+          @exit="handleExitWork"
         />
       </div>
 
