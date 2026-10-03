@@ -337,7 +337,10 @@ function extractNodeYum(outputPath) {
  */
 function extractPostgresYum(outputPath) {
   log('  → 使用已安装的 PostgreSQL 15...');
-  
+
+  // gcc：编译 pg-path-redirect.so（下方无容错，缺失会中止整个提取；单 C 文件只需 gcc，勿装 build-essential）
+  execSync('yum install -y gcc', { stdio: 'inherit' });
+
   // 创建目录结构
   const binDir = path.join(outputPath, 'bin');
   const libDir = path.join(outputPath, 'lib');
@@ -641,8 +644,8 @@ function extractNodeApt(outputPath) {
 function extractPostgresApt(outputPath) {
   log('  → 安装 PostgreSQL 15...');
   
-  // 添加 PostgreSQL 官方源
-  execSync('apt-get install -y curl gnupg2 lsb-release', { stdio: 'inherit' });
+  // 添加 PostgreSQL 官方源（gcc：编译 pg-path-redirect.so，下方无容错，缺失会中止整个提取；单 C 文件只需 gcc，勿装 build-essential）
+  execSync('apt-get install -y curl gnupg2 lsb-release gcc', { stdio: 'inherit' });
   execSync('curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --batch --yes --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg', { stdio: 'inherit' });
   
   const release = execSync('lsb_release -cs', { encoding: 'utf8' }).trim();

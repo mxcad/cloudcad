@@ -1316,8 +1316,15 @@ function assertWindowsRuntimeComponents() {
  * 坏提取缓存被复用后打出缺 node 的包，目标机 start.sh 报"找不到 Node.js 运行时"。
  * 此处在打压缩包前按关键可执行文件逐项断言（路径与 start.sh / verify-deploy.js /
  * lib/proc.js 的 PM2_JS、packages/config-service/lib/pm2.js 引用保持一致）。
+ *
+ * 自动提取联动（仅本机直打）：组件缺失时不直接中止，自动调用 extract-linux-runtime.js
+ * （联网 apt/yum 安装 postgres/redis/svn 并收集二进制树到 runtime/linux/，PG15 走 PGDG
+ * 源可能较慢；需 root，非 root 经 sudo 提权且产物属主随后归回当前用户），提取后重新断言。
+ * 容器通道不触发——容器内提取由 Dockerfile CMD 显式编排（先 extract 再 pack），
+ * pack-linux-deploy.js 另有缓存缺失时容器内重提机制，此处触发会重复。
+ * 新机器最小打包流程由此收敛为：装 node → npm i -g pnpm → pnpm install → 一条打包命令。
  */
-function assertLinuxRuntimeComponents() {
+function getMissingLinuxComponents() {
   const required = [
     path.join('node', 'bin', 'node'),
     path.join('node', 'node_modules', 'pm2', 'bin', 'pm2'),
@@ -1325,10 +1332,42 @@ function assertLinuxRuntimeComponents() {
     path.join('redis', 'redis-server'),
     path.join('subversion', 'svn'),
   ];
-  const missing = [];
-  for (const rel of required) {
-    const p = path.join(PROJECT_ROOT, 'runtime', 'linux', rel);
-    if (!fs.existsSync(p)) missing.push(`runtime/linux/${rel}`);
+  return required
+    .filter((rel) => !fs.existsSync(path.join(PROJECT_ROOT, 'runtime', 'linux', rel)))
+    .map((rel) => `runtime/linux/${rel}`);
+}
+
+function assertLinuxRuntimeComponents() {
+  let missing = getMissingLinuxComponents();
+  if (missing.length > 0 && !IN_CONTAINER) {
+    log('Linux 标准运行时组件缺失，自动调用 extract-linux-runtime.js 提取...');
+    log('（将联网安装 postgres/redis/svn 并收集二进制树，PG15 走 PGDG 源可能较慢；提取脚本自带幂等，物料齐全则直接命中缓存跳过）');
+    // 提取需 root（apt 锁 + 全局 npm 安装）；非 root 经 sudo 提权，密码交互沿用 stdio inherit
+    const isRoot = process.getuid() === 0;
+    const extractScript = path.join(__dirname, 'extract-linux-runtime.js');
+    const r = isRoot
+      ? spawnSync(process.execPath, [extractScript], { stdio: 'inherit' })
+      : spawnSync('sudo', [process.execPath, extractScript], { stdio: 'inherit' });
+    if (r.error) {
+      error(`自动提取启动失败: ${r.error.message}`);
+      error('请手动执行: sudo node scripts/extract-linux-runtime.js');
+      process.exit(1);
+    }
+    if (r.status !== 0) {
+      error(`自动提取失败（exit ${r.status}），请手动执行: sudo node scripts/extract-linux-runtime.js`);
+      process.exit(1);
+    }
+    if (!isRoot) {
+      // sudo 提取的产物是 root 属主，归回当前用户，避免后续打包/部署权限问题
+      try {
+        spawnSync(
+          'sudo',
+          ['chown', '-R', `${process.getuid()}:${process.getgid()}`, path.join(PROJECT_ROOT, 'runtime', 'linux')],
+          { stdio: 'pipe' }
+        );
+      } catch {}
+    }
+    missing = getMissingLinuxComponents();
   }
   if (missing.length > 0) {
     error(`Linux 标准运行时组件缺失，中止打包:\n  ${missing.join('\n  ')}`);
@@ -1337,6 +1376,7 @@ function assertLinuxRuntimeComponents() {
     error('    rm -rf runtime/cache/linux-extract/<os>');
     error('  - 或重新下载 runtime 依赖资产解压到 runtime/cache/linux-extract/<os>/');
     error('  注: pm2 属 node 组件提取，缺 pm2 即 node 产物残缺，须重新提取');
+    error('  注: 本机直打可手动执行 sudo node scripts/extract-linux-runtime.js 后重试');
     process.exit(1);
   }
   log('Linux 标准运行时组件校验通过（node / pm2 / postgres / redis / svn）');
@@ -1439,6 +1479,12 @@ function prepareDeployDir(platform, variant = 'oss') {
     } else {
       ensureDir(path.dirname(destPath));
       fs.copyFileSync(srcPath, destPath);
+      // .sh 入口脚本（start/stop/cloudcad*.sh 模板）补执行位：模板在 git 中为 0644
+      //（Windows 开发机无执行位概念，全仓 .sh 均 100644），copyFileSync 保真复制后
+      // 目标机 ./start.sh 报 Permission denied（同类症状见 manifest.js 升级包 0666 记录）
+      if (item.dest.endsWith('.sh')) {
+        fs.chmodSync(destPath, 0o755);
+      }
       log(`复制 ${item.src}`);
     }
   }
