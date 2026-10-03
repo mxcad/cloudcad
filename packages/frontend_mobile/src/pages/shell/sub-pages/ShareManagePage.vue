@@ -12,7 +12,7 @@ import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
 import { copyText } from '@/utils/clipboard'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
-import { shareControllerListShares, shareControllerRevokeShare, shareControllerCreateShare, shareControllerUpdateShare, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
+import { shareControllerListShares, shareControllerRevokeShare, shareControllerUpdateShare, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import QRCode from 'qrcode'
 import { t } from '@/languages'
@@ -25,11 +25,11 @@ import {
   SHARE_EXPIRATION_DEFAULT,
   clampCustomDays,
   computeExpiresAtIso,
-  computeExpiresInSeconds,
   detectShareExpiration,
   isShareExpired,
   type ShareExpirationOption,
 } from '@cloudcad/platform'
+import { useShareCreate, type ShareCreateResult } from '@/composables/useShareCreate'
 
 interface ShareItem {
   id: string
@@ -47,6 +47,7 @@ interface ShareItem {
 }
 
 const router = useRouter()
+const { createShares } = useShareCreate()
 const keyword = ref('')
 const filter = ref<'all' | 'active' | 'expired'>('all')
 const shares = ref<ShareItem[]>([])
@@ -510,7 +511,8 @@ const SHARE_FILE_PAGE_SIZE = 50
 
 const fileKeyword = ref('')
 const fileOptions = ref<CreateFileOption[]>([])
-const selectedFileId = ref('')
+// M-01 多选（对齐 PC ShareDialog 批量分享）：点按切换勾选，创建时逐文件循环
+const selectedFileIds = ref<string[]>([])
 const fileLoading = ref(false)
 const fileError = ref('')
 const filePage = ref(1)
@@ -521,12 +523,20 @@ const fileHasMore = computed(() => filePage.value < fileTotalPages.value)
 const expirationOptions = ref(SHARE_EXPIRATION_DEFAULT)
 const customDays = ref(SHARE_CUSTOM_DAYS_DEFAULT)
 
-const createdShareInfo = ref<{ token: string; url: string; expiresAt?: string | null } | null>(null)
+// M-01 批量创建结果（对齐 PC ShareDialog BatchShareResult）：单文件=长度 1，
+// 多选=逐文件一条。成功项带 url 可复制，失败项带 error 供排查。
+const createdResults = ref<ShareCreateResult[]>([])
+// 单文件成功时沿用原「二维码 + 复制链接」视图；多选走结果列表
+const singleCreated = computed(() =>
+  createdResults.value.length === 1 && createdResults.value[0].success
+    ? createdResults.value[0]
+    : null,
+)
 
 // C-10：创建成功面板内嵌二维码（对齐 PC ShareDialog QRCodeSVG 160px）
 const createdQrDataUrl = ref('')
 watch(
-  createdShareInfo,
+  singleCreated,
   async (info) => {
     if (!info) {
       createdQrDataUrl.value = ''
@@ -545,11 +555,6 @@ watch(
   },
   { immediate: true }
 )
-
-// 创建分享的 expiresIn（秒）计算收敛到 @cloudcad/platform（与 PC 共用）
-function expiresIn(expiration: 'never' | '2h' | '6h' | '12h' | '1d' | '3d' | '7d' | 'custom'): number | undefined {
-  return computeExpiresInSeconds(expiration, customDays.value)
-}
 
 async function searchShareFiles(scope: 'personal_space' | 'all_projects', page: number) {
   const res = await nodeControllerSearch({
@@ -577,7 +582,7 @@ async function loadShareFiles(reset: boolean) {
     filePage.value = 1
     fileTotalPages.value = 1
     fileOptions.value = []
-    selectedFileId.value = ''
+    selectedFileIds.value = []
   }
   const gen = fileSearchGen
   fileLoading.value = true
@@ -625,7 +630,7 @@ watch(fileKeyword, () => {
 
 function openCreateSharePopup() {
   showCreateSharePopup.value = true
-  createdShareInfo.value = null
+  createdResults.value = []
   expirationOptions.value = SHARE_EXPIRATION_DEFAULT
   // 作废上一次搜索残留的防抖任务，否则会在直调之后再刷一次列表
   fileSearchGen++
@@ -635,58 +640,59 @@ function openCreateSharePopup() {
   void loadShareFiles(true)
 }
 
-function selectFile(id: string) {
-  selectedFileId.value = id
+function toggleFileSelect(id: string) {
+  const idx = selectedFileIds.value.indexOf(id)
+  if (idx >= 0) selectedFileIds.value.splice(idx, 1)
+  else selectedFileIds.value.push(id)
 }
 
+// M-01 批量创建（对齐 PC createBatchShares）：逐文件循环 + 结果收集收敛到 useShareCreate；
+// 全部成功关弹窗（结果在列表可复制），部分失败停留结果视图供排查。
 async function handleCreateShare() {
-  if (!selectedFileId.value) {
+  const ids = selectedFileIds.value.slice()
+  if (ids.length === 0) {
     showToast(t('请选择要分享的文件'))
     return
   }
 
   createLoading.value = true
   createError.value = ''
-  try {
-    const expiresInValue = expiresIn(expirationOptions.value)
-    const res = await shareControllerCreateShare({
-      body: {
-        fileId: selectedFileId.value,
-        ...(expiresInValue !== undefined ? { expiresIn: expiresInValue } : {}),
-      },
-    })
-    if (res.error) {
-      createError.value = String(res.error)
-      return
-    }
-    const raw = res.data as { token?: string; url?: string; expiresAt?: string | null } | undefined
-    if (!raw || !raw.token) {
-      createError.value = t('创建失败，请重试')
-      return
-    }
-    createdShareInfo.value = {
-      token: raw.token,
-      url: raw.url ?? '',
-      expiresAt: raw.expiresAt ?? null,
-    }
-    // 重新加载分享列表
-    void loadShares()
-  } catch (e) {
+  const results = await createShares(
+    ids.map((id) => ({
+      fileId: id,
+      fileName: fileOptions.value.find((f) => f.id === id)?.name ?? t('未知文件'),
+    })),
+    expirationOptions.value,
+    customDays.value,
+  )
+  createLoading.value = false
+
+  const successCount = results.filter((r) => r.success).length
+  const failCount = results.length - successCount
+  if (successCount === 0) {
     createError.value = t('创建失败，请重试')
-  } finally {
-    createLoading.value = false
+    return
+  }
+  createdResults.value = results
+  // 重新加载分享列表（成功项已入库）
+  void loadShares()
+  if (failCount > 0) {
+    showToast(t('已生成 {a} 个分享链接，{b} 个失败', { a: String(successCount), b: String(failCount) }))
+  } else if (ids.length > 1) {
+    // 多选全部成功：对齐 PC 自动关弹窗，结果在分享列表可复制
+    showToast(t('已生成 {count} 个分享链接', { count: String(successCount) }))
+    closeCreateSharePopup()
   }
 }
 
-async function copyCreatedLink() {
-  const url = createdShareInfo.value?.url
-  if (!url) return
-  void copyLinkWithFallback(url)
+async function copyCreatedLink(result: ShareCreateResult) {
+  if (!result.url) return
+  void copyLinkWithFallback(result.url)
 }
 
 function closeCreateSharePopup() {
   showCreateSharePopup.value = false
-  createdShareInfo.value = null
+  createdResults.value = []
 }
 
 // 格式化有效期文本（含当前日期）
@@ -900,9 +906,9 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
           <button class="panel-cancel" @click="closeCreateSharePopup">{{ t('取消') }}</button>
           <span class="panel-title">{{ t('新建分享') }}</span>
           <button
-            v-if="!createdShareInfo"
+            v-if="createdResults.length === 0"
             class="panel-confirm"
-            :disabled="!selectedFileId || createLoading"
+            :disabled="selectedFileIds.length === 0 || createLoading"
             @click="handleCreateShare"
           >
             {{ createLoading ? t('创建中...') : t('创建') }}
@@ -910,25 +916,60 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
           <button v-else class="panel-confirm" @click="closeCreateSharePopup">{{ t('完成') }}</button>
         </div>
 
-        <template v-if="createdShareInfo">
+        <template v-if="singleCreated">
           <div class="share-success">
             <van-icon name="checked" size="48" color="var(--accent)" />
             <span class="success-text">{{ t('分享链接已创建') }}</span>
             <img v-if="createdQrDataUrl" class="qr-image qr-image--inline" :src="createdQrDataUrl" alt="QR" />
             <div class="share-url-row">
-              <input class="share-url-input" :value="createdShareInfo.url" readonly />
-              <button class="copy-btn" @click="copyCreatedLink">{{ t('复制') }}</button>
+              <input class="share-url-input" :value="singleCreated.url" readonly />
+              <button class="copy-btn" @click="copyCreatedLink(singleCreated)">{{ t('复制') }}</button>
             </div>
             <div class="expire-hint">
               <van-icon name="clock-o" size="12" />
-              {{ formatExpiryDate(createdShareInfo.expiresAt ?? null) }}
+              {{ formatExpiryDate(singleCreated.expiresAt ?? null) }}
+            </div>
+          </div>
+        </template>
+
+        <!-- M-01 批量结果列表（多选成功/部分失败；全成功已自动关弹窗，此处只渲染多选失败残留态与单文件失败） -->
+        <template v-else-if="createdResults.length > 0">
+          <div class="batch-results">
+            <div class="batch-summary">
+              {{
+                t('已生成 {count} 个分享链接', {
+                  count: String(createdResults.filter((r) => r.success).length),
+                })
+              }}
+            </div>
+            <div
+              v-for="(r, i) in createdResults"
+              :key="i"
+              :class="['batch-item', { 'batch-item--failed': !r.success }]"
+            >
+              <div class="batch-item-name">
+                <van-icon :name="r.success ? 'photo-o' : 'warning-o'" size="14" />
+                <span>{{ r.fileName }}</span>
+              </div>
+              <template v-if="r.success">
+                <div class="share-url-row">
+                  <input class="share-url-input" :value="r.url" readonly />
+                  <button class="copy-btn" @click="copyCreatedLink(r)">{{ t('复制') }}</button>
+                </div>
+              </template>
+              <div v-else class="batch-item-error">{{ r.error }}</div>
             </div>
           </div>
         </template>
 
         <template v-else>
           <div class="file-section">
-            <div class="section-title">{{ t('选择文件') }}</div>
+            <div class="section-title">
+              {{ t('选择文件') }}
+              <span v-if="selectedFileIds.length > 0" class="selected-count">
+                {{ t('已选择 {count} 个文件', { count: String(selectedFileIds.length) }) }}
+              </span>
+            </div>
             <van-search
               v-model="fileKeyword"
               class="file-search"
@@ -952,12 +993,15 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
                 <div
                   v-for="f in fileOptions"
                   :key="f.id"
-                  :class="['file-option', { selected: selectedFileId === f.id }]"
-                  @click="selectFile(f.id)"
+                  :class="['file-option', { selected: selectedFileIds.includes(f.id) }]"
+                  @click="toggleFileSelect(f.id)"
                 >
+                  <span
+                    :class="['file-check', { 'file-check--on': selectedFileIds.includes(f.id) }]"
+                  />
                   <van-icon name="photo-o" size="18" />
                   <span class="file-option-name">{{ f.name }}</span>
-                  <van-icon v-if="selectedFileId === f.id" name="passed" size="16" color="var(--accent)" />
+                  <van-icon v-if="selectedFileIds.includes(f.id)" name="passed" size="16" color="var(--accent)" />
                 </div>
                 <button v-if="fileHasMore && !fileLoading" class="file-more" @click="loadMoreShareFiles">
                   {{ t('加载更多') }}
@@ -1358,6 +1402,86 @@ function formatExpirationDisplay(expiration: 'never' | '2h' | '6h' | '12h' | '1d
   &:active {
     opacity: 0.8;
   }
+}
+
+/* M-01 多选：已选计数 + 行内勾选圈 */
+.selected-count {
+  margin-left: 8px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.file-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-tertiary);
+  background: transparent;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.file-check--on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.file-check--on::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* M-01 批量结果列表 */
+.batch-results {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.batch-summary {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  padding: 14px 0 10px;
+}
+
+.batch-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--divider);
+  margin-bottom: 8px;
+
+  &.batch-item--failed {
+    border-color: #ff4444;
+  }
+}
+
+.batch-item-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batch-item-error {
+  font-size: 12px;
+  color: #ff4444;
 }
 
 .file-empty {

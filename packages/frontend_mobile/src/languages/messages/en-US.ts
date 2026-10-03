@@ -1168,5 +1168,9 @@ export default  {
     "3711": "Batch restore",
     "3712": "Are you sure you want to restore the selected {count} items?",
     "3713": "Preparing the historical version timed out, please try again later",
-    "3714": "Failed to prepare the historical version file, please retry"
+    "3714": "Failed to prepare the historical version file, please retry",
+    "3715": "Selected {count} files",
+    "3716": "Generated {count} share links",
+    "3717": "Generated {a} share links, {b} failed",
+    "3718": "Failed to create share link"
 }
