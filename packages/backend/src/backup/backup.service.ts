@@ -19,6 +19,7 @@ import * as path from 'path';
 import type { AppConfig } from '../config/app.config';
 import { PROJECT_ROOT } from '../config/configuration';
 import { CleanupMetricsService } from '../metrics/cleanup-metrics.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { TASK_NAMES } from '../task-run/task-run.constants';
 
 /** 单个备份文件信息 */
@@ -127,11 +128,24 @@ export class BackupService {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly cleanupMetrics: CleanupMetricsService
+    private readonly cleanupMetrics: CleanupMetricsService,
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {}
 
   private get backupConfig() {
     return this.configService.get<AppConfig['backup']>('backup');
+  }
+
+  /**
+   * 本地保留份数每次备份后读取，运行时配置页修改后立即生效。
+   * 非正整数（脏数据/解析失败）回落默认 14，避免把全部历史备份误删。
+   */
+  private async resolveKeepLocal(): Promise<number> {
+    const value = await this.runtimeConfigService.getValue<number>(
+      'backupKeepLocal',
+      14
+    );
+    return Number.isInteger(value) && value > 0 ? value : 14;
   }
 
   /**
@@ -194,7 +208,7 @@ export class BackupService {
     // 行数快照（#320 恢复演练比对基线，best-effort 不阻塞备份）
     await this.writeCountsSnapshotSafe(outputFile, filename);
 
-    const deletedCount = await this.rotateBackups(cfg.keepLocal);
+    const deletedCount = await this.rotateBackups(await this.resolveKeepLocal());
 
     const result: BackupResult = {
       filename,

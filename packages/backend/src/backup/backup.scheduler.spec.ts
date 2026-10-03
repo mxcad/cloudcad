@@ -172,11 +172,10 @@ describe('BackupScheduler', () => {
       expect(mockAlertService.raise).not.toHaveBeenCalled();
     });
 
-    it('should skip when BACKUP_DRILL_ENABLED is disabled', async () => {
-      mockConfigService.get.mockImplementation((key: string, def?: unknown) => {
-        if (key === 'backup') return { drillEnabled: false };
-        return def;
-      });
+    it('should skip when runtime backupDrillEnabled is disabled', async () => {
+      mockRuntimeConfigService.getValue.mockImplementation(async (key: string) =>
+        key === 'backupDrillEnabled' ? false : true
+      );
 
       await scheduler.handleScheduledRestoreDrill();
 

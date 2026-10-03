@@ -18,6 +18,7 @@ import { FileSystemPermissionService } from '../file-permission/file-system-perm
 import { AuditLogger } from '../../audit/audit-logger.service';
 import { ClsService } from 'nestjs-cls';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { CadDownloadFormat } from '../dto/download-node.dto';
 import {
   FileDownloadExportService,
@@ -109,7 +110,6 @@ describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () 
           zipMaxFileCount: 1,
           zipMaxDepth: 1,
           zipMaxSingleFileSize: 1,
-          zipCompressionLevel: 1,
           maxFilenameLength: 200,
           maxRecursionDepth: 1,
         };
@@ -137,6 +137,10 @@ describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () 
           useValue: { getFullPath: storageManagerGetFullPath },
         },
         { provide: ConfigService, useValue: { get: configGet } },
+        {
+          provide: RuntimeConfigService,
+          useValue: { getValue: jest.fn().mockResolvedValue(1) },
+        },
         { provide: FileSystemPermissionService, useValue: {} },
         {
           provide: ModuleRef,

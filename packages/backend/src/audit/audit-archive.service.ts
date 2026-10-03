@@ -16,6 +16,7 @@ import * as fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import * as path from 'path';
 import { DatabaseService } from '../database/database.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { buildAuditCsv, type AuditLogListItem } from './audit-log.service';
 
 /** 单个月度归档分片产物 */
@@ -88,24 +89,26 @@ export class AuditArchiveService implements OnApplicationBootstrap {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {}
 
   /**
    * 启动自检（#420）：生产环境关闭审计归档时告警（不阻塞启动）。
    * 等保 8.4.3.3/8.1.4.3 要求超期审计记录留存归档，关闭归档意味着超期记录
-   * 将被直接删除而非留存，属合规缺口，需运维显式确认（AUDIT_ARCHIVE_ENABLED）。
+   * 将被直接删除而非留存，属合规缺口，需运维显式确认（auditArchiveEnabled）。
+   * 返回 Promise：配置取自运行时配置，读取本身异步。
    */
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     const isProduction = process.env.NODE_ENV === 'production';
-    const archiveEnabled = this.configService.get<boolean>(
-      'audit.archiveEnabled',
+    const archiveEnabled = await this.runtimeConfigService.getValue<boolean>(
+      'auditArchiveEnabled',
       false
     );
     if (isProduction && !archiveEnabled) {
       this.logger.warn(
-        '生产环境已关闭审计日志归档（AUDIT_ARCHIVE_ENABLED 未开启）：超期审计记录将被直接删除而不归档留存，' +
-          '不满足等保 8.4.3.3/8.1.4.3 留存要求。如需归档请设置 AUDIT_ARCHIVE_ENABLED=true。'
+        '生产环境已关闭审计日志归档：超期审计记录将被直接删除而不归档留存，' +
+          '不满足等保 8.4.3.3/8.1.4.3 留存要求。如需归档请在运行时配置中开启「超期审计日志先归档留存再删除」。'
       );
     }
   }

@@ -2,7 +2,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { AuditCleanupScheduler } from './audit-cleanup.scheduler';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditArchiveService } from '../../audit/audit-archive.service';
-import { ConfigService } from '@nestjs/config';
 import { AlertService } from '../../alert/alert.service';
 import { AlertLevel } from '../../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
@@ -22,10 +21,6 @@ describe('AuditCleanupScheduler', () => {
 
 	const mockAuditArchiveService = {
 		archiveExpiredLogs: jest.fn(),
-	};
-
-	const mockConfigService = {
-		get: jest.fn(),
 	};
 
 	const mockAlertService = {
@@ -53,7 +48,6 @@ describe('AuditCleanupScheduler', () => {
 
 	beforeEach(async () => {
 		jest.clearAllMocks();
-		mockConfigService.get.mockImplementation((key: string, def: unknown) => def);
 		mockRuntimeConfigService.getValue.mockImplementation(async (_key: string, def: unknown) => def);
 		mockTaskRunService.run.mockImplementation(
 			async (_taskName: string, fn: () => Promise<unknown>) => fn()
@@ -65,7 +59,6 @@ describe('AuditCleanupScheduler', () => {
 				AuditCleanupScheduler,
 				{ provide: AuditLogService, useValue: mockAuditLogService },
 				{ provide: AuditArchiveService, useValue: mockAuditArchiveService },
-				{ provide: ConfigService, useValue: mockConfigService },
 				{ provide: AlertService, useValue: mockAlertService },
 				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 				{ provide: TaskRunService, useValue: mockTaskRunService },
@@ -100,22 +93,22 @@ describe('AuditCleanupScheduler', () => {
 			expect(mockAuditLogService.cleanupOldLogs).toHaveBeenCalledWith(183);
 		});
 
-		it('should cleanup TaskRun retention with TASK_RUN_RETENTION_DAYS default of 180 (#326)', async () => {
+		it('should cleanup TaskRun retention with taskRunRetentionDays default of 180 (#326)', async () => {
 			mockAuditLogService.cleanupOldLogs.mockResolvedValue(10);
 			mockTaskRunService.cleanupOldRuns.mockResolvedValue(5);
 
 			await scheduler.cleanupOldAuditLogs();
 
-			expect(mockConfigService.get).toHaveBeenCalledWith(
-				'taskRun.retentionDays',
+			expect(mockRuntimeConfigService.getValue).toHaveBeenCalledWith(
+				'taskRunRetentionDays',
 				180
 			);
 			expect(mockTaskRunService.cleanupOldRuns).toHaveBeenCalledWith(180);
 		});
 
 		it('should route to archive-then-delete when archive enabled (#322 fail-closed)', async () => {
-			mockConfigService.get.mockImplementation((key: string, def: unknown) => {
-				if (key === 'audit.archiveEnabled') return true;
+			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
+				if (key === 'auditArchiveEnabled') return true;
 				return def;
 			});
 			mockAuditArchiveService.archiveExpiredLogs.mockResolvedValue({
@@ -133,8 +126,8 @@ describe('AuditCleanupScheduler', () => {
 		});
 
 		it('should raise task_run_failed when archive fails (fail-closed keeps logs)', async () => {
-			mockConfigService.get.mockImplementation((key: string, def: unknown) => {
-				if (key === 'audit.archiveEnabled') return true;
+			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
+				if (key === 'auditArchiveEnabled') return true;
 				return def;
 			});
 			mockAuditArchiveService.archiveExpiredLogs.mockRejectedValue(
@@ -217,8 +210,8 @@ describe('AuditCleanupScheduler', () => {
 		});
 
 		it('observes archived delete count on the archive-enabled path', async () => {
-			mockConfigService.get.mockImplementation((key: string, def: unknown) => {
-				if (key === 'audit.archiveEnabled') return true;
+			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
+				if (key === 'auditArchiveEnabled') return true;
 				return def;
 			});
 			mockAuditArchiveService.archiveExpiredLogs.mockResolvedValue({
@@ -240,8 +233,8 @@ describe('AuditCleanupScheduler', () => {
 	// ==================== manualCleanup ====================
 	describe('manualCleanup', () => {
 		it('should route to archive service when archive enabled (#322)', async () => {
-			mockConfigService.get.mockImplementation((key: string, def: unknown) => {
-				if (key === 'audit.archiveEnabled') return true;
+			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
+				if (key === 'auditArchiveEnabled') return true;
 				return def;
 			});
 			mockAuditArchiveService.archiveExpiredLogs.mockResolvedValue({

@@ -6,27 +6,10 @@ describe('configuration', () => {
 	beforeEach(() => {
 		jest.resetModules();
 		process.env = { ...ORIGINAL_ENV };
-		delete process.env.TASK_RUN_RETENTION_DAYS;
 	});
 
 	afterEach(() => {
 		process.env = ORIGINAL_ENV;
-	});
-
-	describe('taskRun.retentionDays (#326)', () => {
-		it('should default to 180 when TASK_RUN_RETENTION_DAYS is not set', () => {
-			const config = configuration();
-
-			expect(config.taskRun.retentionDays).toBe(180);
-		});
-
-		it('should use TASK_RUN_RETENTION_DAYS from env when set', () => {
-			process.env.TASK_RUN_RETENTION_DAYS = '90';
-
-			const config = configuration();
-
-			expect(config.taskRun.retentionDays).toBe(90);
-		});
 	});
 
 	describe('生产环境必需环境变量（#419 等保 8.1.2.2）', () => {

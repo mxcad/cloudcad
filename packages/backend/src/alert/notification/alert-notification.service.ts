@@ -5,12 +5,11 @@ import {
   type OnModuleDestroy,
 } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import { ConfigService } from '@nestjs/config';
 import type { AlertRecord } from '@cloudcad/db';
 import { Prisma as PrismaRuntime } from '@cloudcad/db';
-import { AppConfig } from '../../config/app.config';
 import { DatabaseService } from '../../database/database.service';
 import { EmailService } from '../../notification/email.service';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { AlertService } from '../alert.service';
 import { AlertLevel } from '../enums/alert.enum';
 import { ALERT_RAISED_EVENT, ALERT_RESOLVED_EVENT } from '../alert.events';
@@ -34,11 +33,11 @@ const DAILY_REPORT_MAX_ITEMS = 50;
  *
  * 订阅 AlertService 的 alert.raised / alert.resolved 领域事件：
  * 1. P0：实时发送邮件告警单；发送成功在 detail 持久化 emailNotifiedAt
- * 2. P1：按 source 聚合窗口（ALERT_P1_WINDOW_MINUTES，默认 15）合并一封邮件
+ * 2. P1：按 source 聚合窗口（运行时配置 alertEmailP1WindowMinutes，默认 15）合并一封邮件
  *    —— 内存态 Map + 定时 flush；多实例部署存在跨实例重复发送风险（设计可接受）
- * 3. P2：每日 ALERT_P2_DAILY_HOUR 点（默认 9）发送前一日告警日报；无前日告警不发送
+ * 3. P2：每日 alertEmailP2DailyHour 点（默认 9）发送前一日告警日报；无前日告警不发送
  * 4. 恢复通知：仅对已发过邮件（detail.emailNotifiedAt）的告警发 RESOLVED 邮件
- * 5. 失败升级：连续失败 ≥ ALERT_EMAIL_FAIL_ESCALATE 次，raise P0 alert-email 告警
+ * 5. 失败升级：连续失败 ≥ alertEmailFailEscalate 次（默认 5），raise P0 alert-email 告警
  *
  * 自循环防护：source=alert-email 的告警不触发邮件（升级告警本身也是 P0）。
  */
@@ -60,11 +59,52 @@ export class AlertNotificationService
     private readonly alertService: AlertService,
     private readonly emailService: EmailService,
     private readonly prisma: DatabaseService,
-    private readonly configService: ConfigService<AppConfig>
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {}
 
+  /**
+   * 告警邮件配置统一解析出口（运行时配置优先，env 经 envKey 兜底）。
+   * 每次事件都读，配置页改完下一条告警即生效；数值越界回落默认值防脏值。
+   */
+  private async resolveAlertEmailConfig(): Promise<{
+    enabled: boolean;
+    to: string[];
+    failEscalate: number;
+    p1WindowMinutes: number;
+    p2DailyHour: number;
+  }> {
+    const [enabled, rawTo, failEscalate, p1WindowMinutes, p2DailyHour] =
+      await Promise.all([
+        this.runtimeConfigService.getValue<boolean>('alertEmailEnabled', false),
+        this.runtimeConfigService.getValue<string>('alertEmailTo', ''),
+        this.runtimeConfigService.getValue<number>('alertEmailFailEscalate', 5),
+        this.runtimeConfigService.getValue<number>(
+          'alertEmailP1WindowMinutes',
+          15
+        ),
+        this.runtimeConfigService.getValue<number>('alertEmailP2DailyHour', 9),
+      ]);
+    const clampInt = (
+      value: number,
+      min: number,
+      max: number,
+      fallback: number
+    ): number =>
+      Number.isInteger(value) && value >= min && value <= max ? value : fallback;
+    return {
+      enabled,
+      to: rawTo.split(',').map((addr) => addr.trim()).filter(Boolean),
+      failEscalate: clampInt(failEscalate, 1, 100, 5),
+      p1WindowMinutes: clampInt(p1WindowMinutes, 1, 1440, 15),
+      p2DailyHour: clampInt(p2DailyHour, 0, 23, 9),
+    };
+  }
+
   onApplicationBootstrap(): void {
-    this.dailyTimer = setInterval(() => this.checkDailyReport(), 60_000);
+    this.dailyTimer = setInterval(
+      () => void this.checkDailyReport(),
+      60_000
+    );
   }
 
   onModuleDestroy(): void {
@@ -99,8 +139,8 @@ export class AlertNotificationService
    * 触发通知入口。
    */
   private async handleRaised(record: AlertRecord): Promise<void> {
-    const config = this.configService.get('alertEmail', { infer: true });
-    if (!config?.enabled || config.to.length === 0) return;
+    const config = await this.resolveAlertEmailConfig();
+    if (!config.enabled || config.to.length === 0) return;
     // 升级告警自身不再触发邮件，防止无限循环
     if (record.source === ALERT_EMAIL_SOURCE) return;
 
@@ -109,7 +149,7 @@ export class AlertNotificationService
         await this.sendRaisedEmail(record, config.to);
         break;
       case AlertLevel.P1:
-        this.bufferP1(record, config.to, config.p1WindowMinutes ?? 15);
+        this.bufferP1(record, config.to, config.p1WindowMinutes);
         break;
       // P2 不逐条发送，由每日日报汇总
       case AlertLevel.P2:
@@ -220,13 +260,13 @@ export class AlertNotificationService
   /**
    * 每分钟对时：到达配置小时（默认 9 点）后当日首次触发即发前一日日报。
    */
-  checkDailyReport(): void {
-    const config = this.configService.get('alertEmail', { infer: true });
-    if (!config?.enabled || config.to.length === 0) return;
+  async checkDailyReport(): Promise<void> {
+    const config = await this.resolveAlertEmailConfig();
+    if (!config.enabled || config.to.length === 0) return;
 
     const now = new Date();
     const dateKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-    if (now.getHours() !== (config.p2DailyHour ?? 9)) return;
+    if (now.getHours() !== config.p2DailyHour) return;
     if (this.lastReportDateKey === dateKey) return;
     this.lastReportDateKey = dateKey;
     void this.sendDailyReport(config.to).catch((e) => {
@@ -292,8 +332,8 @@ export class AlertNotificationService
    * 恢复通知：仅对此前成功发过邮件的告警发送（#312：与 P1 聚合独立，resolve 即时发送）。
    */
   private async handleResolved(record: AlertRecord): Promise<void> {
-    const config = this.configService.get('alertEmail', { infer: true });
-    if (!config?.enabled || config.to.length === 0) return;
+    const config = await this.resolveAlertEmailConfig();
+    if (!config.enabled || config.to.length === 0) return;
     if (record.source === ALERT_EMAIL_SOURCE) return;
     if (!this.hasEmailed(record)) return;
 
@@ -332,8 +372,7 @@ export class AlertNotificationService
     );
     this.consecutiveFailures += 1;
 
-    const config = this.configService.get('alertEmail', { infer: true });
-    const threshold = config?.failEscalate ?? 5;
+    const threshold = (await this.resolveAlertEmailConfig()).failEscalate;
     if (this.consecutiveFailures < threshold) return;
 
     this.consecutiveFailures = 0;

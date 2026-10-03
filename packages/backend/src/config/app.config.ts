@@ -108,15 +108,6 @@ export interface FontsConfig {
   frontendPath: string;
 }
 
-export interface FileExtensionsConfig {
-  cad: string[];
-  image: string[];
-  document: string[];
-  archive: string[];
-  font: string[];
-  forbidden: string[];
-}
-
 export interface CacheTTLConfig {
   verificationCode: number;
   verificationRateLimit: number;
@@ -133,7 +124,6 @@ export interface FileLimitsConfig {
   zipMaxFileCount: number;
   zipMaxDepth: number;
   zipMaxSingleFileSize: number;
-  zipCompressionLevel: number;
   maxFilenameLength: number;
   maxPathLength: number;
   maxDirectoryDepth: number;
@@ -314,15 +304,8 @@ export interface AccountLockConfig {
 export interface AuditConfig {
   /** 审计日志保留天数（#322：默认 183，严格大于 6 个月；兼容旧变量 AUDIT_RETENTION_DAYS 回退） */
   retentionDays: number;
-  /** 超期审计日志归档开关（#322，AUDIT_ARCHIVE_ENABLED；等保验收需开启） */
-  archiveEnabled: boolean;
   /** 归档文件输出目录（#322，AUDIT_ARCHIVE_PATH，相对路径基于项目根解析） */
   archivePath: string;
-}
-
-export interface TaskRunConfig {
-  /** 后台任务执行记录保留天数（#271 无界增长治理；#326 默认 180，运维排查窗口与等保对齐） */
-  retentionDays: number;
 }
 
 /** 异地推送类型（#319：BACKUP_REMOTE_TYPE，none 时完全跳过推送） */
@@ -362,14 +345,10 @@ export interface BackupConfig {
   enabled: boolean;
   /** 备份输出目录（默认 data/backups，相对路径基于项目根解析） */
   dir: string;
-  /** 本地备份保留份数（超出清理最旧，默认 14） */
-  keepLocal: number;
   /** 备份 cron 表达式（默认每日 01:00） */
   cron: string;
   /** pg_dump 可执行文件路径（未配置时按 runtime 目录 → PATH 探测） */
   pgDumpPath: string;
-  /** 恢复演练开关（#320，BACKUP_DRILL_ENABLED，默认 true；每月临时库恢复 + 行数校验） */
-  drillEnabled: boolean;
   /** 演练行数比对表清单（#320，BACKUP_DRILL_TABLES，逗号分隔，默认 audit_logs,alert_records,task_runs,users） */
   drillTables: string[];
   /** 异地推送（#319，ADR-0055 §5：none/rsync/oss/s3 三通道可配） */
@@ -377,19 +356,6 @@ export interface BackupConfig {
 }
 
 /** 告警邮件通知配置（#311） */
-export interface AlertEmailConfig {
-  /** 总开关（默认关闭；ALERT_EMAIL_ENABLED=true 开启） */
-  enabled: boolean;
-  /** 收件人列表（ALERT_EMAIL_TO，逗号分隔） */
-  to: string[];
-  /** 连续发送失败多少次后升级为 P0 alert-email 告警（默认 5） */
-  failEscalate: number;
-  /** P1 按 source 聚合窗口分钟数（默认 15，#312；多实例部署存在跨实例重复发送风险，可接受） */
-  p1WindowMinutes: number;
-  /** P2 每日报表发送小时 0-23（默认 9，#312；无前日告警时不发送） */
-  p2DailyHour: number;
-}
-
 export interface MxcadConfig {
   /** mxcadassembly 可执行文件路径 */
   assemblyPath: string;
@@ -439,7 +405,6 @@ export interface AppConfig {
   mxcadUploadPath: string;
   mxcadTempPath: string;
   mxcadDebugPath: string;
-  fileExtensions: FileExtensionsConfig;
   cacheTTL: CacheTTLConfig;
   fileLimits: FileLimitsConfig;
   pagination: PaginationConfig;
@@ -461,11 +426,9 @@ export interface AppConfig {
   /** 账号失败锁定（#416 等保 8.1.4.1 c) 防暴力破解） */
   accountLock: AccountLockConfig;
   audit: AuditConfig;
-  taskRun: TaskRunConfig;
   /** 数据库备份（#318） */
   backup: BackupConfig;
   /** 告警邮件通知（#311：P0 实时邮件 + 恢复通知 + 失败升级） */
-  alertEmail: AlertEmailConfig;
   /** /metrics 抓取令牌认证（#315） */
   metrics: MetricsScrapeConfig;
   /** 管理员登录 IP 白名单（本地文件兜底通道） */

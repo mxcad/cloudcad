@@ -14,6 +14,7 @@ import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import type { AuditLogListItem } from './audit-log.service';
 import { DatabaseService } from '../database/database.service';
 import { AuditArchiveService } from './audit-archive.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { verifyChainFiles } from './audit-chain';
 
 /**
@@ -36,6 +37,10 @@ describe('AuditArchiveService (#322)', () => {
 
 	const mockConfigService = {
 		get: jest.fn(),
+	};
+
+	const mockRuntimeConfigService = {
+		getValue: jest.fn(async (_key: string, def: unknown) => def),
 	};
 
 	function makeLog(overrides: Partial<AuditLogListItem> = {}): AuditLogListItem {
@@ -80,6 +85,7 @@ describe('AuditArchiveService (#322)', () => {
 				AuditArchiveService,
 				{ provide: DatabaseService, useValue: mockPrisma },
 				{ provide: ConfigService, useValue: mockConfigService },
+				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 			],
 		}).compile();
 
@@ -229,6 +235,8 @@ describe('AuditArchiveService verifyArchivedForCutoff (#323)', () => {
 		get: jest.fn(),
 	};
 
+	const mockRuntimeConfigService = { getValue: jest.fn() };
+
 	async function writeShard(month: string, csvText: string): Promise<void> {
 		await fs.writeFile(
 			path.join(tmpDir, `${month}.csv`),
@@ -257,6 +265,7 @@ describe('AuditArchiveService verifyArchivedForCutoff (#323)', () => {
 				AuditArchiveService,
 				{ provide: DatabaseService, useValue: mockPrisma },
 				{ provide: ConfigService, useValue: mockConfigService },
+				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 			],
 		}).compile();
 
@@ -367,6 +376,7 @@ describe('AuditArchiveService 哈希链 (#420)', () => {
 		$queryRaw: jest.fn(),
 	};
 	const mockConfigService = { get: jest.fn() };
+	const mockRuntimeConfigService = { getValue: jest.fn() };
 
 	function makeLog(month: string, id: string): unknown {
 		return {
@@ -407,6 +417,7 @@ describe('AuditArchiveService 哈希链 (#420)', () => {
 				AuditArchiveService,
 				{ provide: DatabaseService, useValue: mockPrisma },
 				{ provide: ConfigService, useValue: mockConfigService },
+				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 			],
 		}).compile();
 		service = module.get<AuditArchiveService>(AuditArchiveService);
@@ -574,6 +585,7 @@ describe('AuditArchiveService 启动自检 (#420)', () => {
 		$queryRaw: jest.fn(),
 	};
 	const mockConfigService = { get: jest.fn() };
+	const mockRuntimeConfigService = { getValue: jest.fn() };
 
 	beforeEach(async () => {
 		originalNodeEnv = process.env.NODE_ENV;
@@ -586,6 +598,7 @@ describe('AuditArchiveService 启动自检 (#420)', () => {
 				AuditArchiveService,
 				{ provide: DatabaseService, useValue: mockPrisma },
 				{ provide: ConfigService, useValue: mockConfigService },
+				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 			],
 		}).compile();
 		service = module.get<AuditArchiveService>(AuditArchiveService);
@@ -596,40 +609,31 @@ describe('AuditArchiveService 启动自检 (#420)', () => {
 		process.env.NODE_ENV = originalNodeEnv;
 	});
 
-	it('生产环境 + 归档关闭 → WARN 提示合规缺口', () => {
+	it('生产环境 + 归档关闭 → WARN 提示合规缺口', async () => {
 		process.env.NODE_ENV = 'production';
-		mockConfigService.get.mockImplementation(
-			(key: string, def: unknown) =>
-				key === 'audit.archiveEnabled' ? false : def,
-		);
+		mockRuntimeConfigService.getValue.mockResolvedValue(false);
 
-		service.onApplicationBootstrap();
+		await service.onApplicationBootstrap();
 
 		expect(warnSpy).toHaveBeenCalledWith(
 			expect.stringContaining('生产环境已关闭审计日志归档'),
 		);
 	});
 
-	it('生产环境 + 归档开启 → 不告警', () => {
+	it('生产环境 + 归档开启 → 不告警', async () => {
 		process.env.NODE_ENV = 'production';
-		mockConfigService.get.mockImplementation(
-			(key: string, def: unknown) =>
-				key === 'audit.archiveEnabled' ? true : def,
-		);
+		mockRuntimeConfigService.getValue.mockResolvedValue(true);
 
-		service.onApplicationBootstrap();
+		await service.onApplicationBootstrap();
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});
 
-	it('非生产环境 + 归档关闭 → 不告警（本地开发可自由关闭）', () => {
+	it('非生产环境 + 归档关闭 → 不告警（本地开发可自由关闭）', async () => {
 		process.env.NODE_ENV = 'test';
-		mockConfigService.get.mockImplementation(
-			(key: string, def: unknown) =>
-				key === 'audit.archiveEnabled' ? false : def,
-		);
+		mockRuntimeConfigService.getValue.mockResolvedValue(false);
 
-		service.onApplicationBootstrap();
+		await service.onApplicationBootstrap();
 
 		expect(warnSpy).not.toHaveBeenCalled();
 	});

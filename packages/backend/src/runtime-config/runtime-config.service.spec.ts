@@ -559,6 +559,141 @@ describe("RuntimeConfigService", () => {
 		});
 	});
 
+
+	// ==================== 键登记完整性 ====================
+	describe("getValue 键登记完整性", () => {
+		it("业务代码读取的配置键必须都已登记（拼错的键会静默回落到 fallback，配置页改不动）", () => {
+			const fs = require("fs");
+			const path = require("path");
+			const srcRoot = path.join(__dirname, "..");
+			const registered = new Set(RUNTIME_CONFIG_DEFINITIONS.map((d) => d.key));
+
+			// 间接键来源：这些文件用常量而非字面量持有配置键，字面量正则扫不到。
+
+			// 配置键形如 camelCase 标识符；用 charCode 判定，避免在正则里写引号与转义。
+			const isConfigKey = (s: string): boolean => {
+				if (s.length === 0) return false;
+				const first = s.charCodeAt(0);
+				if (first < 97 || first > 122) return false;
+				for (let k = 1; k < s.length; k += 1) {
+					const c = s.charCodeAt(k);
+					const ok = (c >= 97 && c <= 122) || (c >= 65 && c <= 90) || (c >= 48 && c <= 57) || c === 95;
+					if (!ok) return false;
+				}
+				return true;
+			};
+
+			// 从声明体挑出形如 key: 'value' 或 key: "value" 的字符串字面量。
+			function quotedKeys(body: string): string[] {
+				const keys: string[] = [];
+				const quotes = [34, 39];
+				let i = 0;
+				while (i < body.length) {
+					if (!quotes.includes(body.charCodeAt(i))) { i += 1; continue; }
+					let j = i + 1;
+					while (j < body.length && !quotes.includes(body.charCodeAt(j))) j += 1;
+					const inner = body.slice(i + 1, j);
+					if (isConfigKey(inner)) keys.push(inner);
+					i = j + 1;
+				}
+				return keys;
+			}
+
+			const INDIRECT_KEY_SOURCES: [string, RegExp][] = [
+				[
+					"task-run/task-run.constants.ts",
+					/TASK_ENABLED_KEYS\s*=\s*[\x7b]([\s\S]*?)[\x7d]/ig,
+				],
+				[
+					"vip/restriction-engine.service.ts",
+					/\b[A-Z][A-Z_]*KEY\s*=\s*/gm,
+				],
+			];
+
+			const indirectKeys = new Set<string>();
+			for (const [rel, matcher] of INDIRECT_KEY_SOURCES) {
+				const text = fs.readFileSync(path.join(srcRoot, rel), "utf8");
+				for (const m of text.matchAll(matcher)) {
+					const body = m[1] ?? text.slice(m.index, text.indexOf("\n", m.index + 1));
+					for (const key of quotedKeys(body)) indirectKeys.add(key);
+				}
+			}
+
+			// 调用侧：允许 getValue<T>( 与键之间换行（Prettier 换行后的常见形态）。
+			const callPattern = /getValue\s*<[^>]*>\(\s*['"]([a-zA-Z][a-zA-Z0-9_]*)['"]/g;
+			const calls: { key: string; file: string }[] = [];
+
+			const walk = (dir: string): void => {
+				for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+					const full = path.join(dir, entry.name);
+					if (entry.isDirectory()) {
+						if (entry.name !== "node_modules") walk(full);
+					} else if (
+						entry.name.endsWith(".ts") &&
+						!entry.name.endsWith(".spec.ts") &&
+						entry.name !== "runtime-config.service.ts"
+					) {
+						const text = fs.readFileSync(full, "utf8").replace(/\n\s*\(/g, "(");
+						for (const m of text.matchAll(callPattern)) {
+							calls.push({
+								key: m[1],
+								file: path.relative(srcRoot, full),
+							});
+						}
+					}
+				}
+			};
+
+			walk(srcRoot);
+
+			// 调用侧扫描必须真跑起来，否则下面所有断言都是空过。
+			expect(calls.length).toBeGreaterThan(0);
+
+			const unknown = new Set(
+				calls.filter((c) => !registered.has(c.key)).map((c) => c.key),
+			);
+			if (unknown.size > 0) {
+				throw new Error(
+					"以下键被 getValue 读取但未登记在 RUNTIME_CONFIG_DEFINITIONS：" +
+						[...unknown]
+							.sort()
+							.map(
+								(k) => `${k} <- ${calls.find((c) => c.key === k)?.file}`,
+							)
+							.join("\n"),
+				);
+			}
+
+			// 间接引用的键也必须已登记（常量化引用最容易漏登记），断言非空防正则失配空过。
+			expect(indirectKeys.size).toBeGreaterThan(0);
+			const unknownIndirect = [...indirectKeys].filter((k) => !registered.has(k));
+			if (unknownIndirect.length > 0) {
+				throw new Error(`间接引用的配置键未登记：${unknownIndirect.join(", ")}`);
+			}
+
+			// 本轮迁运行时配置的键：必须已登记且有消费者
+			// （未登记会让配置页改了不生效；无人读取则是空壳定义）。
+			const migratedKeys = [
+				"auditArchiveEnabled",
+				"taskRunRetentionDays",
+				"backupKeepLocal",
+				"backupDrillEnabled",
+				"fileZipCompressionLevel",
+				"alertEmailEnabled",
+				"alertEmailTo",
+				"alertEmailFailEscalate",
+				"alertEmailP1WindowMinutes",
+				"alertEmailP2DailyHour",
+			];
+			const problems = migratedKeys.filter(
+				(k) => !registered.has(k) || !calls.some((c) => c.key === k),
+			);
+			if (problems.length > 0) {
+				throw new Error(`迁移键未登记或无人读取：${problems.join(", ")}`);
+			}
+		});
+	});
+
 	// ==================== parseValue ====================
 	describe("parseValue", () => {
 		it("should parse boolean type", () => {

@@ -9,8 +9,7 @@ import configuration from './configuration';
  * configuration() 审计段配置（#322）
  *
  * 接缝：configuration() 纯函数 —— 环境变量 → 结构化配置的唯一出口。
- * 顺带回归：AUDIT_ARCHIVE_ENABLED 必须经 parseBoolean 解析，
- * 字符串 'false' 不得为 truthy（旧实现直接 configService.get('AUDIT_ARCHIVE_ENABLED') 的隐患）。
+ * 归档开关（AUDIT_ARCHIVE_ENABLED）已迁运行时配置 auditArchiveEnabled，见 runtime-config 测试。
  */
 describe('configuration 审计段（#322）', () => {
 	const ORIGINAL_ENV = { ...process.env };
@@ -45,22 +44,6 @@ describe('configuration 审计段（#322）', () => {
 		it('非法数值回退默认 183', () => {
 			process.env.AUDIT_LOG_RETENTION_DAYS = 'not-a-number';
 			expect(configuration().audit.retentionDays).toBe(183);
-		});
-	});
-
-	describe('archiveEnabled', () => {
-		it('默认 false', () => {
-			expect(configuration().audit.archiveEnabled).toBe(false);
-		});
-
-		it("字面 'true' 开启", () => {
-			process.env.AUDIT_ARCHIVE_ENABLED = 'true';
-			expect(configuration().audit.archiveEnabled).toBe(true);
-		});
-
-		it("字符串 'false' 必须解析为 false（不得 truthy）", () => {
-			process.env.AUDIT_ARCHIVE_ENABLED = 'false';
-			expect(configuration().audit.archiveEnabled).toBe(false);
 		});
 	});
 

@@ -19,7 +19,7 @@
 
 ## 保留与清理
 
-执行记录默认保留 **180 天**（`TASK_RUN_RETENTION_DAYS`，configuration.ts / .env.example），`cleanupOldRuns(retentionDays)` 由调度器随审计清理 cron 每日执行（#271）。
+执行记录默认保留 **180 天**（运行时配置 `taskRunRetentionDays`，env 兜底 `TASK_RUN_RETENTION_DAYS`），`cleanupOldRuns(retentionDays)` 由调度器随审计清理 cron 每日执行（#271）。
 
 ### 保留期演进（#326）
 
@@ -32,4 +32,4 @@
 
 ### 存量数据
 
-切换默认值后无需迁移脚本：首轮定时清理自然以新保留期为 cutoff，只删除 `startedAt` 早于 180 天前的旧记录。已显式配置旧值（如 `TASK_RUN_RETENTION_DAYS=30`）的部署不受影响，可按需调整。
+切换默认值后无需迁移脚本：首轮定时清理自然以新保留期为 cutoff，只删除 `startedAt` 早于 180 天前的旧记录。已显式配置旧值（运行时或 `TASK_RUN_RETENTION_DAYS=30`）的部署不受影响，可按需调整。

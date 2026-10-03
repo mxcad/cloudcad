@@ -342,54 +342,6 @@ export default (): AppConfig => {
     mxcadTempPath: resolvePath(process.env.MXCAD_TEMP_PATH || 'data/temp'),
     mxcadDebugPath: resolvePath(process.env.MXCAD_DEBUG_PATH || 'data/debug'),
 
-    // 文件扩展名配置
-    fileExtensions: {
-      cad: parseStringArray(process.env.FILE_EXT_CAD, ['.dwg', '.dxf']),
-      image: parseStringArray(process.env.FILE_EXT_IMAGE, [
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.gif',
-        '.bmp',
-        '.svg',
-        '.webp',
-      ]),
-      document: parseStringArray(process.env.FILE_EXT_DOCUMENT, [
-        '.pdf',
-        '.doc',
-        '.docx',
-        '.xls',
-        '.xlsx',
-        '.ppt',
-        '.pptx',
-        '.txt',
-      ]),
-      archive: parseStringArray(process.env.FILE_EXT_ARCHIVE, [
-        '.zip',
-        '.rar',
-        '.7z',
-        '.tar',
-        '.gz',
-      ]),
-      font: parseStringArray(process.env.FILE_EXT_FONT, [
-        '.ttf',
-        '.otf',
-        '.woff',
-        '.woff2',
-        '.eot',
-        '.shx',
-      ]),
-      forbidden: parseStringArray(process.env.FILE_EXT_FORBIDDEN, [
-        '.exe',
-        '.bat',
-        '.sh',
-        '.cmd',
-        '.ps1',
-        '.scr',
-        '.vbs',
-      ]),
-    },
-
     // 缓存 TTL 配置（单位：秒）
     cacheTTL: {
       verificationCode:
@@ -426,8 +378,6 @@ export default (): AppConfig => {
           process.env.FILE_LIMIT_ZIP_MAX_SINGLE_FILE_SIZE || '524288000',
           10
         ) || 500 * 1024 * 1024, // 500MB
-      zipCompressionLevel:
-        parseInt(process.env.FILE_LIMIT_ZIP_COMPRESSION_LEVEL || '1', 10) || 1,
       maxFilenameLength:
         parseInt(process.env.FILE_LIMIT_MAX_FILENAME_LENGTH || '255', 10) ||
         255,
@@ -636,28 +586,17 @@ export default (): AppConfig => {
             '183',
           10
         ) || 183,
-      // #322 fail-closed：true 时超期记录先按月归档 CSV + SHA-256 清单，成功才删库；
-      // false 时直接按保留天数删除。等保 8.4.3.3/8.4.7.2 验收需开启。
-      archiveEnabled: parseBoolean(process.env.AUDIT_ARCHIVE_ENABLED, false),
       archivePath: resolvePath(
         process.env.AUDIT_ARCHIVE_PATH || 'data/archives/audit-logs'
       ),
-    },
-
-    // 后台任务执行记录保留策略（#271 无界增长治理；#326 默认 180 天，运维排查窗口与等保对齐）
-    taskRun: {
-      retentionDays:
-        parseInt(process.env.TASK_RUN_RETENTION_DAYS || '180', 10) || 180,
     },
 
     // 数据库备份配置（#318：每日全量 pg_dump -Fc + 本地轮转；#320：月度恢复演练）
     backup: {
       enabled: parseBoolean(process.env.BACKUP_ENABLED, true),
       dir: resolvePath(process.env.BACKUP_DIR || 'data/backups'),
-      keepLocal: parseInt(process.env.BACKUP_KEEP_LOCAL || '14', 10) || 14,
       cron: process.env.BACKUP_CRON || '0 1 * * *',
       pgDumpPath: process.env.PG_DUMP_PATH || '',
-      drillEnabled: parseBoolean(process.env.BACKUP_DRILL_ENABLED, true),
       drillTables: (
         process.env.BACKUP_DRILL_TABLES ||
         'audit_logs,alert_records,task_runs,users'
@@ -684,22 +623,6 @@ export default (): AppConfig => {
     },
 
     // 告警邮件通知（#311：P0 实时邮件 + 恢复通知 + 连续失败升级）
-    alertEmail: {
-      enabled: (process.env.ALERT_EMAIL_ENABLED || 'false') === 'true',
-      to: (process.env.ALERT_EMAIL_TO || '')
-        .split(',')
-        .map((addr) => addr.trim())
-        .filter(Boolean),
-      failEscalate:
-        parseInt(process.env.ALERT_EMAIL_FAIL_ESCALATE || '5', 10) || 5,
-      p1WindowMinutes:
-        parseInt(process.env.ALERT_P1_WINDOW_MINUTES || '15', 10) || 15,
-      p2DailyHour: (() => {
-        const h = parseInt(process.env.ALERT_P2_DAILY_HOUR || '9', 10);
-        return Number.isInteger(h) && h >= 0 && h <= 23 ? h : 9;
-      })(),
-    },
-
     // /metrics 抓取令牌认证（#315）：配置后 Prometheus 可用 Bearer/Basic 抓取令牌访问
     // /api/metrics；未配置时保持原有 SYSTEM_MONITOR 权限控制（兼容现有行为）
     metrics: {

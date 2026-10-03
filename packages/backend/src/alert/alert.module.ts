@@ -7,9 +7,10 @@ import { AlertNotificationService } from './notification/alert-notification.serv
 import { DatabaseModule } from '../database/database.module';
 import { PermissionModule } from '../permission/permission.module';
 import { NotificationModule } from '../notification/notification.module';
+import { RuntimeConfigModule } from '../runtime-config/runtime-config.module';
 
 @Module({
-  imports: [DatabaseModule, PermissionModule, NotificationModule],
+  imports: [DatabaseModule, PermissionModule, NotificationModule, RuntimeConfigModule],
   controllers: [AlertController, InternalAlertController],
   providers: [AlertService, WebhookService, AlertNotificationService],
   exports: [AlertService, WebhookService],

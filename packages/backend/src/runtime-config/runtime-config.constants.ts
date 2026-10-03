@@ -100,6 +100,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     impact: '开启后未验证邮箱的用户无法完成需要邮箱的功能；配合 mailEnabled 使用。',
+    dangerous: true,
   },
   {
     key: 'refundNotifyEmails',
@@ -110,6 +111,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'admin',
     input: { maxLength: 500, allowNull: true, placeholder: 'a@example.com,b@example.com' },
+    impact: '退款申请通知的收件人；为空时不发送退款通知邮件，退款流程本身不受影响。',
   },
 
   // ───────────────────────── 短信 ─────────────────────────
@@ -133,6 +135,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     impact: '开启后未验证手机号的用户受限；配合 smsEnabled 使用。',
+    dangerous: true,
   },
 
   // ───────────────────────── 用户 ─────────────────────────
@@ -145,6 +148,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'user',
     impact: '关闭后注册页隐藏、注册接口拒绝；已注册用户不受影响。',
+    dangerous: true,
   },
   {
     key: 'allowAutoRegisterOnPhoneLogin',
@@ -165,6 +169,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'user',
     input: { min: 1, max: 365, step: 1, unit: '天' },
+    impact: '用户提交注销后，在冷静期内重新登录即可自动撤销；天数越短，误注销后越难自助恢复。',
+    dangerous: true,
   },
   {
     key: 'userCleanupEnabled',
@@ -188,6 +194,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'user',
     impact: '开启后登录页出现微信扫码入口；需先在服务端配置微信开放平台凭证。',
+    dangerous: true,
   },
   {
     key: 'wechatAutoRegister',
@@ -222,6 +229,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'admin',
     input: { min: 1, max: 5000, step: 1, unit: 'MB' },
+    impact: '超过该大小的字体文件会被拒绝上传，可能影响依赖大字体库的图纸正常显示。',
   },
   {
     key: 'extRefMaxFileSize',
@@ -232,6 +240,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'admin',
     input: { min: 1, max: 50000, step: 1, unit: 'MB' },
+    impact: '外部参照（被引用图纸）单个文件上限；超出会被拒绝，调大会增加磁盘占用与打开时的引用加载时间。',
   },
 
   // ───────────────────────── 存储清理 ─────────────────────────
@@ -256,6 +265,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'advanced',
     input: { min: 1, max: 365, step: 1, unit: '天' },
     impact: '删除操作产生孤立文件后，等待多少天才可被清理回收。',
+    dangerous: true,
   },
   {
     key: 'trashCleanupEnabled',
@@ -277,6 +287,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'advanced',
     input: { min: 1, max: 365, step: 1, unit: '天' },
+    impact: '文件进入回收站后停留该天数被永久删除；设为 1 天时用户几乎没有恢复窗口。',
+    dangerous: true,
   },
   {
     key: 'orphanCleanupEnabled',
@@ -287,6 +299,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'advanced',
     dangerous: true,
+    impact: '关闭后磁盘上已无数据库记录的孤儿文件不再自动清理，长期堆积会持续占用磁盘。',
   },
   // orphanCleanupDelayDays 刻意不收录：storageCleanupService.cleanupOrphans() 检出即删、
   // 没有「标记后延迟 N 天」的两阶段机制，收录该字段会让 UI 承诺一个不成立的行为。
@@ -308,7 +321,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '是否启用磁盘状态监控',
     defaultValue: true,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
+    impact: '关闭后不再采集磁盘空间并告警，磁盘写满时不会有任何提示，备份与转换可能直接失败。',
   },
 
   // ───────────────────────── 缓存任务 ─────────────────────────
@@ -330,6 +344,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: true,
     isPublic: false,
     tier: 'advanced',
+    impact: '关闭后缓存命中与延迟等监控数据不再自动清理，指标记录会持续增长。',
   },
 
   // ───────────────────────── 审计与运维任务 ─────────────────────────
@@ -340,7 +355,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '是否启用审计日志自动清理',
     defaultValue: true,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     dangerous: true,
     impact: '关闭后审计日志永不删除；等保要求的日志留存上界靠它控制，长期不删会撑爆磁盘。',
   },
@@ -351,13 +366,39 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '审计日志保留天数',
     defaultValue: 183,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     envKey: 'AUDIT_RETENTION_DAYS',
     // #322 之前只认 AUDIT_LOG_RETENTION_DAYS（configuration.ts 至今仍同时兼容两个名字）；
     // 不给别名，存量按合规要求配置了 730 天的部署会被静默收紧回 183 天。
     envAliases: ['AUDIT_LOG_RETENTION_DAYS'],
     input: { min: 7, max: 3650, step: 1, unit: '天' },
     impact: '早于该天数的审计日志由定时任务删除。等保 2.0 要求日志留存不少于 6 个月（183 天）。',
+    dangerous: true,
+  },
+  {
+    key: 'auditArchiveEnabled',
+    type: 'boolean',
+    category: 'audit',
+    description: '超期审计日志先归档留存再删除（关闭则到期直接删除）',
+    defaultValue: false,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'AUDIT_ARCHIVE_ENABLED',
+    dangerous: true,
+    impact:
+      '关闭时到期审计日志直接从数据库删除、不归档留存，不满足等保 8.4.3.3/8.1.4.3 的日志留存要求。开启后先按月导出 CSV + SHA-256 清单，全部落盘成功才删库。',
+  },
+  {
+    key: 'taskRunRetentionDays',
+    type: 'number',
+    category: 'audit',
+    description: '后台任务执行记录的保留天数',
+    defaultValue: 180,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'TASK_RUN_RETENTION_DAYS',
+    input: { min: 7, max: 3650, step: 1, unit: '天' },
+    impact: '早于该天数的任务执行记录由定时任务删除，仅用于运维排查历史任务的留存窗口。',
   },
   {
     key: 'batchDownloadCleanupEnabled',
@@ -367,6 +408,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: true,
     isPublic: false,
     tier: 'advanced',
+    impact: '关闭后已过期但尚未清理的批量下载压缩包会一直留在磁盘上。',
   },
   {
     key: 'backupEnabled',
@@ -376,8 +418,32 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: true,
     isPublic: false,
     tier: 'advanced',
+    envKey: 'BACKUP_ENABLED',
     dangerous: true,
     impact: '关闭后不再有自动数据库备份，数据库损坏将无恢复途径。',
+  },
+  {
+    key: 'backupKeepLocal',
+    type: 'number',
+    category: 'backup',
+    description: '本地保留最近几次备份（超出自动清理最旧的）',
+    defaultValue: 14,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'BACKUP_KEEP_LOCAL',
+    input: { min: 1, max: 200, step: 1, unit: '份' },
+    impact: '份数越小占用磁盘越少，但可回退的时间窗口越短。每次备份完成后按此值轮转清理。',
+  },
+  {
+    key: 'backupDrillEnabled',
+    type: 'boolean',
+    category: 'backup',
+    description: '是否启用月度恢复演练（临时库恢复 + 行数校验）',
+    defaultValue: true,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'BACKUP_DRILL_ENABLED',
+    impact: '关闭后不再验证备份能否真正恢复；备份文件可能早已损坏却无人发现。',
   },
   {
     key: 'billingCronEnabled',
@@ -386,8 +452,9 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '是否启用计费定时任务（会员降级/超时订单关闭）',
     defaultValue: true,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     impact: '关闭后会员到期不自动降级、超时订单不自动关闭。',
+    dangerous: true,
   },
   {
     key: 'batchDownloadEnabled',
@@ -398,6 +465,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     impact: '开启后用户可发起批量打包下载，占用磁盘与带宽。',
+    dangerous: true,
   },
   {
     key: 'fileZipCompressionLevel',
@@ -410,6 +478,66 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'FILE_LIMIT_ZIP_COMPRESSION_LEVEL',
     input: { min: 0, max: 9, step: 1 },
     impact: '级别越高包越小但打包越慢、CPU 越高。每个下载任务开始时读取，即时生效。',
+  },
+
+  // ───────────────────────── 告警邮件 ─────────────────────────
+  {
+    key: 'alertEmailEnabled',
+    type: 'boolean',
+    category: 'alert',
+    description: '是否启用告警邮件通知（P0 实时 / P1 聚合 / P2 日报）',
+    defaultValue: false,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'ALERT_EMAIL_ENABLED',
+    impact: '关闭后磁盘/备份/任务失败等告警只落库不发邮件，故障要等人登录后台才发现。',
+  },
+  {
+    key: 'alertEmailTo',
+    type: 'string',
+    category: 'alert',
+    description: '告警邮件收件人（多个用英文逗号分隔）',
+    defaultValue: '',
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'ALERT_EMAIL_TO',
+    impact: '收件人为空时告警邮件一封都不会发送（等同关闭），告警只会留在后台告警列表。',
+  },
+  {
+    key: 'alertEmailFailEscalate',
+    type: 'number',
+    category: 'alert',
+    description: '告警邮件连续失败多少次后升级为 P0 告警',
+    defaultValue: 5,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'ALERT_EMAIL_FAIL_ESCALATE',
+    input: { min: 1, max: 100, step: 1, unit: '次' },
+    impact: 'SMTP 故障时，达到该次数会主动 raise 一条 P0 告警提醒检查邮件通道；设太大等于邮件坏了没人知道。',
+  },
+  {
+    key: 'alertEmailP1WindowMinutes',
+    type: 'number',
+    category: 'alert',
+    description: 'P1 告警按来源聚合的窗口分钟数',
+    defaultValue: 15,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'ALERT_P1_WINDOW_MINUTES',
+    input: { min: 1, max: 1440, step: 1, unit: '分钟' },
+    impact: '同一来源的 P1 告警在窗口内合并成一封邮件；窗口越长打扰越少，但单封邮件覆盖的问题范围越大。',
+  },
+  {
+    key: 'alertEmailP2DailyHour',
+    type: 'number',
+    category: 'alert',
+    description: 'P2 告警日报发送时间（几点，24 小时制）',
+    defaultValue: 9,
+    isPublic: false,
+    tier: 'advanced',
+    envKey: 'ALERT_P2_DAILY_HOUR',
+    input: { min: 0, max: 23, step: 1, unit: '时' },
+    impact: '每日该整点发送前一天 P2 告警汇总；当天无前日告警则不发送。',
   },
 
   // ───────────────────────── 安全：接口限流 ─────────────────────────
@@ -435,6 +563,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'advanced',
     envKey: 'RATE_LIMIT_WINDOW_MS',
     input: { min: 1000, max: 86400000, step: 1000, unit: 'ms' },
+    impact: '未登录接口的统计窗口长度；需与「公开接口每窗口最大请求数」配合理解，改小会让阈值更快被触发。',
   },
   {
     key: 'rateLimitAuthMax',
@@ -446,12 +575,13 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'advanced',
     envKey: 'RATE_LIMIT_AUTH_MAX',
     input: { min: 1, max: 1000000, step: 1, unit: '次' },
+    impact: '已登录用户按 IP 的请求上限；设太小正常操作也会被限流，设太大等于放开限制。',
   },
   {
     key: 'rateLimitLoginMax',
     type: 'number',
     category: 'security',
-    description: '登录接口每窗口最大尝试次数（按账号/IP）',
+    description: '登录失败次数上限（按 IP 统计，同一出口 IP 共用额度）',
     defaultValue: 5,
     isPublic: false,
     tier: 'admin',
@@ -464,12 +594,14 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     key: 'rateLimitLoginWindowMs',
     type: 'number',
     category: 'security',
-    description: '登录限流窗口长度',
+    description: '登录失败次数上限的统计窗口（按 IP 统计）',
     defaultValue: 900000,
     isPublic: false,
     tier: 'admin',
     envKey: 'RATE_LIMIT_LOGIN_WINDOW_MS',
     input: { min: 60000, max: 86400000, step: 60000, unit: 'ms' },
+    impact: '登录接口按 IP 统计的窗口长度；须与「登录接口每窗口最大尝试次数（按账号/IP）」配套调整。',
+    dangerous: true,
   },
   {
     key: 'mfaEnforceEnabled',
@@ -501,7 +633,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     key: 'loginRateLimitMax',
     type: 'number',
     category: 'security',
-    description: '登录接口每窗口最大尝试次数（按账号，防暴力破解）',
+    description: '登录失败次数上限（按账号统计，每个账号独立额度）',
     defaultValue: 5,
     isPublic: false,
     tier: 'admin',
@@ -514,12 +646,14 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     key: 'loginRateLimitWindowSeconds',
     type: 'number',
     category: 'security',
-    description: '登录限流窗口长度',
+    description: '登录失败次数上限的统计窗口（按账号统计）',
     defaultValue: 60,
     isPublic: false,
     tier: 'admin',
     envKey: 'AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS',
     input: { min: 10, max: 86400, step: 10, unit: '秒' },
+    impact: '登录失败按账号统计的窗口长度；与按 IP 的登录限流是两套独立机制，改一个不影响另一个。',
+    dangerous: true,
   },
   {
     key: 'passwordResetRateLimitMax',
@@ -531,6 +665,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'AUTH_RATE_LIMIT_PASSWORD_RESET_MAX',
     input: { min: 1, max: 10000, step: 1, unit: '次' },
+    impact: '单个手机号/邮箱在窗口内最多可提交几次密码重置；过小会挡住真实用户，过大等于放开被撞库重置。',
   },
   {
     key: 'passwordResetRateLimitWindowSeconds',
@@ -542,6 +677,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'AUTH_RATE_LIMIT_PASSWORD_RESET_WINDOW_SECONDS',
     input: { min: 60, max: 86400, step: 60, unit: '秒' },
+    impact: '密码重置次数的统计窗口长度。',
   },
   {
     key: 'registerRateLimitMax',
@@ -553,6 +689,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'AUTH_RATE_LIMIT_REGISTER_MAX',
     input: { min: 1, max: 10000, step: 1, unit: '次' },
+    impact: '单个 IP 在窗口内的注册次数上限；过小会挡住批量导入，过大等于放开批量注册。',
   },
   {
     key: 'registerRateLimitWindowSeconds',
@@ -564,6 +701,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'AUTH_RATE_LIMIT_REGISTER_WINDOW_SECONDS',
     input: { min: 60, max: 86400, step: 60, unit: '秒' },
+    impact: '注册次数的统计窗口长度。',
   },
   {
     key: 'orderCreateRateLimitMax',
@@ -575,6 +713,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'advanced',
     envKey: 'AUTH_RATE_LIMIT_ORDER_CREATE_MAX',
     input: { min: 1, max: 10000, step: 1, unit: '次' },
+    impact: '下单次数上限，窗口内超出后无法下单（用于保护第三方支付配额）。',
   },
   {
     key: 'orderCreateRateLimitWindowSeconds',
@@ -586,6 +725,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'advanced',
     envKey: 'AUTH_RATE_LIMIT_ORDER_CREATE_WINDOW_SECONDS',
     input: { min: 60, max: 86400, step: 60, unit: '秒' },
+    impact: '下单次数的统计窗口长度。',
   },
   {
     key: 'accountLockFailThreshold',
@@ -610,6 +750,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'AUTH_LOCK_WINDOW_SECONDS',
     input: { min: 60, max: 86400, step: 60, unit: '秒' },
+    impact: '统计登录失败的窗口长度；窗口内失败达到阈值即锁定账号。',
+    dangerous: true,
   },
   {
     key: 'accountLockDurationSeconds',
@@ -621,6 +763,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'AUTH_LOCK_DURATION_SECONDS',
     input: { min: 60, max: 86400, step: 60, unit: '秒' },
+    impact: '账号被锁定后的锁定时长，期间即使密码正确也无法登录；设太大会让账号长时间不可用。',
+    dangerous: true,
   },
   {
     key: 'smsDailyLimitPerPhone',
@@ -633,6 +777,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'SMS_DAILY_LIMIT_PER_PHONE',
     input: { min: 1, max: 200, step: 1, unit: '次/日' },
     impact: '超过后该手机号当日无法再收到验证码，直接控制短信费。',
+    dangerous: true,
   },
   {
     key: 'smsHourlyLimitPerIp',
@@ -644,6 +789,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'SMS_HOURLY_LIMIT_PER_IP',
     input: { min: 1, max: 500, step: 1, unit: '次/时' },
+    impact: '单个 IP 每小时最多发送短信条数，超出后验证码发不出，登录与找回密码会卡住。',
+    dangerous: true,
   },
 
   // ───────────────────────── 配额 ─────────────────────────
@@ -656,6 +803,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     input: { min: 1, max: 720, step: 1, unit: '小时' },
+    impact: '未登录游客转换次数的统计窗口长度；须与「游客每窗口内最多图纸转换次数」配套理解。',
   },
   {
     key: 'conversionGuestLimit',
@@ -666,6 +814,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     input: { min: 1, max: 1000, step: 1, unit: '次' },
+    impact: '未登录游客每窗口的转换次数上限，超出后需登录；设太大会放开匿名刷转换。',
   },
   {
     key: 'freeExportDownloadEnabled',
@@ -676,6 +825,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     impact: '开启后免费用户可导出转换结果，会增加转换引擎负载。',
+    dangerous: true,
   },
 
   // ───────────────────────── 支付 ─────────────────────────
@@ -701,6 +851,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'user',
     impact: '开启后侧边栏出现「协同」入口；需已部署协同服务端。',
+    dangerous: true,
   },
   {
     key: 'collaborationDomains',
@@ -725,6 +876,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'advanced',
     input: { maxLength: 300 },
+    impact: '新设备登录时展示的授权确认页地址；填错会导致用户打不开授权页、无法完成设备登录。',
+    dangerous: true,
   },
 
   // ─────────────────────────

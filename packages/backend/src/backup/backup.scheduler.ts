@@ -189,14 +189,17 @@ export class BackupScheduler {
   }
 
   /**
-   * 月度恢复演练定时任务（#320）：BACKUP_DRILL_ENABLED 环境开关，
+   * 月度恢复演练定时任务（#320）：运行时配置 backupDrillEnabled 开关，
    * 校验失败/演练失败均产生 P1 告警（source: restore-drill / backup-verify）
    */
   @Cron(BACKUP_DRILL_CRON)
   async handleScheduledRestoreDrill(): Promise<void> {
-    const cfg = this.configService.get<AppConfig['backup']>('backup');
-    if (cfg && !cfg.drillEnabled) {
-      this.logger.log('恢复演练已通过 BACKUP_DRILL_ENABLED 禁用，跳过');
+    const drillEnabled = await this.runtimeConfigService.getValue<boolean>(
+      'backupDrillEnabled',
+      true
+    );
+    if (!drillEnabled) {
+      this.logger.log('恢复演练已通过运行时开关禁用，跳过');
       return;
     }
 

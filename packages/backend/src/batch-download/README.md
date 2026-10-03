@@ -105,7 +105,7 @@ PENDING ──> PROCESSING ──> COMPLETED
 
 ### 9. ArchiveWriter（archive-writer.ts）
 
-archiver 打 ZIP：写入 `${archiveName}.zip.tmp`，`close` 后原子 `rename` 为最终文件；出错清理 tmp。压缩级别取 `fileLimits.zipCompressionLevel`（默认 1）。
+archiver 打 ZIP：写入 `${archiveName}.zip.tmp`，`close` 后原子 `rename` 为最终文件；出错清理 tmp。压缩级别由 JobContext 每任务开始时读运行时配置 `fileZipCompressionLevel`（默认 1，env 兜底 `FILE_LIMIT_ZIP_COMPRESSION_LEVEL`）传入。
 
 ### 10. JobContext（job-context.ts）
 

@@ -27,7 +27,7 @@ import { RaiseInternalAlertDto } from './dto/internal-alert.dto';
  *
  * 供宿主机运维脚本（runtime/scripts/antivirus/scan-malware.sh）检出恶意文件后
  * 将告警接入既有告警链路：raise → AlertNotificationService → P1 聚合邮件
- * （ALERT_EMAIL_ENABLED=true + ALERT_EMAIL_TO 时）。
+ * （运行时配置 alertEmailEnabled=true 且 alertEmailTo 非空时）。
  *
  * 鉴权：@Public() 仅绕过 JWT/CSRF 全局 Guard（宿主机 curl 无用户身份），
  * 端点实际由 InternalSecretGuard 校验 X-Internal-Service-Secret 共享密钥

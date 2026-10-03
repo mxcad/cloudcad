@@ -44,8 +44,8 @@ src/audit/
 ## 保留与清理
 
 - 默认保留 **183 天**（#322，严格大于 6 个月整），环境变量 `AUDIT_LOG_RETENTION_DAYS`（旧名 `AUDIT_RETENTION_DAYS` 兼容回退），`common/schedulers/audit-cleanup.scheduler.ts` 每日 02:00 清理。
-- 按月归档（#322 已实现）：`AUDIT_ARCHIVE_ENABLED=true` 时超期记录先按月分片导出 CSV（UTF-8 BOM，字段与导出端点一致，复用 `buildAuditCsv` 单一事实源）+ 生成 SHA-256 校验清单（`YYYY-MM.sha256`，`<hash>  <file>` 两空格格式，兼容 `sha256sum -c`），**全部归档成功才从数据库删除**；任一分片失败则整体失败——记录保留、任务告警（P1 `task_run_failed`）。归档目录默认 `data/archives/audit-logs`（`AUDIT_ARCHIVE_PATH` 可配，目录 0750/文件 0640）。等保 8.4.3.3/8.4.7.2 验收需开启。
-- `AUDIT_ARCHIVE_ENABLED=false` 时直接按保留天数删除（不产生归档产物）。
+- 按月归档（#322 已实现）：`auditArchiveEnabled=true`（运行时配置，env 兜底 `AUDIT_ARCHIVE_ENABLED`）时超期记录先按月分片导出 CSV（UTF-8 BOM，字段与导出端点一致，复用 `buildAuditCsv` 单一事实源）+ 生成 SHA-256 校验清单（`YYYY-MM.sha256`，`<hash>  <file>` 两空格格式，兼容 `sha256sum -c`），**全部归档成功才从数据库删除**；任一分片失败则整体失败——记录保留、任务告警（P1 `task_run_failed`）。归档目录默认 `data/archives/audit-logs`（`AUDIT_ARCHIVE_PATH` 可配，目录 0750/文件 0640）。等保 8.4.3.3/8.4.7.2 验收需开启。
+- `auditArchiveEnabled=false`（默认）时直接按保留天数删除（不产生归档产物）。
 - 手动清理与归档联动（#323）：`POST /audit/cleanup` 不再直删——先经 `AuditArchiveService.verifyArchivedForCutoff(cutoff)` 校验目标时间段已归档且产物完整，通过后才按同一 cutoff 删除。已知边界：该校验证明"归档存在且完整"，不证明"覆盖到当前 cutoff 快照"（cron 归档后新过期的记录不在旧分片）；运行约定是每日 cron 归档保持产物新鲜，手动清理仅作恢复手段，严格场景先触发一次 cron 归档任务再手动清理。
 - 归档检索（#324）：超期记录不在 DB（热数据仅 183 天），运维查归档走 CLI 脚本 `scripts/audit-archive-query.ts`——先校验月份 SHA-256 清单（不匹配/缺失拒绝输出，fail-closed），再解析 CSV 过滤输出。用法：
 

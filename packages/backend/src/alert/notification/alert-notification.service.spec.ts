@@ -1,5 +1,5 @@
 ﻿import { Test, type TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import type { AlertRecord } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
 import { EmailService } from '../../notification/email.service';
@@ -20,17 +20,22 @@ describe('AlertNotificationService', () => {
     alertRecord: { update: jest.fn(), findMany: jest.fn(), count: jest.fn() },
   };
 
-  const baseConfig = {
-    enabled: true,
-    to: ['ops@example.com'],
-    failEscalate: 5,
-    p1WindowMinutes: 15,
-    p2DailyHour: 9,
+  /** 键名与运行时配置 key 对齐，未设的键回落服务内默认值 */
+  const baseConfig: Record<string, unknown> = {
+    alertEmailEnabled: true,
+    alertEmailTo: 'ops@example.com',
+    alertEmailFailEscalate: 5,
+    alertEmailP1WindowMinutes: 15,
+    alertEmailP2DailyHour: 9,
   };
   let alertEmailConfig = { ...baseConfig };
 
-  const mockConfigService = {
-    get: jest.fn(),
+  const mockRuntimeConfigService = {
+    getValue: jest.fn(async (key: string, fallback: unknown) =>
+      Object.prototype.hasOwnProperty.call(alertEmailConfig, key)
+        ? alertEmailConfig[key]
+        : fallback
+    ),
   };
 
   function makeRecord(overrides: Partial<AlertRecord> = {}): AlertRecord {
@@ -53,7 +58,12 @@ describe('AlertNotificationService', () => {
     jest.clearAllMocks();
     // resetMocks 会清除实现，这里显式恢复（仓库 jest 约定）
     alertEmailConfig = { ...baseConfig };
-    mockConfigService.get.mockImplementation(() => alertEmailConfig);
+    mockRuntimeConfigService.getValue.mockImplementation(
+      async (key: string, fallback: unknown) =>
+        Object.prototype.hasOwnProperty.call(alertEmailConfig, key)
+          ? alertEmailConfig[key]
+          : fallback
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -61,7 +71,10 @@ describe('AlertNotificationService', () => {
         { provide: AlertService, useValue: mockAlertService },
         { provide: EmailService, useValue: mockEmailService },
         { provide: DatabaseService, useValue: mockPrisma },
-        { provide: ConfigService, useValue: mockConfigService },
+        {
+          provide: RuntimeConfigService,
+          useValue: mockRuntimeConfigService,
+        },
       ],
     }).compile();
 
@@ -103,9 +116,9 @@ describe('AlertNotificationService', () => {
     });
 
     it('should not send when disabled or recipients empty', async () => {
-      alertEmailConfig = { ...baseConfig, enabled: false };
+      alertEmailConfig = { ...baseConfig, alertEmailEnabled: false };
       await service.onRaised(makeRecord());
-      alertEmailConfig = { ...baseConfig, to: [] };
+      alertEmailConfig = { ...baseConfig, alertEmailTo: '' };
       await service.onRaised(makeRecord());
       await new Promise(process.nextTick);
 
@@ -212,7 +225,7 @@ describe('AlertNotificationService', () => {
     });
 
     it('should not send recovery email when disabled', async () => {
-      alertEmailConfig = { ...baseConfig, enabled: false };
+      alertEmailConfig = { ...baseConfig, alertEmailEnabled: false };
       const emailed = makeRecord({
         detail: { emailNotifiedAt: '2026-08-25T00:00:00.000Z' },
       });

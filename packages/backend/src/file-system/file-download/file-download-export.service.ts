@@ -38,6 +38,7 @@ import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { NodeUtils } from '../../common/utils/node-utils';
 import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
 import { ClsService } from 'nestjs-cls';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import {
   conversionTargetExt,
@@ -71,7 +72,6 @@ export class FileDownloadExportService {
     zipMaxFileCount: number;
     zipMaxDepth: number;
     zipMaxSingleFileSize: number;
-    zipCompressionLevel: number;
     maxFilenameLength: number;
     maxRecursionDepth: number;
   };
@@ -88,6 +88,7 @@ export class FileDownloadExportService {
     @Inject(IStorageService) private readonly storageService: IStorageService,
     private readonly storageManager: StorageManager,
     private readonly configService: ConfigService,
+    private readonly runtimeConfigService: RuntimeConfigService,
     private readonly permissionService: FileSystemPermissionService,
     private readonly moduleRef: ModuleRef,
     private readonly auditLogger: AuditLogger,
@@ -100,7 +101,6 @@ export class FileDownloadExportService {
       zipMaxFileCount: limits.zipMaxFileCount,
       zipMaxDepth: limits.zipMaxDepth,
       zipMaxSingleFileSize: limits.zipMaxSingleFileSize,
-      zipCompressionLevel: limits.zipCompressionLevel,
       maxFilenameLength: limits.maxFilenameLength,
       maxRecursionDepth: limits.maxRecursionDepth,
     };
@@ -862,6 +862,17 @@ export class FileDownloadExportService {
     }
   }
 
+  /**
+   * ZIP 压缩级别每次下载时读取运行时配置。构造期固化会让配置页改级别后
+   * 单节点/目录下载永不生效（批量下载那条链路本来就是每次读）。
+   */
+  private async resolveZipCompressionLevel(): Promise<number> {
+    return this.runtimeConfigService.getValue<number>(
+      'fileZipCompressionLevel',
+      1
+    );
+  }
+
   private async downloadNodeAsZip(
     nodeId: string,
     userId: string
@@ -883,7 +894,7 @@ export class FileDownloadExportService {
 
       const output = new PassThrough();
       const archive = archiver.create('zip', {
-        zlib: { level: this.fileLimits.zipCompressionLevel },
+        zlib: { level: await this.resolveZipCompressionLevel() },
       });
 
       archive.on('error', (error) => {

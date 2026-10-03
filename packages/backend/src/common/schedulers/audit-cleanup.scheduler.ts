@@ -12,7 +12,6 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { ConfigService } from '@nestjs/config';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditArchiveService } from '../../audit/audit-archive.service';
 import { AlertService } from '../../alert/alert.service';
@@ -35,7 +34,6 @@ export class AuditCleanupScheduler {
   constructor(
     private readonly auditLogService: AuditLogService,
     private readonly auditArchiveService: AuditArchiveService,
-    private readonly configService: ConfigService,
     private readonly alertService: AlertService,
     private readonly runtimeConfigService: RuntimeConfigService,
     private readonly taskRunService: TaskRunService,
@@ -60,11 +58,11 @@ export class AuditCleanupScheduler {
 
   /**
    * 每天凌晨 2 点执行审计日志清理
-   * 可通过 AUDIT_LOG_RETENTION_DAYS 环境变量配置保留天数（#322：默认 183 天，>6 个月整）
-   * 可通过 AUDIT_ARCHIVE_ENABLED 环境变量启用归档（#322：默认 false，等保验收需开启）：
+   * 保留天数走运行时配置 auditRetentionDays（#322：默认 183 天，>6 个月整）
+   * 归档开关走运行时配置 auditArchiveEnabled（#322：默认 false，等保验收需开启）：
    * true 时超期记录先按月归档 CSV + SHA-256 清单，全部成功才删库（fail-closed）；
    * false 时直接按保留天数删除。
-   * 同 cron 顺带清理 TaskRun 保留期记录（#271/#326：TASK_RUN_RETENTION_DAYS 默认 180 天）
+   * 同 cron 顺带清理 TaskRun 保留期记录（#271/#326：taskRunRetentionDays 默认 180 天）
    */
   @Cron(AUDIT_CLEANUP_CRON, {
     name: 'audit-cleanup',
@@ -95,12 +93,12 @@ export class AuditCleanupScheduler {
 
   /**
    * TaskRun 保留期清理裸执行（#271，定时 + 手动触发共用）
-   * 复用本调度器的 auditCleanupEnabled 开关，保留期由 TASK_RUN_RETENTION_DAYS 配置（默认 180 天，#326）
+   * 复用本调度器的 auditCleanupEnabled 开关，保留期由运行时配置 taskRunRetentionDays 决定（默认 180 天，#326）
    */
   private async cleanupTaskRunsTask(): Promise<void> {
     const startedAt = Date.now();
-    const retentionDays = this.configService.get<number>(
-      'taskRun.retentionDays',
+    const retentionDays = await this.runtimeConfigService.getValue<number>(
+      'taskRunRetentionDays',
       180
     );
     const deletedCount = await this.taskRunService.cleanupOldRuns(retentionDays);
@@ -138,8 +136,8 @@ export class AuditCleanupScheduler {
     const days =
       retentionDays ??
       (await this.runtimeConfigService.getValue<number>('auditRetentionDays', 183));
-    const archiveEnabled = this.configService.get<boolean>(
-      'audit.archiveEnabled',
+    const archiveEnabled = await this.runtimeConfigService.getValue<boolean>(
+      'auditArchiveEnabled',
       false
     );
     this.logger.log(

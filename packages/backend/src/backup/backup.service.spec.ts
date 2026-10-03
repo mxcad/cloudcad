@@ -1,6 +1,7 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { basename, join } from 'path';
 import { ConfigService } from '@nestjs/config';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import * as cp from 'child_process';
 import * as fsp from 'fs/promises';
 import { BackupService, BackupVerifyError } from './backup.service';
@@ -33,6 +34,10 @@ describe('BackupService', () => {
     get: jest.fn(),
   };
 
+  const mockRuntimeConfigService = {
+    getValue: jest.fn(),
+  };
+
   const mockDbConfig = {
     host: 'localhost',
     port: 5432,
@@ -47,7 +52,6 @@ describe('BackupService', () => {
       if (key === 'backup') {
         return {
           dir: BACKUP_DIR_ABS,
-          keepLocal: 2,
           pgDumpPath: '',
           ...overrides,
         };
@@ -60,12 +64,17 @@ describe('BackupService', () => {
     jest.clearAllMocks();
     delete process.env.PG_DUMP_PATH;
     configureBackup();
+    mockRuntimeConfigService.getValue.mockResolvedValue(2);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BackupService,
         { provide: ConfigService, useValue: mockConfigService },
         { provide: CleanupMetricsService, useValue: CleanupMetricsMock },
+        {
+          provide: RuntimeConfigService,
+          useValue: mockRuntimeConfigService,
+        },
       ],
     }).compile();
 
@@ -191,7 +200,7 @@ describe('BackupService', () => {
           isFile: () => true,
         };
       });
-      configureBackup({ keepLocal: 2 });
+      mockRuntimeConfigService.getValue.mockResolvedValue(2);
 
       const result = await service.backup();
 
@@ -224,7 +233,7 @@ describe('BackupService', () => {
           modifiedAt: new Date('2026-08-25T01:00:00Z'),
         },
       ]);
-      configureBackup({ keepLocal: 1 });
+      mockRuntimeConfigService.getValue.mockResolvedValue(1);
 
       const result = await service.backup();
 
