@@ -545,7 +545,14 @@ async function batchDelete(items: Array<{ id: string; name: string }>) {
     })
     closeToast()
     if (res.error) throw new Error(String(res.error))
-    showSuccessToast(t('删除成功'))
+    // 批量操作部分成功：透传成功/失败计数（对齐 PC「成功删除 N 项，M 项失败」）
+    const data = res.data as BatchOperationResponseDto | undefined
+    const failed = items.length > 1 ? (data?.failedCount ?? 0) : 0
+    if (failed > 0) {
+      showFailToast(t('成功删除 {n} 项，{m} 项失败', { n: String(data?.successCount ?? 0), m: String(failed) }))
+    } else {
+      showSuccessToast(t('删除成功'))
+    }
     await fileList.refresh()
     // 撤销：trash 恢复这批节点 + 刷新文件列表（单步撤销，顶替既有 snackbar）
     undo.trackUndo(t('已删除 {count} 个文件', { count: String(items.length) }), async () => {
