@@ -134,7 +134,7 @@
 - [x] **B-07 转让项目所有权**：✅ 成员行「转让」按钮 → `projectActions.transferOwnership` + 成功后重载成员+权限
 - [x] **B-08 成员真实头像 + 邮箱展示**：✅ 2026-10-01 ProjectDetailPage memberRows 加 `avatar`；`m.avatar` 有值用 `van-image`（`avatarErrors` Set 逐 id @error 回落 `user-o`），`m.email` 有值渲染副行（无则不渲染，无占位）
 - [x] **B-09 按角色筛选成员**：✅ 2026-10-01 ProjectDetailPage 成员列表头加角色筛选下拉（`roleFilterOptions` 含所有角色含所有者，稳定 computed 防 DropdownMenu 递归）；`filteredMemberRows` 按 `projectRoleId` 过滤 + 人数联动 + 筛空态「没有符合条件的成员」（新键 3655/3656）
-- [ ] **B-10 精细化错误文案**：🚧 部分——move/copy 已透传后端错误（transferErrorMessage）；成员操作仍 `e?.message || '移除失败'`（后端 i18n 消息已透传，可接受，低优）
+- [➖] **B-10 精细化错误文案**：➖ 2026-10-03 关闭（低优，排票见文末「待排票」）——move/copy 已透传后端错误（transferErrorMessage）；成员操作失败兜底 `移除失败`（`ProjectDetailPage.vue:356`）是硬编码中文且 idMap 无此键。修它需加 i18n 键 + 动 `ProjectDetailPage.vue`，该文件正被并发会话修改，本轮不碰
 - [x] **B-11 项目改名/改描述**：✅ ProjectEditPopup
 - [x] **B-12 删除项目**：✅ 管理菜单「删除项目」→ useProjectActions.remove（确认+回退）
 - [x] **B-15 配额用量条**：✅
@@ -168,7 +168,7 @@
 - [x] **C-05 分页/加载更多**：✅ 2026-10-01 `loadShares(append)` page 累加 + `shareHasMore`（total/pageSize 推算，后端 ShareListResponseDto 无 totalPages）+ 列表 `@scroll` 触底加载 + 底条（加载中/没有更多了）；keyword/filter 变化回第一页
 - [x] **C-11 自定义天数**：✅ 2026-10-01 续期弹窗补「自定义天数」档 + 天数输入（1-365 钳制，`computeExpiresAtIso(option, days)` 走 platform）；`openRenewPopup` 改用 `detectShareExpiration` 反推初始档+天数（对齐 PC EditExpiryModal）。**注**：移动端创建弹窗的 `customDays` 原是死代码（模板从未渲染 custom 档/输入框）；2026-10-03 补齐（见 C-17），创建弹窗 8 档已与 PC ShareDialog 对齐
 - [x] **C-12 「立即过期」选项**：✅ 2026-10-01 续期弹窗补「立即过期」档（`computeExpiresAtIso` 返回 now-1s，后端视为已过期）；创建弹窗不加（新建即过期无意义，PC 因共用 ExpirationPicker 才显示，属 PC 小瑕疵）
-- [ ] **C-13 复制成功行内反馈**：⬜ PC copiedToken 该行图标变 ✓ 2s；移动端仅 toast（可接受，低优）
+- [x] **C-13 复制成功行内反馈**：✅ 2026-10-03 与 C-27 重复合并关闭——C-27（Batch 17）的 `useShareLinkCopy`（`copiedKey` + 按钮行内 ✓ 2s）已对齐 PC `copiedToken`；Batch 18 又补第 6 个复制点（WorkCard 协同分享二维码面板，见 C-29）。本条不再单独跟踪
 - [x] **C-14 加载失败底条**：✅ 2026-10-01 `loadMoreFailed` 与整页 `error` 分离——翻页失败保留已加载列表、底条「加载失败，点击重试」（重跑当前页不重复追加）；首屏失败才整页错误态
 - [x] **C-15 空态「清除搜索」**：✅ 2026-10-01 搜索无结果时文案改「未找到相关分享」+「清除搜索」按钮（清空 keyword）；无关键词时保持「暂无分享」+「新建分享」
 
@@ -191,6 +191,13 @@
 - [x] **C-26 分享链接相对路径**：✅ 2026-10-03 后端 4 个 share 端点（create/list/file/update）返回的 `url` 一律是相对 path，裸 path 粘进浏览器会被当成搜索词、扫码打不开。绝对化规则收敛进 `@cloudcad/platform` 的 `toShareUrl(path, origin)`（纯函数、幂等、兼容已绝对化 / 协议相对 / 尾部斜杠），两端各配一个只供 origin 的薄出口（PC `src/utils/shareUrl.ts`、移动端 `src/utils/shareUrl.ts`）。移动端在 4 个**数据边界**一次性绝对化（列表 map / `useShareCreate` 结果 / 创建成功 / 已有分享 map）→ 覆盖 10 个下游消费点（复制 / 二维码 / 打开 / 展示）；PC 5 处手写 `` ${origin}${path} `` 全部改走共享出口。**复查结论**：PC 的列表行复制本来就是绝对化（`handleCopyItem` 内部已前置 origin），此前台账「PC 不自洽」的说法有误，PC 无行为变更，只是换成共享规则
 - [x] **C-27 复制成功行内反馈**：✅ 2026-10-03 对齐 PC `copiedToken` 图标变 ✓ 2s。收敛出 `useShareLinkCopy`（移动端唯一复制出口，同时替换 ShareManagePage `copyLinkWithFallback` 与 ShareCurrentPopup `copyShareUrl` 两份逐字重复实现）：`copiedKey` 用 url 本身当键，5 个复制按钮用「copiedKey === 自己的 url」判定，连续复制复用同一定时器，卸载时清定时器；5 例 spec 覆盖成功/连续/失败回落/空 url/卸载
 
+### Batch 18（2026-10-03 分享/协同收尾，3 项 + 1 项查证非差距）
+
+- [x] **C-29 WorkCard 协同分享复制绕过了唯一出口（P1）**：✅ C-27 收敛时漏掉的第 6 个复制点——`WorkCard.vue` 仍直接 `copyText()` + 自持 `showLinkSheet`/`linkSheetUrl` 两份回落 refs + 成功 toast（即「一份逐字重复实现」仍在）。改为调 `useShareLinkCopy`，二维码面板复制按钮加行内 ✓（`copiedKey === display.shareUrl`，与 ShareManagePage 三个复制点同判据）。`handleCopy` 从 9 行降到 3 行，删除该文件的本地回落逻辑；成功文案统一为 `已复制链接`（原「分享链接已复制」仅此文件用，键 1515 留在词表不再引用，不删——词表删除留给下次词表维护）
+- [x] **C-30 WorkCard 5 处硬编码中文未走 `t()`（P1）**：✅ `分享`×2、`退出`、`加入`×2 包 `t()`。键 2644（分享）/742（退出）复用，`加入` 为新键 **3731**（四语：加入/加入/Join/참여）——**与 PC `CollabWorkCard.tsx:126-141` 逐字一致**（PC 也用 `t('分享')`/`t('退出')`/`t('加入')`）。移动端原本连英文用户都看到中文「加入」
+- [➖] **C-28 分享列表日期格式（查证非差距，不改代码）**：➖ 台账原以为移动端 `toLocaleDateString()` 违反「日期走唯一出口」。查证后**不是差距**：PC `constants/share.ts` 的 `formatExpiryDate` 与 `ShareTable.tsx` 的 createdAt 列**同样**是 `toLocaleDateString()`，移动端逐字对齐 PC。只把移动端换成 platform `formatDate`（固定 ISO-like）会让两端显示口径不一致（`2026-10-03` vs `2026/10/3`），与「补齐差距」方向相反。正确归属=**跨端共用的本地化日期口径问题**，需 PC + 移动端同改（4 处），已排票（见文末）。P-12 的 platform 固定格式决策只覆盖审计/版本/文件时间戳，未覆盖分享
+- [x] **Batch 18 台账清尾**：✅ 关闭 C-13（与 C-27 重复合并）、D-10（台账「跳 PC /member-center」**过时**——`openMemberCenter` 已直达原生 `/shell/member`，ADR-0068）、G-04（2026-09-10 已裁定，标记 ⏸→➖）；重写 G-02 为可执行流程（`pnpm i18nCompile` 禁止运行，改手工加键 + 四语一致性校验）；G-05 确认为常驻验收纪律；排票 B-10 / P-08 自动化 / Batch 6b / G-03 / C-28 跨端日期。§C 与 §K 已无 ⬜/⏸ 遗留
+
 ---
 
 ## D. 个人中心 ProfilePage（/shell/profile）
@@ -198,7 +205,7 @@
 ### P1 高频
 
 - [x] **D-01 头像展示 + 上传**：✅ / **D-06 密码强度条 + 忘记密码入口**：✅
-- [x] **D-10 会员购买/续费/升级入口**：✅（跳 PC /member-center 整页；移动端已有完整会员中心见 §E 之外的 MemberCenterPage——**待确认**：D-10 的「跳 PC」降级方案是否应改为直接进移动端 MemberCenterPage，2026-10-01 重审发现移动端已有完整会员页，此降级可能已过时）
+- [x] **D-10 会员购买/续费/升级入口**：✅ 2026-10-03 关闭「待确认」——台账旧记「跳 PC /member-center」**已过时**：`openMemberCenter()`（`ProfilePage.vue:300`）`router.push('/shell/member')` 直达原生 `MemberCenterPage`（ADR-0068，购买/续费/升级/退款全在移动端完成），与 PC 无差距
 - [x] **D-11 会员到期预警**：✅ / **D-12 存储配额用量**：✅
 
 ### P2
@@ -206,7 +213,7 @@
 - [x] **D-02 账号元信息 / D-03 已验证标记 / D-05 邮箱手机解绑 / D-07 设置密码引导 / D-08 改密后重新登录 / D-14 验证码 6 位 / D-15 密码可见性**：✅
 - [➖] **D-16 deactivated 态细化**：➖ 不适用（已裁定）
 
-### P3 / 待确认
+### P3
 
 - [x] **D-04 微信绑定/解绑/冲突接管**：✅（2026-10-01 重审：整页跳转 + `#wechat_result` 回传 + 接管确认，runtimeConfig.wechatEnabled 门控）
 - [x] **D-09 注销账户（冷静期）**：✅ `useProfileDeactivate`（动态验证方式含微信授权 + 30 天警告 + 确认勾选）
@@ -355,10 +362,10 @@ PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围
 ## G. 跨切面
 
 - [x] **G-01 UnifiedFileList ellipsis 死控件**：✅ 已并入 A-03
-- [ ] **G-02 新增文案 i18n**：⬜ 所有新 UI 文本走 `t()` → extract+compile；mxUIConfig.json 菜单文案手工写 translates（坑记录见 Batch 6）
-- [ ] **G-03 集成测试/单测**：⬜ 每条 P0/P1 修复带回归测试
-- [ ] **G-04 PC 通知中心孤儿代码**：⏸ 维持保留 + 如实保留 4 个 type-check 错误（2026-09-10 裁定，无消费者、后端从未存在）
-- [ ] **G-05（2026-10-01 新增）platform 收敛回归**：每处 P-xx 收敛后，两端 type-check + 测试 + `pnpm --filter @cloudcad/platform type-check` 全绿才算完成
+- [➖] **G-02 新增文案 i18n**：➖ 2026-10-03 重写——**`pnpm i18nCompile`（`voerkai18n compile -t`）不可信，禁止运行**（`-t` 只是「启用 typescript」，不是翻译/抽取；实测会静默把 idMap + 4 语言重建成「HEAD 减 89 键」且零报错，见 Batch 17 事故注）。当前唯一可靠流程：①把新键手工追加到 `idMap.json` + 4 个 `messages/*.ts`（末条目无尾逗号、文件以 `}` 结尾；值里的双引号必须 `\"` 转义——键 3728 曾因 en-US/ko-KR 未转义致 `TS1005` 全量红）；②校验四语 entries 数一致 + 可 JSON 解析 + id 无重复 + 四语 id 集合一致；③`vue-tsc --noEmit`。mxUIConfig.json 菜单文案仍手工写 translates（坑记录见 Batch 6）
+- [➖] **G-03 集成测试/单测**：➖ 2026-10-03 排票（见文末「待排票」）——未成为硬门禁。Batch 15~18 的实际做法是「改逻辑的条目带 spec（`useShareCreate`/`apiError`/`useShareLinkCopy`/platform `share/url`），纯 UI 文案条目不带」，是否升为强制规则需用户裁定
+- [➖] **G-04 PC 通知中心孤儿代码**：➖ 已裁定（2026-09-10），Batch 18 只把状态标记从 ⏸ 改为 ➖——维持保留 + 如实保留 4 个 type-check 错误（无消费者、后端从未存在）
+- [x] **G-05（2026-10-01 新增）platform 收敛回归**：✅ 2026-10-03 确认为常驻验收纪律（非一次性任务）——每处 P-xx 收敛后，两端 type-check + 测试 + `pnpm --filter @cloudcad/platform type-check` 全绿才算完成。Batch 17（platform `toShareUrl`）与 Batch 18 均已按此口径收尾
 
 ---
 
@@ -379,4 +386,21 @@ PC `FontLibrary` 需 `SYSTEM_FONT_READ` 权限=管理员功能，按本次范围
 | Batch 15（分享细节对齐） | C-17 创建弹窗自定义天数 + C-18 已有分享链接/复制 + C-19 删死分支 + C-20 批量进度 + C-21 errMsg 唯一出口 + C-22 撤销文案统一 + C-23 错误态/空态 + C-24 搜索防抖 + C-25 二维码 160 | ✅ 2026-10-03 完成：ShareCurrentPopup/ShareManagePage/useShareCreate/apiError 共 4 文件；`errMsg` 补裸字符串直通（修 `[object Object]` 与错误塌成兜底）；`createShares` 加 `onProgress`（不传行为不变）；新增 i18n 键 3721/3722 四语 |
 | Batch 16（实时协同对齐） | K-01~K-13 全 13 项（详见 §K） | ✅ 2026-10-03 完成：useCooperate/useCollabAutoJoin/useOpenGuard/useEditorState/collab.ts/editor.ts/CooperatePopup/WorkCard/index.vue 共 9 文件；新增 i18n 键 3723-3727 四语。最大产出=K-01 一处 `guardBeforeOpen` 覆盖 4 个打开入口 + K-08 修跨端死链。**后端无缺口**（协同是 http-proxy 黑盒，无 REST 面） |
 | Batch 17（分享链接绝对化 + 复制反馈） | C-26 `toShareUrl` 收敛进 platform + 两端薄出口（移动端 4 边界覆盖 10 消费点、PC 5 处手写拼接换共享规则）+ C-27 `useShareLinkCopy` 行内反馈 | ✅ 2026-10-03 完成：platform `share/url.ts` + spec + barrel；PC `utils/shareUrl.ts` + ShareDialog ×4 + useShareActions；移动端 `utils/shareUrl.ts` + `useShareLinkCopy`（+5 例 spec）+ ShareManagePage/ShareCurrentPopup/useShareCreate。**门禁**：platform 13/76 绿、PC type-check 0 错 + share specs 19/19、移动端 vue-tsc 0 错 + 68 文件/633 用例绿 + `vite build` 成功。**⚠ i18n 事故**：`pnpm i18nCompile`（`voerkai18n compile -t`）会把 `idMap.json` 连同 4 个语言文件一起重建成「HEAD 减去尾部 89 个键」的状态（丢 1412 + 3633-3720，含批量下载/回收站/跨项目转移/分享撤销等文案），且不补本轮新键。已 `git show HEAD:` 逐文件恢复后**手工**追加 3721-3727 四语（1181/1182 条，四语 id 集合完全一致）；**此工具当前不可信，勿再跑**，i18n 键须手工加或在工具修复后统一跑 |
-| ⏸ 待确认 | D-10 会员入口改走移动端 MemberCenterPage？/ P-08 编辑器菜单审计自动化 | 需用户裁定 |
+| Batch 18（分享/协同收尾） | C-29 WorkCard 协同分享复制收敛进 `useShareLinkCopy` + 行内 ✓ + C-30 WorkCard 5 处硬编码中文包 `t()`（新键 3731）+ C-28 查证非差距 + 台账清尾 | ✅ 2026-10-03 完成：`WorkCard.vue` 删本地 `copyText` + 两份回落 refs 改调 `useShareLinkCopy`（`copiedKey === display.shareUrl` 行内 ✓）；`分享`×2/`退出`/`加入`×2 包 `t()`，**与 PC `CollabWorkCard.tsx` 三个按钮文案逐字一致**。C-13 由 C-27 覆盖故合并；D-10 查证为台账过时（`router.push('/shell/member')` 直达原生 MemberCenterPage）；G-02 重写（compile 工具不可信，改手工加键 + 四语校验）；G-04/G-05 状态归位；B-10/P-08 自动化/Batch 6b/G-03/C-28 跨端日期排票见文末。**门禁**：移动端 `vue-tsc --noEmit` 0 错 + vitest 70 文件 / 647 用例全绿 | 
+| ⏸ 待确认 | P-08 编辑器菜单审计自动化（命令覆盖已人工审计完成，门禁待建）/ Batch 6b 库层级视图 / G-03 测试覆盖率门禁 | 需用户裁定（明细见文末「待排票」） |
+
+---
+
+## 待排票（Batch 18 收尾，2026-10-03）
+
+以下为已查证但**不进 Batch 18** 的项。本仓台账无 issue 编号约定，故在此集中登记而非散落在各处 ⏸ 标记里：
+
+| 项 | 内容 | 为什么不进本批 | 前置条件 |
+|---|---|---|---|
+| **C-28 跨端日期口径** | 分享相关日期两端都用 `toLocaleDateString()`（PC `constants/share.ts` `formatExpiryDate` + `ShareTable.tsx` createdAt 列；移动端 `ShareManagePage.vue` `formatExpiryDate`/`formatDate`）。若统一走 platform `formatDate`（固定 `YYYY-MM-DD`），需 **4 处同改**并同步动 PC 行为 | 单改一端会制造跨端显示不一致；P-12 的固定格式决策只覆盖审计/版本/文件时间戳 | 产品裁定：分享日期要不要也走固定格式 |
+| **B-10 精细化错误文案** | 成员操作失败兜底 `移除失败`（`ProjectDetailPage.vue:356`）是硬编码中文且 idMap 无此键 | 低优；且 `ProjectDetailPage.vue` 正被并发会话修改，动它必冲突 | 与 G-02 的 i18n 流程改造一并处理 |
+| **P-08 菜单审计自动化** | 命令覆盖已人工审计完成（E-30~E-33 结论见 §E），但审计靠手工 grep，无门禁；引擎 ini 双源结构不同名（PC `myUiConfig.json` 196 命令 vs 移动端 `mxUIConfig.json` 55 命令） | 需先裁定审计范围与判定标准（能否合并两份数据本身就是 P-08 的结论：不能） | 用户裁定 |
+| **Batch 6b 库层级视图** | E-09 库内新建文件夹 / E-12 库内移动复制 / E-17 库面包屑 | 与 all-files 决策冲突，属产品形态取舍而非技术差距 | 用户裁定 |
+| **G-03 测试覆盖率门禁** | 「每条 P0/P1 修复带回归测试」未成为硬门禁；Batch 15~18 实际做法=改逻辑的条目带 spec、纯 UI 文案条目不带 | 是否升为强制规则影响后续所有批次的工作量 | 用户裁定 |
+
+> 已关闭无需再排票：G-04（PC 通知中心孤儿代码，2026-09-10 已裁定保留）、C-13（与 C-27 重复合并）、D-10（台账过时，现状已与 PC 对齐）。

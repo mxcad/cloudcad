@@ -5,7 +5,7 @@ import { showToast } from 'vant';
 import QRCode from 'qrcode';
 import FloatingPopup from './FloatingPopup.vue';
 import ShareLinkSheet from './ShareLinkSheet.vue';
-import { copyText } from '@/utils/clipboard';
+import { useShareLinkCopy } from '@/composables/useShareLinkCopy';
 import type { Work } from '../composables/useCooperate';
 
 export interface WorkDisplay {
@@ -35,8 +35,8 @@ const emit = defineEmits<{
   (e: 'exit'): void;
 }>();
 
-const showLinkSheet = ref(false);
-const linkSheetUrl = ref('');
+// 复制走唯一出口（对齐 ShareManagePage）：降级链 + 回落面板 + 行内 ✓ 都在里面
+const { copiedKey, showLinkSheet, linkSheetUrl, copy } = useShareLinkCopy();
 const showQr = ref(false);
 const qrDataUrl = ref('');
 
@@ -54,14 +54,9 @@ async function handleShare() {
 }
 
 async function handleCopy() {
-  const result = await copyText(props.display.shareUrl);
-  // 两级降级都失败：弹出只读输入框让用户手动选中复制
-  if (result === 'failed') {
-    showLinkSheet.value = true;
-    return;
-  }
-  showToast(t('分享链接已复制'));
-  showQr.value = false;
+  // 失败时 copy() 已弹出 ShareLinkSheet 手动复制面板；成功才收起二维码
+  const ok = await copy(props.display.shareUrl);
+  if (ok) showQr.value = false;
 }
 </script>
 
@@ -93,7 +88,8 @@ async function handleCopy() {
       </div>
       <template #footer>
         <van-button type="primary" block round @click="handleCopy">
-          {{ t('复制') }}
+          <van-icon v-if="copiedKey === display.shareUrl" name="success" size="14" />
+          <span v-else>{{ t('复制') }}</span>
         </van-button>
       </template>
     </FloatingPopup>
@@ -138,12 +134,12 @@ async function handleCopy() {
         </div>
       </div>
       <div class="card-actions">
-        <button class="btn btn-outline" @click="handleShare">分享</button>
+        <button class="btn btn-outline" @click="handleShare">{{ t('分享') }}</button>
         <button
           v-if="display.isJoined"
           class="btn btn-danger"
           @click="emit('exit')"
-        >退出</button>
+        >{{ t('退出') }}</button>
         <button
           v-else
           class="btn btn-primary"
@@ -151,21 +147,21 @@ async function handleCopy() {
           @click="emit('join', display.work.work_id)"
         >
           <van-loading v-if="connecting" color="var(--van-white)" size="14px" />
-          <span v-else>加入</span>
+          <span v-else>{{ t('加入') }}</span>
         </button>
       </div>
     </div>
 
     <!-- 简化版（无 footer） -->
     <div v-else class="card-actions">
-      <button class="btn btn-outline" @click="handleShare">分享</button>
+      <button class="btn btn-outline" @click="handleShare">{{ t('分享') }}</button>
       <button
         class="btn btn-primary"
         :disabled="connecting"
         @click="emit('join', display.work.work_id)"
       >
         <van-loading v-if="connecting" color="var(--van-white)" size="14px" />
-        <span v-else>加入</span>
+        <span v-else>{{ t('加入') }}</span>
       </button>
     </div>
   </div>
