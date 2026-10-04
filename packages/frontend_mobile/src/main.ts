@@ -54,6 +54,13 @@ setToastDefaultOptions({
 i18nScope.ready(async ()=> {
     await initConfig()
 
+    // API client 必须先于任何 SDK 请求配置：SDK 在发起请求那一刻从 _config 读
+    // responseTransformer（client.gen.ts `const opts = { ..._config }`），晚于请求发出
+    // 才 setConfig 会让该请求拿不到解包器 → res.data 恒为 { code,message,data,timestamp }
+    // 包壳。ensureBrandApplied 内部 await ensureRuntimeConfig() 会同步触发首个 SDK 请求，
+    // 故 setupApiClient 必须排在它之前（此前顺序颠倒导致运行时配置全回落 DEFAULTS）。
+    setupApiClient()
+
     // 品牌（页签标题 / favicon）按运行时 brandProfile 覆盖 index.html 的静态兜底值。
     // 不 await：配置接口失败或慢都不该挡 App 挂载，取回后自然生效。
     void ensureBrandApplied()
@@ -65,8 +72,6 @@ i18nScope.ready(async ()=> {
     app.use(createPinia())
     app.use(router)
     app.use(plugins)
-
-    setupApiClient()
 
     const { debug } = getParamsFromUrl()
 

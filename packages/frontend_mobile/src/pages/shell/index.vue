@@ -17,6 +17,7 @@ import { showDialog } from 'vant'
 import { useShellStack } from '../../stores/shellStack'
 import { t, i18nScope } from '../../languages'
 import { useUser } from '../../composables/useUser'
+import { useBrand } from '../../composables/useBrand'
 import { buildPcUrlForPath } from '../../utils/pcTarget'
 import Home from '../home/index.vue'
 import FileBrowserPage from './sub-pages/FileBrowserPage.vue'
@@ -123,6 +124,8 @@ function closeSheet() {
 // ── 「+」菜单：导航入口 + 账号与设置（语言 / 退出登录）──
 const i18n = useVoerkaI18n()
 const { isAuthenticated, logout } = useUser()
+// 顶栏标题用品牌配置主标题（对齐 PC Layout 的 appName=brandConfig.title），不再硬编码产品名
+const { brand } = useBrand()
 const showLanguageSheet = ref(false)
 
 /** 语言名用各语言自身写法（nativeTitle），不同语言下都能认出母语 */
@@ -227,7 +230,7 @@ defineExpose({
           <van-icon name="arrow-left" size="22" />
         </button>
       </span>
-      <h1 class="shell-title">CloudCAD</h1>
+      <h1 class="shell-title">{{ brand.title }}</h1>
       <nav class="shell-entries">
         <button class="entry-btn" aria-label="更多" @click="openSheet">
           <van-icon name="plus" size="24" />
@@ -371,6 +374,10 @@ defineExpose({
   font-weight: 600;
   letter-spacing: 0.2px;
   color: var(--text-primary);
+  /* 品牌主标题由管理端配置，可能超长：单行截断防挤占返回/更多按钮 */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .shell-entries {
