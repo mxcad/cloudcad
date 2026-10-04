@@ -10,13 +10,24 @@ import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
  * 新增字段时两边必须同步。
  */
 /**
- * 运行时品牌档案里移动端用到的部分：法务条款正文的品牌占位符
- * （产品全称 / 简称 / 运营主体）。形状与 PC `appConfig.ts` 的 `RuntimeBrandConfig.legal`
- * 同构——管理端只填了哪些字段，DB 里就只有哪些键，故全部可选。
+ * 运行时品牌档案里移动端消费的部分。字段名与 PC `appConfig.ts` 的
+ * `RuntimeBrandConfig`（= `Partial<BrandConfig>`）同名同义——管理端配一份两端共用。
+ * PC 独有的 `subtitle` / `docsUrl` / `apps` / `tagline` 移动端无对应消费点，
+ * 故不在此声明（后端 brandProfile 是 type:json，未声明字段照样能存）。
+ * DB 里只有管理端填了的键，故全部可选。
+ * 移动端消费入口统一走 `config/brandConfig.ts` 的 `resolveBrand` / `resolveLegalVars`。
  */
 export interface RuntimeBrandProfile {
+  /** 应用主标题：页签标题 + 认证页品牌名（对齐 PC `BrandConfig.title`） */
+  title?: string
+  /** Logo 路径（同为 favicon 来源，对齐 PC `BrandConfig.logo`） */
+  logo?: string
+  copyrightYear?: string
   /** 版权主体（页脚展示，对齐 PC `BrandConfig.copyrightHolder`） */
   copyrightHolder?: string
+  copyrightLine?: string
+  /** 客服：email/phone 以 supportEmail/supportPhone 运行时项为准，此处仅补 hours */
+  support?: { email?: string; phone?: string; hours?: string }
   legal?: {
     productName?: string
     productShortName?: string
@@ -185,6 +196,16 @@ async function fetchConfig(): Promise<void> {
     }
   })();
   return fetchPromise;
+}
+
+/** 非组件上下文触发配置加载（main.ts 启动期用；已加载则立即返回） */
+export function ensureRuntimeConfig(): Promise<void> {
+  return fetchConfig();
+}
+
+/** 当前配置快照（非组件上下文读取用；未取回时为默认值） */
+export function getRuntimeConfigSnapshot(): PublicRuntimeConfig {
+  return config.value;
 }
 
 export function useRuntimeConfig() {

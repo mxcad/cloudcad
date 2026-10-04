@@ -35,11 +35,14 @@ import {
 import { isPhone, isCode } from '@/utils/authValidation'
 import { useCountdown } from '@/composables/useCountdown'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import { useBrand } from '@/composables/useBrand'
 import { useWechatLogin, takeWechatTxn } from '@/composables/useWechatLogin'
+import AuthBrandHeader from '@/components/AuthBrandHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { config } = useRuntimeConfig()
+const { brand } = useBrand()
 
 const activeTab = ref<'account' | 'phone'>('account')
 const loading = ref(false)
@@ -216,6 +219,7 @@ onMounted(() => {
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <AuthBrandHeader />
       <div class="auth-header">
         <h1 class="auth-title">{{ t('登录') }}</h1>
         <p class="auth-subtitle">{{ t('欢迎回来，请登录您的账户') }}</p>
@@ -329,6 +333,9 @@ onMounted(() => {
           <button class="link-btn" type="button" @click="goLegal('terms')">{{ t('用户协议') }}</button>
         </div>
       </div>
+
+      <!-- 版权行独立于 auth-footer（那是 flex 行，塞段落会被拆成一行内 token） -->
+      <p class="auth-copyright">{{ brand.copyrightText }}</p>
     </div>
   </div>
 </template>

@@ -32,11 +32,14 @@ import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isPhone, isCode, isEmail, getPasswordStrength } from '@/utils/authValidation'
 import { useCountdown } from '@/composables/useCountdown'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import { useBrand } from '@/composables/useBrand'
 import { useRegisterFieldCheck } from '@/composables/useRegisterFieldCheck'
+import AuthBrandHeader from '@/components/AuthBrandHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { config } = useRuntimeConfig()
+const { brand } = useBrand()
 
 const phone = ref('')
 const code = ref('')
@@ -210,6 +213,7 @@ onMounted(() => {
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <AuthBrandHeader />
       <template v-if="closed">
         <div class="auth-header">
           <h1 class="auth-title">{{ t('注册已关闭') }}</h1>
@@ -224,7 +228,9 @@ onMounted(() => {
       <template v-else>
         <div class="auth-header">
           <h1 class="auth-title">{{ t('注册') }}</h1>
-          <p class="auth-subtitle">{{ t('创建账户，开始使用 CloudCAD') }}</p>
+          <p class="auth-subtitle">{{
+            t('创建账户，开始使用 {shortName}', { shortName: brand.shortName })
+          }}</p>
         </div>
 
         <div class="form-body">
@@ -335,6 +341,9 @@ onMounted(() => {
           <button class="link-btn" type="button" @click="goLogin">{{ t('去登录') }}</button>
         </div>
       </template>
+
+      <!-- 版权行独立于 auth-footer（那是 flex 行，塞段落会被拆成一行内 token） -->
+      <p class="auth-copyright">{{ brand.copyrightText }}</p>
     </div>
   </div>
 </template>

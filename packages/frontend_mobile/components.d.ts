@@ -12,6 +12,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AuthBrandHeader: typeof import('./src/components/AuthBrandHeader.vue')['default']
     DialogBase: typeof import('./src/components/DialogBase.vue')['default']
     DwgIcon: typeof import('./src/components/FileIcons/DwgIcon.vue')['default']
     DxfIcon: typeof import('./src/components/FileIcons/DxfIcon.vue')['default']
@@ -64,6 +65,7 @@ declare module 'vue' {
 
 // For TSX support
 declare global {
+  const AuthBrandHeader: typeof import('./src/components/AuthBrandHeader.vue')['default']
   const DialogBase: typeof import('./src/components/DialogBase.vue')['default']
   const DwgIcon: typeof import('./src/components/FileIcons/DwgIcon.vue')['default']
   const DxfIcon: typeof import('./src/components/FileIcons/DxfIcon.vue')['default']

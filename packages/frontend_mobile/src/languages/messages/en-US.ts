@@ -748,7 +748,7 @@ export default  {
     "2712": "registered successfully",
     "2713": "Registration failed, please try again",
     "2714": "Registration",
-    "2715": "Create an account and start using CloudCAD",
+    "2715": "Create an account and start using {shortName}",
     "2716": "At least 6 characters",
     "2717": "Optional, up to 50 characters",
     "2718": "Registering",

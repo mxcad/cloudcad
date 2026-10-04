@@ -1,13 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover"
     />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <title>在线CAD梦想画图</title>
+    <!-- 静态兜底值：logo 与 branding.js 同源，标题与 runtime/scripts/lib/branding.js 的
+         PRODUCT_NAME 一致；JS 启动后由 config/brandConfig.ts 的 ensureBrandApplied
+         按运行时 brandProfile 覆盖（管理端可改，无需重新打包） -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <title>梦想网页CAD实时协同平台</title>
   </head>
   <body ontouchstart="">
     <div id="app"></div>

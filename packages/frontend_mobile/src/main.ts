@@ -47,11 +47,16 @@ import "vant/lib/index.css"
 import "./styles/tokens.scss"
 import { getParamsFromUrl } from './utils/paramsFromUrl.js';
 import { setupApiClient } from './utils/apiConfig';
+import { ensureBrandApplied } from './config/brandConfig';
 setToastDefaultOptions({
     position: "top",
 })
 i18nScope.ready(async ()=> {
     await initConfig()
+
+    // 品牌（页签标题 / favicon）按运行时 brandProfile 覆盖 index.html 的静态兜底值。
+    // 不 await：配置接口失败或慢都不该挡 App 挂载，取回后自然生效。
+    void ensureBrandApplied()
 
     const app = createApp(App)
     app.use<VoerkaI18nVuePluginOptions>(i18nPlugin as any,{
