@@ -55,12 +55,15 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'json',
     category: 'brand',
     description:
-      '品牌档案（标题/标语/Logo 路径/文档地址/版权/法务主体），整块覆盖前端内置默认值。客服邮箱/电话请用 supportEmail、supportPhone 项，此处 support 仅支持 hours（服务时间）。',
+      '品牌档案（标题/标语/Logo 路径/文档地址/版权/法务主体），整块覆盖前端内置默认值。' +
+      'PC 与移动端都消费同一份（移动端只读 title/logo/版权字段与 legal，' +
+      '不读 subtitle/docsUrl/apps/tagline）。客服邮箱/电话请用 supportEmail、supportPhone 项，' +
+      '此处 support 仅支持 hours（服务时间）。',
     defaultValue: {},
     isPublic: true,
     tier: 'user',
     impact:
-      '保存后前端即刻生效（BrandContext 订阅公开配置）；字段缺失时回退到前端内置默认品牌，' +
+      '保存后 PC（BrandContext）与移动端（启动期与配置快照）即刻生效；字段缺失时回退到前端内置默认品牌，' +
       '需清空某字段请从 JSON 中删除该键（不支持空串清空，前端校验会拒绝）。',
   },
   {

@@ -21,8 +21,12 @@ describe("RuntimeConfigService", () => {
 			findMany: jest.fn(),
 			findUnique: jest.fn(),
 			createMany: jest.fn(),
+			update: jest.fn(),
 			upsert: jest.fn(),
 		},
+		// syncDefaultConfigs 用事务回填 isPublic/description 漂移，未 mock 会在
+		// 构造期的 .catch() 里静默失败
+		$transaction: jest.fn().mockImplementation(async (ops: unknown[]) => ops),
 		runtimeConfigLog: {
 			create: jest.fn(),
 			findMany: jest.fn(),
@@ -386,6 +390,109 @@ describe("RuntimeConfigService", () => {
 			const result = await service.getAllConfigs();
 			expect(result).toHaveLength(1);
 			expect(result[0].key).toBe("mailEnabled");
+		});
+	});
+
+	// ==================== 启动期同步与 env 别名一致性 ====================
+	describe("启动期同步与 env 别名一致性", () => {
+		// 全部定义键都算「已存在」，否则其余键会被判为新增而走 createMany
+		const allDefRows = (
+			overrides: Record<string, Record<string, unknown>> = {},
+		) =>
+			RUNTIME_CONFIG_DEFINITIONS.map((d) => ({
+				key: d.key,
+				value: JSON.stringify(d.defaultValue),
+				type: d.type,
+				category: d.category,
+				description: d.description,
+				isPublic: d.isPublic,
+				updatedBy: null,
+				updatedAt: new Date(),
+				...overrides[d.key],
+			}));
+
+		afterEach(() => {
+			delete process.env.AUDIT_RETENTION_DAYS;
+			delete process.env.AUDIT_LOG_RETENTION_DAYS;
+		});
+
+		it("isPublic / description 漂移时逐键回填，且不动 value / updatedBy", async () => {
+			// mailEnabled 定义表 isPublic=true、description='邮件服务开关'；
+			// 这里造的存量行两个字段都是旧值 → 应当被回填
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue(
+				allDefRows({
+					mailEnabled: { description: "旧文案", isPublic: false },
+				}),
+			);
+			mockPrisma.runtimeConfig.createMany.mockResolvedValue({});
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+			mockPrisma.$transaction.mockResolvedValue([]);
+
+			await (service as any).syncDefaultConfigs();
+
+			const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "mailEnabled")!;
+			expect(mockPrisma.runtimeConfig.createMany).not.toHaveBeenCalled();
+			expect(mockPrisma.runtimeConfig.update).toHaveBeenCalledTimes(1);
+			// 只回填定义表独有的元数据两列——value / updatedBy 是「用户改过」与
+			// 「env 层生效」的判据，碰了会让私有化定制静默失效
+			expect(mockPrisma.runtimeConfig.update).toHaveBeenCalledWith({
+				where: { key: "mailEnabled" },
+				data: { isPublic: def.isPublic, description: def.description },
+			});
+			expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+		});
+
+		it("全新键仍走 createMany + skipDuplicates，不做任何 update", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+			mockPrisma.runtimeConfig.createMany.mockResolvedValue({});
+
+			await (service as any).syncDefaultConfigs();
+
+			expect(mockPrisma.runtimeConfig.createMany).toHaveBeenCalledWith({
+				data: expect.any(Array),
+				skipDuplicates: true,
+			});
+			expect(mockPrisma.runtimeConfig.update).not.toHaveBeenCalled();
+			expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+		});
+
+		it("无新增也无漂移时直接返回，不产生任何写操作", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue(allDefRows());
+
+			await (service as any).syncDefaultConfigs();
+
+			expect(mockPrisma.runtimeConfig.createMany).not.toHaveBeenCalled();
+			expect(mockPrisma.runtimeConfig.update).not.toHaveBeenCalled();
+			expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+		});
+
+		it("envValue 与 resolveValue 同口径：只配兼容别名时管理端也能看到 env 值", async () => {
+			// 部署方沿用 #322 之前的旧变量名 AUDIT_LOG_RETENTION_DAYS=730
+			delete process.env.AUDIT_RETENTION_DAYS;
+			process.env.AUDIT_LOG_RETENTION_DAYS = "730";
+
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "auditRetentionDays",
+					value: JSON.stringify(183),
+					type: "number",
+					category: "audit",
+					description: "审计日志保留天数",
+					isPublic: false,
+					updatedBy: null,
+					updatedAt: new Date(),
+				},
+			]);
+
+			const item = (await service.getAllConfigs()).find(
+				(i) => i.key === "auditRetentionDays",
+			)!;
+
+			// resolveValue 认别名 → 生效值 730；enrichFromDefinition 若漏传 envAliases，
+			// envValue 会是 null，「已被 env 锁定、清空后要重启才生效」的提示随之失效
+			expect(item.value).toBe(730);
+			expect(item.source).toBe("env");
+			expect(item.envValue).toBe(730);
 		});
 	});
 

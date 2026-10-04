@@ -72,7 +72,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   }
 
   /**
-   * 同步默认配置到数据库（仅添加不存在的配置项）
+   * 同步默认配置到数据库
    *
    * 注意：写入的行 `updatedBy` 保持 null，这是「未被用户显式修改」的唯一判据——
    * env 层默认值正因此才能在这些行上生效（见 resolveValue）。
@@ -83,31 +83,56 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
     // 获取所有已存在的配置
     const existingConfigs = await this.prisma.runtimeConfig.findMany({
-      select: { key: true },
+      select: { key: true, isPublic: true, description: true },
     });
     const existingKeys = new Set(existingConfigs.map((c) => c.key));
+    const existingByKey = new Map(existingConfigs.map((c) => [c.key, c]));
 
     // 过滤出不存在的配置
     const newConfigs = RUNTIME_CONFIG_DEFINITIONS.filter(
       (def) => !existingKeys.has(def.key)
     );
 
-    if (newConfigs.length === 0) {
+    // `isPublic` / `description` 是定义表独有的元数据，管理端没有编辑入口——
+    // 定义表改了就回填，否则 isPublic 变更对已初始化的存量部署永久无效。
+    // 刻意不碰 value / updatedBy：那两项是「用户改过」与「env 层生效」的判据。
+    const drifted = RUNTIME_CONFIG_DEFINITIONS.filter((def) => {
+      const row = existingByKey.get(def.key);
+      return (
+        row && (row.isPublic !== def.isPublic || row.description !== def.description)
+      );
+    });
+
+    if (newConfigs.length === 0 && drifted.length === 0) {
       return;
     }
 
     // 批量创建新配置
-    await this.prisma.runtimeConfig.createMany({
-      data: newConfigs.map((def) => ({
-        key: def.key,
-        value: JSON.stringify(def.defaultValue),
-        type: def.type,
-        category: def.category,
-        description: def.description,
-        isPublic: def.isPublic,
-      })),
-      skipDuplicates: true,
-    });
+    if (newConfigs.length > 0) {
+      await this.prisma.runtimeConfig.createMany({
+        data: newConfigs.map((def) => ({
+          key: def.key,
+          value: JSON.stringify(def.defaultValue),
+          type: def.type,
+          category: def.category,
+          description: def.description,
+          isPublic: def.isPublic,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    if (drifted.length > 0) {
+      // 逐键更新：各键的 isPublic / description 互不相同，updateMany 只能写同一份数据
+      await this.prisma.$transaction(
+        drifted.map((def) =>
+          this.prisma.runtimeConfig.update({
+            where: { key: def.key },
+            data: { isPublic: def.isPublic, description: def.description },
+          }),
+        ),
+      );
+    }
 
     this.logger.log(
       `运行时配置同步完成: 创建 ${newConfigs.length} 个配置，耗时 ${Date.now() - startTime}ms`
@@ -527,8 +552,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     | 'dangerous'
     | 'hot'
   > {
+    // 必须与 resolveValue 同样传入 envAliases，否则只配了兼容别名（如
+    // AUDIT_LOG_RETENTION_DAYS）的部署会在管理端看到 envValue=null，
+    // 「已被 env 锁定」提示与二次确认分支全部失效。
     const envValue = def?.envKey
-      ? this.parseEnvValue(def.envKey, def.type)
+      ? this.parseEnvValue(def.envKey, def.type, def.envAliases)
       : null;
 
     const defaultValue = def?.defaultValue;
