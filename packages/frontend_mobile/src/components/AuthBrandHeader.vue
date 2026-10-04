@@ -25,3 +25,32 @@ const logoOk = ref(true)
     <div class="auth-brand-name">{{ brand.title }}</div>
   </div>
 </template>
+
+<style scoped lang="scss">
+/* 品牌区样式必须随组件走：父页面（Login/Register）的 scoped 选择器带 data-v 属性，
+   匹配不到本组件内部的 img/div，抽组件后若样式还留在父级则 logo 失去尺寸约束、
+   按原图（1080px）撑满整屏（ADR-0062 品牌区抽组件时漏迁）。 */
+.auth-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+/* 品牌名用 div 而非 h1——页面已有 h1（auth-title 的动作标题），
+   两个 h1 会让读屏软件报出两个同级标题 */
+.auth-brand-name {
+  margin: 0;
+  font-size: var(--font-size-page-title);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text-primary);
+  text-align: center;
+}
+</style>

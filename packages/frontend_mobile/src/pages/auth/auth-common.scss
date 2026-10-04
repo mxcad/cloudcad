@@ -42,30 +42,8 @@
   gap: 20px;
 }
 
-/* 品牌区（logo + 产品名），位于 .auth-header 之上，两个页面字节相同故抽组件 */
-.auth-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.auth-logo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-}
-
-/* 品牌名用 div 而非 h1——页面已有 h1（auth-title 的动作标题），
-   两个 h1 会让读屏软件报出两个同级标题 */
-.auth-brand-name {
-  margin: 0;
-  font-size: var(--font-size-page-title);
-  font-weight: 700;
-  line-height: 1.3;
-  color: var(--text-primary);
-  text-align: center;
-}
+/* 品牌区（.auth-brand/.auth-logo/.auth-brand-name）样式随 AuthBrandHeader.vue
+   组件走（scoped 选择器带 data-v，留在父级匹配不到组件内部元素，logo 会撑满整屏）。 */
 
 .auth-header {
   text-align: center;
