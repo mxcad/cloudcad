@@ -205,9 +205,26 @@ describe('useUnifiedFileList 统一数据层（阶段 4 搜索分支）', () => 
     expect(vi.mocked(nodeControllerGetChildren)).toHaveBeenCalledWith(
       expect.objectContaining({ path: { nodeId: 'space-1' } }),
     )
-    // 回根不覆盖存档（currentFolderId===rootId 跳过持久化，仍保留上次离开位置）
-    const saved = JSON.parse(localStorage.getItem('fs_breadcrumb_personal') ?? 'null')
-    expect(saved?.folderId).toBe('folder-1')
+    // 回根清存档：存档语义=离开时的位置，回根即从根离开；
+    // 若保留旧存档，重载后 loadRootNode 会还原进之前进的文件夹，与用户回根动作矛盾
+    expect(localStorage.getItem('fs_breadcrumb_personal')).toBeNull()
+  })
+
+  it('往返回归：进文件夹→回根→重载（新实例）落根而非旧文件夹', async () => {
+    resolveWith(nodeControllerGetChildren, nodePage([{ id: 'folder-1', name: '文件夹一' }]))
+    const c = useUnifiedFileList('personal')
+    await c.loadRootNode('space-1')
+    c.enterFolder({ id: 'folder-1', name: '文件夹一' } as never)
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
+    c.goBackTo(-1)
+    await vi.waitFor(() => expect(c.loading.value).toBe(false))
+    // 模拟重载：新实例读存档（回根已清）→ 落根
+    const c2 = useUnifiedFileList('personal')
+    await c2.loadRootNode('space-1')
+    expect(c2.currentFolderId.value).toBe('space-1')
+    expect(c2.breadcrumbs.value).toEqual([])
+    // 未走存档还原路径（不查节点存在性）
+    expect(vi.mocked(nodeControllerGetNode)).not.toHaveBeenCalled()
   })
 
   it('loadRootNode：还原存档位置（节点仍存在 → getChildren 按存档加载）', async () => {

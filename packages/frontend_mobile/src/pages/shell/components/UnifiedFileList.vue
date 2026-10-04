@@ -230,6 +230,18 @@ function onItemClick(item: ListItem) {
   }
 }
 
+// 长按守卫：只抑制长按后紧随的那次合成 click（消费后复位）。
+// 原内联 `longPressTriggered ? undefined : onItemClick` 不复位标志，长按进多选后
+// 标志恒为 true，后续所有点选追加都被吞——触摸设备无法逐项勾选，只能靠「全选」。
+// 与 LibraryPanel / ShareManagePage 的消费式写法对齐。
+function onItemTap(item: ListItem) {
+  if (longPressTriggered.value) {
+    longPressTriggered.value = false
+    return
+  }
+  onItemClick(item)
+}
+
 // 多选操作项由父组件注入（回收站传 恢复/彻底删除），不传沿用默认四项
 // 复制/剪切=写入剪贴板（对齐 PC 多选剪贴板），粘贴见工具栏粘贴条
 const selectionActions = computed<SelectionActionDef[]>(() =>
@@ -428,7 +440,7 @@ async function onPullRefresh() {
           :key="item.id"
           class="grid-item"
           :class="{ 'grid-item--folder': item.isFolder, 'grid-item--selected': selected.has(item.id) }"
-          @click="longPressTriggered ? undefined : onItemClick(item)"
+          @click="onItemTap(item)"
           @touchstart.passive="startLongPress(item)"
           @touchend="cancelLongPress"
           @touchmove="cancelLongPress"
@@ -484,7 +496,7 @@ async function onPullRefresh() {
           :key="item.id"
           class="list-item"
           :class="{ 'list-item--selected': selected.has(item.id) }"
-          @click="longPressTriggered ? undefined : onItemClick(item)"
+          @click="onItemTap(item)"
           @touchstart.passive="startLongPress(item)"
           @touchend="cancelLongPress"
           @touchmove="cancelLongPress"

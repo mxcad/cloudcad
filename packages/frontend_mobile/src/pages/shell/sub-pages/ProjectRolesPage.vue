@@ -139,7 +139,7 @@ async function onPermissionChange(next: string[]) {
         deps: decision.dependents.map(labelOf).join('、'),
       }),
       showCancelButton: true,
-      confirmButtonColor: '#ee0a24',
+      className: 'dialog-danger',
     })
   } catch {
     // 用户取消：不改动 selectedPerms（受控模式下勾选态本就未变）
@@ -223,7 +223,7 @@ async function onDeleteRole(role: ProjectRoleDto) {
         { role: getProjectRoleDisplayName(role.name) },
       ),
       showCancelButton: true,
-      confirmButtonColor: '#ee0a24',
+      className: 'dialog-danger',
     })
   } catch {
     return

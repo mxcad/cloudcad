@@ -85,7 +85,7 @@ export function useProjectActions(refresh: () => Promise<void>) {
         title: t('删除项目'),
         message: t('确定删除项目「{name}」？删除后可在回收站恢复。', { name }),
         showCancelButton: true,
-        confirmButtonColor: '#ee0a24',
+        className: 'dialog-danger',
       })
     } catch {
       return false // 用户取消
@@ -122,7 +122,7 @@ export function useProjectActions(refresh: () => Promise<void>) {
         ),
         showCancelButton: true,
         confirmButtonText: t('确认转让'),
-        confirmButtonColor: '#ee0a24',
+        className: 'dialog-danger',
       })
     } catch {
       return false // 用户取消

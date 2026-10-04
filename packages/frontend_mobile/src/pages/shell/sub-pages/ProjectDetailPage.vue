@@ -547,7 +547,7 @@ async function batchDelete(items: Array<{ id: string; name: string }>) {
       title: t('确认删除'),
       message: t('确定删除 {count} 个文件/文件夹？', { count: String(items.length) }),
       showCancelButton: true,
-      confirmButtonColor: '#ff4444',
+      className: 'dialog-danger',
     })
   } catch { return }
 

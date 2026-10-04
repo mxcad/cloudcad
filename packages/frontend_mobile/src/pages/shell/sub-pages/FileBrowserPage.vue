@@ -210,6 +210,15 @@ function cancelSearchRowLongPress() {
   }
 }
 
+// 长按守卫：只抑制长按后紧随的合成 click（消费后复位），否则菜单关闭后首次点行被吞
+function onSearchRowTap(item: FileListItem) {
+  if (searchRowLongPressTriggered.value) {
+    searchRowLongPressTriggered.value = false
+    return
+  }
+  onSearchResultClick(item)
+}
+
 function onSearchRowMenuSelect() {
   showSearchRowMenu.value = false
   const item = searchRowMenuTarget.value
@@ -383,6 +392,15 @@ function cancelProjectLongPress() {
   }
 }
 
+// 长按守卫：只抑制长按后紧随的合成 click（消费后复位），否则菜单关闭后首次点卡片被吞
+function onProjectCardTap(project: ProjectCard) {
+  if (projectLongPressTriggered.value) {
+    projectLongPressTriggered.value = false
+    return
+  }
+  onProjectClick(project)
+}
+
 function onProjectMenuAction(action: ProjectMenuItem) {
   showProjectMenuSheet.value = false
   const target = projectMenuTarget.value
@@ -508,7 +526,7 @@ async function batchDelete(items: Array<{ id: string; name: string }>) {
       title: t('确认删除'),
       message: t('确定删除 {count} 个文件/文件夹？', { count: String(items.length) }),
       showCancelButton: true,
-      confirmButtonColor: '#ff4444',
+      className: 'dialog-danger',
     })
   } catch { return }
 
@@ -1285,7 +1303,7 @@ async function onFileInputChange(e: Event) {
               <div
                 v-else
                 class="search-row"
-                @click="searchRowLongPressTriggered ? undefined : onSearchResultClick(item)"
+                @click="onSearchRowTap(item)"
                 @touchstart.passive="onSearchRowTouchStart(item)"
                 @touchend="cancelSearchRowLongPress"
                 @touchmove="cancelSearchRowLongPress"
@@ -1325,7 +1343,7 @@ async function onFileInputChange(e: Event) {
             v-for="p in projects"
             :key="p.id"
             class="project-card"
-            @click="projectLongPressTriggered ? undefined : onProjectClick(p)"
+            @click="onProjectCardTap(p)"
             @touchstart.passive="onProjectTouchStart(p)"
             @touchend="cancelProjectLongPress"
             @touchmove="cancelProjectLongPress"

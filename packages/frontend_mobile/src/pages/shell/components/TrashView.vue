@@ -146,7 +146,7 @@ async function confirmPermanentDelete(list: FileListItem[]) {
           ? t('确定彻底删除「{name}」？删除后不可恢复。', { name: list[0].name })
           : t('确定彻底删除 {count} 项？删除后不可恢复。', { count: String(list.length) }),
       showCancelButton: true,
-      confirmButtonColor: '#ee0a24',
+      className: 'dialog-danger',
     })
   } catch {
     return
@@ -168,7 +168,7 @@ async function onClear() {
         ? t('确定要清空项目回收站吗？此操作将彻底删除所有已删除的文件和文件夹，且不可恢复。')
         : t('确定要清空回收站吗？此操作将彻底删除所有已删除的项目，且不可恢复。'),
       showCancelButton: true,
-      confirmButtonColor: '#ee0a24',
+      className: 'dialog-danger',
     })
   } catch {
     return

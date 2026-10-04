@@ -35,6 +35,15 @@ button:not(.van-button) {
   color: #fff;
 }
 
+/*
+ * 破坏性确认（删除/彻底删除/转让等）：调用方传 className: 'dialog-danger'。
+ * 不能用 confirmButtonColor（只设内联文字色，与上面的蓝底叠加成蓝底红字）；
+ * 红底白字对齐 PC variant="destructive"。
+ */
+.dialog-danger .van-dialog__confirm {
+  background: var(--danger);
+}
+
 html,
 body {
   margin: 0;

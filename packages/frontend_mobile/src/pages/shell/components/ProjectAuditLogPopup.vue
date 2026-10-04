@@ -6,7 +6,7 @@
  * 今天/昨天/更早三桶分组 + 逐条定位（文件→打开图纸，文件夹→跳父目录，由页面处理）。
  * 数据走 useProjectAuditLog（GET /api/v1/audit/project/:projectId，成员可查）。
  */
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
 import { showToast } from 'vant'
 import { t } from '@/languages'
 import {
@@ -28,17 +28,23 @@ const emit = defineEmits<{
 }>()
 
 const visible = ref(props.show)
+// 打开时重置筛选会触发下方筛选 watch，用标志跳过避免重复请求
+let resettingFilters = false
 watch(
   () => props.show,
   (val) => {
     visible.value = val
     if (val) {
       // 每次打开重置筛选与列表
+      resettingFilters = true
       audit.search.value = ''
       audit.actionFilter.value = ''
       audit.memberFilter.value = ''
       void audit.loadLogs(true)
       void audit.loadMembers()
+      nextTick(() => {
+        resettingFilters = false
+      })
     }
   },
 )
@@ -62,15 +68,15 @@ const ACTION_OPTIONS = [
   'ROLE_CREATE', 'ROLE_UPDATE', 'ROLE_DELETE',
 ]
 
-function onActionFilter(val: string) {
-  audit.actionFilter.value = val
-  void audit.loadLogs(true)
-}
-
-function onMemberFilter(val: string) {
-  audit.memberFilter.value = val
-  void audit.loadLogs(true)
-}
+// vant dropdown-item 自定义 slot 内容不发射 change（仅内置 :options 路径发射），
+// 改 watch 筛选值触发重载
+watch(
+  [() => audit.actionFilter.value, () => audit.memberFilter.value],
+  () => {
+    if (resettingFilters) return
+    void audit.loadLogs(true)
+  },
+)
 
 function memberName(log: AuditLogItem): string {
   return log.user?.username || log.user?.email || t('未知')
@@ -128,7 +134,6 @@ function onClose() {
           <van-dropdown-item
             v-model="audit.actionFilter.value"
             :title="audit.actionFilter.value ? actionLabel(audit.actionFilter.value) : t('操作类型')"
-            @change="onActionFilter"
           >
             <van-radio-group v-model="audit.actionFilter.value" direction="vertical">
               <van-radio :name="''">{{ t('全部') }}</van-radio>
@@ -138,7 +143,6 @@ function onClose() {
           <van-dropdown-item
             v-model="audit.memberFilter.value"
             :title="memberFilterTitle"
-            @change="onMemberFilter"
           >
             <van-radio-group v-model="audit.memberFilter.value" direction="vertical">
               <van-radio :name="''">{{ t('全部成员') }}</van-radio>

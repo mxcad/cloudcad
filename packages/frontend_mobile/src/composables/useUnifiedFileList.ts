@@ -102,7 +102,14 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
   }
 
   function persistLocation() {
-    if (!rootId.value || !currentFolderId.value || currentFolderId.value === rootId.value) return
+    if (!rootId.value || !currentFolderId.value) return
+    // 回根=清存档：存档语义是「离开时的位置」，用户显式回根即从根离开；
+    // 若只跳过写入而保留旧存档，重载后 loadRootNode 会还原进之前进的文件夹，
+    // 与用户回根动作矛盾（进文件夹→回根→刷新 却被弹回文件夹）
+    if (currentFolderId.value === rootId.value) {
+      clearSavedLocation()
+      return
+    }
     try {
       localStorage.setItem(
         storageKey(),
