@@ -68,6 +68,16 @@ export function formatSize(bytes: number): string {
   return formatBytes(bytes)
 }
 
+/**
+ * 存储用量格式化——0 是合法值（新用户未占用），显示 "0 B" 而非 formatBytes 的
+ * 「空/0→-」口径（后者是文件大小语义，0 字节文件才用 '-'）。已用 0 时若显示
+ * 「已用 -」会被误读成数据缺失，且与「剩余 50 MB / 使用率 0.0%」自相矛盾。
+ */
+export function formatStorageSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  return formatBytes(bytes)
+}
+
 export function formatTime(isoString: string): string {
   const r = relativeTime(isoString)
   if (r.tier === 'just_now') return '刚刚'

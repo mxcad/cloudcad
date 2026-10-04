@@ -44,7 +44,7 @@ import {
   parseWechatResult,
 } from '@/composables/useWechatAccount';
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig';
-import { formatSize } from '@/composables/useNodeFormatter';
+import { formatSize, formatStorageSize } from '@/composables/useNodeFormatter';
 import { logout as logoutSession } from '@/utils/authSession';
 import { errMsg, toError, errorCode } from '@/utils/apiError';
 import { avatarInitial, displayName } from '@/utils/profileDisplay';
@@ -415,7 +415,7 @@ useLoginPrompt(() => {
         <div class="storage-box">
           <div class="storage-line">
             <span>{{
-              t('已用 {size}', { size: formatSize(storageInfo.used) })
+              t('已用 {size}', { size: formatStorageSize(storageInfo.used) })
             }}</span>
             <span>{{
               t('总计 {size}', { size: formatSize(storageInfo.total) })

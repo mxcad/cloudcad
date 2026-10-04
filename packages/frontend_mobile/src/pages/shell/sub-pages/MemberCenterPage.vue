@@ -15,7 +15,7 @@ import { useRouter } from 'vue-router'
 import { showFailToast, showSuccessToast } from 'vant'
 import { t } from '@/languages'
 import { useMemberCenter } from '@/composables/useMemberCenter'
-import { formatSize } from '@/composables/useNodeFormatter'
+import { formatSize, formatStorageSize } from '@/composables/useNodeFormatter'
 import {
   type BillingOrder,
   type DurationPricing,
@@ -183,7 +183,7 @@ function tierCurrent(tier: VipTier): boolean {
   return isVip.value && tier.level === currentLevel.value
 }
 
-const storageUsed = computed(() => (quota.value ? formatSize(quota.value.used) : ''))
+const storageUsed = computed(() => (quota.value ? formatStorageSize(quota.value.used) : ''))
 const storageTotal = computed(() => (quota.value ? formatSize(quota.value.total) : ''))
 const storageRemaining = computed(() => (quota.value ? formatSize(quota.value.remaining) : ''))
 const storagePercent = computed(() =>
