@@ -168,7 +168,7 @@ function currentValue(key: string): number {
 }
 
 function formatQuota(value: number, unit: QuotaUnit): string {
-  if (unit === 'count') return value > 0 ? `${value} 个` : t('不限')
+  if (unit === 'count') return value > 0 ? t('{count} 个', { count: value }) : t('不限')
   if (value >= 1024) {
     const gb = value / 1024
     return `${Number.isInteger(gb) ? gb : gb.toFixed(1)}GB`

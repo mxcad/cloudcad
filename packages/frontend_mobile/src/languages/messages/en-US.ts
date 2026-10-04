@@ -1207,5 +1207,15 @@ export default  {
 "3752": "Failed to load projects",
 "3753": "Failed to load personal space",
 "3754": "Remove member {name}?",
-"3755": "Removing..."
+"3755": "Removing...",
+"3756": "Me",
+"3757": "Adding...",
+"3758": "{count}",
+"3759": "Order failed, please try again",
+"3760": "Payment failed, please try again",
+"3761": "Order status changed, please place a new order",
+"3762": "Order closed or expired, please place a new order",
+"3763": "Failed to query payment result, please try again",
+"3764": "Project {id}",
+"3765": "Specify zoom ratio"
 }

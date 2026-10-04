@@ -151,7 +151,7 @@ async function m_mx_offset() {
     getDist.setInputToucheType(MxType.InputToucheType.kGetEnd);
     getDist.setOffsetInputPostion(true)
     getDist.setMessage(`\n${t("指定偏移距离")}<${(dist || 0).toFixed(3)}>`);
-    getDist.setKeyWords(`[${t("通过点")}(T)/删除(E)/图层(L))]`)
+    getDist.setKeyWords(`[${t("通过点")}(T)/${t("删除")}(E)/${t("图层")}(L))]`)
     const _dist = await getDist.go();
 
     if (getDist.isKeyWordPicked("T") || getDist.getStatus() === MrxDbgUiPrBaseReturn.kNone) {
@@ -161,7 +161,7 @@ async function m_mx_offset() {
     if (getDist.isKeyWordPicked("E")) {
       const getKey = new MxCADUiPrKeyWord()
       getKey.setMessage(`${t("要在偏移后删除源对象吗")}?<${isDel ? t("是") : t("否")}>`)
-      getKey.setKeyWords("[是(Y)/否(N)]")
+      getKey.setKeyWords(`[${t("是")}(Y)/${t("否")}(N)]`)
 
       const key = await getKey.go()
       if (getKey.getStatus() === MrxDbgUiPrBaseReturn.kCancel) {
@@ -182,7 +182,7 @@ async function m_mx_offset() {
     if (getDist.isKeyWordPicked("L")) {
       const getKey = new MxCADUiPrKeyWord()
       getKey.setMessage(`${t("输入偏移对象的图层选项")}<${isSourceLayer ? t("源") : t("当前")}>`)
-      getKey.setKeyWords("[当前(C)/源(S)]")
+      getKey.setKeyWords(`[${t("当前")}(C)/${t("源")}(S)]`)
       const key = await getKey.go()
       if (getKey.getStatus() === MrxDbgUiPrBaseReturn.kCancel) {
         return

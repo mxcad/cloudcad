@@ -5,6 +5,7 @@
  */
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import { relativeTime, formatBytes } from '@cloudcad/platform'
+import { t } from '@/languages'
 
 export interface FileListItem {
   id: string
@@ -80,19 +81,19 @@ export function formatStorageSize(bytes: number): string {
 
 export function formatTime(isoString: string): string {
   const r = relativeTime(isoString)
-  if (r.tier === 'just_now') return '刚刚'
+  if (r.tier === 'just_now') return t('刚刚')
   switch (r.unit) {
     case 'minute':
-      return `${r.value} 分钟前`
+      return t('{n} 分钟前', { n: r.value })
     case 'hour':
-      return `${r.value} 小时前`
+      return t('{n} 小时前', { n: r.value })
     case 'day':
-      return `${r.value} 天前`
+      return t('{n} 天前', { n: r.value })
     case 'week':
-      return `${r.value} 周前`
+      return t('{n} 周前', { n: r.value })
     case 'month':
-      return `${r.value} 个月前`
+      return t('{n} 个月前', { n: r.value })
     case 'year':
-      return `${r.value} 年前`
+      return t('{n} 年前', { n: r.value })
   }
 }

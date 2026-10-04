@@ -150,7 +150,8 @@ const languageSheetItems = computed<SheetItem[]>(() => {
 })
 
 const sheetItems = computed<SheetItem[]>(() => [
-  ...SHEET_NAV_ITEMS,
+  // 导航名过 t()（文件/分享/我的 为 i18n 键），随语言切换重算
+  ...SHEET_NAV_ITEMS.map((item) => ({ ...item, name: t(item.name) })),
   {
     name: t('语言'),
     // action-sheet 不支持 icon-prefix，只能用 vant 内置名（自定义 mxicon 图标在此用不了）

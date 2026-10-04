@@ -91,7 +91,7 @@ const router = useRouter()
 const projectId = computed(() => (route.params.projectId as string) ?? '')
 
 const activeTab = ref(0)
-const projectName = ref('项目')
+const projectName = ref(t('项目'))
 
 // 回收站（对齐 PC 概念：项目详情页的回收站 = 本项目子树的已删条目，nav bar 入口）
 const isTrashView = ref(false)
@@ -177,11 +177,11 @@ async function loadProjectInfo() {
       const data = res.data as ProjectDto | undefined
       if (data) {
         projectInfo.value = data
-        projectName.value = data.name ?? '项目'
+        projectName.value = data.name ?? t('项目')
       }
     }
   } catch (e) {
-    projectName.value = `项目 ${projectId.value.slice(0, 6)}`
+    projectName.value = t('项目 {id}', { id: projectId.value.slice(0, 6) })
   }
 }
 
@@ -314,7 +314,7 @@ async function onAddMemberConfirm() {
     showFailToast(t('请选择用户和角色'))
     return
   }
-  showLoadingToast({ message: '添加中...', forbidClick: true })
+  showLoadingToast({ message: t('添加中...'), forbidClick: true })
   try {
     const res = await memberControllerAddProjectMember({
       path: { projectId: projectId.value },
@@ -366,7 +366,7 @@ async function onUpdateMemberRole(member: { id: string; projectRoleId: string },
       body: { projectRoleId: roleId },
     })
     if (res.error) throw new Error(String(res.error))
-    showSuccessToast('角色已更新')
+    showSuccessToast(t('角色已更新'))
     await loadMembers()
   } catch (e) {
     showFailToast(e instanceof Error ? e.message : t('更新失败'))
@@ -1234,7 +1234,7 @@ async function onCreateFolderConfirm() {
   if (!parentId) return
 
   showCreateFolderDialog.value = false
-  showLoadingToast({ message: '创建中...', forbidClick: true })
+  showLoadingToast({ message: t('创建中...'), forbidClick: true })
   try {
     const res = await nodeControllerCreateFolder({
       path: { parentId },
@@ -1256,7 +1256,7 @@ async function onCreateFolderConfirm() {
     }
   } catch (e) {
     closeToast()
-    showToast('创建失败，请重试')
+    showToast(t('创建失败，请重试'))
   }
 }
 
@@ -1322,7 +1322,7 @@ async function onFileInputChange(e: Event) {
 const memberRows = computed(() =>
   members.value.map((m) => ({
     id: m.id,
-    name: m.nickname ?? m.username ?? m.email ?? '未知',
+    name: m.nickname ?? m.username ?? m.email ?? t('未知'),
     role: getProjectRoleDisplayName(m.projectRoleName ?? 'PROJECT_MEMBER'),
     joinedAt: m.joinedAt ?? '',
     projectRoleId: m.projectRoleId,

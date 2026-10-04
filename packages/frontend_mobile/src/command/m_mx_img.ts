@@ -49,7 +49,7 @@ function m_mx_img() {
           pt.y = point.y;
           const basePt = new McGePoint3d(pt.x, pt.y);
           getPoint.setBasePt(basePt);
-          getPoint.setMessage('指定缩放比例');
+          getPoint.setMessage(t('指定缩放比例'));
 
           getPoint.setUserDraw((pt, pw) => {
             const z = pt.distanceTo(basePt) / img.width;

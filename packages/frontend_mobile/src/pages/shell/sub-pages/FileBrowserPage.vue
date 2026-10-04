@@ -1072,11 +1072,11 @@ const projectNameInput = ref('')
 async function onCreateProjectConfirm() {
   const name = projectNameInput.value.trim()
   if (!name) {
-    showToast('请输入项目名称')
+    showToast(t('请输入项目名称'))
     return
   }
   showCreateProjectDialog.value = false
-  showLoadingToast({ message: '创建中...', forbidClick: true })
+  showLoadingToast({ message: t('创建中...'), forbidClick: true })
   try {
     const res = await projectControllerCreateProject({
       body: { name },
@@ -1092,7 +1092,7 @@ async function onCreateProjectConfirm() {
     }
   } catch (e) {
     closeToast()
-    showToast('创建失败，请重试')
+    showToast(t('创建失败，请重试'))
   }
 }
 
@@ -1156,7 +1156,7 @@ async function onCreateFolderConfirm() {
   if (!parentId) return
 
   showCreateFolderDialog.value = false
-  showLoadingToast({ message: '创建中...', forbidClick: true })
+  showLoadingToast({ message: t('创建中...'), forbidClick: true })
   try {
     const res = await nodeControllerCreateFolder({
       path: { parentId },
@@ -1178,7 +1178,7 @@ async function onCreateFolderConfirm() {
     }
   } catch (e) {
     closeToast()
-    showToast('创建失败，请重试')
+    showToast(t('创建失败，请重试'))
   }
 }
 
@@ -1247,7 +1247,7 @@ async function onFileInputChange(e: Event) {
     <!-- 回收站打开时：标题变「回收站」，左箭头返回文件列表（对齐 PC 回收站 toggle）；
          未打开时右侧「回收站」入口按当前 tab 定 scope（项目列表 tab→全局，个人空间 tab→个人） -->
     <van-nav-bar
-      :title="trashContext ? t('回收站') : '文件'"
+      :title="trashContext ? t('回收站') : t('文件')"
       left-arrow
       @click-left="trashContext ? closeTrash() : router.back()"
     >

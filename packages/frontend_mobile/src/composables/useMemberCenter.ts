@@ -251,7 +251,7 @@ export function useMemberCenter() {
       await applyOrder(order, tradeType);
     } catch (e) {
       payPhase.value = 'error';
-      payError.value = errMsg(e, '下单失败，请重试');
+      payError.value = errMsg(e, t('下单失败，请重试'));
     }
   }
 
@@ -272,7 +272,7 @@ export function useMemberCenter() {
       await applyOrder(result, tradeType);
     } catch (e) {
       payPhase.value = 'error';
-      payError.value = errMsg(e, '续付失败，请重试');
+      payError.value = errMsg(e, t('续付失败，请重试'));
     }
   }
 
@@ -289,7 +289,7 @@ export function useMemberCenter() {
     }
     if (order.status !== 'PENDING') {
       payPhase.value = 'error';
-      payError.value = '订单状态已变更，请重新下单';
+      payError.value = t('订单状态已变更，请重新下单');
       return;
     }
     savePendingPayment({
@@ -358,10 +358,10 @@ export function useMemberCenter() {
       }
       clearPendingPayment();
       payPhase.value = 'error';
-      payError.value = '订单已关闭或超时，请重新下单';
+      payError.value = t('订单已关闭或超时，请重新下单');
     } catch (e) {
       payPhase.value = 'error';
-      payError.value = errMsg(e, '查询支付结果失败，请重试');
+      payError.value = errMsg(e, t('查询支付结果失败，请重试'));
     }
   }
 
