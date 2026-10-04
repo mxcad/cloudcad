@@ -369,14 +369,7 @@ function extractPostgresYum(outputPath) {
   // 复制 PostgreSQL 库文件
   log('  → 复制 PostgreSQL 库文件...');
   if (fs.existsSync(pgLibDir)) {
-    execSync(`cp ${pgLibDir}/*.so ${libDir}/ 2>/dev/null || true`, { stdio: 'pipe' });
-    // 复制子目录
-    const subdirs = ['bitcode', 'pgxs'];
-    for (const sub of subdirs) {
-      if (fs.existsSync(path.join(pgLibDir, sub))) {
-        execSync(`cp -r ${pgLibDir}/${sub} ${libDir}/`, { stdio: 'pipe' });
-      }
-    }
+    copyPgLibs(pgLibDir, libDir, { includeVersioned: false });
   }
   
   // 复制 PostgreSQL share 目录
@@ -678,14 +671,7 @@ function extractPostgresApt(outputPath) {
   log('  → 复制 PostgreSQL 库文件...');
   const pgLibDir = '/usr/lib/postgresql/15/lib';
   if (fs.existsSync(pgLibDir)) {
-    execSync(`cp ${pgLibDir}/*.so* ${libDir}/ 2>/dev/null || true`, { stdio: 'pipe' });
-    // 复制子目录
-    const subdirs = ['bitcode', 'pgxs'];
-    for (const sub of subdirs) {
-      if (fs.existsSync(path.join(pgLibDir, sub))) {
-        execSync(`cp -r ${pgLibDir}/${sub} ${libDir}/`, { stdio: 'pipe' });
-      }
-    }
+    copyPgLibs(pgLibDir, libDir);
   }
   
   // 复制 PostgreSQL share 目录
@@ -838,6 +824,61 @@ function extractSvnApt(outputPath) {
 }
 
 // ==================== 依赖收集工具 ====================
+
+// PostgreSQL 库提取时排除的 JIT 组件前缀。
+// pg-manager.js 启动时写 jit=off 到 postgresql.auto.conf，PG 不加载 llvmjit.so，
+// libLLVM-15.so.1(~112M) + bitcode(~26M) 合计 ~138M 纯属死重；
+// Windows 官方 portable 包本就不含 JIT（postgresql 117M vs Linux 219M）。
+const PG_JIT_LIB_PREFIXES = ['libLLVM-', 'llvmjit'];
+
+/** 是否为 JIT 组件（libLLVM-* / llvmjit*） */
+function isJitLib(name) {
+  return PG_JIT_LIB_PREFIXES.some((prefix) => name.startsWith(prefix));
+}
+
+/** 是否为 PG so 库文件（*.so；includeVersioned 时含 libfoo.so.N） */
+function isPgSoFile(name, includeVersioned) {
+  return name.endsWith('.so') || (includeVersioned && /\.so\./.test(name));
+}
+
+/**
+ * 复制 PostgreSQL 库文件，排除 JIT 组件
+ *
+ * 必须在复制阶段排除，不能事后删：collectLibDependencies 会遍历 libDir 里所有
+ * *.so* 跑 ldd，若 llvmjit.so 留在目录里会把 libLLVM-15.so.1 当 DT_NEEDED
+ * 依赖又拷回来（postgres 自身不链 libLLVM——llvmjit.so 是运行时 dlopen 的插件）。
+ *
+ * 纯 Node 实现（不用 shell glob），保证单测可在非 Linux 环境实跑验证排除逻辑。
+ *
+ * @param {string} pgLibDir PG 库目录（yum: /usr/pgsql-15/lib；apt: /usr/lib/postgresql/15/lib）
+ * @param {string} libDir 目标 lib 目录
+ * @param {object} [options]
+ * @param {boolean} [options.includeVersioned=true] 是否包含 libfoo.so.N（yum 版传 false）
+ */
+function copyPgLibs(pgLibDir, libDir, options = {}) {
+  const { includeVersioned = true } = options;
+  let names = [];
+  try {
+    names = fs.readdirSync(pgLibDir);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    if (isJitLib(name) || !isPgSoFile(name, includeVersioned)) continue;
+    try {
+      fs.copyFileSync(path.join(pgLibDir, name), path.join(libDir, name));
+    } catch {
+      // 软链断裂或源文件消失：与原 shell cp 的 `|| true` 语义一致，跳过
+    }
+  }
+  // pgxs 保留（扩展构建工具）；bitcode 是 LLVM 位码（JIT 编译支撑），同属死重
+  for (const sub of ['pgxs']) {
+    const src = path.join(pgLibDir, sub);
+    if (fs.existsSync(src)) {
+      fs.cpSync(src, path.join(libDir, sub), { recursive: true });
+    }
+  }
+}
 
 /**
  * 收集二进制文件的依赖库（排除 glibc 核心库）
@@ -1054,4 +1095,15 @@ function main() {
   log('  运行 node scripts/pack-offline.js --deploy --linux 打包部署包');
 }
 
-main();
+// 直接执行时跑提取流程；被 require（单测）时只导出纯函数，
+// 避免加载即触发联网 apt/yum 安装
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  PG_JIT_LIB_PREFIXES,
+  isJitLib,
+  isPgSoFile,
+  copyPgLibs,
+};

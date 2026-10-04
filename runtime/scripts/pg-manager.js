@@ -23,7 +23,10 @@ const PLATFORM_DIR = IS_WINDOWS
 
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
-const PG_DATA_DIR = path.join(DATA_DIR, 'postgres');
+// 数据目录（CLOUDCAD_PG_DATA_DIR 仅供单测重定向，生产不设）
+const PG_DATA_DIR = process.env.CLOUDCAD_PG_DATA_DIR
+  ? path.resolve(process.env.CLOUDCAD_PG_DATA_DIR)
+  : path.join(DATA_DIR, 'postgres');
 const LOGS_DIR = path.join(DATA_DIR, 'logs');
 
 // 可执行文件路径
@@ -533,7 +536,13 @@ function isRunning() {
 }
 
 // 写入 postgresql.auto.conf
-// 只更新 unix_socket_directories 和 port，保留其他已有配置
+// 更新 unix_socket_directories / port / jit，保留其他已有配置
+// jit=off：禁用 LLVM JIT，部署包因此不带 libLLVM-15.so.1(~112M) + bitcode(~26M)。
+// PG 默认 jit=on，仅在 plan_cost_total > jit_above_cost(默认 100000) 的大查询触发，
+// CloudCAD 无此类查询；关闭后 PG 不加载 llvmjit.so，JIT 相关库纯属死重
+// （Windows 官方 portable 包本就不含 JIT：postgresql 117M vs Linux 219M）。
+// ⚠ 调用时机：startPostgres 在 initDatabase() 前后各调一次。首次部署时 PG_DATA_DIR
+// 由 initdb 创建，前置那次调用会因目录不存在而 no-op，故必须补写一次配置才落盘。
 function writePgAutoConf() {
   const socketDir = process.env.PG_SOCKET_DIR;
   if (!fs.existsSync(PG_DATA_DIR)) {
@@ -546,6 +555,7 @@ function writePgAutoConf() {
     desired['unix_socket_directories'] = `'${socketDir.replace(/'/g, "\\'")}'`;
   }
   desired['port'] = String(PG_PORT);
+  desired['jit'] = 'off';
 
   let lines = [];
   if (fs.existsSync(autoConf)) {
@@ -632,6 +642,10 @@ function startPostgres() {
   if (!initDatabase()) {
     return false;
   }
+
+  // 首次部署时上面那次是 no-op（PG_DATA_DIR 由 initDatabase 创建），补写一次让
+  // jit/port 真正落盘——否则首次部署会跑在 PG 默认 jit=on 上
+  writePgAutoConf();
 
   // Linux 下检查并修复数据目录权限
   // PostgreSQL 要求数据目录权限为 0700 或 0750
@@ -944,15 +958,23 @@ function main() {
 const args = process.argv.slice(2);
 const command = args[0];
 
-if (command === 'start') {
-  startPostgres();
-} else if (command === 'stop') {
-  stopPostgres();
-} else if (command === 'status') {
-  console.log(isRunning() ? 'running' : 'stopped');
-} else if (!command || command === 'daemon') {
-  main();
-} else {
-  console.log('用法: node pg-manager.js [start|stop|status|daemon]');
-  process.exit(1);
+// 直接执行时按子命令分发（含 PM2 的 `args: 'daemon'`）；
+// 被 require（单测）时只导出函数，避免 process.exit 杀掉测试进程
+if (require.main === module) {
+  if (command === 'start') {
+    startPostgres();
+  } else if (command === 'stop') {
+    stopPostgres();
+  } else if (command === 'status') {
+    console.log(isRunning() ? 'running' : 'stopped');
+  } else if (!command || command === 'daemon') {
+    main();
+  } else {
+    console.log('用法: node pg-manager.js [start|stop|status|daemon]');
+    process.exit(1);
+  }
 }
+
+module.exports = {
+  writePgAutoConf,
+};
