@@ -485,7 +485,7 @@ async function onPullRefresh() {
           >
             {{ t('加载失败，点击重试') }}
           </button>
-          <span v-else-if="!hasMore" class="load-more-text">没有更多了</span>
+          <span v-else-if="!hasMore" class="load-more-text">{{ t('没有更多了') }}</span>
         </div>
       </div>
 
@@ -533,7 +533,7 @@ async function onPullRefresh() {
           >
             {{ t('加载失败，点击重试') }}
           </button>
-          <span v-else-if="!hasMore" class="load-more-text">没有更多了</span>
+          <span v-else-if="!hasMore" class="load-more-text">{{ t('没有更多了') }}</span>
         </div>
       </div>
     </van-pull-refresh>

@@ -234,7 +234,7 @@ async function loadMembers() {
     if (res.error) throw new Error(String(res.error))
     members.value = res.data ?? []
   } catch (e) {
-    memberError.value = '加载成员失败'
+    memberError.value = t('加载成员失败')
   } finally {
     memberLoading.value = false
   }
@@ -338,11 +338,11 @@ async function onAddMemberConfirm() {
 async function onRemoveMember(member: { id: string; name: string }) {
   try {
     await showDialog({
-      title: '移除成员',
-      message: `确定移除成员 ${member.name} 吗？`,
+      title: t('移除成员'),
+      message: t('确定移除成员 {name} 吗？', { name: member.name }),
       showCancelButton: true,
     })
-    showLoadingToast({ message: '移除中...', forbidClick: true })
+    showLoadingToast({ message: t('移除中...'), forbidClick: true })
     const res = await memberControllerRemoveProjectMember({
       path: { projectId: projectId.value, userId: member.id },
     })
@@ -1391,7 +1391,7 @@ onMounted(() => {
     </van-nav-bar>
 
     <van-tabs v-show="!isTrashView" v-model:active="activeTab" line-width="28" class="detail-tabs">
-      <van-tab title="文件">
+      <van-tab :title="t('文件')">
         <!-- B-15 项目上传配额（对齐 PC FileSystemHeader：进度条 + 90%/超限阈值配色） -->
         <div v-if="projectQuota && projectQuota.limit > 0" class="quota-bar">
           <span class="quota-label">{{ t('上传上限') }}</span>
@@ -1402,7 +1402,7 @@ onMounted(() => {
         </div>
         <div v-if="fileError && projectFiles.length === 0" class="state-box">
           <span class="state-text">{{ fileError }}</span>
-          <van-button size="small" round @click="fileList.loadNodes">重试</van-button>
+          <van-button size="small" round @click="fileList.loadNodes">{{ t('重试') }}</van-button>
         </div>
         <UnifiedFileList
           v-else
@@ -1439,10 +1439,10 @@ onMounted(() => {
         />
       </van-tab>
 
-      <van-tab title="成员">
+      <van-tab :title="t('成员')">
         <div v-if="memberError && members.length === 0" class="state-box">
           <span class="state-text">{{ memberError }}</span>
-          <van-button size="small" round @click="loadMembers">重试</van-button>
+          <van-button size="small" round @click="loadMembers">{{ t('重试') }}</van-button>
         </div>
         <div v-else-if="memberLoading && members.length === 0" class="state-box">
           <van-loading size="24" />
@@ -1451,7 +1451,7 @@ onMounted(() => {
           <!-- 0 成员时列表头仍要保留角色管理入口（PC 端按权限恒显示，不依赖成员数） -->
           <div v-if="members.length > 0 || canManageRoles || canManageMembers" class="member-header">
             <div class="member-header-left">
-              <span v-if="members.length > 0" class="member-count">{{ filteredMemberRows.length }} 人</span>
+              <span v-if="members.length > 0" class="member-count">{{ t('{count} 人', { count: filteredMemberRows.length }) }}</span>
               <van-dropdown-menu v-if="members.length > 0" class="role-filter-dropdown">
                 <van-dropdown-item
                   :options="roleFilterOptions"
@@ -1467,12 +1467,12 @@ onMounted(() => {
               </button>
               <button v-if="canManageMembers" class="add-member-btn" @click="openAddMemberDialog">
                 <van-icon name="plus" size="14" />
-                添加成员
+                {{ t('添加成员') }}
               </button>
             </div>
           </div>
           <div v-if="members.length === 0" class="state-box">
-            <span class="state-text">暂无成员</span>
+            <span class="state-text">{{ t('暂无成员') }}</span>
           </div>
           <div v-else-if="filteredMemberRows.length === 0" class="state-box">
             <span class="state-text">{{ t('没有符合条件的成员') }}</span>
@@ -1539,16 +1539,16 @@ onMounted(() => {
     <van-popup v-model:show="showCreateFolderDialog" position="bottom" round :style="{ height: '40%' }">
       <div class="create-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="showCreateFolderDialog = false">取消</button>
-          <span class="panel-title">新建文件夹</span>
+          <button class="panel-cancel" @click="showCreateFolderDialog = false">{{ t('取消') }}</button>
+          <span class="panel-title">{{ t('新建文件夹') }}</span>
           <button class="panel-confirm" :disabled="!folderNameInput.trim()" @click="onCreateFolderConfirm">
-            {{ folderNameInput.trim() ? '确定' : '确认' }}
+            {{ folderNameInput.trim() ? t('确定') : t('确认') }}
           </button>
         </div>
         <van-field
           v-model="folderNameInput"
           maxlength="50"
-          placeholder="请输入文件夹名称"
+          :placeholder="t('请输入文件夹名称')"
           autofocus
           clearable
           @keyup.enter="onCreateFolderConfirm"

@@ -138,7 +138,7 @@ async function loadProjects(append = false) {
     projects.value = append ? [...projects.value, ...cards] : cards
     projectTotalPages.value = data.totalPages ?? 1
   } catch (e) {
-    projectError.value = '加载项目失败'
+    projectError.value = t('加载项目失败')
   } finally {
     projectLoading.value = false
   }
@@ -302,7 +302,7 @@ async function loadPersonalSpace() {
       }
     }
   } catch (e) {
-    personalError.value = '加载个人空间失败'
+    personalError.value = t('加载个人空间失败')
   }
 }
 
@@ -1276,11 +1276,11 @@ async function onFileInputChange(e: Event) {
         <template v-if="keyword">
           <div v-if="projectSearch.error.value && projectSearch.results.value.length === 0" class="state-box">
             <span class="state-text">{{ projectSearch.error.value }}</span>
-            <van-button size="small" round @click="projectSearch.searchFromFirstPage(keyword, projectFilter)">重试</van-button>
+            <van-button size="small" round @click="projectSearch.searchFromFirstPage(keyword, projectFilter)">{{ t('重试') }}</van-button>
           </div>
           <div v-else-if="projectSearch.loading.value && projectSearch.results.value.length === 0" class="state-box">
             <van-loading size="24" />
-            <span class="state-text">加载中...</span>
+            <span class="state-text">{{ t('加载中...') }}</span>
           </div>
           <div v-else-if="projectSearch.results.value.length === 0" class="state-box">
             <span class="state-text">{{ t('未找到相关项目或文件') }}</span>
@@ -1321,7 +1321,7 @@ async function onFileInputChange(e: Event) {
             </template>
             <div v-if="projectSearch.results.value.length > 0" class="grid-footer">
               <van-loading v-if="projectSearch.loading.value" size="20" />
-              <span v-else-if="!projectSearch.hasMore.value" class="state-text">没有更多了</span>
+              <span v-else-if="!projectSearch.hasMore.value" class="state-text">{{ t('没有更多了') }}</span>
             </div>
           </div>
         </template>
@@ -1329,14 +1329,14 @@ async function onFileInputChange(e: Event) {
         <template v-else>
         <div v-if="projectError && projects.length === 0" class="state-box">
           <span class="state-text">{{ projectError }}</span>
-          <van-button size="small" round @click="loadProjects">重试</van-button>
+          <van-button size="small" round @click="loadProjects">{{ t('重试') }}</van-button>
         </div>
         <div v-else-if="projectLoading && projects.length === 0" class="state-box">
           <van-loading size="24" />
-          <span class="state-text">加载中...</span>
+          <span class="state-text">{{ t('加载中...') }}</span>
         </div>
         <div v-else-if="projects.length === 0" class="state-box">
-          <span class="state-text">暂无项目</span>
+          <span class="state-text">{{ t('暂无项目') }}</span>
         </div>
         <div v-else class="project-grid" @scroll.passive="onProjectScroll">
           <div
@@ -1362,22 +1362,22 @@ async function onFileInputChange(e: Event) {
               </div>
             </div>
             <div class="card-footer">
-              <span class="card-files">{{ p.files }} 个文件</span>
+              <span class="card-files">{{ t('{count} 个文件', { count: p.files }) }}</span>
               <span class="card-time">{{ p.updated }}</span>
             </div>
           </div>
           <div v-if="projects.length > 0" class="grid-footer">
             <van-loading v-if="projectLoading" size="20" />
-            <span v-else-if="!projectHasMore" class="state-text">没有更多了</span>
+            <span v-else-if="!projectHasMore" class="state-text">{{ t('没有更多了') }}</span>
           </div>
         </div>
         </template>
       </van-tab>
 
-      <van-tab title="个人空间">
+      <van-tab :title="t('个人空间')">
         <div v-if="personalError && personalItems.length === 0" class="state-box">
           <span class="state-text">{{ personalError }}</span>
-          <van-button size="small" round @click="loadPersonalSpace">重试</van-button>
+          <van-button size="small" round @click="loadPersonalSpace">{{ t('重试') }}</van-button>
         </div>
         <UnifiedFileList
           v-else
@@ -1424,7 +1424,7 @@ async function onFileInputChange(e: Event) {
       @changed="onTrashChanged"
     />
 
-    <button v-if="!trashContext" class="fab" aria-label="新建" @click="onFabClick">
+    <button v-if="!trashContext" class="fab" :aria-label="t('新建')" @click="onFabClick">
       <van-icon name="plus" />
     </button>
     <van-action-sheet
@@ -1436,16 +1436,16 @@ async function onFileInputChange(e: Event) {
     <van-popup v-model:show="showCreateProjectDialog" position="bottom" round :style="{ height: '48%' }">
       <div class="create-project-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="showCreateProjectDialog = false">取消</button>
-          <span class="panel-title">新建项目</span>
+          <button class="panel-cancel" @click="showCreateProjectDialog = false">{{ t('取消') }}</button>
+          <span class="panel-title">{{ t('新建项目') }}</span>
           <button class="panel-confirm" :disabled="!projectNameInput.trim()" @click="onCreateProjectConfirm">
-            {{ projectNameInput.trim() ? '确定' : '确认' }}
+            {{ projectNameInput.trim() ? t('确定') : t('确认') }}
           </button>
         </div>
         <van-field
           v-model="projectNameInput"
           maxlength="50"
-          placeholder="请输入项目名称"
+          :placeholder="t('请输入项目名称')"
           autofocus
           clearable
           @keyup.enter="onCreateProjectConfirm"
@@ -1456,16 +1456,16 @@ async function onFileInputChange(e: Event) {
     <van-popup v-model:show="showCreateFolderDialog" position="bottom" round :style="{ height: '40%' }">
       <div class="create-project-panel">
         <div class="panel-header">
-          <button class="panel-cancel" @click="showCreateFolderDialog = false">取消</button>
-          <span class="panel-title">新建文件夹</span>
+          <button class="panel-cancel" @click="showCreateFolderDialog = false">{{ t('取消') }}</button>
+          <span class="panel-title">{{ t('新建文件夹') }}</span>
           <button class="panel-confirm" :disabled="!folderNameInput.trim()" @click="onCreateFolderConfirm">
-            {{ folderNameInput.trim() ? '确定' : '确认' }}
+            {{ folderNameInput.trim() ? t('确定') : t('确认') }}
           </button>
         </div>
         <van-field
           v-model="folderNameInput"
           maxlength="50"
-          placeholder="请输入文件夹名称"
+          :placeholder="t('请输入文件夹名称')"
           autofocus
           clearable
           @keyup.enter="onCreateFolderConfirm"

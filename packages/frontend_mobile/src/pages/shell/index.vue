@@ -267,7 +267,7 @@ defineExpose({
       @cancel="closeSheet"
     >
       <template #title>
-        <div class="sheet-title">导航</div>
+        <div class="sheet-title">{{ t('导航') }}</div>
       </template>
     </van-action-sheet>
 

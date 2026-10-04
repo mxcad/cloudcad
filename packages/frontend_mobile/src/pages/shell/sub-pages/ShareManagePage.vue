@@ -841,7 +841,7 @@ function onCustomDaysInput(e: Event) {
             <span class="share-url-text">{{ truncateUrl(s.url) }}</span>
           </div>
           <div class="share-stats">
-            <span class="stat"><van-icon name="records-o" size="10" /> {{ s.usedCount }} 次</span>
+            <span class="stat"><van-icon name="records-o" size="10" /> {{ t('{count} 次', { count: s.usedCount }) }}</span>
             <span class="stat">{{ t('创建') }} {{ formatDate(s.createdAt) }}</span>
             <span class="stat">{{ t('到期') }} {{ s.expireText }}</span>
           </div>

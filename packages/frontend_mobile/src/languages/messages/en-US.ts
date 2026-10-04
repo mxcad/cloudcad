@@ -1192,5 +1192,20 @@ export default  {
 "3736": "Removal failed",
 "3737": "Addition failed",
 "3738": "The project recycle bin has been cleared",
-"3739": "Search for deleted items..."
+"3739": "Search for deleted items...",
+"3740": "Navigation",
+"3741": "No projects",
+"3742": "No members",
+"3743": "New project",
+"3744": "{count} people",
+"3745": "{count} files",
+"3746": "{count} times",
+"3747": "Files",
+"3748": "Enter folder name",
+"3750": "New",
+"3751": "Failed to load members",
+"3752": "Failed to load projects",
+"3753": "Failed to load personal space",
+"3754": "Remove member {name}?",
+"3755": "Removing..."
 }
