@@ -27,8 +27,9 @@ export class StoragePathConstants {
   /** MXWEB 文件扩展名 */
   static readonly MXWEB_EXTENSION = '.mxweb';
 
-  /** 支持的 CAD 文件扩展名 */
-  static readonly ALLOWED_CAD_EXTENSIONS = ['.dwg', '.dxf'] as const;
+  // CAD 扩展名校验走 env UPLOAD_ALLOWED_EXTENSIONS（configuration.ts →
+  // file-validation.service）。此处刻意不声明常量：曾经的 ALLOWED_CAD_EXTENSIONS
+  // 零读取方，一旦被引用就分叉出第二套与 env 不同步的安全边界。
 
   /** 文件哈希长度 */
   static readonly FILE_HASH_LENGTH = 32;
@@ -55,14 +56,7 @@ export class SecurityConstants {
   /** 路径遍历检测字符 */
   static readonly PATH_TRAVERSAL_CHARS = ['..', '\\', '\0'] as const;
 
-  /** 禁止的文件扩展名 */
-  static readonly FORBIDDEN_EXTENSIONS = [
-    '.exe',
-    '.bat',
-    '.sh',
-    '.cmd',
-    '.ps1',
-    '.scr',
-    '.vbs',
-  ] as const;
+  // 禁止上传的扩展名走 env UPLOAD_BLOCKED_EXTENSIONS（configuration.ts →
+  // file-validation.service）。曾经的 FORBIDDEN_EXTENSIONS 常量零读取方，
+  // 且与 env 清单不一致（多了 .scr/.vbs），删掉以免两套黑名单各改一半。
 }

@@ -124,16 +124,16 @@ export class FileConversionService implements IMxcadConversionService {
 		// 获取 MxCAD 转换配置
 		const mxcadConfig = this.configService.get("mxcad", { infer: true });
 
-		// 获取上传并发配置
+		// 获取上传段配置（含文件转换并发）
 		const uploadConfig = this.configService.get("upload", { infer: true });
-		// 文件转换是 CPU 密集型任务，并发数关联 CPU 核心数
-		// 默认使用 CPU 核心数，但最多配置的并发数（避免过度争抢 CPU）
+		// 文件转换是 CPU 密集型任务：上限 = min(转换并发配置, CPU 核心数)
+		// 刻意不复用上传并发（UPLOAD_MAX_CONCURRENT）——那是 I/O 密集型预算，
+		// 拿它当转换上限会让调大上传并发顺带放开 CPU 争抢。
 		const cpuCount = os.cpus().length;
-		const configMaxConcurrent = uploadConfig?.maxConcurrent;
-		const maxConversionConcurrent = uploadConfig?.conversionMaxConcurrent || 4;
-		const maxConcurrent = configMaxConcurrent
-			? Math.min(configMaxConcurrent, cpuCount, maxConversionConcurrent)
-			: Math.min(cpuCount, maxConversionConcurrent);
+		const maxConcurrent = Math.min(
+			uploadConfig?.conversionMaxConcurrent || 3,
+			cpuCount,
+		);
 
 		// 初始化文件转换限流器
 		this.conversionRateLimiter = new RateLimiter(maxConcurrent);

@@ -52,7 +52,9 @@ describe("FileConversionService", () => {
 						compression: true,
 					};
 				if (key === "upload")
-					return { maxConcurrent: 2, conversionMaxConcurrent: 2 };
+					// maxConcurrent 故意小于 conversionMaxConcurrent：上传并发（I/O 密集型）
+					// 不得再压制转换并发（CPU 密集型），否则限流器 cap 会被压成 1
+					return { maxConcurrent: 1, conversionMaxConcurrent: 2 };
 				if (options?.infer) {
 					if (key === "mxcad")
 						return {
@@ -61,7 +63,7 @@ describe("FileConversionService", () => {
 							compression: true,
 						};
 					if (key === "upload")
-						return { maxConcurrent: 2, conversionMaxConcurrent: 2 };
+						return { maxConcurrent: 1, conversionMaxConcurrent: 2 };
 				}
 				return undefined;
 			}),
@@ -858,13 +860,14 @@ describe("FileConversionService", () => {
 						}, 50);
 					}),
 			);
-			await Promise.all([
-				service.convertBinToMxweb("/tmp/a.bin", "/tmp/out", "a.mxweb"),
-				service.convertBinToMxweb("/tmp/b.bin", "/tmp/out", "b.mxweb"),
-				service.convertBinToMxweb("/tmp/c.bin", "/tmp/out", "c.mxweb"),
-			]);
-			// 限流器 cap = min(2, cpu, 2) = 2：3 个并发请求最多 2 个同时跑
-			expect(maxActive).toBeLessThanOrEqual(2);
+				await Promise.all([
+					service.convertBinToMxweb("/tmp/a.bin", "/tmp/out", "a.mxweb"),
+					service.convertBinToMxweb("/tmp/b.bin", "/tmp/out", "b.mxweb"),
+					service.convertBinToMxweb("/tmp/c.bin", "/tmp/out", "c.mxweb"),
+				]);
+				// 限流器 cap = min(conversionMaxConcurrent, cpu) = 2：必须真的能并到 2 个同时跑。
+				// 断言相等而非 ≤，确保重新引入上传并发（maxConcurrent=1）作上限时红灯。
+				expect(maxActive).toBe(2);
 		});
 	});
 

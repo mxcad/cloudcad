@@ -225,19 +225,10 @@ export default (): AppConfig => {
     },
 
     upload: {
-      // 文件大小限制 - Multer 中间件层防护（第一层）
-      // Multer 层已改为读取此值，而非硬编码
-      // 业务层使用运行时配置 maxFileSize 进行精确限制
-      // 运行时配置可在管理界面动态调整
-      maxSize: 500 * 1024 * 1024, // 500MB 固定上限
-      allowedTypes: parseStringArray(process.env.UPLOAD_ALLOWED_TYPES, [
-        '.dwg',
-        '.dxf',
-        '.pdf',
-        '.png',
-        '.jpg',
-        '.jpeg',
-      ]),
+      // HTTP 层文件大小上限不在本段：multer 的 fileSize 由
+      // common/utils/multter-upload-limits.ts 按运行时配置 maxFileSize 计算
+      // （兜底 512MB）。本段曾有一个 500MB 的 maxSize 并注释称「Multer 已改为
+      // 读取此值」，实际零读取方，已删除。
       maxFilesPerUpload:
         parseInt(process.env.UPLOAD_MAX_FILES || '10', 10) || 10,
       allowedExtensions: parseStringArray(
@@ -248,7 +239,8 @@ export default (): AppConfig => {
         process.env.UPLOAD_BLOCKED_EXTENSIONS,
         ['.exe', '.bat', '.sh', '.cmd', '.ps1']
       ),
-      maxConcurrent:
+      // 文件转换并发上限（CPU 密集型，与 I/O 密集的分片上传并发解耦）
+      conversionMaxConcurrent:
         parseInt(process.env.UPLOAD_MAX_CONCURRENT || '3', 10) || 3,
       // 分片上传并发数（I/O 密集型，可以较高）
       chunkMaxConcurrent:

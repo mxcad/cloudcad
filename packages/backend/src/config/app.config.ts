@@ -54,12 +54,10 @@ export interface PiiConfig {
 }
 
 export interface UploadConfig {
-  maxSize: number;
-  allowedTypes: string[];
   maxFilesPerUpload: number;
   allowedExtensions: string[];
   blockedExtensions: string[];
-  maxConcurrent: number;
+  conversionMaxConcurrent: number;
   chunkMaxConcurrent: number;
 }
 
