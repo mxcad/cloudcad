@@ -35,6 +35,7 @@ import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isEmail, isCode } from '@/utils/authValidation'
 import { CODE_COOLDOWN_SECONDS, useCountdown } from '@/composables/useCountdown'
+import AuthBrandHeader from '@/components/AuthBrandHeader.vue'
 
 interface VerifyEmailState {
   email?: string
@@ -167,6 +168,7 @@ onMounted(() => {
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <AuthBrandHeader />
       <div class="auth-header">
         <h1 class="auth-title">{{ title }}</h1>
         <p class="auth-subtitle">{{ subtitle }}</p>

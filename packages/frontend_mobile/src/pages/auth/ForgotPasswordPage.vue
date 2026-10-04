@@ -18,6 +18,7 @@ import { isEmail, isPhone, isContactType, type ContactType } from '@/utils/authV
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { redirectQueryOf } from '@/utils/authNavigate'
 import { resolveSupportContact } from '@/utils/supportContact'
+import AuthBrandHeader from '@/components/AuthBrandHeader.vue'
 
 const CONTACT_TYPE_KEY = 'forgotContactType'
 const CONTACT_VALUE_KEY = 'forgotContactValue'
@@ -103,6 +104,7 @@ function goLogin() {
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <AuthBrandHeader />
       <template v-if="noChannel">
         <div class="auth-header">
           <h1 class="auth-title">{{ t('无法重置密码') }}</h1>

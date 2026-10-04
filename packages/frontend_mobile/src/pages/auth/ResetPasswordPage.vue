@@ -20,6 +20,7 @@ import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isCode, getPasswordStrength, isContactType, type ContactType } from '@/utils/authValidation'
 import { CODE_COOLDOWN_SECONDS, useCountdown } from '@/composables/useCountdown'
 import { redirectQueryOf } from '@/utils/authNavigate'
+import AuthBrandHeader from '@/components/AuthBrandHeader.vue'
 
 const CONTACT_TYPE_KEY = 'forgotContactType'
 const CONTACT_VALUE_KEY = 'forgotContactValue'
@@ -119,6 +120,7 @@ function goForgot() {
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <AuthBrandHeader />
       <template v-if="!contact">
         <div class="auth-header">
           <h1 class="auth-title">{{ t('重置密码') }}</h1>
