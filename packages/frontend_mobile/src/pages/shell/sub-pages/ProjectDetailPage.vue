@@ -1527,7 +1527,7 @@ onMounted(() => {
     />
 
     <!-- 成员 Tab 无新建内容语义（添加成员已有列表头按钮），故只在文件 Tab 显示 FAB -->
-    <button v-if="activeTab === 0 && !isTrashView" class="fab" aria-label="新建" @click="showFabSheet = true">
+    <button v-if="activeTab === 0 && !isTrashView" class="fab" :aria-label="t('新建')" @click="showFabSheet = true">
       <van-icon name="plus" />
     </button>
     <van-action-sheet

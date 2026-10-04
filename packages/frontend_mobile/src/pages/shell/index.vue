@@ -232,7 +232,7 @@ defineExpose({
       </span>
       <h1 class="shell-title">{{ brand.title }}</h1>
       <nav class="shell-entries">
-        <button class="entry-btn" aria-label="更多" @click="openSheet">
+        <button class="entry-btn" :aria-label="t('更多')" @click="openSheet">
           <van-icon name="plus" size="24" />
         </button>
       </nav>
