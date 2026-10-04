@@ -28,6 +28,11 @@ const DEFAULT_OUTPUT = path.join(PROJECT_ROOT, 'runtime', 'linux');
 
 // 品牌单一事实源（runtime/scripts/lib/branding.js）
 const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
+// 运行时 node 工具白名单：与 pack-offline.js 的出包前门禁共用同一事实源
+const {
+  copyNodeModulesOnly,
+  missingNodePackages,
+} = require('./pack-lib/runtime-cleanliness');
 
 // 版本信息
 const VERSIONS = {
@@ -303,9 +308,9 @@ function extractNodeYum(outputPath) {
   log(`  → 复制 Node.js 二进制 (${nodeBinary})...`);
   execSync(`cp ${nodeBinary} ${binDir}/`, { stdio: 'inherit' });
   
-  // 复制 node_modules
+  // 复制 node_modules（只搬白名单包：整目录复制会把打包机全局装的 AI CLI 等随包发货）
   log(`  → 复制 node_modules (${nodeModulesPath})...`);
-  execSync(`cp -rL ${nodeModulesPath}/* ${nodeModulesDir}/`, { stdio: 'inherit' });
+  copyRuntimeNodeModules(nodeModulesPath, nodeModulesDir);
   
   // 创建启动脚本
   log('  → 创建启动脚本...');
@@ -602,9 +607,9 @@ function extractNodeApt(outputPath) {
   log(`  → 复制 Node.js 二进制 (${nodeBinary})...`);
   execSync(`cp ${nodeBinary} ${binDir}/`, { stdio: 'inherit' });
   
-  // 复制 node_modules
+  // 复制 node_modules（只搬白名单包：整目录复制会把打包机全局装的 AI CLI 等随包发货）
   log(`  → 复制 node_modules (${nodeModulesPath})...`);
-  execSync(`cp -rL ${nodeModulesPath}/* ${nodeModulesDir}/`, { stdio: 'inherit' });
+  copyRuntimeNodeModules(nodeModulesPath, nodeModulesDir);
   
   // 创建启动脚本
   log('  → 创建启动脚本...');
@@ -878,6 +883,26 @@ function copyPgLibs(pgLibDir, libDir, options = {}) {
       fs.cpSync(src, path.join(libDir, sub), { recursive: true });
     }
   }
+}
+
+/**
+ * 复制运行时 node 工具（只搬白名单包，见 pack-lib/runtime-cleanliness.js）。
+ * yum/apt 两条提取通道共用——原先各写一遍 `cp -rL <打包机全局 node_modules>/*`，
+ * 会把打包机全局装的 AI CLI 等一并搬进部署包。
+ */
+function copyRuntimeNodeModules(nodeModulesPath, nodeModulesDir) {
+  const { copied, skipped } = copyNodeModulesOnly(nodeModulesPath, nodeModulesDir);
+  const missing = missingNodePackages(nodeModulesDir);
+  if (missing.length > 0) {
+    error(
+      `运行时 node 工具复制后缺失: ${missing.join(', ')}（源: ${nodeModulesPath}）`
+    );
+    process.exit(1);
+  }
+  if (skipped.length > 0) {
+    log(`  → 已排除打包机全局包（不进部署包）: ${skipped.join(', ')}`);
+  }
+  log(`  → 运行时 node 工具: ${copied.join(', ')}`);
 }
 
 /**

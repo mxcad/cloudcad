@@ -9,13 +9,25 @@
  * 4. 目录不存在/空目录返回空数组（缺件由组件完整性断言负责报缺，不在此混判）
  * 5. 白名单与 runtime/windows/node/package.json 的 dependencies 一致（防两端漂移）
  * 6. 回归实例：@opencode/cli 213M 混入 Linux 部署包（2026-10-04）
+ *
+ * copyNodeModulesOnly（源头治理，替换 extract 的 `cp -rL <全局 node_modules>/*`）：
+ * 7. 只复制白名单包，其余记入 skipped 且不落盘
+ * 8. 隐藏条目跳过且不计入 skipped（原 shell glob `*` 亦不匹配）
+ * 9. 以 recursive + dereference 调用 cpSync（语义对齐 shell `cp -rL`）
+ * 10. 解引用软链，pnpm 全局包内指向 .pnpm 的软链不会变成断链
+ *
+ * missingNodePackages（复制后断言）：
+ * 11. 探测路径写错或 npm install -g 失败时白名单复制会产出空目录，
+ *     无此断言会让部署包静默缺 pnpm/pm2 后照常出包
  */
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {
   RUNTIME_NODE_DIRECT_PACKAGES,
+  copyNodeModulesOnly,
   findUnexpectedPackages,
+  missingNodePackages,
 } = require('../../../scripts/pack-lib/runtime-cleanliness');
 
 /**
@@ -43,6 +55,24 @@ const created = [];
 afterAll(() => {
   for (const d of created) fs.rmSync(d, { recursive: true, force: true });
 });
+
+/** 铺真实目录结构：{ 顶层条目名: 内部子文件名 }（复制语义需要真实目录，非稀疏文件） */
+function makeSrcDirs(entries) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nm-copy-src-'));
+  created.push(dir);
+  for (const [name, file] of Object.entries(entries)) {
+    const p = path.join(dir, name);
+    fs.mkdirSync(p, { recursive: true });
+    fs.writeFileSync(path.join(p, file), 'payload');
+  }
+  return dir;
+}
+
+function makeDstDir() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nm-copy-dst-'));
+  created.push(dir);
+  return dir;
+}
 
 describe('RUNTIME_NODE_DIRECT_PACKAGES', () => {
   // 锁定与 Windows 侧唯一事实源对齐：这两个端声明的是同一组「直接依赖」。
@@ -138,5 +168,136 @@ describe('findUnexpectedPackages', () => {
     const result = findUnexpectedPackages(makeNodeModules(entries));
     expect(result.length).toBe(100);
     expect(result.every((x) => x.name.startsWith('dep-'))).toBe(true);
+  });
+});
+
+describe('copyNodeModulesOnly', () => {
+  // 软链能力探测：Windows 非特权环境无法创建目录软链（需管理员或开发者模式），
+  // 此时跳过该用例；Linux 容器与 CI 上会真执行。探测在模块加载期做一次。
+  let symlinkCase = it;
+  try {
+    const probe = fs.mkdtempSync(path.join(os.tmpdir(), 'nm-probe-'));
+    fs.mkdirSync(path.join(probe, 't'));
+    fs.symlinkSync(path.join(probe, 't'), path.join(probe, 'l'), 'dir');
+    fs.rmSync(probe, { recursive: true, force: true });
+  } catch {
+    symlinkCase = it.skip;
+  }
+  it('只复制白名单包，其余记入 skipped 且不落盘', () => {
+    const src = makeSrcDirs({ pnpm: 'pnpm.cjs', '@opencode': 'cli.js', qwen: 'cli.js' });
+    const dst = makeDstDir();
+    const result = copyNodeModulesOnly(src, dst);
+    expect(result.copied).toEqual(['pnpm']);
+    expect(result.skipped.sort()).toEqual(['@opencode', 'qwen']);
+    expect(fs.existsSync(path.join(dst, 'pnpm', 'pnpm.cjs'))).toBe(true);
+    expect(fs.existsSync(path.join(dst, '@opencode'))).toBe(false);
+    expect(fs.existsSync(path.join(dst, 'qwen'))).toBe(false);
+  });
+
+  it('隐藏条目（pnpm/npm 元数据）跳过且不计入 skipped', () => {
+    const result = copyNodeModulesOnly(
+      makeSrcDirs({ pnpm: 'a', '.pnpm': 'b', '.modules.yaml': 'c' }),
+      makeDstDir()
+    );
+    expect(result).toEqual({ copied: ['pnpm'], skipped: [] });
+  });
+
+  it('源目录不存在返回空（缺件由组件完整性断言负责报缺）', () => {
+    expect(copyNodeModulesOnly(path.join(os.tmpdir(), 'no-such-nm-xyz'), makeDstDir())).toEqual({
+      copied: [],
+      skipped: [],
+    });
+  });
+
+  it('自定义白名单生效', () => {
+    const result = copyNodeModulesOnly(
+      makeSrcDirs({ 'custom-tool': 'a', other: 'b' }),
+      makeDstDir(),
+      ['custom-tool']
+    );
+    expect(result.copied).toEqual(['custom-tool']);
+    expect(result.skipped).toEqual(['other']);
+  });
+
+  // dereference 是本修复的关键语义：原 shell `cp -rL` 会解引用所有软链。
+  // 漏掉它，pnpm 全局包内指向 .pnpm store 的软链会被原样搬过去（而 .pnpm 不在
+  // 白名单会被跳过），部署包内就留下一批断链。
+  it('以 recursive + dereference 调用 cpSync（语义对齐 shell cp -rL）', () => {
+    const spy = jest.spyOn(fs, 'cpSync').mockImplementation(() => {});
+    try {
+      copyNodeModulesOnly(makeSrcDirs({ pnpm: 'a', npm: 'b' }), makeDstDir());
+      expect(spy).toHaveBeenCalledTimes(2);
+      for (const call of spy.mock.calls) {
+        expect(call[2]).toEqual({ recursive: true, dereference: true });
+      }
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  symlinkCase('解引用软链，pnpm 全局包内指向 .pnpm 的软链不会变成断链', () => {
+    const src = makeSrcDirs({ pm2: 'pm2' });
+    const dst = makeDstDir();
+    // .pnpm 不在白名单会被跳过——这正是 dereference 必要性的来源
+    const store = path.join(src, '.pnpm', 'store');
+    fs.mkdirSync(store, { recursive: true });
+    fs.writeFileSync(path.join(store, 'data'), 'store-data');
+    fs.symlinkSync(store, path.join(src, 'pm2', 'lib'), 'dir');
+
+    const result = copyNodeModulesOnly(src, dst);
+    expect(result.copied).toEqual(['pm2']);
+    expect(result.skipped).toEqual([]);
+
+    const out = path.join(dst, 'pm2', 'lib', 'data');
+    // dereference: true → 软链被展开成真实文件，而非指向 .pnpm 的悬空软链
+    expect(fs.lstatSync(out).isSymbolicLink()).toBe(false);
+    expect(fs.readFileSync(out, 'utf8')).toEqual('store-data');
+  });
+
+  it('回归实例：2026-10-04 @opencode 213M 不再随包发货', () => {
+    const result = copyNodeModulesOnly(
+      makeSrcDirs({
+        '@opencode': 'cli.js',
+        corepack: 'corepack.js',
+        npm: 'npm-cli.js',
+        pm2: 'pm2',
+        pnpm: 'pnpm.cjs',
+      }),
+      makeDstDir()
+    );
+    expect(result.copied.sort()).toEqual(['corepack', 'npm', 'pm2', 'pnpm']);
+    expect(result.skipped).toEqual(['@opencode']);
+  });
+});
+
+describe('missingNodePackages', () => {
+  it('四包齐全时返回空', () => {
+    expect(
+      missingNodePackages(
+        makeSrcDirs({ corepack: 'a', npm: 'b', pm2: 'c', pnpm: 'd' })
+      )
+    ).toEqual([]);
+  });
+
+  it('缺失时返回缺失的包名', () => {
+    expect(missingNodePackages(makeSrcDirs({ corepack: 'a', npm: 'b' }))).toEqual([
+      'pm2',
+      'pnpm',
+    ]);
+  });
+
+  it('目录不存在视为全部缺失', () => {
+    expect(missingNodePackages(path.join(os.tmpdir(), 'no-such-nm-xyz'))).toEqual([
+      'corepack',
+      'npm',
+      'pm2',
+      'pnpm',
+    ]);
+  });
+
+  it('自定义必需清单生效', () => {
+    expect(
+      missingNodePackages(makeSrcDirs({ 'custom-tool': 'a' }), ['custom-tool', 'other'])
+    ).toEqual(['other']);
   });
 });

@@ -79,7 +79,70 @@ function findUnexpectedPackages(nmDir, allowed = RUNTIME_NODE_DIRECT_PACKAGES) {
     .sort((a, b) => b.size - a.size);
 }
 
+/**
+ * 只复制 node_modules 顶层白名单内的包，返回实际复制与排除的条目。
+ *
+ * findUnexpectedPackages 是出包前门禁（拦截），本函数是源头治理：
+ * extract-linux-runtime.js 原以 `cp -rL ${nodeModulesPath}/*` 整目录搬打包机
+ * 全局 node_modules，打包机全局装过的任何 npm 包都会随部署包静默发货。
+ *
+ * 语义对齐原 shell `cp -rL`：recursive 递归、dereference 解引用软链
+ * （pnpm 全局包内指向 .pnpm store 的软链不解引用会断链）。
+ * 隐藏条目（`.` 开头）跳过——它们是 pnpm/npm 元数据，原 shell glob `*` 亦不匹配。
+ * 复制失败直接抛错中止，与原 execSync 失败即中止一致。
+ *
+ * @param {string} srcDir 打包机全局 node_modules 目录
+ * @param {string} dstDir 部署包内的 node_modules 目录
+ * @param {string[]} [allowlist] 允许复制的顶层包，默认 RUNTIME_NODE_DIRECT_PACKAGES
+ * @returns {{copied: string[], skipped: string[]}}
+ */
+function copyNodeModulesOnly(srcDir, dstDir, allowlist = RUNTIME_NODE_DIRECT_PACKAGES) {
+  let names = [];
+  try {
+    names = fs.readdirSync(srcDir);
+  } catch {
+    return { copied: [], skipped: [] };
+  }
+  const allowSet = new Set(allowlist);
+  const copied = [];
+  const skipped = [];
+  for (const name of names) {
+    if (name.startsWith('.')) continue;
+    if (!allowSet.has(name)) {
+      skipped.push(name);
+      continue;
+    }
+    fs.cpSync(path.join(srcDir, name), path.join(dstDir, name), {
+      recursive: true,
+      dereference: true,
+    });
+    copied.push(name);
+  }
+  return { copied, skipped };
+}
+
+/**
+ * 校验运行时工具是否齐全，返回缺失的包名。
+ *
+ * 供复制后断言用：nodeModulesPath 探测路径写错（node 装在自定义前缀时探测只认
+ * /usr/local/lib 与 /usr/lib 两个硬编码路径）或 `npm install -g` 失败时，
+ * 白名单复制会产出空目录——没有此断言，部署包会静默缺 pnpm/pm2 后照常出包。
+ *
+ * @returns {string[]} 缺失的包名
+ */
+function missingNodePackages(dstDir, required = RUNTIME_NODE_DIRECT_PACKAGES) {
+  return required.filter((name) => {
+    try {
+      return !fs.existsSync(path.join(dstDir, name));
+    } catch {
+      return true;
+    }
+  });
+}
+
 module.exports = {
   RUNTIME_NODE_DIRECT_PACKAGES,
+  copyNodeModulesOnly,
   findUnexpectedPackages,
+  missingNodePackages,
 };
