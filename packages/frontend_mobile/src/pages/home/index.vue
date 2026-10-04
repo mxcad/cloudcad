@@ -721,7 +721,7 @@ setViewportHeight();
           <MxIcon icon="huitui" isDefault class="zoomed"></MxIcon>
         </button>
         <button class="item" @click="callCommand('Mx_Redo')">
-          <MxIcon icon="huitui1" isDefault class="zoomed"></MxIcon>
+          <MxIcon icon="zhongzuo_huaban" isDefault class="zoomed"></MxIcon>
         </button>
         <button class="item" @click="selectColor">
           <div
