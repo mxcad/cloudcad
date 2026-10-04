@@ -6,10 +6,12 @@
  * .primary-btn 等声明（约 120 行 × 6 份），改一处要改六处。收敛到这里，
  * 页面只保留自己特有的少量样式。
  *
- * 注意：所有选择器写成 `button.xxx`（特异性 0,2,1）而不是裸 `.xxx`（0,1,1）。
- * main.scss 的全局 reset 是 [type="button"]:not(.van-button)，特异性 (0,2,0)，
- * 产物里 reset 排在组件样式之后 —— 裸类选择器会与其打平并按源序落败，
- * background/border/color 被改写成 none/none/inherit，在黑底上按钮物理消失。
+ * 注意：所有选择器写成 `button.xxx` 而不是裸 `.xxx`。
+ * main.scss 的全局 reset 是 `button:not(.van-button)`，特异性 (0,1,1)——刻意保持
+ * 低于组件 scoped 裸类 `.x[data-v]`（(0,2,0)），让任何组件按钮样式都能覆盖 reset。
+ * （历史：reset 曾用 `[type="button"]:not(.van-button)`（(0,2,0)），与 scoped 裸类
+ * 打平后按源序胜负不定，构建产物 reset 恒在后 → 组件按钮 background/border/color
+ * 被静默吃掉，黑底上按钮物理消失。2026-10-04 降回 (0,1,1) 根治，全仓 87 处受益。）
  * 所有自定义 button 类必须自带 `type="button"`。
  */
 
@@ -146,8 +148,11 @@ button.link-btn {
   color: var(--text-tertiary);
 }
 
+/* flex-wrap 必须开：.legal-links 用 flex-basis:100% 独占一行；nowrap 时它不但不换行，
+   还会把同行的「还没有账号？/立即注册」挤成逐字竖排（390px 视口实测） */
 .auth-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 6px;

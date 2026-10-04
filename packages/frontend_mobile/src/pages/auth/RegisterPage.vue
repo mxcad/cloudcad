@@ -176,12 +176,14 @@ async function handleRegister() {
         },
       })
       const data = unwrap<{ accessToken?: string; refreshToken?: string; user?: unknown; email?: string }>(res)
-      // 后端返回 email 表示账号已建但邮箱未验证，需先去验证页拿 token
+      // 后端返回 email 表示账号已建但邮箱未验证，需先去验证页拿 token。
+      // codeSent：注册请求已在后端发过验证码，验证页只起倒计时、不再补发
+      // （补发必撞 60s 限流，注册成功页会误报「发送过于频繁」）
       if (data.email && !data.accessToken) {
         void router.replace({
           path: '/verify-email',
           query: { ...redirectQueryOf(route.query) },
-          state: { email: data.email, message: t('请验证邮箱以完成注册') },
+          state: { email: data.email, codeSent: true, message: t('请验证邮箱以完成注册') },
         })
         return
       }
@@ -307,8 +309,11 @@ onMounted(() => {
             clearable
           />
 
-          <!-- 协议勾选（H-02，对齐 PC 注册页）：未勾选注册按钮禁用 -->
-          <label class="agreement">
+          <!-- 协议勾选（H-02，对齐 PC 注册页）：未勾选注册按钮禁用。
+               外层必须是 div 而非 label：vant checkbox 渲染为 div[role=checkbox]（非可标记元素），
+               label 的隐式激活会转而点击第一个 labelable 后代——「《用户协议》」按钮，
+               导致点勾选框就跳协议页、返回后勾选丢失，注册流程不可用 -->
+          <div class="agreement">
             <van-checkbox v-model="agreed" icon-size="16" shape="square" />
             <span class="agreement-text">
               {{ t('我已阅读并同意') }}
@@ -316,7 +321,7 @@ onMounted(() => {
               {{ t('和') }}
               <button class="agreement-link" type="button" @click="goLegal('privacy')">{{ '《' }}{{ t('隐私政策') }}{{ '》' }}</button>
             </span>
-          </label>
+          </div>
 
           <button class="primary-btn" type="button" :disabled="!canSubmit || submitting" @click="handleRegister">
             {{ submitting ? t('注册中…') : t('立即注册') }}

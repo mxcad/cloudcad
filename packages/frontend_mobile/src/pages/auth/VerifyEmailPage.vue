@@ -13,7 +13,8 @@
  *      → authControllerVerifyEmail
  *
  * 挂载时若已有邮箱且非补绑模式，自动补发一次验证码并起倒计时（PC 同行为）；
- * 补绑模式邮箱由用户输入，必须手动点发送。
+ * 补绑模式邮箱由用户输入，必须手动点发送。注册路径例外：后端已随注册请求发过
+ * 码（state.codeSent），只起倒计时不补发，否则必撞 60s 限流误报「发送过于频繁」。
  */
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -40,6 +41,8 @@ interface VerifyEmailState {
   tempToken?: string
   mode?: 'bind'
   message?: string
+  /** 注册请求已在后端发过验证码（仅注册路径携带）：只起倒计时，不再补发 */
+  codeSent?: boolean
 }
 
 const route = useRoute()
@@ -148,6 +151,9 @@ function goLogin() {
 onMounted(() => {
   if (bindMode || !email.value || !isEmail(email.value)) return
   startCountdown()
+  // 注册路径后端已随注册请求发过码：补发必撞 60s 限流，注册成功页会误报
+  // 「发送过于频繁」（登录 EMAIL_NOT_VERIFIED 路径后端未发码，仍需补发）
+  if (state.codeSent) return
   authControllerResendVerification({ body: { email: email.value.trim() } })
     .then((res) => {
       if (res.error) throw toError(res.error)

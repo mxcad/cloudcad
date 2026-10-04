@@ -21,9 +21,10 @@
   // 非错误态提示条（accent 浅底）
   --info-bg: rgba(0, 169, 158, 0.1);
   --info-border: rgba(0, 169, 158, 0.3);
-  // 密码强度条两端（弱/强之外的中间档）
+  // 密码强度条中间档与顶档（弱/较强走 --warning/--success）。
+  // 顶档对齐 PC #10b981 翠绿：曾用金色 #ffd700，最强密码显示成警示黄，语义反了
   --strength-medium: #ffa500;
-  --strength-strong: #ffd700;
+  --strength-strong: #10b981;
 
   // --- Spacing / Radius / Font (theme-independent) ---
   --space-xs: 4px;

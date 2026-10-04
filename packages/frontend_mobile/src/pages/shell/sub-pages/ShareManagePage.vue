@@ -1158,10 +1158,14 @@ function onCustomDaysInput(e: Event) {
   gap: 4px;
 }
 
+/* flex:1 + 居中：与 UnifiedFileList .empty-state 口径一致（.subpage 是 flex 列），
+   否则空态贴顶、与项目详情/文件页的居中空态视觉不一致 */
 .state-box {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 48px 0;
 }

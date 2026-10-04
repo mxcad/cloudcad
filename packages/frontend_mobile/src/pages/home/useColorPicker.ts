@@ -18,24 +18,35 @@ const initColorPicker = () => {
     })
     const el = colorPicker!.el
     const circle = el.getElementsByClassName("IroWheel")[0] as HTMLElement
-    document.addEventListener("touchstart", (event) => {
-        let target = event.target as HTMLElement
 
-        if (target.tagName === "svg") {
-            target = target.parentElement as HTMLElement
-        }
-        if (typeof target.className === "string" && ["IroSliderGradient", "IroSlider"].some((className) => target.className.includes(className))) return
-
+    // 点在色轮圆外即关闭。触摸与鼠标都要覆盖：桌面浏览器/平板外接鼠标下
+    // touchstart 不触发，缺鼠标分支时色轮打开后无法关闭（UI 卡死）
+    const isOutsideWheel = (clientX: number, clientY: number) => {
         const centerX = circle.offsetWidth / 2;
         const centerY = circle.offsetHeight / 2;
-
-        const touch = event.changedTouches[0];
-        const dx = touch.clientX - (circle.getBoundingClientRect().left + centerX);
-        const dy = touch.clientY - (circle.getBoundingClientRect().top + centerY);
-
+        const dx = clientX - (circle.getBoundingClientRect().left + centerX);
+        const dy = clientY - (circle.getBoundingClientRect().top + centerY);
         const radius = circle.offsetWidth / 2;
-        if (Math.sqrt(dx * dx + dy * dy) > radius) {
+        return Math.sqrt(dx * dx + dy * dy) > radius
+    }
+    const isOnSlider = (target: EventTarget | null) => {
+        let el = target as HTMLElement
+        if (el.tagName === "svg") {
+            el = el.parentElement as HTMLElement
+        }
+        return typeof el.className === "string" && ["IroSliderGradient", "IroSlider"].some((className) => el.className.includes(className))
+    }
+    document.addEventListener("touchstart", (event) => {
+        if (isOnSlider(event.target)) return
+        if (isOutsideWheel(event.changedTouches[0].clientX, event.changedTouches[0].clientY)) {
             event.stopPropagation()
+            isShowColorPicker.value = false
+        }
+    })
+    document.addEventListener("mousedown", (event) => {
+        if (!isShowColorPicker.value) return
+        if (isOnSlider(event.target)) return
+        if (isOutsideWheel(event.clientX, event.clientY)) {
             isShowColorPicker.value = false
         }
     })

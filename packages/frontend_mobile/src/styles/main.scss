@@ -3,10 +3,14 @@
   box-sizing: border-box;
 }
 
-button:not(.van-button),
-[type="button"]:not(.van-button),
-[type="reset"]:not(.van-button),
-[type="submit"]:not(.van-button) {
+/*
+ * button 基础 reset：特异性必须保持 (0,1,1) 以下——组件 scoped 裸类 `.x[data-v]`
+ * 是 (0,2,0)，若 reset 用 `[type="button"]:not(.van-button)`（(0,2,0)）平手后按源序
+ * 胜负不定（dev 取决于组件加载顺序，构建产物 reset 恒在后）→ 组件按钮的
+ * background/border/color 被静默吃掉，黑底上按钮物理消失（实例：登录页 .wechat-btn）。
+ * 基础 reset 应是最低优先级，任何组件类样式都能覆盖它。
+ */
+button:not(.van-button) {
   background: none;
   border: none;
   color: inherit;

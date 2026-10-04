@@ -456,10 +456,14 @@ onMounted(() => {
   border-radius: var(--radius-md);
 }
 
+/* flex:1 + 居中：与 UnifiedFileList .empty-state 口径一致（.roles-body 是 flex 列），
+   否则空态贴顶 */
 .state-box {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 48px 0;
 }

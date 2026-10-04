@@ -959,16 +959,22 @@ watch(
 }
 
 /* ── 列表 ── */
+/* display:flex 仅为让空态 state-box 能 flex:1 居中（与 UnifiedFileList .empty-state
+   口径一致）；grid/list/load-more 是内容高度 flex 项，布局不变 */
 .library-body {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
 }
 
 .state-box {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 48px 0;
 }
