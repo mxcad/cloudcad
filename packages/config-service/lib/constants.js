@@ -77,7 +77,10 @@ const CONFIG_GROUPS = [
       { key: 'MAIL_SECURE', label: '启用 TLS', type: 'boolean', sensitive: false },
       { key: 'MAIL_USER', label: 'SMTP 用户', type: 'text', sensitive: false },
       {
-        key: 'MAIL_PASSWORD',
+        // 必须与后端 configuration.ts 实际读取的变量名一致（MAIL_PASS）。
+        // 历史上这里写成 MAIL_PASSWORD：配置中心保存一次，后端读的是另一个名字，
+        // 改 SMTP 密码会静默不生效。
+        key: 'MAIL_PASS',
         label: 'SMTP 密码',
         type: 'password',
         sensitive: true,
