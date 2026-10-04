@@ -43,6 +43,12 @@ const {
   isKeepEmptyFile,
 } = require('./pack-lib/packignore');
 
+// 运行时 node 工具依赖清洁检查（Linux runtime 整目录复制会带上打包机全局 npm 包）
+const {
+  RUNTIME_NODE_DIRECT_PACKAGES,
+  findUnexpectedPackages,
+} = require('./pack-lib/runtime-cleanliness');
+
 // ==================== 配置 ====================
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -1383,6 +1389,72 @@ function assertLinuxRuntimeComponents() {
 }
 
 /**
+ * Linux 运行时 node 工具依赖清洁检查（出包前门禁）。
+ *
+ * 背景：extract-linux-runtime.js 用 `cp -rL <打包机全局 node_modules>/*` 把打包机的
+ * npm 全局包整目录搬进 runtime/linux/node，而 runtime/linux/ 又是整目录复制。
+ * 打包机上全局装过的任何 npm 包（AI CLI、IDE 工具等）都会随部署包静默发货。
+ * 2026-10-04 实例：@opencode/cli 213M（含 4 个平台变体二进制）使 Linux 部署包
+ * 凭空多出约 96M 压缩体积。reinstall-node-tools.js 的 TOP_AI_TOOLS 黑名单
+ * （codebuddy/qwen/qodercli/iflow/cbc）证实同类污染在 Windows 侧也反复发生。
+ *
+ * Windows 侧已有防御：reinstall-node-tools.js 以 package.json + package-lock.json
+ * 为唯一事实源 `npm ci` 严格还原 node_modules（先清空再精确安装，天然清除未声明
+ * 垃圾）；Linux 侧无同类机制。本门禁与上面两个组件断言同属出包前强制校验，
+ * 是同一道防线的第三块（缺件 → 中止、脏件 → 中止）。
+ *
+ * 判定：node_modules 顶层只允许 RUNTIME_NODE_DIRECT_PACKAGES（两端共同声明的
+ * 四个直接依赖）；隐藏条目（pnpm/npm 元数据）跳过。命中即中止——误报时按提示
+ * 删掉该目录即可恢复，代价远小于静默发货。
+ *
+ * 布局差异（2026-10-04 实测两端部署包发现）：Linux 侧是 pnpm 布局，顶层只挂
+ * 4 个直接安装的包（依赖落在各自子目录），故白名单判定精确；Windows 侧是 npm
+ * 布局（npm ci 扁平化），顶层实测 120 个条目，此白名单对它完全不适用——
+ * 若在此布局上跑会误报上百个合法依赖。故本门禁只对 Linux 侧调用，条目数
+ * 异常多时另给出布局提示。
+ */
+function assertLinuxRuntimeNodeModules() {
+  const nmDir = path.join(PROJECT_ROOT, 'runtime', 'linux', 'node', 'node_modules');
+  const unexpected = findUnexpectedPackages(nmDir);
+  if (unexpected.length === 0) {
+    log(
+      'Linux 运行时 node_modules 清洁检查通过（仅 ' +
+        RUNTIME_NODE_DIRECT_PACKAGES.join('/') +
+        '）'
+    );
+    return;
+  }
+  const details = unexpected
+    .map((x) => `  - ${x.name}（${formatSize(x.size)}）`)
+    .join('\n');
+  error(
+    `Linux 运行时 node_modules 含未声明包，中止打包（会随部署包整目录发货）:\n${details}`
+  );
+  error(`合法顶层包仅: ${RUNTIME_NODE_DIRECT_PACKAGES.join(' / ')}`);
+  error('根因: extract-linux-runtime.js 以 cp -rL 整目录复制打包机 npm 全局 node_modules，');
+  error('打包机上全局安装过的任何 npm 包（AI CLI、IDE 工具等）都会被带进部署包。');
+  error('修复方式:');
+  error('  - 删除多余条目后重跑打包:');
+  unexpected.forEach((x) =>
+    error(`      rm -rf runtime/linux/node/node_modules/${x.name}`)
+  );
+  error('  - 根治: 清理打包机全局 npm 包后重新提取: sudo node scripts/extract-linux-runtime.js');
+  error(
+    '  - 若某条目确为运行时必需，将其加入 scripts/pack-lib/runtime-cleanliness.js 的 RUNTIME_NODE_DIRECT_PACKAGES'
+  );
+  if (unexpected.length > 20) {
+    error('');
+    error(
+      `注意: 条目数异常多（${unexpected.length} 个）。这通常是 npm 扁平化布局所致——`
+    );
+    error('npm ci 会把全部传递依赖铺到顶层（Windows 侧实测 120 个），而非开发工具混入。');
+    error('请确认 runtime/linux/node/node_modules 的生成方式是否已改用 npm ci；若是，');
+    error('须改用 package-lock.json 作事实源判定，直接安装包白名单对 npm 布局不适用。');
+  }
+  process.exit(1);
+}
+
+/**
  * 一方脚本行尾/编码出包前校验（门禁）。
  *
  * 背景（2026-09-29 事故）：bat 模板被批量改写为 LF 行尾后，离线包内
@@ -1588,6 +1660,9 @@ async function packDeploy(platform, variant = 'oss') {
       process.exit(1);
     }
     assertLinuxRuntimeComponents();
+    // 必须在组件断言之后：缺失组件会自动触发 extract-linux-runtime.js 重新提取，
+    // 提取会重建 node_modules，先做清洁检查会判定到提取前的旧状态
+    assertLinuxRuntimeNodeModules();
   }
 
   // 检查 Windows 标准运行时组件（node/postgresql/redis 关键可执行文件）
