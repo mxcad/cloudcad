@@ -109,7 +109,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `packages/frontend/AGENTS.md` | 前端 i18n (VoerkaI18n) 配置 |
 | `packages/config-service/AGENTS.md` | Config Center 说明 |
 | `LEAN-CTX.md` | lean-ctx MCP 工具使用规则 |
-| `docs/elastic-conversion-architecture.md` | 转换架构 + 容量规划（核数/内存/并发公式，调 `maxConcurrent` 前必读） |
+| `docs/elastic-conversion-architecture.md` | 转换架构 + 容量规划（核数/内存/并发公式，调 `upload.conversionMaxConcurrent` 前必读） |
 | `docs/adr/0020-replaceable-vs-internal-service.md` | 扩展点 vs 内部服务 —— 何时用接口 + DI token，何时用 class-based DI |
 | `docs/adr/0026-extension-mechanism-master.md` | 扩展机制总纲 —— 三类扩展判断 + 类型获取 + 契约先行 + AI 探针 |
 | `docs/adr/0027-shared-prisma-client.md` | @cloudcad/db 共享 Prisma Client —— schema 单一源 + 数据层类型唯一出口 |

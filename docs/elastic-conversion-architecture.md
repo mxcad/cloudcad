@@ -143,7 +143,7 @@ pnpm dev
 
 ### 决策速查
 
-- 并发转换量大 → 提高 `maxConcurrent`（先算物理核数 × 4GB 内存是否吃得住），或切 standalone 多实例横向扩容 / 云 FaaS。
+- 并发转换量大 → 提高 `upload.conversionMaxConcurrent`（env `UPLOAD_MAX_CONCURRENT`）。实际并发 = `min(CPU核数, upload.conversionMaxConcurrent)`，调高超过物理核数无效，所以先算核数 × 4GB 内存是否吃得住；再不行切 standalone 多实例横向扩容 / 云 FaaS。
 - 单实例 embedded 模式受 `RateLimiter(4)` 限制，只适合低并发/内部环境。
 - 内存比核数更先成为瓶颈时（大图多），优先减并发而不是加核。
 

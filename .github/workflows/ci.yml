@@ -115,8 +115,11 @@ jobs:
           MINIO_SECRET_KEY=minioadmin
           MINIO_REGION=us-east-1
           MINIO_BUCKET=cloudcad
-          UPLOAD_MAX_SIZE=104857600
-          UPLOAD_ALLOWED_TYPES=.dwg,.dxf,.pdf,.png,.jpg,.jpeg
+          UPLOAD_MAX_FILES=10
+          UPLOAD_ALLOWED_EXTENSIONS=.dwg,.dxf
+          UPLOAD_BLOCKED_EXTENSIONS=.exe,.bat,.sh,.cmd,.ps1
+          UPLOAD_MAX_CONCURRENT=3
+          UPLOAD_CHUNK_MAX_CONCURRENT=5
           EOF
 
       - name: 等待数据库就绪
@@ -192,6 +195,14 @@ jobs:
         run: |
           cd packages/frontend
           pnpm test
+
+      - name: 运行部署运行时打包/启动脚本单元测试（tests/runtime-unit）
+        # 独立 npm 包（未纳入 pnpm-workspace），故单独安装依赖。
+        # 纯函数 + jest mock，不依赖 PG/Redis；此前仅在本地跑，无 CI 强制力。
+        run: |
+          cd tests/runtime-unit
+          npm install
+          npm test
 
       - name: 安装 Playwright 浏览器
         run: |

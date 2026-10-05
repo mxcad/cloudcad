@@ -17,6 +17,7 @@ const {
   isJitLib,
   isPgSoFile,
   copyPgLibs,
+  findPgJitLibs,
 } = require('../../../scripts/extract-linux-runtime');
 
 const created = [];
@@ -124,5 +125,37 @@ describe('copyPgLibs', () => {
 
     expect(fs.existsSync(path.join(dst, 'bitcode'))).toBe(false);
     expect(fs.readdirSync(dst)).toEqual(['libpq.so.5']);
+  });
+});
+
+describe('findPgJitLibs', () => {
+  it('扫出 postgres/lib 下残留的 JIT 库（旧缓存遗留，copyPgLibs 删不掉）', () => {
+    const out = mkdtemp();
+    put(out, 'postgres/lib/libLLVM-15.so.1');
+    put(out, 'postgres/lib/llvmjit.so');
+    put(out, 'postgres/lib/libpq.so');
+
+    const found = findPgJitLibs(out).map((p) => path.basename(p)).sort();
+    expect(found).toEqual(['libLLVM-15.so.1', 'llvmjit.so']);
+  });
+
+  it('产物干净时返回空数组', () => {
+    const out = mkdtemp();
+    put(out, 'postgres/lib/libpq.so');
+    put(out, 'postgres/bin/postgres');
+
+    expect(findPgJitLibs(out)).toEqual([]);
+  });
+
+  it('postgres/lib 不存在时返回空数组（不抛错）', () => {
+    const out = mkdtemp();
+    expect(findPgJitLibs(out)).toEqual([]);
+  });
+
+  it('不扫其他组件目录（node/bin 下的同名文件不算残留）', () => {
+    const out = mkdtemp();
+    put(out, 'node/lib/libLLVM-15.so.1');
+
+    expect(findPgJitLibs(out)).toEqual([]);
   });
 });

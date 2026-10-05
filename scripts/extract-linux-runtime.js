@@ -847,6 +847,47 @@ function isPgSoFile(name, includeVersioned) {
 }
 
 /**
+ * 扫描 postgres/lib 下残留的 JIT 库（libLLVM-* / llvmjit*），返回绝对路径列表。
+ *
+ * copyPgLibs 只在「复制」时按前缀排除，删除不了更早版本遗留的同名文件：
+ * 一份已含 libLLVM-15.so.1 的旧缓存目录，会通过 isRuntimeExtracted 的关键可执行
+ * 文件检查被判为「缓存命中」直接复用，JIT 死重随包回来。故复用与提取两条路径
+ * 都必须主动检查。
+ */
+function findPgJitLibs(outputDir) {
+  const libDir = path.join(outputDir, 'postgres', 'lib');
+  if (!fs.existsSync(libDir)) return [];
+  return fs
+    .readdirSync(libDir)
+    .filter((name) => isJitLib(name))
+    .map((name) => path.join(libDir, name));
+}
+
+/** 清除 postgres/lib 下残留的 JIT 库（旧缓存遗留，copyPgLibs 不会覆盖删除） */
+function purgePgJitLibs(outputDir) {
+  for (const file of findPgJitLibs(outputDir)) {
+    try {
+      fs.unlinkSync(file);
+      log(`  已清除残留 JIT 库: ${path.basename(file)}`);
+    } catch (e) {
+      log(`  清除残留 JIT 库失败: ${path.basename(file)} - ${e.message}`);
+    }
+  }
+}
+
+/** 断言产物中不含 JIT 库，命中即致命退出（防止带 JIT 的产物落盘成缓存） */
+function assertNoPgJitLibs(outputDir) {
+  const libs = findPgJitLibs(outputDir);
+  if (libs.length > 0) {
+    error(
+      `部署产物包含 PostgreSQL JIT 库（应已排除，见 d8ce83f）:\n  ` +
+        libs.map((f) => path.basename(f)).join('\n  ')
+    );
+    process.exit(1);
+  }
+}
+
+/**
  * 复制 PostgreSQL 库文件，排除 JIT 组件
  *
  * 必须在复制阶段排除，不能事后删：collectLibDependencies 会遍历 libDir 里所有
@@ -1070,7 +1111,11 @@ function main() {
   
   // 确保输出目录存在
   ensureDir(outputDir);
-  
+
+  // 先清残留 JIT 库：它只影响产物体积不影响关键可执行文件检查，
+  // 缓存命中路径不会重跑 copyPgLibs，必须在两条路径共用处清除。
+  purgePgJitLibs(outputDir);
+
   // 缓存命中：产物已完整存在则跳过提取（避免每次重复 apt/yum install + 收集依赖库）。
   // 缓存目录通过 docker run 挂载持久化到本地 runtime/cache/linux-extract/<发行版>，
   // 首次提取后落盘，后续打包直接复用，大幅加速 Linux 打包。
@@ -1095,6 +1140,7 @@ function main() {
   // 提取后断言关键可执行文件：组件级错误仅 node 致命，其余组件失败只打日志，
   // 但"目录在、内容残缺"的产物不能落盘成缓存（下次打包会被误判缓存命中）。
   assertExtractedComponents(outputDir, components);
+  assertNoPgJitLibs(outputDir);
 
   // 创建入口脚本（如果提取了 node）
   if (components.includes('node')) {
@@ -1131,4 +1177,5 @@ module.exports = {
   isJitLib,
   isPgSoFile,
   copyPgLibs,
+  findPgJitLibs,
 };
