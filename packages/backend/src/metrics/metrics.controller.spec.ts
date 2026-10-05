@@ -5,7 +5,6 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
-import { MetricsAccessGuard } from './metrics-access.guard';
 import { IPERMISSION_SERVICE } from '../permission/interfaces/permission-service.interface';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { PERMISSIONS_KEY } from '../common/decorators/require-permissions.decorator';
