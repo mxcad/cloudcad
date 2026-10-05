@@ -26,10 +26,6 @@ export function isFolderNode(node: NodeLike): boolean {
   return node.nodeType !== NodeType.FILE;
 }
 
-export function isLibraryNode(node: NodeLike): boolean {
-  return node.nodeType === NodeType.LIBRARY_DRAWING || node.nodeType === NodeType.LIBRARY_BLOCK;
-}
-
 export function getLibraryKeyFromNodeType(nodeType: NodeType): string | undefined {
   if (nodeType === NodeType.LIBRARY_DRAWING) return 'drawing';
   if (nodeType === NodeType.LIBRARY_BLOCK) return 'block';
