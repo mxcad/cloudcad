@@ -36,21 +36,6 @@ export interface MxCadContext {
 }
 
 /**
- * 带可选字段的 MxCAD 服务上下文
- * 用于某些方法的参数
- */
-export interface MxCadContextOptional {
-  /** 用户ID */
-  userId?: string;
-  /** 用户名 */
-  username?: string;
-  /** 用户角色 */
-  role?: string;
-  /** 节点ID */
-  nodeId?: string;
-}
-
-/**
  * 服务器文件转换参数
  *
  * 引擎输入字段部分从 @cloudcad/contracts 的 ConversionRequest 派生
