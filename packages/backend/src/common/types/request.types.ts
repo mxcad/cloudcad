@@ -34,15 +34,6 @@ export interface AuthenticatedRequest extends Express.Request {
 }
 
 /**
- * 文件上传请求
- */
-export interface FileUploadRequest extends AuthenticatedRequest {
-  file?: Express.Multer.File;
-  files?: Express.Multer.File[];
-  body: Record<string, unknown>;
-}
-
-/**
  * 带查询参数的请求
  */
 export interface QueryRequest<
