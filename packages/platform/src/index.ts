@@ -90,6 +90,9 @@ export { resolvePlaceholders } from './legal/placeholder';
 export { scorePasswordStrength } from './auth/password-strength';
 export type { PasswordStrengthScore } from './auth/password-strength';
 
+// ── 角色权限判定（纯判定，会话存储读取留端包） ──
+export { hasAnyPermission } from './auth/permissions';
+
 // ── 相对时间（纯计算 tier/unit/value，文案留端包） ──
 export { relativeTime } from './format/relative';
 export type {

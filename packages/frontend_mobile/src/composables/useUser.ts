@@ -2,6 +2,7 @@ import { ref, readonly, onMounted, getCurrentInstance } from 'vue';
 import {
   authTransferParamNames,
   parseAuthTransferQuery,
+  hasAnyPermission,
 } from '@cloudcad/platform';
 import {
   logout as logoutSession,
@@ -101,25 +102,11 @@ export function useUser() {
   }
 
   function hasPermission(permission: string): boolean {
-    if (!user.value) return false;
-    const rolePermissions = (user.value as unknown as Record<string, unknown>)
-      .role as Record<string, unknown> | undefined;
-    if (
-      !rolePermissions?.permissions ||
-      !Array.isArray(rolePermissions.permissions)
-    ) {
-      return false;
-    }
-    for (const p of rolePermissions.permissions) {
-      if (typeof p === 'string' && p === permission) return true;
-      if (
-        p &&
-        typeof (p as Record<string, unknown>).permission === 'string' &&
-        (p as Record<string, unknown>).permission === permission
-      )
-        return true;
-    }
-    return false;
+    return hasAnyPermission(
+      (user.value as unknown as { role?: { permissions?: unknown } } | null)
+        ?.role?.permissions,
+      [permission]
+    );
   }
 
   return {

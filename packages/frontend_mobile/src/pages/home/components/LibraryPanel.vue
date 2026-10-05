@@ -307,9 +307,9 @@ import { MxFun } from 'mxdraw'
 import FloatingPopup from '@/components/FloatingPopup.vue'
 import { useLibrary, LibraryType } from '@/composables/useLibrary'
 import { useViewMode } from '@/composables/useViewMode'
-import { openMxWeb } from '@/plugins/mxcad/openMxWeb'
 import { useEditorState } from '@/composables/useEditorState'
-import { useSave } from '@/composables/useSave'
+import { useOpenGuard } from '@/composables/useOpenGuard'
+import { openDrawing } from '@/services/drawingOpener'
 import { useUser } from '@/composables/useUser'
 import { PERMISSIONS, canExportDownloadGate } from '@/services/permissionService'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
@@ -352,8 +352,8 @@ const floatingPopupRef = ref<InstanceType<typeof FloatingPopup>>()
 const library = useLibrary(props.libraryType)
 // E-15 库列表视图切换（网格/清单），按库域持久化（对齐 UnifiedFileList A-16）
 const mode = useViewMode(`library_${props.libraryType}`)
-const { save: saveAction } = useSave()
 const editorState = useEditorState()
+const { guardBeforeOpen } = useOpenGuard()
 const { user, hasPermission } = useUser()
 const { config: runtimeConfig } = useRuntimeConfig()
 
@@ -453,58 +453,49 @@ async function onItemClick(node: FileSystemNodeDto) {
     floatingPopupRef.value?.resetPreservedHeight()
     innerShow.value = false
   } else {
-    // 图纸 → 打开
-    await openDrawing(node)
+    // 图纸 → 打开（状态编排走 drawingOpener，本处只管抽屉编舞）
+    await openLibraryDrawing(node)
   }
 }
 
-async function openDrawing(node: FileSystemNodeDto) {
-  const fileUrl = getNodeFileUrl(node)
+/**
+ * 从图纸库打开一张图纸。
+ *
+ * 节点信息 / 权限 / deletedAt 与 fileHash 校验 / projectId 解析 / IndexedDB
+ * mxweb 缓存统一由 drawingOpener（useFileLoader）深模块一次性写全，本函数只
+ * 负责本组件特有的抽屉编舞：打开前收缩到最低、成功后关抽屉、失败后展开到最高。
+ *
+ * 不能直接 openMxWeb(fileUrl)：那只会设 isActive + fileName，fileId 恒为空——
+ * 保存退化成「另存为到云图」，库列表也高亮不到当前图纸。
+ *
+ * 未保存更改与退出协同的确认复用 useOpenGuard 共享守卫，且必须在
+ * resetFileState() 之前：守卫内的 save() 读的是当前会话状态。
+ */
+async function openLibraryDrawing(node: FileSystemNodeDto) {
+  if (!(await guardBeforeOpen())) return
 
-  // 未保存更改确认（E-22）：与 home/index.vue handleNewFile 同模式，
-  // 确认须在 reset() 之前（reset 会清 isModified）
-  if (editorState.state.isModified) {
-    try {
-      await showConfirmDialog({
-        title: t('未保存的更改'),
-        message: t('当前图纸有未保存的更改，是否保存？'),
-        confirmButtonText: t('保存'),
-        cancelButtonText: t('不保存'),
-      })
-      try {
-        const success = await saveAction()
-        if (!success) return
-      } catch {
-        return
-      }
-    } catch {
-      // 用户选「不保存」→ 放弃修改继续打开
-      editorState.setIsModified(false)
-    }
-  }
-
-  // 拿到链接 → 抽屉收缩到最低
+  // 确认对话框已关闭 → 抽屉收缩到最低
   floatingPopupRef.value?.snapTo(0)
   await nextTick()
 
-  editorState.reset()
-  editorState.setLoading(true)
-  const ok = await openMxWeb(fileUrl)
-  editorState.setLoading(false)
+  // 清掉上一次打开的文件上下文与错误（保留 isModified/isActive/loading）
+  editorState.resetFileState()
+
+  const ok = await openDrawing({
+    source: 'library',
+    libraryKey: props.libraryType,
+    nodeId: node.id,
+  })
 
   if (ok) {
-    editorState.setIsActive(true)
-    editorState.setFileName(stripExt(node.name))
-    editorState.setLibraryKey(props.libraryType)
-    // 记录当前文件 id 与版本戳：库列表据此高亮当前图纸，保存/分享据此定位节点
-    editorState.setFileId(node.id)
-    if (node.updatedAt) editorState.setUpdatedAt(node.updatedAt)
     // 成功 → 重置记忆高度 → 关闭抽屉
     floatingPopupRef.value?.resetPreservedHeight()
     innerShow.value = false
   } else {
+    // 错误 overlay 会被画布/浮层盖住，改 toast 提示并展开抽屉留在原页
+    editorState.setError(null)
+    editorState.setErrorType(null)
     showToast(t('打开图纸失败'))
-    // 失败 → 展开到最高
     floatingPopupRef.value?.snapTo(2)
   }
 }

@@ -23,6 +23,7 @@ import { handleApiError } from '../utils/apiConfig';
 import { isTokenExpired, readToken } from '../utils/authSession';
 import { showToast, showLoadingToast, closeToast } from 'vant';
 import { PERMISSIONS } from '../services/permissionService';
+import { hasAnyPermission } from '@cloudcad/platform';
 
 export interface SaveResult {
   success: boolean;
@@ -36,16 +37,13 @@ function checkLibraryPermission(): boolean {
     const userStr = localStorage.getItem('user');
     if (!userStr) return false;
     const userData = JSON.parse(userStr);
-    const permissions = userData?.role?.permissions || [];
-    const permStrings = permissions
-      .map((p: unknown) =>
-        typeof p === 'string' ? p : (p as Record<string, unknown>)?.permission
-      )
-      .filter(Boolean) as string[];
-    return (
-      permStrings.includes(PERMISSIONS.LIBRARY_DRAWING_MANAGE) ||
-      permStrings.includes(PERMISSIONS.LIBRARY_BLOCK_MANAGE)
-    );
+    // 权限码判定收敛到 @cloudcad/platform（与 PC 共用一份）；
+    // 这里只负责端侧取数（localStorage）与目标权限码清单。
+    // 须同步读取：本判定在 save() 的 await 之前执行，useUser 的响应式状态不在此用。
+    return hasAnyPermission(userData?.role?.permissions, [
+      PERMISSIONS.LIBRARY_DRAWING_MANAGE,
+      PERMISSIONS.LIBRARY_BLOCK_MANAGE,
+    ]);
   } catch {
     return false;
   }
@@ -121,7 +119,10 @@ export function useSave() {
         return { success: false, message: t('公开文件不支持保存') };
       }
 
-      if (!state.permissions.canSave && state.fileId) {
+      // 项目保存权限门禁。库文件在此排除：useFileLoader 对库源固定写
+      // canSave:false，不排除会让库文件在下方 checkLibraryPermission 判定之前
+      // 被误拦成「没有保存权限」，saveLibraryDrawing/Block 恒不可达。
+      if (!state.permissions.canSave && state.fileId && !state.libraryKey) {
         saving.value = false;
         closeToast();
         return {
@@ -185,7 +186,10 @@ export function useSave() {
 
       const fileInfo = state.fileInfo as Record<string, unknown> | null;
       const parentId = fileInfo?.parentId as string | null | undefined;
-      const libraryKey = fileInfo?.libraryKey as string | undefined;
+      // libraryKey 只存在于 store 字段：loadByNodeId 经 options.libraryKey 写入
+      // state.libraryKey。FileSystemNode 没有该字段，接口返回的 fileInfo 上读它
+      // 恒为 undefined——曾因此让库保存分支彻底不可达。
+      const libraryKey = state.libraryKey || undefined;
       const projectId = fileInfo?.projectId as string | undefined;
 
       const isMyDrawing = !!(

@@ -10,6 +10,7 @@ import type {
   SavePermissionQuerier,
   SaveSdkHandles,
 } from './saveTypes';
+import { hasAnyPermission } from '@cloudcad/platform';
 
 /**
  * 保存流项目权限缓存（带 TTL，对齐 globalPermissionCache 的 5 分钟）
@@ -77,15 +78,12 @@ export function createDefaultPermissionQuerier(): SavePermissionQuerier {
       const userStr = localStorage.getItem('user');
       if (!userStr) return false;
       const userData = JSON.parse(userStr);
-      const userPermissions = userData?.role?.permissions || [];
-      const permissionStrings = userPermissions.map(
-        (p: string | { permission: string }) =>
-          typeof p === 'string' ? p : p.permission
-      );
-      return (
-        permissionStrings.includes('LIBRARY_DRAWING_MANAGE') ||
-        permissionStrings.includes('LIBRARY_BLOCK_MANAGE')
-      );
+      // 权限码判定收敛到 @cloudcad/platform（与移动端共用一份）；
+      // 这里只负责端侧取数（localStorage）与目标权限码清单。
+      return hasAnyPermission(userData?.role?.permissions, [
+        'LIBRARY_DRAWING_MANAGE',
+        'LIBRARY_BLOCK_MANAGE',
+      ]);
     },
   };
 }

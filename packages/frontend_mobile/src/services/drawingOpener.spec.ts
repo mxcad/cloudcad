@@ -88,6 +88,7 @@ import {
   nodeControllerGetNode as getNodeSdk,
 } from '@/api-sdk';
 import { openMxWeb } from '@/plugins/mxcad/openMxWeb';
+import { loadCADPermissions } from '@/services/permissionService';
 
 const shareResolveMock = vi.mocked(shareResolveSdk);
 const getNodeMock = vi.mocked(getNodeSdk);
@@ -188,6 +189,82 @@ describe('drawingOpener — node 源', () => {
     expect(s.projectId).toBe('file-1');
     expect(s.isActive).toBe(true);
     expect(s.loading).toBe(false);
+  });
+});
+
+describe('drawingOpener — library 源（图纸库 / 图块库）', () => {
+  it('成功 → 库节点接口路由，editorState 记 libraryKey 与受限权限', async () => {
+    libraryControllerGetDrawingNode.mockResolvedValue({
+      data: shareNodeInfo({ name: 'lib.dwg' }),
+    } as never);
+
+    const ok = await openDrawing({
+      source: 'library',
+      libraryKey: 'drawing',
+      nodeId: 'file-1',
+    });
+
+    expect(ok).toBe(true);
+    expect(libraryControllerGetDrawingNode).toHaveBeenCalledWith({
+      path: { nodeId: 'file-1' },
+    });
+    // 库节点不在文件系统节点接口里
+    expect(getNodeMock).not.toHaveBeenCalled();
+    const s = useEditorStore().state;
+    expect(s.libraryKey).toBe('drawing');
+    expect(s.fileId).toBe('file-1');
+    expect(s.fileName).toBe('lib.dwg');
+    // 库源不走根节点解析：projectId 停在 parentId 初值，无 parentId 即 null
+    expect(s.projectId).toBeNull();
+    // libraryKey 只落在 store 字段上，FileSystemNode 没有这一列——
+    // 保存侧必须读 state.libraryKey，且 canSave 门禁须排除 libraryKey。
+    // （曾同时违反这两点，导致库文件保存分支恒不可达）
+    expect(
+      (s.fileInfo as Record<string, unknown> | null)?.libraryKey
+    ).toBeUndefined();
+    expect(s.permissions).toEqual({
+      canSave: false,
+      canExport: true,
+      canManageExternalRef: false,
+    });
+    expect(s.isActive).toBe(true);
+    expect(s.loading).toBe(false);
+  });
+
+  it('图块库 → libraryControllerGetBlockNode 路由，libraryKey 记 block', async () => {
+    libraryControllerGetBlockNode.mockResolvedValue({
+      data: shareNodeInfo({ name: 'blk.dwg' }),
+    } as never);
+
+    const ok = await openDrawing({
+      source: 'library',
+      libraryKey: 'block',
+      nodeId: 'file-2',
+    });
+
+    expect(ok).toBe(true);
+    expect(libraryControllerGetBlockNode).toHaveBeenCalledWith({
+      path: { nodeId: 'file-2' },
+    });
+    expect(libraryControllerGetDrawingNode).not.toHaveBeenCalled();
+    expect(useEditorStore().state.libraryKey).toBe('block');
+  });
+
+  it('库源不加载项目 CAD 权限、不查个人空间', async () => {
+    libraryControllerGetDrawingNode.mockResolvedValue({
+      data: shareNodeInfo({ parentId: null }),
+    } as never);
+
+    const ok = await openDrawing({
+      source: 'library',
+      libraryKey: 'drawing',
+      nodeId: 'file-1',
+    });
+
+    expect(ok).toBe(true);
+    expect(vi.mocked(loadCADPermissions)).not.toHaveBeenCalled();
+    expect(projectControllerGetPersonalSpace).not.toHaveBeenCalled();
+    expect(useEditorStore().state.personalSpaceId).toBeNull();
   });
 });
 
