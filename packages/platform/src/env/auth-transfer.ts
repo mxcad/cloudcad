@@ -18,6 +18,9 @@ export const AUTH_TRANSFER_QUERY = {
   isRedirect: '_redirect',
 } as const;
 
+export type AuthTransferParamKey =
+  (typeof AUTH_TRANSFER_QUERY)[keyof typeof AUTH_TRANSFER_QUERY];
+
 /** 待搬运的登录态。user 是已序列化的 JSON 字符串。 */
 export interface AuthTransferCredentials {
   accessToken: string;
