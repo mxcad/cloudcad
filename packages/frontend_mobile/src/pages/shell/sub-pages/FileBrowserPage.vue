@@ -46,6 +46,7 @@ import { calculateFileHash } from '@/utils/hashUtils'
 import { cachedApiUrl } from '@/utils/apiConfig'
 import { uploadFile } from '@/services/mobileUploadService'
 import { validateName } from '@/utils/validateName'
+import { vibrate } from '@/utils/vibrate'
 import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.gen'
 import { useBatchDownload } from '@/composables/useBatchDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
@@ -199,7 +200,7 @@ function onSearchRowTouchStart(item: FileListItem) {
     searchRowLongPressTriggered.value = true
     searchRowMenuTarget.value = item
     showSearchRowMenu.value = true
-    if (navigator.vibrate) navigator.vibrate(10)
+    vibrate()
   }, 500)
 }
 
@@ -381,7 +382,7 @@ function onProjectTouchStart(project: ProjectCard) {
   projectLongPressTimer = setTimeout(() => {
     projectLongPressTriggered.value = true
     void openProjectMenu(project)
-    if (navigator.vibrate) navigator.vibrate(10)
+    vibrate()
   }, 500)
 }
 

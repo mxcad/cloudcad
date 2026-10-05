@@ -1,3 +1,17 @@
+// CAD 引擎菜单 i18n 提取工具（独立脚本，未注册到 package.json）
+//
+// 用法：在 packages/frontend_mobile 目录下执行 `node scripts/i18n/index.cjs`
+// （内部用 process.cwd() 定位，必须在包根目录运行）
+//
+// 做两件事：
+//   1. 把 public/mxUIConfig.json 里所有 name / text 字段的值提取进
+//      src/languages/translates/mxUIConfig.json，按值建键并记录 $files 来源路径。
+//      CAD 引擎菜单文案不走源码 t()，voerkai18n extract 扫不到，须靠这一步补。
+//   2. 串跑 i18nInit → i18nExtract → i18nAutoTranslate → i18nCompile。
+//
+// 注意：第 2 步含 `compile -t`，会按 idMap 校验键映射，映射不一致即失败——
+// 若只想提取 mxUIConfig.json 文案而不重建词表，请勿直接跑本脚本。
+
 const fs = require('fs');
 const path = require('path');
 const child_process = require('child_process');

@@ -29,7 +29,7 @@ const logoOk = ref(true)
 <style scoped lang="scss">
 /* 品牌区样式必须随组件走：父页面（Login/Register）的 scoped 选择器带 data-v 属性，
    匹配不到本组件内部的 img/div，抽组件后若样式还留在父级则 logo 失去尺寸约束、
-   按原图（1080px）撑满整屏（ADR-0062 品牌区抽组件时漏迁）。 */
+   按原图（1080px）撑满整屏（57e10c6 品牌区抽组件时漏迁）。 */
 .auth-brand {
   display: flex;
   flex-direction: column;

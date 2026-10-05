@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
     "clean": "rimraf dist",
-    "iconReplace": "node iconReplace.js",
+    "iconReplace": "node scripts/iconReplace.cjs",
     "setEnI18n": "voerkai18n init . -lngs en-US -d en-US -r",
     "setDefaultI18n": "voerkai18n init . -lngs zh-CN en-US ko-KR zh-TW -d zh-CN -r",
     "i18nInit": "pnpm setDefaultI18n",
@@ -23,9 +23,6 @@
     "i18nAutoTranslate": "voerkai18n translate --api baidu --provider baidu",
     "i18nAutoTranslateAi": "voerkai18n translate --api qwen",
     "i18n": "pnpm i18n:extract && pnpm i18nAutoTranslate && pnpm i18n:compile",
-    "i18nAnnotationTranslation": "node scripts/i18n/i18nAnnotationTranslation",
-    "i18nSourceCodeSubstitution-ZH": "node scripts/i18n/i18nSourceCodeSubstitution.js -d zh-CN",
-    "i18nSourceCodeSubstitution-EN": "node scripts/i18n/i18nSourceCodeSubstitution.js -d en-US",
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": ""

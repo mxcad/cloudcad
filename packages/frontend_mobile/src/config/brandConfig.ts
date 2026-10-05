@@ -69,6 +69,9 @@ export interface BrandLegalVars {
 
 const DEFAULT_LANGUAGE = 'zh-CN'
 
+/** `identities` 的通用主体键，与 PC `DEFAULT_LEGAL_LANGUAGE` 同为字面量 'default' */
+const LEGAL_DEFAULT_KEY = 'default'
+
 function asText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -132,9 +135,13 @@ export function resolveLegalVars(
   return {
     productName: asText(legal?.productName) || names[language] || fallback,
     productShortName: asText(legal?.productShortName) || DEFAULT_BRAND.shortName,
+    // 兜底阶梯须与 PC `appConfig.ts getBrandLegalNames` 一致：运营可能只填
+    // `legal.identities.default` 作为通用主体名，漏掉该分支会让 PC 生效、移动端静默忽略。
     entityName:
       legal?.identities?.[language]?.entityName ||
+      legal?.identities?.[LEGAL_DEFAULT_KEY]?.entityName ||
       identities[language]?.entityName ||
+      identities[LEGAL_DEFAULT_KEY]?.entityName ||
       defaultIdentity,
   }
 }

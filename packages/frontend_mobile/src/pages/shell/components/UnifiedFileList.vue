@@ -26,6 +26,7 @@ export interface SelectionActionDef {
  */
 import { ref, watch, computed } from 'vue'
 import { t } from '@/languages'
+import { vibrate } from '../../../utils/vibrate'
 import type { UnifiedDomain } from '../../../composables/useUnifiedFileList'
 import type { FileListItem } from '../../../composables/useNodeFormatter'
 import {
@@ -211,7 +212,7 @@ function startLongPress(item: ListItem) {
   longPressTimer = setTimeout(() => {
     longPressTriggered.value = true
     enterWith(item)
-    if (navigator.vibrate) navigator.vibrate(10)
+    vibrate()
   }, 500)
 }
 

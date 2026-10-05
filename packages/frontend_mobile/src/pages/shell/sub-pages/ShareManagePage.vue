@@ -18,6 +18,7 @@ import QRCode from 'qrcode'
 import { t } from '@/languages'
 import { extractExtension } from '@/composables/useNodeFormatter'
 import { shareUrl } from '@/utils/shareUrl'
+import { vibrate } from '@/utils/vibrate'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import {
   SHARE_CUSTOM_DAYS_DEFAULT,
@@ -293,7 +294,7 @@ function onShareTouchStart(item: ShareItem) {
       isSelecting.value = true
       selectedTokens.value = [item.token]
     }
-    if (navigator.vibrate) navigator.vibrate(10)
+    vibrate()
   }, 500)
 }
 

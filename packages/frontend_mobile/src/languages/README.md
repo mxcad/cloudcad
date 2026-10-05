@@ -54,12 +54,8 @@
 完整语言种类参考：
 https://fanyi-api.baidu.com/doc/21
 
-`npm run i18nAnnotationTranslation`: 将中文翻译追加英文注释， 一般在写了中文注释后调用它
+`npm run i18n`: 完整流水线 = extract + autoTranslate(baidu) + compile。`compile -t` 会按 idMap 校验键映射，不一致即失败；翻译质量需人工校对。
 
-`npm run i18nSourceCodeSubstitution-EN`: 根据`src/languages/settings.json`查看当前的语言，如果不是英文会将源码中包含`t("文字")` 的`文字`，会去寻找`src/languages/translates`目录中的`json`文件记录的对象的键是否是这个`文字`， 如果是， 则会根据语言代码(比如这个命令是 EN) 就会在这个对象键中寻找en属性对应的文字，进行替换， 替换会先替换源码中的`t("文字")`然后替换`json`文件对象中的键。
-如: 
-index.ts 存在 `t("你好")` 而 `src/languages/translates/default.json`中正好存在`{"你好": { "en": "Hello" }}`这个对象
-那么 index.ts源码会变成`t("Hello")` 而`src/languages/translates/default.json`中的这个对象就会变成: `{"Hello": { "zh": "你好" }}`
+`node scripts/i18n/index.cjs`: 独立工具，先把 `public/mxUIConfig.json` 的 `name` / `text` 字段提取到 `src/languages/translates/mxUIConfig.json`，再串跑 `i18nInit → i18nExtract → i18nAutoTranslate → i18nCompile`。未在 package.json 注册，直接用 `node` 调用。
 
-这样就完成了源码的转换并且适配i18n。
-所有， 调用这个命令前最好先`npm run i18n` 确保源码中所有需要提取的内容都提取到了`src/languages/translates`的json文件中，再调用该命令。
+> 历史上的 `i18nAnnotationTranslation`、`i18nSourceCodeSubstitution-ZH`、`i18nSourceCodeSubstitution-EN` 三条命令曾注册在 package.json，但指向从未入库的文件（`git log --all` 可证），已于 2026-10-05 删除。勿再引用。

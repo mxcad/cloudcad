@@ -103,6 +103,30 @@ describe('resolveLegalVars', () => {
     )
   })
 
+  it('只配 legal.identities.default 通用主体名时各语言一致生效（对齐 PC getBrandLegalNames）', () => {
+    const config = {
+      brandProfile: { legal: { identities: { default: { entityName: '通用主体有限公司' } } } },
+    }
+    for (const lang of ['zh-CN', 'zh-TW', 'en-US', 'ko-KR']) {
+      expect(resolveLegalVars(lang, config).entityName).toBe('通用主体有限公司')
+    }
+  })
+
+  it('按语言配置优先于 default 通用主体名', () => {
+    const config = {
+      brandProfile: {
+        legal: {
+          identities: {
+            default: { entityName: '通用主体有限公司' },
+            'zh-CN': { entityName: '中文主体有限公司' },
+          },
+        },
+      },
+    }
+    expect(resolveLegalVars('zh-CN', config).entityName).toBe('中文主体有限公司')
+    expect(resolveLegalVars('en-US', config).entityName).toBe('通用主体有限公司')
+  })
+
   it('productName / productShortName 是单值：各语言共用管理端填的那一份', () => {
     const config = { brandProfile: { legal: { productName: '某某工业CAD云' } } }
     for (const lang of ['zh-CN', 'zh-TW', 'en-US', 'ko-KR']) {
