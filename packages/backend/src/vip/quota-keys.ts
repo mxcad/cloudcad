@@ -16,5 +16,3 @@ export const QUOTA_KEYS = {
   HISTORY_WINDOW_COUNT: 'quota.history_window_count',
   MAX_PROJECTS: 'quota.max_projects',
 } as const;
-
-export type QuotaKey = (typeof QUOTA_KEYS)[keyof typeof QUOTA_KEYS];
