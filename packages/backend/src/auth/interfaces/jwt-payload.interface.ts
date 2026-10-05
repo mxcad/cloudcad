@@ -65,17 +65,6 @@ export interface SessionRequest {
 }
 
 /**
- * 微信临时 Token Payload
- */
-export interface WechatTempPayload {
-  sub: string;
-  type: 'wechat_temp';
-  wechatId: string;
-  nickname?: string;
-  avatar?: string;
-}
-
-/**
  * EXE 设备授权 Access Token Payload
  * 与 Web 共用 JWT 验证逻辑，但附加 client_type 和 client_id 用于策略区分
  */
