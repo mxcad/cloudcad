@@ -59,9 +59,6 @@ export const DEVICE_AUTH_STATUS = {
   EXPIRED: 'EXPIRED',
 } as const;
 
-export type DeviceAuthStatus =
-  (typeof DEVICE_AUTH_STATUS)[keyof typeof DEVICE_AUTH_STATUS];
-
 /**
  * 设备码 Redis Hash 字段
  */
