@@ -57,8 +57,10 @@ const {
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'release');
 
-// 支持的 Linux OS 变体（与 pack-linux-deploy.js --os 保持一致）
-const SUPPORTED_OS = ['centos7', 'debian', 'ubuntu22', 'ubuntu24', 'rocky8', 'rocky9'];
+// 支持的 Linux OS 变体：单一事实源在 pack-lib/linux-os.js（ADR-0059 收敛 3 glibc 档，
+// 与 pack-linux-deploy.js --os 同一清单，禁止各自硬编码）
+const { supportedOsList } = require('./pack-lib/linux-os');
+const SUPPORTED_OS = supportedOsList();
 
 const PACKAGE_JSON = require(path.join(PROJECT_ROOT, 'package.json'));
 const VERSION = PACKAGE_JSON.version || '1.0.0';
@@ -66,6 +68,8 @@ const DATE = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
 // 品牌单一事实源（runtime/scripts/lib/branding.js）
 const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
+// 尺寸格式化单一事实源（pack-lib/format.js）
+const { formatSize } = require('./pack-lib/format');
 
 // 容器内打包标记：由 Dockerfile.linux-deploy 的 CMD 设置（export PACK_IN_CONTAINER=1）。
 // 分流原则：
@@ -98,14 +102,6 @@ function getArchName() {
     ia32: 'i686',
   };
   return archMap[process.arch] || process.arch;
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 function find7z() {
@@ -1583,6 +1579,82 @@ function assertLinuxPgLibsClean() {
 }
 
 /**
+ * prisma-engines 跨平台残留清理（schema-engine 是按平台×openssl 的二进制）。
+ *
+ * 背景：bundlePrismaSchemaEngine 从当前 @prisma/engines 拷「全部 schema-engine*」
+ * 且只增不删——跨平台打包会让对方平台的引擎整目录随包发货（Windows 机实测累积
+ * 5 个 linux 引擎 ~127M 未压缩混进 windows 包；反之 windows.exe 也混进 linux 包）。
+ * linux-musl 同属死重：官方支持 3 档（centos7/ubuntu22/rocky9）全为 glibc，
+ * alpine 不在支持列表。仅按平台匹配删文件，不碰版本选择（版本由 bundle 从当前
+ * node_modules/@prisma/engines 拷出保证），无版本错配风险。
+ */
+function cleanPrismaEnginesForPlatform(platform) {
+  const dir = path.join(PROJECT_ROOT, 'runtime', 'prisma-engines');
+  let entries;
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return;
+  }
+  const isWin = platform === 'win';
+  const junk = entries.filter((name) => {
+    if (!name.startsWith('schema-engine')) return false;
+    if (isWin) return !name.endsWith('.exe');
+    // linux 包：windows 引擎与 musl（alpine，非支持档）均为死重
+    return name.endsWith('.exe') || name.includes('musl');
+  });
+  if (junk.length === 0) return;
+  const sizeOf = new Map(
+    junk.map((name) => [name, pathSize(path.join(dir, name))])
+  );
+  const totalSize = junk.reduce((n, name) => n + sizeOf.get(name), 0);
+  log(
+    `prisma-engines 含 ${isWin ? 'Linux' : 'Windows/musl'} 平台残留 ` +
+      `${junk.length} 项，自动清理（对方平台引擎随包发货属死重）...`
+  );
+  const failed = [];
+  let usedSudo = false;
+  for (const name of junk) {
+    const p = path.join(dir, name);
+    try {
+      fs.rmSync(p, { recursive: true, force: true });
+      log(`  已清理 ${name}（${formatSize(sizeOf.get(name))}）`);
+    } catch (e) {
+      if (
+        process.platform !== 'win32' &&
+        (e.code === 'EACCES' || e.code === 'EPERM')
+      ) {
+        const r = spawnSync('sudo', ['rm', '-rf', p], { stdio: 'inherit' });
+        if (r.status === 0 && !fs.existsSync(p)) {
+          log(`  已清理 ${name}（经 sudo）`);
+          usedSudo = true;
+          continue;
+        }
+      }
+      failed.push(`${name}: ${e.message}`);
+    }
+  }
+  if (usedSudo && process.platform !== 'win32') {
+    try {
+      spawnSync(
+        'sudo',
+        ['chown', '-R', `${process.getuid()}:${process.getgid()}`, dir],
+        { stdio: 'pipe' }
+      );
+    } catch {}
+  }
+  if (failed.length > 0) {
+    error('prisma-engines 自动清理未完成，中止打包:');
+    failed.forEach((m) => error(`  - ${m}`));
+    error(`修复方式: 手动删除 ${dir} 下对方平台引擎后重跑打包`);
+    process.exit(1);
+  }
+  log(
+    `prisma-engines 清理完成（移除 ${junk.length} 项 / ${formatSize(totalSize)}）`
+  );
+}
+
+/**
  * 一方脚本行尾/编码出包前校验（门禁）。
  *
  * 背景（2026-09-29 事故）：bat 模板被批量改写为 LF 行尾后，离线包内
@@ -1794,11 +1866,15 @@ async function packDeploy(platform, variant = 'oss') {
     // 同理在组件断言之后：重新提取（新代码）已在复制阶段排除 JIT，此项为空操作；
     // 旧缓存产物则在此处自动清除
     assertLinuxPgLibsClean();
+    // 对方平台引擎（windows.exe/musl）在 bundle 前清掉，bundle 只会追加本平台引擎
+    cleanPrismaEnginesForPlatform('linux');
   }
 
   // 检查 Windows 标准运行时组件（node/postgresql/redis 关键可执行文件）
   if (platform === 'win' || platform === 'all') {
     assertWindowsRuntimeComponents();
+    // 同理：windows 包清掉跨平台累积的 linux 引擎残留
+    cleanPrismaEnginesForPlatform('win');
   }
 
   // 原生打包机路径：确保根依赖完整（tsc/vite/prisma 等 dev deps）；
@@ -1990,6 +2066,8 @@ async function packUpgrade(platform, variant = 'oss') {
 
   // 升级包同样携带 runtime/scripts，行尾门禁与部署包一致
   assertScriptLineEndings();
+  // 升级包共享清单同样携带 runtime/prisma-engines，对方平台残留一并清理
+  cleanPrismaEnginesForPlatform(platform === 'win' ? 'win' : 'linux');
 
   // 0. 构建产物（始终重新构建，保证升级包是最新源码产物）
   // 后端链路（backend/db/contracts，private 含 impl-mx）：始终强制重build
