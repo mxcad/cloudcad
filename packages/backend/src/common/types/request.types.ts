@@ -32,12 +32,3 @@ export interface AuthenticatedUser {
 export interface AuthenticatedRequest extends Express.Request {
   user: AuthenticatedUser;
 }
-
-/**
- * 图库文件请求（带路径参数）
- */
-export interface GalleryFileRequest extends AuthenticatedRequest {
-  params: {
-    path: string | string[];
-  };
-}
