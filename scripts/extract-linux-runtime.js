@@ -32,6 +32,9 @@ const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 const {
   copyNodeModulesOnly,
   missingNodePackages,
+  isPgJitEntry,
+  findPgJitJunk,
+  PG_JIT_LIB_PREFIXES,
 } = require('./pack-lib/runtime-cleanliness');
 
 // 版本信息
@@ -830,16 +833,12 @@ function extractSvnApt(outputPath) {
 
 // ==================== 依赖收集工具 ====================
 
-// PostgreSQL 库提取时排除的 JIT 组件前缀。
+// PostgreSQL JIT 死重识别（libLLVM-*/llvmjit* 文件 + bitcode/ 目录）已收敛到
+// pack-lib/runtime-cleanliness.js 单一事实源（isPgJitEntry），extract 缓存命中自愈
+// 与 pack-offline 出包前清理共用，防两份清单漂移。
 // pg-manager.js 启动时写 jit=off 到 postgresql.auto.conf，PG 不加载 llvmjit.so，
 // libLLVM-15.so.1(~112M) + bitcode(~26M) 合计 ~138M 纯属死重；
 // Windows 官方 portable 包本就不含 JIT（postgresql 117M vs Linux 219M）。
-const PG_JIT_LIB_PREFIXES = ['libLLVM-', 'llvmjit'];
-
-/** 是否为 JIT 组件（libLLVM-* / llvmjit*） */
-function isJitLib(name) {
-  return PG_JIT_LIB_PREFIXES.some((prefix) => name.startsWith(prefix));
-}
 
 /** 是否为 PG so 库文件（*.so；includeVersioned 时含 libfoo.so.N） */
 function isPgSoFile(name, includeVersioned) {
@@ -855,22 +854,17 @@ function isPgSoFile(name, includeVersioned) {
  * 都必须主动检查。
  */
 function findPgJitLibs(outputDir) {
-  const libDir = path.join(outputDir, 'postgres', 'lib');
-  if (!fs.existsSync(libDir)) return [];
-  return fs
-    .readdirSync(libDir)
-    .filter((name) => isJitLib(name))
-    .map((name) => path.join(libDir, name));
+  return findPgJitJunk(path.join(outputDir, 'postgres', 'lib'));
 }
 
-/** 清除 postgres/lib 下残留的 JIT 库（旧缓存遗留，copyPgLibs 不会覆盖删除） */
+/** 清除 postgres/lib 下残留的 JIT 死重（旧缓存遗留，copyPgLibs 不会覆盖删除；rmSync 兼容 bitcode/ 目录） */
 function purgePgJitLibs(outputDir) {
   for (const file of findPgJitLibs(outputDir)) {
     try {
-      fs.unlinkSync(file);
-      log(`  已清除残留 JIT 库: ${path.basename(file)}`);
+      fs.rmSync(file, { recursive: true, force: true });
+      log(`  已清除残留 JIT 死重: ${path.basename(file)}`);
     } catch (e) {
-      log(`  清除残留 JIT 库失败: ${path.basename(file)} - ${e.message}`);
+      log(`  清除残留 JIT 死重失败: ${path.basename(file)} - ${e.message}`);
     }
   }
 }
@@ -910,7 +904,7 @@ function copyPgLibs(pgLibDir, libDir, options = {}) {
     return;
   }
   for (const name of names) {
-    if (isJitLib(name) || !isPgSoFile(name, includeVersioned)) continue;
+    if (isPgJitEntry(name) || !isPgSoFile(name, includeVersioned)) continue;
     try {
       fs.copyFileSync(path.join(pgLibDir, name), path.join(libDir, name));
     } catch {
@@ -1174,7 +1168,7 @@ if (require.main === module) {
 
 module.exports = {
   PG_JIT_LIB_PREFIXES,
-  isJitLib,
+  isJitLib: isPgJitEntry,
   isPgSoFile,
   copyPgLibs,
   findPgJitLibs,

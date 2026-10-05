@@ -140,9 +140,57 @@ function missingNodePackages(dstDir, required = RUNTIME_NODE_DIRECT_PACKAGES) {
   });
 }
 
+// ==================== PG JIT 死重识别（extract 与 pack 出包清理共用） ====================
+
+/**
+ * PostgreSQL JIT 组件识别（d8ce83f 裁定移除，运行时 pg-manager 写 jit=off）：
+ *   - libLLVM-*.so.N  LLVM 运行时（~110MB，llvmjit.so 运行时 dlopen 它，postgres 本身不链）
+ *   - llvmjit*        JIT 插件本体
+ *   - bitcode/        LLVM 位码目录（供 JIT 内联优化，~30-60MB）
+ * OLTP 业务用不上 JIT（只加速秒级以上分析型大查询），纯部署包死重。
+ */
+const PG_JIT_LIB_PREFIXES = ['libLLVM-', 'llvmjit'];
+const PG_JIT_DIR_NAMES = ['bitcode'];
+
+/** 是否为 JIT 死重条目（文件名或目录名） */
+function isPgJitEntry(name) {
+  return (
+    PG_JIT_LIB_PREFIXES.some((prefix) => name.startsWith(prefix)) ||
+    PG_JIT_DIR_NAMES.includes(name)
+  );
+}
+
+/**
+ * 扫描 postgres/lib 下的 JIT 死重，返回绝对路径列表（文件与目录混排）。
+ *
+ * copyPgLibs 只在「复制」时按前缀排除，删除不了更早版本遗留的同名文件/目录：
+ * 旧缓存（含 bitcode/ 的 cp -r 时代产物）会经 isRuntimeExtracted 关键文件检查
+ * 被判「缓存命中」直接复用，JIT 死重随包回来。故复用与出包两条路径都必须
+ * 主动检查（extract 的缓存命中自愈 + pack-offline 的出包前清理）。
+ *
+ * @param {string} pgLibDir 部署产物 postgres/lib 目录绝对路径
+ * @returns {string[]}
+ */
+function findPgJitJunk(pgLibDir) {
+  let entries;
+  try {
+    entries = fs.readdirSync(pgLibDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((e) => isPgJitEntry(e.name))
+    .map((e) => path.join(pgLibDir, e.name));
+}
+
 module.exports = {
   RUNTIME_NODE_DIRECT_PACKAGES,
   copyNodeModulesOnly,
   findUnexpectedPackages,
   missingNodePackages,
+  PG_JIT_LIB_PREFIXES,
+  PG_JIT_DIR_NAMES,
+  isPgJitEntry,
+  findPgJitJunk,
+  pathSize,
 };

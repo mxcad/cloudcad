@@ -44,9 +44,12 @@ const {
 } = require('./pack-lib/packignore');
 
 // 运行时 node 工具依赖清洁检查（Linux runtime 整目录复制会带上打包机全局 npm 包）
+// + PG JIT 死重识别（出包前自动清理，d8ce83f 裁定移除）
 const {
   RUNTIME_NODE_DIRECT_PACKAGES,
   findUnexpectedPackages,
+  findPgJitJunk,
+  pathSize,
 } = require('./pack-lib/runtime-cleanliness');
 
 // ==================== 配置 ====================
@@ -1507,6 +1510,79 @@ function assertLinuxRuntimeNodeModules() {
 }
 
 /**
+ * Linux PG JIT 死重出包前清理（libLLVM- 与 llvmjit 文件 + bitcode 目录）。
+ *
+ * 背景：d8ce83f 裁定移除 PG JIT（运行时 pg-manager 写 jit=off，OLTP 用不上，
+ * ~138M 未压缩 / ~64M 压缩纯死重），extract 侧已有缓存命中自愈（purgePgJitLibs），
+ * 但自愈只在 extract 被触发时执行——旧缓存的产物经组件断言判定就绪后 extract
+ * 根本不会运行，死重随包发货（2026-10-05 实例：用户机器清理 @opencode 后包仍
+ * 550MB，JIT 库仍在）。故与 node_modules 清理同型：出包前按共享事实源
+ * （runtime-cleanliness.isPgJitEntry）扫描 postgres/lib 并自动清除；
+ * EACCES（sudo 提取的 root 属主产物）时 sudo 重试并归位属主，失败才中止。
+ * 模式匹配式判定（libLLVM-/llvmjit 前缀 + bitcode 目录名），非白名单差集，
+ * 无布局误删风险。
+ */
+function assertLinuxPgLibsClean() {
+  const pgLibDir = path.join(PROJECT_ROOT, 'runtime', 'linux', 'postgres', 'lib');
+  const junk = findPgJitJunk(pgLibDir);
+  if (junk.length === 0) {
+    log('Linux PG JIT 死重检查通过（postgres/lib 无 libLLVM/llvmjit/bitcode）');
+    return;
+  }
+  const sizeOf = new Map(junk.map((p) => [p, pathSize(p)]));
+  const totalSize = junk.reduce((n, p) => n + sizeOf.get(p), 0);
+  log(
+    `Linux PG JIT 死重 ${junk.length} 项，自动清理（jit=off 下 PG 不加载，纯死重）...`
+  );
+  const failed = [];
+  let usedSudo = false;
+  for (const p of junk) {
+    try {
+      fs.rmSync(p, { recursive: true, force: true });
+      log(`  已清理 ${path.basename(p)}（${formatSize(sizeOf.get(p))}）`);
+    } catch (e) {
+      // EACCES/EPERM：sudo 提取产生的 root 属主产物，Linux 下 sudo 重试
+      if (
+        process.platform !== 'win32' &&
+        (e.code === 'EACCES' || e.code === 'EPERM')
+      ) {
+        const r = spawnSync('sudo', ['rm', '-rf', p], { stdio: 'inherit' });
+        if (r.status === 0 && !fs.existsSync(p)) {
+          log(`  已清理 ${path.basename(p)}（经 sudo）`);
+          usedSudo = true;
+          continue;
+        }
+      }
+      failed.push(`${path.basename(p)}: ${e.message}`);
+    }
+  }
+  if (usedSudo) {
+    // sudo 产物属主归回当前用户，避免后续打包复制/再清理继续撞权限
+    try {
+      spawnSync(
+        'sudo',
+        [
+          'chown',
+          '-R',
+          `${process.getuid()}:${process.getgid()}`,
+          path.join(PROJECT_ROOT, 'runtime', 'linux'),
+        ],
+        { stdio: 'pipe' }
+      );
+    } catch {}
+  }
+  if (failed.length > 0 || findPgJitJunk(pgLibDir).length > 0) {
+    error('Linux PG JIT 死重自动清理未完成，中止打包:');
+    failed.forEach((m) => error(`  - ${m}`));
+    error(
+      '修复方式: 手动删除 runtime/linux/postgres/lib 下 libLLVM-* / llvmjit* / bitcode 后重跑打包'
+    );
+    process.exit(1);
+  }
+  log(`PG JIT 死重清理完成（移除 ${junk.length} 项 / ${formatSize(totalSize)}）`);
+}
+
+/**
  * 一方脚本行尾/编码出包前校验（门禁）。
  *
  * 背景（2026-09-29 事故）：bat 模板被批量改写为 LF 行尾后，离线包内
@@ -1715,6 +1791,9 @@ async function packDeploy(platform, variant = 'oss') {
     // 必须在组件断言之后：缺失组件会自动触发 extract-linux-runtime.js 重新提取，
     // 提取会重建 node_modules，先做清洁检查会判定到提取前的旧状态
     assertLinuxRuntimeNodeModules();
+    // 同理在组件断言之后：重新提取（新代码）已在复制阶段排除 JIT，此项为空操作；
+    // 旧缓存产物则在此处自动清除
+    assertLinuxPgLibsClean();
   }
 
   // 检查 Windows 标准运行时组件（node/postgresql/redis 关键可执行文件）

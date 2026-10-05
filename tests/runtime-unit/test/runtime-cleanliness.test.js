@@ -28,6 +28,8 @@ const {
   copyNodeModulesOnly,
   findUnexpectedPackages,
   missingNodePackages,
+  isPgJitEntry,
+  findPgJitJunk,
 } = require('../../../scripts/pack-lib/runtime-cleanliness');
 
 /**
@@ -299,5 +301,52 @@ describe('missingNodePackages', () => {
     expect(
       missingNodePackages(makeSrcDirs({ 'custom-tool': 'a' }), ['custom-tool', 'other'])
     ).toEqual(['other']);
+  });
+});
+
+// ==================== PG JIT 死重识别（isPgJitEntry / findPgJitJunk） ====================
+// d8ce83f 裁定移除 PG JIT（运行时 jit=off，~138M 死重）；旧缓存产物由 pack 出包前
+// 自动清理，识别逻辑收在共享模块防 extract/pack 两份清单漂移。
+
+describe('isPgJitEntry（PG JIT 死重条目判定）', () => {
+  it('libLLVM- 前缀命中（版本号后缀不影响）', () => {
+    expect(isPgJitEntry('libLLVM-15.so.1')).toBe(true);
+    expect(isPgJitEntry('libLLVM-19.so')).toBe(true);
+  });
+
+  it('llvmjit 前缀命中', () => {
+    expect(isPgJitEntry('llvmjit.so')).toBe(true);
+    expect(isPgJitEntry('llvmjit.dll')).toBe(true);
+  });
+
+  it('bitcode 目录名命中', () => {
+    expect(isPgJitEntry('bitcode')).toBe(true);
+  });
+
+  it('合法 PG 库不误伤（libpq/libcrypto/pgxs 等大小写前缀近似也要排除误报）', () => {
+    expect(isPgJitEntry('libpq.so.5')).toBe(false);
+    expect(isPgJitEntry('libcrypto.so.3')).toBe(false);
+    expect(isPgJitEntry('libLLVM.so')).toBe(false); // 无版本连字符，非官方 JIT 运行时命名
+    expect(isPgJitEntry('pgxs')).toBe(false);
+    expect(isPgJitEntry('plpgsql.so')).toBe(false);
+  });
+});
+
+describe('findPgJitJunk（postgres/lib 扫描，文件与目录混排）', () => {
+  it('检出 JIT 文件与 bitcode 目录，返回绝对路径', () => {
+    const libDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pgjit-'));
+    created.push(libDir);
+    fs.writeFileSync(path.join(libDir, 'libLLVM-15.so.1'), 'x');
+    fs.writeFileSync(path.join(libDir, 'llvmjit.so'), 'x');
+    fs.writeFileSync(path.join(libDir, 'libpq.so.5'), 'x');
+    fs.mkdirSync(path.join(libDir, 'bitcode'));
+    fs.writeFileSync(path.join(libDir, 'bitcode', 'postgres.bc'), 'x');
+    fs.mkdirSync(path.join(libDir, 'pgxs'));
+    const junk = findPgJitJunk(libDir).map((p) => path.basename(p));
+    expect(junk.sort()).toEqual(['bitcode', 'libLLVM-15.so.1', 'llvmjit.so']);
+  });
+
+  it('目录不存在返回空数组（交由组件完整性断言报缺件）', () => {
+    expect(findPgJitJunk(path.join(os.tmpdir(), 'no-such-pglib-xyz'))).toEqual([]);
   });
 });
