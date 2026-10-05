@@ -1404,14 +1404,18 @@ function assertLinuxRuntimeComponents() {
  * 是同一道防线的第三块（缺件 → 中止、脏件 → 中止）。
  *
  * 判定：node_modules 顶层只允许 RUNTIME_NODE_DIRECT_PACKAGES（两端共同声明的
- * 四个直接依赖）；隐藏条目（pnpm/npm 元数据）跳过。命中即中止——误报时按提示
- * 删掉该目录即可恢复，代价远小于静默发货。
+ * 四个直接依赖）；隐藏条目（pnpm/npm 元数据）跳过。命中时**自动清理**未声明
+ * 条目（语义对齐 Windows 侧 npm ci 严格还原：先清掉再精确保留），清理的只是
+ * runtime/linux 构建产物副本，不碰打包机全局 node_modules（用户工具零影响）；
+ * 清理失败才中止退回人工。源头治理在 extract-linux-runtime.js 的
+ * copyNodeModulesOnly（白名单复制），但旧提取缓存的脏产物不会再被源头碰到，
+ * 故出包前清理是必须的兜底。
  *
  * 布局差异（2026-10-04 实测两端部署包发现）：Linux 侧是 pnpm 布局，顶层只挂
  * 4 个直接安装的包（依赖落在各自子目录），故白名单判定精确；Windows 侧是 npm
  * 布局（npm ci 扁平化），顶层实测 120 个条目，此白名单对它完全不适用——
- * 若在此布局上跑会误报上百个合法依赖。故本门禁只对 Linux 侧调用，条目数
- * 异常多时另给出布局提示。
+ * 若在此布局上自动清理会误删上百个合法传递依赖。故条目数 >20（pnpm 布局下
+ * 私货不可能这么多）时退回人工拦截，不自动删。
  */
 function assertLinuxRuntimeNodeModules() {
   const nmDir = path.join(PROJECT_ROOT, 'runtime', 'linux', 'node', 'node_modules');
@@ -1424,34 +1428,52 @@ function assertLinuxRuntimeNodeModules() {
     );
     return;
   }
-  const details = unexpected
-    .map((x) => `  - ${x.name}（${formatSize(x.size)}）`)
-    .join('\n');
-  error(
-    `Linux 运行时 node_modules 含未声明包，中止打包（会随部署包整目录发货）:\n${details}`
-  );
-  error(`合法顶层包仅: ${RUNTIME_NODE_DIRECT_PACKAGES.join(' / ')}`);
-  error('根因: extract-linux-runtime.js 以 cp -rL 整目录复制打包机 npm 全局 node_modules，');
-  error('打包机上全局安装过的任何 npm 包（AI CLI、IDE 工具等）都会被带进部署包。');
-  error('修复方式:');
-  error('  - 删除多余条目后重跑打包:');
-  unexpected.forEach((x) =>
-    error(`      rm -rf runtime/linux/node/node_modules/${x.name}`)
-  );
-  error('  - 根治: 清理打包机全局 npm 包后重新提取: sudo node scripts/extract-linux-runtime.js');
-  error(
-    '  - 若某条目确为运行时必需，将其加入 scripts/pack-lib/runtime-cleanliness.js 的 RUNTIME_NODE_DIRECT_PACKAGES'
-  );
+  // npm 扁平化布局防御：条目异常多说明这不是 pnpm 布局（顶层被 npm ci 铺满），
+  // 白名单自动清理会误删合法传递依赖，必须退回人工判定
   if (unexpected.length > 20) {
-    error('');
     error(
-      `注意: 条目数异常多（${unexpected.length} 个）。这通常是 npm 扁平化布局所致——`
+      `Linux 运行时 node_modules 含未声明包 ${unexpected.length} 项（超过自动清理阈值 20），中止打包:`
     );
-    error('npm ci 会把全部传递依赖铺到顶层（Windows 侧实测 120 个），而非开发工具混入。');
-    error('请确认 runtime/linux/node/node_modules 的生成方式是否已改用 npm ci；若是，');
-    error('须改用 package-lock.json 作事实源判定，直接安装包白名单对 npm 布局不适用。');
+    error(`合法顶层包仅: ${RUNTIME_NODE_DIRECT_PACKAGES.join(' / ')}`);
+    error('注意: 条目数异常多通常是 npm 扁平化布局所致——npm ci 会把全部传递依赖');
+    error('铺到顶层（Windows 侧实测 120 个），而非开发工具混入。自动清理在此布局下');
+    error('会误删合法依赖，请人工确认生成方式（npm ci 须改用 package-lock.json 判定）:');
+    unexpected
+      .slice(0, 20)
+      .forEach((x) => error(`  - ${x.name}（${formatSize(x.size)}）`));
+    process.exit(1);
   }
-  process.exit(1);
+  // 自动清理未声明条目（仅产物副本，打包机全局包不动）
+  const totalSize = unexpected.reduce((n, x) => n + x.size, 0);
+  log(
+    `Linux 运行时 node_modules 含未声明包 ${unexpected.length} 项，自动清理` +
+      `（对齐 Windows 侧 npm ci 严格还原语义，不动打包机全局包）...`
+  );
+  const failed = [];
+  for (const x of unexpected) {
+    try {
+      fs.rmSync(path.join(nmDir, x.name), { recursive: true, force: true });
+      log(`  已清理 ${x.name}（${formatSize(x.size)}）`);
+    } catch (e) {
+      failed.push(`${x.name}: ${e.message}`);
+    }
+  }
+  if (failed.length > 0 || findUnexpectedPackages(nmDir).length > 0) {
+    error('Linux 运行时 node_modules 自动清理未完成，中止打包:');
+    failed.forEach((m) => error(`  - ${m}`));
+    error('修复方式: 手动删除上述条目后重跑打包，或重新提取:');
+    error('  sudo node scripts/extract-linux-runtime.js');
+    process.exit(1);
+  }
+  log(
+    `自动清理完成（移除 ${unexpected.length} 项 / ${formatSize(totalSize)}），` +
+      '若某条目确为运行时必需，将其加入 runtime-cleanliness.js 的 RUNTIME_NODE_DIRECT_PACKAGES'
+  );
+  log(
+    'Linux 运行时 node_modules 清洁检查通过（仅 ' +
+      RUNTIME_NODE_DIRECT_PACKAGES.join('/') +
+      '）'
+  );
 }
 
 /**
