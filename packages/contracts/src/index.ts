@@ -82,7 +82,6 @@ export {
   buildEngineParams,
   parseEngineOutput,
   CONVERSION_FAILURE_CATEGORIES,
-  TRANSIENT_FAILURE_CATEGORIES,
   isTransientFailure,
   isConversionFailureCategory,
 } from './conversion/mxcad-engine-contract';
