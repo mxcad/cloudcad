@@ -45,18 +45,4 @@ export const getApiBaseUrl = (): string => {
  */
 export const API_BASE_URL = getApiBaseUrl();
 
-/**
- * 上传配置
- */
-export const UPLOAD_CONFIG = {
-  /** 分片大小（字节） */
-  CHUNK_SIZE: 5 * 1024 * 1024, // 5MB
-  /** 最大文件大小（字节） */
-  MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB
-  /** 最大重试次数 */
-  MAX_RETRIES: 10,
-  /** 重试延迟（毫秒） */
-  RETRY_DELAY: 2000,
-} as const;
-
 // 注意：PAGINATION_CONFIG 已移至 constants/appConfig.ts 统一管理
