@@ -5,8 +5,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext } from 'nestjs-i18n';
-import * as fs from 'fs';
-import * as path from 'path';
 import type { AppConfig, PasswordPolicyConfig } from '../../config/app.config';
 import { weakPasswords as weakPasswordsList } from '../data/weak-passwords';
 

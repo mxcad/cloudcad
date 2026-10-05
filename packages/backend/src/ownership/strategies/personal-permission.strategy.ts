@@ -1,4 +1,4 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { I18nContext } from 'nestjs-i18n';
 import type { MutationAction, OwnershipNode, OwnershipPermissionStrategy } from '../interfaces/ownership-permission-strategy.interface';
 
@@ -7,8 +7,6 @@ import type { MutationAction, OwnershipNode, OwnershipPermissionStrategy } from 
  */
 @Injectable()
 export class PersonalPermissionStrategy implements OwnershipPermissionStrategy {
-  private readonly logger = new Logger(PersonalPermissionStrategy.name);
-
   async assertCan(
     userId: string,
     _action: MutationAction,

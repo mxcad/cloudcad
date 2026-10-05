@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AlertRecord } from '@cloudcad/db';
 import { Prisma as PrismaRuntime } from '@cloudcad/db';
@@ -29,8 +29,6 @@ export interface RaiseAlertInput {
  */
 @Injectable()
 export class AlertService {
-  private readonly logger = new Logger(AlertService.name);
-
   constructor(
     private readonly prisma: DatabaseService,
     private readonly eventEmitter: EventEmitter2

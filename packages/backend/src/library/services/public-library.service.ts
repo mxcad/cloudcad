@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
@@ -25,8 +25,6 @@ import {
 
 @Injectable()
 export class PublicLibraryService implements IPublicLibraryProvider {
-  private readonly logger = new Logger(PublicLibraryService.name);
-
   constructor(
     private readonly prisma: DatabaseService,
     private readonly projectCrudService: ProjectCrudService,

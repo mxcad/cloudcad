@@ -522,7 +522,6 @@ export class SearchService implements ISearchService {
       libraryKey,
       type,
       extension,
-      fileStatus,
       skip,
       limit,
       sortBy,

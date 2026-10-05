@@ -758,7 +758,7 @@ export class InitializationService implements OnModuleInit {
       // 处理结果
       for (const result of results) {
         if (result.status === 'fulfilled') {
-          const { key, name, status } = result.value;
+          const { name, status } = result.value;
           if (status === 'created') {
             this.logger.log(`✅ 公共资源库 ${name} 创建成功`);
           } else {

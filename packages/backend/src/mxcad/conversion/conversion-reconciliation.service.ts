@@ -14,8 +14,6 @@ import {
   Injectable,
   Inject,
   Logger,
-  OnModuleInit,
-  OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../../database/database.service';

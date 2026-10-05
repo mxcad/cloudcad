@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext } from 'nestjs-i18n';
@@ -16,7 +16,6 @@ import type { AppConfig } from '../../config/app.config';
 
 @Injectable()
 export class ExtRefValidatorService {
-  private readonly logger = new Logger(ExtRefValidatorService.name);
   private readonly cacheTTL: number;
   private preloadingDataCache = new Map<string, { data: PreloadingDataDto; timestamp: number }>();
 

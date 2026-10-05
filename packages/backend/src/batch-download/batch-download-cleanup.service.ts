@@ -18,9 +18,6 @@ import { isConversionCacheEntry } from '../file-system/file-download/file-downlo
 import * as fs from 'fs';
 import * as path from 'path';
 
-/** errorSummary 明细截断条数：detail 为 Json 字段，防止错误风暴撑爆告警记录 */
-const ERROR_SUMMARY_LIMIT = 10;
-
 /**
  * 定时 cron 表达式：@Cron 装饰器与手动触发注册表（任务清单展示）共用同一来源，防止漂移
  */

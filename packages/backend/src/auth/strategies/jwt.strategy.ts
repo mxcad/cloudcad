@@ -38,7 +38,6 @@ interface JwtStrategyRequest {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name);
-  private readonly configService: ConfigService;
   private readonly prisma: DatabaseService;
   private readonly tokenBlacklistService: TokenBlacklistService;
   private readonly roleInheritanceService: RoleInheritanceService;
@@ -77,7 +76,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       passReqToCallback: true,
     });
 
-    this.configService = configService;
     this.prisma = prisma;
     this.tokenBlacklistService = tokenBlacklistService;
     this.roleInheritanceService = roleInheritanceService;

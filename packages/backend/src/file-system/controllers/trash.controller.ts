@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Logger,
   Param,
   Post,
   Query,
@@ -45,8 +44,6 @@ import {
 @ApiTags("文件系统 - 回收站")
 @ApiBearerAuth()
 export class TrashController {
-  private readonly logger = new Logger(TrashController.name);
-
   constructor(
     private readonly nodeTrashService: NodeTrashService,
     private readonly fileTreeService: FileTreeService,

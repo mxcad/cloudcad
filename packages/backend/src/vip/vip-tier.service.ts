@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@cloudcad/db';
 import type { VipTier } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
@@ -13,8 +13,6 @@ export const FREE_TIER_LEVEL = 0;
 
 @Injectable()
 export class VipTierService {
-  private readonly logger = new Logger(VipTierService.name);
-
   constructor(
     private prisma: DatabaseService,
     private configKeyRegistryService: ConfigKeyRegistryService,

@@ -136,7 +136,6 @@ export class DrawingIngestService {
     { status: NoNodeConversionStatus; updatedAt: number }
   > = new Map();
   private readonly mxcadUploadPath: string;
-  private readonly filesDataPath: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -157,8 +156,6 @@ export class DrawingIngestService {
     private readonly prisma: DatabaseService
   ) {
     this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
-    this.filesDataPath =
-      this.configService.get('filesDataPath') || '../../filesData';
   }
 
   private targetToContext(target: IngestTarget): FileSystemNodeContext {
@@ -1106,7 +1103,6 @@ export class DrawingIngestService {
       filepath,
       fileHash: hash,
       fileName,
-      fileSize,
       context,
       source,
       forceConvert,

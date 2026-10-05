@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, ForbiddenException } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
 import {
@@ -14,8 +14,6 @@ import type { MutationAction, OwnershipNode, OwnershipPermissionStrategy } from 
  */
 @Injectable()
 export class LibraryPermissionStrategy implements OwnershipPermissionStrategy {
-  private readonly logger = new Logger(LibraryPermissionStrategy.name);
-
   constructor(
     @Inject(IPERMISSION_SERVICE)
     private readonly systemPermissionService: IPermissionService,

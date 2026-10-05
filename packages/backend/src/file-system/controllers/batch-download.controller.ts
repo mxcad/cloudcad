@@ -5,7 +5,6 @@ import {
   Request,
   Res,
   UseGuards,
-  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import type { Request as ExpressRequest, Response } from 'express';
@@ -24,8 +23,6 @@ class BatchDownloadBody {
 @Controller('file-system')
 @UseGuards(RequireProjectPermissionGuard, PermissionsGuard)
 export class BatchDownloadController {
-  private readonly logger = new Logger(BatchDownloadController.name);
-
   constructor(
     private readonly crossNodeDownloadService: CrossNodeDownloadService
   ) {}

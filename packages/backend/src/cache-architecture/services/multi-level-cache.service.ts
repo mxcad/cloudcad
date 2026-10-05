@@ -21,26 +21,6 @@ import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheVersionService, CacheVersionType } from './cache-version.service';
 
 /**
- * 缓存穿透配置
- */
-interface CachePenetrationConfig {
-  /**
-   * 是否启用缓存穿透保护
-   */
-  enabled: boolean;
-
-  /**
-   * 空值缓存 TTL（秒）
-   */
-  nullTTL: number;
-
-  /**
-   * 布隆过滤器大小
-   */
-  bloomSize: number;
-}
-
-/**
  * 缓存雪崩配置
  */
 interface CacheAvalancheConfig {
@@ -82,12 +62,6 @@ interface CacheVersionConfig {
 @Injectable()
 export class MultiLevelCacheService {
   private readonly logger = new Logger(MultiLevelCacheService.name);
-
-  private readonly penetrationConfig: CachePenetrationConfig = {
-    enabled: true,
-    nullTTL: 60, // 1 分钟
-    bloomSize: 1000000,
-  };
 
   private readonly avalancheConfig: CacheAvalancheConfig = {
     enabled: true,

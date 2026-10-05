@@ -1,11 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
 
 @Injectable()
 export class AncestorQueryService {
-  private readonly logger = new Logger(AncestorQueryService.name);
-
   constructor(private readonly prisma: DatabaseService) {}
 
   /**

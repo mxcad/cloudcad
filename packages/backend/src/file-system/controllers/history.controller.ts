@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Logger } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { FileHistoryService } from '../file-history/file-history.service';
 import { FileTreeService } from '../file-tree/file-tree.service';
@@ -6,8 +6,6 @@ import { FileTreeService } from '../file-tree/file-tree.service';
 @ApiTags('File History')
 @Controller('file-system')
 export class HistoryController {
-  private readonly logger = new Logger(HistoryController.name);
-
   constructor(
     private readonly fileHistoryService: FileHistoryService,
     private readonly fileTreeService: FileTreeService,

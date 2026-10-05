@@ -1,12 +1,10 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
 export class NodeNameService {
-  private readonly logger = new Logger(NodeNameService.name);
-
   constructor(private readonly prisma: DatabaseService) {}
 
   async checkNameUniqueness(

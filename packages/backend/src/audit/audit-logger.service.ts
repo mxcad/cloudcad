@@ -95,8 +95,6 @@ export class AuditLogger extends ConsoleLogger {
     const { action, resourceType, resourceId, projectId, resourceName, userId, success, errorMessage, details, params: structuredParams } = params;
 
     // 从 CLS 自动获取上下文信息
-    const requestId = this.cls.get<string>('requestId');
-    const traceId = this.cls.get<string>('traceId');
     const clientIp = this.cls.get<string>('clientIp');
     const userAgent = this.cls.get<string>('userAgent');
 

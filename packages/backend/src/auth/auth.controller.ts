@@ -16,7 +16,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Logger,
   Post,
   Query,
   Req,
@@ -109,8 +108,6 @@ const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 天，与 refresh t
 @ApiTags('认证')
 @Controller('auth')
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name);
-
   constructor(
     @Inject(IAUTH_FACADE)
     private readonly authService: IAuthFacade,

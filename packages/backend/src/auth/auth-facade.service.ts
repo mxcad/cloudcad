@@ -10,7 +10,6 @@
 
 import {
   Injectable,
-  Logger,
   Inject,
   ConflictException,
 } from '@nestjs/common';
@@ -64,8 +63,6 @@ import { PasswordPolicyService } from './services/password-policy.service';
 
 @Injectable()
 export class AuthFacadeService implements IAuthFacade {
-  private readonly logger = new Logger(AuthFacadeService.name);
-
   constructor(
     @Inject(REGISTRATION_SERVICE) private readonly registrationService: IRegistrationService,
     @Inject(PASSWORD_SERVICE) private readonly passwordService: IPasswordService,

@@ -1,11 +1,9 @@
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as https from 'https';
 import * as crypto from 'crypto';
 import type { ConversionTask } from '../../function-executor.interface';
 
 export class HuaweiExecutor {
-  private readonly logger = new Logger(HuaweiExecutor.name);
   private readonly endpoint: string;
   private readonly ak: string;
   private readonly sk: string;

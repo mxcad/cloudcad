@@ -1,5 +1,4 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import { I18nContext } from 'nestjs-i18n';

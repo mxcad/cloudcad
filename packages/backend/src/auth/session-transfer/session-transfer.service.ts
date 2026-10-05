@@ -50,7 +50,6 @@ import type {
   IUserRepository,
   IRefreshTokenRepository,
   ITokenBlacklistService,
-  UserRecord,
 } from '@cloudcad/contracts';
 import type { Request as ExpressRequest } from 'express';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
@@ -58,7 +57,6 @@ import { MembershipService } from '../../vip/membership.service';
 import { membershipTierOf } from '../../vip/membership-tier';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { Audit } from '../../common/decorators/audit.decorator';
-import type { AuthResponseDto } from '../dto/auth.dto';
 import {
   SESSION_TRANSFER_TOKEN_EXPIRES_IN,
   sessionTransferKey,

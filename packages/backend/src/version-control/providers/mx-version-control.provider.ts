@@ -104,7 +104,6 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
   private readonly filesDataPath: string;
   private readonly mxIgnorePatterns: string[];
   private isInitialized = false;
-  private initPromise: Promise<void> | null = null;
   /** 全局初始化互斥锁：确保 onModuleInit 与 ensureInitialized 并发调用时只执行一次仓库初始化 */
   private static initMutex: Promise<void> | null = null;
 
@@ -165,7 +164,6 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       .finally(() => {
         MxVersionControlProvider.initMutex = null;
       });
-    this.initPromise = MxVersionControlProvider.initMutex;
     await MxVersionControlProvider.initMutex;
   }
 

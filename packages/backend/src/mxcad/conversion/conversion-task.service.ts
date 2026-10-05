@@ -1,7 +1,6 @@
 import {
   Injectable,
   Inject,
-  Logger,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
@@ -50,8 +49,6 @@ const HISTORY_MAX_LIMIT = 50;
  */
 @Injectable()
 export class UnifiedConversionService {
-  private readonly logger = new Logger(UnifiedConversionService.name);
-
   constructor(
     private readonly asyncConversionService: AsyncConversionService,
     @Inject(IFunctionExecutor) private readonly executor: IFunctionExecutor,

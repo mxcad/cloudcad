@@ -10,7 +10,6 @@ import {
   Req,
   HttpCode,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -35,8 +34,6 @@ import {
 @ApiTags('文件分享')
 @Controller('shares')
 export class ShareController {
-  private readonly logger = new Logger(ShareController.name);
-
   constructor(private readonly shareService: ShareService) {}
 
   @Post()

@@ -7,7 +7,6 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
-  Logger,
   Param,
   Patch,
   Post,
@@ -42,8 +41,6 @@ import { I18nContext } from 'nestjs-i18n';
 @ApiTags("文件系统 - 成员")
 @ApiBearerAuth()
 export class MemberController {
-  private readonly logger = new Logger(MemberController.name);
-
   constructor(
     private readonly projectMemberService: ProjectMemberService,
     @Inject(IPROJECT_PERMISSION_SERVICE) private readonly projectPermissionService: IProjectPermissionService,

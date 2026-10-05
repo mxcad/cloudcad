@@ -23,7 +23,6 @@ export class RefreshTokenStrategy extends PassportStrategy(
   Strategy,
   'refresh-token'
 ) {
-  private readonly configService: ConfigService;
   private readonly prisma: DatabaseService;
   private readonly tokenBlacklistService: TokenBlacklistService;
 
@@ -43,7 +42,6 @@ export class RefreshTokenStrategy extends PassportStrategy(
       secretOrKey: jwtRefreshSecret,
     });
 
-    this.configService = configService;
     this.prisma = prisma;
     this.tokenBlacklistService = tokenBlacklistService;
   }

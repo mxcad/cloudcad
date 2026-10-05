@@ -54,10 +54,6 @@ export class UserCrudService {
 
   async create(createUserDto: CreateUserDto): Promise<ICreatedUser> {
     try {
-      const mailEnabled = await this.runtimeConfigService.getValue<boolean>(
-        'mailEnabled',
-        false
-      );
       const requireEmailVerification =
         await this.runtimeConfigService.getValue<boolean>(
           'requireEmailVerification',

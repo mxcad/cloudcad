@@ -242,7 +242,7 @@ export class L2CacheProvider<T = unknown>
       }
     } catch (error) {
       this.logger.error('批量获取 L2 缓存失败', error);
-      for (const key of keys) {
+      for (const _ of keys) {
         this.misses++;
       }
     }

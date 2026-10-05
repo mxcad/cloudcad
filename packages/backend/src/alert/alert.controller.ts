@@ -13,7 +13,6 @@
 import {
   HttpCode,
   HttpStatus,
-  Logger,
   NotFoundException,
   Param,
   Patch,
@@ -52,8 +51,6 @@ import {
 @UseGuards(PermissionsGuard)
 @RequirePermissions([SystemPermission.SYSTEM_MONITOR])
 export class AlertController {
-  private readonly logger = new Logger(AlertController.name);
-
   constructor(private readonly alertService: AlertService) {}
 
   @Get()

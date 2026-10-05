@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  Logger,
 } from '@nestjs/common';
 import { CrossProjectTransferMode, NodeType } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
@@ -50,8 +49,6 @@ export interface MutationContext {
  */
 @Injectable()
 export class NodeMutationGuard {
-  private readonly logger = new Logger(NodeMutationGuard.name);
-
   constructor(
     private readonly prisma: DatabaseService,
     private readonly fileTreeService: FileTreeService,

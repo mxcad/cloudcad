@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, ForbiddenException } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
 import {
@@ -23,8 +23,6 @@ import type {
  */
 @Injectable()
 export class ProjectPermissionStrategy implements OwnershipPermissionStrategy {
-  private readonly logger = new Logger(ProjectPermissionStrategy.name);
-
   constructor(
     @Inject(IPROJECT_PERMISSION_SERVICE)
     private readonly projectPermissionService: IProjectPermissionService,

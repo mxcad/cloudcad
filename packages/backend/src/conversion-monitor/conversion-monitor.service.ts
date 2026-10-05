@@ -19,8 +19,6 @@ import {
 } from '@nestjs/common';
 import { IFunctionExecutor } from '../function-executor/function-executor.interface';
 import type {
-  ExecutorDurationStats,
-  ExecutorQueueStats,
   ExecutorTaskRecord,
   PriorityQueueDurationStats,
   PriorityQueueStats,

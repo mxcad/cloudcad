@@ -121,7 +121,7 @@ export class FileSystemService {
     options: MergeOptions
   ): Promise<{ success: boolean; error?: string }> {
     return new Promise((resolve) => {
-      const { sourceFiles, targetPath, chunkDir } = options;
+      const { targetPath, chunkDir } = options;
 
       try {
         if (!fs.existsSync(chunkDir)) {

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
 import type {
   MutationAction,
@@ -12,8 +12,6 @@ import { LibraryPermissionStrategy } from '../strategies/library-permission.stra
 
 @Injectable()
 export class OwnershipPermissionFactory {
-  private readonly logger = new Logger(OwnershipPermissionFactory.name);
-
   constructor(
     private readonly projectStrategy: ProjectPermissionStrategy,
     private readonly personalStrategy: PersonalPermissionStrategy,

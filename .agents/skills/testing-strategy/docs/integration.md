@@ -99,21 +99,3 @@ describe("Feature Name", () => {
 | workflow-1 | 上传 → 转换 → 打开 |
 | workflow-2 | 保存 → 版本控制 |
 | workflow-3 | 删除 → 回收站 → 永久删除 |
-
-## 权限测试运行器
-
-`packages/backend/src/test/permission-test-runner.ts` 是特殊的 `@Injectable()` 权限验证类：
-
-```typescript
-const runner = module.get<PermissionTestRunner>(PermissionTestRunner);
-const result = await runner.runSystemRoleTestSuite();
-// 返回：{ passed, failed, skipped, details }
-```
-
-测试套件：
-- 系统角色测试（ADMIN vs USER）
-- 权限继承测试（USER_MANAGER 继承 USER）
-- 缓存一致性测试
-- 批量权限检查测试
-
-批量用户创建避免 N+1 问题，测试结果输出 JSON/Markdown 报告。

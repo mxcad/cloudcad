@@ -380,10 +380,6 @@ export class FileNodeMaterializer {
       // MxWebDwg2Jpg 输出的是 jpg，目标文件名必须用 .jpg，
       // 否则内容与扩展名/Content-Type 不符（webp）导致浏览器解码失败
       const thumbnailFileName = getThumbnailFileName('jpg');
-      const thumbnailTargetPath = path.join(
-        storageInfo.nodeDirectoryPath,
-        thumbnailFileName
-      );
       const thumbnailRelativeKey = `${storageInfo.nodeDirectoryRelativePath}/${thumbnailFileName}`;
 
       const thumbnailExists = await fsPromises
