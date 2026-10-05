@@ -21,8 +21,6 @@ export const OUTPUT_FORMATS = [
   'original',
 ] as const;
 
-export type OutputFormat = (typeof OUTPUT_FORMATS)[number];
-
 /** PDF 引擎参数默认值（2000x2000、单色） */
 export const PDF_DEFAULT_WIDTH = '2000';
 export const PDF_DEFAULT_HEIGHT = '2000';
