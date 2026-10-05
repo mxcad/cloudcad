@@ -303,22 +303,6 @@ export function isConversionFailureCategory(
 }
 
 /**
- * 转换失败的结构化描述（backend ↔ conversion-service 的 HTTP 边界契约）。
- *
- * 此前边界只传 message 字符串，失败性质在跨线时被丢弃，backend 只能按文案反推；
- * 现在 category / code 与 message 并列下发（errorCategory / errorCode 字段），
- * 判定依据从「文案匹配」变成「字段读取」。
- */
-export interface ConversionFailureDetail {
-  /** 人可读错误信息，用于日志与 UI 展示；不作分类依据 */
-  message: string;
-  /** 失败性质分类 */
-  category: ConversionFailureCategory;
-  /** 引擎返回码：仅 content-error 时为非 0，其余分类为 undefined */
-  code?: number;
-}
-
-/**
  * 不参与内容身份派生的引擎输入字段。
  *
  * outpath 是产物落点（bin→mxweb 方向的输出目录），是转换宿主机的本地路径，不是内容身份：

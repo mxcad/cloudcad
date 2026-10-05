@@ -92,7 +92,6 @@ export type {
   MxCadEngineParams,
   MxCadConversionResult,
   ConversionFailureCategory,
-  ConversionFailureDetail,
 } from './conversion/mxcad-engine-contract';
 
 // Repository interfaces
