@@ -22,7 +22,6 @@ import {
   ProjectPermissionCheckMode,
 } from '../decorators/require-project-permission.decorator';
 import { IS_OPTIONAL_AUTH_KEY } from '../../auth/decorators/optional-auth.decorator';
-import { IS_LIBRARY_PUBLIC_KEY } from '../decorators/library-public.decorator';
 import { RequireProjectPermissionGuard } from './require-project-permission.guard';
 
 describe('RequireProjectPermissionGuard — 公共资源库', () => {
