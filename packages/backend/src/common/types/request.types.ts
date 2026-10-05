@@ -34,15 +34,6 @@ export interface AuthenticatedRequest extends Express.Request {
 }
 
 /**
- * 带查询参数的请求
- */
-export interface QueryRequest<
-  T = Record<string, unknown>,
-> extends AuthenticatedRequest {
-  query: T;
-}
-
-/**
  * 带路径参数的请求
  */
 export interface ParamsRequest<
