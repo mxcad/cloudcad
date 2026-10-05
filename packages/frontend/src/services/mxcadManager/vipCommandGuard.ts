@@ -89,11 +89,6 @@ export function installVipCommandGuard(): void {
   installed = true;
 }
 
-/** 测试用：重置安装标记，便于单测重复安装/卸载 */
-export function resetVipCommandGuardForTest(): void {
-  installed = false;
-}
-
 /** 本地缓存用户（AuthContext 登录/刷新时同步写入 localStorage 'user'） */
 interface LocalUserLike {
   membershipTierLevel?: number;

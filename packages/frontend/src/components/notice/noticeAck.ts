@@ -29,9 +29,6 @@ export type NoticeAckMap = Record<string, number>;
 
 export const NOTICE_ACK_STORAGE_KEY = 'cloudcad_notice_acks';
 
-/** localStorage 键名，测试用 */
-export const NOTICE_ACK_DEFAULT_TTL_MS = NOTICE_ACK_TTL_MS;
-
 /** 读取已读记录。解析失败返回空表而不是抛错（存储被污染不该让应用崩掉） */
 export function readAcks(storage: Storage = localStorage): NoticeAckMap {
   let raw: string | null;

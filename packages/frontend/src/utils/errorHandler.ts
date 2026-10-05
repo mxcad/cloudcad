@@ -108,43 +108,12 @@ export const createError = (
 };
 
 /**
- * 检查是否为网络错误
- * @param error - 错误对象
- * @returns boolean - 是否为网络错误
- */
-export const isNetworkError = (error: unknown): boolean => {
-  if (error instanceof Error) {
-    return (
-      error.message.includes('Network Error') ||
-      error.message.includes('ECONNREFUSED') ||
-      error.message.includes('ETIMEDOUT')
-    );
-  }
-
-  return false;
-};
-
-/**
  * 检查是否为请求取消错误
  * 用于检测 AbortController、Axios CancelToken、CanceledError 等取消类型
  * @param error - 错误对象
  * @returns boolean - 是否为请求取消错误
  */
 export const isAbortError = (error: unknown): boolean => _isAbortError(error);
-
-/**
- * 检查是否为认证错误
- * @param error - 错误对象
- * @returns boolean - 是否为认证错误
- */
-export const isAuthError = (error: unknown): boolean => {
-  if (typeof error === 'object' && error !== null) {
-    const err = error as { response?: { status?: number } };
-    return err.response?.status === 401 || err.response?.status === 403;
-  }
-
-  return false;
-};
 
 import { t } from '@/languages';
 

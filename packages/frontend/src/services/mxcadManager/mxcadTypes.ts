@@ -150,9 +150,3 @@ export const EXTERNAL_REF_READY_TIMEOUT_MS = 20_000;
 
 /** 引擎就绪等待轮询间隔（ms）：ensureEngineReady 唯一轮询实现使用 */
 export const ENGINE_READY_POLL_INTERVAL_MS = 200;
-
-/** 缩略图配置 */
-export const THUMBNAIL_CONFIG = {
-  MIN_DRAWING_SIZE: 100,
-  TARGET_SIZE: 200,
-} as const;

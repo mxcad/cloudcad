@@ -82,16 +82,8 @@ function tryBase64Decode(raw: string): string | null {
   }
 }
 
-export function encodeWorkData(data: CollaborateWorkData): string {
-  return utf8ToBase64(JSON.stringify(data));
-}
-
 export function encodeUserData(data: CollaborateUserData): string {
   return utf8ToBase64(JSON.stringify(data));
-}
-
-export function encodeV2WorkData(data: Omit<CollaborateWorkDataV2, 'v'>): string {
-  return utf8ToBase64(JSON.stringify({ v: 2, ...data }));
 }
 
 export function encodeV3WorkData(data: Omit<CollaborateWorkDataV3, 'v'>): string {

@@ -89,21 +89,6 @@ export type ProjectPermission = typeof ProjectPermission[keyof typeof ProjectPer
 export type Permission = SystemPermission | ProjectPermission;
 
 /**
- * 获取系统权限的所有值
- */
-export const SystemPermissionValues = Object.values(SystemPermission) as readonly SystemPermission[];
-
-/**
- * 获取项目权限的所有值
- */
-export const ProjectPermissionValues = Object.values(ProjectPermission) as readonly ProjectPermission[];
-
-/**
- * 获取所有权限的值
- */
-export const PermissionValues = [...SystemPermissionValues, ...ProjectPermissionValues] as readonly Permission[];
-
-/**
  * 权限依赖关系
  * 记录每个权限需要依赖的其他权限
  */
@@ -393,19 +378,5 @@ export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): str
   return t(displayName);
 };
 
-/**
- * @deprecated 请使用 PERMISSION_GROUPS 常量
- */
-export const getPermissionGroups = () => {
-  const result = [];
-  for (const groupList of Object.values(PERMISSION_GROUPS)) {
-    result.push(...groupList);
-  }
-  return result;
-};
-
 /** @deprecated 请使用 PROJECT_ROLE_NAMES 常量 */
 export const getProjectRoleNames = () => PROJECT_ROLE_NAMES;
-
-/** @deprecated 请使用 SYSTEM_ROLE_NAMES 常量 */
-export const getSystemRoleNames = () => SYSTEM_ROLE_NAMES;

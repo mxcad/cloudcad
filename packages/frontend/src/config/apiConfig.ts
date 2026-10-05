@@ -46,11 +46,6 @@ export const getApiBaseUrl = (): string => {
 export const API_BASE_URL = getApiBaseUrl();
 
 /**
- * API 超时时间（毫秒）
- */
-export const API_TIMEOUT = 10000;
-
-/**
  * 上传配置
  */
 export const UPLOAD_CONFIG = {
@@ -62,18 +57,6 @@ export const UPLOAD_CONFIG = {
   MAX_RETRIES: 10,
   /** 重试延迟（毫秒） */
   RETRY_DELAY: 2000,
-} as const;
-
-/**
- * 文件类型配置
- */
-export const FILE_TYPE_CONFIG = {
-  /** CAD 文件扩展名 */
-  CAD_EXTENSIONS: ['.dwg', '.dxf'],
-  /** 图片文件扩展名 */
-  IMAGE_EXTENSIONS: ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'],
-  /** PDF 扩展名 */
-  PDF_EXTENSION: '.pdf',
 } as const;
 
 // 注意：PAGINATION_CONFIG 已移至 constants/appConfig.ts 统一管理

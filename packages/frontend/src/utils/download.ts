@@ -3,7 +3,6 @@ import {
   batchDownloadControllerDownloadItem,
   batchDownloadControllerMergeZip,
   batchDownloadControllerGetProgress,
-  downloadControllerDownloadNodeWithFormat,
   mxcadFileAccessControllerGetFileDownloadExternalRef,
   mxcadFileAccessControllerViewExternalRef,
 } from '@/api-sdk';
@@ -35,23 +34,6 @@ export interface DownloadNodeQuery {
   height?: string;
   colorPolicy?: string;
   dwgVersion?: string;
-}
-
-/** 下载节点文件（download-with-format，支持多格式转换）。失败抛错，由调用方提示具体原因。 */
-export async function downloadNodeFile(
-  nodeId: string,
-  fallbackName: string,
-  query?: DownloadNodeQuery
-): Promise<boolean> {
-  const result = await downloadControllerDownloadNodeWithFormat({
-    path: { nodeId },
-    query,
-  });
-  // SDK 默认不抛错：失败时错误在 result.error。抛出让调用方显示后端真实原因
-  // （此前返回 false 只显示固定"下载失败"，格式不支持/无权限等原因丢失）
-  if (result.error) throw result.error;
-  triggerBlobDownload(result.data as Blob, fallbackName);
-  return true;
 }
 
 /** 下载外部参照文件（download-external-ref）。失败抛错，由调用方决定提示。 */
