@@ -10,7 +10,7 @@ import { SearchService } from '../../file-system/search/search.service';
 import { FtsQueryBuilder } from '../../file-system/search/fts-query-builder';
 import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { AncestorQueryService } from '../../common/services/ancestor-query.service';
-import { SearchScope, SearchType } from '../../file-system/dto/search.dto';
+import { SearchScope } from '../../file-system/dto/search.dto';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 
 describe('文件搜索 + 权限过滤 + 分页 链路单元测试', () => {
