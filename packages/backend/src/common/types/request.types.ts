@@ -34,15 +34,6 @@ export interface AuthenticatedRequest extends Express.Request {
 }
 
 /**
- * 带请求体的请求
- */
-export interface BodyRequest<
-  T = Record<string, unknown>,
-> extends AuthenticatedRequest {
-  body: T;
-}
-
-/**
  * 图库文件请求（带路径参数）
  */
 export interface GalleryFileRequest extends AuthenticatedRequest {
