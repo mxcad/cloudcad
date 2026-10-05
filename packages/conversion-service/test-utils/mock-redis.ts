@@ -147,4 +147,4 @@ function startMockRedis(options: MockRedisOptions = {}): Promise<MockRedis> {
   });
 }
 
-export { startMockRedis, parseCommand, bulk, simple, integer, arrayReply, nullBulk };
+export { startMockRedis, simple };
