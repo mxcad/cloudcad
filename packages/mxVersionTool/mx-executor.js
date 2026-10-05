@@ -1,20 +1,5 @@
-const { exec, spawn, execFile } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const mxPathModule = require('./mxpath');
-
-function executeCommand(command, options = {}) {
-  const execOptions = mxPathModule.getExecOptions();
-  Object.assign(execOptions, options);
-  
-  return new Promise((resolve, reject) => {
-    exec(command, execOptions, (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve(stdout);
-      }
-    });
-  });
-}
 
 function executeSpawn(executable, args, options = {}) {
   const spawnOptions = mxPathModule.getSpawnOptions();
@@ -70,7 +55,6 @@ function executeExecFile(executable, args, options = {}) {
 }
 
 module.exports = {
-  executeCommand,
   executeSpawn,
   executeExecFile
 };
