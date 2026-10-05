@@ -34,15 +34,6 @@ export interface AuthenticatedRequest extends Express.Request {
 }
 
 /**
- * 带路径参数的请求
- */
-export interface ParamsRequest<
-  T = Record<string, string>,
-> extends AuthenticatedRequest {
-  params: T;
-}
-
-/**
  * 带请求体的请求
  */
 export interface BodyRequest<
