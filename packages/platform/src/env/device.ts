@@ -12,10 +12,10 @@
  */
 
 /** 移动设备 UA 特征。补了 `mobi`：部分 Android WebView 只带 Mobi 不带完整机型名。 */
-export const MOBILE_UA_PATTERN = /android|iphone|ipad|ipod|webos|mobi/i;
+const MOBILE_UA_PATTERN = /android|iphone|ipad|ipod|webos|mobi/i;
 
 /** 微信内置浏览器 UA 特征。 */
-export const WECHAT_UA_PATTERN = /micromessenger/i;
+const WECHAT_UA_PATTERN = /micromessenger/i;
 
 /**
  * 视口宽度超过该值视为「宽屏」，即使用户是移动设备也不自动降级到移动端 H5。
@@ -23,15 +23,13 @@ export const WECHAT_UA_PATTERN = /micromessenger/i;
  * 大屏 Android 平板 / iPad Pro 分屏的用户在用桌面 CAD 编辑器时，按 UA 自动跳走
  * 会毁掉工作流——他们用的是桌面姿态，只是设备碰巧是触屏。
  */
-export const DESKTOP_WIDTH_THRESHOLD = 1024;
+const DESKTOP_WIDTH_THRESHOLD = 1024;
 
 export interface DeviceEnv {
   /** 浏览器 User-Agent。SSR / Node 环境可传空串。 */
   ua: string;
   /** 视口宽度（window.innerWidth）。取不到时传 undefined，则只做 UA 判定。 */
   width?: number;
-  /** navigator.maxTouchPoints，用于兜底判定触屏设备。 */
-  maxTouchPoints?: number;
 }
 
 /** 纯 UA 判定：UA 里是否声明为移动设备。 */
@@ -42,16 +40,6 @@ export function isMobileByUA(ua: string): boolean {
 /** 纯 UA 判定：是否微信内置浏览器。 */
 export function isWechatByUA(ua: string): boolean {
   return WECHAT_UA_PATTERN.test(ua);
-}
-
-/**
- * 触屏兜底判定：maxTouchPoints > 0 说明是可触摸设备。
- *
- * 只做兜底不做主判定——UA 会伪造，但 maxTouchPoints 是硬件能力，
- * 且部分 Linux / Windows 触屏 PC 也会 > 0。
- */
-export function isTouchDevice(maxTouchPoints: number | undefined): boolean {
-  return typeof maxTouchPoints === 'number' && maxTouchPoints > 0;
 }
 
 /**
