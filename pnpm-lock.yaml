@@ -490,9 +490,6 @@ importers:
       react-hook-form:
         specifier: ^7.68.0
         version: 7.80.0(react@19.2.7)
-      react-horizontal-scrolling:
-        specifier: ^0.1.13
-        version: 0.1.13(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react-router-dom:
         specifier: ^7.18.3
         version: 7.18.3(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -505,9 +502,6 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.6.0
-      webuploader:
-        specifier: ^0.1.8
-        version: 0.1.8
       zod:
         specifier: ^4.2.1
         version: 4.4.3
@@ -9831,12 +9825,6 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
 
-  react-horizontal-scrolling@0.1.13:
-    resolution: {integrity: sha512-LOInfIj77DA+Jijft5PZT/XGmF+B3iEx17wmXkBJ06J5VtjbXsO7zagP5ERJvUDM68M7Yd5dZEGpEW+8qlK0Sg==}
-    peerDependencies:
-      react: '>=16.0.0'
-      react-dom: '>=16.0.0'
-
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
 
@@ -11534,9 +11522,6 @@ packages:
     peerDependenciesMeta:
       webpack-cli:
         optional: true
-
-  webuploader@0.1.8:
-    resolution: {integrity: sha512-soZbBIqOiXGiPySqOIIkXz6u+trdWv2jZIuo+BK4KlOtgXEKsWq1DY2RHAwl5gNzQpeEWTz0OdTdV5UC5cdgJA==}
 
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
@@ -22326,11 +22311,6 @@ snapshots:
     dependencies:
       react: 19.2.7
 
-  react-horizontal-scrolling@0.1.13(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
-    dependencies:
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-
   react-is@16.13.1: {}
 
   react-is@17.0.2: {}
@@ -24204,8 +24184,6 @@ snapshots:
       - postcss
       - uglify-js
     optional: true
-
-  webuploader@0.1.8: {}
 
   whatwg-encoding@3.1.1:
     dependencies:

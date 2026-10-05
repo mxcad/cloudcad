@@ -78,12 +78,10 @@
     "react-device-detect": "^2.2.3",
     "react-dom": "^19.2.1",
     "react-hook-form": "^7.68.0",
-    "react-horizontal-scrolling": "^0.1.13",
     "react-router-dom": "^7.18.3",
     "recharts": "^3.5.1",
     "spark-md5": "^3.0.2",
     "tailwind-merge": "^3.4.0",
-    "webuploader": "^0.1.8",
     "zod": "^4.2.1",
     "zustand": "^5.0.10"
   },
