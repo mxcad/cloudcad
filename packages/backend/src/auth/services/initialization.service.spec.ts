@@ -7,7 +7,7 @@ import { BlacklistSource } from '@cloudcad/db';
 import { InitializationService } from './initialization.service';
 import { DatabaseService } from '../../database/database.service';
 import { RoleInheritanceService } from '../../permission/services/role-inheritance.service';
-import { USER_SERVICE, IUserService } from '../../common/interfaces/user-service.interface';
+import { USER_SERVICE } from '../../common/interfaces/user-service.interface';
 import { SystemRole } from '../../common/enums/permissions.enum';
 
 describe('InitializationService（#416 初始管理员 env 必填）', () => {
