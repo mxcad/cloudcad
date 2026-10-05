@@ -153,24 +153,6 @@ export const getOriginalFileUrl = (node: FileSystemNode): string => {
 /** CAD 可编辑文件扩展名（不含模板 .dwt） */
 export const CAD_EXTENSIONS = ['.dwg', '.dxf', '.mxweb'];
 
-/** 图纸文件扩展名 */
-export const DRAWING_EXTENSIONS = ['.dwg', '.dxf', '.dwt'];
-
-/** 图块文件扩展名 */
-export const BLOCK_EXTENSIONS = ['.dwg', '.dxf', '.dwt', '.blk'];
-
-/**
- * 检查是否为图纸文件
- * @param fileName 文件名
- * @returns 是否为图纸文件
- */
-export function isDrawingFile(fileName: string): boolean {
-  const lastDot = fileName.lastIndexOf('.');
-  if (lastDot === -1) return false;
-  const ext = fileName.toLowerCase().slice(lastDot);
-  return DRAWING_EXTENSIONS.includes(ext);
-}
-
 // ========== 文件名处理 ==========
 
 /**
