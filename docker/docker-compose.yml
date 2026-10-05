@@ -94,9 +94,13 @@ services:
       REDIS_MAX_RETRIES: ${REDIS_MAX_RETRIES:-3}
       # #419 等保 8.1.2.2：内部服务共享密钥（storage/conversion 出站鉴权）
       INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-}
-      # 上传配置
-      UPLOAD_MAX_SIZE: ${UPLOAD_MAX_SIZE:-104857600}
-      UPLOAD_ALLOWED_TYPES: ${UPLOAD_ALLOWED_TYPES:-.dwg,.dxf,.pdf,.png,.jpg,.jpeg}
+      # 上传配置（键名必须与 packages/backend/src/config/configuration.ts 的读取方一致；
+      # UPLOAD_MAX_SIZE / UPLOAD_ALLOWED_TYPES 已删除，后端零读取方，注入也无效）
+      UPLOAD_MAX_FILES: ${UPLOAD_MAX_FILES:-10}
+      UPLOAD_ALLOWED_EXTENSIONS: ${UPLOAD_ALLOWED_EXTENSIONS:-.dwg,.dxf}
+      UPLOAD_BLOCKED_EXTENSIONS: ${UPLOAD_BLOCKED_EXTENSIONS:-.exe,.bat,.sh,.cmd,.ps1}
+      UPLOAD_MAX_CONCURRENT: ${UPLOAD_MAX_CONCURRENT:-3}
+      UPLOAD_CHUNK_MAX_CONCURRENT: ${UPLOAD_CHUNK_MAX_CONCURRENT:-5}
       # 文件存储路径（容器内路径）
       FILES_DATA_PATH: /app/data/files
       MX_REPO_PATH: /app/data/svn-repo

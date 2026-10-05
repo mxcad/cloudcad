@@ -226,7 +226,7 @@ export default (): AppConfig => {
 
     upload: {
       // HTTP 层文件大小上限不在本段：multer 的 fileSize 由
-      // common/utils/multter-upload-limits.ts 按运行时配置 maxFileSize 计算
+      // common/utils/multer-upload-limits.ts 按运行时配置 maxFileSize 计算
       // （兜底 512MB）。本段曾有一个 500MB 的 maxSize 并注释称「Multer 已改为
       // 读取此值」，实际零读取方，已删除。
       maxFilesPerUpload:

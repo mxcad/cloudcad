@@ -165,9 +165,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       };
     }
 
-    const envValue = def.envKey
-      ? this.parseEnvValue(def.envKey, def.type, def.envAliases)
-      : undefined;
+    const envValue = this.resolveEnvLayer(def);
     if (envValue !== undefined) {
       return { value: envValue, source: 'env' };
     }
@@ -180,6 +178,20 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     }
 
     return { value: def.defaultValue, source: 'default' };
+  }
+
+  /**
+   * 解析定义表声明的 env 层（envKey + 兼容别名）。返回 undefined 表示该键未声明
+   * envKey，或声明了但 env 值无效——两种情形都回退下一层。
+   *
+   * 取值（resolveValue）与展示（enrichFromDefinition）必须共用此出口，否则两处会
+   * 各自手写「取 envKey + envAliases」这一步而漏传参数。313b8d2 修的 envAliases 漏传
+   * 正是这类副本缺失，同构缺陷会再次发生。
+   */
+  private resolveEnvLayer(def: RuntimeConfigDefinition | undefined): EnvResolveResult {
+    return def?.envKey
+      ? this.parseEnvValue(def.envKey, def.type, def.envAliases)
+      : undefined;
   }
 
   /**
@@ -552,12 +564,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     | 'dangerous'
     | 'hot'
   > {
-    // 必须与 resolveValue 同样传入 envAliases，否则只配了兼容别名（如
-    // AUDIT_LOG_RETENTION_DAYS）的部署会在管理端看到 envValue=null，
-    // 「已被 env 锁定」提示与二次确认分支全部失效。
-    const envValue = def?.envKey
-      ? this.parseEnvValue(def.envKey, def.type, def.envAliases)
-      : null;
+    const envValue = this.resolveEnvLayer(def);
 
     const defaultValue = def?.defaultValue;
     const isModified =

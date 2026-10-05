@@ -20,7 +20,9 @@ import type { IRuntimeConfigService } from '@cloudcad/contracts';
 export async function buildMulterUploadLimits(
   runtimeConfigService: IRuntimeConfigService
 ): Promise<{ fileSize: number }> {
-  const runtimeMaxFileSizeMB = await runtimeConfigService.getValue<number>('maxFileSize', 500);
+  // 不传 fallback：maxFileSize 已登记在 RUNTIME_CONFIG_DEFINITIONS，getValue 对已登记键
+  // 恒返回定义表默认值（100MB），调用方 fallback 会被静默丢弃——传了就是死值。
+  const runtimeMaxFileSizeMB = await runtimeConfigService.getValue<number>('maxFileSize');
   const runtimeMaxBytes = runtimeMaxFileSizeMB * 1024 * 1024;
   const safetyCeilingBytes = 512 * 1024 * 1024; // 固定兜底，防错误配置导致 multer 成为更紧的限制
   return { fileSize: Math.max(runtimeMaxBytes, safetyCeilingBytes) };

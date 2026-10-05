@@ -1,7 +1,11 @@
 import { NodeType } from '@cloudcad/db';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 
-export const OWNERSHIP_PERMISSION_STRATEGY = 'OwnershipPermissionStrategy';
+// 此处曾有 DI token OWNERSHIP_PERMISSION_STRATEGY：三个策略实现（project/
+// personal/library）都以具体类注入 OwnershipPermissionFactory，token 从未
+// provide、从未 @Inject，是死代码。按 ADR-0020 删除已死的
+// IFileSystemPermissionService 的同一口径处理；接口类型
+// OwnershipPermissionStrategy 仍被三个策略 implements，保留。
 
 /**
  * 归属节点上下文（与 NodeMutationGuard 的 NodeContext 对齐）
