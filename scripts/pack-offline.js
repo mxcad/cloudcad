@@ -1450,13 +1450,43 @@ function assertLinuxRuntimeNodeModules() {
       `（对齐 Windows 侧 npm ci 严格还原语义，不动打包机全局包）...`
   );
   const failed = [];
+  let usedSudo = false;
   for (const x of unexpected) {
+    const target = path.join(nmDir, x.name);
     try {
-      fs.rmSync(path.join(nmDir, x.name), { recursive: true, force: true });
+      fs.rmSync(target, { recursive: true, force: true });
       log(`  已清理 ${x.name}（${formatSize(x.size)}）`);
     } catch (e) {
+      // EACCES/EPERM：产物多为 sudo 提取产生的 root 属主（普通用户删不动），
+      // Linux 下 sudo 重试；sudo 密码交互沿用 stdio inherit
+      if (
+        process.platform !== 'win32' &&
+        (e.code === 'EACCES' || e.code === 'EPERM')
+      ) {
+        const r = spawnSync('sudo', ['rm', '-rf', target], { stdio: 'inherit' });
+        if (r.status === 0 && !fs.existsSync(target)) {
+          log(`  已清理 ${x.name}（${formatSize(x.size)}，经 sudo）`);
+          usedSudo = true;
+          continue;
+        }
+      }
       failed.push(`${x.name}: ${e.message}`);
     }
+  }
+  if (usedSudo) {
+    // sudo 产物属主归回当前用户，避免后续打包复制/再清理继续撞权限
+    try {
+      spawnSync(
+        'sudo',
+        [
+          'chown',
+          '-R',
+          `${process.getuid()}:${process.getgid()}`,
+          path.join(PROJECT_ROOT, 'runtime', 'linux'),
+        ],
+        { stdio: 'pipe' }
+      );
+    } catch {}
   }
   if (failed.length > 0 || findUnexpectedPackages(nmDir).length > 0) {
     error('Linux 运行时 node_modules 自动清理未完成，中止打包:');
