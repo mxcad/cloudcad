@@ -243,8 +243,12 @@ function getDeployIncludeList(platform, variant = 'oss') {
   // deploy 独有：启动/停止入口脚本（追加在部署说明之前，保持历史复制顺序不变）
   for (const entry of getLaunchScriptEntries(platform)) items.push(entry);
   for (const entry of getRuntimeScriptEntries(platform)) items.push(entry);
-  // deploy 独有：部署说明文档（末尾）
-  items.push({ src: '部署说明.txt', dest: '部署说明.txt' });
+  // deploy 独有：部署说明文档（末尾）——按打包平台出对应版本
+  //（Linux 包只带 Linux 版，Windows 包只带 Windows 版），包内统一命名为 部署说明.txt
+  items.push({
+    src: platform === 'linux' ? '部署说明-linux.txt' : '部署说明-windows.txt',
+    dest: '部署说明.txt',
+  });
 
   return appendPrivateEntries(items, variant);
 }
