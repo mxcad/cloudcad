@@ -10,6 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# 补齐包内可执行位（Windows 打包链路产物执行位丢失，目录清单唯一源见 ensure-exec.sh）
+bash runtime/scripts/ensure-exec.sh 2>/dev/null || true
+
 # 优先 Linux 离线运行时，回退到 Windows（Git Bash on Windows 场景）
 if [ -f "$PROJECT_ROOT/runtime/linux/node/bin/node" ]; then
   NODE_DIR="$PROJECT_ROOT/runtime/linux/node/bin"

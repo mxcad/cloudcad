@@ -1978,6 +1978,26 @@ async function packDeploy(platform, variant = 'oss') {
 
     ensureDir(OUTPUT_DIR);
 
+    // Linux 包打 tar 前补齐暂存目录可执行位（目录清单唯一源 = runtime/scripts/ensure-exec.sh）：
+    // Windows 侧缓存经 NTFS 丢失 Unix 执行位，bsdtar 打包又无法凭空恢复（全部 0666），
+    // 须在打 tar 前显式补 +x，包内二进制才自带执行位——断网验证 CMD 直接 exec node
+    // （不经 start.sh 自愈），目标机解压后也应免 chmod 直接 ./start.sh。
+    if (platform === 'linux') {
+      const healScript = path.join(tempDir, 'runtime', 'scripts', 'ensure-exec.sh');
+      if (fs.existsSync(healScript)) {
+        const healed = spawnSync('bash', [healScript, tempDir], { stdio: 'pipe' });
+        if (healed.error || healed.status !== 0) {
+          error(
+            `补齐包内可执行位失败（ensure-exec.sh）: ${
+              healed.error ? healed.error.message : `exit ${healed.status}`
+            }`
+          );
+          process.exit(1);
+        }
+        log('已补齐包内可执行位（node/postgres/redis/subversion/mxcad + *.sh）');
+      }
+    }
+
     await createArchive(tempDir, outputPath);
 
     const stat = fs.statSync(outputPath);

@@ -3,6 +3,9 @@
 
 cd "$(dirname "$0")"
 
+# 补齐包内可执行位（Windows 打包链路产物执行位丢失，目录清单唯一源见 ensure-exec.sh）
+bash runtime/scripts/ensure-exec.sh 2>/dev/null || true
+
 # 使用内嵌的 Node.js
 NODE_EXE="./runtime/linux/node/bin/node"
 
