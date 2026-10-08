@@ -22,6 +22,8 @@ const { viewStatus, logCenterMenu } = require('./status');
 const { databaseBackupMenu } = require('./db-backup');
 const { mfaTotpUnbind } = require('./mfa');
 const { adminResetPassword } = require('./admin-reset-password');
+const { dbResetPassword } = require('./db-reset-password');
+const { redisResetPassword } = require('./redis-reset-password');
 const versionHelper = require('../drawing-version-helper');
 
 const menuSections = [
@@ -97,10 +99,28 @@ const menuSections = [
         desc: '管理员丢失验证器时的恢复通道',
         action: () => mfaTotpUnbind(),
       },
+    ],
+  },
+  {
+    // 密码重置单独成节（ADR-0072/0073）：三条都是锁死时才会跑的恢复通道，
+    // 与排障工具混在一节里既不好找也会稀释语义。刻意不给 scope/platform
+    // 标记——恢复入口绝不能只在开发机出现。
+    title: '密码重置',
+    items: [
       {
         label: '重置管理员密码',
         desc: '管理员忘记密码时的恢复通道',
         action: () => adminResetPassword(),
+      },
+      {
+        label: '重置数据库密码',
+        desc: '数据库口令轮换，改密后自动更新 .env 并重启后端',
+        action: () => dbResetPassword(),
+      },
+      {
+        label: '重置 Redis 密码',
+        desc: 'Redis 口令轮换，改密后自动更新 .env 并重启服务',
+        action: () => redisResetPassword(),
       },
     ],
   },

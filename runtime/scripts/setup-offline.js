@@ -24,6 +24,8 @@ const { execSync, spawn } = require('child_process');
 const { PRODUCT_NAME } = require('./lib/branding');
 const { brandBox } = require('./lib/logger');
 const { OPS_ENTRY, PLATFORM, IS_WINDOWS, IS_LINUX } = require('./lib/context');
+// 后端生产依赖 pnpm --filter 清单（与 verify-deploy.js 共用，见 lib/deploy-install-filter）
+const { buildDeployInstallFilters } = require('./lib/deploy-install-filter');
 // .env 值转义唯一出口（config-updater）：生成的口令含 #/$/! 等字符，
 // 裸写会被 dotenv 当注释截断，见 escapeEnvValue 注释
 const { escapeEnvValue } = require('./config-updater');
@@ -689,18 +691,10 @@ function runPnpmInstallOffline(options = {}) {
   // filter 才会为其建立 workspace 链接并安装依赖；OSS 包无此目录则跳过，
   // 避免 pnpm 因找不到 workspace 包而失败。engine-exec 与 conversion-service
   // 目录两种变体都有，无需条件判断。
+  // filter 清单走 lib/deploy-install-filter 单一事实源（与 verify-deploy.js 共用），
+  // impl-mx 条件项由 buildDeployInstallFilters 按目录存在性判定。
   const installArgs = deployBackendOnly || isDeployStore
-    ? [
-        '--filter', 'backend',
-        '--filter', '@cloudcad/db',
-        '--filter', '@cloudcad/contracts',
-        '--filter', '@cloudcad/engine-exec',
-        '--filter', '@cloudcad/conversion-service',
-        ...(fs.existsSync(path.join(PROJECT_ROOT, 'packages', 'impl-mx', 'package.json'))
-          ? ['--filter', '@cloudcad/impl-mx']
-          : []),
-        'install', '--offline', '--prod',
-      ]
+    ? [...buildDeployInstallFilters(PROJECT_ROOT), 'install', '--offline', '--prod']
     : ['install', '--offline'];
 
   const installLabel = isDeployStore

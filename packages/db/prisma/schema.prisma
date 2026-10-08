@@ -548,6 +548,9 @@ enum AuditAction {
   ADMIN_PASSWORD_RESET
   // 会话转移（桌面端 EXE → 系统浏览器强制会话切换，等保 8.1.4.1 会话切换可追溯）
   USER_SESSION_TRANSFER
+  // 基础设施密码重置（ADR-0073：改服务端 + 成对改 .env + 审计留痕，resourceType=SYSTEM）
+  DB_PASSWORD_RESET
+  REDIS_PASSWORD_RESET
 }
 
 enum ResourceType {

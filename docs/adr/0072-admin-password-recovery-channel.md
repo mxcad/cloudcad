@@ -43,6 +43,7 @@ cloudcad admin:reset-password [<username>] [--interactive] [--also-unbind-totp]
 - **刻意不做 Redis session 清理**：session value 里才是 `userId`，按用户清理需 SCAN + 逐条反序列化，而 runtime 脚本刻意零外部依赖（无 redis client）。真实恢复场景里被锁死的管理员根本没有 session；access token 最多 1h 自然过期、refresh 已清空无法续期，暴露窗口 ≤1h。与 mfa.js 解绑行为一致。
 - **刻意不校验弱口令黑名单**：黑名单在 backend 的 TS 模块里，runtime 无法解析；且它只在「设置口令」入口生效、不影响登录。生成器产出 16 位四类随机口令，命中概率可忽略。
 - **多语句事务不带换行**：`BEGIN;UPDATE ...;DELETE ...;COMMIT;` 仅用分号分隔——分号已足够，换行经 shell 引号传递有二次转义风险（已实测验证：`\n` 经 `JSON.stringify` 会变成字面两个字符）。
-- **TOTP 叠加场景**：密码重置不自动解绑 TOTP。若管理员验证器也丢了，需加 `--also-unbind-totp` 或先跑 `mfa:totp-unbind`；命令输出会主动提示该情况，避免「密码重置了却仍登不上」的二次挫败。
+- **TOTP 叠加场景**：密码重置不自动解绑 TOTP。若管理员验证器也丢了，需加 `--also-unbind-totp` 或先跑 `mfa:totp-unbind`；命令输出会主动提示该情况，避免「密码重置了却仍登不上」的二次挫败。**3002 网页入口把该判断前置**：候选列表就带上 `totpEnabled`，选中启用 TOTP 的管理员时自动露出「同时解绑 TOTP」复选框，成功响应再回传 `totpEnabled` / `unbindTotp` 让前端说清后果（见 ADR-0073）。
+- **3002 网页入口上线时收紧了角色口径（CLI 行为变更）**：`queryAdminByUsername` 原为 `LEFT JOIN` 且不带角色条件，`cloudcad admin:reset-password <任意用户名>` 能重置非管理员账号。做成网页按钮前必须收敛——现与 `queryAdminCandidates` 同一角色条件，失败信息为「用户不存在或不是管理员」。**这是刻意的破坏性变更**：命令名与本 ADR 的语义都是「管理员」，放行非管理员等于把用户管理端点的职责塞进恢复通道。详见 ADR-0073。
 - **无「至少保留一名管理员」保护**：与既有现状一致（`PATCH /users/:id` 本就能删掉最后一个 ADMIN），本 ADR 不扩大该缺口也不在此处补上——恢复通道里加该约束没有意义，它属于用户管理端点的独立议题。
 - **菜单总数断言随之调整**：恢复项无 `scope`/`platform` 标记，四种部署形态全可见——恢复入口绝不能只在开发机出现，`menu.test.js` 已把两项管理员恢复通道列入「核心项在所有环境都可见」断言锁定。

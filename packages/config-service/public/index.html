@@ -1767,8 +1767,14 @@
           <div class="modal-content">
             <h3 id="changePasswordTitle">修改密码</h3>
             <div id="changePasswordDesc" style="color:#888;font-size:13px;margin-bottom:16px"></div>
-            <div class="form-group">
-              <label id="changePasswordOldLabel">旧密码</label>
+            <!-- 仅「平台管理员密码」显示：网页无法交互询问，必须点名要重置的管理员 -->
+            <div id="adminUserRow" class="form-group hidden">
+              <label>管理员账号</label>
+              <select id="changeAdminUser" onchange="onAdminUserChange()"></select>
+              <div id="adminUserHint" style="color:#888;font-size:12px;margin-top:6px"></div>
+            </div>
+            <div id="changeOldPasswordRow" class="form-group">
+              <label>旧密码</label>
               <input type="password" id="changeOldPassword" placeholder="请输入旧密码" />
             </div>
             <div class="form-group">
@@ -1778,6 +1784,13 @@
             <div class="form-group">
               <label>确认新密码</label>
               <input type="password" id="changeConfirmPassword" placeholder="请再次输入新密码" />
+            </div>
+            <!-- 仅「平台管理员密码」且该账号启用 TOTP 时显示 -->
+            <div id="unbindTotpRow" class="form-group hidden">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="changeUnbindTotp" style="width:auto;margin:0" />
+                同时解绑 TOTP 双因素
+              </label>
             </div>
             <div id="changePasswordError" class="error hidden"></div>
             <div class="modal-actions">
@@ -1813,7 +1826,10 @@
           </div>
           <!-- 密码管理 -->
           <div class="password-management" style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #333">
-            <h3 style="color:#00d9ff;margin-bottom:16px;font-size:16px">🔑 密码管理</h3>
+            <h3 style="color:#00d9ff;margin-bottom:16px;font-size:16px">
+              🔑 密码重置
+              <span style="color:#555;font-size:12px">（与 cloudcad CLI「密码重置」菜单同一入口）</span>
+            </h3>
             <div style="display:flex;gap:12px;flex-wrap:wrap">
               <div class="password-card" style="flex:1;min-width:200px;background:#0d0d1a;border-radius:8px;padding:16px">
                 <div style="font-size:13px;color:#888;margin-bottom:4px">数据库密码</div>
@@ -1826,8 +1842,13 @@
                 <button class="btn btn-primary" style="width:100%" onclick="showPasswordModal('redis')">修改密码</button>
               </div>
               <div class="password-card" style="flex:1;min-width:200px;background:#0d0d1a;border-radius:8px;padding:16px">
-                <div style="font-size:13px;color:#888;margin-bottom:4px">管理员密码</div>
-                <div style="font-size:12px;color:#555;margin-bottom:12px">配置中心登录密码</div>
+                <div style="font-size:13px;color:#888;margin-bottom:4px">平台管理员密码</div>
+                <div style="font-size:12px;color:#555;margin-bottom:12px">平台 ADMIN 账号，用于找回被锁死的账号</div>
+                <button class="btn btn-primary" style="width:100%" onclick="showPasswordModal('adminUser')">重置密码</button>
+              </div>
+              <div class="password-card" style="flex:1;min-width:200px;background:#0d0d1a;border-radius:8px;padding:16px">
+                <div style="font-size:13px;color:#888;margin-bottom:4px">配置中心登录密码</div>
+                <div style="font-size:12px;color:#555;margin-bottom:12px">本页面（端口 3002）的登录密码</div>
                 <button class="btn btn-primary" style="width:100%" onclick="showPasswordModal('admin')">修改密码</button>
               </div>
             </div>
@@ -2531,6 +2552,7 @@
       // ========== 密码管理 ==========
 
       let currentPasswordType = '';
+      let adminCandidates = [];
 
       function showPasswordModal(type) {
         currentPasswordType = type;
@@ -2538,21 +2560,106 @@
         const title = document.getElementById('changePasswordTitle');
         const desc = document.getElementById('changePasswordDesc');
 
-        const labels = {
-          database: { title: '修改数据库密码', desc: '修改后将更新 PostgreSQL 用户密码和 .env 配置，并重启后端服务' },
-          redis: { title: '修改 Redis 密码', desc: '修改后将更新 Redis 密码和 .env 配置，并重启 Redis 和后端服务' },
-          admin: { title: '修改管理员密码', desc: '修改配置中心（端口 3002）的登录密码' },
+        // adminUser = 平台 ADMIN 账号（ADR-0072 的 nonInteractive 通道）。
+        // 与数据库/Redis 刻意不同：不核对旧密码——被锁死的恰恰是「不知旧密码」。
+        const configs = {
+          database: {
+            title: '修改数据库密码',
+            desc: '修改后将更新 PostgreSQL 用户密码和 .env 配置，并重启后端服务。新密码至少 10 位，且需含大小写字母/数字/特殊字符中至少三类',
+          },
+          redis: {
+            title: '修改 Redis 密码',
+            desc: '修改后将更新 Redis 密码和 .env 配置，并重启 Redis、后端和转换服务。新密码至少 10 位，且需含大小写字母/数字/特殊字符中至少三类',
+          },
+          admin: {
+            title: '修改配置中心登录密码',
+            desc: '修改配置中心（端口 3002）的登录密码，不影响平台内的任何账号',
+          },
+          adminUser: {
+            title: '重置平台管理员密码',
+            desc: '重置平台 ADMIN 账号的登录密码，并撤销该账号的全部刷新令牌。不核对旧密码（被锁死时正是不知旧密码）。新密码至少 10 位，且需含大小写字母/数字/特殊字符中至少三类',
+            needsOldPassword: false,
+            needsAdminUser: true,
+          },
         };
-        const info = labels[type] || labels.admin;
+        const info = configs[type] || configs.admin;
         title.textContent = info.title;
         desc.textContent = info.desc;
 
+        // 旧密码行只对 database/redis/admin 显示；管理员下拉与 TOTP 复选只对 adminUser 显示
+        setRowVisible('adminUserRow', !!info.needsAdminUser);
+        setRowVisible('unbindTotpRow', false);
+        setRowVisible('changeOldPasswordRow', info.needsOldPassword !== false);
+
+        adminCandidates = [];
+        document.getElementById('changeAdminUser').innerHTML = '';
+        document.getElementById('adminUserHint').textContent = '';
+        document.getElementById('changeUnbindTotp').checked = false;
         document.getElementById('changeOldPassword').value = '';
         document.getElementById('changeNewPassword').value = '';
         document.getElementById('changeConfirmPassword').value = '';
         document.getElementById('changePasswordError').classList.add('hidden');
-        document.getElementById('changeOldPassword').focus();
         modal.classList.remove('hidden');
+
+        if (info.needsAdminUser) {
+          loadAdminUsersForReset();
+          document.getElementById('changeNewPassword').focus();
+        } else {
+          document.getElementById('changeOldPassword').focus();
+        }
+      }
+
+      function setRowVisible(id, visible) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', !visible);
+      }
+
+      async function loadAdminUsersForReset() {
+        const select = document.getElementById('changeAdminUser');
+        const hint = document.getElementById('adminUserHint');
+        try {
+          const res = await fetch('/api/password/admin-users', {
+            headers: { Authorization: 'Bearer ' + token },
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            hint.textContent = '加载失败：' + (data.error || '未知错误');
+            return;
+          }
+          adminCandidates = data.admins || [];
+          // 用 textContent 逐条构造（勿拼 innerHTML）：用户名来自数据库，可能含 < > &
+          select.innerHTML = '';
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = '请选择管理员';
+          select.appendChild(placeholder);
+          adminCandidates.forEach((admin) => {
+            const option = document.createElement('option');
+            option.value = admin.username;
+            option.textContent = admin.username + (admin.totpEnabled ? '（已启用 TOTP）' : '');
+            select.appendChild(option);
+          });
+          hint.textContent =
+            adminCandidates.length === 0
+              ? '系统中没有任何管理员账号'
+              : `共 ${adminCandidates.length} 个管理员账号，重置后该账号将立即下线`;
+        } catch (e) {
+          hint.textContent = '加载失败：网络错误';
+        }
+      }
+
+      function onAdminUserChange() {
+        const select = document.getElementById('changeAdminUser');
+        const admin = adminCandidates.find((a) => a.username === select.value);
+        const hint = document.getElementById('adminUserHint');
+        if (!admin) return;
+        if (admin.totpEnabled) {
+          setRowVisible('unbindTotpRow', true);
+          hint.textContent = '该账号已启用 TOTP：重置后首次登录仍会被动态码挡住，可勾选一并解绑';
+        } else {
+          setRowVisible('unbindTotpRow', false);
+          hint.textContent = '该账号未启用 TOTP';
+        }
       }
 
       function hideChangePasswordModal() {
@@ -2560,23 +2667,34 @@
       }
 
       async function submitChangePassword() {
-        const oldPassword = document.getElementById('changeOldPassword').value;
         const newPassword = document.getElementById('changeNewPassword').value;
         const confirmPassword = document.getElementById('changeConfirmPassword').value;
         const errorEl = document.getElementById('changePasswordError');
+        const isAdminUser = currentPasswordType === 'adminUser';
+        const oldPassword = document.getElementById('changeOldPassword').value;
+        const username = isAdminUser ? document.getElementById('changeAdminUser').value : '';
 
-        if (!oldPassword || !newPassword || !confirmPassword) {
-          errorEl.textContent = '请填写所有字段';
+        if (!newPassword || !confirmPassword) {
+          errorEl.textContent = '请填写新密码并再次确认';
           errorEl.classList.remove('hidden');
           return;
         }
-
+        // 旧密码只对数据库/Redis/配置中心三种核对；平台管理员不核对（锁死场景）
+        if (!isAdminUser && !oldPassword) {
+          errorEl.textContent = '请输入旧密码';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+        if (isAdminUser && !username) {
+          errorEl.textContent = '请选择要重置密码的管理员';
+          errorEl.classList.remove('hidden');
+          return;
+        }
         if (newPassword !== confirmPassword) {
           errorEl.textContent = '两次输入的新密码不一致';
           errorEl.classList.remove('hidden');
           return;
         }
-
         if (newPassword.length < 8) {
           errorEl.textContent = '新密码长度至少 8 位';
           errorEl.classList.remove('hidden');
@@ -2592,8 +2710,16 @@
           database: '/api/password/database',
           redis: '/api/password/redis',
           admin: '/api/auth/change-password',
+          adminUser: '/api/password/admin-user',
         };
         const apiUrl = apiMap[currentPasswordType] || '/api/auth/change-password';
+        const payload = isAdminUser
+          ? {
+              username,
+              newPassword,
+              unbindTotp: document.getElementById('changeUnbindTotp').checked,
+            }
+          : { oldPassword, newPassword };
 
         try {
           const res = await fetch(apiUrl, {
@@ -2602,13 +2728,19 @@
               'Content-Type': 'application/json',
               Authorization: 'Bearer ' + token,
             },
-            body: JSON.stringify({ oldPassword, newPassword }),
+            body: JSON.stringify(payload),
           });
 
           const data = await res.json();
 
           if (res.ok) {
-            toast('密码修改成功', 'success');
+            // TOTP 仍启用时必须说清后果，否则用户会把「登录仍被挡」误判成重置失败
+            toast(
+              isAdminUser && data.totpEnabled && !data.unbindTotp
+                ? '密码已重置；该管理员已启用 TOTP，首次登录仍会被动态码挡住'
+                : '密码修改成功',
+              'success'
+            );
             hideChangePasswordModal();
           } else {
             errorEl.textContent = data.error || '修改失败';

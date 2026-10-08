@@ -77,6 +77,7 @@ CloudCAD 架构决策记录（`docs/adr/`）。编号唯一；`superseded` 表�
 | [0070](0070-platform-package-and-pc-mobile-url-interop.md) | `accepted` | 0070 — `@cloudcad/platform` 跨端公共层（准入四条：纯函数/不绑框架/不绑端/重复已成立）+ PC↔移动端 URL 互通走「语义等价 + 双向翻译层」（映射表单一事实源、两端参数名同名铁律、移动端 URL 形态固定 `base?query#path`）+ 双向逃生入口 + 消灭整页重载 + 守卫异步刷新 |
 | [0071](0071-ops-center-on-config-service.md) | `accepted` | 0071 — 运维中心建在 config-service（部署全程存活的唯一长任务宿主 + require 复用 CLI 命令函数 + 后台 job/落盘/轮询；否决 backend+React 方案的「部署中途自停」死穴；删 admin123 回退；排障菜单项按部署形态门控） |
 | [0072](0072-admin-password-recovery-channel.md) | `accepted` | 0072 — 管理员密码恢复走带外运维 CLI（`admin:reset-password` 与 `mfa:totp-unbind` 同构；信任边界=部署机 shell 权限，否决 HTTP 应急端点与「永远在线的免密改密面」；重置即全量撤销会话同事务提交；刻意不清 Redis session、不校验弱口令黑名单；新增 `AuditAction.ADMIN_PASSWORD_RESET` 需迁移，迁移未应用时重置仍成功仅审计告警；补 `cloudcad.bat` 的 `%*` 透传；兑现部署说明里落空的「密码向导」承诺） |
+| [0073](0073-infra-password-reset-ledger-consistency.md) | `accepted` | 0073 — 数据库 / Redis 密码重置走同一条带外运维通道（`db:reset-password` / `redis:reset-password`），核心安全性质=**先用新密码验证成功才允许写 `.env`**（防服务端与账本分叉，验证失败尽力回滚并大声报错）；嵌入式 PG 全仓库 `-A trust` 且从未写过 `pg_hba.conf`，故本轮只做账本一致、**刻意不在重置命令里加 pg_hba 硬加固**（逃生舱不得依赖正在被重置的门禁，单独排票）；`DB_PASSWORD` 与 `DATABASE_URL` 成对写；Redis 改密走裸 RESP 不留进程列表痕迹、`AUTH`+`CONFIG REWRITE` 同请求；ADR-0071 收尾=3002 两条旧路由改薄壳并加源码扫描断言防双轨回归；`psql`/审计写入收敛进 `lib/psql.js` 唯一出口 |
 
 ## 规则
 

@@ -52,3 +52,12 @@
   若 TOTP 验证器也丢了，加参数 `--also-unbind-totp`。
 - **管理员忘了 TOTP 验证器**：运行 `runtime/cloudcad.bat mfa:totp-unbind <用户名>`，
   解绑后该管理员下次登录重新绑定验证器即可。
+- **忘记 / 轮换数据库密码**：运行 `runtime/cloudcad.bat db:reset-password`，
+  或双击 `runtime/cloudcad.bat` 进菜单选 [重置数据库密码]。新密码由系统生成并在
+  终端只显示一次，请当场记录。命令会用新密码回连 PostgreSQL 验证，验证通过才
+  更新 `.env`（`DB_PASSWORD` 与 `DATABASE_URL` 成对写）并重启后端；验证失败会
+  回滚为旧密码。不索取旧密码。运维中心 3002 的「修改数据库密码」是同一通道。
+- **忘记 / 轮换 Redis 密码**：运行 `runtime/cloudcad.bat redis:reset-password`，
+  或双击 `runtime/cloudcad.bat` 进菜单选 [重置 Redis 密码]。改密不停机，成功后
+  按 Redis → 后端 → 转换服务顺序重启（只重启实际存在的服务）。同样先用新密码
+  AUTH 验证通过才写 `.env`。运维中心 3002 的「修改 Redis 密码」是同一通道。

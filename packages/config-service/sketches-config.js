@@ -172,22 +172,24 @@ function importConfig(newConfig) {
   return { success: true };
 }
 
+// 统一契约（routes/config-resource.js 工厂消费）：
+// { ok: true, data } | { ok: false, error, errors? }
 function resetConfig() {
   ensureConfigDir();
-  if (fs.existsSync(SOURCE_PATH)) {
-    try {
-      const sourceConfig = JSON.parse(fs.readFileSync(SOURCE_PATH, 'utf8'));
-      fs.writeFileSync(
-        CONFIG_PATH,
-        JSON.stringify(sourceConfig, null, 2),
-        'utf8'
-      );
-      return sourceConfig;
-    } catch (e) {
-      return null;
-    }
+  if (!fs.existsSync(SOURCE_PATH)) {
+    return { ok: false, error: '默认配置文件不存在，无法还原' };
   }
-  return null;
+  try {
+    const sourceConfig = JSON.parse(fs.readFileSync(SOURCE_PATH, 'utf8'));
+    fs.writeFileSync(
+      CONFIG_PATH,
+      JSON.stringify(sourceConfig, null, 2),
+      'utf8'
+    );
+    return { ok: true, data: sourceConfig };
+  } catch (e) {
+    return { ok: false, error: '读取默认配置失败: ' + e.message };
+  }
 }
 
 module.exports = {

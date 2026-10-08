@@ -34,6 +34,8 @@ const {
 } = require('./lib/context');
 const { runCommand, runPm2 } = require('./lib/proc');
 const { checkHttpOnce, isPortOpen } = require('./lib/health');
+// 后端生产依赖 pnpm --filter 清单（与 setup-offline.js 共用，见 lib/deploy-install-filter）
+const { buildDeployInstallFilters } = require('./lib/deploy-install-filter');
 
 const LOGS_DIR = path.join(DATA_DIR, 'logs');
 
@@ -428,26 +430,16 @@ async function step2_InstallDeps() {
   // engine-exec 与 conversion-service 现依赖 @cloudcad/contracts（ADR-0069），
   // 漏掉它们则 require 解析失败（backend 转换路径炸 / 3100 端口无监听），
   // 本验证会正确判失败。
-  // 与 setup-offline.js runPnpmInstallOffline 保持一致。
-  log(
-    'info',
-    '运行 pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --offline --prod...'
-  );
+  // filter 清单走 lib/deploy-install-filter 单一事实源（与 setup-offline.js 共用），
+  // 私有包会额外纳入 @cloudcad/impl-mx（此前本验证器漏掉它，私有包断网验证会挂）。
+  const filterArgs = buildDeployInstallFilters(PROJECT_ROOT);
+  log('info', `运行 pnpm ${filterArgs.join(' ')} install --offline --prod...`);
 
   const installResult = spawnSync(
     NODE_EXE,
     [
       pnpmPath,
-      '--filter',
-      'backend',
-      '--filter',
-      '@cloudcad/db',
-      '--filter',
-      '@cloudcad/contracts',
-      '--filter',
-      '@cloudcad/engine-exec',
-      '--filter',
-      '@cloudcad/conversion-service',
+      ...filterArgs,
       'install',
       '--offline',
       '--prod',

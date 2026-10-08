@@ -140,13 +140,13 @@ function parseAdminList(stdout) {
     });
 }
 
-/** 查询某用户名对应的用户行（存在性校验，不限角色） */
+/** 查询某用户名对应的 ADMIN 角色用户（与 queryAdminCandidates 同一角色口径） */
 function queryAdminByUsername(username) {
   try {
     const q = runPsql(
       `SELECT u."id", u."username", u."totpEnabled", u."status" FROM "users" u ` +
-        `LEFT JOIN "roles" r ON u."roleId" = r."id" ` +
-        `WHERE u."username" = '${sqlQuote(username)}'`
+        `JOIN "roles" r ON u."roleId" = r."id" ` +
+        `WHERE r."name" = 'ADMIN' AND u."username" = '${sqlQuote(username)}'`
     );
     return q.ok
       ? { ok: true, admins: parseAdminList(q.stdout) }
@@ -207,7 +207,7 @@ function promptAdminChoice(admins) {
  * 误当成「自动生成」而静默采用一个操作员没设定的口令。
  * @returns {Promise<string|null>} 确认一致的口令，或 null（空白=自动生成）
  */
-async function promptNewPassword() {
+async function promptNewPassword(subject = '管理员') {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -215,7 +215,7 @@ async function promptNewPassword() {
   try {
     return await promptPasswordWithConfirm(
       rl,
-      '输入新管理员密码',
+      `输入新${subject}密码`,
       '[空白=自动生成强随机]'
     );
   } finally {
@@ -228,19 +228,19 @@ async function promptNewPassword() {
  * 掩码输入由 prompter 内部完成二次确认，不满足策略则重输（Ctrl+C 抛出即中止）。
  * 契约：prompter 只返回「确认一致的口令」或 null（空白）——二次输入不一致由
  * prompter 内部重问，绝不以空串形式外泄，故本循环不会把「确认失败」误当「自动生成」。
- * @param {string} username
+ * @param {string} subject 被重置对象的展示名（如 `管理员 admin` / `数据库` / `Redis`）
  * @param {number} minLength
  * @param {Function} [prompter] 口令输入函数（测试注入用）
  * @returns {Promise<{ok: true, password: string}>}
  */
 async function promptInteractivePassword(
-  username,
+  subject,
   minLength,
   prompter = promptNewPassword
 ) {
   console.log('');
   console.log(
-    `即将重置管理员 ${username} 的密码（当前策略：≥${minLength} 位，` +
+    `即将重置${subject}的密码（当前策略：≥${minLength} 位，` +
       '大小写/数字/特殊字符至少三类'
   );
   for (;;) {
@@ -274,7 +274,7 @@ async function resolveTargetAdmin(usernameArg, options) {
     const result = queryAdminByUsername(username);
     if (!result.ok) return result;
     if (!result.admins.length) {
-      return { ok: false, message: `用户不存在：${username}` };
+      return { ok: false, message: `用户不存在或不是管理员：${username}` };
     }
     return { ok: true, username, target: result.admins[0] };
   }
@@ -323,11 +323,16 @@ function verifyUpdateCount(stdout, expectedUpdates) {
  * @param {{
  *   confirmed?: boolean,
  *   interactive?: boolean,
+ *   password?: string,
  *   alsoUnbindTotp?: boolean,
  *   nonInteractive?: boolean,
- * }} [options] interactive=true 走掩码交互输口令，否则自动生成强随机；
- *   nonInteractive=true（未来运维中心，ADR-0071）要求必须给用户名；
- *   confirmed=true 跳过确认提问。
+ *   source?: string,
+ *   userAgent?: string,
+ * }} [options] password 显式指定新口令（非交互调用方用，仍过策略校验），
+ *   interactive=true 走掩码交互输口令，都缺省时自动生成强随机；
+ *   nonInteractive=true（运维中心 ADR-0071）要求必须给用户名；
+ *   confirmed=true 跳过确认提问；
+ *   source/userAgent 记录调用来源（默认 ops_cli / cloudcad-cli/…）。
  * @returns {Promise<{ok: boolean, message: string, password?: string}>}
  */
 async function adminResetPassword(usernameArg, options = null) {
@@ -342,11 +347,16 @@ async function adminResetPassword(usernameArg, options = null) {
     log('yellow', '该管理员未启用 TOTP，--also-unbind-totp 已忽略');
   }
 
-  // 2. 确定新口令（默认自动生成；interactive=true 才走掩码交互输入）
+  // 2. 确定新口令（优先级：显式指定 > interactive 掩码输入 > 自动生成）
   const minLength = resolveMinLength();
   let newPassword;
-  if (options?.interactive) {
-    const prompted = await promptInteractivePassword(username, minLength);
+  if (options?.password) {
+    newPassword = options.password;
+  } else if (options?.interactive) {
+    const prompted = await promptInteractivePassword(
+      `管理员 ${username}`,
+      minLength
+    );
     if (!prompted.ok) {
       log('red', prompted.message);
       return { ok: false, message: prompted.message };
@@ -355,11 +365,21 @@ async function adminResetPassword(usernameArg, options = null) {
   } else {
     newPassword = generateStrongPassword();
   }
+  // 三个来源统一过策略：显式指定的口令来自外部调用方（运维中心网页表单），
+  // 不校验等于把弱口令直接写进 users.password
+  const policyErrors = assertPasswordPolicy(newPassword, minLength);
+  if (policyErrors.length) {
+    const message = `密码不符合策略：${policyErrors.join('；')}`;
+    log('red', message);
+    return { ok: false, message };
+  }
 
   const totpNote = target.totpEnabled
-    ? '（该管理员已启用 TOTP：重置后首次登录仍会被动态码挡住，' +
-      '验证器也丢失时请同时执行 mfa:totp-unbind）'
+    ? `（该管理员已启用 TOTP：重置后首次登录仍会被动态码挡住，` +
+      `验证器也丢失时请同时执行 mfa:totp-unbind）`
     : '';
+  // 本次是否真的解绑了 TOTP（= 请求解绑 且 该账号确实启用着）
+  const unboundTotp = Boolean(options?.alsoUnbindTotp && target.totpEnabled);
 
   // 3. 确认（高危操作：覆盖管理员口令）
   let confirmed = options?.confirmed === true;
@@ -378,7 +398,7 @@ async function adminResetPassword(usernameArg, options = null) {
   // 4. 写口令哈希 + 撤销会话（同一事务：任一失败则全部回滚）
   const hash = hashPassword(newPassword);
   const statements = [];
-  if (options?.alsoUnbindTotp && target.totpEnabled) {
+  if (unboundTotp) {
     statements.push(
       `UPDATE "users" SET "totpSecret" = NULL, "totpEnabled" = false ` +
         `WHERE "id" = '${sqlQuote(target.id)}'`
@@ -395,7 +415,7 @@ async function adminResetPassword(usernameArg, options = null) {
     return { ok: false, message: `重置失败：${tx.stderr}` };
   }
   // 校验 UPDATE 行数与预期一致（解绑 TOTP + 改口令各一条）
-  const expectedUpdates = (options?.alsoUnbindTotp && target.totpEnabled ? 1 : 0) + 1;
+  const expectedUpdates = (unboundTotp ? 1 : 0) + 1;
   const updates = (tx.stdout.match(/UPDATE 1/g) || []).length;
   if (!verifyUpdateCount(tx.stdout, expectedUpdates)) {
     // UPDATE 0 是语句级零行命中（非错误），事务照常提交——措辞须如实，
@@ -415,9 +435,10 @@ async function adminResetPassword(usernameArg, options = null) {
     params: {
       method: 'admin_password_reset',
       source: 'ops_cli',
-      unbindTotp: Boolean(options?.alsoUnbindTotp && target.totpEnabled),
+      unbindTotp: unboundTotp,
+      source: options?.source || 'ops_cli',
     },
-    userAgent: 'cloudcad-cli/admin-reset-password',
+    userAgent: options?.userAgent || 'cloudcad-cli/admin-reset-password',
   });
   const auditNote = ins.ok ? '' : `，但审计写入失败：${ins.stderr}`;
 
@@ -433,6 +454,9 @@ async function adminResetPassword(usernameArg, options = null) {
     ok: true,
     message: `已重置管理员 ${username} 的密码${auditNote}`,
     password: newPassword,
+    // 调用方（运维中心网页）据此提示「登录后仍会被动态码挡住」
+    totpEnabled: target.totpEnabled,
+    unbindTotp: unboundTotp,
   };
 }
 
@@ -440,6 +464,8 @@ module.exports = {
   adminResetPassword,
   assertPasswordPolicy,
   parseAdminList,
+  // 供运维中心（config-service）列管理员下拉用
+  queryAdminCandidates,
   verifyUpdateCount,
   promptInteractivePassword,
   promptNewPassword,

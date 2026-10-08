@@ -49,8 +49,8 @@ const COMPONENT_VERSIONS = {
 // Linux 发行版 → 基础镜像：单一事实源在 pack-lib/linux-os.js（与 pack-linux-deploy 同源）
 const { LINUX_OS_BASE_IMAGES: OS_BASE_IMAGES } = require('./pack-lib/linux-os');
 
-// 标准组件目录（Linux 提取输出子目录；svn→subversion 映射与 extract-linux-runtime.js 一致）
-const LINUX_COMPONENT_DIRS = ['node', 'postgres', 'redis', 'subversion'];
+// 标准组件目录 + 关键可执行文件：单一事实源在 pack-lib/components.js（架构审查 ⑪）
+const { LINUX_COMPONENT_DIRS, LINUX_ASSET_REQUIRED_FILES } = require('./pack-lib/components');
 const WIN_COMPONENT_DIRS = ['node', 'redis', 'postgresql'];
 
 // ==================== 工具函数 ====================
@@ -177,23 +177,16 @@ async function packLinux(targetOs, { noDocker = false } = {}) {
     log(`--no-docker：跳过 Docker，假设 ${extractCacheDir} 已提取`);
   }
 
-  // 校验 4 个标准组件的关键可执行文件（而非仅目录存在）：
-  // 空/残缺的 node 目录若被打进资产，后续所有部署包都会复用这份坏资产
+  // 校验标准组件 + pm2 的关键可执行文件（而非仅目录存在）：
+  // 空/残缺的 node 目录（或缺 pm2）若被打进资产，后续所有部署包都会复用这份坏资产
   // （内容寻址，指纹不变则一直复用），目标机 start.sh 报"找不到 Node.js 运行时"。
-  const criticalFiles = {
-    node: 'bin/node',
-    postgres: 'bin/postgres',
-    redis: 'redis-server',
-    subversion: 'svn',
-  };
-  const missing = LINUX_COMPONENT_DIRS.filter(
-    (d) => !fs.existsSync(path.join(extractCacheDir, d, criticalFiles[d]))
+  // 清单单一事实源在 pack-lib/components.js（含嵌在 node 内的 pm2，架构审查 ⑪）。
+  const missing = LINUX_ASSET_REQUIRED_FILES.filter(
+    (rel) => !fs.existsSync(path.join(extractCacheDir, rel))
   );
   if (missing.length > 0) {
     error(
-      `标准组件关键可执行文件缺失: ${missing
-        .map((d) => `${d}/${criticalFiles[d]}`)
-        .join(', ')}（${extractCacheDir}）`
+      `标准组件关键可执行文件缺失: ${missing.join(', ')}（${extractCacheDir}）`
     );
     process.exit(1);
   }

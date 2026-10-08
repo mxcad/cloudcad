@@ -74,10 +74,66 @@ async function runStopAll() {
   );
 }
 
+/**
+ * 非交互调用来源标记。审计 params.source 记录触发入口：CLI 菜单/子命令是
+ * ops_cli，本层（运维中心网页）是 ops_web——否则从网页改密码会被记成 CLI。
+ */
+const WEB_SOURCE = { source: 'ops_web', userAgent: 'config-service/web' };
+
 /** 管理员 TOTP 解绑（同步快任务，网页侧已双重确认） */
 async function runMfaUnbind(username) {
   return tryRuntime(() =>
-    requireRuntime('commands/mfa').mfaTotpUnbind(username, { confirmed: true })
+    requireRuntime('commands/mfa').mfaTotpUnbind(username, {
+      confirmed: true,
+      ...WEB_SOURCE,
+    })
+  );
+}
+
+/** 数据库密码重置（ADR-0073；显式新口令 + confirmed 跳过确认；成功后重启 backend） */
+async function runDbPasswordReset(newPassword) {
+  return tryRuntime(() =>
+    requireRuntime('commands/db-reset-password').dbResetPassword({
+      password: newPassword,
+      confirmed: true,
+      ...WEB_SOURCE,
+    })
+  );
+}
+
+/** Redis 密码重置（ADR-0073；成功后按 redis → backend → conversion 顺序重启） */
+async function runRedisPasswordReset(newPassword) {
+  return tryRuntime(() =>
+    requireRuntime('commands/redis-reset-password').redisResetPassword({
+      password: newPassword,
+      confirmed: true,
+      ...WEB_SOURCE,
+    })
+  );
+}
+
+/** 列出全部 ADMIN 用户（供重置密码下拉选择；网页无法交互询问，必须显式点名） */
+function listAdminUsers() {
+  return tryRuntime(() =>
+    requireRuntime('commands/admin-reset-password').queryAdminCandidates()
+  );
+}
+
+/**
+ * 平台管理员密码重置（ADR-0072 的 nonInteractive 通道）。
+ * 与数据库/Redis 不同：这里不设旧密码核对——被锁死的恰恰是「不知道旧密码」。
+ * username 由命令侧按 ADMIN 角色校验，不接受任意用户名。
+ * @returns {Promise<{ok: boolean, message: string, totpEnabled?: boolean, unbindTotp?: boolean}>}
+ */
+async function runAdminUserPasswordReset({ username, password, unbindTotp }) {
+  return tryRuntime(() =>
+    requireRuntime('commands/admin-reset-password').adminResetPassword(username, {
+      password,
+      confirmed: true,
+      nonInteractive: true,
+      alsoUnbindTotp: Boolean(unbindTotp),
+      ...WEB_SOURCE,
+    })
   );
 }
 
@@ -205,6 +261,10 @@ module.exports = {
   runStopApps,
   runStopAll,
   runMfaUnbind,
+  runDbPasswordReset,
+  runRedisPasswordReset,
+  listAdminUsers,
+  runAdminUserPasswordReset,
   getLogLocations,
   runLogBundle,
   viewLogFile,

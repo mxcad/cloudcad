@@ -91,6 +91,10 @@ export enum AuditAction {
   // —— 账号安全：管理员密码重置（#417，ADR-0072 带外运维恢复通道；
   // params.source=ops_cli 区分运维 CLI 与用户在界面上的自助改密）——
   ADMIN_PASSWORD_RESET = 'ADMIN_PASSWORD_RESET',
+  // —— 基础设施密码重置（ADR-0073：服务端改密 + 成对改 .env + 审计留痕；
+  // resourceType=SYSTEM，resourceName=被改的对象名，params.source=ops_cli）——
+  DB_PASSWORD_RESET = 'DB_PASSWORD_RESET',
+  REDIS_PASSWORD_RESET = 'REDIS_PASSWORD_RESET',
 }
 
 /**

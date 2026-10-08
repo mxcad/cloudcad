@@ -11,10 +11,14 @@
  * - 长度下限读取：缺省 10，接受 env 抬高，低于 8 的取值回退默认（那种配置本身不安全）
  *
  * 不测数据库交互（UPDATE/DELETE/INSERT audit_logs）——需真实 PG，归集成环境。
+ * 用源码扫描锁两条委托契约（见文件末尾）：显式口令必须过策略校验、点名用户
+ * 名必须限定 ADMIN 角色。
  *
  * 运行：node --test runtime/scripts/commands/admin-reset-password.test.js
  */
 
+const fs = require('fs');
+const path = require('path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
@@ -181,4 +185,34 @@ test('交互循环：策略不达标必须重输而非采用', async () => {
   assert.equal(res.ok, true);
   assert.equal(res.password, 'Ab1!cdefgh');
   assert.equal(calls, 2);
+});
+
+// ==================== 委托契约（源码扫描） ====================
+// adminResetPassword 没有 deps 注入缝（bcrypt / psql 绑在模块级），不为锁两条
+// 委托契约而引入缝——真实写库路径由集成环境与只读探针覆盖（弱口令被拦且
+// passwordChangedAt 不变；非管理员用户名在写库前被拦）。
+
+const SOURCE = fs.readFileSync(
+  path.join(__dirname, 'admin-reset-password.js'),
+  'utf8'
+);
+
+test('显式口令必须过策略校验（否则网页表单可写入弱口令）', () => {
+  const atOpts = SOURCE.indexOf('options?.password');
+  const atCheck = SOURCE.indexOf('assertPasswordPolicy(newPassword, minLength)');
+  assert.ok(atOpts > 0, '应支持 options.password（运维中心 ADR-0071 非交互通道）');
+  assert.ok(
+    atCheck > atOpts,
+    '策略校验须落在口令来源判定之后，覆盖显式指定 / 交互输入 / 自动生成三个来源'
+  );
+});
+
+test('点名用户名限定 ADMIN 角色，与候选列表同一口径（防越权重置非管理员）', () => {
+  const i = SOURCE.indexOf('function queryAdminByUsername');
+  const j = SOURCE.indexOf('function queryAdminCandidates');
+  assert.ok(i > 0 && j > i);
+  const byName = SOURCE.slice(i, j);
+  assert.match(byName, /JOIN "roles"/);
+  assert.match(byName, /r\."name"\s*=\s*'ADMIN'/);
+  assert.ok(!/LEFT JOIN/.test(byName), '按用户名查也必须 INNER JOIN 过滤角色');
 });

@@ -11,7 +11,7 @@
  *     部署包（.deploy 标记）不显示开发模式/种子等仅开发机项
  *   - 命令行参数：dev / deploy / start / stop / migrate / seed / db:* /
  *     status / logs / init / version:check / version:verify / mfa:totp-unbind
- *     / admin:reset-password
+ *     / admin:reset-password / db:reset-password / redis:reset-password
  */
 
 const readline = require('readline');
@@ -124,6 +124,8 @@ const { devMode } = require('./commands/dev');
 const { deployMode } = require('./commands/deploy');
 const { mfaTotpUnbind } = require('./commands/mfa');
 const { adminResetPassword } = require('./commands/admin-reset-password');
+const { dbResetPassword } = require('./commands/db-reset-password');
+const { redisResetPassword } = require('./commands/redis-reset-password');
 
 
 // ==================== 交互式菜单 ====================
@@ -315,6 +317,8 @@ async function bootstrap() {
       'version:verify': () => versionHelper.runVerification({ silent: false }),
       'mfa:totp-unbind': () => mfaTotpUnbind(),
       'admin:reset-password': () => adminResetPassword(),
+      'db:reset-password': () => dbResetPassword(),
+      'redis:reset-password': () => redisResetPassword(),
     };
 
     const cmd = commandMap[args[0]];
@@ -356,6 +360,23 @@ async function bootstrap() {
           alsoUnbindTotp,
         });
       }
+      // 支持 db:reset-password [--interactive] [--no-restart]
+      // （#417 数据库密码重置恢复，ADR-0073：ALTER USER 后用新口令回连验证，
+      //   验证通过才更新 .env 的 DB_PASSWORD 与 DATABASE_URL）
+      else if (args[0] === 'db:reset-password') {
+        await dbResetPassword({
+          interactive: args.includes('--interactive'),
+          restart: !args.includes('--no-restart'),
+        });
+      }
+      // 支持 redis:reset-password [--interactive] [--no-restart]
+      // （#417 Redis 密码重置恢复，ADR-0073：CONFIG SET 后用新口令 AUTH 验证）
+      else if (args[0] === 'redis:reset-password') {
+        await redisResetPassword({
+          interactive: args.includes('--interactive'),
+          restart: !args.includes('--no-restart'),
+        });
+      }
       // 支持 logs:bundle --days N（仅打包最近 N 天；缺省=全部）
       else if (args[0] === 'logs:bundle') {
         const daysIndex = args.indexOf('--days');
@@ -376,7 +397,7 @@ async function bootstrap() {
       log('red', `未知命令: ${args[0]}`);
       log(
         'cyan',
-        '可用命令: dev, deploy, start, start:infra, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, logs:locations, logs:bundle, version:check, version:verify, mfa:totp-unbind, admin:reset-password'
+        '可用命令: dev, deploy, start, start:infra, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, logs:locations, logs:bundle, version:check, version:verify, mfa:totp-unbind, admin:reset-password, db:reset-password, redis:reset-password'
       );
       log('cyan', '  deploy             : 交互式部署，询问是否构建');
       log(
@@ -396,6 +417,16 @@ async function bootstrap() {
         'cyan',
         '  admin:reset-password [用户名] [--interactive] [--also-unbind-totp]: ' +
           '管理员忘记密码后的运维恢复'
+      );
+      log(
+        'cyan',
+        '  db:reset-password [--interactive] [--no-restart]: 数据库密码重置，' +
+          '改密后以新密码回连验证，验证通过才更新 .env 并重启后端'
+      );
+      log(
+        'cyan',
+        '  redis:reset-password [--interactive] [--no-restart]: Redis 密码重置，' +
+          '改密后以新密码 AUTH 验证，验证通过才更新 .env 并重启服务'
       );
       log('cyan', '');
       log('cyan', `查看帮助: ${OPS_ENTRY} --help`);

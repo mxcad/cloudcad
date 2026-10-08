@@ -1032,19 +1032,16 @@ exec "$NODE_EXE" runtime/scripts/cli.js "$@"
 // 各组件关键可执行文件（相对组件目录）。缓存命中判定与提取后断言共用：
 // 只查"目录存在且非空"会把"目录在但内容残缺"（如 node/bin/node 缺失）误判为就绪，
 // 导致坏缓存被复用、缺 node 的包被打出（start.sh 报"找不到 Node.js 运行时"）。
-const CRITICAL_FILES = {
-  node: 'bin/node',
-  postgres: 'bin/postgres',
-  redis: 'redis-server',
-  svn: 'svn',
-};
+// 关键可执行文件路径单一事实源在 pack-lib/components.js（按目录名键控，架构审查 ⑪）。
+// 本脚本内部逻辑名 'svn' 经 componentDirName 映射到目录名 'subversion' 后查表。
+const { LINUX_CRITICAL_FILES } = require('./pack-lib/components');
 
 function componentDirName(comp) {
   return comp === 'svn' ? 'subversion' : comp;
 }
 
 function isComponentReady(outputDir, comp) {
-  const critical = CRITICAL_FILES[comp];
+  const critical = LINUX_CRITICAL_FILES[componentDirName(comp)];
   if (!critical) return false;
   return fs.existsSync(path.join(outputDir, componentDirName(comp), critical));
 }
@@ -1060,7 +1057,7 @@ function assertExtractedComponents(outputDir, components) {
   if (missing.length > 0) {
     error(
       `标准组件关键可执行文件缺失，视为提取失败，中止（防坏产物入缓存/部署包）:\n  ` +
-        missing.map((c) => `${componentDirName(c)}/${CRITICAL_FILES[c]}`).join('\n  ')
+        missing.map((c) => `${componentDirName(c)}/${LINUX_CRITICAL_FILES[componentDirName(c)]}`).join('\n  ')
     );
     process.exit(1);
   }

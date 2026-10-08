@@ -3,8 +3,8 @@
  *
  * 覆盖 routes/runtime-config.js 的 POST /api/server-config/reset：
  * - 鉴权（未登录一律 401，且不得触达 resetConfig）
- * - 成功路径透传 serverConfig.resetConfig() 的返回值
- * - 源配置文件缺失（返回 null）时不得伪装成功
+ * - 成功路径透传 serverConfig.resetConfig() 的统一契约 { ok: true, data }
+ * - 源配置文件缺失（resetConfig 报 { ok: false }）时不得伪装成功
  * - 路由边界：/reset 不会被同文件其它 server-config 分支误吞
  *
  * 运行：cd packages/config-service && npm test（或 node --test test/）
@@ -48,7 +48,7 @@ describe('POST /api/server-config/reset', () => {
     calls = [];
     serverConfig.resetConfig = (...args) => {
       calls.push(args);
-      return SOURCE_CONFIG;
+      return { ok: true, data: SOURCE_CONFIG };
     };
   });
 
@@ -89,8 +89,11 @@ describe('POST /api/server-config/reset', () => {
     assert.equal(calls.length, 1);
   });
 
-  it('源配置文件缺失（resetConfig 返回 null）时报 400，不伪装成功', async () => {
-    serverConfig.resetConfig = () => null;
+  it('源配置文件缺失（resetConfig 报失败）时报 400，不伪装成功', async () => {
+    serverConfig.resetConfig = () => ({
+      ok: false,
+      error: '默认配置文件不存在，无法还原',
+    });
     const token = createSession('tester');
     const { res, captured } = makeRes();
 

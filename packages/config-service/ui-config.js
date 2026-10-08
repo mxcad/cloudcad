@@ -7,8 +7,17 @@ const fs = require('fs');
 const path = require('path');
 const { FRONTEND_INI_DIR } = require('../../runtime/scripts/config-paths');
 
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const UI_CONFIG_DIR = FRONTEND_INI_DIR;
 const CONFIG_PATH = path.join(UI_CONFIG_DIR, 'myUiConfig.json');
+const SOURCE_PATH = path.join(
+  PROJECT_ROOT,
+  'packages',
+  'frontend',
+  'public',
+  'ini',
+  'myUiConfig.json'
+);
 
 const DEFAULT_CONFIG = {
   title: 'CAD梦想在线画图',
@@ -315,6 +324,28 @@ function importConfig(newConfig) {
   return { success: true };
 }
 
+// 统一契约（routes/config-resource.js 工厂消费）：
+// { ok: true, data } | { ok: false, error, errors? }
+// 还原为仓库内置的 myUiConfig.json（与 server/sketches/theme 的 reset 同构；
+// 不用内存 DEFAULT_CONFIG——它是字段子集，会丢按钮栏数据）
+function resetConfig() {
+  ensureConfigDir();
+  if (!fs.existsSync(SOURCE_PATH)) {
+    return { ok: false, error: '默认配置文件不存在，无法还原' };
+  }
+  try {
+    const sourceConfig = JSON.parse(fs.readFileSync(SOURCE_PATH, 'utf8'));
+    fs.writeFileSync(
+      CONFIG_PATH,
+      JSON.stringify(sourceConfig, null, 2),
+      'utf8'
+    );
+    return { ok: true, data: sourceConfig };
+  } catch (e) {
+    return { ok: false, error: '读取默认配置失败: ' + e.message };
+  }
+}
+
 module.exports = {
   UI_CONFIG_DIR,
   CONFIG_PATH,
@@ -324,5 +355,6 @@ module.exports = {
   validateConfig,
   exportConfig,
   importConfig,
+  resetConfig,
   ensureConfigDir,
 };

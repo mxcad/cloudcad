@@ -126,21 +126,23 @@ function importConfig(newConfig) {
   return { success: true };
 }
 
+// 统一契约（routes/config-resource.js 工厂消费）：
+// { ok: true, data } | { ok: false, error, errors? }
 function resetConfig() {
   if (!fs.existsSync(SOURCE_PATH)) {
-    return { success: false, error: '默认配置文件不存在' };
+    return { ok: false, error: '默认配置文件不存在，无法还原' };
   }
 
   try {
     const defaultConfig = JSON.parse(fs.readFileSync(SOURCE_PATH, 'utf8'));
     const errors = validateConfig(defaultConfig);
     if (errors.length > 0) {
-      return { success: false, errors };
+      return { ok: false, errors };
     }
     updateConfig(defaultConfig);
-    return { success: true };
+    return { ok: true, data: defaultConfig };
   } catch (e) {
-    return { success: false, error: '读取默认配置失败: ' + e.message };
+    return { ok: false, error: '读取默认配置失败: ' + e.message };
   }
 }
 

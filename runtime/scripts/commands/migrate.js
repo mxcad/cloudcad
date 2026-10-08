@@ -31,6 +31,39 @@ const {
 } = require('./db-backup');
 const { checkPrismaClientExists } = require('../setup-offline');
 
+// ==================== 迁移错误串判定（纯函数，可单测） ====================
+// Prisma/PG 错误码 →「可安全继续」的语义判定集中于此，消灭散在各 async 函数里的内联
+// 字符串匹配（架构审查 ⑨）：错误码一旦变动，单测红灯而非部署时静默误判。
+
+/** P3018 = migration 已被 rolled back（幂等：再次 resolve --rolled-back 视为成功） */
+function isAlreadyRolledBackError(stderr) {
+  return typeof stderr === 'string' && stderr.includes('P3018');
+}
+
+/** P3008 = migration 已被记录为 applied（幂等：再次 resolve --applied 可安全继续） */
+function isAlreadyAppliedError(stderr) {
+  return typeof stderr === 'string' && stderr.includes('P3008');
+}
+
+/** 变更已存在于数据库（表/索引/约束/对象已存在）→ 可标记 applied 继续 */
+function isAlreadyExistsError(output) {
+  return typeof output === 'string' && /already exists|42P07|42710|42701|42P16/.test(output);
+}
+
+/** enum 值已不合法（enum 已被提前迁移，数据已转换）→ 可标记 applied 继续 */
+function isEnumValueRemovedError(output) {
+  return (
+    typeof output === 'string' &&
+    /22P02/.test(output) &&
+    /invalid input value for enum/.test(output)
+  );
+}
+
+/** migration.sql 是否含零停机索引创建（CREATE INDEX CONCURRENTLY） */
+function hasConcurrentIndexCreation(sql) {
+  return typeof sql === 'string' && sql.includes('CREATE INDEX CONCURRENTLY');
+}
+
 /**
  * 查找预置的 Prisma schema-engine 二进制（pack-offline.js bundlePrismaSchemaEngine 预置到
  * runtime/prisma-engines/，含全平台二进制）。pnpm store manifest 不引用 postinstall 下载的
@@ -406,7 +439,7 @@ async function repairMigrationRecords() {
       log('green', `    ✓ ${name}`);
     } else {
       const err = (r.stderr || '').trim();
-      if (err.includes('P3018')) {
+      if (isAlreadyRolledBackError(err)) {
         log('green', `    ✓ ${name} (already rolled back)`);
       } else {
         log('red', `    ✗ ${name}: ${err}`);
@@ -468,7 +501,7 @@ async function preflightMigrationCheck() {
         const sqlFile = path.join(migrationsDir, migration, 'migration.sql');
         if (fs.existsSync(sqlFile)) {
           const sqlContent = fs.readFileSync(sqlFile, 'utf8');
-          if (sqlContent.includes('CREATE INDEX CONCURRENTLY')) {
+          if (hasConcurrentIndexCreation(sqlContent)) {
             hasConcurrentIndex = true;
             break;
           }
@@ -500,7 +533,9 @@ async function getDatabaseSize(host, port, user, dbName) {
     const result = execSync(cmd, {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD || '' },
+      // 口令必须从 .env 取（调用方已按 .env 解析 host/port/user/db）：
+      // 部署机 shell 里没有 DB_PASSWORD，读 process.env 会静默连不上、恒报 0 字节
+      env: { ...process.env, PGPASSWORD: getDbEnv().env.PGPASSWORD },
     });
 
     const size = parseInt(result.trim(), 10);
@@ -658,11 +693,11 @@ async function runDatabaseMigration(options = null) {
     // 判断是否为"已存在"类错误（表、索引、约束等在数据库中已存在）
     // 42P07 = relation already exists, 42710 = duplicate object, 42P16 = invalid table definition
     // 22P02 = enum 值已不合法（通常 enum 已被提前迁移，数据也已转换），标记为 applied 安全
-    const isAlreadyExistsError = /already exists|42P07|42710|42701|42P16/.test(errorOutput);
-    const isEnumValueRemovedError = /22P02/.test(errorOutput) && /invalid input value for enum/.test(errorOutput);
+    const alreadyExists = isAlreadyExistsError(errorOutput);
+    const enumValueRemoved = isEnumValueRemovedError(errorOutput);
 
-    if (isAlreadyExistsError || isEnumValueRemovedError) {
-      if (isAlreadyExistsError) {
+    if (alreadyExists || enumValueRemoved) {
+      if (alreadyExists) {
         log('yellow', `检测到迁移 "${failedMigrationName}" 失败：变更已存在于数据库`);
       } else {
         log('yellow', `检测到迁移 "${failedMigrationName}" 失败：枚举值已不存在（enum 已提前迁移）`);
@@ -687,7 +722,7 @@ async function runDatabaseMigration(options = null) {
         const resolveErr = (resolveResult.stderr || '').trim();
         log('red', `[错误] 标记 applied 失败: ${resolveErr || '未知错误'}`);
         // P3008 = already recorded as applied（已被其他进程标记过，可安全继续）
-        if (!resolveErr.includes('P3008')) {
+        if (!isAlreadyAppliedError(resolveErr)) {
           break;
         }
         log('yellow', '（P3008 表示已标记过，继续部署）');
@@ -818,4 +853,10 @@ module.exports = {
   runDatabaseMigration,
   runDatabaseSeed,
   runPiiBackfill,
+  // 迁移错误串判定纯函数（架构审查 ⑨：集中错误码语义，可单测）
+  isAlreadyRolledBackError,
+  isAlreadyAppliedError,
+  isAlreadyExistsError,
+  isEnumValueRemovedError,
+  hasConcurrentIndexCreation,
 };

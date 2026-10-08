@@ -40,8 +40,9 @@ function promptUsername() {
 /**
  * 解绑指定管理员的 TOTP 双因素并写入 MFA_UNBIND 审计。
  * @param {string} [usernameArg] CLI 传入的用户名；缺省时交互输入。
- * @param {{confirmed?: boolean}} [options] 非交互调用（运维中心 ADR-0071）：
- *   confirmed=true 跳过确认提问（网页侧已做双重确认）。
+ * @param {{confirmed?: boolean, source?: string, userAgent?: string}} [options]
+ *   非交互调用（运维中心 ADR-0071）：confirmed=true 跳过确认提问（网页侧已做
+ *   双重确认）；source/userAgent 记录调用来源（默认 ops_cli / cloudcad-cli/…）。
  * @returns {{ok: boolean, message: string}} 结果与面向用户的消息
  */
 async function mfaTotpUnbind(usernameArg, options = null) {
@@ -123,13 +124,13 @@ async function mfaTotpUnbind(usernameArg, options = null) {
     };
   }
 
-  // 4. 写入 MFA_UNBIND 审计（source=ops_cli，便于安全回溯）
+  // 4. 写入 MFA_UNBIND 审计（source 默认 ops_cli，便于安全回溯）
   const ins = writeAudit({
     action: 'MFA_UNBIND',
     resourceId: user.id,
     resourceName: user.username,
-    params: { method: 'mfa_unbind', source: 'ops_cli' },
-    userAgent: 'cloudcad-cli/mfa-unbind',
+    params: { method: 'mfa_unbind', source: options?.source || 'ops_cli' },
+    userAgent: options?.userAgent || 'cloudcad-cli/mfa-unbind',
   });
   if (!ins.ok) {
     // 解绑已生效，审计失败不应回滚（数据已改），仅告警

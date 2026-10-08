@@ -61,6 +61,8 @@ const OUTPUT_DIR = path.join(PROJECT_ROOT, 'release');
 // 与 pack-linux-deploy.js --os 同一清单，禁止各自硬编码）
 const { supportedOsList } = require('./pack-lib/linux-os');
 const SUPPORTED_OS = supportedOsList();
+// Linux 标准组件关键文件清单：单一事实源在 pack-lib/components.js（架构审查 ⑪）
+const { LINUX_ASSET_REQUIRED_FILES } = require('./pack-lib/components');
 
 const PACKAGE_JSON = require(path.join(PROJECT_ROOT, 'package.json'));
 const VERSION = PACKAGE_JSON.version || '1.0.0';
@@ -1330,14 +1332,8 @@ function assertWindowsRuntimeComponents() {
  * 新机器最小打包流程由此收敛为：装 node → npm i -g pnpm → pnpm install → 一条打包命令。
  */
 function getMissingLinuxComponents() {
-  const required = [
-    path.join('node', 'bin', 'node'),
-    path.join('node', 'node_modules', 'pm2', 'bin', 'pm2'),
-    path.join('postgres', 'bin', 'postgres'),
-    path.join('redis', 'redis-server'),
-    path.join('subversion', 'svn'),
-  ];
-  return required
+  // 关键文件清单单一事实源在 pack-lib/components.js（含嵌在 node 内的 pm2，架构审查 ⑪）
+  return LINUX_ASSET_REQUIRED_FILES
     .filter((rel) => !fs.existsSync(path.join(PROJECT_ROOT, 'runtime', 'linux', rel)))
     .map((rel) => `runtime/linux/${rel}`);
 }
