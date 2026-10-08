@@ -15,17 +15,21 @@ export const useDrawingOpener = (isAuthenticated: boolean) => {
 
   // 获取节点信息
   const getNode = useCallback(async (nodeId: string) => {
-    const result = await nodeControllerGetNode({ path: { nodeId } });
+    const result = await nodeControllerGetNode({
+      throwOnError: true,
+      path: { nodeId },
+    });
     // SDK 默认不抛错：显式抛出让调用方 catch 展示真实错误，
     // 否则失败时 file 为 undefined 会被误报为"文件尚未转换完成"
-    if (result.error) throw result.error;
     return result.data;
   }, []);
 
   // 获取根节点
   const getRootNode = useCallback(async (nodeId: string) => {
-    const result = await nodeControllerGetRootNode({ path: { nodeId } });
-    if (result.error) throw result.error;
+    const result = await nodeControllerGetRootNode({
+      throwOnError: true,
+      path: { nodeId },
+    });
     return result.data;
   }, []);
 

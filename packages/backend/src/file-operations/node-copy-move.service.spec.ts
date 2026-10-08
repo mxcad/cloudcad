@@ -671,4 +671,35 @@ describe('NodeCopyMoveService', () => {
       expect(prisma.fileSystemNode.update).toHaveBeenCalled();
     });
   });
+
+  describe('filterDescendantNodes — 被选节点互不含子树', () => {
+    // 子树形状：R > C > G（隔层），A / B 独立
+    const mockSubtrees = (map: Record<string, string[]>) => {
+      treeWalker.getSubtreeIds.mockImplementation((id: string) =>
+        Promise.resolve(map[id] ?? [id]),
+      );
+    };
+    const filter = (ids: string[]) =>
+      (service as any).filterDescendantNodes(ids) as Promise<string[]>;
+
+    it('隔层选择 [R, 孙G]（中间 C 未选）→ 剔除 G，避免对同一子树二次搬动', async () => {
+      mockSubtrees({ R: ['R', 'C', 'G'], C: ['C', 'G'], G: ['G'] });
+      await expect(filter(['R', 'G'])).resolves.toEqual(['R']);
+    });
+
+    it('直接父子 [R, G]（G 父=R）→ 剔除 G', async () => {
+      mockSubtrees({ R: ['R', 'G'], G: ['G'] });
+      await expect(filter(['R', 'G'])).resolves.toEqual(['R']);
+    });
+
+    it('无包含关系 [A, B] → 全部保留', async () => {
+      mockSubtrees({ A: ['A'], B: ['B'] });
+      await expect(filter(['A', 'B'])).resolves.toEqual(['A', 'B']);
+    });
+
+    it('单节点 → 原样返回（不触发子树查询）', async () => {
+      await expect(filter(['R'])).resolves.toEqual(['R']);
+      expect(treeWalker.getSubtreeIds).not.toHaveBeenCalled();
+    });
+  });
 });

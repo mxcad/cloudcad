@@ -519,6 +519,7 @@ describe('SystemMonitorPage', () => {
 
     await waitFor(() => {
       expect(alertListMock).toHaveBeenCalledWith({
+        throwOnError: true,
         query: { page: 2, limit: 20 },
       });
     });

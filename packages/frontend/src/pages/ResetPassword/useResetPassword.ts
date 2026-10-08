@@ -19,6 +19,7 @@ export function useResetPassword() {
 
       try {
         const result = await authControllerResetPassword({
+          throwOnError: true,
           body: {
             email: data.email,
             phone: data.phone,
@@ -30,7 +31,6 @@ export function useResetPassword() {
         });
         // SDK 默认不抛错：非 2xx/业务错误在 result.error，必须显式抛出，
         // 否则失败会被当成"重置成功"（历史 bug）
-        if (result.error) throw result.error;
         return true;
       } catch (err) {
         setError(

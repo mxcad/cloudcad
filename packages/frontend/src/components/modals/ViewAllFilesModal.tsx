@@ -27,10 +27,10 @@ export const ViewAllFilesModal: React.FC<ViewAllFilesModalProps> = ({
     queryKey: ['viewAllFiles', personalSpaceId],
     queryFn: async () => {
       const result = await nodeControllerGetChildren({
+        throwOnError: true,
         path: { nodeId: personalSpaceId! },
         query: { limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' },
       });
-      if (result.error) throw result.error;
       return result.data?.nodes ?? [];
     },
     enabled: isOpen && !!personalSpaceId,

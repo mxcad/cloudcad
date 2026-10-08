@@ -54,8 +54,11 @@ import { useUIStore } from '../stores/uiStore';
 export const useExternalReferenceUpload = (
   config: UseExternalReferenceUploadConfig
 ): UseExternalReferenceUploadReturn => {
-  const { showGlobalLoading: storeShowLoading, hideGlobalLoading: storeHideLoading, setLoadingMessage } =
-    useUIStore();
+  const {
+    showGlobalLoading: storeShowLoading,
+    hideGlobalLoading: storeHideLoading,
+    setLoadingMessage,
+  } = useUIStore();
   const [localLoading, setLocalLoading] = useState(false);
   const [files, setFiles] = useState<ExternalReferenceFile[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -149,17 +152,17 @@ export const useExternalReferenceUpload = (
         if (shouldUsePublicUpload) {
           // CAD 编辑器场景：使用公开上传服务的预加载接口
           const publicResult = await publicFileControllerGetPreloadingData({
+            throwOnError: true,
             path: { hash: id },
           });
           // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-          if (publicResult?.error) throw publicResult.error;
           data = publicResult?.data as PreloadingData | null;
         } else {
           // 项目文件场景：使用节点 ID 获取预加载数据
           const result = await mxcadExternalRefControllerGetPreloadingData({
+            throwOnError: true,
             path: { nodeId: id },
           });
-          if (result?.error) throw result.error;
           data = result?.data as PreloadingData | null;
         }
 
@@ -204,19 +207,19 @@ export const useExternalReferenceUpload = (
         if (shouldUsePublicUpload) {
           // CAD 编辑器场景：使用公开上传服务的检查接口
           const sdkResult = await publicFileControllerCheckExtReference({
+            throwOnError: true,
             query: { srcHash: id, fileName },
           });
           // SDK 默认不抛错：失败时错误在 result.error
-          if (sdkResult?.error) throw sdkResult.error;
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         } else {
           // 项目文件场景：使用节点 ID 检查
           const sdkResult =
             await mxcadExternalRefControllerCheckExternalReference({
+              throwOnError: true,
               path: { nodeId: id },
               body: { fileName },
             });
-          if (sdkResult?.error) throw sdkResult.error;
           result = (sdkResult?.data ?? null) as { exists?: boolean } | null;
         }
         console.debug(
@@ -511,6 +514,7 @@ export const useExternalReferenceUpload = (
         if (shouldUsePublicUpload) {
           // CAD 编辑器场景：使用公开上传服务
           const uploadResult = await publicFileControllerUploadExtReference({
+            throwOnError: true,
             body: {
               file: extRefFile,
               srcFileHash: id,
@@ -518,12 +522,12 @@ export const useExternalReferenceUpload = (
               originalXrefName: fileInfo.originalXrefName,
             } as UploadExtReferenceDto & { file: File },
           });
-          if (uploadResult.error) throw uploadResult.error;
         } else {
           // 项目文件场景：使用节点 ID 上传
           if (fileInfo.type === 'img') {
             const uploadResult =
               await mxcadExternalRefControllerUploadExtReferenceImage({
+                throwOnError: true,
                 path: { nodeId: id },
                 body: {
                   file: extRefFile,
@@ -533,10 +537,10 @@ export const useExternalReferenceUpload = (
                   originalXrefName: fileInfo.originalXrefName,
                 },
               });
-            if (uploadResult.error) throw uploadResult.error;
           } else {
             const uploadResult =
               await mxcadExternalRefControllerUploadExtReferenceDwg({
+                throwOnError: true,
                 path: { nodeId: id },
                 body: {
                   file: extRefFile,
@@ -545,7 +549,6 @@ export const useExternalReferenceUpload = (
                   originalXrefName: fileInfo.originalXrefName,
                 },
               });
-            if (uploadResult.error) throw uploadResult.error;
           }
         }
 
@@ -592,7 +595,13 @@ export const useExternalReferenceUpload = (
 
     setLocalLoading(false);
     storeHideLoading();
-  }, [config.nodeId, config.onError, usePublicUpload, storeShowLoading, storeHideLoading]);
+  }, [
+    config.nodeId,
+    config.onError,
+    usePublicUpload,
+    storeShowLoading,
+    storeHideLoading,
+  ]);
 
   /**
    * 关闭模态框

@@ -3,6 +3,7 @@ import { useWechatAuth } from '../../hooks/useWechatAuth';
 import { MessageCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { t } from '@/languages';
+import { erase, write } from '@/lib/browserStorage';
 import styles from './Profile.module.css';
 
 interface WechatDeactivateConfirmProps {
@@ -29,7 +30,7 @@ export function WechatDeactivateConfirm({
         }
         setSuccess(true);
         // 清除保存的验证方式
-        sessionStorage.removeItem(DEACTIVATE_VERIFICATION_KEY);
+        erase(DEACTIVATE_VERIFICATION_KEY, 'session');
         // 只回传授权 code，不做任何绑定操作；注销提交时由后端验证 openid 匹配
         onConfirm(result.code);
       } catch {
@@ -55,7 +56,7 @@ export function WechatDeactivateConfirm({
     setLoading(true);
     setError(null);
     // 跳转前保存当前验证方式
-    sessionStorage.setItem(DEACTIVATE_VERIFICATION_KEY, 'wechat');
+    write(DEACTIVATE_VERIFICATION_KEY, 'wechat', 'session');
     await open();
   };
 

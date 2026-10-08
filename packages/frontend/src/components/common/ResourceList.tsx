@@ -27,6 +27,7 @@ import { t } from '@/languages';
 import { CascadeCategorySelector } from './CascadeCategorySelector';
 import { useResourceListScroll } from './useResourceListScroll';
 import type { ResourceListProps } from './ResourceListTypes';
+import { read } from '@/lib/browserStorage';
 
 export type { CategoryOption } from './CascadeCategorySelector';
 export type { ResourceItem, ViewMode } from './ResourceListTypes';
@@ -83,7 +84,7 @@ export const ResourceList: React.FC<ResourceListProps> = ({
   // 初始化视图模式（使用 defaultViewMode）
   useEffect(() => {
     // 检查 localStorage 中是否有保存的视图模式
-    const savedMode = localStorage.getItem('fileSystemStore');
+    const savedMode = read('fileSystemStore');
     if (!savedMode) {
       // 如果没有保存，使用默认模式
       setViewMode(defaultViewMode);

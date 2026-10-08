@@ -17,6 +17,7 @@ export const useAccountDeactivate = () => {
   const deactivateAccount = useMutation({
     mutationFn: async (params: DeactivateParams) => {
       const result = await usersControllerDeactivateAccount({
+        throwOnError: true,
         body: {
           password: params.password,
           phoneCode: params.phoneCode,
@@ -24,7 +25,6 @@ export const useAccountDeactivate = () => {
           wechatCode: params.wechatCode,
         },
       });
-      if (result.error) throw result.error;
       return result;
     },
   });
@@ -32,9 +32,9 @@ export const useAccountDeactivate = () => {
   const resendVerification = useMutation({
     mutationFn: async (params: { email: string }) => {
       const result = await authControllerResendVerification({
+        throwOnError: true,
         body: { email: params.email } satisfies ResendVerificationDto,
       });
-      if (result.error) throw result.error;
       return result;
     },
   });

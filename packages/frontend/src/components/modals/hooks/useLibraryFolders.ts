@@ -34,8 +34,7 @@ export const useLibraryFolders = (libraryType: LibraryType) => {
       : libraryControllerGetBlockChildren;
 
   const getLibrary = useCallback(async (): Promise<LibraryMeta> => {
-    const result = await getLibraryApi();
-    if (result.error) throw result.error;
+    const result = await getLibraryApi({ throwOnError: true });
     const data = result.data as { id: string; name: string };
     return { id: data.id, name: data.name };
   }, [getLibraryApi]);
@@ -44,10 +43,10 @@ export const useLibraryFolders = (libraryType: LibraryType) => {
     async (nodeId: string, excludeNodeId: string): Promise<FolderNode[]> => {
       try {
         const result = await getChildrenApi({
+          throwOnError: true,
           path: { nodeId },
           query: { page: 1, limit: 100 },
         });
-        if (result.error) throw result.error;
 
         let children: FileSystemNode[] = [];
 

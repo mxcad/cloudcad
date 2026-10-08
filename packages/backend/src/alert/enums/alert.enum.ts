@@ -17,3 +17,10 @@ export enum AlertStatus {
   OPEN = 'OPEN',
   RESOLVED = 'RESOLVED',
 }
+
+/**
+ * 定时任务「完全失败」（task_run_failed）的统一告警级别 = P1。
+ * 单点定义，禁止各调度器各自内联 AlertLevel——历史漂移：backup 曾写 P2（仅进每日日报），
+ * 致守护每日 pg_dump 全量备份的失败拿不到 15min 聚合邮件（#325 / ADR-0055 §7 已定为 P1）。
+ */
+export const TASK_RUN_FAILED_LEVEL: AlertLevel = AlertLevel.P1;

@@ -785,7 +785,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           <span className="share-dialog-expiry-hint">
             {t('有效期至: {date}').replace(
               '{date}',
-              new Date(shareInfo!.expiresAt).toLocaleString()
+              formatExpiryDate(shareInfo!.expiresAt)
             )}
           </span>
         )}

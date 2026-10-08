@@ -94,10 +94,10 @@ export function EditUserModal({
 
     try {
       const result = await usersControllerUploadUserAvatar({
+        throwOnError: true,
         path: { id: user.id },
         body: { file } as never,
       });
-      if (result.error) throw result.error;
       if (result.data?.avatar) {
         onFormChange('avatar', result.data.avatar);
         onAvatarUploaded?.();

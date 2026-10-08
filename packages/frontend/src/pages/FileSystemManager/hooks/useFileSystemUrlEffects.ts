@@ -145,8 +145,10 @@ export function useFileSystemUrlEffects({
       }
       if (!query.projectId && mode !== 'personal-space') return;
       try {
-        const result = await nodeControllerResolvePath({ query });
-        if (result.error) throw result.error;
+        const result = await nodeControllerResolvePath({
+          throwOnError: true,
+          query,
+        });
         const node = result.data as FileSystemNode;
         if (node?.id) {
           const url = buildNodeUrl(node);
@@ -165,10 +167,10 @@ export function useFileSystemUrlEffects({
       if (!node.parentId) return;
       try {
         const result = await nodeControllerGetParentContext({
+          throwOnError: true,
           path: { nodeId: node.id },
           query: { pageSize: pagination?.limit || 30 },
         });
-        if (result.error) throw result.error;
         if (!result.data) throw new Error('parent-context 返回空');
         const ctx = result.data;
         const baseUrl = buildNodeUrl({

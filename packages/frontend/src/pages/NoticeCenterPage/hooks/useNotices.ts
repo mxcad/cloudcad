@@ -29,8 +29,7 @@ export function useNoticeList() {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: queryKeys.notices.listAll,
     queryFn: async (): Promise<NoticeResponseDto[]> => {
-      const res = await noticeCenterControllerListAll();
-      if (res.error) throw res.error;
+      const res = await noticeCenterControllerListAll({ throwOnError: true });
       return Array.isArray(res.data) ? res.data : [];
     },
     refetchInterval: NOTICE_LIST_REFRESH_MS,
@@ -61,8 +60,10 @@ export function useCreateNotice(onSuccess?: () => void) {
       if (values.startAt) body.startAt = values.startAt;
       if (values.endAt) body.endAt = values.endAt;
 
-      const res = await noticeCenterControllerCreate({ body });
-      if (res.error) throw res.error;
+      const res = await noticeCenterControllerCreate({
+        throwOnError: true,
+        body,
+      });
       return res.data;
     },
     onSuccess: () => {
@@ -94,8 +95,11 @@ export function useUpdateNotice(onSuccess?: () => void) {
         title: values.title.trim(),
         body: values.body.trim(),
       };
-      const res = await noticeCenterControllerUpdate({ path: { id }, body });
-      if (res.error) throw res.error;
+      const res = await noticeCenterControllerUpdate({
+        throwOnError: true,
+        path: { id },
+        body,
+      });
       return res.data;
     },
     onSuccess: () => {
@@ -115,8 +119,10 @@ export function usePublishNotice(onSuccess?: () => void) {
 
   return useMutation({
     mutationFn: async ({ id }: { id: string }) => {
-      const res = await noticeCenterControllerPublish({ path: { id } });
-      if (res.error) throw res.error;
+      const res = await noticeCenterControllerPublish({
+        throwOnError: true,
+        path: { id },
+      });
       return res.data;
     },
     onSuccess: () => {
@@ -136,8 +142,10 @@ export function useRetractNotice(onSuccess?: () => void) {
 
   return useMutation({
     mutationFn: async ({ id }: { id: string }) => {
-      const res = await noticeCenterControllerRetract({ path: { id } });
-      if (res.error) throw res.error;
+      const res = await noticeCenterControllerRetract({
+        throwOnError: true,
+        path: { id },
+      });
       return res.data;
     },
     onSuccess: () => {

@@ -26,6 +26,7 @@ import { i18nScope } from '@/languages';
 import { useIsMobile } from '../lib/useIsMobile';
 import { isDesktopOrigin } from '../lib/desktopOrigin';
 import { setTourModeActive, useIsTourModeActive } from '../utils/tourMode';
+import { read, write, readJson, writeJson } from '@/lib/browserStorage';
 
 /** localStorage 存储键名 */
 const TOUR_DISMISSED_KEY = 'cloudcad_tour_dismissed';
@@ -43,45 +44,29 @@ const TOUR_COMPLETED_KEY = 'cloudcad_tour_completed';
  * 从 localStorage 读取 dismissed 状态
  */
 function loadDismissedState(): boolean {
-  try {
-    return localStorage.getItem(TOUR_DISMISSED_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  return read(TOUR_DISMISSED_KEY) === 'true';
 }
 
 /**
  * 保存 dismissed 状态到 localStorage
  */
 function saveDismissedState(dismissed: boolean): void {
-  try {
-    localStorage.setItem(TOUR_DISMISSED_KEY, String(dismissed));
-  } catch {
-    // 忽略存储错误（如隐私模式）
-  }
+  write(TOUR_DISMISSED_KEY, String(dismissed));
 }
 
 /**
  * 从 localStorage 读取已完成引导列表
  */
 function loadCompletedGuides(): string[] {
-  try {
-    const data = localStorage.getItem(TOUR_COMPLETED_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
+  const guides = readJson<string[]>(TOUR_COMPLETED_KEY);
+  return guides ?? [];
 }
 
 /**
  * 保存已完成引导列表到 localStorage
  */
 function saveCompletedGuides(guides: string[]): void {
-  try {
-    localStorage.setItem(TOUR_COMPLETED_KEY, JSON.stringify(guides));
-  } catch {
-    // 忽略存储错误
-  }
+  writeJson(TOUR_COMPLETED_KEY, guides);
 }
 
 /**

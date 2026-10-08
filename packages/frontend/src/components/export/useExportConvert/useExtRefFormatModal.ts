@@ -62,10 +62,10 @@ export function useExtRefFormatModal({
         }
         const result =
           await mxcadFileAccessControllerGetFileDownloadExternalRef({
+            throwOnError: true,
             path: { nodeId: fileId, fileName: extRefFile.name },
             query,
           });
-        if (result?.error) throw result.error;
         const blobData = result?.data;
         const blob =
           blobData instanceof Blob

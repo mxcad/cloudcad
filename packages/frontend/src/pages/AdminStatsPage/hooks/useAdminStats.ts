@@ -32,8 +32,7 @@ export function useAdminStatsOverview(enabled: boolean) {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.adminStats.overview,
     queryFn: async (): Promise<StatsOverviewDto> => {
-      const result = await adminControllerGetOverview();
-      if (result.error) throw result.error;
+      const result = await adminControllerGetOverview({ throwOnError: true });
       return result.data as StatsOverviewDto;
     },
     enabled,
@@ -58,9 +57,9 @@ export function useDailyRegistrations(
     queryKey: queryKeys.adminStats.registrations(params),
     queryFn: async (): Promise<DailyRegistrationsStatsDto> => {
       const result = await adminControllerGetRegistrationStats({
+        throwOnError: true,
         query: params,
       });
-      if (result.error) throw result.error;
       return result.data as DailyRegistrationsStatsDto;
     },
     enabled,
@@ -84,8 +83,10 @@ export function useDailyPurchases(
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.adminStats.purchases(params),
     queryFn: async (): Promise<DailyPurchasesStatsDto> => {
-      const result = await adminControllerGetPurchaseStats({ query: params });
-      if (result.error) throw result.error;
+      const result = await adminControllerGetPurchaseStats({
+        throwOnError: true,
+        query: params,
+      });
       return result.data as DailyPurchasesStatsDto;
     },
     enabled,

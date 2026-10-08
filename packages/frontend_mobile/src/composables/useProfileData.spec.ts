@@ -99,20 +99,28 @@ describe('useProfileData 资料读取与展示派生', () => {
       [past, false],
     ] as const) {
       const d = useProfileData()
-      d.profile.value = { isVip: true, membershipExpiresAt: expiresAt }
+      // 判定走 @cloudcad/platform membershipState（tierLevel + expiresAt 推导），
+      // 后端 isVip 字段仅作展示，不参与该计算
+      d.profile.value = { isVip: true, membershipTierLevel: 1, membershipExpiresAt: expiresAt }
       expect(d.vipExpiringSoon.value).toBe(want)
     }
 
     // 非会员永不预警
     const free = useProfileData()
-    free.profile.value = { isVip: false, membershipExpiresAt: soon }
+    free.profile.value = { isVip: false, membershipTierLevel: 0, membershipExpiresAt: soon }
     expect(free.vipExpiringSoon.value).toBe(false)
 
     // 时间非法 → 不预警、剩余天数 null
     const bad = useProfileData()
-    bad.profile.value = { isVip: true, membershipExpiresAt: 'not-a-date' }
+    bad.profile.value = { isVip: true, membershipTierLevel: 1, membershipExpiresAt: 'not-a-date' }
     expect(bad.vipExpiringSoon.value).toBe(false)
     expect(bad.vipDaysRemaining.value).toBeNull()
+
+    // 回归：后端 isVip 陈旧为 true 但实际已到期 → 剩余天数不再显示负值（收敛前会显示 -1）
+    const stale = useProfileData()
+    stale.profile.value = { isVip: true, membershipTierLevel: 1, membershipExpiresAt: past }
+    expect(stale.vipDaysRemaining.value).toBeNull()
+    expect(stale.vipExpiringSoon.value).toBe(false)
   })
 
   it('已验证标记：邮箱只看是否绑定，手机号还要求 phoneVerified', () => {

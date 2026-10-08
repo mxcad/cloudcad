@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { authControllerGetWechatAuthUrl } from '@/api-sdk';
 import { classifyWechatAuthResult } from '@/utils/wechat-auth-result';
 import { setWechatTempToken } from '@/utils/tokenUtils';
+import { writeJson } from '@/lib/browserStorage';
 import { isMobile as isMobileDevice } from 'react-device-detect';
 import { t } from '@/languages';
 import {
@@ -141,7 +142,7 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
       hash: window.location.hash,
       onPopup: (result) => {
         // 弹窗自身：写入 localStorage 供主窗口通过 storage 事件接收，然后关闭
-        localStorage.setItem(WECHAT_RESULT_STORAGE_KEY, JSON.stringify(result));
+        writeJson(WECHAT_RESULT_STORAGE_KEY, result);
         window.close();
       },
       onResult: (result) => {
@@ -363,6 +364,7 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
     processedRef.current = false;
     try {
       const response = await authControllerGetWechatAuthUrl({
+        throwOnError: true,
         query: {
           origin: window.location.origin,
           isPopup: 'false',
@@ -372,7 +374,6 @@ export function useWechatAuth(options: WechatAuthOptions): WechatAuthResult {
         },
       });
       // SDK 默认不抛错：失败时错误在 result.error，直接对 undefined 解构会向用户显示英文引擎报错
-      if (response.error) throw response.error;
 
       const { authUrl } = response.data as { authUrl: string };
       window.location.href = authUrl;

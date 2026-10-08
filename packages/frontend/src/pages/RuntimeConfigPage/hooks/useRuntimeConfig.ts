@@ -173,9 +173,10 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
         setConfigsError(null);
       }
       try {
-        const result = await runtimeConfigControllerGetAllConfigs();
+        const result = await runtimeConfigControllerGetAllConfigs({
+          throwOnError: true,
+        });
         // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出
-        if (result.error) throw result.error;
         setConfigs(toConfigItems(result.data));
       } catch (error: unknown) {
         // 失败不能伪装成「暂无配置项」：首次加载失败给错误态，静默刷新只 toast
@@ -371,12 +372,12 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       try {
         setSaving((prev) => new Set(prev).add(key));
         const result = await runtimeConfigControllerUpdateConfig({
+          throwOnError: true,
           path: { key },
           body: { val: outcome.value as never },
         });
         // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
         // 否则保存失败仍会弹「配置已保存」
-        if (result.error) throw result.error;
         showToast(t('配置已保存'), 'success');
         setDrafts((prev) => {
           const next = { ...prev };
@@ -451,9 +452,9 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       try {
         setSaving((prev) => new Set(prev).add(key));
         const result = await runtimeConfigControllerResetConfig({
+          throwOnError: true,
           path: { key },
         });
-        if (result.error) throw result.error;
         showToast(t('已恢复默认'), 'success');
         setDrafts((prev) => {
           const next = { ...prev };
@@ -504,9 +505,9 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     setSavingCategory(true);
     try {
       const result = await runtimeConfigControllerResetCategory({
+        throwOnError: true,
         body: { category },
       });
-      if (result.error) throw result.error;
       showToast(t('已恢复默认'), 'success');
       setDrafts((prev) => {
         const next = { ...prev };
@@ -548,10 +549,10 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     setHistoryError(null);
     try {
       const result = await runtimeConfigControllerGetConfigHistory({
+        throwOnError: true,
         path: { key },
         query: { limit: String(HISTORY_LIMIT) },
       });
-      if (result.error) throw result.error;
       setHistory(toHistoryEntries(result.data));
     } catch (error: unknown) {
       handleError(error, t('获取修改历史失败'));

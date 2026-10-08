@@ -5,6 +5,7 @@ import { useAccountDeactivate } from './useAccountDeactivate';
 import { usePhoneBind } from './usePhoneBind';
 import { useCountdown } from './useCountdown';
 import { t } from '@/languages';
+import { read } from '@/lib/browserStorage';
 
 export type DeactivateVerificationMethod =
   'password' | 'phone' | 'email' | 'wechat' | '';
@@ -37,9 +38,7 @@ export function useDeactivateProfile({
 
   const [deactivateForm, setDeactivateForm] = useState<DeactivateFormState>(
     () => {
-      const savedMethod = sessionStorage.getItem(
-        'deactivate_verification_method'
-      );
+      const savedMethod = read('deactivate_verification_method', 'session');
       return {
         verificationMethod: (savedMethod || '') as DeactivateVerificationMethod,
         password: '',

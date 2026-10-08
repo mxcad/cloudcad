@@ -9,16 +9,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTheme } from '@/contexts/ThemeContext';
-import {
-  ShieldCheck,
-  KeyRound,
-  Smartphone,
-  CheckCircle2,
-} from 'lucide-react';
-import {
-  adminMfaControllerSetup,
-  adminMfaControllerBind,
-} from '@/api-sdk';
+import { ShieldCheck, KeyRound, Smartphone, CheckCircle2 } from 'lucide-react';
+import { adminMfaControllerSetup, adminMfaControllerBind } from '@/api-sdk';
 import { Button } from '@/components/ui/Button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -69,8 +61,7 @@ const AdminMfaSetup: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await adminMfaControllerSetup();
-        if (res.error) throw res.error;
+        const res = await adminMfaControllerSetup({ throwOnError: true });
         if (cancelled) return;
         setSecret(res.data!.secret);
         setOtpauthUrl(res.data!.otpauthUrl);
@@ -104,8 +95,10 @@ const AdminMfaSetup: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await adminMfaControllerBind({ body: { code: normalized } });
-        if (res.error) throw res.error;
+        const res = await adminMfaControllerBind({
+          throwOnError: true,
+          body: { code: normalized },
+        });
         // 绑定成功 → 锁定解除，进入管理后台
         navigate('/admin/ip-access', { replace: true });
       } catch (err) {
@@ -169,7 +162,9 @@ const AdminMfaSetup: React.FC = () => {
                     style={{ color: 'var(--text-secondary)' }}
                   />
                   <p style={{ color: 'var(--text-secondary)' }}>
-                    {t('使用 Google Authenticator / 1Password 等验证器 App 扫描二维码')}
+                    {t(
+                      '使用 Google Authenticator / 1Password 等验证器 App 扫描二维码'
+                    )}
                   </p>
                   <div
                     className="p-3"
@@ -190,7 +185,10 @@ const AdminMfaSetup: React.FC = () => {
                       border: '1px solid var(--border-default)',
                     }}
                   >
-                    <KeyRound size={14} style={{ color: 'var(--text-secondary)' }} />
+                    <KeyRound
+                      size={14}
+                      style={{ color: 'var(--text-secondary)' }}
+                    />
                     <span
                       style={{
                         fontFamily: 'monospace',
@@ -201,7 +199,12 @@ const AdminMfaSetup: React.FC = () => {
                       {secret}
                     </span>
                   </div>
-                  <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8rem' }}>
+                  <p
+                    style={{
+                      color: 'var(--text-tertiary)',
+                      fontSize: '0.8rem',
+                    }}
+                  >
                     {t('无法扫码？手动输入上方密钥到验证器 App')}
                   </p>
                 </div>
@@ -226,7 +229,9 @@ const AdminMfaSetup: React.FC = () => {
                       placeholder={t('例如 123456')}
                       value={code}
                       onChange={(e) =>
-                        setCode(e.target.value.replace(/[^\d]/g, '').slice(0, 8))
+                        setCode(
+                          e.target.value.replace(/[^\d]/g, '').slice(0, 8)
+                        )
                       }
                     />
                     <div className={styles.inputGlow} />

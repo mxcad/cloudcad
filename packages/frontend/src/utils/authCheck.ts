@@ -22,14 +22,11 @@
  * @returns boolean 是否已登录
  */
 import { isValidToken, getValidToken } from './tokenUtils';
+import { read } from '@/lib/browserStorage';
 
 export function isAuthenticated(): boolean {
-  try {
-    const token = getValidToken();
-    const user = localStorage.getItem('user');
-    return isValidToken(token) && !!user;
-  } catch {
-    return false;
-  }
+  const token = getValidToken();
+  const user = read('user');
+  return isValidToken(token) && !!user;
 }
 

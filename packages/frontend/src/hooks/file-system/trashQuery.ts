@@ -57,6 +57,7 @@ export function buildTrashQueryOptions({
     ] as const,
     queryFn: async () => {
       const response = await trashControllerGetTrash({
+        throwOnError: true,
         query: {
           projectId: projectIdForTrash,
           page,
@@ -72,7 +73,6 @@ export function buildTrashQueryOptions({
       });
       // SDK 默认不抛错：显式抛出让 react-query 感知失败，
       // 否则加载失败被当作"回收站为空"返回（历史 bug）
-      if (response.error) throw response.error;
       const data = response.data;
       if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
         return {

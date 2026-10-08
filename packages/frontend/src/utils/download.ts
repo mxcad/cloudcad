@@ -44,10 +44,10 @@ export async function downloadExternalRefFile(
   fallbackName: string
 ): Promise<void> {
   const result = await mxcadFileAccessControllerGetFileDownloadExternalRef({
+    throwOnError: true,
     path: { nodeId, fileName },
     query,
   });
-  if (result.error) throw result.error;
   triggerBlobDownload(result.data as Blob, fallbackName);
 }
 

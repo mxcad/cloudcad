@@ -46,13 +46,13 @@ export function useIpBlacklistList(page: number, keyword?: string) {
     }),
     queryFn: async () => {
       const res = await ipBlacklistControllerList({
+        throwOnError: true,
         query: {
           page,
           pageSize: IP_BLACKLIST_PAGE_SIZE,
           ...(keyword ? { keyword } : {}),
         },
       });
-      if (res.error) throw res.error;
       const body = res.data;
       return {
         items: (body?.items ?? []).map(toEntry),
@@ -90,8 +90,10 @@ export function useAddIpBlacklistEntry(onSuccess?: () => void) {
         reason: form.reason.trim(),
       };
       if (form.expiresAt) body.expiresAt = form.expiresAt;
-      const res = await ipBlacklistControllerCreate({ body });
-      if (res.error) throw res.error;
+      const res = await ipBlacklistControllerCreate({
+        throwOnError: true,
+        body,
+      });
       return res.data;
     },
     onSuccess: () => {

@@ -77,12 +77,18 @@ import {
   libraryControllerDownloadDrawingNode,
   libraryControllerDownloadBlockNode,
   libraryControllerDeleteDrawingNode,
+  libraryControllerDeleteBlockNode,
+  libraryControllerCopyDrawingNode,
+  libraryControllerCopyBlockNode,
   libraryControllerBatchDeleteDrawingNodes,
   libraryControllerBatchDeleteBlockNodes,
+  libraryControllerBatchCopyDrawingNodes,
+  libraryControllerBatchCopyBlockNodes,
   downloadControllerDownloadNodeWithFormat,
 } from '@/api-sdk';
 import { triggerBlobDownload } from '@/utils/download';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import type { OperationOutcome } from '../file-system/moveCopyActions';
 import { useLibraryOperations } from './useLibraryOperations';
 
 const downloadWithFormatMock = downloadControllerDownloadNodeWithFormat as unknown as ReturnType<typeof vi.fn>;
@@ -91,6 +97,11 @@ const downloadBlockMock = libraryControllerDownloadBlockNode as unknown as Retur
 const deleteDrawingMock = libraryControllerDeleteDrawingNode as unknown as ReturnType<typeof vi.fn>;
 const batchDeleteDrawingMock = libraryControllerBatchDeleteDrawingNodes as unknown as ReturnType<typeof vi.fn>;
 const batchDeleteBlockMock = libraryControllerBatchDeleteBlockNodes as unknown as ReturnType<typeof vi.fn>;
+const batchCopyDrawingMock = libraryControllerBatchCopyDrawingNodes as unknown as ReturnType<typeof vi.fn>;
+const batchCopyBlockMock = libraryControllerBatchCopyBlockNodes as unknown as ReturnType<typeof vi.fn>;
+const copyDrawingMock = libraryControllerCopyDrawingNode as unknown as ReturnType<typeof vi.fn>;
+const copyBlockMock = libraryControllerCopyBlockNode as unknown as ReturnType<typeof vi.fn>;
+const deleteBlockMock = libraryControllerDeleteBlockNode as unknown as ReturnType<typeof vi.fn>;
 const triggerDownloadMock = triggerBlobDownload as unknown as ReturnType<typeof vi.fn>;
 
 function pushMoveAction(nodeId: string) {
@@ -354,6 +365,155 @@ describe('useLibraryOperations — handleBatchDelete（收编后的唯一入口�
 
     expect(caught).toBeInstanceOf(Error);
     expect(showToast).toHaveBeenCalledWith('批量删除失败', 'error');
+  });
+});
+
+describe('useLibraryOperations — handleBatchCopy（透出 outcome：createdIds 是副本 id）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('全部成功：返回 successIds/createdIds/failedCount，createdIds 为副本 id（≠ 源 id）', async () => {
+    batchCopyDrawingMock.mockResolvedValue({
+      data: {
+        successIds: ['n1', 'n2'],
+        failedIds: [],
+        failedCount: 0,
+        createdIds: ['copy-1', 'copy-2'],
+      },
+    });
+    const { result, showToast, refreshNodes } = renderOps();
+
+    let outcome: OperationOutcome | undefined;
+    await act(async () => {
+      outcome = await result.current.handleBatchCopy(['n1', 'n2'], 'target-1');
+    });
+
+    expect(batchCopyDrawingMock).toHaveBeenCalledWith({
+      body: { nodeIds: ['n1', 'n2'], targetParentId: 'target-1' },
+      throwOnError: false,
+    });
+    expect(outcome).toEqual({
+      successIds: ['n1', 'n2'],
+      createdIds: ['copy-1', 'copy-2'],
+      failedCount: 0,
+    });
+    expect(showToast).toHaveBeenCalledWith('成功复制 2 个项目', 'success');
+    expect(refreshNodes).toHaveBeenCalled();
+  });
+
+  it('部分失败：failedCount 如实透出 + warning toast', async () => {
+    batchCopyDrawingMock.mockResolvedValue({
+      data: {
+        successCount: 1,
+        successIds: ['n1'],
+        failedIds: ['n2'],
+        failedCount: 1,
+        createdIds: ['copy-1'],
+      },
+    });
+    const { result, showToast } = renderOps();
+
+    let outcome: OperationOutcome | undefined;
+    await act(async () => {
+      outcome = await result.current.handleBatchCopy(['n1', 'n2'], 'target-1');
+    });
+
+    expect(outcome?.createdIds).toEqual(['copy-1']);
+    expect(outcome?.failedCount).toBe(1);
+    expect(showToast).toHaveBeenCalledWith('成功复制 1 项，1 项失败', 'warning');
+  });
+
+  it('响应缺 createdIds 时回落空数组（undo rollback 不会误删源节点）', async () => {
+    batchCopyDrawingMock.mockResolvedValue({
+      data: { successIds: ['n1'], failedIds: [], failedCount: 0 },
+    });
+    const { result } = renderOps();
+
+    let outcome: OperationOutcome | undefined;
+    await act(async () => {
+      outcome = await result.current.handleBatchCopy(['n1'], 'target-1');
+    });
+
+    expect(outcome?.createdIds).toEqual([]);
+  });
+
+  it('图块库走 BatchCopyBlockNodes', async () => {
+    batchCopyBlockMock.mockResolvedValue({
+      data: { successIds: ['n1'], failedIds: [], failedCount: 0, createdIds: ['copy-1'] },
+    });
+    const { result } = renderOps({ libraryType: 'block' });
+
+    await act(async () => {
+      await result.current.handleBatchCopy(['n1'], 'target-1');
+    });
+
+    expect(batchCopyBlockMock).toHaveBeenCalled();
+    expect(batchCopyDrawingMock).not.toHaveBeenCalled();
+  });
+
+  it('接口错误：error toast + 向上抛出（调用方不再重复提示）', async () => {
+    batchCopyDrawingMock.mockResolvedValue({
+      data: undefined,
+      error: new Error('批量复制失败'),
+    });
+    const { result, showToast } = renderOps();
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.handleBatchCopy(['n1'], 'target-1');
+      } catch (e) {
+        caught = e;
+      }
+    });
+
+    expect(caught).toBeInstanceOf(Error);
+    expect(showToast).toHaveBeenCalledWith('批量复制失败', 'error');
+  });
+});
+
+describe('useLibraryOperations — copyNode/deleteNode（构建 undo 动作的裸端点）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('图纸库：copyNode/deleteNode 走 drawing 端点，删除恒 permanently=true', async () => {
+    copyDrawingMock.mockResolvedValue({ data: { id: 'copy-1' } });
+    deleteDrawingMock.mockResolvedValue({ data: { id: 'n1' } });
+    const { result } = renderOps();
+
+    await act(async () => {
+      await result.current.copyNode('n1', 'target-1');
+      await result.current.deleteNode('n1');
+    });
+
+    expect(copyDrawingMock).toHaveBeenCalledWith({
+      path: { nodeId: 'n1' },
+      body: { targetParentId: 'target-1' },
+      throwOnError: true,
+    });
+    expect(deleteDrawingMock).toHaveBeenCalledWith({
+      path: { nodeId: 'n1' },
+      query: { permanently: true },
+      throwOnError: true,
+    });
+  });
+
+  it('图块库：走 block 端点', async () => {
+    copyBlockMock.mockResolvedValue({ data: { id: 'copy-1' } });
+    deleteBlockMock.mockResolvedValue({ data: { id: 'n1' } });
+    const { result } = renderOps({ libraryType: 'block' });
+
+    await act(async () => {
+      await result.current.copyNode('n1', 'target-1');
+      await result.current.deleteNode('n1');
+    });
+
+    expect(copyBlockMock).toHaveBeenCalled();
+    expect(deleteBlockMock).toHaveBeenCalled();
+    expect(copyDrawingMock).not.toHaveBeenCalled();
+    expect(deleteDrawingMock).not.toHaveBeenCalled();
   });
 });
 

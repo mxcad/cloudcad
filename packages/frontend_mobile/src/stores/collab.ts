@@ -4,16 +4,18 @@ import { MxCpp } from 'mxcad';
 import { showToast } from 'vant';
 import { t } from '@/languages';
 import {
-  getCooperate,
   encodeUserData,
   encodeV3WorkData,
   parseWorkData,
   deduplicateWorkUsers,
   parseUserData,
   getWorkCreator,
-  syncSessionFromWorkData,
   type Work,
   type CollaborateWorkDataV3,
+} from '@cloudcad/platform';
+import {
+  getCooperate,
+  syncSessionFromWorkData,
   exitGuardRef,
 } from '../composables/useCooperate';
 import {
@@ -21,8 +23,6 @@ import {
   projectControllerGetProjects,
 } from '../api-sdk';
 import { useEditorStore } from './editor';
-
-export { exitGuardRef, parseWorkData, getWorkCreator, parseUserData };
 
 const FETCH_WORKS_TIMEOUT = 30000;
 const JOIN_SAFETY_TIMEOUT = 15000;

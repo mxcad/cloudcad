@@ -178,12 +178,12 @@ export const useFileSystemNavigation = ({
           : sanitizeFileName(fileName);
 
         const result = await downloadControllerDownloadNode({
+          throwOnError: true,
           path: { nodeId: node.id },
           parseAs: 'blob',
         });
         // SDK 默认不抛错：失败时错误在 result.error。不检查会生成
         // 内容为 "undefined" 的损坏文件并弹"下载成功"（历史 bug）
-        if (result.error) throw result.error;
         const blobData = result.data;
         const blob =
           blobData instanceof Blob
@@ -265,13 +265,13 @@ export const useFileSystemNavigation = ({
         const finalFileName = `${sanitizeFileName(nameWithoutExt)}.${format}`;
 
         const result = await downloadControllerDownloadNodeWithFormat({
+          throwOnError: true,
           path: { nodeId: downloadingNode.id },
           query: { format, ...pdfOptions, ...dwgOptions },
           parseAs: 'blob',
         });
         // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出（对照
         // useLibraryOperations 的同场景已写 if (error) throw error）
-        if (result.error) throw result.error;
         const blobData = result.data;
         const blob =
           blobData instanceof Blob

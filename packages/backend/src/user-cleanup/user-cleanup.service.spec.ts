@@ -10,6 +10,7 @@ describe('UserCleanupService', () => {
   let prisma: any;
   let storageManager: {
     deleteNodeStorage: jest.Mock;
+    parseNodeDirectory: jest.Mock;
   };
 
   const txFactory = () => {
@@ -44,7 +45,14 @@ describe('UserCleanupService', () => {
 
   beforeEach(async () => {
     prisma = { $transaction: jest.fn(), user: { findMany: jest.fn() } };
-    storageManager = { deleteNodeStorage: jest.fn(async () => {}) };
+    storageManager = {
+      deleteNodeStorage: jest.fn(async () => {}),
+      // 与 StorageManager.parseNodeDirectory 同语义：段数 < 2 返回 null
+      parseNodeDirectory: jest.fn((p: string) => {
+        const parts = p.split('/').filter(Boolean);
+        return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : null;
+      }),
+    };
 
     const module = await Test.createTestingModule({
       providers: [
@@ -87,8 +95,8 @@ describe('UserCleanupService', () => {
     const result = await service.deleteUserCompletely('u-1');
 
     expect(state.users.deleted).toEqual({ id: 'u-1' });
-    expect(storageManager.deleteNodeStorage).toHaveBeenCalledWith('node-1', '202607');
-    expect(storageManager.deleteNodeStorage).toHaveBeenCalledWith('node-2', '202608');
+    expect(storageManager.deleteNodeStorage).toHaveBeenCalledWith('202607/node-1');
+    expect(storageManager.deleteNodeStorage).toHaveBeenCalledWith('202608/node-2');
     expect(storageManager.deleteNodeStorage).toHaveBeenCalledTimes(2);
     expect(result.storagePaths).toEqual(['202607/node-1', '202608/node-2', 'badpath']);
   });
@@ -170,5 +178,41 @@ describe('UserCleanupService', () => {
 
     expect(result.processedUsers).toBe(1);
     expect(state.users.deleted).toEqual({ id: 'u-1' });
+  });
+
+  it('manualCleanup 自定义延迟小于冷静期时按 graceDays 下限（不删冷静期账号）', async () => {
+    const { tx } = txFactory();
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+    prisma.user.findMany.mockResolvedValue([]);
+
+    // 自定义 delayDays=3 < graceDays=7 → 实际生效 7（冷静期下限，单出口钳制）
+    await service.manualCleanup(3);
+
+    const where = (prisma.user.findMany.mock.calls[0][0] as {
+      where: { deletedAt: { not: null; lt: Date } };
+    }).where;
+    expect(where.deletedAt.not).toBe(null);
+    const expected = new Date();
+    expected.setDate(expected.getDate() - 7);
+    expect(Math.abs(where.deletedAt.lt.getTime() - expected.getTime())).toBeLessThan(
+      5000
+    );
+  });
+
+  it('getPendingCleanupStats 只统计已过有效延迟（含冷静期）的软删用户', async () => {
+    const count = jest.fn().mockResolvedValue(5);
+    (prisma.user as { count: jest.Mock }).count = count;
+
+    const stats = await service.getPendingCleanupStats();
+
+    // 回归：where 须带 lt: expiryDate（此前只判 deletedAt != null，返回全量软删数）
+    const where = (count.mock.calls[0][0] as {
+      where: { deletedAt: { not: null; lt: Date } };
+    }).where;
+    expect(where.deletedAt.not).toBe(null);
+    expect(where.deletedAt.lt).toBeInstanceOf(Date);
+    // delayDays 为有效延迟 max(cleanupDelayDays=30, graceDays=7)=30，与 expiryDate 自洽
+    expect(stats.delayDays).toBe(30);
+    expect(stats.pendingCleanup).toBe(5);
   });
 });

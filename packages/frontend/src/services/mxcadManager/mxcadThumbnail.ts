@@ -63,6 +63,7 @@ export async function uploadThumbnail(
     const file = new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' });
 
     const result = await thumbnailControllerUploadThumbnail({
+      throwOnError: true,
       path: { nodeId },
       body: {
         file,
@@ -70,7 +71,6 @@ export async function uploadThumbnail(
     });
     // SDK 默认不抛错：失败时错误在 result.error。不检查会返回 true
     // （语义错误），缩略图静默缺失
-    if (result.error) throw result.error;
     return true;
   } catch (error) {
     console.error(`[uploadThumbnail] 缩略图上传失败: ${nodeId}`, error);

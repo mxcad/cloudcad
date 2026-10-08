@@ -5,12 +5,7 @@ import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Download } from 'lucide-react';
 import { t } from '@/languages';
-
-export interface PdfOptions {
-  width?: string;
-  height?: string;
-  colorPolicy?: 'mono' | 'color';
-}
+import type { PdfOptions } from '@/types/download-format';
 
 interface PdfExportModalProps {
   isOpen: boolean;

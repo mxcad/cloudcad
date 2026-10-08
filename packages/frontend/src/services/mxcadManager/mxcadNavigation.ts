@@ -2,6 +2,7 @@ import { handleError } from '@/utils/errorHandler';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { getFileInfo } from './mxcadHelpers';
 import { isCadEditorEntry } from '@/utils/cadEditorRoute';
+import { read } from '@/lib/browserStorage';
 
 const NAVIGATION_PATHS = {
   PROJECTS_LIST: '/projects',
@@ -18,7 +19,7 @@ const NAVIGATION_PATHS = {
 
 function hasLibraryPermission(type: 'drawing' | 'block'): boolean {
   try {
-    const userStr = localStorage.getItem('user');
+    const userStr = read('user');
     if (!userStr) return false;
     const userData = JSON.parse(userStr);
     const permissions = userData?.role?.permissions || [];

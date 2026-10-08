@@ -273,10 +273,8 @@ describe('useRuntimeConfig', () => {
     });
 
     it('SDK 返回错误时弹错误提示并清空列表', async () => {
-      getAllConfigs.mockResolvedValue({
-        data: undefined,
-        error: new Error('boom'),
-      });
+      // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
+      getAllConfigs.mockRejectedValue(new Error('boom'));
       const hook = await load();
       expect(hook.result.current.configs).toEqual([]);
       expect(showToast).toHaveBeenCalledWith('boom', 'error');
@@ -352,6 +350,7 @@ describe('useRuntimeConfig', () => {
       });
       expect(saved).toBe(true);
       expect(updateConfig).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { key: 'mail.smtpHost' },
         body: { val: '' },
       });
@@ -438,6 +437,7 @@ describe('useRuntimeConfig', () => {
       });
 
       expect(updateConfig).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { key: 'mail.port' },
         body: { val: 25 },
       });
@@ -459,6 +459,7 @@ describe('useRuntimeConfig', () => {
         await hook.result.current.handleSave('security.corsOrigins');
       });
       expect(updateConfig).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { key: 'security.corsOrigins' },
         body: { val: next },
       });
@@ -574,6 +575,7 @@ describe('useRuntimeConfig', () => {
         await hook.result.current.handleSave('user.allowRegister');
       });
       expect(updateConfig).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { key: 'user.allowRegister' },
         body: { val: true },
       });
@@ -581,10 +583,8 @@ describe('useRuntimeConfig', () => {
 
     it('后端拒绝（400）时错误落到对应卡片，同时弹 toast，草稿保留供修正', async () => {
       // 该草稿能过本地校验（长度/类型均合法），因此会真正发出请求
-      updateConfig.mockResolvedValueOnce({
-        data: undefined,
-        error: new Error('该主机名已被占用'),
-      });
+      // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
+      updateConfig.mockRejectedValueOnce(new Error('该主机名已被占用'));
       const hook = await load();
       await act(async () => {
         hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.busy.com');
@@ -625,7 +625,10 @@ describe('useRuntimeConfig', () => {
         await hook.result.current.handleReset('mail.port');
       });
 
-      expect(resetConfig).toHaveBeenCalledWith({ path: { key: 'mail.port' } });
+      expect(resetConfig).toHaveBeenCalledWith({
+        throwOnError: true,
+        path: { key: 'mail.port' },
+      });
       expect(showToast).toHaveBeenCalledWith('已恢复默认', 'success');
       expect(hook.result.current.drafts['mail.port']).toBeUndefined();
       // 其它项的草稿不受影响
@@ -670,7 +673,10 @@ describe('useRuntimeConfig', () => {
         await hook.result.current.confirmResetCategory();
       });
 
-      expect(resetCategory).toHaveBeenCalledWith({ body: { category: 'mail' } });
+      expect(resetCategory).toHaveBeenCalledWith({
+        throwOnError: true,
+        body: { category: 'mail' },
+      });
       expect(showToast).toHaveBeenCalledWith('已恢复默认', 'success');
       expect(hook.result.current.resetPreviewCategory).toBeNull();
       // 只清该分类的草稿，其它分类保留
@@ -706,6 +712,7 @@ describe('useRuntimeConfig', () => {
       });
 
       expect(getConfigHistory).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { key: 'mail.port' },
         query: { limit: '50' },
       });
@@ -724,10 +731,8 @@ describe('useRuntimeConfig', () => {
     });
 
     it('历史接口失败时记录错误信息而非抛出', async () => {
-      getConfigHistory.mockResolvedValue({
-        data: undefined,
-        error: new Error('网络异常'),
-      });
+      // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
+      getConfigHistory.mockRejectedValue(new Error('网络异常'));
       const hook = await load();
       await act(async () => {
         await hook.result.current.openHistory('mail.port');

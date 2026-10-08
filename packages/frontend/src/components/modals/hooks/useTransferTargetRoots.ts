@@ -19,18 +19,16 @@ export function useTransferTargetRoots(enabled = true): TransferTargetRoot[] {
     queryFn: async () => {
       // 全量拉取（分页上限放开到 200），保证第 2 页后的项目也可选为目标
       const result = await projectControllerGetProjects({
+        throwOnError: true,
         query: { page: 1, limit: 200 },
       });
-      if (result.error) throw result.error;
       return (result.data?.nodes ?? [])
         .filter((p) => p.fileStatus !== 'DELETED')
-        .map(
-          (p): TransferTargetRoot => ({
-            id: p.id,
-            name: p.name,
-            kind: 'project',
-          })
-        );
+        .map((p): TransferTargetRoot => ({
+          id: p.id,
+          name: p.name,
+          kind: 'project',
+        }));
     },
     enabled,
     staleTime: 60 * 1000,

@@ -30,6 +30,7 @@ import {
 } from '@cloudcad/platform';
 
 import { getConfig } from '../config/getConfig';
+import { read } from '@/lib/browserStorage';
 
 interface MobileRedirectConfig {
   isAutomaticJumpToMobilePage?: boolean;
@@ -226,9 +227,9 @@ export async function performMobileRedirectIfNeeded(): Promise<boolean> {
     pathname,
     search: window.location.search,
     credentials: {
-      accessToken: localStorage.getItem('accessToken'),
-      refreshToken: localStorage.getItem('refreshToken'),
-      user: localStorage.getItem('user'),
+      accessToken: read('accessToken'),
+      refreshToken: read('refreshToken'),
+      user: read('user'),
     },
     markRedirect: true,
   });

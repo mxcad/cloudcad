@@ -20,9 +20,8 @@ interface TierConfigQueryData {
 }
 
 async function fetchRegistry(): Promise<TierConfigQueryData> {
-  const res = await vipControllerGetRegistry();
+  const res = await vipControllerGetRegistry({ throwOnError: true });
   // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 react-query 进入 error 态
-  if (res?.error) throw res.error;
   const data = res?.data as ConfigRegistryEntry[] | undefined;
   const entries = Array.isArray(data) ? data : [];
   return { entries, registry: buildRegistryMap(entries) };

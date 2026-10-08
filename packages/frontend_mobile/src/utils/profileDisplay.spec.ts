@@ -50,8 +50,10 @@ describe('membershipBadge', () => {
 })
 
 describe('membershipExpiry', () => {
-  it('格式化到期日为 YYYY-MM-DD', () => {
-    expect(membershipExpiry({ isVip: true, membershipExpiresAt: '2026-12-31T23:59:59.000Z' })).toBe('2026-12-31')
+  it('格式化到期日为 YYYY-MM-DD（本地日历日）', () => {
+    // 12:00Z 在 UTC 与 UTC+8 下本地日历日均为 12-31（08:00Z–15:59Z 窗口对两端无歧义），
+    // 使断言不依赖测试机时区；边界（UTC+8 00:00–07:59 不跨日）需固定 TZ 才能可移植地锁定
+    expect(membershipExpiry({ isVip: true, membershipExpiresAt: '2026-12-31T12:00:00.000Z' })).toBe('2026-12-31')
   })
 
   it('永久会员（到期时间为 null）返回 null', () => {

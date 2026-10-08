@@ -89,6 +89,7 @@ describe('useAlertHistory', () => {
     await waitFor(() => expect(result.current.data).not.toBeNull());
 
     expect(mockedList).toHaveBeenCalledWith({
+      throwOnError: true,
       query: { page: 1, limit: 20 },
     });
     expect(result.current.data?.items).toHaveLength(1);

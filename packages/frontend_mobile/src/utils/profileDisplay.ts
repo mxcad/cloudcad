@@ -9,6 +9,8 @@
  * 文案交给 UI 层（VoerkaI18n）：这里返回结构化值，null 表示"不适用"。
  */
 
+import { formatDate as platformFormatDate } from '@cloudcad/platform'
+
 export interface ProfileLike {
   username?: string
   nickname?: string
@@ -32,13 +34,14 @@ export function membershipBadge(p: ProfileLike): string | null {
   return null
 }
 
-/** 会员到期日（YYYY-MM-DD）；非会员、永久会员或时间非法返回 null */
+/** 会员到期日（YYYY-MM-DD，本地日历日）；非会员、永久会员或时间非法返回 null */
 export function membershipExpiry(p: ProfileLike): string | null {
   if (!p.isVip) return null
   if (!p.membershipExpiresAt) return null
-  const date = new Date(p.membershipExpiresAt)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toISOString().slice(0, 10)
+  // 本地日历日（口径收敛到 @cloudcad/platform，与 PC / billing 一致）；
+  // 旧实现 toISOString().slice(0,10) 取 UTC 日历日，UTC+8 用户在 00:00–07:59 会显示错一天
+  const formatted = platformFormatDate(p.membershipExpiresAt)
+  return formatted || null
 }
 
 /** 手机号脱敏（保留前 3 位与后 4 位）；未绑定返回空串 */

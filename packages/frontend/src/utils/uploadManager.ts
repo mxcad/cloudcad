@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { uploadSingleFile, type MxCadUploadResult } from './mxcadUploadUtils';
+import { read, writeJson } from '@/lib/browserStorage';
 
 // ==================== 上传历史持久化 ====================
 
@@ -437,7 +438,7 @@ export class UploadManager {
   /** 从 localStorage 恢复终态（done/failed）任务作为历史记录 */
   private loadHistory(): void {
     try {
-      const raw = localStorage.getItem(UPLOAD_HISTORY_KEY);
+      const raw = read(UPLOAD_HISTORY_KEY);
       if (!raw) return;
       const records = JSON.parse(raw) as UploadHistoryRecord[];
       if (!Array.isArray(records)) return;
@@ -478,10 +479,7 @@ export class UploadManager {
         }
       }
       records.sort((a, b) => b.updatedAt - a.updatedAt);
-      localStorage.setItem(
-        UPLOAD_HISTORY_KEY,
-        JSON.stringify(records.slice(0, UPLOAD_HISTORY_LIMIT))
-      );
+      writeJson(UPLOAD_HISTORY_KEY, records.slice(0, UPLOAD_HISTORY_LIMIT));
     } catch {
       // localStorage 不可用（隐私模式等）：静默降级为仅内存历史
     }

@@ -28,9 +28,8 @@ export function useCoreServices() {
     setLoading(true);
     setError(null);
     try {
-      const healthRes = await healthControllerCheck();
+      const healthRes = await healthControllerCheck({ throwOnError: true });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-      if (healthRes.error) throw healthRes.error;
       const healthData = healthRes.data;
       if (healthData && healthData.info) {
         const databaseInfo = healthData.info.database;

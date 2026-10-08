@@ -30,6 +30,7 @@ import {
   vipControllerGetActiveTiers,
   vipControllerGetRegistry,
 } from '@cloudcad/api-sdk/sdk.gen';
+import { membershipState } from '@cloudcad/platform';
 import { patchUser, readUser } from '@/utils/authSession';
 import { t } from '@/languages';
 import { unwrap, errMsg } from '@/utils/apiError';
@@ -117,13 +118,14 @@ export function useMemberCenter() {
     return tiers.value.find((t) => t.level === level)?.configs ?? {};
   });
 
-  /** 剩余天数：永久会员返回 null（页面显示「永久有效」） */
+  /** 剩余天数：永久会员返回 null（页面显示「永久有效」）；判定走 @cloudcad/platform 唯一出口（下限钳制 ≥0） */
   const daysRemaining = computed<number | null>(() => {
-    const raw = membership.value.membershipExpiresAt;
-    if (!membership.value.isVip || !raw) return null;
-    const expire = new Date(raw).getTime();
-    if (Number.isNaN(expire)) return null;
-    return Math.ceil((expire - Date.now()) / 86400000);
+    const state = membershipState({
+      tierLevel: membership.value.membershipTierLevel ?? 0,
+      expiresAt: membership.value.membershipExpiresAt ?? null,
+    });
+    if (!state.isVip || state.isPermanent) return null;
+    return state.daysRemaining;
   });
 
   /** 调用 SDK 并解包；失败返回 null，各区块独立降级不互相牵连 */

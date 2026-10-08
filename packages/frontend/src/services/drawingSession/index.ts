@@ -47,6 +47,7 @@ export type {
   ExportDwgDetail,
   SaveAsDetail,
   SaveRequiredDetail,
+  SaveRequiredKind,
   NewFileDetail,
   PublicFileUploadedDetail,
   DrawingEvent,

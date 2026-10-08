@@ -18,6 +18,7 @@ import { useAccumulatedPagination } from '@/hooks/common/useAccumulatedPaginatio
 import { SelectableTable } from '@/components/common/SelectableTable';
 import { BatchActionBar } from '@/components/common/BatchActionBar';
 import { t } from '@/languages';
+import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import { globalShowToast } from '@/utils/notificationEvents';
 import { useCopy } from '@/hooks/useCopy';
 import { ipWhitelistControllerRemove } from '@/api-sdk';
@@ -35,11 +36,6 @@ import {
   useIpWhitelistList,
 } from './hooks/useIpWhitelist';
 import type { IpWhitelistEntry, IpWhitelistEntryForm } from './types';
-
-
-function formatTime(value: string): string {
-  return new Date(value).toLocaleString();
-}
 
 /** 本地文件条目（id 以 file: 开头）不可经接口移除 */
 function isFileEntry(entry: IpWhitelistEntry): boolean {
@@ -407,11 +403,11 @@ export default function IpWhitelistPage({
                       </div>
                     </td>
                     <td className="text-xs">
-                      {fileEntry ? t('—') : formatTime(entry.createdAt)}
+                      {fileEntry ? t('—') : formatDateTimeWithSeconds(entry.createdAt)}
                     </td>
                     <td className="text-xs">
                       {entry.expiresAt ? (
-                        formatTime(entry.expiresAt)
+                        formatDateTimeWithSeconds(entry.expiresAt)
                       ) : (
                         <Tag variant="success" size="xs">
                           {t('永久')}

@@ -290,10 +290,6 @@ share:
   only_creator_can_revoke: "Only the creator can revoke the share"
   token_mismatch: "Share token does not match the requested file"
   only_creator_can_modify: "Only the creator can modify share settings"
-  no_permission_repo_drawing: "No permission to share repository drawings"
-  no_permission_repo_block: "No permission to share repository blocks"
-  no_permission_file: "No file sharing permission"
-  only_owner_can_share: "Only the file owner can share"
 
 public_file:
   missing_source_hash: "Missing source drawing hash"
@@ -485,7 +481,6 @@ file_extra:
   conversion_failed_detail: "File conversion failed: {error}"
   download_format_unsupported_detail: "Unsupported download format: {format}"
   size_exceeded_with_name: "File size exceeds limit: {name}"
-  path_validation_failed_delete: "Path validation failed, cannot safely delete"
   filename_starts_with_dot: "File name cannot start with a dot"
   missing_file_or_hash: "Missing file or file hash"
   extension_forbidden_detail: "Uploading {extension} files is forbidden"

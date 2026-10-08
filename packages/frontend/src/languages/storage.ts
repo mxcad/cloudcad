@@ -1,20 +1,14 @@
-import type { IVoerkaI18nStorage } from "@voerkai18n/runtime" 
+import type { IVoerkaI18nStorage } from "@voerkai18n/runtime"
+import { read, write, erase } from "@/lib/browserStorage"
 
 export default {
     get(key:string){
-        if(globalThis.localStorage){
-            return globalThis.localStorage.getItem(key)
-        }
-        return null
+        return read(key)
     },
     set(key:string,value:any){
-        if(globalThis.localStorage){
-            globalThis.localStorage.setItem(key,value)
-        }
+        write(key,value)
     },
     remove(key:string){
-        if(globalThis.localStorage){
-            globalThis.localStorage.removeItem(key)
-        }
+        erase(key)
     }
 } as IVoerkaI18nStorage

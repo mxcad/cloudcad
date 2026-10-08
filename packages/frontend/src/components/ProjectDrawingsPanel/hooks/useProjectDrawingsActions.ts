@@ -200,12 +200,12 @@ export function useProjectDrawingsActions({
       e.preventDefault();
       handleUpdateProjectSubmit(async (id, data) => {
         const result = await nodeControllerUpdateNode({
+          throwOnError: true,
           path: { nodeId: id },
           body: { name: data.name ?? undefined, description: data.description },
         });
         // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
         // 否则外层 catch 不触发，弹窗照常关闭提示"更新成功"（历史 bug）
-        if (result.error) throw result.error;
       });
     },
     [handleUpdateProjectSubmit]

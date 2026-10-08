@@ -347,11 +347,11 @@ export const useFileSystemCRUD = ({
       if (node.isRoot) {
         try {
           const permissions = await memberControllerGetUserProjectPermissions({
+            throwOnError: true,
             path: { projectId: node.id },
           });
           // SDK 默认不抛错：失败时错误在 result.error。不检查会把接口
           // 失败误判为"没有权限删除项目"，掩盖真实原因
-          if (permissions.error) throw permissions.error;
           if (
             !permissions.data?.permissions?.includes(
               ProjectPermission.PROJECT_DELETE

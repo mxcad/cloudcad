@@ -9,6 +9,7 @@ import {
 import type { LibraryType } from '@/components/ProjectDrawingsPanel/types';
 import { CategoryLevel } from '@/components/CategoryTabs';
 import { t } from '@/languages';
+import { read, writeJson } from '@/lib/browserStorage';
 
 // 分类 queryKey 定义在本地而非 queryKeys，避免 Vite HMR 级联刷新 useLibraryQuery 导致其 React Query 缓存丢失
 const drawingCategoriesKey = ['library', 'drawing', 'categories'] as const;
@@ -132,7 +133,7 @@ export function useLibraryCategories(
 
   const getDefaultCategoryPath = (): string[] => {
     try {
-      const saved = localStorage.getItem(
+      const saved = read(
         `library_category_path_${libraryType}`
       );
       if (saved) {
@@ -159,14 +160,7 @@ export function useLibraryCategories(
       setSelectedCategoryPath((prev) => {
         const newPath = [...prev.slice(0, level), categoryId];
         while (newPath.length < 3) newPath.push('all');
-        try {
-          localStorage.setItem(
-            `library_category_path_${libraryType}`,
-            JSON.stringify(newPath)
-          );
-        } catch {
-          // localStorage 写入失败时忽略，仅影响持久化
-        }
+        writeJson(`library_category_path_${libraryType}`, newPath);
         return newPath;
       });
     },

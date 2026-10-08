@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { membershipState } from '@cloudcad/platform';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface MembershipInfo {
@@ -14,23 +15,18 @@ export function useMembership(): MembershipInfo | null {
   return useMemo(() => {
     if (!user) return null;
 
-    const tierLevel = user.membershipTierLevel ?? 0;
-    const expiresAt = user.membershipExpiresAt ?? null;
-
-    let daysRemaining = 0;
-    if (expiresAt) {
-      const diff = new Date(expiresAt).getTime() - Date.now();
-      daysRemaining = Math.max(0, Math.ceil(diff / 86_400_000));
-    }
-
-    // 永久会员（tierLevel > 0 且 expiresAt 为 null）视为永久有效
-    const isPermanent = tierLevel > 0 && expiresAt === null;
+    // 会员判定唯一出口（@cloudcad/platform）：永久会员（tierLevel > 0 且
+    // expiresAt 为 null）daysRemaining 为 Infinity，其余下限钳制 ≥0
+    const state = membershipState({
+      tierLevel: user.membershipTierLevel ?? 0,
+      expiresAt: user.membershipExpiresAt ?? null,
+    });
 
     return {
-      tierLevel,
-      isVip: tierLevel > 0 && (isPermanent || daysRemaining > 0),
-      expiresAt,
-      daysRemaining: isPermanent ? Number.POSITIVE_INFINITY : daysRemaining,
+      tierLevel: state.tierLevel,
+      isVip: state.isVip,
+      expiresAt: user.membershipExpiresAt ?? null,
+      daysRemaining: state.daysRemaining,
     };
   }, [user]);
 }

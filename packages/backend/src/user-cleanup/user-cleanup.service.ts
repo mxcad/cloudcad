@@ -142,16 +142,27 @@ export class UserCleanupService {
   }
 
   /**
-   * 查询过期的已注销用户
+   * 注销冷静期不变量的唯一出口：有效清理延迟 = max(基础延迟, graceDays)。
+   * 基础延迟默认取配置 cleanupDelayDays，manualCleanup 可传 overrideDays 覆盖。
+   * 保证「冷静期内登录可自动恢复」承诺——cron / 手动清理 / 待清理统计三条路径
+   * 都不得在冷静期内物理删除账号（此前 manualCleanup 与 getPendingCleanupStats
+   * 各用裸 cleanupDelayDays，delayDays=3/graceDays=7 时一键删除仍在冷静期的账号）。
    */
-  private async findExpiredUsers() {
-    // 防御：注销冷静期（运行时配置，可能大于清理延迟）内不得删除——
-    // 清理延迟取 max(cleanupDelayDays, graceDays)，保证「冷静期内登录可自动恢复」承诺不被破坏
+  private async getEffectiveCleanupDelayDays(
+    overrideDays?: number
+  ): Promise<number> {
     const graceDays = await this.runtimeConfigService.getValue<number>(
       'userCancelGraceDays',
       7
     );
-    const effectiveDelayDays = Math.max(this.cleanupDelayDays, graceDays);
+    return Math.max(overrideDays ?? this.cleanupDelayDays, graceDays);
+  }
+
+  /**
+   * 查询过期的已注销用户
+   */
+  private async findExpiredUsers() {
+    const effectiveDelayDays = await this.getEffectiveCleanupDelayDays();
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() - effectiveDelayDays);
 
@@ -172,21 +183,26 @@ export class UserCleanupService {
 
   /**
    * 获取待清理用户统计
+   *
+   * 「待清理数」= 已过有效清理延迟（含冷静期）的软删用户数，与 cron 实际清理口径一致
+   * （此前 where 只判 deletedAt != null，返回的是「全部软删用户数」而非「可清理数」，
+   * 且 expiryDate 算了却从未进 where）。
    */
   async getPendingCleanupStats(): Promise<PendingCleanupStats> {
+    const effectiveDelayDays = await this.getEffectiveCleanupDelayDays();
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() - this.cleanupDelayDays);
+    expiryDate.setDate(expiryDate.getDate() - effectiveDelayDays);
 
     const pendingCleanup = await this.prisma.user.count({
       where: {
-        deletedAt: { not: null },
+        deletedAt: { not: null, lt: expiryDate },
       },
     });
 
     return {
       pendingCleanup,
       expiryDate,
-      delayDays: this.cleanupDelayDays,
+      delayDays: effectiveDelayDays,
     };
   }
 
@@ -195,10 +211,14 @@ export class UserCleanupService {
    * @param delayDays 延迟天数（覆盖默认值）
    */
   async manualCleanup(delayDays?: number): Promise<UserCleanupResult> {
-    const actualDelayDays = delayDays ?? this.cleanupDelayDays;
+    // 冷静期不变量：即使管理员传自定义延迟，也不得小于 graceDays（否则一键删除
+    // 仍在冷静期、登录可恢复的账号）。统一走 getEffectiveCleanupDelayDays 单出口。
+    const actualDelayDays = await this.getEffectiveCleanupDelayDays(delayDays);
 
     if (delayDays !== undefined) {
-      this.logger.log(`使用自定义延迟天数: ${delayDays}`);
+      this.logger.log(
+        `使用自定义延迟天数: ${delayDays}（冷静期下限后实际生效 ${actualDelayDays}）`
+      );
     }
 
     const expiryDate = new Date();
@@ -382,18 +402,15 @@ export class UserCleanupService {
     paths: string[]
   ): Promise<void> {
     for (const filePath of paths) {
-      const pathParts = filePath.split('/');
-      if (pathParts.length < 2) {
+      if (!this.storageManager.parseNodeDirectory(filePath)) {
         this.logger.warn(`节点路径格式错误: ${filePath}`);
         continue;
       }
-      const directory = pathParts[0];
-      const nodeId = pathParts[1];
       try {
-        await this.storageManager.deleteNodeStorage(nodeId, directory);
+        await this.storageManager.deleteNodeStorage(filePath);
       } catch (error) {
         this.logger.error(
-          `用户 ${userId} 物理删除存储失败: ${nodeId} (${directory})`,
+          `用户 ${userId} 物理删除存储失败: ${filePath}`,
           error.stack
         );
       }

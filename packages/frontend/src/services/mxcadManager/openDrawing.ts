@@ -179,9 +179,9 @@ async function getProjectId(
   } else {
     try {
       const rootResponse = await nodeControllerGetRootNode({
+        throwOnError: true,
         path: { nodeId: newNodeId },
       });
-      if (rootResponse.error) throw rootResponse.error;
       if (rootResponse.data?.id) projectId = rootResponse.data.id;
     } catch (error) {
       handleError(error, 'mxcadManager: getProjectId');

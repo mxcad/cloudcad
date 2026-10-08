@@ -1,3 +1,5 @@
+import { read, erase } from '@/lib/browserStorage';
+
 export const WECHAT_STORAGE_POLL_INTERVAL_MS = 500;
 export const WECHAT_STORAGE_POLL_MAX_ATTEMPTS = 60;
 
@@ -29,7 +31,7 @@ export function watchWechatStorage(
   const handleStorageChange = (e: StorageEvent) => {
     if (e.key === storageKey && e.newValue) {
       // 清理 localStorage（removeItem 本身也会触发 storage 事件，但 newValue 为 null 会被过滤）
-      localStorage.removeItem(storageKey);
+      erase(storageKey);
       onResult(e.newValue);
     }
   };
@@ -43,9 +45,9 @@ export function watchWechatStorage(
       return;
     }
     attempts += 1;
-    const raw = localStorage.getItem(storageKey);
+    const raw = read(storageKey);
     if (raw) {
-      localStorage.removeItem(storageKey);
+      erase(storageKey);
       onResult(raw);
     }
     if (attempts >= maxAttempts) {

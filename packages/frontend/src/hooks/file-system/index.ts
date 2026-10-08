@@ -17,6 +17,11 @@ export {
   buildCopyAction,
   getCreatedNodeId,
 } from './moveCopyActions';
+export type {
+  OperationOutcome,
+  CopyActionEndpoints,
+  BuildCopyActionOptions,
+} from './moveCopyActions';
 export { useFileSystemData } from './useFileSystemData';
 export { useFileSystemNavigation } from './useFileSystemNavigation';
 export { useFileSystemSearch } from './useFileSystemSearch';

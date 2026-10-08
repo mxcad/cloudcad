@@ -290,10 +290,6 @@ share:
   only_creator_can_revoke: "생성자만 공유를 취소할 수 있습니다"
   token_mismatch: "공유 토큰이 요청된 파일과 일치하지 않습니다"
   only_creator_can_modify: "생성자만 공유 설정을 수정할 수 있습니다"
-  no_permission_repo_drawing: "저장소 도면 공유 권한이 없습니다"
-  no_permission_repo_block: "저장소 블록 공유 권한이 없습니다"
-  no_permission_file: "파일 공유 권한이 없습니다"
-  only_owner_can_share: "파일 소유자만 공유할 수 있습니다"
 
 public_file:
   missing_source_hash: "소스 도면 해시 누락"
@@ -485,7 +481,6 @@ file_extra:
   conversion_failed_detail: "파일 변환 실패: {error}"
   download_format_unsupported_detail: "지원되지 않는 다운로드 형식: {format}"
   size_exceeded_with_name: "파일 크기가 제한을 초과했습니다: {name}"
-  path_validation_failed_delete: "경로 검증 실패. 안전하게 삭제할 수 없습니다"
   filename_starts_with_dot: "파일 이름은 점으로 시작할 수 없습니다"
   missing_file_or_hash: "파일 또는 파일 hash 누락"
   extension_forbidden_detail: "{extension} 유형 파일 업로드가 금지됩니다"

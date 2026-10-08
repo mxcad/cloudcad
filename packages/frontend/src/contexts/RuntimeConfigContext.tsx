@@ -105,10 +105,11 @@ function mapPublicConfig(
 }
 
 async function fetchPublicConfigs(): Promise<PublicRuntimeConfig> {
-  const result = await runtimeConfigControllerGetPublicConfigs();
+  const result = await runtimeConfigControllerGetPublicConfigs({
+    throwOnError: true,
+  });
   // SDK 默认不抛错：显式抛出使 react-query 进入 error 态，
   // 上层 useEffect 能记录真实失败原因（UI 仍按设计回退 DEFAULT_CONFIG）
-  if (result.error) throw result.error;
   const data = (result.data ?? {}) as Record<string, PublicConfigValue>;
   return mapPublicConfig(data);
 }

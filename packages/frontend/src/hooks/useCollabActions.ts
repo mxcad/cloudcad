@@ -7,7 +7,7 @@ import {
   checkAndConfirmUnsavedChanges,
   refreshFileName,
   getCooperate,
-  exitCurrentCollaboration,
+  exitCollaboration,
   isEmptyDocumentName,
 } from '../services/mxcadManager';
 import {
@@ -71,6 +71,7 @@ export function useCollabActions(
     collaborationWorkId,
     isPersonalSpaceMode,
     setCollaborationState,
+    setCollabPhase,
     setCollabShareState,
   } = useCADEditorStore();
   const { showToast } = useNotification();
@@ -81,11 +82,18 @@ export function useCollabActions(
   const [isCadReady, setIsCadReady] = useState(false);
 
   const initCheckRef = useRef<NodeJS.Timeout | null>(null);
-  const exitGuardRef = useRef(false);
   const joiningLockRef = useRef(false);
   const autoJoinTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pendingJoinWorkIdRef = useRef<number | null>(null);
-  const exitGuardTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // 组件卸载标记：用户发起的 join/create 回调在卸载后仍会触发，
+  // 此时引擎 session 若已开必须就地清理（孤儿清理），否则会话泄漏
+  const joinCancelledRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      joinCancelledRef.current = true;
+    };
+  }, []);
 
   useEffect(() => {
     const checkCadReady = () => {
@@ -127,7 +135,7 @@ export function useCollabActions(
         }
 
         if (collaborationWorkId !== null) {
-          exitCurrentCollaboration();
+          await exitCollaboration();
           setCurrentWorkId(null);
         }
 
@@ -190,10 +198,23 @@ export function useCollabActions(
         });
 
         showGlobalLoading(t('正在创建协同...'), 'handleCreate');
+        setCollabPhase('joining');
         cooperate.createWork(
           (workid: number) => {
             hideGlobalLoading('handleCreate-success');
             setCreating(false);
+            if (joinCancelledRef.current) {
+              // 组件已卸载：引擎 session 若已开则就地清理，防会话泄漏
+              if (workid > 0) {
+                try {
+                  getCooperate()?.exitWork();
+                } catch {
+                  /* 忽略 */
+                }
+              }
+              setCollabPhase('idle');
+              return;
+            }
             if (workid > 0) {
               setCurrentWorkId(workid);
               setCollaborationState({
@@ -215,6 +236,7 @@ export function useCollabActions(
               // 创建成功后拉取服务端完整协同列表（以服务端为准，不进行本地合并）
               fetchWorks();
             } else {
+              setCollabPhase('idle');
               const errorCode = -workid;
               showToast(`${t('创建协同失败，错误码: ')}${errorCode}`, 'error');
             }
@@ -226,6 +248,7 @@ export function useCollabActions(
       } catch (error) {
         hideGlobalLoading('handleCreate-catch');
         setCreating(false);
+        setCollabPhase('idle');
         fetchWorks();
         showToast(getErrorMessage(error), 'error');
       }
@@ -241,6 +264,7 @@ export function useCollabActions(
       isPersonalSpaceMode,
       setCurrentWorkId,
       setCollaborationState,
+      setCollabPhase,
       setWorks,
     ]
   );
@@ -255,7 +279,7 @@ export function useCollabActions(
 
       try {
         if (collaborationWorkId !== null && collaborationWorkId !== workId) {
-          exitCurrentCollaboration();
+          await exitCollaboration();
           setCurrentWorkId(null);
           fetchWorks();
         }
@@ -309,11 +333,24 @@ export function useCollabActions(
         );
 
         showGlobalLoading(t('正在打开协同文件...'), 'handleJoin');
+        setCollabPhase('joining');
         cooperate.joinWork(
           workId,
           (iRet: number) => {
             setJoiningWorkId(null);
             joiningLockRef.current = false;
+            if (joinCancelledRef.current) {
+              // 组件已卸载：引擎 session 若已开则就地清理，防会话泄漏
+              if (iRet === 0 || iRet === 17) {
+                try {
+                  getCooperate()?.exitWork();
+                } catch {
+                  /* 忽略 */
+                }
+              }
+              setCollabPhase('idle');
+              return;
+            }
             if (iRet === 0) {
               setCurrentWorkId(workId);
               setCollaborationState({ isInCollaboration: true, workId });
@@ -331,6 +368,7 @@ export function useCollabActions(
               hideGlobalLoading('handleJoin-error');
               unsubscribeOpenComplete?.();
               unsubscribeOpenComplete = null;
+              setCollabPhase('idle');
               fetchWorks();
               showToast(t('该协同已关闭'), 'error');
             }
@@ -344,6 +382,7 @@ export function useCollabActions(
         joiningLockRef.current = false;
         unsubscribeOpenComplete?.();
         unsubscribeOpenComplete = null;
+        setCollabPhase('idle');
         fetchWorks();
         showToast(getErrorMessage(error), 'error');
       }
@@ -355,6 +394,7 @@ export function useCollabActions(
       collaborationWorkId,
       setCurrentWorkId,
       setCollaborationState,
+      setCollabPhase,
     ]
   );
 
@@ -366,16 +406,11 @@ export function useCollabActions(
         return;
       }
 
-      const ret = cooperate.exitWork();
-      if (ret === 0) {
-        const exitedWorkId = useCADEditorStore.getState().collaborationWorkId;
+      // 先取旧 workId（命令内部会清状态）；exitGuard 置位统一在命令内
+      const exitedWorkId = useCADEditorStore.getState().collaborationWorkId;
+      const result = await exitCollaboration();
+      if (result.exited) {
         setCurrentWorkId(null);
-        setCollaborationState({ isInCollaboration: false, workId: null });
-        exitGuardRef.current = true;
-        exitGuardTimerRef.current = setTimeout(() => {
-          exitGuardRef.current = false;
-        }, 3000);
-        refreshFileName();
         if (exitedWorkId !== null) {
           setWorks((prev) => prev.filter((w) => w.work_id !== exitedWorkId));
         }
@@ -383,25 +418,26 @@ export function useCollabActions(
         showToast(t('已退出协同'), 'success');
       } else {
         fetchWorks();
-        showToast(`${t('退出协同失败，错误码: ')}${ret}`, 'error');
+        showToast(
+          `${t('退出协同失败，错误码: ')}${result.exitCode ?? '未知'}`,
+          'error'
+        );
       }
     } catch (error) {
       fetchWorks();
       showToast(getErrorMessage(error), 'error');
     }
-  }, [
-    fetchWorks,
-    showToast,
-    setCurrentWorkId,
-    setCollaborationState,
-    setWorks,
-  ]);
+  }, [fetchWorks, showToast, setCurrentWorkId, setWorks]);
 
   useEffect(() => {
     if (!visible || !isCadReady || !fromCollabShare || !targetCollabWorkId)
       return;
-    if (isInCollaboration) return;
-    if (exitGuardRef.current) return;
+    // phase/exitGuard 用 getState() 读且不进依赖数组：tryJoin 置 'joining'
+    // 若触发 effect 重跑，cleanup 的 cancelled 会掐断 in-flight 的重试链
+    // （phase !== 'idle' 同时覆盖 joined 与 joining，加入在途不重复发起）
+    const guardState = useCADEditorStore.getState();
+    if (guardState.collabPhase !== 'idle') return;
+    if (guardState.collabExitGuard) return;
     if (!user) return;
 
     setWaitingForSession(true);
@@ -416,6 +452,9 @@ export function useCollabActions(
       // joinWork 永不回调（引擎挂起/白名单异常）时兜底关闭骨架屏，
       // 避免页面永久停留在加载态
       onFileLoaded?.();
+      if (useCADEditorStore.getState().collabPhase === 'joining') {
+        useCADEditorStore.getState().setCollabPhase('idle');
+      }
     }, AUTO_JOIN_SAFETY_TIMEOUT);
 
     const userData: CollaborateUserData = {
@@ -437,9 +476,23 @@ export function useCollabActions(
         return;
       }
 
+      setCollabPhase('joining');
       cooperate.joinWork(
         targetCollabWorkId,
         (iRet: number) => {
+          if (cancelled) {
+            // 组件已卸载/用户已离开：引擎 session 若已开则就地清理，
+            // 防「引擎已加入但 store 说未加入」的会话泄漏
+            if (iRet === 0 || iRet === 17) {
+              try {
+                getCooperate()?.exitWork();
+              } catch {
+                /* 忽略 */
+              }
+            }
+            setCollabPhase('idle');
+            return;
+          }
           if (iRet === 0) {
             cancelled = true;
             clearTimeout(safetyTimer);
@@ -539,6 +592,7 @@ export function useCollabActions(
               // 失败也关闭骨架屏：auto-join 已结束（超时），不允许页面停留在加载态
               onFileLoaded?.();
               showToast(t('加入协同超时'), 'warning');
+              setCollabPhase('idle');
               setCollabShareState({
                 fromCollabShare: false,
                 targetWorkId: null,
@@ -552,6 +606,7 @@ export function useCollabActions(
             // 失败也关闭骨架屏：协同已关闭/链接失效，auto-join 已结束
             onFileLoaded?.();
             showToast(t('该协同已关闭，链接已失效'), 'error');
+            setCollabPhase('idle');
             setCollabShareState({ fromCollabShare: false, targetWorkId: null });
           }
         },
@@ -567,12 +622,16 @@ export function useCollabActions(
       clearTimeout(timer);
       clearTimeout(safetyTimer);
       hideGlobalLoading('autoJoin-cleanup');
+      // join 未落定就卸载（如 cooperate 一直不可用的重试中）→ 落定 phase，
+      // 避免卡在 'joining'；已 joined 的不覆盖（回调侧已处理）
+      if (useCADEditorStore.getState().collabPhase === 'joining') {
+        useCADEditorStore.getState().setCollabPhase('idle');
+      }
     };
   }, [
     isCadReady,
     fromCollabShare,
     targetCollabWorkId,
-    isInCollaboration,
     user,
     visible,
     collabShareLibraryKey,
@@ -580,6 +639,7 @@ export function useCollabActions(
     setWorks,
     fetchWorks,
     setCollaborationState,
+    setCollabPhase,
     setCollabShareState,
   ]);
 
@@ -601,12 +661,6 @@ export function useCollabActions(
     fetchWorks,
     setCurrentWorkId,
   ]);
-
-  useEffect(() => {
-    return () => {
-      clearTimeout(exitGuardTimerRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     const targetWorkId = pendingJoinWorkIdRef.current;

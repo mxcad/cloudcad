@@ -10,7 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { IL1CacheManager } from '../interfaces/cache-manager.interface';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheStrategy } from '../enums/cache-strategy.enum';
@@ -31,17 +36,29 @@ interface ICacheEntry<T> {
  * 使用 LRU 策略，最大容量 1000 条，TTL 5 分钟
  */
 @Injectable()
-export class L1CacheProvider<T = unknown> implements IL1CacheManager<T> {
+export class L1CacheProvider<T = unknown>
+  implements IL1CacheManager<T>, OnModuleDestroy
+{
   private readonly logger = new Logger(L1CacheProvider.name);
   private readonly cache = new Map<string, ICacheEntry<T>>();
   private maxCapacity = 1000;
   private defaultTTL = 300; // 5 分钟
   private hits = 0;
   private misses = 0;
+  private cleanTimer: NodeJS.Timeout | undefined;
 
   constructor() {
-    // 定期清理过期缓存（每分钟执行一次）
-    setInterval(() => this.cleanExpired(), 60000);
+    // 定期清理过期缓存（每分钟执行一次）。保存句柄 + unref，模块销毁时清理，
+    // 避免定时器泄漏（对照 conversion-monitor 的 samplerTimer 约定）。
+    this.cleanTimer = setInterval(() => this.cleanExpired(), 60000);
+    this.cleanTimer.unref?.();
+  }
+
+  onModuleDestroy(): void {
+    if (this.cleanTimer) {
+      clearInterval(this.cleanTimer);
+      this.cleanTimer = undefined;
+    }
   }
 
   /**

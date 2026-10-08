@@ -12,12 +12,12 @@ export const useProfileUpdate = () => {
   const mutation = useMutation({
     mutationFn: async (data: ProfileUpdateData) => {
       const result = await usersControllerUpdateProfile({
+        throwOnError: true,
         body: {
           username: data.username,
           nickname: data.nickname,
         },
       });
-      if (result.error) throw result.error;
       return result.data;
     },
     onSuccess: () => {

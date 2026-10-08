@@ -10,6 +10,7 @@ import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
 import { UrlHelper } from '@/utils/mxcadUtils';
+import { read } from '@/lib/browserStorage';
 import { extractShareTokenFromUrl } from './mxcadHelpers';
 import type { CurrentFileInfo, OpenFilePayload } from './mxcadTypes';
 import { VIEW_INIT_TIMEOUT_MS, ENGINE_READY_POLL_INTERVAL_MS } from './mxcadTypes';
@@ -159,7 +160,7 @@ export async function waitForDocumentLoaded(
  */
 function buildViewOptions(openFile?: string) {
   const containerManager = MxCADContainerManager.getInstance();
-  const token = localStorage.getItem('accessToken');
+  const token = read('accessToken');
   // 从 openFile URL 提取 shareToken（共享图纸场景）
   if (openFile) {
     currentShareToken = extractShareTokenFromUrl(openFile);

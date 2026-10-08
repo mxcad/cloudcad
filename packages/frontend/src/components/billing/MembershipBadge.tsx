@@ -1,5 +1,6 @@
 import { useMembership } from '@/hooks/useMembership';
 import { t } from '@/languages';
+import { formatDate } from '@/utils/dateUtils';
 
 function formatRemaining(days: number): string {
   // 永久会员 daysRemaining 为 Infinity，直接返回"永久有效"，避免 Infinity 月份
@@ -22,7 +23,7 @@ export default function MembershipBadge() {
 
   const label = `VIP${membership.tierLevel}`;
   const expireDate = membership.expiresAt
-    ? new Date(membership.expiresAt).toLocaleDateString('zh-CN')
+    ? formatDate(membership.expiresAt)
     : '';
   const title = !Number.isFinite(membership.daysRemaining)
     ? `VIP${membership.tierLevel} · ${t('永久有效')}`

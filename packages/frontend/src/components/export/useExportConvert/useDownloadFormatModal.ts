@@ -132,10 +132,10 @@ export function useDownloadFormatModal({
         }
 
         const result = await downloadControllerDownloadNodeWithFormat({
+          throwOnError: true,
           path: { nodeId: downloadingNodeId },
           query: { format, ...pdfOptions, ...dwgOptions },
         });
-        if (result?.error) throw result.error;
         const blobData = result?.data;
         const blob =
           blobData instanceof Blob

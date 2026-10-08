@@ -55,10 +55,7 @@ import {
   formatDate,
   getActionDisplayName,
 } from '@/pages/AuditLogPage/constants';
-import {
-  getActionDetail,
-  type AuditLog,
-} from '@/utils/auditActionTemplates';
+import { getActionDetail, type AuditLog } from '@/utils/auditActionTemplates';
 
 interface OperationHistoryModalProps {
   isOpen: boolean;
@@ -157,7 +154,10 @@ const ACTION_ICON: Record<
   ROLE_DELETE: { icon: ShieldX, colorClass: 'text-[var(--error)]' },
 };
 const getActionIcon = (action: string) =>
-  ACTION_ICON[action] ?? { icon: History, colorClass: 'text-[var(--text-secondary)]' };
+  ACTION_ICON[action] ?? {
+    icon: History,
+    colorClass: 'text-[var(--text-secondary)]',
+  };
 
 /** 时间分组：今天 / 昨天 / 更早 */
 type TimeGroup = 'today' | 'yesterday' | 'earlier';
@@ -236,16 +236,13 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
   };
 
   // 项目成员列表（操作人筛选数据源）
-  const {
-    data: members = [],
-    isLoading: membersLoading,
-  } = useQuery({
+  const { data: members = [], isLoading: membersLoading } = useQuery({
     queryKey: ['projectMembers', projectId],
     queryFn: async () => {
       const result = await memberControllerGetProjectMembers({
+        throwOnError: true,
         path: { projectId },
       });
-      if (result.error) throw result.error;
       const raw = (result.data ?? []) as Array<{
         id: string;
         nickname?: string | null;
@@ -276,6 +273,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
     }),
     queryFn: async () => {
       const result = await projectAuditLogControllerFindByProject({
+        throwOnError: true,
         path: { projectId },
         query: {
           page: String(page),
@@ -287,7 +285,6 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
           ...(deferredSearch.trim() ? { search: deferredSearch.trim() } : {}),
         },
       });
-      if (result.error) throw result.error;
       const raw = (result.data ?? {}) as {
         logs?: AuditLog[];
         total?: number;
@@ -514,9 +511,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
                       >
                         <Tooltip
                           content={`${actorDisplayName(log)}${
-                            log.user?.email
-                              ? ` · ${log.user.email}`
-                              : ''
+                            log.user?.email ? ` · ${log.user.email}` : ''
                           }`}
                           position="top"
                         >

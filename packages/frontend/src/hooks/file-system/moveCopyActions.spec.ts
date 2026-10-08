@@ -134,18 +134,39 @@ describe('buildCopyAction', () => {
     description: '复制 2 个项目',
     projectId: 'proj-1',
   };
+  // 端点参数化：builder 不绑定具体 SDK 端点，测试用 node controller mock 装配
+  const endpoints = {
+    copyNode: (nodeId: string, targetParentId: string) =>
+      nodeControllerCopyNode({
+        path: { nodeId },
+        body: { targetParentId },
+        throwOnError: true,
+      }),
+    deleteNode: (nodeId: string) =>
+      nodeControllerDeleteNode({
+        path: { nodeId },
+        query: { permanently: true },
+        throwOnError: true,
+      }),
+  };
 
-  it('creates a paste-copy action with metadata', () => {
-    const action = buildCopyAction(options);
+  it('creates a paste-copy action with metadata and nodeIds = initial created ids', () => {
+    const action = buildCopyAction({
+      ...options,
+      createdIds: ['created-a'],
+      endpoints,
+    });
     expect(action.type).toBe('paste-copy');
     expect(action.description).toBe('复制 2 个项目');
     expect(action.projectId).toBe('proj-1');
+    expect(action.nodeIds).toEqual(['created-a']);
   });
 
   it('rollback deletes the initial created ids when undo happens without redo', async () => {
     const action = buildCopyAction({
       ...options,
-      initialCreatedIds: ['created-a', 'created-b'],
+      createdIds: ['created-a', 'created-b'],
+      endpoints,
     });
     await action.rollback();
     expect(deleteMock).toHaveBeenCalledTimes(2);
@@ -158,12 +179,34 @@ describe('buildCopyAction', () => {
     }
   });
 
+  it('rollback only deletes copy ids, never source node ids（数据丢失回归）', async () => {
+    const action = buildCopyAction({
+      ...options,
+      createdIds: ['copy-a', 'copy-b'],
+      endpoints,
+    });
+    await action.rollback();
+    expect(deleteMock).toHaveBeenCalledTimes(2);
+    expect(deleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { nodeId: 'copy-a' } })
+    );
+    expect(deleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { nodeId: 'copy-b' } })
+    );
+    for (const sourceId of ['a', 'b']) {
+      expect(deleteMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({ path: { nodeId: sourceId } })
+      );
+    }
+  });
+
   it('execute replays copies and updates the rollback set to redo products', async () => {
     copyMock.mockResolvedValueOnce({ data: { id: 'redo-a' } });
     copyMock.mockResolvedValueOnce({ id: 'redo-b' });
     const action = buildCopyAction({
       ...options,
-      initialCreatedIds: ['created-a'],
+      createdIds: ['created-a'],
+      endpoints,
     });
     await action.execute();
     expect(copyMock).toHaveBeenCalledTimes(2);
@@ -192,10 +235,27 @@ describe('buildCopyAction', () => {
     });
   });
 
+  it('nodeIds stays the same array reference after execute（removeActions 清理恒读最新集合）', async () => {
+    copyMock.mockResolvedValue({ data: { id: 'redo-a' } });
+    const action = buildCopyAction({
+      ...options,
+      createdIds: ['created-a'],
+      endpoints,
+    });
+    const before = action.nodeIds;
+    await action.execute();
+    expect(action.nodeIds).toBe(before);
+    expect(action.nodeIds).toEqual(['redo-a', 'redo-a']);
+  });
+
   it('execute skips results without a created id', async () => {
     copyMock.mockResolvedValueOnce({ data: {} });
     copyMock.mockResolvedValueOnce({ data: { id: 'redo-a' } });
-    const action = buildCopyAction(options);
+    const action = buildCopyAction({
+      ...options,
+      createdIds: [],
+      endpoints,
+    });
     await action.execute();
     await action.rollback();
     expect(deleteMock).toHaveBeenCalledTimes(1);
@@ -214,7 +274,8 @@ describe('buildCopyAction', () => {
     deleteMock.mockResolvedValueOnce(undefined);
     const action = buildCopyAction({
       ...options,
-      initialCreatedIds: ['created-a', 'created-b'],
+      createdIds: ['created-a', 'created-b'],
+      endpoints,
     });
     await expect(action.rollback()).resolves.toBeUndefined();
     expect(deleteMock).toHaveBeenCalledTimes(2);
@@ -225,7 +286,8 @@ describe('buildCopyAction', () => {
     deleteMock.mockRejectedValueOnce(serverError);
     const action = buildCopyAction({
       ...options,
-      initialCreatedIds: ['created-a'],
+      createdIds: ['created-a'],
+      endpoints,
     });
     await expect(action.rollback()).rejects.toThrow('server error');
     expect(deleteMock).toHaveBeenCalledTimes(1);

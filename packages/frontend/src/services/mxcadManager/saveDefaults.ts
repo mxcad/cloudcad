@@ -11,6 +11,7 @@ import type {
   SaveSdkHandles,
 } from './saveTypes';
 import { hasAnyPermission } from '@cloudcad/platform';
+import { read } from '@/lib/browserStorage';
 
 /**
  * 保存流项目权限缓存（带 TTL，对齐 globalPermissionCache 的 5 分钟）
@@ -64,18 +65,18 @@ export function createDefaultPermissionQuerier(): SavePermissionQuerier {
         perms = cached.perms;
       } else {
         const result = await memberControllerGetUserProjectPermissions({
+          throwOnError: true,
           path: { projectId },
         });
         // SDK 默认不抛错：失败时错误在 result.error。静默降级为"无权限"
         // 会让用户被误导"您没有保存图纸的权限"（历史 bug），必须抛出让上层显示真实原因
-        if (result.error) throw result.error;
         perms = result.data?.permissions || [];
         projectPermsCache.set(projectId, { perms, timestamp: Date.now() });
       }
       return perms.includes(permission);
     },
     async hasLibraryPermission() {
-      const userStr = localStorage.getItem('user');
+      const userStr = read('user');
       if (!userStr) return false;
       const userData = JSON.parse(userStr);
       // 权限码判定收敛到 @cloudcad/platform（与移动端共用一份）；

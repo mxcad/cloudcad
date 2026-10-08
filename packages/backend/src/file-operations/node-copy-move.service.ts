@@ -666,24 +666,17 @@ export class NodeCopyMoveService {
 
   private async filterDescendantNodes(nodeIds: string[]): Promise<string[]> {
     if (nodeIds.length <= 1) return nodeIds;
-    const nodes = await this.prisma.fileSystemNode.findMany({
-      where: { id: { in: nodeIds } },
-      select: { id: true, parentId: true },
-    });
-    const parentMap = new Map<string, string | null>();
-    for (const n of nodes) parentMap.set(n.id, n.parentId);
-    let result = [...nodeIds];
-    let changed = true;
-    while (changed) {
-      const resultSet = new Set(result);
-      const filtered = result.filter((id) => {
-        const parentId = parentMap.get(id);
-        return !(parentId && resultSet.has(parentId));
-      });
-      changed = filtered.length !== result.length;
-      result = filtered;
+    // 包含关系交给 TreeWalker：某被选节点若落在另一被选节点的子树内（含自身），
+    // 则剔除，避免批量 move/copy 对同一子树重复处理——隔层选择 [R, 孙G]（中间 C 未选）
+    // 时 G 会被 R 的子树一并带走，若 G 也保留会对同一节点二次搬动（复制则产生重复副本）。
+    const subtrees = new Map<string, Set<string>>();
+    for (const id of nodeIds) {
+      const ids = await this.treeWalker.getSubtreeIds(id, { includeRoot: true });
+      subtrees.set(id, new Set(ids));
     }
-    return result;
+    return nodeIds.filter((id) =>
+      nodeIds.every((other) => other === id || !subtrees.get(other)!.has(id)),
+    );
   }
 
   async batchMoveNodes(

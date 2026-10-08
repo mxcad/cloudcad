@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Tag } from '@/components/ui/Tag';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { t } from '@/languages';
+import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import { globalShowToast } from '@/utils/notificationEvents';
 import { useCopy } from '@/hooks/useCopy';
 import {
@@ -24,11 +25,6 @@ import {
   useWhitelistSecurityAttempt,
 } from './hooks/useSecurityAccessAttempt';
 import type { SecurityAccessAttemptAggregate } from './types';
-
-
-function formatTime(value: string): string {
-  return new Date(value).toLocaleString();
-}
 
 /**
  * @param embedded 嵌入 IP 访问控制 Tab 时为 true：隐藏独立页头与外边距
@@ -266,7 +262,7 @@ export default function SecurityAccessAttemptPage({
                         {item.account ?? t('—')}
                       </td>
                       <td className="px-4 py-3 text-xs">
-                        {formatTime(item.lastSeen)}
+                        {formatDateTimeWithSeconds(item.lastSeen)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex justify-center gap-1">

@@ -153,11 +153,12 @@ export function useFileOpenGuard({
     const handleSaveRequired = (payload: SaveRequiredDetail) => {
       if (loginPromptDismissedRef.current) return;
 
-      const action = payload?.action || '';
-      if (action.includes(t('另存为'))) return;
-
       if (!isAuthenticated) {
-        setLoginPromptAction(action || t('保存文件'));
+        // 按稳定 kind 取展示文案：原 action.includes(t('另存为')) 分派因生产端恒发
+        // t('保存文件') 而不可达，且跳过 saveAs 会吞掉登录提示（saveAsToCloud 已
+        // cancelLoginRedirect，提示是未登录用户唯一的登录入口），故两种 kind 都弹提示
+        const label = payload?.kind === 'saveAs' ? t('另存为') : t('保存文件');
+        setLoginPromptAction(label);
         setShowLoginPrompt(true);
       }
     };

@@ -9,8 +9,9 @@ export function useDashboardStats() {
   const query = useQuery({
     queryKey: DASHBOARD_STATS_KEY,
     queryFn: async () => {
-      const result = await usersControllerGetDashboardStats();
-      if (result.error) throw result.error;
+      const result = await usersControllerGetDashboardStats({
+        throwOnError: true,
+      });
       return result.data;
     },
   });

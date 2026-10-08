@@ -74,6 +74,7 @@ describe('CacheKeyOperations', () => {
 
       await waitFor(() => {
         expect(apiMocks.cacheMonitorControllerGetValue).toHaveBeenCalledWith({
+          throwOnError: true,
           query: { key: 'user:1' },
         });
       });
@@ -95,6 +96,7 @@ describe('CacheKeyOperations', () => {
       });
       await waitFor(() => {
         expect(apiMocks.cacheMonitorControllerDeleteValue).toHaveBeenCalledWith({
+          throwOnError: true,
           query: { key: 'user:1' },
         });
       });
@@ -139,6 +141,7 @@ describe('CacheKeyOperations', () => {
 
       await waitFor(() => {
         expect(apiMocks.cacheMonitorControllerSetValue).toHaveBeenCalledWith({
+          throwOnError: true,
           body: { key: 'config:theme', value: 'dark', ttl: 60 },
         });
       });
@@ -162,7 +165,10 @@ describe('CacheKeyOperations', () => {
       await waitFor(() => {
         expect(
           apiMocks.cacheMonitorControllerDeleteByPattern
-        ).toHaveBeenCalledWith({ query: { pattern: 'user:*' } });
+        ).toHaveBeenCalledWith({
+          throwOnError: true,
+          query: { pattern: 'user:*' },
+        });
       });
     });
 
@@ -173,6 +179,7 @@ describe('CacheKeyOperations', () => {
 
       await waitFor(() => {
         expect(apiMocks.cacheMonitorControllerCleanup).toHaveBeenCalledWith({
+          throwOnError: true,
           body: { level: 'ALL' },
         });
       });
@@ -194,6 +201,7 @@ describe('CacheKeyOperations', () => {
 
       await waitFor(() => {
         expect(apiMocks.cacheMonitorControllerRefresh).toHaveBeenCalledWith({
+          throwOnError: true,
           body: { key: 'user:1' },
         });
       });

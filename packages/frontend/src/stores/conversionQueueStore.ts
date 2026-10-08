@@ -22,6 +22,7 @@ import type { ConversionTaskItemDto } from '@/api-sdk';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { getValidToken } from '@/utils/tokenUtils';
 import { t } from '@/languages';
+import { read, writeJson } from '@/lib/browserStorage';
 
 /**
  * 统一转换队列（#471 / #475）
@@ -142,9 +143,7 @@ function mapToTaskStatus(
 }
 
 /** 后端任务条目 → 面板任务（云端 live 列表与历史分页共用，映射口径唯一） */
-function mapTaskItem(
-  item: ConversionTaskItemDto
-): ConversionTask {
+function mapTaskItem(item: ConversionTaskItemDto): ConversionTask {
   return {
     id: item.nodeId,
     name: item.name,
@@ -162,7 +161,7 @@ function mapTaskItem(
 
 function loadLocalTasks(): ConversionTask[] {
   try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const raw = read(LOCAL_STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
@@ -186,7 +185,7 @@ function persistLocalTasks(tasks: ConversionTask[]): void {
     const local = tasks
       .filter((t) => t.source === 'local')
       .slice(0, MAX_LOCAL_TASKS);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(local));
+    writeJson(LOCAL_STORAGE_KEY, local);
   } catch {
     // 隐私模式 / 配额满：忽略（本地记录丢失即丢失）
   }
@@ -205,7 +204,7 @@ function loadPanelUi(): PanelUiState {
     size: { ...DEFAULT_PANEL_SIZE },
   };
   try {
-    const raw = localStorage.getItem(PANEL_UI_STORAGE_KEY);
+    const raw = read(PANEL_UI_STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<PanelUiState>;
     const position =
@@ -231,14 +230,7 @@ function persistPanelUi(
   position: { x: number; y: number } | null,
   size: { width: number; height: number }
 ): void {
-  try {
-    localStorage.setItem(
-      PANEL_UI_STORAGE_KEY,
-      JSON.stringify({ position, size })
-    );
-  } catch {
-    // 忽略
-  }
+  writeJson(PANEL_UI_STORAGE_KEY, { position, size });
 }
 
 interface ConversionQueueState {
@@ -351,16 +343,17 @@ export const useConversionQueueStore = create<ConversionQueueState>(
       if (!getValidToken()) return;
       set({ cloudLoading: true, cloudError: null });
       try {
-        const res = await conversionTaskControllerListTasks();
+        const res = await conversionTaskControllerListTasks({
+          throwOnError: true,
+        });
         // SDK 默认不抛错：失败时错误在 res.error
-        if (res.error) throw res.error;
         const cloudTasks = (res.data?.tasks ?? []).map(mapTaskItem);
         // 有云端任务从「进行中/失败」中消失（刚完成）→ 增量刷新历史头部。
         // 后端 listTasks 不含 COMPLETED，完成瞬间该行会从 live 列表蒸发，而历史只在
         // 面板展开时才刷新（refreshHistory 重置分页），此处补齐这个空窗。
         const currentCloudIds = new Set(cloudTasks.map((t) => t.id));
-        const droppedCloudIds = get().tasks
-          .filter((t) => t.source === 'cloud')
+        const droppedCloudIds = get()
+          .tasks.filter((t) => t.source === 'cloud')
           .filter((t) => !currentCloudIds.has(t.id))
           .map((t) => t.id);
         set((state) => {
@@ -415,9 +408,9 @@ export const useConversionQueueStore = create<ConversionQueueState>(
       set({ historyLoading: true });
       try {
         const res = await conversionTaskControllerListHistory({
+          throwOnError: true,
           query: { limit: String(HISTORY_PAGE_SIZE), offset: '0' },
         });
-        if (res.error) throw res.error;
         const fresh = (res.data?.tasks ?? []).map(mapTaskItem);
         set((state) => {
           const loadedIds = new Set(state.history.map((h) => h.id));
@@ -458,13 +451,13 @@ export const useConversionQueueStore = create<ConversionQueueState>(
         // 搜索词下推到 DB（跨分页检索：前端只持有已加载页，无法搜到未加载数据）
         const search = get().search?.trim() || undefined;
         const res = await conversionTaskControllerListHistory({
+          throwOnError: true,
           query: {
             limit: String(HISTORY_PAGE_SIZE),
             offset: String(offset),
             ...(search ? { search } : {}),
           },
         });
-        if (res.error) throw res.error;
         const newTasks = (res.data?.tasks ?? []).map(mapTaskItem);
         set((state) => ({
           history: [...state.history, ...newTasks],
@@ -546,11 +539,9 @@ export const useConversionQueueStore = create<ConversionQueueState>(
         // 无 fileHash 的记录（如 submitTask 失败兜底）只能按 id 去重。
         const rest = state.tasks.filter(
           (t) =>
-            !(
-              task.fileHash
-                ? t.source === 'local' && t.fileHash === task.fileHash
-                : t.id === task.id
-            )
+            !(task.fileHash
+              ? t.source === 'local' && t.fileHash === task.fileHash
+              : t.id === task.id)
         );
         const tasks = [newTask, ...rest].slice(0, MAX_LOCAL_TASKS + 50);
         persistLocalTasks(tasks);

@@ -19,7 +19,9 @@ import { SECURITY_ATTEMPT_PAGE_SIZE } from '../constants';
 import type { SecurityAccessAttemptAggregate } from '../types';
 
 /** 将 SDK 返回的聚合项转换为前端类型（account/userAgent 为 string 或 null） */
-function toAggregate(raw: SecurityAccessAttemptAggregateDto): SecurityAccessAttemptAggregate {
+function toAggregate(
+  raw: SecurityAccessAttemptAggregateDto
+): SecurityAccessAttemptAggregate {
   return {
     ip: raw.ip,
     firstSeen: raw.firstSeen,
@@ -27,7 +29,11 @@ function toAggregate(raw: SecurityAccessAttemptAggregateDto): SecurityAccessAtte
     count: raw.count,
     reasons: raw.reasons as Record<string, number>,
     account:
-      typeof raw.account === 'string' ? raw.account : raw.account ? String(raw.account) : null,
+      typeof raw.account === 'string'
+        ? raw.account
+        : raw.account
+          ? String(raw.account)
+          : null,
     userAgent:
       typeof raw.userAgent === 'string'
         ? raw.userAgent
@@ -51,13 +57,13 @@ export function useSecurityAccessAttemptList(page: number, keyword?: string) {
     }),
     queryFn: async () => {
       const res = await securityAccessAttemptControllerList({
+        throwOnError: true,
         query: {
           page,
           pageSize: SECURITY_ATTEMPT_PAGE_SIZE,
           ...(keyword ? { keyword } : {}),
         },
       });
-      if (res.error) throw res.error;
       const body = res.data;
       return {
         items: (body?.items ?? []).map(toAggregate),
@@ -84,15 +90,19 @@ export function useWhitelistSecurityAttempt(onSuccess?: () => void) {
   return useMutation({
     mutationFn: async (ip: string) => {
       const res = await securityAccessAttemptControllerWhitelist({
+        throwOnError: true,
         body: { ip },
       });
-      if (res.error) throw res.error;
       return res.data;
     },
     onSuccess: () => {
       globalShowToast(t('已加入管理员 IP 白名单'), 'success');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.ipWhitelist.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.securityAttempt.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.ipWhitelist.all,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.securityAttempt.all,
+      });
       onSuccess?.();
     },
     onError: (error) => {
@@ -107,15 +117,19 @@ export function useBlacklistSecurityAttempt(onSuccess?: () => void) {
   return useMutation({
     mutationFn: async (ip: string) => {
       const res = await securityAccessAttemptControllerBlacklist({
+        throwOnError: true,
         body: { ip },
       });
-      if (res.error) throw res.error;
       return res.data;
     },
     onSuccess: () => {
       globalShowToast(t('已加入 IP 黑名单'), 'success');
-      void queryClient.invalidateQueries({ queryKey: queryKeys.ipBlacklist.all });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.securityAttempt.all });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.ipBlacklist.all,
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.securityAttempt.all,
+      });
       onSuccess?.();
     },
     onError: (error) => {

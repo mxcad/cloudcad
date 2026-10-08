@@ -349,9 +349,9 @@ export function useLibraryActions({
             ? libraryControllerResolveDrawingPath
             : libraryControllerResolveBlockPath;
         const result = await resolvePath({
+          throwOnError: true,
           query: { path: normalizedPath },
         });
-        if (result.error) throw result.error;
         const node = result.data as FileSystemNode;
         if (node?.id) {
           navigate(`/library/${libraryType}/${node.id}`);

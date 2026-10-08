@@ -17,6 +17,7 @@ import { RegisterSteps } from './RegisterSteps';
 import { BasicInfoStep } from './BasicInfoStep';
 import { PasswordStep } from './PasswordStep';
 import { RegisterFooter } from './RegisterFooter';
+import { read, erase } from '@/lib/browserStorage';
 import styles from './register.module.css';
 
 export const Register: React.FC = () => {
@@ -42,9 +43,9 @@ export const Register: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const isWechatEntry = searchParams.get('wechat') === '1';
   if (!isWechatEntry) {
-    sessionStorage.removeItem('wechatTempToken');
+    erase('wechatTempToken', 'session');
   }
-  const wechatTempToken = sessionStorage.getItem('wechatTempToken');
+  const wechatTempToken = read('wechatTempToken', 'session');
   const isWechatRegister = !!wechatTempToken;
 
   // ── Form hooks ──────────────────────────────────
@@ -97,14 +98,14 @@ export const Register: React.FC = () => {
           const redirectUrl = new URL(redirectParam, window.location.origin);
           if (redirectUrl.origin !== window.location.origin) {
             // 跨域 redirect（移动端 window.open 打开）：带 token 跳回移动端
-            const accessToken = localStorage.getItem('accessToken');
+            const accessToken = read('accessToken');
             if (accessToken) {
               redirectUrl.searchParams.set('accessToken', accessToken);
-              const refreshToken = localStorage.getItem('refreshToken');
+              const refreshToken = read('refreshToken');
               if (refreshToken) {
                 redirectUrl.searchParams.set('refreshToken', refreshToken);
               }
-              const user = localStorage.getItem('user');
+              const user = read('user');
               if (user) {
                 redirectUrl.searchParams.set('user', user);
               }

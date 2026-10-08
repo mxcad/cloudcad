@@ -23,6 +23,7 @@ export function useForgotPassword() {
 
       try {
         const result = await authControllerForgotPassword({
+          throwOnError: true,
           body: {
             email: params.email,
             phone: params.phone,
@@ -30,7 +31,6 @@ export function useForgotPassword() {
           },
         });
         // SDK 默认不抛错：错误在 result.error，必须显式抛出否则失败时无任何反馈
-        if (result.error) throw result.error;
         const apiResponse = result.data!;
         if (!apiResponse) return null;
         return apiResponse;

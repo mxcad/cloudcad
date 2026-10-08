@@ -14,26 +14,18 @@
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast, showLoadingToast, closeToast, showDialog, showConfirmDialog, showSuccessToast, showFailToast } from 'vant'
+import { showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant'
 import type { ActionSheetAction } from 'vant'
 import {
   projectControllerGetProjects,
   projectControllerCreateProject,
   projectControllerGetPersonalSpace,
-  nodeControllerCreateFolder,
   nodeControllerDeleteNode,
-  nodeControllerBatchDeleteNodes,
-  nodeControllerUpdateNode,
-  nodeControllerMoveNode,
-  nodeControllerCopyNode,
-  nodeControllerBatchMoveNodes,
-  nodeControllerBatchCopyNodes,
   memberControllerGetUserProjectPermissions,
-  trashControllerRestoreTrashItems,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
-import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType, BatchOperationResponseDto } from '@cloudcad/api-sdk/types.gen'
+import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType } from '@cloudcad/api-sdk/types.gen'
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
 import { useViewMode } from '@/composables/useViewMode'
 import { useProjectActions } from '@/composables/useProjectActions'
@@ -43,28 +35,16 @@ import { formatNodeAsItems, formatTime } from '@/composables/useNodeFormatter'
 import type { FileListItem } from '@/composables/useNodeFormatter'
 import { useShellFileOpen } from '@/composables/useShellFileOpen'
 import { useShellStack } from '@/stores/shellStack'
-import { calculateFileHash } from '@/utils/hashUtils'
-import { uploadFile } from '@/services/mobileUploadService'
-import { validateName } from '@/utils/validateName'
 import { vibrate } from '@/utils/vibrate'
 import { useFormatDownload } from '@/composables/useFormatDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
-import type { SelectionActionKey } from '../components/UnifiedFileList.vue'
 import TrashView from '../components/TrashView.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
-import { useTransferTargets } from '@/composables/useTransferTargets'
-import { useCrossProjectTransfer } from '@/composables/useCrossProjectTransfer'
-import { useFileSystemClipboard } from '@/stores/fileSystemClipboard'
-import { useClipboardWrite } from '@/composables/useClipboardWrite'
 import { useClipboardPaste } from '@/composables/useClipboardPaste'
 import { useUndoSnackbar } from '@/composables/useUndoSnackbar'
-import { extractMoveCopyUndoIds } from '@/utils/moveCopyUndo'
-import { filterPasteCycleItems } from '@/utils/pasteCycleGuard'
+import { useFileNodeOps, type FabActionKey } from '@/composables/useFileNodeOps'
 import { isCadFileName } from '@/utils/cadFile'
 import { useNodeDownload } from '@/composables/useNodeDownload'
-import { getNodeInfo } from '@/services/fileService'
-import { warmupHistoricalVersion } from '@/services/versionWarmup'
-import { showExternalReferenceManagePopup } from '@/plugins/vant/components/popup/showExternalReferenceManagePopup'
 import UndoSnackbar from '@/components/UndoSnackbar.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
 import ProjectEditPopup from '../components/ProjectEditPopup.vue'
@@ -75,8 +55,6 @@ import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import ShareCurrentPopup from '@/pages/home/components/ShareCurrentPopup.vue'
 import VersionHistoryPopup from '@/pages/home/components/VersionHistoryPopup.vue'
 import FileFilterPopup from '@/pages/shell/components/FileFilterPopup.vue'
-import type { FileListFilters } from '@/composables/useUnifiedFileList'
-import { runUploadPool } from '@/utils/uploadPool'
 
 const router = useRouter()
 const route = useRoute()
@@ -469,252 +447,44 @@ function onTrashChanged() {
   trashDirty.value = true
 }
 
-// ── 多选操作（B-03/B-17：move 接线；Bug6：复制/剪切写剪贴板）──
-function onPersonalSelectionAction(action: SelectionActionKey, items: Array<{ id: string; name: string }>) {
-  if (action === 'delete') {
-    batchDelete(items)
-  } else if (action === 'copy' || action === 'cut') {
-    // 剪贴板（Bug6）：源根=个人空间；粘贴条由 UnifiedFileList 读取全局剪贴板展示
-    // 个人空间无出向策略字段，write 内部跳过快照（恒允许跨出，由目标入向策略 + 归属权限兜底）
-    clipboardWrite.write(items.map((i) => i.id), action, personalSpaceId.value ?? '', 'personalSpace', personalFileList.currentFolderId.value ?? '')
-    showSuccessToast(
-      action === 'cut'
-        ? t('已剪切 {count} 项', { count: String(items.length) })
-        : t('已复制 {count} 项', { count: String(items.length) })
-    )
-  } else if (action === 'move') {
-    openFolderPicker('move', items)
-  } else if (action === 'download') {
-    void downloadSelection(items)
-  }
-}
-
-async function batchDelete(items: Array<{ id: string; name: string }>) {
-  try {
-    await showDialog({
-      title: t('确认删除'),
-      message: t('确定删除 {count} 个文件/文件夹？', { count: String(items.length) }),
-      showCancelButton: true,
-      className: 'dialog-danger',
-    })
-  } catch { return }
-
-  showLoadingToast({ message: t('删除中...'), forbidClick: true })
-  try {
-    const res = await nodeControllerBatchDeleteNodes({
-      body: { nodeIds: items.map((i) => i.id), permanently: false },
-    })
-    closeToast()
-    if (res.error) throw new Error(String(res.error))
-    // 批量操作部分成功：透传成功/失败计数（对齐 PC「成功删除 N 项，M 项失败」）
-    const data = res.data as BatchOperationResponseDto | undefined
-    const failed = items.length > 1 ? (data?.failedCount ?? 0) : 0
-    if (failed > 0) {
-      showFailToast(t('成功删除 {n} 项，{m} 项失败', { n: String(data?.successCount ?? 0), m: String(failed) }))
-    } else {
-      showSuccessToast(t('删除成功'))
-    }
-    await personalFileList.loadNodes()
-    // 撤销：trash 恢复这批节点 + 刷新文件列表（单步撤销，顶替既有 snackbar）
-    undo.trackUndo(t('已删除 {count} 个文件', { count: String(items.length) }), async () => {
-      const r = await trashControllerRestoreTrashItems({ body: { itemIds: items.map((i) => i.id) } })
-      if (r.error) throw new Error(String(r.error))
-      showSuccessToast(t('已恢复'))
-      await personalFileList.loadNodes()
-    })
-  } catch (e) {
-    closeToast()
-    showFailToast(t('删除失败'))
-  }
-}
-
 // ── 单条目操作菜单（A-03）+ 重命名（A-04）+ 移动/复制（A-05）+ 格式下载（A-06）+ 文件夹下载（A-08）──
-const menuTarget = ref<{ id: string; name: string; isFolder?: boolean; path?: string; projectId?: string } | null>(null)
-const showMenuSheet = ref(false)
+// menuTarget/showMenuSheet 等状态与 onItemMenu/onMenuAction 已收敛进 useFileNodeOps（见文件底部 ctx）
 const menuActions = computed(() => {
   const isFolder = !!menuTarget.value?.isFolder
   // CAD 图纸 → 外部参照管理（对齐 PC isCadFile visibilityCheck；个人空间=所有者恒可管理）
   const isCad = !isFolder && menuTarget.value ? isCadFileName(menuTarget.value.name) : false
-  const actions: Array<{ name: string; color?: string }> = [
-    { name: t('打开') },
+  const actions: Array<{ name: string; key: string; color?: string }> = [
+    { name: t('打开'), key: 'open' },
     // 文件 → 下载（M9：CAD 弹格式选择、非 CAD 原格式直下，对齐 PC 单一「下载」项）；文件夹 → 打包下载（A-08）
-    isFolder ? { name: t('打包下载') } : { name: t('下载') },
+    isFolder ? { name: t('打包下载'), key: 'folderDownload' } : { name: t('下载'), key: 'download' },
     // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
-    ...(isFolder ? [] : [{ name: t('分享') }]),
-    ...(isCad ? [{ name: t('外部参照管理') }] : []),
+    ...(isFolder ? [] : [{ name: t('分享'), key: 'share' }]),
+    ...(isCad ? [{ name: t('外部参照管理'), key: 'externalRef' }] : []),
     // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
-    ...(isFolder ? [] : [{ name: t('版本历史') }]),
-    { name: t('重命名') },
+    ...(isFolder ? [] : [{ name: t('版本历史'), key: 'versionHistory' }]),
+    { name: t('重命名'), key: 'rename' },
     // A-29a：文件夹操作（移动到…/复制到…）与剪贴板操作（复制到剪贴板/剪切）对齐 PC 语义区分
-    { name: t('移动到...') },
-    { name: t('复制到...') },
-    { name: t('复制到剪贴板') },
-    { name: t('剪切') },
-    { name: t('删除'), color: '#ee0a24' },
+    { name: t('移动到...'), key: 'move' },
+    { name: t('复制到...'), key: 'copy' },
+    { name: t('复制到剪贴板'), key: 'copyClipboard' },
+    { name: t('剪切'), key: 'cut' },
+    { name: t('删除'), key: 'delete', color: '#ee0a24' },
   ]
   return actions
 })
 
-function onItemMenu(item: { id: string; name: string; isFolder?: boolean; path?: string; projectId?: string }) {
-  menuTarget.value = item
-  showMenuSheet.value = true
-}
-
-function onMenuAction(action: { name: string }) {
-  showMenuSheet.value = false
-  const target = menuTarget.value
-  if (!target) return
-  if (action.name === t('打开')) {
-    onPersonalItemClick(target)
-  } else if (action.name === t('下载')) {
-    // M9：CAD → 格式选择弹窗（转换下载）；非 CAD → 原格式直下（对齐 PC handleDownload 分流）
-    if (isCadFileName(target.name)) openFormatDownload(target)
-    else void downloadOriginal(target.id, target.name)
-  } else if (action.name === t('打包下载')) {
-    void downloadFolder(target)
-  } else if (action.name === t('分享')) {
-    openShare(target)
-  } else if (action.name === t('外部参照管理')) {
-    void openExternalRefManage(target)
-  } else if (action.name === t('版本历史')) {
-    openVersionHistory(target)
-  } else if (action.name === t('重命名')) {
-    renameTarget.value = target
-    showRename.value = true
-  } else if (action.name === t('移动到...') || action.name === t('复制到...')) {
-    openFolderPicker(action.name === t('移动到...') ? 'move' : 'copy', [target])
-  } else if (action.name === t('复制到剪贴板') || action.name === t('剪切')) {
-    // A-29a：单条目剪贴板（对齐 PC copy_clipboard/cut；粘贴条由 UnifiedFileList 读取全局剪贴板展示）
-    const mode = action.name === t('剪切') ? 'cut' : 'copy'
-    clipboardWrite.write([target.id], mode, personalSpaceId.value ?? '', 'personalSpace', personalFileList.currentFolderId.value ?? '')
-    showSuccessToast(mode === 'cut' ? t('已剪切') : t('已复制'))
-  } else if (action.name === t('删除')) {
-    batchDelete([target])
-  }
-}
-
-/** 外部参照管理（列表直达，无需先打开编辑器）：按节点拉参照列表开管理面板（查看/下载/替换/上传+刷新）；
- *  比 PC 更正确——PC 列表菜单该项实际绑定当前编辑器上下文（checkMissingReferences(undefined)），移动端对点选文件生效 */
-async function openExternalRefManage(target: { id: string }) {
-  await showExternalReferenceManagePopup({
-    ctx: { identifier: target.id, isPublic: false },
-    canManage: true,
-  })
-}
-
-// ── 列表内分享入口（阶段 5）：文件项菜单 → ShareCurrentPopup（有效期/二维码/已有分享/撤销）──
-const showSharePopup = ref(false)
-const shareTarget = ref<{ id: string; name: string } | null>(null)
-
-function openShare(target: { id: string; name: string }) {
-  shareTarget.value = target
-  showSharePopup.value = true
-}
-
-// ── 列表内版本历史（二期 h）：VersionHistoryPopup 显式 target（projectId+path 取自节点）──
-const showVersionPopup = ref(false)
-const versionTarget = ref<{ projectId: string; filePath: string; fileId?: string } | null>(null)
-
-function openVersionHistory(target: { id: string; path?: string; projectId?: string }) {
-  if (!target.path) {
-    showToast(t('该文件没有版本信息'))
-    return
-  }
-  versionTarget.value = {
-    projectId: target.projectId ?? personalFileList.rootId.value ?? '',
-    filePath: target.path,
-    fileId: target.id,
-  }
-  showVersionPopup.value = true
-}
-
-/** 选中历史版本：先预热（H3，对齐 PC）——冷路径「分片下载 + bin→mxweb 转换」可能耗时数十秒，
- *  直接打开会被编辑器 60s 打开超时拖爆；预热完成（202→204）后才走统一打开入口（URL 带 ?v=） */
-async function onOpenHistoricalVersion(payload: { nodeId: string; revision: number }) {
-  showLoadingToast({ message: t('正在准备历史版本文件，请稍候...'), forbidClick: false })
-  try {
-    const nodeInfo = await getNodeInfo(payload.nodeId)
-    if (!nodeInfo.path) throw new Error(t('文件不存在或已被删除'))
-    await warmupHistoricalVersion(nodeInfo.path, payload.revision)
-  } catch (e) {
-    showFailToast(e instanceof Error ? e.message : t('历史版本文件准备失败，请重试'))
-    return
-  }
-  closeToast()
-  const url = new URL(window.location.href)
-  url.searchParams.set('v', String(payload.revision))
-  history.replaceState(history.state, '', url.toString())
-  void openFromList(payload.nodeId, {
-    path: '/shell/file',
-    tab: 1,
-    folderId: personalFileList.currentFolderId.value,
-    breadcrumbs: personalFileList.breadcrumbs.value,
-  })
-}
-
-// ── 高级筛选（二期 d）：确认后交 composable 统一织入 getChildren/search 请求 ──
-const showFilterPopup = ref(false)
-
-function onFilterApply(filters: FileListFilters) {
-  personalFileList.setFilters(filters)
-}
-
 // ── A-06/A-07 格式转换下载 + 批量下载任务面板（个人空间：zip 任务不带 projectId）──
 // 状态机收敛到 useFormatDownload（与 ProjectDetailPage 共用，唯一差异是 zip 是否带 projectId）
+const formatDownload = useFormatDownload()
 const {
   showBatchPanel,
   showFormatPopup,
   formatTarget,
   formatDownloadMode,
   batchConvertCount,
-  openFormatDownload,
   onFormatDownloadConfirm,
-  downloadFolder,
-  downloadSelection,
-} = useFormatDownload()
+} = formatDownload
 
-const showRename = ref(false)
-const renameTarget = ref<{ id: string; name: string; isFolder?: boolean } | null>(null)
-
-async function onRenameConfirm(name: string) {
-  const target = renameTarget.value
-  if (!target) return
-  showRename.value = false
-  showLoadingToast({ message: t('重命名中...'), forbidClick: true })
-  try {
-    const res = await nodeControllerUpdateNode({
-      path: { nodeId: target.id },
-      body: { name },
-    })
-    closeToast()
-    if (res.error) throw new Error(String(res.error))
-    showSuccessToast(t('重命名成功'))
-    await personalFileList.loadNodes()
-    // 撤销：回写原名（对齐 PC rename undo rollback）
-    undo.trackUndo(t('已重命名'), async () => {
-      const r = await nodeControllerUpdateNode({ path: { nodeId: target.id }, body: { name: target.name } })
-      if (r.error) throw new Error(String(r.error))
-      showSuccessToast(t('已撤销'))
-      await personalFileList.loadNodes()
-    })
-  } catch (e) {
-    closeToast()
-    showFailToast(t('重命名失败'))
-  }
-}
-
-const showFolderPicker = ref(false)
-const folderPickerOp = ref<'move' | 'copy' | null>(null)
-const folderPickerItems = ref<Array<{ id: string; name: string }>>([])
-
-// ── 二期 g 跨项目移动/复制：目标根=个人空间+我的项目，切根实时预判六域矩阵 ──
-const transferTargets = useTransferTargets()
-const crossTransfer = useCrossProjectTransfer()
-
-// ── Bug6 剪贴板粘贴：把剪贴板内容粘贴到当前文件夹（cut→move 成功后清空）──
-const clipboard = useFileSystemClipboard()
-// 复制/剪切写入 + 源项目 6 域出向策略快照（跨项目粘贴预判前置数据）
-const clipboardWrite = useClipboardWrite()
 // 粘贴预判：目标=当前个人空间；策略禁止跨项目转移 → 禁用粘贴 + 原因（对齐 PC）
 const pastePolicy = useClipboardPaste(() => ({
   id: personalSpaceId.value ?? '',
@@ -723,162 +493,6 @@ const pastePolicy = useClipboardPaste(() => ({
 
 // 删除/复制/移动撤销：操作成功后浮出撤销条，限时内点「撤销」回滚；回滚失败经 onError 弹「撤销失败」
 const undo = useUndoSnackbar(5000, () => showFailToast(t('撤销失败')))
-
-function onClearPaste() {
-  clipboard.clearClipboard()
-}
-
-async function onPaste() {
-  if (!clipboard.hasItems || !clipboard.mode) return
-  // 跨项目粘贴被源/目标策略禁止：粘贴条已禁用，这里兜底拦截（对齐 PC canPaste 门控）
-  if (!pastePolicy.canPaste.value) {
-    showFailToast(pastePolicy.pasteDisabledReason.value || t('当前策略不允许粘贴'))
-    return
-  }
-  const mode = clipboard.mode
-  const targetId = personalFileList.currentFolderId.value ?? personalSpaceId.value
-  if (!targetId) {
-    showFailToast(t('无法确定粘贴位置'))
-    return
-  }
-  const op = mode === 'cut' ? 'move' : 'copy'
-  // 跨根剪切（源项目→个人空间等）：文件将从源移走，二次确认（对齐 PC）
-  if (mode === 'cut' && clipboard.sourceRootId && clipboard.sourceRootId !== (personalSpaceId.value ?? '')) {
-    try {
-      await showConfirmDialog({
-        title: t('跨项目移动'),
-        message: t('将把 {count} 个项目移动到当前文件夹，源项目的文件将被移走，确定？', { count: String(clipboard.itemIds.length) }),
-        confirmButtonText: t('确定'),
-        cancelButtonText: t('取消'),
-      })
-    } catch {
-      return
-    }
-  }
-  // 环防护（对齐 PC D2）：剔除子树包含粘贴目标的剪贴板项（移入/复制到自身后代后端恒拒，先剔除避免批量部分失败）
-  const pasteIds = filterPasteCycleItems(clipboard.itemIds, [
-    ...personalFileList.breadcrumbs.value.map((b) => b.id),
-    targetId,
-  ])
-  if (pasteIds.length === 0) {
-    showFailToast(t('没有可粘贴的项目'))
-    return
-  }
-  const items = pasteIds.map((id) => ({ id, name: '' }))
-  void doMoveOrCopy({ id: targetId, name: '' }, op, items, true)
-}
-
-async function openFolderPicker(op: 'move' | 'copy', items: Array<{ id: string; name: string }>) {
-  if (!personalSpaceId.value) {
-    showFailToast(t('文件夹未就绪，请稍后再试'))
-    return
-  }
-  folderPickerOp.value = op
-  folderPickerItems.value = items
-  // 拉目标根（含个人空间）+ 源设置（源=个人空间，无项目转移设置）；初始根=个人空间根（对齐 PC 从根下钻）
-  await transferTargets.load(personalSpaceId.value)
-  await crossTransfer.init({ id: personalSpaceId.value, name: t('个人空间'), domain: 'personalSpace' }, op)
-  showFolderPicker.value = true
-}
-
-async function onPickerRootChange(rootId: string) {
-  await crossTransfer.onRootChange(rootId, transferTargets.roots.value)
-}
-
-/** 后端错误透传：403 策略被拒/权限/配额 等文案直接展示，不吞成通用「移动失败」 */
-function transferErrorMessage(e: unknown, op: 'move' | 'copy'): string {
-  const msg = e instanceof Error ? e.message : ''
-  if (msg) return msg
-  return op === 'move' ? t('移动失败') : t('复制失败')
-}
-
-async function doMoveOrCopy(folder: { id: string; name: string }, op: 'move' | 'copy', items: Array<{ id: string; name: string }>, isClipboardPaste = false) {
-  showLoadingToast({ message: isClipboardPaste ? t('粘贴中...') : op === 'move' ? t('移动中...') : t('复制中...'), forbidClick: true })
-  try {
-    const res = items.length === 1
-      ? op === 'move'
-        ? await nodeControllerMoveNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } })
-        : await nodeControllerCopyNode({ path: { nodeId: items[0].id }, body: { targetParentId: folder.id } })
-      : op === 'move'
-        ? await nodeControllerBatchMoveNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
-        : await nodeControllerBatchCopyNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
-    closeToast()
-    if (res.error) throw new Error(String(res.error))
-    // 批量操作部分成功：透传成功/失败计数（对齐 PC「成功移动 N 项，M 项失败」）
-    const data = res.data as BatchOperationResponseDto | undefined
-    const failed = items.length > 1 ? (data?.failedCount ?? 0) : 0
-    if (failed > 0) {
-      const n = String(data?.successCount ?? 0)
-      const m = String(failed)
-      showFailToast(op === 'move' ? t('成功移动 {n} 项，{m} 项失败', { n, m }) : t('成功复制 {n} 项，{m} 项失败', { n, m }))
-    } else {
-      showSuccessToast(isClipboardPaste ? t('粘贴成功') : op === 'move' ? t('移动成功') : t('复制成功'))
-    }
-    // ── 撤销（须在剪切+粘贴清空剪贴板前捕获源文件夹）──
-    // 回滚目标=仅实际变化的项（move=successIds、copy=createdIds）；部分成功只回滚成功项（对齐 PC）
-    const undoIds = extractMoveCopyUndoIds({
-      op,
-      isSingle: items.length === 1,
-      singleResultId: (res.data as { id?: string } | undefined)?.id,
-      batchData: data,
-      originalIds: items.map((i) => i.id),
-    })
-    if (op === 'copy') {
-      // 复制撤销：删除新建副本
-      if (undoIds.length > 0) {
-        undo.trackUndo(t('已复制 {count} 个文件', { count: String(undoIds.length) }), async () => {
-          const r = await nodeControllerBatchDeleteNodes({ body: { nodeIds: undoIds, permanently: true } })
-          if (r.error) throw new Error(String(r.error))
-          showSuccessToast(t('已撤销'))
-          await personalFileList.loadNodes()
-        })
-      }
-    } else {
-      // 移动撤销：把成功移动的节点移回源文件夹（剪切+粘贴=剪贴板源文件夹；直接移动=当前浏览文件夹）
-      const sourceFolder = isClipboardPaste
-        ? clipboard.sourceFolderId
-        : (personalFileList.currentFolderId.value ?? '')
-      if (undoIds.length > 0 && sourceFolder) {
-        undo.trackUndo(t('已移动 {count} 个文件', { count: String(undoIds.length) }), async () => {
-          const r = await nodeControllerBatchMoveNodes({ body: { nodeIds: undoIds, targetParentId: sourceFolder } })
-          if (r.error) throw new Error(String(r.error))
-          showSuccessToast(t('已撤销'))
-          await personalFileList.loadNodes()
-        })
-      }
-    }
-    // 剪切粘贴：只要有项成功就清空剪贴板（对齐 PC movedIds.length>0；全失败保留可重试；复制粘贴保留）
-    if (isClipboardPaste && op === 'move') {
-      const moved = items.length === 1 ? 1 : (data?.successCount ?? 0)
-      if (moved > 0) clipboard.clearClipboard()
-    }
-    await personalFileList.loadNodes()
-  } catch (e) {
-    closeToast()
-    showFailToast(transferErrorMessage(e, op))
-  }
-}
-
-async function onFolderPickerSelect(folder: { id: string; name: string; rootId: string }) {
-  const op = folderPickerOp.value
-  const items = folderPickerItems.value
-  if (!op) return
-  showFolderPicker.value = false
-  // 跨项目 move：个人空间文件将被移走，二次确认（对齐 PC）
-  if (op === 'move' && crossTransfer.isCrossProject.value) {
-    try {
-      await showConfirmDialog({
-        title: t('跨项目移动'),
-        message: t('将把 {count} 个项目移动到目标项目，源项目的文件将被移走，确定？', { count: String(items.length) }),
-        confirmButtonText: t('确定'),
-        cancelButtonText: t('取消'),
-      })
-    } catch {
-      return // 取消
-    }
-  }
-  void doMoveOrCopy(folder, op, items)
-}
 
 // ── 新建项目弹窗 ──
 const showCreateProjectDialog = ref(false)
@@ -911,13 +525,8 @@ async function onCreateProjectConfirm() {
   }
 }
 
-// ── 新建文件夹弹窗 ──
-const showCreateFolderDialog = ref(false)
-const folderNameInput = ref('')
-const showFabSheet = ref(false)
-
 // van-action-sheet 用 name 字段（van-popover 用 text）；key 作跨语言稳定判别符
-type FabActionKey = 'createFolder' | 'createDrawing' | 'uploadFile' | 'downloadTasks'
+// （showCreateFolderDialog/folderNameInput/showFabSheet 已收敛进 useFileNodeOps，见文件底部 ctx）
 type FabAction = ActionSheetAction & { key: FabActionKey }
 
 // 项目 Tab：+ 直接新建项目（唯一动作，无需选择）；个人空间 Tab：+ 弹菜单选新建/上传/下载任务
@@ -937,73 +546,8 @@ const fabActions = computed<FabAction[]>(() => [
   { key: 'downloadTasks', name: t('下载任务'), icon: 'down' },
 ])
 
-function openCreateFolderDialog() {
-  showCreateFolderDialog.value = true
-  folderNameInput.value = ''
-}
-
-function onFabSheetSelect(action: FabAction) {
-  showFabSheet.value = false
-  switch (action.key) {
-    case 'createFolder':
-      openCreateFolderDialog()
-      break
-    case 'createDrawing':
-      openCreateDrawingDialog()
-      break
-    case 'uploadFile':
-      triggerFileUpload()
-      break
-    case 'downloadTasks':
-      showBatchPanel.value = true
-      break
-  }
-}
-
-async function onCreateFolderConfirm() {
-  const name = folderNameInput.value.trim()
-  const validation = validateName(name)
-  if (!validation.valid) {
-    showToast(validation.error || t('文件夹名称无效'))
-    return
-  }
-  const parentId = personalFileList.currentFolderId.value
-  if (!parentId) return
-
-  showCreateFolderDialog.value = false
-  showLoadingToast({ message: t('创建中...'), forbidClick: true })
-  try {
-    const res = await nodeControllerCreateFolder({
-      path: { parentId },
-      body: { name },
-    })
-    closeToast()
-    if (res.error) throw new Error(String(res.error))
-    showToast(t('文件夹创建成功'))
-    await personalFileList.loadNodes()
-    // 撤销：彻底删除新建文件夹（对齐 PC createFolder undo rollback）
-    const createdId = (res.data as { id?: string } | undefined)?.id
-    if (createdId) {
-      undo.trackUndo(t('已创建文件夹'), async () => {
-        const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
-        if (r.error) throw new Error(String(r.error))
-        showSuccessToast(t('已撤销'))
-        await personalFileList.loadNodes()
-      })
-    }
-  } catch (e) {
-    closeToast()
-    showToast(t('创建失败，请重试'))
-  }
-}
-
 // ── 新建图纸（create-drawing 空白模板，后端自动补 .mxweb 后缀）──
-const {
-  showCreateDrawingDialog,
-  drawingNameInput,
-  openCreateDrawingDialog,
-  onCreateDrawingConfirm,
-} = useCreateDrawing(
+const createDrawing = useCreateDrawing(
   () => personalFileList.currentFolderId.value,
   () => personalFileList.loadNodes(),
   // 撤销：彻底删除新建图纸（对齐 PC createDrawing undo rollback）
@@ -1016,45 +560,82 @@ const {
     })
   },
 )
+const {
+  showCreateDrawingDialog,
+  drawingNameInput,
+  openCreateDrawingDialog,
+  onCreateDrawingConfirm,
+} = createDrawing
 
-// ── 文件上传 ──
-const fileInputRef = ref<HTMLInputElement | null>(null)
-
-function triggerFileUpload() {
-  fileInputRef.value?.click()
-}
-
-/**
- * 上传走 mobileUploadService（SDK 生成函数 + MD5 哈希 + 秒传检查 + 5MB 分片），
- * 与 PC 端上传管线同一套后端契约；禁止原生 fetch/FormData（见 AGENTS.md 三层一致性）。
- */
-async function onFileInputChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  const files = Array.from(input.files ?? [])
-  input.value = ''
-  if (files.length === 0) return
-
-  const parentId = personalFileList.currentFolderId.value
-  if (!parentId) return
-
-  // 多文件上传（阶段 5）：并发 2，逐文件独立成功/失败 toast，全部结束后统一重载一次
-  showLoadingToast({ message: t('上传中...'), forbidClick: true, duration: 0 })
-  try {
-    await runUploadPool(
-      files,
-      async (file) => {
-        const hash = await calculateFileHash(file)
-        await uploadFile({ file, hash, nodeId: parentId })
-      },
-      (_file, ok) => {
-        showToast(ok ? t('上传成功') : t('上传失败，请重试'))
-      },
-    )
-  } finally {
-    closeToast()
-    await personalFileList.loadNodes()
-  }
-}
+// ── 文件节点操作层（C2：与 ProjectDetailPage 共用 useFileNodeOps，差异收敛进 ctx）──
+const {
+  menuTarget,
+  showMenuSheet,
+  showSharePopup,
+  shareTarget,
+  showVersionPopup,
+  versionTarget,
+  showFilterPopup,
+  showRename,
+  renameTarget,
+  showFolderPicker,
+  showCreateFolderDialog,
+  folderNameInput,
+  showFabSheet,
+  fileInputRef,
+  onItemMenu,
+  onMenuAction,
+  onSelectionAction,
+  batchDelete,
+  openExternalRefManage,
+  openShare,
+  openVersionHistory,
+  onOpenHistoricalVersion,
+  onFilterApply,
+  onRenameConfirm,
+  onClearPaste,
+  onPaste,
+  openFolderPicker,
+  onPickerRootChange,
+  onFolderPickerSelect,
+  openCreateFolderDialog,
+  onFabSheetSelect,
+  onCreateFolderConfirm,
+  triggerFileUpload,
+  onFileInputChange,
+  // 文件夹选择器（NodeFolderPicker 模板绑定）：目标根/策略预判/源项排除
+  transferTargets,
+  crossTransfer,
+  folderPickerItems,
+} = useFileNodeOps({
+  reloadAfterOp: () => personalFileList.loadNodes(),
+  currentFolderId: personalFileList.currentFolderId,
+  breadcrumbs: personalFileList.breadcrumbs,
+  rootId: personalFileList.rootId,
+  setFilters: personalFileList.setFilters,
+  spaceId: personalSpaceId,
+  personalSpaceId,
+  ensurePersonalSpaceId,
+  domain: 'personalSpace',
+  openItem: onPersonalItemClick,
+  openHistoricalVersion: (nodeId) => {
+    void openFromList(nodeId, {
+      path: '/shell/file',
+      tab: 1,
+      folderId: personalFileList.currentFolderId.value,
+      breadcrumbs: personalFileList.breadcrumbs.value,
+    })
+  },
+  resolveParentId: () => personalFileList.currentFolderId.value,
+  folderPickerGuard: () => personalSpaceId.value,
+  transferSource: () => ({ id: personalSpaceId.value as string, name: t('个人空间'), domain: 'personalSpace' }),
+  pasteGate: pastePolicy.canPaste,
+  pasteDisabledReason: pastePolicy.pasteDisabledReason,
+  downloadOriginal,
+  formatDownload,
+  createDrawing,
+  undo,
+})
 </script>
 
 <template>
@@ -1213,7 +794,7 @@ async function onFileInputChange(e: Event) {
           @item-menu="onItemMenu"
           @breadcrumb-click="personalFileList.goBackTo"
           @mode-change="onPersonalModeChange"
-          @selection-action="onPersonalSelectionAction"
+          @selection-action="onSelectionAction"
           @search="personalFileList.setSearch"
           @load-more="personalFileList.loadMore"
           @load-more-retry="personalFileList.retryLoadMore"

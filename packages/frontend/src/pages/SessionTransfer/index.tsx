@@ -29,7 +29,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { sessionTransferControllerConsume } from '@/api-sdk';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
-import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
+import { clearAuthState, saveAuthState } from '@/lib/authState';
 import { cancelProactiveRefresh } from '@/config/tokenRefresh';
 import { useBrandConfig } from '../../contexts/BrandContext';
 import { Button } from '@/components/ui/Button';
@@ -54,8 +54,7 @@ export const SessionTransfer: React.FC = () => {
   if (rawRedirect) {
     try {
       const url = new URL(rawRedirect, window.location.origin);
-      redirectTarget =
-        url.pathname + url.search + url.hash || DEFAULT_REDIRECT;
+      redirectTarget = url.pathname + url.search + url.hash || DEFAULT_REDIRECT;
     } catch {
       redirectTarget = DEFAULT_REDIRECT;
     }
@@ -78,9 +77,7 @@ export const SessionTransfer: React.FC = () => {
 
     // ① 清旧凭证（三键）+ 用户级内存缓存 + 取消旧主动刷新定时器
     cancelProactiveRefresh();
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    clearAuthState();
     // 会话转移是 SPA 流程不整页刷新：清掉上一会话的用户级内存缓存（跨账号残留防护）
     useFileSystemStore.getState().setPersonalSpaceId(null);
 
@@ -88,15 +85,17 @@ export const SessionTransfer: React.FC = () => {
       try {
         // ② 消费凭证，后端销毁旧会话并签发新会话（同时下发新 httpOnly cookie）
         const result = await sessionTransferControllerConsume({
+          throwOnError: true,
           body: { token },
         });
         // SDK 默认不抛错：失败时错误在 result.error，必须抛出才能进入错误分支
-        if (result.error) throw result.error;
         const data = result.data!;
         // ③ 写入新凭证（localStorage 三键）
-        setAccessToken(data.accessToken);
-        setRefreshToken(data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        saveAuthState({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          user: data.user ?? null,
+        });
         // ④ 整页刷新，AuthContext 从干净 localStorage 重建
         window.location.replace(redirectTarget);
       } catch (err: unknown) {
@@ -156,9 +155,7 @@ export const SessionTransfer: React.FC = () => {
     <div className={styles.authPage}>
       <div className={styles.authContainer}>
         {state === 'loading' ? renderLoading() : renderError()}
-        <p className={styles.copyright}>
-          {getCopyrightLine(appName)}
-        </p>
+        <p className={styles.copyright}>{getCopyrightLine(appName)}</p>
       </div>
     </div>
   );

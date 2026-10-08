@@ -37,9 +37,9 @@ export const useProjectRoleCRUD = (projectId: string) => {
     queryKey: [...PROJECT_ROLES_BY_PROJECT_KEY, projectId],
     queryFn: async () => {
       const result = await rolesControllerGetProjectRolesByProject({
+        throwOnError: true,
         path: { projectId },
       });
-      if (result.error) throw result.error;
       return unwrapResponse<ProjectRoleDto[]>(result.data) || [];
     },
     enabled: !!projectId,
@@ -53,6 +53,7 @@ export const useProjectRoleCRUD = (projectId: string) => {
       permissions: string[];
     }) => {
       const result = await projectRolesControllerCreateProjectRole({
+        throwOnError: true,
         path: { projectId },
         body: {
           name: data.name,
@@ -60,7 +61,6 @@ export const useProjectRoleCRUD = (projectId: string) => {
           permissions: data.permissions as CreateProjectRoleDto['permissions'],
         },
       });
-      if (result.error) throw result.error;
       return result.data;
     },
     onSuccess: () => {
@@ -80,6 +80,7 @@ export const useProjectRoleCRUD = (projectId: string) => {
       data: { name: string; description: string; permissions: string[] };
     }) => {
       const result = await projectRolesControllerUpdateProjectRole({
+        throwOnError: true,
         path: { projectId, id },
         body: {
           name: data.name,
@@ -87,7 +88,6 @@ export const useProjectRoleCRUD = (projectId: string) => {
           permissions: data.permissions as CreateProjectRoleDto['permissions'],
         },
       });
-      if (result.error) throw result.error;
       return result.data;
     },
     onSuccess: () => {
@@ -101,9 +101,9 @@ export const useProjectRoleCRUD = (projectId: string) => {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const result = await projectRolesControllerDeleteProjectRole({
+        throwOnError: true,
         path: { projectId, id },
       });
-      if (result.error) throw result.error;
       return result.data;
     },
     onSuccess: () => {

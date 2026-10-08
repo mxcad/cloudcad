@@ -43,7 +43,10 @@ describe('UserCrudService.updateMembership', () => {
         { provide: RuntimeConfigService, useValue: {} },
         { provide: PASSWORD_HASHER, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
-        { provide: MembershipService, useValue: {} },
+        {
+          provide: MembershipService,
+          useValue: { hasValidExternalWatermark: jest.fn().mockResolvedValue(false) },
+        },
         { provide: StorageInfoService, useValue: storageInfoService },
         {
           provide: StorageUsageService,

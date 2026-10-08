@@ -55,9 +55,10 @@ const getFilePicker = (): HTMLInputElement => {
 
 async function getPersonalSpaceId(): Promise<string | null> {
   try {
-    const response = await projectControllerGetPersonalSpace();
+    const response = await projectControllerGetPersonalSpace({
+      throwOnError: true,
+    });
     // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-    if (response.error) throw response.error;
     return response.data?.id || null;
   } catch (error) {
     handleError(error, 'mxcadManager: getPersonalSpaceId');
@@ -66,10 +67,11 @@ async function getPersonalSpaceId(): Promise<string | null> {
 }
 
 async function getUploadTargetNodeId(): Promise<string> {
-  const personalSpaceResponse = await projectControllerGetPersonalSpace();
+  const personalSpaceResponse = await projectControllerGetPersonalSpace({
+    throwOnError: true,
+  });
   // SDK 默认不抛错：失败时错误在 result.error，透传后端真实原因
   // （此前固定显示"无法获取私人空间，请联系管理员"掩盖 401/无权限等原因）
-  if (personalSpaceResponse.error) throw personalSpaceResponse.error;
   const personalSpace = personalSpaceResponse.data;
   if (!personalSpace?.id) throw new Error(t('无法获取私人空间，请联系管理员'));
   const currentProjectId =
@@ -231,8 +233,7 @@ export async function handlePublicUpload(
   // 转换」，不该进队列——此前在算 hash 之前就先塞一条 processing 行，每次打开都会
   // 留下一条与是否命中缓存无关的记录。
   const localTaskId = `local_public_${Date.now()}`;
-  const { addLocalTask, updateTaskStatus } =
-    useConversionQueueStore.getState();
+  const { addLocalTask, updateTaskStatus } = useConversionQueueStore.getState();
   try {
     showGlobalLoading(t('正在计算文件哈希...'));
     const hash = await calculateFileHash(file);

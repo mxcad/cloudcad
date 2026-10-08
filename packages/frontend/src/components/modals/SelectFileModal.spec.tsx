@@ -123,6 +123,7 @@ describe('SelectFileModal', () => {
 
     await waitFor(() =>
       expect(mockFns.nodeControllerGetChildren).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { nodeId: 'ps-1' },
       })
     );

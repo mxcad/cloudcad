@@ -86,14 +86,6 @@ export interface ExtRefUploadResult {
 }
 
 /**
- * 文件去重检查结果
- */
-export interface DuplicateCheckResult {
-  isDuplicate: boolean;
-  existingNodeId: string | null;
-}
-
-/**
  * 等待文件就绪的返回类型
  */
 export interface FileReadyInfo {

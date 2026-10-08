@@ -21,7 +21,7 @@ export class SaveCommand implements Command {
   async execute(ctx: CommandContext): Promise<CommandResult> {
     try {
       if (!isAuthenticated() || isAccessTokenExpired()) {
-        emit(CAD_EVENTS.SAVE_REQUIRED, { action: t('保存文件') });
+        emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'save' });
         return { success: false, error: 'unauthorized' };
       }
 

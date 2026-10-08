@@ -1,7 +1,8 @@
 import { t } from '@/languages';
 import { showLoadingToast, closeToast, showToast } from 'vant';
 import { useEditorStore } from '../stores/editor';
-import { getCooperate, encodeUserData, syncSessionFromWorkData, exitGuardRef } from './useCooperate';
+import { encodeUserData } from '@cloudcad/platform';
+import { getCooperate, syncSessionFromWorkData, exitGuardRef } from './useCooperate';
 import type { Ref } from 'vue';
 
 interface UserInfo {

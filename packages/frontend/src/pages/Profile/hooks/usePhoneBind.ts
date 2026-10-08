@@ -17,17 +17,18 @@ export const usePhoneBind = () => {
   const sendSmsCode = useMutation({
     mutationFn: async (params: { phone: string }) => {
       const result = await authControllerSendSmsCode({
+        throwOnError: true,
         body: { phone: params.phone, scene: 'bind' },
       });
-      if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
     },
   });
 
   const sendUnbindPhoneCode = useMutation({
     mutationFn: async () => {
-      const result = await authControllerSendUnbindPhoneCode();
-      if (result.error) throw result.error;
+      const result = await authControllerSendUnbindPhoneCode({
+        throwOnError: true,
+      });
       return result.data as { success?: boolean; message?: string };
     },
   });
@@ -35,9 +36,9 @@ export const usePhoneBind = () => {
   const verifyUnbindPhone = useMutation({
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerVerifyUnbindPhoneCode({
+        throwOnError: true,
         body: { code: params.code } satisfies VerifyUnbindCodeDto,
       });
-      if (result.error) throw result.error;
       return result.data as {
         success?: boolean;
         message?: string;
@@ -49,9 +50,9 @@ export const usePhoneBind = () => {
   const bindPhone = useMutation({
     mutationFn: async (params: { phone: string; code: string }) => {
       const result = await authControllerBindPhone({
+        throwOnError: true,
         body: { phone: params.phone, code: params.code } satisfies BindPhoneDto,
       });
-      if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
     },
   });
@@ -63,13 +64,13 @@ export const usePhoneBind = () => {
       token: string;
     }) => {
       const result = await authControllerRebindPhone({
+        throwOnError: true,
         body: {
           phone: params.phone,
           code: params.code,
           token: params.token,
         } satisfies RebindPhoneDto,
       });
-      if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
     },
   });
@@ -78,9 +79,9 @@ export const usePhoneBind = () => {
     // 解绑手机号需验证原手机号验证码（后端 unbind-phone 必填 code）
     mutationFn: async (params: { code: string }) => {
       const result = await authControllerUnbindPhone({
+        throwOnError: true,
         body: { code: params.code } satisfies VerifyUnbindCodeDto,
       });
-      if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
     },
   });

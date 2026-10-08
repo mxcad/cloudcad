@@ -51,8 +51,10 @@ export class MxCADManager {
   }
 
   async openFile(payload: OpenFilePayload): Promise<void> {
-    const { exitCollaborationIfNeeded } = await import('./mxcadCollaboration');
-    exitCollaborationIfNeeded();
+    // 完整退出命令：加入在途（joining）时等引擎回调落定再退出，
+    // 避免「新文件已打开但旧协同 session 仍挂着」
+    const { exitCollaboration } = await import('./mxcadCollaboration');
+    await exitCollaboration();
     return this.instanceManager.openFile(payload);
   }
 

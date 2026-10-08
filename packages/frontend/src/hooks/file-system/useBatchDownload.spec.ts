@@ -254,7 +254,10 @@ describe('useBatchDownload — individual 任务状态回写（回归：曾因�
 
     await result.current.cancelTask('task-1');
 
-    expect(mockCancel).toHaveBeenCalledWith({ path: { taskId: 'task-1' } });
+    expect(mockCancel).toHaveBeenCalledWith({
+      throwOnError: true,
+      path: { taskId: 'task-1' },
+    });
     expect(findTask('task-1')?.status).toBe('CANCELLED');
   });
 });
@@ -267,7 +270,8 @@ describe('useBatchDownload — VIP 门控错误处理（回归：购买弹窗 ow
 
   it('createZipTask 遇 VIP_FEATURE_REQUIRED → 返回 null 且不 toast', async () => {
     const showToast = vi.fn();
-    mockCreate.mockResolvedValue({ error: vipError });
+    // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
+    mockCreate.mockRejectedValue(vipError);
     const { result } = renderHook(() => useBatchDownload(showToast));
 
     const taskId = await result.current.createZipTask([fileItem]);
@@ -278,8 +282,9 @@ describe('useBatchDownload — VIP 门控错误处理（回归：购买弹窗 ow
 
   it('createZipTask 遇非 VIP 错误 → toast 后端消息（既有行为不变）', async () => {
     const showToast = vi.fn();
-    mockCreate.mockResolvedValue({
-      error: { code: 'INTERNAL_SERVER_ERROR', message: '服务器内部错误' },
+    mockCreate.mockRejectedValue({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: '服务器内部错误',
     });
     const { result } = renderHook(() => useBatchDownload(showToast));
 
@@ -293,7 +298,7 @@ describe('useBatchDownload — VIP 门控错误处理（回归：购买弹窗 ow
     const mockRetry = batchDownloadControllerRetryTask as ReturnType<
       typeof vi.fn
     >;
-    mockRetry.mockResolvedValue({ error: vipError });
+    mockRetry.mockRejectedValue(vipError);
     const { result } = renderHook(() => useBatchDownload(showToast));
 
     await result.current.retryTask('task-1');
@@ -359,6 +364,7 @@ describe('useBatchDownload — 单文件格式下载走独立路由（回归：�
     expect(mockCreateSingleFile).toHaveBeenCalledTimes(1);
     // 平铺 DTO：单文件 + 单格式，不经过 fileList/mode
     expect(mockCreateSingleFile).toHaveBeenCalledWith({
+      throwOnError: true,
       body: {
         nodeId: 'node-9',
         fileName: 'a.mxweb',
@@ -399,6 +405,7 @@ describe('useBatchDownload — 单文件格式下载走独立路由（回归：�
     expect(mockCreateSingleFile).toHaveBeenCalledTimes(1);
     // fileHash-only（CAD 编辑器内存导出上传的临时文件）：body 传 fileHash，nodeId 缺省
     expect(mockCreateSingleFile).toHaveBeenCalledWith({
+      throwOnError: true,
       body: {
         fileHash: 'hash-abc',
         fileName: 'drawing.mxweb',

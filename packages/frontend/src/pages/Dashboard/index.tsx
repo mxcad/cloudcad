@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -97,9 +103,10 @@ export const Dashboard: React.FC = () => {
   const handleRefreshDashboard = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const result = await usersControllerGetDashboardStats();
+      const result = await usersControllerGetDashboardStats({
+        throwOnError: true,
+      });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让用户感知刷新失败
-      if (result.error) throw result.error;
       if (result.data) {
         setRefreshedStats(result.data);
       }
@@ -147,9 +154,10 @@ export const Dashboard: React.FC = () => {
         setProjectFormData({ name: '', description: '' });
 
         try {
-          const result = await usersControllerGetDashboardStats();
+          const result = await usersControllerGetDashboardStats({
+            throwOnError: true,
+          });
           // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-          if (result.error) throw result.error;
           if (result.data) {
             setRefreshedStats(result.data);
           }
@@ -163,7 +171,10 @@ export const Dashboard: React.FC = () => {
         console.error('创建项目失败:', err);
         // 同类问题：创建失败必须可见（与 handleCreateDrawing 一致），
         // 仅 console.error 用户看不到任何提示
-        globalShowToast(getErrorMessage(err) || t('创建项目失败，请重试'), 'error');
+        globalShowToast(
+          getErrorMessage(err) || t('创建项目失败，请重试'),
+          'error'
+        );
       }
     },
     [projectFormData, createProject]
@@ -177,8 +188,9 @@ export const Dashboard: React.FC = () => {
       setIsDrawingModalOpen(false);
       setDrawingName('');
       try {
-        const result = await usersControllerGetDashboardStats();
-        if (result.error) throw result.error;
+        const result = await usersControllerGetDashboardStats({
+          throwOnError: true,
+        });
         if (result.data) {
           setRefreshedStats(result.data);
         }
@@ -188,7 +200,10 @@ export const Dashboard: React.FC = () => {
       globalShowToast(t('图纸创建成功'), 'success');
     } catch (err) {
       console.error('创建图纸失败:', err);
-      globalShowToast(getErrorMessage(err) || t('创建图纸失败，请重试'), 'error');
+      globalShowToast(
+        getErrorMessage(err) || t('创建图纸失败，请重试'),
+        'error'
+      );
     }
   }, [drawingName, createDrawing]);
 

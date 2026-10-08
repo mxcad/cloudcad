@@ -28,7 +28,7 @@ import {
 } from '../stores/conversionQueueStore';
 import { toggleFileQueuePanel } from './conversion-panel/ConversionPanel';
 import MembershipBadge from './billing/MembershipBadge';
-import { t, $t } from '@/languages';
+import { t, $t, i18nScope } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
 
 // Lucide 图标导入
@@ -948,12 +948,14 @@ function SidebarClock() {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-  const formattedTime = now.toLocaleTimeString('zh-CN', {
+  // locale 取运行时激活语言（同 DatePicker）：硬编码 'zh-CN' 会让 en-US/ko-KR 界面显示中文星期与月份
+  const locale = i18nScope.activeLanguage;
+  const formattedTime = now.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   });
-  const formattedDate = now.toLocaleDateString('zh-CN', {
+  const formattedDate = now.toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     weekday: 'short',

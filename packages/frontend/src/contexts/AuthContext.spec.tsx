@@ -128,6 +128,7 @@ describe('AuthContext - registerByPhone (T4 bug regression)', () => {
     expect(localStorage.getItem('refreshToken')).toBe('rt-phone');
     expect(localStorage.getItem('user')).toContain('phoneuser');
     expect(authControllerRegisterByPhone).toHaveBeenCalledWith({
+      throwOnError: true,
       body: {
         phone: '13800138000',
         code: '123456',

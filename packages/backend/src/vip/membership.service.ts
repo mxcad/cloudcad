@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import type { IMembershipService, VipTierActivateInput } from '@cloudcad/contracts';
+import { membershipTierOf } from './membership-tier';
 
 type PrismaTx = Prisma.TransactionClient;
 
@@ -26,6 +27,30 @@ export const isActiveMembership = (
   m: { tierLevel: number; expiresAt: Date | null } | null
 ): boolean => {
   return !!m && !(m.expiresAt && m.expiresAt <= new Date());
+};
+
+/**
+ * 有效会员行 → 扁平展示投影（读侧单点，取代各消费方内联重算）：
+ * 有效 = membership 存在 && (expiresAt 为 null 永久 || 未过期)；过期/失效统一降级为 0/null。
+ * 消费方（user-crud / users）禁止再各自内联该判定——历史漂移：users 侧曾漏 `tier` 字段，
+ * 桌面客户端契约在 updateProfile 响应上取不到 membershipTier。
+ */
+export const projectMembership = (
+  row: { tierLevel: number; expiresAt: Date | null } | null,
+): {
+  tierLevel: number;
+  expiresAt: Date | null;
+  isVip: boolean;
+  tier: string;
+} => {
+  const valid = isActiveMembership(row);
+  const tierLevel = valid ? row!.tierLevel : 0;
+  return {
+    tierLevel,
+    expiresAt: valid ? row!.expiresAt : null,
+    isVip: tierLevel > 0,
+    tier: membershipTierOf(tierLevel),
+  };
 };
 
 /** 退款重算入参：billing 查询 paymentOrder 后映射传入（数据获取留 billing，数学归位 membership） */
@@ -124,6 +149,30 @@ export class MembershipService implements IMembershipService {
   }
 
   /**
+   * 外部水位守卫（单点，供退款重算与管理员直改共用）：externalVipExpiresAt 承载旧官网
+   * vipTime（未来时间戳），有效时该会员的本地 expiresAt/tierLevel 由外部锚点推导，任何非外部
+   * 写入方都不应触碰——否则下一次增量 VIP 同步基于被污染的水位重算。
+   * 字段名明确语义，避免按字段名误写"上次同步时间"（过去时间戳）导致 ts > Date.now() 恒 false、
+   * 保护失效（外部来源会员被错误清零/覆盖）。外部同步写入见 ADR-0018。
+   */
+  async hasValidExternalWatermark(
+    tx: PrismaTx,
+    userId: string
+  ): Promise<boolean> {
+    const membership = await tx.userMembership.findUnique({ where: { userId } });
+    const metadata = membership?.metadata;
+    if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+      const externalExpiresAt = (metadata as Prisma.JsonObject)
+        .externalVipExpiresAt;
+      if (typeof externalExpiresAt === 'string') {
+        const ts = new Date(externalExpiresAt).getTime();
+        if (!Number.isNaN(ts) && ts > Date.now()) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * 退款后会员水位重算（自 billing 迁入，数学归位）：按 paidAt 升序游标叠加剩余订单
    * 月数水位（月 = MONTH_DAYS 天），取 maxTier；externalVipExpiresAt 外部水位有效时保护不写；
    * 全过期/空订单清零等级（避免激活时 Math.max 继承高等级造成等级通胀）。
@@ -134,32 +183,8 @@ export class MembershipService implements IMembershipService {
     userId: string,
     orders: RecalculateOrderInput[]
   ): Promise<void> {
-    // 检查外部水位：旧官网同步/管理员直改等无订单来源的会员，externalVipExpiresAt 有效时不触碰
-    // 水位语义：externalVipExpiresAt 承载的是"外部会员到期时间"（旧官网 vipTime，未来时间戳）。
-    // 字段名明确语义，避免按字段名误写"上次同步时间"（过去时间戳）导致 ts > Date.now() 恒 false、
-    // 退款保护失效（外部来源会员被错误清零）。外部同步写入见 ADR-0018。
-    const hasValidExternalWatermark = async (): Promise<boolean> => {
-      const membership = await tx.userMembership.findUnique({
-        where: { userId },
-      });
-      const metadata = membership?.metadata;
-      if (
-        metadata &&
-        typeof metadata === 'object' &&
-        !Array.isArray(metadata)
-      ) {
-        const externalExpiresAt = (metadata as Prisma.JsonObject)
-          .externalVipExpiresAt;
-        if (typeof externalExpiresAt === 'string') {
-          const ts = new Date(externalExpiresAt).getTime();
-          if (!Number.isNaN(ts) && ts > Date.now()) return true;
-        }
-      }
-      return false;
-    };
-
     if (orders.length === 0) {
-      if (await hasValidExternalWatermark()) {
+      if (await this.hasValidExternalWatermark(tx, userId)) {
         this.logger.warn(`退款重算跳过外部同步来源会员: userId=${userId}`);
         return;
       }
@@ -196,7 +221,7 @@ export class MembershipService implements IMembershipService {
 
     // 剩余订单全部过期：清零等级，避免激活时 Math.max 继承高等级造成等级通胀
     if (cursor <= now) {
-      if (await hasValidExternalWatermark()) {
+      if (await this.hasValidExternalWatermark(tx, userId)) {
         this.logger.warn(`退款重算跳过外部同步来源会员: userId=${userId}`);
         return;
       }

@@ -5,10 +5,6 @@ import { Select } from '@/components/ui/Select';
 import { Download } from 'lucide-react';
 import { t } from '@/languages';
 
-export interface DwgOptions {
-  dwgVersion: number;
-}
-
 interface DwgExportModalProps {
   isOpen: boolean;
   fileName: string;

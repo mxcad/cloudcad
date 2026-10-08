@@ -43,27 +43,27 @@ export function useShareData() {
     [page, searchQuery, sort.field, sort.order]
   );
 
-  const { data, isFetching, isLoading, error, refetch } = useQuery<ShareQueryData>({
-    queryKey,
-    queryFn: async () => {
-      const result = await shareControllerListShares({
-        query: {
-          page,
-          pageSize: PAGE_SIZE,
-          search: searchQuery || undefined,
-          sortBy: sort.field,
-          sortOrder: sort.order,
-        },
-      });
-      // SDK 默认不抛错：显式抛出让 react-query 进入 error 态展示真实原因
-      if (result.error) throw result.error;
-      const d = result.data as
-        | { items: ShareListItemDto[]; total: number }
-        | undefined;
-      return { items: d?.items ?? [], total: d?.total ?? 0 };
-    },
-    placeholderData: keepPreviousData,
-  });
+  const { data, isFetching, isLoading, error, refetch } =
+    useQuery<ShareQueryData>({
+      queryKey,
+      queryFn: async () => {
+        const result = await shareControllerListShares({
+          throwOnError: true,
+          query: {
+            page,
+            pageSize: PAGE_SIZE,
+            search: searchQuery || undefined,
+            sortBy: sort.field,
+            sortOrder: sort.order,
+          },
+        });
+        // SDK 默认不抛错：显式抛出让 react-query 进入 error 态展示真实原因
+        const d = result.data as
+          { items: ShareListItemDto[]; total: number } | undefined;
+        return { items: d?.items ?? [], total: d?.total ?? 0 };
+      },
+      placeholderData: keepPreviousData,
+    });
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;

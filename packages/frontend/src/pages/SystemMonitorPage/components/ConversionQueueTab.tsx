@@ -19,6 +19,7 @@ import {
   ListOrdered,
 } from 'lucide-react';
 import { t } from '@/languages';
+import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import { Tag } from '@/components/ui';
 import type { MonitorTaskItemDto } from '@/api-sdk';
 import type {
@@ -71,8 +72,7 @@ function formatClock(epochMs: number | null): string {
 }
 
 function formatTaskTime(iso: string): string {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleString();
+  return iso ? formatDateTimeWithSeconds(iso) : '-';
 }
 
 /**

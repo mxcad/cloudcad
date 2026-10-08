@@ -3,12 +3,8 @@ import { Button, Select } from '@/components/ui';
 import { SearchInput } from '@/components/search/SearchInput';
 import { ViewToggle } from '@/components/common/ViewToggle';
 import { getFontTypes } from '../fontTypeConfig';
+import type { FontFilters } from '../hooks/useFontLibrary';
 import { t } from '@/languages';
-
-export interface FontFilters {
-  name: string;
-  extension: string;
-}
 
 interface FontToolbarProps {
   filters: FontFilters;

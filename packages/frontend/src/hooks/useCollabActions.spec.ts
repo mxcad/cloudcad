@@ -43,6 +43,10 @@ vi.mock('../services/mxcadManager', () => ({
   checkAndConfirmUnsavedChanges: vi.fn(async () => true),
   refreshFileName: vi.fn(),
   getCooperate: vi.fn(() => cooperateMock),
+  exitCollaboration: vi.fn(async () => ({
+    exited: true,
+    wasPending: false,
+  })),
   exitCurrentCollaboration: vi.fn(),
 }));
 
@@ -79,6 +83,8 @@ beforeEach(() => {
     collabShareLibraryKey: null,
     isInCollaboration: false,
     collaborationWorkId: null,
+    collabPhase: 'idle',
+    collabExitGuard: false,
     currentFileInfo: null,
     isDirty: false,
     isCurrentFileDeleted: false,
@@ -287,6 +293,9 @@ describe('auto-join 协同链接加入 — 回归：fetchWorks 被 fromShare 阻
     const fetchWorksMock = vi.fn(async () => {});
     const setWorksMock = vi.fn();
     const onFileLoadedMock = vi.fn();
+    // 必须是稳定引用：render 回调随 store 变化重跑，内联 vi.fn() 每次生成
+    // 新引用会触发 auto-join effect 重跑、重置重试链（生产调用方传 useState setter，恒稳定）
+    const setCurrentWorkIdMock = vi.fn();
 
     cooperateMock.joinWork.mockImplementation(
       (_workId: number, cb: (ret: number) => void) => cb(-1)
@@ -307,7 +316,7 @@ describe('auto-join 协同链接加入 — 回归：fetchWorks 被 fromShare 阻
           [],
           setWorksMock,
           null,
-          vi.fn(),
+          setCurrentWorkIdMock,
           fetchWorksMock,
           user,
           onFileLoadedMock

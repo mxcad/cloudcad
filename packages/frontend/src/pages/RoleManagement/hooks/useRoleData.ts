@@ -14,9 +14,8 @@ export function useRoleData({ setLoading }: LoadingControl) {
 
   const loadSystemRoles = useCallback(async () => {
     try {
-      const response = await rolesControllerFindAll();
+      const response = await rolesControllerFindAll({ throwOnError: true });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-      if (response.error) throw response.error;
       setSystemRoles(response.data ?? []);
     } catch (error) {
       console.error('加载系统角色失败:', error);
@@ -26,8 +25,9 @@ export function useRoleData({ setLoading }: LoadingControl) {
   // ADR-00XX：项目角色模板（isSystem=true, projectId=null），创建项目时的默认角色
   const loadProjectRoleTemplates = useCallback(async () => {
     try {
-      const response = await rolesControllerGetSystemProjectRoles();
-      if (response.error) throw response.error;
+      const response = await rolesControllerGetSystemProjectRoles({
+        throwOnError: true,
+      });
       setProjectRoleTemplates(
         (response.data ?? []).map((dto) => ({
           id: dto.id,

@@ -39,9 +39,9 @@ export function useAuditLogList(params: AuditLogQueryParams) {
     queryKey: queryKeys.auditLog.list(params),
     queryFn: async () => {
       const result = await auditLogControllerFindAll({
+        throwOnError: true,
         query: params,
       });
-      if (result.error) throw result.error;
       return (result.data ?? {}) as AuditLogListResponse;
     },
     placeholderData: (prev) => prev,
@@ -69,8 +69,9 @@ export function useAuditLogStats() {
   >({
     queryKey: queryKeys.auditLog.stats,
     queryFn: async () => {
-      const result = await auditLogControllerGetStatistics();
-      if (result.error) throw result.error;
+      const result = await auditLogControllerGetStatistics({
+        throwOnError: true,
+      });
       return result.data ?? {};
     },
   });
@@ -97,8 +98,10 @@ export function useAuditProjectOptions() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.projects.all,
     queryFn: async (): Promise<ProjectOption[]> => {
-      const result = await projectControllerGetProjects({ query: {} });
-      if (result.error) throw result.error;
+      const result = await projectControllerGetProjects({
+        throwOnError: true,
+        query: {},
+      });
       return (result.data?.nodes ?? []).map((node) => ({
         id: String(node.id ?? ''),
         name: String(node.name ?? node.id ?? ''),

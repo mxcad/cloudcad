@@ -16,40 +16,11 @@ import {
   SidebarTab,
   DrawingsSubTab,
 } from '../types/sidebar';
+import { read, write, erase, writeJson } from '@/lib/browserStorage';
 
 // localStorage 版本控制
 const STORAGE_VERSION = 'v1';
 const SIDEBAR_SETTINGS_STORAGE_KEY = `sidebarSettings:${STORAGE_VERSION}`;
-
-/**
- * 安全的 localStorage 操作工具
- */
-const safeStorage = {
-  getItem: (key: string): string | null => {
-    try {
-      return localStorage.getItem(key);
-    } catch {
-      // 隐私模式或 storage 被禁用时返回 null
-      return null;
-    }
-  },
-  setItem: (key: string, value: string): boolean => {
-    try {
-      localStorage.setItem(key, value);
-      return true;
-    } catch {
-      // quota exceeded 或 storage 被禁用时返回 false
-      return false;
-    }
-  },
-  removeItem: (key: string): void => {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      // 忽略错误
-    }
-  },
-};
 
 /**
  * 最小化设置数据，只存储必要字段
@@ -75,7 +46,7 @@ const minimizeSettings = (
 export function useSidebarSettings() {
   const [settings, setSettings] = useState<SidebarSettings>(() => {
     // 从 localStorage 读取设置
-    const stored = safeStorage.getItem(SIDEBAR_SETTINGS_STORAGE_KEY);
+    const stored = read(SIDEBAR_SETTINGS_STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -83,7 +54,7 @@ export function useSidebarSettings() {
       } catch (error) {
         console.error('Failed to parse sidebar settings:', error);
         // 解析失败时清除损坏的数据
-        safeStorage.removeItem(SIDEBAR_SETTINGS_STORAGE_KEY);
+        erase(SIDEBAR_SETTINGS_STORAGE_KEY);
       }
     }
     return DEFAULT_SIDEBAR_SETTINGS;
@@ -92,10 +63,7 @@ export function useSidebarSettings() {
   // 保存设置到 localStorage
   useEffect(() => {
     const minimized = minimizeSettings(settings);
-    const success = safeStorage.setItem(
-      SIDEBAR_SETTINGS_STORAGE_KEY,
-      JSON.stringify(minimized)
-    );
+    const success = writeJson(SIDEBAR_SETTINGS_STORAGE_KEY, minimized);
     if (!success) {
       console.warn('Failed to save sidebar settings to localStorage');
     }

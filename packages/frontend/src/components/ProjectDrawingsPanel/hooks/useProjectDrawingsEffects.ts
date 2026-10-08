@@ -121,10 +121,10 @@ export function useProjectDrawingsEffects({
     const initProject = async () => {
       try {
         const response = await nodeControllerGetNode({
+          throwOnError: true,
           path: { nodeId: selectedProjectId },
         });
         // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-        if (response.error) throw response.error;
         const projectNode = response.data;
         if (supersededByParentNavigation()) return;
         if (projectNode)

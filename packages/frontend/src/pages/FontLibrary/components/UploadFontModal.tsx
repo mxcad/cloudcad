@@ -82,11 +82,11 @@ export function UploadFontModal({
     setUploading(true);
     try {
       const result = await fontsControllerUploadFont({
+        throwOnError: true,
         body: { files: files, target: target } as never,
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则上传失败仍弹"成功上传"并刷新列表（历史 bug）
-      if (result.error) throw result.error;
       showToast(
         t('成功上传 {count} 个字体文件', { count: String(files.length) }),
         'success'

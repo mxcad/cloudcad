@@ -52,6 +52,7 @@ export async function processPendingImages(): Promise<void> {
       const file = new File([blob], img.fileName, { type: blob.type });
 
       const result = await mxcadExternalRefControllerUploadExtReferenceImage({
+        throwOnError: true,
         path: { nodeId: currentInfo.fileId },
         body: {
           file,
@@ -61,7 +62,6 @@ export async function processPendingImages(): Promise<void> {
         },
       });
       // SDK 默认不抛错：失败时错误在 result.error，不检查会静默丢图
-      if (result.error) throw result.error;
 
       try {
         const checkResult =

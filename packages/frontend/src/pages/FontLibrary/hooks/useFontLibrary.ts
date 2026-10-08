@@ -107,10 +107,10 @@ export function useFontLibrary(): UseFontLibraryReturn {
     setLoading(true);
     try {
       const result = await fontsControllerGetFonts({
+        throwOnError: true,
         query: { location: activeTab },
       });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-      if (result.error) throw result.error;
       const fontsApiResult = result.data;
       const raw: unknown = fontsApiResult;
       let fontList: FontInfo[] = [];

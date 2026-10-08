@@ -8,6 +8,7 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
+import { read, write } from '@/lib/browserStorage';
 
 interface ThemeContextType {
   /** 当前是否为暗色主题 */
@@ -28,28 +29,19 @@ const THEME_STORAGE_KEY = 'mx-user-dark';
  * 在 useState 初始化时调用,确保首次渲染前主题已正确应用
  */
 function getStoredTheme(): boolean {
-  try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    // 默认为暗色主题（与 mxcad-app 默认一致）
-    const isDark = stored ? stored === 'true' : true;
-    // 立即应用到 DOM,防止闪烁
-    applyThemeToDOM(isDark);
-    return isDark;
-  } catch {
-    applyThemeToDOM(true);
-    return true;
-  }
+  const stored = read(THEME_STORAGE_KEY);
+  // 默认为暗色主题（与 mxcad-app 默认一致）
+  const isDark = stored ? stored === 'true' : true;
+  // 立即应用到 DOM,防止闪烁
+  applyThemeToDOM(isDark);
+  return isDark;
 }
 
 /**
  * 保存主题设置到 localStorage
  */
 function storeTheme(isDark: boolean): void {
-  try {
-    localStorage.setItem(THEME_STORAGE_KEY, String(isDark));
-  } catch {
-    // 忽略存储错误（如隐私模式）
-  }
+  write(THEME_STORAGE_KEY, String(isDark));
 }
 
 /**

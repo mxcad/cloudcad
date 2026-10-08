@@ -10,6 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { InteractiveBackground } from '../components/InteractiveBackground';
+import { saveAuthState } from '@/lib/authState';
 
 // Lucide 图标
 import { Phone } from 'lucide-react';
@@ -120,9 +121,7 @@ export const PhoneVerification: React.FC = () => {
         });
         if (!response) throw new Error(t('绑定手机号失败'));
         const { accessToken, refreshToken, user: userData } = response;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        saveAuthState({ accessToken, refreshToken, user: userData ?? null });
         // 直接刷新页面，让 AuthContext 从 localStorage 重新初始化
         window.location.href = '/';
         return;

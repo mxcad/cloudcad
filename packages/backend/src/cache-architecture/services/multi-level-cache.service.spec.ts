@@ -37,6 +37,7 @@ describe("MultiLevelCacheService", () => {
 		getStats: jest.fn(),
 		getMany: jest.fn(),
 		setMany: jest.fn(),
+		ttl: jest.fn(),
 	};
 
 	const mockCacheVersionService = {

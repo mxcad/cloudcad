@@ -26,6 +26,7 @@ import { t, $t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { CheckCircle, AlertCircle, Smartphone, Loader2 } from 'lucide-react';
 import type { PageState } from './DeviceAuthorize.types';
+import { write, erase } from '@/lib/browserStorage';
 import styles from './DeviceAuthorize.module.css';
 
 const CLIENT_DISPLAY: Record<string, { title: string; tagline: string }> = {
@@ -93,21 +94,21 @@ export const DeviceAuthorize: React.FC = () => {
       return;
     }
     if (!isAuthenticated) {
-      sessionStorage.setItem('device_auth_user_code', userCode);
-      if (clientId) sessionStorage.setItem('device_auth_client_id', clientId);
+      write('device_auth_user_code', userCode, 'session');
+      if (clientId) write('device_auth_client_id', clientId, 'session');
       if (redirectTarget)
-        sessionStorage.setItem('device_auth_redirect', redirectTarget);
+        write('device_auth_redirect', redirectTarget, 'session');
       window.location.href = '/login';
       return;
     }
     if (forceLogin) {
-      sessionStorage.setItem('device_auth_user_code', userCode);
-      if (clientId) sessionStorage.setItem('device_auth_client_id', clientId);
+      write('device_auth_user_code', userCode, 'session');
+      if (clientId) write('device_auth_client_id', clientId, 'session');
       if (redirectTarget)
-        sessionStorage.setItem('device_auth_redirect', redirectTarget);
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+        write('device_auth_redirect', redirectTarget, 'session');
+      erase('accessToken');
+      erase('refreshToken');
+      erase('user');
       window.location.href = '/login';
       return;
     }
@@ -160,10 +161,10 @@ export const DeviceAuthorize: React.FC = () => {
     setPageState('authorizing');
     try {
       const result = await deviceAuthControllerAuthorizeDevice({
+        throwOnError: true,
         body: { user_code: userCode },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须抛出才能进入下方错误分支
-      if (result.error) throw result.error;
       if (result.data?.success) {
         // EXE 场景：授权成功后跳转重定向地址（如 VIP 购买页），EXE 轮询 token 不受影响
         if (redirectTarget) {
@@ -179,10 +180,10 @@ export const DeviceAuthorize: React.FC = () => {
       // 登录态已失效（token 无效/过期）→ 保存授权待办并跳转登录页，
       // 避免停留在失败页反复刷新重试
       if ((err as { status?: number })?.status === 401) {
-        sessionStorage.setItem('device_auth_user_code', userCode);
-        if (clientId) sessionStorage.setItem('device_auth_client_id', clientId);
+        write('device_auth_user_code', userCode, 'session');
+        if (clientId) write('device_auth_client_id', clientId, 'session');
         if (redirectTarget)
-          sessionStorage.setItem('device_auth_redirect', redirectTarget);
+          write('device_auth_redirect', redirectTarget, 'session');
         window.location.href = '/login';
         return;
       }

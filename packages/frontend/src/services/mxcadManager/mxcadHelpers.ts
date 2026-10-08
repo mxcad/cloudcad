@@ -36,9 +36,7 @@ export function extractShareTokenFromUrl(
 const EMPTY_DOCUMENT_NAMES = ['empty_template.mxweb', 'empty.mxweb'];
 
 /** 引擎当前文件是否为默认空模板（还没有真正打开过图纸）。唯一判据，勿在他处硬编码文件名 */
-export function isEmptyDocumentName(
-  name: string | null | undefined
-): boolean {
+export function isEmptyDocumentName(name: string | null | undefined): boolean {
   return !!name && EMPTY_DOCUMENT_NAMES.includes(name);
 }
 
@@ -87,9 +85,7 @@ export function refreshFileName() {
   // currentFileInfo（openSession 写入）优先；协同 auto-join 不经过 openSession，
   // 用 currentFileName（patchSession/pendingJoinWorkIdRef effect 写入）兜底
   const fileName =
-    getFileInfo()?.name ||
-    useCADEditorStore.getState().currentFileName ||
-    '';
+    getFileInfo()?.name || useCADEditorStore.getState().currentFileName || '';
   setEditorFileName(fileName);
 }
 
@@ -149,9 +145,10 @@ export async function saveCurrentDrawingToBlob(fileName: string): Promise<{
 export async function getPersonalSpaceId(): Promise<string | null> {
   const cached = () => useFileSystemStore.getState().personalSpaceId;
   try {
-    const response = await projectControllerGetPersonalSpace();
+    const response = await projectControllerGetPersonalSpace({
+      throwOnError: true,
+    });
     // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-    if (response.error) throw response.error;
     const personalSpaceId = response.data?.id || null;
     if (personalSpaceId) {
       // 成功结果同步进本地缓存，供后续请求偶发失败时回退
@@ -216,14 +213,20 @@ export async function triggerSaveAs(): Promise<boolean> {
 
   if (fileInfo?.projectId && !fileInfo.libraryKey) {
     try {
-      const hasSavePermission = await createDefaultPermissionQuerier()
-        .hasProjectPermission(fileInfo.projectId, 'CAD_SAVE');
+      const hasSavePermission =
+        await createDefaultPermissionQuerier().hasProjectPermission(
+          fileInfo.projectId,
+          'CAD_SAVE'
+        );
       if (!hasSavePermission) {
         globalShowToast(t('您没有保存图纸的权限'), 'warning');
         return false;
       }
     } catch (error) {
-      handleError(error, 'mxcadManager: triggerSaveAs project permission check');
+      handleError(
+        error,
+        'mxcadManager: triggerSaveAs project permission check'
+      );
       globalShowToast(t('权限检查失败，请稍后重试'), 'warning');
       return false;
     }

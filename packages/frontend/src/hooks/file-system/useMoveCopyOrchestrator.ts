@@ -8,6 +8,8 @@ import { useCallback } from 'react';
 import {
   nodeControllerBatchCopyNodes,
   nodeControllerBatchMoveNodes,
+  nodeControllerCopyNode,
+  nodeControllerDeleteNode,
 } from '@/api-sdk';
 import { buildMoveAction, buildCopyAction } from './moveCopyActions';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
@@ -255,13 +257,27 @@ export function useMoveCopyOrchestrator({
         buildCopyAction({
           sourceNodeIds,
           targetParentId,
+          createdIds,
           description:
             description ||
             (mode === 'drag'
               ? t('拖拽复制')
               : t(`复制 ${createdIds.length} 个项目`)),
           projectId,
-          initialCreatedIds: createdIds,
+          endpoints: {
+            copyNode: (id, pid) =>
+              nodeControllerCopyNode({
+                path: { nodeId: id },
+                body: { targetParentId: pid },
+                throwOnError: true,
+              }),
+            deleteNode: (id) =>
+              nodeControllerDeleteNode({
+                path: { nodeId: id },
+                query: { permanently: true },
+                throwOnError: true,
+              }),
+          },
         })
       );
       handleRefresh();

@@ -17,7 +17,8 @@ import {
   cancelProactiveRefresh,
   redirectToLogin,
 } from '@/config/clientSetup';
-import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
+import { writeJson } from '@/lib/browserStorage';
+import { clearAuthState, saveAuthState } from '@/lib/authState';
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
 import { clearSavePermissionCache } from '@/services/mxcadManager/saveDefaults';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
@@ -88,9 +89,9 @@ export function useAuthActions({
   const login = useCallback(
     async (account: string, password: string): Promise<boolean> => {
       const response = await authControllerLogin({
+        throwOnError: true,
         body: { account, password },
       });
-      if (response.error) throw response.error;
       const apiResponse = response.data!;
 
       const {
@@ -100,9 +101,7 @@ export function useAuthActions({
         restored,
       } = apiResponse;
 
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      saveAuthState({ accessToken, refreshToken, user: userData ?? null });
       setToken(accessToken);
       userData && setUser(userData);
       triggerProactiveRefresh();
@@ -115,9 +114,9 @@ export function useAuthActions({
   const loginByPhone = useCallback(
     async (phone: string, code: string): Promise<boolean> => {
       const response = await authControllerLoginByPhone({
+        throwOnError: true,
         body: { phone, code },
       });
-      if (response.error) throw response.error;
       const apiResponse = response.data!;
 
       const {
@@ -127,9 +126,7 @@ export function useAuthActions({
         restored,
       } = apiResponse;
 
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      saveAuthState({ accessToken, refreshToken, user: userData ?? null });
       setToken(accessToken);
       setUser(userData);
       triggerProactiveRefresh();
@@ -145,9 +142,7 @@ export function useAuthActions({
     (authData: { accessToken: string; refreshToken: string; user: User }) => {
       const { accessToken, refreshToken, user: userData } = authData;
 
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      saveAuthState({ accessToken, refreshToken, user: userData ?? null });
       setToken(accessToken);
       setUser(userData);
 
@@ -172,13 +167,13 @@ export function useAuthActions({
       passwordChangeRequired?: 'first_login' | 'expired';
     }> => {
       const response = await adminAuthControllerLogin({
+        throwOnError: true,
         body: {
           account,
           password,
           ...(totpCode ? { totpCode } : {}),
         },
       });
-      if (response.error) throw response.error;
       const apiResponse = response.data!;
 
       const {
@@ -214,9 +209,9 @@ export function useAuthActions({
       data: RegisterPayload
     ): Promise<{ message: string; email?: string | undefined }> => {
       const response = await authControllerRegister({
+        throwOnError: true,
         body: data,
       });
-      if (response.error) throw response.error;
       const authData = response.data!;
 
       // 如果 API 返回的 data 为空，抛出错误
@@ -247,9 +242,9 @@ export function useAuthActions({
       nickname?: string;
     }): Promise<void> => {
       const response = await authControllerRegisterByPhone({
+        throwOnError: true,
         body: data,
       });
-      if (response.error) throw response.error;
       const authData = response.data as {
         accessToken?: string;
         refreshToken?: string;
@@ -270,17 +265,15 @@ export function useAuthActions({
   const verifyEmailAndLogin = useCallback(
     async (email: string, code: string) => {
       const response = await authControllerVerifyEmail({
+        throwOnError: true,
         body: { email, code },
       });
-      if (response.error) throw response.error;
       const apiResponse = response.data!;
 
       // 验证成功，返回 token，自动登录
       const { accessToken, refreshToken, user: userData } = apiResponse;
 
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      saveAuthState({ accessToken, refreshToken, user: userData ?? null });
       setToken(accessToken);
       setUser(userData);
 
@@ -295,15 +288,13 @@ export function useAuthActions({
   const verifyPhoneAndLogin = useCallback(
     async (phone: string, code: string) => {
       const response = await authControllerVerifyPhone({
+        throwOnError: true,
         body: { phone, code },
       });
-      if (response.error) throw response.error;
       const apiResponse = response.data!;
       const { accessToken, refreshToken, user: userData } = apiResponse;
 
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      saveAuthState({ accessToken, refreshToken, user: userData ?? null });
       setToken(accessToken);
       setUser(userData);
 
@@ -326,9 +317,7 @@ export function useAuthActions({
       // 即使后端失败，也要清除本地状态
     } finally {
       // 2. 清除本地存储
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      clearAuthState();
 
       // 清除用户级内存缓存（personalSpaceId 跨账号残留会把文件存错空间；
       // 登出时若停留在 /login 不发生整页刷新，必须显式重置）
@@ -375,7 +364,7 @@ export function useAuthActions({
     }
     const userData = response.data as unknown as User;
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    writeJson('user', userData);
     return true;
   }, [setUser]);
 

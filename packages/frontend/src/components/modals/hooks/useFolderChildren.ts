@@ -20,10 +20,10 @@ export const useFolderChildren = () => {
     ): Promise<FolderNode[]> => {
       try {
         const childrenResponse = await nodeControllerGetChildren({
+          throwOnError: true,
           path: { nodeId },
         });
         // SDK 默认不抛错：错误在 result.error，必须显式抛出否则 catch 是死代码
-        if (childrenResponse?.error) throw childrenResponse.error;
 
         let children: FileSystemNode[] = [];
 

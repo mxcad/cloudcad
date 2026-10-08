@@ -233,10 +233,8 @@ describe('conversionQueueStore 云端合并', () => {
   });
 
   it('refreshCloud 失败时记录 cloudError（不抛错）', async () => {
-    mockedList.mockResolvedValue({
-      error: new Error('network'),
-      data: undefined,
-    } as never);
+    // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
+    mockedList.mockRejectedValue(new Error('network'));
     await useConversionQueueStore.getState().refreshCloud();
     expect(useConversionQueueStore.getState().cloudError).toBeTruthy();
   });
@@ -842,10 +840,8 @@ describe('conversionQueueStore 历史分页（#476）', () => {
   });
 
   it('loadMoreHistory 失败时记录 cloudError 并复位 loading', async () => {
-    mockedHistory.mockResolvedValue({
-      error: new Error('network'),
-      data: undefined,
-    } as never);
+    // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
+    mockedHistory.mockRejectedValue(new Error('network'));
     await useConversionQueueStore.getState().loadMoreHistory();
     const state = useConversionQueueStore.getState();
     expect(state.cloudError).toBeTruthy();
@@ -933,6 +929,7 @@ describe('conversionQueueStore 历史分页（#476）', () => {
     expect(state.history[1].name).toBe('h1-renamed.dwg');
     // 只拉第一页（offset=0），且不改翻页游标
     expect(mockedHistory).toHaveBeenLastCalledWith({
+      throwOnError: true,
       query: { limit: String(20), offset: '0' },
     });
     expect(state.historyOffset).toBe(2);

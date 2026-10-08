@@ -13,6 +13,7 @@ import {
   registerFormSchema,
   type RegisterFormValues,
 } from './registerFormSchema';
+import { read, erase } from '@/lib/browserStorage';
 
 // ──────────────────────────────────────────────
 // Options & return type
@@ -157,13 +158,13 @@ export function useRegisterForm(
     if (values.username || values.email) {
       try {
         const response = await authControllerCheckFieldUniqueness({
+          throwOnError: true,
           body: {
             username: values.username || undefined,
             email: values.email || undefined,
           },
         });
         // SDK 默认不抛错：失败时错误在 result.error，静默跳过会漏掉用户名/邮箱冲突预检
-        if (response.error) throw response.error;
         const checkResult = response.data as {
           usernameExists?: boolean;
           emailExists?: boolean;
@@ -303,7 +304,7 @@ export function useRegisterForm(
       setError(null);
 
       // Get wechat temp token from session storage
-      const wechatTempToken = sessionStorage.getItem('wechatTempToken');
+      const wechatTempToken = read('wechatTempToken', 'session');
 
       try {
         if (
@@ -339,7 +340,7 @@ export function useRegisterForm(
           });
 
           if (isWechatRegister) {
-            sessionStorage.removeItem('wechatTempToken');
+            erase('wechatTempToken', 'session');
           }
           navigate('/');
         } else {
@@ -354,7 +355,7 @@ export function useRegisterForm(
           const result = await registerUser(registerData);
 
           if (isWechatRegister) {
-            sessionStorage.removeItem('wechatTempToken');
+            erase('wechatTempToken', 'session');
           }
 
           if (result.email) {
@@ -429,7 +430,7 @@ export function useRegisterForm(
 function useWechatNickname(isWechatRegister: boolean): string {
   if (!isWechatRegister) return '';
 
-  const wechatTempToken = sessionStorage.getItem('wechatTempToken');
+  const wechatTempToken = read('wechatTempToken', 'session');
   if (!wechatTempToken) return '';
 
   try {

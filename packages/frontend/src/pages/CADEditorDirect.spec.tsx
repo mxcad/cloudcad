@@ -176,6 +176,10 @@ vi.mock('../services/mxcadManager', async () => {
     setPersonalSpaceId: vi.fn(),
     setOpenedBackInfo: vi.fn(),
     refreshFileName: vi.fn(),
+    exitCollaboration: vi.fn(async () => ({
+      exited: true,
+      wasPending: false,
+    })),
     editorDisplayName: (name: string | null) => name ?? '',
     openDrawing,
   };

@@ -7,6 +7,10 @@ vi.mock('../services/mxcadManager', () => ({
     isReady: vi.fn(() => false),
     hasPendingOpen: vi.fn(() => false),
   },
+  exitCollaboration: vi.fn(async () => ({
+    exited: true,
+    wasPending: false,
+  })),
 }));
 
 vi.mock('../services/drawingSession', () => ({

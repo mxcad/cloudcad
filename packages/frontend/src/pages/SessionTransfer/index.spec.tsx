@@ -16,7 +16,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { sessionTransferControllerConsume } from '@/api-sdk';
-import { setAccessToken, setRefreshToken } from '@/utils/tokenUtils';
+import { clearAuthState, saveAuthState } from '@/lib/authState';
 import { cancelProactiveRefresh } from '@/config/tokenRefresh';
 import { useBrandConfig } from '../../contexts/BrandContext';
 import { t } from '@/languages';
@@ -27,9 +27,9 @@ import { useFileSystemStore } from '@/stores/fileSystemStore';
 vi.mock('@/api-sdk', () => ({
   sessionTransferControllerConsume: vi.fn(),
 }));
-vi.mock('@/utils/tokenUtils', () => ({
-  setAccessToken: vi.fn(),
-  setRefreshToken: vi.fn(),
+vi.mock('@/lib/authState', () => ({
+  clearAuthState: vi.fn(),
+  saveAuthState: vi.fn(() => true),
 }));
 vi.mock('@/config/tokenRefresh', () => ({
   cancelProactiveRefresh: vi.fn(),
@@ -101,22 +101,22 @@ describe('SessionTransfer', () => {
       expect(window.location.replace).toHaveBeenCalled();
     });
 
-    // ① 清旧：三键被清除（setAccessToken/setRefreshToken 被 mock，不会真正写回）
-    expect(localStorage.getItem('accessToken')).toBeNull();
-    expect(localStorage.getItem('refreshToken')).toBeNull();
+    // ① 清旧：原子清三键（authState.clearAuthState 被 mock 记录调用）
+    expect(clearAuthState).toHaveBeenCalled();
     // personalSpaceId 清理已迁移到 zustand 内存态（原 localStorage key 无写入者，已死）
     expect(useFileSystemStore.getState().personalSpaceId).toBeNull();
     expect(cancelProactiveRefresh).toHaveBeenCalled();
     // ② 消费一次性凭证
     expect(sessionTransferControllerConsume).toHaveBeenCalledWith({
+      throwOnError: true,
       body: { token: 'abc123' },
     });
-    // ③ 写新：新 token + user
-    expect(setAccessToken).toHaveBeenCalledWith('new-access');
-    expect(setRefreshToken).toHaveBeenCalledWith('new-refresh');
-    expect(localStorage.getItem('user')).toBe(
-      JSON.stringify({ id: 'u1', username: 'newuser' }),
-    );
+    // ③ 写新：原子写新 token + user（authState.saveAuthState 被 mock 记录调用）
+    expect(saveAuthState).toHaveBeenCalledWith({
+      accessToken: 'new-access',
+      refreshToken: 'new-refresh',
+      user: { id: 'u1', username: 'newuser' },
+    });
     // ④ 缺省跳转 /profile
     expect(window.location.replace).toHaveBeenCalledWith('/profile');
   });

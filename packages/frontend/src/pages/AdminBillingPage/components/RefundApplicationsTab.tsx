@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Tag } from '@/components/ui/Tag';
 import { t } from '@/languages';
+import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import {
   formatYuan,
   PAGE_SIZE,
@@ -173,16 +174,12 @@ export function RefundApplicationsTab({
                         </Tag>
                       </td>
                       <td className="px-4 py-3 text-xs">
-                        {new Date(application.createdAt).toLocaleString(
-                          'zh-CN'
-                        )}
+                        {formatDateTimeWithSeconds(application.createdAt)}
                       </td>
                       <td className="px-4 py-3 text-xs">
                         {application.reviewedAt ? (
                           <>
-                            {new Date(application.reviewedAt).toLocaleString(
-                              'zh-CN'
-                            )}
+                            {formatDateTimeWithSeconds(application.reviewedAt)}
                             {application.reviewer && (
                               <div
                                 className="mt-0.5"

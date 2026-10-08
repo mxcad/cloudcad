@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { t } from '@/languages';
-import { parseWorkData, getWorkCreator, parseUserData, type Work } from '../../../composables/useCooperate';
+import { parseWorkData, getWorkCreator, parseUserData, type Work } from '@cloudcad/platform';
 import { useUser } from '../../../composables/useUser';
 import { useSave } from '../../../composables/useSave';
 import { useEditorStore } from '../../../stores/editor';

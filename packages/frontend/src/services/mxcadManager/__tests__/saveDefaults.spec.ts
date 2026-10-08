@@ -61,7 +61,8 @@ describe('createDefaultPermissionQuerier — 项目权限缓存（TTL）', () =>
   });
 
   it('查询失败（SDK error）→ 抛出且不写缓存，恢复后重新请求', async () => {
-    apiMock.mockResolvedValue({ error: new Error('403') });
+    // 代码用 throwOnError:true，SDK 失败时直接抛错（非返回 { error }），mock 须 reject 以匹配
+    apiMock.mockRejectedValue(new Error('403'));
     const querier = createDefaultPermissionQuerier();
 
     await expect(

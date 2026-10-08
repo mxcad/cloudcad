@@ -108,11 +108,11 @@ export const useFileSystemData = ({
     queryKey: queryKeys.fileSystem.node(effectiveNodeId),
     queryFn: async () => {
       const response = await nodeControllerGetNode({
+        throwOnError: true,
         path: { nodeId: effectiveNodeId },
       });
       // SDK 默认不抛错：显式抛出让 react-query 进入 error 态展示真实原因，
       // 否则对 undefined 调用 toFileSystemNode 抛英文 TypeError
-      if (response.error) throw response.error;
       return toFileSystemNode(response.data as FileSystemNodeDto);
     },
     enabled:
@@ -152,6 +152,7 @@ export const useFileSystemData = ({
     queryFn: async () => {
       if (isProjectRootMode) {
         const response = await projectControllerGetProjects({
+          throwOnError: true,
           query: {
             filter: projectFilter,
             page: pagination.page,
@@ -162,7 +163,6 @@ export const useFileSystemData = ({
         });
         // SDK 默认不抛错：显式抛出让 react-query 感知失败，
         // 否则失败被当作"暂无项目"空态返回（历史 bug）
-        if (response.error) throw response.error;
 
         const data = response.data;
         if (
@@ -196,6 +196,7 @@ export const useFileSystemData = ({
       }
 
       const response = await nodeControllerGetChildren({
+        throwOnError: true,
         path: { nodeId: effectiveNodeId },
         query: {
           page: pagination.page,
@@ -223,7 +224,6 @@ export const useFileSystemData = ({
       });
       // SDK 默认不抛错：显式抛出让 react-query 感知失败，
       // 否则失败被当作"空目录"返回（历史 bug）
-      if (response.error) throw response.error;
 
       const data = response.data;
       if (data && typeof data === 'object' && Array.isArray(data.nodes)) {
@@ -288,6 +288,7 @@ export const useFileSystemData = ({
       }
 
       const response = await nodeControllerSearch({
+        throwOnError: true,
         query: {
           keyword: effectiveSearchKeyword,
           scope: searchScope,
@@ -322,7 +323,6 @@ export const useFileSystemData = ({
       });
       // SDK 默认不抛错：显式抛出让 react-query 感知失败，
       // 否则搜索失败被当作"无搜索结果"返回（历史 bug）
-      if (response.error) throw response.error;
 
       const data = response.data;
       if (data && typeof data === 'object' && Array.isArray(data.nodes)) {

@@ -20,6 +20,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserMembershipDto } from './dto/update-user-membership.dto';
 import { DatabaseService } from '../database/database.service';
+import { projectMembership } from '../vip/membership.service';
 import { PiiCryptoService } from '../common/pii/pii-crypto.service';
 import { Prisma } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
@@ -220,19 +221,17 @@ export class UsersService implements IUserService {
         },
       });
 
-      // 扁平化 membership 字段
+      // 扁平化 membership 字段：判定收进 projectMembership 单点（ADR-0036），
+      // 与 user-crud 返回同形（含 membershipTier，修复此前本接口漏返该字段的漂移）
       const { membership: membershipRow, ...userWithoutMembership } = updatedUser;
-      const membershipValid =
-        !!membershipRow &&
-        (membershipRow.expiresAt === null ||
-          membershipRow.expiresAt > new Date());
-      const membershipTierLevel = membershipValid ? membershipRow.tierLevel : 0;
+      const p = projectMembership(membershipRow);
 
       return {
         ...userWithoutMembership,
-        membershipTierLevel,
-        membershipExpiresAt: membershipValid ? membershipRow.expiresAt : null,
-        isVip: membershipTierLevel > 0,
+        membershipTierLevel: p.tierLevel,
+        membershipExpiresAt: p.expiresAt,
+        isVip: p.isVip,
+        membershipTier: p.tier,
       };
     });
   }

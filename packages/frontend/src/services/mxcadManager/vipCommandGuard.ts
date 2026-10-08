@@ -1,4 +1,5 @@
 import { MxFun, store } from 'mxdraw';
+import { membershipState } from '@cloudcad/platform';
 import { t } from '@/languages';
 import { queryClient } from '@/lib/queryClient';
 import { queryKeys } from '@/lib/queryKeys';
@@ -105,14 +106,13 @@ function readLocalUser(): LocalUserLike | null {
   }
 }
 
-/** 与 useMembership 同构的会员判定（永久会员 expiresAt === null 视为长期有效） */
+/** 会员判定走 @cloudcad/platform 唯一出口（与 useMembership 同口径，永久会员 expiresAt === null 视为长期有效） */
 function isVipUser(user: LocalUserLike | null): boolean {
   if (!user) return false;
-  const tierLevel = user.membershipTierLevel ?? 0;
-  if (tierLevel <= 0) return false;
-  const expiresAt = user.membershipExpiresAt ?? null;
-  if (expiresAt === null) return true;
-  return new Date(expiresAt).getTime() - Date.now() > 0;
+  return membershipState({
+    tierLevel: user.membershipTierLevel ?? 0,
+    expiresAt: user.membershipExpiresAt ?? null,
+  }).isVip;
 }
 
 /**

@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import type { CurrentFileInfo } from '../services/mxcadManager/mxcadTypes';
 
+/**
+ * 协同会话阶段（C5 状态机）：
+ * - idle：不在协同中，也没有进行中的加入/创建
+ * - joining：joinWork/createWork 已发出、引擎回调未落定（窗口期内退出须等落定）
+ * - joined：引擎回调确认已进入协同会话
+ *
+ * 历史上 isInCollaboration 布尔值表达不了「加入在途」，窗口期内导航离开时
+ * 引擎 session 已开但 store 说未加入、面板已卸载 → 全链路无一次 exitWork
+ * （会话泄漏）。phase 与 isInCollaboration 并存：后者仍是「已加入」的唯一
+ * 事实源（大量 UI/守卫消费），phase 额外表达 joining 维度，由
+ * setCollaborationState 联动维护，避免双写漂移。
+ */
+export type CollabPhase = 'idle' | 'joining' | 'joined';
+
 interface CADEditorState {
   isActive: boolean;
   loading: boolean;
@@ -18,6 +32,9 @@ interface CADEditorState {
   collabShareLibraryKey: 'drawing' | 'block' | null;
   isInCollaboration: boolean;
   collaborationWorkId: number | null;
+  collabPhase: CollabPhase;
+  /** 退出协同后的短窗守卫（3s），阻止 auto-join 把刚退出的 session 拉回 */
+  collabExitGuard: boolean;
   currentFileInfo: CurrentFileInfo | null;
   isDirty: boolean;
   isCurrentFileDeleted: boolean;
@@ -47,6 +64,8 @@ interface CADEditorState {
     isInCollaboration: boolean;
     workId: number | null;
   }) => void;
+  setCollabPhase: (phase: CollabPhase) => void;
+  setCollabExitGuard: (guard: boolean) => void;
   setCurrentFileInfo: (info: CurrentFileInfo | null) => void;
   patchCurrentFileInfo: (partial: Partial<CurrentFileInfo>) => void;
   setIsDirty: (dirty: boolean) => void;
@@ -74,6 +93,8 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   collabShareLibraryKey: null,
   isInCollaboration: false,
   collaborationWorkId: null,
+  collabPhase: 'idle',
+  collabExitGuard: false,
   currentFileInfo: null,
   isDirty: false,
   isCurrentFileDeleted: false,
@@ -102,7 +123,14 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
       collabShareLibraryKey: libraryKey ?? null,
     }),
   setCollaborationState: ({ isInCollaboration, workId }) =>
-    set({ isInCollaboration, collaborationWorkId: workId }),
+    set({
+      isInCollaboration,
+      collaborationWorkId: workId,
+      // 联动 phase，避免 isInCollaboration 与 collabPhase 双写漂移
+      collabPhase: isInCollaboration ? 'joined' : 'idle',
+    }),
+  setCollabPhase: (phase) => set({ collabPhase: phase }),
+  setCollabExitGuard: (guard) => set({ collabExitGuard: guard }),
   setCurrentFileInfo: (info) => set({ currentFileInfo: info }),
   patchCurrentFileInfo: (partial) =>
     set((state) => ({

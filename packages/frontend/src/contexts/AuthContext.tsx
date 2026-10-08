@@ -15,11 +15,12 @@ import {
 } from '@/config/clientSetup';
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
 import { clearSavePermissionCache } from '@/services/mxcadManager/saveDefaults';
+import { read, writeJson } from '@/lib/browserStorage';
 import {
   isAccessTokenExpired,
-  removeAccessToken,
-  removeRefreshToken,
+  getUser,
 } from '@/utils/tokenUtils';
+import { clearAuthState } from '@/lib/authState';
 import {
   useAuthActions,
   type User,
@@ -94,19 +95,15 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // 同步初始化，避免闪烁
   const getInitialAuthState = () => {
-    try {
-      const storedToken = localStorage.getItem('accessToken');
-      const storedUser = localStorage.getItem('user');
+    const storedToken = read('accessToken');
+    const storedUser = getUser();
 
-      if (storedToken && storedUser) {
-        return {
-          token: storedToken,
-          user: JSON.parse(storedUser),
-          loading: true, // will be set to false after token validation
-        };
-      }
-    } catch (error) {
-      // 静默：初始化认证状态失败
+    if (storedToken && storedUser) {
+      return {
+        token: storedToken,
+        user: storedUser,
+        loading: true, // will be set to false after token validation
+      };
     }
 
     return {
@@ -131,9 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 本地 accessToken 已过期（如残留失效 token）：视为未登录，直接降级游客，
         // 不发起 /auth/profile 请求，避免未登录场景产生 401 控制台噪音。
         if (isAccessTokenExpired()) {
-          removeAccessToken();
-          removeRefreshToken();
-          localStorage.removeItem('user');
+          clearAuthState();
           setToken(null);
           setUser(null);
           clearProjectPermissionsCache();
@@ -154,7 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (response.data) {
             const userData = response.data as unknown as User;
             setUser(userData);
-            localStorage.setItem('user', JSON.stringify(userData));
+            writeJson('user', userData);
           } else if ((response as Record<string, unknown>).error) {
             // API返回了错误，但token可能仍有效，保留用户信息
             console.warn(

@@ -1,12 +1,11 @@
-import {
-  setAccessToken,
-  setRefreshToken,
-  setWechatTempToken,
-} from '@/utils/tokenUtils';
+import { setWechatTempToken } from '@/utils/tokenUtils';
+import { saveAuthState } from '@/lib/authState';
+import type { UserDto } from '@/api-sdk';
 import { triggerProactiveRefresh } from '@/config/clientSetup';
 import { authControllerGetProfile } from '@/api-sdk';
 import { t } from '@/languages';
 import type { WechatAuthAction } from '@/utils/wechat-auth-result';
+import { writeJson } from '@/lib/browserStorage';
 
 export interface WechatLoginActionHandlers {
   /** 错误通知（文案是否带前缀由调用方 errorPrefix 决定） */
@@ -47,9 +46,13 @@ export function applyWechatLoginAction(
   }
 
   if (action.type === 'login') {
-    setAccessToken(action.accessToken);
-    if (writeRefreshToken) setRefreshToken(action.refreshToken);
-    if (action.user) localStorage.setItem('user', JSON.stringify(action.user));
+    saveAuthState({
+      accessToken: action.accessToken,
+      ...(writeRefreshToken && action.refreshToken
+        ? { refreshToken: action.refreshToken }
+        : {}),
+      ...(action.user ? { user: action.user as UserDto } : {}),
+    });
     handlers.onLoginSuccess(null, action.accessToken);
     triggerProactiveRefresh();
     // 回调 URL 不再携带 user，登录后从 profile 拉取；失败重试一次
@@ -58,7 +61,7 @@ export function applyWechatLoginAction(
         .then((res) => {
           if (res.data) {
             const userData = res.data;
-            localStorage.setItem('user', JSON.stringify(userData));
+            writeJson('user', userData);
             handlers.onLoginSuccess(userData, action.accessToken);
           }
         })

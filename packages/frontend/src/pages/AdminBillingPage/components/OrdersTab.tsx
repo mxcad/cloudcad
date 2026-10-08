@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Tag } from '@/components/ui/Tag';
 import { Input } from '@/components/ui/Input';
 import { t } from '@/languages';
+import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import {
   formatYuan,
   ORDER_STATUS_META,
@@ -172,7 +173,7 @@ export function OrdersTab({
                       <td className="px-4 py-3">{order.gateway}</td>
                       <td className="px-4 py-3 text-xs">
                         {order.createdAt
-                          ? new Date(order.createdAt).toLocaleString('zh-CN')
+                          ? formatDateTimeWithSeconds(order.createdAt)
                           : ''}
                       </td>
                       <td className="px-4 py-3 text-center">

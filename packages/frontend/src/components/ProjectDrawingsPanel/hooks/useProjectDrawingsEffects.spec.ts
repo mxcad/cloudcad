@@ -290,6 +290,7 @@ describe('useProjectDrawingsEffects — 打开图纸后目录只加载一次（�
     data.selectedProjectId = 'proj-root';
     rerender({ visible: true, parentId: 'folder-1', tabId: 'my-project' });
     expect(nodeControllerGetNode).toHaveBeenCalledWith({
+      throwOnError: true,
       path: { nodeId: 'proj-root' },
     });
   });

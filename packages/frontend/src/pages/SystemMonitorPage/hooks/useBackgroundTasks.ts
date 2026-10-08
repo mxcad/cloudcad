@@ -73,9 +73,9 @@ export function useBackgroundTasks(active: boolean): BackgroundTasksState {
     queryKey: [TASK_RUNS_KEY],
     queryFn: async () => {
       const res = await taskRunControllerListRuns({
+        throwOnError: true,
         query: { page: 1, limit: TASK_RUNS_LIMIT },
       });
-      if (res.error) throw res.error;
       return parseTaskRunList(res.data);
     },
     placeholderData: (prev) => prev,
@@ -86,8 +86,7 @@ export function useBackgroundTasks(active: boolean): BackgroundTasksState {
   const taskListQuery = useQuery({
     queryKey: [TASK_LIST_KEY],
     queryFn: async () => {
-      const res = await taskRunControllerListTasks();
-      if (res.error) throw res.error;
+      const res = await taskRunControllerListTasks({ throwOnError: true });
       return parseTaskList(res.data);
     },
     enabled: active,
@@ -96,8 +95,9 @@ export function useBackgroundTasks(active: boolean): BackgroundTasksState {
   const configQuery = useQuery({
     queryKey: [TASK_ENABLED_KEYS_KEY],
     queryFn: async () => {
-      const res = await runtimeConfigControllerGetAllConfigs();
-      if (res.error) throw res.error;
+      const res = await runtimeConfigControllerGetAllConfigs({
+        throwOnError: true,
+      });
       const items = Array.isArray(res.data) ? res.data : [];
       const map: Record<string, boolean> = {};
       for (const item of items) {
@@ -146,9 +146,9 @@ export function useBackgroundTasks(active: boolean): BackgroundTasksState {
       try {
         setTriggering(taskName);
         const res = await taskRunControllerRunTask({
+          throwOnError: true,
           body: { taskName },
         });
-        if (res.error) throw res.error;
         showToast(t('任务已触发'), 'success');
         refetchRuns();
       } catch (error) {
@@ -171,10 +171,10 @@ export function useBackgroundTasks(active: boolean): BackgroundTasksState {
       try {
         setTogglingKey(enabledKey);
         const res = await runtimeConfigControllerUpdateConfig({
+          throwOnError: true,
           path: { key: enabledKey },
           body: { val: enabled as never },
         });
-        if (res.error) throw res.error;
         showToast(enabled ? t('任务已启用') : t('任务已禁用'), 'success');
         configQuery.refetch();
       } catch (error) {

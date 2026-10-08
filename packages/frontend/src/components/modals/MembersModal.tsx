@@ -94,10 +94,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       const response = await memberControllerGetProjectMembers({
+        throwOnError: true,
         path: { projectId },
       });
       // SDK 默认不抛错：错误在 result.error，必须显式抛出否则 catch 是死代码
-      if (response.error) throw response.error;
       // 映射 id 为 userId 以保持兼容性
       const membersWithUserId = (response.data ?? []).map((m) => ({
         ...m,
@@ -112,9 +112,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const loadProjectRoles = useCallback(async () => {
     try {
       const response = await rolesControllerGetProjectRolesByProject({
+        throwOnError: true,
         path: { projectId },
       });
-      if (response.error) throw response.error;
       const allRoles = response.data ?? [];
 
       // 添加成员时可用的角色（排除项目所有者使用的角色——数据驱动 isOwnerRole，
@@ -151,9 +151,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setSearching(true);
       try {
         const response = await usersControllerSearchUsers({
+          throwOnError: true,
           query: { search: query, limit: 10 },
         });
-        if (response.error) throw response.error;
         // response.data 是 UserListResponseDto，包含 users 数组
         const users = response.data?.users ?? [];
 
@@ -239,13 +239,13 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     try {
       // 添加成员
       const result = await memberControllerAddProjectMember({
+        throwOnError: true,
         path: { projectId },
         body: {
           userId: selectedUser.id,
           projectRoleId: newRoleId,
         },
       });
-      if (result.error) throw result.error;
 
       // 重新获取完整成员列表（addProjectMember 返回的是 Prisma 嵌套结构，
       // 而成员列表需要扁平化的 ProjectMemberDto）
@@ -276,9 +276,9 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       const result = await memberControllerRemoveProjectMember({
+        throwOnError: true,
         path: { projectId, userId },
       });
-      if (result.error) throw result.error;
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
       refreshProjectPermissions(projectId);
     } catch (error) {
@@ -295,10 +295,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       const result = await memberControllerUpdateProjectMember({
+        throwOnError: true,
         path: { projectId, userId },
         body: { projectRoleId },
       });
-      if (result.error) throw result.error;
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );
@@ -332,10 +332,10 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     setErrorMessage('');
     try {
       const result = await memberControllerTransferProject({
+        throwOnError: true,
         path: { projectId },
         body: { newOwnerId: transferTarget.userId },
       });
-      if (result.error) throw result.error;
 
       // 刷新成员列表
       await loadMembers();

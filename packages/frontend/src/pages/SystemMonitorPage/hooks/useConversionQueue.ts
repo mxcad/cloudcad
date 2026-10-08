@@ -27,9 +27,10 @@ export function useConversionQueue(active: boolean) {
     setLoading(true);
     setError(null);
     try {
-      const res = await conversionMonitorControllerGetStats();
+      const res = await conversionMonitorControllerGetStats({
+        throwOnError: true,
+      });
       // SDK 默认不抛错：失败时错误在 res.error，显式抛出让 catch 记录真实原因
-      if (res.error) throw res.error;
       setState(parseConversionMonitorStats(res.data));
     } catch (err) {
       setError(getErrorMessage(err) || t('获取转换队列统计失败'));
@@ -68,8 +69,9 @@ export function useConversionTasks(active: boolean) {
     setLoading(true);
     setError(null);
     try {
-      const res = await conversionMonitorControllerListTasks();
-      if (res.error) throw res.error;
+      const res = await conversionMonitorControllerListTasks({
+        throwOnError: true,
+      });
       setTasks(res.data?.items ?? []);
     } catch (err) {
       setError(getErrorMessage(err) || t('获取转换任务明细失败'));

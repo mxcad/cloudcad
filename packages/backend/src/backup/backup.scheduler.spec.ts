@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { BackupScheduler } from './backup.scheduler';
 import { BackupService, BackupVerifyError } from './backup.service';
 import { AlertService } from '../alert/alert.service';
-import { AlertLevel } from '../alert/enums/alert.enum';
+import { AlertLevel, TASK_RUN_FAILED_LEVEL } from '../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { TaskRunService } from '../task-run/task-run.service';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../task-run/task-run.constants';
@@ -116,7 +116,8 @@ describe('BackupScheduler', () => {
       expect(mockAlertService.raise).toHaveBeenCalledWith({
         source: 'scheduler:backup',
         messageKey: 'task_run_failed',
-        level: AlertLevel.P2,
+        // 完全失败须 P1（15min 聚合邮件），非 P2 日报——#325 / ADR-0055 §7
+        level: TASK_RUN_FAILED_LEVEL,
         message: expect.stringContaining('pg_dump failed'),
         detail: expect.objectContaining({ error: 'pg_dump failed' }),
       });

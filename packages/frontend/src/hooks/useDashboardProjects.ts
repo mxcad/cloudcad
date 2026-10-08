@@ -20,8 +20,10 @@ export function useDashboardProjects() {
   const projectsQuery = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: async (): Promise<FileSystemNodeDto[]> => {
-      const result = await projectControllerGetProjects({ query: {} });
-      if (result.error) throw result.error;
+      const result = await projectControllerGetProjects({
+        throwOnError: true,
+        query: {},
+      });
       const nodes = result.data?.nodes || [];
       return nodes
         .filter((p: FileSystemNodeDto) => p.fileStatus !== 'DELETED')
@@ -41,10 +43,10 @@ export function useDashboardProjects() {
     queryKey: queryKeys.dashboard.personalSpaceChildren(personalSpaceId || ''),
     queryFn: async () => {
       const result = await nodeControllerGetChildren({
+        throwOnError: true,
         path: { nodeId: personalSpaceId! },
         query: { limit: 10 },
       });
-      if (result.error) throw result.error;
       const data = result.data;
       return data?.nodes ?? [];
     },
@@ -56,12 +58,12 @@ export function useDashboardProjects() {
   const createProjectMutation = useMutation({
     mutationFn: async (payload: { name: string; description?: string }) => {
       const result = await projectControllerCreateProject({
+        throwOnError: true,
         body: {
           name: payload.name.trim(),
           description: payload.description?.trim() || undefined,
         },
       });
-      if (result.error) throw result.error;
       return result.data;
     },
     onSuccess: () => {
@@ -76,12 +78,12 @@ export function useDashboardProjects() {
         throw new Error(t('无法确定创建位置'));
       }
       const result = await nodeControllerCreateDrawing({
+        throwOnError: true,
         body: {
           parentId: personalSpaceId,
           name: payload.name.trim() || undefined,
         },
       });
-      if (result.error) throw result.error;
       return result.data;
     },
     onSuccess: () => {
@@ -122,7 +124,8 @@ export function useDashboardProjects() {
     createDrawing: createDrawingMutation.mutateAsync,
     isCreatingDrawing: createDrawingMutation.isPending,
     createDrawingError: createDrawingMutation.error
-      ? getErrorMessage(createDrawingMutation.error) || t('创建图纸失败，请重试')
+      ? getErrorMessage(createDrawingMutation.error) ||
+        t('创建图纸失败，请重试')
       : null,
   };
 }

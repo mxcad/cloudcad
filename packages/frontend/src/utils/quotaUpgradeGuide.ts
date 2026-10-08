@@ -4,6 +4,7 @@ import { t } from '@/languages';
 // 直接从 tokenRefresh 取（而非 clientSetup 门面）：本文件被业务广泛引用，
 // 引 clientSetup 会把整个客户端初始化链拉进依赖图，徒增环风险
 import { redirectToLogin } from '@/config/tokenRefresh';
+import { writeJson } from '@/lib/browserStorage';
 
 /** 配额升级引导触发事件（由 planSelectStore 监听并打开选型弹窗） */
 export const QUOTA_GUIDE_EVENT = 'cloudcad:quota-guide';
@@ -64,14 +65,15 @@ export async function handleQuotaExceededError(error: unknown): Promise<void> {
       cancelText: t('取消'),
     });
     if (!confirmed) return;
-    sessionStorage.setItem(
+    writeJson(
       'pendingVipPurchase',
-      JSON.stringify({
+      {
         restrictionKey,
         current: toNumber(err.current),
         limit: toNumber(err.limit),
         need: toNumber(err.need),
-      })
+      },
+      'session'
     );
     redirectToLogin();
     return;

@@ -54,6 +54,7 @@ describe('CacheMonitorController', () => {
     deleteMany: jest.fn(),
     deleteByPattern: jest.fn(),
     clear: jest.fn(),
+    clearLevel: jest.fn(),
   };
 
   const mockPermissionService = {
@@ -105,6 +106,7 @@ describe('CacheMonitorController', () => {
     mockCacheService.deleteMany.mockResolvedValue(undefined);
     mockCacheService.deleteByPattern.mockResolvedValue(3);
     mockCacheService.clear.mockResolvedValue(undefined);
+    mockCacheService.clearLevel.mockResolvedValue(undefined);
 
     mockPermissionService.checkSystemPermission.mockImplementation(
       async (_userId: string, permission: SystemPermission) =>
@@ -222,6 +224,21 @@ describe('CacheMonitorController', () => {
         .send({ level: 'ALL' });
       expect(cleanupRes.status).toBe(200);
       expect(mockCacheService.clear).toHaveBeenCalled();
+    });
+
+    it('分级清理 L1/L2 应真正调用 clearLevel（此前为伪成功，落注释后直接返回 success）', async () => {
+      mockPermissionService.checkSystemPermission.mockResolvedValue(true);
+
+      for (const level of ['L1', 'L2'] as const) {
+        const res = await request(app.getHttpServer())
+          .post('/api/v1/cache-monitor/cleanup')
+          .send({ level });
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(mockCacheService.clearLevel).toHaveBeenCalledWith(level);
+      }
+      // 分级清理不应触发整库 clear
+      expect(mockCacheService.clear).not.toHaveBeenCalled();
     });
   });
 

@@ -4,7 +4,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import type { FileSystemNodeDto } from '@/api-sdk';
-import { getNodeApi, type BreadcrumbItem, type LibraryType } from './libraryQueryHelpers';
+import {
+  getNodeApi,
+  type BreadcrumbItem,
+  type LibraryType,
+} from './libraryQueryHelpers';
 
 async function getNodePath(
   type: LibraryType,
@@ -12,8 +16,7 @@ async function getNodePath(
   libraryId: string
 ): Promise<BreadcrumbItem[]> {
   const nodeApi = getNodeApi(type);
-  const nodeResponse = await nodeApi({ path: { nodeId } });
-  if (nodeResponse.error) throw nodeResponse.error;
+  const nodeResponse = await nodeApi({ throwOnError: true, path: { nodeId } });
 
   // FileSystemNodeDto 没有 parent 字段，但 API 响应实际包含
   const nodeData = nodeResponse.data as FileSystemNodeDto & {
@@ -41,8 +44,10 @@ export async function buildBreadcrumbs(
   const nodeApi = getNodeApi(type);
 
   try {
-    const nodeResponse = await nodeApi({ path: { nodeId } });
-    if (nodeResponse.error) throw nodeResponse.error;
+    const nodeResponse = await nodeApi({
+      throwOnError: true,
+      path: { nodeId },
+    });
     const nodeData = nodeResponse.data as FileSystemNodeDto & {
       parent?: { id: string; name: string };
     };

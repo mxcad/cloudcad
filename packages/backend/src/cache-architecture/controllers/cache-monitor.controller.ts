@@ -296,7 +296,8 @@ export class CacheMonitorController {
       return { success: true, message: '成功清理所有缓存' };
     }
 
-    // 根据级别清理（需要实现特定级别的清理）
-    return { success: true, message: '缓存清理成功' };
+    // 分级清理（L1 / L2）——此前落到「需要实现」注释后直接返回 success:true（伪成功）
+    await this.cacheService.clearLevel(dto.level);
+    return { success: true, message: `成功清理 ${dto.level} 缓存` };
   }
 }

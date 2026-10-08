@@ -303,24 +303,24 @@ export function useCadFileLoader(
 
         if (libraryKeyParam === 'drawing') {
           const res = await libraryControllerGetDrawingNode({
+            throwOnError: true,
             path: { nodeId: fileId },
           });
           // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
           // 否则 nodeData 为 undefined 会被误报为"文件不存在"
-          if (res.error) throw res.error;
           file = res.data!;
         } else if (libraryKeyParam === 'block') {
           const res = await libraryControllerGetBlockNode({
+            throwOnError: true,
             path: { nodeId: fileId },
           });
-          if (res.error) throw res.error;
           file = res.data!;
         } else if (shareTokenParam) {
           try {
             const res = await shareControllerResolveShareNode({
+              throwOnError: true,
               path: { token: shareTokenParam },
             });
-            if (res.error) throw res.error;
             file = res.data!;
           } catch (err) {
             // catch 仅兜底：SDK 不抛错时真实错误已在上面显式抛出，
@@ -331,9 +331,9 @@ export function useCadFileLoader(
         } else {
           try {
             const res = await nodeControllerGetNode({
+              throwOnError: true,
               path: { nodeId: fileId },
             });
-            if (res.error) throw res.error;
             file = res.data!;
           } catch (error) {
             // 后端错误体带 code 字段（UNAUTHORIZED/NOT_FOUND/...），

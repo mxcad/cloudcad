@@ -33,6 +33,7 @@ import {
 import { useLoginForm } from './hooks/useLoginForm';
 import { getReturnUrl } from '@/config/clientSetup';
 import { isAccessTokenExpired } from '@/utils/tokenUtils';
+import { read, write, erase } from '@/lib/browserStorage';
 import { authControllerGetProfile } from '@/api-sdk';
 import { t } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
@@ -130,9 +131,9 @@ export const Login: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const redirectUri = params.get('redirect_uri');
     if (redirectUri) {
-      sessionStorage.setItem('desktop_redirect_uri', redirectUri);
+      write('desktop_redirect_uri', redirectUri, 'session');
       const state = params.get('state');
-      if (state) sessionStorage.setItem('desktop_redirect_state', state);
+      if (state) write('desktop_redirect_state', state, 'session');
     }
   }, []);
 
@@ -156,7 +157,7 @@ export const Login: React.FC = () => {
       redirectPerformed.current = true;
 
       // 桌面端 EXE OAuth 回调（优先于普通 redirect）— 验证 token 后同时触发回调 + 页面跳转
-      const desktopRedirectUri = sessionStorage.getItem('desktop_redirect_uri');
+      const desktopRedirectUri = read('desktop_redirect_uri', 'session');
       if (desktopRedirectUri) {
         if (isAccessTokenExpired()) {
           return;
@@ -168,11 +169,11 @@ export const Login: React.FC = () => {
               return;
             }
             // 验证通过，触发 EXE 回调
-            const state = sessionStorage.getItem('desktop_redirect_state');
-            sessionStorage.removeItem('desktop_redirect_uri');
-            sessionStorage.removeItem('desktop_redirect_state');
-            const accessToken = localStorage.getItem('accessToken');
-            const refreshToken = localStorage.getItem('refreshToken');
+            const state = read('desktop_redirect_state', 'session');
+            erase('desktop_redirect_uri', 'session');
+            erase('desktop_redirect_state', 'session');
+            const accessToken = read('accessToken');
+            const refreshToken = read('refreshToken');
             let redirectUrl = desktopRedirectUri;
             let hasQuery = redirectUrl.includes('?');
             if (accessToken) {
@@ -195,13 +196,13 @@ export const Login: React.FC = () => {
         try {
           const redirectUrl = new URL(redirectParam);
           if (redirectUrl.origin !== window.location.origin) {
-            const accessToken = localStorage.getItem('accessToken');
+            const accessToken = read('accessToken');
             if (accessToken) {
               redirectUrl.searchParams.set('accessToken', accessToken);
-              const refreshToken = localStorage.getItem('refreshToken');
+              const refreshToken = read('refreshToken');
               if (refreshToken)
                 redirectUrl.searchParams.set('refreshToken', refreshToken);
-              const user = localStorage.getItem('user');
+              const user = read('user');
               if (user) redirectUrl.searchParams.set('user', user);
               window.location.href = redirectUrl.toString();
               return;
@@ -213,14 +214,14 @@ export const Login: React.FC = () => {
       }
 
       // 设备授权待办 — 从 sessionStorage 恢复，优先于普通 redirect
-      const deviceUserCode = sessionStorage.getItem('device_auth_user_code');
+      const deviceUserCode = read('device_auth_user_code', 'session');
       if (deviceUserCode) {
         const deviceClientId =
-          sessionStorage.getItem('device_auth_client_id') || '';
+          read('device_auth_client_id', 'session') || '';
         const deviceRedirect =
-          sessionStorage.getItem('device_auth_redirect') || '';
-        sessionStorage.removeItem('device_auth_user_code');
-        sessionStorage.removeItem('device_auth_client_id');
+          read('device_auth_redirect', 'session') || '';
+        erase('device_auth_user_code', 'session');
+        erase('device_auth_client_id', 'session');
         let deviceUrl = `/device?user_code=${encodeURIComponent(deviceUserCode)}${deviceClientId ? `&client_id=${encodeURIComponent(deviceClientId)}` : ''}`;
         if (deviceRedirect) {
           deviceUrl += `&redirect=${encodeURIComponent(deviceRedirect)}`;
@@ -239,9 +240,9 @@ export const Login: React.FC = () => {
       navigate(from, { replace: true });
 
       // 检测待办 VIP 购买意图（游客使用会员功能时触发，登录后自动弹出购买弹窗）
-      const pendingVipPurchase = sessionStorage.getItem('pendingVipPurchase');
+      const pendingVipPurchase = read('pendingVipPurchase', 'session');
       if (pendingVipPurchase) {
-        sessionStorage.removeItem('pendingVipPurchase');
+        erase('pendingVipPurchase', 'session');
         try {
           const reason = JSON.parse(pendingVipPurchase);
           // 回来时先判断当前账号是否已是会员：已是会员则购买意图作废，不再弹窗

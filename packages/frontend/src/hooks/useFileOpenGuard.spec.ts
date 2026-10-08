@@ -39,43 +39,35 @@ beforeEach(() => {
 });
 
 describe('useFileOpenGuard — SAVE_REQUIRED 经类型化 bus（T1 迁移）', () => {
-  it('未登录收到 SAVE_REQUIRED（含 action）→ 弹出登录提示', async () => {
+  // 分派走稳定 kind（SaveRequiredKind），不再用翻译串匹配：
+  // 生产端恒发 t('保存文件') 曾令「另存为」分支不可达，spec 靠喂中文字面量锁死永远绿。
+  it('未登录收到 SAVE_REQUIRED（kind=save）→ 弹出登录提示，文案=保存文件', async () => {
     const { result } = renderGuard();
 
     act(() => {
-      emit(CAD_EVENTS.SAVE_REQUIRED, { action: '保存文件' });
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'save' });
     });
 
     expect(result.current.showLoginPrompt).toBe(true);
     expect(result.current.loginPromptAction).toBe('保存文件');
   });
 
-  it('未登录收到 SAVE_REQUIRED（无 action）→ 使用默认文案', () => {
+  it('未登录收到 SAVE_REQUIRED（kind=saveAs）→ 仍弹提示（saveAsToCloud 已 cancelLoginRedirect，提示是唯一登录入口），文案=另存为', () => {
     const { result } = renderGuard();
 
     act(() => {
-      emit(CAD_EVENTS.SAVE_REQUIRED, { action: '' });
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'saveAs' });
     });
 
     expect(result.current.showLoginPrompt).toBe(true);
-    expect(result.current.loginPromptAction).toBe('保存文件');
-  });
-
-  it('action 含「另存为」→ 不弹登录提示', () => {
-    const { result } = renderGuard();
-
-    act(() => {
-      emit(CAD_EVENTS.SAVE_REQUIRED, { action: '另存为图纸' });
-    });
-
-    expect(result.current.showLoginPrompt).toBe(false);
+    expect(result.current.loginPromptAction).toBe('另存为');
   });
 
   it('已登录 → 不弹登录提示', () => {
     const { result } = renderGuard({ isAuthenticated: true });
 
     act(() => {
-      emit(CAD_EVENTS.SAVE_REQUIRED, { action: '保存文件' });
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'save' });
     });
 
     expect(result.current.showLoginPrompt).toBe(false);
@@ -85,7 +77,7 @@ describe('useFileOpenGuard — SAVE_REQUIRED 经类型化 bus（T1 迁移）', (
     const { result } = renderGuard();
 
     act(() => {
-      emit(CAD_EVENTS.SAVE_REQUIRED, { action: '保存文件' });
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'save' });
     });
     expect(result.current.showLoginPrompt).toBe(true);
 
@@ -95,30 +87,20 @@ describe('useFileOpenGuard — SAVE_REQUIRED 经类型化 bus（T1 迁移）', (
     expect(result.current.showLoginPrompt).toBe(false);
 
     act(() => {
-      emit(CAD_EVENTS.SAVE_REQUIRED, { action: '保存文件' });
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'save' });
     });
     expect(result.current.showLoginPrompt).toBe(false);
   });
 
-  it('未登录收到 SAVE_AS_REQUIRED（含 action）→ 弹出登录提示（引擎黑盒防御监听）', () => {
+  it('未登录收到 SAVE_AS_REQUIRED（kind=saveAs，引擎黑盒防御监听）→ 弹出登录提示，文案=另存为', () => {
     const { result } = renderGuard();
 
     act(() => {
-      emit(CAD_EVENTS.SAVE_AS_REQUIRED, { action: '保存文件' });
+      emit(CAD_EVENTS.SAVE_AS_REQUIRED, { kind: 'saveAs' });
     });
 
     expect(result.current.showLoginPrompt).toBe(true);
-    expect(result.current.loginPromptAction).toBe('保存文件');
-  });
-
-  it('SAVE_AS_REQUIRED action 含「另存为」→ 不弹登录提示', () => {
-    const { result } = renderGuard();
-
-    act(() => {
-      emit(CAD_EVENTS.SAVE_AS_REQUIRED, { action: '另存为图纸' });
-    });
-
-    expect(result.current.showLoginPrompt).toBe(false);
+    expect(result.current.loginPromptAction).toBe('另存为');
   });
 
   it('卸载后取消订阅（bus 不再派发到本 hook）', () => {
@@ -126,7 +108,7 @@ describe('useFileOpenGuard — SAVE_REQUIRED 经类型化 bus（T1 迁移）', (
     unmount();
 
     act(() => {
-      emit(CAD_EVENTS.SAVE_REQUIRED, { action: '保存文件' });
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'save' });
     });
     // 无异常即通过（订阅已解除）
     expect(true).toBe(true);

@@ -169,8 +169,9 @@ export default function PlanSelectOverlay() {
       try {
         // SDK 默认不抛错：fetchVipOffering 内部把 result.error 显式抛出，
         // 让 catch 记录真实原因（此前失败静默显示"暂无可用方案"，误导用户以为未配置套餐）
-        const { tiers: allTiers, durations: durData } =
-          await fetchVipOffering(abort.signal);
+        const { tiers: allTiers, durations: durData } = await fetchVipOffering(
+          abort.signal
+        );
         const currentLevel = membership?.tierLevel ?? 0;
         const isVip = membership?.isVip ?? false;
         const tiersData = allTiers
@@ -216,10 +217,12 @@ export default function PlanSelectOverlay() {
         returnUrl.searchParams.set('paymentReturn', '1');
         body.redirectUrl = returnUrl.toString();
       }
-      const res = await billingControllerCreateOrder({ body });
+      const res = await billingControllerCreateOrder({
+        throwOnError: true,
+        body,
+      });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则下单失败被误判为"创建订单失败"固定文案（历史 bug）
-      if (res?.error) throw res.error;
       const orderData = res?.data as Record<string, unknown> | undefined;
       if (orderData?.status === 'SUCCEEDED') {
         // 对账兜底：复用的 PENDING 单在微信侧已支付（回调丢失）时后端直接

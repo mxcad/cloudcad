@@ -1,4 +1,5 @@
 import { UrlHelper } from '@/utils/mxcadUtils';
+import { read } from '@/lib/browserStorage';
 
 let isThemeSyncInitialized = false;
 
@@ -19,7 +20,7 @@ export async function initThemeSync(): Promise<void> {
       );
     };
 
-    const storedTheme = localStorage.getItem('mx-user-dark');
+    const storedTheme = read('mx-user-dark');
     const userThemeIsDark = storedTheme ? storedTheme === 'true' : true;
     const currentMxcadTheme = vuetify.theme.global.name.value;
     const mxcadIsDark = currentMxcadTheme === 'dark';

@@ -17,6 +17,7 @@ import { useAccumulatedPagination } from '@/hooks/common/useAccumulatedPaginatio
 import { SelectableTable } from '@/components/common/SelectableTable';
 import { BatchActionBar } from '@/components/common/BatchActionBar';
 import { t } from '@/languages';
+import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import { globalShowToast } from '@/utils/notificationEvents';
 import { useCopy } from '@/hooks/useCopy';
 import { ipBlacklistControllerRemove } from '@/api-sdk';
@@ -25,10 +26,6 @@ import { RemoveEntryModal } from './components/RemoveEntryModal';
 import { IP_BLACKLIST_PAGE_SIZE, IP_BLACKLIST_SOURCE_META } from './constants';
 import { useAddIpBlacklistEntry, useIpBlacklistList } from './hooks/useIpBlacklist';
 import type { IpBlacklistEntry, IpBlacklistEntryForm } from './types';
-
-function formatTime(value: string): string {
-  return new Date(value).toLocaleString();
-}
 
 /**
  * @param embedded 嵌入 IP 访问控制 Tab 时为 true：隐藏独立页头与外边距
@@ -358,10 +355,10 @@ export default function IpBlacklistPage({
                         </button>
                       </div>
                     </td>
-                    <td className="text-xs">{formatTime(entry.createdAt)}</td>
+                    <td className="text-xs">{formatDateTimeWithSeconds(entry.createdAt)}</td>
                     <td className="text-xs">
                       {entry.expiresAt ? (
-                        formatTime(entry.expiresAt)
+                        formatDateTimeWithSeconds(entry.expiresAt)
                       ) : (
                         <Tag variant="success" size="xs">
                           {t('永久')}

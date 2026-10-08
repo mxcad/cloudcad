@@ -48,11 +48,11 @@ export function useBatchDownload(
     ) => {
       try {
         const result = await batchDownloadControllerCreateTask({
+          throwOnError: true,
           body: { fileList, projectId, mode: 'zip', libraryType },
         });
         // SDK 默认不抛错：失败时错误 in result.error。不检查会对 undefined
         // 取 .taskId 抛 TypeError，用户看到英文引擎报错而非后端原因
-        if (result.error) throw result.error;
         const taskId = (result.data as { taskId: string }).taskId;
 
         // ZIP 模式：生成 itemNames 用于下载列表显示
@@ -123,6 +123,7 @@ export function useBatchDownload(
         });
 
         const result = await batchDownloadControllerCreateTask({
+          throwOnError: true,
           body: {
             fileList: singleFormatItems,
             projectId,
@@ -130,7 +131,6 @@ export function useBatchDownload(
             libraryType,
           },
         });
-        if (result.error) throw result.error;
         const taskId = (result.data as { taskId: string }).taskId;
 
         const task: BatchTask = {
@@ -199,9 +199,10 @@ export function useBatchDownload(
       try {
         const nameWithoutExt = body.fileName.replace(/\.[^.]+$/, '');
         const itemNames = [`${nameWithoutExt}.${body.format}`];
-        const result =
-          await batchDownloadControllerCreateSingleFileTask({ body });
-        if (result.error) throw result.error;
+        const result = await batchDownloadControllerCreateSingleFileTask({
+          throwOnError: true,
+          body,
+        });
         const taskId = (result.data as { taskId: string }).taskId;
 
         const task: BatchTask = {
@@ -345,7 +346,10 @@ export function useBatchDownload(
       if (newTasks.length > 0) {
         // addTask 是前置插入：服务端已按 createdAt 倒序返回，须反序逐个插入，
         // 否则同步组内顺序被翻转（最旧排到最前）
-        newTasks.slice().reverse().forEach((task) => addTask(task));
+        newTasks
+          .slice()
+          .reverse()
+          .forEach((task) => addTask(task));
       }
       if (!hasMore) {
         const serverIds = new Set(serverTasks.map((st) => st.taskId));
@@ -435,11 +439,11 @@ export function useBatchDownload(
     async (taskId: string) => {
       try {
         const result = await batchDownloadControllerCancelTask({
+          throwOnError: true,
           path: { taskId },
         });
         // SDK 默认不抛错：失败时错误在 result.error。不检查会把任务标记为
         // 已取消并弹"批量下载已取消"，实际后端取消失败仍在后台执行
-        if (result.error) throw result.error;
         closeBatchTaskProgress(taskId);
         mySubscriptionsRef.current.delete(taskId);
         updateTask(taskId, { status: 'CANCELLED' });
@@ -457,9 +461,9 @@ export function useBatchDownload(
     async (taskId: string) => {
       try {
         const result = await batchDownloadControllerRetryTask({
+          throwOnError: true,
           path: { taskId },
         });
-        if (result.error) throw result.error;
         updateTask(taskId, { status: 'PROCESSING' });
         // 失败时进度 SSE 已关闭（onClosed 清实例订阅标记），重试后须重新订阅才能收到新进度
         subscribeToProgressSSE(taskId);
@@ -480,9 +484,9 @@ export function useBatchDownload(
     async (taskId: string) => {
       try {
         const result = await batchDownloadControllerRetryFailedItems({
+          throwOnError: true,
           path: { taskId },
         });
-        if (result.error) throw result.error;
         const newTaskId = (result.data as { newTaskId: string }).newTaskId;
         // 新任务显示名继承原任务失败项文件名（errors 字段）
         const original = useBatchDownloadStore

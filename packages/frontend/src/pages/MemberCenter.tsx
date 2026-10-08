@@ -43,6 +43,7 @@ import {
 import { usePaymentRefresh } from '@/hooks/billing/usePaymentRefresh';
 import { formatConfigValue, getConfigLabel } from '@/utils/tierConfigUtils';
 import { centsToYuan } from '@/utils/priceUtils';
+import { formatDate } from '@/utils/dateUtils';
 import { usagePercent } from '@cloudcad/platform';
 import {
   BENEFIT_ITEMS,
@@ -182,9 +183,8 @@ export default function MemberCenter() {
   const loadOrders = useCallback(async () => {
     setOrdersLoading(true);
     try {
-      const res = await billingControllerGetOrders();
+      const res = await billingControllerGetOrders({ throwOnError: true });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-      if (res?.error) throw res.error;
       const data = res?.data as { items?: OrderItem[] } | undefined;
       setOrders(data?.items?.slice(0, 5) ?? []);
     } catch (error) {
@@ -212,10 +212,10 @@ export default function MemberCenter() {
       setAutoError('');
       try {
         const res = await billingControllerAutoCreateOrder({
+          throwOnError: true,
           body: { tradeType: 'NATIVE' },
         });
         // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-        if (res?.error) throw res.error;
         if (cancelled) return;
         const data = res?.data as
           | {
@@ -257,48 +257,51 @@ export default function MemberCenter() {
     [globalOpen]
   );
 
-  const handleRepay = useCallback(async (orderNo: string) => {
-    setRepayLoading(true);
-    setRepayError('');
-    try {
-      const tradeType = detectTradeType();
-      const res = await billingControllerRepayOrder({
-        path: { orderNo },
-        body: { tradeType },
-      });
-      // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
-      // 否则下单失败被误判为"订单状态已变更"（历史 bug）
-      if (res?.error) throw res.error;
-      const data = res?.data as Record<string, unknown> | undefined;
-      if (data?.status === 'SUCCEEDED') {
-        // 对账兜底：后端确认微信侧已支付并完成订单（回调丢失场景），
-        // 提示已开通并刷新会员状态/订单列表，而非误导性的"状态已变更"
-        globalShowToast(t('该订单已支付成功，会员已开通'), 'success');
-        await refreshAfterPayment();
-        await loadOrders();
-        return;
+  const handleRepay = useCallback(
+    async (orderNo: string) => {
+      setRepayLoading(true);
+      setRepayError('');
+      try {
+        const tradeType = detectTradeType();
+        const res = await billingControllerRepayOrder({
+          throwOnError: true,
+          path: { orderNo },
+          body: { tradeType },
+        });
+        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
+        // 否则下单失败被误判为"订单状态已变更"（历史 bug）
+        const data = res?.data as Record<string, unknown> | undefined;
+        if (data?.status === 'SUCCEEDED') {
+          // 对账兜底：后端确认微信侧已支付并完成订单（回调丢失场景），
+          // 提示已开通并刷新会员状态/订单列表，而非误导性的"状态已变更"
+          globalShowToast(t('该订单已支付成功，会员已开通'), 'success');
+          await refreshAfterPayment();
+          await loadOrders();
+          return;
+        }
+        if (!data || data.status !== 'PENDING') {
+          setRepayError(t('订单状态已变更，无法继续支付'));
+          globalShowToast(t('订单状态已变更，无法继续支付'), 'error');
+          return;
+        }
+        setRepayPayment({
+          orderNo: data.orderNo as string,
+          amount: data.amount as number,
+          codeUrl: (data.codeUrl as string | null) ?? null,
+          payParams: (data.payParams as Record<string, unknown>) ?? null,
+          redirectUrl: (data.redirectUrl as string | null) ?? null,
+        });
+      } catch (error) {
+        // 透传后端真实原因（网关/风控等），不再固定"获取支付参数失败"
+        const msg = getErrorMessage(error) || t('获取支付参数失败，请重试');
+        setRepayError(msg);
+        globalShowToast(msg, 'error');
+      } finally {
+        setRepayLoading(false);
       }
-      if (!data || data.status !== 'PENDING') {
-        setRepayError(t('订单状态已变更，无法继续支付'));
-        globalShowToast(t('订单状态已变更，无法继续支付'), 'error');
-        return;
-      }
-      setRepayPayment({
-        orderNo: data.orderNo as string,
-        amount: data.amount as number,
-        codeUrl: (data.codeUrl as string | null) ?? null,
-        payParams: (data.payParams as Record<string, unknown>) ?? null,
-        redirectUrl: (data.redirectUrl as string | null) ?? null,
-      });
-    } catch (error) {
-      // 透传后端真实原因（网关/风控等），不再固定"获取支付参数失败"
-      const msg = getErrorMessage(error) || t('获取支付参数失败，请重试');
-      setRepayError(msg);
-      globalShowToast(msg, 'error');
-    } finally {
-      setRepayLoading(false);
-    }
-  }, [refreshAfterPayment, loadOrders]);
+    },
+    [refreshAfterPayment, loadOrders]
+  );
 
   const handleApplyRefund = useCallback(async () => {
     if (!refundTarget) return;
@@ -310,11 +313,11 @@ export default function MemberCenter() {
     setRefundError('');
     try {
       const res = await billingControllerApplyRefund({
+        throwOnError: true,
         path: { orderNo: refundTarget.orderNo },
         body: { reason: refundReason.trim() },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出（sdk-mutation-error-gotcha）
-      if (res?.error) throw res.error;
       globalShowToast(t('退款申请已提交，请等待审核'), 'success');
       setRefundTarget(null);
       setRefundReason('');
@@ -447,9 +450,7 @@ export default function MemberCenter() {
                         style={{ color: 'var(--text-tertiary)' }}
                       >
                         {t('有效期至 {date}', {
-                          date: new Date(
-                            membership.expiresAt
-                          ).toLocaleDateString('zh-CN'),
+                          date: formatDate(membership.expiresAt),
                         })}
                       </p>
                     )}
@@ -717,7 +718,11 @@ export default function MemberCenter() {
                             {currentVal !== undefined && (
                               <Tag variant="primary" size="sm">
                                 {t('当前: {val}', {
-                                  val: formatConfigValue(key, currentVal, registry),
+                                  val: formatConfigValue(
+                                    key,
+                                    currentVal,
+                                    registry
+                                  ),
                                 })}
                               </Tag>
                             )}
@@ -974,9 +979,7 @@ export default function MemberCenter() {
                           className="text-xs mt-0.5"
                           style={{ color: 'var(--text-tertiary)' }}
                         >
-                          {new Date(order.createdAt).toLocaleDateString(
-                            'zh-CN'
-                          )}
+                          {formatDate(order.createdAt)}
                           <span className="ml-2 font-mono">
                             {order.orderNo}
                           </span>

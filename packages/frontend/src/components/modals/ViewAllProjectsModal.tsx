@@ -24,9 +24,9 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
     queryKey: ['viewAllProjects'],
     queryFn: async () => {
       const result = await projectControllerGetProjects({
+        throwOnError: true,
         query: { limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' },
       });
-      if (result.error) throw result.error;
       const nodes = result.data?.nodes || [];
       return nodes.filter((p) => p.fileStatus !== 'DELETED');
     },

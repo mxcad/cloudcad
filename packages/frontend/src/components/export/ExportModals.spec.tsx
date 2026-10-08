@@ -233,6 +233,7 @@ describe('ExportModals', () => {
     fireEvent.click(screen.getByText('下载'));
     await waitFor(() => {
       expect(downloadControllerDownloadNodeWithFormat).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { nodeId: 'node-1' },
         query: { format: 'mxweb' },
       });
@@ -413,6 +414,7 @@ describe('ExportModals', () => {
       expect(
         mxcadFileAccessControllerGetFileDownloadExternalRef
       ).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { nodeId: 'file-1', fileName: 'ref.dwg' },
         query: { format: 'mxweb' },
       });

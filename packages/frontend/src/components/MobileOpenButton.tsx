@@ -19,6 +19,7 @@ import {
   buildMobileRedirectUrl,
   getMobileRedirectConfig,
 } from '../utils/mobileRedirect';
+import { read } from '@/lib/browserStorage';
 
 export function MobileOpenButton() {
   const location = useLocation();
@@ -34,9 +35,9 @@ export function MobileOpenButton() {
           pathname: location.pathname,
           search: location.search,
           credentials: {
-            accessToken: localStorage.getItem('accessToken'),
-            refreshToken: localStorage.getItem('refreshToken'),
-            user: localStorage.getItem('user'),
+            accessToken: read('accessToken'),
+            refreshToken: read('refreshToken'),
+            user: read('user'),
           },
         })
       );

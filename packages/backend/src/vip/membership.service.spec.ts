@@ -218,10 +218,14 @@ describe('MembershipService', () => {
     it('should add prorated extra days when upgrading to higher tier', async () => {
       // 旧等级 VIP1(1500) 剩余 60 天 → 升 VIP2(3000)：
       // extraDays = floor(60 × 1500 / 3000) = 30，effectiveDays = 30 + 30 = 60
+      // 钉住 Date.now：折算按 (expiresAt − now) 计剩余天数，时钟前进 1ms 即
+      // floor(59.99…×0.5)=29 使断言必红（HEAD 既有 flake），冻结后恒为整 60 天
+      const now = Date.now();
+      jest.spyOn(Date, 'now').mockReturnValue(now);
       const existing = {
         userId: 'user-1',
         tierLevel: 1,
-        expiresAt: new Date(Date.now() + 60 * 86400000),
+        expiresAt: new Date(now + 60 * 86400000),
       };
       mockTx.userMembership.findUnique.mockResolvedValue(existing);
       mockTx.vipTier.findUnique.mockResolvedValue({

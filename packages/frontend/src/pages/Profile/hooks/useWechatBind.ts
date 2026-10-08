@@ -22,21 +22,20 @@ export const useWechatBind = () => {
       takeover?: boolean;
     }) => {
       const result = await authControllerBindWechat({
+        throwOnError: true,
         body: {
           code: params.code,
           state: params.state,
           ...(params.takeover ? { takeover: true } : {}),
         } satisfies BindWechatDto,
       });
-      if (result.error) throw result.error;
       return result.data as { success?: boolean; message?: string };
     },
   });
 
   const unbindWechat = useMutation({
     mutationFn: async () => {
-      const result = await authControllerUnbindWechat();
-      if (result.error) throw result.error;
+      const result = await authControllerUnbindWechat({ throwOnError: true });
       return result.data as { success?: boolean; message?: string };
     },
   });

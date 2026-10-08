@@ -108,11 +108,11 @@ export function usePhoneVerification({
 
       // 先检查手机号是否已被注册
       const checkResult = await authControllerCheckFieldUniqueness({
+        throwOnError: true,
         body: {
           phone: phoneForm.phone,
         },
       });
-      if (checkResult.error) throw checkResult.error;
       if ((checkResult as { phoneExists?: boolean })?.phoneExists) {
         setFieldErrors((prev) => ({ ...prev, phone: t('该手机号已被注册') }));
         return;
@@ -120,12 +120,12 @@ export function usePhoneVerification({
 
       // 手机号可用，发送验证码
       const sendRes = await authControllerSendSmsCode({
+        throwOnError: true,
         body: {
           phone: phoneForm.phone,
         },
       });
       // SDK 默认不抛错：失败时响应体在 result.error
-      if (sendRes.error) throw sendRes.error;
       if ((sendRes.data as { success?: boolean } | undefined)?.success) {
         setCountdown(60);
       } else {

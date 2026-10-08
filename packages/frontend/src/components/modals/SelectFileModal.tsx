@@ -229,9 +229,9 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
             expandingNodeIdsRef.current.add(nodeId);
             try {
               const childrenRes = await nodeControllerGetChildren({
+                throwOnError: true,
                 path: { nodeId },
               });
-              if (childrenRes.error) throw childrenRes.error;
               const nodesData = childrenRes.data as
                 | {
                     nodes?: Array<{

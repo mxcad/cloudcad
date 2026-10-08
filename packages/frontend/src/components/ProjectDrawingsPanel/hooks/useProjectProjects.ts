@@ -78,11 +78,11 @@ export function useProjectProjects({
     queryKey: ['sidebar-projects', projectFilter, projectRefreshKey, page],
     queryFn: async () => {
       const result = await projectControllerGetProjects({
+        throwOnError: true,
         query: { filter: projectFilter, page, limit: PAGE_SIZE },
       });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 react-query 进入 error 态，
       // 否则失败被当作"无项目"空态
-      if (result.error) throw result.error;
       const projectList = result.data?.nodes || [];
       return {
         nodes: projectList.map(toFileSystemNode),

@@ -16,7 +16,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import { showFailToast, showSuccessToast } from 'vant'
 import { t } from '@/languages'
-import { usagePercent } from '@cloudcad/platform'
+import { membershipState, usagePercent, formatDate as platformFormatDate } from '@cloudcad/platform'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { unwrap, errMsg } from '@/utils/apiError'
 import { maskPhone, membershipBadge, membershipExpiry } from '@/utils/profileDisplay'
@@ -122,12 +122,14 @@ export function useProfileData() {
   const vipExpireDate = computed(() => membershipExpiry(profile.value))
 
   // 会员到期预警（D-11）：有效会员且剩余 ≤7 天；expiresAt 为 null 表示永久，不算到期
+  // 判定走 @cloudcad/platform 唯一出口（下限钳制 ≥0，过期不再显示负天数）
   const vipDaysRemaining = computed(() => {
-    const raw = profile.value.membershipExpiresAt
-    if (!profile.value.isVip || !raw) return null
-    const expire = new Date(raw).getTime()
-    if (Number.isNaN(expire)) return null
-    return Math.ceil((expire - Date.now()) / 86400000)
+    const state = membershipState({
+      tierLevel: profile.value.membershipTierLevel ?? 0,
+      expiresAt: profile.value.membershipExpiresAt ?? null,
+    })
+    if (!state.isVip || state.isPermanent) return null
+    return state.daysRemaining
   })
   const vipExpiringSoon = computed(() => {
     const days = vipDaysRemaining.value
@@ -142,12 +144,8 @@ export function useProfileData() {
   const statusTone = computed(() =>
     profile.value.status === 'ACTIVE' ? 'ok' : profile.value.status === 'INACTIVE' ? 'warn' : 'err'
   )
-  const createdAtText = computed(() => {
-    const raw = profile.value.createdAt
-    if (!raw) return ''
-    const date = new Date(raw)
-    return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10)
-  })
+  // 本地日历日（口径收敛到 @cloudcad/platform）；空/非法 → ''
+  const createdAtText = computed(() => platformFormatDate(profile.value.createdAt))
 
   const accountGroup = computed<AccountEntry[]>(() => {
     const rows: AccountEntry[] = [

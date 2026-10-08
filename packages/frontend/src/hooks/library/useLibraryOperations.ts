@@ -45,6 +45,7 @@ import {
 import { useMembership } from '@/hooks/useMembership';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
+import type { OperationOutcome } from '../file-system/moveCopyActions';
 import type { BatchOperationResponseDto } from '@/api-sdk';
 
 export type LibraryType = 'drawing' | 'block';
@@ -113,8 +114,15 @@ export interface UseLibraryOperationsReturn {
   handleBatchDelete: (nodeIds: string[]) => Promise<void>;
   /** 批量移动 */
   handleBatchMove: (nodeIds: string[], targetParentId: string) => Promise<void>;
-  /** 批量复制 */
-  handleBatchCopy: (nodeIds: string[], targetParentId: string) => Promise<void>;
+  /** 批量复制（透出结果：createdIds 为副本 id，undo rollback 按它删除） */
+  handleBatchCopy: (
+    nodeIds: string[],
+    targetParentId: string
+  ) => Promise<OperationOutcome>;
+  /** 单节点复制（裸 API：无 toast/刷新，供构建 undo 动作） */
+  copyNode: (nodeId: string, targetParentId: string) => Promise<unknown>;
+  /** 永久删除单节点（裸 API：无 toast/刷新，供构建 undo 动作） */
+  deleteNode: (nodeId: string) => Promise<unknown>;
 }
 
 export function useLibraryOperations({
@@ -368,6 +376,38 @@ export function useLibraryOperations({
     [libraryType, showToast, refreshNodes]
   );
 
+  // 单节点复制（裸 API：无 toast/刷新，供构建 undo 动作的 redo 重放）
+  const copyNode = useCallback(
+    async (nodeId: string, targetParentId: string) => {
+      const apiMethod =
+        libraryType === 'drawing'
+          ? libraryControllerCopyDrawingNode
+          : libraryControllerCopyBlockNode;
+      return apiMethod({
+        path: { nodeId },
+        body: { targetParentId },
+        throwOnError: true,
+      });
+    },
+    [libraryType]
+  );
+
+  // 永久删除单节点（裸 API：无 toast/刷新，供构建 undo 动作的 rollback）
+  const deleteNode = useCallback(
+    async (nodeId: string) => {
+      const apiMethod =
+        libraryType === 'drawing'
+          ? libraryControllerDeleteDrawingNode
+          : libraryControllerDeleteBlockNode;
+      return apiMethod({
+        path: { nodeId },
+        query: { permanently: true },
+        throwOnError: true,
+      });
+    },
+    [libraryType]
+  );
+
   // 批量删除（三处调用的唯一入口：LibraryManagerContent / ClipboardActions）
   const handleBatchDelete = useCallback(
     async (nodeIds: string[]) => {
@@ -451,9 +491,13 @@ export function useLibraryOperations({
     [libraryType, showToast, refreshNodes]
   );
 
-  // 批量复制
+  // 批量复制（透出 outcome：createdIds 是副本 id，undo rollback 必须按它删除，
+  // 绝不能删源节点 id——公共库删除即永久删除）
   const handleBatchCopy = useCallback(
-    async (nodeIds: string[], targetParentId: string) => {
+    async (
+      nodeIds: string[],
+      targetParentId: string
+    ): Promise<OperationOutcome> => {
       try {
         const {
           libraryControllerBatchCopyDrawingNodes,
@@ -480,6 +524,11 @@ export function useLibraryOperations({
           showToast(t(`成功复制 ${nodeIds.length} 个项目`), 'success');
         }
         refreshNodes();
+        return {
+          successIds: result.successIds ?? [],
+          createdIds: result.createdIds ?? [],
+          failedCount: result.failedCount,
+        };
       } catch (error) {
         console.error('批量复制失败:', error);
         showToast(getErrorMessage(error), 'error');
@@ -500,5 +549,7 @@ export function useLibraryOperations({
     handleBatchDelete,
     handleBatchMove,
     handleBatchCopy,
+    copyNode,
+    deleteNode,
   };
 }

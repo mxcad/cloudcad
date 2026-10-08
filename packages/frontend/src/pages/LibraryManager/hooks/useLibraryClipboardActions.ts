@@ -5,6 +5,10 @@ import {
   libraryControllerDeleteDrawingNode,
   libraryControllerDeleteBlockNode,
 } from '@/api-sdk';
+import {
+  buildCopyAction,
+  getCreatedNodeId,
+} from '@/hooks/file-system/moveCopyActions';
 import { useFileSystemClipboardStore } from '@/stores/fileSystemClipboardStore';
 import { useFileSystemUndoRedoStore } from '@/stores/fileSystemUndoRedoStore';
 import { getErrorMessage } from '../../../utils/errorHandler';
@@ -214,7 +218,7 @@ export function useLibraryClipboardActions({
             ? libraryControllerDeleteDrawingNode
             : libraryControllerDeleteBlockNode;
 
-        const createdIdsRef: { current: string[] } = { current: [] };
+        const createdIds: string[] = [];
         let failedCount = 0;
         let lastError: unknown = null;
         for (const nodeId of clipboardItems) {
@@ -224,17 +228,15 @@ export function useLibraryClipboardActions({
               body: { targetParentId },
               throwOnError: true,
             });
-            const data =
-              (result as unknown as { data?: { id?: string } })?.data || result;
-            const newId = (data as unknown as { id?: string })?.id || '';
-            if (newId) createdIdsRef.current.push(newId);
+            const newId = getCreatedNodeId(result);
+            if (newId) createdIds.push(newId);
           } catch (e) {
             // 单个复制失败不影响其他节点，但必须计入失败数并如实反馈（配额超限等错误不可静默吞掉）
             failedCount += 1;
             lastError = e;
           }
         }
-        const successCount = createdIdsRef.current.length;
+        const successCount = createdIds.length;
         if (successCount === 0) {
           showToast(
             lastError ? getErrorMessage(lastError) : t('粘贴失败'),
@@ -251,59 +253,32 @@ export function useLibraryClipboardActions({
         } else {
           showToast(t('粘贴成功'), 'success');
         }
-        if (createdIdsRef.current.length > 0) {
-          pushAction({
-            type: 'paste-copy',
-            description: t('复制 {count} 个项目', {
-              count: String(successCount),
-            }),
-            projectId: libraryId || undefined,
-            // 引用同一数组（execute 原地更新元素而非替换引用），
-            // 供永久删除后清理 undo/redo 栈：复制产出的新节点 id 全集
-            nodeIds: createdIdsRef.current,
-            execute: async () => {
-              const newIds: string[] = [];
-              for (const nodeId of clipboardItems) {
-                try {
-                  const result = await apiMethod({
-                    path: { nodeId },
-                    body: { targetParentId },
+        if (createdIds.length > 0) {
+          pushAction(
+            buildCopyAction({
+              sourceNodeIds: clipboardItems,
+              targetParentId,
+              createdIds,
+              description: t('复制 {count} 个项目', {
+                count: String(successCount),
+              }),
+              projectId: libraryId || undefined,
+              endpoints: {
+                copyNode: (id, pid) =>
+                  apiMethod({
+                    path: { nodeId: id },
+                    body: { targetParentId: pid },
                     throwOnError: true,
-                  });
-                  const data =
-                    (result as unknown as { data?: { id?: string } })?.data ||
-                    result;
-                  const newId = (data as unknown as { id?: string })?.id || '';
-                  if (newId) newIds.push(newId);
-                } catch {
-                  // skip
-                }
-              }
-              // 原地更新：保持 action.nodeIds 与 createdIdsRef.current 指向同一数组
-              createdIdsRef.current.length = 0;
-              createdIdsRef.current.push(...newIds);
-            },
-            rollback: async () => {
-              for (const id of createdIdsRef.current) {
-                try {
-                  await deleteApi({
+                  }),
+                deleteNode: (id) =>
+                  deleteApi({
                     path: { nodeId: id },
                     query: { permanently: true },
                     throwOnError: true,
-                  });
-                } catch (e) {
-                  if (
-                    e &&
-                    typeof e === 'object' &&
-                    'code' in e &&
-                    (e as { code: string }).code === 'NOT_FOUND'
-                  )
-                    continue;
-                  throw e;
-                }
-              }
-            },
-          });
+                  }),
+              },
+            })
+          );
         }
       }
       refresh();

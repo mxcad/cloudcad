@@ -4,16 +4,15 @@
   NotFoundException,
   ForbiddenException,
   BadRequestException,
-  Inject,
 } from '@nestjs/common';
-import { NodeType, Prisma } from '@cloudcad/db';
+import { Prisma } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
-import { IPROJECT_PERMISSION_SERVICE, IProjectPermissionService } from '../roles/interfaces/project-permission-service.interface';
-import { IPERMISSION_SERVICE, IPermissionService } from '../permission/interfaces/permission-service.interface';
-import { SystemPermission, ProjectPermission } from '../common/enums/permissions.enum';
+import { ProjectPermission } from '../common/enums/permissions.enum';
 import { CreateShareDto, UpdateShareDto } from './dto';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
+import { StorageManager } from '../storage-management/services/storage-manager.service';
+import { FileSystemPermissionService } from '../file-system/file-permission/file-system-permission.service';
 
 import { I18nContext } from 'nestjs-i18n';
 @Injectable()
@@ -22,11 +21,9 @@ export class ShareService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    @Inject(IPROJECT_PERMISSION_SERVICE)
-    private readonly projectPermissionService: IProjectPermissionService,
-    @Inject(IPERMISSION_SERVICE)
-    private readonly systemPermissionService: IPermissionService,
+    private readonly fileSystemPermissionService: FileSystemPermissionService,
     private readonly auditLogService: AuditLogService,
+    private readonly storageManager: StorageManager,
   ) {}
 
   async createShare(dto: CreateShareDto, userId: string) {
@@ -34,13 +31,14 @@ export class ShareService {
 
     const fileNode = await this.prisma.fileSystemNode.findFirst({
       where: { id: fileId, deletedAt: null },
-      select: { id: true, projectId: true, ownerId: true, nodeType: true, name: true },
+      // 仅审计/URL 需要 projectId+name；授权判定已委托 assertNodeAccess（内部自取节点）
+      select: { id: true, projectId: true, name: true },
     });
     if (!fileNode) {
       throw new BadRequestException(I18nContext.current()?.t('error.file.not_found') ?? '文件不存在');
     }
 
-    await this.checkSharePermission(userId, fileNode);
+    await this.checkSharePermission(userId, fileId);
 
     let expiresAt: Date | null = null;
     if (expiresIn) {
@@ -62,22 +60,20 @@ export class ShareService {
     );
 
     // #207 阶段 2：文件公开分享埋点（FILE_SHARE，带项目维度 + 名称快照）
-    await this.auditLogService.log(
-      AuditAction.FILE_SHARE,
-      ResourceType.FILE,
-      fileId,
+    await this.auditLogService.log({
+      action: AuditAction.FILE_SHARE,
+      resourceType: ResourceType.FILE,
+      resourceId: fileId,
       userId,
-      true,
-      undefined,
-      undefined,
-      fileNode.projectId ?? undefined,
-      fileNode.name,
-      {
+      success: true,
+      projectId: fileNode.projectId ?? undefined,
+      resourceName: fileNode.name,
+      params: {
         fileName: fileNode.name,
         shareToken: share.token,
         expiresAt: share.expiresAt?.toISOString() ?? null,
-      }
-    );
+      },
+    });
 
     return {
       token: share.token,
@@ -88,53 +84,18 @@ export class ShareService {
 
   private async checkSharePermission(
     userId: string,
-    fileNode: { id: string; projectId: string | null; ownerId: string; nodeType: NodeType | null },
+    fileId: string,
   ): Promise<void> {
-    if (fileNode.nodeType === NodeType.LIBRARY_DRAWING) {
-      const hasPerm = await this.systemPermissionService.checkSystemPermission(
-        userId,
-        SystemPermission.LIBRARY_DRAWING_MANAGE,
-      );
-      if (!hasPerm) {
-        throw new ForbiddenException(I18nContext.current()?.t('error.share.no_permission_repo_drawing') ?? '没有资源库图纸的分享权限');
-      }
-      return;
-    }
-
-    if (fileNode.nodeType === NodeType.LIBRARY_BLOCK) {
-      const hasPerm = await this.systemPermissionService.checkSystemPermission(
-        userId,
-        SystemPermission.LIBRARY_BLOCK_MANAGE,
-      );
-      if (!hasPerm) {
-        throw new ForbiddenException(I18nContext.current()?.t('error.share.no_permission_repo_block') ?? '没有资源库图块的分享权限');
-      }
-      return;
-    }
-
-    if (fileNode.projectId) {
-      const isOwner = await this.projectPermissionService.isProjectOwner(
-        userId,
-        fileNode.projectId,
-      );
-      if (isOwner) {
-        return;
-      }
-
-      const hasPerm = await this.projectPermissionService.checkPermission(
-        userId,
-        fileNode.projectId,
-        ProjectPermission.FILE_SHARE,
-      );
-      if (!hasPerm) {
-        throw new ForbiddenException(I18nContext.current()?.t('error.share.no_permission_file') ?? '没有文件分享权限');
-      }
-      return;
-    }
-
-    if (fileNode.ownerId !== userId) {
-      throw new ForbiddenException(I18nContext.current()?.t('error.share.only_owner_can_share') ?? '只有文件所有者可以分享');
-    }
+    // 节点级分享授权统一委托 assertNodeAccess（服务层节点访问断言唯一出口，按 TreeWalker
+    // 解析的根类型判定，fail-closed）。旧实现按节点自身 nodeType 走四段梯子：库内子文件
+    // nodeType=FILE 但根为 LIBRARY_*，会漏判库两段、只剩 ownerId 段 → 另存进库的普通成员
+    // 绕过 LIBRARY_*_MANAGE、库管理员分享他人图纸反被 403（唯一授权绕过，第三次复发）。
+    // 与批量下载/跨节点下载/文件夹展开同口径。
+    await this.fileSystemPermissionService.assertNodeAccess(
+      userId,
+      fileId,
+      ProjectPermission.FILE_SHARE,
+    );
   }
 
   async resolveShare(token: string) {
@@ -339,13 +300,14 @@ export class ShareService {
   async getFileShares(fileId: string, userId: string) {
     const fileNode = await this.prisma.fileSystemNode.findFirst({
       where: { id: fileId, deletedAt: null },
-      select: { id: true, projectId: true, ownerId: true, nodeType: true, name: true },
+      // 仅 URL/fileName 需要 name；授权判定已委托 assertNodeAccess（内部自取节点）
+      select: { id: true, name: true },
     });
     if (!fileNode) {
       throw new NotFoundException(I18nContext.current()?.t('error.file.not_found') ?? '文件不存在');
     }
 
-    await this.checkSharePermission(userId, fileNode);
+    await this.checkSharePermission(userId, fileId);
 
     const shares = await this.prisma.fileShare.findMany({
       where: {
@@ -410,15 +372,10 @@ export class ShareService {
 
     if (fileNode.path !== storagePath) {
       // 外部参照文件（如 A1.dwg.mxweb）不是分享的主文件，而是主文件的关联文件
-      // 只要 shareToken 有效，且请求的文件与主文件在同一 nodeId 目录下，就允许访问
-      const mainParts = fileNode.path.split('/');
-      const mainPrefix = mainParts.length >= 2 ? `${mainParts[0]}/${mainParts[1]}` : '';
-      // 必须带尾部 / 比较：裸 startsWith 会让同月前缀兄弟目录（YYYYMM/<nodeId>-evil/…）
-      // 被误判为同节点。storagePath 来自 URL 路径参数（攻击者可控），nodeId 目录虽由
-      // 系统生成，此处按最小包含性原则收紧
-      const isSameNodeAccess =
-        mainPrefix && storagePath.startsWith(mainPrefix + '/');
-      if (!isSameNodeAccess) {
+      // 只要 shareToken 有效，且请求的文件与主文件在同一 nodeId 目录下，就允许访问。
+      // 路径比较收口 StorageManager.isSameNodeStoragePath（带尾部 / 比较，防同月前缀
+      // 兄弟目录 YYYYMM/<nodeId>-evil/… 被误判为同节点；storagePath 来自 URL 路径参数，攻击者可控）
+      if (!this.storageManager.isSameNodeStoragePath(storagePath, fileNode.path)) {
         this.logger.warn(
           `分享令牌路径不匹配: token=${token}, expected=${fileNode.path}, requested=${storagePath}`
         );

@@ -167,9 +167,9 @@ export function usePasswordProfile({
 
     try {
       const result = await usersControllerUploadAvatar({
+        throwOnError: true,
         body: { file } as never,
       });
-      if (result.error) throw result.error;
       setSuccess(t('头像更新成功'));
       await refreshUser();
     } catch (err) {

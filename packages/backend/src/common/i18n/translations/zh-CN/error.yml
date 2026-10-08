@@ -290,10 +290,6 @@ share:
   only_creator_can_revoke: "只有创建者可以撤销分享"
   token_mismatch: "分享令牌与请求的文件不匹配"
   only_creator_can_modify: "只有创建者可以修改分享设置"
-  no_permission_repo_drawing: "没有资源库图纸的分享权限"
-  no_permission_repo_block: "没有资源库图块的分享权限"
-  no_permission_file: "没有文件分享权限"
-  only_owner_can_share: "只有文件所有者可以分享"
 
 public_file:
   missing_source_hash: "缺少源图纸哈希值"
@@ -485,7 +481,6 @@ file_extra:
   conversion_failed_detail: "文件转换失败: {error}"
   download_format_unsupported_detail: "不支持的下载格式: {format}"
   size_exceeded_with_name: "文件大小超过限制: {name}"
-  path_validation_failed_delete: "路径验证失败，无法安全删除"
   filename_starts_with_dot: "文件名不能以点开头"
   missing_file_or_hash: "缺少文件或文件 hash"
   extension_forbidden_detail: "禁止上传 {extension} 类型文件"

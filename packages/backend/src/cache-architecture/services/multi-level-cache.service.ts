@@ -159,8 +159,10 @@ export class MultiLevelCacheService {
     const l2Value = await this.l2Cache.get<T>(versionedKey);
     if (l2Value !== null) {
       this.logger.debug(`L2 缓存命中: ${key}`);
-      // 回填 L1
-      await this.l1Cache.set(versionedKey, l2Value);
+      // 回填 L1：沿用 L2 剩余 TTL，避免 L1 用自身默认 TTL 而比 L2 条目存活更久
+      // （写入侧对 L1/L2 用同一随机化 TTL，但回填若走 L1 默认值会造成两级 TTL 漂移）
+      const l2Ttl = await this.l2Cache.ttl(versionedKey);
+      await this.l1Cache.set(versionedKey, l2Value, l2Ttl > 0 ? l2Ttl : null);
       return l2Value;
     }
 
@@ -308,6 +310,20 @@ export class MultiLevelCacheService {
     ]);
 
     this.logger.debug('所有缓存已清空');
+  }
+
+  /**
+   * 清理指定级别缓存（L1 或 L2）。
+   * 此前 controller 对 L1/L2 级别落到「需要实现」注释后直接返回 success:true（伪成功），
+   * 补上真实入口使分级清理生效。
+   */
+  async clearLevel(level: 'L1' | 'L2'): Promise<void> {
+    if (level === 'L1') {
+      await this.l1Cache.clear();
+    } else {
+      await this.l2Cache.clear();
+    }
+    this.logger.debug(`${level} 缓存已清空`);
   }
 
   /**

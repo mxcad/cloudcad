@@ -11,10 +11,13 @@ import { PermissionCacheService } from '../../permission/services/permission-cac
 import { DatabaseService } from '../../database/database.service';
 import { PERSONAL_SPACE_NAME } from '../../personal-space/personal-space.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
-import { MembershipService, DAY_MS } from '../../vip/membership.service';
+import {
+  MembershipService,
+  DAY_MS,
+  projectMembership,
+} from '../../vip/membership.service';
 import { StorageInfoService } from '../../file-system/storage-quota/storage-info.service';
 import { StorageUsageService } from '../../vip/storage-usage/storage-usage.service';
-import { membershipTierOf } from '../../vip/membership-tier';
 import { QUOTA_KEYS } from '../../vip/quota-keys';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { QueryUsersDto } from '../dto/query-users.dto';
@@ -671,6 +674,19 @@ export class UserCrudService {
         );
       }
 
+      // 外部水位守卫（单点 MembershipService.hasValidExternalWatermark）：旧官网同步来源的会员
+      // 其 expiresAt 由外部锚点推导，管理员直改会在下一次增量 VIP 同步时被外部锚点叠加覆盖（污染水位）。
+      // 此处仅告警不阻断——「管理员是否可覆盖外部锚点会员」属产品决策，待裁定后收紧为拒绝。
+      if (
+        tierLevel > 0 &&
+        (await this.membershipService.hasValidExternalWatermark(this.prisma, id))
+      ) {
+        this.logger.warn(
+          `用户 ${id} 为旧官网同步来源会员（externalVipExpiresAt 有效），` +
+            `管理员直改 expiresAt 将在下一次增量 VIP 同步时被外部锚点覆盖`
+        );
+      }
+
       // 计算最终到期时间：adjustDays 模式下基于当前到期时间增减
       let finalExpiresAt = expiresAt;
       if (adjustDays !== undefined && adjustDays !== 0 && tierLevel > 0) {
@@ -779,19 +795,14 @@ export class UserCrudService {
     membershipTier: string;
   } {
     const { membership: membershipRow, ...userWithoutMembership } = user;
-    // 有效会员判定（与 AuthService / restriction-engine / storage-info 语义一致）：
-    // membership 存在 && (expiresAt === null 永久 || expiresAt > now)，过期/失效统一降级为 0/null
-    const membershipValid =
-      !!membershipRow &&
-      (membershipRow.expiresAt === null ||
-        membershipRow.expiresAt > new Date());
-    const membershipTierLevel = membershipValid ? membershipRow.tierLevel : 0;
+    // 有效会员判定收进 projectMembership 单点（ADR-0036），不再内联重算
+    const p = projectMembership(membershipRow);
     return {
       ...userWithoutMembership,
-      membershipTierLevel,
-      membershipExpiresAt: membershipValid ? membershipRow.expiresAt : null,
-      isVip: membershipTierLevel > 0,
-      membershipTier: membershipTierOf(membershipTierLevel),
+      membershipTierLevel: p.tierLevel,
+      membershipExpiresAt: p.expiresAt,
+      isVip: p.isVip,
+      membershipTier: p.tier,
     };
   }
 

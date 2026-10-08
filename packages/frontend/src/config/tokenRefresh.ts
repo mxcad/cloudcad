@@ -13,11 +13,9 @@ import {
   getRefreshToken,
   getValidToken,
   isValidToken,
-  removeAccessToken,
-  removeRefreshToken,
-  setAccessToken,
-  setRefreshToken,
 } from '@/utils/tokenUtils';
+import { read, write, erase } from '@/lib/browserStorage';
+import { clearAuthState as clearAuthKeys, saveAuthState } from '@/lib/authState';
 
 // ── 3. 401 Refresh ────────────────────────────────────────────
 let isRefreshing = false;
@@ -54,12 +52,15 @@ async function doRefresh(token?: string): Promise<boolean> {
     const res = await authControllerRefreshToken({ body });
     const inner = res.data!;
     if (inner?.accessToken && isValidToken(inner.accessToken)) {
-      setAccessToken(inner.accessToken);
+      // 原子写 token 两键（user 不动）：refreshToken 缺失时只写 accessToken
       // 始终保存到 localStorage，供桌面离线版 cookie 丢失后 body 模式兜底
       // 浏览器模式下 httpOnly cookie 仍是主要机制，localStorage 是次级 fallback
-      if (inner.refreshToken && isValidToken(inner.refreshToken)) {
-        setRefreshToken(inner.refreshToken);
-      }
+      saveAuthState({
+        accessToken: inner.accessToken,
+        ...(inner.refreshToken && isValidToken(inner.refreshToken)
+          ? { refreshToken: inner.refreshToken }
+          : {}),
+      });
       if (tokenRefreshCallback) {
         tokenRefreshCallback(inner.accessToken);
       }
@@ -176,13 +177,13 @@ function getCurrentReturnUrl(): string {
 function saveReturnUrl() {
   const url = getCurrentReturnUrl();
   if (url !== '/') {
-    sessionStorage.setItem('returnUrl', url);
+    write('returnUrl', url, 'session');
   }
 }
 
 export function getReturnUrl(): string {
-  const url = sessionStorage.getItem('returnUrl') || '/';
-  sessionStorage.removeItem('returnUrl');
+  const url = read('returnUrl', 'session') || '/';
+  erase('returnUrl', 'session');
   return url;
 }
 
@@ -191,9 +192,7 @@ export function getReturnUrl(): string {
 // 不清会导致：1. 页面刷新后 AuthContext 误判"已登录"，反复发起 401 请求风暴；
 // 2. 授权页面反复进入 ready → 自动授权 → 401 → 失败 的死循环。
 function clearAuthState() {
-  removeAccessToken();
-  removeRefreshToken();
-  localStorage.removeItem('user');
+  clearAuthKeys();
   // clearAuthState 走 spaNavigate（SPA 导航不整页刷新），zustand 内存态不会自动清空：
   // personalSpaceId 跨账号残留会在 getPersonalSpaceId 网络失败时把文件存进上一个用户的空间
   useFileSystemStore.getState().setPersonalSpaceId(null);

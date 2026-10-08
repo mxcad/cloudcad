@@ -2,6 +2,7 @@ import React from 'react';
 import { NavigateFunction } from 'react-router-dom';
 import { Shield, Crown } from 'lucide-react';
 import { t } from '@/languages';
+import { formatDate } from '@/utils/dateUtils';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useMembership } from '@/hooks/useMembership';
@@ -124,9 +125,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       else remain = t('剩余 {days} 天', { days: String(d) });
                       return t('有效期至 {date} · {remain}', {
                         date: membership.expiresAt
-                          ? new Date(membership.expiresAt).toLocaleDateString(
-                              'zh-CN'
-                            )
+                          ? formatDate(membership.expiresAt)
                           : '',
                         remain,
                       });

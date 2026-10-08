@@ -94,6 +94,10 @@ export { UserAvatar } from './UserAvatar';
 export { Modal } from './Modal';
 export { Pagination } from './Pagination';
 export type { PaginationMeta } from './Pagination';
+// SelectableTable 实体在 components/common/（历史原因），经此桶文件对外统一出口，
+// 使「表格怎么写」从 5 处手写样式收敛到这一个已测容器（ADR-0052）。
+export { SelectableTable } from '../common/SelectableTable';
+export type { SelectableTableRenderContext } from '../common/SelectableTable';
 
 export {
   FileSize,

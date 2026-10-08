@@ -5,6 +5,7 @@
 
 import { useCallback, useState } from 'react';
 import { useLibraryOperations } from '@/hooks/library/useLibraryOperations';
+import { buildCopyAction } from '@/hooks/file-system/moveCopyActions';
 import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
 import { t } from '@/languages';
 
@@ -135,18 +136,27 @@ export function useProjectDrawingsBatch({
             },
           });
         } else {
-          await libraryOperations.handleBatchCopy(nodeIds, targetParentId);
-          pushAction({
-            type: 'delete',
-            description: t(`复制 ${nodeIds.length} 个项目`),
-            projectId: undoProjectId,
-            execute: async () => {
-              await libraryOperations.handleBatchCopy(nodeIds, targetParentId);
-            },
-            rollback: async () => {
-              await libraryOperations.handleBatchDelete(nodeIds);
-            },
-          });
+          // 复制 undo 的 rollback 必须删副本 id（outcome.createdIds），
+          // 绝不能删源 nodeIds——公共库删除即永久删除（数据丢失事故）
+          const outcome = await libraryOperations.handleBatchCopy(
+            nodeIds,
+            targetParentId
+          );
+          if (outcome.createdIds.length > 0) {
+            pushAction(
+              buildCopyAction({
+                sourceNodeIds: nodeIds,
+                targetParentId,
+                createdIds: outcome.createdIds,
+                description: t(`复制 ${nodeIds.length} 个项目`),
+                projectId: undoProjectId,
+                endpoints: {
+                  copyNode: (id, pid) => libraryOperations.copyNode(id, pid),
+                  deleteNode: (id) => libraryOperations.deleteNode(id),
+                },
+              })
+            );
+          }
         }
         clearMultiSelection();
         setShowBatchSelectFolderModal(false);

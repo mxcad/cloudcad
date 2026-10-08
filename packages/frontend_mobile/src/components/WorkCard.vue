@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import FloatingPopup from './FloatingPopup.vue';
 import ShareLinkSheet from './ShareLinkSheet.vue';
 import { useShareLinkCopy } from '@/composables/useShareLinkCopy';
-import type { Work } from '../composables/useCooperate';
+import type { Work } from '@cloudcad/platform';
 
 export interface WorkDisplay {
   work: Work;

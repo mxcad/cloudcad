@@ -18,7 +18,7 @@ import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { TaskRunService } from '../task-run/task-run.service';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../task-run/task-run.constants';
 import { AlertService } from '../alert/alert.service';
-import { AlertLevel } from '../alert/enums/alert.enum';
+import { AlertLevel, TASK_RUN_FAILED_LEVEL } from '../alert/enums/alert.enum';
 import { TaskRunTrigger } from '../task-run/enums/task-run.enum';
 import {
   BackupResult,
@@ -243,7 +243,7 @@ export class BackupScheduler {
     await this.raiseAlert(
       'scheduler:backup',
       'task_run_failed',
-      AlertLevel.P2,
+      TASK_RUN_FAILED_LEVEL,
       `数据库备份失败: ${error instanceof Error ? error.message : String(error)}`,
       error
     );

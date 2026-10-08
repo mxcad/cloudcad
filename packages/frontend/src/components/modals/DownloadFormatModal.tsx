@@ -5,18 +5,7 @@ import { Select } from '@/components/ui/Select';
 import { Input } from '@/components/ui/Input';
 import { Download } from 'lucide-react';
 import { t } from '@/languages';
-
-export type DownloadFormat = 'dwg' | 'dxf' | 'mxweb' | 'pdf';
-
-export interface PdfOptions {
-  width?: string;
-  height?: string;
-  colorPolicy?: 'mono' | 'color';
-}
-
-export interface DwgOptions {
-  dwgVersion: number;
-}
+import type { DownloadFormat, PdfOptions, DwgOptions } from '@/types/download-format';
 
 interface DownloadFormatModalProps {
   isOpen: boolean;

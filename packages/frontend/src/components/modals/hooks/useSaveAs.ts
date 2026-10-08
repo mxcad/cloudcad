@@ -65,9 +65,9 @@ export const useSaveAs = ({
     queryKey: ['projects', 'all'],
     queryFn: async () => {
       const result = await projectControllerGetProjects({
+        throwOnError: true,
         query: { filter: 'all' },
       });
-      if (result.error) throw result.error;
       const allProjects = result.data?.nodes || [];
       return allProjects.map((project: FileSystemNodeDto) => ({
         id: project.id,

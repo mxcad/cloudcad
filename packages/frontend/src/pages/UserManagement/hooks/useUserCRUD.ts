@@ -41,8 +41,10 @@ export function useUserCRUD(params?: UserSearchParams) {
   } = useQuery({
     queryKey: [...USERS_KEY, params],
     queryFn: async () => {
-      const result = await usersControllerFindAll({ query: params || {} });
-      if (result.error) throw result.error;
+      const result = await usersControllerFindAll({
+        throwOnError: true,
+        query: params || {},
+      });
       return result.data;
     },
     placeholderData: keepPreviousData,
@@ -54,8 +56,7 @@ export function useUserCRUD(params?: UserSearchParams) {
   const { data: roles = [] } = useQuery({
     queryKey: ROLES_KEY,
     queryFn: async () => {
-      const result = await rolesControllerFindAll();
-      if (result.error) throw result.error;
+      const result = await rolesControllerFindAll({ throwOnError: true });
       return result.data || [];
     },
   });
@@ -63,8 +64,9 @@ export function useUserCRUD(params?: UserSearchParams) {
   const { data: cleanupStats } = useQuery({
     queryKey: CLEANUP_STATS_KEY,
     queryFn: async () => {
-      const result = await userCleanupControllerGetStats();
-      if (result.error) throw result.error;
+      const result = await userCleanupControllerGetStats({
+        throwOnError: true,
+      });
       return result.data;
     },
   });
@@ -176,9 +178,9 @@ export function useUserCRUD(params?: UserSearchParams) {
     loadUsers: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
     triggerCleanup: async (delayDays?: number) => {
       const result = await userCleanupControllerTriggerCleanup({
+        throwOnError: true,
         body: { delayDays },
       });
-      if (result.error) throw result.error;
       queryClient.invalidateQueries({ queryKey: CLEANUP_STATS_KEY });
       return result.data;
     },

@@ -1,3 +1,6 @@
+import { read, write, erase, readJson, writeJson } from '@/lib/browserStorage';
+import type { UserDto } from '@/api-sdk';
+
 export const isValidToken = (token: string | null): boolean => {
   return (
     !!token &&
@@ -7,37 +10,48 @@ export const isValidToken = (token: string | null): boolean => {
   );
 };
 
-export const getValidToken = (): string | null => {
-  const token = localStorage.getItem('accessToken');
-  return isValidToken(token) ? token : null;
-};
-
 // Access Token
 export const getAccessToken = (): string | null => {
-  const token = localStorage.getItem('accessToken');
+  const token = read('accessToken');
   return isValidToken(token) ? token : null;
 };
 
+// 历史遗留：与 getAccessToken 语义完全一致，保留为别名以免破坏既有调用方。
+export const getValidToken = getAccessToken;
+
 export const setAccessToken = (token: string): void => {
-  localStorage.setItem('accessToken', token);
+  write('accessToken', token);
 };
 
 export const removeAccessToken = (): void => {
-  localStorage.removeItem('accessToken');
+  erase('accessToken');
 };
 
 // Refresh Token
 export const getRefreshToken = (): string | null => {
-  const token = localStorage.getItem('refreshToken');
+  const token = read('refreshToken');
   return isValidToken(token) ? token : null;
 };
 
 export const setRefreshToken = (token: string): void => {
-  localStorage.setItem('refreshToken', token);
+  write('refreshToken', token);
 };
 
 export const removeRefreshToken = (): void => {
-  localStorage.removeItem('refreshToken');
+  erase('refreshToken');
+};
+
+// User（JSON 序列化存储；User extends UserDto，故 setUser 收 UserDto 即可兼容两者）
+export const getUser = (): UserDto | null => {
+  return readJson<UserDto>('user');
+};
+
+export const setUser = (user: UserDto): void => {
+  writeJson('user', user);
+};
+
+export const removeUser = (): void => {
+  erase('user');
 };
 
 /**
@@ -78,5 +92,5 @@ export const isAccessTokenExpired = (): boolean => {
 
 // WeChat Temp Token (sessionStorage)
 export const setWechatTempToken = (token: string): void => {
-  sessionStorage.setItem('wechatTempToken', token);
+  write('wechatTempToken', token, 'session');
 };

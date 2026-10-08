@@ -9,10 +9,10 @@ export function useProjectQuota(projectId: string | undefined) {
     queryFn: async () => {
       if (!projectId) return null;
       const result = await projectControllerGetProjectQuota({
+        throwOnError: true,
         path: { projectId },
       });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 react-query 进入 error 态
-      if (result.error) throw result.error;
       return (result.data as ProjectQuotaDto) ?? null;
     },
     enabled: !!projectId,

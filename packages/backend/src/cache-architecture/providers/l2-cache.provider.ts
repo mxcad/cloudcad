@@ -39,6 +39,9 @@ export class L2CacheProvider<T = unknown>
   private hits = 0;
   private misses = 0;
 
+  /** deleteByPattern 单次删除条数上限（L2 与共享 DB 同库，防过宽模式无界删除） */
+  private static readonly MAX_PATTERN_DELETE_KEYS = 5000;
+
   constructor(@Inject(ConfigService) private readonly configService: ConfigService<AppConfig>) {
     const redisConfig = this.configService.get('redis') as { host: string; port: number; password?: string; db: number; connectTimeout?: number } | undefined;
     if (!redisConfig) throw new Error('Redis 配置不存在');
@@ -165,20 +168,17 @@ export class L2CacheProvider<T = unknown>
   }
 
   /**
-   * 清空所有缓存
+   * 清空 L2 缓存。
+   * 注意：L2 与 connect-redis 会话 / token 黑名单 / 限流计数共享同一 Redis DB，
+   * 因此这里**不能** flushDb（会把会话/token/限流一并清掉，SYSTEM_ADMIN 一个按钮即清空整库）。
+   * L2 是 TTL 缓存（默认 30min），条目会自然过期；此处仅重置本地命中统计，不触碰 Redis 数据。
    */
   async clear(): Promise<void> {
-    if (!this.isConnected) {
-      return;
-    }
-
-    try {
-      await this.client.flushDb();
-      this.hits = 0;
-      this.misses = 0;
-    } catch (error) {
-      this.logger.error('清空 L2 缓存失败', error);
-    }
+    this.hits = 0;
+    this.misses = 0;
+    this.logger.debug(
+      'L2 缓存统计已重置（L2 为 TTL 缓存，条目自然过期，不做 DB 级 flush）'
+    );
   }
 
   /**
@@ -304,10 +304,12 @@ export class L2CacheProvider<T = unknown>
   }
 
   /**
-   * 根据模式删除缓存
+   * 根据模式删除缓存。
+   * 模式由调用方（SYSTEM_ADMIN 清理入口）传入，且 L2 与共享 DB 的会话/token 同库，
+   * 因此设删除条数上限，防止过宽模式（如 `*`）无界 scan + 一次性 del 波及非缓存键。
    */
   async deleteByPattern(pattern: string): Promise<number> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !pattern) {
       return 0;
     }
 
@@ -315,9 +317,16 @@ export class L2CacheProvider<T = unknown>
       const keys: string[] = [];
       for await (const key of this.client.scanIterator({
         MATCH: pattern,
+        COUNT: 200,
       })) {
         // scanIterator 返回的键类型是 string，但 TypeScript 推断可能有问题
         keys.push(String(key));
+        if (keys.length >= L2CacheProvider.MAX_PATTERN_DELETE_KEYS) {
+          this.logger.warn(
+            `deleteByPattern 达到删除上限 ${L2CacheProvider.MAX_PATTERN_DELETE_KEYS}，提前停止: ${pattern}`
+          );
+          break;
+        }
       }
 
       if (keys.length > 0) {

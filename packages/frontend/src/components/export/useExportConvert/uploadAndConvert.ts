@@ -37,6 +37,7 @@ export async function uploadAndConvert(
   const hash = await uploadBlobToHash(blob);
 
   const result = await publicFileControllerConvertAndDownload({
+    throwOnError: true,
     body: {
       fileHash: hash,
       format: format as 'dwg' | 'dxf' | 'mxweb' | 'pdf',
@@ -44,7 +45,6 @@ export async function uploadAndConvert(
     },
   });
 
-  if (result?.error) throw result.error;
   const resultBlob = result?.data as Blob | undefined;
   if (!resultBlob) throw new Error(t('转换失败：无返回数据'));
   return resultBlob;

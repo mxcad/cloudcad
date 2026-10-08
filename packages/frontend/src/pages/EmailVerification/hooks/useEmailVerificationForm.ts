@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 import { t } from '@/languages';
+import { saveAuthState } from '@/lib/authState';
 
 export interface PhoneRegisterData {
   phone: string;
@@ -61,8 +62,7 @@ export function useEmailVerificationForm({
         });
         if (!response) throw new Error(t('绑定邮箱失败'));
         const { refreshToken, user: userData } = response;
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        saveAuthState({ refreshToken, user: userData ?? null });
         window.location.href = '/';
         return;
       } else if (phoneRegisterData) {
@@ -77,9 +77,7 @@ export function useEmailVerificationForm({
         });
         if (!response) throw new Error(t('注册失败'));
         const { accessToken, refreshToken, user: userData } = response;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        saveAuthState({ accessToken, refreshToken, user: userData ?? null });
         window.location.href = '/';
         return;
       } else {

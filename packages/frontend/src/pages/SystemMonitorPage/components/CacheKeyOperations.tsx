@@ -63,9 +63,11 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     }
     setQuerying(true);
     try {
-      const result = await cacheMonitorControllerGetValue({ query: { key } });
+      const result = await cacheMonitorControllerGetValue({
+        throwOnError: true,
+        query: { key },
+      });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 提示真实原因
-      if (result.error) throw result.error;
       setResult(formatResult(result.data));
     } catch (error) {
       setResult(null);
@@ -93,6 +95,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     setMutating(true);
     try {
       const result = await cacheMonitorControllerSetValue({
+        throwOnError: true,
         body: {
           key,
           // SDK 将后端 `value?: unknown` 生成为 object 类型（openapi-ts 限制），
@@ -103,7 +106,6 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则设置失败仍弹"缓存设置成功"（历史 bug）
-      if (result.error) throw result.error;
       showToast(t('缓存设置成功'), 'success');
       onChanged();
     } catch (error) {
@@ -131,10 +133,10 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     setMutating(true);
     try {
       const result = await cacheMonitorControllerDeleteValue({
+        throwOnError: true,
         query: { key },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出
-      if (result.error) throw result.error;
       showToast(t('缓存删除成功'), 'success');
       setResult(null);
       onChanged();
@@ -163,10 +165,10 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     setMutating(true);
     try {
       const result = await cacheMonitorControllerDeleteByPattern({
+        throwOnError: true,
         query: { pattern },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出
-      if (result.error) throw result.error;
       showToast(t('按模式删除成功'), 'success');
       onChanged();
     } catch (error) {
@@ -185,11 +187,11 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     setMutating(true);
     try {
       const result = await cacheMonitorControllerRefresh({
+        throwOnError: true,
         body: { key },
       });
       // SDK 默认不抛错：失败时错误在 result.error，显式抛出
       // （此前失败时 data 为 undefined 被误判为"缓存不存在"）
-      if (result.error) throw result.error;
       const data = result.data;
       const success =
         data &&
@@ -220,11 +222,11 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     setMutating(true);
     try {
       const result = await cacheMonitorControllerCleanup({
+        throwOnError: true,
         body: { level: 'ALL' },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则清空失败仍弹"缓存已清空"（破坏性操作，历史 bug）
-      if (result.error) throw result.error;
       showToast(t('缓存已清空'), 'success');
       setResult(null);
       onChanged();

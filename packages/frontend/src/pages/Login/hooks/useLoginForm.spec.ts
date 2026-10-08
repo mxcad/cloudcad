@@ -56,6 +56,7 @@ describe('useLoginForm - handleSendCode', () => {
     });
 
     expect(apiSdk.authControllerSendSmsCode).toHaveBeenCalledWith({
+      throwOnError: true,
       body: { phone: '13800138000' },
     });
   });

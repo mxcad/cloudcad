@@ -17,6 +17,7 @@ import {
   type AccountLoginValues,
   type PhoneLoginValues,
 } from './loginFormSchema';
+import { read } from '@/lib/browserStorage';
 
 export type LoginTab = 'account' | 'phone';
 
@@ -182,10 +183,10 @@ export function useLoginForm(): UseLoginFormReturn {
 
     try {
       const res = await authControllerSendSmsCode({
+        throwOnError: true,
         body: { phone: phoneValue },
       });
       // SDK 默认不抛错：失败时响应体在 result.error，成功数据在 result.data
-      if (res.error) throw res.error;
       if ((res.data as Record<string, unknown> | undefined)?.success) {
         setSuccess(t('验证码已发送'));
         setCountdown(60);
@@ -225,7 +226,7 @@ export function useLoginForm(): UseLoginFormReturn {
       try {
         const restored = await login(account, password);
         // 桌面端 OAuth 验证未完成时，留在登录页等待验证成功
-        if (sessionStorage.getItem('desktop_redirect_uri')) {
+        if (read('desktop_redirect_uri', 'session')) {
           return;
         }
         if (restored) {
@@ -310,7 +311,7 @@ export function useLoginForm(): UseLoginFormReturn {
       try {
         const restored = await loginByPhone(phone, code);
         // 桌面端 OAuth 验证未完成时，留在登录页等待验证成功
-        if (sessionStorage.getItem('desktop_redirect_uri')) {
+        if (read('desktop_redirect_uri', 'session')) {
           return;
         }
         if (restored) {

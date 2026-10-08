@@ -9,6 +9,8 @@ import { renderHook, act } from '@testing-library/react';
 vi.mock('@/api-sdk', () => ({
   nodeControllerBatchMoveNodes: vi.fn(),
   nodeControllerBatchCopyNodes: vi.fn(),
+  nodeControllerCopyNode: vi.fn(),
+  nodeControllerDeleteNode: vi.fn(),
 }));
 
 vi.mock('@/languages', () => ({

@@ -10,12 +10,12 @@ export const usePasswordChange = () => {
   const changePassword = useMutation({
     mutationFn: async (params: ChangePasswordParams) => {
       const result = await usersControllerChangePassword({
+        throwOnError: true,
         body: {
           oldPassword: params.oldPassword,
           newPassword: params.newPassword,
         },
       });
-      if (result.error) throw result.error;
       return result;
     },
   });

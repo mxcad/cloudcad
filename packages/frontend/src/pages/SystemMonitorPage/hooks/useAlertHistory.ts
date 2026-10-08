@@ -35,9 +35,9 @@ export function useAlertHistory(
     queryKey: [ALERT_LIST_KEY, page],
     queryFn: async () => {
       const res = await alertControllerList({
+        throwOnError: true,
         query: { page, limit: ALERT_PAGE_SIZE },
       });
-      if (res.error) throw res.error;
       return parseAlertList(res.data);
     },
     placeholderData: (prev) => prev,

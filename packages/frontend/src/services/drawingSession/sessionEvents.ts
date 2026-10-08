@@ -52,9 +52,16 @@ export interface SaveAsDetail {
   sourceFileHash?: string | null;
 }
 
+/**
+ * 需要保存信号的稳定类型：区分「保存」与「另存为」。
+ * 消费端据此取展示文案，禁止再用翻译串（如 action.includes(t('另存为'))）做分派——
+ * 生产端曾恒发 t('保存文件')，导致「另存为」分支不可达且两端译文互为隐式协议。
+ */
+export type SaveRequiredKind = 'save' | 'saveAs';
+
 /** 需要保存信号 payload（对应原 mxcad-save-required window 事件） */
 export interface SaveRequiredDetail {
-  action: string;
+  kind: SaveRequiredKind;
 }
 
 /** 新建文件信号 payload（对应原 mxcad-new-file window 事件） */

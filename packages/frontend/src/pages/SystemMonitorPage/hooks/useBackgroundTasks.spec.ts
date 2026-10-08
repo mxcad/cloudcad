@@ -158,6 +158,7 @@ describe('useBackgroundTasks', () => {
     await waitFor(() => expect(result.current.records).toHaveLength(1));
 
     expect(mockedListRuns).toHaveBeenCalledWith({
+      throwOnError: true,
       query: { page: 1, limit: 50 },
     });
     expect(result.current.records[0]).toMatchObject({
@@ -335,6 +336,7 @@ describe('useBackgroundTasks', () => {
       })
     );
     expect(mockedRunTask).toHaveBeenCalledWith({
+      throwOnError: true,
       body: { taskName: 'storage-cleanup:expired-storage' },
     });
     expect(notificationMock.showToast).toHaveBeenCalledWith('任务已触发', 'success');
@@ -399,6 +401,7 @@ describe('useBackgroundTasks', () => {
     });
 
     expect(mockedUpdateConfig).toHaveBeenCalledWith({
+      throwOnError: true,
       path: { key: 'storageCleanupEnabled' },
       body: { val: false as never },
     });

@@ -51,13 +51,13 @@ export function useIpWhitelistList(page: number, keyword?: string) {
     }),
     queryFn: async () => {
       const res = await ipWhitelistControllerList({
+        throwOnError: true,
         query: {
           page,
           pageSize: IP_WHITELIST_PAGE_SIZE,
           ...(keyword ? { keyword } : {}),
         },
       });
-      if (res.error) throw res.error;
       const body = res.data;
       return {
         items: (body?.items ?? []).map(toEntry),
@@ -94,8 +94,10 @@ export function useAddIpWhitelistEntry(onSuccess?: () => void) {
         reason: form.reason.trim(),
       };
       if (form.expiresAt) body.expiresAt = form.expiresAt;
-      const res = await ipWhitelistControllerCreate({ body });
-      if (res.error) throw res.error;
+      const res = await ipWhitelistControllerCreate({
+        throwOnError: true,
+        body,
+      });
       return res.data;
     },
     onSuccess: () => {

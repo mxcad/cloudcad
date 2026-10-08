@@ -148,6 +148,7 @@ describe('NoticeCenterPage', () => {
     // mutationFn 在 react-query 内部异步调度，须 waitFor 等 API 调用落定
     await waitFor(() =>
       expect(createMock).toHaveBeenCalledWith({
+        throwOnError: true,
         body: {
           kind: 'system',
           level: 'info',
@@ -203,6 +204,7 @@ describe('NoticeCenterPage', () => {
 
     await waitFor(() =>
       expect(updateMock).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { id: 'n-1' },
         body: {
           level: 'info',
@@ -226,7 +228,10 @@ describe('NoticeCenterPage', () => {
       );
     });
     await waitFor(() => {
-      expect(retractMock).toHaveBeenCalledWith({ path: { id: 'n-1' } });
+      expect(retractMock).toHaveBeenCalledWith({
+        throwOnError: true,
+        path: { id: 'n-1' },
+      });
     });
   });
 

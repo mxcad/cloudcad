@@ -3,6 +3,7 @@ import { globalShowConfirm } from '@/utils/notificationEvents';
 import { t } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from './quotaUpgradeGuide';
 import { redirectToLogin } from '@/config/tokenRefresh';
+import { writeJson } from '@/lib/browserStorage';
 
 /** 后端 VIP 专属功能门控业务错误码（VipFeatureRequiredException 响应 code） */
 export const VIP_FEATURE_REQUIRED_CODE = 'VIP_FEATURE_REQUIRED';
@@ -55,9 +56,10 @@ export async function handleVipFeatureRequiredError(
     });
     if (!confirmed) return;
     // 存储待办购买意图，登录后自动弹出 VIP 购买弹窗
-    sessionStorage.setItem(
+    writeJson(
       'pendingVipPurchase',
-      JSON.stringify({ restrictionKey: EXPORT_DOWNLOAD_FEATURE })
+      { restrictionKey: EXPORT_DOWNLOAD_FEATURE },
+      'session'
     );
     redirectToLogin();
     return;

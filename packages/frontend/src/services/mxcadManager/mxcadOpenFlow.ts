@@ -1,6 +1,7 @@
 import { MxFun } from 'mxdraw';
 import { FetchAttributes } from 'mxcad';
 import { t } from '@/languages';
+import { read } from '@/lib/browserStorage';
 import { ensureFreshAuthCookie } from '@/config/clientSetup';
 import { FILE_OPEN_RETRY_CONFIG } from './mxcadTypes';
 import type { OpenFilePayload } from './mxcadTypes';
@@ -148,7 +149,7 @@ export class MxCADOpenFlow {
         return;
       }
       const doOpen = async () => {
-        const token = localStorage.getItem('accessToken');
+        const token = read('accessToken');
         // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
         // 后端 authorizeFilesDataAccess 支持 query + header 双路检测
         const shareToken = extractShareTokenFromUrl(payload.url);
@@ -247,7 +248,7 @@ export class MxCADOpenFlow {
       }
       const doOpen = async () => {
         try {
-          const token = localStorage.getItem('accessToken');
+          const token = read('accessToken');
           const url = currentMxwebUrl;
           // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
           const shareToken = extractShareTokenFromUrl(url);

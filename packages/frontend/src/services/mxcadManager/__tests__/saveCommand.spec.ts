@@ -104,7 +104,7 @@ describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
     const result = await command.execute(makeCtx());
 
     expect(result).toEqual({ success: false, error: 'unauthorized' });
-    expect(handler).toHaveBeenCalledWith({ action: '保存文件' });
+    expect(handler).toHaveBeenCalledWith({ kind: 'save' });
   });
 
   it('新图纸打开中（pendingOpen）→ 拒绝保存并提示，不进入保存分支', async () => {

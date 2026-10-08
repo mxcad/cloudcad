@@ -31,10 +31,10 @@ export function useBuildBreadcrumbs() {
         while (currentId && depth < MAX_DEPTH) {
           try {
             const result = await nodeControllerGetNode({
+              throwOnError: true,
               path: { nodeId: currentId },
             });
             // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-            if (result.error) throw result.error;
             const node = result.data as
               | { id: string; name: string; parentId?: string | null }
               | undefined;

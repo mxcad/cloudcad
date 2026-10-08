@@ -1,5 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ShareService } from './share.service';
+import { StorageManager } from '../storage-management/services/storage-manager.service';
+import { ProjectPermission } from '../common/enums/permissions.enum';
 
 /**
  * validateShareFileAccess 路径匹配回归测试。
@@ -35,20 +37,18 @@ describe('ShareService.validateShareFileAccess', () => {
         findFirst: jest.fn(),
       },
     };
-    const projectPermissionService = {
-      isProjectOwner: jest.fn(),
-      checkPermission: jest.fn(),
-    };
-    const systemPermissionService = { checkSystemPermission: jest.fn() };
+    // 授权判定已委托 assertNodeAccess；validateShareFileAccess 不走该路径，空壳即可
+    const fileSystemPermissionService = { assertNodeAccess: jest.fn() };
     const auditLogService = {
       log: jest.fn(),
       logProjectNodeAction: jest.fn(),
     };
+    // isSameNodeStoragePath 是纯路径比较，依赖项传空壳即可
     return new ShareService(
       prisma as never,
-      projectPermissionService as never,
-      systemPermissionService as never,
-      auditLogService as never
+      fileSystemPermissionService as never,
+      auditLogService as never,
+      new StorageManager({} as never, {} as never)
     );
   };
 
@@ -101,7 +101,7 @@ describe('ShareService.validateShareFileAccess', () => {
       prisma as never,
       {} as never,
       {} as never,
-      {} as never
+      new StorageManager({} as never, {} as never)
     );
     await expect(
       service.validateShareFileAccess('tok-abc', '202509/node-1/main.dwg')
@@ -125,7 +125,7 @@ describe('ShareService.validateShareFileAccess', () => {
       prisma as never,
       {} as never,
       {} as never,
-      {} as never
+      new StorageManager({} as never, {} as never)
     );
     await expect(
       service.validateShareFileAccess('tok-abc', '202509/node-1/main.dwg')
@@ -152,7 +152,7 @@ describe('ShareService.listShares status 筛选', () => {
       prisma as never,
       {} as never,
       {} as never,
-      {} as never
+      new StorageManager({} as never, {} as never)
     );
     return { service, count, findMany };
   };
@@ -192,5 +192,68 @@ describe('ShareService.listShares status 筛选', () => {
     count.mockResolvedValue(3);
     const result = await service.listShares('user-1', { status: 'expired' });
     expect(result.total).toBe(3);
+  });
+});
+
+/**
+ * #1 分享授权委托 assertNodeAccess 回归（唯一授权绕过）。
+ *
+ * 旧实现按节点自身 nodeType 走四段梯子：库内子文件 nodeType=FILE 但根为 LIBRARY_*，
+ * 会漏判库两段、只剩 ownerId 段 → 另存进库的普通成员（ownerId=自己）绕过
+ * LIBRARY_DRAWING_MANAGE、库管理员分享他人图纸反被 403。新实现统一委托
+ * assertNodeAccess（按 TreeWalker 解析的根类型判定，fail-closed）。
+ */
+describe('ShareService 分享授权委托 assertNodeAccess（#1 回归）', () => {
+  // 库内子文件：projectId=null、nodeType 为 FILE（非 LIBRARY_*），根才是 LIBRARY_DRAWING
+  const subFileNode = { id: 'sub-1', projectId: null, name: 'sub.dwg' };
+  const createdShare = { token: 'tok-new', expiresAt: null };
+
+  const createService = (assertNodeAccess: jest.Mock) => {
+    const prisma = {
+      fileSystemNode: { findFirst: jest.fn().mockResolvedValue(subFileNode) },
+      $transaction: jest.fn(async (cb: (tx: unknown) => Promise<unknown>) =>
+        cb({ fileShare: { create: jest.fn().mockResolvedValue(createdShare) } })
+      ),
+    };
+    const auditLogService = { log: jest.fn() };
+    const service = new ShareService(
+      prisma as never,
+      { assertNodeAccess } as never,
+      auditLogService as never,
+      new StorageManager({} as never, {} as never)
+    );
+    return { service, assertNodeAccess };
+  };
+
+  it('createShare 委托 assertNodeAccess(userId, fileId, FILE_SHARE)', async () => {
+    const assertNodeAccess = jest.fn().mockResolvedValue(undefined);
+    const { service } = createService(assertNodeAccess);
+
+    await service.createShare({ fileId: 'sub-1' }, 'member-1');
+
+    expect(assertNodeAccess).toHaveBeenCalledWith(
+      'member-1',
+      'sub-1',
+      ProjectPermission.FILE_SHARE
+    );
+  });
+
+  it('库内子文件：无 LIBRARY_DRAWING_MANAGE 的普通成员被拒（旧 ownerId 旁路已消除）', async () => {
+    // 普通成员把图纸另存进库后（ownerId=自己），旧实现会经 ownerId 段放行；
+    // 新实现委托 assertNodeAccess 按根类型（LIBRARY_DRAWING）要求系统权限，拒绝并 fail-closed
+    const assertNodeAccess = jest
+      .fn()
+      .mockRejectedValue(new ForbiddenException('没有访问该资源库的权限'));
+    const { service } = createService(assertNodeAccess);
+
+    await expect(
+      service.createShare({ fileId: 'sub-1' }, 'member-1')
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(assertNodeAccess).toHaveBeenCalledWith(
+      'member-1',
+      'sub-1',
+      ProjectPermission.FILE_SHARE
+    );
   });
 });

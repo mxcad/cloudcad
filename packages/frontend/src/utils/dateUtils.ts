@@ -20,8 +20,12 @@ import {
 /**
  * 日期工具函数
  *
- * locale 取运行时激活语言（i18nScope.activeLanguage），而非硬编码 zh-CN：
- * en-US / zh-TW / ko-KR 界面下日期格式应与界面语言一致。
+ * 两类口径，勿混用：
+ * - formatDate / formatDateTime / formatDateTimeWithSeconds 委托 @cloudcad/platform 的
+ *   **固定 ISO-like 格式**（locale 无关、可排序、无歧义）——产品决策：审计日志/操作历史/
+ *   版本历史等记录类时间戳跨端统一固定格式（见 platform/format/date.ts）。
+ * - formatTime 是**语义时钟**（如侧边栏当前时间），刻意跟随界面语言
+ *   （i18nScope.activeLanguage），不走固定格式。
  */
 const locale = () => i18nScope.activeLanguage;
 

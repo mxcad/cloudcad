@@ -67,6 +67,10 @@ vi.mock('../services/mxcadManager', () => ({
   setOpenedBackInfo: vi.fn(),
   refreshFileName: vi.fn(),
   getCooperate: vi.fn(() => cooperateMock),
+  exitCollaboration: vi.fn(async () => ({
+    exited: true,
+    wasPending: false,
+  })),
   exitCurrentCollaboration: vi.fn(),
   checkAndConfirmUnsavedChanges: vi.fn(async () => true),
 }));

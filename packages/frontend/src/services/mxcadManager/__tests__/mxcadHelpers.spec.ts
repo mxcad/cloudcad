@@ -110,13 +110,11 @@ describe('getPersonalSpaceId — 失败回退本地缓存（偶发另存为 bug 
     await expect(getPersonalSpaceId()).resolves.toBe('ps-cached');
   });
 
-  it('接口返回 error（SDK 不抛错语义）→ 记录错误并回退缓存值', async () => {
+  it('接口报错（throwOnError 抛错）→ 记录错误并回退缓存值', async () => {
     useFileSystemStore.setState({ personalSpaceId: 'ps-cached' });
     const err = new Error('boom');
-    mocks.projectControllerGetPersonalSpace.mockResolvedValue({
-      data: null,
-      error: err,
-    });
+    // 源码用 throwOnError:true，SDK 失败时直接抛错（非返回 { error }），mock 须 reject 以匹配
+    mocks.projectControllerGetPersonalSpace.mockRejectedValue(err);
 
     await expect(getPersonalSpaceId()).resolves.toBe('ps-cached');
     expect(mocks.handleError).toHaveBeenCalledWith(

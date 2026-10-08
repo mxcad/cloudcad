@@ -9,6 +9,7 @@
 import { ref, watch, computed, nextTick } from 'vue'
 import { showToast } from 'vant'
 import { t } from '@/languages'
+import { formatDateTimeWithSeconds } from '@cloudcad/platform'
 import {
   useProjectAuditLog,
   actionLabel,
@@ -89,20 +90,6 @@ const memberFilterTitle = computed(() => {
   return m?.nickname || m?.username || t('全部成员')
 })
 
-function formatTime(createdAt: string): string {
-  try {
-    const d = new Date(createdAt)
-    return d.toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return createdAt
-  }
-}
-
 function onLocate(log: AuditLogItem) {
   if (!isLocatable(log)) {
     showToast(t('该记录对应的节点不存在'))
@@ -179,7 +166,7 @@ function onClose() {
               </div>
               <div class="ap-item-meta">
                 <span class="ap-item-user">{{ memberName(log) }}</span>
-                <span class="ap-item-time">{{ formatTime(log.createdAt) }}</span>
+                <span class="ap-item-time">{{ formatDateTimeWithSeconds(log.createdAt) }}</span>
               </div>
             </div>
           </template>

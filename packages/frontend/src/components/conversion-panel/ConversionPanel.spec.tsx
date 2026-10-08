@@ -456,10 +456,8 @@ describe('ConversionPanel', () => {
 
   it('云端拉取失败时显示错误提示，不整块替换成空态', async () => {
     // 空 error 对象 = 无 message 的网络失败：getErrorMessage 回落到统一文案
-    vi.mocked(conversionTaskControllerListTasks).mockResolvedValueOnce({
-      error: {},
-      data: undefined,
-    } as never);
+    // 源码用 throwOnError:true，SDK 失败时直接抛错，mock 须 reject 以匹配
+    vi.mocked(conversionTaskControllerListTasks).mockRejectedValueOnce({});
     // 展开面板会触发 refreshHistory 重置分页，故历史也走真实通道返回
     vi.mocked(conversionTaskControllerListHistory).mockResolvedValueOnce({
       error: undefined,
@@ -1586,6 +1584,7 @@ describe('ConversionPanel', () => {
         retryBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       });
       expect(batchDownloadControllerRetryTask).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { taskId: 'dl-fail' },
       });
       // 重试后任务乐观置回 PROCESSING（进度经 SSE 重新推送）
@@ -1630,6 +1629,7 @@ describe('ConversionPanel', () => {
         retryFailedBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       });
       expect(batchDownloadControllerRetryFailedItems).toHaveBeenCalledWith({
+        throwOnError: true,
         path: { taskId: 'dl-fail' },
       });
       // 新任务加入列表（仅失败项重跑，显示名继承失败项文件名），原任务保持 FAILED

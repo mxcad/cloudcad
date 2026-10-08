@@ -53,9 +53,11 @@ export { initThemeSync, initMxCADConfig } from './initMxCAD';
 export {
   checkAndConfirmUnsavedChanges,
   confirmExitCollaborationIfNeeded,
+  exitCollaboration,
   exitCurrentCollaboration,
   getCooperate,
 } from './mxcadCollaboration';
+export type { ExitCollaborationResult } from './mxcadCollaboration';
 
 export {
   openDrawing,
