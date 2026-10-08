@@ -353,25 +353,23 @@ describe('DrawingIngestService', () => {
         true
       );
       // 失败原因在失败瞬间写审计（删节点不丢诊断信息）
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.FILE_UPLOAD,
-        ResourceType.FILE,
-        'cad1',
-        'user1',
-        false,
-        'read file error',
-        undefined,
-        undefined,
-        'upload.dwg',
-        {
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.FILE_UPLOAD,
+        resourceType: ResourceType.FILE,
+        resourceId: 'cad1',
+        userId: 'user1',
+        success: false,
+        errorMessage: 'read file error',
+        resourceName: 'upload.dwg',
+        params: {
           fileName: 'upload.dwg',
           hash: 'hash1',
           size: 1024,
           failureStage: 'conversion',
           transient: true,
           errorCategory: null,
-        }
-      );
+        },
+      });
     });
 
     it('落盘失败：删除未成功节点（不置 FAILED），审计 failureStage=materialize', async () => {
@@ -413,21 +411,19 @@ describe('DrawingIngestService', () => {
         'cad1',
         true
       );
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.FILE_UPLOAD,
-        ResourceType.FILE,
-        'cad1',
-        'user1',
-        false,
-        expect.any(String),
-        undefined,
-        undefined,
-        'upload.dwg',
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.FILE_UPLOAD,
+        resourceType: ResourceType.FILE,
+        resourceId: 'cad1',
+        userId: 'user1',
+        success: false,
+        errorMessage: expect.any(String),
+        resourceName: 'upload.dwg',
+        params: expect.objectContaining({
           failureStage: 'materialize',
           transient: true,
-        })
-      );
+        }),
+      });
     });
   });
 
@@ -739,21 +735,19 @@ describe('DrawingIngestService', () => {
         'node-1',
         true
       );
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.FILE_UPLOAD,
-        ResourceType.FILE,
-        'node-1',
-        'user1',
-        false,
-        expect.any(String),
-        undefined,
-        undefined,
-        'upload.dwg',
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.FILE_UPLOAD,
+        resourceType: ResourceType.FILE,
+        resourceId: 'node-1',
+        userId: 'user1',
+        success: false,
+        errorMessage: expect.any(String),
+        resourceName: 'upload.dwg',
+        params: expect.objectContaining({
           failureStage: 'materialize',
           transient: true,
-        })
-      );
+        }),
+      });
       // 临时目录与合并缓存照旧清理
       expect(mockFileSystemService.deleteDirectory).toHaveBeenCalled();
       expect(mockCacheManager.delete).toHaveBeenCalledWith(
@@ -795,21 +789,19 @@ describe('DrawingIngestService', () => {
         'node-1',
         true
       );
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.FILE_UPLOAD,
-        ResourceType.FILE,
-        'node-1',
-        'user1',
-        false,
-        'read file error',
-        undefined,
-        undefined,
-        'upload.dwg',
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.FILE_UPLOAD,
+        resourceType: ResourceType.FILE,
+        resourceId: 'node-1',
+        userId: 'user1',
+        success: false,
+        errorMessage: 'read file error',
+        resourceName: 'upload.dwg',
+        params: expect.objectContaining({
           failureStage: 'conversion',
           transient: false,
-        })
-      );
+        }),
+      });
     });
 
     it('无 nodeId（游客 / 公开图纸）：合并请求立即返回 kOk，后台转换 + COMPLETED emit + 临时目录清理', async () => {

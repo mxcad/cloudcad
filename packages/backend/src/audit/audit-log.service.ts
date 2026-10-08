@@ -37,6 +37,40 @@ export type AuditLogDetailItem = Prisma.AuditLogGetPayload<{
 }>;
 
 /**
+ * 审计日志写入条目（`AuditLogService.log()` 与 `AuditLogger.audit()` 共用同一形状）。
+ *
+ * 取代旧的 12 个位置参数：此前 49 个外部调用点靠一串 `undefined` 垫位，
+ * 而 `resourceId`（原位置 3）与 `resourceName`（原位置 9）类型都是 `string | undefined`，
+ * 位置参数下两者互换可静默编译通过；具名后不可能互换。
+ */
+export interface AuditLogInput {
+  /** 操作类型 */
+  action: AuditAction;
+  /** 资源类型 */
+  resourceType: ResourceType;
+  /** 资源 ID */
+  resourceId?: string;
+  /** 操作用户 ID */
+  userId: string;
+  /** 操作是否成功 */
+  success: boolean;
+  /** 错误信息（失败时） */
+  errorMessage?: string;
+  /** 旧版详细信息（JSON 字符串，已废弃 #207）：提供时自动解析并入 params 写入 */
+  details?: string;
+  /** 项目 ID（项目维度过滤，系统级操作可空） */
+  projectId?: string;
+  /** 资源名称快照（资源删除后记录依然可读） */
+  resourceName?: string;
+  /** 结构化参数（替代 details blob） */
+  params?: Record<string, unknown> | null;
+  /** IP 地址 */
+  ipAddress?: string;
+  /** 用户代理 */
+  userAgent?: string;
+}
+
+/**
  * 高频读操作集合（#207 阶段 1，ADR-0045）：
  * 成功记录零审查价值且占满日志量，由写入入口统一过滤；失败记录保留（异常才有审查价值）
  */
@@ -73,33 +107,24 @@ export class AuditLogService {
   /**
    * 记录审计日志
    *
-   * @param action 操作类型
-   * @param resourceType 资源类型
-   * @param resourceId 资源 ID
-   * @param userId 操作用户 ID
-   * @param success 操作是否成功
-   * @param errorMessage 错误信息（如果失败）
-   * @param details 旧版详细信息（JSON 字符串，已废弃；提供时自动解析并入 params）
-   * @param projectId 项目 ID（项目维度过滤，系统级操作可空）
-   * @param resourceName 资源名称快照（资源删除后记录依然可读）
-   * @param params 结构化参数（替代 details blob）
-   * @param ipAddress IP 地址
-   * @param userAgent 用户代理
+   * @param entry 审计条目（字段语义见 {@link AuditLogInput}）
    */
-  async log(
-    action: AuditAction,
-    resourceType: ResourceType,
-    resourceId: string | undefined,
-    userId: string,
-    success: boolean,
-    errorMessage?: string,
-    details?: string,
-    projectId?: string,
-    resourceName?: string,
-    params?: Record<string, unknown> | null,
-    ipAddress?: string,
-    userAgent?: string
-  ): Promise<void> {
+  async log(entry: AuditLogInput): Promise<void> {
+    const {
+      action,
+      resourceType,
+      resourceId,
+      userId,
+      success,
+      errorMessage,
+      details,
+      projectId,
+      resourceName,
+      params,
+      ipAddress,
+      userAgent,
+    } = entry;
+
     // #207 阶段 1：高频读操作成功记录直接丢弃（日志零噪音），失败保留
     if (success && HIGH_FREQUENCY_READ_ACTIONS.has(action)) {
       this.logger.debug(
@@ -198,18 +223,16 @@ export class AuditLogService {
         select: { id: true, projectId: true, name: true },
       });
       if (!node?.projectId) return;
-      await this.log(
+      await this.log({
         action,
         resourceType,
-        node.id,
+        resourceId: node.id,
         userId,
-        true,
-        undefined,
-        undefined,
-        node.projectId,
-        node.name,
-        { fileName: node.name, nodeId: node.id, ...extraParams }
-      );
+        success: true,
+        projectId: node.projectId,
+        resourceName: node.name,
+        params: { fileName: node.name, nodeId: node.id, ...extraParams },
+      });
     } catch (error) {
       this.logger.warn(
         `文件动作审计埋点失败（业务不阻塞）: ${(error as Error).message}`
@@ -583,6 +606,53 @@ export function splitQueryValues(value?: string): string[] | undefined {
     .map((v) => v.trim())
     .filter(Boolean);
   return values.length > 0 ? values : undefined;
+}
+
+/** 审计列表/统计查询的原始 Query 参数（字符串形态，未做语义转换） */
+export interface AuditQuery {
+  action?: string;
+  resourceType?: string;
+  userId?: string;
+  resourceId?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  success?: string;
+  page?: string;
+  limit?: string;
+}
+
+/**
+ * 审计 Query 参数 → filters + pagination 的唯一出口
+ * （AuditLogController / ProjectAuditLogController 共用）。
+ *
+ * 多选拆分、本地时区日期、success 字符串判定、分页默认值这些不变式只写一次。
+ * 此前两个 Controller 各自复制一份并靠「与 AuditLogController 一致」的注释维持同步，
+ * 属手写注释同步失效的同类风险（engine-exec 收敛前 runner/backend 踩过）。
+ */
+export function parseAuditQuery(raw: AuditQuery): {
+  filters: Record<string, unknown>;
+  pagination: { page: number; limit: number };
+} {
+  const filters: Record<string, unknown> = {};
+  const actionValues = splitQueryValues(raw.action);
+  if (actionValues?.length) filters.action = actionValues as AuditAction[];
+  const resourceTypeValues = splitQueryValues(raw.resourceType);
+  if (resourceTypeValues?.length) {
+    filters.resourceType = resourceTypeValues as ResourceType[];
+  }
+  if (raw.userId) filters.userId = raw.userId;
+  if (raw.resourceId) filters.resourceId = raw.resourceId;
+  if (raw.search) filters.search = raw.search.trim();
+  // endDate 语义为"包含当天"（service 内闭合到次日零点）
+  if (raw.startDate) filters.startDate = parseLocalDate(raw.startDate);
+  if (raw.endDate) filters.endDate = parseLocalDate(raw.endDate);
+  if (raw.success !== undefined) filters.success = raw.success === 'true';
+  const pagination = {
+    page: raw.page ? parseInt(raw.page, 10) : 1,
+    limit: raw.limit ? parseInt(raw.limit, 10) : 20,
+  };
+  return { filters, pagination };
 }
 
 /**

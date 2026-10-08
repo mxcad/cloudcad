@@ -2,6 +2,8 @@ import { isConversionFailureCategory } from '@cloudcad/contracts';
 import type { ConversionFailureCategory } from '@cloudcad/contracts';
 import {
   PRIORITY_CONFIG,
+  PRIORITY_LEVELS,
+  coercePriority,
   WORKER_POOL_AUTO_SCALE,
   WORKER_POOL_MAX_MULTIPLIER,
   WORKER_POOL_MAX_CONCURRENT,
@@ -27,8 +29,10 @@ export interface RunnerLike {
 }
 
 // 回调引擎契约（callbackEngine 未接线时为 null / no-op）
+// callbackUrl 由调用方（_notify）从 task 取出后传入：引擎不再回查 TaskStore，
+// 「该不该回调」的守卫只留在调用方一处。
 export interface CallbackEngineLike {
-  notify(taskId: string, result: { status: string; result: unknown; error?: unknown }): Promise<void>;
+  notify(taskId: string, callbackUrl: string, result: { status: string; result: unknown; error?: unknown }): Promise<void>;
 }
 
 // 执行异常 → 结构化失败详情。只认结构化字段（ConversionExecutionError 的 category / code），
@@ -270,8 +274,15 @@ class WorkerPool {
   }
 
   enqueue(task: TaskInput): void {
-    this.taskStore.create(task);
-    log(`[WorkerPool] 任务入队: ${task.id} (priority=${task.priority}, type=${task.type || 'convert'})`);
+    // 越界优先级（0 / -1 / 2.5 / '1' / undefined）会永久停留 PENDING 且不进任何池、无任何日志，
+    // 前端 GET /tasks/:id 恒显示排队中——故在入队口归一化。此处是调度不变式的唯一守门点，
+    // 单任务与批量两条提交路径都经此。
+    const input: TaskInput = { ...task, priority: coercePriority(task.priority) };
+    if (input.priority !== task.priority) {
+      log(`[WorkerPool] 非法 priority=${String(task.priority)}，回落默认 ${input.priority}`);
+    }
+    this.taskStore.create(input);
+    log(`[WorkerPool] 任务入队: ${input.id} (priority=${input.priority}, type=${input.type || 'convert'})`);
     setImmediate(() => this._tick());
   }
 
@@ -279,7 +290,7 @@ class WorkerPool {
     if (!this._running) return;
     const now = Date.now();
     const allPending = this.taskStore.list({ status: 'PENDING' });
-    for (let level = 1; level <= 3; level++) {
+    for (const level of PRIORITY_LEVELS) {
       const levelStr = String(level);
       const pool = this.pools[levelStr];
       const pending = allPending.filter((t) => t.priority === level);
@@ -437,7 +448,7 @@ class WorkerPool {
     const task = this.taskStore.get(taskId);
     if (!task || !task.callbackUrl) return;
     try {
-      this.callbackEngine.notify(taskId, { status, result, error }).catch((err) => {
+      this.callbackEngine.notify(taskId, task.callbackUrl, { status, result, error }).catch((err) => {
         log(`[WorkerPool] 回调失败: ${taskId} - ${(err as Error).message}`);
       });
     } catch (err) {
@@ -447,7 +458,7 @@ class WorkerPool {
 
   getStats(): WorkerStats {
     const stats: WorkerStats = {};
-    for (let level = 1; level <= 3; level++) {
+    for (const level of PRIORITY_LEVELS) {
       const levelStr = String(level);
       const pool = this.pools[levelStr];
       const cfg = PRIORITY_CONFIG[level];

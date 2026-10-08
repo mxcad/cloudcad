@@ -49,8 +49,32 @@ const MXCAD_CONFIG = {
       : path.join(PROJECT_ROOT, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe')
   ),
   binPath: os.platform() === 'linux' ? path.join(PROJECT_ROOT, 'runtime', 'linux', 'mxcad') : '',
-  maxBuffer: 50 * 1024 * 1024,
 };
+
+// 优先级档位唯一事实源：由 PRIORITY_CONFIG 的键派生并升序排列。
+// worker-pool 的 _tick / getStats 按此枚举，不再硬编码 level <= 3——新增档位只改 PRIORITY_CONFIG 一处。
+export const PRIORITY_LEVELS: number[] = Object.keys(PRIORITY_CONFIG)
+  .map(Number)
+  .sort((a, b) => a - b);
+
+// 队列任务缺省优先级（#431：导出下载 = 2，次于打开/预览）。
+export const DEFAULT_PRIORITY = 2;
+
+/**
+ * 归一化入站优先级。
+ *
+ * worker-pool 只按 PRIORITY_LEVELS 调度，越界优先级（0 / -1 / 2.5 / '1' / undefined）此前会被
+ * 静默永久饿死：任务停留 PENDING 且不进任何池、无日志、queuePosition 恒 null，前端永远显示排队中。
+ * 此处回落默认档而非 400 拒绝——上游字段错误不应升级为前端可见失败。
+ */
+export function coercePriority(raw: unknown): number {
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10);
+  return PRIORITY_LEVELS.includes(n) ? n : DEFAULT_PRIORITY;
+}
+
+// 同步接口愿意等多久（客户端耐心），与 PRIORITY_CONFIG[*].timeout（单次转换执行上限）语义不同。
+// 调大执行超时时须同步抬升此值，否则同步接口会先报 TIMEOUT 谎称失败。
+const SYNC_WAIT_TIMEOUT_MS = 180000;
 
 const QUEUE_DRIVER = (process.env.QUEUE_DRIVER || 'local').toLowerCase();
 const REDIS_URL = process.env.REDIS_URL || '';
@@ -104,6 +128,7 @@ export {
   PORT,
   PROJECT_ROOT,
   PRIORITY_CONFIG,
+  SYNC_WAIT_TIMEOUT_MS,
   MXCAD_CONFIG,
   QUEUE_DRIVER,
   REDIS_URL,

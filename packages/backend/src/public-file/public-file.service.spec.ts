@@ -32,10 +32,10 @@ describe('PublicFileService 路径包含性', () => {
     };
     const storageManager = { getFullPath: jest.fn().mockReturnValue(null) };
     const restrictionEngine = {
-      reserveConversionCountOrThrow: jest.fn(),
-      reserveGuestConversionCountOrThrow: jest.fn(),
-      releaseConversionCount: jest.fn().mockResolvedValue(undefined),
-      releaseGuestConversionCount: jest.fn().mockResolvedValue(undefined),
+      // 透传包装：占位/释放语义由 RestrictionEngine.withConversionQuota 单点保证（引擎级 spec 覆盖）
+      withConversionQuota: jest.fn(
+        async (_principal: unknown, fn: () => Promise<unknown>) => fn()
+      ),
     };
     const fileConversionService = { convertFile: jest.fn() };
     return new PublicFileService(

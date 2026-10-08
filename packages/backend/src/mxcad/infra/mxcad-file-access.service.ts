@@ -25,7 +25,6 @@ import { IStorageService } from '../../storage/interfaces/storage-service.interf
 import { I_EXTERNAL_REF_FACADE, IExternalRefFacade } from '../external-ref/interfaces/ext-ref-facade.interface';
 import { MXCAD_CONVERSION_SERVICE } from '../interfaces/mxcad-service-tokens';
 import type { IMxcadConversionService } from '../interfaces/mxcad-conversion.interface';
-import type { MxCadConversionResult } from '../interfaces/file-conversion.interface';
 import type { MxCadRequest } from '../types/request.types';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { NodeUtils } from '../../common/utils/node-utils';
@@ -251,54 +250,41 @@ export class MxcadFileAccessService {
       return;
     }
 
-    // 频率占位（打开/导出共用窗口）；导出下载方向会员门控由转换服务按源文件类型自动执行
-    if (userId) {
-      await this.restrictionEngine.reserveConversionCountOrThrow(userId);
-    }
-
     const srcPath = filePath;
     const outDir = path.dirname(filePath);
     const baseName = path.basename(fileName, ext);
     const outName = `${baseName}.${downloadFormat}`;
     const outPath = path.join(outDir, outName);
 
-    let convertResult: MxCadConversionResult | undefined;
-    try {
-      convertResult = await this.conversionService.convertServerFile({
-        srcPath,
-        fileHash: '',
-        nodeId,
-        userId,
-        createPreloadingData: false,
-        outname: outName,
-        cmd: downloadFormat === 'pdf' ? 'toPdf' : 'toDwg',
-        width: width ? Number(width) : undefined,
-        height: height ? Number(height) : undefined,
-        colorPolicy: colorPolicy as 'mono' | 'color' | undefined,
-        dwgVersion: dwgVersion ? Number(dwgVersion) : undefined,
-      });
-    } catch (error) {
-      if (userId) {
-        await this.restrictionEngine.releaseConversionCount(userId);
+    // 频率占位（打开/导出共用窗口）；导出下载方向会员门控由转换服务按源文件类型自动执行。
+    // 占位/释放走 withConversionQuota 单点：成功消耗占位，任何失败（引擎原始异常 /
+    // 引擎 code≠0 / 产物缺失）保证释放；校验与错误文案在占位作用域内完成。
+    await this.restrictionEngine.withConversionQuota(
+      { userId },
+      async () => {
+        const convertResult = await this.conversionService.convertServerFile({
+          srcPath,
+          fileHash: '',
+          nodeId,
+          userId,
+          createPreloadingData: false,
+          outname: outName,
+          cmd: downloadFormat === 'pdf' ? 'toPdf' : 'toDwg',
+          width: width ? Number(width) : undefined,
+          height: height ? Number(height) : undefined,
+          colorPolicy: colorPolicy as 'mono' | 'color' | undefined,
+          dwgVersion: dwgVersion ? Number(dwgVersion) : undefined,
+        });
+        if (convertResult?.code !== 0) {
+          throw new InternalServerErrorException(I18nContext.current()?.t('error.mxcad.conversion_failed') ?? '文件转换失败');
+        }
+        try {
+          await fsPromises.access(outPath);
+        } catch {
+          throw new InternalServerErrorException(I18nContext.current()?.t('error.mxcad.conversion_output_not_found') ?? '转换输出文件不存在');
+        }
       }
-      throw error;
-    }
-
-    if (convertResult?.code !== 0) {
-      if (userId) {
-        await this.restrictionEngine.releaseConversionCount(userId);
-      }
-      throw new InternalServerErrorException(I18nContext.current()?.t('error.mxcad.conversion_failed') ?? '文件转换失败');
-    }
-
-    try {
-      await fsPromises.access(outPath);
-    } catch {
-      if (userId) {
-        await this.restrictionEngine.releaseConversionCount(userId);
-      }
-      throw new InternalServerErrorException(I18nContext.current()?.t('error.mxcad.conversion_output_not_found') ?? '转换输出文件不存在');
-    }
+    );
 
     res.setHeader('Content-Type', 'application/octet-stream');
     setContentDisposition(res, outName);

@@ -368,35 +368,35 @@ export class FileDownloadExportService {
       return { alreadyCached: true, cacheKey };
     }
 
-    // 频率占位（与同步下载路径一致）；缓存命中已在上方提前返回，此处必发生真实转换
-    if (userId) {
-      await this.restrictionEngine.reserveConversionCountOrThrow(userId);
-    }
-
     const srcPath = (
       snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)
     ).replace(/\\/g, '/');
     const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
 
-    // 共享转换核心（构造参数 → 调引擎 → 校验产物）。失败释放配额并按本地化文案抛错；
-    // 引擎原始异常（spawn 失败 / VIP 门控拒绝）原样上抛，不占配额（与既有语义一致）。
+    // 共享转换核心（构造参数 → 调引擎 → 校验产物）。占位/释放走 withConversionQuota
+    // 单点（缓存命中已在上方提前返回，此处必发生真实转换）：成功消耗占位，
+    // 任何失败（含引擎原始异常 spawn 失败 / VIP 门控拒绝）保证释放；
+    // 调用点只负责按本地化文案翻译错误。
     let targetFullPath: string;
     try {
-      const mxCadConversionService = await this.getMxCadConversionService();
-      ({ artifactPath: targetFullPath } = await runConversionCore({
-        conversionService: mxCadConversionService,
-        srcPath,
-        fileHash: node.fileHash || '',
-        nodeId: node.id,
-        userId,
-        outname,
-        engineParams: resolved.engineParams,
-      }));
+      targetFullPath = await this.restrictionEngine.withConversionQuota(
+        { userId },
+        async () => {
+          const mxCadConversionService = await this.getMxCadConversionService();
+          const { artifactPath } = await runConversionCore({
+            conversionService: mxCadConversionService,
+            srcPath,
+            fileHash: node.fileHash || '',
+            nodeId: node.id,
+            userId,
+            outname,
+            engineParams: resolved.engineParams,
+          });
+          return artifactPath;
+        }
+      );
     } catch (error) {
       if (error instanceof ConversionCoreError) {
-        if (userId) {
-          await this.restrictionEngine.releaseConversionCount(userId);
-        }
         if (error.kind === 'engine-failed') {
           const errMsg = error.detail || '文件转换失败';
           throw new BadRequestException(
@@ -695,38 +695,38 @@ export class FileDownloadExportService {
             };
           }
 
-          // 频率占位（打开/导出共用窗口）；导出下载方向会员门控由转换服务按源文件类型自动执行
-          if (userId) {
-            await this.restrictionEngine.reserveConversionCountOrThrow(userId);
-          }
-
           const srcPath = (
             snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)
           ).replace(/\\/g, '/');
           const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
 
           this.logger.log(`开始转换文件: ${originalFilename} -> ${outname}`);
-          // 共享转换核心（构造参数 → 调引擎 → 校验产物）。配额释放时机与既有语义一致：
-          // 引擎失败（code≠0）与引擎原始异常（spawn/VIP 门控）释放配额；产物缺失不释放。
+          // 共享转换核心（构造参数 → 调引擎 → 校验产物）。占位/释放走 withConversionQuota
+          // 单点（打开/导出共用窗口；导出下载方向会员门控由转换服务按源文件类型自动执行）：
+          // 成功消耗占位，任何失败（引擎失败 code≠0 / 产物缺失 / 引擎原始异常
+          // spawn/VIP 门控）保证释放——失败转换不消耗窗口额度，与 precomputeExport 统一。
           let targetFullPath: string;
           try {
-            const mxCadConversionService =
-              await this.getMxCadConversionService();
-            ({ artifactPath: targetFullPath } = await runConversionCore({
-              conversionService: mxCadConversionService,
-              srcPath,
-              fileHash: node.fileHash || '',
-              nodeId: node.id,
-              userId,
-              outname,
-              engineParams: resolved.engineParams,
-            }));
+            targetFullPath = await this.restrictionEngine.withConversionQuota(
+              { userId },
+              async () => {
+                const mxCadConversionService =
+                  await this.getMxCadConversionService();
+                const { artifactPath } = await runConversionCore({
+                  conversionService: mxCadConversionService,
+                  srcPath,
+                  fileHash: node.fileHash || '',
+                  nodeId: node.id,
+                  userId,
+                  outname,
+                  engineParams: resolved.engineParams,
+                });
+                return artifactPath;
+              }
+            );
           } catch (error) {
             if (error instanceof ConversionCoreError) {
               if (error.kind === 'engine-failed') {
-                if (userId) {
-                  await this.restrictionEngine.releaseConversionCount(userId);
-                }
                 const errMsg = error.detail || '文件转换失败';
                 this.logger.error(`文件转换失败: ${errMsg}`);
                 throw new BadRequestException(
@@ -736,17 +736,12 @@ export class FileDownloadExportService {
                   ) ?? `文件转换失败: ${errMsg}`
                 );
               }
-              // 产物缺失：不释放配额（与既有语义一致）
               throw new NotFoundException(
                 I18nContext.current()?.t(
                   'error.file_extra.converted_file_not_exist',
                   { args: { path: error.detail } }
                 ) ?? `转换后的文件不存在: ${error.detail}`
               );
-            }
-            // 引擎原始异常（spawn 失败 / VIP 门控拒绝）：释放配额后原样上抛
-            if (userId) {
-              await this.restrictionEngine.releaseConversionCount(userId);
             }
             throw error;
           }

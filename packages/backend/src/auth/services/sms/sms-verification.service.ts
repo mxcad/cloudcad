@@ -14,13 +14,13 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
-import * as crypto from 'crypto';
 import {
   SmsProvider,
   SmsProviderConfig,
 } from './interfaces/sms-provider.interface';
 import { SmsProviderFactory, MockSmsProvider } from './providers';
 import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
+import { VerificationCodeStore } from '../../../common/verification-code.store';
 
 import { I18nContext } from 'nestjs-i18n';
 import type { ISmsVerificationService } from '@cloudcad/contracts';
@@ -52,12 +52,15 @@ export class SmsVerificationService implements ISmsVerificationService {
   private readonly codeTTL: number;
   private readonly rateLimitTTL: number;
   private readonly verifyLimits: SmsVerifyLimitsConfig;
+  private readonly codeStore: VerificationCodeStore;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly runtimeConfigService: RuntimeConfigService,
     @InjectRedis() private readonly redis: Redis
   ) {
+    // 验证码生成/存储/原子验证走共享 VerificationCodeStore（架构审查 ⑥）
+    this.codeStore = new VerificationCodeStore(this.redis);
     const cacheTTL = this.configService.get('cacheTTL');
 
     // 设置验证码有效期（默认 5 分钟）
@@ -242,12 +245,12 @@ export class SmsVerificationService implements ISmsVerificationService {
       }
     }
 
-    // 生成 6 位数字验证码
-    const code = (100000 + crypto.randomInt(900000)).toString();
+    // 生成 6 位数字验证码（共享 VerificationCodeStore）
+    const code = this.codeStore.generateCode();
 
     // 存储验证码到 Redis
     const codeKey = this.getCodeKey(formattedPhone);
-    await this.redis.setex(codeKey, this.codeTTL, code);
+    await this.codeStore.storeCode(codeKey, code, this.codeTTL);
 
     // 设置频率限制
     await this.redis.setex(rateLimitKey, this.rateLimitTTL, '1');
@@ -328,55 +331,40 @@ export class SmsVerificationService implements ISmsVerificationService {
     const formattedPhone = this.formatPhone(phone);
     const codeKey = this.getCodeKey(formattedPhone);
     const attemptsKey = this.getVerifyAttemptsKey(formattedPhone);
-    const storedCode = await this.redis.get(codeKey);
 
-    if (!storedCode) {
-      return { valid: false, message: I18nContext.current()?.t('success.verification_code_expired') ?? '验证码已过期，请重新获取' };
-    }
+    // 验证码核心逻辑（原子 incr 计数 / 删码 / TTL 对齐）走共享 VerificationCodeStore，
+    // 本方法只负责 phone 校验、key 生成与 status→对外契约的 i18n 翻译（架构审查 ⑥）
+    const result = await this.codeStore.verifyCode({
+      codeKey,
+      attemptsKey,
+      code,
+      maxVerifyAttempts: this.verifyLimits.maxVerifyAttempts,
+    });
 
-    if (storedCode !== code) {
-      // 获取当前验证尝试次数
-      const attempts = parseInt((await this.redis.get(attemptsKey)) || '0', 10);
-      const remainingAttempts = this.verifyLimits.maxVerifyAttempts - attempts;
-
-      if (remainingAttempts <= 0) {
-        // 验证次数用完，删除验证码
-        await this.redis.del(codeKey);
-        await this.redis.del(attemptsKey);
-        return { valid: false, message: (I18nContext.current()?.t('error.auth.verification_attempts_exhausted') ?? '验证次数已用完，请重新获取验证码') };
-      }
-
-      // 增加验证尝试次数
-      await this.redis.incr(attemptsKey);
-      // 设置验证次数key的过期时间与验证码一致
-      const ttl = await this.redis.ttl(codeKey);
-      if (ttl > 0) {
-        await this.redis.expire(attemptsKey, ttl);
-      }
-
-      this.logger.log(
-        `验证码验证失败: ${formattedPhone}, 剩余尝试次数: ${remainingAttempts - 1}`
-      );
-
+    if (result.status === 'valid') {
+      this.logger.log(`验证码验证成功: ${formattedPhone}`);
       return {
-        valid: false,
-        message: I18nContext.current()?.t('success.verification_code_error_remaining', { args: { count: remainingAttempts - 1 } }) ?? `验证码错误，剩余 ${remainingAttempts - 1} 次尝试机会`,
-        remainingAttempts: remainingAttempts - 1,
+        valid: true,
+        message: I18nContext.current()?.t('success.verification_success') ?? '验证成功',
+        expiresIn: result.expiresIn,
       };
     }
 
-    // 获取验证码剩余有效期（删除之前查询，否则返回 -2）
-    const ttl = await this.redis.ttl(codeKey);
+    if (result.status === 'expired') {
+      return { valid: false, message: I18nContext.current()?.t('success.verification_code_expired') ?? '验证码已过期，请重新获取' };
+    }
 
-    // 验证成功后删除验证码和验证次数记录
-    await this.redis.del(codeKey);
-    await this.redis.del(attemptsKey);
+    if (result.status === 'exhausted') {
+      return { valid: false, message: I18nContext.current()?.t('error.auth.verification_attempts_exhausted') ?? '验证次数已用完，请重新获取验证码' };
+    }
 
-    this.logger.log(`验证码验证成功: ${formattedPhone}`);
+    // status === 'wrong'
+    const remainingAttempts = result.remainingAttempts ?? 0;
+    this.logger.log(`验证码验证失败: ${formattedPhone}, 剩余尝试次数: ${remainingAttempts}`);
     return {
-      valid: true,
-      message: I18nContext.current()?.t('success.verification_success') ?? '验证成功',
-      expiresIn: ttl > 0 ? ttl : undefined,
+      valid: false,
+      message: I18nContext.current()?.t('success.verification_code_error_remaining', { args: { count: remainingAttempts } }) ?? `验证码错误，剩余 ${remainingAttempts} 次尝试机会`,
+      remainingAttempts,
     };
   }
 

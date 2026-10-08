@@ -36,6 +36,27 @@ describe('TokenValidator', () => {
     assert.equal(result.path, '202607/node1/a.dwg');
   });
 
+  it('should extract userId from the payload (backend-signed, for audit; ADR-0015)', () => {
+    const token = signToken(
+      { path: '202607/node1/a.dwg', operation: 'upload', userId: 'user-42', exp: Math.floor(Date.now() / 1000) + 3600 },
+      'test-shared-secret',
+    );
+
+    const result = validator.validate(token);
+    assert.equal(result.userId, 'user-42');
+    assert.equal(result.path, '202607/node1/a.dwg');
+  });
+
+  it('should leave userId undefined for legacy tokens without the claim', () => {
+    const token = signToken(
+      { path: '202607/node1/a.dwg', operation: 'upload', exp: Math.floor(Date.now() / 1000) + 3600 },
+      'test-shared-secret',
+    );
+
+    const result = validator.validate(token);
+    assert.equal(result.userId, undefined);
+  });
+
   it('should allow file:write operation', () => {
     const token = signToken(
       { path: '202607/node1/a.dwg', operation: 'file:write' },

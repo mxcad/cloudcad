@@ -1134,18 +1134,15 @@ export class BillingService {
     extra: Record<string, unknown>
   ) {
     await this.auditLogService
-      .log(
+      .log({
         action,
-        ResourceType.USER,
-        orderNo,
-        actorId,
-        true,
-        undefined,
-        undefined,
-        undefined,
-        orderNo,
-        extra
-      )
+        resourceType: ResourceType.USER,
+        resourceId: orderNo,
+        userId: actorId,
+        success: true,
+        resourceName: orderNo,
+        params: extra,
+      })
       .catch((e) =>
         this.logger.warn(
           `refund audit failed: applicationId=${applicationId}`,

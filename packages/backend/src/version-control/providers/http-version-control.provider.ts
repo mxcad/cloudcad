@@ -13,12 +13,13 @@
 import { Injectable, Logger, NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
-import * as http from 'http';
-import * as https from 'https';
 import * as path from 'path';
 import { FileUtils } from '../../common/utils/file-utils';
-import { buildOutboundTraceHeaders } from '../../common/utils/outbound-trace';
 import { internalServiceSecretHeader } from '../../common/utils/internal-service-auth';
+import {
+  createInternalServiceClient,
+  type InternalServiceClient,
+} from '../../common/utils/internal-service-http';
 import {
   IVersionControl,
   CommitResult,
@@ -41,26 +42,29 @@ import {
 @Injectable()
 export class HttpVersionControlProvider implements IVersionControl {
   private readonly logger = new Logger(HttpVersionControlProvider.name);
-  private readonly baseUrl: string;
-  private readonly useHttps: boolean;
   private readonly filesDataPath?: string;
-  /** #419：内部服务共享密钥（空则不带头，向后兼容本地开发） */
-  private readonly secretHeaders: Record<string, string>;
+  /** backend → storage-service 的 HTTP 传输（唯一出口见 internal-service-http） */
+  private readonly client: InternalServiceClient;
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly cls: ClsService,
+    cls: ClsService,
   ) {
-    this.baseUrl =
+    const baseUrl =
       this.configService.get<string>('STORAGE_SERVICE_URL') ||
       'http://localhost:3200';
-    this.useHttps = this.baseUrl.startsWith('https');
     this.filesDataPath = this.configService.get<string>('filesDataPath', {
       infer: true,
     });
-    this.secretHeaders = internalServiceSecretHeader(
-      this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
-    );
+    this.client = createInternalServiceClient({
+      baseUrl,
+      useHttps: baseUrl.startsWith('https'),
+      secretHeaders: internalServiceSecretHeader(
+        this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
+      ),
+      cls,
+      serviceName: 'http-version-control',
+    });
   }
 
   isReady(): boolean {
@@ -74,7 +78,7 @@ export class HttpVersionControlProvider implements IVersionControl {
   async isFirstCommit(directoryPath: string): Promise<boolean> {
     const storagePath = this.toStorageRelativePath(directoryPath);
     try {
-      const result = await this.request(
+      const result = await this.client.request(
         `/v1/svn/history?path=${encodeURIComponent(storagePath)}`,
         'GET',
       );
@@ -103,7 +107,7 @@ export class HttpVersionControlProvider implements IVersionControl {
       timestamp: new Date().toISOString(),
     };
     try {
-      const result = await this.request(
+      const result = await this.client.request(
         '/v1/svn/commit',
         'POST',
         JSON.stringify({ path: storagePath, message: JSON.stringify(commitData) }),
@@ -131,7 +135,7 @@ export class HttpVersionControlProvider implements IVersionControl {
     try {
       for (const filePath of filePaths) {
         const storagePath = this.toStorageRelativePath(filePath);
-        await this.request(
+        await this.client.request(
           '/v1/svn/commit',
           'POST',
           JSON.stringify({ path: storagePath, message }),
@@ -169,7 +173,7 @@ export class HttpVersionControlProvider implements IVersionControl {
   ): Promise<HistoryResult> {
     const storagePath = this.toStorageRelativePath(filePath);
     try {
-      const result = await this.request(
+      const result = await this.client.request(
         `/v1/svn/history?path=${encodeURIComponent(storagePath)}`,
         'GET',
       );
@@ -232,7 +236,7 @@ export class HttpVersionControlProvider implements IVersionControl {
   ): Promise<FileContentResult> {
     const storagePath = this.toStorageRelativePath(filePath);
     try {
-      const data = await this.requestBuffer(
+      const data = await this.client.requestBuffer(
         `/v1/svn/cat?path=${encodeURIComponent(storagePath)}&revision=${revision}`,
         'GET',
       );
@@ -281,107 +285,4 @@ export class HttpVersionControlProvider implements IVersionControl {
     return storagePath.replace(/\\/g, '/');
   }
 
-  private request(
-    path: string,
-    method: string,
-    body?: string
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(path, this.baseUrl);
-      const mod = this.useHttps ? https : http;
-      const options: http.RequestOptions = {
-        hostname: url.hostname,
-        port: url.port || (this.useHttps ? 443 : 80),
-        path: url.pathname + url.search,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          // X-Request-Id/X-Trace-Id 透传（#309）：storage-service 侧日志据此串联
-          ...buildOutboundTraceHeaders(
-            {
-              requestId: this.cls?.get<string>('requestId'),
-              traceId: this.cls?.get<string>('traceId'),
-            },
-            'http-version-control',
-          ),
-          // #419：内部服务共享密钥
-          ...this.secretHeaders,
-        },
-        timeout: 60000,
-      };
-      if (body) options.headers!['Content-Length'] = Buffer.byteLength(body);
-      const req = mod.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk: string) => (data += chunk));
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 400) {
-            return reject(
-              new Error(
-                `HTTP ${res.statusCode} for ${method} ${path}: ${data.substring(0, 200)}`
-              )
-            );
-          }
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            reject(new Error(`Invalid JSON: ${data}`));
-          }
-        });
-      });
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Timeout: ${method} ${path}`));
-      });
-      if (body) req.write(body);
-      req.end();
-    });
-  }
-
-  private requestBuffer(path: string, method: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(path, this.baseUrl);
-      const mod = this.useHttps ? https : http;
-      const options: http.RequestOptions = {
-        hostname: url.hostname,
-        port: url.port || (this.useHttps ? 443 : 80),
-        path: url.pathname + url.search,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...buildOutboundTraceHeaders(
-            {
-              requestId: this.cls?.get<string>('requestId'),
-              traceId: this.cls?.get<string>('traceId'),
-            },
-            'http-version-control',
-          ),
-          // #419：内部服务共享密钥
-          ...this.secretHeaders,
-        },
-        timeout: 60000,
-      };
-      const req = mod.request(options, (res) => {
-        const chunks: Buffer[] = [];
-        res.on('data', (chunk: Buffer) => chunks.push(chunk));
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 400) {
-            const body = Buffer.concat(chunks).toString('utf-8');
-            return reject(
-              new Error(
-                `HTTP ${res.statusCode} for ${method} ${path}: ${body.substring(0, 200)}`
-              )
-            );
-          }
-          resolve(Buffer.concat(chunks));
-        });
-      });
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Timeout: ${method} ${path}`));
-      });
-      req.end();
-    });
-  }
 }

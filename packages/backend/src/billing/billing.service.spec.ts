@@ -1550,18 +1550,15 @@ describe('BillingService', () => {
         false
       );
       // 资金敏感操作审计
-      expect(auditLogService.log).toHaveBeenCalledWith(
-        AuditAction.REFUND_APPLY,
-        expect.anything(),
-        'PAYtest123',
-        'user-1',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        'PAYtest123',
-        expect.objectContaining({ applicationId: 'app-1', amount: 2400 })
-      );
+      expect(auditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.REFUND_APPLY,
+        resourceType: expect.anything(),
+        resourceId: 'PAYtest123',
+        userId: 'user-1',
+        success: true,
+        resourceName: 'PAYtest123',
+        params: expect.objectContaining({ applicationId: 'app-1', amount: 2400 }),
+      });
     });
 
     it('should throw NotFound for order of another user', async () => {
@@ -1735,18 +1732,15 @@ describe('BillingService', () => {
         }),
       });
       // 资金敏感操作审计
-      expect(auditLogService.log).toHaveBeenCalledWith(
-        AuditAction.REFUND_APPROVE,
-        expect.anything(),
-        'PAYtest123',
-        'admin-1',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        'PAYtest123',
-        expect.objectContaining({ applicationId: 'app-1' })
-      );
+      expect(auditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.REFUND_APPROVE,
+        resourceType: expect.anything(),
+        resourceId: 'PAYtest123',
+        userId: 'admin-1',
+        success: true,
+        resourceName: 'PAYtest123',
+        params: expect.objectContaining({ applicationId: 'app-1' }),
+      });
     });
 
     it('should mark APPROVED when order was already refunded (idempotent retry)', async () => {
@@ -1875,18 +1869,15 @@ describe('BillingService', () => {
       expect(prisma.paymentOrder.update).not.toHaveBeenCalled();
       expect(prisma.paymentOrder.updateMany).not.toHaveBeenCalled();
       // 资金敏感操作审计
-      expect(auditLogService.log).toHaveBeenCalledWith(
-        AuditAction.REFUND_REJECT,
-        expect.anything(),
-        'PAYtest123',
-        'admin-1',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        'PAYtest123',
-        expect.objectContaining({ applicationId: 'app-1' })
-      );
+      expect(auditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.REFUND_REJECT,
+        resourceType: expect.anything(),
+        resourceId: 'PAYtest123',
+        userId: 'admin-1',
+        success: true,
+        resourceName: 'PAYtest123',
+        params: expect.objectContaining({ applicationId: 'app-1' }),
+      });
     });
 
     it('should throw when application not found', async () => {

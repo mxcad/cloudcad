@@ -38,7 +38,7 @@ import {
   AuditLogDetailItem,
   AuditLogListItem,
   parseLocalDate,
-  splitQueryValues,
+  parseAuditQuery,
   computeRetentionCutoff,
 } from './audit-log.service';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
@@ -124,28 +124,22 @@ export class AuditLogController {
     limit: number;
     totalPages: number;
   }> {
-    const filters: Record<string, unknown> = {};
-    if (userId) filters.userId = userId;
-    // 多选筛选：action / resourceType 支持逗号分隔多值（如 action=A,B → in 查询）
-    const actionValues = splitQueryValues(action);
-    if (actionValues?.length) filters.action = actionValues as AuditAction[];
-    const resourceTypeValues = splitQueryValues(resourceType);
-    if (resourceTypeValues?.length) {
-      filters.resourceType = resourceTypeValues as ResourceType[];
-    }
-    if (resourceId) filters.resourceId = resourceId;
-    if (projectId) filters.projectId = projectId;
-    // 日期按本地时区解析（parseLocalDate），endDate 语义为"包含当天"（service 内闭合到次日零点）
-    if (startDate) filters.startDate = parseLocalDate(startDate);
-    if (endDate) filters.endDate = parseLocalDate(endDate);
-    if (success !== undefined) filters.success = success === 'true';
+    const { filters, pagination } = parseAuditQuery({
+      userId,
+      action,
+      resourceType,
+      resourceId,
+      startDate,
+      endDate,
+      success,
+      page,
+      limit,
+    });
 
-    const pagination = {
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
-    };
-
-    return await this.auditLogService.findAll(filters, pagination);
+    return await this.auditLogService.findAll(
+      { ...filters, projectId },
+      pagination
+    );
   }
 
   @Get('logs/:id')
@@ -172,10 +166,7 @@ export class AuditLogController {
     @Query('endDate') endDate?: string,
     @Query('userId') userId?: string
   ) {
-    const filters: Record<string, unknown> = {};
-    if (startDate) filters.startDate = parseLocalDate(startDate);
-    if (endDate) filters.endDate = parseLocalDate(endDate);
-    if (userId) filters.userId = userId;
+    const { filters } = parseAuditQuery({ startDate, endDate, userId });
 
     return await this.auditLogService.getStatistics(filters);
   }
@@ -204,24 +195,20 @@ export class AuditLogController {
 
     // 导出动作本身记录审计日志（#207 阶段 2）
     const userId = req.user?.id ?? 'unknown';
-    await this.auditLogService.log(
-      AuditAction.AUDIT_EXPORT,
-      ResourceType.SYSTEM,
-      undefined,
+    await this.auditLogService.log({
+      action: AuditAction.AUDIT_EXPORT,
+      resourceType: ResourceType.SYSTEM,
       userId,
-      true,
-      undefined,
-      undefined,
-      dto.projectId,
-      undefined,
-      {
+      success: true,
+      projectId: dto.projectId,
+      params: {
         format: dto.format ?? 'csv',
         action: dto.action ?? null,
         startDate: dto.startDate ?? null,
         endDate: dto.endDate ?? null,
         success: dto.success ?? null,
-      }
-    );
+      },
+    });
 
     res.setHeader('Content-Type', mimeType);
     setContentDisposition(res, filename);
@@ -325,17 +312,15 @@ export class AuditLogController {
     success: boolean,
     params: Record<string, unknown>
   ): Promise<void> {
-    await this.auditLogService.log(
-      AuditAction.AUDIT_CLEANUP,
-      ResourceType.SYSTEM,
-      undefined,
+    await this.auditLogService.log({
+      action: AuditAction.AUDIT_CLEANUP,
+      resourceType: ResourceType.SYSTEM,
       userId,
       success,
-      success ? undefined : String(params.reason ?? 'CLEANUP_REJECTED'),
-      undefined,
-      undefined,
-      undefined,
-      params
-    );
+      errorMessage: success
+        ? undefined
+        : String(params.reason ?? 'CLEANUP_REJECTED'),
+      params,
+    });
   }
 }

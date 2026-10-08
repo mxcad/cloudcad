@@ -110,10 +110,13 @@ describe('EmailVerificationService', () => {
   });
 
   describe('verifyEmail', () => {
-    it('should reject when code not stored or expired', async () => {
-      await expect(
-        service.verifyEmail('a@b.com', '123456')
-      ).rejects.toThrow('验证码无效或已过期');
+    it('should return invalid when code not stored or expired', async () => {
+      const result = await service.verifyEmail('a@b.com', '123456');
+
+      expect(result).toEqual({
+        valid: false,
+        message: '验证码无效或已过期',
+      });
     });
 
     it('should succeed with correct code and clear all keys', async () => {
@@ -130,9 +133,11 @@ describe('EmailVerificationService', () => {
     it('should decrement remaining attempts on wrong code', async () => {
       mockRedis.store.set(codeKey('a@b.com'), '123456');
 
-      await expect(
-        service.verifyEmail('a@b.com', '000000')
-      ).rejects.toThrow('验证码错误，剩余 4 次尝试机会');
+      const result = await service.verifyEmail('a@b.com', '000000');
+
+      expect(result.valid).toBe(false);
+      expect(result.message).toBe('验证码错误，剩余 4 次尝试机会');
+      expect(result.remainingAttempts).toBe(4);
       expect(mockRedis.store.get(attemptsKey('a@b.com'))).toBe('1');
     });
 
@@ -141,16 +146,17 @@ describe('EmailVerificationService', () => {
 
       // 前 5 次错答：剩余 4/3/2/1/0 次
       for (let remaining = 4; remaining >= 0; remaining--) {
-        await expect(
-          service.verifyEmail('a@b.com', '000000')
-        ).rejects.toThrow(`验证码错误，剩余 ${remaining} 次尝试机会`);
+        const result = await service.verifyEmail('a@b.com', '000000');
+        expect(result.valid).toBe(false);
+        expect(result.message).toBe(`验证码错误，剩余 ${remaining} 次尝试机会`);
+        expect(result.remainingAttempts).toBe(remaining);
       }
       expect(mockRedis.store.has(codeKey('a@b.com'))).toBe(true);
 
       // 第 6 次错答：次数用尽，验证码与计数一并清除
-      await expect(
-        service.verifyEmail('a@b.com', '000000')
-      ).rejects.toThrow('验证次数已用完，请重新获取验证码');
+      const exhausted = await service.verifyEmail('a@b.com', '000000');
+      expect(exhausted.valid).toBe(false);
+      expect(exhausted.message).toBe('验证次数已用完，请重新获取验证码');
       expect(mockRedis.store.has(codeKey('a@b.com'))).toBe(false);
       expect(mockRedis.store.has(attemptsKey('a@b.com'))).toBe(false);
     });

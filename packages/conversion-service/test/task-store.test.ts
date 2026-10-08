@@ -152,4 +152,26 @@ describe('TaskStore', () => {
     assert.equal(store.get('live')!.status, 'PROCESSING');
     assert.equal(store.list({ status: 'FAILED' }).length, 5);
   });
+
+  it('should evict oldest terminal records produced by cancel() beyond the retention cap', () => {
+    const cap = 500;
+    for (let i = 0; i < cap + 5; i += 1) {
+      const id = `c${i}`;
+      store.create({ id, priority: 2, params: {} });
+      store.cancel(id);
+    }
+    // 取消是独立终态入口，同样须触发淘汰（此前 cancel 从不调 _evictTerminal，
+    // 纯取消负载下终态集合无界增长）：最旧的 5 条被删
+    assert.equal(store.get('c0'), null);
+    assert.equal(store.get('c4'), null);
+    assert.ok(store.get('c5'));
+    assert.equal(store.list({ status: 'CANCELLED' }).length, cap);
+  });
+
+  it('should record completedAt when a task is cancelled via updateStatus', () => {
+    store.create({ id: 'u1', priority: 2, params: {} });
+    const rec = store.updateStatus('u1', 'CANCELLED');
+    assert.equal(rec!.status, 'CANCELLED');
+    assert.ok(rec!.completedAt, 'updateStatus CANCELLED must set completedAt');
+  });
 });

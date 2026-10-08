@@ -11,6 +11,8 @@ import jwt from 'jsonwebtoken';
 export interface UploadTokenPayload {
   path: string;
   operation: 'upload';
+  /** 签发时登录用户 id（审计用）：storage-service 落审计日志，不用于鉴权——写入路径权威值仍只信令牌 path（ADR-0015） */
+  userId?: string;
   exp: number;
 }
 
@@ -45,8 +47,12 @@ export class UploadTokenService {
   /**
    * 签发上传令牌
    * @param path storage-service 内相对路径（如 202607/node1/a.dwg）
+   * @param userId 登录用户 id（可选）：签进载荷供 storage-service 审计；nodeId 已编码在 path 内，不另签
    */
-  async signUploadToken(path: string): Promise<UploadTokenResult> {
+  async signUploadToken(
+    path: string,
+    userId?: string,
+  ): Promise<UploadTokenResult> {
     const secret = this.configService.get<string>('BACKEND_JWT_SECRET');
     if (!secret) {
       this.logger.warn('BACKEND_JWT_SECRET 未配置，无法签发上传令牌');
@@ -58,6 +64,7 @@ export class UploadTokenService {
     const payload: UploadTokenPayload = {
       path,
       operation: 'upload',
+      ...(userId ? { userId } : {}),
       exp,
     };
 

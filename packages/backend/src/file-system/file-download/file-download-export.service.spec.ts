@@ -94,8 +94,10 @@ describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () 
     };
     conversionMock = { convertServerFile: jest.fn() };
     restrictionEngine = {
-      reserveConversionCountOrThrow: jest.fn().mockResolvedValue(undefined),
-      releaseConversionCount: jest.fn().mockResolvedValue(undefined),
+      // 透传包装：占位/释放语义由 RestrictionEngine.withConversionQuota 单点保证（引擎级 spec 覆盖）
+      withConversionQuota: jest.fn(
+        async (_principal: unknown, fn: () => Promise<unknown>) => fn()
+      ),
       assertExportDownloadAllowed: jest.fn().mockResolvedValue(undefined),
     };
     storageManagerGetFullPath = jest.fn((rel: string) =>
@@ -210,7 +212,7 @@ describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () 
     const content = await collectStream(result.stream);
 
     expect(conversionMock.convertServerFile).not.toHaveBeenCalled();
-    expect(restrictionEngine.reserveConversionCountOrThrow).not.toHaveBeenCalled();
+    expect(restrictionEngine.withConversionQuota).not.toHaveBeenCalled();
     expect(content.toString('utf-8')).toBe('cached-content');
   });
 

@@ -5,6 +5,7 @@ import {
   CONVERSION_SERVICE_SECRET,
   INTERNAL_SERVICE_SECRET,
   CONVERSION_SERVICE_REQUIRE_AUTH,
+  SYNC_WAIT_TIMEOUT_MS,
 } from '../lib/constants';
 import type { TaskRecord, TaskInput, TaskFilter, TaskStats, DurationStats } from '../services/task-store';
 import type { WorkerStats } from '../services/worker-pool';
@@ -32,10 +33,6 @@ interface RouteWorkerPool {
   cancel(taskId: string): { ok: boolean; status?: string; reason?: string; killed: boolean };
   // 排队位置（S6-5）：仅排队中任务有意义，否则 null
   getQueuePosition(taskId: string): number | null;
-}
-
-interface RouteCallbackEngine {
-  notify(taskId: string, result: { status: string; result: unknown; error?: unknown }): Promise<void>;
 }
 
 /**
@@ -90,8 +87,7 @@ function checkSecret(req: RouteRequest, res: ResponseLike): boolean {
  */
 function create(
   workerPool: RouteWorkerPool,
-  taskStore: RouteTaskStore,
-  callbackEngine: RouteCallbackEngine
+  taskStore: RouteTaskStore
 ) {
 
   /**
@@ -116,7 +112,8 @@ function create(
     const taskId = generateId();
     workerPool.enqueue({
       id: taskId,
-      priority: body.priority || 2,
+      // 优先级归一化在 WorkerPool.enqueue 单一出口（越界值回落默认档）
+      priority: body.priority,
       params,
       callbackUrl,
       createdAt: new Date().toISOString(),
@@ -137,8 +134,8 @@ function create(
       const { taskId, merged } = submitConvertTask(body, null);
       log(`[Sync] 等待转换完成: ${taskId}${merged ? ' (合并到在途任务)' : ''}`);
 
-      // S1-3：客户端断开（req 'close'）时 abort 轮询，避免 interval 跑到 180s 超时浪费 CPU。
-      // 180s waitForTask 超时仍是有界的服务端兜底（客户端不断开时）。
+      // S1-3：客户端断开（req 'close'）时 abort 轮询，避免 interval 跑到 SYNC_WAIT_TIMEOUT_MS 超时浪费 CPU。
+      // SYNC_WAIT_TIMEOUT_MS 仍是有界的服务端兜底（客户端不断开时）。
       const controller = new AbortController();
       const onClientClose = () => {
         if (!controller.signal.aborted) {
@@ -148,7 +145,7 @@ function create(
       };
       req.on('close', onClientClose);
       try {
-        const result = await waitForTask(taskId, taskStore, 180000, controller.signal);
+        const result = await waitForTask(taskId, taskStore, SYNC_WAIT_TIMEOUT_MS, controller.signal);
         return sendJson(res, result.status === 'COMPLETED' ? 200 : 500, result);
       } catch (err) {
         // 客户端断开导致的 abort：响应已无意义（客户端已走），不再发送
@@ -194,7 +191,7 @@ function create(
       const taskId = generateId();
       const task = {
         id: taskId,
-        priority: body.priority || 2,
+        priority: body.priority,
         type: 'batch',
         params: { tasks: body.tasks },
         callbackUrl: body.callbackUrl || null,

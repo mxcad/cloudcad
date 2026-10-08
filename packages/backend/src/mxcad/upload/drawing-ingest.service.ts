@@ -200,25 +200,23 @@ export class DrawingIngestService {
     stage: 'conversion' | 'materialize';
   }): Promise<void> {
     try {
-      await this.auditLogService.log(
-        AuditAction.FILE_UPLOAD,
-        ResourceType.FILE,
-        args.nodeId,
-        args.context?.userId ?? 'unknown',
-        false,
-        args.error,
-        undefined,
-        undefined,
-        args.name,
-        {
+      await this.auditLogService.log({
+        action: AuditAction.FILE_UPLOAD,
+        resourceType: ResourceType.FILE,
+        resourceId: args.nodeId,
+        userId: args.context?.userId ?? 'unknown',
+        success: false,
+        errorMessage: args.error,
+        resourceName: args.name,
+        params: {
           fileName: args.name,
           hash: args.fileHash,
           size: args.size,
           failureStage: args.stage,
           transient: args.transient ?? null,
           errorCategory: args.errorCategory ?? null,
-        }
-      );
+        },
+      });
     } catch (error) {
       this.logger.warn(
         `[DrawingIngest] 上传失败审计埋点失败（业务不阻塞）: ${

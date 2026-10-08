@@ -46,10 +46,9 @@ describe('FileHandler', () => {
     await assert.rejects(() => handler.read('202607/node1/nope.dwg'));
   });
 
-  it('should confine paths inside FILES_DATA_PATH (traversal guard)', () => {
-    const resolved = handler._resolvePath('../../../etc/passwd');
-    assert.ok(resolved.startsWith(path.resolve(dataDir)));
-    assert.ok(!resolved.includes('..'));
+  it('should reject paths containing .. or ~ (traversal guard, aligned with embedded validatePath)', () => {
+    assert.throws(() => handler._resolvePath('../../../etc/passwd'), /Path traversal/);
+    assert.throws(() => handler._resolvePath('~/secret.dwg'), /Path traversal/);
   });
 
   it('should reject an absolute path escaping to a prefix-sibling directory', () => {

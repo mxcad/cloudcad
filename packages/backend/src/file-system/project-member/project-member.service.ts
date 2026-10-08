@@ -197,22 +197,20 @@ export class ProjectMemberService {
       await this.permissionService.clearNodeCache(projectId);
       await this.projectPermissionService.clearUserCache(userId, projectId);
 
-      await this.auditLogService.log(
-        AuditAction.ADD_MEMBER,
-        ResourceType.PROJECT,
+      await this.auditLogService.log({
+        action: AuditAction.ADD_MEMBER,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectId,
+        userId: operatorId,
+        success: true,
         projectId,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        projectId,
-        project.name,
-        {
+        resourceName: project.name,
+        params: {
           targetUserName: user.nickname || user.username || user.email,
           targetUserId: user.id,
           roleName: role.name,
-        }
-      );
+        },
+      });
 
       this.logger.log(
         `项目成员添加成功: ${projectId} - ${userId} (${role.name}) by ${operatorId}`
@@ -220,21 +218,19 @@ export class ProjectMemberService {
 
       return member;
     } catch (error) {
-      await this.auditLogService.log(
-        AuditAction.ADD_MEMBER,
-        ResourceType.PROJECT,
+      await this.auditLogService.log({
+        action: AuditAction.ADD_MEMBER,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectId,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
         projectId,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        projectId,
-        undefined,
-        {
+        params: {
           targetUserName: userId,
           targetUserId: userId,
-        }
-      );
+        },
+      });
 
       this.logger.error(`添加项目成员失败: ${error.message}`, error.stack);
       throw error;
@@ -358,24 +354,22 @@ export class ProjectMemberService {
         await this.permissionService.clearNodeCache(projectId);
         await this.projectPermissionService.clearUserCache(userId, projectId);
 
-        await this.auditLogService.log(
-          AuditAction.UPDATE_MEMBER,
-          ResourceType.PROJECT,
+        await this.auditLogService.log({
+          action: AuditAction.UPDATE_MEMBER,
+          resourceType: ResourceType.PROJECT,
+          resourceId: projectId,
+          userId: operatorId,
+          success: true,
           projectId,
-          operatorId,
-          true,
-          undefined,
-          undefined,
-          projectId,
-          project.name,
-          {
+          resourceName: project.name,
+          params: {
             targetUserName:
               member.user.nickname || member.user.username || member.user.email,
             targetUserId: member.user.id,
             oldRoleName: oldRole?.name ?? undefined,
             newRoleName: role.name,
-          }
-        );
+          },
+        });
 
         this.logger.log(
           `项目成员角色更新成功: ${projectId} - ${userId} -> ${role.name} by ${operatorId}`
@@ -386,21 +380,19 @@ export class ProjectMemberService {
         throw new NotFoundException(I18nContext.current()?.t('error.project_member.member_not_found') ?? '成员不存在');
       }
     } catch (error) {
-      await this.auditLogService.log(
-        AuditAction.UPDATE_MEMBER,
-        ResourceType.PROJECT,
+      await this.auditLogService.log({
+        action: AuditAction.UPDATE_MEMBER,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectId,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
         projectId,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        projectId,
-        undefined,
-        {
+        params: {
           targetUserName: userId,
           targetUserId: userId,
-        }
-      );
+        },
+      });
 
       this.logger.error(`更新项目成员角色失败: ${error.message}`, error.stack);
       throw error;
@@ -476,22 +468,20 @@ export class ProjectMemberService {
       await this.permissionService.clearNodeCache(projectId);
       await this.projectPermissionService.clearUserCache(userId, projectId);
 
-      await this.auditLogService.log(
-        AuditAction.REMOVE_MEMBER,
-        ResourceType.PROJECT,
+      await this.auditLogService.log({
+        action: AuditAction.REMOVE_MEMBER,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectId,
+        userId: operatorId,
+        success: true,
         projectId,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        projectId,
-        project.name,
-        {
+        resourceName: project.name,
+        params: {
           targetUserName:
             targetUser?.nickname || targetUser?.username || targetUser?.email || userId,
           targetUserId: userId,
-        }
-      );
+        },
+      });
 
       this.logger.log(
         `项目成员移除成功: ${projectId} - ${userId} by ${operatorId}`
@@ -499,21 +489,19 @@ export class ProjectMemberService {
 
       return { message: (I18nContext.current()?.t('success.member_removed') ?? '成员移除成功') };
     } catch (error) {
-      await this.auditLogService.log(
-        AuditAction.REMOVE_MEMBER,
-        ResourceType.PROJECT,
+      await this.auditLogService.log({
+        action: AuditAction.REMOVE_MEMBER,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectId,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
         projectId,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        projectId,
-        undefined,
-        {
+        params: {
           targetUserName: userId,
           targetUserId: userId,
-        }
-      );
+        },
+      });
 
       this.logger.error(`移除项目成员失败: ${error.message}`, error.stack);
       throw error;
@@ -642,22 +630,20 @@ export class ProjectMemberService {
         select: { nickname: true, username: true, email: true },
       });
 
-      await this.auditLogService.log(
-        AuditAction.TRANSFER_OWNERSHIP,
-        ResourceType.PROJECT,
+      await this.auditLogService.log({
+        action: AuditAction.TRANSFER_OWNERSHIP,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectId,
+        userId: operatorId,
+        success: true,
         projectId,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        projectId,
-        project.name,
-        {
+        resourceName: project.name,
+        params: {
           targetUserName:
             newOwner?.nickname || newOwner?.username || newOwner?.email || newOwnerId,
           targetUserId: newOwnerId,
-        }
-      );
+        },
+      });
 
       this.logger.log(
         `项目所有权转让成功: ${projectId} from ${operatorId} to ${newOwnerId}`
@@ -665,21 +651,19 @@ export class ProjectMemberService {
 
       return { message: (I18nContext.current()?.t('success.project_transferred') ?? '项目所有权转让成功') };
     } catch (error) {
-      await this.auditLogService.log(
-        AuditAction.TRANSFER_OWNERSHIP,
-        ResourceType.PROJECT,
+      await this.auditLogService.log({
+        action: AuditAction.TRANSFER_OWNERSHIP,
+        resourceType: ResourceType.PROJECT,
+        resourceId: projectId,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
         projectId,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        projectId,
-        undefined,
-        {
+        params: {
           targetUserName: newOwnerId,
           targetUserId: newOwnerId,
-        }
-      );
+        },
+      });
 
       this.logger.error(`转让项目所有权失败: ${error.message}`, error.stack);
       throw error;

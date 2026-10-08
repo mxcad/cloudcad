@@ -8,7 +8,8 @@ const { log } = require('../lib/utils');
 class TokenValidator {
   /**
    * 验证上传令牌
-   * @returns {object|null} { path, operation, exp } 或 null
+   * @returns {object|null} { path, operation, exp, userId } 或 null
+   *   userId 由后端签进载荷（审计用），旧令牌无此字段时为 undefined
    */
   validate(token) {
     const payload = verifyToken(token);
@@ -24,6 +25,7 @@ class TokenValidator {
       path: payload.path,
       operation: payload.operation,
       exp: payload.exp,
+      userId: payload.userId,
     };
   }
 

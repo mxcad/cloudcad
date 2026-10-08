@@ -212,59 +212,55 @@ export class PublicFileService {
         }
 
         // ADR-0043：转换频率限制占位——已登录用户按 userId，游客按 IP。
-        // 占位在写临时文件之前：超限 403 时不落任何临时文件。
-        if (userId) {
-          await this.restrictionEngine.reserveConversionCountOrThrow(userId);
-        } else if (ip) {
-          await this.restrictionEngine.reserveGuestConversionCountOrThrow(ip);
-        }
-
+        // 占位在写临时文件之前：超限 403 时不落任何临时文件；
+        // 占位/释放走 withConversionQuota 单点，任何失败保证释放。
+        let convertFailure: string | undefined;
         try {
-          await fs.promises.writeFile(tempFilePath, fileBuffer);
+          // 转换失败（!isOk）返回失败文案；成功返回 undefined。
+          // 临时文件清理统一在 finally：成功（转换孪生 .mxweb 已生成）与失败/异常都删除。
+          convertFailure =
+            await this.restrictionEngine.withConversionQuota(
+              { userId, ip },
+              async () => {
+                try {
+                  await fs.promises.writeFile(tempFilePath, fileBuffer);
 
-          // 调用转换服务将 DWG/DXF 转换为 MXWeb
-          const { isOk, ret } = await this.fileConversionService.convertFile({
-            srcPath: tempFilePath,
-            fileHash: hash,
-            createPreloadingData: true,
-          });
+                  // 调用转换服务将 DWG/DXF 转换为 MXWeb
+                  const { isOk, ret } =
+                    await this.fileConversionService.convertFile({
+                      srcPath: tempFilePath,
+                      fileHash: hash,
+                      createPreloadingData: true,
+                    });
 
-          if (!isOk) {
-            await this.releaseConversionReservation(ip, userId);
-            // 转换失败时，删除临时文件
-            if (fs.existsSync(tempFilePath)) {
-              await fs.promises.unlink(tempFilePath);
-            }
-            return {
-              ret: 'failed',
-              message: `文件转换失败: ${ret?.message || '未知错误'}`,
-            };
-          }
+                  if (!isOk) {
+                    return `文件转换失败: ${ret?.message || '未知错误'}`;
+                  }
 
-          // 转换成功后删除临时文件
-          await fs.promises.unlink(tempFilePath);
+                  // 转换工具在原始文件旁边生成 {originalName}.mxweb，如: {hash}.dwg -> {hash}.dwg.mxweb
+                  const targetPath = tempFilePath + '.mxweb';
 
-          // 转换工具在原始文件旁边生成 {originalName}.mxweb，如: {hash}.dwg -> {hash}.dwg.mxweb
-          const targetPath = tempFilePath + '.mxweb';
-
-          logger.log(
-            `[uploadExtReference] 外部参照文件上传并转换成功: ${extRefFileName} -> ${targetPath}`
-          );
+                  logger.log(
+                    `[uploadExtReference] 外部参照文件上传并转换成功: ${extRefFileName} -> ${targetPath}`
+                  );
+                  return undefined;
+                } finally {
+                  if (fs.existsSync(tempFilePath)) {
+                    await fs.promises.unlink(tempFilePath);
+                  }
+                }
+              }
+            );
         } catch (convertError) {
-          await this.releaseConversionReservation(ip, userId);
           if (convertError instanceof QuotaExceededException) throw convertError;
           logger.error(
             `[uploadExtReference] 转换文件失败: ${convertError.message}`,
             convertError.stack
           );
-          // 转换失败时，删除临时文件
-          if (fs.existsSync(tempFilePath)) {
-            await fs.promises.unlink(tempFilePath);
-          }
-          return {
-            ret: 'failed',
-            message: `文件转换失败: ${convertError.message}`,
-          };
+          convertFailure = `文件转换失败: ${convertError.message}`;
+        }
+        if (convertFailure) {
+          return { ret: 'failed', message: convertFailure };
         }
       } else {
         // 对于图片文件，直接保存
@@ -464,14 +460,6 @@ export class PublicFileService {
       };
     }
 
-    // ADR-0043：转换频率限制占位——已登录用户按 userId，游客按 IP，超限直接 403。
-    // 导出下载方向（mxweb → 其他格式）会员门控由转换服务按源文件类型自动执行（含游客）。
-    if (userId) {
-      await this.restrictionEngine.reserveConversionCountOrThrow(userId);
-    } else if (ip) {
-      await this.restrictionEngine.reserveGuestConversionCountOrThrow(ip);
-    }
-
     const timestamp = Date.now();
     const outname = `${fileHash}_${timestamp}.${targetFormat}`;
     const uploadPath = this.uploadService.getUploadPath();
@@ -479,61 +467,66 @@ export class PublicFileService {
 
     this.logger.log(`[convertMxwebByHash] params?.colorPolicy: ${params?.colorPolicy}, all keys: ${Object.keys(params || {})}`);
 
+    // ADR-0043：转换频率限制占位——已登录用户按 userId，游客按 IP，超限直接 403。
+    // 导出下载方向（mxweb → 其他格式）会员门控由转换服务按源文件类型自动执行（含游客）。
+    // 占位/释放走 withConversionQuota 单点：成功消耗占位，任何失败保证释放。
     try {
-      const result = await this.fileConversionService.convertFile({
-        srcPath: mxwebPath,
-        fileHash,
-        userId,
-        createPreloadingData: false,
-        outname,
-        cmd: params?.cmd,
-        width: params?.width,
-        height: params?.height,
-        colorPolicy: params?.colorPolicy,
-        roate_angle: params?.roate_angle,
-        view_angle: params?.view_angle,
-        bd_pt1_x: params?.bd_pt1_x,
-        bd_pt1_y: params?.bd_pt1_y,
-        bd_pt2_x: params?.bd_pt2_x,
-        bd_pt2_y: params?.bd_pt2_y,
-        open_file_md5: params?.open_file_md5,
-        layout_name: params?.layout_name,
-        create_clip_block: params?.create_clip_block,
-        dwgVersion: params?.dwgVersion,
-      });
+      return await this.restrictionEngine.withConversionQuota(
+        { userId, ip },
+        async () => {
+          const result = await this.fileConversionService.convertFile({
+            srcPath: mxwebPath,
+            fileHash,
+            userId,
+            createPreloadingData: false,
+            outname,
+            cmd: params?.cmd,
+            width: params?.width,
+            height: params?.height,
+            colorPolicy: params?.colorPolicy,
+            roate_angle: params?.roate_angle,
+            view_angle: params?.view_angle,
+            bd_pt1_x: params?.bd_pt1_x,
+            bd_pt1_y: params?.bd_pt1_y,
+            bd_pt2_x: params?.bd_pt2_x,
+            bd_pt2_y: params?.bd_pt2_y,
+            open_file_md5: params?.open_file_md5,
+            layout_name: params?.layout_name,
+            create_clip_block: params?.create_clip_block,
+            dwgVersion: params?.dwgVersion,
+          });
 
-      if (!result.isOk) {
-        throw new Error(
-          `文件转换失败: ${result.ret?.message || '未知错误'}`
-        );
-      }
+          if (!result.isOk) {
+            throw new Error(
+              `文件转换失败: ${result.ret?.message || '未知错误'}`
+            );
+          }
 
-      // mxcadassembly.exe 将输出文件写到源文件同目录
-      outputFile = path.join(uploadPath, outname);
-      if (!fs.existsSync(outputFile)) {
-        throw new Error('转换后的文件未生成');
-      }
+          // mxcadassembly.exe 将输出文件写到源文件同目录
+          outputFile = path.join(uploadPath, outname);
+          if (!fs.existsSync(outputFile)) {
+            throw new Error('转换后的文件未生成');
+          }
 
-      const convertedBuffer = await fs.promises.readFile(outputFile);
+          const convertedBuffer = await fs.promises.readFile(outputFile);
 
-      const mimeTypes: Record<string, string> = {
-        dwg: 'application/acad',
-        dxf: 'application/dxf',
-        pdf: 'application/pdf',
-      };
+          const mimeTypes: Record<string, string> = {
+            dwg: 'application/acad',
+            dxf: 'application/dxf',
+            pdf: 'application/pdf',
+          };
 
-      this.logger.log(
-        `[convertMxwebByHash] 转换成功: ${targetFormat}, hash=${fileHash}, 大小: ${convertedBuffer.length} bytes`
+          this.logger.log(
+            `[convertMxwebByHash] 转换成功: ${targetFormat}, hash=${fileHash}, 大小: ${convertedBuffer.length} bytes`
+          );
+
+          return {
+            buffer: convertedBuffer,
+            filename: `converted.${targetFormat}`,
+            mimeType: mimeTypes[targetFormat] || 'application/octet-stream',
+          };
+        }
       );
-
-      return {
-        buffer: convertedBuffer,
-        filename: `converted.${targetFormat}`,
-        mimeType: mimeTypes[targetFormat] || 'application/octet-stream',
-      };
-    } catch (error) {
-      await this.releaseConversionReservation(ip, userId);
-      throw error;
     } finally {
       try {
         if (outputFile && fs.existsSync(outputFile)) {
@@ -542,24 +535,6 @@ export class PublicFileService {
       } catch (e) {
         this.logger.warn(`[convertMxwebByHash] 清理临时文件失败: ${e.message}`);
       }
-    }
-  }
-
-  /**
-   * 释放本次转换的频率限制占位：登录用户按 userId，游客按 IP（ADR-0043）。
-   */
-  private async releaseConversionReservation(
-    ip?: string,
-    userId?: string
-  ): Promise<void> {
-    if (userId) {
-      await this.restrictionEngine
-        .releaseConversionCount(userId)
-        .catch(() => undefined);
-    } else if (ip) {
-      await this.restrictionEngine
-        .releaseGuestConversionCount(ip)
-        .catch(() => undefined);
     }
   }
 }

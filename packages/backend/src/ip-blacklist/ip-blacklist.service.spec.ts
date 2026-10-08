@@ -308,18 +308,15 @@ describe('IpBlacklistService', () => {
       });
       expect(mockMulti.exec).toHaveBeenCalled();
       // 安全审计：加入 IP 黑名单（名称快照=IP）
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        'IP_BLACKLIST_ADD',
-        'IpBlacklistEntry',
-        'e1',
-        'u1',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        '203.0.113.0/24',
-        expect.objectContaining({ ip: '203.0.113.0/24', reason: '扫描' })
-      );
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: 'IP_BLACKLIST_ADD',
+        resourceType: 'IpBlacklistEntry',
+        resourceId: 'e1',
+        userId: 'u1',
+        success: true,
+        resourceName: '203.0.113.0/24',
+        params: expect.objectContaining({ ip: '203.0.113.0/24', reason: '扫描' }),
+      });
     });
 
     it('rejects invalid IP/CIDR', async () => {

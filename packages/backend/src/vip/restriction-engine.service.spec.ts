@@ -212,6 +212,113 @@ describe('RestrictionEngine', () => {
     });
   });
 
+  describe('withConversionQuota（占位 → 执行 → 失败必释放单点包装）', () => {
+    it('成功：占位被消耗（不释放），返回 fn 结果', async () => {
+      membershipService.getQuota
+        .mockResolvedValueOnce(10) // 占位：窗口次数
+        .mockResolvedValueOnce(2); // 占位：窗口小时
+      redis.eval.mockResolvedValue(1);
+
+      const result = await engine.withConversionQuota(
+        { userId: 'u1' },
+        async () => 'converted'
+      );
+
+      expect(result).toBe('converted');
+      expect(redis.decr).not.toHaveBeenCalled();
+    });
+
+    it('fn 抛引擎原始异常：保证释放后原样上抛（precomputeExport 泄漏回归）', async () => {
+      membershipService.getQuota
+        .mockResolvedValueOnce(10) // 占位：窗口次数
+        .mockResolvedValueOnce(2) // 占位：窗口小时
+        .mockResolvedValueOnce(2); // 释放：窗口小时
+      redis.eval.mockResolvedValue(1);
+      redis.get.mockResolvedValue('1');
+
+      const boom = new Error('spawn failed');
+      await expect(
+        engine.withConversionQuota({ userId: 'u1' }, async () => {
+          throw boom;
+        })
+      ).rejects.toBe(boom);
+
+      expect(redis.decr).toHaveBeenCalledWith(
+        expect.stringMatching(/^conversion:window:user:u1:/)
+      );
+    });
+
+    it('占位失败（超限）：抛 QuotaExceededException，fn 不执行、不释放', async () => {
+      membershipService.getQuota
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(2);
+      redis.eval.mockResolvedValue(0);
+
+      const fn = jest.fn().mockResolvedValue('never');
+      await expect(
+        engine.withConversionQuota({ userId: 'u1' }, fn)
+      ).rejects.toBeInstanceOf(QuotaExceededException);
+
+      expect(fn).not.toHaveBeenCalled();
+      expect(redis.decr).not.toHaveBeenCalled();
+    });
+
+    it('游客主体（ip）：占位/释放走 IP 窗口', async () => {
+      runtimeConfigService.getValue
+        .mockResolvedValueOnce(5) // 占位：游客限制
+        .mockResolvedValueOnce(2) // 占位：游客窗口小时
+        .mockResolvedValueOnce(2); // 释放：游客窗口小时
+      redis.eval.mockResolvedValue(1);
+      redis.get.mockResolvedValue('1');
+
+      await expect(
+        engine.withConversionQuota({ ip: '1.2.3.4' }, async () => {
+          throw new Error('engine down');
+        })
+      ).rejects.toThrow('engine down');
+
+      expect(redis.eval).toHaveBeenCalledWith(
+        expect.any(String),
+        1,
+        expect.stringMatching(/^conversion:window:ip:1\.2\.3\.4:/),
+        '5',
+        String(2 * 3600 + 300)
+      );
+      expect(redis.decr).toHaveBeenCalledWith(
+        expect.stringMatching(/^conversion:window:ip:1\.2\.3\.4:/)
+      );
+    });
+
+    it('无主体（userId/ip 皆无）：不占位直接执行，失败也不释放', async () => {
+      await expect(
+        engine.withConversionQuota({}, async () => {
+          throw new Error('boom');
+        })
+      ).rejects.toThrow('boom');
+
+      expect(redis.eval).not.toHaveBeenCalled();
+      expect(redis.decr).not.toHaveBeenCalled();
+    });
+
+    it('释放自身失败：只告警，不掩盖原始错误', async () => {
+      membershipService.getQuota
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(2);
+      redis.eval.mockResolvedValue(1);
+      redis.get.mockResolvedValue('1');
+      redis.decr.mockRejectedValue(new Error('redis down'));
+
+      await expect(
+        engine.withConversionQuota({ userId: 'u1' }, async () => {
+          throw new Error('boom');
+        })
+      ).rejects.toThrow('boom');
+    });
+  });
+
   describe('tryReserveSaveCount', () => {
     it('should reserve with save_window_count and reuse conversion window hours', async () => {
       // 保存次数 300、窗口小时 2（复用转换窗口）

@@ -14,12 +14,13 @@ import { Injectable, Logger, NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import * as fsPromises from 'fs/promises';
-import * as http from 'http';
-import * as https from 'https';
 import type { Readable } from 'stream';
 import { Readable as ReadableStream } from 'stream';
-import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
 import { internalServiceSecretHeader } from '../common/utils/internal-service-auth';
+import {
+  createInternalServiceClient,
+  type InternalServiceClient,
+} from '../common/utils/internal-service-http';
 import type { IStorageProvider } from './interfaces/storage-provider.interface';
 
 /**
@@ -37,26 +38,29 @@ import type { IStorageProvider } from './interfaces/storage-provider.interface';
 @Injectable()
 export class HttpStorageProvider implements IStorageProvider {
   private readonly logger = new Logger(HttpStorageProvider.name);
-  private readonly baseUrl: string;
-  private readonly useHttps: boolean;
-  /** #419：内部服务共享密钥（空则不带头，向后兼容本地开发） */
-  private readonly secretHeaders: Record<string, string>;
+  /** backend → storage-service 的 HTTP 传输（唯一出口见 internal-service-http） */
+  private readonly client: InternalServiceClient;
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly cls: ClsService,
+    cls: ClsService,
   ) {
-    this.baseUrl =
+    const baseUrl =
       this.configService.get<string>('STORAGE_SERVICE_URL') ||
       'http://localhost:3200';
-    this.useHttps = this.baseUrl.startsWith('https');
-    this.secretHeaders = internalServiceSecretHeader(
-      this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
-    );
+    this.client = createInternalServiceClient({
+      baseUrl,
+      useHttps: baseUrl.startsWith('https'),
+      secretHeaders: internalServiceSecretHeader(
+        this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
+      ),
+      cls,
+      serviceName: 'http-storage',
+    });
   }
 
   async read(path: string): Promise<Readable> {
-    const data = await this.requestBuffer(
+    const data = await this.client.requestBuffer(
       `/v1/files/${encodeURIComponent(path)}`,
       'GET'
     );
@@ -74,16 +78,25 @@ export class HttpStorageProvider implements IStorageProvider {
           ? Buffer.from(contents)
           : await this.streamToBuffer(contents);
     const body = JSON.stringify({ contents: data.toString('base64') });
-    await this.request(`/v1/files/${encodeURIComponent(path)}`, 'PUT', body);
+    await this.client.request(`/v1/files/${encodeURIComponent(path)}`, 'PUT', body);
   }
 
   async delete(path: string): Promise<void> {
-    await this.request(`/v1/files/${encodeURIComponent(path)}`, 'DELETE');
+    await this.client.request(`/v1/files/${encodeURIComponent(path)}`, 'DELETE');
   }
 
+  /**
+   * standalone 已知限制：storage-service 无 HEAD/exists 端点，此实现用 GET 全文
+   * 探测并吞掉所有异常——网络错误 / 服务不可用与「文件不存在」都返回 false，
+   * 调用方无法区分「真不存在」与「探测失败」。待 storage-service 补 HEAD 端点后
+   * 改走 HEAD 并按状态码区分。
+   */
   async exists(path: string): Promise<boolean> {
     try {
-      await this.requestBuffer(`/v1/files/${encodeURIComponent(path)}`, 'GET');
+      await this.client.requestBuffer(
+        `/v1/files/${encodeURIComponent(path)}`,
+        'GET'
+      );
       return true;
     } catch {
       return false;
@@ -121,6 +134,12 @@ export class HttpStorageProvider implements IStorageProvider {
     );
   }
 
+  /**
+   * standalone 已知限制：storage-service 无元数据端点，此实现只能 GET 全文后拼出
+   * contentLength；contentType 恒 octet-stream、lastModified 恒当前时间、etag 恒空串，
+   * 均为占位值而非真实元数据。依赖 lastModified/etag 的调用方（如 getFileInfo 的文件
+   * 修改时间）在 standalone 下拿到的是假值。待 storage-service 补元数据响应头后改读真实值。
+   */
   async getMetaData(
     key: string
   ): Promise<{
@@ -129,7 +148,7 @@ export class HttpStorageProvider implements IStorageProvider {
     lastModified: Date;
     etag: string;
   }> {
-    const data = await this.requestBuffer(
+    const data = await this.client.requestBuffer(
       `/v1/files/${encodeURIComponent(key)}`,
       'GET'
     );
@@ -159,110 +178,6 @@ export class HttpStorageProvider implements IStorageProvider {
   async copyFromFs(sourcePath: string, destinationKey: string): Promise<void> {
     const data = await fsPromises.readFile(sourcePath);
     await this.write(destinationKey, data);
-  }
-
-  private request(
-    path: string,
-    method: string,
-    body?: string
-  ): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(path, this.baseUrl);
-      const mod = this.useHttps ? https : http;
-      const options: http.RequestOptions = {
-        hostname: url.hostname,
-        port: url.port || (this.useHttps ? 443 : 80),
-        path: url.pathname + url.search,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          // X-Request-Id/X-Trace-Id 透传（#309）：storage-service 侧日志据此串联
-          ...buildOutboundTraceHeaders(
-            {
-              requestId: this.cls?.get<string>('requestId'),
-              traceId: this.cls?.get<string>('traceId'),
-            },
-            'http-storage',
-          ),
-          // #419：内部服务共享密钥（storage-service 非 health 路由校验）
-          ...this.secretHeaders,
-        },
-        timeout: 60000,
-      };
-      if (body) options.headers!['Content-Length'] = Buffer.byteLength(body);
-      const req = mod.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk: string) => (data += chunk));
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 400) {
-            return reject(
-              new Error(
-                `HTTP ${res.statusCode} for ${method} ${path}: ${data.substring(0, 200)}`
-              )
-            );
-          }
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            reject(new Error(`Invalid JSON: ${data}`));
-          }
-        });
-      });
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Timeout: ${method} ${path}`));
-      });
-      if (body) req.write(body);
-      req.end();
-    });
-  }
-
-  private requestBuffer(path: string, method: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const url = new URL(path, this.baseUrl);
-      const mod = this.useHttps ? https : http;
-      const options: http.RequestOptions = {
-        hostname: url.hostname,
-        port: url.port || (this.useHttps ? 443 : 80),
-        path: url.pathname + url.search,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...buildOutboundTraceHeaders(
-            {
-              requestId: this.cls?.get<string>('requestId'),
-              traceId: this.cls?.get<string>('traceId'),
-            },
-            'http-storage',
-          ),
-          // #419：内部服务共享密钥
-          ...this.secretHeaders,
-        },
-        timeout: 60000,
-      };
-      const req = mod.request(options, (res) => {
-        const chunks: Buffer[] = [];
-        res.on('data', (chunk: Buffer) => chunks.push(chunk));
-        res.on('end', () => {
-          if (res.statusCode && res.statusCode >= 400) {
-            const body = Buffer.concat(chunks).toString('utf-8');
-            return reject(
-              new Error(
-                `HTTP ${res.statusCode} for ${method} ${path}: ${body.substring(0, 200)}`
-              )
-            );
-          }
-          resolve(Buffer.concat(chunks));
-        });
-      });
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error(`Timeout: ${method} ${path}`));
-      });
-      req.end();
-    });
   }
 
   private streamToBuffer(stream: Readable): Promise<Buffer> {

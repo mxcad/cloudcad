@@ -125,7 +125,7 @@ describe('WorkerPool 批量转换聚合 (batchConvert)', () => {
   it('批量任务完成后触发回调', async () => {
     const callbackCalls: any[] = [];
     const callbackEngine = {
-      notify: async (taskId: string, result: any) => {
+      notify: async (taskId: string, _callbackUrl: string, result: any) => {
         callbackCalls.push({ taskId, result });
       },
     };

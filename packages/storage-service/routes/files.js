@@ -1,4 +1,4 @@
-const { sendJson, parseBody } = require('../lib/utils');
+const { sendJson, parseBody, log } = require('../lib/utils');
 
 function create(fileHandler, tokenValidator) {
 
@@ -11,7 +11,9 @@ function create(fileHandler, tokenValidator) {
       if (!tokenData) return sendJson(res, 401, { error: 'Invalid or missing upload token' });
 
       const body = await parseBody(req);
-      const filePath = tokenData.path || body.path;
+      // 写入路径只信令牌（后端签发前已做权限校验的权威值）；body.path 不得覆盖，
+      // 否则持有效令牌的客户端可借 body.path 写任意路径（ADR-0015）
+      const filePath = tokenData.path;
       if (!filePath) return sendJson(res, 400, { error: 'path required' });
 
       const data = Buffer.isBuffer(body.contents)
@@ -19,6 +21,9 @@ function create(fileHandler, tokenValidator) {
         : Buffer.from(body.contents || '', 'base64');
 
       await fileHandler.write(filePath, data);
+      // 审计：谁（userId 由后端签进令牌）写了哪个路径。nodeId 已编码在 path（YYYYMM/nodeId/file），
+      // 记全 path 即含节点，无需冗余字段（ADR-0015）
+      log(`[Upload] 写入 path=${filePath} userId=${tokenData.userId ?? 'anonymous'} size=${data.length}`);
       return sendJson(res, 200, { path: filePath, size: data.length });
     }
 

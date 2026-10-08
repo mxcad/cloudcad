@@ -1,18 +1,20 @@
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'http';
 import type { AddressInfo } from 'net';
-import TaskStore from '../services/task-store';
 import CallbackEngine from '../services/callback';
 
-function startReceiver(onBody: (data: { path: string | undefined; body: any }) => void): Promise<http.Server> {
+function startReceiver(
+  onBody: (data: { path: string | undefined; body: any }) => void,
+  statusCode = 200,
+): Promise<http.Server> {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
       let body = '';
       req.on('data', (c: string) => (body += c));
       req.on('end', () => {
         onBody({ path: req.url, body: JSON.parse(body) });
-        res.writeHead(200);
+        res.writeHead(statusCode);
         res.end('ok');
       });
     });
@@ -21,32 +23,18 @@ function startReceiver(onBody: (data: { path: string | undefined; body: any }) =
 }
 
 describe('CallbackEngine', () => {
-  let store: TaskStore;
-  let engine: CallbackEngine;
-
-  beforeEach(() => {
-    store = new TaskStore('local');
-    engine = new CallbackEngine(store);
-  });
-
-  it('should POST a payload to the task callbackUrl', async () => {
+  it('should POST a payload to the callbackUrl and resolve on 2xx', async () => {
     let received: { path: string | undefined; body: any } | undefined;
     const server = await startReceiver((data) => (received = data));
     const { port } = server.address() as AddressInfo;
+    const engine = new CallbackEngine();
 
-    store.create({
-      id: 't1',
-      priority: 1,
-      params: {},
-      callbackUrl: `http://127.0.0.1:${port}/cb`,
-    });
-    await engine.notify('t1', {
+    await engine.notify('t1', `http://127.0.0.1:${port}/cb`, {
       status: 'COMPLETED',
       result: { newpath: '/out/a.mxweb' },
       error: null,
     });
 
-    await new Promise((r) => setTimeout(r, 50));
     assert.ok(received, 'callback was never delivered');
     assert.equal(received!.path, '/cb');
     assert.equal(received!.body.taskId, 't1');
@@ -55,22 +43,32 @@ describe('CallbackEngine', () => {
     await new Promise((resolve) => server.close(resolve));
   });
 
-  it('should do nothing when the task has no callbackUrl', async () => {
-    store.create({ id: 't2', priority: 1, params: {} });
+  it('should reject when the receiver returns a 4xx/5xx status', async () => {
+    const server = await startReceiver(() => {}, 500);
+    const { port } = server.address() as AddressInfo;
+    const engine = new CallbackEngine();
 
-    await engine.notify('t2', { status: 'COMPLETED', result: null, error: null });
-
-    assert.equal(store.get('t2')!.status, 'PENDING');
+    await assert.rejects(
+      engine.notify('t2', `http://127.0.0.1:${port}/cb`, {
+        status: 'FAILED',
+        result: null,
+        error: 'boom',
+      }),
+      /Callback HTTP 500/,
+    );
+    await new Promise((resolve) => server.close(resolve));
   });
 
-  it('should swallow callback failures', async () => {
-    store.create({
-      id: 't3',
-      priority: 1,
-      params: {},
-      callbackUrl: 'http://127.0.0.1:1/down',
-    });
+  it('should reject on network error so the caller can log the failure', async () => {
+    const engine = new CallbackEngine();
 
-    await engine.notify('t3', { status: 'FAILED', result: null, error: 'x' });
+    // 127.0.0.1:1 无监听 → connect ECONNREFUSED
+    await assert.rejects(
+      engine.notify('t3', 'http://127.0.0.1:1/down', {
+        status: 'FAILED',
+        result: null,
+        error: 'x',
+      }),
+    );
   });
 });

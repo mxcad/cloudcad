@@ -141,18 +141,16 @@ export class ProjectCrudService {
         this.logger.log(`项目创建成功: ${node.name} by user ${userId}`);
 
         // #207 阶段 2：项目创建埋点（PROJECT_CREATE，带项目维度 + 名称快照）
-        await this.auditLogService.log(
-          AuditAction.PROJECT_CREATE,
-          ResourceType.PROJECT,
-          node.id,
+        await this.auditLogService.log({
+          action: AuditAction.PROJECT_CREATE,
+          resourceType: ResourceType.PROJECT,
+          resourceId: node.id,
           userId,
-          true,
-          undefined,
-          undefined,
-          node.id,
-          node.name,
-          { projectName: node.name }
-        );
+          success: true,
+          projectId: node.id,
+          resourceName: node.name,
+          params: { projectName: node.name },
+        });
 
         return node;
       }
@@ -669,18 +667,16 @@ export class ProjectCrudService {
           params.newStatus = dto.status;
         }
         if (changed.length > 0) {
-          await this.auditLogService.log(
-            AuditAction.PROJECT_UPDATE,
-            ResourceType.PROJECT,
-            projectId,
+          await this.auditLogService.log({
+            action: AuditAction.PROJECT_UPDATE,
+            resourceType: ResourceType.PROJECT,
+            resourceId: projectId,
             userId,
-            true,
-            undefined,
-            undefined,
+            success: true,
             projectId,
-            project.name,
-            params
-          );
+            resourceName: project.name,
+            params,
+          });
         }
       }
 
@@ -736,18 +732,16 @@ export class ProjectCrudService {
         (k) => data[k as keyof typeof data] !== undefined
       );
       if (changedFields.length > 0) {
-        await this.auditLogService.log(
-          AuditAction.PROJECT_UPDATE,
-          ResourceType.PROJECT,
-          projectId,
+        await this.auditLogService.log({
+          action: AuditAction.PROJECT_UPDATE,
+          resourceType: ResourceType.PROJECT,
+          resourceId: projectId,
           userId,
-          true,
-          undefined,
-          undefined,
+          success: true,
           projectId,
-          project.name,
-          { transferSettings: changedFields.join(',') }
-        );
+          resourceName: project.name,
+          params: { transferSettings: changedFields.join(',') },
+        });
       }
     }
     return project;

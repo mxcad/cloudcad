@@ -211,12 +211,15 @@ class TaskStore {
   cancel(taskId: string): { ok: boolean; status: TaskStatus | null; reason?: string } {
     const record = this.tasks.get(taskId);
     if (!record) return { ok: false, status: null, reason: 'not_found' };
-    if (record.status !== 'PENDING' && record.status !== 'PROCESSING') {
+    if (this._isTerminal(record.status)) {
       return { ok: false, status: record.status, reason: 'terminal' };
     }
     record.status = 'CANCELLED';
     record.updatedAt = new Date().toISOString();
     if (!record.completedAt) record.completedAt = record.updatedAt;
+    // 取消是独立的终态入口：与 updateStatus 一样必须触发淘汰，
+    // 否则纯取消负载下终态集合在内存与 Redis 中无界增长（ADR-0058 §4 要堵的洞）。
+    this._evictTerminal();
     this._persist(taskId, record);
     log(`[TaskStore] 任务已取消: ${taskId}`);
     return { ok: true, status: 'CANCELLED' };
@@ -235,9 +238,11 @@ class TaskStore {
     record.status = status;
     record.updatedAt = new Date().toISOString();
     const now = new Date().toISOString();
-    // 首次进入 PROCESSING 记开始时间；进入终态记完成时间（各只记一次）
+    // 首次进入 PROCESSING 记开始时间；进入任一终态记完成时间并触发淘汰（各只记一次）。
+    // 用 _isTerminal 统一判定：此前只认 COMPLETED/FAILED，经 updateStatus 置 CANCELLED
+    // 会绕过 completedAt 与淘汰，产出 completedAt=null 的终态记录。
     if (status === 'PROCESSING' && !record.startedAt) record.startedAt = now;
-    if ((status === 'COMPLETED' || status === 'FAILED') && !record.completedAt) {
+    if (this._isTerminal(status) && !record.completedAt) {
       record.completedAt = now;
       this._evictTerminal();
     }
@@ -300,20 +305,26 @@ class TaskStore {
     };
   }
 
+  // 终态判定唯一出口：COMPLETED/FAILED/CANCELLED。
+  // 转移合法性（终态不可逆）与「记 completedAt + 触发淘汰」的收口都基于它，
+  // 避免各方法各写一份判定导致取消路径漏掉淘汰。
+  _isTerminal(status: TaskStatus): boolean {
+    return status === 'COMPLETED' || status === 'FAILED' || status === 'CANCELLED';
+  }
+
   // 终态记录（COMPLETED/FAILED/CANCELLED）超过上限时按入队顺序（Map 迭代序）淘汰最旧的，
   // Redis 模式同步 HDEL
   _evictTerminal(): void {
-    const isTerminal = (s: TaskStatus) => s === 'COMPLETED' || s === 'FAILED' || s === 'CANCELLED';
     let terminalCount = 0;
     for (const t of this.tasks.values()) {
-      if (isTerminal(t.status)) terminalCount++;
+      if (this._isTerminal(t.status)) terminalCount++;
     }
     let excess = terminalCount - MAX_TERMINAL_RETAIN;
     if (excess <= 0) return;
     for (const id of [...this.tasks.keys()]) {
       if (excess <= 0) break;
       const t = this.tasks.get(id);
-      if (t && isTerminal(t.status)) {
+      if (t && this._isTerminal(t.status)) {
         this.delete(id);
         excess--;
       }

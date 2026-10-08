@@ -52,6 +52,27 @@ describe('UploadTokenService', () => {
     expect(payload.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
   });
 
+  it('should sign userId into the payload when provided (storage-service audit, ADR-0015)', async () => {
+    service = await createService({ BACKEND_JWT_SECRET: 'shared-secret' });
+    const result = await service.signUploadToken('202607/node1/a.dwg', 'user-42');
+
+    const payload = JSON.parse(
+      Buffer.from(result.token.split('.')[1], 'base64url').toString(),
+    );
+    expect(payload.userId).toBe('user-42');
+    expect(payload.path).toBe('202607/node1/a.dwg');
+  });
+
+  it('should omit the userId claim when no user id is given (backward-compatible payload)', async () => {
+    service = await createService({ BACKEND_JWT_SECRET: 'shared-secret' });
+    const result = await service.signUploadToken('202607/node1/a.dwg');
+
+    const payload = JSON.parse(
+      Buffer.from(result.token.split('.')[1], 'base64url').toString(),
+    );
+    expect(payload).not.toHaveProperty('userId');
+  });
+
   it('should produce a token verifiable with the shared secret (storage-service verifyToken contract)', async () => {
     service = await createService({ BACKEND_JWT_SECRET: 'shared-secret' });
     const result = await service.signUploadToken('202607/node1/a.dwg');

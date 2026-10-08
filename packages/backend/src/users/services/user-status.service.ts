@@ -58,35 +58,30 @@ export class UserStatusService {
       this.logger.log(`用户注销成功：${existingUser.email}`);
       // 账号安全审计：管理员软删（操作者=管理员，目标=用户；名称快照入库，写库失败不阻塞业务）
       if (operatorId) {
-        await this.auditLogService.log(
-          AuditAction.USER_DEACTIVATE,
-          ResourceType.USER,
-          id,
-          operatorId,
-          true,
-          undefined,
-          undefined,
-          undefined,
-          existingUser.email ?? existingUser.username ?? id,
-          { deactivatedBy: 'ADMIN' }
-        );
+        await this.auditLogService.log({
+          action: AuditAction.USER_DEACTIVATE,
+          resourceType: ResourceType.USER,
+          resourceId: id,
+          userId: operatorId,
+          success: true,
+          resourceName: existingUser.email ?? existingUser.username ?? id,
+          params: { deactivatedBy: 'ADMIN' },
+        });
       }
       return { message: (I18nContext.current()?.t('success.user_deactivated_30d_cleanup') ?? '用户已注销，30天后自动清理数据') };
     } catch (error) {
       // 失败也记（写库失败不阻塞业务）
       if (operatorId) {
-        await this.auditLogService.log(
-          AuditAction.USER_DEACTIVATE,
-          ResourceType.USER,
-          id,
-          operatorId,
-          false,
-          error instanceof Error ? error.message : String(error),
-          undefined,
-          undefined,
-          id,
-          { deactivatedBy: 'ADMIN' }
-        );
+        await this.auditLogService.log({
+          action: AuditAction.USER_DEACTIVATE,
+          resourceType: ResourceType.USER,
+          resourceId: id,
+          userId: operatorId,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          resourceName: id,
+          params: { deactivatedBy: 'ADMIN' },
+        });
       }
       this.logger.error(`用户注销失败：${error.message}`, error.stack);
       throw error;
@@ -111,35 +106,30 @@ export class UserStatusService {
       this.logger.log(`用户立即注销成功：${existingUser.email}`);
       // 账号安全审计：管理员彻底删除（操作者=管理员，目标=用户；名称快照入库）
       if (operatorId) {
-        await this.auditLogService.log(
-          AuditAction.USER_DEACTIVATE,
-          ResourceType.USER,
-          id,
-          operatorId,
-          true,
-          undefined,
-          undefined,
-          undefined,
-          existingUser.email ?? existingUser.username ?? id,
-          { deactivatedBy: 'ADMIN', immediate: true }
-        );
+        await this.auditLogService.log({
+          action: AuditAction.USER_DEACTIVATE,
+          resourceType: ResourceType.USER,
+          resourceId: id,
+          userId: operatorId,
+          success: true,
+          resourceName: existingUser.email ?? existingUser.username ?? id,
+          params: { deactivatedBy: 'ADMIN', immediate: true },
+        });
       }
       return { message: (I18nContext.current()?.t('success.user_deactivated_immediate_cleanup') ?? '用户已立即注销并彻底删除数据') };
     } catch (error) {
       // 失败也记（写库失败不阻塞业务）
       if (operatorId) {
-        await this.auditLogService.log(
-          AuditAction.USER_DEACTIVATE,
-          ResourceType.USER,
-          id,
-          operatorId,
-          false,
-          error instanceof Error ? error.message : String(error),
-          undefined,
-          undefined,
-          id,
-          { deactivatedBy: 'ADMIN', immediate: true }
-        );
+        await this.auditLogService.log({
+          action: AuditAction.USER_DEACTIVATE,
+          resourceType: ResourceType.USER,
+          resourceId: id,
+          userId: operatorId,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          resourceName: id,
+          params: { deactivatedBy: 'ADMIN', immediate: true },
+        });
       }
       this.logger.error(`用户立即注销失败：${error.message}`, error.stack);
       throw error;
@@ -236,34 +226,29 @@ export class UserStatusService {
       } satisfies UserLifecycleEventPayload);
 
       // 账号安全审计：自助注销成功（操作者=目标用户本人；保留绑定信息待冷静期恢复）
-      await this.auditLogService.log(
-        AuditAction.USER_DEACTIVATE,
-        ResourceType.USER,
+      await this.auditLogService.log({
+        action: AuditAction.USER_DEACTIVATE,
+        resourceType: ResourceType.USER,
+        resourceId: userId,
         userId,
-        userId,
-        true,
-        undefined,
-        undefined,
-        undefined,
-        user.email ?? user.phone ?? userId,
-        { deactivatedBy: 'SELF' }
-      );
+        success: true,
+        resourceName: user.email ?? user.phone ?? userId,
+        params: { deactivatedBy: 'SELF' },
+      });
 
       return { message: (I18nContext.current()?.t('success.account_deactivated') ?? '账户注销成功') };
     } catch (error) {
       // 失败也记（验证失败尝试有审查价值），写库失败不阻塞业务
-      await this.auditLogService.log(
-        AuditAction.USER_DEACTIVATE,
-        ResourceType.USER,
+      await this.auditLogService.log({
+        action: AuditAction.USER_DEACTIVATE,
+        resourceType: ResourceType.USER,
+        resourceId: userId,
         userId,
-        userId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        undefined,
-        userId,
-        { deactivatedBy: 'SELF' }
-      );
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        resourceName: userId,
+        params: { deactivatedBy: 'SELF' },
+      });
       this.logger.error(`账户注销失败：${error.message}`, error.stack);
       throw error;
     }

@@ -2,6 +2,7 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import TaskStore from '../services/task-store';
 import WorkerPool from '../services/worker-pool';
+import { PRIORITY_LEVELS } from '../lib/constants';
 
 function waitUntil(predicate: () => boolean, timeout = 5000, interval = 20): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -115,8 +116,8 @@ describe('WorkerPool', () => {
     const pool = new WorkerPool(store, runner);
     const stats = pool.getStats();
 
-    assert.equal(Object.keys(stats).length, 3);
-    for (let level = 1; level <= 3; level++) {
+    assert.equal(Object.keys(stats).length, PRIORITY_LEVELS.length);
+    for (const level of PRIORITY_LEVELS) {
       assert.ok(stats[level].maxConcurrent > 0);
       assert.equal(typeof stats[level].waiting, 'number');
     }
@@ -140,7 +141,7 @@ describe('WorkerPool', () => {
   it('should fire the callback engine on terminal states', async () => {
     const calls: any[] = [];
     const callbackEngine = {
-      notify: async (taskId: string, result: any) => {
+      notify: async (taskId: string, _callbackUrl: string, result: any) => {
         calls.push({ taskId, result });
         return Promise.resolve();
       },

@@ -15,22 +15,25 @@ import { ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
-import * as crypto from 'crypto';
 
 import { I18nContext } from 'nestjs-i18n';
 import type { IEmailVerificationService } from '@cloudcad/contracts';
 import { AppConfig } from '../config/app.config';
+import { VerificationCodeStore } from '../common/verification-code.store';
 @Injectable()
 export class EmailVerificationService implements IEmailVerificationService {
   private readonly codeTTL: number;
   private readonly rateLimitTTL: number;
   private readonly maxVerifyAttempts: number;
+  private readonly codeStore: VerificationCodeStore;
 
   constructor(
     private readonly emailService: EmailService,
     private readonly configService: ConfigService<AppConfig>,
     @InjectRedis() private readonly redis: Redis
   ) {
+    // 验证码生成/存储/原子验证走共享 VerificationCodeStore（架构审查 ⑥）
+    this.codeStore = new VerificationCodeStore(this.redis);
     const cacheTTL = this.configService.get('cacheTTL', { infer: true });
     this.codeTTL = cacheTTL.verificationCode;
     this.rateLimitTTL = cacheTTL.verificationRateLimit;
@@ -51,10 +54,10 @@ export class EmailVerificationService implements IEmailVerificationService {
   }
 
   private async generateVerificationToken(email: string): Promise<string> {
-    const code = (100000 + crypto.randomInt(900000)).toString();
+    const code = this.codeStore.generateCode();
 
     const key = this.getCodeKey(email);
-    await this.redis.setex(key, this.codeTTL, code);
+    await this.codeStore.storeCode(key, code, this.codeTTL);
     return code;
   }
 
@@ -79,40 +82,40 @@ export class EmailVerificationService implements IEmailVerificationService {
     const key = this.getCodeKey(email);
     const attemptsKey = this.getVerifyAttemptsKey(email);
     const rateLimitKey = this.getRateLimitKey(email);
-    const storedCode = await this.redis.get(key);
 
-    if (!storedCode) {
-      throw new BadRequestException(I18nContext.current()?.t('error.auth.verification_code_invalid') ?? '验证码无效或已过期');
+    // 验证码核心逻辑（原子 incr 计数 / 删码 / TTL 对齐）走共享 VerificationCodeStore，
+    // 本方法只负责 key 生成与 status→对外契约的 i18n 翻译（架构审查 ⑥）
+    const result = await this.codeStore.verifyCode({
+      codeKey: key,
+      attemptsKey,
+      code,
+      maxVerifyAttempts: this.maxVerifyAttempts,
+    });
+
+    if (result.status === 'valid') {
+      // 邮箱特有：验证成功后清除发送频率限制
+      await this.redis.del(rateLimitKey);
+      return { valid: true, message: I18nContext.current()?.t('success.verification_success') ?? '验证成功' };
     }
 
-    if (storedCode !== code) {
-      // incr 原子计数后按返回值判定，避免并发错答时 get→incr 竞态绕过次数上限
-      const attempts = await this.redis.incr(attemptsKey);
-      const remainingAttempts = this.maxVerifyAttempts - attempts;
+    if (result.status === 'expired') {
+      return { valid: false, message: I18nContext.current()?.t('error.auth.verification_code_invalid') ?? '验证码无效或已过期' };
+    }
 
-      if (remainingAttempts < 0) {
-        await this.redis.del(key);
-        await this.redis.del(attemptsKey);
-        throw new BadRequestException(I18nContext.current()?.t('error.auth.verification_attempts_exhausted') ?? '验证次数已用完，请重新获取验证码');
-      }
+    if (result.status === 'exhausted') {
+      return { valid: false, message: I18nContext.current()?.t('error.auth.verification_attempts_exhausted') ?? '验证次数已用完，请重新获取验证码' };
+    }
 
-      const ttl = await this.redis.ttl(key);
-      if (ttl > 0) {
-        await this.redis.expire(attemptsKey, ttl);
-      }
-
-      throw new BadRequestException(
+    // status === 'wrong'
+    const remainingAttempts = result.remainingAttempts ?? 0;
+    return {
+      valid: false,
+      message:
         I18nContext.current()?.t('success.verification_code_error_remaining', {
           args: { count: remainingAttempts },
-        }) ?? `验证码错误，剩余 ${remainingAttempts} 次尝试机会`
-      );
-    }
-
-    await this.redis.del(key);
-    await this.redis.del(attemptsKey);
-    await this.redis.del(rateLimitKey);
-
-    return { valid: true, message: I18nContext.current()?.t('success.verification_success') ?? '验证成功' };
+        }) ?? `验证码错误，剩余 ${remainingAttempts} 次尝试机会`,
+      remainingAttempts,
+    };
   }
 
   async resendVerificationEmail(email: string): Promise<void> {

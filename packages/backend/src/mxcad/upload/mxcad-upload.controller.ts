@@ -294,18 +294,15 @@ export class MxcadUploadController {
       return { nodeId: result.nodeId, tz: result.tz, ret: result.ret };
     } catch (error) {
       // #207 阶段 2：上传失败埋点（FILE_UPLOAD 成功记录已在写入入口过滤，失败保留）
-      await this.auditLogService.log(
-        AuditAction.FILE_UPLOAD,
-        ResourceType.FILE,
-        undefined,
-        context?.userId ?? 'unknown',
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        undefined,
-        body?.name,
-        { fileName: body?.name ?? null, hash: body?.hash ?? null }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.FILE_UPLOAD,
+        resourceType: ResourceType.FILE,
+        userId: context?.userId ?? 'unknown',
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        resourceName: body?.name,
+        params: { fileName: body?.name ?? null, hash: body?.hash ?? null },
+      });
       throw error;
     }
   }

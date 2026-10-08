@@ -33,7 +33,7 @@ describe('UploadTokenController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should issue token for a valid path', async () => {
+  it('should issue token for a valid path and forward the caller userId (ADR-0015 audit)', async () => {
     const result: { token: string; path: string; operation: 'upload'; expiresAt: Date } = {
       token: 'jwt-token',
       path: '202607/node1/a.dwg',
@@ -42,9 +42,30 @@ describe('UploadTokenController', () => {
     };
     jest.spyOn(service, 'signUploadToken').mockResolvedValue(result);
 
-    const resp = await controller.createUploadToken({ path: '202607/node1/a.dwg' });
+    const resp = await controller.createUploadToken(
+      { path: '202607/node1/a.dwg' },
+      { user: { id: 'user-42' } },
+    );
     expect(resp).toEqual(result);
-    expect(service.signUploadToken).toHaveBeenCalledWith('202607/node1/a.dwg');
+    expect(service.signUploadToken).toHaveBeenCalledWith(
+      '202607/node1/a.dwg',
+      'user-42',
+    );
+  });
+
+  it('should sign an anonymous token (no userId) when the request has no user', async () => {
+    jest.spyOn(service, 'signUploadToken').mockResolvedValue({
+      token: 'jwt-token',
+      path: '202607/node1/a.dwg',
+      operation: 'upload',
+      expiresAt: new Date(),
+    });
+
+    await controller.createUploadToken({ path: '202607/node1/a.dwg' });
+    expect(service.signUploadToken).toHaveBeenCalledWith(
+      '202607/node1/a.dwg',
+      undefined,
+    );
   });
 
   it('should reject path traversal', async () => {

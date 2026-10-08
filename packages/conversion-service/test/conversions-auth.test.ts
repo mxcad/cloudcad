@@ -31,7 +31,7 @@ function makeRes(): any {
 function createRoutes(): any {
   const store = { get: () => null, list: () => [] };
   const pool = { enqueue: () => {} };
-  return require('../routes/conversions').create(pool, store, {});
+  return require('../routes/conversions').create(pool, store);
 }
 
 describe('batchConvert 鉴权', () => {

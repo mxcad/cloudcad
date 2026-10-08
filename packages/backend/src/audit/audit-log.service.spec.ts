@@ -12,6 +12,7 @@ import {
 	AuditLogService,
 	parseLocalDate,
 	splitQueryValues,
+	parseAuditQuery,
 } from "./audit-log.service";
 
 describe("AuditLogService", () => {
@@ -61,13 +62,13 @@ describe("AuditLogService", () => {
 				success: true,
 			});
 
-			await service.log(
-				AuditAction.ADD_MEMBER,
-				ResourceType.PROJECT,
-				"proj-1",
-				"admin",
-				true,
-			);
+			await service.log({
+				action: AuditAction.ADD_MEMBER,
+				resourceType: ResourceType.PROJECT,
+				resourceId: "proj-1",
+				userId: "admin",
+				success: true,
+			});
 
 			expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
 				data: {
@@ -87,25 +88,25 @@ describe("AuditLogService", () => {
 		});
 
 		it("should skip high-frequency read action success records (#207)", async () => {
-			await service.log(
-				AuditAction.USER_LOGIN,
-				ResourceType.USER,
-				"user-1",
-				"admin",
-				true,
-			);
+			await service.log({
+				action: AuditAction.USER_LOGIN,
+				resourceType: ResourceType.USER,
+				resourceId: "user-1",
+				userId: "admin",
+				success: true,
+			});
 
 			expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
 		});
 
 		it("should skip FILE_DOWNLOAD success records (#207)", async () => {
-			await service.log(
-				AuditAction.FILE_DOWNLOAD,
-				ResourceType.FILE,
-				"node-1",
-				"admin",
-				true,
-			);
+			await service.log({
+				action: AuditAction.FILE_DOWNLOAD,
+				resourceType: ResourceType.FILE,
+				resourceId: "node-1",
+				userId: "admin",
+				success: true,
+			});
 
 			expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
 		});
@@ -113,14 +114,14 @@ describe("AuditLogService", () => {
 		it("should keep high-frequency read action failure records (#207)", async () => {
 			mockPrisma.auditLog.create.mockResolvedValue({ id: "log-1" });
 
-			await service.log(
-				AuditAction.FILE_DOWNLOAD,
-				ResourceType.FILE,
-				"node-1",
-				"admin",
-				false,
-				"download failed",
-			);
+			await service.log({
+				action: AuditAction.FILE_DOWNLOAD,
+				resourceType: ResourceType.FILE,
+				resourceId: "node-1",
+				userId: "admin",
+				success: false,
+				errorMessage: "download failed",
+			});
 
 			expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
 				data: {
@@ -143,25 +144,25 @@ describe("AuditLogService", () => {
 			mockPrisma.auditLog.create.mockRejectedValue(new Error("DB error"));
 			// Should not throw, just log error internally
 			await expect(
-				service.log(
-					AuditAction.ADD_MEMBER,
-					ResourceType.PROJECT,
-					"proj-1",
-					"admin",
-					true,
-				),
+				service.log({
+					action: AuditAction.ADD_MEMBER,
+					resourceType: ResourceType.PROJECT,
+					resourceId: "proj-1",
+					userId: "admin",
+					success: true,
+				}),
 			).resolves.toBeUndefined();
 		});
 
 		it("should raise alert on write failure (fail-open #207)", async () => {
 			mockPrisma.auditLog.create.mockRejectedValue(new Error("DB down"));
-			await service.log(
-				AuditAction.ADD_MEMBER,
-				ResourceType.PROJECT,
-				"proj-1",
-				"admin",
-				true,
-			);
+			await service.log({
+				action: AuditAction.ADD_MEMBER,
+				resourceType: ResourceType.PROJECT,
+				resourceId: "proj-1",
+				userId: "admin",
+				success: true,
+			});
 
 			expect(mockAlertService.raise).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -176,33 +177,33 @@ describe("AuditLogService", () => {
 			mockPrisma.auditLog.create.mockRejectedValue(new Error("DB down"));
 			mockAlertService.raise.mockRejectedValue(new Error("alert down"));
 			await expect(
-				service.log(
-					AuditAction.ADD_MEMBER,
-					ResourceType.PROJECT,
-					"proj-1",
-					"admin",
-					true,
-				),
+				service.log({
+					action: AuditAction.ADD_MEMBER,
+					resourceType: ResourceType.PROJECT,
+					resourceId: "proj-1",
+					userId: "admin",
+					success: true,
+				}),
 			).resolves.toBeUndefined();
 		});
 
 		it("should log with optional parameters (details migrated to params)", async () => {
 			mockPrisma.auditLog.create.mockResolvedValue({ id: "log-1" });
 
-			await service.log(
-				AuditAction.PROJECT_CREATE,
-				ResourceType.PROJECT,
-				"proj-1",
-				"user-1",
-				false,
-				"Error message",
-				JSON.stringify({ details: "test" }),
-				"proj-1",
-				"项目A",
-				null,
-				"192.168.1.1",
-				"Mozilla",
-			);
+			await service.log({
+				action: AuditAction.PROJECT_CREATE,
+				resourceType: ResourceType.PROJECT,
+				resourceId: "proj-1",
+				userId: "user-1",
+				success: false,
+				errorMessage: "Error message",
+				details: JSON.stringify({ details: "test" }),
+				projectId: "proj-1",
+				resourceName: "项目A",
+				params: null,
+				ipAddress: "192.168.1.1",
+				userAgent: "Mozilla",
+			});
 
 			expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
 				data: {
@@ -224,18 +225,16 @@ describe("AuditLogService", () => {
 		it("should write structured params when provided", async () => {
 			mockPrisma.auditLog.create.mockResolvedValue({ id: "log-1" });
 
-			await service.log(
-				AuditAction.REMOVE_MEMBER,
-				ResourceType.PROJECT,
-				"proj-1",
-				"user-1",
-				true,
-				undefined,
-				undefined,
-				"proj-1",
-				"项目A",
-				{ userId: "u-2", fromRole: "viewer" },
-			);
+			await service.log({
+				action: AuditAction.REMOVE_MEMBER,
+				resourceType: ResourceType.PROJECT,
+				resourceId: "proj-1",
+				userId: "user-1",
+				success: true,
+				projectId: "proj-1",
+				resourceName: "项目A",
+				params: { userId: "u-2", fromRole: "viewer" },
+			});
 
 			expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
 				data: {
@@ -257,15 +256,14 @@ describe("AuditLogService", () => {
 		it("should fall back to raw details when JSON.parse fails", async () => {
 			mockPrisma.auditLog.create.mockResolvedValue({ id: "log-1" });
 
-			await service.log(
-				AuditAction.ADD_MEMBER,
-				ResourceType.PROJECT,
-				"proj-1",
-				"user-1",
-				true,
-				undefined,
-				"not-valid-json{{",
-			);
+			await service.log({
+				action: AuditAction.ADD_MEMBER,
+				resourceType: ResourceType.PROJECT,
+				resourceId: "proj-1",
+				userId: "user-1",
+				success: true,
+				details: "not-valid-json{{",
+			});
 
 			const data = mockPrisma.auditLog.create.mock.calls[0][0].data;
 			expect(data.params).toEqual({ raw: "not-valid-json{{" });
@@ -274,13 +272,14 @@ describe("AuditLogService", () => {
 		it("should handle undefined resourceId", async () => {
 			mockPrisma.auditLog.create.mockResolvedValue({ id: "log-1" });
 
-			await service.log(
-				AuditAction.USER_LOGOUT,
-				ResourceType.USER,
-				undefined,
-				"user-1",
-				true,
-			);
+			await service.log({
+				action: AuditAction.USER_LOGOUT,
+				resourceType: ResourceType.USER,
+				// 显式 undefined 与省略该键等价：具名后二者都可表达，此处保留以贴合用例名
+				resourceId: undefined,
+				userId: "user-1",
+				success: true,
+			});
 
 			expect(mockPrisma.auditLog.create).toHaveBeenCalled();
 		});
@@ -630,6 +629,52 @@ describe("AuditLogService", () => {
 			expect(splitQueryValues(undefined)).toBeUndefined();
 			expect(splitQueryValues("")).toBeUndefined();
 			expect(splitQueryValues(" , , ")).toBeUndefined();
+		});
+	});
+
+	describe("parseAuditQuery", () => {
+		it("should map multi-value / keyword / boolean / date params to filters", () => {
+			const { filters, pagination } = parseAuditQuery({
+				action: "AUDIT_EXPORT, AUDIT_CLEANUP",
+				resourceType: "SYSTEM,USER",
+				userId: "user-1",
+				resourceId: "res-1",
+				search: "  报表  ",
+				startDate: "2026-08-01",
+				endDate: "2026-08-31",
+				success: "true",
+				page: "3",
+				limit: "50",
+			});
+
+			expect(filters.action).toEqual(["AUDIT_EXPORT", "AUDIT_CLEANUP"]);
+			expect(filters.resourceType).toEqual(["SYSTEM", "USER"]);
+			expect(filters.userId).toBe("user-1");
+			expect(filters.resourceId).toBe("res-1");
+			expect(filters.search).toBe("报表");
+			expect(filters.success).toBe(true);
+			// 日期按本地时区解析，落在本地零点而非 UTC 零点
+			expect(filters.startDate).toBeInstanceOf(Date);
+			expect(filters.endDate).toBeInstanceOf(Date);
+			expect((filters.endDate as Date).getHours()).toBe(0);
+			expect(pagination).toEqual({ page: 3, limit: 50 });
+		});
+
+		it("should default pagination and omit absent params", () => {
+			const { filters, pagination } = parseAuditQuery({});
+			expect(pagination).toEqual({ page: 1, limit: 20 });
+			expect(Object.keys(filters)).toEqual([]);
+		});
+
+		it("should map success=false and keep invalid date key undefined (buildWhere 语义不变)", () => {
+			const { filters } = parseAuditQuery({
+				success: "false",
+				startDate: "2026-13-45",
+			});
+			expect(filters.success).toBe(false);
+			// 传了但非法：键存在且值为 undefined（与原两个 Controller 的逐字行为一致）
+			expect(Object.keys(filters)).toContain("startDate");
+			expect(filters.startDate).toBeUndefined();
 		});
 	});
 

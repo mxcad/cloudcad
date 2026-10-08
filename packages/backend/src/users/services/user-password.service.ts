@@ -79,36 +79,31 @@ export class UserPasswordService {
       this.logger.log(`用户密码${hasPassword ? '修改' : '设置'}成功：${user.email}`);
 
       // 账号安全审计：修改密码成功（操作者即目标用户本人）
-      await this.auditLogService.log(
-        AuditAction.USER_CHANGE_PASSWORD,
-        ResourceType.USER,
+      await this.auditLogService.log({
+        action: AuditAction.USER_CHANGE_PASSWORD,
+        resourceType: ResourceType.USER,
+        resourceId: userId,
         userId,
-        userId,
-        true,
-        undefined,
-        undefined,
-        undefined,
-        user.email ?? userId,
-        { changeType: hasPassword ? 'change' : 'set' }
-      );
+        success: true,
+        resourceName: user.email ?? userId,
+        params: { changeType: hasPassword ? 'change' : 'set' },
+      });
 
       return {
         message: `密码${hasPassword ? '修改' : '设置'}成功，请重新登录`,
       };
     } catch (error) {
       // 失败也记（密码错误/验证失败等尝试有审查价值），写库失败不阻塞业务
-      await this.auditLogService.log(
-        AuditAction.USER_CHANGE_PASSWORD,
-        ResourceType.USER,
+      await this.auditLogService.log({
+        action: AuditAction.USER_CHANGE_PASSWORD,
+        resourceType: ResourceType.USER,
+        resourceId: userId,
         userId,
-        userId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        undefined,
-        userId,
-        { changeType: hasPassword ? 'change' : 'set' }
-      );
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        resourceName: userId,
+        params: { changeType: hasPassword ? 'change' : 'set' },
+      });
       this.logger.error(`用户密码修改失败：${error.message}`, error.stack);
       throw error;
     }

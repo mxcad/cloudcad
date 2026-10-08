@@ -14,12 +14,18 @@ class FileHandler {
   }
 
   _resolvePath(filePath) {
-    const cleaned = filePath.replace(/\.\./g, '_').replace(/~/g, '_');
-    const absolute = path.resolve(FILES_DATA_PATH, cleaned);
+    // 与 embedded 侧 LocalStorageProvider.validatePath 对齐：拒绝 .. / ~（fail-closed）。
+    // 旧行为把 .. / ~ 静默改写为 _，会把路径悄悄落到错误位置（DB/磁盘不一致）；
+    // 存储路径合法形态（YYYYMM/nodeId/src_file_md5/fileName）本就不含 .. / ~，
+    // 出现即视为遍历攻击或调用方 bug，直接拒绝而非静默改写。
+    if (filePath.includes('..') || filePath.includes('~')) {
+      throw new Error('Path traversal detected');
+    }
+    const absolute = path.resolve(FILES_DATA_PATH, filePath);
     const base = path.resolve(FILES_DATA_PATH);
     // 前缀判界须带 path.sep 后缀：裸 startsWith(base) 会放行「同名前缀兄弟目录」
     // （如 base=/…files-123 时 /…files-123-evil/x 也匹配），绝对路径经 resolve 后
-    // 落到兄弟目录即可越界。相对遍历已被上面的 .. / ~ 替换中和，此处兜绝对路径逃逸。
+    // 落到兄弟目录即可越界。
     if (!absolute.startsWith(base + path.sep)) {
       throw new Error('Path traversal detected');
     }

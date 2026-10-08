@@ -231,18 +231,15 @@ describe('RolesService', () => {
 
       await service.create(createDto, 'admin-1');
 
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.ROLE_CREATE,
-        ResourceType.ROLE,
-        'role2',
-        'admin-1',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        'CUSTOM_ROLE2',
-        { roleName: 'CUSTOM_ROLE2' }
-      );
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.ROLE_CREATE,
+        resourceType: ResourceType.ROLE,
+        resourceId: 'role2',
+        userId: 'admin-1',
+        success: true,
+        resourceName: 'CUSTOM_ROLE2',
+        params: { roleName: 'CUSTOM_ROLE2' },
+      });
     });
 
     it('should skip audit when userId not provided (#207)', async () => {
@@ -417,18 +414,15 @@ describe('RolesService', () => {
 
       await service.remove('role1', 'admin-1');
 
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.ROLE_DELETE,
-        ResourceType.ROLE,
-        'role1',
-        'admin-1',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        'CUSTOM_ROLE',
-        { roleName: 'CUSTOM_ROLE' }
-      );
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.ROLE_DELETE,
+        resourceType: ResourceType.ROLE,
+        resourceId: 'role1',
+        userId: 'admin-1',
+        success: true,
+        resourceName: 'CUSTOM_ROLE',
+        params: { roleName: 'CUSTOM_ROLE' },
+      });
     });
 
     it('should throw NotFoundException when role not found', async () => {
@@ -577,21 +571,18 @@ describe('RolesService', () => {
 
       await service.addPermissions('role1', ['SYSTEM_USER_READ'], 'admin-1');
 
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.PERMISSION_GRANT,
-        ResourceType.ROLE,
-        'role1',
-        'admin-1',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        'CUSTOM_ROLE',
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.PERMISSION_GRANT,
+        resourceType: ResourceType.ROLE,
+        resourceId: 'role1',
+        userId: 'admin-1',
+        success: true,
+        resourceName: 'CUSTOM_ROLE',
+        params: expect.objectContaining({
           roleName: 'CUSTOM_ROLE',
           permissionName: 'SYSTEM_USER_READ',
-        })
-      );
+        }),
+      });
     });
   });
 

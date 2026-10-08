@@ -102,7 +102,7 @@ describe('内容身份去重（#431 门禁3）', () => {
     // 慢 runner：任务保持 PENDING/PROCESSING 不立即完成，保证在途可被合并
     const runner = { execute: () => new Promise(() => {}) };
     const pool = new WorkerPool(store, runner, null, { autoScale: false });
-    const routes = create(pool, store, { notify: async () => {} });
+    const routes = create(pool, store);
     pool.start();
 
     const params = { srcPath: '/in/1.dwg', fileHash: 'abc', cmd: 'to_mxweb' };
@@ -134,7 +134,7 @@ describe('内容身份去重（#431 门禁3）', () => {
     const store = new TaskStore('local');
     const runner = { execute: () => new Promise(() => {}) };
     const pool = new WorkerPool(store, runner, null, { autoScale: false });
-    const routes = create(pool, store, { notify: async () => {} });
+    const routes = create(pool, store);
     pool.start();
 
     const res = makeRes();
@@ -150,7 +150,7 @@ describe('内容身份去重（#431 门禁3）', () => {
     const store = new TaskStore('local');
     const runner = { execute: () => new Promise(() => {}) };
     const pool = new WorkerPool(store, runner, null, { autoScale: false });
-    const routes = create(pool, store, { notify: async () => {} });
+    const routes = create(pool, store);
     pool.start();
 
     const res1 = makeRes();

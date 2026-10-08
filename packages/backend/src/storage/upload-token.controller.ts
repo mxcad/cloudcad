@@ -11,6 +11,7 @@ import {
   HttpStatus,
   Logger,
   Post,
+  Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { BadRequestException } from '@nestjs/common';
@@ -42,10 +43,16 @@ export class UploadTokenController {
   @ApiResponse({ status: 400, description: 'path 非法' })
   async createUploadToken(
     @Body() dto: CreateUploadTokenDto,
+    // 运行时由全局 JwtStrategyExecutor 守卫恒提供；`?` 仅为单测直调便利（匿名回落）
+    @Req() req?: { user?: { id?: string } },
   ): Promise<UploadTokenResponseDto> {
     this.validatePath(dto.path);
-    this.logger.log(`[upload-token] 签发上传令牌: path=${dto.path}`);
-    return this.uploadTokenService.signUploadToken(dto.path);
+    // 全局 JwtStrategyExecutor 守卫已填充 req.user；userId 签进令牌供 storage-service 审计
+    const userId = req?.user?.id;
+    this.logger.log(
+      `[upload-token] 签发上传令牌: path=${dto.path}, userId=${userId ?? 'anonymous'}`,
+    );
+    return this.uploadTokenService.signUploadToken(dto.path, userId);
   }
 
   /**

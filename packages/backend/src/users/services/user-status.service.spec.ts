@@ -109,18 +109,15 @@ describe('UserStatusService（注销/恢复）', () => {
     expect(mockPrisma.refreshToken.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
     expect(mockEventEmitter.emit).toHaveBeenCalledWith('user.deactivated', expect.any(Object));
     // 账号安全审计：自助注销成功（操作者=目标用户本人）
-    expect(mockAuditLogService.log).toHaveBeenCalledWith(
-      'USER_DEACTIVATE',
-      'USER',
-      'user-1',
-      'user-1',
-      true,
-      undefined,
-      undefined,
-      undefined,
-      'test@example.com',
-      { deactivatedBy: 'SELF' }
-    );
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: 'USER_DEACTIVATE',
+      resourceType: 'USER',
+      resourceId: 'user-1',
+      userId: 'user-1',
+      success: true,
+      resourceName: 'test@example.com',
+      params: { deactivatedBy: 'SELF' },
+    });
   });
 
   it('自助注销失败（验证未通过）时记失败审计', async () => {
@@ -130,18 +127,16 @@ describe('UserStatusService（注销/恢复）', () => {
       BadRequestException
     );
 
-    expect(mockAuditLogService.log).toHaveBeenCalledWith(
-      'USER_DEACTIVATE',
-      'USER',
-      'user-1',
-      'user-1',
-      false,
-      expect.stringContaining('密码不正确'),
-      undefined,
-      undefined,
-      'user-1',
-      { deactivatedBy: 'SELF' }
-    );
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: 'USER_DEACTIVATE',
+      resourceType: 'USER',
+      resourceId: 'user-1',
+      userId: 'user-1',
+      success: false,
+      errorMessage: expect.stringContaining('密码不正确'),
+      resourceName: 'user-1',
+      params: { deactivatedBy: 'SELF' },
+    });
   });
 
   it('管理员软删：写 deactivatedBy=ADMIN（登录不自动恢复）', async () => {
@@ -156,18 +151,15 @@ describe('UserStatusService（注销/恢复）', () => {
       },
     });
     // 账号安全审计：操作者=管理员，resourceName=目标用户邮箱（名称快照）
-    expect(mockAuditLogService.log).toHaveBeenCalledWith(
-      'USER_DEACTIVATE',
-      'USER',
-      'user-1',
-      'admin-1',
-      true,
-      undefined,
-      undefined,
-      undefined,
-      'test@example.com',
-      { deactivatedBy: 'ADMIN' }
-    );
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: 'USER_DEACTIVATE',
+      resourceType: 'USER',
+      resourceId: 'user-1',
+      userId: 'admin-1',
+      success: true,
+      resourceName: 'test@example.com',
+      params: { deactivatedBy: 'ADMIN' },
+    });
   });
 
   it('管理员软删失败：记失败审计', async () => {
@@ -175,18 +167,16 @@ describe('UserStatusService（注销/恢复）', () => {
 
     await expect(service.softDelete('user-1', 'admin-1')).rejects.toThrow();
 
-    expect(mockAuditLogService.log).toHaveBeenCalledWith(
-      'USER_DEACTIVATE',
-      'USER',
-      'user-1',
-      'admin-1',
-      false,
-      expect.any(String),
-      undefined,
-      undefined,
-      'user-1',
-      { deactivatedBy: 'ADMIN' }
-    );
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: 'USER_DEACTIVATE',
+      resourceType: 'USER',
+      resourceId: 'user-1',
+      userId: 'admin-1',
+      success: false,
+      errorMessage: expect.any(String),
+      resourceName: 'user-1',
+      params: { deactivatedBy: 'ADMIN' },
+    });
   });
 
   it('自助恢复：冷静期内（默认 7 天）允许，恢复后清除 deactivatedBy', async () => {

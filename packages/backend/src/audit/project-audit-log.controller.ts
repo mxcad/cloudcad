@@ -28,10 +28,8 @@ import {
 import {
   AuditLogService,
   AuditLogListItem,
-  parseLocalDate,
-  splitQueryValues,
+  parseAuditQuery,
 } from './audit-log.service';
-import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import { ProjectAuditGuard } from './project-audit.guard';
 
 /**
@@ -86,24 +84,17 @@ export class ProjectAuditLogController {
     limit: number;
     totalPages: number;
   }> {
-    const filters: Record<string, unknown> = {};
-    // 多选筛选：action / resourceType 支持逗号分隔多值（与 AuditLogController 一致）
-    const actionValues = splitQueryValues(action);
-    if (actionValues?.length) filters.action = actionValues as AuditAction[];
-    const resourceTypeValues = splitQueryValues(resourceType);
-    if (resourceTypeValues?.length) {
-      filters.resourceType = resourceTypeValues as ResourceType[];
-    }
-    if (userId) filters.userId = userId;
-    if (search) filters.search = search.trim();
-    if (startDate) filters.startDate = parseLocalDate(startDate);
-    if (endDate) filters.endDate = parseLocalDate(endDate);
-    if (success !== undefined) filters.success = success === 'true';
-
-    const pagination = {
-      page: page ? parseInt(page, 10) : 1,
-      limit: limit ? parseInt(limit, 10) : 20,
-    };
+    const { filters, pagination } = parseAuditQuery({
+      action,
+      resourceType,
+      userId,
+      search,
+      startDate,
+      endDate,
+      success,
+      page,
+      limit,
+    });
 
     return await this.auditLogService.findAll(
       { ...filters, projectId },

@@ -246,18 +246,16 @@ export class ProjectRolesService {
       await this.invalidateRoleCache(role);
 
       if (userId) {
-        await this.auditLogService.log(
-          AuditAction.ROLE_CREATE,
-          ResourceType.ROLE,
-          role.id,
+        await this.auditLogService.log({
+          action: AuditAction.ROLE_CREATE,
+          resourceType: ResourceType.ROLE,
+          resourceId: role.id,
           userId,
-          true,
-          undefined,
-          undefined,
-          role.projectId ?? undefined,
-          role.name,
-          { roleName: role.name, projectId: role.projectId ?? null }
-        );
+          success: true,
+          projectId: role.projectId ?? undefined,
+          resourceName: role.name,
+          params: { roleName: role.name, projectId: role.projectId ?? null },
+        });
       }
 
       return role;
@@ -334,22 +332,20 @@ export class ProjectRolesService {
       }
 
       if (userId) {
-        await this.auditLogService.log(
-          AuditAction.ROLE_UPDATE,
-          ResourceType.ROLE,
-          roleId,
+        await this.auditLogService.log({
+          action: AuditAction.ROLE_UPDATE,
+          resourceType: ResourceType.ROLE,
+          resourceId: roleId,
           userId,
-          true,
-          undefined,
-          undefined,
-          role.projectId ?? undefined,
-          updatedRole.name,
-          {
+          success: true,
+          projectId: role.projectId ?? undefined,
+          resourceName: updatedRole.name,
+          params: {
             roleName: updatedRole.name,
             projectId: role.projectId ?? null,
             changedFields: Object.keys(dto),
-          }
-        );
+          },
+        });
       }
 
       return updatedRole;
@@ -490,22 +486,20 @@ export class ProjectRolesService {
       await this.invalidateRoleCache(role);
 
       if (userId) {
-        await this.auditLogService.log(
-          AuditAction.ROLE_DELETE,
-          ResourceType.ROLE,
-          roleId,
+        await this.auditLogService.log({
+          action: AuditAction.ROLE_DELETE,
+          resourceType: ResourceType.ROLE,
+          resourceId: roleId,
           userId,
-          true,
-          undefined,
-          undefined,
-          role.projectId ?? undefined,
-          role.name,
-          {
+          success: true,
+          projectId: role.projectId ?? undefined,
+          resourceName: role.name,
+          params: {
             roleName: role.name,
             projectId: role.projectId ?? null,
             autoCreatedMemberRoleId: autoCreatedMemberRoleId,
-          }
-        );
+          },
+        });
       }
     } catch (error) {
       if (
@@ -810,23 +804,21 @@ export class ProjectRolesService {
       await this.invalidateRoleCache(role);
 
       if (userId) {
-        await this.auditLogService.log(
-          AuditAction.PERMISSION_GRANT,
-          ResourceType.ROLE,
-          roleId,
+        await this.auditLogService.log({
+          action: AuditAction.PERMISSION_GRANT,
+          resourceType: ResourceType.ROLE,
+          resourceId: roleId,
           userId,
-          true,
-          undefined,
-          undefined,
-          role.projectId ?? undefined,
-          role.name,
-          {
+          success: true,
+          projectId: role.projectId ?? undefined,
+          resourceName: role.name,
+          params: {
             roleName: role.name,
             projectId: role.projectId ?? null,
             permissionName: permissions.join(', '),
             permissionCount: permissions.length,
-          }
-        );
+          },
+        });
       }
     } catch (error) {
       if (
@@ -890,23 +882,21 @@ export class ProjectRolesService {
       await this.invalidateRoleCache(role);
 
       if (userId) {
-        await this.auditLogService.log(
-          AuditAction.PERMISSION_REVOKE,
-          ResourceType.ROLE,
-          roleId,
+        await this.auditLogService.log({
+          action: AuditAction.PERMISSION_REVOKE,
+          resourceType: ResourceType.ROLE,
+          resourceId: roleId,
           userId,
-          true,
-          undefined,
-          undefined,
-          role.projectId ?? undefined,
-          role.name,
-          {
+          success: true,
+          projectId: role.projectId ?? undefined,
+          resourceName: role.name,
+          params: {
             roleName: role.name,
             projectId: role.projectId ?? null,
             permissionName: permissions.join(', '),
             permissionCount: permissions.length,
-          }
-        );
+          },
+        });
       }
     } catch (error) {
       if (

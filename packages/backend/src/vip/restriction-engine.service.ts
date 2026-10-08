@@ -210,6 +210,9 @@ export class RestrictionEngine implements IConversionAccessGuard {
   /**
    * 原子预留每窗口转换次数，失败时抛 QuotaExceededException（带正确窗口/次数文案）。
    * 统一各调用点错误处理，避免重复抛错块与 i18n 占位符误用。
+   *
+   * 内部原语：新调用点优先用 withConversionQuota（释放时机单点，防漏释放）；
+   * 直接调用仅限批量逐项占位（conversion-runner）与长生命周期后台占位（drawing-ingest）。
    */
   async reserveConversionCountOrThrow(userId: string): Promise<void> {
     const reserved = await this.tryReserveConversionCount(userId);
@@ -221,6 +224,7 @@ export class RestrictionEngine implements IConversionAccessGuard {
 
   /**
    * 游客（按 IP）原子预留每窗口转换次数，失败抛 QuotaExceededException。
+   * 内部原语：新调用点优先用 withConversionQuota（见 reserveConversionCountOrThrow 说明）。
    */
   async reserveGuestConversionCountOrThrow(ip: string): Promise<void> {
     const reserved = await this.tryReserveGuestConversionCount(ip);
@@ -228,6 +232,49 @@ export class RestrictionEngine implements IConversionAccessGuard {
     const limit = await this.getGuestConversionLimit();
     const windowHours = await this.getGuestWindowHours();
     this.throwFrequencyExceeded(limit, windowHours);
+  }
+
+  /**
+   * 转换配额「占位 → 执行 → 失败必释放」单点包装（ADR-0043/0060）。
+   *
+   * - 主体：登录用户走 userId 窗口；游客走 IP 窗口；两者皆无则不占位直接执行。
+   * - 成功：占位被消耗（不释放）；失败（含引擎原始异常）：保证释放后原样上抛，
+   *   释放自身失败只告警不掩盖原始错误。
+   * - 调用点只负责错误文案翻译，不再各自管理 reserve/release 时机——
+   *   历史上 precomputeExport 的「引擎原始异常分支漏释放」即源于散落的释放对。
+   *
+   * 不适用场景（保留直接调用原语）：批量逐项占位（conversion-runner 的 N 项
+   * 逐条占位/按项释放）与长生命周期后台占位（drawing-ingest 上传时占位、
+   * 后台转换失败时释放，reserve 与 release 跨控制流）。
+   */
+  async withConversionQuota<T>(
+    principal: { userId?: string; ip?: string },
+    fn: () => Promise<T>
+  ): Promise<T> {
+    const { userId, ip } = principal;
+    if (userId) {
+      await this.reserveConversionCountOrThrow(userId);
+    } else if (ip) {
+      await this.reserveGuestConversionCountOrThrow(ip);
+    }
+    try {
+      return await fn();
+    } catch (error) {
+      if (userId) {
+        await this.releaseConversionCount(userId).catch((e: unknown) =>
+          this.logger.warn(
+            `释放转换配额失败: ${(e as Error).message}`
+          )
+        );
+      } else if (ip) {
+        await this.releaseGuestConversionCount(ip).catch((e: unknown) =>
+          this.logger.warn(
+            `释放游客转换配额失败: ${(e as Error).message}`
+          )
+        );
+      }
+      throw error;
+    }
   }
 
   /**

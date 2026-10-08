@@ -17,7 +17,7 @@ import { create as createConversions } from './routes/conversions';
 async function bootstrap(): Promise<void> {
   const taskStore = new TaskStore(QUEUE_DRIVER, { redisUrl: REDIS_URL });
   const runner = new MxcadRunner();
-  const callbackEngine = new CallbackEngine(taskStore);
+  const callbackEngine = new CallbackEngine();
   const workerPool = new WorkerPool(taskStore, runner, callbackEngine);
 
   await taskStore.init();
@@ -25,7 +25,7 @@ async function bootstrap(): Promise<void> {
   // （须在 worker 开始 tick 前，避免竞态）
   taskStore.recoverStuckProcessing();
 
-  const functionRoutes = createConversions(workerPool, taskStore, callbackEngine);
+  const functionRoutes = createConversions(workerPool, taskStore);
 
   async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     if (req.method === 'OPTIONS') {
@@ -131,7 +131,11 @@ async function bootstrap(): Promise<void> {
   const shutdown = () => {
     log('[server] 收到退出信号, 优雅关闭...');
     workerPool.stop();
+    // close() 在 flush 之后：先等持久化队列排空，再断 Redis 连接。RedisClient.close 会置
+    // _closed 终止重连调度并 end socket——此前 shutdown 只 flush 不 close，socket 留到进程
+    // 退出才由 OS 回收，且重连定时器可能在 flush 期间又尝试建连。
     taskStore.flush().finally(() => {
+      taskStore.close();
       server.close(() => process.exit(0));
     });
   };

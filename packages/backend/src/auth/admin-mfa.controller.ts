@@ -133,20 +133,17 @@ export class AdminMfaController {
       );
     }
 
-    await this.auditLogService.log(
-      AuditAction.MFA_BIND,
-      ResourceType.USER,
-      user.id,
-      user.id,
-      true,
-      undefined,
-      undefined,
-      undefined,
-      user.username,
-      { method: 'mfa_bind' },
-      clientIp,
-      req.headers['user-agent'] as string | undefined
-    );
+    await this.auditLogService.log({
+      action: AuditAction.MFA_BIND,
+      resourceType: ResourceType.USER,
+      resourceId: user.id,
+      userId: user.id,
+      success: true,
+      resourceName: user.username,
+      params: { method: 'mfa_bind' },
+      ipAddress: clientIp,
+      userAgent: req.headers['user-agent'] as string | undefined,
+    });
 
     return { mfaSetupRequired: false };
   }

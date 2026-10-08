@@ -39,7 +39,7 @@ describe('POST /v1/conversions/tasks/:taskId/cancel 路由（#431 取消机制�
   });
 
   function createRoutes(pool: WorkerPool, store: TaskStore): any {
-    return require('../routes/conversions').create(pool, store, {});
+    return require('../routes/conversions').create(pool, store);
   }
 
   it('排队中任务取消 → 200 CANCELLED（killed=false）', async () => {

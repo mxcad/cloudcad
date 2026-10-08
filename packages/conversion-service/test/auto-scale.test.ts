@@ -2,6 +2,7 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import TaskStore from '../services/task-store';
 import WorkerPool from '../services/worker-pool';
+import { PRIORITY_LEVELS } from '../lib/constants';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -160,8 +161,8 @@ describe('WorkerPool 自动扩容', () => {
   it('stats 暴露 currentMax / autoScale 字段', () => {
     const pool = new WorkerPool(store, makeSlowRunner(100));
     const stats = pool.getStats();
-    assert.equal(Object.keys(stats).length, 3);
-    for (let level = 1; level <= 3; level++) {
+    assert.equal(Object.keys(stats).length, PRIORITY_LEVELS.length);
+    for (const level of PRIORITY_LEVELS) {
       assert.equal(stats[level].currentMax, stats[level].maxConcurrent);
       assert.equal(typeof stats[level].autoScale, 'boolean');
     }

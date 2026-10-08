@@ -231,33 +231,27 @@ export class IpWhitelistService {
       });
 
       // 安全审计：加入管理员白名单（写库失败不阻塞业务）
-      await this.auditLogService.log(
-        AuditAction.IP_WHITELIST_ADD,
-        ResourceType.IpWhitelistEntry,
-        created.id,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        undefined,
-        storedIp,
-        { ip: storedIp, reason: dto.reason, expiresAt: created.expiresAt }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.IP_WHITELIST_ADD,
+        resourceType: ResourceType.IpWhitelistEntry,
+        resourceId: created.id,
+        userId: operatorId,
+        success: true,
+        resourceName: storedIp,
+        params: { ip: storedIp, reason: dto.reason, expiresAt: created.expiresAt },
+      });
 
       return this.toResponse(created);
     } catch (error) {
-      await this.auditLogService.log(
-        AuditAction.IP_WHITELIST_ADD,
-        ResourceType.IpWhitelistEntry,
-        undefined,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        undefined,
-        dto.ip,
-        { ip: dto.ip }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.IP_WHITELIST_ADD,
+        resourceType: ResourceType.IpWhitelistEntry,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        resourceName: dto.ip,
+        params: { ip: dto.ip },
+      });
       throw error;
     }
   }
@@ -287,33 +281,28 @@ export class IpWhitelistService {
       await this.prisma.ipWhitelistEntry.delete({ where: { id } });
 
       // 安全审计：移出管理员白名单（高危：可能把自己锁外面，审计必留痕）
-      await this.auditLogService.log(
-        AuditAction.IP_WHITELIST_REMOVE,
-        ResourceType.IpWhitelistEntry,
-        id,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        undefined,
-        existing.ip,
-        { ip: existing.ip }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.IP_WHITELIST_REMOVE,
+        resourceType: ResourceType.IpWhitelistEntry,
+        resourceId: id,
+        userId: operatorId,
+        success: true,
+        resourceName: existing.ip,
+        params: { ip: existing.ip },
+      });
 
       return { id };
     } catch (error) {
-      await this.auditLogService.log(
-        AuditAction.IP_WHITELIST_REMOVE,
-        ResourceType.IpWhitelistEntry,
-        id,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        undefined,
-        id,
-        { id }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.IP_WHITELIST_REMOVE,
+        resourceType: ResourceType.IpWhitelistEntry,
+        resourceId: id,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        resourceName: id,
+        params: { id },
+      });
       throw error;
     }
   }

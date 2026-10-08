@@ -78,18 +78,15 @@ describe('UserPasswordService（修改密码审计）', () => {
     expect(mockPrisma.refreshToken.deleteMany).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
     });
-    expect(mockAuditLogService.log).toHaveBeenCalledWith(
-      'USER_CHANGE_PASSWORD',
-      'USER',
-      'user-1',
-      'user-1',
-      true,
-      undefined,
-      undefined,
-      undefined,
-      'test@example.com',
-      { changeType: 'change' }
-    );
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: 'USER_CHANGE_PASSWORD',
+      resourceType: 'USER',
+      resourceId: 'user-1',
+      userId: 'user-1',
+      success: true,
+      resourceName: 'test@example.com',
+      params: { changeType: 'change' },
+    });
   });
 
   it('旧密码错误：抛 ConflictException 并记失败审计', async () => {
@@ -103,18 +100,16 @@ describe('UserPasswordService（修改密码审计）', () => {
       )
     ).rejects.toThrow(ConflictException);
 
-    expect(mockAuditLogService.log).toHaveBeenCalledWith(
-      'USER_CHANGE_PASSWORD',
-      'USER',
-      'user-1',
-      'user-1',
-      false,
-      expect.stringContaining('当前密码不正确'),
-      undefined,
-      undefined,
-      'user-1',
-      { changeType: 'change' }
-    );
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: 'USER_CHANGE_PASSWORD',
+      resourceType: 'USER',
+      resourceId: 'user-1',
+      userId: 'user-1',
+      success: false,
+      errorMessage: expect.stringContaining('当前密码不正确'),
+      resourceName: 'user-1',
+      params: { changeType: 'change' },
+    });
   });
 
   it('未设置密码的用户直接设置密码：changeType=set', async () => {
@@ -126,17 +121,14 @@ describe('UserPasswordService（修改密码审计）', () => {
 
     await service.changePassword('user-1', undefined, '<PASSWORD_STUB_NEW>');
 
-    expect(mockAuditLogService.log).toHaveBeenCalledWith(
-      'USER_CHANGE_PASSWORD',
-      'USER',
-      'user-1',
-      'user-1',
-      true,
-      undefined,
-      undefined,
-      undefined,
-      'test@example.com',
-      { changeType: 'set' }
-    );
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: 'USER_CHANGE_PASSWORD',
+      resourceType: 'USER',
+      resourceId: 'user-1',
+      userId: 'user-1',
+      success: true,
+      resourceName: 'test@example.com',
+      params: { changeType: 'set' },
+    });
   });
 });

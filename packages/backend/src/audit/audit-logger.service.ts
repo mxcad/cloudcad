@@ -98,20 +98,20 @@ export class AuditLogger extends ConsoleLogger {
     const clientIp = this.cls.get<string>('clientIp');
     const userAgent = this.cls.get<string>('userAgent');
 
-    await this.auditLogService.log(
+    await this.auditLogService.log({
       action,
       resourceType,
       resourceId,
       userId,
       success,
       errorMessage,
-      details ? JSON.stringify(details) : undefined,
+      details: details ? JSON.stringify(details) : undefined,
       projectId,
       resourceName,
-      structuredParams,
-      clientIp,
+      params: structuredParams,
+      ipAddress: clientIp,
       userAgent,
-    );
+    });
   }
 
   private async writeToAudit(message: AuditMessage): Promise<void> {
@@ -125,19 +125,18 @@ export class AuditLogger extends ConsoleLogger {
       return;
     }
 
-    await this.auditLogService!.log(
-      action as AuditAction,
-      resourceType as ResourceType,
+    await this.auditLogService!.log({
+      action: action as AuditAction,
+      resourceType: resourceType as ResourceType,
       resourceId,
       userId,
-      success ?? true,
+      success: success ?? true,
       errorMessage,
-      details ? JSON.stringify(details) : undefined,
+      details: details ? JSON.stringify(details) : undefined,
       projectId,
       resourceName,
-      params ?? null,
-      undefined, // ipAddress 将在 audit 方法中自动填充
-      undefined, // userAgent 将在 audit 方法中自动填充
-    );
+      params: params ?? null,
+      // ipAddress / userAgent 由 audit 方法从 CLS 自动填充，此处留空
+    });
   }
 }

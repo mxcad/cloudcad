@@ -317,23 +317,19 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
         mockAuditArchiveService.verifyArchivedForCutoff
       ).not.toHaveBeenCalled();
       expect(mockAuditLogService.cleanupOldLogs).not.toHaveBeenCalled();
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.AUDIT_CLEANUP,
-        ResourceType.SYSTEM,
-        undefined,
-        'test-user',
-        false,
-        'BELOW_RETENTION_FLOOR',
-        undefined,
-        undefined,
-        undefined,
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.AUDIT_CLEANUP,
+        resourceType: ResourceType.SYSTEM,
+        userId: 'test-user',
+        success: false,
+        errorMessage: 'BELOW_RETENTION_FLOOR',
+        params: expect.objectContaining({
           reason: 'BELOW_RETENTION_FLOOR',
           requestedDaysToKeep: 90,
           retentionDays: 183,
           deletedCount: 0,
-        })
-      );
+        }),
+      });
     });
 
     it('未归档时间段返回 409 且不删数据，留痕含违规明细', async () => {
@@ -351,22 +347,18 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
         { month: '2026-05', reason: 'CSV_MISSING' },
       ]);
       expect(mockAuditLogService.cleanupOldLogs).not.toHaveBeenCalled();
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.AUDIT_CLEANUP,
-        ResourceType.SYSTEM,
-        undefined,
-        'test-user',
-        false,
-        'NOT_ARCHIVED',
-        undefined,
-        undefined,
-        undefined,
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.AUDIT_CLEANUP,
+        resourceType: ResourceType.SYSTEM,
+        userId: 'test-user',
+        success: false,
+        errorMessage: 'NOT_ARCHIVED',
+        params: expect.objectContaining({
           reason: 'NOT_ARCHIVED',
           violations: [{ month: '2026-05', reason: 'CSV_MISSING' }],
           deletedCount: 0,
-        })
-      );
+        }),
+      });
     });
 
     it('已归档 + confirm=true：执行清理并留痕（操作者/确认参数/范围/结果）', async () => {
@@ -392,23 +384,18 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
         'test-user'
       );
       // 清理动作本身记审计：操作者 + confirm + 范围 + 结果
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.AUDIT_CLEANUP,
-        ResourceType.SYSTEM,
-        undefined,
-        'test-user',
-        true,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.AUDIT_CLEANUP,
+        resourceType: ResourceType.SYSTEM,
+        userId: 'test-user',
+        success: true,
+        params: expect.objectContaining({
           confirm: true,
           effectiveDaysToKeep: 365,
           retentionDays: 183,
           deletedCount: 42,
-        })
-      );
+        }),
+      });
     });
 
     it('daysToKeep 缺省时回落到保留期配置（183），不低于下限', async () => {
@@ -434,22 +421,18 @@ describe('AuditLogController permissions (#321 三权分立)', () => {
 
       expect(res.status).toBe(HttpStatus.BAD_REQUEST);
       expect(mockAuditLogService.cleanupOldLogs).not.toHaveBeenCalled();
-      expect(mockAuditLogService.log).toHaveBeenCalledWith(
-        AuditAction.AUDIT_CLEANUP,
-        ResourceType.SYSTEM,
-        undefined,
-        'test-user',
-        false,
-        'BELOW_RETENTION_FLOOR',
-        undefined,
-        undefined,
-        undefined,
-        expect.objectContaining({
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        action: AuditAction.AUDIT_CLEANUP,
+        resourceType: ResourceType.SYSTEM,
+        userId: 'test-user',
+        success: false,
+        errorMessage: 'BELOW_RETENTION_FLOOR',
+        params: expect.objectContaining({
           requestedDaysToKeep: 700,
           effectiveDaysToKeep: 700,
           retentionDays: 730,
-        })
-      );
+        }),
+      });
     });
   });
 });

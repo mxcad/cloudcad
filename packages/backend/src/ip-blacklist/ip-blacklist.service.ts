@@ -270,38 +270,32 @@ export class IpBlacklistService {
       await this.safeRebuildCache();
 
       // 安全审计：加入 IP 黑名单（名称快照=IP，写库失败不阻塞业务）
-      await this.auditLogService.log(
-        AuditAction.IP_BLACKLIST_ADD,
-        ResourceType.IpBlacklistEntry,
-        created.id,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        undefined,
-        storedIp,
-        {
+      await this.auditLogService.log({
+        action: AuditAction.IP_BLACKLIST_ADD,
+        resourceType: ResourceType.IpBlacklistEntry,
+        resourceId: created.id,
+        userId: operatorId,
+        success: true,
+        resourceName: storedIp,
+        params: {
           ip: storedIp,
           reason: dto.reason,
           expiresAt: created.expiresAt,
-        }
-      );
+        },
+      });
 
       return this.toResponse(created);
     } catch (error) {
       // 失败也记（写库失败不阻塞业务）
-      await this.auditLogService.log(
-        AuditAction.IP_BLACKLIST_ADD,
-        ResourceType.IpBlacklistEntry,
-        undefined,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        undefined,
-        dto.ip,
-        { ip: dto.ip }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.IP_BLACKLIST_ADD,
+        resourceType: ResourceType.IpBlacklistEntry,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        resourceName: dto.ip,
+        params: { ip: dto.ip },
+      });
       throw error;
     }
   }
@@ -325,34 +319,29 @@ export class IpBlacklistService {
       await this.safeRebuildCache();
 
       // 安全审计：移出 IP 黑名单（名称快照=IP，写库失败不阻塞业务）
-      await this.auditLogService.log(
-        AuditAction.IP_BLACKLIST_REMOVE,
-        ResourceType.IpBlacklistEntry,
-        id,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        undefined,
-        existing.ip,
-        { ip: existing.ip }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.IP_BLACKLIST_REMOVE,
+        resourceType: ResourceType.IpBlacklistEntry,
+        resourceId: id,
+        userId: operatorId,
+        success: true,
+        resourceName: existing.ip,
+        params: { ip: existing.ip },
+      });
 
       return { id };
     } catch (error) {
       // 失败也记（写库失败不阻塞业务）
-      await this.auditLogService.log(
-        AuditAction.IP_BLACKLIST_REMOVE,
-        ResourceType.IpBlacklistEntry,
-        id,
-        operatorId,
-        false,
-        error instanceof Error ? error.message : String(error),
-        undefined,
-        undefined,
-        id,
-        { id }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.IP_BLACKLIST_REMOVE,
+        resourceType: ResourceType.IpBlacklistEntry,
+        resourceId: id,
+        userId: operatorId,
+        success: false,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        resourceName: id,
+        params: { id },
+      });
       throw error;
     }
   }
