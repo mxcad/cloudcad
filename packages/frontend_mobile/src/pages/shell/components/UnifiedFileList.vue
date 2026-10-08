@@ -40,6 +40,7 @@ import {
 } from '../../../components/FileIcons'
 import { useFileSystemClipboard } from '../../../stores/fileSystemClipboard'
 import { useMultiSelect } from '../../../composables/useMultiSelect'
+import { useLongPress } from '../../../composables/useLongPress'
 
 type ListItem = FileListItem
 type SortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
@@ -199,29 +200,14 @@ const { isSelectionMode, selected, enterWith, toggleSelect, selectAll, clearSele
   // 数据源更换（搜索/换 scope/刷新回第一页）时按加载项剪枝选中，避免「已选 N 项」残留却点不动
   () => props.items.map((i) => i.id),
 )
-let longPressTimer: ReturnType<typeof setTimeout> | null = null
-// 长按触发后抑制随后的合成 click：被动 touchstart（.passive）无法 preventDefault，
-// touchend 后浏览器仍派发 click → onItemClick 见已进多选态会 toggleSelect 把刚选中的项
-// 取消、清空后退出多选态，长按净效果=震动一下回到原状（触摸设备无法进入多选）。
-// 与 FileBrowserPage 项目卡片/搜索行同套守卫（longPressTriggered ? undefined : handler）。
-const longPressTriggered = ref(false)
-
-function startLongPress(item: ListItem) {
-  if (isSelectionMode.value) return
-  longPressTriggered.value = false
-  longPressTimer = setTimeout(() => {
-    longPressTriggered.value = true
+// 长按进多选：唯一出口 useLongPress。已在多选态时长按无意义（短按即可勾选），不启动计时。
+const longPress = useLongPress<ListItem>({
+  onStart: () => !isSelectionMode.value,
+  onTrigger: (item) => {
     enterWith(item)
     vibrate()
-  }, 500)
-}
-
-function cancelLongPress() {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer)
-    longPressTimer = null
-  }
-}
+  },
+})
 
 function onItemClick(item: ListItem) {
   if (isSelectionMode.value) {
@@ -231,15 +217,11 @@ function onItemClick(item: ListItem) {
   }
 }
 
-// 长按守卫：只抑制长按后紧随的那次合成 click（消费后复位）。
+// 长按守卫：只抑制长按后紧随的那次合成 click（消费后复位，见 useLongPress）。
 // 原内联 `longPressTriggered ? undefined : onItemClick` 不复位标志，长按进多选后
 // 标志恒为 true，后续所有点选追加都被吞——触摸设备无法逐项勾选，只能靠「全选」。
-// 与 LibraryPanel / ShareManagePage 的消费式写法对齐。
 function onItemTap(item: ListItem) {
-  if (longPressTriggered.value) {
-    longPressTriggered.value = false
-    return
-  }
+  if (longPress.shouldSuppressTap()) return
   onItemClick(item)
 }
 
@@ -442,9 +424,9 @@ async function onPullRefresh() {
           class="grid-item"
           :class="{ 'grid-item--folder': item.isFolder, 'grid-item--selected': selected.has(item.id) }"
           @click="onItemTap(item)"
-          @touchstart.passive="startLongPress(item)"
-          @touchend="cancelLongPress"
-          @touchmove="cancelLongPress"
+          @touchstart.passive="longPress.start(item)"
+          @touchend="longPress.cancel"
+          @touchmove="longPress.cancel"
           @contextmenu.prevent="onItemClick(item)"
         >
           <div v-if="item.isFolder" class="grid-thumb grid-thumb--folder">
@@ -498,9 +480,9 @@ async function onPullRefresh() {
           class="list-item"
           :class="{ 'list-item--selected': selected.has(item.id) }"
           @click="onItemTap(item)"
-          @touchstart.passive="startLongPress(item)"
-          @touchend="cancelLongPress"
-          @touchmove="cancelLongPress"
+          @touchstart.passive="longPress.start(item)"
+          @touchend="longPress.cancel"
+          @touchmove="longPress.cancel"
           @contextmenu.prevent="onItemClick(item)"
         >
           <div class="list-icon" :class="item.isFolder ? 'list-icon--folder' : 'list-icon--file'">

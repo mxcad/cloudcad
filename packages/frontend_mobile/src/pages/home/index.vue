@@ -55,7 +55,6 @@ import LoginPromptPopup from '@/components/LoginPromptPopup.vue';
 import CooperatePopup from './components/CooperatePopup.vue';
 import ShareCurrentPopup from './components/ShareCurrentPopup.vue';
 import InsertBlockPopup from './components/InsertBlockPopup.vue';
-import type { LibraryType } from '../../composables/useLibrary';
 import { pendingInsertParams } from '../../command/m_mx_insert_block';
 import type { BlockInfoItem } from '../../composables/useInsertBlock';
 import MxToolbar from '@/components/MxToolbar.vue';
@@ -455,16 +454,6 @@ const handleShowInsertBlock = (e: Event) => {
   showInsertBlock.value = true;
 };
 
-const handleShowLibrary = (e: Event) => {
-  const libraryType = ((e as CustomEvent).detail as LibraryType) ?? 'drawing';
-  // 库是浮在画布上的抽屉，由壳统一打开（见 shell/index.vue 的 handleShellNavigate）
-  window.dispatchEvent(
-    new CustomEvent('mxcad-shell-navigate', {
-      detail: `/shell/library/${libraryType}`,
-    })
-  );
-};
-
 // E-07 分享当前图纸：编辑器菜单经 mxcad-share-current 事件唤起
 const showShareCurrent = ref(false);
 const handleShareCurrent = () => {
@@ -520,7 +509,6 @@ onMounted(async () => {
   window.addEventListener('mxcad-new-file', handleNewFile);
   window.addEventListener('mxcad-show-collaborate', handleShowCollaborate);
   window.addEventListener('mxcad-show-insert-block', handleShowInsertBlock);
-  window.addEventListener('mxcad-show-library', handleShowLibrary);
   window.addEventListener('mxcad-share-current', handleShareCurrent);
   window.addEventListener('beforeunload', onBeforeUnloadHandler);
 
@@ -538,7 +526,6 @@ onMounted(async () => {
       'mxcad-show-insert-block',
       handleShowInsertBlock
     );
-    window.removeEventListener('mxcad-show-library', handleShowLibrary);
     window.removeEventListener('mxcad-share-current', handleShareCurrent);
     window.removeEventListener('beforeunload', onBeforeUnloadHandler);
     autoJoinCleanup?.();

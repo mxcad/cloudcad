@@ -25,6 +25,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { BatchDownloadTaskDto, BatchDownloadErrorDto } from '@cloudcad/api-sdk/types.gen'
 import { cachedApiUrl } from '@/utils/apiConfig'
+import { triggerUrlDownload } from '@/utils/download'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { t } from '@/languages'
 
@@ -193,53 +194,42 @@ export function useBatchDownload() {
     return taskId ?? ''
   }
 
-  /** zip 完成下载（锚点） */
+  /** zip 完成下载：文件名由服务端 Content-Disposition 决定（不传 download 属性） */
   function downloadZip(taskId: string) {
-    const a = document.createElement('a')
-    a.href = cachedApiUrl(`/file-system/batch-download/${taskId}/download`)
-    a.download = ''
-    a.style.display = 'none'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    triggerUrlDownload(cachedApiUrl(`/file-system/batch-download/${taskId}/download`))
   }
 
-  /** individual 任务单项产物下载（锚点）：单文件任务只有 1 项，固定 items/0/download */
+  /** individual 任务单项产物下载：文件名由服务端 Content-Disposition 决定 */
   function downloadSingleFileItem(taskId: string) {
-    const a = document.createElement('a')
-    a.href = cachedApiUrl(`/file-system/batch-download/${taskId}/items/0/download`)
-    a.download = ''
-    a.style.display = 'none'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    triggerUrlDownload(cachedApiUrl(`/file-system/batch-download/${taskId}/items/0/download`))
   }
 
-  async function cancelTask(taskId: string) {
+  /** 任务控制操作（取消/重试/重试失败项）统一出口：调端点 → 重载任务列表 → 失败静默（调用方 toast 兜底） */
+  async function runTaskControl(call: () => Promise<unknown>): Promise<void> {
     try {
-      await batchDownloadControllerCancelTask({ path: { taskId } } as never)
+      await call()
       await loadTasks()
     } catch {
       /* 失败由调用方 toast 兜底 */
     }
   }
 
+  async function cancelTask(taskId: string) {
+    return runTaskControl(() =>
+      batchDownloadControllerCancelTask({ path: { taskId } } as never)
+    )
+  }
+
   async function retryTask(taskId: string) {
-    try {
-      await batchDownloadControllerRetryTask({ path: { taskId } } as never)
-      await loadTasks()
-    } catch {
-      /* 同上 */
-    }
+    return runTaskControl(() =>
+      batchDownloadControllerRetryTask({ path: { taskId } } as never)
+    )
   }
 
   async function retryFailedItems(taskId: string) {
-    try {
-      await batchDownloadControllerRetryFailedItems({ path: { taskId } } as never)
-      await loadTasks()
-    } catch {
-      /* 同上 */
-    }
+    return runTaskControl(() =>
+      batchDownloadControllerRetryFailedItems({ path: { taskId } } as never)
+    )
   }
 
   /** 拉取单任务逐文件错误（progress 端点，含 errors 对象数组；任务列表端点只有 errorCount 计数）。

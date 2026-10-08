@@ -43,12 +43,16 @@ import {
   batchDownloadControllerGetUserTasks,
   batchDownloadControllerGetProgress,
   batchDownloadControllerGetFolderFiles,
+  batchDownloadControllerCancelTask,
+  batchDownloadControllerRetryFailedItems,
 } from '@cloudcad/api-sdk/sdk.gen'
 
 const mockedCreate = batchDownloadControllerCreateTask as ReturnType<typeof vi.fn>
 const mockedGetTasks = batchDownloadControllerGetUserTasks as ReturnType<typeof vi.fn>
 const mockedGetProgress = batchDownloadControllerGetProgress as ReturnType<typeof vi.fn>
 const mockedGetFolderFiles = batchDownloadControllerGetFolderFiles as ReturnType<typeof vi.fn>
+const mockedCancel = batchDownloadControllerCancelTask as ReturnType<typeof vi.fn>
+const mockedRetryFailed = batchDownloadControllerRetryFailedItems as ReturnType<typeof vi.fn>
 
 describe('批量下载门控（batchDownloadEnabled）', () => {
   beforeEach(() => {
@@ -221,5 +225,36 @@ describe('useBatchDownload.fetchTaskErrors（逐文件错误详情，对齐 PC �
     mockedGetProgress.mockRejectedValue(new Error('network down'))
     const { fetchTaskErrors } = useBatchDownload()
     expect(await fetchTaskErrors('task-y')).toStrictEqual([])
+  })
+})
+
+describe('useBatchDownload 任务控制（取消/重试失败项，统一 runTaskControl 出口）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockBatchDownloadEnabled.value = true
+    mockedGetTasks.mockResolvedValue({ data: { tasks: [] }, error: null })
+  })
+
+  it('cancelTask 成功 → 调取消端点并重载任务列表', async () => {
+    mockedCancel.mockResolvedValue({ data: null, error: null })
+    const { cancelTask } = useBatchDownload()
+    await cancelTask('task-1')
+    expect(mockedCancel).toHaveBeenCalledWith({ path: { taskId: 'task-1' } })
+    expect(mockedGetTasks).toHaveBeenCalled()
+  })
+
+  it('cancelTask 端点抛错 → 静默吞掉（不抛出），且不再重载', async () => {
+    mockedCancel.mockRejectedValue(new Error('boom'))
+    const { cancelTask } = useBatchDownload()
+    await expect(cancelTask('task-1')).resolves.toBeUndefined()
+    expect(mockedGetTasks).not.toHaveBeenCalled()
+  })
+
+  it('retryFailedItems 走同一出口 → 调重试失败项端点并重载', async () => {
+    mockedRetryFailed.mockResolvedValue({ data: null, error: null })
+    const { retryFailedItems } = useBatchDownload()
+    await retryFailedItems('task-1')
+    expect(mockedRetryFailed).toHaveBeenCalledWith({ path: { taskId: 'task-1' } })
+    expect(mockedGetTasks).toHaveBeenCalled()
   })
 })

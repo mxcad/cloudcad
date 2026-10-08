@@ -306,6 +306,7 @@ import { t } from '@/languages'
 import { MxFun } from 'mxdraw'
 import FloatingPopup from '@/components/FloatingPopup.vue'
 import { useLibrary, LibraryType } from '@/composables/useLibrary'
+import { useLongPress } from '@/composables/useLongPress'
 import { useViewMode } from '@/composables/useViewMode'
 import { useEditorState } from '@/composables/useEditorState'
 import { useOpenGuard } from '@/composables/useOpenGuard'
@@ -314,6 +315,7 @@ import { useUser } from '@/composables/useUser'
 import { PERMISSIONS, canExportDownloadGate } from '@/services/permissionService'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { calculateFileHash } from '@/utils/hashUtils'
+import { runUploadPool } from '@/utils/uploadPool'
 import { uploadFile } from '@/services/mobileUploadService'
 import {
   buildLibraryFileUrl,
@@ -421,14 +423,8 @@ onUnmounted(() => {
 
 // ── 项目点击 ──
 async function onItemClick(node: FileSystemNodeDto) {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-  if (longPressTriggered.value) {
-    longPressTriggered.value = false
-    return
-  }
+  // 长按触发后抑制紧随的合成 click（消费式守卫，见 useLongPress）
+  if (longPress.shouldSuppressTap()) return
   if (library.isFolder(node)) {
     library.enterFolder(node)
     return
@@ -554,37 +550,24 @@ function exitSelection() {
 }
 
 // ── 长按进入多选 ──
-// 只有持续按住足够久（明显长按）才进入多选，避免点击/滚动时误触。
-// 已在多选态时长按无意义（短按即可勾选），不再计时。
-const LONG_PRESS_THRESHOLD = 800
-const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null)
-const longPressTriggered = ref(false)
+// 只有持续按住足够久（明显长按）才进入多选，避免点击/滚动时误触（800ms 阈值）。
+// 已在多选态或目标是文件夹时长按无意义（短按即可勾选 / 文件夹不可选），不启动计时。
+const longPress = useLongPress<FileSystemNodeDto>({
+  threshold: 800,
+  onStart: (node) => !library.isFolder(node) && !selecting.value,
+  onTrigger: (node) => enterSelection(node),
+})
 
 function onTouchStart(_e: TouchEvent, node: FileSystemNodeDto) {
-  if (library.isFolder(node) || selecting.value) return
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-  longPressTriggered.value = false
-  longPressTimer.value = setTimeout(() => {
-    longPressTriggered.value = true
-    enterSelection(node)
-  }, LONG_PRESS_THRESHOLD)
+  longPress.start(node)
 }
 
 function onTouchMove() {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
+  longPress.cancel()
 }
 
 function onTouchEnd() {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
+  longPress.cancel()
 }
 
 // ── 图片加载失败 → 显示文件类型图标 ──
@@ -626,25 +609,29 @@ async function onFilesPicked(e: Event) {
     return
   }
 
+  // 多文件上传：唯一出口 runUploadPool（并发 2，对齐 FileBrowserPage / ProjectDetailPage）；
+  // 本面板保留计数式 toast（一次传多文件时比逐文件 toast 更易读），失败明细进 console
   uploading.value = true
-  let okCount = 0
-  for (const file of files) {
-    try {
-      const hash = await calculateFileHash(file)
-      await uploadFile({ file, hash, nodeId: parentId })
-      okCount++
-    } catch (err) {
-      console.error('[LibraryPanel] upload failed:', file.name, err)
+  try {
+    const { ok, failed } = await runUploadPool(
+      files,
+      async (file) => {
+        const hash = await calculateFileHash(file)
+        await uploadFile({ file, hash, nodeId: parentId })
+      },
+      (file, ok) => {
+        if (!ok) console.error('[LibraryPanel] upload failed:', file.name)
+      },
+    )
+    if (ok > 0) {
+      showToast(t('已上传 {count} 个文件', { count: String(ok) }))
+      library.page.value = 1
+      library.loadNodes()
+    } else if (failed > 0) {
+      showToast(t('上传失败'))
     }
-  }
-  uploading.value = false
-
-  if (okCount > 0) {
-    showToast(t('已上传 {count} 个文件', { count: String(okCount) }))
-    library.page.value = 1
-    library.loadNodes()
-  } else {
-    showToast(t('上传失败'))
+  } finally {
+    uploading.value = false
   }
 }
 

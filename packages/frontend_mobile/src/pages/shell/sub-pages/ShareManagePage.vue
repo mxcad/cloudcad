@@ -10,6 +10,7 @@
 import { ref, watch, computed } from 'vue'
 import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
 import { useShareLinkCopy } from '@/composables/useShareLinkCopy'
+import { useLongPress } from '@/composables/useLongPress'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import { shareControllerListShares, shareControllerRevokeShare, shareControllerUpdateShare, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
@@ -18,6 +19,7 @@ import QRCode from 'qrcode'
 import { t } from '@/languages'
 import { extractExtension } from '@/composables/useNodeFormatter'
 import { shareUrl } from '@/utils/shareUrl'
+import { formatShareExpiry } from '@/utils/shareDate'
 import { vibrate } from '@/utils/vibrate'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import {
@@ -144,7 +146,7 @@ async function loadShares(append = false) {
         ext,
         status,
         statusText: status === 'active' ? t('有效') : t('已过期'),
-        expireText: formatExpiryDate(expiresAt),
+        expireText: formatShareExpiry(expiresAt),
         usedCount: s.usedCount ?? 0,
         url: shareUrl(s.url),
         createdAt: s.createdAt ?? '',
@@ -199,27 +201,6 @@ watch([sortBy, sortOrder], () => loadShares())
 
 // 分享链接一律取后端返回的 url（ShareListItemDto.url 必填）。
 // 不本地拼 `/share/{id}`——两端路由表里都没有 `/share/:token`，拼出来是死链。
-
-// 到期时间展示（对齐 PC formatExpiryDate）：null=永不过期，否则本地化日期
-function formatExpiryDate(dateStr: string | null): string {
-  if (!dateStr) return t('永不过期')
-  try {
-    return new Date(dateStr).toLocaleDateString()
-  } catch {
-    return dateStr
-  }
-}
-
-// 创建成功面板的到期提示：对齐 PC ShareDialog 用 toLocaleString()（含时分）；
-// 列表行仍走 formatExpiryDate 的 toLocaleDateString()（PC 两处同为分档口径）
-function formatCreatedExpiry(dateStr: string | null): string {
-  if (!dateStr) return t('永不过期')
-  try {
-    return new Date(dateStr).toLocaleString()
-  } catch {
-    return dateStr
-  }
-}
 
 // 创建时间展示（对齐 PC createdAt 列）
 function formatDate(iso: string): string {
@@ -279,31 +260,19 @@ async function onRevokeCreated() {
 }
 
 // ── C-03 多选 + 批量撤销（对齐 PC ShareTable 行选择 + BatchActionBar）──
-// 长按进入多选（与文件列表/项目卡片同套 500ms 手势）；底部操作栏「批量撤销」
+// 长按进入多选（与文件列表/项目卡片同套 500ms 手势，唯一出口 useLongPress）；底部操作栏「批量撤销」
 const isSelecting = ref(false)
 const selectedTokens = ref<string[]>([])
 const batchRevoking = ref(false)
-let shareLongPressTimer: ReturnType<typeof setTimeout> | null = null
-const shareLongPressTriggered = ref(false)
-
-function onShareTouchStart(item: ShareItem) {
-  shareLongPressTriggered.value = false
-  shareLongPressTimer = setTimeout(() => {
-    shareLongPressTriggered.value = true
+const shareLongPress = useLongPress<ShareItem>({
+  onTrigger: (item) => {
     if (!isSelecting.value) {
       isSelecting.value = true
       selectedTokens.value = [item.token]
     }
     vibrate()
-  }, 500)
-}
-
-function cancelShareLongPress() {
-  if (shareLongPressTimer) {
-    clearTimeout(shareLongPressTimer)
-    shareLongPressTimer = null
-  }
-}
+  },
+})
 
 function toggleSelect(token: string) {
   const idx = selectedTokens.value.indexOf(token)
@@ -448,11 +417,8 @@ function copyQrUrl() {
 }
 
 function onShareClick(item: ShareItem) {
-  // 长按触发后抑制随后的 click
-  if (shareLongPressTriggered.value) {
-    shareLongPressTriggered.value = false
-    return
-  }
+  // 长按触发后抑制紧随的合成 click（消费式守卫，见 useLongPress）
+  if (shareLongPress.shouldSuppressTap()) return
   // C-03 多选模式：点按切换选中（不进 action sheet）
   if (isSelecting.value) {
     toggleSelect(item.token)
@@ -823,9 +789,9 @@ function onCustomDaysInput(e: Event) {
         :key="s.id"
         :class="['share-item', { 'share-item--selected': isSelecting && selectedTokens.includes(s.token) }]"
         @click="onShareClick(s)"
-        @touchstart.passive="onShareTouchStart(s)"
-        @touchend="cancelShareLongPress"
-        @touchmove="cancelShareLongPress"
+        @touchstart.passive="shareLongPress.start(s)"
+        @touchend="shareLongPress.cancel"
+        @touchmove="shareLongPress.cancel"
       >
         <!-- C-03 多选模式：选中指示（纯 CSS 圆圈勾选，不依赖 vant 图标名）-->
         <span
@@ -990,7 +956,7 @@ function onCustomDaysInput(e: Event) {
             <div class="expire-hint">
               <van-icon name="clock-o" size="12" />
               <template v-if="singleCreated.expiresAt">
-                {{ t('有效期至') }} {{ formatCreatedExpiry(singleCreated.expiresAt) }}
+                {{ t('有效期至') }} {{ formatShareExpiry(singleCreated.expiresAt, true) }}
               </template>
               <template v-else>{{ t('永不过期') }}</template>
             </div>

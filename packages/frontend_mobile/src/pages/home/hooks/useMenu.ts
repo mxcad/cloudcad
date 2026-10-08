@@ -19,7 +19,6 @@ import {
 } from '../../../composables/useSaveAs';
 import { useUser } from '../../../composables/useUser';
 import { useRuntimeConfig } from '../../../composables/useRuntimeConfig';
-import { useShellMode } from '@/composables/useShellMode';
 
 /**
  * M7 编辑器菜单裁剪：壳模式下从编辑器菜单剥离的入口。
@@ -47,7 +46,6 @@ export const useMenu = () => {
   const isShowMenu = ref(false);
   const { user } = useUser();
   const { config } = useRuntimeConfig();
-  const { isShellMode } = useShellMode();
 
   const canExportDownload = (): boolean =>
     canExportDownloadGate(user.value, config.value.freeExportDownloadEnabled);
@@ -145,14 +143,10 @@ export const useMenu = () => {
     ];
 
     // M7 壳模式：编辑器菜单只剥离账号设置入口（语言/退出登录），
-    // 迁移到壳顶栏「+」菜单
-    if (isShellMode.value) {
-      items = items.filter(
-        (item) =>
-          !isShellMenuCmd((item as Record<string, unknown>).cmd as string)
-      );
-    }
-    return items;
+    // 迁移到壳顶栏「+」菜单（移动端 App 恒为壳模式，过滤恒生效）
+    return items.filter(
+      (item) => !isShellMenuCmd((item as Record<string, unknown>).cmd as string)
+    );
   };
   const actions = ref<PopoverAction[]>(getDefaultMenuData());
   addCommand('Mx_NewFile', () => {
@@ -189,30 +183,19 @@ export const useMenu = () => {
   addCommand('Mx_ShowCollaborate', () => {
     window.dispatchEvent(new CustomEvent('mxcad-show-collaborate'));
   });
+  // 移动端 App 恒为壳模式：图纸库/图块库走壳内导航（旧的 mxcad-show-library 非壳分支已删）
   addCommand('Mx_ShowDrawingLibrary', () => {
-    if (isShellMode.value) {
-      window.dispatchEvent(
-        new CustomEvent('mxcad-shell-navigate', {
-          detail: '/shell/library/drawing',
-        })
-      );
-      return;
-    }
     window.dispatchEvent(
-      new CustomEvent('mxcad-show-library', { detail: 'drawing' })
+      new CustomEvent('mxcad-shell-navigate', {
+        detail: '/shell/library/drawing',
+      })
     );
   });
   addCommand('Mx_ShowBlockLibrary', () => {
-    if (isShellMode.value) {
-      window.dispatchEvent(
-        new CustomEvent('mxcad-shell-navigate', {
-          detail: '/shell/library/block',
-        })
-      );
-      return;
-    }
     window.dispatchEvent(
-      new CustomEvent('mxcad-show-library', { detail: 'block' })
+      new CustomEvent('mxcad-shell-navigate', {
+        detail: '/shell/library/block',
+      })
     );
   });
   addCommand('Mx_export', showExportSubMenu);

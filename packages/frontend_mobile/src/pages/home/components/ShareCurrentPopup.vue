@@ -29,6 +29,7 @@ import {
 } from '@cloudcad/platform'
 import { errMsg } from '@/utils/apiError'
 import { shareUrl } from '@/utils/shareUrl'
+import { formatShareExpiry } from '@/utils/shareDate'
 
 // 后端 getFileShares 只返回 token/url/expiresAt/createdAt/createdBy/fileName
 // （无 id、无 usedCount，且服务端已过滤掉已过期项）
@@ -214,13 +215,6 @@ async function handleRevoke(item: FileShareItem) {
   }
 }
 
-function formatExpiry(dateStr?: string | null): string {
-  if (!dateStr) return t('永不过期')
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return t('永不过期')
-  return d.toLocaleDateString()
-}
-
 // 弹窗打开时重置并拉取已有分享
 watch(
   () => props.show,
@@ -311,7 +305,7 @@ function onClose() {
               </button>
             </div>
             <div class="sc-expiry-note">
-              {{ t('有效期') }}：{{ formatExpiry(created.expiresAt) }}
+              {{ t('有效期') }}：{{ formatShareExpiry(created.expiresAt) }}
             </div>
           </div>
 
@@ -338,7 +332,7 @@ function onClose() {
                   </button>
                 </div>
                 <div class="sc-share-row sc-share-row--meta">
-                  <span class="sc-share-expiry">{{ formatExpiry(item.expiresAt) }}</span>
+                  <span class="sc-share-expiry">{{ formatShareExpiry(item.expiresAt) }}</span>
                   <button class="sc-revoke" @click="handleRevoke(item)">{{ t('撤销') }}</button>
                 </div>
               </div>
