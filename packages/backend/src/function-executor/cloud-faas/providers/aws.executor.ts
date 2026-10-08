@@ -1,7 +1,8 @@
 import { ConfigService } from '@nestjs/config';
-import * as https from 'https';
+import type { RequestOptions } from 'https';
 import * as crypto from 'crypto';
 import type { ConversionTask } from '../../function-executor.interface';
+import { buildFaasInvokeBody, faasHttpsJsonRequest } from '../faas-http';
 
 export class LambdaExecutor {
   private readonly endpoint: string;
@@ -17,14 +18,7 @@ export class LambdaExecutor {
   }
 
   async invoke(task: ConversionTask): Promise<{ status: string; outputPath?: string; error?: string; metadata?: Record<string, unknown> }> {
-    const body = JSON.stringify({
-      taskId: task.id,
-      type: task.type,
-      params: task.params,
-      priority: task.priority,
-    });
-
-    const response = await this.request('/2015-03-31/functions/cloudcad-convert/invocations', 'POST', body);
+    const response = await this.request('/2015-03-31/functions/cloudcad-convert/invocations', 'POST', buildFaasInvokeBody(task));
     if (response.statusCode === 200) {
       const payload = typeof response.Payload === 'string' ? JSON.parse(response.Payload) : response.Payload;
       if (payload.code === 0) {
@@ -46,7 +40,9 @@ export class LambdaExecutor {
 
   private request(path: string, method: string, body?: string): Promise<any> {
     const url = new URL(path, this.endpoint);
-    const amzDate = new Date().toISOString().replace(/[:\-]|\.\d{3}/g, '') + 'Z';
+    // toISOString() 已含结尾 Z，替换掉 : - .sss 后即 SigV4 要求的 YYYYMMDD'T'HHMMSS'Z'
+    // 单 Z 形态；切勿再 + 'Z'（会成双 Z，真实 AWS 拒绝签名）
+    const amzDate = new Date().toISOString().replace(/[:\-]|\.\d{3}/g, '');
     const datestamp = amzDate.substring(0, 8);
 
     const canonicalHeaders = `host:${url.hostname}\nx-amz-date:${amzDate}\n`;
@@ -60,36 +56,27 @@ export class LambdaExecutor {
     const signature = this.sign(stringToSign, datestamp);
     const authorization = `AWS4-HMAC-SHA256 Credential=${this.ak}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 
-    return new Promise((resolve, reject) => {
-      const options: https.RequestOptions = {
-        hostname: url.hostname,
-        port: 443,
-        path: url.pathname,
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Amz-Date': amzDate,
-          'Authorization': authorization,
-          'X-Amz-Invocation-Type': 'RequestResponse',
-        },
-        timeout: 300000,
-        rejectUnauthorized: false,
-      };
-      if (body) options.headers!['Content-Length'] = Buffer.byteLength(body);
+    const options: RequestOptions = {
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname,
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Amz-Date': amzDate,
+        'Authorization': authorization,
+        'X-Amz-Invocation-Type': 'RequestResponse',
+      },
+      timeout: 300000,
+      rejectUnauthorized: false,
+    };
+    if (body) options.headers!['Content-Length'] = Buffer.byteLength(body);
 
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try { resolve(JSON.parse(data)); }
-          catch { resolve({ statusCode: res.statusCode, Payload: data }); }
-        });
-      });
-      req.on('error', (err) => reject(err));
-      req.on('timeout', () => { req.destroy(); reject(new Error('Request timeout')); });
-      if (body) req.write(body);
-      req.end();
-    });
+    // AWS 解析失败兜底与华为/阿里云不同：保留 {statusCode, Payload} 供 invoke 判 statusCode
+    return faasHttpsJsonRequest(options, body, (data, res) => ({
+      statusCode: res.statusCode,
+      Payload: data,
+    }));
   }
 
   private sign(stringToSign: string, datestamp: string): string {
