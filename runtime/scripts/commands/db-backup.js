@@ -28,6 +28,7 @@ const {
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { parseEnvFile } = require('../lib/env');
 const { prompt, promptConfirm } = require('../lib/prompt');
+const { formatSize } = require('../lib/format');
 
 /**
  * 列出所有备份文件
@@ -53,14 +54,6 @@ function listBackupFiles() {
     .sort((a, b) => b.modified - a.modified); // 按时间倒序
 }
 
-/**
- * 格式化文件大小
- */
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-}
 
 /**
  * 获取 pg_dump 路径

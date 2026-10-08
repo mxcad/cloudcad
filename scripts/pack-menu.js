@@ -23,8 +23,13 @@ const IS_WINDOWS = os.platform() === 'win32';
 
 // 品牌单一事实源（runtime/scripts/lib/branding.js）
 const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
+// 发行版清单单一事实源（pack-lib/linux-os.js，ADR-0059 收敛 3 glibc 档）
+const { LINUX_OS } = require('./pack-lib/linux-os');
 
-const OS_OPTIONS = ['centos7', 'ubuntu22', 'ubuntu24', 'rocky8', 'rocky9', 'debian'];
+const OS_OPTIONS = Object.entries(LINUX_OS).map(([id, def]) => ({
+  id,
+  label: def.label,
+}));
 
 const TYPE_OPTIONS = [
   { key: '1', id: 'upgrade', label: '升级包（业务产物全集，不含 store，依赖目标机既有 store 离线补装）' },
@@ -199,11 +204,11 @@ async function main() {
     }
     channel = await pick(channelOptions, '请选择平台通道');
 
-    // 4. Linux 容器通道：选择 OS 变体
+    // 4. Linux 容器通道：选择 OS 变体（清单与 pack-linux-deploy --os 同源）
     if (channel.id === 'docker') {
       osArg = (
         await pick(
-          OS_OPTIONS.map((o, i) => ({ key: String(i + 1), id: o, label: o })),
+          OS_OPTIONS.map((o, i) => ({ key: String(i + 1), id: o.id, label: o.label })),
           '请选择目标 Linux 发行版',
           '1'
         )

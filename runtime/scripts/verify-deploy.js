@@ -8,8 +8,7 @@
  *   node runtime/scripts/verify-deploy.js
  */
 
-const { spawn, spawnSync, execSync } = require('child_process');
-const http = require('http');
+const { spawnSync, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { PRODUCT_NAME } = require('./lib/branding');
@@ -18,17 +17,24 @@ const { fillEmptySecrets } = require('./setup-offline');
 
 // ==================== 配置 ====================
 
-const { PLATFORM, IS_WINDOWS, IS_LINUX } = require('./lib/context');
+// 上下文常量与进程/健康检查原语统一走 lib/*（单一事实源）；
+// env 解析刻意保留本文件自己的（D5：验收器独立，见 getConversionServiceConfig 注释）
+const {
+  PLATFORM,
+  IS_WINDOWS,
+  IS_LINUX,
+  PROJECT_ROOT,
+  RUNTIME_DIR,
+  PLATFORM_DIR,
+  USE_RUNTIME,
+  DATA_DIR,
+  PM2_HOME,
+  NODE_EXE,
+  PNPM_JS,
+} = require('./lib/context');
+const { runCommand, runPm2 } = require('./lib/proc');
+const { checkHttpOnce, isPortOpen } = require('./lib/health');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
-const RUNTIME_DIR = path.resolve(__dirname, '..');
-const PLATFORM_DIR = IS_WINDOWS
-  ? path.join(RUNTIME_DIR, 'windows')
-  : path.join(RUNTIME_DIR, 'linux');
-
-const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
-const DATA_DIR = path.join(PROJECT_ROOT, 'data');
-const PM2_HOME = path.join(DATA_DIR, 'pm2');
 const LOGS_DIR = path.join(DATA_DIR, 'logs');
 
 // Prisma schema-engine 预置二进制（pack-offline.js bundlePrismaSchemaEngine 预置到
@@ -222,21 +228,6 @@ function getConversionServiceConfig() {
   return { enabled: true, dist, env };
 }
 
-// 可执行文件路径
-const NODE_EXE = USE_RUNTIME
-  ? IS_WINDOWS
-    ? path.join(PLATFORM_DIR, 'node', 'node.exe')
-    : path.join(PLATFORM_DIR, 'node', 'bin', 'node')
-  : 'node';
-
-const PM2_JS = USE_RUNTIME
-  ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pm2', 'bin', 'pm2')
-  : null;
-
-const PNPM_JS = USE_RUNTIME
-  ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs')
-  : null;
-
 // ==================== 日志函数 ====================
 
 const colors = {
@@ -277,24 +268,6 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-}
-
-function runCommand(command, args, options = {}) {
-  const result = spawnSync(command, args, {
-    cwd: options.cwd || PROJECT_ROOT,
-    stdio: options.silent ? 'pipe' : 'inherit',
-    shell: IS_WINDOWS,
-    env: {
-      ...process.env,
-      ...options.env,
-    },
-    timeout: options.timeout || 60000,
-  });
-  return result.status === 0;
-}
-
-function runNode(scriptPath, args = [], options = {}) {
-  return runCommand(NODE_EXE, [scriptPath, ...args], options);
 }
 
 // Prisma 二进制目标平台（必须与 pack-offline.js 中的 prepareDeployStore 一致）
@@ -343,77 +316,12 @@ function runPnpm(args, options = {}) {
   return runCommand('pnpm', args, { ...options, env });
 }
 
-function runPm2(args, options = {}) {
-  if (!PM2_JS || !fs.existsSync(PM2_JS)) {
-    log('error', 'PM2 不可用');
-    return false;
-  }
-
-  const nodeDir = path.dirname(NODE_EXE);
-  const existingPath = process.env.PATH || '';
-  const newPath = USE_RUNTIME
-    ? IS_WINDOWS
-      ? `${nodeDir};${existingPath}`
-      : `${nodeDir}:${existingPath}`
-    : existingPath;
-
-  return runCommand(NODE_EXE, [PM2_JS, ...args], {
-    ...options,
-    env: {
-      ...options.env,
-      PM2_HOME,
-      PATH: newPath,
-    },
-  });
-}
-
 /**
- * HTTP 健康检查
+ * pm2 命令包装（lib/proc runPm2 + 60s 超时）：验收脚本非交互运行，
+ * pm2 命令挂起时不能让验收流程永久挂住（对齐旧 runCommand 的默认超时）。
  */
-function checkHealth(port, path = '/health', timeout = 5000) {
-  return new Promise((resolve) => {
-    const req = http.request(
-      {
-        hostname: 'localhost',
-        port,
-        path,
-        method: 'GET',
-        timeout,
-      },
-      (res) => {
-        resolve(res.statusCode === 200);
-      }
-    );
-
-    req.on('error', () => resolve(false));
-    req.on('timeout', () => {
-      req.destroy();
-      resolve(false);
-    });
-    req.end();
-  });
-}
-
-/**
- * TCP 端口检查
- */
-function checkPort(port, timeout = 5000) {
-  return new Promise((resolve) => {
-    const net = require('net');
-    const socket = net.connect(port, 'localhost');
-
-    socket.on('connect', () => {
-      socket.end();
-      resolve(true);
-    });
-
-    socket.on('error', () => resolve(false));
-
-    setTimeout(() => {
-      socket.destroy();
-      resolve(false);
-    }, timeout);
-  });
+function pm2(args, options = {}) {
+  return runPm2(args, { timeout: 60000, ...options });
 }
 
 /**
@@ -585,12 +493,12 @@ async function step3_StartInfrastructure() {
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
 
   // 停止旧进程
-  runPm2(['delete', 'all'], { silent: true });
-  runPm2(['kill'], { silent: true });
+  pm2(['delete', 'all'], { silent: true });
+  pm2(['kill'], { silent: true });
 
   // 启动基础服务
   if (
-    !runPm2([
+    !pm2([
       'start',
       ecosystemPath,
       '--only',
@@ -604,7 +512,9 @@ async function step3_StartInfrastructure() {
   // 等待 PostgreSQL 就绪
   log('info', '等待 PostgreSQL...');
   if (
-    !(await waitForService('PostgreSQL', () => checkPort(PORTS.postgresql)))
+    !(await waitForService('PostgreSQL', () =>
+      isPortOpen(PORTS.postgresql, 'localhost', 5000)
+    ))
   ) {
     logError('PostgreSQL 启动超时');
     return false;
@@ -613,7 +523,11 @@ async function step3_StartInfrastructure() {
 
   // 等待 Redis 就绪
   log('info', '等待 Redis...');
-  if (!(await waitForService('Redis', () => checkPort(PORTS.redis)))) {
+  if (
+    !(await waitForService('Redis', () =>
+      isPortOpen(PORTS.redis, 'localhost', 5000)
+    ))
+  ) {
     logError('Redis 启动超时');
     return false;
   }
@@ -624,7 +538,7 @@ async function step3_StartInfrastructure() {
   if (
     await waitForService(
       'Config-service',
-      () => checkPort(PORTS.configService),
+      () => isPortOpen(PORTS.configService, 'localhost', 5000),
       30000
     )
   ) {
@@ -636,7 +550,11 @@ async function step3_StartInfrastructure() {
   // Cooperate 服务可选
   log('info', '等待 Cooperate...');
   if (
-    await waitForService('Cooperate', () => checkPort(PORTS.cooperate), 30000)
+    await waitForService(
+      'Cooperate',
+      () => isPortOpen(PORTS.cooperate, 'localhost', 5000),
+      30000
+    )
   ) {
     logSuccess('Cooperate 已就绪');
   } else {
@@ -747,7 +665,7 @@ async function step5_StartBackend() {
     `module.exports = { apps: [${JSON.stringify(backendConfig)}] };`
   );
 
-  if (!runPm2(['start', tempConfigPath])) {
+  if (!pm2(['start', tempConfigPath])) {
     logError('后端启动失败');
     return false;
   }
@@ -756,7 +674,7 @@ async function step5_StartBackend() {
   log('info', '等待后端服务...');
   if (
     !(await waitForService('Backend', () =>
-      checkHealth(PORTS.backend, '/api/health/live')
+      checkHttpOnce(PORTS.backend, '/api/health/live', 5000)
     ))
   ) {
     logError('后端启动超时');
@@ -823,7 +741,7 @@ async function step6_StartFrontend() {
     `module.exports = { apps: [${JSON.stringify(frontendConfig)}] };`
   );
 
-  if (!runPm2(['start', tempConfigPath])) {
+  if (!pm2(['start', tempConfigPath])) {
     logError('前端启动失败');
     return false;
   }
@@ -831,7 +749,9 @@ async function step6_StartFrontend() {
   // 等待前端就绪
   log('info', '等待前端服务...');
   if (
-    !(await waitForService('Frontend', () => checkHealth(PORTS.frontend, '/')))
+    !(await waitForService('Frontend', () =>
+      checkHttpOnce(PORTS.frontend, '/', 5000)
+    ))
   ) {
     logError('前端启动超时');
     return false;
@@ -867,14 +787,14 @@ async function step6_StartFrontend() {
         conversionTempConfig,
         `module.exports = { apps: [${JSON.stringify(conversionConfig)}] };`
       );
-      if (!runPm2(['start', conversionTempConfig])) {
+      if (!pm2(['start', conversionTempConfig])) {
         logError('转换服务启动失败');
         return false;
       }
       log('info', '等待转换服务...');
       if (
         !(await waitForService('Conversion', () =>
-          checkHealth(PORTS.conversion, '/health')
+          checkHttpOnce(PORTS.conversion, '/health', 5000)
         ))
       ) {
         logError('转换服务启动超时');
@@ -925,9 +845,9 @@ async function step7_FinalVerification() {
   for (const service of services) {
     let isReady;
     if (service.type === 'http') {
-      isReady = await checkHealth(service.port, service.path || '/health');
+      isReady = await checkHttpOnce(service.port, service.path || '/health', 5000);
     } else {
-      isReady = await checkPort(service.port);
+      isReady = await isPortOpen(service.port, 'localhost', 5000);
     }
 
     if (isReady) {
@@ -946,7 +866,7 @@ async function step7_FinalVerification() {
   // 获取 PM2 状态
   console.log('');
   log('info', 'PM2 服务状态:');
-  runPm2(['status']);
+  pm2(['status']);
 
   // 检查日志是否有错误（行级匹配，不是整文件子串）：
   // 旧逻辑对整文件 includes('failed')，RouterExplorer 启动期路由注册日志里的
@@ -1000,9 +920,9 @@ async function stopAll() {
   console.log('');
   log('info', '停止所有服务...');
 
-  runPm2(['stop', 'all'], { silent: true });
-  runPm2(['delete', 'all'], { silent: true });
-  runPm2(['kill'], { silent: true });
+  pm2(['stop', 'all'], { silent: true });
+  pm2(['delete', 'all'], { silent: true });
+  pm2(['kill'], { silent: true });
 
   logSuccess('服务已停止');
 }

@@ -25,6 +25,9 @@ const fs = require('fs');
 const path = require('path');
 const { execSync, spawnSync } = require('child_process');
 
+// 尺寸格式化单一事实源（pack-lib/format.js），本脚本历史用 1 位小数
+const { formatSize } = require('./pack-lib/format');
+
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const NODE_DIR = path.join(PROJECT_ROOT, 'runtime', 'windows', 'node');
 const PACKAGE_JSON = path.join(NODE_DIR, 'package.json');
@@ -50,11 +53,6 @@ function logStep(step, total, msg) {
   log(`[${step}/${total}] ${msg}`);
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function getDirSize(dir) {
   if (!fs.existsSync(dir)) return 0;
@@ -129,7 +127,7 @@ function main() {
   }
 
   const beforeSize = getDirSize(NODE_DIR);
-  log(`重建前 node 目录体积: ${formatSize(beforeSize)}`);
+  log(`重建前 node 目录体积: ${formatSize(beforeSize, 1)}`);
   log('');
 
   // 步骤 1/3：清理顶层 AI 工具脚本
@@ -172,7 +170,7 @@ function main() {
   const afterSize = getDirSize(NODE_DIR);
   log('============================================');
   log('重建完成');
-  log(`重建后 node 目录体积: ${formatSize(afterSize)}（前 ${formatSize(beforeSize)}）`);
+  log(`重建后 node 目录体积: ${formatSize(afterSize, 1)}（前 ${formatSize(beforeSize, 1)}）`);
   log('现在可以执行 pnpm pack:offline:win 打包干净的部署包。');
   log('============================================');
 }

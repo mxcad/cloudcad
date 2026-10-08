@@ -26,25 +26,16 @@ const VERIFY_IMAGE_NAME = 'cloudcad-verify';
 // 品牌单一事实源（runtime/scripts/lib/branding.js）
 const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 
-// OS 到基础镜像的映射（ADR-0059 收敛到 3 个 glibc 档位）
-const OS_BASE_IMAGES = {
-  centos7: 'centos:7',
-  ubuntu22: 'ubuntu:22.04',
-  rocky9: 'rockylinux:9',
-};
+// OS 到基础镜像的映射：单一事实源在 pack-lib/linux-os.js（ADR-0059 收敛 3 glibc 档）
+const { LINUX_OS_BASE_IMAGES: OS_BASE_IMAGES } = require('./pack-lib/linux-os');
+// 尺寸格式化单一事实源（pack-lib/format.js）
+const { formatSize } = require('./pack-lib/format');
 
 // ==================== 工具函数 ====================
 
 function log(msg) { console.log(`[Verify-Linux-Deploy] ${msg}`); }
 function error(msg) { console.error(`[Verify-Linux-Deploy] ERROR: ${msg}`); }
 function warn(msg) { console.warn(`[Verify-Linux-Deploy] WARN: ${msg}`); }
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 function checkDocker() {
   try {

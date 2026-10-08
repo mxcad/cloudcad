@@ -23,6 +23,9 @@ const path = require('path');
 const os = require('os');
 const { execSync, spawn } = require('child_process');
 
+// 尺寸格式化单一事实源（pack-lib/format.js）
+const { formatSize } = require('./pack-lib/format');
+
 // 打包排除规则（同一套配置：scripts/pack-lib/packignore.json）
 const {
   isExcluded,
@@ -56,13 +59,6 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 function find7z() {
   if (os.platform() === 'win32') {

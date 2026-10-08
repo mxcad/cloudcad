@@ -39,11 +39,10 @@ const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 
 // ADR-0059 决策 2：发行版收敛到 3 个 glibc 档位（centos7/ubuntu22/rocky9），
 // 砍掉 ubuntu24/rocky8/debian（glibc 与三档重叠或可被代表）。
-const OS_BASE_IMAGES = {
-  centos7: 'centos:7',
-  ubuntu22: 'ubuntu:22.04',
-  rocky9: 'rockylinux:9',
-};
+// 清单单一事实源在 pack-lib/linux-os.js（pack-offline/pack-menu 同源，防清单漂移）。
+const { LINUX_OS_BASE_IMAGES: OS_BASE_IMAGES } = require('./pack-lib/linux-os');
+// 尺寸格式化单一事实源（pack-lib/format.js）
+const { formatSize } = require('./pack-lib/format');
 
 // glibc >= 2.35 的系统需要 SystemLib 版本的 mxcad 二进制
 const NEEDS_SYSTEM_LIB = ['ubuntu22'];
@@ -66,13 +65,6 @@ function warn(msg) { console.warn(`[Pack-Linux-Deploy] WARN: ${msg}`); }
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-}
-
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 /**
@@ -199,7 +191,13 @@ async function buildPackImage(targetOs = 'centos7', npmRegistry = '', variant = 
   log('构建打包镜像...');
 
   const dockerfilePath = path.join(DOCKER_DIR, DOCKERFILE);
-  const baseImage = OS_BASE_IMAGES[targetOs] || OS_BASE_IMAGES.centos7;
+  // 未知 OS 显式拒绝（不再静默回退 centos7：回退会产出「标签 X、底座 centos7」的误导包）
+  const baseImage = OS_BASE_IMAGES[targetOs];
+  if (!baseImage) {
+    throw new Error(
+      `不支持的目标 OS: ${targetOs}（支持: ${Object.keys(OS_BASE_IMAGES).join(', ')}）`
+    );
+  }
 
   if (!fs.existsSync(dockerfilePath)) {
     throw new Error(`找不到 Dockerfile: ${dockerfilePath}`);

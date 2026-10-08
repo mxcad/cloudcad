@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const { PROJECT_ROOT } = require('./context');
 const { createZip } = require('./zip-writer');
+const { formatSize } = require('./format');
 
 /**
  * 日志源清单。slug 同时用作 zip 内的一级目录名（不同源存在同名文件，
@@ -72,13 +73,6 @@ const LOG_SOURCES = [
   },
 ];
 
-function formatSize(bytes) {
-  if (!Number.isFinite(bytes) || bytes < 0) return '-';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
 
 function formatTime(date) {
   const pad = (n) => String(n).padStart(2, '0');
@@ -152,7 +146,7 @@ function listLogLocations({ rootDir = PROJECT_ROOT } = {}) {
           .map((f) => ({
             name: path.basename(f.absPath),
             size: f.size,
-            sizeText: formatSize(f.size),
+            sizeText: formatSize(f.size, 1),
             mtimeText: formatTime(f.mtime),
           }))
       : [];

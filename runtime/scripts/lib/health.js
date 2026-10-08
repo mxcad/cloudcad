@@ -46,53 +46,55 @@ function openBrowser(url) {
   }
 }
 
-async function checkHttpHealth(port, path, timeout = 60000) {
+/**
+ * 单次 HTTP 健康探测（不重试）：一次 GET，200 → true，其余（非 200 / 连接错误 /
+ * 超时）→ false。供自行轮询的调用方（如 verify-deploy 的 waitForService）使用；
+ * checkHttpHealth 是内置重试退避的版本，二者共用本探测。
+ * @param {number} port
+ * @param {string} [path='/health']
+ * @param {number} [timeout=5000] 单次请求超时（ms）
+ * @returns {Promise<boolean>}
+ */
+function checkHttpOnce(port, path = '/health', timeout = 5000) {
   const http = require('http');
+  return new Promise((resolve) => {
+    const req = http.request(
+      {
+        hostname: 'localhost',
+        port,
+        path,
+        method: 'GET',
+        timeout,
+      },
+      (res) => {
+        resolve(res.statusCode === 200);
+      }
+    );
+
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.end();
+  });
+}
+
+async function checkHttpHealth(port, path, timeout = 60000) {
   const startTime = Date.now();
 
-  return new Promise((resolve, reject) => {
-    // 指数退避：避免服务未就绪时高频探测压垮 DB/后端
-    // （每次 /api/health/live 都会触发数据库健康检查，高频连接会加剧负载）
-    let attempt = 0;
-    const backoffDelay = () =>
-      Math.min(1000 * 2 ** attempt++, 10000);
+  // 指数退避：避免服务未就绪时高频探测压垮 DB/后端
+  // （每次 /api/health/live 都会触发数据库健康检查，高频连接会加剧负载）
+  let attempt = 0;
+  const backoffDelay = () => Math.min(1000 * 2 ** attempt++, 10000);
 
-    const tryCheck = () => {
-      const req = http.request(
-        {
-          hostname: 'localhost',
-          port,
-          path,
-          method: 'GET',
-          timeout: 5000,
-        },
-        (res) => {
-          if (res.statusCode === 200) {
-            resolve(true);
-          } else {
-            retry();
-          }
-        }
-      );
-
-      req.on('error', () => retry());
-      req.on('timeout', () => {
-        req.destroy();
-        retry();
-      });
-      req.end();
-    };
-
-    const retry = () => {
-      if (Date.now() - startTime >= timeout) {
-        reject(new Error(`健康检查超时 (${timeout / 1000}s)`));
-      } else {
-        setTimeout(tryCheck, backoffDelay());
-      }
-    };
-
-    tryCheck();
-  });
+  for (;;) {
+    if (await checkHttpOnce(port, path)) return true;
+    if (Date.now() - startTime >= timeout) {
+      throw new Error(`健康检查超时 (${timeout / 1000}s)`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, backoffDelay()));
+  }
 }
 
 async function waitAndOpenBrowsers() {
@@ -247,6 +249,7 @@ async function waitPortReleased(port, timeout = 15000) {
 
 module.exports = {
   openBrowser,
+  checkHttpOnce,
   checkHttpHealth,
   waitAndOpenBrowsers,
   waitForPort,

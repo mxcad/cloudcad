@@ -46,12 +46,8 @@ const COMPONENT_VERSIONS = {
   redis: '5',
 };
 
-// Linux 发行版 → 基础镜像（与 pack-linux-deploy.js OS_BASE_IMAGES 收敛后 3 档一致）
-const OS_BASE_IMAGES = {
-  centos7: 'centos:7',
-  ubuntu22: 'ubuntu:22.04',
-  rocky9: 'rockylinux:9',
-};
+// Linux 发行版 → 基础镜像：单一事实源在 pack-lib/linux-os.js（与 pack-linux-deploy 同源）
+const { LINUX_OS_BASE_IMAGES: OS_BASE_IMAGES } = require('./pack-lib/linux-os');
 
 // 标准组件目录（Linux 提取输出子目录；svn→subversion 映射与 extract-linux-runtime.js 一致）
 const LINUX_COMPONENT_DIRS = ['node', 'postgres', 'redis', 'subversion'];

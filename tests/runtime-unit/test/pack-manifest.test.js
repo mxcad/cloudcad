@@ -87,11 +87,16 @@ describe('pack-lib/manifest.js（P9 单一事实源）', () => {
       }
       expect(deploy).toContain('runtime/linux');
       expect(deploy).toContain('.pnpm-store-deploy');
-      expect(deploy).toContain('部署说明.txt');
+      // 部署说明按打包平台取对应版本源文件（c15e7e8），包内统一命名 部署说明.txt
+      expect(deploy).toContain('部署说明-linux.txt');
+      const docEntry = getDeployIncludeList('linux', 'oss').find(
+        (e) => e.src === '部署说明-linux.txt'
+      );
+      expect(docEntry.dest).toBe('部署说明.txt');
       // 独有条目恰好是这四组
       const only = deploy.filter((s) => !shared.includes(s));
       expect(only.sort()).toEqual(
-        [...launch, ...runtimeScripts, '.pnpm-store-deploy', 'runtime/linux', '部署说明.txt'].sort()
+        [...launch, ...runtimeScripts, '.pnpm-store-deploy', 'runtime/linux', '部署说明-linux.txt'].sort()
       );
     });
 
@@ -100,7 +105,7 @@ describe('pack-lib/manifest.js（P9 单一事实源）', () => {
       const launch = srcs(getLaunchScriptEntries('linux'));
       const runtimeScripts = srcs(getRuntimeScriptEntries('linux'));
       const lockIdx = deploy.indexOf('pnpm-lock.yaml');
-      const docIdx = deploy.indexOf('部署说明.txt');
+      const docIdx = deploy.indexOf('部署说明-linux.txt');
       // 入口脚本保持历史相对顺序，且整体位于根目录文件之后、部署说明之前
       for (let i = 0; i < launch.length; i += 1) {
         const idx = deploy.indexOf(launch[i]);
@@ -132,8 +137,11 @@ describe('pack-lib/manifest.js（P9 单一事实源）', () => {
       expect(storeIdx).toBeGreaterThan(-1);
       expect(runtimeIdx).toBeLessThan(lockIdx);
       expect(storeIdx).toBeLessThan(lockIdx);
-      // 部署说明在末尾（private 时在其前一条）
-      expect(deploy[deploy.length - 1]).toBe('部署说明.txt');
+      // 部署说明在末尾（private 时在其前一条）：win 包源文件为 部署说明-windows.txt，
+      // 包内统一命名 部署说明.txt
+      const last = getDeployIncludeList('win', 'oss')[deploy.length - 1];
+      expect(last.src).toBe('部署说明-windows.txt');
+      expect(last.dest).toBe('部署说明.txt');
     });
 
     it('private variant 额外包含 impl-mx/dist', () => {

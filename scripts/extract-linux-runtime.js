@@ -21,6 +21,9 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
+// 尺寸格式化单一事实源（pack-lib/format.js）
+const { formatSize } = require('./pack-lib/format');
+
 // ==================== 配置 ====================
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -69,12 +72,6 @@ function ensureDir(dir) {
   }
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
 
 function getDirSize(dir) {
   if (!fs.existsSync(dir)) return 0;
@@ -994,6 +991,9 @@ function createCloudcadSh(outputDir) {
 # 入口脚本位于 runtime/，部署根目录为其上一级
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR/.."
+
+# 补齐包内可执行位（Windows 打包链路产物执行位丢失，目录清单唯一源见 ensure-exec.sh）
+bash runtime/scripts/ensure-exec.sh 2>/dev/null || true
 
 # 使用内嵌的 Node.js
 NODE_EXE="$SCRIPT_DIR/linux/node/bin/node"

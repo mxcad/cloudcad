@@ -13,6 +13,7 @@ const http = require('http');
 
 const {
   waitForPort,
+  checkHttpOnce,
   checkHttpHealth,
   isPortOpen,
   waitPortReleased,
@@ -76,6 +77,41 @@ describe('checkHttpHealth', () => {
     } finally {
       await close(server);
     }
+  });
+});
+
+describe('checkHttpOnce (单次 HTTP 探测，不重试)', () => {
+  test('HTTP 200 时 resolve true', async () => {
+    const server = http.createServer((req, res) => {
+      res.statusCode = 200;
+      res.end('ok');
+    });
+    const port = await listen(server);
+    try {
+      await expect(checkHttpOnce(port, '/health')).resolves.toBe(true);
+    } finally {
+      await close(server);
+    }
+  });
+
+  test('HTTP 非 200 时立即 resolve false（不重试、不 reject）', async () => {
+    const server = http.createServer((req, res) => {
+      res.statusCode = 503;
+      res.end('bad');
+    });
+    const port = await listen(server);
+    try {
+      await expect(checkHttpOnce(port, '/health')).resolves.toBe(false);
+    } finally {
+      await close(server);
+    }
+  });
+
+  test('端口无服务（连接拒绝）时 resolve false', async () => {
+    const server = http.createServer();
+    const port = await listen(server);
+    await close(server);
+    await expect(checkHttpOnce(port, '/health', 500)).resolves.toBe(false);
   });
 });
 

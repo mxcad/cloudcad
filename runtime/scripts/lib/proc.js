@@ -109,13 +109,16 @@ function withNodePath(env) {
 
 function runCommand(command, args, options = {}) {
   const result = spawnSync(command, args, {
-    cwd: PROJECT_ROOT,
+    cwd: options.cwd || PROJECT_ROOT,
     stdio: options.silent ? 'pipe' : 'inherit',
     shell: IS_WINDOWS,
     env: withNodePath({
       ...process.env,
       ...options.env,
     }),
+    // 透传调用方超时（spawnSync 语义：超时杀子进程、status 为 null → 返回 false）；
+    // 不传保持原「无超时」行为
+    timeout: options.timeout,
   });
   return result.status === 0;
 }
