@@ -43,7 +43,7 @@ PC / 移动端（以及未来的 App、Electron、平板）共用的**纯函数�
 
 | 模块 | 导出 |
 |---|---|
-| `src/env/device.ts` | `MOBILE_UA_PATTERN` / `WECHAT_UA_PATTERN` / `DESKTOP_WIDTH_THRESHOLD`（1024，宽屏豁免线）/ `isMobileByUA` / `isWechatByUA` / `isTouchDevice(maxTouchPoints)` / `shouldUseMobilePresentation(env)` / `currentUA()`（唯一读端 API 的适配函数）/ `DeviceEnv` |
+| `src/env/device.ts` | `MOBILE_UA_PATTERN` / `WECHAT_UA_PATTERN` / `DESKTOP_WIDTH_THRESHOLD`（1024，宽屏豁免线）/ `isMobileByUA` / `isWechatByUA` / `shouldUseMobilePresentation(env)` / `currentUA()`（唯一读端 API 的适配函数）/ `DeviceEnv` |
 | `src/env/auth-transfer.ts` | `AUTH_TRANSFER_QUERY`（参数名常量，含 `_redirect`）/ `buildAuthTransferQuery`（PC 拼参数）/ `parseAuthTransferQuery`（移动端解析）/ `authTransferParamNames`（供消费后从 URL 剥离，**两端都必须调它而不是手写删除清单**）+ 4 个类型 |
 | `src/routes/match.ts` | `compilePathPattern` / `splitPathname` / `matchPathPattern` / `renderPathPattern` / `PathSegment`——零依赖路径 pattern 匹配器（`:param` 占位，段数必须完全相等才算命中）。**内部机制，不经 barrel 导出** |
 | `src/routes/aliases.ts` | `ROUTE_ALIASES`（PC→移动端）/ `MOBILE_TO_PC_ALIASES`（反向）/ `NON_MAPPABLE_PC_PREFIXES`（桌面管理端等不可映射前缀）——**跨端 URL 互通的单一事实源** |

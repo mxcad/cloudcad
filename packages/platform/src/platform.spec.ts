@@ -9,7 +9,6 @@ import {
   buildAuthTransferQuery,
   isMappableRoute,
   isMobileByUA,
-  isTouchDevice,
   isWechatByUA,
   parseAuthTransferQuery,
   resolveMobileRoute,
@@ -62,12 +61,6 @@ describe('@cloudcad/platform · env/device', () => {
     expect(isWechatByUA(UA.wechat)).toBe(true);
     expect(isWechatByUA(UA.desktopChrome)).toBe(false);
     expect(isWechatByUA(UA.iPhone)).toBe(false);
-  });
-
-  it('treats touch support as a hint only', () => {
-    expect(isTouchDevice(5)).toBe(true);
-    expect(isTouchDevice(0)).toBe(false);
-    expect(isTouchDevice(undefined)).toBe(false);
   });
 
   it('keeps wide mobile devices on the desktop presentation', () => {
