@@ -1,11 +1,11 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
-import { DatabaseService } from '../../database/database.service';
 import * as path from 'path';
 import * as fs from 'fs';
 import { FileUtils } from '../../common/utils/file-utils';
 import { setContentDisposition } from '../../common/utils/content-disposition';
+import { NodeUtils } from '../../common/utils/node-utils';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -19,8 +19,7 @@ export class MxcadFileHandlerService {
   private readonly logger = new Logger(MxcadFileHandlerService.name);
 
   constructor(
-    private readonly configService: ConfigService,
-    private readonly db: DatabaseService
+    private readonly configService: ConfigService
   ) {}
 
   /**
@@ -32,8 +31,8 @@ export class MxcadFileHandlerService {
     try {
       // 统一还原 Express 通配符路径参数：不同环境可能注入为逗号分隔字符串
       // （如 "YYYYMM,nodeId,file.mxweb"，数组被内部 toString() 化），与
-      // handleFilesDataFileRequest / authorizeFilesDataAccess 的逗号还原保持一致，
-      // 避免 seek 到带逗号的路径导致 404。
+      // MxcadFileAccessService（serveFilesDataFile / authorizeFilesDataAccess）
+      // 的逗号还原保持一致，避免 seek 到带逗号的路径导致 404。
       filename = filename.replace(/,/g, '/');
       this.logger.log(`
 ----------------------------------------
@@ -155,19 +154,8 @@ export class MxcadFileHandlerService {
     const fileStats = fs.statSync(filePath);
     const ext = path.extname(filePath).toLowerCase();
 
-    // 设置 Content-Type
-    const contentTypes: Record<string, string> = {
-      '.mxweb': 'application/octet-stream',
-      '.dwg': 'application/acad',
-      '.dxf': 'application/dxf',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.bmp': 'image/bmp',
-    };
-    const contentType = contentTypes[ext] || 'application/octet-stream';
+    // 设置 Content-Type（MIME 单一事实源走 NodeUtils）
+    const contentType = NodeUtils.getMimeType(ext);
 
     // 设置响应头
     res.setHeader('Content-Type', contentType);

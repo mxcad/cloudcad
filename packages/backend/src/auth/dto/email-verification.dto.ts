@@ -52,14 +52,6 @@ export class ResendVerificationDto {
 }
 
 // 响应DTO
-export class VerifyEmailResponseDto {
-  @ApiProperty({
-    description: '操作结果',
-    example: '邮箱验证成功',
-  })
-  message: string;
-}
-
 export class SendVerificationResponseDto {
   @ApiProperty({
     description: '操作结果',
@@ -69,17 +61,6 @@ export class SendVerificationResponseDto {
 }
 
 // Swagger响应DTO
-export class VerifyEmailApiResponseDto {
-  @ApiProperty({ type: () => VerifyEmailResponseDto })
-  code: string;
-  @ApiProperty()
-  message: string;
-  @ApiProperty({ type: () => VerifyEmailResponseDto })
-  data: VerifyEmailResponseDto;
-  @ApiProperty()
-  timestamp: string;
-}
-
 export class SendVerificationApiResponseDto {
   @ApiProperty({ type: () => SendVerificationResponseDto })
   code: string;

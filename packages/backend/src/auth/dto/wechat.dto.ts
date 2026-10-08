@@ -12,32 +12,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 /**
- * 微信用户信息 DTO
- */
-export class WechatUserInfoDto {
-  @ApiProperty({ description: '用户 openid' })
-  openid: string;
-
-  @ApiProperty({ description: '昵称' })
-  nickname: string;
-
-  @ApiProperty({ description: '头像 URL' })
-  avatar: string;
-
-  @ApiPropertyOptional({ description: '性别' })
-  sex?: number;
-
-  @ApiPropertyOptional({ description: '省份' })
-  province?: string;
-
-  @ApiPropertyOptional({ description: '城市' })
-  city?: string;
-
-  @ApiPropertyOptional({ description: '国家' })
-  country?: string;
-}
-
-/**
  * 微信登录响应中的用户信息 DTO（包含完整用户数据）
  */
 export class WechatLoginUserDto {

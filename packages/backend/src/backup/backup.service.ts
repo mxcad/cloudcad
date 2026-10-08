@@ -21,6 +21,7 @@ import { PROJECT_ROOT } from '../config/configuration';
 import { CleanupMetricsService } from '../metrics/cleanup-metrics.service';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { TASK_NAMES } from '../task-run/task-run.constants';
+import { NodeUtils } from '../common/utils/node-utils';
 
 /** 单个备份文件信息 */
 export interface BackupFileInfo {
@@ -115,12 +116,6 @@ function shellSingleQuote(value: string): string {
 function sshCommand(): string {
   return process.platform === 'win32' ? 'ssh.exe' : 'ssh';
 }
-
-type ExecFileCallback = (
-  error: Error | null,
-  stdout: string,
-  stderr: string
-) => void;
 
 @Injectable()
 export class BackupService {
@@ -217,7 +212,7 @@ export class BackupService {
       deletedCount,
     };
     this.logger.log(
-      `数据库备份完成: ${filename} (${this.formatSize(result.sizeBytes)}, 耗时 ${result.durationMs}ms, 清理旧备份 ${deletedCount} 份)`
+      `数据库备份完成: ${filename} (${NodeUtils.formatFileSize(result.sizeBytes)}, 耗时 ${result.durationMs}ms, 清理旧备份 ${deletedCount} 份)`
     );
     return result;
   }
@@ -1058,14 +1053,6 @@ export class BackupService {
       `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
       `-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
     );
-  }
-
-  private formatSize(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    if (bytes < 1024 * 1024 * 1024)
-      return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
   }
 
   private exec(

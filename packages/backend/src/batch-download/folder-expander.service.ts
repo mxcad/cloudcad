@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { FileSystemPermissionService } from '../file-system/file-permission/file-system-permission.service';
 import { ProjectPermission } from '../common/enums/permissions.enum';
@@ -15,8 +15,6 @@ export interface FolderFileNode {
 
 @Injectable()
 export class FolderExpanderService {
-  private readonly logger = new Logger(FolderExpanderService.name);
-
   constructor(
     private readonly prisma: DatabaseService,
     private readonly fileSystemPermissionService: FileSystemPermissionService,
@@ -96,19 +94,12 @@ export class FolderExpanderService {
       select: { id: true, name: true, originalName: true, nodeType: true, projectId: true, ownerId: true },
     });
     if (!node) throw new NotFoundException('Node not found');
-    if (node.projectId) {
-      const hasPermission = await this.fileSystemPermissionService.checkNodePermission(
-        userId, nodeId, ProjectPermission.FILE_OPEN,
-      );
-      if (!hasPermission) {
-        throw new ForbiddenException('Access denied');
-      }
-    } else if (node.ownerId !== userId) {
-      // 个人空间/owner 归属节点：与 RequireProjectPermissionGuard 同一语义——
-      // 仅 owner 本人可访问，否则任意登录用户可枚举他人个人文件夹树（IDOR）。
-      // fail-closed：ownerId 为 null（异常数据）同样拒绝。
-      throw new ForbiddenException('Access denied');
-    }
+    // 节点级访问校验统一走 assertNodeAccess（IDOR 防线，语义与
+    // RequireProjectPermissionGuard 一致）：项目/个人空间按 FILE_OPEN 项目权限，
+    // 资源库上下文按 LIBRARY_*_MANAGE 系统权限，根不可解析 fail-closed。
+    await this.fileSystemPermissionService.assertNodeAccess(
+      userId, nodeId, ProjectPermission.FILE_OPEN,
+    );
     if (node.nodeType === NodeType.FILE) {
       return { nodeId: node.id, fileName: node.originalName || node.name, isFolder: false };
     }

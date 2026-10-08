@@ -122,29 +122,9 @@ export class MxcadUploadController {
       this.logger.log(
         `[fileisExist] 文件存在于 uploads 目录: ${body.filename}, hash=${body.fileHash}`
       );
-      if (context.userId && context.nodeId) {
-        context.fileSize = body.fileSize;
-        const result = await this.drawingIngestService.checkExist(
-          body.fileHash,
-          body.filename,
-          {
-            userId: context.userId,
-            parentNodeId: context.nodeId,
-            ownerId: context.userId,
-            conflictStrategy: context.conflictStrategy,
-            isLibrary: context.isLibrary,
-            fileSize: body.fileSize,
-          }
-        );
-        // 秒传命中且新建节点 → 记"新增图纸"（项目操作历史）
-        await this.logInstantUploadCreate(result, context.userId);
-        return {
-          exists: result.ret === MxUploadReturn.kFileAlreadyExist,
-          nodeId: result.nodeId,
-        };
-      }
-      return { exists: true, nodeId: null };
     }
+    // 有登录态+节点上下文 → 走秒传判定（checkExist 可能 materialize 新节点）；
+    // 无上下文时仅按存储是否存在返回
     if (context.userId && context.nodeId) {
       context.fileSize = body.fileSize;
       const result = await this.drawingIngestService.checkExist(
@@ -166,7 +146,7 @@ export class MxcadUploadController {
         nodeId: result.nodeId,
       };
     }
-    return { exists: false, nodeId: null };
+    return { exists: fileExistsInStorage, nodeId: null };
   }
 
   /**

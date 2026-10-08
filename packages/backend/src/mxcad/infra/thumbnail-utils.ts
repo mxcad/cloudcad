@@ -82,24 +82,6 @@ export function findThumbnailSync(nodeDir: string): {
 }
 
 /**
- * 检查节点目录中是否存在任意格式的缩略图
- * @param nodeDir 节点目录路径
- * @returns 是否存在缩略图
- */
-export async function hasThumbnail(nodeDir: string): Promise<boolean> {
-  return findThumbnail(nodeDir) !== null;
-}
-
-/**
- * 同步版本检查缩略图是否存在
- * @param nodeDir 节点目录路径
- * @returns 是否存在缩略图
- */
-export function hasThumbnailSync(nodeDir: string): boolean {
-  return findThumbnailSync(nodeDir) !== null;
-}
-
-/**
  * 默认缩略图文件名映射（按文件扩展名）
  * 仅在没有真实缩略图时兜底使用；无法识别的扩展名才返回 default.jpg
  */
@@ -129,20 +111,4 @@ export function getMimeType(format: ThumbnailFormat): string {
     jpg: 'image/jpeg',
   };
   return mimeTypes[format];
-}
-
-/**
- * 从文件路径中提取缩略图格式
- * @param fileName 文件名（如 'thumbnail.jpg'）
- * @returns 缩略图格式，如果不是缩略图文件则返回 null
- */
-export function getThumbnailFormatFromFileName(
-  fileName: string
-): ThumbnailFormat | null {
-  for (const format of THUMBNAIL_FORMATS) {
-    if (fileName === getThumbnailFileName(format)) {
-      return format;
-    }
-  }
-  return null;
 }

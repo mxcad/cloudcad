@@ -1,18 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Response, Request } from 'express';
-import { verify } from 'jsonwebtoken';
+import {
+  setSseHeaders,
+  resolveSseUserId,
+  startSseKeepalive,
+} from '../../common/sse/sse.helpers';
 import {
   CONVERSION_TASK_CHANNEL,
   type ConversionTaskSseEvent,
 } from './conversion-task-sse.constants';
-
-/**
- * SSE 保活间隔：空闲连接（无任务变更）时防止代理按超时断开。
- * 用 SSE 注释行（`: keep-alive`）——EventSource 视为注释不触发 onmessage，仅保活。
- */
-const SSE_KEEPALIVE_INTERVAL_MS = 15000;
 
 /**
  * S4-3 转换任务 SSE 推送（per-user 长连接）。
@@ -25,7 +23,6 @@ const SSE_KEEPALIVE_INTERVAL_MS = 15000;
  */
 @Injectable()
 export class ConversionTaskSseService {
-  private readonly logger = new Logger(ConversionTaskSseService.name);
   private readonly jwtSecret: string;
 
   constructor(
@@ -45,8 +42,7 @@ export class ConversionTaskSseService {
     res: Response,
     req: Request
   ): Promise<void> {
-    this.setSseHeaders(res);
-    res.flushHeaders();
+    setSseHeaders(res);
 
     let closed = false;
     res.on('close', () => {
@@ -59,25 +55,17 @@ export class ConversionTaskSseService {
     }
 
     const channel = CONVERSION_TASK_CHANNEL(userId);
+    const stopKeepalive = startSseKeepalive(res, () => closed);
     const onEvent = (event: ConversionTaskSseEvent) => {
       if (closed) return;
       res.write(`data: ${JSON.stringify({ ...event, type: 'status' })}\n\n`);
     };
     this.eventEmitter.on(channel, onEvent);
 
-    // 保活：空闲期防代理超时断连（注释行不触发前端 onmessage）
-    const keepAliveTimer = setInterval(() => {
-      if (closed) {
-        clearInterval(keepAliveTimer);
-        return;
-      }
-      res.write(': keep-alive\n\n');
-    }, SSE_KEEPALIVE_INTERVAL_MS);
-
     req.on('close', () => {
       closed = true;
       this.eventEmitter.off(channel, onEvent);
-      clearInterval(keepAliveTimer);
+      stopKeepalive();
     });
   }
 
@@ -86,28 +74,6 @@ export class ConversionTaskSseService {
    * Authorization header，token 走 query，与 batch-download SSE 一致）。
    */
   resolveUserId(req: Request, res: Response): string | null {
-    const user = (req as { user?: { id?: string } }).user;
-    if (user?.id) return user.id;
-
-    const token = (req.query as { token?: string })?.token;
-    if (token) {
-      try {
-        const decoded = verify(token, this.jwtSecret) as { id: string };
-        return decoded.id;
-      } catch {
-        res.status(401).end();
-        return null;
-      }
-    }
-
-    res.status(401).end();
-    return null;
-  }
-
-  private setSseHeaders(res: Response): void {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
+    return resolveSseUserId(req, res, this.jwtSecret);
   }
 }

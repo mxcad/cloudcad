@@ -289,47 +289,6 @@ export class NodeTreeResponseDto extends FileSystemNodeDto {
 }
 
 /**
- * 回收站项目 DTO
- */
-export class TrashItemDto {
-  @ApiProperty({ description: '节点 ID' })
-  id: string;
-
-  @ApiProperty({ description: '节点名称' })
-  name: string;
-
-  @ApiProperty({ description: '节点描述', required: false })
-  description?: string;
-
-  @ApiProperty({ description: '是否为文件夹' })
-  isFolder: boolean;
-
-  @ApiProperty({ description: '原始父节点 ID' })
-  originalParentId: string;
-
-  @ApiProperty({ description: '文件大小', required: false })
-  size?: number;
-
-  @ApiProperty({ description: '文件 MIME 类型', required: false })
-  mimeType?: string;
-
-  @ApiProperty({ description: '创建时间' })
-  createdAt: Date;
-
-  @ApiProperty({ description: '更新时间' })
-  updatedAt: Date;
-
-  @ApiProperty({ description: '删除时间' })
-  deletedAt: Date;
-
-  @ApiProperty({ description: '所有者 ID' })
-  ownerId: string;
-
-  @ApiProperty({ description: '项目 ID', required: false })
-  projectId?: string;
-}
-
-/**
  * 回收站列表响应 DTO - 现在它也是 NodeListResponseDto 的别名
  */
 export class TrashListResponseDto extends NodeListResponseDto {}

@@ -6,7 +6,6 @@ import {
   Body,
   Request,
   Res,
-  Logger,
   HttpCode,
   Header,
   Query,
@@ -26,13 +25,12 @@ import {
   CreateBatchDownloadDto,
   CreateSingleFormatDownloadDto,
   BatchDownloadProgressDto,
-  BatchDownloadTaskDto,
   BatchDownloadTaskPageDto,
   MergeBatchDownloadDto,
 } from './dto/create-batch-download.dto';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { I18nContext } from 'nestjs-i18n';
-import { setContentDisposition } from '../common/utils/content-disposition';
+import { streamFileToResponse } from '../common/utils/stream-file';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -40,8 +38,6 @@ import * as path from 'path';
 @ApiTags('文件系统 - 批量下载')
 @ApiBearerAuth()
 export class BatchDownloadController {
-  private readonly logger = new Logger(BatchDownloadController.name);
-
   constructor(
     private readonly batchDownloadService: BatchDownloadService,
     private readonly runtimeConfigService: RuntimeConfigService
@@ -129,17 +125,7 @@ export class BatchDownloadController {
       taskId,
       userId
     );
-    const filename = path.basename(filePath);
-    const stat = fs.statSync(filePath);
-    res.setHeader('Content-Type', 'application/zip');
-    setContentDisposition(res, filename);
-    res.setHeader('Content-Length', stat.size.toString());
-    const stream = fs.createReadStream(filePath);
-    stream.pipe(res);
-    stream.on('error', () => {
-      if (!res.headersSent)
-        res.status(500).json({ message: 'File read failed' });
-    });
+    await streamFileToResponse(res, filePath, path.basename(filePath), 'application/zip');
   }
 
   @Get(':taskId/items/:itemIndex/download')
@@ -164,18 +150,8 @@ export class BatchDownloadController {
     if (!item) {
       return res.status(404).json({ message: 'Item not available' });
     }
-    const stat = fs.statSync(item.fullPath);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    setContentDisposition(res, item.name);
-    res.setHeader('Content-Length', stat.size.toString());
-    const stream = fs.createReadStream(item.fullPath);
-    stream.pipe(res);
-    stream.on('error', () => {
-      if (!res.headersSent)
-        res.status(500).json({ message: 'File read failed' });
-    });
     // 转换临时产物下载完成后即清理；源文件（temp=false）绝不删除
-    stream.on('close', () => {
+    await streamFileToResponse(res, item.fullPath, item.name, 'application/octet-stream', () => {
       if (!item.temp) return;
       fs.promises.unlink(item.fullPath).catch(() => undefined);
     });
@@ -193,19 +169,8 @@ export class BatchDownloadController {
       dto.taskIds,
       userId
     );
-    const filename = path.basename(zipPath);
-    const stat = fs.statSync(zipPath);
-    res.setHeader('Content-Type', 'application/zip');
-    setContentDisposition(res, filename);
-    res.setHeader('Content-Length', stat.size.toString());
-    const stream = fs.createReadStream(zipPath);
-    stream.pipe(res);
-    stream.on('error', () => {
-      if (!res.headersSent)
-        res.status(500).json({ message: 'File read failed' });
-    });
     // 合并产物为临时按需产物：下载完成后即清理（区别于任务 zip 持久化可重复下载）
-    stream.on('close', () => {
+    await streamFileToResponse(res, zipPath, path.basename(zipPath), 'application/zip', () => {
       fs.promises.unlink(zipPath).catch(() => undefined);
     });
   }

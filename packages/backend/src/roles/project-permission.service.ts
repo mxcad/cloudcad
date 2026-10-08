@@ -17,7 +17,6 @@ import {
   ProjectPermission,
   ProjectRole,
 } from '../common/enums/permissions.enum';
-import { ProjectRolesService } from './project-roles.service';
 import { PermissionCacheService } from '../permission/services/permission-cache.service';
 import { CACHE_TTL } from '../common/constants/cache.constants';
 import { IPERMISSION_STORE, IPermissionStore } from '../common/interfaces/permission-store.interface';
@@ -33,7 +32,6 @@ export class ProjectPermissionService implements IProjectPermissionService {
 
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly projectRolesService: ProjectRolesService,
     private readonly cacheService: PermissionCacheService,
     @Optional()
     @Inject(IPERMISSION_STORE)

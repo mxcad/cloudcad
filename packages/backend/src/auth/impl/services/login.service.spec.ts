@@ -24,11 +24,6 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     update: jest.fn(),
   };
 
-  const mockEmailVerificationService = {
-    sendVerificationEmail: jest.fn(),
-    verifyEmail: jest.fn(),
-  };
-
   const mockRuntimeConfigService = {
     getValue: jest.fn().mockResolvedValue(false),
   };
@@ -37,10 +32,6 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     generateTokens: jest
       .fn()
       .mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' }),
-  };
-
-  const mockTokenBlacklistService = {
-    removeUserFromBlacklist: jest.fn(),
   };
 
   const mockJwtService = {
@@ -127,10 +118,8 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
       providers: [
         LoginService,
         { provide: USER_REPOSITORY, useValue: mockUserRepo },
-        { provide: 'EMAIL', useValue: mockEmailVerificationService },
         { provide: 'CONFIG', useValue: mockRuntimeConfigService },
         { provide: AuthTokenService, useValue: mockAuthTokenService },
-        { provide: 'TOKEN_BLACKLIST', useValue: mockTokenBlacklistService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
         {
@@ -225,10 +214,8 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
       providers: [
         LoginService,
         { provide: USER_REPOSITORY, useValue: mockUserRepo },
-        { provide: 'EMAIL', useValue: mockEmailVerificationService },
         { provide: 'CONFIG', useValue: mockRuntimeConfigService },
         { provide: AuthTokenService, useValue: mockAuthTokenService },
-        { provide: 'TOKEN_BLACKLIST', useValue: mockTokenBlacklistService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
         {

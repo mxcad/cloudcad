@@ -1,13 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, Min, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { OrderStatus } from '../enums/billing.enum';
-
-export class QueryOrderDto {
-  @ApiProperty({ description: '订单号' })
-  @IsString()
-  orderNo: string;
-}
 
 export class ListOrdersQueryDto {
   @ApiPropertyOptional({ description: '页码', default: 1 })

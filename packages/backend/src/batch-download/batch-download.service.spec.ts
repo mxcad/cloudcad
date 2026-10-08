@@ -45,6 +45,7 @@ function createService(mocks: {
   config?: any;
   diskMonitor?: any;
   systemPermission?: any;
+  fileSystemPermission?: any;
   sseManager?: any;
   batchDownloadJob?: any;
   folderExpander?: any;
@@ -69,6 +70,10 @@ function createService(mocks: {
   const defaultSystemPermission = {
     checkSystemPermission: jest.fn().mockResolvedValue(true),
   };
+  // 默认放行节点级访问校验（IDOR 防线），需要验证拒绝路径的用例显式传入 mock
+  const defaultFileSystemPermission = {
+    assertNodeAccess: jest.fn().mockResolvedValue(undefined),
+  };
   const defaultSseManager = { streamProgress: jest.fn() };
   // 默认放行（模拟 VIP 用户），需要验证门控的用例显式传入 mock
   const defaultRestrictionEngine = {
@@ -80,6 +85,7 @@ function createService(mocks: {
     mocks.config || (defaultConfig as any),
     mocks.diskMonitor as any,
     (mocks.systemPermission || defaultSystemPermission) as any,
+    (mocks.fileSystemPermission || defaultFileSystemPermission) as any,
     (mocks.sseManager || defaultSseManager) as any,
     (mocks.batchDownloadJob || createMockBatchDownloadJob()) as any,
     (mocks.folderExpander || createMockFolderExpander()) as any,
@@ -152,6 +158,78 @@ describe('BatchDownloadService', () => {
           }),
         })
       );
+    });
+
+    describe('节点级访问校验（IDOR 防线）', () => {
+      it('should assert FILE_DOWNLOAD access for every node item', async () => {
+        mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+          id: 'node-1',
+          projectId: 'proj-1',
+          nodeType: NodeType.FILE,
+        });
+        mockPrisma.batchDownloadJob.create.mockResolvedValue({ id: 'task-1' });
+        const fileSystemPermission = {
+          assertNodeAccess: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const service = createService({
+          prisma: mockPrisma,
+          diskMonitor: mockDiskMonitor,
+          fileSystemPermission,
+        });
+        await service.createTask('user-1', validDto);
+
+        expect(fileSystemPermission.assertNodeAccess).toHaveBeenCalledWith(
+          'user-1',
+          'node-1',
+          'FILE_DOWNLOAD'
+        );
+      });
+
+      it('should reject with ForbiddenException when user lacks node access (IDOR)', async () => {
+        mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+          id: 'node-1',
+          projectId: 'proj-1',
+          nodeType: NodeType.FILE,
+        });
+        const fileSystemPermission = {
+          assertNodeAccess: jest
+            .fn()
+            .mockRejectedValue(new ForbiddenException('Access denied')),
+        };
+
+        const service = createService({
+          prisma: mockPrisma,
+          diskMonitor: mockDiskMonitor,
+          fileSystemPermission,
+        });
+        await expect(service.createTask('user-1', validDto)).rejects.toThrow(
+          ForbiddenException
+        );
+        // 权限拒绝发生在建 job 之前：不得落库
+        expect(mockPrisma.batchDownloadJob.create).not.toHaveBeenCalled();
+      });
+
+      it('should skip node access assertion for fileHash-only items', async () => {
+        mockPrisma.batchDownloadJob.create.mockResolvedValue({ id: 'task-3' });
+        const fileSystemPermission = {
+          assertNodeAccess: jest.fn().mockResolvedValue(undefined),
+        };
+
+        const service = createService({
+          prisma: mockPrisma,
+          diskMonitor: mockDiskMonitor,
+          fileSystemPermission,
+        });
+        await service.createTask('user-1', {
+          fileList: [
+            { fileHash: 'hash-xyz', fileName: 'test.dwg', formats: ['mxweb'] },
+          ],
+          mode: 'individual',
+        });
+
+        expect(fileSystemPermission.assertNodeAccess).not.toHaveBeenCalled();
+      });
     });
 
     it('should create a fileHash-only task without node validation or project', async () => {

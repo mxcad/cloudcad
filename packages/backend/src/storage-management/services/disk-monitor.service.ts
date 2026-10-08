@@ -16,6 +16,7 @@ import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AppConfig } from '../../config/app.config';
+import { NodeUtils } from '../../common/utils/node-utils';
 
 export interface DiskStats {
   path: string;
@@ -57,7 +58,7 @@ export class DiskMonitorService {
 
     try {
       // 获取磁盘信息（Windows 和 Linux/macOS 兼容）
-      const stats = fs.statSync(resolvedPath);
+      fs.statSync(resolvedPath);
       const drive = path.parse(resolvedPath).root || resolvedPath;
 
       // 获取磁盘空间信息
@@ -207,14 +208,14 @@ export class DiskMonitorService {
 
     let warning = false;
     let critical = false;
-    let message = `Disk status normal (Available: ${this.formatBytes(stats.free)})`;
+    let message = `Disk status normal (Available: ${NodeUtils.formatFileSize(stats.free)})`;
 
     if (stats.free < this.criticalThreshold) {
       critical = true;
-      message = `Disk space critically low! Available: ${this.formatBytes(stats.free)}, please clean up immediately`;
+      message = `Disk space critically low! Available: ${NodeUtils.formatFileSize(stats.free)}, please clean up immediately`;
     } else if (stats.free < this.warningThreshold) {
       warning = true;
-      message = `Disk space low! Available: ${this.formatBytes(stats.free)}, recommended to clean up`;
+      message = `Disk space low! Available: ${NodeUtils.formatFileSize(stats.free)}, recommended to clean up`;
     }
 
     return {
@@ -223,21 +224,6 @@ export class DiskMonitorService {
       critical,
       message,
     };
-  }
-
-  /**
-   * 格式化字节数
-   * @param bytes 字节数
-   * @returns 格式化字符串
-   */
-  private formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-    return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
   }
 
   /**

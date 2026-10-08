@@ -16,7 +16,11 @@ import {
   IPERMISSION_SERVICE,
   IPermissionService,
 } from '../permission/interfaces/permission-service.interface';
-import { SystemPermission } from '../common/enums/permissions.enum';
+import {
+  SystemPermission,
+  ProjectPermission,
+} from '../common/enums/permissions.enum';
+import { FileSystemPermissionService } from '../file-system/file-permission/file-system-permission.service';
 import { NodeType, BatchJobStatus, Prisma } from '@cloudcad/db';
 import { Response, Request } from 'express';
 import { SseManager } from './sse-manager';
@@ -55,6 +59,7 @@ export class BatchDownloadService {
     private readonly diskMonitor: DiskMonitorService,
     @Inject(IPERMISSION_SERVICE)
     private readonly systemPermissionService: IPermissionService,
+    private readonly fileSystemPermissionService: FileSystemPermissionService,
     private readonly sseManager: SseManager,
     private readonly batchDownloadJob: BatchDownloadJob,
     private readonly folderExpander: FolderExpanderService,
@@ -133,6 +138,14 @@ export class BatchDownloadService {
         if (!node) {
           throw new NotFoundException(`Node not found: ${item.nodeId}`);
         }
+        // 节点级访问校验（IDOR 防线）：与单文件下载端点的 FILE_DOWNLOAD 权限同口径，
+        // 库/个人空间/项目上下文由 assertNodeAccess 统一判定（fail-closed）。
+        // 缺失此校验时任意登录用户可传他人 nodeId 建任务，引擎真实转换并产出 ZIP。
+        await this.fileSystemPermissionService.assertNodeAccess(
+          userId,
+          item.nodeId,
+          ProjectPermission.FILE_DOWNLOAD
+        );
         if (node.projectId) {
           projectIds.add(node.projectId);
         }

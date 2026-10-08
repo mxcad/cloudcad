@@ -5,7 +5,6 @@
 
 import { Test, type TestingModule } from "@nestjs/testing";
 import { CacheLevel } from "../enums/cache-level.enum";
-import { L1CacheProvider } from "../providers/l1-cache.provider";
 import { L2CacheProvider } from "../providers/l2-cache.provider";
 import { CacheMonitorService } from "./cache-monitor.service";
 import { MultiLevelCacheService } from "./multi-level-cache.service";
@@ -17,10 +16,6 @@ describe("CacheMonitorService", () => {
 	let service: CacheMonitorService;
 
 	const mockCacheService = {
-		getStats: jest.fn(),
-	};
-
-	const mockL1Cache = {
 		getStats: jest.fn(),
 	};
 
@@ -57,9 +52,8 @@ describe("CacheMonitorService", () => {
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
 				CacheMonitorService,
-				{ provide: MultiLevelCacheService, useValue: mockCacheService },
-				{ provide: L1CacheProvider, useValue: mockL1Cache },
-				{ provide: L2CacheProvider, useValue: mockL2Cache },
+			{ provide: MultiLevelCacheService, useValue: mockCacheService },
+			{ provide: L2CacheProvider, useValue: mockL2Cache },
 				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 				{ provide: TaskRunService, useValue: mockTaskRunService },
 				{ provide: AlertService, useValue: mockAlertService },

@@ -94,8 +94,3 @@ export function getAccessLogger(options: AccessLoggerOptions = {}): PinoLogger {
   cachedLogger = logger;
   return logger;
 }
-
-/** 供测试重置缓存（避免跨用例复用真实子进程） */
-export function resetAccessLoggerCache(): void {
-  cachedLogger = null;
-}

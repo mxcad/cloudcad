@@ -109,30 +109,6 @@ export class ConversionTaskListResponseDto {
   total: number;
 }
 
-/**
- * 转换历史分页查询（#476）：已完成（COMPLETED）任务，供面板「转换·历史」区块滚动加载。
- * 与 listTasks（进行中/失败，实时轮询）互补：历史为只读终态数据，offset 分页稳定。
- */
-export class ConversionHistoryQueryDto {
-  @ApiPropertyOptional({
-    description: '每页数量（默认 20，最大 50）',
-    example: 20,
-  })
-  limit?: number;
-
-  @ApiPropertyOptional({
-    description: '偏移量（分页游标，默认 0）',
-    example: 0,
-  })
-  offset?: number;
-
-  @ApiPropertyOptional({
-    description: '按文件名模糊搜索（DB 侧 contains，空=不过滤）',
-    example: 'dwg',
-  })
-  search?: string;
-}
-
 export class ConversionHistoryResponseDto {
   @ApiProperty({ type: [ConversionTaskItemDto] })
   tasks: ConversionTaskItemDto[];

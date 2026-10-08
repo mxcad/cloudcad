@@ -20,6 +20,7 @@ import {
 import Redis from 'ioredis';
 import type { Notice } from '@cloudcad/db';
 import type { Request, Response } from 'express';
+import { setSseHeaders } from '../common/sse/sse.helpers';
 import {
   NOTICE_EVENTS_CHANNEL,
   NOTICE_HEARTBEAT_MS,
@@ -78,12 +79,7 @@ export class NoticeSseService implements OnModuleInit, OnModuleDestroy {
     };
     this.connections.add(conn);
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    // nginx 反代不缓冲，否则心跳与事件会攒在缓冲里
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.flushHeaders();
+    setSseHeaders(res);
 
     this.writeFrame(conn, { type: 'snapshot', notices: snapshot });
 

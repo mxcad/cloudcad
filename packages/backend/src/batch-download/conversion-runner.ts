@@ -4,7 +4,6 @@ import { resolveMxcadUploadDir } from '../common/utils/mxcad-upload-dir';
 import { ModuleRef } from '@nestjs/core';
 import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
 import type { IMxcadConversionService } from '../mxcad/interfaces/mxcad-conversion.interface';
-import type { ConvertServerFileParam } from '../mxcad/types/mxcad-context.types';
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
@@ -18,7 +17,10 @@ import {
   formatUnsupportedMessage,
   resolveOutputFormat,
 } from '../file-system/file-download/format-policy';
-import * as path from 'path';
+import {
+  ConversionCoreError,
+  runConversionCore,
+} from '../file-system/file-download/conversion-core';
 import * as fs from 'fs';
 
 class Semaphore {
@@ -483,39 +485,43 @@ export class ConversionRunner {
           return { filePath: cachedPath, format, success: true };
         }
 
-        const conversionOptions: ConvertServerFileParam = {
-          srcPath: snapshot.snapshotPath.replace(/\\/g, '/'),
-          fileHash: node.fileHash || '',
-          nodeId: node.id,
-          userId,
-          outname,
-          createPreloadingData: false,
-          priority: 'low',
-          ...params,
-        };
-
-        const conversionService = await this.getConversionService();
-        const result =
-          await conversionService.convertServerFile(conversionOptions);
-
-        if (result.code !== 0) {
-          const errMsg = result.message || 'Conversion failed';
-          return { filePath: '', format, success: false, error: errMsg };
-        }
-
-        // 引擎把 outname 写到 srcPath 同目录（uploads/）：产物 = uploads/{hash}{targetExt}
-        const targetFullPath = path.join(
-          path.dirname(snapshot.snapshotPath),
-          outname
-        );
-
-        if (!fs.existsSync(targetFullPath)) {
-          return {
-            filePath: '',
-            format,
-            success: false,
-            error: `Converted file not found: ${outname}`,
-          };
+        // 共享转换核心（构造参数 → 调引擎 → 校验产物）；失败折叠为失败结果
+        // （engine-failed 用引擎原始 message、artifact-missing 拼「Converted file not found: …」）。
+        // 配额在 convertMany 按项占位、尾部按 success 统一释放，此处不处理。
+        let targetFullPath: string;
+        try {
+          const conversionService = await this.getConversionService();
+          ({ artifactPath: targetFullPath } = await runConversionCore({
+            conversionService,
+            srcPath: snapshot.snapshotPath.replace(/\\/g, '/'),
+            fileHash: node.fileHash || '',
+            nodeId: node.id,
+            userId,
+            outname,
+            engineParams: params,
+            priority: 'low',
+          }));
+        } catch (err) {
+          if (err instanceof ConversionCoreError) {
+            if (err.kind === 'artifact-missing') {
+              return {
+                filePath: '',
+                format,
+                success: false,
+                error: `Converted file not found: ${err.detail}`,
+              };
+            }
+            return {
+              filePath: '',
+              format,
+              success: false,
+              error: err.detail || 'Conversion failed',
+            };
+          }
+          this.logger.error(
+            `Conversion failed for ${node.name} to ${format}: ${err.message}`
+          );
+          return { filePath: '', format, success: false, error: err.message };
         }
 
         // 转换产物写入缓存目录复用（copy 而非 rename，ZIP 装配仍需原文件；ADR-0060）

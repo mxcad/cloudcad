@@ -8,6 +8,8 @@ import {
 import { UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
+// streamFileToResponse 在流 close 时 resolve：mock 的 close 处理器需被触发，
+// 否则 await 流式 handler 的测试会永久挂起
 jest.mock('fs', () => ({
   ...jest.requireActual('fs'),
   statSync: jest.fn().mockReturnValue({ size: 1024 }),
@@ -15,7 +17,7 @@ jest.mock('fs', () => ({
   createReadStream: jest.fn().mockReturnValue({
     pipe: jest.fn().mockReturnThis(),
     on: jest.fn((event: string, handler: Function) => {
-      if (event === 'error') { /* noop */ }
+      if (event === 'close') setImmediate(() => handler());
       return { on: jest.fn() };
     }),
   }),
@@ -46,7 +48,10 @@ describe('BatchDownloadController', () => {
     mockFs.existsSync.mockReturnValue(true);
     mockFs.createReadStream.mockReturnValue({
       pipe: jest.fn().mockReturnThis(),
-      on: jest.fn().mockReturnThis(),
+      on: jest.fn((event: string, handler: Function) => {
+        if (event === 'close') setImmediate(() => handler());
+        return { on: jest.fn() };
+      }),
     });
 
     mockService = {

@@ -1,5 +1,4 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import * as crypto from 'crypto';
@@ -39,7 +38,6 @@ export class WechatTransactionService implements OnModuleInit {
   private readonly ttl = 300;
 
   constructor(
-    private configService: ConfigService,
     @InjectRedis() private readonly redis: Redis
   ) {}
 

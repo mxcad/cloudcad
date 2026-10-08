@@ -14,7 +14,6 @@ import * as crypto from 'crypto';
 import { DatabaseService } from '../../database/database.service';
 import { IStorageService } from '../../storage/interfaces/storage-service.interface';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
-import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { AuditLogger } from '../../audit/audit-logger.service';
 import { ClsService } from 'nestjs-cls';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
@@ -141,7 +140,6 @@ describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () 
           provide: RuntimeConfigService,
           useValue: { getValue: jest.fn().mockResolvedValue(1) },
         },
-        { provide: FileSystemPermissionService, useValue: {} },
         {
           provide: ModuleRef,
           useValue: { get: jest.fn().mockReturnValue(conversionMock) },

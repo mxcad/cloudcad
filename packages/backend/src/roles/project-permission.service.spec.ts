@@ -6,7 +6,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProjectPermissionService } from './project-permission.service';
 import { DatabaseService } from '../database/database.service';
-import { ProjectRolesService } from './project-roles.service';
 import { PermissionCacheService } from '../permission/services/permission-cache.service';
 import { ProjectPermission, ProjectRole } from '../common/enums/permissions.enum';
 import { IPERMISSION_STORE } from '../common/interfaces/permission-store.interface';
@@ -22,8 +21,6 @@ describe('ProjectPermissionService', () => {
       findUnique: jest.fn(),
     },
   };
-
-  const mockProjectRolesService = {};
 
   const mockCacheService = {
     get: jest.fn(),
@@ -51,7 +48,6 @@ describe('ProjectPermissionService', () => {
       providers: [
         ProjectPermissionService,
         { provide: DatabaseService, useValue: mockPrisma },
-        { provide: ProjectRolesService, useValue: mockProjectRolesService },
         { provide: PermissionCacheService, useValue: mockCacheService },
       ],
     }).compile();

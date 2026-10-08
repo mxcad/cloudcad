@@ -7,11 +7,12 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module';
 import { RolesModule } from '../../roles/roles.module';
+import { PermissionModule } from '../../permission/permission.module';
 import { FileTreeModule } from '../file-tree/file-tree.module';
 import { FileSystemPermissionService } from './file-system-permission.service';
 
 @Module({
-  imports: [DatabaseModule, RolesModule, FileTreeModule],
+  imports: [DatabaseModule, RolesModule, PermissionModule, FileTreeModule],
   providers: [
     FileSystemPermissionService,
   ],

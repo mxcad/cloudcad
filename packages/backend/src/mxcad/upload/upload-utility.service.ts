@@ -3,19 +3,15 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
-import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { NodeNameService } from '../../file-operations/node-name.service';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import {
   cachedArtifactFileName,
   cachedArtifactReady,
 } from '../utils/conversion-artifact';
-import { FileSystemNodeService } from '../node/filesystem-node.service';
-import { StorageManager } from '../../storage-management/services/storage-manager.service';
-import { IStorageService } from '../../storage/interfaces/storage-service.interface';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -27,11 +23,7 @@ export class UploadUtilityService {
   constructor(
     private readonly configService: ConfigService,
     private readonly fileSystemService: MxFileSystemService,
-    private readonly fileTreeService: FileTreeService,
-    private readonly nodeNameService: NodeNameService,
-    private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly storageManager: StorageManager,
-    @Inject(IStorageService) private readonly storageService: IStorageService
+    private readonly nodeNameService: NodeNameService
   ) {
     this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
   }

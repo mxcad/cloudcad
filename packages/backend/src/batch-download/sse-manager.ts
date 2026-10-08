@@ -1,14 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BatchJobStatus } from '@cloudcad/db';
 import { Response, Request } from 'express';
-import { verify } from 'jsonwebtoken';
+import { setSseHeaders, resolveSseUserId } from '../common/sse/sse.helpers';
 import { BatchDownloadJob } from './batch-download-job';
 
 @Injectable()
 export class SseManager {
-  private readonly logger = new Logger(SseManager.name);
   private readonly jwtSecret: string;
 
   constructor(
@@ -25,11 +24,10 @@ export class SseManager {
     req: Request,
     getProgress: (userId: string) => Promise<T>
   ): Promise<void> {
-    const userId = this.resolveUserId(req, res);
+    const userId = resolveSseUserId(req, res, this.jwtSecret);
     if (!userId) return;
 
-    this.setSseHeaders(res);
-    res.flushHeaders();
+    setSseHeaders(res);
 
     let closed = false;
     const markClosed = () => {
@@ -89,33 +87,6 @@ export class SseManager {
         res.end();
       }
     }
-  }
-
-  private resolveUserId(req: Request, res: Response): string | null {
-    // JWT strategy 将解码用户挂到 req.user（无全局 Express 类型增强，用精确 cast）
-    const user = (req as { user?: { id?: string } }).user;
-    if (user?.id) return user.id;
-
-    const token = req.query.token as string | undefined;
-    if (token) {
-      try {
-        const decoded = verify(token, this.jwtSecret) as { id: string };
-        return decoded.id;
-      } catch {
-        res.status(401).end();
-        return null;
-      }
-    }
-
-    res.status(401).end();
-    return null;
-  }
-
-  private setSseHeaders(res: Response): void {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
   }
 
   private isActive(status: string): boolean {

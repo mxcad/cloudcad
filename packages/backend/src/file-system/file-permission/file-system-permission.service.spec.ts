@@ -8,9 +8,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FileSystemPermissionService } from './file-system-permission.service';
 import { DatabaseService } from '../../database/database.service';
 import { IPROJECT_PERMISSION_SERVICE } from '../../roles/interfaces/project-permission-service.interface';
+import { IPERMISSION_SERVICE } from '../../permission/interfaces/permission-service.interface';
 import { TreeWalker } from '../file-tree/tree-walker.service';
-import { NotFoundException } from '@nestjs/common';
-import { ProjectRole, ProjectPermission } from '../../common/enums/permissions.enum';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { ProjectRole, ProjectPermission, SystemPermission } from '../../common/enums/permissions.enum';
 
 describe('FileSystemPermissionService', () => {
   let service: FileSystemPermissionService;
@@ -36,6 +37,10 @@ describe('FileSystemPermissionService', () => {
 		resolveProjectId: jest.fn(),
 	};
 
+  const mockSystemPermissionService = {
+    checkSystemPermission: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -45,6 +50,7 @@ describe('FileSystemPermissionService', () => {
         { provide: DatabaseService, useValue: mockPrisma },
         { provide: IPROJECT_PERMISSION_SERVICE, useValue: mockProjectPermissionService },
         { provide: TreeWalker, useValue: mockTreeWalker },
+        { provide: IPERMISSION_SERVICE, useValue: mockSystemPermissionService },
       ],
     }).compile();
 
@@ -153,6 +159,135 @@ describe('FileSystemPermissionService', () => {
       );
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('assertNodeAccess', () => {
+    it('should pass for project file when user has the project permission', async () => {
+      // findUnique 调用序：节点自身 → 根节点（projectId 指向项目根）→ checkNodePermission 复查节点
+      const fileNode = { id: 'file1', nodeType: NodeType.FILE, projectId: 'project1' };
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(fileNode)
+        .mockResolvedValueOnce({ id: 'project1', nodeType: NodeType.PROJECT })
+        .mockResolvedValue(fileNode);
+      mockTreeWalker.resolveProjectId.mockResolvedValue('project1');
+      mockProjectPermissionService.checkPermission.mockResolvedValue(true);
+
+      await expect(
+        service.assertNodeAccess('user1', 'file1', ProjectPermission.FILE_DOWNLOAD)
+      ).resolves.toBeUndefined();
+      // checkNodePermission 内部解析出项目根后按项目维度判定
+      expect(mockProjectPermissionService.checkPermission).toHaveBeenCalledWith(
+        'user1',
+        'project1',
+        ProjectPermission.FILE_DOWNLOAD
+      );
+    });
+
+    it('should throw ForbiddenException when user lacks the project permission (IDOR)', async () => {
+      const fileNode = { id: 'file1', nodeType: NodeType.FILE, projectId: 'project1' };
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(fileNode)
+        .mockResolvedValueOnce({ id: 'project1', nodeType: NodeType.PROJECT })
+        .mockResolvedValue(fileNode);
+      // 根可解析、权限判定为 false：拒绝必须来自权限判定而非根解析失败
+      mockTreeWalker.resolveProjectId.mockResolvedValue('project1');
+      mockProjectPermissionService.checkPermission.mockResolvedValue(false);
+
+      await expect(
+        service.assertNodeAccess('user1', 'file1', ProjectPermission.FILE_DOWNLOAD)
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should pass for personal space file via project permission path (owner logic in store)', async () => {
+      const fileNode = { id: 'file1', nodeType: NodeType.FILE, projectId: 'ps1' };
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce(fileNode)
+        .mockResolvedValueOnce({ id: 'ps1', nodeType: NodeType.PERSONAL_SPACE })
+        .mockResolvedValue(fileNode);
+      mockTreeWalker.resolveProjectId.mockResolvedValue('ps1');
+      mockProjectPermissionService.checkPermission.mockResolvedValue(true);
+
+      await expect(
+        service.assertNodeAccess('owner1', 'file1', ProjectPermission.FILE_OPEN)
+      ).resolves.toBeUndefined();
+    });
+
+    it('should require LIBRARY_DRAWING_MANAGE for file under drawing library root', async () => {
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce({
+          id: 'lib-file1',
+          nodeType: NodeType.FILE,
+          projectId: 'lib-root',
+        })
+        .mockResolvedValueOnce({ id: 'lib-root', nodeType: NodeType.LIBRARY_DRAWING });
+      mockSystemPermissionService.checkSystemPermission.mockResolvedValue(true);
+
+      await expect(
+        service.assertNodeAccess('admin1', 'lib-file1', ProjectPermission.FILE_DOWNLOAD)
+      ).resolves.toBeUndefined();
+      expect(mockSystemPermissionService.checkSystemPermission).toHaveBeenCalledWith(
+        'admin1',
+        SystemPermission.LIBRARY_DRAWING_MANAGE
+      );
+      // 库上下文不走项目权限
+      expect(mockProjectPermissionService.checkPermission).not.toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException for library file without system permission (IDOR)', async () => {
+      mockPrisma.fileSystemNode.findUnique
+        .mockResolvedValueOnce({
+          id: 'lib-file1',
+          nodeType: NodeType.FILE,
+          projectId: 'lib-root',
+        })
+        .mockResolvedValueOnce({ id: 'lib-root', nodeType: NodeType.LIBRARY_BLOCK });
+      mockSystemPermissionService.checkSystemPermission.mockResolvedValue(false);
+
+      await expect(
+        service.assertNodeAccess('user1', 'lib-file1', ProjectPermission.FILE_DOWNLOAD)
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockSystemPermissionService.checkSystemPermission).toHaveBeenCalledWith(
+        'user1',
+        SystemPermission.LIBRARY_BLOCK_MANAGE
+      );
+    });
+
+    it('should treat the node itself as root when it is a library root', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'lib-root',
+        nodeType: NodeType.LIBRARY_DRAWING,
+        projectId: null,
+      });
+      mockSystemPermissionService.checkSystemPermission.mockResolvedValue(true);
+
+      await expect(
+        service.assertNodeAccess('admin1', 'lib-root', ProjectPermission.FILE_OPEN)
+      ).resolves.toBeUndefined();
+      // 节点自身即根：不应触发根节点二次查询
+      expect(mockPrisma.fileSystemNode.findUnique).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw NotFoundException when node does not exist', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.assertNodeAccess('user1', 'missing', ProjectPermission.FILE_OPEN)
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should fail closed when root cannot be resolved', async () => {
+      // 节点自身 + checkNodePermission 复查均返回同一孤儿节点；根解析走 treeWalker 返回 null
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'orphan1',
+        nodeType: NodeType.FILE,
+        projectId: null,
+      });
+      mockTreeWalker.resolveProjectId.mockResolvedValue(null);
+
+      await expect(
+        service.assertNodeAccess('user1', 'orphan1', ProjectPermission.FILE_OPEN)
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

@@ -11,30 +11,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // ---------------------------------------------------------------------------
-// Interfaces
-// ---------------------------------------------------------------------------
-
-/** 节点引用上下文 */
-export interface NodeReferenceContext {
-  /** 节点 ID */
-  nodeId: string;
-  /** 节点名称 */
-  nodeName: string;
-  /** 文件哈希值 */
-  fileHash: string;
-  /** 所有者 ID */
-  ownerId: string;
-  /** 父节点 ID */
-  parentId: string;
-}
-
-// ---------------------------------------------------------------------------
 // NodeUtils
 // ---------------------------------------------------------------------------
 
 /**
  * 节点工具类
- * 提供节点创建、验证、文件名处理、MIME 类型检测、文件验证等纯逻辑工具方法。
+ * 提供 MIME 类型检测、文件大小格式化等纯逻辑工具方法。
  * 整合自 common/utils/node-utils.ts 和 file-system/utils/node-utils.ts 两处
  * 重复实现，消除代码重复（P2 / code-review 13-code-duplication.md）。
  */
@@ -112,100 +94,6 @@ export class NodeUtils {
     hpp: 'text/x-c++',
   };
 
-  /** 非法字符（Windows / Linux 均不允许；包含控制字符是故意的，用于安全验证） */
-  private static readonly INVALID_CHARS = /[<>:"|?*\x00-\x1F]/;
-
-  /** 控制字符（用于安全清理） */
-  private static readonly CONTROL_CHARS = /[\x00-\x1F\x7F]/;
-
-  /** 最大文件名长度 */
-  private static readonly MAX_FILENAME_LENGTH = 255;
-
-  // ---- 创建 / 验证 --------------------------------------------------------
-
-  /**
-   * 验证文件哈希格式（SHA-256，64 位十六进制）
-   * @param fileHash 文件哈希
-   * @returns 是否有效
-   */
-  static isValidFileHash(fileHash: string): boolean {
-    const sha256Pattern = /^[a-f0-9]{64}$/i;
-    return sha256Pattern.test(fileHash);
-  }
-
-  // ---- 文件名/扩展名处理 ---------------------------------------------------
-
-  /**
-   * 获取文件扩展名（含点）
-   * @param fileName 文件名
-   * @returns 扩展名，如 ".dwg"；无扩展名返回空串
-   */
-  static extractExtension(fileName: string): string {
-    if (!fileName) {
-      return '';
-    }
-
-    const lastDotIndex = fileName.lastIndexOf('.');
-
-    // 没有点，或者点是最后一个字符（如 "foo."），或者点是第一个字符（隐藏文件）
-    if (lastDotIndex <= 0 || lastDotIndex === fileName.length - 1) {
-      return '';
-    }
-
-    return fileName.substring(lastDotIndex);
-  }
-
-  /**
-   * 获取文件主名（不含扩展名）
-   * @param fileName 文件名
-   * @returns 主文件名
-   */
-  static extractBaseName(fileName: string): string {
-    if (!fileName) {
-      return '';
-    }
-
-    const lastDotIndex = fileName.lastIndexOf('.');
-
-    // 没有点，或者点是第一个字符（隐藏文件 .foo）
-    if (lastDotIndex <= 0) {
-      return fileName;
-    }
-
-    return fileName.substring(0, lastDotIndex);
-  }
-
-  /** @deprecated 请使用 extractBaseName */
-  static getBaseName = NodeUtils.extractBaseName;
-
-  /** @deprecated 请使用 extractExtension */
-  static getExtension = NodeUtils.extractExtension;
-
-  // ---- 唯一文件名 ---------------------------------------------------------
-
-  /**
-   * 生成唯一的文件名（处理重复）
-   * @param baseName 基础文件名（不含扩展名）
-   * @param extension 扩展名
-   * @param existingNames 已存在的文件名列表
-   * @returns 唯一文件名
-   */
-  static generateUniqueFileName(
-    baseName: string,
-    extension: string,
-    existingNames: string[],
-  ): string {
-    let candidate = `${baseName}${extension}`;
-    let counter = 1;
-
-    while (existingNames.includes(candidate)) {
-      candidate = `${baseName} (${counter})${extension}`;
-      counter++;
-    }
-
-    return candidate;
-  }
-
   // ---- MIME ---------------------------------------------------------------
 
   /**
@@ -226,64 +114,6 @@ export class NodeUtils {
     const lowerExt = normalizedExt.toLowerCase();
 
     return NodeUtils.MIME_TYPES[lowerExt] || 'application/octet-stream';
-  }
-
-  // ---- 文件类型检测 --------------------------------------------------------
-
-  /**
-   * 检查是否为文档文件
-   * @param filename 文件名
-   * @returns 是否为文档文件
-   */
-  static isDocumentFile(filename: string): boolean {
-    const extension = NodeUtils.extractExtension(filename).toLowerCase();
-    return [
-      '.pdf',
-      '.doc',
-      '.docx',
-      '.xls',
-      '.xlsx',
-      '.ppt',
-      '.pptx',
-      '.txt',
-      '.rtf',
-      '.odt',
-      '.ods',
-      '.odp',
-    ].includes(extension);
-  }
-
-  // ---- 文件名清理 ---------------------------------------------------------
-
-  /**
-   * 清理文件名，移除非法字符
-   * @param filename 原始文件名
-   * @returns 清理后的文件名
-   */
-  static sanitizeFileName(filename: string): string {
-    // 移除路径遍历字符
-    let sanitized = filename.replace(/[/\\]/g, '_');
-
-    // 移除控制字符
-    sanitized = sanitized.replace(NodeUtils.CONTROL_CHARS, '_');
-
-    // 移除非法字符
-    sanitized = sanitized.replace(NodeUtils.INVALID_CHARS, '_');
-
-    // 限制文件名长度
-    if (sanitized.length > NodeUtils.MAX_FILENAME_LENGTH) {
-      const ext = NodeUtils.extractExtension(sanitized);
-      const nameWithoutExt = NodeUtils.extractBaseName(sanitized);
-      const maxNameLength = NodeUtils.MAX_FILENAME_LENGTH - ext.length;
-      sanitized = nameWithoutExt.substring(0, maxNameLength) + ext;
-    }
-
-    // 确保文件名不为空
-    if (sanitized.trim() === '' || sanitized === '.') {
-      sanitized = 'unnamed';
-    }
-
-    return sanitized;
   }
 
   // ---- 格式化 -------------------------------------------------------------

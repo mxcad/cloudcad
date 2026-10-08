@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Logger,
   Param,
   Patch,
   Post,
@@ -34,7 +33,6 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { ProjectCrudService } from '../../file-operations/project-crud.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
-import { FileTreeService } from '../file-tree/file-tree.service';
 import { StorageInfoService } from '../storage-quota/storage-info.service';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { QueryProjectsDto } from '../dto/query-projects.dto';
@@ -52,12 +50,9 @@ import {
 @ApiTags('文件系统 - 项目')
 @ApiBearerAuth()
 export class ProjectController {
-  private readonly logger = new Logger(ProjectController.name);
-
   constructor(
     private readonly projectCrudService: ProjectCrudService,
     private readonly nodeTrashService: NodeTrashService,
-    private readonly fileTreeService: FileTreeService,
     private readonly storageInfoService: StorageInfoService
   ) {}
 

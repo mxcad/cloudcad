@@ -11,7 +11,6 @@ import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
 import { FileSystemNodeContext } from '../node/filesystem-node.service';
-import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import { I18nContext } from 'nestjs-i18n';
@@ -26,7 +25,6 @@ export class ExternalRefService {
     private readonly configService: ConfigService<AppConfig>,
     private readonly fileSystemService: MxFileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly fileTreeService: FileTreeService,
     private readonly storageManager: StorageManager,
     private readonly extRefPreloadingService: ExtRefPreloadingService,
     private readonly nodeMutationGuard: NodeMutationGuard

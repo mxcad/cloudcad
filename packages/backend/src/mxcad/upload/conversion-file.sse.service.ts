@@ -1,17 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Response, Request } from 'express';
+import { setSseHeaders, startSseKeepalive } from '../../common/sse/sse.helpers';
 import { DrawingIngestService } from './drawing-ingest.service';
 import {
   CONVERSION_FILE_CHANNEL,
   type ConversionFileSseEvent,
 } from '../conversion/conversion-task-sse.constants';
-
-/**
- * SSE 保活间隔：空闲连接（转换进行中无事件）时防止代理按超时断开。
- * 用 SSE 注释行（`: keep-alive`）——EventSource 视为注释不触发 onmessage，仅保活。
- */
-const SSE_KEEPALIVE_INTERVAL_MS = 15000;
 
 /**
  * 无节点（游客 / 公开图纸）转换完成 SSE（per 文件 hash，公开端点）。
@@ -25,8 +20,6 @@ const SSE_KEEPALIVE_INTERVAL_MS = 15000;
  */
 @Injectable()
 export class ConversionFileSseService {
-  private readonly logger = new Logger(ConversionFileSseService.name);
-
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly drawingIngestService: DrawingIngestService
@@ -41,8 +34,7 @@ export class ConversionFileSseService {
     res: Response,
     req: Request
   ): Promise<void> {
-    this.setSseHeaders(res);
-    res.flushHeaders();
+    setSseHeaders(res);
 
     let closed = false;
     res.on('close', () => {
@@ -61,36 +53,21 @@ export class ConversionFileSseService {
     }
 
     const channel = CONVERSION_FILE_CHANNEL(hash);
+    const stopKeepalive = startSseKeepalive(res, () => closed);
     const onEvent = (event: ConversionFileSseEvent) => {
       if (closed) return;
       res.write(`data: ${JSON.stringify(event)}\n\n`);
       closed = true;
       this.eventEmitter.off(channel, onEvent);
-      clearInterval(keepAliveTimer);
+      stopKeepalive();
       res.end();
     };
     this.eventEmitter.on(channel, onEvent);
 
-    // 保活：转换进行中期防代理超时断连（注释行不触发前端 onmessage）
-    const keepAliveTimer = setInterval(() => {
-      if (closed) {
-        clearInterval(keepAliveTimer);
-        return;
-      }
-      res.write(': keep-alive\n\n');
-    }, SSE_KEEPALIVE_INTERVAL_MS);
-
     req.on('close', () => {
       closed = true;
       this.eventEmitter.off(channel, onEvent);
-      clearInterval(keepAliveTimer);
+      stopKeepalive();
     });
-  }
-
-  private setSseHeaders(res: Response): void {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
   }
 }

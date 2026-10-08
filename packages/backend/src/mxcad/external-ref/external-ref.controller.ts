@@ -27,7 +27,6 @@ import {
 } from './interfaces/ext-ref-facade.interface';
 import { DrawingIngestService } from '../upload/drawing-ingest.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
-import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { I18nContext } from 'nestjs-i18n';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
@@ -49,8 +48,7 @@ export class MxcadExternalRefController {
     @Inject(I_EXTERNAL_REF_FACADE)
     private readonly externalRefFacade: IExternalRefFacade,
     private readonly drawingIngestService: DrawingIngestService,
-    private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly fileTreeService: FileTreeService
+    private readonly fileSystemNodeService: FileSystemNodeService
   ) {}
 
   @Get('preloading/:nodeId')

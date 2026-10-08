@@ -14,12 +14,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { FileSystemNode as PrismaFileSystemNode, NodeType } from '@cloudcad/db';
+import { NodeType } from '@cloudcad/db';
 import { DatabaseService } from '../../database/database.service';
 import { IStorageService } from '../../storage/interfaces/storage-service.interface';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { ConfigService } from '@nestjs/config';
-import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { CadDownloadFormat } from '../dto/download-node.dto';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -30,14 +29,12 @@ import { PassThrough } from 'stream';
 
 import { MXCAD_CONVERSION_SERVICE } from '../../mxcad/interfaces/mxcad-service-tokens';
 import type { IMxcadConversionService } from '../../mxcad/interfaces/mxcad-conversion.interface';
-import type { ConvertServerFileParam } from '../../mxcad/types/mxcad-context.types';
 
 import { I18nContext } from 'nestjs-i18n';
 import { AuditLogger } from '../../audit/audit-logger.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { NodeUtils } from '../../common/utils/node-utils';
 import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
-import { ClsService } from 'nestjs-cls';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import {
@@ -46,6 +43,10 @@ import {
   isConvertibleSourceExt,
   resolveOutputFormat,
 } from './format-policy';
+import {
+  ConversionCoreError,
+  runConversionCore,
+} from './conversion-core';
 
 /**
  * 转换产物缓存文件名判据：`{hash}-{paramKey}{ext}`。
@@ -89,10 +90,8 @@ export class FileDownloadExportService {
     private readonly storageManager: StorageManager,
     private readonly configService: ConfigService,
     private readonly runtimeConfigService: RuntimeConfigService,
-    private readonly permissionService: FileSystemPermissionService,
     private readonly moduleRef: ModuleRef,
     private readonly auditLogger: AuditLogger,
-    private readonly cls: ClsService,
     private readonly restrictionEngine: RestrictionEngine
   ) {
     const limits = this.configService.get('fileLimits', { infer: true });
@@ -379,45 +378,40 @@ export class FileDownloadExportService {
     ).replace(/\\/g, '/');
     const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
 
-    const conversionOptions: ConvertServerFileParam = {
-      srcPath,
-      fileHash: node.fileHash || '',
-      nodeId: node.id,
-      userId,
-      outname,
-      createPreloadingData: false,
-    };
-    // 引擎参数默认值单一出口（FormatPolicy）：pdf 补齐 2000/2000/mono，dwg/dxf 仅透传 dwgVersion
-    if (resolved.engineParams) {
-      Object.assign(conversionOptions, resolved.engineParams);
-    }
-
-    const mxCadConversionService = await this.getMxCadConversionService();
-    const result =
-      await mxCadConversionService.convertServerFile(conversionOptions);
-    if (result.code !== 0) {
-      const errMsg = result.message || '文件转换失败';
-      if (userId) {
-        await this.restrictionEngine.releaseConversionCount(userId);
+    // 共享转换核心（构造参数 → 调引擎 → 校验产物）。失败释放配额并按本地化文案抛错；
+    // 引擎原始异常（spawn 失败 / VIP 门控拒绝）原样上抛，不占配额（与既有语义一致）。
+    let targetFullPath: string;
+    try {
+      const mxCadConversionService = await this.getMxCadConversionService();
+      ({ artifactPath: targetFullPath } = await runConversionCore({
+        conversionService: mxCadConversionService,
+        srcPath,
+        fileHash: node.fileHash || '',
+        nodeId: node.id,
+        userId,
+        outname,
+        engineParams: resolved.engineParams,
+      }));
+    } catch (error) {
+      if (error instanceof ConversionCoreError) {
+        if (userId) {
+          await this.restrictionEngine.releaseConversionCount(userId);
+        }
+        if (error.kind === 'engine-failed') {
+          const errMsg = error.detail || '文件转换失败';
+          throw new BadRequestException(
+            I18nContext.current()?.t('error.file_extra.conversion_failed_detail', {
+              args: { error: errMsg },
+            }) ?? `文件转换失败: ${errMsg}`
+          );
+        }
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.file_extra.converted_file_not_exist', {
+            args: { path: error.detail },
+          }) ?? `转换后的文件不存在: ${error.detail}`
+        );
       }
-      throw new BadRequestException(
-        I18nContext.current()?.t('error.file_extra.conversion_failed_detail', {
-          args: { error: errMsg },
-        }) ?? `文件转换失败: ${errMsg}`
-      );
-    }
-
-    // 引擎把 outname 写到 srcPath 同目录：产物 = dirname(srcPath)/outname
-    const targetFullPath = path.join(path.dirname(srcPath), outname);
-    if (!fs.existsSync(targetFullPath)) {
-      if (userId) {
-        await this.restrictionEngine.releaseConversionCount(userId);
-      }
-      throw new NotFoundException(
-        I18nContext.current()?.t('error.file_extra.converted_file_not_exist', {
-          args: { path: outname },
-        }) ?? `转换后的文件不存在: ${outname}`
-      );
+      throw error;
     }
     // 产物移入缓存目录（内容寻址时产物已在缓存位置，无需移动）
     if (cachePath && targetFullPath !== cachePath) {
@@ -454,16 +448,6 @@ export class FileDownloadExportService {
     }
 
     return sanitized;
-  }
-
-  private getStoragePath(node: PrismaFileSystemNode): string {
-    if (!node.path) {
-      throw new NotFoundException(
-        I18nContext.current()?.t('error.file_extra.path_not_exist') ??
-          '文件路径不存在'
-      );
-    }
-    return this.storageManager.getFullPath(node.path);
   }
 
   private async getFileStream(
@@ -721,58 +705,50 @@ export class FileDownloadExportService {
           ).replace(/\\/g, '/');
           const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
 
-          const conversionOptions: ConvertServerFileParam = {
-            srcPath,
-            fileHash: node.fileHash || '',
-            nodeId: node.id,
-            userId,
-            outname,
-            createPreloadingData: false,
-          };
-
-          // 引擎参数默认值单一出口（FormatPolicy）：pdf 补齐 2000/2000/mono，dwg/dxf 仅透传 dwgVersion
-          if (resolved.engineParams) {
-            Object.assign(conversionOptions, resolved.engineParams);
-          }
-
           this.logger.log(`开始转换文件: ${originalFilename} -> ${outname}`);
-          let result;
+          // 共享转换核心（构造参数 → 调引擎 → 校验产物）。配额释放时机与既有语义一致：
+          // 引擎失败（code≠0）与引擎原始异常（spawn/VIP 门控）释放配额；产物缺失不释放。
+          let targetFullPath: string;
           try {
             const mxCadConversionService =
               await this.getMxCadConversionService();
-            result =
-              await mxCadConversionService.convertServerFile(conversionOptions);
+            ({ artifactPath: targetFullPath } = await runConversionCore({
+              conversionService: mxCadConversionService,
+              srcPath,
+              fileHash: node.fileHash || '',
+              nodeId: node.id,
+              userId,
+              outname,
+              engineParams: resolved.engineParams,
+            }));
           } catch (error) {
+            if (error instanceof ConversionCoreError) {
+              if (error.kind === 'engine-failed') {
+                if (userId) {
+                  await this.restrictionEngine.releaseConversionCount(userId);
+                }
+                const errMsg = error.detail || '文件转换失败';
+                this.logger.error(`文件转换失败: ${errMsg}`);
+                throw new BadRequestException(
+                  I18nContext.current()?.t(
+                    'error.file_extra.conversion_failed_detail',
+                    { args: { error: errMsg } }
+                  ) ?? `文件转换失败: ${errMsg}`
+                );
+              }
+              // 产物缺失：不释放配额（与既有语义一致）
+              throw new NotFoundException(
+                I18nContext.current()?.t(
+                  'error.file_extra.converted_file_not_exist',
+                  { args: { path: error.detail } }
+                ) ?? `转换后的文件不存在: ${error.detail}`
+              );
+            }
+            // 引擎原始异常（spawn 失败 / VIP 门控拒绝）：释放配额后原样上抛
             if (userId) {
               await this.restrictionEngine.releaseConversionCount(userId);
             }
             throw error;
-          }
-
-          if (result.code !== 0) {
-            const errMsg = result.message || '文件转换失败';
-            this.logger.error(`文件转换失败: ${errMsg}`);
-            if (userId) {
-              await this.restrictionEngine.releaseConversionCount(userId);
-            }
-            throw new BadRequestException(
-              I18nContext.current()?.t(
-                'error.file_extra.conversion_failed_detail',
-                { args: { error: errMsg } }
-              ) ?? `文件转换失败: ${errMsg}`
-            );
-          }
-
-          // 引擎把 outname 写到 srcPath 同目录：产物 = dirname(srcPath)/outname
-          const targetFullPath = path.join(path.dirname(srcPath), outname);
-
-          if (!fs.existsSync(targetFullPath)) {
-            throw new NotFoundException(
-              I18nContext.current()?.t(
-                'error.file_extra.converted_file_not_exist',
-                { args: { path: outname } }
-              ) ?? `转换后的文件不存在: ${outname}`
-            );
           }
 
           let convertedStream: fs.ReadStream;
@@ -1073,14 +1049,6 @@ export class FileDownloadExportService {
     return { totalSize: currentTotalSize, fileCount: currentFileCount };
   }
 
-  formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  }
-
   /**
    * 获取节点的完整存储路径（公共方法）
    * @param nodePath 节点的相对路径
@@ -1094,14 +1062,5 @@ export class FileDownloadExportService {
       );
     }
     return this.storageManager.getFullPath(nodePath);
-  }
-
-  /**
-   * 检查节点是否属于图书馆节点（公共方法）
-   * @param nodeId 节点 ID
-   * @returns 是否为图书馆节点
-   */
-  async isLibraryNode(nodeId: string): Promise<boolean> {
-    return await this.permissionService.isLibraryNode(nodeId);
   }
 }

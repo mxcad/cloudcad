@@ -35,31 +35,3 @@ export enum CacheLevel {
    */
   L2 = 'L2',
 }
-
-/**
- * 获取缓存级别的默认 TTL（秒）
- */
-export function getDefaultTTL(level: CacheLevel): number {
-  switch (level) {
-    case CacheLevel.L1:
-      return 300; // 5 分钟
-    case CacheLevel.L2:
-      return 1800; // 30 分钟
-    default:
-      return 300;
-  }
-}
-
-/**
- * 获取缓存级别的描述
- */
-export function getCacheLevelDescription(level: CacheLevel): string {
-  switch (level) {
-    case CacheLevel.L1:
-      return 'L1 内存缓存 - 最快访问速度，容量 1000 条，TTL 5 分钟';
-    case CacheLevel.L2:
-      return 'L2 Redis 缓存 - 快速访问，跨实例共享，TTL 30 分钟';
-    default:
-      return '未知缓存级别';
-  }
-}

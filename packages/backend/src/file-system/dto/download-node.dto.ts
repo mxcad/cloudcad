@@ -29,46 +29,6 @@ export enum CadDownloadFormat {
 }
 
 /**
- * PDF 转换参数
- */
-export class PdfConversionParams {
-  @ApiProperty({
-    description: '输出宽度（像素）',
-    required: false,
-    default: '2000',
-  })
-  @IsOptional()
-  @IsString()
-  width?: string;
-
-  @ApiProperty({
-    description: '输出高度（像素）',
-    required: false,
-    default: '2000',
-  })
-  @IsOptional()
-  @IsString()
-  height?: string;
-
-  @ApiProperty({
-    description: '颜色策略：mono（单色）、color（彩色）',
-    required: false,
-    default: 'mono',
-  })
-  @IsOptional()
-  @IsString()
-  colorPolicy?: string;
-
-  @ApiProperty({
-    description: 'DWG/DXF 版本号',
-    required: false,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  dwgVersion?: number;
-}
-
-/**
  * 节点下载查询参数 DTO
  */
 export class DownloadNodeQueryDto {

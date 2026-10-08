@@ -11,13 +11,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { NodeType } from '@cloudcad/db';
-import { ForbiddenException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { Readable } from 'stream';
 import { DatabaseService } from '../../database/database.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
-import { IPROJECT_PERMISSION_SERVICE } from '../../roles/interfaces/project-permission-service.interface';
+import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import { IStorageProvider } from '../../storage/interfaces/storage-provider.interface';
 import { CrossNodeDownloadService } from './cross-node-download.service';
 
@@ -34,7 +33,7 @@ describe('CrossNodeDownloadService', () => {
   let service: CrossNodeDownloadService;
   let prisma: any;
   let storageProvider: Record<string, jest.Mock>;
-  let projectPermissionService: Record<string, jest.Mock>;
+  let fileSystemPermissionService: Record<string, jest.Mock>;
 
   const fileNode = {
     id: 'node-file-1',
@@ -42,14 +41,6 @@ describe('CrossNodeDownloadService', () => {
     path: '/files/node-file-1.dwg',
     nodeType: NodeType.FILE,
     projectId: 'proj-1',
-  };
-
-  const projectNode = {
-    id: 'proj-1',
-    name: 'project',
-    path: '/files/proj-1.dwg',
-    nodeType: NodeType.PROJECT,
-    projectId: null,
   };
 
   beforeEach(async () => {
@@ -61,20 +52,18 @@ describe('CrossNodeDownloadService', () => {
     storageProvider = {
       read: jest.fn(),
     };
-    projectPermissionService = {
-      isProjectOwner: jest.fn(),
-      checkPermission: jest.fn(),
+    fileSystemPermissionService = {
+      assertNodeAccess: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CrossNodeDownloadService,
         { provide: DatabaseService, useValue: prisma },
-        { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: IStorageProvider, useValue: storageProvider },
         {
-          provide: IPROJECT_PERMISSION_SERVICE,
-          useValue: projectPermissionService,
+          provide: FileSystemPermissionService,
+          useValue: fileSystemPermissionService,
         },
       ],
     }).compile();
@@ -82,45 +71,28 @@ describe('CrossNodeDownloadService', () => {
     service = module.get(CrossNodeDownloadService);
   });
 
-  it('should download a node when user is the project owner', async () => {
+  it('delegates the node-level access check to assertNodeAccess and downloads on success', async () => {
     prisma.fileSystemNode.findUnique.mockResolvedValue(fileNode);
-    projectPermissionService.isProjectOwner.mockResolvedValue(true);
+    fileSystemPermissionService.assertNodeAccess.mockResolvedValue(undefined);
     storageProvider.read.mockResolvedValue(Readable.from(['content']));
 
     const { stream } = await service.createBatchZip([fileNode.id], 'user-1');
 
     await collectStream(stream);
 
-    expect(projectPermissionService.isProjectOwner).toHaveBeenCalledWith(
+    expect(fileSystemPermissionService.assertNodeAccess).toHaveBeenCalledWith(
       'user-1',
-      'proj-1'
-    );
-    expect(projectPermissionService.checkPermission).not.toHaveBeenCalled();
-    expect(storageProvider.read).toHaveBeenCalledWith(fileNode.path);
-  });
-
-  it('should download a node when non-owner has FILE_DOWNLOAD permission', async () => {
-    prisma.fileSystemNode.findUnique.mockResolvedValue(fileNode);
-    projectPermissionService.isProjectOwner.mockResolvedValue(false);
-    projectPermissionService.checkPermission.mockResolvedValue(true);
-    storageProvider.read.mockResolvedValue(Readable.from(['content']));
-
-    const { stream } = await service.createBatchZip([fileNode.id], 'user-1');
-
-    await collectStream(stream);
-
-    expect(projectPermissionService.checkPermission).toHaveBeenCalledWith(
-      'user-1',
-      'proj-1',
+      fileNode.id,
       ProjectPermission.FILE_DOWNLOAD
     );
     expect(storageProvider.read).toHaveBeenCalledWith(fileNode.path);
   });
 
-  it('should throw ForbiddenException when user has no permission', async () => {
+  it('rethrows ForbiddenException from assertNodeAccess (fail-closed)', async () => {
     prisma.fileSystemNode.findUnique.mockResolvedValue(fileNode);
-    projectPermissionService.isProjectOwner.mockResolvedValue(false);
-    projectPermissionService.checkPermission.mockResolvedValue(false);
+    fileSystemPermissionService.assertNodeAccess.mockRejectedValue(
+      new ForbiddenException('no permission')
+    );
 
     await expect(
       service.createBatchZip([fileNode.id], 'user-1')
@@ -128,36 +100,27 @@ describe('CrossNodeDownloadService', () => {
     expect(storageProvider.read).not.toHaveBeenCalled();
   });
 
-  it('should skip non-existent node without checking permission', async () => {
+  it('adds an error entry and continues for non-Forbidden failures', async () => {
+    prisma.fileSystemNode.findUnique.mockResolvedValue(fileNode);
+    fileSystemPermissionService.assertNodeAccess.mockRejectedValue(
+      new NotFoundException('node not found')
+    );
+
+    const { stream } = await service.createBatchZip([fileNode.id], 'user-1');
+
+    await collectStream(stream);
+
+    expect(storageProvider.read).not.toHaveBeenCalled();
+  });
+
+  it('skips non-existent node without checking permission', async () => {
     prisma.fileSystemNode.findUnique.mockResolvedValue(null);
 
     const { stream } = await service.createBatchZip(['missing-node'], 'user-1');
 
     await collectStream(stream);
 
-    expect(projectPermissionService.isProjectOwner).not.toHaveBeenCalled();
-    expect(projectPermissionService.checkPermission).not.toHaveBeenCalled();
+    expect(fileSystemPermissionService.assertNodeAccess).not.toHaveBeenCalled();
     expect(storageProvider.read).not.toHaveBeenCalled();
-  });
-
-  it('should check permission against the project node id for PROJECT nodes', async () => {
-    prisma.fileSystemNode.findUnique.mockResolvedValue(projectNode);
-    projectPermissionService.isProjectOwner.mockResolvedValue(false);
-    projectPermissionService.checkPermission.mockResolvedValue(true);
-    storageProvider.read.mockResolvedValue(Readable.from(['content']));
-
-    const { stream } = await service.createBatchZip([projectNode.id], 'user-1');
-
-    await collectStream(stream);
-
-    expect(projectPermissionService.isProjectOwner).toHaveBeenCalledWith(
-      'user-1',
-      projectNode.id
-    );
-    expect(projectPermissionService.checkPermission).toHaveBeenCalledWith(
-      'user-1',
-      projectNode.id,
-      ProjectPermission.FILE_DOWNLOAD
-    );
   });
 });

@@ -75,33 +75,3 @@ export class BatchDeleteFontDto {
   @IsOptional()
   target?: FontUploadTarget;
 }
-
-/**
- * 字体信息响应 DTO
- */
-export class FontInfoDto {
-  @ApiProperty({ description: '字体文件名' })
-  @IsString()
-  name: string;
-
-  @ApiProperty({ description: '文件大小（字节）' })
-  size: number;
-
-  @ApiProperty({ description: '文件扩展名' })
-  extension: string;
-
-  @ApiProperty({ description: '后端目录是否存在' })
-  existsInBackend: boolean;
-
-  @ApiProperty({ description: '前端目录是否存在' })
-  existsInFrontend: boolean;
-
-  @ApiProperty({ description: '创建时间' })
-  createdAt: Date;
-
-  @ApiProperty({ description: '更新时间' })
-  updatedAt: Date;
-
-  @ApiProperty({ description: '创建者' })
-  creator?: string;
-}

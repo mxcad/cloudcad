@@ -9,7 +9,6 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../database/database.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
-import { IPERMISSION_SERVICE } from '../permission/interfaces/permission-service.interface';
 import { NodeTrashService } from '../file-operations/node-trash.service';
 import { NodeMutationGuard } from '../file-operations/node-mutation.guard';
 import { NodeCopyMoveService } from '../file-operations/node-copy-move.service';
@@ -111,10 +110,6 @@ describe('LibraryService.saveLibraryAs', () => {
         { provide: DatabaseService, useValue: prisma },
         { provide: FileTreeService, useValue: fileTreeService },
         { provide: TreeWalker, useValue: treeWalker },
-        {
-          provide: IPERMISSION_SERVICE,
-          useValue: { checkSystemPermission: jest.fn() },
-        },
         { provide: NodeTrashService, useValue: {} },
         { provide: NodeMutationGuard, useValue: nodeMutationGuard },
         { provide: NodeCopyMoveService, useValue: {} },
@@ -317,10 +312,6 @@ describe('LibraryService.saveLibraryNode', () => {
         { provide: DatabaseService, useValue: { fileSystemNode: {} } },
         { provide: FileTreeService, useValue: fileTreeService },
         { provide: TreeWalker, useValue: { resolveProjectId: jest.fn() } },
-        {
-          provide: IPERMISSION_SERVICE,
-          useValue: { checkSystemPermission: jest.fn() },
-        },
         { provide: NodeTrashService, useValue: {} },
         { provide: NodeMutationGuard, useValue: {} },
         { provide: NodeCopyMoveService, useValue: {} },

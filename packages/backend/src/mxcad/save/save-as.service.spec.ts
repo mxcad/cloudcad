@@ -9,8 +9,6 @@ import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { FileConversionService } from '../conversion/file-conversion.service';
-import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
-import { VERSION_CONTROL_TOKEN } from '../../version-control/interfaces/version-control.interface';
 import { DatabaseService } from '../../database/database.service';
 import { ConfigService } from '@nestjs/config';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
@@ -59,12 +57,6 @@ describe('SaveAsService', () => {
     convertFile: jest.fn(),
   };
 
-  const mockPermissionService = {};
-
-  const mockVersionControlService = {
-    commitNodeDirectory: jest.fn(),
-  };
-
   const mockConfigService = {
     get: jest.fn().mockReturnValue(undefined),
   };
@@ -95,11 +87,6 @@ describe('SaveAsService', () => {
         { provide: FileSystemNodeService, useValue: mockFileSystemNodeService },
         { provide: StorageManager, useValue: mockStorageManager },
         { provide: FileConversionService, useValue: mockFileConversionService },
-        {
-          provide: FileSystemPermissionService,
-          useValue: mockPermissionService,
-        },
-        { provide: VERSION_CONTROL_TOKEN, useValue: mockVersionControlService },
         { provide: DatabaseService, useValue: mockPrisma },
         {
           provide: RestrictionEngine,

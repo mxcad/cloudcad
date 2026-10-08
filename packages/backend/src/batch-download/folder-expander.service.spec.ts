@@ -6,7 +6,11 @@ function createService(mocks: {
   prisma: any;
   permission?: any;
 }) {
-  const defaultPermission = { checkNodePermission: jest.fn().mockResolvedValue(true) };
+  // 节点级访问判定统一在 FileSystemPermissionService.assertNodeAccess（其语义
+  // 由 file-system-permission.service.spec.ts 覆盖）；此处默认放行，仅验证委托。
+  const defaultPermission = {
+    assertNodeAccess: jest.fn().mockResolvedValue(undefined),
+  };
   return new FolderExpanderService(
     mocks.prisma,
     mocks.permission || defaultPermission,
@@ -149,27 +153,35 @@ describe('FolderExpanderService', () => {
       expect(result).toEqual({ nodeId: 'file-1', fileName: 'test.dwg', isFolder: false });
     });
 
-    it('should allow personal-space node for its owner', async () => {
+    it('should delegate node access to assertNodeAccess with FILE_OPEN', async () => {
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'ps-folder', name: 'MySpace', originalName: null, nodeType: NodeType.FOLDER, projectId: null, ownerId: 'user-1' });
       mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
       const service = createService({ prisma: mockPrisma });
 
       const result = await service.getFolderFilesRecursive('ps-folder', 'user-1');
       expect(result.isFolder).toBe(true);
-      // 个人空间不走项目权限检查
-      expect((service as any).fileSystemPermissionService.checkNodePermission).not.toHaveBeenCalled();
+      // 个人空间/项目/资源库的判定统一在 assertNodeAccess 内（fail-closed）
+      expect((service as any).fileSystemPermissionService.assertNodeAccess).toHaveBeenCalledWith(
+        'user-1', 'ps-folder', 'FILE_OPEN',
+      );
     });
 
-    it('should reject personal-space node for a non-owner (IDOR regression)', async () => {
+    it('should reject when assertNodeAccess denies (IDOR regression)', async () => {
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'ps-folder', name: 'MySpace', originalName: null, nodeType: NodeType.FOLDER, projectId: null, ownerId: 'user-2' });
-      const service = createService({ prisma: mockPrisma });
+      const denied = {
+        assertNodeAccess: jest.fn().mockRejectedValue(new ForbiddenException('Access denied')),
+      };
+      const service = createService({ prisma: mockPrisma, permission: denied });
 
       await expect(service.getFolderFilesRecursive('ps-folder', 'user-1')).rejects.toThrow(ForbiddenException);
     });
 
-    it('should reject personal-space node with null ownerId (fail-closed)', async () => {
+    it('should fail closed when assertNodeAccess denies null-ownerId node', async () => {
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'ps-folder', name: 'MySpace', originalName: null, nodeType: NodeType.FOLDER, projectId: null, ownerId: null });
-      const service = createService({ prisma: mockPrisma });
+      const denied = {
+        assertNodeAccess: jest.fn().mockRejectedValue(new ForbiddenException('Access denied')),
+      };
+      const service = createService({ prisma: mockPrisma, permission: denied });
 
       await expect(service.getFolderFilesRecursive('ps-folder', 'user-1')).rejects.toThrow(ForbiddenException);
     });
@@ -196,7 +208,9 @@ describe('FolderExpanderService', () => {
 
     it('should throw ForbiddenException when no permission', async () => {
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue({ id: 'file-1', name: 'test.dwg', originalName: null, nodeType: NodeType.FILE, projectId: 'proj-1' });
-      const noPermission = { checkNodePermission: jest.fn().mockResolvedValue(false) };
+      const noPermission = {
+        assertNodeAccess: jest.fn().mockRejectedValue(new ForbiddenException('Access denied')),
+      };
       const service = createService({ prisma: mockPrisma, permission: noPermission });
 
       await expect(service.getFolderFilesRecursive('file-1', 'user-1')).rejects.toThrow(ForbiddenException);

@@ -26,11 +26,6 @@ import { promises as fsPromises } from 'fs';
 import { findReadyArtifactByHash } from '../utils/conversion-artifact';
 import * as crypto from 'crypto';
 import { NodeType } from '@cloudcad/db';
-import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
-import {
-  IVersionControl,
-  VERSION_CONTROL_TOKEN,
-} from '../../version-control/interfaces/version-control.interface';
 import { DatabaseService } from '../../database/database.service';
 import { AppConfig } from '../../config/app.config';
 
@@ -85,9 +80,6 @@ export class SaveAsService {
     private readonly fileTreeService: FileTreeService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly storageManager: StorageManager,
-    private readonly permissionService: FileSystemPermissionService,
-    @Inject(VERSION_CONTROL_TOKEN)
-    private readonly versionControlService: IVersionControl,
     private readonly prisma: DatabaseService,
     @Inject(I_EXTERNAL_REF_FACADE)
     private readonly externalRefFacade: IExternalRefFacade,
@@ -102,8 +94,6 @@ export class SaveAsService {
       projectId,
       format: userFormat,
       userId,
-      userName,
-      commitMessage,
       fileName: userFileName,
     } = options;
 
@@ -277,10 +267,7 @@ export class SaveAsService {
       projectId,
       format: userFormat,
       userId,
-      userName,
-      commitMessage,
       fileName: userFileName,
-      libraryType,
     } = options;
 
     const format = targetType === 'library' ? 'mxweb' : userFormat;

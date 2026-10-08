@@ -13,7 +13,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { MultiLevelCacheService } from './multi-level-cache.service';
-import { L1CacheProvider } from '../providers/l1-cache.provider';
 import { L2CacheProvider } from '../providers/l2-cache.provider';
 import {
   ICachePerformanceMetrics,
@@ -76,7 +75,6 @@ export class CacheMonitorService {
 
   constructor(
     private readonly cacheService: MultiLevelCacheService,
-    private readonly l1Cache: L1CacheProvider,
     private readonly l2Cache: L2CacheProvider,
     private readonly runtimeConfigService: RuntimeConfigService,
     private readonly taskRunService: TaskRunService,

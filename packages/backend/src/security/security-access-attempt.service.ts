@@ -21,9 +21,6 @@ import type {
   SecurityAccessAttemptListResponseDto,
 } from './dto/security-access-attempt.dto';
 
-/** 被记录的高危接口（仅管理员登录入口；后续如需扩展可在此追加） */
-export const SECURITY_ENDPOINT_ADMIN_LOGIN = '/api/v1/admin/auth/login';
-
 /**
  * 高危接口访问尝试记录服务
  *

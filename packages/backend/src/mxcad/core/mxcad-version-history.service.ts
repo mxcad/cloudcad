@@ -20,6 +20,7 @@ import { FileConversionService } from '../conversion/file-conversion.service';
 import { I18nContext } from 'nestjs-i18n';
 import { AppConfig } from '../../config/app.config';
 import { FileUtils } from '../../common/utils/file-utils';
+import { NodeUtils } from '../../common/utils/node-utils';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 
@@ -782,22 +783,9 @@ export class MxcadVersionHistoryService {
     }
   }
 
+  // MIME 单一事实源走 NodeUtils（此前本服务 + mxcad-file-access 控制器各一份，
+  // .dwg 值在 application/dwg 与 application/acad 间漂移）
   private getContentType(filePath: string): string {
-    const ext = path.extname(filePath).toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      '.mxweb': 'application/octet-stream',
-      '.dwg': 'application/dwg',
-      '.dxf': 'application/dxf',
-      '.pdf': 'application/pdf',
-      '.png': 'image/png',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.gif': 'image/gif',
-      '.bmp': 'image/bmp',
-      '.webp': 'image/webp',
-      '.json': 'application/json',
-      '.txt': 'text/plain',
-    };
-    return mimeTypes[ext] || 'application/octet-stream';
+    return NodeUtils.getMimeType(path.extname(filePath));
   }
 }

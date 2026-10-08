@@ -4,7 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AccountBindingService } from './account-binding.service';
 import { WechatService } from './wechat.service';
-import { AuthTokenService } from './auth-token.service';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
 
 /**
@@ -40,7 +39,6 @@ describe('AccountBindingService.bindWechat (takeover)', () => {
   const mockEmail = { sendVerificationEmail: jest.fn(), verifyEmail: jest.fn() };
   const mockSms = { sendVerificationCode: jest.fn(), verifyCode: jest.fn() };
   const mockRuntimeConfig = { getValue: jest.fn().mockResolvedValue(true) };
-  const mockAuthTokenService = { generateTokens: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -60,7 +58,6 @@ describe('AccountBindingService.bindWechat (takeover)', () => {
         { provide: WechatService, useValue: mockWechatService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: AuthTokenService, useValue: mockAuthTokenService },
       ],
     }).compile();
 
@@ -191,7 +188,6 @@ describe('AccountBindingService.unbindEmail/unbindPhone (验证码解绑)', () =
   const mockEmail = { sendVerificationEmail: jest.fn(), verifyEmail: jest.fn() };
   const mockSms = { sendVerificationCode: jest.fn(), verifyCode: jest.fn() };
   const mockRuntimeConfig = { getValue: jest.fn().mockResolvedValue(true) };
-  const mockAuthTokenService = { generateTokens: jest.fn() };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -207,7 +203,6 @@ describe('AccountBindingService.unbindEmail/unbindPhone (验证码解绑)', () =
         { provide: WechatService, useValue: mockWechatService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: AuthTokenService, useValue: mockAuthTokenService },
       ],
     }).compile();
 

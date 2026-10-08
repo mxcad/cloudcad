@@ -2,7 +2,6 @@ import { Injectable, Logger, BadRequestException, ConflictException, InternalSer
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WechatService } from './wechat.service';
-import { AuthTokenService } from './auth-token.service';
 import type { IUserRepository, IEmailVerificationService, ISmsVerificationService, IRuntimeConfigService, IAccountBindingService, WechatBindResponseDto, WechatUnbindResponseDto } from '@cloudcad/contracts';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
 import { I18nContext } from 'nestjs-i18n';
@@ -18,8 +17,7 @@ export class AccountBindingService implements IAccountBindingService {
     @Inject('EMAIL') private readonly emailVerificationService: IEmailVerificationService,
     @Inject('SMS') private readonly smsVerificationService: ISmsVerificationService,
     private wechatService: WechatService,
-    @Inject('CONFIG') private readonly runtimeConfigService: IRuntimeConfigService,
-    private authTokenService: AuthTokenService
+    @Inject('CONFIG') private readonly runtimeConfigService: IRuntimeConfigService
   ) {}
 
   async sendBindEmailCode(userId: string, email: string, isRebind: boolean = false): Promise<{ message: string }> {

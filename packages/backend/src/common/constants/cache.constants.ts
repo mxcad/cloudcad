@@ -47,34 +47,3 @@ export const CACHE_TTL = {
   /** 节点访问角色缓存 - 10 分钟 */
   NODE_ACCESS_ROLE: 10 * 60 * 1000,
 } as const;
-
-/**
- * 缓存键前缀
- */
-export const CACHE_KEY_PREFIX = {
-  /** 系统权限前缀 */
-  SYSTEM_PERMISSION: 'system_perm',
-
-  /** 用户权限前缀 */
-  USER_PERMISSIONS: 'user_permissions',
-
-  /** 项目权限前缀 */
-  PROJECT_PERMISSIONS: 'project_permissions',
-
-  /** 角色权限前缀 */
-  ROLE_PERMISSIONS: 'role_permissions',
-
-  /** 项目所有者前缀 */
-  PROJECT_OWNER: 'project_owner',
-
-  /** 项目成员角色前缀 */
-  PROJECT_MEMBER_ROLE: 'project_role',
-} as const;
-
-/**
- * 缓存事件频道前缀
- */
-export const CACHE_CHANNEL_PREFIX = {
-  /** 权限缓存失效事件前缀 */
-  PERMISSION: 'permission:cache:invalidation',
-} as const;

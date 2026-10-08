@@ -27,13 +27,6 @@ export type NoticeKind = (typeof NOTICE_KINDS)[number];
 export const NOTICE_LEVELS = ['info', 'warning', 'danger'] as const;
 export type NoticeLevel = (typeof NOTICE_LEVELS)[number];
 
-/** 级别优先级（数值越大越先弹） */
-export const NOTICE_LEVEL_PRIORITY: Record<NoticeLevel, number> = {
-  danger: 3,
-  warning: 2,
-  info: 1,
-};
-
 /** Redis pub/sub 频道：跨实例投递通知事件 */
 export const NOTICE_EVENTS_CHANNEL = 'notice:events';
 

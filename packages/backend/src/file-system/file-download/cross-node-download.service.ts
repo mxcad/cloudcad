@@ -1,14 +1,8 @@
 import { ForbiddenException, Injectable, Inject, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { NodeType } from '@cloudcad/db';
 import { IStorageProvider } from '../../storage/interfaces/storage-provider.interface';
 import { DatabaseService } from '../../database/database.service';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
-import {
-  IPROJECT_PERMISSION_SERVICE,
-  IProjectPermissionService,
-} from '../../roles/interfaces/project-permission-service.interface';
-import { I18nContext } from 'nestjs-i18n';
+import { FileSystemPermissionService } from '../file-permission/file-system-permission.service';
 import * as archiver from 'archiver';
 import { PassThrough } from 'stream';
 
@@ -20,9 +14,7 @@ export class CrossNodeDownloadService {
     @Inject(IStorageProvider)
     private readonly storageProvider: IStorageProvider,
     private readonly prisma: DatabaseService,
-    private readonly configService: ConfigService,
-    @Inject(IPROJECT_PERMISSION_SERVICE)
-    private readonly projectPermissionService: IProjectPermissionService
+    private readonly fileSystemPermissionService: FileSystemPermissionService
   ) {}
 
   async createBatchZip(
@@ -44,7 +36,13 @@ export class CrossNodeDownloadService {
           continue;
         }
 
-        await this.assertDownloadPermission(node, userId);
+        // 节点级访问校验（IDOR 防线）：统一走 assertNodeAccess（与单文件下载同口径，
+        // fail-closed，库/个人空间/项目上下文由其内部判定）
+        await this.fileSystemPermissionService.assertNodeAccess(
+          userId,
+          node.id,
+          ProjectPermission.FILE_DOWNLOAD
+        );
 
         const fileStream = await this.storageProvider.read(node.path);
         archive.append(fileStream, { name: node.name });
@@ -65,35 +63,5 @@ export class CrossNodeDownloadService {
 
     const filename = `batch-${Date.now()}.zip`;
     return { stream, filename };
-  }
-
-  private async assertDownloadPermission(
-    node: { id: string; nodeType: NodeType; projectId: string | null },
-    userId: string
-  ): Promise<void> {
-    const targetProjectId =
-      node.nodeType === NodeType.PROJECT ? node.id : node.projectId;
-    if (!targetProjectId) {
-      throw new ForbiddenException(
-        I18nContext.current()?.t('error.file.batch_download_project_unknown') ?? `无法确定节点 ${node.id} 所属项目`,
-      );
-    }
-    const isOwner = await this.projectPermissionService.isProjectOwner(
-      userId,
-      targetProjectId
-    );
-    if (isOwner) {
-      return;
-    }
-    const hasPermission = await this.projectPermissionService.checkPermission(
-      userId,
-      targetProjectId,
-      ProjectPermission.FILE_DOWNLOAD
-    );
-    if (!hasPermission) {
-      throw new ForbiddenException(
-        I18nContext.current()?.t('error.auth.permission_denied') ?? '您没有权限执行此操作',
-      );
-    }
   }
 }

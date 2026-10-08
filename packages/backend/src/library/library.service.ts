@@ -20,10 +20,6 @@ import { FileSystemNode, NodeType } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
-import {
-  IPERMISSION_SERVICE,
-  IPermissionService,
-} from '../permission/interfaces/permission-service.interface';
 import { NodeTrashService } from '../file-operations/node-trash.service';
 import { NodeMutationGuard } from '../file-operations/node-mutation.guard';
 import { NodeCopyMoveService } from '../file-operations/node-copy-move.service';
@@ -65,8 +61,6 @@ export class LibraryService {
     private readonly prisma: DatabaseService,
     private readonly fileTreeService: FileTreeService,
     private readonly treeWalker: TreeWalker,
-    @Inject(IPERMISSION_SERVICE)
-    private readonly permissionService: IPermissionService,
     private readonly nodeTrashService: NodeTrashService,
     private readonly nodeCopyMoveService: NodeCopyMoveService,
     private readonly nodeUpdateService: NodeUpdateService,

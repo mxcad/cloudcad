@@ -12,16 +12,18 @@
 
 import {
   Injectable,
-  Logger,
   NotFoundException,
+  ForbiddenException,
   Inject,
 } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
 import {
   ProjectPermission,
   ProjectRole,
+  SystemPermission,
 } from '../../common/enums/permissions.enum';
 import { IPROJECT_PERMISSION_SERVICE, IProjectPermissionService } from '../../roles/interfaces/project-permission-service.interface';
+import { IPERMISSION_SERVICE, IPermissionService } from '../../permission/interfaces/permission-service.interface';
 import { DatabaseService } from '../../database/database.service';
 import { TreeWalker } from '../file-tree/tree-walker.service';
 
@@ -36,13 +38,99 @@ import { I18nContext } from 'nestjs-i18n';
  */
 @Injectable()
 export class FileSystemPermissionService {
-  private readonly logger = new Logger(FileSystemPermissionService.name);
-
   constructor(
     private readonly prisma: DatabaseService,
     @Inject(IPROJECT_PERMISSION_SERVICE) private readonly projectPermissionService: IProjectPermissionService,
-    private readonly treeWalker: TreeWalker
+    private readonly treeWalker: TreeWalker,
+    @Inject(IPERMISSION_SERVICE) private readonly systemPermissionService: IPermissionService
   ) {}
+
+  /**
+   * 断言用户可访问节点（fail-closed，服务层节点访问断言的唯一出口）。
+   *
+   * 语义与 RequireProjectPermissionGuard 对齐：
+   * - 资源库上下文（节点本身是库根，或其所属根为库根）：要求对应 LIBRARY_*_MANAGE 系统权限；
+   * - 项目/个人空间上下文：要求指定项目权限（owner 自动通过，个人空间经权限存储按
+   *   ownerId 判定，见 prisma-permission-store）。
+   * 节点不存在抛 NotFoundException；根不可解析时拒绝（fail-closed）。
+   * 删除/跨项目/跨个人空间的节点级越权（IDOR）由此统一拦截，调用方无需各自推导根归属。
+   */
+  async assertNodeAccess(
+    userId: string,
+    nodeId: string,
+    requiredPermission: ProjectPermission
+  ): Promise<void> {
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId },
+      select: { id: true, nodeType: true, projectId: true },
+    });
+    if (!node) {
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
+      );
+    }
+
+    const rootType = await this.resolveRootNodeType(node);
+    if (
+      rootType === NodeType.LIBRARY_DRAWING ||
+      rootType === NodeType.LIBRARY_BLOCK
+    ) {
+      const requiredSystemPermission =
+        rootType === NodeType.LIBRARY_DRAWING
+          ? SystemPermission.LIBRARY_DRAWING_MANAGE
+          : SystemPermission.LIBRARY_BLOCK_MANAGE;
+      const hasSystemPermission =
+        await this.systemPermissionService.checkSystemPermission(
+          userId,
+          requiredSystemPermission
+        );
+      if (!hasSystemPermission) {
+        throw new ForbiddenException(
+          I18nContext.current()?.t('error.file.no_repo_access') ??
+            '没有访问该资源库的权限'
+        );
+      }
+      return;
+    }
+
+    const hasPermission = await this.checkNodePermission(
+      userId,
+      nodeId,
+      requiredPermission
+    );
+    if (!hasPermission) {
+      throw new ForbiddenException(
+        I18nContext.current()?.t('error.auth.permission_denied') ??
+          '您没有权限执行此操作'
+      );
+    }
+  }
+
+  /**
+   * 解析节点所属根节点类型（PROJECT / PERSONAL_SPACE / LIBRARY_*）。
+   * 节点自身即根时直接返回；否则优先取 projectId 字段，缺失时经 TreeWalker 上溯。
+   * 根不可解析返回 null（调用方按 fail-closed 处理）。
+   */
+  private async resolveRootNodeType(
+    node: { id: string; nodeType: NodeType; projectId: string | null }
+  ): Promise<NodeType | null> {
+    if (
+      node.nodeType === NodeType.PROJECT ||
+      node.nodeType === NodeType.PERSONAL_SPACE ||
+      node.nodeType === NodeType.LIBRARY_DRAWING ||
+      node.nodeType === NodeType.LIBRARY_BLOCK
+    ) {
+      return node.nodeType;
+    }
+    const rootId =
+      node.projectId || (await this.treeWalker.resolveProjectId(node.id));
+    if (!rootId) return null;
+    const root = await this.prisma.fileSystemNode.findUnique({
+      where: { id: rootId },
+      select: { nodeType: true },
+    });
+    return root?.nodeType ?? null;
+  }
 
   /**
    * 检查节点权限

@@ -14,9 +14,7 @@ import type { LoginDto, AuthResponseDto } from '../../dto/auth.dto';
 import type { SessionRequest } from '../../interfaces/jwt-payload.interface';
 import type {
   IUserRepository,
-  IEmailVerificationService,
   IRuntimeConfigService,
-  ITokenBlacklistService,
   IUserSyncHook,
   UserRecord,
 } from '@cloudcad/contracts';
@@ -37,13 +35,9 @@ export class LoginService {
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
-    @Inject('EMAIL')
-    private readonly emailVerificationService: IEmailVerificationService,
     @Inject('CONFIG')
     private readonly runtimeConfigService: IRuntimeConfigService,
     private authTokenService: AuthTokenService,
-    @Inject('TOKEN_BLACKLIST')
-    private readonly tokenBlacklistService: ITokenBlacklistService,
     private jwtService: JwtService,
     private configService: ConfigService,
     private accountRateLimitService: AccountRateLimitService,
