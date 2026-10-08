@@ -14,46 +14,14 @@
  * 说明：解绑后该管理员下次登录将回到「未绑定」态，被锁定至绑定页重新绑定。
  */
 
-const { spawnSync } = require('child_process');
-const { randomUUID } = require('crypto');
 const readline = require('readline');
 const { log } = require('../lib/logger');
 const { promptConfirm } = require('../lib/prompt');
+const { sqlQuote, makePsql } = require('../lib/psql');
 const { getDbEnv, getPsqlPath } = require('./db-backup');
 
-/**
- * 执行 psql 单条 SQL（复用 db-backup 的 DB 连接配置：离线 runtime psql + .env 凭据）。
- * -tAc：tuples-only + 非对齐（多列以 | 分隔）+ 命令串。
- */
-function runPsql(sql) {
-  const psqlPath = getPsqlPath();
-  const { env, config } = getDbEnv();
-  const dbHost = config.DB_HOST || 'localhost';
-  const dbPort = config.DB_PORT || '5432';
-  const dbUser = config.DB_USERNAME || 'postgres';
-  const dbName = config.DB_DATABASE || 'cloudcad';
-
-  const cmd = `"${psqlPath}" -h "${dbHost}" -p "${dbPort}" -U "${dbUser}" -d "${dbName}" -tAc "${sql}"`;
-  const result = spawnSync(cmd, [], {
-    env,
-    shell: true,
-    stdio: 'pipe',
-    encoding: 'utf-8',
-  });
-  if (result.error) {
-    throw new Error(`psql 执行失败: ${result.error.message}`);
-  }
-  return {
-    ok: result.status === 0,
-    stdout: (result.stdout || '').trim(),
-    stderr: (result.stderr || '').trim(),
-  };
-}
-
-/** SQL 单引号转义（防注入） */
-function sqlQuote(value) {
-  return String(value).replace(/'/g, "''");
-}
+// psql 执行 + 审计写入统一走 lib/psql 唯一出口（与 admin-reset-password 共用）
+const { run: runPsql, writeAudit } = makePsql({ getPsqlPath, getDbEnv });
 
 /** 交互输入用户名（CLI 未传参时） */
 function promptUsername() {
@@ -156,20 +124,13 @@ async function mfaTotpUnbind(usernameArg, options = null) {
   }
 
   // 4. 写入 MFA_UNBIND 审计（source=ops_cli，便于安全回溯）
-  const auditId = randomUUID();
-  const paramsJson = '{"method":"mfa_unbind","source":"ops_cli"}';
-  const ins = runPsql(
-    `INSERT INTO "audit_logs" (` +
-      `"id", "action", "resourceType", "resourceId", "userId", ` +
-      `"resourceName", "params", "success", "ipAddress", "userAgent", "createdAt" ` +
-      `) VALUES (` +
-      `'${auditId}', 'MFA_UNBIND', 'USER', '${sqlQuote(user.id)}', '${sqlQuote(
-        user.id
-      )}', ` +
-      `'${sqlQuote(user.username)}', '${paramsJson}'::jsonb, true, ` +
-      `'127.0.0.1', 'cloudcad-cli/mfa-unbind', now()` +
-      `)`
-  );
+  const ins = writeAudit({
+    action: 'MFA_UNBIND',
+    resourceId: user.id,
+    resourceName: user.username,
+    params: { method: 'mfa_unbind', source: 'ops_cli' },
+    userAgent: 'cloudcad-cli/mfa-unbind',
+  });
   if (!ins.ok) {
     // 解绑已生效，审计失败不应回滚（数据已改），仅告警
     log('yellow', `解绑已生效，但审计写入失败：${ins.stderr}`);
