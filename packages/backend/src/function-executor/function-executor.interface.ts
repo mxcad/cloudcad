@@ -250,9 +250,6 @@ export interface IFunctionExecutor {
    */
   listTasks?(status?: string): Promise<ExecutorTaskRecord[]>;
 
-  /** 清空排队中任务，返回被取消数（可选；无排队队列的执行器不实现）。 */
-  clearQueue?(): number;
-
   /**
    * 批量提交（可选）。一次性提交所有转换任务（如 conversion-service 的
    * POST /v1/conversions/batchConvert），返回批量任务 id。

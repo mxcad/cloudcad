@@ -23,7 +23,6 @@ describe('BatchDelegateConversionExecutor（批量委托装饰器）', () => {
     durationStats: jest.Mock;
     cancelTask?: jest.Mock;
     listTasks?: jest.Mock;
-    clearQueue?: jest.Mock;
   };
 
   const startServer = async (
@@ -324,16 +323,13 @@ describe('BatchDelegateConversionExecutor（批量委托装饰器）', () => {
       const without = createExecutor();
       expect(without.cancelTask).toBeUndefined();
       expect(without.listTasks).toBeUndefined();
-      expect(without.clearQueue).toBeUndefined();
 
       baseExecutor.cancelTask = jest.fn().mockResolvedValue({ ok: true });
       baseExecutor.listTasks = jest.fn().mockResolvedValue([]);
-      baseExecutor.clearQueue = jest.fn().mockReturnValue(0);
       const withOptional = createExecutor();
 
       expect(withOptional.cancelTask).toBeDefined();
       expect(withOptional.listTasks).toBeDefined();
-      expect(withOptional.clearQueue).toBeDefined();
       await expect(withOptional.cancelTask!('t1')).resolves.toEqual({ ok: true });
       expect(baseExecutor.cancelTask).toHaveBeenCalledWith('t1');
     });

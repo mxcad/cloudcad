@@ -171,8 +171,4 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
       stats: this.rateLimiter.getDurationStats(),
     };
   }
-
-  clearQueue(): number {
-    return this.rateLimiter.clearQueue();
-  }
 }

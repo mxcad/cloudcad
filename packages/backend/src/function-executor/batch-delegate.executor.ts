@@ -50,7 +50,6 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
   /** 可选原语透传：base 实现了才暴露（调用方按 undefined 判断能力） */
   cancelTask?: IFunctionExecutor['cancelTask'];
   listTasks?: IFunctionExecutor['listTasks'];
-  clearQueue?: IFunctionExecutor['clearQueue'];
 
   constructor(
     private readonly base: IFunctionExecutor,
@@ -59,7 +58,6 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
     this.isRemote = base.isRemote === true;
     if (base.cancelTask) this.cancelTask = base.cancelTask.bind(base);
     if (base.listTasks) this.listTasks = base.listTasks.bind(base);
-    if (base.clearQueue) this.clearQueue = base.clearQueue.bind(base);
 
     const batchConfig = configService.get('batchDownload', { infer: true });
     const workflowUrl = batchConfig?.conversionServiceUrl;

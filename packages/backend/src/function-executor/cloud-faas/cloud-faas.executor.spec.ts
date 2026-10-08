@@ -127,7 +127,6 @@ describe('CloudFaaSExecutor', () => {
       await expect(executor.queueStats()).resolves.toBeNull();
       await expect(executor.durationStats()).resolves.toBeNull();
       expect(executor.listTasks).toBeUndefined();
-      expect(executor.clearQueue).toBeUndefined();
     });
   });
 });
