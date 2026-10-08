@@ -87,6 +87,36 @@ function runPm2Command(args, options = {}) {
   }
 }
 
+/**
+ * 解析 pm2 jlist 的 stdout 为进程数组。
+ *
+ * pm2 冷启动（守护进程被杀后首次调用）时 jlist 的退出码为 0、stderr 为空，但
+ * stdout 会混入横幅后才是 JSON 数组，两种实测形态：
+ *   1. 首次安装/首次使用：ASCII 横幅（不含 '['）+ JSON；
+ *   2. 守护进程被杀后重拉："[PM2] Spawning PM2 daemon ..."/"[PM2] PM2 Successfully
+ *      daemonized" 行（**以 '[' 开头**）+ JSON。
+ * 整段 JSON.parse 与「首个 '[' 起截取」都会被形态 2 打炸。这里从最后一个 ']' 往前
+ * 逐个 '[' 尝试解析，取第一个能完整解析的数组段。空输出回落空数组；有内容却解析
+ * 不出数组则抛错由调用方 catch（不伪装成「全部已停止」）。
+ */
+function parsePm2JlistOutput(stdout) {
+  const text = (stdout || '').trim();
+  if (!text) return [];
+  const end = text.lastIndexOf(']');
+  if (end < 0) {
+    throw new Error('pm2 jlist 输出中没有 JSON 数组段');
+  }
+  let start = text.lastIndexOf('[', end - 1);
+  while (start >= 0) {
+    try {
+      return JSON.parse(text.slice(start, end + 1));
+    } catch {
+      start = text.lastIndexOf('[', start - 1);
+    }
+  }
+  throw new Error('pm2 jlist 输出中没有可解析的 JSON 数组段');
+}
+
 function getAllServicesStatus() {
   const result = runPm2Command(['jlist']);
 
@@ -95,7 +125,7 @@ function getAllServicesStatus() {
   }
 
   try {
-    const processes = JSON.parse(result.stdout || '[]');
+    const processes = parsePm2JlistOutput(result.stdout);
     const statusMap = {};
 
     processes.forEach((proc) => {
@@ -214,6 +244,7 @@ function startService(serviceName) {
 module.exports = {
   resolvePm2Invocation,
   runPm2Command,
+  parsePm2JlistOutput,
   getAllServicesStatus,
   restartService,
   stopService,

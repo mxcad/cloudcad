@@ -159,3 +159,52 @@ describe('pm2 服务名白名单（命令注入回归）', () => {
     assert.notEqual(result.error, '非法的服务名');
   });
 });
+
+// 冷启动回归：pm2 首次调用拉起守护进程时，jlist 的 stdout 是「ASCII 横幅 + JSON」
+// （退出码 0、stderr 为空）——整段 JSON.parse 必然失败，部署包首次访问「服务管理」
+// 恒报「解析 PM2 状态失败」。parsePm2JlistOutput 截取数组段必须兼容两种输出。
+describe('pm2 jlist 输出解析（冷启动 ASCII 横幅污染回归）', () => {
+  const { parsePm2JlistOutput } = require('../lib/pm2');
+
+  // 真实冷启动 stdout 样本（2026-10-06 实测：横幅 1252 字符 + JSON）
+  const COLD_START_STDOUT =
+    '\n                        -------------\n' +
+    '__/\\\\\\\\\\\\\____/\\\\____________/\\\\____/\\\\\\\\\_____\n' +
+    '  _\/\\\_____________\/\\\____\///___/\\/\\/\\/_____/\\\\\\\\\\__\n' +
+    '[{"name":"backend","pm2_env":{"status":"online","pm_uptime":1,"restart_time":0},"monit":{"memory":2,"cpu":3}}]';
+
+  it('横幅污染的 stdout 能解析出进程列表', () => {
+    const processes = parsePm2JlistOutput(COLD_START_STDOUT);
+    assert.equal(processes.length, 1);
+    assert.equal(processes[0].name, 'backend');
+    assert.equal(processes[0].pm2_env.status, 'online');
+  });
+
+  it('纯净 JSON 数组照常解析', () => {
+    const processes = parsePm2JlistOutput('[{"name":"frontend"}]');
+    assert.equal(processes.length, 1);
+    assert.equal(processes[0].name, 'frontend');
+  });
+
+  // 实测形态 2（2026-10-06 抓包）：守护进程被杀后重拉，"[PM2]" 前缀行以 '[' 开头，
+  // 「首个 '[' 起截取」的朴素修复会被它打炸——必须从后往前取可解析数组段
+  const DAEMON_RESPAWN_STDOUT =
+    '[PM2] Spawning PM2 daemon with pm2_home=D:\\web\\MxCADOnline\\cloudcad\\data\\pm2\n' +
+    '[PM2] PM2 Successfully daemonized\n' +
+    '[{"name":"backend","pm2_env":{"status":"online"},"monit":{"memory":1,"cpu":2}}]';
+
+  it('[PM2] 前缀横幅（以 [ 开头）污染的 stdout 能解析出进程列表', () => {
+    const processes = parsePm2JlistOutput(DAEMON_RESPAWN_STDOUT);
+    assert.equal(processes.length, 1);
+    assert.equal(processes[0].name, 'backend');
+  });
+
+  it('空输出回落为空数组', () => {
+    assert.deepEqual(parsePm2JlistOutput(''), []);
+    assert.deepEqual(parsePm2JlistOutput(undefined), []);
+  });
+
+  it('无数组段的输出抛错（与旧行为一致，由调用方 catch）', () => {
+    assert.throws(() => parsePm2JlistOutput('not json'));
+  });
+});
