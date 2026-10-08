@@ -52,6 +52,16 @@ const {
   pathSize,
 } = require('./pack-lib/runtime-cleanliness');
 
+// 出包前门禁纯判定 + 共享删除策略（架构审查 ⑪ C9：判定逻辑抽到可单测纯函数，
+// 副作用 process.exit/log 留编排器，零行为变更）
+const {
+  checkDeployStore,
+  findMissingWindowsComponents,
+  findMissingLinuxComponents,
+  checkScriptLineEndings,
+  removeJunkWithSudoFallback,
+} = require('./pack-lib/pack-assertions');
+
 // ==================== 配置 ====================
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -719,22 +729,7 @@ function countPackages(nodeModulesPath) {
 }
 
 function verifyDeployStore(storePath) {
-  if (!fs.existsSync(storePath)) {
-    return { valid: false, reason: 'store 目录不存在' };
-  }
-  const filesDir = path.join(storePath, 'v3', 'files');
-  if (!fs.existsSync(filesDir)) {
-    return { valid: false, reason: 'store/v3/files 目录不存在' };
-  }
-  try {
-    const files = fs.readdirSync(filesDir);
-    if (files.length < 100) {
-      return { valid: false, reason: `仅有 ${files.length} 个包，不符合预期` };
-    }
-    return { valid: true, count: files.length };
-  } catch {
-    return { valid: false, reason: '无法读取 store 内容' };
-  }
+  return checkDeployStore(storePath);
 }
 
 /**
@@ -1290,18 +1285,9 @@ function writeDeployMeta(tempDir) {
  * pg-manager.js / redis-manager.js、lib/proc.js 的 PM2_JS 引用保持一致）。
  */
 function assertWindowsRuntimeComponents() {
-  const required = [
-    path.join('node', 'node.exe'),
-    path.join('node', 'node_modules', 'pm2', 'bin', 'pm2'),
-    path.join('postgresql', 'pgsql', 'bin', 'initdb.exe'),
-    path.join('postgresql', 'pgsql', 'bin', 'pg_ctl.exe'),
-    path.join('redis', 'redis-server.exe'),
-  ];
-  const missing = [];
-  for (const rel of required) {
-    const p = path.join(PROJECT_ROOT, 'runtime', 'windows', rel);
-    if (!fs.existsSync(p)) missing.push(`runtime/windows/${rel}`);
-  }
+  const missing = findMissingWindowsComponents(
+    path.join(PROJECT_ROOT, 'runtime', 'windows')
+  );
   if (missing.length > 0) {
     error(`Windows 标准运行时组件缺失，中止打包:\n  ${missing.join('\n  ')}`);
     error('修复方式:');
@@ -1333,9 +1319,10 @@ function assertWindowsRuntimeComponents() {
  */
 function getMissingLinuxComponents() {
   // 关键文件清单单一事实源在 pack-lib/components.js（含嵌在 node 内的 pm2，架构审查 ⑪）
-  return LINUX_ASSET_REQUIRED_FILES
-    .filter((rel) => !fs.existsSync(path.join(PROJECT_ROOT, 'runtime', 'linux', rel)))
-    .map((rel) => `runtime/linux/${rel}`);
+  return findMissingLinuxComponents(
+    path.join(PROJECT_ROOT, 'runtime', 'linux'),
+    LINUX_ASSET_REQUIRED_FILES
+  );
 }
 
 function assertLinuxRuntimeComponents() {
@@ -1444,45 +1431,19 @@ function assertLinuxRuntimeNodeModules() {
     `Linux 运行时 node_modules 含未声明包 ${unexpected.length} 项，自动清理` +
       `（对齐 Windows 侧 npm ci 严格还原语义，不动打包机全局包）...`
   );
-  const failed = [];
-  let usedSudo = false;
-  for (const x of unexpected) {
-    const target = path.join(nmDir, x.name);
-    try {
-      fs.rmSync(target, { recursive: true, force: true });
-      log(`  已清理 ${x.name}（${formatSize(x.size)}）`);
-    } catch (e) {
-      // EACCES/EPERM：产物多为 sudo 提取产生的 root 属主（普通用户删不动），
-      // Linux 下 sudo 重试；sudo 密码交互沿用 stdio inherit
-      if (
-        process.platform !== 'win32' &&
-        (e.code === 'EACCES' || e.code === 'EPERM')
-      ) {
-        const r = spawnSync('sudo', ['rm', '-rf', target], { stdio: 'inherit' });
-        if (r.status === 0 && !fs.existsSync(target)) {
-          log(`  已清理 ${x.name}（${formatSize(x.size)}，经 sudo）`);
-          usedSudo = true;
-          continue;
-        }
-      }
-      failed.push(`${x.name}: ${e.message}`);
+  const sizeOf = new Map(unexpected.map((x) => [path.join(nmDir, x.name), x.size]));
+  const { failed } = removeJunkWithSudoFallback(
+    unexpected.map((x) => path.join(nmDir, x.name)),
+    {
+      onItem: (p, viaSudo) =>
+        log(
+          `  已清理 ${path.basename(p)}（${formatSize(sizeOf.get(p))}${
+            viaSudo ? '，经 sudo' : ''
+          }）`
+        ),
+      chownTargets: [path.join(PROJECT_ROOT, 'runtime', 'linux')],
     }
-  }
-  if (usedSudo) {
-    // sudo 产物属主归回当前用户，避免后续打包复制/再清理继续撞权限
-    try {
-      spawnSync(
-        'sudo',
-        [
-          'chown',
-          '-R',
-          `${process.getuid()}:${process.getgid()}`,
-          path.join(PROJECT_ROOT, 'runtime', 'linux'),
-        ],
-        { stdio: 'pipe' }
-      );
-    } catch {}
-  }
+  );
   if (failed.length > 0 || findUnexpectedPackages(nmDir).length > 0) {
     error('Linux 运行时 node_modules 自动清理未完成，中止打包:');
     failed.forEach((m) => error(`  - ${m}`));
@@ -1526,43 +1487,13 @@ function assertLinuxPgLibsClean() {
   log(
     `Linux PG JIT 死重 ${junk.length} 项，自动清理（jit=off 下 PG 不加载，纯死重）...`
   );
-  const failed = [];
-  let usedSudo = false;
-  for (const p of junk) {
-    try {
-      fs.rmSync(p, { recursive: true, force: true });
-      log(`  已清理 ${path.basename(p)}（${formatSize(sizeOf.get(p))}）`);
-    } catch (e) {
-      // EACCES/EPERM：sudo 提取产生的 root 属主产物，Linux 下 sudo 重试
-      if (
-        process.platform !== 'win32' &&
-        (e.code === 'EACCES' || e.code === 'EPERM')
-      ) {
-        const r = spawnSync('sudo', ['rm', '-rf', p], { stdio: 'inherit' });
-        if (r.status === 0 && !fs.existsSync(p)) {
-          log(`  已清理 ${path.basename(p)}（经 sudo）`);
-          usedSudo = true;
-          continue;
-        }
-      }
-      failed.push(`${path.basename(p)}: ${e.message}`);
-    }
-  }
-  if (usedSudo) {
-    // sudo 产物属主归回当前用户，避免后续打包复制/再清理继续撞权限
-    try {
-      spawnSync(
-        'sudo',
-        [
-          'chown',
-          '-R',
-          `${process.getuid()}:${process.getgid()}`,
-          path.join(PROJECT_ROOT, 'runtime', 'linux'),
-        ],
-        { stdio: 'pipe' }
-      );
-    } catch {}
-  }
+  const { failed } = removeJunkWithSudoFallback(junk, {
+    onItem: (p, viaSudo) =>
+      log(
+        `  已清理 ${path.basename(p)}（${viaSudo ? '经 sudo' : formatSize(sizeOf.get(p))}）`
+      ),
+    chownTargets: [path.join(PROJECT_ROOT, 'runtime', 'linux')],
+  });
   if (failed.length > 0 || findPgJitJunk(pgLibDir).length > 0) {
     error('Linux PG JIT 死重自动清理未完成，中止打包:');
     failed.forEach((m) => error(`  - ${m}`));
@@ -1608,37 +1539,18 @@ function cleanPrismaEnginesForPlatform(platform) {
     `prisma-engines 含 ${isWin ? 'Linux' : 'Windows/musl'} 平台残留 ` +
       `${junk.length} 项，自动清理（对方平台引擎随包发货属死重）...`
   );
-  const failed = [];
-  let usedSudo = false;
-  for (const name of junk) {
-    const p = path.join(dir, name);
-    try {
-      fs.rmSync(p, { recursive: true, force: true });
-      log(`  已清理 ${name}（${formatSize(sizeOf.get(name))}）`);
-    } catch (e) {
-      if (
-        process.platform !== 'win32' &&
-        (e.code === 'EACCES' || e.code === 'EPERM')
-      ) {
-        const r = spawnSync('sudo', ['rm', '-rf', p], { stdio: 'inherit' });
-        if (r.status === 0 && !fs.existsSync(p)) {
-          log(`  已清理 ${name}（经 sudo）`);
-          usedSudo = true;
-          continue;
-        }
-      }
-      failed.push(`${name}: ${e.message}`);
+  const { failed } = removeJunkWithSudoFallback(
+    junk.map((name) => path.join(dir, name)),
+    {
+      onItem: (p, viaSudo) =>
+        log(
+          `  已清理 ${path.basename(p)}（${
+            viaSudo ? '经 sudo' : formatSize(sizeOf.get(path.basename(p)))
+          }）`
+        ),
+      chownTargets: [dir],
     }
-  }
-  if (usedSudo && process.platform !== 'win32') {
-    try {
-      spawnSync(
-        'sudo',
-        ['chown', '-R', `${process.getuid()}:${process.getgid()}`, dir],
-        { stdio: 'pipe' }
-      );
-    } catch {}
-  }
+  );
   if (failed.length > 0) {
     error('prisma-engines 自动清理未完成，中止打包:');
     failed.forEach((m) => error(`  - ${m}`));
@@ -1670,42 +1582,7 @@ function assertScriptLineEndings() {
     // 运行时脚本（整目录进包）
     path.join(PROJECT_ROOT, 'runtime', 'scripts'),
   ];
-  const problems = [];
-  const walk = (dir) => {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const p = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(p);
-      } else if (/\.(bat|cmd|sh)$/i.test(entry.name)) {
-        const rel = path.relative(PROJECT_ROOT, p);
-        const buf = fs.readFileSync(p);
-        const hasBom =
-          buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf;
-        if (hasBom) {
-          problems.push(`${rel}: 含 BOM（bat/sh 均不得带 BOM）`);
-        } else if (/\.(bat|cmd)$/i.test(entry.name)) {
-          // cmd.exe 要求 CRLF：存在独立 LF 即解析错乱
-          for (let i = 0; i < buf.length; i++) {
-            if (buf[i] === 0x0a && (i === 0 || buf[i - 1] !== 0x0d)) {
-              problems.push(`${rel}: 存在独立 LF（bat/cmd 必须 CRLF 行尾）`);
-              break;
-            }
-          }
-        } else {
-          // bash 要求纯 LF：存在任何 CR 即坏
-          for (let i = 0; i < buf.length; i++) {
-            if (buf[i] === 0x0d) {
-              problems.push(`${rel}: 存在 CR（sh 必须 LF 行尾）`);
-              break;
-            }
-          }
-        }
-      }
-    }
-  };
-  for (const dir of targets) {
-    if (fs.existsSync(dir)) walk(dir);
-  }
+  const problems = checkScriptLineEndings(targets, PROJECT_ROOT);
   if (problems.length > 0) {
     error(`脚本行尾校验失败，中止打包:\n  ${problems.join('\n  ')}`);
     error('修复方式:');

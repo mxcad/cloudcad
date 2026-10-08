@@ -43,8 +43,8 @@ const SKIP_STD_RUNTIME = process.env.CLOUDCAD_SKIP_STD_RUNTIME === '1';
 // runtime 依赖包 Release tag（与 .github/workflows/runtime-deps.yml 上传的 tag 一致）
 const RUNTIME_DEPS_REPO = process.env.RUNTIME_DEPS_REPO || 'mxcad/cloudcad';
 const RUNTIME_DEPS_TAG = process.env.RUNTIME_DEPS_TAG || 'runtime-deps';
-// 组件版本指纹（与 scripts/pack-runtime-deps.js 的 COMPONENT_VERSIONS 单一事实源一致）
-const COMPONENT_VERSIONS = { node: '20.19.5', postgres: '15', redis: '5' };
+// 组件版本 + 指纹单一事实源：pack-lib/component-versions.js（架构审查 ⑪ C5）
+const { COMPONENT_VERSIONS, componentFingerprint } = require('./pack-lib/component-versions');
 // 统一下载助手（多源有序回退 + 内置公开镜像 + 超时判定，见 ADR-0059 决策 9）
 const { downloadFile } = require('./lib/download-sources');
 
@@ -68,11 +68,11 @@ function getArchSuffix() {
 }
 
 /**
- * 组件版本指纹（与 scripts/pack-runtime-deps.js 的 COMPONENT_VERSIONS 一致）：
+ * 组件版本指纹（派生自 pack-lib/component-versions.js 单一事实源）：
  *   node20.19.5-pg15-redis5
  */
 function versionFingerprint() {
-  return `node${COMPONENT_VERSIONS.node}-pg${COMPONENT_VERSIONS.postgres}-redis${COMPONENT_VERSIONS.redis}`;
+  return componentFingerprint();
 }
 
 /**

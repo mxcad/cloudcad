@@ -43,6 +43,8 @@ const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 const { LINUX_OS_BASE_IMAGES: OS_BASE_IMAGES } = require('./pack-lib/linux-os');
 // 尺寸格式化单一事实源（pack-lib/format.js）
 const { formatSize } = require('./pack-lib/format');
+// 组件版本单一事实源（pack-lib/component-versions.js，架构审查 ⑪ C5）
+const { COMPONENT_VERSIONS } = require('./pack-lib/component-versions');
 
 // glibc >= 2.35 的系统需要 SystemLib 版本的 mxcad 二进制
 const NEEDS_SYSTEM_LIB = ['ubuntu22'];
@@ -50,7 +52,7 @@ const NEEDS_SYSTEM_LIB = ['ubuntu22'];
 // ==================== 二进制缓存配置 ====================
 
 const CACHE_DIR = path.join(PROJECT_ROOT, 'runtime', 'cache');
-const NODE_VERSION = '20.19.5';
+const NODE_VERSION = COMPONENT_VERSIONS.node;
 const NODE_FILENAME = `node-v${NODE_VERSION}-linux-x64-glibc-217.tar.xz`;
 const NODE_BASE_URL = `https://unofficial-builds.nodejs.org/download/release/v${NODE_VERSION}`;
 const NODE_URL = `${NODE_BASE_URL}/${NODE_FILENAME}`;

@@ -39,12 +39,8 @@ const DOCKER_DIR = path.join(PROJECT_ROOT, 'runtime', 'docker');
 const DOCKERFILE = 'Dockerfile.linux-deploy';
 const IMAGE_NAME = 'cloudcad-pack-linux';
 
-// 组件版本指纹单一事实源（与 extract-linux-runtime.js / build-windows-runtime.js 的 VERSIONS 一致）
-const COMPONENT_VERSIONS = {
-  node: '20.19.5',
-  postgres: '15',
-  redis: '5',
-};
+// 组件版本 + 指纹单一事实源：pack-lib/component-versions.js（架构审查 ⑪ C5）
+const { COMPONENT_VERSIONS, componentFingerprint } = require('./pack-lib/component-versions');
 
 // Linux 发行版 → 基础镜像：单一事实源在 pack-lib/linux-os.js（与 pack-linux-deploy 同源）
 const { LINUX_OS_BASE_IMAGES: OS_BASE_IMAGES } = require('./pack-lib/linux-os');
@@ -79,18 +75,11 @@ function runCommand(command, options = {}) {
 }
 
 /**
- * 版本指纹：node20.19.5-pg15-redis5
- */
-function fingerprint() {
-  return `node${COMPONENT_VERSIONS.node}-pg${COMPONENT_VERSIONS.postgres}-redis${COMPONENT_VERSIONS.redis}`;
-}
-
-/**
- * 资产名（确定性）
+ * 资产名（确定性，指纹派生自 pack-lib/component-versions.js 单一事实源）
  */
 function assetName(platform, osName, arch) {
   const osTag = platform === 'windows' ? 'windows' : osName;
-  return `cloudcad-runtime-deps-${osTag}-${arch}-${fingerprint()}.tar.gz`;
+  return `cloudcad-runtime-deps-${osTag}-${arch}-${componentFingerprint()}.tar.gz`;
 }
 
 /**

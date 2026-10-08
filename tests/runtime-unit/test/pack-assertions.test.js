@@ -1,0 +1,213 @@
+/**
+ * 出包前门禁纯判定 + 共享删除策略 单元测试（架构审查 ⑪ C9）
+ *
+ * 断言目标：
+ * 1. checkDeployStore：store 缺失 / 缺 v3/files / 包数<100 / 包数>=100 四分支
+ * 2. findMissingWindowsComponents：全缺失返回 5 项、齐全返回空
+ * 3. findMissingLinuxComponents：按清单判定缺失（存在的放过、缺失的列出）
+ * 4. checkScriptLineEndings：bat 独立 LF / sh 含 CR / 干净无 BOM / BOM / 子目录递归 / 目录不存在跳过
+ * 5. removeJunkWithSudoFallback：删除成功回调 + 空列表无操作 + win32 被占用目录失败分支
+ *    （sudo 分支需 root、非 sudo 失败分支 linux 下无法确定性触发，均不在此测）
+ *
+ * 这些纯函数从 pack-offline.js（2390 行编排器）抽出，此前唯一测试方式是打完整包。
+ */
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const {
+  checkDeployStore,
+  findMissingWindowsComponents,
+  findMissingLinuxComponents,
+  checkScriptLineEndings,
+  removeJunkWithSudoFallback,
+} = require('../../../scripts/pack-lib/pack-assertions');
+
+describe('pack-assertions', () => {
+  let tmp;
+  beforeEach(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'pack-assert-'));
+  });
+  afterEach(() => {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  });
+
+  describe('checkDeployStore', () => {
+    it('store 目录不存在 → invalid（不存在）', () => {
+      const r = checkDeployStore(path.join(tmp, 'nope'));
+      expect(r.valid).toBe(false);
+      expect(r.reason).toMatch(/不存在/);
+    });
+
+    it('缺 v3/files → invalid', () => {
+      const store = path.join(tmp, 'store');
+      fs.mkdirSync(store, { recursive: true });
+      const r = checkDeployStore(store);
+      expect(r.valid).toBe(false);
+      expect(r.reason).toMatch(/v3\/files/);
+    });
+
+    it('包数 <100 → invalid（不符合预期）', () => {
+      const filesDir = path.join(tmp, 'store', 'v3', 'files');
+      fs.mkdirSync(filesDir, { recursive: true });
+      fs.writeFileSync(path.join(filesDir, 'a'), 'x');
+      const r = checkDeployStore(path.join(tmp, 'store'));
+      expect(r.valid).toBe(false);
+      expect(r.reason).toMatch(/不符合预期/);
+    });
+
+    it('包数 >=100 → valid + count', () => {
+      const filesDir = path.join(tmp, 'store', 'v3', 'files');
+      fs.mkdirSync(filesDir, { recursive: true });
+      for (let i = 0; i < 100; i++) fs.writeFileSync(path.join(filesDir, `f${i}`), 'x');
+      const r = checkDeployStore(path.join(tmp, 'store'));
+      expect(r.valid).toBe(true);
+      expect(r.count).toBe(100);
+    });
+  });
+
+  describe('findMissingWindowsComponents', () => {
+    const LAYOUT = [
+      'node/node.exe',
+      'node/node_modules/pm2/bin/pm2',
+      'postgresql/pgsql/bin/initdb.exe',
+      'postgresql/pgsql/bin/pg_ctl.exe',
+      'redis/redis-server.exe',
+    ];
+
+    it('全缺失 → 5 项（runtime/windows/ 前缀）', () => {
+      const dir = path.join(tmp, 'runtime', 'windows');
+      fs.mkdirSync(dir, { recursive: true });
+      const missing = findMissingWindowsComponents(dir);
+      expect(missing).toHaveLength(5);
+      for (const m of missing) expect(m).toMatch(/^runtime\/windows\//);
+    });
+
+    it('齐全 → 空', () => {
+      const dir = path.join(tmp, 'runtime', 'windows');
+      for (const rel of LAYOUT) {
+        const p = path.join(dir, rel);
+        fs.mkdirSync(path.dirname(p), { recursive: true });
+        fs.writeFileSync(p, 'x');
+      }
+      expect(findMissingWindowsComponents(dir)).toHaveLength(0);
+    });
+  });
+
+  describe('findMissingLinuxComponents', () => {
+    it('存在的放过、缺失的列出（runtime/linux/ 前缀）', () => {
+      const dir = path.join(tmp, 'runtime', 'linux');
+      const req = ['node/bin/node', 'redis/redis-server'];
+      const nodeBin = path.join(dir, 'node', 'bin');
+      fs.mkdirSync(nodeBin, { recursive: true });
+      fs.writeFileSync(path.join(nodeBin, 'node'), 'x');
+      // redis/redis-server 缺失
+      const missing = findMissingLinuxComponents(dir, req);
+      expect(missing).toEqual(['runtime/linux/redis/redis-server']);
+    });
+
+    it('全存在 → 空', () => {
+      const dir = path.join(tmp, 'runtime', 'linux');
+      const req = ['node/bin/node'];
+      fs.mkdirSync(path.join(dir, 'node', 'bin'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'node', 'bin', 'node'), 'x');
+      expect(findMissingLinuxComponents(dir, req)).toHaveLength(0);
+    });
+  });
+
+  describe('checkScriptLineEndings', () => {
+    it('bat 含独立 LF → 报「独立 LF」', () => {
+      const dir = path.join(tmp, 'scripts');
+      fs.mkdirSync(dir, { recursive: true });
+      // 第二行是独立 LF（前一行 CRLF，此行只有 \n 无 \r）
+      fs.writeFileSync(path.join(dir, 'a.bat'), 'echo hi\r\necho bad\n');
+      const problems = checkScriptLineEndings([dir], tmp);
+      expect(problems.some((p) => p.includes('独立 LF'))).toBe(true);
+    });
+
+    it('sh 含 CR → 报「CR」', () => {
+      const dir = path.join(tmp, 'scripts');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'a.sh'), 'echo hi\r\n');
+      const problems = checkScriptLineEndings([dir], tmp);
+      expect(problems.some((p) => p.includes('CR'))).toBe(true);
+    });
+
+    it('bat=CRLF + sh=LF 且无 BOM → 无 problem', () => {
+      const dir = path.join(tmp, 'scripts');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'a.bat'), 'echo hi\r\n');
+      fs.writeFileSync(path.join(dir, 'b.sh'), 'echo hi\n');
+      expect(checkScriptLineEndings([dir], tmp)).toHaveLength(0);
+    });
+
+    it('含 BOM → 报「BOM」', () => {
+      const dir = path.join(tmp, 'scripts');
+      fs.mkdirSync(dir, { recursive: true });
+      // 写入真正的 BOM 字节（0xEF 0xBB 0xBF）；字符串 '\xef\xbb\xbf' 经 utf8 编码会变多字节，非 BOM
+      const buf = Buffer.concat([
+        Buffer.from([0xef, 0xbb, 0xbf]),
+        Buffer.from('echo hi\n', 'utf8'),
+      ]);
+      fs.writeFileSync(path.join(dir, 'a.sh'), buf);
+      const problems = checkScriptLineEndings([dir], tmp);
+      expect(problems.some((p) => p.includes('BOM'))).toBe(true);
+    });
+
+    it('子目录递归：深层脚本也被扫描', () => {
+      const nested = path.join(tmp, 'scripts', 'nested');
+      fs.mkdirSync(nested, { recursive: true });
+      // 深层 sh 含 CR → 应被递归检出
+      fs.writeFileSync(path.join(nested, 'deep.sh'), 'echo hi\r\n');
+      const problems = checkScriptLineEndings([path.join(tmp, 'scripts')], tmp);
+      expect(problems.some((p) => p.includes('CR'))).toBe(true);
+    });
+
+    it('目录不存在 → 跳过（不抛错、无 problem）', () => {
+      expect(checkScriptLineEndings([path.join(tmp, 'nope')], tmp)).toHaveLength(0);
+    });
+  });
+
+  describe('removeJunkWithSudoFallback', () => {
+    it('删除存在的项，onItem 回调（viaSudo=false），failed 空', () => {
+      const dir = path.join(tmp, 'junk');
+      fs.mkdirSync(dir, { recursive: true });
+      const f = path.join(dir, 'a.txt');
+      fs.writeFileSync(f, 'x');
+      const calls = [];
+      const { failed, usedSudo } = removeJunkWithSudoFallback([f], {
+        onItem: (p, viaSudo) => calls.push([path.basename(p), viaSudo]),
+      });
+      expect(failed).toHaveLength(0);
+      expect(usedSudo).toBe(false);
+      expect(calls).toEqual([['a.txt', false]]);
+      expect(fs.existsSync(f)).toBe(false);
+    });
+
+    it('空列表 → 无操作（failed 空、usedSudo false）', () => {
+      const { failed, usedSudo } = removeJunkWithSudoFallback([]);
+      expect(failed).toHaveLength(0);
+      expect(usedSudo).toBe(false);
+    });
+
+    // 非 sudo 失败分支（failed.push）：win32 下删除被占用目录抛 ENOTEMPTY（非 EACCES/EPERM，
+    // 不进 sudo 重试）→ 记入 failed。linux 下 rmSync 对打开句柄的目录直接成功，无法确定性
+    // 触发，故仅 win32 测（sudo 分支需 root，亦不在此测）。
+    const itOnWin = process.platform === 'win32' ? it : it.skip;
+    itOnWin('win32: 删除被占用目录 → failed 记录（非 sudo 失败分支）', () => {
+      const dir = path.join(tmp, 'locked');
+      fs.mkdirSync(dir, { recursive: true });
+      const f = path.join(dir, 'keep.txt');
+      fs.writeFileSync(f, 'x');
+      const fd = fs.openSync(f, 'r');
+      let result;
+      try {
+        result = removeJunkWithSudoFallback([dir]);
+      } finally {
+        fs.closeSync(fd);
+      }
+      expect(result.failed).toHaveLength(1);
+      expect(result.failed[0]).toMatch(/^locked/);
+      expect(result.usedSudo).toBe(false);
+    });
+  });
+});

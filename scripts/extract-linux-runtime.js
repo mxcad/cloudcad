@@ -40,13 +40,9 @@ const {
   PG_JIT_LIB_PREFIXES,
 } = require('./pack-lib/runtime-cleanliness');
 
-// 版本信息
-const VERSIONS = {
-  node: '20.19.5',
-  postgres: '15',
-  redis: '5',
-  pnpm: '9.15.9',
-};
+// 版本信息：node/postgres/redis/pnpm 单一事实源在 pack-lib/component-versions.js（架构审查 ⑪ C5）
+const { COMPONENT_VERSIONS, PNPM_VERSION } = require('./pack-lib/component-versions');
+const VERSIONS = { ...COMPONENT_VERSIONS, pnpm: PNPM_VERSION };
 
 // 系统核心库（不打包，使用目标系统版本）
 // 重要：glibc 核心库必须使用目标系统的版本，否则会导致兼容性问题

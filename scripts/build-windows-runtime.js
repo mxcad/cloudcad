@@ -27,11 +27,9 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const RUNTIME_WIN_DIR = path.join(PROJECT_ROOT, 'runtime', 'windows');
 const CACHE_DIR = path.join(PROJECT_ROOT, 'runtime', 'cache');
 
-// 版本常量（与下载地址清单 download_address.txt 保持一致）
-const VERSIONS = {
-  node: '20.19.5',
-  redis: '5.0.14.1',
-};
+// 版本常量：node 来自 pack-lib/component-versions.js 单一事实源，redis 为 Windows 发行版号（架构审查 ⑪ C5）
+const { COMPONENT_VERSIONS, WINDOWS_REDIS_VERSION } = require('./pack-lib/component-versions');
+const VERSIONS = { node: COMPONENT_VERSIONS.node, redis: WINDOWS_REDIS_VERSION };
 
 // 官方下载源（postgresql 走产品二进制通道，见文件头说明）
 const SOURCES = {

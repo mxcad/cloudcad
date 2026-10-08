@@ -151,8 +151,8 @@ jobs:
           set -euo pipefail
           os="${{ matrix.os }}"
           arch="${{ matrix.arch }}"
-          # 组件版本指纹（与 scripts/pack-runtime-deps.js COMPONENT_VERSIONS 一致）
-          fingerprint="node20.19.5-pg15-redis5"
+          # 组件版本指纹：从 pack-lib/component-versions.js 单一事实源读取（架构审查 ⑪ C5，勿硬编码）
+          fingerprint=$(node -e "console.log(require('./scripts/pack-lib/component-versions').componentFingerprint())")
           asset="cloudcad-runtime-deps-${os}-${arch}-${fingerprint}.tar.gz"
           cacheDir="runtime/cache/linux-extract/${os}"
           echo "下载 runtime 依赖包: ${asset}"
