@@ -46,4 +46,9 @@
 
 - **端口占用**：默认端口 3000（前端）、3001（后端）、3002（运维中心/配置中心）、5432（PostgreSQL）、6379（Redis）。
 - **服务起不来**：先看运维中心「服务管理」或 `runtime/cloudcad.sh` → [查看服务状态]；日志用「日志中心」打包排查。
-- **忘记管理员密码**：到服务器运行 `runtime/cloudcad.sh` → 密码向导重置。
+- **忘记管理员密码**：到服务器运行 `runtime/cloudcad.sh admin:reset-password`，
+  或运行 `runtime/cloudcad.sh` 进菜单选 [重置管理员密码]。新密码由系统生成并在
+  终端只显示一次，请当场记录；同时撤销该管理员全部刷新令牌，操作留审计。
+  若 TOTP 验证器也丢了，加参数 `--also-unbind-totp`。
+- **管理员忘了 TOTP 验证器**：运行 `runtime/cloudcad.sh mfa:totp-unbind <用户名>`，
+  解绑后该管理员下次登录重新绑定验证器即可。

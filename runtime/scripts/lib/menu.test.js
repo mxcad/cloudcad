@@ -74,13 +74,15 @@ test('Windows 开发机：无 Linux 初始化', () => {
   assert.ok(!visibleLabels(ENVS.winDev).includes('Linux 初始化（首次部署）'));
 });
 
-test('菜单项总数守恒（防静默丢项：旧平铺 14 项拆分后一项不能少）', () => {
-  // linuxDev = 全量 14 项；winDev 少 Linux 初始化；部署包再少 开发模式/种子 +
+test('菜单项总数守恒（防静默丢项：旧平铺项拆分后一项不能少）', () => {
+  // linuxDev = 全量 15 项；winDev 少 Linux 初始化；部署包再少 开发模式/种子 +
   // 排障三项（仅启动基础服务/版本检查/版本验证，scope:'dev'）
-  assert.equal(visibleLabels(ENVS.linuxDev).length, 14);
-  assert.equal(visibleLabels(ENVS.winDev).length, 13);
-  assert.equal(visibleLabels(ENVS.linuxDeploy).length, 9);
-  assert.equal(visibleLabels(ENVS.winDeploy).length, 8);
+  // 两项管理员恢复通道（解绑 TOTP / 重置密码）无 scope 无 platform，
+  // 四种环境全可见——恢复入口绝不能只在开发机出现
+  assert.equal(visibleLabels(ENVS.linuxDev).length, 15);
+  assert.equal(visibleLabels(ENVS.winDev).length, 14);
+  assert.equal(visibleLabels(ENVS.linuxDeploy).length, 10);
+  assert.equal(visibleLabels(ENVS.winDeploy).length, 9);
 });
 
 test('编号跨 section 连续 1..N，无重复无跳号', () => {
@@ -109,6 +111,9 @@ test('核心项在所有环境都可见，退出项恒为 [q]', () => {
     '停止服务',
     '部署 / 升级',
     '数据库备份与恢复',
+    // 管理员恢复通道：凭据丢失时这是唯一出路，任何部署形态都必须可见
+    '解绑管理员 TOTP',
+    '重置管理员密码',
   ];
   for (const env of Object.values(ENVS)) {
     const labels = visibleLabels(env);

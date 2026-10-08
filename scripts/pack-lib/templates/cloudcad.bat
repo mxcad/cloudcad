@@ -14,5 +14,8 @@ if not exist "%NODE_EXE%" (
     exit /b 1
 )
 
-"%NODE_EXE%" runtime\scripts\cli.js
+REM %* 透传子命令：无参=交互式菜单；带参=子命令（如 admin:reset-password）。
+REM 与 cloudcad.sh 的 "$@" 对齐；pause 保留——恢复类命令输出的新密码需人工记录，
+REM 窗口不应在结果显示后立即关闭。
+"%NODE_EXE%" runtime\scripts\cli.js %*
 pause

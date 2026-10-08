@@ -88,6 +88,9 @@ export enum AuditAction {
   // —— 账号安全：管理员 TOTP 双因素（#415，等保 8.1.4.1(d)）——
   MFA_BIND = 'MFA_BIND',
   MFA_UNBIND = 'MFA_UNBIND',
+  // —— 账号安全：管理员密码重置（#417，ADR-0072 带外运维恢复通道；
+  // params.source=ops_cli 区分运维 CLI 与用户在界面上的自助改密）——
+  ADMIN_PASSWORD_RESET = 'ADMIN_PASSWORD_RESET',
 }
 
 /**

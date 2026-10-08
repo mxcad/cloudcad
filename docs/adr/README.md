@@ -76,6 +76,7 @@ CloudCAD 架构决策记录（`docs/adr/`）。编号唯一；`superseded` 表�
 
 | [0070](0070-platform-package-and-pc-mobile-url-interop.md) | `accepted` | 0070 — `@cloudcad/platform` 跨端公共层（准入四条：纯函数/不绑框架/不绑端/重复已成立）+ PC↔移动端 URL 互通走「语义等价 + 双向翻译层」（映射表单一事实源、两端参数名同名铁律、移动端 URL 形态固定 `base?query#path`）+ 双向逃生入口 + 消灭整页重载 + 守卫异步刷新 |
 | [0071](0071-ops-center-on-config-service.md) | `accepted` | 0071 — 运维中心建在 config-service（部署全程存活的唯一长任务宿主 + require 复用 CLI 命令函数 + 后台 job/落盘/轮询；否决 backend+React 方案的「部署中途自停」死穴；删 admin123 回退；排障菜单项按部署形态门控） |
+| [0072](0072-admin-password-recovery-channel.md) | `accepted` | 0072 — 管理员密码恢复走带外运维 CLI（`admin:reset-password` 与 `mfa:totp-unbind` 同构；信任边界=部署机 shell 权限，否决 HTTP 应急端点与「永远在线的免密改密面」；重置即全量撤销会话同事务提交；刻意不清 Redis session、不校验弱口令黑名单；新增 `AuditAction.ADMIN_PASSWORD_RESET` 需迁移，迁移未应用时重置仍成功仅审计告警；补 `cloudcad.bat` 的 `%*` 透传；兑现部署说明里落空的「密码向导」承诺） |
 
 ## 规则
 

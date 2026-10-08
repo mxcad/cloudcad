@@ -531,6 +531,7 @@ module.exports = {
   generateRandomPassword,
   generateNumericPassword,
   generateJwtSecret,
+  generateStrongPassword,
   runSetupWizard,
   autoSetupAndShowPasswords,
   showCurrentPasswords,

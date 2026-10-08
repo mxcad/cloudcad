@@ -544,6 +544,8 @@ enum AuditAction {
   REFUND_REJECT
   MFA_BIND
   MFA_UNBIND
+  // 管理员密码重置（#417，ADR-0072 带外运维恢复通道）
+  ADMIN_PASSWORD_RESET
   // 会话转移（桌面端 EXE → 系统浏览器强制会话切换，等保 8.1.4.1 会话切换可追溯）
   USER_SESSION_TRANSFER
 }

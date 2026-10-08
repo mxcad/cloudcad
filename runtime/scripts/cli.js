@@ -11,6 +11,7 @@
  *     部署包（.deploy 标记）不显示开发模式/种子等仅开发机项
  *   - 命令行参数：dev / deploy / start / stop / migrate / seed / db:* /
  *     status / logs / init / version:check / version:verify / mfa:totp-unbind
+ *     / admin:reset-password
  */
 
 const readline = require('readline');
@@ -122,6 +123,7 @@ const { startMode, startOnly } = require('./commands/start');
 const { devMode } = require('./commands/dev');
 const { deployMode } = require('./commands/deploy');
 const { mfaTotpUnbind } = require('./commands/mfa');
+const { adminResetPassword } = require('./commands/admin-reset-password');
 
 
 // ==================== 交互式菜单 ====================
@@ -312,6 +314,7 @@ async function bootstrap() {
       'version:check': () => versionHelper.runHealthCheck({ silent: false }),
       'version:verify': () => versionHelper.runVerification({ silent: false }),
       'mfa:totp-unbind': () => mfaTotpUnbind(),
+      'admin:reset-password': () => adminResetPassword(),
     };
 
     const cmd = commandMap[args[0]];
@@ -337,6 +340,22 @@ async function bootstrap() {
       else if (args[0] === 'mfa:totp-unbind') {
         await mfaTotpUnbind(args[1]);
       }
+      // 支持 admin:reset-password <username> [--interactive] [--also-unbind-totp]
+      // （#417 管理员密码重置恢复，ADR-0072）
+      // CLI 恒为交互调用：恒传 options（不置 nonInteractive），候选列表与
+      // 掩码输口令都可用；--interactive 只决定「交互输口令 vs 自动生成」，
+      // 不再与「能否列候选」纠缠——否则 `--interactive` 不带用户名会被误拒。
+      else if (args[0] === 'admin:reset-password') {
+        const interactive = args.includes('--interactive');
+        const alsoUnbindTotp = args.includes('--also-unbind-totp');
+        const positional = args
+          .slice(1)
+          .find((arg) => !arg.startsWith('--'));
+        await adminResetPassword(positional || undefined, {
+          interactive,
+          alsoUnbindTotp,
+        });
+      }
       // 支持 logs:bundle --days N（仅打包最近 N 天；缺省=全部）
       else if (args[0] === 'logs:bundle') {
         const daysIndex = args.indexOf('--days');
@@ -357,7 +376,7 @@ async function bootstrap() {
       log('red', `未知命令: ${args[0]}`);
       log(
         'cyan',
-        '可用命令: dev, deploy, start, start:infra, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, logs:locations, logs:bundle, version:check, version:verify, mfa:totp-unbind'
+        '可用命令: dev, deploy, start, start:infra, stop, kill-all, migrate, seed, db:backup, db:restore, db:list, db:cleanup, init, status, logs, logs:locations, logs:bundle, version:check, version:verify, mfa:totp-unbind, admin:reset-password'
       );
       log('cyan', '  deploy             : 交互式部署，询问是否构建');
       log(
@@ -373,6 +392,11 @@ async function bootstrap() {
       log('cyan', '  start:infra        : 仅启动基础服务（排障用）');
       log('cyan', '  version:check      : 图纸版本部署前检查');
       log('cyan', '  version:verify     : 图纸版本部署后验证');
+      log(
+        'cyan',
+        '  admin:reset-password [用户名] [--interactive] [--also-unbind-totp]: ' +
+          '管理员忘记密码后的运维恢复'
+      );
       log('cyan', '');
       log('cyan', `查看帮助: ${OPS_ENTRY} --help`);
       process.exit(1);

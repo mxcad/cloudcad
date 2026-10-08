@@ -21,6 +21,7 @@ const { runDatabaseMigration, runDatabaseSeed } = require('./migrate');
 const { viewStatus, logCenterMenu } = require('./status');
 const { databaseBackupMenu } = require('./db-backup');
 const { mfaTotpUnbind } = require('./mfa');
+const { adminResetPassword } = require('./admin-reset-password');
 const versionHelper = require('../drawing-version-helper');
 
 const menuSections = [
@@ -95,6 +96,11 @@ const menuSections = [
         label: '解绑管理员 TOTP',
         desc: '管理员丢失验证器时的恢复通道',
         action: () => mfaTotpUnbind(),
+      },
+      {
+        label: '重置管理员密码',
+        desc: '管理员忘记密码时的恢复通道',
+        action: () => adminResetPassword(),
       },
     ],
   },
