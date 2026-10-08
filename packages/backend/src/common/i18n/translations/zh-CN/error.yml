@@ -599,3 +599,8 @@ conversion_task:
   not_found_or_no_access: "转换任务不存在或您没有访问权限"
   retry_not_failed: "只有失败的转换任务可以重试"
   node_deleted: "文件已删除，无法重试"
+
+mxcad_engine_extra:
+  ini_read_failed: "读取引擎配置文件失败: {path}"
+  ini_parse_failed: "引擎配置文件不是有效 JSON: {path}"
+  ini_write_failed: "写入引擎配置文件失败: {path}"

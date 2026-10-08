@@ -39,6 +39,8 @@ interface ConfigCardProps {
   collapsed: boolean;
   savingCategory: boolean;
   actions: RowActions;
+  /** 分类底部的附加内容（如协同配置分类的「协同详细日志」特殊卡片） */
+  extraContent?: React.ReactNode;
   onToggleCollapsed: () => void;
   onRequestResetCategory: () => void;
 }
@@ -48,6 +50,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
   collapsed,
   savingCategory,
   actions,
+  extraContent,
   onToggleCollapsed,
   onRequestResetCategory,
 }) => {
@@ -122,6 +125,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
               onShowHistory={() => actions.onShowHistory(item.key)}
             />
           ))}
+          {extraContent}
         </div>
       )}
     </section>

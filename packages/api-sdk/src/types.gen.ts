@@ -4342,6 +4342,24 @@ export type DeletedFileStatsDto = {
     dbOrphanCount: number;
 };
 
+export type MxcadEngineConfigDto = {
+    /**
+     * 协同详细日志是否启用（与引擎 mxcad_ini.json 实时一致）
+     */
+    enabled: boolean;
+    /**
+     * 引擎本机数据目录（日志位置，来自引擎 about 探测）；探测失败时为 null
+     */
+    logPath: string | null;
+};
+
+export type UpdateCoordinateLogDto = {
+    /**
+     * 是否启用协同详细日志（写入引擎 mxcad_ini.json 的 coordinate_log_enable）
+     */
+    enabled: boolean;
+};
+
 export type QueueStatsDto = {
     /**
      * 队列总长度（各优先级排队任务数之和）
@@ -11168,6 +11186,38 @@ export type AdminControllerGetDeletedFileStatsResponses = {
 };
 
 export type AdminControllerGetDeletedFileStatsResponse = AdminControllerGetDeletedFileStatsResponses[keyof AdminControllerGetDeletedFileStatsResponses];
+
+export type AdminControllerGetMxcadEngineConfigData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/mxcad-engine/config';
+};
+
+export type AdminControllerGetMxcadEngineConfigResponses = {
+    /**
+     * 获取协同详细日志配置成功；logPath 为引擎 about 探测的本机数据目录，探测失败时为 null
+     */
+    200: MxcadEngineConfigDto;
+};
+
+export type AdminControllerGetMxcadEngineConfigResponse = AdminControllerGetMxcadEngineConfigResponses[keyof AdminControllerGetMxcadEngineConfigResponses];
+
+export type AdminControllerUpdateCoordinateLogData = {
+    body: UpdateCoordinateLogDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/mxcad-engine/coordinate-log';
+};
+
+export type AdminControllerUpdateCoordinateLogResponses = {
+    /**
+     * 协同详细日志开关已写入引擎配置
+     */
+    200: MxcadEngineConfigDto;
+};
+
+export type AdminControllerUpdateCoordinateLogResponse = AdminControllerUpdateCoordinateLogResponses[keyof AdminControllerUpdateCoordinateLogResponses];
 
 export type HealthControllerLivenessData = {
     body?: never;

@@ -40,10 +40,9 @@ export const handlers = [
         }
       }
 
-      const resultArray = [[undefined, { status: 200 }]] as [
-        any,
-        { status: number },
-      ][];
+      const resultArray = [
+        [await getAdminControllerGetCleanupStats200Response(), { status: 200 }],
+      ] as [any, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -69,10 +68,12 @@ export const handlers = [
         }
       }
 
-      const resultArray = [[undefined, { status: 200 }]] as [
-        any,
-        { status: number },
-      ][];
+      const resultArray = [
+        [
+          await getAdminControllerGetDeletedFileStats200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -99,10 +100,9 @@ export const handlers = [
         }
       }
 
-      const resultArray = [[undefined, { status: 200 }]] as [
-        any,
-        { status: number },
-      ][];
+      const resultArray = [
+        [await getAdminControllerGetOrphanStats200Response(), { status: 200 }],
+      ] as [any, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -209,10 +209,9 @@ export const handlers = [
         }
       }
 
-      const resultArray = [[undefined, { status: 200 }]] as [
-        any,
-        { status: number },
-      ][];
+      const resultArray = [
+        [await getAdminControllerCleanupOrphans200Response(), { status: 200 }],
+      ] as [any, { status: number }][];
 
       const [body, init] =
         resultArray[
@@ -500,6 +499,37 @@ export const handlers = [
         resultArray[
           next(`get /api/v1/admin/billing/refund-applications`) %
             resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(
+    `${baseURL}/api/v1/admin/mxcad-engine/config`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getAdminControllerGetMxcadEngineConfig200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/admin/mxcad-engine/config`) % resultArray.length
         ];
       const responseJson =
         requestJson && body && typeof body === 'object' && !Array.isArray(body)
@@ -1401,10 +1431,9 @@ export const handlers = [
       }
     }
 
-    const resultArray = [[undefined, { status: 200 }]] as [
-      any,
-      { status: number },
-    ][];
+    const resultArray = [
+      [await getAdminControllerCleanupStorage200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
 
     const [body, init] =
       resultArray[
@@ -2259,6 +2288,38 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.put(
+    `${baseURL}/api/v1/admin/mxcad-engine/coordinate-log`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('put')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getAdminControllerUpdateCoordinateLog200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`put /api/v1/admin/mxcad-engine/coordinate-log`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.delete(
     `${baseURL}/api/v1/cache-monitor/pattern`,
     async ({ request }) => {
@@ -4657,6 +4718,38 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(
+    `${baseURL}/api/v1/runtime-config/reset-category`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerResetCategory201Response(),
+          { status: 201 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/runtime-config/reset-category`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.post(`${baseURL}/api/v1/user-cleanup/trigger`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -8012,6 +8105,7 @@ export const handlers = [
 
     const resultArray = [
       [undefined, { status: 200 }],
+      [undefined, { status: 401 }],
       [undefined, { status: 404 }],
     ] as [any, { status: number }][];
 
@@ -8177,6 +8271,37 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(
+    `${baseURL}/api/v1/runtime-config/:key/history`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerGetConfigHistory200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/runtime-config/:key/history`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.get(`${baseURL}/api/v1/shares/:token/node`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -8356,6 +8481,7 @@ export const handlers = [
 
     const resultArray = [
       [undefined, { status: 200 }],
+      [undefined, { status: 401 }],
       [undefined, { status: 404 }],
     ] as [any, { status: number }][];
 
@@ -9496,9 +9622,72 @@ export const handlers = [
 
 export function getCacheMonitorControllerGetSummary200Response() {
   return {
-    stats: {},
-    healthStatus: {},
-    performanceMetrics: {},
+    stats: {
+      levels: {
+        L1: {
+          totalEntries: faker.number.int(),
+          capacity: faker.number.int(),
+          memoryUsage: faker.lorem.words(),
+          hitRate: faker.number.int(),
+        },
+        L2: {
+          totalEntries: faker.number.int(),
+          capacity: faker.number.int(),
+          memoryUsage: faker.lorem.words(),
+          hitRate: faker.number.int(),
+        },
+      },
+      summary: {
+        totalHits: faker.number.int(),
+        totalMisses: faker.number.int(),
+        totalRequests: faker.number.int(),
+        overallHitRate: faker.number.int(),
+        totalMemoryUsage: faker.number.int(),
+      },
+    },
+    healthStatus: {
+      L1: {
+        level: faker.lorem.words(),
+        status: faker.helpers.arrayElement([
+          'healthy',
+          'degraded',
+          'unhealthy',
+        ]),
+        lastCheckTime: faker.date.anytime().toISOString(),
+        availability: faker.number.int(),
+        error: faker.lorem.words(),
+      },
+      L2: {
+        level: faker.lorem.words(),
+        status: faker.helpers.arrayElement([
+          'healthy',
+          'degraded',
+          'unhealthy',
+        ]),
+        lastCheckTime: faker.date.anytime().toISOString(),
+        availability: faker.number.int(),
+        error: faker.lorem.words(),
+      },
+      overall: faker.helpers.arrayElement(['healthy', 'degraded', 'unhealthy']),
+    },
+    performanceMetrics: {
+      L1: {
+        avgResponseTime: faker.number.int(),
+        p50ResponseTime: faker.number.int(),
+        p95ResponseTime: faker.number.int(),
+        p99ResponseTime: faker.number.int(),
+        throughput: faker.number.int(),
+        errorRate: faker.number.int(),
+      },
+      L2: {
+        avgResponseTime: faker.number.int(),
+        p50ResponseTime: faker.number.int(),
+        p95ResponseTime: faker.number.int(),
+        p99ResponseTime: faker.number.int(),
+        throughput: faker.number.int(),
+        errorRate: faker.number.int(),
+      },
+    },
     timestamp: faker.date.anytime().toISOString(),
   };
 }
@@ -9586,6 +9775,38 @@ export function getRuntimeConfigControllerGetAllConfigs200Response() {
       isPublic: true,
       updatedBy: faker.lorem.words(),
       updatedAt: '2024-01-01T00:00:00.000Z',
+      defaultValue: {},
+      source: 'runtime',
+      isModified: faker.datatype.boolean(),
+      envValue: {},
+      tier: 'admin',
+      input: {
+        min: 1,
+        max: 1000,
+        step: 100,
+        unit: 'MB',
+        options: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => ({
+            value: 'off',
+            label: '关闭',
+          }));
+        })(),
+        maxLength: 200,
+        multiline: faker.datatype.boolean(),
+        placeholder: '多个邮箱用逗号分隔',
+        secret: faker.datatype.boolean(),
+        allowNull: faker.datatype.boolean(),
+      },
+      impact: '关闭后邮件验证码发送全部停止',
+      dangerous: true,
+      hot: true,
     }));
   })();
 }
@@ -9604,6 +9825,35 @@ export function getRuntimeConfigControllerGetDefinitions200Response() {
       description: '邮件服务开关',
       defaultValue: {},
       isPublic: true,
+      tier: 'admin',
+      input: {
+        min: 1,
+        max: 1000,
+        step: 100,
+        unit: 'MB',
+        options: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => ({
+            value: 'off',
+            label: '关闭',
+          }));
+        })(),
+        maxLength: 200,
+        multiline: faker.datatype.boolean(),
+        placeholder: '多个邮箱用逗号分隔',
+        secret: faker.datatype.boolean(),
+        allowNull: faker.datatype.boolean(),
+      },
+      impact: faker.lorem.words(),
+      dangerous: faker.datatype.boolean(),
+      hot: faker.datatype.boolean(),
+      envKey: 'SESSION_MAX_AGE',
     }));
   })();
 }
@@ -9618,6 +9868,38 @@ export function getRuntimeConfigControllerGetConfig200Response() {
     isPublic: true,
     updatedBy: faker.lorem.words(),
     updatedAt: '2024-01-01T00:00:00.000Z',
+    defaultValue: {},
+    source: 'runtime',
+    isModified: faker.datatype.boolean(),
+    envValue: {},
+    tier: 'admin',
+    input: {
+      min: 1,
+      max: 1000,
+      step: 100,
+      unit: 'MB',
+      options: (() => {
+        const arrayMin = 1;
+        const arrayMax = MAX_ARRAY_LENGTH;
+        const safeMin = Math.min(arrayMin, arrayMax);
+        return [
+          ...new Array(
+            faker.number.int({ min: safeMin, max: arrayMax })
+          ).keys(),
+        ].map((_) => ({
+          value: 'off',
+          label: '关闭',
+        }));
+      })(),
+      maxLength: 200,
+      multiline: faker.datatype.boolean(),
+      placeholder: '多个邮箱用逗号分隔',
+      secret: faker.datatype.boolean(),
+      allowNull: faker.datatype.boolean(),
+    },
+    impact: '关闭后邮件验证码发送全部停止',
+    dangerous: true,
+    hot: true,
   };
 }
 
@@ -9630,6 +9912,32 @@ export function getRuntimeConfigControllerUpdateConfig200Response() {
 export function getRuntimeConfigControllerResetConfig201Response() {
   return {
     success: true,
+  };
+}
+
+export function getRuntimeConfigControllerGetConfigHistory200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      id: faker.string.uuid(),
+      key: 'maxFileSize',
+      oldValue: faker.lorem.words(),
+      newValue: faker.lorem.words(),
+      operatorId: faker.string.uuid(),
+      operatorIp: faker.lorem.words(),
+      createdAt: '2024-01-01T00:00:00.000Z',
+    }));
+  })();
+}
+
+export function getRuntimeConfigControllerResetCategory201Response() {
+  return {
+    success: true,
+    keys: ['mailEnabled', 'requireEmailVerification'],
   };
 }
 
@@ -9646,11 +9954,11 @@ export function getTaskRunControllerListRuns200Response() {
         taskName: faker.person.fullName(),
         status: faker.helpers.arrayElement(['SUCCESS', 'FAILED']),
         startedAt: faker.date.anytime().toISOString(),
-        finishedAt: {},
-        durationMs: {},
-        errorSummary: {},
+        finishedAt: faker.date.anytime().toISOString(),
+        durationMs: faker.number.int(),
+        errorSummary: faker.lorem.words(),
         trigger: faker.helpers.arrayElement(['SCHEDULED', 'MANUAL']),
-        triggeredBy: {},
+        triggeredBy: faker.lorem.words(),
         createdAt: faker.date.anytime().toISOString(),
       }));
     })(),
@@ -9669,8 +9977,8 @@ export function getTaskRunControllerListTasks200Response() {
       ].map((_) => ({
         taskName: faker.person.fullName(),
         description: faker.lorem.words(),
-        schedule: {},
-        scheduleLabel: {},
+        schedule: faker.lorem.words(),
+        scheduleLabel: faker.lorem.words(),
       }));
     })(),
   };
@@ -9700,7 +10008,7 @@ export function getAlertControllerList200Response() {
         message: faker.lorem.words(),
         detail: {},
         status: faker.helpers.arrayElement(['OPEN', 'RESOLVED']),
-        resolvedAt: {},
+        resolvedAt: faker.date.anytime().toISOString(),
         createdAt: faker.date.anytime().toISOString(),
         updatedAt: faker.date.anytime().toISOString(),
       }));
@@ -9718,7 +10026,7 @@ export function getAlertControllerResolve200Response() {
     message: faker.lorem.words(),
     detail: {},
     status: faker.helpers.arrayElement(['OPEN', 'RESOLVED']),
-    resolvedAt: {},
+    resolvedAt: faker.date.anytime().toISOString(),
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
   };
@@ -11068,8 +11376,8 @@ export function getSecurityAccessAttemptControllerList200Response() {
         lastSeen: faker.date.anytime().toISOString(),
         count: faker.number.int(),
         reasons: { ip_not_allowed: 3 },
-        account: {},
-        userAgent: {},
+        account: faker.lorem.words(),
+        userAgent: faker.lorem.words(),
         inWhitelist: faker.datatype.boolean(),
         inBlacklist: faker.datatype.boolean(),
       }));
@@ -11267,8 +11575,13 @@ export function getRolesControllerGetSystemProjectRoles200Response() {
           createdAt: faker.date.anytime().toISOString(),
         }));
       })(),
-      _count: {},
-      project: {},
+      _count: {
+        members: faker.number.int(),
+      },
+      project: {
+        id: faker.string.uuid(),
+        name: faker.person.fullName(),
+      },
       createdAt: faker.date.anytime().toISOString(),
       updatedAt: faker.date.anytime().toISOString(),
     }));
@@ -11326,8 +11639,13 @@ export function getRolesControllerGetProjectRolesByProject200Response() {
           createdAt: faker.date.anytime().toISOString(),
         }));
       })(),
-      _count: {},
-      project: {},
+      _count: {
+        members: faker.number.int(),
+      },
+      project: {
+        id: faker.string.uuid(),
+        name: faker.person.fullName(),
+      },
       createdAt: faker.date.anytime().toISOString(),
       updatedAt: faker.date.anytime().toISOString(),
     }));
@@ -11377,8 +11695,13 @@ export function getRolesControllerCreateProjectRole201Response() {
         createdAt: faker.date.anytime().toISOString(),
       }));
     })(),
-    _count: {},
-    project: {},
+    _count: {
+      members: faker.number.int(),
+    },
+    project: {
+      id: faker.string.uuid(),
+      name: faker.person.fullName(),
+    },
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
   };
@@ -11427,8 +11750,13 @@ export function getRolesControllerUpdateProjectRole200Response() {
         createdAt: faker.date.anytime().toISOString(),
       }));
     })(),
-    _count: {},
-    project: {},
+    _count: {
+      members: faker.number.int(),
+    },
+    project: {
+      id: faker.string.uuid(),
+      name: faker.person.fullName(),
+    },
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
   };
@@ -11477,8 +11805,13 @@ export function getProjectRolesControllerCreateProjectRole201Response() {
         createdAt: faker.date.anytime().toISOString(),
       }));
     })(),
-    _count: {},
-    project: {},
+    _count: {
+      members: faker.number.int(),
+    },
+    project: {
+      id: faker.string.uuid(),
+      name: faker.person.fullName(),
+    },
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
   };
@@ -11527,8 +11860,13 @@ export function getProjectRolesControllerUpdateProjectRole200Response() {
         createdAt: faker.date.anytime().toISOString(),
       }));
     })(),
-    _count: {},
-    project: {},
+    _count: {
+      members: faker.number.int(),
+    },
+    project: {
+      id: faker.string.uuid(),
+      name: faker.person.fullName(),
+    },
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
   };
@@ -11577,8 +11915,13 @@ export function getProjectRolesControllerAddProjectRolePermissions200Response() 
         createdAt: faker.date.anytime().toISOString(),
       }));
     })(),
-    _count: {},
-    project: {},
+    _count: {
+      members: faker.number.int(),
+    },
+    project: {
+      id: faker.string.uuid(),
+      name: faker.person.fullName(),
+    },
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
   };
@@ -11627,8 +11970,13 @@ export function getProjectRolesControllerRemoveProjectRolePermissions200Response
         createdAt: faker.date.anytime().toISOString(),
       }));
     })(),
-    _count: {},
-    project: {},
+    _count: {
+      members: faker.number.int(),
+    },
+    project: {
+      id: faker.string.uuid(),
+      name: faker.person.fullName(),
+    },
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
   };
@@ -12281,7 +12629,11 @@ export function getNodeControllerGetNode200Response() {
       const safeMin = Math.min(arrayMin, arrayMax);
       return [
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) => ({}));
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        name: faker.person.fullName(),
+        isRoot: faker.datatype.boolean(),
+      }));
     })(),
   };
 }
@@ -13226,7 +13578,7 @@ export function getConversionTaskControllerGetQuotadefaultResponse() {
     remaining: faker.number.int(),
     windowHours: faker.number.int(),
     unlimited: faker.datatype.boolean(),
-    resetsAt: {},
+    resetsAt: faker.lorem.words(),
     scope: faker.lorem.words(),
   };
 }
@@ -13458,25 +13810,121 @@ export function getAdminControllerGetPurchaseStats200Response() {
 
 export function getAdminControllerGetCacheStats200Response() {
   return {
-    message: faker.lorem.words(),
-    data: {
-      size: faker.number.int(),
-      hits: faker.number.int(),
-      misses: faker.number.int(),
-      hitRate: faker.number.int(),
-    },
+    totalEntries: faker.number.int(),
+    capacity: faker.number.int(),
+    memoryUsage: faker.lorem.words(),
+    hitRate: faker.number.int(),
   };
 }
 
 export function getAdminControllerCleanupCache200Response() {
   return {
-    message: faker.lorem.words(),
+    cleanedEntries: faker.number.int(),
   };
 }
 
 export function getAdminControllerClearUserCache200Response() {
   return {
-    message: faker.lorem.words(),
+    userId: faker.string.uuid(),
+  };
+}
+
+export function getAdminControllerCleanupStorage200Response() {
+  return {
+    success: faker.datatype.boolean(),
+    deletedNodes: faker.number.int(),
+    deletedDirectories: faker.number.int(),
+    freedSpace: faker.number.int(),
+    errors: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+  };
+}
+
+export function getAdminControllerGetCleanupStats200Response() {
+  return {
+    total: faker.number.int(),
+    expiryDate: faker.lorem.words(),
+    delayDays: faker.number.int(),
+  };
+}
+
+export function getAdminControllerGetOrphanStats200Response() {
+  return {
+    localOrphanCount: faker.number.int(),
+    localOrphanTotalSize: faker.number.int(),
+    dbOrphanCount: faker.number.int(),
+    localOrphans: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        nodeId: faker.string.uuid(),
+        directory: faker.lorem.words(),
+        sizeBytes: faker.number.int(),
+      }));
+    })(),
+    dbOrphans: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        nodeId: faker.string.uuid(),
+        name: faker.person.fullName(),
+        projectId: faker.string.uuid(),
+      }));
+    })(),
+  };
+}
+
+export function getAdminControllerCleanupOrphans200Response() {
+  return {
+    success: faker.datatype.boolean(),
+    deletedNodes: faker.number.int(),
+    deletedDirectories: faker.number.int(),
+    freedSpace: faker.number.int(),
+    errors: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+  };
+}
+
+export function getAdminControllerGetDeletedFileStats200Response() {
+  return {
+    trashCount: faker.number.int(),
+    storageMarkedCount: faker.number.int(),
+    deletedProjectCount: faker.number.int(),
+    localOrphanCount: faker.number.int(),
+    localOrphanTotalSize: faker.number.int(),
+    dbOrphanCount: faker.number.int(),
+  };
+}
+
+export function getAdminControllerGetMxcadEngineConfig200Response() {
+  return {
+    enabled: faker.datatype.boolean(),
+    logPath: 'C:/Users/MxDrawHome/AppData/Local/MxWebCAD/',
+  };
+}
+
+export function getAdminControllerUpdateCoordinateLog200Response() {
+  return {
+    enabled: faker.datatype.boolean(),
+    logPath: 'C:/Users/MxDrawHome/AppData/Local/MxWebCAD/',
   };
 }
 
@@ -14811,7 +15259,11 @@ export function getBatchDownloadControllerGetProgressdefaultResponse() {
       const safeMin = Math.min(arrayMin, arrayMax);
       return [
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) => faker.lorem.words());
+      ].map((_) => ({
+        nodeId: faker.string.uuid(),
+        fileName: faker.person.fullName(),
+        error: faker.lorem.words(),
+      }));
     })(),
     zipPath: faker.location.zipCode(),
     itemNames: (() => {
@@ -14900,16 +15352,62 @@ export function getConversionMonitorControllerGetStats200Response() {
       'conversion-service',
       'cloud-faas',
     ]),
-    processPool: {},
-    conversionService: {},
-    conversionServiceError: {},
+    processPool: {
+      queueLength: faker.number.int(),
+      criticalPriorityQueueLength: faker.number.int(),
+      highPriorityQueueLength: faker.number.int(),
+      lowPriorityQueueLength: faker.number.int(),
+      runningCount: faker.number.int(),
+      maxConcurrent: faker.number.int(),
+      timeout: faker.number.int(),
+      duration: {
+        sampleCount: faker.number.int(),
+        p50DurationMs: {},
+        p95DurationMs: {},
+        p50WaitMs: {},
+        p95WaitMs: {},
+      },
+    },
+    conversionService: {
+      tasks: {
+        total: faker.number.int(),
+        pending: faker.number.int(),
+        processing: faker.number.int(),
+        completed: faker.number.int(),
+        failed: faker.number.int(),
+      },
+      duration: {
+        sampleCount: faker.number.int(),
+        p50Ms: {},
+        p95Ms: {},
+      },
+      workers: [...new Array(5).keys()]
+        .map((_) => ({
+          [faker.lorem.word()]: {
+            label: faker.lorem.words(),
+            maxConcurrent: faker.number.int(),
+            currentMax: faker.number.int(),
+            running: faker.number.int(),
+            waiting: faker.number.int(),
+            autoScale: faker.datatype.boolean(),
+            backlogSince: {},
+          },
+        }))
+        .reduce((acc, next) => Object.assign(acc, next), {}),
+    },
+    conversionServiceError: faker.lorem.words(),
     history: (() => {
       const arrayMin = 1;
       const arrayMax = MAX_ARRAY_LENGTH;
       const safeMin = Math.min(arrayMin, arrayMax);
       return [
         ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-      ].map((_) => faker.lorem.words());
+      ].map((_) => ({
+        t: faker.number.int(),
+        queueDepth: {},
+        running: {},
+        p95DurationMs: {},
+      }));
     })(),
     sampledAt: faker.number.int(),
   };

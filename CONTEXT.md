@@ -217,6 +217,10 @@ _Avoid_: 协作、实时协作
 一个协同编辑 session。通过 `createWrok()` 创建（自动加入）或 `joinWork()` 连接已有会话（SDK 内部自动加载文件），通过 `exitWrok()` 断开。work_data 使用 V3 编码（base64 JSON），包含 drawingId、projectId、drawingName、sourceType、creatorId 等元数据。
 _Avoid_: 会话、session
 
+**协同日志（Coordinate Log）**:
+CAD 引擎在协同运行期间输出的详细运行诊断日志，用于排查协同问题（通常应 MX 官方要求开启）。存放在引擎所在机器本机，与后端服务日志、审计日志相互独立。
+_Avoid_: 协同设置日志、详细日志、引擎日志（泛指）
+
 **图纸会话（Drawing Session）**:
 由 `services/drawingSession/` 深模块管理的「编辑器当前打开图纸」会话状态。`openSession(info)` / `closeSession()` 为唯一 writer（编排 `useCADEditorStore` 相关字段 + 切换/重置）；引擎→UI 信号经类型化事件 bus（`subscribe(event, cb)`，补全 CAD_EVENTS 与 payload 类型）取代散落的 window 裸字符串事件；`isModified` 脏标记由 session 持有并发布，侧边栏订阅而非 1s 轮询；**「当前文件被外部删除/恢复」标记（isCurrentFileDeleted）的全生命周期归 session**——文件系统动作/保存序列经 `notifyNodesDeleted(nodeIds)` / `notifyNodesRestored(nodeIds)` 通知，「删的是当前文件才置位」的 id 匹配推导收进实现，禁止调用方各自比对 currentFileId。与「协同会话（Work）」的区别：图纸会话是本地编辑会话状态，协同会话是 mxcad 协作连接。
 _避免_: 编辑器状态（指 store 本身）、当前文件状态、session 直译

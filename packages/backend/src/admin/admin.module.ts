@@ -16,10 +16,11 @@ import { PermissionModule } from '../permission/permission.module';
 import { StorageManagementModule } from '../storage-management/storage-management.module';
 import { AdminController } from './admin.controller';
 import { AdminStatsService } from './admin-stats.service';
+import { MxcadEngineConfigService } from './mxcad-engine-config.service';
 
 @Module({
   imports: [CommonModule, PermissionModule, StorageManagementModule],
   controllers: [AdminController],
-  providers: [AdminStatsService],
+  providers: [AdminStatsService, MxcadEngineConfigService],
 })
 export class AdminModule {}

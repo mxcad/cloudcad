@@ -29,6 +29,7 @@ import { useRuntimeConfig } from './hooks/useRuntimeConfig';
 import { PageHeader } from './PageHeader';
 import { ConfigCard } from './ConfigCard';
 import type { RowActions } from './ConfigCard';
+import { CoordinateLogCard } from './CoordinateLogCard';
 import { ConfigHistoryPanel } from './ConfigHistoryPanel';
 import { ResetCategoryModal } from './ResetCategoryModal';
 import styles from './RuntimeConfigPage.module.css';
@@ -140,6 +141,11 @@ export const RuntimeConfigPage: React.FC = () => {
                 rc.requestResetCategory(group.category)
               }
               actions={rowActions}
+              extraContent={
+                group.category === 'collaboration' ? (
+                  <CoordinateLogCard canManage={rc.canManageConfig} />
+                ) : undefined
+              }
             />
           ))}
         </div>

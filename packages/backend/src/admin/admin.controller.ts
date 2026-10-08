@@ -9,14 +9,15 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import {
+  Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   HttpStatus,
-  Inject,
   Param,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -30,10 +31,6 @@ import {
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
-import {
-  IPERMISSION_SERVICE,
-  IPermissionService,
-} from '../permission/interfaces/permission-service.interface';
 import { PermissionCacheService } from '../permission/services/permission-cache.service';
 import { StorageCleanupService } from '../storage-management/services/storage-cleanup.service';
 import { SystemPermission } from '../common/enums/permissions.enum';
@@ -47,6 +44,11 @@ import {
   DeletedFileStatsDto,
 } from './dto/admin-response.dto';
 import { AdminStatsService } from './admin-stats.service';
+import { MxcadEngineConfigService } from './mxcad-engine-config.service';
+import {
+  MxcadEngineConfigDto,
+  UpdateCoordinateLogDto,
+} from './dto/mxcad-engine-config.dto';
 import {
   DailyPurchasesStatsDto,
   DailyRegistrationsStatsDto,
@@ -60,11 +62,10 @@ import {
 @RequirePermissions([SystemPermission.SYSTEM_ADMIN])
 export class AdminController {
   constructor(
-    @Inject(IPERMISSION_SERVICE)
-    private readonly permissionService: IPermissionService,
     private readonly cacheService: PermissionCacheService,
     private readonly storageCleanupService: StorageCleanupService,
-    private readonly adminStatsService: AdminStatsService
+    private readonly adminStatsService: AdminStatsService,
+    private readonly mxcadEngineConfigService: MxcadEngineConfigService
   ) {}
 
   // ────────────────────────────────────────────────────────────
@@ -282,5 +283,43 @@ export class AdminController {
   })
   async getDeletedFileStats() {
     return this.storageCleanupService.getDeletedFileStats();
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // MX 引擎 ini 配置（mxcad_ini.json，单一事实源是引擎目录下的文件本身）
+  // ────────────────────────────────────────────────────────────
+
+  @Get('mxcad-engine/config')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '获取协同详细日志配置（开关状态 + 引擎日志目录）',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '获取协同详细日志配置成功；logPath 为引擎 about 探测的本机数据目录，探测失败时为 null',
+    type: MxcadEngineConfigDto,
+  })
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  async getMxcadEngineConfig(): Promise<MxcadEngineConfigDto> {
+    return this.mxcadEngineConfigService.getEngineConfig();
+  }
+
+  @Put('mxcad-engine/coordinate-log')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      '启用/关闭协同详细日志（写引擎 mxcad_ini.json；协同为长驻进程，需重启协同服务后对协同编辑生效）',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '协同详细日志开关已写入引擎配置',
+    type: MxcadEngineConfigDto,
+  })
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  async updateCoordinateLog(
+    @Body() dto: UpdateCoordinateLogDto
+  ): Promise<MxcadEngineConfigDto> {
+    return this.mxcadEngineConfigService.setCoordinateLogEnabled(dto.enabled);
   }
 }

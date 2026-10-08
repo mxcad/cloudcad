@@ -19,6 +19,7 @@ import {
   Body,
   Req,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -38,12 +39,14 @@ import {
 } from './dto/runtime-config.dto';
 import type { RuntimeConfigValue } from './runtime-config.types';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import type { Request } from 'express';
 
 @ApiTags('runtime-config')
 @Controller('runtime-config')
+@UseGuards(PermissionsGuard)
 export class RuntimeConfigController {
   constructor(private readonly runtimeConfigService: RuntimeConfigService) {}
 

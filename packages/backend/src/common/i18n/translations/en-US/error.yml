@@ -599,3 +599,8 @@ conversion_task:
   not_found_or_no_access: "The conversion task does not exist or you do not have access to it"
   retry_not_failed: "Only failed conversion tasks can be retried"
   node_deleted: "The file has been deleted and cannot be retried"
+
+mxcad_engine_extra:
+  ini_read_failed: "Failed to read engine config file: {path}"
+  ini_parse_failed: "Engine config file is not valid JSON: {path}"
+  ini_write_failed: "Failed to write engine config file: {path}"
