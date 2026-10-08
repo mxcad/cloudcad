@@ -23,6 +23,8 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
     findByUsername: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    findById: jest.fn(),
+    findByPhoneIncludingDeleted: jest.fn(),
   };
 
   const mockRoleRepo = {
@@ -65,7 +67,7 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
     reset: jest.fn().mockResolvedValue(undefined),
   };
 
-  const noopService = { syncBeforeLogin: jest.fn() };
+  const noopService = { syncBeforeLogin: jest.fn(), verifyCode: jest.fn() };
 
   const wechatUser = {
     openid: 'wechat-openid-123',
@@ -218,5 +220,31 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
     });
     expect(mockUserService.syncWechatAvatar).not.toHaveBeenCalled();
     expect(result.user.avatar).toBe(LOCAL_AVATAR_URL);
+  });
+
+  // 回归：bcrypt 哈希（cost 12）曾经 getUserInfo / loginByPhone 直接展开 UserRecord 泄漏进
+  // 响应体 → 前端 localStorage。现统一经 toPublicUser 剥离。UserDto 类型本就不含 password，
+  // 故用运行时对象断言（绕过类型）证明「对象里确实没有 password 键」。
+  it('getUserInfo 返回的用户对象不含 password 哈希', async () => {
+    mockUserRepo.findById.mockResolvedValue(baseUser());
+
+    const result = (await service.getUserInfo('user-1')) as unknown as Record<string, unknown>;
+
+    expect(result.password).toBeUndefined();
+    expect(result.id).toBe('user-1');
+    expect(result.username).toBe('wechat_user');
+  });
+
+  it('loginByPhone 返回的用户对象不含 password 哈希', async () => {
+    mockUserRepo.findByPhoneIncludingDeleted.mockResolvedValue(baseUser());
+    noopService.verifyCode.mockResolvedValue({ valid: true, message: '' });
+
+    const result = (await service.loginByPhone('13800000000', '123456')) as unknown as {
+      user: Record<string, unknown>;
+    };
+
+    expect(result.user.password).toBeUndefined();
+    expect(result.user.id).toBe('user-1');
+    expect(result.user.status).toBe('ACTIVE');
   });
 });

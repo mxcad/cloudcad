@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import type { SessionRequest, ITokenBlacklistService, IUserRepository, IRefreshTokenRepository, IAuthTokenService } from '@cloudcad/contracts';
-import { TOKEN_BLACKLIST, USER_REPOSITORY, REFRESH_TOKEN_REPOSITORY } from '@cloudcad/contracts';
+import { TOKEN_BLACKLIST, USER_REPOSITORY, REFRESH_TOKEN_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
@@ -96,7 +96,7 @@ export class AuthTokenService implements IAuthTokenService {
     }
 
     const hasPassword = !!user.password;
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = toPublicUser(user);
     const clientId = (payload as Record<string, unknown>).client_id as string | undefined;
     const tokens = await this.generateTokens(userWithoutPassword, refreshToken, clientId);
 

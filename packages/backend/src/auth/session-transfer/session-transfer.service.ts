@@ -44,6 +44,7 @@ import {
   USER_REPOSITORY,
   REFRESH_TOKEN_REPOSITORY,
   TOKEN_BLACKLIST,
+  toPublicUser,
 } from '@cloudcad/contracts';
 import type {
   IAuthTokenService,
@@ -179,7 +180,7 @@ export class SessionTransferService {
     await this.teardownOldSession(oldUserId, oldAccessToken, request);
 
     // ④ 建立新会话：regenerate 后 req.session 已被替换，须从 request 重读新对象
-    const { password: _password, ...userWithoutPassword } = user;
+    const userWithoutPassword = toPublicUser(user);
     const tokens = await this.authTokenService.generateTokens(userWithoutPassword);
     const roleName = user.role?.name ?? 'UNKNOWN';
     await this.establishNewSession(user.id, roleName, user.email, request);

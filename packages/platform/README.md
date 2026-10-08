@@ -51,6 +51,7 @@ PC / 移动端（以及未来的 App、Electron、平板）共用的**纯函数�
 | `src/share/expiry.ts` | `SHARE_EXPIRATION_VALUES`（6 档预设→秒）/ `SHARE_EXPIRATION_DEFAULT`（弹窗默认档位，初始化与重置同引；类型排除 `immediate`）/ `SHARE_CUSTOM_DAYS_MIN` / `SHARE_CUSTOM_DAYS_MAX`（自定义天数合法区间，端侧输入框 min/max 提示同源）/ `SHARE_CUSTOM_DAYS_DEFAULT`（自定义天数默认值）/ `detectShareExpiration`（反推选中项，**只有 custom 分支带天数**）/ `computeExpiresAtIso` / `computeExpiresInSeconds`（custom 天数统一过上下界钳制：NaN 回落默认、±∞ 钳到边界）/ `isShareExpired` / `ShareExpirationOption` / `ShareExpirationDetection` |
 | `src/billing/price.ts` | `orderAmountCents` / `originalAmountCents` / `centsToYuan`（金额单位「分」，公式与后端 `BillingService.createOrder` 一致） |
 | `src/billing/quota.ts` | `usagePercent`（total 非正→0，封顶 100）/ `resolveQuotaValue`（档位配置优先，缺键回落 registry 默认值，ADR-0043） |
+| `src/billing/membership.ts` | `membershipState({ tierLevel, expiresAt, now? })`——会员判定唯一出口（`isPermanent`/`isVip`/`daysRemaining` 下限钳制≥0，永久=Infinity）；吃参数不读 localStorage，展示约定（Infinity/null）由调用端适配 |
 | `src/files/name-rules.ts` | `checkFileName(name, maxLength?)` / `FileNameCheckResult` / `FileNameReason`（`empty`/`too_long`/`illegal_chars`/`control_chars`/`reserved_name`/`dot_edges`） |
 | `src/legal/placeholder.ts` | `resolvePlaceholders(text, vars)`——`{{双花括号}}` 品牌占位符替换，未知占位符原样保留（漏项可见） |
 | `src/auth/password-strength.ts` | `scorePasswordStrength` / `PasswordStrengthScore`（`0\|1\|2\|3\|4` 字面量联合，标签与颜色留端包） |
@@ -59,6 +60,7 @@ PC / 移动端（以及未来的 App、Electron、平板）共用的**纯函数�
 | `src/format/date.ts` | `formatDate` / `formatDateTime` / `formatDateTimeWithSeconds`——**固定 ISO-like 格式，locale 无关**；空与非法一律→`''` |
 | `src/errors/classify.ts` | `isAbortError` / `isPermissionError` / `isServerError`（两端并集判定，文案留端包） |
 | `src/transfer/policy.ts` | `evaluateCrossProjectTransfer`（6 域矩阵 + 库-move 预判，后端仍是最终裁决）+ 7 个类型 |
+| `src/collaboration/wire.ts` | 协同 wire 协议唯一实现（与第三方 cooperate SDK 互操作的线上协议）：`encodeUserData` / `encodeV3WorkData` / `parseWorkData` / `parseUserData` / `getWorkCreator` / `deduplicateWorkUsers` + 6 个类型；`CollaborateUserData.v` 裁定为字面量 `1`（两端编码恒 `v: 1`，`parseUserData` 只认 `v === 1`） |
 
 `src/index.ts` 是唯一的 barrel，所有**产品接口**从它转出。**`src/routes/match.ts` 的路径 pattern 编译/匹配不经 barrel 导出**——它是 `resolve.ts` 的内部机制，需要它的测试按模块路径直接导入（`from './routes/match'`）。判定标准：调用端需要它才能工作就导出，只有本包内部或本包测试需要就不导出。
 

@@ -3,18 +3,18 @@ import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import * as bcrypt from 'bcryptjs';
 import { LoginService, ACCOUNT_DEACTIVATED_CODE } from './login.service';
 import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { USER_REPOSITORY, USER_SYNC_HOOK } from '@cloudcad/contracts';
+import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
 
-// jest.quick.json 配置了 resetMocks:true，会清掉 setup.ts 里 bcryptjs mock 的实现，
-// 这里显式恢复 compare/hash 的实现，保证密码校验可控。
-beforeEach(() => {
-  (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-  (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
-});
+// 密码哈希 seam 的 mock：compare/hash 实现在各 beforeEach 里按用例设置
+// （resetMocks:true 会清空实现，故在 describe 内 beforeEach 统一恢复）
+const mockPasswordHasher = {
+  compare: jest.fn(),
+  hash: jest.fn(),
+};
 
 describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）', () => {
   let service: LoginService;
@@ -69,6 +69,8 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
   beforeEach(async () => {
     // resetMocks:true 会清空 mock 实现，这里统一恢复依赖实现
     jest.clearAllMocks();
+    mockPasswordHasher.compare.mockResolvedValue(true);
+    mockPasswordHasher.hash.mockResolvedValue('hashed-password');
     mockAuthTokenService.generateTokens.mockResolvedValue({
       accessToken: 'at',
       refreshToken: 'rt',
@@ -126,6 +128,7 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
           provide: AccountRateLimitService,
           useValue: mockAccountRateLimitService,
         },
+        { provide: PASSWORD_HASHER, useValue: mockPasswordHasher },
         { provide: USER_SYNC_HOOK, useValue: mockSyncHook },
         { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
@@ -155,8 +158,8 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     await expect(
       service.login({ account: '13800138000', password: 'password123' })
     ).rejects.toThrow(new UnauthorizedException('账号或密码错误'));
-    // bcryptjs 对 null hash 会 reject（→ 500），修复后不得调用 compare
-    expect(bcrypt.compare).not.toHaveBeenCalled();
+    // bcrypt 对 null hash 会 reject（→ 500），修复后不得调用 compare
+    expect(mockPasswordHasher.compare).not.toHaveBeenCalled();
     // 与密码错误同路径：失败计数 + 不发 token
     expect(mockAccountRateLimitService.recordLoginFailure).toHaveBeenCalledWith(
       '13800138000'
@@ -222,6 +225,7 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
           provide: AccountRateLimitService,
           useValue: mockAccountRateLimitService,
         },
+        { provide: PASSWORD_HASHER, useValue: mockPasswordHasher },
         { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();

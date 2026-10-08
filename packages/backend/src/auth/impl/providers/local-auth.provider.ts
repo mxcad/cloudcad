@@ -25,8 +25,9 @@ import type {
   ITokenHandler, IUserRepository, IRoleRepository,
   ISmsVerificationService, IEmailVerificationService, IRuntimeConfigService,
 } from '@cloudcad/contracts';
-import { USER_REPOSITORY, ROLE_REPOSITORY } from '@cloudcad/contracts';
+import { USER_REPOSITORY, ROLE_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
+import { establishSession } from '../../session-establishment';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
@@ -162,15 +163,12 @@ export class OssAuthProvider
       throw new UnauthorizedException(I18nContext.current()?.t('error.auth.invalid_credentials') ?? '账号或密码错误');
     }
 
-    const tokens = await this.authTokenService.generateTokens(user);
+    const tokens = await this.authTokenService.generateTokens(toPublicUser(user));
 
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role.name;
-      req.session.userEmail = user.email ?? undefined;
-      await req.session.save();
+      await establishSession(req, user, { withEmail: true });
       this.logger.log(
-        `Session 已设置 userId=${user.id}, role=${user.role.name}`
+        `Session 已设置 userId=${user.id}, role=${user.role?.name ?? 'USER'}`
       );
     }
 
@@ -180,7 +178,7 @@ export class OssAuthProvider
       ...tokens,
       restored: restored || undefined,
       user: {
-        ...user,
+        ...toPublicUser(user),
         nickname: user.nickname || undefined,
         avatar: user.avatar || undefined,
         role: user.role,
@@ -412,7 +410,7 @@ export class OssAuthProvider
     return {
       ...result,
       user: {
-        ...user,
+        ...toPublicUser(user),
         nickname: user.nickname || undefined,
         avatar: user.avatar || undefined,
         role: user.role,
@@ -430,7 +428,7 @@ export class OssAuthProvider
     }
 
     return {
-      ...user,
+      ...toPublicUser(user),
       nickname: user.nickname || undefined,
       avatar: user.avatar || undefined,
       phone: user.phone || undefined,
@@ -494,14 +492,12 @@ export class OssAuthProvider
 
     this.logger.log(`手机号验证成功: ${formattedPhone}, userId: ${user.id}`);
 
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = toPublicUser(user);
     const tokens =
       await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-      await req.session.save();
+      await establishSession(req, user);
     }
 
     return {
@@ -555,14 +551,12 @@ export class OssAuthProvider
 
     this.logger.log(`邮箱绑定成功: userId=${userId}, email=${email}`);
 
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = toPublicUser(user);
     const tokens =
       await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-      await req.session.save();
+      await establishSession(req, user);
     }
 
     return {
@@ -619,14 +613,12 @@ export class OssAuthProvider
       `手机号绑定成功: userId=${userId}, phone=${formattedPhone}`
     );
 
-    const { password: _, ...userWithoutPassword } = user;
+    const userWithoutPassword = toPublicUser(user);
     const tokens =
       await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-      await req.session.save();
+      await establishSession(req, user);
     }
 
     return {
@@ -706,9 +698,7 @@ export class OssAuthProvider
     const tokens = await this.authTokenService.generateTokens(user);
 
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-      await req.session.save();
+      await establishSession(req, user);
     }
 
     return {
@@ -785,9 +775,7 @@ export class OssAuthProvider
     const tokens = await this.authTokenService.generateTokens(user);
 
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = user.role?.name || 'USER';
-      await req.session.save();
+      await establishSession(req, user);
     }
 
     return {

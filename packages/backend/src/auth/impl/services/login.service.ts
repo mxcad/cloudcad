@@ -9,7 +9,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthTokenService } from './auth-token.service';
-import * as bcrypt from 'bcryptjs';
+import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
+import type { IPasswordHasher } from '../../../users/interfaces/password-hasher.interface';
 import type { LoginDto, AuthResponseDto } from '../../dto/auth.dto';
 import type { SessionRequest } from '../../interfaces/jwt-payload.interface';
 import type {
@@ -23,6 +24,7 @@ import { AccountRateLimitService } from '../../services/account-rate-limit.servi
 import { membershipTierOf } from '../../../vip/membership-tier';
 import { I18nContext } from 'nestjs-i18n';
 import { UserLifecycleEventPayload } from '../../../users/interfaces/user-lifecycle-event.interface';
+import { establishSession } from '../../session-establishment';
 
 /** 注销冷静期已过、拒绝登录时的专用错误码（前端据此弹出客服信息弹框） */
 export const ACCOUNT_DEACTIVATED_CODE = 'ACCOUNT_DEACTIVATED';
@@ -35,6 +37,8 @@ export class LoginService {
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(PASSWORD_HASHER)
+    private readonly passwordHasher: IPasswordHasher,
     @Inject('CONFIG')
     private readonly runtimeConfigService: IRuntimeConfigService,
     private authTokenService: AuthTokenService,
@@ -97,7 +101,7 @@ export class LoginService {
     // 抛异常 → 500，破坏下方防枚举统一文案（攻击者可用 500 vs 401 区分此类账号存在性），
     // 故按「密码错误」同路径处理（计数 + 通用 401）
     const isPasswordValid = user.password
-      ? await bcrypt.compare(password, user.password)
+      ? await this.passwordHasher.compare(password, user.password)
       : false;
     if (!isPasswordValid) {
       this.logger.warn(`登录失败 - 密码错误: ${account}`);
@@ -243,10 +247,7 @@ export class LoginService {
     const roleName = user.role?.name ?? 'UNKNOWN';
 
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = roleName;
-      req.session.userEmail = user.email ?? undefined;
-      await req.session.save();
+      await establishSession(req, user, { fallbackRole: 'UNKNOWN', withEmail: true });
       this.logger.log(`Session 已设置 userId=${user.id}, role=${roleName}`);
     }
 

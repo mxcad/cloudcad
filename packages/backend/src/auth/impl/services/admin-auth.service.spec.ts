@@ -5,7 +5,6 @@
 
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
 import { AdminAuthService } from './admin-auth.service';
 import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
@@ -17,10 +16,12 @@ import { MfaService } from '../../services/mfa.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
 import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
+import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
 
-beforeEach(() => {
-  (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-});
+// 密码哈希 seam 的 mock：compare 实现在 describe 内 beforeEach 里按用例设置
+const mockPasswordHasher = {
+  compare: jest.fn(),
+};
 
 describe('AdminAuthService（管理员专用登录）', () => {
   let service: AdminAuthService;
@@ -74,7 +75,7 @@ describe('AdminAuthService（管理员专用登录）', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    mockPasswordHasher.compare.mockResolvedValue(true);
     mockAuthTokenService.generateTokens.mockResolvedValue({
       accessToken: 'at',
       refreshToken: 'rt',
@@ -124,6 +125,7 @@ describe('AdminAuthService（管理员专用登录）', () => {
       providers: [
         AdminAuthService,
         { provide: USER_REPOSITORY, useValue: mockUserRepo },
+        { provide: PASSWORD_HASHER, useValue: mockPasswordHasher },
         { provide: AuthTokenService, useValue: mockAuthTokenService },
         { provide: AccountRateLimitService, useValue: mockAccountRateLimitService },
         { provide: AuditLogService, useValue: mockAuditLogService },
@@ -219,7 +221,7 @@ describe('AdminAuthService（管理员专用登录）', () => {
         service.login(dto, undefined, '127.0.0.1')
       ).rejects.toThrow(UnauthorizedException);
       // 密码比对不应执行（非管理员直接拒绝，避免无谓计算）
-      expect(bcrypt.compare).not.toHaveBeenCalled();
+      expect(mockPasswordHasher.compare).not.toHaveBeenCalled();
     });
 
     it('用户不存在同样返回统一 Unauthorized，并记录高危访问尝试（user_not_found）', async () => {
@@ -245,7 +247,7 @@ describe('AdminAuthService（管理员专用登录）', () => {
     });
 
     it('密码错误返回统一 Unauthorized 且不发 token', async () => {
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      mockPasswordHasher.compare.mockResolvedValue(false);
       mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue(adminUser);
       await expect(
         service.login(dto, undefined, '127.0.0.1')

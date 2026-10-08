@@ -7,7 +7,8 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
+import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
+import type { IPasswordHasher } from '../../../users/interfaces/password-hasher.interface';
 import { I18nContext } from 'nestjs-i18n';
 import type { IUserRepository, UserRecord } from '@cloudcad/contracts';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
@@ -24,6 +25,7 @@ import { AccountRateLimitService } from '../../services/account-rate-limit.servi
 import { MfaService } from '../../services/mfa.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
 import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
+import { establishSession } from '../../session-establishment';
 
 /** 管理员登录请求：Session 基础上携带 headers（审计 user-agent） */
 type AdminLoginRequest = SessionRequest & { headers?: Record<string, unknown> };
@@ -45,6 +47,8 @@ export class AdminAuthService {
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(PASSWORD_HASHER)
+    private readonly passwordHasher: IPasswordHasher,
     private readonly authTokenService: AuthTokenService,
     private readonly accountRateLimitService: AccountRateLimitService,
     private readonly auditLogService: AuditLogService,
@@ -150,7 +154,7 @@ export class AdminAuthService {
       throw genericReject();
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await this.passwordHasher.compare(password, user.password);
     if (!isPasswordValid) {
       this.logger.warn(`管理员登录失败 - 密码错误: ${account}`);
       // 失败锁定计数（#416）：连续失败达阈值 → 锁 30 分钟
@@ -252,10 +256,7 @@ export class AdminAuthService {
     // 5. Session（与普通登录一致，供 cookie 会话链路复用）
     const roleName = user.role?.name ?? 'ADMIN';
     if (req && req.session) {
-      req.session.userId = user.id;
-      req.session.userRole = roleName;
-      req.session.userEmail = user.email ?? undefined;
-      await req.session.save();
+      await establishSession(req, user, { fallbackRole: 'ADMIN', withEmail: true });
       this.logger.log(
         `管理员登录 Session 已设置 userId=${user.id}, role=${roleName}`
       );
@@ -270,17 +271,14 @@ export class AdminAuthService {
     );
 
     // 6. 安全审计（管理员入口登录为高价值安全事件：成功失败均留痕）
-    await this.auditLogService.log(
-      AuditAction.ADMIN_LOGIN,
-      ResourceType.USER,
-      user.id,
-      user.id,
-      true,
-      undefined,
-      undefined,
-      undefined,
-      user.username || user.email || user.id,
-      {
+    await this.auditLogService.log({
+      action: AuditAction.ADMIN_LOGIN,
+      resourceType: ResourceType.USER,
+      resourceId: user.id,
+      userId: user.id,
+      success: true,
+      resourceName: user.username || user.email || user.id,
+      params: {
         account,
         ip: clientIp,
         loginMethod: mfaSetupRequired
@@ -288,9 +286,9 @@ export class AdminAuthService {
           : 'admin_password',
         mfaSetupRequired,
       },
-      clientIp,
-      req?.headers?.['user-agent'] as string | undefined
-    );
+      ipAddress: clientIp,
+      userAgent: req?.headers?.['user-agent'] as string | undefined,
+    });
 
     return {
       ...tokens,
@@ -334,20 +332,18 @@ export class AdminAuthService {
     // 未认证成功（IP 拦截/账号不存在）无合法 userId，跳过 AuditLog（已由上述通道留痕）
     if (!userId) return;
     try {
-      await this.auditLogService.log(
-        AuditAction.ADMIN_LOGIN,
-        ResourceType.USER,
+      await this.auditLogService.log({
+        action: AuditAction.ADMIN_LOGIN,
+        resourceType: ResourceType.USER,
+        resourceId: userId,
         userId,
-        userId,
-        false,
-        `admin login failed: ${reason}`,
-        undefined,
-        undefined,
-        account,
-        { account, ip: clientIp, reason, loginMethod: 'admin_password' },
-        clientIp,
-        req?.headers?.['user-agent'] as string | undefined
-      );
+        success: false,
+        errorMessage: `admin login failed: ${reason}`,
+        resourceName: account,
+        params: { account, ip: clientIp, reason, loginMethod: 'admin_password' },
+        ipAddress: clientIp,
+        userAgent: req?.headers?.['user-agent'] as string | undefined,
+      });
     } catch {
       // 审计写库失败不影响登录拒绝流程
     }

@@ -70,6 +70,6 @@ pnpm test:integration             # 集成测试（需 DB，串行）
 ```
 
 Config: `clearMocks`+`restoreMocks`+`resetMocks` 全 true。
-覆盖阈值：P0 80%（auth.service, permission.service），P1 70%。
+覆盖：`jest.config.cjs` 当前**无 `coverageThreshold`**（`test:cov`/`test:ci` 只生成报告、不强制失败）。P0 80%（auth-facade.service / permission.service）、P1 70% 是**目标**而非已生效门禁——auth 域多个核心 service 仍零测试，落地门禁须先补测试（架构审查 ⑩）。
 
 </supporting-info>

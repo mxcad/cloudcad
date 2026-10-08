@@ -62,6 +62,9 @@ export type {
 // Domain types
 export type { UserRecord, UserRoleRef, RefreshTokenRecord, RoleRecord } from './domain/user.types';
 
+// Domain value helpers（纯函数，过 scan:purity 门禁）
+export { toPublicUser } from './domain/user-mapping';
+
 // Domain contracts (values)
 export {
   ProjectRole,
@@ -82,6 +85,7 @@ export {
   buildEngineParams,
   parseEngineOutput,
   CONVERSION_FAILURE_CATEGORIES,
+  TRANSIENT_FAILURE_CATEGORIES,
   isTransientFailure,
   isConversionFailureCategory,
 } from './conversion/mxcad-engine-contract';

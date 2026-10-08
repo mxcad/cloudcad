@@ -61,6 +61,8 @@ export {
   centsToYuan,
 } from './billing/price';
 export { usagePercent, resolveQuotaValue } from './billing/quota';
+export { membershipState } from './billing/membership';
+export type { MembershipStateInput, MembershipState } from './billing/membership';
 
 // ── 文件名规则（纯判定，文案留端包） ──
 export { checkFileName } from './files/name-rules';
@@ -109,3 +111,21 @@ export type {
 
 // ── 协同编辑域名白名单（纯判定；hostname 由调用方传入，不读 window） ──
 export { isCollaborationAllowed } from './collaboration/domains';
+
+// ── 协同 wire 协议（与第三方 cooperate SDK 互操作的线上协议，两端唯一实现） ──
+export {
+  encodeUserData,
+  encodeV3WorkData,
+  parseWorkData,
+  parseUserData,
+  getWorkCreator,
+  deduplicateWorkUsers,
+} from './collaboration/wire';
+export type {
+  CollaborateWorkDataV1,
+  CollaborateWorkDataV2,
+  CollaborateWorkDataV3,
+  CollaborateWorkData,
+  CollaborateUserData,
+  Work,
+} from './collaboration/wire';

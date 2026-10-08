@@ -1,11 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import * as bcrypt from 'bcryptjs';
 import { PasswordService } from './password.service';
 import { AuthTokenService } from './auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
+import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
 
 describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
   let service: PasswordService;
@@ -36,6 +36,11 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
 
   const mockTokenBlacklistService = {
     removeUserFromBlacklist: jest.fn(),
+  };
+
+  const mockPasswordHasher = {
+    hash: jest.fn(),
+    compare: jest.fn(),
   };
 
   const mockAccountRateLimitService = {
@@ -71,6 +76,7 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
         { provide: 'CONFIG', useValue: mockRuntimeConfigService },
         { provide: AuthTokenService, useValue: mockAuthTokenService },
         { provide: 'TOKEN_BLACKLIST', useValue: mockTokenBlacklistService },
+        { provide: PASSWORD_HASHER, useValue: mockPasswordHasher },
         { provide: AccountRateLimitService, useValue: mockAccountRateLimitService },
         {
           provide: PasswordPolicyService,
@@ -169,7 +175,7 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
   });
 
   describe('validateUser（无密码账号防 500）', () => {
-    it('ACTIVE 但 password=null（微信注册）：返回 null 而非抛 500，且不调用 bcrypt.compare', async () => {
+    it('ACTIVE 但 password=null（微信注册）：返回 null 而非抛 500，且不调用 passwordHasher.compare', async () => {
       mockUserRepo.findByEmail.mockResolvedValue({
         id: 'user-1',
         email: 'wx@example.com',
@@ -181,8 +187,8 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
       const result = await service.validateUser('wx@example.com', 'anything');
 
       expect(result).toBeNull();
-      // bcryptjs 对 null hash 会 reject（→ 500），修复后不得调用 compare
-      expect(bcrypt.compare).not.toHaveBeenCalled();
+      // bcrypt 对 null hash 会 reject（→ 500），修复后不得调用 compare
+      expect(mockPasswordHasher.compare).not.toHaveBeenCalled();
     });
 
     it('ACTIVE 且有密码：密码正确返回用户（不含 password 字段）', async () => {
@@ -193,7 +199,7 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
         password: 'hashed-password',
         status: 'ACTIVE',
       });
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockPasswordHasher.compare.mockResolvedValue(true);
 
       const result = await service.validateUser('ok@example.com', 'password123');
 

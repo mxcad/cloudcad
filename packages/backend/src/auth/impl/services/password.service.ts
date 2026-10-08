@@ -1,8 +1,9 @@
 import { Injectable, Logger, UnauthorizedException, BadRequestException, Inject } from '@nestjs/common';
 import { AuthTokenService } from './auth-token.service';
-import * as bcrypt from 'bcryptjs';
+import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
+import type { IPasswordHasher } from '../../../users/interfaces/password-hasher.interface';
 import type { IUserRepository, IEmailVerificationService, ISmsVerificationService, IRuntimeConfigService, ITokenBlacklistService, IPasswordService } from '@cloudcad/contracts';
-import { USER_REPOSITORY } from '@cloudcad/contracts';
+import { USER_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
 import { I18nContext } from 'nestjs-i18n';
@@ -13,6 +14,7 @@ export class PasswordService implements IPasswordService {
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(PASSWORD_HASHER) private readonly passwordHasher: IPasswordHasher,
     @Inject('EMAIL') private readonly emailVerificationService: IEmailVerificationService,
     @Inject('SMS') private readonly smsVerificationService: ISmsVerificationService,
     @Inject('CONFIG') private readonly runtimeConfigService: IRuntimeConfigService,
@@ -28,10 +30,10 @@ export class PasswordService implements IPasswordService {
       // 无密码账号（微信注册等 password=null）：bcrypt.compare(hash=null) 会 reject
       // 抛异常 → 500，故按「密码错误」处理（返回 null，与错误密码同语义）
       const isPasswordValid = user.password
-        ? await bcrypt.compare(password, user.password)
+        ? await this.passwordHasher.compare(password, user.password)
         : false;
       if (isPasswordValid) {
-        const { password: _, ...result } = user;
+        const result = toPublicUser(user);
         return result;
       }
     }
@@ -129,7 +131,7 @@ export class PasswordService implements IPasswordService {
     // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
     this.passwordPolicyService.assertPasswordPolicy(newPassword);
 
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const hashedPassword = await this.passwordHasher.hash(newPassword);
     // 记录口令修改时间（#416）
     await this.userRepo.update(user.id, { password: hashedPassword, passwordChangedAt: new Date() });
     await this.authTokenService.deleteAllRefreshTokens(user.id);

@@ -5,9 +5,10 @@ import { AuthTokenService } from './auth-token.service';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import type { IUserRepository, IEmailVerificationService, IRuntimeConfigService, IRegistrationService, IUserService, RegisterDto, AuthResponseDto, SessionRequest } from '@cloudcad/contracts';
-import { USER_REPOSITORY } from '@cloudcad/contracts';
+import { USER_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
+import { establishSession } from '../../session-establishment';
 import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
@@ -103,8 +104,7 @@ export class RegistrationService implements IRegistrationService {
       const tokens = await this.authTokenService.generateTokens(user);
 
       if (req && req.session) {
-        req.session.userId = user.id;
-        req.session.userRole = user.role?.name || 'USER';
+        await establishSession(req, user, { save: false });
       }
 
       return { ...tokens, user: { ...user, role: user.role, status: user.status } };
@@ -137,8 +137,7 @@ export class RegistrationService implements IRegistrationService {
       const tokens = await this.authTokenService.generateTokens(user);
 
       if (req && req.session) {
-        req.session.userId = user.id;
-        req.session.userRole = user.role?.name || 'USER';
+        await establishSession(req, user, { save: false });
       }
 
       return { ...tokens, user: { ...user, role: user.role, status: user.status } };
@@ -208,8 +207,7 @@ export class RegistrationService implements IRegistrationService {
       const tokens = await this.authTokenService.generateTokens(user);
 
       if (req && req.session) {
-        req.session.userId = user.id;
-        req.session.userRole = user.role?.name || 'USER';
+        await establishSession(req, user, { save: false });
       }
 
       return { ...tokens, user: { ...user, role: user.role, status: user.status } };
@@ -226,12 +224,11 @@ export class RegistrationService implements IRegistrationService {
 
     const updatedUser = await this.userRepo.markEmailVerified(existingUser.id, email);
 
-    const { password: _, ...userWithoutPassword } = updatedUser;
+    const userWithoutPassword = toPublicUser(updatedUser);
     const tokens = await this.authTokenService.generateTokens(userWithoutPassword);
 
     if (req && req.session) {
-      req.session.userId = updatedUser.id;
-      req.session.userRole = updatedUser.role?.name || 'USER';
+      await establishSession(req, updatedUser, { save: false });
     }
 
     return { ...tokens, user: userWithoutPassword };
