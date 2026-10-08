@@ -378,26 +378,14 @@ export class FileTreeService {
 
   /**
    * 判断节点是否属于公共资源库（图纸库/图块库）：
-   * 库根节点（LIBRARY_DRAWING/LIBRARY_BLOCK）直接判定；
-   * 库内文件/文件夹通过 TreeWalker.resolveProjectId 上溯到库根判定。
+   * 经 TreeWalker.resolveRootContext 一次 CTE 沿父链上溯到归属根（含自身），
+   * 按根类型判定（库根节点解析为自身）。
    */
   async isLibraryNode(nodeId: string): Promise<boolean> {
-    const nodeType = await this.getNodeType(nodeId);
-    if (
-      nodeType === NodeType.LIBRARY_DRAWING ||
-      nodeType === NodeType.LIBRARY_BLOCK
-    ) {
-      return true;
-    }
-    if (nodeType !== NodeType.FILE && nodeType !== NodeType.FOLDER) {
-      return false;
-    }
-    const projectId = await this.treeWalker.resolveProjectId(nodeId);
-    if (!projectId) return false;
-    const rootType = await this.getNodeType(projectId);
+    const root = await this.treeWalker.resolveRootContext(nodeId);
     return (
-      rootType === NodeType.LIBRARY_DRAWING ||
-      rootType === NodeType.LIBRARY_BLOCK
+      root?.rootType === NodeType.LIBRARY_DRAWING ||
+      root?.rootType === NodeType.LIBRARY_BLOCK
     );
   }
 

@@ -194,17 +194,11 @@ export class SaveController {
     }
 
     if (dto.targetType === 'personal') {
-      const rootId = await this.treeWalker.resolveProjectId(
+      const root = await this.treeWalker.resolveRootContext(
         dto.targetParentId,
       );
-      const rootNode = rootId
-        ? await this.fileSystemNodeService.findUniqueById(rootId, {
-            nodeType: true,
-            ownerId: true,
-          })
-        : null;
 
-      const isUserPersonalSpace = rootNode?.ownerId === userId;
+      const isUserPersonalSpace = root?.ownerId === userId;
 
       if (!isUserPersonalSpace) {
         this.logger.warn(

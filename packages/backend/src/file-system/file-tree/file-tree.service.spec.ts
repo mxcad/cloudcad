@@ -59,6 +59,7 @@ describe('FileTreeService', () => {
 
   const mockTreeWalker = {
     resolveProjectId: jest.fn(),
+    resolveRootContext: jest.fn(),
     getSubtreeIds: jest.fn(),
     getSubtreeFileIds: jest.fn(),
     getSubtreeFilesPaginated: jest.fn(),
@@ -374,67 +375,34 @@ describe('FileTreeService', () => {
   // ==================== isLibraryNode ====================
   describe('isLibraryNode', () => {
     it('should return false for non-library nodes', async () => {
-      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
-        id: 'n1',
-        nodeType: NodeType.FILE,
-      });
-      mockTreeWalker.resolveProjectId.mockResolvedValue(null);
+      mockTreeWalker.resolveRootContext.mockResolvedValue(null);
       expect(await service.isLibraryNode('n1')).toBe(false);
     });
 
     it('should return true for library drawing nodes', async () => {
-      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
-        id: 'root-1',
-        nodeType: NodeType.LIBRARY_DRAWING,
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'root-1',
+        rootType: NodeType.LIBRARY_DRAWING,
+        ownerId: 'admin-1',
       });
       expect(await service.isLibraryNode('root-1')).toBe(true);
     });
 
     it('should return true for folder inside library', async () => {
-      mockTreeWalker.resolveProjectId.mockResolvedValue('root-1');
-      mockPrisma.fileSystemNode.findUnique.mockImplementation(({ where }) => {
-        if (where.id === 'folder-1') {
-          return Promise.resolve({
-            id: 'folder-1',
-            nodeType: NodeType.FOLDER,
-            projectId: null,
-            parentId: 'root-1',
-          });
-        }
-        if (where.id === 'root-1') {
-          return Promise.resolve({
-            id: 'root-1',
-            nodeType: NodeType.LIBRARY_DRAWING,
-            projectId: null,
-            parentId: null,
-          });
-        }
-        return Promise.resolve(null);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'root-1',
+        rootType: NodeType.LIBRARY_DRAWING,
+        ownerId: 'admin-1',
       });
       expect(await service.isLibraryNode('folder-1')).toBe(true);
-      expect(mockTreeWalker.resolveProjectId).toHaveBeenCalledWith('folder-1');
+      expect(mockTreeWalker.resolveRootContext).toHaveBeenCalledWith('folder-1');
     });
 
     it('should return false for folder inside regular project', async () => {
-      mockTreeWalker.resolveProjectId.mockResolvedValue('proj-1');
-      mockPrisma.fileSystemNode.findUnique.mockImplementation(({ where }) => {
-        if (where.id === 'folder-1') {
-          return Promise.resolve({
-            id: 'folder-1',
-            nodeType: NodeType.FOLDER,
-            projectId: null,
-            parentId: 'proj-1',
-          });
-        }
-        if (where.id === 'proj-1') {
-          return Promise.resolve({
-            id: 'proj-1',
-            nodeType: NodeType.PROJECT,
-            projectId: null,
-            parentId: null,
-          });
-        }
-        return Promise.resolve(null);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'proj-1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'user-1',
       });
       expect(await service.isLibraryNode('folder-1')).toBe(false);
     });

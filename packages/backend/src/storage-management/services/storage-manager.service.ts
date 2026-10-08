@@ -89,24 +89,47 @@ export class StorageManager {
 
   /**
    * 删除节点存储
-   * @param nodeId 节点 ID
-   * @param directory 目录（YYYYMM[/N]）
+   * @param nodePath 数据库存储路径（YYYYMM[/N]/nodeId/...，可带 /mxcad/file/ 前缀）
    */
-  async deleteNodeStorage(nodeId: string, directory: string): Promise<void> {
-    const nodeRelativePath = `${directory}/${nodeId}`;
-    await this.localStorageProvider.deleteDirectory(nodeRelativePath);
-    this.logger.log(`删除节点存储成功: ${nodeId} (${directory})`);
+  async deleteNodeStorage(nodePath: string): Promise<void> {
+    const nodeDirectory = this.parseNodeDirectory(nodePath);
+    if (!nodeDirectory) {
+      this.logger.warn(`删除节点存储跳过，路径无法解析为节点目录: ${nodePath}`);
+      return;
+    }
+    await this.localStorageProvider.deleteDirectory(nodeDirectory);
+    this.logger.log(`删除节点存储成功: ${nodeDirectory}`);
   }
 
   /**
    * 检查节点存储是否存在
-   * @param nodeId 节点 ID
-   * @param directory 目录（YYYYMM[/N]）
-   * @returns 是否存在
+   * @param nodePath 数据库存储路径（YYYYMM[/N]/nodeId/...，可带 /mxcad/file/ 前缀）
+   * @returns 是否存在（路径无法解析时返回 false）
    */
-  async nodeStorageExists(nodeId: string, directory: string): Promise<boolean> {
-    const nodeRelativePath = `${directory}/${nodeId}`;
-    return await this.localStorageProvider.directoryExists(nodeRelativePath);
+  async nodeStorageExists(nodePath: string): Promise<boolean> {
+    const nodeDirectory = this.parseNodeDirectory(nodePath);
+    if (!nodeDirectory) {
+      this.logger.warn(
+        `检查节点存储跳过，路径无法解析为节点目录: ${nodePath}`
+      );
+      return false;
+    }
+    return await this.localStorageProvider.directoryExists(nodeDirectory);
+  }
+
+  /**
+   * 判断请求路径是否落在主文件的同一节点目录下（分享 IDOR 安全比较）。
+   * 必须带尾部 / 比较：裸 startsWith 会让同月前缀兄弟目录（YYYYMM/<nodeId>-evil/…）
+   * 被误判为同节点。两侧均按原始字符串比较，不做前缀剥离（保持既有 403 行为）。
+   * @param requestedPath 请求的存储路径（攻击者可控）
+   * @param mainFilePath 主文件的数据库存储路径
+   */
+  isSameNodeStoragePath(requestedPath: string, mainFilePath: string): boolean {
+    const mainParts = mainFilePath.split('/').filter(Boolean);
+    if (mainParts.length < 2) {
+      return false;
+    }
+    return requestedPath.startsWith(`${mainParts[0]}/${mainParts[1]}/`);
   }
 
   /**
@@ -194,27 +217,38 @@ export class StorageManager {
    * @returns 完整路径
    */
   getFullPath(relativePath: string): string {
-    // 去掉 /mxcad/file/ 前缀，获取实际的存储路径
-    let storagePath = relativePath.replace(/^\/mxcad\/file\//, '');
-    // 替换路径中的 .. 和 ~ 防止被 validatePath 拒绝
-    storagePath = storagePath.replace(/\.\./g, '_').replace(/~/g, '_');
+    // 去掉 /mxcad/file/ 前缀，获取实际的存储路径。
+    // 不再把 .. / ~ 静默改写为 _：与 standalone 侧 FileHandler._resolvePath 对齐，
+    // 交由 getAbsolutePath 内的 validatePath 统一拒绝 .. / ~（fail-closed）。
+    // 合法存储路径（YYYYMM/nodeId/src_file_md5/fileName）本就不含 .. / ~，且写入时
+    // validatePath 已拒绝 .. / ~，故 DB 中不存在含 .. / ~ 的路径，此改动零行为变化。
+    const storagePath = relativePath.replace(/^\/mxcad\/file\//, '');
     return this.localStorageProvider.getAbsolutePath(storagePath);
+  }
+
+  /**
+   * 从数据库存储路径解码节点目录（约定单点：YYYYMM[/N]/nodeId）。
+   * @param dbPath 数据库存储路径（可带 /mxcad/file/ 前缀）
+   * @returns 节点目录相对路径 (YYYYMM/nodeId)；段数不足 2 时返回 null
+   */
+  parseNodeDirectory(dbPath: string): string | null {
+    const cleanPath = dbPath.replace(/^\/mxcad\/file\//, '');
+    const pathParts = cleanPath.split('/').filter(Boolean);
+    if (pathParts.length < 2) {
+      return null;
+    }
+    return `${pathParts[0]}/${pathParts[1]}`;
   }
 
   /**
    * 从数据库存储路径中提取节点目录相对路径
    * @param dbRelativePath 数据库中的相对路径
-   * @returns 节点目录的相对路径 (YYYYMM/nodeId)
+   * @returns 节点目录的相对路径 (YYYYMM/nodeId)；无法解码时回落去前缀原路径
    */
   getNodeDirectoryRelativePath(dbRelativePath: string): string {
-    // 去掉前缀
-    const cleanPath = dbRelativePath.replace(/^\/mxcad\/file\//, '');
-    const pathParts = cleanPath.split('/').filter(Boolean);
-
-    if (pathParts.length >= 2) {
-      return `${pathParts[0]}/${pathParts[1]}`;
-    }
-
-    return cleanPath;
+    return (
+      this.parseNodeDirectory(dbRelativePath) ??
+      dbRelativePath.replace(/^\/mxcad\/file\//, '')
+    );
   }
 }

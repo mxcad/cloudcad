@@ -6,6 +6,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
+import { NodeType } from '@cloudcad/db';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../../database/database.service';
 import { TreeWalker } from './tree-walker.service';
@@ -112,6 +113,67 @@ describe('TreeWalker', () => {
       mockPrisma.$queryRaw.mockResolvedValue([]);
 
       await expect(service.resolveProjectId('missing')).resolves.toBeNull();
+    });
+  });
+
+  describe('resolveRootContext', () => {
+    const ROOT_TYPES = [
+      NodeType.PROJECT,
+      NodeType.PERSONAL_SPACE,
+      NodeType.LIBRARY_DRAWING,
+      NodeType.LIBRARY_BLOCK,
+    ];
+
+    it.each(ROOT_TYPES)(
+      'when 归属根类型为 %s：一次 CTE 返回 { rootId, rootType, ownerId }',
+      async (rootType) => {
+        mockPrisma.$queryRaw.mockResolvedValue([
+          { id: 'root-1', nodeType: rootType, ownerId: 'owner-1' },
+        ]);
+
+        await expect(service.resolveRootContext('node-1')).resolves.toEqual({
+          rootId: 'root-1',
+          rootType,
+          ownerId: 'owner-1',
+        });
+
+        const sql = sqlText();
+        expect(sql).toContain('WITH RECURSIVE ancestors');
+        expect(sql).toContain('INNER JOIN ancestors a ON n.id = a."parentId"');
+        expect(sql).toContain('NOT IN');
+        expect(sql).not.toContain('projectId');
+        expect(sqlParams()).toEqual(['node-1', 'FILE', 'FOLDER']);
+      }
+    );
+
+    it('when FILE/FOLDER 子节点：上溯到归属根（含 owner）', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        { id: 'proj-1', nodeType: NodeType.PROJECT, ownerId: 'owner-1' },
+      ]);
+
+      await expect(service.resolveRootContext('file-1')).resolves.toEqual({
+        rootId: 'proj-1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'owner-1',
+      });
+    });
+
+    it('when 归属根无 owner（ownerId 为 null）：保真返回 null', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([
+        { id: 'lib-1', nodeType: NodeType.LIBRARY_DRAWING, ownerId: null },
+      ]);
+
+      await expect(service.resolveRootContext('lib-file-1')).resolves.toEqual({
+        rootId: 'lib-1',
+        rootType: NodeType.LIBRARY_DRAWING,
+        ownerId: null,
+      });
+    });
+
+    it('when 节点缺失：返回 null', async () => {
+      mockPrisma.$queryRaw.mockResolvedValue([]);
+
+      await expect(service.resolveRootContext('missing')).resolves.toBeNull();
     });
   });
 

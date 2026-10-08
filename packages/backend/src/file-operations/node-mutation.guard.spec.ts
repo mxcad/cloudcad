@@ -17,7 +17,6 @@ import {
 } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../database/database.service';
-import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
 import { IPROJECT_PERMISSION_SERVICE } from '../roles/interfaces/project-permission-service.interface';
@@ -34,7 +33,6 @@ import { NodeMutationGuard } from './node-mutation.guard';
 describe('NodeMutationGuard', () => {
   let guard: NodeMutationGuard;
   let prisma: any;
-  let fileTreeService: Record<string, jest.Mock>;
   let treeWalker: Record<string, jest.Mock>;
   let storageInfoService: Record<string, jest.Mock>;
   let restrictionEngine: Record<string, jest.Mock>;
@@ -50,6 +48,12 @@ describe('NodeMutationGuard', () => {
     ...overrides,
   });
 
+  const rootCtx = (
+    rootId: string,
+    rootType: NodeType,
+    ownerId: string | null = 'user-1'
+  ) => ({ rootId, rootType, ownerId });
+
   beforeEach(async () => {
     prisma = {
       fileSystemNode: {
@@ -57,12 +61,10 @@ describe('NodeMutationGuard', () => {
         findFirst: jest.fn(),
       },
     };
-    fileTreeService = {
-      getNodeType: jest.fn().mockResolvedValue(NodeType.PROJECT),
-      isLibraryNode: jest.fn().mockResolvedValue(false),
-    };
     treeWalker = {
-      resolveProjectId: jest.fn().mockResolvedValue('project-1'),
+      resolveRootContext: jest
+        .fn()
+        .mockResolvedValue(rootCtx('project-1', NodeType.PROJECT)),
     };
     storageInfoService = {
       invalidateQuotaCache: jest.fn().mockResolvedValue(undefined),
@@ -80,7 +82,6 @@ describe('NodeMutationGuard', () => {
       providers: [
         NodeMutationGuard,
         { provide: DatabaseService, useValue: prisma },
-        { provide: FileTreeService, useValue: fileTreeService },
         { provide: TreeWalker, useValue: treeWalker },
         { provide: StorageInfoService, useValue: storageInfoService },
         { provide: RestrictionEngine, useValue: restrictionEngine },
@@ -108,28 +109,34 @@ describe('NodeMutationGuard', () => {
           projectId: null,
         })
       );
-      treeWalker.resolveProjectId.mockResolvedValue('project-1');
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('project-1', NodeType.PROJECT)
+      );
       const ctx = await guard.resolveProjectContext({ id: 'project-1' });
       expect(ctx.projectId).toBe('project-1');
       expect(ctx.nodeType).toBe(NodeType.PROJECT);
     });
 
-    it('projectId 经 resolveProjectId 沿祖先链解析（不依赖字段短路）', async () => {
+    it('projectId 经 resolveRootContext 沿祖先链解析（不依赖字段短路）', async () => {
       prisma.fileSystemNode.findUnique.mockResolvedValue(nodeRow());
-      treeWalker.resolveProjectId.mockResolvedValue('project-1');
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('project-1', NodeType.PROJECT)
+      );
       const ctx = await guard.resolveProjectContext({ id: 'node-1' });
       expect(ctx.projectId).toBe('project-1');
-      expect(treeWalker.resolveProjectId).toHaveBeenCalledWith('node-1');
+      expect(treeWalker.resolveRootContext).toHaveBeenCalledWith('node-1');
     });
 
-    it('projectId 缺失时沿祖先链向上查找（父节点 id 传入 resolveProjectId）', async () => {
+    it('projectId 缺失时沿祖先链向上查找（父链由 CTE 解析）', async () => {
       prisma.fileSystemNode.findUnique.mockResolvedValue(
         nodeRow({ projectId: null, parentId: 'folder-1' })
       );
-      treeWalker.resolveProjectId.mockResolvedValue('project-1');
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('project-1', NodeType.PROJECT)
+      );
       const ctx = await guard.resolveProjectContext({ id: 'node-1' });
       expect(ctx.projectId).toBe('project-1');
-      expect(treeWalker.resolveProjectId).toHaveBeenCalledWith('node-1');
+      expect(treeWalker.resolveRootContext).toHaveBeenCalledWith('node-1');
     });
 
     it('个人空间根（projectId 字段为 null）：解析为自身 id（修复，不依赖字段）', async () => {
@@ -141,10 +148,12 @@ describe('NodeMutationGuard', () => {
           parentId: null,
         })
       );
-      treeWalker.resolveProjectId.mockResolvedValue('space-1');
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('space-1', NodeType.PERSONAL_SPACE)
+      );
       const ctx = await guard.resolveProjectContext({ id: 'space-1' });
       expect(ctx.projectId).toBe('space-1');
-      expect(treeWalker.resolveProjectId).toHaveBeenCalledWith('space-1');
+      expect(treeWalker.resolveRootContext).toHaveBeenCalledWith('space-1');
     });
   });
 
@@ -213,6 +222,9 @@ describe('NodeMutationGuard', () => {
           ownerId: 'user-1',
         })
       );
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('space-1', NodeType.PERSONAL_SPACE)
+      );
       await expect(
         guard.assertMutationAllowed('user-1', 'upload', {
           node: { id: 'space-1' },
@@ -257,8 +269,9 @@ describe('NodeMutationGuard', () => {
           parentId: 'lib-1',
         })
       );
-      treeWalker.resolveProjectId.mockResolvedValue('lib-1');
-      fileTreeService.getNodeType.mockResolvedValue(NodeType.LIBRARY_DRAWING);
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('lib-1', NodeType.LIBRARY_DRAWING, 'admin-1')
+      );
       await expect(
         guard.assertMutationAllowed('user-1', 'create', {
           node: { id: 'folder-1' },
@@ -284,7 +297,9 @@ describe('NodeMutationGuard', () => {
       prisma.fileSystemNode.findUnique.mockResolvedValue(
         nodeRow({ nodeType: NodeType.FOLDER, projectId: 'space-1' })
       );
-      treeWalker.resolveProjectId.mockResolvedValue('space-1');
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('space-1', NodeType.PERSONAL_SPACE)
+      );
       prisma.fileSystemNode.findFirst.mockResolvedValue({ id: 'space-1' });
       await guard.assertMutationAllowed('user-1', 'move', {
         node: { id: 'node-1' },
@@ -316,13 +331,15 @@ describe('NodeMutationGuard', () => {
         nodeRow({ projectId: 'project-a' })
       );
       prisma.fileSystemNode.findFirst.mockResolvedValue(null);
-      treeWalker.resolveProjectId.mockResolvedValue('project-b');
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('project-b', NodeType.PROJECT)
+      );
       await guard.assertMutationAllowed('user-1', 'copy', {
         node: { id: 'node-1' },
         target: { id: 'target-1' },
         incrementBytes: 200,
       });
-      expect(treeWalker.resolveProjectId).toHaveBeenCalledWith('target-1');
+      expect(treeWalker.resolveRootContext).toHaveBeenCalledWith('target-1');
       expect(restrictionEngine.checkQuota).toHaveBeenCalledWith('user-1', {
         projectId: 'project-b',
         incrementBytes: 200,
@@ -346,12 +363,10 @@ describe('NodeMutationGuard', () => {
           projectId: null,
         })
       );
-      fileTreeService.isLibraryNode.mockResolvedValue(true);
       await guard.assertMutationAllowed('user-1', 'upload', {
         node: { id: 'lib-1' },
         incrementBytes: 1024 * 1024 * 100,
       });
-      expect(fileTreeService.isLibraryNode).toHaveBeenCalledWith('lib-1');
       expect(restrictionEngine.checkQuota).not.toHaveBeenCalled();
     });
 
@@ -367,44 +382,34 @@ describe('NodeMutationGuard', () => {
             })
           );
         }
-        if (where.id === 'lib-1') {
-          return Promise.resolve(
-            nodeRow({
-              id: 'lib-1',
-              nodeType: NodeType.LIBRARY_DRAWING,
-              projectId: null,
-              parentId: null,
-            })
-          );
-        }
         return Promise.resolve(null);
       });
-      fileTreeService.isLibraryNode.mockResolvedValue(true);
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('lib-1', NodeType.LIBRARY_DRAWING, 'admin-1')
+      );
       await guard.assertMutationAllowed('user-1', 'upload', {
         node: { id: 'folder-1' },
         incrementBytes: 1024 * 1024 * 100,
       });
-      expect(fileTreeService.isLibraryNode).toHaveBeenCalledWith('folder-1');
       expect(restrictionEngine.checkQuota).not.toHaveBeenCalled();
     });
 
     it('move/copy 进库（目标父节点为库）：跳过字节配额', async () => {
       prisma.fileSystemNode.findUnique.mockResolvedValue(nodeRow());
-      fileTreeService.isLibraryNode.mockResolvedValue(false);
-      treeWalker.resolveProjectId.mockResolvedValue('lib-root');
-      fileTreeService.getNodeType.mockResolvedValue(NodeType.LIBRARY_DRAWING);
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('lib-root', NodeType.LIBRARY_DRAWING, 'admin-1')
+      );
       await guard.assertMutationAllowed('user-1', 'move', {
         node: { id: 'node-1' },
         target: { id: 'lib-folder' },
         incrementBytes: 1024 * 1024 * 100,
       });
-      expect(treeWalker.resolveProjectId).toHaveBeenCalledWith('lib-folder');
+      expect(treeWalker.resolveRootContext).toHaveBeenCalledWith('lib-folder');
       expect(restrictionEngine.checkQuota).not.toHaveBeenCalled();
     });
 
     it('项目内节点：库判断不影响原有配额检查', async () => {
       prisma.fileSystemNode.findUnique.mockResolvedValue(nodeRow());
-      fileTreeService.isLibraryNode.mockResolvedValue(false);
       await guard.assertMutationAllowed('user-1', 'upload', {
         node: { id: 'node-1' },
         incrementBytes: 100,
@@ -490,15 +495,12 @@ describe('NodeMutationGuard', () => {
           transferInFromProject: inMode,
         }),
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) => {
-        if (id === 'node-1') return Promise.resolve('project-a');
-        if (id === 'target-1') return Promise.resolve('project-b');
-        return Promise.resolve(id);
-      });
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-a' || id === 'project-b')
-          return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.PROJECT);
+      treeWalker.resolveRootContext.mockImplementation((id: string) => {
+        if (id === 'node-1')
+          return Promise.resolve(rootCtx('project-a', NodeType.PROJECT));
+        if (id === 'target-1')
+          return Promise.resolve(rootCtx('project-b', NodeType.PROJECT, 'user-b'));
+        return Promise.resolve(rootCtx(id, NodeType.PROJECT));
       });
     };
 
@@ -517,8 +519,9 @@ describe('NodeMutationGuard', () => {
           parentId: 'project-a',
         },
       });
-      treeWalker.resolveProjectId.mockResolvedValue('project-a');
-      fileTreeService.getNodeType.mockResolvedValue(NodeType.PROJECT);
+      treeWalker.resolveRootContext.mockResolvedValue(
+        rootCtx('project-a', NodeType.PROJECT)
+      );
       await expect(
         guard.assertMutationAllowed('user-1', 'move', {
           node: { id: 'node-1' },
@@ -613,13 +616,13 @@ describe('NodeMutationGuard', () => {
           parentId: null,
         },
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'project-a' : 'space-1')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('project-a', NodeType.PROJECT)
+            : rootCtx('space-1', NodeType.PERSONAL_SPACE)
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-a') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.PERSONAL_SPACE);
-      });
       // 目标个人空间 owner 与操作者一致（本人），但仍被出向 NONE 拦截
       await expect(
         guard.assertMutationAllowed('user-1', 'copy', {
@@ -648,13 +651,13 @@ describe('NodeMutationGuard', () => {
           ownerId: 'user-1',
         },
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'project-a' : 'space-1')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('project-a', NodeType.PROJECT)
+            : rootCtx('space-1', NodeType.PERSONAL_SPACE)
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-a') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.PERSONAL_SPACE);
-      });
       await expect(
         guard.assertMutationAllowed('user-1', 'copy', {
           node: { id: 'node-1' },
@@ -682,13 +685,13 @@ describe('NodeMutationGuard', () => {
           ownerId: 'user-2',
         },
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'project-a' : 'space-2')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('project-a', NodeType.PROJECT)
+            : rootCtx('space-2', NodeType.PERSONAL_SPACE, 'user-2')
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-a') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.PERSONAL_SPACE);
-      });
       await expect(
         guard.assertMutationAllowed('user-1', 'copy', {
           node: { id: 'node-1' },
@@ -719,13 +722,13 @@ describe('NodeMutationGuard', () => {
           parentId: null,
         },
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'project-a' : 'lib-root')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('project-a', NodeType.PROJECT)
+            : rootCtx('lib-root', NodeType.LIBRARY_DRAWING, 'admin-1')
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-a') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.LIBRARY_DRAWING);
-      });
       await expect(
         guard.assertMutationAllowed('user-1', 'copy', {
           node: { id: 'node-1' },
@@ -762,13 +765,13 @@ describe('NodeMutationGuard', () => {
           parentId: null,
         },
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'project-a' : 'lib-root')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('project-a', NodeType.PROJECT)
+            : rootCtx('lib-root', NodeType.LIBRARY_DRAWING, 'admin-1')
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-a') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.LIBRARY_DRAWING);
-      });
       systemPermissionService.checkSystemPermission.mockResolvedValue(false);
       await expect(
         guard.assertMutationAllowed('user-1', 'copy', {
@@ -801,13 +804,13 @@ describe('NodeMutationGuard', () => {
         'project-b': projectRoot('project-b', { ownerId: 'user-b' }),
       };
       // 源库、无库管理权限（systemPermissionService false），copy 仍豁免源断言
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'lib-root' : 'project-b')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('lib-root', NodeType.LIBRARY_DRAWING, 'admin-1')
+            : rootCtx('project-b', NodeType.PROJECT, 'user-b')
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-b') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.LIBRARY_DRAWING);
-      });
       systemPermissionService.checkSystemPermission.mockResolvedValue(false);
       projectPermissionService.checkPermission.mockResolvedValue(true);
 
@@ -852,13 +855,13 @@ describe('NodeMutationGuard', () => {
         },
         'project-b': projectRoot('project-b', { ownerId: 'user-b' }),
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'lib-root' : 'project-b')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('lib-root', NodeType.LIBRARY_DRAWING, 'admin-1')
+            : rootCtx('project-b', NodeType.PROJECT, 'user-b')
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-b') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.LIBRARY_DRAWING);
-      });
       await expect(
         guard.assertMutationAllowed('user-1', 'move', {
           node: { id: 'node-1' },
@@ -890,13 +893,13 @@ describe('NodeMutationGuard', () => {
         },
         'project-b': projectRoot('project-b', { ownerId: 'user-b' }),
       };
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'space-1' : 'project-b')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('space-1', NodeType.PERSONAL_SPACE)
+            : rootCtx('project-b', NodeType.PROJECT, 'user-b')
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-b') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.PERSONAL_SPACE);
-      });
 
       mockNodes({ ...base, 'project-b': projectRoot('project-b', { ownerId: 'user-b', transferInFromPersonalSpace: 'ALL' }) });
       await expect(
@@ -951,15 +954,14 @@ describe('NodeMutationGuard', () => {
         },
         'project-b': projectRoot('project-b', { ownerId: 'user-b' }),
       });
-      treeWalker.resolveProjectId.mockImplementation((id: string) =>
-        Promise.resolve(id === 'node-1' ? 'lib-root' : 'project-b')
+      treeWalker.resolveRootContext.mockImplementation((id: string) =>
+        Promise.resolve(
+          id === 'node-1'
+            ? rootCtx('lib-root', NodeType.LIBRARY_DRAWING, 'admin-1')
+            : rootCtx('project-b', NodeType.PROJECT, 'user-b')
+        )
       );
-      fileTreeService.getNodeType.mockImplementation((id: string) => {
-        if (id === 'project-b') return Promise.resolve(NodeType.PROJECT);
-        return Promise.resolve(NodeType.LIBRARY_DRAWING);
-      });
-      // 源是库内节点（isLibraryNode true），但目标为项目 → 必须执行配额检查
-      fileTreeService.isLibraryNode.mockResolvedValue(true);
+      // 源是库内节点（归属根为库），但目标为项目 → 必须执行配额检查
       await guard.assertMutationAllowed('user-1', 'copy', {
         node: { id: 'node-1' },
         target: { id: 'target-1' },

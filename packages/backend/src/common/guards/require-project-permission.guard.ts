@@ -38,8 +38,7 @@ import {
   IPermissionService,
 } from '../../permission/interfaces/permission-service.interface';
 import { NodeContextResolver } from '../node-context/node-context-resolver';
-import { NodeContext } from '../node-context/node-context.types';
-import { DatabaseService } from '../../database/database.service';
+import { LibraryRootType } from '../node-context/node-context.types';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -62,8 +61,7 @@ export class RequireProjectPermissionGuard implements CanActivate {
     private readonly projectPermissionService: IProjectPermissionService,
     @Inject(IPERMISSION_SERVICE)
     private readonly systemPermissionService: IPermissionService,
-    private readonly nodeContextResolver: NodeContextResolver,
-    private readonly prisma: DatabaseService
+    private readonly nodeContextResolver: NodeContextResolver
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -107,7 +105,7 @@ export class RequireProjectPermissionGuard implements CanActivate {
       IS_LIBRARY_PUBLIC_KEY,
       [targetHandler, targetClass]
     );
-    if (isLibraryPublic && (await this.isLibraryContext(ctx))) {
+    if (isLibraryPublic && ctx.kind === 'library') {
       return true;
     }
 
@@ -124,60 +122,51 @@ export class RequireProjectPermissionGuard implements CanActivate {
       );
     }
 
-    if (ctx.isLibraryNode) {
-      return this.handleLibraryAccess(
-        userId,
-        ctx.libraryRootType ?? ctx.nodeType
-      );
-    }
-
-    if (ctx.isPersonalSpace) {
-      return this.handlePersonalSpaceAccess(userId, ctx.ownerId);
-    }
-
-    if (ctx.nodeId && ctx.nodeType && !ctx.projectId) {
-      if (ctx.ownerId === userId) {
-        return true;
-      }
-      throw new ForbiddenException(
-        I18nContext.current()?.t('error.auth.permission_denied') ??
-          '您没有权限执行此操作'
-      );
-    }
-
-    if (!ctx.projectId) {
-      const isOptionalAuth = this.reflector.getAllAndOverride<boolean>(
-        IS_OPTIONAL_AUTH_KEY,
-        [targetHandler, targetClass]
-      );
-      if (isOptionalAuth) {
-        this.logger.debug(
-          `[OptionalAuth] 缺少projectId但端点标记为OptionalAuth，放行给Controller处理`
+    switch (ctx.kind) {
+      case 'library':
+        return this.handleLibraryAccess(userId, ctx.rootType);
+      case 'personalSpace':
+        return this.handlePersonalSpaceAccess(userId, ctx.ownerId);
+      case 'project':
+        return this.handleProjectAccess(
+          userId,
+          ctx.projectId,
+          requiredPermissions,
+          mode
         );
-        return true;
+      case 'nodeOwner':
+        if (ctx.ownerId === userId) {
+          return true;
+        }
+        throw new ForbiddenException(
+          I18nContext.current()?.t('error.auth.permission_denied') ??
+            '您没有权限执行此操作'
+        );
+      case 'none': {
+        const isOptionalAuth = this.reflector.getAllAndOverride<boolean>(
+          IS_OPTIONAL_AUTH_KEY,
+          [targetHandler, targetClass]
+        );
+        if (isOptionalAuth) {
+          this.logger.debug(
+            `[OptionalAuth] 缺少projectId但端点标记为OptionalAuth，放行给Controller处理`
+          );
+          return true;
+        }
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.resource.missing_project_id') ??
+            '缺少项目ID参数'
+        );
       }
-      throw new BadRequestException(
-        I18nContext.current()?.t('error.resource.missing_project_id') ??
-          '缺少项目ID参数'
-      );
     }
-
-    return this.handleProjectAccess(
-      userId,
-      ctx.projectId,
-      requiredPermissions,
-      mode
-    );
   }
 
   private async handleLibraryAccess(
     userId: string,
-    nodeType: string | null
+    rootType: LibraryRootType
   ): Promise<boolean> {
-    const libraryType =
-      nodeType === NodeType.LIBRARY_DRAWING ? 'drawing' : 'block';
     const requiredPermission =
-      libraryType === 'drawing'
+      rootType === NodeType.LIBRARY_DRAWING
         ? SystemPermission.LIBRARY_DRAWING_MANAGE
         : SystemPermission.LIBRARY_BLOCK_MANAGE;
 
@@ -194,24 +183,6 @@ export class RequireProjectPermissionGuard implements CanActivate {
     }
 
     return true;
-  }
-
-  /**
-   * 判断请求目标节点是否属于公共资源库（图纸库/图块库）
-   * - 库根节点（LIBRARY_DRAWING/LIBRARY_BLOCK）直接判定
-   * - 库内文件/文件夹（nodeType 为 FILE/FOLDER，projectId 指向库根）通过 projectId 上溯判定
-   */
-  private async isLibraryContext(ctx: NodeContext): Promise<boolean> {
-    if (ctx.isLibraryNode) return true;
-    if (!ctx.projectId) return false;
-    const root = await this.prisma.fileSystemNode.findUnique({
-      where: { id: ctx.projectId },
-      select: { nodeType: true },
-    });
-    return (
-      root?.nodeType === NodeType.LIBRARY_DRAWING ||
-      root?.nodeType === NodeType.LIBRARY_BLOCK
-    );
   }
 
   private async handlePersonalSpaceAccess(

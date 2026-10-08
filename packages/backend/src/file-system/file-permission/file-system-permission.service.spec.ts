@@ -35,6 +35,7 @@ describe('FileSystemPermissionService', () => {
 
 	const mockTreeWalker = {
 		resolveProjectId: jest.fn(),
+		resolveRootContext: jest.fn(),
 	};
 
   const mockSystemPermissionService = {
@@ -71,6 +72,8 @@ describe('FileSystemPermissionService', () => {
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      // PROJECT 根经 resolveProjectId 解析为自身
+      mockTreeWalker.resolveProjectId.mockResolvedValue('node1');
       mockProjectPermissionService.checkPermission.mockResolvedValue(true);
 
       const result = await service.checkNodePermission(
@@ -164,12 +167,13 @@ describe('FileSystemPermissionService', () => {
 
   describe('assertNodeAccess', () => {
     it('should pass for project file when user has the project permission', async () => {
-      // findUnique 调用序：节点自身 → 根节点（projectId 指向项目根）→ checkNodePermission 复查节点
       const fileNode = { id: 'file1', nodeType: NodeType.FILE, projectId: 'project1' };
-      mockPrisma.fileSystemNode.findUnique
-        .mockResolvedValueOnce(fileNode)
-        .mockResolvedValueOnce({ id: 'project1', nodeType: NodeType.PROJECT })
-        .mockResolvedValue(fileNode);
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(fileNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'project1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'owner1',
+      });
       mockTreeWalker.resolveProjectId.mockResolvedValue('project1');
       mockProjectPermissionService.checkPermission.mockResolvedValue(true);
 
@@ -186,10 +190,12 @@ describe('FileSystemPermissionService', () => {
 
     it('should throw ForbiddenException when user lacks the project permission (IDOR)', async () => {
       const fileNode = { id: 'file1', nodeType: NodeType.FILE, projectId: 'project1' };
-      mockPrisma.fileSystemNode.findUnique
-        .mockResolvedValueOnce(fileNode)
-        .mockResolvedValueOnce({ id: 'project1', nodeType: NodeType.PROJECT })
-        .mockResolvedValue(fileNode);
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(fileNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'project1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'owner1',
+      });
       // 根可解析、权限判定为 false：拒绝必须来自权限判定而非根解析失败
       mockTreeWalker.resolveProjectId.mockResolvedValue('project1');
       mockProjectPermissionService.checkPermission.mockResolvedValue(false);
@@ -201,10 +207,12 @@ describe('FileSystemPermissionService', () => {
 
     it('should pass for personal space file via project permission path (owner logic in store)', async () => {
       const fileNode = { id: 'file1', nodeType: NodeType.FILE, projectId: 'ps1' };
-      mockPrisma.fileSystemNode.findUnique
-        .mockResolvedValueOnce(fileNode)
-        .mockResolvedValueOnce({ id: 'ps1', nodeType: NodeType.PERSONAL_SPACE })
-        .mockResolvedValue(fileNode);
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(fileNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'ps1',
+        rootType: NodeType.PERSONAL_SPACE,
+        ownerId: 'owner1',
+      });
       mockTreeWalker.resolveProjectId.mockResolvedValue('ps1');
       mockProjectPermissionService.checkPermission.mockResolvedValue(true);
 
@@ -214,13 +222,16 @@ describe('FileSystemPermissionService', () => {
     });
 
     it('should require LIBRARY_DRAWING_MANAGE for file under drawing library root', async () => {
-      mockPrisma.fileSystemNode.findUnique
-        .mockResolvedValueOnce({
-          id: 'lib-file1',
-          nodeType: NodeType.FILE,
-          projectId: 'lib-root',
-        })
-        .mockResolvedValueOnce({ id: 'lib-root', nodeType: NodeType.LIBRARY_DRAWING });
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'lib-file1',
+        nodeType: NodeType.FILE,
+        projectId: 'lib-root',
+      });
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'lib-root',
+        rootType: NodeType.LIBRARY_DRAWING,
+        ownerId: 'admin1',
+      });
       mockSystemPermissionService.checkSystemPermission.mockResolvedValue(true);
 
       await expect(
@@ -235,13 +246,16 @@ describe('FileSystemPermissionService', () => {
     });
 
     it('should throw ForbiddenException for library file without system permission (IDOR)', async () => {
-      mockPrisma.fileSystemNode.findUnique
-        .mockResolvedValueOnce({
-          id: 'lib-file1',
-          nodeType: NodeType.FILE,
-          projectId: 'lib-root',
-        })
-        .mockResolvedValueOnce({ id: 'lib-root', nodeType: NodeType.LIBRARY_BLOCK });
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'lib-file1',
+        nodeType: NodeType.FILE,
+        projectId: 'lib-root',
+      });
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'lib-root',
+        rootType: NodeType.LIBRARY_BLOCK,
+        ownerId: 'admin1',
+      });
       mockSystemPermissionService.checkSystemPermission.mockResolvedValue(false);
 
       await expect(
@@ -258,6 +272,11 @@ describe('FileSystemPermissionService', () => {
         id: 'lib-root',
         nodeType: NodeType.LIBRARY_DRAWING,
         projectId: null,
+      });
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'lib-root',
+        rootType: NodeType.LIBRARY_DRAWING,
+        ownerId: 'admin1',
       });
       mockSystemPermissionService.checkSystemPermission.mockResolvedValue(true);
 
@@ -283,6 +302,7 @@ describe('FileSystemPermissionService', () => {
         nodeType: NodeType.FILE,
         projectId: null,
       });
+      mockTreeWalker.resolveRootContext.mockResolvedValue(null);
       mockTreeWalker.resolveProjectId.mockResolvedValue(null);
 
       await expect(
@@ -301,6 +321,11 @@ describe('FileSystemPermissionService', () => {
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'node1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'user1',
+      });
       // getNodeAccessRole checks ownerId first, then nodeType for PROJECT → looks up members
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: { name: ProjectRole.OWNER },
@@ -320,8 +345,33 @@ describe('FileSystemPermissionService', () => {
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'node1',
+        rootType: NodeType.LIBRARY_DRAWING,
+        ownerId: 'otherUser',
+      });
 
       const result = await service.getNodeAccessRole('user1', 'node1');
+
+      expect(result).toBe(ProjectRole.VIEWER);
+    });
+
+    it('should return viewer role for file under library root (walk-up unification)', async () => {
+      const mockNode = {
+        id: 'lib-file1',
+        ownerId: 'otherUser',
+        nodeType: NodeType.FILE,
+        parentId: 'lib-root',
+      };
+
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'lib-root',
+        rootType: NodeType.LIBRARY_DRAWING,
+        ownerId: 'admin1',
+      });
+
+      const result = await service.getNodeAccessRole('user1', 'lib-file1');
 
       expect(result).toBe(ProjectRole.VIEWER);
     });
@@ -338,6 +388,11 @@ describe('FileSystemPermissionService', () => {
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'node1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'ownerUser',
+      });
       mockPrisma.projectMember.findUnique.mockResolvedValue(mockMember);
 
       const result = await service.getNodeAccessRole('user1', 'node1');
@@ -354,6 +409,11 @@ describe('FileSystemPermissionService', () => {
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'node1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'ownerUser',
+      });
       mockPrisma.projectMember.findUnique.mockResolvedValue(null);
 
       const result = await service.getNodeAccessRole('user1', 'node1');
@@ -380,6 +440,11 @@ describe('FileSystemPermissionService', () => {
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'node1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'user1',
+      });
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: { name: ProjectRole.OWNER },
       });
@@ -402,6 +467,11 @@ describe('FileSystemPermissionService', () => {
       };
 
       mockPrisma.fileSystemNode.findUnique.mockResolvedValue(mockNode);
+      mockTreeWalker.resolveRootContext.mockResolvedValue({
+        rootId: 'node1',
+        rootType: NodeType.PROJECT,
+        ownerId: 'user1',
+      });
       mockPrisma.projectMember.findUnique.mockResolvedValue({
         projectRole: { name: ProjectRole.OWNER },
       });

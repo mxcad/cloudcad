@@ -21,6 +21,7 @@ describe('StorageCleanupService freedSpace 统计 (#325)', () => {
 	const mockStorageManager = {
 		deleteNodeStorage: jest.fn(),
 		cleanupEmptyDirectories: jest.fn(),
+		parseNodeDirectory: jest.fn(),
 	};
 
 	const mockRuntimeConfigService = {
@@ -32,6 +33,11 @@ describe('StorageCleanupService freedSpace 统计 (#325)', () => {
 		mockRuntimeConfigService.getValue.mockResolvedValue(true);
 		mockStorageManager.deleteNodeStorage.mockResolvedValue(undefined);
 		mockStorageManager.cleanupEmptyDirectories.mockResolvedValue(0);
+		// 与 StorageManager.parseNodeDirectory 同语义：段数 < 2 返回 null
+		mockStorageManager.parseNodeDirectory.mockImplementation((p: string) => {
+			const parts = p.split('/').filter(Boolean);
+			return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : null;
+		});
 		mockPrisma.fileSystemNode.update.mockResolvedValue({});
 		mockPrisma.fileSystemNode.delete.mockResolvedValue({});
 

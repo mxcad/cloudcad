@@ -258,11 +258,17 @@ export class NodeTrashService {
 
         for (const file of filesToDelete) {
           if (file.path) {
-            await this.deleteFileFromStorage(file.path, file.fileHash, true);
+            await this.deleteFileInStorage(file.path, {
+              commitMx: true,
+              fileHash: file.fileHash,
+            });
           }
         }
         if (node.nodeType === NodeType.FILE && node.path) {
-          await this.deleteFileFromStorage(node.path, node.fileHash, true);
+          await this.deleteFileInStorage(node.path, {
+            commitMx: true,
+            fileHash: node.fileHash,
+          });
         }
         if (node.ownerId) {
           await this.nodeMutationGuard.invalidateQuotaAfterMutation(
@@ -361,18 +367,16 @@ export class NodeTrashService {
     const result = await this.deleteNode(projectId, permanently);
 
     // #207 阶段 2：项目删除埋点（PROJECT_DELETE，软删/硬删均记录，permanently 区分）
-    await this.auditLogService.log(
-      AuditAction.PROJECT_DELETE,
-      ResourceType.PROJECT,
-      projectId,
+    await this.auditLogService.log({
+      action: AuditAction.PROJECT_DELETE,
+      resourceType: ResourceType.PROJECT,
+      resourceId: projectId,
       userId,
-      true,
-      undefined,
-      undefined,
+      success: true,
       projectId,
-      project.name,
-      { projectName: project.name, permanently }
-    );
+      resourceName: project.name,
+      params: { projectName: project.name, permanently },
+    });
 
     return result;
   }
@@ -400,20 +404,19 @@ export class NodeTrashService {
     ) {
       return;
     }
-    await this.auditLogService.log(
-      AuditAction.FILE_DELETE,
-      node.nodeType === NodeType.FILE
-        ? ResourceType.FILE
-        : ResourceType.FOLDER,
-      nodeId,
+    await this.auditLogService.log({
+      action: AuditAction.FILE_DELETE,
+      resourceType:
+        node.nodeType === NodeType.FILE
+          ? ResourceType.FILE
+          : ResourceType.FOLDER,
+      resourceId: nodeId,
       userId,
-      true,
-      undefined,
-      undefined,
-      node.projectId ?? undefined,
-      node.name ?? undefined,
-      { fileName: node.name ?? undefined, permanently }
-    );
+      success: true,
+      projectId: node.projectId ?? undefined,
+      resourceName: node.name ?? undefined,
+      params: { fileName: node.name ?? undefined, permanently },
+    });
   }
 
   async restoreNode(nodeId: string, userId: string) {
@@ -702,18 +705,16 @@ export class NodeTrashService {
     // 项目恢复审计（NODE_RESTORE + PROJECT）：项目根节点 projectId 为空（logProjectNodeAction
     // 会跳过），直接 log 并以项目自身 id 作 projectId，项目成员在操作历史中可见
     if (operatorId) {
-      await this.auditLogService.log(
-        AuditAction.NODE_RESTORE,
-        ResourceType.PROJECT,
-        project.id,
-        operatorId,
-        true,
-        undefined,
-        undefined,
-        project.id,
-        project.name,
-        { restoredName: project.name }
-      );
+      await this.auditLogService.log({
+        action: AuditAction.NODE_RESTORE,
+        resourceType: ResourceType.PROJECT,
+        resourceId: project.id,
+        userId: operatorId,
+        success: true,
+        projectId: project.id,
+        resourceName: project.name,
+        params: { restoredName: project.name },
+      });
     }
     return {
       message:
@@ -820,12 +821,11 @@ export class NodeTrashService {
     if (children.length > 0) {
       for (const child of children) {
         if (child.nodeType === NodeType.FILE && child.path) {
-          await this.deleteFileIfNotReferenced(
+          await this.deleteFileInStorage(child.path, {
+            commitMx: true,
             tx,
-            child.id,
-            child.path,
-            child.fileHash
-          );
+            fileHash: child.fileHash,
+          });
           await tx.fileSystemNode.update({
             where: { id: child.id },
             data: { deletedFromStorage: new Date() },
@@ -837,20 +837,36 @@ export class NodeTrashService {
     }
   }
 
-  async deleteFileIfNotReferenced(
-    tx: Prisma.TransactionClient,
-    nodeId: string,
+  /**
+   * 删除节点物理目录（原 deleteFileIfNotReferenced / deleteFileFromStorage 双方法合并）。
+   *
+   * - nodePath 为 DB 存储路径（YYYYMM[/N]/nodeId/fileName，可带 /mxcad/file/ 前缀）；
+   *   段数 < 3 无法定位节点目录 → 告警跳过（防 2 段路径退化成 deleteAll 整个 YYYYMM 目录）。
+   * - fileHash 引用计数：同内容仍被其他存活节点引用时跳过物理删除；传 tx 时引用计数
+   *   与节点删除同事务读取（防并发引用漏判）。
+   * - commitMx：是否在 MX 版本控制（SVN）标记删除目录；false 时仅删物理目录。
+   * - 路径解码（节点目录相对键）收口 StorageManager.parseNodeDirectory 单点。
+   * - 路径验证失败/删除失败仅记日志不上抛（调用方决定上层流程语义）。
+   */
+  async deleteFileInStorage(
     nodePath: string,
-    fileHash: string | null
+    options: {
+      commitMx?: boolean;
+      tx?: Prisma.TransactionClient;
+      fileHash?: string | null;
+    } = {}
   ): Promise<void> {
+    const { commitMx = false, tx, fileHash = null } = options;
     if (!nodePath) return;
     const pathParts = nodePath.split('/');
     if (pathParts.length < 3) {
       this.logger.warn(`nodePath 格式不正确，跳过删除: ${nodePath}`);
       return;
     }
+    const nodeId = pathParts[pathParts.length - 2];
+    const db = tx ?? this.prisma;
     if (fileHash) {
-      const otherRefCount = await tx.fileSystemNode.count({
+      const otherRefCount = await db.fileSystemNode.count({
         where: { fileHash, deletedAt: null, id: { not: nodeId } },
       });
       if (otherRefCount > 0) {
@@ -866,7 +882,7 @@ export class NodeTrashService {
         infer: true,
       });
       const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
-      if (this.versionControlService.isReady()) {
+      if (commitMx && this.versionControlService.isReady()) {
         try {
           const deleteResult =
             await this.versionControlService.deleteNodeDirectory(nodeDirectory);
@@ -885,17 +901,15 @@ export class NodeTrashService {
         this.logger.error(
           `路径验证失败，拒绝删除: ${nodeDirectoryPath} (期望以 ${nodeId} 结尾)`
         );
-        throw new BadRequestException(
-          I18nContext.current()?.t(
-            'error.file_extra.path_validation_failed_delete'
-          ) ?? '路径验证失败，无法安全删除'
-        );
+        return;
       }
-      const cleanPath = nodePath.replace(/^\/mxcad\/file\//, '');
-      const nodeDirRelativeKey = cleanPath.substring(
-        0,
-        cleanPath.lastIndexOf('/')
+      const nodeDirRelativeKey = this.storageManager.parseNodeDirectory(
+        nodePath
       );
+      if (!nodeDirRelativeKey) {
+        this.logger.warn(`无法解析节点目录，跳过删除: ${nodePath}`);
+        return;
+      }
       await this.storageProvider.deleteAll(nodeDirRelativeKey);
       this.logger.log(`节点目录已删除: ${nodeDirectoryPath}`);
     } catch (error) {
@@ -903,64 +917,6 @@ export class NodeTrashService {
         `删除物理文件失败: ${nodePath} - ${error.message}`,
         error.stack
       );
-    }
-  }
-
-  async deleteFileFromStorage(
-    nodePath: string,
-    fileHash: string | null,
-    commitMx: boolean
-  ): Promise<void> {
-    if (!nodePath) return;
-    if (fileHash) {
-      const pathParts = nodePath.split('/');
-      const nodeId = pathParts[pathParts.length - 2];
-      const otherRefCount = await this.prisma.fileSystemNode.count({
-        where: { fileHash, deletedAt: null, id: { not: nodeId } },
-      });
-      if (otherRefCount > 0) {
-        this.logger.warn(
-          `跳过物理文件删除: fileHash ${fileHash} 仍被 ${otherRefCount} 个其他节点引用`
-        );
-        return;
-      }
-    }
-    try {
-      const filesDataPath = this.configService.get('filesDataPath', {
-        infer: true,
-      });
-      const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
-      if (commitMx && this.versionControlService.isReady()) {
-        try {
-          const deleteResult =
-            await this.versionControlService.deleteNodeDirectory(nodeDirectory);
-          if (deleteResult.success) {
-            this.logger.log(`节点目录已从 MX 标记删除: ${nodeDirectory}`);
-          }
-        } catch (mxError) {
-          this.logger.error(
-            `节点目录从 MX 标记删除失败: ${nodeDirectory}`,
-            mxError
-          );
-        }
-      }
-      const fullPath = this.storageManager.getFullPath(nodePath);
-      const nodeDirectoryPath = path.dirname(fullPath);
-      const pathParts = nodePath.split('/');
-      const nodeId = pathParts[pathParts.length - 2];
-      if (!nodeDirectoryPath.endsWith(nodeId)) {
-        this.logger.error(`路径验证失败，拒绝删除: ${nodeDirectoryPath}`);
-        return;
-      }
-      const cleanPath = nodePath.replace(/^\/mxcad\/file\//, '');
-      const nodeDirRelativeKey = cleanPath.substring(
-        0,
-        cleanPath.lastIndexOf('/')
-      );
-      await this.storageProvider.deleteAll(nodeDirRelativeKey);
-      this.logger.log(`节点目录已删除: ${nodeDirectoryPath}`);
-    } catch (error) {
-      this.logger.error(`删除物理文件失败: ${nodePath}`, error);
     }
   }
 
@@ -1027,15 +983,17 @@ export class NodeTrashService {
 
       for (const file of filesToDelete) {
         if (file.path) {
-          await this.deleteFileFromStorage(file.path, file.fileHash, commitMx);
+          await this.deleteFileInStorage(file.path, {
+            commitMx,
+            fileHash: file.fileHash,
+          });
         }
       }
       if (project.nodeType === NodeType.FILE && project.path) {
-        await this.deleteFileFromStorage(
-          project.path,
-          project.fileHash,
-          commitMx
-        );
+        await this.deleteFileInStorage(project.path, {
+          commitMx,
+          fileHash: project.fileHash,
+        });
       }
       if (project.ownerId) {
         await this.nodeMutationGuard.invalidateQuotaAfterMutation(
@@ -1129,11 +1087,17 @@ export class NodeTrashService {
 
       for (const file of filesToDelete) {
         if (file.path) {
-          await this.deleteFileFromStorage(file.path, file.fileHash, commitMx);
+          await this.deleteFileInStorage(file.path, {
+            commitMx,
+            fileHash: file.fileHash,
+          });
         }
       }
       if (node.nodeType === NodeType.FILE && node.path) {
-        await this.deleteFileFromStorage(node.path, node.fileHash, commitMx);
+        await this.deleteFileInStorage(node.path, {
+          commitMx,
+          fileHash: node.fileHash,
+        });
       }
       if (node.ownerId) {
         await this.nodeMutationGuard.invalidateQuotaAfterMutation(

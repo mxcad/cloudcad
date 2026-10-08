@@ -7,7 +7,6 @@ import { CrossProjectTransferMode, NodeType } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
 import { DatabaseService } from '../database/database.service';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
-import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { QUOTA_KEYS } from '../vip/quota-keys';
@@ -51,7 +50,6 @@ export interface MutationContext {
 export class NodeMutationGuard {
   constructor(
     private readonly prisma: DatabaseService,
-    private readonly fileTreeService: FileTreeService,
     private readonly treeWalker: TreeWalker,
     private readonly storageInfoService: StorageInfoService,
     private readonly restrictionEngine: RestrictionEngine,
@@ -80,13 +78,11 @@ export class NodeMutationGuard {
         I18nContext.current()?.t('error.node.not_found') ?? '节点不存在'
       );
     }
-    const projectId = await this.treeWalker.resolveProjectId(row.id);
+    const root = await this.treeWalker.resolveRootContext(row.id);
     const rootNodeType = isOwnershipRootType(row.nodeType)
       ? row.nodeType
-      : projectId
-        ? await this.fileTreeService.getNodeType(projectId).catch(() => null)
-        : null;
-    return { ...row, projectId, rootNodeType };
+      : (root?.rootType ?? null);
+    return { ...row, projectId: root?.rootId ?? null, rootNodeType };
   }
 
   /**
@@ -178,17 +174,20 @@ export class NodeMutationGuard {
     const incrementBytes = ctx.incrementBytes;
     if (!incrementBytes || incrementBytes <= 0) return;
 
+    const targetRoot = ctx.target
+      ? await this.treeWalker.resolveRootContext(ctx.target.id)
+      : null;
     const projectId = ctx.target
-      ? await this.treeWalker.resolveProjectId(ctx.target.id)
+      ? (targetRoot?.rootId ?? null)
       : node.projectId;
 
     // 公共资源库（图纸库/图块库，含库内文件/文件夹）是系统管理员维护的内部资源库，
-    // 不参与个人空间/项目字节配额限制：库内操作（无 target）按源节点上溯判定；
+    // 不参与个人空间/项目字节配额限制：库内操作（无 target）按源节点归属根判定；
     // 跨根操作按目标归属判定——仅目标属库才跳过（源库复制进项目须按目标项目配额校验，
     // 修复"从库复制大文件进项目不限额"）
     if (ctx.target) {
-      if (await this.isLibraryTarget(projectId)) return;
-    } else if (await this.fileTreeService.isLibraryNode(node.id)) {
+      if (this.isLibraryRootType(targetRoot?.rootType)) return;
+    } else if (this.isLibraryRootType(node.rootNodeType)) {
       return;
     }
 
@@ -212,23 +211,6 @@ export class NodeMutationGuard {
       incrementBytes,
       strategyKeys,
     });
-  }
-
-  /**
-   * 判断目标是否属于公共资源库（图纸库/图块库）：
-   * 按其解析出的 projectId（库内节点上溯为库根 id）根类型判定。
-   */
-  private async isLibraryTarget(
-    projectId: string | null
-  ): Promise<boolean> {
-    if (!projectId) return false;
-    const rootType = await this.fileTreeService
-      .getNodeType(projectId)
-      .catch(() => null);
-    return (
-      rootType === NodeType.LIBRARY_DRAWING ||
-      rootType === NodeType.LIBRARY_BLOCK
-    );
   }
 
   private isLibraryRootType(rootType?: string | null): boolean {

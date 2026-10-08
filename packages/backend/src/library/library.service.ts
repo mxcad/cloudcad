@@ -105,14 +105,6 @@ export class LibraryService {
     });
   }
 
-  async isLibrary(nodeId: string): Promise<boolean> {
-    const nodeType = await this.fileTreeService.getNodeType(nodeId);
-    return (
-      nodeType === NodeType.LIBRARY_DRAWING ||
-      nodeType === NodeType.LIBRARY_BLOCK
-    );
-  }
-
   async validateLibraryNode(
     nodeId: string,
     expectedKey: LibraryType

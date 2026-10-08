@@ -108,28 +108,14 @@ export class FileSystemPermissionService {
 
   /**
    * 解析节点所属根节点类型（PROJECT / PERSONAL_SPACE / LIBRARY_*）。
-   * 节点自身即根时直接返回；否则优先取 projectId 字段，缺失时经 TreeWalker 上溯。
+   * 经 TreeWalker 一次 CTE 沿父链解析（父链唯一事实源，不读 projectId 字段短路）。
    * 根不可解析返回 null（调用方按 fail-closed 处理）。
    */
-  private async resolveRootNodeType(
-    node: { id: string; nodeType: NodeType; projectId: string | null }
-  ): Promise<NodeType | null> {
-    if (
-      node.nodeType === NodeType.PROJECT ||
-      node.nodeType === NodeType.PERSONAL_SPACE ||
-      node.nodeType === NodeType.LIBRARY_DRAWING ||
-      node.nodeType === NodeType.LIBRARY_BLOCK
-    ) {
-      return node.nodeType;
-    }
-    const rootId =
-      node.projectId || (await this.treeWalker.resolveProjectId(node.id));
-    if (!rootId) return null;
-    const root = await this.prisma.fileSystemNode.findUnique({
-      where: { id: rootId },
-      select: { nodeType: true },
-    });
-    return root?.nodeType ?? null;
+  private async resolveRootNodeType(node: {
+    id: string;
+  }): Promise<NodeType | null> {
+    const root = await this.treeWalker.resolveRootContext(node.id);
+    return root?.rootType ?? null;
   }
 
   /**
@@ -159,15 +145,10 @@ export class FileSystemPermissionService {
       return false;
     }
 
-    // 找到项目根节点 ID
-    let projectId: string | null;
-    if (node.nodeType === NodeType.PROJECT) {
-      projectId = nodeId;
-    } else {
-      projectId = await this.treeWalker.resolveProjectId(nodeId);
-      if (!projectId) {
-        return false;
-      }
+    // 找到项目根节点 ID（PROJECT 根解析为自身）
+    const projectId = await this.treeWalker.resolveProjectId(nodeId);
+    if (!projectId) {
+      return false;
     }
 
     // 使用项目权限服务检查权限
@@ -199,22 +180,20 @@ export class FileSystemPermissionService {
       return null;
     }
 
-    // 2. 检查是否是公共资源库（新增）
-    const isLibrary = await this.isLibraryNode(nodeId);
-    if (isLibrary) {
+    // 2. 检查是否属于公共资源库（含库内子节点，经 TreeWalker 上溯判定）
+    const root = await this.treeWalker.resolveRootContext(nodeId);
+    if (
+      root?.rootType === NodeType.LIBRARY_DRAWING ||
+      root?.rootType === NodeType.LIBRARY_BLOCK
+    ) {
       // 公共资源库允许任何人访问，返回 VIEWER 角色
       return ProjectRole.VIEWER;
     }
 
-    // 3. 找到项目根节点 ID
-    let projectId: string | null;
-    if (node.nodeType === NodeType.PROJECT) {
-      projectId = nodeId;
-    } else {
-      projectId = await this.treeWalker.resolveProjectId(nodeId);
-      if (!projectId) {
-        return null;
-      }
+    // 3. 找到项目根节点 ID（PROJECT 根解析为自身）
+    const projectId = root?.rootId ?? null;
+    if (!projectId) {
+      return null;
     }
 
     // 4. 检查是否是项目所有者
@@ -241,19 +220,6 @@ export class FileSystemPermissionService {
     });
 
     return (member?.projectRole?.name as ProjectRole) || null;
-  }
-
-  /**
-   * 检查节点是否属于公共资源库
-   * @param nodeId 节点 ID
-   * @returns 是否属于公共资源库
-   */
-  async isLibraryNode(nodeId: string): Promise<boolean> {
-    const node = await this.prisma.fileSystemNode.findUnique({
-      where: { id: nodeId },
-      select: { nodeType: true },
-    });
-    return node?.nodeType === NodeType.LIBRARY_DRAWING || node?.nodeType === NodeType.LIBRARY_BLOCK;
   }
 
   /**

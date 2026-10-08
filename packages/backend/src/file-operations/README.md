@@ -61,8 +61,8 @@ src/file-operations/
 | `clearTrash(userId)` / `clearProjectTrash(projectId, userId)` | 清空用户可访问（owner/成员/个人空间）回收站 / 项目内回收站 |
 | `batchDeleteNodes(nodeIds, permanently, userId)` | 批量删除，返回 success/failed 统计 |
 | `softDeleteDescendants(tx, nodeId)` | 事务内递归软删子节点；PROCESSING 状态不可直达 DELETED，先 FAILED 再 DELETED 保证流程不中断 |
-| `deleteDescendantsWithFiles(tx, nodeId)` / `deleteFileIfNotReferenced(...)` | 事务内递归删子节点及物理文件；按 `fileHash` 引用计数跳过仍被引用的文件 |
-| `deleteFileFromStorage(nodePath, fileHash, commitMx)` | 单文件物理删除（含 MX 标记删除） |
+| `deleteDescendantsWithFiles(tx, nodeId)` | 事务内递归删子节点及物理文件；按 `fileHash` 引用计数跳过仍被引用的文件 |
+| `deleteFileInStorage(nodePath, { commitMx?, tx?, fileHash? })` | 节点物理目录删除唯一出口（原 `deleteFileIfNotReferenced`/`deleteFileFromStorage` 双方法合并）：段数 < 3 跳过（防 2 段路径退化成删整个 YYYYMM 目录）；`fileHash` 引用计数跳过仍被引用的文件（传 `tx` 时与节点删除同事务读引用）；`commitMx` 控制 MX 标记删除；节点目录相对键解码收口 `StorageManager.parseNodeDirectory` |
 
 **物理删除安全措施**：目录名必须以节点 id 结尾（防路径穿越，失败即拒删）；`fileHash` 被其他未删节点引用时跳过物理删除；MX 版本控制就绪时先 `deleteNodeDirectory` 再提交。
 

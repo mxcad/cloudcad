@@ -79,14 +79,22 @@ const SORTABLE_COLUMNS: Record<string, string> = {
   size: '"size"',
 };
 
+/** 归属根上下文：沿祖先链（含自身）解析出的第一个非 FILE/FOLDER 节点 */
+export interface RootContext {
+  rootId: string;
+  rootType: NodeType;
+  ownerId: string | null;
+}
+
 /**
  * 树遍历深 module（#225 重构实施）
  *
- * 职责: projectId 解析 + 子树遍历的单一入口，全部走 SQL CTE（无 JS 递归 N+1）。
+ * 职责: 归属根解析 + 子树遍历的单一入口，全部走 SQL CTE（无 JS 递归 N+1）。
  * 语义约定（grilling 决议 1/3/4/5）:
  * - 广义根: "项目根 = 非 FILE/FOLDER 节点（PROJECT / PERSONAL_SPACE / LIBRARY 根）"，
- *   resolveProjectId 沿祖先链找第一个非 FILE/FOLDER 节点（含自身），不读 projectId 字段短路，
- *   因此个人空间根（创建时 projectId 字段为 null）也能解析为自身。
+ *   resolveRootContext 沿祖先链找第一个非 FILE/FOLDER 节点（含自身），不读 projectId 字段短路，
+ *   因此个人空间根（创建时 projectId 字段为 null）也能解析为自身；
+ *   resolveProjectId 是其 id-only 薄包装，供仅需根 id 的调用点使用。
  * - getSubtreeIds 默认 `{ includeRoot: false, includeDeleted: true }`（保持 trash/copy-move 语义）；
  *   includeDeleted: false 仅 findFileByHashInProject；includeRoot: true 用于 file-tree 项目范围检索
  *   与 trash 整树更新（search 已改走 relation filter，#256，不再使用 getSubtreeIds）。
@@ -96,23 +104,42 @@ export class TreeWalker {
   constructor(private readonly prisma: DatabaseService) {}
 
   /**
+   * 沿祖先链（含自身）找第一个非 FILE/FOLDER 节点（归属根），
+   * 一次 CTE 查询同时返回根 id / 根类型 / 根 owner。
+   * 节点缺失返回 null；个人空间根（projectId 字段为 null）返回自身。
+   * 不读 projectId 字段短路——父链是唯一事实源（防存量脏值）。
+   */
+  async resolveRootContext(nodeId: string): Promise<RootContext | null> {
+    const result = await this.prisma.$queryRaw<
+      { id: string; nodeType: string; ownerId: string | null }[]
+    >`
+      WITH RECURSIVE ancestors AS (
+        SELECT id, "parentId", "nodeType", "ownerId" FROM file_system_nodes WHERE id = ${nodeId}
+        UNION ALL
+        SELECT n.id, n."parentId", n."nodeType", n."ownerId"
+        FROM file_system_nodes n
+        INNER JOIN ancestors a ON n.id = a."parentId"
+      )
+      SELECT id, "nodeType"::text AS "nodeType", "ownerId" FROM ancestors
+      WHERE "nodeType" NOT IN (${NodeType.FILE}, ${NodeType.FOLDER})
+      LIMIT 1
+    `;
+    const row = result[0];
+    if (!row) return null;
+    return {
+      rootId: row.id,
+      rootType: row.nodeType as NodeType,
+      ownerId: row.ownerId,
+    };
+  }
+
+  /**
    * 沿祖先链（含自身）找第一个非 FILE/FOLDER 节点，返回其 id。
    * 节点缺失返回 null；个人空间根（projectId 字段为 null）返回自身 id。
    */
   async resolveProjectId(nodeId: string): Promise<string | null> {
-    const result = await this.prisma.$queryRaw<{ id: string }[]>`
-      WITH RECURSIVE ancestors AS (
-        SELECT id, "parentId", "nodeType" FROM file_system_nodes WHERE id = ${nodeId}
-        UNION ALL
-        SELECT n.id, n."parentId", n."nodeType"
-        FROM file_system_nodes n
-        INNER JOIN ancestors a ON n.id = a."parentId"
-      )
-      SELECT id FROM ancestors
-      WHERE "nodeType" NOT IN (${NodeType.FILE}, ${NodeType.FOLDER})
-      LIMIT 1
-    `;
-    return result[0]?.id ?? null;
+    const root = await this.resolveRootContext(nodeId);
+    return root?.rootId ?? null;
   }
 
   /**

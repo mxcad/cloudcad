@@ -155,16 +155,12 @@ export class StorageCleanupService {
 
       for (const node of nodesToDelete) {
         try {
-          const pathParts = node.path?.split('/') || [];
-          if (pathParts.length < 2) {
+          if (!node.path || !this.storageManager.parseNodeDirectory(node.path)) {
             this.logger.warn(`节点路径格式错误: ${node.path}`);
             continue;
           }
 
-          const directory = pathParts[0];
-          const nodeId = pathParts[1];
-
-          await this.storageManager.deleteNodeStorage(nodeId, directory);
+          await this.storageManager.deleteNodeStorage(node.path);
           result.deletedNodes++;
           result.freedSpace += node.size ?? 0;
 
@@ -265,11 +261,8 @@ export class StorageCleanupService {
             await this.prisma.fileSystemNode.delete({ where: { id: item.id } });
             result.deletedNodes++;
           } else if (item.nodeType === NodeType.FILE && item.path) {
-            const pathParts = item.path?.split('/') || [];
-            if (pathParts.length >= 2) {
-              const directory = pathParts[0];
-              const nodeId = pathParts[1];
-              await this.storageManager.deleteNodeStorage(nodeId, directory);
+            if (this.storageManager.parseNodeDirectory(item.path)) {
+              await this.storageManager.deleteNodeStorage(item.path);
               result.deletedNodes++;
               result.freedSpace += item.size ?? 0;
               await this.prisma.fileSystemNode.delete({ where: { id: item.id } });
@@ -312,12 +305,9 @@ export class StorageCleanupService {
       if (child.nodeType !== NodeType.FILE) {
         await this.cleanupFolderRecursive(child.id, result);
       } else if (child.path) {
-        const pathParts = child.path?.split('/') || [];
-        if (pathParts.length >= 2) {
-          const directory = pathParts[0];
-          const nodeId = pathParts[1];
+        if (this.storageManager.parseNodeDirectory(child.path)) {
           try {
-            await this.storageManager.deleteNodeStorage(nodeId, directory);
+            await this.storageManager.deleteNodeStorage(child.path);
             result.deletedNodes++;
             result.freedSpace += child.size ?? 0;
           } catch (error) {
@@ -363,16 +353,12 @@ export class StorageCleanupService {
     try {
       for (const node of nodesToDelete) {
         try {
-          const pathParts = node.path?.split('/') || [];
-          if (pathParts.length < 2) {
+          if (!node.path || !this.storageManager.parseNodeDirectory(node.path)) {
             this.logger.warn(`节点路径格式错误: ${node.path}`);
             continue;
           }
 
-          const directory = pathParts[0];
-          const nodeId = pathParts[1];
-
-          await this.storageManager.deleteNodeStorage(nodeId, directory);
+          await this.storageManager.deleteNodeStorage(node.path);
           result.deletedNodes++;
           result.freedSpace += node.size ?? 0;
 
@@ -501,13 +487,11 @@ export class StorageCleanupService {
 
       for (const node of nodes) {
         try {
-          const pathParts = node.path?.split('/') || [];
-          if (pathParts.length < 2) continue;
+          if (!node.path || !this.storageManager.parseNodeDirectory(node.path)) {
+            continue;
+          }
 
-          const directory = pathParts[0];
-          const nodeId = pathParts[1];
-
-          const exists = await this.storageManager.nodeStorageExists(nodeId, directory);
+          const exists = await this.storageManager.nodeStorageExists(node.path);
           if (!exists) {
             orphans.push({
               nodeId: node.id,
@@ -624,7 +608,9 @@ export class StorageCleanupService {
       // 清理本地孤立文件
       for (const orphan of localOrphans) {
         try {
-          await this.storageManager.deleteNodeStorage(orphan.nodeId, orphan.directory);
+          await this.storageManager.deleteNodeStorage(
+            `${orphan.directory}/${orphan.nodeId}`
+          );
           result.deletedNodes++;
           result.freedSpace += orphan.sizeBytes;
           this.logger.log(`清理本地孤立文件: ${orphan.nodeId} (${orphan.directory})`);

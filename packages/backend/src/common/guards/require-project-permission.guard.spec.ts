@@ -7,7 +7,6 @@ import { NodeType } from '@cloudcad/db';
 import { ForbiddenException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
-import { DatabaseService } from '../../database/database.service';
 import { NodeContextResolver } from '../node-context/node-context-resolver';
 import { NodeContext } from '../node-context/node-context.types';
 import { IPROJECT_PERMISSION_SERVICE } from '../../roles/interfaces/project-permission-service.interface';
@@ -29,16 +28,14 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
   let nodeContextResolver: Record<string, jest.Mock>;
   let systemPermissionService: Record<string, jest.Mock>;
   let projectPermissionService: Record<string, jest.Mock>;
-  let prisma: any;
 
-  const libraryCtx = (overrides: Partial<NodeContext> = {}): NodeContext => ({
+  type LibraryCtx = Extract<NodeContext, { kind: 'library' }>;
+
+  const libraryCtx = (overrides: Partial<LibraryCtx> = {}): NodeContext => ({
+    kind: 'library',
+    rootType: NodeType.LIBRARY_DRAWING,
     nodeId: 'folder-1',
-    projectId: null,
-    nodeType: NodeType.FOLDER,
     ownerId: 'admin-a',
-    isLibraryNode: true,
-    isPersonalSpace: false,
-    libraryRootType: NodeType.LIBRARY_DRAWING,
     ...overrides,
   });
 
@@ -53,7 +50,6 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
       isProjectOwner: jest.fn(),
       checkPermission: jest.fn(),
     };
-    prisma = { fileSystemNode: { findUnique: jest.fn() } };
 
     // 默认：要求 FILE_CREATE，ALL 模式，非 OptionalAuth，非 LibraryPublic
     const meta = (key: string) => {
@@ -78,7 +74,6 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
         },
         { provide: IPERMISSION_SERVICE, useValue: systemPermissionService },
         { provide: NodeContextResolver, useValue: nodeContextResolver },
-        { provide: DatabaseService, useValue: prisma },
       ],
     }).compile();
 
@@ -112,12 +107,7 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
     systemPermissionService.checkSystemPermission.mockResolvedValue(true);
 
     const result = await guard.canActivate(
-      buildRequest(
-        libraryCtx({
-          nodeType: NodeType.FOLDER,
-          libraryRootType: NodeType.LIBRARY_BLOCK,
-        })
-      )
+      buildRequest(libraryCtx({ rootType: NodeType.LIBRARY_BLOCK }))
     );
 
     expect(result).toBe(true);
@@ -149,13 +139,7 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
     systemPermissionService.checkSystemPermission.mockResolvedValue(true);
 
     const result = await guard.canActivate(
-      buildRequest(
-        libraryCtx({
-          nodeId: 'lib-1',
-          nodeType: NodeType.LIBRARY_DRAWING,
-          libraryRootType: NodeType.LIBRARY_DRAWING,
-        })
-      )
+      buildRequest(libraryCtx({ nodeId: 'lib-1' }))
     );
 
     expect(result).toBe(true);
@@ -187,13 +171,7 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
     systemPermissionService.checkSystemPermission.mockResolvedValue(true);
 
     const result = await guard.canActivate(
-      buildRequest(
-        libraryCtx({
-          nodeId: 'lib-file-1',
-          nodeType: NodeType.FILE,
-          libraryRootType: NodeType.LIBRARY_DRAWING,
-        })
-      )
+      buildRequest(libraryCtx({ nodeId: 'lib-file-1' }))
     );
 
     expect(result).toBe(true);
@@ -210,11 +188,7 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
 
     const result = await guard.canActivate(
       buildRequest(
-        libraryCtx({
-          nodeId: 'lib-file-2',
-          nodeType: NodeType.FILE,
-          libraryRootType: NodeType.LIBRARY_BLOCK,
-        })
+        libraryCtx({ nodeId: 'lib-file-2', rootType: NodeType.LIBRARY_BLOCK })
       )
     );
 
@@ -241,13 +215,10 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
 
     const result = await guard.canActivate(
       buildRequest({
-        nodeId: 'proj-file-1',
+        kind: 'project',
         projectId: 'proj-1',
-        nodeType: NodeType.FILE,
+        nodeId: 'proj-file-1',
         ownerId: 'owner-a',
-        isLibraryNode: false,
-        isPersonalSpace: false,
-        libraryRootType: null,
       })
     );
 
@@ -270,13 +241,10 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
 
     const result = await guard.canActivate(
       buildRequest({
-        nodeId: 'proj-file-2',
+        kind: 'project',
         projectId: 'proj-1',
-        nodeType: NodeType.FILE,
+        nodeId: 'proj-file-2',
         ownerId: 'owner-a',
-        isLibraryNode: false,
-        isPersonalSpace: false,
-        libraryRootType: null,
       })
     );
 
@@ -292,13 +260,10 @@ describe('RequireProjectPermissionGuard — 公共资源库', () => {
     await expect(
       guard.canActivate(
         buildRequest({
-          nodeId: 'proj-file-3',
+          kind: 'project',
           projectId: 'proj-1',
-          nodeType: NodeType.FILE,
+          nodeId: 'proj-file-3',
           ownerId: 'owner-a',
-          isLibraryNode: false,
-          isPersonalSpace: false,
-          libraryRootType: null,
         })
       )
     ).rejects.toBeInstanceOf(ForbiddenException);

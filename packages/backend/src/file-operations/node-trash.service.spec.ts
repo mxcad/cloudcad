@@ -400,7 +400,7 @@ describe('NodeTrashService', () => {
       stubInflightScan([{ id: 'node-1', taskId: 'async_node-1_9' }]);
       treeWalker.getSubtreeIds.mockResolvedValue(['child-1']);
       jest
-        .spyOn(service, 'deleteFileFromStorage')
+        .spyOn(service, 'deleteFileInStorage')
         .mockResolvedValue(undefined);
 
       await service.deleteNode('node-1', true);

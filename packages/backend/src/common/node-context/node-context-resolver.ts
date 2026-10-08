@@ -1,18 +1,28 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
-import { DatabaseService } from '../../database/database.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
-import { NodeContext, RequestLike } from './node-context.types';
+import { TreeWalker } from '../../file-system/file-tree/tree-walker.service';
+import {
+  LibraryRootType,
+  NodeContext,
+  RequestLike,
+} from './node-context.types';
 
 @Injectable()
 export class NodeContextResolver {
   private readonly logger = new Logger(NodeContextResolver.name);
 
   constructor(
-    private readonly prisma: DatabaseService,
-    private readonly fileTreeService: FileTreeService
+    private readonly fileTreeService: FileTreeService,
+    private readonly treeWalker: TreeWalker
   ) {}
 
+  /**
+   * 解析请求节点上下文（判别联合，见 NodeContext）。
+   * 归属根一律经 TreeWalker.resolveRootContext 一次 CTE 解析
+   * （父链唯一事实源，不读 projectId 字段短路）；
+   * 库内子节点（FILE/FOLDER）直接归入 library 分支。
+   */
   async resolve(request: RequestLike): Promise<NodeContext> {
     const nodeId = this.extractNodeId(request);
     let nodeType: string | null = null;
@@ -30,39 +40,43 @@ export class NodeContextResolver {
       }
     }
 
-    let isLibraryNode =
-      nodeType === NodeType.LIBRARY_DRAWING ||
-      nodeType === NodeType.LIBRARY_BLOCK;
-    let libraryRootType: string | null = null;
-    if (isLibraryNode) {
-      libraryRootType = nodeType;
-    } else if (
-      nodeId &&
-      (nodeType === NodeType.FILE || nodeType === NodeType.FOLDER)
-    ) {
-      // 库内子节点（文件/文件夹）上溯识别公共资源库根，与 TreeWalker.resolveProjectId 语义对齐
-      libraryRootType = await this.lookupLibraryRootType(nodeId);
-      isLibraryNode = libraryRootType !== null;
-    }
+    const root = nodeId
+      ? await this.treeWalker.resolveRootContext(nodeId)
+      : null;
+    const libraryRootType: LibraryRootType | null =
+      root &&
+      (root.rootType === NodeType.LIBRARY_DRAWING ||
+        root.rootType === NodeType.LIBRARY_BLOCK)
+        ? (root.rootType as LibraryRootType)
+        : null;
     const isPersonalSpace = nodeType === NodeType.PERSONAL_SPACE;
 
     let projectId: string | null = null;
-    if (nodeId && !isLibraryNode && !isPersonalSpace) {
-      projectId = await this.extractProjectIdFromNode(nodeId);
+    if (nodeId && !libraryRootType && !isPersonalSpace) {
+      projectId = root?.rootId ?? null;
     }
     if (!projectId) {
       projectId = await this.extractProjectId(request);
     }
 
-    return {
-      nodeId,
-      projectId,
-      nodeType,
-      ownerId,
-      isLibraryNode,
-      isPersonalSpace,
-      libraryRootType,
-    };
+    if (libraryRootType) {
+      return {
+        kind: 'library',
+        rootType: libraryRootType,
+        nodeId,
+        ownerId,
+      };
+    }
+    if (isPersonalSpace) {
+      return { kind: 'personalSpace', nodeId, ownerId };
+    }
+    if (projectId) {
+      return { kind: 'project', projectId, nodeId, ownerId };
+    }
+    if (nodeId && nodeType) {
+      return { kind: 'nodeOwner', nodeId, nodeType, ownerId };
+    }
+    return { kind: 'none', nodeId, ownerId };
   }
 
   extractNodeId(request: RequestLike): string | null {
@@ -88,9 +102,15 @@ export class NodeContextResolver {
     ] as const) {
       const pid = source?.projectId as string | undefined;
       if (pid) {
-        const resolved = await this.lookupNodeProjectId(pid);
-        if (resolved) return resolved;
-        return pid;
+        try {
+          const root = await this.treeWalker.resolveRootContext(pid);
+          return root?.rootId ?? pid;
+        } catch (error) {
+          this.logger.warn(
+            `解析请求 projectId 失败 pid=${pid}: ${error instanceof Error ? error.message : String(error)}`
+          );
+          return pid;
+        }
       }
     }
 
@@ -104,70 +124,11 @@ export class NodeContextResolver {
 
   async extractProjectIdFromNode(nodeId: string): Promise<string | null> {
     try {
-      const resolved = await this.lookupNodeProjectId(nodeId);
-      return resolved ?? null;
+      const root = await this.treeWalker.resolveRootContext(nodeId);
+      return root?.rootId ?? null;
     } catch (error) {
       this.logger.warn(
         `提取项目ID失败 nodeId=${nodeId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return null;
-    }
-  }
-
-  private async lookupNodeProjectId(id: string): Promise<string | null> {
-    try {
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id },
-        select: { id: true, nodeType: true, projectId: true, parentId: true },
-      });
-      if (!node) return null;
-      if (node.nodeType === NodeType.PROJECT) return node.id;
-      // 公共资源库根节点视为库内节点的"项目根"（与 TreeWalker.resolveProjectId 语义对齐）
-      if (
-        node.nodeType === NodeType.LIBRARY_DRAWING ||
-        node.nodeType === NodeType.LIBRARY_BLOCK
-      ) {
-        return node.id;
-      }
-      if (node.projectId) return node.projectId;
-      if (node.parentId) return this.extractProjectIdFromNode(node.parentId);
-      return null;
-    } catch (error) {
-      this.logger.warn(
-        `lookupNodeProjectId失败 id=${id}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return null;
-    }
-  }
-
-  /**
-   * 沿 parentId 上溯查找公共资源库根节点类型（LIBRARY_DRAWING / LIBRARY_BLOCK）。
-   * 仅对 FILE/FOLDER 节点调用；上溯到库根返回其类型，否则返回 null。
-   */
-  private async lookupLibraryRootType(nodeId: string): Promise<string | null> {
-    try {
-      const node = await this.prisma.fileSystemNode.findUnique({
-        where: { id: nodeId },
-        select: { nodeType: true, parentId: true },
-      });
-      if (!node) return null;
-      if (
-        node.nodeType === NodeType.LIBRARY_DRAWING ||
-        node.nodeType === NodeType.LIBRARY_BLOCK
-      ) {
-        return node.nodeType;
-      }
-      if (
-        node.nodeType !== NodeType.FILE &&
-        node.nodeType !== NodeType.FOLDER
-      ) {
-        return null;
-      }
-      if (node.parentId) return this.lookupLibraryRootType(node.parentId);
-      return null;
-    } catch (error) {
-      this.logger.warn(
-        `lookupLibraryRootType失败 id=${nodeId}: ${error instanceof Error ? error.message : String(error)}`
       );
       return null;
     }

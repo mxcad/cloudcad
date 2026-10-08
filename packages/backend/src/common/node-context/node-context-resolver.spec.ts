@@ -5,142 +5,191 @@
 
 import { NodeType } from '@cloudcad/db';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { DatabaseService } from '../../database/database.service';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
+import { TreeWalker } from '../../file-system/file-tree/tree-walker.service';
 import { NodeContextResolver } from './node-context-resolver';
 
 describe('NodeContextResolver', () => {
   let resolver: NodeContextResolver;
-  let prisma: any;
   let fileTreeService: Record<string, jest.Mock>;
-
-  const nodeRow = (overrides: Record<string, unknown> = {}) => ({
-    id: 'node-1',
-    nodeType: NodeType.FILE,
-    projectId: null,
-    ownerId: 'user-1',
-    parentId: null,
-    ...overrides,
-  });
+  let treeWalker: Record<string, jest.Mock>;
 
   beforeEach(async () => {
-    prisma = {
-      fileSystemNode: {
-        findUnique: jest.fn(),
-      },
-    };
     fileTreeService = {
       getNodeTypeAndOwner: jest.fn(),
+    };
+    treeWalker = {
+      resolveRootContext: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NodeContextResolver,
-        { provide: DatabaseService, useValue: prisma },
         { provide: FileTreeService, useValue: fileTreeService },
+        { provide: TreeWalker, useValue: treeWalker },
       ],
     }).compile();
 
     resolver = module.get(NodeContextResolver);
   });
 
-  it('library root: isLibraryNode=true and libraryRootType=its own type', async () => {
-    fileTreeService.getNodeTypeAndOwner.mockResolvedValue({
+  /** 表驱动：6 种节点类型 → 期望的 NodeContext.kind */
+  const CASES: Array<{
+    name: string;
+    nodeType: NodeType;
+    root: { rootId: string; rootType: NodeType; ownerId: string | null } | null;
+    expect: (ctx: Awaited<ReturnType<NodeContextResolver['resolve']>>) => void;
+  }> = [
+    {
+      name: 'PROJECT 根：kind=project，projectId 为自身',
+      nodeType: NodeType.PROJECT,
+      root: { rootId: 'proj-1', rootType: NodeType.PROJECT, ownerId: 'owner-1' },
+      expect: (ctx) => {
+        expect(ctx.kind).toBe('project');
+        if (ctx.kind === 'project') {
+          expect(ctx.projectId).toBe('proj-1');
+        }
+      },
+    },
+    {
+      name: 'PERSONAL_SPACE 根：kind=personalSpace（projectId 不解析）',
+      nodeType: NodeType.PERSONAL_SPACE,
+      root: { rootId: 'ps-1', rootType: NodeType.PERSONAL_SPACE, ownerId: 'owner-1' },
+      expect: (ctx) => {
+        expect(ctx.kind).toBe('personalSpace');
+        if (ctx.kind === 'personalSpace') {
+          expect(ctx.ownerId).toBe('owner-1');
+        }
+      },
+    },
+    {
+      name: 'LIBRARY_DRAWING 根：kind=library，rootType 为自身类型',
       nodeType: NodeType.LIBRARY_DRAWING,
-      ownerId: 'admin-1',
+      root: { rootId: 'lib-d-1', rootType: NodeType.LIBRARY_DRAWING, ownerId: 'admin-1' },
+      expect: (ctx) => {
+        expect(ctx.kind).toBe('library');
+        if (ctx.kind === 'library') {
+          expect(ctx.rootType).toBe(NodeType.LIBRARY_DRAWING);
+        }
+      },
+    },
+    {
+      name: 'LIBRARY_BLOCK 根：kind=library，rootType 为自身类型',
+      nodeType: NodeType.LIBRARY_BLOCK,
+      root: { rootId: 'lib-b-1', rootType: NodeType.LIBRARY_BLOCK, ownerId: 'admin-1' },
+      expect: (ctx) => {
+        expect(ctx.kind).toBe('library');
+        if (ctx.kind === 'library') {
+          expect(ctx.rootType).toBe(NodeType.LIBRARY_BLOCK);
+        }
+      },
+    },
+    {
+      name: 'FILE 子节点（项目内）：kind=project，projectId=项目根',
+      nodeType: NodeType.FILE,
+      root: { rootId: 'proj-1', rootType: NodeType.PROJECT, ownerId: 'owner-1' },
+      expect: (ctx) => {
+        expect(ctx.kind).toBe('project');
+        if (ctx.kind === 'project') {
+          expect(ctx.projectId).toBe('proj-1');
+        }
+      },
+    },
+    {
+      name: 'FOLDER 子节点（个人空间内）：kind=project，projectId=个人空间根',
+      nodeType: NodeType.FOLDER,
+      root: { rootId: 'ps-1', rootType: NodeType.PERSONAL_SPACE, ownerId: 'owner-1' },
+      expect: (ctx) => {
+        expect(ctx.kind).toBe('project');
+        if (ctx.kind === 'project') {
+          expect(ctx.projectId).toBe('ps-1');
+        }
+      },
+    },
+  ];
+
+  it.each(CASES)('$name', async ({ nodeType, root, expect: assertCtx }) => {
+    fileTreeService.getNodeTypeAndOwner.mockResolvedValue({
+      nodeType,
+      ownerId: root?.ownerId ?? null,
     });
+    treeWalker.resolveRootContext.mockResolvedValue(root);
 
-    const ctx = await resolver.resolve({ body: { nodeId: 'lib-1' } });
+    const ctx = await resolver.resolve({ body: { nodeId: 'node-1' } });
 
-    expect(ctx.isLibraryNode).toBe(true);
-    expect(ctx.libraryRootType).toBe(NodeType.LIBRARY_DRAWING);
+    assertCtx(ctx);
   });
 
-  it('folder inside library: resolved to library root type', async () => {
+  it('库内 FOLDER 子节点：kind=library，rootType=库根类型（上溯判定）', async () => {
     fileTreeService.getNodeTypeAndOwner.mockResolvedValue({
       nodeType: NodeType.FOLDER,
       ownerId: 'admin-1',
     });
-    prisma.fileSystemNode.findUnique
-      .mockResolvedValueOnce(
-        nodeRow({
-          id: 'folder-1',
-          nodeType: NodeType.FOLDER,
-          parentId: 'lib-1',
-        })
-      )
-      .mockResolvedValueOnce(
-        nodeRow({
-          id: 'lib-1',
-          nodeType: NodeType.LIBRARY_DRAWING,
-          parentId: null,
-        })
-      );
+    treeWalker.resolveRootContext.mockResolvedValue({
+      rootId: 'lib-d-1',
+      rootType: NodeType.LIBRARY_DRAWING,
+      ownerId: 'admin-1',
+    });
 
-    const ctx = await resolver.resolve({ body: { nodeId: 'folder-1' } });
+    const ctx = await resolver.resolve({ body: { nodeId: 'lib-folder-1' } });
 
-    expect(ctx.isLibraryNode).toBe(true);
-    expect(ctx.libraryRootType).toBe(NodeType.LIBRARY_DRAWING);
+    expect(ctx.kind).toBe('library');
+    if (ctx.kind === 'library') {
+      expect(ctx.rootType).toBe(NodeType.LIBRARY_DRAWING);
+    }
   });
 
-  it('file inside library: resolved to library root type, projectId=library root id', async () => {
+  it('孤立节点（存在但上溯不到根）：kind=nodeOwner，按 owner 兜底', async () => {
     fileTreeService.getNodeTypeAndOwner.mockResolvedValue({
       nodeType: NodeType.FILE,
-      ownerId: 'admin-1',
+      ownerId: 'owner-1',
     });
-    prisma.fileSystemNode.findUnique
-      .mockResolvedValueOnce(
-        nodeRow({ id: 'file-1', nodeType: NodeType.FILE, parentId: 'lib-1' })
-      )
-      .mockResolvedValueOnce(
-        nodeRow({
-          id: 'lib-1',
-          nodeType: NodeType.LIBRARY_DRAWING,
-          parentId: null,
-        })
-      );
+    treeWalker.resolveRootContext.mockResolvedValue(null);
 
-    const ctx = await resolver.resolve({ body: { nodeId: 'file-1' } });
+    const ctx = await resolver.resolve({ body: { nodeId: 'orphan-1' } });
 
-    expect(ctx.isLibraryNode).toBe(true);
-    expect(ctx.libraryRootType).toBe(NodeType.LIBRARY_DRAWING);
+    expect(ctx.kind).toBe('nodeOwner');
+    if (ctx.kind === 'nodeOwner') {
+      expect(ctx.ownerId).toBe('owner-1');
+    }
   });
 
-  it('folder inside regular project: not a library, projectId=project root', async () => {
+  it('孤立节点但请求带 projectId：kind=project（请求参数兜底）', async () => {
     fileTreeService.getNodeTypeAndOwner.mockResolvedValue({
-      nodeType: NodeType.FOLDER,
-      ownerId: 'user-1',
+      nodeType: NodeType.FILE,
+      ownerId: 'owner-1',
     });
-    prisma.fileSystemNode.findUnique.mockImplementation(({ where }: any) => {
-      if (where.id === 'folder-1') {
-        return Promise.resolve(
-          nodeRow({
-            id: 'folder-1',
-            nodeType: NodeType.FOLDER,
-            parentId: 'proj-1',
-          })
-        );
-      }
-      if (where.id === 'proj-1') {
-        return Promise.resolve(
-          nodeRow({ id: 'proj-1', nodeType: NodeType.PROJECT, parentId: null })
-        );
-      }
-      return Promise.resolve(null);
+    treeWalker.resolveRootContext
+      .mockResolvedValueOnce(null) // 节点上溯无根
+      .mockResolvedValue({
+        rootId: 'proj-9',
+        rootType: NodeType.PROJECT,
+        ownerId: 'owner-9',
+      }); // 请求 projectId 解析
+
+    const ctx = await resolver.resolve({
+      body: { nodeId: 'orphan-1', projectId: 'proj-9' },
     });
 
-    const ctx = await resolver.resolve({ body: { nodeId: 'folder-1' } });
-
-    expect(ctx.isLibraryNode).toBe(false);
-    expect(ctx.libraryRootType).toBeNull();
-    expect(ctx.projectId).toBe('proj-1');
+    expect(ctx.kind).toBe('project');
+    if (ctx.kind === 'project') {
+      expect(ctx.projectId).toBe('proj-9');
+    }
   });
 
-  it('no nodeId: not a library context', async () => {
+  it('节点缺失（元数据查询失败）：kind=none', async () => {
+    fileTreeService.getNodeTypeAndOwner.mockRejectedValue(new Error('boom'));
+    treeWalker.resolveRootContext.mockResolvedValue(null);
+
+    const ctx = await resolver.resolve({ body: { nodeId: 'missing-1' } });
+
+    expect(ctx.kind).toBe('none');
+  });
+
+  it('无 nodeId：kind=none', async () => {
     const ctx = await resolver.resolve({ body: {} });
 
-    expect(ctx.isLibraryNode).toBe(false);
-    expect(ctx.libraryRootType).toBeNull();
+    expect(ctx.kind).toBe('none');
     expect(ctx.nodeId).toBeNull();
   });
 });
