@@ -24,7 +24,6 @@ async function bootstrap(): Promise<void> {
   // 崩溃恢复（#431 门禁4）：重启后残留的 PROCESSING 任务重置为 PENDING 重新调度
   // （须在 worker 开始 tick 前，避免竞态）
   taskStore.recoverStuckProcessing();
-  workerPool.start();
 
   const functionRoutes = createConversions(workerPool, taskStore, callbackEngine);
 
@@ -92,28 +91,42 @@ async function bootstrap(): Promise<void> {
     });
   });
 
-  server.listen(PORT, () => {
-    log(`[server] Conversion Service 启动, port=${PORT}, driver=${taskStore.getDriver()}${taskStore.isFallback() ? ' (redis 不可用, 已回退内存)' : ''}`);
-    log(`[server] 端点:`);
-    log(`  POST /v1/conversions/convertFile`);
-    log(`  POST /v1/conversions/async/convertFile`);
-    log(`  POST /v1/conversions/batchConvert`);
-    log(`  GET  /v1/conversions/tasks/:taskId`);
-    log(`  GET  /v1/conversions/tasks`);
-    log(`  GET  /v1/conversions/stats`);
-    log(`  GET  /health`);
+  // listen 的失败以 Server 的 'error' 事件抛出，不是 Promise rejection：不接住会落成 Node
+  // 默认的 Unhandled 'error' event 裸栈退出，bootstrap().catch 也拿不到。这里转成 rejection，
+  // 交给下方统一打印并 exit(1)。最常见情形是端口被上一轮残留实例占用（EADDRINUSE）。
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(PORT, () => {
+      server.removeListener('error', reject);
+      resolve();
+      log(`[server] Conversion Service 启动, port=${PORT}, driver=${taskStore.getDriver()}${taskStore.isFallback() ? ' (redis 不可用, 已回退内存)' : ''}`);
+      log(`[server] 端点:`);
+      log(`  POST /v1/conversions/convertFile`);
+      log(`  POST /v1/conversions/async/convertFile`);
+      log(`  POST /v1/conversions/batchConvert`);
+      log(`  GET  /v1/conversions/tasks/:taskId`);
+      log(`  GET  /v1/conversions/tasks`);
+      log(`  GET  /v1/conversions/stats`);
+      log(`  GET  /health`);
 
-    // 鉴权门禁大声信号（S1-1）：两密钥均未配置时，明确告知当前鉴权状态，
-    // 防止生产忘配密钥裸奔（REQUIRE_AUTH=false 时所有非 health 路由无密钥防护）。
-    const hasAnySecret = !!(CONVERSION_SERVICE_SECRET || INTERNAL_SERVICE_SECRET);
-    if (!hasAnySecret) {
-      if (CONVERSION_SERVICE_REQUIRE_AUTH) {
-        log('[server] [WARN] 未配置 INTERNAL_SERVICE_SECRET/CONVERSION_SERVICE_SECRET 且 REQUIRE_AUTH=true：所有非 health 路由将拒绝（401）。生产环境请配置密钥。');
-      } else {
-        log('[server] [WARN] 未配置 INTERNAL_SERVICE_SECRET/CONVERSION_SERVICE_SECRET 且 REQUIRE_AUTH=false：所有非 health 路由无密钥防护（裸奔）。生产环境务必配置密钥或设 CONVERSION_SERVICE_REQUIRE_AUTH=true。');
+      // 鉴权门禁大声信号（S1-1）：两密钥均未配置时，明确告知当前鉴权状态，
+      // 防止生产忘配密钥裸奔（REQUIRE_AUTH=false 时所有非 health 路由无密钥防护）。
+      const hasAnySecret = !!(CONVERSION_SERVICE_SECRET || INTERNAL_SERVICE_SECRET);
+      if (!hasAnySecret) {
+        if (CONVERSION_SERVICE_REQUIRE_AUTH) {
+          log('[server] [WARN] 未配置 INTERNAL_SERVICE_SECRET/CONVERSION_SERVICE_SECRET 且 REQUIRE_AUTH=true：所有非 health 路由将拒绝（401）。生产环境请配置密钥。');
+        } else {
+          log('[server] [WARN] 未配置 INTERNAL_SERVICE_SECRET/CONVERSION_SERVICE_SECRET 且 REQUIRE_AUTH=false：所有非 health 路由无密钥防护（裸奔）。生产环境务必配置密钥或设 CONVERSION_SERVICE_REQUIRE_AUTH=true。');
+        }
       }
-    }
+    });
   });
+
+  // worker 在端口就绪后才开始 tick：listen 失败时本实例不会以「没有 HTTP 入口、却已在
+  // 消费共享 Redis 队列」的状态运行（两实例并存会重复抢占同一批任务）。listen 成功到
+  // start() 之间无 await，请求无法插队；即便有请求先入队，enqueue→_tick 见 !_running
+  // 直接返回，任务留为 PENDING，start() 的 _tick 会捡起。
+  workerPool.start();
 
   const shutdown = () => {
     log('[server] 收到退出信号, 优雅关闭...');
