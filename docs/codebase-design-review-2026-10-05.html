@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudCAD 代码库设计复审报告 · 2026-10-05</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #171a23;
+    --panel-2: #1e2230;
+    --border: #2a2f3d;
+    --text: #d7dce6;
+    --muted: #8b93a7;
+    --accent: #4f9cf7;
+    --green: #34c77b;
+    --amber: #e0a83a;
+    --red: #e05c5c;
+    --mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0 0 80px;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+    line-height: 1.65; font-size: 15px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  header {
+    padding: 48px 0 28px; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+  }
+  h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: .3px; }
+  .subtitle { color: var(--muted); font-size: 15px; }
+  .meta { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted);
+  }
+  .chip b { color: var(--text); }
+  h2 {
+    font-size: 20px; margin: 44px 0 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 16px; margin: 24px 0 10px; color: var(--accent); }
+  p { margin: 10px 0; }
+  code, .mono { font-family: var(--mono); font-size: 13.5px; background: var(--panel-2);
+    padding: 1px 6px; border-radius: 4px; color: #c8d3e8; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .4px; }
+  tr:hover td { background: rgba(255,255,255,.015); }
+  .gate { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: 14px; margin: 18px 0; }
+  .gate .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px;
+  }
+  .gate .card .num { font-size: 26px; font-weight: 700; color: var(--green); font-family: var(--mono); }
+  .gate .card .lbl { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .tag { display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
+  .tag.sec { background: rgba(224,92,92,.15); color: var(--red); }
+  .tag.dup { background: rgba(79,156,247,.15); color: var(--accent); }
+  .tag.dead { background: rgba(224,168,58,.15); color: var(--amber); }
+  .tag.script { background: rgba(52,199,123,.15); color: var(--green); }
+  .task { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 4px 18px 14px; margin: 14px 0; }
+  .task .head { display: flex; align-items: center; gap: 10px; padding: 12px 0; flex-wrap: wrap; }
+  .task .head .no { font-family: var(--mono); color: var(--muted); font-size: 13px; }
+  .task .head .title { font-weight: 600; font-size: 15px; }
+  .task .body { color: #c2c9d8; font-size: 14px; }
+  .task .body .verify { color: var(--green); font-size: 13px; margin-top: 8px; }
+  .callout { background: var(--panel); border-left: 3px solid var(--accent); border-radius: 6px; padding: 12px 16px; margin: 14px 0; }
+  .callout.warn { border-left-color: var(--amber); }
+  .callout.good { border-left-color: var(--green); }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .foot { color: var(--muted); font-size: 13px; margin-top: 48px; border-top: 1px solid var(--border); padding-top: 20px; }
+  .files { font-family: var(--mono); font-size: 12.5px; color: var(--muted); line-height: 1.9; }
+  .files .add { color: var(--green); }
+  .files .del { color: var(--red); }
+  .files .mod { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>CloudCAD 代码库设计复审报告</h1>
+  <div class="subtitle">基于 <code>codebase-design</code> + <code>improve-codebase-architecture</code> 技能视角的迭代式复审与修复 · 迭代至「一轮复审无新问题」收敛</div>
+  <div class="meta">
+    <span class="chip">日期 <b>2026-10-05</b></span>
+    <span class="chip">分支 <b>develop</b></span>
+    <span class="chip">改动 <b>49 文件 · +1048 / −1800（净 −752 行）</b></span>
+    <span class="chip">门禁 <b>后端 / 移动端 / platform / runtime-unit 全绿</b></span>
+  </div>
+</header>
+
+<h2>一、目标与方法</h2>
+<p>以「深模块 / 唯一出口 / 消灭重复 / 删除孤儿」为核心视角，对 monorepo 做迭代式复审：每轮用技能视角扫描出结构性问题（重复实现、浅模块、死代码、越权防线缺口），修复后以测试 + 类型检查为门禁验证，再进入下一轮，直至一轮复审不再发现新问题。所有改动遵循 AGENTS.md 的「外科手术式修改」与「三层一致性」原则——只动必须动的行，且确认前端 / API SDK / 后端 / 数据库无需联动。</p>
+<div class="callout good"><b>收敛原则：</b>≥3 份重复即缺陷，收敛到唯一出口；无消费者代码删除或标注；安全类重复（权限判定）必须收敛到 fail-closed 的单一断言出口，杜绝「较弱的第 N 份」绕过主线。</div>
+
+<h2>二、门禁结果（全部通过）</h2>
+<div class="gate">
+  <div class="card"><div class="num">2690 / 2690</div><div class="lbl">后端单元测试（196 套件）</div></div>
+  <div class="card"><div class="num">691 / 691</div><div class="lbl">移动端 vitest（74 文件）</div></div>
+  <div class="card"><div class="num">0 错</div><div class="lbl">platform tsc --noEmit</div></div>
+  <div class="card"><div class="num">166 / 167</div><div class="lbl">runtime-unit jest（15 套件，1 skip）</div></div>
+</div>
+<p style="color:var(--muted);font-size:13.5px;">后端净 −1 测试为 cross-node spec 由 5 例收敛为 4 例（权限逻辑移入 <code>assertNodeAccess</code> 后，owner / 非 owner / PROJECT 节点三个细分用例合并为「委托 + 失败定性」两个用例）。</p>
+
+<h2>三、任务明细（16 项）</h2>
+
+<h3>安全 / IDOR 防线</h3>
+
+<div class="task">
+  <div class="head"><span class="tag sec">安全</span><span class="no">#1</span><span class="title">batch-download createTask IDOR 修复 + assertNodeAccess 唯一出口</span></div>
+  <div class="body">批量下载建任务时任意登录用户可传他人 <code>nodeId</code> 建任务，引擎真实转换并产出 ZIP。新增 <code>FileSystemPermissionService.assertNodeAccess</code> 作为<b>服务层节点访问断言的唯一出口</b>（fail-closed：库根要求 <code>LIBRARY_*_MANAGE</code>、项目/个人空间按权限存储判定、根不可解析即拒绝），建任务与文件夹展开统一走它。<div class="verify">验证：新增 15 例 IDOR 回归测试，后端全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag sec">安全</span><span class="no">#12</span><span class="title">mxcad-file-access 业务逻辑下沉 + MIME 4 份收敛</span></div>
+  <div class="body">controller 里的手写业务逻辑下沉到 <code>MxcadFileAccessService</code>（controller 只做路由委托）；散落的 MIME 判定 4 份收敛到 <code>NodeUtils</code> 单一出口。<div class="verify">验证：后端 2685/2685 + 13 例 IDOR 回归全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag sec">安全</span><span class="no">#16</span><span class="title">cross-node assertDownloadPermission 收敛到 assertNodeAccess</span></div>
+  <div class="body">跨节点批量 ZIP 的 <code>assertDownloadPermission</code> 是<b>较弱的第 4 份</b>节点访问断言——只判项目 owner / <code>FILE_DOWNLOAD</code>，不处理库根与个人空间，且与单文件下载口径不一致。改为委托 <code>assertNodeAccess</code>，补齐 fail-closed 语义（库根现正确要求 <code>LIBRARY_*_MANAGE</code>）。owner 直通由权限存储内部保证，行为等价；spec 重写为「委托成功 / Forbidden 重抛 / 非 Forbidden 记错误条目 / 缺节点跳过」四例。<div class="verify">验证：后端 196/2690 全绿，含 #1 的 IDOR 回归锚点。</div></div>
+</div>
+
+<h3>重复实现收敛（≥3 份 → 唯一出口）</h3>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#2</span><span class="title">移动端锚点下载 7 处 → utils/download.ts</span></div>
+  <div class="body">7 处各自拼 <code>&lt;a&gt;</code> 触发下载 / 各自 try-catch，收敛到 <code>triggerBlobDownload</code> / <code>triggerUrlDownload</code> 唯一出口，消费方只调函数。<div class="verify">验证：移动端 74/691 全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#3</span><span class="title">batch-download controller 三处流文件到响应 → streamFileToResponse</span></div>
+  <div class="body">controller 里三处「读文件 → 设头 → 写响应」重复，抽 <code>streamFileToResponse</code> helper + spec。<div class="verify">验证：后端全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#4</span><span class="title">formatSize 8 份收敛 + OS 清单收敛</span></div>
+  <div class="body">字节大小格式化 8 份重复，按包边界收敛到 <code>runtime/scripts/lib/format.js</code> 与 <code>scripts/pack-lib/format.js</code> 两个唯一出口（不同模块系统不能跨包共享）；Linux 发行版 OS 清单收敛到 <code>pack-lib/linux-os.js</code>。<div class="verify">验证：runtime 140/140 全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#5</span><span class="title">SSE 基础设施收敛 → common/sse/sse.helpers.ts</span></div>
+  <div class="body">4 个 SSE 服务（sse-manager / conversion-task / conversion-file / notice-sse）各自重复的响应头、心跳、客户端生命周期管理，收敛到 <code>common/sse/sse.helpers.ts</code>。<div class="verify">验证：SSE 22/22 全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#7</span><span class="title">LibraryPanel 上传改走 runUploadPool 唯一出口</span></div>
+  <div class="body">LibraryPanel 自写上传循环，改走既有 <code>runUploadPool</code> 并发池唯一出口。<div class="verify">验证：移动端 tsc 0 错。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#8</span><span class="title">长按手势状态机 5 处 → useLongPress composable</span></div>
+  <div class="body">LibraryPanel / FileBrowserPage / UnifiedFileList / ShareManagePage 等 5 处各自实现长按计时状态机，收敛到 <code>useLongPress</code>。<div class="verify">验证：移动端 691/691 + tsc 0 错。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#9</span><span class="title">分享日期格式化 3 份 → utils/shareDate.ts formatShareExpiry</span></div>
+  <div class="body">分享有效期文本（含「已过期」相对判定）3 份重复，收敛到 <code>formatShareExpiry</code>。<div class="verify">验证：移动端 691/691 + tsc 0 错。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#10</span><span class="title">orchestrator processDelegated / processItem 重复管线</span></div>
+  <div class="body">批量下载编排器两条处理路径的重复管线（取产物 → 判定 → 计数 → 落盘）收敛为共享流程。<div class="verify">验证：batch-download 174/174 + tsc 全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#13</span><span class="title">转换执行管线 3 份副本 → runConversionCore</span></div>
+  <div class="body">文件下载导出 / 批量转换 / 版本历史三处各自实现「起引擎 → 解析输出 → 失败分类」，收敛到 <code>conversion-core.ts</code> 的 <code>runConversionCore</code> 共享核心 + <code>ConversionCoreError</code>。<div class="verify">验证：后端 2691/2691 + 6 例新锚点全绿。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#14</span><span class="title">FileBrowserPage / ProjectDetailPage 格式下载状态机 → useFormatDownload</span></div>
+  <div class="body">两页各 6 个函数（单/批量格式下载、格式弹窗状态、确认流程）逐字重复，收敛到 <code>useFormatDownload</code> composable。<div class="verify">验证：移动端 691/691 + tsc 0 错。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dup">重复</span><span class="no">#16</span><span class="title">checkFileExist 控制器两个逐字节相同的块去重</span></div>
+  <div class="body"><code>mxcad-upload.controller.ts</code> 的 <code>checkFileExist</code> 里「有登录态+节点上下文 → 秒传判定」块在存储命中 / 未命中两分支各写一遍，唯一差异是无上下文时的兜底返回值恰为 <code>fileExistsInStorage</code>。提升为单块 + 兜底 <code>exists: fileExistsInStorage</code>，四情形逐一核对行为保持。<div class="verify">验证：后端全绿。</div></div>
+</div>
+
+<h3>死代码 / 孤儿清理</h3>
+
+<div class="task">
+  <div class="head"><span class="tag dead">死代码</span><span class="no">#6</span><span class="title">删 platform barrel 17 个零消费者导出</span></div>
+  <div class="body">逐个核对 <code>@cloudcad/platform</code> barrel 导出，删除 17 个无任何消费者的导出。<div class="verify">验证：platform 89/89 + 两端 tsc 0 错。</div></div>
+</div>
+
+<div class="task">
+  <div class="head"><span class="tag dead">死代码</span><span class="no">#15</span><span class="title">删 useShellMode 恒真孤儿 + index.vue 死 handler</span></div>
+  <div class="body"><code>useShellMode</code> 是恒返回 true 的 15 行 composable，全仓零消费者、零测试——移动端 App 恒为壳模式，它不可能变得有意义，直接删除。同时 <code>home/index.vue</code> 的 <code>handleShowLibrary</code> 只是把 <code>mxcad-show-library</code> 转发成 <code>mxcad-shell-navigate</code>，而 <code>useMenu.ts</code> 已改为直接派发后者，该 handler 及其监听、<code>LibraryType</code> 导入全部成为死代码，一并删除——图纸库现走单一 <code>mxcad-shell-navigate</code> 一跳直达壳。<div class="verify">验证：移动端 691/691 + tsc 0 错。</div></div>
+</div>
+
+<h3>部署 / 打包脚本收敛</h3>
+
+<div class="task">
+  <div class="head"><span class="tag script">脚本</span><span class="no">#11</span><span class="title">verify-deploy.js 改引 lib/health + lib/proc，删第二套原语</span></div>
+  <div class="body">断网部署验证脚本自写了一套健康检查 / 进程原语，与 <code>runtime/scripts/lib/health.js</code>、<code>proc.js</code> 重复。改为引用共享 lib，删掉第二套实现，并补 3 例锚点测试。<div class="verify">验证：runtime-unit 166/167 + 3 例新锚点全绿。</div></div>
+</div>
+
+<h2>四、最终复审（一轮无新问题）</h2>
+<div class="callout good">
+  <b>孤儿扫描：</b>对移动端 <code>composables / utils / hooks / command</code> 与 PC <code>lib / hooks / utils</code> 做零消费者文件扫描。命中的 46 个 <code>command/m_mx_*</code> 均为<b>误报</b>——命令文件由 <code>main.ts</code> 的 <code>import "./command"</code> 副作用导入触发、经 <code>addCommand</code> 自注册；PC 的 <code>hooks/*/index.ts</code> 为按目录导入的 barrel。<b>真实孤儿仅 <code>useShellMode</code>，已在 #15 删除。</b>
+</div>
+<div class="callout good">
+  <b>重复扫描：</b>对已收敛的唯一出口（<code>formatShareExpiry</code> / <code>useLongPress</code> / <code>triggerBlobDownload</code>）复扫，均为「单出口 + 多消费者」的健康形态；<code>ShareManagePage</code> 的 <code>formatDate</code>（纯日期「创建时间」，对齐 PC createdAt 列）与 <code>formatShareExpiry</code>（有效期文本）是不同格式，非重复。<code>isInUploadsCache</code>（单 util + 3 消费方）与 <code>sanitizeZipName</code>（<code>job-context</code> 单一定义 + 3 调用点）核实<b>已收敛、无隐藏内联副本</b>。
+</div>
+<div class="callout">
+  <b>三层一致性：</b>本轮所有改动均为内部重构或死代码删除，<b>未触及任何 DTO / 端点契约</b>——<code>checkFileExist</code> 响应形状 <code>{ exists, nodeId }</code> 不变，cross-node 为服务内部重构，移动端为内部逻辑——故无需重新生成 API SDK，前端 / 移动端无联动。
+</div>
+
+<h2>五、已知遗留（非缺陷，刻意保留 / 待跨端裁定）</h2>
+<ul>
+  <li><b>跨端日期口径：</b>PC 与移动端对 createdAt 均用 <code>toLocaleDateString()</code>（刻意保持两端一致）。统一为标准日期格式属跨端决策，已登记待裁定，非重复缺陷。</li>
+  <li><b>格式下载状态机剩余 ~14 函数：</b>#14 收敛了两页共 6 个逐字重复函数；其余函数因 <code>refresh</code> / 权限上下文差异不构成逐字重复，留作专项重构，避免过度抽象。</li>
+</ul>
+
+<h2>六、变更文件清单（49 文件）</h2>
+<div class="files">
+  <b>新增（11）：</b><span class="add">+</span> common/sse/（SSE helpers）· common/utils/stream-file.ts(+spec) · file-download/conversion-core.ts(+spec) · mxcad/infra/mxcad-file-access.service.ts · 移动端 useFormatDownload.ts / useLongPress.ts / utils/shareDate.ts · runtime/scripts/lib/format.js · scripts/pack-lib/format.js + linux-os.js<br>
+  <b>删除（1）：</b><span class="del">−</span> 移动端 composables/useShellMode.ts<br>
+  <b>后端（25）：</b><span class="mod">~</span> batch-download/{orchestrator, controller(+spec), service(+spec), conversion-runner, folder-expander(+spec), sse-manager} · file-system/file-download/{cross-node(+spec), file-download-export} · file-system/file-permission/{module, service(+spec)} · mxcad/{conversion-task.sse, core/module, core/file-handler, core/version-history, infra/file-access.controller(+spec), upload/conversion-file.sse, upload/mxcad-upload.controller} · notice-sse<br>
+  <b>移动端（13）：</b><span class="mod">~</span> command/m_mx_saveAsMxWeb · composables/useBatchDownload · home/{LibraryPanel, ShareCurrentPopup, useMenu, index} · shell/{UnifiedFileList, FileBrowserPage, ProjectDetailPage, ShareManagePage} · utils/download<br>
+  <b>platform（1）：</b><span class="mod">~</span> index.ts<br>
+  <b>runtime / scripts（10）：</b><span class="mod">~</span> runtime/{db-backup, lib/health, lib/log-center, lib/proc, verify-deploy} · scripts/{extract-linux-runtime, pack-docker, pack-linux-deploy, pack-menu, pack-runtime-deps, reinstall-node-tools, verify-linux-deploy}<br>
+  <b>测试（1）：</b><span class="mod">~</span> tests/runtime-unit/test/lib-health.test.js
+</div>
+
+<div class="foot">
+  报告生成于 2026-10-05 · 分支 develop · 所有改动未提交（工作区待用户确认后提交）· 门禁：后端 2690/2690 · 移动端 691/691 · platform tsc 0 · runtime-unit 166/167
+</div>
+
+</div>
+</body>
+</html>
