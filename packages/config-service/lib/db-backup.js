@@ -40,11 +40,16 @@ function formatBackupSize(bytes) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
-function getPgDumpPath() {
+/** 运行时平台目录布局（windows/linux 分叉 + runtime 路径），收敛 5 处重复的平台判定 */
+function getRuntimeLayout() {
   const isWindows = process.platform === 'win32';
   const platformDir = isWindows ? 'windows' : 'linux';
   const runtimePath = path.join(RUNTIME_DIR, platformDir);
+  return { isWindows, platformDir, runtimePath };
+}
 
+function getPgDumpPath() {
+  const { isWindows, runtimePath } = getRuntimeLayout();
   if (fs.existsSync(runtimePath)) {
     return isWindows
       ? path.join(runtimePath, 'postgresql', 'pgsql', 'bin', 'pg_dump.exe')
@@ -54,10 +59,7 @@ function getPgDumpPath() {
 }
 
 function getPsqlPath() {
-  const isWindows = process.platform === 'win32';
-  const platformDir = isWindows ? 'windows' : 'linux';
-  const runtimePath = path.join(RUNTIME_DIR, platformDir);
-
+  const { isWindows, runtimePath } = getRuntimeLayout();
   if (fs.existsSync(runtimePath)) {
     return isWindows
       ? path.join(runtimePath, 'postgresql', 'pgsql', 'bin', 'psql.exe')
@@ -67,16 +69,12 @@ function getPsqlPath() {
 }
 
 function getPostgresLibPath() {
-  const isWindows = process.platform === 'win32';
-  const platformDir = isWindows ? 'windows' : 'linux';
+  const { platformDir } = getRuntimeLayout();
   return path.join(RUNTIME_DIR, platformDir, 'postgres', 'lib');
 }
 
 function getRedisCliPath() {
-  const isWindows = process.platform === 'win32';
-  const platformDir = isWindows ? 'windows' : 'linux';
-  const runtimePath = path.join(RUNTIME_DIR, platformDir);
-
+  const { isWindows, runtimePath } = getRuntimeLayout();
   if (fs.existsSync(runtimePath)) {
     return isWindows
       ? path.join(runtimePath, 'redis', 'redis-cli.exe')
@@ -85,14 +83,52 @@ function getRedisCliPath() {
   return isWindows ? 'redis-cli.exe' : 'redis-cli';
 }
 
+/**
+ * 解析 DATABASE_URL（postgresql://user:password@host:port/dbname）为连接部件。
+ * 未提供的部件返回 undefined，由 resolveDbConnection 回落到 DB_* 环境变量；
+ * 非合法 URL 返回空对象（全部回落 DB_*）。
+ */
+function parseDatabaseUrl(url) {
+  if (!url) return {};
+  try {
+    const u = new URL(url);
+    return {
+      host: u.hostname || undefined,
+      port: u.port || undefined,
+      user: u.username ? decodeURIComponent(u.username) : undefined,
+      password: u.password ? decodeURIComponent(u.password) : undefined,
+      dbName: u.pathname ? u.pathname.replace(/^\//, '') : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * 解析数据库连接部件：DATABASE_URL 权威（ADR-0073），其部件优先；
+ * 缺失部件回落 DB_* 环境变量，再回落内置默认（localhost/5432/postgres/cloudcad）。
+ * 只配 DATABASE_URL 的部署不再被静默指向 localhost:5432/postgres/cloudcad 空密码。
+ */
+function resolveDbConnection(envConfig) {
+  const fromUrl = parseDatabaseUrl(envConfig.DATABASE_URL);
+  return {
+    host: fromUrl.host || envConfig.DB_HOST || 'localhost',
+    port: fromUrl.port || envConfig.DB_PORT || '5432',
+    user: fromUrl.user || envConfig.DB_USERNAME || 'postgres',
+    dbName: fromUrl.dbName || envConfig.DB_DATABASE || 'cloudcad',
+    password: fromUrl.password || envConfig.DB_PASSWORD || '',
+  };
+}
+
 function getDbEnv() {
   const envConfig = parseEnvFile(ENV_PATH);
-  const isWindows = process.platform === 'win32';
+  const conn = resolveDbConnection(envConfig);
+  const { isWindows } = getRuntimeLayout();
 
   return {
     env: {
       ...process.env,
-      PGPASSWORD: envConfig.DB_PASSWORD || '',
+      PGPASSWORD: conn.password,
       ...(!isWindows && fs.existsSync(getPostgresLibPath())
         ? {
             LD_LIBRARY_PATH: getPostgresLibPath(),
@@ -100,6 +136,7 @@ function getDbEnv() {
         : {}),
     },
     config: envConfig,
+    conn,
   };
 }
 
@@ -112,7 +149,7 @@ async function backupDatabase() {
   const filename = `db_backup_${timestamp}.sql`;
   const backupFile = path.join(BACKUP_DIR, filename);
 
-  const { env, config: envConfig } = getDbEnv();
+  const { env, conn } = getDbEnv();
   const pgDumpPath = getPgDumpPath();
 
   if (!fs.existsSync(pgDumpPath)) {
@@ -122,13 +159,13 @@ async function backupDatabase() {
 
   const args = [
     '-h',
-    envConfig.DB_HOST || 'localhost',
+    conn.host,
     '-p',
-    envConfig.DB_PORT || '5432',
+    conn.port,
     '-U',
-    envConfig.DB_USERNAME || 'postgres',
+    conn.user,
     '-d',
-    envConfig.DB_DATABASE || 'cloudcad',
+    conn.dbName,
     '-f',
     backupFile,
     '--no-owner',
@@ -168,7 +205,7 @@ async function restoreDatabase(filename) {
     return { success: false, error: '备份文件不存在' };
   }
 
-  const { env, config: envConfig } = getDbEnv();
+  const { env, conn } = getDbEnv();
   const psqlPath = getPsqlPath();
 
   if (!fs.existsSync(psqlPath)) {
@@ -177,13 +214,13 @@ async function restoreDatabase(filename) {
 
   const args = [
     '-h',
-    envConfig.DB_HOST || 'localhost',
+    conn.host,
     '-p',
-    envConfig.DB_PORT || '5432',
+    conn.port,
     '-U',
-    envConfig.DB_USERNAME || 'postgres',
+    conn.user,
     '-d',
-    envConfig.DB_DATABASE || 'cloudcad',
+    conn.dbName,
     '-f',
     backupFile,
   ];
@@ -242,4 +279,6 @@ module.exports = {
   getPsqlPath,
   getRedisCliPath,
   getDbEnv,
+  parseDatabaseUrl,
+  resolveDbConnection,
 };
