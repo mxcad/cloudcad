@@ -269,56 +269,210 @@ function getPm2OnlineApps() {
 }
 
 /**
- * 检测指定端口当前被哪个 PID 占用。
- * @param {number} port
- * @returns {number|null} 占用进程的 PID；端口空闲返回 null；检测失败返回 null
+ * 解析 /proc/net/tcp{,6} 文本，取 LISTEN 状态且本地端口匹配的 socket inode 集合。
+ *
+ * 行格式（首行为表头，跳过）：
+ *   sl local_address rem_address st tx:rx tr:when retrnsmt uid timeout inode
+ * local_address 为十六进制 `IP:PORT`（tcp6 的 IP 段为 32 位），st=0A 即 LISTEN，
+ * inode 为第 10 列。纯函数，便于用真实格式 fixture 跨平台单测。
+ * @param {string|null} [tcpContent] /proc/net/tcp 内容
+ * @param {string|null} [tcp6Content] /proc/net/tcp6 内容（部分内核无此文件）
+ * @param {number} port 目标端口（十进制）
+ * @returns {Set<string>} 匹配的 socket inode 集合（无匹配为空集）
  */
-function getPidByPort(port) {
+function parseListenInodes(tcpContent, tcp6Content, port) {
+  const inodes = new Set();
+  for (const content of [tcpContent, tcp6Content]) {
+    if (!content) continue;
+    const lines = content.split('\n');
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].trim().split(/\s+/);
+      if (cols.length < 10) continue;
+      if (cols[3] !== '0A') continue; // 0A = LISTEN
+      const local = cols[1];
+      const idx = local.lastIndexOf(':');
+      if (idx < 0) continue;
+      const localPort = parseInt(local.slice(idx + 1), 16);
+      if (localPort !== port) continue;
+      inodes.add(cols[9]);
+    }
+  }
+  return inodes;
+}
+
+/**
+ * 在 /proc/<pid>/fd 中查找持有指定 socket inode 的进程（注入式，可 0 依赖单测）。
+ * 其他用户进程的 fd 目录不可读（EACCES）→ 跳过：本原语只能定位**当前用户
+ * （或 root 下全量）**的进程，跨用户进程定位不到——调用方据此判定"占用者
+ * 属于其他用户"。
+ * @param {Set<string>} inodes 目标 socket inode 集合
+ * @param {{listPids: () => string[], listFds: (pid: string) => string[], readFdLink: (pid: string, fd: string) => string}} io
+ * @returns {number|null} 首个持有目标 socket 的 PID；无匹配返回 null
+ */
+function findPidByInodes(inodes, { listPids, listFds, readFdLink }) {
+  if (!inodes || inodes.size === 0) return null;
+  let pids;
   try {
-    if (IS_WINDOWS) {
-      const res = spawnSync('netstat', ['-ano', '-p', 'TCP'], {
+    pids = listPids();
+  } catch {
+    return null;
+  }
+  for (const pid of pids) {
+    let fds;
+    try {
+      fds = listFds(pid);
+    } catch {
+      continue; // 其他用户进程 fd 目录不可读 → 跳过
+    }
+    for (const fd of fds) {
+      let link;
+      try {
+        link = readFdLink(pid, fd);
+      } catch {
+        continue;
+      }
+      const m = /^socket:\[(\d+)\]$/.exec(link);
+      if (m && inodes.has(m[1])) return Number(pid);
+    }
+  }
+  return null;
+}
+
+/**
+ * /proc 兜底探测：零外部依赖（ss/lsof/netstat 全缺的精简镜像也能用）。
+ * 先读 /proc/net/tcp{,6} 拿目标端口的 LISTEN socket inode，再扫 /proc/<pid>/fd
+ * 的 `socket:[inode]` 链接定位进程。只能看到当前用户（root 下全量）的进程。
+ * @param {number} port
+ * @returns {{pid: number|null, scanned: boolean}}
+ *   pid     定位到的 PID；无匹配/不可用返回 null
+ *   scanned /proc 扫描是否实际执行过（/proc/net/tcp 可读且 /proc 目录可枚举）——
+ *           调用方据此区分"确认跨用户"（scanned=true 且无 PID）与"手段不足"
+ */
+function getPidByPortViaProc(port) {
+  let tcpContent = null;
+  let tcp6Content = null;
+  try {
+    tcpContent = fs.readFileSync('/proc/net/tcp', 'utf8');
+  } catch {
+    /* /proc 不可用 */
+  }
+  try {
+    tcp6Content = fs.readFileSync('/proc/net/tcp6', 'utf8');
+  } catch {
+    /* 部分内核无 tcp6 */
+  }
+  if (tcpContent == null && tcp6Content == null) {
+    return { pid: null, scanned: false };
+  }
+  const inodes = parseListenInodes(tcpContent, tcp6Content, port);
+  if (inodes.size === 0) return { pid: null, scanned: true };
+  let pids;
+  try {
+    pids = fs.readdirSync('/proc').filter((n) => /^\d+$/.test(n));
+  } catch {
+    return { pid: null, scanned: false };
+  }
+  const pid = findPidByInodes(inodes, {
+    listPids: () => pids,
+    listFds: (p) => fs.readdirSync(`/proc/${p}/fd`),
+    readFdLink: (p, fd) => fs.readlinkSync(`/proc/${p}/fd/${fd}`),
+  });
+  return { pid, scanned: true };
+}
+
+/**
+ * 检测指定端口的占用者（PID + 探测置信度）。
+ *
+ * 探测顺序：Windows 走 netstat -ano（全量可见，无用户边界）；Linux 依次
+ * ss → lsof → netstat → /proc 兜底（零外部依赖）。
+ *
+ * @param {number} port
+ * @returns {{pid: number|null, fullScanDone: boolean}}
+ *   pid          占用进程 PID；端口空闲/无法定位返回 null
+ *   fullScanDone 全量可见性扫描是否执行过（Linux=/proc 扫描实际执行，
+ *                Windows=netstat 成功且看到了该端口的 socket）。
+ *                true 且 pid 为 null ⇒ 占用者必然不是当前用户（root 下：不是
+ *                任何本机进程）的进程——调用方可安全按"外部实例"处置；
+ *                false ⇒ 手段不足，无法排除是本部署自己的实例，调用方必须
+ *                中止而非猜测。
+ */
+function detectPortOwner(port) {
+  if (IS_WINDOWS) {
+    let res;
+    try {
+      res = spawnSync('netstat', ['-ano', '-p', 'TCP'], {
         encoding: 'utf8',
         windowsHide: true,
         timeout: 8000,
       });
-      const line = (res.stdout || '')
-        .split('\n')
-        .find((l) => l.includes(`:${port}`) && l.includes('LISTENING'));
-      if (!line) return null;
-      const parts = line.trim().split(/\s+/);
-      const pid = parseInt(parts[parts.length - 1], 10);
-      return Number.isFinite(pid) && pid > 0 ? pid : null;
+    } catch {
+      return { pid: null, fullScanDone: false };
     }
-    // Linux：ss 优先（iproute2，最小化发行版默认带，无 lsof 也能探测），
-    // lsof / netstat 兜底；统一 timeout 防探测命令挂起
+    if (res.error) return { pid: null, fullScanDone: false };
+    const line = (res.stdout || '')
+      .split('\n')
+      .find((l) => l.includes(`:${port}`) && l.includes('LISTENING'));
+    if (!line) return { pid: null, fullScanDone: false };
+    const parts = line.trim().split(/\s+/);
+    const pid = parseInt(parts[parts.length - 1], 10);
+    if (Number.isFinite(pid) && pid > 0) return { pid, fullScanDone: true };
+    // socket 可见但 PID 列解析不出：扫描本身是全量的，按已穷尽处理
+    return { pid: null, fullScanDone: true };
+  }
+  // Linux：ss 优先（iproute2，最小化发行版默认带，无 lsof 也能探测），
+  // lsof / netstat 兜底；统一 timeout 防探测命令挂起
+  let pid = null;
+  try {
     const ss = spawnSync('ss', ['-tlnp'], { encoding: 'utf8', timeout: 8000 });
     const ssLine = (ss.stdout || '')
       .split('\n')
       .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));
     if (ssLine) {
       const m = /pid=(\d+)/.exec(ssLine);
-      if (m) return parseInt(m[1], 10);
+      if (m) pid = parseInt(m[1], 10);
     }
-    const lsof = spawnSync('lsof', ['-t', '-i', `:${port}`, '-sTCP:LISTEN'], {
-      encoding: 'utf8',
-      timeout: 8000,
-    });
-    const lsofPid = parseInt((lsof.stdout || '').trim(), 10);
-    if (Number.isFinite(lsofPid) && lsofPid > 0) return lsofPid;
-    const netstat = spawnSync('netstat', ['-tlnp'], { encoding: 'utf8', timeout: 8000 });
-    const line = (netstat.stdout || '')
-      .split('\n')
-      .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));
-    if (!line) return null;
-    const match = line.match(/\s(\d+)\/([^\s]+)\s*$/);
-    if (match) {
-      const pid = parseInt(match[1], 10);
-      return Number.isFinite(pid) && pid > 0 ? pid : null;
+    if (pid == null) {
+      const lsof = spawnSync('lsof', ['-t', '-i', `:${port}`, '-sTCP:LISTEN'], {
+        encoding: 'utf8',
+        timeout: 8000,
+      });
+      const lsofPid = parseInt((lsof.stdout || '').trim(), 10);
+      if (Number.isFinite(lsofPid) && lsofPid > 0) pid = lsofPid;
     }
-    return null;
+    if (pid == null) {
+      const netstat = spawnSync('netstat', ['-tlnp'], {
+        encoding: 'utf8',
+        timeout: 8000,
+      });
+      const line = (netstat.stdout || '')
+        .split('\n')
+        .find((l) => l.includes(`:${port}`) && l.includes('LISTEN'));
+      if (line) {
+        const match = line.match(/\s(\d+)\/([^\s]+)\s*$/);
+        if (match) {
+          const n = parseInt(match[1], 10);
+          if (Number.isFinite(n) && n > 0) pid = n;
+        }
+      }
+    }
   } catch {
-    return null;
+    /* 探测命令异常 → 落到 /proc 兜底 */
   }
+  if (pid != null) return { pid, fullScanDone: true };
+  // /proc 兜底：覆盖三工具全缺的精简镜像；非 root 下只能看到当前用户的进程，
+  // 故"扫描执行过但无 PID"可确证占用者属于其他用户（如系统装的 redis）。
+  const viaProc = getPidByPortViaProc(port);
+  if (viaProc.pid != null) return { pid: viaProc.pid, fullScanDone: true };
+  return { pid: null, fullScanDone: viaProc.scanned };
+}
+
+/**
+ * 检测指定端口当前被哪个 PID 占用。
+ * @param {number} port
+ * @returns {number|null} 占用进程的 PID；端口空闲返回 null；检测失败返回 null
+ */
+function getPidByPort(port) {
+  return detectPortOwner(port).pid;
 }
 
 /**
@@ -565,6 +719,9 @@ module.exports = {
   getPm2AppStatus,
   getPm2OnlineApps,
   getPidByPort,
+  detectPortOwner,
+  parseListenInodes,
+  findPidByInodes,
   isNodePid,
   getProcessExecutablePath,
   isOurRuntimeProcess,

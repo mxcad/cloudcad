@@ -684,9 +684,17 @@ async function runDatabaseMigration(options = null) {
     const failedMigrationName = migrationMatch?.[1] || altMigrationMatch?.[1];
 
     if (!failedMigrationName) {
-      log('yellow', '⚠️  无法解析失败迁移名称，请手动执行:');
-      log('cyan', '  npx prisma migrate resolve --rolled-back <migration_name>');
-      log('cyan', '  或 npx prisma migrate resolve --applied <migration_name>');
+      // P1000 = 数据库认证/连接失败：错误输出里根本没有迁移名，给"migrate
+      // resolve"指引是误导（用户 VM 实锤：DB_PORT 与 DATABASE_URL 漂移，
+      // Prisma 连到旧端口的系统库，此分支曾把用户引向不存在的迁移名操作）
+      if (/P1000|Authentication failed/i.test(errorOutput)) {
+        log('red', '[错误] 数据库认证失败 (P1000)：.env 的数据库凭据与服务端不匹配，或 DB_PORT 与 DATABASE_URL 指向了不同的库（如系统数据库）。');
+        log('cyan', '  请确认 DB_PORT 与 DATABASE_URL 指向同一数据库（端口一致，且是本部署的 PostgreSQL），且 DB_PASSWORD 与 DATABASE_URL 中的密码一致，修正后重跑。');
+      } else {
+        log('yellow', '⚠️  无法解析失败迁移名称，请手动执行:');
+        log('cyan', '  npx prisma migrate resolve --rolled-back <migration_name>');
+        log('cyan', '  或 npx prisma migrate resolve --applied <migration_name>');
+      }
       break;
     }
 

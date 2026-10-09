@@ -1656,7 +1656,22 @@ function prepareDeployDir(platform, variant = 'oss') {
 
   // 生成 Prisma 7.x 配置文件（ES Module 格式）
   // schema 单一源在 packages/db/prisma，离线包内相对此 config 路径为 ../db/prisma/schema.prisma
-  const prismaConfigContent = `import { defineConfig } from 'prisma/config';
+  // 必须 import 'dotenv/config'：离线包内 Prisma CLI 的 process.env 不含 .env 内容，
+  // 不加载则 process.env.DATABASE_URL 恒为 undefined，只能落到兜底 URL（用户 VM 实锤：
+  // 兜底硬编码 5432，部署换端口后 migrate deploy 连到系统库 P1000）。
+  // 兜底同样禁止硬编码端口：从 DB_* 部件拼接（与部署运行时 pg_dump/psql 及后端
+  // database.service 同一口径），DATABASE_URL 缺失时跟随 DB_PORT。
+  const prismaConfigContent = `import 'dotenv/config';
+import { defineConfig } from 'prisma/config';
+
+function fallbackDatabaseUrl(dbSuffix = '') {
+  const user = process.env.DB_USERNAME || 'postgres';
+  const password = process.env.DB_PASSWORD || '';
+  const host = process.env.DB_HOST || 'localhost';
+  const port = process.env.DB_PORT || '5432';
+  const db = process.env.DB_DATABASE || 'cloudcad';
+  return \`postgresql://\${user}:\${encodeURIComponent(password)}@\${host}:\${port}/\${db}\${dbSuffix}\`;
+}
 
 export default defineConfig({
   schema: '../db/prisma/schema.prisma',
@@ -1665,7 +1680,7 @@ export default defineConfig({
     seed: 'node dist/prisma/seed.js',
   },
   datasource: {
-    url: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/cloudcad',
+    url: process.env.DATABASE_URL || fallbackDatabaseUrl(),
   },
 });
 `;

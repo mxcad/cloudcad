@@ -22,7 +22,9 @@ const {
   PROJECT_ROOT,
   RUNTIME_DIR,
   PLATFORM_DIR,
+  DATA_DIR,
   PORTS,
+  BACKEND_ENV_PATH,
   NODE_EXE,
   PM2_JS,
   PM2_HOME,
@@ -35,6 +37,7 @@ const {
   getPm2StatusList,
   getPm2AppStatus,
   getPidByPort,
+  detectPortOwner,
   isNodePid,
   isOurRuntimeProcess,
   isForeignCloudCadRuntimeProcess,
@@ -45,6 +48,9 @@ const state = require('../lib/state');
 // isPortOpen 单一实现位于 lib/health（infra 直接复用，避免重复实现）
 const { isPortOpen, waitPortReleased } = require('../lib/health');
 const { log } = require('../lib/logger');
+const { parseEnvFile } = require('../lib/env');
+const { updateEnvFile } = require('../config-updater');
+const { credentialFilePath, saveCredentialBackup } = require('../lib/credentials');
 const {
   detectRedisOwnership,
   stopRedisProcess,
@@ -79,13 +85,29 @@ async function startInfrastructure(_usePm2 = true) {
   // 不代表数据实例用了 .env 密码（包装进程见端口已占即采纳现有实例），
   // 故必须在端口扫描 / 短路复用之前独立探测。
   // 'taken-over' 时 redis 端口已释放，下方扫描会自然进入 reconcile 以 --requirepass 重拉；
-  // 'configured' 表示外部实例密码已按 .env 生效（本轮运行中设好或上一轮已设），实例继续
-  // 运行、数据不动，reconcile 不把它当"端口被外部进程占用"的冲突，而是把 PM2 包装进程
-  // 拉起以采纳该实例；
+  // 'configured' 表示本部署无密码实例已在运行中按 .env 设好密码，实例继续运行、数据
+  // 不动，reconcile 不把它当"端口被外部进程占用"的冲突，而是把 PM2 包装进程拉起以
+  // 采纳该实例；
+  // 'relocated' 表示 .env 端口被外部实例（系统 redis 等）占用——外部实例未被触碰，
+  // 本部署自带 redis 已切换到空闲端口且 .env 的 REDIS_PORT 已改写（内存 PORTS 同步
+  // 更新），下方扫描按新端口进行；reconcile 须强制重注册 PM2 redis 定义（旧 env 的
+  // REDIS_PORT 在 pm2 start 时固化，restart 不会刷新）；
   // 'blocked' 表示无法自动修复，中止部署。
   const redisGate = pm2Available ? await ensureRedisPasswordManaged() : 'ok';
   if (redisGate === 'blocked') return false;
   const redisPasswordConfigured = redisGate === 'configured';
+  const redisRelocated = redisGate === 'relocated';
+
+  // #425 PG 端口门禁：自带 PG 必须恒由本部署包提供（"始终用本地的"）。
+  // .env 端口被外部实例（系统装的 PG 等）占用时不碰外部实例——自带 PG 换到空闲
+  // 端口并成对改写 .env（DB_PORT + DATABASE_URL）；被另一部署目录的实例占用时
+  // 直接停掉对方、启动本目录的。'relocated' 时内存 PORTS.postgresql 已更新、
+  // .env 已改写，下方扫描按新端口进行；reconcile 须强制重注册 PM2 postgresql
+  // 定义（旧 env 的 DB_PORT 在 pm2 start 时固化，restart 不会刷新）；
+  // 'blocked' 表示无法自动修复，中止部署。
+  const pgGate = pm2Available ? await ensurePostgresPortManaged() : 'ok';
+  if (pgGate === 'blocked') return false;
+  const postgresRelocated = pgGate === 'relocated';
 
   // 逐服务检测端口 + PM2 托管状态，判定"缺失"与"重复/残留"。
   // 这是 Q1 的核心：端口状态与 PM2 状态必须一致，不一致即视为待清理的重复实例。
@@ -108,6 +130,8 @@ async function startInfrastructure(_usePm2 = true) {
       );
       return reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap, {
         redisPasswordConfigured,
+        redisRelocated,
+        postgresRelocated,
       });
     }
     log('green', '[✓] 基础服务已在运行，复用现有实例（不重启）');
@@ -117,6 +141,8 @@ async function startInfrastructure(_usePm2 = true) {
   if (pm2Available) {
     return reconcileInfrastructureWithPm2(portOpenMap, pm2StatusMap, {
       redisPasswordConfigured,
+      redisRelocated,
+      postgresRelocated,
     });
   }
 
@@ -137,7 +163,133 @@ function areAllInfraOnline(pm2StatusMap) {
 }
 
 /**
- * 升级路径强制门禁（#419）：已运行的 redis 实例必须接受 .env 的 REDIS_PASSWORD。
+ * 判断 REDIS_HOST 是否指向本机（只有本机实例才能被定位/停止/换端口处置）。
+ * @param {string} host
+ * @returns {boolean}
+ */
+function isLocalRedisHost(host) {
+  const h = String(host || '127.0.0.1').trim().toLowerCase();
+  return h === '127.0.0.1' || h === 'localhost' || h === '::1';
+}
+
+/**
+ * redis 密码门禁的纯决策：给定探测状态、占用者归属与探测置信度，决定处置动作。
+ *
+ * 处置原则（2026-10 修订）：
+ * - 本部署实例（ours）：可复用/运行中设密/停止重拉——是自己的进程，怎么处置都不
+ *   影响外部；
+ * - **外部实例**（系统装的 redis / 其他用户 / 另一部署目录），任何认证状态：
+ *   一律不碰（不停、不改密、不采纳）——停系统服务/改其配置属于对用户机器的
+ *   越权操作；改为让本部署自带 redis 换到空闲端口（relocate）；
+ * - PID 无法定位但全量扫描已执行（fullScanDone）：本部署进程与当前用户同属，
+ *   全量扫描必然可见，故定位不到 ⇒ 占用者必属其他用户 ⇒ 按外部实例换端口；
+ * - PID 无法定位且全量扫描未执行：无法排除是本部署实例（换端口会让新旧两个
+ *   实例共写同一 --dir，有数据损坏风险）⇒ 中止，须人工介入。
+ *
+ * @param {{probeState: 'ok'|'noauth'|'wrongpass'|'unknown', ownership: 'ours'|'foreign'|'unknown'|null, fullScanDone: boolean, isLocal: boolean}} p
+ *   probeState   probeRedisAuth 的认证探测结果
+ *   ownership    detectRedisOwnership 结果（pid 未定位时为 null）
+ *   fullScanDone detectPortOwner 的置信度（全量可见性扫描是否执行过）
+ *   isLocal      REDIS_HOST 是否指向本机
+ * @returns {'ok'|'fix-ours'|'takeover-ours'|'relocate'|'blocked'}
+ */
+function decideRedisGateAction({
+  probeState,
+  ownership,
+  fullScanDone,
+  isLocal,
+}) {
+  if (!isLocal) {
+    // 远程实例：无法定位进程/停止/运行中设密，只有"密码正确 → 原样复用"是安全的
+    return probeState === 'ok' ? 'ok' : 'blocked';
+  }
+  if (ownership === 'ours') {
+    if (probeState === 'ok') return 'ok';
+    if (probeState === 'noauth') return 'fix-ours';
+    return 'takeover-ours'; // wrongpass / unknown：本部署实例，停止重拉
+  }
+  if (ownership === 'foreign') return 'relocate';
+  // ownership 为 null（PID 未定位）或 'unknown'（PID 在但 cmdline 不可读）：
+  if (ownership === null && fullScanDone) return 'relocate';
+  return 'blocked';
+}
+
+/**
+ * 从 startPort 起向上扫描第一个空闲 TCP 端口。
+ * @param {number} startPort 起始端口（含）
+ * @param {{maxTries?: number, isPortOpen?: (port: number) => Promise<boolean>, exclude?: Set<number>}} [opts]
+ *   maxTries   最多尝试的端口数（默认 100）
+ *   isPortOpen 端口占用探测（默认 isPortOpen(port, '127.0.0.1')，可注入便于单测）
+ *   exclude    需跳过的端口集合（如本部署其他服务端口）
+ * @returns {Promise<number|null>} 第一个空闲端口；范围内无空闲端口返回 null
+ */
+async function findFreePortUpFrom(
+  startPort,
+  { maxTries = 100, isPortOpen: probe, exclude } = {}
+) {
+  const check = probe || ((p) => isPortOpen(p, '127.0.0.1'));
+  for (let i = 0; i < maxTries; i++) {
+    const candidate = startPort + i;
+    if (candidate < 1 || candidate > 65535) return null;
+    if (exclude && exclude.has(candidate)) continue;
+    if (!(await check(candidate))) return candidate;
+  }
+  return null;
+}
+
+/**
+ * 把本部署自带 redis 切换到空闲端口并改写 .env（单一事实源）。
+ *
+ * 触发条件：.env 端口被**外部实例**（系统装的 redis / 其他用户 / 另一部署目录）
+ * 占用且无法接管。外部实例完全不被触碰（不停、不改密、不采纳）；本部署自带
+ * redis 改到空闲端口。backend（自己 dotenv 读 .env）、redis-manager（env 优先
+ * 否则读 .env）、ecosystem（加载时读 .env）、conversion-service（start.js 现场
+ * 拼 REDIS_URL）、config-service、verify-deploy 都从同一份 .env 读 REDIS_PORT，
+ * 全部自动跟随；内存 PORTS 同步更新，供本进程后续 waitForPort/健康检查/stop 使用。
+ *
+ * 换端口后不回迁（外部实例消失也不迁回）：.env 即长期事实源，避免端口抖动。
+ *
+ * @param {string} redisHost .env 的 REDIS_HOST（仅用于日志展示）
+ * @returns {Promise<'relocated'|'blocked'>}
+ */
+async function relocateRedisPort(redisHost) {
+  const oldPort = PORTS.redis;
+  const newPort = await findFreePortUpFrom(oldPort + 1, {
+    maxTries: 100,
+    isPortOpen: (p) => isPortOpen(p, '127.0.0.1'),
+    exclude: new Set(Object.values(PORTS)),
+  });
+  if (!newPort) {
+    log(
+      'red',
+      `  [错误] redis 端口 ${oldPort} 被外部实例占用，且 ${oldPort + 1}-${oldPort + 100} 范围内未找到空闲端口，部署中止。请手动释放端口或修改 .env 的 REDIS_PORT 后重跑。`
+    );
+    return 'blocked';
+  }
+  const ok = updateEnvFile(BACKEND_ENV_PATH, { REDIS_PORT: String(newPort) });
+  if (!ok) {
+    log(
+      'red',
+      `  [错误] 新 redis 端口 ${newPort} 写入 ${BACKEND_ENV_PATH} 失败，部署中止。请手动把 .env 的 REDIS_PORT 改为 ${newPort} 后重跑。`
+    );
+    return 'blocked';
+  }
+  PORTS.redis = newPort;
+  log(
+    'yellow',
+    `  [换端口] redis 端口 ${oldPort} 被外部实例占用（如系统安装的 redis，主机 ${redisHost}）——该实例未被停止、未改密、未被采纳`
+  );
+  log(
+    'yellow',
+    `  [换端口] 本部署自带 redis 已切换到空闲端口 ${newPort}，.env 的 REDIS_PORT 已自动更新（backend/conversion-service/config-service/verify 均从 .env 读取，自动跟随）`
+  );
+  return 'relocated';
+}
+
+/**
+ * 升级路径强制门禁（#419，2026-10 修订）：.env 端口上的 redis 实例必须属于本
+ * 部署并接受 .env 的 REDIS_PASSWORD；外部实例（系统 redis 等）一律不碰，改为
+ * 本部署自带 redis 自动换端口（见 decideRedisGateAction / relocateRedisPort）。
  *
  * 为什么不复用 reconcile 里"端口开但 PM2 未托管"的分支：PM2 的 `redis` app 为
  * online 只说明 redis-manager 包装进程存活——包装进程见端口已占即采纳现有实例
@@ -145,16 +297,18 @@ function areAllInfraOnline(pm2StatusMap) {
  * 升级前的无密码旧实例。那种情况下 `allPortsOpen + areAllInfraOnline` 会判定"健康
  * 复用"，旧实例永远不被设密，后端 AUTH 恒 NOAUTH。
  *
- * @returns {Promise<'ok'|'taken-over'|'blocked'|'configured'>}
- *   ok         无需再处理：端口未开 / 未配置密码 / 实例密码正确
- *   configured 6379 上的外部实例（系统装的 redis）密码已按 .env 生效——本轮运行中
- *              改密成功（CONFIG SET + CONFIG REWRITE）或上一轮已设好。实例继续运行
- *              （未杀进程），调用方须把 PM2 的 redis 包装进程拉起以采纳该实例——
- *              否则端口被外部进程占用会被误报成冲突，且 pm2 status 恒显示 stopped
- *   taken-over 端口上不接受 .env 密码的实例（本部署旧实例/另一部署目录/人工或系统
- *              实例，归属不影响动作）已停止并等端口释放，后续流程以 --requirepass
- *              重拉本目录实例。数据按各自 --dir 隔离，停止进程不删数据
- *   blocked    无法自动修复（无法定位占用 PID / 停止失败 / 端口未释放），调用方中止
+ * @returns {Promise<'ok'|'configured'|'taken-over'|'relocated'|'blocked'>}
+ *   ok         无需再处理：端口未开 / 未配置密码 / 本部署实例密码正确
+ *   configured 本部署无密码实例已在运行中按 .env 设好密码（CONFIG SET +
+ *              CONFIG REWRITE，未杀进程、数据不动），调用方须把 PM2 的 redis
+ *              包装进程拉起以采纳该实例
+ *   taken-over 本部署旧实例（密码不一致/未知）已停止并等端口释放，后续流程以
+ *              --requirepass 重拉本目录实例
+ *   relocated  端口被外部实例占用（未被触碰），本部署自带 redis 已切换到空闲
+ *              端口且 .env 的 REDIS_PORT 已改写，调用方须强制重注册 PM2 redis
+ *              定义（旧 env 的 REDIS_PORT 在 pm2 start 时固化，restart 不刷新）
+ *   blocked    无法自动修复（远程实例 / 探测手段不足无法排除本部署实例 /
+ *              本部署实例停止后端口未释放 / 无空闲端口 / .env 写入失败），调用方中止
  */
 async function ensureRedisPasswordManaged() {
   const password = loadRedisPassword();
@@ -175,40 +329,47 @@ async function ensureRedisPasswordManaged() {
     PORTS.redis,
     password
   );
-  if (probe === 'ok') {
-    // 密码已正确。本部署实例或另一部署目录的实例交给 reconcile 按常规处理；
-    // 系统实例（apt/systemd）密码正确但不在 PM2 托管内，返回 'configured' 让
-    // reconcile 把包装进程拉起采纳它——否则每次运行都误报"端口被外部进程占用"。
-    const pid = getPidByPort(PORTS.redis);
-    if (
-      pid &&
-      detectRedisOwnership(pid) !== 'ours' &&
-      !isForeignCloudCadRuntimeProcess(pid)
-    ) {
-      return 'configured';
-    }
-    return 'ok';
-  }
-  if (probe === 'unknown') {
-    log(
-      'yellow',
-      `  [警告] 无法确认 redis（${redisHost}:${PORTS.redis}）的认证状态（${reason}），按不可信实例处理：停止重拉...`
-    );
-  }
-  const desc =
-    probe === 'noauth'
-      ? '未设密码'
-      : probe === 'unknown'
-        ? '认证状态未知'
-        : '密码与 .env 不一致';
+  const isLocal = isLocalRedisHost(redisHost);
+  const owner = isLocal
+    ? detectPortOwner(PORTS.redis)
+    : { pid: null, fullScanDone: false };
+  const ownership = owner.pid ? detectRedisOwnership(owner.pid) : null;
 
-  // 无密码实例直接在运行中改密（`CONFIG SET requirepass`）：不需要先 AUTH，
-  // 因此不依赖进程归属、不杀进程、不动数据、无停机。实例可能是系统装的 redis
-  // （apt/systemd，归属必然判成 foreign），那种情况下只有停进程才真有丢数据风险，
-  // 而 CONFIG SET 完全安全——这是"老无密码实例"的首选修复。
-  // 生效范围是该进程存活期；任何后续重启都由 redis-manager 以
-  // --requirepass <.env> 拉起（见 redis-manager startRedis），密码不会回退。
-  if (probe === 'noauth') {
+  const action = decideRedisGateAction({
+    probeState: probe,
+    ownership,
+    fullScanDone: owner.fullScanDone,
+    isLocal,
+  });
+
+  if (action === 'ok') return 'ok';
+  if (action === 'relocate') return relocateRedisPort(redisHost);
+  if (action === 'blocked') {
+    if (!isLocal) {
+      log(
+        'red',
+        `  [错误] 远程 redis（${redisHost}:${PORTS.redis}）不接受 .env 的 REDIS_PASSWORD，无法自动处置远程实例，部署中止。请人工确认该实例，或修改 .env 的 REDIS_HOST/REDIS_PORT 指向本部署可用的端口后重跑。`
+      );
+    } else if (ownership === null && !owner.fullScanDone) {
+      log(
+        'red',
+        `  [错误] redis 端口 ${PORTS.redis} 被占用，但无法定位其进程（ss/lsof/netstat 均不可用且 /proc 不可读），无法排除是本部署自己的实例，部署中止。请安装 lsof（sudo apt install lsof）或以 root 运行，或用 sudo ss -tlnp | grep ${PORTS.redis} 人工确认占用者后处理再重跑。`
+      );
+    } else {
+      log(
+        'red',
+        `  [错误] redis 端口 ${PORTS.redis} 的占用进程 (PID ${owner.pid || '未知'}) 归属无法确认（cmdline 不可读），为避免与本部署实例共写同一数据目录，本次不自动处置，部署中止。请人工确认该进程后重跑。`
+      );
+    }
+    return 'blocked';
+  }
+
+  // 以下两个分支都只针对本部署实例（ownership === 'ours'）
+  if (action === 'fix-ours') {
+    // 本部署的无密码实例直接在运行中改密（`CONFIG SET requirepass`）：不需要先
+    // AUTH，不杀进程、不动数据、无停机。生效范围是该进程存活期；任何后续重启
+    // 都由 redis-manager 以 --requirepass <.env> 拉起（见 redis-manager
+    // startRedis），密码不会回退。
     log(
       'yellow',
       `  redis（${redisHost}:${PORTS.redis}）未设密码，正在运行中重置为 .env 的 REDIS_PASSWORD（不停止实例）...`
@@ -225,8 +386,8 @@ async function ensureRedisPasswordManaged() {
           'green',
           '  [✓] redis 密码已设为 .env 的 REDIS_PASSWORD（未重启实例，数据不受影响）'
         );
-        // 运行期设置只对该进程生效；写回实例自己的配置文件，否则 systemd 等
-        // 独立托管的系统 redis 重启后会回到无密码，后端 AUTH 立刻 NOAUTH。
+        // 运行期设置只对该进程生效；写回实例自己的配置文件，否则独立托管的
+        // 实例重启后会回到无密码，后端 AUTH 立刻 NOAUTH。
         const persist = await persistRedisConfig(
           redisHost,
           PORTS.redis,
@@ -252,30 +413,22 @@ async function ensureRedisPasswordManaged() {
         `  [警告] 运行中改密失败（${set.reason}），回退到停止旧实例后按 --requirepass 重拉...`
       );
     }
+    // 落到下方 takeover-ours 分支
   }
 
-  // 统一接管：无论归属（本部署旧实例/另一部署目录/人工或系统实例），只要端口上
-  // 的实例不接受 .env 的 REDIS_PASSWORD，就必须让位——本目录 start 的语义是
-  // "启动后项目必须可用"，否则后端 AUTH 恒失败而 PM2 侧 redis 却显示 online。
-  // 实例数据按各自 --dir 隔离，停止进程不删数据（SIGTERM 优雅落盘/taskkill 强杀）。
-  const pid = getPidByPort(PORTS.redis);
-  if (!pid) {
-    log(
-      'red',
-      `  [错误] redis 端口 ${PORTS.redis} 上的实例${desc}，但无法定位其进程（netstat/lsof 失败？）`
-    );
-    return 'blocked';
-  }
-  const ownership = detectRedisOwnership(pid);
-  const origin =
-    ownership === 'ours'
-      ? '本部署旧实例'
-      : isForeignCloudCadRuntimeProcess(pid)
-        ? '另一部署目录实例'
-        : '外部/系统实例';
+  // takeover-ours：停止本部署旧实例，交 PM2 以 --requirepass 重拉。
+  // 实例数据在 data/redis（--dir 隔离），停止进程不删数据（SIGTERM 优雅落盘/
+  // taskkill 强杀）。
+  const pid = owner.pid;
+  const desc =
+    probe === 'noauth'
+      ? '未设密码'
+      : probe === 'unknown'
+        ? `认证状态未知（${reason}）`
+        : '密码与 .env 不一致';
   log(
     'yellow',
-    `  [接管] redis 端口 ${PORTS.redis} 由${origin}占用（PID ${pid}）${desc}，停止并按 .env REDIS_PASSWORD 重新拉起...`
+    `  [接管] redis 端口 ${PORTS.redis} 由本部署旧实例占用（PID ${pid}）${desc}，停止并按 .env REDIS_PASSWORD 重新拉起...`
   );
   // 先停 PM2 的 redis 包装进程（若在本机 PM2 中处于托管）：否则其 keepAlive
   // 会在实例被停后 5 秒内重拉旧实例，与下方端口释放等待形成竞态。
@@ -302,6 +455,458 @@ async function ensureRedisPasswordManaged() {
   }
   log('green', '  [✓] 占用实例已停止，端口已释放，交 PM2 按 .env 密码重新拉起');
   return 'taken-over';
+}
+
+// ==================== PostgreSQL 端口门禁（#425） ====================
+
+// PostgreSQL 数据目录（与 pg-manager.js 同约定；CLOUDCAD_PG_DATA_DIR 仅供单测重定向）
+const PG_DATA_DIR = process.env.CLOUDCAD_PG_DATA_DIR
+  ? path.resolve(process.env.CLOUDCAD_PG_DATA_DIR)
+  : path.join(DATA_DIR, 'postgres');
+
+/**
+ * PG 端口门禁的纯决策：给定 .env 数据库端口占用者的归属，决定处置动作。
+ *
+ * 处置原则（2026-10，与 redis 门禁对齐 + 用户明确要求的"始终用本地的"）：
+ * - 自带 PG 必须恒由本部署包提供，**永不采纳外部实例**（即使密码恰好一致）；
+ * - 本部署实例（ours）：原样复用（后续端口扫描 / reconcile 按既有语义处理）；
+ * - 另一部署目录的实例（foreign-deploy，同包多解压）：直接停掉、启动本目录的
+ *   （同包同数据布局，不存在跨项目数据错位风险，无需询问用户）；
+ * - 外部实例（系统装的 PG / 其他用户）：一律不碰（不停、不改密、不采纳）——
+ *   本部署自带 PG 换到空闲端口并改写 .env（relocate）；
+ * - PID 无法定位但全量扫描已执行（fullScanDone）：本部署进程与当前用户同属
+ *   （root 下全量可见），定位不到 ⇒ 必属其他用户 ⇒ 按外部实例换端口；
+ * - PID 无法定位且全量扫描未执行：无法排除是本部署实例（换端口会让新旧两个
+ *   实例共写同一数据目录，有数据损坏风险）⇒ 中止，须人工介入；
+ * - 远程 DB_HOST：自带 PG 无法服务远程库，不属门禁范围（ok；连不上由迁移步骤
+ *   以 prisma 原错误上报）。
+ *
+ * @param {{ownership: 'ours'|'foreign-deploy'|'foreign'|'unknown'|null, fullScanDone: boolean, isLocal: boolean}} p
+ *   ownership    detectPostgresOwnership 结果（pid 未定位时为 null）
+ *   fullScanDone detectPortOwner 的置信度（全量可见性扫描是否执行过）
+ *   isLocal      DB_HOST 是否指向本机
+ * @returns {'ok'|'stop-foreign'|'relocate'|'blocked'}
+ */
+function decidePostgresGateAction({ ownership, fullScanDone, isLocal }) {
+  if (!isLocal) return 'ok';
+  if (ownership === 'ours') return 'ok';
+  if (ownership === 'foreign-deploy') return 'stop-foreign';
+  if (ownership === 'foreign') return 'relocate';
+  if (ownership === null && fullScanDone) return 'relocate';
+  return 'blocked';
+}
+
+/**
+ * 解析 DATABASE_URL 的 host:port 段（URL 其余部分逐字保留）。
+ *
+ * URL 形状识别的单一事实源：rewriteDatabaseUrlPort（换端口改写）与
+ * repairDatabaseUrlConsistency（URL 与 DB_PORT 对齐）都经此解析，形状口径
+ * 只有一份。
+ *
+ * @param {string} url DATABASE_URL
+ * @returns {{host: string, port: number, prefix: string, rest: string}|null}
+ *   host   URL 主机段（不含端口）
+ *   port   URL 端口段（无端口段时按 PostgreSQL 默认 5432）
+ *   prefix `postgresql://[userinfo@]host`（端口段之前的部分）
+ *   rest   端口段之后的部分（含 /库名 与查询参数）
+ *   形状无法识别（非 postgresql:// 开头 / 空值）返回 null
+ */
+function parseDatabaseUrlHostPort(url) {
+  const text = String(url || '');
+  const m = /^(postgresql:\/\/(?:[^@/]+@)?)([^:/?#\s]+)(?::(\d+))?(?:[/?#].*)?$/.exec(
+    text
+  );
+  if (!m) return null;
+  const host = m[2];
+  const port = m[3] ? Number(m[3]) : 5432;
+  const prefix = `${m[1]}${host}`;
+  const rest = text.slice(prefix.length + (m[3] ? m[3].length + 1 : 0));
+  return { host, port, prefix, rest };
+}
+
+/**
+ * 只改写 DATABASE_URL 的端口段（userinfo / 查询参数 / 库名逐字保留）。
+ *
+ * 不用 DB_* 部件重组 URL：DATABASE_URL 可能携带查询参数（sslmode 等），重组会
+ * 静默丢弃；且 URL 内密码与 DB_PASSWORD 允许不同（DATABASE_URL 优先于
+ * DB_PASSWORD）。门禁只改端口，不得触碰其余任何字节。
+ *
+ * @param {string} url 当前 DATABASE_URL
+ * @param {number|string} oldPort .env 原端口（DB_PORT）
+ * @param {number} newPort 新端口
+ * @returns {string|null} 改写后的 URL；形状无法识别、或 URL 端口与 oldPort 不一致
+ *   （.env 自身不一致，调用方必须中止而非猜测）时返回 null
+ */
+function rewriteDatabaseUrlPort(url, oldPort, newPort) {
+  const parsed = parseDatabaseUrlHostPort(url);
+  if (!parsed) return null;
+  if (parsed.port !== Number(oldPort)) return null;
+  return `${parsed.prefix}:${newPort}${parsed.rest}`;
+}
+
+/**
+ * 判定 PG 端口占用进程的归属：
+ * - 'ours'：本部署自带 PG（postmaster.pid 的 PID 匹配，或可执行文件在本目录 runtime/ 下）；
+ * - 'foreign-deploy'：同包另一部署目录的实例（可执行文件含 /runtime/<platform>/ 但不在本目录）；
+ * - 'foreign'：外部系统服务（系统装的 PG 等）；
+ * - 'unknown'：PID 在但可执行文件不可读（调用方必须中止，不得猜测）；
+ * - null：无 PID（调用方结合 fullScanDone 判定）。
+ *
+ * postmaster.pid 判据最直接：该锁文件由对应数据目录的 postmaster 独占持有并负责
+ * 清理，首行 PID 与端口占用者一致即坐实本部署实例（陈旧文件的 PID 已死，不会
+ * 与存活的外部 PID 撞号）。
+ *
+ * @param {number|null} pid
+ * @param {{pgDataDir?: string, getExe?: (pid: number) => string|null, isOurs?: (pid: number) => boolean, isForeign?: (pid: number) => boolean}} [deps] 注入用（测试）
+ * @returns {'ours'|'foreign-deploy'|'foreign'|'unknown'|null}
+ */
+function detectPostgresOwnership(
+  pid,
+  {
+    pgDataDir = PG_DATA_DIR,
+    getExe = getProcessExecutablePath,
+    isOurs = isOurRuntimeProcess,
+    isForeign = isForeignCloudCadRuntimeProcess,
+  } = {}
+) {
+  if (!pid) return null;
+  try {
+    const pidFile = path.join(pgDataDir, 'postmaster.pid');
+    if (fs.existsSync(pidFile)) {
+      const first = fs.readFileSync(pidFile, 'utf8').split('\n')[0].trim();
+      if (first === String(pid)) return 'ours';
+    }
+  } catch {
+    /* 锁文件不可读，落到可执行文件判定 */
+  }
+  if (isOurs(pid)) return 'ours';
+  if (isForeign(pid)) return 'foreign-deploy';
+  return getExe(pid) ? 'foreign' : 'unknown';
+}
+
+/**
+ * 把本部署自带 PG 切换到空闲端口并成对改写 .env（单一事实源）。
+ *
+ * 触发条件：.env 端口被**外部实例**（系统装的 PG / 其他用户）占用。外部实例
+ * 完全不被触碰（不停、不改密、不采纳）；本部署自带 PG 改到空闲端口。
+ * DB_PORT 与 DATABASE_URL 必须**成对**改写（Prisma 优先用 DATABASE_URL，只改
+ * DB_PORT 会让后端/迁移仍连旧端口的系统库）；pg-manager、db-backup、预检、
+ * backend、verify-deploy 都从同一份 .env 读，全部自动跟随；内存 PORTS 同步
+ * 更新，供本进程后续 waitForPort/健康检查/stop 使用。
+ *
+ * 换端口后不回迁（外部实例消失也不迁回）：.env 即长期事实源，避免端口抖动。
+ *
+ * @param {string} dbHost .env 的 DB_HOST（仅用于日志展示）
+ * @returns {Promise<'relocated'|'blocked'>}
+ */
+async function relocatePostgresPort(dbHost) {
+  const oldPort = PORTS.postgresql;
+  const newPort = await findFreePortUpFrom(oldPort + 1, {
+    maxTries: 100,
+    isPortOpen: (p) => isPortOpen(p, '127.0.0.1'),
+    exclude: new Set(Object.values(PORTS)),
+  });
+  if (!newPort) {
+    log(
+      'red',
+      `  [错误] PG 端口 ${oldPort} 被外部实例占用，且 ${oldPort + 1}-${oldPort + 100} 范围内未找到空闲端口，部署中止。请手动释放端口或修改 .env 的 DB_PORT（连同 DATABASE_URL 的端口）后重跑。`
+    );
+    return 'blocked';
+  }
+
+  let envConfig = {};
+  try {
+    envConfig = parseEnvFile(BACKEND_ENV_PATH);
+  } catch {
+    /* .env 不可读时仅改写 DB_PORT */
+  }
+  const updates = { DB_PORT: String(newPort) };
+  if (envConfig.DATABASE_URL) {
+    const newUrl = rewriteDatabaseUrlPort(
+      envConfig.DATABASE_URL,
+      oldPort,
+      newPort
+    );
+    if (!newUrl) {
+      log(
+        'red',
+        `  [错误] .env 的 DATABASE_URL 形状无法识别，或其端口与 DB_PORT（${oldPort}）不一致，无法安全改写端口，部署中止。请人工把 DATABASE_URL 的端口改为 ${newPort}（与 DB_PORT 保持一致）后重跑。`
+      );
+      return 'blocked';
+    }
+    updates.DATABASE_URL = newUrl;
+  }
+
+  const ok = updateEnvFile(BACKEND_ENV_PATH, updates);
+  if (!ok) {
+    log(
+      'red',
+      `  [错误] 新 PG 端口 ${newPort} 写入 ${BACKEND_ENV_PATH} 失败，部署中止。请手动把 .env 的 DB_PORT（连同 DATABASE_URL 的端口）改为 ${newPort} 后重跑。`
+    );
+    return 'blocked';
+  }
+  PORTS.postgresql = newPort;
+
+  // 刷新首次部署凭据备份（其中记录了数据库端口；用户已删除该文件则不重建）
+  try {
+    if (fs.existsSync(credentialFilePath())) {
+      saveCredentialBackup(
+        { ...updates, DB_PASSWORD: envConfig.DB_PASSWORD || '' },
+        parseEnvFile(BACKEND_ENV_PATH)
+      );
+    }
+  } catch {
+    /* 凭据备份失败不影响部署 */
+  }
+
+  log(
+    'yellow',
+    `  [换端口] PG 端口 ${oldPort} 被外部实例占用（如系统安装的 PostgreSQL，主机 ${dbHost}）——该实例未被停止、未改密、未被采纳`
+  );
+  log(
+    'yellow',
+    `  [换端口] 本部署自带 PostgreSQL 已切换到空闲端口 ${newPort}，.env 的 DB_PORT 与 DATABASE_URL 已成对自动更新（pg-manager/backend/迁移/verify 均从 .env 读取，自动跟随）`
+  );
+  return 'relocated';
+}
+
+/**
+ * DATABASE_URL ↔ DB_PORT 一致性修复（单一出口，PG 门禁前置步骤）。
+ *
+ * DB_PORT 是端口的单一事实源（pg-manager / pg_dump / 建库 / 预检都读它），
+ * DATABASE_URL 是 Prisma（migrate deploy / 后端）的最高优先连接源。两者漂移
+ * （只手动改了 DB_PORT 绕开系统 PG、或旧包门禁只改过 DB_PORT）→ pg_dump 在
+ * 新端口成功、Prisma 连旧端口的系统库 → P1000（用户 VM 实锤：DB_PORT=5433、
+ * URL 仍 5432，备份成功但迁移失败）。
+ *
+ * 修复规则（仅 DB_HOST 指向本机时执行）：
+ * - DATABASE_URL 缺失 → ok（Prisma CLI / 后端都回落 DB_* 部件，跟随 DB_PORT）；
+ * - URL 形状无法识别 → blocked（不得猜测）；
+ * - URL 主机与 DB_HOST 指向不同机器（且非 localhost/127.0.0.1/::1 等价形态）
+ *   → blocked（真实冲突：连哪个库须人工裁定）；
+ * - URL 端口 ≠ DB_PORT → 只改写 URL 端口段（其余字节逐字保留）→ repaired；
+ * - 已一致 → ok。
+ *
+ * @returns {Promise<'ok'|'repaired'|'blocked'>}
+ */
+async function repairDatabaseUrlConsistency() {
+  let envConfig;
+  try {
+    envConfig = parseEnvFile(BACKEND_ENV_PATH);
+  } catch {
+    return 'ok';
+  }
+  const url = envConfig.DATABASE_URL;
+  if (!url) return 'ok';
+
+  const parsed = parseDatabaseUrlHostPort(url);
+  if (!parsed) {
+    log(
+      'red',
+      `  [错误] .env 的 DATABASE_URL 形状无法识别（${url}），无法确认其指向的数据库，部署中止。请人工修正后重跑。`
+    );
+    return 'blocked';
+  }
+
+  const dbHost = envConfig.DB_HOST || 'localhost';
+  // 主机冲突判定：不同名且非"双方都是本机形态"（localhost/127.0.0.1/::1 等价）
+  const bothLocal = isLocalRedisHost(dbHost) && isLocalRedisHost(parsed.host);
+  if (dbHost !== parsed.host && !bothLocal) {
+    log(
+      'red',
+      `  [错误] .env 的 DATABASE_URL 指向主机 ${parsed.host}，与 DB_HOST（${dbHost}）指向不同的数据库，部署中止。请人工确认应连接哪个数据库、保持两者一致后重跑。`
+    );
+    return 'blocked';
+  }
+
+  const dbPort = Number(envConfig.DB_PORT || 5432);
+  if (parsed.port === dbPort) return 'ok';
+
+  const aligned = `${parsed.prefix}:${dbPort}${parsed.rest}`;
+  const ok = updateEnvFile(BACKEND_ENV_PATH, { DATABASE_URL: aligned });
+  if (!ok) {
+    log(
+      'red',
+      `  [错误] DATABASE_URL 端口对齐写入 ${BACKEND_ENV_PATH} 失败，部署中止。请手动把 DATABASE_URL 的端口改为 ${dbPort}（与 DB_PORT 一致）后重跑。`
+    );
+    return 'blocked';
+  }
+  log(
+    'yellow',
+    `  [修复] DATABASE_URL 端口（${parsed.port}）与 DB_PORT（${dbPort}）不一致，已自动对齐为 ${aligned}（Prisma 优先用 DATABASE_URL，漂移会让迁移连到旧端口的库）`
+  );
+  return 'repaired';
+}
+
+/**
+ * 停止另一部署目录的 PostgreSQL（PG 门禁"直接停掉"的动作）。
+ *
+ * 1) 优先经对方目录的 PM2 停止：只杀 postgres 进程的话，对方 pg-manager 的
+ *    keepAlive 会在 5 秒内把它重拉、再次占住端口，与下方端口释放等待形成竞态；
+ *    `pm2 stop` 标记 stopped 不触发自动重启。对方根目录从可执行文件路径推导
+ *    （exe 位于 <对方根>/runtime/<platform>/ 下，PM2_HOME = <对方根>/data/pm2，
+ *    与 context.js 的 DATA_DIR/data/pm2 约定一致）。
+ * 2) 回退（对方 PM2 daemon 未运行 / 停止失败）：直接向 postmaster 发信号——
+ *    Linux 用 SIGINT（= pg_ctl -m fast，崩溃安全停机、WAL 安全落盘）；Windows
+ *    用 taskkill。不用 killTree 的进程组信号：postgres 由 pg_ctl 直接 spawn，
+ *    不属于对方 PM2 的进程组，`process.kill(-pid)` 会 ESRCH 被误判"成功"而实际
+ *    未杀掉（与 redis-takeover 同一教训）。
+ *
+ * @param {number|null} pid
+ * @returns {boolean} 是否已发出停止信号（调用方以端口最终释放为准绳）
+ */
+function stopForeignPostgres(pid) {
+  if (!pid) return false;
+  const exe = getProcessExecutablePath(pid);
+  const normalized = (exe || '').toLowerCase().replace(/\\/g, '/');
+  const runtimeIdx = normalized.indexOf('/runtime/');
+  if (exe && runtimeIdx > 0 && PM2_JS && fs.existsSync(PM2_JS)) {
+    const foreignRoot = exe.slice(0, runtimeIdx);
+    const foreignPm2Home = path.join(foreignRoot, 'data', 'pm2');
+    if (fs.existsSync(foreignPm2Home)) {
+      const nodeDir = path.dirname(NODE_EXE);
+      const existingPath = process.env.PATH || '';
+      const res = spawnSync(NODE_EXE, [PM2_JS, 'stop', 'postgresql'], {
+        encoding: 'utf8',
+        windowsHide: true,
+        timeout: 30000,
+        env: {
+          ...process.env,
+          PM2_HOME: foreignPm2Home,
+          PATH: IS_WINDOWS
+            ? `${nodeDir};${existingPath}`
+            : `${nodeDir}:${existingPath}`,
+        },
+      });
+      if (res.status === 0) {
+        log(
+          `  [✓] 已通过对方目录 PM2 停止 PostgreSQL（PM2_HOME: ${foreignPm2Home}）`
+        );
+        return true;
+      }
+      log(
+        'yellow',
+        `  [警告] 对方目录 PM2 停止失败（退出码 ${res.status}），回退为直接向 postmaster 发信号...`
+      );
+    }
+  }
+  try {
+    if (IS_WINDOWS) {
+      const result = spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+        stdio: 'pipe',
+        windowsHide: true,
+      });
+      // 退出码：0=成功终止；128=目标不存在（已退出，视为已停止）
+      return result.status === 0 || result.status === 128;
+    }
+    process.kill(pid, 'SIGINT');
+    return true;
+  } catch (err) {
+    // ESRCH = 进程已不存在，视为已停止；其余（EPERM 等）为真实失败
+    return err.code === 'ESRCH';
+  }
+}
+
+/**
+ * PG 端口门禁（#425）：.env 端口上的 PostgreSQL 必须属于本部署包。
+ *
+ * 为什么需要独立门禁（不能靠 reconcile 的"端口被占用"分支兜底）：reconcile 对
+ * "端口开但 PM2 未托管"只告警跳过，部署继续走到迁移步骤时，pg_dump/prisma 拿
+ * 本部署的密码连 .env 端口上的外部实例（系统 PG 等），认证恒失败，"是否继续
+ * 部署？"的提示成了假选择（同一套凭据下迁移必败）。门禁在端口扫描之前运行：
+ * 外部实例占着 .env 端口 → 自带 PG 换端口并改写 .env；另一部署目录的实例占着
+ * → 直接停掉、启动本目录的。此后扫描/迁移/健康检查全部针对本部署自己的实例。
+ *
+ * @param {{stopForeign?: (pid: number) => boolean}} [deps] 注入用（测试）
+ * @returns {Promise<'ok'|'relocated'|'stopped-foreign'|'blocked'>}
+ *   ok              无需处理：端口未开 / 远程 DB_HOST（自带 PG 不服务远程库）/
+ *                   本部署实例已在运行
+ *   relocated       端口被外部实例占用（未被触碰），自带 PG 已切换到空闲端口且
+ *                   .env 的 DB_PORT/DATABASE_URL 已成对改写，调用方须强制重注册
+ *                   PM2 postgresql 定义（旧 env 的 DB_PORT 在 pm2 start 时固化，
+ *                   restart 不会刷新）
+ *   stopped-foreign 端口被另一部署目录的实例占用，已停止并等端口释放，后续流程
+ *                   在原端口启动本目录实例
+ *   blocked         无法自动修复（手段不足无法排除本部署实例 / 停止失败 / 端口
+ *                   未释放 / 无空闲端口 / .env 写入失败 / DATABASE_URL 形状不一致
+ *                   / DATABASE_URL 主机与 DB_HOST 冲突），调用方中止
+ */
+async function ensurePostgresPortManaged(deps = {}) {
+  const stopForeign = deps.stopForeign || stopForeignPostgres;
+
+  if (!fs.existsSync(BACKEND_ENV_PATH)) return 'ok';
+  let envConfig;
+  try {
+    envConfig = parseEnvFile(BACKEND_ENV_PATH);
+  } catch {
+    return 'ok';
+  }
+  const dbHost = envConfig.DB_HOST || 'localhost';
+  // isLocalRedisHost 是通用的本机主机判定（命名沿用 redis 门禁）
+  if (!isLocalRedisHost(dbHost)) return 'ok';
+
+  // DATABASE_URL 一致性修复（所有本机场景都执行，含"端口空闲"提前返回路径）：
+  // DB_PORT 是端口单一事实源、Prisma 优先用 DATABASE_URL——两者漂移时
+  // pg_dump 在新端口成功、migrate deploy 连旧端口的系统库报 P1000
+  const urlRepair = await repairDatabaseUrlConsistency();
+  if (urlRepair === 'blocked') return 'blocked';
+
+  if (!(await isPortOpen(PORTS.postgresql, dbHost))) return 'ok';
+
+  const owner = detectPortOwner(PORTS.postgresql);
+  const ownership = owner.pid ? detectPostgresOwnership(owner.pid) : null;
+
+  const action = decidePostgresGateAction({
+    ownership,
+    fullScanDone: owner.fullScanDone,
+    isLocal: true,
+  });
+
+  if (action === 'ok') return 'ok';
+  if (action === 'relocate') return relocatePostgresPort(dbHost);
+
+  if (action === 'stop-foreign') {
+    const pid = owner.pid;
+    const exe = getProcessExecutablePath(pid) || '未知路径';
+    log(
+      'yellow',
+      `  [停止] PG 端口 ${PORTS.postgresql} 被另一部署目录的服务占用 (PID ${pid}): ${exe}——直接停止并启动本目录的 PostgreSQL...`
+    );
+    if (!stopForeign(pid)) {
+      log(
+        'red',
+        `  [错误] 停止另一部署目录的 PostgreSQL (PID ${pid}) 失败，部署中止。请手动停止该实例后重跑。`
+      );
+      return 'blocked';
+    }
+    const released = await waitPortReleased(PORTS.postgresql, 15000);
+    if (!released) {
+      log(
+        'red',
+        `  [错误] 已发停止信号但另一部署目录的 PostgreSQL (PID ${pid}) 未释放端口 ${PORTS.postgresql}，部署中止。请手动确认后重跑。`
+      );
+      return 'blocked';
+    }
+    log(
+      'green',
+      `  [✓] 另一部署目录的 PostgreSQL 已停止，端口已释放，本目录实例将接管端口 ${PORTS.postgresql}`
+    );
+    return 'stopped-foreign';
+  }
+
+  // blocked：给出可执行的排查指引
+  if (ownership === null && !owner.fullScanDone) {
+    log(
+      'red',
+      `  [错误] PG 端口 ${PORTS.postgresql} 被占用，但无法定位其进程（ss/lsof/netstat 均不可用且 /proc 不可读），无法排除是本部署自己的实例，部署中止。请安装 lsof（sudo apt install lsof）或以 root 运行，或用 sudo ss -tlnp | grep ${PORTS.postgresql} 人工确认占用者后处理再重跑。`
+    );
+  } else {
+    log(
+      'red',
+      `  [错误] PG 端口 ${PORTS.postgresql} 的占用进程 (PID ${owner.pid || '未知'}) 归属无法确认（可执行文件不可读），为避免与本部署实例共写同一数据目录，本次不自动处置，部署中止。请人工确认该进程后重跑。`
+    );
+  }
+  return 'blocked';
 }
 
 /**
@@ -393,11 +998,18 @@ function stopForeignService(appName, pid) {
  *    - 外部系统服务（系统自带 PG/Redis）：告警跳过，不误杀。
  *
  * @param {object} [opts]
- * @param {boolean} [opts.redisPasswordConfigured] 前置门禁确认占用 6379 的外部实例
- *   （系统装的 redis）密码已按 .env 生效：本轮运行中改密成功（CONFIG SET +
- *   CONFIG REWRITE）或上一轮已设好。此时数据实例不动，但不报"端口被外部进程占用，
- *   未接管"的冲突告警，而是把 PM2 的 redis 包装进程拉起/重启以纳入托管——包装进程
- *   采纳现有实例，不会重启数据实例。
+ * @param {boolean} [opts.redisPasswordConfigured] 前置门禁确认本部署无密码实例已
+ *   在运行中按 .env 设好密码（CONFIG SET + CONFIG REWRITE）。此时数据实例不动，
+ *   但不报"端口被外部进程占用，未接管"的冲突告警，而是把 PM2 的 redis 包装进程
+ *   拉起/重启以纳入托管——包装进程采纳现有实例，不会重启数据实例。
+ * @param {boolean} [opts.redisRelocated] 前置门禁已把本部署 redis 换到空闲端口
+ *   （.env 的 REDIS_PORT 已改写）。PM2 中若已注册过 redis app，其 env.REDIS_PORT
+ *   是上次 pm2 start 时固化的旧值（restart 不会刷新），必须 delete 后重新 start
+ *   让 ecosystem 重新加载 .env，否则 redis-manager 会按旧 env 拉回旧端口。
+ * @param {boolean} [opts.postgresRelocated] 前置 PG 门禁已把本部署 PostgreSQL 换到
+ *   空闲端口（.env 的 DB_PORT/DATABASE_URL 已成对改写）。同 redisRelocated：旧注册
+ *   条目的 env.DB_PORT 是上次 pm2 start 时固化的旧值，必须 delete 后重新 start，
+ *   否则 pg-manager 会按旧 env 拉回旧端口（旧端口仍被外部实例占用 → 冲突复现）。
  */
 /**
  * 判断 PM2 app 的注册信息（pm_cwd）是否属于本部署目录。
@@ -428,7 +1040,11 @@ function isPm2AppFromThisProject(entry) {
 async function reconcileInfrastructureWithPm2(
   portOpenMap,
   pm2StatusMap,
-  { redisPasswordConfigured = false } = {}
+  {
+    redisPasswordConfigured = false,
+    redisRelocated = false,
+    postgresRelocated = false,
+  } = {}
 ) {
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
   const pm2Entries = getPm2StatusList();
@@ -559,14 +1175,15 @@ async function reconcileInfrastructureWithPm2(
         // 清理后需重查端口，但此处直接交给 PM2 启动（start 幂等，若仍占用会失败）
         toStart.push(appName);
       } else if (appName === 'redis') {
-        // 前置门禁已运行中设好密码：密码正确、实例不动（不杀进程、数据不受影响），
-        // 只需把 PM2 的 redis 包装进程拉起纳入托管。包装进程见端口已占即采纳现有
-        // 实例进入 keepAlive，因此不会重启/替换系统实例——这是全套基础服务统一
-        // PM2 托管的既定形态（否则 pm2 status 恒显示 stopped，运维侧无法判断状态）。
+        // 前置门禁已运行中设好密码（本部署实例）：密码正确、实例不动（不杀进程、
+        // 数据不受影响），只需把 PM2 的 redis 包装进程拉起纳入托管。包装进程见端口
+        // 已占即采纳现有实例进入 keepAlive，因此不会重启/替换该实例——这是全套
+        // 基础服务统一 PM2 托管的既定形态（否则 pm2 status 恒显示 stopped，运维侧
+        // 无法判断状态）。
         if (redisPasswordConfigured) {
           log(
             'cyan',
-            `  [提示] redis 端口 ${PORTS.redis} 由系统实例提供（PID ${pid || '未知'}），密码与 .env 一致；拉起 PM2 包装进程采纳该实例（不重启实例）...`
+            `  [提示] redis 端口 ${PORTS.redis} 由本部署实例提供（PID ${pid || '未知'}），密码与 .env 一致；拉起 PM2 包装进程采纳该实例（不重启实例）...`
           );
           // 已注册（可能处于 stopped）走 restart，未注册走 start——与下方"端口未开"
           // 分支的判定一致；对未注册 app 发 restart 会直接报错并中止部署。
@@ -622,6 +1239,28 @@ async function reconcileInfrastructureWithPm2(
     // 先注册的别家脚本（别家 .env 密钥 / 别家数据目录），本目录配置完全不生效。
     // 此处端口空闲，删除只影响注册表条目，不涉及任何运行中的进程，也不碰对方的库。
     if (getPm2AppStatus(appName) === 'unknown') {
+      toStart.push(appName);
+    } else if (appName === 'redis' && redisRelocated) {
+      // 前置门禁已换端口并改写 .env：旧注册条目的 env.REDIS_PORT 是上次
+      // pm2 start 时固化的旧值，restart 会按旧 env 把 redis-manager 拉回旧端口
+      // （旧端口仍被外部实例占用 → 冲突复现）。删除后重新 start，ecosystem
+      // 重新加载 .env 拿到新端口。
+      log(
+        'yellow',
+        `  [接管] redis 已自动换到新端口，用本目录配置重新注册 PM2 redis 定义（旧注册的 env 仍是旧端口）...`
+      );
+      runPm2(['delete', appName], { silent: true });
+      toStart.push(appName);
+    } else if (appName === 'postgresql' && postgresRelocated) {
+      // 前置 PG 门禁已换端口并成对改写 .env（DB_PORT + DATABASE_URL）：旧注册
+      // 条目的 env.DB_PORT 是上次 pm2 start 时固化的旧值，restart 会按旧 env 把
+      // pg-manager 拉回旧端口（旧端口仍被外部实例占用 → 冲突复现）。删除后重新
+      // start，ecosystem 重新加载 .env 拿到新端口。
+      log(
+        'yellow',
+        `  [接管] PostgreSQL 已自动换到新端口，用本目录配置重新注册 PM2 postgresql 定义（旧注册的 env 仍是旧端口）...`
+      );
+      runPm2(['delete', appName], { silent: true });
       toStart.push(appName);
     } else if (foreignApp) {
       log(
@@ -836,4 +1475,17 @@ module.exports = {
   areAllInfraOnline,
   reconcileInfrastructureWithPm2,
   isPm2AppFromThisProject,
+  ensureRedisPasswordManaged,
+  decideRedisGateAction,
+  ensurePostgresPortManaged,
+  decidePostgresGateAction,
+  detectPostgresOwnership,
+  parseDatabaseUrlHostPort,
+  rewriteDatabaseUrlPort,
+  repairDatabaseUrlConsistency,
+  relocatePostgresPort,
+  stopForeignPostgres,
+  findFreePortUpFrom,
+  relocateRedisPort,
+  isLocalRedisHost,
 };
