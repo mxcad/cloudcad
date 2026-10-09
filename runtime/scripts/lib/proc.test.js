@@ -16,6 +16,7 @@ const {
   getProcessCmdlines,
   parseListenInodes,
   findPidByInodes,
+  parsePm2JlistOutput,
 } = require('./proc');
 
 test('返回结构正确的进程行，且能定位当前 node 进程', () => {
@@ -36,6 +37,58 @@ test('返回结构正确的进程行，且能定位当前 node 进程', () => {
   const self = rows.find((row) => row.pid === process.pid);
   assert.ok(self, '必须包含当前 node 进程（否则残留检测会漏判）');
   assert.match(self.name, /node/i);
+});
+
+// ==================== parsePm2JlistOutput（pm2 冷启动横幅污染回归） ====================
+//
+// 回归背景：pm2 冷启动（守护进程被杀后首次 jlist）退出码 0、stderr 空，但 stdout
+// 混入横幅后才是 JSON 数组。裸 JSON.parse 会被横幅打炸 → 误判「无 PM2」→ stop 的
+// pm2OwnedApps 漏判、start 的跨目录冲突检测放行、redis 改密后消费者不重启。
+// 与 packages/config-service/lib/pm2.js 的 parsePm2JlistOutput 算法一致，须同步维护。
+
+test('parsePm2JlistOutput: 形态① ASCII 横幅（不含 [）+ JSON 数组', () => {
+  const stdout =
+    'PM2 v5.4.0\n┌────┐ (banner, no bracket)\n' +
+    '[{"name":"backend","pm2_env":{"status":"online"},"pid":111}]';
+  const list = parsePm2JlistOutput(stdout);
+  assert.equal(list.length, 1);
+  assert.equal(list[0].name, 'backend');
+  assert.equal(list[0].pm2_env.status, 'online');
+});
+
+test('parsePm2JlistOutput: 形态② 以 [ 开头的 [PM2] 横幅行 + JSON 数组', () => {
+  // 守护进程被杀后重拉的实测形态：横幅行以 '[' 开头，整段 JSON.parse / 首个 '[' 截取都会打炸
+  const stdout =
+    '[PM2] Spawning PM2 daemon: /path/to/pm2d\n' +
+    '[PM2] PM2 Successfully daemonized\n' +
+    '[{"name":"postgresql","pm2_env":{"status":"online"},"pid":1},{"name":"backend","pm2_env":{"status":"stopped"},"pid":2}]';
+  const list = parsePm2JlistOutput(stdout);
+  assert.equal(list.length, 2);
+  assert.deepEqual(
+    list.map((a) => a.name),
+    ['postgresql', 'backend']
+  );
+});
+
+test('parsePm2JlistOutput: 空输出 / 无 JSON 数组段 → []（安全语义，不升级 stop all）', () => {
+  assert.deepEqual(parsePm2JlistOutput(''), []);
+  assert.deepEqual(parsePm2JlistOutput('   \n  '), []);
+  assert.deepEqual(parsePm2JlistOutput('PM2 not installed'), []);
+  assert.deepEqual(parsePm2JlistOutput(null), []);
+});
+
+test('parsePm2JlistOutput: 非数组 JSON 段 → []', () => {
+  assert.deepEqual(parsePm2JlistOutput('{"name":"backend"}'), []);
+});
+
+test('parsePm2JlistOutput: 嵌套数组元素不干扰外层数组定位', () => {
+  // pm2_env 内可能含数组；回溯须落到外层数组的 '['，而非元素内层 '['
+  const stdout =
+    '[PM2] Spawning PM2 daemon\n' +
+    '[{"name":"backend","pm2_env":{"status":"online","args":["-p","3001"]}}]';
+  const list = parsePm2JlistOutput(stdout);
+  assert.equal(list.length, 1);
+  assert.deepEqual(list[0].pm2_env.args, ['-p', '3001']);
 });
 
 test('查询失败时抛错，不返回空表', { skip: process.platform !== 'win32' }, () => {

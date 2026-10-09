@@ -217,6 +217,39 @@ function runPm2(args, options = {}) {
 }
 
 /**
+ * 解析 pm2 jlist 的 stdout 为进程数组（纯函数，可单测）。
+ *
+ * 算法与 packages/config-service/lib/pm2.js 的 parsePm2JlistOutput 保持一致：
+ * pm2 冷启动（守护进程被杀后首次调用）时 jlist 退出码为 0、stderr 为空，但 stdout
+ * 会混入横幅后才是 JSON 数组——两种实测形态：① ASCII 横幅（不含 '['）+ JSON；
+ * ② "[PM2] Spawning PM2 daemon ..."/"[PM2] PM2 Successfully daemonized" 行（以 '['
+ * 开头）+ JSON。整段 JSON.parse 与「首个 '[' 起截取」都会被形态 ② 打炸，故从最后一个
+ * ']' 往前逐个 '[' 回溯，取第一个能完整解析的数组段。
+ *
+ * 与 config-service 侧的唯一差异在失败语义：本处解析失败/空输出返回 []（「无 PM2 /
+ * 查询失败」的安全语义——stop 据此不得升级为 stop all，见 stop.test.js 的守恒断言）；
+ * config-service 侧解析失败抛错、由调用方转 success:false。改任一侧的回溯算法须同步另一侧。
+ * @param {string} stdout pm2 jlist 的原始 stdout
+ * @returns {Array} 进程数组；无 PM2 / 空输出 / 解析失败一律 []
+ */
+function parsePm2JlistOutput(stdout) {
+  const text = (stdout || '').trim();
+  if (!text) return [];
+  const end = text.lastIndexOf(']');
+  if (end < 0) return [];
+  let start = text.lastIndexOf('[', end - 1);
+  while (start >= 0) {
+    try {
+      const parsed = JSON.parse(text.slice(start, end + 1));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      start = text.lastIndexOf('[', start - 1);
+    }
+  }
+  return [];
+}
+
+/**
  * 查询 PM2 当前托管的所有 app 状态（jlist JSON）。
  * @returns {Array<{name:string, pm2_env:{status:string}, pid:number}>} 空数组表示无 PM2 或查询失败
  */
@@ -231,12 +264,7 @@ function getPm2StatusList() {
     timeout: 10000,
   });
   if (result.status !== 0) return [];
-  try {
-    const list = JSON.parse(result.stdout);
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
+  return parsePm2JlistOutput(result.stdout);
 }
 
 /**
@@ -716,6 +744,7 @@ module.exports = {
   runInNewWindow,
   killTree,
   getPm2StatusList,
+  parsePm2JlistOutput,
   getPm2AppStatus,
   getPm2OnlineApps,
   getPidByPort,
