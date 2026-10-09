@@ -214,20 +214,7 @@ export class BatchDownloadService {
     });
     if (!job) throw new NotFoundException('Task not found');
     if (job.userId !== userId) throw new ForbiddenException('Access denied');
-    return {
-      taskId: job.id,
-      status: job.status,
-      mode: job.mode === 'individual' ? 'individual' : 'zip',
-      totalCount: job.totalCount,
-      completedCount: job.completedCount,
-      errorCount: job.errorCount,
-      errors:
-        (job.errors as Array<{ nodeId: string; fileName: string; error: string }> | null) ||
-        undefined,
-      zipPath: job.zipPath || undefined,
-      zipSize: job.zipSize || undefined,
-      itemNames: this.deriveItemNames(job),
-    };
+    return this.toProgressEvent(job);
   }
 
   async cancelTask(taskId: string, userId: string): Promise<void> {
@@ -521,21 +508,7 @@ export class BatchDownloadService {
       take: pageSize + 1,
     });
     const hasMore = jobs.length > pageSize;
-    const tasks = jobs.slice(0, pageSize).map((job) => ({
-      taskId: job.id,
-      status: job.status,
-      mode: (job.mode === 'individual' ? 'individual' : 'zip') as
-        'individual' | 'zip',
-      totalCount: job.totalCount,
-      completedCount: job.completedCount,
-      errorCount: job.errorCount,
-      errors:
-        (job.errors as Array<{ nodeId: string; fileName: string; error: string }> | null) ||
-        undefined,
-      zipPath: job.zipPath || undefined,
-      zipSize: job.zipSize || undefined,
-      itemNames: this.deriveItemNames(job),
-    }));
+    const tasks = jobs.slice(0, pageSize).map((job) => this.toProgressEvent(job));
     return { tasks, hasMore };
   }
 
@@ -570,6 +543,40 @@ export class BatchDownloadService {
       const format = item.formats?.[0] || 'mxweb';
       return `${nameWithoutExt}.${format}`;
     });
+  }
+
+  /**
+   * DB job → BatchProgressEvent 的单一映射出口：getProgress 与 getUserTasks 共用，
+   * 保证「SSE 初始快照 / 轮询 / 历史列表」三处返回同一形状（此前两处各写一份、
+   * 字段集易漂移）。实时进度 tick 走 ProgressTrackerService.emitProgress（不含 mode），
+   * 前端在任务创建时已知 mode 并保留，故快照与 tick 形状差异是有意为之。
+   */
+  private toProgressEvent(job: {
+    id: string;
+    status: BatchJobStatus;
+    mode: string;
+    totalCount: number;
+    completedCount: number;
+    errorCount: number;
+    errors: unknown;
+    zipPath: string | null;
+    zipSize: number | null;
+    fileList: unknown;
+  }): BatchProgressEvent {
+    return {
+      taskId: job.id,
+      status: job.status,
+      mode: job.mode === 'individual' ? 'individual' : 'zip',
+      totalCount: job.totalCount,
+      completedCount: job.completedCount,
+      errorCount: job.errorCount,
+      errors:
+        (job.errors as Array<{ nodeId: string; fileName: string; error: string }> | null) ||
+        undefined,
+      zipPath: job.zipPath || undefined,
+      zipSize: job.zipSize || undefined,
+      itemNames: this.deriveItemNames(job),
+    };
   }
 
   async getProgressForSse(

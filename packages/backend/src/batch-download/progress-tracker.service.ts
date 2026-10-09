@@ -39,6 +39,8 @@ export class ProgressTrackerService {
     currentFile?: string,
     errors?: Array<{ nodeId: string; fileName: string; error: string }>
   ): void {
+    // 实时进度 tick：不下发 mode（前端在任务创建时已知并保留，SSE 帧不读此字段），
+    // 故无需 as 断言——对象本身就是合法的 BatchProgressEvent（mode 可选）
     this.eventEmitter.emit(`batch-download.progress.${taskId}`, {
       taskId,
       status,
@@ -47,6 +49,6 @@ export class ProgressTrackerService {
       errorCount,
       currentFile,
       errors,
-    } as BatchProgressEvent);
+    } satisfies BatchProgressEvent);
   }
 }

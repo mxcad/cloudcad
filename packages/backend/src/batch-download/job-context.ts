@@ -141,6 +141,12 @@ export class JobContext {
     );
   }
 
+  /**
+   * 实时进度 tick（处理中）。状态恒为 PROCESSING：本方法只在活跃处理期被调用
+   * （recordError / 编排器逐项进度），终态迁移一律走 BatchDownloadJob.transition
+   * ——它按真实目标状态（COMPLETED/FAILED/CANCELLED）emit，不经过此路径。
+   * 故此处不会把已取消/已终态的任务误报为 PROCESSING。
+   */
   emitProgress(currentLabel?: string): void {
     this.deps.progressTracker.emitProgress(
       this.jobId,

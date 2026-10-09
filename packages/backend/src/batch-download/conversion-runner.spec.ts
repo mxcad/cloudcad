@@ -90,6 +90,20 @@ describe('ConversionRunner', () => {
       }),
     };
 
+    // 产物名单一出口（与 buildParamKey 同源 + 扩展名）：mock 委托给 buildParamKey，
+    // 保证 outname 与缓存 basename 的字节一致关系在测试里同样成立
+    mockFileDownloadExportService.buildConversionArtifactName = jest.fn(
+      (hash: string, format: string, params?: unknown) => {
+        const paramKey = mockFileDownloadExportService.buildParamKey(
+          format,
+          params
+        );
+        const ext =
+          format === 'pdf' ? '.pdf' : format === 'dwg' ? '.dwg' : '.dxf';
+        return `${hash}-${paramKey}${ext}`;
+      }
+    );
+
     const mockConfigService = {
       get: jest.fn().mockImplementation((key: string) => {
         if (key === 'batchDownload') return { maxConcurrency: 3 };

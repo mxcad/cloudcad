@@ -149,7 +149,6 @@ export class ConversionRunner {
     format: string,
     pdfParams?: ConvertRequest['pdfParams']
   ): {
-    targetExt: string;
     cadFormat: CadDownloadFormat;
     params: {
       width?: string;
@@ -163,7 +162,6 @@ export class ConversionRunner {
       throw new Error(formatUnsupportedMessage(format));
     }
     return {
-      targetExt: resolved.targetExt,
       cadFormat: resolved.cadFormat,
       params: resolved.engineParams ?? {},
     };
@@ -424,21 +422,23 @@ export class ConversionRunner {
     snapshot: { snapshotPath: string; hash: string }
   ): BatchConversionTask {
     const node = request.node;
-    const { targetExt, cadFormat, params } = this.resolveTarget(
+    const { cadFormat, params } = this.resolveTarget(
       request.format,
-      request.pdfParams
-    );
-    const paramKey = this.fileDownloadExportService.buildParamKey(
-      cadFormat,
       request.pdfParams
     );
     return {
       id: `${node.id}:${request.format}`,
-      // 步骤 2：srcPath 指内容寻址快照（uploads/{hash}.mxweb）；outname 版本绑定（{hash}-{paramKey}{targetExt}）
-      // → 产物落 uploads/{hash}-{paramKey}{targetExt}（= 缓存路径，内容寻址）；ZIP 条目名仍用原文件名（sanitized，独立计算）
+      // 步骤 2：srcPath 指内容寻址快照（uploads/{hash}.mxweb）；outname 由
+      // FileDownloadExportService.buildConversionArtifactName 单一出口派生
+      // （{hash}-{paramKey}{targetExt}，= 缓存路径 basename，内容寻址）；
+      // ZIP 条目名仍用原文件名（sanitized，独立计算）
       srcPath: snapshot.snapshotPath.replace(/\\/g, '/'),
       fileHash: node.fileHash || '',
-      outname: `${snapshot.hash}-${paramKey}${targetExt}`,
+      outname: this.fileDownloadExportService.buildConversionArtifactName(
+        snapshot.hash,
+        cadFormat,
+        request.pdfParams
+      ),
       ...params,
     };
   }
@@ -462,16 +462,18 @@ export class ConversionRunner {
           };
         }
 
-        const { targetExt, cadFormat, params } = this.resolveTarget(
+        const { cadFormat, params } = this.resolveTarget(
           format,
           pdfParams
         );
-        const paramKey = this.fileDownloadExportService.buildParamKey(
-          cadFormat,
-          pdfParams
-        );
-        // 产物版本绑定：outname = {hash}-{paramKey}{targetExt}，产物落 srcPath 同目录（uploads/{hash}-{paramKey}{targetExt} = 缓存路径）
-        const outname = `${snapshot.hash}-${paramKey}${targetExt}`;
+        // 产物版本绑定：outname 由 buildConversionArtifactName 单一出口派生
+        // （{hash}-{paramKey}{targetExt}），产物落 srcPath 同目录（= 缓存路径 basename）
+        const outname =
+          this.fileDownloadExportService.buildConversionArtifactName(
+            snapshot.hash,
+            cadFormat,
+            pdfParams
+          );
 
         // 转换缓存命中（同 hash+格式参数）：直接复用缓存产物，不再起 mxcadassembly（ADR-0060）
         const cachedPath =
