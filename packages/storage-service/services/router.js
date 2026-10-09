@@ -18,6 +18,10 @@ const { log } = require('../lib/utils');
  * 文件读写（FileHandler）仍走固定 FILES_DATA_PATH，未按 prefix 转发到不同节点——
  * ADR-0015 的多节点路由尚未接线。单节点部署无路由表，行为正确；要启用多节点，
  * 需在 FileHandler 侧实现 prefix→节点的解析与转发（本类目前只提供表加载与上报）。
+ *
+ * ⚠️ 这是 ADR-0015 的**刻意未接线**状态（防御性设计），**非缺陷**：
+ * 勿因"路由表已被加载/上报"就误以为文件已按 prefix 分发到多节点，
+ * 也勿顺手"修复"接线——多节点接线是独立排票项，未排期前保持现状。
  */
 class StorageRouter {
   constructor() {
