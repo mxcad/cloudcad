@@ -175,6 +175,50 @@ describe('FileDownloadExportService - 转换产物缓存（内容寻址）', () 
     return cachePath;
   };
 
+  describe('buildConversionArtifactName（产物名单一出口 ↔ 清理 cron 判据）', () => {
+    const H = 'a'.repeat(32);
+    it('产物名被 isConversionCacheEntry 识别（清理 cron 不会漏删孤儿缓存）', () => {
+      // 单一出口产出的产物名必须与清理 cron 的缓存判据同形——否则清理 cron
+      // 认不出这些文件，孤儿缓存无限累积。这是「产物名 vs 缓存判据」漂移的守卫。
+      expect(
+        isConversionCacheEntry(
+          service.buildConversionArtifactName(H, CadDownloadFormat.PDF)
+        )
+      ).toBe(true);
+      expect(
+        isConversionCacheEntry(
+          service.buildConversionArtifactName(H, CadDownloadFormat.PDF, {
+            width: '4000',
+            height: '3000',
+            colorPolicy: 'color',
+          })
+        )
+      ).toBe(true);
+      expect(
+        isConversionCacheEntry(
+          service.buildConversionArtifactName(H, CadDownloadFormat.DWG)
+        )
+      ).toBe(true);
+      expect(
+        isConversionCacheEntry(
+          service.buildConversionArtifactName(H, CadDownloadFormat.DXF, {
+            dwgVersion: 2010,
+          })
+        )
+      ).toBe(true);
+    });
+    it('产物名 = 缓存 key + 扩展名（与 buildConversionCacheKey 同源，runner 与 export 字节一致）', () => {
+      // 缓存启用时（本 spec 的 conversionCacheDir 指向 uploadsDir）：
+      // 产物名 join 缓存目录 = 缓存路径，其 basename 即产物名——
+      // 这正是批量下载 outname 与单文件导出缓存路径双向命中的前提。
+      const name = service.buildConversionArtifactName(H, CadDownloadFormat.DWG);
+      const cacheKey = service.buildConversionCacheKey(H, CadDownloadFormat.DWG);
+      expect(cacheKey).not.toBeNull();
+      expect(name).toBe(`${cacheKey}.dwg`);
+      expect(path.basename(path.join(uploadsDir, name))).toBe(name);
+    });
+  });
+
   it('缓存未命中：调用转换，产物即缓存（内容寻址，无需移动）', async () => {
     const node = makeNode();
     prisma.fileSystemNode.findUnique.mockResolvedValue(node);

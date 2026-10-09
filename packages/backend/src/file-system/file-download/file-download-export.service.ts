@@ -180,6 +180,30 @@ export class FileDownloadExportService {
     return `${hash}-${this.buildParamKey(format, pdfParams)}`;
   }
 
+  /**
+   * 转换产物名（内容寻址）的单一出口：`{hash}-{paramKey}{targetExt}`。
+   *
+   * 与缓存启用与否无关（缓存路径 = 本名 join 缓存目录），单文件导出（outname/cachePath）
+   * 与批量下载（conversion-runner 的 outname）共用同一实现，保证两侧产物名字节一致、
+   * 缓存双向命中。扩展名统一取自 resolveOutputFormat（经 conversionTargetExt），
+   * 不再让各调用点分别拼 `${cacheKey}${conversionTargetExt(format)}` /
+   * `${cacheKey}${resolved.targetExt}` / runner 手拼 `${hash}-${paramKey}${targetExt}`。
+   * 无 hash 返回空串。
+   */
+  buildConversionArtifactName(
+    hash: string,
+    format: CadDownloadFormat,
+    pdfParams?: {
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: number;
+    }
+  ): string {
+    if (!hash) return '';
+    return `${hash}-${this.buildParamKey(format, pdfParams)}${conversionTargetExt(format)}`;
+  }
+
   /** 缓存命中且未过 TTL（mtime 惰性检查）；过期文件顺带删除 */
   private isConversionCacheFresh(cachePath: string): boolean {
     try {
@@ -221,7 +245,7 @@ export class FileDownloadExportService {
     if (!cacheKey) return null;
     const cachePath = path.join(
       this.conversionCacheDir,
-      `${cacheKey}${conversionTargetExt(format)}`
+      this.buildConversionArtifactName(hash, format, pdfParams)
     );
     return this.isConversionCacheFresh(cachePath) ? cachePath : null;
   }
@@ -246,7 +270,7 @@ export class FileDownloadExportService {
     if (!cacheKey) return;
     const cachePath = path.join(
       this.conversionCacheDir,
-      `${cacheKey}${conversionTargetExt(format)}`
+      this.buildConversionArtifactName(hash, format, pdfParams)
     );
     if (srcFilePath === cachePath) return;
     try {
@@ -361,8 +385,13 @@ export class FileDownloadExportService {
     const cacheKey = hash
       ? this.buildConversionCacheKey(hash, format, pdfParams)
       : null;
+    const artifactName = this.buildConversionArtifactName(
+      hash ?? '',
+      format,
+      pdfParams
+    );
     const cachePath = cacheKey
-      ? path.join(this.conversionCacheDir, `${cacheKey}${targetExt}`)
+      ? path.join(this.conversionCacheDir, artifactName)
       : null;
     if (cachePath && this.isConversionCacheFresh(cachePath)) {
       return { alreadyCached: true, cacheKey };
@@ -371,7 +400,7 @@ export class FileDownloadExportService {
     const srcPath = (
       snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)
     ).replace(/\\/g, '/');
-    const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
+    const outname = cacheKey ? artifactName : targetFilename;
 
     // 共享转换核心（构造参数 → 调引擎 → 校验产物）。占位/释放走 withConversionQuota
     // 单点（缓存命中已在上方提前返回，此处必发生真实转换）：成功消耗占位，
@@ -665,8 +694,13 @@ export class FileDownloadExportService {
           const cacheKey = hash
             ? this.buildConversionCacheKey(hash, format, pdfParams)
             : null;
+          const artifactName = this.buildConversionArtifactName(
+            hash ?? '',
+            format,
+            pdfParams
+          );
           const cachePath = cacheKey
-            ? path.join(this.conversionCacheDir, `${cacheKey}${targetExt}`)
+            ? path.join(this.conversionCacheDir, artifactName)
             : null;
           if (cachePath && this.isConversionCacheFresh(cachePath)) {
             const cachedStream = fs.createReadStream(cachePath);
@@ -698,7 +732,7 @@ export class FileDownloadExportService {
           const srcPath = (
             snapshot?.snapshotPath || this.storageManager.getFullPath(mxwebPath)
           ).replace(/\\/g, '/');
-          const outname = cacheKey ? `${cacheKey}${targetExt}` : targetFilename;
+          const outname = cacheKey ? artifactName : targetFilename;
 
           this.logger.log(`开始转换文件: ${originalFilename} -> ${outname}`);
           // 共享转换核心（构造参数 → 调引擎 → 校验产物）。占位/释放走 withConversionQuota
