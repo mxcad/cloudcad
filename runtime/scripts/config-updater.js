@@ -748,8 +748,12 @@ function mergeExampleIntoEnv(envContent, exampleContent) {
  * 含 shell 敏感字符（#、空白、$、反引号、!、&、|、;、<、>）的值必须加双引号——
  * 否则 dotenv 把 # 当行内注释：以 # 开头的口令解析为空值（后端首次启动创建
  * 管理员失败、PM2 反复重启），# 在中间的口令被静默截断（用户拿到的口令 ≠ 实际口令）。
- * 所有写 .env 的路径（updateEnvFile、setup-offline fillEmptySecrets、config-service
- * updateEnvFile）必须走本函数，不得裸写值。
+ * runtime 包内所有写 .env 的路径（updateEnvFile、setup-offline fillEmptySecrets）
+ * 必须走本函数，不得裸写值。
+ * config-service 是 0 依赖独立包、无法 require 本函数，在
+ * packages/config-service/lib/env.js（updateEnvFile）保留逐字相同的副本——
+ * 两侧 escape 字符类必须同步修改，漂移守卫见 config-updater.test.js
+ * （断言 runtime 实现 / config-service 实现 / 测试文件 SENSITIVE_RE 三份逐字一致）。
  * @param {string} value
  * @returns {string}
  */

@@ -8,8 +8,11 @@
  *   - # 中间 → 静默截断 → 用户拿到的口令 ≠ 实际口令（登录永远失败）
  * 生成口令含 # 的概率约 35%，即每 3 次全新部署约 1 次踩中。
  *
- * 修复约定：所有写 .env 的路径必须走 escapeEnvValue（含敏感字符加双引号），
+ * 修复约定：runtime 包内所有写 .env 的路径必须走 escapeEnvValue（含敏感字符加双引号），
  * 与 lib/env.js、config-service/lib/env.js 的剥引号解析逻辑配对。
+ * config-service 是 0 依赖独立包，其写入器（lib/env.js updateEnvFile）保留一份
+ * 逐字相同的 escape 副本；escape 字符类的三份副本（runtime 实现 / config-service
+ * 实现 / 本文件 SENSITIVE_RE）由本文件末尾的漂移守卫锁定逐字一致。
  *
  * 运行：node --test runtime/scripts/config-updater.test.js
  */
@@ -160,4 +163,37 @@ test('回归: fillEmptySecrets 生成的 INITIAL_ADMIN_PASSWORD 恒可完整回�
       }
     );
   }
+});
+
+test('escape 字符类漂移守卫：runtime 实现 / config-service 实现 / 本文件 SENSITIVE_RE 三份逐字一致', () => {
+  // config-service 无法 require escapeEnvValue（0 依赖独立包），在 lib/env.js 保留逐字副本；
+  // 本文件 SENSITIVE_RE 是第三份。任一份被单独收紧/放宽，另两份静默漂移 → 加引号判定
+  // 口径分裂，含敏感字符的口令被 dotenv 截断（缺陷机理见文件头）。
+  // 从源码提取以 # 开头的 escape 字符类（斜杠包裹，全仓仅这三处）。
+  const extract = (src) =>
+    [...src.matchAll(/\/\[(#[^\]]*)\]\//g)].map((m) => m[1]);
+  const implSrc = fs.readFileSync(path.join(__dirname, 'config-updater.js'), 'utf8');
+  const testSrc = fs.readFileSync(__filename, 'utf8');
+  const impl = extract(implSrc);
+  const self = extract(testSrc);
+  assert.equal(impl.length, 1, 'runtime 实现应恰有 1 处 escape 字符类');
+  assert.equal(self.length, 1, '本测试文件应恰有 1 处 escape 字符类');
+  assert.equal(
+    SENSITIVE_RE.source,
+    `[${impl[0]}]`,
+    '本文件 SENSITIVE_RE 必须与 runtime 实现逐字一致'
+  );
+  const csPath = path.join(
+    __dirname,
+    '..',
+    '..',
+    'packages',
+    'config-service',
+    'lib',
+    'env.js'
+  );
+  if (!fs.existsSync(csPath)) return; // 部署机无 monorepo 布局，跨包比对无从谈起
+  const cs = extract(fs.readFileSync(csPath, 'utf8'));
+  assert.equal(cs.length, 1, 'config-service 实现应恰有 1 处 escape 字符类');
+  assert.equal(cs[0], impl[0], '两份实现的 escape 字符类必须逐字一致');
 });

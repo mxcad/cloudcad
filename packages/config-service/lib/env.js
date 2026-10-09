@@ -44,6 +44,9 @@ function updateEnvFile(filePath, updates) {
   Object.entries(updates).forEach(([key, value]) => {
     const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`^${escapedKey}=.*$`, 'm');
+    // escape 字符类刻意与 runtime/scripts/config-updater.js 的 escapeEnvValue 逐字一致
+    // （本包是 0 依赖独立服务，无法 require 它）；改一侧必须同步改另一侧——
+    // 漂移守卫见 runtime/scripts/config-updater.test.js
     const needsQuotes = /[#\s$`!&|;<>]/.test(value);
     const escapedValue = needsQuotes
       ? `"${value.replace(/"/g, '\\"')}"`
