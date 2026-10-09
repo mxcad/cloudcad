@@ -4,6 +4,7 @@
   mxcadExternalRefControllerUploadExtReferenceImage,
   mxcadExternalRefControllerUploadExtReferenceDwg,
 } from '../api-sdk';
+import { unwrap } from '../utils/apiError';
 
 export interface ExtRefFile {
   name: string;
@@ -24,7 +25,7 @@ export async function getPreloadingData(
 ): Promise<PreloadingData | null> {
   try {
     const result = await mxcadExternalRefControllerGetPreloadingData({ path: { nodeId } });
-    if (result.error) return null;
+    unwrap(result);
     return result.data as unknown as PreloadingData;
   } catch {
     return null;
@@ -39,7 +40,7 @@ export async function checkExternalReferences(
       path: { nodeId },
       body: { fileName: '' },
     });
-    if (result.error) return [];
+    unwrap(result);
     const data = result.data as unknown as { files: ExtRefFile[] };
     return data?.files || [];
   } catch {
@@ -67,7 +68,7 @@ export async function uploadExtRefImage(params: {
       ext_ref_file: params.extRefFile,
     },
   });
-  if (result.error) throw result.error;
+  unwrap(result);
 }
 
 /** 上传外部参照 dwg。失败即抛，契约同 uploadExtRefImage。 */
@@ -79,7 +80,7 @@ export async function uploadExtRefDwg(params: {
     path: { nodeId: params.nodeId },
     body: { file: params.file, ext_ref_file: '' },
   });
-  if (result.error) throw result.error;
+  unwrap(result);
 }
 
 export function parseExtRefFileNames(

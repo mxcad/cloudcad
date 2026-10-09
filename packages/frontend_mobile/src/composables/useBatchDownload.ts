@@ -25,6 +25,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { BatchDownloadTaskDto, BatchDownloadErrorDto } from '@cloudcad/api-sdk/types.gen'
 import { cachedApiUrl } from '@/utils/apiConfig'
+import { unwrap } from '@/utils/apiError'
 import { triggerUrlDownload } from '@/utils/download'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { t } from '@/languages'
@@ -80,7 +81,7 @@ export function useBatchDownload() {
       const res = await batchDownloadControllerGetUserTasks({
         query: { page: '1', pageSize: '20' },
       })
-      if (res.error) return
+      unwrap(res)
       const data = (res.data ?? {}) as { tasks?: BatchDownloadTaskDto[] }
       tasks.value = (data.tasks ?? []).map((t) => ({ ...t }))
     } catch {
@@ -126,7 +127,7 @@ export function useBatchDownload() {
         mode: 'zip',
       },
     } as never)
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     // 本地记录展示名（服务端任务 DTO 不含 name）
     if (opts.name) {
       const created = (res.data ?? {}) as { taskId?: string }
@@ -145,7 +146,7 @@ export function useBatchDownload() {
     // 先门控再展开：关闭时没必要白做一次递归展开
     await assertBatchDownloadEnabled()
     const res = await batchDownloadControllerGetFolderFiles({ path: { nodeId } } as never)
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     const tree = res.data as FolderTreeNode
     const files = flattenFolderTree(tree)
     if (files.length === 0) throw new Error('empty')
@@ -183,7 +184,7 @@ export function useBatchDownload() {
         ...(opts.projectId ? { projectId: opts.projectId } : {}),
       },
     } as never)
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     const data = (res.data ?? {}) as { taskId?: string }
     const taskId = data.taskId
     if (taskId) {
@@ -238,7 +239,7 @@ export function useBatchDownload() {
   async function fetchTaskErrors(taskId: string): Promise<BatchDownloadErrorDto[]> {
     try {
       const res = await batchDownloadControllerGetProgress({ path: { taskId } } as never)
-      if (res.error) return []
+      unwrap(res)
       const data = res.data as { errors?: BatchDownloadErrorDto[] } | null
       return data?.errors ?? []
     } catch {

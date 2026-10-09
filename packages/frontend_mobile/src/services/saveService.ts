@@ -8,6 +8,7 @@ import { MxCpp } from 'mxcad';
 import { calculateFileHash } from '../utils/hashUtils';
 import { uploadFile } from './mobileUploadService';
 import { t } from '@/languages';
+import { unwrap } from '../utils/apiError';
 
 export function getMxwebBlob(): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -66,10 +67,7 @@ export async function saveToNode(
       ...(expectedTimestamp ? { expectedTimestamp } : {}),
     } as never,
   });
-  if (result.error) {
-    const errBody = result.error as { message?: string };
-    throw new Error(errBody.message || t('保存失败'));
-  }
+  unwrap(result);
   return { path: result.data?.path };
 }
 
@@ -102,7 +100,7 @@ export async function saveAs(params: {
       ...(rest.libraryType ? { libraryType: rest.libraryType } : {}),
     } as never,
   });
-  if (result.error) throw result.error;
+  unwrap(result);
   const responseData = result.data as unknown as { nodeId: string };
   return responseData;
 }
@@ -116,7 +114,7 @@ export async function saveLibraryDrawing(
     path: { nodeId },
     body: { file },
   });
-  if (result.error) throw result.error;
+  unwrap(result);
   const data = result.data as unknown as { updatedAt?: string } | undefined;
   return data || {};
 }
@@ -130,7 +128,7 @@ export async function saveLibraryBlock(
     path: { nodeId },
     body: { file },
   });
-  if (result.error) throw result.error;
+  unwrap(result);
   const data = result.data as unknown as { updatedAt?: string } | undefined;
   return data || {};
 }

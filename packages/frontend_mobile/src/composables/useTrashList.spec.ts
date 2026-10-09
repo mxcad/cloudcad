@@ -30,6 +30,17 @@ vi.mock('@/utils/apiError', () => ({
     const m = (e as { message?: unknown })?.message
     return typeof m === 'string' && m ? m : fallback
   }),
+  // 与真实 unwrap 同语义：error 非空抛错；data.code 为字符串业务码抛错（SUCCESS 解包）；否则返回 data
+  unwrap: vi.fn((res: { error?: unknown; data?: unknown }) => {
+    if (res.error) throw res.error
+    const data = (res.data ?? {}) as { code?: unknown; data?: unknown }
+    const code = data.code
+    if (typeof code === 'string' && code) {
+      if (code === 'SUCCESS') return (data.data ?? data) as never
+      throw data
+    }
+    return data as never
+  }),
 }))
 
 import {

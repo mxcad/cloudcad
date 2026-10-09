@@ -23,6 +23,7 @@ import {
   showFailToast,
 } from 'vant'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import {
   rolesControllerGetProjectRolesByProject,
   projectRolesControllerCreateProjectRole,
@@ -62,7 +63,7 @@ async function loadRoles() {
     const res = await rolesControllerGetProjectRolesByProject({
       path: { projectId: projectId.value },
     })
-    if (res.error) throw res.error
+    unwrap(res)
     roles.value = res.data ?? []
     roleError.value = ''
   } catch (e) {
@@ -81,8 +82,12 @@ async function loadProjectPermissions() {
     const res = await memberControllerGetUserProjectPermissions({
       path: { projectId: projectId.value },
     })
-    if (res.error) return
-    projectPermissions.value = res.data?.permissions ?? []
+    try {
+      unwrap(res)
+      projectPermissions.value = res.data?.permissions ?? []
+    } catch {
+      // 业务/网络错误：保留旧权限（对齐原 `if (res.error) return` 语义）
+    }
   } catch {
     projectPermissions.value = []
   }
@@ -195,7 +200,7 @@ async function onSaveRole() {
           path: { projectId: projectId.value },
           body,
         })
-    if (res.error) throw res.error
+    unwrap(res)
     closeToast()
     showSuccessToast(editingRole.value ? t('角色已更新') : t('角色已创建'))
     configOpen.value = false
@@ -234,7 +239,7 @@ async function onDeleteRole(role: ProjectRoleDto) {
     const res = await projectRolesControllerDeleteProjectRole({
       path: { projectId: projectId.value, id: role.id },
     })
-    if (res.error) throw res.error
+    unwrap(res)
     closeToast()
     showSuccessToast(t('角色已删除'))
     await loadRoles()

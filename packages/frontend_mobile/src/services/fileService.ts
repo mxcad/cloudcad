@@ -4,6 +4,7 @@ import {
 } from '../api-sdk';
 import type { FileSystemNodeDto } from '../api-sdk';
 import { cachedApiUrl } from '../utils/apiConfig';
+import { unwrap } from '../utils/apiError';
 import { mxwebFilesDataPath } from '../utils/mxwebUrl';
 import { triggerBlobDownload } from '../utils/download';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
@@ -25,7 +26,7 @@ export function buildMxwebUrl(filePath: string, revision?: number): string {
  */
 export async function getNodeInfo(nodeId: string): Promise<FileSystemNodeDto> {
   const result = await nodeControllerGetNode({ path: { nodeId } });
-  if (result.error) throw result.error;
+  unwrap(result);
   return result.data as unknown as FileSystemNodeDto;
 }
 
@@ -43,7 +44,7 @@ export async function downloadNodeOriginal(
     path: { nodeId },
     parseAs: 'blob',
   });
-  if (result.error) throw result.error;
+  unwrap(result);
   const blobData = result.data;
   const blob =
     blobData instanceof Blob ? blobData : new Blob([blobData as BlobPart]);

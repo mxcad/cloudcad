@@ -40,6 +40,7 @@ import { runUploadPool } from '@/utils/uploadPool'
 import { calculateFileHash } from '@/utils/hashUtils'
 import { uploadFile } from '@/services/mobileUploadService'
 import { validateName } from '@/utils/validateName'
+import { unwrap } from '@/utils/apiError'
 import type { SelectionActionKey } from '../pages/shell/components/UnifiedFileList.vue'
 
 /** 只读 ref（Ref 或 ComputedRef 皆可）：两页数据层来源既有 Ref 也有 ComputedRef，统一放宽避免可写性摩擦 */
@@ -204,7 +205,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
         body: { nodeIds: items.map((i) => i.id), permanently: false },
       })
       closeToast()
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       // 批量操作部分成功：透传成功/失败计数（对齐 PC「成功删除 N 项，M 项失败」）
       const data = res.data as BatchOperationResponseDto | undefined
       const failed = items.length > 1 ? (data?.failedCount ?? 0) : 0
@@ -217,7 +218,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
       // 撤销：trash 恢复这批节点 + 刷新文件列表（单步撤销，顶替既有 snackbar）
       ctx.undo.trackUndo(t('已删除 {count} 个文件', { count: String(items.length) }), async () => {
         const r = await trashControllerRestoreTrashItems({ body: { itemIds: items.map((i) => i.id) } })
-        if (r.error) throw new Error(String(r.error))
+        unwrap(r)
         showSuccessToast(t('已恢复'))
         await ctx.reloadAfterOp()
       })
@@ -302,13 +303,13 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
         body: { name },
       })
       closeToast()
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       showSuccessToast(t('重命名成功'))
       await ctx.reloadAfterOp()
       // 撤销：回写原名（对齐 PC rename undo rollback）
       ctx.undo.trackUndo(t('已重命名'), async () => {
         const r = await nodeControllerUpdateNode({ path: { nodeId: target.id }, body: { name: target.name } })
-        if (r.error) throw new Error(String(r.error))
+        unwrap(r)
         showSuccessToast(t('已撤销'))
         await ctx.reloadAfterOp()
       })
@@ -409,7 +410,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
           ? await nodeControllerBatchMoveNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
           : await nodeControllerBatchCopyNodes({ body: { nodeIds: items.map((i) => i.id), targetParentId: folder.id } })
       closeToast()
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       // 批量操作部分成功：透传成功/失败计数（对齐 PC「成功移动 N 项，M 项失败」）
       const data = res.data as BatchOperationResponseDto | undefined
       const failed = items.length > 1 ? (data?.failedCount ?? 0) : 0
@@ -434,7 +435,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
         if (undoIds.length > 0) {
           ctx.undo.trackUndo(t('已复制 {count} 个文件', { count: String(undoIds.length) }), async () => {
             const r = await nodeControllerBatchDeleteNodes({ body: { nodeIds: undoIds, permanently: true } })
-            if (r.error) throw new Error(String(r.error))
+            unwrap(r)
             showSuccessToast(t('已撤销'))
             await ctx.reloadAfterOp()
           })
@@ -445,7 +446,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
         if (undoIds.length > 0 && sourceFolder) {
           ctx.undo.trackUndo(t('已移动 {count} 个文件', { count: String(undoIds.length) }), async () => {
             const r = await nodeControllerBatchMoveNodes({ body: { nodeIds: undoIds, targetParentId: sourceFolder } })
-            if (r.error) throw new Error(String(r.error))
+            unwrap(r)
             showSuccessToast(t('已撤销'))
             await ctx.reloadAfterOp()
           })
@@ -530,7 +531,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
         body: { name },
       })
       closeToast()
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       showToast(t('文件夹创建成功'))
       await ctx.reloadAfterOp()
       // 撤销：彻底删除新建文件夹（对齐 PC createFolder undo rollback）
@@ -538,7 +539,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
       if (createdId) {
         ctx.undo.trackUndo(t('已创建文件夹'), async () => {
           const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
-          if (r.error) throw new Error(String(r.error))
+          unwrap(r)
           showSuccessToast(t('已撤销'))
           await ctx.reloadAfterOp()
         })

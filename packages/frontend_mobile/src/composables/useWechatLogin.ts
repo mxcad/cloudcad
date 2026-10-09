@@ -5,6 +5,7 @@ import {
   authControllerPollWechatTransaction,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import { toError, errorCode, errorDetail, errMsg } from '@/utils/authFeedback'
 import { showAccountDeactivatedDialog } from '@/utils/authFeedback'
 
@@ -73,8 +74,8 @@ export function useWechatLogin(handlers: WechatLoginHandlers) {
           txn: '',
         },
       })
-      // SDK 不抛错：失败信息在 res.error
-      if (res.error) throw toError(res.error)
+      // SDK 不抛错：失败信息在 res.error（unwrap 同时拦截 data.code 字符串业务码）
+      unwrap(res)
       const { authUrl } = (res.data ?? {}) as { authUrl?: string }
       if (!authUrl) throw new Error(t('获取授权链接失败'))
       window.location.href = authUrl
@@ -90,7 +91,7 @@ export function useWechatLogin(handlers: WechatLoginHandlers) {
     polling.value = true
     try {
       const res = await authControllerPollWechatTransaction({ query: { txn } })
-      if (res.error) throw toError(res.error)
+      unwrap(res)
       const raw = res.data
       if (!isPollResult(raw)) return
 

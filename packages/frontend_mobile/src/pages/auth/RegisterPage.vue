@@ -105,7 +105,7 @@ async function handleSendCode() {
     if (outcome === 'error') throw new Error(t('验证码发送失败'))
 
     const res = await authControllerSendSmsCode({ body: { phone: phone.value.trim(), scene: 'register' } })
-    if (res.error) throw toError(res.error)
+    unwrap(res)
     showToast(t('验证码已发送'))
     countdownStart()
   } catch (e) {

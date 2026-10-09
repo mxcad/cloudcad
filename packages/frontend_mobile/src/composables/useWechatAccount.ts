@@ -14,7 +14,7 @@ import {
   authControllerUnbindWechat,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
-import { toError } from '@/utils/apiError'
+import { unwrap } from '@/utils/apiError'
 import { hashRouterOrigin } from '@/composables/useWechatLogin'
 
 export type WechatAccountPurpose = 'bind' | 'deactivate'
@@ -54,7 +54,7 @@ export function useWechatAccount() {
       },
     })
     // SDK 不抛错：失败信息在 res.error
-    if (res.error) throw toError(res.error)
+    unwrap(res)
     const { authUrl } = (res.data ?? {}) as { authUrl?: string }
     if (!authUrl) throw new Error(t('获取授权链接失败'))
     window.location.href = authUrl
@@ -68,7 +68,7 @@ export function useWechatAccount() {
     const res = await authControllerBindWechat({
       body: { code, state, ...(takeover ? { takeover: true } : {}) },
     })
-    if (res.error) throw toError(res.error)
+    unwrap(res)
     const data = (res.data ?? {}) as { success?: boolean; message?: string }
     if (data.success === false) throw new Error(data.message || t('绑定失败'))
   }
@@ -76,7 +76,7 @@ export function useWechatAccount() {
   /** 解绑微信（后端校验账号至少保留一种登录方式，否则 400） */
   async function unbindWechat(): Promise<void> {
     const res = await authControllerUnbindWechat()
-    if (res.error) throw toError(res.error)
+    unwrap(res)
     const data = (res.data ?? {}) as { success?: boolean; message?: string }
     if (data.success === false) throw new Error(data.message || t('解绑失败'))
   }

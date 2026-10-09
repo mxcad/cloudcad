@@ -7,6 +7,7 @@ import {
 } from 'vant'
 import { t } from '@/languages'
 import { cachedApiUrl } from '@/utils/apiConfig'
+import { unwrap } from '@/utils/apiError'
 import { triggerBlobDownload, triggerUrlDownload } from '@/utils/download'
 import { isCadFileName } from '@/utils/cadFile'
 import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.gen'
@@ -97,7 +98,7 @@ export function useFormatDownload(options: {
         parseAs: 'blob',
       } as never)
       closeToast()
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       const blob = res.data as Blob
       const nameWithoutExt = target.name.replace(/\.[^.]+$/, '')
       const finalName = `${nameWithoutExt}.${payload.format}`

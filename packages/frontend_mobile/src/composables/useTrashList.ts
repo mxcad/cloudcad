@@ -27,7 +27,7 @@ import {
 import type { FileSystemNodeDto, TrashListResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
 import { showSuccessToast, showFailToast } from 'vant'
-import { errorKind, errMsg } from '@/utils/apiError'
+import { errorKind, errMsg, unwrap } from '@/utils/apiError'
 
 export type TrashScope = 'projects' | 'project' | 'personal'
 export type TrashSortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
@@ -144,7 +144,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
           sortOrder: sortOrder.value,
         },
       })
-      if (res.error) throw res.error
+      unwrap(res)
       const data = (res.data ?? {}) as TrashListResponseDto
       nodes.value = page.value === 1 ? (data.nodes ?? []) : [...nodes.value, ...(data.nodes ?? [])]
       total.value = data.total ?? 0
@@ -249,7 +249,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
         const res = item.isRoot
           ? await trashControllerRestoreTrashItems({ body: { itemIds: [item.id] } })
           : await nodeControllerRestoreNode({ path: { nodeId: item.id } })
-        if (res.error) throw res.error
+        unwrap(res)
         showSuccessToast(t('已恢复'))
         await reload()
       } catch (e) {
@@ -263,7 +263,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     await runExclusive(async () => {
       try {
         const res = await trashControllerRestoreTrashItems({ body: { itemIds: ids } })
-        if (res.error) throw res.error
+        unwrap(res)
         showSuccessToast(t('已恢复 {count} 项', { count: String(ids.length) }))
         await reload()
       } catch (e) {
@@ -280,7 +280,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
           path: { nodeId: item.id },
           query: { permanently: true },
         })
-        if (res.error) throw res.error
+        unwrap(res)
         showSuccessToast(t('已彻底删除'))
         await reload()
       } catch (e) {
@@ -294,7 +294,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
     await runExclusive(async () => {
       try {
         const res = await trashControllerPermanentlyDeleteTrashItems({ body: { itemIds: ids } })
-        if (res.error) throw res.error
+        unwrap(res)
         showSuccessToast(t('已彻底删除 {count} 项', { count: String(ids.length) }))
         await reload()
       } catch (e) {
@@ -320,7 +320,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
                     ) ?? '',
                 },
               })
-        if (res.error) throw res.error
+        unwrap(res)
         // scope 专属成功文案（对齐 PC：项目/个人空间清空报「项目回收站已清空」，全局报「回收站已清空」）
         showSuccessToast(scope.value === 'projects' ? t('回收站已清空') : t('项目回收站已清空'))
         await reload()

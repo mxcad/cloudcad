@@ -22,6 +22,7 @@ import {
   nodeControllerGetNode,
   projectControllerGetProjects,
 } from '../api-sdk';
+import { unwrap } from '../utils/apiError';
 import { useEditorStore } from './editor';
 
 const FETCH_WORKS_TIMEOUT = 30000;
@@ -80,7 +81,7 @@ export const useCollabStore = defineStore('collab', () => {
   async function fetchMyProjectIds(): Promise<string[]> {
     try {
       const result = await projectControllerGetProjects({ query: {} });
-      if (result.error) return [];
+      unwrap(result);
       const nodes = (result.data as { nodes?: { id: string }[] })?.nodes || [];
       return nodes.map((n) => n.id);
     } catch {

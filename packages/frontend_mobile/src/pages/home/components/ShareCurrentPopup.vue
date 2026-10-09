@@ -27,7 +27,7 @@ import {
   computeExpiresInSeconds,
   type ShareExpirationOption,
 } from '@cloudcad/platform'
-import { errMsg } from '@/utils/apiError'
+import { errMsg, unwrap } from '@/utils/apiError'
 import { shareUrl } from '@/utils/shareUrl'
 import { formatShareExpiry } from '@/utils/shareDate'
 
@@ -110,13 +110,8 @@ async function loadExistingShares() {
   loadingShares.value = true
   try {
     const res = await shareControllerGetFileShares({ path: { fileId: props.fileId } })
-    if (res.error) {
-      // 权限/网络错误不再静默：留错误态 + 重试，避免「已有分享」区凭空消失
-      sharesLoadFailed.value = true
-      existingShares.value = []
-      return
-    }
-    const raw = res.data as FileShareItem[] | undefined
+    // 权限/网络/业务错误不再静默：留错误态 + 重试，避免「已有分享」区凭空消失
+    const raw = unwrap<FileShareItem[]>(res)
     // url 在后端是相对 path，展示/复制前统一绝对化（与 ShareManagePage 同一出口）
     existingShares.value = Array.isArray(raw)
       ? raw.map((s) => ({ ...s, url: shareUrl(s.url) }))
@@ -149,11 +144,7 @@ async function handleCreate() {
         ...(expiresInValue !== undefined ? { expiresIn: expiresInValue } : {}),
       },
     })
-    if (res.error) {
-      showToast(errMsg(res.error, t('创建失败，请重试')))
-      return
-    }
-    const raw = res.data as { token?: string; url?: string; expiresAt?: string | null } | undefined
+    const raw = unwrap<{ token?: string; url?: string; expiresAt?: string | null }>(res)
     if (!raw?.token) {
       showToast(t('创建失败，请重试'))
       return
@@ -203,10 +194,7 @@ async function handleRevoke(item: FileShareItem) {
     // 撤销端点按 token 查（DELETE /api/v1/shares/:token → findUnique({ where: { token } })），
     // 传 DB id 会 404
     const res = await shareControllerRevokeShare({ path: { token: item.token } })
-    if (res.error) {
-      showToast(errMsg(res.error, t('撤销失败')))
-      return
-    }
+    unwrap(res)
     showToast(t('已撤销'))
     if (created.value?.token === item.token) created.value = null
     void loadExistingShares()

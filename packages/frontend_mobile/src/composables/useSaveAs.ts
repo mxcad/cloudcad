@@ -14,6 +14,7 @@ import {
 import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { showToast } from 'vant';
 import { t } from '@/languages';
+import { unwrap } from '../utils/apiError';
 
 export type SaveTargetType = 'personal' | 'project' | 'library';
 export type LibraryType = 'drawing' | 'block';
@@ -48,7 +49,7 @@ export function useSaveAs() {
       const result = await projectControllerGetProjects({
         query: { filter: 'all' },
       });
-      if (result.error) throw result.error;
+      unwrap(result);
       const nodes =
         (
           result.data as unknown as {
@@ -64,7 +65,7 @@ export function useSaveAs() {
   async function loadPersonalSpace() {
     try {
       const result = await projectControllerGetPersonalSpace();
-      if (result.error) throw result.error;
+      unwrap(result);
       const data = result.data as unknown as { id: string };
       personalSpaceId.value = data?.id || null;
     } catch {
@@ -83,7 +84,7 @@ export function useSaveAs() {
         ? libraryControllerGetDrawingLibrary
         : libraryControllerGetBlockLibrary;
       const result = await apiFn();
-      if (result.error) throw result.error;
+      unwrap(result);
       const data = result.data as unknown as { id: string };
       libraryRootId.value = data?.id || null;
     } catch {

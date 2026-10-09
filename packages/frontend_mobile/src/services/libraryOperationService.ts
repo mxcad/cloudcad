@@ -21,6 +21,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { LibraryType } from '@/composables/useLibrary'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import { showLoadingToast, showSuccessToast, showFailToast, closeToast } from 'vant'
 import { triggerBlobDownload } from '@/utils/download'
 import { buildMxwebFileUrl, resolveCacheTimestamp } from '@/utils/mxwebUrl'
@@ -59,7 +60,7 @@ export async function renameLibraryNode(
   try {
     const res = await fn({ path: { nodeId }, body: { name: newName } })
     closeToast()
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     showSuccessToast(t('重命名成功'))
     return true
   } catch (e) {
@@ -84,7 +85,7 @@ export async function deleteLibraryNode(
   try {
     const res = await fn({ path: { nodeId }, query: { permanently: true } })
     closeToast()
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     showSuccessToast(t('删除成功'))
     return true
   } catch (e) {
@@ -109,7 +110,7 @@ export async function batchDeleteLibraryNodes(
   try {
     const res = await fn({ body: { nodeIds, permanently: true } })
     closeToast()
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     const raw = res.data as BatchDeleteResult | undefined
     return {
       successCount: raw?.successCount ?? nodeIds.length,
@@ -145,7 +146,7 @@ export async function downloadLibraryNode(
         ? libraryControllerDownloadDrawingNode
         : libraryControllerDownloadBlockNode
       const res = await fn({ path: { nodeId }, parseAs: 'blob' })
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       blob = res.data as Blob | undefined
     } else {
       const res = await downloadControllerDownloadNodeWithFormat({
@@ -153,7 +154,7 @@ export async function downloadLibraryNode(
         query,
         parseAs: 'blob',
       } as never)
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       blob = res.data as Blob | undefined
     }
     if (!silent) closeToast()

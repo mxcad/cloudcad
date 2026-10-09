@@ -10,6 +10,7 @@
  */
 import { ref, watch, type Ref } from 'vue'
 import { authControllerCheckFieldUniqueness } from '@cloudcad/api-sdk/sdk.gen'
+import { unwrap } from '@/utils/apiError'
 
 interface CheckFieldResult {
   usernameExists?: boolean
@@ -23,9 +24,8 @@ async function checkField(body: {
   phone?: string
 }): Promise<CheckFieldResult> {
   const res = await authControllerCheckFieldUniqueness({ body })
-  // SDK 默认不抛错：失败时错误在 result.error
-  if (res.error) throw res.error
-  return (res.data ?? {}) as CheckFieldResult
+  // SDK 默认不抛错：失败时错误在 result.error（unwrap 同时拦截 data.code 字符串业务码）
+  return unwrap<CheckFieldResult>(res)
 }
 
 export function useRegisterFieldCheck(fields: {

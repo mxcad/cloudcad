@@ -17,6 +17,7 @@ import { shareControllerListShares, shareControllerRevokeShare, shareControllerU
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import QRCode from 'qrcode'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import { extractExtension } from '@/composables/useNodeFormatter'
 import { shareUrl } from '@/utils/shareUrl'
 import { formatShareExpiry } from '@/utils/shareDate'
@@ -127,7 +128,7 @@ async function loadShares(append = false) {
         ...(filter.value === 'all' ? {} : { status: filter.value }),
       },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     const data = (res.data ?? {}) as { items?: Array<any>; total?: number }
     const rawShares = data.items ?? []
 
@@ -236,10 +237,7 @@ async function onRevokeShare(token: string): Promise<boolean> {
     const res = await shareControllerRevokeShare({
       path: { token },
     })
-    if (res.error) {
-      showToast(t('撤销失败'))
-      return false
-    }
+    unwrap(res)
     showToast(t('已撤销'))
     loadShares()
     return true
@@ -309,8 +307,8 @@ async function onBatchRevoke() {
   for (const token of tokens) {
     try {
       const res = await shareControllerRevokeShare({ path: { token } })
-      if (res.error) failCount++
-      else successCount++
+      unwrap(res)
+      successCount++
     } catch {
       failCount++
     }
@@ -382,7 +380,7 @@ async function onRenewConfirm() {
       path: { token: target.token },
       body: { expiresAt: computeRenewExpiresAt() } as never,
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     showRenewPopup.value = false
     showToast(t('有效期已更新'))
     loadShares()
@@ -570,7 +568,7 @@ async function searchShareFiles(scope: 'personal_space' | 'all_projects', page: 
       sortOrder: 'desc',
     },
   })
-  if (res.error) throw new Error(String(res.error))
+  unwrap(res)
   const data = (res.data ?? {}) as { nodes?: FileSystemNodeDto[]; totalPages?: number }
   return { nodes: data.nodes ?? [], totalPages: data.totalPages ?? 1 }
 }

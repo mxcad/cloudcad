@@ -11,6 +11,7 @@ import { showSuccessToast, showFailToast } from 'vant'
 import { projectControllerUpdateTransferSettings } from '@cloudcad/api-sdk/sdk.gen'
 import type { CrossProjectTransferModeEnum } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 
 type SettingsKey =
   | 'transferOutToProject'
@@ -117,7 +118,7 @@ async function onModeSelect(action: { name: string; value?: string }) {
       path: { projectId: props.projectId },
       body: { ...values.value },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     showSuccessToast(t('保存成功'))
     emit('saved', { ...values.value })
   } catch (e) {

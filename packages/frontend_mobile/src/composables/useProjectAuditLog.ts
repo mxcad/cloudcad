@@ -11,6 +11,7 @@ import {
   memberControllerGetProjectMembers,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 
 /** 后端 AuditLogListItem（审计日志列表项） */
 export interface AuditLogItem {
@@ -119,13 +120,12 @@ export function useProjectAuditLog(getProjectId: () => string) {
         path: { projectId },
         query: buildQuery(page.value),
       })
-      if (res.error) throw new Error(String(res.error))
-      const data = (res.data ?? {}) as {
+      const data = unwrap<{
         logs?: AuditLogItem[]
         total?: number
         page?: number
         totalPages?: number
-      }
+      }>(res)
       const items = data.logs ?? []
       logs.value = page.value === 1 ? items : [...logs.value, ...items]
       total.value = data.total ?? 0
@@ -143,9 +143,12 @@ export function useProjectAuditLog(getProjectId: () => string) {
     if (!projectId) return
     try {
       const res = await memberControllerGetProjectMembers({ path: { projectId } })
-      if (res.error) return
-      const raw = (res.data ?? []) as AuditMember[]
-      members.value = Array.isArray(raw) ? raw : []
+      try {
+        const raw = unwrap<AuditMember[]>(res)
+        members.value = Array.isArray(raw) ? raw : []
+      } catch {
+        // 业务/网络错误：保留旧成员列表（对齐原 `if (res.error) return` 语义）
+      }
     } catch {
       members.value = []
     }

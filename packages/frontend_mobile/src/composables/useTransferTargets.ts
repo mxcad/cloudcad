@@ -6,6 +6,7 @@ import { ref } from 'vue'
 import { projectControllerGetProjects } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import type { TransferRoot } from '@/utils/transferPolicy'
 
 export function useTransferTargets() {
@@ -20,13 +21,15 @@ export function useTransferTargets() {
         list.push({ id: personalSpaceId, name: t('个人空间'), domain: 'personalSpace' })
       }
       const res = await projectControllerGetProjects({ query: { page: 1, limit: 200 } })
-      if (!res.error) {
-        const data = (res.data ?? {}) as { nodes?: FileSystemNodeDto[] }
+      try {
+        const data = unwrap<{ nodes?: FileSystemNodeDto[] }>(res)
         for (const n of data.nodes ?? []) {
           if (n.nodeType === 'PROJECT' && !n.deletedAt) {
             list.push({ id: n.id, name: n.name, domain: 'project' })
           }
         }
+      } catch {
+        // 业务/网络错误：保留个人空间条目（对齐原 `if (!res.error)` 语义）
       }
       roots.value = list
     } catch {

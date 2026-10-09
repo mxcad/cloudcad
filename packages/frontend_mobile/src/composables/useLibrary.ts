@@ -14,6 +14,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto, NodeListResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 
 export type LibraryType = 'drawing' | 'block'
 
@@ -131,11 +132,9 @@ export function useLibrary(libraryType: LibraryType) {
 
       // SDK 把非 2xx 放进 res.error 而不抛异常：不检查的话 data 为 undefined，
       // rootId 变成 ''，loadNodes 静默 return，页面停在"暂无数据"且无错误提示
-      if (libRes.error || catRes.error) {
-        throw new Error(String(libRes.error ?? catRes.error))
-      }
-
-      const libData = (libRes.data ?? {}) as FileSystemNodeDto
+      // （unwrap 同时拦截 res.error 与 data.code 字符串业务码，任一失败即抛 → catch 置错误态）
+      const libData = unwrap<FileSystemNodeDto>(libRes)
+      const catData = unwrap<{ categories?: CategoryLevel[] }>(catRes)
       rootId.value = libData.id || ''
       rootName.value = t('全部')
 
@@ -155,7 +154,6 @@ export function useLibrary(libraryType: LibraryType) {
         return false
       }
 
-      const catData = (catRes.data ?? {}) as unknown as { categories?: CategoryLevel[] }
       const rawCategories = catData?.categories ?? []
 
       // 补齐到3级，每级插入"全部"
@@ -225,13 +223,7 @@ export function useLibrary(libraryType: LibraryType) {
         query: queryParams,
       })
 
-      if (res.error) {
-        console.error('[useLibrary] getAllFiles error:', res.error)
-        throw new Error(String(res.error))
-      }
-
-      const rawData = res.data ?? {}
-      const data = rawData as unknown as NodeListResponseDto
+      const data = unwrap<NodeListResponseDto>(res)
       const fetched = data.nodes ?? []
 
       if (page.value === 1) {

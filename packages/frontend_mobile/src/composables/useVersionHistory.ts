@@ -6,6 +6,7 @@ import type { DrawingOpenRequest } from '../services/drawingOpener';
 import { warmupHistoricalVersion } from '../services/versionWarmup';
 import { showToast } from 'vant';
 import { t } from '@/languages';
+import { unwrap } from '../utils/apiError';
 
 export interface VersionEntry {
   revision: number;
@@ -61,9 +62,7 @@ export function useVersionHistory() {
         },
       });
 
-      if (result.error) {
-        throw result.error;
-      }
+      unwrap(result);
 
       const data = result.data as { success: boolean; message?: string; entries?: VersionEntry[]; totalCount?: number } | undefined;
 

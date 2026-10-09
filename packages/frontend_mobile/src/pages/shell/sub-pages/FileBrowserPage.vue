@@ -24,6 +24,7 @@ import {
   memberControllerGetUserProjectPermissions,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
 import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType } from '@cloudcad/api-sdk/types.gen'
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
@@ -103,7 +104,7 @@ async function loadProjects(append = false) {
         sortOrder: 'desc',
       },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     const data = (res.data ?? {}) as ProjectListResponseDto
     const cards = (data.nodes ?? []).map((n: FileSystemNodeDto) => ({
       id: n.id,
@@ -239,7 +240,7 @@ const personalSpaceId = ref<string | null>(null)
 async function ensurePersonalSpaceId() {
   if (personalSpaceId.value) return
   const res = await projectControllerGetPersonalSpace()
-  if (res.error) throw new Error(String(res.error))
+  unwrap(res)
   const space = res.data as { id?: string } | undefined
   if (space?.id) personalSpaceId.value = space.id
 }
@@ -510,7 +511,7 @@ async function onCreateProjectConfirm() {
     const res = await projectControllerCreateProject({
       body: { name },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     const data = res.data as { id?: string; name?: string }
     closeToast()
     showToast(t('项目创建成功'))
@@ -554,7 +555,7 @@ const createDrawing = useCreateDrawing(
   (createdId) => {
     undo.trackUndo(t('已创建图纸'), async () => {
       const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
-      if (r.error) throw new Error(String(r.error))
+      unwrap(r)
       showSuccessToast(t('已撤销'))
       await personalFileList.loadNodes()
     })

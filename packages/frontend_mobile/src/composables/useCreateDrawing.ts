@@ -9,6 +9,7 @@ import { ref } from 'vue'
 import { showToast, showLoadingToast, closeToast, showFailToast } from 'vant'
 import { nodeControllerCreateDrawing } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import { validateName } from '@/utils/validateName'
 
 export function useCreateDrawing(
@@ -48,7 +49,7 @@ export function useCreateDrawing(
         body: { parentId, name },
       })
       closeToast()
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       showToast(t('图纸创建成功'))
       await refresh()
       // 创建成功才挂撤销入口（对齐 PC：无 createdId 不入栈）

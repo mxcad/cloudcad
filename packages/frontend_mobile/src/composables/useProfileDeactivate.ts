@@ -15,7 +15,7 @@ import {
   usersControllerDeactivateAccount,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
-import { toError, errMsg } from '@/utils/apiError'
+import { toError, unwrap, errMsg } from '@/utils/apiError'
 import { isCode } from '@/utils/authValidation'
 import { useCountdown } from '@/composables/useCountdown'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
@@ -116,7 +116,7 @@ export function useProfileDeactivate(profile: { value: UserProfile }, onDeactiva
       const res = await authControllerSendSmsCode({
         body: { phone: phoneNum, scene: 'bind' },
       })
-      if (res.error) throw toError(res.error)
+      unwrap(res)
       startPhoneCountdown()
     } catch (e) {
       error.value = errMsg(toError(e), t('发送验证码失败'))
@@ -135,7 +135,7 @@ export function useProfileDeactivate(profile: { value: UserProfile }, onDeactiva
       const res = await authControllerResendVerification({
         body: { email: emailAddr },
       })
-      if (res.error) throw toError(res.error)
+      unwrap(res)
       startEmailCountdown()
     } catch (e) {
       error.value = errMsg(toError(e), t('发送验证码失败'))
@@ -155,7 +155,7 @@ export function useProfileDeactivate(profile: { value: UserProfile }, onDeactiva
           wechatCode: method.value === 'wechat' ? wechatCode.value : undefined,
         },
       })
-      if (res.error) throw toError(res.error)
+      unwrap(res)
       successMsg.value = t(
         '账户已注销。{days} 天内重新登录可自动取消注销，逾期需联系客服恢复；30 天后数据将被彻底删除。',
         { days: String(graceDays.value) }

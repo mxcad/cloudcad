@@ -20,6 +20,7 @@ import {
   mxcadFileAccessControllerViewExternalRef,
 } from '../api-sdk';
 import { cachedApiUrl } from '../utils/apiConfig';
+import { unwrap } from '../utils/apiError';
 import { publicFileAccessPath } from '../utils/mxwebUrl';
 import { triggerBlobDownload } from '../utils/download';
 import { sanitizeFileName } from '../utils/sanitizeFileName';
@@ -122,7 +123,7 @@ async function checkPublicExtReference(
     const result = await publicFileControllerCheckExtReference({
       query: { srcHash, fileName },
     });
-    if (result.error) return true;
+    unwrap(result);
     const data = result.data as unknown as { exists?: boolean };
     return data?.exists ?? false;
   } catch {
@@ -145,7 +146,7 @@ export async function getExtRefImageUrl(
   const result = await mxcadFileAccessControllerViewExternalRef({
     path: { nodeId: ctx.identifier, fileName: name },
   });
-  if (result.error) throw result.error;
+  unwrap(result);
   return URL.createObjectURL(result.data as Blob);
 }
 
@@ -172,14 +173,14 @@ export async function downloadExtRef(
     const result = await publicFileControllerAccessFile({
       path: { hash: ctx.identifier, filename: file.name },
     });
-    if (result.error) throw result.error;
+    unwrap(result);
     triggerBlobDownload(result.data as Blob, file.name);
     return;
   }
   const result = await mxcadFileAccessControllerGetFileDownloadExternalRef({
     path: { nodeId: ctx.identifier, fileName: file.name },
   });
-  if (result.error) throw result.error;
+  unwrap(result);
   triggerBlobDownload(result.data as Blob, file.name);
 }
 
@@ -221,7 +222,7 @@ async function uploadPublicExtRef(
     const result = await publicFileControllerUploadExtReference({
       body: { file, srcFileHash: hash, extRefFile: safeName } as never,
     });
-    if (result.error) throw result.error;
+    unwrap(result);
     onProgress?.(100);
     return;
   }
@@ -240,7 +241,7 @@ async function uploadPublicExtRef(
         chunks: totalChunks,
       } as never,
     });
-    if (result.error) throw result.error;
+    unwrap(result);
     uploadedBytes += chunk.size;
     onProgress?.(Math.min(99, Math.round((uploadedBytes / file.size) * 100)));
   }

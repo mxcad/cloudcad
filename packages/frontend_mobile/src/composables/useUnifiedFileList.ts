@@ -16,6 +16,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto, NodeListResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 
 export type UnifiedDomain = 'project' | 'personal'
 
@@ -212,7 +213,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
         },
       })
 
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       const data = (res.data ?? {}) as unknown as NodeListResponseDto
       nodes.value = page.value === 1
         ? (data.nodes ?? [])
@@ -245,7 +246,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
       }
       const res = await nodeControllerSearch({ query })
 
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       const data = (res.data ?? {}) as unknown as NodeListResponseDto
       nodes.value = page.value === 1
         ? (data.nodes ?? [])
@@ -339,7 +340,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
       if (saved && saved.folderId !== rootNodeId) {
         try {
           const res = await nodeControllerGetNode({ path: { nodeId: saved.folderId } })
-          if (res.error) throw new Error(String(res.error))
+          unwrap(res)
           currentFolderId.value = saved.folderId
           breadcrumbs.value = saved.breadcrumbs
         } catch {

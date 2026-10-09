@@ -113,7 +113,7 @@ onMounted(() => {
   startCountdown()
   authControllerSendSmsCode({ body: { phone: phone.value.trim(), scene: 'login' } })
     .then((res) => {
-      if (res.error) throw toError(res.error)
+      unwrap(res)
     })
     .catch((e) => {
       error.value = errMsg(e, t('验证码发送失败'))

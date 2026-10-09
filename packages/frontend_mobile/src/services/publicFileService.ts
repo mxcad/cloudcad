@@ -3,6 +3,7 @@ import {
   publicFileControllerCheckExtReference,
 } from '../api-sdk';
 import { cachedApiUrl } from '../utils/apiConfig';
+import { unwrap } from '../utils/apiError';
 import { publicFileAccessPath } from '../utils/mxwebUrl';
 
 export interface PublicPreloadingData {
@@ -31,7 +32,7 @@ export async function getPublicPreloadingData(
     const result = await publicFileControllerGetPreloadingData({
       path: { hash },
     });
-    if (result.error) return null;
+    unwrap(result);
     return result.data as unknown as PublicPreloadingData;
   } catch {
     return null;

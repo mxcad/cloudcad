@@ -157,7 +157,7 @@ onMounted(() => {
   if (state.codeSent) return
   authControllerResendVerification({ body: { email: email.value.trim() } })
     .then((res) => {
-      if (res.error) throw toError(res.error)
+      unwrap(res)
     })
     .catch((e) => {
       error.value = errMsg(e, t('验证码发送失败'))

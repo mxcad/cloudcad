@@ -2,6 +2,7 @@ import { getMxwebBlob } from './saveService';
 import { uploadFileForConversion } from './uploadService';
 import { publicFileControllerConvertAndDownload } from '../api-sdk';
 import { handleApiError } from '../utils/apiConfig';
+import { unwrap } from '../utils/apiError';
 import { triggerBlobDownload } from '../utils/download';
 import { showToast } from 'vant';
 import { t } from '@/languages';
@@ -66,10 +67,7 @@ export async function exportDrawing(
       },
     });
 
-    if (result.error) {
-      handleApiError(result.error, t('转换失败'));
-      return;
-    }
+    unwrap(result);
 
     const convertedBlob = result?.data as Blob | undefined;
     if (!convertedBlob || convertedBlob.size === 0) {

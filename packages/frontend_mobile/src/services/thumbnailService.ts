@@ -1,4 +1,5 @@
 import { thumbnailControllerCheckThumbnail, thumbnailControllerUploadThumbnail } from '../api-sdk';
+import { unwrap } from '../utils/apiError';
 
 /** 缩略图边长（与 PC 端 mxcadThumbnail.generateThumbnail 默认值一致） */
 const THUMBNAIL_SIZE = 200;
@@ -139,7 +140,8 @@ export async function uploadThumbnailForNode(
       path: { nodeId },
       body: { file },
     });
-    return !result.error;
+    unwrap(result);
+    return true;
   } catch {
     return false;
   }

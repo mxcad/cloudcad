@@ -12,6 +12,7 @@ import { ref, watch, computed } from 'vue'
 import { nodeControllerGetChildren } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 
 const props = withDefaults(
   defineProps<{
@@ -69,9 +70,13 @@ async function loadFolders() {
       path: { nodeId: currentId.value ?? root },
       query: { page: 1, limit: 100 },
     })
-    if (res.error) return
-    const nodes = (res.data?.nodes ?? []) as FileSystemNodeDto[]
-    folders.value = nodes.filter((n) => n.isFolder || n.nodeType === 'FOLDER')
+    try {
+      unwrap(res)
+      const nodes = (res.data?.nodes ?? []) as FileSystemNodeDto[]
+      folders.value = nodes.filter((n) => n.isFolder || n.nodeType === 'FOLDER')
+    } catch {
+      // 业务/网络错误：保留旧文件夹列表（对齐原 `if (res.error) return` 语义）
+    }
   } catch {
     folders.value = []
   } finally {

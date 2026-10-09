@@ -10,7 +10,7 @@
 import { shareControllerCreateShare } from '@cloudcad/api-sdk/sdk.gen'
 import { computeExpiresInSeconds, type ShareExpirationOption } from '@cloudcad/platform'
 import { t } from '@/languages'
-import { errMsg } from '@/utils/apiError'
+import { errMsg, unwrap } from '@/utils/apiError'
 import { shareUrl } from '@/utils/shareUrl'
 
 export interface ShareCreateResult {
@@ -44,37 +44,24 @@ export function useShareCreate() {
             ...(expiresInValue !== undefined ? { expiresIn: expiresInValue } : {}),
           },
         })
-        if (res.error) {
+        const raw = unwrap<{ token?: string; url?: string; expiresAt?: string | null }>(res)
+        if (raw && raw.token) {
+          results.push({
+            fileName: file.fileName,
+            token: raw.token,
+            url: shareUrl(raw.url),
+            expiresAt: raw.expiresAt ?? null,
+            success: true,
+          })
+        } else {
           results.push({
             fileName: file.fileName,
             token: '',
             url: '',
             expiresAt: null,
             success: false,
-            error: errMsg(res.error, t('创建分享链接失败')),
+            error: t('创建分享链接失败'),
           })
-        } else {
-          const raw = res.data as
-            | { token?: string; url?: string; expiresAt?: string | null }
-            | undefined
-          if (raw && raw.token) {
-            results.push({
-              fileName: file.fileName,
-              token: raw.token,
-              url: shareUrl(raw.url),
-              expiresAt: raw.expiresAt ?? null,
-              success: true,
-            })
-          } else {
-            results.push({
-              fileName: file.fileName,
-              token: '',
-              url: '',
-              expiresAt: null,
-              success: false,
-              error: t('创建分享链接失败'),
-            })
-          }
         }
       } catch (e) {
         results.push({

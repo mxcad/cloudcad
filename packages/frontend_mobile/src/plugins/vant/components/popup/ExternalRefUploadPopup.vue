@@ -4,6 +4,7 @@ import { t } from '@/languages'
 import { UploadFileInfo, UploadState } from './types'
 import { publicFileControllerUploadExtReference } from '@/api-sdk'
 import { classifyApiError } from '@/utils/errorHandler'
+import { unwrap } from '@/utils/apiError'
 import { sanitizeFileName } from '@/utils/sanitizeFileName'
 import { showToast } from 'vant'
 import FloatingPopup from "../../../../components/FloatingPopup.vue"
@@ -62,12 +63,7 @@ async function uploadSingleFile(info: UploadFileInfo, file: File): Promise<void>
       const result = await publicFileControllerUploadExtReference({
         body: { file, srcFileHash: info.hash, extRefFile: safeName } as never,
       })
-      if (result.error) {
-        info.uploadState = UploadState.fail
-        info.progress = 0
-        showToast(classifyApiError(result.error).message)
-        return
-      }
+      unwrap(result)
       info.progress = 100
       info.uploadState = UploadState.success
       return
@@ -88,12 +84,7 @@ async function uploadSingleFile(info: UploadFileInfo, file: File): Promise<void>
         } as never,
       })
 
-      if (result.error) {
-        info.uploadState = UploadState.fail
-        info.progress = 0
-        showToast(classifyApiError(result.error).message)
-        return
-      }
+      unwrap(result)
 
       uploadedBytes += chunk.size
       info.progress = Math.min(99, Math.round((uploadedBytes / totalBytes) * 100))

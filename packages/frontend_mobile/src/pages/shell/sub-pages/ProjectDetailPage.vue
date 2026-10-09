@@ -11,6 +11,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showDialog, showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 import { nodeControllerDeleteNode } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerGetParentContext } from '@cloudcad/api-sdk/sdk.gen'
 import ProjectAuditLogPopup from '@/pages/shell/components/ProjectAuditLogPopup.vue'
@@ -150,12 +151,11 @@ async function loadProjectInfo() {
     const res = await projectControllerGetProject({
       path: { projectId: projectId.value },
     })
-    if (!res.error) {
-      const data = res.data as ProjectDto | undefined
-      if (data) {
-        projectInfo.value = data
-        projectName.value = data.name ?? t('项目')
-      }
+    unwrap(res)
+    const data = res.data as ProjectDto | undefined
+    if (data) {
+      projectInfo.value = data
+      projectName.value = data.name ?? t('项目')
     }
   } catch (e) {
     projectName.value = t('项目 {id}', { id: projectId.value.slice(0, 6) })
@@ -191,7 +191,7 @@ async function loadProjectQuota() {
     const res = await projectControllerGetProjectQuota({
       path: { projectId: projectId.value },
     })
-    if (res.error) return
+    unwrap(res)
     const data = res.data as ProjectQuotaDto | undefined
     if (data && typeof data.limit === 'number') {
       projectQuota.value = { used: data.used ?? 0, limit: data.limit }
@@ -208,7 +208,7 @@ async function loadMembers() {
     const res = await memberControllerGetProjectMembers({
       path: { projectId: projectId.value },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     members.value = res.data ?? []
   } catch (e) {
     memberError.value = t('加载成员失败')
@@ -231,9 +231,8 @@ async function loadRoles() {
     const res = await rolesControllerGetProjectRolesByProject({
       path: { projectId: projectId.value },
     })
-    if (!res.error) {
-      roles.value = res.data ?? []
-    }
+    unwrap(res)
+    roles.value = res.data ?? []
   } catch (e) {
     console.error('loadRoles error:', e)
   }
@@ -251,11 +250,10 @@ function onMemberSearchInput(val: string) {
       const res = await usersControllerSearchUsers({
         query: { search: val, limit: 10 },
       })
-      if (!res.error) {
-        // Filter out existing members
-        const existingIds = new Set(members.value.map((m) => m.id))
-        searchResults.value = (res.data?.users ?? []).filter((u) => !existingIds.has(u.id))
-      }
+      unwrap(res)
+      // Filter out existing members
+      const existingIds = new Set(members.value.map((m) => m.id))
+      searchResults.value = (res.data?.users ?? []).filter((u) => !existingIds.has(u.id))
     } catch (e) {
       console.error('searchUsers error:', e)
     }
@@ -300,7 +298,7 @@ async function onAddMemberConfirm() {
         projectRoleId: selectedRoleId.value,
       },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     closeToast()
     showSuccessToast(t('成员添加成功'))
     showAddMember.value = false
@@ -323,7 +321,7 @@ async function onRemoveMember(member: { id: string; name: string }) {
     const res = await memberControllerRemoveProjectMember({
       path: { projectId: projectId.value, userId: member.id },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     closeToast()
     showSuccessToast(t('成员已移除'))
     await loadMembers()
@@ -342,7 +340,7 @@ async function onUpdateMemberRole(member: { id: string; projectRoleId: string },
       path: { projectId: projectId.value, userId: member.id },
       body: { projectRoleId: roleId },
     })
-    if (res.error) throw new Error(String(res.error))
+    unwrap(res)
     showSuccessToast(t('角色已更新'))
     await loadMembers()
   } catch (e) {
@@ -381,8 +379,12 @@ async function loadProjectPermissions() {
     const res = await memberControllerGetUserProjectPermissions({
       path: { projectId: projectId.value },
     })
-    if (res.error) return
-    projectPermissions.value = res.data?.permissions ?? []
+    try {
+      unwrap(res)
+      projectPermissions.value = res.data?.permissions ?? []
+    } catch {
+      // 业务/网络错误：保留旧权限（对齐原 `if (res.error) return` 语义）
+    }
   } catch {
     projectPermissions.value = []
   }
@@ -522,7 +524,7 @@ async function onAuditLocate(log: AuditLogItem) {
     // 文件夹 → 取父目录后把文件列表定位过去（loadRootNode override 优先于持久化存档）
     try {
       const res = await nodeControllerGetParentContext({ path: { nodeId } })
-      if (res.error) throw new Error(String(res.error))
+      unwrap(res)
       const parentId = (res.data as { parentId?: string } | undefined)?.parentId
       if (parentId) {
         await fileList.loadRootNode(projectId.value, { folderId: parentId, breadcrumbs: [] })
@@ -637,7 +639,11 @@ const personalSpaceId = ref<string | null>(null)
 async function ensurePersonalSpaceId() {
   if (personalSpaceId.value) return
   const res = await projectControllerGetPersonalSpace()
-  if (res.error) return
+  try {
+    unwrap(res)
+  } catch {
+    return
+  }
   const space = res.data as { id?: string } | undefined
   if (space?.id) personalSpaceId.value = space.id
 }
@@ -661,7 +667,7 @@ const createDrawing = useCreateDrawing(
   (createdId) => {
     undo.trackUndo(t('已创建图纸'), async () => {
       const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
-      if (r.error) throw new Error(String(r.error))
+      unwrap(r)
       showSuccessToast(t('已撤销'))
       await fileList.refresh()
     })

@@ -10,6 +10,7 @@ import { ref, computed } from 'vue'
 import { nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto, NodeListResponseDto, ProjectFilterType } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
+import { unwrap } from '@/utils/apiError'
 
 export function useProjectSearch() {
   const results = ref<FileSystemNodeDto[]>([])
@@ -44,8 +45,7 @@ export function useProjectSearch() {
           limit: 30,
         },
       })
-      if (res.error) throw new Error(String(res.error))
-      const data = (res.data ?? {}) as unknown as NodeListResponseDto
+      const data = unwrap<NodeListResponseDto>(res)
       results.value = append ? [...results.value, ...(data.nodes ?? [])] : (data.nodes ?? [])
       total.value = data.total ?? 0
       totalPages.value = data.totalPages ?? 1

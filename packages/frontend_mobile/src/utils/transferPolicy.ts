@@ -24,6 +24,7 @@ import {
   type TransferRootRef,
   type TransferSettings,
 } from '@cloudcad/platform'
+import { unwrap } from '@/utils/apiError'
 
 export type { TransferDomain, TransferSettings }
 
@@ -83,7 +84,7 @@ export function precheckTransfer(
 export async function fetchProjectTransferSettings(projectId: string): Promise<TransferSettings | null> {
   try {
     const res = await projectControllerGetProject({ path: { projectId } })
-    if (res.error) return null
+    unwrap(res)
     const p = res.data as unknown as TransferSettings | undefined
     if (!p) return null
     return {

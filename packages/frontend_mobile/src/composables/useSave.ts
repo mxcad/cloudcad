@@ -20,6 +20,7 @@ import {
   setMxwebCache,
 } from '../services/mxwebCacheService';
 import { handleApiError } from '../utils/apiConfig';
+import { unwrap } from '../utils/apiError';
 import { isTokenExpired, readToken } from '../utils/authSession';
 import { showToast, showLoadingToast, closeToast } from 'vant';
 import { PERMISSIONS } from '../services/permissionService';
@@ -176,10 +177,7 @@ export function useSave() {
       let personalSpaceId: string | null = null;
       try {
         const result = await projectControllerGetPersonalSpace();
-        if (!result.error) {
-          personalSpaceId =
-            (result.data as unknown as { id: string })?.id || null;
-        }
+        personalSpaceId = unwrap<{ id: string }>(result).id || null;
       } catch {
         personalSpaceId = null;
       }

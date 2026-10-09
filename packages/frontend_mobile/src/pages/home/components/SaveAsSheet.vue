@@ -5,6 +5,7 @@ import { useSaveAs, type SaveTargetType, type LibraryType, type SaveFormat } fro
 import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
+import { unwrap } from '../../../utils/apiError';
 import type { FileSystemNodeDto } from '../../../api-sdk';
 import FloatingPopup from '../../../components/FloatingPopup.vue';
 
@@ -223,7 +224,7 @@ async function loadFolderChildren(parentId: string): Promise<FolderNode[]> {
           ? libraryControllerGetDrawingChildren
           : libraryControllerGetBlockChildren;
       const result = await apiFn({ path: { nodeId: parentId }, query: { nodeType: 'folder' } });
-      if (result.error) return [];
+      unwrap(result);
       const data = result.data as unknown as { nodes: FileSystemNodeDto[] };
       return (data?.nodes || [])
         .filter(n => n.isFolder && n.id !== props.currentNodeId)
@@ -235,7 +236,7 @@ async function loadFolderChildren(parentId: string): Promise<FolderNode[]> {
     }
     const { nodeControllerGetChildren } = await import('../../../api-sdk');
     const result = await nodeControllerGetChildren({ path: { nodeId: parentId }, query: { nodeType: 'folder' } });
-    if (result.error) return [];
+    unwrap(result);
     const data = result.data as unknown as { nodes: FileSystemNodeDto[] };
     return (data?.nodes || [])
       .filter(n => n.id !== props.currentNodeId)

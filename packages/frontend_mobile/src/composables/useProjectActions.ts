@@ -17,7 +17,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
 import { validateName } from '@/utils/validateName'
-import { errorKind, errMsg } from '@/utils/apiError'
+import { errorKind, errMsg, unwrap } from '@/utils/apiError'
 
 function failToast(e: unknown): void {
   if (errorKind(e) === 'forbidden') {
@@ -39,7 +39,7 @@ export function useProjectActions(refresh: () => Promise<void>) {
     try {
       const res = await projectControllerUpdateProject({ path: { projectId }, body: { name } })
       closeToast()
-      if (res.error) throw res.error
+      unwrap(res)
       showSuccessToast(t('重命名成功'))
       await refresh()
       return true
@@ -67,7 +67,7 @@ export function useProjectActions(refresh: () => Promise<void>) {
         body: { name: payload.name, description: payload.description },
       })
       closeToast()
-      if (res.error) throw res.error
+      unwrap(res)
       showSuccessToast(t('保存成功'))
       await refresh()
       return true
@@ -97,7 +97,7 @@ export function useProjectActions(refresh: () => Promise<void>) {
         query: { permanently: false },
       })
       closeToast()
-      if (res.error) throw res.error
+      unwrap(res)
       showSuccessToast(t('删除成功'))
       await refresh()
       return true
@@ -134,7 +134,7 @@ export function useProjectActions(refresh: () => Promise<void>) {
         body: { newOwnerId: target.id },
       })
       closeToast()
-      if (res.error) throw res.error
+      unwrap(res)
       showSuccessToast(t('转让成功'))
       await refresh()
       return true

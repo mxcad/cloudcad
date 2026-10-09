@@ -40,6 +40,7 @@ import {
   type Notice,
   type NoticeAckMap,
 } from '../utils/noticeAck';
+import { unwrap } from '../utils/apiError';
 
 export {
   filterUnacknowledged,
@@ -73,7 +74,7 @@ async function fetchCurrent(): Promise<void> {
   fetching = true;
   try {
     const res = await noticeCenterControllerGetCurrent();
-    if (res.error) return;
+    unwrap(res);
     notices.value = sortNotices(Array.isArray(res.data) ? res.data : []);
   } catch {
     // 静默：下一个轮询周期重试
