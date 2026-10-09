@@ -192,10 +192,28 @@ function removeJunkWithSudoFallback(items, { onItem, chownTargets = [] } = {}) {
   return { failed, usedSudo };
 }
 
+/**
+ * 启用私有 variant 包内 .env.example 的 IMPL（纯变换，无副作用）。
+ *
+ * 背景：包内 .env.example 的 IMPL 是注释态（# IMPL=），目标机 bootstrap 从模板
+ * 生成 .env——不启用则私有包在目标机静默按 OSS 认证运行（impl-mx 层不注册、
+ * 应用照常启动）。private 变体打包编排器调用本函数把裸设置行 `# IMPL=` 取消
+ * 注释为 `IMPL=1`；oss 变体保持模板原样。只动裸设置行：文档注释行
+ * （# IMPL=true 或 IMPL=1 → …）与示例行（# 例如: IMPL=…）不受影响。
+ *
+ * @param {string} content .env.example 原文
+ * @returns {{content: string, changed: boolean}}
+ */
+function enableImplInEnvExample(content) {
+  const updated = content.replace(/^# IMPL=[ \t]*$/m, 'IMPL=1');
+  return { content: updated, changed: updated !== content };
+}
+
 module.exports = {
   checkDeployStore,
   findMissingWindowsComponents,
   findMissingLinuxComponents,
   checkScriptLineEndings,
   removeJunkWithSudoFallback,
+  enableImplInEnvExample,
 };

@@ -8,6 +8,7 @@
  * 4. checkScriptLineEndings：bat 独立 LF / sh 含 CR / 干净无 BOM / BOM / 子目录递归 / 目录不存在跳过
  * 5. removeJunkWithSudoFallback：删除成功回调 + 空列表无操作 + win32 被占用目录失败分支
  *    （sudo 分支需 root、非 sudo 失败分支 linux 下无法确定性触发，均不在此测）
+ * 6. enableImplInEnvExample：裸设置行 # IMPL= → IMPL=1；文档/示例注释行不动；已激活幂等
  *
  * 这些纯函数从 pack-offline.js（2390 行编排器）抽出，此前唯一测试方式是打完整包。
  */
@@ -20,6 +21,7 @@ const {
   findMissingLinuxComponents,
   checkScriptLineEndings,
   removeJunkWithSudoFallback,
+  enableImplInEnvExample,
 } = require('../../../scripts/pack-lib/pack-assertions');
 
 describe('pack-assertions', () => {
@@ -208,6 +210,50 @@ describe('pack-assertions', () => {
       expect(result.failed).toHaveLength(1);
       expect(result.failed[0]).toMatch(/^locked/);
       expect(result.usedSudo).toBe(false);
+    });
+  });
+
+  describe('enableImplInEnvExample', () => {
+    // 真实 .env.example 的 IMPL 段（与 packages/backend/.env.example 保持同步，防模板漂移）
+    const IMPL_SECTION = [
+      '# 自定义认证实现模块路径（可选）',
+      '# 为空则使用内置默认认证实现（auth/impl/index.ts 的 createDefaultAuthProviders）',
+      '# IMPL=true 或 IMPL=1 → 加载私有包默认路径 packages/impl-mx/dist',
+      '# 其他值 → 任意绝对/相对路径，从该模块加载 createAuthProviders()/createRealProviders() 导出的 Provider',
+      '# 例如: IMPL=./dist/auth/impl-custom/index.js',
+      '# IMPL=',
+      '',
+      '# ============================================',
+    ].join('\n');
+
+    it('裸设置行 # IMPL= → IMPL=1（文档/示例注释行不动）', () => {
+      const { content, changed } = enableImplInEnvExample(IMPL_SECTION);
+      expect(changed).toBe(true);
+      expect(content).not.toContain('# IMPL=\n');
+      expect(content).toContain('# IMPL=true 或 IMPL=1 → 加载私有包默认路径 packages/impl-mx/dist');
+      expect(content).toContain('# 例如: IMPL=./dist/auth/impl-custom/index.js');
+      // 设置行后的空行与分节线不丢失
+      expect(content).toContain('IMPL=1\n\n# ============================================');
+    });
+
+    it('已激活（IMPL=1）→ 幂等无变化', () => {
+      const once = enableImplInEnvExample(IMPL_SECTION);
+      const twice = enableImplInEnvExample(once.content);
+      expect(twice.changed).toBe(false);
+      expect(twice.content).toBe(once.content);
+    });
+
+    it('无 IMPL 行 → 无变化', () => {
+      const content = 'FOO=1\n# FOO=2\n';
+      const r = enableImplInEnvExample(content);
+      expect(r.changed).toBe(false);
+      expect(r.content).toBe(content);
+    });
+
+    it('裸设置行带尾随空白也识别（# IMPL=   ）', () => {
+      const r = enableImplInEnvExample('A=1\n# IMPL=   \nB=2\n');
+      expect(r.changed).toBe(true);
+      expect(r.content).toBe('A=1\nIMPL=1\nB=2\n');
     });
   });
 });

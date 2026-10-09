@@ -60,6 +60,7 @@ const {
   findMissingLinuxComponents,
   checkScriptLineEndings,
   removeJunkWithSudoFallback,
+  enableImplInEnvExample,
 } = require('./pack-lib/pack-assertions');
 
 // ==================== 配置 ====================
@@ -611,6 +612,11 @@ async function installFullDeps(variant = 'oss') {
  * 私有 variant：构建 impl-mx
  */
 async function buildImplMx() {
+  if (!fs.existsSync(path.join(PROJECT_ROOT, 'packages', 'impl-mx', 'package.json'))) {
+    error('private 变体需要私有包 packages/impl-mx，但打包机上不存在');
+    error('impl-mx 是 gitignore 的私有包：请先将其拷贝到打包机，或改用 oss 变体（pnpm pack:offline:linux）');
+    return false;
+  }
   log('构建 impl-mx (私有实现)...');
   try {
     execSync('pnpm --filter @cloudcad/impl-mx build', {
@@ -692,9 +698,14 @@ async function buildProject(variant = 'oss') {
 
   try {
     // 构建后端（前端已在本地构建好，dist/ 已通过 COPY 带入容器）
+    // IMPL 以 variant 为单一事实源显式注入：打包机本地 .env（如遗留 IMPL=1）不得
+    // 劫持构建——否则 oss 包 generate:swagger 会去加载 impl-mx/dist 而失败，
+    // private 包则可能漏掉私有认证层。dotenv 不覆盖已存在的环境变量，
+    // 此处显式传值优先于 .env（空串 = oss 变体强制不加载 impl-mx）。
     execSync('pnpm --filter backend build', {
       cwd: PROJECT_ROOT,
       stdio: 'inherit',
+      env: { ...process.env, IMPL: variant === 'private' ? '1' : '' },
     });
     // 构建转换服务（纯 tsc，无 workspace 依赖，独立于 backend；dist 自包含随包分发）
     execSync('pnpm --filter @cloudcad/conversion-service build', {
@@ -1594,6 +1605,34 @@ function assertScriptLineEndings() {
 }
 
 /**
+ * private 变体：启用打包目录内 .env.example 的 IMPL（副作用包装，纯变换见 pack-assertions）。
+ *
+ * 目标机 bootstrap 从包内 .env.example 生成 .env：不启用则私有包在目标机静默按
+ * OSS 认证运行（impl-mx 层不注册、应用照常启动）。oss 变体保持模板原样。
+ * 硬门禁：变换后模板必须含激活的 IMPL 行，否则模板已漂移（裸设置行缺失），
+ * 继续出包会复现静默缺口——直接中止。
+ */
+function enableImplInPackDir(tempDir, variant) {
+  if (variant !== 'private') return;
+  const envExamplePath = path.join(tempDir, 'packages', 'backend', '.env.example');
+  if (!fs.existsSync(envExamplePath)) {
+    error('private 变体打包目录缺 packages/backend/.env.example，无法启用 IMPL');
+    process.exit(1);
+  }
+  const { content, changed } = enableImplInEnvExample(
+    fs.readFileSync(envExamplePath, 'utf8')
+  );
+  if (changed) {
+    fs.writeFileSync(envExamplePath, content, 'utf8');
+  }
+  if (!/^IMPL=(1|true)[ \t]*$/m.test(fs.readFileSync(envExamplePath, 'utf8'))) {
+    error('private 变体 .env.example 的 IMPL 未激活（模板裸设置行 # IMPL= 缺失？），中止出包');
+    process.exit(1);
+  }
+  log('✓ .env.example: IMPL=1 已启用（private 变体）');
+}
+
+/**
  * 部署包：复制文件到临时目录
  */
 function prepareDeployDir(platform, variant = 'oss') {
@@ -1636,6 +1675,9 @@ function prepareDeployDir(platform, variant = 'oss') {
 
   // 复制移动端前端构建产物到前端 dist 子目录下
   mergeMobileDist(tempDir);
+
+  // private 变体：启用包内 .env.example 的 IMPL（目标机从模板生成 .env 时带上）
+  enableImplInPackDir(tempDir, variant);
 
   // 创建部署包标记文件（让 start.bat 能够识别这是部署包）
   fs.writeFileSync(path.join(tempDir, '.deploy'), '');
@@ -2029,6 +2071,9 @@ async function packUpgrade(platform, variant = 'oss') {
 
     // 复制移动端前端构建产物到前端 dist 子目录下（与部署包一致）
     mergeMobileDist(tempDir);
+
+    // private 变体：启用包内 .env.example 的 IMPL（与部署包一致）
+    enableImplInPackDir(tempDir, variant);
 
     // 关键产物复查：防止"打包成功但缺内容"的静默失败
     // （曾发生：容器内 impl-mx 因 Windows 风格路径构建假成功，dist 缺失却被警告跳过）
