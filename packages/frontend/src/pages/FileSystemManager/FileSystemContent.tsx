@@ -25,6 +25,8 @@ export interface FileSystemContentProps {
   projectPermissions: Record<string, boolean>;
   /** 节点/项目权限加载中（悲观门控：加载期节点编辑/删除按钮不显示，根节点不回退乐观默认） */
   permissionsLoading?: boolean;
+  /** 个人空间模式：非根节点权限回退默认值的判据（个人空间乐观 true / 项目内悲观 false） */
+  isPersonalSpace?: boolean;
   paginationMeta: {
     total: number;
     page: number;
@@ -109,6 +111,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
   nodePermissions,
   projectPermissions,
   permissionsLoading,
+  isPersonalSpace,
   paginationMeta,
   onNodeSelect,
   onFileOpen,
@@ -173,6 +176,7 @@ export const FileSystemContent: React.FC<FileSystemContentProps> = ({
     projectPermissions,
     permissionsLoading,
     isTrashView,
+    isPersonalSpace,
     onEdit,
     onDeleteProject,
     onPermanentlyDeleteProject,

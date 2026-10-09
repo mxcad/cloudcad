@@ -388,7 +388,7 @@ export const useFileSystem = (options?: UseFileSystemOptions) => {
     handleToggleTrashView: trash.toggle,
     // 回收站门控派生（useTrashView 单一来源，props 层与权限派生组合消费）
     canRestore: trash.canRestore,
-    canDelete: trash.canDelete,
+    canPurge: trash.canPurge,
     handleRestoreNode: trash.restore,
     handleBatchRestore: trash.batchRestore,
     handleClearTrash: trash.clearTrash,

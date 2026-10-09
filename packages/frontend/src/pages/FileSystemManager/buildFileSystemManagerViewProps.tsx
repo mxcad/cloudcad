@@ -148,6 +148,7 @@ function buildContentProps(a: Actions): FileSystemContentProps {
     nodePermissions,
     projectPermissions: projectPermissionsRecord,
     permissionsLoading: a.permissionsLoading,
+    isPersonalSpace: fs.isPersonalSpaceMode,
     paginationMeta: fs.paginationMeta,
     onNodeSelect: fs.handleNodeSelect,
     onFileOpen: handleFileOpen,
@@ -321,7 +322,7 @@ function buildBatchBarProps(a: Actions): BatchActionBarProps | null {
         label: t('删除'),
         icon: Trash2,
         variant: 'danger',
-        // fs.canDelete 是回收站视图标志（=isTrashView），非回收站恒 false，不能拿来
+        // fs.canPurge 是回收站视图标志（=isTrashView），非回收站恒 false，不能拿来
         // 与项目权限 AND 组合（7cb550a06 回归）：缺失会导致批量删除按钮恒禁用。
         disabled: !eachSelectedCanDelete,
         onClick: () => fs.handleBatchDelete(false),

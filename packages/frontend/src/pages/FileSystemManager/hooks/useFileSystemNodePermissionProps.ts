@@ -8,6 +8,8 @@ export interface UseFileSystemNodePermissionPropsOptions {
   projectPermissions: Record<string, boolean>;
   permissionsLoading?: boolean;
   isTrashView: boolean;
+  /** 个人空间模式：非根节点回退默认值的判据（个人空间用户拥有全部→乐观 true；项目内→悲观 false） */
+  isPersonalSpace?: boolean;
   onEdit?: (node: FileSystemNode) => void;
   onDeleteProject?: (nodeId: string, nodeName: string) => void;
   onPermanentlyDeleteProject?: (nodeId: string, nodeName: string) => void;
@@ -34,6 +36,7 @@ export function useFileSystemNodePermissionProps({
   projectPermissions,
   permissionsLoading,
   isTrashView,
+  isPersonalSpace = false,
   onEdit,
   onDeleteProject,
   onPermanentlyDeleteProject,
@@ -64,8 +67,12 @@ export function useFileSystemNodePermissionProps({
       const permissions = node.isRoot
         ? cachedPermissions || defaultPermissions
         : cachedPermissions || {
-            canEdit: true,
-            canDelete: true,
+            // 非根节点永不被 useNodePermissions 缓存（它只加载根节点/urlProjectId），
+            // 故该回退对象恒生效：个人空间用户拥有全部（乐观 true 正确）；项目内应由
+            // projectPermissions 治理，未就绪位回退须悲观（false）——否则「节点权限已加载
+            // 但项目权限未加载」的竞态窗口会乐观显示编辑/删除按钮（后端仍会 403）。
+            canEdit: isPersonalSpace,
+            canDelete: isPersonalSpace,
             canManageMembers: false,
             canManageRoles: false,
           };
@@ -120,6 +127,7 @@ export function useFileSystemNodePermissionProps({
       projectPermissions,
       permissionsLoading,
       isTrashView,
+      isPersonalSpace,
       onEdit,
       onDeleteProject,
       onPermanentlyDeleteProject,

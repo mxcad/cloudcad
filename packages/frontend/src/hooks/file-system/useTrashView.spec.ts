@@ -153,13 +153,13 @@ describe('useTrashView', () => {
     expect(result.current.isTrashView).toBe(false);
   });
 
-  it('门控派生：trash 视图下 canRestore/canDelete 可用（供 props 层与权限派生双条件消费）', async () => {
+  it('门控派生：trash 视图下 canRestore/canPurge 可用（供 props 层与权限派生双条件消费）', async () => {
     const { result } = renderHook(() => useTrashView(createDefaultProps()), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.canRestore).toBe(false);
-    expect(result.current.canDelete).toBe(false);
+    expect(result.current.canPurge).toBe(false);
 
     act(() => {
       result.current.toggle();
@@ -168,7 +168,7 @@ describe('useTrashView', () => {
     await waitFor(() => expect(result.current.trashNodes).toHaveLength(1));
 
     expect(result.current.canRestore).toBe(true);
-    expect(result.current.canDelete).toBe(true);
+    expect(result.current.canPurge).toBe(true);
   });
 
   it('restore 单节点：确认后调用恢复接口并刷新（普通节点走 nodeControllerRestoreNode）', async () => {

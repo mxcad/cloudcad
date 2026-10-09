@@ -143,8 +143,10 @@ export const useTrashView = ({
   });
 
   // ── 门控派生（回收站视图门控，props 层与权限派生双条件消费） ──────
+  // canPurge = 回收站视图门控（=isTrashView），与权限 canDelete（FILE_DELETE，"移入回收站"）
+  // 刻意不同名：旧名 canDelete 与权限撞名曾致回归（7cb550a06 误与项目权限 AND 组合）。
   const canRestore = isTrashView;
-  const canDelete = isTrashView;
+  const canPurge = isTrashView;
   const trashPaginationMeta: PaginationMeta | null = trashData
     ? {
         total: trashData.total,
@@ -173,6 +175,6 @@ export const useTrashView = ({
         : t('加载数据失败')
       : null,
     canRestore,
-    canDelete,
+    canPurge,
   };
 };
