@@ -47,7 +47,7 @@ printf 'protocol=http\nhost=10.66.66.1:5656\npath=/qjx/cloudcad.git\n\n' | git c
 
 ## 编号映射（GitHub → Gitea）
 
-2026-10-12 已将 GitHub `mxcad/cloudcad` 全部 428 个 issue（86 open / 342 closed，含 401 条评论）迁移到 Gitea。每个迁移 issue 的 body 头部带 `> **从 GitHub 迁移**：原 GitHub issue #N · 作者 … · 创建于 …` 标记。代码注释、ADR、issue 正文里引用的旧 GitHub 编号（如 #228、#234、#498）一律经 `docs/agents/issue-mapping.md` 换算。
+2026-10-12 已将 GitHub `mxcad/cloudcad` 全部 428 个 issue（86 open / 342 closed，含 401 条评论）迁移到 Gitea，同日整理：关闭 35 张已完成/测试票（含 1 张乱码测试票）、修复 2 处乱码标题；GitHub 侧 86 张 open 票已全部关闭（无删除权限，无法物理删除），open 列表已清空，GitHub 仓库 issue 区从此只读归档。每个迁移 issue 的 body 头部带 `> **从 GitHub 迁移**：原 GitHub issue #N · 作者 … · 创建于 …` 标记。代码注释、ADR、issue 正文里引用的旧 GitHub 编号（如 #228、#234、#498）一律经 `docs/agents/issue-mapping.md` 换算。
 
 ## Wayfinding operations
 

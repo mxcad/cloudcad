@@ -1,6 +1,6 @@
 # Issue 编号映射（GitHub → Gitea）
 
-2026-10-12 由 GitHub mxcad/cloudcad 全量迁移生成：共 428 个 issue（86 open / 342 closed）。
+2026-10-12 由 GitHub mxcad/cloudcad 全量迁移生成（428 个 issue + 401 条评论）；2026-10-12 整理：关闭 35 张已完成/测试票、修复 2 处乱码标题。
 
 每个迁移后的 Gitea issue body 头部带 `> **从 GitHub 迁移**：原 GitHub issue #N` 标记，可反向核对。
 代码注释 / ADR / 旧 issue 正文里引用的 GitHub 编号，用本表换算成 Gitea 编号后再操作。
@@ -315,13 +315,13 @@
 | 347 | 304 | open | [架构决策] 前后端契约校验机制：contract test / smoke E2E / 改造 MSW / 维持现状？ |
 | 348 | 305 | open | Map: CloudCAD 架构成熟度提升路线图 — 安全/可观测/CD/质量门禁/构建编排 |
 | 349 | 306 | closed | [P0-安全] @Throttle 死依赖清理：注册 ThrottlerModule 或删除无效装饰器 |
-| 350 | 307 | open | [P0-安全] CSRF 策略：默认开启 vs Bearer-only 文档化 |
+| 350 | 307 | closed | [P0-安全] CSRF 策略：默认开启 vs Bearer-only 文档化 |
 | 351 | 308 | closed | [P0-安全] WeChat OAuth state CSRF 修复方案：state 绑定 session + 令牌不走 URL fragment |
 | 352 | 309 | closed | [P1-可观测] 采集层参考架构：Prometheus + Grafana + Loki 部署方案 |
 | 353 | 310 | open | [P1-可观测] 生产日志级别可诊断化：审计/业务关键日志不被 prod 级别静默丢弃 |
 | 354 | 311 | open | [P1-可观测] 引入 config schema 校验（zod / @nestjs/config validate） |
 | 355 | 312 | open | [P2-质量门禁] 覆盖率阈值门禁 + pre-commit lint-staged 快速反馈 |
-| 356 | 313 | open | [P2-质量门禁] CI 补齐 frontend depcruise + 清理幽灵步骤 |
+| 356 | 313 | closed | [P2-质量门禁] CI 补齐 frontend depcruise + 清理幽灵步骤 |
 | 357 | 314 | open | [P2-构建编排] 引入 Turborepo + 接通 TypeScript project references |
 | 358 | 315 | open | [P1-CI/CD] CD 发布管道设计：CI 产物到 registry 到分阶段发布 |
 | 359 | 316 | open | [P3-架构] 包边界加固：impl-mx 构建断言 + contracts-db 耦合审视 + service 接口共享 |
@@ -337,8 +337,8 @@
 | 369 | 326 | open | [tech-debt] 滚动列表虚拟滚动（@tanstack/react-virtual）：与 DOM 测页/框选/累计合并深度耦合，需预研后分容器迁移 |
 | 370 | 327 | open | [tech-debt] 快速滚动跳页加载（skip pages）：破坏『列表=已加载连续页』不变量，需先设计状态机 |
 | 371 | 328 | open | [tech-debt] 后端分页设施统一：page/pageSize 与 page/limit 两套命名并存，service 手写 count+skip/take 重复 |
-| 372 | 329 | open | 闇€姹傛祴璇?蹇界暐 |
-| 373 | 330 | open | [浣庝紭鍏堢骇]闇€姹傦細浼佷笟鐢ㄦ埛鎺ュ叆C绔崗鍚屽钩鍙帮紝鏀寔璐﹀彿鍏宠仈涓庡绾х鐞嗙殑澶氱鎴稴aaS骞冲彴 |
+| 372 | 329 | closed | 闇€姹傛祴璇?蹇界暐 |
+| 373 | 330 | open | [低优先级]需求：企业用户接入C端协同平台，支持账号关联与多级管理的多租户SaaS平台 |
 | 394 | 331 | open | chore(storage): copy 物理复制中途失败留下的无 DB 记录存储目录缺少周期性清理 |
 | 395 | 332 | open | test: 跨空间 move/copy 全链路集成测试（真实 PG）补齐 |
 | 396 | 333 | open | bug(frontend): 库管理批量复制的 undo rollback 删除的是源节点而非副本 |
@@ -376,17 +376,17 @@
 | 428 | 365 | open | Wayfinder 地图｜图纸转换服务化 + 全链路队列化（单机 · 独立 conversion-service · 只 POST 通信） |
 | 429 | 366 | closed | 【转换服务化】事实源收口：存在性/缓存/已转判据经 IStorageProvider + conversion_task |
 | 430 | 367 | closed | 【转换服务化】conversion_task 表 schema 定稿 |
-| 431 | 368 | open | 【转换服务化】队列与执行器：单机 Redis/BullMQ + 多 worker 安全 + 崩溃可恢复 |
+| 431 | 368 | closed | 【转换服务化】队列与执行器：单机 Redis/BullMQ + 多 worker 安全 + 崩溃可恢复 |
 | 432 | 369 | closed | 【转换服务化】部署拓扑与 env 变量统一（CONVERSION_MODE + STORAGE_MODE） |
-| 433 | 370 | open | 【转换服务化】全部转换入口同步→异步 + 前端配合 |
-| 434 | 371 | open | 【转换服务化】永久失败标记（判据 + 拦截 + 复位 + 前端呈现） |
+| 433 | 370 | closed | 【转换服务化】全部转换入口同步→异步 + 前端配合 |
+| 434 | 371 | closed | 【转换服务化】永久失败标记（判据 + 拦截 + 复位 + 前端呈现） |
 | 435 | 372 | open | 【转换服务化】侧边栏「图纸」tab 队列面板 + 游客观察态 |
-| 436 | 373 | open | 【转换服务化】conversion-service 全 TS 化 + 补测试 |
-| 437 | 374 | open | 【转换服务化】监控 UI 激活（SystemMonitorPage 转换队列 Tab，并入旧观测性拷问） |
+| 436 | 373 | closed | 【转换服务化】conversion-service 全 TS 化 + 补测试 |
+| 437 | 374 | closed | 【转换服务化】监控 UI 激活（SystemMonitorPage 转换队列 Tab，并入旧观测性拷问） |
 | 438 | 375 | closed | 【转换服务化｜research】standalone 存储路径（storage-service:3200）是否端到端可用 |
 | 439 | 376 | closed | 【转换服务化】版本管理收口：provider 逻辑路径 + 历史版本转换入队 + 保存走 provider |
 | 440 | 377 | open | 【转换服务化】转换分队列与优先级（open/thumbnail/export/batch + 缩略图丢弃限流） |
-| 441 | 378 | open | 【转换服务化】API 契约与前端收口（新端点 + api-sdk/MSW + 全量转换调用点改异步） |
+| 441 | 378 | closed | 【转换服务化】API 契约与前端收口（新端点 + api-sdk/MSW + 全量转换调用点改异步） |
 | 442 | 379 | open | 【转换服务化】转换触发 / 取消权限模型 |
 | 445 | 380 | closed | [依赖漏洞] 第二批存量清理：multer/nodemailer/uuid 定点升级（#423 拆出） |
 | 446 | 381 | open | [依赖漏洞] 第三批存量清理：three/hono/html-minifier 上游阻塞跟踪（#423 拆出） |
@@ -403,37 +403,37 @@
 | 457 | 392 | closed | T9 个人中心域页面设计（个人资料 / 分享管理） |
 | 458 | 393 | closed | T10 CAD 编辑器菜单裁剪与编辑器根设计 |
 | 459 | 394 | closed | T11 登录/鉴权引导与异常态页面设计 |
-| 460 | 395 | open | Spec: 图纸转换服务化 + 全链路队列化（单机 · 独立 conversion-service · 只 POST 通信） |
-| 461 | 396 | open | conversion-service 队列机制（Redis/BullMQ） |
+| 460 | 395 | closed | Spec: 图纸转换服务化 + 全链路队列化（单机 · 独立 conversion-service · 只 POST 通信） |
+| 461 | 396 | closed | conversion-service 队列机制（Redis/BullMQ） |
 | 462 | 397 | open | conversion-service 状态机扩展（加 CANCELLED 状态） |
 | 463 | 398 | open | conversion-service 取消路由（POST /tasks/:id/cancel） |
 | 464 | 399 | open | conversion-service 去重（content hash + source format + target format） |
 | 465 | 400 | open | conversion-service 永久失败负缓存（content_hash + dst_fmt） |
-| 466 | 401 | open | conversion-service TS 化 + 补测试 |
-| 467 | 402 | open | backend 异步转换服务扩展（支持不同任务类型 open/download + 目标 nodeId/version/format） |
-| 468 | 403 | open | backend 统一提交端点（POST /conversions/tasks） |
-| 469 | 404 | open | backend 统一状态查询端点（GET /conversions/tasks） |
-| 470 | 405 | open | CAD 编辑器场景（open 类型）：上传流程接入统一队列 |
-| 471 | 406 | open | 前端悬浮可拖动按钮 + 展开面板 |
-| 472 | 407 | open | CAD 编辑器场景（open 类型）：完成后打开文件 |
-| 473 | 408 | open | 历史版本（download 类型）：接入统一队列 |
-| 474 | 409 | open | 导出/下载（download 类型）：接入统一队列 |
-| 475 | 410 | open | 前端统一转换面板：全部转换列表 + 搜索 |
-| 476 | 411 | open | 前端：waitForFileReady 超时 60s→120s |
-| 477 | 412 | open | 永久失败的前端呈现（文件列表红色×徽标 + 打开时弹窗提示 + 管理后台转换任务页面） |
-| 478 | 413 | open | 监控 UI（SystemMonitorPage 转换队列 Tab） |
-| 479 | 414 | open | M1 移动端 App 壳骨架：Vue Router + PersistentEditorShell |
-| 480 | 415 | open | M2 UnifiedFileList 统一文件列表组件（四域共用） |
-| 481 | 416 | open | M3 文件浏览器页（项目 + 个人空间） |
-| 482 | 417 | open | M4 项目详情 + 图纸库 + 图块库专门页 |
-| 483 | 418 | open | M5 个人中心 + 分享管理页 |
-| 484 | 419 | open | M6 壳顶栏「+」+ 底部 Action Sheet 导航 |
-| 485 | 420 | open | M7 编辑器菜单裁剪 + 编辑器根设计 |
-| 486 | 421 | open | M8 登录/鉴权引导 + 6 态异常态组件 |
-| 487 | 422 | open | M9 i18n 全量 + 部署入口 + 回归矩阵落地 |
+| 466 | 401 | closed | conversion-service TS 化 + 补测试 |
+| 467 | 402 | closed | backend 异步转换服务扩展（支持不同任务类型 open/download + 目标 nodeId/version/format） |
+| 468 | 403 | closed | backend 统一提交端点（POST /conversions/tasks） |
+| 469 | 404 | closed | backend 统一状态查询端点（GET /conversions/tasks） |
+| 470 | 405 | closed | CAD 编辑器场景（open 类型）：上传流程接入统一队列 |
+| 471 | 406 | closed | 前端悬浮可拖动按钮 + 展开面板 |
+| 472 | 407 | closed | CAD 编辑器场景（open 类型）：完成后打开文件 |
+| 473 | 408 | closed | 历史版本（download 类型）：接入统一队列 |
+| 474 | 409 | closed | 导出/下载（download 类型）：接入统一队列 |
+| 475 | 410 | closed | 前端统一转换面板：全部转换列表 + 搜索 |
+| 476 | 411 | closed | 前端：waitForFileReady 超时 60s→120s |
+| 477 | 412 | closed | 永久失败的前端呈现（文件列表红色×徽标 + 打开时弹窗提示 + 管理后台转换任务页面） |
+| 478 | 413 | closed | 监控 UI（SystemMonitorPage 转换队列 Tab） |
+| 479 | 414 | closed | M1 移动端 App 壳骨架：Vue Router + PersistentEditorShell |
+| 480 | 415 | closed | M2 UnifiedFileList 统一文件列表组件（四域共用） |
+| 481 | 416 | closed | M3 文件浏览器页（项目 + 个人空间） |
+| 482 | 417 | closed | M4 项目详情 + 图纸库 + 图块库专门页 |
+| 483 | 418 | closed | M5 个人中心 + 分享管理页 |
+| 484 | 419 | closed | M6 壳顶栏「+」+ 底部 Action Sheet 导航 |
+| 485 | 420 | closed | M7 编辑器菜单裁剪 + 编辑器根设计 |
+| 486 | 421 | closed | M8 登录/鉴权引导 + 6 态异常态组件 |
+| 487 | 422 | closed | M9 i18n 全量 + 部署入口 + 回归矩阵落地 |
 | 488 | 423 | closed | 移动端 401 刷新重试失效修复 — fetch 层覆写替代 interceptor retry |
-| 489 | 424 | open | api-sdk 生成产物移出 git 跟踪（.gitignore .gen.ts + clone 后一键生成 + CI 联动） |
-| 490 | 425 | open | session 中间件 Redis 故障降级——NOAUTH/宕机不 500 每个请求（游客打开图纸 500 根因） |
+| 489 | 424 | closed | api-sdk 生成产物移出 git 跟踪（.gitignore .gen.ts + clone 后一键生成 + CI 联动） |
+| 490 | 425 | closed | session 中间件 Redis 故障降级——NOAUTH/宕机不 500 每个请求（游客打开图纸 500 根因） |
 | 497 | 426 | open | storage-service：接线 ADR-0015 多节点路由（FileHandler prefix→节点转发） |
 | 498 | 427 | open | 移动端 mxweb IndexedDB 缓存逐次打开/保存只增不减：clearMxwebCache 只删精确键、?t= 旧版本永久驻留 |
 | 499 | 428 | open | PC 保存路径写引擎私有 IDBFS store：无键空间契约、无容量上限（有界但脆弱，动它有打断保存链风险） |
