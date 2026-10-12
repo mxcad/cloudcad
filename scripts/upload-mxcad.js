@@ -8,7 +8,7 @@
  *   3. 查询 GitHub Release 是否已存在同哈希附件：
  *        存在  → 跳过上传（复用线上已有，零重复）
  *        不存在 → 上传，附件名携带哈希后缀
- *   4. 生成 ./mxcad-dist/manifest.json（平台×架构×组件 → 哈希），供 release.yml 引用
+ *   4. 更新 ./scripts/pack-lib/mxcad-registry.json（平台×架构×组件 → 哈希），供 release.yml / ensure-runtime.js 引用
  *
  * 使用方式：
  *   node scripts/upload-mxcad.js [--repo mxcad/cloudcad] [--tag mxcad-stable]
@@ -32,7 +32,9 @@ const { execSync } = require('child_process');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DIST_DIR = path.join(PROJECT_ROOT, 'mxcad-dist');
-const MANIFEST_PATH = path.join(DIST_DIR, 'manifest.json');
+// 产物索引（入库）。放代码目录而非 mxcad-dist/：该目录被 .gitignore 整体排除，
+// 父目录被忽略时 Git 不下钻，子级 ! 例外规则不生效。
+const REGISTRY_PATH = path.join(__dirname, 'pack-lib', 'mxcad-registry.json');
 
 /**
  * 自动发现 mxcad-dist/ 下的目标目录与组件。
@@ -253,10 +255,10 @@ async function main() {
     }
   }
 
-  // 写入 manifest.json
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2), 'utf8');
-  console.log(`\nmanifest 已写入: ${MANIFEST_PATH}`);
-  console.log('请将 manifest.json 提交进 git，release.yml 将据此下载对应哈希的 mxcad。');
+  // 写入产物索引（入库，release.yml 与 ensure-runtime.js 据此下载对应哈希的 mxcad）
+  fs.writeFileSync(REGISTRY_PATH, JSON.stringify(manifest, null, 2), 'utf8');
+  console.log(`\n产物索引已写入: ${REGISTRY_PATH}`);
+  console.log('请将 mxcad-registry.json 提交进 git。');
 
   const reused = uploads.length === 0 ? '全部复用线上，零上传' : `${uploads.length} 个新增上传`;
   console.log(`\n完成：${reused}`);

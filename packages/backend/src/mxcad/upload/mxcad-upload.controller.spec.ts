@@ -29,7 +29,6 @@ describe('MxcadUploadController - 分片上传配额预检', () => {
   };
 
   const mockUploadUtilityService = {
-    checkChunkExistsInStorage: jest.fn(),
     checkFileExistsInStorage: jest.fn(),
   };
 
@@ -183,6 +182,56 @@ describe('MxcadUploadController - 分片上传配额预检', () => {
     );
 
     expect(mockAuditLogService.logProjectNodeAction).not.toHaveBeenCalled();
+  });
+
+  describe('chunkisExist 分片存在性单一权威', () => {
+    const chunkExistRequest = (overrides: Record<string, unknown> = {}) => ({
+      body: {
+        fileHash: 'hash1',
+        filename: 'drawing.dwg',
+        size: 1024,
+        chunk: 1,
+        chunks: 3,
+        ...overrides,
+      },
+      query: {},
+    });
+
+    it('仅问 chunkUploadManager（tempPath 根），kChunkAlreadyExist → exists: true', async () => {
+      mockChunkUploadManager.checkChunkExist.mockResolvedValue({
+        ret: MxUploadReturn.kChunkAlreadyExist,
+      });
+
+      const req = chunkExistRequest();
+      const result = await controller.checkChunkExist(
+        req.body as never,
+        req as never
+      );
+
+      expect(result.exists).toBe(true);
+      expect(mockChunkUploadManager.checkChunkExist).toHaveBeenCalledTimes(1);
+      expect(mockChunkUploadManager.checkChunkExist).toHaveBeenCalledWith({
+        hash: 'hash1',
+        name: 'drawing.dwg',
+        size: 1024,
+        chunk: 1,
+        chunks: 3,
+        context: expect.anything(),
+      });
+    });
+
+    it('kChunkNoExist → exists: false', async () => {
+      mockChunkUploadManager.checkChunkExist.mockResolvedValue({
+        ret: MxUploadReturn.kChunkNoExist,
+      });
+
+      const req = chunkExistRequest();
+      const result = await controller.checkChunkExist(
+        req.body as never,
+        req as never
+      );
+      expect(result.exists).toBe(false);
+    });
   });
 
   describe('fileisExist 秒传新建节点审计', () => {

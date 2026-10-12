@@ -16,7 +16,6 @@ import * as path from 'path';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
-import { I18nContext } from 'nestjs-i18n';
 import { spawnManagedProcess } from '@cloudcad/engine-exec';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
@@ -25,7 +24,7 @@ import {
   findThumbnail,
   getThumbnailFileName,
   THUMBNAIL_FORMATS,
-} from './thumbnail-utils';
+} from '../../common/utils/thumbnail-utils';
 
 /**
  * 缩略图生成结果
@@ -364,103 +363,45 @@ export class ThumbnailGenerationService implements OnModuleInit {
   }
 
   /**
-   * 上传缩略图
+   * 保存缩略图（nodeId 入参）
+   * 路径解析统一走 storageManager.getFullPath，与 checkThumbnailExists 同一套解析，
+   * 保证写入目录与缩略图读取目录一致（避免"有缩略图却找不到"）
    * @param nodeId 节点 ID
-   * @param filePath 上传的缩略图文件路径
-   * @returns 上传结果
+   * @param buffer 缩略图文件内容（jpg）
+   * @returns 保存结果（结构化事实，用户可见文案由调用方负责）
    */
-  async uploadThumbnail(
+  async saveThumbnail(
     nodeId: string,
-    filePath: string
-  ): Promise<{ success: boolean; message: string; fileName?: string }> {
+    buffer: Buffer
+  ): Promise<{ success: boolean; notFound?: boolean; fileName?: string }> {
+    const node = await this.fileSystemNodeService.findById(nodeId);
+
+    if (!node || !node.path) {
+      this.logger.warn(`[saveThumbnail] 节点不存在或没有 path 字段: ${nodeId}`);
+      return { success: false, notFound: true };
+    }
+
+    const nodeFullPath = this.storageManager.getFullPath(node.path);
+    const nodeDir = path.dirname(nodeFullPath);
+    const targetFileName = getThumbnailFileName('jpg');
+    const targetLocalPath = path.join(nodeDir, targetFileName);
+
     try {
-      const node = await this.fileSystemNodeService.findById(nodeId);
-
-      if (!node || !node.path) {
-        this.logger.warn(
-          `[uploadThumbnail] 节点不存在或没有 path 字段: ${nodeId}`
-        );
-        return {
-          success: false,
-          message:
-            I18nContext.current()?.t('error.file.node_not_found_or_no_path') ??
-            '文件节点不存在或没有 path 字段',
-        };
-      }
-
-      if (!fs.existsSync(filePath)) {
-        return {
-          success: false,
-          message:
-            I18nContext.current()?.t('error.file.upload_file_not_found') ??
-            '上传文件不存在',
-        };
-      }
-
-      // 限制只能上传 jpg 缩略图，统一命名 thumbnail.jpg
-      const rawExt = path.extname(filePath).toLowerCase();
-      const ext = rawExt.startsWith('.') ? rawExt.slice(1) : rawExt;
-      if (ext !== 'jpg' && ext !== 'jpeg') {
-        this.logger.warn(
-          `[uploadThumbnail] 仅支持 jpg 格式缩略图，收到: ${ext || '未知'}`
-        );
-        return {
-          success: false,
-          message: '仅支持 jpg 格式的缩略图',
-        };
-      }
-
-      const targetFileName = getThumbnailFileName('jpg');
-
-      const nodeFullPath = this.storageManager.getFullPath(node.path);
-      const nodeDir = path.dirname(nodeFullPath);
-      const targetLocalPath = path.join(nodeDir, targetFileName);
-
+      await fsPromises.mkdir(nodeDir, { recursive: true });
       try {
-        if (fs.existsSync(targetLocalPath)) {
-          fs.unlinkSync(targetLocalPath);
-          this.logger.log(
-            `[uploadThumbnail] 删除已存在的本地缩略图: ${targetLocalPath}`
-          );
-        }
-
-        fs.copyFileSync(filePath, targetLocalPath);
-        this.logger.log(
-          `[uploadThumbnail] 缩略图上传到本地成功: ${filePath} -> ${targetLocalPath}`
-        );
-      } catch (error) {
-        this.logger.error(
-          `[uploadThumbnail] 上传到本地文件系统失败: ${error.message}`,
-          error.stack
-        );
-        return {
-          success: false,
-          message:
-            I18nContext.current()?.t('error.mxcad_extra.upload_local_failed', {
-              args: { error: error.message },
-            }) ?? `上传到本地失败: ${error.message}`,
-        };
+        await fsPromises.unlink(targetLocalPath);
+      } catch {
+        // 无旧缩略图，忽略
       }
-
-      return {
-        success: true,
-        message:
-          I18nContext.current()?.t('success.thumbnail_uploaded') ??
-          '缩略图上传成功',
-        fileName: targetFileName,
-      };
+      await fsPromises.writeFile(targetLocalPath, buffer);
+      this.logger.log(`[saveThumbnail] 缩略图已保存: ${targetLocalPath}`);
+      return { success: true, fileName: targetFileName };
     } catch (error) {
       this.logger.error(
-        `[uploadThumbnail] 上传缩略图失败: ${error.message}`,
+        `[saveThumbnail] 保存缩略图失败: ${error.message}`,
         error.stack
       );
-      return {
-        success: false,
-        message:
-          I18nContext.current()?.t('error.mxcad_extra.upload_failed_detail', {
-            args: { error: error.message },
-          }) ?? `上传失败: ${error.message}`,
-      };
+      return { success: false };
     }
   }
 }

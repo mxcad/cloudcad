@@ -79,6 +79,8 @@ CloudCAD 架构决策记录（`docs/adr/`）。编号唯一；`superseded` 表�
 | [0072](0072-admin-password-recovery-channel.md) | `accepted` | 0072 — 管理员密码恢复走带外运维 CLI（`admin:reset-password` 与 `mfa:totp-unbind` 同构；信任边界=部署机 shell 权限，否决 HTTP 应急端点与「永远在线的免密改密面」；重置即全量撤销会话同事务提交；刻意不清 Redis session、不校验弱口令黑名单；新增 `AuditAction.ADMIN_PASSWORD_RESET` 需迁移，迁移未应用时重置仍成功仅审计告警；补 `cloudcad.bat` 的 `%*` 透传；兑现部署说明里落空的「密码向导」承诺） |
 | [0073](0073-infra-password-reset-ledger-consistency.md) | `accepted` | 0073 — 数据库 / Redis 密码重置走同一条带外运维通道（`db:reset-password` / `redis:reset-password`），核心安全性质=**先用新密码验证成功才允许写 `.env`**（防服务端与账本分叉，验证失败尽力回滚并大声报错）；嵌入式 PG 全仓库 `-A trust` 且从未写过 `pg_hba.conf`，故本轮只做账本一致、**刻意不在重置命令里加 pg_hba 硬加固**（逃生舱不得依赖正在被重置的门禁，单独排票）；`DB_PASSWORD` 与 `DATABASE_URL` 成对写；Redis 改密走裸 RESP 不留进程列表痕迹、`AUTH`+`CONFIG REWRITE` 同请求；ADR-0071 收尾=3002 两条旧路由改薄壳并加源码扫描断言防双轨回归；`psql`/审计写入收敛进 `lib/psql.js` 唯一出口 |
 
+| [0074](0074-docker-oneclick-deploy-half-containerization.md) | `proposed` | 0074 — Docker 一键部署包半容器化：宿主只留 mxcadAssembly 折叠的协同服务 + conversion-service + config-service 运维中心（零反向依赖已核实，升级窗口全程存活；PM2 一律不用），容器只 3 个（pg / redis / app 双进程），全 `network_mode: host` 使 `.env` 端口直接生效；挂载一律「宿主绝对路径 = 容器绝对路径」以让宿主引擎能读容器算出的 `srcPath`；单一 `.env`（不新增配置文件，复用 `fillEmptySecrets` / `mergeExampleIntoEnv`）；Redis 与裸机对齐不设 maxmemory（修旧 compose LRU 驱逐转换队列缺陷）；app 镜像装 postgresql-client 保住备份通道；Docker 静态二进制 20.10.24 + compose v2 自装，**无 root 即硬失败不降级裸机形态**；升级 = 同目录覆盖 + start.sh 自动识别；SystemLib 由构建期按发行版替换改为运行时 `1.dwg` 探针失败再替换（探针走 `@cloudcad/engine-exec` 唯一出口、判据只认 JSON `code` 不按退出码） |
+
 ## 规则
 
 - 新 ADR 编号 = 当前最大编号 + 1；被取代的决策在原 ADR 中标注 `**Status**: superseded by ADR-NNNN`。

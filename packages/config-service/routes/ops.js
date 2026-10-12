@@ -12,7 +12,7 @@
 const fs = require('fs');
 const { sendJson, parseBody } = require('../lib/utils');
 const {
-  authMiddleware,
+  requireSession,
   createDownloadToken,
   consumeDownloadToken,
 } = require('../lib/session');
@@ -36,8 +36,7 @@ function startLongTask(res, { kind, label, fn }) {
 async function handle(req, res, pathname, method) {
   // ---- 任务状态轮询 ----
   if (pathname === '/api/ops/current-task' && method === 'GET') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const task = jobRunner.getCurrentTask() || jobRunner.readPersistedTask();
     sendJson(res, 200, { success: true, task });
@@ -46,8 +45,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 部署 / 升级（长任务；版本检查/验证已织入部署流程自动执行） ----
   if (pathname === '/api/ops/deploy' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const skipBuild = body.skipBuild !== false; // 缺省跳过构建（部署包/已有 dist 场景）
@@ -61,8 +59,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 数据库迁移（长任务） ----
   if (pathname === '/api/ops/migrate' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     startLongTask(res, {
       kind: 'migrate',
@@ -74,8 +71,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 启动服务（长任务；PM2 后台） ----
   if (pathname === '/api/ops/start' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     startLongTask(res, {
       kind: 'start',
@@ -87,8 +83,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 停止服务：仅应用层（主按钮；基础设施保持在线，页面不失联） ----
   if (pathname === '/api/ops/stop-apps' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     startLongTask(res, {
       kind: 'stop-apps',
@@ -100,8 +95,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 完全停止（危险操作：含 PG/Redis/config-service，执行后页面失联） ----
   if (pathname === '/api/ops/stop-all' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     if (body.confirm !== 'STOP') {
@@ -122,8 +116,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 管理员 TOTP 解绑（同步快任务；网页侧已双重确认） ----
   if (pathname === '/api/ops/mfa-unbind' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const username = (body.username || '').trim();
@@ -143,8 +136,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 日志位置一览 ----
   if (pathname === '/api/ops/logs/locations' && method === 'GET') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const result = ops.getLogLocations();
     sendJson(res, result?.ok === false ? 500 : 200, {
@@ -157,8 +149,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 在线查看日志尾部 ----
   if (pathname === '/api/ops/logs/view' && method === 'GET') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const url = new URL(req.url, `http://${req.headers.host}`);
     const result = ops.viewLogFile(
@@ -171,8 +162,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 日志打包（长任务） ----
   if (pathname === '/api/ops/logs/bundle' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const days = parseInt(body.days, 10);
@@ -186,8 +176,7 @@ async function handle(req, res, pathname, method) {
 
   // ---- 日志包下载凭证（同 db download-token 模式，防任意文件读） ----
   if (pathname === '/api/ops/logs/bundle-download-token' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const { filename } = body;

@@ -11,14 +11,6 @@ import { getErrorMessage } from '@/utils/errorHandler';
 
 const PROJECT_ROLES_BY_PROJECT_KEY = ['projectRolesByProject'] as const;
 
-/** 从后端 ResponseInterceptor 包装的 { code, message, data, timestamp } 中提取 data */
-function unwrapResponse<T>(raw: unknown): T {
-  if (raw && typeof raw === 'object' && 'data' in raw && 'code' in raw) {
-    return (raw as { data: T }).data;
-  }
-  return raw as T;
-}
-
 /**
  * 项目内角色 CRUD（ADR-00XX 项目自治）：
  * 项目创建时从模板复制角色副本，项目内所有角色（含默认角色）完全自治，
@@ -40,7 +32,8 @@ export const useProjectRoleCRUD = (projectId: string) => {
         throwOnError: true,
         path: { projectId },
       });
-      return unwrapResponse<ProjectRoleDto[]>(result.data) || [];
+      // SDK responseTransformer 已解包 { code, message, data }，result.data 即载荷
+      return result.data || [];
     },
     enabled: !!projectId,
   });

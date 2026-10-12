@@ -1,4 +1,4 @@
-import { ref, readonly, onMounted, getCurrentInstance } from 'vue';
+import { ref, readonly, onMounted, getCurrentInstance, watch } from 'vue';
 import {
   authTransferParamNames,
   parseAuthTransferQuery,
@@ -7,7 +7,13 @@ import {
 import {
   logout as logoutSession,
   onSessionChanged,
+  readToken,
+  syncUserMembership,
 } from '../utils/authSession';
+import { usersControllerGetProfile } from '@cloudcad/api-sdk/sdk.gen';
+import { unwrap } from '../utils/apiError';
+import { getApiBaseUrl } from '../utils/apiConfig';
+import type { MembershipLike } from '../utils/billing';
 
 interface UserInfo {
   id: string;
@@ -84,6 +90,70 @@ onSessionChanged((event) => {
   user.value = null;
   isAuthenticated.value = false;
 });
+
+// ── 账户事件 SSE 订阅（会员变更实时推送，与 PC AuthContext 同源） ──
+//
+// 管理员改会员（updateMembership）后后端向本用户通道 emit membership-changed；
+// 已登录的移动端经此长连接收到后重拉 /users/profile/me（含最新会员态）并回写
+// localStorage.user，无需退出重登。token 走 query（EventSource 无法带 header）；
+// 静默刷新（fetch 层 401 刷新不触发会话事件）后由 onerror 的 token 比对重开。
+let accountEventsStream: EventSource | null = null;
+let accountEventsToken: string | null = null;
+
+function closeAccountEventsStream(): void {
+  if (accountEventsStream) {
+    accountEventsStream.close();
+    accountEventsStream = null;
+    accountEventsToken = null;
+  }
+}
+
+/** 收到账户事件：重拉 /users/profile/me 并同步会员字段到 localStorage.user */
+async function handleAccountEvent(): Promise<void> {
+  try {
+    const profile = unwrap<MembershipLike>(
+      await usersControllerGetProfile()
+    );
+    if (profile) syncUserMembership(profile);
+  } catch (e) {
+    console.error('[useUser] account-events profile refresh failed:', e);
+  }
+}
+
+function openAccountEventsStream(): void {
+  const token = readToken();
+  if (!token) {
+    closeAccountEventsStream();
+    return;
+  }
+  // 已用同一 token 建连 → 跳过（避免会员同步触发的状态刷新造成无谓重连）
+  if (accountEventsStream && accountEventsToken === token) return;
+  closeAccountEventsStream();
+  if (typeof EventSource === 'undefined') return;
+  accountEventsToken = token;
+  const es = new EventSource(
+    `${getApiBaseUrl()}/v1/users/profile/account-events?token=${encodeURIComponent(token)}`
+  );
+  es.onmessage = () => {
+    void handleAccountEvent();
+  };
+  es.onerror = () => {
+    // token 可能已静默刷新：localStorage 里的 token 与建连时不同 → 用新 token 重开
+    const current = readToken();
+    if (current && current !== accountEventsToken) openAccountEventsStream();
+  };
+  accountEventsStream = es;
+}
+
+// 登录（含应用加载时已有会话）→ 建连；登出 → 断连。immediate 覆盖「加载即已登录」
+watch(
+  isAuthenticated,
+  (authed) => {
+    if (authed) openAccountEventsStream();
+    else closeAccountEventsStream();
+  },
+  { immediate: true }
+);
 
 export function useUser() {
   function refresh() {

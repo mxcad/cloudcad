@@ -15,6 +15,7 @@ import {
 import type { FileSystemNodeDto, NodeListResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
 import { unwrap } from '@/utils/apiError'
+import { usePagedState, type PagedItems } from './usePagedState'
 
 export type LibraryType = 'drawing' | 'block'
 
@@ -77,12 +78,8 @@ export function useLibrary(libraryType: LibraryType) {
   const breadcrumbs = ref<BreadcrumbItem[]>([])
 
   // ── 节点列表 ──
-  const nodes = shallowRef<FileSystemNodeDto[]>([])
-  const loading = ref(false)
-  const error = ref('')
-  const page = ref(1)
-  const totalPages = ref(1)
-  const total = ref(0)
+  const paged = usePagedState<FileSystemNodeDto>({ onError: () => t('加载失败') })
+  const { items: nodes, page, totalPages, total, loading, error, hasMore } = paged
   const searchText = ref('')
   const debouncedSearch = ref('')
 
@@ -196,6 +193,35 @@ export function useLibrary(libraryType: LibraryType) {
   }
 
   // ── 加载节点列表 ──
+  // 单页取数：fetcher 闭包捕获目标节点/搜索等消费方特有状态，翻页号由 paged 按当前页传入
+  async function fetchPage(
+    targetId: string,
+    pageNo: number,
+  ): Promise<PagedItems<FileSystemNodeDto>> {
+    const queryParams: { page: number; limit: number; search?: string } = {
+      page: pageNo,
+      limit: 30,
+    }
+    if (debouncedSearch.value) {
+      queryParams.search = debouncedSearch.value
+    }
+    const res = await api.getAllFiles({
+      path: { nodeId: targetId },
+      query: queryParams,
+    })
+    const data = unwrap<NodeListResponseDto>(res)
+    const fetched = data.nodes ?? []
+    // 首屏 0 条时把目标节点打到 console：库内查错节点、根节点没拿到、
+    // 服务端分类树变更后 localStorage 里的旧 ID 失效，这三种都会静默返回空
+    if (pageNo === 1 && fetched.length === 0) {
+      console.warn(
+        '[useLibrary] all-files 返回 0 条',
+        `type=${libraryType} target=${targetId} search=${debouncedSearch.value || '(无)'}`,
+      )
+    }
+    return { items: fetched, total: data.total ?? 0, totalPages: data.totalPages ?? 1 }
+  }
+
   async function loadNodes() {
     const targetId = currentFolderId.value ?? resolveCategoryNodeId()
     if (!targetId) {
@@ -205,49 +231,14 @@ export function useLibrary(libraryType: LibraryType) {
       error.value = t('加载失败')
       return
     }
+    await paged.load((pageNo) => fetchPage(targetId, pageNo))
+  }
 
-    loading.value = true
-    error.value = ''
-
-    try {
-      const queryParams: { page: number; limit: number; search?: string } = {
-        page: page.value,
-        limit: 30,
-      }
-      if (debouncedSearch.value) {
-        queryParams.search = debouncedSearch.value
-      }
-
-      const res = await api.getAllFiles({
-        path: { nodeId: targetId },
-        query: queryParams,
-      })
-
-      const data = unwrap<NodeListResponseDto>(res)
-      const fetched = data.nodes ?? []
-
-      if (page.value === 1) {
-        nodes.value = fetched
-      } else {
-        nodes.value = [...nodes.value, ...fetched]
-      }
-      total.value = data.total ?? 0
-      totalPages.value = data.totalPages ?? 1
-
-      // 首屏 0 条时把目标节点打到 console：库内查错节点、根节点没拿到、
-      // 服务端分类树变更后 localStorage 里的旧 ID 失效，这三种都会静默返回空
-      if (page.value === 1 && fetched.length === 0) {
-        console.warn(
-          '[useLibrary] all-files 返回 0 条',
-          `type=${libraryType} target=${targetId} search=${debouncedSearch.value || '(无)'}`,
-        )
-      }
-    } catch (e) {
-      console.error('[useLibrary] loadNodes exception:', e)
-      error.value = t('加载失败')
-    } finally {
-      loading.value = false
-    }
+  // 当前浏览目标对应的 fetcher（loadMore/retry 共用；无目标时返回空 fetcher 不翻页）
+  function currentFetcher(): (pageNo: number) => Promise<PagedItems<FileSystemNodeDto>> {
+    const targetId = currentFolderId.value ?? resolveCategoryNodeId()
+    if (!targetId) return () => Promise.resolve({ items: [], total: 0, totalPages: 1 })
+    return (pageNo) => fetchPage(targetId, pageNo)
   }
 
   // ── 选择分类 ──
@@ -293,16 +284,13 @@ export function useLibrary(libraryType: LibraryType) {
 
   // ── 加载更多 ──
   function loadMore() {
-    if (loading.value || page.value >= totalPages.value) return
-    page.value++
-    loadNodes()
+    paged.loadMore(currentFetcher())
   }
 
   // ── 加载更多失败后重试 ──
   // loadMore 已自增 page，重试须重载当前页而不是再翻一页（否则漏掉一整页）
   function retryLoadMore() {
-    error.value = ''
-    loadNodes()
+    paged.retryLoadMore(currentFetcher())
   }
 
   // ── 判断缩略图节点类型 ──
@@ -324,7 +312,6 @@ export function useLibrary(libraryType: LibraryType) {
     return [...parts, ...folderNames].join(' / ') || rootName.value
   })
 
-  const hasMore = computed(() => page.value < totalPages.value)
   const isEmpty = computed(() => !loading.value && nodes.value.length === 0)
 
   return {

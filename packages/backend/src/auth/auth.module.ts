@@ -29,6 +29,7 @@ import { AdminAuthController } from './admin-auth.controller';
 import { AdminMfaController } from './admin-mfa.controller';
 import { SessionTransferController } from './session-transfer/session-transfer.controller';
 import { SessionTransferService } from './session-transfer/session-transfer.service';
+import { SessionCookieWriter } from './session-cookie.writer';
 import { AuthFacadeService } from './auth-facade.service';
 import { AdminAuthService } from './impl/services/admin-auth.service';
 import { IpWhitelistModule } from '../ip-whitelist/ip-whitelist.module';
@@ -142,6 +143,7 @@ export class AuthModule {
         AuthFacadeService,
         AdminAuthService,
         SessionTransferService,
+        SessionCookieWriter,
         {
           provide: IAUTH_FACADE,
           useClass: AuthFacadeService,

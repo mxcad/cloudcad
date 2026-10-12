@@ -3,31 +3,12 @@ import { handleError } from '@/utils/errorHandler';
 /**
  * MxCAD 文件缓存清理（从 mxcadManagerCore.ts 拆分）
  *
- * - clearOldMxwebCache：清理 Service Worker 缓存中指定路径的旧版本 mxweb（按 ?t= 时间戳比较）
  * - clearFileCacheFromIndexedDB：清理 emscripten 文件系统（IndexedDB）中指定路径的缓存
+ *
+ * 注：引擎在浏览器侧走 IDBFS（IndexedDB），不走 Cache API；全仓无 Service Worker
+ * 注册、无 mxcad-mxweb-cache 写入者，故原 clearOldMxwebCache（遍历 Cache API 删旧
+ * 版本）是零写入者的空转，已删。
  */
-
-export async function clearOldMxwebCache(
-  filePath: string,
-  timestamp: number
-): Promise<void> {
-  try {
-    const cache = await caches.open('mxcad-mxweb-cache');
-    const keys = await cache.keys();
-    for (const request of keys) {
-      const url = new URL(request.url);
-      if (
-        url.pathname.includes(filePath) &&
-        url.searchParams.has('t') &&
-        parseInt(url.searchParams.get('t') || '0') < timestamp
-      ) {
-        await cache.delete(request);
-      }
-    }
-  } catch (error) {
-    handleError(error, 'mxcadManager: clearOldMxwebCache');
-  }
-}
 
 export async function clearFileCacheFromIndexedDB(
   basePath: string

@@ -12,7 +12,6 @@ import {
   cachedArtifactFileName,
   cachedArtifactReady,
 } from '../utils/conversion-artifact';
-import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
@@ -68,38 +67,6 @@ export class UploadUtilityService {
 
   getConvertedFileName(fileHash: string, originalFilename: string): string {
     return cachedArtifactFileName(fileHash, originalFilename);
-  }
-
-  async checkChunkExistsInStorage(
-    fileHash: string,
-    chunkIndex: number
-  ): Promise<boolean> {
-    const chunkDir = path.join(this.mxcadUploadPath, `chunk_${fileHash}`);
-
-    if (!fs.existsSync(chunkDir)) {
-      return false;
-    }
-
-    const chunkFileName = `${chunkIndex}_${fileHash}`;
-    const chunkPath = path.join(chunkDir, chunkFileName);
-
-    if (!fs.existsSync(chunkPath)) {
-      return false;
-    }
-
-    try {
-      const fd = fs.openSync(chunkPath, 'r');
-      const stats = fs.fstatSync(fd);
-      fs.closeSync(fd);
-
-      if (stats.size === 0) {
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      return false;
-    }
   }
 
   async generateUniqueFileName(

@@ -134,6 +134,71 @@ describe('ShareService.validateShareFileAccess', () => {
 });
 
 /**
+ * resolveShareNode 已删节点元数据泄漏回归。
+ *
+ * 旧实现对已入回收站的节点仍回吐 path + fileHash（兄弟端点 resolveShare /
+ * validateShareFileAccess 对同一 token 均 404）。移动端 useFileLoader 依赖
+ * resolveShareNode 对已删节点返回 200 + deletedAt（先判 deletedAt 再判 fileHash）
+ * 以提示「文件已被删除」，故不能改 404；改为对已删节点保留 deletedAt、
+ * 但置空存储定位字段 path/fileHash，与兄弟端点「已删节点不可用」口径对齐。
+ */
+describe('ShareService.resolveShareNode 已删节点元数据', () => {
+  const validShare = {
+    id: 'share-1',
+    token: 'tok-abc',
+    fileId: 'node-1',
+    createdBy: 'user-1',
+    deletedAt: null,
+    expiresAt: null,
+    usedCount: 0,
+  };
+  const baseNode = {
+    id: 'node-1',
+    name: 'main.dwg',
+    fileHash: 'hash-1',
+    path: '202509/node-1/main.dwg',
+    parentId: 'root-1',
+    deletedAt: null,
+    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+  };
+
+  const createService = (fileNode: unknown) => {
+    const prisma = {
+      fileShare: {
+        findUnique: jest.fn().mockResolvedValue(validShare),
+        update: jest.fn().mockResolvedValue(validShare),
+      },
+      fileSystemNode: {
+        findUnique: jest.fn().mockResolvedValue(fileNode),
+        findFirst: jest.fn(),
+      },
+    };
+    return new ShareService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      new StorageManager({} as never, {} as never)
+    );
+  };
+
+  it('存活节点：回吐 path + fileHash', async () => {
+    const service = createService(baseNode);
+    const result = await service.resolveShareNode('tok-abc');
+    expect(result.path).toBe('202509/node-1/main.dwg');
+    expect(result.fileHash).toBe('hash-1');
+    expect(result.deletedAt).toBeNull();
+  });
+
+  it('已删节点：保留 deletedAt 但置空 path/fileHash（不再泄漏存储定位字段）', async () => {
+    const service = createService({ ...baseNode, deletedAt: new Date() });
+    const result = await service.resolveShareNode('tok-abc');
+    expect(result.deletedAt).toEqual(expect.any(String));
+    expect(result.path).toBeNull();
+    expect(result.fileHash).toBeNull();
+  });
+});
+
+/**
  * listShares 状态筛选下推回归。
  *
  * 移动端「全部/有效/已过期」原先是客户端过滤已加载页，而 total 由服务端未过滤计数返回，

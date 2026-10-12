@@ -31,6 +31,7 @@ import {
   IPermissionService,
 } from '../permission/interfaces/permission-service.interface';
 import { ProjectPermission } from '../common/enums/permissions.enum';
+import { getLibrarySystemPermission } from '../common/utils/permission-mapping';
 import { ModuleRef } from '@nestjs/core';
 import { IFunctionExecutor } from '../function-executor/function-executor.interface';
 import * as path from 'path';
@@ -117,7 +118,7 @@ export class NodeTrashService {
   private async cancelInflightConversions(nodeIds: string[]): Promise<void> {
     if (nodeIds.length === 0) return;
     const executor = this.getFunctionExecutor();
-    if (!executor?.cancelTask) return;
+    if (!executor?.capabilities.cancel) return;
 
     const running = await this.prisma.fileSystemNode.findMany({
       where: {
@@ -157,6 +158,97 @@ export class NodeTrashService {
     }
   }
 
+  /**
+   * 彻底删除子树的共享核心（deleteNode 硬删 / permanentlyDeleteProject /
+   * permanentlyDeleteNode 三处共用），把「取消在途转换必须排在物理删行事务前」
+   * 这条时序不变式收进一处，调用方无法再各自漏掉或排错顺序。
+   *
+   * 步骤：收集子树 → 事务前取消在途转换 → 事务（标记落盘 → 删子树 → 标记根 → 删根）
+   * → 逐个落盘删除。配额失效与审计 / MX 工作副本提交由调用方按各自语义处理。
+   *
+   * @param root 根节点（须含 id/nodeType/path/fileHash/ownerId）
+   * @param opts.commitMx 落盘删除后是否提交 MX 工作副本
+   * @param opts.guardProjectRoot 项目根删除时附加 nodeType+deletedAt 守卫，
+   *   防止误删未入回收站的项目（permanentlyDeleteProject 专用）
+   */
+  private async purgeSubtree(
+    root: {
+      id: string;
+      nodeType: NodeType;
+      path: string | null;
+      fileHash: string | null;
+      ownerId: string | null;
+    },
+    opts: { commitMx: boolean; guardProjectRoot?: boolean }
+  ): Promise<void> {
+    const [subtreeIds, subtreeFiles] = await Promise.all([
+      this.treeWalker.getSubtreeIds(root.id),
+      this.treeWalker.getSubtreeFiles(root.id),
+    ]);
+    const filesToDelete = subtreeFiles
+      .filter((f): f is SubtreeFileInfo & { path: string } => f.path !== null)
+      .map((f) => ({ path: f.path, fileHash: f.fileHash, nodeId: f.id }));
+    const nodesToDelete = subtreeIds;
+
+    // 事务会物理删行，取消在途转换必须排在事务前（getSubtreeIds 默认不含根，补上 root.id）
+    this.cancelInflightConversions([...nodesToDelete, root.id]).catch(
+      (err: unknown) =>
+        this.logger.warn(
+          `删除前取消在途转换失败（不影响删除结果）: ${(err as Error).message}`
+        )
+    );
+
+    const rootDeleteWhere = opts.guardProjectRoot
+      ? {
+          id: root.id,
+          nodeType: NodeType.PROJECT,
+          deletedAt: { not: null },
+        }
+      : { id: root.id };
+
+    await this.prisma.$transaction(
+      async (tx) => {
+        const fileNodeIds = filesToDelete
+          .filter((f) => f.path)
+          .map((f) => f.nodeId);
+        if (fileNodeIds.length > 0) {
+          await tx.fileSystemNode.updateMany({
+            where: { id: { in: fileNodeIds } },
+            data: { deletedFromStorage: new Date() },
+          });
+        }
+        if (nodesToDelete.length > 0) {
+          await tx.fileSystemNode.deleteMany({
+            where: { id: { in: nodesToDelete } },
+          });
+        }
+        if (root.nodeType === NodeType.FILE && root.path) {
+          await tx.fileSystemNode.updateMany({
+            where: { id: root.id },
+            data: { deletedFromStorage: new Date() },
+          });
+        }
+        await tx.fileSystemNode.delete({ where: rootDeleteWhere });
+      },
+      { timeout: 30000 }
+    );
+
+    for (const file of filesToDelete) {
+      if (file.path) {
+        await this.deleteFileInStorage(file.path, {
+          commitMx: opts.commitMx,
+          fileHash: file.fileHash,
+        });
+      }
+    }
+    if (root.nodeType === NodeType.FILE && root.path) {
+      await this.deleteFileInStorage(root.path, {
+        commitMx: opts.commitMx,
+        fileHash: root.fileHash,
+      });
+    }
+  }
+
   async deleteNode(
     nodeId: string,
     permanently: boolean = false,
@@ -166,6 +258,7 @@ export class NodeTrashService {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
         select: {
+          id: true,
           nodeType: true,
           path: true,
           fileHash: true,
@@ -210,66 +303,7 @@ export class NodeTrashService {
       );
 
       if (permanently) {
-        const [subtreeIds, subtreeFiles] = await Promise.all([
-          this.treeWalker.getSubtreeIds(nodeId),
-          this.treeWalker.getSubtreeFiles(nodeId),
-        ]);
-        const filesToDelete = subtreeFiles
-          .filter(
-            (f): f is SubtreeFileInfo & { path: string } => f.path !== null
-          )
-          .map((f) => ({ path: f.path, fileHash: f.fileHash, nodeId: f.id }));
-        const nodesToDelete = subtreeIds;
-
-        // 事务会物理删行，取消在途转换必须排在事务前（getSubtreeIds 默认不含根，补上 nodeId）
-        this.cancelInflightConversions([...nodesToDelete, nodeId]).catch(
-          (err: unknown) =>
-            this.logger.warn(
-              `删除前取消在途转换失败（不影响删除结果）: ${(err as Error).message}`
-            )
-        );
-
-        await this.prisma.$transaction(
-          async (tx) => {
-            const fileNodeIds = filesToDelete
-              .filter((f) => f.path)
-              .map((f) => f.nodeId);
-            if (fileNodeIds.length > 0) {
-              await tx.fileSystemNode.updateMany({
-                where: { id: { in: fileNodeIds } },
-                data: { deletedFromStorage: new Date() },
-              });
-            }
-            if (nodesToDelete.length > 0) {
-              await tx.fileSystemNode.deleteMany({
-                where: { id: { in: nodesToDelete } },
-              });
-            }
-            if (node.nodeType === NodeType.FILE && node.path) {
-              await tx.fileSystemNode.updateMany({
-                where: { id: nodeId },
-                data: { deletedFromStorage: new Date() },
-              });
-            }
-            await tx.fileSystemNode.delete({ where: { id: nodeId } });
-          },
-          { timeout: 30000 }
-        );
-
-        for (const file of filesToDelete) {
-          if (file.path) {
-            await this.deleteFileInStorage(file.path, {
-              commitMx: true,
-              fileHash: file.fileHash,
-            });
-          }
-        }
-        if (node.nodeType === NodeType.FILE && node.path) {
-          await this.deleteFileInStorage(node.path, {
-            commitMx: true,
-            fileHash: node.fileHash,
-          });
-        }
+        await this.purgeSubtree(node, { commitMx: true });
         if (node.ownerId) {
           await this.nodeMutationGuard.invalidateQuotaAfterMutation(
             node.ownerId,
@@ -519,10 +553,7 @@ export class NodeTrashService {
         }
 
         if (libraryNodeType) {
-          const requiredPermission =
-            libraryNodeType === NodeType.LIBRARY_DRAWING
-              ? 'LIBRARY_DRAWING_MANAGE'
-              : 'LIBRARY_BLOCK_MANAGE';
+          const requiredPermission = getLibrarySystemPermission(libraryNodeType);
           const hasPermission =
             await this.permissionService.checkSystemPermission(
               userId,
@@ -939,62 +970,7 @@ export class NodeTrashService {
         );
       }
 
-      const [subtreeIds, subtreeFiles] = await Promise.all([
-        this.treeWalker.getSubtreeIds(projectId),
-        this.treeWalker.getSubtreeFiles(projectId),
-      ]);
-      const filesToDelete = subtreeFiles
-        .filter((f): f is SubtreeFileInfo & { path: string } => f.path !== null)
-        .map((f) => ({ path: f.path, fileHash: f.fileHash, nodeId: f.id }));
-      const nodesToDelete = subtreeIds;
-
-      await this.prisma.$transaction(
-        async (tx) => {
-          const fileNodeIds = filesToDelete
-            .filter((f) => f.path)
-            .map((f) => f.nodeId);
-          if (fileNodeIds.length > 0) {
-            await tx.fileSystemNode.updateMany({
-              where: { id: { in: fileNodeIds } },
-              data: { deletedFromStorage: new Date() },
-            });
-          }
-          if (nodesToDelete.length > 0) {
-            await tx.fileSystemNode.deleteMany({
-              where: { id: { in: nodesToDelete } },
-            });
-          }
-          if (project.nodeType === NodeType.FILE && project.path) {
-            await tx.fileSystemNode.updateMany({
-              where: { id: projectId },
-              data: { deletedFromStorage: new Date() },
-            });
-          }
-          await tx.fileSystemNode.delete({
-            where: {
-              id: projectId,
-              nodeType: NodeType.PROJECT,
-              deletedAt: { not: null },
-            },
-          });
-        },
-        { timeout: 30000 }
-      );
-
-      for (const file of filesToDelete) {
-        if (file.path) {
-          await this.deleteFileInStorage(file.path, {
-            commitMx,
-            fileHash: file.fileHash,
-          });
-        }
-      }
-      if (project.nodeType === NodeType.FILE && project.path) {
-        await this.deleteFileInStorage(project.path, {
-          commitMx,
-          fileHash: project.fileHash,
-        });
-      }
+      await this.purgeSubtree(project, { commitMx, guardProjectRoot: true });
       if (project.ownerId) {
         await this.nodeMutationGuard.invalidateQuotaAfterMutation(
           project.ownerId,
@@ -1035,6 +1011,7 @@ export class NodeTrashService {
       const node = await this.prisma.fileSystemNode.findUnique({
         where: { id: nodeId },
         select: {
+          id: true,
           nodeType: true,
           path: true,
           fileHash: true,
@@ -1049,56 +1026,7 @@ export class NodeTrashService {
         );
       }
 
-      const [subtreeIds, subtreeFiles] = await Promise.all([
-        this.treeWalker.getSubtreeIds(nodeId),
-        this.treeWalker.getSubtreeFiles(nodeId),
-      ]);
-      const filesToDelete = subtreeFiles
-        .filter((f): f is SubtreeFileInfo & { path: string } => f.path !== null)
-        .map((f) => ({ path: f.path, fileHash: f.fileHash, nodeId: f.id }));
-      const nodesToDelete = subtreeIds;
-
-      await this.prisma.$transaction(
-        async (tx) => {
-          const fileNodeIds = filesToDelete
-            .filter((f) => f.path)
-            .map((f) => f.nodeId);
-          if (fileNodeIds.length > 0) {
-            await tx.fileSystemNode.updateMany({
-              where: { id: { in: fileNodeIds } },
-              data: { deletedFromStorage: new Date() },
-            });
-          }
-          if (nodesToDelete.length > 0) {
-            await tx.fileSystemNode.deleteMany({
-              where: { id: { in: nodesToDelete } },
-            });
-          }
-          if (node.nodeType === NodeType.FILE && node.path) {
-            await tx.fileSystemNode.updateMany({
-              where: { id: nodeId },
-              data: { deletedFromStorage: new Date() },
-            });
-          }
-          await tx.fileSystemNode.delete({ where: { id: nodeId } });
-        },
-        { timeout: 30000 }
-      );
-
-      for (const file of filesToDelete) {
-        if (file.path) {
-          await this.deleteFileInStorage(file.path, {
-            commitMx,
-            fileHash: file.fileHash,
-          });
-        }
-      }
-      if (node.nodeType === NodeType.FILE && node.path) {
-        await this.deleteFileInStorage(node.path, {
-          commitMx,
-          fileHash: node.fileHash,
-        });
-      }
+      await this.purgeSubtree(node, { commitMx });
       if (node.ownerId) {
         await this.nodeMutationGuard.invalidateQuotaAfterMutation(
           node.ownerId,

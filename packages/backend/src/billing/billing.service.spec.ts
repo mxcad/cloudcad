@@ -1260,16 +1260,29 @@ describe('BillingService', () => {
       prisma.paymentOrder.findUnique
         .mockResolvedValueOnce(mockOrder)
         .mockResolvedValue({ ...mockOrder, status: OrderStatus.FAILED });
-      prisma.paymentOrder.updateMany.mockResolvedValue({ count: 1 });
+      const updateManyMock = jest.fn().mockResolvedValue({ count: 1 });
       gatewayFactory.getGateway.mockReturnValue(mockGateway);
       mockGateway.queryOrder.mockResolvedValue({
         status: 'SUCCESS',
         gatewayOrderId: 'txn-001',
         amount: 100,
       });
+      prisma.$transaction.mockImplementation(async (cb: any) => {
+        const tx = buildTx({
+          paymentOrderFindUnique: { ...mockOrder, vipTier: mockVipTier },
+          paymentOrderUpdateMany: updateManyMock,
+        });
+        await cb(tx);
+        // 金额不符的 FAILED 标记统一走 applyGatewayOutcome 协议（带 PENDING 守卫）
+        expect(updateManyMock).toHaveBeenCalledWith({
+          where: { id: mockOrder.id, status: OrderStatus.PENDING },
+          data: expect.objectContaining({ status: OrderStatus.FAILED }),
+        });
+      });
 
       const result = await service.refreshOrder('user-1', 'PAYtest123');
       expect(result.status).toBe(OrderStatus.FAILED);
+      expect(membershipService.activate).not.toHaveBeenCalled();
     });
 
     it('should handle CLOSED from gateway', async () => {
@@ -1341,18 +1354,24 @@ describe('BillingService', () => {
         amount: 100,
         paidAt: new Date(),
       });
-      prisma.paymentOrder.updateMany.mockResolvedValue({ count: 1 });
+      const updateManyMock = jest.fn().mockResolvedValue({ count: 1 });
+      prisma.$transaction.mockImplementation(async (cb: any) => {
+        const tx = buildTx({
+          paymentOrderFindUnique: { ...mockOrder, vipTier: mockVipTier },
+          paymentOrderUpdateMany: updateManyMock,
+        });
+        await cb(tx);
+        // 金额不符的 FAILED 标记统一走 applyGatewayOutcome 协议（带 PENDING 守卫）
+        expect(updateManyMock).toHaveBeenCalledWith({
+          where: { id: mockOrder.id, status: OrderStatus.PENDING },
+          data: expect.objectContaining({ status: OrderStatus.FAILED }),
+        });
+      });
 
       const recovered = await service.reconcilePendingOrders(new Date());
 
       expect(recovered).toBe(0);
       expect(membershipService.activate).not.toHaveBeenCalled();
-      expect(prisma.paymentOrder.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { orderNo: 'PAYtest123', status: OrderStatus.PENDING },
-          data: expect.objectContaining({ status: OrderStatus.FAILED }),
-        })
-      );
     });
 
     it('should skip orders gateway reports NOTPAY', async () => {

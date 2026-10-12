@@ -4,6 +4,7 @@ import { ConversionServiceClient } from '../common/utils/conversion-service-clie
 import { internalServiceSecretHeader } from '../common/utils/internal-service-auth';
 import type {
   IFunctionExecutor,
+  ExecutorCapabilities,
   ConversionTask,
   ConversionResult,
   TaskStatus,
@@ -47,7 +48,10 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
    */
   readonly isRemote: boolean;
 
-  /** 可选原语透传：base 实现了才暴露（调用方按 undefined 判断能力） */
+  /** 能力随 base 透传（cancel/listTasks），批量原语由本装饰器叠加（构造时声明） */
+  readonly capabilities: ExecutorCapabilities;
+
+  /** 可选原语透传：base 声明了对应能力才绑定（调用方读 capabilities，不再按 undefined 探测） */
   cancelTask?: IFunctionExecutor['cancelTask'];
   listTasks?: IFunctionExecutor['listTasks'];
 
@@ -56,8 +60,15 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
     configService: ConfigService
   ) {
     this.isRemote = base.isRemote === true;
-    if (base.cancelTask) this.cancelTask = base.cancelTask.bind(base);
-    if (base.listTasks) this.listTasks = base.listTasks.bind(base);
+    // 能力随 base 透传（cancel/listTasks），批量原语由本装饰器叠加
+    this.capabilities = {
+      cancel: base.capabilities.cancel,
+      listTasks: base.capabilities.listTasks,
+      batch: true,
+    };
+    if (base.capabilities.cancel) this.cancelTask = base.cancelTask!.bind(base);
+    if (base.capabilities.listTasks)
+      this.listTasks = base.listTasks!.bind(base);
 
     const batchConfig = configService.get('batchDownload', { infer: true });
     const workflowUrl = batchConfig?.conversionServiceUrl;

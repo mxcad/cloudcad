@@ -1,5 +1,6 @@
 import { t } from '@/languages';
 import { z } from 'zod';
+import { validatePasswordPolicy } from '@cloudcad/platform';
 
 /**
  * Step 1 schema — basic info (username, optional nickname, conditional email).
@@ -31,8 +32,13 @@ export const step2Schema = z
     password: z
       .string()
       .min(1, t('密码不能为空'))
-      .min(8, t('密码至少8个字符'))
-      .max(50, t('密码最多50个字符')),
+      // 长度下限与后端 assertPasswordPolicy 对齐（≥10）；复杂度（≥3 类）走下方 refine
+      .min(10, t('密码至少10个字符'))
+      .max(50, t('密码最多50个字符'))
+      .refine((v) => validatePasswordPolicy(v).reason !== 'complexity', {
+        message: t('密码需包含大小写字母、数字、特殊字符中至少三类'),
+        path: ['password'],
+      }),
     confirmPassword: z.string().min(1, t('请再次输入密码')),
   })
   .refine((data) => data.password === data.confirmPassword, {

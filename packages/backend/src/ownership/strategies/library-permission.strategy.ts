@@ -1,11 +1,10 @@
 import { Injectable, Inject, ForbiddenException } from '@nestjs/common';
-import { NodeType } from '@cloudcad/db';
 import { I18nContext } from 'nestjs-i18n';
 import {
   IPERMISSION_SERVICE,
   IPermissionService,
 } from '../../permission/interfaces/permission-service.interface';
-import { SystemPermission } from '../../common/enums/permissions.enum';
+import { getLibrarySystemPermission } from '../../common/utils/permission-mapping';
 import type { MutationAction, OwnershipNode, OwnershipPermissionStrategy } from '../interfaces/ownership-permission-strategy.interface';
 
 /**
@@ -27,10 +26,7 @@ export class LibraryPermissionStrategy implements OwnershipPermissionStrategy {
     // 库根节点用自身 nodeType；库内 FILE/FOLDER 按归属根类型（rootNodeType）判定，
     // 保证「仅有图纸库/图块库管理权限」的管理员在库内目录操作时仍按对应库校验
     const libraryType = node.rootNodeType ?? node.nodeType;
-    const requiredPermission =
-      libraryType === NodeType.LIBRARY_DRAWING
-        ? SystemPermission.LIBRARY_DRAWING_MANAGE
-        : SystemPermission.LIBRARY_BLOCK_MANAGE;
+    const requiredPermission = getLibrarySystemPermission(libraryType);
     const has = await this.systemPermissionService.checkSystemPermission(
       userId,
       requiredPermission

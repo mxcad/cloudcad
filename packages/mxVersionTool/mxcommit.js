@@ -1,8 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx, writeTempText } = require('./mx');
 
 function mxCommit(
   targetPaths,
@@ -12,19 +8,11 @@ function mxCommit(
   password,
   callback
 ) {
-  const args = ['commit'];
-
-  targetPaths.forEach((p) => {
-    args.push(p);
-  });
+  const args = [...targetPaths];
 
   let tempFile = null;
   if (message) {
-    tempFile = path.join(
-      os.tmpdir(),
-      `mx-commit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`
-    );
-    fs.writeFileSync(tempFile, message, 'utf8');
+    tempFile = writeTempText('commit', message);
     args.push('-F', tempFile, '--encoding', 'UTF-8');
   } else {
     args.push('-m', '');
@@ -36,23 +24,15 @@ function mxCommit(
   if (username) {
     args.push('--username', username);
   }
-  let env;
   if (password) {
     args.push('--password-from-env');
-    env = { ...process.env, SVN_PASSWORD: password };
   }
 
-  executeSpawn(mxPath, args, env ? { env } : {})
+  mx('commit', args, { password, cleanup: tempFile ? [tempFile] : [] })
     .then(stdout => {
-      if (tempFile && fs.existsSync(tempFile)) {
-        try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
-      }
       callback(null, stdout);
     })
     .catch(error => {
-      if (tempFile && fs.existsSync(tempFile)) {
-        try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
-      }
       callback(error);
     });
 }

@@ -12,6 +12,7 @@ import { MembershipService } from '../../vip/membership.service';
 import { QUOTA_KEYS } from '../../vip/quota-keys';
 import { StorageUsageService } from '../../vip/storage-usage/storage-usage.service';
 import { ProjectQuotaDto } from '../../common/dto/project-quota.dto';
+import type { QuotaCacheInvalidator } from '../../common/interfaces/quota-cache-invalidator';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
@@ -31,7 +32,7 @@ interface QuotaCacheItem {
 }
 
 @Injectable()
-export class StorageInfoService {
+export class StorageInfoService implements QuotaCacheInvalidator {
   private readonly logger = new Logger(StorageInfoService.name);
   private readonly quotaCache = new Map<string, QuotaCacheItem>();
   private readonly cacheTTL = 5 * 60 * 1000;
@@ -91,7 +92,11 @@ export class StorageInfoService {
     return { projectId, used, limit, remaining };
   }
 
-  async invalidateQuotaCache(userId: string, _nodeId?: string): Promise<void> {
+  /**
+   * 配额缓存失效（IQuotaCacheInvalidator 实现，缓存键仅用户维度）。
+   * 原第二参 _nodeId 零读取已删：调用方曾误以为按项目维度失效。
+   */
+  async invalidateQuotaCache(userId: string): Promise<void> {
     this.quotaCache.delete(`quota:${userId}`);
   }
 

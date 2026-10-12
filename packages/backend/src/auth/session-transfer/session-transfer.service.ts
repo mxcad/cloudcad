@@ -53,6 +53,7 @@ import type {
   ITokenBlacklistService,
 } from '@cloudcad/contracts';
 import type { Request as ExpressRequest } from 'express';
+import { AUTH_COOKIE_NAME } from '../session-cookie.writer';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { MembershipService } from '../../vip/membership.service';
 import { membershipTierOf } from '../../vip/membership-tier';
@@ -176,7 +177,7 @@ export class SessionTransferService {
 
     // ③ 旧会话彻底销毁：先捕获旧身份与旧 access token（regenerate 前）
     const oldUserId = request.session?.userId;
-    const oldAccessToken = request.cookies?.['auth_token'];
+    const oldAccessToken = request.cookies?.[AUTH_COOKIE_NAME];
     await this.teardownOldSession(oldUserId, oldAccessToken, request);
 
     // ④ 建立新会话：regenerate 后 req.session 已被替换，须从 request 重读新对象

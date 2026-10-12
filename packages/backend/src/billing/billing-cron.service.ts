@@ -1,14 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DatabaseService } from '../database/database.service';
-import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
+import { MembershipService } from '../vip/membership.service';
 import { OrderStatus } from './enums/billing.enum';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
-import { AlertService } from '../alert/alert.service';
-import { AlertLevel } from '../alert/enums/alert.enum';
 import { TaskRunService } from '../task-run/task-run.service';
+import { TaskRunFailureReporter } from '../task-run/task-run-failure-reporter';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../task-run/task-run.constants';
 import { BillingService } from './billing.service';
+import { PENDING_ORDER_TTL_MS } from './payment-order';
 
 /**
  * 定时 cron 表达式：@Cron 装饰器与手动触发注册表（任务清单展示）共用同一来源，防止漂移
@@ -22,9 +22,9 @@ export class BillingCron {
 
   constructor(
     private prisma: DatabaseService,
-    private storageInfoService: StorageInfoService,
+    private readonly membershipService: MembershipService,
     private readonly runtimeConfigService: RuntimeConfigService,
-    private readonly alertService: AlertService,
+    private readonly taskRunFailureReporter: TaskRunFailureReporter,
     private readonly taskRunService: TaskRunService,
     private readonly billingService: BillingService
   ) {
@@ -69,7 +69,11 @@ export class BillingCron {
         `downgradeExpiredMemberships failed: ${error.message}`,
         error.stack
       );
-      await this.raiseTaskFailed('downgradeExpiredMemberships', error);
+      await this.taskRunFailureReporter.reportTaskFailed({
+        source: 'scheduler:billing',
+        task: 'downgradeExpiredMemberships',
+        error,
+      });
     }
   }
 
@@ -77,22 +81,10 @@ export class BillingCron {
    * 过期会员降级裸执行（定时 + 手动触发共用）
    */
   private async downgradeExpiredMembershipsTask(): Promise<void> {
-    const expired = await this.prisma.userMembership.findMany({
-      where: { expiresAt: { lte: new Date(), not: null } },
-      select: { userId: true },
-    });
-    const userIds = expired.map((m) => m.userId);
-
-    const { count } = await this.prisma.userMembership.updateMany({
-      where: { expiresAt: { lte: new Date(), not: null } },
-      data: { tierLevel: 0, expiresAt: null },
-    });
+    // 写侧单点：过期降级 + 配额缓存失效统一走 MembershipService（VipModule @Global 注入）
+    const count = await this.membershipService.expireOverdueMemberships();
     if (count > 0) {
       this.logger.log(`downgraded ${count} expired memberships`);
-      // 会员等级降级会影响存储额度，立即失效配额缓存
-      for (const userId of userIds) {
-        await this.storageInfoService.invalidateQuotaCache(userId);
-      }
     }
   }
 
@@ -113,7 +105,11 @@ export class BillingCron {
         `timeoutPendingOrders failed: ${error.message}`,
         error.stack
       );
-      await this.raiseTaskFailed('timeoutPendingOrders', error);
+      await this.taskRunFailureReporter.reportTaskFailed({
+        source: 'scheduler:billing',
+        task: 'timeoutPendingOrders',
+        error,
+      });
     }
   }
 
@@ -121,7 +117,7 @@ export class BillingCron {
    * 超时订单关闭裸执行（定时 + 手动触发共用）
    */
   private async timeoutPendingOrdersTask(): Promise<void> {
-    const cutoff = new Date(Date.now() - 2 * 3600000);
+    const cutoff = new Date(Date.now() - PENDING_ORDER_TTL_MS);
 
     // 关单前先对账：已支付订单补激活而非超时关闭（回调丢失兜底，不依赖用户操作）。
     // 对账会把已支付订单改为 SUCCEEDED，随后的关单 updateMany 带 PENDING 守卫，
@@ -151,30 +147,6 @@ export class BillingCron {
     });
     if (count > 0) {
       this.logger.log(`timed out ${count} pending orders`);
-    }
-  }
-
-  /**
-   * 定时任务失败钩子（#245 模式）：task_run_failed 告警，source = scheduler:billing
-   */
-  private async raiseTaskFailed(task: string, error: unknown): Promise<void> {
-    try {
-      await this.alertService.raise({
-        source: 'scheduler:billing',
-        messageKey: 'task_run_failed',
-        // P1：单任务失败（下一轮 cron 重试；订单超时/降级非即时资损）
-        level: AlertLevel.P1,
-        message: `定时任务 billing 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
-        detail: {
-          task,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
-    } catch (alertError) {
-      this.logger.error(
-        `任务失败告警上报失败: ${alertError.message}`,
-        alertError.stack
-      );
     }
   }
 }

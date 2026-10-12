@@ -33,12 +33,13 @@ import { NoticeProvider } from './components/notice';
 import PlanSelectOverlay from './components/billing/PlanSelectOverlay';
 import { usePermission } from './hooks/usePermission';
 import { SystemPermission } from './constants/permissions';
+import { getRoutePermission } from './config/navigation';
 import { ADMIN_LOGIN_PATH } from './constants/adminLoginConfig';
 import { BrandProvider } from './contexts/BrandContext';
 import NoPermissionPage from './components/ui/NoPermissionPage';
 import { i18nScope, t } from '@/languages';
 import { useVoerkaI18n } from '@voerkai18n/react';
-import { setSpaNavigate } from './config/clientSetup';
+import { setSpaNavigate, buildLoginUrl } from './config/clientSetup';
 import { performMobileRedirectIfNeeded } from './utils/mobileRedirect';
 import { isConversionPanelRoute } from './utils/conversionPanelRoute';
 
@@ -143,13 +144,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = React.memo(
     }
 
     if (!isAuthenticated) {
+      // return URL 走 buildLoginUrl 单一出口（A8：禁止手拼 /login?redirect=）
       const currentUrl = location.pathname + location.search;
-      return (
-        <Navigate
-          to={`/login?redirect=${encodeURIComponent(currentUrl)}`}
-          replace
-        />
-      );
+      return <Navigate to={buildLoginUrl(currentUrl)} replace />;
     }
 
     return <>{children}</>;
@@ -492,7 +489,7 @@ function AppContent() {
                     path="/users"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_USER_READ}
+                        permission={getRoutePermission('/users')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <UserManagement />
@@ -506,7 +503,7 @@ function AppContent() {
                     path="/roles"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_ROLE_READ}
+                        permission={getRoutePermission('/roles')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <RoleManagement />
@@ -529,7 +526,7 @@ function AppContent() {
                     path="/font-library"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_FONT_READ}
+                        permission={getRoutePermission('/font-library')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <FontLibrary />
@@ -543,10 +540,7 @@ function AppContent() {
                     path="/library"
                     element={
                       <PermissionRoute
-                        permission={[
-                          SystemPermission.LIBRARY_DRAWING_MANAGE,
-                          SystemPermission.LIBRARY_BLOCK_MANAGE,
-                        ]}
+                        permission={getRoutePermission('/library')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -558,10 +552,7 @@ function AppContent() {
                     path="/library/:libraryType"
                     element={
                       <PermissionRoute
-                        permission={[
-                          SystemPermission.LIBRARY_DRAWING_MANAGE,
-                          SystemPermission.LIBRARY_BLOCK_MANAGE,
-                        ]}
+                        permission={getRoutePermission('/library')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -573,10 +564,7 @@ function AppContent() {
                     path="/library/:libraryType/:nodeId"
                     element={
                       <PermissionRoute
-                        permission={[
-                          SystemPermission.LIBRARY_DRAWING_MANAGE,
-                          SystemPermission.LIBRARY_BLOCK_MANAGE,
-                        ]}
+                        permission={getRoutePermission('/library')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <LibraryManager />
@@ -600,10 +588,7 @@ function AppContent() {
                     path="/audit-logs"
                     element={
                       <PermissionRoute
-                        permission={[
-                          SystemPermission.AUDIT_ADMIN,
-                          SystemPermission.SYSTEM_ADMIN,
-                        ]}
+                        permission={getRoutePermission('/audit-logs')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AuditLogPage />
@@ -617,7 +602,7 @@ function AppContent() {
                     path="/system-monitor"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_MONITOR}
+                        permission={getRoutePermission('/system-monitor')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <SystemMonitorPage />
@@ -647,7 +632,7 @@ function AppContent() {
                     path="/admin/billing"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_BILLING_READ}
+                        permission={getRoutePermission('/admin/billing')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AdminBillingPage />
@@ -661,10 +646,7 @@ function AppContent() {
                     path="/admin/stats"
                     element={
                       <PermissionRoute
-                        permission={[
-                          SystemPermission.SYSTEM_USER_READ,
-                          SystemPermission.SYSTEM_BILLING_READ,
-                        ]}
+                        permission={getRoutePermission('/admin/stats')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <AdminStatsPage />
@@ -678,7 +660,7 @@ function AppContent() {
                     path="/runtime-config"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_CONFIG_READ}
+                        permission={getRoutePermission('/runtime-config')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <RuntimeConfigPage />
@@ -697,7 +679,7 @@ function AppContent() {
                     path="/admin/notices"
                     element={
                       <PermissionRoute
-                        permission={SystemPermission.SYSTEM_CONFIG_WRITE}
+                        permission={getRoutePermission('/admin/notices')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <NoticeCenterPage />
@@ -711,10 +693,7 @@ function AppContent() {
                     path="/admin/ip-access"
                     element={
                       <PermissionRoute
-                        permission={[
-                          SystemPermission.SYSTEM_IP_BLACKLIST_MANAGE,
-                          SystemPermission.SYSTEM_IP_WHITELIST_MANAGE,
-                        ]}
+                        permission={getRoutePermission('/admin/ip-access')!}
                       >
                         <Suspense fallback={<PageLoader />}>
                           <IpAccessControlPage />

@@ -17,6 +17,8 @@
  * MUST reference these constants instead of hardcoded values.
  */
 
+import { COLLAB_WORKS_POLL_INTERVAL_MS } from '@cloudcad/platform';
+
 /** React Query default stale time (30s) */
 export const STALE_TIME_DEFAULT = 30_000;
 
@@ -26,8 +28,12 @@ export const INIT_TIMEOUT = 5_000;
 /** Fetch collaboration works timeout (30s) */
 export const FETCH_WORKS_TIMEOUT = 30_000;
 
-/** Collaboration works polling interval (30s) — 协同列表是低实时性展示，8s 轮询会产生过量请求 */
-export const POLL_INTERVAL = 30_000;
+/**
+ * Collaboration works polling interval (2s) — 在线人数来自 cooperate SDK 的
+ * getWorks 轮询（无推送通道），30s 时各端收敛时间差上限 60s，人数明显不一致。
+ * 数值单一事实源在 @cloudcad/platform（移动端共用），此处保留既有常量名。
+ */
+export const POLL_INTERVAL = COLLAB_WORKS_POLL_INTERVAL_MS;
 
 /** My project ids cache TTL (60s) — 仅用于协同列表「项目协同」分组过滤，无需每次轮询都拉取 */
 export const PROJECT_IDS_CACHE_TTL = 60_000;

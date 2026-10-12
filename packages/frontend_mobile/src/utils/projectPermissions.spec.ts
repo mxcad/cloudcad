@@ -29,6 +29,7 @@ import {
   getProjectPermissionGroups,
   getProjectPermissionItems,
   getProjectRoleDisplayName,
+  getFileNodeMenuActions,
   type PermissionChangeDecision,
 } from './projectPermissions'
 
@@ -202,5 +203,96 @@ describe('getProjectRoleDisplayName', () => {
 
   it('自定义角色名原样透传（项目内角色可改名）', () => {
     expect(getProjectRoleDisplayName('临时协作者')).toBe('临时协作者')
+  })
+})
+
+describe('getFileNodeMenuActions 文件/文件夹操作菜单派生', () => {
+  const allCan = {
+    download: true,
+    share: true,
+    externalRef: true,
+    versionHistory: true,
+    rename: true,
+    move: true,
+    copy: true,
+    delete: true,
+  }
+  const keys = (actions: ReturnType<typeof getFileNodeMenuActions>) => actions.map((a) => a.key)
+
+  it('个人空间（全 true can）文件：全部操作项可见', () => {
+    const actions = getFileNodeMenuActions({ isFolder: false, isCad: false, can: allCan })
+    expect(keys(actions)).toEqual([
+      'open',
+      'download',
+      'share',
+      'versionHistory',
+      'rename',
+      'move',
+      'copy',
+      'copyClipboard',
+      'cut',
+      'delete',
+    ])
+  })
+
+  it('CAD 文件追加外部参照管理', () => {
+    const actions = getFileNodeMenuActions({ isFolder: false, isCad: true, can: allCan })
+    expect(keys(actions)).toContain('externalRef')
+  })
+
+  it('文件夹：打包下载替代下载，且无分享/版本历史/外部参照', () => {
+    const actions = getFileNodeMenuActions({ isFolder: true, isCad: false, can: allCan })
+    expect(keys(actions)).toContain('folderDownload')
+    expect(keys(actions)).not.toContain('download')
+    expect(keys(actions)).not.toContain('share')
+    expect(keys(actions)).not.toContain('versionHistory')
+    expect(keys(actions)).not.toContain('externalRef')
+  })
+
+  it('项目页按权限门控：can 为 false 的操作项被隐藏', () => {
+    const actions = getFileNodeMenuActions({
+      isFolder: false,
+      isCad: false,
+      can: {
+        download: false,
+        share: true,
+        externalRef: false,
+        versionHistory: true,
+        rename: false,
+        move: false,
+        copy: false,
+        delete: true,
+      },
+    })
+    expect(keys(actions)).not.toContain('download')
+    expect(keys(actions)).toContain('share')
+    expect(keys(actions)).toContain('delete')
+    expect(keys(actions)).not.toContain('rename')
+    expect(keys(actions)).not.toContain('move')
+    expect(keys(actions)).not.toContain('copy')
+  })
+
+  it('删除项带红色标记，其余项无 color', () => {
+    const actions = getFileNodeMenuActions({ isFolder: false, isCad: false, can: allCan })
+    expect(actions.find((a) => a.key === 'delete')?.color).toBe('#ee0a24')
+    expect(actions.find((a) => a.key === 'open')?.color).toBeUndefined()
+  })
+
+  it('can 全 false 时仅剩「打开」', () => {
+    const actions = getFileNodeMenuActions({
+      isFolder: false,
+      isCad: false,
+      can: {
+        download: false,
+        share: false,
+        externalRef: false,
+        versionHistory: false,
+        rename: false,
+        move: false,
+        copy: false,
+        delete: false,
+      },
+    })
+    expect(keys(actions)).toEqual(['open'])
   })
 })

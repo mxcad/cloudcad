@@ -11,6 +11,7 @@ import { ref, watch, computed } from 'vue'
 import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
 import { useShareLinkCopy } from '@/composables/useShareLinkCopy'
 import { useLongPress } from '@/composables/useLongPress'
+import { useMultiSelect } from '@/composables/useMultiSelect'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import { shareControllerListShares, shareControllerRevokeShare, shareControllerUpdateShare, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
@@ -22,6 +23,7 @@ import { extractExtension } from '@/composables/useNodeFormatter'
 import { shareUrl } from '@/utils/shareUrl'
 import { formatShareExpiry } from '@/utils/shareDate'
 import { vibrate } from '@/utils/vibrate'
+import { isNearScrollBottom } from '@/utils/scroll'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import {
   SHARE_CUSTOM_DAYS_DEFAULT,
@@ -179,7 +181,7 @@ function retryLoadMore() {
 
 function onShareListScroll(e: Event) {
   const el = e.target as HTMLElement
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) loadMoreShares()
+  if (isNearScrollBottom(el)) loadMoreShares()
 }
 
 let shareSearchGen = 0
@@ -258,38 +260,32 @@ async function onRevokeCreated() {
 }
 
 // ── C-03 多选 + 批量撤销（对齐 PC ShareTable 行选择 + BatchActionBar）──
-// 长按进入多选（与文件列表/项目卡片同套 500ms 手势，唯一出口 useLongPress）；底部操作栏「批量撤销」
-const isSelecting = ref(false)
-const selectedTokens = ref<string[]>([])
+// 长按进入多选（与文件列表/项目卡片同套 500ms 手势，唯一出口 useLongPress）；
+// 选中态机收敛到 useMultiSelect（与 UnifiedFileList 各列表视图共用）：分享列表无面包屑导航，
+// 数据源更换（搜索/批量撤销后重载）按已加载 token 剪枝选中
+const loadedTokens = () => shares.value.map((s) => s.token).filter(Boolean)
+const {
+  isSelectionMode,
+  selected,
+  enterWith,
+  toggleSelect,
+  selectAll,
+  exitSelectionMode,
+} = useMultiSelect(() => [], loadedTokens)
 const batchRevoking = ref(false)
 const shareLongPress = useLongPress<ShareItem>({
   onTrigger: (item) => {
-    if (!isSelecting.value) {
-      isSelecting.value = true
-      selectedTokens.value = [item.token]
-    }
+    if (!isSelectionMode.value) enterWith({ id: item.token })
     vibrate()
   },
 })
 
-function toggleSelect(token: string) {
-  const idx = selectedTokens.value.indexOf(token)
-  if (idx >= 0) selectedTokens.value.splice(idx, 1)
-  else selectedTokens.value.push(token)
-  if (selectedTokens.value.length === 0) isSelecting.value = false
-}
-
 function selectAllShares() {
-  selectedTokens.value = shares.value.map((s) => s.token).filter(Boolean)
-}
-
-function exitSelecting() {
-  isSelecting.value = false
-  selectedTokens.value = []
+  selectAll(loadedTokens())
 }
 
 async function onBatchRevoke() {
-  const tokens = selectedTokens.value.slice()
+  const tokens = [...selected.value]
   if (tokens.length === 0) return
   try {
     await showConfirmDialog({
@@ -314,7 +310,7 @@ async function onBatchRevoke() {
     }
   }
   batchRevoking.value = false
-  exitSelecting()
+  exitSelectionMode()
   if (successCount > 0) {
     showToast(
       failCount > 0
@@ -418,8 +414,8 @@ function onShareClick(item: ShareItem) {
   // 长按触发后抑制紧随的合成 click（消费式守卫，见 useLongPress）
   if (shareLongPress.shouldSuppressTap()) return
   // C-03 多选模式：点按切换选中（不进 action sheet）
-  if (isSelecting.value) {
-    toggleSelect(item.token)
+  if (isSelectionMode.value) {
+    toggleSelect({ id: item.token })
     return
   }
   // 对齐 PC ShareTable 行操作：打开 / 复制链接 / 修改有效期 / 撤销（二维码为移动端补充入口）
@@ -785,7 +781,7 @@ function onCustomDaysInput(e: Event) {
       <div
         v-for="s in shares"
         :key="s.id"
-        :class="['share-item', { 'share-item--selected': isSelecting && selectedTokens.includes(s.token) }]"
+        :class="['share-item', { 'share-item--selected': isSelectionMode && selected.has(s.token) }]"
         @click="onShareClick(s)"
         @touchstart.passive="shareLongPress.start(s)"
         @touchend="shareLongPress.cancel"
@@ -793,8 +789,8 @@ function onCustomDaysInput(e: Event) {
       >
         <!-- C-03 多选模式：选中指示（纯 CSS 圆圈勾选，不依赖 vant 图标名）-->
         <span
-          v-if="isSelecting"
-          :class="['share-select-dot', { 'share-select-dot--on': selectedTokens.includes(s.token) }]"
+          v-if="isSelectionMode"
+          :class="['share-select-dot', { 'share-select-dot--on': selected.has(s.token) }]"
         />
         <div class="share-left">
           <div class="share-name">
@@ -836,21 +832,21 @@ function onCustomDaysInput(e: Event) {
     </div>
 
     <!-- C-03 多选模式底部操作栏（取消/全选/批量撤销）-->
-    <div v-if="isSelecting" class="select-bar">
-      <button class="select-bar-btn" @click="exitSelecting">{{ t('取消') }}</button>
+    <div v-if="isSelectionMode" class="select-bar">
+      <button class="select-bar-btn" @click="exitSelectionMode">{{ t('取消') }}</button>
       <button class="select-bar-btn" @click="selectAllShares">
         {{ t('全选') }}（{{ shares.length }}）
       </button>
       <button
         class="select-bar-btn select-bar-btn--danger"
-        :disabled="selectedTokens.length === 0 || batchRevoking"
+        :disabled="selected.size === 0 || batchRevoking"
         @click="onBatchRevoke"
       >
-        {{ batchRevoking ? t('撤销中...') : `${t('批量撤销')}（${selectedTokens.length}）` }}
+        {{ batchRevoking ? t('撤销中...') : `${t('批量撤销')}（${selected.size}）` }}
       </button>
     </div>
 
-    <button v-if="!isSelecting" class="fab" :aria-label="t('新建分享')" @click="onFabClick">
+    <button v-if="!isSelectionMode" class="fab" :aria-label="t('新建分享')" @click="onFabClick">
       <van-icon name="plus" />
     </button>
 

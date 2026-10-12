@@ -26,16 +26,6 @@ function parseEnvFile(filePath) {
   return result;
 }
 
-function extractDbNameFromUrl(url) {
-  if (!url) return null;
-  try {
-    const match = url.match(/\/([^/?]+)(\?|$)/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
 function updateEnvFile(filePath, updates) {
   let content = fs.existsSync(filePath)
     ? fs.readFileSync(filePath, 'utf8')
@@ -63,6 +53,5 @@ function updateEnvFile(filePath, updates) {
 
 module.exports = {
   parseEnvFile,
-  extractDbNameFromUrl,
   updateEnvFile,
 };

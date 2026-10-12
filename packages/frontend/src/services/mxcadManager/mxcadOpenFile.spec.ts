@@ -3,7 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useConversionQueueStore } from '../../stores/conversionQueueStore';
 // handlePublicUpload/handleOpenFileCommand 留在 mxcadOpenFile；
 // openUploadedFile/waitForFileReady 已迁至 openDrawing（打开序列深模块）
-import { handlePublicUpload, handleOpenFileCommand } from './mxcadOpenFile';
+import {
+  handlePublicUpload,
+  handleOpenFileCommand,
+  openLocalFile,
+} from './mxcadOpenFile';
 import { openUploadedFile, waitForFileReady } from './openDrawing';
 import { emit } from '../drawingSession';
 import { calculateFileHash } from '../../utils/hashUtils';
@@ -26,7 +30,10 @@ import {
 
 // mxcadManager 是全局单例（模块加载即 MxCADManager.getInstance() 拉起 CAD 引擎，测试环境崩溃），
 // 必须 mock 整个模块。用 vi.hoisted 共享同一个 openFile mock，确保 mxcadOpenFile.ts 与测试引用同一实例。
-const { mockOpenFile } = vi.hoisted(() => ({ mockOpenFile: vi.fn() }));
+const { mockOpenFile, createObjectURLMock } = vi.hoisted(() => ({
+  mockOpenFile: vi.fn(),
+  createObjectURLMock: vi.fn(() => 'blob:mock-abc'),
+}));
 
 // mxcadOpenFile.ts 依赖全部 mock（除 conversionQueueStore 与 mxcadManager——
 // 前者本测试正是要验证真实 store 接线；后者是全局单例，用 spy 拦截 openFile）。
@@ -99,7 +106,8 @@ vi.mock('./mxcadCollaboration', () => ({
   checkAndConfirmUnsavedChanges: vi.fn(() => Promise.resolve(true)),
 }));
 vi.mock('../../utils/fileUtils', () => ({
-  CAD_EXTENSIONS: ['.dwg', '.dxf'],
+  // 与真实 CAD_EXTENSIONS 一致（含 .mxweb）：picker 先按 isCadFile 过滤再分派
+  CAD_EXTENSIONS: ['.dwg', '.dxf', '.mxweb'],
 }));
 vi.mock('@/constants/events', () => ({
   CAD_EVENTS: { PUBLIC_FILE_UPLOADED: 'public_file_uploaded' },
@@ -577,7 +585,6 @@ describe('转换等待期解锁 + 打开前 guardBeforeOpen 复查', () => {
   it('本地 mxweb 打开：守卫取消 → 不打开、清遮罩（入口从未查过未保存，打开点是唯一检查点）', async () => {
     mockCheckUnsaved.mockResolvedValueOnce(false);
     mockCalculateFileHash.mockResolvedValue('localhash');
-    installFakeIndexedDB();
 
     await handleOpenFileCommand();
     const picker = document.getElementById(
@@ -592,28 +599,56 @@ describe('转换等待期解锁 + 打开前 guardBeforeOpen 复查', () => {
   });
 });
 
-/**
- * openLocalMxwebFile 的 IndexedDB 最小 fake：open/get 均以微任务触发 onsuccess，
- * get 返回 truthy（缓存命中 → needsWrite=false，跳过 arrayBuffer 写入路径）。
- */
-function installFakeIndexedDB(): void {
-  const req = (result?: unknown) => {
-    const r: {
-      onsuccess?: () => void;
-      onerror?: () => void;
-      result?: unknown;
-    } = { result };
-    queueMicrotask(() => r.onsuccess?.());
-    return r;
-  };
-  const db = {
-    transaction: () => ({
-      objectStore: () => ({
-        get: () => req(new Uint8Array(1)),
-        put: () => req(),
-      }),
-    }),
-    close: vi.fn(),
-  };
-  (globalThis as Record<string, unknown>).indexedDB = { open: () => req(db) };
-}
+describe('openLocalFile 本地文件打开分派（文件选择器与拖拽打开共用出口）', () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    localStorage.clear();
+    useConversionQueueStore.setState({ tasks: [] });
+    // jsdom 的 URL.createObjectURL 不接受测试 File 对象，替换为可控 mock
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: createObjectURLMock,
+      revokeObjectURL: vi.fn(),
+    });
+  });
+
+  it('.mxweb：本地 blob URL 就地打开——不上传、不转换、不进队列（回归：拖拽 mxweb 曾误走上传+转换）', async () => {
+    mockCalculateFileHash.mockResolvedValue('localhash');
+    mockOpenFile.mockResolvedValue(undefined);
+    const file = makeFile('a.mxweb');
+
+    await openLocalFile(file);
+
+    expect(mockOpenFile).toHaveBeenCalledTimes(1);
+    const payload = mockOpenFile.mock.calls[0]![0] as {
+      url: string;
+      fileInfo: { fileHash: string };
+    };
+    // 引擎走 blob: URL 原生 fetch，不再写 emscripten_filesystem 虚拟盘
+    expect(payload.url).toBe('blob:mock-abc');
+    expect(createObjectURLMock).toHaveBeenCalledWith(file);
+    // hash 仍算：fileInfo.fileHash 是打开早退/身份判据的唯一来源
+    expect(payload.fileInfo.fileHash).toBe('localhash');
+    expect(mockUploadMxCadFile).not.toHaveBeenCalled();
+    expect(mockCheckFileExist).not.toHaveBeenCalled();
+    expect(
+      useConversionQueueStore
+        .getState()
+        .tasks.filter((t) => t.source === 'local')
+    ).toHaveLength(0);
+  });
+
+  it('非 mxweb CAD 文件：仍走公开上传 + 转换流程（缓存命中 → callback 直接打开）', async () => {
+    mockCalculateFileHash.mockResolvedValue('hash123');
+    mockCheckFileExist.mockResolvedValue({ data: { exists: true } });
+    mockOpenFile.mockResolvedValue(undefined);
+
+    await openLocalFile(makeFile('drawing.dwg'));
+    await capturedCallback()();
+
+    expect(mockUploadMxCadFile).not.toHaveBeenCalled();
+    expect(mockOpenFile).toHaveBeenCalled();
+  });
+});
+

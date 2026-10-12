@@ -75,10 +75,9 @@ async function generateFrontendPermissions() {
       .map((value) => `  ${value}: '${value}',`)
       .join('\n');
 
-    // 生成权限依赖关系
-    const permissionDependencies = generatePermissionDependencies(
-      systemPermissions,
-      projectPermissions
+    // 生成系统权限依赖关系（项目部分来自 @cloudcad/platform，不在此生成）
+    const systemPermissionDependencies = generateSystemPermissionDependencies(
+      systemPermissions
     );
 
     // 生成权限分组
@@ -101,6 +100,12 @@ async function generateFrontendPermissions() {
  */
 
 import { t } from '@/languages';
+import {
+  ProjectPermission,
+  PROJECT_PERMISSION_DEPENDENCIES,
+  completePermissionDependencies as completePermissionDependenciesCore,
+  getDependentPermissions as getDependentPermissionsCore,
+} from '@cloudcad/platform';
 
 /**
  * 系统权限枚举
@@ -111,22 +116,18 @@ ${systemPermissionsObject}
 } as const;
 
 /**
- * 项目权限枚举
- * 用于项目和文件系统的权限控制
+ * 项目权限枚举（来自 @cloudcad/platform 跨端单一事实源，与移动端共用，
+ * 由本脚本从 Prisma schema 派生到 platform 包）
  */
-export const ProjectPermission = {
-${projectPermissionsObject}
-} as const;
+export { ProjectPermission };
+export type ProjectPermissionValue =
+  (typeof ProjectPermission)[keyof typeof ProjectPermission];
+export type ProjectPermission = ProjectPermissionValue;
 
 /**
  * 系统权限类型
  */
 export type SystemPermission = typeof SystemPermission[keyof typeof SystemPermission];
-
-/**
- * 项目权限类型
- */
-export type ProjectPermission = typeof ProjectPermission[keyof typeof ProjectPermission];
 
 /**
  * 统一权限类型
@@ -149,11 +150,19 @@ export const ProjectPermissionValues = Object.values(ProjectPermission) as reado
 export const PermissionValues = [...SystemPermissionValues, ...ProjectPermissionValues] as readonly Permission[];
 
 /**
- * 权限依赖关系
+ * 系统权限依赖关系（项目部分来自 @cloudcad/platform，见 PERMISSION_DEPENDENCIES）
+ */
+const SYSTEM_PERMISSION_DEPENDENCIES: Record<string, string[]> = {
+${systemPermissionDependencies}
+};
+
+/**
+ * 权限依赖关系（系统 + 项目；项目部分来自 @cloudcad/platform 单一事实源）
  * 记录每个权限需要依赖的其他权限
  */
 export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
-${permissionDependencies}
+  ...SYSTEM_PERMISSION_DEPENDENCIES,
+  ...PROJECT_PERMISSION_DEPENDENCIES,
 };
 
 /**
@@ -218,61 +227,24 @@ export const togglePermission = (
 };
 
 /**
- * 自动补全权限的前置依赖（迭代直至稳定，幂等）
+ * 自动补全权限的前置依赖（迭代直至稳定，幂等）。
+ * 算法来自 @cloudcad/platform（跨端单一事实源），此处以全量依赖图调用。
  * 勾选"创建角色"会自动带上"查看角色"，保证界面上不会出现
  * "能创建但看不到"的无效权限组合
  */
 export const completePermissionDependencies = (
   selected: string[]
-): string[] => {
-  const result = new Set(selected);
-  let changed = true;
-
-  while (changed) {
-    changed = false;
-    for (const perm of [...result]) {
-      const dependencies = PERMISSION_DEPENDENCIES[perm];
-      if (!dependencies) continue;
-      for (const dep of dependencies) {
-        if (!result.has(dep)) {
-          result.add(dep);
-          changed = true;
-        }
-      }
-    }
-  }
-
-  return [...result];
-};
+): string[] => completePermissionDependenciesCore(PERMISSION_DEPENDENCIES, selected);
 
 /**
- * 获取取消 perm 时会被级联取消的下游权限（selected 中直接或传递依赖 perm 的权限）
+ * 获取取消 perm 时会被级联取消的下游权限（selected 中直接或传递依赖 perm 的权限）。
+ * 算法来自 @cloudcad/platform（跨端单一事实源），此处以全量依赖图调用。
  * 用于取消前置权限（如"查看角色"）时提示用户哪些已勾选的权限会一并取消
  */
 export const getDependentPermissions = (
   perm: string,
   selected: string[]
-): string[] => {
-  const dependents = new Set<string>();
-  let changed = true;
-
-  while (changed) {
-    changed = false;
-    for (const p of selected) {
-      if (p === perm || dependents.has(p)) continue;
-      const dependencies = PERMISSION_DEPENDENCIES[p];
-      if (
-        dependencies &&
-        dependencies.some((dep) => dep === perm || dependents.has(dep))
-      ) {
-        dependents.add(p);
-        changed = true;
-      }
-    }
-  }
-
-  return [...dependents];
-};
+): string[] => getDependentPermissionsCore(PERMISSION_DEPENDENCIES, perm, selected);
 
 /**
  * 系统角色名称映射
@@ -344,12 +316,9 @@ export const getSystemRoleNames = () => SYSTEM_ROLE_NAMES;
 }
 
 /**
- * 生成权限依赖关系
+ * 生成系统权限依赖关系（项目权限依赖来自 @cloudcad/platform，不在此生成）
  */
-function generatePermissionDependencies(
-  systemPermissions,
-  projectPermissions
-) {
+function generateSystemPermissionDependencies(systemPermissions) {
   const dependencies = {};
 
   // 系统权限依赖
@@ -399,68 +368,6 @@ function generatePermissionDependencies(
   }
   if (systemPermissions.includes('SYSTEM_FONT_DOWNLOAD')) {
     dependencies['SYSTEM_FONT_DOWNLOAD'] = ['SYSTEM_FONT_READ'];
-  }
-
-  // 项目权限依赖
-  if (projectPermissions.includes('PROJECT_UPDATE')) {
-    dependencies['PROJECT_UPDATE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('PROJECT_DELETE')) {
-    dependencies['PROJECT_DELETE'] = ['PROJECT_UPDATE'];
-  }
-  if (projectPermissions.includes('PROJECT_MEMBER_MANAGE')) {
-    dependencies['PROJECT_MEMBER_MANAGE'] = ['PROJECT_UPDATE'];
-  }
-  if (projectPermissions.includes('PROJECT_MEMBER_ASSIGN')) {
-    dependencies['PROJECT_MEMBER_ASSIGN'] = ['PROJECT_UPDATE'];
-  }
-  if (projectPermissions.includes('PROJECT_TRANSFER')) {
-    dependencies['PROJECT_TRANSFER'] = ['PROJECT_UPDATE'];
-  }
-  if (projectPermissions.includes('PROJECT_TRANSFER_MANAGE')) {
-    dependencies['PROJECT_TRANSFER_MANAGE'] = ['PROJECT_UPDATE'];
-  }
-  if (projectPermissions.includes('PROJECT_ROLE_MANAGE')) {
-    dependencies['PROJECT_ROLE_MANAGE'] = ['PROJECT_UPDATE'];
-  }
-  if (projectPermissions.includes('PROJECT_ROLE_PERMISSION_MANAGE')) {
-    dependencies['PROJECT_ROLE_PERMISSION_MANAGE'] = ['PROJECT_UPDATE'];
-  }
-  if (projectPermissions.includes('FILE_CREATE')) {
-    dependencies['FILE_CREATE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_UPLOAD')) {
-    dependencies['FILE_UPLOAD'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_EDIT')) {
-    dependencies['FILE_EDIT'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_DELETE')) {
-    dependencies['FILE_DELETE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_TRASH_MANAGE')) {
-    dependencies['FILE_TRASH_MANAGE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_DOWNLOAD')) {
-    dependencies['FILE_DOWNLOAD'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_MOVE')) {
-    dependencies['FILE_MOVE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_COPY')) {
-    dependencies['FILE_COPY'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('CAD_SAVE')) {
-    dependencies['CAD_SAVE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('CAD_EXTERNAL_REFERENCE')) {
-    dependencies['CAD_EXTERNAL_REFERENCE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('FILE_SHARE')) {
-    dependencies['FILE_SHARE'] = ['FILE_OPEN'];
-  }
-  if (projectPermissions.includes('VERSION_READ')) {
-    dependencies['VERSION_READ'] = ['FILE_OPEN'];
   }
 
   return Object.entries(dependencies)

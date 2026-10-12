@@ -10,7 +10,7 @@ import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import type { Response, Request } from 'express';
-import { FileTypeDetector } from '../utils/file-type-detector';
+import { FileTypeDetector } from '@cloudcad/contracts';
 import {
   cachedArtifactFileName,
   isArtifactReady,

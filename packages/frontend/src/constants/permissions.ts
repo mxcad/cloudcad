@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-08-26T03:03:17.065Z
+ * 生成时间: 2026-10-10T05:50:46.409Z
  * 来源: Prisma Schema (packages/db/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/db/prisma/schema.prisma 文件，
@@ -11,6 +11,12 @@
  */
 
 import { t } from '@/languages';
+import {
+  ProjectPermission,
+  PROJECT_PERMISSION_DEPENDENCIES,
+  completePermissionDependencies as completePermissionDependenciesCore,
+  getDependentPermissions as getDependentPermissionsCore,
+} from '@cloudcad/platform';
 
 /**
  * 系统权限枚举
@@ -46,32 +52,13 @@ export const SystemPermission = {
 } as const;
 
 /**
- * 项目权限枚举
- * 用于项目和文件系统的权限控制
+ * 项目权限枚举（来自 @cloudcad/platform 跨端单一事实源，与移动端共用，
+ * 由本脚本从 Prisma schema 派生到 platform 包）
  */
-export const ProjectPermission = {
-  PROJECT_UPDATE: 'PROJECT_UPDATE',
-  PROJECT_DELETE: 'PROJECT_DELETE',
-  PROJECT_MEMBER_MANAGE: 'PROJECT_MEMBER_MANAGE',
-  PROJECT_MEMBER_ASSIGN: 'PROJECT_MEMBER_ASSIGN',
-  PROJECT_TRANSFER: 'PROJECT_TRANSFER',
-  PROJECT_TRANSFER_MANAGE: 'PROJECT_TRANSFER_MANAGE',
-  PROJECT_ROLE_MANAGE: 'PROJECT_ROLE_MANAGE',
-  PROJECT_ROLE_PERMISSION_MANAGE: 'PROJECT_ROLE_PERMISSION_MANAGE',
-  FILE_CREATE: 'FILE_CREATE',
-  FILE_UPLOAD: 'FILE_UPLOAD',
-  FILE_OPEN: 'FILE_OPEN',
-  FILE_EDIT: 'FILE_EDIT',
-  FILE_DELETE: 'FILE_DELETE',
-  FILE_TRASH_MANAGE: 'FILE_TRASH_MANAGE',
-  FILE_DOWNLOAD: 'FILE_DOWNLOAD',
-  FILE_SHARE: 'FILE_SHARE',
-  FILE_MOVE: 'FILE_MOVE',
-  FILE_COPY: 'FILE_COPY',
-  CAD_SAVE: 'CAD_SAVE',
-  CAD_EXTERNAL_REFERENCE: 'CAD_EXTERNAL_REFERENCE',
-  VERSION_READ: 'VERSION_READ',
-} as const;
+export { ProjectPermission };
+export type ProjectPermissionValue =
+  (typeof ProjectPermission)[keyof typeof ProjectPermission];
+export type ProjectPermission = ProjectPermissionValue;
 
 /**
  * 系统权限类型
@@ -79,20 +66,29 @@ export const ProjectPermission = {
 export type SystemPermission = typeof SystemPermission[keyof typeof SystemPermission];
 
 /**
- * 项目权限类型
- */
-export type ProjectPermission = typeof ProjectPermission[keyof typeof ProjectPermission];
-
-/**
  * 统一权限类型
  */
 export type Permission = SystemPermission | ProjectPermission;
 
 /**
- * 权限依赖关系
- * 记录每个权限需要依赖的其他权限
+ * 获取系统权限的所有值
  */
-export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
+export const SystemPermissionValues = Object.values(SystemPermission) as readonly SystemPermission[];
+
+/**
+ * 获取项目权限的所有值
+ */
+export const ProjectPermissionValues = Object.values(ProjectPermission) as readonly ProjectPermission[];
+
+/**
+ * 获取所有权限的值
+ */
+export const PermissionValues = [...SystemPermissionValues, ...ProjectPermissionValues] as readonly Permission[];
+
+/**
+ * 系统权限依赖关系（项目部分来自 @cloudcad/platform，见 PERMISSION_DEPENDENCIES）
+ */
+const SYSTEM_PERMISSION_DEPENDENCIES: Record<string, string[]> = {
   'SYSTEM_USER_CREATE': ["SYSTEM_USER_READ","SYSTEM_ROLE_READ"],
   'SYSTEM_USER_UPDATE': ["SYSTEM_USER_READ","SYSTEM_ROLE_READ"],
   'SYSTEM_USER_DELETE': ["SYSTEM_USER_READ"],
@@ -106,26 +102,15 @@ export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
   'SYSTEM_FONT_UPLOAD': ["SYSTEM_FONT_READ"],
   'SYSTEM_FONT_DELETE': ["SYSTEM_FONT_READ"],
   'SYSTEM_FONT_DOWNLOAD': ["SYSTEM_FONT_READ"],
-  'PROJECT_UPDATE': ["FILE_OPEN"],
-  'PROJECT_DELETE': ["PROJECT_UPDATE"],
-  'PROJECT_MEMBER_MANAGE': ["PROJECT_UPDATE"],
-  'PROJECT_MEMBER_ASSIGN': ["PROJECT_UPDATE"],
-  'PROJECT_TRANSFER': ["PROJECT_UPDATE"],
-  'PROJECT_TRANSFER_MANAGE': ["PROJECT_UPDATE"],
-  'PROJECT_ROLE_MANAGE': ["PROJECT_UPDATE"],
-  'PROJECT_ROLE_PERMISSION_MANAGE': ["PROJECT_UPDATE"],
-  'FILE_CREATE': ["FILE_OPEN"],
-  'FILE_UPLOAD': ["FILE_OPEN"],
-  'FILE_EDIT': ["FILE_OPEN"],
-  'FILE_DELETE': ["FILE_OPEN"],
-  'FILE_TRASH_MANAGE': ["FILE_OPEN"],
-  'FILE_DOWNLOAD': ["FILE_OPEN"],
-  'FILE_MOVE': ["FILE_OPEN"],
-  'FILE_COPY': ["FILE_OPEN"],
-  'CAD_SAVE': ["FILE_OPEN"],
-  'CAD_EXTERNAL_REFERENCE': ["FILE_OPEN"],
-  'FILE_SHARE': ["FILE_OPEN"],
-  'VERSION_READ': ["FILE_OPEN"],
+};
+
+/**
+ * 权限依赖关系（系统 + 项目；项目部分来自 @cloudcad/platform 单一事实源）
+ * 记录每个权限需要依赖的其他权限
+ */
+export const PERMISSION_DEPENDENCIES: Record<string, string[]> = {
+  ...SYSTEM_PERMISSION_DEPENDENCIES,
+  ...PROJECT_PERMISSION_DEPENDENCIES,
 };
 
 /**
@@ -290,61 +275,24 @@ export const togglePermission = (
 };
 
 /**
- * 自动补全权限的前置依赖（迭代直至稳定，幂等）
+ * 自动补全权限的前置依赖（迭代直至稳定，幂等）。
+ * 算法来自 @cloudcad/platform（跨端单一事实源），此处以全量依赖图调用。
  * 勾选"创建角色"会自动带上"查看角色"，保证界面上不会出现
  * "能创建但看不到"的无效权限组合
  */
 export const completePermissionDependencies = (
   selected: string[]
-): string[] => {
-  const result = new Set(selected);
-  let changed = true;
-
-  while (changed) {
-    changed = false;
-    for (const perm of [...result]) {
-      const dependencies = PERMISSION_DEPENDENCIES[perm];
-      if (!dependencies) continue;
-      for (const dep of dependencies) {
-        if (!result.has(dep)) {
-          result.add(dep);
-          changed = true;
-        }
-      }
-    }
-  }
-
-  return [...result];
-};
+): string[] => completePermissionDependenciesCore(PERMISSION_DEPENDENCIES, selected);
 
 /**
- * 获取取消 perm 时会被级联取消的下游权限（selected 中直接或传递依赖 perm 的权限）
+ * 获取取消 perm 时会被级联取消的下游权限（selected 中直接或传递依赖 perm 的权限）。
+ * 算法来自 @cloudcad/platform（跨端单一事实源），此处以全量依赖图调用。
  * 用于取消前置权限（如"查看角色"）时提示用户哪些已勾选的权限会一并取消
  */
 export const getDependentPermissions = (
   perm: string,
   selected: string[]
-): string[] => {
-  const dependents = new Set<string>();
-  let changed = true;
-
-  while (changed) {
-    changed = false;
-    for (const p of selected) {
-      if (p === perm || dependents.has(p)) continue;
-      const dependencies = PERMISSION_DEPENDENCIES[p];
-      if (
-        dependencies &&
-        dependencies.some((dep) => dep === perm || dependents.has(dep))
-      ) {
-        dependents.add(p);
-        changed = true;
-      }
-    }
-  }
-
-  return [...dependents];
-};
+): string[] => getDependentPermissionsCore(PERMISSION_DEPENDENCIES, perm, selected);
 
 /**
  * 系统角色名称映射
@@ -374,9 +322,22 @@ export const getRoleDisplayName = (roleName: string, isSystemRole: boolean): str
   // 根据角色名称前缀判断是否为项目角色
   const isProjectRole = roleName.startsWith('PROJECT_');
   const mapping = isProjectRole ? PROJECT_ROLE_NAMES : SYSTEM_ROLE_NAMES;
-  const displayName = mapping[roleName] || roleName;
-  return t(displayName);
+  return mapping[roleName] || roleName;
+};
+
+/**
+ * @deprecated 请使用 PERMISSION_GROUPS 常量
+ */
+export const getPermissionGroups = () => {
+  const result = [];
+  for (const groupList of Object.values(PERMISSION_GROUPS)) {
+    result.push(...groupList);
+  }
+  return result;
 };
 
 /** @deprecated 请使用 PROJECT_ROLE_NAMES 常量 */
 export const getProjectRoleNames = () => PROJECT_ROLE_NAMES;
+
+/** @deprecated 请使用 SYSTEM_ROLE_NAMES 常量 */
+export const getSystemRoleNames = () => SYSTEM_ROLE_NAMES;

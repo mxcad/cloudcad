@@ -4,6 +4,7 @@ import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../storage-management/services/storage-manager.service';
 import { UserCleanupService } from './user-cleanup.service';
 import { NodeType, ProjectStatus } from '@cloudcad/db';
+import { MembershipService } from '../vip/membership.service';
 
 describe('UserCleanupService', () => {
   let service: UserCleanupService;
@@ -67,6 +68,10 @@ describe('UserCleanupService', () => {
           useValue: { getValue: jest.fn().mockResolvedValue(7) },
         },
         { provide: StorageManager, useValue: storageManager },
+        {
+          provide: MembershipService,
+          useValue: { deleteMembershipForUser: jest.fn(async () => 1) },
+        },
       ],
     }).compile();
 

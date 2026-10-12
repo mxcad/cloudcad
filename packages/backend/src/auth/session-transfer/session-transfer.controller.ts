@@ -28,7 +28,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
+import { SessionCookieWriter } from '../session-cookie.writer';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { SessionTransferService } from './session-transfer.service';
 import {
@@ -40,23 +40,12 @@ import { AuthResponseDto } from '../dto/auth.dto';
 import { Public } from '../decorators/public.decorator';
 import type { AuthenticatedRequest } from '../../common/types/request.types';
 
-/**
- * 与 auth.controller.ts 的 cookie 契约保持一致（名称/路径/时效）：
- * auth_token 1h path=/；refresh_token 7d path=/api/v1/auth/refresh。
- */
-const AUTH_COOKIE_NAME = 'auth_token';
-const AUTH_COOKIE_PATH = '/';
-const AUTH_COOKIE_MAX_AGE = 60 * 60 * 1000;
-const REFRESH_COOKIE_NAME = 'refresh_token';
-const REFRESH_COOKIE_PATH = '/api/v1/auth/refresh';
-const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-
 @ApiTags('会话转移')
 @Controller('auth/session-transfer')
 export class SessionTransferController {
   constructor(
     private readonly sessionTransferService: SessionTransferService,
-    private readonly configService: ConfigService,
+    private readonly sessionCookieWriter: SessionCookieWriter,
   ) {}
 
   @Post()
@@ -98,37 +87,7 @@ export class SessionTransferController {
     @Res({ passthrough: true }) response: ExpressResponse,
   ): Promise<SessionTransferConsumeResponseDto> {
     const result = await this.sessionTransferService.consumeTransfer(dto.token, req);
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
-  }
-
-  /**
-   * 下发 httpOnly cookie（与 auth.controller.ts setAuthCookies 同契约）：
-   * secure 属性 cookieSecure 显式设置时以显式值为准，否则按请求协议自适应。
-   */
-  private setAuthCookies(
-    req: { secure?: boolean },
-    response: ExpressResponse,
-    result: { accessToken: string; refreshToken: string },
-  ): void {
-    const cookieSecure = this.configService.get<boolean | null>(
-      'session.cookieSecure',
-    );
-
-    response.cookie(AUTH_COOKIE_NAME, result.accessToken, {
-      httpOnly: true,
-      secure: cookieSecure ?? req.secure ?? false,
-      sameSite: 'lax',
-      maxAge: AUTH_COOKIE_MAX_AGE,
-      path: AUTH_COOKIE_PATH,
-    });
-
-    response.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
-      httpOnly: true,
-      secure: cookieSecure ?? req.secure ?? false,
-      sameSite: 'lax',
-      maxAge: REFRESH_COOKIE_MAX_AGE,
-      path: REFRESH_COOKIE_PATH,
-    });
   }
 }

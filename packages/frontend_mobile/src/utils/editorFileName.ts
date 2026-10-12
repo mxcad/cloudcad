@@ -1,5 +1,5 @@
 import { t } from '@/languages';
-import { useEditorState } from '@/composables/useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { useUser } from '@/composables/useUser';
 
 /**
@@ -23,7 +23,7 @@ export function editorDisplayName(fileName: string | null | undefined): string {
   let inCollaboration = false;
   let authenticated = true;
   try {
-    inCollaboration = useEditorState().state.isInCollaboration;
+    inCollaboration = useEditorStore().state.isInCollaboration;
     authenticated = useUser().isAuthenticated.value;
   } catch {
     // 会话态不可用时按「非协同、已登录」降级，只影响前缀不丢文件名

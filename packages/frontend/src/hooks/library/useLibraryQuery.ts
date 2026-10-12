@@ -25,8 +25,8 @@ import {
   type LibraryType,
   type LibraryData,
   type ChildrenData,
-  type BreadcrumbItem,
 } from './libraryQueryHelpers';
+import type { BreadcrumbItem } from '@/lib/ancestorPath';
 import { buildBreadcrumbs } from './libraryBreadcrumbs';
 
 export type { LibraryType } from './libraryQueryHelpers';

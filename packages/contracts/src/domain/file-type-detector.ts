@@ -1,19 +1,17 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
-// All rights reserved.
-// The code, documentation, and related materials of this software belong to
-// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
-// software must include the following copyright statement.
-// This application should reach an agreement with Chengdu Dream Kaide
-// Technology Co., Ltd. to use this software, its documentation, or related
-// materials.
-// https://www.mxdraw.com/
-///////////////////////////////////////////////////////////////////////////////
+// 文件类型分类的唯一事实源（纯函数、零依赖、过 scan:purity 门禁，ADR-0069）：
+//
+// 历史上「某扩展名算不算 CAD / 图片 / 文档 / 压缩包」被手写散落在多处，且已漂移：
+// - 外部参照服务（external-reference-update / public-file / mxcad-file-handler）
+//   各自内联一份 dwg 列表与图片列表，图片列表一份含 .jfif 不含 .svg、另一份相反；
+// - 转换 / 版本历史走 needsConversion 判断是否 CAD。
+// 代价：同一扩展名在不同出口被归为不同类型（.svg 与 .jfif 的归属互相矛盾）。
+//
+// 本文件把扩展名 → 类型 的判定写成一次，backend 各出口都是它的调用方。
+// 纯 TypeScript、无 IO、无副作用。需要 IO/框架时迁独立包，勿就地扩展（ADR-0069）。
 
 /**
- * 文件类型检测工具
+ * 文件类型检测工具（静态纯函数集合）
  */
-
 export class FileTypeDetector {
   /**
    * CAD文件扩展名
@@ -27,11 +25,13 @@ export class FileTypeDetector {
 
   /**
    * 图片文件扩展名
+   * 取各消费方内联列表的并集（.svg 与 .jfif 都收），作为唯一事实源
    */
   private static readonly IMAGE_EXTENSIONS = [
     '.png',
     '.jpg',
     '.jpeg',
+    '.jfif',
     '.gif',
     '.bmp',
     '.svg',

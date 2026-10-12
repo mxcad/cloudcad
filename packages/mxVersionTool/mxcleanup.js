@@ -1,9 +1,7 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxCleanup(targetPath, callback) {
-  const args = ['cleanup', targetPath];
-  executeSpawn(mxPath, args)
+  mx('cleanup', [targetPath])
     .then(stdout => {
       callback(null, stdout);
     })

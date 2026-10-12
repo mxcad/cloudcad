@@ -23,7 +23,6 @@ import {
   subscribe,
   setModified,
   getCurrentFileUrl,
-  getCacheTimestamp,
   setCurrentFileUrl,
 } from '../drawingSession';
 import {
@@ -34,7 +33,6 @@ import {
   refreshFileName,
 } from './mxcadHelpers';
 import { MxCADContainerManager } from './mxcadContainerManager';
-import { clearOldMxwebCache } from './mxcadCache';
 import { applyVipExportIcons } from './applyVipExportIcons';
 import { rebindMxCommands } from './cmd/rebindMxCommands';
 import { installVipCommandGuard } from './vipCommandGuard';
@@ -272,16 +270,6 @@ async function handleOpenCompleteSideEffects(): Promise<void> {
         'mxcadManager: handleOpenCompleteSideEffects thumbnail'
       );
     }
-    const cacheTimestamp = getCacheTimestamp();
-    const currentMxwebUrl = getCurrentFileUrl();
-    if (cacheTimestamp && getFileInfo() && currentMxwebUrl) {
-      try {
-        const filePath = UrlHelper.extractMxwebFilePath(currentMxwebUrl);
-        if (filePath) await clearOldMxwebCache(filePath, cacheTimestamp);
-      } catch (error) {
-        handleError(error, 'mxcadManager: clearOldCache');
-      }
-    }
   }
 }
 
@@ -366,11 +354,15 @@ export class MxCADInstanceManager {
     });
     return previous
       .catch(() => undefined)
-      .then(() => {
+      .then(async () => {
+        // 初始加载结算查询必须在 userOpenDispatched 置位之前完成：
+        // 置位后 getOpenSettled() 恒返回 {count:0}，首开「已结算直接放行」
+        // 快路径失效，空模板态每次打开都白等满 3s 超时（4660e0e 回归）。
+        const ready = this.isReady()
+          ? await waitForDocumentLoaded(this)
+          : true;
         this.userOpenDispatched = true;
-        return this.isReady()
-          ? waitForDocumentLoaded(this)
-          : Promise.resolve(true);
+        return ready;
       })
       .then(run)
       .then(

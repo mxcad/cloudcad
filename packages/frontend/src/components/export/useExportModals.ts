@@ -17,7 +17,8 @@ export interface ExportModalsOptions {
   fileId: string | null;
   canExport?: boolean;
   isAuthenticated?: boolean;
-  loginPromptDismissedRef?: React.MutableRefObject<boolean>;
+  /** 登录闸门抑制查询（useLoginGate.isLoginSuppressed） */
+  isLoginSuppressed?: () => boolean;
   currentFileHash?: string;
 }
 
@@ -25,7 +26,7 @@ export function useExportModals({
   fileId,
   canExport,
   isAuthenticated,
-  loginPromptDismissedRef,
+  isLoginSuppressed,
   currentFileHash,
 }: ExportModalsOptions) {
   const { showToast, showConfirm } = useNotification();
@@ -74,7 +75,7 @@ export function useExportModals({
 
   useEffect(() => {
     return subscribe(CAD_EVENTS.SAVE_AS, (detail) => {
-      if (loginPromptDismissedRef?.current) return;
+      if (isLoginSuppressed?.()) return;
 
       if (!isAuthenticatedRef.current) {
         convert.setDownloadingFileName(detail.currentFileName);
@@ -94,7 +95,7 @@ export function useExportModals({
       setShowSaveAsModal(true);
     });
   }, [
-    loginPromptDismissedRef,
+    isLoginSuppressed,
     convert.setDownloadingFileName,
     convert.setShowDownloadFormatModal,
   ]);

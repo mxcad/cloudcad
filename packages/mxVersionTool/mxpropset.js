@@ -1,8 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx, writeTempText } = require('./mx');
 
 function mxPropset(targetPath, propertyName, propertyValue, callback) {
   const hasNewline = propertyValue.includes('\n');
@@ -10,14 +6,10 @@ function mxPropset(targetPath, propertyName, propertyValue, callback) {
   let tempFile = null;
 
   if (hasNewline) {
-    tempFile = path.join(
-      os.tmpdir(),
-      `mx-prop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`
-    );
-    fs.writeFileSync(tempFile, propertyValue, 'utf8');
+    tempFile = writeTempText('propset', propertyValue);
   }
 
-  const args = ['propset', propertyName];
+  const args = [propertyName];
   if (tempFile) {
     args.push('-F', tempFile);
   } else {
@@ -25,19 +17,11 @@ function mxPropset(targetPath, propertyName, propertyValue, callback) {
   }
   args.push(targetPath, '--force');
 
-  function cleanup() {
-    if (tempFile && fs.existsSync(tempFile)) {
-      try { fs.unlinkSync(tempFile); } catch (e) { /* ignore */ }
-    }
-  }
-
-  executeSpawn(mxPath, args)
+  mx('propset', args, { cleanup: tempFile ? [tempFile] : [] })
     .then(stdout => {
-      cleanup();
       callback(null, stdout);
     })
     .catch(error => {
-      cleanup();
       callback(error);
     });
 }

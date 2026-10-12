@@ -34,6 +34,7 @@ import {
 import { UserLifecycleEventPayload } from '../interfaces/user-lifecycle-event.interface';
 import { PasswordPolicyService } from '../../auth/services/password-policy.service';
 import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
+import { ACCOUNT_EVENTS_CHANNEL } from '../account-events-sse.constants';
 
 import { I18nContext } from 'nestjs-i18n';
 
@@ -743,6 +744,12 @@ export class UserCrudService {
           `用户会员已更新：id=${id}, tierLevel=${tierLevel}, expiresAt=${finalExpiresAt}`
         );
       }
+
+      // 推送账户事件：已登录的该用户（PC / 移动端）经 SSE 收到后 refreshUser()
+      // 重拉 /auth/profile，立即拿到最新会员态，无需退出重登
+      this.eventEmitter.emit(ACCOUNT_EVENTS_CHANNEL(id), {
+        type: 'membership-changed',
+      });
 
       const user = await this.prisma.user.findUnique({
         where: { id },

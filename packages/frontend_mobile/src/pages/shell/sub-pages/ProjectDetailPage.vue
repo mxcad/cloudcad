@@ -26,8 +26,8 @@ import {
   memberControllerAddProjectMember,
   memberControllerRemoveProjectMember,
   memberControllerUpdateProjectMember,
-  memberControllerGetUserProjectPermissions,
 } from '@cloudcad/api-sdk/sdk.gen'
+import { loadProjectPermissions, invalidateProjectPermissions } from '@/services/permissionService'
 import { useUser } from '@/composables/useUser'
 import { rolesControllerGetProjectRolesByProject } from '@cloudcad/api-sdk/sdk.gen'
 import { usersControllerSearchUsers } from '@cloudcad/api-sdk/sdk.gen'
@@ -37,7 +37,7 @@ import { useShellStack } from '@/stores/shellStack'
 import ShareCurrentPopup from '@/pages/home/components/ShareCurrentPopup.vue'
 import VersionHistoryPopup from '@/pages/home/components/VersionHistoryPopup.vue'
 import FileFilterPopup from '@/pages/shell/components/FileFilterPopup.vue'
-import { ProjectPermission, getProjectRoleDisplayName } from '@/utils/projectPermissions'
+import { ProjectPermission, getProjectRoleDisplayName, getFileNodeMenuActions } from '@/utils/projectPermissions'
 import { useFormatDownload } from '@/composables/useFormatDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
 import type { SelectionActionDef } from '../components/UnifiedFileList.vue'
@@ -374,20 +374,11 @@ function isSelf(member: { id: string }): boolean {
 
 const projectPermissions = ref<string[]>([])
 
-async function loadProjectPermissions() {
-  try {
-    const res = await memberControllerGetUserProjectPermissions({
-      path: { projectId: projectId.value },
-    })
-    try {
-      unwrap(res)
-      projectPermissions.value = res.data?.permissions ?? []
-    } catch {
-      // 业务/网络错误：保留旧权限（对齐原 `if (res.error) return` 语义）
-    }
-  } catch {
-    projectPermissions.value = []
-  }
+// 权限拉取统一走 permissionService.loadProjectPermissions（TTL 缓存 + 失败回退旧值）；
+// 本壳页进入/变更后先失效缓存再拉取，保证门控菜单项始终反映最新权限
+async function refreshProjectPermissions() {
+  invalidateProjectPermissions(projectId.value)
+  projectPermissions.value = await loadProjectPermissions(projectId.value)
 }
 
 const canManageMembers = computed(() =>
@@ -484,34 +475,22 @@ const menuActions = computed(() => {
   const isFolder = !!menuTarget.value?.isFolder
   // CAD 图纸 → 外部参照管理（对齐 PC isCadFile && canManageExternalReference visibilityCheck）
   const isCad = !isFolder && menuTarget.value ? isCadFileName(menuTarget.value.name) : false
-  const canManageExtRef = projectPermissions.value.includes(ProjectPermission.CAD_EXTERNAL_REFERENCE)
   // M5：逐项权限门控（对齐 PC fileActionConfig permissionCheck；个人空间自持无需门控，仅项目页）
-  const canEdit = projectPermissions.value.includes(ProjectPermission.FILE_EDIT)
-  const canMove = projectPermissions.value.includes(ProjectPermission.FILE_MOVE)
-  const canCopy = projectPermissions.value.includes(ProjectPermission.FILE_COPY)
-  const canDownload = projectPermissions.value.includes(ProjectPermission.FILE_DOWNLOAD)
-  const canShare = projectPermissions.value.includes(ProjectPermission.FILE_SHARE)
-  const canReadVersion = projectPermissions.value.includes(ProjectPermission.VERSION_READ)
-  const canDelete = projectPermissions.value.includes(ProjectPermission.FILE_DELETE)
-  const actions: Array<{ name: string; key: string; color?: string }> = [
-    { name: t('打开'), key: 'open' },
-    // 文件 → 下载（M9：CAD 弹格式选择、非 CAD 原格式直下，对齐 PC 单一「下载」项）；文件夹 → 打包下载（A-08）
-    ...(isFolder
-      ? (canDownload ? [{ name: t('打包下载'), key: 'folderDownload' }] : [])
-      : (canDownload ? [{ name: t('下载'), key: 'download' }] : [])),
-    // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
-    ...(!isFolder && canShare ? [{ name: t('分享'), key: 'share' }] : []),
-    ...(isCad && canManageExtRef ? [{ name: t('外部参照管理'), key: 'externalRef' }] : []),
-    // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
-    ...(!isFolder && canReadVersion ? [{ name: t('版本历史'), key: 'versionHistory' }] : []),
-    ...(canEdit ? [{ name: t('重命名'), key: 'rename' }] : []),
-    // A-29a：文件夹操作（移动到…/复制到…）与剪贴板操作（复制到剪贴板/剪切）对齐 PC 语义区分
-    ...(canMove ? [{ name: t('移动到...'), key: 'move' }] : []),
-    ...(canCopy ? [{ name: t('复制到...'), key: 'copy' }, { name: t('复制到剪贴板'), key: 'copyClipboard' }] : []),
-    ...(canMove ? [{ name: t('剪切'), key: 'cut' }] : []),
-    ...(canDelete ? [{ name: t('删除'), key: 'delete', color: '#ee0a24' }] : []),
-  ]
-  return actions
+  const perms = projectPermissions.value
+  return getFileNodeMenuActions({
+    isFolder,
+    isCad,
+    can: {
+      download: perms.includes(ProjectPermission.FILE_DOWNLOAD),
+      share: perms.includes(ProjectPermission.FILE_SHARE),
+      externalRef: perms.includes(ProjectPermission.CAD_EXTERNAL_REFERENCE),
+      versionHistory: perms.includes(ProjectPermission.VERSION_READ),
+      rename: perms.includes(ProjectPermission.FILE_EDIT),
+      move: perms.includes(ProjectPermission.FILE_MOVE),
+      copy: perms.includes(ProjectPermission.FILE_COPY),
+      delete: perms.includes(ProjectPermission.FILE_DELETE),
+    },
+  })
 })
 
 // ── 操作历史（二期 b）：nav-bar 入口 → ProjectAuditLogPopup；定位=文件打开图纸/文件夹跳父目录 ──
@@ -618,7 +597,7 @@ function onTransferSettingsSaved(settings: Partial<ProjectDto>) {
 async function onTransferOwnership(member: { id: string; name: string }) {
   const ok = await projectActions.transferOwnership(projectId.value, member)
   if (ok) {
-    await Promise.all([loadMembers(), loadProjectPermissions()])
+    await Promise.all([loadMembers(), refreshProjectPermissions()])
   }
 }
 
@@ -788,7 +767,7 @@ onMounted(() => {
   initFileList()
   loadMembers()
   loadRoles()
-  loadProjectPermissions()
+  refreshProjectPermissions()
   loadProjectQuota()
   // 从项目列表卡片管理菜单深链进入（?manage=members|roles|transfer|history）：直达对应管理区
   const manage = route.query.manage

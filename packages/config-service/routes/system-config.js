@@ -1,6 +1,7 @@
 const { log, parseBody, sendJson } = require('../lib/utils');
-const { authMiddleware } = require('../lib/session');
-const { parseEnvFile, extractDbNameFromUrl, updateEnvFile } = require('../lib/env');
+const { requireSession } = require('../lib/session');
+const { parseEnvFile, updateEnvFile } = require('../lib/env');
+const { parseDatabaseUrl, composeDatabaseUrl } = require('../lib/database-url');
 const { ENV_PATH, CONFIG_GROUPS } = require('../lib/constants');
 const path = require('path');
 const crypto = require('crypto');
@@ -33,15 +34,13 @@ function sendPasswordResetResult(res, result) {
 
 async function handle(req, res, pathname, method) {
   if (pathname === '/api/config/schema' && method === 'GET') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
     sendJson(res, 200, { groups: CONFIG_GROUPS });
     return true;
   }
 
   if (pathname === '/api/config' && method === 'GET') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const env = parseEnvFile(ENV_PATH);
     const config = {};
@@ -62,8 +61,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/config' && method === 'PUT') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const updates = body.updates || {};
@@ -86,13 +84,19 @@ async function handle(req, res, pathname, method) {
 
     if (hasDbConfigChange) {
       const env = parseEnvFile(ENV_PATH);
-      const dbHost = updates.DB_HOST || env.DB_HOST || 'localhost';
-      const dbPort = updates.DB_PORT || env.DB_PORT || '5432';
-      const dbName = updates.DB_DATABASE || env.DB_DATABASE || extractDbNameFromUrl(env.DATABASE_URL) || 'cloudcad';
-      const dbUser = updates.DB_USERNAME || env.DB_USERNAME || 'postgres';
-      const dbPassword = updates.DB_PASSWORD || env.DB_PASSWORD || 'password';
-      const encodedPassword = encodeURIComponent(dbPassword);
-      updates.DATABASE_URL = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}`;
+      // DATABASE_URL 权威（ADR-0073）：未显式变更的部件优先取现有 URL 的部件，
+      // 再回落 DB_* 环境变量，最后内置默认；查询参数（?sslmode= 等）逐字保留。
+      // 用 DB_* 部件重组会静默丢弃查询串与 URL 内密码——runtime 侧 infra.js 已
+      // 明确拒绝重组，此处对齐（漂移守卫见 runtime/scripts/database-url.test.js）。
+      const cur = parseDatabaseUrl(env.DATABASE_URL);
+      updates.DATABASE_URL = composeDatabaseUrl({
+        host: updates.DB_HOST || cur.host || env.DB_HOST || 'localhost',
+        port: updates.DB_PORT || cur.port || env.DB_PORT || '5432',
+        user: updates.DB_USERNAME || cur.user || env.DB_USERNAME || 'postgres',
+        password: updates.DB_PASSWORD || cur.password || env.DB_PASSWORD || 'password',
+        dbName: updates.DB_DATABASE || cur.dbName || env.DB_DATABASE || 'cloudcad',
+        query: cur.query,
+      });
     }
 
     updateEnvFile(ENV_PATH, updates);
@@ -106,8 +110,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/config/regenerate-jwt' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const newSecret = crypto.randomBytes(64).toString('hex');
     updateEnvFile(ENV_PATH, { JWT_SECRET: newSecret });
@@ -124,8 +127,7 @@ async function handle(req, res, pathname, method) {
   // 审计、重启 backend 全在 runtime/scripts 的 db:reset-password 里，本层只做
   // ADR-0071 允许的输入校验（网页表单带旧密码字段，作为防误改的人机确认）。
   if (pathname === '/api/password/database' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const { oldPassword, newPassword } = body;
@@ -143,8 +145,7 @@ async function handle(req, res, pathname, method) {
 
   // Redis 密码重置（ADR-0073）：同上，成功后按 redis → backend → conversion 重启。
   if (pathname === '/api/password/redis' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const { oldPassword, newPassword } = body;
@@ -166,8 +167,7 @@ async function handle(req, res, pathname, method) {
   // 「必须是 ADMIN 角色」校验全在 runtime/scripts 的 admin:reset-password 里。
   // 网页无法交互询问用户选谁，故先暴露只读的候选列表。
   if (pathname === '/api/password/admin-users' && method === 'GET') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const result = listAdminUsers();
     if (!result || result.ok !== true) {
@@ -187,8 +187,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/password/admin-user' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const username = typeof body.username === 'string' ? body.username.trim() : '';

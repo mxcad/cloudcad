@@ -13,6 +13,8 @@ import { IFunctionExecutor } from '../../function-executor/function-executor.int
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { FileStatus } from '../../common/enums/file-status.enum';
+import { FileSystemService } from '../infra/file-system.service';
+import { FileConversionService } from './file-conversion.service';
 
 describe('AsyncConversionService', () => {
   let service: AsyncConversionService;
@@ -491,6 +493,120 @@ describe('AsyncConversionService', () => {
       );
 
       expect(transitioner.transition).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reconvertNode 走真实 NodeStatusTransitioner（状态机回归）', () => {
+    // 上一节把 NodeStatusTransitioner 整个 mock 掉，validateTransition 从不真正执行，
+    // COMPLETED → PROCESSING 缺边因此一直空绿。这里注入真实转换器（共享同一 prisma
+    // mock）+ 假库状态，锁定「已 COMPLETED 节点重转」全程不被状态机拦死。
+    let service: AsyncConversionService;
+    let prisma: {
+      fileSystemNode: { findUnique: jest.Mock; update: jest.Mock };
+    };
+    let convertFile: jest.Mock;
+    let nodeStatus: FileStatus;
+
+    beforeEach(async () => {
+      const fileSystemService = {
+        getMd5Path: jest.fn((relative: string) => `/abs/${relative}`),
+        exists: jest.fn().mockResolvedValue(true),
+      };
+      convertFile = jest.fn().mockResolvedValue({ isOk: true });
+      nodeStatus = FileStatus.COMPLETED;
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          AsyncConversionService,
+          {
+            provide: IFunctionExecutor,
+            useValue: { invoke: jest.fn() },
+          },
+          {
+            provide: DatabaseService,
+            useValue: {
+              fileSystemNode: { findUnique: jest.fn(), update: jest.fn() },
+            },
+          },
+          // 真实实现：FileStatusStateMachine.validateTransition 会被真正调用
+          NodeStatusTransitioner,
+          {
+            provide: StorageManager,
+            useValue: { getFullPath: jest.fn((p: string) => `/abs/${p}`) },
+          },
+          { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+          {
+            provide: ModuleRef,
+            useValue: {
+              get: jest.fn((token: unknown) =>
+                token === FileSystemService
+                  ? fileSystemService
+                  : { convertFile }
+              ),
+            },
+          },
+        ],
+      }).compile();
+
+      service = module.get<AsyncConversionService>(AsyncConversionService);
+      prisma = (
+        service as unknown as {
+          prisma: { fileSystemNode: { findUnique: jest.Mock; update: jest.Mock } };
+        }
+      ).prisma;
+    });
+
+    // 后台重转 fire-and-forget，需冲刷微任务链后再断言
+    async function flushMicrotasks(count = 12): Promise<void> {
+      for (let i = 0; i < count; i++) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+    }
+
+    it('已 COMPLETED 的 CAD 节点：重转全程 COMPLETED → PROCESSING → COMPLETED', async () => {
+      prisma.fileSystemNode.findUnique.mockImplementation(() =>
+        Promise.resolve({
+          id: 'node-1',
+          name: 'drawing.dwg',
+          fileHash: 'hash-1',
+          // path 为 null：跳过覆盖产物分支（该分支要走真实 fs 扫描）
+          path: null,
+          deletedAt: null,
+          ownerId: 'user-1',
+          taskId: null,
+          fileStatus: nodeStatus,
+        })
+      );
+      // 假库：状态写入回写 nodeStatus，供后续 findUnique 读到迁移后状态
+      prisma.fileSystemNode.update.mockImplementation(
+        (args: { data: { fileStatus?: FileStatus; taskId?: string | null } }) => {
+          if (args.data.fileStatus) nodeStatus = args.data.fileStatus;
+          return Promise.resolve({});
+        }
+      );
+
+      const taskId = await service.reconvertNode('node-1');
+
+      // 曾经的死点：状态机把 COMPLETED → PROCESSING 列为非法，这里恒抛 BadRequestException
+      expect(taskId).toMatch(/^async_re_node-1_\d+$/);
+      expect(prisma.fileSystemNode.update).toHaveBeenCalledWith({
+        where: { id: 'node-1' },
+        data: { fileStatus: FileStatus.PROCESSING },
+      });
+
+      await flushMicrotasks();
+
+      // 后台以原始源重跑引擎（forceConvert 绕过产物就位短路），成功后回写 COMPLETED
+      expect(convertFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          srcPath: '/abs/hash-1.dwg',
+          forceConvert: true,
+        })
+      );
+      expect(prisma.fileSystemNode.update).toHaveBeenCalledWith({
+        where: { id: 'node-1' },
+        data: { fileStatus: FileStatus.COMPLETED },
+      });
+      expect(nodeStatus).toBe(FileStatus.COMPLETED);
     });
   });
 });

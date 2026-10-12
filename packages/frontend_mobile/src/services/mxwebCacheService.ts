@@ -8,6 +8,22 @@ function getCacheKey(path: string): string {
   return `${CACHE_PREFIX}/${cleanPath}`;
 }
 
+/**
+ * 缓存键的「文件路径基」：`local/<path>?t=<ts>` → `local/<path>`。
+ * 入参是调用方经 buildCacheKey 拼好的完整键（未经 local/ 前缀处理）。
+ */
+export function cacheKeyBase(cacheKey: string): string {
+  const key = getCacheKey(cacheKey);
+  const queryIndex = key.indexOf('?');
+  return queryIndex === -1 ? key : key.slice(0, queryIndex);
+}
+
+/** 该键是否属于 base 指向的同一份文件：裸键或任意 `?t=` 版本 */
+export function isCacheKeyOf(key: IDBValidKey, base: string): boolean {
+  if (typeof key !== 'string') return false;
+  return key === base || key.startsWith(base + '?t=');
+}
+
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -58,10 +74,18 @@ export async function setMxwebCache(cacheKey: string, data: ArrayBuffer): Promis
 export async function clearMxwebCache(cacheKey: string): Promise<void> {
   try {
     const db = await openDB();
+    const base = cacheKeyBase(cacheKey);
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       const store = tx.objectStore(STORE_NAME);
-      store.delete(getCacheKey(cacheKey));
+      const keysRequest = store.getAllKeys();
+      keysRequest.onsuccess = () => {
+        // 必须扫掉该文件的全部 ?t= 版本：精确键是 put 之后才存在的新版本键，
+        // 只删精确键等于删了个空，旧版本永久驻留、每次打开/保存净增一条
+        for (const key of keysRequest.result) {
+          if (isCacheKeyOf(key, base)) store.delete(key);
+        }
+      };
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => reject(tx.error);
     });

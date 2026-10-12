@@ -60,8 +60,13 @@ const {
   findMissingLinuxComponents,
   checkScriptLineEndings,
   removeJunkWithSudoFallback,
+  resolveMobileAccessPath,
+  findMissingKeyArtifacts,
   enableImplInEnvExample,
 } = require('./pack-lib/pack-assertions');
+
+// 前端构建唯一出口（pack-linux-deploy.js 与本文件共用，2026-10-09 收敛双份漂移）
+const { buildFrontendLocally } = require('./pack-lib/build-frontend');
 
 // ==================== 配置 ====================
 
@@ -1122,39 +1127,32 @@ function bundlePrismaSchemaEngine() {
 
 /**
  * 复制移动端前端构建产物到前端 dist 子目录下
- * 目标子目录名读自 frontend/public/ini/myServerConfig.json 的 mobileAccessPath（默认 mxcad_mobile）
+ * 目标子目录名由 resolveMobileAccessPath 解析（frontend/public/ini/myServerConfig.json
+ * 的 mobileAccessPath，默认 mxcad_mobile）
  * 部署包与升级包共用：保证升级后的 frontend/dist 与部署包一致（含移动端）
+ *
+ * 源缺失或为空即抛出（不再警告跳过）：移动端是部署包的必备产物，静默跳过会产出
+ * 缺移动端的包且退出码 0。调用方（prepareDeployDir / packUpgrade）各自清理暂存目录。
  * @param {string} tempDir - 打包临时目录
  */
 function mergeMobileDist(tempDir) {
   const mobileDistSrc = path.join(
     PROJECT_ROOT, 'packages', 'frontend_mobile', 'dist'
   );
-  const sourceConfigPath = path.join(
-    PROJECT_ROOT, 'packages', 'frontend', 'public', 'ini', 'myServerConfig.json'
-  );
-  let mobileAccessPath = 'mxcad_mobile';
-  if (fs.existsSync(sourceConfigPath)) {
-    try {
-      const sourceConfig = JSON.parse(fs.readFileSync(sourceConfigPath, 'utf8'));
-      if (sourceConfig.mobileAccessPath && typeof sourceConfig.mobileAccessPath === 'string') {
-        mobileAccessPath = sourceConfig.mobileAccessPath;
-      }
-    } catch (e) {
-      // 读取失败用默认值
-    }
-  }
-  const mobileDistDest = path.join(tempDir, 'packages', 'frontend', 'dist', mobileAccessPath);
-  if (fs.existsSync(mobileDistSrc)) {
-    copyDir(
-      mobileDistSrc,
-      mobileDistDest,
-      `packages/frontend/dist/${mobileAccessPath}`
+  if (!fs.existsSync(mobileDistSrc) || fs.readdirSync(mobileDistSrc).length === 0) {
+    throw new Error(
+      '移动端构建产物不存在或为空: packages/frontend_mobile/dist' +
+        '（部署包/升级包必须含移动端，请先执行 pnpm --filter frontend_mobile build）'
     );
-    log(`复制移动端前端: packages/frontend_mobile/dist/ → packages/frontend/dist/${mobileAccessPath}/`);
-  } else {
-    log('警告: packages/frontend_mobile/dist 不存在，跳过移动端复制');
   }
+  const mobileAccessPath = resolveMobileAccessPath(PROJECT_ROOT);
+  const mobileDistDest = path.join(tempDir, 'packages', 'frontend', 'dist', mobileAccessPath);
+  copyDir(
+    mobileDistSrc,
+    mobileDistDest,
+    `packages/frontend/dist/${mobileAccessPath}`
+  );
+  log(`复制移动端前端: packages/frontend_mobile/dist/ → packages/frontend/dist/${mobileAccessPath}/`);
 }
 
 /**
@@ -1653,8 +1651,15 @@ function prepareDeployDir(platform, variant = 'oss') {
     const destPath = path.join(tempDir, item.dest);
 
     if (!fs.existsSync(srcPath)) {
-      log(`警告: ${item.src} 不存在，跳过`);
-      continue;
+      if (item.optional) {
+        log(`警告: ${item.src} 不存在（可选条目），跳过`);
+        continue;
+      }
+      error(
+        `清单条目缺失: ${item.src}（必需条目），中止打包——否则照常吃残留或缺产物打出坏包`
+      );
+      fs.rmSync(tempDir, { recursive: true, force: true });
+      process.exit(1);
     }
 
     if (item.isDir) {
@@ -1675,6 +1680,17 @@ function prepareDeployDir(platform, variant = 'oss') {
 
   // 复制移动端前端构建产物到前端 dist 子目录下
   mergeMobileDist(tempDir);
+
+  // 关键产物复查：防止"打包成功但缺内容"的静默失败（与升级包共用同一清单）。
+  // 2026-10-09：deploy 路径此前没有这道复查，缺前端 dist 时照常打出缺前端的部署包。
+  const mobileAccessPath = resolveMobileAccessPath(PROJECT_ROOT);
+  const missingArtifacts = findMissingKeyArtifacts(tempDir, variant, mobileAccessPath);
+  if (missingArtifacts.length > 0) {
+    error(`关键产物缺失，部署包不完整，中止: ${missingArtifacts.join(', ')}`);
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    process.exit(1);
+  }
+  log('✓ 关键产物复查通过（backend/db/contracts/frontend/conversion-service dist + 移动端）');
 
   // private 变体：启用包内 .env.example 的 IMPL（目标机从模板生成 .env 时带上）
   enableImplInPackDir(tempDir, variant);
@@ -1861,32 +1877,44 @@ async function packDeploy(platform, variant = 'oss') {
     }
   }
 
-  // 1. 构建（前端已在本地预构建，dist/ 已 COPY 入容器）
+  // 1. 构建（后端）
   log('[1] 构建后端...');
   if (!(await buildProject(variant))) {
     process.exit(1);
   }
 
-  // 2. 可选：替换 mxcad 系列 dist（私有修改，不进 git）并重建前端产物。
+  // 2. 构建前端（PC + 移动端）。纯静态产物，本机直打必须在此构建，否则照常吃磁盘上的
+  // dist 残留——2026-10-09 事故：deploy 路径只构建后端，packages/frontend/dist 缺失时
+  // 清单复制仅打警告后 continue，仍照常打 tar、退出码 0，产出缺前端的部署包。
+  // 容器通道（PACK_IN_CONTAINER=1）跳过：Dockerfile 已在宿主构建前端后 COPY dist 入镜像，
+  // 且容器内未安装前端 devDeps（vite），无法构建。
+  // 必须在 prepareDeployStore 之前——该步 --prod install 会剔除 devDeps（vite）。
+  if (!IN_CONTAINER) {
+    log('');
+    log('[2] 构建前端...');
+    buildFrontendLocally(PROJECT_ROOT);
+  }
+
+  // 3. 可选：替换 mxcad 系列 dist（私有修改，不进 git）并重建前端产物。
   // 必须在 prepareDeployStore 之前——该步 --prod install 会剔除 devDeps（vite），
   // 前端 build 需要 vite。前端产物是 packages/frontend/dist（磁盘文件），
   // 后续 prepareDeployStore 重置 node_modules 不影响。
   // 默认相对路径基于 PROJECT_ROOT，可用环境变量单独覆盖某个包。
   if (process.env.PRIVATE_MXCAD === '1') {
     log('');
-    log('[2] 替换 mxcad 系列 dist（私有版本）...');
+    log('[3] 替换 mxcad 系列 dist（私有版本）...');
     replaceAndBuildDists(getDistTargets());
   }
 
-  // 3. 验证生产依赖 store + 补充全平台 Prisma 引擎（复用 Docker 已建 store，不重装）
+  // 4. 验证生产依赖 store + 补充全平台 Prisma 引擎（复用 Docker 已建 store，不重装）
   log('');
-  log('[3] 准备生产依赖 store...');
+  log('[4] 准备生产依赖 store...');
   await prepareDeployStore(variant);
 
 
-  // 4. 准备打包目录
+  // 5. 准备打包目录
   log('');
-  log('[4] 打包...');
+  log('[5] 打包...');
   const tempDir = prepareDeployDir(platform, variant);
 
   try {
@@ -1974,28 +2002,6 @@ function getUpgradeIncludeList(platform, variant = 'oss') {
 }
 
 /**
- * 在本地构建前端（纯静态，三端通用；移动端 dist 打包时合并进 frontend/dist/<mobileAccessPath>）
- * 升级包/部署包均需先构建前端，保证产物为最新源码。
- */
-function buildFrontendLocally() {
-  log('构建前端 (本地)...');
-  try {
-    execSync('pnpm build', {
-      cwd: path.join(PROJECT_ROOT, 'packages/frontend'),
-      stdio: 'inherit',
-    });
-    execSync('pnpm build', {
-      cwd: path.join(PROJECT_ROOT, 'packages/frontend_mobile'),
-      stdio: 'inherit',
-    });
-    log('✓ 前端构建完成');
-  } catch (err) {
-    error(`前端构建失败: ${err.message.split('\n')[0]}`);
-    process.exit(1);
-  }
-}
-
-/**
  * 升级包打包（路线 B：不带 store，只推业务产物全集）
  * - 固定业务产物全集：backend/db/contracts/frontend dist + prisma migrations +
  *   runtime/scripts + ecosystem + 根启动脚本 + pnpm-lock.yaml
@@ -2030,7 +2036,7 @@ async function packUpgrade(platform, variant = 'oss') {
   }
 
   // 前端为纯静态产物：始终强制重build（PC + 移动端），保证最新源码
-  buildFrontendLocally();
+  buildFrontendLocally(PROJECT_ROOT);
 
   // 可选：替换 mxcad 系列 dist（私有修改）并重建前端产物。放 buildFrontendLocally
   // 之后，保证私有产物是最终态（该函数自身会重建受影响的端）。upgrade 不调
@@ -2056,8 +2062,14 @@ async function packUpgrade(platform, variant = 'oss') {
       const srcPath = path.join(PROJECT_ROOT, item.src);
       const destPath = path.join(tempDir, item.dest);
       if (!fs.existsSync(srcPath)) {
-        log(`警告: ${item.src} 不存在，跳过`);
-        continue;
+        if (item.optional) {
+          log(`警告: ${item.src} 不存在（可选条目），跳过`);
+          continue;
+        }
+        error(
+          `清单条目缺失: ${item.src}（必需条目），中止打包——否则照常吃残留或缺产物打出坏包`
+        );
+        process.exit(1);
       }
       if (item.isDir) {
         copyDir(srcPath, destPath, item.src);
@@ -2077,38 +2089,13 @@ async function packUpgrade(platform, variant = 'oss') {
 
     // 关键产物复查：防止"打包成功但缺内容"的静默失败
     // （曾发生：容器内 impl-mx 因 Windows 风格路径构建假成功，dist 缺失却被警告跳过）
-    const verifyDirs = [
-      path.join(tempDir, 'packages', 'backend', 'dist'),
-      path.join(tempDir, 'packages', 'db', 'dist'),
-      path.join(tempDir, 'packages', 'contracts', 'dist'),
-      path.join(tempDir, 'packages', 'frontend', 'dist'),
-      // 转换服务 dist 恒在包内（共享清单两类包都带），缺失即打包不完整
-      path.join(tempDir, 'packages', 'conversion-service', 'dist'),
-    ];
-    if (variant === 'private') {
-      verifyDirs.push(path.join(tempDir, 'packages', 'impl-mx', 'dist'));
+    const mobileAccessPath = resolveMobileAccessPath(PROJECT_ROOT);
+    const missingArtifacts = findMissingKeyArtifacts(tempDir, variant, mobileAccessPath);
+    if (missingArtifacts.length > 0) {
+      error(`关键产物缺失，升级包不完整，中止: ${missingArtifacts.join(', ')}`);
+      process.exit(1);
     }
-    // 移动端合并目录（与 mergeMobileDist 同一默认值）
-    const sourceConfigPath = path.join(
-      PROJECT_ROOT, 'packages', 'frontend', 'public', 'ini', 'myServerConfig.json'
-    );
-    let mobileAccessPath = 'mxcad_mobile';
-    if (fs.existsSync(sourceConfigPath)) {
-      try {
-        const cfg = JSON.parse(fs.readFileSync(sourceConfigPath, 'utf8'));
-        if (cfg.mobileAccessPath && typeof cfg.mobileAccessPath === 'string') {
-          mobileAccessPath = cfg.mobileAccessPath;
-        }
-      } catch (e) { /* 默认值 */ }
-    }
-    verifyDirs.push(path.join(tempDir, 'packages', 'frontend', 'dist', mobileAccessPath));
-    for (const dir of verifyDirs) {
-      if (!fs.existsSync(dir) || fs.readdirSync(dir).length === 0) {
-        error(`关键产物缺失: ${path.relative(tempDir, dir)}，升级包不完整，中止`);
-        process.exit(1);
-      }
-    }
-    log(`✓ 关键产物复查通过（${verifyDirs.length} 项）`);
+    log('✓ 关键产物复查通过（deploy/upgrade 共用清单）');
 
     // .npmrc（指向目标机已有的 .pnpm-store-deploy：升级包不带 store，
     // 目标机 install --offline 时复用首次部署包留下的 store 补装缺失依赖）

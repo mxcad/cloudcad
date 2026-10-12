@@ -14,6 +14,18 @@
  * Web 应用）、不绑框架、不绑端、重复已成立（逐字节双写）。
  */
 
+/**
+ * 协同列表（在线人数来源）轮询间隔（2s）。
+ *
+ * 在线人数 = cooperate SDK getWorks 返回的 link_user_ids 长度，SDK 无推送
+ * 通道，各端只能独立轮询——间隔越长，成员进出会话在各端收敛的时间差越大
+ * （上限 = 2 × 本间隔）。30s 时不同成员间最长相差 60s，人数明显不一致，
+ * 收紧到 2s 后收敛差上限约 4s。
+ *
+ * PC 与移动端共用此常量，勿在端包各自硬编码（历史上移动端从 8s 对齐到 30s）。
+ */
+export const COLLAB_WORKS_POLL_INTERVAL_MS = 2_000;
+
 export interface CollaborateWorkDataV1 {
   v: 1;
   drawingId: string;
@@ -140,21 +152,24 @@ export function deduplicateWorkUsers(
   const seen = new Set<string>();
   const ids: string[] = [];
   const data: string[] = [];
-  const len = Math.min(linkUserData.length, linkUserIds.length);
+  const len = Math.max(linkUserData.length, linkUserIds.length);
 
   if (linkUserData.length !== linkUserIds.length) {
+    // 服务端会只回 id 不回 data（或反之）：按较长一侧遍历，缺 data 的 id
+    // 仍计入人数。原先按较短一侧截断，会让只剩 1 人的会话被清零显示「0 在线」。
     console.warn('[collaboration] link_user_data length mismatch', linkUserData.length, linkUserIds.length);
   }
 
   for (let i = 0; i < len; i++) {
-    const raw = linkUserData[i];
     const rawId = linkUserIds[i];
-    if (!raw || !rawId) continue;
-    const userData = parseUserData(raw);
-    const userId = userData?.id ?? rawId;
-    if (userId && !seen.has(userId)) {
+    if (!rawId) continue;
+    const raw = linkUserData[i] ?? '';
+    // parseUserData('') 返回 null → 回落 rawId，与 data 缺失同一路径
+    const userId = parseUserData(raw)?.id ?? rawId;
+    if (!seen.has(userId)) {
       seen.add(userId);
       ids.push(rawId);
+      // 缺 data 时用空串占位，保持 ids[i] 与 data[i] 一一对应
       data.push(raw);
     }
   }

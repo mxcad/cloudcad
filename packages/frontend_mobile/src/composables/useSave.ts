@@ -1,6 +1,6 @@
 import { ref, readonly } from 'vue';
 import { t } from '@/languages';
-import { useEditorState } from './useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { useUser } from './useUser';
 import {
   getMxwebBlob,
@@ -54,7 +54,7 @@ function checkLibraryPermission(): boolean {
 async function updateCacheAndState(
   nodeId: string,
   blob: Blob,
-  editorState: ReturnType<typeof useEditorState>
+  editorState: ReturnType<typeof useEditorStore>
 ): Promise<void> {
   try {
     const nodeResult = await nodeControllerGetNode({ path: { nodeId } });
@@ -87,7 +87,7 @@ async function updateCacheAndState(
 
 export function useSave() {
   const saving = ref(false);
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
   const { isAuthenticated } = useUser();
 
   async function save(commitMessage?: string): Promise<SaveResult> {

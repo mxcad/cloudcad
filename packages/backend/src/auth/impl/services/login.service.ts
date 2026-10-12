@@ -113,29 +113,16 @@ export class LoginService {
       );
     }
 
-    // 系统管理员禁止通过普通登录入口认证（专用入口见 AdminAuthController）：
-    // 密码正确也拒绝，且与"账号不存在/密码错误"返回同一防枚举文案，
-    // 不向攻击者暴露该账号是管理员；同时不触发注销恢复等任何 DB 副作用
-    if (user.role?.name === 'ADMIN') {
-      this.logger.warn(
-        `普通登录拒绝 - 系统管理员账号须使用管理员专用入口: ${account}`
-      );
-      throw new UnauthorizedException(
-        I18nContext.current()?.t('error.auth.invalid_credentials') ??
-          '账号或密码错误'
-      );
-    }
-
-    // 注销冷静期自动恢复（仅自助注销，认证通过后才恢复）：恢复成功后继续登录，
-    // 且返回 restored 标记供前端提示；超期由 recoverIfPendingDeletion 抛 ACCOUNT_DEACTIVATED
-    let restored = false;
-    if (user.deletedAt) {
-      const recovered = await this.recoverIfPendingDeletion(user);
-      if (recovered) {
-        // 恢复查询不带 membership，从原记录回填，保证 VIP 信息不丢
-        user = { ...recovered, membership: user.membership };
-        restored = true;
-      }
+    // 登录资格（管理员入口隔离 → 注销冷静期恢复）统一走 assertLoginEligible：
+    // 管理员门在前，保证已注销的 ADMIN 账号不会因一次登录尝试被自动恢复（写库 + user.restored 副作用）
+    const originalMembership = user.membership;
+    const { user: eligibleUser, restored } = await this.assertLoginEligible(
+      user,
+      '普通登录'
+    );
+    if (restored) {
+      // 恢复查询不带 membership，从原记录回填，保证 VIP 信息不丢
+      user = { ...eligibleUser, membership: originalMembership };
     }
 
     if (user.status !== 'ACTIVE') {
@@ -337,5 +324,44 @@ export class LoginService {
       graceDays,
       cleanupDays,
     });
+  }
+
+  /**
+   * post-credential 登录资格断言（普通入口）：管理员入口隔离 → 注销冷静期恢复。
+   *
+   * 顺序固定为「管理员门在前、恢复在后」：已注销的 ADMIN 账号仅凭一次普通入口尝试
+   * （手机码 / 微信 / 邮箱）就会触发 recoverIfPendingDeletion 的写库 + user.restored
+   * 审计副作用，随后又被管理员门拒绝——恢复成为无意义且有害的副作用（把自注销的
+   * 管理员账号拉回 ACTIVE）。密码路径（login）一直是这个顺序，三个 provider 流程此前
+   * 把恢复放在管理员门之前，本方法统一纠正并作为唯一出口。
+   *
+   * 状态校验（ACTIVE / SUSPENDED / INACTIVE，各入口文案不同）留在调用方，本方法不碰。
+   * 仅用于「拒绝管理员」的普通入口；管理员专用入口（AdminAuthService）逻辑相反，不走这里。
+   */
+  async assertLoginEligible(
+    user: UserRecord,
+    entry: string
+  ): Promise<{ user: UserRecord; restored: boolean }> {
+    if (user.role?.name === 'ADMIN') {
+      this.logger.warn(
+        `${entry} 登录拒绝 - 系统管理员账号须使用管理员专用入口: ${
+          user.username || user.email || user.id
+        }`
+      );
+      throw new UnauthorizedException(
+        I18nContext.current()?.t('error.auth.invalid_credentials') ??
+          '账号或密码错误'
+      );
+    }
+
+    let restored = false;
+    if (user.deletedAt) {
+      const recovered = await this.recoverIfPendingDeletion(user);
+      if (recovered) {
+        user = recovered;
+        restored = true;
+      }
+    }
+    return { user, restored };
   }
 }

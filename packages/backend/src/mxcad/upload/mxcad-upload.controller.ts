@@ -72,29 +72,18 @@ export class MxcadUploadController {
     this.logger.log(`[chunkisExist] 参数: ${JSON.stringify(body)}`);
     const context =
       await this.requestContextBuilder.buildContextFromRequest(request);
-    const chunkExistsInStorage =
-      await this.uploadUtilityService.checkChunkExistsInStorage(
-        body.fileHash,
-        body.chunk
-      );
-    if (chunkExistsInStorage) {
-      this.logger.log(
-        `[chunkisExist] 分片存在于 uploads 目录: chunk=${body.chunk}, hash=${body.fileHash}`
-      );
-      return { exists: true };
-    }
-    if (context.userId && context.nodeId) {
-      const result = await this.chunkUploadManager.checkChunkExist({
-        hash: body.fileHash,
-        name: body.filename,
-        size: body.size,
-        chunk: body.chunk,
-        chunks: body.chunks,
-        context,
-      });
-      return { exists: result.ret === MxUploadReturn.kChunkAlreadyExist };
-    }
-    return { exists: false };
+    // 分片存在性单一权威 = chunkUploadManager.checkChunkExist（mxcadTempPath 根，
+    // 与 multer 分片落盘、合并读取同目录）。旧 upload 目录检查指向无任何写入者的
+    // 目录（恒 false），已删除——双根目录问答「谁被先问谁就权威、分歧静默」。
+    const result = await this.chunkUploadManager.checkChunkExist({
+      hash: body.fileHash,
+      name: body.filename,
+      size: body.size,
+      chunk: body.chunk,
+      chunks: body.chunks,
+      context,
+    });
+    return { exists: result.ret === MxUploadReturn.kChunkAlreadyExist };
   }
 
   @Post('files/fileisExist')

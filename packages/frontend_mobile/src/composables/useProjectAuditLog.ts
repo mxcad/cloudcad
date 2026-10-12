@@ -12,6 +12,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
 import { unwrap } from '@/utils/apiError'
+import { usePagedState, type PagedItems } from './usePagedState'
 
 /** 后端 AuditLogListItem（审计日志列表项） */
 export interface AuditLogItem {
@@ -88,18 +89,17 @@ export function isLocatable(log: AuditLogItem): boolean {
 }
 
 export function useProjectAuditLog(getProjectId: () => string) {
-  const logs = ref<AuditLogItem[]>([])
-  const loading = ref(false)
-  const error = ref('')
-  const page = ref(1)
-  const totalPages = ref(1)
-  const total = ref(0)
+  const paged = usePagedState<AuditLogItem>({
+    onError: (e) => {
+      console.error('[useProjectAuditLog] loadLogs:', e)
+      return t('加载失败')
+    },
+  })
+  const { items: logs, page, totalPages, total, loading, error, hasMore } = paged
   const search = ref('')
   const actionFilter = ref('') // 逗号分隔多值
   const memberFilter = ref('') // userId
   const members = ref<AuditMember[]>([])
-
-  const hasMore = computed(() => page.value < totalPages.value)
 
   function buildQuery(p: number) {
     const q: Record<string, string> = { page: String(p), limit: String(PAGE_SIZE) }
@@ -109,33 +109,27 @@ export function useProjectAuditLog(getProjectId: () => string) {
     return q
   }
 
+  // 单页取数：fetcher 闭包捕获搜索/筛选等消费方特有状态，翻页号由 paged 按当前页传入
+  async function fetchPage(pageNo: number): Promise<PagedItems<AuditLogItem>> {
+    const projectId = getProjectId()
+    const res = await projectAuditLogControllerFindByProject({
+      path: { projectId },
+      query: buildQuery(pageNo),
+    })
+    const data = unwrap<{
+      logs?: AuditLogItem[]
+      total?: number
+      page?: number
+      totalPages?: number
+    }>(res)
+    return { items: data.logs ?? [], total: data.total ?? 0, totalPages: data.totalPages ?? 1 }
+  }
+
   async function loadLogs(reset = false): Promise<void> {
     const projectId = getProjectId()
     if (!projectId) return
-    if (reset) page.value = 1
-    loading.value = true
-    error.value = ''
-    try {
-      const res = await projectAuditLogControllerFindByProject({
-        path: { projectId },
-        query: buildQuery(page.value),
-      })
-      const data = unwrap<{
-        logs?: AuditLogItem[]
-        total?: number
-        page?: number
-        totalPages?: number
-      }>(res)
-      const items = data.logs ?? []
-      logs.value = page.value === 1 ? items : [...logs.value, ...items]
-      total.value = data.total ?? 0
-      totalPages.value = data.totalPages ?? 1
-    } catch (e) {
-      console.error('[useProjectAuditLog] loadLogs:', e)
-      error.value = t('加载失败')
-    } finally {
-      loading.value = false
-    }
+    if (reset) paged.resetToFirstPage()
+    await paged.load(fetchPage)
   }
 
   async function loadMembers(): Promise<void> {
@@ -155,9 +149,7 @@ export function useProjectAuditLog(getProjectId: () => string) {
   }
 
   function loadMore() {
-    if (loading.value || page.value >= totalPages.value) return
-    page.value++
-    loadLogs()
+    paged.loadMore(fetchPage)
   }
 
   // ── 按天分组（今天/昨天/更早，与 PC 一致）──

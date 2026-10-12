@@ -2,18 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Crown, X, Minus, Plus } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { usePlanSelectStore } from '@/stores/planSelectStore';
-import { billingControllerCreateOrder } from '@/api-sdk';
 import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { useMembership } from '@/hooks/useMembership';
 import {
   fetchVipOffering,
-  detectTradeType,
   type VipTier,
   type DurationPricing,
 } from '@/hooks/billing/useVipOffering';
 import { usePaymentRefresh } from '@/hooks/billing/usePaymentRefresh';
+import {
+  openPayment,
+  type PaymentDescriptor,
+} from '@/hooks/billing/paymentIntake';
 import { useTierConfigRegistry } from '@/hooks/useTierConfigRegistry';
 import {
   formatConfigValueShort,
@@ -26,14 +28,6 @@ import {
   calculateOriginalPriceInCents,
 } from '@/utils/priceUtils';
 import WechatPayButton from './WechatPayButton';
-
-interface OrderResult {
-  orderNo: string;
-  payParams: Record<string, any> | null;
-  codeUrl: string | null;
-  redirectUrl: string | null;
-  amount: number;
-}
 
 function discountText(bps: number): string {
   if (bps >= 10000) return '';
@@ -89,7 +83,9 @@ export default function PlanSelectOverlay() {
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const [months, setMonths] = useState(1);
   const [view, setView] = useState<ViewState>('selection');
-  const [orderResult, setOrderResult] = useState<OrderResult | null>(null);
+  const [orderResult, setOrderResult] = useState<PaymentDescriptor | null>(
+    null
+  );
   const [orderError, setOrderError] = useState('');
 
   const selectedTier = useMemo(
@@ -201,50 +197,27 @@ export default function PlanSelectOverlay() {
     setPurchasing(true);
     setOrderError('');
     try {
-      const tradeType = detectTradeType();
-      const body: {
-        vipTierId: string;
-        durationPricingId: string;
-        tradeType: 'JSAPI' | 'NATIVE' | 'MWEB' | 'APP';
-        redirectUrl?: string;
-      } = {
+      // 下单 + 响应后协议（SUCCEEDED 对账 / PENDING 守卫 / 描述符提取）
+      // 走 openPayment 唯一出口，tradeType 探测与 MWEB returnUrl 在其内部
+      const outcome = await openPayment({
+        source: 'manual',
         vipTierId: selectedTier.id,
         durationPricingId: matchedDuration.id,
-        tradeType,
-      };
-      if (tradeType === 'MWEB') {
-        const returnUrl = new URL(window.location.href);
-        returnUrl.searchParams.set('paymentReturn', '1');
-        body.redirectUrl = returnUrl.toString();
-      }
-      const res = await billingControllerCreateOrder({
-        throwOnError: true,
-        body,
       });
-      // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
-      // 否则下单失败被误判为"创建订单失败"固定文案（历史 bug）
-      const orderData = res?.data as Record<string, unknown> | undefined;
-      if (orderData?.status === 'SUCCEEDED') {
+      if (outcome.kind === 'already-paid') {
         // 对账兜底：复用的 PENDING 单在微信侧已支付（回调丢失）时后端直接
         // 完成订单并返回终态，刷新会员并关闭弹窗（与支付成功链路同效）
         await refreshAfterPayment();
         close();
         return;
       }
-      if (!orderData || orderData.status !== 'PENDING') {
+      if (outcome.kind !== 'pending') {
         setOrderError(t('创建订单失败'));
         setPurchasing(false);
         return;
       }
-      const result: OrderResult = {
-        orderNo: orderData.orderNo as string,
-        payParams: (orderData.payParams as Record<string, unknown>) ?? null,
-        codeUrl: (orderData.codeUrl as string) ?? null,
-        redirectUrl: (orderData.redirectUrl as string) ?? null,
-        amount: orderData.amount as number,
-      };
-      setOrderResult(result);
-      setPaymentOrder(result);
+      setOrderResult(outcome.descriptor);
+      setPaymentOrder(outcome.descriptor);
       setView('payment');
     } catch (error) {
       setOrderError(getErrorMessage(error) || t('创建订单失败，请重试'));
@@ -254,7 +227,6 @@ export default function PlanSelectOverlay() {
   }, [
     selectedTier,
     matchedDuration,
-    detectTradeType,
     setPurchasing,
     setPaymentOrder,
     refreshAfterPayment,

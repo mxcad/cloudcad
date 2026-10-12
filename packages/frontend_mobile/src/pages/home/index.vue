@@ -25,7 +25,7 @@ import { openDrawing } from '../../services/drawingOpener';
 import { uploadThumbnailForNode } from '../../services/thumbnailService';
 import { isHashLike } from '../../services/publicFileService';
 import { checkLibraryPermissions } from '../../services/permissionService';
-import { useEditorState } from '../../composables/useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { useSave } from '../../composables/useSave';
 import {
   saveAsToCloudTrigger,
@@ -147,7 +147,7 @@ const {
   getVersionFromUrl,
   clearError,
 } = useFileLoader();
-const editorState = useEditorState();
+const editorState = useEditorStore();
 const collabStore = useCollabStore();
 
 /**

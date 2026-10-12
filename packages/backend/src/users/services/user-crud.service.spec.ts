@@ -11,11 +11,13 @@ import { StorageUsageService } from '../../vip/storage-usage/storage-usage.servi
 import { PASSWORD_HASHER } from '../interfaces/password-hasher.interface';
 import { PasswordPolicyService } from '../../auth/services/password-policy.service';
 import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
+import { ACCOUNT_EVENTS_CHANNEL } from '../account-events-sse.constants';
 
 describe('UserCrudService.updateMembership', () => {
   let service: UserCrudService;
   let prisma: any;
   let storageInfoService: { invalidateQuotaCache: jest.Mock };
+  let eventEmitter: { emit: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -71,6 +73,7 @@ describe('UserCrudService.updateMembership', () => {
     }).compile();
 
     service = module.get(UserCrudService);
+    eventEmitter = module.get(EventEmitter2) as { emit: jest.Mock };
   });
 
   it('should throw NotFoundException when user does not exist', async () => {
@@ -120,6 +123,11 @@ describe('UserCrudService.updateMembership', () => {
     expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith(
       'user-1'
     );
+    // 写库后向该用户通道推送账户事件，已登录端（PC/移动）经 SSE 收到即刷新会员态
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ACCOUNT_EVENTS_CHANNEL('user-1'),
+      { type: 'membership-changed' }
+    );
   });
 
   it('should remove membership when tier is 0', async () => {
@@ -132,6 +140,11 @@ describe('UserCrudService.updateMembership', () => {
     });
     expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith(
       'user-1'
+    );
+    // 移除分支同样推送（已登录端需立即感知会员被取消）
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      ACCOUNT_EVENTS_CHANNEL('user-1'),
+      { type: 'membership-changed' }
     );
   });
 });

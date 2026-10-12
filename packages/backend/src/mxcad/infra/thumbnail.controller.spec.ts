@@ -1,8 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ThumbnailController } from './thumbnail.controller';
 import { ThumbnailGenerationService } from './thumbnail-generation.service';
-import { FileSystemNodeService } from '../node/filesystem-node.service';
-import { ConfigService } from '@nestjs/config';
 import { JwtStrategyExecutor } from '../../auth/jwt.strategy.executor';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -11,17 +9,7 @@ describe('ThumbnailController', () => {
 
   const mockThumbnailGenerationService = {
     checkThumbnailExists: jest.fn(),
-  };
-
-  const mockFileSystemNodeService = {
-    findById: jest.fn(),
-  };
-
-  const mockConfigService = {
-    get: jest.fn((key: string) => {
-      if (key === 'filesDataPath') return '/fake/filesData';
-      return undefined;
-    }),
+    saveThumbnail: jest.fn(),
   };
 
   const mockReq = {
@@ -36,8 +24,6 @@ describe('ThumbnailController', () => {
       controllers: [ThumbnailController],
       providers: [
         { provide: ThumbnailGenerationService, useValue: mockThumbnailGenerationService },
-        { provide: FileSystemNodeService, useValue: mockFileSystemNodeService },
-        { provide: ConfigService, useValue: mockConfigService },
       ],
     })
       .overrideGuard(JwtStrategyExecutor)
@@ -141,6 +127,82 @@ describe('ThumbnailController', () => {
         code: -1,
         message: '上传的文件不存在',
       });
+    });
+
+    it('should return 200 with fileName when saveThumbnail succeeds', async () => {
+      mockThumbnailGenerationService.saveThumbnail.mockResolvedValue({
+        success: true,
+        fileName: 'thumbnail.jpg',
+      });
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
+
+      await controller.uploadThumbnail(
+        'node-1',
+        {
+          buffer: Buffer.from('fake-jpg'),
+          mimetype: 'image/jpeg',
+          originalname: 'blob',
+        } as any,
+        res,
+      );
+
+      expect(mockThumbnailGenerationService.saveThumbnail).toHaveBeenCalledWith(
+        'node-1',
+        expect.any(Buffer),
+      );
+      expect(res.json).toHaveBeenCalledWith({
+        code: 0,
+        message: '缩略图上传成功',
+        data: { fileName: 'thumbnail.jpg' },
+      });
+    });
+
+    it('should return 404 when node not found', async () => {
+      mockThumbnailGenerationService.saveThumbnail.mockResolvedValue({
+        success: false,
+        notFound: true,
+      });
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
+
+      await controller.uploadThumbnail(
+        'missing',
+        {
+          buffer: Buffer.from('fake-jpg'),
+          mimetype: 'image/jpeg',
+          originalname: 'blob',
+        } as any,
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it('should return 400 and not call saveThumbnail when mimetype is not jpg', async () => {
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn(),
+      } as any;
+
+      await controller.uploadThumbnail(
+        'node-1',
+        {
+          buffer: Buffer.from('fake-png'),
+          mimetype: 'image/png',
+          originalname: 'blob',
+        } as any,
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockThumbnailGenerationService.saveThumbnail).not.toHaveBeenCalled();
     });
   });
 });

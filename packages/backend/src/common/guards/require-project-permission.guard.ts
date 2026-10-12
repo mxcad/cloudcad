@@ -31,8 +31,8 @@ import {
 } from '../decorators/require-project-permission.decorator';
 import { IS_OPTIONAL_AUTH_KEY } from '../../auth/decorators/optional-auth.decorator';
 import { IS_LIBRARY_PUBLIC_KEY } from '../decorators/library-public.decorator';
-import { ProjectPermission, SystemPermission } from '../enums/permissions.enum';
-import { NodeType } from '@cloudcad/db';
+import { ProjectPermission } from '../enums/permissions.enum';
+import { getLibrarySystemPermission } from '../utils/permission-mapping';
 import {
   IPERMISSION_SERVICE,
   IPermissionService,
@@ -165,10 +165,7 @@ export class RequireProjectPermissionGuard implements CanActivate {
     userId: string,
     rootType: LibraryRootType
   ): Promise<boolean> {
-    const requiredPermission =
-      rootType === NodeType.LIBRARY_DRAWING
-        ? SystemPermission.LIBRARY_DRAWING_MANAGE
-        : SystemPermission.LIBRARY_BLOCK_MANAGE;
+    const requiredPermission = getLibrarySystemPermission(rootType);
 
     const hasPermission =
       await this.systemPermissionService.checkSystemPermission(

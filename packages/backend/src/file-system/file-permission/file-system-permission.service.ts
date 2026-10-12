@@ -20,8 +20,8 @@ import { NodeType } from '@cloudcad/db';
 import {
   ProjectPermission,
   ProjectRole,
-  SystemPermission,
 } from '../../common/enums/permissions.enum';
+import { getLibrarySystemPermission } from '../../common/utils/permission-mapping';
 import { IPROJECT_PERMISSION_SERVICE, IProjectPermissionService } from '../../roles/interfaces/project-permission-service.interface';
 import { IPERMISSION_SERVICE, IPermissionService } from '../../permission/interfaces/permission-service.interface';
 import { DatabaseService } from '../../database/database.service';
@@ -75,10 +75,7 @@ export class FileSystemPermissionService {
       rootType === NodeType.LIBRARY_DRAWING ||
       rootType === NodeType.LIBRARY_BLOCK
     ) {
-      const requiredSystemPermission =
-        rootType === NodeType.LIBRARY_DRAWING
-          ? SystemPermission.LIBRARY_DRAWING_MANAGE
-          : SystemPermission.LIBRARY_BLOCK_MANAGE;
+      const requiredSystemPermission = getLibrarySystemPermission(rootType);
       const hasSystemPermission =
         await this.systemPermissionService.checkSystemPermission(
           userId,

@@ -9,8 +9,8 @@ const state = vi.hoisted(() => ({
 vi.mock('@/languages', () => ({
   t: (key: string) => key,
 }));
-vi.mock('@/composables/useEditorState', () => ({
-  useEditorState: () => {
+vi.mock('@/stores/editor', () => ({
+  useEditorStore: () => {
     if (state.throwOnRead) throw new Error('pinia is not installed');
     return { state };
   },

@@ -74,6 +74,16 @@ export { resolvePlaceholders } from './legal/placeholder';
 export { scorePasswordStrength } from './auth/password-strength';
 export type { PasswordStrengthScore } from './auth/password-strength';
 
+// ── 口令策略预检（长度+复杂度纯判定，弱口令黑名单留后端兜底） ──
+export {
+  PASSWORD_POLICY,
+  validatePasswordPolicy,
+} from './auth/password-policy';
+export type {
+  PasswordPolicyReason,
+  PasswordPolicyResult,
+} from './auth/password-policy';
+
 // ── 角色权限判定（纯判定，会话存储读取留端包） ──
 export { hasAnyPermission } from './auth/permissions';
 
@@ -114,6 +124,7 @@ export { isCollaborationAllowed } from './collaboration/domains';
 
 // ── 协同 wire 协议（与第三方 cooperate SDK 互操作的线上协议，两端唯一实现） ──
 export {
+  COLLAB_WORKS_POLL_INTERVAL_MS,
   encodeUserData,
   encodeV3WorkData,
   parseWorkData,
@@ -129,3 +140,17 @@ export type {
   CollaborateUserData,
   Work,
 } from './collaboration/wire';
+
+// ── 项目权限（跨端单一事实源：枚举 + 依赖图 + 补全/级联算法，label 分组留端包） ──
+export {
+  ProjectPermission,
+  PROJECT_PERMISSION_DEPENDENCIES,
+  PROJECT_ROLE_KEYS,
+  completePermissionDependencies,
+  getDependentPermissions,
+} from './permissions/project';
+export type {
+  ProjectPermissionValue,
+  ProjectRoleKey,
+  PermissionDependencyGraph,
+} from './permissions/project';

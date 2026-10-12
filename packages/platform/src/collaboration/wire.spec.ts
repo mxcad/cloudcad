@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 
 import {
+  COLLAB_WORKS_POLL_INTERVAL_MS,
   deduplicateWorkUsers,
   encodeUserData,
   encodeV3WorkData,
@@ -104,13 +105,28 @@ describe('@cloudcad/platform · collaboration/wire', () => {
     expect(out.linkUserData).toEqual([a, b, 'not-user-data']);
     expect(warn).not.toHaveBeenCalled();
 
-    // 长度不齐 → 告警 + 按较短一侧截断
+    // 长度不齐 → 告警 + 按较长一侧遍历，缺 data 的 id 用空串占位（不截断）
     const out2 = deduplicateWorkUsers(['r-1', 'r-2'], [a]);
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(out2.linkUserIds).toEqual(['r-1']);
-    expect(out2.linkUserData).toEqual([a]);
+    expect(out2.linkUserIds).toEqual(['r-1', 'r-2']);
+    expect(out2.linkUserData).toEqual([a, '']);
+
+    // 反向不齐（data 比 id 多）：多余 data 无 id 归属，丢弃
+    expect(deduplicateWorkUsers(['r-1'], [a, b])).toEqual({
+      linkUserIds: ['r-1'],
+      linkUserData: [a],
+    });
 
     // 空条目跳过
     expect(deduplicateWorkUsers(['', 'r-2'], ['', b]).linkUserIds).toEqual(['r-2']);
+
+    // 回归：只剩 1 人且服务端只回 id 不回 data 时人数仍为 1（曾按 min 截断成 0）
+    const last = deduplicateWorkUsers(['r-1'], []);
+    expect(last.linkUserIds).toEqual(['r-1']);
+    expect(last.linkUserData).toEqual(['']);
+  });
+
+  it('COLLAB_WORKS_POLL_INTERVAL_MS 为 2s：30s 时成员间在线状态收敛差上限 60s', () => {
+    expect(COLLAB_WORKS_POLL_INTERVAL_MS).toBe(2000);
   });
 });

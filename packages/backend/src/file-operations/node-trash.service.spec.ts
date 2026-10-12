@@ -31,7 +31,7 @@ describe('NodeTrashService', () => {
   let nodeSizeResolver: Record<string, jest.Mock>;
   let storageUsageService: Record<string, jest.Mock>;
   let auditLogService: Record<string, jest.Mock>;
-  let executor: Record<string, jest.Mock>;
+  let executor: Record<string, any>;
 
   const fileNode = (overrides: Record<string, unknown> = {}) => ({
     id: 'node-1',
@@ -124,9 +124,11 @@ describe('NodeTrashService', () => {
       log: jest.fn().mockResolvedValue(undefined),
       logProjectNodeAction: jest.fn().mockResolvedValue(undefined),
     };
-    // 默认无 cancelTask（process-pool / cloud-faas 模式），按需用例补上
+    // 默认带 cancelTask（conversion-service 模式，capabilities.cancel=true）；
+    // 「无取消能力」用例按用例把 capabilities.cancel 置 false
     executor = {
       cancelTask: jest.fn().mockResolvedValue({ ok: true, status: 'CANCELLED' }),
+      capabilities: { cancel: true, listTasks: false, batch: false },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -372,8 +374,8 @@ describe('NodeTrashService', () => {
       expect(executor.cancelTask).toHaveBeenCalledWith('async_child-1_2');
     });
 
-    it('执行器无 cancelTask（process-pool / cloud-faas）时直接跳过', async () => {
-      delete executor.cancelTask;
+    it('执行器无取消能力（process-pool / cloud-faas）时直接跳过', async () => {
+      executor.capabilities.cancel = false;
 
       await callCancel(['node-1']);
 

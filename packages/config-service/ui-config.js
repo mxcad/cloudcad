@@ -3,9 +3,14 @@
  * 处理 CAD 编辑器界面配置 myUiConfig.json
  */
 
-const fs = require('fs');
 const path = require('path');
 const { FRONTEND_INI_DIR } = require('../../runtime/scripts/config-paths');
+const {
+  ensureDir,
+  readJsonFile,
+  writeJsonFile,
+  resetFromSource,
+} = require('./lib/ini-store');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const UI_CONFIG_DIR = FRONTEND_INI_DIR;
@@ -99,26 +104,17 @@ const UI_CONFIG_SCHEMA = {
 };
 
 function ensureConfigDir() {
-  if (!fs.existsSync(UI_CONFIG_DIR)) {
-    fs.mkdirSync(UI_CONFIG_DIR, { recursive: true });
-  }
+  ensureDir(UI_CONFIG_DIR);
 }
 
 function getConfig() {
   ensureConfigDir();
-  if (!fs.existsSync(CONFIG_PATH)) {
-    return null;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-  } catch (e) {
-    return null;
-  }
+  return readJsonFile(CONFIG_PATH);
 }
 
 function updateConfig(config) {
   ensureConfigDir();
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  writeJsonFile(CONFIG_PATH, config);
   return config;
 }
 
@@ -330,20 +326,10 @@ function importConfig(newConfig) {
 // 不用内存 DEFAULT_CONFIG——它是字段子集，会丢按钮栏数据）
 function resetConfig() {
   ensureConfigDir();
-  if (!fs.existsSync(SOURCE_PATH)) {
-    return { ok: false, error: '默认配置文件不存在，无法还原' };
-  }
-  try {
-    const sourceConfig = JSON.parse(fs.readFileSync(SOURCE_PATH, 'utf8'));
-    fs.writeFileSync(
-      CONFIG_PATH,
-      JSON.stringify(sourceConfig, null, 2),
-      'utf8'
-    );
-    return { ok: true, data: sourceConfig };
-  } catch (e) {
-    return { ok: false, error: '读取默认配置失败: ' + e.message };
-  }
+  // 不校验 source：ui 的内置 myUiConfig.json 与 UI_CONFIG_SCHEMA 存在漂移
+  // （logoImg 非布尔、footerRightBtnSwitchData 含 schema 未列枚举值），
+  // 强制校验会令 reset 恒失败（见 lib/ini-store.js 说明）。
+  return resetFromSource(SOURCE_PATH, CONFIG_PATH);
 }
 
 module.exports = {

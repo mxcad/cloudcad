@@ -1,17 +1,14 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxSwitch(oldUrl, newUrl, targetPath, username, password, callback) {
-  const args = ['switch', '--relocate', oldUrl, newUrl, targetPath];
+  const args = ['--relocate', oldUrl, newUrl, targetPath];
   if (username) {
     args.push('--username', username);
   }
-  let env;
   if (password) {
     args.push('--password-from-env');
-    env = { ...process.env, SVN_PASSWORD: password };
   }
-  executeSpawn(mxPath, args, env ? { env } : {})
+  mx('switch', args, { password })
     .then(stdout => {
       callback(null, stdout);
     })

@@ -1,6 +1,6 @@
 import { ref, readonly } from 'vue';
 import { versionControlControllerGetFileHistory } from '../api-sdk';
-import { useEditorState } from './useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { openDrawing } from '../services/drawingOpener';
 import type { DrawingOpenRequest } from '../services/drawingOpener';
 import { warmupHistoricalVersion } from '../services/versionWarmup';
@@ -28,7 +28,7 @@ const totalCount = ref(0);
 const error = ref<string | null>(null);
 
 export function useVersionHistory() {
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
 
   async function loadHistory(target?: VersionHistoryTarget): Promise<void> {
     let projectId: string;

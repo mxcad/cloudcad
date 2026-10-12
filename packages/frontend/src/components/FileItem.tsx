@@ -616,6 +616,23 @@ export const FileItem: React.FC<FileItemProps> = ({
     return null;
   }
 
+  // grid 与 list 两形态共用的交互处理器（onMouseEnter/onMouseLeave 因 gallery
+  // 差异各自内联，不在此列）。抽成单一对象消除两分支逐字重复的 7 个交互属性。
+  const interactiveHandlers = {
+    onMouseDown: (e: React.MouseEvent) => {
+      if (hideSelectionCircle && !isRubberBanding) e.stopPropagation();
+    },
+    onClick: handleClick,
+    onDoubleClick: handleDoubleClick,
+    draggable:
+      hideSelectionCircle && !!onDragStart && !node.isRoot && !isRubberBanding,
+    onDragStart: (e: React.DragEvent) => {
+      onDragStart?.(e, node);
+    },
+    onDragOver: (e: React.DragEvent) => onDragOver?.(e, node),
+    onDrop: (e: React.DragEvent) => onDrop?.(e, node),
+  };
+
   if (viewMode === 'grid') {
     const showSelectedStyle = isSelected;
     const showActiveStyle = isActive && !isSelected;
@@ -676,22 +693,7 @@ export const FileItem: React.FC<FileItemProps> = ({
               }
             }
           }}
-          onMouseDown={(e) => {
-            if (hideSelectionCircle && !isRubberBanding) e.stopPropagation();
-          }}
-          onClick={handleClick}
-          onDoubleClick={handleDoubleClick}
-          draggable={
-            hideSelectionCircle &&
-            !!onDragStart &&
-            !node.isRoot &&
-            !isRubberBanding
-          }
-          onDragStart={(e) => {
-            onDragStart?.(e, node);
-          }}
-          onDragOver={(e) => onDragOver?.(e, node)}
-          onDrop={(e) => onDrop?.(e, node)}
+          {...interactiveHandlers}
         >
           {!hideSelectionCircle && (
             <FileItemSelection
@@ -884,22 +886,7 @@ export const FileItem: React.FC<FileItemProps> = ({
             e.currentTarget.style.background = 'transparent';
           }
         }}
-        onMouseDown={(e) => {
-          if (hideSelectionCircle && !isRubberBanding) e.stopPropagation();
-        }}
-        onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
-        draggable={
-          hideSelectionCircle &&
-          !!onDragStart &&
-          !node.isRoot &&
-          !isRubberBanding
-        }
-        onDragStart={(e) => {
-          onDragStart?.(e, node);
-        }}
-        onDragOver={(e) => onDragOver?.(e, node)}
-        onDrop={(e) => onDrop?.(e, node)}
+        {...interactiveHandlers}
       >
         {!hideSelectionCircle && (
           <div className="p-1">

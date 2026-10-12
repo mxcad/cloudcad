@@ -86,7 +86,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             autoComplete="new-password"
             required
             className={`${styles.inputField} ${styles.inputFieldHasToggle}`}
-            placeholder={t('至少8位，包含大小写字母、数字和特殊字符')}
+            placeholder={t('至少10位，包含大小写字母、数字、特殊字符中至少三类')}
             {...register('password')}
             onFocus={() => setFocusedField('password')}
           />

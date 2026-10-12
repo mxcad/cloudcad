@@ -22,6 +22,8 @@ runtime/prisma-engines/
 runtime/docker/*.tar.gz
 runtime/docker/*.log
 runtime/docker/tmp/
+# docker/data：本地 docker 测试运行时数据（PG pgdata 等），不入库
+docker/data/
 # 例外：runtime/windows/node 的依赖清单（package.json + package-lock.json）入库，
 # 作为 reinstall-node-tools.js 重建 pnpm/pm2 的唯一事实源（CI Windows 打包必需）。
 # 其余 node 产物（node.exe / node_modules 等）仍忽略，不入库。
@@ -33,10 +35,11 @@ runtime/docker/tmp/
 # （如 packages/backend/src/auth/data/weak-passwords.ts 是源码须入库）
 /data
 release
-# 本地 mxcad 暂存目录（仅用于上传到 Release，不入库）
+# 本地 mxcad 暂存目录（仅用于上传到 Release，不入库）。
+# 产物索引已移到 scripts/pack-lib/mxcad-registry.json（入库）：本行用 / 结尾排除整个目录，
+# Git 不下钻故子级 ! 例外规则不生效（与上方 :9-12 同规则；曾误以为
+# !mxcad-dist/manifest.json 能入库，实际 git check-ignore 命中父目录、manifest 从未被跟踪）。
 mxcad-dist/
-# 例外：manifest.json（哈希映射，不含二进制）入库，供 release.yml 下载 mxcad 使用
-!mxcad-dist/manifest.json
 # project-env.sh（Git Bash 本地环境文件，由 setup-offline 生成到 runtime/ 下）；
 # 旧版曾落在仓库根目录，新旧两位置一并忽略生成产物；
 # scripts/pack-lib/templates/project-env.sh 作为参考样例入库（不进部署包）

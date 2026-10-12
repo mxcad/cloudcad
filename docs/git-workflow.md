@@ -241,11 +241,13 @@ Release 附件（mxcad 独立 Release，与业务解耦）：
 }
 ```
 
-`scripts/ensure-runtime.js` 行为（ADR-0059）：
-1. 检查本平台【产品二进制】是否就绪：Linux `runtime/linux/mxcad/`、Windows `runtime/windows/mxcad/` + `runtime/windows/mxversion/`。
-2. 检查【标准组件】是否就绪：node / postgresql / redis / svn（Linux `runtime/linux/`，Windows `runtime/windows/`；Windows 的 svn 由 mxversion 提供，无独立 subversion）。
-3. **已就绪 → 直接跳过**（幂等，零开销，不阻塞日常 install）。
-4. 缺失 → 自动从 GitHub Release 下载对应平台×架构的 **runtime 依赖包**（`cloudcad-runtime-deps-<os>-<arch>-<fingerprint>.tar.gz`，内容寻址，见 5.7）并解压到 `runtime/<platform>/`。
+`scripts/ensure-runtime.js` 行为：
+1. 从产物索引 `scripts/pack-lib/mxcad-registry.json` 按【当前平台×当前架构】过滤出应就绪的【产品二进制】：Linux `runtime/linux/mxcad/`；Windows `runtime/windows/mxcad/` + `runtime/windows/mxversion/` + `runtime/windows/postgresql/`（Windows 本地 PG，EDB 官方直链 403 故随产品通道分发）。
+2. **已就绪 → 直接跳过**（幂等，零开销，不阻塞日常 install）。就绪判定按**关键可执行文件**而非「目录非空」——`runtime/windows/node/` 因 `package.json`/`package-lock.json` 入库而恒非空，但干净 clone 下 `node.exe` 并不存在。
+3. 缺失 → 自动从 GitHub Release 下载对应平台×架构的产品二进制并解压到 `runtime/<platform>/<component>/`（经 `scripts/lib/download-sources.js` 多源回退）。
+4. **标准组件（node/postgresql/redis/svn）不走 Release 资产**，按平台分派：
+   - **Windows**：调 `scripts/build-windows-runtime.js` 从官方源下载解压 node/redis 到 `runtime/windows/`（postgresql 已在第 3 步随产品二进制下齐，因其出口断言包含 postgresql，下载顺序有约束）。全程只写 `runtime/windows/`，零系统副作用。
+   - **Linux**：检测本机系统安装（`command -v`）。缺失时打印按发行版适配的安装命令（apt / dnf / yum），装好后提示可选 `sudo node scripts/extract-linux-runtime.js` 提取到 `runtime/linux/`。默认不自动装系统包——`pnpm install` 阶段静默改 apt/dnf 包数据库是重副作用；`CLOUDCAD_AUTO_INSTALL=1` 显式开启才自动装。
 
 > **目标体验**：clone → `pnpm i`（preinstall 自动拉产品二进制 + 缺失的标准组件）→ `pnpm dev`（predev 跑 `prisma generate` + tsc）→ 直接启动。完全不懂开发的人 clone 后开箱即用。
 >
@@ -267,27 +269,28 @@ Release 附件（mxcad 独立 Release，与业务解耦）：
 - **可配置覆盖**：`RUNTIME_DOWNLOAD_URLS`（有序列表，逗号/空格分隔）优先级最高——**未来自己服务器就绪 = 往列表前插一项即优先**。保留 `RUNTIME_DOWNLOAD_URL`（单地址，向后兼容，等价列表长度 1）。
 - **双形态**：① 基地址替换 `<base>/<asset>`（自己服务器/rsync 镜像用）；② 前缀代理 `<mirror>/https://github.com/...`（ghproxy 类公开加速用）。
 - **回退判定 = 超时 + 状态码双判**：每源设连接超时（~10s）+ 读取超时（`RUNTIME_DOWNLOAD_TIMEOUT_MS`，默认 60s），超时或 HTTP 非 2xx 即切下一源；全部失败才报错（提示手动放置 / 设镜像）。**必须判超时**——国内 GitHub 典型症状是「TCP 能连但传输极慢/卡死」。
-- **覆盖范围 = 全链路统一**：dev preinstall（产品二进制 + 标准组件）+ CI（runtime 依赖包 + mxcad 二进制）+ 终端用户部署包下载文档，全部走同一下载助手。
-- **其他环境变量**：`RUNTIME_RELEASE_TAG`（产品二进制 tag，默认 `mxcad-stable`）、`RUNTIME_DEPS_TAG`（runtime 依赖包 tag，默认 `runtime-deps`）、`CLOUDCAD_RUNTIME_TIER`（Linux glibc 档位覆盖，默认按 `/etc/os-release` 探测）。
+- **实际顺序**：用户自定义源 → GitHub 直链 → 内置公开镜像（`resolveSourceList`：先插用户 base，再直链，最后 prefix 代理兜底）。
+- **覆盖范围 = 全链路统一**：dev preinstall（产品二进制）+ CI（产品二进制）+ 终端用户部署包下载文档，全部走同一下载助手。
+- **其他环境变量**：`RUNTIME_RELEASE_TAG`（产品二进制 Release tag，默认 `mxcad-stable`）、`RUNTIME_RELEASE_REPO`（产品二进制所在仓库，默认 `mxcad/cloudcad`）、`CLOUDCAD_RUNTIME_TIER`（Linux glibc 档位覆盖，默认按 `/etc/os-release` 探测）、`CLOUDCAD_SKIP_STD_RUNTIME=1`（跳过标准组件自动拉取）、`CLOUDCAD_AUTO_INSTALL=1`（Linux 缺失时自动装系统包并提取）。
 
 **终端用户自建镜像**：把 Release 资产 rsync 到自己服务器，再设 `RUNTIME_DOWNLOAD_URLS=https://your-server/`（基地址替换形态）即可优先走自己服务器。
 
-### 5.7 runtime 依赖包（Release 复用 + 断网验证硬门禁，ADR-0059）
+### 5.7 Linux 平台物料提取缓存 + 断网验证硬门禁（ADR-0059）
 
 **问题**：`release.yml` 的 `build-linux` 矩阵每个发行版都起 Docker 容器重新 `apt/dnf install` + 提取 node/pg/redis/svn，而 `runtime/cache/`（按发行版隔离的提取缓存）被 `.gitignore` 排除、GitHub runner 恒空 → 每次 release 全部重提。
 
-**方案**（三件事）：
+**历史方案（已下线）**：曾把提取结果打成内容寻址 Release 资产 `cloudcad-runtime-deps-<os>-<arch>-<fingerprint>.tar.gz`（`scripts/pack-runtime-deps.js` + `.github/workflows/runtime-deps.yml` 播种）。该 Release tag 从未实际发布（`/releases/tags/runtime-deps` 恒 404），`release.yml` 的下载步骤因 `.catch → exit 1` 而**每次打 Linux 部署包必失败**——问题被「下载失败」掩盖，容器自身本就具备冷启动提取能力却从未被走到。
 
-1. **runtime 依赖包 = 内容寻址 Release 资产**：node/pg/redis/svn 按 `os × arch` 提取一次，打成 `cloudcad-runtime-deps-<os>-<arch>-<fingerprint>.tar.gz`（fingerprint=组件版本指纹，如 `node20.19.5-pg15-redis5`），上传 Release。CI（`release.yml`）与 dev 机（preinstall）**都只下载该资产**，不再各自提取。版本不变 → 资产名不变 → 永久复用、零重提。
-   - 打包脚本 `scripts/pack-runtime-deps.js`（`--os <os>` Linux Docker 提取 / `--win` Windows）+ `mxcad-dist/manifest.json` 登记「组件×平台×架构 + hash」。
-   - 独立提取 workflow `.github/workflows/runtime-deps.yml`（`workflow_dispatch` 手动播种 + 可选 `schedule` 周期刷新防版本漂移），与 release 解耦。
+**现方案（三件事）**：
+
+1. **复用层从 GitHub Release 下沉到 CI cache**：容器内 `extract-linux-runtime.js` 提取结果落盘到 `runtime/cache/linux-extract/<os>/`，`release.yml` 用 `actions/cache@v4` 缓存该目录（key 含 `scripts/pack-lib/component-versions.js` 的哈希——node/pg/redis 升级 → 哈希变 → 缓存自然失效重提）。冷启动（缓存空）由容器自己 `apt/dnf install` 完成，`pack-linux-deploy.js` 打包前后各做一次关键可执行文件检查，缺失由容器自动重提、重提失败 fail-fast（不产出残缺部署包）。
 2. **发行版收敛 6→3 glibc 档**：`centos7`(glibc2.17) / `ubuntu22`(2.35) / `rocky9`(2.34+)，砍 `ubuntu24`/`rocky8`/`debian`（glibc 重叠或可被代表）。`release.yml` 矩阵 + `pack-linux-deploy.js`/`verify-linux-deploy.js` 的 `OS_BASE_IMAGES` 同步收敛。
 3. **断网启动验证 = release 硬门禁**：每个 build job 产出部署包后，**先跑断网验证、通过才上传** draft Release；任一包验证失败 → 整个 release 失败。
    - Linux：`scripts/verify-linux-deploy.js --os <os>`（`docker run --rm --network none` 断网容器 + 解压包 + 装依赖 + 启 PostgreSQL/Redis/后端/前端 + 全服务健康检查）。
    - Windows：`scripts/verify-windows-deploy.js` + `runtime/docker/Dockerfile.windows-deploy-verify`（`docker run --network none mcr.microsoft.com/windows/servercore:ltsc2022` + 解压 .7z + 跑 Windows 版 verify）。
    - **判定标准 = 全服务健康检查通过**：postgresql（`pg_isready`）、redis（`redis-cli ping`）、backend（API 健康端点 200）、frontend（HTTP 200）、cooperate + config-service（进程存活 + 端口监听）全部通过。
 
-**红线**：runtime 依赖包**只作为打包机/CI 的复用层**，不改变部署包内嵌 runtime 的事实——部署包仍自包含、目标机仍纯离线（store-based 250-350MB 结构不变）。
+**红线**：提取缓存**只作为打包机/CI 的复用层**，不改变部署包内嵌 runtime 的事实——部署包仍自包含、目标机仍纯离线（store-based 250-350MB 结构不变）。GitHub Release 只承担不可自建的 MX 黑盒二进制（`mxcad`、Windows `mxversion` + `postgresql`），索引在 `scripts/pack-lib/mxcad-registry.json`。
 
 ---
 

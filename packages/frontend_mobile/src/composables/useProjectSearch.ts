@@ -6,66 +6,59 @@
  * 后端 searchGlobal 经 searchAllProjects 注入 ancestorPath）。
  * keyword 为空时页面回正常项目列表，本 composable 只持有搜索结果状态与翻页。
  */
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto, NodeListResponseDto, ProjectFilterType } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
 import { unwrap } from '@/utils/apiError'
+import { usePagedState, type PagedItems } from './usePagedState'
 
 export function useProjectSearch() {
-  const results = ref<FileSystemNodeDto[]>([])
-  const loading = ref(false)
-  const error = ref('')
-  const page = ref(1)
-  const totalPages = ref(1)
-  const total = ref(0)
-  const hasMore = computed(() => page.value < totalPages.value)
+  const paged = usePagedState<FileSystemNodeDto>({
+    onError: (e) => {
+      console.error('[useProjectSearch] search:', e)
+      return t('加载失败')
+    },
+  })
+  const { items: results, page, totalPages, total, loading, error, hasMore } = paged
 
   // 最近一次搜索参数（loadMore 翻页用；keyword/filter 由页面驱动）
   let lastKeyword = ''
   let lastFilter: ProjectFilterType = 'all'
 
-  async function search(keyword: string, filter: ProjectFilterType, append = false) {
+  // 单页取数：fetcher 闭包捕获最近一次搜索参数（lastKeyword/lastFilter），翻页号由 paged 按当前页传入
+  async function fetchPage(pageNo: number): Promise<PagedItems<FileSystemNodeDto>> {
+    const res = await nodeControllerSearch({
+      query: {
+        keyword: lastKeyword,
+        scope: 'global',
+        filter: lastFilter,
+        page: pageNo,
+        limit: 30,
+      },
+    })
+    const data = unwrap<NodeListResponseDto>(res)
+    return { items: data.nodes ?? [], total: data.total ?? 0, totalPages: data.totalPages ?? 1 }
+  }
+
+  async function search(keyword: string, filter: ProjectFilterType) {
     if (!keyword) {
       clear()
       return
     }
     lastKeyword = keyword
     lastFilter = filter
-    loading.value = true
-    error.value = ''
-
-    try {
-      const res = await nodeControllerSearch({
-        query: {
-          keyword,
-          scope: 'global',
-          filter,
-          page: page.value,
-          limit: 30,
-        },
-      })
-      const data = unwrap<NodeListResponseDto>(res)
-      results.value = append ? [...results.value, ...(data.nodes ?? [])] : (data.nodes ?? [])
-      total.value = data.total ?? 0
-      totalPages.value = data.totalPages ?? 1
-    } catch (e) {
-      console.error('[useProjectSearch] search:', e)
-      error.value = t('加载失败')
-    } finally {
-      loading.value = false
-    }
+    paged.resetToFirstPage()
+    await paged.load(fetchPage)
   }
 
   function searchFromFirstPage(keyword: string, filter: ProjectFilterType) {
-    page.value = 1
-    void search(keyword, filter, false)
+    void search(keyword, filter)
   }
 
   function loadMore() {
-    if (loading.value || !hasMore.value || !lastKeyword) return
-    page.value++
-    void search(lastKeyword, lastFilter, true)
+    if (!lastKeyword) return
+    paged.loadMore(fetchPage)
   }
 
   function clear() {

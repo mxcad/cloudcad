@@ -15,15 +15,14 @@
  */
 
 const { parseBody, sendJson } = require('../lib/utils');
-const { authMiddleware } = require('../lib/session');
+const { requireSession } = require('../lib/session');
 
 function configResource(prefix, adapter, exportFilename) {
   const base = `/api/${prefix}`;
 
   // PUT 与 import 是同一操作（校验 body 后落盘），共用一个处理函数
   async function handleWrite(req, res) {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const errors = adapter.validateConfig(body);
@@ -39,8 +38,7 @@ function configResource(prefix, adapter, exportFilename) {
 
   async function handle(req, res, pathname, method) {
     if (pathname === base && method === 'GET') {
-      const session = authMiddleware(req, res);
-      if (!session) return true;
+      if (!requireSession(req, res)) return true;
 
       sendJson(res, 200, { success: true, data: adapter.getConfig() });
       return true;
@@ -51,8 +49,7 @@ function configResource(prefix, adapter, exportFilename) {
     }
 
     if (pathname === `${base}/reset` && method === 'POST') {
-      const session = authMiddleware(req, res);
-      if (!session) return true;
+      if (!requireSession(req, res)) return true;
 
       const result = adapter.resetConfig();
 
@@ -69,8 +66,7 @@ function configResource(prefix, adapter, exportFilename) {
     }
 
     if (pathname === `${base}/export` && method === 'GET') {
-      const session = authMiddleware(req, res);
-      if (!session) return true;
+      if (!requireSession(req, res)) return true;
 
       const config = adapter.getConfig();
       res.writeHead(200, {

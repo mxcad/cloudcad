@@ -8,6 +8,7 @@ import { buildOutboundTraceHeaders } from '../common/utils/outbound-trace';
 import { internalServiceSecretHeader } from '../common/utils/internal-service-auth';
 import type {
   IFunctionExecutor,
+  ExecutorCapabilities,
   ConversionTask,
   ConversionResult,
   TaskStatus,
@@ -36,6 +37,12 @@ export class HttpConversionExecutor implements IFunctionExecutor {
   private readonly logger = new Logger(HttpConversionExecutor.name);
   /** 远端执行：经 HTTP 提交到独立转换服务，不回调本服务，无递归风险 */
   readonly isRemote = true;
+  /** 独立服务形态：支持取消 + 逐任务明细；批量原语由 BatchDelegate 装饰器叠加 */
+  readonly capabilities: ExecutorCapabilities = {
+    cancel: true,
+    listTasks: true,
+    batch: false,
+  };
   private readonly client: ConversionServiceClient;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;

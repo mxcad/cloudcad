@@ -18,7 +18,9 @@ import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../storage-management/services/storage-manager.service';
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
-import { PreloadingDataDto, PreloadingFileInfoDto } from '../mxcad/dto/preloading-data.dto';
+import { PreloadingDataDto } from '../mxcad/dto/preloading-data.dto';
+import { FileTypeDetector } from '@cloudcad/contracts';
+import { enrichPreloadingFileInfoList } from '../mxcad/utils/preloading-file-info';
 import {
   findArtifactByHash,
   findReadyArtifactByHash,
@@ -169,9 +171,8 @@ export class PublicFileService {
       throw new BadRequestException(I18nContext.current()?.t('error.file.name_contains_illegal_chars') ?? '文件名包含非法字符');
     }
 
-    const ext = path.extname(extRefFileName).toLowerCase();
-    const isDwgFile = ['.dwg', '.dxf'].includes(ext);
-    const isImageFile = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(ext);
+    const isDwgFile = FileTypeDetector.isCadFile(extRefFileName);
+    const isImageFile = FileTypeDetector.isImageFile(extRefFileName);
 
     if (!isDwgFile && !isImageFile) {
       throw new BadRequestException(I18nContext.current()?.t('error.public_file.type_unsupported') ?? '不支持的文件类型');
@@ -302,8 +303,7 @@ export class PublicFileService {
     const uploadPath = this.uploadService.getUploadPath();
     const srcDir = path.join(uploadPath, srcFileHash);
 
-    const ext = path.extname(extRefFileName).toLowerCase();
-    const isDwgFile = ['.dwg', '.dxf'].includes(ext);
+    const isDwgFile = FileTypeDetector.isCadFile(extRefFileName);
 
     let targetPath: string;
     if (isDwgFile) {
@@ -352,12 +352,12 @@ export class PublicFileService {
           const hashDir = path.join(uploadPath, hash);
 
           // 将原始字符串数组转为包含文件大小和类型的对象数组
-          const externalReference = await this.enrichFileInfoList(
+          const externalReference = await enrichPreloadingFileInfoList(
             rawData.externalReference,
             hashDir,
             'dwg'
           );
-          const images = await this.enrichFileInfoList(
+          const images = await enrichPreloadingFileInfoList(
             rawData.images,
             hashDir,
             'image'
@@ -384,46 +384,6 @@ export class PublicFileService {
     }
 
     return null;
-  }
-
-  /**
-   * 将文件名列表转为包含文件大小和类型的对象列表
-   * @param fileNames 原始文件名列表
-   * @param dirPath 文件所在目录路径
-   * @param defaultType 默认文件类型
-   */
-  private async enrichFileInfoList(
-    fileNames: string[],
-    dirPath: string,
-    defaultType: 'dwg' | 'image',
-  ): Promise<PreloadingFileInfoDto[]> {
-    if (!fileNames || fileNames.length === 0) return [];
-
-    const results: PreloadingFileInfoDto[] = [];
-    for (const name of fileNames) {
-      let size = 0;
-      let type = defaultType;
-
-      const ext = path.extname(name).toLowerCase();
-      const isDwgFile = ['.dwg', '.dxf'].includes(ext);
-      const isImageFile = ['.png', '.jpg', '.jpeg', '.jfif', '.gif', '.webp', '.bmp'].includes(ext);
-      if (isDwgFile) type = 'dwg';
-      else if (isImageFile) type = 'image';
-
-      // DWG 文件需要 .mxweb 后缀
-      const targetFileName = isDwgFile ? `${name}.mxweb` : name;
-      const targetPath = path.join(dirPath, targetFileName);
-
-      try {
-        const stat = await fs.promises.stat(targetPath);
-        size = stat.size;
-      } catch {
-        // 文件不存在时 size 保持 0
-      }
-
-      results.push({ name, size, type });
-    }
-    return results;
   }
 
   /**

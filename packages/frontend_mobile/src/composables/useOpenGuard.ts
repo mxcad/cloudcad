@@ -1,6 +1,6 @@
 import { showConfirmDialog } from 'vant';
 import { t } from '@/languages';
-import { useEditorState } from '@/composables/useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { useSave } from '@/composables/useSave';
 import { confirmExitCollaborationIfNeeded } from '@/composables/useCooperate';
 
@@ -19,7 +19,7 @@ export function useOpenGuard() {
     const collabOk = await confirmExitCollaborationIfNeeded();
     if (!collabOk) return false;
 
-    const editorState = useEditorState();
+    const editorState = useEditorStore();
     if (!editorState.state.isModified) return true;
 
     const { save } = useSave();

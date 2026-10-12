@@ -18,6 +18,7 @@ interface ExecutorFixture {
   queueStats?: jest.Mock;
   durationStats?: jest.Mock;
   listTasks?: jest.Mock;
+  capabilities?: { cancel: boolean; listTasks: boolean; batch: boolean };
 }
 
 function makeService(fixture: ExecutorFixture): ConversionMonitorService {
@@ -247,6 +248,7 @@ describe('ConversionMonitorService', () => {
       ];
       const service = makeService({
         listTasks: jest.fn().mockResolvedValue(records),
+        capabilities: { cancel: false, listTasks: true, batch: false },
       });
 
       const list = await service.listTasks();
@@ -266,14 +268,19 @@ describe('ConversionMonitorService', () => {
 
     it('should forward the status filter to the executor', async () => {
       const listTasks = jest.fn().mockResolvedValue([]);
-      const service = makeService({ listTasks });
+      const service = makeService({
+        listTasks,
+        capabilities: { cancel: false, listTasks: true, batch: false },
+      });
 
       await service.listTasks('failed');
       expect(listTasks).toHaveBeenCalledWith('failed');
     });
 
     it('should return an empty list when the executor has no task store', async () => {
-      const service = makeService({});
+      const service = makeService({
+        capabilities: { cancel: false, listTasks: false, batch: false },
+      });
 
       const list = await service.listTasks();
       expect(list).toEqual({ items: [], total: 0 });
@@ -282,6 +289,7 @@ describe('ConversionMonitorService', () => {
     it('should degrade to an empty list when the executor rejects', async () => {
       const service = makeService({
         listTasks: jest.fn().mockRejectedValue(new Error('ECONNREFUSED')),
+        capabilities: { cancel: false, listTasks: true, batch: false },
       });
 
       const list = await service.listTasks();

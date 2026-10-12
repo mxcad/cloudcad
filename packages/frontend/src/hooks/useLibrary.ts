@@ -3,12 +3,13 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { FileSystemNode } from '../types/filesystem';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { useFileBrowserSelection } from './file-browser/useFileBrowserSelection';
+import { useDebouncedValue } from './useDebouncedValue';
 import { useLibraryQuery } from './library/useLibraryQuery';
 import type { LibraryType } from './library/useLibraryQuery';
 
@@ -109,16 +110,9 @@ export const useLibrary = (
     (params.libraryType as LibraryType) || 'drawing';
   const urlNodeId = params.nodeId;
 
-  // ── 搜索防抖 ──
+  // ── 搜索防抖（useDebouncedValue 唯一出口） ──
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
 
   // ── 视图模式（使用全局 fileSystemStore，与 FileSystemManager 共享状态） ──
   const viewMode = useFileSystemStore((s) => s.viewMode);

@@ -1,64 +1,55 @@
-const { spawn } = require('child_process');
 const { SVN_CONFIG } = require('../lib/constants');
 const { log } = require('../lib/utils');
 
+// mx() 单一 adapter（@cloudcad/mx-version-tool 的 A5 收敛出口）。
+// 旧实现 spawn `node <mxcmd.js> <args>`，但 mxcmd.js 是模块、不解析 argv，
+// 于是 commit/history/cat 全部静默以退出码 0 结束——commit 谎报成功、history 恒空、
+// cat 恒空缓冲。改为进程内直接调用 mx()：argv 由 mx() 无 shell spawn，
+// 凭据/错误/Buffer 协议与 backend 的 MxVersionControlProvider 共用同一份实现。
+const { mx: defaultMx } = require(SVN_CONFIG.mxToolPath);
+
+/**
+ * 解析 `svn log --xml` 输出为 {revision, author, timestamp, message} 列表。
+ * svn log 默认按 revision 降序（新→旧），与 backend HttpVersionControlProvider
+ * 「storage-service 返回新→旧，反转成旧→新」的约定一致。
+ * 零依赖：按 <logentry> 块 + 各标签正则提取（XML 结构由 svn 固定保证）。
+ */
+function parseLogXml(xml) {
+  const entries = [];
+  const entryRe = /<logentry revision="(\d+)"[^>]*>([\s\S]*?)<\/logentry>/g;
+  let m;
+  while ((m = entryRe.exec(xml)) !== null) {
+    const body = m[2];
+    const pick = (tag) => {
+      const mm = body.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`));
+      return mm ? mm[1] : '';
+    };
+    entries.push({
+      revision: parseInt(m[1], 10),
+      author: pick('author'),
+      timestamp: pick('date'),
+      message: pick('msg'),
+    });
+  }
+  return entries;
+}
+
 /**
  * SVN 操作代理
- * 通过 mx 命令行工具封装 SVN 操作
+ * 通过 @cloudcad/mx-version-tool 的 mx() adapter 封装 SVN 操作（进程内调用）。
  *
- * 安全说明：使用 spawn（非 exec）传参数数组，避免 filePath/message
- * 中的特殊字符被 shell 解释（命令注入）。
+ * 安全说明：mx() 用 spawn（非 exec）传参数数组，filePath/message 中的特殊字符
+ * 不会被 shell 解释（命令注入）；密码走 env 绝不上 argv。
  */
 class SvnAgent {
-  _run(args, { encoding = 'utf8', timeout = 30000, maxBuffer } = {}) {
-    return new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [SVN_CONFIG.mxToolPath, ...args], {
-        windowsHide: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-      const stdout = [];
-      const stderr = [];
-      let stdoutBytes = 0;
-      let timer;
-      const fail = (err) => {
-        clearTimeout(timer);
-        reject(err);
-      };
-      child.stdout.on('data', (c) => {
-        // spawn 无内置 maxBuffer，手动统计 stdout 字节数并在超限时中止
-        // （等价于 exec 的 maxBuffer 语义，cat 传 50MB 即在此生效）
-        if (maxBuffer != null && stdoutBytes + c.length > maxBuffer) {
-          child.kill('SIGKILL');
-          fail(new Error('SVN 命令 stdout 超过 maxBuffer 限制'));
-          return;
-        }
-        stdout.push(c);
-        stdoutBytes += c.length;
-      });
-      child.stderr.on('data', (c) => stderr.push(c));
-      timer = setTimeout(() => {
-        child.kill('SIGKILL');
-        fail(new Error('SVN 命令超时'));
-      }, timeout);
-      child.on('error', (err) => fail(err));
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        const out = Buffer.concat(stdout);
-        const err = Buffer.concat(stderr);
-        if (code === 0) return resolve(encoding === 'buffer' ? out : out.toString(encoding));
-        const message = err.length
-          ? err.toString('utf8').trim()
-          : `SVN 命令退出码 ${code}`;
-        reject(new Error(message));
-      });
-    });
+  constructor(deps = {}) {
+    this.mx = deps.mx || defaultMx;
   }
 
   async commit(filePath, message) {
     try {
-      const stdout = await this._run(['commit', filePath, message], {
-        timeout: 30000,
-      });
+      // spawn 无 shell，-m 的多行/特殊字符消息作为单个 argv 元素安全传递
+      const stdout = await this.mx('commit', [filePath, '-m', message]);
       log(`[SVN] 提交成功: ${filePath}`);
       return { success: true, output: String(stdout).trim() };
     } catch (err) {
@@ -69,20 +60,10 @@ class SvnAgent {
 
   async history(filePath) {
     try {
-      const stdout = await this._run(['history', filePath], {
-        timeout: 30000,
-      });
-      const lines = String(stdout).trim().split('\n').filter(Boolean);
-      return lines.map((line) => {
-        const parts = line.split('|').map((s) => s.trim());
-        return {
-          revision: parseInt(parts[0], 10) || 0,
-          author: parts[1] || '',
-          timestamp: parts[2] || '',
-          message: parts.slice(3).join('|') || '',
-        };
-      });
+      const stdout = await this.mx('log', [filePath, '--xml']);
+      return parseLogXml(String(stdout));
     } catch (err) {
+      // 路径尚无历史（首次提交前）时 svn log 报 E160013 → 视为空历史
       log(`[SVN] 获取历史失败: ${err.message}`);
       return [];
     }
@@ -90,12 +71,11 @@ class SvnAgent {
 
   async cat(filePath, revision) {
     try {
-      const stdout = await this._run(['cat', filePath, '-r', String(revision)], {
-        timeout: 30000,
-        encoding: 'buffer',
+      const args = revision ? ['-r', String(revision), filePath] : [filePath];
+      return await this.mx('cat', args, {
+        buffer: true,
         maxBuffer: 50 * 1024 * 1024,
       });
-      return stdout;
     } catch (err) {
       log(`[SVN] cat 失败: ${err.message}`);
       throw err;
@@ -104,3 +84,4 @@ class SvnAgent {
 }
 
 module.exports = SvnAgent;
+module.exports.parseLogXml = parseLogXml;

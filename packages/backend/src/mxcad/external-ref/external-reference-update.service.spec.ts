@@ -24,7 +24,6 @@ import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { ExternalReferenceUpdateService } from './external-reference-update.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
-import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
 
 describe('ExternalReferenceUpdateService — 路径遍历防护', () => {
@@ -38,9 +37,6 @@ describe('ExternalReferenceUpdateService — 路径遍历防护', () => {
     findById: jest.fn(),
     findFileByIdNotDeleted: jest.fn(),
   };
-  const mockStorageManager = {
-    getFullPath: jest.fn(),
-  };
   const mockExtRefPreloadingService = {
     getExtRefDirName: jest.fn(),
     getPreloadingFileName: jest.fn(),
@@ -52,7 +48,6 @@ describe('ExternalReferenceUpdateService — 路径遍历防护', () => {
         ExternalReferenceUpdateService,
         { provide: ConfigService, useValue: mockConfigService },
         { provide: FileSystemNodeService, useValue: mockFileSystemNodeService },
-        { provide: StorageManager, useValue: mockStorageManager },
         {
           provide: ExtRefPreloadingService,
           useValue: mockExtRefPreloadingService,
@@ -69,7 +64,6 @@ describe('ExternalReferenceUpdateService — 路径遍历防护', () => {
     mockExtRefPreloadingService.getPreloadingFileName.mockReturnValue(
       'node1.mxweb_preloading.json'
     );
-    mockStorageManager.getFullPath.mockReturnValue('/full/path');
     jest.spyOn(service as any, 'getStorageRootPath').mockResolvedValue(root);
   });
 

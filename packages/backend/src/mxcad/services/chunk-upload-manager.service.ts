@@ -30,6 +30,15 @@ export class ChunkUploadManagerService {
     this.logger.log(`分片上传限流器初始化: 最大并发数=${maxConcurrent}`);
   }
 
+  /**
+   * 分片存在性检查——全仓单一权威。
+   *
+   * 根目录 = mxcadTempPath（`getChunkTempDirPath`），与 multer 分片落盘
+   * （mxcad-core.module diskStorage destination）和合并读取
+   * （DrawingIngestService.ingestChunks）同一目录。历史缺陷：controller 曾先问
+   * UploadUtilityService 的 mxcadUploadPath 检查（该目录下无任何分片写入者，
+   * 恒 false），双根目录问答「谁被先问谁就权威、分歧静默」，已收敛为本方法。
+   */
   async checkChunkExist(
     options: UploadChunkOptions
   ): Promise<{ ret: MxUploadReturn }> {
@@ -128,6 +137,8 @@ export class ChunkUploadManagerService {
           }
         );
       } else {
+        // 非末片：分片内容已由 multer diskStorage 落盘到 mxcadTempPath
+        // （mxcad-core.module destination），本方法无需再写盘，仅确认接收。
         this.logger.log(`[uploadChunk] 保存分片: hash=${hash}, chunk=${chunk}`);
         return { ret: MxUploadReturn.kOk };
       }

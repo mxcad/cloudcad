@@ -13,12 +13,7 @@ import type { SearchFilterValues } from '@/components/search/SearchFilters';
 import { t } from '@/languages';
 import type { ProjectQuotaDto } from '@/api-sdk';
 import { formatFileSize } from '@/utils/fileUtils';
-
-interface BreadcrumbItem {
-  id: string;
-  name: string;
-  isRoot?: boolean;
-}
+import type { BreadcrumbItem } from '@/lib/ancestorPath';
 
 export interface FileSystemHeaderProps {
   mode: 'project' | 'personal-space';

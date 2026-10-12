@@ -9,6 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { ensureDir, readJsonFile, writeJsonFile } = require('./lib/ini-store');
 
 // 品牌配置保存到 dist 目录，因为部署包使用的是 dist
 const BRAND_DIR = path.join(__dirname, '..', 'frontend', 'dist', 'brand');
@@ -51,33 +52,24 @@ const DEFAULT_CONFIG = {
 };
 
 function ensureBrandDir() {
-  if (!fs.existsSync(BRAND_DIR)) {
-    fs.mkdirSync(BRAND_DIR, { recursive: true });
-  }
+  ensureDir(BRAND_DIR);
 }
 
 function getConfig() {
   ensureBrandDir();
   if (!fs.existsSync(CONFIG_PATH)) {
-    fs.writeFileSync(
-      CONFIG_PATH,
-      JSON.stringify(DEFAULT_CONFIG, null, 2),
-      'utf8'
-    );
+    writeJsonFile(CONFIG_PATH, DEFAULT_CONFIG);
     return { ...DEFAULT_CONFIG };
   }
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-  } catch (e) {
-    return { ...DEFAULT_CONFIG };
-  }
+  const data = readJsonFile(CONFIG_PATH);
+  return data != null ? data : { ...DEFAULT_CONFIG };
 }
 
 function updateConfig(updates) {
   ensureBrandDir();
   const config = getConfig();
   Object.assign(config, updates);
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  writeJsonFile(CONFIG_PATH, config);
   return config;
 }
 

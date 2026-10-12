@@ -79,6 +79,8 @@ installCache(OPS_PATH, {
 installCache(SESSION_PATH, {
   ...realSession,
   authMiddleware: () => (authed ? { userId: 'tester' } : null),
+  // requireSession 与 authMiddleware 同源（守卫语义 = 是否取到 session）
+  requireSession: () => authed,
 });
 installCache(ENV_PATH, {
   ...realEnv,

@@ -216,8 +216,11 @@ describe('SaveController', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw when target folder not found', async () => {
-      mockNodeService.findByIdWithDeletedAt.mockResolvedValue(null);
+    it('should propagate service failure (target folder not found) as 400', async () => {
+      mockSaveAsService.saveMxwebAs.mockResolvedValue({
+        success: false,
+        message: '目标文件夹不存在',
+      });
 
       await expect(
         controller.saveMxwebAs(
@@ -228,10 +231,10 @@ describe('SaveController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw when target is not a folder', async () => {
-      mockNodeService.findByIdWithDeletedAt.mockResolvedValue({
-        id: 'file-1',
-        nodeType: 'FILE',
+    it('should propagate service failure (target not a folder) as 400', async () => {
+      mockSaveAsService.saveMxwebAs.mockResolvedValue({
+        success: false,
+        message: '目标必须是文件夹',
       });
 
       await expect(
@@ -243,12 +246,11 @@ describe('SaveController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw when project save lacks permission', async () => {
-      mockNodeService.findByIdWithDeletedAt.mockResolvedValue({
-        id: 'parent-1',
-        nodeType: 'FOLDER',
+    it('should propagate service failure (lacks permission) as 400', async () => {
+      mockSaveAsService.saveMxwebAs.mockResolvedValue({
+        success: false,
+        message: '您没有权限保存到此项目',
       });
-      mockPermissionService.checkNodePermission.mockResolvedValue(false);
 
       await expect(
         controller.saveMxwebAs(

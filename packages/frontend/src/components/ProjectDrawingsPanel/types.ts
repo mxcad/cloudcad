@@ -8,11 +8,6 @@ import type { FileSystemNode } from '@/types/filesystem';
 /** 库类型 */
 export type LibraryType = 'drawing' | 'block';
 
-export interface BreadcrumbItem {
-  id: string;
-  name: string;
-}
-
 export interface ProjectDrawingsPanelProps {
   /** 项目 ID（编辑器当前打开的项目，用于"我的项目"Tab 的初始选择） */
   projectId?: string;

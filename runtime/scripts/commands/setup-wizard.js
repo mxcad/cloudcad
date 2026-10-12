@@ -25,8 +25,11 @@ const { PORTS, BACKEND_ENV_PATH } = require('../lib/context');
 const { PRODUCT_NAME } = require('../lib/branding');
 const { colors, log, brandBox } = require('../lib/logger');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
+const { parseDatabaseUrl, composeDatabaseUrl } = require('../lib/database-url');
 const { getAdminLoginPath } = require('../lib/admin-login');
 const { saveCredentialBackup, credentialFilePath } = require('../lib/credentials');
+// 强随机口令生成：单一事实源 lib/secret-generator.js（ADR-0074，与 setup-offline 共用）
+const { generateStrongPassword } = require('../lib/secret-generator');
 const {
   promptPassword,
   promptPasswordWithConfirm,
@@ -86,31 +89,6 @@ function generateNumericPassword(length = 10) {
  */
 function generateJwtSecret(length = 32) {
   return generateNumericPassword(length);
-}
-
-/**
- * 生成符合口令策略的强随机口令（#416 等保 8.1.4.1）：
- * 长度 16，覆盖小写/大写/数字/特殊字符四类（满足"四类至少三类"），
- * 随机生成不会命中弱口令黑名单。用于生成 INITIAL_ADMIN_PASSWORD。
- */
-function generateStrongPassword() {
-  const lower = 'abcdefghijklmnopqrstuvwxyz';
-  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const digits = '0123456789';
-  const special = '!@#$%^&*-_=+?';
-  const all = lower + upper + digits + special;
-  const rand = (chars) => chars[crypto.randomInt(chars.length)];
-  // 保证四类各至少一个，其余随机补齐到 16 位
-  const chars = [rand(lower), rand(upper), rand(digits), rand(special)];
-  while (chars.length < 16) {
-    chars.push(rand(all));
-  }
-  // Fisher-Yates 洗牌打散位置
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1);
-    [chars[i], chars[j]] = [chars[j], chars[i]];
-  }
-  return chars.join('');
 }
 
 /**
@@ -276,14 +254,17 @@ async function runSetupWizard() {
     const hasDbConfigChange = dbConfigKeys.some((key) => updates[key]);
 
     if (hasDbConfigChange) {
-      const dbHost = updates.DB_HOST || envConfig.DB_HOST || 'localhost';
-      const dbPort = updates.DB_PORT || envConfig.DB_PORT || '5432';
-      const dbName = updates.DB_DATABASE || envConfig.DB_DATABASE || 'cloudcad';
-      const dbUser = updates.DB_USERNAME || envConfig.DB_USERNAME || 'postgres';
-      const dbPassword =
-        updates.DB_PASSWORD || envConfig.DB_PASSWORD || 'password';
-      const encodedPassword = encodeURIComponent(dbPassword);
-      updates.DATABASE_URL = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}`;
+      // DATABASE_URL 权威（ADR-0073）：未显式变更的部件优先取现有 URL 的部件，
+      // 再回落 DB_* 环境变量，最后内置默认；查询参数逐字保留（勿用 DB_* 重组）。
+      const cur = parseDatabaseUrl(envConfig.DATABASE_URL);
+      updates.DATABASE_URL = composeDatabaseUrl({
+        host: updates.DB_HOST || cur.host || envConfig.DB_HOST || 'localhost',
+        port: updates.DB_PORT || cur.port || envConfig.DB_PORT || '5432',
+        user: updates.DB_USERNAME || cur.user || envConfig.DB_USERNAME || 'postgres',
+        password: updates.DB_PASSWORD || cur.password || envConfig.DB_PASSWORD || 'password',
+        dbName: updates.DB_DATABASE || cur.dbName || envConfig.DB_DATABASE || 'cloudcad',
+        query: cur.query,
+      });
     }
 
     updateEnvFile(BACKEND_ENV_PATH, updates);
@@ -477,13 +458,17 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
  * @param {Record<string,string>} envConfig 现有 .env 配置
  */
 async function writeFinalEnv(updates, envConfig) {
-  // 同步更新 DATABASE_URL
-  const dbHost = envConfig.DB_HOST || 'localhost';
-  const dbPort = envConfig.DB_PORT || '5432';
-  const dbName = envConfig.DB_DATABASE || 'cloudcad';
-  const dbUser = envConfig.DB_USERNAME || 'postgres';
-  const encodedPassword = encodeURIComponent(updates.DB_PASSWORD);
-  updates.DATABASE_URL = `postgresql://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}`;
+  // 同步更新 DATABASE_URL：已确认的新密码（updates.DB_PASSWORD）为权威，其余部件
+  // 回落链与写入器 1 一致；查询参数逐字保留（勿用 DB_* 重组）。
+  const cur = parseDatabaseUrl(envConfig.DATABASE_URL);
+  updates.DATABASE_URL = composeDatabaseUrl({
+    host: envConfig.DB_HOST || cur.host || 'localhost',
+    port: envConfig.DB_PORT || cur.port || '5432',
+    user: envConfig.DB_USERNAME || cur.user || 'postgres',
+    password: updates.DB_PASSWORD || cur.password || envConfig.DB_PASSWORD || 'password',
+    dbName: envConfig.DB_DATABASE || cur.dbName || 'cloudcad',
+    query: cur.query,
+  });
   // 标记密码已确认（供 CLI 判断后续启动命令是否仍需首次密码确认）
   updates.PASSWORD_INITIALIZED = '1';
   updateEnvFile(BACKEND_ENV_PATH, updates);

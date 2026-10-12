@@ -12,13 +12,27 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AppConfig } from '../../config/app.config';
 import { NodeUtils } from '../../common/utils/node-utils';
 
+/**
+ * 磁盘探测失败原因。
+ * 探测失败与「磁盘真满」必须可区分——前者是运维问题，后者才是空间问题。
+ */
+export type DiskStatsReason =
+  | 'path-unreachable' // 路径不存在、挂载丢失或不可达（ENOENT 等）
+  | 'statfs-unavailable'; // 运行时 Node 版本过旧，无 fs.statfs
+
 export interface DiskStats {
+  /**
+   * 是否成功测得。false 时 total/free/used 全为 0——那是「没测到」的占位值，
+   * 不是实测值，禁止直接拿 free 与容量阈值比较。
+   */
+  ok: boolean;
+  /** ok=false 时的原因 */
+  reason?: DiskStatsReason;
   path: string;
   total: number; // 总容量（字节）
   free: number; // 可用空间（字节）
@@ -50,152 +64,63 @@ export class DiskMonitorService {
   /**
    * 获取磁盘统计信息
    * @param filePath 文件路径（默认为 FILES_DATA_PATH）
-   * @returns 磁盘统计信息
+   * @returns 磁盘统计信息；探测失败时 ok=false 且 total/free/used 为 0
    */
   getDiskStats(filePath?: string): DiskStats {
-    const targetPath = filePath || this.filesDataPath;
-    const resolvedPath = path.resolve(targetPath);
+    const resolvedPath = path.resolve(filePath || this.filesDataPath);
 
+    // Node 18.15.0+ 才有 fs.statfs；本仓 node floor >=20，正常不会命中
+    if (typeof fs.statfsSync !== 'function') {
+      this.logger.error(
+        `fs.statfs unavailable, cannot read disk stats: ${resolvedPath}`
+      );
+      return this.unavailable(resolvedPath, 'statfs-unavailable');
+    }
+
+    let stats: fs.StatsFs;
     try {
-      // 获取磁盘信息（Windows 和 Linux/macOS 兼容）
-      fs.statSync(resolvedPath);
-      const drive = path.parse(resolvedPath).root || resolvedPath;
-
-      // 获取磁盘空间信息
-      const diskInfo = this.getDiskInfo(drive);
-
-      return {
-        path: drive,
-        total: diskInfo.total,
-        free: diskInfo.free,
-        used: diskInfo.used,
-        usagePercentage: diskInfo.usagePercentage,
-      };
+      // 直接对目标路径查询其所在卷——不再把路径猜成盘符去问 WMIC。
+      // 旧实现对 UNC 路径 / 未挂载盘符必然查不到实例，且 WMIC 查无结果时
+      // 退出码仍为 0，正则落空后会静默返回全 0，被调用方当成「磁盘已满」。
+      stats = fs.statfsSync(resolvedPath);
     } catch (error) {
       this.logger.error(
         `Failed to get disk stats: ${resolvedPath}`,
         error.stack
       );
-      return {
-        path: resolvedPath,
-        total: 0,
-        free: 0,
-        used: 0,
-        usagePercentage: 0,
-      };
+      return this.unavailable(resolvedPath, 'path-unreachable');
     }
+
+    // bavail = 非特权用户可用（尊重保留空间），与 df 的 Available 列同义；
+    // 乘数必须是 bsize——Windows 的 statfs 没有 frsize 字段，误用会得到 NaN，
+    // 而 NaN 与阈值比较恒为 false，会让容量门禁静默失效。
+    const total = stats.blocks * stats.bsize;
+    const free = stats.bavail * stats.bsize;
+    const used = Math.max(total - free, 0);
+
+    return {
+      ok: true,
+      path: resolvedPath,
+      total,
+      free,
+      used,
+      usagePercentage: total > 0 ? (used / total) * 100 : 0,
+    };
   }
 
-  /**
-   * 获取磁盘信息
-   * @param drivePath 驱动器路径
-   * @returns 磁盘信息
-   */
-  private getDiskInfo(drivePath: string): {
-    total: number;
-    free: number;
-    used: number;
-    usagePercentage: number;
-  } {
-    try {
-      // 检测操作系统平台
-      const platform = process.platform;
-
-      if (platform === 'win32') {
-        // Windows 平台：使用 exec 执行 WMIC 命令获取磁盘信息
-        try {
-          // 确保驱动器路径格式正确（例如：D:）
-          const drive = path.parse(drivePath).root || drivePath;
-          // WMIC 的 DeviceID 格式应该是 "D:"（只有冒号，没有反斜杠）
-          const deviceId = drive.replace(/\\/g, '');
-
-          // 使用 buffer 编码执行 WMIC 命令，然后转换为字符串
-          const buffer = execSync(
-            `wmic logicaldisk where "DeviceID='${deviceId}'" get FreeSpace,Size /value`,
-            { windowsHide: true }
-          );
-          const output = buffer.toString('latin1');
-
-          // 解析输出
-          const freeSpaceMatch = output.match(/FreeSpace=(\d+)/);
-          const totalSizeMatch = output.match(/Size=(\d+)/);
-
-          if (freeSpaceMatch && totalSizeMatch) {
-            const free = parseInt(freeSpaceMatch[1], 10);
-            const total = parseInt(totalSizeMatch[1], 10);
-            const used = total - free;
-            const usagePercentage = total > 0 ? (used / total) * 100 : 0;
-
-            return { total, free, used, usagePercentage };
-          }
-        } catch (execError) {
-          this.logger.warn(
-            `Windows disk query failed, trying fallback method: ${execError.message}`
-          );
-          // 尝试使用 PowerShell 备用方法
-          try {
-            const drive = path.parse(drivePath).root || drivePath;
-            const driveLetter = drive.replace(/[:\\]/g, ''); // 去掉冒号和反斜杠
-            const psOutput = execSync(
-              `powershell -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-PSDrive ${driveLetter} | Select-Object Used,Free | ConvertTo-Json"`,
-              { encoding: 'utf-8', windowsHide: true }
-            );
-            const psData = JSON.parse(psOutput);
-            const free = psData.Free || 0;
-            const used = psData.Used || 0;
-            const total = used + free;
-            const usagePercentage = total > 0 ? (used / total) * 100 : 0;
-
-            return { total, free, used, usagePercentage };
-          } catch (psError) {
-            this.logger.error(
-              `PowerShell query also failed: ${psError.message}`
-            );
-          }
-        }
-      } else if (platform === 'linux' || platform === 'darwin') {
-        // Linux/macOS 平台：使用 statvfs 命令
-        try {
-          const output = execSync(`df -k "${drivePath}"`, {
-            encoding: 'utf-8',
-            windowsHide: true,
-          });
-          const lines = output.trim().split('\n');
-          if (lines.length >= 2) {
-            const parts = lines[1].split(/\s+/);
-            const total = parseInt(parts[1], 10) * 1024; // KB to Bytes
-            const free = parseInt(parts[3], 10) * 1024; // KB to Bytes
-            const used = total - free;
-            const usagePercentage = parseFloat(parts[4]);
-
-            return { total, free, used, usagePercentage };
-          }
-        } catch (execError) {
-          this.logger.error(
-            `Linux/macOS disk query failed: ${execError.message}`
-          );
-        }
-      }
-
-      // 所有方法都失败，返回默认值
-      this.logger.warn(
-        `Unable to get disk info, returning default values: ${drivePath}`
-      );
-      return {
-        total: 0,
-        free: 0,
-        used: 0,
-        usagePercentage: 0,
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get disk info: ${drivePath}`, error.stack);
-      return {
-        total: 0,
-        free: 0,
-        used: 0,
-        usagePercentage: 0,
-      };
-    }
+  private unavailable(
+    resolvedPath: string,
+    reason: DiskStatsReason
+  ): DiskStats {
+    return {
+      ok: false,
+      reason,
+      path: resolvedPath,
+      total: 0,
+      free: 0,
+      used: 0,
+      usagePercentage: 0,
+    };
   }
 
   /**
@@ -205,6 +130,17 @@ export class DiskMonitorService {
    */
   checkDiskStatus(filePath?: string): DiskStatus {
     const stats = this.getDiskStats(filePath);
+
+    // 测不到与「空间不足」是两回事：不置 warning/critical（否则会上报
+    // disk_space_low 告警，而实际并未空间紧张），但也不伪装成正常
+    if (!stats.ok) {
+      return {
+        stats,
+        warning: false,
+        critical: false,
+        message: `Disk status unknown (${stats.reason}): ${stats.path}`,
+      };
+    }
 
     let warning = false;
     let critical = false;
@@ -238,7 +174,9 @@ export class DiskMonitorService {
     const status = this.checkDiskStatus();
     let recommendation = 'Disk status good, no action needed';
 
-    if (status.critical) {
+    if (!status.stats.ok) {
+      recommendation = `Disk stats unavailable (${status.stats.reason}): check that ${status.stats.path} exists, is mounted and is writable`;
+    } else if (status.critical) {
       recommendation =
         'Immediate action required: 1. Stop upload operations 2. Clean up expired files 3. Expand disk capacity';
     } else if (status.warning) {
@@ -247,7 +185,7 @@ export class DiskMonitorService {
     }
 
     return {
-      healthy: !status.critical,
+      healthy: status.stats.ok && !status.critical,
       status,
       recommendation,
     };

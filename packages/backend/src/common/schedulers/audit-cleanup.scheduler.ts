@@ -15,7 +15,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditArchiveService } from '../../audit/audit-archive.service';
 import { AlertService } from '../../alert/alert.service';
-import { AlertLevel } from '../../alert/enums/alert.enum';
+import { TASK_RUN_FAILED_KEY, TASK_RUN_FAILED_LEVEL } from '../../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { TaskRunService } from '../../task-run/task-run.service';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../../task-run/task-run.constants';
@@ -178,9 +178,9 @@ export class AuditCleanupScheduler {
     try {
       await this.alertService.raise({
         source: 'scheduler:audit-cleanup',
-        messageKey: 'task_run_failed',
-        // P1：单任务完全失败（15min 同源聚合）
-        level: AlertLevel.P1,
+        messageKey: TASK_RUN_FAILED_KEY,
+        // 级别取 TASK_RUN_FAILED_LEVEL 单点（当前 P1）：单任务完全失败（15min 同源聚合）
+        level: TASK_RUN_FAILED_LEVEL,
         message: `定时任务 audit-cleanup 失败（cleanupOldAuditLogs）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task: 'cleanupOldAuditLogs',

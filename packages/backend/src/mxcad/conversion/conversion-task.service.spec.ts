@@ -24,7 +24,10 @@ describe('UnifiedConversionService', () => {
     convertNode: jest.Mock;
     convertNodeForExport: jest.Mock;
   };
-  let executor: { getTaskStatus: jest.Mock };
+  let executor: {
+    getTaskStatus: jest.Mock;
+    capabilities: { cancel: boolean; listTasks: boolean; batch: boolean };
+  };
   let restrictionEngine: { getConversionQuotaState: jest.Mock };
   let prisma: {
     fileSystemNode: {
@@ -47,7 +50,11 @@ describe('UnifiedConversionService', () => {
         },
         {
           provide: IFunctionExecutor,
-          useValue: { invoke: jest.fn(), getTaskStatus: jest.fn() },
+          useValue: {
+            invoke: jest.fn(),
+            getTaskStatus: jest.fn(),
+            capabilities: { cancel: false, listTasks: false, batch: false },
+          },
         },
         {
           provide: RestrictionEngine,
@@ -173,6 +180,7 @@ describe('UnifiedConversionService', () => {
           ok: true,
           status: 'CANCELLED',
         });
+      executor.capabilities.cancel = true;
       const result = await service.cancelTask('task-1');
       expect(result).toEqual({ ok: true, status: 'CANCELLED' });
     });
@@ -181,6 +189,7 @@ describe('UnifiedConversionService', () => {
       (executor as unknown as { cancelTask: jest.Mock }).cancelTask = jest
         .fn()
         .mockResolvedValue({ ok: true, status: 'CANCELLED' });
+      executor.capabilities.cancel = true;
       prisma.fileSystemNode.findFirst.mockImplementation(
         ({ where }: { where: { deletedAt?: unknown } }) =>
           Promise.resolve(where.deletedAt ? { id: 'node-1' } : null)

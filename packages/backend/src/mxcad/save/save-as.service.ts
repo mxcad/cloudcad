@@ -14,6 +14,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
+import { NodeUtils } from '../../common/utils/node-utils';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import {
   I_EXTERNAL_REF_FACADE,
@@ -32,6 +33,11 @@ import { AppConfig } from '../../config/app.config';
 import { I18nContext } from 'nestjs-i18n';
 import { QuotaExceededException } from '../../vip/errors/quota-exceeded.error';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
+import { TreeWalker } from '../../file-system/file-tree/tree-walker.service';
+import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
+import { IPERMISSION_SERVICE, IPermissionService } from '../../permission/interfaces/permission-service.interface';
+import { getLibrarySystemPermissionByKey } from '../../common/utils/permission-mapping';
+import { ProjectPermission } from '../../common/enums/permissions.enum';
 export interface SaveMxwebAsOptions {
   file: Express.Multer.File;
   targetType: 'personal' | 'project' | 'library';
@@ -83,8 +89,76 @@ export class SaveAsService {
     private readonly prisma: DatabaseService,
     @Inject(I_EXTERNAL_REF_FACADE)
     private readonly externalRefFacade: IExternalRefFacade,
-    private readonly nodeMutationGuard: NodeMutationGuard
+    private readonly nodeMutationGuard: NodeMutationGuard,
+    private readonly treeWalker: TreeWalker,
+    private readonly permissionService: FileSystemPermissionService,
+    @Inject(IPERMISSION_SERVICE)
+    private readonly systemPermissionService: IPermissionService
   ) {}
+
+  /**
+   * 另存为三态权限分派（personal/library/project）。
+   * 从 SaveController 下沉：Controller 只做路由委托，权限判定归 Service。
+   * 返回错误文案（无权限/参数缺失）；通过则返回 null。
+   */
+  private async assertSavePermission(
+    options: SaveMxwebAsOptions | SaveMxwebAsByHashOptions
+  ): Promise<string | null> {
+    const { targetType, targetParentId, projectId, userId, libraryType } =
+      options;
+    if (targetType === 'personal') {
+      const root = await this.treeWalker.resolveRootContext(targetParentId);
+      if (root?.ownerId !== userId) {
+        this.logger.warn(
+          `[SaveAs] 用户 ${userId} 尝试保存到非自己的私人空间: ${targetParentId}`
+        );
+        return (
+          I18nContext.current()?.t('error.mxcad.no_permission_save_to_location') ??
+          '您没有权限保存到此位置'
+        );
+      }
+    } else if (targetType === 'library') {
+      const requiredPermission = getLibrarySystemPermissionByKey(libraryType!);
+      const hasPermission =
+        await this.systemPermissionService.checkSystemPermission(
+          userId,
+          requiredPermission
+        );
+      if (!hasPermission) {
+        this.logger.warn(
+          `[SaveAs] 用户 ${userId} 没有${libraryType === 'drawing' ? '图纸库' : '图块库'}管理权限`
+        );
+        return (
+          I18nContext.current()?.t('error.mxcad.no_permission_library_management') ??
+          '您没有资源库管理权限'
+        );
+      }
+    } else {
+      if (projectId) {
+        const hasPermission =
+          await this.permissionService.checkNodePermission(
+            userId,
+            projectId,
+            ProjectPermission.CAD_SAVE
+          );
+        if (!hasPermission) {
+          this.logger.warn(
+            `[SaveAs] 用户 ${userId} 没有项目 ${projectId} 的 CAD_SAVE 权限`
+          );
+          return (
+            I18nContext.current()?.t('error.mxcad.no_permission_save_to_project') ??
+            '您没有权限保存到此项目'
+          );
+        }
+      } else {
+        return (
+          I18nContext.current()?.t('error.mxcad.save_to_project_requires_project_id') ??
+          '保存到项目时必须提供projectId'
+        );
+      }
+    }
+    return null;
+  }
 
   async saveMxwebAs(options: SaveMxwebAsOptions): Promise<SaveMxwebAsResult> {
     const {
@@ -104,6 +178,54 @@ export class SaveAsService {
         `[SaveAs] 开始保存: targetType=${targetType}, parentId=${targetParentId}, format=${format}`
       );
 
+      // 输入校验（原 SaveController 下沉）
+      if (targetType === 'project' && !projectId) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.save_to_project_requires_project_id') ??
+            '保存到项目时必须提供projectId',
+        };
+      }
+      if (targetType === 'library' && !options.libraryType) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.save_to_library_requires_library_type') ??
+            '保存到资源库时必须提供libraryType',
+        };
+      }
+
+      // 父节点校验（原 SaveController 下沉；findByIdWithDeletedAt 保持 400 语义）
+      const targetParentNode =
+        await this.fileSystemNodeService.findByIdWithDeletedAt(targetParentId, {
+          id: true,
+          nodeType: true,
+          ownerId: true,
+        });
+      if (!targetParentNode) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.target_folder_not_found') ??
+            '目标文件夹不存在',
+        };
+      }
+      if (targetParentNode.nodeType === NodeType.FILE) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.target_must_be_folder') ??
+            '目标必须是文件夹',
+        };
+      }
+
+      // 三态权限分派（原 SaveController 下沉）
+      const permError = await this.assertSavePermission(options);
+      if (permError) {
+        return { success: false, message: permError };
+      }
+
       if (!file || !file.path) {
         return {
           success: false,
@@ -120,30 +242,11 @@ export class SaveAsService {
         };
       }
 
-      const parentNode = await this.fileTreeService.getNode(targetParentId);
-      if (!parentNode) {
-        return {
-          success: false,
-          message:
-            I18nContext.current()?.t('error.mxcad.target_folder_not_found') ??
-            '目标文件夹不存在',
-        };
-      }
-
       if (userId && file?.size) {
         await this.nodeMutationGuard.assertByteQuota(
           { node: { id: targetParentId }, incrementBytes: file.size },
           userId
         );
-      }
-
-      if (parentNode.nodeType === NodeType.FILE) {
-        return {
-          success: false,
-          message:
-            I18nContext.current()?.t('error.mxcad.target_must_be_folder') ??
-            '目标必须是文件夹',
-        };
       }
 
       // ========== 同名文件处理 ==========
@@ -164,7 +267,7 @@ export class SaveAsService {
 
       const finalFileName = uniqueFileName;
       const extension = `.${format}`;
-      const mimeType = this.fileSystemNodeService.getMimeType(extension);
+      const mimeType = NodeUtils.getMimeType(extension);
 
       const newNode = await this.fileTreeService.createFileNode({
         name: finalFileName,
@@ -277,6 +380,54 @@ export class SaveAsService {
         `[SaveAsByHash] 开始保存: targetType=${targetType}, parentId=${targetParentId}, hash=${fileHash}`
       );
 
+      // 输入校验（原 SaveController 下沉）
+      if (targetType === 'project' && !projectId) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.save_to_project_requires_project_id') ??
+            '保存到项目时必须提供projectId',
+        };
+      }
+      if (targetType === 'library' && !options.libraryType) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.save_to_library_requires_library_type') ??
+            '保存到资源库时必须提供libraryType',
+        };
+      }
+
+      // 父节点校验（原 SaveController 下沉；findByIdWithDeletedAt 保持 400 语义）
+      const targetParentNode =
+        await this.fileSystemNodeService.findByIdWithDeletedAt(targetParentId, {
+          id: true,
+          nodeType: true,
+          ownerId: true,
+        });
+      if (!targetParentNode) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.target_folder_not_found') ??
+            '目标文件夹不存在',
+        };
+      }
+      if (targetParentNode.nodeType === NodeType.FILE) {
+        return {
+          success: false,
+          message:
+            I18nContext.current()?.t('error.mxcad.target_must_be_folder') ??
+            '目标必须是文件夹',
+        };
+      }
+
+      // 三态权限分派（原 SaveController 下沉）
+      const permError = await this.assertSavePermission(options);
+      if (permError) {
+        return { success: false, message: permError };
+      }
+
       // 在 uploads 目录中查找 {hash}.mxweb
       const uploadPath =
         this.configService.get('mxcadUploadPath', { infer: true }) ||
@@ -288,16 +439,6 @@ export class SaveAsService {
 
       const mxwebSourcePath = path.join(uploadPath, mxwebFile);
 
-      const parentNode = await this.fileTreeService.getNode(targetParentId);
-      if (!parentNode) {
-        return {
-          success: false,
-          message:
-            I18nContext.current()?.t('error.mxcad.target_folder_not_found') ??
-            '目标文件夹不存在',
-        };
-      }
-
       if (userId) {
         const stats = await fsPromises.stat(mxwebSourcePath).catch(() => null);
         if (stats?.size) {
@@ -306,15 +447,6 @@ export class SaveAsService {
             userId
           );
         }
-      }
-
-      if (parentNode.nodeType === NodeType.FILE) {
-        return {
-          success: false,
-          message:
-            I18nContext.current()?.t('error.mxcad.target_must_be_folder') ??
-            '目标必须是文件夹',
-        };
       }
 
       // 同名文件处理
@@ -335,7 +467,7 @@ export class SaveAsService {
 
       const finalFileName = uniqueFileName;
       const extension = `.${format}`;
-      const mimeType = this.fileSystemNodeService.getMimeType(extension);
+      const mimeType = NodeUtils.getMimeType(extension);
 
       const newNode = await this.fileTreeService.createFileNode({
         name: finalFileName,

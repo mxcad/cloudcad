@@ -24,3 +24,12 @@ export enum AlertStatus {
  * 致守护每日 pg_dump 全量备份的失败拿不到 15min 聚合邮件（#325 / ADR-0055 §7 已定为 P1）。
  */
 export const TASK_RUN_FAILED_LEVEL: AlertLevel = AlertLevel.P1;
+
+/**
+ * 定时任务「完全失败」的统一 messageKey = 'task_run_failed'。
+ * 与 TASK_RUN_FAILED_LEVEL 成对单点化：去重 / 15min 同源聚合 / 自动恢复都以
+ * (source, messageKey) 为键。级别已单点化，若键仍由各调度器内联字符串，任一处
+ * 笔误即令该告警无法去重（重复建单）、无法进入同源聚合邮件、也无法按正确键恢复。
+ * 单点定义，禁止各调用点内联 'task_run_failed' 字符串。
+ */
+export const TASK_RUN_FAILED_KEY = 'task_run_failed';

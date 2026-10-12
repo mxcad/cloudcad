@@ -35,6 +35,9 @@ const VERSION = PACKAGE_JSON.version || '1.0.0';
 // 品牌单一事实源（runtime/scripts/lib/branding.js）
 const { PRODUCT_NAME } = require('../runtime/scripts/lib/branding');
 
+// 前端构建唯一出口（与 pack-offline.js 共用；2026-10-09 收敛本文件重复实现）
+const { buildFrontendLocally } = require('./pack-lib/build-frontend');
+
 // ==================== OS 镜像映射 ====================
 
 // ADR-0059 决策 2：发行版收敛到 3 个 glibc 档位（centos7/ubuntu22/rocky9），
@@ -531,23 +534,6 @@ function ensureBinaryCache() {
   }
 }
 
-/**
- * 在本地构建前端（前端为纯静态文件，三端通用，无需在 Docker 内构建）
- * 注意：移动端 dist 也会打包进部署包/升级包（合并到 frontend/dist/<mobileAccessPath>），必须构建
- */
-function buildFrontendLocally() {
-  log('构建前端 (本地)...');
-  execSync('pnpm build', {
-    cwd: path.join(PROJECT_ROOT, 'packages/frontend'),
-    stdio: 'inherit',
-  });
-  execSync('pnpm build', {
-    cwd: path.join(PROJECT_ROOT, 'packages/frontend_mobile'),
-    stdio: 'inherit',
-  });
-  log('✓ 前端构建完成');
-}
-
 // ==================== 主函数 ====================
 
 async function main() {
@@ -650,7 +636,7 @@ async function main() {
   try {
     // 0. 在本地构建前端（三端通用，无需在 Docker 内构建；移动端合并进前端 dist）
     log('[0/3] 构建前端 (本地)...');
-    buildFrontendLocally();
+    buildFrontendLocally(PROJECT_ROOT);
 
     // 1. 构建打包镜像
     log('');

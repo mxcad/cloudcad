@@ -17,6 +17,13 @@
  * 确保打包产物顺序审计（V6）无回归。
  *
  * 依赖方向：本模块只声明条目，不含任何 IO；可被单测直接断言。
+ *
+ * 条目字段：
+ * - src / dest：仓库内相对路径 → 包内相对路径
+ * - isDir：true 表示整目录复制
+ * - optional：true 表示源缺失时可静默跳过。默认 false——必需条目缺失即中止打包
+ *   （否则照常吃残留或缺产物打 tar、退出码 0，产出坏包；2026-10-09 前端 dist
+ *   缺失即因此静默出包）。目前仅 runtime/prisma-engines 标记为 optional。
  */
 
 // 两类包共享的核心条目（顺序 = 复制顺序，与历史清单保持一致）
@@ -142,8 +149,8 @@ function getSharedEntries() {
     // pnpm store manifest 不引用 postinstall 下载的 schema-engine，部署机重建 @prisma/engines
     // 包目录缺该二进制 → prisma CLI 回退联网下载 → 断网 migrate deploy 失败。
     // 故预置到 runtime/prisma-engines/，verify-deploy.js / migrate.js 设 PRISMA_SCHEMA_ENGINE_BINARY 指向它。
-    // 目录可能不存在（构建机未找到 schema-engine 时跳过预置），prepareDeployDir 对缺失源静默跳过。
-    { src: 'runtime/prisma-engines', dest: 'runtime/prisma-engines', isDir: true },
+    // 目录可能不存在（构建机未找到 schema-engine 时跳过预置），故标记 optional 静默跳过。
+    { src: 'runtime/prisma-engines', dest: 'runtime/prisma-engines', isDir: true, optional: true },
     // 根目录文件（pnpm-lock.yaml 是目标机依赖重装检测的触发器）
     { src: 'pnpm-lock.yaml', dest: 'pnpm-lock.yaml' },
     { src: 'pnpm-workspace.yaml', dest: 'pnpm-workspace.yaml' },

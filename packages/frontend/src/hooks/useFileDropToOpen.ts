@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  handlePublicUpload,
+  openLocalFile,
   CSS_CLASSES,
   confirmExitCollaborationIfNeeded,
   checkAndConfirmUnsavedChanges,
@@ -40,7 +40,8 @@ function waitForContainer(
  * 文件拖拽打开 Hook
  *
  * 在 mxcad-global-container 上绑定拖拽事件，
- * 当用户拖入 CAD 文件时自动调用公开上传流程并打开图纸。
+ * 当用户拖入 CAD 文件时经 openLocalFile 打开图纸（.mxweb 本地虚拟盘就地打开，
+ * 其余走公开上传 + 转换），与文件选择器入口共用同一分派。
  */
 export function useFileDropToOpen() {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -120,7 +121,9 @@ export function useFileDropToOpen() {
 
     isUploadingRef.current = true;
     try {
-      await handlePublicUpload(file);
+      // 与文件选择器同一分派：.mxweb 走本地虚拟盘就地打开（不上传/不转换），
+      // 其余 CAD 文件走公开上传 + 转换
+      await openLocalFile(file);
     } catch (error) {
       console.error('[useFileDropToOpen] 打开文件失败:', error);
     } finally {

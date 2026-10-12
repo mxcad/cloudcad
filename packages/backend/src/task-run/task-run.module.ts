@@ -15,12 +15,13 @@ import { DatabaseModule } from '../database/database.module';
 import { PermissionModule } from '../permission/permission.module';
 import { AlertModule } from '../alert/alert.module';
 import { TaskRunService } from './task-run.service';
+import { TaskRunFailureReporter } from './task-run-failure-reporter';
 import { TaskRunController } from './task-run.controller';
 
 @Module({
   imports: [DatabaseModule, PermissionModule, AlertModule],
   controllers: [TaskRunController],
-  providers: [TaskRunService],
-  exports: [TaskRunService],
+  providers: [TaskRunService, TaskRunFailureReporter],
+  exports: [TaskRunService, TaskRunFailureReporter],
 })
 export class TaskRunModule {}

@@ -16,9 +16,10 @@ import { Cron } from '@nestjs/schedule';
 import type { AppConfig } from '../config/app.config';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { TaskRunService } from '../task-run/task-run.service';
+import { TaskRunFailureReporter } from '../task-run/task-run-failure-reporter';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../task-run/task-run.constants';
 import { AlertService } from '../alert/alert.service';
-import { AlertLevel, TASK_RUN_FAILED_LEVEL } from '../alert/enums/alert.enum';
+import { AlertLevel } from '../alert/enums/alert.enum';
 import { TaskRunTrigger } from '../task-run/enums/task-run.enum';
 import {
   BackupResult,
@@ -74,7 +75,8 @@ export class BackupScheduler {
     private readonly configService: ConfigService,
     private readonly runtimeConfigService: RuntimeConfigService,
     private readonly alertService: AlertService,
-    private readonly taskRunService: TaskRunService
+    private readonly taskRunService: TaskRunService,
+    private readonly taskRunFailureReporter: TaskRunFailureReporter
   ) {
     // 手动触发注册表（#210 模式）：裸执行函数由 TaskRunService.run 统一包装记录
     this.taskRunService.register(TASK_NAMES.BACKUP.DATABASE, {
@@ -227,7 +229,7 @@ export class BackupScheduler {
 
   /**
    * 备份失败钩子（#245 模式）：完整性校验失败走 P1 backup-verify 告警，
-   * 其余失败 task_run_failed 告警，source = scheduler:backup
+   * 其余失败经 TaskRunFailureReporter 上报 task_run_failed，source = scheduler:backup
    */
   private async raiseBackupFailed(error: unknown): Promise<void> {
     if (error instanceof BackupVerifyError) {
@@ -240,26 +242,24 @@ export class BackupScheduler {
       );
       return;
     }
-    await this.raiseAlert(
-      'scheduler:backup',
-      'task_run_failed',
-      TASK_RUN_FAILED_LEVEL,
-      `数据库备份失败: ${error instanceof Error ? error.message : String(error)}`,
-      error
-    );
+    await this.taskRunFailureReporter.reportTaskFailed({
+      source: 'scheduler:backup',
+      task: TASK_NAMES.BACKUP.DATABASE,
+      error,
+      messagePrefix: '数据库备份失败',
+    });
   }
 
   /**
-   * 恢复演练失败钩子（#320）：P1 告警，source = restore-drill
+   * 恢复演练失败钩子（#320）：task_run_failed 告警，source = restore-drill
    */
   private async raiseDrillFailed(error: unknown): Promise<void> {
-    await this.raiseAlert(
-      'restore-drill',
-      'task_run_failed',
-      AlertLevel.P1,
-      `数据库恢复演练失败: ${error instanceof Error ? error.message : String(error)}`,
-      error
-    );
+    await this.taskRunFailureReporter.reportTaskFailed({
+      source: 'restore-drill',
+      task: TASK_NAMES.BACKUP.RESTORE_DRILL,
+      error,
+      messagePrefix: '数据库恢复演练失败',
+    });
   }
 
   /**
@@ -309,13 +309,11 @@ export class BackupScheduler {
   ): Promise<void> {
     try {
       const task =
-        source === 'restore-drill'
-          ? TASK_NAMES.BACKUP.RESTORE_DRILL
-          : source === REMOTE_ALERT_SOURCE
-            ? TASK_NAMES.BACKUP.REMOTE_PUSH
-            : source === AUDIT_ARCHIVE_REMOTE_ALERT_SOURCE
-              ? TASK_NAMES.BACKUP.AUDIT_ARCHIVE_SYNC
-              : TASK_NAMES.BACKUP.DATABASE;
+        source === REMOTE_ALERT_SOURCE
+          ? TASK_NAMES.BACKUP.REMOTE_PUSH
+          : source === AUDIT_ARCHIVE_REMOTE_ALERT_SOURCE
+            ? TASK_NAMES.BACKUP.AUDIT_ARCHIVE_SYNC
+            : TASK_NAMES.BACKUP.DATABASE;
       await this.alertService.raise({
         source,
         messageKey,

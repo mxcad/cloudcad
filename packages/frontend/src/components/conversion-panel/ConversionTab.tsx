@@ -7,6 +7,7 @@ import {
   X,
   ExternalLink,
   RotateCcw,
+  RefreshCw,
 } from 'lucide-react';
 import { t } from '@/languages';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -67,6 +68,8 @@ interface ConversionTabProps {
   onCancel: (task: ConversionTask) => void;
   /** 重试失败的转换（原地重新排队，不重新上传、不占配额、无次数上限） */
   onRetry: (task: ConversionTask) => void;
+  /** 重新转换（#4c，对已 COMPLETED 的 CAD 节点从原始源文件重跑引擎） */
+  onReconvert: (task: ConversionTask) => void;
   historyLoading: boolean;
   historyHasMore: boolean;
   historyCount: number;
@@ -87,6 +90,7 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
   onOpen,
   onCancel,
   onRetry,
+  onReconvert,
   historyLoading,
   historyHasMore,
   historyCount,
@@ -100,6 +104,14 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
     task.status === 'failed' &&
     task.source === 'cloud' &&
     !!task.taskId;
+
+  // 「重新转换」可用性（#4c）：已 COMPLETED 的云端 CAD 节点（有 nodeId 且非 mxweb——
+  // mxweb 本就是原生格式，重转无意义，后端亦 no-op）。live 区与历史区共用。
+  const canReconvertTask = (task: ConversionTask): boolean =>
+    task.status === 'completed' &&
+    task.source === 'cloud' &&
+    !!task.nodeId &&
+    !task.name?.toLowerCase().endsWith('.mxweb');
 
   return (
     <>
@@ -128,6 +140,7 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
         // 失败性质由后端结构化下发（errorCategory），重试可用性见 canRetryTask
         const isContentError = task.errorCategory === 'content-error';
         const canRetry = canRetryTask(task);
+        const canReconvert = canReconvertTask(task);
         return (
           <div key={task.id} className={`conversion-row ${meta.className}`}>
             <div className="conversion-row-main">
@@ -189,6 +202,16 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                   </button>
                 </Tooltip>
               )}
+              {canReconvert && (
+                <Tooltip content={t('重新转换')}>
+                  <button
+                    aria-label={t('重新转换')}
+                    onClick={() => onReconvert(task)}
+                  >
+                    <RefreshCw size={13} />
+                  </button>
+                </Tooltip>
+              )}
             </div>
           </div>
         );
@@ -212,6 +235,7 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
           task.status === 'completed' && (!!task.nodeId || !!task.fileHash);
         // 失败记录从 live 区移入历史区后仍要可重试（与 live 区同一判据）
         const canRetry = canRetryTask(task);
+        const canReconvert = canReconvertTask(task);
         return (
           <div
             key={`history-${task.id}`}
@@ -252,6 +276,16 @@ export const ConversionTab: React.FC<ConversionTabProps> = ({
                 <Tooltip content={t('打开')}>
                   <button aria-label={t('打开')} onClick={() => onOpen(task)}>
                     <ExternalLink size={13} />
+                  </button>
+                </Tooltip>
+              )}
+              {canReconvert && (
+                <Tooltip content={t('重新转换')}>
+                  <button
+                    aria-label={t('重新转换')}
+                    onClick={() => onReconvert(task)}
+                  >
+                    <RefreshCw size={13} />
                   </button>
                 </Tooltip>
               )}

@@ -5,7 +5,7 @@ import { DatabaseService } from '../database/database.service';
 import { BatchJobStatus } from '@cloudcad/db';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { AlertService } from '../alert/alert.service';
-import { AlertLevel } from '../alert/enums/alert.enum';
+import { AlertLevel, TASK_RUN_FAILED_KEY, TASK_RUN_FAILED_LEVEL } from '../alert/enums/alert.enum';
 import { TaskRunService } from '../task-run/task-run.service';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../task-run/task-run.constants';
 import {
@@ -400,9 +400,9 @@ export class BatchDownloadCleanupService {
     try {
       await this.alertService.raise({
         source: 'scheduler:batch-download',
-        messageKey: 'task_run_failed',
-        // P1：单任务完全失败（15min 同源聚合）
-        level: AlertLevel.P1,
+        messageKey: TASK_RUN_FAILED_KEY,
+        // 级别取 TASK_RUN_FAILED_LEVEL 单点（当前 P1）：单任务完全失败（15min 同源聚合）
+        level: TASK_RUN_FAILED_LEVEL,
         message: `定时任务 batch-download 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task,

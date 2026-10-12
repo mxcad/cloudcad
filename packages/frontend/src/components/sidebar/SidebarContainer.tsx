@@ -18,7 +18,6 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FolderOpen } from 'lucide-react';
 import { FileText } from 'lucide-react';
 import { Layers } from 'lucide-react';
@@ -32,7 +31,9 @@ import { SidebarTabBar } from './SidebarTabBar';
 import { SidebarTrigger } from './SidebarTrigger';
 import { ProjectDrawingsPanel } from '../ProjectDrawingsPanel';
 import { CollaborateSidebar } from '../CollaborateSidebar';
-import { Button, Tab } from '../ui';
+import { Tab } from '../ui';
+import { useLoginGate } from '../../hooks/useLoginGate';
+import { LoginPromptCard } from './LoginPromptCard';
 import { FileSystemNode } from '../../types/filesystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
@@ -82,7 +83,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   contentReady = true,
 }) => {
   // ==================== Hooks ====================
-  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { personalSpaceId, handleDrawingOpen: navigationOpen } =
     useDrawingOpener(isAuthenticated);
@@ -146,9 +146,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   const isLibraryFile =
     fileInfo?.libraryKey === 'drawing' || fileInfo?.libraryKey === 'block';
 
-  // 登录提示状态
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [loginPromptAction, setLoginPromptAction] = useState<string>('');
+  // 登录闸门（A8）：侧边栏卡片按钮统一走 useLoginGate.handleLoginClick
+  const { handleLoginClick } = useLoginGate({ isAuthenticated });
 
   // ==================== Refs ====================
 
@@ -298,36 +297,6 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     [navigationOpen]
   );
 
-  // 处理登录提示的登录按钮 — 跳转到登录页面
-  const handleLoginClick = useCallback(async () => {
-    // 隐藏 CAD 编辑器，避免遮挡登录页面
-    const { mxcadManager } = await import('../../services/mxcadManager');
-    mxcadManager.showMxCAD(false);
-
-    // 保存当前路径，登录后返回
-    const currentUrl = window.location.pathname + window.location.search;
-    navigate(`/login?redirect=${encodeURIComponent(currentUrl)}`, {
-      replace: true,
-    });
-
-    setShowLoginPrompt(false);
-  }, [navigate]);
-
-  // 处理登录提示的关闭
-  const handleLoginPromptClose = () => {
-    setShowLoginPrompt(false);
-  };
-
-  // 检查登录状态，未登录时显示登录提示
-  const checkLoginAndShowPrompt = (action: string) => {
-    if (!isAuthenticated) {
-      setLoginPromptAction(action);
-      setShowLoginPrompt(true);
-      return false;
-    }
-    return true;
-  };
-
   // ==================== 渲染内容 ====================
 
   const renderContent = () => {
@@ -404,27 +373,12 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       tabId="my-project"
                     />
                   ) : (
-                    <div className={styles.loginPromptContainer}>
-                      <div className={styles.loginPromptContent}>
-                        <div className={styles.loginPromptIcon}>
-                          <FolderOpen size={40} />
-                        </div>
-                        <h3 className={styles.loginPromptTitle}>
-                          {t('登录以访问我的项目')}
-                        </h3>
-                        <p className={styles.loginPromptDescription}>
-                          {t('登录后可以查看和管理您的项目')}
-                        </p>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={handleLoginClick}
-                          className={styles.loginPromptButton}
-                        >
-                          {t('立即登录')}
-                        </Button>
-                      </div>
-                    </div>
+                    <LoginPromptCard
+                      icon={<FolderOpen size={40} />}
+                      title={t('登录以访问我的项目')}
+                      description={t('登录后可以查看和管理您的项目')}
+                      onLogin={handleLoginClick}
+                    />
                   )}
                 </div>
                 <div
@@ -444,27 +398,12 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       tabId="my-drawings"
                     />
                   ) : (
-                    <div className={styles.loginPromptContainer}>
-                      <div className={styles.loginPromptContent}>
-                        <div className={styles.loginPromptIcon}>
-                          <FileText size={40} />
-                        </div>
-                        <h3 className={styles.loginPromptTitle}>
-                          {t('登录以访问个人空间')}
-                        </h3>
-                        <p className={styles.loginPromptDescription}>
-                          {t('登录后可以查看和管理您的私人图纸')}
-                        </p>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={handleLoginClick}
-                          className={styles.loginPromptButton}
-                        >
-                          {t('立即登录')}
-                        </Button>
-                      </div>
-                    </div>
+                    <LoginPromptCard
+                      icon={<FileText size={40} />}
+                      title={t('登录以访问个人空间')}
+                      description={t('登录后可以查看和管理您的私人图纸')}
+                      onLogin={handleLoginClick}
+                    />
                   )}
                 </div>
               </>
@@ -496,39 +435,22 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
               </div>
               {!isAuthenticated && (
                 <div className={styles.loginPromptOverlay}>
-                  <div className={styles.loginPromptContainer}>
-                    <div className={styles.loginPromptContent}>
-                      <div className={styles.loginPromptIcon}>
-                        <FolderOpen size={40} />
-                      </div>
-                      <h3 className={styles.loginPromptTitle}>
-                        {t('登录以使用完整功能')}
-                      </h3>
-                      <p className={styles.loginPromptDescription}>
-                        {t('登录后可以使用个人空间、我的项目、协同等功能')}
-                      </p>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={handleLoginClick}
-                        className={styles.loginPromptButton}
-                      >
-                        {t('立即登录')}
-                      </Button>
-                    </div>
-                  </div>
+                  <LoginPromptCard
+                    icon={<FolderOpen size={40} />}
+                    title={t('登录以使用完整功能')}
+                    description={t('登录后可以使用个人空间、我的项目、协同等功能')}
+                    onLogin={handleLoginClick}
+                  />
                 </div>
               )}
             </>
           ) : (
             <div className={styles.content}>
-              <div className={styles.loginPromptContainer}>
-                <div className={styles.loginPromptContent}>
-                  <div className={styles.loginPromptIcon}>
-                    <FolderOpen size={40} />
-                  </div>
-                  <h3 className={styles.loginPromptTitle}>{t('实时协同')}</h3>
-                  <p className={styles.loginPromptDescription}>
+              <LoginPromptCard
+                icon={<FolderOpen size={40} />}
+                title={t('实时协同')}
+                description={
+                  <>
                     <span>{t('实时协同只支持私有化部署，请点击')}</span>
                     <a
                       href="https://help.mxdraw.com/"
@@ -543,9 +465,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       {t('查看文档')}
                     </a>
                     <span>{t('或者联系客服')}</span>
-                  </p>
-                </div>
-              </div>
+                  </>
+                }
+              />
             </div>
           )}
         </div>

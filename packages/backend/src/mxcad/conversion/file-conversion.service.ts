@@ -31,7 +31,6 @@ import {
 	CONVERSION_ACCESS_GUARD,
 	type IConversionAccessGuard,
 } from "../../common/interfaces/conversion-access-guard";
-import { FileTypeDetector } from "../utils/file-type-detector";
 import { VipFeatureRequiredException } from "../../vip/errors/vip-feature-required.error";
 import {
 	interpretEngineRun,
@@ -48,6 +47,7 @@ import {
 	ENGINE_INPUT_FIELDS,
 	buildEngineParams,
 	isTransientFailure,
+	FileTypeDetector,
 } from "@cloudcad/contracts";
 import type {
 	ConversionRequest,

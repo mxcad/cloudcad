@@ -17,6 +17,7 @@ import type { MxCadRequest } from '../types/request.types';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
+import { normalizeMxcadPath } from '../../common/utils/mxcad-path';
 import { I18nContext } from 'nestjs-i18n';
 
 @ApiTags('MxCAD 文件访问')
@@ -44,7 +45,7 @@ export class MxcadFileAccessController {
     @Query('v') version?: string,
     @Query('warmup') warmup?: string
   ) {
-    const filename = this.extractPath(path);
+    const filename = normalizeMxcadPath(path);
     if (!filename) return res.status(400).json({ code: -1, message: I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径' });
     if (!(await this.authorizeFilesDataOrRespond(res, filename, req))) return;
     if (version) return this.fileAccessService.serveFilesDataFile(filename, res, req, false, version, warmup === '1' || warmup === 'true');
@@ -64,7 +65,7 @@ export class MxcadFileAccessController {
     @Param('path') path: string,
     @Query('v') version?: string
   ) {
-    const filename = this.extractPath(path);
+    const filename = normalizeMxcadPath(path);
     if (!filename) return res.status(400).json({ code: -1, message: I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径' });
     // HEAD 与 GET 同一鉴权：此前仅 shareToken 存在时才鉴权，匿名 HEAD 可探测
     // filesData 文件存在性（200/404）与 Content-Length。authorizeFilesDataAccess
@@ -129,7 +130,7 @@ export class MxcadFileAccessController {
     @Req() req: MxCadRequest,
     @Param('path') path: string
   ) {
-    const filename = this.extractPath(path);
+    const filename = normalizeMxcadPath(path);
     if (!filename) return res.status(400).json({ code: -1, message: I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径' });
     return this.fileAccessService.serveNodeFile(filename, res, req, false);
   }
@@ -142,7 +143,7 @@ export class MxcadFileAccessController {
     @Req() req: MxCadRequest,
     @Param('path') path: string
   ) {
-    const filename = this.extractPath(path);
+    const filename = normalizeMxcadPath(path);
     if (!filename) return res.status(400).json({ code: -1, message: I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径' });
     return this.fileAccessService.serveNodeFile(filename, res, req, true);
   }
@@ -174,21 +175,5 @@ export class MxcadFileAccessController {
       if (error instanceof UnauthorizedException || error instanceof ForbiddenException) { res.status(401).json({ code: -1, message: error.message }); return false; }
       throw error;
     }
-  }
-
-  /**
-   * 还原 Express 通配符路径参数为「/」分隔的 filesData 路径。
-   *
-   * 不同 Express/环境对 `*path` 通配符的注入形态不一：可能为字符串数组
-   * （Array → join('/')），也可能为数组被内部 toString() 成的逗号字符串
-   * （"YYYYMM,nodeId,file.mxweb"）。统一在此还原为斜杠路径，
-   * 与 service 侧的 `replace(/,/g, '/')` 保持一致，避免 seek 到带逗号的路径导致 404。
-   */
-  private extractPath(params: unknown): string {
-    const pathArray = params as string | string[];
-    const joined = Array.isArray(pathArray)
-      ? pathArray.join('/')
-      : (pathArray || '').replace(/,/g, '/');
-    return joined.replace(/,/g, '/');
   }
 }

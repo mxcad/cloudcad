@@ -1,9 +1,10 @@
 import { membershipState } from '@cloudcad/platform';
 import { memberControllerGetUserProjectPermissions } from '../api-sdk';
-import { useEditorState } from '../composables/useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { useUser } from '../composables/useUser';
 import { showToast } from 'vant';
 import { t } from '@/languages';
+import { unwrap } from '@/utils/apiError';
 
 interface CachedPermissions {
   canSave: boolean;
@@ -20,10 +21,21 @@ interface CacheEntry {
 
 const permissionCache = new Map<string, CacheEntry>();
 
-/** 项目权限列表缓存，用于本地权限判断，避免 N+1 API 调用 */
-const projectPermissionsCache = new Map<string, string[]>();
+/** 项目权限列表缓存（带 TTL），用于本地权限判断，避免 N+1 API 调用 */
+interface ProjectPermissionsCacheEntry {
+  permissions: string[];
+  timestamp: number;
+}
+const projectPermissionsCache = new Map<string, ProjectPermissionsCacheEntry>();
 
 function isCacheValid(entry: CacheEntry | undefined): entry is CacheEntry {
+  if (!entry) return false;
+  return Date.now() - entry.timestamp < CACHE_TTL;
+}
+
+function isProjectPermissionsCacheValid(
+  entry: ProjectPermissionsCacheEntry | undefined,
+): entry is ProjectPermissionsCacheEntry {
   if (!entry) return false;
   return Date.now() - entry.timestamp < CACHE_TTL;
 }
@@ -39,23 +51,34 @@ export const PERMISSIONS = {
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
 /**
- * 加载项目权限列表（合并端点，一次请求返回全部权限，本地判断）
+ * 加载项目权限列表（合并端点，一次请求返回全部权限，本地判断）。
+ * 带 TTL 缓存；失败时回退既有缓存（保留旧权限，避免门控菜单项闪动），无缓存则空。
+ * 角色/权限/归属变更后调用 invalidateProjectPermissions 失效，保证下次重新拉取。
  */
 export async function loadProjectPermissions(projectId: string): Promise<string[]> {
   const cached = projectPermissionsCache.get(projectId);
-  if (cached) return cached;
+  const stalePerms = cached?.permissions;
+  if (isProjectPermissionsCacheValid(cached)) return cached.permissions;
 
   try {
     const result = await memberControllerGetUserProjectPermissions({
       path: { projectId },
     });
+    unwrap(result);
     const data = result.data as { permissions?: string[] } | undefined;
     const perms = data?.permissions || [];
-    projectPermissionsCache.set(projectId, perms);
+    projectPermissionsCache.set(projectId, { permissions: perms, timestamp: Date.now() });
     return perms;
   } catch {
-    return [];
+    // 失败回退既有（可能过期）缓存，保留旧权限避免门控菜单项闪动；无缓存则空
+    return stalePerms ?? [];
   }
+}
+
+/** 失效项目权限缓存：传 projectId 失效单个项目，不传清空全部（角色/权限/归属变更后调用） */
+export function invalidateProjectPermissions(projectId?: string): void {
+  if (projectId) projectPermissionsCache.delete(projectId);
+  else projectPermissionsCache.clear();
 }
 
 export async function checkSystemPermission(permission: PermissionKey): Promise<boolean> {
@@ -64,7 +87,7 @@ export async function checkSystemPermission(permission: PermissionKey): Promise<
 }
 
 export async function loadCADPermissions(projectId: string | null): Promise<void> {
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
 
   if (!projectId) {
     editorState.setPermissions({ canSave: false, canExport: false, canManageExternalRef: false });

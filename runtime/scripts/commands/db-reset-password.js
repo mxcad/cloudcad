@@ -31,6 +31,7 @@ const { promptConfirm } = require('../lib/prompt');
 const { sqlQuote, makePsql } = require('../lib/psql');
 const { BACKEND_ENV_PATH } = require('../lib/context');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
+const { composeDatabaseUrl } = require('../lib/database-url');
 const { runPm2 } = require('../lib/proc');
 const { saveCredentialBackup } = require('../lib/credentials');
 const { generateStrongPassword } = require('./setup-wizard');
@@ -49,14 +50,19 @@ const { run: runPsql, writeAudit, auditorId } = makePsql({
 });
 
 /**
- * 组装 DATABASE_URL。与 setup-wizard 同口径：密码必须 encodeURIComponent，
- * 否则含 `#` 的口令会被当成 URL 片段静默截断（历史事故，见 config-updater 注释）。
+ * 组装 DATABASE_URL。委托 lib/database-url 的 composeDatabaseUrl（唯一事实源，
+ * 与 setup-wizard / config-service 同口径）：密码 encodeURIComponent，否则含 `#`
+ * 的口令会被当成 URL 片段静默截断（历史事故，见 config-updater 注释）。
  * @returns {string}
  */
 function buildDatabaseUrl(dbUser, password, dbHost, dbPort, dbName) {
-  return `postgresql://${dbUser}:${encodeURIComponent(
-    password
-  )}@${dbHost}:${dbPort}/${dbName}`;
+  return composeDatabaseUrl({
+    host: dbHost,
+    port: dbPort,
+    user: dbUser,
+    password,
+    dbName,
+  });
 }
 
 /**

@@ -29,8 +29,8 @@ import {
   projectRolesControllerCreateProjectRole,
   projectRolesControllerUpdateProjectRole,
   projectRolesControllerDeleteProjectRole,
-  memberControllerGetUserProjectPermissions,
 } from '@cloudcad/api-sdk/sdk.gen'
+import { loadProjectPermissions, invalidateProjectPermissions } from '@/services/permissionService'
 import {
   ProjectPermission,
   ProjectPermissionValue,
@@ -76,21 +76,12 @@ async function loadRoles() {
 // ── 权限门控（对齐 PC ProjectRolesModal）──
 const projectPermissions = ref<string[]>([])
 
-async function loadProjectPermissions() {
+// 权限拉取统一走 permissionService.loadProjectPermissions（TTL 缓存 + 失败回退旧值）；
+// 本壳页进入/变更后先失效缓存再拉取，保证门控菜单项始终反映最新权限
+async function refreshProjectPermissions() {
   if (!projectId.value) return
-  try {
-    const res = await memberControllerGetUserProjectPermissions({
-      path: { projectId: projectId.value },
-    })
-    try {
-      unwrap(res)
-      projectPermissions.value = res.data?.permissions ?? []
-    } catch {
-      // 业务/网络错误：保留旧权限（对齐原 `if (res.error) return` 语义）
-    }
-  } catch {
-    projectPermissions.value = []
-  }
+  invalidateProjectPermissions(projectId.value)
+  projectPermissions.value = await loadProjectPermissions(projectId.value)
 }
 
 const canManageRoles = computed(() =>
@@ -205,7 +196,7 @@ async function onSaveRole() {
     showSuccessToast(editingRole.value ? t('角色已更新') : t('角色已创建'))
     configOpen.value = false
     // 自己所在角色被改权限时会直接影响当前用户的项目权限，故一并刷新门控
-    await Promise.all([loadRoles(), loadProjectPermissions()])
+    await Promise.all([loadRoles(), refreshProjectPermissions()])
   } catch (e) {
     closeToast()
     showFailToast(errMessage(e, t('保存失败')))
@@ -266,7 +257,7 @@ function roleMemberCount(role: ProjectRoleDto): number {
 
 onMounted(() => {
   loadRoles()
-  loadProjectPermissions()
+  refreshProjectPermissions()
 })
 </script>
 

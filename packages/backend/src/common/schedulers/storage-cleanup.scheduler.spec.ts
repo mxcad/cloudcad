@@ -53,6 +53,7 @@ describe('StorageCleanupScheduler', () => {
 	};
 
 	const baseStats = {
+		ok: true,
 		path: 'D:',
 		total: 100 * 1024 * 1024 * 1024,
 		free: 15 * 1024 * 1024 * 1024,
@@ -126,6 +127,40 @@ describe('StorageCleanupScheduler', () => {
 			);
 			expect(mockAlertService.raise).not.toHaveBeenCalledWith(
 				expect.objectContaining({ messageKey: 'disk_space_low' })
+			);
+		});
+
+		it('should log but not alert when the disk cannot be read', async () => {
+			mockDiskMonitorService.getHealthReport.mockReturnValue({
+				healthy: false,
+				status: {
+					stats: {
+						ok: false,
+						reason: 'path-unreachable',
+						path: 'D:',
+						total: 0,
+						free: 0,
+						used: 0,
+						usagePercentage: 0,
+					},
+					warning: false,
+					critical: false,
+					message: 'Disk status unknown (path-unreachable): D:',
+				},
+				recommendation: 'rec',
+			});
+			const warnSpy = jest.spyOn((scheduler as any).logger, 'warn');
+
+			await scheduler.handleDiskMonitor();
+
+			// 探测失败不是空间问题：不得上报 disk_space 告警
+			expect(mockAlertService.raise).not.toHaveBeenCalledWith(
+				expect.objectContaining({ source: 'disk-monitor' })
+			);
+			expect(mockAlertService.resolveBySourceKey).not.toHaveBeenCalled();
+			// 但必须留痕，否则长期探测失败将完全不可见
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining('Disk status unknown')
 			);
 		});
 

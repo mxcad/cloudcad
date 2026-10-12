@@ -1,0 +1,102 @@
+import { ref, computed, type Ref, type ComputedRef } from 'vue'
+
+/** 分页 fetcher 返回的数据形态（各 composable 的 fetch 统一归约到此） */
+export interface PagedItems<T> {
+  items: T[]
+  total: number
+  totalPages: number
+}
+
+/**
+ * 分页深模块：状态 + 派生 + 「加载仪式」+ 竞态守卫，单一出口。
+ *
+ * 收敛范围（相对旧 state-only 版）：
+ *   - items 列表归此持有（首屏替换 / 翻页追加的合并逻辑在此，消费方不再各自写
+ *     `page===1 ? replace : append`）；
+ *   - load(fetcher) 统一 loading/error 仪式（true→''→try→catch→finally false）；
+ *   - 竞态守卫：loadMore 受 loading/hasMore 双守卫（防「加载更多」双击）；load 本身
+ *     不设重入守卫（刷新/切 scope 总是重查，对齐原语义——旧 load 亦无此守卫）；
+ *   - 错误文案经 onError 回调注入 i18n（本 composable 不依赖语言包）。
+ *
+ * fetcher 以 page 为入参（不直接读这里的响应式引用），故与「fetch 读取分页状态」
+ * 不构成循环依赖：消费方把自身特有状态（scope/search/sort 等）闭包进 fetcher，
+ * 翻页号由本模块按当前 page 传入。6 个数据层 composable 共用，消除逐字重复的
+ * loading/error 仪式与首屏/翻页合并逻辑。
+ */
+export interface PagedState<T> {
+  items: Ref<T[]>
+  page: Ref<number>
+  totalPages: Ref<number>
+  total: Ref<number>
+  loading: Ref<boolean>
+  error: Ref<string>
+  hasMore: ComputedRef<boolean>
+  /** 加载更多（page>1）失败：已加载列表保留、底部出重试条（首屏失败不算） */
+  loadMoreFailed: ComputedRef<boolean>
+  /** 执行一次分页加载（含 loading/error 仪式 + 首屏替换/翻页追加；不设重入守卫） */
+  load: (fetcher: (page: number) => Promise<PagedItems<T>>) => Promise<void>
+  /** 翻下一页（loading/hasMore 双守卫） */
+  loadMore: (fetcher: (page: number) => Promise<PagedItems<T>>) => void
+  /** 重试当前页（loadMore 失败后；不翻页，重载当前 page） */
+  retryLoadMore: (fetcher: (page: number) => Promise<PagedItems<T>>) => void
+  /** 回第 1 页（不触发加载，由调用方随后 load） */
+  resetToFirstPage: () => void
+}
+
+export function usePagedState<T>(
+  opts?: { onError?: (e: unknown) => string },
+): PagedState<T> {
+  const items = ref<T[]>([]) as Ref<T[]>
+  const page = ref(1)
+  const totalPages = ref(1)
+  const total = ref(0)
+  const loading = ref(false)
+  const error = ref('')
+  const hasMore = computed(() => page.value < totalPages.value)
+  const loadMoreFailed = computed(() => error.value !== '' && page.value > 1)
+
+  async function load(fetcher: (page: number) => Promise<PagedItems<T>>) {
+    loading.value = true
+    error.value = ''
+    try {
+      const { items: newItems, total: t, totalPages: tp } =
+        await fetcher(page.value)
+      items.value = page.value === 1 ? newItems : [...items.value, ...newItems]
+      total.value = t
+      totalPages.value = tp
+    } catch (e) {
+      error.value = opts?.onError?.(e) ?? '加载失败'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  function loadMore(fetcher: (page: number) => Promise<PagedItems<T>>) {
+    if (loading.value || page.value >= totalPages.value) return
+    page.value++
+    void load(fetcher)
+  }
+
+  function retryLoadMore(fetcher: (page: number) => Promise<PagedItems<T>>) {
+    void load(fetcher)
+  }
+
+  function resetToFirstPage() {
+    page.value = 1
+  }
+
+  return {
+    items,
+    page,
+    totalPages,
+    total,
+    loading,
+    error,
+    hasMore,
+    loadMoreFailed,
+    load,
+    loadMore,
+    retryLoadMore,
+    resetToFirstPage,
+  }
+}

@@ -1,8 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Prisma } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import type { IMembershipService, VipTierActivateInput } from '@cloudcad/contracts';
 import { membershipTierOf } from './membership-tier';
+import {
+  IQuotaCacheInvalidator,
+  type QuotaCacheInvalidator,
+} from '../common/interfaces/quota-cache-invalidator';
 
 type PrismaTx = Prisma.TransactionClient;
 
@@ -64,7 +68,13 @@ export interface RecalculateOrderInput {
 export class MembershipService implements IMembershipService {
   private readonly logger = new Logger(MembershipService.name);
 
-  constructor(private prisma: DatabaseService) {}
+  constructor(
+    private prisma: DatabaseService,
+    // 配额缓存失效 seam（@Optional：未接线 StorageQuotaModule 的模块降级为 no-op）
+    @Optional()
+    @Inject(IQuotaCacheInvalidator)
+    private readonly quotaCacheInvalidator?: QuotaCacheInvalidator
+  ) {}
 
   /**
    * 激活会员（写侧唯一入口，ADR-0036）：内部完成旧等级价格查询 → 升级折算 → 续期/永久保持/等级 max。
@@ -87,29 +97,36 @@ export class MembershipService implements IMembershipService {
     );
 
     // 永久会员（expiresAt 为 null 且等级 >0）保持永久，仅提升等级，不覆盖为有时限
+    let updated: Prisma.UserMembershipGetPayload<object>;
     if (existing && !existing.expiresAt && existing.tierLevel > 0) {
-      return tx.userMembership.update({
+      updated = await tx.userMembership.update({
         where: { userId },
         data: { tierLevel: Math.max(existing.tierLevel, vipTier.level) },
       });
+    } else {
+      const existingActive =
+        existing && existing.expiresAt && existing.expiresAt > now;
+      const base =
+        existing?.expiresAt && existing.expiresAt > now
+          ? existing.expiresAt
+          : now;
+      const newExpiresAt = new Date(base.getTime() + effectiveDays * DAY_MS);
+
+      const effectiveTierLevel = existingActive
+        ? Math.max(existing.tierLevel, vipTier.level)
+        : vipTier.level;
+
+      updated = await tx.userMembership.upsert({
+        where: { userId },
+        create: { userId, tierLevel: vipTier.level, expiresAt: newExpiresAt },
+        update: { tierLevel: effectiveTierLevel, expiresAt: newExpiresAt },
+      });
     }
-    const existingActive =
-      existing && existing.expiresAt && existing.expiresAt > now;
-    const base =
-      existing?.expiresAt && existing.expiresAt > now
-        ? existing.expiresAt
-        : now;
-    const newExpiresAt = new Date(base.getTime() + effectiveDays * DAY_MS);
 
-    const effectiveTierLevel = existingActive
-      ? Math.max(existing.tierLevel, vipTier.level)
-      : vipTier.level;
-
-    return tx.userMembership.upsert({
-      where: { userId },
-      create: { userId, tierLevel: vipTier.level, expiresAt: newExpiresAt },
-      update: { tierLevel: effectiveTierLevel, expiresAt: newExpiresAt },
-    });
+    // 配额变更后失效配额缓存（seam 避免 vip→file-system 依赖环；
+    // 此前 activate 从不失效，非 billing 路径激活后旧配额最长滞留 5min TTL）
+    await this.quotaCacheInvalidator?.invalidateQuotaCache(userId);
+    return updated;
   }
 
   /**
@@ -321,5 +338,40 @@ export class MembershipService implements IMembershipService {
     const { configs } = await this.getEffectiveMembership(userId);
     const value = configs[key];
     return typeof value === 'number' ? value : 0;
+  }
+
+  /**
+   * 过期会员批量降级（写侧单点，自 billing-cron 迁入）：expiresAt 已过期（非 null）的会员
+   * 统一降级为 tierLevel=0 / expiresAt=null，并逐个失效配额缓存（seam 避免 vip→file-system 环）。
+   * 返回降级条数。billing 定时/手动触发共用本方法，禁止再自行 userMembership.updateMany。
+   */
+  async expireOverdueMemberships(): Promise<number> {
+    const now = new Date();
+    const expired = await this.prisma.userMembership.findMany({
+      where: { expiresAt: { lte: now, not: null } },
+      select: { userId: true },
+    });
+    const { count } = await this.prisma.userMembership.updateMany({
+      where: { expiresAt: { lte: now, not: null } },
+      data: { tierLevel: 0, expiresAt: null },
+    });
+    if (count > 0) {
+      for (const m of expired) {
+        await this.quotaCacheInvalidator?.invalidateQuotaCache(m.userId);
+      }
+    }
+    return count;
+  }
+
+  /**
+   * 删除指定用户的会员记录（写侧单点，自 user-cleanup 迁入）：在调用方事务内执行，
+   * 供账号清理统一走 MembershipService，禁止再自行 tx.userMembership.deleteMany。
+   */
+  async deleteMembershipForUser(
+    tx: PrismaTx,
+    userId: string
+  ): Promise<number> {
+    const { count } = await tx.userMembership.deleteMany({ where: { userId } });
+    return count;
   }
 }

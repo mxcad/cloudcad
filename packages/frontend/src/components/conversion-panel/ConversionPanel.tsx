@@ -22,6 +22,7 @@ import { Z_LAYERS } from '@/constants/layers';
 import { t } from '@/languages';
 import { openEventStream } from '@/services/eventStream';
 import { getValidToken } from '@/utils/tokenUtils';
+import { globalShowToast } from '@/utils/notificationEvents';
 import {
   useConversionQueueStore,
   hasActiveTask,
@@ -141,6 +142,7 @@ export function ConversionPanel() {
     loadMoreHistory,
     cancelTask,
     retryTask,
+    reconvertTask,
   } = useConversionQueueStore();
 
   /** 转换配额（ADR-0043 只读）：本窗口剩余额度，仅展示 */
@@ -151,11 +153,20 @@ export function ConversionPanel() {
     void retryTask(task).then(() => refreshQuota());
   };
 
+  /** 重新转换（#4c，对已 COMPLETED 的 CAD 节点从原始源重跑引擎；提交失败时提示） */
+  const handleReconvert = (task: ConversionTask) => {
+    void reconvertTask(task).then((ok) => {
+      if (!ok) globalShowToast(t('重新转换失败'), 'error');
+    });
+  };
+
   /** 下载/上传 tab 独立搜索词（转换 tab 用 store 的 search，因其触发历史重取；三 tab 各持一词，切 tab 互不串扰） */
   const [downloadSearch, setDownloadSearch] = useState('');
   const [uploadSearch, setUploadSearch] = useState('');
 
-  const { stats: uploadStats } = useUploadManager({ maxConcurrent: 3 });
+  const { stats: uploadStats, manager: uploadManager } = useUploadManager({
+    maxConcurrent: 3,
+  });
 
   const {
     tasks: downloadTasks,
@@ -279,6 +290,39 @@ export function ConversionPanel() {
       handle.close();
     };
   }, [hasActive, refreshCloud]);
+
+  // 上传任务终态对账（#4b）：上传任务的 finalize/fail 此前只由组件级 task-processing
+  // 监听器驱动（waitForFileReady 后 finalizeTask），组件卸载 / 监听丢失 / 轮询超时时
+  // 任务永久滞留 processing，「上传」角标不消。面板常驻且轮询云端，此处按 nodeId 对账：
+  // 云端节点进终态（completed→done / failed→fail）即结算对应上传任务，兜底组件监听丢失。
+  // completed 不在 live 列表（listTasks 不含 COMPLETED），靠 history（任务从 live 蒸发时
+  // mergeRecentHistory 增量加载）；failed 直接在 live 列表。finalizeTask/failTask 幂等
+  // （仅处理 processing 态），与组件监听器双触发不冲突。
+  useEffect(() => {
+    if (!uploadManager) return;
+    const terminalByNode = new Map<string, 'completed' | 'failed'>();
+    for (const ct of tasks) {
+      if (ct.source === 'cloud' && ct.nodeId && ct.status === 'failed') {
+        terminalByNode.set(ct.nodeId, 'failed');
+      }
+    }
+    for (const ht of history) {
+      if (ht.source === 'cloud' && ht.nodeId) {
+        if (ht.status === 'completed') terminalByNode.set(ht.nodeId, 'completed');
+        else if (ht.status === 'failed') terminalByNode.set(ht.nodeId, 'failed');
+      }
+    }
+    for (const ut of uploadManager.getTasks()) {
+      if (ut.status !== 'processing' || !ut.result?.nodeId) continue;
+      const terminal = terminalByNode.get(ut.result.nodeId);
+      if (terminal === 'completed') {
+        uploadManager.finalizeTask(ut.id);
+      } else if (terminal === 'failed') {
+        uploadManager.failTask(ut.id, t('转换失败'));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, history, uploadManager]);
 
   // 面板展开时拉取最新已完成历史 + 进行中任务（保证打开面板即见完整列表，#476）。
   // 进行中列表必须一并刷：refreshCloud 的所有触发点都被门控到 hasActive，而手动展开
@@ -693,6 +737,7 @@ export function ConversionPanel() {
                   onOpen={handleOpen}
                   onCancel={cancelTask}
                   onRetry={handleRetry}
+                  onReconvert={handleReconvert}
                   historyLoading={historyLoading}
                   historyHasMore={historyHasMore}
                   historyCount={history.length}

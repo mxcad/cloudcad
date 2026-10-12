@@ -116,8 +116,18 @@ describe('BatchDownloadService', () => {
     };
 
     mockDiskMonitor = {
-      getDiskStats: jest.fn().mockReturnValue({ free: 999999999 }),
+      getDiskStats: jest.fn().mockReturnValue(okDiskStats()),
     };
+  });
+
+  /** 探测成功的磁盘统计（ok 缺失时门禁一律按「测不到」处理） */
+  const okDiskStats = (free: number = 999999999) => ({
+    ok: true,
+    path: defaultExportDir,
+    total: free,
+    free,
+    used: 0,
+    usagePercentage: 0,
   });
 
   describe('createTask', () => {
@@ -365,14 +375,50 @@ describe('BatchDownloadService', () => {
         projectId: 'proj-1',
         nodeType: NodeType.FILE,
       });
-      mockDiskMonitor.getDiskStats.mockReturnValue({ free: 500 });
+      mockDiskMonitor.getDiskStats.mockReturnValue(okDiskStats(500));
       const service = createService({
         prisma: mockPrisma,
         diskMonitor: mockDiskMonitor,
       });
       await expect(service.createTask('user-1', validDto)).rejects.toThrow(
-        ServiceUnavailableException
+        /Insufficient disk space: 500 bytes available/
       );
+    });
+
+    // 回归守卫：探测失败不得伪装成「磁盘已满」
+    it('should report unknown disk state instead of reporting 0 bytes free', async () => {
+      mockPrisma.fileSystemNode.findUnique.mockResolvedValue({
+        id: 'node-1',
+        projectId: 'proj-1',
+        nodeType: NodeType.FILE,
+      });
+      mockDiskMonitor.getDiskStats.mockReturnValue({
+        ok: false,
+        reason: 'path-unreachable',
+        path: defaultExportDir,
+        total: 0,
+        free: 0,
+        used: 0,
+        usagePercentage: 0,
+      });
+      const service = createService({
+        prisma: mockPrisma,
+        diskMonitor: mockDiskMonitor,
+      });
+      const thrown = await service
+        .createTask('user-1', validDto)
+        .then(() => undefined)
+        .catch((error) => error);
+
+      expect(thrown).toBeInstanceOf(ServiceUnavailableException);
+      expect(thrown.message).toMatch(
+        /Unable to determine free disk space.*path-unreachable/
+      );
+      // 必须不再谎报「磁盘已满」
+      expect(thrown.message).not.toMatch(
+        /Insufficient disk space: 0 bytes available/
+      );
+      expect(mockPrisma.batchDownloadJob.create).not.toHaveBeenCalled();
     });
 
     it('should throw VipFeatureRequiredException for export format when not VIP', async () => {

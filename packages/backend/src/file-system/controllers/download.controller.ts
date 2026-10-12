@@ -43,7 +43,7 @@ import { I18nContext } from 'nestjs-i18n';
 import {
   findThumbnailSync,
   getDefaultThumbnailFileName,
-} from '../../mxcad/infra/thumbnail-utils';
+} from '../../common/utils/thumbnail-utils';
 
 @Controller('file-system')
 @UseGuards(RequireProjectPermissionGuard, PermissionsGuard)

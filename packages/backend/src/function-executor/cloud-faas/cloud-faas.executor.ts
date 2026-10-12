@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   IFunctionExecutor,
+  ExecutorCapabilities,
   ConversionTask,
   ConversionResult,
   TaskStatus,
@@ -36,6 +37,12 @@ export class CloudFaaSExecutor implements IFunctionExecutor {
    * 假定 result.metadata 承载引擎输出，而 cloud-faas 的 metadata 来自供应商侧）。
    */
   readonly isRemote = false;
+  /** 云函数形态：供应商侧调度，无取消/逐任务明细/批量原语 */
+  readonly capabilities: ExecutorCapabilities = {
+    cancel: false,
+    listTasks: false,
+    batch: false,
+  };
 
   constructor(@Inject(FaaS_PROVIDER) private readonly provider: FaasProvider) {
     this.logger.log('CloudFaaSExecutor 初始化');

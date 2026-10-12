@@ -2,13 +2,13 @@ const os = require('os');
 const { spawnSync } = require('child_process');
 const { default: mxPath } = require('./mxpath');
 const mxadminPath = require('./mxadminpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 const { getSpawnOptions } = require('./mxpath');
 
 const isWindows = os.platform() === 'win32';
 
 function checkMxAvailable(callback) {
-  executeSpawn(mxPath, ['--version', '--quiet'])
+  mx('--version', ['--quiet'])
     .then(stdout => {
       const version = stdout.trim();
       callback(null, {

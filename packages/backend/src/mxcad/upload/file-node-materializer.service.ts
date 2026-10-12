@@ -6,17 +6,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
 import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
-import {
-  FileSystemNodeService,
-  FileSystemNodeContext,
-} from '../node/filesystem-node.service';
+import { FileSystemNodeContext } from '../node/filesystem-node.service';
+import { NodeUtils } from '../../common/utils/node-utils';
 import {
   StorageManager,
   NodeStorageInfo,
 } from '../../storage-management/services/storage-manager.service';
 import { IStorageService } from '../../storage/interfaces/storage-service.interface';
 import { ThumbnailGenerationService } from '../infra/thumbnail-generation.service';
-import { getThumbnailFileName } from '../infra/thumbnail-utils';
+import { getThumbnailFileName } from '../../common/utils/thumbnail-utils';
 import { I_EXTERNAL_REF_FACADE } from '../external-ref/interfaces/ext-ref-facade.interface';
 import type { IExternalRefFacade } from '../external-ref/interfaces/ext-ref-facade.interface';
 import { copyFileOrDir } from './copy-file-or-dir';
@@ -100,8 +98,7 @@ export class FileNodeMaterializer {
     @Inject(IStorageService) private readonly storageService: IStorageService,
     private readonly thumbnailGenerationService: ThumbnailGenerationService,
     @Inject(I_EXTERNAL_REF_FACADE)
-    private readonly externalRefFacade: IExternalRefFacade,
-    private readonly fileSystemNodeService: FileSystemNodeService
+    private readonly externalRefFacade: IExternalRefFacade
   ) {}
 
   /**
@@ -117,7 +114,7 @@ export class FileNodeMaterializer {
 
   /** 文件扩展名 → MIME 类型（建节点用，随节点创建归属本 module） */
   getMimeType(extension: string): string {
-    return this.fileSystemNodeService.getMimeType(extension);
+    return NodeUtils.getMimeType(extension);
   }
 
   /**
@@ -250,7 +247,7 @@ export class FileNodeMaterializer {
     ownerId: string
   ): Promise<{ id: string }> {
     const extension = path.extname(name).toLowerCase();
-    const mimeType = this.fileSystemNodeService.getMimeType(extension);
+    const mimeType = NodeUtils.getMimeType(extension);
     return this.fileTreeService.createFileNode({
       name,
       fileHash,

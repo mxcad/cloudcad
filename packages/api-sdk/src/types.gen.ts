@@ -3531,6 +3531,17 @@ export type ConversionHistoryResponseDto = {
     hasMore: boolean;
 };
 
+export type RetryConversionTaskResponseDto = {
+    /**
+     * 重试后生成的新转换任务 ID
+     */
+    taskId: string;
+    /**
+     * 重试的原节点 ID（前端据此合并同一节点的任务）
+     */
+    nodeId: string;
+};
+
 export type ConversionQuotaDto = {
     /**
      * 本窗口转换次数上限（unlimited 时为 0）
@@ -10386,6 +10397,24 @@ export type ConversionTaskControllerRetryTaskData = {
 export type ConversionTaskControllerRetryTaskResponses = {
     201: unknown;
 };
+
+export type ConversionTaskControllerReconvertNodeData = {
+    body?: never;
+    path: {
+        /**
+         * 文件节点 ID
+         */
+        nodeId: string;
+    };
+    query?: never;
+    url: '/api/v1/mxcad/conversion/nodes/{nodeId}/reconvert';
+};
+
+export type ConversionTaskControllerReconvertNodeResponses = {
+    default: RetryConversionTaskResponseDto;
+};
+
+export type ConversionTaskControllerReconvertNodeResponse = ConversionTaskControllerReconvertNodeResponses[keyof ConversionTaskControllerReconvertNodeResponses];
 
 export type ConversionTaskControllerGetQuotaData = {
     body?: never;

@@ -26,6 +26,7 @@ import { I18nContext } from 'nestjs-i18n';
 import { ClsService } from 'nestjs-cls';
 import Redis from 'ioredis';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
+import { getClientIp } from '../utils/client-ip';
 
 /**
  * 速率限制配置接口
@@ -94,25 +95,14 @@ export class RateLimitGuard implements CanActivate {
    * 获取客户端真实 IP
    */
   private getClientIp(request: Request): string {
-    // 优先从 CLS 获取（由 ClsMiddleware 设置）
+    // 优先从 CLS 获取（由 ClsMiddleware 设置，其值已走 client-ip 唯一出口）
     const clsIp = this.cls.get<string>('clientIp');
     if (clsIp && clsIp !== 'unknown') {
       return clsIp;
     }
 
-    // 回退到请求头
-    const forwardedFor = request.headers['x-forwarded-for'];
-    if (forwardedFor) {
-      const ips = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor.split(',')[0].trim();
-      return ips;
-    }
-
-    const realIp = request.headers['x-real-ip'];
-    if (realIp) {
-      return Array.isArray(realIp) ? realIp[0] : realIp;
-    }
-
-    return request.ip || (request.connection as { remoteAddress?: string })?.remoteAddress || 'unknown';
+    // 回退到统一 IP 提取（XFF → x-real-ip → socket）
+    return getClientIp(request);
   }
 
   /**

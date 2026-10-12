@@ -3,6 +3,7 @@ const {
   createSession,
   destroySession,
   authMiddleware,
+  requireSession,
   checkLoginLock,
   recordLoginAttempt,
 } = require('../lib/session');
@@ -64,8 +65,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/auth/change-password' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const { oldPassword, newPassword } = body;

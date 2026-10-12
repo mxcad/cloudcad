@@ -2,11 +2,12 @@
 import { BillingCron } from './billing-cron.service';
 import { BillingService } from './billing.service';
 import { DatabaseService } from '../database/database.service';
-import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
+import { MembershipService } from '../vip/membership.service';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { AlertService } from '../alert/alert.service';
 import { AlertLevel } from '../alert/enums/alert.enum';
 import { TaskRunService } from '../task-run/task-run.service';
+import { TaskRunFailureReporter } from '../task-run/task-run-failure-reporter';
 import { OrderStatus } from './enums/billing.enum';
 
 describe('BillingCron', () => {
@@ -22,8 +23,8 @@ describe('BillingCron', () => {
 		},
 	};
 
-	const mockStorageInfoService = {
-		invalidateQuotaCache: jest.fn(),
+	const mockMembershipService = {
+		expireOverdueMemberships: jest.fn(),
 	};
 
 	const mockRuntimeConfigService = {
@@ -58,8 +59,10 @@ describe('BillingCron', () => {
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
 				BillingCron,
+				// 真实 reporter + mock AlertService：协议断言仍落在 alertService.raise 上
+				TaskRunFailureReporter,
 				{ provide: DatabaseService, useValue: mockPrisma },
-				{ provide: StorageInfoService, useValue: mockStorageInfoService },
+				{ provide: MembershipService, useValue: mockMembershipService },
 				{ provide: RuntimeConfigService, useValue: mockRuntimeConfigService },
 				{ provide: AlertService, useValue: mockAlertService },
 				{ provide: TaskRunService, useValue: mockTaskRunService },
@@ -71,12 +74,8 @@ describe('BillingCron', () => {
 	});
 
 	describe('downgradeExpiredMemberships', () => {
-		it('should downgrade expired memberships and invalidate quota cache', async () => {
-			mockPrisma.userMembership.findMany.mockResolvedValue([
-				{ userId: 'u1' },
-				{ userId: 'u2' },
-			]);
-			mockPrisma.userMembership.updateMany.mockResolvedValue({ count: 2 });
+		it('should delegate expiry downgrade to MembershipService', async () => {
+			mockMembershipService.expireOverdueMemberships.mockResolvedValue(2);
 
 			await cron.downgradeExpiredMemberships();
 
@@ -84,11 +83,8 @@ describe('BillingCron', () => {
 				'billing:downgrade-memberships',
 				expect.any(Function)
 			);
-			expect(mockStorageInfoService.invalidateQuotaCache).toHaveBeenCalledWith(
-				'u1'
-			);
-			expect(mockStorageInfoService.invalidateQuotaCache).toHaveBeenCalledWith(
-				'u2'
+			expect(mockMembershipService.expireOverdueMemberships).toHaveBeenCalledTimes(
+				1
 			);
 		});
 
@@ -97,11 +93,11 @@ describe('BillingCron', () => {
 
 			await cron.downgradeExpiredMemberships();
 
-			expect(mockPrisma.userMembership.findMany).not.toHaveBeenCalled();
+			expect(mockMembershipService.expireOverdueMemberships).not.toHaveBeenCalled();
 		});
 
 		it('should raise task_run_failed when task throws', async () => {
-			mockPrisma.userMembership.findMany.mockRejectedValue(
+			mockMembershipService.expireOverdueMemberships.mockRejectedValue(
 				new Error('billing error')
 			);
 

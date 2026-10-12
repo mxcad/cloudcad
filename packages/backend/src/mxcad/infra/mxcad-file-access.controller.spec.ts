@@ -11,6 +11,7 @@ function createController(mocks: {
   shareService?: any;
   storageService?: any;
   externalRefFacade?: any;
+  requestAuthService?: any;
 }) {
   const configService = {
     get: jest.fn((key: string) =>
@@ -30,11 +31,13 @@ function createController(mocks: {
     mocks.shareService || { validateShareFileAccess: jest.fn().mockResolvedValue(undefined) },
     {} as any, // conversionService
     mocks.externalRefFacade || {
-      validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
-      checkFileAccessPermission: jest.fn().mockResolvedValue(true),
       getExternalRefDownloadPath: jest.fn().mockResolvedValue(null),
     },
     {} as any, // restrictionEngine
+    mocks.requestAuthService || {
+      resolveUserId: jest.fn().mockResolvedValue('user-1'),
+      canAccessNode: jest.fn().mockResolvedValue(true),
+    },
   );
   return new MxcadFileAccessController(
     service,
@@ -144,13 +147,13 @@ describe('MxcadFileAccessController filesData 鉴权（HEAD/GET 同一出口）'
       const fileExists = jest.fn().mockResolvedValue(true); // 磁盘上文件仍在
       const getFileStream = jest.fn();
       const findFileByIdNotDeleted = jest.fn().mockResolvedValue(null); // 节点已删
-      const checkFileAccessPermission = jest.fn().mockResolvedValue(true);
+      const canAccessNode = jest.fn().mockResolvedValue(true);
       const controller = createController({
         storageService: { fileExists, getFileStream, getFileInfo: jest.fn() },
         fileSystemNodeService: { findFileByIdNotDeleted },
-        externalRefFacade: {
-          validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
-          checkFileAccessPermission,
+        requestAuthService: {
+          resolveUserId: jest.fn().mockResolvedValue('user-1'),
+          canAccessNode,
         },
       });
       const res = makeRes();
@@ -161,7 +164,7 @@ describe('MxcadFileAccessController filesData 鉴权（HEAD/GET 同一出口）'
       expect(res.status).toHaveBeenCalledWith(404);
       expect(getFileStream).not.toHaveBeenCalled();
       // 节点查不到时不应再做权限判定（直接 fail-closed）
-      expect(checkFileAccessPermission).not.toHaveBeenCalled();
+      expect(canAccessNode).not.toHaveBeenCalled();
     });
 
     it('节点存在但无访问权限时 401', async () => {
@@ -175,9 +178,9 @@ describe('MxcadFileAccessController filesData 鉴权（HEAD/GET 同一出口）'
         fileSystemNodeService: {
           findFileByIdNotDeleted: jest.fn().mockResolvedValue({ id: 'node-1' }),
         },
-        externalRefFacade: {
-          validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
-          checkFileAccessPermission: jest.fn().mockResolvedValue(false),
+        requestAuthService: {
+          resolveUserId: jest.fn().mockResolvedValue('user-1'),
+          canAccessNode: jest.fn().mockResolvedValue(false),
         },
       });
       const res = makeRes();
@@ -201,9 +204,9 @@ describe('MxcadFileAccessController filesData 鉴权（HEAD/GET 同一出口）'
         fileSystemNodeService: {
           findFileByIdNotDeleted: jest.fn().mockResolvedValue({ id: 'node-1' }),
         },
-        externalRefFacade: {
-          validateTokenAndGetUserId: jest.fn().mockResolvedValue('user-1'),
-          checkFileAccessPermission: jest.fn().mockResolvedValue(true),
+        requestAuthService: {
+          resolveUserId: jest.fn().mockResolvedValue('user-1'),
+          canAccessNode: jest.fn().mockResolvedValue(true),
         },
       });
       const res = makeRes();

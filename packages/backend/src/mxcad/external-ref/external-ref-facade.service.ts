@@ -5,7 +5,6 @@ import { ExtRefPreloadingService, PreloadingDataResult, WritePreloadingData } fr
 import { ExtRefValidatorService } from './ext-ref-validator.service';
 import { IExternalRefFacade } from './interfaces/ext-ref-facade.interface';
 import { FileSystemNodeContext } from '../node/filesystem-node.service';
-import type { MxCadRequest } from '../types/request.types';
 import type { PreloadingDataDto } from '../dto/preloading-data.dto';
 import type { ExternalReferenceStats } from '../types/external-reference.types';
 import type { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto';
@@ -52,14 +51,6 @@ export class ExternalRefFacadeService implements IExternalRefFacade {
 
   async writePreloading(nodeId: string, data: WritePreloadingData): Promise<boolean> {
     return this.extRefPreloadingService.writePreloading(nodeId, data);
-  }
-
-  async validateTokenAndGetUserId(request: MxCadRequest): Promise<string> {
-    return this.extRefValidatorService.validateTokenAndGetUserId(request);
-  }
-
-  async checkFileAccessPermission(nodeId: string, userId: string, checkUserId: string): Promise<boolean> {
-    return this.extRefValidatorService.checkFileAccessPermission(nodeId, userId, checkUserId);
   }
 
   async getPreloadingData(nodeId: string): Promise<PreloadingDataDto | null> {

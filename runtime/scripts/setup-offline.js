@@ -26,9 +26,9 @@ const { brandBox } = require('./lib/logger');
 const { OPS_ENTRY, PLATFORM, IS_WINDOWS, IS_LINUX } = require('./lib/context');
 // 后端生产依赖 pnpm --filter 清单（与 verify-deploy.js 共用，见 lib/deploy-install-filter）
 const { buildDeployInstallFilters } = require('./lib/deploy-install-filter');
-// .env 值转义唯一出口（config-updater）：生成的口令含 #/$/! 等字符，
-// 裸写会被 dotenv 当注释截断，见 escapeEnvValue 注释
-const { escapeEnvValue } = require('./config-updater');
+// 密钥生成 / 空白密钥填充：单一事实源 lib/secret-generator.js（ADR-0074，
+// 与 setup-wizard.js 及 Docker 一键部署包共用；本文件不再持有副本）
+const { fillEmptySecrets: fillEmptySecretsCore } = require('./lib/secret-generator');
 
 // 项目根目录
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
@@ -745,92 +745,11 @@ function runPnpmInstallOffline(options = {}) {
 }
 
 /**
- * 生成长度为 64 的随机密钥（十六进制）
- */
-function generateSecret() {
-  const crypto = require('crypto');
-  return crypto.randomBytes(32).toString('hex');
-}
-
-/**
- * 生成符合口令策略的强随机口令（#416 等保 8.1.4.1）：
- * 长度 16，覆盖小写/大写/数字/特殊字符四类（满足"四类至少三类"），
- * 随机生成不会命中弱口令黑名单。用于填充 INITIAL_ADMIN_PASSWORD。
- */
-function generateStrongPassword() {
-  const crypto = require('crypto');
-  const lower = 'abcdefghijklmnopqrstuvwxyz';
-  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const digits = '0123456789';
-  const special = '!@#$%^&*-_=+?';
-  const all = lower + upper + digits + special;
-  const rand = (chars) => chars[crypto.randomInt(chars.length)];
-  // 保证四类各至少一个，其余随机补齐到 16 位
-  const chars = [rand(lower), rand(upper), rand(digits), rand(special)];
-  while (chars.length < 16) {
-    chars.push(rand(all));
-  }
-  // Fisher-Yates 洗牌打散位置
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = crypto.randomInt(i + 1);
-    [chars[i], chars[j]] = [chars[j], chars[i]];
-  }
-  return chars.join('');
-}
-
-/**
- * 填充 .env 中空白的必填密钥（SESSION_SECRET、JWT_SECRET）
- * 首次部署时自动生成随机密钥，避免生产环境校验报错
+ * 填充 .env 空白必填密钥（委托 lib/secret-generator.js 单一事实源，绑定本文件日志）
  * @param {string} envFile - .env 文件路径
  */
 function fillEmptySecrets(envFile) {
-  if (!fs.existsSync(envFile)) return;
-  let content = fs.readFileSync(envFile, 'utf8');
-  const secrets = [
-    'SESSION_SECRET',
-    'JWT_SECRET',
-    // #417 等保 8.1.4.8：PII 字段级加密密钥（users.phone/email 的 AES-GCM 加密 +
-    // HMAC-SHA256 归一化索引）。首次部署自动生成两个独立密钥；升级部署保留已有值
-    // （正则只匹配空白行），避免重启后密钥变化导致存量密文无法解密。
-    'PII_ENCRYPTION_KEY',
-    'PII_HMAC_KEY',
-    // #419 等保 8.1.2.2：Redis requirepass 密码。生产必填（configuration.ts 校验），
-    // 首次部署自动生成；升级部署保留已有值（避免 Redis 密码变化导致后端连不上）。
-    'REDIS_PASSWORD',
-    // #419 等保 8.1.2.2：storage/conversion 内部服务共享密钥（backend 出站带
-    // X-Internal-Service-Secret 头，服务侧非 health 路由校验）。
-    'INTERNAL_SERVICE_SECRET',
-  ];
-  let changed = false;
-  for (const key of secrets) {
-    const regex = new RegExp(`^${key}=[ \\t]*$`, 'm');
-    if (regex.test(content)) {
-      // escapeEnvValue：hex 密钥不含敏感字符原样写入，含敏感字符则加引号
-      content = content.replace(
-        regex,
-        `${key}=${escapeEnvValue(generateSecret())}`
-      );
-      log(`  ✓ 自动生成 ${key}`);
-      changed = true;
-    }
-  }
-  // #416 等保 8.1.4.1：INITIAL_ADMIN_PASSWORD 必填无缺省——首次部署生成符合策略的强随机口令
-  // 强随机口令必含 !@#$%^&* 等特殊字符，必须走 escapeEnvValue 加引号：
-  // 裸写时 dotenv 把 # 当行内注释，以 # 开头的口令解析为空值 → 后端首次启动
-  // 创建管理员失败、PM2 反复重启；# 在中间的口令被静默截断（用户拿到的 ≠ 实际）
-  const adminPasswordRegex = /^INITIAL_ADMIN_PASSWORD=[ \t]*$/m;
-  if (adminPasswordRegex.test(content)) {
-    content = content.replace(
-      adminPasswordRegex,
-      `INITIAL_ADMIN_PASSWORD=${escapeEnvValue(generateStrongPassword())}`
-    );
-    log('  ✓ 自动生成 INITIAL_ADMIN_PASSWORD（强随机口令，请妥善保存）');
-    changed = true;
-  }
-  if (changed) {
-    fs.writeFileSync(envFile, content, 'utf8');
-    log(`  ✓ 已填充 ${path.basename(envFile)} 中的空白密钥`);
-  }
+  return fillEmptySecretsCore(envFile, log);
 }
 
 function copyEnvExampleToEnv() {

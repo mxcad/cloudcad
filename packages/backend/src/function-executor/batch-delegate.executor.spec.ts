@@ -17,6 +17,7 @@ describe('BatchDelegateConversionExecutor（批量委托装饰器）', () => {
   let port: number;
   let baseExecutor: {
     isRemote: boolean;
+    capabilities: { cancel: boolean; listTasks: boolean; batch: boolean };
     invoke: jest.Mock;
     getTaskStatus: jest.Mock;
     queueStats: jest.Mock;
@@ -63,6 +64,7 @@ describe('BatchDelegateConversionExecutor（批量委托装饰器）', () => {
   beforeEach(() => {
     baseExecutor = {
       isRemote: false,
+      capabilities: { cancel: false, listTasks: false, batch: false },
       invoke: jest.fn().mockResolvedValue({ taskId: 't1', status: 'COMPLETED' }),
       getTaskStatus: jest.fn(),
       queueStats: jest.fn().mockResolvedValue(null),
@@ -326,6 +328,8 @@ describe('BatchDelegateConversionExecutor（批量委托装饰器）', () => {
 
       baseExecutor.cancelTask = jest.fn().mockResolvedValue({ ok: true });
       baseExecutor.listTasks = jest.fn().mockResolvedValue([]);
+      baseExecutor.capabilities.cancel = true;
+      baseExecutor.capabilities.listTasks = true;
       const withOptional = createExecutor();
 
       expect(withOptional.cancelTask).toBeDefined();

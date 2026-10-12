@@ -47,7 +47,9 @@ function restorePorts() {
 // ==================== 纯函数：decideRedisGateAction 决策矩阵 ====================
 
 const infra = require('./infra');
-const D = infra.decideRedisGateAction;
+// 纯判定层（ADR-0056 下沉）：决策矩阵 / 空闲端口扫描 / 本机主机判定
+const gate = require('../lib/infra-gate');
+const D = gate.decideRedisGateAction;
 
 test('decideRedisGateAction: 远程实例只有密码正确可复用，其余一律 blocked', () => {
   assert.equal(
@@ -118,38 +120,38 @@ test('decideRedisGateAction: 归属未知（PID 在但 cmdline 不可读）→ b
   );
 });
 
-// ==================== 纯函数：findFreePortUpFrom / isLocalRedisHost ====================
+// ==================== 纯函数：findFreePortUpFrom / isLocalHost ====================
 
 test('findFreePortUpFrom: 跳过占用端口，返回第一个空闲端口', async () => {
   assert.equal(
-    await infra.findFreePortUpFrom(6380, {
+    await gate.findFreePortUpFrom(6380, {
       isPortOpen: async (p) => p === 6380,
     }),
     6381
   );
   assert.equal(
-    await infra.findFreePortUpFrom(6380, { isPortOpen: async () => false }),
+    await gate.findFreePortUpFrom(6380, { isPortOpen: async () => false }),
     6380
   );
 });
 
 test('findFreePortUpFrom: 排除集合与尝试上限/端口边界', async () => {
   assert.equal(
-    await infra.findFreePortUpFrom(6380, {
+    await gate.findFreePortUpFrom(6380, {
       isPortOpen: async (p) => p !== 6382,
       exclude: new Set([6381]),
     }),
     6382
   );
   assert.equal(
-    await infra.findFreePortUpFrom(6380, {
+    await gate.findFreePortUpFrom(6380, {
       isPortOpen: async () => true,
       maxTries: 3,
     }),
     null
   );
   assert.equal(
-    await infra.findFreePortUpFrom(65535, {
+    await gate.findFreePortUpFrom(65535, {
       isPortOpen: async () => true,
       maxTries: 5,
     }),
@@ -157,14 +159,14 @@ test('findFreePortUpFrom: 排除集合与尝试上限/端口边界', async () =>
   );
 });
 
-test('isLocalRedisHost: 本机形态识别（大小写/空值回落）', () => {
-  assert.equal(infra.isLocalRedisHost('127.0.0.1'), true);
-  assert.equal(infra.isLocalRedisHost('localhost'), true);
-  assert.equal(infra.isLocalRedisHost('LOCALHOST'), true);
-  assert.equal(infra.isLocalRedisHost('::1'), true);
-  assert.equal(infra.isLocalRedisHost(''), true);
-  assert.equal(infra.isLocalRedisHost('10.0.0.5'), false);
-  assert.equal(infra.isLocalRedisHost('redis.internal'), false);
+test('isLocalHost: 本机形态识别（大小写/空值回落）', () => {
+  assert.equal(gate.isLocalHost('127.0.0.1'), true);
+  assert.equal(gate.isLocalHost('localhost'), true);
+  assert.equal(gate.isLocalHost('LOCALHOST'), true);
+  assert.equal(gate.isLocalHost('::1'), true);
+  assert.equal(gate.isLocalHost(''), true);
+  assert.equal(gate.isLocalHost('10.0.0.5'), false);
+  assert.equal(gate.isLocalHost('redis.internal'), false);
 });
 
 // ==================== 门禁集成：ensureRedisPasswordManaged ====================

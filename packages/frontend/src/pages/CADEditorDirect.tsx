@@ -33,7 +33,6 @@ import { Button } from '@/components/ui/Button';
 import { ExternalReferencePanel } from '../components/modals/ExternalReferencePanel';
 import type { ExternalReferenceFile } from '../types/filesystem';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
-import { LoginPrompt } from '../components/auth/LoginPrompt';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
 import {
   hideGlobalLoading,
@@ -139,16 +138,7 @@ export const CADEditorDirect: React.FC = () => {
   // 标记是否已初始化 MxCAD，避免重复初始化
   const isInitializedRef = useRef(false);
 
-  const {
-    isActive,
-    showLoginPrompt,
-    loginPromptAction,
-    handleLoginClick,
-    handleLoginPromptClose,
-    loginPromptDismissedRef,
-    setShowLoginPrompt,
-    setLoginPromptAction,
-  } = useFileOpenGuard({
+  const { isActive, loginGate } = useFileOpenGuard({
     fileId,
     isHomeMode,
     isAuthenticated,
@@ -314,20 +304,14 @@ export const CADEditorDirect: React.FC = () => {
   });
 
   // 协同链接 + 未登录（游客）：未登录不能加入协同，弹出登录提示。
-  // 登录后 redirect 回原 URL（handleLoginClick 保留 ?collabWorkId=9），
+  // 登录后 redirect 回原 URL（闸门 handleLoginClick 保留 ?collabWorkId=9），
   // isAuthenticated 变 true，auto-join（依赖 user）自动执行加入协同。
+  // 已登录/已抑制的判定收敛在 requireLogin 内部。
   useEffect(() => {
-    if (isCollabLink && !isAuthenticated && !loginPromptDismissedRef.current) {
-      setLoginPromptAction(t('加入协同'));
-      setShowLoginPrompt(true);
+    if (isCollabLink) {
+      loginGate.requireLogin(t('加入协同'));
     }
-  }, [
-    isCollabLink,
-    isAuthenticated,
-    loginPromptDismissedRef,
-    setLoginPromptAction,
-    setShowLoginPrompt,
-  ]);
+  }, [isCollabLink, loginGate.requireLogin]);
 
   // 文件加载逻辑提取到独立 hook
   useCadFileLoader(
@@ -439,10 +423,8 @@ export const CADEditorDirect: React.FC = () => {
     isHomeMode,
     isAuthenticated,
     personalSpaceId,
-    loginPromptDismissedRef,
+    requireLogin: loginGate.requireLogin,
     currentFileIdRef,
-    setLoginPromptAction,
-    setShowLoginPrompt,
   });
 
   // 外部参照查看预览状态
@@ -735,20 +717,15 @@ export const CADEditorDirect: React.FC = () => {
               // loading 门控：权限加载完成前禁用导出（canExport 悲观默认已为 false）
               canExport={canExport && !permissionsLoading}
               isAuthenticated={isAuthenticated}
-              loginPromptDismissedRef={loginPromptDismissedRef}
+              isLoginSuppressed={loginGate.isLoginSuppressed}
               currentFileHash={currentFileHash}
             />
           </div>
         </div>
       )}
 
-      {/* 登录提示弹窗 - 主页模式 */}
-      <LoginPrompt
-        isOpen={showLoginPrompt}
-        action={loginPromptAction}
-        onLogin={handleLoginClick}
-        onClose={handleLoginPromptClose}
-      />
+      {/* 登录提示弹窗 - 主页模式（视图由 useLoginGate 渲染） */}
+      {loginGate.loginPrompt}
 
       {/* 外部参照管理面板 */}
       <ExternalReferencePanel

@@ -31,17 +31,8 @@ import MembershipBadge from './billing/MembershipBadge';
 import { t, $t, i18nScope } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
 
-// Lucide 图标导入
-import { LayoutDashboard } from 'lucide-react';
-import { FolderOpen } from 'lucide-react';
-import { FileText } from 'lucide-react';
-import { Users } from 'lucide-react';
-import { Shield } from 'lucide-react';
+// Lucide 图标导入（菜单图标已迁入 config/navigation 单一事实源，此处仅保留非菜单图标）
 import { ShieldCheck } from 'lucide-react';
-import { Type } from 'lucide-react';
-import { Activity } from 'lucide-react';
-import { ScrollText } from 'lucide-react';
-import { Bell } from 'lucide-react';
 import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
@@ -51,13 +42,10 @@ import {
   HardDrive,
   ChevronDown,
   HelpCircle,
-  Library,
-  Share2,
-  User,
-  DollarSign,
   Home,
   ListTodo,
 } from 'lucide-react';
+import { ROUTE_DECLARATIONS } from '../config/navigation';
 import { Menu } from './ui/Menu';
 
 interface NavItemProps {
@@ -234,123 +222,25 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   };
 
   // 导航菜单项配置
+  // 菜单项由路由声明（ROUTE_DECLARATIONS，单一事实源）派生：权限映射与路由守卫
+  // （App）共用同一份，杜绝「菜单可见但路由 403」的漂移。仅带 icon 的条目进菜单
+  // （/admin/stats、/runtime-config 等受守卫路由无 icon，不进菜单）。visible 按
+  // permission 计算：无 permission = 仅需登录（恒可见）；单权限 = hasPermission；
+  // 多权限 = 任一满足。
   const menuItems = useMemo(
-    () => [
-      {
-        section: 'main',
-        to: '/dashboard',
-        icon: LayoutDashboard,
-        label: t('仪表盘'),
-        visible: true,
-      },
-      {
-        section: 'main',
-        to: '/projects',
-        icon: FolderOpen,
-        label: t('项目管理'),
-        visible: true,
-        dataTour: 'sidebar-projects',
-      },
-      {
-        section: 'main',
-        to: '/personal-space',
-        icon: FileText,
-        label: t('个人空间'),
-        visible: true,
-        dataTour: 'sidebar-personal-space',
-      },
-      {
-        section: 'main',
-        to: '/shares',
-        icon: Share2,
-        label: t('分享管理'),
-        visible: true,
-      },
-      {
-        section: 'main',
-        to: '/profile',
-        icon: User,
-        label: t('个人资料'),
-        visible: true,
-      },
-      {
-        section: 'admin',
-        to: '/library',
-        icon: Library,
-        label: t('公共资源库'),
-        visible:
-          hasPermission(SystemPermission.LIBRARY_DRAWING_MANAGE) ||
-          hasPermission(SystemPermission.LIBRARY_BLOCK_MANAGE),
-      },
-      {
-        section: 'admin',
-        to: '/font-library',
-        icon: Type,
-        label: t('字体库'),
-        visible: hasPermission(SystemPermission.SYSTEM_FONT_READ),
-      },
-      {
-        section: 'admin',
-        to: '/users',
-        icon: Users,
-        label: t('用户管理'),
-        visible: hasPermission(SystemPermission.SYSTEM_USER_READ),
-      },
-      {
-        section: 'admin',
-        to: '/roles',
-        icon: ShieldCheck,
-        label: t('角色权限'),
-        visible: hasPermission(SystemPermission.SYSTEM_ROLE_READ),
-        dataTour: 'sidebar-roles',
-      },
-      {
-        section: 'admin',
-        to: '/admin/billing',
-        icon: DollarSign,
-        label: t('支付管理'),
-        // 与路由守卫一致：菜单显隐用 SYSTEM_BILLING_READ（曾误用 SYSTEM_CONFIG_READ，
-        // 导致有"查看配置"无"查看支付"的用户看到菜单但 403，反之看不到菜单）
-        visible: hasPermission(SystemPermission.SYSTEM_BILLING_READ),
-      },
-      {
-        section: 'admin',
-        to: '/admin/ip-access',
-        icon: Shield,
-        label: t('IP 访问控制'),
-        // 三个子 Tab 权限不同（黑名单 / 白名单+高危访问尝试），任一权限即见入口，
-        // 页内再按权限显隐 Tab；与 /admin/ip-access 路由守卫的 OR 规则保持一致
-        visible: hasAnyPermission([
-          SystemPermission.SYSTEM_IP_BLACKLIST_MANAGE,
-          SystemPermission.SYSTEM_IP_WHITELIST_MANAGE,
-        ]),
-      },
-      {
-        section: 'admin',
-        to: '/audit-logs',
-        icon: ScrollText,
-        label: t('审计日志'),
-        // #321 三权分立：审计管理员（AUDIT_ADMIN）或系统管理员可见
-        visible: hasAnyPermission([
-          SystemPermission.AUDIT_ADMIN,
-          SystemPermission.SYSTEM_ADMIN,
-        ]),
-      },
-      {
-        section: 'admin',
-        to: '/system-monitor',
-        icon: Activity,
-        label: t('系统监控'),
-        visible: hasPermission(SystemPermission.SYSTEM_MONITOR),
-      },
-      {
-        section: 'admin',
-        to: '/admin/notices',
-        icon: Bell,
-        label: t('通知管理'),
-        visible: hasPermission(SystemPermission.SYSTEM_CONFIG_READ),
-      },
-    ],
+    () =>
+      ROUTE_DECLARATIONS.filter((e) => e.icon).map((e) => ({
+        section: e.section!,
+        to: e.path,
+        icon: e.icon!,
+        label: t(e.labelKey!),
+        dataTour: e.dataTour,
+        visible: e.permission
+          ? Array.isArray(e.permission)
+            ? hasAnyPermission(e.permission)
+            : hasPermission(e.permission)
+          : true,
+      })),
     [hasPermission, hasAnyPermission]
   );
 

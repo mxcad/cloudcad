@@ -1,116 +1,119 @@
 'use strict';
 
-const { describe, it, beforeEach, afterEach } = require('node:test');
+const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { execFileSync } = require('child_process');
+const SvnAgent = require('../services/svn-agent');
+const { parseLogXml } = require('../services/svn-agent');
 
-const TEST_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'svn-agent-test-'));
-
-// 模拟 mxcmd.js CLI：把收到的 argv 原样写回 stdout（JSON），方便断言参数未被 shell 解释。
-const MOCK_CLI = `
-'use strict';
-process.stdout.write(JSON.stringify(process.argv.slice(2)));
-`;
-
-function loadAgentWithMockCli({ exitCode = 0, stderr = '' } = {}) {
-  const mockCliPath = path.join(TEST_DIR, 'mxcmd.js');
-  fs.writeFileSync(
-    mockCliPath,
-    `${MOCK_CLI}\nprocess.exit(${exitCode});\n`,
-    'utf8',
-  );
-  // 通过临时 env + 清理 require cache，让 constants.js 重新读取 MX_VERSION_TOOL_PATH
-  process.env.MX_VERSION_TOOL_PATH = mockCliPath;
-  for (const mod of [
-    require.resolve('../lib/constants'),
-    require.resolve('../services/svn-agent'),
-  ]) {
-    delete require.cache[mod];
-  }
-  const agent = require('../services/svn-agent');
-  const cli = new agent();
-  return { cli, mockCliPath };
+/**
+ * 假 mx()：捕获 (command, args, opts)，按配置 resolve(stdout) / reject(error)。
+ * 通过 SvnAgent 的 DI 注入（new SvnAgent({ mx })），不触碰真实 mx 二进制，
+ * 也不再需要 MX_VERSION_TOOL_PATH 指向一个假 CLI（旧 spawn 实现才需要）。
+ */
+function fakeMx({ stdout = '', reject } = {}) {
+  const calls = [];
+  const fn = (command, args, opts) => {
+    calls.push({ command, args, opts });
+    if (reject) return Promise.reject(reject);
+    // 与真实 mx() 一致：buffer 模式返回 Buffer，否则 utf8 字符串
+    const value = opts && opts.buffer ? Buffer.from(stdout, 'utf8') : stdout;
+    return Promise.resolve(value);
+  };
+  fn.calls = calls;
+  return fn;
 }
 
-describe('SvnAgent', () => {
-  afterEach(() => {
-    // 恢复默认路径，避免影响其他测试
-    delete process.env.MX_VERSION_TOOL_PATH;
-    for (const mod of [
-      require.resolve('../lib/constants'),
-      require.resolve('../services/svn-agent'),
-    ]) {
-      delete require.cache[mod];
-    }
-    require('../services/svn-agent');
-  });
-
-  it('should pass filePath with shell metacharacters as a single literal arg (no shell)', async () => {
-    const { cli } = loadAgentWithMockCli();
+describe('SvnAgent（进程内 mx() adapter）', () => {
+  it('commit 走 mx(commit, [path, -m, message])，特殊字符作为单个 argv 元素', async () => {
+    const mx = fakeMx({ stdout: 'Committed revision 5.' });
+    const agent = new SvnAgent({ mx });
     const dangerous = 'a b;rm -rf / && echo pwned "$(id)"';
-    const result = await cli.commit(dangerous, 'msg');
+    const result = await agent.commit(dangerous, 'msg');
     assert.equal(result.success, true);
-    const args = JSON.parse(result.output);
-    assert.equal(args[0], 'commit');
-    assert.equal(args[1], dangerous);
-    assert.equal(args[2], 'msg');
+    assert.equal(result.output, 'Committed revision 5.');
+    assert.equal(mx.calls[0].command, 'commit');
+    assert.deepEqual(mx.calls[0].args, [dangerous, '-m', 'msg']);
   });
 
-  it('should pass message with special characters literally', async () => {
-    const { cli } = loadAgentWithMockCli();
-    const result = await cli.commit('p.dwg', 'fix: "quotes" && & | ; $()');
-    assert.equal(result.success, true);
-    const args = JSON.parse(result.output);
-    assert.equal(args[2], 'fix: "quotes" && & | ; $()');
+  it('commit 消息含特殊字符时作为单个 argv 元素（无 shell 解释）', async () => {
+    const mx = fakeMx({ stdout: 'ok' });
+    const agent = new SvnAgent({ mx });
+    await agent.commit('p.dwg', 'fix: "quotes" && & | ; $()');
+    assert.deepEqual(mx.calls[0].args, [
+      'p.dwg',
+      '-m',
+      'fix: "quotes" && & | ; $()',
+    ]);
   });
 
-  it('should parse history output lines', async () => {
-    const { cli } = loadAgentWithMockCli();
-    // 直接调用私有 _run 会触发真实 mock CLI，改写历史输出为一行
-    const mockCliPath = path.join(TEST_DIR, 'mxcmd.js');
-    fs.writeFileSync(
-      mockCliPath,
-      `process.stdout.write('3|author|2026-01-01|my commit\\n');\n`,
-      'utf8',
-    );
-    delete require.cache[require.resolve('../services/svn-agent')];
-    const agent = require('../services/svn-agent');
-    const cli2 = new agent();
-    const entries = await cli2.history('p.dwg');
-    assert.equal(entries.length, 1);
-    assert.equal(entries[0].revision, 3);
-    assert.equal(entries[0].author, 'author');
-    assert.equal(entries[0].message, 'my commit');
+  it('history 走 mx(log, [path, --xml]) 并解析 XML（新→旧）', async () => {
+    const xml =
+      '<?xml version="1.0"?>\n<log>\n' +
+      '<logentry revision="5"><author>alice</author><date>2026-01-02T00:00:00.000000Z</date><msg>second</msg></logentry>\n' +
+      '<logentry revision="3"><author>bob</author><date>2026-01-01T00:00:00.000000Z</date><msg>first</msg></logentry>\n' +
+      '</log>';
+    const mx = fakeMx({ stdout: xml });
+    const agent = new SvnAgent({ mx });
+    const entries = await agent.history('p.dwg');
+    assert.equal(mx.calls[0].command, 'log');
+    assert.deepEqual(mx.calls[0].args, ['p.dwg', '--xml']);
+    assert.equal(entries.length, 2);
+    assert.equal(entries[0].revision, 5);
+    assert.equal(entries[0].author, 'alice');
+    assert.equal(entries[0].message, 'second');
+    assert.equal(entries[1].revision, 3);
+    assert.equal(entries[1].message, 'first');
   });
 
-  it('should propagate non-zero exit as an error for cat', async () => {
-    const { cli } = loadAgentWithMockCli({ exitCode: 1, stderr: 'svn error' });
-    await assert.rejects(() => cli.cat('p.dwg', 5), /svn error|退出码/);
+  it('cat 走 mx(cat, [-r rev, path]) 带 buffer + maxBuffer', async () => {
+    const mx = fakeMx({ stdout: 'filebytes' });
+    const agent = new SvnAgent({ mx });
+    const buf = await agent.cat('p.dwg', 5);
+    assert.equal(mx.calls[0].command, 'cat');
+    assert.deepEqual(mx.calls[0].args, ['-r', '5', 'p.dwg']);
+    assert.equal(mx.calls[0].opts.buffer, true);
+    assert.ok(mx.calls[0].opts.maxBuffer > 0);
+    assert.ok(Buffer.isBuffer(buf));
   });
 
-  it('should return failure object when commit exits non-zero', async () => {
-    const { cli } = loadAgentWithMockCli({ exitCode: 1 });
-    const result = await cli.commit('p', 'm');
+  it('cat 非零退出 → 抛错', async () => {
+    const mx = fakeMx({ reject: Object.assign(new Error('svn error'), { code: 1 }) });
+    const agent = new SvnAgent({ mx });
+    await assert.rejects(() => agent.cat('p.dwg', 5), /svn error/);
+  });
+
+  it('commit 非零退出 → {success:false, error}', async () => {
+    const mx = fakeMx({ reject: new Error('commit failed') });
+    const agent = new SvnAgent({ mx });
+    const result = await agent.commit('p', 'm');
     assert.equal(result.success, false);
     assert.ok(result.error);
   });
 
-  it('should return empty array on history error', async () => {
-    const { cli } = loadAgentWithMockCli({ exitCode: 1 });
-    const entries = await cli.history('p');
-    assert.deepEqual(entries, []);
+  it('history 出错（如 E160013 无历史）→ 空数组', async () => {
+    const mx = fakeMx({ reject: new Error('svn: E160013: path not found') });
+    const agent = new SvnAgent({ mx });
+    assert.deepEqual(await agent.history('p'), []);
   });
 
-  it('should be robust against MX_VERSION_TOOL_PATH missing (path traversal args)', async () => {
-    const { cli } = loadAgentWithMockCli();
-    const result = await cli.commit('../../etc/passwd', 'x');
-    assert.equal(result.success, true);
-    const args = JSON.parse(result.output);
-    assert.equal(args[1], '../../etc/passwd');
+  it('路径穿越参数作为单元素原样传递（不解释）', async () => {
+    const mx = fakeMx({ stdout: 'ok' });
+    const agent = new SvnAgent({ mx });
+    await agent.commit('../../etc/passwd', 'x');
+    assert.deepEqual(mx.calls[0].args, ['../../etc/passwd', '-m', 'x']);
+  });
+});
+
+describe('parseLogXml', () => {
+  it('空 <log></log> → 空数组', () => {
+    assert.deepEqual(parseLogXml('<?xml version="1.0"?><log></log>'), []);
   });
 
-  void execFileSync;
+  it('多行 msg 完整保留', () => {
+    const xml =
+      '<log><logentry revision="1"><author>a</author><date>2026-01-01T00:00:00Z</date><msg>line1\nline2</msg></logentry></log>';
+    const e = parseLogXml(xml);
+    assert.equal(e.length, 1);
+    assert.equal(e[0].message, 'line1\nline2');
+  });
 });

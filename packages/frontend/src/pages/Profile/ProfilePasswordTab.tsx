@@ -171,8 +171,8 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             {t('安全建议')}
           </h4>
           <ul>
-            <li>{t('密码长度至少 8 个字符')}</li>
-            <li>{t('包含大小写字母和数字')}</li>
+            <li>{t('密码长度至少 10 个字符')}</li>
+            <li>{t('包含大小写字母、数字、特殊字符中至少三类')}</li>
             <li>{t('避免使用常见的密码组合')}</li>
             <li>{t('不要在多个网站使用相同的密码')}</li>
           </ul>

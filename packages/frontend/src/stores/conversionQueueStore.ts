@@ -17,6 +17,7 @@ import {
   conversionTaskControllerCancelTask,
   conversionTaskControllerListHistory,
   conversionTaskControllerRetryTask,
+  conversionTaskControllerReconvertNode,
 } from '@/api-sdk';
 import type { ConversionTaskItemDto } from '@/api-sdk';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -298,6 +299,12 @@ interface ConversionQueueState {
    * 成功即刷新云端列表（同一 nodeId 合并覆盖）。不重新上传、不占配额、无次数上限。
    */
   retryTask: (task: ConversionTask) => Promise<boolean>;
+  /**
+   * 重新转换（#4c，cloud + nodeId）：对已 COMPLETED 的 CAD 节点从原始源文件重跑引擎
+   * （面板「重新转换」按钮）。成功即把节点移回 live 列表（PROCESSING）并清掉历史区
+   * 陈旧 COMPLETED 行，再刷新云端。与 retryTask（仅 FAILED）互补。
+   */
+  reconvertTask: (task: ConversionTask) => Promise<boolean>;
   setCollapsed: (collapsed: boolean) => void;
   /**
    * 任务驱动的自动展开：展开并标记为「无任务后可自动收起」。
@@ -618,6 +625,25 @@ export const useConversionQueueStore = create<ConversionQueueState>(
         get().updateTaskStatus(task.id, 'failed', {
           error: getErrorMessage(err) || t('重试失败'),
         });
+        return false;
+      }
+    },
+
+    reconvertTask: async (task) => {
+      if (task.source !== 'cloud' || !task.nodeId) return false;
+      try {
+        await conversionTaskControllerReconvertNode({
+          path: { nodeId: task.nodeId },
+          throwOnError: true,
+        });
+        // 重转已提交：节点回到 PROCESSING（进 live 列表），清掉历史区陈旧 COMPLETED 行
+        set((state) => ({
+          history: state.history.filter((h) => h.nodeId !== task.nodeId),
+        }));
+        await get().refreshCloud();
+        return true;
+      } catch (err) {
+        // 提交失败（原始文件不可用 / 无权限 / 网络错误）：调用方据返回值提示
         return false;
       }
     },

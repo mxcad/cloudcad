@@ -98,22 +98,40 @@ export class ShareService {
     );
   }
 
-  async resolveShare(token: string) {
-    const share = await this.prisma.fileShare.findUnique({
-      where: { token },
-    });
-
+  /**
+   * 分享令牌可用性校验（resolveShare / resolveShareNode / validateShareFileAccess
+   * 三处共用）：token 存在 → 未撤销 → 未过期，返回 share 行。
+   * 节点存活判定各调用方按自身语义处理——resolveShareNode 需感知已删节点以回吐
+   * deletedAt（供调用方提示「文件已被删除」），故节点过滤不在此处。
+   */
+  private async assertShareUsable(token: string) {
+    const share = await this.prisma.fileShare.findUnique({ where: { token } });
     if (!share) {
       throw new NotFoundException(I18nContext.current()?.t('error.share.not_found') ?? '分享链接不存在');
     }
-
     if (share.deletedAt) {
       throw new NotFoundException(I18nContext.current()?.t('error.share.revoked') ?? '分享链接已撤销');
     }
-
     if (share.expiresAt && share.expiresAt < new Date()) {
       throw new NotFoundException(I18nContext.current()?.t('error.share.expired') ?? '分享链接已过期');
     }
+    return share;
+  }
+
+  /** 分享属主校验（revokeShare / updateShare 共用），errorKey/fallback 区分撤销与修改文案。 */
+  private assertShareOwner(
+    share: { createdBy: string },
+    userId: string,
+    errorKey: 'error.share.only_creator_can_revoke' | 'error.share.only_creator_can_modify',
+    fallback: string,
+  ): void {
+    if (share.createdBy !== userId) {
+      throw new ForbiddenException(I18nContext.current()?.t(errorKey) ?? fallback);
+    }
+  }
+
+  async resolveShare(token: string) {
+    const share = await this.assertShareUsable(token);
 
     const fileNode = await this.prisma.fileSystemNode.findFirst({
       where: { id: share.fileId, deletedAt: null },
@@ -142,9 +160,7 @@ export class ShareService {
       throw new NotFoundException(I18nContext.current()?.t('error.share.not_found') ?? '分享链接不存在');
     }
 
-    if (share.createdBy !== userId) {
-      throw new ForbiddenException(I18nContext.current()?.t('error.share.only_creator_can_revoke') ?? '只有创建者可以撤销分享');
-    }
+    this.assertShareOwner(share, userId, 'error.share.only_creator_can_revoke', '只有创建者可以撤销分享');
 
     if (share.deletedAt) {
       throw new NotFoundException(I18nContext.current()?.t('error.share.revoked') ?? '分享链接已撤销');
@@ -168,21 +184,7 @@ export class ShareService {
   }
 
   async resolveShareNode(token: string) {
-    const share = await this.prisma.fileShare.findUnique({
-      where: { token },
-    });
-
-    if (!share) {
-      throw new NotFoundException(I18nContext.current()?.t('error.share.not_found') ?? '分享链接不存在');
-    }
-
-    if (share.deletedAt) {
-      throw new NotFoundException(I18nContext.current()?.t('error.share.revoked') ?? '分享链接已撤销');
-    }
-
-    if (share.expiresAt && share.expiresAt < new Date()) {
-      throw new NotFoundException(I18nContext.current()?.t('error.share.expired') ?? '分享链接已过期');
-    }
+    const share = await this.assertShareUsable(token);
 
     const fileNode = await this.prisma.fileSystemNode.findUnique({
       where: { id: share.fileId },
@@ -206,10 +208,15 @@ export class ShareService {
       data: { usedCount: { increment: 1 } },
     });
 
+    // 已入回收站的节点：回吐 deletedAt 供调用方提示「文件已被删除」（移动端
+    // useFileLoader 先判 deletedAt 再判 fileHash，依赖此 200 而非 404），但不再
+    // 泄漏存储定位字段 path/fileHash——与 resolveShare/validateShareFileAccess 的
+    // 「已删节点不可用」口径对齐，避免同一 token 对已删文件在兄弟端点 404、此处却回吐路径。
+    const isDeleted = !!fileNode.deletedAt;
     return {
       name: fileNode.name,
-      fileHash: fileNode.fileHash,
-      path: fileNode.path,
+      fileHash: isDeleted ? null : fileNode.fileHash,
+      path: isDeleted ? null : fileNode.path,
       parentId: fileNode.parentId,
       id: fileNode.id,
       deletedAt: fileNode.deletedAt?.toISOString() ?? null,
@@ -341,21 +348,7 @@ export class ShareService {
    * @param storagePath 请求的文件存储路径（如 202506/nodeId/filename.dwg）
    */
   async validateShareFileAccess(token: string, storagePath: string): Promise<void> {
-    const share = await this.prisma.fileShare.findUnique({
-      where: { token },
-    });
-
-    if (!share) {
-      throw new NotFoundException(I18nContext.current()?.t('error.share.not_found') ?? '分享链接不存在');
-    }
-
-    if (share.deletedAt) {
-      throw new NotFoundException(I18nContext.current()?.t('error.share.revoked') ?? '分享链接已撤销');
-    }
-
-    if (share.expiresAt && share.expiresAt < new Date()) {
-      throw new NotFoundException(I18nContext.current()?.t('error.share.expired') ?? '分享链接已过期');
-    }
+    const share = await this.assertShareUsable(token);
 
     const fileNode = await this.prisma.fileSystemNode.findUnique({
       where: { id: share.fileId },
@@ -393,9 +386,7 @@ export class ShareService {
       throw new NotFoundException(I18nContext.current()?.t('error.share.not_found') ?? '分享链接不存在');
     }
 
-    if (share.createdBy !== userId) {
-      throw new ForbiddenException(I18nContext.current()?.t('error.share.only_creator_can_modify') ?? '只有创建者可以修改分享设置');
-    }
+    this.assertShareOwner(share, userId, 'error.share.only_creator_can_modify', '只有创建者可以修改分享设置');
 
     if (share.deletedAt) {
       throw new NotFoundException(I18nContext.current()?.t('error.share.revoked') ?? '分享链接已撤销');

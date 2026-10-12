@@ -1,8 +1,7 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxLog(targetPath, limit, verbose, username, password, callback) {
-  const args = ['log'];
+  const args = [];
 
   if (verbose) {
     args.push('-v');
@@ -20,15 +19,13 @@ function mxLog(targetPath, limit, verbose, username, password, callback) {
     args.push('--username', username);
   }
 
-  let env;
   if (password) {
     args.push('--password-from-env');
-    env = { ...process.env, SVN_PASSWORD: password };
   }
 
   args.push('--xml');
 
-  executeSpawn(mxPath, args, env ? { env } : {})
+  mx('log', args, { password })
     .then(stdout => {
       callback(null, stdout);
     })

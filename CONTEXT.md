@@ -300,6 +300,38 @@ _避免_: DataTable、Table（与后端"表/数据表"语义混淆）
 选中计数徽标 + 批量按钮组 + 清空（`selectedCount > 0` 显示）的统一组件。批量动作一律**循环调用现有 SDK 单条接口**
 （统计成功/失败计数 Toast 汇总），不新增后端批量接口（同分享管理批量撤销模式）。
 
+**Docker 部署包（Docker 一键部署包）**:
+Linux 交付形态之一（ADR-0074）：一个压缩包，解压后 `./start.sh` 即完成部署、`./stop.sh` 停止。包内含离线 Docker 镜像 tar、
+Docker 静态二进制（无 Docker 时自装）、宿主进程物料（node / mxcad / conversion-service）与单一 `.env`。
+与**裸机部署包**（`pack-offline.js --deploy`，全量二进制 + PM2）并存的第二种交付形态。
+_避免_: docker 包、容器包
+
+**半容器化（half-containerization）**:
+Docker 部署包的容器化边界（ADR-0074）：只有 pg / redis / app 三个容器；mxcadAssembly 折叠的协同服务、
+conversion-service 与运维中心（config-service）作为**宿主进程**留在容器外。理由：mxcadAssembly 的机器码绑定读闭源字段
+（CPU/DMI/磁盘序列号不变，MAC/主机名/IP 在容器内会变），留在宿主是唯一不需猜闭源实现的解法；运维中心留宿主则升级重建
+app 容器期间管理面全程存活。
+_避免_: 全容器化（那是 `docker/docker-compose.yml` 的另一条路线）、部分容器化
+
+**宿主进程（host process）**:
+Docker 部署包中运行在容器外、由 start.sh 以 nohup + pidfile 管理的进程：协同服务（mxcadAssembly，3091）、
+conversion-service（3100）与运维中心（config-service，3002）。用包内离线 node 启动（协同服务是 mxcadAssembly 二进制），
+**不用 PM2**（容器重启由 dockerd 负责，PM2 是裸机形态独有）。
+_避免_: 容器外服务、旁路服务
+
+**同路径挂载（same-path bind mount）**:
+Docker 部署包的挂载铁律（ADR-0074 D3）：bind mount 的宿主路径与容器路径使用**同一绝对路径字符串**。
+因为 backend 在容器内按 `resolvePath()` 算出的 `srcPath` 会原样交给宿主上的引擎去读文件——
+路径字符串两端必须一致，宿主引擎才不会 ENOENT。`.env` 中所有宿主进程要读的路径因此一律写绝对路径。
+_避免_: 路径映射、路径翻译层
+
+**SystemLib 运行时探针（SystemLib runtime probe）**:
+Docker 部署包对 mxcad 二进制 glibc 兼容性的运行时判定（ADR-0074 D6）：start.sh 用包内自带 `1.dwg`
+经 `@cloudcad/engine-exec` 做一次真实转换，判据只认引擎 JSON stdout 的 `code`（退出码恒 2123 不可用）；
+失败才把 `SystemLib/` 覆盖进 mxcad 目录并重试。取代构建期按发行版硬编码的 `NEEDS_SYSTEM_LIB` 替换。
+已知局限：无法区分 glibc 失败与授权/机器码失败，替换是启发式。
+_避免_: SystemLib 自动替换（那是被取代的构建期行为）
+
 ## 关系
 
 - 一张 **图纸** 是一个 `NodeType=FILE` 的 **文件节点** 的业务别名——图纸不独立于文件节点存在
@@ -308,6 +340,8 @@ _避免_: DataTable、Table（与后端"表/数据表"语义混淆）
 - 一个 **文件节点** 拥有多个 **版本**（通过 SVN 提交生成）
 - **资源库** 节点不产生版本
 - 删除 **文件节点** 时，其所有 **版本** 记录一同删除
+- 一个 **Docker 部署包** = 3 个容器（pg/redis/app）+ 3 个 **宿主进程**（协同服务、conversion-service、运维中心），
+  全部经宿主网络互通（`network_mode: host`），端口只由单一 `.env` 决定；app 容器与宿主进程经 **同路径挂载** 共享 `data/` 与 `runtime/`
 
 ## 后端模块依赖分层
 
@@ -339,11 +373,11 @@ Layer 3: 业务编排层
 
 **模块状态（Module Health）**:
 后端模块除三层分层外，还需处于以下健康状态之一，新模块必须能回答三问（有无消费者/有无测试/是否值得独立）：
-- **已激活**：有消费者、有测试、被 app.module 装配并实际生效（如 permission、file-operations）
-- **已实现未接线**：能力完整但生产链路未接入（如 policy-engine、ownership 空壳），必须 JSDoc 标注状态 + 登记 issue，不得"假装生效"
-- **迁移中（双轨）**：expand-contract 迁移的中间态，必须排收尾票（contract 旧路径退休），禁止无限期双轨（如 storage vs storage-provider）
+- **已激活**：有消费者、有测试、被 app.module 装配并实际生效（如 permission、file-operations、ownership、storage）
+- **已实现未接线**：能力完整但生产链路未接入，必须 JSDoc 标注状态 + 登记 issue，不得"假装生效"（当前无此类模块——`policy-engine` 从未实现、`ownership` 已生产接线，均不属此类）
+- **迁移中（双轨）**：expand-contract 迁移的中间态，必须排收尾票（contract 旧路径退休），禁止无限期双轨（`storage vs storage-provider` 双轨已收尾，见 #234）
 - **孤儿（孤儿服务/孤儿 barrel/空壳模块）**：无消费者，一律删除或标注
-_实例与决策见 issue #228（模块健康盘点）、#234（存储迁移收尾）_
+_实例与决策见 issue #228（模块健康盘点）、#234（存储迁移收尾，已完成）_
 
 ## 图纸归属
 

@@ -185,6 +185,34 @@ export class ConversionTaskController {
   }
 
   /**
+   * 重新转换（#4c）：对已 COMPLETED 的 CAD 节点，从原始源文件重跑引擎（面板「重新转换」
+   * 按钮）。与 retry（仅 FAILED）互补：reconvert 面向 COMPLETED 节点主动重转。
+   * 需登录（按 nodeId 做归属校验）。
+   */
+  @Post('nodes/:nodeId/reconvert')
+  @ApiOperation({
+    summary: '重新转换（#4c，从原始源文件重跑引擎；面向已 COMPLETED 的 CAD 节点）',
+  })
+  @ApiParam({ name: 'nodeId', description: '文件节点 ID' })
+  @ApiResponse({ type: RetryConversionTaskResponseDto })
+  async reconvertNode(
+    @Param('nodeId') nodeId: string,
+    @Req() request: MxCadRequest
+  ): Promise<RetryConversionTaskResponseDto> {
+    const userId = request.user?.id;
+    if (!userId)
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    const taskId = await this.unifiedConversionService.reconvertNode(
+      nodeId,
+      userId
+    );
+    this.logger.log(
+      `Node ${nodeId} reconvert by user ${userId}: task ${taskId}`
+    );
+    return { taskId, nodeId };
+  }
+
+  /**
    * 当前调用者的转换配额（ADR-0043，只读不占位）：@Public 端点，
    * 游客按 IP 窗口、登录用户按 userId 窗口（scope 区分）。
    */

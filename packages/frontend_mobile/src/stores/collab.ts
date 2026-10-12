@@ -4,6 +4,7 @@ import { MxCpp } from 'mxcad';
 import { showToast } from 'vant';
 import { t } from '@/languages';
 import {
+  COLLAB_WORKS_POLL_INTERVAL_MS,
   encodeUserData,
   encodeV3WorkData,
   parseWorkData,
@@ -27,8 +28,9 @@ import { useEditorStore } from './editor';
 
 const FETCH_WORKS_TIMEOUT = 30000;
 const JOIN_SAFETY_TIMEOUT = 15000;
-// 与 PC POLL_INTERVAL 对齐：原 8s 是 PC 的 4 倍频率，手机端切后台仍持续打请求
-const POLL_INTERVAL = 30000;
+// 轮询间隔与 PC 共用单一事实源（@cloudcad/platform）：30s 时成员间在线状态
+// 收敛差上限 60s，人数明显不一致，统一收紧到 2s
+const POLL_INTERVAL = COLLAB_WORKS_POLL_INTERVAL_MS;
 
 export const useCollabStore = defineStore('collab', () => {
   const isCadReady = ref(false);

@@ -49,7 +49,7 @@ export function useCollaboration(visible: boolean, onFileLoaded?: () => void): U
     projectWorks,
     currentFileName,
     fetchWorks,
-  } = useCollabWorks(fromShare, user?.id, visible);
+  } = useCollabWorks(fromShare, user, visible);
 
   const {
     creating,

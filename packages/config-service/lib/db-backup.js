@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 const { log } = require('./utils');
 const { BACKUP_DIR, ENV_PATH, RUNTIME_DIR } = require('./constants');
 const { parseEnvFile } = require('./env');
+const { parseDatabaseUrl } = require('./database-url');
 
 /**
  * 备份文件名格式校验（唯一事实源，与 backupDatabase 生成的 `db_backup_<ISO 时间戳>.sql`
@@ -83,26 +84,8 @@ function getRedisCliPath() {
   return isWindows ? 'redis-cli.exe' : 'redis-cli';
 }
 
-/**
- * 解析 DATABASE_URL（postgresql://user:password@host:port/dbname）为连接部件。
- * 未提供的部件返回 undefined，由 resolveDbConnection 回落到 DB_* 环境变量；
- * 非合法 URL 返回空对象（全部回落 DB_*）。
- */
-function parseDatabaseUrl(url) {
-  if (!url) return {};
-  try {
-    const u = new URL(url);
-    return {
-      host: u.hostname || undefined,
-      port: u.port || undefined,
-      user: u.username ? decodeURIComponent(u.username) : undefined,
-      password: u.password ? decodeURIComponent(u.password) : undefined,
-      dbName: u.pathname ? u.pathname.replace(/^\//, '') : undefined,
-    };
-  } catch {
-    return {};
-  }
-}
+// parseDatabaseUrl 已收敛到 lib/database-url.js（与 runtime 侧同名模块逐字一致，
+// 漂移守卫见 runtime/scripts/database-url.test.js）；此处仅 import 供 resolveDbConnection 使用。
 
 /**
  * 解析数据库连接部件：DATABASE_URL 权威（ADR-0073），其部件优先；

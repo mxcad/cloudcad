@@ -29,18 +29,16 @@ import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import {
   billingControllerGetOrders,
-  billingControllerRepayOrder,
   billingControllerApplyRefund,
-  billingControllerAutoCreateOrder,
 } from '@/api-sdk';
 import WechatPayModal from '@/components/billing/WechatPayModal';
 import { useTierConfigRegistry } from '@/hooks/useTierConfigRegistry';
-import {
-  useVipOffering,
-  detectTradeType,
-  type VipTier,
-} from '@/hooks/billing/useVipOffering';
+import { useVipOffering, type VipTier } from '@/hooks/billing/useVipOffering';
 import { usePaymentRefresh } from '@/hooks/billing/usePaymentRefresh';
+import {
+  openPayment,
+  type PaymentDescriptor,
+} from '@/hooks/billing/paymentIntake';
 import { formatConfigValue, getConfigLabel } from '@/utils/tierConfigUtils';
 import { centsToYuan } from '@/utils/priceUtils';
 import { formatDate } from '@/utils/dateUtils';
@@ -103,13 +101,9 @@ export default function MemberCenter() {
   const { registry } = useTierConfigRegistry();
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [selectedTierIdx, setSelectedTierIdx] = useState(0);
-  const [repayPayment, setRepayPayment] = useState<{
-    orderNo: string;
-    amount: number;
-    codeUrl: string | null;
-    payParams: Record<string, unknown> | null;
-    redirectUrl: string | null;
-  } | null>(null);
+  const [repayPayment, setRepayPayment] = useState<PaymentDescriptor | null>(
+    null
+  );
   const [repayLoading, setRepayLoading] = useState(false);
   const [repayError, setRepayError] = useState('');
   const [refundTarget, setRefundTarget] = useState<OrderItem | null>(null);
@@ -117,14 +111,9 @@ export default function MemberCenter() {
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [refundError, setRefundError] = useState('');
   // ADR-0066：?auto=1 自动下单的支付弹窗状态
-  const [autoPayment, setAutoPayment] = useState<{
-    orderNo: string;
-    amount: number;
-    codeUrl: string | null;
-    payParams: Record<string, unknown> | null;
-    redirectUrl: string | null;
-    orderLabel: string;
-  } | null>(null);
+  const [autoPayment, setAutoPayment] = useState<PaymentDescriptor | null>(
+    null
+  );
   const [autoLoading, setAutoLoading] = useState(false);
   const [autoError, setAutoError] = useState('');
 
@@ -211,31 +200,24 @@ export default function MemberCenter() {
       setAutoLoading(true);
       setAutoError('');
       try {
-        const res = await billingControllerAutoCreateOrder({
-          throwOnError: true,
-          body: { tradeType: 'NATIVE' },
-        });
-        // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
+        // 响应后协议（SUCCEEDED 对账 / PENDING 守卫）走 openPayment 唯一出口：
+        // 此前 auto 入口两者皆缺，已支付订单会以「请扫码支付」呈现给用户
+        const outcome = await openPayment({ source: 'auto' });
         if (cancelled) return;
-        const data = res?.data as
-          | {
-              orderNo: string;
-              amount: number;
-              codeUrl: string | null;
-              payParams: Record<string, unknown> | null;
-              redirectUrl: string | null;
-              vipTierName?: string;
-              durationLabel?: string;
-            }
-          | undefined;
-        setAutoPayment({
-          orderNo: data?.orderNo ?? '',
-          amount: data?.amount ?? 0,
-          codeUrl: data?.codeUrl ?? null,
-          payParams: data?.payParams ?? null,
-          redirectUrl: data?.redirectUrl ?? null,
-          orderLabel: `${data?.vipTierName ?? ''} · ${data?.durationLabel ?? ''}`,
-        });
+        if (outcome.kind === 'already-paid') {
+          // 对账兜底：auto 订单已支付（回调丢失）→ 按支付成功处理，不展示二维码
+          globalShowToast(
+            t('该订单已支付成功，会员已开通'),
+            'success'
+          );
+          await refreshAfterPayment();
+          return;
+        }
+        if (outcome.kind !== 'pending') {
+          setAutoError(t('创建订单失败，请重试'));
+          return;
+        }
+        setAutoPayment(outcome.descriptor);
       } catch (error) {
         if (cancelled) return;
         setAutoError(getErrorMessage(error) || t('创建订单失败，请重试'));
@@ -262,16 +244,9 @@ export default function MemberCenter() {
       setRepayLoading(true);
       setRepayError('');
       try {
-        const tradeType = detectTradeType();
-        const res = await billingControllerRepayOrder({
-          throwOnError: true,
-          path: { orderNo },
-          body: { tradeType },
-        });
-        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
-        // 否则下单失败被误判为"订单状态已变更"（历史 bug）
-        const data = res?.data as Record<string, unknown> | undefined;
-        if (data?.status === 'SUCCEEDED') {
+        // 下单 + 响应后协议走 openPayment 唯一出口（tradeType 探测在其内部）
+        const outcome = await openPayment({ source: 'repay', orderNo });
+        if (outcome.kind === 'already-paid') {
           // 对账兜底：后端确认微信侧已支付并完成订单（回调丢失场景），
           // 提示已开通并刷新会员状态/订单列表，而非误导性的"状态已变更"
           globalShowToast(t('该订单已支付成功，会员已开通'), 'success');
@@ -279,18 +254,12 @@ export default function MemberCenter() {
           await loadOrders();
           return;
         }
-        if (!data || data.status !== 'PENDING') {
+        if (outcome.kind !== 'pending') {
           setRepayError(t('订单状态已变更，无法继续支付'));
           globalShowToast(t('订单状态已变更，无法继续支付'), 'error');
           return;
         }
-        setRepayPayment({
-          orderNo: data.orderNo as string,
-          amount: data.amount as number,
-          codeUrl: (data.codeUrl as string | null) ?? null,
-          payParams: (data.payParams as Record<string, unknown>) ?? null,
-          redirectUrl: (data.redirectUrl as string | null) ?? null,
-        });
+        setRepayPayment(outcome.descriptor);
       } catch (error) {
         // 透传后端真实原因（网关/风控等），不再固定"获取支付参数失败"
         const msg = getErrorMessage(error) || t('获取支付参数失败，请重试');

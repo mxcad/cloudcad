@@ -21,6 +21,7 @@ import {
   getUser,
 } from '@/utils/tokenUtils';
 import { clearAuthState } from '@/lib/authState';
+import { openEventStream } from '@/services/eventStream';
 import {
   useAuthActions,
   type User,
@@ -238,6 +239,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser: (u) => setUser(u as User | null),
     setError,
   });
+
+  // 账户事件 SSE：管理员改会员等账户写操作后，后端向本用户通道推送 membership-changed，
+  // 收到即 refreshUser() 重拉 /auth/profile，使已登录用户无需退出重登即拿到最新会员态。
+  // 以 token 为依赖：token 刷新时自动重开（带新 token）；登出（token 清空）时关流。
+  // closeOnError=false：断连由 EventSource 自动重连（token 过期 401 会随下次 token 刷新重开）。
+  useEffect(() => {
+    if (!token) return;
+    const handle = openEventStream({
+      path: '/v1/users/profile/account-events',
+      query: { token },
+      closeOnError: false,
+      onFrame: () => {
+        void refreshUser();
+      },
+    });
+    return () => handle?.close();
+  }, [token, refreshUser]);
 
   const value = useMemo<AuthContextType>(
     () => ({

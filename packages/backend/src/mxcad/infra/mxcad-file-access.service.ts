@@ -12,8 +12,8 @@ import {
 import type { Response, Request } from 'express';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
-import { createReadStream } from 'fs';
 import * as path from 'path';
+import { FileTypeDetector } from '@cloudcad/contracts';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext } from 'nestjs-i18n';
 import { AppConfig } from '../../config/app.config';
@@ -28,7 +28,12 @@ import type { IMxcadConversionService } from '../interfaces/mxcad-conversion.int
 import type { MxCadRequest } from '../types/request.types';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { NodeUtils } from '../../common/utils/node-utils';
+import { streamFileToResponse } from '../../common/utils/stream-file';
+import { FileUtils } from '../../common/utils/file-utils';
+import { normalizeMxcadPath } from '../../common/utils/mxcad-path';
+import { MxCadRequestAuthService } from '../core/mxcad-request-auth.service';
 import { setContentDisposition } from '../../common/utils/content-disposition';
+import { resolveOutputFormat } from '../../file-system/file-download/format-policy';
 
 /**
  * MxCAD 文件访问业务逻辑（从 MxcadFileAccessController 下沉）。
@@ -52,6 +57,7 @@ export class MxcadFileAccessService {
     @Inject(MXCAD_CONVERSION_SERVICE) private readonly conversionService: IMxcadConversionService,
     @Inject(I_EXTERNAL_REF_FACADE) private readonly externalRefFacade: IExternalRefFacade,
     private readonly restrictionEngine: RestrictionEngine,
+    private readonly requestAuthService: MxCadRequestAuthService,
   ) {
     this.mxCadFileExt = this.configService.get('mxcad.fileExt', { infer: true }) || '.mxweb';
   }
@@ -61,7 +67,7 @@ export class MxcadFileAccessService {
    * 失败抛 NotFoundException / UnauthorizedException，由控制器映射为 404 / 401。
    */
   async authorizeFilesDataAccess(filename: string, req: Request): Promise<void> {
-    const normalizedFilename = filename.replace(/,/g, '/');
+    const normalizedFilename = normalizeMxcadPath(filename);
     const shareToken = (req.query.shareToken as string | undefined)
       || (req.headers['x-share-token'] as string | undefined)
       || this.extractShareTokenFromReferer(req);
@@ -103,10 +109,11 @@ export class MxcadFileAccessService {
    */
   async serveFilesDataFile(filename: string, res: Response, req: Request, isHeadRequest: boolean, versionParam?: string, isWarmup = false) {
     try {
-      const normalizedFilename = filename.replace(/,/g, '/');
+      const normalizedFilename = normalizeMxcadPath(filename);
       if (versionParam) return this.versionHistoryService.handleHistoricalVersionRequest(normalizedFilename, versionParam, res, req, isHeadRequest, isWarmup);
       const filesDataPath = this.configService.get('filesDataPath', { infer: true });
-      const absoluteFilePath = path.resolve(filesDataPath, normalizedFilename);
+      // 路径遍历防护：解析结果必须仍位于 filesDataPath 内，逃逸抛 BadRequestException（catch 归 400）
+      const absoluteFilePath = FileUtils.resolveWithinRoot(filesDataPath, normalizedFilename);
       if (!fs.existsSync(absoluteFilePath)) return res.status(404).json({ code: -1, message: I18nContext.current()?.t('error.file.not_found') ?? '文件不存在' });
       const fileStats = fs.statSync(absoluteFilePath);
       const contentType = this.getContentType(absoluteFilePath);
@@ -121,9 +128,20 @@ export class MxcadFileAccessService {
         if (!res.headersSent) res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败' });
       });
       fileStream.pipe(res);
-    } catch (error) {
-      this.logger.error(`获取 filesData 文件失败: ${error.message}`, error);
-      if (!res.headersSent) res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败' });
+    } catch (error: unknown) {
+      const err = error as { message?: string; status?: number; statusCode?: number };
+      this.logger.error(`获取 filesData 文件失败: ${err?.message}`, error);
+      if (!res.headersSent) {
+        // 遍历逃逸（BadRequestException）保留 400，其余归 500
+        const status = err?.status || err?.statusCode || 500;
+        res.status(status).json({
+          code: -1,
+          message:
+            status === 400
+              ? I18nContext.current()?.t('error.mxcad.path_invalid') ?? '无效的文件路径'
+              : I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败',
+        });
+      }
     }
   }
 
@@ -135,9 +153,9 @@ export class MxcadFileAccessService {
     try {
       let userId: string;
       if (req.session?.userId) { userId = req.session.userId; } else {
-        try { userId = await this.externalRefFacade.validateTokenAndGetUserId(req); } catch (authError) { return res.status(401).json({ code: -1, message: authError.message }); }
+        try { userId = await this.requestAuthService.resolveUserId(req); } catch (authError) { return res.status(401).json({ code: -1, message: authError.message }); }
       }
-      const normalizedFilename = filename.replace(/,/g, '/');
+      const normalizedFilename = normalizeMxcadPath(filename);
       const pathParts = normalizedFilename.split('/');
       const nodeId = pathParts[0];
       const node = await this.fileSystemNodeService.findFileByIdNotDeleted(nodeId, { id: true, name: true, ownerId: true, parentId: true, nodeType: true });
@@ -147,7 +165,7 @@ export class MxcadFileAccessService {
       if (!node) {
         return res.status(404).json({ code: -1, message: I18nContext.current()?.t('error.file.not_found') ?? '文件不存在' });
       }
-      const permission = await this.externalRefFacade.checkFileAccessPermission(node.id, userId, userId);
+      const permission = await this.requestAuthService.canAccessNode(userId, node.id);
       if (!permission) return res.status(401).json({ code: -1, message: 'Unauthorized' });
       const ext = path.extname(normalizedFilename).toLowerCase();
       const possiblePaths: string[] = [];
@@ -223,10 +241,10 @@ export class MxcadFileAccessService {
     const { format, width, height, colorPolicy, dwgVersion } = params;
     let userId: string | undefined;
     try {
-      userId = await this.externalRefFacade.validateTokenAndGetUserId(req);
+      userId = await this.requestAuthService.resolveUserId(req);
       const node = await this.fileSystemNodeService.findFileByIdNotDeleted(nodeId, { id: true, name: true, ownerId: true, parentId: true, nodeType: true });
       if (node) {
-        const permission = await this.externalRefFacade.checkFileAccessPermission(node.id, userId, userId);
+        const permission = await this.requestAuthService.canAccessNode(userId, node.id);
         if (!permission) return res.status(401).json({ code: -1, message: 'Unauthorized' });
       }
     } catch (authError) {
@@ -234,7 +252,7 @@ export class MxcadFileAccessService {
     }
 
     const ext = path.extname(fileName).toLowerCase();
-    const isImageFile = ['.png', '.jpg', '.jpeg', '.jfif', '.gif', '.webp', '.bmp'].includes(ext);
+    const isImageFile = FileTypeDetector.isImageFile(fileName);
     const downloadFormat = format || 'mxweb';
 
     const filePath = await this.externalRefFacade.getExternalRefDownloadPath(nodeId, fileName);
@@ -243,22 +261,38 @@ export class MxcadFileAccessService {
     }
 
     if (downloadFormat === 'mxweb' || isImageFile) {
-      res.setHeader('Content-Type', 'application/octet-stream');
-      setContentDisposition(res, fileName);
-      const readStream = createReadStream(filePath);
-      readStream.pipe(res);
+      // 传输编排回归 streamFileToResponse 唯一出口（顺带补上原裸 pipe 缺失的流错误处理）
+      void streamFileToResponse(res, filePath, fileName, 'application/octet-stream').catch(
+        (err: unknown) => {
+          this.logger.error(`[serveExternalRefDownload] 文件读取失败: ${(err as Error).message}`);
+          if (!res.headersSent) {
+            res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败' });
+          }
+        }
+      );
       return;
     }
 
     const srcPath = filePath;
     const outDir = path.dirname(filePath);
     const baseName = path.basename(fileName, ext);
-    const outName = `${baseName}.${downloadFormat}`;
+    // 格式决策（引擎参数默认值 / 产物扩展名 / 格式白名单）走 FormatPolicy 单一出口，
+    // 与单文件导出/批量下载同口径：pdf 补齐 2000/2000/mono，未知格式显式 400。
+    const resolved = resolveOutputFormat(downloadFormat, {
+      width,
+      height,
+      colorPolicy,
+      dwgVersion: dwgVersion ? Number(dwgVersion) : undefined,
+    });
+    const outName = `${baseName}${resolved.targetExt}`;
     const outPath = path.join(outDir, outName);
 
     // 频率占位（打开/导出共用窗口）；导出下载方向会员门控由转换服务按源文件类型自动执行。
     // 占位/释放走 withConversionQuota 单点：成功消耗占位，任何失败（引擎原始异常 /
     // 引擎 code≠0 / 产物缺失）保证释放；校验与错误文案在占位作用域内完成。
+    // 注：外部参照源为 .dwg/.dxf（非 .mxweb 快照），引擎目标格式依赖 cmd 字段，
+    // 故此处保留直调 convertServerFile + cmd，未走 runConversionCore（其 engineParams
+    // 不含 cmd，且外部参照转换暂不进转换结果缓存）——待引擎侧确认 cmd 可省后再收敛。
     await this.restrictionEngine.withConversionQuota(
       { userId },
       async () => {
@@ -270,10 +304,7 @@ export class MxcadFileAccessService {
           createPreloadingData: false,
           outname: outName,
           cmd: downloadFormat === 'pdf' ? 'toPdf' : 'toDwg',
-          width: width ? Number(width) : undefined,
-          height: height ? Number(height) : undefined,
-          colorPolicy: colorPolicy as 'mono' | 'color' | undefined,
-          dwgVersion: dwgVersion ? Number(dwgVersion) : undefined,
+          ...resolved.engineParams,
         });
         if (convertResult?.code !== 0) {
           throw new InternalServerErrorException(I18nContext.current()?.t('error.mxcad.conversion_failed') ?? '文件转换失败');
@@ -286,18 +317,22 @@ export class MxcadFileAccessService {
       }
     );
 
-    res.setHeader('Content-Type', 'application/octet-stream');
-    setContentDisposition(res, outName);
-    const readStream = createReadStream(outPath);
-    readStream.pipe(res);
-
-    readStream.on('end', () => {
-      fsPromises.unlink(outPath).catch((err) => {
-        this.logger.warn(`清理转换临时文件失败: ${err.message}`);
-      });
-    });
-    readStream.on('error', () => {
-      fsPromises.unlink(outPath).catch(() => {});
+    // 传输编排回归 streamFileToResponse 唯一出口：流关闭后清理转换临时产物
+    void streamFileToResponse(
+      res,
+      outPath,
+      outName,
+      'application/octet-stream',
+      () => {
+        fsPromises.unlink(outPath).catch((err) => {
+          this.logger.warn(`清理转换临时文件失败: ${err.message}`);
+        });
+      }
+    ).catch((err: unknown) => {
+      this.logger.error(`[serveExternalRefDownload] 文件读取失败: ${(err as Error).message}`);
+      if (!res.headersSent) {
+        res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败' });
+      }
     });
   }
 
@@ -314,23 +349,28 @@ export class MxcadFileAccessService {
     // MIME 单一事实源走 NodeUtils（与 getContentType 同源）
     const contentType = NodeUtils.getMimeType(ext);
 
-    try {
-      const fileStats = fs.statSync(filePath);
-      res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', fileStats.size);
-      // 显示逻辑文件名（A1.dwg），而非磁盘文件名（A1.dwg.mxweb）
-      setContentDisposition(res, fileName, 'inline');
-      // 外部参照可被替换，URL 不变但内容会变，禁止浏览器 HTTP 缓存，否则替换后查看仍显示旧图
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      const readStream = createReadStream(filePath);
-      readStream.pipe(res);
-    } catch (error) {
-      this.logger.error(`[serveExternalRefView] 文件读取失败: ${error.message}`);
+    // 传输编排回归 streamFileToResponse 唯一出口：显示逻辑文件名（A1.dwg，而非磁盘
+    // A1.dwg.mxweb）+ 禁缓存（外部参照可被替换，URL 不变内容会变）+ 跨域 + inline
+    void streamFileToResponse(
+      res,
+      filePath,
+      fileName,
+      contentType,
+      undefined,
+      {
+        cacheControl: 'no-store',
+        allowOrigin: '*',
+        disposition: 'inline',
+        errorCode: -1,
+        errorMessage:
+          I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败',
+      }
+    ).catch((error: unknown) => {
+      this.logger.error(`[serveExternalRefView] 文件读取失败: ${(error as Error).message}`);
       if (!res.headersSent) {
         res.status(500).json({ code: -1, message: I18nContext.current()?.t('error.file.fetch_failed') ?? '获取文件失败' });
       }
-    }
+    });
   }
 
   /**

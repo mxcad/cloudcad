@@ -308,7 +308,7 @@ import FloatingPopup from '@/components/FloatingPopup.vue'
 import { useLibrary, LibraryType } from '@/composables/useLibrary'
 import { useLongPress } from '@/composables/useLongPress'
 import { useViewMode } from '@/composables/useViewMode'
-import { useEditorState } from '@/composables/useEditorState'
+import { useEditorStore } from '@/stores/editor'
 import { useOpenGuard } from '@/composables/useOpenGuard'
 import { openDrawing } from '@/services/drawingOpener'
 import { useUser } from '@/composables/useUser'
@@ -354,7 +354,7 @@ const floatingPopupRef = ref<InstanceType<typeof FloatingPopup>>()
 const library = useLibrary(props.libraryType)
 // E-15 库列表视图切换（网格/清单），按库域持久化（对齐 UnifiedFileList A-16）
 const mode = useViewMode(`library_${props.libraryType}`)
-const editorState = useEditorState()
+const editorState = useEditorStore()
 const { guardBeforeOpen } = useOpenGuard()
 const { user, hasPermission } = useUser()
 const { config: runtimeConfig } = useRuntimeConfig()

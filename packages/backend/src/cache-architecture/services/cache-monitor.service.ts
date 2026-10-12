@@ -20,7 +20,7 @@ import {
 } from '../interfaces/cache-stats.interface';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { AlertService } from '../../alert/alert.service';
-import { AlertLevel } from '../../alert/enums/alert.enum';
+import { AlertLevel, TASK_RUN_FAILED_KEY, TASK_RUN_FAILED_LEVEL } from '../../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { TaskRunService } from '../../task-run/task-run.service';
 import {
@@ -120,9 +120,9 @@ export class CacheMonitorService {
     try {
       await this.alertService.raise({
         source: 'cache-monitor',
-        messageKey: 'task_run_failed',
-        // P1：单任务失败（下一轮定时重试）
-        level: AlertLevel.P1,
+        messageKey: TASK_RUN_FAILED_KEY,
+        // 级别取 TASK_RUN_FAILED_LEVEL 单点（当前 P1）：单任务失败（下一轮定时重试）
+        level: TASK_RUN_FAILED_LEVEL,
         message: `定时任务 cache-monitor 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task,

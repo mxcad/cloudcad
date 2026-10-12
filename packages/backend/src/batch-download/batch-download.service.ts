@@ -16,10 +16,8 @@ import {
   IPERMISSION_SERVICE,
   IPermissionService,
 } from '../permission/interfaces/permission-service.interface';
-import {
-  SystemPermission,
-  ProjectPermission,
-} from '../common/enums/permissions.enum';
+import { ProjectPermission } from '../common/enums/permissions.enum';
+import { getLibrarySystemPermissionByKey } from '../common/utils/permission-mapping';
 import { FileSystemPermissionService } from '../file-system/file-permission/file-system-permission.service';
 import { NodeType, BatchJobStatus, Prisma } from '@cloudcad/db';
 import { Response, Request } from 'express';
@@ -43,7 +41,6 @@ import type {
 } from './dto/create-batch-download.dto';
 import { isInUploadsCache } from './upload-cache.util';
 import * as fs from 'fs';
-import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
 @Injectable()
@@ -72,7 +69,43 @@ export class BatchDownloadService {
     this.exportDir = batchConfig.exportDir;
     this.minDiskSpace = batchConfig.minDiskSpace;
     this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
-    fsPromises.mkdir(this.exportDir, { recursive: true }).catch(() => {});
+    // 同步建目录：确保首个请求到达前目录已存在（getDiskStats 会对它做 statfs）。
+    // 失败必须留痕——旧写法 .catch(() => {}) 会静默吞掉，导致目录永远不存在，
+    // 而磁盘门禁读到 0 字节后向用户谎报「空间不足」。
+    try {
+      fs.mkdirSync(this.exportDir, { recursive: true });
+    } catch (error) {
+      this.logger.error(
+        `Failed to create export directory: ${this.exportDir}`,
+        error.stack
+      );
+    }
+  }
+
+  /**
+   * 建任务 / 重试前检查导出目录所在卷的剩余空间。
+   *
+   * 必须三态而非两态：磁盘探测失败（目录不存在、挂载丢失）不是「空间不足」，
+   * 旧实现把失败时的 0 占位值直接拿去比阈值，会向用户谎报
+   * 「Insufficient disk space: 0 bytes available」。
+   */
+  private assertExportDiskSpace(): void {
+    const diskStatus = this.diskMonitor.getDiskStats(this.exportDir);
+
+    if (!diskStatus.ok) {
+      this.logger.error(
+        `Unable to determine free disk space for export directory: ${diskStatus.path} (${diskStatus.reason})`
+      );
+      throw new ServiceUnavailableException(
+        `Unable to determine free disk space for export directory: ${diskStatus.path} (${diskStatus.reason})`
+      );
+    }
+
+    if (diskStatus.free < this.minDiskSpace) {
+      throw new ServiceUnavailableException(
+        `Insufficient disk space: ${diskStatus.free} bytes available, ${this.minDiskSpace} bytes required`
+      );
+    }
   }
 
   async createTask(
@@ -107,10 +140,7 @@ export class BatchDownloadService {
     let effectiveProjectId = projectId;
 
     if (libraryType) {
-      const requiredPermission =
-        libraryType === 'drawing'
-          ? SystemPermission.LIBRARY_DRAWING_MANAGE
-          : SystemPermission.LIBRARY_BLOCK_MANAGE;
+      const requiredPermission = getLibrarySystemPermissionByKey(libraryType);
       const hasPermission =
         await this.systemPermissionService.checkSystemPermission(
           userId,
@@ -166,12 +196,7 @@ export class BatchDownloadService {
       }
     }
 
-    const diskStatus = this.diskMonitor.getDiskStats(this.exportDir);
-    if (diskStatus.free < this.minDiskSpace) {
-      throw new ServiceUnavailableException(
-        `Insufficient disk space: ${diskStatus.free} bytes available, ${this.minDiskSpace} bytes required`
-      );
-    }
+    this.assertExportDiskSpace();
 
     const totalFormatCount = fileList.reduce(
       (sum, item) => sum + item.formats.length,
@@ -310,12 +335,7 @@ export class BatchDownloadService {
       await this.restrictionEngine.assertExportDownloadAllowed(userId);
     }
 
-    const diskStatus = this.diskMonitor.getDiskStats(this.exportDir);
-    if (diskStatus.free < this.minDiskSpace) {
-      throw new ServiceUnavailableException(
-        `Insufficient disk space: ${diskStatus.free} bytes available, ${this.minDiskSpace} bytes required`
-      );
-    }
+    this.assertExportDiskSpace();
 
     const totalFormatCount = failedFileList.reduce(
       (sum, item) => sum + item.formats.length,

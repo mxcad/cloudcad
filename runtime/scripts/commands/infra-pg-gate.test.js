@@ -62,10 +62,12 @@ function restorePorts() {
 }
 
 const infra = require('./infra');
+// 纯判定层（ADR-0056 下沉）：决策矩阵 / URL 形状解析 / 归属判定
+const gate = require('../lib/infra-gate');
 
 // ==================== 纯函数：decidePostgresGateAction 决策矩阵 ====================
 
-const D = infra.decidePostgresGateAction;
+const D = gate.decidePostgresGateAction;
 
 test('decidePostgresGateAction: 远程 DB_HOST 不属自带 PG 服务范围，一律 ok', () => {
   assert.equal(
@@ -129,7 +131,7 @@ test('decidePostgresGateAction: 归属未知（可执行文件不可读）→ bl
 
 // ==================== 纯函数：rewriteDatabaseUrlPort ====================
 
-const R = infra.rewriteDatabaseUrlPort;
+const R = gate.rewriteDatabaseUrlPort;
 
 test('rewriteDatabaseUrlPort: 标准 URL 只改端口段，userinfo/库名保留', () => {
   assert.equal(
@@ -182,7 +184,7 @@ test('rewriteDatabaseUrlPort: 形状无法识别 / 空值 → null', () => {
 
 // ==================== 纯函数：parseDatabaseUrlHostPort ====================
 
-const P = infra.parseDatabaseUrlHostPort;
+const P = gate.parseDatabaseUrlHostPort;
 
 test('parseDatabaseUrlHostPort: 标准 URL → host/port/prefix/rest', () => {
   assert.deepEqual(P('postgresql://postgres:pw@localhost:5432/cloudcad'), {
@@ -213,7 +215,7 @@ test('parseDatabaseUrlHostPort: 形状无法识别 / 空值 → null', () => {
 
 // ==================== 纯函数：detectPostgresOwnership ====================
 
-const O = infra.detectPostgresOwnership;
+const O = gate.detectPostgresOwnership;
 
 test('detectPostgresOwnership: 无 PID → null', () => {
   assert.equal(
@@ -400,8 +402,14 @@ function loadPgGate({
     return { ok: true, path: credPath };
   };
 
+  // lib/infra-gate 在模块加载期从 lib/proc、lib/health 解构默认依赖
+  // （detectPostgresOwnership 的归属判定 / findFreePortUpFrom 的端口探测），
+  // 须与 infra.js 一并重载，否则捕获的是打补丁前的真实函数
+  const gatePath = require.resolve('../lib/infra-gate');
+  delete require.cache[gatePath];
   const infraPath = require.resolve('./infra');
   delete require.cache[infraPath];
+  // 遮蔽顶层 gate（lib/infra-gate）：此处返回的是重载后的 commands/infra 模块
   const gate = require('./infra');
 
   return {

@@ -68,7 +68,7 @@ export {
 } from './openDrawing';
 export type { OpenDrawingRequest } from './openDrawing';
 
-export { handlePublicUpload, handleOpenFileCommand } from './mxcadOpenFile';
+export { openLocalFile, handleOpenFileCommand } from './mxcadOpenFile';
 
 // ==================== 私人空间 ID ====================
 

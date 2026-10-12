@@ -15,7 +15,6 @@
 
 import { ref, computed, onMounted, getCurrentInstance } from 'vue';
 import { refreshTokensOnce } from '../utils/apiConfig';
-import { navigateToLogin } from '../utils/authNavigate';
 import {
   clearSession,
   isTokenExpired as isJwtExpired,
@@ -132,51 +131,6 @@ export function useAuthState() {
     }
   }
 
-  /** 子页调用：需要登录态，否则自动跳转 */
-  function requireAuth() {
-    if (authState.value.kind === 'guest') {
-      navigateToLogin();
-      return false;
-    }
-    if (authState.value.kind === 'token_expired') {
-      navigateToLogin();
-      return false;
-    }
-    if (authState.value.kind === 'deactivated') {
-      return false;
-    }
-    return true;
-  }
-
-  /** 子页调用：需要指定权限，否则切 forbidden */
-  function requirePermission(permission: string): boolean {
-    if (authState.value.kind !== 'authenticated') return false;
-    const userRaw = localStorage.getItem('user');
-    if (!userRaw) return false;
-    try {
-      const user = JSON.parse(userRaw) as Record<string, unknown>;
-      const role = user.role as Record<string, unknown> | undefined;
-      if (role?.permissions && Array.isArray(role.permissions)) {
-        for (const p of role.permissions as unknown[]) {
-          if (typeof p === 'string' && p === permission) return true;
-          if (
-            p &&
-            typeof p === 'object' &&
-            (p as Record<string, unknown>).permission === permission
-          )
-            return true;
-        }
-      }
-    } catch {
-      // ignore
-    }
-    authState.value = {
-      kind: 'forbidden',
-      detail: { missingPermission: permission },
-    };
-    return false;
-  }
-
   /** 显式切 guest（登出后） */
   function setGuest() {
     authState.value = { kind: 'guest' };
@@ -239,8 +193,6 @@ export function useAuthState() {
     isDeactivated,
     refreshing,
     handleError,
-    requireAuth,
-    requirePermission,
     setGuest,
     setAuthenticated,
     clearNetworkError,

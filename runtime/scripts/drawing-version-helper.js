@@ -18,12 +18,14 @@ const os = require('os');
 // ==================== 路径与配置 ====================
 
 const { IS_WINDOWS, IS_LINUX } = require('./lib/context');
+const { systemSvnPair, classifySpawnError } = require('./lib/version-cli');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const RUNTIME_DIR = path.resolve(__dirname, '..');
 const PLATFORM_DIR = IS_WINDOWS
   ? path.join(RUNTIME_DIR, 'windows')
   : path.join(RUNTIME_DIR, 'linux');
+// 仅用于下方 run() 的 Windows PATH 前置；Linux 侧的运行时路径一律经 mxpath 解析（见 CLI）
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 
 const MX_VERSION_TOOL_DIR = path.join(PROJECT_ROOT, 'packages', 'mxVersionTool');
@@ -31,20 +33,33 @@ const hasMxVersionTool =
   fs.existsSync(MX_VERSION_TOOL_DIR) &&
   fs.existsSync(path.join(MX_VERSION_TOOL_DIR, 'mxcmd.js'));
 
-// SVN 可执行文件路径（与 mxVersionTool/mxpath.js 一致）
-function getSvnExePath() {
-  if (!USE_RUNTIME) return IS_WINDOWS ? 'mx.exe' : 'svn';
-  return IS_WINDOWS
-    ? path.join(PLATFORM_DIR, 'mxversion', 'mx.exe')
-    : path.join(PLATFORM_DIR, 'subversion', 'svn');
+// SVN 可执行文件路径的唯一事实源 = packages/mxVersionTool/mxpath.js（产品运行时真正 spawn 的
+// 就是它：storage-service → svn-agent → mxcmd.js → mxpath）。本文件只消费、不再自己拼路径。
+//
+// 历史缺陷：本文件曾用 fs.existsSync(runtime/<platform>) 判定 USE_RUNTIME（目录级），mxpath 用
+// fs.existsSync(runtime/<platform>/subversion)（组件级）——runtime/linux 存在但 subversion/ 缺失时
+// （升级包覆盖后、提取中断），本文件仍去探测一个不存在的路径，并输出误导性的「未找到 mx.exe」。
+let mxpath = null;
+let mxadminPath = null;
+try {
+  mxpath = require(path.join(MX_VERSION_TOOL_DIR, 'mxpath'));
+  mxadminPath = require(path.join(MX_VERSION_TOOL_DIR, 'mxadminpath'));
+} catch {
+  // mxVersionTool 不在树中（残缺树/升级包未覆盖 packages/）：无从知道产品会解析到哪，
+  // 退回 PATH 探测——与 mxpath 自身 useRuntime=false 的回退语义一致
 }
 
-function getSvnadminExePath() {
-  if (!USE_RUNTIME) return IS_WINDOWS ? 'mxadmin.exe' : 'svnadmin';
-  return IS_WINDOWS
-    ? path.join(PLATFORM_DIR, 'mxversion', 'mxadmin.exe')
-    : path.join(PLATFORM_DIR, 'subversion', 'svnadmin');
-}
+const CLI = mxpath
+  ? {
+      svnExe: mxpath.default,
+      svnadminExe: mxadminPath,
+      libPath: mxpath.getMxLibPath(),
+      useRuntime: mxpath.useRuntime,
+    }
+  : (() => {
+      const pair = systemSvnPair(IS_WINDOWS);
+      return { svnExe: pair.svn, svnadminExe: pair.svnadmin, libPath: null, useRuntime: false };
+    })();
 
 // 从 .env 读取变量
 function parseEnvFile(filePath) {
@@ -98,8 +113,8 @@ function getSvnConfig() {
     filesDataPath: env.FILES_DATA_PATH || path.join(PROJECT_ROOT, 'data', 'files'),
     mxToolPath,
     ignorePatterns,
-    svnExe: getSvnExePath(),
-    svnadminExe: getSvnadminExePath(),
+    svnExe: CLI.svnExe,
+    svnadminExe: CLI.svnadminExe,
   };
 }
 
@@ -133,18 +148,18 @@ function run(cmd, args, options = {}) {
   const exePath = cmd;
 
   // Linux 内嵌 runtime：设置 LD_LIBRARY_PATH 指向收集的依赖库
+  // （svn 的库路径取自 mxpath，与 mxcmd.js 实际使用的完全一致）
   let env = {
     ...process.env,
     ...options.env,
     PATH: IS_WINDOWS && USE_RUNTIME
-      ? `${path.dirname(getSvnExePath())};${process.env.PATH || ''}`
+      ? `${path.dirname(CLI.svnExe)};${process.env.PATH || ''}`
       : process.env.PATH,
   };
-  if (IS_LINUX && USE_RUNTIME) {
-    const libPaths = [
-      path.join(PLATFORM_DIR, 'subversion', 'lib'),
-      path.join(PLATFORM_DIR, 'postgres', 'lib'),
-    ].filter((p) => fs.existsSync(p));
+  if (IS_LINUX) {
+    const libPaths = [CLI.libPath, path.join(PLATFORM_DIR, 'postgres', 'lib')].filter(
+      (p) => p && fs.existsSync(p)
+    );
     if (libPaths.length > 0) {
       env = {
         ...env,
@@ -188,22 +203,34 @@ async function runHealthCheck(options = {}) {
     console.log('');
   }
 
-  // Check 1: CLI availability
-  const exeCheck = run(config.svnExe, ['--version', '--quiet']);
-  const svnAvailable = exeCheck.success;
-  if (svnAvailable) {
-    checks.passed++; checks.items.push({ name: 'SVN CLI 可用性', status: 'pass', detail: exeCheck.stdout.split('\n')[0] });
-    if (!silent) logItem(1, '版本控制 CLI 可用性', 'pass', exeCheck.stdout.split('\n')[0] || config.svnExe);
+  // Check 1: CLI availability —— 探测的就是 mxpath 解析出的同一条路径（见上方 CLI）
+  const svnProbe = run(config.svnExe, ['--version', '--quiet']);
+  const svnVersion = svnProbe.stdout.split('\n')[0];
+
+  if (svnProbe.success) {
+    checks.passed++;
+    checks.items.push({ name: '版本控制 CLI', status: 'pass', detail: svnVersion });
+    if (!silent) logItem(1, '版本控制 CLI 可用性', 'pass', svnVersion || config.svnExe);
   } else {
-    // Try system svn as fallback
-    const sysCheck = run(IS_WINDOWS ? 'svn.exe' : 'svn', ['--version', '--quiet']);
-    if (sysCheck.success) {
-      checks.warnings++; checks.items.push({ name: 'CLI 可用性', status: 'warn', detail: '使用系统 svn（非 runtime）' });
-      if (!silent) logItem(1, '版本控制 CLI 可用性', 'warn', '使用系统 svn');
-      config.svnExe = IS_WINDOWS ? 'svn.exe' : 'svn';
+    // 回退系统 svn；svn 与 svnadmin 必须成对回退（见 version-cli.js 的说明）
+    const sysPair = systemSvnPair(IS_WINDOWS);
+    const svnDiag = classifySpawnError(svnProbe, config.svnExe).detail;
+    const sysProbe = run(sysPair.svn, ['--version', '--quiet']);
+    if (sysProbe.success) {
+      checks.warnings++;
+      checks.items.push({ name: '版本控制 CLI', status: 'warn', detail: `${svnDiag}；已回退 ${sysPair.svn}` });
+      if (!silent) logItem(1, '版本控制 CLI 可用性', 'warn', 'runtime 不可用，已回退系统 svn');
+      config.svnExe = sysPair.svn;
+      config.svnadminExe = sysPair.svnadmin;
     } else {
-      checks.failures++; checks.items.push({ name: 'CLI 可用性', status: 'fail', detail: `未找到 ${config.svnExe}` });
-      if (!silent) logItem(1, '版本控制 CLI 可用性', 'fail', '未找到 svn/mx.exe');
+      const sysDiag = classifySpawnError(sysProbe, sysPair.svn).detail;
+      checks.failures++;
+      checks.items.push({ name: '版本控制 CLI', status: 'fail', detail: `${svnDiag}；${sysDiag}` });
+      if (!silent) {
+        logItem(1, '版本控制 CLI 可用性', 'fail', 'runtime 与系统 svn 均不可用');
+        console.log(`    ${svnDiag}`);
+        console.log(`    ${sysDiag}`);
+      }
     }
   }
   if (!silent) console.log('');
@@ -420,9 +447,11 @@ async function runVerification(options = {}) {
     console.log('');
   }
 
-  const svnExe = fs.existsSync(config.svnExe) || run(config.svnExe, ['--version', '--quiet']).success
-    ? config.svnExe
-    : IS_WINDOWS ? 'svn.exe' : 'svn';
+  // 回退名与 Check 1 同源（systemSvnPair），避免两处各写一份导致漂移
+  const svnExe =
+    fs.existsSync(config.svnExe) || run(config.svnExe, ['--version', '--quiet']).success
+      ? config.svnExe
+      : systemSvnPair(IS_WINDOWS).svn;
 
   const wcDir = config.filesDataPath;
   const wcSvnDir = path.join(wcDir, '.svn');

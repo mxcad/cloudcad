@@ -67,7 +67,12 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
     reset: jest.fn().mockResolvedValue(undefined),
   };
 
-  const noopService = { syncBeforeLogin: jest.fn(), verifyCode: jest.fn() };
+  const noopService = {
+    syncBeforeLogin: jest.fn(),
+    verifyCode: jest.fn(),
+    // LoginService 替身：登录资格断言默认透传（非管理员、未注销 → 不触发恢复）
+    assertLoginEligible: jest.fn(),
+  };
 
   const wechatUser = {
     openid: 'wechat-openid-123',
@@ -149,6 +154,10 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
         if (key === 'wechatAutoRegister') return true;
         return false;
       }
+    );
+    // resetMocks 会清掉实现：登录资格断言默认透传（非管理员、未注销 → 原样返回、不恢复）
+    noopService.assertLoginEligible.mockImplementation(
+      async (user: unknown) => ({ user, restored: false })
     );
   });
 

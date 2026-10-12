@@ -33,17 +33,10 @@ import {
   getAdminClientIp,
   sanitizeTrustedProxies,
 } from '../common/utils/client-ip';
+import { SessionCookieWriter } from './session-cookie.writer';
 
 /** 管理员登录请求：同时具备 express headers（IP 提取）与 Session（会话写回） */
 type AdminLoginRequest = ExpressRequest & SessionRequest;
-
-// Cookie 常量与 AuthController 保持一致（登录态跨入口互通，复用既有刷新链路）
-const REFRESH_COOKIE_NAME = 'refresh_token';
-const REFRESH_COOKIE_PATH = '/api/v1/auth/refresh';
-const AUTH_COOKIE_NAME = 'auth_token';
-const AUTH_COOKIE_PATH = '/';
-const AUTH_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 小时，与 JWT access token 过期时间一致
-const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 天，与 refresh token 一致
 
 /**
  * 管理员专用登录入口
@@ -57,7 +50,8 @@ const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 天，与 refresh t
 export class AdminAuthController {
   constructor(
     private readonly adminAuthService: AdminAuthService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly sessionCookieWriter: SessionCookieWriter
   ) {}
 
   @Post('login')
@@ -87,40 +81,7 @@ export class AdminAuthController {
     );
     const clientIp = getAdminClientIp(req, trustedProxies);
     const result = await this.adminAuthService.login(loginDto, req, clientIp);
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
-  }
-
-  /**
-   * Cookie 设置与 AuthController 行为一致：
-   * secure 显式配置优先，否则按请求协议自适应（http 不带 Secure，https 带）。
-   */
-  private setAuthCookies(
-    req: { secure?: boolean },
-    response: ExpressResponse,
-    result: { accessToken: string; refreshToken?: string }
-  ): void {
-    const cookieSecure = this.configService.get('session.cookieSecure') as
-      | boolean
-      | null
-      | undefined;
-    const secure = cookieSecure ?? req.secure ?? false;
-
-    response.cookie(AUTH_COOKIE_NAME, result.accessToken, {
-      httpOnly: true,
-      secure,
-      sameSite: 'lax',
-      maxAge: AUTH_COOKIE_MAX_AGE,
-      path: AUTH_COOKIE_PATH,
-    });
-    if (result.refreshToken) {
-      response.cookie(REFRESH_COOKIE_NAME, result.refreshToken, {
-        httpOnly: true,
-        secure,
-        sameSite: 'lax',
-        maxAge: REFRESH_COOKIE_MAX_AGE,
-        path: REFRESH_COOKIE_PATH,
-      });
-    }
   }
 }

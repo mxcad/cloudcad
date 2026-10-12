@@ -1,6 +1,5 @@
 import type { PreloadingDataResult, WritePreloadingData } from '../ext-ref-preloading.service';
 import type { FileSystemNodeContext } from '../../node/filesystem-node.service';
-import type { MxCadRequest } from '../../types/request.types';
 import type { PreloadingDataDto } from '../../dto/preloading-data.dto';
 import type { ExternalReferenceStats } from '../../types/external-reference.types';
 import type { UploadExtReferenceFileDto } from '../../dto/upload-ext-reference-file.dto';
@@ -31,10 +30,6 @@ export interface IExternalRefFacade {
   readPreloadingData(nodeId: string): Promise<PreloadingDataResult | null>;
 
   writePreloading(nodeId: string, data: WritePreloadingData): Promise<boolean>;
-
-  validateTokenAndGetUserId(request: MxCadRequest): Promise<string>;
-
-  checkFileAccessPermission(nodeId: string, userId: string, checkUserId: string): Promise<boolean>;
 
   getPreloadingData(nodeId: string): Promise<PreloadingDataDto | null>;
 

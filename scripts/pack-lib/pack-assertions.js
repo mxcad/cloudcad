@@ -193,6 +193,72 @@ function removeJunkWithSudoFallback(items, { onItem, chownTargets = [] } = {}) {
 }
 
 /**
+ * 读取移动端前端在 PC 端 dist 内的合并子目录名（纯判定，无副作用）。
+ *
+ * 单一事实源：读 packages/frontend/public/ini/myServerConfig.json 的 mobileAccessPath，
+ * 缺失或不可读时回落默认值 mxcad_mobile。此前该解析逻辑在 pack-offline.js 的
+ * mergeMobileDist 与 packUpgrade 关键产物复查各有一份内联副本，易漂移。
+ *
+ * @param {string} projectRoot 项目根绝对路径
+ * @returns {string} 移动端合并子目录名
+ */
+function resolveMobileAccessPath(projectRoot) {
+  const configPath = path.join(
+    projectRoot,
+    'packages',
+    'frontend',
+    'public',
+    'ini',
+    'myServerConfig.json'
+  );
+  const DEFAULT = 'mxcad_mobile';
+  if (!fs.existsSync(configPath)) return DEFAULT;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (cfg.mobileAccessPath && typeof cfg.mobileAccessPath === 'string') {
+      return cfg.mobileAccessPath;
+    }
+  } catch {
+    // 解析失败用默认值
+  }
+  return DEFAULT;
+}
+
+/**
+ * 复查打包暂存目录的关键产物，返回缺失或为空的项（纯判定，无副作用）。
+ *
+ * 背景（2026-10-09）：清单复制对缺失源只打警告后 continue，曾致 packages/frontend/dist
+ * 缺失时仍照常打 tar、退出码 0，产出缺前端的部署包。升级包路径此前已有同款复查
+ * （内联在 packUpgrade），部署包路径完全没有——抽成纯判定供两路共用，避免双份清单漂移。
+ *
+ * 返回路径以相对 tempDir 展示（统一正斜杠，便于跨平台断言与报错定位）。
+ *
+ * @param {string} tempDir 打包暂存目录绝对路径
+ * @param {string} variant oss / private
+ * @param {string} mobileAccessPath 移动端合并子目录名（resolveMobileAccessPath 的返回值）
+ * @returns {string[]} 缺失或为空的关键产物（相对 tempDir，统一正斜杠）
+ */
+function findMissingKeyArtifacts(tempDir, variant, mobileAccessPath) {
+  const dirs = [
+    path.join(tempDir, 'packages', 'backend', 'dist'),
+    path.join(tempDir, 'packages', 'db', 'dist'),
+    path.join(tempDir, 'packages', 'contracts', 'dist'),
+    path.join(tempDir, 'packages', 'frontend', 'dist'),
+    // 转换服务 dist 恒在包内（共享清单两类包都带），缺失即打包不完整
+    path.join(tempDir, 'packages', 'conversion-service', 'dist'),
+  ];
+  if (variant === 'private') {
+    dirs.push(path.join(tempDir, 'packages', 'impl-mx', 'dist'));
+  }
+  // 移动端合并目录：不在正向清单内，由 mergeMobileDist 单独合并
+  dirs.push(path.join(tempDir, 'packages', 'frontend', 'dist', mobileAccessPath));
+
+  return dirs
+    .filter((dir) => !fs.existsSync(dir) || fs.readdirSync(dir).length === 0)
+    .map((dir) => path.relative(tempDir, dir).split(path.sep).join('/'));
+}
+
+/**
  * 启用私有 variant 包内 .env.example 的 IMPL（纯变换，无副作用）。
  *
  * 背景：包内 .env.example 的 IMPL 是注释态（# IMPL=），目标机 bootstrap 从模板
@@ -215,5 +281,7 @@ module.exports = {
   findMissingLinuxComponents,
   checkScriptLineEndings,
   removeJunkWithSudoFallback,
+  resolveMobileAccessPath,
+  findMissingKeyArtifacts,
   enableImplInEnvExample,
 };

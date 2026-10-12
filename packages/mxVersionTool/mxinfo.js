@@ -1,17 +1,14 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxInfo(targetPath, username, password, callback) {
-  const args = ['info', targetPath];
+  const args = [targetPath];
   if (username) {
     args.push('--username', username);
   }
-  let env;
   if (password) {
     args.push('--password-from-env');
-    env = { ...process.env, SVN_PASSWORD: password };
   }
-  executeSpawn(mxPath, args, env ? { env } : {})
+  mx('info', args, { password })
     .then(stdout => {
       callback(null, stdout);
     })

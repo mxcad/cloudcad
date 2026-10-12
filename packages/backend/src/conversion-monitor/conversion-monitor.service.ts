@@ -173,12 +173,11 @@ export class ConversionMonitorService implements OnModuleInit, OnModuleDestroy {
    * 可选 status 过滤（pending/processing/completed/failed/cancelled）。
    */
   async listTasks(status?: string): Promise<ConversionTaskList> {
-    const listTasks = this.executor.listTasks;
-    if (!listTasks) {
+    if (!this.executor.capabilities.listTasks) {
       return { items: [], total: 0 };
     }
     try {
-      const items = await listTasks.call(this.executor, status);
+      const items = await this.executor.listTasks!(status);
       return { items, total: items.length };
     } catch (err: unknown) {
       this.logger.warn(

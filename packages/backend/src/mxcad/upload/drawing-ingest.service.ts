@@ -255,6 +255,72 @@ export class DrawingIngestService {
   }
 
   /**
+   * 后台转换失败清算（节点路径共用）：释放转换额度 → 写失败审计 → 删除未成功节点
+   * → 执行调用方清理（分片临时目录 / 合并缓存）。
+   *
+   * 每步独立容错：任一步抛错只记日志、不阻断后续步骤——失败审计与删节点是失败诊断
+   * 的唯一可见面，绝不能因额度释放异常而丢失。整包（cad）与分片（chunk）两条节点
+   * 路径共用；无节点路径（SSE 状态机，无 node/审计/删节点）形态不同，不在此列。
+   *
+   * `releaseReservation` 由调用方按「转换是否真正完成」决定：转换失败→true（额度应
+   * 退还）；落盘失败（转换已成功）→false（额度已实际消耗，不退）；异常→按各路径
+   * 既有语义。
+   */
+  private async settleNodeFailure(opts: {
+    context: FileSystemNodeContext;
+    source: IngestSource;
+    releaseReservation: boolean;
+    nodeId: string;
+    audit: {
+      name: string;
+      fileHash: string;
+      size: number;
+      error: string;
+      transient?: boolean;
+      errorCategory?: ConversionFailureCategory;
+      stage: 'conversion' | 'materialize';
+    };
+    cleanup?: () => Promise<void>;
+  }): Promise<void> {
+    const step = async (
+      label: string,
+      run: () => Promise<unknown>
+    ): Promise<void> => {
+      try {
+        await run();
+      } catch (err) {
+        this.logger.error(
+          `[DrawingIngest.settle] ${label}失败（不阻断后续清算）: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      }
+    };
+    if (opts.releaseReservation) {
+      await step('释放转换额度', () =>
+        this.releaseConversionReservation(opts.context, opts.source)
+      );
+    }
+    await step('写失败审计', () =>
+      this.logUploadFailure({
+        context: opts.context,
+        nodeId: opts.nodeId,
+        name: opts.audit.name,
+        fileHash: opts.audit.fileHash,
+        size: opts.audit.size,
+        error: opts.audit.error,
+        transient: opts.audit.transient,
+        errorCategory: opts.audit.errorCategory,
+        stage: opts.audit.stage,
+      })
+    );
+    await step('删除未成功节点', () => this.purgeFailedNode(opts.nodeId));
+    if (opts.cleanup) {
+      await step('清理临时资源', opts.cleanup);
+    }
+  }
+
+  /**
    * 唯一摄入入口：整包 / 分片上传 + 秒传 + 格式转换 + 状态机流转 + 存储分配
    */
   async ingest(
@@ -769,17 +835,21 @@ export class DrawingIngestService {
           );
           if (finalNodeId === null) {
             // 落盘失败：未转换成功，不留存节点。真实原因先写审计再删节点。
-            await this.logUploadFailure({
+            // 转换已成功（额度已实际消耗），不退转换额度。
+            await this.settleNodeFailure({
               context,
+              source,
+              releaseReservation: false,
               nodeId: cadNodeId,
-              name,
-              fileHash: hash,
-              size,
-              error: MATERIALIZE_FAILED_ERROR,
-              transient: true,
-              stage: 'materialize',
+              audit: {
+                name,
+                fileHash: hash,
+                size,
+                error: MATERIALIZE_FAILED_ERROR,
+                transient: true,
+                stage: 'materialize',
+              },
             });
-            await this.purgeFailedNode(cadNodeId);
             this.logger.warn(
               `[DrawingIngest.background] 落盘失败，删除未成功节点: ${cadNodeId}`
             );
@@ -794,22 +864,24 @@ export class DrawingIngestService {
             `[DrawingIngest.background] 转换完成: ${name} (node ${cadNodeId})`
           );
         } else {
-          await this.releaseConversionReservation(context, source);
           // 转换失败：未转换成功，不留存节点。transient=true（超时/引擎未启动/
           // 输出无法解析）属环境性可重试失败，transient=false 是内容性永久失败，
           // 两者都不保留 node 记录；引擎原始 message 同时记日志 + 审计。
-          await this.logUploadFailure({
+          await this.settleNodeFailure({
             context,
+            source,
+            releaseReservation: true,
             nodeId: cadNodeId,
-            name,
-            fileHash: hash,
-            size,
-            error: result.error || '未知错误',
-            transient: result.transient,
-            errorCategory: result.errorCategory,
-            stage: 'conversion',
+            audit: {
+              name,
+              fileHash: hash,
+              size,
+              error: result.error || '未知错误',
+              transient: result.transient,
+              errorCategory: result.errorCategory,
+              stage: 'conversion',
+            },
           });
-          await this.purgeFailedNode(cadNodeId);
           this.logger.warn(
             `[DrawingIngest.background] 转换失败，删除未成功节点: ${cadNodeId} ` +
               `（transient=${result.transient ?? 'unknown'}，${
@@ -823,28 +895,22 @@ export class DrawingIngestService {
           `[DrawingIngest.background] 后台转换异常: ${errMsg}`,
           error instanceof Error ? error.stack : undefined
         );
-        try {
-          await this.releaseConversionReservation(context, source);
-        } catch (cleanupErr) {
-          this.logger.error(
-            `[DrawingIngest.background] 失败清理异常: ${
-              cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
-            }`
-          );
-        }
-        // 审计独立于节点删除成败：删节点也不丢失败原因
-        await this.logUploadFailure({
-          context,
-          nodeId: cadNodeId,
-          name,
-          fileHash: hash,
-          size,
-          error: errMsg,
-          stage: 'conversion',
-        });
+        // 审计独立于节点删除成败：删节点也不丢失败原因。
         // 异常可能发生在落盘前（PROCESSING → 删）或落盘后（COMPLETED → 保留）：
         // purgeFailedNode 内部按当前态 + path 判断，已 COMPLETED / path 已就位不删。
-        await this.purgeFailedNode(cadNodeId);
+        await this.settleNodeFailure({
+          context,
+          source,
+          releaseReservation: true,
+          nodeId: cadNodeId,
+          audit: {
+            name,
+            fileHash: hash,
+            size,
+            error: errMsg,
+            stage: 'conversion',
+          },
+        });
       }
     })();
   }
@@ -894,6 +960,11 @@ export class DrawingIngestService {
     const isMxwebFile = extension === '.mxweb';
 
     return (async () => {
+      // 分片临时目录 + 合并缓存清理：成功 / 转换失败 / 落盘失败 / 异常四条路径共用
+      const cleanup = async (): Promise<void> => {
+        await this.fileSystemService.deleteDirectory(tmpDir);
+        await this.cacheManager.delete('file-upload', mergeKey);
+      };
       try {
         // Step 2: 格式转换（.mxweb 文件无需转换）
         let isOk = true;
@@ -913,31 +984,30 @@ export class DrawingIngestService {
         }
 
         if (!isOk) {
-          if (conversionReserved) {
-            await this.releaseConversionReservation(context, source);
-          }
           // 转换失败：未转换成功，不留存节点（同后台单文件上传）。
           // tmpDir 与合并缓存照旧清理。
-          await this.logUploadFailure({
+          await this.settleNodeFailure({
             context,
+            source,
+            releaseReservation: conversionReserved,
             nodeId: newNodeId,
-            name: fileName,
-            fileHash: fileMd5,
-            size: fileSize,
-            error: convertResult?.error || '未知错误',
-            transient: convertResult?.transient,
-            errorCategory: convertResult?.errorCategory,
-            stage: 'conversion',
+            audit: {
+              name: fileName,
+              fileHash: fileMd5,
+              size: fileSize,
+              error: convertResult?.error || '未知错误',
+              transient: convertResult?.transient,
+              errorCategory: convertResult?.errorCategory,
+              stage: 'conversion',
+            },
+            cleanup,
           });
-          await this.purgeFailedNode(newNodeId);
           this.logger.warn(
             `[DrawingIngest.chunks-bg] 转换失败，删除未成功节点: ${newNodeId} ` +
               `（transient=${convertResult?.transient ?? 'unknown'}，${
                 convertResult?.error || '未知错误'
               }）`
           );
-          await this.fileSystemService.deleteDirectory(tmpDir);
-          await this.cacheManager.delete('file-upload', mergeKey);
           return;
         }
 
@@ -964,22 +1034,21 @@ export class DrawingIngestService {
           // 落盘失败：未转换成功，不留存节点（同转换失败）。COMPLETED 必须等
           // 落盘成功后才置：未落盘的节点 path=null，提前置 COMPLETED 会让前端
           // 拿它去打开一个不存在的文件。
-          if (conversionReserved) {
-            await this.releaseConversionReservation(context, source);
-          }
-          await this.logUploadFailure({
+          await this.settleNodeFailure({
             context,
+            source,
+            releaseReservation: conversionReserved,
             nodeId: newNodeId,
-            name: fileName,
-            fileHash: fileMd5,
-            size: fileSize,
-            error: MATERIALIZE_FAILED_ERROR,
-            transient: true,
-            stage: 'materialize',
+            audit: {
+              name: fileName,
+              fileHash: fileMd5,
+              size: fileSize,
+              error: MATERIALIZE_FAILED_ERROR,
+              transient: true,
+              stage: 'materialize',
+            },
+            cleanup,
           });
-          await this.purgeFailedNode(newNodeId);
-          await this.fileSystemService.deleteDirectory(tmpDir);
-          await this.cacheManager.delete('file-upload', mergeKey);
           this.logger.warn(
             `[DrawingIngest.chunks-bg] 落盘失败，删除未成功节点: ${newNodeId}`
           );
@@ -992,8 +1061,7 @@ export class DrawingIngestService {
           FileStatus.COMPLETED
         );
 
-        await this.fileSystemService.deleteDirectory(tmpDir);
-        await this.cacheManager.delete('file-upload', mergeKey);
+        await cleanup();
         this.logger.log(
           `[DrawingIngest.chunks-bg] 转换完成: ${fileName} (node ${newNodeId})`
         );
@@ -1003,34 +1071,23 @@ export class DrawingIngestService {
           `[DrawingIngest.chunks-bg] 后台转换异常: ${errMsg}`,
           error instanceof Error ? error.stack : undefined
         );
-        try {
-          if (conversionReserved) {
-            await this.releaseConversionReservation(context, source);
-          }
-          // 审计独立于节点删除成败：删节点也不丢失败原因
-          await this.logUploadFailure({
-            context,
-            nodeId: newNodeId,
+        // 审计独立于节点删除成败：删节点也不丢失败原因。
+        // 异常可能发生在落盘前（PROCESSING → 删）或落盘后（COMPLETED → 保留）：
+        // purgeFailedNode 内部按当前态 + path 判断，已 COMPLETED / path 已就位不删。
+        await this.settleNodeFailure({
+          context,
+          source,
+          releaseReservation: conversionReserved,
+          nodeId: newNodeId,
+          audit: {
             name: fileName,
             fileHash: fileMd5,
             size: fileSize,
             error: errMsg,
             stage: 'conversion',
-          });
-          // 异常可能发生在落盘前（PROCESSING → 删）或落盘后（COMPLETED → 保留）：
-          // purgeFailedNode 内部按当前态 + path 判断，已 COMPLETED / path 已就位不删。
-          await this.purgeFailedNode(newNodeId);
-          await this.fileSystemService.deleteDirectory(tmpDir);
-          await this.cacheManager.delete('file-upload', mergeKey);
-        } catch (cleanupErr) {
-          this.logger.error(
-            `[DrawingIngest.chunks-bg] 失败清理异常: ${
-              cleanupErr instanceof Error
-                ? cleanupErr.message
-                : String(cleanupErr)
-            }`
-          );
-        }
+          },
+          cleanup,
+        });
       }
     })();
   }

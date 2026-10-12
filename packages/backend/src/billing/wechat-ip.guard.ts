@@ -4,6 +4,8 @@ import {
   ExecutionContext,
   Logger,
 } from '@nestjs/common';
+import { getClientIp } from '../common/utils/client-ip';
+import { cidrContains } from '../ip-blacklist/ip-blacklist.utils';
 
 /** 默认白名单：仅覆盖微信支付历史回源段（部分） */
 const DEFAULT_WHITELIST = ['103.244.8.0/24', '103.244.52.0/24'];
@@ -28,35 +30,6 @@ function resolveEnforceMode(): boolean {
   return process.env.WECHAT_IP_GUARD_ENFORCE === 'true';
 }
 
-/** 取客户端 IP 所需的 request 最小形状（Express req 的结构子集） */
-interface ClientIpRequest {
-  headers?: Record<string, string | string[] | undefined>;
-  ip?: string;
-  connection?: { remoteAddress?: string };
-}
-
-function getClientIp(req: ClientIpRequest): string {
-  const forwarded = req.headers?.['x-forwarded-for'];
-  if (typeof forwarded === 'string') {
-    const ip = forwarded.split(',')[0].trim();
-    if (ip) return ip;
-  }
-  return req.ip || req.connection?.remoteAddress || '';
-}
-
-function ipInCIDR(ip: string, cidr: string): boolean {
-  const parts = cidr.split('/');
-  if (parts.length !== 2) return false;
-  const [range, bitsStr] = parts;
-  const bits = parseInt(bitsStr, 10);
-  if (Number.isNaN(bits) || bits < 0 || bits > 32) return false;
-  // 使用无符号右移构建掩码，避免 2**32 溢出；bits=32 时左移位数不取模
-  const mask = bits === 0 ? 0 : ((0xFFFFFFFF << (32 - bits)) >>> 0);
-  const ipNum = ip.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;
-  const rangeNum = range.split('.').reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;
-  return (ipNum & mask) === (rangeNum & mask);
-}
-
 @Injectable()
 export class WechatIpGuard implements CanActivate {
   private readonly logger = new Logger(WechatIpGuard.name);
@@ -65,7 +38,7 @@ export class WechatIpGuard implements CanActivate {
     const req = context.switchToHttp().getRequest();
     const ip = getClientIp(req);
     const whitelist = resolveWhitelist();
-    const inWhitelist = whitelist.some((cidr) => ipInCIDR(ip, cidr));
+    const inWhitelist = whitelist.some((cidr) => cidrContains(cidr, ip));
 
     if (inWhitelist) return true;
 

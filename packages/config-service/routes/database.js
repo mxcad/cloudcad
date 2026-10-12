@@ -1,5 +1,9 @@
 const { log, parseBody, sendJson } = require('../lib/utils');
-const { authMiddleware, createDownloadToken, consumeDownloadToken } = require('../lib/session');
+const {
+  requireSession,
+  createDownloadToken,
+  consumeDownloadToken,
+} = require('../lib/session');
 const { parseEnvFile } = require('../lib/env');
 const { ENV_PATH, BACKUP_DIR } = require('../lib/constants');
 const { testTcpConnection } = require('../lib/network');
@@ -15,8 +19,7 @@ const path = require('path');
 
 async function handle(req, res, pathname, method) {
   if (pathname === '/api/test/database' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const env = parseEnvFile(ENV_PATH);
     const result = await testTcpConnection({
@@ -29,8 +32,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/test/redis' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const env = parseEnvFile(ENV_PATH);
     const result = await testTcpConnection({
@@ -43,8 +45,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/db/backups' && method === 'GET') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const backups = listBackupFiles();
     sendJson(res, 200, { success: true, backups });
@@ -52,8 +53,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/db/backup' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const result = await backupDatabase();
     sendJson(res, result.success ? 200 : 500, result);
@@ -61,8 +61,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/db/restore' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const { filename, confirm } = body;
@@ -83,8 +82,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/db/cleanup' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const maxBackups = body.maxBackups || 10;
@@ -134,8 +132,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/db/download-token' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const { filename } = body;
@@ -157,8 +154,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname.match(/^\/api\/db\/backup\//) && method === 'DELETE') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const filename = decodeURIComponent(pathname.split('/').pop());
 

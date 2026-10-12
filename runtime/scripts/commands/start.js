@@ -48,6 +48,7 @@ const {
 const { parseEnvFile } = require('../lib/env');
 const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
 const { promptConfirm } = require('../lib/prompt');
+const { alignConversionServiceUrl } = require('../config-updater');
 const state = require('../lib/state');
 const { startInfrastructure, isPm2AppFromThisProject } = require('./infra');
 const { stopAppServices } = require('./stop');
@@ -287,6 +288,10 @@ function getConversionServiceConfig() {
     'server.js'
   );
   const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
+  // CONVERSION_SERVICE_URL ↔ CONVERSION_SERVICE_PORT 对齐，必须在本函数读取 .env 之前：
+  // 只改 PORT 不改 URL 时后端恒连旧端口（其缺省值是硬编码 http://localhost:3100），
+  // 转换服务却起在新端口——所有转换静默失败而启动全程无感。
+  alignConversionServiceUrl(envPath);
   const envConfig = fs.existsSync(envPath) ? parseEnvFile(envPath) : {};
   const executor = (envConfig.FUNCTION_EXECUTOR || 'process-pool').toLowerCase();
   if (executor !== 'conversion-service') {

@@ -20,6 +20,7 @@ import { authControllerLogout } from '../api-sdk';
 import { showToast } from 'vant';
 import { t } from '@/languages';
 import { errMsg } from './apiError';
+import type { MembershipLike } from './billing';
 
 export interface AuthResponseData {
   accessToken: string;
@@ -90,6 +91,26 @@ export function patchUser(fields: Record<string, unknown>): void {
   const merged = { ...current, ...fields };
   localStorage.setItem('user', JSON.stringify(merged));
   notifySessionChanged('written');
+}
+
+/**
+ * 同步会员字段到 localStorage.user（编辑器 VIP 门控的数据源），走 patchUser 唯一出口
+ * （user 增量回写 + 状态机刷新）。支付成功（useMemberCenter）与账户事件 SSE 推送
+ * （useUser）共用：会员变更后回写这 4 个字段，已登录端无需重登即拿到最新会员态。
+ */
+export function syncUserMembership(profile: MembershipLike): void {
+  // 原地补字段的前提是已有 user 落盘；无 user / JSON 损坏时不动
+  if (!readUser()) return;
+  const fields: Record<string, unknown> = {};
+  for (const key of [
+    'membershipTierLevel',
+    'membershipTier',
+    'membershipExpiresAt',
+    'isVip',
+  ] as const) {
+    if (key in profile) fields[key] = profile[key];
+  }
+  patchUser(fields);
 }
 
 // ── JWT exp 判定（唯一出口） ──

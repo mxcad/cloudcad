@@ -1,5 +1,4 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxDelete(
   targetPaths,
@@ -9,7 +8,7 @@ function mxDelete(
   password,
   callback
 ) {
-  const args = ['delete', ...targetPaths];
+  const args = [...targetPaths];
   if (!isRecursive) {
     args.push('--non-recursive');
   }
@@ -19,12 +18,10 @@ function mxDelete(
   if (username) {
     args.push('--username', username);
   }
-  let env;
   if (password) {
     args.push('--password-from-env');
-    env = { ...process.env, SVN_PASSWORD: password };
   }
-  executeSpawn(mxPath, args, env ? { env } : {})
+  mx('delete', args, { password })
     .then(stdout => {
       callback(null, stdout);
     })

@@ -373,43 +373,51 @@ export function useCadFileLoader(
           !shareTokenParam &&
           !(file.fileHash && file.path)
         ) {
-          // 转换等待期不再锁编辑器（转换面板提供进度反馈）：展开面板 + 拉云端
-          // 列表 + 跨标签页广播，让该在途任务可见
-          const queueStore = useConversionQueueStore.getState();
-          void queueStore.refreshCloud();
-          queueStore.expandByTask();
-          broadcastConversionActivity();
-          const conversion = await waitForConversion(fileId, {
-            autoTrigger: fileStatus !== 'PROCESSING',
-            shouldContinue: () => !cancelled,
-          });
-          if (cancelled) return;
-          if (!conversion.completed) {
-            const isTerminalFailure =
-              conversion.status === 'FAILED' || conversion.status === 'DELETED';
-            if (isTerminalFailure) {
-              // #477：永久失败弹窗提示（区别于「尚未转换完成」）
-              void globalShowConfirm({
-                title: t('转换失败'),
-                message: t('该文件转换失败，请检查文件内容'),
-                confirmText: t('知道了'),
-                type: 'danger',
-              });
-            }
-            const msg = isTerminalFailure
-              ? t('文件转换失败，无法打开文件')
-              : t('文件尚未转换完成');
-            fail(msg);
-            return;
-          }
-          // 转换完成，重新获取节点信息（fileHash/path/updatedAt 可能已更新）
-          try {
-            const { data: refreshed } = await nodeControllerGetNode({
-              path: { nodeId: fileId },
+          // 已是 mxweb（原生格式）的文件无需转换：触发转换注定失败（引擎对 .mxweb 源
+          // 按「导出方向」处理，无目标格式），还会把节点打成 FAILED。跳过转换等待，
+          // 交由下方 fileHash/path 校验给出明确错误（缺 fileHash→尚未转换完成，
+          // 缺 path→无法构造访问URL），不再拉起注定失败的转换、不再进转换队列。
+          const isAlreadyMxweb = file.name?.toLowerCase().endsWith('.mxweb');
+          if (!isAlreadyMxweb) {
+            // 转换等待期不再锁编辑器（转换面板提供进度反馈）：展开面板 + 拉云端
+            // 列表 + 跨标签页广播，让该在途任务可见
+            const queueStore = useConversionQueueStore.getState();
+            void queueStore.refreshCloud();
+            queueStore.expandByTask();
+            broadcastConversionActivity();
+            const conversion = await waitForConversion(fileId, {
+              autoTrigger: fileStatus !== 'PROCESSING',
+              shouldContinue: () => !cancelled,
             });
-            if (refreshed) file = refreshed;
-          } catch {
-            // 保留原节点信息，后续校验会给出明确错误
+            if (cancelled) return;
+            if (!conversion.completed) {
+              const isTerminalFailure =
+                conversion.status === 'FAILED' ||
+                conversion.status === 'DELETED';
+              if (isTerminalFailure) {
+                // #477：永久失败弹窗提示（区别于「尚未转换完成」）
+                void globalShowConfirm({
+                  title: t('转换失败'),
+                  message: t('该文件转换失败，请检查文件内容'),
+                  confirmText: t('知道了'),
+                  type: 'danger',
+                });
+              }
+              const msg = isTerminalFailure
+                ? t('文件转换失败，无法打开文件')
+                : t('文件尚未转换完成');
+              fail(msg);
+              return;
+            }
+            // 转换完成，重新获取节点信息（fileHash/path/updatedAt 可能已更新）
+            try {
+              const { data: refreshed } = await nodeControllerGetNode({
+                path: { nodeId: fileId },
+              });
+              if (refreshed) file = refreshed;
+            } catch {
+              // 保留原节点信息，后续校验会给出明确错误
+            }
           }
         }
 

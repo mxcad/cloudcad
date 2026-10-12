@@ -106,6 +106,8 @@ vi.mock('@/services/permissionService', () => ({
     canManageBlock: false,
   })),
   canExportDownloadGate: vi.fn(async () => ({ allowed: true })),
+  loadProjectPermissions: vi.fn(async () => []),
+  invalidateProjectPermissions: vi.fn(),
 }));
 
 vi.mock('@/services/thumbnailService', () => ({

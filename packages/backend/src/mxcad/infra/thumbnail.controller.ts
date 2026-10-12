@@ -32,15 +32,11 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import * as fs from 'fs';
-import * as path from 'path';
-import { ConfigService } from '@nestjs/config';
-import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { ThumbnailGenerationService } from './thumbnail-generation.service';
 import { CheckThumbnailResponseDto } from '../dto/check-thumbnail-response.dto';
 import { UploadThumbnailResponseDto } from '../dto/upload-thumbnail-response.dto';
 import { UploadThumbnailDto } from '../dto/upload-thumbnail.dto';
 import { I18nContext } from 'nestjs-i18n';
-import { getThumbnailFileName } from './thumbnail-utils';
 import { OptionalAuth } from '../../auth/decorators/optional-auth.decorator';
 import { LibraryPublicAccess } from '../../common/decorators/library-public.decorator';
 import { RequireProjectPermission } from '../../common/decorators/require-project-permission.decorator';
@@ -55,9 +51,7 @@ export class ThumbnailController {
   private readonly logger = new Logger(ThumbnailController.name);
 
   constructor(
-    private readonly thumbnailGenerationService: ThumbnailGenerationService,
-    private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly configService: ConfigService
+    private readonly thumbnailGenerationService: ThumbnailGenerationService
   ) {}
 
   @Get('nodes/:nodeId/thumbnail/check')
@@ -181,27 +175,6 @@ export class ThumbnailController {
         });
       }
 
-      const node = await this.fileSystemNodeService.findById(nodeId);
-      if (!node || !node.path) {
-        return res
-          .status(404)
-          .json({ code: -1, message: '文件不存在或没有 path' });
-      }
-
-      const filesDataPath = this.configService.get('filesDataPath', {
-        infer: true,
-      });
-      // 与 storageManager.getFullPath 保持一致的路径解析（剥离 /mxcad/file/ 前缀），
-      // 否则上传目录与缩略图读取目录不一致，导致有缩略图却找不到
-      const cleanPath = node.path
-        .replace(/^\/mxcad\/file\//, '')
-        .replace(/\.\./g, '_')
-        .replace(/~/g, '_');
-      const dirParts = cleanPath.split('/').filter(Boolean).slice(0, -1);
-      const targetDir = path.resolve(filesDataPath, dirParts.join('/'));
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true });
-      }
       // 限制只能上传 jpg 缩略图，统一命名 thumbnail.jpg
       // 注意：前端以 Blob 形式上传（FormData 无文件名，originalname 为 "blob"），
       // 不能依赖文件扩展名判断格式，必须用 Multer 从 Blob type 解析出的 mimetype
@@ -219,20 +192,35 @@ export class ThumbnailController {
           .json({ code: -1, message: '仅支持 jpg 格式的缩略图' });
       }
 
-      const targetFileName = getThumbnailFileName('jpg');
-      const targetFilePath = path.join(targetDir, targetFileName);
-      if (fs.existsSync(targetFilePath)) {
-        fs.unlinkSync(targetFilePath);
+      // 节点查找、路径解析（storageManager.getFullPath）与落盘统一收敛到
+      // ThumbnailGenerationService.saveThumbnail，与缩略图读取目录保持一致
+      const result = await this.thumbnailGenerationService.saveThumbnail(
+        nodeId,
+        fileBuffer
+      );
+
+      if (result.notFound) {
+        return res
+          .status(404)
+          .json({ code: -1, message: '文件不存在或没有 path' });
       }
 
-      fs.writeFileSync(targetFilePath, fileBuffer);
-      this.logger.log(`[uploadThumbnail] 缩略图已上传: ${targetFilePath}`);
+      if (!result.success) {
+        return res.status(500).json({
+          code: -1,
+          message:
+            I18nContext.current()?.t('error.thumbnail_upload_failed') ??
+            '上传缩略图失败',
+        });
+      }
+
+      this.logger.log(`[uploadThumbnail] 缩略图已上传, nodeId: ${nodeId}`);
       return res.json({
         code: 0,
         message:
           I18nContext.current()?.t('success.thumbnail_uploaded') ??
           '缩略图上传成功',
-        data: { fileName: targetFileName },
+        data: { fileName: result.fileName },
       });
     } catch (error) {
       this.logger.error(

@@ -8,7 +8,7 @@
  * 注意：postgresql 不在本脚本职责内——EDB 官方直链已封禁（HTTP 403），
  * PostgreSQL 二进制改走与 mxcad/mxversion 相同的产品二进制通道：
  * 本地压缩包（zip 内顶层须为 pgsql/ 目录）放入 mxcad-dist/windows-x64/postgresql.zip，
- * 经 scripts/upload-mxcad.js 上传到 Release 并登记 manifest.json，
+ * 经 scripts/upload-mxcad.js 上传到 Release 并登记 scripts/pack-lib/mxcad-registry.json，
  * 由 release.yml 的「下载产品二进制」步骤解压到 runtime/windows/postgresql。
  *
  * 使用方式（仅在 Windows 环境 / GitHub windows runner）：

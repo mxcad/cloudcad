@@ -14,6 +14,7 @@ const fs = require('fs');
 const { PRODUCT_NAME } = require('./lib/branding');
 const { resolveMxcadAssemblyPath } = require('./lib/mxcad-path');
 const { fillEmptySecrets } = require('./setup-offline');
+const { alignConversionServiceUrl } = require('./config-updater');
 
 // ==================== 配置 ====================
 
@@ -195,6 +196,10 @@ function getConversionServiceConfig() {
     'dist',
     'server.js'
   );
+  // CONVERSION_SERVICE_URL ↔ CONVERSION_SERVICE_PORT 对齐（同 start.js，须先于读取）：
+  // 不对齐时后端连旧端口、转换服务起新端口，健康检查仍全绿——断网门禁会"通过"
+  // 一个转换必失败的坏部署（S9-4 要防的正是这种假绿）。
+  alignConversionServiceUrl(BACKEND_ENV_PATH);
   const envConfig = parseEnvFileSimple(BACKEND_ENV_PATH);
   const executor = (envConfig.FUNCTION_EXECUTOR || 'process-pool').toLowerCase();
   if (executor !== 'conversion-service') {

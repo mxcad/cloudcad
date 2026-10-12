@@ -57,6 +57,15 @@ describe('FileStatusStateMachine', () => {
         ).toBe(true);
       });
 
+      it('COMPLETED → PROCESSING（主动重新转换：产物损坏 / 需刷新）', () => {
+        expect(
+          FileStatusStateMachine.canTransition(
+            FileStatus.COMPLETED,
+            FileStatus.PROCESSING
+          )
+        ).toBe(true);
+      });
+
       it('FAILED → DELETED（系统自动删除）', () => {
         expect(
           FileStatusStateMachine.canTransition(
@@ -123,15 +132,6 @@ describe('FileStatusStateMachine', () => {
         ).toBe(false);
       });
 
-      it('COMPLETED → PROCESSING（已完成不能回到处理中）', () => {
-        expect(
-          FileStatusStateMachine.canTransition(
-            FileStatus.COMPLETED,
-            FileStatus.PROCESSING
-          )
-        ).toBe(false);
-      });
-
       it('FAILED → COMPLETED（失败后不能直接恢复，只能删除）', () => {
         expect(
           FileStatusStateMachine.canTransition(
@@ -171,10 +171,10 @@ describe('FileStatusStateMachine', () => {
         ).toBe(false);
       });
 
-      it('null → PROCESSING 视为非法', () => {
+      it('null → PROCESSING 视为合法（null ≈ COMPLETED，可主动重新转换）', () => {
         expect(
           FileStatusStateMachine.canTransition(null, FileStatus.PROCESSING)
-        ).toBe(false);
+        ).toBe(true);
       });
     });
   });
@@ -193,8 +193,8 @@ describe('FileStatusStateMachine', () => {
     it('非法转换抛出 BadRequestException', () => {
       expect(() =>
         FileStatusStateMachine.validateTransition(
-          FileStatus.COMPLETED,
-          FileStatus.PROCESSING
+          FileStatus.UPLOADING,
+          FileStatus.COMPLETED
         )
       ).toThrow(BadRequestException);
     });
@@ -222,7 +222,7 @@ describe('FileStatusStateMachine', () => {
 
     it('null from 非法转换抛异常', () => {
       expect(() =>
-        FileStatusStateMachine.validateTransition(null, FileStatus.PROCESSING)
+        FileStatusStateMachine.validateTransition(null, FileStatus.UPLOADING)
       ).toThrow(BadRequestException);
     });
 

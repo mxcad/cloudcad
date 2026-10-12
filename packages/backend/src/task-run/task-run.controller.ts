@@ -36,7 +36,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { SystemPermission } from '../common/enums/permissions.enum';
 import { AlertService } from '../alert/alert.service';
-import { AlertLevel } from '../alert/enums/alert.enum';
+import { TASK_RUN_FAILED_KEY, TASK_RUN_FAILED_LEVEL } from '../alert/enums/alert.enum';
 import { TaskRunService } from './task-run.service';
 import { TaskRunTrigger } from './enums/task-run.enum';
 import {
@@ -166,9 +166,9 @@ export class TaskRunController {
     try {
       await this.alertService.raise({
         source: 'task-run:manual',
-        messageKey: 'task_run_failed',
-        // P1：单任务失败（可再次手动触发）
-        level: AlertLevel.P1,
+        messageKey: TASK_RUN_FAILED_KEY,
+        // 级别取 TASK_RUN_FAILED_LEVEL 单点（当前 P1）：单任务失败（可再次手动触发）
+        level: TASK_RUN_FAILED_LEVEL,
         message: `手动触发任务 ${taskName} 失败: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task: taskName,

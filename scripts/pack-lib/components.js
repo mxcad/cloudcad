@@ -1,17 +1,19 @@
 /**
  * 标准运行时组件清单（单一事实源）
  *
- * extract-linux-runtime.js / pack-runtime-deps.js / pack-offline.js 共用，
+ * extract-linux-runtime.js / pack-offline.js / ensure-runtime.js 共用，
  * 消灭 4 份内联定义（架构审查 ⑪）。此前各脚本各写一份关键可执行文件清单，
- * 且 pack-runtime-deps（内容寻址资产 gate）只查 4 个顶层组件目录、漏掉嵌在
- * node 内的 pm2——残缺资产指纹不变会被永久复用，目标机 start.sh 报"找不到
- * Node.js 运行时"。收敛到此：关键文件路径只在此定义一次。
+ * 且内容寻址资产 gate 只查 4 个顶层组件目录、漏掉嵌在 node 内的 pm2——
+ * 残缺资产指纹不变会被永久复用，目标机 start.sh 报"找不到 Node.js 运行时"。
+ * 收敛到此：关键文件路径只在此定义一次。
  *
  * 命名约定：目录名用 'subversion'（runtime/linux/ 下的实际目录名）；
  * extract-linux-runtime 内部逻辑名 'svn' 经 componentDirName 映射到 'subversion'。
+ * Windows 侧无 subversion 组件——svn 能力由产品二进制 mxversion（mx.exe）提供，
+ * 见 packages/mxVersionTool/mxpath.js。
  */
 
-// Linux 组件目录名（runtime/linux/<dir>，也是 runtime-deps 资产 tar 的输入目录）。
+// Linux 组件目录名（runtime/linux/<dir>，也是提取缓存 runtime/cache/linux-extract/<os>/ 下的目录名）。
 const LINUX_COMPONENT_DIRS = ['node', 'postgres', 'redis', 'subversion'];
 
 // 各组件关键可执行文件（相对组件目录）。缓存命中判定 + 提取后断言 + 出包前 gate 共用。
@@ -21,6 +23,26 @@ const LINUX_CRITICAL_FILES = {
   postgres: 'bin/postgres',
   redis: 'redis-server',
   subversion: 'svn',
+};
+
+// Windows 标准组件关键可执行文件（相对组件目录）。
+// 目录名与 Linux 不同：postgresql（Linux 为 postgres）；Windows 无 subversion。
+const WINDOWS_CRITICAL_FILES = {
+  node: 'node.exe',
+  redis: 'redis-server.exe',
+  postgresql: 'pgsql/bin/initdb.exe',
+};
+
+// 产品二进制（mxcad / mxversion）关键可执行文件，按平台区分。
+// ensure-runtime 用此判定"已下载解压的目录是否完整"：部分解压（下载中断）留下的
+// 非空目录会被"目录非空"判定误判为就绪，而实际缺关键二进制。
+// 文件名取代码实际解析的那个，不是发行包里的别名：
+//   mxcad      → packages/backend/src/config/configuration.ts 解析 mxcadassembly(.exe)
+//                （发行包另带 0 字节的 mx 符号链接，不可作就绪判据）
+//   mxversion  → packages/mxVersionTool/mxpath.js 解析 mx.exe（Windows svn 能力）
+const PRODUCT_CRITICAL_FILES = {
+  mxcad: { linux: 'mxcadassembly', windows: 'mxcadassembly.exe' },
+  mxversion: { windows: 'mx.exe' },
 };
 
 // 资产/部署包 gate 的完整必需文件清单（相对 runtime/linux 或提取缓存根）。
@@ -38,4 +60,6 @@ module.exports = {
   LINUX_COMPONENT_DIRS,
   LINUX_CRITICAL_FILES,
   LINUX_ASSET_REQUIRED_FILES,
+  WINDOWS_CRITICAL_FILES,
+  PRODUCT_CRITICAL_FILES,
 };

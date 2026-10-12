@@ -233,26 +233,4 @@ export class FileSystemNodeService {
       return null;
     }
   }
-
-  /**
-   * 根据文件扩展名获取 MIME 类型
-   */
-  getMimeType(extension: string): string {
-    const mimeMap: Record<string, string> = {
-      '.dwg': 'application/acad',
-      '.dxf': 'application/dxf',
-      '.mxweb': 'application/octet-stream',
-      '.png': 'image/png',
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.bmp': 'image/bmp',
-      '.svg': 'image/svg+xml',
-      '.pdf': 'application/pdf',
-      '.zip': 'application/zip',
-      '.rar': 'application/vnd.rar',
-    };
-    return mimeMap[extension.toLowerCase()] || 'application/octet-stream';
-  }
 }

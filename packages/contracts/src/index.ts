@@ -46,7 +46,6 @@ export type { IPasswordService } from './auth/service.interface';
 export type { IAccountBindingService } from './auth/service.interface';
 export type { IWechatCallbackService } from './auth/service.interface';
 export type { IUserService, IUserRole, ICreatedUser, IUserDetail, IUserActionResponse } from './auth/user-service.interface';
-export type { IAuthFacade } from './auth/auth-facade.interface';
 export type { IAuthProvider, IAuthenticationHandler, IOAuthHandler, ISmsAuthHandler, IPasswordResetHandler, IAccountBindingHandler, ITokenHandler } from './auth/auth-provider.interface';
 export type { IUserSyncHook } from './auth/user-sync.interface';
 
@@ -64,6 +63,7 @@ export type { UserRecord, UserRoleRef, RefreshTokenRecord, RoleRecord } from './
 
 // Domain value helpers（纯函数，过 scan:purity 门禁）
 export { toPublicUser } from './domain/user-mapping';
+export { FileTypeDetector } from './domain/file-type-detector';
 
 // Domain contracts (values)
 export {

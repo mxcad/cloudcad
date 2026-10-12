@@ -14,8 +14,8 @@ jest.mock('@cloudcad/engine-exec', () => ({
   spawnManagedProcess: (...args: any[]) => mockSpawnManagedProcess(...args),
 }));
 
-jest.mock('./thumbnail-utils', () => {
-  const actual = jest.requireActual('./thumbnail-utils');
+jest.mock('../../common/utils/thumbnail-utils', () => {
+  const actual = jest.requireActual('../../common/utils/thumbnail-utils');
   return {
     ...actual,
     findThumbnail: (...args: any[]) => mockFindThumbnail(...args),
@@ -211,49 +211,47 @@ describe('ThumbnailGenerationService', () => {
     });
   });
 
-  describe('uploadThumbnail', () => {
-    it('should return success when jpg file uploaded', async () => {
-      const nodeDir = path.join(os.tmpdir(), 'thumbnail-test', 'project');
-      if (!fs.existsSync(nodeDir)) {
-        fs.mkdirSync(nodeDir, { recursive: true });
-      }
-      const testFile = path.join(nodeDir, 'test.jpg');
-      fs.writeFileSync(testFile, 'fake-jpg');
-
+  describe('saveThumbnail', () => {
+    it('should return success with fileName when node exists', async () => {
       mockFileSystemNodeService.findById.mockResolvedValue({
         id: 'node-1',
         path: 'project/file.dwg',
       });
 
-      const result = await service.uploadThumbnail('node-1', testFile);
+      const result = await service.saveThumbnail(
+        'node-1',
+        Buffer.from('fake-jpg')
+      );
 
       expect(result.success).toBe(true);
+      expect(result.fileName).toBeTruthy();
     });
 
-    it('should reject non-jpg files', async () => {
-      const nodeDir = path.join(os.tmpdir(), 'thumbnail-test', 'project');
-      if (!fs.existsSync(nodeDir)) {
-        fs.mkdirSync(nodeDir, { recursive: true });
-      }
-      const testFile = path.join(nodeDir, 'test.png');
-      fs.writeFileSync(testFile, 'fake-png');
-
-      mockFileSystemNodeService.findById.mockResolvedValue({
-        id: 'node-1',
-        path: 'project/file.dwg',
-      });
-
-      const result = await service.uploadThumbnail('node-1', testFile);
-
-      expect(result.success).toBe(false);
-    });
-
-    it('should return error when node not found', async () => {
+    it('should return notFound when node not found', async () => {
       mockFileSystemNodeService.findById.mockResolvedValue(null);
 
-      const result = await service.uploadThumbnail('missing', '/tmp/test.jpg');
+      const result = await service.saveThumbnail(
+        'missing',
+        Buffer.from('fake-jpg')
+      );
 
       expect(result.success).toBe(false);
+      expect(result.notFound).toBe(true);
+    });
+
+    it('should return notFound when node has no path', async () => {
+      mockFileSystemNodeService.findById.mockResolvedValue({
+        id: 'node-1',
+        path: undefined,
+      });
+
+      const result = await service.saveThumbnail(
+        'node-1',
+        Buffer.from('fake-jpg')
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.notFound).toBe(true);
     });
   });
 });

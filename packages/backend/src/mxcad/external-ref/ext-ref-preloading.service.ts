@@ -69,17 +69,27 @@ export class ExtRefPreloadingService {
   }
 
   /**
+   * 解析节点的存储根目录（外部参照定位的唯一事实源）：
+   * 用户云端 = node.path 经 storageManager.getFullPath 后取目录；游客/临时 = mxcadUploadPath。
+   * 传入已查得的 node 可省去一次 findById。
+   */
+  async resolveStorageRoot(
+    nodeId: string,
+    node?: { path?: string } | null
+  ): Promise<string> {
+    const resolved = node ?? (await this.fileSystemNodeService.findById(nodeId));
+    return resolved?.path
+      ? path.dirname(this.storageManager.getFullPath(resolved.path))
+      : this.mxcadUploadPath;
+  }
+
+  /**
    * 获取 preloading JSON 的完整文件路径
    */
   async getPreloadingFilePath(nodeId: string): Promise<string | null> {
     const node = await this.fileSystemNodeService.findById(nodeId);
     const nodePath = node?.path || '';
-
-    // 用户云端：按 node.path 解析存储目录；游客/临时：回退到 mxcadUploadPath
-    const storageRootPath = node?.path
-      ? path.dirname(this.storageManager.getFullPath(node.path))
-      : this.mxcadUploadPath;
-
+    const storageRootPath = await this.resolveStorageRoot(nodeId, node);
     const preloadingFileName = this.getPreloadingFileName(nodeId, nodePath);
     return path.join(storageRootPath, preloadingFileName);
   }

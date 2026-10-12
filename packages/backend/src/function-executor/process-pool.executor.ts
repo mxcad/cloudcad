@@ -1,6 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import type {
   IFunctionExecutor,
+  ExecutorCapabilities,
   ConversionTask,
   ConversionResult,
   TaskStatus,
@@ -28,6 +29,12 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
   private readonly logger = new Logger(ProcessPoolExecutor.name);
   /** 进程内执行：executeTask 回调 FileConversionService.convertFile，故不得作为转发目标 */
   readonly isRemote = false;
+  /** 进程内形态：无取消/逐任务明细/批量原语（簿记仅供 getTaskStatus） */
+  readonly capabilities: ExecutorCapabilities = {
+    cancel: false,
+    listTasks: false,
+    batch: false,
+  };
   private readonly taskStore = new Map<string, TaskRecord>();
   private readonly rateLimiter: RateLimiter;
   /** 终态任务 id 的入队顺序（Map 淘汰依据；仅终态 id 入列，每个任务只入列一次） */

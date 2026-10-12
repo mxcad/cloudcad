@@ -9,7 +9,13 @@ import { Prisma as PrismaRuntime } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import { PaymentGatewayFactory } from './gateway/payment-gateway.factory';
 import { MockPaymentGateway } from './gateway/mock/mock-payment.gateway';
-import { MembershipService, MONTH_DAYS } from '../vip/membership.service';
+import { MembershipService } from '../vip/membership.service';
+import {
+  PaymentOrder,
+  PENDING_ORDER_TTL_MS,
+  type GatewayPaidOutcome,
+  type GatewayOutcomeResult,
+} from './payment-order';
 import { StorageInfoService } from '../file-system/storage-quota/storage-info.service';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { EmailService } from '../notification/email.service';
@@ -37,6 +43,8 @@ function generateOrderNo(): string {
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
 
+  private readonly paymentOrder: PaymentOrder;
+
   constructor(
     private prisma: DatabaseService,
     private gatewayFactory: PaymentGatewayFactory,
@@ -45,7 +53,10 @@ export class BillingService {
     private runtimeConfigService: RuntimeConfigService,
     private emailService: EmailService,
     private auditLogService: AuditLogService
-  ) {}
+  ) {
+    // 网关对账协议唯一实现（A7）：金额比对 + 状态守卫 + 恢复 + 激活委托
+    this.paymentOrder = new PaymentOrder(membershipService);
+  }
 
   async getUserMembership(userId: string) {
     return this.membershipService.getMembership(userId);
@@ -125,7 +136,7 @@ export class BillingService {
 
     const gateway = await this.gatewayFactory.getActiveGateway();
 
-    const twoHoursAgo = new Date(Date.now() - 2 * 3600000);
+    const twoHoursAgo = new Date(Date.now() - PENDING_ORDER_TTL_MS);
     const pending = await this.prisma.paymentOrder.findFirst({
       where: {
         userId,
@@ -346,7 +357,17 @@ export class BillingService {
     }
   }
 
-  async handlePaymentNotify(verified: WebhookVerifyResult): Promise<void> {
+  /**
+   * 网关支付结果落地的唯一编排入口（A7）：
+   * 状态迁移协议（金额比对 + 守卫 + 恢复 + 激活）全部委托
+   * {@link PaymentOrder.applyGatewayOutcome}，本方法只做订单查找、
+   * 终态订单的网关查单确认与事务/缓存编排。
+   * @returns 订单应用结果（'succeeded' 时事务提交后失效配额缓存）
+   */
+  async handlePaymentNotify(
+    verified: WebhookVerifyResult
+  ): Promise<GatewayOutcomeResult> {
+    let result: GatewayOutcomeResult = 'already-terminal';
     let activatedUserId: string | undefined;
     await this.prisma.$transaction(async (tx) => {
       const order = await tx.paymentOrder.findUnique({
@@ -355,70 +376,48 @@ export class BillingService {
       });
       if (!order) throw new Error(`order not found: ${verified.orderNo}`);
 
-      // 非 PENDING 终态：TIMEOUT/CLOSED 订单向网关对账，避免已付款订单回调被吞
-      if (order.status !== OrderStatus.PENDING) {
-        if (
-          order.status === OrderStatus.TIMEOUT ||
-          order.status === OrderStatus.CLOSED
-        ) {
-          await this.reconcileTerminatedOrder(tx, order, verified);
-          activatedUserId = order.userId;
+      let outcome: GatewayPaidOutcome = {
+        gatewayPaidId: verified.gatewayOrderId,
+        amount: verified.amount,
+        paidAt: verified.paidAt,
+      };
+
+      // 非 PENDING 终态：TIMEOUT/CLOSED 订单向网关查单确认实际支付，
+      // 避免已付款订单回调被吞；其他终态（SUCCEEDED/REFUNDED/FAILED）幂等跳过
+      if (
+        order.status === OrderStatus.TIMEOUT ||
+        order.status === OrderStatus.CLOSED
+      ) {
+        try {
+          const gateway = this.gatewayFactory.getGateway(order.gateway);
+          const query = await gateway.queryOrder(verified.orderNo);
+          if (query.status !== 'SUCCESS') return;
+          outcome = {
+            gatewayPaidId: query.gatewayOrderId ?? verified.gatewayOrderId,
+            amount: query.amount ?? verified.amount,
+            paidAt: query.paidAt ?? verified.paidAt,
+          };
+        } catch (e) {
+          // 网关查询失败不阻断回调流程（下一轮回调/cron 重试）
+          this.logger.warn(
+            `gateway reconciliation failed: orderNo=${verified.orderNo}`,
+            e
+          );
+          return;
         }
+      } else if (order.status !== OrderStatus.PENDING) {
         return;
       }
 
-      if (order.amount !== verified.amount) {
-        this.logger.warn(
-          `amount mismatch, skipping: order=${order.amount} callback=${verified.amount} orderNo=${verified.orderNo}`
-        );
-        const { count } = await tx.paymentOrder.updateMany({
-          where: { id: order.id, status: OrderStatus.PENDING },
-          data: {
-            status: OrderStatus.FAILED,
-            failedAt: new Date(),
-            description: `金额不匹配: order=${order.amount} callback=${verified.amount}`,
-          },
-        });
-        // count===0 说明订单已被并发改成其他状态，直接返回
-        if (count === 0) return;
-        return;
-      }
-
-      const { count } = await tx.paymentOrder.updateMany({
-        where: { id: order.id, status: OrderStatus.PENDING },
-        data: {
-          status: OrderStatus.SUCCEEDED,
-          gatewayPaidId: verified.gatewayOrderId,
-          paidAt: verified.paidAt,
-        },
-      });
-
-      if (count === 0) {
-        // count===0 说明订单已被并发改为其他状态（如 cron 标记 TIMEOUT/CLOSED）。
-        // 此时重新读最新状态：若为终态，走网关对账路径，避免已付款订单永久卡在 TIMEOUT。
-        const latest = await tx.paymentOrder.findUnique({
-          where: { id: order.id },
-          include: { vipTier: true },
-        });
-        if (
-          latest &&
-          (latest.status === OrderStatus.TIMEOUT ||
-            latest.status === OrderStatus.CLOSED)
-        ) {
-          await this.reconcileTerminatedOrder(tx, latest, verified);
-          activatedUserId = latest.userId;
-        }
-        return;
-      }
-
-      await this.activateMembershipForOrder(tx, order);
-      activatedUserId = order.userId;
+      result = await this.paymentOrder.applyGatewayOutcome(tx, order, outcome);
+      if (result === 'succeeded') activatedUserId = order.userId;
     });
 
     // 会员等级/到期时间变化会影响存储额度，事务提交后立即失效配额缓存保证前端即时生效
     if (activatedUserId) {
       await this.storageInfoService.invalidateQuotaCache(activatedUserId);
     }
+    return result;
   }
 
   async getAllOrders(page = 1, limit = 20, status?: string, keyword?: string) {
@@ -502,7 +501,7 @@ export class BillingService {
     }
 
     // 陈旧 PENDING 订单复用同一 out_trade_no 会被微信拒绝，先关闭旧单再重建新单
-    if (order.createdAt < new Date(Date.now() - 2 * 3600000)) {
+    if (order.createdAt < new Date(Date.now() - PENDING_ORDER_TTL_MS)) {
       // 防降级：当前有效等级高于该订单等级时按 createOrder 逻辑抛错
       const currentTier = await this.membershipService.getEffectiveTier(userId);
       if (order.vipTier && currentTier > order.vipTier.level) {
@@ -635,24 +634,7 @@ export class BillingService {
             );
             break;
           }
-          if (result.amount != null && result.amount !== order.amount) {
-            this.logger.warn(
-              `amount mismatch on refresh, order FAILED: order=${order.amount} gateway=${result.amount} orderNo=${orderNo}`
-            );
-            const { count } = await this.prisma.paymentOrder.updateMany({
-              where: { id: order.id, status: OrderStatus.PENDING },
-              data: {
-                status: OrderStatus.FAILED,
-                failedAt: new Date(),
-                description: `金额不匹配: order=${order.amount} gateway=${result.amount}`,
-              },
-            });
-            if (count === 0)
-              this.logger.warn(
-                `order status changed concurrently, skip failed: ${orderNo}`
-              );
-            return this.prisma.paymentOrder.findUnique({ where: { orderNo } });
-          }
+          // 金额比对/状态迁移/激活统一走 handlePaymentNotify → applyGatewayOutcome
           await this.handlePaymentNotify({
             isValid: true,
             orderNo,
@@ -675,7 +657,7 @@ export class BillingService {
           });
           break;
         case 'NOTPAY':
-          if (order.createdAt < new Date(Date.now() - 7200000)) {
+          if (order.createdAt < new Date(Date.now() - PENDING_ORDER_TTL_MS)) {
             this.logger.log(
               `order exceeded 2h window, marking timeout: ${orderNo}`
             );
@@ -721,33 +703,21 @@ export class BillingService {
         const result = await gateway.queryOrder(order.orderNo);
         if (result.status !== 'SUCCESS' || !result.gatewayOrderId) continue;
 
-        if (result.amount != null && result.amount !== order.amount) {
-          // 金额不匹配：置 FAILED 绝不激活会员（与 refreshOrder 同语义）
-          this.logger.warn(
-            `amount mismatch on reconcile, order FAILED: order=${order.amount} gateway=${result.amount} orderNo=${order.orderNo}`
-          );
-          await this.prisma.paymentOrder.updateMany({
-            where: { orderNo: order.orderNo, status: OrderStatus.PENDING },
-            data: {
-              status: OrderStatus.FAILED,
-              failedAt: new Date(),
-              description: `金额不匹配: order=${order.amount} gateway=${result.amount}`,
-            },
-          });
-          continue;
-        }
-
-        await this.handlePaymentNotify({
+        // 金额比对/状态迁移/激活统一走 handlePaymentNotify → applyGatewayOutcome
+        // （金额不符会在协议内标 FAILED 且绝不激活）；仅真正完成订单才计入 recovered
+        const applied = await this.handlePaymentNotify({
           isValid: true,
           orderNo: order.orderNo,
           gatewayOrderId: result.gatewayOrderId,
           amount: result.amount ?? order.amount,
           paidAt: result.paidAt ?? new Date(),
         });
-        recovered++;
-        this.logger.log(
-          `reconciled paid order by cron: orderNo=${order.orderNo}`
-        );
+        if (applied === 'succeeded') {
+          recovered++;
+          this.logger.log(
+            `reconciled paid order by cron: orderNo=${order.orderNo}`
+          );
+        }
       } catch (e) {
         // 单笔失败不阻断本轮其余订单，下一轮 cron 重试
         this.logger.warn(
@@ -1000,6 +970,39 @@ export class BillingService {
     note?: string,
     revertMembership = true
   ) {
+    return this.reviewRefundApplication(
+      applicationId,
+      reviewerId,
+      'approved',
+      note,
+      revertMembership
+    );
+  }
+
+  /**
+   * 驳回退款申请：仅更新申请状态，订单保持 SUCCEEDED，用户可再次申请。
+   */
+  async rejectRefundApplication(
+    applicationId: string,
+    reviewerId: string,
+    note?: string
+  ) {
+    return this.reviewRefundApplication(applicationId, reviewerId, 'rejected', note);
+  }
+
+  /**
+   * 退款审批状态机的唯一实现：approve 与 reject 只差决策值，
+   * 守卫/乐观锁标记/通知/审计尾部不再各抄一遍。
+   * 通过时先执行实际退款（失败上抛，申请保持 PENDING 允许重试）；
+   * 驳回仅更新申请状态。
+   */
+  private async reviewRefundApplication(
+    applicationId: string,
+    reviewerId: string,
+    decision: 'approved' | 'rejected',
+    note?: string,
+    revertMembership = true
+  ) {
     const application = await this.prisma.refundApplication.findUnique({
       where: { id: applicationId },
       include: {
@@ -1020,15 +1023,24 @@ export class BillingService {
       );
     }
 
-    // 实际退款（订单变 REFUNDED + 可选会员水位重算 + 配额缓存失效）；失败上抛，申请保持 PENDING
-    // refund() 已幂等：上一轮退款成功但申请未标记（进程中断等）时重试直接跳过，不会二次打款
-    await this.refund(application.order.orderNo, application.reason, revertMembership);
+    if (decision === 'approved') {
+      // 实际退款（订单变 REFUNDED + 可选会员水位重算 + 配额缓存失效）；失败上抛，申请保持 PENDING
+      // refund() 已幂等：上一轮退款成功但申请未标记（进程中断等）时重试直接跳过，不会二次打款
+      await this.refund(
+        application.order.orderNo,
+        application.reason,
+        revertMembership
+      );
+    }
 
-    // 乐观锁标记 APPROVED：并发驳回（reject 已成功）时 count=0 上抛，避免覆写对方结果
+    // 乐观锁标记决策：并发审核（对方已成功）时 count=0 上抛，避免覆写对方结果
     const { count } = await this.prisma.refundApplication.updateMany({
       where: { id: applicationId, status: RefundApplicationStatus.PENDING },
       data: {
-        status: RefundApplicationStatus.APPROVED,
+        status:
+          decision === 'approved'
+            ? RefundApplicationStatus.APPROVED
+            : RefundApplicationStatus.REJECTED,
         reviewerId,
         reviewNote: note ?? null,
         reviewedAt: new Date(),
@@ -1042,9 +1054,9 @@ export class BillingService {
     }
 
     this.logger.log(
-      `refund application approved: id=${applicationId}, orderNo=${application.order.orderNo}`
+      `refund application ${decision}: id=${applicationId}, orderNo=${application.order.orderNo}`
     );
-    this.notifyRefundResult(application, 'approved', note).catch((e) =>
+    this.notifyRefundResult(application, decision, note).catch((e) =>
       this.logger.warn(
         `refund result notify failed: id=${applicationId}`,
         e
@@ -1053,68 +1065,9 @@ export class BillingService {
 
     // 资金敏感操作审计（写库失败不阻塞业务）
     await this.logRefundAudit(
-      AuditAction.REFUND_APPROVE,
-      application.order.orderNo,
-      reviewerId,
-      applicationId,
-      { applicationId, amount: application.order.amount, note: note ?? null }
-    );
-  }
-
-  /**
-   * 驳回退款申请：仅更新申请状态，订单保持 SUCCEEDED，用户可再次申请。
-   */
-  async rejectRefundApplication(
-    applicationId: string,
-    reviewerId: string,
-    note?: string
-  ) {
-    const application = await this.prisma.refundApplication.findUnique({
-      where: { id: applicationId },
-      include: {
-        user: { select: { id: true, email: true, username: true } },
-        order: true,
-      },
-    });
-    if (!application) {
-      throw new NotFoundException(
-        I18nContext.current()?.t('error.billing.refund_application_not_found') ??
-          '退款申请不存在'
-      );
-    }
-
-    const { count } = await this.prisma.refundApplication.updateMany({
-      where: {
-        id: applicationId,
-        status: RefundApplicationStatus.PENDING,
-      },
-      data: {
-        status: RefundApplicationStatus.REJECTED,
-        reviewerId,
-        reviewNote: note ?? null,
-        reviewedAt: new Date(),
-      },
-    });
-    if (count === 0) {
-      throw new BadRequestException(
-        I18nContext.current()?.t('error.billing.refund_application_not_pending') ??
-          '该退款申请已处理，请刷新后重试'
-      );
-    }
-
-    this.logger.log(
-      `refund application rejected: id=${applicationId}, orderNo=${application.order.orderNo}`
-    );
-    this.notifyRefundResult(application, 'rejected', note).catch((e) =>
-      this.logger.warn(
-        `refund result notify failed: id=${applicationId}`,
-        e
-      )
-    );
-
-    // 资金敏感操作审计（写库失败不阻塞业务）
-    await this.logRefundAudit(
-      AuditAction.REFUND_REJECT,
+      decision === 'approved'
+        ? AuditAction.REFUND_APPROVE
+        : AuditAction.REFUND_REJECT,
       application.order.orderNo,
       reviewerId,
       applicationId,
@@ -1291,56 +1244,6 @@ export class BillingService {
       );
       return false;
     }
-  }
-
-  // 对账：订单被 cron 标记 TIMEOUT/CLOSED 后收到回调，向网关确认是否已支付
-  private async reconcileTerminatedOrder(
-    tx: PrismaType.TransactionClient,
-    order: PrismaType.PaymentOrderGetPayload<{ include: { vipTier: true } }>,
-    verified: WebhookVerifyResult
-  ): Promise<void> {
-    try {
-      const gateway = this.gatewayFactory.getGateway(order.gateway);
-      const result = await gateway.queryOrder(verified.orderNo);
-      // 网关非 SUCCESS 或金额不匹配：直接返回，不改变订单状态
-      if (result.status !== 'SUCCESS') return;
-      const gatewayAmount = result.amount ?? verified.amount;
-      if (gatewayAmount !== order.amount) return;
-
-      const { count } = await tx.paymentOrder.updateMany({
-        where: { id: order.id, status: order.status },
-        data: {
-          status: OrderStatus.SUCCEEDED,
-          gatewayPaidId: result.gatewayOrderId ?? verified.gatewayOrderId,
-          paidAt: result.paidAt ?? verified.paidAt,
-        },
-      });
-      if (count === 0) return;
-      await this.activateMembershipForOrder(tx, order);
-    } catch (e) {
-      // 网关查询可能抛异常，异常时不阻断回调流程
-      this.logger.warn(
-        `gateway reconciliation failed: orderNo=${verified.orderNo}`,
-        e
-      );
-    }
-  }
-
-  private async activateMembershipForOrder(
-    tx: PrismaType.TransactionClient,
-    order: PrismaType.PaymentOrderGetPayload<{ include: { vipTier: true } }>
-  ): Promise<void> {
-    if (!order.vipTier) return;
-    const durationDays = (order.months ?? 1) * MONTH_DAYS;
-    await this.membershipService.activate(
-      tx,
-      order.userId,
-      {
-        level: order.vipTier.level,
-        baseMonthlyPrice: order.vipTier.baseMonthlyPrice,
-      },
-      durationDays
-    );
   }
 
   private buildPayResponse(

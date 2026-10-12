@@ -19,7 +19,7 @@
   },
   "files": [
     "mxcmd.js",
-    "mx-executor.js",
+    "mx.js",
     "mxcheckout.js",
     "mxadd.js",
     "mxcommit.js",

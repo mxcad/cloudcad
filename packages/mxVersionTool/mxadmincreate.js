@@ -1,8 +1,8 @@
 const mxadminPath = require('./mxadminpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxadminCreate(repoPath, callback) {
-  executeSpawn(mxadminPath, ['create', repoPath])
+  mx('create', [repoPath], { binary: mxadminPath })
     .then(stdout => {
       callback(null, stdout);
     })

@@ -1,7 +1,7 @@
 import { useRouter } from 'vue-router';
 import { showFailToast } from 'vant';
 import { t } from '@/languages';
-import { useEditorState } from '@/composables/useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { useOpenGuard } from '@/composables/useOpenGuard';
 import { openDrawing } from '@/services/drawingOpener';
 import { useShellStack, type ShellReturnTarget } from '@/stores/shellStack';
@@ -21,7 +21,7 @@ import { useShellStack, type ShellReturnTarget } from '@/stores/shellStack';
  */
 export function useShellFileOpen() {
   const router = useRouter();
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
   const shellStack = useShellStack();
   const { guardBeforeOpen } = useOpenGuard();
 

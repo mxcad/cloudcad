@@ -16,7 +16,7 @@ import { FileStatus } from '@cloudcad/db';
  * ```
  * UPLOADING  → PROCESSING | DELETED
  * PROCESSING → COMPLETED  | FAILED
- * COMPLETED  → DELETED
+ * COMPLETED  → DELETED | PROCESSING   (COMPLETED → PROCESSING: 主动重新转换，产物损坏 / 需刷新)
  * FAILED     → PROCESSING | DELETED   (FAILED → PROCESSING: 失败后重试转换)
  * DELETED    → COMPLETED
  * ```
@@ -30,7 +30,7 @@ export class FileStatusStateMachine {
   private static readonly TRANSITIONS: Record<FileStatus, FileStatus[]> = {
     [FileStatus.UPLOADING]: [FileStatus.PROCESSING, FileStatus.DELETED],
     [FileStatus.PROCESSING]: [FileStatus.COMPLETED, FileStatus.FAILED],
-    [FileStatus.COMPLETED]: [FileStatus.DELETED],
+    [FileStatus.COMPLETED]: [FileStatus.DELETED, FileStatus.PROCESSING],
     [FileStatus.FAILED]: [FileStatus.PROCESSING, FileStatus.DELETED],
     [FileStatus.DELETED]: [FileStatus.COMPLETED],
   };

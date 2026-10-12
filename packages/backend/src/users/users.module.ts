@@ -27,6 +27,7 @@ import { UsersService } from './users.service';
 import { UserCrudService } from './services/user-crud.service';
 import { UserStatusService } from './services/user-status.service';
 import { UserPasswordService } from './services/user-password.service';
+import { AccountEventsSseService } from './account-events.sse.service';
 import { USER_SERVICE } from '../common/interfaces/user-service.interface';
 import { PASSWORD_HASHER } from './interfaces/password-hasher.interface';
 import { BcryptPasswordHasher } from './services/password-hasher.service';
@@ -57,6 +58,7 @@ import { WechatVerificationStrategy } from './strategies/wechat-verification.str
     UserCrudService,
     UserStatusService,
     UserPasswordService,
+    AccountEventsSseService,
     // UserStatusService 等注入 CONFIG token（IRuntimeConfigService），与 AuthModule 注册方式保持一致
     { provide: CONFIG, useExisting: RuntimeConfigService },
     { provide: USER_SERVICE, useExisting: UsersService },

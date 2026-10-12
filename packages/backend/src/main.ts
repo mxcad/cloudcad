@@ -36,6 +36,7 @@ import * as crypto from 'crypto';
 import { RuntimeConfigService } from './runtime-config/runtime-config.service';
 import { CooperateAuthService } from './cooperate/cooperate-auth.service';
 import { TokenBlacklistService } from './auth/services/token-blacklist.service';
+import { AUTH_COOKIE_NAME } from './auth/session-cookie.writer';
 import { DatabaseService } from './database/database.service';
 import { AccessLogMiddleware } from './common/middlewares/access-log.middleware';
 import { withSessionRedisFallback } from './common/session/degrade-session-middleware';
@@ -391,7 +392,7 @@ async function bootstrap() {
         // JWT 方式（auth_token cookie 或 Authorization header）
         const token = req.headers.authorization?.startsWith('Bearer ')
           ? req.headers.authorization.slice(7)
-          : parseCookie(req.headers.cookie, 'auth_token');
+          : parseCookie(req.headers.cookie, AUTH_COOKIE_NAME);
         if (token) {
           userId = await cooperateAuthService.authenticateJwt(token);
         }

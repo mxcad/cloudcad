@@ -250,12 +250,9 @@ export class FileTreeService {
       })) as PrismaFileSystemNode;
     });
 
-    // 在事务外清除配额缓存
+    // 在事务外清除配额缓存（仅用户维度；projectId 仅供诊断日志）
     const projectId = await this.treeWalker.resolveProjectId(parentId);
-    await this.storageInfoService.invalidateQuotaCache(
-      ownerId,
-      projectId || undefined
-    );
+    await this.storageInfoService.invalidateQuotaCache(ownerId);
     this.logger.debug(
       `[createFileNode] 配额缓存已清除: userId=${ownerId}, projectId=${projectId}`
     );

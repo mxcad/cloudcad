@@ -842,6 +842,132 @@ function updateEnvFile(filePath, updates, examplePath) {
   return true;
 }
 
+// ==================== 转换服务配置一致性 ====================
+
+/**
+ * 本机形态主机名（与 lib/infra-gate.js 的 isLocalHost 同口径）。
+ * 不能 require 它：config-updater ← lib/env ← lib/context ← lib/infra-gate 会成环，
+ * 故在此保留副本，漂移守卫见 config-updater.test.js 的「本机形态口径」用例。
+ */
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+
+/**
+ * 解析 http(s) 服务地址的 host:port 段（URL 其余部分逐字保留）。
+ *
+ * 与 lib/infra-gate.js 的 parseDatabaseUrlHostPort 同构（仅协议与默认端口不同，
+ * 后者硬编码 postgresql:// 故不能复用）。用「找 ':' 再切」而非捕获组切分：
+ * 捕获组会把分隔符（/ ? #）吃掉，重组时静默丢失。
+ *
+ * @param {string} url 服务地址
+ * @returns {{host: string, port: number|null, prefix: string, rest: string}|null}
+ *   host    主机名（不含端口与 IPv6 方括号）
+ *   port    端口段（无端口段时为 null）
+ *   prefix  `http://[userinfo@]host`（端口段之前的部分，IPv6 保留方括号）
+ *   rest    端口段之后的部分（含 /路径、查询参数与分隔符，逐字保留）
+ *   形状无法识别（非 http(s):// 开头 / 空主机 / 空值）返回 null
+ */
+function parseHttpServiceUrl(url) {
+  const text = String(url || '').trim();
+  const schemeEnd = text.indexOf('://');
+  if (schemeEnd < 2 || !/^https?$/.test(text.slice(0, schemeEnd))) return null;
+
+  // userinfo 之后的部分才是 host[:port][/rest]；userinfo 内的 ':'（口令）不是端口
+  const at = text.indexOf('@', schemeEnd + 3);
+  const hostStart = at >= 0 ? at + 1 : schemeEnd + 3;
+
+  // IPv6 主机须用方括号（裸 ::1 在 URL 中非法，归「形状无法识别」）
+  let hostEnd;
+  if (text[hostStart] === '[') {
+    const close = text.indexOf(']', hostStart);
+    if (close < 0) return null;
+    hostEnd = close + 1;
+  } else {
+    const delim = text.slice(hostStart).search(/[:/?#\s]/);
+    hostEnd = delim >= 0 ? hostStart + delim : text.length;
+  }
+  const host = text.slice(hostStart, hostEnd);
+  if (!host) return null;
+  const prefix = text.slice(0, hostEnd);
+
+  let port = null;
+  let rest = text.slice(hostEnd);
+  if (text[hostEnd] === ':') {
+    const portMatch = /^\d{1,5}/.exec(text.slice(hostEnd + 1));
+    if (!portMatch) return null;
+    port = Number(portMatch[0]);
+    rest = text.slice(hostEnd + 1 + portMatch[0].length);
+  }
+  return { host: host.replace(/^\[|\]$/g, ''), port, prefix, rest };
+}
+
+/**
+ * CONVERSION_SERVICE_URL ↔ CONVERSION_SERVICE_PORT 一致性修复。
+ *
+ * CONVERSION_SERVICE_PORT 是端口的单一事实源（start.js / verify-deploy.js 经
+ * PORTS.conversion 据此拉起转换服务），CONVERSION_SERVICE_URL 是后端连接转换服务的
+ * 地址。后端对该键的缺省值是**硬编码字面量** http://localhost:3100
+ * （configuration.ts / http-conversion.executor.ts），不读 CONVERSION_SERVICE_PORT——
+ * 故只改 PORT 不改 URL 会让后端恒连旧端口，转换全部静默失败且启动无感。
+ *
+ * 与 repairDatabaseUrlConsistency（DATABASE_URL ↔ DB_PORT）同一模式、同一写入口：
+ * - 仅 FUNCTION_EXECUTOR=conversion-service 时执行（其他模式本键无人消费，改写是噪声）；
+ * - 仅 URL 主机是本机形态时改写端口段——远程转换服务（如 helm standalone 的
+ *   http://cloudcad-conversion:3100）不由本部署拉起，CONVERSION_SERVICE_PORT 对其
+ *   无意义，不得猜测；
+ * - URL 形状无法识别 → 原样保留（后端按用户显式值尝试）；
+ * - 只动端口段，端口段以外的字节逐字保留。
+ *
+ * 幂等：已一致时不改文件、不打印日志，可被调用方重复调用。
+ *
+ * @param {string} envPath 后端 .env 路径
+ * @returns {'missing'|'skipped'|'ok'|'repaired'|'failed'}
+ */
+function alignConversionServiceUrl(envPath) {
+  if (!envPath || !fs.existsSync(envPath)) return 'missing';
+
+  let envConfig;
+  try {
+    envConfig = parseEnvContent(fs.readFileSync(envPath, 'utf8'));
+  } catch {
+    return 'missing';
+  }
+
+  if (
+    String(envConfig.FUNCTION_EXECUTOR || '')
+      .trim()
+      .toLowerCase() !== 'conversion-service'
+  ) {
+    return 'skipped';
+  }
+
+  // 与 lib/context.js 的 PORTS.conversion 同回退口径（非正整数 → 3100）
+  const declared = parseInt(String(envConfig.CONVERSION_SERVICE_PORT || '').trim(), 10);
+  const port = Number.isInteger(declared) && declared > 0 ? declared : 3100;
+
+  const url = String(envConfig.CONVERSION_SERVICE_URL || '').trim();
+  const parsed = url ? parseHttpServiceUrl(url) : null;
+
+  let aligned = null;
+  if (!url) {
+    // 后端缺省字面量已含 3100，端口未改时无需补写
+    aligned = port === 3100 ? null : `http://localhost:${port}`;
+  } else if (parsed && LOCAL_HOSTNAMES.has(String(parsed.host).toLowerCase())) {
+    aligned = parsed.port === port ? null : `${parsed.prefix}:${port}${parsed.rest}`;
+  }
+  if (aligned === null) return 'ok';
+
+  if (!updateEnvFile(envPath, { CONVERSION_SERVICE_URL: aligned })) {
+    error(`CONVERSION_SERVICE_URL 对齐写入失败：${envPath}`);
+    return 'failed';
+  }
+  log(
+    url
+      ? `CONVERSION_SERVICE_URL（${url}）与 CONVERSION_SERVICE_PORT（${port}）不一致，已对齐为 ${aligned}`
+      : `CONVERSION_SERVICE_URL 缺失而 CONVERSION_SERVICE_PORT=${port}，已补写 ${aligned}`
+  );
+  return 'repaired';
+}
+
 // ==================== 导出 ====================
 
 module.exports = {
@@ -864,6 +990,7 @@ module.exports = {
   mergeExampleIntoEnv,
   updateEnvFile,
   escapeEnvValue,
+  alignConversionServiceUrl,
 
   // 包装函数
   updateFrontendConfigsWrapper,

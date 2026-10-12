@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { rolesControllerCreate, rolesControllerUpdate } from '@/api-sdk';
 import type { CreateRoleDto } from '@/api-sdk';
 import { t } from '@/languages';
 import type { SystemRole } from '../types';
 import type { RoleFeedback, LoadingControl } from './types';
+import { useRoleForm } from './useRoleForm';
 
 export interface UseSystemRoleCrudOptions {
   load: () => Promise<void>;
@@ -12,61 +13,47 @@ export interface UseSystemRoleCrudOptions {
   loadingControl: LoadingControl;
 }
 
+/** 运行时权限字段可能是字符串或 { permission } 对象（API 形状漂移），统一归一为字符串 */
+function normalizeSystemRolePermissions(
+  permissions: SystemRole['permissions']
+): string[] {
+  if (!Array.isArray(permissions)) return [];
+  return permissions
+    .map((p: string | { permission: string }) => {
+      if (typeof p === 'string') return p;
+      if (p && p.permission) return p.permission;
+      return null;
+    })
+    .filter((p): p is string => p !== null);
+}
+
+/**
+ * 系统角色 CRUD：表单生命周期在 useRoleForm（单点），本 hook 只负责
+ * 系统角色端点调用与删除委托。
+ */
 export function useSystemRoleCrud({
   load,
   feedback,
   onRequestDelete,
   loadingControl,
 }: UseSystemRoleCrudOptions) {
-  const { loading, setLoading } = loadingControl;
-  const [systemModalOpen, setSystemModalOpen] = useState(false);
-  const [editingSystemRole, setEditingSystemRole] = useState<SystemRole | null>(
-    null
-  );
-  const [systemRoleName, setSystemRoleName] = useState('');
-  const [systemRoleDesc, setSystemRoleDesc] = useState('');
-  const [selectedSystemPerms, setSelectedSystemPerms] = useState<string[]>([]);
-
-  const handleCreateSystemRole = useCallback(() => {
-    setEditingSystemRole(null);
-    setSystemRoleName('');
-    setSystemRoleDesc('');
-    setSelectedSystemPerms([]);
-    setSystemModalOpen(true);
-  }, []);
-
-  const handleEditSystemRole = useCallback((role: SystemRole) => {
-    setEditingSystemRole(role);
-    setSystemRoleName(role.name);
-    setSystemRoleDesc(role.description || '');
-    const permissions = Array.isArray(role.permissions)
-      ? role.permissions
-          .map((p: string | { permission: string }) => {
-            if (typeof p === 'string') return p;
-            if (p && p.permission) return p.permission;
-            return null;
-          })
-          .filter((p): p is string => p !== null)
-      : [];
-    setSelectedSystemPerms(permissions);
-    setSystemModalOpen(true);
-  }, []);
-
-  const handleSaveSystemRole = useCallback(async () => {
-    if (!systemRoleName) {
-      feedback.showError(t('请输入角色名称'));
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if (editingSystemRole) {
+  const form = useRoleForm<SystemRole>({
+    loadingControl,
+    feedback,
+    load,
+    toFormValues: (role) => ({
+      name: role.name,
+      desc: role.description || '',
+      perms: normalizeSystemRolePermissions(role.permissions),
+    }),
+    onSave: async (values, editing) => {
+      if (editing) {
         await rolesControllerUpdate({
-          path: { id: editingSystemRole.id },
+          path: { id: editing.id },
           body: {
-            name: systemRoleName,
-            description: systemRoleDesc,
-            permissions: selectedSystemPerms as CreateRoleDto['permissions'],
+            name: values.name,
+            description: values.desc,
+            permissions: values.perms as CreateRoleDto['permissions'],
           },
           throwOnError: true,
         });
@@ -74,9 +61,9 @@ export function useSystemRoleCrud({
       } else {
         await rolesControllerCreate({
           body: {
-            name: systemRoleName,
-            description: systemRoleDesc,
-            permissions: selectedSystemPerms as CreateRoleDto['permissions'],
+            name: values.name,
+            description: values.desc,
+            permissions: values.perms as CreateRoleDto['permissions'],
             category: 'CUSTOM',
             level: 0,
           },
@@ -84,28 +71,8 @@ export function useSystemRoleCrud({
         });
         feedback.showSuccess(t('角色创建成功'));
       }
-
-      setSystemModalOpen(false);
-      load();
-    } catch (error) {
-      const message =
-        (error as { response?: { data?: { message?: string } } }).response?.data
-          ?.message ||
-        (error as Error).message ||
-        t('保存失败');
-      feedback.showError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    systemRoleName,
-    systemRoleDesc,
-    selectedSystemPerms,
-    editingSystemRole,
-    load,
-    feedback,
-    setLoading,
-  ]);
+    },
+  });
 
   const handleDeleteSystemRole = useCallback(
     (id: string) => {
@@ -115,19 +82,19 @@ export function useSystemRoleCrud({
   );
 
   return {
-    systemModalOpen,
-    editingSystemRole,
-    systemRoleName,
-    systemRoleDesc,
-    selectedSystemPerms,
-    loading,
-    setSystemModalOpen,
-    setSystemRoleName,
-    setSystemRoleDesc,
-    setSelectedSystemPerms,
-    handleCreateSystemRole,
-    handleEditSystemRole,
-    handleSaveSystemRole,
+    systemModalOpen: form.modalOpen,
+    editingSystemRole: form.editing,
+    systemRoleName: form.name,
+    systemRoleDesc: form.desc,
+    selectedSystemPerms: form.selectedPerms,
+    loading: form.loading,
+    setSystemModalOpen: form.setModalOpen,
+    setSystemRoleName: form.setName,
+    setSystemRoleDesc: form.setDesc,
+    setSelectedSystemPerms: form.setSelectedPerms,
+    handleCreateSystemRole: form.handleCreate,
+    handleEditSystemRole: form.handleEdit,
+    handleSaveSystemRole: form.handleSave,
     handleDeleteSystemRole,
   };
 }

@@ -26,6 +26,7 @@ import {
   IExternalRefFacade,
 } from './interfaces/ext-ref-facade.interface';
 import { DrawingIngestService } from '../upload/drawing-ingest.service';
+import { MxCadRequestAuthService } from '../core/mxcad-request-auth.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { I18nContext } from 'nestjs-i18n';
 import { RequireProjectPermissionGuard } from '../../common/guards/require-project-permission.guard';
@@ -48,7 +49,8 @@ export class MxcadExternalRefController {
     @Inject(I_EXTERNAL_REF_FACADE)
     private readonly externalRefFacade: IExternalRefFacade,
     private readonly drawingIngestService: DrawingIngestService,
-    private readonly fileSystemNodeService: FileSystemNodeService
+    private readonly fileSystemNodeService: FileSystemNodeService,
+    private readonly requestAuthService: MxCadRequestAuthService
   ) {}
 
   @Get('preloading/:nodeId')
@@ -145,7 +147,7 @@ export class MxcadExternalRefController {
     const parentFolderId = node?.parentId || node?.id || 'external-reference';
     const context = {
       nodeId: parentFolderId,
-      userId: await this.externalRefFacade.validateTokenAndGetUserId(request),
+      userId: await this.requestAuthService.resolveUserId(request),
       userRole: 'USER',
       srcDwgNodeId: node?.id || body.nodeId,
       isImage: false,
@@ -213,13 +215,12 @@ export class MxcadExternalRefController {
     let sourceNode: { id: string; parentId?: string | null } | null = null;
     try {
       const userId =
-        await this.externalRefFacade.validateTokenAndGetUserId(request);
+        await this.requestAuthService.resolveUserId(request);
       const node = await this.fileSystemNodeService.findById(body.nodeId);
       if (node) {
-        const permission = await this.externalRefFacade.checkFileAccessPermission(
-          body.nodeId,
+        const permission = await this.requestAuthService.canAccessNode(
           userId,
-          userId
+          body.nodeId
         );
         if (!permission)
           return res.json({
@@ -248,7 +249,7 @@ export class MxcadExternalRefController {
     const srcNodeId = sourceNode?.id || body.nodeId;
     const context = {
       nodeId: srcNodeId,
-      userId: await this.externalRefFacade.validateTokenAndGetUserId(request),
+      userId: await this.requestAuthService.resolveUserId(request),
       userRole: 'USER',
       srcDwgNodeId: srcNodeId,
       isImage: true,

@@ -9,7 +9,6 @@ import { FileTreeService } from '../../file-system/file-tree/file-tree.service';
 import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { IStorageService } from '../../storage/interfaces/storage-service.interface';
 import { ThumbnailGenerationService } from '../infra/thumbnail-generation.service';
-import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { I_EXTERNAL_REF_FACADE } from '../external-ref/interfaces/ext-ref-facade.interface';
 import {
   FileNodeMaterializer,
@@ -46,10 +45,6 @@ describe('FileNodeMaterializer', () => {
     handleExternalReferenceFile: jest.fn(),
     handleExternalReferenceImage: jest.fn(),
     updateAfterUpload: jest.fn(),
-  };
-
-  const mockFileSystemNodeService = {
-    getMimeType: jest.fn(),
   };
 
   function buildStorageInfo(overrides?: Record<string, unknown>) {
@@ -93,10 +88,6 @@ describe('FileNodeMaterializer', () => {
           useValue: mockThumbnailGenerationService,
         },
         { provide: I_EXTERNAL_REF_FACADE, useValue: mockExternalRefFacade },
-        {
-          provide: FileSystemNodeService,
-          useValue: mockFileSystemNodeService,
-        },
       ],
     }).compile();
     service = module.get<FileNodeMaterializer>(FileNodeMaterializer);
@@ -104,9 +95,6 @@ describe('FileNodeMaterializer', () => {
     mockFileTreeService.createFileNode.mockResolvedValue({ id: 'node1' });
     mockStorageManager.allocateNodeStorage.mockResolvedValue(
       buildStorageInfo()
-    );
-    mockFileSystemNodeService.getMimeType.mockReturnValue(
-      'application/octet-stream'
     );
   });
 
@@ -154,7 +142,8 @@ describe('FileNodeMaterializer', () => {
         name: 'drawing.dwg',
         fileHash: 'hash1',
         size: 1024,
-        mimeType: 'application/octet-stream',
+        // NodeUtils.getMimeType('.dwg') 的真实值（此前 mock 为 octet-stream）
+        mimeType: 'application/acad',
         extension: '.dwg',
         parentId: 'parent1',
         ownerId: 'user1',

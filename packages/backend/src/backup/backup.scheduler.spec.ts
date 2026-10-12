@@ -6,6 +6,7 @@ import { AlertService } from '../alert/alert.service';
 import { AlertLevel, TASK_RUN_FAILED_LEVEL } from '../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 import { TaskRunService } from '../task-run/task-run.service';
+import { TaskRunFailureReporter } from '../task-run/task-run-failure-reporter';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../task-run/task-run.constants';
 
 describe('BackupScheduler', () => {
@@ -62,6 +63,8 @@ describe('BackupScheduler', () => {
           useValue: mockRuntimeConfigService,
         },
         { provide: TaskRunService, useValue: mockTaskRunService },
+        // 真实 reporter + mock AlertService：task_run_failed 协议断言仍落在 raise 上
+        TaskRunFailureReporter,
       ],
     }).compile();
 

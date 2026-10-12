@@ -21,8 +21,8 @@ import {
   projectControllerCreateProject,
   projectControllerGetPersonalSpace,
   nodeControllerDeleteNode,
-  memberControllerGetUserProjectPermissions,
 } from '@cloudcad/api-sdk/sdk.gen'
+import { loadProjectPermissions, invalidateProjectPermissions } from '@/services/permissionService'
 import { t } from '@/languages'
 import { unwrap } from '@/utils/apiError'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
@@ -45,6 +45,8 @@ import { useClipboardPaste } from '@/composables/useClipboardPaste'
 import { useUndoSnackbar } from '@/composables/useUndoSnackbar'
 import { useFileNodeOps, type FabActionKey } from '@/composables/useFileNodeOps'
 import { isCadFileName } from '@/utils/cadFile'
+import { getFileNodeMenuActions } from '@/utils/projectPermissions'
+import { isNearScrollBottom } from '@/utils/scroll'
 import { useNodeDownload } from '@/composables/useNodeDownload'
 import UndoSnackbar from '@/components/UndoSnackbar.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
@@ -130,7 +132,7 @@ function loadMoreProjects() {
 
 function onProjectScroll(e: Event) {
   const el = e.target as HTMLElement
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) loadMoreProjects()
+  if (isNearScrollBottom(el)) loadMoreProjects()
 }
 
 // ── 全局递归搜索（keyword 非空 → scope=global：项目命中 + 文件/文件夹命中混合结果）──
@@ -139,7 +141,7 @@ const searchItems = computed(() => formatNodeAsItems(projectSearch.results.value
 
 function onSearchResultScroll(e: Event) {
   const el = e.target as HTMLElement
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) projectSearch.loadMore()
+  if (isNearScrollBottom(el)) projectSearch.loadMore()
 }
 
 // 全局搜索结果交互：项目命中→进入项目；文件夹命中→进入该文件夹（A-29b，URL 带
@@ -334,12 +336,9 @@ const projectLongPress = useLongPress<ProjectCard>({
 /** 打开项目操作菜单：先拉该项目的权限（门控菜单项），再弹菜单；拉取失败回退为仅基础项 */
 async function openProjectMenu(project: ProjectCard) {
   projectMenuTarget.value = project
-  try {
-    const res = await memberControllerGetUserProjectPermissions({ path: { projectId: project.id } })
-    projectPermissions.value = (res.data?.permissions as string[] | undefined) ?? []
-  } catch {
-    projectPermissions.value = []
-  }
+  // 统一走 permissionService（TTL 缓存 + 失败回退旧值）；每次开菜单先失效缓存，保证门控项最新
+  invalidateProjectPermissions(project.id)
+  projectPermissions.value = await loadProjectPermissions(project.id)
   showProjectMenuSheet.value = true
 }
 
@@ -454,24 +453,21 @@ const menuActions = computed(() => {
   const isFolder = !!menuTarget.value?.isFolder
   // CAD 图纸 → 外部参照管理（对齐 PC isCadFile visibilityCheck；个人空间=所有者恒可管理）
   const isCad = !isFolder && menuTarget.value ? isCadFileName(menuTarget.value.name) : false
-  const actions: Array<{ name: string; key: string; color?: string }> = [
-    { name: t('打开'), key: 'open' },
-    // 文件 → 下载（M9：CAD 弹格式选择、非 CAD 原格式直下，对齐 PC 单一「下载」项）；文件夹 → 打包下载（A-08）
-    isFolder ? { name: t('打包下载'), key: 'folderDownload' } : { name: t('下载'), key: 'download' },
-    // 文件 → 分享链接（阶段 5：ShareCurrentPopup 解耦入参 fileId+name）
-    ...(isFolder ? [] : [{ name: t('分享'), key: 'share' }]),
-    ...(isCad ? [{ name: t('外部参照管理'), key: 'externalRef' }] : []),
-    // 文件 → 版本历史（二期 h：VersionHistoryPopup 显式 target，无需先打开编辑器）
-    ...(isFolder ? [] : [{ name: t('版本历史'), key: 'versionHistory' }]),
-    { name: t('重命名'), key: 'rename' },
-    // A-29a：文件夹操作（移动到…/复制到…）与剪贴板操作（复制到剪贴板/剪切）对齐 PC 语义区分
-    { name: t('移动到...'), key: 'move' },
-    { name: t('复制到...'), key: 'copy' },
-    { name: t('复制到剪贴板'), key: 'copyClipboard' },
-    { name: t('剪切'), key: 'cut' },
-    { name: t('删除'), key: 'delete', color: '#ee0a24' },
-  ]
-  return actions
+  // 个人空间=所有者，各操作恒可 → 传全 true 的 can，与项目页共用 getFileNodeMenuActions 装配逻辑
+  return getFileNodeMenuActions({
+    isFolder,
+    isCad,
+    can: {
+      download: true,
+      share: true,
+      externalRef: true,
+      versionHistory: true,
+      rename: true,
+      move: true,
+      copy: true,
+      delete: true,
+    },
+  })
 })
 
 // ── A-06/A-07 格式转换下载 + 批量下载任务面板（个人空间：zip 任务不带 projectId）──

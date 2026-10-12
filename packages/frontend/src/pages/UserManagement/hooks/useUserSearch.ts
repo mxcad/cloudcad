@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearch } from '../../../hooks/useSearch';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 
 interface UseUserSearchReturn {
   searchQuery: string;
@@ -23,12 +23,11 @@ interface UseUserSearchReturn {
 }
 
 export function useUserSearch(): UseUserSearchReturn {
-  const { searchQuery, setSearchQuery, debouncedSearchTerm, isSearching } =
-    useSearch({
-      debounceDelay: 300,
-      enableRemoteSearch: false,
-      initialLimit: 30,
-    });
+  // 搜索防抖走 useDebouncedValue 唯一出口（原 useSearch 假 seam 已删；
+  // 分页由本 hook 自有 currentPage/pageSize 管理，与 useSearch 的 pagination 无关）
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchQuery, 300);
+  const isSearching = debouncedSearchTerm !== searchQuery;
 
   const [roleFilter, setRoleFilter] = useState('');
   const [tierFilter, setTierFilter] = useState('');

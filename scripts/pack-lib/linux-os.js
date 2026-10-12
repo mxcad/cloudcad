@@ -1,8 +1,8 @@
 /**
  * @fileoverview Linux 发行版清单单一事实源（ADR-0059：发行版收敛 3 glibc 档）
  *
- * 打包侧（pack-offline / pack-menu / pack-linux-deploy / pack-runtime-deps /
- * verify-linux-deploy）与运行时侧（scripts/ensure-runtime.js 的 tier 探测）必须使用
+ * 打包侧（pack-offline / pack-menu / pack-linux-deploy / verify-linux-deploy）
+ * 与运行时侧（scripts/ensure-runtime.js 的 tier 探测）必须使用
  * 同一组 tier。历史上 pack-offline/pack-menu 硬编码 6 档而 pack-linux-deploy 只有
  * 3 个基础镜像，ubuntu24/rocky8/debian 会静默回退 centos7 基础镜像，产出「标签
  * ubuntu24、底座 centos7」的包且包名误导。所有脚本一律从这里读清单，禁止各自

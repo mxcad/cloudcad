@@ -6,7 +6,7 @@ MX 版本控制 CLI 包装器（CommonJS），后端通过此包进行 SVN 式�
 
 ```
 mxcmd.js           # 入口 + 导出
-mx-executor.js     # MX 命令执行包装器
+mx.js              # 单一 mx 调用出口（spawn/凭据走 env/错误/临时文件）
 mxpath.js          # 路径解析
 mxadminpath.js     # 管理路径
 mxcheck.js         # 可用性检查

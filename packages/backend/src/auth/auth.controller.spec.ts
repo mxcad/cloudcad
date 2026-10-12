@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { IAUTH_FACADE } from './interfaces/auth-facade.interface';
 import { WECHAT_CALLBACK_SERVICE } from './interfaces/service-interfaces';
+import { SessionCookieWriter } from './session-cookie.writer';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -45,6 +46,7 @@ describe('AuthController', () => {
         { provide: IAUTH_FACADE, useValue: mockAuthService },
         { provide: WECHAT_CALLBACK_SERVICE, useValue: mockWechatCallbackService },
         { provide: ConfigService, useValue: mockConfigService },
+        SessionCookieWriter,
       ],
     }).compile();
 

@@ -1,8 +1,7 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxList(repoUrl, isRecursive, revision, username, password, callback) {
-  const args = ['list', repoUrl];
+  const args = [repoUrl];
   if (revision) {
     args.push('-r', revision.toString());
   }
@@ -12,12 +11,10 @@ function mxList(repoUrl, isRecursive, revision, username, password, callback) {
   if (username) {
     args.push('--username', username);
   }
-  let env;
   if (password) {
     args.push('--password-from-env');
-    env = { ...process.env, SVN_PASSWORD: password };
   }
-  executeSpawn(mxPath, args, env ? { env } : {})
+  mx('list', args, { password })
     .then(stdout => {
       callback(null, stdout);
     })

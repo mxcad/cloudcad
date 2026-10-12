@@ -1,5 +1,4 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxAdd(targetPaths, isRecursive, noIgnore, parents, callback) {
   if (typeof parents === 'function') {
@@ -10,7 +9,7 @@ function mxAdd(targetPaths, isRecursive, noIgnore, parents, callback) {
     noIgnore = false;
     parents = false;
   }
-  const args = ['add', ...targetPaths];
+  const args = [...targetPaths];
 
   if (parents) {
     args.push('--parents');
@@ -26,7 +25,7 @@ function mxAdd(targetPaths, isRecursive, noIgnore, parents, callback) {
     args.push('--depth', 'empty');
   }
 
-  executeSpawn(mxPath, args)
+  mx('add', args)
     .then(stdout => {
       callback(null, stdout);
     })

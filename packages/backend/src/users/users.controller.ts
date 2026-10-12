@@ -21,6 +21,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   Request,
   Res,
   UseGuards,
@@ -38,6 +39,7 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiBody,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -55,6 +57,7 @@ import {
   AVATAR_MIME_BY_EXTENSION,
 } from './avatar-extensions';
 import { UsersService } from './users.service';
+import { AccountEventsSseService } from './account-events.sse.service';
 import {
   UserResponseDto,
   UserListResponseDto,
@@ -91,6 +94,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
+    private readonly accountEventsSseService: AccountEventsSseService,
   ) {}
 
   @Post()
@@ -171,6 +175,27 @@ export class UsersController {
   })
   getDashboardStats(@Request() req: AuthenticatedRequest) {
     return this.usersService.getDashboardStats(req.user.id);
+  }
+
+  /**
+   * 账户事件 SSE 流（ADR-0034 豁免：EventSource 无 SDK 形态，token 走 query）。
+   *
+   * 已登录用户（PC / 移动端）建连后，管理员改其会员时后端向本通道推送
+   * `membership-changed`，前端收到即 `refreshUser()` 重拉 `/auth/profile`，
+   * 使已登录用户无需退出重登即拿到最新会员态。`@Public` 绕过全局守卫
+   * （EventSource 无法带 Authorization header），身份经 `resolveUserId` 的
+   * query token 解析。
+   */
+  @Get('profile/account-events')
+  @Public()
+  @ApiExcludeEndpoint()
+  async streamAccountEvents(
+    @Req() req: ExpressRequest,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = this.accountEventsSseService.resolveUserId(req, res);
+    if (!userId) return;
+    await this.accountEventsSseService.streamAccountEvents(userId, res, req);
   }
 
   @Patch('profile/me')

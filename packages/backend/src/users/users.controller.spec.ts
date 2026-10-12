@@ -41,7 +41,12 @@ describe('UsersController.serveAvatar — 路径遍历防护', () => {
     configService = { get: jest.fn().mockReturnValue(avatarDir) };
 
     // 直接实例化（serveAvatar 仅用 configService，不经 HTTP 故无需 Guards/DI）
-    controller = new UsersController({} as never, configService as never);
+    // 第 3 参 accountEventsSseService 供 SSE 端点用，serveAvatar 不触达 → 空 stub
+    controller = new UsersController(
+      {} as never,
+      configService as never,
+      {} as never
+    );
   });
 
   afterEach(() => {

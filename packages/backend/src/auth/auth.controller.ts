@@ -38,6 +38,7 @@ import {
 } from '@nestjs/swagger';
 import { Request, Inject } from '@nestjs/common';
 import { IAUTH_FACADE, IAuthFacade } from './interfaces/auth-facade.interface';
+import { getClientIp } from '../common/utils/client-ip';
 import {
   WECHAT_CALLBACK_SERVICE,
   IWechatCallbackService,
@@ -97,13 +98,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 import { I18nContext } from 'nestjs-i18n';
-
-const REFRESH_COOKIE_NAME = 'refresh_token';
-const REFRESH_COOKIE_PATH = '/api/v1/auth/refresh';
-const AUTH_COOKIE_NAME = 'auth_token';
-const AUTH_COOKIE_PATH = '/';
-const AUTH_COOKIE_MAX_AGE = 60 * 60 * 1000; // 1 小时，与 JWT access token 过期时间一致
-const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 天，与 refresh token 一致
+import { SessionCookieWriter } from './session-cookie.writer';
 
 @ApiTags('认证')
 @Controller('auth')
@@ -113,7 +108,8 @@ export class AuthController {
     private readonly authService: IAuthFacade,
     @Inject(WECHAT_CALLBACK_SERVICE)
     private readonly wechatCallbackService: IWechatCallbackService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly sessionCookieWriter: SessionCookieWriter
   ) {}
 
   @Post('register')
@@ -132,7 +128,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
     const result = await this.authService.register(registerDto, req);
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
   }
 
@@ -152,7 +148,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: ExpressResponse
   ): Promise<AuthResponseDto> {
     const result = await this.authService.login(loginDto, req);
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
   }
 
@@ -181,7 +177,7 @@ export class AuthController {
       );
     }
     const result = await this.authService.refreshToken(token);
-    this.setAuthCookies(request, response, result);
+    this.sessionCookieWriter.setAuthCookies(request, response, result);
     return result;
   }
 
@@ -206,8 +202,7 @@ export class AuthController {
     // 无论是否登录成功，都清除 Cookie（幂等登出）
     const sessionName = this.configService.get('session.name');
     response.clearCookie(sessionName);
-    response.clearCookie(AUTH_COOKIE_NAME, { path: AUTH_COOKIE_PATH });
-    response.clearCookie(REFRESH_COOKIE_NAME, { path: REFRESH_COOKIE_PATH });
+    this.sessionCookieWriter.clearTokenCookies(response);
 
     return {
       message: I18nContext.current()?.t('success.logout_success') ?? '登出成功',
@@ -269,7 +264,7 @@ export class AuthController {
       req
     );
     if (result.accessToken) {
-      this.setAuthCookies(req, response, result);
+      this.sessionCookieWriter.setAuthCookies(req, response, result);
     }
     return result;
   }
@@ -303,7 +298,7 @@ export class AuthController {
       req
     );
     if (result.accessToken) {
-      this.setAuthCookies(req, response, result);
+      this.sessionCookieWriter.setAuthCookies(req, response, result);
     }
     return result;
   }
@@ -350,7 +345,7 @@ export class AuthController {
       dto.code,
       req
     );
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
   }
 
@@ -375,7 +370,7 @@ export class AuthController {
       dto.code,
       req
     );
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
   }
 
@@ -399,7 +394,7 @@ export class AuthController {
       dto.code,
       req
     );
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
   }
 
@@ -564,13 +559,8 @@ export class AuthController {
     @Body() dto: SendSmsCodeDto,
     @Req() req: Request
   ): Promise<{ success: boolean; message: string }> {
-    // 提取客户端 IP（支持代理场景）
-    const clientIp =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      (req.headers['x-real-ip'] as string) ||
-      (req as Request & { socket?: { remoteAddress?: string } }).socket
-        ?.remoteAddress ||
-      'unknown';
+    // 提取客户端 IP（支持代理场景，统一走 client-ip 唯一出口）
+    const clientIp = getClientIp(req as never);
 
     return this.authService.sendSmsCode(dto.phone, clientIp, dto.scene);
   }
@@ -611,7 +601,7 @@ export class AuthController {
   ): Promise<AuthResponseDto> {
     const result = await this.authService.registerByPhone(registerDto, req);
     if (result.accessToken) {
-      this.setAuthCookies(req, response, result);
+      this.sessionCookieWriter.setAuthCookies(req, response, result);
     }
     return result;
   }
@@ -637,7 +627,7 @@ export class AuthController {
       dto.code,
       req
     );
-    this.setAuthCookies(req, response, result);
+    this.sessionCookieWriter.setAuthCookies(req, response, result);
     return result;
   }
 
@@ -912,60 +902,4 @@ export class AuthController {
     return this.authService.unbindPhone(req.user.id, dto.code);
   }
 
-  /**
-   * 设置 JWT Cookie，用于 <img> 标签等无法携带 Authorization 头的请求
-   * secure 属性：cookieSecure 显式设置时以显式值为准，否则按请求协议自适应
-   * （http 不带 Secure，https 带 Secure，修复离线 http 部署 cookie 被丢弃问题）
-   */
-  private setAuthCookie(
-    req: { secure?: boolean },
-    response: ExpressResponse,
-    accessToken: string
-  ): void {
-    const cookieSecure = this.configService.get<boolean | null>(
-      'session.cookieSecure'
-    );
-
-    response.cookie(AUTH_COOKIE_NAME, accessToken, {
-      httpOnly: true,
-      secure: cookieSecure ?? req.secure ?? false,
-      sameSite: 'lax',
-      maxAge: AUTH_COOKIE_MAX_AGE,
-      path: AUTH_COOKIE_PATH,
-    });
-  }
-
-  /**
-   * 设置 httpOnly refresh_token cookie
-   * 浏览器端自动携带，桌面 EXE 继续用 body 传
-   * secure 属性同上：显式配置优先，否则按请求协议自适应
-   */
-  private setRefreshCookie(
-    req: { secure?: boolean },
-    response: ExpressResponse,
-    refreshToken: string
-  ): void {
-    const cookieSecure = this.configService.get<boolean | null>(
-      'session.cookieSecure'
-    );
-
-    response.cookie(REFRESH_COOKIE_NAME, refreshToken, {
-      httpOnly: true,
-      secure: cookieSecure ?? req.secure ?? false,
-      sameSite: 'lax',
-      maxAge: REFRESH_COOKIE_MAX_AGE,
-      path: REFRESH_COOKIE_PATH,
-    });
-  }
-
-  private setAuthCookies(
-    req: { secure?: boolean },
-    response: ExpressResponse,
-    result: { accessToken: string; refreshToken?: string }
-  ): void {
-    this.setAuthCookie(req, response, result.accessToken);
-    if (result.refreshToken) {
-      this.setRefreshCookie(req, response, result.refreshToken);
-    }
-  }
 }

@@ -92,6 +92,22 @@ function authMiddleware(req, res) {
   return session;
 }
 
+/**
+ * 鉴权前置守卫（布尔语义）。
+ *
+ * 校验 Authorization Bearer 会话；未登录/过期时写 401 并返回 false，
+ * 调用方据此 `return true` 认领请求（停止路由匹配）。
+ *
+ * 绝大多数 handler 只需要「必须登录」这道门、不读 session 本体，过去各自手写
+ * 「const session = authMiddleware(req, res); if (!session) return true;」两行
+ * 前言——安全相关且极易漏抄一处（漏一处即未鉴权端点）。此处收为单一出口，
+ * 401 文案与短路语义只在这里定义一次。
+ * 需要 session 对象的唯一例外（GET /api/auth/me 读 username）仍用 authMiddleware。
+ */
+function requireSession(req, res) {
+  return authMiddleware(req, res) !== null;
+}
+
 module.exports = {
   createSession,
   validateSession,
@@ -101,4 +117,5 @@ module.exports = {
   checkLoginLock,
   recordLoginAttempt,
   authMiddleware,
+  requireSession,
 };

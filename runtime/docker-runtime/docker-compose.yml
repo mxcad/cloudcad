@@ -1,0 +1,102 @@
+# CloudCAD Docker 一键部署包 —— 容器编排（ADR-0074 半容器化）
+#
+# 与旧 docker/docker-compose.yml（全容器化形态）的区别：
+#   - 全部 network_mode: host —— 无端口发布/映射，.env 端口直接生效，
+#     DB_HOST/REDIS_HOST 恒为 localhost（下方 environment 显式覆盖，防 .env 漂移）
+#   - 无 bridge 网络、无 127.0.0.1 端口收口（#418 的缺陷在 host 网络下不存在）
+#   - 协同/转换/运维中心是宿主进程（不在本文件），cooperate 端口映射（旧 COOPERATE_PORT:3000）删除
+#   - Redis 无 maxmemory（与裸机 redis-manager.js 对齐；旧 256mb allkeys-lru 会 LRU 驱逐在途转换队列键）
+#   - 数据同路径挂载：宿主绝对路径 = 容器绝对路径，宿主引擎可读容器算出的 srcPath
+#
+# 插值来源：.env（start.sh 生成，含 DEPLOY_DIR=<实际部署目录>、APP_VERSION=<版本>）
+
+name: cloudcad
+
+services:
+  # PostgreSQL 数据库
+  pg:
+    image: cloudcad/pg:15-alpine
+    container_name: cloudcad-pg
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-cloudcad}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # host 网络下官方镜像恒绑 5432（无 POSTGRES_PORT 环境变量）；
+    # 经 docker-entrypoint.sh 透传 -p 让 PG 监听 .env 的 DB_PORT（如 5433 绕开系统 PG）
+    command: ['sh', '-c', 'exec docker-entrypoint.sh postgres -p ${DB_PORT:-5432}']
+    volumes:
+      - ${DEPLOY_DIR}/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-postgres} -p ${DB_PORT:-5432}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'
+
+  # Redis 缓存（无 maxmemory，与裸机形态对齐）
+  redis:
+    image: cloudcad/redis:7-alpine
+    container_name: cloudcad-redis
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: >-
+      sh -c 'redis-server --port ${REDIS_PORT:-6379} --appendonly yes
+      $${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}
+      $${REDIS_MAXMEMORY:+--maxmemory $$REDIS_MAXMEMORY}'
+    volumes:
+      - ${DEPLOY_DIR}/data/redis:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -p ${REDIS_PORT:-6379} $${REDIS_PASSWORD:+-a $$REDIS_PASSWORD} --no-auth-warning ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'
+
+  # 应用（backend + 前端静态服务双进程，入口 docker/app-entrypoint.js）
+  app:
+    image: cloudcad/app:${APP_VERSION:-dev}
+    container_name: cloudcad-app
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      # host 网络：容器与宿主共享网络栈，服务间地址恒为 localhost
+      # （显式覆盖 .env 值，防用户把 DB_HOST 改成旧形态的 postgres/redis 服务名）
+      DB_HOST: localhost
+      REDIS_HOST: localhost
+      COOPERATE_HOST: localhost
+    volumes:
+      # 同路径挂载：宿主引擎（协同/转换探针）按 .env 绝对路径读容器写入的产物
+      - ${DEPLOY_DIR}/data:${DEPLOY_DIR}/data
+      # 第二挂载：serve-static 等按 /app 相对解析 data/ 的消费者
+      - ${DEPLOY_DIR}/data:/app/data
+    depends_on:
+      pg:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs http://localhost:${PORT:-3001}/api/health/live || exit 1']
+      interval: 15s
+      timeout: 10s
+      start_period: 90s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'

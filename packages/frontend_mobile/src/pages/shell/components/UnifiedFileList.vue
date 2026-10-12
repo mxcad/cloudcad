@@ -27,6 +27,7 @@ export interface SelectionActionDef {
 import { ref, watch, computed } from 'vue'
 import { t } from '@/languages'
 import { vibrate } from '../../../utils/vibrate'
+import { isNearScrollBottom } from '../../../utils/scroll'
 import type { UnifiedDomain } from '../../../composables/useUnifiedFileList'
 import type { FileListItem } from '../../../composables/useNodeFormatter'
 import {
@@ -154,7 +155,7 @@ watch(
 // 无限滚动：滚动接近底部时上抛加载更多（父组件调 composable.loadMore）
 function onScroll(e: Event) {
   const el = e.target as HTMLElement
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+  if (isNearScrollBottom(el)) {
     emit('loadMore')
   }
 }

@@ -1,17 +1,14 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxRelocate(fromUrl, toUrl, targetPath, username, password, callback) {
-  const args = ['relocate', fromUrl, toUrl, targetPath];
+  const args = [fromUrl, toUrl, targetPath];
   if (username) {
     args.push('--username', username);
   }
-  let env;
   if (password) {
     args.push('--password-from-env');
-    env = { ...process.env, SVN_PASSWORD: password };
   }
-  executeSpawn(mxPath, args, env ? { env } : {})
+  mx('relocate', args, { password })
     .then(stdout => {
       callback(null, stdout);
     })

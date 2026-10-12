@@ -19,8 +19,10 @@ const {
   checkMxAvailableSync,
   getPlatformInfo,
 } = require('./mxcheck');
+const { mx } = require('./mx');
 
 module.exports = {
+  mx,
   mxCheckout,
   mxAdd,
   mxCommit,

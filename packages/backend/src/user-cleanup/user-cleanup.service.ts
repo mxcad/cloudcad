@@ -16,6 +16,7 @@ import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../storage-management/services/storage-manager.service';
 import { NodeType, ProjectStatus, Prisma } from '@cloudcad/db';
 import { IRuntimeConfigService } from '@cloudcad/contracts';
+import { MembershipService } from '../vip/membership.service';
 
 export interface UserCleanupResult {
   success: boolean;
@@ -69,7 +70,8 @@ export class UserCleanupService {
     private readonly configService: ConfigService,
     private readonly storageManager: StorageManager,
     @Inject('CONFIG')
-    private readonly runtimeConfigService: IRuntimeConfigService
+    private readonly runtimeConfigService: IRuntimeConfigService,
+    private readonly membershipService: MembershipService
   ) {
     this.cleanupDelayDays = this.configService.get<number>(
       'userCleanup.delayDays',
@@ -345,10 +347,9 @@ export class UserCleanupService {
     });
     result.deletedPaymentOrders = paymentOrderDelete.count;
 
-    const membershipDelete = await tx.userMembership.deleteMany({
-      where: { userId },
-    });
-    result.deletedMemberships = membershipDelete.count;
+    // 写侧单点：会员记录删除统一走 MembershipService（VipModule @Global 注入）
+    result.deletedMemberships =
+      await this.membershipService.deleteMembershipForUser(tx, userId);
 
     const fileShareDelete = await tx.fileShare.deleteMany({
       where: { createdBy: userId },

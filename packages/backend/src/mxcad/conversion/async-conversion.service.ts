@@ -1,6 +1,15 @@
-import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import * as path from 'path';
+import * as fsPromises from 'fs/promises';
 import { DatabaseService } from '../../database/database.service';
 import { IFunctionExecutor } from '../../function-executor/function-executor.interface';
 import type {
@@ -12,6 +21,10 @@ import { StorageManager } from '../../storage-management/services/storage-manage
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { FileDownloadExportService } from '../../file-system/file-download/file-download-export.service';
 import { CadDownloadFormat } from '../../file-system/dto/download-node.dto';
+import { FileSystemService } from '../infra/file-system.service';
+import { FileConversionService } from './file-conversion.service';
+import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
+import { findReadyArtifactByHash } from '../utils/conversion-artifact';
 import {
   CONVERSION_TASK_CHANNEL,
   type ConversionTaskSseEvent,
@@ -47,6 +60,30 @@ export class AsyncConversionService {
         `Node ${nodeId} already has in-flight conversion task ${inFlight}; returning existing taskId without overwriting`
       );
       return inFlight;
+    }
+
+    // 已是 mxweb（原生格式）的节点无需转换：引擎对 .mxweb 源按「导出方向」处理，
+    // 无目标格式时必然失败（content-error），会把节点打成 FAILED——这正是「打开
+    // mxweb 却进转换队列且立刻失败」的根因。产物已就位（path 非空）时直接置
+    // COMPLETED，打开链路据此秒开，不再拉起注定失败的转换。仅对非在途态短路：
+    // PROCESSING/UPLOADING 表示确有在途转换（或刚建节点），交由既有流程结算。
+    if (
+      node.name?.toLowerCase().endsWith('.mxweb') &&
+      node.path &&
+      node.fileStatus !== FileStatus.PROCESSING &&
+      node.fileStatus !== FileStatus.UPLOADING
+    ) {
+      if (node.fileStatus !== FileStatus.COMPLETED) {
+        await this.nodeStatusTransitioner.transition(
+          nodeId,
+          (node.fileStatus as FileStatus | null) ?? null,
+          FileStatus.COMPLETED
+        );
+      }
+      this.logger.log(
+        `Node ${nodeId} is already mxweb (path=${node.path}); no conversion needed`
+      );
+      return node.taskId ?? `async_${nodeId}_noop`;
     }
 
     const taskId = `async_${nodeId}_${Date.now()}`;
@@ -206,6 +243,162 @@ export class AsyncConversionService {
       `Export conversion queued for node ${nodeId} (task ${taskId}, format ${format}, priority ${priority})`
     );
     return taskId;
+  }
+
+  /**
+   * 重新转换（#4c）：对已 COMPLETED 的 CAD 节点，从**原始源文件**（dwg/dxf）重跑引擎，
+   * 把新 mxweb 覆盖到节点既有 path（不重新分配存储），再置 COMPLETED。
+   *
+   * 与 convertNode 的区别：convertNode 以 node.path（mxweb 产物）为源，对已转换的 CAD
+   * 节点会按「导出方向」喂给引擎而必然失败；重新转换必须回到原始源文件。原始源优先取
+   * uploads 目录 {hash}.{ext}（原始上传），回退节点目录 {nodeId}.{ext} 灾难恢复备份；
+   * 两者都不可用时报错（无法凭空重转）。mxweb 节点本就是原生格式，重转无意义，直接 no-op。
+   *
+   * 走 fire-and-forget（同 convertNode）：立即返回 taskId，后台重转 + 覆盖产物 + 状态迁移。
+   */
+  async reconvertNode(nodeId: string): Promise<string> {
+    const node = await this.prisma.fileSystemNode.findUnique({
+      where: { id: nodeId, deletedAt: null },
+    });
+    if (!node) {
+      throw new NotFoundException(`Node not found: ${nodeId}`);
+    }
+
+    // mxweb 节点本就是原生格式，重转无意义（同 convertNode 的 mxweb 短路）
+    if (node.name?.toLowerCase().endsWith('.mxweb')) {
+      return node.taskId ?? `async_${nodeId}_noop`;
+    }
+
+    // 去重守卫：节点已有在途任务时直接返回（同 convertNode）
+    const inFlight = this.inFlightTaskId(node);
+    if (inFlight) {
+      this.logger.log(
+        `Node ${nodeId} already has in-flight task ${inFlight}; reconvert returns existing taskId`
+      );
+      return inFlight;
+    }
+
+    const originalSource = await this.resolveOriginalSource(node);
+    if (!originalSource) {
+      throw new BadRequestException(`原始文件不可用，无法重新转换: ${nodeId}`);
+    }
+
+    const taskId = `async_re_${nodeId}_${Date.now()}`;
+    await this.prisma.fileSystemNode.update({
+      where: { id: nodeId },
+      data: { taskId },
+    });
+    await this.nodeStatusTransitioner.transition(
+      nodeId,
+      (node.fileStatus as FileStatus | null) ?? null,
+      FileStatus.PROCESSING
+    );
+
+    const fileHash = node.fileHash || nodeId;
+    const nodePath = node.path;
+    void this.runReconversion(nodeId, fileHash, originalSource, nodePath).catch(
+      (error: unknown) => {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Reconversion failed for node ${nodeId}: ${errMsg}`);
+        this.updateNodeStatus(nodeId, FileStatus.FAILED).catch((e) =>
+          this.logger.error(
+            `Failed to update node ${nodeId} to FAILED: ${e.message}`
+          )
+        );
+      }
+    );
+
+    this.logger.log(
+      `Reconversion queued for node ${nodeId} (task ${taskId}, source=${originalSource})`
+    );
+    return taskId;
+  }
+
+  /**
+   * 定位原始源文件（dwg/dxf）：优先 uploads 目录 {hash}.{ext}（原始上传），
+   * 回退节点目录 {nodeDir}/{nodeId}.{ext}（writeOriginalBackup 的灾难恢复副本）。
+   * 都不可用返回 null。
+   */
+  private async resolveOriginalSource(node: {
+    id: string;
+    name: string | null;
+    fileHash: string | null;
+    path: string | null;
+  }): Promise<string | null> {
+    const hash = node.fileHash;
+    if (!hash) return null;
+    const ext = path.extname(node.name || '').replace('.', '').toLowerCase();
+    if (!ext) return null;
+    const fileSystemService = this.moduleRef.get(FileSystemService, {
+      strict: false,
+    });
+    // 1) uploads 目录 {hash}.{ext}（原始上传文件）
+    const uploadOriginal = fileSystemService.getMd5Path(`${hash}.${ext}`);
+    if (await fileSystemService.exists(uploadOriginal)) return uploadOriginal;
+    // 2) 节点目录备份 {nodeDir}/{nodeId}.{ext}（灾难恢复副本）
+    if (node.path) {
+      const backupRelative = path.join(
+        path.dirname(node.path),
+        `${node.id}.${ext}`
+      );
+      const backupAbs = this.storageManager.getFullPath(backupRelative);
+      if (await fileSystemService.exists(backupAbs)) return backupAbs;
+    }
+    return null;
+  }
+
+  /**
+   * 后台重新转换：从原始源重跑引擎（forceConvert 绕过产物就位短路）→ 成功后把新 mxweb
+   * 覆盖到节点既有 path（不重新分配存储）→ 置 COMPLETED。任何失败向上抛（由调用方
+   * 的 catch 置 FAILED）。
+   */
+  private async runReconversion(
+    nodeId: string,
+    fileHash: string,
+    originalSource: string,
+    nodePath: string | null
+  ): Promise<void> {
+    const fileConversionService = this.moduleRef.get(FileConversionService, {
+      strict: false,
+    });
+    const result = await fileConversionService.convertFile({
+      srcPath: originalSource,
+      fileHash,
+      createPreloadingData: true,
+      forceConvert: true,
+      debugNodeId: nodeId,
+    });
+    if (!result.isOk) {
+      throw new Error(result.error || '重新转换失败');
+    }
+    if (nodePath) {
+      await this.copyNewArtifactToNode(nodeId, fileHash, nodePath);
+    }
+    await this.updateNodeStatus(nodeId, FileStatus.COMPLETED);
+  }
+
+  /**
+   * 把重转产出的新 mxweb 覆盖到节点既有 path（同名覆盖，不重新分配存储）。
+   * 产物未就位（引擎 isOk 但产物缺失，理论上不应发生）时保留既有 mxweb，仅告警。
+   */
+  private async copyNewArtifactToNode(
+    nodeId: string,
+    fileHash: string,
+    nodePath: string
+  ): Promise<void> {
+    const configService = this.moduleRef.get(ConfigService, { strict: false });
+    const uploadDir = resolveMxcadUploadDir(configService);
+    const artifactName = findReadyArtifactByHash(uploadDir, fileHash, '.mxweb');
+    if (!artifactName) {
+      this.logger.warn(
+        `Reconversion artifact not found for node ${nodeId} (hash=${fileHash}); keeping existing mxweb`
+      );
+      return;
+    }
+    const srcPath = path.join(uploadDir, artifactName);
+    const destPath = this.storageManager.getFullPath(nodePath);
+    await fsPromises.copyFile(srcPath, destPath);
+    this.logger.log(`Reconversion: overwrote node ${nodeId} mxweb at ${nodePath}`);
   }
 
   async getNodeConversionStatus(nodeId: string): Promise<{

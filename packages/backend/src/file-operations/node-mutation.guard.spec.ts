@@ -419,30 +419,16 @@ describe('NodeMutationGuard', () => {
   });
 
   describe('invalidateQuotaAfterMutation', () => {
-    it('失效源项目与额外目标项目缓存', async () => {
+    it('仅按用户维度失效一次（项目参数为死参，不触发重复失效）', async () => {
       await guard.invalidateQuotaAfterMutation(
         'user-1',
         { projectId: 'project-a' },
         'project-b'
-      );
-      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledTimes(2);
-      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith(
-        'user-1',
-        'project-a'
-      );
-      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith(
-        'user-1',
-        'project-b'
-      );
-    });
-
-    it('同项目时不重复失效', async () => {
-      await guard.invalidateQuotaAfterMutation(
-        'user-1',
-        { projectId: 'project-a' },
-        'project-a'
       );
       expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledTimes(1);
+      expect(storageInfoService.invalidateQuotaCache).toHaveBeenCalledWith(
+        'user-1'
+      );
     });
   });
 

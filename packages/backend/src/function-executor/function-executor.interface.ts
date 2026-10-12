@@ -202,9 +202,32 @@ export interface BatchConversionResult {
   results: BatchConversionResultItem[];
 }
 
+/**
+ * 执行器能力描述符：本执行器实现了哪些可选原语。
+ *
+ * 由 adapter 在构造时一次性声明（单一事实源），调用方只读本字段判断能力，
+ * 不再逐个探测方法存在性（`typeof x === 'function'` / 非空断言 `!` / 真值判断）。
+ * 与可选方法一一对应：cancel↔cancelTask、listTasks↔listTasks、
+ * batch↔(submitBatch && waitBatch)。
+ */
+export interface ExecutorCapabilities {
+  /** 支持 cancelTask（取消在途任务；仅 conversion-service 形态） */
+  cancel: boolean;
+  /** 支持 listTasks（逐任务明细；process-pool 的簿记仅供 getTaskStatus，无此能力） */
+  listTasks: boolean;
+  /** 支持 submitBatch + waitBatch（批量原语，成对；仅批量委托/conversion-service 形态） */
+  batch: boolean;
+}
+
 export const IFunctionExecutor = 'IFunctionExecutor';
 
 export interface IFunctionExecutor {
+  /**
+   * 能力描述符（必填）。adapter 构造时声明，调用方据此选择分支，
+   * 不再探测可选方法是否存在。
+   */
+  readonly capabilities: ExecutorCapabilities;
+
   /**
    * 是否为远端执行器（经 HTTP 提交到独立转换服务，不回调本进程）。
    *
@@ -231,7 +254,7 @@ export interface IFunctionExecutor {
   /**
    * 取消任务（可选，#463）。
    * 仅 conversion-service 模式支持（独立服务有进程组可杀 / 排队中可出队）；
-   * process-pool / cloud-faas 模式不实现（undefined），调用方据此隐藏取消入口。
+   * process-pool / cloud-faas 模式不实现（undefined），调用方读 capabilities.cancel 判断。
    */
   cancelTask?(taskId: string): Promise<{ ok: boolean; status?: string; reason?: string }>;
 
@@ -246,7 +269,7 @@ export interface IFunctionExecutor {
 
   /**
    * 逐任务明细（可选）。无独立任务存储的执行器不实现（process-pool 的任务簿记
-   * 随进程生命周期，仅供 getTaskStatus 查询）；调用方按 undefined 返回空列表。
+   * 随进程生命周期，仅供 getTaskStatus 查询）；调用方读 capabilities.listTasks 判断。
    */
   listTasks?(status?: string): Promise<ExecutorTaskRecord[]>;
 
@@ -254,7 +277,7 @@ export interface IFunctionExecutor {
    * 批量提交（可选）。一次性提交所有转换任务（如 conversion-service 的
    * POST /v1/conversions/batchConvert），返回批量任务 id。
    * 服务不可达/处于熔断期时抛错，调用方据此降级（逐任务 invoke 或进程内转换）。
-   * 与 waitBatch 成对实现；未实现时批量下载调用方走逐任务路径。
+   * 与 waitBatch 成对实现；调用方读 capabilities.batch 判断是否走批量路径。
    */
   submitBatch?(tasks: BatchConversionTask[]): Promise<{ batchId: string }>;
 

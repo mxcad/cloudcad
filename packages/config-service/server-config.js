@@ -3,9 +3,14 @@
  * 处理 myServerConfig.json
  */
 
-const fs = require('fs');
 const path = require('path');
 const { FRONTEND_INI_DIR } = require('../../runtime/scripts/config-paths');
+const {
+  ensureDir,
+  writeJsonFile,
+  readOrSeed,
+  resetFromSource,
+} = require('./lib/ini-store');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const SERVER_CONFIG_DIR = FRONTEND_INI_DIR;
@@ -20,40 +25,17 @@ const SOURCE_PATH = path.join(
 );
 
 function ensureConfigDir() {
-  if (!fs.existsSync(SERVER_CONFIG_DIR)) {
-    fs.mkdirSync(SERVER_CONFIG_DIR, { recursive: true });
-  }
+  ensureDir(SERVER_CONFIG_DIR);
 }
 
 function getConfig() {
   ensureConfigDir();
-
-  if (!fs.existsSync(CONFIG_PATH)) {
-    if (fs.existsSync(SOURCE_PATH)) {
-      try {
-        const sourceConfig = JSON.parse(fs.readFileSync(SOURCE_PATH, 'utf8'));
-        fs.writeFileSync(
-          CONFIG_PATH,
-          JSON.stringify(sourceConfig, null, 2),
-          'utf8'
-        );
-        return sourceConfig;
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-  } catch (e) {
-    return null;
-  }
+  return readOrSeed(CONFIG_PATH, SOURCE_PATH);
 }
 
 function updateConfig(config) {
   ensureConfigDir();
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  writeJsonFile(CONFIG_PATH, config);
   return config;
 }
 
@@ -204,21 +186,8 @@ function importConfig(newConfig) {
 // 统一契约（routes/config-resource.js 工厂消费）：
 // { ok: true, data } | { ok: false, error, errors? }
 function resetConfig() {
-  ensureConfigDir();
-  if (!fs.existsSync(SOURCE_PATH)) {
-    return { ok: false, error: '默认配置文件不存在，无法还原' };
-  }
-  try {
-    const sourceConfig = JSON.parse(fs.readFileSync(SOURCE_PATH, 'utf8'));
-    fs.writeFileSync(
-      CONFIG_PATH,
-      JSON.stringify(sourceConfig, null, 2),
-      'utf8'
-    );
-    return { ok: true, data: sourceConfig };
-  } catch (e) {
-    return { ok: false, error: '读取默认配置失败: ' + e.message };
-  }
+  // server 的内置 source 与 schema 存在漂移风险，reset 不校验（与 ui/sketches 一致）
+  return resetFromSource(SOURCE_PATH, CONFIG_PATH);
 }
 
 module.exports = {

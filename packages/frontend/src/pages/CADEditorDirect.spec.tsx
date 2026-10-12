@@ -54,8 +54,8 @@ const { useFileRouteParserMock } = vi.hoisted(() => ({
 
 const { useFileOpenGuardMock } = vi.hoisted(() => ({
   useFileOpenGuardMock: {
-    setShowLoginPrompt: vi.fn(),
-    setLoginPromptAction: vi.fn(),
+    showLoginPrompt: false,
+    loginPromptAction: null as string | null,
   },
 }));
 
@@ -93,13 +93,24 @@ vi.mock('@/hooks/useCadFileLoader', () => ({ useCadFileLoader: vi.fn() }));
 vi.mock('@/hooks/useFileOpenGuard', () => ({
   useFileOpenGuard: vi.fn(() => ({
     isActive: true,
-    showLoginPrompt: false,
-    loginPromptAction: null,
-    handleLoginClick: vi.fn(),
-    handleLoginPromptClose: vi.fn(),
-    loginPromptDismissedRef: { current: false },
-    setShowLoginPrompt: useFileOpenGuardMock.setShowLoginPrompt,
-    setLoginPromptAction: useFileOpenGuardMock.setLoginPromptAction,
+    hideEditor: vi.fn(),
+    loginGate: {
+      // 半真实 requireLogin：读 useAuthMock 当前认证态，
+      // 镜像真实闸门「已登录→放行 / 游客→弹提示」语义
+      requireLogin: vi.fn((actionLabel: string) => {
+        const { isAuthenticated } = useAuthMock();
+        if (isAuthenticated) return true;
+        useFileOpenGuardMock.showLoginPrompt = true;
+        useFileOpenGuardMock.loginPromptAction = actionLabel;
+        return false;
+      }),
+      isLoginSuppressed: vi.fn(() => false),
+      showLoginPrompt: false,
+      loginPromptAction: null,
+      handleLoginClick: vi.fn(),
+      handleLoginPromptClose: vi.fn(),
+      loginPrompt: null,
+    },
   })),
 }));
 vi.mock('@/hooks/useCadPermissions', () => ({
@@ -220,6 +231,8 @@ beforeEach(() => {
   clearDrawingSessionListeners();
   subscriptions.length = 0;
   vi.clearAllMocks();
+  useFileOpenGuardMock.showLoginPrompt = false;
+  useFileOpenGuardMock.loginPromptAction = null;
   mxcadManagerMock.getCurrentFileName.mockReturnValue('empty_template.mxweb');
   mxcadManagerMock.openFile.mockResolvedValue(undefined);
   useAuthMock.mockImplementation(() => ({
@@ -326,11 +339,9 @@ describe('CADEditorDirect — 协同链接未登录（游客）场景', () => {
       await Promise.resolve();
     });
 
-    // 触发登录提示：设置动作文案 + 弹出提示（游客不能加入协同）
-    expect(useFileOpenGuardMock.setLoginPromptAction).toHaveBeenCalledWith(
-      '加入协同'
-    );
-    expect(useFileOpenGuardMock.setShowLoginPrompt).toHaveBeenCalledWith(true);
+    // 游客不能加入协同：requireLogin('加入协同') 弹出登录提示
+    expect(useFileOpenGuardMock.showLoginPrompt).toBe(true);
+    expect(useFileOpenGuardMock.loginPromptAction).toBe('加入协同');
   });
 
   it('已登录用户访问协同链接时不弹登录提示', async () => {
@@ -360,6 +371,7 @@ describe('CADEditorDirect — 协同链接未登录（游客）场景', () => {
       await Promise.resolve();
     });
 
-    expect(useFileOpenGuardMock.setShowLoginPrompt).not.toHaveBeenCalled();
+    // 已登录：requireLogin 直接放行，不弹提示
+    expect(useFileOpenGuardMock.showLoginPrompt).toBe(false);
   });
 });

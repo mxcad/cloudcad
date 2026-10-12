@@ -67,8 +67,8 @@ vi.mock('@/composables/useOpenGuard', () => ({
 vi.mock('@/composables/useNativeFilePicker', () => ({
   showFilePicker: showFilePickerMock,
 }));
-vi.mock('@/composables/useEditorState', () => ({
-  useEditorState: () => editorStateMock,
+vi.mock('@/stores/editor', () => ({
+  useEditorStore: () => editorStateMock,
 }));
 vi.mock('@/utils/toast', () => ({ showToastOnce: toastMock }));
 vi.mock('@/utils/apiConfig', () => ({

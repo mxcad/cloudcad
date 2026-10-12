@@ -1,5 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext } from 'nestjs-i18n';
 import * as crypto from 'crypto';
@@ -7,11 +6,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ExternalReferenceUpdateService } from './external-reference-update.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
-import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { UploadExtReferenceFileDto } from '../dto/upload-ext-reference-file.dto';
 import { PreloadingDataDto } from '../dto/preloading-data.dto';
-import type { MxCadRequest } from '../types/request.types';
 import type { AppConfig } from '../../config/app.config';
 
 @Injectable()
@@ -20,10 +17,8 @@ export class ExtRefValidatorService {
   private preloadingDataCache = new Map<string, { data: PreloadingDataDto; timestamp: number }>();
 
   constructor(
-    private readonly jwtService: JwtService,
     private readonly externalReferenceUpdateService: ExternalReferenceUpdateService,
     private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly permissionService: FileSystemPermissionService,
     private readonly runtimeConfigService: RuntimeConfigService,
     configService: ConfigService<AppConfig>,
   ) {
@@ -99,31 +94,6 @@ export class ExtRefValidatorService {
 
   validateFileType(fileName: string, allowedExtensions: string[] = ['.dwg', '.dxf', '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']): boolean {
     return allowedExtensions.includes(path.extname(fileName).toLowerCase());
-  }
-
-  async validateTokenAndGetUserId(request: MxCadRequest): Promise<string> {
-    if (request.user) {
-      const userData = await this.fileSystemNodeService.findUserById(request.user.id, { id: true, status: true });
-      if (!userData) throw new UnauthorizedException(I18nContext.current()?.t('error.user.not_found') ?? '用户不存在');
-      if (userData.status !== 'ACTIVE') throw new UnauthorizedException(I18nContext.current()?.t('error.auth_extra.user_account_disabled') ?? '用户账号已被禁用');
-      return userData.id;
-    }
-    const authorization = request.headers.authorization;
-    if (!authorization) throw new UnauthorizedException(I18nContext.current()?.t('error.auth.missing_auth_header') ?? '缺少Authorization header');
-    const token = authorization.replace('Bearer ', '');
-    let payload: { sub: string };
-    try { payload = this.jwtService.verify(token); } catch { throw new UnauthorizedException(I18nContext.current()?.t('error.auth.jwt_invalid') ?? 'JWT token无效或已过期'); }
-    const userData = await this.fileSystemNodeService.findUserById(payload.sub, { id: true, status: true });
-    if (!userData) throw new UnauthorizedException(I18nContext.current()?.t('error.user.not_found') ?? '用户不存在');
-    if (userData.status !== 'ACTIVE') throw new UnauthorizedException(I18nContext.current()?.t('error.auth_extra.user_account_disabled') ?? '用户账号已被禁用');
-    return userData.id;
-  }
-
-  async checkFileAccessPermission(nodeId: string, userId: string, checkUserId: string): Promise<boolean> {
-    try {
-      const role = await this.permissionService.getNodeAccessRole(checkUserId, nodeId);
-      return role !== null;
-    } catch { return false; }
   }
 
   computeUploadedFileHash(filePath: string, originalname: string): { hash: string; path: string } {

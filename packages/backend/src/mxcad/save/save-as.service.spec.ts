@@ -14,6 +14,9 @@ import { ConfigService } from '@nestjs/config';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import { I_EXTERNAL_REF_FACADE } from '../external-ref/interfaces/ext-ref-facade.interface';
+import { TreeWalker } from '../../file-system/file-tree/tree-walker.service';
+import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
+import { IPERMISSION_SERVICE } from '../../permission/interfaces/permission-service.interface';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -45,12 +48,24 @@ describe('SaveAsService', () => {
   };
 
   const mockFileSystemNodeService = {
-    getMimeType: jest.fn(),
     findById: jest.fn(),
+    findByIdWithDeletedAt: jest.fn(),
   };
 
   const mockStorageManager = {
     allocateNodeStorage: jest.fn(),
+  };
+
+  const mockTreeWalker = {
+    resolveRootContext: jest.fn(),
+  };
+
+  const mockPermissionService = {
+    checkNodePermission: jest.fn(),
+  };
+
+  const mockSystemPermissionService = {
+    checkSystemPermission: jest.fn(),
   };
 
   const mockFileConversionService = {
@@ -78,6 +93,18 @@ describe('SaveAsService', () => {
       Buffer.from('test mxweb content')
     );
     (fs.promises.unlink as jest.Mock).mockResolvedValue(undefined);
+
+    // 默认：父节点为本人 FOLDER、三态权限均通过（各用例按需覆盖）
+    (mockFileSystemNodeService.findByIdWithDeletedAt as jest.Mock).mockResolvedValue({
+      id: 'parent1',
+      nodeType: 'FOLDER',
+      ownerId: 'user1',
+    });
+    (mockTreeWalker.resolveRootContext as jest.Mock).mockResolvedValue({
+      ownerId: 'user1',
+    });
+    (mockPermissionService.checkNodePermission as jest.Mock).mockResolvedValue(true);
+    (mockSystemPermissionService.checkSystemPermission as jest.Mock).mockResolvedValue(true);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -114,6 +141,9 @@ describe('SaveAsService', () => {
             writePreloading: jest.fn().mockResolvedValue(undefined),
           },
         },
+        { provide: TreeWalker, useValue: mockTreeWalker },
+        { provide: FileSystemPermissionService, useValue: mockPermissionService },
+        { provide: IPERMISSION_SERVICE, useValue: mockSystemPermissionService },
       ],
     }).compile();
 
@@ -155,7 +185,6 @@ describe('SaveAsService', () => {
         ret: { code: 0, message: 'success' },
       });
       mockFileSystemNodeService.findById.mockResolvedValue({ id: 'node1' });
-      mockFileSystemNodeService.getMimeType.mockReturnValue('application/dwg');
       mockFileTreeService.getChildren.mockResolvedValue({ nodes: [] });
 
       const result = await service.saveMxwebAs({
@@ -212,7 +241,9 @@ describe('SaveAsService', () => {
         originalname: 'test.mxweb',
       } as Express.Multer.File;
 
-      mockFileTreeService.getNode.mockResolvedValue(null);
+      (mockFileSystemNodeService.findByIdWithDeletedAt as jest.Mock).mockResolvedValue(
+        null
+      );
 
       const result = await service.saveMxwebAs({
         file: mockFile,
@@ -234,12 +265,10 @@ describe('SaveAsService', () => {
         originalname: 'test.mxweb',
       } as Express.Multer.File;
 
-      const mockParentNode = {
+      (mockFileSystemNodeService.findByIdWithDeletedAt as jest.Mock).mockResolvedValue({
         id: 'parent1',
         nodeType: 'FILE',
-      };
-
-      mockFileTreeService.getNode.mockResolvedValue(mockParentNode);
+      });
 
       const result = await service.saveMxwebAs({
         file: mockFile,
@@ -253,6 +282,65 @@ describe('SaveAsService', () => {
 
       expect(result.success).toBe(false);
       expect(result.message).toBe('目标必须是文件夹');
+    });
+  });
+
+  describe('assertSavePermission 三态权限分派', () => {
+    const validFile = {
+      path: path.join(os.tmpdir(), 'test.mxweb'),
+      originalname: 'test.mxweb',
+    } as Express.Multer.File;
+
+    it('personal：非本人私人空间 → 无权限', async () => {
+      (mockTreeWalker.resolveRootContext as jest.Mock).mockResolvedValue({
+        ownerId: 'other',
+      });
+      const result = await service.saveMxwebAs({
+        file: validFile,
+        targetType: 'personal',
+        targetParentId: 'parent1',
+        projectId: undefined,
+        format: 'dwg',
+        userId: 'user1',
+        userName: 'Test User',
+      });
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('您没有权限保存到此位置');
+    });
+
+    it('library：无资源库管理权限 → 无权限', async () => {
+      (mockSystemPermissionService.checkSystemPermission as jest.Mock).mockResolvedValue(
+        false
+      );
+      const result = await service.saveMxwebAs({
+        file: validFile,
+        targetType: 'library',
+        targetParentId: 'parent1',
+        projectId: undefined,
+        format: 'dwg',
+        userId: 'user1',
+        userName: 'Test User',
+        libraryType: 'drawing',
+      });
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('您没有资源库管理权限');
+    });
+
+    it('project：无 CAD_SAVE 权限 → 无权限', async () => {
+      (mockPermissionService.checkNodePermission as jest.Mock).mockResolvedValue(
+        false
+      );
+      const result = await service.saveMxwebAs({
+        file: validFile,
+        targetType: 'project',
+        targetParentId: 'parent1',
+        projectId: 'proj1',
+        format: 'dwg',
+        userId: 'user1',
+        userName: 'Test User',
+      });
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('您没有权限保存到此项目');
     });
   });
 

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFileSystemStore } from '../../stores/fileSystemStore';
-import { useSearch } from '../useSearch';
+import { useDebouncedValue } from '../useDebouncedValue';
 import type { SearchFilterValues } from '../../components/search/SearchFilters';
 
 interface UseFileSystemSearchProps {
@@ -8,11 +8,10 @@ interface UseFileSystemSearchProps {
 }
 
 export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
-  const { searchQuery, setSearchQuery, debouncedSearchTerm, isSearching } =
-    useSearch({
-      debounceDelay: 300,
-      enableRemoteSearch: false,
-    });
+  // 搜索防抖走 useDebouncedValue 唯一出口（原 useSearch 假 seam 已删）
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchTerm = useDebouncedValue(searchQuery, 300);
+  const isSearching = debouncedSearchTerm !== searchQuery;
 
   const { pageSize: storePageSize, setPageSize: setStorePageSize } =
     useFileSystemStore();
@@ -39,12 +38,17 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
     paginationRef.current = pagination;
   }, [pagination]);
 
+  // 「任一筛选变化回页 1」单一出口（原 3 处内联副本）
+  const resetToFirstPage = useCallback(() => {
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  }, []);
+
   const handleSearchChange = useCallback(
     (query: string) => {
       setSearchQuery(query);
-      setPagination((prev) => ({ ...prev, page: 1 }));
+      resetToFirstPage();
     },
-    [setSearchQuery]
+    [setSearchQuery, resetToFirstPage]
   );
 
   const handleSearchSubmit = useCallback(() => {
@@ -74,17 +78,20 @@ export const useFileSystemSearch = ({ loadData }: UseFileSystemSearchProps) => {
     return shouldLoad;
   }, []);
 
-  const handleFiltersChange = useCallback((filters: SearchFilterValues) => {
-    setSearchFilters(filters);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  }, []);
+  const handleFiltersChange = useCallback(
+    (filters: SearchFilterValues) => {
+      setSearchFilters(filters);
+      resetToFirstPage();
+    },
+    [resetToFirstPage]
+  );
 
   const handleSearchQueryChange = useCallback(
     (query: string) => {
       setSearchQuery(query);
-      setPagination((prev) => ({ ...prev, page: 1 }));
+      resetToFirstPage();
     },
-    [setSearchQuery]
+    [setSearchQuery, resetToFirstPage]
   );
 
   return {

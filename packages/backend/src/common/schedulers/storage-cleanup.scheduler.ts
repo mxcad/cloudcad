@@ -18,7 +18,7 @@ import type { CleanupResult } from '../../storage-management/services/storage-cl
 import { DiskMonitorService } from '../../storage-management/services/disk-monitor.service';
 import { FileLockService } from '../../storage-management/services/file-lock.service';
 import { AlertService } from '../../alert/alert.service';
-import { AlertLevel } from '../../alert/enums/alert.enum';
+import { AlertLevel, TASK_RUN_FAILED_KEY, TASK_RUN_FAILED_LEVEL } from '../../alert/enums/alert.enum';
 import { TaskRunService } from '../../task-run/task-run.service';
 import { TASK_ENABLED_KEYS, TASK_NAMES } from '../../task-run/task-run.constants';
 import {
@@ -278,7 +278,13 @@ export class StorageCleanupScheduler {
     const healthReport = this.diskMonitorService.getHealthReport();
     await this.raiseDiskAlerts(healthReport);
 
-    if (healthReport.status.warning || healthReport.status.critical) {
+    // 测不到（stats.ok=false）同样要留痕：磁盘探测失败不置 warning/critical，
+    // 否则长期存在的探测失败会完全没有日志
+    if (
+      healthReport.status.warning ||
+      healthReport.status.critical ||
+      !healthReport.status.stats.ok
+    ) {
       this.logger.warn(`Disk status check: ${healthReport.status.message}`);
       this.logger.warn(`Recommendation: ${healthReport.recommendation}`);
     }
@@ -334,11 +340,14 @@ export class StorageCleanupScheduler {
         );
       }
       await this.safeResolveDiskKey(DISK_ALERT_KEYS.CRITICAL);
-    } else {
+    } else if (stats.ok) {
       // 磁盘恢复正常 → 自动恢复（resolve）两个 key
       await this.safeResolveDiskKey(DISK_ALERT_KEYS.LOW);
       await this.safeResolveDiskKey(DISK_ALERT_KEYS.CRITICAL);
     }
+    // stats.ok=false（测不到）时故意不 resolve：探测失败不是「恢复正常」，
+    // 自动清掉已有 disk_space 告警会掩盖真实的空间故障；告警保持挂起，
+    // 直到一次成功探测确认空间确实正常
   }
 
   private async safeResolveDiskKey(messageKey: string): Promise<void> {
@@ -437,9 +446,9 @@ export class StorageCleanupScheduler {
     try {
       await this.alertService.raise({
         source: 'scheduler:storage-cleanup',
-        messageKey: 'task_run_failed',
-        // P1：单任务完全失败（15min 同源聚合）
-        level: AlertLevel.P1,
+        messageKey: TASK_RUN_FAILED_KEY,
+        // 级别取 TASK_RUN_FAILED_LEVEL 单点（当前 P1）：单任务完全失败（15min 同源聚合）
+        level: TASK_RUN_FAILED_LEVEL,
         message: `定时任务 storage-cleanup 失败（${task}）: ${error instanceof Error ? error.message : String(error)}`,
         detail: {
           task,

@@ -38,14 +38,8 @@ import { RequireProjectPermission } from '../../common/decorators/require-projec
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 import { MXCAD_SAVE_SERVICE } from '../interfaces/mxcad-service-tokens';
 import { IMxcadSaveService } from '../interfaces/mxcad-save.interface';
-import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { SaveAsService, SaveMxwebAsResult } from './save-as.service';
-import { TreeWalker } from '../../file-system/file-tree/tree-walker.service';
-import { FileSystemPermissionService } from '../../file-system/file-permission/file-system-permission.service';
-import { IPERMISSION_SERVICE, IPermissionService } from '../../permission/interfaces/permission-service.interface';
-import { SystemPermission } from '../../common/enums/permissions.enum';
 import { MxCadRequest } from '../types/request.types';
-import { NodeType } from '@cloudcad/db';
 import { SaveMxwebDto } from '../dto/save-mxweb.dto';
 import { SaveMxwebAsDto } from '../dto/save-mxweb-as.dto';
 import { SaveMxwebResponseDto } from '../dto/save-mxweb-response.dto';
@@ -62,11 +56,7 @@ export class SaveController {
   constructor(
     @Inject(MXCAD_SAVE_SERVICE)
     private readonly mxCadSaveService: IMxcadSaveService,
-    private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly saveAsService: SaveAsService,
-    private readonly treeWalker: TreeWalker,
-    private readonly permissionService: FileSystemPermissionService,
-    @Inject(IPERMISSION_SERVICE) private readonly systemPermissionService: IPermissionService,
     private readonly auditLogService: AuditLogService,
   ) {}
 
@@ -168,76 +158,6 @@ export class SaveController {
 
     if (!userId) {
       throw new UnauthorizedException(I18nContext.current()?.t('error.auth_extra.user_not_logged_in') ?? '用户未登录');
-    }
-
-    if (dto.targetType === 'project' && !dto.projectId) {
-      throw new BadRequestException(I18nContext.current()?.t('error.mxcad.save_to_project_requires_project_id') ?? '保存到项目时必须提供projectId');
-    }
-
-    if (dto.targetType === 'library' && !dto.libraryType) {
-      throw new BadRequestException(I18nContext.current()?.t('error.mxcad.save_to_library_requires_library_type') ?? '保存到资源库时必须提供libraryType');
-    }
-
-    const targetParentNode =
-      await this.fileSystemNodeService.findByIdWithDeletedAt(dto.targetParentId, {
-        id: true,
-        nodeType: true,
-        ownerId: true,
-      });
-
-    if (!targetParentNode) {
-      throw new BadRequestException(I18nContext.current()?.t('error.mxcad.target_folder_not_found') ?? '目标文件夹不存在');
-    }
-
-    if (targetParentNode.nodeType === NodeType.FILE) {
-      throw new BadRequestException(I18nContext.current()?.t('error.mxcad.target_must_be_folder') ?? '目标必须是文件夹');
-    }
-
-    if (dto.targetType === 'personal') {
-      const root = await this.treeWalker.resolveRootContext(
-        dto.targetParentId,
-      );
-
-      const isUserPersonalSpace = root?.ownerId === userId;
-
-      if (!isUserPersonalSpace) {
-        this.logger.warn(
-          `[saveMxwebAs] 用户 ${userId} 尝试保存到非自己的私人空间: ${dto.targetParentId}`,
-        );
-        throw new BadRequestException(I18nContext.current()?.t('error.mxcad.no_permission_save_to_location') ?? '您没有权限保存到此位置');
-      }
-    } else if (dto.targetType === 'library') {
-      const requiredPermission = dto.libraryType === 'drawing'
-        ? SystemPermission.LIBRARY_DRAWING_MANAGE
-        : SystemPermission.LIBRARY_BLOCK_MANAGE;
-      const hasPermission = await this.systemPermissionService.checkSystemPermission(
-        userId,
-        requiredPermission,
-      );
-      if (!hasPermission) {
-        this.logger.warn(
-          `[saveMxwebAs] 用户 ${userId} 没有${dto.libraryType === 'drawing' ? '图纸库' : '图块库'}管理权限`,
-        );
-        throw new BadRequestException(I18nContext.current()?.t('error.mxcad.no_permission_library_management') ?? '您没有资源库管理权限');
-      }
-    } else {
-      if (dto.projectId) {
-        const hasPermission =
-          await this.permissionService.checkNodePermission(
-            userId,
-            dto.projectId,
-            ProjectPermission.CAD_SAVE,
-          );
-
-        if (!hasPermission) {
-          this.logger.warn(
-            `[saveMxwebAs] 用户 ${userId} 没有项目 ${dto.projectId} 的 CAD_SAVE 权限`,
-          );
-          throw new BadRequestException(I18nContext.current()?.t('error.mxcad.no_permission_save_to_project') ?? '您没有权限保存到此项目');
-        }
-      } else {
-        throw new BadRequestException(I18nContext.current()?.t('error.mxcad.save_to_project_requires_project_id') ?? '保存到项目时必须提供projectId');
-      }
     }
 
     let result: SaveMxwebAsResult;

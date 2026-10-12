@@ -8,7 +8,7 @@
  * 见 docs/adr/0062-mobile-app-shell-architecture.md 第 5 节。
  * nodeController 分支复用文件系统节点层级遍历逻辑。
  */
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed } from 'vue'
 import {
   nodeControllerGetChildren,
   nodeControllerGetNode,
@@ -17,6 +17,7 @@ import {
 import type { FileSystemNodeDto, NodeListResponseDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
 import { unwrap } from '@/utils/apiError'
+import { usePagedState, type PagedItems } from './usePagedState'
 
 export type UnifiedDomain = 'project' | 'personal'
 
@@ -40,12 +41,13 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
   const STORAGE_KEY = `fs_breadcrumb_${domain}`
 
   // ── 状态 ──
-  const nodes = shallowRef<FileSystemNodeDto[]>([])
-  const loading = ref(false)
-  const error = ref('')
-  const page = ref(1)
-  const totalPages = ref(1)
-  const total = ref(0)
+  const paged = usePagedState<FileSystemNodeDto>({
+    onError: (e) => {
+      console.error('[useUnifiedFileList] load:', e)
+      return t('加载失败')
+    },
+  })
+  const { items: nodes, page, totalPages, total, loading, error, hasMore, loadMoreFailed } = paged
   const searchText = ref('')
   const debouncedSearch = ref('')
 
@@ -178,13 +180,66 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     return rootId.value ? 'project_files' : null
   }
 
+  // ── 单页取数（列表 / 搜索两路）──
+  // fetcher 闭包捕获目标节点/搜索/排序/筛选等消费方特有状态，翻页号由 paged 按当前页传入
+  async function fetchPage(
+    targetId: string,
+    pageNo: number,
+  ): Promise<PagedItems<FileSystemNodeDto>> {
+    // 项目/个人空间：用 nodeControllerGetChildren（服务端搜索：传 search 参数，
+    // QueryChildrenDto.search 匹配名称或描述；避免只在已加载页做客户端过滤）
+    const res = await nodeControllerGetChildren({
+      path: { nodeId: targetId },
+      query: {
+        page: pageNo,
+        limit: 30,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value,
+        ...(debouncedSearch.value ? { search: debouncedSearch.value } : {}),
+        ...filterQueryParams(),
+      },
+    })
+    unwrap(res)
+    const data = (res.data ?? {}) as unknown as NodeListResponseDto
+    return { items: data.nodes ?? [], total: data.total ?? 0, totalPages: data.totalPages ?? 1 }
+  }
+
+  async function fetchSearchPage(
+    pageNo: number,
+    scope: 'personal_space' | 'project_files',
+  ): Promise<PagedItems<FileSystemNodeDto>> {
+    const query = {
+      keyword: debouncedSearch.value,
+      scope,
+      page: pageNo,
+      limit: 30,
+      sortBy: sortBy.value,
+      sortOrder: sortOrder.value,
+      ...filterQueryParams(),
+      ...(scope === 'project_files' ? { projectId: rootId.value ?? undefined } : {}),
+    }
+    const res = await nodeControllerSearch({ query })
+    unwrap(res)
+    const data = (res.data ?? {}) as unknown as NodeListResponseDto
+    return { items: data.nodes ?? [], total: data.total ?? 0, totalPages: data.totalPages ?? 1 }
+  }
+
+  // 当前模式对应的 fetcher：搜索态走 search，否则走列表（loadMore/retry/refresh 共用）
+  function currentFetcher(): (pageNo: number) => Promise<PagedItems<FileSystemNodeDto>> {
+    if (debouncedSearch.value) {
+      const scope = searchScope()
+      if (scope) return (pageNo) => fetchSearchPage(pageNo, scope)
+    }
+    return (pageNo) => fetchPage(resolveTargetId()!, pageNo)
+  }
+
   // ── 加载节点列表 ──
   async function loadNodes() {
     // 搜索态：改走 nodeControllerSearch 递归全 scope 搜索（结果替换当前文件夹列表）
     if (debouncedSearch.value) {
       const scope = searchScope()
       if (scope) {
-        await loadSearch(scope)
+        await paged.load((pageNo) => fetchSearchPage(pageNo, scope))
         return
       }
     }
@@ -195,70 +250,7 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
       return
     }
 
-    loading.value = true
-    error.value = ''
-
-    try {
-      // 项目/个人空间：用 nodeControllerGetChildren（服务端搜索：传 search 参数，
-      // QueryChildrenDto.search 匹配名称或描述；避免只在已加载页做客户端过滤）
-      const res = await nodeControllerGetChildren({
-        path: { nodeId: targetId },
-        query: {
-          page: page.value,
-          limit: 30,
-          sortBy: sortBy.value,
-          sortOrder: sortOrder.value,
-          ...(debouncedSearch.value ? { search: debouncedSearch.value } : {}),
-          ...filterQueryParams(),
-        },
-      })
-
-      unwrap(res)
-      const data = (res.data ?? {}) as unknown as NodeListResponseDto
-      nodes.value = page.value === 1
-        ? (data.nodes ?? [])
-        : [...nodes.value, ...(data.nodes ?? [])]
-      total.value = data.total ?? 0
-      totalPages.value = data.totalPages ?? 1
-    } catch (e) {
-      console.error('[useUnifiedFileList] loadNodes:', e)
-      error.value = t('加载失败')
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // ── 加载搜索结果（递归全 scope，替换当前文件夹列表）──
-  async function loadSearch(scope: 'personal_space' | 'project_files') {
-    loading.value = true
-    error.value = ''
-
-    try {
-      const query = {
-        keyword: debouncedSearch.value,
-        scope,
-        page: page.value,
-        limit: 30,
-        sortBy: sortBy.value,
-        sortOrder: sortOrder.value,
-        ...filterQueryParams(),
-        ...(scope === 'project_files' ? { projectId: rootId.value ?? undefined } : {}),
-      }
-      const res = await nodeControllerSearch({ query })
-
-      unwrap(res)
-      const data = (res.data ?? {}) as unknown as NodeListResponseDto
-      nodes.value = page.value === 1
-        ? (data.nodes ?? [])
-        : [...nodes.value, ...(data.nodes ?? [])]
-      total.value = data.total ?? 0
-      totalPages.value = data.totalPages ?? 1
-    } catch (e) {
-      console.error('[useUnifiedFileList] loadSearch:', e)
-      error.value = t('加载失败')
-    } finally {
-      loading.value = false
-    }
+    await paged.load((pageNo) => fetchPage(targetId, pageNo))
   }
 
   // ── 进入文件夹 ──
@@ -289,23 +281,19 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
 
   // ── 加载更多 ──
   function loadMore() {
-    if (loading.value || page.value >= totalPages.value) return
-    page.value++
-    loadNodes()
+    paged.loadMore(currentFetcher())
   }
 
-  // 加载更多失败（A-14）：page>1 失败时已加载列表保留，底部出重试条；
+  // 加载更多失败（A-14）：page>1 失败时已加载列表保留，底部出重试条（loadMoreFailed 由 usePagedState 派生）；
   // page 已指向失败页，重试直接重跑当前页，不会重复追加
-  const loadMoreFailed = computed(() => error.value !== '' && page.value > 1)
-
   function retryLoadMore() {
-    loadNodes()
+    paged.retryLoadMore(currentFetcher())
   }
 
   // 手动刷新（A-15）：下拉刷新 / 刷新按钮 → 回到第一页整页重查。
   // 返回 loadNodes 的 Promise，供「创建/删除后 await 重载完成再走后续」的调用方使用
   function refresh(): Promise<void> {
-    page.value = 1
+    paged.resetToFirstPage()
     return loadNodes()
   }
 
@@ -313,7 +301,6 @@ export function useUnifiedFileList(domain: UnifiedDomain) {
     return !!node.isFolder || node.nodeType === 'FOLDER'
   }
 
-  const hasMore = computed(() => page.value < totalPages.value)
   const isEmpty = computed(() => !loading.value && nodes.value.length === 0)
 
   function getThumbnailUrl(nodeId: string): string {

@@ -31,7 +31,7 @@ import {
   vipControllerGetRegistry,
 } from '@cloudcad/api-sdk/sdk.gen';
 import { membershipState } from '@cloudcad/platform';
-import { patchUser, readUser } from '@/utils/authSession';
+import { syncUserMembership } from '@/utils/authSession';
 import { t } from '@/languages';
 import { unwrap, errMsg } from '@/utils/apiError';
 import {
@@ -50,6 +50,7 @@ import {
   sortDurations,
   sortTiers,
 } from '@/utils/billing';
+import { usePagedState, type PagedItems } from './usePagedState';
 
 /** 查单轮询间隔与上限（5s × 120 = 10 分钟，与 PC WechatPayButton 一致） */
 const POLL_INTERVAL_MS = 5000;
@@ -62,23 +63,6 @@ const QR_SIZE_PX = 200;
  *  awaiting MWEB 跳回后等待结果 / success 已支付 / error 失败 */
 export type PayPhase =
   'idle' | 'creating' | 'qr' | 'awaiting' | 'success' | 'error';
-
-/** 支付成功后同步会员字段到 localStorage.user（VIP 门控的数据源） */
-function syncMembershipToLocalUser(profile: MembershipLike): void {
-  // 原地补字段的前提是已有 user 落盘；无 user / JSON 损坏时不动
-  if (!readUser()) return;
-  const fields: Record<string, unknown> = {};
-  for (const key of [
-    'membershipTierLevel',
-    'membershipTier',
-    'membershipExpiresAt',
-    'isVip',
-  ] as const) {
-    if (key in profile) fields[key] = profile[key];
-  }
-  // 走会话唯一出口：user 增量回写 + 状态机刷新（notify written → useUser 重读）
-  patchUser(fields);
-}
 
 /** 生成支付二维码 dataURL；失败返回空串（页面据此提示下单失败） */
 async function toQrDataUrl(codeUrl: string): Promise<string> {
@@ -101,11 +85,15 @@ export function useMemberCenter() {
   const durations = ref<DurationPricing[]>([]);
   const quota = ref<QuotaInfo | null>(null);
   const registry = shallowRef<Map<string, ConfigRegistryEntry>>(new Map());
-  const orders = ref<BillingOrder[]>([]);
-  const ordersLoading = ref(false);
-  const ordersTotal = ref(0);
-  const ordersHasMore = ref(false);
-  const ordersPage = ref(1);
+  // 订单分页：复用 usePagedState 深模块（仪式/竞态守卫/首屏替换翻页追加）。
+  // onError 返回空串——订单加载失败不阻塞会员状态展示（对齐原空 catch 语义）。
+  const ordersPaged = usePagedState<BillingOrder>({ onError: () => '' });
+  const {
+    items: orders,
+    loading: ordersLoading,
+    total: ordersTotal,
+    hasMore: ordersHasMore,
+  } = ordersPaged;
 
   const payPhase = ref<PayPhase>('idle');
   const payOrder = ref<BillingOrder | null>(null);
@@ -162,29 +150,27 @@ export function useMemberCenter() {
     loading.value = false;
   }
 
+  // 单页取数：翻页号由 ordersPaged 按当前页传入；totalPages 由 total 推导（后端 OrdersPage 无 totalPages 字段）
+  async function fetchOrdersPage(pageNo: number): Promise<PagedItems<BillingOrder>> {
+    const page = unwrap<OrdersPage>(
+      await billingControllerGetOrders({
+        query: { page: pageNo, limit: ORDERS_PAGE_SIZE },
+      })
+    );
+    return {
+      items: page.items,
+      total: page.total,
+      totalPages: Math.max(1, Math.ceil(page.total / ORDERS_PAGE_SIZE)),
+    };
+  }
+
   async function loadOrders(reset = true): Promise<void> {
-    ordersLoading.value = true;
-    if (reset) ordersPage.value = 1;
-    try {
-      const page = unwrap<OrdersPage>(
-        await billingControllerGetOrders({
-          query: { page: ordersPage.value, limit: ORDERS_PAGE_SIZE },
-        })
-      );
-      orders.value = reset ? page.items : [...orders.value, ...page.items];
-      ordersTotal.value = page.total;
-      ordersHasMore.value = orders.value.length < page.total;
-    } catch {
-      // 订单加载失败不阻塞会员状态展示
-    } finally {
-      ordersLoading.value = false;
-    }
+    if (reset) ordersPaged.resetToFirstPage();
+    await ordersPaged.load(fetchOrdersPage);
   }
 
   async function loadMoreOrders(): Promise<void> {
-    if (!ordersHasMore.value || ordersLoading.value) return;
-    ordersPage.value += 1;
-    await loadOrders(false);
+    ordersPaged.loadMore(fetchOrdersPage);
   }
 
   // ==================== 支付 ====================
@@ -226,7 +212,7 @@ export function useMemberCenter() {
     payPhase.value = 'success';
     payError.value = '';
     await Promise.allSettled([loadAll(), loadOrders(true)]);
-    syncMembershipToLocalUser(membership.value);
+    syncUserMembership(membership.value);
   }
 
   /** 下单并进入支付态；MWEB 返回后整页跳走，跳回由 resumePending 恢复 */

@@ -142,25 +142,16 @@ export class OssAuthProvider
       throw new InternalServerErrorException(I18nContext.current()?.t('error.user.create_failed') ?? '用户创建失败');
     }
 
-    // 注销冷静期自动恢复（仅自助注销）：恢复成功后继续登录，响应带 restored 标记供前端提示
-    let restored = false;
-    if (user.deletedAt) {
-      const recovered = await this.loginService.recoverIfPendingDeletion(user);
-      if (recovered) {
-        user = recovered;
-        restored = true;
-      }
-    }
+    // 登录资格（管理员入口隔离 → 注销冷静期恢复）统一走 LoginService.assertLoginEligible：
+    // 管理员门在前，保证已注销的 ADMIN 账号不会因一次手机码尝试被自动恢复
+    const { user: eligibleUser, restored } = await this.loginService.assertLoginEligible(
+      user,
+      '手机验证码登录'
+    );
+    user = eligibleUser;
 
     if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException(I18nContext.current()?.t('error.auth.account_deactivated') ?? '账号已被注销');
-    }
-
-    // 系统管理员禁止通过手机验证码等普通入口登录（专用入口见 AdminAuthController）：
-    // 统一防枚举文案，不暴露该账号是管理员
-    if (user.role?.name === 'ADMIN') {
-      this.logger.warn(`手机验证码登录拒绝 - 系统管理员账号: ${formattedPhone}`);
-      throw new UnauthorizedException(I18nContext.current()?.t('error.auth.invalid_credentials') ?? '账号或密码错误');
     }
 
     const tokens = await this.authTokenService.generateTokens(toPublicUser(user));
@@ -293,13 +284,11 @@ export class OssAuthProvider
         };
       }
     } else {
-      if (user.deletedAt) {
-        const recovered = await this.loginService.recoverIfPendingDeletion(user);
-        if (recovered) {
-          user = recovered;
-          restored = true;
-        }
-      }
+      // 登录资格（管理员入口隔离 → 注销冷静期恢复）统一走 LoginService.assertLoginEligible：
+      // 管理员门在前，保证已注销的 ADMIN 账号不会因一次微信尝试被自动恢复
+      const eligible = await this.loginService.assertLoginEligible(user, '微信登录');
+      user = eligible.user;
+      restored = eligible.restored;
 
       if (user.status === 'SUSPENDED') {
         throw new UnauthorizedException(I18nContext.current()?.t('error.auth_extra.account_suspended') ?? '账号已被暂停使用');
@@ -307,13 +296,6 @@ export class OssAuthProvider
         throw new UnauthorizedException(I18nContext.current()?.t('error.auth_extra.account_not_activated') ?? '账号尚未激活');
       } else if (user.status !== 'ACTIVE') {
         throw new UnauthorizedException(I18nContext.current()?.t('error.auth_extra.account_status_abnormal') ?? '账号状态异常');
-      }
-
-      // 系统管理员禁止通过微信等普通入口登录（专用入口见 AdminAuthController）：
-      // 统一防枚举文案，不暴露该账号是管理员
-      if (user.role?.name === 'ADMIN') {
-        this.logger.warn(`微信登录拒绝 - 系统管理员账号: ${user.username} (ID: ${user.id})`);
-        throw new UnauthorizedException(I18nContext.current()?.t('error.auth.invalid_credentials') ?? '账号或密码错误');
       }
 
       // 用户已上传本地头像时不覆盖；仅当 avatar 为空或仍为微信 URL 时同步并落盘
@@ -465,24 +447,14 @@ export class OssAuthProvider
       throw new BadRequestException(I18nContext.current()?.t('error.user.verification_failed_generic') ?? '验证失败');
     }
 
-    // 注销冷静期自动恢复（仅自助注销）：恢复成功后继续登录
-    if (user.deletedAt) {
-      const recovered = await this.loginService.recoverIfPendingDeletion(user);
-      if (recovered) {
-        user = recovered;
-        restored = true;
-      }
-    }
+    // 登录资格（管理员入口隔离 → 注销冷静期恢复）统一走 LoginService.assertLoginEligible：
+    // 管理员门在前，保证已注销的 ADMIN 账号不会因一次手机验证尝试被自动恢复
+    const eligible = await this.loginService.assertLoginEligible(user, '手机验证登录');
+    user = eligible.user;
+    restored = eligible.restored;
 
     if (user.status !== 'ACTIVE') {
       throw new UnauthorizedException(I18nContext.current()?.t('error.auth.account_deactivated') ?? '账号已被注销');
-    }
-
-    // 系统管理员禁止通过手机验证等普通入口登录（专用入口见 AdminAuthController）：
-    // 统一防枚举文案，不暴露该账号是管理员
-    if (user.role?.name === 'ADMIN') {
-      this.logger.warn(`手机验证登录拒绝 - 系统管理员账号: ${formattedPhone}`);
-      throw new UnauthorizedException(I18nContext.current()?.t('error.auth.invalid_credentials') ?? '账号或密码错误');
     }
 
     await this.userRepo.update(user.id, {

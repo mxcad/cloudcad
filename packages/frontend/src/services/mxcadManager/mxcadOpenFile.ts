@@ -5,7 +5,6 @@ import { projectControllerGetPersonalSpace } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import { calculateFileHash } from '../../utils/hashUtils';
 import { uploadMxCadFile } from '../../utils/mxcadUploadUtils';
-import { StoragePathConstants } from '@/constants/storage.constants';
 import { globalShowToast } from '@/utils/notificationEvents';
 import {
   showGlobalLoading,
@@ -93,49 +92,28 @@ async function openLocalMxwebFile(
   file: File,
   noCache?: boolean
 ): Promise<void> {
+  // blob URL 生命周期：引擎打开完成（成功/失败）后即不再读取，可安全 revoke。
+  // 放在 try 外声明，finally 无论成功/取消/失败都能回收，避免页面会话内泄漏。
+  let blobUrl: string | null = null;
   try {
     // loading 配对（show/finally hide）统一交给 openUnderLoading，本模块不再自配对
     await openUnderLoading({
       loadingMessage: t('正在计算文件哈希...'),
       prepare: async () => {
+        // hash 仍算：fileInfo.fileHash 是打开早退/身份判据的唯一来源，与存储方式无关
         const hash = await calculateFileHash(file);
-        const virtualUrl = `${StoragePathConstants.LOCAL_MXWEB_CACHE_PREFIX}/${hash}${StoragePathConstants.MXWEB_EXTENSION}`;
-        setLoadingMessage(t('正在检查本地缓存...'));
-        const db = await new Promise<IDBDatabase>((resolve, reject) => {
-          const request = indexedDB.open('emscripten_filesystem', 1);
-          request.onerror = () => reject(request.error);
-          request.onsuccess = () => resolve(request.result);
-        });
-        let needsWrite = true;
-        if (!noCache) {
-          const existingData = await new Promise<unknown>((resolve, reject) => {
-            const getRequest = db
-              .transaction(['FILES'], 'readonly')
-              .objectStore('FILES')
-              .get(virtualUrl);
-            getRequest.onerror = () => reject(getRequest.error);
-            getRequest.onsuccess = () => resolve(getRequest.result);
-          });
-          if (existingData) needsWrite = false;
-        }
-        if (needsWrite) {
-          setLoadingMessage(t('正在缓存文件...'));
-          const arrayBuffer = await file.arrayBuffer();
-          const transaction = db.transaction(['FILES'], 'readwrite');
-          const objectStore = transaction.objectStore('FILES');
-          await new Promise<void>((resolve, reject) => {
-            const putRequest = objectStore.put(arrayBuffer, virtualUrl);
-            putRequest.onerror = () => reject(putRequest.error);
-            putRequest.onsuccess = () => resolve();
-          });
-        }
-        db.close();
         setLoadingMessage(t('正在打开文件...'));
-        // 打开前复查（入口从未查过未保存，这是唯一检查点）：算哈希/写缓存期间
+        // 打开前复查（入口从未查过未保存，这是唯一检查点）：算哈希期间
         // 用户可能编辑了当前图纸。取消不是失败，用哨兵静默退出
         if (!(await guardBeforeOpen())) throw new OpenGuardCancelled();
+        // 直接给引擎 blob: URL：emscripten fetch 原生支持 blob:，引擎自己 fetch +
+        // 写临时文件 + readMxFile。前端不碰引擎私有的 emscripten_filesystem（IDBFS
+        // 后端）——此前直写 local/<md5>.mxweb 既与引擎自身 IDBFS 读写竞争（间歇
+        // readMxFile 失败），又因键无 ?t= 永远匹配不上 clearFileCacheFromIndexedDB
+        // 的清理规则而永久驻留、无容量上限。
+        blobUrl = URL.createObjectURL(file);
         return {
-          url: virtualUrl,
+          url: blobUrl,
           noCache,
           fileInfo: {
             fileId: '',
@@ -149,7 +127,7 @@ async function openLocalMxwebFile(
       },
     });
     // 打开成功后同步浏览器 URL（对齐 openDrawing 各分支的 emitFileOpened）。
-    // 本地 mxweb 只落在引擎本地虚拟盘 + IndexedDB，URL 无法重开；也不写 ?hash=：
+    // 本地 mxweb 只在内存 blob 中，URL 无法重开；也不写 ?hash=：
     // 刷新时 useCadFileLoader 会把 ?hash= 当成公开文件 access URL 去服务端取，
     // 取不到就开出一张空图。故与「新建图纸」一致——URL 清到无身份参数的 /cad-editor。
     emitFileOpened({
@@ -163,6 +141,8 @@ async function openLocalMxwebFile(
     const errorMessage =
       error instanceof Error ? error.message : t('打开文件失败');
     globalShowToast(errorMessage, 'error');
+  } finally {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
   }
 }
 
@@ -347,6 +327,24 @@ export async function handlePublicUpload(
   }
 }
 
+/**
+ * 本地文件打开统一分派：.mxweb 是源格式，引擎可直接读——走本地虚拟盘就地打开
+ * （不上传、不转换）；其余 CAD 文件走公开上传 + 转换流程。
+ * 文件选择器（handleOpenFileCommand）与拖拽打开（useFileDropToOpen）共用此分派，
+ * 防止两个入口路由漂移（此前拖拽 mxweb 到编辑器误走上传+转换路径）。
+ */
+export async function openLocalFile(
+  file: File,
+  noCache?: boolean
+): Promise<void> {
+  if (isMxwebFile(file.name)) {
+    // noCache 必须透传：.mxweb 不走上传/转换，缓存只在本地虚拟盘 + 引擎 fetch 两层
+    await openLocalMxwebFile(file, noCache);
+    return;
+  }
+  await handlePublicUpload(file, noCache);
+}
+
 export async function handleOpenFileCommand(noCache?: boolean) {
   try {
     const collabOk = await confirmExitCollaborationIfNeeded();
@@ -360,12 +358,6 @@ export async function handleOpenFileCommand(noCache?: boolean) {
       }
       const selectedFile = files[0];
       if (selectedFile) {
-        if (isMxwebFile(selectedFile.name)) {
-          // noCache 必须透传：.mxweb 不走上传/转换，缓存只在本地虚拟盘 + 引擎 fetch 两层
-          await openLocalMxwebFile(selectedFile, noCache);
-          picker.value = '';
-          return;
-        }
         if (!isCadFile(selectedFile.name)) {
           globalShowToast(
             t('不支持的文件格式，请选择 .dwg、.dxf、.mxweb'),
@@ -374,7 +366,7 @@ export async function handleOpenFileCommand(noCache?: boolean) {
           picker.value = '';
           return;
         }
-        await handlePublicUpload(selectedFile, noCache);
+        await openLocalFile(selectedFile, noCache);
         picker.value = '';
         return;
       }

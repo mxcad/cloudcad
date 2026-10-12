@@ -9,6 +9,8 @@
  * 5. removeJunkWithSudoFallback：删除成功回调 + 空列表无操作 + win32 被占用目录失败分支
  *    （sudo 分支需 root、非 sudo 失败分支 linux 下无法确定性触发，均不在此测）
  * 6. enableImplInEnvExample：裸设置行 # IMPL= → IMPL=1；文档/示例注释行不动；已激活幂等
+ * 7. resolveMobileAccessPath：缺文件/字段非字符串/JSON 损坏均回落 mxcad_mobile
+ * 8. findMissingKeyArtifacts：齐全/缺项/空目录/移动端合并目录/variant/private impl-mx
  *
  * 这些纯函数从 pack-offline.js（2390 行编排器）抽出，此前唯一测试方式是打完整包。
  */
@@ -21,6 +23,8 @@ const {
   findMissingLinuxComponents,
   checkScriptLineEndings,
   removeJunkWithSudoFallback,
+  resolveMobileAccessPath,
+  findMissingKeyArtifacts,
   enableImplInEnvExample,
 } = require('../../../scripts/pack-lib/pack-assertions');
 
@@ -254,6 +258,124 @@ describe('pack-assertions', () => {
       const r = enableImplInEnvExample('A=1\n# IMPL=   \nB=2\n');
       expect(r.changed).toBe(true);
       expect(r.content).toBe('A=1\nIMPL=1\nB=2\n');
+    });
+  });
+
+  describe('resolveMobileAccessPath', () => {
+    const iniDir = () => path.join(tmp, 'packages', 'frontend', 'public', 'ini');
+    const writeConfig = (value) => {
+      fs.mkdirSync(iniDir(), { recursive: true });
+      fs.writeFileSync(
+        path.join(iniDir(), 'myServerConfig.json'),
+        JSON.stringify({ mobileAccessPath: value })
+      );
+    };
+
+    it('配置文件不存在 → 默认 mxcad_mobile', () => {
+      expect(resolveMobileAccessPath(path.join(tmp, 'nope'))).toBe('mxcad_mobile');
+    });
+
+    it('读取 myServerConfig.json 的 mobileAccessPath', () => {
+      writeConfig('mx_mobile');
+      expect(resolveMobileAccessPath(tmp)).toBe('mx_mobile');
+    });
+
+    it('字段非字符串 → 默认值', () => {
+      writeConfig(42);
+      expect(resolveMobileAccessPath(tmp)).toBe('mxcad_mobile');
+    });
+
+    it('JSON 损坏 → 默认值（不抛错）', () => {
+      fs.mkdirSync(iniDir(), { recursive: true });
+      fs.writeFileSync(path.join(iniDir(), 'myServerConfig.json'), '{ not json');
+      expect(resolveMobileAccessPath(tmp)).toBe('mxcad_mobile');
+    });
+  });
+
+  describe('findMissingKeyArtifacts', () => {
+    // 建一个"非空目录"（含 1 个文件）
+    const fill = (rel) => {
+      const p = path.join(tmp, ...rel.split('/'));
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, 'x');
+    };
+    // 齐全（oss）：backend/db/contracts/frontend/conversion-service dist + 移动端合并目录
+    const fillAll = (mobile = 'mxcad_mobile') => {
+      fill('packages/backend/dist/a.js');
+      fill('packages/db/dist/a.js');
+      fill('packages/contracts/dist/a.js');
+      fill('packages/frontend/dist/index.html');
+      fill('packages/conversion-service/dist/server.js');
+      fill('packages/frontend/dist/' + mobile + '/index.html');
+    };
+    // 除移动端合并目录外的 5 项
+    const fillNonMobile = () => {
+      fill('packages/backend/dist/a.js');
+      fill('packages/db/dist/a.js');
+      fill('packages/contracts/dist/a.js');
+      fill('packages/frontend/dist/index.html');
+      fill('packages/conversion-service/dist/server.js');
+    };
+
+    it('齐全 → 空', () => {
+      fillAll();
+      expect(findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile')).toHaveLength(0);
+    });
+
+    it('缺 frontend/dist → 列出（正斜杠相对路径，移动端合并目录随之缺失）', () => {
+      // 移动端合并目录位于 frontend/dist 之内，故只填其余 4 项、不建 frontend/dist
+      fill('packages/backend/dist/a.js');
+      fill('packages/db/dist/a.js');
+      fill('packages/contracts/dist/a.js');
+      fill('packages/conversion-service/dist/server.js');
+      const missing = findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile');
+      expect(missing).toContain('packages/frontend/dist');
+      expect(missing).toContain('packages/frontend/dist/mxcad_mobile');
+    });
+
+    it('目录存在但为空也算缺失（vite 半途失败会留空 dist）', () => {
+      fill('packages/db/dist/a.js');
+      fill('packages/contracts/dist/a.js');
+      fill('packages/frontend/dist/index.html');
+      fill('packages/frontend/dist/mxcad_mobile/index.html');
+      fill('packages/conversion-service/dist/server.js');
+      // backend/dist 存在但完全为空 → 仍应判定为缺失
+      fs.mkdirSync(path.join(tmp, 'packages', 'backend', 'dist'), { recursive: true });
+      const missing = findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile');
+      expect(missing).toContain('packages/backend/dist');
+    });
+
+    it('缺移动端合并目录 → 列出', () => {
+      fillNonMobile();
+      const missing = findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile');
+      expect(missing).toContain('packages/frontend/dist/mxcad_mobile');
+    });
+
+    it('mobileAccessPath 生效（自定义子目录名）', () => {
+      fillAll('mx_mobile');
+      expect(findMissingKeyArtifacts(tmp, 'oss', 'mx_mobile')).toHaveLength(0);
+      // 同一目录按 mxcad_mobile 判定即为缺失
+      expect(findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile')).toContain(
+        'packages/frontend/dist/mxcad_mobile'
+      );
+    });
+
+    it('private 变体额外检查 impl-mx/dist', () => {
+      fillAll();
+      expect(findMissingKeyArtifacts(tmp, 'private', 'mxcad_mobile')).toEqual([
+        'packages/impl-mx/dist',
+      ]);
+    });
+
+    it('oss 变体不检查 impl-mx/dist（存在与否都不影响）', () => {
+      fillAll();
+      fill('packages/impl-mx/dist/a.js');
+      expect(findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile')).toHaveLength(0);
+    });
+
+    it('全部缺失 → 6 项（oss）/ 7 项（private）', () => {
+      expect(findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile')).toHaveLength(6);
+      expect(findMissingKeyArtifacts(tmp, 'private', 'mxcad_mobile')).toHaveLength(7);
     });
   });
 });

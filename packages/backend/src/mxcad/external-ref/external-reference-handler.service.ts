@@ -7,7 +7,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { DatabaseService } from '../../database/database.service';
-import { setContentDisposition } from '../../common/utils/content-disposition';
+import { streamFileToResponse } from '../../common/utils/stream-file';
+import { NodeUtils } from '../../common/utils/node-utils';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
 import * as path from 'path';
@@ -223,49 +224,24 @@ export class ExternalReferenceHandler {
     fileName: string,
     res: Response
   ): Promise<void> {
-    // 获取文件信息
-    const fileStats = fs.statSync(filePath);
     const ext = path.extname(fileName).toLowerCase();
-    const contentType = this.getContentType(ext);
-
-    // 设置响应头
-    res.setHeader('Content-Type', contentType);
-    setContentDisposition(res, fileName, 'inline');
-    res.setHeader('Content-Length', fileStats.size);
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // 缓存 1 小时
-    res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
-
-    // 创建文件流并返回
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-
-    // 监听流错误
-    fileStream.on('error', (error: Error) => {
-      this.logger.error(`文件流错误：${error.message}`, error);
-      if (!res.headersSent) {
-        res.status(500).json({ message: (I18nContext.current()?.t('error.file_extra_v2.read_failed') ?? '文件读取失败') });
+    // MIME 单一事实源走 NodeUtils
+    const contentType = NodeUtils.getMimeType(ext);
+    // 传输编排回归 streamFileToResponse 唯一出口：缓存 1 小时 + 跨域 + inline 处置
+    await streamFileToResponse(
+      res,
+      filePath,
+      fileName,
+      contentType,
+      undefined,
+      {
+        cacheControl: 'public, max-age=3600',
+        allowOrigin: '*',
+        disposition: 'inline',
+        errorMessage:
+          I18nContext.current()?.t('error.file_extra_v2.read_failed') ??
+          '文件读取失败',
       }
-    });
-  }
-
-  /**
-   * 获取文件 Content-Type
-   *
-   * @param ext 文件扩展名
-   * @private
-   */
-  private getContentType(ext: string): string {
-    const contentTypes: Record<string, string> = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.bmp': 'image/bmp',
-      '.dwg': 'application/acad',
-      '.dxf': 'application/dxf',
-      '.mxweb': 'application/octet-stream',
-    };
-    return contentTypes[ext] || 'application/octet-stream';
+    );
   }
 }

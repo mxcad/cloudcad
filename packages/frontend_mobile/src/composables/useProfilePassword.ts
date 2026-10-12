@@ -14,7 +14,7 @@ import {
   usersControllerChangePassword,
 } from '@cloudcad/api-sdk/sdk.gen';
 import { showDialog, showSuccessToast } from 'vant';
-import { scorePasswordStrength } from '@cloudcad/platform';
+import { scorePasswordStrength, validatePasswordPolicy } from '@cloudcad/platform';
 import { t } from '@/languages';
 import { applyAuthResponse, clearSession } from '@/utils/authSession';
 import { unwrap, errMsg } from '@/utils/apiError';
@@ -61,8 +61,8 @@ export function useProfilePassword(
   );
   const newPwdPlaceholder = computed(() =>
     isSettingPassword.value
-      ? t('至少8位，包含大小写字母和数字')
-      : t('请输入新密码（至少 6 位）')
+      ? t('至少10位，包含大小写字母、数字、特殊字符中至少三类')
+      : t('请输入新密码（至少 10 位）')
   );
 
   // 强度打分（D-06）：评分收敛到 @cloudcad/platform 的 scorePasswordStrength
@@ -86,23 +86,31 @@ export function useProfilePassword(
     () => `${(pwdStrength.value.score / 4) * 100}%`
   );
 
-  // 建议清单里已完成项打勾（D-06）：让用户看到差什么，而不是只看到颜色
-  const pwdSuggestions = computed(() => [
-    { text: t('密码长度至少 8 个字符'), ok: newPassword.value.length >= 8 },
-    {
-      text: t('包含大小写字母和数字'),
-      ok:
-        /[a-z]/.test(newPassword.value) &&
-        /[A-Z]/.test(newPassword.value) &&
+  // 复杂度类别数（小写/大写/数字/特殊字符）：建议清单独立展示，与 validatePasswordPolicy 同口径
+  const pwdCategoryCount = computed(
+    () =>
+      [
+        /[a-z]/.test(newPassword.value),
+        /[A-Z]/.test(newPassword.value),
         /\d/.test(newPassword.value),
+        /[^a-zA-Z0-9]/.test(newPassword.value),
+      ].filter(Boolean).length
+  );
+
+  // 建议清单里已完成项打勾（D-06）：让用户看到差什么，而不是只看到颜色
+  // 口径与后端 assertPasswordPolicy 对齐（长度≥10 + 复杂度≥3 类）
+  const pwdSuggestions = computed(() => [
+    { text: t('密码长度至少 10 个字符'), ok: newPassword.value.length >= 10 },
+    {
+      text: t('包含大小写字母、数字、特殊字符中至少三类'),
+      ok: pwdCategoryCount.value >= 3,
     },
-    { text: t('包含特殊字符'), ok: /[^a-zA-Z0-9]/.test(newPassword.value) },
     { text: t('不要在多个网站使用相同的密码'), ok: false },
   ]);
 
   const canSubmitPwd = computed(
     () =>
-      newPassword.value.length >= 6 &&
+      validatePasswordPolicy(newPassword.value).valid &&
       newPassword.value === confirmPassword.value &&
       (!isSettingPassword.value ? oldPassword.value.length > 0 : true)
   );

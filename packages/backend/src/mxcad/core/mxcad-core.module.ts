@@ -50,6 +50,7 @@ import { MxcadUploadController } from '../upload/mxcad-upload.controller';
 import { MxcadFileHandlerService } from './mxcad-file-handler.service';
 import { MxcadVersionHistoryService } from './mxcad-version-history.service';
 import { MxCadRequestContextBuilder } from './mxcad-request-context-builder';
+import { MxCadRequestAuthService } from './mxcad-request-auth.service';
 import { buildMulterChunkDir, buildMulterFilename } from './multer-path.utils';
 
 /**
@@ -137,12 +138,14 @@ import { buildMulterChunkDir, buildMulterFilename } from './multer-path.utils';
     MxcadVersionHistoryService,
     MxcadFileAccessService,
     MxCadRequestContextBuilder,
+    MxCadRequestAuthService,
     { provide: MXCAD_CONVERSION_SERVICE, useExisting: FileConversionService },
     { provide: MXCAD_SAVE_SERVICE, useExisting: MxcadSaveService },
   ],
   exports: [
     MxcadFileHandlerService,
     MxCadRequestContextBuilder,
+    MxCadRequestAuthService,
     MXCAD_CONVERSION_SERVICE,
     MXCAD_SAVE_SERVICE,
   ],

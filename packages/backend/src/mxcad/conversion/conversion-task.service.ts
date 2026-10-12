@@ -118,7 +118,7 @@ export class UnifiedConversionService {
     status?: string;
     reason?: string;
   }> {
-    if (!this.executor.cancelTask) {
+    if (!this.executor.capabilities.cancel) {
       return {
         ok: false,
         reason:
@@ -179,6 +179,37 @@ export class UnifiedConversionService {
     // priority 2：用户显式请求重跑，低于打开命脉 1、高于后台 3。
     const newTaskId = await this.asyncConversionService.convertNode(node.id, 2);
     return { taskId: newTaskId, nodeId: node.id };
+  }
+
+  /**
+   * 重新转换（#4c）：对已 COMPLETED 的 CAD 节点，从**原始源文件**重跑引擎（面板
+   * 「重新转换」按钮）。与 retryTask 的区别：retryTask 仅接受 FAILED 节点（失败重试），
+   * reconvertNode 接受 COMPLETED 节点（主动重转，如产物损坏 / 需刷新）。归属校验同
+   * retryTask（可访问范围由 buildAccessFilter 约束）。实际重转委托
+   * AsyncConversionService.reconvertNode（定位原始源 + 重跑引擎 + 覆盖产物）。
+   */
+  async reconvertNode(nodeId: string, userId: string): Promise<string> {
+    const node = await this.prisma.fileSystemNode.findFirst({
+      where: {
+        id: nodeId,
+        OR: this.buildAccessFilter(userId),
+      },
+      select: { id: true, fileStatus: true, deletedAt: true },
+    });
+    if (!node) {
+      throw new NotFoundException(
+        I18nContext.current()?.t(
+          'error.conversion_task.not_found_or_no_access'
+        ) ?? '转换任务不存在或您没有访问权限'
+      );
+    }
+    if (node.deletedAt) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.conversion_task.node_deleted') ??
+          '文件已删除，无法重新转换'
+      );
+    }
+    return this.asyncConversionService.reconvertNode(nodeId);
   }
 
   /**

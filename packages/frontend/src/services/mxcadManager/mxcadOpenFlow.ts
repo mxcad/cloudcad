@@ -4,7 +4,7 @@ import { t } from '@/languages';
 import { read } from '@/lib/browserStorage';
 import { ensureFreshAuthCookie } from '@/config/clientSetup';
 import { FILE_OPEN_RETRY_CONFIG } from './mxcadTypes';
-import type { OpenFilePayload } from './mxcadTypes';
+import type { OpenFilePayload, CurrentFileInfo } from './mxcadTypes';
 import { getCurrentFileUrl, setCurrentFileUrl } from '../drawingSession';
 import { getFileInfo, restoreEditorTitle } from './mxcadHelpers';
 import type { MxCADInstanceManager } from './mxcadInstanceManager';
@@ -46,6 +46,117 @@ export class MxCADOpenFlow {
     await this.openFile(payload);
   }
 
+  /**
+   * 打开/重载共用的引擎调用核心：取 MxDrawObject → 挂 openFileComplete 监听（仅结果码 0
+   * 判成功，失败由同批 retCall 或 60s 超时兜底）→ 按 FILE_OPEN_RETRY_CONFIG 重试发送
+   * __openWebFile__（mxdrawObject 未就绪时重试）。
+   *
+   * 本方法只负责「发命令 + 监听 + 超时」，不做 URL/shareToken/pending 等会话副作用——
+   * 那些由调用方在 onSuccess/onFail 里收尾：openFile 回滚 URL/shareToken + 恢复标题 +
+   * reject；reload 恢复标题 + resolve(false)。openFile / reloadCurrentFile 两个孪生入口
+   * 共用此核心，避免 mxdraw 获取 / 超时 / 监听 / 重试逻辑双份漂移。
+   */
+  private sendOpenWebFile(opts: {
+    url: string;
+    fetchAttributes: number;
+    onSuccess: () => void;
+    onFail: (error: Error) => void;
+  }): void {
+    // 先取 MxDrawObject（openFileComplete 结果码的唯一来源）：cleanup/fail 闭包引用它，
+    // 必须在其声明前完成初始化——若获取表达式抛错且 mxdraw 声明在闭包之后，会触发 TDZ
+    // ReferenceError，掩盖真实错误并跳过恢复逻辑
+    const mxdraw = (() => {
+      try {
+        return this.manager.getCurrentView()?.mxcad?.getMxDrawObject?.() ?? null;
+      } catch {
+        return null;
+      }
+    })();
+    const timeout = setTimeout(() => {
+      fail(new Error(t('文件打开超时')));
+    }, 60000);
+    // MxDrawObject 层 openFileComplete 携带打开结果码（0=成功，非 0=失败），
+    // McObject 层同名事件转发时丢失该参数，无法区分成败。若监听 McObject 层并
+    // 无条件 resolve，失败打开会被当作成功，调用方继续记录当前文件状态
+    // （emitFileOpened → patchSessionFlags / title）。故仅在结果码为 0 时 onSuccess，
+    // 失败由同一次派发中稍后触发的 retCall（iRet!==0）走 onFail 统一收尾；
+    // 403 等不触发 openFileComplete 的失败由上方 60s 超时兜底。
+    const onOpen = (iResult: number) => {
+      if (iResult !== 0) return;
+      cleanup();
+      opts.onSuccess();
+    };
+    const cleanup = () => {
+      clearTimeout(timeout);
+      mxdraw?.removeEventFuction('openFileComplete', onOpen);
+    };
+    const fail = (error: Error) => {
+      cleanup();
+      opts.onFail(error);
+    };
+    if (!mxdraw) {
+      fail(new Error(t('mxcad 对象不可用')));
+      return;
+    }
+    try {
+      mxdraw.addEvent('openFileComplete', onOpen);
+    } catch (error) {
+      fail(error as Error);
+      return;
+    }
+    const doOpen = async () => {
+      try {
+        const token = read('accessToken');
+        // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
+        // 后端 authorizeFilesDataAccess 支持 query + header 双路检测
+        const shareToken = extractShareTokenFromUrl(opts.url);
+        const baseHeaders: Record<string, string> = {};
+        if (token) baseHeaders.Authorization = `Bearer ${token}`;
+        if (shareToken) baseHeaders['x-share-token'] = shareToken;
+        const hasHeaders = Object.keys(baseHeaders).length > 0;
+        for (
+          let attempt = 0;
+          attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
+          attempt++
+        ) {
+          try {
+            // openWebFile 的 retCall（第 2 参）：iRet !== 0 即打开失败
+            // （403 等失败不会触发 openFileComplete，只能靠 retCall 快速感知，
+            //  否则要等 60s 超时兜底）
+            MxFun.sendStringToExecute('__openWebFile__', [
+              opts.url,
+              (code: number) => {
+                if (code !== 0) {
+                  fail(new Error(t('文件打开失败')));
+                }
+              },
+              true,
+              hasHeaders ? { requestHeaders: baseHeaders } : undefined,
+              opts.fetchAttributes,
+            ]);
+            return;
+          } catch (error) {
+            const err = error as Error;
+            if (
+              err.message?.includes('mxdrawObject') &&
+              attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1
+            ) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
+              );
+              continue;
+            }
+            fail(error as Error);
+            return;
+          }
+        }
+      } catch {
+        fail(new Error(t('文件打开失败')));
+      }
+    };
+    void doOpen();
+  }
+
   async openFile(payload: OpenFilePayload): Promise<void> {
     if (!this.manager.isReady()) {
       await this.waitForViewReady(payload);
@@ -71,13 +182,18 @@ export class MxCADOpenFlow {
     // 打开失败时引擎 currentFileName 同样会被置为 URL 尾部内部文件名——若仅按文件名匹配，
     // 失败后重试同一图纸会错误早退（跳过真正打开），调用方随后 emitFileOpened 记录失败状态
     // （正是「失败不得记录当前文件状态」所禁止的）。成功打开的会话才被 openSession 记录，
-    // 因此用 store 会话 fileId === 本次 fileId 作为早退的第二条件。
+    // 因此用 store 会话身份 === 本次身份 作为早退的第二条件。
+    // 身份判据：云端文件用 fileId（唯一节点 ID）；本地文件 fileId 恒为 ''，
+    // 回退到 fileHash（原始文件 MD5）区分——否则失败后重试同一本地文件会因
+    // fileId 均为 '' 而错误早退（4660e0e 串行队列引入的下游缺陷）。
+    const fileIdentity = (info: CurrentFileInfo | null | undefined): string =>
+      info ? info.fileId || info.fileHash || '' : '';
     if (
       currentFileName &&
       targetFileName &&
       currentFileName === targetFileName &&
       payload.fileInfo &&
-      getFileInfo()?.fileId === payload.fileInfo.fileId
+      fileIdentity(getFileInfo()) === fileIdentity(payload.fileInfo)
     ) {
       // 清理刚设置的 pending（早退不经 openFileComplete 消费，避免残留被后续事件消费）
       this.manager.setPendingOpenInfo(null);
@@ -85,120 +201,35 @@ export class MxCADOpenFlow {
     }
     const mxcad = this.manager.getMxcadObject();
     if (!mxcad) throw new Error(t('mxcad 对象不可用'));
+    // 打开失败（含游客 IP 转换限制 403 等）时恢复上一个图纸状态：
+    // 回滚引擎侧当前文件 URL 和 shareToken，并清理待生效的文件信息，避免影响后续打开/重载
+    const restorePreviousFile = () => {
+      const pending = this.manager.getPendingOpenInfo();
+      if (pending?.fileInfo.fileId === payload.fileInfo?.fileId) {
+        this.manager.setPendingOpenInfo(null);
+      }
+      setCurrentFileUrl(previousUrl);
+      // 恢复之前的 shareToken
+      setCurrentShareToken(extractShareTokenFromUrl(previousUrl));
+    };
     return new Promise<void>((resolve, reject) => {
-      // 先取 MxDrawObject（openFileComplete 结果码的唯一来源）：cleanup/fail 闭包引用它，
-      // 必须在其声明前完成初始化——若获取表达式抛错且 mxdraw 声明在闭包之后，会触发 TDZ
-      // ReferenceError，掩盖真实错误并跳过恢复逻辑
-      const mxdraw = (() => {
-        try {
-          return this.manager.getCurrentView()?.mxcad?.getMxDrawObject?.() ?? null;
-        } catch {
-          return null;
-        }
-      })();
-      // 打开失败（含游客 IP 转换限制 403 等）时恢复上一个图纸状态：
-      // 回滚引擎侧当前文件 URL 和 shareToken，并清理待生效的文件信息，避免影响后续打开/重载
-      const restorePreviousFile = () => {
-        const pending = this.manager.getPendingOpenInfo();
-        if (pending?.fileInfo.fileId === payload.fileInfo?.fileId) {
-          this.manager.setPendingOpenInfo(null);
-        }
-        setCurrentFileUrl(previousUrl);
-        // 恢复之前的 shareToken
-        setCurrentShareToken(extractShareTokenFromUrl(previousUrl));
-      };
-      const timeout = setTimeout(() => {
-        fail(new Error(t('文件打开超时')));
-      }, 60000);
-      // MxDrawObject 层 openFileComplete 携带打开结果码（0=成功，非 0=失败），
-      // McObject 层同名事件转发时丢失该参数，无法区分成败。若监听 McObject 层并
-      // 无条件 resolve，失败打开会被当作成功，调用方继续记录当前文件状态
-      // （emitFileOpened → patchSessionFlags / title）。故仅在结果码为 0 时 resolve，
-      // 失败由同一次派发中稍后触发的 retCall（iRet!==0）走 fail 统一收尾；
-      // 403 等不触发 openFileComplete 的失败由上方 60s 超时兜底。
-      const onOpen = (iResult: number) => {
-        if (iResult !== 0) return;
-        cleanup();
-        resolve();
-      };
-      const cleanup = () => {
-        clearTimeout(timeout);
-        mxdraw?.removeEventFuction('openFileComplete', onOpen);
-      };
-      const fail = (error: Error) => {
-        cleanup();
-        restorePreviousFile();
-        // 打开失败时引擎会把 currentFileName 置为 URL 尾部的 mxweb 内部访问文件名，
-        // mxcad-app 标题栏随之显示内部文件名；这里修正为图纸名：
-        // 已有当前文件（切换失败）恢复原标题，首次进入失败则显示目标图纸名
-        restoreEditorTitle(payload.fileInfo?.name);
-        reject(error);
-      };
-      if (!mxdraw) {
-        fail(new Error(t('mxcad 对象不可用')));
-        return;
-      }
-      try {
-        mxdraw.addEvent('openFileComplete', onOpen);
-      } catch (error) {
-        fail(error as Error);
-        return;
-      }
-      if (!mxcad) {
-        fail(new Error(t('mxcad 对象不可用')));
-        return;
-      }
-      const doOpen = async () => {
-        const token = read('accessToken');
-        // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
-        // 后端 authorizeFilesDataAccess 支持 query + header 双路检测
-        const shareToken = extractShareTokenFromUrl(payload.url);
-        const baseHeaders: Record<string, string> = {};
-        if (token) baseHeaders.Authorization = `Bearer ${token}`;
-        if (shareToken) baseHeaders['x-share-token'] = shareToken;
-        const hasHeaders = Object.keys(baseHeaders).length > 0;
-        for (
-          let attempt = 0;
-          attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
-          attempt++
-        ) {
-          try {
-            // openWebFile 的 retCall（第 2 参）：iRet !== 0 即打开失败
-            // （403 等失败不会触发 openFileComplete，只能靠 retCall 快速感知，
-            //  否则要等 60s 超时兜底）
-            MxFun.sendStringToExecute('__openWebFile__', [
-              payload.url,
-              (code: number) => {
-                if (code !== 0) {
-                  fail(new Error(t('文件打开失败')));
-                }
-              },
-              true,
-              hasHeaders ? { requestHeaders: baseHeaders } : undefined,
-              payload.noCache
-                ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY |
-                  FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE |
-                  FetchAttributes.EMSCRIPTEN_FETCH_REPLACE
-                : 0,
-            ]);
-            break;
-          } catch (error) {
-            const err = error as Error;
-            if (
-              err.message?.includes('mxdrawObject') &&
-              attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1
-            ) {
-              await new Promise((resolve) =>
-                setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
-              );
-              continue;
-            }
-            fail(error as Error);
-            return;
-          }
-        }
-      };
-      void doOpen();
+      this.sendOpenWebFile({
+        url: payload.url,
+        fetchAttributes: payload.noCache
+          ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY |
+            FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE |
+            FetchAttributes.EMSCRIPTEN_FETCH_REPLACE
+          : 0,
+        onSuccess: () => resolve(),
+        onFail: (error) => {
+          restorePreviousFile();
+          // 打开失败时引擎会把 currentFileName 置为 URL 尾部的 mxweb 内部访问文件名，
+          // mxcad-app 标题栏随之显示内部文件名；这里修正为图纸名：
+          // 已有当前文件（切换失败）恢复原标题，首次进入失败则显示目标图纸名
+          restoreEditorTitle(payload.fileInfo?.name);
+          reject(error);
+        },
+      });
     });
   }
 
@@ -208,94 +239,16 @@ export class MxCADOpenFlow {
     // 重载会重新加载外部参照（引擎内部请求只带 cookie），先确保 cookie 新鲜
     await ensureFreshAuthCookie();
     return new Promise<boolean>((resolve) => {
-      // 先取 MxDrawObject（同 openFile：cleanup 闭包引用它，须在闭包前初始化，避免 TDZ）
-      const mxdraw = (() => {
-        try {
-          return this.manager.getCurrentView()?.mxcad?.getMxDrawObject?.() ?? null;
-        } catch {
-          return null;
-        }
-      })();
-      // 重载失败统一收尾：清理监听 + 恢复标题（引擎会把标题改成 mxweb 内部访问文件名）
-      const failReload = () => {
-        cleanup();
-        // reload 针对当前已打开文件，失败时恢复为当前文件标题
-        restoreEditorTitle();
-        resolve(false);
-      };
-      const timeout = setTimeout(() => {
-        failReload();
-      }, 60000);
-      // 同 openFile：仅结果码 0（成功）才 resolve(true)，失败由 retCall 或超时 resolve(false)
-      const onOpen = (iResult: number) => {
-        if (iResult !== 0) return;
-        cleanup();
-        resolve(true);
-      };
-      const cleanup = () => {
-        clearTimeout(timeout);
-        mxdraw?.removeEventFuction('openFileComplete', onOpen);
-      };
-      if (!mxdraw) {
-        failReload();
-        return;
-      }
-      try {
-        mxdraw.addEvent('openFileComplete', onOpen);
-      } catch {
-        failReload();
-        return;
-      }
-      const doOpen = async () => {
-        try {
-          const token = read('accessToken');
-          const url = currentMxwebUrl;
-          // 从 URL 提取 shareToken（共享图纸场景），添加到请求头供引擎内部请求使用
-          const shareToken = extractShareTokenFromUrl(url);
-          const baseHeaders: Record<string, string> = {};
-          if (token) baseHeaders.Authorization = `Bearer ${token}`;
-          if (shareToken) baseHeaders['x-share-token'] = shareToken;
-          const hasHeaders = Object.keys(baseHeaders).length > 0;
-          for (
-            let attempt = 0;
-            attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES;
-            attempt++
-          ) {
-            try {
-              // retCall（第 2 参）：iRet !== 0 即打开失败，立即返回 false
-              MxFun.sendStringToExecute('__openWebFile__', [
-                url,
-                (code: number) => {
-                  if (code !== 0) {
-                    failReload();
-                  }
-                },
-                true,
-                hasHeaders ? { requestHeaders: baseHeaders } : undefined,
-                0,
-              ]);
-              return;
-            } catch (error) {
-              const err = error as Error;
-              if (
-                err.message?.includes('mxdrawObject') &&
-                attempt < FILE_OPEN_RETRY_CONFIG.MAX_RETRIES - 1
-              ) {
-                await new Promise((resolve) =>
-                  setTimeout(resolve, FILE_OPEN_RETRY_CONFIG.RETRY_DELAY_MS)
-                );
-                continue;
-              }
-              failReload();
-              return;
-            }
-          }
-          failReload();
-        } catch {
-          failReload();
-        }
-      };
-      doOpen();
+      this.sendOpenWebFile({
+        url: currentMxwebUrl,
+        fetchAttributes: 0,
+        onSuccess: () => resolve(true),
+        onFail: () => {
+          // reload 针对当前已打开文件，失败时恢复为当前文件标题
+          restoreEditorTitle();
+          resolve(false);
+        },
+      });
     });
   }
 }

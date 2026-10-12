@@ -45,6 +45,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
+import { normalizeMxcadPath } from '../common/utils/mxcad-path';
 import { Public } from '../auth/decorators/public.decorator';
 import { CreateFolderDto } from '../file-system/dto/create-folder.dto';
 import { UpdateNodeDto } from '../file-system/dto/update-node.dto';
@@ -137,8 +138,7 @@ export class LibraryController {
   @ApiOperation({ summary: 'Serve drawing library file (unified entry)' })
   @ApiResponse({ status: 200, description: 'Success', content: { 'application/octet-stream': {} } })
   async getDrawingFile(@Param('path') filePath: string[] | string, @Res() res: Response) {
-    // 兼容 Express 通配符参数的两种形态：数组或内部 toString() 成的逗号字符串
-    const filename = (Array.isArray(filePath) ? filePath.join('/') : filePath).replace(/,/g, '/');
+    const filename = normalizeMxcadPath(filePath);
     return this.libraryService.serveFile(filename, res);
   }
 
@@ -384,8 +384,7 @@ export class LibraryController {
     @Res() res: Response,
     @Request() req: AuthenticatedRequest
   ) {
-    // 兼容 Express 通配符参数的两种形态：数组或内部 toString() 成的逗号字符串
-    const filename = (Array.isArray(filePath) ? filePath.join('/') : filePath).replace(/,/g, '/');
+    const filename = normalizeMxcadPath(filePath);
     const referer = (req as unknown as IncomingMessage).headers?.referer || 'N/A';
     this.logger.log(`[Block file access] path: ${filename}, from: ${referer}`);
     return this.libraryService.serveFile(filename, res);

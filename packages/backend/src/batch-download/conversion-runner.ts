@@ -172,10 +172,7 @@ export class ConversionRunner {
    * 委托能力）。批量下载编排层据此选择批量路径；本类据此选择委托或逐项进程内。
    */
   hasBatchDelegate(): boolean {
-    return (
-      typeof this.executor?.submitBatch === 'function' &&
-      typeof this.executor?.waitBatch === 'function'
-    );
+    return this.executor?.capabilities.batch === true;
   }
 
   private async getConversionService(): Promise<IMxcadConversionService> {

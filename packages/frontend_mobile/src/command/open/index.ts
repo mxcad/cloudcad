@@ -5,7 +5,7 @@ import { cachedApiUrl } from '@/utils/apiConfig';
 import { publicFileAccessPath } from '@/utils/mxwebUrl';
 import { waitPublicConversion } from '@/services/conversionStream';
 import { checkPublicFileExternalRefs } from '@/composables/useFileLoader';
-import { useEditorState } from '@/composables/useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { useOpenGuard } from '@/composables/useOpenGuard';
 import { addCommand } from '@/plugins/mxcad/command';
 import { FetchAttributes } from 'mxcad';
@@ -36,7 +36,7 @@ const NO_CACHE_FETCH_ATTRIBUTES =
   FetchAttributes.EMSCRIPTEN_FETCH_REPLACE;
 
 function applyOpenSuccess(param: FilePickerResult): void {
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
   editorState.setIsActive(true);
   editorState.setFileName(param.name);
   editorState.setIsPublicFile(true);
@@ -45,7 +45,7 @@ function applyOpenSuccess(param: FilePickerResult): void {
 
 /** 源格式：blob URL 就地打开，无服务端往返 */
 async function openLocalMxweb(param: FilePickerResult): Promise<boolean> {
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
   editorState.resetFileState();
   editorState.setProgressStage('opening');
 
@@ -68,7 +68,7 @@ async function openConvertedCad(
   param: FilePickerResult,
   noCache: boolean
 ): Promise<boolean> {
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
   editorState.resetFileState();
   editorState.setProgressStage('converting');
 
@@ -101,7 +101,7 @@ async function openPicked(
   param: FilePickerResult,
   noCache: boolean
 ): Promise<boolean> {
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
   try {
     return param.type === 'mxweb'
       ? await openLocalMxweb(param)

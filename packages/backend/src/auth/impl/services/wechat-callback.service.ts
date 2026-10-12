@@ -5,7 +5,10 @@ import { Inject } from '@nestjs/common';
 import { WechatService } from './wechat.service';
 import { WechatTransactionService } from './wechat-transaction.service';
 import { IAUTH_FACADE } from '@cloudcad/contracts';
-import type { IAuthFacade, IWechatCallbackService, WechatAuthUrlResponseDto, WechatPollTransactionResponseDto } from '@cloudcad/contracts';
+import type { IWechatCallbackService, WechatAuthUrlResponseDto, WechatPollTransactionResponseDto } from '@cloudcad/contracts';
+import type { IAuthFacade } from '../../interfaces/auth-facade.interface';
+import { getClientIp } from '../../../common/utils/client-ip';
+import { SessionCookieWriter } from '../../session-cookie.writer';
 
 @Injectable()
 export class WechatCallbackService implements IWechatCallbackService {
@@ -16,6 +19,7 @@ export class WechatCallbackService implements IWechatCallbackService {
     private wechatTransactionService: WechatTransactionService,
     @Inject(IAUTH_FACADE) private readonly authService: IAuthFacade,
     private configService: ConfigService,
+    private sessionCookieWriter: SessionCookieWriter,
   ) {}
 
   async getAuthUrl(
@@ -168,27 +172,7 @@ export class WechatCallbackService implements IWechatCallbackService {
               : 'need_register';
 
       if (result.accessToken) {
-        const cookieSecure =
-          this.configService.get<boolean | null>('session.cookieSecure');
-        const maxAge = 60 * 60 * 1000;
-        res.cookie('auth_token', result.accessToken, {
-          httpOnly: true,
-          // secure 属性：显式配置优先，否则按请求协议自适应（http 不带 Secure）
-          secure: cookieSecure ?? req.secure,
-          sameSite: 'lax',
-          maxAge,
-          path: '/',
-        });
-        if (result.refreshToken) {
-          const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-          res.cookie('refresh_token', result.refreshToken, {
-            httpOnly: true,
-            secure: cookieSecure ?? req.secure,
-            sameSite: 'lax',
-            maxAge: REFRESH_MAX_AGE,
-            path: '/api/v1/auth/refresh',
-          });
-        }
+        this.sessionCookieWriter.setAuthCookies(req, res, result);
       }
 
       if (txn) {
@@ -258,10 +242,7 @@ export class WechatCallbackService implements IWechatCallbackService {
       return { status: 'error', error: '缺少事务 ID' };
     }
 
-    const clientIp =
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      (req.headers['x-real-ip'] as string) ||
-      'unknown';
+    const clientIp = getClientIp(req);
     const rateLimitKey = `wechat:poll:ratelimit:${clientIp}`;
     const currentCount =
       await this.wechatTransactionService.rateLimitCheck(rateLimitKey);

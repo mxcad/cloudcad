@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { nodeControllerGetNode, projectControllerGetProjects } from '@/api-sdk';
-import { parseWorkData, deduplicateWorkUsers } from '../types/collaboration';
+import {
+  encodeUserData,
+  parseWorkData,
+  deduplicateWorkUsers,
+} from '../types/collaboration';
 import type { Work, CollaborateWorkDataV3 } from '../types/collaboration';
 import { getCooperate } from '../services/mxcadManager';
 import {
@@ -54,17 +58,89 @@ export interface CollabWorksState {
   fetchWorks: (showLoading?: boolean, force?: boolean) => Promise<void>;
 }
 
+/** 两个 work 列表是否逐项等价（2s 轮询下避免内容未变也整体重渲染） */
+function sameWorks(a: Work[], b: Work[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.work_id !== y.work_id ||
+      x.work_data !== y.work_data ||
+      x.real_user_id !== y.real_user_id ||
+      !sameStringArray(x.link_user_ids, y.link_user_ids) ||
+      !sameStringArray(x.link_user_data, y.link_user_data)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function sameStringArray(a: string[], b: string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * 名称缓存合并 + 清理已不在列表的条目；内容无变化时返回原引用
+ * （2s 轮询下避免每轮换新引用触发整棵面板重渲染）。
+ */
+function mergeNameCache<T extends { id: string; name: string }>(
+  prev: Record<string, string>,
+  entries: T[],
+  activeIds: Set<string>
+): Record<string, string> {
+  const updated: Record<string, string> = {};
+  for (const [id, name] of Object.entries(prev)) {
+    if (activeIds.has(id)) updated[id] = name;
+  }
+  for (const e of entries) updated[e.id] = e.name;
+  if (Object.keys(updated).length === Object.keys(prev).length) {
+    let changed = false;
+    for (const id of Object.keys(updated)) {
+      if (updated[id] !== prev[id]) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return prev;
+  }
+  return updated;
+}
+
 export function useCollabWorks(
   fromShare: boolean,
-  userId: string | null | undefined,
+  user: { id: string; username: string; avatar?: string | null } | null | undefined,
   visible: boolean
 ): CollabWorksState {
+  const userId = user?.id;
   const currentFileIdState = useCADEditorStore((s) => s.currentFileId);
   const storeFileNameState = useCADEditorStore((s) => s.currentFileName);
   const currentFileInfoState = useCADEditorStore((s) => s.currentFileInfo);
 
-  const [works, setWorks] = useState<Work[]>([]);
-  const [currentWorkId, setCurrentWorkId] = useState<number | null>(null);
+  const [works, setWorksState] = useState<Work[]>([]);
+  // 等价短路：内容未变的轮询结果不换引用，避免每轮触发整棵协同面板重渲染
+  const setWorks: React.Dispatch<React.SetStateAction<Work[]>> = useCallback(
+    (action) => {
+      setWorksState((prev) => {
+        const next = typeof action === 'function' ? action(prev) : action;
+        return sameWorks(prev, next) ? prev : next;
+      });
+    },
+    []
+  );
+  // 已加入的协同以 store 为准水合：侧边栏隐藏时整棵面板卸载（SidebarContainer
+  // 条件渲染），本地态会清零，导致重开后已加入的会话显示为「加入」而非「退出」。
+  // 页面级语言切换（SidebarContainer 的 key=activeLanguage）同理。
+  const [currentWorkId, setCurrentWorkId] = useState<number | null>(
+    () => useCADEditorStore.getState().collaborationWorkId
+  );
   const [loading, setLoading] = useState(false);
   const [fileNameCache, setFileNameCache] = useState<Record<string, string>>(
     {}
@@ -83,6 +159,39 @@ export function useCollabWorks(
   // 当前本地图纸的内容 MD5（local 类型唯一标识；云图等为 undefined）
   const currentFileHashValue = currentFileInfoState?.fileHash;
   const queryClient = useQueryClient();
+
+  // 自己这条参与者数据：协同会话里我本人必然在场，服务端偶发漏回自己的
+  // link_user_data 时（只剩最后 1 人时出现过）不能把人数清零
+  const myUserData = useMemo(
+    () =>
+      user
+        ? encodeUserData({
+            v: 1,
+            id: user.id,
+            name: user.username,
+            avatar: user.avatar ?? undefined,
+          })
+        : null,
+    [user]
+  );
+
+  const withSelfInJoinedWork = useCallback(
+    (list: Work[]): Work[] => {
+      if (!userId || !myUserData) return list;
+      const joinedWorkId = useCADEditorStore.getState().collaborationWorkId;
+      if (joinedWorkId === null) return list;
+      return list.map((w) =>
+        w.work_id === joinedWorkId && !w.link_user_ids.includes(userId)
+          ? {
+              ...w,
+              link_user_ids: [...w.link_user_ids, userId],
+              link_user_data: [...w.link_user_data, myUserData],
+            }
+          : w
+      );
+    },
+    [userId, myUserData]
+  );
 
   // 项目 ID 列表（60s staleTime，由 react-query 管理）—— 仅用于「项目协同」分组过滤，无需每次轮询都拉取
   const fetchMyProjectIds = useCallback(async (): Promise<string[]> => {
@@ -139,19 +248,21 @@ export function useCollabWorks(
           if (version !== fetchVersionRef.current) return;
           fetchingRef.current = false;
           setLoading(false);
-          const filtered = workList
-            .filter((w) => parseWorkData(w.work_data) !== null)
-            .map((w) => {
-              const { linkUserIds, linkUserData } = deduplicateWorkUsers(
-                w.link_user_ids,
-                w.link_user_data
-              );
-              return {
-                ...w,
-                link_user_ids: linkUserIds,
-                link_user_data: linkUserData,
-              };
-            });
+          const filtered = withSelfInJoinedWork(
+            workList
+              .filter((w) => parseWorkData(w.work_data) !== null)
+              .map((w) => {
+                const { linkUserIds, linkUserData } = deduplicateWorkUsers(
+                  w.link_user_ids,
+                  w.link_user_data
+                );
+                return {
+                  ...w,
+                  link_user_ids: linkUserIds,
+                  link_user_data: linkUserData,
+                };
+              })
+          );
           // 以服务端 getWorks 结果为准（不进行本地合并）：
           // 创建/加入协同后由服务端返回完整协同列表；退出当前协同（exitWork）
           // 只是离开协同会话，服务端 work 记录仍在，无需在本地做合并兜底。
@@ -163,7 +274,7 @@ export function useCollabWorks(
         setLoading(false);
       }
     },
-    [fromShare, fetchMyProjectIds]
+    [fromShare, fetchMyProjectIds, withSelfInJoinedWork]
   );
 
   const resolveNames = useCallback(
@@ -182,8 +293,17 @@ export function useCollabWorks(
       const resolvedDrawings: { id: string; name: string }[] = [];
       const resolvedProjects: ProjectCacheEntry[] = [];
 
+      // 2s 轮询下每轮都会进来：只拉未缓存的名称，避免每轮对整张列表重打 getNode。
+      // 已缓存的 id 直接沿用旧值（与移动端 resolveNames 同一策略）。
+      const uncachedDrawingIds = [...drawingIds].filter(
+        (id) => !fileNameCache[id]
+      );
+      const uncachedProjectIds = [...projectIds].filter(
+        (id) => !projectNameCache[id]
+      );
+
       await Promise.all([
-        ...[...drawingIds].map(async (id) => {
+        ...uncachedDrawingIds.map(async (id) => {
           try {
             const result = await nodeControllerGetNode({
               path: { nodeId: id },
@@ -201,7 +321,7 @@ export function useCollabWorks(
             });
           }
         }),
-        ...[...projectIds].map(async (id) => {
+        ...uncachedProjectIds.map(async (id) => {
           try {
             const result = await nodeControllerGetNode({
               path: { nodeId: id },
@@ -221,51 +341,16 @@ export function useCollabWorks(
         }),
       ]);
 
-      if (resolvedDrawings.length > 0) {
-        setFileNameCache((prev) => {
-          const entries = resolvedDrawings.filter((r) => !prev[r.id]);
-          if (entries.length === 0) {
-            const staleIds = Object.keys(prev).filter(
-              (id) => !drawingIds.has(id)
-            );
-            if (staleIds.length === 0) return prev;
-            const cleaned = { ...prev };
-            for (const id of staleIds) delete cleaned[id];
-            return cleaned;
-          }
-          const updated = { ...prev };
-          for (const e of entries) updated[e.id] = e.name;
-          const staleIds = Object.keys(updated).filter(
-            (id) => !drawingIds.has(id)
-          );
-          for (const id of staleIds) delete updated[id];
-          return updated;
-        });
-      }
+      // 每轮都执行清理：只取未缓存的名称，已不在列表的条目仍需剔除
+      setFileNameCache((prev) =>
+        mergeNameCache(prev, resolvedDrawings, drawingIds)
+      );
 
-      if (resolvedProjects.length > 0) {
-        setProjectNameCache((prev) => {
-          const entries = resolvedProjects.filter((r) => !prev[r.id]);
-          if (entries.length === 0) {
-            const staleIds = Object.keys(prev).filter(
-              (id) => !projectIds.has(id)
-            );
-            if (staleIds.length === 0) return prev;
-            const cleaned = { ...prev };
-            for (const id of staleIds) delete cleaned[id];
-            return cleaned;
-          }
-          const updated = { ...prev };
-          for (const e of entries) updated[e.id] = e.name;
-          const staleIds = Object.keys(updated).filter(
-            (id) => !projectIds.has(id)
-          );
-          for (const id of staleIds) delete updated[id];
-          return updated;
-        });
-      }
+      setProjectNameCache((prev) =>
+        mergeNameCache(prev, resolvedProjects, projectIds)
+      );
     },
-    [fromShare]
+    [fromShare, fileNameCache, projectNameCache]
   );
 
   useEffect(() => {

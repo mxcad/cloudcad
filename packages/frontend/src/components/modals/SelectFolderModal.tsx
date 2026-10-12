@@ -53,11 +53,6 @@ interface FolderNode extends FileSystemNode {
   hasChildren?: boolean;
 }
 
-interface BreadcrumbItem {
-  id: string;
-  name: string;
-}
-
 export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   isOpen,
   currentNodeId,

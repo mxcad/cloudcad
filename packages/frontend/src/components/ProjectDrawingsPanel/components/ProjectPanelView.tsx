@@ -13,7 +13,7 @@ import { t } from '@/languages';
 import styles from '@/components/sidebar/sidebar.module.css';
 import type { ViewMode } from '@/components/common';
 
-import type { BreadcrumbItem } from '../types';
+import type { BreadcrumbItem } from '@/lib/ancestorPath';
 
 interface ProjectPanelViewProps {
   isLibraryMode: boolean;

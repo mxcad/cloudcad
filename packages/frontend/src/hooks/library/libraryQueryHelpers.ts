@@ -29,11 +29,6 @@ export type ChildrenData = Pick<
   'nodes' | 'total' | 'totalPages'
 >;
 
-export interface BreadcrumbItem {
-  id: string;
-  name: string;
-}
-
 // ---- queryKey helpers ----
 
 export function getLibraryQueryKey(type: LibraryType): QueryKey {

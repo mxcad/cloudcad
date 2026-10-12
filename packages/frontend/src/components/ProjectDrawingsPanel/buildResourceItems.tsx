@@ -9,7 +9,8 @@ import type { ResourceItem } from '@/components/common';
 import { getLibraryThumbnailUrl } from '@/utils/fileUtils';
 import styles from '@/components/sidebar/sidebar.module.css';
 
-import type { BreadcrumbItem, LibraryType } from './types';
+import type { LibraryType } from './types';
+import type { BreadcrumbItem } from '@/lib/ancestorPath';
 import { isDrawingFile, API_BASE } from './constants';
 
 export interface BuildResourceItemsOptions {

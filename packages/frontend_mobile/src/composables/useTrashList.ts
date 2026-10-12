@@ -28,6 +28,7 @@ import type { FileSystemNodeDto, TrashListResponseDto } from '@cloudcad/api-sdk/
 import { t } from '@/languages'
 import { showSuccessToast, showFailToast } from 'vant'
 import { errorKind, errMsg, unwrap } from '@/utils/apiError'
+import { usePagedState, type PagedItems } from './usePagedState'
 
 export type TrashScope = 'projects' | 'project' | 'personal'
 export type TrashSortField = 'name' | 'createdAt' | 'updatedAt' | 'size'
@@ -72,12 +73,13 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
   const selectedProjectId = ref<string | null>(null)
   // 高级筛选：扩展名 csv（回收站接口仅支持 search/extension/sort，大小/时间会被后端忽略）
   const extension = ref('')
-  const nodes = ref<FileSystemNodeDto[]>([])
-  const loading = ref(false)
-  const error = ref('')
-  const page = ref(1)
-  const totalPages = ref(1)
-  const total = ref(0)
+  const paged = usePagedState<FileSystemNodeDto>({
+    onError: (e) => {
+      console.error('[useTrashList] load:', e)
+      return t('加载失败')
+    },
+  })
+  const { items: nodes, page, totalPages, total, loading, error, hasMore, loadMoreFailed } = paged
   const searchText = ref('')
   const debouncedSearch = ref('')
   const sortBy = ref<TrashSortField>('updatedAt')
@@ -107,6 +109,29 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
   }
 
   // ── 列表加载 ──
+  // 单页取数：fetcher 闭包捕获 scope/搜索/排序等消费方特有状态，翻页号由 paged 按当前页传入
+  async function fetchPage(pageNo: number): Promise<PagedItems<FileSystemNodeDto>> {
+    const projectId = resolveTrashProjectId(
+      scope.value,
+      selectedProjectId.value,
+      personalSpaceId.value,
+    )
+    const res = await trashControllerGetTrash({
+      query: {
+        projectId,
+        page: pageNo,
+        limit: PAGE_SIZE,
+        search: debouncedSearch.value || undefined,
+        extension: extension.value || undefined,
+        sortBy: sortBy.value,
+        sortOrder: sortOrder.value,
+      },
+    })
+    unwrap(res)
+    const data = (res.data ?? {}) as TrashListResponseDto
+    return { items: data.nodes ?? [], total: data.total ?? 0, totalPages: data.totalPages ?? 1 }
+  }
+
   async function load() {
     // personal scope 依赖个人空间根 id；project scope 依赖选定的项目 id；
     // 未就绪时不发起请求（避免 personal/project 误落到全局回收站）
@@ -124,37 +149,7 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
       error.value = ''
       return
     }
-
-    loading.value = true
-    error.value = ''
-    try {
-      const projectId = resolveTrashProjectId(
-        scope.value,
-        selectedProjectId.value,
-        personalSpaceId.value,
-      )
-      const res = await trashControllerGetTrash({
-        query: {
-          projectId,
-          page: page.value,
-          limit: PAGE_SIZE,
-          search: debouncedSearch.value || undefined,
-          extension: extension.value || undefined,
-          sortBy: sortBy.value,
-          sortOrder: sortOrder.value,
-        },
-      })
-      unwrap(res)
-      const data = (res.data ?? {}) as TrashListResponseDto
-      nodes.value = page.value === 1 ? (data.nodes ?? []) : [...nodes.value, ...(data.nodes ?? [])]
-      total.value = data.total ?? 0
-      totalPages.value = data.totalPages ?? 1
-    } catch (e) {
-      console.error('[useTrashList] load:', e)
-      error.value = t('加载失败')
-    } finally {
-      loading.value = false
-    }
+    await paged.load(fetchPage)
   }
 
   // 回第 1 页重载（动作成功后调用）
@@ -165,23 +160,18 @@ export function useTrashList(personalSpaceId: Ref<string | null | undefined>) {
 
   // ── 分页 / 刷新 ──
   function loadMore() {
-    if (loading.value || page.value >= totalPages.value) return
-    page.value++
-    load()
+    paged.loadMore(fetchPage)
   }
 
-  const loadMoreFailed = computed(() => error.value !== '' && page.value > 1)
-
   function retryLoadMore() {
-    load()
+    paged.retryLoadMore(fetchPage)
   }
 
   async function refresh() {
-    page.value = 1
+    paged.resetToFirstPage()
     await load()
   }
 
-  const hasMore = computed(() => page.value < totalPages.value)
   const isEmpty = computed(() => !loading.value && nodes.value.length === 0)
 
   // ── 搜索（300ms 防抖，服务端 search 参数）──

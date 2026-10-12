@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   # ============================================================
-  # 动态发现 Linux 架构清单（从 mxcad-dist/manifest.json）
+  # 动态发现 Linux 架构清单（从 scripts/pack-lib/mxcad-registry.json）
   # ============================================================
   detect-arch:
     runs-on: ubuntu-latest
@@ -29,12 +29,12 @@ jobs:
       linux-arch: ${{ steps.detect.outputs.linux_arch }}
     steps:
       - uses: actions/checkout@v4
-      - name: 从 manifest.json 发现 Linux 架构
+      - name: 从 mxcad-registry.json 发现 Linux 架构
         id: detect
         run: |
-          if [ -f mxcad-dist/manifest.json ]; then
+          if [ -f scripts/pack-lib/mxcad-registry.json ]; then
             archs=$(node -e "
-              const m = require('./mxcad-dist/manifest.json');
+              const m = require('./scripts/pack-lib/mxcad-registry.json');
               const set = new Set();
               for (const k of Object.keys(m)) if (m[k].platform === 'linux') set.add(m[k].arch);
               console.log(JSON.stringify([...set].sort()));
@@ -94,7 +94,7 @@ jobs:
       # 安装依赖（pack-linux-deploy.js 会在本机构建前端，这里只需装齐依赖）
       - run: pnpm install --frozen-lockfile
 
-      # 从 manifest.json 下载本架构所有产品二进制（mxcad），解压到 runtime/linux/<component>
+      # 从 mxcad-registry.json 下载本架构所有产品二进制（mxcad），解压到 runtime/linux/<component>
       - name: 下载产品二进制
         shell: bash
         env:
@@ -103,16 +103,16 @@ jobs:
           set -euo pipefail
           arch="${{ matrix.arch }}"
           mkdir -p runtime/linux
-          # 从 manifest.json 提取该架构的所有组件附件名
+          # 从 mxcad-registry.json 提取该架构的所有组件附件名
           mapfile -t assets < <(node -e "
-            const m = require('./mxcad-dist/manifest.json');
+            const m = require('./scripts/pack-lib/mxcad-registry.json');
             for (const k of Object.keys(m)) {
               const e = m[k];
               if (e.platform === 'linux' && e.arch === '${arch}') console.log(e.asset);
             }
           ")
           if [ ${#assets[@]} -eq 0 ]; then
-            echo "::error::manifest 中未找到 linux-${arch} 的产物，请先运行 scripts/upload-mxcad.js"
+            echo "::error::registry 中未找到 linux-${arch} 的产物，请先运行 scripts/upload-mxcad.js"
             exit 1
           fi
           for asset in "${assets[@]}"; do
@@ -139,39 +139,19 @@ jobs:
             fi
           done
 
-      # ADR-0059：下载 runtime 依赖包（node/pg/redis/svn 内容寻址资产），解压到
-      # runtime/cache/linux-extract/<os>/。pack-linux-deploy.js 的容器挂载该目录后，
-      # extract-linux-runtime.js 检测到已提取即跳过 apt/dnf/yum 重复安装 + 收集依赖库。
-      # 多源回退：经 scripts/lib/download-sources.js（GitHub 主源 → 内置公开镜像 → 用户自定义源）。
-      - name: 下载 runtime 依赖包（复用，避免重复提取）
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          os="${{ matrix.os }}"
-          arch="${{ matrix.arch }}"
-          # 组件版本指纹：从 pack-lib/component-versions.js 单一事实源读取（架构审查 ⑪ C5，勿硬编码）
-          fingerprint=$(node -e "console.log(require('./scripts/pack-lib/component-versions').componentFingerprint())")
-          asset="cloudcad-runtime-deps-${os}-${arch}-${fingerprint}.tar.gz"
-          cacheDir="runtime/cache/linux-extract/${os}"
-          echo "下载 runtime 依赖包: ${asset}"
-          node -e "
-            const { downloadFile } = require('./scripts/lib/download-sources');
-            const fs = require('fs'); const path = require('path');
-            const os = process.argv[1], arch = process.argv[2], fp = process.argv[3];
-            const asset = 'cloudcad-runtime-deps-' + os + '-' + arch + '-' + fp + '.tar.gz';
-            const canonical = 'https://github.com/mxcad/cloudcad/releases/download/runtime-deps/' + asset;
-            const dest = path.join('runtime', 'cache', 'linux-extract', os + '.tar.gz');
-            fs.mkdirSync(path.dirname(dest), { recursive: true });
-            downloadFile(canonical, dest, { onTry: (s) => console.log('尝试源: ' + s.label) })
-              .then(({ url, bytes }) => console.log('✓ 下载 ' + asset + ' (' + (bytes/1024/1024).toFixed(1) + ' MB) 自 ' + url))
-              .catch((e) => { console.error(e.message); process.exit(1); });
-          " "$os" "$arch" "$fingerprint"
-          mkdir -p "${cacheDir}"
-          tar -xzf "runtime/cache/linux-extract/${os}.tar.gz" -C "${cacheDir}"
-          rm -f "runtime/cache/linux-extract/${os}.tar.gz"
-          echo "✓ runtime 依赖包已解压到 ${cacheDir}/（node/postgres/redis/subversion）"
+      # 平台物料（node/postgres/redis/subversion）复用层：容器挂载空缓存时由
+      # extract-linux-runtime.js 自提（apt/dnf/yum install + 收集依赖库）并落盘，
+      # pack-linux-deploy.js 打包前后各做一次关键文件检查——缺失自动重提、重提失败 fail-fast。
+      # 原「下载 runtime 依赖包」步骤已删除：runtime-deps Release tag 从未发布（404），
+      # 该步骤 .catch→exit 1 会让每次打 Linux 部署包必失败；复用职责下沉到 CI cache。
+      # key 含组件版本源码哈希——node/pg/redis 升级 → 哈希变 → 缓存自然失效重提。
+      - name: 设置 Linux 平台物料缓存
+        uses: actions/cache@v4
+        with:
+          path: runtime/cache/linux-extract/${{ matrix.os }}
+          key: ${{ runner.os }}-linux-extract-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('scripts/pack-lib/component-versions.js') }}
+          restore-keys: |
+            ${{ runner.os }}-linux-extract-${{ matrix.os }}-${{ matrix.arch }}-
 
       # 用 Docker 打包 Linux 部署包（QEMU/多架构见上方注释）
       - name: 打包 Linux 部署包
@@ -236,7 +216,7 @@ jobs:
       - run: pnpm build
         working-directory: packages/frontend_mobile
 
-      # 从 manifest.json 下载 windows-x64 的所有产品二进制（mxcad/mxversion/postgresql）
+      # 从 mxcad-registry.json 下载 windows-x64 的所有产品二进制（mxcad/mxversion/postgresql）
       # postgresql 自 2026-08 起走产品二进制通道（EDB 官方直链已 403），
       # zip 顶层须为 pgsql/ 目录，解压后落在 runtime/windows/postgresql/pgsql/
       - name: 下载产品二进制
@@ -245,14 +225,20 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p runtime/windows
-          # 从 manifest.json 提取 windows-x64 的所有组件附件名
+          # 从 mxcad-registry.json 提取 windows-x64 的所有组件附件名
           mapfile -t assets < <(node -e "
-            const m = require('./mxcad-dist/manifest.json');
+            const m = require('./scripts/pack-lib/mxcad-registry.json');
             for (const k of Object.keys(m)) {
               const e = m[k];
               if (e.platform === 'windows' && e.arch === 'x64') console.log(e.asset);
             }
           ")
+          # 与 build-linux 的空 assets 守卫对齐：registry 缺条目时静默空转，
+          # 直到末尾断言才炸，报错却指向 upload-mxcad.js 而非真因
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "::error::registry 中未找到 windows-x64 的产物，请先运行 scripts/upload-mxcad.js"
+            exit 1
+          fi
           for asset in "${assets[@]}"; do
             comp="${asset%%-*}"
             echo "下载: $asset (→ runtime/windows/$comp)"

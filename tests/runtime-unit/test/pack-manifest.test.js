@@ -44,6 +44,13 @@ describe('pack-lib/manifest.js（P9 单一事实源）', () => {
       const shared = srcs(getSharedEntries());
       const upgrade = srcs(getUpgradeIncludeList('linux', 'oss'));
       expect(upgrade).toEqual(shared);
+
+      // 必需条目不得声明 optional；仅 runtime/prisma-engines 允许源缺失静默跳过
+      // （注意：srcs() 已把条目压成字符串，optional 判定须用原始对象）
+      const entries = getSharedEntries();
+      const optional = entries.filter((e) => e.optional).map((e) => e.src);
+      expect(optional).toEqual(['runtime/prisma-engines']);
+      expect(entries.every((e) => e.src && e.dest)).toBe(true);
     });
 
     it('升级包清单不包含 runtime 二进制 / store / 部署说明 / 入口脚本', () => {

@@ -4,8 +4,9 @@ import { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 import { FileUtils } from '../../common/utils/file-utils';
-import { setContentDisposition } from '../../common/utils/content-disposition';
+import { streamFileToResponse } from '../../common/utils/stream-file';
 import { NodeUtils } from '../../common/utils/node-utils';
+import { normalizeMxcadPath } from '../../common/utils/mxcad-path';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -29,11 +30,8 @@ export class MxcadFileHandlerService {
    */
   async serveFile(filename: string, res: Response): Promise<void> {
     try {
-      // 统一还原 Express 通配符路径参数：不同环境可能注入为逗号分隔字符串
-      // （如 "YYYYMM,nodeId,file.mxweb"，数组被内部 toString() 化），与
-      // MxcadFileAccessService（serveFilesDataFile / authorizeFilesDataAccess）
-      // 的逗号还原保持一致，避免 seek 到带逗号的路径导致 404。
-      filename = filename.replace(/,/g, '/');
+      // 统一还原 Express 通配符路径参数（数组 / toString 逗号串 → 斜杠路径）
+      filename = normalizeMxcadPath(filename);
       this.logger.log(`
 ----------------------------------------
 [serveFile] 处理文件请求
@@ -150,36 +148,27 @@ export class MxcadFileHandlerService {
    * @param filePath 文件绝对路径
    * @param res Express Response 对象
    */
-  private streamFile(filePath: string, res: Response): void {
-    const fileStats = fs.statSync(filePath);
+  private async streamFile(filePath: string, res: Response): Promise<void> {
     const ext = path.extname(filePath).toLowerCase();
-
-    // 设置 Content-Type（MIME 单一事实源走 NodeUtils）
+    // MIME 单一事实源走 NodeUtils
     const contentType = NodeUtils.getMimeType(ext);
-
-    // 设置响应头
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Length', fileStats.size);
-    // 禁用缓存，确保每次请求都获取最新文件
-    // 特别是对于图纸库/图块库文件，用户可能刚刚保存并需要立即使用
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('Access-Control-Allow-Origin', '*'); // 允许跨域访问
-    setContentDisposition(res, path.basename(filePath), 'inline');
-
-    // 创建文件流并返回
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-
-    // 监听流错误
-    fileStream.on('error', (error: Error) => {
-      this.logger.error(`[streamFile] 文件流错误：${error.message}`);
-      if (!res.headersSent) {
-        res.status(500).json({ message: '文件读取失败' });
-      }
-    });
-
     this.logger.log(`[streamFile] 开始传输文件：${filePath}`);
+    // 传输编排回归 streamFileToResponse 唯一出口：禁缓存（图纸库/图块库刚保存需
+    // 立即生效）+ 跨域 + inline 处置，策略作为参数传入。
+    await streamFileToResponse(
+      res,
+      filePath,
+      path.basename(filePath),
+      contentType,
+      undefined,
+      {
+        cacheControl: 'no-cache, no-store, must-revalidate',
+        allowOrigin: '*',
+        disposition: 'inline',
+        pragmaNoCache: true,
+        expiresZero: true,
+        errorMessage: '文件读取失败',
+      }
+    );
   }
 }

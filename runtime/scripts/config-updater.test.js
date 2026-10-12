@@ -23,7 +23,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { escapeEnvValue, updateEnvFile } = require('./config-updater');
+const { escapeEnvValue, updateEnvFile, alignConversionServiceUrl } =
+  require('./config-updater');
 const {
   parseEnvFile,
   parseEnvFileSimple,
@@ -197,3 +198,284 @@ test('escape 字符类漂移守卫：runtime 实现 / config-service 实现 / �
   assert.equal(cs.length, 1, 'config-service 实现应恰有 1 处 escape 字符类');
   assert.equal(cs[0], impl[0], '两份实现的 escape 字符类必须逐字一致');
 });
+
+// ==================== alignConversionServiceUrl（CONVERSION_SERVICE_URL ↔ PORT 一致性） ====================
+//
+// 缺陷机理：CONVERSION_SERVICE_PORT 是端口单一事实源（start.js / verify-deploy.js 经
+// PORTS.conversion 据此拉起转换服务），CONVERSION_SERVICE_URL 是后端连接地址；后端对该键
+// 的缺省值是硬编码字面量 http://localhost:3100（不读 PORT）。故只改 PORT 不改 URL 时后端
+// 恒连旧端口，转换全部静默失败且启动全程无感。
+
+test('alignConversionServiceUrl: 文件不存在返回 missing', () => {
+  assert.equal(
+    alignConversionServiceUrl(path.join(os.tmpdir(), 'no-such-dir-xyz', '.env')),
+    'missing'
+  );
+});
+
+test('alignConversionServiceUrl: 非 conversion-service 模式不动文件（返回 skipped）', () => {
+  const before = [
+    'FUNCTION_EXECUTOR=process-pool',
+    'CONVERSION_SERVICE_PORT=3101',
+    'CONVERSION_SERVICE_URL=http://localhost:3100',
+  ].join('\n');
+  withTempEnv(before, (file) => {
+    assert.equal(alignConversionServiceUrl(file), 'skipped');
+    assert.equal(fs.readFileSync(file, 'utf8'), before);
+  });
+});
+
+test('alignConversionServiceUrl: 已一致时返回 ok 且逐字节不改文件', () => {
+  const content = [
+    '# 区块注释',
+    'FUNCTION_EXECUTOR=conversion-service',
+    'CONVERSION_SERVICE_PORT=3101',
+    'CONVERSION_SERVICE_URL=http://localhost:3101',
+    'UNRELATED=keep',
+  ].join('\n');
+  withTempEnv(content, (file) => {
+    assert.equal(alignConversionServiceUrl(file), 'ok');
+    assert.equal(fs.readFileSync(file, 'utf8'), content);
+  });
+});
+
+test('alignConversionServiceUrl: 幂等——第二次调用返回 ok', () => {
+  const content = [
+    'FUNCTION_EXECUTOR=conversion-service',
+    'CONVERSION_SERVICE_PORT=3101',
+    'CONVERSION_SERVICE_URL=http://localhost:3100',
+  ].join('\n');
+  withTempEnv(content, (file) => {
+    assert.equal(alignConversionServiceUrl(file), 'repaired');
+    assert.equal(alignConversionServiceUrl(file), 'ok');
+    assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://localhost:3101');
+  });
+});
+
+test('alignConversionServiceUrl: 只改 PORT 未改 URL 时改写端口段，其余行保留', () => {
+  const content = [
+    'FUNCTION_EXECUTOR=conversion-service',
+    'CONVERSION_SERVICE_PORT=3101',
+    'CONVERSION_SERVICE_URL=http://localhost:3100',
+    'UNRELATED=keep',
+  ].join('\n');
+  withTempEnv(content, (file) => {
+    assert.equal(alignConversionServiceUrl(file), 'repaired');
+    assert.equal(
+      fs.readFileSync(file, 'utf8'),
+      content.replace('http://localhost:3100', 'http://localhost:3101')
+    );
+  });
+});
+
+test('alignConversionServiceUrl: 端口段之后的路径与查询参数逐字保留', () => {
+  withTempEnv(
+    [
+      'FUNCTION_EXECUTOR=conversion-service',
+      'CONVERSION_SERVICE_PORT=3200',
+      'CONVERSION_SERVICE_URL=http://localhost:3100/v1?ssl=on&retry=2',
+    ].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      // & 属敏感字符，按 escapeEnvValue 约定加引号（与写口令同一规则）
+      assert.equal(
+        rawValue(file, 'CONVERSION_SERVICE_URL'),
+        '"http://localhost:3200/v1?ssl=on&retry=2"'
+      );
+      // 解析回读须逐字一致
+      assert.equal(
+        parseEnvFile(file).CONVERSION_SERVICE_URL,
+        'http://localhost:3200/v1?ssl=on&retry=2'
+      );
+    }
+  );
+});
+
+test('alignConversionServiceUrl: URL 带 userinfo 时只改端口、凭据段保留', () => {
+  withTempEnv(
+    [
+      'FUNCTION_EXECUTOR=conversion-service',
+      'CONVERSION_SERVICE_PORT=3300',
+      'CONVERSION_SERVICE_URL=http://svc:secr3t@localhost:3100',
+    ].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      assert.equal(
+        rawValue(file, 'CONVERSION_SERVICE_URL'),
+        'http://svc:secr3t@localhost:3300'
+      );
+    }
+  );
+});
+
+test('alignConversionServiceUrl: URL 无端口段时补齐端口', () => {
+  withTempEnv(
+    [
+      'FUNCTION_EXECUTOR=conversion-service',
+      'CONVERSION_SERVICE_PORT=3101',
+      'CONVERSION_SERVICE_URL=http://localhost',
+    ].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://localhost:3101');
+    }
+  );
+});
+
+test('alignConversionServiceUrl: URL 缺失而 PORT 非默认时补写显式地址', () => {
+  withTempEnv(
+    ['FUNCTION_EXECUTOR=conversion-service', 'CONVERSION_SERVICE_PORT=3101'].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://localhost:3101');
+    }
+  );
+});
+
+test('alignConversionServiceUrl: PORT 缺失（后端缺省 3100）时 URL 指向其他端口即漂移', () => {
+  withTempEnv(
+    [
+      'FUNCTION_EXECUTOR=conversion-service',
+      'CONVERSION_SERVICE_URL=http://localhost:3200',
+    ].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://localhost:3100');
+    }
+  );
+});
+
+test('alignConversionServiceUrl: PORT 非正整数按 context.js 口径回退 3100', () => {
+  for (const bad of ['abc', '0', '-1', '  ']) {
+    withTempEnv(
+      [
+        'FUNCTION_EXECUTOR=conversion-service',
+        `CONVERSION_SERVICE_PORT=${bad}`,
+        'CONVERSION_SERVICE_URL=http://localhost:3100',
+      ].join('\n'),
+      (file) => {
+        assert.equal(alignConversionServiceUrl(file), 'ok', `PORT=${bad}`);
+        assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://localhost:3100');
+      }
+    );
+  }
+});
+
+test('alignConversionServiceUrl: 已按默认 3100 且 PORT 未改时不补写 URL', () => {
+  const content = [
+    'FUNCTION_EXECUTOR=conversion-service',
+    'CONVERSION_SERVICE_PORT=3100',
+    'UNRELATED=keep',
+  ].join('\n');
+  withTempEnv(content, (file) => {
+    assert.equal(alignConversionServiceUrl(file), 'ok');
+    assert.equal(fs.readFileSync(file, 'utf8'), content);
+  });
+});
+
+test('alignConversionServiceUrl: 远程主机不由本部署拉起，不改写', () => {
+  const content = [
+    'FUNCTION_EXECUTOR=conversion-service',
+    'CONVERSION_SERVICE_PORT=3101',
+    'CONVERSION_SERVICE_URL=http://cloudcad-conversion:3100',
+  ].join('\n');
+  withTempEnv(content, (file) => {
+    assert.equal(alignConversionServiceUrl(file), 'ok');
+    assert.equal(fs.readFileSync(file, 'utf8'), content);
+  });
+});
+
+test('alignConversionServiceUrl: IPv6 地址（URL 须用方括号）按本机改写', () => {
+  withTempEnv(
+    [
+      'FUNCTION_EXECUTOR=conversion-service',
+      'CONVERSION_SERVICE_PORT=3103',
+      'CONVERSION_SERVICE_URL=http://[::1]:3100',
+    ].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://[::1]:3103');
+    }
+  );
+});
+
+test('alignConversionServiceUrl: URL 形状无法识别时原样保留（不猜测）', () => {
+  for (const url of ['not-a-url', 'ftp://localhost:3100', 'localhost:3100', '::1:3100']) {
+    const content = [
+      'FUNCTION_EXECUTOR=conversion-service',
+      'CONVERSION_SERVICE_PORT=3101',
+      `CONVERSION_SERVICE_URL=${url}`,
+    ].join('\n');
+    withTempEnv(content, (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'ok', `url=${url}`);
+      assert.equal(fs.readFileSync(file, 'utf8'), content, `url=${url}`);
+    });
+  }
+});
+
+test('alignConversionServiceUrl: FUNCTION_EXECUTOR 大小写/首尾空白容忍，URL 引号容忍', () => {
+  withTempEnv(
+    [
+      'FUNCTION_EXECUTOR= Conversion-Service ',
+      'CONVERSION_SERVICE_PORT=3102',
+      'CONVERSION_SERVICE_URL="http://localhost:3100"',
+    ].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://localhost:3102');
+    }
+  );
+});
+
+test('回归: 对齐写入后两个启动脚本的解析器都读到新值（write-once, read-twice）', () => {
+  // start.js 用 parseEnvFile，verify-deploy.js 用 parseEnvFileSimple（D5 验收器独立）——
+  // 写一处、读两处，两口径必须一致，否则验收器与启动器对漂移的判定分裂。
+  withTempEnv(
+    [
+      'FUNCTION_EXECUTOR=conversion-service',
+      'CONVERSION_SERVICE_PORT=3107',
+      'CONVERSION_SERVICE_URL=http://localhost:3100',
+    ].join('\n'),
+    (file) => {
+      assert.equal(alignConversionServiceUrl(file), 'repaired');
+      assert.equal(parseEnvFile(file).CONVERSION_SERVICE_URL, 'http://localhost:3107');
+      assert.equal(
+        parseEnvFileSimple(file).CONVERSION_SERVICE_URL,
+        'http://localhost:3107'
+      );
+    }
+  );
+});
+
+test('本机形态口径: 改写与否的判定与 lib/infra-gate 的 isLocalHost 逐例一致', () => {
+  const { isLocalHost } = require('./lib/infra-gate');
+  // 只取「既是本机形态、又是合法 URL 主机」的取值：裸 '::1' 在 URL 中非法（须 [::1]），
+  // 归入上方「形状无法识别」用例，不与 isLocalHost 口径比对。
+  const hosts = [
+    'localhost',
+    'LOCALHOST',
+    '127.0.0.1',
+    '[::1]',
+    'cloudcad-conversion',
+    'db.internal',
+    '10.0.0.5',
+    '192.168.1.10',
+  ];
+  for (const host of hosts) {
+    withTempEnv(
+      [
+        'FUNCTION_EXECUTOR=conversion-service',
+        'CONVERSION_SERVICE_PORT=3999',
+        `CONVERSION_SERVICE_URL=http://${host}:3100`,
+      ].join('\n'),
+      (file) => {
+        assert.equal(
+          alignConversionServiceUrl(file),
+          isLocalHost(host.replace(/^\[|\]$/g, '')) ? 'repaired' : 'ok',
+          `host=${host} 应与 isLocalHost 同口径`
+        );
+      }
+    );
+  }
+});
+

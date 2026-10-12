@@ -232,7 +232,7 @@ export const ResetPassword: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   className={styles.inputField}
-                  placeholder={t('新密码（至少8个字符）')}
+                  placeholder={t('新密码（至少10个字符）')}
                   {...register('newPassword')}
                 />
                 <Button

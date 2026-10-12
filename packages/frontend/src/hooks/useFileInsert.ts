@@ -8,20 +8,17 @@ export interface UseFileInsertOptions {
   isHomeMode: boolean;
   isAuthenticated: boolean;
   personalSpaceId: string | null;
-  loginPromptDismissedRef: React.MutableRefObject<boolean>;
+  /** 登录闸门（useLoginGate.requireLogin）：未登录时弹闸门并返回 false */
+  requireLogin: (actionLabel: string) => boolean;
   currentFileIdRef: React.MutableRefObject<string | null>;
-  setLoginPromptAction: (action: string) => void;
-  setShowLoginPrompt: (show: boolean) => void;
 }
 
 export function useFileInsert({
   isHomeMode,
   isAuthenticated,
   personalSpaceId,
-  loginPromptDismissedRef,
+  requireLogin,
   currentFileIdRef,
-  setLoginPromptAction,
-  setShowLoginPrompt,
 }: UseFileInsertOptions) {
   const { showToast } = useNotification();
 
@@ -39,9 +36,8 @@ export function useFileInsert({
             showToast(getErrorMessage(error), 'error');
           }
         } else {
-          if (loginPromptDismissedRef.current) return;
-          setLoginPromptAction(t('打开文件'));
-          setShowLoginPrompt(true);
+          // 抑制判定收敛在 requireLogin 内部（A8）
+          requireLogin(t('打开文件'));
         }
         return;
       }
@@ -82,10 +78,8 @@ export function useFileInsert({
       isHomeMode,
       isAuthenticated,
       personalSpaceId,
-      loginPromptDismissedRef,
+      requireLogin,
       currentFileIdRef,
-      setLoginPromptAction,
-      setShowLoginPrompt,
       showToast,
     ]
   );

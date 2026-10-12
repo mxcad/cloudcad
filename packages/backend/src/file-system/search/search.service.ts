@@ -8,6 +8,7 @@ import { FileStatus } from '../../common/enums/file-status.enum';
 import { FtsQueryBuilder } from './fts-query-builder';
 import { parseSearchQuery } from './search-query.parser';
 import { AncestorQueryService } from '../../common/services/ancestor-query.service';
+import { isRootNode, isFolderNode, getLibraryKeyFromNodeType } from '../utils/node-type';
 import { I18nContext } from 'nestjs-i18n';
 import {
   NodeListResponseDto,
@@ -937,10 +938,10 @@ export class SearchService implements ISearchService {
     const safeLimit = Number(limit) || 50;
     const results: FileSystemNodeDto[] = nodes.map((node) => {
       const nodeType = node.nodeType as NodeType;
-      const isFolder = nodeType !== NodeType.FILE;
-      const isRoot = nodeType === NodeType.PROJECT || nodeType === NodeType.PERSONAL_SPACE || nodeType === NodeType.LIBRARY_DRAWING || nodeType === NodeType.LIBRARY_BLOCK;
+      const isFolder = isFolderNode({ nodeType });
+      const isRoot = isRootNode({ nodeType });
       const personalSpaceKey = nodeType === NodeType.PERSONAL_SPACE ? (node.ownerId as string) : null;
-      const libraryKey = nodeType === NodeType.LIBRARY_DRAWING ? 'drawing' : nodeType === NodeType.LIBRARY_BLOCK ? 'block' : null;
+      const libraryKey = getLibraryKeyFromNodeType(nodeType) ?? null;
 
       return {
         id: node.id as string,

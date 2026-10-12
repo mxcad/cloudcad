@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { FileTypeDetector } from './file-type-detector';
+import { FileTypeDetector } from '@cloudcad/contracts';
 
 describe('FileTypeDetector', () => {
   // ============================================================

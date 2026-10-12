@@ -1,8 +1,7 @@
-const { default: mxPath } = require('./mxpath');
-const { executeSpawn } = require('./mx-executor');
+const { mx } = require('./mx');
 
 function mxRevert(targetPath, isRecursive, callback) {
-  const args = ['revert'];
+  const args = [];
 
   if (isRecursive) {
     args.push('-R');
@@ -10,7 +9,7 @@ function mxRevert(targetPath, isRecursive, callback) {
 
   args.push(targetPath);
 
-  executeSpawn(mxPath, args)
+  mx('revert', args)
     .then(stdout => {
       callback(null, stdout);
     })

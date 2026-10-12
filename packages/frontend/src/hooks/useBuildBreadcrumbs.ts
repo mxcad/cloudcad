@@ -7,51 +7,44 @@ import { useCallback } from 'react';
 import { nodeControllerGetNode } from '@/api-sdk';
 import { handleError } from '@/utils/errorHandler';
 import { t } from '@/languages';
+import {
+  resolveAncestorPath,
+  type AncestorClient,
+  type BreadcrumbItem,
+} from '@/lib/ancestorPath';
 
-export interface BreadcrumbItem {
-  id: string;
-  name: string;
-}
+export type { BreadcrumbItem } from '@/lib/ancestorPath';
 
 /**
- * 构建面包屑路径
+ * 构建面包屑路径（seam adapter：遍历到根，失败/空路径降级为根目录占位）。
  *
- * 从指定 nodeId 向上遍历 parentId，构建完整的面包屑路径。
- * 支持最大深度限制防止无限循环。
+ * 祖先链遍历本身在 `resolveAncestorPath`（唯一实现）；本 hook 只负责
+ * nodeController 客户端注入与「空路径 → 根目录占位」的失败语义。
  */
 export function useBuildBreadcrumbs() {
   const buildBreadcrumbPath = useCallback(
     async (nodeId: string): Promise<BreadcrumbItem[]> => {
-      try {
-        const path: BreadcrumbItem[] = [];
-        let currentId: string | null = nodeId;
-        let depth = 0;
-        const MAX_DEPTH = 20;
+      const client: AncestorClient = {
+        getNode: async (id) => {
+          // SDK 默认不抛错：失败时错误在 result.error，throwOnError 显式抛出让核心记录真实原因
+          const result = await nodeControllerGetNode({
+            throwOnError: true,
+            path: { nodeId: id },
+          });
+          return (result.data ?? null) as BreadcrumbItem & {
+            parentId?: string | null;
+          } | null;
+        },
+      };
 
-        while (currentId && depth < MAX_DEPTH) {
-          try {
-            const result = await nodeControllerGetNode({
-              throwOnError: true,
-              path: { nodeId: currentId },
-            });
-            // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
-            const node = result.data as
-              | { id: string; name: string; parentId?: string | null }
-              | undefined;
-            if (node) {
-              path.unshift({ id: node.id, name: node.name });
-              currentId = node.parentId || null;
-              depth++;
-            } else {
-              break;
-            }
-          } catch (error: unknown) {
-            handleError(
-              error,
-              `useBuildBreadcrumbs: 获取节点 ${currentId} 失败`
-            );
-            break;
-          }
+      try {
+        const { path, complete, failedId, error } =
+          await resolveAncestorPath(nodeId, { client });
+        if (!complete) {
+          handleError(
+            error ?? new Error('ancestor path incomplete'),
+            `useBuildBreadcrumbs: 获取节点 ${failedId ?? nodeId} 失败`
+          );
         }
 
         if (path.length === 0) {

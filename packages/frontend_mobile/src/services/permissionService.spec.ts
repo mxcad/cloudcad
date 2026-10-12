@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../api-sdk', () => ({
   memberControllerGetUserProjectPermissions: vi.fn(),
 }))
-vi.mock('../composables/useEditorState', () => ({ useEditorState: vi.fn() }))
+vi.mock('@/stores/editor', () => ({ useEditorStore: vi.fn() }))
 vi.mock('../composables/useUser', () => ({ useUser: vi.fn() }))
 vi.mock('vant', () => ({ showToast: vi.fn() }))
 vi.mock('@/languages', () => ({
@@ -11,7 +11,8 @@ vi.mock('@/languages', () => ({
 }))
 
 import { showToast } from 'vant'
-import { canExportDownloadGate } from './permissionService'
+import { canExportDownloadGate, loadProjectPermissions, invalidateProjectPermissions } from './permissionService'
+import { memberControllerGetUserProjectPermissions } from '../api-sdk'
 
 const DAY = 86400000
 
@@ -53,5 +54,49 @@ describe('canExportDownloadGate 导出下载会员预检', () => {
     expect(canExportDownloadGate(undefined, false)).toBe(false)
     expect(canExportDownloadGate({ membershipExpiresAt: new Date(Date.now() + DAY).toISOString() }, false)).toBe(false)
     expect(showToast).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('loadProjectPermissions 项目权限加载（TTL 缓存 + 失败回退 + 失效）', () => {
+  const api = memberControllerGetUserProjectPermissions as unknown as ReturnType<typeof vi.fn>
+  const T0 = 1_000_000
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    invalidateProjectPermissions()
+    vi.useFakeTimers()
+    vi.setSystemTime(T0)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('成功：返回权限并写缓存；TTL 内二次调用命中缓存不再请求', async () => {
+    api.mockResolvedValue({ error: null, data: { permissions: ['CAD_SAVE'] } })
+    expect(await loadProjectPermissions('p1')).toEqual(['CAD_SAVE'])
+    expect(await loadProjectPermissions('p1')).toEqual(['CAD_SAVE'])
+    expect(api).toHaveBeenCalledTimes(1)
+  })
+
+  it('缓存过期后重新拉取；拉取失败回退既有（过期）缓存，保留旧权限', async () => {
+    api.mockResolvedValueOnce({ error: null, data: { permissions: ['CAD_SAVE'] } })
+    await loadProjectPermissions('p1')
+    vi.setSystemTime(T0 + 6 * 60 * 1000) // 越过 5min TTL
+    api.mockRejectedValueOnce(new Error('network'))
+    expect(await loadProjectPermissions('p1')).toEqual(['CAD_SAVE'])
+  })
+
+  it('无缓存且拉取失败：返回空数组', async () => {
+    api.mockRejectedValue(new Error('network'))
+    expect(await loadProjectPermissions('p2')).toEqual([])
+  })
+
+  it('invalidateProjectPermissions 失效后重新拉取', async () => {
+    api.mockResolvedValueOnce({ error: null, data: { permissions: ['CAD_SAVE'] } })
+    await loadProjectPermissions('p1')
+    invalidateProjectPermissions('p1')
+    api.mockResolvedValueOnce({ error: null, data: { permissions: ['FILE_DOWNLOAD'] } })
+    expect(await loadProjectPermissions('p1')).toEqual(['FILE_DOWNLOAD'])
+    expect(api).toHaveBeenCalledTimes(2)
   })
 })

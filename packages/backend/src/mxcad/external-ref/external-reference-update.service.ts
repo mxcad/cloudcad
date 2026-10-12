@@ -4,15 +4,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { NodeType } from '@cloudcad/db';
+import { FileTypeDetector } from '@cloudcad/contracts';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
-import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
-import {
-  PreloadingDataDto,
-  PreloadingFileInfoDto,
-} from '../dto/preloading-data.dto';
+import { PreloadingDataDto } from '../dto/preloading-data.dto';
+import { enrichPreloadingFileInfoList } from '../utils/preloading-file-info';
 import {
   ExternalReferenceStats,
   ExternalReferenceInfo,
@@ -37,7 +35,6 @@ export class ExternalReferenceUpdateService {
   constructor(
     private readonly configService: ConfigService<AppConfig>,
     private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly storageManager: StorageManager,
     private readonly extRefPreloadingService: ExtRefPreloadingService,
   ) {
     this.mxcadUploadPath = this.configService.get('mxcadUploadPath', {
@@ -202,20 +199,17 @@ export class ExternalReferenceUpdateService {
 
         const extRefDirName = rawData.src_file_md5 || nodeId;
 
-        const externalReference =
-          await this.enrichFileInfoList(
-            rawData.externalReference,
-            storageRootPath,
-            extRefDirName,
-            'dwg'
-          );
-        const images =
-          await this.enrichFileInfoList(
-            rawData.images,
-            storageRootPath,
-            extRefDirName,
-            'image'
-          );
+        const extRefDir = path.join(storageRootPath, extRefDirName);
+        const externalReference = await enrichPreloadingFileInfoList(
+          rawData.externalReference,
+          extRefDir,
+          'dwg'
+        );
+        const images = await enrichPreloadingFileInfoList(
+          rawData.images,
+          extRefDir,
+          'image'
+        );
 
         this.logger.debug(
           `成功获取预加载数据: nodeId=${nodeId}, 外部参照数: ${externalReference.length}, 图片数: ${images.length}`
@@ -247,49 +241,6 @@ export class ExternalReferenceUpdateService {
   }
 
   /**
-   * 将文件名列表转为包含文件大小和类型的对象列表
-   * @param fileNames 原始文件名列表
-   * @param storageRootPath 存储根路径
-   * @param extRefDirName 外部参照子目录名 (src_file_md5)
-   * @param defaultType 默认文件类型
-   */
-  private async enrichFileInfoList(
-    fileNames: string[],
-    storageRootPath: string,
-    extRefDirName: string,
-    defaultType: 'dwg' | 'image',
-  ): Promise<PreloadingFileInfoDto[]> {
-    if (!fileNames || fileNames.length === 0) return [];
-
-    const results: PreloadingFileInfoDto[] = [];
-    for (const name of fileNames) {
-      let size = 0;
-      let type = defaultType;
-
-      // 根据扩展名精确判断类型
-      const ext = path.extname(name).toLowerCase();
-      const isDwgFile = ['.dwg', '.dxf'].includes(ext);
-      const isImageFile = ['.png', '.jpg', '.jpeg', '.jfif', '.gif', '.webp', '.bmp'].includes(ext);
-      if (isDwgFile) type = 'dwg';
-      else if (isImageFile) type = 'image';
-
-      // 构造目标文件路径（与 checkExists 逻辑一致）
-      const targetFileName = isDwgFile ? `${name}.mxweb` : name;
-      const targetFilePath = path.join(storageRootPath, extRefDirName, targetFileName);
-
-      try {
-        const stat = await fsPromises.stat(targetFilePath);
-        size = stat.size;
-      } catch {
-        // 文件不存在时 size 保持 0
-      }
-
-      results.push({ name, size, type });
-    }
-    return results;
-  }
-
-  /**
    * 检查外部参照文件是否存在
    * @param nodeId 源图纸文件的节点 ID
    * @param fileName 外部参照文件名
@@ -313,18 +264,9 @@ export class ExternalReferenceUpdateService {
       // 获取外部参照目录名称
       const externalRefDirName = await this.extRefPreloadingService.getExtRefDirName(nodeId);
 
-      // 判断文件类型
-      const ext = path.extname(fileName).toLowerCase();
-      const isDwgFile = ['.dwg', '.dxf'].includes(ext);
-      const isImageFile = [
-        '.png',
-        '.jpg',
-        '.jpeg',
-        '.jfif',
-        '.gif',
-        '.webp',
-        '.bmp',
-      ].includes(ext);
+      // 判断文件类型（FileTypeDetector 为唯一事实源）
+      const isDwgFile = FileTypeDetector.isCadFile(fileName);
+      const isImageFile = FileTypeDetector.isImageFile(fileName);
 
       // 构建目标文件名
       let targetFileName: string;
@@ -404,18 +346,11 @@ export class ExternalReferenceUpdateService {
    */
   private async getStorageRootPath(nodeId: string): Promise<string> {
     try {
-      const sourceNode = await this.fileSystemNodeService.findById(nodeId);
-
-      if (sourceNode && sourceNode.path) {
-        const fullPath = this.storageManager.getFullPath(sourceNode.path);
-        const directoryPath = path.dirname(fullPath);
-        return directoryPath;
-      }
+      return await this.extRefPreloadingService.resolveStorageRoot(nodeId);
     } catch (error) {
       this.logger.warn(`[getStorageRootPath] 查找节点失败: ${error.message}`);
+      return this.mxcadUploadPath;
     }
-
-    return this.mxcadUploadPath;
   }
 
   /**
@@ -615,7 +550,7 @@ export class ExternalReferenceUpdateService {
       const storageRootPath = await this.getStorageRootPath(nodeId);
       const extRefDirName = await this.extRefPreloadingService.getExtRefDirName(nodeId);
       const ext = path.extname(fileName).toLowerCase();
-      const isDwgFile = ['.dwg', '.dxf'].includes(ext);
+      const isDwgFile = FileTypeDetector.isCadFile(fileName);
 
       // 构建磁盘文件名：
       // - DWG/DXF: 追加 .mxweb 后缀 → A1.dwg → A1.dwg.mxweb
@@ -640,7 +575,7 @@ export class ExternalReferenceUpdateService {
           if (nameWithoutMxweb) {
             candidates.push(path.join(storageRootPath, extRefDirName, nameWithoutMxweb));
             const innerExt = path.extname(nameWithoutMxweb).toLowerCase();
-            if (['.dwg', '.dxf'].includes(innerExt)) {
+            if (FileTypeDetector.isCadFile(nameWithoutMxweb)) {
               const innerBase = path.basename(nameWithoutMxweb, innerExt);
               candidates.push(path.join(storageRootPath, extRefDirName, `${innerBase}.mxweb`));
             }

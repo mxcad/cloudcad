@@ -27,7 +27,7 @@ import * as crypto from 'crypto';
 import * as archiver from 'archiver';
 import { PassThrough } from 'stream';
 
-import { MXCAD_CONVERSION_SERVICE } from '../../mxcad/interfaces/mxcad-service-tokens';
+import { MXCAD_CONVERSION_SERVICE } from '../../common/di-tokens';
 import type { IMxcadConversionService } from '../../mxcad/interfaces/mxcad-conversion.interface';
 
 import { I18nContext } from 'nestjs-i18n';

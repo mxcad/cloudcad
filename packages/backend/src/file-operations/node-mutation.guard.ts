@@ -339,21 +339,14 @@ export class NodeMutationGuard {
 
   /**
    * 变更后配额缓存失效统一入口。
+   * 缓存键仅用户维度（IQuotaCacheInvalidator），node/extraProjectId 为历史
+   * 项目维度参数、零读取——签名保留至 node-trash 等在途调用方落地后删除。
    */
   async invalidateQuotaAfterMutation(
     userId: string,
-    node: { projectId?: string | null },
-    extraProjectId?: string | null
+    _node?: { projectId?: string | null },
+    _extraProjectId?: string | null
   ): Promise<void> {
-    await this.storageInfoService.invalidateQuotaCache(
-      userId,
-      node.projectId ?? undefined
-    );
-    if (extraProjectId && extraProjectId !== node.projectId) {
-      await this.storageInfoService.invalidateQuotaCache(
-        userId,
-        extraProjectId
-      );
-    }
+    await this.storageInfoService.invalidateQuotaCache(userId);
   }
 }

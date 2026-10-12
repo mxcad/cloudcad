@@ -1,5 +1,5 @@
 import { ref, readonly } from 'vue';
-import { useEditorState } from './useEditorState';
+import { useEditorStore } from '@/stores/editor';
 import { loadCADPermissions } from '../services/permissionService';
 import { openMxWeb } from '../plugins/mxcad/openMxWeb';
 import {
@@ -39,7 +39,7 @@ export interface FileOpenOptions {
 }
 
 export function useFileLoader() {
-  const editorState = useEditorState();
+  const editorState = useEditorStore();
 
   /**
    * 从 URL 获取 fileId：
@@ -477,7 +477,7 @@ export async function checkFileExternalRefs(nodeId: string): Promise<void> {
     const ctx = { identifier: nodeId, isPublic: false };
     const items = await fetchExtRefList(ctx);
     if (items.length === 0) return;
-    const { state } = useEditorState();
+    const { state } = useEditorStore();
     const canManage = state.permissions.canManageExternalRef;
     await showExternalReferenceManagePopup({ ctx, initialFiles: items, canManage });
   } catch {

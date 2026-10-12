@@ -1,5 +1,5 @@
 const { log, parseBody, parseMultipart, sendJson } = require('../lib/utils');
-const { authMiddleware } = require('../lib/session');
+const { requireSession } = require('../lib/session');
 const brand = require('../brand');
 
 async function handle(req, res, pathname, method) {
@@ -13,8 +13,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/brand' && method === 'PUT') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const body = await parseBody(req);
     const errors = brand.validateConfig(body);
@@ -31,8 +30,7 @@ async function handle(req, res, pathname, method) {
   }
 
   if (pathname === '/api/brand/logo' && method === 'POST') {
-    const session = authMiddleware(req, res);
-    if (!session) return true;
+    if (!requireSession(req, res)) return true;
 
     const contentType = req.headers['content-type'] || '';
     if (!contentType.includes('multipart/form-data')) {

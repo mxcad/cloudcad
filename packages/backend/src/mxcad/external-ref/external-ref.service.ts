@@ -4,11 +4,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AppConfig } from '../../config/app.config';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
-import { StorageManager } from '../../storage-management/services/storage-manager.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
 import { FileSystemNodeContext } from '../node/filesystem-node.service';
 import * as path from 'path';
@@ -19,18 +16,13 @@ import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 @Injectable()
 export class ExternalRefService {
   private readonly logger = new Logger(ExternalRefService.name);
-  private readonly mxcadUploadPath: string;
 
   constructor(
-    private readonly configService: ConfigService<AppConfig>,
     private readonly fileSystemService: MxFileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
-    private readonly storageManager: StorageManager,
     private readonly extRefPreloadingService: ExtRefPreloadingService,
     private readonly nodeMutationGuard: NodeMutationGuard
-  ) {
-    this.mxcadUploadPath = this.configService.get('mxcadUploadPath', { infer: true });
-  }
+  ) {}
 
   async getExternalRefDirName(srcDwgNodeId: string): Promise<string> {
     try {
@@ -61,17 +53,15 @@ export class ExternalRefService {
       const sourceNode =
         await this.fileSystemNodeService.findById(srcDwgNodeId);
 
-      let sourceNodeDir: string;
+      // 存储根目录统一走 ExtRefPreloadingService.resolveStorageRoot（唯一事实源）
+      const sourceNodeDir = await this.extRefPreloadingService.resolveStorageRoot(
+        srcDwgNodeId,
+        sourceNode
+      );
       let externalRefDirName: string;
-
       if (sourceNode && sourceNode.path) {
-        // 用户云端：写入 filesDataPath 下的节点目录
-        const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
-        sourceNodeDir = path.dirname(sourceNodePath);
         externalRefDirName = await this.getExternalRefDirName(srcDwgNodeId);
       } else {
-        // 游客/临时：写入 mxcadUploadPath 下的临时目录
-        sourceNodeDir = this.mxcadUploadPath;
         externalRefDirName = srcDwgNodeId;
         this.logger.debug(
           `[handleExternalReferenceFile] 源节点不存在，使用临时存储: srcDwgNodeId=${srcDwgNodeId}`
@@ -133,18 +123,16 @@ export class ExternalRefService {
         );
       }
 
-      let sourceNodeDir: string;
+      // 存储根目录统一走 ExtRefPreloadingService.resolveStorageRoot（唯一事实源）
+      const sourceNodeDir = await this.extRefPreloadingService.resolveStorageRoot(
+        srcDwgNodeId,
+        sourceNode
+      );
       let externalRefDirName: string;
-
       if (sourceNode && sourceNode.path) {
-        // 用户云端：写入 filesDataPath 下的节点目录
-        const sourceNodePath = this.storageManager.getFullPath(sourceNode.path);
-        sourceNodeDir = path.dirname(sourceNodePath);
         const preloading = await this.extRefPreloadingService.readPreloadingData(srcDwgNodeId);
         externalRefDirName = preloading?.srcFileMd5 || sourceNode.fileHash || srcDwgNodeId;
       } else {
-        // 游客/临时：写入 mxcadUploadPath 下的临时目录
-        sourceNodeDir = this.mxcadUploadPath;
         const preloading = await this.extRefPreloadingService.readPreloadingData(srcDwgNodeId);
         externalRefDirName = preloading?.srcFileMd5 || srcDwgNodeId;
         this.logger.debug(

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { CAD_EVENTS } from '@/constants/events';
 import { t } from '@/languages';
 import { exitCurrentCollaboration } from '@/services/mxcadManager';
 import { subscribe, type SaveRequiredDetail } from '@/services/drawingSession';
+import { useLoginGate, type LoginGate } from './useLoginGate';
 
 export interface UseFileOpenGuardOptions {
   fileId: string | null;
@@ -18,6 +19,13 @@ export interface UseFileOpenGuardOptions {
   onSetIsPersonalSpaceMode: (mode: boolean) => void;
 }
 
+export interface UseFileOpenGuardResult {
+  isActive: boolean;
+  hideEditor: () => void;
+  /** 游客登录闸门（A8）：唯一动作入口 requireLogin + 只读查询 + 视图元素 */
+  loginGate: LoginGate;
+}
+
 export function useFileOpenGuard({
   fileId,
   isHomeMode,
@@ -29,20 +37,21 @@ export function useFileOpenGuard({
   onSetError,
   onSetStoreError,
   onSetIsPersonalSpaceMode,
-}: UseFileOpenGuardOptions) {
-  const navigate = useNavigate();
+}: UseFileOpenGuardOptions): UseFileOpenGuardResult {
   const location = useLocation();
 
   const [isActive, setIsActiveLocal] = useState(() => !!fileId || isHomeMode);
 
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [loginPromptAction, setLoginPromptAction] = useState<string>('');
-
   const pendingShowActionRef = useRef<boolean | null>(null);
-  const loginPromptDismissedRef = useRef(false);
-  const loginPromptActionRef = useRef<string>('');
-  const saveTriggeredRef = useRef(false);
-  const isProcessingSaveRef = useRef(false);
+
+  // 登录闸门归 useLoginGate 唯一 owner（A8）：本 hook 只在登录跳转前
+  // 结算编辑器 show 动作（onLoginStart），不再向外泄漏 ref/setter
+  const loginGate = useLoginGate({
+    isAuthenticated,
+    onLoginStart: () => {
+      pendingShowActionRef.current = false;
+    },
+  });
 
   const hideEditor = useCallback(() => {
     exitCurrentCollaboration();
@@ -95,7 +104,8 @@ export function useFileOpenGuard({
 
   useEffect(() => {
     if (isAuthenticated && isHomeMode) {
-      loginPromptDismissedRef.current = false;
+      // 登录成功回到首页：解除闸门抑制，后续游客态动作可再次弹提示
+      loginGate.resetLoginSuppression();
       pendingShowActionRef.current = true;
 
       (async () => {
@@ -114,7 +124,8 @@ export function useFileOpenGuard({
         }
       })();
     }
-  }, [isAuthenticated, isHomeMode]);
+    // 依赖具体稳定成员而非 loginGate 对象（对象每渲染新引用，会令 effect 每渲染重跑）
+  }, [isAuthenticated, isHomeMode, loginGate.resetLoginSuppression]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -141,9 +152,15 @@ export function useFileOpenGuard({
     }
   }, [isAuthenticated, fileId]);
 
+  const {
+    showLoginPrompt: gateShowLoginPrompt,
+    handleLoginPromptClose,
+  } = loginGate;
   useEffect(() => {
-    if (!isHomeMode && showLoginPrompt) {
-      setShowLoginPrompt(false);
+    // 路由变化时关闭仍打开的闸门视图（依赖只含路由：若含 showLoginPrompt，
+    // 非主页模式下提示一弹出就会被本 effect 立刻关闭，SAVE_REQUIRED 提示不可见）
+    if (!isHomeMode && gateShowLoginPrompt) {
+      handleLoginPromptClose();
     }
   }, [location.pathname, isHomeMode]);
 
@@ -151,16 +168,11 @@ export function useFileOpenGuard({
     // SAVE_REQUIRED + SAVE_AS_REQUIRED（原 window CustomEvent，T1 迁入类型化 bus）：
     // 未登录且未忽略时弹出登录提示，响应逻辑与迁移前一致（旧实现同一 handler 双事件订阅）
     const handleSaveRequired = (payload: SaveRequiredDetail) => {
-      if (loginPromptDismissedRef.current) return;
-
-      if (!isAuthenticated) {
-        // 按稳定 kind 取展示文案：原 action.includes(t('另存为')) 分派因生产端恒发
-        // t('保存文件') 而不可达，且跳过 saveAs 会吞掉登录提示（saveAsToCloud 已
-        // cancelLoginRedirect，提示是未登录用户唯一的登录入口），故两种 kind 都弹提示
-        const label = payload?.kind === 'saveAs' ? t('另存为') : t('保存文件');
-        setLoginPromptAction(label);
-        setShowLoginPrompt(true);
-      }
+      // 按稳定 kind 取展示文案：原 action.includes(t('另存为')) 分派因生产端恒发
+      // t('保存文件') 而不可达，且跳过 saveAs 会吞掉登录提示（saveAsToCloud 已
+      // cancelLoginRedirect，提示是未登录用户唯一的登录入口），故两种 kind 都弹提示
+      const label = payload?.kind === 'saveAs' ? t('另存为') : t('保存文件');
+      loginGate.requireLogin(label);
     };
 
     const unsubscribeSave = subscribe(
@@ -176,43 +188,7 @@ export function useFileOpenGuard({
       unsubscribeSave();
       unsubscribeSaveAs();
     };
-  }, [isAuthenticated]);
+  }, [loginGate.requireLogin]);
 
-  const handleLoginClick = async () => {
-    loginPromptDismissedRef.current = true;
-    saveTriggeredRef.current = true;
-    setShowLoginPrompt(false);
-
-    if (!loginPromptActionRef.current) {
-      loginPromptActionRef.current = loginPromptAction || t('保存文件');
-    }
-
-    pendingShowActionRef.current = false;
-
-    const { mxcadManager } = await import('../services/mxcadManager');
-    mxcadManager.showMxCAD(false);
-
-    const currentUrl = location.pathname + location.search;
-    const loginUrl = `/login?redirect=${encodeURIComponent(currentUrl)}`;
-    navigate(loginUrl, { replace: true });
-  };
-
-  const handleLoginPromptClose = () => {
-    setShowLoginPrompt(false);
-  };
-
-  return {
-    isActive,
-    showLoginPrompt,
-    loginPromptAction,
-    hideEditor,
-    handleLoginClick,
-    handleLoginPromptClose,
-    pendingShowActionRef,
-    loginPromptDismissedRef,
-    loginPromptActionRef,
-    saveTriggeredRef,
-    setShowLoginPrompt,
-    setLoginPromptAction,
-  };
+  return { isActive, hideEditor, loginGate };
 }

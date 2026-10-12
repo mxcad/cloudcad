@@ -43,7 +43,7 @@ import { SaveLibraryAsDto } from './dto/save-library-as.dto';
 import {
   findThumbnailSync,
   getDefaultThumbnailFileName,
-} from '../mxcad/infra/thumbnail-utils';
+} from '../common/utils/thumbnail-utils';
 
 export type LibraryType = 'drawing' | 'block';
 

@@ -81,9 +81,15 @@ function resetStore(): void {
 }
 
 let latestWorks: ReturnType<typeof makeWork>[] = [];
+let lastCurrentWorkId: number | null = null;
 
 function Probe() {
-  const { works, fetchWorks } = useCollabWorks(false, 'u1', true);
+  const { works, fetchWorks, currentWorkId } = useCollabWorks(
+    false,
+    { id: 'u1', username: 'tester' },
+    true
+  );
+  lastCurrentWorkId = currentWorkId;
   latestWorks = works as ReturnType<typeof makeWork>[];
 
   useEffect(() => {
@@ -99,6 +105,7 @@ beforeEach(() => {
   resetStore();
   vi.clearAllMocks();
   latestWorks = [];
+  lastCurrentWorkId = null;
 });
 
 describe('useCollabWorks — fetchWorks 以服务端为准', () => {
@@ -176,5 +183,61 @@ describe('useCollabWorks — fetchWorks 以服务端为准', () => {
 
     expect(useCADEditorStore.getState().currentFileName).toBe('真实图纸.dwg');
     expect(refreshFileName).toHaveBeenCalled();
+  });
+
+  it('回归：当前用户被遗漏时仍计入已加入会话的参与人数', async () => {
+    useCADEditorStore.setState({ collaborationWorkId: 101, isInCollaboration: true });
+    cooperateMock.getWorks.mockImplementation((cb: (list: unknown[]) => void) =>
+      cb([
+        {
+          work_id: 101,
+          work_data: JSON.stringify({
+            v: 3,
+            drawingId: '',
+            projectId: null,
+            drawingName: '图纸.dwg',
+            sourceType: 'local',
+            creatorId: 'other',
+            creatorName: 'other',
+          }),
+          real_user_id: 'other',
+          link_user_ids: [],
+          link_user_data: [],
+        },
+      ])
+    );
+
+    render(<Probe />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(latestWorks).toHaveLength(1);
+    expect(latestWorks[0].link_user_ids).toEqual(['u1']);
+    expect(latestWorks[0].link_user_data).toHaveLength(1);
+  });
+
+  it('回归：服务端只回 id 不回 data 时在线人数不被清零', async () => {
+    useCADEditorStore.setState({ collaborationWorkId: 101, isInCollaboration: true });
+    cooperateMock.getWorks.mockImplementation((cb: (list: unknown[]) => void) =>
+      cb([makeWork(101, '图纸.dwg')])
+    );
+
+    render(<Probe />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(latestWorks[0].link_user_ids).toEqual(['u1']);
+  });
+
+  it('回归：挂载时 currentWorkId 从 store 水合（侧边栏隐藏再打开不丢已加入态）', () => {
+    // resetStore 已置 collaborationWorkId=101
+    render(<Probe />);
+    expect(lastCurrentWorkId).toBe(101);
   });
 });

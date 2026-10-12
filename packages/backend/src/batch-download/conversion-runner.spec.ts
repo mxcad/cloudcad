@@ -119,6 +119,7 @@ describe('ConversionRunner', () => {
 
     mockExecutor = {
       isRemote: false,
+      capabilities: { cancel: false, listTasks: false, batch: false },
       invoke: jest.fn(),
       getTaskStatus: jest.fn(),
       queueStats: jest.fn().mockResolvedValue(null),
@@ -389,6 +390,11 @@ describe('ConversionRunner', () => {
   });
 
   describe('批量委托路径（执行器带批量原语）', () => {
+    beforeEach(() => {
+      // 批量用例：执行器声明批量能力（hasBatchDelegate 据此走委托路径）
+      mockExecutor.capabilities = { cancel: false, listTasks: false, batch: true };
+    });
+
     const okBatch = (results: BatchConversionResult['results']): void => {
       mockExecutor.submitBatch = jest
         .fn()
@@ -569,6 +575,7 @@ describe('ConversionRunner', () => {
     });
 
     it('委托路径混合直取格式：该任务显式报错，其余任务照常提交批量', async () => {
+      mockExecutor.capabilities = { cancel: false, listTasks: false, batch: true };
       mockExecutor.submitBatch = jest
         .fn()
         .mockResolvedValue({ batchId: 'fw_1' });
