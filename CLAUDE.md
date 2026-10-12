@@ -72,4 +72,4 @@
 
 ## Issues
 
-Issues 在 GitHub Issues 中跟踪。参见 `docs/agents/issue-tracker.md`。
+Issues 在自建 Gitea（`qjx/cloudcad`）中跟踪，**所有记录只保留在 Gitea**（GitHub 侧为 2026-10-12 迁移前的只读归档）。参见 `docs/agents/issue-tracker.md`（API 用法与 GitHub→Gitea 编号映射见 `docs/agents/issue-mapping.md`）。
