@@ -45,7 +45,7 @@ import { useClipboardPaste } from '@/composables/useClipboardPaste'
 import { useUndoSnackbar } from '@/composables/useUndoSnackbar'
 import { useFileNodeOps, type FabActionKey } from '@/composables/useFileNodeOps'
 import { isCadFileName } from '@/utils/cadFile'
-import { getFileNodeMenuActions } from '@/utils/projectPermissions'
+import { getFileNodeMenuActions, getProjectMenuActions, type ProjectMenuAction } from '@/utils/projectPermissions'
 import { isNearScrollBottom } from '@/utils/scroll'
 import { useNodeDownload } from '@/composables/useNodeDownload'
 import UndoSnackbar from '@/components/UndoSnackbar.vue'
@@ -308,20 +308,8 @@ const projectMenuTarget = ref<ProjectCard | null>(null)
 const showProjectMenuSheet = ref(false)
 const projectPermissions = ref<string[]>([])
 
-type ProjectMenuKey = 'edit' | 'members' | 'roles' | 'transfer' | 'history' | 'delete'
-type ProjectMenuItem = { name: string; key: ProjectMenuKey; color?: string }
-
-const projectMenuActions = computed<ProjectMenuItem[]>(() => {
-  const perms = projectPermissions.value
-  const actions: ProjectMenuItem[] = []
-  if (perms.includes('PROJECT_UPDATE')) actions.push({ name: t('编辑项目'), key: 'edit' })
-  actions.push({ name: t('成员'), key: 'members' })
-  if (perms.includes('PROJECT_ROLE_MANAGE')) actions.push({ name: t('角色管理'), key: 'roles' })
-  if (perms.includes('PROJECT_TRANSFER_MANAGE')) actions.push({ name: t('跨项目转移'), key: 'transfer' })
-  actions.push({ name: t('操作历史'), key: 'history' })
-  if (perms.includes('PROJECT_DELETE')) actions.push({ name: t('删除项目'), key: 'delete', color: '#ee0a24' })
-  return actions
-})
+// 门控表 + 装配表收在 getProjectMenuActions（与项目详情页共用），此处只留分派
+const projectMenuActions = computed(() => getProjectMenuActions(projectPermissions.value))
 
 const showProjectEdit = ref(false)
 
@@ -348,7 +336,7 @@ function onProjectCardTap(project: ProjectCard) {
   onProjectClick(project)
 }
 
-function onProjectMenuAction(action: ProjectMenuItem) {
+function onProjectMenuAction(action: ProjectMenuAction) {
   showProjectMenuSheet.value = false
   const target = projectMenuTarget.value
   if (!target) return

@@ -58,3 +58,66 @@ describe('FileUtils.resolveWithinRoot', () => {
     ).toThrow(BadRequestException);
   });
 });
+
+/**
+ * sanitizeDownloadFilename 是下载 / 导出 / zip 条目方向文件名净化的唯一出口。
+ * 字符集必须是此前 3 份实现的并集：任一份漏掉的字符（尤其 `<>:"|?*`）会原样进
+ * zip 条目名，Windows 端打不开。
+ */
+describe('FileUtils.sanitizeDownloadFilename', () => {
+  it('替换 Windows 非法字符而非剔除（与 sanitizeFilename 的分工）', () => {
+    expect(FileUtils.sanitizeDownloadFilename('<>"|?*a.txt', 255)).toBe(
+      '______a.txt'
+    );
+    // 对比：上传命名那侧是剔除 + 抛错，不会得到下划线占位
+    expect(FileUtils.sanitizeFilename('<>a.txt')).toBe('a.txt');
+  });
+
+  it('替换路径分隔符、..、~ 与控制字符', () => {
+    expect(
+      FileUtils.sanitizeDownloadFilename('a/b\\c..d~e\x00f.pdf', 255)
+    ).toBe('a_b_c_d_e_f.pdf');
+  });
+
+  it('截断到长度上限并保留扩展名', () => {
+    const result = FileUtils.sanitizeDownloadFilename(
+      'x'.repeat(260) + '.pdf',
+      255
+    );
+    expect(result).toHaveLength(255);
+    expect(result).toBe('x'.repeat(251) + '.pdf');
+  });
+
+  it('无扩展名的名字（转换产物名拼接前）也可截断', () => {
+    expect(FileUtils.sanitizeDownloadFilename('x'.repeat(260), 255)).toBe(
+      'x'.repeat(255)
+    );
+  });
+
+  it('基名全为点号时不留下隐藏文件起点', () => {
+    // path.extname('.pdf') === ''（隐藏文件的点不算扩展名）：'.pdf' 按无扩展名处理
+    expect(FileUtils.sanitizeDownloadFilename('.pdf', 0)).toBe('unnamed');
+    // 长点串截断后基名全为点号，剥点后只剩裸扩展名 → 同为隐藏文件
+    expect(FileUtils.sanitizeDownloadFilename('...pdf', 0)).toBe('unnamed');
+  });
+
+  it('整个名字在截断后消失时回落到 unnamed', () => {
+    expect(FileUtils.sanitizeDownloadFilename('/', 0)).toBe('unnamed');
+  });
+
+  it('扩展名占满上限时不产生负数截断长度', () => {
+    expect(FileUtils.sanitizeDownloadFilename('a.b.c.d', 3)).toBe('a.d');
+  });
+
+  it('净化后为空或仅剩点号：回落到 unnamed', () => {
+    expect(FileUtils.sanitizeDownloadFilename('/\\', 255)).toBe('unnamed');
+    expect(FileUtils.sanitizeDownloadFilename('  ', 255)).toBe('unnamed');
+    expect(FileUtils.sanitizeDownloadFilename('.', 255)).toBe('unnamed');
+  });
+
+  it('中文文件名原样保留（不动非 ASCII 合法字符）', () => {
+    expect(FileUtils.sanitizeDownloadFilename('图纸 最终版.dwg', 255)).toBe(
+      '图纸 最终版.dwg'
+    );
+  });
+});

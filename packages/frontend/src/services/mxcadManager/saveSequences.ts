@@ -10,6 +10,7 @@ import { calculateFileHash } from '@/utils/hashUtils';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
 import { globalShowToast } from '@/utils/notificationEvents';
+import { isDeletedStatus } from '@/lib/fileStatus';
 import { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
 import {
   getFileInfo,
@@ -78,7 +79,7 @@ export async function saveToNodeFile(
   try {
     const nodeResp = await deps.sdk.getNode(fileInfo.fileId);
     const node = nodeResp.data;
-    if (node?.fileStatus === 'DELETED' || node?.deletedAt) {
+    if (isDeletedStatus(node?.fileStatus) || node?.deletedAt) {
       // 保存的是当前打开文件（生产不变量：fileInfo.fileId === currentFileId），
       // 会话置已删除标记后走另存为
       notifyNodesDeleted([fileInfo.fileId]);

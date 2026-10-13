@@ -52,6 +52,35 @@ export interface ConversionQuotaState {
   resetsAt: Date;
 }
 
+/**
+ * 转换配额主体（ADR-0043）：登录用户按 userId 窗口，游客按 IP 窗口。
+ *
+ * userId / ip 的分派只在本模块（reserve/release/withConversionQuota 共用），
+ * 调用方不再各自复制「userId 走 user 窗口、否则走 IP 窗口」的判断——
+ * 此前 drawing-ingest 各写了一份（reserve 与 release 各一份）。
+ */
+export type ConversionQuotaPrincipal = { userId?: string; ip?: string };
+
+/**
+ * 转换频率占位的可释放句柄（ADR-0043）。
+ *
+ * `release()` 幂等、可重复调用、无占位时为空操作、释放失败只告警不抛——
+ * 调用方无需自己跟踪「是否占过位」，也就无需在异步边界上传递
+ * conversionReserved 之类的布尔标记。
+ */
+export interface ConversionQuotaReservation {
+  /** 是否真的占用了额度（无主体或无限制时为 false；release() 仍恒可安全调用） */
+  readonly reserved: boolean;
+  /** 释放占位 */
+  release(): Promise<void>;
+}
+
+/** 未占用任何额度的占位句柄（无主体 / 内部调用 / 额度拒绝项） */
+export const NO_OP_CONVERSION_RESERVATION: ConversionQuotaReservation = {
+  reserved: false,
+  release: async () => undefined,
+};
+
 /** 转 bin（覆盖保存）频率窗口 Redis 键：与转换窗口独立前缀，避免混用计数 */
 const saveWindowKey = (
   scope: 'user' | 'ip',
@@ -247,32 +276,90 @@ export class RestrictionEngine implements IConversionAccessGuard {
    * 逐条占位/按项释放）与长生命周期后台占位（drawing-ingest 上传时占位、
    * 后台转换失败时释放，reserve 与 release 跨控制流）。
    */
-  async withConversionQuota<T>(
-    principal: { userId?: string; ip?: string },
-    fn: () => Promise<T>
-  ): Promise<T> {
+  /**
+   * 预留本次转换的频率限制额度（ADR-0043），返回可释放句柄。
+   *
+   * 主体分派（userId 窗口 / IP 窗口 / 无主体不占位）唯一收口在此；超限抛
+   * QuotaExceededException（403）。reserve 与 release 跨控制流的调用方
+   * （drawing-ingest：上传时占位、后台转换失败时释放）用它拿句柄后按失败点释放。
+   */
+  async reserveConversionReservation(
+    principal: ConversionQuotaPrincipal
+  ): Promise<ConversionQuotaReservation> {
     const { userId, ip } = principal;
     if (userId) {
       await this.reserveConversionCountOrThrow(userId);
-    } else if (ip) {
-      await this.reserveGuestConversionCountOrThrow(ip);
+      return {
+        reserved: true,
+        release: async () => {
+          await this.releaseConversionCount(userId).catch((e: unknown) =>
+            this.logger.warn(
+              `释放转换配额失败: ${(e as Error).message}`
+            )
+          );
+        },
+      };
     }
-    try {
-      return await fn();
-    } catch (error) {
-      if (userId) {
-        await this.releaseConversionCount(userId).catch((e: unknown) =>
-          this.logger.warn(
-            `释放转换配额失败: ${(e as Error).message}`
-          )
-        );
-      } else if (ip) {
+    if (!ip) return { reserved: false, release: async () => undefined };
+    await this.reserveGuestConversionCountOrThrow(ip);
+    return {
+      reserved: true,
+      release: async () => {
         await this.releaseGuestConversionCount(ip).catch((e: unknown) =>
           this.logger.warn(
             `释放游客转换配额失败: ${(e as Error).message}`
           )
         );
-      }
+      },
+    };
+  }
+
+  /**
+   * 按主体释放一次转换频率占位（reserve 与 release 不在同一作用域、手上没有句柄
+   * 的调用方用，如 drawing-ingest 的失败清算）。幂等；无主体为空操作；
+   * 释放失败只告警不抛。
+   */
+  async releaseConversionReservation(
+    principal: ConversionQuotaPrincipal
+  ): Promise<void> {
+    const { userId, ip } = principal;
+    if (userId) {
+      await this.releaseConversionCount(userId).catch((e: unknown) =>
+        this.logger.warn(
+          `释放转换配额失败: ${(e as Error).message}`
+        )
+      );
+    } else if (ip) {
+      await this.releaseGuestConversionCount(ip).catch((e: unknown) =>
+        this.logger.warn(
+          `释放游客转换配额失败: ${(e as Error).message}`
+        )
+      );
+    }
+  }
+
+  /**
+   * 转换配额「占位 → 执行 → 失败必释放」单点包装（ADR-0043/0060）。
+   *
+   * - 主体：登录用户走 userId 窗口；游客走 IP 窗口；两者皆无则不占位直接执行。
+   * - 成功：占位被消耗（不释放）；失败（含引擎原始异常）：保证释放后原样上抛，
+   *   释放自身失败只告警不掩盖原始错误。
+   * - 调用点只负责错误文案翻译，不再各自管理 reserve/release 时机——
+   *   历史上 precomputeExport 的「引擎原始异常分支漏释放」即源于散落的释放对。
+   *
+   * 不适用场景：批量逐项占位（conversion-runner 的 N 项逐条占位/按项释放）与
+   * 长生命周期后台占位（drawing-ingest 上传时占位、后台转换失败时释放，
+   * reserve 与 release 跨控制流）——它们直接用 reserveConversionReservation 拿句柄。
+   */
+  async withConversionQuota<T>(
+    principal: ConversionQuotaPrincipal,
+    fn: () => Promise<T>
+  ): Promise<T> {
+    const reservation = await this.reserveConversionReservation(principal);
+    try {
+      return await fn();
+    } catch (error) {
+      await reservation.release();
       throw error;
     }
   }

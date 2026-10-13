@@ -13,7 +13,7 @@
 /**
  * 项目权限共享缓存
  *
- * 供 useProjectPermission（hook）与 permissionUtils（纯函数）复用，
+ * 供 useProjectPermissions（hook）与 permissionUtils（纯函数）复用，
  * 避免两处各自维护一套项目权限缓存。
  */
 

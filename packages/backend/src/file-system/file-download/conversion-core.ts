@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import type { ConversionRequest } from '@cloudcad/contracts';
 import type { IMxcadConversionService } from '../../mxcad/interfaces/mxcad-conversion.interface';
 import type { ConvertServerFileParam } from '../../mxcad/types/mxcad-context.types';
-import type { OutputFormatParams } from './format-policy';
 
 /**
  * 共享转换核心失败：区分「引擎返回非 0 code」与「产物缺失」，携带引擎原始信息。
@@ -34,8 +34,18 @@ export interface ConversionCoreInput {
   userId?: string;
   /** 输出文件名（含扩展名；版本绑定 {hash}-{paramKey}{ext} 或直取名） */
   outname: string;
-  /** 引擎参数（FormatPolicy 已应用默认值：pdf 补齐 2000/2000/mono，dwg/dxf 透传版本） */
-  engineParams?: OutputFormatParams;
+  /**
+   * 引擎参数——引擎影响字段全集（ENGINE_INPUT_FIELDS），不含 srcPath/fileHash/outname/
+   * createPreloadingData（这几个由上方显式字段设定，Object.assign 会被其覆盖）。
+   *
+   * 取全集而非 FormatPolicy 的 OutputFormatParams 子集，是为了让调用方能透传客户端
+   * 传入的裁剪框/打印角度/布局等字段而不必绕开本核心自己拼转换参数
+   * （public-file 曾因此手写枚举 14 个引擎字段）。
+   * FormatPolicy 输出的 OutputFormatParams 是它的子集，直接可传。
+   */
+  engineParams?: Partial<
+    Omit<ConversionRequest, 'srcPath' | 'fileHash' | 'outname' | 'createPreloadingData'>
+  >;
   /** 任务优先级（批量下载 'low'；单文件下载缺省 'high'） */
   priority?: 'high' | 'low';
 }

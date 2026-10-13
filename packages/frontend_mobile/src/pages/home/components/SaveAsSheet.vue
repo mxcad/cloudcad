@@ -5,7 +5,7 @@ import { useSaveAs, type SaveTargetType, type LibraryType, type SaveFormat } fro
 import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
-import { unwrap } from '../../../utils/apiError';
+import { unwrap, errMsg } from '../../../utils/apiError';
 import type { FileSystemNodeDto } from '../../../api-sdk';
 import FloatingPopup from '../../../components/FloatingPopup.vue';
 
@@ -170,7 +170,7 @@ async function handleSave() {
       error.value = result.message || t('保存失败');
     }
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : t('保存失败，请稍后重试');
+    error.value = errMsg(e, t('保存失败，请稍后重试'));
   }
 }
 

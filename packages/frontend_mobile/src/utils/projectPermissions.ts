@@ -233,3 +233,45 @@ export function getFileNodeMenuActions(ctx: FileNodeMenuContext): FileNodeMenuAc
   ]
   return actions.filter((a): a is FileNodeMenuAction => a !== null)
 }
+
+/** 项目级操作菜单项 key（与深链查询参 `?manage=<key>` 同名，见 ProjectDetailPage 深链入口） */
+export type ProjectMenuKey =
+  | 'edit'
+  | 'members'
+  | 'roles'
+  | 'transfer'
+  | 'history'
+  | 'delete'
+
+/** 项目级操作菜单项（name 走 i18n，key 供 onMenuAction 分派，color 仅删除项用） */
+export interface ProjectMenuAction {
+  name: string
+  key: ProjectMenuKey
+  color?: string
+}
+
+/**
+ * 项目级操作菜单项派生（纯函数，项目列表壳页与项目详情页共用同一装配逻辑）。
+ * 「成员」「操作历史」恒可见；编辑/角色管理/跨项目转移/删除按 projectPermissions
+ * 逐项门控。此前两页各写一份（门控表 + 装配表 + 分派），且 key 词汇分叉成
+ * `transfer`（路由参）与 `transferSettings`（本地 action key），收敛后 key 只有一份。
+ */
+export function getProjectMenuActions(permissions: string[]): ProjectMenuAction[] {
+  const actions: Array<ProjectMenuAction | null> = [
+    permissions.includes(ProjectPermission.PROJECT_UPDATE)
+      ? { name: t('编辑项目'), key: 'edit' }
+      : null,
+    { name: t('成员'), key: 'members' },
+    permissions.includes(ProjectPermission.PROJECT_ROLE_MANAGE)
+      ? { name: t('角色管理'), key: 'roles' }
+      : null,
+    permissions.includes(ProjectPermission.PROJECT_TRANSFER_MANAGE)
+      ? { name: t('跨项目转移'), key: 'transfer' }
+      : null,
+    { name: t('操作历史'), key: 'history' },
+    permissions.includes(ProjectPermission.PROJECT_DELETE)
+      ? { name: t('删除项目'), key: 'delete', color: '#ee0a24' }
+      : null,
+  ]
+  return actions.filter((a): a is ProjectMenuAction => a !== null)
+}

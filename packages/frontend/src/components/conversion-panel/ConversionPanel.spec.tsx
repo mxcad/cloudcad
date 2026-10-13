@@ -192,7 +192,11 @@ beforeEach(() => {
     pauseAll: vi.fn(),
     resumeAll: vi.fn(),
     clearCompleted: vi.fn(),
-    manager: {},
+    manager: {
+      getTasks: vi.fn(() => []),
+      finalizeTask: vi.fn(),
+      failTask: vi.fn(),
+    },
   });
   // 下载 store 重置：前序用例残留的 tasks 会在渲染时被当作「本会话新触发」
   // （settled 前只记录基线，但 settled 后增长即展开），导致用例不独立
@@ -957,7 +961,11 @@ describe('ConversionPanel', () => {
       pauseAll: vi.fn(),
       resumeAll: vi.fn(),
       clearCompleted: vi.fn(),
-      manager: {},
+      manager: {
+        getTasks: vi.fn(() => []),
+        finalizeTask: vi.fn(),
+        failTask: vi.fn(),
+      },
     });
     useConversionQueueStore.setState({ collapsed: false });
     await renderPanel();
@@ -1056,7 +1064,11 @@ describe('ConversionPanel', () => {
       pauseAll: vi.fn(),
       resumeAll: vi.fn(),
       clearCompleted: vi.fn(),
-      manager: {},
+      manager: {
+        getTasks: vi.fn(() => []),
+        finalizeTask: vi.fn(),
+        failTask: vi.fn(),
+      },
     };
     mockUseUploadManager.mockImplementation(() => uploadState);
     // 重置下载 store：前序用例残留的 tasks 会让首次渲染即触发下载切 tab
@@ -1663,7 +1675,11 @@ describe('ConversionPanel', () => {
         pauseAll: vi.fn(),
         resumeAll: vi.fn(),
         clearCompleted: vi.fn(),
-        manager: {},
+        manager: {
+          getTasks: vi.fn(() => []),
+          finalizeTask: vi.fn(),
+          failTask: vi.fn(),
+        },
       });
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
       useConversionQueueStore.setState({ collapsed: false });
@@ -1802,5 +1818,61 @@ describe('ConversionPanel', () => {
           .value
       ).toBe('');
     });
+  });
+
+  it('上传任务终态对账：云端节点终态后结算滞留 processing 的上传任务（#4b 回归）', async () => {
+    // 上传任务在 processing 态，result 已写入 nodeId（task-processing 事件后）
+    const finalizeSpy = vi.fn();
+    const failSpy = vi.fn();
+    const processingTask = {
+      id: 'ut-1',
+      fileName: 'test.dwg',
+      fileSize: 1024,
+      nodeId: 'n1',
+      progress: 100,
+      status: 'processing' as const,
+      result: { nodeId: 'n1' },
+      updatedAt: Date.now(),
+    };
+    mockUseUploadManager.mockReturnValue({
+      tasks: [processingTask],
+      stats: { ...emptyUploadStats, total: 1, uploading: 1 },
+      pauseTask: vi.fn(),
+      resumeTask: vi.fn(),
+      removeTask: vi.fn(),
+      retryTask: vi.fn(),
+      pauseAll: vi.fn(),
+      resumeAll: vi.fn(),
+      clearCompleted: vi.fn(),
+      manager: {
+        getTasks: vi.fn(() => [processingTask]),
+        finalizeTask: finalizeSpy,
+        failTask: failSpy,
+      },
+    });
+    // 云端历史返回同一 nodeId 的 completed 任务 → 触发对账
+    vi.mocked(conversionTaskControllerListHistory).mockResolvedValue({
+      error: undefined,
+      data: {
+        tasks: [
+          {
+            nodeId: 'n1',
+            name: 'test.dwg',
+            fileStatus: 'COMPLETED',
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+        hasMore: false,
+      },
+    } as never);
+    useConversionQueueStore.setState({ collapsed: false });
+    await renderPanel();
+
+    // 对账 effect 应在 history 更新后触发 finalizeTask
+    await waitFor(() => {
+      expect(finalizeSpy).toHaveBeenCalledWith('ut-1');
+    });
+    expect(failSpy).not.toHaveBeenCalled();
   });
 });

@@ -26,6 +26,7 @@ import {
 
 import { t } from '@/languages';
 import { queryKeys } from '@/lib/queryKeys';
+import { isDeletedStatus } from '@/lib/fileStatus';
 import type { FileSystemNode } from '@/types/filesystem';
 import { handleError } from '@/utils/errorHandler';
 
@@ -171,7 +172,7 @@ export const useTrashActions = ({
         throwOnError: true,
       });
       const node = nodeResp.data;
-      if (node?.fileStatus === 'DELETED' || node?.deletedAt) {
+      if (isDeletedStatus(node?.fileStatus) || node?.deletedAt) {
         notifyNodesDeleted([currentFileId]);
       }
     } catch {

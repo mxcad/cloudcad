@@ -23,7 +23,7 @@ import {
   showFailToast,
 } from 'vant'
 import { t } from '@/languages'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
 import {
   rolesControllerGetProjectRolesByProject,
   projectRolesControllerCreateProjectRole,
@@ -67,7 +67,7 @@ async function loadRoles() {
     roles.value = res.data ?? []
     roleError.value = ''
   } catch (e) {
-    roleError.value = errMessage(e, t('加载项目角色失败'))
+    roleError.value = errMsg(e, t('加载项目角色失败'))
   } finally {
     roleLoading.value = false
   }
@@ -199,7 +199,7 @@ async function onSaveRole() {
     await Promise.all([loadRoles(), refreshProjectPermissions()])
   } catch (e) {
     closeToast()
-    showFailToast(errMessage(e, t('保存失败')))
+    showFailToast(errMsg(e, t('保存失败')))
   } finally {
     saving.value = false
   }
@@ -236,18 +236,8 @@ async function onDeleteRole(role: ProjectRoleDto) {
     await loadRoles()
   } catch (e) {
     closeToast()
-    showFailToast(errMessage(e, t('删除失败')))
+    showFailToast(errMsg(e, t('删除失败')))
   }
-}
-
-/** 从 SDK 错误取可读文案：transformer 把后端 i18n message 放进 Error.message */
-function errMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) return error.message
-  if (error && typeof error === 'object' && 'message' in error) {
-    const msg = String((error as { message?: unknown }).message ?? '')
-    if (msg) return msg
-  }
-  return fallback
 }
 
 /** 角色成员数（_count 由后端按 includes 返回，可能缺失） */

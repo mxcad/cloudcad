@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import {
   auditLogControllerFindAll,
   auditLogControllerGetStatistics,
-  projectControllerGetProjects,
 } from '@/api-sdk';
 import type { AuditLogControllerFindAllData } from '@/api-sdk';
 import { queryKeys } from '@/lib/queryKeys';
+import { fetchProjects } from '@/lib/projects';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import type { AuditLog } from '@/utils/auditActionTemplates';
@@ -98,11 +98,8 @@ export function useAuditProjectOptions() {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.projects.all,
     queryFn: async (): Promise<ProjectOption[]> => {
-      const result = await projectControllerGetProjects({
-        throwOnError: true,
-        query: {},
-      });
-      return (result.data?.nodes ?? []).map((node) => ({
+      const { nodes } = await fetchProjects();
+      return nodes.map((node) => ({
         id: String(node.id ?? ''),
         name: String(node.name ?? node.id ?? ''),
       }));

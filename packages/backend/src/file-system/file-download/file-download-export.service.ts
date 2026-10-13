@@ -34,6 +34,7 @@ import { I18nContext } from 'nestjs-i18n';
 import { AuditLogger } from '../../audit/audit-logger.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import { NodeUtils } from '../../common/utils/node-utils';
+import { FileUtils } from '../../common/utils/file-utils';
 import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
@@ -373,11 +374,9 @@ export class FileDownloadExportService {
       throw new BadRequestException(formatUnsupportedMessage(format));
     }
     const targetExt = resolved.targetExt;
-    const targetFilename = `${path
-      .basename(originalFilename, ext)
-      .replace(/[<>:"|?*]/g, '_')
-      .replace(/\.\./g, '_')
-      .replace(/~/g, '_')}${targetExt}`;
+    const targetFilename = `${this.sanitizeFileName(
+      path.basename(originalFilename, ext)
+    )}${targetExt}`;
 
     // 步骤 2：快照工作副本到 uploads/{hash}.mxweb（内容寻址），缓存键 {hash}-{paramKey}
     const snapshot = await this.snapshotMxweb(node);
@@ -462,21 +461,10 @@ export class FileDownloadExportService {
   }
 
   private sanitizeFileName(fileName: string): string {
-    let sanitized = fileName.replace(/[\/\\]/g, '_');
-    sanitized = sanitized.replace(/[\x00-\x1F\x7F]/g, '_');
-
-    if (sanitized.length > this.fileLimits.maxFilenameLength) {
-      const ext = path.extname(sanitized);
-      const nameWithoutExt = path.basename(sanitized, ext);
-      const maxNameLength = this.fileLimits.maxFilenameLength - ext.length;
-      sanitized = nameWithoutExt.substring(0, maxNameLength) + ext;
-    }
-
-    if (sanitized.trim() === '' || sanitized === '.') {
-      sanitized = 'unnamed';
-    }
-
-    return sanitized;
+    return FileUtils.sanitizeDownloadFilename(
+      fileName,
+      this.fileLimits.maxFilenameLength
+    );
   }
 
   private async getFileStream(
@@ -679,11 +667,9 @@ export class FileDownloadExportService {
           // 格式决策单一出口（FormatPolicy）：targetExt/引擎参数默认值由此派生
           const resolved = resolveOutputFormat(format, pdfParams);
           const targetExt = resolved.targetExt;
-          const targetFilename = `${path
-            .basename(originalFilename, ext)
-            .replace(/[<>:"|?*]/g, '_')
-            .replace(/\.\./g, '_')
-            .replace(/~/g, '_')}${targetExt}`;
+          const targetFilename = `${this.sanitizeFileName(
+            path.basename(originalFilename, ext)
+          )}${targetExt}`;
 
           // ── 步骤 2：快照工作副本到 uploads/{hash}.mxweb（内容寻址、不可变），缓存键 {hash}-{paramKey} ──
           // 转换读快照而非可变工作副本，避免执行时读到被覆盖的版本。

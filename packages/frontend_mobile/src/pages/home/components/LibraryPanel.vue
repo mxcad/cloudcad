@@ -303,6 +303,7 @@ interface LibraryActionItem {
   color?: string
 }
 import { t } from '@/languages'
+import { errMsg } from '@/utils/apiError'
 import { MxFun } from 'mxdraw'
 import FloatingPopup from '@/components/FloatingPopup.vue'
 import { useLibrary, LibraryType } from '@/composables/useLibrary'
@@ -722,7 +723,7 @@ async function onActionSheetSelect(action: LibraryActionItem) {
       showBatchPanel.value = true
     } catch (e) {
       closeToast()
-      const msg = e instanceof Error ? e.message : ''
+      const msg = errMsg(e, '')
       showFailToast(msg || t('创建下载任务失败'))
     }
     exitSelection()

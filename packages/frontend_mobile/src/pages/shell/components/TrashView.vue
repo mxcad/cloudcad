@@ -26,7 +26,7 @@ import { formatNodeAsItems } from '@/composables/useNodeFormatter'
 import type { FileListItem } from '@/composables/useNodeFormatter'
 import type { FileListFilters } from '@/composables/useUnifiedFileList'
 import UnifiedFileList from './UnifiedFileList.vue'
-import type { SelectionActionKey } from './UnifiedFileList.vue'
+import type { SelectionActionKey } from '@/types/selection-action'
 import FileFilterPopup from './FileFilterPopup.vue'
 
 const props = withDefaults(

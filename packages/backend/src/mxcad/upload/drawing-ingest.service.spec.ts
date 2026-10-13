@@ -85,10 +85,10 @@ describe('DrawingIngestService', () => {
   };
 
   const mockRestrictionEngine = {
-    reserveConversionCountOrThrow: jest.fn(),
-    reserveGuestConversionCountOrThrow: jest.fn(),
-    releaseConversionCount: jest.fn(),
-    releaseGuestConversionCount: jest.fn(),
+    // 主体分派（userId / IP 窗口）已收口进 RestrictionEngine，
+    // 本服务只经这两个句柄方法占位与释放
+    reserveConversionReservation: jest.fn(),
+    releaseConversionReservation: jest.fn(),
   };
 
   const mockNodeStatusTransitioner = {
@@ -173,10 +173,13 @@ describe('DrawingIngestService', () => {
 
     mockMaterializer.resolveParentId.mockResolvedValue('parent1');
     mockMaterializer.materialize.mockResolvedValue({ nodeId: 'node1' });
-    mockRestrictionEngine.reserveConversionCountOrThrow.mockResolvedValue(
+    mockRestrictionEngine.reserveConversionReservation.mockResolvedValue({
+      reserved: true,
+      release: jest.fn(),
+    });
+    mockRestrictionEngine.releaseConversionReservation.mockResolvedValue(
       undefined
     );
-    mockRestrictionEngine.releaseConversionCount.mockResolvedValue(undefined);
   });
 
   describe('秒传 ret 码', () => {
@@ -332,16 +335,16 @@ describe('DrawingIngestService', () => {
         nodeId: 'cad1',
         created: true,
       });
-      expect(mockRestrictionEngine.reserveConversionCountOrThrow).toHaveBeenCalledWith(
-        'user1'
+      expect(mockRestrictionEngine.reserveConversionReservation).toHaveBeenCalledWith(
+        { userId: 'user1', ip: undefined }
       );
 
       // 冲刷后台转换任务微任务链（fire-and-forget，mock 立即 resolve 故任务已完成）
       await flushMicrotasks();
 
       // 后台任务：转换失败 → 释放占位 + 删除未成功节点（不留 FAILED 记录）
-      expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
-        'user1'
+      expect(mockRestrictionEngine.releaseConversionReservation).toHaveBeenCalledWith(
+        { userId: 'user1', ip: undefined }
       );
       expect(mockNodeStatusTransitioner.transition).not.toHaveBeenCalledWith(
         expect.any(String),
@@ -515,8 +518,8 @@ describe('DrawingIngestService', () => {
       expect(result).toEqual({ ret: MxUploadReturn.kConvertFileError });
       expect(mockMaterializer.handleExtRef).not.toHaveBeenCalled();
       expect(mockNodeTrashService.deleteNode).not.toHaveBeenCalled();
-      expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
-        'user1'
+      expect(mockRestrictionEngine.releaseConversionReservation).toHaveBeenCalledWith(
+        { userId: 'user1', ip: undefined }
       );
     });
   });
@@ -563,7 +566,7 @@ describe('DrawingIngestService', () => {
         { hash: 'hash1', status: 'COMPLETED' }
       );
       // 转换成功，不释放占位
-      expect(mockRestrictionEngine.releaseConversionCount).not.toHaveBeenCalled();
+      expect(mockRestrictionEngine.releaseConversionReservation).not.toHaveBeenCalled();
     });
 
     it('无 nodeId 转换失败：上传仍立即返回 kOk，后台释放占位 + FAILED emit', async () => {
@@ -592,8 +595,8 @@ describe('DrawingIngestService', () => {
         CONVERSION_FILE_CHANNEL('hash1'),
         { hash: 'hash1', status: 'FAILED' }
       );
-      expect(mockRestrictionEngine.releaseConversionCount).toHaveBeenCalledWith(
-        'user1'
+      expect(mockRestrictionEngine.releaseConversionReservation).toHaveBeenCalledWith(
+        { userId: 'user1', ip: undefined }
       );
     });
   });

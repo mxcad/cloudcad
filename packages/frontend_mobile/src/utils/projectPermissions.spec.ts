@@ -28,6 +28,7 @@ import {
   getDependentPermissions,
   getProjectPermissionGroups,
   getProjectPermissionItems,
+  getProjectMenuActions,
   getProjectRoleDisplayName,
   getFileNodeMenuActions,
   type PermissionChangeDecision,
@@ -294,5 +295,54 @@ describe('getFileNodeMenuActions 文件/文件夹操作菜单派生', () => {
       },
     })
     expect(keys(actions)).toEqual(['open'])
+  })
+})
+
+describe('getProjectMenuActions 项目级操作菜单派生', () => {
+  const ALL_PROJECT = Object.values(ProjectPermission) as string[]
+  const menuKeys = (actions: ReturnType<typeof getProjectMenuActions>) =>
+    actions.map((a) => a.key)
+
+  it('权限齐全：六项全出，顺序固定', () => {
+    expect(menuKeys(getProjectMenuActions(ALL_PROJECT))).toEqual([
+      'edit',
+      'members',
+      'roles',
+      'transfer',
+      'history',
+      'delete',
+    ])
+  })
+
+  it('空权限（加载期悲观隐藏）：仅「成员」「操作历史」恒可见', () => {
+    expect(menuKeys(getProjectMenuActions([]))).toEqual(['members', 'history'])
+  })
+
+  it('逐项门控：只带 PROJECT_DELETE 时在恒可见项之外仅多出删除项', () => {
+    expect(menuKeys(getProjectMenuActions(['PROJECT_DELETE']))).toEqual([
+      'members',
+      'history',
+      'delete',
+    ])
+  })
+
+  it('逐项门控：只带 PROJECT_ROLE_MANAGE 时多出角色管理项', () => {
+    expect(menuKeys(getProjectMenuActions(['PROJECT_ROLE_MANAGE']))).toEqual([
+      'members',
+      'roles',
+      'history',
+    ])
+  })
+
+  it('key 词汇与深链查询参 ?manage=<key> 同名（transfer 而非 transferSettings）', () => {
+    const actions = getProjectMenuActions(ALL_PROJECT)
+    expect(actions.some((a) => a.key === 'transfer')).toBe(true)
+    expect(actions.some((a) => (a.key as string) === 'transferSettings')).toBe(false)
+  })
+
+  it('「删除项目」带红色，其余不带', () => {
+    const actions = getProjectMenuActions(ALL_PROJECT)
+    expect(actions.find((a) => a.key === 'delete')?.color).toBe('#ee0a24')
+    expect(actions.filter((a) => a.color !== undefined)).toHaveLength(1)
   })
 })

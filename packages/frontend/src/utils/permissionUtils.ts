@@ -14,8 +14,7 @@
  * 权限检查工具（纯函数版）
  *
  * 供非 hook 上下文（动态 import、循环遍历）使用。
- * 数据经 globalPermissionCache 共享缓存（与 useProjectPermissions /
- * useProjectPermission 同一份），避免重复请求。
+ * 数据经 globalPermissionCache 共享缓存（与 useProjectPermissions 同一份），避免重复请求。
  */
 
 import { t } from '@/languages';

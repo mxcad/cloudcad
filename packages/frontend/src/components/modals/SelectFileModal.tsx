@@ -13,9 +13,9 @@ import {
 import {
   nodeControllerSearch,
   projectControllerGetPersonalSpace,
-  projectControllerGetProjects,
   nodeControllerGetChildren,
 } from '@/api-sdk';
+import { fetchProjects } from '@/lib/projects';
 import type { FileSystemNode } from '@/types/filesystem';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -82,15 +82,13 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
 
     const loadRoots = async () => {
       try {
-        const [psRes, projectsRes] = await Promise.all([
+        const [psRes, projectPage] = await Promise.all([
           projectControllerGetPersonalSpace(),
-          projectControllerGetProjects({
-            query: { filter: 'all', limit: 100 },
-          }),
+          fetchProjects({ filter: 'all', limit: 100 }),
         ]);
-        // SDK 默认不抛错：失败时错误在 result.error，显式抛出才能在 UI 提示
+        // 个人空间 SDK 默认不抛错：失败时错误在 result.error，显式抛出才能在 UI 提示
+        // （项目列表由 fetchProjects 统一抛错）
         if (psRes.error) throw psRes.error;
-        if (projectsRes.error) throw projectsRes.error;
 
         const roots: FileEntry[] = [];
 
@@ -106,9 +104,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
           });
         }
 
-        const projectsData = projectsRes.data as
-          { nodes?: Array<{ id: string; name?: string }> } | undefined;
-        const projectNodes = projectsData?.nodes ?? [];
+        const projectNodes = projectPage.nodes;
         if (projectNodes.length > 0) {
           const projectChildren: FileEntry[] = projectNodes
             .filter((p) => p.id)

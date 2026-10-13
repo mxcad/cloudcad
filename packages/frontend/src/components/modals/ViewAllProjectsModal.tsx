@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { FileItem } from '@/components/FileItem';
 import { FileSystemNode } from '@/types/filesystem';
-import { projectControllerGetProjects } from '@/api-sdk';
+import { fetchProjects } from '@/lib/projects';
 import { FolderOpen, AlertCircle } from 'lucide-react';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -23,12 +23,13 @@ export const ViewAllProjectsModal: React.FC<ViewAllProjectsModalProps> = ({
   const projectsQuery = useQuery({
     queryKey: ['viewAllProjects'],
     queryFn: async () => {
-      const result = await projectControllerGetProjects({
-        throwOnError: true,
-        query: { limit: 50, sortBy: 'updatedAt', sortOrder: 'desc' },
+      const { nodes } = await fetchProjects({
+        limit: 50,
+        sortBy: 'updatedAt',
+        sortOrder: 'desc',
+        excludeDeleted: true,
       });
-      const nodes = result.data?.nodes || [];
-      return nodes.filter((p) => p.fileStatus !== 'DELETED');
+      return nodes;
     },
     enabled: isOpen,
   });

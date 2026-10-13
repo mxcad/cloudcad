@@ -290,9 +290,9 @@ export class MxcadFileAccessService {
     // 频率占位（打开/导出共用窗口）；导出下载方向会员门控由转换服务按源文件类型自动执行。
     // 占位/释放走 withConversionQuota 单点：成功消耗占位，任何失败（引擎原始异常 /
     // 引擎 code≠0 / 产物缺失）保证释放；校验与错误文案在占位作用域内完成。
-    // 注：外部参照源为 .dwg/.dxf（非 .mxweb 快照），引擎目标格式依赖 cmd 字段，
-    // 故此处保留直调 convertServerFile + cmd，未走 runConversionCore（其 engineParams
-    // 不含 cmd，且外部参照转换暂不进转换结果缓存）——待引擎侧确认 cmd 可省后再收敛。
+    // 注：外部参照源为 .dwg/.dxf（非 .mxweb 快照），产物不进转换结果缓存，
+    // 故此处保留直调 convertServerFile + cmd，未走 runConversionCore
+    // （其 engineParams 已含 cmd，类型层不再构成阻碍）——待产物进缓存后再收敛。
     await this.restrictionEngine.withConversionQuota(
       { userId },
       async () => {

@@ -24,7 +24,7 @@ import {
 import { usersControllerSearchUsers } from '@/api-sdk';
 import { rolesControllerGetProjectRolesByProject } from '@/api-sdk';
 import type { ProjectRoleDto } from '@/api-sdk';
-import { useProjectPermission } from '@/hooks/useProjectPermission';
+import { useProjectPermissions } from '@/hooks/useProjectPermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProjectPermission, getRoleDisplayName } from '@/constants/permissions';
 import { t, $t } from '@/languages';
@@ -80,13 +80,17 @@ export const MembersModal: React.FC<MembersModalProps> = ({
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(
     null
   );
-  const [canManageMembers, setCanManageMembers] = useState(false);
-  const [canAssignRoles, setCanAssignRoles] = useState(false);
-  const [loadingPermissions, setLoadingPermissions] = useState(false);
-
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitializedRef = useRef(false);
-  const { checkPermission, refreshProjectPermissions } = useProjectPermission();
+  const {
+    permissions,
+    loading: loadingPermissions,
+    refresh: refreshProjectPermissions,
+  } = useProjectPermissions(projectId, { autoLoad: false });
+  const canManageMembers =
+    permissions[ProjectPermission.PROJECT_MEMBER_MANAGE] ?? false;
+  const canAssignRoles =
+    permissions[ProjectPermission.PROJECT_MEMBER_ASSIGN] ?? false;
   const { user } = useAuth();
   const currentUserId = user?.id;
 
@@ -196,39 +200,25 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setErrorMessage('');
       setSearchResults([]);
       setSelectedUser(null);
-      setCanManageMembers(false);
-      setCanAssignRoles(false);
-
       // 开始加载
       setLoading(true);
-      setLoadingPermissions(true);
 
       // 清除权限缓存，确保每次打开弹框都重新请求最新权限
-      refreshProjectPermissions(projectId);
+      refreshProjectPermissions();
 
-      // 并行加载数据和权限
-      Promise.all([
-        loadMembers(),
-        loadProjectRoles(),
-        checkPermission(projectId, ProjectPermission.PROJECT_MEMBER_MANAGE),
-        checkPermission(projectId, ProjectPermission.PROJECT_MEMBER_ASSIGN),
-      ])
-        .then((results) => {
-          setCanManageMembers(results[2]);
-          setCanAssignRoles(results[3]);
-        })
+      // 并行加载数据
+      Promise.all([loadMembers(), loadProjectRoles()])
         .catch((error) => {
           setErrorMessage(t('加载数据失败'));
         })
         .finally(() => {
           setLoading(false);
-          setLoadingPermissions(false);
         });
     }
     if (!isOpen) {
       isInitializedRef.current = false;
     }
-  }, [isOpen, projectId, checkPermission]);
+  }, [isOpen, projectId, refreshProjectPermissions]);
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,7 +240,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       // 重新获取完整成员列表（addProjectMember 返回的是 Prisma 嵌套结构，
       // 而成员列表需要扁平化的 ProjectMemberDto）
       await loadMembers();
-      refreshProjectPermissions(projectId);
+      refreshProjectPermissions();
 
       // 重置表单
       setNewEmail('');
@@ -280,7 +270,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
         path: { projectId, userId },
       });
       setMembers((prev) => prev.filter((m) => m.userId !== userId));
-      refreshProjectPermissions(projectId);
+      refreshProjectPermissions();
     } catch (error) {
       setErrorMessage(
         getMemberActionError(error, {
@@ -302,18 +292,8 @@ export const MembersModal: React.FC<MembersModalProps> = ({
       setMembers((prev) =>
         prev.map((m) => (m.userId === userId ? { ...m, projectRoleId } : m))
       );
-      refreshProjectPermissions(projectId);
-      // 重新检查当前用户权限（可能是修改了自己的角色）
-      const newCanManage = await checkPermission(
-        projectId,
-        ProjectPermission.PROJECT_MEMBER_MANAGE
-      );
-      const newCanAssign = await checkPermission(
-        projectId,
-        ProjectPermission.PROJECT_MEMBER_ASSIGN
-      );
-      setCanManageMembers(newCanManage);
-      setCanAssignRoles(newCanAssign);
+      // 重新加载权限（可能是修改了自己的角色，权限已变更）
+      await refreshProjectPermissions();
     } catch (error) {
       setErrorMessage(
         getMemberActionError(error, {
@@ -339,7 +319,7 @@ export const MembersModal: React.FC<MembersModalProps> = ({
 
       // 刷新成员列表
       await loadMembers();
-      refreshProjectPermissions(projectId);
+      refreshProjectPermissions();
 
       setShowTransferModal(false);
       setTransferTarget(null);

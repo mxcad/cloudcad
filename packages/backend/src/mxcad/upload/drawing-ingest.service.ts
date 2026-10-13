@@ -28,6 +28,7 @@ import {
   isArtifactReady,
   isArtifactReadyByHash,
 } from '../utils/conversion-artifact';
+import { buildIngestConversionOptions } from '../utils/ingest-conversion-options';
 import { NodeStatusTransitioner } from '../../file-system/file-status/node-status-transitioner';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 import { RestrictionEngine } from '../../vip/restriction-engine.service';
@@ -298,7 +299,10 @@ export class DrawingIngestService {
     };
     if (opts.releaseReservation) {
       await step('释放转换额度', () =>
-        this.releaseConversionReservation(opts.context, opts.source)
+        this.restrictionEngine.releaseConversionReservation({
+          userId: opts.context?.userId,
+          ip: opts.source.ip,
+        })
       );
     }
     await step('写失败审计', () =>
@@ -577,8 +581,12 @@ export class DrawingIngestService {
     // 字节配额断言增量取服务器侧真实文件大小，防止客户端上报值偏小绕过配额
     const realSize = await this.fileSystemService.getFileSize(filePath);
     await this.checkQuota(context, realSize);
-    // ADR-0043：转换频率限制只在转换执行点占位——登录用户按 userId，游客按 IP
-    await this.reserveConversionReservation(context, source);
+    // ADR-0043：转换频率限制只在转换执行点占位——主体分派（userId / IP 窗口）
+    // 唯一收口在 RestrictionEngine
+    await this.restrictionEngine.reserveConversionReservation({
+      userId: context?.userId,
+      ip: source.ip,
+    });
 
     let cadNodeId: string | undefined;
     if (
@@ -668,7 +676,10 @@ export class DrawingIngestService {
     }
 
     // 节点创建失败（nodeId 存在但建节点失败）：回滚转换额度，返回转换错误
-    await this.releaseConversionReservation(context, source);
+    await this.restrictionEngine.releaseConversionReservation({
+      userId: context?.userId,
+      ip: source.ip,
+    });
     return { ret: MxUploadReturn.kConvertFileError };
   }
 
@@ -738,15 +749,21 @@ export class DrawingIngestService {
     let ret: { tz?: boolean } | undefined;
     try {
       await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
-      const result = await this.fileConversionService.convertFile({
-        srcPath: filePath,
-        fileHash: hash,
-        createPreloadingData: true,
-      });
+      const result = await this.fileConversionService.convertFile(
+        buildIngestConversionOptions({
+          srcPath: filePath,
+          fileHash: hash,
+          // 外部参照 DWG 不建自身节点（挂到源 DWG 的 ext-ref 列表），失败现场无节点目录可挂
+          debugNodeId: undefined,
+        })
+      );
       isOk = result.isOk;
       ret = result.ret;
     } catch (error) {
-      await this.releaseConversionReservation(context, source);
+      await this.restrictionEngine.releaseConversionReservation({
+        userId: context?.userId,
+        ip: source.ip,
+      });
       throw error;
     }
 
@@ -767,7 +784,10 @@ export class DrawingIngestService {
       return { ret: MxUploadReturn.kOk, tz: ret?.tz, created: false };
     }
 
-    await this.releaseConversionReservation(context, source);
+    await this.restrictionEngine.releaseConversionReservation({
+      userId: context?.userId,
+      ip: source.ip,
+    });
     return { ret: MxUploadReturn.kConvertFileError };
   }
 
@@ -816,12 +836,13 @@ export class DrawingIngestService {
         // 转换仍走同步 convertFile（下方）+ finalizeCadNode 落盘，不触发 executor.invoke。
         await this.asyncConversionService.registerTask(cadNodeId);
         await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
-        const result = await this.fileConversionService.convertFile({
-          srcPath: filePath,
-          fileHash: hash,
-          createPreloadingData: true,
-          debugNodeId: cadNodeId,
-        });
+        const result = await this.fileConversionService.convertFile(
+          buildIngestConversionOptions({
+            srcPath: filePath,
+            fileHash: hash,
+            debugNodeId: cadNodeId,
+          })
+        );
 
         if (result.isOk) {
           const finalNodeId = await this.finalizeCadNode(
@@ -970,12 +991,13 @@ export class DrawingIngestService {
         let isOk = true;
         let convertResult: ConversionResult | undefined;
         if (!isMxwebFile) {
-          convertResult = await this.fileConversionService.convertFile({
-            srcPath: filepath,
-            fileHash: fileMd5,
-            createPreloadingData: true,
-            debugNodeId: newNodeId,
-          });
+          convertResult = await this.fileConversionService.convertFile(
+            buildIngestConversionOptions({
+              srcPath: filepath,
+              fileHash: fileMd5,
+              debugNodeId: newNodeId,
+            })
+          );
           isOk = convertResult.isOk;
         } else {
           this.logger.log(
@@ -1212,12 +1234,15 @@ export class DrawingIngestService {
           );
           return;
         }
-        const result = await this.fileConversionService.convertFile({
-          srcPath: filepath,
-          fileHash: hash,
-          createPreloadingData: true,
-          forceConvert,
-        });
+        const result = await this.fileConversionService.convertFile(
+          buildIngestConversionOptions({
+            srcPath: filepath,
+            fileHash: hash,
+            forceConvert,
+            // 无节点（游客/公开图纸）转换失败无节点目录可挂失败现场
+            debugNodeId: undefined,
+          })
+        );
         if (result.isOk) {
           setStatus('COMPLETED');
           emitDone('COMPLETED');
@@ -1228,7 +1253,10 @@ export class DrawingIngestService {
         } else {
           setStatus('FAILED');
           emitDone('FAILED');
-          await this.releaseConversionReservation(context, source);
+          await this.restrictionEngine.releaseConversionReservation({
+            userId: context?.userId,
+            ip: source.ip,
+          });
           await cleanup();
           this.logger.warn(
             `[DrawingIngest.noNode] 无节点转换失败: ${fileName} (${hash}) ` +
@@ -1246,7 +1274,10 @@ export class DrawingIngestService {
         setStatus('FAILED');
         emitDone('FAILED');
         try {
-          await this.releaseConversionReservation(context, source);
+          await this.restrictionEngine.releaseConversionReservation({
+            userId: context?.userId,
+            ip: source.ip,
+          });
           await cleanup();
         } catch (cleanupErr) {
           this.logger.error(
@@ -1259,48 +1290,6 @@ export class DrawingIngestService {
         }
       }
     })();
-  }
-
-  /**
-   * 预留本次转换的频率限制额度：登录用户按 userId，游客按 IP（ADR-0043）。
-   * 超限抛 QuotaExceededException（403）向上传播。返回是否已占位。
-   */
-  private async reserveConversionReservation(
-    context: FileSystemNodeContext,
-    source: { ip?: string }
-  ): Promise<boolean> {
-    if (context?.userId) {
-      await this.restrictionEngine.reserveConversionCountOrThrow(
-        context.userId
-      );
-      return true;
-    }
-    if (source.ip) {
-      await this.restrictionEngine.reserveGuestConversionCountOrThrow(
-        source.ip
-      );
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * 释放本次转换的频率限制占位：登录用户按 userId，游客按 IP。
-   * 转换失败/转换引擎异常时调用，避免失败任务耗尽窗口额度（ADR-0043）。
-   */
-  private async releaseConversionReservation(
-    context: FileSystemNodeContext,
-    source: { ip?: string }
-  ): Promise<void> {
-    if (context?.userId) {
-      await this.restrictionEngine
-        .releaseConversionCount(context.userId)
-        .catch(() => undefined);
-    } else if (source.ip) {
-      await this.restrictionEngine
-        .releaseGuestConversionCount(source.ip)
-        .catch(() => undefined);
-    }
   }
 
   /**
@@ -1445,7 +1434,12 @@ export class DrawingIngestService {
         const isMxwebFile = extension === '.mxweb';
         if (!isMxwebFile) {
           conversionReserved =
-            await this.reserveConversionReservation(context, source);
+            (
+              await this.restrictionEngine.reserveConversionReservation({
+                userId: context?.userId,
+                ip: source.ip,
+              })
+            ).reserved;
         }
 
         await this.fileSystemService.writeStatusFile(
@@ -1463,7 +1457,10 @@ export class DrawingIngestService {
           if (!parentId) {
             // 未发生转换，释放本次占位（ADR-0043）
             if (conversionReserved) {
-              await this.releaseConversionReservation(context, source);
+              await this.restrictionEngine.releaseConversionReservation({
+                userId: context?.userId,
+                ip: source.ip,
+              });
             }
             await this.cacheManager.delete('file-upload', mergeKey);
             return { ret: MxUploadReturn.kConvertFileError };
@@ -1484,7 +1481,10 @@ export class DrawingIngestService {
           if (conflict.earlyReturn) {
             // 冲突跳过：未发生转换，释放本次占位（ADR-0043）
             if (conversionReserved) {
-              await this.releaseConversionReservation(context, source);
+              await this.restrictionEngine.releaseConversionReservation({
+                userId: context?.userId,
+                ip: source.ip,
+              });
             }
             await this.fileSystemService.deleteDirectory(tmpDir);
             await this.cacheManager.delete('file-upload', mergeKey);
@@ -1562,7 +1562,10 @@ export class DrawingIngestService {
       } catch (error) {
         await this.cacheManager.delete('file-upload', mergeKey);
         if (conversionReserved) {
-          await this.releaseConversionReservation(context, source);
+          await this.restrictionEngine.releaseConversionReservation({
+            userId: context?.userId,
+            ip: source.ip,
+          });
         }
         if (error instanceof QuotaExceededException) throw error;
         this.logger.error(

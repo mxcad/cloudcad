@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, unref, computed, watch } from 'vue';
 import { t } from '@/languages';
+import { errMsg } from '@/utils/apiError';
 import { createMxCAD } from '../../plugins/mxcad';
 import { callCommand } from '@/plugins/mxcad/command';
 import { uiConfig } from '@/config/uiConfig';
@@ -35,6 +36,7 @@ import {
 import { useUser } from '../../composables/useUser';
 import { useCollabStore } from '../../stores/collab';
 import { editorDisplayName } from '@/utils/editorFileName';
+import { parseEditorOpenParams } from '@/utils/editorOpenParams';
 
 import { showToast, showConfirmDialog } from 'vant';
 import { showToastOnce } from '@/utils/toast';
@@ -543,15 +545,15 @@ onMounted(async () => {
   });
 
   // ====== 解析 URL 参数 ======
-  const searchParams = new URLSearchParams(window.location.search);
+  const openParams = parseEditorOpenParams(window.location.search);
   const fileId = getFileIdFromUrl();
   const fileHash = getHashFromUrl();
   const libraryKey =
-    (searchParams.get('library') as 'drawing' | 'block' | null) || undefined;
-  const shareToken = searchParams.get('shareToken') || undefined;
-  const collabWorkId = searchParams.get('collabWorkId');
-  const collabDrawingId = searchParams.get('drawingId');
-  const collabProjectId = searchParams.get('projectId');
+    (openParams.library as 'drawing' | 'block' | null) || undefined;
+  const shareToken = openParams.shareToken || undefined;
+  const collabWorkId = openParams.collabWorkId;
+  const collabDrawingId = openParams.collabDrawingId;
+  const collabProjectId = openParams.collabProjectId;
 
   // ====== 协同分享链接（与 PC CADEditorDirect.tsx L316-L343 + CollaborateSidebar.tsx L364-L513 对齐） ======
   if (collabWorkId) {
@@ -582,7 +584,7 @@ onMounted(async () => {
 
   // ====== History stack fix（与 PC L244-L259 对齐） ======
   if (fileId && window.history.length <= 1) {
-    const urlBackUrl = searchParams.get('back');
+    const urlBackUrl = openParams.back;
     if (urlBackUrl) {
       // 保存返回信息，用于判断是否可以直接关闭标签页
       backUrl.value = urlBackUrl;
@@ -618,7 +620,7 @@ onMounted(async () => {
       // openDrawing 内部错误已自处理（error/loading 收尾）；这里只兜
       // 引擎创建/事件绑定/工具栏初始化失败，避免 loading 永久卡住
       editorState.setLoading(false);
-      editorState.setError(e instanceof Error ? e.message : t('打开文件失败'));
+      editorState.setError(errMsg(e, t('打开文件失败')));
       editorState.setErrorType('unknown');
     }
     return;

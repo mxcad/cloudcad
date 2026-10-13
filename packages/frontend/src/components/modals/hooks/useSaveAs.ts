@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { projectControllerGetProjects } from '@/api-sdk';
-import type { FileSystemNodeDto } from '@/api-sdk';
 import { saveControllerSaveMxwebAs } from '@/api-sdk';
+import { fetchProjects } from '@/lib/projects';
 import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
 import { calculateFileHash } from '@/utils/hashUtils';
 import { t } from '@/languages';
@@ -64,12 +63,8 @@ export const useSaveAs = ({
   const { data: projects = [] } = useQuery<ProjectWithPermission[]>({
     queryKey: ['projects', 'all'],
     queryFn: async () => {
-      const result = await projectControllerGetProjects({
-        throwOnError: true,
-        query: { filter: 'all' },
-      });
-      const allProjects = result.data?.nodes || [];
-      return allProjects.map((project: FileSystemNodeDto) => ({
+      const { nodes } = await fetchProjects({ filter: 'all' });
+      return nodes.map((project) => ({
         id: project.id,
         name: project.name,
         hasUploadPermission: true,

@@ -55,6 +55,7 @@ import type {
 	MxCadEngineParams,
 } from "@cloudcad/contracts";
 import { cachedArtifactReady } from "../utils/conversion-artifact";
+import { buildIngestConversionOptions } from "../utils/ingest-conversion-options";
 
 /**
  * 从转换选项中挑选契约定义的引擎输入字段（camelCase），丢弃 undefined 字段。
@@ -865,7 +866,10 @@ export class FileConversionService implements IMxcadConversionService {
 			}
 
 			const { isOk, ret } = await this.convertFile(conversionOptions);
-			return isOk ? ret : { code: 12, message: 'param error' };
+			// 失败保留引擎原始 message：本入口的 message 会被 runConversionCore 折进
+			// ConversionCoreError.detail，并原样回到调用方面向用户的文案
+			// （此前恒回 'param error'，公开转换端点的用户只能看到这个）。
+			return isOk ? ret : { code: 12, message: ret?.message || 'param error' };
 		} catch (error) {
 			// 导出下载方向会员门控拒绝（VipFeatureRequiredException）必须原样透传，
 			// 前端据此弹购买会员引导；其余转换失败按既有语义折叠为 code 12。
@@ -882,15 +886,18 @@ export class FileConversionService implements IMxcadConversionService {
 			const mxwebName = path.basename(mxwebPath);
 			const outname = `${mxwebName}.bin`;
 
-			const result = await this.convertFile({
+		const result = await this.convertFile(
+			buildIngestConversionOptions({
 				srcPath: mxwebPath,
 				fileHash: '',
-				createPreloadingData: true,
 				outname,
 				// 保存时生成 bin 文件属于内部保存流水线（等价打开方向转换），
 				// 非用户主动导出下载，跳过导出下载会员门控。
 				skipExportGate: true,
-			});
+				// 内部保存流水线无节点目录可挂失败现场
+				debugNodeId: undefined,
+			})
+		);
 
 			if (result.isOk) {
 				this.logger.log(`[generateBinFiles] bin 文件生成成功: ${nodeName}`);

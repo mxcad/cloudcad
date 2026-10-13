@@ -25,9 +25,16 @@ import {
   findArtifactByHash,
   findReadyArtifactByHash,
 } from '../mxcad/utils/conversion-artifact';
+import { buildIngestConversionOptions } from '../mxcad/utils/ingest-conversion-options';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { NodeUtils } from '../common/utils/node-utils';
+import {
+  ConversionCoreError,
+  runConversionCore,
+} from '../file-system/file-download/conversion-core';
+import { isDirectFormat } from '../file-system/file-download/format-policy';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -228,11 +235,14 @@ export class PublicFileService {
 
                   // 调用转换服务将 DWG/DXF 转换为 MXWeb
                   const { isOk, ret } =
-                    await this.fileConversionService.convertFile({
-                      srcPath: tempFilePath,
-                      fileHash: hash,
-                      createPreloadingData: true,
-                    });
+                    await this.fileConversionService.convertFile(
+                      buildIngestConversionOptions({
+                        srcPath: tempFilePath,
+                        fileHash: hash,
+                        // 公开文件转换无节点，失败现场不挂节点目录
+                        debugNodeId: undefined,
+                      })
+                    );
 
                   if (!isOk) {
                     return `文件转换失败: ${ret?.message || '未知错误'}`;
@@ -411,18 +421,18 @@ export class PublicFileService {
       throw new NotFoundException(I18nContext.current()?.t('error.file_extra.file_not_exist_by_hash', { args: { hash: fileHash } }) ?? `文件不存在: ${fileHash}`);
     }
 
-    if (targetFormat === 'mxweb') {
+    // 直取格式（mxweb）不转换，直接回源文件；路由判断走 FormatPolicy 单一事实源。
+    if (isDirectFormat(targetFormat)) {
       const buffer = await fs.promises.readFile(mxwebPath);
       return {
         buffer,
         filename: `converted.mxweb`,
-        mimeType: 'application/octet-stream',
+        mimeType: NodeUtils.getMimeType('mxweb'),
       };
     }
 
     const timestamp = Date.now();
     const outname = `${fileHash}_${timestamp}.${targetFormat}`;
-    const uploadPath = this.uploadService.getUploadPath();
     let outputFile: string | undefined;
 
     this.logger.log(`[convertMxwebByHash] params?.colorPolicy: ${params?.colorPolicy}, all keys: ${Object.keys(params || {})}`);
@@ -434,47 +444,25 @@ export class PublicFileService {
       return await this.restrictionEngine.withConversionQuota(
         { userId, ip },
         async () => {
-          const result = await this.fileConversionService.convertFile({
+          // 引擎字段清单 + 产物就位校验共用 runConversionCore 单一出口。此前此处手写
+          // 枚举 14 个引擎字段（裁剪框/打印角度/布局/压缩…），与 368ca55 / 721fe02
+          // 「漏抄字段致引擎静默丢参」同源。
+          // 注：本端点透传客户端参数、不套 FormatPolicy 的 PDF 默认值（2000/2000/mono）——
+          // 那套默认值属下载/批量下载链路的产品语义，套用会改变公开端点的输出。
+          const { artifactPath } = await runConversionCore({
+            conversionService: this.fileConversionService,
             srcPath: mxwebPath,
             fileHash,
+            // 公开上传链路无文件节点：nodeId 是 ConvertServerFileParam 的必需占位，
+            // convertServerFile 不读取该字段
+            nodeId: '',
             userId,
-            createPreloadingData: false,
             outname,
-            cmd: params?.cmd,
-            width: params?.width,
-            height: params?.height,
-            colorPolicy: params?.colorPolicy,
-            roate_angle: params?.roate_angle,
-            view_angle: params?.view_angle,
-            bd_pt1_x: params?.bd_pt1_x,
-            bd_pt1_y: params?.bd_pt1_y,
-            bd_pt2_x: params?.bd_pt2_x,
-            bd_pt2_y: params?.bd_pt2_y,
-            open_file_md5: params?.open_file_md5,
-            layout_name: params?.layout_name,
-            create_clip_block: params?.create_clip_block,
-            dwgVersion: params?.dwgVersion,
+            engineParams: params,
           });
+          outputFile = artifactPath;
 
-          if (!result.isOk) {
-            throw new Error(
-              `文件转换失败: ${result.ret?.message || '未知错误'}`
-            );
-          }
-
-          // mxcadassembly.exe 将输出文件写到源文件同目录
-          outputFile = path.join(uploadPath, outname);
-          if (!fs.existsSync(outputFile)) {
-            throw new Error('转换后的文件未生成');
-          }
-
-          const convertedBuffer = await fs.promises.readFile(outputFile);
-
-          const mimeTypes: Record<string, string> = {
-            dwg: 'application/acad',
-            dxf: 'application/dxf',
-            pdf: 'application/pdf',
-          };
+          const convertedBuffer = await fs.promises.readFile(artifactPath);
 
           this.logger.log(
             `[convertMxwebByHash] 转换成功: ${targetFormat}, hash=${fileHash}, 大小: ${convertedBuffer.length} bytes`
@@ -483,10 +471,21 @@ export class PublicFileService {
           return {
             buffer: convertedBuffer,
             filename: `converted.${targetFormat}`,
-            mimeType: mimeTypes[targetFormat] || 'application/octet-stream',
+            mimeType: NodeUtils.getMimeType(targetFormat),
           };
         }
       );
+    } catch (error) {
+      // runConversionCore 抛结构化失败（engine-failed / artifact-missing），
+      // 此处翻回本端点既有文案——判定依据是 kind，不依赖文案。
+      if (error instanceof ConversionCoreError) {
+        throw new Error(
+          error.kind === 'engine-failed'
+            ? `文件转换失败: ${error.detail || '未知错误'}`
+            : '转换后的文件未生成',
+        );
+      }
+      throw error;
     } finally {
       try {
         if (outputFile && fs.existsSync(outputFile)) {

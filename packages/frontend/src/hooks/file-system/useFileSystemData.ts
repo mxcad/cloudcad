@@ -18,13 +18,11 @@ import {
   keepPreviousData,
 } from '@tanstack/react-query';
 import {
-  projectControllerGetProjects,
   nodeControllerSearch,
   nodeControllerGetNode,
   nodeControllerGetChildren,
   nodeControllerGetRootNode,
   FileSystemNodeDto,
-  ProjectDto,
   type SearchScope,
 } from '@/api-sdk';
 import {
@@ -36,6 +34,7 @@ import {
 
 import { PaginationMeta } from '@/components/ui/Pagination';
 import { queryKeys } from '@/lib/queryKeys';
+import { fetchProjects } from '@/lib/projects';
 import type { ProjectFilterType } from '@/api-sdk';
 import type { SearchFilterValues } from '@/components/search/SearchFilters';
 import { t } from '@/languages';
@@ -151,47 +150,21 @@ export const useFileSystemData = ({
         ],
     queryFn: async () => {
       if (isProjectRootMode) {
-        const response = await projectControllerGetProjects({
-          throwOnError: true,
-          query: {
-            filter: projectFilter,
-            page: pagination.page,
-            limit: pagination.limit,
-            sortBy: searchFilters.sortBy || undefined,
-            sortOrder: (searchFilters.sortOrder as 'asc' | 'desc') || undefined,
-          },
-        });
-        // SDK 默认不抛错：显式抛出让 react-query 感知失败，
-        // 否则失败被当作"暂无项目"空态返回（历史 bug）
-
-        const data = response.data;
-        if (
-          data &&
-          typeof data === 'object' &&
-          'nodes' in data &&
-          Array.isArray(data.nodes)
-        ) {
-          return {
-            nodes: data.nodes.map((n) => projectToNode(n)),
-            total: data.total,
-            page: data.page,
-            limit: data.limit,
-            totalPages: data.totalPages,
-          };
-        }
-
-        // Legacy format: array of ProjectDto
-        const allProjects = (
-          Array.isArray(response.data) ? response.data : []
-        ) as ProjectDto[];
-        return {
-          nodes: allProjects.map((p) =>
-            projectToNode(p as unknown as FileSystemNodeDto)
-          ),
-          total: allProjects.length,
+        // 项目根视图走项目列表单一出口（内部已处理失败抛出与响应形态归一化），
+        // 失败即抛出让 react-query 感知，否则被当作「暂无项目」空态（历史 bug）
+        const { nodes, total, page, limit, totalPages } = await fetchProjects({
+          filter: projectFilter,
           page: pagination.page,
           limit: pagination.limit,
-          totalPages: Math.ceil(allProjects.length / pagination.limit),
+          sortBy: searchFilters.sortBy || undefined,
+          sortOrder: (searchFilters.sortOrder as 'asc' | 'desc') || undefined,
+        });
+        return {
+          nodes: nodes.map((n) => projectToNode(n)),
+          total,
+          page,
+          limit,
+          totalPages,
         };
       }
 

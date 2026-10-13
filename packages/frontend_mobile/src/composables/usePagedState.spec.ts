@@ -84,7 +84,7 @@ describe('usePagedState', () => {
     expect(s.error.value).toBe('加载失败')
   })
 
-  it('loadMore：受 loading/hasMore 双守卫——到达末页不翻页、不触发 fetcher', () => {
+  it('loadMore：到达末页不翻页、不触发 fetcher', () => {
     const s = usePagedState<string>()
     const fetcher = vi.fn(makeFetcher([{ items: [], total: 0, totalPages: 1 }]))
     s.totalPages.value = 1 // page=1 已到达末页
@@ -112,6 +112,64 @@ describe('usePagedState', () => {
     s.retryLoadMore(fetcher)
     await vi.waitFor(() => expect(fetcher).toHaveBeenCalledWith(2))
     expect(s.page.value).toBe(2) // 未自增
+  })
+
+  it('loadMore：当前页加载失败时不前进（前进会跳过失败页的数据）', async () => {
+    const s = usePagedState<string>()
+    const pages: Array<PagedItems<string>> = [
+      { items: ['a'], total: 3, totalPages: 3 },
+      { items: ['b'], total: 3, totalPages: 3 },
+      { items: ['c'], total: 3, totalPages: 3 },
+    ]
+    const fetcher = vi.fn((page: number) =>
+      page === 2
+        ? Promise.reject(new Error('boom'))
+        : Promise.resolve(pages[page - 1] ?? { items: [], total: 0, totalPages: 1 })
+    )
+    s.totalPages.value = 3
+    s.loadMore(fetcher) // page 1→2，加载失败
+    await vi.waitFor(() => expect(s.loading.value).toBe(false))
+    expect(s.error.value).toBe('加载失败')
+    expect(s.loadMoreFailed.value).toBe(true)
+    expect(s.page.value).toBe(2)
+
+    // 失败未修复前滚动到底不再前进：否则 page 跳到 3，第 2 页 items 从未落库
+    s.loadMore(fetcher)
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(s.page.value).toBe(2)
+  })
+
+  it('loadMore：retryLoadMore 成功后守卫解除，可继续翻页', async () => {
+    const s = usePagedState<string>()
+    const pages: Array<PagedItems<string>> = [
+      { items: ['a'], total: 3, totalPages: 3 },
+      { items: ['b'], total: 3, totalPages: 3 },
+      { items: ['c'], total: 3, totalPages: 3 },
+    ]
+    let flaky = true
+    const fetcher = vi.fn((page: number) => {
+      if (page === 2 && flaky) return Promise.reject(new Error('boom'))
+      return Promise.resolve(pages[page - 1] ?? { items: [], total: 0, totalPages: 1 })
+    })
+
+    await s.load(fetcher) // 首屏 page=1
+    expect(s.items.value).toEqual(['a'])
+
+    s.loadMore(fetcher) // page 1→2 失败
+    await vi.waitFor(() => expect(s.loading.value).toBe(false))
+    expect(s.loadMoreFailed.value).toBe(true)
+
+    flaky = false
+    s.retryLoadMore(fetcher) // 重试第 2 页成功
+    await vi.waitFor(() => expect(s.loading.value).toBe(false))
+    expect(s.error.value).toBe('')
+    expect(s.loadMoreFailed.value).toBe(false)
+    expect(s.items.value).toEqual(['a', 'b'])
+
+    s.loadMore(fetcher) // 守卫解除后可前进到第 3 页
+    expect(s.page.value).toBe(3)
+    await vi.waitFor(() => expect(s.loading.value).toBe(false))
+    expect(s.items.value).toEqual(['a', 'b', 'c'])
   })
 
   it('resetToFirstPage：page 归 1（不触发加载，由调用方随后 load）', () => {

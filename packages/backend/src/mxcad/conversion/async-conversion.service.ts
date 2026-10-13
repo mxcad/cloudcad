@@ -25,6 +25,7 @@ import { FileSystemService } from '../infra/file-system.service';
 import { FileConversionService } from './file-conversion.service';
 import { resolveMxcadUploadDir } from '../../common/utils/mxcad-upload-dir';
 import { findReadyArtifactByHash } from '../utils/conversion-artifact';
+import { buildIngestConversionOptions } from '../utils/ingest-conversion-options';
 import {
   CONVERSION_TASK_CHANNEL,
   type ConversionTaskSseEvent,
@@ -107,13 +108,11 @@ export class AsyncConversionService {
     const task: ConversionTask = {
       id: taskId,
       type: 'convertFile',
-      params: {
+      params: buildIngestConversionOptions({
         srcPath,
         fileHash: node.fileHash || nodeId,
-        createPreloadingData: true,
-        outname: undefined,
         debugNodeId: nodeId,
-      },
+      }),
       priority,
       createdAt: new Date(),
     };
@@ -361,13 +360,14 @@ export class AsyncConversionService {
     const fileConversionService = this.moduleRef.get(FileConversionService, {
       strict: false,
     });
-    const result = await fileConversionService.convertFile({
-      srcPath: originalSource,
-      fileHash,
-      createPreloadingData: true,
-      forceConvert: true,
-      debugNodeId: nodeId,
-    });
+    const result = await fileConversionService.convertFile(
+      buildIngestConversionOptions({
+        srcPath: originalSource,
+        fileHash,
+        forceConvert: true,
+        debugNodeId: nodeId,
+      })
+    );
     if (!result.isOk) {
       throw new Error(result.error || '重新转换失败');
     }

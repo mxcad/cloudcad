@@ -24,6 +24,114 @@ import { CAD_EVENTS } from '@/constants/events';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/languages';
 
+/**
+ * work_data V3 语义判据：V3 才有 sourceType/fileHash，V1/V2 与无源头的
+ * （null/未知版本）统一视作云图路径，所以「本地」判据必须同时带 v === 3。
+ * drawingName 也只存在于 V3；drawingId 两个版本都有。
+ */
+type WorkData = ReturnType<typeof parseWorkData>;
+
+function isLocalWorkData(
+  data: WorkData | null | undefined
+): data is Extract<WorkData, { v: 3 }> {
+  return !!data && data.v === 3 && data.sourceType === 'local';
+}
+
+/** 本地协同无 drawingId（空串），按内容 MD5 判断是否当前图纸 */
+function matchesCurrentDrawing(
+  data: WorkData | null,
+  currentFileHashValue: string | null | undefined,
+  currentFileIdValue: string | null | undefined
+): boolean {
+  if (!data) return false;
+  if (isLocalWorkData(data)) {
+    return currentFileHashValue ? data.fileHash === currentFileHashValue : false;
+  }
+  return data.drawingId === currentFileIdValue;
+}
+
+/** 图纸聚合键：本地=fileHash，云图/项目等=drawingId */
+function drawingGroupKey(data: WorkData | null | undefined): string {
+  if (data?.v === 3 && data.sourceType === 'local') {
+    return data.fileHash || '';
+  }
+  return data?.drawingId || '';
+}
+
+/** 协同来源类型：V3 才有，其余为 null */
+function workSourceType(data: WorkData | null | undefined) {
+  return data && data.v === 3 ? data.sourceType : null;
+}
+
+/**
+ * 展示名：云图/项目走 nodeId 缓存，本地取 work_data.drawingName。
+ * 缓存缺失时 drawingName 才当兜底——缓存过期时优先显示刷新后的真名。
+ */
+function resolveWorkDisplayName(
+  data: WorkData | null | undefined,
+  fileNameCache: Record<string, string>
+): string {
+  return (
+    (data?.drawingId && fileNameCache[data.drawingId]
+      ? fileNameCache[data.drawingId]
+      : data && data.v === 3
+        ? data.drawingName
+        : undefined) || t('未知图纸')
+  );
+}
+
+/** 「我的项目」口径：排除本地/个人/分享来源，且必须挂在某个项目下 */
+function isMyProjectWork(
+  data: WorkData | null,
+  myWorkIds: Set<number>,
+  myProjectIds: string[],
+  workId: number
+): boolean {
+  if (myWorkIds.has(workId)) return false;
+  if (!data) return false;
+  if (
+    data.v === 3 &&
+    (data.sourceType === 'local' ||
+      data.sourceType === 'my' ||
+      data.sourceType === 'share')
+  ) {
+    return false;
+  }
+  if (!data.projectId) return false;
+  return myProjectIds.includes(data.projectId);
+}
+
+/**
+ * 列表条目装配（myWorks / projectWorks 共用）。
+ * 无 projectId 时的项目名两个列表口径不同（我的=个人空间，我的项目=空串），
+ * 由 emptyProjectName 区分。
+ */
+function buildWorkListItem(
+  work: Work,
+  data: WorkData | null,
+  ctx: {
+    currentWorkId: number | null;
+    projectNameCache: Record<string, string>;
+    fileNameCache: Record<string, string>;
+    emptyProjectName: string;
+    isSameCurrentDrawing: (data: WorkData | null) => boolean;
+  }
+): WorkListItem {
+  const { projectNameCache, emptyProjectName } = ctx;
+  return {
+    work,
+    projectName: data?.projectId
+      ? (projectNameCache[data.projectId] ?? emptyProjectName)
+      : emptyProjectName,
+    drawingName: resolveWorkDisplayName(data, ctx.fileNameCache),
+    isCurrentFile: ctx.isSameCurrentDrawing(data),
+    isJoined: ctx.currentWorkId === work.work_id,
+    onlineCount: work.link_user_ids.length,
+    sourceType: workSourceType(data),
+    drawingKey: drawingGroupKey(data),
+  };
+}
+
 interface ProjectCacheEntry {
   id: string;
   name: string;
@@ -63,8 +171,9 @@ function sameWorks(a: Work[], b: Work[]): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
-    const x = a[i];
-    const y = b[i];
+    // 上方已校 a.length === b.length 且 i < a.length，两侧索引必然在界内
+    const x = a[i]!;
+    const y = b[i]!;
     if (
       x.work_id !== y.work_id ||
       x.work_data !== y.work_data ||
@@ -427,16 +536,8 @@ export function useCollabWorks(
   }, [works, currentFileIdValue, currentFileHashValue, userId, currentWorkId]);
 
   const isSameCurrentDrawing = useCallback(
-    (data: ReturnType<typeof parseWorkData> | null): boolean => {
-      if (!data) return false;
-      // 本地图纸：按内容 MD5 判断是否当前图纸
-      if (data.v === 3 && data.sourceType === 'local') {
-        return currentFileHashValue
-          ? data.fileHash === currentFileHashValue
-          : false;
-      }
-      return data.drawingId === currentFileIdValue;
-    },
+    (data: WorkData | null): boolean =>
+      matchesCurrentDrawing(data, currentFileHashValue, currentFileIdValue),
     [currentFileHashValue, currentFileIdValue]
   );
 
@@ -444,33 +545,16 @@ export function useCollabWorks(
     () =>
       works
         .filter((w) => userId && w.real_user_id === userId)
-        .map((w) => {
-          const data = parseWorkData(w.work_data);
-          const sourceType = data && data.v === 3 ? data.sourceType : null;
-          // 本地图纸用 fileHash 分组；云图/项目等用 drawingId(nodeId) 分组
-          const drawingKey =
-            sourceType === 'local' && data && data.v === 3
-              ? data.fileHash || ''
-              : data?.drawingId || '';
-          return {
-            work: w,
-            projectName: data?.projectId
-              ? (projectNameCache[data.projectId] ?? t('未知项目'))
-              : t('个人空间'),
-            drawingName:
-              (data?.drawingId && fileNameCache[data.drawingId]
-                ? fileNameCache[data.drawingId]
-                : data && data.v === 3
-                  ? data.drawingName
-                  : undefined) || t('未知图纸'),
-            isCurrentFile: isSameCurrentDrawing(data),
-            isJoined: currentWorkId === w.work_id,
-            onlineCount: w.link_user_ids.length,
-            sourceType,
-            drawingKey,
-          };
-        })
-        .sort((a, b) => b.work.work_id - a.work.work_id),
+        .map((w) =>
+      buildWorkListItem(w, parseWorkData(w.work_data), {
+        currentWorkId,
+        projectNameCache,
+        fileNameCache,
+        emptyProjectName: t('未知项目'),
+        isSameCurrentDrawing,
+      }))
+      .sort((a, b) => b.work.work_id - a.work.work_id),
+
     [
       works,
       userId,
@@ -490,45 +574,23 @@ export function useCollabWorks(
     () =>
       works
         .filter((w) => {
-          if (myWorkIds.has(w.work_id)) return false;
-          const data = parseWorkData(w.work_data);
-          if (!data) return false;
-          if (
-            data.v === 3 &&
-            (data.sourceType === 'local' ||
-              data.sourceType === 'my' ||
-              data.sourceType === 'share')
-          )
-            return false;
-          if (!data.projectId) return false;
-          return myProjectIds.includes(data.projectId);
+          return isMyProjectWork(
+            parseWorkData(w.work_data),
+            myWorkIds,
+            myProjectIds,
+            w.work_id
+          );
         })
-        .map((w) => {
-          const data = parseWorkData(w.work_data);
-          const sourceType = data && data.v === 3 ? data.sourceType : null;
-          const drawingKey =
-            sourceType === 'local' && data && data.v === 3
-              ? data.fileHash || ''
-              : data?.drawingId || '';
-          return {
-            work: w,
-            projectName: data?.projectId
-              ? (projectNameCache[data.projectId] ?? t('未知项目'))
-              : '',
-            drawingName:
-              (data?.drawingId && fileNameCache[data.drawingId]
-                ? fileNameCache[data.drawingId]
-                : data && data.v === 3
-                  ? data.drawingName
-                  : undefined) || t('未知图纸'),
-            isCurrentFile: isSameCurrentDrawing(data),
-            isJoined: currentWorkId === w.work_id,
-            onlineCount: w.link_user_ids.length,
-            sourceType,
-            drawingKey,
-          };
-        })
-        .sort((a, b) => b.work.work_id - a.work.work_id),
+        .map((w) =>
+      buildWorkListItem(w, parseWorkData(w.work_data), {
+        currentWorkId,
+        projectNameCache,
+        fileNameCache,
+        emptyProjectName: '',
+        isSameCurrentDrawing,
+      }))
+      .sort((a, b) => b.work.work_id - a.work.work_id),
+
     [
       works,
       myWorkIds,

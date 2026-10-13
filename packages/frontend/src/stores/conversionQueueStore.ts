@@ -24,6 +24,11 @@ import { getErrorMessage } from '@/utils/errorHandler';
 import { getValidToken } from '@/utils/tokenUtils';
 import { t } from '@/languages';
 import { read, writeJson } from '@/lib/browserStorage';
+import {
+  isCompletedStatus,
+  isFailedStatus,
+  isUploadingStatus,
+} from '@/lib/fileStatus';
 
 /**
  * 统一转换队列（#471 / #475）
@@ -136,9 +141,9 @@ function mapToTaskStatus(
 ): ConversionTaskStatus {
   const ts = taskStatus?.toUpperCase();
   if (ts === 'CANCELLED') return 'cancelled';
-  if (ts === 'PENDING' || fileStatus === 'UPLOADING') return 'pending';
-  if (ts === 'COMPLETED' || fileStatus === 'COMPLETED') return 'completed';
-  if (ts === 'FAILED' || fileStatus === 'FAILED') return 'failed';
+  if (ts === 'PENDING' || isUploadingStatus(fileStatus)) return 'pending';
+  if (ts === 'COMPLETED' || isCompletedStatus(fileStatus)) return 'completed';
+  if (ts === 'FAILED' || isFailedStatus(fileStatus)) return 'failed';
   // PROCESSING / UPLOADING / UNKNOWN / 缺省 → 转换中
   return 'processing';
 }

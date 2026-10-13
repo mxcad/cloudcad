@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  projectControllerGetProjects,
   projectControllerCreateProject,
   nodeControllerGetChildren,
   nodeControllerCreateDrawing,
 } from '@/api-sdk';
 import type { FileSystemNodeDto } from '@/api-sdk';
 import { queryKeys } from '@/lib/queryKeys';
+import { fetchProjects } from '@/lib/projects';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -16,21 +16,15 @@ const PROJECTS_KEY = ['dashboard', 'projects'] as const;
 export function useDashboardProjects() {
   const queryClient = useQueryClient();
 
-  // 1. 项目列表
+  // 1. 项目列表（单一出口 @/lib/projects）
   const projectsQuery = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: async (): Promise<FileSystemNodeDto[]> => {
-      const result = await projectControllerGetProjects({
-        throwOnError: true,
-        query: {},
-      });
-      const nodes = result.data?.nodes || [];
-      return nodes
-        .filter((p: FileSystemNodeDto) => p.fileStatus !== 'DELETED')
-        .sort(
-          (a: FileSystemNodeDto, b: FileSystemNodeDto) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
+      const { nodes } = await fetchProjects({ excludeDeleted: true });
+      return nodes.sort(
+        (a: FileSystemNodeDto, b: FileSystemNodeDto) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
     },
   });
 

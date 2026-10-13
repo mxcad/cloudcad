@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { projectControllerGetProjects } from '@/api-sdk';
+import { fetchProjects } from '@/lib/projects';
 import { useAuth } from '@/contexts/AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { ProjectPermission } from '@/constants/permissions';
@@ -77,17 +77,16 @@ export function useProjectProjects({
   const { data, isFetching, isLoading, error, refetch } = useQuery({
     queryKey: ['sidebar-projects', projectFilter, projectRefreshKey, page],
     queryFn: async () => {
-      const result = await projectControllerGetProjects({
-        throwOnError: true,
-        query: { filter: projectFilter, page, limit: PAGE_SIZE },
+      // fetchProjects 失败即抛出，保证 react-query 进入 error 态而非「无项目」空态
+      const { nodes, total, totalPages } = await fetchProjects({
+        filter: projectFilter,
+        page,
+        limit: PAGE_SIZE,
       });
-      // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 react-query 进入 error 态，
-      // 否则失败被当作"无项目"空态
-      const projectList = result.data?.nodes || [];
       return {
-        nodes: projectList.map(toFileSystemNode),
-        total: result.data?.total ?? 0,
-        totalPages: result.data?.totalPages ?? 0,
+        nodes: nodes.map(toFileSystemNode),
+        total,
+        totalPages,
       };
     },
     enabled: queryEnabled,

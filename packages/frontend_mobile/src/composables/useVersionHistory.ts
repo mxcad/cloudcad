@@ -6,7 +6,8 @@ import type { DrawingOpenRequest } from '../services/drawingOpener';
 import { warmupHistoricalVersion } from '../services/versionWarmup';
 import { showToast } from 'vant';
 import { t } from '@/languages';
-import { unwrap } from '../utils/apiError';
+import { unwrap, errMsg } from '../utils/apiError';
+import { parseEditorOpenParams } from '../utils/editorOpenParams';
 
 export interface VersionEntry {
   revision: number;
@@ -75,7 +76,7 @@ export function useVersionHistory() {
         totalCount.value = 0;
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : t('加载版本历史失败');
+      const msg = errMsg(e, t('加载版本历史失败'));
       error.value = msg;
       entries.value = [];
       totalCount.value = 0;
@@ -90,7 +91,7 @@ export function useVersionHistory() {
     if (!fileId) return null;
 
     // 分享链接的来源标记只在 URL 上（editorState 不存 shareToken）
-    const shareToken = new URLSearchParams(window.location.search).get('shareToken');
+    const shareToken = parseEditorOpenParams(window.location.search).shareToken;
     if (shareToken) return { source: 'share', token: shareToken, nodeId: fileId };
 
     const libraryKey = editorState.state.libraryKey;
@@ -121,7 +122,7 @@ export function useVersionHistory() {
       try {
         await warmupHistoricalVersion(filePath, revision);
       } catch (e) {
-        error.value = e instanceof Error ? e.message : t('历史版本文件准备失败，请重试');
+        error.value = errMsg(e, t('历史版本文件准备失败，请重试'));
         return false;
       }
     }

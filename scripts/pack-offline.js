@@ -27,7 +27,6 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync, spawn, spawnSync } = require('child_process');
-const crypto = require('crypto');
 const zlib = require('zlib');
 
 // 打包清单单一事实源（全量部署包 / 增量升级包 共享条目，P9 收敛双清单硬编码）
@@ -161,15 +160,6 @@ function find7z() {
     }
   }
   return null;
-}
-
-function calcLockHash() {
-  const lockFile = path.join(PROJECT_ROOT, 'pnpm-lock.yaml');
-  if (!fs.existsSync(lockFile)) return null;
-  return crypto
-    .createHash('sha256')
-    .update(fs.readFileSync(lockFile))
-    .digest('hex');
 }
 
 /**
@@ -582,6 +572,29 @@ function getDeployIncludeList(platform, variant = 'oss') {
   return getDeployIncludeListFromManifest(platform, variant);
 }
 
+// ── pnpm install filter 单一事实源 ──
+// installFullDeps（全量构建 scope=full）与 getDeployStoreInstallFilter（--prod 运行时装
+// scope=prod）共用基础集合 PACK_SHARED_FILTER_PACKAGES；scope=full 额外纳入仅构建期需要的包；
+// variant=private 额外纳入 @cloudcad/impl-mx（gitignore 私有包，不在提交的 lockfile）。
+const PACK_SHARED_FILTER_PACKAGES = [
+  '@cloudcad/db',
+  '@cloudcad/contracts',
+  '@cloudcad/engine-exec',
+  '@cloudcad/conversion-service',
+];
+const PACK_BUILD_ONLY_FILTER_PACKAGES = [
+  '@cloudcad/mx-version-tool',
+  '@cloudcad/config-service',
+];
+
+function buildInstallFilters(variant = 'oss', scope = 'prod') {
+  const pkgs = ['backend'];
+  if (scope === 'full') pkgs.push(...PACK_BUILD_ONLY_FILTER_PACKAGES);
+  pkgs.push(...PACK_SHARED_FILTER_PACKAGES);
+  if (variant === 'private') pkgs.push('@cloudcad/impl-mx');
+  return pkgs.map((p) => `--filter ${p}`).join(' ');
+}
+
 /**
  * 部署包：安装完整依赖
  */
@@ -598,8 +611,8 @@ async function installFullDeps(variant = 'oss') {
   // 首次 install 须同步 lockfile（补回 impl-mx importer）才能继续，故用非 frozen；
   // oss variant 的 lockfile 与 workspace 一致，保持 frozen 以保证可复现。
   const filter = variant === 'private'
-    ? 'pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service --filter @cloudcad/impl-mx'
-    : 'pnpm install --frozen-lockfile --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/config-service --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service';
+    ? `pnpm install ${buildInstallFilters(variant, 'full')}`
+    : `pnpm install --frozen-lockfile ${buildInstallFilters(variant, 'full')}`;
 
   try {
     execSync(filter, {
@@ -749,17 +762,6 @@ function verifyDeployStore(storePath) {
 }
 
 /**
- * 获取 lockfile hash，用于检测依赖是否变化
- */
-function getLockfileHash() {
-  const lockfilePath = path.join(PROJECT_ROOT, 'pnpm-lock.yaml');
-  if (!fs.existsSync(lockfilePath)) return null;
-  const hash = crypto.createHash('sha256');
-  hash.update(fs.readFileSync(lockfilePath, 'utf8'));
-  return hash.digest('hex').slice(0, 16);
-}
-
-/**
  * 部署/升级包 filter（与 prepareDeployStore 保持一致）
  * private 额外纳入 @cloudcad/impl-mx
  * @param {string} variant - oss | private
@@ -774,8 +776,8 @@ function getDeployStoreInstallFilter(variant = 'oss') {
   // 提交的 pnpm-lock.yaml 里，私有打包机首次 store 安装须同步 lockfile（补回
   // impl-mx importer）才能解析，故用非 frozen（与 installFullDeps 一致）。
   return variant === 'private'
-    ? 'pnpm --filter backend --filter @cloudcad/impl-mx --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --prod'
-    : 'pnpm --filter backend --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --filter @cloudcad/conversion-service install --frozen-lockfile --prod';
+    ? `pnpm ${buildInstallFilters(variant, 'prod')} install --prod`
+    : `pnpm ${buildInstallFilters(variant, 'prod')} install --frozen-lockfile --prod`;
 }
 
 /**
@@ -2138,7 +2140,6 @@ async function packUpgrade(platform, variant = 'oss') {
       platform: platform === 'all' ? 'all' : platform,
       variant,
       createdAt: new Date().toISOString(),
-      lockfileHash: getLockfileHash(),
       store: 'none',
       migrationsCount,
       notes: [

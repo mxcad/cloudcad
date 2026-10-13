@@ -20,6 +20,11 @@ import {
 } from '@/services/loadingService';
 import { waitForConversion } from './conversion/useConversionPolling';
 import {
+  hasReadyArtifact,
+  isProcessingStatus,
+  isTerminalFailureStatus,
+} from '@/lib/fileStatus';
+import {
   broadcastConversionActivity,
   useConversionQueueStore,
 } from '@/stores/conversionQueueStore';
@@ -368,11 +373,7 @@ export function useCadFileLoader(
         // 对「path 已就位但状态仍为 UPLOADING/PROCESSING」的节点会误判未就绪并
         // autoTrigger 重新发起一次转换 + 最长 120s 轮询，而双击入口（判据②）对同一
         // 文件秒开——同一份缓存两条入口给出相反结论。
-        if (
-          !libraryKeyParam &&
-          !shareTokenParam &&
-          !(file.fileHash && file.path)
-        ) {
+        if (!libraryKeyParam && !shareTokenParam && !hasReadyArtifact(file)) {
           // 已是 mxweb（原生格式）的文件无需转换：触发转换注定失败（引擎对 .mxweb 源
           // 按「导出方向」处理，无目标格式），还会把节点打成 FAILED。跳过转换等待，
           // 交由下方 fileHash/path 校验给出明确错误（缺 fileHash→尚未转换完成，
@@ -386,14 +387,14 @@ export function useCadFileLoader(
             queueStore.expandByTask();
             broadcastConversionActivity();
             const conversion = await waitForConversion(fileId, {
-              autoTrigger: fileStatus !== 'PROCESSING',
+              autoTrigger: !isProcessingStatus(fileStatus),
               shouldContinue: () => !cancelled,
             });
             if (cancelled) return;
             if (!conversion.completed) {
-              const isTerminalFailure =
-                conversion.status === 'FAILED' ||
-                conversion.status === 'DELETED';
+              const isTerminalFailure = isTerminalFailureStatus(
+                conversion.status
+              );
               if (isTerminalFailure) {
                 // #477：永久失败弹窗提示（区别于「尚未转换完成」）
                 void globalShowConfirm({

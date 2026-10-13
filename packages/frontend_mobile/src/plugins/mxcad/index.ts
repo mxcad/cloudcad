@@ -5,6 +5,7 @@ import { MxFun } from "mxdraw";
 import { registerCommand } from "./command";
 import { openMxWeb } from "./openMxWeb";
 import { t } from "@/languages";
+import { parseEditorOpenParams } from "@/utils/editorOpenParams";
 
 /**
  * 引擎单例守卫（对齐 PC MxCADInstanceManager）。
@@ -65,12 +66,13 @@ async function doCreateMxCAD(fileUrl?: string): Promise<McObject> {
   if (fileUrl) {
     file = fileUrl
   } else {
-    const urlParams = new URLSearchParams(window.location.search);
+    const openParams = parseEditorOpenParams(window.location.search);
     // shareToken 也算「有特定文件」：分享链接的 fileId 在 path 不在 query，若此处
     // 开 empty.mxweb，引擎初始化即发起一次 open，随后 openMxWeb 再开分享文件会撞上
     // 引擎「同一时刻只能打开一个文档」限制（assert(0), cannot start a new open）。
     // 分享流须建空引擎，由 openMxWeb 独占首次打开（对齐 PC 打开串行队列的约束）。
-    const hasSpecificFile = urlParams.has('fileId') || urlParams.has('nodeId') || urlParams.has('hash') || urlParams.has('fileHash') || urlParams.has('shareToken');
+    // hash 已含 fileHash 回退（见 parseEditorOpenParams），故无需单独判 fileHash。
+    const hasSpecificFile = !!(openParams.fileId || openParams.nodeId || openParams.hash || openParams.shareToken);
 
     if (!file && !hasSpecificFile) {
       file = new URL("../../../public/empty.mxweb", import.meta.url).href;

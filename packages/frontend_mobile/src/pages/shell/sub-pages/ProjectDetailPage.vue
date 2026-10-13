@@ -11,7 +11,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showDialog, showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant'
 import { t } from '@/languages'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
 import { nodeControllerDeleteNode } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerGetParentContext } from '@cloudcad/api-sdk/sdk.gen'
 import ProjectAuditLogPopup from '@/pages/shell/components/ProjectAuditLogPopup.vue'
@@ -37,10 +37,16 @@ import { useShellStack } from '@/stores/shellStack'
 import ShareCurrentPopup from '@/pages/home/components/ShareCurrentPopup.vue'
 import VersionHistoryPopup from '@/pages/home/components/VersionHistoryPopup.vue'
 import FileFilterPopup from '@/pages/shell/components/FileFilterPopup.vue'
-import { ProjectPermission, getProjectRoleDisplayName, getFileNodeMenuActions } from '@/utils/projectPermissions'
+import {
+  ProjectPermission,
+  getProjectRoleDisplayName,
+  getFileNodeMenuActions,
+  getProjectMenuActions,
+  type ProjectMenuAction,
+} from '@/utils/projectPermissions'
 import { useFormatDownload } from '@/composables/useFormatDownload'
 import UnifiedFileList from '../components/UnifiedFileList.vue'
-import type { SelectionActionDef } from '../components/UnifiedFileList.vue'
+import type { SelectionActionDef } from '@/types/selection-action'
 import TrashView from '../components/TrashView.vue'
 import NodeFolderPicker from '../components/NodeFolderPicker.vue'
 import { useClipboardPaste } from '@/composables/useClipboardPaste'
@@ -306,7 +312,7 @@ async function onAddMemberConfirm() {
     await loadMembers()
   } catch (e) {
     closeToast()
-    showFailToast(e instanceof Error ? e.message : t('添加失败'))
+    showFailToast(errMsg(e, t('添加失败')))
   }
 }
 
@@ -328,7 +334,7 @@ async function onRemoveMember(member: { id: string; name: string }) {
   } catch (e) {
     if (e !== 'cancel') {
       closeToast()
-      showFailToast(e instanceof Error ? e.message : t('移除失败'))
+      showFailToast(errMsg(e, t('移除失败')))
     }
   }
 }
@@ -344,7 +350,7 @@ async function onUpdateMemberRole(member: { id: string; projectRoleId: string },
     showSuccessToast(t('角色已更新'))
     await loadMembers()
   } catch (e) {
-    showFailToast(e instanceof Error ? e.message : t('更新失败'))
+    showFailToast(errMsg(e, t('更新失败')))
   }
 }
 
@@ -388,17 +394,6 @@ const canManageMembers = computed(() =>
 // 角色管理入口（对齐 PC ProjectListView 的 canManageRoles 门控：PROJECT_ROLE_MANAGE）
 const canManageRoles = computed(() =>
   projectPermissions.value.includes(ProjectPermission.PROJECT_ROLE_MANAGE)
-)
-
-// 项目管理菜单权限门控（对齐 PC 逐项目权限拉取；加载期悲观隐藏）
-const canUpdateProject = computed(() =>
-  projectPermissions.value.includes(ProjectPermission.PROJECT_UPDATE)
-)
-const canDeleteProject = computed(() =>
-  projectPermissions.value.includes(ProjectPermission.PROJECT_DELETE)
-)
-const canManageTransfer = computed(() =>
-  projectPermissions.value.includes(ProjectPermission.PROJECT_TRANSFER_MANAGE)
 )
 
 // 多选操作权限门控（对齐 PC canBatchCopy/Move/Delete/Download：按项目 FILE_* 权限；加载期悲观禁用）
@@ -530,19 +525,10 @@ const showManageSheet = ref(false)
 const showEditPopup = ref(false)
 const showTransferSettings = ref(false)
 
-type ManageActionKey = 'edit' | 'members' | 'roles' | 'transferSettings' | 'history' | 'delete'
-type ManageAction = ActionSheetAction & { key: ManageActionKey }
+type ManageAction = ProjectMenuAction
 
-const manageActions = computed<ManageAction[]>(() => {
-  const actions: ManageAction[] = []
-  if (canUpdateProject.value) actions.push({ key: 'edit', name: t('编辑项目') })
-  actions.push({ key: 'members', name: t('成员') })
-  if (canManageRoles.value) actions.push({ key: 'roles', name: t('角色管理') })
-  if (canManageTransfer.value) actions.push({ key: 'transferSettings', name: t('跨项目转移') })
-  actions.push({ key: 'history', name: t('操作历史') })
-  if (canDeleteProject.value) actions.push({ key: 'delete', name: t('删除项目'), color: '#ee0a24' })
-  return actions
-})
+// 门控表 + 装配表收在 getProjectMenuActions（与 FileBrowserPage 共用），此处只留分派
+const manageActions = computed<ManageAction[]>(() => getProjectMenuActions(projectPermissions.value))
 
 function onManageAction(action: ManageAction) {
   showManageSheet.value = false
@@ -556,7 +542,7 @@ function onManageAction(action: ManageAction) {
     case 'roles':
       goRoleManagement()
       break
-    case 'transferSettings':
+    case 'transfer':
       showTransferSettings.value = true
       break
     case 'history':

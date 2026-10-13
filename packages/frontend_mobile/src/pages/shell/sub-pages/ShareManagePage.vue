@@ -37,6 +37,7 @@ import {
   type ShareExpirationOption,
 } from '@cloudcad/platform'
 import { useShareCreate, type ShareCreateResult } from '@/composables/useShareCreate'
+import { usePagedState, type PagedItems } from '@/composables/usePagedState'
 
 interface ShareItem {
   id: string
@@ -57,17 +58,28 @@ const router = useRouter()
 const { createShares } = useShareCreate()
 const keyword = ref('')
 const filter = ref<'all' | 'active' | 'expired'>('all')
-const shares = ref<ShareItem[]>([])
-const loading = ref(false)
-const error = ref('')
 
 // C-05 分页/滚动加载（对齐 PC ShareTable 分页）：page 累加 + hasMore；
-// C-14 翻页失败保留已加载列表，底条重试（loadMoreFailed 与整页 error 分离）
+// C-14 翻页失败保留已加载列表，底条重试（loadMoreFailed 与整页 error 分离）。
+// 状态 + 派生 + 加载仪式 + 竞态守卫统一走 usePagedState（与 TrashList/MemberCenter
+// 等数据层同一 seam），本页不再各自维护 page/total/hasMore 与 loading/error 仪式。
 const sharePageSize = 20
-const sharePage = ref(1)
-const shareTotal = ref(0)
-const loadMoreFailed = ref(false)
-const shareHasMore = computed(() => sharePage.value < Math.ceil(shareTotal.value / sharePageSize))
+const sharePaged = usePagedState<ShareItem>({
+  onError: (e) => {
+    console.error('[ShareManagePage] loadShares:', e)
+    return t('加载失败')
+  },
+})
+const {
+  items: shares,
+  page,
+  loading,
+  error,
+  hasMore: shareHasMore,
+  loadMoreFailed,
+} = sharePaged
+// 整页错误态仅在首屏（page 1）失败时出现；翻页失败保留已加载列表、走底条重试（C-14）
+const listError = computed(() => (page.value === 1 ? error.value : ''))
 
 // 操作面板（vant 无 showActionSheet 函数式 API，改用 ActionSheet 组件）
 const actionSheetShow = ref(false)
@@ -110,73 +122,67 @@ function onSortSelect(action: { name: string }) {
   }
 }
 
-async function loadShares(append = false) {
-  loading.value = true
-  if (!append) {
-    sharePage.value = 1
-    error.value = ''
-    loadMoreFailed.value = false
-  }
-  try {
-    const res = await shareControllerListShares({
-      query: {
-        page: sharePage.value,
-        pageSize: sharePageSize,
-        sortBy: sortBy.value,
-        sortOrder: sortOrder.value,
-        ...(keyword.value ? { search: keyword.value } : {}),
-        // P1-2：状态筛选下推到 DB。原先客户端只过滤已加载页，而 total 是服务端未过滤总数，
-        // 过滤后会出现「还能加载但已无有效项」、全选计数口径也不一致。
-        ...(filter.value === 'all' ? {} : { status: filter.value }),
-      },
-    })
-    unwrap(res)
-    const data = (res.data ?? {}) as { items?: Array<any>; total?: number }
-    const rawShares = data.items ?? []
+// 单页取数：翻页号由 sharePaged 按当前页传入；totalPages 由 total 推导
+//（后端 ShareListResponseDto 无 totalPages 字段）
+async function fetchSharePage(pageNo: number): Promise<PagedItems<ShareItem>> {
+  const res = await shareControllerListShares({
+    query: {
+      page: pageNo,
+      pageSize: sharePageSize,
+      sortBy: sortBy.value,
+      sortOrder: sortOrder.value,
+      ...(keyword.value ? { search: keyword.value } : {}),
+      // P1-2：状态筛选下推到 DB。原先客户端只过滤已加载页，而 total 是服务端未过滤总数，
+      // 过滤后会出现「还能加载但已无有效项」、全选计数口径也不一致。
+      ...(filter.value === 'all' ? {} : { status: filter.value }),
+    },
+  })
+  unwrap(res)
+  const data = (res.data ?? {}) as { items?: Array<any>; total?: number }
+  const total = data.total ?? 0
 
-    const mapped = rawShares.map((s: any) => {
-      const fileName = s.fileName ?? t('未知文件')
-      const ext = extractExtension(fileName)
-      const expiresAt: string | null = s.expiresAt ?? null
-      // 状态由过期时间客户端判定（对齐 PC isExpired）：有 expiresAt 且已过期 → expired
-      const expired = isShareExpired(expiresAt)
-      const status: 'active' | 'expired' = expired ? 'expired' : 'active'
+  const items = (data.items ?? []).map((s: any) => {
+    const fileName = s.fileName ?? t('未知文件')
+    const ext = extractExtension(fileName)
+    const expiresAt: string | null = s.expiresAt ?? null
+    // 状态由过期时间客户端判定（对齐 PC isExpired）：有 expiresAt 且已过期 → expired
+    const expired = isShareExpired(expiresAt)
+    const status: 'active' | 'expired' = expired ? 'expired' : 'active'
 
-      return {
-        id: s.id,
-        token: s.token ?? '',
-        name: fileName,
-        ext,
-        status,
-        statusText: status === 'active' ? t('有效') : t('已过期'),
-        expireText: formatShareExpiry(expiresAt),
-        usedCount: s.usedCount ?? 0,
-        url: shareUrl(s.url),
-        createdAt: s.createdAt ?? '',
-        expiresAt,
-      }
-    })
-    shareTotal.value = data.total ?? 0
-    shares.value = append ? [...shares.value, ...mapped] : mapped
-    loadMoreFailed.value = false
-  } catch (e) {
-    // C-14：翻页失败保留已加载列表（底条重试）；首屏失败才整页错误态
-    if (append) loadMoreFailed.value = true
-    else error.value = t('加载失败')
-  } finally {
-    loading.value = false
+    return {
+      id: s.id,
+      token: s.token ?? '',
+      name: fileName,
+      ext,
+      status,
+      statusText: status === 'active' ? t('有效') : t('已过期'),
+      expireText: formatShareExpiry(expiresAt),
+      usedCount: s.usedCount ?? 0,
+      url: shareUrl(s.url),
+      createdAt: s.createdAt ?? '',
+      expiresAt,
+    }
+  })
+
+  return {
+    items,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / sharePageSize)),
   }
+}
+
+async function loadShares(): Promise<void> {
+  sharePaged.resetToFirstPage()
+  await sharePaged.load(fetchSharePage)
 }
 
 function loadMoreShares() {
-  if (loading.value || loadMoreFailed.value || !shareHasMore.value) return
-  sharePage.value++
-  loadShares(true)
+  sharePaged.loadMore(fetchSharePage)
 }
 
 function retryLoadMore() {
-  // page 已指向失败页，直接重跑当前页（不会重复追加）
-  loadShares(true)
+  // 不翻页，重载当前（失败）页；成功项按页号追加，不会重复
+  sharePaged.retryLoadMore(fetchSharePage)
 }
 
 function onShareListScroll(e: Event) {
@@ -759,8 +765,8 @@ function onCustomDaysInput(e: Event) {
       <span class="state-text">{{ t('加载中...') }}</span>
     </div>
 
-    <div v-else-if="error" class="state-box">
-      <span class="state-text">{{ error }}</span>
+    <div v-else-if="listError" class="state-box">
+      <span class="state-text">{{ listError }}</span>
       <van-button size="small" round @click="loadShares">{{ t('重试') }}</van-button>
     </div>
 

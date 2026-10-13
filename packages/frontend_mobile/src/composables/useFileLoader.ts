@@ -28,6 +28,7 @@ import {
 import type { FileSystemNodeDto } from '../api-sdk';
 import { t } from '@/languages';
 import { buildMxwebFileUrl, resolveCacheTimestamp } from '../utils/mxwebUrl';
+import { parseEditorOpenParams } from '../utils/editorOpenParams';
 
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -48,27 +49,25 @@ export function useFileLoader() {
    * 3. 最后回退 ?nodeId=（旧链接兼容）
    */
   function getFileIdFromUrl(): string | null {
-    const params = new URLSearchParams(window.location.search);
-    const fileId = params.get('fileId');
-    if (fileId) return fileId;
+    const p = parseEditorOpenParams(window.location.search);
+    if (p.fileId) return p.fileId;
     const match = window.location.pathname.match(/^\/cad-editor\/([^/]+)$/);
     if (match) return match[1];
-    return params.get('nodeId') || null;
+    return p.nodeId || null;
   }
 
   /**
    * 从 URL 获取父目录 nodeId（用于侧边栏上下文）
    */
   function getNodeIdFromUrl(): string | null {
-    return new URLSearchParams(window.location.search).get('nodeId') || null;
+    return parseEditorOpenParams(window.location.search).nodeId || null;
   }
 
   /**
    * 从 URL 获取文件 hash（公开文件）
    */
   function getHashFromUrl(): string | null {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('hash') || params.get('fileHash') || null;
+    return parseEditorOpenParams(window.location.search).hash || null;
   }
 
   /**
@@ -76,18 +75,14 @@ export function useFileLoader() {
    * ?fileName= 携带转换前的原文件名，缺失时由调用方回退内部访问名 <hash>.mxweb
    */
   function getFileNameFromUrl(): string | null {
-    return new URLSearchParams(window.location.search).get('fileName') || null;
+    return parseEditorOpenParams(window.location.search).fileName || null;
   }
 
   /**
    * 从 URL 获取版本号
    */
   function getVersionFromUrl(): number | undefined {
-    const params = new URLSearchParams(window.location.search);
-    const v = params.get('v');
-    if (!v) return undefined;
-    const num = parseInt(v, 10);
-    return isNaN(num) ? undefined : num;
+    return parseEditorOpenParams(window.location.search).version;
   }
 
   /**

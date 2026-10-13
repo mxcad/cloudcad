@@ -6,6 +6,7 @@
  */
 import { showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant';
 import { t } from '@/languages';
+import { errMsg } from '@/utils/apiError';
 import { downloadNodeOriginal } from '@/services/fileService';
 
 export function useNodeDownload() {
@@ -22,8 +23,7 @@ export function useNodeDownload() {
       return true;
     } catch (e) {
       closeToast();
-      const msg = e instanceof Error ? e.message : '';
-      showFailToast(msg || t('下载失败'));
+      showFailToast(errMsg(e, t('下载失败')));
       return false;
     }
   }

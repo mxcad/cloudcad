@@ -8,6 +8,7 @@ import {
   TruncateText,
 } from '../ui/TruncateText';
 import { t } from '@/languages';
+import { isFailedStatus } from '@/lib/fileStatus';
 
 interface FileItemInfoProps {
   node: FileSystemNode;
@@ -65,7 +66,7 @@ export const FileItemInfo: React.FC<FileItemInfoProps> = memo(
 
     // 永久失败徽标（#477）：fileStatus=FAILED 的文件节点显示红色× + 「转换失败」标签
     const failedBadge = useMemo(() => {
-      if (node.isFolder || node.fileStatus !== 'FAILED') return null;
+      if (node.isFolder || !isFailedStatus(node.fileStatus)) return null;
       return (
         <span
           className="inline-flex items-center gap-0.5 text-xs font-medium"

@@ -15,6 +15,12 @@ import {
   conversionStatusControllerGetConversionStatus,
   conversionStatusControllerTriggerConversion,
 } from '@/api-sdk';
+import {
+  isCompletedStatus,
+  isFailedStatus,
+  isProcessingStatus,
+  isTerminalFailureStatus,
+} from '@/lib/fileStatus';
 
 /**
  * 异步转换状态（后端 ConversionStatusResponseDto）
@@ -78,18 +84,8 @@ const DEFAULT_TIMEOUT_MS = 120000;
 /** hook 默认 FAILED 自动重试次数（waitForConversion 默认 0，hook 默认 1 次防死循环） */
 const DEFAULT_FAILED_RETRIES = 1;
 
-const COMPLETED_STATUS = 'COMPLETED';
-const IN_PROGRESS_STATUS = 'PROCESSING';
-const TERMINAL_FAILED_STATUSES: ReadonlySet<string> = new Set([
-  'FAILED',
-  'DELETED',
-]);
-
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
-
-const isTerminalFailure = (status: string | null | undefined): boolean =>
-  !!status && TERMINAL_FAILED_STATUSES.has(status);
 
 /**
  * 轮询指定节点文件的异步转换状态，直到完成、失败或超时。
@@ -141,7 +137,7 @@ export async function waitForConversion(
     const status = (response.data ?? {}) as ConversionStatus;
     const fileStatus = status.fileStatus ?? null;
 
-    if (fileStatus === COMPLETED_STATUS) {
+    if (isCompletedStatus(fileStatus)) {
       return {
         ...status,
         status: fileStatus,
@@ -149,7 +145,7 @@ export async function waitForConversion(
         timedOut: false,
       };
     }
-    if (isTerminalFailure(fileStatus)) {
+    if (isTerminalFailureStatus(fileStatus)) {
       return {
         ...status,
         status: fileStatus,
@@ -160,7 +156,7 @@ export async function waitForConversion(
 
     // 转换尚未开始（非 PROCESSING）且需要自动触发时，先触发一次再继续轮询。
     // 触发失败不阻断轮询，后续轮询会反映真实状态。
-    if (!triggered && autoTrigger && fileStatus !== IN_PROGRESS_STATUS) {
+    if (!triggered && autoTrigger && !isProcessingStatus(fileStatus)) {
       triggered = true;
       try {
         await conversionStatusControllerTriggerConversion({ path: { nodeId } });
@@ -175,7 +171,7 @@ export async function waitForConversion(
   let result = await poll();
   // FAILED 自动重试：调用转换触发接口后继续轮询，直到成功/超限/触发失败
   while (
-    result.status === 'FAILED' &&
+    isFailedStatus(result.status) &&
     !result.completed &&
     failedRetries < maxFailedRetries
   ) {
@@ -186,7 +182,7 @@ export async function waitForConversion(
     if (!retried) break;
     result = await poll();
   }
-  if (result.completed || isTerminalFailure(result.status)) {
+  if (result.completed || isTerminalFailureStatus(result.status)) {
     return result;
   }
 
@@ -196,7 +192,7 @@ export async function waitForConversion(
     }
     await delay(intervalMs);
     result = await poll();
-    if (result.completed || isTerminalFailure(result.status)) {
+    if (result.completed || isTerminalFailureStatus(result.status)) {
       return result;
     }
   }

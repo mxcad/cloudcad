@@ -24,8 +24,9 @@ import { Layers } from 'lucide-react';
 import { LayoutTemplate } from 'lucide-react';
 import { SidebarTab, DrawingsSubTab } from '../../types/sidebar';
 import { useSidebarSettings } from '../../hooks/useSidebarSettings';
+import { usePersonalSpaceQuery } from '../../hooks/usePersonalSpaceQuery';
 import { isTourModeActive } from '../../utils/tourMode';
-import { useDrawingOpener } from './hooks/useDrawingOpener';
+import { openDrawing } from '../../services/mxcadManager';
 import { useAutoSelectSubTab } from './hooks/useAutoSelectSubTab';
 import { SidebarTabBar } from './SidebarTabBar';
 import { SidebarTrigger } from './SidebarTrigger';
@@ -84,8 +85,10 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
 }) => {
   // ==================== Hooks ====================
   const { isAuthenticated } = useAuth();
-  const { personalSpaceId, handleDrawingOpen: navigationOpen } =
-    useDrawingOpener(isAuthenticated);
+  const { data: personalSpaceData } = usePersonalSpaceQuery({
+    enabled: isAuthenticated,
+  });
+  const personalSpaceId = personalSpaceData?.id || null;
 
   const { config: runtimeConfig } = useRuntimeConfig();
 
@@ -292,9 +295,26 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
         return;
       }
 
-      await navigationOpen(node, libraryType);
+      // 只描述「打开什么」：守卫、转换等待、项目根解析、URL 构造与错误收尾
+      // 全部在 openDrawing 内部，此处不再重复投影就绪判据与根节点推导。
+      if (libraryType === 'drawing' || libraryType === 'block') {
+        await openDrawing({
+          source: 'library',
+          libraryKey: libraryType,
+          nodeId: node.id,
+          fileName: node.name,
+          nodePath: node.path,
+          updatedAt: node.updatedAt,
+        });
+      } else {
+        await openDrawing({
+          source: 'node',
+          nodeId: node.id,
+          uploadTargetNodeId: node.parentId || '',
+        });
+      }
     },
-    [navigationOpen]
+    []
   );
 
   // ==================== 渲染内容 ====================

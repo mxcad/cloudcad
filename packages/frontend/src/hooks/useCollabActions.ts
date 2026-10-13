@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MxCpp } from 'mxcad';
 import { useNotification } from '../contexts/NotificationContext';
 import { getErrorMessage } from '../utils/errorHandler';
 import {
@@ -36,6 +35,22 @@ import {
   AUTO_JOIN_MAX_RETRIES,
 } from '@/constants/timeouts';
 import { t } from '@/languages';
+
+/**
+ * 从引擎读当前图纸名并同步到会话（引擎未就绪会抛错，静默忽略）。
+ * 走 mxcadManager 唯一出口，hook 层不直接摸 MxCpp。
+ */
+function syncCurrentFileNameToSession(): void {
+  try {
+    const name = mxcadManager.getCurrentFileName();
+    if (name && !isEmptyDocumentName(name)) {
+      patchSession({ name });
+      refreshFileName();
+    }
+  } catch {
+    /* 引擎未就绪，忽略 */
+  }
+}
 
 export interface CollabActionsState {
   creating: boolean;
@@ -513,28 +528,9 @@ export function useCollabActions(
               libraryKey: collabShareLibraryKey ?? undefined,
             });
             refreshFileName();
-            try {
-              const mxCAD = MxCpp.getCurrentMxCAD();
-              const fn = mxCAD?.getCurrentFileName?.();
-              if (fn && !isEmptyDocumentName(fn)) {
-                patchSession({ name: fn });
-                refreshFileName();
-              }
-              // 引擎文件名校读可能失败（未就绪），忽略
-            } catch {
-              /* 忽略 */
-            }
+            syncCurrentFileNameToSession();
             setTimeout(() => {
-              try {
-                const mxCAD = MxCpp.getCurrentMxCAD();
-                const fn = mxCAD?.getCurrentFileName?.();
-                if (fn && !isEmptyDocumentName(fn)) {
-                  patchSession({ name: fn });
-                  refreshFileName();
-                }
-              } catch {
-                /* 忽略 */
-              }
+              syncCurrentFileNameToSession();
               hideGlobalLoading('autoJoin-fileLoaded');
               onFileLoaded?.();
             }, 500);

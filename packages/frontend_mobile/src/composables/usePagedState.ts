@@ -14,8 +14,9 @@ export interface PagedItems<T> {
  *   - items 列表归此持有（首屏替换 / 翻页追加的合并逻辑在此，消费方不再各自写
  *     `page===1 ? replace : append`）；
  *   - load(fetcher) 统一 loading/error 仪式（true→''→try→catch→finally false）；
- *   - 竞态守卫：loadMore 受 loading/hasMore 双守卫（防「加载更多」双击）；load 本身
- *     不设重入守卫（刷新/切 scope 总是重查，对齐原语义——旧 load 亦无此守卫）；
+ *   - 竞态守卫：loadMore 受 loading / 当前页失败 / hasMore 三重守卫（防双击，
+ *     也防「失败页被翻页跳过」）；load 本身不设重入守卫（刷新/切 scope 总是重查，
+ *     对齐原语义——旧 load 亦无此守卫）；
  *   - 错误文案经 onError 回调注入 i18n（本 composable 不依赖语言包）。
  *
  * fetcher 以 page 为入参（不直接读这里的响应式引用），故与「fetch 读取分页状态」
@@ -35,7 +36,7 @@ export interface PagedState<T> {
   loadMoreFailed: ComputedRef<boolean>
   /** 执行一次分页加载（含 loading/error 仪式 + 首屏替换/翻页追加；不设重入守卫） */
   load: (fetcher: (page: number) => Promise<PagedItems<T>>) => Promise<void>
-  /** 翻下一页（loading/hasMore 双守卫） */
+  /** 翻下一页（loading / 当前页失败 / hasMore 三重守卫） */
   loadMore: (fetcher: (page: number) => Promise<PagedItems<T>>) => void
   /** 重试当前页（loadMore 失败后；不翻页，重载当前 page） */
   retryLoadMore: (fetcher: (page: number) => Promise<PagedItems<T>>) => void
@@ -72,7 +73,9 @@ export function usePagedState<T>(
   }
 
   function loadMore(fetcher: (page: number) => Promise<PagedItems<T>>) {
-    if (loading.value || page.value >= totalPages.value) return
+    // loadMoreFailed 守卫：失败页未加载成功前不前进——前进会让 page 跳到下一页，
+    // 而失败那一页的 items 从未落库，等于静默丢一整页数据。
+    if (loading.value || loadMoreFailed.value || page.value >= totalPages.value) return
     page.value++
     void load(fetcher)
   }

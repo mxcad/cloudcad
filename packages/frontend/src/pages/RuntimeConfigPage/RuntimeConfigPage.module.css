@@ -157,17 +157,20 @@
   flex: 1;
 }
 
-/* ===== 配置网格 ===== */
+/* ===== 配置瀑布流 =====
+   分类卡片高度差异极大（security 20 项 ≈ 2000px，多数分类 2-7 项 ≈ 200-700px），
+   等宽网格 + align-items:start 会把行高对齐到最高卡，矮卡下方留大片矩形空白。
+   改用 CSS 多列瀑布流：高卡独占一列、矮卡顺势填进空隙，不留空洞。
+   代价：阅读顺序变为「列内自上而下」，且展开/折叠某卡时其后卡片会重排换列。 */
 .config-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
-  gap: var(--space-5);
-  align-items: start;
+  column-count: 1;
+  column-gap: var(--space-5);
 }
 
-@media (max-width: 768px) {
+/* 列宽不低于原网格的 520px 设计下限：(1120 - 2*space-6 - space-5) / 2 ≈ 526px */
+@media (min-width: 1120px) {
   .config-grid {
-    grid-template-columns: 1fr;
+    column-count: 2;
   }
 }
 
@@ -177,6 +180,9 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
   overflow: hidden;
+  /* 多列布局下禁止单张卡片被截断分到两列；列内垂直间距由 margin 承担 */
+  break-inside: avoid;
+  margin-bottom: var(--space-5);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   animation: card-enter 0.4s ease-out forwards;
   opacity: 0;

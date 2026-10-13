@@ -14,7 +14,7 @@ import {
 import { uploadThumbnailForNode } from '../services/thumbnailService';
 import { showToast } from 'vant';
 import { t } from '@/languages';
-import { unwrap } from '../utils/apiError';
+import { unwrap, errMsg } from '../utils/apiError';
 
 export type SaveTargetType = 'personal' | 'project' | 'library';
 export type LibraryType = 'drawing' | 'block';
@@ -138,7 +138,7 @@ export function useSaveAs() {
       return { success: true, nodeId: result.nodeId };
     } catch (e: unknown) {
       saving.value = false;
-      const message = e instanceof Error ? e.message : t('保存失败');
+      const message = errMsg(e, t('保存失败'));
       return { success: false, message };
     }
   }

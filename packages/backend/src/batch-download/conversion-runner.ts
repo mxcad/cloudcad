@@ -4,7 +4,11 @@ import { resolveMxcadUploadDir } from '../common/utils/mxcad-upload-dir';
 import { ModuleRef } from '@nestjs/core';
 import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
 import type { IMxcadConversionService } from '../mxcad/interfaces/mxcad-conversion.interface';
-import { RestrictionEngine } from '../vip/restriction-engine.service';
+import {
+  NO_OP_CONVERSION_RESERVATION,
+  RestrictionEngine,
+  type ConversionQuotaReservation,
+} from '../vip/restriction-engine.service';
 import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
 import { FileDownloadExportService } from '../file-system/file-download/file-download-export.service';
 import { PublicFileService } from '../public-file/public-file.service';
@@ -226,39 +230,39 @@ export class ConversionRunner {
     await this.restrictionEngine.assertExportDownloadAllowed(userId);
 
     // ADR-0043：转换频率占位——每个转换任务 1 次；超限任务返回失败结果，其余继续。
-    // 无 userId（内部调用）不占位也不限制。
-    const reserved = new Array<boolean>(requests.length).fill(!userId);
+    // 无 userId（内部调用）不占位也不限制（对应 reserved=false 的占位句柄）。
+    const reservations: ConversionQuotaReservation[] =
+      new Array<ConversionQuotaReservation>(requests.length);
     const quotaMessages = new Array<string | null>(requests.length).fill(null);
     try {
       for (let i = 0; i < requests.length; i++) {
-        if (!userId) continue;
+        if (!userId) {
+          reservations[i] = NO_OP_CONVERSION_RESERVATION;
+          continue;
+        }
         try {
-          await this.restrictionEngine.reserveConversionCountOrThrow(userId);
-          reserved[i] = true;
+          reservations[i] =
+            await this.restrictionEngine.reserveConversionReservation({
+              userId,
+            });
         } catch (error) {
           if (!(error instanceof QuotaExceededException)) throw error;
           quotaMessages[i] = error.message;
+          reservations[i] = NO_OP_CONVERSION_RESERVATION;
         }
       }
     } catch (error) {
       // 占位循环中途异常：释放已占位的额度再向上抛（避免残留）
       await Promise.all(
-        reserved.map((r, i) =>
-          r && userId
-            ? this.restrictionEngine
-                .releaseConversionCount(userId)
-                .catch(() => undefined)
-            : undefined
-        )
+        reservations.map((r) => (r ? r.release() : undefined))
       );
       throw error;
     }
 
     const releaseIfReserved = async (index: number, success: boolean) => {
-      if (success || !reserved[index] || !userId) return;
-      await this.restrictionEngine
-        .releaseConversionCount(userId)
-        .catch(() => undefined);
+      const reservation = reservations[index];
+      if (success || !reservation?.reserved) return;
+      await reservation.release();
     };
 
     const quotaFailure = (i: number): ConversionResult => ({
@@ -272,7 +276,7 @@ export class ConversionRunner {
     if (!this.hasBatchDelegate()) {
       const results = await Promise.all(
         requests.map((r, i) => {
-          if (!reserved[i]) {
+          if (quotaMessages[i] !== null) {
             return quotaFailure(i);
           }
           return this.convertInProcess(r.node, r.format, r.pdfParams, userId);
@@ -292,7 +296,7 @@ export class ConversionRunner {
     // 步骤 1：提交时快照工作副本到 uploads/{hash}.mxweb（内容寻址、不可变），转换读快照而非可变工作副本
     for (let index = 0; index < requests.length; index++) {
       const request = requests[index]!;
-      if (!reserved[index]) {
+      if (quotaMessages[index] !== null) {
         results[index] = quotaFailure(index);
         continue;
       }

@@ -40,8 +40,8 @@ import { runUploadPool } from '@/utils/uploadPool'
 import { calculateFileHash } from '@/utils/hashUtils'
 import { uploadFile } from '@/services/mobileUploadService'
 import { validateName } from '@/utils/validateName'
-import { unwrap } from '@/utils/apiError'
-import type { SelectionActionKey } from '../pages/shell/components/UnifiedFileList.vue'
+import { unwrap, errMsg } from '@/utils/apiError'
+import type { SelectionActionKey } from '@/types/selection-action'
 
 /** 只读 ref（Ref 或 ComputedRef 皆可）：两页数据层来源既有 Ref 也有 ComputedRef，统一放宽避免可写性摩擦 */
 type ReadRef<T> = Ref<T> | ComputedRef<T>
@@ -272,7 +272,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
       if (!nodeInfo.path) throw new Error(t('文件不存在或已被删除'))
       await warmupHistoricalVersion(nodeInfo.path, payload.revision)
     } catch (e) {
-      showFailToast(e instanceof Error ? e.message : t('历史版本文件准备失败，请重试'))
+      showFailToast(errMsg(e, t('历史版本文件准备失败，请重试')))
       return
     }
     closeToast()
@@ -389,7 +389,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
 
   /** 后端错误透传：403 策略被拒/权限/配额 等文案直接展示，不吞成通用「移动失败」 */
   function transferErrorMessage(e: unknown, op: 'move' | 'copy'): string {
-    const msg = e instanceof Error ? e.message : ''
+    const msg = errMsg(e, '')
     if (msg) return msg
     return op === 'move' ? t('移动失败') : t('复制失败')
   }

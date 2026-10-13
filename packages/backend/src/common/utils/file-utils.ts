@@ -222,6 +222,45 @@ export class FileUtils {
   }
 
   /**
+   * 下载 / 导出 / zip 条目方向的文件名净化（**替换**而非剔除）。
+   *
+   * 与 sanitizeFilename 的分工：上传命名那侧要拒绝坏名字（剔除 + 抛错，见上）；
+   * 下载这侧拿的是服务器已存的名字，剔成空串会让产物没了标识，必须替换成 `_`
+   * 并保留原字形。此前本方向有 3 份互不相同的实现（file-download-export 的私有
+   * sanitizeFileName，以及同文件 2 处逐字节相同的内联块），其中私有那份只净化
+   * 分隔符与控制字符——`<>:"|?*` 原样进 zip 条目名，Windows 端打不开。
+   * 本方法是三者字符集并集的唯一出口。
+   *
+   * @param filename 文件名（可含扩展名，也可不含）
+   * @param maxFilenameLength 最大长度（字符数，含扩展名）
+   */
+  static sanitizeDownloadFilename(
+    filename: string,
+    maxFilenameLength: number
+  ): string {
+    const sanitized = filename
+      .replace(/[\/\\]/g, '_')
+      .replace(/[<>:"|?*~]/g, '_')
+      .replace(/\.\./g, '_')
+      .replace(/[\x00-\x1F\x7F]/g, '_');
+
+    const ext = path.extname(sanitized);
+    const base = path
+      .basename(sanitized, ext)
+      .substring(0, Math.max(0, maxFilenameLength - ext.length))
+      .replace(/^\.+/, '');
+
+    // 回落判据（Windows 上不可写或无意义的名字）：
+    //  1. 基名被截断后全剩点号（'...pdf' → 剥点后空串）→ 只剩 '.pdf' 这种隐藏文件
+    //  2. 纯点号/纯下划线/纯空白/空串；纯下划线也算，因为分隔符名 '/\\' 的净化结果就是 '__'
+    if (base === '' || /^[_.\s]*$/.test(base + ext)) {
+      return 'unnamed';
+    }
+
+    return base + ext;
+  }
+
+  /**
    * 将相对路径解析到根目录下，并校验结果仍在根目录内（防 `..` 路径遍历逃逸）。
    *
    * 用于所有「把用户可控路径拼到 filesDataPath 等根目录下再读盘」的场景：

@@ -319,6 +319,124 @@ describe('RestrictionEngine', () => {
     });
   });
 
+  describe('reserveConversionReservation（可释放句柄：主体分派单点）', () => {
+    it('登录用户：reserved=true，release() 释放 userId 窗口', async () => {
+      membershipService.getQuota
+        .mockResolvedValueOnce(10) // 占位：窗口次数
+        .mockResolvedValueOnce(2) // 占位：窗口小时
+        .mockResolvedValueOnce(2); // 释放：窗口小时
+      redis.eval.mockResolvedValue(1);
+      redis.get.mockResolvedValue('1');
+
+      const reservation = await engine.reserveConversionReservation({
+        userId: 'u1',
+      });
+      expect(reservation.reserved).toBe(true);
+      expect(redis.eval).toHaveBeenCalledWith(
+        expect.any(String),
+        1,
+        expect.stringMatching(/^conversion:window:user:u1:/),
+        '10',
+        expect.any(String)
+      );
+
+      await reservation.release();
+      expect(redis.decr).toHaveBeenCalledWith(
+        expect.stringMatching(/^conversion:window:user:u1:/)
+      );
+    });
+
+    it('游客：reserved=true，release() 释放 IP 窗口', async () => {
+      runtimeConfigService.getValue
+        .mockResolvedValueOnce(5) // 占位：游客限制
+        .mockResolvedValueOnce(2) // 占位：游客窗口小时
+        .mockResolvedValueOnce(2); // 释放：游客窗口小时
+      redis.eval.mockResolvedValue(1);
+      redis.get.mockResolvedValue('1');
+
+      const reservation = await engine.reserveConversionReservation({
+        ip: '1.2.3.4',
+      });
+      expect(reservation.reserved).toBe(true);
+
+      await reservation.release();
+      expect(redis.decr).toHaveBeenCalledWith(
+        expect.stringMatching(/^conversion:window:ip:1\.2\.3\.4:/)
+      );
+    });
+
+    it('无主体（内部调用）：不占位，reserved=false，release() 空操作', async () => {
+      const reservation = await engine.reserveConversionReservation({});
+      expect(reservation.reserved).toBe(false);
+
+      await reservation.release();
+      expect(redis.eval).not.toHaveBeenCalled();
+      expect(redis.decr).not.toHaveBeenCalled();
+    });
+
+    it('超限：抛 QuotaExceededException，不返回句柄', async () => {
+      membershipService.getQuota
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(2);
+      redis.eval.mockResolvedValue(0);
+
+      await expect(
+        engine.reserveConversionReservation({ userId: 'u1' })
+      ).rejects.toBeInstanceOf(QuotaExceededException);
+    });
+
+    it('release() 幂等且吞掉释放异常（跨控制流的失败清算依赖它）', async () => {
+      const reservation = await engine.reserveConversionReservation({});
+      await reservation.release();
+      await reservation.release();
+      await expect(reservation.release()).resolves.toBeUndefined();
+      expect(redis.decr).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('releaseConversionReservation（手上没有句柄时按主体释放）', () => {
+    it('登录用户：释放 userId 窗口', async () => {
+      membershipService.getQuota.mockResolvedValueOnce(2); // 窗口小时
+      redis.get.mockResolvedValue('1');
+
+      await engine.releaseConversionReservation({ userId: 'u1' });
+
+      expect(redis.decr).toHaveBeenCalledWith(
+        expect.stringMatching(/^conversion:window:user:u1:/)
+      );
+    });
+
+    it('游客：释放 IP 窗口', async () => {
+      runtimeConfigService.getValue.mockResolvedValueOnce(2); // 游客窗口小时
+      redis.get.mockResolvedValue('1');
+
+      await engine.releaseConversionReservation({ ip: '1.2.3.4' });
+
+      expect(redis.decr).toHaveBeenCalledWith(
+        expect.stringMatching(/^conversion:window:ip:1\.2\.3\.4:/)
+      );
+    });
+
+    it('无主体：空操作，不触达 Redis', async () => {
+      await engine.releaseConversionReservation({});
+
+      expect(redis.get).not.toHaveBeenCalled();
+      expect(redis.decr).not.toHaveBeenCalled();
+    });
+
+    it('释放异常被吞掉（不掩盖调用方正在处理的原始错误）', async () => {
+      membershipService.getQuota.mockResolvedValueOnce(2);
+      redis.get.mockResolvedValue('1');
+      redis.decr.mockRejectedValue(new Error('redis down'));
+
+      await expect(
+        engine.releaseConversionReservation({ userId: 'u1' })
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe('tryReserveSaveCount', () => {
     it('should reserve with save_window_count and reuse conversion window hours', async () => {
       // 保存次数 300、窗口小时 2（复用转换窗口）
