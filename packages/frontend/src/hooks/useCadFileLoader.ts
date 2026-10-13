@@ -404,9 +404,11 @@ export function useCadFileLoader(
                   type: 'danger',
                 });
               }
+              // conversion.error 非空 = 轮询取不到状态（连续传输失败），带出真实原因，
+              // 不再一律报「尚未转换完成」
               const msg = isTerminalFailure
                 ? t('文件转换失败，无法打开文件')
-                : t('文件尚未转换完成');
+                : conversion.error || t('文件尚未转换完成');
               fail(msg);
               return;
             }

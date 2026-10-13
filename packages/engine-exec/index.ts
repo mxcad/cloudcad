@@ -19,3 +19,5 @@ export type {
   EngineRunContext,
   EngineRunOutcome,
 } from './runner';
+export { resolveMxExecutablePath } from './mx-path';
+export type { ResolveMxExecutablePathOptions } from './mx-path';

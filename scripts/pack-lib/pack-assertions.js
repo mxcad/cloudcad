@@ -19,6 +19,12 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
+// 移动端路径名解析的唯一出口（runtime 侧运维入口同样引用它）
+const { getMobileAccessPathForPackage } = require(
+  '../../runtime/scripts/lib/mobile-access-path'
+);
+const { WINDOWS_ASSET_REQUIRED_FILES } = require('./components');
+
 /**
  * 校验部署 store 完整性（纯判定，无副作用）。
  *
@@ -52,26 +58,18 @@ function checkDeployStore(storePath) {
  *
  * 背景：runtime/windows/ 在 manifest 中是整目录复制，只要 node/ 存在即可通过，
  * 缺 postgresql/redis 子目录或 node_modules/pm2 完全无感知——曾致线上 Windows 离线包
- * 缺 pg/redis、目标机启动失败。关键可执行文件清单与 runtime/scripts 的
- * pg-manager.js / redis-manager.js、lib/proc.js 的 PM2_JS 引用保持一致。
+ * 缺 pg/redis、目标机启动失败。
+ *
+ * 关键文件清单的单一事实源在 pack-lib/components.js 的 WINDOWS_ASSET_REQUIRED_FILES
+ * （Linux 侧对应 LINUX_ASSET_REQUIRED_FILES，同样在此定义一次）。
  *
  * @param {string} runtimeWindowsDir runtime/windows 目录绝对路径
  * @returns {string[]} 缺失项（runtime/windows/... 形态）
  */
 function findMissingWindowsComponents(runtimeWindowsDir) {
-  const required = [
-    path.join('node', 'node.exe'),
-    path.join('node', 'node_modules', 'pm2', 'bin', 'pm2'),
-    path.join('postgresql', 'pgsql', 'bin', 'initdb.exe'),
-    path.join('postgresql', 'pgsql', 'bin', 'pg_ctl.exe'),
-    path.join('redis', 'redis-server.exe'),
-  ];
-  const missing = [];
-  for (const rel of required) {
-    const p = path.join(runtimeWindowsDir, rel);
-    if (!fs.existsSync(p)) missing.push(`runtime/windows/${rel}`);
-  }
-  return missing;
+  return WINDOWS_ASSET_REQUIRED_FILES
+    .filter((rel) => !fs.existsSync(path.join(runtimeWindowsDir, rel)))
+    .map((rel) => `runtime/windows/${rel}`);
 }
 
 /**
@@ -195,33 +193,17 @@ function removeJunkWithSudoFallback(items, { onItem, chownTargets = [] } = {}) {
 /**
  * 读取移动端前端在 PC 端 dist 内的合并子目录名（纯判定，无副作用）。
  *
- * 单一事实源：读 packages/frontend/public/ini/myServerConfig.json 的 mobileAccessPath，
- * 缺失或不可读时回落默认值 mxcad_mobile。此前该解析逻辑在 pack-offline.js 的
- * mergeMobileDist 与 packUpgrade 关键产物复查各有一份内联副本，易漂移。
+ * 解析逻辑的唯一出口在 runtime/scripts/lib/mobile-access-path（运维入口 cli.js /
+ * start.js 与 serve-static.js 也引用同一份）。打包期只认仓库内模板配置
+ * packages/frontend/public/ini/myServerConfig.json，缺失或不可读时回落 mxcad_mobile；
+ * 刻意**不**读 data/configs/ —— 那是打包机自己的本地运行时配置，读它会打出错误
+ * 子目录名的包。
  *
  * @param {string} projectRoot 项目根绝对路径
  * @returns {string} 移动端合并子目录名
  */
 function resolveMobileAccessPath(projectRoot) {
-  const configPath = path.join(
-    projectRoot,
-    'packages',
-    'frontend',
-    'public',
-    'ini',
-    'myServerConfig.json'
-  );
-  const DEFAULT = 'mxcad_mobile';
-  if (!fs.existsSync(configPath)) return DEFAULT;
-  try {
-    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    if (cfg.mobileAccessPath && typeof cfg.mobileAccessPath === 'string') {
-      return cfg.mobileAccessPath;
-    }
-  } catch {
-    // 解析失败用默认值
-  }
-  return DEFAULT;
+  return getMobileAccessPathForPackage(projectRoot);
 }
 
 /**

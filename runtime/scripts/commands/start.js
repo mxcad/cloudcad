@@ -25,6 +25,7 @@ const {
   PM2_JS,
   getMobileAccessPath,
   OPS_ENTRY,
+  INFRA_SERVICE_APPS,
 } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { promptChoice } = require('../lib/prompt');
@@ -157,8 +158,9 @@ async function waitForServicesForeground(backendProcess, backendOutput) {
   log('green', '║  停止: Ctrl+C / 关闭终端（停止全部服务）               ║');
   log('green', '╚══════════════════════════════════════════════════════════╝');
 
-  // 打开浏览器
+  // 打开浏览器（前端 + 管理员登录入口）
   openBrowser(`http://localhost:${PORTS.frontend}`);
+  openBrowser(`http://localhost:${PORTS.frontend}${getAdminLoginPath()}`);
   return true;
 }
 
@@ -175,14 +177,12 @@ function shouldRestartAppServices(backendStatus, frontendStatus) {
 }
 
 /**
- * PM2 注册的应用层服务名（与 pm2-deploy.config.js 生成的 apps[].name 一致）。
- * conversion 仅在 FUNCTION_EXECUTOR=conversion-service 时注册；归属判定按名字查表、
- * 查不到 entry 即跳过，故无条件列出不会误伤未启用的转换服务。
+ * PM2 注册的应用层服务名（backend/frontend 由 startAppServices 注册，
+ * conversion 仅在 FUNCTION_EXECUTOR=conversion-service 时注册）。
+ * 归属判定按名字查表、查不到 entry 即跳过，故无条件列出不会误伤未启用的转换服务。
+ * 基础服务名不在此重复定义，用 lib/context 的 INFRA_SERVICE_APPS（单一事实源）。
  */
 const APP_PM2_NAMES = ['backend', 'frontend', 'conversion'];
-
-/** PM2 注册的基础服务名（与 ecosystem.config.js 的 app name 一致）。 */
-const INFRA_PM2_NAMES = ['postgresql', 'redis', 'cooperate', 'config-service'];
 
 /**
  * 前置归属审计门禁：PM2 注册表中存在**属于另一部署目录且处于 online** 的 cloudcad
@@ -212,7 +212,7 @@ const INFRA_PM2_NAMES = ['postgresql', 'redis', 'cooperate', 'config-service'];
 async function assertNoForeignAppConflict() {
   const entries = getPm2StatusList();
   const conflicts = [];
-  for (const appName of [...INFRA_PM2_NAMES, ...APP_PM2_NAMES]) {
+  for (const appName of [...INFRA_SERVICE_APPS, ...APP_PM2_NAMES]) {
     const entry = entries.find((a) => a.name === appName);
     if (!entry || isPm2AppFromThisProject(entry)) continue;
     if (!entry.pm2_env || entry.pm2_env.status !== 'online') continue;
@@ -885,7 +885,6 @@ module.exports = {
   assertNoForeignAppConflict,
   deleteForeignAppDefinitions,
   APP_PM2_NAMES,
-  INFRA_PM2_NAMES,
   startOnly,
   testConnection,
   startMode,

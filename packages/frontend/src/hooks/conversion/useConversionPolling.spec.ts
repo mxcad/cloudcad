@@ -16,6 +16,7 @@ import {
   waitForConversion,
   useConversionPolling,
 } from './useConversionPolling';
+import { isTerminalFailureStatus } from '@/lib/fileStatus';
 
 vi.mock('@/api-sdk', () => ({
   conversionStatusControllerGetConversionStatus: vi.fn(),
@@ -85,6 +86,57 @@ describe('waitForConversion', () => {
     expect(result.timedOut).toBe(false);
     expect(result.status).toBe('FAILED');
     expect(result.error).toBe('convert boom');
+  });
+
+  it('404 NOT_FOUND（节点已被删除）：立即按终态失败返回，不空等到超时', async () => {
+    vi.mocked(conversionStatusControllerGetConversionStatus).mockResolvedValue({
+      error: { code: 'NOT_FOUND', message: 'node not found' },
+    } as never);
+
+    const result = await waitForConversion('node1', {
+      intervalMs: 5,
+      timeoutMs: 300,
+    });
+
+    expect(result.completed).toBe(false);
+    expect(result.timedOut).toBe(false);
+    expect(isTerminalFailureStatus(result.status)).toBe(true);
+    // 终态失败必须立即返回：不再重复轮询同一个 404
+    expect(conversionStatusControllerGetConversionStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('连续轮询传输失败（500）：判定服务不可达、快速失败并带出真实错误', async () => {
+    vi.mocked(conversionStatusControllerGetConversionStatus).mockResolvedValue({
+      error: new Error('Internal Server Error'),
+    } as never);
+
+    const result = await waitForConversion('node1', {
+      intervalMs: 2,
+      timeoutMs: 1000,
+    });
+
+    expect(result.completed).toBe(false);
+    expect(result.timedOut).toBe(false);
+    expect(result.status).toBeNull();
+    expect(result.error).toContain('Internal Server Error');
+    // 在连续失败上限处终止，而非空等到 timeoutMs
+    expect(conversionStatusControllerGetConversionStatus).toHaveBeenCalledTimes(3);
+  });
+
+  it('单次传输失败视为瞬时抖动：恢复后继续轮询到 COMPLETED', async () => {
+    vi.mocked(conversionStatusControllerGetConversionStatus)
+      .mockResolvedValueOnce({ error: new Error('ECONNRESET') } as never)
+      .mockResolvedValueOnce({ data: { fileStatus: 'COMPLETED' } } as never);
+
+    const result = await waitForConversion('node1', {
+      intervalMs: 2,
+      timeoutMs: 300,
+    });
+
+    expect(result.completed).toBe(true);
+    expect(result.status).toBe('COMPLETED');
+    expect(result.error).toBeUndefined();
+    expect(conversionStatusControllerGetConversionStatus).toHaveBeenCalledTimes(2);
   });
 
   it('should retry FAILED once by triggering conversion and keep polling to COMPLETED', async () => {

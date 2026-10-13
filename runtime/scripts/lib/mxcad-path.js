@@ -1,14 +1,18 @@
 /**
- * @fileoverview mxcad 二进制路径解析 —— 跨平台误配置回退（单一事实源）
+ * @fileoverview mxcad 二进制路径解析 —— 跨平台误配置回退（部署/运维脚本侧的事实源）
  *
- * 与后端 packages/backend/src/config/configuration.ts 的 resolveMxExecutablePath 同语义：
- * Linux 上 MXCAD_ASSEMBLY_PATH 配成 Windows .exe 路径时回退平台默认路径。
+ * 与 @cloudcad/engine-exec 的 resolveMxExecutablePath（backend 与 conversion-service 共用）
+ * 同语义：Linux 上 MXCAD_ASSEMBLY_PATH 配成 Windows .exe 路径时回退平台默认路径。
  *
- * 为什么部署侧也需要这份回退：后端自己会回退（.env.example 明写"跨平台复制 .env 时无需删除
- * 此配置"，linux-init.service.ts 亦仅做防御性告警不阻塞启动），但独立 conversion-service 直接
- * 读 process.env.MXCAD_ASSEMBLY_PATH、无守卫。start.js / verify-deploy.js 拉起转换服务时若原样
- * 注入，会让它去 spawn 部署包里不存在的 runtime/windows/mxcad/mxcadassembly.exe（ubuntu22
- * 部署包内无 runtime/windows/）→ 每次转换 ENOENT。
+ * 为什么本文件保留独立一份：它供 runtime/scripts 的运维脚本使用，而脚本进程族不能
+ * 依赖 TS 包的 dist（干净 clone 未构建时 require 直接失败）。语义由两边测试交叉锁定：
+ * 本目录 mxcad-path.test.js 与 packages/engine-exec/test/mx-path.test.ts。
+ *
+ * 历史背景（已修）：conversion-service 曾直接读 process.env.MXCAD_ASSEMBLY_PATH、无守卫，
+ * start.js / verify-deploy.js 拉起它时若原样注入 Windows 路径，会去 spawn 部署包里不存在的
+ * runtime/windows/mxcad/mxcadassembly.exe（ubuntu22 部署包内无 runtime/windows/）→ 每次
+ * 转换 ENOENT、被归类为可重试的 not-started。现它已改走 engine-exec 的共享出口，
+ * 本文件只剩运维脚本消费。
  *
  * 依赖方向：lib 只允许 require 其他 lib 或独立模块；本模块仅依赖 node 内置。
  */

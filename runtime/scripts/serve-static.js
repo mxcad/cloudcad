@@ -17,29 +17,12 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 
+const { getMobileAccessPathForRuntime } = require('./lib/mobile-access-path');
+
 // 从 myServerConfig.json 读取移动端访问路径名
+// （候选清单与运维入口共用 lib/mobile-access-path，勿在此另起一份）
 function getMobileAccessPath() {
-  const configPaths = [
-    // 部署模式运行时配置
-    path.resolve(__dirname, '..', '..', 'data', 'configs', 'frontend', 'ini', 'myServerConfig.json'),
-    // 开发/构建模式源码配置
-    path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'public', 'ini', 'myServerConfig.json'),
-    // 前端 dist 配置（部分部署场景）
-    path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist', 'ini', 'myServerConfig.json'),
-  ];
-  for (const configPath of configPaths) {
-    if (fs.existsSync(configPath)) {
-      try {
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        if (config.mobileAccessPath && typeof config.mobileAccessPath === 'string') {
-          return config.mobileAccessPath;
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-  }
-  return 'mxcad_mobile';
+  return getMobileAccessPathForRuntime(path.resolve(__dirname, '..', '..'));
 }
 
 // 解析命令行参数

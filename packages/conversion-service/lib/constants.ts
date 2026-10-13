@@ -2,6 +2,7 @@ import './env'; // 须在读取下方任何 process.env 之前加载 .env/.env.l
 import path from 'path';
 import os from 'os';
 import { existsSync } from 'fs';
+import { resolveMxExecutablePath } from '@cloudcad/engine-exec';
 
 const PORT = parseInt(process.env.CONVERSION_SERVICE_PORT || '3100', 10);
 
@@ -42,12 +43,15 @@ const PRIORITY_CONFIG: Record<string, PriorityConfig> = {
   3: { label: 'background', maxConcurrent: 1, timeout: 120000, acquireTimeout: 40000 },
 };
 
+// 引擎路径走 engine-exec 的唯一出口：跨平台 .env 误配置（Windows 路径被复制到 Linux）
+// 必须回退平台默认路径。此前本文件直接读 MXCAD_ASSEMBLY_PATH、无守卫，Linux 上会去
+// spawn 一个 .exe 路径 → ENOENT 被 interpretEngineRun 归类为可重试的 not-started，
+// 每次转换都重试到超时，看起来像「引擎抽风」而实际是环境配错。
 const MXCAD_CONFIG = {
-  assemblyPath: process.env.MXCAD_ASSEMBLY_PATH || (
-    os.platform() === 'linux'
-      ? path.join(PROJECT_ROOT, 'runtime', 'linux', 'mxcad', 'mxcadassembly')
-      : path.join(PROJECT_ROOT, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe')
-  ),
+  assemblyPath: resolveMxExecutablePath(process.env.MXCAD_ASSEMBLY_PATH, {
+    windowsDefault: path.join(PROJECT_ROOT, 'runtime', 'windows', 'mxcad', 'mxcadassembly.exe'),
+    linuxDefault: path.join(PROJECT_ROOT, 'runtime', 'linux', 'mxcad', 'mxcadassembly'),
+  }),
   binPath: os.platform() === 'linux' ? path.join(PROJECT_ROOT, 'runtime', 'linux', 'mxcad') : '',
 };
 

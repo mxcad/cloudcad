@@ -13,37 +13,13 @@
 import * as os from 'os';
 import * as path from 'path';
 import type { AppConfig } from './app.config';
+import { resolveMxExecutablePath } from '@cloudcad/engine-exec';
 import { resolvePiiKey } from '../common/pii/pii-crypto.service';
 
 /**
  * 判断当前操作系统是否为 Windows
  */
 const isWindows = os.platform() === 'win32';
-
-/**
- * 解析 MxCAD 可执行文件路径，防止跨平台 .env 复制导致的误配置
- * 非 Windows 平台上以 .exe 结尾的路径一定是 Windows 可执行文件，
- * 此时忽略环境变量配置，回退到当前平台的默认路径
- * @param envPath 环境变量中配置的路径（可能为空）
- * @param windowsDefault Windows 平台默认路径
- * @param linuxDefault Linux 平台默认路径
- * @returns 与当前平台匹配的可执行文件路径
- */
-function resolveMxExecutablePath(
-  envPath: string | undefined,
-  windowsDefault: string,
-  linuxDefault: string
-): string {
-  if (envPath) {
-    if (isWindows) {
-      return envPath;
-    }
-    if (path.extname(envPath).toLowerCase() !== '.exe') {
-      return envPath;
-    }
-  }
-  return isWindows ? windowsDefault : linuxDefault;
-}
 
 /**
  * 项目根目录
@@ -298,11 +274,10 @@ export default (): AppConfig => {
     // MxCAD 转换引擎配置（mxcad/conversion/file-conversion.service.ts 消费）
     mxcad: {
       assemblyPath: resolvePath(
-        resolveMxExecutablePath(
-          process.env.MXCAD_ASSEMBLY_PATH,
-          'runtime/windows/mxcad/mxcadassembly.exe',
-          'runtime/linux/mxcad/mxcadassembly'
-        )
+        resolveMxExecutablePath(process.env.MXCAD_ASSEMBLY_PATH, {
+          windowsDefault: 'runtime/windows/mxcad/mxcadassembly.exe',
+          linuxDefault: 'runtime/linux/mxcad/mxcadassembly',
+        })
       ),
       fileExt: process.env.MXCAD_FILE_EXT || '.mxweb',
       compression: parseBoolean(process.env.MXCAD_COMPRESSION, true),
@@ -692,11 +667,10 @@ export default (): AppConfig => {
     thumbnail: {
       // MxWebDwg2Jpg 路径，用于将 mxweb 转换为 jpg 缩略图
       dwg2JpgPath: resolvePath(
-        resolveMxExecutablePath(
-          process.env.MXCAD_DWG2JPG_PATH,
-          'runtime/windows/mxcad/tool/MxWebDwg2Jpg.exe',
-          'runtime/linux/mxcad/tool/MxWebDwg2Jpg'
-        )
+        resolveMxExecutablePath(process.env.MXCAD_DWG2JPG_PATH, {
+          windowsDefault: 'runtime/windows/mxcad/tool/MxWebDwg2Jpg.exe',
+          linuxDefault: 'runtime/linux/mxcad/tool/MxWebDwg2Jpg',
+        })
       ),
       // 是否启用后端自动生成缩略图
       autoGenerateEnabled: parseBoolean(

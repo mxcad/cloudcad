@@ -8,7 +8,7 @@
  * - BACKEND_ENV_PATH：cli.js:107
  * - getPorts/PORTS：cli.js:108-143
  * - NODE_EXE/PM2_JS/PNPM_JS：cli.js:146-175
- * - getMobileAccessPath：cli.js:61-81
+ * - getMobileAccessPath：cli.js:61-81（解析逻辑已收进 ./mobile-access-path）
  *
  * 依赖方向铁律：lib 只允许 require 其他 lib 或独立模块，禁止 require commands。
  * 本模块被 lib/logger、lib/proc、lib/health、commands/* 引用。
@@ -19,6 +19,7 @@ const os = require('os');
 const path = require('path');
 
 const { parseEnvFileSimple } = require('./env');
+const { getMobileAccessPathForRuntime } = require('./mobile-access-path');
 
 const PLATFORM = os.platform();
 const IS_WINDOWS = PLATFORM === 'win32';
@@ -38,32 +39,16 @@ const PM2_HOME = path.join(DATA_DIR, 'pm2');
 // 部署包根目录只保留 start/stop 两个启动入口，交互菜单入口在 runtime/ 下。
 const OPS_ENTRY = IS_WINDOWS ? 'runtime\\cloudcad.bat' : 'runtime/cloudcad.sh';
 
-// 从 myServerConfig.json 读取移动端访问路径名
+// 从 myServerConfig.json 读取移动端访问路径名（运行时候选清单在 ./mobile-access-path）
 function getMobileAccessPath() {
-  const root = PROJECT_ROOT;
-  const configPaths = [
-    path.join(root, 'data', 'configs', 'frontend', 'ini', 'myServerConfig.json'),
-    path.join(root, 'packages', 'frontend', 'public', 'ini', 'myServerConfig.json'),
-  ];
-  for (const configPath of configPaths) {
-    if (fs.existsSync(configPath)) {
-      try {
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        if (config.mobileAccessPath && typeof config.mobileAccessPath === 'string') {
-          return config.mobileAccessPath;
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-  }
-  return 'mxcad_mobile';
+  return getMobileAccessPathForRuntime(PROJECT_ROOT);
 }
 
 const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
 
-// 基础服务 PM2 app 名清单（单一事实源：infra/start/stop/verify 共享）
-// 顺序即 ecosystem.config.js 中注册的 app name。
+// 基础服务 PM2 app 名清单（单一事实源：infra/start/stop/verify 共享；
+// 名字与 ecosystem.config.js 注册的 apps[].name 一致）。顺序无关——消费方全部按
+// 名字查表或迭代判定，不要靠调整本清单顺序来改变基础服务启动次序。
 const INFRA_SERVICE_APPS = ['config-service', 'cooperate', 'postgresql', 'redis'];
 
 // 基础服务：PM2 app 名 → 端口 key 的映射（用于重复实例检测与端口查询）

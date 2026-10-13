@@ -172,6 +172,68 @@ describe('usePagedState', () => {
     expect(s.items.value).toEqual(['a', 'b', 'c'])
   })
 
+  it('loadMore 在途时导航回第 1 页：迟到的翻页响应不得顶掉新列表', async () => {
+    const s = usePagedState<string>()
+    s.totalPages.value = 2
+
+    // 第 2 页响应卡住，直到测试显式放行——模拟「翻页在途时用户点面包屑回父目录」
+    let releasePage2!: () => void
+    const page2 = new Promise<PagedItems<string>>((resolve) => {
+      releasePage2 = () => resolve({ items: ['c'], total: 2, totalPages: 2 })
+    })
+    // 刻意不用 vi.fn 包延迟响应：vi.fn 返回的是另一个 promise，会比原始响应晚约 2 个微任务
+    // resolve，「await page2 后断言」会读到旧值而假绿（已实测）
+    const fetcher = (page: number): Promise<PagedItems<string>> =>
+      page === 2
+        ? page2
+        : Promise.resolve<PagedItems<string>>({ items: ['a'], total: 2, totalPages: 2 })
+
+    s.loadMore(fetcher)
+    await Promise.resolve()
+
+    s.resetToFirstPage()
+    await s.load(fetcher)
+    expect(s.page.value).toBe(1)
+    expect(s.items.value).toEqual(['a'])
+    expect(s.loading.value).toBe(false)
+
+    releasePage2()
+    await page2 // load 的续作先于本续作入队，故此处可断言迟到响应已被消费
+    // 若迟到响应仍被合并，列表会变成 ['c']（旧 scope 的数据顶掉新 scope 的第 1 页）
+    expect(s.items.value).toEqual(['a'])
+    expect(s.page.value).toBe(1)
+    expect(s.loading.value).toBe(false)
+  })
+
+  it('被取代的失败响应不写 error（旧 scope 的失败不污染新 scope 的重试条）', async () => {
+    const s = usePagedState<string>()
+    s.totalPages.value = 2
+
+    let releasePage2!: () => void
+    const page2 = new Promise<never>((_, reject) => {
+      releasePage2 = () => reject(new Error('boom'))
+    })
+    const fetcher = (page: number): Promise<PagedItems<string>> =>
+      page === 2
+        ? (page2 as unknown as Promise<PagedItems<string>>)
+        : Promise.resolve<PagedItems<string>>({ items: ['a'], total: 2, totalPages: 2 })
+
+    s.loadMore(fetcher)
+    await Promise.resolve()
+
+    s.resetToFirstPage()
+    await s.load(fetcher)
+    expect(s.error.value).toBe('')
+    expect(s.loadMoreFailed.value).toBe(false)
+
+    releasePage2()
+    await page2.catch(() => undefined)
+
+    expect(s.error.value).toBe('')
+    expect(s.loadMoreFailed.value).toBe(false)
+    expect(s.items.value).toEqual(['a'])
+  })
+
   it('resetToFirstPage：page 归 1（不触发加载，由调用方随后 load）', () => {
     const s = usePagedState<string>()
     s.page.value = 3

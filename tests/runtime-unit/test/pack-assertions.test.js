@@ -27,6 +27,7 @@ const {
   findMissingKeyArtifacts,
   enableImplInEnvExample,
 } = require('../../../scripts/pack-lib/pack-assertions');
+const { WINDOWS_ASSET_REQUIRED_FILES } = require('../../../scripts/pack-lib/components');
 
 describe('pack-assertions', () => {
   let tmp;
@@ -96,6 +97,15 @@ describe('pack-assertions', () => {
         fs.writeFileSync(p, 'x');
       }
       expect(findMissingWindowsComponents(dir)).toHaveLength(0);
+    });
+
+    it('缺失清单即 components.js 的单一事实源（防两份清单漂移）', () => {
+      const dir = path.join(tmp, 'runtime', 'windows');
+      fs.mkdirSync(dir, { recursive: true });
+      expect(WINDOWS_ASSET_REQUIRED_FILES).toEqual(LAYOUT);
+      expect(findMissingWindowsComponents(dir)).toEqual(
+        WINDOWS_ASSET_REQUIRED_FILES.map((rel) => `runtime/windows/${rel}`)
+      );
     });
   });
 

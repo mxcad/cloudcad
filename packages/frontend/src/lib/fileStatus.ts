@@ -11,6 +11,12 @@
  * 重叠时，同一张图纸一条入口能开、另一条干等满 120s 超时——同一份缓存给出相反
  * 结论。这里把状态值与判定谓词收进一处，两个轮询只保留各自的时序与副作用。
  *
+ * 刻意不合并成单一 `waitForNodeReady`：两者打的是不同端点（node 详情 vs
+ * conversion 状态）、返回形状不同（节点 DTO vs ConversionStatus）、副作用不同
+ * （waitForFileReady 驱动 loading 进度与转换队列刷新/广播，waitForConversion 无副作用
+ * 且自带 autoTrigger 与 FAILED 重试）。判据层面的分叉才是上面那个 bug 的根因，已在此收口；
+ * 传输层口径也已对齐（两个轮询都显式处理 SDK 不抛错时落在 `response.error` 的失败）。
+ *
  * 本模块只定义状态值与判定谓词，不含轮询 / 触发 / IO（那是 hooks 与 services 的职责）。
  */
 

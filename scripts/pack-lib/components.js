@@ -33,6 +33,20 @@ const WINDOWS_CRITICAL_FILES = {
   postgresql: 'pgsql/bin/initdb.exe',
 };
 
+// Windows 资产/部署包 gate 的完整必需文件清单（相对 runtime/windows）。
+// 在 3 个标准组件关键文件之外额外断言两项：
+// - node/node_modules/pm2/bin/pm2 —— 与 Linux 侧同构，嵌在 node 内，缺了目标机 PM2 起不来
+// - postgresql/pgsql/bin/pg_ctl.exe —— 启动/停止 PG 必需（initdb 只用于初始化）
+// Windows 侧此前无此清单：gate 清单内联在 pack-assertions.js（5 项）、readiness 断言
+// 又内联在 build-windows-runtime.js（3 项），与本文件的 WINDOWS_CRITICAL_FILES 三份不一致。
+const WINDOWS_ASSET_REQUIRED_FILES = [
+  `node/${WINDOWS_CRITICAL_FILES.node}`,
+  'node/node_modules/pm2/bin/pm2',
+  `postgresql/${WINDOWS_CRITICAL_FILES.postgresql}`,
+  'postgresql/pgsql/bin/pg_ctl.exe',
+  `redis/${WINDOWS_CRITICAL_FILES.redis}`,
+];
+
 // 产品二进制（mxcad / mxversion）关键可执行文件，按平台区分。
 // ensure-runtime 用此判定"已下载解压的目录是否完整"：部分解压（下载中断）留下的
 // 非空目录会被"目录非空"判定误判为就绪，而实际缺关键二进制。
@@ -61,5 +75,6 @@ module.exports = {
   LINUX_CRITICAL_FILES,
   LINUX_ASSET_REQUIRED_FILES,
   WINDOWS_CRITICAL_FILES,
+  WINDOWS_ASSET_REQUIRED_FILES,
   PRODUCT_CRITICAL_FILES,
 };

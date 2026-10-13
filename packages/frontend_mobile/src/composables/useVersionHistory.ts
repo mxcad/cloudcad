@@ -8,6 +8,7 @@ import { showToast } from 'vant';
 import { t } from '@/languages';
 import { unwrap, errMsg } from '../utils/apiError';
 import { parseEditorOpenParams } from '../utils/editorOpenParams';
+import { useOpenGuard } from '@/composables/useOpenGuard';
 
 export interface VersionEntry {
   revision: number;
@@ -30,6 +31,7 @@ const error = ref<string | null>(null);
 
 export function useVersionHistory() {
   const editorState = useEditorStore();
+  const { guardBeforeOpen } = useOpenGuard();
 
   async function loadHistory(target?: VersionHistoryTarget): Promise<void> {
     let projectId: string;
@@ -113,6 +115,12 @@ export function useVersionHistory() {
       showToast(t('无法打开历史版本：缺少文件ID'));
       return false;
     }
+
+    // 历史版本 = 同一节点的另一份内容，会替换当前文档：必须过共享守卫，否则未保存
+    // 更改被静默丢弃（PC 走 window.open 新标签页不受此约束，移动端无标签页概念）。
+    // 须早于下面 replaceState 改 ?v= 与预热——守卫内的 save() 读的是当前会话状态，
+    // 且取消时不应白跑一次可能耗时数十秒的预热
+    if (!(await guardBeforeOpen())) return false;
 
     // H3：先预热（对齐 PC）——冷路径「分片下载 + bin→mxweb 转换」可能耗时数十秒，
     // 直接打开会被编辑器 60s 打开超时拖爆。弹窗「准备中」态覆盖等待；失败置 error 由弹窗展示。

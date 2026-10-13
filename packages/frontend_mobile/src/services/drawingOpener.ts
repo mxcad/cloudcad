@@ -22,6 +22,15 @@ import { useFileLoader } from '../composables/useFileLoader';
  *
  * 命令层（command/**）仍可直用 openMxWeb（引擎已就绪的画布内打开），
  * 不属于「打开一张图纸」编排。
+ *
+ * 刻意不下沉的两件事（都属调用方职责，勿搬进来）：
+ *  - resetFileState()：仅「换成另一张图」的调用方需要（useShellFileOpen、
+ *    LibraryPanel）。useVersionHistory.openHistoricalVersion 是「同一节点的另一份
+ *    内容」，它必须保留 isInCollaboration / collaborationWorkId / currentVersion
+ *    等会话身份，下沉 reset 会把协同状态误清掉。
+ *  - guardBeforeOpen()：openDrawing 返回 boolean，「用户取消守卫」与「打开失败」
+ *    无法区分；下沉会让调用方误弹「打开文件失败」toast。各调用方各自 await 后再决定
+ *    后续动作。useVersionHistory 也调用守卫（见其注释），守卫本身不在这里。
  */
 export type DrawingOpenRequest =
   /** 云端节点（项目 / 个人空间） */

@@ -16,11 +16,13 @@ import {
   conversionStatusControllerTriggerConversion,
 } from '@/api-sdk';
 import {
+  FILE_STATUS,
   isCompletedStatus,
   isFailedStatus,
   isProcessingStatus,
   isTerminalFailureStatus,
 } from '@/lib/fileStatus';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 /**
  * 异步转换状态（后端 ConversionStatusResponseDto）
@@ -50,6 +52,7 @@ export interface ConversionPollingResult {
   status: string | null;
   taskId?: string;
   taskStatus?: string;
+  /** 错误信息：后端上报的转换错误，或轮询本身的传输错误（见 MAX_CONSECUTIVE_POLL_ERRORS） */
   error?: string;
   /** fileStatus 是否为 COMPLETED */
   completed: boolean;
@@ -83,6 +86,12 @@ const DEFAULT_INTERVAL_MS = 2000;
 const DEFAULT_TIMEOUT_MS = 120000;
 /** hook 默认 FAILED 自动重试次数（waitForConversion 默认 0，hook 默认 1 次防死循环） */
 const DEFAULT_FAILED_RETRIES = 1;
+/**
+ * 连续轮询传输失败次数上限：达到即判定「取不到状态」而非「仍在转换中」，
+ * 立即返回并带出最后一次错误，避免网络/5xx 期间空等到 timeoutMs。
+ * 单次失败不算（内网抖动常见），故这里数的是连续次数。
+ */
+const MAX_CONSECUTIVE_POLL_ERRORS = 3;
 
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
@@ -114,6 +123,8 @@ export async function waitForConversion(
   const deadline = Date.now() + timeoutMs;
   let triggered = false;
   let failedRetries = 0;
+  let consecutivePollErrors = 0;
+  let lastPollError: unknown;
 
   /**
    * 尝试对 FAILED 状态自动重试：调用转换触发接口一次，
@@ -134,6 +145,35 @@ export async function waitForConversion(
     const response = await conversionStatusControllerGetConversionStatus({
       path: { nodeId },
     });
+    // SDK 默认不抛错：非 2xx / 网络错误落在 response.error（与 waitForFileReady
+    // 的口径一致）。忽略它会把失败折叠成 status={}、被当成「仍在转换中」空等到
+    // timeoutMs，最终误报「文件尚未转换完成」
+    if (response.error) {
+      if ((response.error as { code?: string })?.code === 'NOT_FOUND') {
+        // 404 = 节点已不存在（转换/落盘失败后后端不留存未成功的 node 记录）：
+        // 与 FAILED 同属终态失败，立即停止等待
+        consecutivePollErrors = 0;
+        return {
+          status: FILE_STATUS.DELETED,
+          completed: false,
+          timedOut: false,
+        };
+      }
+      lastPollError = response.error;
+      consecutivePollErrors += 1;
+      if (consecutivePollErrors >= MAX_CONSECUTIVE_POLL_ERRORS) {
+        // 连续失败 = 取不到状态（区别于「仍在转换中」）：立即返回真实错误
+        return {
+          status: null,
+          completed: false,
+          timedOut: false,
+          error: getErrorMessage(lastPollError),
+        };
+      }
+      // 单次失败按瞬时抖动处理，继续轮询
+      return { status: null, completed: false, timedOut: false };
+    }
+    consecutivePollErrors = 0;
     const status = (response.data ?? {}) as ConversionStatus;
     const fileStatus = status.fileStatus ?? null;
 
@@ -168,6 +208,10 @@ export async function waitForConversion(
     return { ...status, status: fileStatus, completed: false, timedOut: false };
   };
 
+  /** 是否已到达可结算的终局（完成 / 终态失败 / 取不到状态），不再继续轮询 */
+  const isDone = (r: ConversionPollingResult): boolean =>
+    r.completed || isTerminalFailureStatus(r.status) || !!r.error;
+
   let result = await poll();
   // FAILED 自动重试：调用转换触发接口后继续轮询，直到成功/超限/触发失败
   while (
@@ -182,7 +226,7 @@ export async function waitForConversion(
     if (!retried) break;
     result = await poll();
   }
-  if (result.completed || isTerminalFailureStatus(result.status)) {
+  if (isDone(result)) {
     return result;
   }
 
@@ -192,7 +236,7 @@ export async function waitForConversion(
     }
     await delay(intervalMs);
     result = await poll();
-    if (result.completed || isTerminalFailureStatus(result.status)) {
+    if (isDone(result)) {
       return result;
     }
   }

@@ -315,30 +315,6 @@ export class RestrictionEngine implements IConversionAccessGuard {
   }
 
   /**
-   * 按主体释放一次转换频率占位（reserve 与 release 不在同一作用域、手上没有句柄
-   * 的调用方用，如 drawing-ingest 的失败清算）。幂等；无主体为空操作；
-   * 释放失败只告警不抛。
-   */
-  async releaseConversionReservation(
-    principal: ConversionQuotaPrincipal
-  ): Promise<void> {
-    const { userId, ip } = principal;
-    if (userId) {
-      await this.releaseConversionCount(userId).catch((e: unknown) =>
-        this.logger.warn(
-          `释放转换配额失败: ${(e as Error).message}`
-        )
-      );
-    } else if (ip) {
-      await this.releaseGuestConversionCount(ip).catch((e: unknown) =>
-        this.logger.warn(
-          `释放游客转换配额失败: ${(e as Error).message}`
-        )
-      );
-    }
-  }
-
-  /**
    * 转换配额「占位 → 执行 → 失败必释放」单点包装（ADR-0043/0060）。
    *
    * - 主体：登录用户走 userId 窗口；游客走 IP 窗口；两者皆无则不占位直接执行。

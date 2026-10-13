@@ -38,13 +38,10 @@ const SOURCES = {
     `https://github.com/tporadowski/redis/releases/download/v${VERSIONS.redis}/Redis-x64-${VERSIONS.redis}.zip`,
 };
 
-// 组件就绪断言：目录存在 + 关键可执行文件存在（与 runtime/scripts 的 pg-manager/
-// redis-manager 引用路径一致；postgresql 由产品二进制通道提供，此处一并断言）
-const REQUIRED_BINARIES = {
-  node: 'node.exe',
-  postgresql: path.join('pgsql', 'bin', 'initdb.exe'),
-  redis: 'redis-server.exe',
-};
+// 组件就绪断言：目录存在 + 关键可执行文件存在。清单单一事实源在
+// pack-lib/components.js（WINDOWS_CRITICAL_FILES），与 ensure-runtime 的就绪判定共用。
+// postgresql 由产品二进制通道提供，此处一并断言。
+const { WINDOWS_CRITICAL_FILES } = require('./pack-lib/components');
 
 const FORCE = process.argv.includes('--force');
 
@@ -166,9 +163,9 @@ async function main() {
   // 出口断言：三个标准组件目录必须存在且关键可执行文件就位
   // （postgresql 由产品二进制通道在 release.yml 更早步骤提供）
   const missing = [];
-  for (const [name, bin] of Object.entries(REQUIRED_BINARIES)) {
+  for (const [name, bin] of Object.entries(WINDOWS_CRITICAL_FILES)) {
     const p = path.join(RUNTIME_WIN_DIR, name, bin);
-    if (!fs.existsSync(p)) missing.push(path.join('runtime', 'windows', name, bin));
+    if (!fs.existsSync(p)) missing.push(`runtime/windows/${name}/${bin}`);
   }
   if (missing.length > 0) {
     throw new Error(
