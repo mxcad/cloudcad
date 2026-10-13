@@ -24,6 +24,8 @@ runtime/docker/*.log
 runtime/docker/tmp/
 # docker/data：本地 docker 测试运行时数据（PG pgdata 等），不入库
 docker/data/
+# .tmp-pack-test/：打包机本地出包暂存（staging-<ver>/ + <包>.tar.gz，单包可达 800MB+，不入库）
+.tmp-pack-test/
 # 例外：runtime/windows/node 的依赖清单（package.json + package-lock.json）入库，
 # 作为 reinstall-node-tools.js 重建 pnpm/pm2 的唯一事实源（CI Windows 打包必需）。
 # 其余 node 产物（node.exe / node_modules 等）仍忽略，不入库。
