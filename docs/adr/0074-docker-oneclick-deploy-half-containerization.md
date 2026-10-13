@@ -109,7 +109,7 @@ v1 范围：包内带 `runtime/scripts`（日志中心 / 配置查看 / 健康�
 - **CentOS 7 xfs `ftype`**：xfs 未开 `ftype=1` 时 overlay2 不可用 → 自动改 `--storage-driver=vfs`（慢但能跑，「能起来」优先）。
 - **SELinux enforcing**（RHEL 系）：bind mount 进容器会被拒 → `data/` 挂载加 `:z` 标签（对宿主侧 unconfined 进程无副作用），并提示可 `setenforce 0`。
 - **磁盘预检**：`docker load` 前三态检查（`statfs`，探测失败报「无法确定」而非默认 0——批量下载假阳性教训），剩余 <10GB 拒绝加载并说明。
-- **架构**：Docker 包**只做 x86_64**（mxcadAssembly 是 x86_64 闭源二进制），README 写明；其他架构继续走裸机包。
+- **架构**：**架构感知**——在对应架构的机器上打对应架构的包：x86_64 机器出 x86_64 包，arm64 机器出 aarch64 包（mxcad 两种架构都有转换器，不存在「只做 x86_64」的限制；容器镜像全多架构，`docker build` 在打包机上直接产出本机架构镜像）。打包脚本按 `process.arch` 选择各物料来源（Docker 静态二进制 URL 布局、compose 资产名、node 回退源、mxcad registry 键、Prisma 引擎 target），包名 `cloudcad-docker-linux-<arch>-<版本>`；其余架构（armv7l 等）明确报错，继续走裸机包。
 
 ### D14 打包与运行细节
 
@@ -119,7 +119,18 @@ v1 范围：包内带 `runtime/scripts`（日志中心 / 配置查看 / 健康�
 - **迁移执行**：`schema-engine-linux-musl` 二进制（alpine 基底匹配）烘焙进镜像，app 入口（`docker/app-entrypoint.js`）以 `PRISMA_SCHEMA_ENGINE_BINARY` 指向它、经 **prisma CLI**（钉 `prisma@7.8.0` + `tsx@4.22.4` 加载 `prisma.config.ts`，与旧镜像同口径）跑 `migrate deploy`。实测裸 schema-engine 的 `cli` 子命令只有 can-connect/create-database/drop-database，**不支持 migrate deploy**——「不走 prisma CLI」的初稿方案不成立，CLI 必须进镜像。
 - **app 镜像新写 `docker/Dockerfile.app`**（旧 `docker/Dockerfile` 原样保留给旧全容器化形态，勿混改）：复用其多阶段结构（`node:20.19.5-alpine` 基底），差异 = 双进程入口 `app-entrypoint.js`（backend + `serve-static.js` 前端，无 nginx/dumb-init）、不烘焙 mxcadAssembly（宿主 `runtime/` 同路径挂载进容器）、前端 dist 落 `/app/packages/frontend/dist`（`serve-static.js` 默认目录）、烘焙 schema-engine（musl 变体）。
 - **PG 端口**：host 网络下官方 postgres 镜像恒绑 5432（无 `POSTGRES_PORT` 环境变量）→ compose 用 `command: docker-entrypoint.sh postgres -p ${DB_PORT}` 透传启动参数，`.env` 的 `DB_PORT`（如 5433 绕开系统 PG）在 Docker 形态同样生效。
-- **打包/验证脚本**：`scripts/pack-linux-docker.js`（x86_64 打包机，**Linux 或 Windows+Docker 均可**：docker build app 镜像 → pg/redis 打 `cloudcad/*` tag → `docker save` 三镜像 → 下载 Docker 静态二进制 **20.10.24**（glibc 2.17/CentOS 7 兼容的最后稳定线）+ compose v2 独立二进制 **v2.29.7**（20.10 tgz 不含 compose）→ 组装包树 → SHA256SUMS + 归档）。Linux 运行时物料按序解析：`runtime/linux/node` → `runtime/cache` 的 node **glibc-217 资产**（解压入包，CentOS 7+ 通用）→ `runtime/cache/linux-extract/<tier>/node`（ADR-0059 提取产物）；mxcad 同理。Windows 宿主归档在 Linux 容器内执行（bsdtar 写不出 Unix exec 位：容器内 chmod 可执行清单 + tar 保证 `start.sh`/docker 二进制的 exec 位）。`scripts/verify-linux-docker-deploy.js`（D8 断网验证，DinD 只在 Linux 可靠——Windows 打包后交 Linux CI 验证）。`.env.example` 由打包脚本从 `packages/backend/.env.example` 生成：路径键重写为 `<DEPLOY_DIR>` 绝对值（data/ 与 runtime/ 同路径挂载，宿主与容器同一份路径都可见）、host 键钉 `localhost`、追加 `DEPLOY_FORM=docker` / `APP_VERSION` 段。
+- **打包/验证脚本**：`scripts/pack-linux-docker.js`（**架构感知**：x86_64/arm64 打包机均可，**Linux 或 Windows+Docker 均可**，按打包机架构出对应架构包：docker build app 镜像 → pg/redis 打 `cloudcad/*` tag → `docker save` 三镜像 → 下载 Docker 静态二进制 **20.10.24**（glibc 2.17/CentOS 7 兼容的最后稳定线）+ compose v2 独立二进制 **v2.29.7**（20.10 tgz 不含 compose）→ 组装包树 → SHA256SUMS + 归档）。Linux 运行时物料按序解析：`runtime/linux/node` → `runtime/cache` 的本架构 node 资产 tarball（x64 = glibc-217 资产，CentOS 7+ 通用；arm64 = 官方构建）→ `runtime/cache/linux-extract/<tier>/node`（ADR-0059 提取产物）；mxcad 同理。Windows 宿主归档在 Linux 容器内执行（bsdtar 写不出 Unix exec 位：容器内 chmod 可执行清单 + tar 保证 `start.sh`/docker 二进制的 exec 位）。`scripts/verify-linux-docker-deploy.js`（D8 断网验证，DinD 只在 Linux 可靠——Windows 打包后交 Linux CI 验证）。`.env.example` 由打包脚本从 `packages/backend/.env.example` 生成：路径键重写为 `<DEPLOY_DIR>` 绝对值（data/ 与 runtime/ 同路径挂载，宿主与容器同一份路径都可见）、host 键钉 `localhost`、追加 `DEPLOY_FORM=docker` / `APP_VERSION` 段。
+- **WORKDIR 相对路径 COPY 目的地陷阱（Dockerfile.app 实测，曾误诊为 buildkit 丢文件 bug）**：frontend-builder 阶段 PC 构建后 `WORKDIR` 停在 `/app/packages/frontend`，其后 `COPY packages/frontend_mobile ./packages/frontend_mobile` 的**相对目的地**解析到嵌套的 `/app/packages/frontend/packages/frontend_mobile`（空目录），而移动端构建的 `WORKDIR /app/packages/frontend_mobile` 指向 base 阶段目录（只有 pnpm 装的 node_modules+package.json）→ vite 报 `Could not resolve entry module "index.html"`。症状酷似「buildkit 静默丢文件」（探针一度显示：同序列 COPY 到全新目录文件齐全、移动端目录只剩 node_modules+package.json、可复现），但真根因是 WORKDIR 相对路径解析——探针矩阵全部可用它解释，无 buildkit 缺陷。修法：移动端源码 `COPY packages/frontend_mobile /tmp/fm_src`（绝对目的地）+ `cp -a /tmp/fm_src/. /app/packages/frontend_mobile/`（绝对路径，保留 base 阶段 node_modules）+ `test -f` 断言防上下文缺文件。**规则：Dockerfile 中切换 WORKDIR 之后，所有 COPY 目的地一律写绝对路径**。
+- **打包机零假设自举（2026-10-13 定案）**：打包机只要求 **x86_64/arm64 + Docker + node ≥20.19.5 + 网络（或预置物料）**，其余全部由脚本兜底，「只要运行打包，最终一定出正确的包」：
+  - **step0**：node 版本门禁；pnpm 解析 = PATH `pnpm` → node 自带 `corepack pnpm`（Windows 上两者都是 `.CMD` shim，`spawnSync` 无 shell 报 EINVAL/ENOENT，统一走 `runPnpm` 在 win32 加 `shell:true`）；`node_modules` 缺失自动 `pnpm install --frozen-lockfile`（顺带触发 preinstall 的 runtime 资产下载，ADR-0059）。
+  - **node 兜底**：本地三源全 miss 时按架构下载——x64 从 `unofficial-builds.nodejs.org` 取 glibc-217 构建（CentOS 7 兼容），arm64 从官方 `nodejs.org/dist` 取（unofficial-builds 无 arm64 构建；ARM 目标机一般 glibc 2.28+，官方构建够用），落 `runtime/cache/` 复用。
+  - **schema-engine 兜底**：`runtime/prisma-engines/schema-engine-linux-musl`（逻辑名，内容按打包机架构）缺失时，commit 读自仓库安装的 `@prisma/engines-version` 的 `enginesVersion` 导出（`node_modules/.pnpm` 下，版本跟随 lockfile，不手写漂移；**不是包版本号字符串**），从 `binaries.prisma.sh/all_commits/<commit>/<target>/schema-engine.gz` 获取（**`.gz` 后缀必须**，缺则 404；target 按架构：`linux-musl` / `linux-musl-arm64-openssl-3.0.x`——无后缀的 `linux-musl-arm64` 404；`PRISMA_ENGINES_MIRROR` 可换源），gunzip 后 ELF 魔数 + 体积校验。
+  - **mxcad 兜底**：`mxcad-registry.json` 的本架构条目（`mxcad-linux-x86_64` / `mxcad-linux-aarch64`）从 `github.com/<RUNTIME_RELEASE_REPO>/releases/download/<RUNTIME_RELEASE_TAG>/<asset>` 下载（与 ensure-runtime.js 同仓库/标签约定）；registry 缺条目时走 GitHub API 按前缀解析（同 ensure-runtime.js 策略）；解压后做 `.tmp-*/` 嵌套层扁平化（与 ensure-runtime.js `flattenExtracted` 对齐），校验 `mxcadassembly` 存在。⚠️ 前提：对应架构的 mxcad 资产须已发布到 Release（`upload-mxcad.js` 生成 registry）——ARM 资产未发布前 ARM 包打不出。
+  - **conversion-service dist 兜底**：`dist/` 是 gitignore 的构建产物，干净克隆/工作区重置后不存在；缺失时 `pnpm --filter '@cloudcad/conversion-service...' run build`（`...` = 含全部 workspace 依赖，拓扑序：@cloudcad/db（prisma generate + tsc）→ contracts → engine-exec → conversion-service，四者 dist 均进包）。
+  - **swagger_json.json 兜底**：backend 构建产物（`generate:swagger` 生成，gitignore），Dockerfile.app 的 frontend-builder 阶段 COPY 它（前端 MSW/API 类型源）；缺失时 `pnpm --filter backend run build`，且 **IMPL 恒注入空串**（dotenv 不覆盖已存在变量，挡住打包机 `.env` 里 `IMPL=1` 的劫持——否则会 require 不存在的 `impl-mx/dist` 崩溃，与 bd90de5 变体修复同机制；Docker 包是 OSS 形态，IMPL 不影响 swagger 文档内容）。
+  - **下载源**：全部走 `scripts/lib/download-sources.js` 多源回退（用户源 `RUNTIME_DOWNLOAD_URLS` → 官方直链 → **base 重写镜像**（`download.docker.com` → TUNA `mirrors.tuna.tsinghua.edu.cn/docker-ce`——官方源已删 20.10 静态二进制（EOL 清理，直链恒 404），TUNA 仍完整保留；**两架构 TUNA 均为扁平布局** `<arch>/docker-<ver>.tgz`（实测 x86_64 版本子目录布局 404、扁平 200），故 canonical URL 统一扁平——与官方 23.0+ 布局一致，升版本不改布局；node 构建 `unofficial-builds.nodejs.org/download/release` / `nodejs.org/dist` → npmmirror `registry.npmmirror.com/-/binary/node-unofficial-builds` / `/-/binary/node`——node 官方源是 GitHub 基础设施，国内直连实测 60s 超时，npmmirror 0.5s 可达；两镜像路径结构与官方不同，重写前缀须含完整段）→ GitHub prefix 代理（`ghfast.top` 实测可用居首，ghproxy 系已失效降末位）；**超时语义两阶段**：连接+首字节 60s（切源判据，抓「TCP 能连但卡死」的慢速死源）+ 正文 30min 安全上限（慢速活源读完不中途换源——总时长超时会让 67MB 级大文件在慢链路必失败，2026-10-13 实跑暴露））。受限网络另可 `NPM_REGISTRY` build-arg 指定镜像内 pnpm 的 registry（Dockerfile.app base 与 production 两阶段各设一次——production 是全新 FROM 不继承 base 的 `/root/.npmrc`）。
+  - **容器内重活**：node tarball 的 xz 解压与 Windows 宿主归档统一在 `WORK_IMAGE = node:20.19.5-alpine` 容器内做（busybox tar 自带 xz；**debian:bookworm-slim 缺 xz 不可用**——实测 `tar (child): xz: Cannot exec`；该镜像 app 构建时已拉取，零额外拉取）。**`docker exec` 要求容器 running 态**：`docker create` 后必须 `docker start` 再 exec（初稿 create+exec 模式从未实跑过，属潜伏 bug）。Windows 宿主侧 tar 用 `C:\Windows\System32\tar.exe`（PATH 上的 Git GNU tar 把 `D:\...` 当 host:path 远程语法解析，报 "Cannot connect to D: resolve failed"）。**node 发行包 `bin/` 下的符号链接**（npm/npx/corepack）在 `docker cp` 回 Windows 宿主时因缺 SeCreateSymbolicLink 特权失败（"A required privilege is not held by the client"）→ 容器内解压后立即解引用为实体文件副本（链接目标都是带 shebang 的 JS 文件，Linux 目标机以普通文件执行行为一致）。
+  - **部署侧任何环境保证**：包内零运行时下载（镜像 tar + Docker 静态二进制 + 离线 node + mxcad 全在包内），断网/内网/外网部署行为一致；上传 Release 前必须过 `verify-linux-docker-deploy.js` 的 DinD `--network none` 断网验证硬门禁（D8）。
 
 ## 包内布局
 
@@ -139,23 +150,28 @@ v1 范围：包内带 `runtime/scripts`（日志中心 / 配置查看 / 健康�
 │       ├── index.js                     #   start/stop/verify 主逻辑（start.sh 只 exec 它）
 │       ├── docker-compose.yml           #   compose 模板源（打包时复制到包根）
 │       └── lib/{docker-bootstrap,mxcad-probe,host-process,verify}.js
+├── node_modules/                        # 扁平根 node_modules（实体目录，宿主进程运行时依赖闭包）
+│   ├── @cloudcad/{contracts,engine-exec,db}   # package.json + dist（workspace 包，无自身 node_modules）
+│   └── @prisma/client (+client-runtime-utils) # 实体拷贝（generated client 只 require runtime/*，
+│                                              #   WASM query compiler，不加载引擎二进制）
 ├── packages/
 │   ├── engine-exec/                     # 引擎唯一出口（D6 第 3 条，宿主探针用 dist）
 │   ├── contracts/                       # 引擎参数翻译/输出解析纯函数（宿主探针用 dist）
-│   ├── conversion-service/              # 宿主进程：dist + node_modules（纯 workspace 链接，无 registry 依赖）
+│   ├── conversion-service/              # 宿主进程：dist + package.json（运行时依赖走根 node_modules）
 │   └── config-service/                  # 宿主进程：0 依赖（D11）
 └── data/                                # 全部可外挂数据，唯一用户数据出口（D3）
 ```
 
 > 源位置：包内 `runtime/docker-runtime/` 与 `docker/app-entrypoint.js`、`docker/Dockerfile.app` 在仓库中同名同构（打包脚本原样复制）；schema-engine 二进制**不进包**（烘焙在 app 镜像里，D14）。
+> **包树 node_modules 布局（2026-10-13 定案）**：pnpm 的 node_modules 全是符号链接，Windows 打包机无法复制（EPERM，缺 SeCreateSymbolicLink 特权）→ 包内不用 pnpm 布局，改**扁平根 node_modules（实体目录）**：运行时依赖闭包（dependencies 并集，不含 devDeps）= @cloudcad/{contracts,engine-exec,db}（package.json+dist）+ @prisma/client（store 虚拟层实体拷贝，client-runtime-utils 随包）；`packages/*` 各包只带 package.json+dist，Node 从 `packages/*/dist` 向上解析必然命中根 node_modules。该布局**只存在于 Docker 一键包 tarball 内**——仓库保持 pnpm 原布局，裸机包/全容器化包/CI/开发环境均不受影响；`runtime/docker-runtime` 宿主进程启动器对 node_modules 布局零假设（generic spawn，靠 Node 向上解析）。
 
 ## 后果
 
 - 目标机零依赖安装（除 Docker，而 Docker 也在包内）；PG / Redis / SVN 全部容器化，客户改库改缓存不碰二进制。
 - 宿主只剩「3 容器 + 4 进程」（协同 / 转换 / 运维中心 + dockerd），排障面从裸机形态的 14 个 PM2 app 显著收窄；且不再有 PM2 全机唯一注册表带来的跨部署目录误接管问题（`assertNoForeignAppConflict` 那一整层门禁在本形态下不需要）。
 - 运维中心在升级窗口内全程存活（D1 第 3 条），管理面位置正确。
-- 包体约 1–1.2 GB（镜像 tar + node + mxcad + SystemLib + docker 静态二进制 + compose）；接受。
-- **明确不做**：多实例同机共存、`docker compose pull` 在线升级、systemd unit、无 root 兜底裸机形态、非 x86_64 架构。
+- 包体**实测 782.8 MB**（x86_64 v1.0.0，2026-10-13 Windows 打包机端到端实跑；镜像 tar + node + mxcad + SystemLib + docker 静态二进制 + compose + 根 node_modules ~80MB，其中 @prisma/client runtime 占大头——WASM query compiler base64，gzip 压缩比高）；接受。
+- **明确不做**：多实例同机共存、`docker compose pull` 在线升级、systemd unit、无 root 兜底裸机形态、x86_64/aarch64 之外的架构（走裸机包）。
 
 ## 与既有资产的关系
 

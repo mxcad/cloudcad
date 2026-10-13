@@ -21,6 +21,8 @@ RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # 需要所有 workspace 包的 package.json（pnpm install 解析 workspace:* 依赖）
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# 根 tsconfig：backend/tsconfig.json 以 extends ../../tsconfig.json 继承它（tsc 解析需要）
+COPY tsconfig.json ./
 COPY packages/backend/package.json ./packages/backend/
 COPY packages/frontend/package.json ./packages/frontend/
 COPY packages/frontend_mobile/package.json ./packages/frontend_mobile/
@@ -29,6 +31,11 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/api-sdk/package.json ./packages/api-sdk/
 COPY packages/engine-exec/package.json ./packages/engine-exec/
+COPY packages/platform/package.json ./packages/platform/
+
+# 受限网络：打包机可用 --build-arg NPM_REGISTRY=... 指定 npm registry 镜像（空=官方源）
+ARG NPM_REGISTRY
+RUN [ -z "$NPM_REGISTRY" ] || npm config set registry "$NPM_REGISTRY"
 
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
@@ -47,6 +54,7 @@ COPY packages/mxVersionTool ./packages/mxVersionTool
 
 # db / contracts / engine-exec 源码（backend 的 prebuild 会在容器内构建这三个包）
 COPY packages/db/src ./packages/db/src
+COPY packages/db/scripts ./packages/db/scripts
 COPY packages/db/prisma ./packages/db/prisma
 COPY packages/db/prisma.config.ts ./packages/db/
 COPY packages/db/tsconfig.json ./packages/db/
@@ -61,8 +69,12 @@ COPY packages/engine-exec/tsconfig.json ./packages/engine-exec/
 COPY packages/backend/src ./packages/backend/src
 COPY packages/backend/tsconfig.json ./packages/backend/
 COPY packages/backend/tsconfig.build.json ./packages/backend/
+# build:seed 用（tsc -p tsconfig.seed.json 编译 prisma/seed.ts）
+COPY packages/backend/tsconfig.seed.json ./packages/backend/
 COPY packages/backend/nest-cli.json ./packages/backend/
 COPY packages/backend/scripts ./packages/backend/scripts
+# seed.ts 源码（build:seed 的编译输入）
+COPY packages/backend/prisma ./packages/backend/prisma
 
 WORKDIR /app/packages/backend
 RUN pnpm run build
@@ -76,6 +88,8 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 COPY tsconfig.json ./
 COPY swagger_json.json ./
+# platform 是纯源码包（main 指向 src/index.ts，无 build 步骤，vite 直接编译 TS）
+COPY packages/platform/src ./packages/platform/src
 COPY packages/api-sdk ./packages/api-sdk
 COPY packages/frontend/src ./packages/frontend/src
 COPY packages/frontend/public ./packages/frontend/public
@@ -91,7 +105,16 @@ RUN pnpm run build
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-COPY packages/frontend_mobile ./packages/frontend_mobile
+# 移动端源码：此处置 WORKDIR 仍是 /app/packages/frontend（PC 构建遗留），相对路径 COPY
+# 目的地会解析到嵌套的 packages/frontend/packages/frontend_mobile，而移动端构建的
+# WORKDIR /app/packages/frontend_mobile 指向 base 阶段目录（只有 node_modules+package.json）
+# → vite 报 "Could not resolve entry module index.html"。故一律用绝对路径：
+COPY packages/frontend_mobile /tmp/fm_src
+RUN cp -a /tmp/fm_src/. /app/packages/frontend_mobile/ && \
+    test -f /app/packages/frontend_mobile/index.html && \
+    test -f /app/packages/frontend_mobile/vite.config.ts && \
+    test -d /app/packages/frontend_mobile/src && \
+    rm -rf /tmp/fm_src
 
 WORKDIR /app/packages/frontend_mobile
 RUN pnpm run build
@@ -118,6 +141,10 @@ COPY packages/mxVersionTool/package.json ./packages/mxVersionTool/
 COPY packages/db/package.json ./packages/db/
 COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/engine-exec/package.json ./packages/engine-exec/
+
+# production 是全新 FROM，不继承 base 的 /root/.npmrc，registry 镜像须在此重设
+ARG NPM_REGISTRY
+RUN [ -z "$NPM_REGISTRY" ] || npm config set registry "$NPM_REGISTRY"
 
 # Prisma schema 和 migrations（生产迁移需要）
 COPY packages/db/prisma ./packages/db/prisma
