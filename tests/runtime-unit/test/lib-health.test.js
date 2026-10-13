@@ -17,7 +17,10 @@ const {
   checkHttpHealth,
   isPortOpen,
   waitPortReleased,
+  buildStartupUrls,
 } = require('../../../runtime/scripts/lib/health');
+const { PORTS } = require('../../../runtime/scripts/lib/context');
+const { getAdminLoginPath } = require('../../../runtime/scripts/lib/admin-login');
 
 const realLog = console.log;
 beforeAll(() => { console.log = () => {}; });
@@ -152,5 +155,32 @@ describe('waitPortReleased (Q1 清理后确认端口释放)', () => {
     } finally {
       await close(server);
     }
+  });
+});
+
+describe('buildStartupUrls (服务就绪后打开的标签页)', () => {
+  const frontendUrl = `http://localhost:${PORTS.frontend}`;
+  const adminLoginUrl = `${frontendUrl}${getAdminLoginPath()}`;
+
+  test('按就绪顺序输出，前端后紧跟管理员登录入口', () => {
+    expect(
+      buildStartupUrls([
+        { port: PORTS.backend, name: '后端服务', url: `http://localhost:${PORTS.backend}/api/docs` },
+        { port: PORTS.configService, name: '配置中心', url: `http://localhost:${PORTS.configService}` },
+        { port: PORTS.frontend, name: '前端页面', url: frontendUrl },
+      ])
+    ).toEqual([
+      `http://localhost:${PORTS.backend}/api/docs`,
+      `http://localhost:${PORTS.configService}`,
+      frontendUrl,
+      adminLoginUrl,
+    ]);
+    expect(adminLoginUrl).not.toBe(frontendUrl);
+  });
+
+  test('前端未就绪时不追加管理员登录入口', () => {
+    expect(
+      buildStartupUrls([{ port: PORTS.backend, name: '后端服务', url: `http://localhost:${PORTS.backend}/api/docs` }])
+    ).toEqual([`http://localhost:${PORTS.backend}/api/docs`]);
   });
 });

@@ -14,6 +14,7 @@ const { spawn } = require('child_process');
 
 const { IS_WINDOWS, IS_LINUX, PORTS } = require('./context');
 const { log } = require('./logger');
+const { getAdminLoginPath } = require('./admin-login');
 
 function openBrowser(url) {
   let child;
@@ -97,6 +98,23 @@ async function checkHttpHealth(port, path, timeout = 60000) {
   }
 }
 
+/**
+ * 组装服务就绪后要打开的页面列表（顺序即标签页打开顺序）。
+ * 前端就绪时在其标签页后追加管理员登录入口（同由前端服务承载）。
+ * @param {{port: number, url: string}[]} readyServices 已通过就绪检查的服务
+ * @returns {string[]} 待打开的 URL 列表
+ */
+function buildStartupUrls(readyServices) {
+  const urls = [];
+  for (const service of readyServices) {
+    urls.push(service.url);
+    if (service.port === PORTS.frontend) {
+      urls.push(`http://localhost:${PORTS.frontend}${getAdminLoginPath()}`);
+    }
+  }
+  return urls;
+}
+
 async function waitAndOpenBrowsers() {
   log('cyan', '等待所有服务就绪...');
 
@@ -142,8 +160,8 @@ async function waitAndOpenBrowsers() {
   console.log('');
   log('cyan', '正在打开浏览器...');
 
-  for (const service of readyServices) {
-    openBrowser(service.url);
+  for (const url of buildStartupUrls(readyServices)) {
+    openBrowser(url);
   }
 }
 
@@ -251,6 +269,7 @@ module.exports = {
   openBrowser,
   checkHttpOnce,
   checkHttpHealth,
+  buildStartupUrls,
   waitAndOpenBrowsers,
   waitForPort,
   isPortOpen,
