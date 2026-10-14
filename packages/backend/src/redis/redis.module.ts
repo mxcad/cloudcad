@@ -54,6 +54,11 @@ const redisClientProvider: Provider = {
         db: redisConfig.db,
         enableReadyCheck: false,
         maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
+        // 慢环境（2 核断网 DinD 验证 / 客户小规格 VPS）下后端事件循环被 CPU 争用饿死，
+        // ioredis 默认 connectTimeout=10s 不足以让握手在事件循环被重新调度前完成 →
+        // 客户端 connect ETIMEDOUT 重试风暴（拖慢整个部署）。显式传 REDIS_CONNECT_TIMEOUT
+        // （Docker 形态 .env 覆盖为 60s），让客户端有足够时间完成握手、消除重试风暴。
+        connectTimeout: redisConfig.connectTimeout,
         lazyConnect: true,
         retryStrategy,
       })
@@ -80,6 +85,8 @@ const redisClientProvider: Provider = {
             db: redisConfig.db,
             enableReadyCheck: false,
             maxRetriesPerRequest: redisConfig.maxRetriesPerRequest,
+            // 同 REDIS_CLIENT provider：慢环境显式传 connectTimeout（见上方注释）
+            connectTimeout: redisConfig.connectTimeout,
             lazyConnect: true,
             retryStrategy,
           },

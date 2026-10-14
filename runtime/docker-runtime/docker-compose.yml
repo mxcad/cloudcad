@@ -84,6 +84,11 @@ services:
       - ${DEPLOY_DIR}/data:${DEPLOY_DIR}/data
       # 第二挂载：serve-static 等按 /app 相对解析 data/ 的消费者
       - ${DEPLOY_DIR}/data:/app/data
+      # mxcad 引擎二进制：宿主 runtime/linux/mxcad 挂载到容器内 MXCAD_ASSEMBLY_PATH 指向的
+      # /app/runtime/linux/mxcad（.env.example 固定值，含 fonts 子目录）。不烘焙进镜像
+      # （机器码绑定 + 用户可替换官方版，见 Dockerfile.app 头注）；后端 LinuxInitService 启动时
+      # 校验该路径存在，缺失即 fail-fast 崩溃（ADR-0074 半容器化下引擎二进制唯一来源即此挂载）。
+      - ${DEPLOY_DIR}/runtime/linux/mxcad:/app/runtime/linux/mxcad
     depends_on:
       pg:
         condition: service_healthy

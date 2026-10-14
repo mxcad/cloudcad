@@ -39,6 +39,8 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DOCKER_STATIC_VERSION = '20.10.24';
 // compose v2 独立二进制（20.10 的 tgz 不含 compose 插件，需单独携带）
 const COMPOSE_VERSION = 'v2.29.7';
+// slirp4netns 静态二进制（rootless 完整网络兜底；best-effort 下载，失败不阻塞出包）
+const SLIRP4NETNS_VERSION = 'v1.2.21';
 const PG_IMAGE = 'postgres:15-alpine';
 const REDIS_IMAGE = 'redis:7-alpine';
 const NODE_VERSION = 'v20.19.5';
@@ -51,6 +53,22 @@ const TAR_BIN = process.platform === 'win32' ? 'C:\\Windows\\System32\\tar.exe' 
 // busybox tar 自带 xz 支持（debian:bookworm-slim 缺 xz，实测 `tar (child): xz: Cannot exec`），
 // 且该镜像 app 构建时已拉取，零额外拉取
 const WORK_IMAGE = 'node:20.19.5-alpine';
+
+// 基础镜像拉取镜像源回退清单（实测 2026-10：TUNA docker-hub 已下线恒 404，
+// docker.1panel.live 可用，docker.m.daocloud.io 偶发 502，docker.1ms.run 403）。
+// 顺序 = 尝试顺序；可被 DOCKER_REGISTRY_MIRRORS（逗号分隔）整体覆盖。
+// 仅用于 library 镜像（postgres/redis/node），路径形态 <mirror>/library/<image>。
+const REGISTRY_MIRRORS = (process.env.DOCKER_REGISTRY_MIRRORS
+  ? process.env.DOCKER_REGISTRY_MIRRORS.split(',').map((s) => s.trim()).filter(Boolean)
+  : ['docker.1panel.live', 'docker.m.daocloud.io']);
+
+// 打包机本地 docker 自举目录（无系统 docker 时三级门禁自举；与包内 docker/ 分离，
+// 落 runtime/cache/ 可复用——data-root 保留基础镜像，下次打包免重拉；不污染 /usr/local/bin）
+const PACK_DOCKER_DIR = path.join(PROJECT_ROOT, 'runtime', 'cache', 'pack-docker');
+const PACK_DOCKER_DATA_ROOT = path.join(PROJECT_ROOT, 'runtime', 'cache', 'pack-docker-data');
+// 自举模式：'system'（复用系统 docker）| 'root'（静态二进制 + 自定义 data-root/socket）
+// | 'rootless'（rootless-ns 用户命名空间）。ensurePackDocker 设置，step5/cleanup 读取。
+let PACK_DOCKER_MODE = '';
 
 // ==================== 架构感知：按打包机架构出对应架构的包 ====================
 
@@ -190,6 +208,153 @@ function step0Bootstrap() {
     log('node_modules 缺失，执行 pnpm install（含 preinstall runtime 资产下载，可能数分钟）...');
     const res = runPnpm(['install', '--frozen-lockfile'], { timeoutMs: 30 * 60000 });
     if (res.status !== 0) fail('pnpm install 失败：打包机需可访问 npm registry（或机器上预装好依赖）');
+  }
+}
+
+/** 同步 sleep（Atomics.wait；打包脚本是同步流程，无需事件循环） */
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * 打包机 docker 自举：无系统 docker 时按三级门禁（root→rootless）装一个本地 docker。
+ * - 系统 docker 可用 → 直接复用（不动）。
+ * - root：静态二进制 + 自定义 data-root/socket 的 dockerd（不污染 /usr/local/bin）。
+ * - 非 root（含 sudo）：rootless（rootless-ns 用户命名空间 + 包内 slirp4netns 兜底网络）。
+ * 自举成功后设置 process.env.PATH / DOCKER_HOST，后续所有 run('docker', ...) 走本地 docker。
+ * @returns {Promise<string>} 'system' | 'root' | 'rootless'
+ */
+async function ensurePackDocker() {
+  // 1) 系统 docker 可用 → 直接复用
+  let sys;
+  try {
+    sys = run('docker', ['version', '--format', '{{.Server.Version}}'], { capture: true });
+  } catch {
+    sys = { status: 1, stdout: '', stderr: 'docker 不在 PATH' };
+  }
+  if (sys.status === 0) {
+    PACK_DOCKER_MODE = 'system';
+    log(`打包机系统 docker ${sys.stdout.trim()} 可用，直接复用`);
+    return 'system';
+  }
+  log('打包机无系统 docker，自举本地 docker（三级门禁：root→rootless）...');
+  if (process.platform !== 'linux') {
+    fail('打包机需 Linux（无系统 docker 时的自举仅支持 Linux 静态二进制；Windows 请安装 Docker Desktop 并启用 Linux 容器）');
+  }
+
+  // 2) 静态 docker 二进制就位（供本地安装 + step5 打包复用）：本地 8 个核心二进制齐全则直接
+  //    复用，免重复联网下载 ~70MB tgz。downloadDockerStatic 解压后即删 tgz（重跑时 tgz 不存在），
+  //    旧逻辑按「tgz 是否存在」判定会无条件重下，断网/慢网卡死（2026-10 断网验证暴露）。
+  //    与 step5DockerBinaries 同一口径：按「本地二进制是否齐全」判定，不齐才回退下载补齐。
+  const localDockerBins = ['docker', 'dockerd', 'containerd', 'containerd-shim', 'containerd-shim-runc-v2', 'runc', 'docker-init', 'docker-proxy'];
+  if (localDockerBins.every((b) => fs.existsSync(path.join(PACK_DOCKER_DIR, b)))) {
+    log('复用本地已就位的 Docker 静态二进制（免重复下载）');
+  } else {
+    await downloadDockerStatic(PACK_DOCKER_DIR);
+  }
+
+  const isRoot = typeof process.geteuid === 'function' && process.geteuid() === 0;
+  if (isRoot) {
+    // 3a) root：静态二进制 + 自定义 data-root/socket 的 dockerd
+    const socket = path.join(PACK_DOCKER_DATA_ROOT, 'docker.sock');
+    const logFile = path.join(PACK_DOCKER_DATA_ROOT, 'dockerd.log');
+    const pidFile = path.join(PACK_DOCKER_DATA_ROOT, 'dockerd.pid');
+    ensureDir(PACK_DOCKER_DATA_ROOT);
+    const dockerd = path.join(PACK_DOCKER_DIR, 'dockerd');
+    // 镜像加速兜底：无系统 docker 的打包机（大陆常见）拉基础镜像（断网验证外层
+    // debian:bookworm-slim、app 镜像 base）时官方 Docker Hub 源常不可达（DNS 污染/直连
+    // 超时），ustc/163/tencentyun 等老镜像已停服。写 daemon.json 并经 --config-file 传入
+    // （注意：dockerd 不读 data-root 里的 daemon.json——2026-10 教训：配置放 data-root
+    // 从未生效，pull 一直打官方源超时）。不可达的镜像 dockerd 会自动跳过回退官方源，
+    // 非大陆机器带上无害。覆盖：RUNTIME_DOCKER_MIRRORS（逗号分隔）；关闭：
+    // RUNTIME_DISABLE_DOCKER_MIRRORS=1（与 RUNTIME_DISABLE_BUILTIN_MIRRORS 同模式）。
+    let configArg = '';
+    if (process.env.RUNTIME_DISABLE_DOCKER_MIRRORS !== '1') {
+      const mirrors = process.env.RUNTIME_DOCKER_MIRRORS
+        ? process.env.RUNTIME_DOCKER_MIRRORS.split(',').map((s) => s.trim()).filter(Boolean)
+        : ['https://docker.m.daocloud.io', 'https://docker.1ms.run', 'https://dockerproxy.net'];
+      if (mirrors.length) {
+        const configFile = path.join(PACK_DOCKER_DATA_ROOT, 'daemon.json');
+        fs.writeFileSync(configFile, JSON.stringify({ 'registry-mirrors': mirrors }, null, 2) + '\n');
+        configArg = `--config-file ${configFile} `;
+        log(`本地 dockerd 镜像加速源：${mirrors.join(', ')}`);
+      }
+    }
+    const { spawnSync } = require('child_process');
+    spawnSync(
+      `nohup ${dockerd} ${configArg}--host unix://${socket} --data-root ${PACK_DOCKER_DATA_ROOT} ` +
+        `--iptables=false --bridge=none >> ${logFile} 2>&1 & echo $! > ${pidFile}`,
+      // dockerd 以 PATH 查找 containerd/runc（静态二进制在 PACK_DOCKER_DIR，不在系统 PATH）
+      { shell: true, env: { ...process.env, PATH: `${PACK_DOCKER_DIR}:${process.env.PATH}` } }
+    );
+    log('拉起本地 dockerd（root，自定义 data-root/socket）...');
+    const env = { ...process.env, DOCKER_HOST: `unix://${socket}`, PATH: `${PACK_DOCKER_DIR}:${process.env.PATH}` };
+    const deadline = Date.now() + 30000;
+    let version = '';
+    while (Date.now() < deadline) {
+      try {
+        const check = run('docker', ['version', '--format', '{{.Server.Version}}'], { capture: true, env });
+        if (check.status === 0) { version = check.stdout.trim(); break; }
+      } catch { /* docker 未就绪或无法启动，继续等待 */ }
+      sleepSync(1000);
+    }
+    if (!version) {
+      let tail = '';
+      try { tail = fs.readFileSync(logFile, 'utf8').split('\n').slice(-15).join('\n'); } catch { /* 无日志 */ }
+      fail(`本地 dockerd 30s 内未就绪。日志尾部（${logFile}）：\n${tail || '（空）'}`);
+    }
+    process.env.PATH = `${PACK_DOCKER_DIR}:${process.env.PATH}`;
+    process.env.DOCKER_HOST = `unix://${socket}`;
+    PACK_DOCKER_MODE = 'root';
+    log(`打包机本地 docker 就绪（root，${version}，data-root=${PACK_DOCKER_DATA_ROOT}）`);
+    return 'root';
+  }
+
+  // 3b) 非 root：rootless（rootless-ns 用户命名空间）
+  const rootless = require(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'lib', 'rootless'));
+  // rootless 完整网络需 slirp4netns（拉取基础镜像用）；best-effort（缺失则降级 plain-netns）
+  await ensureSlirp4netns(PACK_DOCKER_DIR);
+  const res = rootless.start({
+    deployDir: PROJECT_ROOT,
+    dockerDir: PACK_DOCKER_DIR,
+    dataRoot: PACK_DOCKER_DATA_ROOT,
+    logFile: path.join(PACK_DOCKER_DATA_ROOT, 'dockerd.log'),
+    ports: [],
+    toolsDir: PACK_DOCKER_DIR,
+    log,
+  });
+  if (!res.ok) {
+    const missing = (res.missing || []).map((m) => `${m.name}（${m.hint}）`).join('；');
+    fail(`打包机 rootless docker 自举失败：${res.message || ''}${missing ? `；缺失：${missing}` : ''}。请改用 root 或带系统 docker 的机器打包`);
+  }
+  process.env.PATH = `${PACK_DOCKER_DIR}:${process.env.PATH}`;
+  process.env.DOCKER_HOST = res.dockerHost;
+  PACK_DOCKER_MODE = 'rootless';
+  log(`打包机 rootless docker 就绪（${res.degraded ? '降级 plain-netns：基础镜像需预置或装 slirp4netns' : 'slirp4netns 完整网络'}）`);
+  return 'rootless';
+}
+
+/**
+ * 打包收尾：停止自举的本地 docker（root：按 pidfile 杀 dockerd；rootless：rootless.stop）。
+ * 系统 docker 不动。data-root 保留（下次打包复用基础镜像，免重拉）。
+ */
+function cleanupPackDocker() {
+  if (PACK_DOCKER_MODE === 'root') {
+    const pidFile = path.join(PACK_DOCKER_DATA_ROOT, 'dockerd.pid');
+    try {
+      const pid = parseInt(fs.readFileSync(pidFile, 'utf8').trim(), 10);
+      if (Number.isFinite(pid) && pid > 0) {
+        process.kill(pid, 'SIGTERM');
+        log(`已停止自举的本地 dockerd（pid=${pid}，data-root 保留供复用）`);
+        return;
+      }
+    } catch { /* 无 pidfile */ }
+    log('自举的本地 dockerd 未在运行（无 pidfile）');
+  } else if (PACK_DOCKER_MODE === 'rootless') {
+    const rootless = require(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'lib', 'rootless'));
+    const pidFile = path.join(PACK_DOCKER_DATA_ROOT, 'rootless.pid');
+    const r = rootless.stop({ pidFile, log });
+    log(r.stopped ? '已停止自举的 rootless dockerd（data-root 保留供复用）' : 'rootless dockerd 未在运行');
   }
 }
 
@@ -342,9 +507,19 @@ async function ensureLinuxMxcad() {
 
 /**
  * 路径键重写表：裸机形态是相对路径（按 cwd 解析），Docker 形态必须绝对
- * （<DEPLOY_DIR> 占位符由 start.sh 首次运行替换；data/ 与 runtime/ 同路径挂载
- * 进 app 容器，故同一份绝对路径宿主与容器都可见）。
- * 例外：FRONTEND_FONTS_PATH 指向镜像内烘焙的前端 dist（/app/...），宿主进程不消费。
+ * （<DEPLOY_DIR> 占位符由 start.sh 首次运行替换）。
+ *
+ * 关键区分（2026-10-13 断网验证踩坑）：
+ *  - `data/` 目录**同路径**挂载进 app 容器（`${DEPLOY_DIR}/data:${DEPLOY_DIR}/data`），
+ *    故 data/ 下的路径用 `<DEPLOY_DIR>/data/...` 绝对值，宿主与容器都可见。
+ *  - `runtime/linux/mxcad` 是**异路径**挂载（`${DEPLOY_DIR}/runtime/linux/mxcad` →
+ *    容器内 `/app/runtime/linux/mxcad`）。因此 **MXCAD_ASSEMBLY_PATH / MXCAD_FONTS_PATH
+ *    绝不能覆盖成 `<DEPLOY_DIR>/runtime/...`**——backend 跑在 app 容器里，按宿主绝对路径
+ *    找不到（挂载点在 /app/runtime/...），生产模式 LinuxInitService 校验 existsSync 失败
+ *    直接 throw 崩溃循环。保持不覆盖 → 走 configuration.ts 平台默认相对路径
+ *    `runtime/linux/mxcad/mxcadassembly`，backend（CWD=/app）解析到 /app/runtime/... 正好
+ *    命中挂载点；conversion-service 等宿主进程不读此键（各自解析），互不影响。
+ *  - FRONTEND_FONTS_PATH 指向镜像内烘焙的前端 dist（/app/...），宿主进程不消费。
  */
 const DOCKER_PATH_OVERRIDES = {
   FILES_DATA_PATH: '<DEPLOY_DIR>/data/files',
@@ -353,8 +528,6 @@ const DOCKER_PATH_OVERRIDES = {
   MXCAD_UPLOAD_PATH: '<DEPLOY_DIR>/data/uploads',
   MXCAD_TEMP_PATH: '<DEPLOY_DIR>/data/temp',
   MXCAD_DEBUG_PATH: '<DEPLOY_DIR>/data/debug',
-  MXCAD_ASSEMBLY_PATH: '<DEPLOY_DIR>/runtime/linux/mxcad/mxcadassembly',
-  MXCAD_FONTS_PATH: '<DEPLOY_DIR>/runtime/linux/mxcad/fonts',
   FRONTEND_FONTS_PATH: '/app/packages/frontend/dist/mxcad-app/mxcadAppAssets/fonts',
   BATCH_DOWNLOAD_EXPORT_DIR: '<DEPLOY_DIR>/data/exports',
   CONVERSION_CACHE_DIR: '<DEPLOY_DIR>/data/exports/conversion-cache',
@@ -366,6 +539,13 @@ const DOCKER_PATH_OVERRIDES = {
   DB_HOST: 'localhost',
   REDIS_HOST: 'localhost',
   COOPERATE_HOST: 'localhost',
+  // 慢环境（2 核断网 DinD 验证 / 客户小规格 VPS）兜底：后端事件循环被 CPU 争用饿死时，
+  // 客户端默认连接超时（pg 30s / redis 10s）不足以让握手在事件循环被重新调度前完成 →
+  // connect ETIMEDOUT 重试风暴拖慢整个部署（2026-10-13 断网验证实测：全新进程 25ms 连上
+  // redis，长驻后端却连不上，根因即事件循环饿死而非网络）。放宽到 pg 120s / redis 60s，
+  // 让客户端有足够时间完成握手、消除重试风暴。快环境连接毫秒级完成，放宽值无副作用。
+  DB_CONNECTION_TIMEOUT: '120000',
+  REDIS_CONNECT_TIMEOUT: '60000',
 };
 
 /**
@@ -377,7 +557,11 @@ const DOCKER_PATH_OVERRIDES = {
 function generateDockerEnvExample(version) {
   const basePath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env.example');
   if (!fs.existsSync(basePath)) fail(`缺少 ${basePath}`);
-  const lines = fs.readFileSync(basePath, 'utf8').split('\n');
+  // 基础 .env.example 是 CRLF 行尾：JS 正则 `.` 不匹配 `\r`（行终止符），`(.*)$` 匹配不到
+  // 带 `\r` 的行 → DOCKER_PATH_OVERRIDES 重写全部失效（2026-10-13 断网验证暴露：
+  // DB_CONNECTION_TIMEOUT/REDIS_CONNECT_TIMEOUT 覆盖没生效，慢环境仍用 30s/10s 超时）。
+  // 读取时剥掉行尾 `\r`，重写与 presentKeys 判定都按 LF 处理（dotenv 两端都认）。
+  const lines = fs.readFileSync(basePath, 'utf8').split('\n').map((l) => l.replace(/\r$/, ''));
   const out = [];
   const presentKeys = new Set();
   for (const line of lines) {
@@ -453,9 +637,7 @@ async function step1Prechecks(version) {
   if (!ARCH) {
     fail(`仅支持 x86_64/arm64 打包机（当前 ${process.arch}）：在对应架构的机器上打对应架构的包`);
   }
-  const docker = run('docker', ['version', '--format', '{{.Server.Version}}'], { capture: true });
-  if (docker.status !== 0) fail(`docker 不可用：${docker.stderr}（Windows 需安装 Docker Desktop 并启用 Linux 容器）`);
-  log(`docker ${docker.stdout.trim()} 可用`);
+  await ensurePackDocker(); // 无系统 docker 时三级门禁自举（root→rootless），设置 PATH/DOCKER_HOST
 
   step0Bootstrap();
 
@@ -513,12 +695,50 @@ function step2BuildAppImage(version) {
     log('跳过 app 镜像构建（--skip-docker-build）');
     return;
   }
+  // 受限网络：自举/rootless dockerd 未配 registry-mirror，docker build 自动拉取基础镜像
+  // 会走不可达的 docker.io → 先经多镜像源预拉取基础镜像（命中后 tag 回标准名），build 命中本地。
+  const baseHas = run('docker', ['image', 'inspect', WORK_IMAGE], { capture: true });
+  if (baseHas.status !== 0) {
+    const pulled = pullLibraryImage(WORK_IMAGE);
+    if (!pulled) {
+      fail(`拉取基础镜像 ${WORK_IMAGE} 失败（默认源与镜像源 ${REGISTRY_MIRRORS.join(', ')} 均不可达）`);
+    }
+  }
   log(`构建 app 镜像 cloudcad/app:${version}（多阶段，本机架构 ${ARCH.pkgArch}，耗时较长）...`);
-  const buildArgs = ['build', '-f', 'docker/Dockerfile.app', '--build-arg', `APP_VERSION=${version}`, '-t', `cloudcad/app:${version}`, '.'];
+  // --network host：root 自举 dockerd 用 --bridge=none（无 bridge 网络），build 步骤容器默认
+  // 无外网（连 DNS 都解析不了）→ 必须 host 网络才能 apk add / pnpm install 联网。
+  // system docker 打包机 host 网络同样可用，无副作用。
+  const buildArgs = ['build', '--network', 'host', '-f', 'docker/Dockerfile.app', '--build-arg', `APP_VERSION=${version}`, '-t', `cloudcad/app:${version}`, '.'];
   // 受限网络：镜像内 pnpm install 走用户指定的 npm registry（Dockerfile.app 的 NPM_REGISTRY build-arg）
   if (process.env.NPM_REGISTRY) buildArgs.push('--build-arg', `NPM_REGISTRY=${process.env.NPM_REGISTRY}`);
+  // 受限网络：apk add 走用户指定的 alpine 镜像源（Dockerfile.app 的 ALPINE_MIRROR build-arg，替换官方 dl-cdn）
+  if (process.env.ALPINE_MIRROR) buildArgs.push('--build-arg', `ALPINE_MIRROR=${process.env.ALPINE_MIRROR}`);
   const res = run('docker', buildArgs, { timeoutMs: 60 * 60000 });
   if (res.status !== 0) fail('app 镜像构建失败');
+}
+
+/**
+ * 拉取 library 基础镜像（多镜像源回退）。
+ * 依次尝试：默认 Docker Hub → REGISTRY_MIRRORS 各源（<mirror>/library/<image>）。
+ * 命中后若来自 mirror，把该镜像 tag 回标准名（供后续 tag/save 用统一名）。
+ * @param {string} image 标准名（形如 postgres:15-alpine）
+ * @returns {string|null} 成功时返回标准名，全部失败返回 null
+ */
+function pullLibraryImage(image) {
+  const candidates = [image, ...REGISTRY_MIRRORS.map((m) => `${m}/library/${image}`)];
+  for (const c of candidates) {
+    log(`拉取 ${c} ...`);
+    const res = run('docker', ['pull', c], { capture: true, timeoutMs: 30 * 60000 });
+    if (res.status === 0) {
+      if (c !== image) {
+        run('docker', ['tag', c, image]);
+        log(`  ${c} → ${image}（镜像源命中）`);
+      }
+      return image;
+    }
+    log(`  ${c} 拉取失败，尝试下一镜像源`);
+  }
+  return null;
 }
 
 function step3TagInfraImages() {
@@ -528,9 +748,10 @@ function step3TagInfraImages() {
   ]) {
     const has = run('docker', ['image', 'inspect', src], { capture: true });
     if (has.status !== 0) {
-      log(`拉取 ${src}...`);
-      const pull = run('docker', ['pull', src], { timeoutMs: 30 * 60000 });
-      if (pull.status !== 0) fail(`拉取 ${src} 失败（打包机需可访问 Docker Hub，或预先 docker load）`);
+      const pulled = pullLibraryImage(src);
+      if (!pulled) {
+        fail(`拉取 ${src} 失败（默认源与镜像源 ${REGISTRY_MIRRORS.join(', ')} 均不可达）。请检查网络，或预先 docker load 该镜像`);
+      }
     }
     run('docker', ['tag', src, tag]);
     log(`${src} → ${tag}`);
@@ -554,7 +775,13 @@ function step4SaveImages(imagesDir, version) {
   }
 }
 
-async function step5DockerBinaries(dockerDir) {
+/**
+ * 下载 Docker 静态二进制（8 个）+ compose v2 独立二进制到 dockerDir（幂等）。
+ * 供 ensurePackDocker（打包机自举）与 step5DockerBinaries（打包）复用。
+ * @param {string} dockerDir 目标目录
+ * @returns {Promise<string[]>} 二进制名清单
+ */
+async function downloadDockerStatic(dockerDir) {
   const { downloadFile } = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'download-sources'));
   ensureDir(dockerDir);
 
@@ -591,7 +818,177 @@ async function step5DockerBinaries(dockerDir) {
     await downloadFile(`https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/${ARCH.composeAsset}`, composeBin);
   }
   fs.chmodSync(composeBin, 0o755);
-  log(`Docker 静态二进制 + compose v2 就位（${binaries.length + 1} 个文件）`);
+
+  // rootless-ns（rootless 自举 / 目标机 rootless 部署依赖；仓库内已编译的静态二进制，
+  // 静态 docker tgz 不含它）。缺失时告警（root/sudo 打包机自举不受影响，但包将缺 rootless 能力）。
+  const nsDest = path.join(dockerDir, 'rootless-ns');
+  const nsSrc = path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'lib', 'rootless', 'rootless-ns');
+  if (!fs.existsSync(nsDest)) {
+    if (fs.existsSync(nsSrc)) {
+      fs.copyFileSync(nsSrc, nsDest);
+      fs.chmodSync(nsDest, 0o755);
+      log('rootless-ns 就位（仓库内静态二进制）');
+    } else {
+      log(`[警告] 仓库内 rootless-ns 缺失（${nsSrc}）——包将不含 rootless 自举能力`);
+    }
+  }
+  return binaries;
+}
+
+/**
+ * 包内 docker/ 目录就位：Docker 静态二进制 + compose v2 + slirp4netns。
+ * 打包机自举过（PACK_DOCKER_DIR 有静态二进制）→ 直接复用（免重复下载 ~70MB tgz）；
+ * 否则下载。slirp4netns best-effort（失败不阻塞出包）。
+ */
+async function step5DockerBinaries(dockerDir) {
+  ensureDir(dockerDir);
+  // 复用打包机自举已就位的静态二进制（免重复联网下载 ~70MB tgz）。
+  // 判定按「本地是否齐全」而非「自举模式」：ensurePackDocker 把静态 docker 放进 PACK_DOCKER_DIR
+  // 后常以 'system' 模式复用（docker 已在 PATH 且可用），旧判定 `mode !== 'system'` 会漏掉这种
+  // 情况 → 误走联网下载，慢/断网时卡死（2026-10 断网验证暴露）。10 个二进制本地齐全即直接复用，
+  // 不齐才回退联网下载（downloadDockerStatic 幂等补齐）。
+  const localBins = ['docker', 'dockerd', 'containerd', 'containerd-shim', 'containerd-shim-runc-v2', 'runc', 'docker-init', 'docker-proxy', 'docker-compose', 'rootless-ns'];
+  if (localBins.every((b) => fs.existsSync(path.join(PACK_DOCKER_DIR, b)))) {
+    for (const bin of localBins) {
+      fs.copyFileSync(path.join(PACK_DOCKER_DIR, bin), path.join(dockerDir, bin));
+      fs.chmodSync(path.join(dockerDir, bin), 0o755);
+    }
+    log('复用打包机自举的 Docker 静态二进制（免重复下载）');
+  } else {
+    await downloadDockerStatic(dockerDir);
+  }
+  // slirp4netns 静态二进制（rootless 完整网络兜底；best-effort——失败不阻塞出包，
+  // 目标机 rootless 模式将降级 plain-netns，或装系统 slirp4netns 后重跑 start.sh）
+  await ensureSlirp4netns(dockerDir);
+  log('Docker 静态二进制 + compose v2 就位');
+}
+
+/**
+ * slirp4netns 就位（rootless 用户态网络）：首选 v1.2.21 静态二进制（GitHub，无 glibc
+ * 依赖、任意机器可跑、1.2.x「TAPNAME PROGRAM」语法）；GitHub 不可达时回退发行版
+ * 1.0.1 动态包 + libslirp（TUNA/aliyun ubuntu pool，glibc≥2.35 可达，1.0.x「PID|PATH
+ * TAPNAME」附着语法——renderSetupScript 按版本分支适配）。best-effort：全部失败仅告警
+ * （root/sudo 模式不依赖它；rootless 模式降级 plain-netns 或靠目标机系统 slirp4netns）。
+ * @param {string} dockerDir 包内 docker/ 目录
+ */
+async function ensureSlirp4netns(dockerDir) {
+  const dest = path.join(dockerDir, 'slirp4netns');
+  if (fs.existsSync(dest)) {
+    fs.chmodSync(dest, 0o755);
+    // 验证可运行（动态 slirp4netns 需 libslirp，经 LD_LIBRARY_PATH 加载；静态无此依赖）。
+    // 二进制在但缺 libslirp 时不可运行 → 不早退，继续走下载补齐 libslirp。
+    const libDir = path.join(dockerDir, 'lib');
+    const env = { ...process.env, LD_LIBRARY_PATH: libDir + (process.env.LD_LIBRARY_PATH ? `:${process.env.LD_LIBRARY_PATH}` : '') };
+    const check = run(dest, ['--version'], { capture: true, env });
+    if (check.status === 0) return;
+    log(`slirp4netns 二进制存在但不可运行（${(check.stderr || check.stdout || '').trim().split('\n').pop()}）→ 重新下载补齐`);
+  }
+  const slirpArch = { x64: 'amd64', arm64: 'arm64' }[process.arch];
+  const { downloadFile } = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'download-sources'));
+  // 1) 首选：v1.2.21 静态二进制（GitHub，经 download-sources 多源回退）
+  const ver = SLIRP4NETNS_VERSION.replace(/^v/, '');
+  const url = `https://github.com/rootless-containers/slirp4netns/releases/download/${SLIRP4NETNS_VERSION}/slirp4netns-${ver}-linux-${slirpArch}.tar.gz`;
+  try {
+    log(`下载 slirp4netns ${SLIRP4NETNS_VERSION}（${slirpArch}，静态）...`);
+    const tgz = path.join(dockerDir, `slirp4netns-${ver}.tar.gz`);
+    await downloadFile(url, tgz);
+    const res = run(TAR_BIN, ['-xzf', tgz, '-C', dockerDir]);
+    if (res.status !== 0) throw new Error(`解压失败: ${res.stderr || res.stdout}`);
+    // 资产内二进制名可能带版本后缀，归一到 slirp4netns
+    const inner = path.join(dockerDir, `slirp4netns-${ver}`);
+    if (fs.existsSync(inner) && !fs.existsSync(dest)) fs.renameSync(inner, dest);
+    fs.rmSync(tgz, { force: true });
+    if (!fs.existsSync(dest)) throw new Error('解压后未见 slirp4netns 二进制');
+    fs.chmodSync(dest, 0o755);
+    log(`slirp4netns 就位（v1.2.x 静态，rootless 完整网络可用）`);
+    return;
+  } catch (err) {
+    log(`slirp4netns ${SLIRP4NETNS_VERSION} 静态不可达（${err.message}）→ 回退发行版 1.0.1 动态包`);
+  }
+  // 2) 回退：发行版 slirp4netns 1.0.1 + libslirp（动态，TUNA/aliyun ubuntu pool）
+  try {
+    await downloadDistroSlirp4netns(dockerDir, slirpArch, downloadFile);
+    fs.chmodSync(dest, 0o755);
+    log(`slirp4netns 就位（发行版 1.0.1 动态 + libslirp，rootless 完整网络可用）`);
+  } catch (err) {
+    log(`[警告] slirp4netns 全部下载失败（${err.message}）——rootless 模式将降级 plain-netns；root/sudo 模式不受影响`);
+  }
+}
+
+/**
+ * 下载发行版 slirp4netns 1.0.1 + libslirp0（动态，TUNA/aliyun ubuntu pool 多镜像回退）。
+ * 1.0.1 是 glibc≥2.35 机器上 GitHub 静态 v1.2.x 不可达时唯一可达的 slirp4netns。
+ * 提取 slirp4netns 二进制到 dockerDir、libslirp.so.0 到 dockerDir/lib（动态库经
+ * LD_LIBRARY_PATH 加载，renderSetupScript 已设）。
+ * @param {string} dockerDir 包内 docker/ 目录
+ * @param {string} slirpArch amd64|arm64
+ * @param {Function} downloadFile download-sources 的 downloadFile
+ */
+async function downloadDistroSlirp4netns(dockerDir, slirpArch, downloadFile) {
+  const mirrors = ['https://mirrors.tuna.tsinghua.edu.cn/ubuntu', 'https://mirrors.aliyun.com/ubuntu'];
+  const slirpDeb = `pool/universe/s/slirp4netns/slirp4netns_1.0.1-2_${slirpArch}.deb`;
+  const libDeb = `pool/main/libs/libslirp/libslirp0_4.6.1-1build1_${slirpArch}.deb`;
+  const slirpDebPath = path.join(dockerDir, '.slirp4netns.deb');
+  const libDebPath = path.join(dockerDir, '.libslirp0.deb');
+  let got = false;
+  for (const base of mirrors) {
+    try {
+      log(`下载发行版 slirp4netns 1.0.1（${base}）...`);
+      await downloadFile(`${base}/${slirpDeb}`, slirpDebPath);
+      await downloadFile(`${base}/${libDeb}`, libDebPath);
+      got = true;
+      break;
+    } catch { /* 该镜像不可达，换下一镜像 */ }
+  }
+  if (!got) throw new Error('发行版 slirp4netns/libslirp 全部镜像不可达');
+  const tmp = path.join(dockerDir, '.slirp-extract');
+  ensureDir(tmp);
+  // 提取 slirp4netns 二进制（.deb 是 ar 归档，dpkg-deb/ar 解出 data.tar 文件树）
+  extractDeb(slirpDebPath, tmp);
+  const binSrc = path.join(tmp, 'usr', 'bin', 'slirp4netns');
+  if (!fs.existsSync(binSrc)) throw new Error('slirp4netns .deb 内未见 usr/bin/slirp4netns');
+  fs.copyFileSync(binSrc, path.join(dockerDir, 'slirp4netns'));
+  // 提取 libslirp.so.0（实体 + soname 符号链接，放 dockerDir/lib）
+  extractDeb(libDebPath, tmp);
+  const libArchDir = slirpArch === 'amd64' ? 'x86_64-linux-gnu' : 'aarch64-linux-gnu';
+  const libSrcDir = path.join(tmp, 'usr', 'lib', libArchDir);
+  const libDir = path.join(dockerDir, 'lib');
+  ensureDir(libDir);
+  const realLib = fs.existsSync(libSrcDir)
+    ? fs.readdirSync(libSrcDir).find((f) => /^libslirp\.so\.0\.\d/.test(f))
+    : null;
+  if (!realLib) throw new Error('libslirp .deb 内未见 libslirp.so.0.x 实体');
+  fs.copyFileSync(path.join(libSrcDir, realLib), path.join(libDir, realLib));
+  const soname = path.join(libDir, 'libslirp.so.0');
+  if (fs.existsSync(soname)) fs.rmSync(soname);
+  fs.symlinkSync(realLib, soname);
+  // 清理临时物
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(slirpDebPath, { force: true });
+  fs.rmSync(libDebPath, { force: true });
+}
+
+/**
+ * 解 .deb 文件树到 destDir：首选 dpkg-deb（Debian/Ubuntu），回退 ar + tar（RHEL/CentOS）。
+ * @param {string} debPath .deb 路径
+ * @param {string} destDir 提取目标目录
+ */
+function extractDeb(debPath, destDir) {
+  ensureDir(destDir);
+  let res = run('dpkg-deb', ['-x', debPath, destDir], { capture: true });
+  if (res.status === 0) return;
+  // 回退：ar 解出 data.tar.*，再 tar 解文件树
+  const arTmp = destDir + '.ar';
+  ensureDir(arTmp);
+  res = run('ar', ['x', debPath], { capture: true, cwd: arTmp });
+  if (res.status !== 0) throw new Error(`解 .deb 失败（dpkg-deb 与 ar 均不可用）: ${res.stderr || res.stdout}`);
+  const dataTar = fs.readdirSync(arTmp).find((f) => f.startsWith('data.tar.'));
+  if (!dataTar) throw new Error('.deb 内未见 data.tar');
+  const ext = dataTar.split('.').pop();
+  const tarArgs = ext === 'xz' ? ['-xJf'] : ext === 'gz' ? ['-xzf'] : ext === 'zst' ? ['-a', '-xf'] : ['-xf'];
+  res = run(TAR_BIN, [...tarArgs, path.join(arTmp, dataTar), '-C', destDir], { capture: true });
+  if (res.status !== 0) throw new Error(`tar 解 data.tar 失败: ${res.stderr || res.stdout}`);
+  fs.rmSync(arTmp, { recursive: true, force: true });
 }
 
 function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
@@ -797,13 +1194,16 @@ async function main() {
       fail('--verify（DinD 断网验证）只在 Linux 机器上可靠：Windows 打包后把包交给 Linux CI 跑 scripts/verify-linux-docker-deploy.js');
     }
     log('执行断网验证（verify-linux-docker-deploy.js）...');
+    // 50 分钟：verify 脚本自身 45 分钟总超时（2 核断网 DinD 慢环境实测 start.sh 需 ~15-25 分钟），
+    // 外层须再留解压+二次探针余量，否则慢环境下外层先杀内层 → 误判失败（2026-10 暴露）。
     const res = run('node', [path.join(PROJECT_ROOT, 'scripts', 'verify-linux-docker-deploy.js'), '--package', archive], {
-      timeoutMs: 30 * 60000,
+      timeoutMs: 50 * 60000,
     });
     if (res.status !== 0) fail('断网验证失败，本包不得上传 Release');
     log('断网验证通过');
   }
   log(`\n产物: ${archive}`);
+  cleanupPackDocker(); // 停止自举的本地 docker（data-root 保留供下次打包复用基础镜像）
 }
 
 if (require.main === module) {

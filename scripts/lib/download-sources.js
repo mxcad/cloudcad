@@ -14,10 +14,13 @@
  *
  * 回退顺序（resolveSourceList 产出）：
  *   [ ...用户自定义源（RUNTIME_DOWNLOAD_URLS / RUNTIME_DOWNLOAD_URL，base 形态，最高优先）,
- *     官方直链（canonical，主源）,
- *     ...内置 base 重写镜像（BUILTIN_REWRITE_MIRRORS，非 GitHub 官方源的下线/不可达兜底）,
+ *     ...内置 base 重写镜像（BUILTIN_REWRITE_MIRRORS，非 GitHub 官方源）,
+ *     官方直链（canonical）,
  *     ...内置公开镜像（BUILTIN_MIRRORS，prefix 形态，仅 GitHub 直链，兜底） ]
- *   用户配 RUNTIME_DOWNLOAD_URLS → 自己服务器放最前=优先；仍保留官方 + 内置镜像作回退兜底。
+ *   重写镜像优先于官方直链：它们正是为「官方源在目标环境慢/不可达」而设（download.docker.com
+ *   的 CloudFront 在国内慢速卡死、nodejs.org 直连常超时）；官方源可达时镜像 404 会快速失败
+ *   回退官方直链，不会像慢速官方源那样卡满正文超时（2026-10-13 实跑暴露）。
+ *   用户配 RUNTIME_DOWNLOAD_URLS → 自己服务器放最前=最高优先。
  *
  * 回退判定 = 超时 + 状态码双判（两阶段超时语义）：
  *   阶段1 连接+首字节：RUNTIME_DOWNLOAD_TIMEOUT_MS（默认 60s）内拿不到响应头即切下一源——
@@ -138,10 +141,9 @@ function resolveSourceList(canonicalUrl) {
     sources.push({ url: `${base}/${asset}`, label: `user-base ${base}`, form: 'user-base' });
   }
 
-  // 2. 官方直链（主源）
-  sources.push({ url: canonicalUrl, label: 'direct', form: 'direct' });
-
-  // 3. 内置 base 重写镜像（非 GitHub 官方源的下线/不可达兜底）
+  // 2. 内置 base 重写镜像（非 GitHub 官方源）——优先于官方直链：官方源在目标环境常慢/不可达
+  //    （download.docker.com 的 CloudFront 国内慢速卡死、nodejs.org 直连常超时）；官方源可达时
+  //    镜像 404 快速失败回退，不会像慢速官方源那样卡满正文超时。
   if (process.env.RUNTIME_DISABLE_BUILTIN_MIRRORS !== '1') {
     for (const rw of BUILTIN_REWRITE_MIRRORS) {
       if (canonicalUrl.startsWith(rw.from)) {
@@ -153,6 +155,9 @@ function resolveSourceList(canonicalUrl) {
       }
     }
   }
+
+  // 3. 官方直链（canonical，回退兜底）
+  sources.push({ url: canonicalUrl, label: 'direct', form: 'direct' });
 
   // 4. 内置公开镜像（prefix 形态，兜底）——仅对 GitHub 直链适用
   if (process.env.RUNTIME_DISABLE_BUILTIN_MIRRORS !== '1' && isGitHubUrl(canonicalUrl)) {

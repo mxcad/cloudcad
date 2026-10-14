@@ -20,20 +20,27 @@ const { portOpen } = require('./host-process');
  * @param {boolean} ctx.dockerInstalledByUs
  * @param {string[]} ctx.imageTags
  * @param {string} ctx.version
+ * @param {string} [ctx.dockerCli] docker CLI（rootless 时指向包内静态二进制，默认 'docker'）
+ * @param {string} [ctx.dockerHost] DOCKER_HOST（rootless 时指向影子 socket，默认 ''）
  * @param {Function} [ctx.log]
  * @returns {Promise<{ ok: boolean, items: { name: string, ok: boolean, hint?: string }[] }>}
  */
 async function verifyDeployment(ctx) {
-  const { deployDir, env, sudo, dockerInstalledByUs, imageTags, version, log = () => {} } = ctx;
+  const { deployDir, env, sudo, dockerInstalledByUs, imageTags, version, dockerCli = 'docker', dockerHost = '', log = () => {} } = ctx;
   const items = [];
   const dataDir = path.join(deployDir, 'data');
 
   const docker = (args, timeoutMs = 20000) => {
     try {
-      return execFileSync(sudo ? `${sudo} docker` : 'docker', args, {
+      const dEnv = { ...process.env };
+      if (dockerHost) dEnv.DOCKER_HOST = dockerHost;
+      const cli = sudo ? 'sudo' : dockerCli;
+      const cliArgs = sudo ? [dockerCli, ...args] : args;
+      return execFileSync(cli, cliArgs, {
         encoding: 'utf8',
         timeout: timeoutMs,
         stdio: ['ignore', 'pipe', 'pipe'],
+        env: dEnv,
       }).trim();
     } catch (err) {
       return `__ERR__ ${err.message.split('\n')[0]}`;

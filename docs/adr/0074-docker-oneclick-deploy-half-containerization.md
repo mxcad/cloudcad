@@ -33,6 +33,12 @@
 
 顺带消灭现有 `docker/docker-compose.yml` 的两个已知缺陷：`127.0.0.1:${DB_PORT}:5432` 收口（#418）因无需 publish 而消失；`${COOPERATE_PORT:-3000}:3000` 死映射（容器内 3000 无监听者，真实协同端口 3091 从未暴露）随形态消失。
 
+**rootless 模式下的网络差异（2026-10-13 补充）**：上述「全 host 网络、恒 `localhost`」描述的是 root/sudo 模式。rootless 模式下三容器运行在**子 netns**（rootless dockerd 经 slirp4netns 建立），与真实宿主不在同一网络栈：
+- `DB_HOST` / `REDIS_HOST` **仍恒 `localhost`**——pg/redis 容器与 app 容器同处子 netns，彼此 `localhost` 互通，无需改；
+- 后端到协同/转换服务（宿主进程，跑在**真实宿主**）改走 slirp4netns 的 guest→host 通道，宿主 IP 恒 `10.0.2.2`——`start.sh` 的 `applyRootlessHostUrls` 在 rootless 模式下把 `.env` 的 `COOPERATE_URL` / `CONVERSION_SERVICE_URL` 改写为 `http://10.0.2.2:<port>`（root/sudo 模式保持默认 `http://localhost:<port>`，不改）；
+- 真实宿主访问 app 容器的前端/后端端口经 slirp4netns **hostfwd**（`start.sh` 的 `step4Docker` 拉起 rootless dockerd 时按 `.env` 的 `PORT` / `FRONTEND_PORT` 建立，故端口定案的 `step6Ports` 必须先于 `step4Docker`）；
+- 宿主进程**不进**子 netns（宿主侧 `nsenter` 进子 userns 拥有的 netns 会 EPERM，实测不可行），故走 `10.0.2.2` 而非 nsenter。同一 `docker-compose.yml`（`network_mode: host`）在两种模式下通用——rootless 下「host」即子 netns。
+
 **代价**：容器无法多实例同机共存（host 网络命名空间全机唯一）。本包按「一台机器一套」定位，接受。
 
 ### D3 挂载一律「宿主绝对路径 = 容器绝对路径」
@@ -58,7 +64,11 @@
 - `docker/` 含 dockerd / containerd / containerd-shim-runc-v2 / runc / docker / docker-proxy / docker-init，版本 **20.10.24**（glibc 2.17+，兼容 CentOS 7 的 3.10 内核；25.0.x 对内核与 glibc 的要求更高）。
 - **compose v2 独立静态二进制一并附带**（~30MB）：Docker 20.10 的静态 tgz 不含 compose，而 compose 文件同时充当用户可读的部署文档、`docker compose ps/logs` 是运维肌肉记忆。
 - dockerd 由 `start.sh` 以 nohup 拉起，参数固定 `--iptables=false --bridge=none --data-root <DEPLOY_DIR>/docker-data`（host 网络无需网桥；`--iptables=false` 避免无 `CAP_NET_ADMIN` 时 dockerd 自退）。**不写 systemd unit**（systemd 版本差异过大）。
-- **无 root / sudo 即失败并给出明确指引，不降级到裸机形态**。理由：dockerd 需要 `CAP_NET_ADMIN` / `CAP_SYS_ADMIN` 才能建命名空间与挂载，无特权环境跑不通；若为兜底再打包一份 PG / Redis / node / SVN 裸机二进制，包体翻倍且进入「双轨维护」——这正是本仓库反复收口掉的反模式。
+- **权限三级门禁（2026-10-13 修订，取代旧「无 root/sudo 即硬失败」结论）**：用户铁律「不能依赖 root，任何环境都要能跑，一切为最终目标兜底」。`start.sh` 的 `step1Permission` 按序探测：
+  1. **root**（euid==0）→ 直接跑，`SUDO=''`；
+  2. **sudo**：免密（`sudo -n`）或交互式（`sudo -v` 提示输密码，需 TTY）→ `SUDO='sudo'`；
+  3. **rootless**：无 root/sudo 时用「用户命名空间 + 包内静态 Docker」兜底（`lib/rootless.js` + C 助手 `rootless-ns`）。硬前置 `newuidmap`/`newgidmap`（setuid，OS 提供，写多段 subuid/subgid 映射）与 `slirp4netns`（用户态网络 + 端口暴露）缺失时**降级**（plain-netns：dockerd 可跑但服务端口对真实宿主不可达）并大声报错，**不再硬失败**；仅当包内 `rootless-ns` 二进制缺失（包不完整）才硬失败。
+  - **不降级到裸机形态**的结论保留：rootless 复用同一套「3 容器 + 宿主进程」形态（容器在子 netns，宿主进程在真实宿主，经 slirp4netns 的 `10.0.2.2` guest→host 通道互通），不为无 root 场景另打包一份 PG/Redis/node/SVN 裸机二进制——避免「双轨维护」反模式。
 
 ### D6 SystemLib 改为运行时探针（取代构建期替换）
 
@@ -85,6 +95,41 @@
 失败不静默：非 0 退出 + 逐项定位指引 + 对应日志位置。
 
 **包级断网验证**（`scripts/verify-linux-docker-deploy.js`，Release 上传前硬门禁，ADR-0059 模式）：DinD 断网——外层容器 = `debian:bookworm-slim`（**glibc 用户态**：包内自带 node/mxcad 是 glibc 二进制，alpine 用户态跑不起来；外层只当「一台断网的 glibc 服务器」）+ `--privileged`（内层 dockerd 需建命名空间/挂载）+ `--network none`（外层 netns 无外网；内层 dockerd 以 `--bridge=none --iptables=false` 启动，内层容器全部 host 网络 = 外层 netns → 整个部署完全离线）。容器内跑包内 `start.sh`（完整 12 步 + 包内 13 项验证），退出码落文件轮询取回；退出码 0 后再做独立二次探针（`docker exec` curl 各健康端点，端口读包内 `.env`），不信任单一出口。
+
+**rootless 的等效离线验证（2026-10-13 补充）**：上述 DinD 方案依赖 `--privileged`（内层 dockerd 建命名空间/挂载），而 **rootless 容器不能 `--privileged`**（用户命名空间内无特权），故 rootless 无法复用 `--network none` 的 DinD 断网验证。rootless 的离线性由**设计保证**而非 `--network none` 强制：
+  1. **包内零运行时下载**——镜像 tar + Docker 静态二进制 + 离线 node + mxcad + slirp4netns 全在包内，`start.sh` 全程不联网（与 root/sudo 同一铁律，见 D14「部署侧任何环境保证」）；
+  2. **rootless dockerd 离线自举**——用包内静态 `dockerd` 经用户命名空间启动（`lib/rootless.js`），不依赖系统 docker、不拉取任何镜像（`docker load` 包内 tar）；
+  3. **slirp4netns 用户态网络**——rootless 的网络由 slirp4netns 在用户态建立（子 netns + hostfwd），不改动宿主网络栈；部署本身不需要外网（slirp4netns 的出站 NAT 仅在宿主有网时可用，部署流程不依赖它）。
+  因此 rootless 的「断网验证」等价于**验证包自包含 + rootless dockerd 离线自举成功 + 容器离线启动成功**，在带 `newuidmap`/`slirp4netns` 的真实目标机上以断网状态跑 `start.sh` 即可（13 项验证中「后端存活/前端页面」经 slirp4netns hostfwd 从真实宿主探测，rootless 下同样有效）。**本机（无 newuidmap/slirp4netns）只能验证降级 plain-netns 路径的 dockerd 自举/幂等/停止**，完整容器运行与端口暴露须在有硬前置的目标机验证。
+
+**端到端验证状态（2026-10-13 受限开发机实跑，含 slirp4netns 缺口修复后复测）**：本机 = Ubuntu 22.04 / glibc 2.35 / 无 root（sudo 需密码）/ 无 newuidmap / 无系统 docker / GitHub 不可达。
+
+  **slirp4netns 缺口已修（不再是墙）**：本机 glibc 2.35 只能跑 Ubuntu 源里的 slirp4netns **1.0.1**（CLI 为 `PID|PATH TAPNAME` 附着模型，与 v1.2.x 的 `TAPNAME PROGRAM ARGS` 不同）。修复 = ①`ensureSlip4netns` 在 v1.2.21 静态（GitHub）不可达时**回退发行版 1.0.1 动态包 + libslirp**（TUNA/aliyun ubuntu pool，`dpkg-deb`/`ar` 提取，`LD_LIBRARY_PATH` 加载动态库）；②`renderSetupScript` **按 slirp4netns 版本分支**——1.0.x 走「先后台起 dockerd 再 `slirp4netns -c --netns-type=pid <PID> tap0` 附着」，1.2.x 走原「slirp 自拉 dockerd」语法。修复后实跑：rootless dockerd 自举 `degraded:false`（**完整用户态网络**，非降级 plain-netns），`docker pull` 经 slirp4netns **成功下载全部镜像层**（通网端到端验证通过）。
+
+  **剩余唯一硬墙 = newuidmap（OS 级约束，非代码缺口、非 root 无法自动安装）**：无 setuid 的 newuidmap/newgidmap（装它必须 root 设 setuid 位，非 root 用户无法自动安装）→ rootless 只能写单段 uid/gid 映射 → 镜像层注册时 `lchown` 到映射外 uid/gid（pg uid 70 / shadow gid 42 等）报 EINVAL → 层注册失败 → 打包侧 `docker pull/build/save` 与部署侧 pg/redis 容器在本机均无法完成。这是 rootless 模式（目标原文「rootless = userns + 自带静态 docker」）的**固有前置**，目标三级门禁的「clear error」分支即为此设。
+
+  **完整端到端验证须在「具备完整前置」的机器上执行**（最简 = 任一台有 root 或系统 docker 的 Linux 机器——root/sudo 模式不依赖 slirp4netns/newuidmap；或带 newuidmap+slirp4netns 的 rootless 机器）：
+  - 打包机：`node scripts/pack-linux-docker.js` → 产出 `release/cloudcad-docker-linux-<arch>-<ver>.tar.gz`。
+  - 目标机：解压 → `./start.sh`（末尾 13 项验证硬门禁）→ `./stop.sh`（彻底停止）。
+
+**本次实跑暴露并修复的真实缺口**（受限/慢速网络机器上会破坏「一条命令出包」，2026-10-13 修复）：
+  1. `downloadDockerStatic` 补 **rootless-ns 复制**（静态 docker tgz 不含它；rootless 打包机自举 `toolsDir=PACK_DOCKER_DIR` 会报「rootless-ns 缺失」）。
+  2. `step5DockerBinaries` 复用分支的复制列表补 **rootless-ns**（否则复用自举二进制的包会缺 rootless 能力）。
+  3. `step2BuildAppImage` 构建前对 **node 基础镜像多源预拉取**（自举/rootless dockerd 未配 registry-mirror，`docker build` 自动拉取会走不可达的 docker.io；与 pg/redis 的 `pullLibraryImage` 同一口径）。
+  4. `scripts/lib/download-sources.js` 让 **rewrite 镜像（TUNA/npmmirror）优先于慢速官方源**（download.docker.com 的 CloudFront 在国内慢速卡死，旧顺序会卡满 30min 正文超时才回退；官方源可达时镜像 404 快速失败回退，不受影响）。
+  5. `ensureSlip4netns` 加**发行版 1.0.1 + libslirp 回退源**（GitHub 静态 v1.2.x 不可达时兜底；`dpkg-deb`/`ar` 提取，动态库经 `LD_LIBRARY_PATH` 加载）+ 早退检查改为「验证可运行」（二进制在但缺 libslirp 时重新下载补齐）。
+  6. `renderSetupScript` **按 slirp4netns 版本分支**（1.0.x 附着模型 vs 1.2.x 自拉模型），使发行版 1.0.1 也能建起完整用户态网络。
+
+**root 模式端到端实跑补充（2026-10-13，2 核 Ubuntu 打包机 + root/sudo + 无系统 docker）**——「一条命令出包 + 断网验证」在 root 门禁下全链路跑通后暴露并修复的缺口：
+
+  1. **`ensurePackDocker` 静态二进制复用**：判定口径从「tgz 是否存在」改为「本地 8 个核心二进制是否齐全」——`downloadDockerStatic` 解压后即删 tgz，重跑时 tgz 不存在，旧口径无条件重下 ~70MB，断网/慢网卡死。与 `step5DockerBinaries` 同一口径。
+  2. **`ensurePackDocker` 镜像加速源**：自举的本地 dockerd 写 `daemon.json`（registry-mirrors：daocloud / 1ms.run / dockerproxy——**ustc/163/tencentyun 等老镜像已停服，DNS 都解析不了**）并经 **`--config-file`** 传入。两个坑：①dockerd **不读 data-root 里的 daemon.json**（配置放 data-root 从未生效，pull 一直打官方源超时）；②20.10 静态二进制的 flag 是 `--config-file`（不是 `--config`）。不可达镜像 dockerd 自动跳过回退官方源，非大陆机器带上无害；`RUNTIME_DOCKER_MIRRORS` 覆盖、`RUNTIME_DISABLE_DOCKER_MIRRORS=1` 关闭。
+  3. **verify 二次探针 curl → 纯 bash `/dev/tcp`**：外层 `debian:bookworm-slim` **没有 curl/wget**（实测），`--network none` 下 apt 也装不了——旧 curl 探针在任何机器上都必失败。改为 bash 内建 `/dev/tcp` 发原始 GET、按状态行判 200：零依赖，且不走包内 node，与包内 13 项验证保持独立。
+  4. **verify 探针端点/超时/总超时**：`/api/health/ready`（**后端无此端点，404 必失败**）→ `/api/health/public`（db+storage 均健康→200）；`curl -m 5` → 15s（慢环境 `/api/health/live` 要等 redis.ping()+db healthCheck，30s+ 才响应）；总超时 25 → **45 分钟**（2 核断网 DinD 下 start.sh 实测 15-25 分钟）。pack 脚本 `--verify` 外层超时同步 30 → **50 分钟**（须覆盖 verify 自身 45 分钟 deadline + 解压/探针余量，否则慢环境外层先杀内层误判失败）。
+  5. **慢环境根因与兜底（`tcp_syn_retries` 6 → 15）**：2 核机器上 redis/pg 服务端 CPU 饿死、SYN-ACK 迟发，客户端默认 6 次 SYN 重试（≈2 分钟窗口）耗尽 → 后端多个 PG/Redis 客户端 `connect ETIMEDOUT`，整体就绪拖到 10+ 分钟。`index.js` start 流程在权限定案后、容器启动前把本 netns 的 `tcp_syn_retries` 拉到 15（≈16 分钟窗口），给饿死服务端足够应答机会。这是「解决慢」而非「放宽窗口」：窗口放宽只是不超时，重试窗口拉长才是让连接真正建立。
+  6. **step10 轮询器**：单次请求超时 3s → 90s（慢环境 live 端点响应 30s+，3s 必误判）；判据从「HTTP 200」改为 body `status === 'ok'`（live 恒 200，degraded 也是 200）；就绪窗口 10 → 25 分钟。
+  7. **mxcad 探针自愈实跑验证**：包内 `mxcadassembly` 首跑 `EACCES`（归档 exec 位/权限边界）→ 探针按设计用 SystemLib 覆盖 mxcad 目录重试 → `code=0` 转换成功，12 步流程未中断。
+  8. **慢就绪真根因 = 客户端事件循环饿死（2026-10-13 二次实跑，修正第 5 条的服务端假设）**：旧包断网验证失败（后端 redis/pg 客户端 `connect ETIMEDOUT` → `/api/health/live` 到不了 `status=ok` → start.sh 退出码 1 / VERIFY_EXIT=1）。对照实验：**全新进程**用后端完全相同的参数 25ms 连上 redis，**长驻后端**却连不上；网络栈无 SYN_SENT 积压、无 cgroup CPU 配额（root cgroup，2 核 VM 负载 ~3.5 过载）→ 根因不是服务端 SYN-ACK 迟发，而是**长驻后端的 Node 事件循环在握手中途被 CPU 争用反复脱调度**（2 核 VM 同时跑 DinD 验证容器 + 3 容器 + 宿主进程），客户端赶不上默认超时（ioredis 硬编码 10s——`REDIS_CONNECT_TIMEOUT` 此前从未传给客户端、恒无效；pg 30s）→ 重试风暴拖慢整个部署。四项修复：① `redis.module.ts` 给两个 ioredis 客户端（REDIS_CLIENT provider + `NestRedisModule.forRootAsync`）显式传 `connectTimeout`，`REDIS_CONNECT_TIMEOUT` 从此真正生效；② `health.controller.ts` `liveness()` 的 db/redis 检查由串行改并行 `Promise.all`（单次健康检查最坏 = max(pg 120s, redis 60s) = 120s，而非两者之和 180s+）；③ `pack-linux-docker.js` `DOCKER_PATH_OVERRIDES` 覆盖 docker 形态 `.env` 的 `DB_CONNECTION_TIMEOUT=120000` / `REDIS_CONNECT_TIMEOUT=60000`（快环境连接毫秒级完成，放宽无副作用）；④ `index.js` step10 轮询器单次请求超时 90s → 150s（> 120s 最坏值，防轮询器取不回响应）。第 5 条 `tcp_syn_retries` 兜底保留（快环境无害、慢环境多一层窗口）。
 
 ### D9 Redis 策略与裸机对齐（修掉旧 compose 的 LRU 驱逐缺陷）
 

@@ -21,15 +21,17 @@ const { execSync, spawnSync } = require('child_process');
 /**
  * 执行 shell 命令（带 sudo 前缀），返回 { ok, stdout, stderr, code }。
  * @param {string} cmd
- * @param {{ sudo?: string, timeoutMs?: number }} [opts]
+ * @param {{ sudo?: string, timeoutMs?: number, env?: Object }} [opts]
+ *   env 覆盖进程环境（rootless 时注入 DOCKER_HOST 指向影子 socket；默认 process.env）
  */
-function run(cmd, { sudo = '', timeoutMs = 60000 } = {}) {
+function run(cmd, { sudo = '', timeoutMs = 60000, env = process.env } = {}) {
   const full = sudo ? `${sudo} ${cmd}` : cmd;
   const res = spawnSync(full, {
     shell: true,
     encoding: 'utf8',
     timeout: timeoutMs,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env,
   });
   return {
     ok: res.status === 0,
@@ -212,14 +214,18 @@ function sleep(ms) {
  * @param {string} opts.sudo
  * @param {string} opts.imagesDir 包内 images/ 目录
  * @param {string[]} opts.tags 期望镜像 tag 列表（cloudcad/pg:15-alpine 等）
+ * @param {string} [opts.dockerCli] docker CLI（rootless 时指向包内静态二进制，默认 'docker'）
+ * @param {string} [opts.dockerHost] DOCKER_HOST（rootless 时指向影子 socket，默认 ''）
  * @param {Function} [log]
  * @returns {{ ok: boolean, loaded: string[], skipped: string[], message: string }}
  */
-function loadImages({ sudo, imagesDir, tags, log = () => {} }) {
+function loadImages({ sudo, imagesDir, tags, log = () => {}, dockerCli = 'docker', dockerHost = '' }) {
+  const dEnv = { ...process.env };
+  if (dockerHost) dEnv.DOCKER_HOST = dockerHost;
   const loaded = [];
   const skipped = [];
   for (const tag of tags) {
-    const inspect = run(`docker image inspect ${tag} >/dev/null 2>&1`, { sudo, timeoutMs: 15000 });
+    const inspect = run(`${dockerCli} image inspect ${tag} >/dev/null 2>&1`, { sudo, timeoutMs: 15000, env: dEnv });
     if (inspect.ok) {
       skipped.push(tag);
       continue;
@@ -229,12 +235,12 @@ function loadImages({ sudo, imagesDir, tags, log = () => {} }) {
       return { ok: false, loaded, skipped, message: `镜像 tar 缺失：${tar}` };
     }
     log(`[docker] 加载镜像 ${tag}（${path.basename(tar)}）...`);
-    const res = run(`${sudo} docker load -i ${tar}`, { sudo: '', timeoutMs: 600000 });
+    const res = run(`${sudo} ${dockerCli} load -i ${tar}`, { sudo: '', timeoutMs: 600000, env: dEnv });
     if (!res.ok) {
       return { ok: false, loaded, skipped, message: `docker load 失败（${tag}）：${res.stderr || res.error}` };
     }
     // load 后的 tag 以 tar 内 manifest 为准，校验期望 tag 已存在
-    const again = run(`docker image inspect ${tag} >/dev/null 2>&1`, { sudo, timeoutMs: 15000 });
+    const again = run(`${dockerCli} image inspect ${tag} >/dev/null 2>&1`, { sudo, timeoutMs: 15000, env: dEnv });
     if (!again.ok) {
       return { ok: false, loaded, skipped, message: `镜像加载后未找到 tag ${tag}（tar 内 tag 与期望不符？）` };
     }

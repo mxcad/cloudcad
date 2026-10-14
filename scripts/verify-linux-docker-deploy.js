@@ -154,7 +154,10 @@ async function main() {
     fail(`验证容器启动失败：${up.stderr}`);
   }
 
-  const deadline = Date.now() + 25 * 60000;
+  // 45 分钟总超时：2 核打包机上断网 DinD 验证（dockerd+3 容器+3 宿主进程）CPU 严重受限，
+  // 后端多个 Redis/PG 客户端重连要 10+ 分钟才全部就绪（2026-10 实测 12 分钟）；step10 就绪窗口
+  // 已放宽到 25 分钟，总超时须覆盖 step10 + 其余步骤 + 13 项验证，留足余量避免慢环境误判超时。
+  const deadline = Date.now() + 45 * 60000;
   let exitCode = null;
   while (Date.now() < deadline) {
     const probe = run('docker', ['exec', containerName, 'cat', '/tmp/start.exit'], { capture: true, timeoutMs: 15000 });
@@ -175,7 +178,7 @@ async function main() {
     const logs = run('docker', ['logs', '--tail', '80', containerName], { capture: true });
     console.error(logs.stdout || logs.stderr);
     cleanup();
-    fail('25 分钟内 start.sh 未结束');
+    fail('45 分钟内 start.sh 未结束');
   }
   if (exitCode !== 0) {
     const logs = run('docker', ['exec', containerName, 'tail', '-n', '80', '/tmp/start.log'], { capture: true });
@@ -185,14 +188,27 @@ async function main() {
   }
   log('start.sh 全流程通过（含包内 13 项验证）');
 
-  // 5. 独立二次探针：直接 curl 健康端点（端口读包内 .env，start.sh 已生成）
+  // 5. 独立二次探针：直接探测健康端点（端口读包内 .env，start.sh 已生成）
   const env = parseEnvSimple(path.join(rootDir, '.env'));
+  // 纯 bash /dev/tcp 原始 HTTP 探针：外层容器是 debian:bookworm-slim（无 curl/wget，
+  // --network none 下 apt 也装不了），旧版 curl 探针在任何机器上都必失败（2026-10 暴露）。
+  // /dev/tcp 是 bash 内建，零依赖；且不走包内 node，与包内 13 项验证（node 实现）保持独立。
+  // 15s 读超时：慢环境（2 核断网 DinD）下 /api/health/live 要等 redis.ping()+db healthCheck
+  // 完成才响应（30s+ 量级）；此时 start.sh 已退出 0（包内验证已过），实际响应远快于 15s。
+  // 「后端 ready」用 /api/health/public（db+storage 均健康→200，任一不可用→503）；
+  // 后端无 /api/health/ready 端点（health.controller 只有 live/public/full/db/storage）。
+  // 全部探针期望 200（live 恒 200；public/前端/运维/转换 健康即 200）。
+  const httpProbe = (port, urlPath) =>
+    `( exec 3<>/dev/tcp/127.0.0.1/${port} && ` +
+    `printf 'GET ${urlPath} HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n' >&3 && ` +
+    `IFS= read -r -t 15 line <&3 && ` +
+    `case "$line" in *" 200 "*) exit 0;; *) echo "status line: $line" >&2; exit 1;; esac ) || exit 1`;
   const probes = [
-    [`后端 live`, `curl -fs -m 5 http://127.0.0.1:${env.PORT || 3001}/api/health/live`],
-    [`后端 ready`, `curl -fs -m 5 http://127.0.0.1:${env.PORT || 3001}/api/health/ready`],
-    [`前端`, `curl -fs -o /dev/null -m 5 http://127.0.0.1:${env.FRONTEND_PORT || 3000}/`],
-    [`运维中心`, `curl -fs -o /dev/null -m 5 http://127.0.0.1:${env.CONFIG_SERVICE_PORT || 3002}/`],
-    [`转换服务`, `curl -fs -m 5 http://127.0.0.1:${env.CONVERSION_SERVICE_PORT || 3100}/health`],
+    [`后端 live`, httpProbe(env.PORT || 3001, '/api/health/live')],
+    [`后端 ready`, httpProbe(env.PORT || 3001, '/api/health/public')],
+    [`前端`, httpProbe(env.FRONTEND_PORT || 3000, '/')],
+    [`运维中心`, httpProbe(env.CONFIG_SERVICE_PORT || 3002, '/')],
+    [`转换服务`, httpProbe(env.CONVERSION_SERVICE_PORT || 3100, '/health')],
   ];
   for (const [name, cmd] of probes) {
     const res = run('docker', ['exec', containerName, 'bash', '-c', cmd], { capture: true, timeoutMs: 30000 });

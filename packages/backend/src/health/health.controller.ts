@@ -56,22 +56,28 @@ export class HealthController {
   async liveness() {
     const memUsage = process.memoryUsage();
 
-    let databaseStatus = 'unknown';
-    let redisStatus = 'unknown';
-
-    try {
-      const dbResult = await this.databaseService.healthCheck();
-      databaseStatus = dbResult.status === 'healthy' ? 'ok' : 'error';
-    } catch {
-      databaseStatus = 'error';
-    }
-
-    try {
-      await this.redis.ping();
-      redisStatus = 'ok';
-    } catch {
-      redisStatus = 'error';
-    }
+    // db 与 redis 检查并行（Promise.all）：慢环境（2 核断网 DinD / 小规格 VPS）下
+    // 两者各自可能耗满客户端连接超时（pg 120s / redis 60s），串行会让单次健康检查
+    // 耗时 = 两者之和（180s+），超过 step10 轮询器的请求超时导致取不回响应；
+    // 并行后耗时 = max(两者)，轮询器可完整取回。结果语义不变（都 ok 才 ok）。
+    const [databaseStatus, redisStatus] = await Promise.all([
+      (async () => {
+        try {
+          const dbResult = await this.databaseService.healthCheck();
+          return dbResult.status === 'healthy' ? 'ok' : 'error';
+        } catch {
+          return 'error';
+        }
+      })(),
+      (async () => {
+        try {
+          await this.redis.ping();
+          return 'ok';
+        } catch {
+          return 'error';
+        }
+      })(),
+    ]);
 
     const overallStatus =
       databaseStatus === 'ok' && redisStatus === 'ok' ? 'ok' : 'degraded';

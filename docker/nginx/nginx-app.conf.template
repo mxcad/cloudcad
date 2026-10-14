@@ -1,0 +1,170 @@
+# CloudCAD app 容器 —— nginx 完整配置模板（ADR-0074 半容器化，替代 serve-static.js）
+#
+# 本文件是「模板」，占位符由容器入口 docker/app-entrypoint.js 在启动时渲染：
+#   @FRONTEND_PORT@  前端监听端口（.env FRONTEND_PORT）
+#   @BACKEND_PORT@   后端端口（.env PORT，nginx 反代 /api 的目标）
+#   @DIST_DIR@       前端静态产物目录（/app/packages/frontend/dist）
+#   @MOBILE_PATH@    移动端访问路径（myServerConfig.json 的 mobileAccessPath，默认 mxcad_mobile）
+#
+# 渲染后的完整配置写到 /app/nginx/nginx.conf，nginx 以 -c 该文件 + daemon off 前台运行，
+# 由 app-entrypoint.js（PID 1）与 backend 一起监督（任一退出→重启容器）。
+#
+# 行为与裸机 serve-static.js 对齐并补齐：
+#   - /api、/mxcad/、/health 反代后端（含 WebSocket upgrade、大文件上传、keepalive）
+#   - 桌面端 SPA 回退 index.html；/mxcad-app/ 按校验下发（no-cache）
+#   - 移动端 SPA（/@MOBILE_PATH@/）+ cooperate 引擎文件 /buf/$<name>.mxb<N>.wgh → <name>
+#   - .wasm 加 COOP/COEP（SharedArrayBuffer 需要）
+#   - 静态资源强缓存 1 年；隐藏文件禁访
+
+user nginx;
+worker_processes auto;
+pid /app/nginx/nginx.pid;
+error_log /dev/stderr warn;
+
+events {
+    worker_connections 4096;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    access_log off;
+    sendfile on;
+    tcp_nopush on;
+    server_tokens off;
+
+    # 大文件上传（.mxweb 等）：上限由后端 maxFileSize 控制，这里放开
+    client_max_body_size 512M;
+    client_body_buffer_size 128k;
+
+    # 代理缓冲关闭：流式响应（SSE / 大文件下载 / 引擎文件）不被 nginx 截断缓冲
+    proxy_buffering off;
+
+    # gzip 压缩
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml application/pdf image/svg+xml;
+
+    # 后端上游（host 网络：容器与后端共享网络栈，恒为 127.0.0.1）
+    upstream backend {
+        server 127.0.0.1:@BACKEND_PORT@;
+        keepalive 32;
+    }
+
+    server {
+        listen @FRONTEND_PORT@;
+        listen [::]:@FRONTEND_PORT@;
+        server_name _;
+
+        # 安全头
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        # 静态文件目录（前端 dist，含合并的移动端 dist）
+        root @DIST_DIR@;
+        index index.html;
+
+        # /mxcad-app/ 运行时原样 dist（无 hash），「覆盖目录即热更新」→ 按校验下发（no-cache）。
+        # ^~ 阻止下方静态资源 regex location 命中并覆盖安全头（location 内 add_header 会整体
+        # 替换 server 级 add_header，故此处显式重列）
+        location ^~ /mxcad-app/ {
+            expires off;
+            add_header Cache-Control "no-cache";
+            add_header X-Frame-Options "SAMEORIGIN" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header X-XSS-Protection "1; mode=block" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            try_files $uri $uri/ =404;
+        }
+
+        # .wasm 需 COOP/COEP（SharedArrayBuffer）；独立 location 避免与静态缓存头叠加
+        location ~* \.wasm$ {
+            add_header Cross-Origin-Opener-Policy "same-origin" always;
+            add_header Cross-Origin-Embedder-Policy "require-corp" always;
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+            try_files $uri =404;
+        }
+
+        # 其余静态资源强缓存 1 年
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json|mp3|mp4|webm|pdf|data|mem)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+            try_files $uri =404;
+        }
+
+        # API 代理到后端（含 WebSocket upgrade：协同/实时特性经 /api 的 WS）
+        location /api {
+            proxy_pass http://backend;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 3600s;
+            proxy_read_timeout 3600s;
+            client_max_body_size 512M;
+        }
+
+        # MxCAD 文件服务代理（后端提供）
+        location /mxcad/ {
+            proxy_pass http://backend;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Connection "";
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 3600s;
+            proxy_read_timeout 3600s;
+        }
+
+        # 健康检查（代理到后端 /api/health）
+        location = /health {
+            proxy_pass http://backend/api/health;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_connect_timeout 5s;
+            proxy_read_timeout 5s;
+        }
+
+        # 移动端 cooperate 引擎文件加载：/buf/$<name>.mxb<N>.wgh → 实际文件 <name>
+        # （私有 mxcad/mxdraw 1.0.399+/0.1.389+ 走此协议；<name> 为 URL 解码后文件名，可能含路径）
+        location ~* ^/@MOBILE_PATH@/buf/\$(?<wghname>.+)\.mxb[0-9]+\.wgh$ {
+            rewrite ^ /@MOBILE_PATH@/$wghname break;
+            try_files $uri =404;
+        }
+
+        # 移动端页面（SPA，从配置路径提供）
+        location /@MOBILE_PATH@ {
+            alias @DIST_DIR@/@MOBILE_PATH@;
+            try_files $uri $uri/ /@MOBILE_PATH@/index.html;
+        }
+
+        # 桌面端 SPA 路由（所有未匹配请求回退 index.html）
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+
+        # 禁止访问隐藏文件
+        location ~ /\. {
+            deny all;
+            log_not_found off;
+        }
+
+        # 错误页面
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root @DIST_DIR@;
+        }
+    }
+}

@@ -1,11 +1,11 @@
 # CloudCAD Docker 一键部署包 —— app 镜像（ADR-0074 半容器化）
 #
 # 与旧 docker/Dockerfile（全容器化形态，`pnpm deploy` 用）的区别：
-#   - 双进程入口 docker/app-entrypoint.js（backend + serve-static 前端），无 nginx/dumb-init
+#   - 双进程入口 docker/app-entrypoint.js（backend + nginx 前端），nginx 提供静态资源 + /api 反代
 #   - 无 svn 仓库预初始化（后端 MxVersionControlProvider 启动时自动初始化）
 #   - 不烘焙 mxcadAssembly（宿主 runtime/ 同路径挂载进容器；机器码绑定 + 用户可替换官方版）
 #   - 不烘焙协同/转换/运维中心（宿主进程）
-#   - 前端 dist 落 /app/packages/frontend/dist（serve-static.js 默认目录，旧镜像是 /var/www/html）
+#   - 前端 dist 落 /app/packages/frontend/dist（nginx root，旧镜像是 /var/www/html）
 #   - 烘焙离线 schema-engine（musl 变体）供 prisma CLI 离线 migrate deploy
 #
 # 构建：docker build -f docker/Dockerfile.app --build-arg APP_VERSION=<版本> .
@@ -14,6 +14,11 @@
 # ==================== 基础依赖阶段 ====================
 FROM node:20.19.5-alpine AS base
 WORKDIR /app
+
+# 受限网络：可用 --build-arg ALPINE_MIRROR=<镜像基址> 替换官方 dl-cdn（空=官方源）。
+# 基址形如 https://mirrors.tuna.tsinghua.edu.cn（替换 dl-cdn.alpinelinux.org，路径 /alpine/v3.22/... 不变）
+ARG ALPINE_MIRROR
+RUN [ -z "$ALPINE_MIRROR" ] || sed -i "s|https://dl-cdn.alpinelinux.org|${ALPINE_MIRROR}|g" /etc/apk/repositories
 
 RUN apk add --no-cache python3 make g++ curl
 
@@ -130,8 +135,13 @@ RUN MOBILE_PATH=$(node -e "const c=JSON.parse(require('fs').readFileSync('packag
 FROM node:20.19.5-alpine AS production
 WORKDIR /app
 
-# subversion：后端版本控制走 svn CLI；curl：容器健康检查
-RUN apk add --no-cache subversion curl
+# production 是全新 FROM，不继承 base 的 apk 镜像配置，须在此重设（同 NPM_REGISTRY 口径）
+ARG ALPINE_MIRROR
+RUN [ -z "$ALPINE_MIRROR" ] || sed -i "s|https://dl-cdn.alpinelinux.org|${ALPINE_MIRROR}|g" /etc/apk/repositories
+
+# subversion：后端版本控制走 svn CLI；curl：容器健康检查；
+# nginx：前端静态资源 + /api 反代（替代裸机 serve-static.js 的 node 服务，见 ADR-0074）
+RUN apk add --no-cache subversion curl nginx
 
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
@@ -178,8 +188,9 @@ COPY --from=frontend-builder /app/packages/frontend/dist ./packages/frontend/dis
 COPY runtime/prisma-engines/schema-engine-linux-musl /app/prisma-engines/schema-engine
 RUN chmod +x /app/prisma-engines/schema-engine
 
-# 前端静态服务（与裸机形态同一脚本：/api 反代 + SPA 回退 + 移动端路径）
-COPY runtime/scripts/serve-static.js ./runtime/scripts/serve-static.js
+# 前端静态服务改由 nginx 提供（/api 反代 + SPA 回退 + 移动端路径 + cooperate 引擎文件），
+# 替代裸机 serve-static.js 的 node 服务。模板占位符由入口 app-entrypoint.js 启动时渲染。
+COPY docker/nginx/nginx-app.conf.template /app/nginx/nginx-app.conf.template
 
 # 入口 + 版本烙入
 COPY docker/app-entrypoint.js /app/app-entrypoint.js
