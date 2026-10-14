@@ -84,6 +84,36 @@ function readPid(pidFile) {
   return null;
 }
 
+/**
+ * 读 ELF 的 e_machine，返回 'x86_64' / 'aarch64' / null。
+ * 把「包内 rootless-ns 架构与本机不符」从 ENOEXEC（exec format error）变成清晰报错。
+ * @param {string} file
+ * @returns {string|null}
+ */
+function elfArch(file) {
+  try {
+    const fd = fs.openSync(file, 'r');
+    try {
+      const buf = Buffer.alloc(20);
+      if (fs.readSync(fd, buf, 0, 20, 0) < 6) return null;
+      if (buf.toString('latin1', 0, 4) !== '\x7fELF') return null;
+      if (buf[4] !== 2) return null;
+      switch (buf.readUInt16LE(18)) {
+        case 62:
+          return 'x86_64';
+        case 183:
+          return 'aarch64';
+        default:
+          return null;
+      }
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return null;
+  }
+}
+
 function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
@@ -236,10 +266,22 @@ function checkPrerequisites({ toolsDir, log = () => {} }) {
   const user = os.userInfo().username;
   const uid = process.getuid();
 
-  // rootless-ns 二进制（包内，硬前置：缺失则完全无法启动）
+  // rootless-ns 二进制（包内，硬前置：缺失或架构不符则完全无法启动）
   const nsBin = path.join(toolsDir, 'rootless-ns');
   if (!fs.existsSync(nsBin)) {
     missing.push({ name: 'rootless-ns', hint: `包内 rootless-ns 二进制缺失（${nsBin}），部署包不完整，rootless 无法启动` });
+  } else {
+    // 错架构二进制（如 aarch64 机器上打进 x86_64 版）exec 时是 ENOEXEC，报错无指向性
+    const wantArch = { x64: 'x86_64', arm64: 'aarch64' }[process.arch];
+    const gotArch = elfArch(nsBin);
+    if (wantArch && gotArch !== wantArch) {
+      missing.push({
+        name: 'rootless-ns',
+        hint: `包内 rootless-ns 架构与本机不符（包内 ${gotArch || '未知'}，本机 ${wantArch}）。` +
+          `请重新出包：在 ${wantArch} 机器上跑 scripts/pack-linux-docker.js，` +
+          `或先在该架构机器上编译 runtime/docker-runtime/lib/rootless/rootless-ns.c（-static）并提交后重打。`,
+      });
+    }
   }
 
   // newuidmap/newgidmap（setuid，OS 提供）—— 多段映射硬前置（无它仅能跑全 0:0 属主镜像）
@@ -487,6 +529,7 @@ module.exports = {
   stop,
   isDockerReady,
   // 内部导出（供测试 / index.js 复用）
+  _elfArch: elfArch,
   _which: which,
   _readSubid: readSubid,
   _readPid: readPid,

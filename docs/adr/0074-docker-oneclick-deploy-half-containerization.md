@@ -69,6 +69,7 @@
   2. **sudo**：免密（`sudo -n`）或交互式（`sudo -v` 提示输密码，需 TTY）→ `SUDO='sudo'`；
   3. **rootless**：无 root/sudo 时用「用户命名空间 + 包内静态 Docker」兜底（`lib/rootless.js` + C 助手 `rootless-ns`）。硬前置 `newuidmap`/`newgidmap`（setuid，OS 提供，写多段 subuid/subgid 映射）与 `slirp4netns`（用户态网络 + 端口暴露）缺失时**降级**（plain-netns：dockerd 可跑但服务端口对真实宿主不可达）并大声报错，**不再硬失败**；仅当包内 `rootless-ns` 二进制缺失（包不完整）才硬失败。
   - **不降级到裸机形态**的结论保留：rootless 复用同一套「3 容器 + 宿主进程」形态（容器在子 netns，宿主进程在真实宿主，经 slirp4netns 的 `10.0.2.2` guest→host 通道互通），不为无 root 场景另打包一份 PG/Redis/node/SVN 裸机二进制——避免「双轨维护」反模式。
+  - **`rootless-ns` 必须按【目标架构】交付（2026-10-14 补）**：本包按打包机架构出包，跨架构打包（x86 打包机出 aarch64 包）时仓库内那份 x86_64 的 `rootless-ns` 不能盲复制——否则目标机 rootless 模式 `exec` 时 ENOEXEC（`exec format error`），而 `start.sh` 旧判定只按「文件存在」认可用性 → 静默失效。两处收口：打包侧 `scripts/pack-linux-docker.js` 的 `ensureRootlessNs` 按 ELF `e_machine` 校验，架构不符则先试「打包机本机 `cc`/`gcc` 从 `rootless-ns.c` 现场编译（`-static`）」，再失败才告警去掉该能力（不 fail，与 slirp4netns 同一 best-effort 口径）；部署侧 `lib/rootless.js` `checkPrerequisites` 也校验 `e_machine`，不符报「架构不符 + 重出包办法」而非 ENOEXEC。`ensureRootlessNs` 是唯一出口，`step5DockerBinaries` 的「复用已自举二进制」判定不再把 rootless-ns 列进门（否则一份架构不符的 rootless-ns 会白白触发 ~70MB tgz 重下）。
 
 ### D6 SystemLib 改为运行时探针（取代构建期替换）
 

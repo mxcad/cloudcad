@@ -128,13 +128,16 @@ http {
             proxy_read_timeout 3600s;
         }
 
-        # 健康检查（代理到后端 /api/health）
+        # 健康检查（代理到后端 /api/health/public）：必须用 /public——裸 /api/health 带
+        # @RequirePermissions(SYSTEM_MONITOR)，无凭证探测恒 401/403，不能当探针用。
+        # /public 是 @Public 轻量检查（db + storage），读超时 180s 覆盖慢环境的 db healthCheck
+        # 最坏耗时（DB_CONNECTION_TIMEOUT 120s），健康时该超时不产生任何开销。
         location = /health {
-            proxy_pass http://backend/api/health;
+            proxy_pass http://backend/api/health/public;
             proxy_http_version 1.1;
             proxy_set_header Connection "";
             proxy_connect_timeout 5s;
-            proxy_read_timeout 5s;
+            proxy_read_timeout 180s;
         }
 
         # 移动端 cooperate 引擎文件加载：/buf/$<name>.mxb<N>.wgh → 实际文件 <name>

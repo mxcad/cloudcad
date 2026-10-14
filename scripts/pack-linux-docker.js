@@ -776,6 +776,101 @@ function step4SaveImages(imagesDir, version) {
 }
 
 /**
+ * 读 ELF 二进制的 e_machine，返回 'x86_64' / 'aarch64' / null（非 64 位 ELF 或读取失败）。
+ * 仅用于判断打包进包的静态二进制是否与目标机架构一致。
+ * @param {string} file
+ * @returns {string|null}
+ */
+function elfArch(file) {
+  try {
+    const fd = fs.openSync(file, 'r');
+    try {
+      const buf = Buffer.alloc(20);
+      if (fs.readSync(fd, buf, 0, 20, 0) < 6) return null;
+      if (buf.toString('latin1', 0, 4) !== '\x7fELF') return null;
+      if (buf[4] !== 2) return null; // 仅处理 64 位 ELF（64 位下 e_machine 偏移恒为 18）
+      switch (buf.readUInt16LE(18)) {
+        case 62:
+          return 'x86_64';
+        case 183:
+          return 'aarch64';
+        default:
+          return null;
+      }
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * rootless-ns 就位（rootless 模式的命名空间启动器；静态 docker tgz 不含它）。
+ *
+ * 架构正确性：仓库内只入库一份 rootless-ns（当前 x86_64），但本脚本按【打包机】架构出包
+ * （--arm64 在 x86 打包机上也能出 aarch64 包），盲复制会把错架构二进制打进包——目标机上
+ * rootless 模式起不来，而 start.sh 只按「文件是否存在」判定可用性 → 静默失效。故按
+ * e_machine 校验，不匹配时按序兜底：仓库二进制 → 用打包机本机 cc/gcc 从 rootless-ns.c
+ * 现场编译（-static，免目标机 glibc 依赖）→ 都失败则告警并去掉该能力（根因通常 = 跨架构
+ * 打包机上无对应架构交叉编译器；补一份对应架构的预编译产物入库即可永久解决）。
+ *
+ * 仅打包侧告警不 fail：root/sudo 模式不依赖 rootless-ns，不因它阻断「一条命令出包」
+ * （与 slirp4netns 的 best-effort 同一口径；仅部署包完整性验证负责拦住「包缺件」）。
+ * @param {string} dockerDir 包内 docker/ 目录
+ */
+async function ensureRootlessNs(dockerDir) {
+  const repoBin = path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'lib', 'rootless', 'rootless-ns');
+  const src = path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'lib', 'rootless', 'rootless-ns.c');
+  const dest = path.join(dockerDir, 'rootless-ns');
+
+  if (fs.existsSync(dest) && elfArch(dest) === ARCH.pkgArch) return;
+  // 残留错架构产物先清掉，否则下面的复制会静默跳过、继续把错架构二进制打进包
+  if (fs.existsSync(dest) && elfArch(dest) !== ARCH.pkgArch) {
+    log(`包内已有 rootless-ns 但架构不符（${elfArch(dest) || '未知'} ≠ ${ARCH.pkgArch}），将重建`);
+    fs.rmSync(dest, { force: true });
+  }
+
+  if (fs.existsSync(repoBin) && elfArch(repoBin) === ARCH.pkgArch) {
+    fs.copyFileSync(repoBin, dest);
+    fs.chmodSync(dest, 0o755);
+    log(`rootless-ns 就位（仓库内静态二进制，${ARCH.pkgArch}）`);
+    return;
+  }
+
+  log(`仓库内无 ${ARCH.pkgArch} 版 rootless-ns（现有多为 x86_64），尝试用打包机本机编译器从源码编译...`);
+  let built = null;
+  for (const cc of ['cc', 'gcc']) {
+    for (const flags of [['-static'], []]) {
+      const out = path.join(PROJECT_ROOT, '.tmp-pack-test', `rootless-ns-${ARCH.pkgArch}${flags[0] ? '-static' : '-dynamic'}`);
+      try {
+        ensureDir(path.dirname(out));
+        const res = run(cc, [src, ...flags, '-O2', '-Wall', '-o', out], { capture: true, timeoutMs: 120000 });
+        if (res.status === 0 && elfArch(out) === ARCH.pkgArch) {
+          built = out;
+          break;
+        }
+      } catch {
+        /* 无该编译器或编译失败 → 换下一个 */
+      }
+    }
+    if (built) break;
+  }
+
+  if (built) {
+    fs.copyFileSync(built, dest);
+    fs.chmodSync(dest, 0o755);
+    log(`rootless-ns 由 rootless-ns.c 现场编译就位（${ARCH.pkgArch}）`);
+    return;
+  }
+
+  log(`[警告] 无法准备 ${ARCH.pkgArch} 的 rootless-ns —— 包将不含 rootless 自举能力（root/sudo 模式不受影响）。\n` +
+      `      补法：在 ${ARCH.pkgArch} 机器上执行\n` +
+      `      cc runtime/docker-runtime/lib/rootless/rootless-ns.c -static -O2 -Wall -o runtime/docker-runtime/lib/rootless/rootless-ns\n` +
+      `      并提交该二进制（当前入库版本仅供 x86_64 目标机）`);
+}
+
+/**
  * 下载 Docker 静态二进制（8 个）+ compose v2 独立二进制到 dockerDir（幂等）。
  * 供 ensurePackDocker（打包机自举）与 step5DockerBinaries（打包）复用。
  * @param {string} dockerDir 目标目录
@@ -819,19 +914,9 @@ async function downloadDockerStatic(dockerDir) {
   }
   fs.chmodSync(composeBin, 0o755);
 
-  // rootless-ns（rootless 自举 / 目标机 rootless 部署依赖；仓库内已编译的静态二进制，
-  // 静态 docker tgz 不含它）。缺失时告警（root/sudo 打包机自举不受影响，但包将缺 rootless 能力）。
-  const nsDest = path.join(dockerDir, 'rootless-ns');
-  const nsSrc = path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'lib', 'rootless', 'rootless-ns');
-  if (!fs.existsSync(nsDest)) {
-    if (fs.existsSync(nsSrc)) {
-      fs.copyFileSync(nsSrc, nsDest);
-      fs.chmodSync(nsDest, 0o755);
-      log('rootless-ns 就位（仓库内静态二进制）');
-    } else {
-      log(`[警告] 仓库内 rootless-ns 缺失（${nsSrc}）——包将不含 rootless 自举能力`);
-    }
-  }
+  // rootless-ns（rootless 自举 / 目标机 rootless 部署依赖；静态 docker tgz 不含它）
+  await ensureRootlessNs(dockerDir);
+
   return binaries;
 }
 
@@ -845,9 +930,11 @@ async function step5DockerBinaries(dockerDir) {
   // 复用打包机自举已就位的静态二进制（免重复联网下载 ~70MB tgz）。
   // 判定按「本地是否齐全」而非「自举模式」：ensurePackDocker 把静态 docker 放进 PACK_DOCKER_DIR
   // 后常以 'system' 模式复用（docker 已在 PATH 且可用），旧判定 `mode !== 'system'` 会漏掉这种
-  // 情况 → 误走联网下载，慢/断网时卡死（2026-10 断网验证暴露）。10 个二进制本地齐全即直接复用，
+  // 情况 → 误走联网下载，慢/断网时卡死（2026-10 断网验证暴露）。9 个二进制本地齐全即直接复用，
   // 不齐才回退联网下载（downloadDockerStatic 幂等补齐）。
-  const localBins = ['docker', 'dockerd', 'containerd', 'containerd-shim', 'containerd-shim-runc-v2', 'runc', 'docker-init', 'docker-proxy', 'docker-compose', 'rootless-ns'];
+  // rootless-ns 不在此列：它可能因架构不符需重建（ensureRootlessNs 兜底编译），
+  // 让它在门里会因「缺一份 rootless-ns」白白重下 ~70MB tgz。
+  const localBins = ['docker', 'dockerd', 'containerd', 'containerd-shim', 'containerd-shim-runc-v2', 'runc', 'docker-init', 'docker-proxy', 'docker-compose'];
   if (localBins.every((b) => fs.existsSync(path.join(PACK_DOCKER_DIR, b)))) {
     for (const bin of localBins) {
       fs.copyFileSync(path.join(PACK_DOCKER_DIR, bin), path.join(dockerDir, bin));
@@ -857,6 +944,8 @@ async function step5DockerBinaries(dockerDir) {
   } else {
     await downloadDockerStatic(dockerDir);
   }
+  // rootless-ns（唯一出口 ensureRootlessNs：架构校验 + 本机编译兜底，幂等）
+  await ensureRootlessNs(dockerDir);
   // slirp4netns 静态二进制（rootless 完整网络兜底；best-effort——失败不阻塞出包，
   // 目标机 rootless 模式将降级 plain-netns，或装系统 slirp4netns 后重跑 start.sh）
   await ensureSlirp4netns(dockerDir);
@@ -1210,4 +1299,4 @@ if (require.main === module) {
   main().catch((err) => fail(err.stack || err.message));
 }
 
-module.exports = { generateDockerEnvExample, DOCKER_PATH_OVERRIDES };
+module.exports = { generateDockerEnvExample, DOCKER_PATH_OVERRIDES, ensureRootlessNs, elfArch };
