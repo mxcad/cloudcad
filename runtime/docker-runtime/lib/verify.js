@@ -140,12 +140,14 @@ async function verifyDeployment(ctx) {
     });
   }
 
-  // 7. 后端 ready（含 DB up）
+  // 7. 后端 ready（含 DB up）——用 /api/health/public（db+storage 均健康→200，任一不可用→503）。
+  //    后端无 /api/health/ready 端点（health.controller 只有 live/public/full/db/storage），
+  //    与外层 verify-linux-docker-deploy.js 的「后端 ready」探针同口径（曾误用 /ready 恒 404 判失败）。
   {
     const port = env.PORT || '3001';
-    const code = await httpGet(`http://127.0.0.1:${port}/api/health/ready`);
+    const code = await httpGet(`http://127.0.0.1:${port}/api/health/public`);
     items.push({
-      name: `后端就绪（/api/health/ready，含数据库连通）`,
+      name: `后端就绪（/api/health/public，含数据库连通）`,
       ok: code === 200,
       hint: code === 200 ? undefined : '数据库连通或迁移未完成：docker logs cloudcad-app --tail 40',
     });
