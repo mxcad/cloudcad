@@ -6,6 +6,8 @@
  * 2. findMissingWindowsComponents：全缺失返回 5 项、齐全返回空
  * 3. findMissingLinuxComponents：按清单判定缺失（存在的放过、缺失的列出）
  * 4. checkScriptLineEndings：bat 独立 LF / sh 含 CR / 干净无 BOM / BOM / 子目录递归 / 目录不存在跳过
+ * 4b. fixScriptLineEndings：sh 剥 CR / bat 补 CR / 已是规范形态无 output / 混合行尾只补独立 LF
+ *     / BOM 无 output（不可自动修）/ GBK 字节逐字节保留（不解析编码）
  * 5. removeJunkWithSudoFallback：删除成功回调 + 空列表无操作 + win32 被占用目录失败分支
  *    （sudo 分支需 root、非 sudo 失败分支 linux 下无法确定性触发，均不在此测）
  * 6. enableImplInEnvExample：裸设置行 # IMPL= → IMPL=1；文档/示例注释行不动；已激活幂等
@@ -22,6 +24,7 @@ const {
   findMissingWindowsComponents,
   findMissingLinuxComponents,
   checkScriptLineEndings,
+  fixScriptLineEndings,
   removeJunkWithSudoFallback,
   resolveMobileAccessPath,
   findMissingKeyArtifacts,
@@ -180,6 +183,69 @@ describe('pack-assertions', () => {
 
     it('目录不存在 → 跳过（不抛错、无 problem）', () => {
       expect(checkScriptLineEndings([path.join(tmp, 'nope')], tmp)).toHaveLength(0);
+    });
+  });
+
+  describe('fixScriptLineEndings', () => {
+    it('sh 含 CR → kind=sh，剥掉 CR 得纯 LF，内容不动', () => {
+      const r = fixScriptLineEndings(Buffer.from('echo hi\r\necho yo\r\n'), 'a.sh');
+      expect(r.kind).toBe('sh');
+      expect(Buffer.from(r.output).toString('utf8')).toBe('echo hi\necho yo\n');
+    });
+
+    it('sh 已是纯 LF → kind=ok，无 output', () => {
+      const r = fixScriptLineEndings(Buffer.from('echo hi\n'), 'a.sh');
+      expect(r.kind).toBe('ok');
+      expect(r.output).toBeUndefined();
+    });
+
+    it('bat 含独立 LF → kind=bat，补成 CRLF，内容不动', () => {
+      const r = fixScriptLineEndings(Buffer.from('echo hi\necho yo\n'), 'a.bat');
+      expect(r.kind).toBe('bat');
+      expect(Buffer.from(r.output).toString('utf8')).toBe('echo hi\r\necho yo\r\n');
+    });
+
+    it('bat 已是 CRLF → kind=ok，无 output', () => {
+      const r = fixScriptLineEndings(Buffer.from('echo hi\r\n'), 'a.bat');
+      expect(r.kind).toBe('ok');
+      expect(r.output).toBeUndefined();
+    });
+
+    it('bat 混合（CRLF + 独立 LF）→ 只给独立 LF 补 CR，原有 CRLF 不重复补', () => {
+      const input = Buffer.from('echo hi\r\necho bad\n');
+      const r = fixScriptLineEndings(input, 'a.bat');
+      const out = Buffer.from(r.output);
+      expect(r.kind).toBe('bat');
+      // 只增加 1 个 CR 字节：原 12 字节 → 13 字节
+      expect(out.length).toBe(input.length + 1);
+      expect(out.toString('utf8')).toBe('echo hi\r\necho bad\r\n');
+    });
+
+    it('cmd 扩展名同 bat 规则', () => {
+      const r = fixScriptLineEndings(Buffer.from('echo hi\n'), 'a.cmd');
+      expect(r.kind).toBe('bat');
+    });
+
+    it('含 BOM → kind=bom，无 output（BOM 不可自动修）', () => {
+      const buf = Buffer.concat([
+        Buffer.from([0xef, 0xbb, 0xbf]),
+        Buffer.from('echo hi\n', 'utf8'),
+      ]);
+      const r = fixScriptLineEndings(buf, 'a.bat');
+      expect(r.kind).toBe('bom');
+      expect(r.output).toBeUndefined();
+    });
+
+    it('.bat 的 GBK 字节逐字节保留（不解析编码）', () => {
+      // 「你好」的 GBK 编码 0xC4E3 0xBAC3，作为 UTF-8 是非法字节
+      const gbk = Buffer.from([0x63, 0x68, 0x6f, 0x20, 0xc4, 0xe3, 0xba, 0xc3, 0x0d, 0x0a]);
+      const r = fixScriptLineEndings(gbk, 'a.bat');
+      expect(r.kind).toBe('ok');
+      // 再测一个需转换的混合：GBK 字节 + 独立 LF
+      const mixed = Buffer.from([0xc4, 0xe3, 0xba, 0xc3, 0x0a]);
+      const r2 = fixScriptLineEndings(mixed, 'a.bat');
+      expect(r2.kind).toBe('bat');
+      expect(Buffer.from(r2.output)).toEqual(Buffer.from([0xc4, 0xe3, 0xba, 0xc3, 0x0d, 0x0a]));
     });
   });
 
