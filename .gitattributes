@@ -8,3 +8,6 @@
 *.cmd text eol=crlf
 # sh：bash 要求纯 LF（CRLF 导致 bad interpreter / 命令尾随 \r 报错）
 *.sh text eol=lf
+# systemd unit：Linux systemd 约定 LF（runtime/scripts/monitoring/systemd/*.service 随包分发，
+# 2026-10-15 发现这些文件 .gitattributes 无规则、工作区被写成 CRLF 且 git 显示「未改动」）
+*.service text eol=lf

@@ -140,6 +140,57 @@ function checkScriptLineEndings(targetDirs, projectRoot) {
 }
 
 /**
+ * 脚本行尾归一化的纯变换（无副作用，不写盘）。
+ *
+ * 与 checkScriptLineEndings 的判定规则一一对应，但产出的是「该文件应写回的字节」，
+ * 供打包编排器对【暂存副本】自动归一化。行尾转换只增删行尾字节、不动内容，无损且
+ * 无歧义，故不该因此中断整个出包流程（此前的硬失败设计会让一次 CRLF 作废掉前面
+ * 已完成的 Prisma/前端构建与 store 准备）。
+ *
+ * 全程按字节操作、不解析编码：.bat 的 GBK 中文一字不动（2026-09-29 事故已确立
+ * CRLF+GBK 为唯一实证正确的形态，UTF-8+chcp 65001 实测同样不可靠）。
+ *
+ * kind：
+ *   'ok'   已规范，无 output
+ *   'sh'   .sh 含 CR → output 为剥掉 CR 后的纯 LF 版（bash 要求纯 LF）
+ *   'bat'  .bat/.cmd 含独立 LF → output 为补成 CRLF 的版本（cmd.exe 要求 CRLF）
+ *   'bom'  含 BOM，无 output——BOM 是编码语义问题而非行尾字节，删它会改坏
+ *          CP936 中文的 .bat，不能自动修，由调用方中止出包
+ *
+ * @param {Buffer} buf  文件原始字节
+ * @param {string} name 文件名（决定走 .sh 还是 .bat/.cmd 规则）
+ * @returns {{kind: 'ok'|'sh'|'bat'|'bom', output?: Buffer}}
+ */
+function fixScriptLineEndings(buf, name) {
+  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+    return { kind: 'bom' };
+  }
+  if (!/\.(bat|cmd)$/i.test(name)) {
+    // .sh：bash 要求纯 LF，剥掉所有 CR
+    if (buf.indexOf(0x0d) === -1) return { kind: 'ok' };
+    const out = Buffer.allocUnsafe(buf.length);
+    let n = 0;
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] !== 0x0d) out[n++] = buf[i];
+    }
+    return { kind: 'sh', output: out.subarray(0, n) };
+  }
+  // .bat/.cmd：cmd.exe 要求 CRLF，给每个独立 LF 前补 CR
+  let loneLf = 0;
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] === 0x0a && (i === 0 || buf[i - 1] !== 0x0d)) loneLf++;
+  }
+  if (loneLf === 0) return { kind: 'ok' };
+  const out = Buffer.allocUnsafe(buf.length + loneLf);
+  let n = 0;
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] === 0x0a && (i === 0 || buf[i - 1] !== 0x0d)) out[n++] = 0x0d;
+    out[n++] = buf[i];
+  }
+  return { kind: 'bat', output: out.subarray(0, n) };
+}
+
+/**
  * 共享删除策略：逐项 rmSync，EACCES/EPERM（非 win32）时 sudo rm 重试，
  * usedSudo 时对 chownTargets 做 sudo chown -R 归位属主。
  *
@@ -262,6 +313,7 @@ module.exports = {
   findMissingWindowsComponents,
   findMissingLinuxComponents,
   checkScriptLineEndings,
+  fixScriptLineEndings,
   removeJunkWithSudoFallback,
   resolveMobileAccessPath,
   findMissingKeyArtifacts,

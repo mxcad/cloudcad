@@ -33,6 +33,8 @@ const zlib = require('zlib');
 const {
   getDeployIncludeList: getDeployIncludeListFromManifest,
   getUpgradeIncludeList: getUpgradeIncludeListFromManifest,
+  getLaunchScriptEntries,
+  getRuntimeScriptEntries,
 } = require('./pack-lib/manifest');
 
 // 打包排除规则（类 .gitignore 但极简：配置见 scripts/pack-lib/packignore.json）
@@ -58,6 +60,7 @@ const {
   findMissingWindowsComponents,
   findMissingLinuxComponents,
   checkScriptLineEndings,
+  fixScriptLineEndings,
   removeJunkWithSudoFallback,
   resolveMobileAccessPath,
   findMissingKeyArtifacts,
@@ -1294,6 +1297,10 @@ function writeDeployMeta(tempDir) {
  * 下载源失效且错误被静默吞掉，导致线上 Windows 离线包缺 pg/redis、目标机启动失败。
  * 此处在打压缩包前按关键可执行文件逐项断言（路径与 runtime/scripts 的
  * pg-manager.js / redis-manager.js、lib/proc.js 的 PM2_JS 引用保持一致）。
+ *
+ * 调用方（pack 流程 Windows 段）会先自动恢复：缺件时自动跑 ensure-runtime.js
+ * （产品二进制含 postgresql 从 mxcad-stable Release 下载、node/redis 从官方源下载）
+ * + reinstall-node-tools.js（重建 pm2），本断言是恢复后的最终门禁。
  */
 function assertWindowsRuntimeComponents() {
   const missing = findMissingWindowsComponents(
@@ -1301,12 +1308,13 @@ function assertWindowsRuntimeComponents() {
   );
   if (missing.length > 0) {
     error(`Windows 标准运行时组件缺失，中止打包:\n  ${missing.join('\n  ')}`);
-    error('修复方式:');
-    error('  - node/pm2/redis: node scripts/build-windows-runtime.js --force');
-    error('    （node_modules 里的 pm2 由 reinstall-node-tools.js 重建）');
-    error('  - postgresql: 本地 PG binaries zip（顶层含 pgsql/ 目录）放入');
-    error('    mxcad-dist/windows-x64/postgresql.zip 后运行 node scripts/upload-mxcad.js，');
-    error('    再由 release.yml「下载产品二进制」步骤解压到 runtime/windows/postgresql');
+    error('修复方式（默认全部自动下载/自动重建，以下手动方式仅在自动恢复失败时用）:');
+    error('  - node/redis: 自动从官方源下载；仍缺失则手动: node scripts/build-windows-runtime.js --force');
+    error('  - postgresql: 自动从 mxcad-stable Release 下载（产品二进制通道，');
+    error('    见 scripts/pack-lib/mxcad-registry.json）；仍缺失则运行: node scripts/ensure-runtime.js');
+    error('    （仅当需要发布新 PG 版本: 本地 PG binaries zip（顶层含 pgsql/ 目录）放入');
+    error('     mxcad-dist/windows-x64/postgresql.zip 后运行 node scripts/upload-mxcad.js 上传新资产）');
+    error('  - pm2: 打包时由 reinstall-node-tools.js 自动重建；若用 SKIP_NODE_TOOLS_REBUILD=1 跳过则手动: node scripts/reinstall-node-tools.js');
     process.exit(1);
   }
   log('Windows 标准运行时组件校验通过（node / pm2 / postgresql / redis）');
@@ -1585,6 +1593,15 @@ function cleanPrismaEnginesForPlatform(platform) {
  * 行尾差异在 git diff 中不可见（autocrlf 归一化），提交管道无门禁，
  * 故在打包前对随包的一方脚本逐字节断言，防坏脚本静默出包。
  * 检出侧由 .gitattributes（bat/cmd eol=crlf、sh eol=lf）保证，本门禁是打包侧。
+ *
+ * 处置分级：
+ *   - 行尾不对（.sh 含 CR / .bat/.cmd 含独立 LF）→ 只告警，不中止。转换只增删
+ *     行尾字节、无损无歧义，由 normalizeStagingScripts 对【暂存副本】自动归一化。
+ *     此前一律硬失败：一次 CRLF 就作废掉前面已完成的 Prisma/前端构建与 store
+ *     准备，而根因是 git 看不见的字节——git status 显示文件「未改动」、git
+ *     restore 也不生效，中止对修复毫无帮助。
+ *   - 含 BOM → 仍硬失败。BOM 是编码语义问题而非行尾字节，删它会改坏 CP936
+ *     中文的 .bat，不能自动修。
  */
 function assertScriptLineEndings() {
   const targets = [
@@ -1594,14 +1611,63 @@ function assertScriptLineEndings() {
     path.join(PROJECT_ROOT, 'runtime', 'scripts'),
   ];
   const problems = checkScriptLineEndings(targets, PROJECT_ROOT);
-  if (problems.length > 0) {
-    error(`脚本行尾校验失败，中止打包:\n  ${problems.join('\n  ')}`);
-    error('修复方式:');
-    error('  - 按 .gitattributes 重新检出归一化（bat/cmd eol=crlf、sh eol=lf）');
-    error('  - 或手工转换行尾（bat/cmd → CRLF、sh → LF），均不得加 BOM');
+  const bom = problems.filter((p) => p.includes('BOM'));
+  if (bom.length > 0) {
+    error(`脚本含 BOM，中止打包:\n  ${bom.join('\n  ')}`);
+    error('修复方式: 移除文件头 3 字节 BOM（0xEF 0xBB 0xBF），改用不带 BOM 的编码保存');
     process.exit(1);
   }
-  log('脚本行尾校验通过（bat/cmd=CRLF、sh=LF、无 BOM）');
+  const eol = problems.filter((p) => !p.includes('BOM'));
+  if (eol.length === 0) {
+    log('脚本行尾校验通过（bat/cmd=CRLF、sh=LF、无 BOM）');
+    return;
+  }
+  log(`警告: 源码树 ${eol.length} 个脚本行尾不规范，将自动归一化暂存副本（不中止打包）:`);
+  for (const p of eol) log(`  - ${p}`);
+  log('  这类差异在 git diff 中不可见（autocrlf 归一化），git status 会显示文件「未改动」，');
+  log('  故 git restore / 重新检出不会修复；若不希望每次打包都归一化，请在磁盘上直接改写');
+  log('  行尾（bat/cmd → CRLF、sh → LF）后提交。');
+}
+
+/**
+ * 对【暂存副本】归一化随包脚本行尾（.sh → 纯 LF、.bat/.cmd → CRLF）。
+ *
+ * 只写 tempDir 内的副本，源码树一字不动——直接改工作区会与 git 索引形成
+ * 「git 认为未改动」的隐形分叉，且打包产物与仓库内容不一致反而更难排查。
+ * 纯变换在 pack-assertions.fixScriptLineEndings（字节级、不解码，GBK 中文不动）。
+ *
+ * @param {string} tempDir      暂存目录
+ * @param {string[]} scriptDests 相对 tempDir 的脚本路径（目录递归、文件单列）
+ */
+function normalizeStagingScripts(tempDir, scriptDests) {
+  const files = [];
+  for (const rel of scriptDests) {
+    const p = path.join(tempDir, rel);
+    if (!fs.existsSync(p)) continue;
+    if (fs.statSync(p).isDirectory()) {
+      const walk = (d) => {
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+          const q = path.join(d, e.name);
+          if (e.isDirectory()) walk(q);
+          else if (/\.(bat|cmd|sh)$/i.test(e.name)) files.push(q);
+        }
+      };
+      walk(p);
+    } else if (/\.(bat|cmd|sh)$/i.test(path.basename(p))) {
+      files.push(p);
+    }
+  }
+  let fixed = 0;
+  for (const f of files) {
+    const r = fixScriptLineEndings(fs.readFileSync(f), path.basename(f));
+    if (!r.output) continue; // 已规范；BOM 已被 assertScriptLineEndings 中止
+    fs.writeFileSync(f, r.output);
+    fixed++;
+    log(
+      `  归一化行尾 ${path.relative(PROJECT_ROOT, f)}（${r.kind === 'sh' ? 'sh → LF' : 'bat/cmd → CRLF'}）`
+    );
+  }
+  log(fixed > 0 ? `✓ 暂存副本已归一化 ${fixed} 个脚本行尾` : '✓ 暂存副本脚本行尾均已规范');
 }
 
 /**
@@ -1679,6 +1745,13 @@ function prepareDeployDir(platform, variant = 'oss') {
       log(`复制 ${item.src}`);
     }
   }
+
+  // 暂存副本脚本行尾归一化（.sh → LF、.bat/.cmd → CRLF）：源码树行尾脏也不中断出包
+  normalizeStagingScripts(tempDir, [
+    'runtime/scripts',
+    ...getLaunchScriptEntries(platform),
+    ...getRuntimeScriptEntries(platform),
+  ].map((e) => e.dest || e));
 
   // 复制移动端前端构建产物到前端 dist 子目录下
   mergeMobileDist(tempDir);
@@ -1818,23 +1891,40 @@ async function packDeploy(platform, variant = 'oss') {
     cleanPrismaEnginesForPlatform('linux');
   }
 
-  // 检查 Windows 标准运行时组件（node/postgresql/redis 关键可执行文件）
+  // 检查 Windows 标准运行时组件（node/pm2/postgresql/redis 关键可执行文件）
   if (platform === 'win' || platform === 'all') {
-    assertWindowsRuntimeComponents();
-    // 同理：windows 包清掉跨平台累积的 linux 引擎残留
-    cleanPrismaEnginesForPlatform('win');
-  }
-
-  // 原生打包机路径：确保根依赖完整（tsc/vite/prisma 等 dev deps）；
-  // Windows 打包机额外先重建运行时 node 工具依赖（产物进 runtime/windows/node）。
-  // 容器内依赖由 Dockerfile `pnpm install --store-dir .pnpm-store-deploy` 在构建阶段
-  // 装好，不在此处重装（重装会破坏容器环境）。
-  if (!IN_CONTAINER) {
-    // 运行时 node 工具（pnpm/pm2）依赖：仅 Windows 打包机（产物进 runtime/windows/node，
-    // Linux 包不含该目录）。以 package.json + package-lock.json 为唯一事实源重建，
-    // 确保打进部署包的 node 运行时干净、版本对齐（不被 IDE 缓存或漂移版本污染）。
-    // 需联网 npm ci（实测约 30s）。无网打包机可用环境变量 SKIP_NODE_TOOLS_REBUILD=1 跳过。
-    if (os.platform() === 'win32') {
+    // Windows 打包机：先自动恢复 + 重建运行时 node 工具，再做断言。
+    // 顺序约束：pm2 是 reinstall-node-tools.js 的产物，断言必须在重建之后——
+    // 此前断言在前，全新机器 pm2 恒缺失而必中止，报错文案还让用户手动下载 PG zip
+    // 上传 Release（实际 postgresql 由 ensure-runtime.js 从 mxcad-stable Release 自动下载）。
+    // 容器通道不触发：Linux 容器通道不使用 runtime/windows。
+    if (!IN_CONTAINER && os.platform() === 'win32') {
+      const missing = findMissingWindowsComponents(
+        path.join(PROJECT_ROOT, 'runtime', 'windows')
+      );
+      // pm2 是下方重建的产物，不算「需下载」触发项
+      const downloadMissing = missing.filter(
+        (m) => !m.includes('node_modules/pm2')
+      );
+      if (downloadMissing.length > 0) {
+        log(`Windows 标准运行时组件缺失（${downloadMissing.join(', ')}），自动从 Release / 官方源下载...`);
+        // 产品二进制（mxcad/mxversion/postgresql）从 mxcad-stable Release 自动下载，
+        // node/redis 从官方源下载解压（ensure-runtime.js 幂等，已就绪则跳过）
+        const ensureScript = path.join(PROJECT_ROOT, 'scripts', 'ensure-runtime.js');
+        const r = spawnSync(process.execPath, [ensureScript], {
+          cwd: PROJECT_ROOT,
+          stdio: 'inherit',
+        });
+        if (r.error) {
+          error(`自动下载启动失败: ${r.error.message}`);
+        } else if (r.status !== 0) {
+          error(`自动下载未全部成功（exit ${r.status}），继续由下方断言判定最终状态。`);
+        }
+      }
+      // 运行时 node 工具（pnpm/pm2）依赖：仅 Windows 打包机（产物进 runtime/windows/node，
+      // Linux 包不含该目录）。以 package.json + package-lock.json 为唯一事实源重建，
+      // 确保打进部署包的 node 运行时干净、版本对齐（不被 IDE 缓存或漂移版本污染）。
+      // 需联网 npm ci（实测约 30s）。无网打包机可用环境变量 SKIP_NODE_TOOLS_REBUILD=1 跳过。
       log('[0/3] 重建运行时 node 工具依赖（pnpm/pm2）...');
       const rebuildNodeTools = path.join(
         PROJECT_ROOT,
@@ -1857,7 +1947,15 @@ async function packDeploy(platform, variant = 'oss') {
         }
       }
     }
+    assertWindowsRuntimeComponents();
+    // 同理：windows 包清掉跨平台累积的 linux 引擎残留
+    cleanPrismaEnginesForPlatform('win');
+  }
 
+  // 原生打包机路径：确保根依赖完整（tsc/vite/prisma 等 dev deps）。
+  // 容器内依赖由 Dockerfile `pnpm install --store-dir .pnpm-store-deploy` 在构建阶段
+  // 装好，不在此处重装（重装会破坏容器环境）。
+  if (!IN_CONTAINER) {
     log('[0/3] 确保根依赖完整（pnpm install）...');
     // oss：--frozen-lockfile。裸 `pnpm install` 在 lockfile 与 package.json 不一致时会
     // 静默改写 pnpm-lock.yaml，让"打包"变成"改依赖"的入口；frozen 改为失败即报错，
@@ -2082,6 +2180,9 @@ async function packUpgrade(platform, variant = 'oss') {
         log(`复制 ${item.src}`);
       }
     }
+
+    // 暂存副本脚本行尾归一化（与部署包一致；升级包不含入口脚本模板，只归一 runtime/scripts）
+    normalizeStagingScripts(tempDir, ['runtime/scripts']);
 
     // 复制移动端前端构建产物到前端 dist 子目录下（与部署包一致）
     mergeMobileDist(tempDir);
