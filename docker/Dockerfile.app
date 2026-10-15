@@ -174,17 +174,19 @@ COPY packages/db/prisma.config.ts ./packages/db/
 COPY packages/backend/prisma ./packages/backend/prisma
 COPY packages/backend/prisma.config.ts ./packages/backend/
 
-# 生产依赖（backend 运行时依赖闭包；不跑 3100 故不含 conversion-service——转换服务是宿主进程）
-RUN pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --ignore-scripts
-
-RUN pnpm --filter backend exec prisma generate
-
-RUN pnpm --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod || \
-    pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod
-
-# 重新安装 prisma 和 tsx（migrate deploy 需要；tsx 加载 prisma.config.ts）
-# 必须钉死精确版本：实时解析 registry 会随时间漂移，导致同一 tag 的镜像不可复现（同旧镜像口径）
-RUN pnpm --filter backend add prisma@7.8.0 tsx@4.22.4 --ignore-scripts
+# 生产依赖（backend 运行时依赖闭包；不跑 3100 故不含 conversion-service——转换服务是宿主进程）。
+# install / prisma generate / prod 裁剪 / 补装 prisma+tsx 全部合并进同一层，末尾同层删除
+# pnpm 缓存与 store：Docker 分层下「跨层 rm」只加 whiteout、不减体积（被删文件仍占下层空间），
+# 必须与创建缓存的 install 同层才能真瘦身（省 /root/.cache ~370M + store 独享部分）。运行时只跑
+# node dist/main.js，不读 /root/.cache、/root/.local；node_modules 与 store 硬链接，删 store 后数据
+# 不丢。对下次构建零影响：production 全新 FROM node:alpine，缓存本就不跨构建复用。
+# 补装的 prisma/tsx 必须钉死精确版本：实时解析 registry 会随时间漂移，导致同一 tag 镜像不可复现。
+RUN pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --ignore-scripts \
+    && pnpm --filter backend exec prisma generate \
+    && (pnpm --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod \
+        || pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod) \
+    && pnpm --filter backend add prisma@7.8.0 tsx@4.22.4 --ignore-scripts \
+    && rm -rf /root/.cache /root/.local
 
 COPY packages/mxVersionTool ./packages/mxVersionTool
 
