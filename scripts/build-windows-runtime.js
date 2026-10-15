@@ -6,10 +6,12 @@
  *   - redis       tporadowski/redis 官方 Release（microsoftarchive 已停更且无 5.x tag）
  *
  * 注意：postgresql 不在本脚本职责内——EDB 官方直链已封禁（HTTP 403），
- * PostgreSQL 二进制改走与 mxcad/mxversion 相同的产品二进制通道：
+ * PostgreSQL 二进制走与 mxcad/mxversion 相同的产品二进制通道：资产已登记在
+ * scripts/pack-lib/mxcad-registry.json，打包机由 scripts/ensure-runtime.js 从
+ * mxcad-stable Release 自动下载解压到 runtime/windows/postgresql（无需手动下载；
+ * CI 的 release.yml「下载产品二进制」步骤同样自动下载）。仅当需要发布新 PG 版本：
  * 本地压缩包（zip 内顶层须为 pgsql/ 目录）放入 mxcad-dist/windows-x64/postgresql.zip，
- * 经 scripts/upload-mxcad.js 上传到 Release 并登记 scripts/pack-lib/mxcad-registry.json，
- * 由 release.yml 的「下载产品二进制」步骤解压到 runtime/windows/postgresql。
+ * 运行 scripts/upload-mxcad.js 上传到 Release 并更新 registry。
  *
  * 使用方式（仅在 Windows 环境 / GitHub windows runner）：
  *   node scripts/build-windows-runtime.js
@@ -172,11 +174,12 @@ async function main() {
       `Windows 标准组件不完整，缺少:\n  ${missing.join('\n  ')}\n` +
         `修复方式:\n` +
         `  - node/redis: node scripts/build-windows-runtime.js --force\n` +
-        `  - postgresql: 本地 PG binaries zip（顶层含 pgsql/）放入 mxcad-dist/windows-x64/postgresql.zip 后运行 scripts/upload-mxcad.js`
+        `  - postgresql: 由 ensure-runtime.js 从 mxcad-stable Release 自动下载，运行 node scripts/ensure-runtime.js\n` +
+        `    （仅当发布新 PG 版本: 本地 PG binaries zip（顶层含 pgsql/）放入 mxcad-dist/windows-x64/postgresql.zip 后运行 scripts/upload-mxcad.js）`
     );
   }
   log('全部标准组件构建完成（node / postgresql / redis 均已就绪）。');
-  log('注意: mxcad / mxversion 为产品二进制，需另行运行 scripts/upload-mxcad.js 上传后由 release.yml 下载合并。');
+  log('注意: mxcad / mxversion 为产品二进制，由 ensure-runtime.js / release.yml 自动下载；仅发布新版本时另行运行 scripts/upload-mxcad.js 上传。');
 }
 
 main().catch((e) => {
