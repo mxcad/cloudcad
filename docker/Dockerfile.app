@@ -44,6 +44,18 @@ RUN [ -z "$NPM_REGISTRY" ] || npm config set registry "$NPM_REGISTRY"
 
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
+# mxcad-app 的 postinstall 负责把 dist/ 下所有 .gz 解压成同名 .js（运行时入口
+# index.js 依赖 chunks/lib.js 等 .js 文件）。--ignore-scripts 会跳过它，导致镜像里
+# node_modules/mxcad-app/dist 只剩发布态 .gz、缺 .js → 前端 closeBundle 原样拷进
+# dist/mxcad-app/ → 浏览器加载 /mxcad-app/chunks/lib.js 命中 nginx try_files 的
+# =404（text/html）→ ES module 被 MIME 拦截 → CAD 编辑器与文件上传全部失败。
+# 故在 base 阶段显式补跑 mxcad-app 的 postinstall（纯本地解压、无网络/无平台二进制，
+# 安全），并断言关键产物 lib.js 已生成，缺失即构建失败（fail-fast，不打出残包）。
+RUN d=$(ls -d node_modules/.pnpm/mxcad-app@*/node_modules/mxcad-app 2>/dev/null | head -1); \
+    if [ -z "$d" ]; then echo "ERROR: 未在 pnpm store 找到 mxcad-app"; exit 1; fi; \
+    node "$d/postinstall.js"; \
+    if [ ! -f "$d/dist/chunks/lib.js" ]; then echo "ERROR: postinstall 未生成 dist/chunks/lib.js"; exit 1; fi
+
 # 复制 Prisma schema（单一源在 db 包，用于生成 Prisma Client）
 COPY packages/db/prisma ./packages/db/prisma
 COPY packages/db/prisma.config.ts ./packages/db/
