@@ -1,4 +1,4 @@
-# CloudCAD Docker 一键部署包 —— 容器编排（ADR-0074 半容器化）
+# MxCloudCAD Docker 一键部署包 —— 容器编排（ADR-0074 半容器化）
 #
 # 与旧 docker/docker-compose.yml（全容器化形态）的区别：
 #   - 全部 network_mode: host —— 无端口发布/映射，.env 端口直接生效，
