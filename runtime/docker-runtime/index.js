@@ -679,7 +679,13 @@ async function step10AppContainer() {
     });
     if (res && res.code === 200) {
       try {
-        if (JSON.parse(res.body).status === 'ok') {
+        const parsed = JSON.parse(res.body);
+        // 后端 ResponseInterceptor 将响应统一包装为 {code,message,data,timestamp}，
+        // 健康状态实际落在 data.status（liveness() 返回的 {status,...} 被包进 data）；
+        // 顶层 parsed.status 恒 undefined，旧判定据此恒判不到 ok → 空转满 25min 窗口后误报未就绪。
+        // 兼容未包装的裸 {status} 形态（parsed.status 兜底）。
+        const st = (parsed.data && parsed.data.status) || parsed.status;
+        if (st === 'ok') {
           log('后端服务已就绪（db + redis 均健康）');
           return;
         }

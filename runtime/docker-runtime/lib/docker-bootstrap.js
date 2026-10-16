@@ -25,7 +25,11 @@ const { execSync, spawnSync } = require('child_process');
  *   env 覆盖进程环境（rootless 时注入 DOCKER_HOST 指向影子 socket；默认 process.env）
  */
 function run(cmd, { sudo = '', timeoutMs = 60000, env = process.env } = {}) {
-  const full = sudo ? `${sudo} ${cmd}` : cmd;
+  // sudo 前缀只提升「首个命令」：对 `a && b; do ...; done` 这类复合链，
+  // 只有 a 以 root 执行、b 与循环体退回非 root 用户 → 写 /usr/local/bin 等系统目录 Permission denied。
+  // 故 sudo 时把整条命令包进 `sudo sh -c '<cmd>'`，让全链以 root 跑；
+  // 单引号按 '\'' 转义，防 cmd 内含单引号（如 --format '{{...}}'）破坏外层引号。
+  const full = sudo ? `${sudo} sh -c '${cmd.replace(/'/g, "'\\''")}'` : cmd;
   const res = spawnSync(full, {
     shell: true,
     encoding: 'utf8',
