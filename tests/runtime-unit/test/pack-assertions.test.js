@@ -13,6 +13,8 @@
  * 6. enableImplInEnvExample：裸设置行 # IMPL= → IMPL=1；文档/示例注释行不动；已激活幂等
  * 7. resolveMobileAccessPath：缺文件/字段非字符串/JSON 损坏均回落 mxcad_mobile
  * 8. findMissingKeyArtifacts：齐全/缺项/空目录/移动端合并目录/variant/private impl-mx
+ * 9. findHardcodedBackendBase：干净/命中 3001/命中 127.0.0.1/递归移动端子目录/
+ *    非 .js 不算/相近端口与 8000 不算/多文件全列/dist 缺失不抛错
  *
  * 这些纯函数从 pack-offline.js（2390 行编排器）抽出，此前唯一测试方式是打完整包。
  */
@@ -28,6 +30,7 @@ const {
   removeJunkWithSudoFallback,
   resolveMobileAccessPath,
   findMissingKeyArtifacts,
+  findHardcodedBackendBase,
   enableImplInEnvExample,
 } = require('../../../scripts/pack-lib/pack-assertions');
 const { WINDOWS_ASSET_REQUIRED_FILES } = require('../../../scripts/pack-lib/components');
@@ -452,6 +455,64 @@ describe('pack-assertions', () => {
     it('全部缺失 → 6 项（oss）/ 7 项（private）', () => {
       expect(findMissingKeyArtifacts(tmp, 'oss', 'mxcad_mobile')).toHaveLength(6);
       expect(findMissingKeyArtifacts(tmp, 'private', 'mxcad_mobile')).toHaveLength(7);
+    });
+  });
+
+  describe('findHardcodedBackendBase', () => {
+    // 写一个前端 dist 下的 js 产物
+    const writeAsset = (rel, content) => {
+      const p = path.join(tmp, 'packages', 'frontend', 'dist', rel);
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, content);
+    };
+
+    it('dist 目录不存在 → 空（不抛错）', () => {
+      expect(findHardcodedBackendBase(path.join(tmp, 'nope'))).toHaveLength(0);
+    });
+
+    it('dist 干净 → 空', () => {
+      writeAsset('assets/index-a.js', 'const x = "/api";');
+      writeAsset('assets/index-b.js', 'fetch(url)');
+      expect(findHardcodedBackendBase(tmp)).toHaveLength(0);
+    });
+
+    it('命中 http://localhost:3001 → 列出（正斜杠相对路径）', () => {
+      writeAsset('assets/index-a.js', 'a:"/api"', );
+      writeAsset('assets/index-b.js', 'globalThis.__X__?"http://localhost:3001/api":"x"');
+      expect(findHardcodedBackendBase(tmp)).toEqual(['packages/frontend/dist/assets/index-b.js']);
+    });
+
+    it('命中 http://127.0.0.1:3001 → 同样拦截', () => {
+      writeAsset('assets/index-a.js', '"http://127.0.0.1:3001/api"');
+      expect(findHardcodedBackendBase(tmp)).toHaveLength(1);
+    });
+
+    it('递归扫描移动端子目录（合并进 frontend/dist 的构建产物）', () => {
+      writeAsset('mxcad_mobile/assets/index-a.js', '"http://localhost:3001/api"');
+      expect(findHardcodedBackendBase(tmp)).toEqual([
+        'packages/frontend/dist/mxcad_mobile/assets/index-a.js',
+      ]);
+    });
+
+    it('非 .js 产物不算（index.html / css 里的字面量不拦截）', () => {
+      const html = path.join(tmp, 'packages', 'frontend', 'dist', 'index.html');
+      fs.mkdirSync(path.dirname(html), { recursive: true });
+      fs.writeFileSync(html, '<script src="http://localhost:3001/api">');
+      writeAsset('assets/app.css', 'url(http://localhost:3001/api)');
+      expect(findHardcodedBackendBase(tmp)).toHaveLength(0);
+    });
+
+    it('相近端口与前端端口不算（8000 / 3002 / 301 均放过）', () => {
+      writeAsset('assets/a.js', '"http://localhost:8000/api"');
+      writeAsset('assets/b.js', '"http://localhost:3002/api"');
+      writeAsset('assets/c.js', '"http://localhost:301/api"');
+      expect(findHardcodedBackendBase(tmp)).toHaveLength(0);
+    });
+
+    it('多个文件命中 → 全部列出', () => {
+      writeAsset('assets/a.js', '"http://localhost:3001/api"');
+      writeAsset('assets/b.js', '"http://localhost:3001/api"');
+      expect(findHardcodedBackendBase(tmp)).toHaveLength(2);
     });
   });
 });

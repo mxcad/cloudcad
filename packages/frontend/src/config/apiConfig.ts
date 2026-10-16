@@ -15,12 +15,6 @@
  * 统一管理 API 相关的配置和常量
  */
 
-// 扩展 globalThis 类型
-declare global {
-  // eslint-disable-next-line no-var
-  var __VITE_API_BASE_URL__: string | undefined;
-}
-
 /**
  * 获取 API 基础 URL
  * 优先使用环境变量，否则使用默认值
@@ -31,13 +25,12 @@ export const getApiBaseUrl = (): string => {
     return import.meta.env.VITE_API_BASE_URL;
   }
 
-  // 其次使用全局变量（兼容旧代码）
-  if (globalThis.__VITE_API_BASE_URL__) {
-    return globalThis.__VITE_API_BASE_URL__;
-  }
-
-  // 默认值
-  return 'http://localhost:3001/api';
+  // 默认值必须是同源相对路径：离线部署由 :8000 的静态服务代理 /api 到后端，
+  // 绝对 http://localhost:3001/api 会变成跨域直连、浏览器扣住 auth_token cookie，
+  // 协同接口恒 401。该默认值同时是「打包机上漏了 .env.local」时的兜底
+  // （.env.local 被 gitignore、不进部署包），与移动端 utils/apiConfig.ts 保持一致；
+  // 出包门禁见 pack-assertions.findHardcodedBackendBase。
+  return '/api';
 };
 
 /**

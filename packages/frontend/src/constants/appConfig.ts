@@ -388,9 +388,6 @@ export function getAppName(): string {
   return getAppBrandConfig().title;
 }
 
-/** API 基础路径 */
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-
 /**
  * 协同服务 URL
  * 通过后端 /api/cooperate 代理到协同服务，无需直接访问 3091 端口

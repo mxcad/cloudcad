@@ -64,6 +64,7 @@ const {
   removeJunkWithSudoFallback,
   resolveMobileAccessPath,
   findMissingKeyArtifacts,
+  findHardcodedBackendBase,
   enableImplInEnvExample,
 } = require('./pack-lib/pack-assertions');
 
@@ -1767,6 +1768,17 @@ function prepareDeployDir(platform, variant = 'oss') {
   }
   log('✓ 关键产物复查通过（backend/db/contracts/frontend/conversion-service dist + 移动端）');
 
+  // 前端 API base 烘焙复查：dist 里出现绝对 localhost:3001 即中止。
+  // 2026-10-16：兜底值曾是 http://localhost:3001/api，而 Vite 不读 .env.example、
+  // .env.local 又被 gitignore——打包机上有没有它决定烘焙结果，曾产出跨域丢
+  // auth_token cookie 的坏包（协同接口恒 401）。
+  const badBaseArtifacts = findHardcodedBackendBase(tempDir);
+  if (badBaseArtifacts.length > 0) {
+    error(`前端 dist 烘焙了硬编码后端地址，离线部署会跨域丢 cookie，中止: ${badBaseArtifacts.join(', ')}`);
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    process.exit(1);
+  }
+
   // private 变体：启用包内 .env.example 的 IMPL（目标机从模板生成 .env 时带上）
   enableImplInPackDir(tempDir, variant);
 
@@ -2199,6 +2211,13 @@ async function packUpgrade(platform, variant = 'oss') {
       process.exit(1);
     }
     log('✓ 关键产物复查通过（deploy/upgrade 共用清单）');
+
+    // 前端 API base 烘焙复查（与部署包一致）：dist 里出现绝对 localhost:3001 即中止
+    const badBaseArtifacts = findHardcodedBackendBase(tempDir);
+    if (badBaseArtifacts.length > 0) {
+      error(`前端 dist 烘焙了硬编码后端地址，离线部署会跨域丢 cookie，中止: ${badBaseArtifacts.join(', ')}`);
+      process.exit(1);
+    }
 
     // .npmrc（指向目标机已有的 .pnpm-store-deploy：升级包不带 store，
     // 目标机 install --offline 时复用首次部署包留下的 store 补装缺失依赖）

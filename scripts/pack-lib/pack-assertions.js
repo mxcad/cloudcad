@@ -292,6 +292,44 @@ function findMissingKeyArtifacts(tempDir, variant, mobileAccessPath) {
 }
 
 /**
+ * 扫描前端构建产物中被烘焙进 bundle 的硬编码后端地址（纯判定，无副作用）。
+ *
+ * 背景（2026-10-16）：前端 API base 的兜底值曾写成绝对 http://localhost:3001/api，
+ * 而 .env.local（VITE_API_BASE_URL=/api）是 gitignored 的本地文件、不进部署包。
+ * 打包机上有没有它直接决定 dist 烘焙哪个值——缺失时离线部署跨域丢失
+ * auth_token cookie，协同接口恒 401；release/ 下曾出现同日两个包一好一坏。
+ * 前端 dist 只允许出现同源相对 base，故出包前扫一遍烘焙结果。
+ *
+ * 递归扫前端 dist（含合并进来的移动端子目录）下所有 .js。
+ *
+ * @param {string} tempDir 打包暂存目录绝对路径
+ * @returns {string[]} 命中硬编码后端地址的产物（相对 tempDir，统一正斜杠）
+ */
+function findHardcodedBackendBase(tempDir) {
+  const distDir = path.join(tempDir, 'packages', 'frontend', 'dist');
+  if (!fs.existsSync(distDir)) return [];
+
+  const needles = ['http://localhost:3001', 'http://127.0.0.1:3001'];
+  const hits = [];
+
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.name.endsWith('.js')) {
+        const content = fs.readFileSync(full, 'utf8');
+        if (needles.some((needle) => content.includes(needle))) {
+          hits.push(path.relative(tempDir, full).split(path.sep).join('/'));
+        }
+      }
+    }
+  };
+  walk(distDir);
+  return hits;
+}
+
+/**
  * 启用私有 variant 包内 .env.example 的 IMPL（纯变换，无副作用）。
  *
  * 背景：包内 .env.example 的 IMPL 是注释态（# IMPL=），目标机 bootstrap 从模板
@@ -317,5 +355,6 @@ module.exports = {
   removeJunkWithSudoFallback,
   resolveMobileAccessPath,
   findMissingKeyArtifacts,
+  findHardcodedBackendBase,
   enableImplInEnvExample,
 };
