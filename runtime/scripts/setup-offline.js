@@ -29,6 +29,8 @@ const { buildDeployInstallFilters } = require('./lib/deploy-install-filter');
 // 密钥生成 / 空白密钥填充：单一事实源 lib/secret-generator.js（ADR-0074，
 // 与 setup-wizard.js 及 Docker 一键部署包共用；本文件不再持有副本）
 const { fillEmptySecrets: fillEmptySecretsCore } = require('./lib/secret-generator');
+// .env 模板创建：单一事实源 lib/env-files.js（pnpm install 的 postinstall 共用）
+const { createEnvFilesFromExamples } = require('./lib/env-files');
 
 // 项目根目录
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
@@ -754,81 +756,7 @@ function fillEmptySecrets(envFile) {
 
 function copyEnvExampleToEnv() {
   log('检查并创建 .env 配置文件...');
-
-  // 需要处理的配置列表
-  // target: 目标文件名，默认 .env（前端使用 .env.local）
-  const envConfigs = [
-    { dir: path.join(PROJECT_ROOT, 'packages', 'backend'), target: '.env' },
-    {
-      dir: path.join(PROJECT_ROOT, 'packages', 'frontend'),
-      target: '.env.local',
-    },
-    { dir: path.join(PROJECT_ROOT, 'docker'), target: '.env' },
-  ];
-
-  let copied = 0;
-  let skipped = 0;
-
-  let backendEnvCreated = false;
-
-  for (const config of envConfigs) {
-    const envExample = path.join(config.dir, '.env.example');
-    const envFile = path.join(config.dir, config.target);
-
-    // 检查 .env.example 是否存在
-    if (!fs.existsSync(envExample)) {
-      continue;
-    }
-
-    // 如果目标文件已存在，跳过
-    if (fs.existsSync(envFile)) {
-      skipped++;
-      continue;
-    }
-
-    // 拷贝 .env.example → 目标文件
-    try {
-      fs.copyFileSync(envExample, envFile);
-      log(`  ✓ 创建: ${path.relative(PROJECT_ROOT, envFile)}`);
-      if (config.target === '.env') {
-        backendEnvCreated = true;
-      }
-      copied++;
-    } catch (err) {
-      error(
-        `  ✗ 创建失败: ${path.relative(PROJECT_ROOT, envFile)} - ${err.message}`
-      );
-    }
-  }
-
-  if (copied > 0) {
-    log(`已创建 ${copied} 个 .env 配置文件`);
-  }
-  if (skipped > 0) {
-    log(`跳过 ${skipped} 个已存在的 .env 文件`);
-  }
-
-  // 无论 .env 是新创建还是已存在，都填补空白密钥
-  const backendEnv = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
-  if (fs.existsSync(backendEnv)) {
-    const label = backendEnvCreated ? '新创建' : '已有';
-    log(`填充 ${label} .env 文件中的空白密钥...`);
-    fillEmptySecrets(backendEnv);
-  }
-
-  // #424：生产 .env 含真密钥，权限收紧 600（仅属主可读写）
-  // Windows（NTFS 无 unix 权限位）下 chmod 为无操作，不报错
-  for (const config of envConfigs) {
-    const envFile = path.join(config.dir, config.target);
-    if (fs.existsSync(envFile)) {
-      try {
-        fs.chmodSync(envFile, 0o600);
-      } catch (_) {
-        // 权限设置失败不阻断部署（Windows 无权限概念/只读文件系统等）
-      }
-    }
-  }
-
+  createEnvFilesFromExamples(PROJECT_ROOT, { log, error });
   return true;
 }
 
