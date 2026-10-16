@@ -24,6 +24,7 @@
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -36,37 +37,28 @@ uid_t geteuid(void) { return FAKE_UID; }
 gid_t getgid(void) { return FAKE_GID; }
 gid_t getegid(void) { return FAKE_GID; }
 
-/* ---- stat 族拦截：把 st_uid/st_gid 改成 999，使数据目录属主检查通过 ----
- * 覆盖 stat/fstat/lstat/fstatat 四个入口：
- *   - postgres（musl）走 stat() 检查数据目录属主
- *   - 动态链接器 / coreutils 等可能走 fstatat()（glibc 下 stat() 常是 fstatat 的包装）
- *   - fstat() 用于已打开 fd 的属主查询
- * 全部覆盖以杜绝"某条路径漏拦导致 st_uid 仍为真实 uid"的边界情况。 */
+/* ---- stat 族拦截：仅对 postgres 数据目录路径伪装 st_uid/st_gid ----
+ * 只拦截路径含 "/var/lib/postgresql" 的 stat/lstat/fstatat 调用（postgres 的
+ * 数据目录属主检查走这条路径）。fstat()（按 fd）不拦截——postgres 的属主检查
+ * 用 stat(path) 而非 fstat(fd)，且 fstat 无法判断路径，全拦会干扰 entrypoint
+ * 的 mkdir 等命令（DinD 断网验证曾因此 Permission denied）。
+ * 这样既让 postgres 的 st_uid==getuid() 检查通过，又不影响其他文件的 stat 结果。 */
 typedef int (*stat_fn)(const char *, struct stat *);
-typedef int (*fstat_fn)(int, struct stat *);
 typedef int (*lstat_fn)(const char *, struct stat *);
 typedef int (*fstatat_fn)(int, const char *, struct stat *, int);
 
-static void fake_stat_uid_gid(struct stat *buf) {
-    if (buf) {
-        buf->st_uid = FAKE_UID;
-        buf->st_gid = FAKE_GID;
-    }
+static int is_pg_data_path(const char *path) {
+    return path && strstr(path, "/var/lib/postgresql") != NULL;
 }
 
 int stat(const char *path, struct stat *buf) {
     static stat_fn real = NULL;
     if (!real) real = (stat_fn)dlsym(RTLD_NEXT, "stat");
     int ret = real ? real(path, buf) : -1;
-    if (ret == 0) fake_stat_uid_gid(buf);
-    return ret;
-}
-
-int fstat(int fd, struct stat *buf) {
-    static fstat_fn real = NULL;
-    if (!real) real = (fstat_fn)dlsym(RTLD_NEXT, "fstat");
-    int ret = real ? real(fd, buf) : -1;
-    if (ret == 0) fake_stat_uid_gid(buf);
+    if (ret == 0 && buf && is_pg_data_path(path)) {
+        buf->st_uid = FAKE_UID;
+        buf->st_gid = FAKE_GID;
+    }
     return ret;
 }
 
@@ -74,7 +66,10 @@ int lstat(const char *path, struct stat *buf) {
     static lstat_fn real = NULL;
     if (!real) real = (lstat_fn)dlsym(RTLD_NEXT, "lstat");
     int ret = real ? real(path, buf) : -1;
-    if (ret == 0) fake_stat_uid_gid(buf);
+    if (ret == 0 && buf && is_pg_data_path(path)) {
+        buf->st_uid = FAKE_UID;
+        buf->st_gid = FAKE_GID;
+    }
     return ret;
 }
 
@@ -82,6 +77,9 @@ int fstatat(int dirfd, const char *pathname, struct stat *buf, int flags) {
     static fstatat_fn real = NULL;
     if (!real) real = (fstatat_fn)dlsym(RTLD_NEXT, "fstatat");
     int ret = real ? real(dirfd, pathname, buf, flags) : -1;
-    if (ret == 0) fake_stat_uid_gid(buf);
+    if (ret == 0 && buf && is_pg_data_path(pathname)) {
+        buf->st_uid = FAKE_UID;
+        buf->st_gid = FAKE_GID;
+    }
     return ret;
 }
