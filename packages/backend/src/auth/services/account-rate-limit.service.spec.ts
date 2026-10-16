@@ -25,7 +25,7 @@ describe('AccountRateLimitService', () => {
 
   /** 运行时配置键 → 默认值（与服务内 getValue 的 fallback 参数一致） */
   const runtimeDefaults: Record<string, number> = {
-    loginRateLimitMax: 5,
+    loginRateLimitMax: 30,
     loginRateLimitWindowSeconds: 60,
     passwordResetRateLimitMax: 5,
     passwordResetRateLimitWindowSeconds: 3600,
@@ -74,8 +74,8 @@ describe('AccountRateLimitService', () => {
       );
     });
 
-    it('超过阈值（第 6 次）时抛出 429', async () => {
-      mockRedis.incr.mockResolvedValue(6);
+    it('超过阈值（第 31 次）时抛出 429', async () => {
+      mockRedis.incr.mockResolvedValue(31);
 
       await expect(service.checkLimit('login', 'user@example.com')).rejects.toThrow(
         HttpException,
@@ -86,7 +86,7 @@ describe('AccountRateLimitService', () => {
     });
 
     it('未超过阈值时不抛异常', async () => {
-      mockRedis.incr.mockResolvedValue(5);
+      mockRedis.incr.mockResolvedValue(30);
 
       await expect(service.checkLimit('login', 'user@example.com')).resolves.toBeUndefined();
     });

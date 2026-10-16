@@ -61,7 +61,7 @@ pnpm install
 pnpm dev
 ```
 
-开发服务器运行在 `http://localhost:3000`，会自动代理 `/api` 请求到后端服务 (`http://localhost:3001`)。
+开发服务器运行在 `http://localhost:8000`，会自动代理 `/api` 请求到后端服务 (`http://localhost:3001`)。
 
 ### 环境变量
 
@@ -240,7 +240,7 @@ rm -rf node_modules
 pnpm install
 
 # 检查端口占用
-netstat -ano | findstr :3000
+netstat -ano | findstr :8000
 ```
 
 ### 构建失败

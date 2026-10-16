@@ -34,7 +34,7 @@ import { WechatService } from '../../src/auth/impl/services/wechat.service';
 
 const RUN = Date.now();
 const WECHAT_CALLBACK_URL =
-  'http://localhost:3000/api/v1/auth/wechat/callback';
+  'http://localhost:8000/api/v1/auth/wechat/callback';
 /** 非 qlogo.cn 域名头像 → syncWechatAvatar 立即降级跳过，保证离线安全 */
 const DEFAULT_AVATAR = 'https://example.com/avatar.png';
 /** 模拟微信返回无 openid 的 token 响应 */
@@ -78,7 +78,7 @@ function registerWechatUser(
 }
 
 /** 构造合法 state（base64(JSON)，含 64 位 csrf），与真实前端一致 */
-function makeState(origin = 'http://localhost:3000'): string {
+function makeState(origin = 'http://localhost:8000'): string {
   return Buffer.from(
     JSON.stringify({
       csrf: 'c'.repeat(64),
@@ -202,7 +202,7 @@ describe('WeChat Login Integration Tests', () => {
   }> {
     const res = await request(app.getHttpServer())
       .get('/auth/wechat/callback')
-      .query({ code, state: makeState('http://localhost:3000') })
+      .query({ code, state: makeState('http://localhost:8000') })
       .expect(302);
     const result = parseWechatHash(res.headers.location as string);
     expect(result.action).toBe('login');
@@ -240,7 +240,7 @@ describe('WeChat Login Integration Tests', () => {
     const res = await request(app.getHttpServer())
       .get('/v1/auth/wechat/login')
       .query({
-        origin: 'http://localhost:3000',
+        origin: 'http://localhost:8000',
         isPopup: 'false',
         client: 'web',
         purpose: 'login',
@@ -332,12 +332,12 @@ describe('WeChat Login Integration Tests', () => {
 
       const res = await request(app.getHttpServer())
         .get('/auth/wechat/callback')
-        .query({ code, state: makeState('http://localhost:3000') })
+        .query({ code, state: makeState('http://localhost:8000') })
         .expect(302);
 
       // 重定向回前端，hash 携带登录结果（action=login + 双 token）
       const location = res.headers.location as string;
-      expect(location.startsWith('http://localhost:3000/login#wechat_result=')).toBe(true);
+      expect(location.startsWith('http://localhost:8000/login#wechat_result=')).toBe(true);
       const result = parseWechatHash(location);
       expect(result.action).toBe('login');
       expect(result.accessToken).toBeTruthy();
@@ -432,7 +432,7 @@ describe('WeChat Login Integration Tests', () => {
       const bind = await request(app.getHttpServer())
         .post('/v1/auth/wechat/bind')
         .set('Authorization', `Bearer ${regToken}`)
-        .send({ code, state: makeState('http://localhost:3000') })
+        .send({ code, state: makeState('http://localhost:8000') })
         .expect(200);
       expect(bind.body.data.success).toBe(true);
 
@@ -518,7 +518,7 @@ describe('WeChat Login Integration Tests', () => {
       const bind = await request(app.getHttpServer())
         .post('/v1/auth/wechat/bind')
         .set('Authorization', `Bearer ${regToken}`)
-        .send({ code: CODE_NO_OPENID, state: makeState('http://localhost:3000') })
+        .send({ code: CODE_NO_OPENID, state: makeState('http://localhost:8000') })
         .expect(400);
       expect(bind.body.code).toBe('BAD_REQUEST');
       expect(bind.body.message).toContain('缺少 openid');
@@ -535,7 +535,7 @@ describe('WeChat Login Integration Tests', () => {
       const bindOk = await request(app.getHttpServer())
         .post('/v1/auth/wechat/bind')
         .set('Authorization', `Bearer ${regToken}`)
-        .send({ code: okCode, state: makeState('http://localhost:3000') })
+        .send({ code: okCode, state: makeState('http://localhost:8000') })
         .expect(200);
       expect(bindOk.body.data.success).toBe(true);
       expect((await getProfile(regToken)).body.data.id).toBe(userId);
@@ -639,11 +639,11 @@ describe('WeChat Login Integration Tests', () => {
     it('T5-S1: 无 code（非事务）→ 重定向登录页并携带错误', async () => {
       const res = await request(app.getHttpServer())
         .get('/auth/wechat/callback')
-        .query({ state: makeState('http://localhost:3000') })
+        .query({ state: makeState('http://localhost:8000') })
         .expect(302);
 
       const location = res.headers.location as string;
-      expect(location.startsWith('http://localhost:3000/login#wechat_result=')).toBe(true);
+      expect(location.startsWith('http://localhost:8000/login#wechat_result=')).toBe(true);
       const result = parseWechatHash(location);
       expect(result.action).toBe('error');
       expect(result.error).toContain('缺少 code');
@@ -675,12 +675,12 @@ describe('WeChat Login Integration Tests', () => {
       // 非事务模式：重定向登录页并携带错误（与无 code 分支一致）
       const res = await request(app.getHttpServer())
         .get('/auth/wechat/callback')
-        .query({ code: CODE_NO_OPENID, state: makeState('http://localhost:3000') })
+        .query({ code: CODE_NO_OPENID, state: makeState('http://localhost:8000') })
         .expect(302);
 
       // 回调以错误重定向收场（openid 缺失 → 回调层显式拒绝 400 语义），不再泄漏 Prisma 校验 500
       const location = res.headers.location as string;
-      expect(location.startsWith('http://localhost:3000/login#wechat_result=')).toBe(true);
+      expect(location.startsWith('http://localhost:8000/login#wechat_result=')).toBe(true);
       const result = parseWechatHash(location);
       expect(result.action).toBe('error');
       expect(result.error).toContain('缺少 openid');

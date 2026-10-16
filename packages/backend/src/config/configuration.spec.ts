@@ -90,4 +90,73 @@ describe('configuration', () => {
 				expect(configuration().upload.conversionMaxConcurrent).toBe(3);
 			});
 		});
+	describe('session cookie 段（占位符与死配置归一化，2026-10-15 部署包实跑定位）', () => {
+		// 历史缺陷：旧版 mergeExampleIntoEnv 把 .env.example 的 25 项「注释 + 示例值」
+		// 逐字激活写进 .env，其守卫只防注释态、不收敛已激活存量（生成端刻意保留「已激活的
+		// 同值项不得被反向注释」），故只能在这里归一化。三条配置各自让离线 http 部署的 cookie
+		// 被浏览器丢弃 -> 协同 401，且无浏览器报错、后端无错误日志。
+		const cookieVars = [
+			'SESSION_COOKIE_DOMAIN',
+			'SESSION_COOKIE_SAME_SITE',
+			'SESSION_COOKIE_SECURE',
+		];
+
+		beforeEach(() => {
+			process.env.NODE_ENV = 'development';
+			cookieVars.forEach((v) => delete process.env[v]);
+		});
+
+		describe('SESSION_COOKIE_DOMAIN：占位域名视同未配置', () => {
+			it('.yourdomain.com 归一化为 undefined（浏览器按请求 host 匹配）', () => {
+				process.env.SESSION_COOKIE_DOMAIN = '.yourdomain.com';
+				expect(configuration().session.cookieDomain).toBeUndefined();
+			});
+
+			it('真实生产域名保留', () => {
+				process.env.SESSION_COOKIE_DOMAIN = '.mxdraw3d.com';
+				expect(configuration().session.cookieDomain).toBe('.mxdraw3d.com');
+			});
+
+			it('未设置时默认 undefined', () => {
+				expect(configuration().session.cookieDomain).toBeUndefined();
+			});
+		});
+
+		describe('SESSION_COOKIE_SECURE：显式 true 视同 auto', () => {
+			it('true -> null（http 请求下强制 Secure 会让浏览器丢弃 cookie）', () => {
+				process.env.SESSION_COOKIE_SECURE = 'true';
+				expect(configuration().session.cookieSecure).toBeNull();
+			});
+
+			it('false -> false（显式关闭保留）', () => {
+				process.env.SESSION_COOKIE_SECURE = 'false';
+				expect(configuration().session.cookieSecure).toBe(false);
+			});
+
+			it('auto 与未设置 -> null（按请求协议自适应）', () => {
+				expect(configuration().session.cookieSecure).toBeNull();
+				process.env.SESSION_COOKIE_SECURE = 'auto';
+				expect(configuration().session.cookieSecure).toBeNull();
+			});
+		});
+
+		describe('SESSION_COOKIE_SAME_SITE：none 回落 lax', () => {
+			it('none -> lax（none 需与 Secure 成对，http 不带 Secure 故必然不生效）', () => {
+				process.env.SESSION_COOKIE_SAME_SITE = 'none';
+				expect(configuration().session.cookieSameSite).toBe('lax');
+			});
+
+			it('strict 保留', () => {
+				process.env.SESSION_COOKIE_SAME_SITE = 'strict';
+				expect(configuration().session.cookieSameSite).toBe('strict');
+			});
+
+			it('lax 与未设置 -> lax', () => {
+				expect(configuration().session.cookieSameSite).toBe('lax');
+				process.env.SESSION_COOKIE_SAME_SITE = 'lax';
+				expect(configuration().session.cookieSameSite).toBe('lax');
+			});
+		});
+
+	});
 	});

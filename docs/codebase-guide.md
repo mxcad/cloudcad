@@ -15,7 +15,7 @@ CloudCAD 是一个**基于 Web 的 CAD 协作平台**：浏览器内在线编辑
 ┌──────────────┐    ┌──────────────────┐    ┌──────────────┐
 │  frontend    │    │  frontend_mobile │    │config-service│
 │  React 19    │    │  Vue 3 (H5)      │    │ 运维控制面    │
-│  :3000       │    │  (经 backend 代理)│    │  :3002        │
+│  :8000       │    │  (经 backend 代理)│    │  :3002        │
 └──────┬───────┘    └────────┬─────────┘    └──────┬───────┘
        │  /api (SDK)         │  /api (SDK)         │ 改写 .env / frontend dist（运行时零耦合）
        ▼                     ▼                     ▼
@@ -67,7 +67,7 @@ CloudCAD 是一个**基于 Web 的 CAD 协作平台**：浏览器内在线编辑
 
 | 包 | 技术栈 | 端口 | 入口 | 一句话职责 |
 |---|---|---|---|---|
-| `packages/frontend` | React 19 + Vite 6 + Zustand + TanStack Query + Radix + mxcad-app | 3000 | `src/index.tsx` | PC 端 CAD 编辑器 + 管理后台 SPA |
+| `packages/frontend` | React 19 + Vite 6 + Zustand + TanStack Query + Radix + mxcad-app | 8000 | `src/index.tsx` | PC 端 CAD 编辑器 + 管理后台 SPA |
 | `packages/frontend_mobile` | Vue 3 + Vite 4 + vant + Pinia | — | `src/main.ts` | 移动端 H5 图纸查看/编辑 |
 | `packages/backend` | NestJS 11 + Express 5 + Prisma 7 + PostgreSQL + Redis | 3001 | `src/main.ts` | API 编排中枢 |
 | `packages/api-sdk` | @hey-api/openapi-ts 自动生成 | — | `src/index.ts` | 前端 HTTP 客户端（fetch-based，无 build 步骤，直接消费 TS 源码） |

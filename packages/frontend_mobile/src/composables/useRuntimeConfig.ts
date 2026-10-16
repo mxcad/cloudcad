@@ -12,7 +12,7 @@ import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 /**
  * 运行时品牌档案里移动端消费的部分。字段名与 PC `appConfig.ts` 的
  * `RuntimeBrandConfig`（= `Partial<BrandConfig>`）同名同义——管理端配一份两端共用。
- * PC 独有的 `subtitle` / `docsUrl` / `apps` / `tagline` 移动端无对应消费点，
+ * PC 独有的 `subtitle` / `apps` / `tagline` 移动端无对应消费点，
  * 故不在此声明（后端 brandProfile 是 type:json，未声明字段照样能存）。
  * DB 里只有管理端填了的键，故全部可选。
  * 移动端消费入口统一走 `config/brandConfig.ts` 的 `resolveBrand` / `resolveLegalVars`。
@@ -22,6 +22,8 @@ export interface RuntimeBrandProfile {
   title?: string
   /** Logo 路径（同为 favicon 来源，对齐 PC `BrandConfig.logo`） */
   logo?: string
+  /** 帮助文档地址（低优先级兜底：`docsUrl` 单项运行时项优先，对齐 PC `BrandConfig.docsUrl`） */
+  docsUrl?: string
   copyrightYear?: string
   /** 版权主体（页脚展示，对齐 PC `BrandConfig.copyrightHolder`） */
   copyrightHolder?: string
@@ -48,6 +50,8 @@ export interface PublicRuntimeConfig {
   supportEmail: string;
   /** 客服电话 */
   supportPhone: string;
+  /** 帮助文档地址（「实时协同」提示里的「查看文档」链接） */
+  docsUrl: string;
   /** 文件上传大小限制 (MB) */
   maxFileSize: number;
   /** 用户注册开关 */
@@ -81,6 +85,7 @@ const DEFAULTS: PublicRuntimeConfig = {
   requirePhoneVerification: false,
   supportEmail: '',
   supportPhone: '',
+  docsUrl: '',
   maxFileSize: 100,
   allowRegister: true,
   wechatEnabled: false,
@@ -89,7 +94,7 @@ const DEFAULTS: PublicRuntimeConfig = {
   conversionGuestWindowHours: 2,
   conversionGuestLimit: 5,
   freeExportDownloadEnabled: false,
-  collaborationEnabled: false,
+  collaborationEnabled: true,
   collaborationDomains: '',
   batchDownloadEnabled: false,
   brandProfile: {},
@@ -151,6 +156,7 @@ async function fetchConfig(): Promise<void> {
           ),
           supportEmail: stringField(data, 'supportEmail', DEFAULTS.supportEmail),
           supportPhone: stringField(data, 'supportPhone', DEFAULTS.supportPhone),
+          docsUrl: stringField(data, 'docsUrl', DEFAULTS.docsUrl),
           maxFileSize: numberField(data, 'maxFileSize', DEFAULTS.maxFileSize),
           allowRegister: boolField(data, 'allowRegister', DEFAULTS.allowRegister),
           wechatEnabled: boolField(data, 'wechatEnabled', DEFAULTS.wechatEnabled),

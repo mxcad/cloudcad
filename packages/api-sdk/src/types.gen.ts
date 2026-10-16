@@ -5587,6 +5587,55 @@ export type RuntimeConfigControllerGetDefinitionsResponses = {
 
 export type RuntimeConfigControllerGetDefinitionsResponse = RuntimeConfigControllerGetDefinitionsResponses[keyof RuntimeConfigControllerGetDefinitionsResponses];
 
+export type RuntimeConfigControllerServeBrandLogoData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/brand-logo';
+};
+
+export type RuntimeConfigControllerServeBrandLogoErrors = {
+    /**
+     * 尚未上传品牌 Logo
+     */
+    404: unknown;
+};
+
+export type RuntimeConfigControllerServeBrandLogoResponses = {
+    /**
+     * 返回品牌 Logo 图片
+     */
+    200: unknown;
+};
+
+export type RuntimeConfigControllerUploadBrandLogoData = {
+    body: {
+        file: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/brand-logo';
+};
+
+export type RuntimeConfigControllerUploadBrandLogoErrors = {
+    /**
+     * 文件类型或大小不符合要求
+     */
+    400: unknown;
+};
+
+export type RuntimeConfigControllerUploadBrandLogoResponses = {
+    /**
+     * 上传成功，返回前端可引用的 Logo URL
+     */
+    200: {
+        logoUrl?: string;
+        size?: number;
+    };
+};
+
+export type RuntimeConfigControllerUploadBrandLogoResponse = RuntimeConfigControllerUploadBrandLogoResponses[keyof RuntimeConfigControllerUploadBrandLogoResponses];
+
 export type RuntimeConfigControllerGetConfigData = {
     body?: never;
     path: {

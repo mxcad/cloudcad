@@ -8,7 +8,7 @@ vi.mock('@cloudcad/api-sdk/sdk.gen', () => ({
 }))
 // useWechatLogin 依赖链带 vant（CSS 导入 vitest 不处理）；本 composable 只用其纯函数 hashRouterOrigin
 vi.mock('@/composables/useWechatLogin', () => ({
-  hashRouterOrigin: () => 'http://localhost:3000/#',
+  hashRouterOrigin: () => 'http://localhost:8000/#',
 }))
 
 import {

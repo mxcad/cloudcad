@@ -7,6 +7,7 @@ import {
   setRuntimeBrandConfig,
   type BrandConfig,
   type BrandProfile,
+  type RuntimeBrandConfig,
 } from '../constants/appConfig';
 import { queryKeys } from '@/lib/queryKeys';
 import { STALE_TIME_DEFAULT } from '@/constants/timeouts';
@@ -37,9 +38,15 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   const { config: runtimeConfig } = useRuntimeConfig();
 
   const effectiveConfig = useMemo(() => {
+    // 单项运行时配置（docsUrl）优先于品牌档案整块里的同名字段；合并结果
+    // 整体作为「运行时层」参与三层合并，品牌运行时配置始终是最高优先级。
+    const runtimeBrand: RuntimeBrandConfig = {
+      ...runtimeConfig.brandProfile,
+      docsUrl: runtimeConfig.docsUrl || runtimeConfig.brandProfile.docsUrl,
+    };
     const merged = mergeBrandOverrides(
       data ?? null,
-      runtimeConfig.brandProfile,
+      runtimeBrand,
       // 客服邮箱/电话以 supportEmail / supportPhone 运行时项为准，
       // 高于 brandProfile.support，避免客服邮箱出现双事实源
       {
@@ -47,9 +54,9 @@ export function BrandProvider({ children }: { children: ReactNode }) {
         phone: runtimeConfig.supportPhone,
       }
     );
-    // 同步进模块级缓存，让 getAppBrandConfig / getAppName 等
+    // 同步进模块级缓存，让 getAppBrandConfig / getAppName / getBrandProfile 等
     // 不走 context 的消费者（标题、版权行、法务正文）也能读到运行时品牌
-    setRuntimeBrandConfig(runtimeConfig.brandProfile);
+    setRuntimeBrandConfig(runtimeBrand);
     return merged;
   }, [data, runtimeConfig]);
 

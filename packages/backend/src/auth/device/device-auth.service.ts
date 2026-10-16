@@ -82,7 +82,7 @@ export class DeviceAuthService {
 
     const domain = await this.runtimeConfigService.getValue<string>(
       'deviceAuthFrontendDomain',
-      'http://localhost:3000',
+      'http://localhost:8000',
     );
 
     return new DeviceCodeResponseDto({

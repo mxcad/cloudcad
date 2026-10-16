@@ -63,7 +63,7 @@ export class WechatCallbackService implements IWechatCallbackService {
   private getFallbackOrigin(): string {
     return (
       this.configService.get<string>('FRONTEND_URL') ||
-      'http://localhost:3000'
+      'http://localhost:8000'
     );
   }
 

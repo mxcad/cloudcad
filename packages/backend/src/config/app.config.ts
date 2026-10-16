@@ -65,12 +65,24 @@ export interface SessionConfig {
   secret: string;
   maxAge: number;
   name: string;
+  /**
+   * session cookie 的 Domain。未设置时浏览器按请求 host 匹配。
+   * `.env.example` 的占位域名（`.yourdomain.com`）已在解析层归一化为 undefined，
+   * 故此处非 undefined 即为真实生产域名。
+   */
   cookieDomain?: string;
+  /**
+   * cookie 的 SameSite。`none` 需与 Secure 成对，而本仓库 secure 为协议自适应，
+   * 无法保证全 https，故解析层恒不产出 `none`（回落 `lax`）；
+   * 保留字面量仅为兼容 express-session 的 CookieOptions 类型。
+   */
   cookieSameSite: 'none' | 'lax' | 'strict';
   /**
    * cookie 的 Secure 标志。
-   * - boolean：显式设置（SESSION_COOKIE_SECURE=true/false），强制覆盖
-   * - null：未设置，按请求协议自适应（http 不带 Secure，https 带 Secure）
+   * - false：显式设置（SESSION_COOKIE_SECURE=false），强制关闭
+   * - null：默认/auto，按请求协议自适应（http 不带 Secure，https 带 Secure）
+   *
+   * SESSION_COOKIE_SECURE=true 视同 auto（显式 true 是严格劣解，见 configuration.ts）。
    */
   cookieSecure: boolean | null;
 }

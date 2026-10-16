@@ -77,8 +77,8 @@ describe('parseEnvFile', () => {
   afterAll(cleanupTemp);
 
   test('解析普通键值对', () => {
-    const file = writeTemp('PORT=3001\nFRONTEND_PORT=3000\n');
-    expect(parseEnvFile(file)).toEqual({ PORT: '3001', FRONTEND_PORT: '3000' });
+    const file = writeTemp('PORT=3001\nFRONTEND_PORT=8000\n');
+    expect(parseEnvFile(file)).toEqual({ PORT: '3001', FRONTEND_PORT: '8000' });
   });
 
   test('跳过空行和注释行', () => {

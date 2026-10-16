@@ -58,7 +58,7 @@ CI runs type-check only; lint/format/type-check are the gate for local work.
 ## Quick Commands
 
 ```bash
-pnpm dev            # Vite dev server (port 3000)
+pnpm dev            # Vite dev server (port 8000)
 pnpm build          # Vite build
 pnpm type-check     # tsc --noEmit
 pnpm depcruise      # dependency-layer gate (ADR-0028)

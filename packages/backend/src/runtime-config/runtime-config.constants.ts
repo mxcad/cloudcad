@@ -55,9 +55,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'json',
     category: 'brand',
     description:
-      '品牌档案（标题/标语/Logo 路径/文档地址/版权/法务主体），整块覆盖前端内置默认值。' +
-      'PC 与移动端都消费同一份（移动端只读 title/logo/版权字段与 legal，' +
-      '不读 subtitle/docsUrl/apps/tagline）。客服邮箱/电话请用 supportEmail、supportPhone 项，' +
+      '品牌档案（标题/标语/Logo 路径/版权/法务主体），整块覆盖前端内置默认值。' +
+      'PC 与移动端都消费同一份。客服邮箱/电话/文档地址请用 supportEmail、supportPhone、docsUrl 项，' +
       '此处 support 仅支持 hours（服务时间）。',
     defaultValue: {},
     isPublic: true,
@@ -87,6 +86,19 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'user',
     input: { maxLength: 200, allowNull: true, placeholder: '400-123-4567' },
     impact: '客服弹框展示的联系电话；优先级高于品牌档案中的 support.phone。',
+  },
+  {
+    key: 'docsUrl',
+    type: 'string',
+    category: 'brand',
+    description: '帮助文档地址（「实时协同只支持私有化部署」提示里的「查看文档」链接）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: 'https://help.mxdraw.com/' },
+    impact:
+      'PC 与移动端「实时协同」提示里的「查看文档」链接地址，两端刷新页面后生效；' +
+      '优先级高于品牌档案（brandProfile）里的 docsUrl 字段，留空时回落到品牌档案 / /brand/config.json / 内置默认值。',
   },
 
   // ───────────────────────── 邮件 ─────────────────────────
@@ -594,7 +606,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'number',
     category: 'security',
     description: '登录失败次数上限（按 IP 统计，同一出口 IP 共用额度）',
-    defaultValue: 5,
+    defaultValue: 30,
     isPublic: false,
     tier: 'advanced',
     envKey: 'RATE_LIMIT_LOGIN_MAX',
@@ -645,7 +657,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'number',
     category: 'security',
     description: '登录失败次数上限（按账号统计，每个账号独立额度）',
-    defaultValue: 5,
+    defaultValue: 30,
     isPublic: false,
     tier: 'advanced',
     envKey: 'AUTH_RATE_LIMIT_LOGIN_MAX',
@@ -860,7 +872,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'boolean',
     category: 'collaboration',
     description: '实时协同功能开关（仅私有化部署可用）',
-    defaultValue: false,
+    defaultValue: true,
     isPublic: true,
     tier: 'user',
     impact: '开启后侧边栏出现「协同」入口；需已部署协同服务端。',
@@ -886,7 +898,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'string',
     category: 'security',
     description: '设备授权前端页面域名（用于构造 verification_uri_complete）',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'http://localhost:8000',
     isPublic: false,
     tier: 'admin',
     input: { maxLength: 300 },

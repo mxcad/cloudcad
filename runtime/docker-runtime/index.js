@@ -371,7 +371,7 @@ function step4Docker() {
     // rootless：用包内静态 dockerd 经用户命名空间启动（lib/rootless.js），
     // 经 DOCKER_HOST（影子 /run 的 unix socket）与真实宿主通信；netns pid 供宿主进程/stop 用
     const env = parseEnvFile(ENV_FILE);
-    const ports = [parseInt(env.FRONTEND_PORT || '3000', 10), parseInt(env.PORT || '3001', 10)];
+    const ports = [parseInt(env.FRONTEND_PORT || '8000', 10), parseInt(env.PORT || '3001', 10)];
     const res = rootless.start({
       deployDir: DEPLOY_DIR,
       dockerDir: path.join(DEPLOY_DIR, 'docker'),
@@ -727,7 +727,7 @@ async function step11Verify() {
 
 function step12Summary() {
   const env = parseEnvFile(ENV_FILE);
-  const fe = env.FRONTEND_PORT || '3000';
+  const fe = env.FRONTEND_PORT || '8000';
   const be = env.PORT || '3001';
   const cfg = env.CONFIG_SERVICE_PORT || '3002';
   console.log('');

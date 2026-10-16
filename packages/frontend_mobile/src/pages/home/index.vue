@@ -49,6 +49,7 @@ import {
 } from '../../composables/useCooperate';
 import { useCollabAutoJoin } from '../../composables/useCollabAutoJoin';
 import { useRuntimeConfig } from '../../composables/useRuntimeConfig';
+import { useBrand } from '../../composables/useBrand';
 import { isCollaborationAllowed } from '@cloudcad/platform';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
 import SaveAsSheet from './components/SaveAsSheet.vue';
@@ -268,6 +269,8 @@ const pendingActionAfterLogin = ref<
   'save' | 'saveAs' | 'version-history' | null
 >(null);
 const { config: runtimeConfig } = useRuntimeConfig();
+// 「查看文档」地址走品牌运行时配置（管理端可改），不硬编码
+const { brand } = useBrand();
 
 // 协同入口可用性 = 功能开关 && 当前域名在白名单内。
 // 与 PC SidebarContainer（collaborationEnabled && isCollaborationAllowed）同口径，
@@ -860,7 +863,7 @@ setViewportHeight();
         <template v-else>
         <span>{{ t('实时协同只支持私有化部署，请点击') }}</span>
         <a
-          href="https://help.mxdraw.com/"
+          :href="brand.docsUrl"
           target="_blank"
           rel="noopener noreferrer"
           style="color: var(--primary); text-decoration: underline"

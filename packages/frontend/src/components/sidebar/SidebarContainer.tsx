@@ -37,6 +37,7 @@ import { useLoginGate } from '../../hooks/useLoginGate';
 import { LoginPromptCard } from './LoginPromptCard';
 import { FileSystemNode } from '../../types/filesystem';
 import { useAuth } from '../../contexts/AuthContext';
+import { useBrandConfig } from '../../contexts/BrandContext';
 import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
 import { useDrawingSession } from '../../services/drawingSession';
 import { isCollaborationAllowed } from '../../constants/appConfig';
@@ -91,6 +92,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   const personalSpaceId = personalSpaceData?.id || null;
 
   const { config: runtimeConfig } = useRuntimeConfig();
+  // 「查看文档」地址走品牌运行时配置（管理端可改），不硬编码
+  const { profile: brandProfile } = useBrandConfig();
 
   const {
     settings,
@@ -473,7 +476,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                   <>
                     <span>{t('实时协同只支持私有化部署，请点击')}</span>
                     <a
-                      href="https://help.mxdraw.com/"
+                      href={brandProfile.docsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{

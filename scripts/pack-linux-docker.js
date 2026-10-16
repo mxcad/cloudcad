@@ -1279,7 +1279,7 @@ function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
       '  2. 用 root 或有 sudo 权限的用户运行: ./start.sh',
       '     - 无 Docker 的机器会自动用包内静态二进制安装',
       '     - 首次部署自动生成 .env 与初始密码（见 DEPLOY-PASSWORDS.txt）',
-      '  3. 浏览器访问 http://<服务器IP>:3000（端口以 .env 为准）',
+      '  3. 浏览器访问 http://<服务器IP>:8000（端口以 .env 为准）',
       '',
       '【停止】 ./stop.sh（数据保留在 data/ 目录）',
       '',

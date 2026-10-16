@@ -37,7 +37,7 @@ interface InProcessLockState {
  *
  * 1. **频率限流**（checkLimit/reset）：Redis INCR + EXPIRE 滑动窗口计数
  *    （窗口从首次请求开始计算）。参数：
- *    - login：登录尝试（默认 5 次 / 60 秒 / 账号）
+ *    - login：登录尝试（默认 30 次 / 60 秒 / 账号）
  *    - password_reset：密码找回（默认 5 次 / 3600 秒 / 账号）
  *    - register：注册（默认 5 次 / 3600 秒 / 账号）
  *    超过阈值抛 429。
@@ -77,7 +77,7 @@ export class AccountRateLimitService {
     switch (action) {
       case 'login':
         return {
-          max: await this.runtimeConfig.getValue<number>('loginRateLimitMax', 5),
+          max: await this.runtimeConfig.getValue<number>('loginRateLimitMax', 30),
           windowSeconds: await this.runtimeConfig.getValue<number>('loginRateLimitWindowSeconds', 60),
         };
       case 'password_reset':

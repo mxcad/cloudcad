@@ -25,7 +25,7 @@ const PC_PATHS = {
  */
 export function getPcBaseUrl(): string {
   if (import.meta.env.DEV) {
-    return 'http://localhost:3000';
+    return 'http://localhost:8000';
   }
   const desktopUrl = serverConfig?.desktopPageUrl || '';
   // 移除路径部分，只保留 origin

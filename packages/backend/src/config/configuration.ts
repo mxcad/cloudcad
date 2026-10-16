@@ -68,16 +68,61 @@ function parseBoolean(
 }
 
 /**
- * 解析 cookie Secure 标志（三态）：
- * - SESSION_COOKIE_SECURE 显式设置为 "true"/"false" → 返回对应布尔值（强制覆盖）
- * - 设置为 "auto" 或未设置 → 返回 null，表示按请求协议自适应（http 不带 Secure，https 带 Secure）
+ * 解析 cookie Secure 标志（二态）：
+ * - SESSION_COOKIE_SECURE="false" → 返回 false（强制关闭 Secure）
+ * - "auto"、"true" 或未设置 → 返回 null，表示按请求协议自适应
+ *   （http 不带 Secure，https 带 Secure）
+ *
+ * "true" 视同 "auto"：它的收益（https 请求带 Secure）已由 auto 完全覆盖，
+ * 而它的风险（http 请求也强制 Secure → 浏览器直接丢弃 cookie）auto 完全规避，
+ * 显式 true 是严格劣解，故不再作为有效配置。
+ *
+ * 实例：2026-10-15 部署包实跑定位，SESSION_COOKIE_SECURE=true 使离线 http 部署的
+ * auth_token / refresh_token / mxcad.sid 从不存储，协同接口恒 401，
+ * 且浏览器侧无报错、后端无错误日志（access log 里只能看到请求没带 cookie）。
  *
  * 注：离线私有化部署常以 http 访问，此时若生产环境默认 Secure=true 会被浏览器丢弃，
- * 导致 session/auth_token cookie 无法存储（协同功能 401）。用 null（默认/auto）走协议自适应可根治。
+ * 导致 session/auth_token cookie 无法存储（协同功能 401）。用 null（auto）走协议自适应可根治。
  */
 function parseCookieSecure(value: string | undefined): boolean | null {
-  if (value === undefined || value === 'auto') return null;
-  return value === 'true';
+  if (value === 'false') return false;
+  return null;
+}
+
+/**
+ * `.env.example` 用「# KEY=模板示例值」表达「未配置」。保留域名是模板的一部分，
+ * 不是任何合法生产配置；命中即按未配置处理。
+ *
+ * 2026-10-15 部署包实跑定位：旧版 mergeExampleIntoEnv 曾把 `.env.example` 的
+ * 25 项注释占位值逐字激活写进 `.env`（本机共 33 项激活、25 项与占位值逐字相同），
+ * 其守卫只防「注释态被误激活」、不收敛已激活的存量（config-updater.test.js 的
+ * 「已激活的同值项不得被反向注释」是刻意约定，不能反过来改），
+ * 故占位符必须在消费侧归一化——存量部署包无需重生成 .env 即可恢复。
+ *
+ * 危害：Domain=.yourdomain.com 下发时，浏览器对 localhost/局域网域名判定
+ * domain 不匹配，session cookie 从不存储。
+ */
+const COOKIE_DOMAIN_PLACEHOLDERS = new Set(['.yourdomain.com']);
+
+function parseCookieDomain(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed || COOKIE_DOMAIN_PLACEHOLDERS.has(trimmed)) return undefined;
+  return trimmed;
+}
+
+/**
+ * 解析 cookie SameSite。`none` 只在同时带 `Secure` 时生效（RFC 6265bis）；
+ * 而本仓库的 secure 已收敛为协议自适应（http 请求不带 Secure），
+ * 无法保证「所有请求都是 https」，故 `none` 在 http 请求下必然不生效
+ * （浏览器按 Lax 处理或直接拒绝存储）——属于必然死配置，按未配置回落 `lax`。
+ * 同源场景 lax 完全够用；确需跨站 iframe 的 https 部署再显式评估。
+ */
+function parseCookieSameSite(
+  value: string | undefined
+): 'none' | 'lax' | 'strict' {
+  if (value === 'strict') return 'strict';
+  if (value === 'lax') return 'lax';
+  return 'lax';
 }
 
 /**
@@ -135,7 +180,7 @@ export default (): AppConfig => {
   return {
     port: parseInt(process.env.PORT || '3001', 10) || 3001,
     nodeEnv,
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8000',
     authImpl: process.env.IMPL || '',
 
     jwt: {
@@ -232,11 +277,11 @@ export default (): AppConfig => {
         parseInt(process.env.SESSION_MAX_AGE || '86400000', 10) ||
         24 * 60 * 60 * 1000, // 24小时（Guard已修复有token强制验证，session仅是无token降级）
       name: process.env.SESSION_NAME || 'mxcad.sid',
-      cookieDomain: process.env.SESSION_COOKIE_DOMAIN || undefined,
-      cookieSameSite:
-        (process.env.SESSION_COOKIE_SAME_SITE as 'none' | 'lax' | 'strict') ||
-        'lax',
+      cookieDomain: parseCookieDomain(process.env.SESSION_COOKIE_DOMAIN),
       cookieSecure: parseCookieSecure(process.env.SESSION_COOKIE_SECURE),
+      cookieSameSite: parseCookieSameSite(
+        process.env.SESSION_COOKIE_SAME_SITE
+      ),
     },
 
     cache: {
@@ -480,7 +525,7 @@ export default (): AppConfig => {
     // 账号维度限流配置（防撞库/暴力破解；IP 维度限流见 RateLimitGuard）
     // max 设为 0 可关闭对应维度的限流
     authRateLimit: {
-      loginMax: parseInt(process.env.AUTH_RATE_LIMIT_LOGIN_MAX || '5', 10),
+      loginMax: parseInt(process.env.AUTH_RATE_LIMIT_LOGIN_MAX || '30', 10),
       loginWindowSeconds: parseInt(
         process.env.AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS || '60',
         10

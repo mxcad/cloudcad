@@ -234,7 +234,7 @@ beforeEach(() => {
   const happyDom = (
     window as unknown as { happyDOM?: { setURL: (url: string) => void } }
   ).happyDOM;
-  happyDom?.setURL('http://localhost:3000/?fileId=node-1#/shell');
+  happyDom?.setURL('http://localhost:8000/?fileId=node-1#/shell');
 });
 
 afterEach(() => {

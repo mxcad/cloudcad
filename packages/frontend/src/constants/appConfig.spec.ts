@@ -201,6 +201,41 @@ describe('mergeBrandOverrides（运行时 brandProfile 覆盖）', () => {
     expect(merged.support.hours).toBe('运行时服务时间');
   });
 
+  it('docsUrl 以同名运行时项为准，高于 brandProfile.docsUrl', () => {
+    const merged = mergeBrandOverrides(
+      base,
+      { docsUrl: 'https://brand.example/' },
+      { docsUrl: 'https://runtime.example/' }
+    );
+    expect(merged.docsUrl).toBe('https://runtime.example/');
+  });
+
+  it('docsUrl 单项为空时回落 brandProfile，再回落 base——链接永不为空', () => {
+    const merged = mergeBrandOverrides(
+      base,
+      { docsUrl: 'https://brand.example/' },
+      { docsUrl: '' }
+    );
+    expect(merged.docsUrl).toBe('https://brand.example/');
+
+    // brandProfile 也没配时落到 base（内置默认值由 getBrandProfile 兜底）
+    expect(mergeBrandOverrides(base, {}, { docsUrl: '' }).docsUrl).toBe(
+      base.docsUrl
+    );
+  });
+
+  it('brandProfile 为空对象时单项运行时项仍生效，不被空 JSON 短路', () => {
+    const merged = mergeBrandOverrides(base, {}, {
+      docsUrl: 'https://runtime.example/',
+      email: 'runtime@x.com',
+    });
+    expect(merged.docsUrl).toBe('https://runtime.example/');
+    expect(merged.support.email).toBe('runtime@x.com');
+    // 单项覆盖不得顺带清掉 brandProfile 之外的字段
+    expect(merged.title).toBe('静态品牌');
+    expect(merged.copyrightLine).toBe(base.copyrightLine);
+  });
+
   it('brandProfile.support.hours 可用于补充服务时间', () => {
     const merged = mergeBrandOverrides(base, {
       support: { hours: '7x24' },

@@ -6,8 +6,9 @@
 /**
  * 类型感知输入控件：按 `type` + `input` 元数据渲染，不做任何本地推断。
  *
- * 渲染优先级：boolean 开关 > 枚举下拉 > json 编辑器 > 多行文本 > 数字（带单位）
- * > 遮罩输入 > 普通文本。单位不再靠 key 白名单硬编码，一律读 `input.unit`。
+ * 渲染优先级：boolean 开关 > 枚举下拉 > json 编辑器（`brandProfile` 用字段级专用
+ * 控件，由行传入） > 多行文本 > 数字（带单位） > 遮罩输入 > 普通文本。
+ * 单位不再靠 key 白名单硬编码，一律读 `input.unit`。
  */
 
 import React from 'react';
@@ -18,6 +19,7 @@ import { Select } from '@/components/ui/Select';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Button } from '@/components/ui/Button';
 import styles from './RuntimeConfigPage.module.css';
+import { BrandProfileForm } from './BrandProfileForm';
 import type { ConfigItem } from './types';
 import type { DraftValue } from './validate';
 import { t } from '@/languages';
@@ -97,8 +99,19 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
     );
   }
 
-  // ── JSON：多行编辑 + 合法性校验 + 格式化 ──
+  // ── JSON：`brandProfile` 用字段级表单（不手写 JSON），其余项走多行编辑 ──
   if (item.type === 'json') {
+    if (item.key === 'brandProfile') {
+      return (
+        <div data-testid="rc-input">
+          <BrandProfileForm
+            draft={draft}
+            disabled={disabled}
+            onChange={onChange}
+          />
+        </div>
+      );
+    }
     return (
       <div data-testid="rc-input" className={styles.jsonBlock}>
         <div className={styles.jsonActions}>

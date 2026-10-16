@@ -704,8 +704,24 @@ function mergeExampleIntoEnv(envContent, exampleContent) {
       seenKeys.add(key);
       const existing = envKeyMap.get(key);
 
-      if (existing) {
-        // 用户有此 key → 激活（取消注释），使用用户值
+      // 注释就是注释：example 里写成 # KEY=VALUE 就表示「这不是默认配置」，
+      // merge 不得把它解开成 KEY=VALUE 替用户做决定。只有用户在 .env 里主动去掉了
+      // #（env 侧是 keyvalue）才输出为激活项；其余情况（用户副本仍是注释态、或从未
+      // 配置过）一律逐字沿用模板注释行。
+      // 这里刻意不回写用户在注释里改过的值：注释行是文档不是配置，模板是它的权威
+      // 来源；而且 example 中同一 key 可能多次出现——`# IMPL=true 或 IMPL=1 → ...`
+      // 这类散文行与 `# IMPL=` 都会被解析成 commented_keyvalue(IMPL)，按 key 回写
+      // 用户值会把散文行改写成用户值并重复输出。
+      // 反向（example 已激活 / 用户副本仍注释）在上方 keyvalue 分支按模板激活，
+      // 那是模板作者把选项提升为默认值的显式动作，与「注释被解开」是两回事；
+      // 已激活项永不反向注释（见 config-updater.test.js 的同名约定）。
+      // 历史缺陷：曾按「.env 里存在这个 key」判激活。全新 .env 由模板逐字生成即含
+      // 注释行，第二次跑 deploy/start 就静默激活「# CORS_ORIGINS=公网域名」这类模板
+      // 默认值 → 生产环境 CORS 白名单整体替换掉 FRONTEND_URL，本机前端所有接口预检
+      // 204 通过却拿不到 Access-Control-Allow-Origin，浏览器只报 TypeError:
+      // Failed to fetch 且后端零日志。
+      if (existing && existing.type === 'keyvalue') {
+        // 用户已显式激活（去掉 #）→ 保留用户值
         outBlocks.push({
           type: 'keyvalue',
           lines: [`${key}=${existing.value}`],
@@ -713,7 +729,6 @@ function mergeExampleIntoEnv(envContent, exampleContent) {
           value: existing.value,
         });
       } else {
-        // 用户无此 key → 保持注释
         outBlocks.push({ ...exBlock, lines: [...exBlock.lines] });
       }
     } else {

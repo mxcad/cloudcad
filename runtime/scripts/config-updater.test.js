@@ -23,8 +23,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { escapeEnvValue, updateEnvFile, alignConversionServiceUrl } =
-  require('./config-updater');
+const {
+  escapeEnvValue,
+  updateEnvFile,
+  alignConversionServiceUrl,
+  mergeExampleIntoEnv,
+  parseEnvToBlocks,
+} = require('./config-updater');
 const {
   parseEnvFile,
   parseEnvFileSimple,
@@ -477,5 +482,172 @@ test('本机形态口径: 改写与否的判定与 lib/infra-gate 的 isLocalHos
       }
     );
   }
+});
+
+// ---------------------------------------------------------------------------
+// mergeExampleIntoEnv 回归（2026-10-15 部署包实跑定位）
+//
+// 缺陷：全新 .env 由 .env.example 逐字生成，含注释行
+//   # CORS_ORIGINS=https://app.cloudcad.com,https://admin.cloudcad.com
+// 首次 deploy 走密码向导，第二次 deploy 走 cli.js 的「合并 .env.example」分支，
+// mergeExampleIntoEnv 见「.env 里存在这个 key（虽是注释态）」就激活它 → 生产环境
+// CORS 白名单整体替换掉 FRONTEND_URL（离线部署 http://localhost:8000）→ 浏览器
+// 预检 204 通过却拿不到 Access-Control-Allow-Origin，所有接口只报
+// TypeError: Failed to fetch，后端一条错误日志都不留。
+//
+// 约定：注释就是注释——example 里是 # KEY=VALUE 的项，输出必须仍是注释。
+// 只有用户在 .env 里主动去掉了 # 才输出为激活项；其余情况（用户副本仍是注释态、
+// 或从未配置过）一律逐字沿用模板注释行，不回写用户在注释里改过的值——注释行是
+// 文档不是配置。反向（example 激活 / 用户副本注释）仍按模板激活，那是模板作者
+// 提升默认值的显式动作。
+// ---------------------------------------------------------------------------
+
+const CORS_EXAMPLE = [
+  '# 安全配置',
+  '# CORS 允许的源 (生产环境必须设置，逗号分隔多个域名)',
+  '# CORS_ORIGINS=https://app.cloudcad.com,https://admin.cloudcad.com',
+  '# REDIS_PASSWORD=',
+  'FRONTEND_URL=http://localhost:8000',
+].join('\n');
+
+test('mergeExampleIntoEnv: 模板注释值逐字拷贝保持注释（回归：不得静默激活 CORS_ORIGINS）', () => {
+  const out = mergeExampleIntoEnv(CORS_EXAMPLE, CORS_EXAMPLE);
+  assert.equal(
+    /(^|\n)CORS_ORIGINS=/.test(out),
+    false,
+    'CORS_ORIGINS 是模板注释默认值，用户从未配置过，不得被激活'
+  );
+  assert.ok(
+    /(^|\n)# CORS_ORIGINS=https:\/\/app\.cloudcad\.com,https:\/\/admin\.cloudcad\.com/.test(
+      out
+    ),
+    '注释行应原样保留'
+  );
+});
+
+test('mergeExampleIntoEnv: 用户只改了注释里的值仍然保持注释（注释就是注释）', () => {
+  // 用 9876 这类与前端端口迁移无关的端口，避免断言随端口改名静默失配。
+  // 旧实现见「.env 里存在这个 key」或「值与模板不同」就激活，等于替用户解开了
+  // 注释——用户在注释行里写的是「想配什么」的备忘，不是「现在生效」的意图。
+  const userEnv = CORS_EXAMPLE.replace(
+    '# CORS_ORIGINS=https://app.cloudcad.com,https://admin.cloudcad.com',
+    '# CORS_ORIGINS=http://localhost:9876,http://127.0.0.1:9876'
+  );
+  const out = mergeExampleIntoEnv(userEnv, CORS_EXAMPLE);
+  assert.equal(
+    /(^|\n)CORS_ORIGINS=/.test(out),
+    false,
+    '注释项不得被 merge 解开'
+  );
+  assert.ok(
+    /(^|\n)# CORS_ORIGINS=https:\/\/app\.cloudcad\.com,https:\/\/admin\.cloudcad\.com/.test(
+      out
+    ),
+    '注释行回到模板权威文案（注释是文档不是配置，不回写用户注释值）'
+  );
+});
+
+test('mergeExampleIntoEnv: 同 key 的散文行不被改写也不重复', () => {
+  // `# IMPL=true 或 IMPL=1 → ...` 这类散文行与 `# IMPL=` 都会被解析成
+  // commented_keyvalue(IMPL)，而 envKeyMap 只保留最后一次出现——按 key 回写用户
+  // 注释值会把散文行改写成用户值，并因 example 中该 key 出现两次而重复输出。
+  const implExample = [
+    '# IMPL=true 或 IMPL=1 → 加载私有包默认路径 packages/impl-mx/dist',
+    '# IMPL=',
+    'JWT_SECRET=abc',
+  ].join('\n');
+  assert.equal(
+    mergeExampleIntoEnv(implExample, implExample),
+    implExample,
+    '散文行与注释行必须逐字保留、不增不减'
+  );
+});
+
+test('mergeExampleIntoEnv: 用户显式去掉 # 的项保持激活（注释态判据不误伤）', () => {
+  const userEnv = CORS_EXAMPLE.replace(
+    '# CORS_ORIGINS=https://app.cloudcad.com,https://admin.cloudcad.com',
+    'CORS_ORIGINS=https://prod.example.com'
+  );
+  const out = mergeExampleIntoEnv(userEnv, CORS_EXAMPLE);
+  assert.ok(
+    /(^|\n)CORS_ORIGINS=https:\/\/prod\.example\.com/.test(out),
+    '用户在 .env 里主动激活的配置不得被退回注释'
+  );
+});
+
+test('mergeExampleIntoEnv: 模板把选项提升为默认值时按模板激活（反向不对称）', () => {
+  // example 已激活 + 用户副本仍是注释 → 按模板激活。这是模板作者显式把可选项
+  // 提升为默认值的动作，与「example 注释被解开」不是同一件事，必须保留。
+  const promoted = CORS_EXAMPLE.replace(
+    '# CORS_ORIGINS=https://app.cloudcad.com,https://admin.cloudcad.com',
+    'CORS_ORIGINS=https://app.cloudcad.com'
+  );
+  const out = mergeExampleIntoEnv(CORS_EXAMPLE, promoted);
+  assert.ok(
+    /(^|\n)CORS_ORIGINS=https:\/\/app\.cloudcad\.com/.test(out),
+    '模板激活的项在存量 .env 中应生效'
+  );
+});
+
+test('mergeExampleIntoEnv: 已激活的同值项不得被反向注释', () => {
+  const userEnv = CORS_EXAMPLE.replace(
+    '# CORS_ORIGINS=',
+    'CORS_ORIGINS='
+  );
+  const out = mergeExampleIntoEnv(userEnv, CORS_EXAMPLE);
+  assert.ok(
+    /(^|\n)CORS_ORIGINS=https:\/\/app\.cloudcad\.com/.test(out),
+    '用户已显式激活的项不得被注释回去'
+  );
+});
+
+test('mergeExampleIntoEnv: fillEmptySecrets 补过的空白密钥仍然激活（不回归）', () => {
+  const userEnv = CORS_EXAMPLE.replace(
+    '# REDIS_PASSWORD=',
+    'REDIS_PASSWORD=quote-d"ollar-abc123'
+  );
+  const out = mergeExampleIntoEnv(userEnv, CORS_EXAMPLE);
+  assert.ok(
+    /(^|\n)REDIS_PASSWORD=quote-d"ollar-abc123/.test(out),
+    '已填入真实值的密钥必须保持激活，否则后端生产校验拒绝启动'
+  );
+});
+
+// ---------------------------------------------------------------------------
+// 模板重复键守卫
+//
+// envKeyMap 对同一 key 只保留「最后一次出现」，所以模板里「激活行 + 注释行同键」
+// 的写法会让注释值污染激活值。实测：
+//   WECHATPAY_CERT_PATH=.../apiclient_cert.pem    ← 默认 PEM
+//   # WECHATPAY_CERT_PATH=.../apiclient_cert.p12  ← PFX 备选值
+// 第二次跑 deploy/start 就把激活行改写成 .p12——PEM 与 PFX 是同一个键的两种取值，
+// 备选值只能写成散文，不能写成 # KEY= 形式。
+// 全是注释行的重复（如 IMPL 的散文说明块）无害：注释块逐字沿用模板，不改写任何
+// 激活值，故不在此列。
+// ---------------------------------------------------------------------------
+
+test('模板守卫: backend .env.example 同一 key 不得同时有激活行与注释行', () => {
+  const examplePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    'packages',
+    'backend',
+    '.env.example'
+  );
+  const stateByKey = new Map();
+  for (const b of parseEnvToBlocks(fs.readFileSync(examplePath, 'utf8'))) {
+    if (!b.key) continue;
+    if (!stateByKey.has(b.key)) stateByKey.set(b.key, new Set());
+    stateByKey.get(b.key).add(b.type === 'keyvalue' ? 'active' : 'commented');
+  }
+  const offenders = [...stateByKey.entries()]
+    .filter(([, states]) => states.size > 1)
+    .map(([key]) => key);
+  assert.deepEqual(
+    offenders,
+    [],
+    `以下 key 同时存在激活行与注释行，注释值会污染激活值: ${offenders.join(', ')}`
+  );
 });
 

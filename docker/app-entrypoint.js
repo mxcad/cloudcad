@@ -96,7 +96,7 @@ function renderNginxConf() {
     fail(`nginx 配置模板缺失（${templatePath}），部署包不完整`);
   }
   let conf = fs.readFileSync(templatePath, 'utf8');
-  const frontendPort = process.env.FRONTEND_PORT || '3000';
+  const frontendPort = process.env.FRONTEND_PORT || '8000';
   const backendPort = process.env.PORT || '3001';
   const distDir = path.join(APP_ROOT, 'packages', 'frontend', 'dist');
   const mobilePath = getMobileAccessPath();
@@ -272,7 +272,7 @@ function main() {
   const redisHost = process.env.REDIS_HOST || 'localhost';
   const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
   const backendPort = process.env.PORT || '3001';
-  const frontendPort = process.env.FRONTEND_PORT || '3000';
+  const frontendPort = process.env.FRONTEND_PORT || '8000';
 
   (async () => {
     await waitTcp('PostgreSQL', dbHost, dbPort, 60000);

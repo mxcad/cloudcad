@@ -123,7 +123,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 | 包 | 技术栈 | 端口 | 入口 |
 |---|--------|------|------|
-| `packages/frontend` | React 19 + Vite 6 + Tailwind v4 + Zustand + Radix UI | 3000 | `src/main.tsx` |
+| `packages/frontend` | React 19 + Vite 6 + Tailwind v4 + Zustand + Radix UI | 8000 | `src/main.tsx` |
 | `packages/backend` | NestJS 11 + Express 5 + Prisma 7 + PostgreSQL + Redis | 3001 | `src/main.ts` |
 | `packages/frontend_mobile` | Vue 3 + Vite 4 + vant + VoerkaI18n | — | `src/main.ts` |
 | `packages/config-service` | 纯 Node.js HTTP（0 外部依赖） | 3002 | `server.js` |

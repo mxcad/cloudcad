@@ -52,6 +52,28 @@ describe('resolveBrand', () => {
     const b = resolveBrand({ brandProfile: { legal: { productShortName: 'MxCAD' } } })
     expect(b.shortName).toBe('MxCAD')
   })
+
+  it('docsUrl 三层优先级：单项运行时项 > brandProfile > 内置默认', () => {
+    expect(resolveBrand(null).docsUrl).toBe('https://help.mxdraw.com/')
+    expect(
+      resolveBrand({ brandProfile: { docsUrl: 'https://brand.example/' } }).docsUrl,
+    ).toBe('https://brand.example/')
+    expect(
+      resolveBrand({
+        docsUrl: 'https://runtime.example/',
+        brandProfile: { docsUrl: 'https://brand.example/' },
+      }).docsUrl,
+    ).toBe('https://runtime.example/')
+  })
+
+  it('docsUrl 单项为空串时回落 brandProfile，再回落内置默认——「查看文档」链接永不为空', () => {
+    expect(
+      resolveBrand({ docsUrl: '', brandProfile: { docsUrl: 'https://brand.example/' } }).docsUrl,
+    ).toBe('https://brand.example/')
+    expect(resolveBrand({ docsUrl: '', brandProfile: { docsUrl: '' } }).docsUrl).toBe(
+      DEFAULT_BRAND.docsUrl,
+    )
+  })
 })
 
 describe('brandAssetPath', () => {

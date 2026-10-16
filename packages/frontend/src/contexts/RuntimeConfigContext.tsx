@@ -13,6 +13,8 @@ export type PublicRuntimeConfig = {
   requirePhoneVerification: boolean;
   supportEmail: string;
   supportPhone: string;
+  /** 帮助文档地址（「实时协同」提示里的「查看文档」链接） */
+  docsUrl: string;
   allowRegister: boolean;
   wechatEnabled: boolean;
   wechatAutoRegister: boolean;
@@ -41,11 +43,12 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   requirePhoneVerification: false,
   supportEmail: '',
   supportPhone: '',
+  docsUrl: '',
   allowRegister: true,
   wechatEnabled: false,
   wechatAutoRegister: false,
   maxFileSize: 100,
-  collaborationEnabled: false,
+  collaborationEnabled: true,
   collaborationDomains: '',
   batchDownloadEnabled: false,
   freeExportDownloadEnabled: false,
@@ -91,11 +94,12 @@ function mapPublicConfig(
     requirePhoneVerification: Boolean(data.requirePhoneVerification),
     supportEmail: String(data.supportEmail ?? ''),
     supportPhone: String(data.supportPhone ?? ''),
+    docsUrl: String(data.docsUrl ?? ''),
     allowRegister: Boolean(data.allowRegister ?? true),
     wechatEnabled: Boolean(data.wechatEnabled ?? false),
     wechatAutoRegister: Boolean(data.wechatAutoRegister ?? false),
     maxFileSize: Number(data.maxFileSize ?? 100),
-    collaborationEnabled: Boolean(data.collaborationEnabled ?? false),
+    collaborationEnabled: Boolean(data.collaborationEnabled ?? true),
     collaborationDomains: String(data.collaborationDomains ?? ''),
     batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? false),
     freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? false),

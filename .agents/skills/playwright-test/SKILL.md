@@ -20,7 +20,7 @@ description: 基于 Playwright MCP 的自动化测试技能。纯文本驱动（
 ### 1. 登录测试
 
 ```
-browser_navigate("http://localhost:3000/login")
+browser_navigate("http://localhost:8000/login")
 browser_snapshot()                    → 获取无障碍树，定位元素 ref
 browser_type(target="@e5", text="user@test.com")
 browser_type(target="@e8", text="password123")
@@ -57,7 +57,7 @@ browser_verify_list_visible(
 ### 4. 权限跳转测试
 
 ```
-browser_navigate("http://localhost:3000/admin")
+browser_navigate("http://localhost:8000/admin")
 browser_wait_for(time=2)
 browser_snapshot()
 browser_verify_text_visible(text="权限不足")
