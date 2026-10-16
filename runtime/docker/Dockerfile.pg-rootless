@@ -31,12 +31,29 @@ RUN gcc -shared -fPIC -O2 -o /usr/local/lib/pg-uid-shim.so /tmp/pg-uid-shim.c -l
 RUN apk del gcc musl-dev && rm -rf /var/cache/apk/*
 
 # 以 root（uid 0）运行：唯一可映射的 uid。
-# LD_PRELOAD 使 shim 在 entrypoint 及其所有子进程（含 id/psql/postgres）生效：
-#   - id -u 返回 999 → 官方 docker-entrypoint.sh 的 `if [ "$(id -u)" = "0" ]` 为假，
-#     不再 gosu 降权到 postgres 用户（uid 999 在单段映射下不可用）
+# LD_PRELOAD 使 shim 在 entrypoint 及其所有子进程（含 psql/postgres）生效：
 #   - postgres 的 getuid()==0 root 检查被绕过（shim 返回 999）
 #   - 数据目录属主检查 st_uid==getuid() 通过（shim 把两者都改成 999）
 USER root
 ENV LD_PRELOAD=/usr/local/lib/pg-uid-shim.so
+
+# rootless 关键修复：/var/lib/postgresql 在基础镜像中属 postgres（alpine 上 uid 70，
+# debian 上 uid 999）。rootless 单段 uid 映射（仅容器 uid 0 → 宿主 euid）下，
+# 该非 0 属主会落到 overflow uid 65534，导致以 uid 0 运行的 entrypoint 无法在其下
+# `mkdir -p $PGDATA`（Permission denied）。改为 uid 0 所有后，rootless 下映射到宿主
+# euid，与数据目录卷（宿主 euid 所有）一致，mkdir/读写正常。
+RUN chown -R 0:0 /var/lib/postgresql
+
+# 双重保险阻止 gosu 降权：
+# 1) fake id：让 `id -u`/`id --real` 恒返回 999（与 shim 的 getuid 伪装一致），
+#    骗过入口脚本的 root 判断。装到 /usr/local/bin/id（PATH 优先于 /bin/id）。
+COPY pg-fake-id.sh /usr/local/bin/id
+# 2) COPY 修改后的入口脚本覆盖原文件（gosu 行已改为 no-op）。
+#    入口脚本在 overlay 只读层上无法原地修改（sed -i / cat > 均 Permission denied），
+#    只能 COPY 新文件覆盖。docker-entrypoint-modified.sh 由 docker-entrypoint-orig.sh
+#    （从 postgres:15-alpine 提取）经 sed 把 `exec gosu postgres` 改为 `true # ...` 生成。
+#    即使 fake id 因任何原因失效（PATH 变化、子 shell 环境差异等），gosu 也不会执行。
+#    容器恒以 uid 0 运行，shim 使 postgres 以为自己是 999，数据目录归 uid 0 所有，读写正常。
+COPY docker-entrypoint-modified.sh /usr/local/bin/docker-entrypoint.sh
 
 # 保留官方 entrypoint（docker-entrypoint.sh）与默认 CMD（postgres）
