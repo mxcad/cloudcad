@@ -748,21 +748,57 @@ function pullLibraryImage(image) {
   return null;
 }
 
-function step3TagInfraImages() {
-  for (const [src, tag] of [
-    [PG_IMAGE, 'cloudcad/pg:15-alpine'],
-    [REDIS_IMAGE, 'cloudcad/redis:7-alpine'],
-  ]) {
-    const has = run('docker', ['image', 'inspect', src], { capture: true });
-    if (has.status !== 0) {
-      const pulled = pullLibraryImage(src);
-      if (!pulled) {
-        fail(`拉取 ${src} 失败（默认源与镜像源 ${REGISTRY_MIRRORS.join(', ')} 均不可达）。请检查网络，或预先 docker load 该镜像`);
-      }
+/**
+ * 构建 rootless 专用 pg 镜像：基于 postgres:15-alpine，以 root(uid 0) 运行 +
+ * LD_PRELOAD shim 伪装 uid=999。无 root/sudo 机器上 user namespace 只能做单段
+ * uid 映射（容器 uid 0 → 宿主 euid），官方镜像的 USER postgres(uid 999) 不可用
+ * （映射到宿主 nobody，无法写数据目录）；本镜像让容器以 uid 0 运行（唯一可映射
+ * 的 uid），shim 拦截 getuid/stat 让 postgres 以为自己是 uid 999。
+ * 有 root 的机器上同样可用（容器内 uid 0 = 宿主 root，shim 仍使 postgres 以
+ * 非 root 身份运行），故统一使用本镜像，无需按目标机是否 rootless 分叉。
+ * @returns {void} 成功时 cloudcad/pg:15-alpine 指向定制镜像
+ */
+function buildRootlessPgImage() {
+  // 1) 确保基础镜像 postgres:15-alpine 在位（多镜像源回退）
+  const has = run('docker', ['image', 'inspect', PG_IMAGE], { capture: true });
+  if (has.status !== 0) {
+    const pulled = pullLibraryImage(PG_IMAGE);
+    if (!pulled) {
+      fail(`拉取 ${PG_IMAGE} 失败（默认源与镜像源 ${REGISTRY_MIRRORS.join(', ')} 均不可达）。请检查网络，或预先 docker load 该镜像`);
     }
-    run('docker', ['tag', src, tag]);
-    log(`${src} → ${tag}`);
   }
+  // 2) 用 Dockerfile.pg-rootless 构建定制镜像（build context = runtime/docker，
+  //    Dockerfile 内 COPY pg-uid-shim.c 并 gcc 编译为 LD_PRELOAD 库）
+  const dockerfile = path.join(PROJECT_ROOT, 'runtime', 'docker', 'Dockerfile.pg-rootless');
+  const buildCtx = path.join(PROJECT_ROOT, 'runtime', 'docker');
+  if (!fs.existsSync(dockerfile)) {
+    fail(`缺少 ${dockerfile}，无法构建 rootless pg 镜像`);
+  }
+  log(`构建 rootless pg 镜像（基于 ${PG_IMAGE} + LD_PRELOAD shim）...`);
+  const res = run(
+    'docker',
+    ['build', '--network', 'host', '-f', dockerfile, '-t', 'cloudcad/pg:15-alpine', buildCtx],
+    { timeoutMs: 30 * 60000 },
+  );
+  if (res.status !== 0) {
+    fail(`构建 rootless pg 镜像失败（docker build -f Dockerfile.pg-rootless）`);
+  }
+  log(`cloudcad/pg:15-alpine = 定制 rootless 镜像（root + LD_PRELOAD shim）`);
+}
+
+function step3TagInfraImages() {
+  // pg：构建 rootless 定制镜像（基于 postgres:15-alpine + LD_PRELOAD shim）
+  buildRootlessPgImage();
+  // redis：标准镜像直接打 tag
+  const hasRedis = run('docker', ['image', 'inspect', REDIS_IMAGE], { capture: true });
+  if (hasRedis.status !== 0) {
+    const pulled = pullLibraryImage(REDIS_IMAGE);
+    if (!pulled) {
+      fail(`拉取 ${REDIS_IMAGE} 失败（默认源与镜像源 ${REGISTRY_MIRRORS.join(', ')} 均不可达）。请检查网络，或预先 docker load 该镜像`);
+    }
+  }
+  run('docker', ['tag', REDIS_IMAGE, 'cloudcad/redis:7-alpine']);
+  log(`${REDIS_IMAGE} → cloudcad/redis:7-alpine`);
 }
 
 function step4SaveImages(imagesDir, version) {

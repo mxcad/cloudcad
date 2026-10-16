@@ -1,0 +1,42 @@
+# CloudCAD rootless 专用 PostgreSQL 镜像
+#
+# 基于 postgres:15-alpine，但以 root（uid 0）运行 + LD_PRELOAD shim 伪装 uid=999。
+# 用途：rootless（无 root/sudo）机器上 user namespace 只能做单段 uid 映射
+# （容器 uid 0 → 宿主 euid），postgres 官方镜像的 USER postgres（uid 999）不可用
+# （映射到宿主 nobody，无法写数据目录）。本镜像让容器以 uid 0 运行（唯一可映射的
+# uid），shim 拦截 getuid/geteuid/getgid/getegid 返回 999 绕过 postgres 的
+# "cannot run as root" 检查，并拦截 stat/fstat/lstat 把 st_uid/st_gid 改成 999
+# 使数据目录属主检查通过。实际文件读写仍由真实宿主 uid（容器 uid 0 = 宿主 euid）
+# 完成，数据目录本就归宿主 euid 所有，故读写正常。
+#
+# 构建（在打包机上，postgres:15-alpine 已 pull）：
+#   docker build --network host -f runtime/docker/Dockerfile.pg-rootless \
+#     -t cloudcad/pg:15-alpine runtime/docker
+#
+# 注意：shim 在镜像内用 musl 工具链（gcc）编译，产物随镜像走，
+# 架构与打包机一致（打包机即目标架构机）。
+FROM postgres:15-alpine
+
+# postgres:15-alpine 默认 USER postgres(uid 999)，apk add 需 root，先切回 root 构建
+USER root
+
+# 编译 LD_PRELOAD shim（musl 工具链，产物为 musl 动态库，与 alpine 运行时匹配）
+RUN apk add --no-cache gcc musl-dev
+
+COPY pg-uid-shim.c /tmp/pg-uid-shim.c
+RUN gcc -shared -fPIC -O2 -o /usr/local/lib/pg-uid-shim.so /tmp/pg-uid-shim.c -ldl \
+    && rm /tmp/pg-uid-shim.c
+
+# 移除编译工具，减小镜像体积
+RUN apk del gcc musl-dev && rm -rf /var/cache/apk/*
+
+# 以 root（uid 0）运行：唯一可映射的 uid。
+# LD_PRELOAD 使 shim 在 entrypoint 及其所有子进程（含 id/psql/postgres）生效：
+#   - id -u 返回 999 → 官方 docker-entrypoint.sh 的 `if [ "$(id -u)" = "0" ]` 为假，
+#     不再 gosu 降权到 postgres 用户（uid 999 在单段映射下不可用）
+#   - postgres 的 getuid()==0 root 检查被绕过（shim 返回 999）
+#   - 数据目录属主检查 st_uid==getuid() 通过（shim 把两者都改成 999）
+USER root
+ENV LD_PRELOAD=/usr/local/lib/pg-uid-shim.so
+
+# 保留官方 entrypoint（docker-entrypoint.sh）与默认 CMD（postgres）
