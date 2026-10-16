@@ -20,6 +20,9 @@ FROM postgres:15-alpine
 # postgres:15-alpine 默认 USER postgres(uid 999)，apk add 需 root，先切回 root 构建
 USER root
 
+# 使用国内镜像加速 apk（默认 dl-cdn.alpinelinux.org 在打包机上慢/卡，实测 11 分钟拉不动索引）
+RUN sed -i 's|https://dl-cdn.alpinelinux.org|https://mirrors.aliyun.com|g' /etc/apk/repositories
+
 # 编译 LD_PRELOAD shim（musl 工具链，产物为 musl 动态库，与 alpine 运行时匹配）
 RUN apk add --no-cache gcc musl-dev
 
@@ -30,19 +33,32 @@ RUN gcc -shared -fPIC -O2 -o /usr/local/lib/pg-uid-shim.so /tmp/pg-uid-shim.c -l
 # 移除编译工具，减小镜像体积
 RUN apk del gcc musl-dev && rm -rf /var/cache/apk/*
 
+# uid/gid 999 必须在 /etc/passwd、/etc/group 可解析：shim 使 getuid() 恒返回 999，
+# initdb 要求 getpwuid(getuid()) 成功（alpine 的 postgres 是 uid 70，999 默认不存在，
+# 否则 initdb 报 "could not look up user id 999"）。
+# 必须在 ENV LD_PRELOAD 之前执行：此步的 shell 不能加载 shim（shim 只伪造
+# getuid 返回值，但任何在构建期依赖真实 uid 的行为都不该被干扰）。
+RUN printf 'pgfake:x:999:999:CloudCAD PG rootless shim:/var/lib/postgresql:/bin/sh\n' >> /etc/passwd \
+    && printf 'pgfake:x:999:\n' >> /etc/group
+
 # 以 root（uid 0）运行：唯一可映射的 uid。
 # LD_PRELOAD 使 shim 在 entrypoint 及其所有子进程（含 psql/postgres）生效：
 #   - postgres 的 getuid()==0 root 检查被绕过（shim 返回 999）
 #   - 数据目录属主检查 st_uid==getuid() 通过（shim 把两者都改成 999）
+# ⚠️ shim 只允许伪造 getuid/geteuid/getgid/getegid 的返回值与 stat 的 st_uid/st_gid，
+# 严禁调用 setresuid/setuid 降低真实 uid：旧版 .so 曾在加载时把真实 uid 降到 999
+# （CapEff 清零），rootless 下真实 uid 999 映射到 overflow 65534，数据目录（宿主
+# euid 所有 = 容器 uid 0）完全不可写，即 mx@ubuntu 首测的 Permission denied 根因。
+# 真实 uid 必须恒为 0（/proc/self/status 的 Uid 行可验证，shim 无法伪造）。
 USER root
 ENV LD_PRELOAD=/usr/local/lib/pg-uid-shim.so
 
-# rootless 关键修复：/var/lib/postgresql 在基础镜像中属 postgres（alpine 上 uid 70，
-# debian 上 uid 999）。rootless 单段 uid 映射（仅容器 uid 0 → 宿主 euid）下，
-# 该非 0 属主会落到 overflow uid 65534，导致以 uid 0 运行的 entrypoint 无法在其下
-# `mkdir -p $PGDATA`（Permission denied）。改为 uid 0 所有后，rootless 下映射到宿主
-# euid，与数据目录卷（宿主 euid 所有）一致，mkdir/读写正常。
-RUN chown -R 0:0 /var/lib/postgresql
+# rootless 属主修复放在运行时而非构建期：/var/lib/postgresql 是基础镜像声明的
+# VOLUME，BuildKit 禁止对 VOLUME 路径 chown（EPERM "Operation not permitted"）。
+# 运行时由 docker-entrypoint.sh 检测真实 uid==0（rootless shim 模式，读
+# /proc/self/status 的 Uid 行，shim 无法伪造）后 chown 0:0 修复
+# /var/lib/postgresql、/var/lib/postgresql/data、$PGDATA 属主；宿主侧 bind mount
+# 目录属主非当前用户时（如 rootful 残留），由 start.sh 预检先移开备份再重建。
 
 # 双重保险阻止 gosu 降权：
 # 1) fake id：让 `id -u`/`id --real` 恒返回 999（与 shim 的 getuid 伪装一致），
@@ -50,8 +66,10 @@ RUN chown -R 0:0 /var/lib/postgresql
 COPY pg-fake-id.sh /usr/local/bin/id
 # 2) COPY 修改后的入口脚本覆盖原文件（gosu 行已改为 no-op）。
 #    入口脚本在 overlay 只读层上无法原地修改（sed -i / cat > 均 Permission denied），
-#    只能 COPY 新文件覆盖。docker-entrypoint-modified.sh 由 docker-entrypoint-orig.sh
-#    （从 postgres:15-alpine 提取）经 sed 把 `exec gosu postgres` 改为 `true # ...` 生成。
+#    只能 COPY 新文件覆盖。docker-entrypoint-modified.sh 以 docker-entrypoint-orig.sh
+#    （从 postgres:15-alpine 提取）为底本手工维护：gosu 行改为 no-op + rootless 属主
+#    修复（docker_create_db_directories 内按 /proc/self/status 真实 uid 0 时 chown 0:0）。
+#    升级基础镜像需从新 postgres:15-alpine 重新提取 orig 并手工重放这两处改动。
 #    即使 fake id 因任何原因失效（PATH 变化、子 shell 环境差异等），gosu 也不会执行。
 #    容器恒以 uid 0 运行，shim 使 postgres 以为自己是 999，数据目录归 uid 0 所有，读写正常。
 COPY docker-entrypoint-modified.sh /usr/local/bin/docker-entrypoint.sh

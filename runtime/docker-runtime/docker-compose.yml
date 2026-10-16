@@ -46,6 +46,11 @@ services:
     container_name: cloudcad-redis
     restart: unless-stopped
     network_mode: host
+    # 官方镜像默认 USER redis（非 0 uid）：rootless 单段 uid 映射下落到 overflow
+    # 65534，无法写 /data（宿主 euid 所有 = 容器 uid 0）→ 写 appendonly 失败退出。
+    # redis 不像 postgres 那样拒绝 root，恒以 root 运行：rootless 下 uid 0 = 宿主
+    # euid 可写 /data，rootful 下 = 宿主 root 同样可写，两种形态统一。
+    user: root
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     command: >-

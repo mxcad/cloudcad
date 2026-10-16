@@ -36,6 +36,19 @@ _is_sourced() {
 docker_create_db_directories() {
 	local user; user="$(id -u)"
 
+	# rootless shim 模式（真实 uid 0、伪装 uid 999）：镜像内 /var/lib/postgresql 属
+	# uid 70/999，rootless 单段映射下落到 overflow 65534 不可写。真实 uid 是 0，
+	# 先修复属主再 mkdir。真实 uid 读 /proc/self/status 的 Uid 行（内核真值，shim
+	# 无法伪造；`id -u` 已被 fake id 改成 999 不可用）。chown 须剥离 LD_PRELOAD
+	# 执行，否则 busybox chown 被 shim 骗成非 root、拒绝 chown 到 0:0。
+	# 宿主侧 bind mount 目录属主非当前用户时 chown 会 EPERM（宿主文件系统不归本
+	# userns 管），由 start.sh 预检先把该目录移开备份，不会走到这里。
+	local real_uid
+	real_uid="$(awk '/^Uid:/{print $2; exit}' /proc/self/status 2>/dev/null)" || real_uid=''
+	if [ "$real_uid" = '0' ]; then
+		env -u LD_PRELOAD chown 0:0 /var/lib/postgresql /var/lib/postgresql/data "$PGDATA" 2>/dev/null || :
+	fi
+
 	mkdir -p "$PGDATA"
 	# ignore failure since there are cases where we can't chmod (and PostgreSQL might fail later anyhow - it's picky about permissions of this directory)
 	chmod 00700 "$PGDATA" || :

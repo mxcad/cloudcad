@@ -229,8 +229,18 @@ function step0Artifacts() {
   if (!fs.existsSync(path.join(DEPLOY_DIR, '.deploy-docker'))) {
     warn('未找到 .deploy-docker 标记文件，按全新安装处理');
   }
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-  fs.mkdirSync(PID_DIR, { recursive: true });
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    fs.mkdirSync(PID_DIR, { recursive: true });
+  } catch (e) {
+    if (e.code === 'EACCES' || e.code === 'EPERM') {
+      fail(
+        `无法创建 ${LOG_DIR}（${e.message}）：部署目录的 data/ 归其他用户所有。` +
+          '若为之前 root 部署的残留，请重新解压包到新目录运行，或用 root 运行 ./start.sh',
+      );
+    }
+    throw e;
+  }
 }
 
 // ==================== Step 1 权限硬门禁 ====================
@@ -292,6 +302,38 @@ function step1Permission() {
   }
   if (!prereq.ok) {
     warn('rootless 硬前置不完整，将以降级模式运行（详见上方缺失项）；完整功能请补齐后重跑 ./start.sh');
+  }
+}
+
+/**
+ * rootless 兜底：宿主侧数据目录属主非当前用户（如之前 rootful 部署的残留）时，
+ * 单段 uid 映射下落到 overflow 65534，容器内 uid 0 无法读写
+ * （postgres 在 $PGDATA 上 mkdir 报 Permission denied，redis 写 appendonly 失败）。
+ * 移开备份（保留旧数据）后由 dockerd 在 bind mount 时以当前用户属主重建。
+ * 仅 rootless 有意义：root/sudo 模式容器内 uid 0 = 宿主 root，任何属主都可写。
+ */
+function checkDataDirOwnership() {
+  if (MODE !== 'rootless') return;
+  for (const rel of ['postgres', 'redis']) {
+    const p = path.join(DATA_DIR, rel);
+    if (!fs.existsSync(p)) continue; // 不存在：dockerd bind mount 时以当前用户属主创建
+    let st;
+    try {
+      st = fs.statSync(p);
+    } catch {
+      continue;
+    }
+    if (st.uid === process.geteuid()) continue;
+    const bak = `${p}.bak-${Date.now()}`;
+    try {
+      fs.renameSync(p, bak);
+    } catch (e) {
+      fail(`无法移开 ${p}（${e.message}）。若为之前 root 部署残留，请用 root 手动移开后重跑 ./start.sh`);
+    }
+    warn(
+      `宿主侧数据目录 ${p} 属主为 uid ${st.uid}（当前用户 ${process.geteuid()}），` +
+        `rootless 下容器内无法读写。已移开到 ${bak} 并全新初始化（旧数据保留在该目录）`,
+    );
   }
 }
 
@@ -751,6 +793,7 @@ function step12Summary() {
 async function cmdStart() {
   step0Artifacts();
   step1Permission();
+  checkDataDirOwnership();
   step2Env();
   // 慢环境兜底：拉长客户端 SYN 重试窗口（须在 step1Permission 定 MODE 后、容器启动前）
   tuneTcpForSlowEnv();
