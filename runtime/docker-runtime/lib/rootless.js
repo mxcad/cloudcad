@@ -44,6 +44,26 @@ function which(cmd) {
 }
 
 /**
+ * 实测 slirp4netns 二进制能否在本机运行（跑 --version）。
+ * 仅查文件存在会误判：包内动态版（发行版 1.0.1）在 glibc 过低的目标机（如 Ubuntu 20.04/2.31）
+ * 会因 libslirp 需 GLIBC_2.33+ 而 exec 失败，若当真则 dockerd 90s 超时。静态版（v1.2.x）
+ * 无 glibc 依赖恒可跑。动态版需 LD_LIBRARY_PATH 找 libslirp（二进制旁 lib/ 目录）。
+ * @param {string} p slirp4netns 路径
+ * @returns {boolean}
+ */
+function slirpUsable(p) {
+  if (!p || !fs.existsSync(p)) return false;
+  try {
+    const libDir = path.join(path.dirname(p), 'lib');
+    const env = { ...process.env, LD_LIBRARY_PATH: libDir + (process.env.LD_LIBRARY_PATH ? `:${process.env.LD_LIBRARY_PATH}` : '') };
+    const r = spawnSync(p, ['--version'], { encoding: 'utf8', env, timeout: 10000 });
+    return r.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 读 /etc/subuid 或 /etc/subgid 中指定用户的首条范围。
  * @param {string} file
  * @param {string} user
@@ -189,8 +209,8 @@ function ensureCgroup(cgroupParent, log = () => {}) {
 function renderSetupScript(p) {
   const { shadowRun, etcLower, etcUpper, etcWork, slirp, dockerd, dockerdArgs, cgroupParent, realUid, ports } = p;
   const cgArg = cgroupParent ? ` --cgroup-parent=${cgroupParent}` : '';
-  // slirp4netns hostfwd：把宿主端口转发进子 netns（无端口则为空串）
-  const hostfwd = ports.map((port) => `-e ${port}:${port}`).join(' ');
+  // slirp4netns hostfwd：把宿主端口转发进子 netns（无端口则为空串），经 API socket 发 add_hostfwd
+  const portsList = (ports || []).join(' ');
   const slirpPath = slirp || '';
   return `#!/bin/sh
 # 由 lib/rootless.js 生成 —— rootless dockerd setup（在 user+mount+ipc ns 内运行，uid=0）
@@ -215,34 +235,66 @@ mount -t overlay overlay -o lowerdir=${etcLower},upperdir=${etcUpper},workdir=${
 DOCKERD="${dockerd}"
 DOCKERD_ARGS="${dockerdArgs}${cgArg}"
 REAL_UID="${realUid}"
+PORTS="${portsList}"
 
-# 4a) 有 slirp4netns：完整用户态网络 + hostfwd 暴露端口给真实宿主
+# hostfwd 发送器（slirp4netns API socket，QMP 风格 JSON）。协议：发 JSON 后 SHUT_WR（无 keep-alive），读响应。
+# 优先 python3（Ubuntu 默认有），回退 nc -U；都无则跳过（端口不暴露但 dockerd 仍跑）。
+send_hostfwd() {
+  hf_proto="$1"; hf_hport="$2"; hf_gport="$3"
+  HFWD_REQ='{"execute":"add_hostfwd","arguments":{"proto":"'\${hf_proto}'","host_port":'\${hf_hport}',"guest_port":'\${hf_gport}'}}'
+  if command -v python3 >/dev/null 2>&1; then
+    HFWD_SOCK="$SLIRP_API_SOCK" HFWD_REQ="$HFWD_REQ" python3 -c '
+import socket, os, sys
+sp, req = os.environ["HFWD_SOCK"], os.environ["HFWD_REQ"]
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.settimeout(5)
+try:
+    s.connect(sp); s.sendall(req.encode()); s.shutdown(socket.SHUT_WR)
+    buf = b""
+    while True:
+        c = s.recv(4096)
+        if not c: break
+        buf += c
+    sys.stdout.write(buf.decode(errors="replace"))
+except Exception:
+    pass
+finally:
+    s.close()
+' 2>/dev/null || true
+  elif command -v nc >/dev/null 2>&1; then
+    printf '%s' "$HFWD_REQ" | nc -U -w 3 "$SLIRP_API_SOCK" >/dev/null 2>&1 || true
+  fi
+}
+
+# 4a) 有 slirp4netns：完整用户态网络 + hostfwd（API socket）暴露端口给真实宿主
+#     slirp4netns 只有附着模型（PID|PATH|FD [TAPNAME]），无自拉模型：先在新 netns 起 dockerd，
+#     再 slirp 附着其 netns 建 TAP + 用户态网络；hostfwd 经 API socket 发 add_hostfwd（非命令行参数）。
 if [ -n "${slirpPath}" ] && [ -x "${slirpPath}" ]; then
-  # 动态 slirp4netns（发行版 1.0.1）需 LD_LIBRARY_PATH 找 libslirp（静态 v1.2.x 无此依赖，设了也无害）
+  # 动态 slirp4netns（发行版 1.0.1）需 LD_LIBRARY_PATH 找 libslirp（静态 v1.3.x 无此依赖，设了也无害）
   SLIRP_LIBDIR="$(dirname "${slirpPath}")/lib"
   [ -d "\${SLIRP_LIBDIR}" ] && export LD_LIBRARY_PATH="\${SLIRP_LIBDIR}\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}"
-  # 按 slirp4netns 版本分支：1.2.x「TAPNAME PROGRAM」(slirp 自拉 dockerd) vs 1.0.x「PID|PATH TAPNAME」(先起 dockerd 再附着)
-  SLIRP_VER="$("${slirpPath}" --version 2>/dev/null | head -1 | grep -oE '[0-9]+\\.[0-9]+' | head -1)"
-  case "\${SLIRP_VER}" in
-    1.0*)
-      # 1.0.x 附着模型：先后台起 dockerd，再 slirp 附着其 netns 建 tap0 通网
-      # （1.0.x 不支持 hostfwd -e port:port，有端口时仅告警——打包侧 ports 为空不受影响）
-      if [ -n "${hostfwd}" ]; then
-        echo "[rootless] 警告：slirp4netns \${SLIRP_VER} 不支持 hostfwd，服务端口将无法暴露给真实宿主（仅 ns 内互通）" >&2
-      fi
-      "$DOCKERD" $DOCKERD_ARGS &
-      DOCKERD_PID=$!
-      "${slirpPath}" -c --netns-type=pid "\${DOCKERD_PID}" tap0 &
-      SLIRP_PID=$!
-      # 脚本存活与 dockerd 绑定：dockerd 退出即清理 slirp 并结束（rootless-ns 据此回收 netns）
-      wait "\${DOCKERD_PID}" || true
-      kill "\${SLIRP_PID}" 2>/dev/null || true
-      ;;
-    *)
-      # 1.2.x+：slirp4netns 自拉 dockerd（原语法，支持 hostfwd）
-      exec "${slirpPath}" tap0 ${hostfwd} "$DOCKERD" $DOCKERD_ARGS
-      ;;
-  esac
+  SLIRP_API_SOCK="/run/slirp4netns.sock"
+  # 1) 新 netns 里起 dockerd（后台；unshare 建 netns 后 exec dockerd，PID 不变）
+  unshare -n "$DOCKERD" $DOCKERD_ARGS &
+  DOCKERD_PID=$!
+  # 2) slirp4netns 附着 dockerd 的 netns（按 PID），建 TAP + 用户态网络 + API socket
+  "${slirpPath}" -c --netns-type=pid "\${DOCKERD_PID}" --api-socket "\${SLIRP_API_SOCK}" tap0 &
+  SLIRP_PID=$!
+  # 3) 等 API socket 就绪，对每个端口发 add_hostfwd（TCP + UDP，宿主端口 → guest 10.0.2.100 同端口）
+  if [ -n "$PORTS" ]; then
+    i=0
+    while [ ! -S "\${SLIRP_API_SOCK}" ] && [ $i -lt 30 ]; do sleep 1; i=$((i+1)); done
+    if [ -S "\${SLIRP_API_SOCK}" ]; then
+      for hf_port in $PORTS; do
+        send_hostfwd tcp "$hf_port" "$hf_port"
+        send_hostfwd udp "$hf_port" "$hf_port"
+      done
+    else
+      echo "[rootless] 警告：slirp4netns API socket 30s 未就绪，服务端口未暴露（仅 ns 内互通）" >&2
+    fi
+  fi
+  # 4) 脚本存活与 dockerd 绑定：dockerd 退出即清理 slirp 并结束（rootless-ns 据此回收 netns）
+  wait "\${DOCKERD_PID}" || true
+  kill "\${SLIRP_PID}" 2>/dev/null || true
 fi
 
 # 4b) 无 slirp4netns：降级 plain netns（仅 loopback，服务端口对真实宿主不可达）
@@ -307,16 +359,30 @@ function checkPrerequisites({ toolsDir, log = () => {} }) {
     });
   }
 
-  // slirp4netns（系统或包内）—— 用户态网络 + 端口暴露
-  const slirp4netns =
-    which('slirp4netns') || (fs.existsSync(path.join(toolsDir, 'slirp4netns')) ? path.join(toolsDir, 'slirp4netns') : null);
+  // slirp4netns（系统或包内）—— 用户态网络 + 端口暴露。
+  // 必须「实测可运行」而非仅查文件存在：包内动态版（发行版 1.0.1）在 glibc 过低的目标机
+  // （如 Ubuntu 20.04/2.31）会因 libslirp 需 GLIBC_2.33+ 而 exec 失败，若只查存在会误判可用
+  // → dockerd 90s 超时。实测 --version，跑不了就降级 plain-netns（或改用系统 slirp4netns）。
+  const sysSlirp = which('slirp4netns');
+  const bundledSlirp = path.join(toolsDir, 'slirp4netns');
+  let slirp4netns = null;
+  if (sysSlirp && slirpUsable(sysSlirp)) {
+    slirp4netns = sysSlirp;
+  } else if (slirpUsable(bundledSlirp)) {
+    slirp4netns = bundledSlirp;
+  }
   if (!slirp4netns) {
+    const foundButBroken = Boolean(sysSlirp) || fs.existsSync(bundledSlirp);
     missing.push({
       name: 'slirp4netns',
-      hint:
-        '未找到 slirp4netns（rootless 用户态网络，负责建 netns 并把服务端口暴露给真实宿主）。' +
-        '安装：Debian/Ubuntu `sudo apt install slirp4netns`；RHEL/CentOS `sudo dnf install slirp4netns`。' +
-        '缺失时降级为 plain netns（dockerd 可跑，但服务端口对宿主不可达）。',
+      hint: foundButBroken
+        ? '找到 slirp4netns 但本机无法运行（常见：包内动态版需 GLIBC_2.33+，本机 glibc 过低）。' +
+          '将降级 plain-netns（dockerd 可跑，但服务端口对真实宿主不可达）。' +
+          '完整网络需：装系统 slirp4netns（sudo apt/dnf install slirp4netns）后重跑，' +
+          '或用含静态 slirp4netns 的部署包（runtime/docker-runtime/vendor/slirp4netns）。'
+        : '未找到 slirp4netns（rootless 用户态网络，负责建 netns 并把服务端口暴露给真实宿主）。' +
+          '安装：Debian/Ubuntu `sudo apt install slirp4netns`；RHEL/CentOS `sudo dnf install slirp4netns`。' +
+          '缺失时降级为 plain netns（dockerd 可跑，但服务端口对宿主不可达）。',
     });
   }
 

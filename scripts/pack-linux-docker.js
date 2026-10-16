@@ -39,8 +39,15 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DOCKER_STATIC_VERSION = '20.10.24';
 // compose v2 独立二进制（20.10 的 tgz 不含 compose 插件，需单独携带）
 const COMPOSE_VERSION = 'v2.29.7';
-// slirp4netns 静态二进制（rootless 完整网络兜底；best-effort 下载，失败不阻塞出包）
-const SLIRP4NETNS_VERSION = 'v1.2.21';
+// slirp4netns 静态二进制（rootless 完整网络兜底；best-effort 下载，失败不阻塞出包）。
+// 版本线是 v1.3.x（v1.2.3+ 不存在，v1.2.2 是旧线且无 hostfwd）；v1.3.6 为当前最新，
+// 带 API socket（add_hostfwd，v0.3.0 起所有版本都有）——rootless 暴露端口靠它，非命令行参数。
+const SLIRP4NETNS_VERSION = 'v1.3.6';
+// 仓库内置静态 slirp4netns（版本控制，免下载）：无 glibc 依赖、任意 Linux 可跑。
+// 目标机 glibc 过低（如 Ubuntu 20.04/2.31）时，动态版（发行版 1.0.1，需 GLIBC_2.33+）会
+// exec 失败；静态版是唯一「任何环境可运行」的兜底。ensureSlirp4netns 首选本目录。
+// 更新/补齐见该目录 README.md + fetch-static-slirp.sh。
+const VENDOR_SLIRP_DIR = path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'vendor', 'slirp4netns');
 const PG_IMAGE = 'postgres:15-alpine';
 const REDIS_IMAGE = 'redis:7-alpine';
 const NODE_VERSION = 'v20.19.5';
@@ -953,48 +960,75 @@ async function step5DockerBinaries(dockerDir) {
 }
 
 /**
- * slirp4netns 就位（rootless 用户态网络）：首选 v1.2.21 静态二进制（GitHub，无 glibc
- * 依赖、任意机器可跑、1.2.x「TAPNAME PROGRAM」语法）；GitHub 不可达时回退发行版
- * 1.0.1 动态包 + libslirp（TUNA/aliyun ubuntu pool，glibc≥2.35 可达，1.0.x「PID|PATH
- * TAPNAME」附着语法——renderSetupScript 按版本分支适配）。best-effort：全部失败仅告警
- * （root/sudo 模式不依赖它；rootless 模式降级 plain-netns 或靠目标机系统 slirp4netns）。
+ * slirp4netns 就位（rootless 用户态网络）。优先级：
+ *   0) 仓库内置静态 v1.2.x（版本控制，无 glibc 依赖、任意 Linux 可跑，免下载）——首选；
+ *   1) 已有可运行的 dest（复用，免下载）；
+ *   2) 下载 v1.2.x 静态裸二进制（GitHub 直链 + 镜像多源回退，见 slirpStaticSources）；
+ *   3) 回退发行版 1.0.1 动态包 + libslirp（TUNA/aliyun ubuntu pool；仅 glibc≥2.33 机器可跑）。
+ * best-effort：全部失败仅告警（root/sudo 模式不依赖它；rootless 模式降级 plain-netns
+ * 或靠目标机系统 slirp4netns）。
  * @param {string} dockerDir 包内 docker/ 目录
  */
 async function ensureSlirp4netns(dockerDir) {
   const dest = path.join(dockerDir, 'slirp4netns');
+  // 发布资产命名用 x86_64/aarch64（非 amd64/arm64）；vendor 目录文件名与资产同名，免改名
+  const slirpArch = { x64: 'x86_64', arm64: 'aarch64' }[process.arch];
+  const { downloadFile } = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'download-sources'));
+
+  // 0) 首选：仓库内置静态 slirp4netns（版本控制，无 glibc 依赖，任意 Linux 可跑，免下载）。
+  //    静态 v1.2.x 是「任何环境可运行」的兜底：目标机 glibc 过低（如 Ubuntu 20.04/2.31）时
+  //    动态版（发行版 1.0.1，需 GLIBC_2.33+）会 exec 失败，静态版不受 glibc 影响。
+  const vendored = path.join(VENDOR_SLIRP_DIR, `slirp4netns-${slirpArch}`);
+  if (fs.existsSync(vendored)) {
+    fs.copyFileSync(vendored, dest);
+    fs.chmodSync(dest, 0o755);
+    const check = run(dest, ['--version'], { capture: true });
+    if (check.status === 0) {
+      log(`slirp4netns 就位（仓库内置静态 ${SLIRP4NETNS_VERSION}，${slirpArch}，免下载）`);
+      return;
+    }
+    log(`内置静态 slirp4netns 不可运行（${(check.stderr || check.stdout || '').trim().split('\n').pop()}）→ 回退下载`);
+  }
+
+  // 1) 已有可运行的 dest（动态/静态）→ 直接复用
   if (fs.existsSync(dest)) {
     fs.chmodSync(dest, 0o755);
     // 验证可运行（动态 slirp4netns 需 libslirp，经 LD_LIBRARY_PATH 加载；静态无此依赖）。
-    // 二进制在但缺 libslirp 时不可运行 → 不早退，继续走下载补齐 libslirp。
+    // 二进制在但缺 libslirp 时不可运行 → 不早退，继续走下载补齐。
     const libDir = path.join(dockerDir, 'lib');
     const env = { ...process.env, LD_LIBRARY_PATH: libDir + (process.env.LD_LIBRARY_PATH ? `:${process.env.LD_LIBRARY_PATH}` : '') };
     const check = run(dest, ['--version'], { capture: true, env });
     if (check.status === 0) return;
     log(`slirp4netns 二进制存在但不可运行（${(check.stderr || check.stdout || '').trim().split('\n').pop()}）→ 重新下载补齐`);
   }
-  const slirpArch = { x64: 'amd64', arm64: 'arm64' }[process.arch];
-  const { downloadFile } = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'download-sources'));
-  // 1) 首选：v1.2.21 静态二进制（GitHub，经 download-sources 多源回退）
-  const ver = SLIRP4NETNS_VERSION.replace(/^v/, '');
-  const url = `https://github.com/rootless-containers/slirp4netns/releases/download/${SLIRP4NETNS_VERSION}/slirp4netns-${ver}-linux-${slirpArch}.tar.gz`;
-  try {
-    log(`下载 slirp4netns ${SLIRP4NETNS_VERSION}（${slirpArch}，静态）...`);
-    const tgz = path.join(dockerDir, `slirp4netns-${ver}.tar.gz`);
-    await downloadFile(url, tgz);
-    const res = run(TAR_BIN, ['-xzf', tgz, '-C', dockerDir]);
-    if (res.status !== 0) throw new Error(`解压失败: ${res.stderr || res.stdout}`);
-    // 资产内二进制名可能带版本后缀，归一到 slirp4netns
-    const inner = path.join(dockerDir, `slirp4netns-${ver}`);
-    if (fs.existsSync(inner) && !fs.existsSync(dest)) fs.renameSync(inner, dest);
-    fs.rmSync(tgz, { force: true });
-    if (!fs.existsSync(dest)) throw new Error('解压后未见 slirp4netns 二进制');
-    fs.chmodSync(dest, 0o755);
-    log(`slirp4netns 就位（v1.2.x 静态，rootless 完整网络可用）`);
-    return;
-  } catch (err) {
-    log(`slirp4netns ${SLIRP4NETNS_VERSION} 静态不可达（${err.message}）→ 回退发行版 1.0.1 动态包`);
+
+  // 2) 下载 v1.2.x 静态裸二进制（GitHub 直链 + 镜像多源回退；GitHub 国内常不可达）。
+  //    发布资产是**裸静态二进制** `slirp4netns-x86_64` / `slirp4netns-aarch64`（非 .tar.gz），
+  //    直接下载落盘、校验可运行后改名到 dest，无需解压。
+  const tmpBin = path.join(dockerDir, `.slirp4netns-dl`);
+  let staticOk = false;
+  for (const url of slirpStaticSources(slirpArch)) {
+    try {
+      log(`下载 slirp4netns ${SLIRP4NETNS_VERSION}（${slirpArch}，静态）：${url}`);
+      await downloadFile(url, tmpBin);
+      fs.chmodSync(tmpBin, 0o755);
+      // 校验是有效可运行二进制（防镜像 200 返回 HTML 错误页被当成二进制）
+      const check = run(tmpBin, ['--version'], { capture: true });
+      if (check.status !== 0) throw new Error(`下载产物不可运行: ${(check.stderr || check.stdout || '').trim().split('\n').pop()}`);
+      fs.renameSync(tmpBin, dest);
+      log(`slirp4netns 就位（v1.2.x 静态，rootless 完整网络可用）`);
+      staticOk = true;
+      break;
+    } catch (err) {
+      log(`slirp4netns 静态源不可达（${url}：${err.message}）→ 试下一源`);
+    } finally {
+      fs.rmSync(tmpBin, { force: true });
+    }
   }
-  // 2) 回退：发行版 slirp4netns 1.0.1 + libslirp（动态，TUNA/aliyun ubuntu pool）
+  if (staticOk) return;
+  log(`slirp4netns ${SLIRP4NETNS_VERSION} 静态全部源不可达 → 回退发行版 1.0.1 动态包`);
+
+  // 3) 回退：发行版 slirp4netns 1.0.1 + libslirp（动态，TUNA/aliyun ubuntu pool）
   try {
     await downloadDistroSlirp4netns(dockerDir, slirpArch, downloadFile);
     fs.chmodSync(dest, 0o755);
@@ -1005,8 +1039,32 @@ async function ensureSlirp4netns(dockerDir) {
 }
 
 /**
+ * slirp4netns v1.2.x 静态裸二进制下载源清单（GitHub 直链 + 镜像回退）。
+ * 发布资产是**裸静态二进制** `slirp4netns-<arch>`（arch = x86_64 / aarch64），非 .tar.gz。
+ * GitHub 在国内常不可达；前缀型代理把完整 GitHub URL 拼在代理后，重写型代理替换主机名。
+ * 各代理可用性随时间波动，按序尝试、首个成功即用（与 vendor/slirp4netns/fetch-static-slirp.sh 同源）。
+ * @param {string} arch x86_64|aarch64
+ * @returns {string[]}
+ */
+function slirpStaticSources(arch) {
+  const asset = `rootless-containers/slirp4netns/releases/download/${SLIRP4NETNS_VERSION}/slirp4netns-${arch}`;
+  const gh = `https://github.com/${asset}`;
+  return [
+    gh,
+    `https://ghproxy.com/${gh}`,
+    `https://mirror.ghproxy.com/${gh}`,
+    `https://gh-proxy.com/${gh}`,
+    `https://ghps.cc/${gh}`,
+    `https://kkgithub.com/${asset}`,
+    `https://gitclone.com/github.com/${asset}`,
+  ];
+}
+
+/**
  * 下载发行版 slirp4netns 1.0.1 + libslirp0（动态，TUNA/aliyun ubuntu pool 多镜像回退）。
- * 1.0.1 是 glibc≥2.35 机器上 GitHub 静态 v1.2.x 不可达时唯一可达的 slirp4netns。
+ * 这是**最后兜底**：仓库内置静态版缺失 + 静态多源下载全失败时才走它。注意它是动态链接、
+ * 需 glibc≥2.33——在低 glibc 目标机（如 Ubuntu 20.04/2.31）上会被 rootless.js 的
+ * slirpUsable 实测判为不可运行、降级 plain-netns（故仅对 glibc≥2.33 的目标机真正有效）。
  * 提取 slirp4netns 二进制到 dockerDir、libslirp.so.0 到 dockerDir/lib（动态库经
  * LD_LIBRARY_PATH 加载，renderSetupScript 已设）。
  * @param {string} dockerDir 包内 docker/ 目录
