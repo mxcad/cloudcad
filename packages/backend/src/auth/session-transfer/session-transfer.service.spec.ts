@@ -102,7 +102,7 @@ describe('SessionTransferService', () => {
     mockRedis.set.mockResolvedValue('OK');
     mockRefreshTokenRepo.deleteByUserId.mockResolvedValue(undefined);
     mockTokenBlacklistService.addToBlacklist.mockResolvedValue(undefined);
-    mockRuntimeConfigService.getValue.mockResolvedValue('http://localhost:3000');
+    mockRuntimeConfigService.getValue.mockResolvedValue('http://localhost:8000');
     mockConfigService.get.mockReturnValue('secret');
     mockMembershipService.getMembership.mockResolvedValue({
       tierLevel: 2,
@@ -141,7 +141,7 @@ describe('SessionTransferService', () => {
       expect(result.token).toHaveLength(43);
       expect(result.expiresIn).toBe(60);
       expect(result.transferUrl).toBe(
-        `http://localhost:3000/session-transfer?token=${result.token}`,
+        `http://localhost:8000/session-transfer?token=${result.token}`,
       );
     });
 

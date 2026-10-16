@@ -32,7 +32,7 @@ const menuSections = [
     items: [
       {
         label: '启动服务（含前后端）',
-        desc: '生产运行，默认 PM2 后台',
+        desc: '生产运行，默认前台运行',
         action: startMode,
       },
       { label: '查看服务状态', action: viewStatus },

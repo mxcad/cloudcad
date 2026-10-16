@@ -18,18 +18,32 @@ import {
   Param,
   Body,
   Req,
+  Res,
   Query,
+  HttpCode,
+  HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
   ApiResponse,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { RuntimeConfigService } from './runtime-config.service';
+import { BrandAssetService } from './brand-asset.service';
 import {
   UpdateRuntimeConfigDto,
   RuntimeConfigResponseDto,
@@ -42,13 +56,16 @@ import { RequirePermissions } from '../common/decorators/require-permissions.dec
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { SystemPermission } from '../common/enums/permissions.enum';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 
 @ApiTags('runtime-config')
 @Controller('runtime-config')
 @UseGuards(PermissionsGuard)
 export class RuntimeConfigController {
-  constructor(private readonly runtimeConfigService: RuntimeConfigService) {}
+  constructor(
+    private readonly runtimeConfigService: RuntimeConfigService,
+    private readonly brandAssetService: BrandAssetService
+  ) {}
 
   /**
    * 获取前端所需的公开配置（无需登录）
@@ -106,6 +123,108 @@ export class RuntimeConfigController {
   })
   async getDefinitions(): Promise<RuntimeConfigDefinitionDto[]> {
     return this.runtimeConfigService.getDefinitions();
+  }
+
+  /**
+   * 获取品牌 Logo（公开：登录页与 favicon 也要读）。
+   * 注意路径声明顺序：必须排在 `:key` 之前，否则 `brand-logo` 会被当成配置键名。
+   */
+  @Public()
+  @Get('brand-logo')
+  @ApiOperation({ summary: '获取品牌 Logo' })
+  @ApiResponse({ status: 200, description: '返回品牌 Logo 图片' })
+  @ApiResponse({ status: 304, description: '品牌 Logo 未变化' })
+  @ApiResponse({ status: 404, description: '尚未上传品牌 Logo' })
+  async serveBrandLogo(@Res() res: Response) {
+    const logo = await this.brandAssetService.readLogo();
+    if (!logo) {
+      throw new NotFoundException('尚未上传品牌 Logo');
+    }
+
+    const stats = await fs.promises.stat(logo.filePath);
+    // 基于 mtime + size 生成 ETag：Logo 被覆盖重写后两者变化 → ETag 变化 → 浏览器重新拉取
+    const etag = `"${Math.floor(stats.mtimeMs)}-${stats.size}"`;
+    const lastModified = stats.mtime.toUTCString();
+    const cacheControl = 'no-cache';
+
+    const ifNoneMatch = res.req?.headers['if-none-match'];
+    const etagMatches =
+      ifNoneMatch
+        ?.split(',')
+        .map((tag) => tag.trim().replace(/^W\//, ''))
+        .includes(etag) ?? false;
+    const ifModifiedSince = Date.parse(
+      res.req?.headers['if-modified-since'] || ''
+    );
+    const lastModifiedMs = Math.floor(stats.mtimeMs / 1000) * 1000;
+    const notModified =
+      etagMatches ||
+      (!ifNoneMatch &&
+        !Number.isNaN(ifModifiedSince) &&
+        ifModifiedSince >= lastModifiedMs);
+
+    if (notModified) {
+      res.status(304);
+      res.setHeader('ETag', etag);
+      res.setHeader('Last-Modified', lastModified);
+      res.setHeader('Cache-Control', cacheControl);
+      res.end();
+      return;
+    }
+
+    res.setHeader('Content-Type', logo.mimeType);
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Last-Modified', lastModified);
+    res.setHeader('ETag', etag);
+    res.setHeader('Cache-Control', cacheControl);
+    const stream = fs.createReadStream(logo.filePath);
+    stream.on('error', () => {
+      if (!res.headersSent) {
+        res.status(500).end();
+      }
+    });
+    stream.pipe(res);
+  }
+
+  /**
+   * 上传品牌 Logo（覆盖式）。返回前端可直接放进 `brandProfile.logo` 的 URL，
+   * 品牌档案本身仍由 `PUT :key` 保存——上传只负责落盘文件。
+   */
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @Post('brand-logo')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiOperation({ summary: '上传品牌 Logo' })
+  @ApiResponse({
+    status: 200,
+    description: '上传成功，返回前端可引用的 Logo URL',
+    schema: {
+      type: 'object',
+      properties: {
+        logoUrl: { type: 'string', example: '/api/v1/runtime-config/brand-logo' },
+        size: { type: 'number', example: 20480 },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: '文件类型或大小不符合要求' })
+  @UseInterceptors(
+    FileInterceptor('file', { storage: memoryStorage(), defParamCharset: 'utf8' })
+  )
+  async uploadBrandLogo(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('请上传 Logo 图片');
+    }
+    return this.brandAssetService.uploadLogo(file.buffer, file.mimetype);
   }
 
   /**

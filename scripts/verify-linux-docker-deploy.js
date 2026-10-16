@@ -206,7 +206,7 @@ async function main() {
   const probes = [
     [`后端 live`, httpProbe(env.PORT || 3001, '/api/health/live')],
     [`后端 ready`, httpProbe(env.PORT || 3001, '/api/health/public')],
-    [`前端`, httpProbe(env.FRONTEND_PORT || 3000, '/')],
+    [`前端`, httpProbe(env.FRONTEND_PORT || 8000, '/')],
     [`运维中心`, httpProbe(env.CONFIG_SERVICE_PORT || 3002, '/')],
     [`转换服务`, httpProbe(env.CONVERSION_SERVICE_PORT || 3100, '/health')],
   ];

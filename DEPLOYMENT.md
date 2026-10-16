@@ -100,7 +100,7 @@ pnpm dev
 
 | 服务     | 地址                           | 说明              |
 | -------- | ------------------------------ | ----------------- |
-| 前端     | http://localhost:3000          | Vite 开发服务器   |
+| 前端     | http://localhost:8000          | Vite 开发服务器   |
 | 后端 API | http://localhost:3001/api      | NestJS 开发服务器 |
 | API 文档 | http://localhost:3001/api/docs | Swagger UI        |
 
@@ -460,7 +460,7 @@ cloudcad/
 │   └── .env                      # 环境变量 (不提交到 Git)
 └── packages/
     ├── backend/                 # 后端 API (3001)
-    ├── frontend/                # 前端 SPA (3000)
+    ├── frontend/                # 前端 SPA (8000)
     ├── frontend_mobile/         # 移动端 H5
     ├── config-service/          # 配置中心 (3002)
     ├── storage-service/         # 文件/版本服务 (3200)

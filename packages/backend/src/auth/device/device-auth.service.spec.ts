@@ -83,14 +83,14 @@ describe('DeviceAuthService', () => {
     });
 
     it('应为 mx_cad_viewer 生成设备码', async () => {
-      mockRuntimeConfigService.getValue.mockResolvedValue('http://localhost:3000');
+      mockRuntimeConfigService.getValue.mockResolvedValue('http://localhost:8000');
 
       const result = await service.requestDeviceCode('mx_cad_viewer');
 
       expect(result.device_code).toBeDefined();
       expect(result.device_code.length).toBeGreaterThan(0);
       expect(result.user_code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
-      expect(result.verification_uri).toBe('http://localhost:3000/device');
+      expect(result.verification_uri).toBe('http://localhost:8000/device');
       expect(result.verification_uri_complete).toContain('user_code=');
       expect(result.verification_uri_complete).toContain('client_id=mx_cad_viewer');
       expect(result.expires_in).toBe(300);

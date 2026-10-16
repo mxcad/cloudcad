@@ -32,6 +32,7 @@ describe('默认值（接口未返回或失败时）', () => {
       requirePhoneVerification: false,
       supportEmail: '',
       supportPhone: '',
+      docsUrl: '',
       maxFileSize: 100,
       allowRegister: true,
       wechatEnabled: false,
@@ -40,7 +41,7 @@ describe('默认值（接口未返回或失败时）', () => {
       conversionGuestWindowHours: 2,
       conversionGuestLimit: 5,
       freeExportDownloadEnabled: false,
-      collaborationEnabled: false,
+      collaborationEnabled: true,
       collaborationDomains: '',
       batchDownloadEnabled: false,
       brandProfile: {},
@@ -66,6 +67,7 @@ describe('字段解析', () => {
         requirePhoneVerification: true,
         supportEmail: 'cs@mx.com',
         supportPhone: '400-123-4567',
+        docsUrl: 'https://docs.mx.com/',
         maxFileSize: 500,
         allowRegister: false,
         wechatEnabled: true,
@@ -85,6 +87,7 @@ describe('字段解析', () => {
     expect(config.value.collaborationDomains).toBe('mxdraw.com,*.mxdraw.cn');
     expect(config.value.allowRegister).toBe(false);
     expect(config.value.maxFileSize).toBe(500);
+    expect(config.value.docsUrl).toBe('https://docs.mx.com/');
   });
 
   it('brandProfile 按对象解析：管理端只填的字段透传，其余交给消费方回落', async () => {
@@ -166,6 +169,6 @@ describe('字段解析', () => {
     expect(config.value.wechatAutoRegister).toBe(false);
     expect(config.value.freeExportDownloadEnabled).toBe(false);
     expect(config.value.batchDownloadEnabled).toBe(false);
-    expect(config.value.collaborationEnabled).toBe(false);
+    expect(config.value.collaborationEnabled).toBe(true);
   });
 });

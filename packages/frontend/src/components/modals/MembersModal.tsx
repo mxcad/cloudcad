@@ -86,7 +86,16 @@ export const MembersModal: React.FC<MembersModalProps> = ({
     permissions,
     loading: loadingPermissions,
     refresh: refreshProjectPermissions,
-  } = useProjectPermissions(projectId, { autoLoad: false });
+  } = useProjectPermissions(projectId, {
+    autoLoad: false,
+    // 必须显式声明本组件读取的权限位：hook 默认白名单 PROJECT_FILE_PERMISSIONS
+    // 只含文件/项目权限，成员权限不在其中会被过滤成 undefined（悲观语义=false），
+    // 导致所有者也看到「需要成员管理权限」
+    permissions: [
+      ProjectPermission.PROJECT_MEMBER_MANAGE,
+      ProjectPermission.PROJECT_MEMBER_ASSIGN,
+    ],
+  });
   const canManageMembers =
     permissions[ProjectPermission.PROJECT_MEMBER_MANAGE] ?? false;
   const canAssignRoles =

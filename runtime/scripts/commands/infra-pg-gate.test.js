@@ -50,7 +50,7 @@ process.env.CLOUDCAD_PG_DATA_DIR = PG_TMP;
 const SAVED_PORTS = { ...PORTS };
 function resetPorts() {
   PORTS.backend = 3001;
-  PORTS.frontend = 3000;
+  PORTS.frontend = 8000;
   PORTS.configService = 3002;
   PORTS.postgresql = 5432;
   PORTS.redis = 6379;

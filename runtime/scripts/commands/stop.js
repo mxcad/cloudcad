@@ -353,7 +353,7 @@ const APP_ENTRY_RE =
  *
  * 前台模式（`cli.js start` 选 2）下这些进程是 `cli.js start` 的子进程，而
  * `cleanupForeground` 只清 state.appProcesses——那是**同一个进程**的内存状态。
- * 另开一个终端跑 `cli.js stop` 时它恒为空，应用层会残留在 3001/3000/3002 上
+ * 另开一个终端跑 `cli.js stop` 时它恒为空，应用层会残留在 3001/8000/3002 上
  * 占用文件，部署包删不掉（实测：stop 报"仍有服务进程占用"、退出码 1）。
  * 连 `cli.js start` 这个驱动进程本身也要停：它同样常驻、同样占着本目录。
  *

@@ -154,7 +154,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     server: {
-      port: parseInt(env.FRONTEND_PORT || '3000', 10),
+      port: parseInt(env.FRONTEND_PORT || '8000', 10),
       host: '0.0.0.0',
       historyApiFallback: true,
       proxy: {

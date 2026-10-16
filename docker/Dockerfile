@@ -195,7 +195,7 @@ RUN mkdir -p /app/data/files /app/data/logs /app/data/svn-repo /app/data/uploads
 RUN apk add --no-cache su-exec
 
 # 暴露端口（443 用于 #408 公网 TLS，证书落位后启用）
-EXPOSE 80 443 3001 3000
+EXPOSE 80 443 3001 8000
 
 # 健康检查（增加超时时间，适应启动较慢的场景）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \

@@ -123,7 +123,7 @@ svn --version
 cloudcad/
 ├── packages/
 │   ├── backend/           # NestJS 后端服务 (端口 3001)
-│   ├── frontend/          # React 19 前端应用 (端口 3000)
+│   ├── frontend/          # React 19 前端应用 (端口 8000)
 │   ├── frontend_mobile/   # 移动端 H5 应用 (Vue 3)
 │   ├── config-service/    # 部署配置中心 (端口 3002)
 │   ├── storage-service/   # 统一文件管理层 (端口 3200)
@@ -202,7 +202,7 @@ pnpm dev
 
 | 服务     | 地址                           | 说明       |
 | -------- | ------------------------------ | ---------- |
-| 前端     | http://localhost:3000          | React 应用 |
+| 前端     | http://localhost:8000          | React 应用 |
 | 后端 API | http://localhost:3001/api      | NestJS API |
 | API 文档 | http://localhost:3001/api/docs | Swagger UI |
 
@@ -417,7 +417,7 @@ node runtime/scripts/start.js
 | -------------- | --------------------- | ------------ |
 | `PORT`         | 3001                  | 后端服务端口 |
 | `NODE_ENV`     | development           | 运行环境     |
-| `FRONTEND_URL` | http://localhost:3000 | 前端地址     |
+| `FRONTEND_URL` | http://localhost:8000 | 前端地址     |
 
 #### 数据库配置
 

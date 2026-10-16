@@ -4,7 +4,7 @@ import { saveControllerSaveMxwebAs } from '../api-sdk';
 const mockCalculateFileHash = vi.fn().mockResolvedValue('mock-hash-123');
 const mockUploadFile = vi.fn().mockResolvedValue(undefined);
 const mockSanitizeFileName = vi.fn().mockImplementation((n: string) => n);
-const mockGetApiBaseUrl = vi.fn().mockReturnValue('http://localhost:3000/api/v1');
+const mockGetApiBaseUrl = vi.fn().mockReturnValue('http://localhost:8000/api/v1');
 
 vi.mock('../utils/hashUtils', () => ({
   calculateFileHash: mockCalculateFileHash,

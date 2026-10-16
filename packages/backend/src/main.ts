@@ -40,6 +40,7 @@ import { AUTH_COOKIE_NAME } from './auth/session-cookie.writer';
 import { DatabaseService } from './database/database.service';
 import { AccessLogMiddleware } from './common/middlewares/access-log.middleware';
 import { withSessionRedisFallback } from './common/session/degrade-session-middleware';
+import { resolveCorsOrigins } from './common/cors-origins';
 
 const logger = new Logger('Bootstrap');
 
@@ -234,6 +235,27 @@ async function bootstrap() {
     logger.log(`Session cookie domain: ${config.session.cookieDomain}`);
   }
   logger.log(`Session cookie sameSite: ${config.session.cookieSameSite}`);
+  // 配置被解析层降级的提示：用户在 .env 里改过但不会生效，必须告知。
+  // 三条都源于「.env.example 注释占位值被旧版 merge 误激活」的历史污染
+  // （2026-10-15 部署包实跑定位），不提示用户会以为是配置没被读取。
+  if (process.env.SESSION_COOKIE_DOMAIN?.trim() === '.yourdomain.com') {
+    logger.warn(
+      'SESSION_COOKIE_DOMAIN=.yourdomain.com 是 .env.example 的占位值，已忽略；' +
+        'session cookie 按请求 host 匹配。跨域部署请填真实域名（如 .yourdomain.com 改为实际域名）。'
+    );
+  }
+  if (process.env.SESSION_COOKIE_SECURE === 'true') {
+    logger.warn(
+      'SESSION_COOKIE_SECURE=true 已回落 auto：http 请求下强制 Secure 会让浏览器丢弃 cookie，' +
+        '导致协同 401 且无任何报错。auto 按协议自适应（http 不带、https 带），已覆盖 true 的全部收益。'
+    );
+  }
+  if (process.env.SESSION_COOKIE_SAME_SITE === 'none') {
+    logger.warn(
+      'SESSION_COOKIE_SAME_SITE=none 已回落 lax：none 需与 Secure 成对，' +
+        '而本服务 http 请求不带 Secure，none 在 http 下必然不生效。'
+    );
+  }
 
   // Cookie 解析中间件（用于读取 refresh_token cookie）
   server.use(cookieParser());
@@ -284,20 +306,14 @@ async function bootstrap() {
   // 信任代理
   app.set('trust proxy', true);
 
-  // CORS 配置：生产环境使用明确域名白名单，开发环境使用配置的前端地址
-  // 通过 FRONTEND_URL 环境变量配置，支持逗号分隔多个域名
-  const corsOrigins =
-    config.nodeEnv === 'production'
-      ? process.env.CORS_ORIGINS
-        ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim())
-        : config.frontendUrl
-          ? [config.frontendUrl]
-          : ['http://localhost:3000']
-      : [
-          config.frontendUrl || 'http://localhost:3000',
-          'http://localhost:5173',
-          'http://localhost:3000',
-        ];
+  // CORS 允许源：FRONTEND_URL 恒允许 + CORS_ORIGINS 追加公网白名单（不整体接管，
+  // 否则本机前端预检 204 无 Access-Control-Allow-Origin → Failed to fetch 且后端零日志）。
+  // 解析逻辑与回归测试在 common/cors-origins.ts。
+  const corsOrigins = resolveCorsOrigins(
+    config.nodeEnv,
+    config.frontendUrl,
+    process.env.CORS_ORIGINS
+  );
 
   app.enableCors({
     origin: corsOrigins,

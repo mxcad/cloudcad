@@ -39,18 +39,18 @@ async function deployModeImpl(skipBuild = false, options = null) {
     console.log(`${colors.cyan}请选择启动模式：${colors.reset}`);
     console.log('');
     console.log(
-      `  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式，推荐）`
+      `  ${colors.cyan}[1]${colors.reset} PM2 后台运行（服务常驻后台，重启后自动恢复）`
     );
     console.log(
-      `  ${colors.cyan}[2]${colors.reset} 前台运行（关闭终端即停止全部服务，可直接删除部署目录）`
+      `  ${colors.cyan}[2]${colors.reset} 前台运行（关闭终端即停止全部服务，可直接删除部署目录，推荐）`
     );
     console.log('');
 
-    // 只接受 1/2（空输入=默认 1）；3 等任意输入不再被静默当成默认项
+    // 只接受 1/2（空输入=默认 2 前台）；3 等任意输入不再被静默当成默认项
     const modeChoice = await promptChoice(
-      `${colors.bright}请输入选项 [1]: ${colors.reset}`,
+      `${colors.bright}请输入选项 [2]: ${colors.reset}`,
       ['1', '2'],
-      '1'
+      '2'
     );
 
     usePm2 = modeChoice !== '2';

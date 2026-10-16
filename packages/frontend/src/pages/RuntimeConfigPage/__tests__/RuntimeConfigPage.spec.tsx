@@ -150,6 +150,18 @@ const mockItems: ConfigItem[] = [
       ],
     },
   }),
+  item({
+    // 后端定义的 key 不带分类前缀（`brandProfile`），表单分支按此精确匹配
+    key: 'brandProfile',
+    category: 'brand',
+    value: { title: '品牌名', logo: '/logo.png' },
+    type: 'json',
+    description: '品牌档案',
+    source: 'runtime',
+    tier: 'user',
+    hot: true,
+    impact: '保存后 PC 与移动端即刻生效',
+  }),
 ];
 
 // ── hook mock ─────────────────────────────────────────────────────────────
@@ -258,7 +270,7 @@ describe('RuntimeConfigPage 渲染', () => {
     expect(screen.getByText('折叠全部')).toBeTruthy();
 
     mockState.return = makeReturn({
-      collapsed: new Set(['mail', 'user', 'file', 'security', 'system']),
+      collapsed: new Set(['mail', 'user', 'file', 'security', 'system', 'brand']),
     });
     render(<RuntimeConfigPage />);
     expect(screen.getByText('展开全部')).toBeTruthy();
@@ -365,6 +377,23 @@ describe('RuntimeConfigPage 类型感知控件', () => {
     const row = rowOf('security.corsOrigins');
     expect(within(row).getByRole('button', { name: '格式化' })).toBeTruthy();
     expect(within(row).getAllByTestId('rc-input')[0].querySelector('textarea')).toBeTruthy();
+  });
+
+  it('brandProfile 渲染为字段级表单而不是 JSON 文本框，编辑走通用草稿链路', () => {
+    render(<RuntimeConfigPage />);
+    const row = rowOf('brandProfile');
+
+    expect(within(row).getByTestId('rc-brand-profile-form')).toBeTruthy();
+    expect(row.querySelectorAll('textarea')).toHaveLength(0);
+    expect(within(row).queryByTestId('rc-brand-upload-logo')).toBeTruthy();
+
+    fireEvent.change(within(row).getByDisplayValue('品牌名'), {
+      target: { value: '新品牌名' },
+    });
+    expect(mockState.return.handleDraftChange).toHaveBeenCalledWith(
+      'brandProfile',
+      expect.any(String)
+    );
   });
 
   it('secret 渲染为 password 输入并可切换显示', () => {

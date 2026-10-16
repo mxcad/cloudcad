@@ -22,9 +22,9 @@
 - [ ] 基础服务启动：postgresql / redis / cooperate / config-service
 - [ ] 端口就绪：`5432`、`6379`、`3091`、`3002`
 - [ ] 数据库迁移成功（migrate deploy 无报错）
-- [ ] 应用服务启动：backend(3001) / frontend(3000)
+- [ ] 应用服务启动：backend(3001) / frontend(8000)
 - [ ] 健康检查通过：`GET /api/v1/health/live` = 200
-- [ ] 前端页面可访问：`http://localhost:3000`
+- [ ] 前端页面可访问：`http://localhost:8000`
 - [ ] 图纸版本部署后验证通过
 - [ ] 浏览器自动打开
 
@@ -32,7 +32,7 @@
 
 - [ ] `./stop.sh`（Linux）/ `stop.bat`（Windows）
 - [ ] `pm2 list` 为空（或所有服务 stopped 后 delete）
-- [ ] 端口全部释放：3001 / 3000 / 5432 / 6379 / 3002 / 3091
+- [ ] 端口全部释放：3001 / 8000 / 5432 / 6379 / 3002 / 3091
 - [ ] 再次 `./start.sh` → 服务完整恢复
 - [ ] 恢复后 `pm2 list` 显示全部服务 online
 

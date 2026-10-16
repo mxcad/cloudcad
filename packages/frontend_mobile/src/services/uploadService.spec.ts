@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockCalculateFileHash = vi.fn().mockResolvedValue('mock-hash-123');
 const mockSanitizeFileName = vi.fn().mockImplementation((n: string) => n);
-const mockGetApiBaseUrl = vi.fn().mockReturnValue('http://localhost:3000/api/v1');
+const mockGetApiBaseUrl = vi.fn().mockReturnValue('http://localhost:8000/api/v1');
 const mockUploadFile = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('../utils/hashUtils', () => ({

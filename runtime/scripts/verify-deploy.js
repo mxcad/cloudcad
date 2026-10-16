@@ -70,7 +70,7 @@ function parseEnvFileSimple(filePath) {
 function getPorts() {
   const defaults = {
     backend: 3001,
-    frontend: 3000,
+    frontend: 8000,
     configService: 3002,
     postgresql: 5432,
     redis: 6379,
@@ -83,7 +83,7 @@ function getPorts() {
     return {
       backend: parseInt(envConfig.PORT || '3001', 10) || defaults.backend,
       frontend:
-        parseInt(envConfig.FRONTEND_PORT || '3000', 10) || defaults.frontend,
+        parseInt(envConfig.FRONTEND_PORT || '8000', 10) || defaults.frontend,
       configService:
         parseInt(envConfig.CONFIG_SERVICE_PORT || '3002', 10) ||
         defaults.configService,

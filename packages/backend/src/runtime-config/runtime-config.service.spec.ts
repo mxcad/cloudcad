@@ -754,6 +754,22 @@ describe("RuntimeConfigService", () => {
 			).toEqual([]);
 		});
 
+		it("品牌客服三件套必须是公开 + brand 分类 + user 档：两端只读 /public", () => {
+			// PC 的 BrandContext 与移动端 resolveBrand 都只消费
+			// GET /runtime-config/public 返回的键；isPublic 一旦改成 false，
+			// 管理端改了配置两端毫无反应且不报任何错。
+			const SUPPORT_KEYS = ["supportEmail", "supportPhone", "docsUrl"];
+			expect(SUPPORT_KEYS.filter((k) => !def(k))).toEqual([]);
+			expect(
+				SUPPORT_KEYS.filter(
+					(k) =>
+						def(k)?.isPublic !== true ||
+						def(k)?.category !== "brand" ||
+						def(k)?.tier !== "user"
+				)
+			).toEqual([]);
+		});
+
 		it("运维基线必须在 admin 档，不能落到默认收起的 advanced", () => {
 			expect(OPS_BASELINE.filter((k) => !def(k))).toEqual([]);
 			expect(

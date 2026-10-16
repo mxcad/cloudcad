@@ -54,7 +54,7 @@ describe('WechatCallbackService', () => {
     mockWechatTransactionService.rateLimitCheck.mockResolvedValue(0);
     mockWechatTransactionService.deleteTransaction.mockResolvedValue(undefined);
     mockConfigService.get.mockImplementation((key: string) => {
-      if (key === 'FRONTEND_URL') return 'http://localhost:3000';
+      if (key === 'FRONTEND_URL') return 'http://localhost:8000';
       if (key === 'session.cookieSecure') return null;
       return undefined;
     });

@@ -167,7 +167,7 @@ async function verifyDeployment(ctx) {
 
   // 9. 前端
   {
-    const port = env.FRONTEND_PORT || '3000';
+    const port = env.FRONTEND_PORT || '8000';
     const code = await httpGet(`http://127.0.0.1:${port}/`);
     items.push({
       name: `前端页面（http://127.0.0.1:${port}/）`,

@@ -78,24 +78,46 @@ async function waitForServicesForeground(backendProcess, backendOutput) {
       const BACKEND_WAIT_TIMEOUT_MS = 180000; // 3 分钟
       const startTime = Date.now();
 
+      // settled 门禁：成功/退出/超时后必须立刻停手。timeout:3000 是 socket **空闲**
+      // 超时，响应回来后若不销毁连接、不拦截后续事件，3s 后 timeout 仍会触发并重排
+      // 下一次探测——实测就绪后仍持续探测满 3 分钟（每探测一次都触发一次 DB+Redis
+      // 健康检查）。故三处回调全部先判 settled 再动作。
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        resolve(ok);
+      };
+      const scheduleRetry = () => {
+        if (!settled) setTimeout(tryCheck, backoffDelay());
+      };
+
       const tryCheck = () => {
+        if (settled) return;
         // 进程已退出 → 不用再等了
         if (backendProcess.exitCode !== null || backendProcess.killed) {
-          resolve(false);
+          finish(false);
           return;
         }
         // 超过总等待上限 → 停止循环，避免无限重试
         if (Date.now() - startTime >= BACKEND_WAIT_TIMEOUT_MS) {
-          resolve(false);
+          finish(false);
           return;
         }
 
         const req = http.request(
           { hostname: 'localhost', port: PORTS.backend, path: '/api/health/live', method: 'GET', timeout: 3000 },
-          (res) => resolve(res.statusCode === 200)
+          (res) => {
+            // 只取状态码，body 不消费：主动释放连接，防止后续空闲超时重排探测
+            finish(res.statusCode === 200);
+            res.destroy();
+          }
         );
-        req.on('error', () => setTimeout(tryCheck, backoffDelay()));
-        req.on('timeout', () => { req.destroy(); setTimeout(tryCheck, backoffDelay()); });
+        req.on('error', scheduleRetry);
+        req.on('timeout', () => {
+          req.destroy();
+          scheduleRetry();
+        });
         req.end();
       };
       tryCheck();
@@ -769,17 +791,19 @@ async function startMode(options = null) {
     console.log('');
     console.log(`${colors.cyan}请选择启动模式：${colors.reset}`);
     console.log('');
-    console.log(`  ${colors.cyan}[1]${colors.reset} PM2 后台运行（生产模式）`);
     console.log(
-      `  ${colors.cyan}[2]${colors.reset} 前台运行（关闭终端即停止全部服务，可直接删除部署目录）`
+      `  ${colors.cyan}[1]${colors.reset} PM2 后台运行（服务常驻后台，重启后自动恢复）`
+    );
+    console.log(
+      `  ${colors.cyan}[2]${colors.reset} 前台运行（关闭终端即停止全部服务，可直接删除部署目录，推荐）`
     );
     console.log('');
 
-    // 只接受 1/2（空输入=默认 1）；3 等任意输入不再被静默当成默认项
+    // 只接受 1/2（空输入=默认 2 前台）；3 等任意输入不再被静默当成默认项
     const choice = await promptChoice(
-      `${colors.bright}请输入选项 [1]: ${colors.reset}`,
+      `${colors.bright}请输入选项 [2]: ${colors.reset}`,
       ['1', '2'],
-      '1'
+      '2'
     );
 
     console.log('');

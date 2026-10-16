@@ -25,6 +25,8 @@ export const DEFAULT_BRAND = {
   title: '梦想网页CAD实时协同平台',
   /** Logo 相对路径（同为 favicon 来源） */
   logo: 'logo.png',
+  /** 帮助文档地址（对齐 PC DEFAULT_BRAND_PROFILE.docsUrl） */
+  docsUrl: 'https://help.mxdraw.com/',
   /** 产品简称：i18n 文案插值用（「创建账户，开始使用 {shortName}」） */
   shortName: 'CloudCAD',
   copyrightYear: '2026',
@@ -52,6 +54,8 @@ export interface MobileBrand {
   title: string
   /** Logo 绝对路径（含 BASE_URL） */
   logo: string
+  /** 帮助文档地址（「实时协同」提示里的「查看文档」链接） */
+  docsUrl: string
   /** 产品简称 */
   shortName: string
   copyrightYear: string
@@ -92,6 +96,8 @@ export function brandAssetPath(path: string): string {
 /**
  * 品牌档案解析：runtime-config `brandProfile` > 内置默认。
  * 逐字段浅合并——只覆盖管理端声明了的字段，避免只填了 copyrightHolder 把标题一起清掉。
+ * `docsUrl` 例外：`docsUrl` 单项运行时项优先于 brandProfile 里的同名字段（与 PC 一致），
+ * 两层都为空才回落内置默认，保证「查看文档」链接永不为空。
  */
 export function resolveBrand(runtime?: Partial<PublicRuntimeConfig> | null): MobileBrand {
   const brand = runtime?.brandProfile ?? null
@@ -99,6 +105,8 @@ export function resolveBrand(runtime?: Partial<PublicRuntimeConfig> | null): Mob
 
   const title = asText(brand?.title) || DEFAULT_BRAND.title
   const logo = asText(brand?.logo) || DEFAULT_BRAND.logo
+  const docsUrl =
+    asText(runtime?.docsUrl) || asText(brand?.docsUrl) || DEFAULT_BRAND.docsUrl
   const shortName = asText(legal?.productShortName) || DEFAULT_BRAND.shortName
   const copyrightYear = asText(brand?.copyrightYear) || DEFAULT_BRAND.copyrightYear
   const copyrightHolder = asText(brand?.copyrightHolder) || DEFAULT_BRAND.copyrightHolder
@@ -107,6 +115,7 @@ export function resolveBrand(runtime?: Partial<PublicRuntimeConfig> | null): Mob
   return {
     title,
     logo: brandAssetPath(logo),
+    docsUrl,
     shortName,
     copyrightYear,
     copyrightHolder,

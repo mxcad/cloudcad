@@ -22,9 +22,9 @@ echo "=== 部署包验证 (断网环境) ==="
 echo ""
 
 APP_DIR="/app"
-# 生产端口与 runtime/scripts/lib/context.js 一致：后端 3001、前端 3000
+# 生产端口与 runtime/scripts/lib/context.js 一致：后端 3001、前端 8000
 BACKEND_PORT=3001
-FRONTEND_PORT=3000
+FRONTEND_PORT=8000
 MAX_WAIT=120  # 最大等待时间（秒）
 
 cd ${APP_DIR}

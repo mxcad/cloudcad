@@ -4,7 +4,7 @@
  * 用法: node serve-static.js [options]
  *
  * 选项:
- *   --port <number>     服务端口 (默认: 3000)
+ *   --port <number>     服务端口 (默认: 8000)
  *   --dir <path>        静态文件目录 (默认: ../../packages/frontend/dist)
  *   --mobile-dir <path> 移动端静态文件目录 (默认: ../../packages/frontend_mobile/dist)
  *   --api-target <url>  API 代理目标 (默认: http://localhost:3001)
@@ -30,7 +30,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const mobileAccessPath = getMobileAccessPath();
   const options = {
-    port: parseInt(process.env.FRONTEND_PORT || '3000', 10),
+    port: parseInt(process.env.FRONTEND_PORT || '8000', 10),
     dir: path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist'),
     mobilePath: mobileAccessPath,
     mobileDir: path.resolve(__dirname, '..', '..', 'packages', 'frontend', 'dist', mobileAccessPath),

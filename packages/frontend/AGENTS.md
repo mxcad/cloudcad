@@ -1,6 +1,6 @@
 # 前端 — packages/frontend
 
-React 19 SPA（端口 3000），提供 CAD 编辑器 UI、项目管理、用户认证等功能。
+React 19 SPA（端口 8000），提供 CAD 编辑器 UI、项目管理、用户认证等功能。
 
 ## 地基 ADR 索引（新 session 必读）
 

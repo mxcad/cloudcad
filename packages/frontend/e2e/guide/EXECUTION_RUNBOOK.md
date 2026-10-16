@@ -34,7 +34,7 @@ pnpm db:seed
 # 5. 启动后端服务（端口 3001）
 pnpm dev:backend
 
-# 6. 启动前端服务（端口 3000）
+# 6. 启动前端服务（端口 8000）
 #    playwright.config.ts 中 webServer 自动启动，若手动启动：
 pnpm --filter frontend dev
 ```
@@ -44,11 +44,11 @@ pnpm --filter frontend dev
 测试运行时通过 `packages/frontend/.env.test` 配置文件注入：
 
 ```
-BASE_URL=http://localhost:3000
+BASE_URL=http://localhost:8000
 BACKEND_URL=http://localhost:3001
 ```
 
-> **注意**：`playwright.config.ts` 中 `webServer.url` 和 `use.baseURL` 均为 `http://localhost:3000`，与项目默认端口一致。`.env.test` 由 `dotenv` 在配置加载时读取。
+> **注意**：`playwright.config.ts` 中 `webServer.url` 和 `use.baseURL` 均为 `http://localhost:8000`，与项目默认端口一致。`.env.test` 由 `dotenv` 在配置加载时读取。
 
 ### 种子数据检查清单
 
@@ -396,10 +396,10 @@ export default defineConfig({
 
 ### 端口冲突
 
-**症状**：`Error: Port 3000 is already in use`
+**症状**：`Error: Port 8000 is already in use`
 
 **排查**：
-1. 检查是否有残留进程：`lsof -i :3000` 或 `netstat -ano | findstr :3000`（Windows）
+1. 检查是否有残留进程：`lsof -i :8000` 或 `netstat -ano | findstr :8000`（Windows）
 2. 杀死残留进程后重试
 3. CI 中 `reuseExistingServer: !process.env.CI` 确保 CI 不使用已有服务
 

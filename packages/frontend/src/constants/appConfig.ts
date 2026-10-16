@@ -208,10 +208,14 @@ function mergeLegalIdentities(
 /** 运行时品牌覆盖：形状同 config.json，全部字段可选（DB 里的 `brandProfile` JSON） */
 export type RuntimeBrandConfig = Partial<BrandConfig>;
 
-/** 运行时客服联系方式（`supportEmail` / `supportPhone` 运行时配置项） */
-export interface RuntimeBrandContact {
+/**
+ * 单项运行时配置对品牌档案同名字段的覆盖（`supportEmail` / `supportPhone` /
+ * `docsUrl` 运行时配置项），优先级高于品牌档案整块里的同名字段。
+ */
+export interface RuntimeBrandFieldOverrides {
   email?: string;
   phone?: string;
+  docsUrl?: string;
 }
 
 /**
@@ -220,47 +224,59 @@ export interface RuntimeBrandContact {
  *
  * 逐字段浅合并而非整块替换：只覆盖运行时声明了的字段，其余字段继续走
  * config.json 或内置默认值——否则运维只配了 copyrightHolder 就会把标语、Logo 一起清掉。
- * 客服邮箱/电话例外：以 `supportEmail` / `supportPhone` 运行时项为准，
- * `brandProfile.support` 只用于补充 hours，避免客服邮箱出现双事实源。
+ * 客服邮箱/电话与文档地址例外：以 `supportEmail` / `supportPhone` / `docsUrl`
+ * 单项运行时项为准，`brandProfile.support` 只用于补充 hours，避免双事实源。
  */
 export function mergeBrandOverrides(
   base: BrandConfig | null,
   runtime?: RuntimeBrandConfig | null,
-  contact?: RuntimeBrandContact
+  fields?: RuntimeBrandFieldOverrides
 ): BrandConfig {
   const b: BrandConfig = base ?? {
     title: DEFAULT_APP_NAME,
     logo: DEFAULT_APP_LOGO,
   };
 
-  if (!runtime || Object.keys(runtime).length === 0) return b;
+  // 品牌档案（brandProfile）可能是空对象，但单项运行时项（supportEmail /
+  // supportPhone / docsUrl）仍有值——两者都必须有值才走「原样返回 base」，
+  // 否则会出现「JSON 清空后单项配置被静默忽略」的假阳性回落。
+  const hasFieldOverrides = Boolean(
+    fields && (fields.email || fields.phone || fields.docsUrl)
+  );
+  if ((!runtime || Object.keys(runtime).length === 0) && !hasFieldOverrides) {
+    return b;
+  }
 
-  const support: Partial<BrandSupport> = { ...b.support, ...runtime.support };
-  if (contact?.email) support.email = contact.email;
-  if (contact?.phone) support.phone = contact.phone;
+  // brandProfile 可能为空（此时只有单项运行时项在生效），统一按空对象处理
+  const r: RuntimeBrandConfig = runtime ?? {};
+
+  const support: Partial<BrandSupport> = { ...b.support, ...r.support };
+  if (fields?.email) support.email = fields.email;
+  if (fields?.phone) support.phone = fields.phone;
 
   return {
-    title: runtime.title || b.title,
-    logo: runtime.logo || b.logo,
-    tagline: runtime.tagline ?? b.tagline,
-    apps: { ...b.apps, ...runtime.apps },
-    copyrightYear: runtime.copyrightYear || b.copyrightYear,
-    copyrightHolder: runtime.copyrightHolder || b.copyrightHolder,
-    copyrightLine: runtime.copyrightLine || b.copyrightLine,
+    title: r.title || b.title,
+    logo: r.logo || b.logo,
+    tagline: r.tagline ?? b.tagline,
+    apps: { ...b.apps, ...r.apps },
+    copyrightYear: r.copyrightYear || b.copyrightYear,
+    copyrightHolder: r.copyrightHolder || b.copyrightHolder,
+    copyrightLine: r.copyrightLine || b.copyrightLine,
     support,
-    docsUrl: runtime.docsUrl || b.docsUrl,
-    subtitle: runtime.subtitle || b.subtitle,
+    docsUrl: fields?.docsUrl || r.docsUrl || b.docsUrl,
+    subtitle: r.subtitle || b.subtitle,
     legal: {
       productShortName:
-        runtime.legal?.productShortName || b.legal?.productShortName,
-      productName: runtime.legal?.productName || b.legal?.productName,
-      identities: { ...b.legal?.identities, ...runtime.legal?.identities },
+        r.legal?.productShortName || b.legal?.productShortName,
+      productName: r.legal?.productName || b.legal?.productName,
+      identities: { ...b.legal?.identities, ...r.legal?.identities },
     },
   };
 }
 
 /**
  * 品牌档案唯一出口：内置默认值 + config.json 覆盖。
+ * `docsUrl` 为四层：`docsUrl` 运行时项 > brandProfile > config.json > 内置默认值。
  * 传 `override` 可在 react-query 数据就绪时直接求值，不依赖模块级缓存时机。
  */
 export function getBrandProfile(

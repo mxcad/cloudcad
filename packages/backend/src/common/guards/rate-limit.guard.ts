@@ -80,7 +80,7 @@ export class RateLimitGuard implements CanActivate {
         this.runtimeConfig.getValue<number>('rateLimitPublicWindowMs', 60000),
         this.runtimeConfig.getValue<number>('rateLimitPublicMax', 100),
         this.runtimeConfig.getValue<number>('rateLimitAuthMax', 300),
-        this.runtimeConfig.getValue<number>('rateLimitLoginMax', 5),
+        this.runtimeConfig.getValue<number>('rateLimitLoginMax', 30),
         this.runtimeConfig.getValue<number>('rateLimitLoginWindowMs', 15 * 60 * 1000),
       ]);
 
@@ -106,27 +106,51 @@ export class RateLimitGuard implements CanActivate {
   }
 
   /**
-   * 判断是否为登录相关端点
+   * 登录爆破面端点（命中严格 IP 配额：rateLimitLoginMax / rateLimitLoginWindowMs）。
+   *
+   * 只收录「可用少量尝试撞库/暴力破解的认证提交入口」：账号密码登录、手机码登录、
+   * 注册、找回密码、验证码校验、微信登录与回调。
+   *
+   * 刻意排除（各有更合适的防护；共享登录配额会让正常用户被误伤）：
+   * - /auth/refresh：token 刷新是高频保活请求。前端有 4 处无节流的触发点
+   *   （提前 5 分钟主动刷新、visibilitychange 回前台、打开图纸前 ensureFreshAuthCookie
+   *   两处），access token 仅 1 小时，最后 10 分钟窗口内反复切 tab 即可耗光配额
+   *   （2026-10-15 实跑：本机部署 3 次正常登出重登即 429）
+   * - /auth/send-*、/auth/resend-verification：验证码发送已有 per-identifier 独立限流
+   *   （EmailVerificationService / SmsVerificationService，1 次/60 秒/账号）
+   * - /auth/wechat/poll-transaction：交易状态轮询，高频正常
+   * - /auth/bind-*、/auth/unbind-*、/auth/rebind-*、/auth/verify-bind-*、
+   *   /auth/verify-unbind-*、/auth/logout、/auth/profile、/auth/check-field：
+   *   需已登录态，非爆破面
+   *
+   * 用「剥离路由版本前缀后的精确路径」匹配而非 includes：includes 会把
+   * /api/v1/admin/auth/login 这类含 /auth/login 子串的路径全算进来（管理员入口本
+   * 就该算，但理由不同），也会把 /auth/bind-email-and-login（含登录）与纯
+   * /auth/bind-email（已登录绑定）混为一类。
    */
+  private static readonly LOGIN_ENDPOINT_PATHS = new Set([
+    '/auth/login',
+    '/auth/login-phone',
+    '/admin/auth/login',
+    '/auth/register',
+    '/auth/register-phone',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/verify-email',
+    '/auth/verify-email-and-register-phone',
+    '/auth/verify-phone',
+    '/auth/verify-sms-code',
+    '/auth/bind-email-and-login',
+    '/auth/bind-phone-and-login',
+    '/auth/wechat/login',
+    '/auth/wechat/callback',
+  ]);
+
+  /** 判断是否为登录爆破面端点 */
   private isLoginEndpoint(request: Request): boolean {
-    const path = request.path;
-    return (
-      path.includes('/auth/login') ||
-      path.includes('/auth/register') ||
-      path.includes('/auth/refresh') ||
-      path.includes('/auth/verify') ||
-      path.includes('/auth/forgot-password') ||
-      path.includes('/auth/reset-password') ||
-      path.includes('/auth/bind') ||
-      path.includes('/auth/unbind') ||
-      path.includes('/auth/send-verification') ||
-      path.includes('/auth/resend-verification') ||
-      path.includes('/auth/send-sms-code') ||
-      path.includes('/auth/verify-sms-code') ||
-      path.includes('/auth/register-phone') ||
-      path.includes('/auth/login-phone') ||
-      path.includes('/auth/verify-phone')
-    );
+    // 剥离路由版本前缀（/api/v1 等），只比对路径本体
+    const path = request.path.replace(/^\/api\/v\d+/, '');
+    return RateLimitGuard.LOGIN_ENDPOINT_PATHS.has(path);
   }
 
   /**
