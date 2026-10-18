@@ -64,7 +64,7 @@
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.5.0",
-    "@prisma/adapter-pg": "^7.1.0",
+    "@prisma/adapter-pg": "^7.9.1",
     "@sentry/node": "^10.68.0",
     "@types/helmet": "^4.0.0",
     "archiver": "^7.0.1",
