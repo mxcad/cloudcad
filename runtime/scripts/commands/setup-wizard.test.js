@@ -2,9 +2,12 @@
  * setup-wizard.js 回归测试（node:test，0 外部依赖）
  *
  * 锁定管理员口令三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）与
- * lib/secret-generator 的非交互默认值：DEFAULT_ADMIN_PASSWORD 是等保 8.1.4.1
- * 复杂度的有意放宽，交互路径（本文件）与非交互路径（fillEmptySecrets，离线安装
- * / docker 一键包）必须共用同一常量，不得各写一份。
+ * lib/secret-generator 的非交互默认值：交互路径（本文件）用 DEFAULT_ADMIN_PASSWORD
+ * （等保 8.1.4.1 复杂度的有意放宽，用户可改选 y/n）；非交互路径（fillEmptySecrets，
+ * 离线安装 / docker 一键包）生成强随机口令（generateStrongPassword，满足后端
+ * assertPasswordPolicy 的 ≥10 位 + 复杂度校验）。c909003 回归修复：非交互路径
+ * 曾误用 8 位简单口令 DEFAULT_ADMIN_PASSWORD 被后端 assertPasswordPolicy 拒绝
+ * →初始管理员创建抛 400→PM2 崩溃重启循环，现改走强随机口令。
  *
  * 运行：node --test runtime/scripts/commands/setup-wizard.test.js
  */
@@ -94,7 +97,7 @@ test('isPasswordWeak：过短或单类字符判为弱（自定义口令前置校
   assert.equal(isPasswordWeak('Abcdefgh1!'), false);
 });
 
-test('fillEmptySecrets：INITIAL_ADMIN_PASSWORD 空白 → 写默认简单口令，其余密钥仍随机', () => {
+test('fillEmptySecrets：INITIAL_ADMIN_PASSWORD 空白 → 写强随机口令（满足后端 assertPasswordPolicy），其余密钥仍随机', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'setup-wizard-test-'));
   const envFile = path.join(dir, '.env');
   const logs = [];
@@ -107,10 +110,25 @@ test('fillEmptySecrets：INITIAL_ADMIN_PASSWORD 空白 → 写默认简单口令
   fillEmptySecrets(envFile, (m) => logs.push(m));
 
   const out = fs.readFileSync(envFile, 'utf8');
-  assert.match(out, new RegExp(`^INITIAL_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}$`, 'm'));
+  // 非交互路径生成 16 位四类强随机口令（满足后端 assertPasswordPolicy 的 ≥10 位 +
+  // 四类至少三类 + 弱口令黑名单校验），不得是 8 位简单口令 DEFAULT_ADMIN_PASSWORD
+  //（c909003 回归：8 位被后端 assertPasswordPolicy 拒绝→初始管理员创建崩溃循环）
+  const adminLine = out.split('\n').find((l) => l.startsWith('INITIAL_ADMIN_PASSWORD='));
+  assert.ok(adminLine, 'INITIAL_ADMIN_PASSWORD 应被填充');
+  let generatedPwd = adminLine.slice('INITIAL_ADMIN_PASSWORD='.length).trim();
+  // 剥引号（escapeEnvValue 对含敏感字符的口令加引号）
+  if (generatedPwd.startsWith('"') && generatedPwd.endsWith('"')) {
+    generatedPwd = generatedPwd.slice(1, -1);
+  }
+  assert.ok(generatedPwd.length >= 10, `非交互口令应 ≥10 位（实际 ${generatedPwd.length}）`);
+  assert.notEqual(generatedPwd, DEFAULT_ADMIN_PASSWORD, '非交互路径不得用 8 位简单口令');
+  assert.match(generatedPwd, /[a-z]/);
+  assert.match(generatedPwd, /[A-Z]/);
+  assert.match(generatedPwd, /\d/);
+  assert.match(generatedPwd, /[^a-zA-Z0-9]/);
   // 机器密钥不得退化成固定值：仍为 64 位随机十六进制
   assert.match(out, /^SESSION_SECRET=[0-9a-f]{64}$/m);
-  // 非交互路径没有终端可问，日志必须把默认口令告知用户
-  assert.ok(logs.some((l) => l.includes(DEFAULT_ADMIN_PASSWORD)));
+  // 非交互路径没有终端可问，日志必须告知用户口令已生成并写入 .env
+  assert.ok(logs.some((l) => l.includes('INITIAL_ADMIN_PASSWORD') && l.includes('强随机口令')));
   fs.rmSync(dir, { recursive: true, force: true });
 });

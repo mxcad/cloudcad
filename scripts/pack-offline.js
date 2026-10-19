@@ -1297,36 +1297,15 @@ function writeDeployMeta(tempDir) {
  * @param {string} tempDir 包暂存目录
  * @param {{isUpgrade: boolean, platform: string, variant: string}} opts
  */
-function writePackageMetadata(tempDir, { isUpgrade, platform, variant }) {
-  const { PRODUCT_NAME } = require(path.join(PROJECT_ROOT, 'runtime', 'scripts', 'lib', 'branding'));
-  const isWin = platform === 'win';
-
+function writePackageMetadata(tempDir) {
   // VERSION（顶层，目标机 start 流程读取）
   fs.writeFileSync(path.join(tempDir, 'VERSION'), VERSION + '\n');
 
-  // 部署说明.txt（顶层，平台/类型自适应）
-  const startCmd = isWin ? 'start.bat' : './start.sh';
-  const stopCmd = isWin ? 'stop.bat' : './stop.sh';
-  const opsCmd = isWin ? 'runtime\\cloudcad.bat' : './runtime/cloudcad.sh';
-  const variantTag = variant === 'private' ? ' / 闭源' : '';
-  const lines = [
-    `${PRODUCT_NAME} ${isUpgrade ? '升级包' : '全量部署包'}（${isWin ? 'Windows' : 'Linux'}${variantTag}）`,
-    `版本: ${VERSION}`,
-    '',
-    isUpgrade
-      ? `【升级】 解压本包覆盖现有部署根目录后重跑 ${startCmd}`
-      : `【部署】 解压本包到目标目录后运行 ${startCmd}`,
-    '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
-    '',
-    `【停止】 ${stopCmd}（数据保留在 data/ 目录）`,
-    '',
-    `【运维入口】 ${opsCmd}（交互菜单：启动/停止/状态）`,
-    '',
-    '【运维中心】 http://<服务器IP>:3002（只读运维 + 配置管理）',
-  ];
-  fs.writeFileSync(path.join(tempDir, '部署说明.txt'), lines.join('\n'), 'utf8');
+  // 部署说明.txt 不在此生成：由 manifest 从人工维护的源文件（部署说明-{platform}.txt，
+  // 完整覆盖首次部署/升级/运维/FAQ）复制而来，见 scripts/pack-lib/manifest.js。
+  // 本函数只补 VERSION + SHA256SUMS（ADR-0075 C7 裸机包元数据，对齐 docker 包）。
 
-  // SHA256SUMS（顶层文件清单，不含自身）
+  // SHA256SUMS（顶层文件清单，不含自身；此时 manifest 已把 部署说明.txt 等复制进 tempDir）
   const sums = [];
   for (const entry of fs.readdirSync(tempDir).sort()) {
     if (entry === 'SHA256SUMS') continue;
@@ -1336,7 +1315,7 @@ function writePackageMetadata(tempDir, { isUpgrade, platform, variant }) {
     }
   }
   fs.writeFileSync(path.join(tempDir, 'SHA256SUMS'), sums.join('\n') + '\n');
-  log(`写入包元数据: VERSION / 部署说明.txt / SHA256SUMS（${sums.length} 个顶层文件）`);
+  log(`写入包元数据: VERSION / SHA256SUMS（${sums.length} 个顶层文件；部署说明.txt 由 manifest 复制）`);
 }
 
 /**
@@ -2117,8 +2096,8 @@ async function packDeploy(platform, variant = 'oss') {
       }
     }
 
-    // 包元数据（ADR-0075 C7：SHA256SUMS + VERSION + 部署说明.txt，对齐 docker 包）
-    writePackageMetadata(tempDir, { isUpgrade: false, platform, variant });
+    // 包元数据（ADR-0075 C7：VERSION + SHA256SUMS，对齐 docker 包；部署说明.txt 由 manifest 复制）
+    writePackageMetadata(tempDir);
 
     await createArchive(tempDir, outputPath);
 
@@ -2344,8 +2323,8 @@ async function packUpgrade(platform, variant = 'oss') {
 
     ensureDir(OUTPUT_DIR);
 
-    // 包元数据（ADR-0075 C7：SHA256SUMS + VERSION + 部署说明.txt，对齐 docker 包）
-    writePackageMetadata(tempDir, { isUpgrade: true, platform, variant });
+    // 包元数据（ADR-0075 C7：VERSION + SHA256SUMS，对齐 docker 包；部署说明.txt 由 manifest 复制）
+    writePackageMetadata(tempDir);
 
     await createArchive(tempDir, outputPath);
 

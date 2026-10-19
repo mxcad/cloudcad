@@ -10,7 +10,7 @@
  * - getLaunchScriptEntries()    —— 部署包根目录的 start/stop 入口（deploy 独有，理由见函数头注释）
  * - getRuntimeScriptEntries()   —— runtime/ 下的运维入口（cloudcad.* / cloudcad-shell.*，deploy 独有）
  * - getDeployIncludeList()      —— 全量部署包 = 共享 + 入口脚本 + deploy 独有（平台运行时/store/说明）
- * - getUpgradeIncludeList()     —— 增量升级包 = 共享（不含平台运行时、部署说明与入口脚本）
+ * - getUpgradeIncludeList()     —— 增量升级包 = 共享 + 部署说明（不含平台运行时、完整 store 与入口脚本）
  *
  * 顺序约定：deploy 独有的平台运行时与 store 须保持在 pnpm-lock.yaml 之前，
  * 部署说明保持在末尾 —— 与原 pack-offline.js 两处清单的复制顺序逐字节一致，
@@ -262,12 +262,18 @@ function getDeployIncludeList(platform, variant = 'oss') {
 
 /**
  * 增量升级包正向清单
- * = 共享条目（不含平台运行时二进制 / 完整 store / 部署说明 / 启动入口脚本）
+ * = 共享条目（不含平台运行时二进制 / 完整 store / 启动入口脚本）+ 部署说明
  * 依赖更新由目标机自动完成：start → cli.js bootstrap → shouldReinstallDependencies
  * （.deploy-lock-hash vs pnpm-lock.yaml 对比）→ 不一致时自动 pnpm install --offline --prod
+ * 部署说明（ADR-0075 C7 四类包统一含）：源文件覆盖首次部署 + 升级 + 运维 + FAQ，
+ * 升级包同样携带，按打包平台取对应版本、包内统一命名 部署说明.txt。
  */
 function getUpgradeIncludeList(platform, variant = 'oss') {
   const items = getSharedEntries().slice();
+  items.push({
+    src: platform === 'linux' ? '部署说明-linux.txt' : '部署说明-windows.txt',
+    dest: '部署说明.txt',
+  });
   return appendPrivateEntries(items, variant);
 }
 

@@ -158,6 +158,10 @@ COPY packages/frontend_mobile/dist ./packages/frontend_mobile/dist
 COPY scripts ./scripts
 COPY runtime ./runtime
 COPY tsconfig.json ./
+# 部署说明源文件（manifest 按平台取用：linux 包取 -linux、windows 包取 -windows，包内统一命名 部署说明.txt）。
+# 根级 .txt 不在上方 packages/scripts/runtime 的 COPY 范围内，须显式 COPY，否则容器内 pack-offline.js
+# 的清单必需条目校验报「部署说明-linux.txt 缺失」中止打包（ADR-0075 C7 裸机包元数据）。
+COPY 部署说明-linux.txt 部署说明-windows.txt ./
 
 # 启动/停止入口脚本不再常驻仓库根目录，单一事实源 = scripts/pack-lib/templates/
 # （已随上方 COPY scripts ./scripts 进入上下文，容器内 pack-offline.js 按 manifest 取用，无需单独 COPY）

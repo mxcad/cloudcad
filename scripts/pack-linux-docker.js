@@ -1030,12 +1030,27 @@ async function ensureSlirp4netns(dockerDir) {
   if (fs.existsSync(vendored)) {
     fs.copyFileSync(vendored, dest);
     fs.chmodSync(dest, 0o755);
-    const check = run(dest, ['--version'], { capture: true });
-    if (check.status === 0) {
+    let runnable = false;
+    let detail = '';
+    try {
+      const check = run(dest, ['--version'], { capture: true });
+      runnable = check.status === 0;
+      if (!runnable) detail = (check.stderr || check.stdout || '').trim().split('\n').pop();
+    } catch (err) {
+      // 非 Linux 宿主（如 Windows 打包机）无法执行 Linux ELF 二进制，run() 抛 ENOENT。
+      // 仓库内置静态二进制是已知良好的 rootless 兜底，目标机（Linux）start.sh 才真正使用它；
+      // best-effort：信任已复制的内置二进制，不阻塞出包（本机可运行性验证交由 Linux CI / 目标机）。
+      if (process.platform !== 'linux') {
+        log(`slirp4netns 就位（仓库内置静态 ${SLIRP4NETNS_VERSION}，${slirpArch}；非 Linux 宿主无法本机验证，目标机 start.sh 使用）`);
+        return;
+      }
+      detail = err.message;
+    }
+    if (runnable) {
       log(`slirp4netns 就位（仓库内置静态 ${SLIRP4NETNS_VERSION}，${slirpArch}，免下载）`);
       return;
     }
-    log(`内置静态 slirp4netns 不可运行（${(check.stderr || check.stdout || '').trim().split('\n').pop()}）→ 回退下载`);
+    log(`内置静态 slirp4netns 不可运行（${detail}）→ 回退下载`);
   }
 
   // 1) 已有可运行的 dest（动态/静态）→ 直接复用
@@ -1197,6 +1212,8 @@ function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
   fs.chmodSync(path.join(pkgRoot, 'start.sh'), 0o755);
   fs.chmodSync(path.join(pkgRoot, 'stop.sh'), 0o755);
   // 运维入口（runtime/cloudcad.sh，与裸机包同构；ensure-exec.sh 的 ./runtime/*.sh 清单覆盖执行位自愈）
+  // copyFileSync 不建中间目录，须先确保 runtime/ 存在（否则 Windows 宿主 ENOENT）
+  ensureDir(path.join(pkgRoot, 'runtime'));
   fs.copyFileSync(path.join(TPL, 'cloudcad.sh'), path.join(pkgRoot, 'runtime', 'cloudcad.sh'));
   fs.chmodSync(path.join(pkgRoot, 'runtime', 'cloudcad.sh'), 0o755);
   fs.copyFileSync(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'docker-compose.yml'), path.join(pkgRoot, 'docker-compose.yml'));
