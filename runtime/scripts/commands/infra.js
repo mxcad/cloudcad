@@ -49,7 +49,6 @@ const { isPortOpen, waitPortReleased } = require('../lib/health');
 const { log } = require('../lib/logger');
 const { parseEnvFile } = require('../lib/env');
 const { updateEnvFile } = require('../config-updater');
-const { credentialFilePath, saveCredentialBackup } = require('../lib/credentials');
 const {
   detectRedisOwnership,
   stopRedisProcess,
@@ -458,18 +457,6 @@ async function relocatePostgresPort(dbHost) {
     return 'blocked';
   }
   PORTS.postgresql = newPort;
-
-  // 刷新首次部署凭据备份（其中记录了数据库端口；用户已删除该文件则不重建）
-  try {
-    if (fs.existsSync(credentialFilePath())) {
-      saveCredentialBackup(
-        { ...updates, DB_PASSWORD: envConfig.DB_PASSWORD || '' },
-        parseEnvFile(BACKEND_ENV_PATH)
-      );
-    }
-  } catch {
-    /* 凭据备份失败不影响部署 */
-  }
 
   log(
     'yellow',

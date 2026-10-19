@@ -23,7 +23,7 @@
  *     换端口落盘失败 / 无空闲端口 → blocked 且内存 PORTS 不变。
  *
  * mock 手法（同 infra-redis-gate.test.js）：infra.js 在模块加载期从 lib/proc、
- * lib/health、lib/env、config-updater、lib/credentials 解构导出，故必须在
+ * lib/health、lib/env、config-updater 解构导出，故必须在
  * require('./infra') 之前打补丁并删除其缓存条目；补丁在 require 之后立即还原
  * （解构已捕获 mock）。
  *
@@ -321,9 +321,8 @@ function loadPgGate({
   postmasterPid = null,
   waitReleased = true,
   updateEnvOk = true,
-  credFileExists = false,
 } = {}) {
-  const calls = { credBackup: 0, credUpdates: null };
+  const calls = {};
   const env =
     envConfig ||
     {
@@ -384,24 +383,6 @@ function loadPgGate({
     return updateEnvOk;
   };
 
-  const creds = require(require.resolve('../lib/credentials'));
-  const prevCreds = {
-    credentialFilePath: creds.credentialFilePath,
-    saveCredentialBackup: creds.saveCredentialBackup,
-  };
-  const credPath = path.join(PG_TMP, 'DEPLOY-PASSWORDS.txt');
-  if (credFileExists) {
-    fs.writeFileSync(credPath, 'x', 'utf8');
-  } else if (fs.existsSync(credPath)) {
-    fs.unlinkSync(credPath);
-  }
-  creds.credentialFilePath = () => credPath;
-  creds.saveCredentialBackup = (updates) => {
-    calls.credBackup++;
-    calls.credUpdates = updates;
-    return { ok: true, path: credPath };
-  };
-
   // lib/infra-gate 在模块加载期从 lib/proc、lib/health 解构默认依赖
   // （detectPostgresOwnership 的归属判定 / findFreePortUpFrom 的端口探测），
   // 须与 infra.js 一并重载，否则捕获的是打补丁前的真实函数
@@ -428,8 +409,6 @@ function loadPgGate({
       health.waitPortReleased = prevHealth.waitPortReleased;
       envLib.parseEnvFile = prevParseEnvFile;
       cu.updateEnvFile = prevUpdateEnvFile;
-      creds.credentialFilePath = prevCreds.credentialFilePath;
-      creds.saveCredentialBackup = prevCreds.saveCredentialBackup;
     },
   };
 }
@@ -707,41 +686,6 @@ test('门禁：归属未知（可执行文件不可读）→ blocked 不冒险',
   try {
     assert.equal(await g.gate.ensurePostgresPortManaged(), 'blocked');
     assert.equal(g.envWrites.length, 0);
-  } finally {
-    g.restore();
-    restorePorts();
-  }
-});
-
-test('门禁：换端口后凭据备份存在则刷新（含新端口）', async () => {
-  const g = loadPgGate({
-    portOpen: { 5432: true },
-    owner: { pid: 961, fullScanDone: true },
-    exe: '/usr/lib/postgresql/15/bin/postgres',
-    credFileExists: true,
-  });
-  resetPorts();
-  try {
-    assert.equal(await g.gate.ensurePostgresPortManaged(), 'relocated');
-    assert.equal(g.calls.credBackup, 1);
-    assert.equal(g.calls.credUpdates.DB_PORT, '5433');
-  } finally {
-    g.restore();
-    restorePorts();
-  }
-});
-
-test('门禁：凭据备份已被用户删除 → 换端口但不重建该文件', async () => {
-  const g = loadPgGate({
-    portOpen: { 5432: true },
-    owner: { pid: 961, fullScanDone: true },
-    exe: '/usr/lib/postgresql/15/bin/postgres',
-    credFileExists: false,
-  });
-  resetPorts();
-  try {
-    assert.equal(await g.gate.ensurePostgresPortManaged(), 'relocated');
-    assert.equal(g.calls.credBackup, 0);
   } finally {
     g.restore();
     restorePorts();

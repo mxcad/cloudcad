@@ -1473,5 +1473,66 @@ describe("AuthFacadeService", () => {
 				});
 			});
 		});
+
+		describe("getProfileWithMembership 弱口令软提示（passwordUnchanged）", () => {
+			// passwordChangedAt===null ⇔ 部署初始口令从未改过：所有改密入口都过
+			// assertPasswordPolicy（拒绝弱口令），故「当前口令可能弱」可由该空值判定，
+			// 后端无需持有明文、无需新增字段或迁移。刻意不挂 changeEnforceEnabled——
+			// 那是「强制改密」总开关，本字段是软提示、不拦截。
+			const membership = { tierLevel: 0, expiresAt: null };
+
+			const getProfile = (user: Record<string, unknown>) => {
+				mockUserService.findById.mockResolvedValue(user);
+				mockMembershipService.getMembership.mockResolvedValue(membership);
+				return service.getProfileWithMembership({ id: "admin1" } as any);
+			};
+
+			it("ADMIN 且从未改密：下发 passwordUnchanged=true", async () => {
+				const res = await getProfile({
+					id: "admin1",
+					role: { name: "ADMIN" },
+					passwordChangedAt: null,
+				});
+				expect(res.passwordUnchanged).toBe(true);
+			});
+
+			it("ADMIN 已改过密码：不下发 passwordUnchanged", async () => {
+				const res = await getProfile({
+					id: "admin1",
+					role: { name: "ADMIN" },
+					passwordChangedAt: new Date("2026-01-01"),
+				});
+				expect(res).not.toHaveProperty("passwordUnchanged");
+			});
+
+			it("非 ADMIN 即使从未改密：也不下发（横幅仅管理员可见）", async () => {
+				const res = await getProfile({
+					id: "admin1",
+					role: { name: "USER" },
+					passwordChangedAt: null,
+				});
+				expect(res).not.toHaveProperty("passwordUnchanged");
+			});
+
+			it("与强制改密/到期提示解耦：三者互不推断", async () => {
+				const res = await getProfile({
+					id: "admin1",
+					role: { name: "ADMIN" },
+					passwordChangedAt: null,
+				});
+				expect(res).not.toHaveProperty("passwordChangeRequired");
+				expect(res).not.toHaveProperty("passwordExpiringSoon");
+			});
+
+			it("响应始终剔除密码哈希（即使实现返回了它）", async () => {
+				const res = await getProfile({
+					id: "admin1",
+					role: { name: "ADMIN" },
+					passwordChangedAt: null,
+					password: "$2b$10$泄露的哈希",
+				});
+				expect(res).not.toHaveProperty("password");
+			});
+		});
 	});
 });

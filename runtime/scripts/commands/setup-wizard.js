@@ -10,8 +10,11 @@
  * - autoSetupAndShowPasswords：cli.js:2558-2613
  * - showCurrentPasswords：cli.js:1696-1724
  *
- * 首次部署确认后额外落一份根目录凭据备份（DEPLOY-PASSWORDS.txt，见 lib/credentials.js）：
- * 随机密码只在终端一次性显示，用户没复制就走就找不回（数据库密码丢失只能重装数据目录）。
+ * 管理员口令三分支（回车=默认简单口令 DEFAULT_ADMIN_PASSWORD / y=复杂随机 / n=自定义）。
+ * 默认走简单口令是有意放松 #416 等保 8.1.4.1 复杂度要求，代价由产品内横幅承接
+ * （ADMIN 且 passwordChangedAt===null 时提示改密）。
+ * 数据库 / Redis 密码丢失不必重装数据目录——走 cli.js db:reset-password /
+ * redis:reset-password（ADR-0073 带外恢复通道，不索取旧口令）。
  *
  * 依赖方向：commands → lib。共享可变状态 isFirstDeploy 经 lib/state（A-2 收口）。
  */
@@ -27,13 +30,12 @@ const { colors, log, brandBox } = require('../lib/logger');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { parseDatabaseUrl, composeDatabaseUrl } = require('../lib/database-url');
 const { getAdminLoginPath } = require('../lib/admin-login');
-const { saveCredentialBackup, credentialFilePath } = require('../lib/credentials');
-// 强随机口令生成：单一事实源 lib/secret-generator.js（ADR-0074，与 setup-offline 共用）
-const { generateStrongPassword } = require('../lib/secret-generator');
+// 强随机口令生成 + 默认简单口令：单一事实源 lib/secret-generator.js（ADR-0074，与 setup-offline 共用）
 const {
-  promptPassword,
-  promptPasswordWithConfirm,
-} = require('../lib/prompt');
+  generateStrongPassword,
+  DEFAULT_ADMIN_PASSWORD,
+} = require('../lib/secret-generator');
+const { promptPasswordWithConfirm } = require('../lib/prompt');
 const state = require('../lib/state');
 
 /**
@@ -89,6 +91,67 @@ function generateNumericPassword(length = 10) {
  */
 function generateJwtSecret(length = 32) {
   return generateNumericPassword(length);
+}
+
+/**
+ * 管理员口令三分支选择（首次部署 autoSetupAndShowPasswords 与重配置 runSetupWizard 共用）：
+ *   直接回车 = 使用默认简单口令 DEFAULT_ADMIN_PASSWORD
+ *   输入 y   = 生成生产级复杂随机口令（符合 #416 等保 8.1.4.1 口令策略）
+ *   输入 n   = 用户自己输入自定义口令（掩码 + 二次确认）
+ *
+ * 默认走简单口令是有意放松 #416 等保 8.1.4.1 复杂度要求（非技术用户抄不下 16 位四类
+ * 随机口令会被锁死），代价由产品内横幅承接：ADMIN 且 passwordChangedAt===null 时
+ * 提示「仍在首次部署初始密码」并给改密入口。
+ *
+ * 自定义口令做最小前置校验：长度下限 8 + 至少两类字符（复用本文件 isPasswordWeak，
+ * 纯数字/纯字母即判弱，故「字母+数字」或含特殊字符的两类组合即通过）。这比后端
+ * assertPasswordPolicy（10 位 + 四类取三）宽松——部署期只挡最明显的短/单类口令，
+ * 写入后由弱口令横幅持续提示，改密时后端策略再拦一次。不校验弱口令黑名单：
+ * 黑名单是 backend 的 TS 模块，runtime 脚本无法解析（同 admin-reset-password.js 的取舍），
+ * 而长度下限已挡住 12345678 这类短口令。
+ *
+ * 沿用本文件既有的 rl.question 循环模式：promptChoice 自建 readline 接口，与调用方已
+ * 持有的 rl 抢 stdin 会在管道输入下丢行。
+ * @param {readline.Interface} rl
+ * @returns {Promise<string>} 最终采用的管理员口令
+ */
+async function promptAdminPassword(rl) {
+  for (;;) {
+    const ans = await new Promise((resolve) => {
+      rl.question(
+        `${colors.cyan}管理员密码${colors.reset}` +
+          ` [默认简单口令 ${colors.bright}${DEFAULT_ADMIN_PASSWORD}${colors.reset}` +
+          `${colors.cyan}；回车=使用默认 / y=生成复杂随机口令 / n=自定义]: ${colors.reset}`,
+        (a) => resolve(a.trim().toLowerCase())
+      );
+    });
+
+    if (ans === '') {
+      console.log(`  → 使用默认简单口令 ${DEFAULT_ADMIN_PASSWORD}`);
+      return DEFAULT_ADMIN_PASSWORD;
+    }
+
+    if (ans === 'y' || ans === 'yes') {
+      const generated = generateStrongPassword();
+      console.log(`  → 已生成复杂随机口令：${generated}`);
+      return generated;
+    }
+
+    if (ans === 'n' || ans === 'no') {
+      const custom = await promptPasswordWithConfirm(rl, '管理员密码（自定义）');
+      if (custom && !isPasswordWeak(custom)) {
+        return custom;
+      }
+      console.log(
+        `${colors.yellow}  ✗ 自定义口令不合格（需 ≥8 位且含字母/数字/特殊字符中至少两类），请重新选择。${colors.reset}`
+      );
+      continue;
+    }
+
+    console.log(
+      `${colors.yellow}  请直接回车使用默认简单口令，或输入 y 生成复杂随机口令、输入 n 自定义。${colors.reset}`
+    );
+  }
 }
 
 /**
@@ -153,26 +216,10 @@ async function runSetupWizard() {
       console.log(`  → 无密码`);
     }
 
-    // 3. 管理员密码 - 不填写时自动生成
+    // 3. 管理员密码 - 三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）
     console.log('');
     console.log(`${colors.cyan}[安全配置]${colors.reset}`);
-    console.log(`${colors.yellow}提示: 直接回车将自动生成密码${colors.reset}`);
-    const adminPassword = await promptPasswordWithConfirm(
-      rl,
-      '管理员密码',
-      '[回车自动生成]'
-    );
-
-    let finalAdminPassword;
-    if (adminPassword) {
-      finalAdminPassword = adminPassword;
-      updates.INITIAL_ADMIN_PASSWORD = adminPassword;
-    } else {
-      // 自动生成（符合口令策略的强随机口令，#416 等保 8.1.4.1）
-      finalAdminPassword = generateStrongPassword();
-      updates.INITIAL_ADMIN_PASSWORD = finalAdminPassword;
-      console.log(`  → 已自动生成管理员密码`);
-    }
+    updates.INITIAL_ADMIN_PASSWORD = await promptAdminPassword(rl);
 
     // 显示所有密码
     console.log('');
@@ -192,7 +239,7 @@ async function runSetupWizard() {
       `  ${colors.bright}Redis密码:${colors.reset} ${updates.REDIS_PASSWORD || '无密码'}`
     );
     console.log(
-      `  ${colors.bright}管理员密码:${colors.reset} ${finalAdminPassword}`
+      `  ${colors.bright}管理员密码:${colors.reset} ${updates.INITIAL_ADMIN_PASSWORD}`
     );
     console.log('');
 
@@ -226,13 +273,9 @@ async function runSetupWizard() {
 
     if (confirm === 'n' || confirm === 'no') {
       rl.close();
-      // 删除 .env 与凭据备份，以便下次运行时重新进入引导配置
-      // （备份必须同步删：.env 已删而 txt 还在，会留下一份过期的密码快照）
+      // 删除 .env，以便下次运行时重新进入引导配置
       if (fs.existsSync(BACKEND_ENV_PATH)) {
         fs.unlinkSync(BACKEND_ENV_PATH);
-      }
-      if (fs.existsSync(credentialFilePath())) {
-        fs.unlinkSync(credentialFilePath());
       }
       console.log('');
       log('yellow', '已取消配置，请重新运行');
@@ -269,57 +312,23 @@ async function runSetupWizard() {
 
     updateEnvFile(BACKEND_ENV_PATH, updates);
     log('green', '[✓] 配置完成！');
-    // 该分支先打印密码后落盘，故备份紧随落盘之后写（取消分支会删 .env，也已同步删备份）
-    saveCredentialBackup(updates, envConfig);
   } finally {
     rl.close();
   }
 }
 
 /**
- * 编辑单个密码项：展示当前（默认自动生成）的值，回车保留，输入则替换并二次确认。
- * @param {readline.Interface} rl
- * @param {string} label 配置项名称
- * @param {string} currentValue 当前值（自动生成的默认值）
- * @returns {Promise<string>} 最终采用的值
- */
-async function editPassword(rl, label, currentValue) {
-  // 提示信息单独输出（隐藏输入需要），说明当前值和操作方式
-  process.stdout.write(
-    `${colors.cyan}${label}${colors.reset} [当前: ${colors.bright}${currentValue}${colors.reset}，回车保留 / 输入修改]: `
-  );
-
-  const first = await promptPassword(rl, '');
-
-  // 回车 → 保留自动生成的值
-  if (!first.trim()) {
-    console.log(`  → 保留自动生成值`);
-    return currentValue;
-  }
-
-  // 输入新值 → 二次确认
-  const second = await promptPassword(rl, `再次输入确认: `);
-  if (first !== second) {
-    console.log(`  ✗ 两次输入不一致，请重新输入`);
-    return editPassword(rl, label, currentValue);
-  }
-  console.log(`  ✓ 已修改`);
-  return first.trim();
-}
-
-/**
- * 首次部署自动配置（整体确认 → 逐项编辑）
+ * 首次部署自动配置（数据库/Redis 随机生成 + 管理员口令三分支）
  *
  * 流程：
- * 1. 自动生成所有密码作为默认值，一次性展示
- * 2. 询问用户是否确认使用这些自动生成的密码：
- *    - 确认 → 全部直接写入 .env（一步到位）
- *    - 不确认 → 进入逐项编辑：每项回车保留该项自动生成值，或输入新值替换（二次确认）
- * 3. 最终写入 .env 并展示生效配置，确保用户看到密码后才继续启动后端
+ * 1. 数据库 / Redis 密码随机生成并一次性展示（基础设施口令，部署后可用
+ *    cli.js db:reset-password / redis:reset-password 轮换，不在本向导内编辑）
+ * 2. 管理员口令三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）
+ * 3. 写入 .env 并展示最终生效配置，暂停等待用户记录后再启动服务
  *
  * @param {Object} [options]
  * @param {boolean} [options.interactive] 是否交互（默认 true）。
- *        false 时静默自动生成并写入，不等待用户输入（用于非交互场景）。
+ *        false 时静默写入默认值，不等待用户输入（用于非交互场景）。
  */
 async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   const envConfig = parseEnvFile(BACKEND_ENV_PATH);
@@ -328,17 +337,15 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   // JWT 密钥自动生成（无需用户编辑）
   updates.JWT_SECRET = generateJwtSecret(32);
 
-  // 自动生成默认密码（数据库/Redis 用 10 位纯数字；管理员口令用符合策略的强随机口令，#416 等保 8.1.4.1）
+  // 数据库 / Redis 用 10 位纯数字；管理员口令走三分支（默认简单口令）
   const dbPassword = generateNumericPassword(10);
   const redisPassword = generateNumericPassword(10);
-  const adminPassword = generateStrongPassword();
 
   if (!interactive) {
     updates.DB_PASSWORD = dbPassword;
     updates.REDIS_PASSWORD = redisPassword;
-    updates.INITIAL_ADMIN_PASSWORD = adminPassword;
+    updates.INITIAL_ADMIN_PASSWORD = DEFAULT_ADMIN_PASSWORD;
     writeFinalEnv(updates, envConfig);
-    saveCredentialBackup(updates, envConfig);
     return true;
   }
 
@@ -354,62 +361,30 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
   console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
-  console.log(`${colors.yellow}  已自动生成以下安全密码：${colors.reset}`);
+  console.log(`${colors.yellow}  已自动生成以下密码：${colors.reset}`);
   console.log('');
   console.log(`  ${colors.bright}数据库密码:${colors.reset}     ${dbPassword}`);
   console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${redisPassword}`);
-  console.log(`  ${colors.bright}管理员密码:${colors.reset}    ${adminPassword}`);
+  console.log('');
+  console.log(`${colors.cyan}数据库 / Redis 密码如需更换，部署后可执行：${colors.reset}`);
+  console.log(
+    `${colors.cyan}  cli.js db:reset-password / redis:reset-password${colors.reset}`
+  );
   console.log('');
 
-  // 第一步：整体确认是否使用自动生成的密码
-  // 语义：直接回车或 y/Y = 全部使用自动生成密码；输入 n/N（不区分大小写）= 逐项修改
+  // 管理员口令三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
-  let confirmed = false;
-  let confirmedFlag = false;
-  while (!confirmedFlag) {
-    const ans = await new Promise((resolve) => {
-      rl.question(
-        `${colors.yellow}是否确认使用以上自动生成的密码？(直接回车=全部使用 / 输入 n=逐项修改): ${colors.reset}`,
-        (a) => resolve(a.trim().toLowerCase())
-      );
-    });
-    if (ans === '' || ans === 'y' || ans === 'yes') {
-      confirmed = true;
-      confirmedFlag = true;
-    } else if (ans === 'n' || ans === 'no') {
-      confirmed = false;
-      confirmedFlag = true;
-    } else {
-      console.log(`${colors.yellow}  请直接回车使用全部自动生成密码，或输入 n 进入逐项修改。${colors.reset}`);
-    }
-  }
-
-  if (confirmed) {
-    updates.DB_PASSWORD = dbPassword;
-    updates.REDIS_PASSWORD = redisPassword;
-    updates.INITIAL_ADMIN_PASSWORD = adminPassword;
-  } else {
-    // 第二步：用户不确认 → 逐项编辑（每项回车保留自动生成值，或输入修改）
-    console.log('');
-    console.log(`${colors.cyan}请逐项确认密码（回车保留自动生成值，输入可修改）：${colors.reset}`);
-    console.log('');
-    updates.DB_PASSWORD = await editPassword(rl, '数据库密码', dbPassword);
-    updates.REDIS_PASSWORD = await editPassword(rl, 'Redis 密码', redisPassword);
-    updates.INITIAL_ADMIN_PASSWORD = await editPassword(
-      rl,
-      '管理员密码',
-      adminPassword
-    );
-  }
+  updates.DB_PASSWORD = dbPassword;
+  updates.REDIS_PASSWORD = redisPassword;
+  updates.INITIAL_ADMIN_PASSWORD = await promptAdminPassword(rl);
   rl.close();
 
-  // 写入 .env，并落一份根目录凭据备份（随机密码在终端只显示一次）
+  // 写入 .env
   writeFinalEnv(updates, envConfig);
-  const credential = saveCredentialBackup(updates, envConfig);
 
   // 展示最终生效的密码
   console.log('');
@@ -421,27 +396,27 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${updates.REDIS_PASSWORD}`);
   console.log(`  ${colors.bright}管理员账号:${colors.reset} ${envConfig.INITIAL_ADMIN_USERNAME || 'admin'}`);
   console.log(`  ${colors.bright}管理员密码:${colors.reset}    ${updates.INITIAL_ADMIN_PASSWORD}`);
-  if (credential.ok) {
-    console.log(`  ${colors.bright}凭据备份:${colors.reset}   ${credential.path}`);
-  }
   console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
   console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
   console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
-  console.log(`${colors.red}  ⚠ 安全提醒：登录后请立即修改管理员密码！${colors.reset}`);
+  console.log(
+    updates.INITIAL_ADMIN_PASSWORD === DEFAULT_ADMIN_PASSWORD
+      ? `${colors.red}  ⚠ 管理员使用的是默认简单密码，请立即登录修改！${colors.reset}`
+      : `${colors.red}  ⚠ 安全提醒：登录后请及时修改管理员密码！${colors.reset}`
+  );
   console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
   console.log('');
 
   // 展示最终密码后暂停等待，避免后续服务启动日志刷屏覆盖密码
   // 确保用户记录下确认后的密码，再继续启动部署
-  const backupNote = credential.ok ? `（已保存到 ${credential.path}）` : '';
   await new Promise((resolve) => {
     const confirmRl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
     });
     confirmRl.question(
-      `${colors.yellow}请记录以上确认后的密码${backupNote}，按回车键继续部署...${colors.reset}`,
+      `${colors.yellow}请记录以上密码，按回车键继续部署...${colors.reset}`,
       () => {
         confirmRl.close();
         resolve();
@@ -517,6 +492,7 @@ module.exports = {
   generateNumericPassword,
   generateJwtSecret,
   generateStrongPassword,
+  promptAdminPassword,
   runSetupWizard,
   autoSetupAndShowPasswords,
   showCurrentPasswords,

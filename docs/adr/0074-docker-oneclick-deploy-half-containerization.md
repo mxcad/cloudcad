@@ -182,7 +182,7 @@ v1 范围：包内带 `runtime/scripts`（日志中心 / 配置查看 / 健康�
 
 ```
 <DEPLOY_DIR>/                            # 解压即得的部署目录（建议 /opt/cloudcad）
-├── start.sh  stop.sh  部署说明.txt       # 用户唯一接触的东西（首次部署另生成 DEPLOY-PASSWORDS.txt）
+├── start.sh  stop.sh  部署说明.txt       # 用户唯一接触的东西（凭据只在 .env，不再另生成 DEPLOY-PASSWORDS.txt）
 ├── .env  .env.example                   # 单一配置（D4）
 ├── docker-compose.yml                   # 3 services，全 host 网络（D2）
 ├── docker/                              # Docker 静态二进制 + compose v2 独立二进制（D5）

@@ -14,9 +14,8 @@
  *      账本永久分叉（DATABASE_URL 优先级高于 DB_PASSWORD，见
  *      database.service.ts）。验证失败时尽力回滚旧口令。
  *   4. 成对更新 .env 的 DB_PASSWORD 与 DATABASE_URL；
- *   5. 刷新 DEPLOY-PASSWORDS.txt 凭据备份（否则该文件从此是错的）；
- *   6. 写 DB_PASSWORD_RESET 审计（resourceType=SYSTEM）；
- *   7. 重启 backend（本进程读 .env 是启动期一次性烘焙，不重启不生效）。
+ *   5. 写 DB_PASSWORD_RESET 审计（resourceType=SYSTEM）；
+ *   6. 重启 backend（本进程读 .env 是启动期一次性烘焙，不重启不生效）。
  *
  * 边界（刻意不做，理由见 ADR-0073）：
  * - 不做 pg_hba.conf 硬加固：部署包里的 PG 一律 `initdb -A trust`，服务端不校验
@@ -33,7 +32,6 @@ const { BACKEND_ENV_PATH } = require('../lib/context');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { composeDatabaseUrl } = require('../lib/database-url');
 const { runPm2 } = require('../lib/proc');
-const { saveCredentialBackup } = require('../lib/credentials');
 const { generateStrongPassword } = require('./setup-wizard');
 const { getDbEnv, getPsqlPath } = require('./db-backup');
 const {
@@ -85,7 +83,7 @@ function isConnectVerified(result) {
  * }} [options] 非交互调用（运维中心 ADR-0071）：confirmed=true 跳过确认提问；
  *   password 指定新口令；restart=false 跳过 backend 重启（默认重启）。
  * @param {object} [deps] 可注入的 IO 缝（测试用）：envPath/parseEnv/updateEnv/
- *   run/writeAudit/auditorId/backup/restart/generatePassword/resolveMinLength。
+ *   run/writeAudit/auditorId/restart/generatePassword/resolveMinLength。
  * @returns {Promise<{ok: boolean, message: string, password?: string}>}
  */
 async function dbResetPassword(options = null, deps = {}) {
@@ -96,7 +94,6 @@ async function dbResetPassword(options = null, deps = {}) {
     run = runPsql,
     audit = writeAudit,
     getAuditor = auditorId,
-    backup = saveCredentialBackup,
     restart = runPm2,
     generatePassword = generateStrongPassword,
     resolveLimit = resolveMinLength,
@@ -207,14 +204,7 @@ async function dbResetPassword(options = null, deps = {}) {
   updateEnv(envPath, updates);
   log('green', `已更新 .env：${envPath}`);
 
-  // 7. 刷新凭据备份（否则 DEPLOY-PASSWORDS.txt 从此是错的）
-  try {
-    backup(updates, envConfig);
-  } catch (err) {
-    log('yellow', `凭据备份写入失败（不影响重置结果）：${err.message}`);
-  }
-
-  // 8. 审计（resourceType=SYSTEM；失败不回滚，仅告警）
+  // 7. 审计（resourceType=SYSTEM；失败不回滚，仅告警）
   const aud = getAuditor();
   let auditNote = '';
   if (!aud) {
@@ -239,7 +229,7 @@ async function dbResetPassword(options = null, deps = {}) {
     auditNote = ins.ok ? '' : `，但审计写入失败：${ins.stderr}`;
   }
 
-  // 9. 重启 backend（.env 是启动期一次性烘焙，不重启不生效）
+  // 8. 重启 backend（.env 是启动期一次性烘焙，不重启不生效）
   let restartNote = '';
   if (options?.restart === false) {
     restartNote = '，未重启 backend（需手动重启才生效）';

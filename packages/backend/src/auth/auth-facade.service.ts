@@ -499,6 +499,12 @@ export class AuthFacadeService implements IAuthFacade {
         )
       : null;
 
+    // 弱口令软提示：ADMIN 且 passwordChangedAt===null → 仍在首次部署设置的初始密码。
+    // 后端只有哈希、无法直接判弱；但所有改密入口都过 assertPasswordPolicy（拒绝弱口令），
+    // 故「当前密码可能弱」⇔「部署初始密码从未改过」⇔ passwordChangedAt===null。
+    // 刻意不挂 changeEnforceEnabled 开关——那是「强制改密」的总开关，本字段是软提示、不拦截。
+    const passwordUnchanged = isAdmin && freshUser.passwordChangedAt === null;
+
     return {
       ...safeUser,
       membershipTierLevel: membership.tierLevel,
@@ -511,6 +517,7 @@ export class AuthFacadeService implements IAuthFacade {
       ...(isAdmin && passwordChangeStatus?.expiringSoon
         ? { passwordExpiringSoon: true }
         : {}),
+      ...(passwordUnchanged ? { passwordUnchanged: true } : {}),
     };
   }
 }

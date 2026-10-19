@@ -13,9 +13,8 @@
  *   3. 立刻用**新**口令 AUTH 回连验证——只有验证通过才允许写 .env；
  *   4. 更新 .env 的 REDIS_PASSWORD（单一事实源）；
  *   5. CONFIG REWRITE 持久化（系统安装的 redis 重启后会回到旧值）；
- *   6. 刷新 DEPLOY-PASSWORDS.txt 凭据备份；
- *   7. 写 REDIS_PASSWORD_RESET 审计（resourceType=SYSTEM）；
- *   8. 按 redis → backend → conversion 顺序重启（只重启确实注册过的 app）。
+ *   6. 写 REDIS_PASSWORD_RESET 审计（resourceType=SYSTEM）；
+ *   7. 按 redis → backend → conversion 顺序重启（只重启确实注册过的 app）。
  *
  * 边界（刻意不做，理由见 ADR-0073）：
  * - 不写 data/redis/cloudcad-redis-auth.conf：redis-manager 每次拉起都会按 .env
@@ -33,7 +32,6 @@ const { BACKEND_ENV_PATH, PORTS } = require('../lib/context');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { runPm2, getPm2AppStatus } = require('../lib/proc');
 const { isPortOpen } = require('../lib/health');
-const { saveCredentialBackup } = require('../lib/credentials');
 const { generateStrongPassword } = require('./setup-wizard');
 const { getDbEnv, getPsqlPath } = require('./db-backup');
 const {
@@ -83,7 +81,7 @@ function restartRegistered(names, statusOf = getPm2AppStatus, restart = runPm2) 
  * }} [options] 非交互调用（运维中心 ADR-0071）：confirmed=true 跳过确认提问；
  *   password 指定新口令；restart=false 跳过重启（默认重启）。
  * @param {object} [deps] 可注入的 IO 缝（测试用）：envPath/parseEnv/updateEnv/
- *   audit/auditorId/backup/isPortOpen/probe/setPassword/persist/restartRegistered/
+ *   audit/auditorId/isPortOpen/probe/setPassword/persist/restartRegistered/
  *   generatePassword/resolveLimit。
  * @returns {Promise<{ok: boolean, message: string, password?: string}>}
  */
@@ -94,7 +92,6 @@ async function redisResetPassword(options = null, deps = {}) {
     updateEnv = updateEnvFile,
     audit = writeAudit,
     getAuditor = auditorId,
-    backup = saveCredentialBackup,
     portOpen = isPortOpen,
     probe = probeRedisAuth,
     setPassword = setRedisPasswordAtRuntime,
@@ -212,14 +209,7 @@ async function redisResetPassword(options = null, deps = {}) {
     );
   }
 
-  // 9. 刷新凭据备份（否则 DEPLOY-PASSWORDS.txt 从此是错的）
-  try {
-    backup({ REDIS_PASSWORD: newPassword }, envConfig);
-  } catch (err) {
-    log('yellow', `凭据备份写入失败（不影响重置结果）：${err.message}`);
-  }
-
-  // 10. 审计（resourceType=SYSTEM；失败不回滚，仅告警）
+  // 9. 审计（resourceType=SYSTEM；失败不回滚，仅告警）
   const aud = getAuditor();
   let auditNote = '';
   if (!aud) {
@@ -244,7 +234,7 @@ async function redisResetPassword(options = null, deps = {}) {
     auditNote = ins.ok ? '' : `，但审计写入失败：${ins.stderr}`;
   }
 
-  // 11. 重启（redis → backend → conversion；只重启注册过的 app）
+  // 10. 重启（redis → backend → conversion；只重启注册过的 app）
   let restartNote = '';
   if (options?.restart === false) {
     restartNote = '，未重启服务（需手动重启才生效）';

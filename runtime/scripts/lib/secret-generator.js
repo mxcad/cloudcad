@@ -20,6 +20,19 @@ const crypto = require('crypto');
 const { escapeEnvValue } = require('../config-updater');
 
 /**
+ * 首次部署默认管理员口令（简单口令分支）
+ *
+ * 有意不满足 #416 等保 8.1.4.1 复杂度要求（8 位纯数字，且命中弱口令黑名单）：
+ * 部署目标用户是非技术人员，抄不下 16 位四类随机口令会被锁死在管理后台。
+ * 代价由产品内横幅承接——ADMIN 且 passwordChangedAt===null 时提示「仍在首次部署
+ * 初始密码」并给改密入口，把「默认弱口令」转成「部署即提示改密」的运营约束。
+ *
+ * 单一事实源：fillEmptySecrets（非交互兜底）与 setup-wizard（三分支默认）共用本常量，
+ * 勿在别处硬编码。改这里即同步改两条路径。
+ */
+const DEFAULT_ADMIN_PASSWORD = '12345678';
+
+/**
  * 生成长度为 64 的随机密钥（十六进制）
  */
 function generateSecret() {
@@ -90,17 +103,21 @@ function fillEmptySecrets(envFile, logFn = () => {}) {
       changed = true;
     }
   }
-  // #416 等保 8.1.4.1：INITIAL_ADMIN_PASSWORD 必填无缺省——首次部署生成符合策略的强随机口令
-  // 强随机口令必含 !@#$%^&* 等特殊字符，必须走 escapeEnvValue 加引号：
-  // 裸写时 dotenv 把 # 当行内注释，以 # 开头的口令解析为空值 → 后端首次启动
-  // 创建管理员失败、进程管理器反复重启；# 在中间的口令被静默截断（用户拿到的 ≠ 实际）
+  // INITIAL_ADMIN_PASSWORD 必填无缺省，默认走简单口令 DEFAULT_ADMIN_PASSWORD
+  // （有意放松 #416 等保 8.1.4.1 复杂度，理由与横幅承接见上方常量注释）。
+  // 本函数是非交互兜底（离线安装 / docker 一键包），没有 stdin 可问 y/n，只能给默认值；
+  // 有交互的部署路径（setup-wizard 三分支）可用 y 选强随机或 n 自定义。
+  // 恒走 escapeEnvValue 通道：强随机口令含 # 时裸写会被 dotenv 当行内注释截断，
+  // 简单口令不含敏感字符则原样返回，两条路径共用同一写法。
   const adminPasswordRegex = /^INITIAL_ADMIN_PASSWORD=[ \t]*$/m;
   if (adminPasswordRegex.test(content)) {
     content = content.replace(
       adminPasswordRegex,
-      `INITIAL_ADMIN_PASSWORD=${escapeEnvValue(generateStrongPassword())}`
+      `INITIAL_ADMIN_PASSWORD=${escapeEnvValue(DEFAULT_ADMIN_PASSWORD)}`
     );
-    logFn('  ✓ 自动生成 INITIAL_ADMIN_PASSWORD（强随机口令，请妥善保存）');
+    logFn(
+      `  ✓ 自动生成 INITIAL_ADMIN_PASSWORD（默认简单口令 ${DEFAULT_ADMIN_PASSWORD}，首次登录后请尽快修改）`
+    );
     changed = true;
   }
   if (changed) {
@@ -110,6 +127,7 @@ function fillEmptySecrets(envFile, logFn = () => {}) {
 }
 
 module.exports = {
+  DEFAULT_ADMIN_PASSWORD,
   generateSecret,
   generateStrongPassword,
   fillEmptySecrets,

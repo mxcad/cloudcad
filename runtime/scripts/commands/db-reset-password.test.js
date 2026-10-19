@@ -68,7 +68,7 @@ test('isConnectVerified 只认 ok 且 stdout 恰为 "1"', () => {
  */
 function makeDeps(o = {}) {
   const { alterOk = true, verifyOk = true, rollbackOk = true } = o;
-  const calls = { alter: 0, verify: 0, rollback: 0, audit: 0, backup: 0, restart: [] };
+  const calls = { alter: 0, verify: 0, rollback: 0, audit: 0, restart: [] };
   const envWrites = [];
 
   const deps = {
@@ -100,9 +100,6 @@ function makeDeps(o = {}) {
       return { ok: true, stdout: '' };
     },
     getAuditor: () => 'admin-1',
-    backup: () => {
-      calls.backup += 1;
-    },
     restart: (args) => {
       calls.restart.push(args);
       return true;
@@ -206,7 +203,7 @@ test('验证失败 + 旧密码为空：无回滚可用，明确告知', async ()
   assert.match(res.message, /回滚失败/);
 });
 
-test('成功路径：ALTER → 验证 → 成对写 .env → 备份 → 审计 → 重启', async () => {
+test('成功路径：ALTER → 验证 → 成对写 .env → 审计 → 重启', async () => {
   const { deps, calls, envWrites } = makeDeps();
   const res = await dbResetPassword({ confirmed: true }, deps);
   assert.equal(res.ok, true);
@@ -226,7 +223,6 @@ test('成功路径：ALTER → 验证 → 成对写 .env → 备份 → 审计 �
     'postgresql://postgres:NewPass1234@localhost:5432/cloudcad'
   );
 
-  assert.equal(calls.backup, 1);
   assert.equal(calls.audit, 1);
   assert.deepEqual(calls.restart, [['restart', 'backend']]);
 });

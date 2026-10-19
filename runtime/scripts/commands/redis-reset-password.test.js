@@ -84,7 +84,6 @@ function makeDeps(o = {}) {
     probes: [],
     persist: 0,
     audit: 0,
-    backup: 0,
     restart: [],
   };
   const envWrites = [];
@@ -105,9 +104,6 @@ function makeDeps(o = {}) {
       return { ok: true, stdout: '' };
     },
     getAuditor: () => auditor,
-    backup: () => {
-      calls.backup += 1;
-    },
     portOpen: async () => portOpen,
     probe: async (_h, _p, pwd) => {
       calls.probes.push(pwd);
@@ -227,7 +223,7 @@ test('AUTH 验证失败：绝不写 .env（核心安全性质）', async () => {
   assert.equal(calls.restart.length, 0);
 });
 
-test('成功路径：改密 → AUTH 验证 → 写 .env → 持久化 → 备份 → 审计 → 按序重启', async () => {
+test('成功路径：改密 → AUTH 验证 → 写 .env → 持久化 → 审计 → 按序重启', async () => {
   const { deps, calls, envWrites } = makeDeps();
   const res = await redisResetPassword({ confirmed: true }, deps);
   assert.equal(res.ok, true);
@@ -241,7 +237,6 @@ test('成功路径：改密 → AUTH 验证 → 写 .env → 持久化 → 备�
   assert.deepEqual(envWrites[0], { REDIS_PASSWORD: NEW });
 
   assert.equal(calls.persist, 1);
-  assert.equal(calls.backup, 1);
   assert.equal(calls.audit, 1);
   assert.deepEqual(calls.restart, [
     ['redis', 'backend', 'conversion'],
@@ -284,16 +279,4 @@ test('审计失败：不改变成功结果，仅附告警', async () => {
   assert.equal(res.ok, true);
   assert.equal(envWrites.length, 1);
   assert.match(res.message, /审计写入失败/);
-});
-
-test('凭据备份抛错：不影响重置结果', async () => {
-  const { deps, calls, envWrites } = makeDeps();
-  const res = await redisResetPassword({ confirmed: true }, {
-    ...deps,
-    backup: () => {
-      throw new Error('EACCES');
-    },
-  });
-  assert.equal(res.ok, true);
-  assert.equal(envWrites.length, 1);
 });

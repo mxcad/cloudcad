@@ -45,6 +45,7 @@ const { mergeExampleIntoEnv } = require(path.join(DEPLOY_DIR, 'runtime', 'script
 const {
   fillEmptySecrets,
   generateStrongPassword,
+  DEFAULT_ADMIN_PASSWORD,
 } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'secret-generator'));
 const { composeDatabaseUrl } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'database-url'));
 const { resolveMxcadAssemblyPath } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'mxcad-path'));
@@ -353,11 +354,9 @@ function checkDataDirOwnership() {
 // ==================== Step 2/3 .env 生成 ====================
 
 function step2Env() {
-  let newInstall = false;
   if (!fs.existsSync(ENV_FILE)) {
     if (!fs.existsSync(ENV_EXAMPLE)) fail('缺少 .env.example 模板');
     fs.copyFileSync(ENV_EXAMPLE, ENV_FILE);
-    newInstall = true;
     log('首次部署：已从 .env.example 生成 .env');
   }
 
@@ -398,24 +397,9 @@ function step2Env() {
   updateEnvFile(ENV_FILE, { DB_PASSWORD: env.DB_PASSWORD, DATABASE_URL: url }, ENV_EXAMPLE);
   env = parseEnvFile(ENV_FILE);
 
-  if (newInstall) {
-    const credFile = path.join(DEPLOY_DIR, 'DEPLOY-PASSWORDS.txt');
-    fs.writeFileSync(
-      credFile,
-      [
-        `${VERSION} 初始凭据（请妥善保存，首次登录并修改密码后可删除本文件）`,
-        `生成时间: ${new Date().toISOString()}`,
-        '',
-        `管理员初始密码 (INITIAL_ADMIN_PASSWORD): ${env.INITIAL_ADMIN_PASSWORD || '（未生成）'}`,
-        `数据库密码 (DB_PASSWORD): ${env.DB_PASSWORD}`,
-        `Redis 密码 (REDIS_PASSWORD): ${env.REDIS_PASSWORD || '（未启用）'}`,
-        '',
-        '管理员入口: 前端页面右上角/登录页的管理员入口',
-      ].join('\n'),
-      'utf8'
-    );
-    log(`初始凭据已写入 ${credFile}（管理员密码只在终端显示这一次，请妥善保存）`);
-  }
+  // 不再落盘 DEPLOY-PASSWORDS.txt：明文重复 .env 的内容，且三份口令都有免旧密码的
+  // 重置通道（cli.js admin:reset-password / db:reset-password / redis:reset-password）。
+  // 初始管理员口令由 fillEmptySecrets 统一填默认值，非交互部署不再需要「一次可见」的凭据出口。
   return env;
 }
 
@@ -796,8 +780,10 @@ function step12Summary() {
   log('╠══════════════════════════════════════════════════════════╣');
   log('║  停止: ./stop.sh    升级: 新包解压到本目录后重跑 ./start.sh ║');
   log('╚══════════════════════════════════════════════════════════╝');
-  if (fs.existsSync(path.join(DEPLOY_DIR, 'DEPLOY-PASSWORDS.txt'))) {
-    log('初始管理员密码见 DEPLOY-PASSWORDS.txt（首次登录后请修改并删除该文件）');
+  // 凭据不再落明文文件：三份口令唯一存于 .env，丢失走免旧密码的重置通道
+  log(`凭据文件: ${ENV_FILE}`);
+  if (env.INITIAL_ADMIN_PASSWORD === DEFAULT_ADMIN_PASSWORD) {
+    log(`⚠ 管理员仍在用默认口令 ${DEFAULT_ADMIN_PASSWORD}，请尽快登录后修改（管理后台顶部有提示横幅）`);
   }
 }
 

@@ -32,7 +32,7 @@ import { t, $t, i18nScope } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
 
 // Lucide 图标导入（菜单图标已迁入 config/navigation 单一事实源，此处仅保留非菜单图标）
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ShieldAlert } from 'lucide-react';
 import { Settings } from 'lucide-react';
 import { Settings2 } from 'lucide-react';
 import { LogOut } from 'lucide-react';
@@ -753,6 +753,41 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   onClick={() => navigate('/admin/change-password')}
                 >
                   {t('修改密码')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+        {/* 弱口令软提示（仅 ADMIN）：后端 passwordUnchanged = isAdmin && passwordChangedAt === null。
+            所有改密入口都过 assertPasswordPolicy（拒绝弱口令），故「当前口令可能过弱」
+            ⇔「部署初始口令从未改过」，无需新增字段/迁移即可判定。软提示不拦截、不设关闭按钮，
+            改密成功即自动消失（与上方到期横幅同形态）。点击进入个人中心（含修改密码页签）。 */}
+        {user?.role?.name === 'ADMIN' &&
+          (user as { passwordUnchanged?: boolean }).passwordUnchanged && (
+            <div
+              className="px-4 py-2 animate-slide-up"
+              style={{
+                background: isDark
+                  ? 'var(--warning-dim)'
+                  : 'var(--warning-light)',
+                borderBottom: `1px solid ${isDark ? 'var(--warning)' : 'var(--warning-dim)'}`,
+              }}
+            >
+              <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+                <ShieldAlert
+                  size={18}
+                  className="flex-shrink-0"
+                  style={{ color: 'var(--warning)' }}
+                />
+                <span className="text-sm" style={{ color: 'var(--warning)' }}>
+                  {t('您当前仍在使用首次部署设置的初始密码，请立即修改')}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => navigate('/profile')}
+                >
+                  {t('去修改')}
                 </Button>
               </div>
             </div>
