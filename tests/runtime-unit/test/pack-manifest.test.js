@@ -2,7 +2,7 @@
  * P9：打包清单单一事实源 单元测试
  *
  * 断言目标（消灭 pack-offline.js 全量部署包/增量升级包双清单硬编码漂移）：
- * 1. upgrade 清单 = 共享条目全集（不含 runtime 二进制 / store / 部署说明 / 入口脚本）
+ * 1. upgrade 清单 = 共享条目 + 部署说明（不含 runtime 二进制 / store / 入口脚本）
  * 2. deploy 清单 = 共享条目 + 入口脚本 + 平台运行时 + store + 部署说明（顺序正确）
  * 3. private variant 额外包含 impl-mx/dist
  * 4. deploy 独有条目顺序：runtime/store 在 pnpm-lock.yaml 之前，部署说明在末尾
@@ -40,10 +40,11 @@ function allTemplateScriptSrcs() {
 
 describe('pack-lib/manifest.js（P9 单一事实源）', () => {
   describe('getUpgradeIncludeList', () => {
-    it('升级包清单 = 共享条目全集（oss）', () => {
+    it('升级包清单 = 共享条目 + 部署说明（oss）', () => {
       const shared = srcs(getSharedEntries());
       const upgrade = srcs(getUpgradeIncludeList('linux', 'oss'));
-      expect(upgrade).toEqual(shared);
+      // C7 四类包统一：升级包也携带部署说明（按打包平台取对应版本源文件，linux 包取 linux 版）
+      expect(upgrade).toEqual([...shared, '部署说明-linux.txt']);
 
       // 必需条目不得声明 optional；仅 runtime/prisma-engines 允许源缺失静默跳过
       // （注意：srcs() 已把条目压成字符串，optional 判定须用原始对象）
@@ -53,12 +54,13 @@ describe('pack-lib/manifest.js（P9 单一事实源）', () => {
       expect(entries.every((e) => e.src && e.dest)).toBe(true);
     });
 
-    it('升级包清单不包含 runtime 二进制 / store / 部署说明 / 入口脚本', () => {
+    it('升级包清单不包含 runtime 二进制 / store / 入口脚本（C7 含部署说明）', () => {
       const upgrade = srcs(getUpgradeIncludeList('win', 'oss'));
       expect(upgrade.some((s) => s.includes('runtime/windows'))).toBe(false);
       expect(upgrade.some((s) => s.includes('runtime/linux'))).toBe(false);
       expect(upgrade.some((s) => s.includes('.pnpm-store-deploy'))).toBe(false);
-      expect(upgrade.some((s) => s.includes('部署说明'))).toBe(false);
+      // C7 四类包统一：升级包携带部署说明（win 包取 windows 版源文件，包内统一命名 部署说明.txt）
+      expect(upgrade).toContain('部署说明-windows.txt');
       // 入口脚本回归锁定：升级包不含 .sh/.bat 入口，否则 Windows 打包机直打 tar
       // 会把目标机部署包的 -rwxr-xr-x 入口覆盖成 0666，用户 ./start.sh 报 Permission denied
       // 根目录与 runtime/ 下的入口脚本一律不带（两个平台都检查）
