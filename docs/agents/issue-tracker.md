@@ -8,11 +8,20 @@
 
 ## 认证
 
-API 走 Basic auth（用户名+密码）。凭据存于 Git Credential Manager，用下面命令取：
+API 走 Basic auth（用户名+密码/token）。凭据存于 Git Credential Manager，用下面命令取：
 
 ```bash
 printf 'protocol=http\nhost=10.66.66.1:5656\npath=/qjx/cloudcad.git\n\n' | git credential-manager-core get
 ```
+
+**首次使用必须一次性存入凭据**，否则每次操作都会触发密码询问：系统级 helper 是 `manager-core`（无头版），交互输入的密码**不会**被持久缓存，只有 `store` 写入的凭据才会被后续 `get` 静默命中。步骤：
+
+1. 推荐在 Gitea「设置 → 账户 → 访问令牌」创建 access token（长期有效、可吊销，不依赖密码）；
+2. 一次性执行（`<token或密码>` 替换为实际值）：
+   ```bash
+   printf 'protocol=http\nhost=10.66.66.1:5656\npath=/qjx/cloudcad.git\nusername=wdx\npassword=<token或密码>\n\n' | git credential-manager-core store
+   ```
+3. 验证：再跑上面的 `get` 命令应静默返回凭据（`password` 有值、exit 0）。返回空/exit 255 = 未存入，重做第 2 步。
 
 脚本化操作建议用 Node `fetch` + `Authorization: Basic <base64(user:pass)>`。注意：Git Bash 下 `curl -d` 传中文 body 会破坏 UTF-8（服务端报 `invalid UTF-8`），发中文内容一律走 Node fetch 或先写 UTF-8 文件再 `--data @file`。
 
