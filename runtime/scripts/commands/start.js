@@ -41,6 +41,8 @@ const {
 } = require('../lib/proc');
 const {
   waitForPort,
+  waitForDatabase,
+  waitForRedis,
   waitAndOpenBrowsers,
   openBrowser,
   isPortOpen,
@@ -721,17 +723,17 @@ async function testConnection() {
   let dbOk = false;
   let redisOk = false;
 
-  // 测试数据库
+  // 测试数据库（协议级：须接受查询，TCP 通连不算就绪）
   try {
-    await waitForPort(dbPort, 'PostgreSQL', 5000);
+    await waitForDatabase(dbPort, 'PostgreSQL', 5000, dbHost);
     dbOk = true;
   } catch (e) {
     log('yellow', `[警告] 数据库连接失败: ${e.message}`);
   }
 
-  // 测试 Redis
+  // 测试 Redis（协议级：须回 PONG）
   try {
-    await waitForPort(redisPort, 'Redis', 5000);
+    await waitForRedis(redisPort, 'Redis', 5000, redisHost);
     redisOk = true;
   } catch (e) {
     log('yellow', `[警告] Redis 连接失败: ${e.message}`);
@@ -855,8 +857,8 @@ async function startAppServicesWithInfra(mode, options = null) {
 
   while (!connected) {
     try {
-      await waitForPort(PORTS.postgresql, 'PostgreSQL', 30000);
-      await waitForPort(PORTS.redis, 'Redis', 30000);
+      await waitForDatabase(PORTS.postgresql, 'PostgreSQL', 30000);
+      await waitForRedis(PORTS.redis, 'Redis', 30000);
       connected = true;
     } catch (err) {
       log('red', `[错误] ${err.message}`);

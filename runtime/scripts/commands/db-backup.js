@@ -24,6 +24,7 @@ const {
   DATA_DIR,
   NODE_EXE,
   PNPM_JS,
+  pgLibDir,
 } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { parseEnvFile } = require('../lib/env');
@@ -92,13 +93,13 @@ function getPostgresLibPath() {
  */
 function getRuntimeLibPaths() {
   if (!IS_LINUX || !USE_RUNTIME) return '';
-  
+
   const paths = [
-    path.join(PLATFORM_DIR, 'postgres', 'lib'),
+    pgLibDir(), // 单一事实源见 lib/context.js，勿在此重复拼 postgres/lib
     path.join(PLATFORM_DIR, 'subversion', 'lib'),
     // 如果有其他运行时库，也加到这里
   ].filter(p => fs.existsSync(p));
-  
+
   return paths.join(':');
 }
 
@@ -113,6 +114,10 @@ function getDbEnv() {
     env: {
       ...process.env,
       PGPASSWORD: envConfig.DB_PASSWORD || '',
+      // psql 的客户端消息默认按 OEM 代码页输出（中文 Windows = CP936/GBK），
+      // 而本仓所有 psql 调用都用 encoding:'utf-8' 解码 stdout/stderr → 错误文案
+      // 变乱码，只能靠猜。强制 UTF8 让 `FATAL: ...` 这类原文可读。
+      PGCLIENTENCODING: 'UTF8',
       ...(IS_LINUX && USE_RUNTIME
         ? {
             LD_LIBRARY_PATH: getRuntimeLibPaths(),
@@ -124,12 +129,15 @@ function getDbEnv() {
 }
 
 /**
- * 检查数据库是否存在
+ * 检查数据库是否存在。
+ * @returns {Promise<boolean|null>} true = 存在；false = 确认不存在；
+ *   null = 无法判定（psql 缺失 / 实例未就绪 / 尚不可达）。
+ *   null 不可当 false：那会让调用方对未就绪的实例执行 CREATE DATABASE 并必然失败。
  */
 async function checkDatabaseExists(host, port, user, database) {
   const psqlPath = getPsqlPath();
   if (!fs.existsSync(psqlPath)) {
-    return false;
+    return null;
   }
 
   const { env } = getDbEnv();
@@ -162,7 +170,21 @@ async function checkDatabaseExists(host, port, user, database) {
     return true;
   }
 
-  // 其他错误（如 psql 不存在）- 无法确定
+  // 实例未就绪或尚不可达 ≠ 数据库不存在。WAL 重放期间 PG 会 accept 连接后立刻
+  // 回 `FATAL: the database system is starting up`，此时去 CREATE DATABASE 必然失败。
+  if (
+    errorMsg.includes('starting up') ||
+    errorMsg.includes('shutting down') ||
+    errorMsg.includes('could not connect') ||
+    errorMsg.includes('connection refused') ||
+    errorMsg.includes('no response') ||
+    errorMsg.includes('timed out')
+  ) {
+    log('yellow', '⚠️  数据库实例尚未就绪，跳过存在性判定');
+    return null;
+  }
+
+  // 其他错误（如 psql 参数错误）- 无法确定
   log('yellow', `⚠️  数据库检查失败: ${result.stderr || result.stdout}`);
   return false;
 }

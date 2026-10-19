@@ -10,11 +10,24 @@
  * 依赖方向铁律：lib 只允许 require 其他 lib 或独立模块，禁止 require commands。
  */
 
+const path = require('path');
 const { spawn } = require('child_process');
 
-const { IS_WINDOWS, IS_LINUX, PORTS } = require('./context');
+const {
+  IS_WINDOWS,
+  IS_LINUX,
+  PORTS,
+  USE_RUNTIME,
+  PLATFORM_DIR,
+  pgLibDir,
+} = require('./context');
 const { log } = require('./logger');
 const { getAdminLoginPath } = require('./admin-login');
+const {
+  respRequest,
+  respReply,
+  loadRedisPassword,
+} = require('./redis-takeover');
 
 function openBrowser(url) {
   let child;
@@ -206,6 +219,155 @@ async function waitForPort(port, name, timeout = 30000) {
 }
 
 /**
+ * pg_isready 可执行文件路径：离线包用捆绑副本，开发环境用 PATH 上的。
+ * 与 commands/db-backup 的 getPsqlPath 同属一个 PostgreSQL bin 目录。
+ * @returns {string}
+ */
+function getPgIsReadyPath() {
+  if (!USE_RUNTIME) return 'pg_isready';
+  return IS_WINDOWS
+    ? path.join(PLATFORM_DIR, 'postgresql', 'pgsql', 'bin', 'pg_isready.exe')
+    : path.join(PLATFORM_DIR, 'postgres', 'bin', 'pg_isready');
+}
+
+/**
+ * 单次 PostgreSQL 就绪探测（不重试）。
+ *
+ * 不能用 net.connect：postmaster 先开监听 socket、再重放 WAL 完成崩溃恢复，
+ * 重放期间会正常 accept 连接并立刻回 `FATAL: the database system is starting
+ * up`——TCP 通连是必要不充分条件。pg_isready 对该状态返回退出码 2（rejecting），
+ * 只有真正接受查询才返回 0。
+ * pg_isready 缺失（开发环境未装、或包内文件不全）时降级为 TCP 探测，保持旧行为。
+ * @param {number} port
+ * @param {string} [host='127.0.0.1']
+ * @param {number} [timeout=3000] 单次探测超时（ms）
+ * @returns {Promise<boolean>}
+ */
+async function checkDatabaseOnce(port, host = '127.0.0.1', timeout = 3000) {
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer;
+    const finish = (ready) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(ready);
+    };
+
+    // 必须用异步 spawn 而非 spawnSync：pg_isready 要先拿到服务端对 SSLRequest
+    // 的应答才发 startup packet，spawnSync 会阻塞事件循环导致探测挂满超时。
+    const child = spawn(getPgIsReadyPath(), ['-h', host, '-p', String(port)], {
+      stdio: 'ignore',
+      windowsHide: true,
+      // Linux 捆绑 libpq 需 LD_LIBRARY_PATH，否则 pg_isready 根本起不来
+      env: {
+        ...process.env,
+        LD_LIBRARY_PATH: pgLibDir() || process.env.LD_LIBRARY_PATH,
+      },
+    });
+
+    timer = setTimeout(() => {
+      child.kill();
+      finish(false);
+    }, timeout);
+
+    child.once('error', (err) => {
+      // pg_isready 不在 PATH / 未随包携带（开发环境常见）：降级为 TCP 探测
+      finish(err.code === 'ENOENT' ? isPortOpen(port, host, timeout) : false);
+    });
+    child.once('close', (code) => finish(code === 0));
+  });
+}
+
+/**
+ * 单次 Redis 就绪探测（不重试）：PING 必须回 PONG。
+ *
+ * 不能用 net.connect：实例加载 RDB/AOF 期间同样先 accept 连接再回
+ * `-LOADING Redis is loading the dataset in memory`，TCP 通连不算就绪。
+ * 部署包的实例恒带密码，故先 AUTH 再 PING；respRequest 复用 redis-takeover 的
+ * 零依赖 RESP 编码，密码含空格/特殊字符也不踩 shell 引号。
+ * @param {number} port
+ * @param {string} [host='127.0.0.1']
+ * @param {number} [timeout=3000] 单次探测超时（ms）
+ * @param {string|null} [password] 缺省取 .env 的 REDIS_PASSWORD；测试可显式传空跳过 AUTH
+ * @returns {Promise<boolean>}
+ */
+async function checkRedisOnce(
+  port,
+  host = '127.0.0.1',
+  timeout = 3000,
+  password = loadRedisPassword()
+) {
+  const commands = password ? [['AUTH', password], ['PING']] : [['PING']];
+  const { ok, lines } = await respRequest(host, port, commands, timeout);
+  if (!ok) return false;
+  const replies = lines.map(respReply);
+  if (replies.some((reply) => /loading/i.test(reply))) return false;
+  return replies.includes('PONG');
+}
+
+/**
+ * 等待 PostgreSQL 真正接受查询（退避重试）。
+ * 部署/迁移前必须用本函数而非 waitForPort：WAL 重放窗口内执行
+ * CREATE DATABASE / migrate deploy 会撞 `FATAL: the database system is starting
+ * up` 并中止部署（Windows 停机走 taskkill，重启后重放量可能不小）。
+ * @param {number} port
+ * @param {string} [name='PostgreSQL']
+ * @param {number} [timeout=30000] 总超时（ms）
+ * @param {string} [host='127.0.0.1']
+ */
+async function waitForDatabase(
+  port,
+  name = 'PostgreSQL',
+  timeout = 30000,
+  host = '127.0.0.1'
+) {
+  const startTime = Date.now();
+  let attempt = 0;
+  for (;;) {
+    if (await checkDatabaseOnce(port, host)) {
+      log('green', `  ✓ ${name} 已就绪 (端口 ${port})`);
+      return true;
+    }
+    if (Date.now() - startTime >= timeout) {
+      throw new Error(`${name} 启动超时 (${Math.round(timeout / 1000)}s)`);
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(1000 * 2 ** attempt++, 5000))
+    );
+  }
+}
+
+/**
+ * 等待 Redis 真正接受命令（退避重试）。理由见 checkRedisOnce。
+ * @param {number} port
+ * @param {string} [name='Redis']
+ * @param {number} [timeout=30000] 总超时（ms）
+ * @param {string} [host='127.0.0.1']
+ */
+async function waitForRedis(
+  port,
+  name = 'Redis',
+  timeout = 30000,
+  host = '127.0.0.1'
+) {
+  const startTime = Date.now();
+  let attempt = 0;
+  for (;;) {
+    if (await checkRedisOnce(port, host)) {
+      log('green', `  ✓ ${name} 已就绪 (端口 ${port})`);
+      return true;
+    }
+    if (Date.now() - startTime >= timeout) {
+      throw new Error(`${name} 启动超时 (${Math.round(timeout / 1000)}s)`);
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, Math.min(1000 * 2 ** attempt++, 5000))
+    );
+  }
+}
+
+/**
  * 单次检测端口是否已被监听。
  * @param {number} port
  * @param {string} [host='127.0.0.1']
@@ -272,6 +434,11 @@ module.exports = {
   buildStartupUrls,
   waitAndOpenBrowsers,
   waitForPort,
+  getPgIsReadyPath,
+  checkDatabaseOnce,
+  waitForDatabase,
+  checkRedisOnce,
+  waitForRedis,
   isPortOpen,
   waitPortReleased,
 };

@@ -24,6 +24,7 @@ const { log } = require('../lib/logger');
 const { runPnpm, runCommandWithProgress } = require('../lib/proc');
 const { findSchemaEngine } = require('../lib/schema-engine');
 const { promptConfirm } = require('../lib/prompt');
+const { waitForDatabase } = require('../lib/health');
 const {
   backupDatabase,
   checkDatabaseExists,
@@ -497,7 +498,24 @@ async function runDatabaseMigration(options = null) {
   const dbUser = envConfig.DB_USERNAME || 'postgres';
   const dbName = envConfig.DB_DATABASE || 'cloudcad';
 
+  // 确认实例已接受查询再碰 pg_database：TCP 端口通连不算就绪——WAL 重放期间
+  // PG 会 accept 连接后立刻回 `FATAL: the database system is starting up`，
+  // 此时建库必然失败。这是建库前唯一的正确闸门。
+  try {
+    await waitForDatabase(dbPort, 'PostgreSQL', 60000, dbHost);
+  } catch (err) {
+    log('red', `[错误] 数据库未就绪，无法创建数据库: ${err.message}`);
+    return false;
+  }
+
   let dbExists = await checkDatabaseExists(dbHost, dbPort, dbUser, dbName);
+  if (dbExists === null) {
+    log(
+      'red',
+      '[错误] 无法确认数据库状态（实例未就绪或不可达），请检查数据库服务'
+    );
+    return false;
+  }
 
   if (!dbExists) {
     log('yellow', '⚠️  数据库不存在，正在创建数据库...');

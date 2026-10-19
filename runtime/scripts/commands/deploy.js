@@ -13,7 +13,7 @@ const { PROJECT_ROOT, PORTS } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { runPnpm } = require('../lib/proc');
 const { promptChoice } = require('../lib/prompt');
-const { waitForPort } = require('../lib/health');
+const { waitForDatabase, waitForRedis } = require('../lib/health');
 const versionHelper = require('../drawing-version-helper');
 const { startInfrastructure, setupPm2Startup } = require('./infra');
 const { stopAppServices } = require('./stop');
@@ -77,11 +77,11 @@ async function deployModeImpl(skipBuild = false, options = null) {
     return false;
   }
 
-  // 等待基础服务就绪
+  // 等待基础服务就绪（协议级：PG 须接受查询、Redis 须回 PONG）
   log('cyan', '等待服务就绪...');
   try {
-    await waitForPort(PORTS.postgresql, 'PostgreSQL', 30000);
-    await waitForPort(PORTS.redis, 'Redis', 30000);
+    await waitForDatabase(PORTS.postgresql, 'PostgreSQL', 30000);
+    await waitForRedis(PORTS.redis, 'Redis', 30000);
   } catch (err) {
     log('red', `[错误] ${err.message}`);
     return false;

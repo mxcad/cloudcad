@@ -117,6 +117,18 @@ const PNPM_JS = USE_RUNTIME
   ? path.join(PLATFORM_DIR, 'node', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs')
   : path.join(PLATFORM_DIR, 'node', 'bin', 'pnpm');
 
+/**
+ * 离线包 PostgreSQL lib 目录（LD_LIBRARY_PATH 用）。
+ * Linux 的 pg_isready / psql 需要它才能加载捆绑的 libpq，缺失则进程直接起不来。
+ * 非 Linux / 开发环境返回空串。
+ * @returns {string}
+ */
+function pgLibDir() {
+  if (!USE_RUNTIME || !IS_LINUX) return '';
+  const dir = path.join(PLATFORM_DIR, 'postgres', 'lib');
+  return fs.existsSync(dir) ? dir : '';
+}
+
 module.exports = {
   PLATFORM,
   IS_WINDOWS,
@@ -135,6 +147,7 @@ module.exports = {
   NODE_EXE,
   PM2_JS,
   PNPM_JS,
+  pgLibDir,
   INFRA_SERVICE_APPS,
   INFRA_APP_TO_PORT_KEY,
 };
