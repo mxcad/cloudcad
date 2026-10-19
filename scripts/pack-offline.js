@@ -26,6 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 const { execSync, spawn, spawnSync } = require('child_process');
 const zlib = require('zlib');
 
@@ -1291,6 +1292,54 @@ function writeDeployMeta(tempDir) {
 }
 
 /**
+ * 写入包元数据（ADR-0075 C7：裸机包对齐 docker 包，统一含 SHA256SUMS + VERSION + 部署说明.txt）。
+ * 在 createArchive 之前调用：先写 VERSION / 部署说明.txt，再对其余顶层文件算 SHA256SUMS（不含自身）。
+ * @param {string} tempDir 包暂存目录
+ * @param {{isUpgrade: boolean, platform: string, variant: string}} opts
+ */
+function writePackageMetadata(tempDir, { isUpgrade, platform, variant }) {
+  const { PRODUCT_NAME } = require(path.join(PROJECT_ROOT, 'runtime', 'scripts', 'lib', 'branding'));
+  const isWin = platform === 'win';
+
+  // VERSION（顶层，目标机 start 流程读取）
+  fs.writeFileSync(path.join(tempDir, 'VERSION'), VERSION + '\n');
+
+  // 部署说明.txt（顶层，平台/类型自适应）
+  const startCmd = isWin ? 'start.bat' : './start.sh';
+  const stopCmd = isWin ? 'stop.bat' : './stop.sh';
+  const opsCmd = isWin ? 'runtime\\cloudcad.bat' : './runtime/cloudcad.sh';
+  const variantTag = variant === 'private' ? ' / 闭源' : '';
+  const lines = [
+    `${PRODUCT_NAME} ${isUpgrade ? '升级包' : '全量部署包'}（${isWin ? 'Windows' : 'Linux'}${variantTag}）`,
+    `版本: ${VERSION}`,
+    '',
+    isUpgrade
+      ? `【升级】 解压本包覆盖现有部署根目录后重跑 ${startCmd}`
+      : `【部署】 解压本包到目标目录后运行 ${startCmd}`,
+    '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
+    '',
+    `【停止】 ${stopCmd}（数据保留在 data/ 目录）`,
+    '',
+    `【运维入口】 ${opsCmd}（交互菜单：启动/停止/状态）`,
+    '',
+    '【运维中心】 http://<服务器IP>:3002（只读运维 + 配置管理）',
+  ];
+  fs.writeFileSync(path.join(tempDir, '部署说明.txt'), lines.join('\n'), 'utf8');
+
+  // SHA256SUMS（顶层文件清单，不含自身）
+  const sums = [];
+  for (const entry of fs.readdirSync(tempDir).sort()) {
+    if (entry === 'SHA256SUMS') continue;
+    const p = path.join(tempDir, entry);
+    if (fs.statSync(p).isFile()) {
+      sums.push(`${crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')}  ${entry}`);
+    }
+  }
+  fs.writeFileSync(path.join(tempDir, 'SHA256SUMS'), sums.join('\n') + '\n');
+  log(`写入包元数据: VERSION / 部署说明.txt / SHA256SUMS（${sums.length} 个顶层文件）`);
+}
+
+/**
  * Windows 标准运行时组件出包前校验（node / pm2 / postgresql / redis）。
  *
  * 背景：runtime/windows/ 在 manifest 中是整目录复制，只要 node/ 存在即可通过，
@@ -2068,6 +2117,9 @@ async function packDeploy(platform, variant = 'oss') {
       }
     }
 
+    // 包元数据（ADR-0075 C7：SHA256SUMS + VERSION + 部署说明.txt，对齐 docker 包）
+    writePackageMetadata(tempDir, { isUpgrade: false, platform, variant });
+
     await createArchive(tempDir, outputPath);
 
     const stat = fs.statSync(outputPath);
@@ -2291,6 +2343,10 @@ async function packUpgrade(platform, variant = 'oss') {
     const outputPath = path.join(OUTPUT_DIR, `${baseName}.${archiveExt}`);
 
     ensureDir(OUTPUT_DIR);
+
+    // 包元数据（ADR-0075 C7：SHA256SUMS + VERSION + 部署说明.txt，对齐 docker 包）
+    writePackageMetadata(tempDir, { isUpgrade: true, platform, variant });
+
     await createArchive(tempDir, outputPath);
 
     const stat = fs.statSync(outputPath);

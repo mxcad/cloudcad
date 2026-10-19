@@ -116,6 +116,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `docs/adr/0056-deployment-runtime-packager-modularization.md` | 离线部署运行时与打包工具工程化 —— 双包架构（runtime-cli/packager）+ 两步迁移 + 前台真修复 + 入口双 facade（start=一键部署 / cloudcad=运维 CLI）+ 分层测试策略 |
 | `docs/adr/0070-platform-package-and-pc-mobile-url-interop.md` | @cloudcad/platform 跨端公共层（准入四条）+ PC↔移动端 URL 互通走「语义等价 + 双向翻译层」——映射表单一事实源、两端路由参数名同名铁律、移动端 URL 形态固定 `base?query#path`、双向逃生入口、消灭整页重载、守卫异步刷新 |
 | `docs/deployment-runtime-refactor-plan.md` | 部署运行时工程化重构的**可执行路线图**（痛点 P1-P9、契约 C1-C11、决策点、回归矩阵 V1-V8）——改 `runtime/scripts`、`scripts/pack-offline.js`、`start.sh`、`cloudcad.sh`、打包/启动相关代码前必读 |
+| `docs/packaging-unification-plan.md` | 打包入口与交付形态统一的**可执行路线图**（v1 三类包统一入口/命名/交互/CI、v2 docker windows 宿主+private、v3 docker 升级包；痛点 P1-P10、契约 C1-C12、回归矩阵 V1-V8）——改 `pack-menu.js`、`pack-linux-docker.js`、`runtime/docker-runtime`、release.yml 打包/验证/CI 相关代码前必读 |
 
 ## 包总览
 

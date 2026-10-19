@@ -36,6 +36,21 @@ const getArg = (name) => {
 const PACKAGE = getArg('--package');
 const KEEP = args.includes('--keep');
 
+// 挑包正则按形态过滤（ADR-0075 C8）：docker 侧只匹配 -docker- 段，
+// 与裸机侧 findDeployPackage（排除 -docker-）对称，避免误挑裸机包。
+// 命名契约：cloudcad-deploy-[-private-]{V}-{DATE}-docker-linux-{arch}.tar.gz
+const DOCKER_PACKAGE_PATTERN = /^cloudcad-deploy-.*-docker-linux-(x86_64|aarch64)\.tar\.gz$/;
+const RELEASE_DIR = path.join(PROJECT_ROOT, 'release');
+
+function findLatestDockerPackage() {
+  if (!fs.existsSync(RELEASE_DIR)) return null;
+  const candidates = fs
+    .readdirSync(RELEASE_DIR)
+    .filter((f) => DOCKER_PACKAGE_PATTERN.test(f))
+    .sort(); // 名称含 {DATE}，字典序 = 时间序
+  return candidates.length ? path.join(RELEASE_DIR, candidates[candidates.length - 1]) : null;
+}
+
 function log(msg) {
   console.log(`[verify-docker] ${msg}`);
 }
@@ -91,10 +106,20 @@ process.on('exit', () => {
 });
 
 async function main() {
-  if (!PACKAGE || !fs.existsSync(PACKAGE)) {
-    fail('用法: node scripts/verify-linux-docker-deploy.js --package <tar.gz> [--keep]');
+  // --package 缺省时挑 release/ 下最新 docker 包（只匹配 -docker-，C8）
+  let packagePath;
+  if (PACKAGE) {
+    if (!fs.existsSync(PACKAGE)) {
+      fail(`包不存在: ${PACKAGE}`);
+    }
+    packagePath = path.resolve(PACKAGE);
+  } else {
+    packagePath = findLatestDockerPackage();
+    if (!packagePath) {
+      fail('用法: node scripts/verify-linux-docker-deploy.js [--package <tar.gz>] [--keep]（release/ 下无 docker 包可挑）');
+    }
+    log(`未指定 --package，挑最新 docker 包: ${packagePath}`);
   }
-  const packagePath = path.resolve(PACKAGE);
   log(`验证包: ${packagePath}`);
 
   // 1. docker 可用

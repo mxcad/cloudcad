@@ -1,8 +1,14 @@
 /**
  * 梦想网页CAD实时协同平台 Docker 部署包打包脚本
  *
+ * ⚠️ DEPRECATED（ADR-0075 C11，v1 标注 / v2 删除，见 #443）：
+ * 本脚本打的是「源码包，服务器现场 compose build」的旧交付形态，已被
+ * `pack-linux-docker.js`（离线 Docker 一键部署包，ADR-0074）取代其交付角色。
+ * 打包菜单（pack-menu.js）已不再暴露本脚本；`pnpm pack:docker` 命令保留为
+ * 薄别名仅供过渡，v2 随 #443 一并删除本脚本与该命令。请勿再用于出交付包。
+ *
  * 功能：打包源码，供服务器 Docker 构建使用
- * 
+ *
  * 打包内容：
  *   - packages/          源代码
  *   - docker/            Docker 配置

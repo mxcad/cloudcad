@@ -48,23 +48,28 @@ const {
 } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'secret-generator'));
 const { composeDatabaseUrl } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'database-url'));
 const { resolveMxcadAssemblyPath } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'mxcad-path'));
+const { PRODUCT_NAME } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'branding'));
 
 const dockerBootstrap = require('./lib/docker-bootstrap');
 const hostProcess = require('./lib/host-process');
 const { probeAndFix } = require('./lib/mxcad-probe');
 const { verifyDeployment } = require('./lib/verify');
 const rootless = require('./lib/rootless');
+const {
+  formatContainerState,
+  formatHostProcState,
+} = require('./lib/status-format');
 
 // ==================== 基础工具 ====================
 
 function log(msg) {
-  console.log(`[CloudCAD] ${msg}`);
+  console.log(`[${PRODUCT_NAME}] ${msg}`);
 }
 function warn(msg) {
-  console.warn(`[CloudCAD][警告] ${msg}`);
+  console.warn(`[${PRODUCT_NAME}][警告] ${msg}`);
 }
 function fail(msg) {
-  console.error(`[CloudCAD][错误] ${msg}`);
+  console.error(`[${PRODUCT_NAME}][错误] ${msg}`);
   process.exit(1);
 }
 
@@ -87,11 +92,11 @@ const IMAGE_TAGS = [`cloudcad/app:${VERSION}`, 'cloudcad/pg:15-alpine', 'cloudca
 let SUDO = '';
 let INSTALLED_BY_US = false;
 let COMPOSE = 'docker compose';
-// 权限模式：'root' | 'sudo' | 'rootless'（step1 决定，贯穿全程）
+// 权限模式：'root'（用户自愿以 root 运行）| 'rootless'（普通用户恒走此路，ADR-0075 完全无 root）
 let MODE = 'root';
-// rootless 时指向包内静态 docker CLI（/usr/local/bin 未必有）；root/sudo 用 PATH 的 docker
+// rootless 时指向包内静态 docker CLI（/usr/local/bin 未必有）；root 用 PATH 的 docker
 let DOCKER_CLI = 'docker';
-// rootless 时 = unix://<影子目录>/docker-rootless.sock；root/sudo 时 = ''（默认 socket）
+// rootless 时 = unix://<影子目录>/docker-rootless.sock；root 时 = ''（默认 socket）
 let DOCKER_HOST = '';
 // rootless 启动结果（netnsPid/pidFile/degraded 等），供 stop / 宿主进程 host IP 使用
 let ROOTLESS = null;
@@ -185,7 +190,7 @@ function sleep(ms) {
  * 就绪窗口。把客户端 SYN 重试拉到 15 次（~16 分钟窗口），给 CPU 饿死的服务端足够机会回
  * SYN-ACK，客户端即可在窗口内完成握手。
  *
- * 仅 root/sudo 模式可写 /proc/sys（rootless 无 CAP_SYS_ADMIN，跳过）；写失败只警告不阻塞
+ * 仅 root 模式可写 /proc/sys（rootless 无 CAP_SYS_ADMIN，跳过）；写失败只警告不阻塞
  * （正常部署机核数充足、服务端应答快，本参数无副作用）。per-netns 参数：host 网络下 app
  * 容器与宿主共享 netns，此处写入即对后端客户端生效。
  */
@@ -243,14 +248,14 @@ function step0Artifacts() {
   }
 }
 
-// ==================== Step 1 权限硬门禁 ====================
+// ==================== Step 1 权限模式定案 ====================
 
 /**
- * 权限三级门禁（ADR-0074 D5，用户铁律「不能依赖 root，一切为最终目标兜底」）：
- *   ① root（euid==0）→ 直接跑，SUDO=''
- *   ② sudo：免密（sudo -n）或交互式（sudo -v 提示输密码，需 TTY）→ SUDO='sudo'
- *   ③ rootless：无 root/sudo 时用「用户命名空间 + 包内静态 Docker」兜底
- *      （硬前置 newuidmap/subuid/subgid/slirp4netns 缺失时降级并清晰报错）
+ * 权限模式定案（ADR-0075：部署完全无 root；取代 ADR-0074 D5 的三级门禁）：
+ *   - euid == 0（用户自愿以 root 运行）→ root dockerd 路径（root 无需密码；这是用户选择，非依赖）
+ *   - 普通用户 → 恒 rootless（用户命名空间 + 包内静态 Docker）：
+ *     **不探测 sudo、不请求任何密码**，部署目录（data/、docker-data/、日志）全部归当前用户。
+ *     零管理员前置：包内镜像全部以 uid 0 运行，单段 0→euid 映射即够（无需 uidmap/subuid）。
  */
 function step1Permission() {
   if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
@@ -258,36 +263,15 @@ function step1Permission() {
     SUDO = '';
     return;
   }
-  // ② sudo（免密）
-  const probe = spawnSync('sudo', ['-n', 'true'], { stdio: 'ignore' });
-  if (probe.status === 0) {
-    MODE = 'sudo';
-    SUDO = 'sudo';
-    log('以 sudo 权限继续（免密；Docker 需要 root 创建命名空间与挂载）');
-    return;
-  }
-  // ② sudo（交互式：有 TTY 时提示输密码）
-  if (process.stdout.isTTY) {
-    log('需要 sudo 权限（创建 Docker 命名空间/挂载）。请输入当前用户密码：');
-    const v = spawnSync('sudo', ['-v'], { stdio: 'inherit' });
-    if (v.status === 0) {
-      MODE = 'sudo';
-      SUDO = 'sudo';
-      log('以 sudo 权限继续（交互式）');
-      return;
-    }
-    log('sudo 校验未通过，继续尝试 rootless 模式...');
-  }
-  // ③ rootless 兜底
-  log('无 root/sudo 权限 → 启用 rootless 模式（用户命名空间 + 包内静态 Docker）');
+  log('普通用户模式 → rootless（用户命名空间 + 包内静态 Docker，无需 root/sudo 密码）');
   const toolsDir = path.join(DEPLOY_DIR, 'docker');
   const prereq = rootless.checkPrerequisites({ toolsDir, log });
   for (const n of prereq.notes) log(n);
   const nsBin = path.join(toolsDir, 'rootless-ns');
   if (!fs.existsSync(nsBin)) {
     fail(
-      '无 root/sudo 权限，且包内缺少 rootless-ns 二进制（' + nsBin + '），无法以 rootless 模式运行。\n' +
-        '  请用 root 用户运行 ./start.sh，或为当前用户配置 sudo（免密或可输密码）。'
+      '包内 rootless-ns 二进制缺失（' + nsBin + '），部署包不完整，无法以 rootless 模式启动。\n' +
+        '  请重新下载并完整解压部署包。'
     );
   }
   MODE = 'rootless';
@@ -297,11 +281,40 @@ function step1Permission() {
   // 已运行的 app 容器（rootless dockerd 若已在上次 start 拉起），否则会误判端口被他人占用而顺延。
   // step4 的 rootless.start 会再次确认（幂等）。
   DOCKER_HOST = `unix://${path.join(DOCKER_DATA_ROOT, 'shadow-run', 'docker-rootless.sock')}`;
+  // 剩余可缺失项只有 slirp4netns（包内静态版恒在；缺失仅降级 plain-netns，不中止）
   for (const m of prereq.missing) {
     warn(`rootless 前置缺失：${m.name}\n      ${m.hint}`);
   }
   if (!prereq.ok) {
-    warn('rootless 硬前置不完整，将以降级模式运行（详见上方缺失项）；完整功能请补齐后重跑 ./start.sh');
+    warn('rootless 前置不完整，将以降级模式运行（详见上方缺失项）；完整功能请补齐后重跑 ./start.sh');
+  }
+}
+
+/**
+ * 部署目录属主预检（ADR-0075：完全无 root）——在 12 步入口快速失败。
+ * 部署目录（或 data/）由 root 创建时（之前 root 部署 / 以 root 解压包），普通用户
+ * 不可写：若不在入口拦下，会在 12 步中途以难懂的 EACCES 失败。给出明确修复路径。
+ */
+function checkDeployDirOwnership() {
+  if (typeof process.geteuid !== 'function' || process.geteuid() === 0) return;
+  for (const p of [DEPLOY_DIR, DATA_DIR]) {
+    if (!fs.existsSync(p)) continue;
+    try {
+      fs.accessSync(p, fs.constants.W_OK);
+    } catch {
+      let owner = '未知';
+      try {
+        owner = `uid ${fs.statSync(p).uid}`;
+      } catch {
+        /* stat 失败不影响报错主体 */
+      }
+      fail(
+        `部署目录当前用户不可写：${p}（属主 ${owner}，当前用户 uid ${process.geteuid()}）。\n` +
+          '  该部署此前由 root 创建（或以 root 解压了部署包）。\n' +
+          `  修复：用 root 执行 chown -R <用户名>:<用户组> ${DEPLOY_DIR}，` +
+          '或以普通用户重新解压部署包。'
+      );
+    }
   }
 }
 
@@ -310,7 +323,7 @@ function step1Permission() {
  * 单段 uid 映射下落到 overflow 65534，容器内 uid 0 无法读写
  * （postgres 在 $PGDATA 上 mkdir 报 Permission denied，redis 写 appendonly 失败）。
  * 移开备份（保留旧数据）后由 dockerd 在 bind mount 时以当前用户属主重建。
- * 仅 rootless 有意义：root/sudo 模式容器内 uid 0 = 宿主 root，任何属主都可写。
+ * 仅 rootless 有意义：root 模式容器内 uid 0 = 宿主 root，任何属主都可写。
  */
 function checkDataDirOwnership() {
   if (MODE !== 'rootless') return;
@@ -667,7 +680,7 @@ async function step9HostProcesses() {
  * 宿主进程（协同/转换）——子 netns 的 localhost 到不了真实宿主，必须走 slirp4netns 的
  * guest→host 通道。DB/Redis 是子 netns 内容器（与 app 同 netns），恒 localhost 无需改。
  * 端口由 step6 定案，故在 step10 启动 app 容器前调用（.env 此时已含最终端口）。
- * root/sudo 模式：app 容器与宿主进程同处真实宿主 netns，后端默认 http://localhost:<port>
+ * root 模式：app 容器与宿主进程同处真实宿主 netns，后端默认 http://localhost:<port>
  * 即可达，无需改。
  */
 function applyRootlessHostUrls() {
@@ -791,6 +804,7 @@ function step12Summary() {
 // ==================== 命令入口 ====================
 
 async function cmdStart() {
+  checkDeployDirOwnership(); // root 残留预检：入口快速失败（ADR-0075 完全无 root）
   step0Artifacts();
   step1Permission();
   checkDataDirOwnership();
@@ -799,7 +813,7 @@ async function cmdStart() {
   tuneTcpForSlowEnv();
   // 端口定案必须在 step4 之前：rootless 的 slirp4netns hostfwd 在 step4 拉起 dockerd 时
   // 按 .env 的 PORT/FRONTEND_PORT 建立，若 step6 之后才改端口，新端口不会被转发到子 netns。
-  // root/sudo 模式无此约束（host 网络直通），提前也无害（容器未起，docker inspect 落空即视为非本部署占用）。
+  // root 模式无此约束（host 网络直通），提前也无害（容器未起，docker inspect 落空即视为非本部署占用）。
   await step6Ports();
   step4Docker();
   step5Images();
@@ -811,11 +825,15 @@ async function cmdStart() {
   step12Summary();
 }
 
-async function cmdStop() {
-  log('停止 CloudCAD 服务...');
-  // 判定 dockerd 形态：rootless（pidfile 存活）或非 rootless。
-  // rootless 下宿主进程（协同/转换/运维中心）跑在真实宿主、不在 rootless 进程组内，
-  // 需单独停；容器在子 netns（rootless dockerd），须先经影子 socket 停容器再杀 dockerd。
+/**
+ * 探测运行时形态并设置模块级 docker 环境（MODE/SUDO/DOCKER_CLI/DOCKER_HOST/COMPOSE）。
+ * rootless dockerd 存活（rootless.pid）→ rootless（影子 socket + 包内静态 CLI）；
+ * 否则按 euid：root → root dockerd；普通用户 → rootless 语义但用 PATH docker
+ * （未 start 过时无 rootless dockerd 可连，docker 侧自然降级）。
+ * cmdStop / cmdStatus 共用（唯一出口，避免两处各写一份探测）。
+ * @returns {{ isRootless: boolean, rootlessPid: number|null }}
+ */
+function detectRuntimeMode() {
   const rootlessPidFile = path.join(DOCKER_DATA_ROOT, 'rootless.pid');
   const rootlessPid = rootless._readPid(rootlessPidFile);
   const isRootless = !!rootlessPid;
@@ -825,19 +843,32 @@ async function cmdStop() {
     DOCKER_CLI = path.join(DEPLOY_DIR, 'docker', 'docker');
     DOCKER_HOST = `unix://${path.join(DOCKER_DATA_ROOT, 'shadow-run', 'docker-rootless.sock')}`;
     COMPOSE = 'docker-compose';
-    log(`检测到 rootless dockerd（pid=${rootlessPid}），以 rootless 模式停止`);
   } else {
     if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
       MODE = 'root';
       SUDO = '';
     } else {
-      const probe = spawnSync('sudo', ['-n', 'true'], { stdio: 'ignore' });
-      MODE = 'sudo';
-      SUDO = probe.status === 0 ? 'sudo' : '';
+      // 普通用户：不探测 sudo（ADR-0075 完全无 root）。rootless dockerd 未在运行时，
+      // docker 侧无可停对象（系统 docker 若不可用，compose down 自然失败走 warn 分支）。
+      MODE = 'rootless';
+      SUDO = '';
     }
     DOCKER_CLI = 'docker';
     DOCKER_HOST = '';
     detectCompose();
+  }
+  return { isRootless, rootlessPid };
+}
+
+async function cmdStop() {
+  log(`停止 ${PRODUCT_NAME} 服务...`);
+  // 判定 dockerd 形态（rootless pidfile 存活 → rootless；否则按 euid），与 cmdStatus 共用
+  // detectRuntimeMode（唯一出口）。rootless 下宿主进程（协同/转换/运维中心）跑在真实宿主、
+  // 不在 rootless 进程组内，需单独停；容器在子 netns（rootless dockerd），须先经影子 socket
+  // 停容器再杀 dockerd。
+  const { isRootless, rootlessPid } = detectRuntimeMode();
+  if (isRootless) {
+    log(`检测到 rootless dockerd（pid=${rootlessPid}），以 rootless 模式停止`);
   }
 
   // 1) 停容器（rootless 下经影子 socket 与 rootless dockerd 通信，必须在杀 dockerd 之前）
@@ -891,14 +922,81 @@ async function cmdVerify() {
   process.exit(result.ok ? 0 : 1);
 }
 
-const command = process.argv[2];
-if (command === 'start') {
-  cmdStart().catch((err) => fail(err.stack || err.message));
-} else if (command === 'stop') {
-  cmdStop().catch((err) => fail(err.stack || err.message));
-} else if (command === 'verify') {
-  cmdVerify().catch((err) => fail(err.stack || err.message));
-} else {
-  console.error('用法: node runtime/docker-runtime/index.js start|stop|verify');
-  process.exit(1);
+/**
+ * 服务状态（Docker 形态，#434 / ADR-0075 D3）：容器（pg/redis/app）+ 宿主进程
+ * （协同/转换/运维中心）。只读、无副作用——docker 守护进程不可达或从未 start 过时
+ * 逐项降级为「未创建/未运行」，不抛错（status 是排障入口，必须恒可用）。
+ */
+async function cmdStatus() {
+  detectRuntimeMode();
+  const env = fs.existsSync(ENV_FILE) ? parseEnvFile(ENV_FILE) : {};
+
+  console.log('');
+  log('>>> 服务状态（Docker 形态）');
+  console.log('');
+
+  // ---- 容器（docker）----
+  console.log('■ 容器（docker）');
+  const containers = [
+    { name: 'cloudcad-pg', label: '数据库 PostgreSQL', portKey: 'DB_PORT', defPort: '5432' },
+    { name: 'cloudcad-redis', label: 'Redis 缓存', portKey: 'REDIS_PORT', defPort: '6379' },
+    { name: 'cloudcad-app', label: '应用（backend + 前端）', portKey: 'PORT', defPort: '3001' },
+  ];
+  let containerFailCount = 0;
+  for (const c of containers) {
+    const port = env[c.portKey] || c.defPort;
+    const r = docker(
+      ['inspect', '-f', '{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}-{{end}}', c.name],
+      15000
+    );
+    if (!r.ok) {
+      containerFailCount++;
+      console.log(`  ${c.name.padEnd(16)} 未创建   ${c.label}（: ${port}）`);
+      continue;
+    }
+    const [state, health] = r.stdout.split('|');
+    console.log(`  ${c.name.padEnd(16)} ${formatContainerState(state, health)}   ${c.label}（: ${port}）`);
+  }
+  if (containerFailCount === containers.length) {
+    console.log('  （docker 守护进程未运行或不可达——未执行过 ./start.sh，或已 ./stop.sh）');
+  }
+  console.log('');
+
+  // ---- 宿主进程（nohup）----
+  console.log('■ 宿主进程（nohup）');
+  const useConversion = (env.FUNCTION_EXECUTOR || 'process-pool').toLowerCase() === 'conversion-service';
+  const hostProcs = [
+    { name: 'cooperate', label: '协同服务', portKey: 'COOPERATE_PORT', defPort: '3091', show: true },
+    { name: 'conversion', label: '转换服务', portKey: 'CONVERSION_SERVICE_PORT', defPort: '3100', show: useConversion },
+    { name: 'config-service', label: '运维中心', portKey: 'CONFIG_SERVICE_PORT', defPort: '3002', show: true },
+  ];
+  for (const p of hostProcs) {
+    if (!p.show) continue;
+    const port = env[p.portKey] || p.defPort;
+    const pid = hostProcess.readPid(path.join(PID_DIR, `${p.name}.pid`));
+    const alive = hostProcess.isProcessAlive(pid);
+    const portOk = alive ? await hostProcess.portOpen(parseInt(port, 10)) : false;
+    console.log(`  ${p.name.padEnd(16)} ${formatHostProcState(pid, alive, portOk)}${pid ? `（pid=${pid}）` : ''}   ${p.label}（: ${port}）`);
+  }
+  console.log('');
 }
+
+// CLI 入口守卫：被 require 时（cli.js 前置分派的 docker-form-adapter）只导出编排函数，
+// 不执行命令分派（ADR-0075 C4：start.sh/stop.sh/cloudcad.sh 与直调 index.js 共用同一份编排）。
+if (require.main === module) {
+  const command = process.argv[2];
+  if (command === 'start') {
+    cmdStart().catch((err) => fail(err.stack || err.message));
+  } else if (command === 'stop') {
+    cmdStop().catch((err) => fail(err.stack || err.message));
+  } else if (command === 'status') {
+    cmdStatus().catch((err) => fail(err.stack || err.message));
+  } else if (command === 'verify') {
+    cmdVerify().catch((err) => fail(err.stack || err.message));
+  } else {
+    console.error('用法: node runtime/docker-runtime/index.js start|stop|status|verify');
+    process.exit(1);
+  }
+}
+
+module.exports = { cmdStart, cmdStop, cmdStatus, cmdVerify };

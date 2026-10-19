@@ -313,30 +313,34 @@ async function runPack(targetOs = 'centos7', variant = 'oss', mode = 'deploy') {
 }
 
 /**
- * 查找生成的部署包/升级包
+ * 查找生成的部署包/升级包（裸机形态）
+ * @param {'deploy'|'upgrade'} mode
+ * @param {string} [dir] 包目录（默认 OUTPUT_DIR；测试用临时目录）
  */
-function findDeployPackage(mode = 'deploy') {
-  if (!fs.existsSync(OUTPUT_DIR)) {
+function findDeployPackage(mode = 'deploy', dir = OUTPUT_DIR) {
+  if (!fs.existsSync(dir)) {
     return null;
   }
-  
-  const files = fs.readdirSync(OUTPUT_DIR);
+
+  const files = fs.readdirSync(dir);
   // 匹配 cloudcad-deploy[-private]-{VERSION}-{DATE}-{OS}.tar.gz 或 cloudcad-upgrade[-private]-...tar.gz
   const prefix = mode === 'upgrade' ? 'upgrade' : 'deploy';
   const pattern = new RegExp(`^cloudcad-${prefix}(-private)?-.+\\.(tar\\.gz|7z)$`);
-  
+
   // 按修改时间倒序取最新包（release/ 目录可能残留大量历史包，
   // 字母序最早的是最旧的，直接取第一个会返回过期文件）
+  // 排除 docker 形态包（cloudcad-deploy-...-docker-linux-...）：命名统一后（ADR-0075 C4）
+  // docker 全量包与裸机包共享 cloudcad-deploy- 前缀，不过滤会误挑 docker 包
   const matches = files
-    .filter((f) => pattern.test(f))
-    .map((f) => ({ name: f, mtime: fs.statSync(path.join(OUTPUT_DIR, f)).mtimeMs }))
+    .filter((f) => pattern.test(f) && !f.includes('-docker-'))
+    .map((f) => ({ name: f, mtime: fs.statSync(path.join(dir, f)).mtimeMs }))
     .sort((a, b) => b.mtime - a.mtime);
-  
+
   if (matches.length === 0) {
     return null;
   }
-  
-  return path.join(OUTPUT_DIR, matches[0].name);
+
+  return path.join(dir, matches[0].name);
 }
 
 /**
@@ -703,4 +707,8 @@ async function main() {
   }
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+
+module.exports = { findDeployPackage };

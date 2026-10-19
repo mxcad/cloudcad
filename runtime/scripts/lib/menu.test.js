@@ -117,7 +117,9 @@ test('「密码重置」独立成节，四种环境都出现且只含三条重�
   }
 });
 
-test('核心项在所有环境都可见，退出项恒为 [q]', () => {
+test('核心项在所有（裸机）环境都可见，退出项恒为 [q]', () => {
+  // 注意：ENVS 均为裸机形态（无 isDockerForm）。db-backup / 三条密码重置在
+  // docker 形态被 C5 隐藏（见下方 docker 形态用例），此处只锁定裸机形态可见。
   const must = [
     '启动服务（含前后端）',
     '查看服务状态',
@@ -125,7 +127,7 @@ test('核心项在所有环境都可见，退出项恒为 [q]', () => {
     '停止服务',
     '部署 / 升级',
     '数据库备份与恢复',
-    // 恢复通道：凭据丢失时这是唯一出路，任何部署形态都必须可见
+    // 恢复通道：凭据丢失时这是唯一出路，裸机形态必须可见
     '解绑管理员 TOTP',
     '重置管理员密码',
     '重置数据库密码',
@@ -148,4 +150,47 @@ test('每个菜单项都有 action（防止数据与命令脱钩）', () => {
       assert.equal(typeof item.action, 'function', `${item.label} 缺少 action`);
     }
   }
+});
+
+// ==================== docker 形态可见性（ADR-0075 C5） ====================
+// docker 形态（isDockerForm）隐藏 v1 长尾命令（db-backup / 密码重置 / infra / dev），
+// 主路径（启动/状态/日志/停止/部署/迁移/TOTP）保留。CLI 侧 docker 形态实际走
+// docker-form-adapter 精简菜单；此处锁定 menu-sections.js 单一事实源的可见性数据。
+const DOCKER_ENV = { isLinux: true, isWindows: false, isDeployPackage: true, isDockerForm: true };
+
+test('docker 形态：长尾命令（db-backup/密码重置/infra/dev）隐藏', () => {
+  const labels = visibleLabels(DOCKER_ENV);
+  for (const label of [
+    '数据库备份与恢复',
+    '重置管理员密码',
+    '重置数据库密码',
+    '重置 Redis 密码',
+    '仅启动基础服务',
+    '开发模式',
+    '数据库种子',
+  ]) {
+    assert.ok(!labels.includes(label), `${label} 应在 docker 形态隐藏`);
+  }
+});
+
+test('docker 形态：主路径命令保留（启动/状态/日志/停止/部署/迁移/TOTP）', () => {
+  const labels = visibleLabels(DOCKER_ENV);
+  for (const label of [
+    '启动服务（含前后端）',
+    '查看服务状态',
+    '查看服务日志',
+    '停止服务',
+    '部署 / 升级',
+    '数据库迁移',
+    '解绑管理员 TOTP',
+  ]) {
+    assert.ok(labels.includes(label), `${label} 应在 docker 形态可见`);
+  }
+});
+
+test('docker 形态：「密码重置」「开发环境」整节消失（空 section 移除）', () => {
+  const sections = buildVisibleMenu(menuSections, DOCKER_ENV);
+  assert.ok(!sections.some((s) => s.title === '密码重置'), '密码重置节应在 docker 形态移除');
+  assert.ok(!sections.some((s) => s.title.startsWith('开发环境')), '开发环境节应在 docker 形态移除');
+  assert.ok(sections.every((s) => s.items.length > 0), 'docker 形态不应出现空 section');
 });

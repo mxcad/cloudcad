@@ -299,6 +299,68 @@ jobs:
           draft: true
 
   # ============================================================
+  # Linux Docker 一键部署包（ADR-0075 C9 / ADR-0074 半容器化）
+  # ubuntu-latest x86_64 出 x86_64 包；aarch64 保持本地打包机（R2：
+  # mxcad-stable 无 ARM 资产，阻塞与裸机一致）。pack-linux-docker.js 自举
+  # 物料（node/mxcad/docker 静态二进制/镜像），--verify 走 DinD 断网硬门禁，
+  # 验证通过（本 step 成功）才执行下方上传 step。
+  # ============================================================
+  build-linux-docker:
+    name: Linux Docker x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.9
+
+      # 缓存 pnpm store（与 build-linux / build-windows 对齐）
+      - name: 获取 pnpm 存储目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 设置 pnpm 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      # 安装依赖（preinstall 顺带下载 x86_64 产品二进制 mxcad 到 runtime/linux/，
+      # pack-linux-docker.js 物料解析优先命中本地，免重复走 Release 下载）
+      - run: pnpm install --frozen-lockfile
+
+      # 打包 + DinD 断网验证（pack-linux-docker.js --verify：step8 调
+      # verify-linux-docker-deploy.js，45 分钟总超时）。验证失败 → 本 step 失败 →
+      # 下方上传 step 不执行（draft Release 只含验证过的包）。
+      # 超时预算放宽（R1：GH ubuntu runner 上 app 镜像 build + save 30-60 分钟级，
+      # 叠加 verify 45 分钟）。
+      - name: 打包 Linux Docker 部署包 + 断网验证（验证通过才上传）
+        env:
+          CI: 'true'
+        timeout-minutes: 180
+        run: node scripts/pack-linux-docker.js --verify
+
+      # 上传产物到 Release（同名 Release 已存在则追加产物）。
+      # 只挑 docker 形态包（-docker- 段，C2 命名），与裸机 linux 包（build-linux job）区分。
+      - name: 上传产物到 Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: release/*-docker-linux-*.tar.gz
+          draft: true
+
+  # ============================================================
   # Release 汇总（可选）：Linux + Windows 产物合并确认
   # ============================================================
   # 由于 Linux/Windows job 各自 upload-artifact 到软 props，此 job 可用于

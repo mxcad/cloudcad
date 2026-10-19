@@ -5,6 +5,8 @@
  * 可见性标记（buildVisibleMenu 按环境过滤）：
  * - platform: 'linux' 仅 Linux 显示；'win' 仅 Windows 显示
  * - scope: 'dev' 仅源码开发机显示；'deploy' 仅部署包显示
+ * - form: 'bare' 仅裸机形态显示（docker 形态隐藏，ADR-0075 C5：v1 长尾命令
+ *   db-backup / 密码重置 / infra / dev 在 docker 形态不可用，v2 补齐）
  *
  * 为什么开发模式/种子只在开发机显示：部署包（.deploy 标记）离线安装只装
  * 生产依赖（pnpm --filter backend ... --prod），vite/ts-node 不存在，
@@ -61,6 +63,7 @@ const menuSections = [
         label: '数据库备份与恢复',
         desc: '备份 / 恢复 / 列表 / 清理',
         action: databaseBackupMenu,
+        form: 'bare',
       },
       {
         label: 'Linux 初始化（首次部署）',
@@ -81,6 +84,7 @@ const menuSections = [
         // 自动执行版本检查/验证，工程师可在部署包用 `start:infra`/
         // `version:check`/`version:verify` 子命令排障
         scope: 'dev',
+        form: 'bare',
       },
       {
         label: '图纸版本检查',
@@ -104,23 +108,27 @@ const menuSections = [
   {
     // 密码重置单独成节（ADR-0072/0073）：三条都是锁死时才会跑的恢复通道，
     // 与排障工具混在一节里既不好找也会稀释语义。刻意不给 scope/platform
-    // 标记——恢复入口绝不能只在开发机出现。
+    // 标记——恢复入口绝不能只在开发机出现。form:'bare'：v1 docker 形态的
+    // 密码重置走 docker exec（v2 补齐），故 docker 形态整节隐藏（ADR-0075 C5）。
     title: '密码重置',
     items: [
       {
         label: '重置管理员密码',
         desc: '管理员忘记密码时的恢复通道',
         action: () => adminResetPassword(),
+        form: 'bare',
       },
       {
         label: '重置数据库密码',
         desc: '数据库口令轮换，改密后自动更新 .env 并重启后端',
         action: () => dbResetPassword(),
+        form: 'bare',
       },
       {
         label: '重置 Redis 密码',
         desc: 'Redis 口令轮换，改密后自动更新 .env 并重启服务',
         action: () => redisResetPassword(),
+        form: 'bare',
       },
     ],
   },
@@ -132,12 +140,14 @@ const menuSections = [
         desc: '启动前后端 dev server',
         action: devMode,
         scope: 'dev',
+        form: 'bare',
       },
       {
         label: '数据库种子',
         desc: '初始化系统角色与权限数据',
         action: runDatabaseSeed,
         scope: 'dev',
+        form: 'bare',
       },
     ],
   },

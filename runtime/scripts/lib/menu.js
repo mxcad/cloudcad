@@ -2,8 +2,9 @@
  * @fileoverview 交互式菜单的纯逻辑（平台/形态过滤 + 编号 + 渲染）
  *
  * 菜单数据（含命令 action）在 commands/menu-sections.js，本模块不依赖 commands：
- * - buildVisibleMenu：按 item.platform（'linux'/'win'）与 item.scope
- *   （'dev' 仅源码开发机 / 'deploy' 仅部署包）过滤，空 section 整体移除，
+ * - buildVisibleMenu：按 item.platform（'linux'/'win'）、item.scope
+ *   （'dev' 仅源码开发机 / 'deploy' 仅部署包）与 item.form（'bare' 仅裸机形态，
+ *   docker 形态隐藏，ADR-0075 C5）过滤，空 section 整体移除，
  *   剩余项跨 section 顺序编号 1..N（连续编号避免重复数字歧义）
  * - formatMenu：渲染为行数组（不直接 console，便于测试断言）；退出项固定 [q]
  *
@@ -15,8 +16,8 @@ const { colors } = require('./logger');
 /**
  * 过滤菜单项并顺序编号。
  * @param {Array<{title: string, items: Array}>} sections 菜单数据（action 原样透传）
- * @param {{isLinux: boolean, isWindows: boolean, isDeployPackage: boolean}} env
- * @returns {Array<{title: string, items: Array}]} 过滤后的 sections（空 section 移除）
+ * @param {{isLinux: boolean, isWindows: boolean, isDeployPackage: boolean, isDockerForm?: boolean}} env
+ * @returns {Array<{title: string, items: Array}>} 过滤后的 sections（空 section 移除）
  */
 function buildVisibleMenu(sections, env) {
   const visible = [];
@@ -28,6 +29,7 @@ function buildVisibleMenu(sections, env) {
         if (item.platform === 'win' && !env.isWindows) return false;
         if (item.scope === 'dev' && env.isDeployPackage) return false;
         if (item.scope === 'deploy' && !env.isDeployPackage) return false;
+        if (item.form === 'bare' && env.isDockerForm) return false;
         return true;
       })
       .map((item) => {

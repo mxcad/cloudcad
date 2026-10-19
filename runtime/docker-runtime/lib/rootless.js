@@ -1,5 +1,11 @@
 /**
- * @fileoverview rootless dockerd 启动器（ADR-0074 权限门禁第三级：无 root/sudo 时的兜底）
+ * @fileoverview rootless dockerd 启动器（ADR-0075：普通用户的**主路径**，部署完全无 root）
+ *
+ * 普通用户恒走本模块（用户命名空间 + 包内静态 dockerd + 静态 slirp4netns）：
+ * 不探测 sudo、不请求任何密码，部署目录全部归当前用户。仅当用户以 root 身份
+ * 运行 ./start.sh 时才走 root dockerd 路径（用户选择，非依赖）。
+ * 零管理员前置：包内镜像全部以 uid 0 运行（pg 定制镜像 / redis user:root /
+ * app 无 USER），单段 0→euid 映射即够，无需 uidmap/subuid（有则用多段）。
  *
  * 目标机既无 root 也无可用 sudo 时，用「用户命名空间 + 包内静态 dockerd」跑容器。
  * 内核硬约束（本模块据此设计，勿绕）：
@@ -336,27 +342,24 @@ function checkPrerequisites({ toolsDir, log = () => {} }) {
     }
   }
 
-  // newuidmap/newgidmap（setuid，OS 提供）—— 多段映射硬前置（无它仅能跑全 0:0 属主镜像）
+  // newuidmap/newgidmap（setuid，OS 提供）—— 仅多段 subuid/subgid 映射需要。
+  // 包内镜像全部以 uid 0 运行（pg 定制镜像 / redis user:root / app 无 USER），
+  // rootless-ns 无 newuidmap 时自写单段 0→euid 映射即够（go=2 降级路径），
+  // 故缺失只提示、不阻塞（ADR-0075：零管理员 rootless）。
   const newuidmap = which('newuidmap');
   const newgidmap = which('newgidmap');
   if (!newuidmap || !newgidmap) {
-    missing.push({
-      name: 'newuidmap/newgidmap',
-      hint:
-        '未找到 setuid 的 newuidmap/newgidmap（uidmap 包）。rootless 运行真实镜像（非 0:0 属主）必须靠它写多段 subuid/subgid 映射。' +
-        '安装：Debian/Ubuntu `sudo apt install uidmap`；RHEL/CentOS `sudo dnf install uidmap`。' +
-        '缺失时降级为单段映射（仅能跑全 0:0 属主镜像，CloudCAD 镜像不适用）。',
-    });
+    notes.push(
+      'newuidmap/newgidmap 未找到：使用单段 uid 映射（包内镜像全部以 uid 0 运行，不受影响；' +
+        '如需运行非 0:0 属主镜像，安装 uidmap 包：Debian/Ubuntu `sudo apt install uidmap`，RHEL/CentOS `sudo dnf install uidmap`）'
+    );
   }
 
-  // subuid/subgid 范围
+  // subuid/subgid 范围（仅多段映射需要；缺失同样不阻塞，见上）
   const subuid = readSubid('/etc/subuid', user);
   const subgid = readSubid('/etc/subgid', user);
   if (!subuid || !subgid) {
-    missing.push({
-      name: 'subuid/subgid',
-      hint: `用户 ${user} 未配置 subuid/subgid 范围（多段映射所需）。请管理员执行：sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 ${user}`,
-    });
+    notes.push(`用户 ${user} 未配置 subuid/subgid 范围：使用单段 uid 映射（包内镜像全部以 uid 0 运行，不受影响）`);
   }
 
   // slirp4netns（系统或包内）—— 用户态网络 + 端口暴露。

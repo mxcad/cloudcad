@@ -38,6 +38,21 @@ const args = process.argv.slice(2);
 const isDeployMode = args[0] === 'deploy';
 // isFirstDeploy 状态已迁移至 lib/state（A-1 机械拆分；A-2 收口改为显式传参）
 
+// ==================== 形态分派（ADR-0075 C4） ====================
+// docker 形态（.deploy 内容 form=docker，或存量 .deploy-docker 标记）把整个命令面
+// 委托给 docker-form-adapter → runtime/docker-runtime（12 步编排，ADR-0074）；
+// 本模块后续的裸机编排（setupOffline / 密码交互 / commandMap / 交互菜单）不执行。
+// 形态标记唯一出口 detectDeployForm（lib/deploy-form.js）。
+const { detectDeployForm } = require('./lib/deploy-form');
+const { PROJECT_ROOT: FORM_ROOT } = require('./lib/context');
+const IS_DOCKER_FORM = detectDeployForm(FORM_ROOT) === 'docker';
+if (IS_DOCKER_FORM) {
+  require('./docker-form-adapter').run(args).catch((err) => {
+    console.error('程序启动失败:', err);
+    process.exit(1);
+  });
+}
+
 
 
 // ==================== 配置（拆分至 lib/context，单一事实源） ====================
@@ -147,6 +162,10 @@ async function showMenu() {
     isLinux: IS_LINUX,
     isWindows: IS_WINDOWS,
     isDeployPackage: IS_DEPLOY_PACKAGE,
+    // docker 形态隐藏长尾命令（db-backup/密码重置/infra/dev，ADR-0075 C5）；
+    // 注意 docker 形态实际走 docker-form-adapter 的精简菜单，此分支仅裸机形态执行，
+    // 传 isDockerForm 使可见性数据在单一事实源（menu-sections.js）保持完整可测。
+    isDockerForm: IS_DOCKER_FORM,
   });
   for (const line of formatMenu(sections)) {
     console.log(line);
@@ -438,8 +457,10 @@ async function bootstrap() {
 }
 
 
-// 启动程序
-bootstrap().catch((err) => {
-  console.error('程序启动失败:', err);
-  process.exit(1);
-});
+// 启动程序（docker 形态已由前置分派交给 adapter，此处只跑裸机编排）
+if (!IS_DOCKER_FORM) {
+  bootstrap().catch((err) => {
+    console.error('程序启动失败:', err);
+    process.exit(1);
+  });
+}

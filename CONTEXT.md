@@ -246,7 +246,7 @@ _避免_: 部署中心、运维后台、控制台
 _Avoid_: 离线部署、自托管
 
 **增量升级包（Incremental Upgrade Package）**:
-面向私有化部署客户的版本更新交付物（ADR-0046）——只含变更产物（各包 dist、全量 prisma migrations 目录、runtime/scripts、完整生产依赖 store），**解压覆盖部署根目录即完成升级**：start 自动检测并应用（migrate deploy 幂等 + `pnpm-lock.yaml` hash 与 store 标记 `variant:lockfileHash` 不一致时自动 `pnpm install --offline --prod`）。与全量部署包的差异：不含 runtime 二进制、配置模板；配置与用户数据（`.env*`、前端 `ini/*.json`、`brand/`、`data/`）永不入包。平台约束：store 原生依赖与打包环境平台强相关，Linux 升级包必须在 Linux 容器内打包。
+面向私有化部署客户的版本更新交付物（ADR-0046；2026-08 运行时重构改路线 B：不带 store）——只含业务产物（各包 dist、全量 prisma migrations 目录、runtime/scripts），**不含生产依赖 store 与 engine 二进制**（线上 engine 不动，依赖变更靠复用目标机既有部署包 store 离线补装），**解压覆盖部署根目录即完成升级**：start 自动检测并应用（migrate deploy 幂等 + `pnpm-lock.yaml` hash 与 store 标记 `variant:lockfileHash` 不一致时自动 `pnpm install --offline --prod`，源为目标机既有 store）。与全量部署包的差异：不含 runtime 二进制、配置模板与依赖 store；配置与用户数据（`.env*`、前端 `ini/*.json`、`brand/`、`data/`）永不入包。因不含原生依赖，升级包是平台无关的业务产物增量包（免 Docker 本机直打，一份包通用于 Windows/Linux 裸机部署）。
 _Avoid_: 升级补丁、热更新包、patch 包
 
 **标准组件（Standard Component）**:
@@ -301,10 +301,30 @@ _避免_: DataTable、Table（与后端"表/数据表"语义混淆）
 （统计成功/失败计数 Toast 汇总），不新增后端批量接口（同分享管理批量撤销模式）。
 
 **Docker 部署包（Docker 一键部署包）**:
-Linux 交付形态之一（ADR-0074）：一个压缩包，解压后 `./start.sh` 即完成部署、`./stop.sh` 停止。包内含离线 Docker 镜像 tar、
-Docker 静态二进制（无 Docker 时自装）、宿主进程物料（node / mxcad / conversion-service）与单一 `.env`。
+交付形态之一（ADR-0074）：一个压缩包，解压后 `./start.sh`（Windows 宿主为 `start.bat`）即完成部署、`./stop.sh` 停止、
+`./runtime/cloudcad.sh` 运维入口（与裸机包同构，ADR-0075：入口薄壳全形态共用模板 → `cli.js` 按**形态标记**
+（`.deploy` 内容 `form=docker`，兼容存量 `.deploy-docker`）分派到 docker-runtime 12 步编排）。
+**完全无 root**（ADR-0075 D11）：以普通用户解压与运行，不探测 sudo、不请求任何密码、部署目录全部归当前用户——
+普通用户恒走 rootless（用户命名空间 + 包内静态 Docker）；包内镜像全部以 uid 0 运行，单段 0→euid 映射即够，
+无需 uidmap/subuid 等管理员前置；仅用户自愿以 root 运行时才走 root dockerd 路径（用户选择，非依赖）。
+包内含离线 Docker 镜像 tar、Docker 运行时（Linux 宿主为包内静态二进制自装；Windows 宿主为检测既有 Docker Desktop 并给安装指引）、
+宿主进程物料（node / mxcad / conversion-service）与单一 `.env`。
 与**裸机部署包**（`pack-offline.js --deploy`，全量二进制 + PM2）并存的第二种交付形态。
+内部镜像在 linux / windows 两种**宿主平台**间完全相同，差异只在宿主侧物料。
 _避免_: docker 包、容器包
+
+**宿主平台（host platform）**:
+Docker 部署包所运行的宿主机操作系统（linux / windows）。Docker 部署包与 Docker 升级包按宿主平台区分入口脚本与宿主侧物料，
+内部镜像（全部为 Linux 镜像）跨宿主平台相同。
+_避免_: 目标机（过宽，含裸机部署）、容器平台
+
+**Docker 升级包（planned）**:
+Docker 交付形态的版本更新交付物——只含新 app 镜像 tar（前后端代码、依赖、migrations 全烤在镜像内）+ 运行时脚本与
+Docker 形态编排 + `.env.example` + 基线清单（pg/redis 镜像 tag、宿主 node/mxcad 版本）；不含 pg/redis 镜像、
+Docker 运行时与宿主二进制（依赖不变 ⇒ 这些不动）。解压覆盖部署根后重跑 start：加载新镜像 → 重建 app 容器 → 幂等迁移。
+app 镜像是 Linux 镜像 ⇒ **跨宿主平台通用、按架构分**（一份 x86_64 包同时服务 linux / windows 的 x86_64 部署）。
+start 时校验基线清单，不匹配即中止并指引使用全量包。
+_避免_: docker 补丁、镜像更新包
 
 **半容器化（half-containerization）**:
 Docker 部署包的容器化边界（ADR-0074）：只有 pg / redis / app 三个容器；mxcadAssembly 折叠的协同服务、

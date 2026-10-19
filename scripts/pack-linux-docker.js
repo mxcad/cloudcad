@@ -22,7 +22,8 @@
  *   → 5 下载 Docker 静态二进制 + compose v2 → 6 组装包树（含 .env.example 生成）
  *   → 7 SHA256SUMS + 归档 → 8（--verify）verify-linux-docker-deploy.js 断网验证
  *
- * 产物: <out>/cloudcad-docker-linux-<arch>-<version>.tar.gz（arch = x86_64 | aarch64）
+ * 产物: <out>/cloudcad-deploy-<version>-<DATE>-docker-linux-<arch>.tar.gz（arch = x86_64 | aarch64）
+ * 命名契约见 ADR-0075（docker 全量包与裸机包共享 cloudcad-deploy- 前缀，-docker- 段区分形态）；
  * 包内布局见 ADR-0074「包布局」节。
  */
 
@@ -117,6 +118,15 @@ const getArg = (name) => {
 const SKIP_DOCKER_BUILD = args.includes('--skip-docker-build');
 const RUN_VERIFY = args.includes('--verify');
 const OUT_DIR = path.resolve(getArg('--out') || path.join(PROJECT_ROOT, 'release'));
+// 包名日期段（与 pack-offline.js 同一约定：YYYYMMDD）
+const DATE = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+// docker 全量部署包命名唯一出口（ADR-0075 C4）：
+// cloudcad-deploy-{version}-{DATE}-docker-linux-{arch}
+// 与裸机包共享 cloudcad-deploy- 前缀，-docker- 段是形态区分（挑包正则按它过滤）。
+function dockerPackageName(version, pkgArch) {
+  return `cloudcad-deploy-${version}-${DATE}-docker-linux-${pkgArch}`;
+}
 
 function log(msg) {
   console.log(`[pack-docker] ${msg}`);
@@ -669,8 +679,10 @@ async function step1Prechecks(version) {
   const required = [
     'runtime/docker-runtime/index.js',
     'runtime/docker-runtime/docker-compose.yml',
-    'runtime/docker-runtime/start.sh',
-    'runtime/docker-runtime/stop.sh',
+    // 入口薄壳与裸机包共用模板（ADR-0075 C4 同构瘦壳）
+    'scripts/pack-lib/templates/start.sh',
+    'scripts/pack-lib/templates/stop.sh',
+    'scripts/pack-lib/templates/cloudcad.sh',
     'docker/Dockerfile.app',
     'docker/app-entrypoint.js',
     'packages/conversion-service/dist/server.js',
@@ -1178,11 +1190,15 @@ function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
   log(`组装包树: ${pkgRoot}`);
   ensureDir(pkgRoot);
 
-  // 入口薄壳 + compose + .env.example
-  fs.copyFileSync(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'start.sh'), path.join(pkgRoot, 'start.sh'));
-  fs.copyFileSync(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'stop.sh'), path.join(pkgRoot, 'stop.sh'));
+  // 入口薄壳（与裸机包共用模板，ADR-0075 C4 同构瘦壳）+ compose + .env.example
+  const TPL = path.join(PROJECT_ROOT, 'scripts', 'pack-lib', 'templates');
+  fs.copyFileSync(path.join(TPL, 'start.sh'), path.join(pkgRoot, 'start.sh'));
+  fs.copyFileSync(path.join(TPL, 'stop.sh'), path.join(pkgRoot, 'stop.sh'));
   fs.chmodSync(path.join(pkgRoot, 'start.sh'), 0o755);
   fs.chmodSync(path.join(pkgRoot, 'stop.sh'), 0o755);
+  // 运维入口（runtime/cloudcad.sh，与裸机包同构；ensure-exec.sh 的 ./runtime/*.sh 清单覆盖执行位自愈）
+  fs.copyFileSync(path.join(TPL, 'cloudcad.sh'), path.join(pkgRoot, 'runtime', 'cloudcad.sh'));
+  fs.chmodSync(path.join(pkgRoot, 'runtime', 'cloudcad.sh'), 0o755);
   fs.copyFileSync(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'docker-compose.yml'), path.join(pkgRoot, 'docker-compose.yml'));
   fs.writeFileSync(path.join(pkgRoot, '.env.example'), generateDockerEnvExample(version), 'utf8');
 
@@ -1265,7 +1281,8 @@ function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
   copyDir(path.join(PROJECT_ROOT, 'packages', 'config-service'), path.join(pkgRoot, 'packages', 'config-service'));
 
   // 标记与元信息
-  fs.writeFileSync(path.join(pkgRoot, '.deploy-docker'), '1');
+  // 形态标记统一走 .deploy（ADR-0075 C3：内容 form=docker；detectDeployForm 兼容存量 .deploy-docker）
+  fs.writeFileSync(path.join(pkgRoot, '.deploy'), 'form=docker');
   fs.writeFileSync(path.join(pkgRoot, 'VERSION'), version + '\n');
   const { PRODUCT_NAME } = require(path.join(PROJECT_ROOT, 'runtime', 'scripts', 'lib', 'branding'));
   fs.writeFileSync(
@@ -1275,13 +1292,15 @@ function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
       `版本: ${version}`,
       '',
       '【部署】',
-      '  1. 解压本包到目标目录（如 /opt/cloudcad）',
-      '  2. 用 root 或有 sudo 权限的用户运行: ./start.sh',
-      '     - 无 Docker 的机器会自动用包内静态二进制安装',
+      '  1. 以普通用户解压本包到目标目录（如 /opt/cloudcad，勿用 root 解压）',
+      '  2. 以同一普通用户运行: ./start.sh',
+      '     - 完全无需 root/sudo，不请求任何密码（rootless 模式用包内静态 Docker）',
       '     - 首次部署自动生成 .env 与初始密码（见 DEPLOY-PASSWORDS.txt）',
       '  3. 浏览器访问 http://<服务器IP>:8000（端口以 .env 为准）',
       '',
       '【停止】 ./stop.sh（数据保留在 data/ 目录）',
+      '',
+      '【运维入口】 ./runtime/cloudcad.sh（交互菜单：启动/停止；与裸机包同构）',
       '',
       '【升级】 新版包解压覆盖本目录后重跑 ./start.sh',
       '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
@@ -1297,7 +1316,7 @@ function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
 }
 
 function step7Archive(pkgRoot, version) {
-  const name = `cloudcad-docker-linux-${ARCH.pkgArch}-${version}`;
+  const name = dockerPackageName(version, ARCH.pkgArch);
   ensureDir(OUT_DIR);
   const archive = path.join(OUT_DIR, `${name}.tar.gz`);
 
@@ -1341,6 +1360,7 @@ function step7Archive(pkgRoot, version) {
         `mv /stage /pkgroot/${name}`,
         `chmod -R u+rwX,go+r /pkgroot/${name}`,
         `chmod 755 /pkgroot/${name}/start.sh /pkgroot/${name}/stop.sh`,
+        `chmod 755 /pkgroot/${name}/runtime/cloudcad.sh 2>/dev/null`,
         `chmod 755 /pkgroot/${name}/docker/* 2>/dev/null`,
         `chmod 755 /pkgroot/${name}/runtime/linux/node/bin/* 2>/dev/null`,
         `chmod 755 /pkgroot/${name}/runtime/linux/mxcad/mxcadassembly /pkgroot/${name}/runtime/linux/mxcad/tool/* 2>/dev/null`,
@@ -1361,7 +1381,7 @@ function step7Archive(pkgRoot, version) {
 async function main() {
   const version = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, 'package.json'), 'utf8')).version;
   const pkgRoot = path.join(OUT_DIR, `staging-${version}`);
-  const pkgName = `cloudcad-docker-linux-${ARCH ? ARCH.pkgArch : process.arch}-${version}`;
+  const pkgName = dockerPackageName(version, ARCH ? ARCH.pkgArch : process.arch);
   const pkgDir = path.join(pkgRoot, pkgName);
 
   const { nodeSrc, mxcadSrc } = await step1Prechecks(version);
@@ -1393,4 +1413,4 @@ if (require.main === module) {
   main().catch((err) => fail(err.stack || err.message));
 }
 
-module.exports = { generateDockerEnvExample, DOCKER_PATH_OVERRIDES, ensureRootlessNs, elfArch };
+module.exports = { generateDockerEnvExample, DOCKER_PATH_OVERRIDES, ensureRootlessNs, elfArch, dockerPackageName };
