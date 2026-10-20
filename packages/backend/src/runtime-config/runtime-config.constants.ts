@@ -600,6 +600,32 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     profiles: { secure: 'secure', normal: 'normal' },
   },
 
+  {
+    key: 'adminLoginEntry',
+    type: 'string',
+    category: 'security',
+    description:
+      '管理员登录入口形态。ISOLATED = 管理员只能走专用入口，普通登录入口拒绝；' +
+      'MERGED = 管理员与普通用户共用登录入口。',
+    defaultValue: 'ISOLATED',
+    isPublic: false,
+    tier: 'advanced',
+    dangerous: true,
+    hot: false,
+    input: {
+      options: [
+        { value: 'ISOLATED', label: '隔离入口（管理员专用入口）' },
+        { value: 'MERGED', label: '合并入口（与普通用户共用）' },
+      ],
+    },
+    impact:
+      '仅影响普通登录入口是否接受管理员：ISOLATED 时管理员凭一次普通入口尝试会被拒' +
+      '（防枚举同文案，不签发 token、不触发注销恢复等写库副作用）；MERGED 时管理员可走任一入口，' +
+      '会话仍携带 DB 实时角色，改密到期/TOTP 锁定等管理员级拦截不受影响。' +
+      '专用入口两种形态下都可用。仅管理员登录时读取，普通用户请求不产生额外查询。',
+    profiles: { secure: 'ISOLATED', normal: 'MERGED' },
+  },
+
   // ───────────────────────── 安全：接口限流 ─────────────────────────
   {
     key: 'rateLimitPublicMax',
@@ -692,7 +718,9 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     category: 'security',
     description: '设置口令时的最小长度',
     defaultValue: 10,
-    isPublic: false,
+    // isPublic：前端（登录/注册/改密/首启表单）经 /runtime-config/public 读取生效值
+    // 动态渲染口令要求提示，杜绝前端写死文案与策略失同步（2026-10-20）
+    isPublic: true,
     tier: 'advanced',
     dangerous: true,
     envKey: 'PASSWORD_POLICY_MIN_LENGTH',
@@ -709,7 +737,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description:
       '设置口令时至少需要的字符类别数（小写、大写、数字、特殊字符四类计），0 = 不要求类别构成',
     defaultValue: 3,
-    isPublic: false,
+    // isPublic：同 passwordPolicyMinLength，前端动态渲染口令要求提示
+    isPublic: true,
     tier: 'advanced',
     dangerous: true,
     input: { min: 0, max: 4, step: 1, unit: '类' },

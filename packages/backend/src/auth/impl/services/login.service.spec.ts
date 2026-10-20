@@ -86,10 +86,11 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     mockAccountRateLimitService.clearLoginFailures.mockResolvedValue(
       undefined
     );
-    // 按 key 返回：登录功能开关默认 false，注销冷静期默认 7 天
+    // 按 key 返回：登录功能开关默认 false，注销冷静期默认 7 天，管理员入口默认隔离
     mockRuntimeConfigService.getValue.mockImplementation(
       async (key: string) => {
         if (key === 'userCancelGraceDays') return 7;
+        if (key === 'adminLoginEntry') return 'ISOLATED';
         return false;
       }
     );
@@ -350,5 +351,67 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     // 管理员走专用入口，普通登录不得签发 token，也不触发注销恢复等 DB 副作用
     expect(mockAuthTokenService.generateTokens).not.toHaveBeenCalled();
     expect(mockUserRepo.update).not.toHaveBeenCalled();
+  });
+
+  describe('adminLoginEntry=MERGED（普通模式：管理员与普通用户共用登录入口）', () => {
+    beforeEach(() => {
+      mockRuntimeConfigService.getValue.mockImplementation(
+        async (key: string) => {
+          if (key === 'userCancelGraceDays') return 7;
+          if (key === 'adminLoginEntry') return 'MERGED';
+          return false;
+        }
+      );
+    });
+
+    it('管理员可走普通登录入口：token 正常签发，不触发恢复写库', async () => {
+      service = await compileModule();
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...loginUser,
+        role: { id: 'role-admin', name: 'ADMIN' },
+      });
+
+      const result = await service.login({
+        account: '13800138000',
+        password: 'password123',
+      });
+
+      expect(result.accessToken).toBe('at');
+      expect(mockAuthTokenService.generateTokens).toHaveBeenCalled();
+      expect(mockUserRepo.update).not.toHaveBeenCalled();
+    });
+
+    it('已自助注销的管理员：冷静期恢复后放行（不复现「恢复后又被拒绝」的前科副作用）', async () => {
+      service = await compileModule();
+      const deletedAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+      mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
+        ...loginUser,
+        role: { id: 'role-admin', name: 'ADMIN' },
+        status: 'INACTIVE',
+        deletedAt,
+        deactivatedBy: 'SELF',
+      });
+      mockUserRepo.update.mockResolvedValue({
+        ...loginUser,
+        role: { id: 'role-admin', name: 'ADMIN' },
+        status: 'ACTIVE',
+        deletedAt: null,
+        deactivatedBy: null,
+      });
+
+      const result = await service.login({
+        account: '13800138000',
+        password: 'password123',
+      });
+
+      // 恢复写库确实发生，且恢复后不被管理员门拦回——这正是入口合一的语义
+      expect(result.restored).toBe(true);
+      expect(result.accessToken).toBe('at');
+      expect(mockUserRepo.update).toHaveBeenCalledWith('user-1', {
+        deletedAt: null,
+        status: 'ACTIVE',
+        deactivatedBy: null,
+      });
+    });
   });
 });

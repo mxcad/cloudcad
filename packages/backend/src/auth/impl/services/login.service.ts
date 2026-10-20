@@ -344,15 +344,26 @@ export class LoginService {
     entry: string
   ): Promise<{ user: UserRecord; restored: boolean }> {
     if (isAdminUser(user)) {
-      this.logger.warn(
-        `${entry} 登录拒绝 - 系统管理员账号须使用管理员专用入口: ${
-          user.username || user.email || user.id
-        }`
-      );
-      throw new UnauthorizedException(
-        I18nContext.current()?.t('error.auth.invalid_credentials') ??
-          '账号或密码错误'
-      );
+      // 管理员入口形态（profile 驱动）：ISOLATED = 只能走专用入口；MERGED = 可走任一入口。
+      // MERGED 下放行后，下面的注销冷静期恢复照常生效——这正是「两个入口合一」的语义，
+      // 不再复现前科里的「恢复后又立即被拒」的无意义写库副作用。
+      // 仅管理员才读配置：普通用户的绝大多数登录尝试不做这次查询。
+      const adminLoginEntry =
+        await this.runtimeConfigService.getValue<string>(
+          'adminLoginEntry',
+          'ISOLATED'
+        );
+      if (adminLoginEntry === 'ISOLATED') {
+        this.logger.warn(
+          `${entry} 登录拒绝 - 系统管理员账号须使用管理员专用入口: ${
+            user.username || user.email || user.id
+          }`
+        );
+        throw new UnauthorizedException(
+          I18nContext.current()?.t('error.auth.invalid_credentials') ??
+            '账号或密码错误'
+        );
+      }
     }
 
     let restored = false;

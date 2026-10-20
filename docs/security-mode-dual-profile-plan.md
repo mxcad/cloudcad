@@ -120,8 +120,15 @@ T9 variant 边界      （独立，需 ADR）
 
 ### T4 · 管理员入口 `MERGED` 的语义与对称性（证据更新）
 二轮实证比一轮更集中：**4 条登录路径全部收口在 `assertLoginEligible`**（`login.service.ts:119`、`local-auth.provider.ts:147/289/452`）——密码、微信、手机码、邮箱。管理员入口仅收 ADMIN 在 `admin-auth.service.ts:145-155`（非管理员与密码错误同文案，防枚举）。
-- 全仓 `runtime-config` keys 中**不存在 `adminLoginEnabled` / `adminLoginEntry`**（已核实）。
-- 新增开关最合理落点 3 处：① `admin-auth.service.login()` 第 0 步前加闸；② 前端 `App.tsx:278-285` 路由门控 + `tokenRefresh.ts:169/219` redirect 目标；③ 配置项。
+- ~~全仓 `runtime-config` keys 中**不存在 `adminLoginEnabled` / `adminLoginEntry`**（已核实）~~
+  → **`adminLoginEntry` 已新增**：`ISOLATED`/`MERGED`，profiles `{ secure: 'ISOLATED', normal: 'MERGED' }`，
+  `defaultValue: 'ISOLATED'`（升级零行为变化）。**T4 已完成。**
+- ~~新增开关最合理落点 3 处：① `admin-auth.service.login()` 第 0 步前加闸；② 前端 `App.tsx:278-285` 路由门控 + `tokenRefresh.ts:169/219` redirect 目标；③ 配置项~~
+  → 实际落点为 **③配置项 + ①的变体**：闸门放在 **`assertLoginEligible`**（四条普通登录路径的共同出口），
+  而不是 `admin-auth.service.login()`——后者只管管理员专用入口，放那里覆盖不到普通入口。
+  **②前端路由门控未做且不需要**：`MERGED` 取「放宽」（管理员可走任一入口）而非「禁用专用入口」，
+  普通登录表单无需改动、专用入口始终保留，故前端与 SDK/MSW 零改动。语义取舍与理由见
+  deferred-decisions R5。
 - **前科实证且被注释固化**：`login.service.ts:329-340` 记载三个 provider 曾把恢复逻辑放在管理员门之前，导致「已注销的 ADMIN 凭一次普通入口尝试即触发写库（`deletedAt=null, status=ACTIVE`）+ `user.restored` 审计事件」（写库点 `:292-296`、事件 `:300-305`）随后才被拒绝。「恢复成为无意义且有害的副作用」。**教训：开关判断必须在一切写库/emit 之前，且拒绝路径统一走防枚举文案（避免探测开关状态）。**
 - **隐性前置（二轮新增）**：`role?.name === 'ADMIN'` 散落 **6 处**（`auth-facade.service.ts:495`、`admin-auth.service.ts:145/257`、`login.service.ts:345`、`user-status.service.ts:50/102`），`@IsAdmin` 全仓零命中，`@Roles` 仅 1 处（`admin-mfa.controller.ts:83`）。**若只做入口开关不做判定收敛，`jwt.strategy.ts:158/192` 两处 ADMIN 分支仍按旧语义放行。**
   **→ 收敛已落地（见 deferred-decisions R5）**：实测是 8 处（含 `jwt.strategy.ts:158/192`），全部改走 `@cloudcad/contracts` 的 `isAdminRole()`/`isAdminUser()`，`SystemRole.ADMIN` 为唯一事实源，零行为变化。上述行号为收敛前状态，仅作历史证据保留。

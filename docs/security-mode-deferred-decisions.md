@@ -165,9 +165,23 @@ MFA 锁定与口令到期锁定两处），全部改走 `@cloudcad/contracts` �
 role/name/user 各级缺失不命中不抛错）。**零行为变化**：backend tsc 0 错、
 全量 225 套件 / 3151 例绿、contracts 41 例绿 + 纯度门禁通过。
 
-**第 2 步（入口开关）未做**，前置已满足，可独立推进：`adminLoginEntry` 配置项
-（普通 `MERGED` / 安全 `ISOLATED`）+ `admin-auth.service.login()` 第 0 步闸门
-（必须在一切写库/emit 之前）+ 前端 `App.tsx` 路由门控与 `tokenRefresh` 跳转目标。
+**第 2 步（入口开关）已落地**：新增 `adminLoginEntry` 配置项
+（`ISOLATED` / `MERGED`，profiles `{ secure: 'ISOLATED', normal: 'MERGED' }`，
+`defaultValue: 'ISOLATED'` = 升级零行为变化），闸门落在 **`assertLoginEligible`**
+而非 `admin-auth.service.login()`——后者只管管理员专用入口，而普通入口的四条登录路径
+（密码/微信/手机码/邮箱）共同收口在 `assertLoginEligible`，闸门放这里才覆盖全部入口，
+且仍在注销冷静期恢复逻辑之前（守住第 1 步的前科）。
+配置读取**仅当用户是管理员时**才发生，普通用户的登录尝试不产生额外查询。
+
+**语义取「放宽」而非「合并后禁用专用入口」**：`MERGED` = 管理员可走任一入口，
+专用入口两种形态下都可用。不采用「MERGED 时禁用专用入口」——那会打断既有部署的
+管理员登录 URL/书签，且纯放宽已完全满足「便利高于一切」的目标。
+`MERGED` 下管理员走普通入口照常触发注销冷静期恢复并被放行——这正是「两个入口合一」
+的语义，不复现前科里的「恢复后立即被拒」。管理员级拦截（口令到期 / TOTP 绑定 /
+`jwt.strategy` 两处分支）基于 DB 实时角色与口令时间判定，与从哪个入口登录无关，不受影响。
+
+**未做前端路由门控**：`adminLoginEntry` 为 `isPublic: false`，且放宽语义下普通登录
+表单本就无需改动（管理员直接可用），专用入口始终保留，故前端零改动、SDK/MSW 零改动。
 
 ⚠️ **`@Roles('ADMIN')`（`admin-mfa.controller.ts:83`）刻意不动**：`RolesGuard` 的
 语义是通用 `requiredRoles.includes(userRole)`（支持任意角色名），不是 ADMIN 专用判定；
@@ -186,8 +200,8 @@ role/name/user 各级缺失不命中不抛错）。**零行为变化**：backend
 5. **T14**（私有化默认值断裂三件套）→ 按 ADR-0078 D2 走「打包期按 variant 设出厂默认值」
 6. **T3**（口令策略全面模式化，最大结构项）→ 6 项配置本次做 5 项，历史密码新表单独排票
 7. **T6**（审计证据链）→ 按 ADR-0079：CONFIG 类 `AuditAction` + `mlps3-drill.sh` 改读现值
-8. **T4**（管理员入口）→ ~~先做 6 处 `role?.name==='ADMIN'` 判定收敛~~
-   **判定收敛已完成**（实测 8 处 → `isAdminRole`/`isAdminUser` 唯一出口）；剩入口开关
+8. **T4**（管理员入口）→ **已完成**：判定收敛（8 处 → `isAdminRole`/`isAdminUser`
+   唯一出口）+ `adminLoginEntry` 开关（`ISOLATED`/`MERGED`，闸门落 `assertLoginEligible`）
 9. **T15**（错误契约）→ 先修 7 处缺陷，ErrorCode 枚举另开票（形状待定）
 10. **待排票**：历史密码不复用新表、`runtime_config_logs` 补字段并入收尾票、
     现值纳入哈希链、配置基线快照、全量审计容量核算
