@@ -11,6 +11,19 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 /**
  * 缓存统计 DTO
@@ -205,15 +218,26 @@ export class CacheWarningsDto {
 
 /**
  * 缓存操作请求 DTO
+ *
+ * 注意：本模块的请求 DTO 必须带 class-validator 装饰器。全局 CustomValidationPipe
+ * 开启 whitelist + forbidNonWhitelisted，只声明 @ApiProperty 的字段会被判为
+ * 「未白名单属性」直接 400（property x should not exist），前端调用无法通过。
  */
 export class CacheOperationDto {
   @ApiProperty({ description: '缓存键' })
+  @IsString()
+  @IsNotEmpty()
   key: string;
 
   @ApiProperty({ description: '缓存值', required: false })
+  @IsOptional()
   value?: unknown;
 
   @ApiProperty({ description: 'TTL（秒）', required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(86400)
   ttl?: number;
 }
 
@@ -222,9 +246,16 @@ export class CacheOperationDto {
  */
 export class BatchCacheOperationDto {
   @ApiProperty({ description: '缓存键列表' })
+  @IsArray()
+  @ArrayMaxSize(1000)
+  @IsString({ each: true })
   keys: string[];
 
   @ApiProperty({ description: 'TTL（秒）', required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(86400)
   ttl?: number;
 }
 
@@ -233,9 +264,13 @@ export class BatchCacheOperationDto {
  */
 export class CacheRefreshDto {
   @ApiProperty({ description: '缓存键' })
+  @IsString()
+  @IsNotEmpty()
   key: string;
 
   @ApiProperty({ description: '是否强制刷新', required: false })
+  @IsOptional()
+  @IsBoolean()
   force?: boolean;
 }
 
@@ -248,9 +283,13 @@ export class CacheCleanupDto {
     enum: ['L1', 'L2', 'ALL'],
     required: false,
   })
+  @IsOptional()
+  @IsIn(['L1', 'L2', 'ALL'])
   level?: 'L1' | 'L2' | 'ALL';
 
   @ApiProperty({ description: '模式（支持通配符）', required: false })
+  @IsOptional()
+  @IsString()
   pattern?: string;
 }
 
@@ -263,9 +302,14 @@ export class CacheStatsQueryDto {
     enum: ['L1', 'L2'],
     required: false,
   })
+  @IsOptional()
+  @IsIn(['L1', 'L2'])
   level?: 'L1' | 'L2';
 
   @ApiProperty({ description: '是否包含性能指标', required: false })
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
   includePerformance?: boolean;
 }
 
@@ -274,9 +318,15 @@ export class CacheStatsQueryDto {
  */
 export class PerformanceTrendQueryDto {
   @ApiProperty({ description: '缓存级别', enum: ['L1', 'L2'] })
+  @IsIn(['L1', 'L2'])
   level: 'L1' | 'L2';
 
   @ApiProperty({ description: '时间范围（分钟）', required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(1440)
+  @Type(() => Number)
   minutes?: number;
 }
 

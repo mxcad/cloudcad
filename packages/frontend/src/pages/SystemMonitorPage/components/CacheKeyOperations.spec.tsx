@@ -30,7 +30,42 @@ const apiMocks = vi.hoisted(() => ({
     Promise.resolve({ data: { success: true } })
   ),
   cacheMonitorControllerCleanup: vi.fn(() => Promise.resolve({ data: {} })),
+  cacheMonitorControllerGetKeyCatalog: vi.fn(),
 }));
+
+// 后端目录的精简样本：一条业务缓存 + 一条基础设施键（会话）
+const CATALOG = [
+  {
+    id: 'user_permissions',
+    name: '用户系统权限集合',
+    pattern: 'user:permissions:*',
+    description: '某用户的系统权限列表',
+    scope: 'cache',
+    removalEffect: '回源数据库重建',
+    ttl: '5 分钟',
+    example: 'user:permissions:12',
+  },
+  {
+    id: 'project_permissions',
+    name: '项目权限',
+    pattern: 'project:permissions:*',
+    description: '某项目的权限集合',
+    scope: 'cache',
+    removalEffect: '回源数据库重建',
+    ttl: '5 分钟',
+    example: 'project:permissions:34',
+  },
+  {
+    id: 'session',
+    name: '登录会话',
+    pattern: 'mxcad:sess:*',
+    description: 'express-session 会话存储',
+    scope: 'infra',
+    removalEffect: '⚠️ 删除后对应用户立即登出',
+    ttl: '24 小时',
+    example: 'mxcad:sess:sXyz',
+  },
+] as const;
 
 vi.mock('@/contexts/NotificationContext', () => ({
   useNotification: () => notificationMock,
@@ -44,21 +79,32 @@ describe('CacheKeyOperations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     notificationMock.showConfirm.mockResolvedValue(true);
+    apiMocks.cacheMonitorControllerGetKeyCatalog.mockResolvedValue({
+      data: { entries: [...CATALOG] },
+    });
   });
 
   describe('when user is not SYSTEM_ADMIN', () => {
     it('只显示查询按钮，不显示任何写操作', () => {
-      render(<CacheKeyOperations isAdmin={false} onChanged={() => undefined} />);
+      render(
+        <CacheKeyOperations isAdmin={false} onChanged={() => undefined} />
+      );
 
       expect(screen.getByRole('button', { name: '查询' })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: '设置' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: '刷新' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: '设置' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: '删除' })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: '刷新' })
+      ).not.toBeInTheDocument();
       expect(
         screen.queryByRole('button', { name: '按模式删除' })
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: '清空所有缓存' })
+        screen.queryByRole('button', { name: '重置监控统计' })
       ).not.toBeInTheDocument();
     });
   });
@@ -67,9 +113,12 @@ describe('CacheKeyOperations', () => {
     it('查询 Key 并展示结果', async () => {
       render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
 
-      fireEvent.change(screen.getByPlaceholderText('缓存 Key'), {
-        target: { value: 'user:1' },
-      });
+      fireEvent.change(
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）'),
+        {
+          target: { value: 'user:1' },
+        }
+      );
       fireEvent.click(screen.getByRole('button', { name: '查询' }));
 
       await waitFor(() => {
@@ -86,19 +135,24 @@ describe('CacheKeyOperations', () => {
     it('删除 Key 前弹出确认，确认后调用删除并 toast', async () => {
       render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
 
-      fireEvent.change(screen.getByPlaceholderText('缓存 Key'), {
-        target: { value: 'user:1' },
-      });
+      fireEvent.change(
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）'),
+        {
+          target: { value: 'user:1' },
+        }
+      );
       fireEvent.click(screen.getByRole('button', { name: '删除' }));
 
       await waitFor(() => {
         expect(notificationMock.showConfirm).toHaveBeenCalled();
       });
       await waitFor(() => {
-        expect(apiMocks.cacheMonitorControllerDeleteValue).toHaveBeenCalledWith({
-          throwOnError: true,
-          query: { key: 'user:1' },
-        });
+        expect(apiMocks.cacheMonitorControllerDeleteValue).toHaveBeenCalledWith(
+          {
+            throwOnError: true,
+            query: { key: 'user:1' },
+          }
+        );
       });
       await waitFor(() => {
         expect(notificationMock.showToast).toHaveBeenCalledWith(
@@ -113,9 +167,12 @@ describe('CacheKeyOperations', () => {
 
       render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
 
-      fireEvent.change(screen.getByPlaceholderText('缓存 Key'), {
-        target: { value: 'user:1' },
-      });
+      fireEvent.change(
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）'),
+        {
+          target: { value: 'user:1' },
+        }
+      );
       fireEvent.click(screen.getByRole('button', { name: '删除' }));
 
       await waitFor(() => {
@@ -128,9 +185,12 @@ describe('CacheKeyOperations', () => {
       const onChanged = vi.fn();
       render(<CacheKeyOperations isAdmin onChanged={onChanged} />);
 
-      fireEvent.change(screen.getByPlaceholderText('缓存 Key'), {
-        target: { value: 'config:theme' },
-      });
+      fireEvent.change(
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）'),
+        {
+          target: { value: 'config:theme' },
+        }
+      );
       fireEvent.change(screen.getByPlaceholderText('缓存值'), {
         target: { value: 'dark' },
       });
@@ -157,9 +217,12 @@ describe('CacheKeyOperations', () => {
     it('按模式删除确认后调用 deleteByPattern', async () => {
       render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
 
-      fireEvent.change(screen.getByPlaceholderText('匹配模式（如 user:*）'), {
-        target: { value: 'user:*' },
-      });
+      fireEvent.change(
+        screen.getByPlaceholderText('匹配模式（点击选择或输入筛选）'),
+        {
+          target: { value: 'user:permissions:*' },
+        }
+      );
       fireEvent.click(screen.getByRole('button', { name: '按模式删除' }));
 
       await waitFor(() => {
@@ -167,15 +230,37 @@ describe('CacheKeyOperations', () => {
           apiMocks.cacheMonitorControllerDeleteByPattern
         ).toHaveBeenCalledWith({
           throwOnError: true,
-          query: { pattern: 'user:*' },
+          query: { pattern: 'user:permissions:*' },
         });
       });
     });
 
-    it('清空所有缓存确认后调用 cleanup', async () => {
+    it('命中删除条数上限时提示仍有键未删除，不谎报成功', async () => {
+      apiMocks.cacheMonitorControllerDeleteByPattern.mockResolvedValueOnce({
+        data: { truncated: true },
+      });
       render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
 
-      fireEvent.click(screen.getByRole('button', { name: '清空所有缓存' }));
+      fireEvent.change(
+        screen.getByPlaceholderText('匹配模式（点击选择或输入筛选）'),
+        {
+          target: { value: 'user:permissions:*' },
+        }
+      );
+      fireEvent.click(screen.getByRole('button', { name: '按模式删除' }));
+
+      await waitFor(() => {
+        expect(notificationMock.showToast).toHaveBeenCalledWith(
+          '已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除',
+          'warning'
+        );
+      });
+    });
+
+    it('重置监控统计确认后调用 cleanup', async () => {
+      render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '重置监控统计' }));
 
       await waitFor(() => {
         expect(apiMocks.cacheMonitorControllerCleanup).toHaveBeenCalledWith({
@@ -185,7 +270,7 @@ describe('CacheKeyOperations', () => {
       });
       await waitFor(() => {
         expect(notificationMock.showToast).toHaveBeenCalledWith(
-          '缓存已清空',
+          '已重置 L1 内存缓存与监控统计',
           'success'
         );
       });
@@ -194,9 +279,12 @@ describe('CacheKeyOperations', () => {
     it('刷新 Key 调用 refresh 并 toast 成功', async () => {
       render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
 
-      fireEvent.change(screen.getByPlaceholderText('缓存 Key'), {
-        target: { value: 'user:1' },
-      });
+      fireEvent.change(
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）'),
+        {
+          target: { value: 'user:1' },
+        }
+      );
       fireEvent.click(screen.getByRole('button', { name: '刷新' }));
 
       await waitFor(() => {
@@ -210,6 +298,83 @@ describe('CacheKeyOperations', () => {
           '缓存刷新成功',
           'success'
         );
+      });
+    });
+  });
+
+  describe('缓存键目录驱动自动筛选', () => {
+    it('加载目录并支持按输入内容过滤候选项', async () => {
+      render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
+
+      const input =
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: 'project' } });
+
+      await waitFor(() => {
+        expect(apiMocks.cacheMonitorControllerGetKeyCatalog).toHaveBeenCalled();
+      });
+      // 只命中 project 前缀的条目，其余被过滤掉
+      expect(screen.getByText('project:permissions:*')).toBeInTheDocument();
+      expect(screen.queryByText('user:permissions:*')).not.toBeInTheDocument();
+    });
+
+    it('选择目录条目后填入真实示例 key', async () => {
+      render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
+
+      const input =
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: 'project' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('project:permissions:*')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('project:permissions:*'));
+
+      expect(input).toHaveValue('project:permissions:34');
+    });
+
+    it('基础设施键只展示不填充，选择时提示不可删除', async () => {
+      render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
+
+      const input =
+        screen.getByPlaceholderText('匹配模式（点击选择或输入筛选）');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: 'sess' } });
+
+      await waitFor(() => {
+        expect(screen.getByText('mxcad:sess:*')).toBeInTheDocument();
+      });
+      // infra 条目带不可删除标记
+      expect(screen.getByText('不可删除')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('mxcad:sess:*'));
+
+      expect(notificationMock.showToast).toHaveBeenCalledWith(
+        expect.stringContaining('该键属于基础设施，不允许删除'),
+        'warning'
+      );
+      // 不填充输入框，避免误删会话
+      expect(input).toHaveValue('sess');
+    });
+
+    it('目录拉取失败时退回纯手输，不阻塞操作', async () => {
+      apiMocks.cacheMonitorControllerGetKeyCatalog.mockRejectedValue(
+        new Error('boom')
+      );
+      render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
+
+      const input =
+        screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）');
+      fireEvent.change(input, { target: { value: 'user:1' } });
+      fireEvent.click(screen.getByRole('button', { name: '查询' }));
+
+      await waitFor(() => {
+        expect(apiMocks.cacheMonitorControllerGetValue).toHaveBeenCalledWith({
+          throwOnError: true,
+          query: { key: 'user:1' },
+        });
       });
     });
   });

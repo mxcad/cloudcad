@@ -20,7 +20,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, RedisClientType } from 'redis';
 import type { AppConfig } from '../../config/app.config';
-import { IL2CacheManager } from '../interfaces/cache-manager.interface';
+import {
+  IL2CacheManager,
+  PatternDeleteResult,
+} from '../interfaces/cache-manager.interface';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheStrategy } from '../enums/cache-strategy.enum';
 
@@ -308,13 +311,14 @@ export class L2CacheProvider<T = unknown>
    * 模式由调用方（SYSTEM_ADMIN 清理入口）传入，且 L2 与共享 DB 的会话/token 同库，
    * 因此设删除条数上限，防止过宽模式（如 `*`）无界 scan + 一次性 del 波及非缓存键。
    */
-  async deleteByPattern(pattern: string): Promise<number> {
+  async deleteByPattern(pattern: string): Promise<PatternDeleteResult> {
     if (!this.isConnected || !pattern) {
-      return 0;
+      return { deleted: 0, truncated: false };
     }
 
     try {
       const keys: string[] = [];
+      let truncated = false;
       for await (const key of this.client.scanIterator({
         MATCH: pattern,
         COUNT: 200,
@@ -322,8 +326,11 @@ export class L2CacheProvider<T = unknown>
         // scanIterator 返回的键类型是 string，但 TypeScript 推断可能有问题
         keys.push(String(key));
         if (keys.length >= L2CacheProvider.MAX_PATTERN_DELETE_KEYS) {
+          // 中止的是扫描，不是删除：超过上限的键仍留在库里。
+          // 恰好匹配到上限条数时也走这里，无法区分「全删干净」和「还剩一堆」。
+          truncated = true;
           this.logger.warn(
-            `deleteByPattern 达到删除上限 ${L2CacheProvider.MAX_PATTERN_DELETE_KEYS}，提前停止: ${pattern}`
+            `deleteByPattern 达到删除上限 ${L2CacheProvider.MAX_PATTERN_DELETE_KEYS}，提前停止（可能仍有键未删除）: ${pattern}`
           );
           break;
         }
@@ -336,10 +343,10 @@ export class L2CacheProvider<T = unknown>
         );
       }
 
-      return keys.length;
+      return { deleted: keys.length, truncated };
     } catch (error) {
       this.logger.error(`根据模式删除 L2 缓存失败: ${pattern}`, error);
-      return 0;
+      return { deleted: 0, truncated: false };
     }
   }
 

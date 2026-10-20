@@ -9,6 +9,7 @@ import { L1CacheProvider } from "../providers/l1-cache.provider";
 import { L2CacheProvider } from "../providers/l2-cache.provider";
 import { CacheVersionService, CacheVersionType } from "./cache-version.service";
 import { MultiLevelCacheService } from "./multi-level-cache.service";
+import { CACHE_TTL } from "../../common/constants/cache.constants";
 
 describe("MultiLevelCacheService", () => {
 	let service: MultiLevelCacheService;
@@ -161,6 +162,31 @@ describe("MultiLevelCacheService", () => {
 			expect(ttl).toBeGreaterThanOrEqual(300);
 			expect(ttl).toBeLessThanOrEqual(600); // 300 + randomizationRange(300)
 		});
+
+		// 回归：CACHE_TTL 历史上一度写成毫秒，而两级 provider 都按秒处理
+		//（L1 内部 *1000、L2 走 Redis SET EX），导致权限缓存存活 1000 倍于预期。
+		it("should keep every CACHE_TTL entry in seconds", () => {
+			Object.entries(CACHE_TTL).forEach(([name, ttl]) => {
+				if (ttl < 60 || ttl > 86400) {
+					throw new Error(
+						`${name} = ${ttl} 秒，超出秒级合理区间 60..86400，疑似单位错误`
+					);
+				}
+			});
+			expect(CACHE_TTL.SYSTEM_PERMISSION).toBe(5 * 60);
+		});
+
+		it("should warn rather than silently accept a millisecond-scale TTL", async () => {
+			const warn = jest.spyOn((service as any).logger, "warn");
+			try {
+				await service.set("key", "value", 5 * 60 * 1000); // 旧写法
+				expect(warn).toHaveBeenCalledWith(
+					expect.stringContaining("疑似单位错误")
+				);
+			} finally {
+				warn.mockRestore();
+			}
+		});
 	});
 
 	// ==================== delete ====================
@@ -184,12 +210,20 @@ describe("MultiLevelCacheService", () => {
 	// ==================== deleteByPattern ====================
 	describe("deleteByPattern", () => {
 		it("should delete by pattern from both L1 and L2", async () => {
-			mockL1Cache.deleteByPattern.mockResolvedValue(2);
-			mockL2Cache.deleteByPattern.mockResolvedValue(5);
+			mockL1Cache.deleteByPattern.mockResolvedValue({ deleted: 2, truncated: false });
+			mockL2Cache.deleteByPattern.mockResolvedValue({ deleted: 5, truncated: false });
 			const result = await service.deleteByPattern("prefix:*");
-			expect(result).toBe(7);
+			expect(result).toEqual({ deleted: 7, truncated: false });
 			expect(mockL1Cache.deleteByPattern).toHaveBeenCalledWith("prefix:*");
 			expect(mockL2Cache.deleteByPattern).toHaveBeenCalledWith("prefix:*");
+		});
+
+		it("should report truncated when either layer stopped early", async () => {
+			mockL1Cache.deleteByPattern.mockResolvedValue({ deleted: 0, truncated: false });
+			// L2 命中删除条数上限时提前中止扫描，剩下的键仍在库里
+			mockL2Cache.deleteByPattern.mockResolvedValue({ deleted: 5000, truncated: true });
+			const result = await service.deleteByPattern("user:permissions:*");
+			expect(result).toEqual({ deleted: 5000, truncated: true });
 		});
 	});
 

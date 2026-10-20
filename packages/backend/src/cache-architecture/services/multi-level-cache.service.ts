@@ -15,10 +15,20 @@ import {
   Logger,
   Optional,
 } from '@nestjs/common';
+import { PatternDeleteResult } from '../interfaces/cache-manager.interface';
 import { L1CacheProvider } from '../providers/l1-cache.provider';
 import { L2CacheProvider } from '../providers/l2-cache.provider';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheVersionService, CacheVersionType } from './cache-version.service';
+
+/**
+ * 缓存 TTL 上限（秒）。
+ *
+ * 超过此值几乎可以肯定是单位搞错——本仓库 TTL 统一按秒（L1 内部 *1000 换算、
+ * L2 走 Redis SET EX）。历史上 CACHE_TTL 误写成毫秒，权限缓存实际存活 1000 倍，
+ * 见 Gitea #468。这里把「单位再错一次」从静默 bug 变成日志可见。
+ */
+const MAX_CACHE_TTL_SECONDS = 86_400; // 24 小时
 
 /**
  * 缓存雪崩配置
@@ -288,20 +298,26 @@ export class MultiLevelCacheService {
   /**
    * 根据模式删除缓存（所有级别）
    */
-  async deleteByPattern(pattern: string): Promise<number> {
-    const [l1Count, l2Count] = await Promise.all([
+  async deleteByPattern(pattern: string): Promise<PatternDeleteResult> {
+    const [l1Result, l2Result] = await Promise.all([
       this.l1Cache.deleteByPattern(pattern),
       this.l2Cache.deleteByPattern(pattern),
     ]);
 
+    const truncated = l1Result.truncated || l2Result.truncated;
     this.logger.debug(
-      `根据模式删除缓存: ${pattern}, L1: ${l1Count}, L2: ${l2Count}`
+      `根据模式删除缓存: ${pattern}, L1: ${l1Result.deleted}, ` +
+        `L2: ${l2Result.deleted}, 截断: ${truncated}`
     );
-    return l1Count + l2Count;
+    return { deleted: l1Result.deleted + l2Result.deleted, truncated };
   }
 
   /**
    * 清空所有缓存（所有级别）
+   *
+   * ⚠️ 只有 L1 真的被清空。L2 的 clear 只重置命中统计、不删条目——
+   * 全仓没有任何 FLUSHDB，Redis 条目一律走 TTL 自然过期。
+   * 日志与 controller 文案都必须如实说明，否则会误导运维判断（#481）。
    */
   async clear(): Promise<void> {
     await Promise.all([
@@ -309,7 +325,7 @@ export class MultiLevelCacheService {
       this.l2Cache.clear(),
     ]);
 
-    this.logger.debug('所有缓存已清空');
+    this.logger.debug('L1 缓存已清空；L2 仅重置统计，条目保留至自然过期');
   }
 
   /**
@@ -417,11 +433,18 @@ export class MultiLevelCacheService {
    * 获取有效 TTL（应用缓存雪崩保护）
    */
   private getEffectiveTTL(ttl?: number): number {
-    if (!this.avalancheConfig.enabled) {
-      return ttl ?? 300;
+    const baseTTL = ttl ?? 300;
+    if (baseTTL > MAX_CACHE_TTL_SECONDS) {
+      this.logger.warn(
+        `缓存 TTL ${baseTTL} 秒超过上限 ${MAX_CACHE_TTL_SECONDS} 秒，` +
+          `疑似单位错误（毫秒被当成秒）；默认值为 300 秒`
+      );
     }
 
-    const baseTTL = ttl ?? 300;
+    if (!this.avalancheConfig.enabled) {
+      return baseTTL;
+    }
+
     const randomOffset = Math.floor(
       Math.random() * this.avalancheConfig.randomizationRange
     );

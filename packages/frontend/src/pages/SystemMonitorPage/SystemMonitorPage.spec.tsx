@@ -83,7 +83,12 @@ vi.mock('@/api-sdk', () => ({
         conversionService: null,
         conversionServiceError: null,
         history: [
-          { t: Date.now() - 60000, queueDepth: 1, running: 2, p95DurationMs: 4000 },
+          {
+            t: Date.now() - 60000,
+            queueDepth: 1,
+            running: 2,
+            p95DurationMs: 4000,
+          },
           { t: Date.now(), queueDepth: 2, running: 3, p95DurationMs: 4500 },
         ],
         sampledAt: Date.now(),
@@ -133,6 +138,9 @@ vi.mock('@/api-sdk', () => ({
   cacheMonitorControllerDeleteByPattern: vi.fn(),
   cacheMonitorControllerRefresh: vi.fn(),
   cacheMonitorControllerCleanup: vi.fn(),
+  cacheMonitorControllerGetKeyCatalog: vi.fn(() =>
+    Promise.resolve({ data: { entries: [] } })
+  ),
   alertControllerList: vi.fn(),
   taskRunControllerListRuns: vi.fn(),
   taskRunControllerListTasks: vi.fn(),
@@ -186,7 +194,10 @@ const alertListMock = vi.mocked(alertControllerList);
 const taskRunListMock = vi.mocked(taskRunControllerListRuns);
 const taskListMock = vi.mocked(taskRunControllerListTasks);
 
-function mockAlertList(items: unknown[] = [], pagination: Record<string, unknown> = {}) {
+function mockAlertList(
+  items: unknown[] = [],
+  pagination: Record<string, unknown> = {}
+) {
   alertListMock.mockResolvedValue({
     data: {
       data: items,
@@ -275,7 +286,13 @@ describe('SystemMonitorPage', () => {
     renderPage();
     await screen.findByText('PostgreSQL 数据库');
 
-    for (const label of ['核心服务', '缓存监控', '后台任务', '转换队列', '告警历史']) {
+    for (const label of [
+      '核心服务',
+      '缓存监控',
+      '后台任务',
+      '转换队列',
+      '告警历史',
+    ]) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }
 
@@ -392,19 +409,37 @@ describe('SystemMonitorPage', () => {
   it('转换队列 Tab 渲染排队 ETA（conversion-service 模式，#478）', async () => {
     const sdk = await import('@/api-sdk');
     vi.mocked(sdk.conversionMonitorControllerGetStats).mockResolvedValue({
-      data: { mode: 'conversion-service', processPool: null,
-        conversionService: { tasks: { total: 5, pending: 4, processing: 2, completed: 1, failed: 0 },
-          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 }, workers: {} },
-        conversionServiceError: null, history: [], sampledAt: Date.now() },
+      data: {
+        mode: 'conversion-service',
+        processPool: null,
+        conversionService: {
+          tasks: {
+            total: 5,
+            pending: 4,
+            processing: 2,
+            completed: 1,
+            failed: 0,
+          },
+          duration: { sampleCount: 8, p50Ms: 3000, p95Ms: 9000 },
+          workers: {},
+        },
+        conversionServiceError: null,
+        history: [],
+        sampledAt: Date.now(),
+      },
     } as never);
     renderPage();
     await screen.findByText('PostgreSQL 数据库');
     fireEvent.click(screen.getByRole('button', { name: '转换队列' }));
     // 排队 ETA：pending=4 / processing=2 × p50=3000ms = 6000ms = 6s
-    expect(await screen.findByText(/排队 4 个 · 预计约 6s 清空/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/排队 4 个 · 预计约 6s 清空/)
+    ).toBeInTheDocument();
     // 永久失败（known-bad）机制已整体移除：面板不再有该区块与复位入口
     expect(screen.queryByText(/永久失败/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '复位全部' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '复位全部' })
+    ).not.toBeInTheDocument();
   });
 
   it('切换到缓存监控 Tab 渲染摘要/健康/警告/图表/key 操作', async () => {
@@ -433,12 +468,18 @@ describe('SystemMonitorPage', () => {
     await screen.findByText('缓存摘要');
 
     expect(screen.getByRole('button', { name: '查询' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '设置' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '删除' })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: '清空所有缓存' })
+      screen.queryByRole('button', { name: '设置' })
     ).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '按模式删除' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '删除' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '重置监控统计' })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '按模式删除' })
+    ).not.toBeInTheDocument();
   });
 
   it('SYSTEM_ADMIN 用户在缓存 Tab 可见写操作按钮', async () => {
@@ -454,9 +495,13 @@ describe('SystemMonitorPage', () => {
 
     expect(screen.getByRole('button', { name: '设置' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '删除' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '按模式删除' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '按模式删除' })
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '刷新' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '清空所有缓存' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '重置监控统计' })
+    ).toBeInTheDocument();
   });
 
   it('告警历史 Tab 渲染分页列表与状态标签，open 告警高亮', async () => {
@@ -593,7 +638,9 @@ describe('SystemMonitorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '后台任务' }));
     await screen.findByText('storage-cleanup:expired-storage');
 
-    expect(screen.queryByRole('button', { name: '手动触发' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '手动触发' })
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
@@ -615,7 +662,9 @@ describe('SystemMonitorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '后台任务' }));
     await screen.findByRole('button', { name: '手动触发' });
 
-    expect(screen.getByRole('button', { name: '手动触发' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '手动触发' })
+    ).toBeInTheDocument();
     expect(screen.getByRole('checkbox')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '手动触发' }));
@@ -639,8 +688,14 @@ describe('SystemMonitorPage', () => {
       makeTaskRun({ id: 'r2', startedAt: '2026-08-01T01:00:00.000Z' }),
     ]);
     mockTaskList([
-      { taskName: 'storage-cleanup:expired-storage', description: '清理过期存储' },
-      { taskName: 'cache-cleanup:warning-check', description: '缓存监控告警检查' },
+      {
+        taskName: 'storage-cleanup:expired-storage',
+        description: '清理过期存储',
+      },
+      {
+        taskName: 'cache-cleanup:warning-check',
+        description: '缓存监控告警检查',
+      },
     ]);
 
     renderPage();

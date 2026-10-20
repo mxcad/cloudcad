@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -19,6 +20,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Logger,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -44,6 +46,13 @@ import { CacheOperationDto } from '../dto/cache-stats.dto';
 import { BatchCacheOperationDto } from '../dto/cache-stats.dto';
 import { CacheRefreshDto } from '../dto/cache-stats.dto';
 import { CacheCleanupDto } from '../dto/cache-stats.dto';
+import { CacheKeyCatalogDto } from '../dto/cache-key-catalog.dto';
+import { CACHE_KEY_CATALOG } from '../data/cache-key-catalog';
+import {
+  decidePatternDelete,
+  DELETABLE_CACHE_PATTERNS,
+} from '../utils/cache-pattern.guard';
+import { PatternDeleteResult } from '../interfaces/cache-manager.interface';
 
 /**
  * 缓存监控控制器
@@ -59,6 +68,8 @@ import { CacheCleanupDto } from '../dto/cache-stats.dto';
 @UseGuards(RolesGuard, PermissionsGuard)
 @RequirePermissions([SystemPermission.SYSTEM_MONITOR])
 export class CacheMonitorController {
+  private readonly logger = new Logger(CacheMonitorController.name);
+
   constructor(
     private readonly cacheMonitorService: CacheMonitorService,
     private readonly cacheService: MultiLevelCacheService
@@ -197,6 +208,25 @@ export class CacheMonitorController {
   }
 
   /**
+   * 获取缓存键目录
+   *
+   * 静态目录（不 SCAN Redis）：列出系统实际写入 L2 的键前缀、匹配模式与删除后果，
+   * 供前端「按模式删除」输入框做自动筛选。刻意不做实时 SCAN——共享库里住着会话与
+   * 限流计数，实时列 key 等于给删除操作多一个入口。
+   */
+  @Get('key-catalog')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '获取缓存键目录' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '成功获取缓存键目录',
+    type: CacheKeyCatalogDto,
+  })
+  getKeyCatalog(): CacheKeyCatalogDto {
+    return { entries: CACHE_KEY_CATALOG };
+  }
+
+  /**
    * 获取缓存值
    */
   @Get('value')
@@ -242,8 +272,12 @@ export class CacheMonitorController {
   @ApiOperation({ summary: '根据模式删除缓存' })
   @ApiResponse({ status: HttpStatus.OK, description: '成功删除缓存' })
   async deleteByPattern(@Query('pattern') pattern: string) {
-    const count = await this.cacheService.deleteByPattern(pattern);
-    return { success: true, message: `成功删除 ${count} 条缓存` };
+    const result = await this.deleteByPatternGuarded(pattern);
+    return {
+      success: true,
+      truncated: result.truncated,
+      message: this.patternDeleteMessage(result),
+    };
   }
 
   /**
@@ -287,17 +321,58 @@ export class CacheMonitorController {
   @ApiResponse({ status: HttpStatus.OK, description: '成功清理缓存' })
   async cleanup(@Body() dto: CacheCleanupDto) {
     if (dto.pattern) {
-      const count = await this.cacheService.deleteByPattern(dto.pattern);
-      return { success: true, message: `成功清理 ${count} 条缓存` };
+      const result = await this.deleteByPatternGuarded(dto.pattern);
+      return {
+        success: true,
+        truncated: result.truncated,
+        message: this.patternDeleteMessage(result),
+      };
     }
 
     if (dto.level === 'ALL' || !dto.level) {
       await this.cacheService.clear();
-      return { success: true, message: '成功清理所有缓存' };
+      // L2 的 clear 只重置计数器、不删条目（全仓无 FLUSHDB），
+      // 所以这里必须如实说明，否则运维以为 Redis 已清干净（#481）
+      return {
+        success: true,
+        message: '成功重置 L1 缓存与命中统计（L2 条目保留至自然过期，未删除 Redis 数据）',
+      };
     }
 
     // 分级清理（L1 / L2）——此前落到「需要实现」注释后直接返回 success:true（伪成功）
     await this.cacheService.clearLevel(dto.level);
     return { success: true, message: `成功清理 ${dto.level} 缓存` };
+  }
+
+  /**
+   * 「按模式删除」的唯一校验点（#467）。
+   *
+   * 刻意留在控制器、不下移到 cacheService.deleteByPattern：权限失效路径
+   * （permission-cache.service）也调该方法清缓存模式，用的是内部构造的合法模式，
+   * 在服务层加白名单会把那条路径一起拦死。这里的白名单只管运维操作面。
+   */
+  private async deleteByPatternGuarded(
+    pattern: string
+  ): Promise<PatternDeleteResult> {
+    const decision = decidePatternDelete(pattern);
+    if (!decision.ok) {
+      const detail =
+        decision.reason === 'overlaps-infra'
+          ? `通配范围会连带删除基础设施键（${decision.overlap!.join('、')}），已拒绝`
+          : `该模式不在缓存键目录的可删清单内，可选值：${DELETABLE_CACHE_PATTERNS.join('、')}`;
+      this.logger.warn(`拒绝按模式删除缓存: pattern=${pattern} - ${detail}`);
+      throw new BadRequestException({
+        code: 'CACHE_PATTERN_FORBIDDEN',
+        message: `模式 ${pattern} 不可删除：${detail}`,
+      });
+    }
+
+    return this.cacheService.deleteByPattern(pattern);
+  }
+
+  private patternDeleteMessage(result: PatternDeleteResult): string {
+    return result.truncated
+      ? `已删除 ${result.deleted} 条缓存，但已达单次删除条数上限，可能仍有匹配键未删除`
+      : `成功删除 ${result.deleted} 条缓存`;
   }
 }

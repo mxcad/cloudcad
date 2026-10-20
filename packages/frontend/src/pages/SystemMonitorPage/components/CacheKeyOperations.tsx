@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   KeyRound,
   Search,
@@ -11,14 +11,16 @@ import {
   cacheMonitorControllerCleanup,
   cacheMonitorControllerDeleteByPattern,
   cacheMonitorControllerDeleteValue,
+  cacheMonitorControllerGetKeyCatalog,
   cacheMonitorControllerGetValue,
   cacheMonitorControllerRefresh,
   cacheMonitorControllerSetValue,
 } from '@/api-sdk';
-import type { CacheOperationDto } from '@/api-sdk';
+import type { CacheKeyCatalogEntryDto, CacheOperationDto } from '@/api-sdk';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
-import { Button, Input, Tag } from '@/components/ui';
+import { Autocomplete, Button, Input, Tag } from '@/components/ui';
+import type { AutocompleteItem } from '@/components/ui';
 import { useNotification } from '@/contexts/NotificationContext';
 import styles from '../SystemMonitorPage.module.css';
 
@@ -39,8 +41,13 @@ function formatResult(value: unknown): string {
 
 /**
  * 缓存 Key 操作区（#217）
- * 查询为读操作（SYSTEM_MONITOR 可见）；设置/删除/按模式删除/刷新/清空仅 SYSTEM_ADMIN 可见，
+ * 查询为读操作（SYSTEM_MONITOR 可见）；设置/删除/按模式删除/刷新/重置仅 SYSTEM_ADMIN 可见，
  * 写操作带确认 + toast
+ *
+ * Key 与匹配模式均为后端目录（GET /cache-monitor/key-catalog）驱动的自动筛选：
+ * 管理员不再需要知道实际存在的键前缀，也不会再对着一个不存在的 `user:*` 示例猜。
+ * 目录里 scope=infra 的条目（会话、限流、IP 黑名单、缓存版本）只展示、不填充——
+ * 它们与业务缓存同库，删掉就是全体登出/限流失效，页面不给这个入口。
  */
 export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   isAdmin,
@@ -54,6 +61,99 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   const [result, setResult] = useState<string | null>(null);
   const [querying, setQuerying] = useState(false);
   const [mutating, setMutating] = useState(false);
+  const [catalog, setCatalog] = useState<CacheKeyCatalogEntryDto[]>([]);
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [patternOpen, setPatternOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    cacheMonitorControllerGetKeyCatalog()
+      .then((res) => {
+        if (!cancelled && res.data) setCatalog(res.data.entries);
+      })
+      .catch(() => {
+        // 目录是增强项：拉取失败时输入框退回纯手输，不阻塞查询/删除
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    []
+  );
+
+  // 输入框 focus 即展开候选；blur 延迟收起，避免点候选项时先 blur 把下拉关掉
+  const openNow = (setter: (v: boolean) => void) => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setter(true);
+  };
+  const closeLater = (setter: (v: boolean) => void) => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setter(false), 150);
+  };
+
+  const filterEntries = (query: string): CacheKeyCatalogEntryDto[] => {
+    const q = query.trim().toLowerCase();
+    if (!q) return catalog;
+    return catalog.filter((entry) =>
+      [entry.pattern, entry.name, entry.example, entry.description]
+        .join(' ')
+        .toLowerCase()
+        .includes(q)
+    );
+  };
+
+  const keyItems: AutocompleteItem[] = filterEntries(keyInput).map((entry) => ({
+    key: entry.id,
+    label: entry.pattern,
+    entry,
+  }));
+  const patternItems: AutocompleteItem[] = filterEntries(patternInput).map(
+    (entry) => ({
+      key: entry.id,
+      label: entry.pattern,
+      entry,
+      restricted: entry.scope === 'infra',
+    })
+  );
+
+  const renderCatalogItem = (item: AutocompleteItem) => {
+    const entry = item.entry as CacheKeyCatalogEntryDto;
+    return (
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <code
+              className="truncate font-mono"
+              style={{ color: 'var(--text-primary)' }}
+            >
+              {entry.pattern}
+            </code>
+            {item.restricted ? (
+              <Tag variant="warning" size="sm">
+                {t('不可删除')}
+              </Tag>
+            ) : (
+              <Tag variant="neutral" size="sm">
+                {t('可删除')}
+              </Tag>
+            )}
+          </div>
+          <p
+            className="truncate text-xs"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            {entry.name}：{entry.description}
+          </p>
+        </div>
+      </div>
+    );
+  };
 
   const handleQuery = useCallback(async () => {
     const key = keyInput.trim();
@@ -169,7 +269,16 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
         query: { pattern },
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出
-      showToast(t('按模式删除成功'), 'success');
+      // truncated=true 表示命中单次删除条数上限、还有键没删干净，不能报「成功」
+      const data = result.data as { truncated?: boolean } | undefined;
+      if (data?.truncated) {
+        showToast(
+          t('已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除'),
+          'warning'
+        );
+      } else {
+        showToast(t('按模式删除成功'), 'success');
+      }
       onChanged();
     } catch (error) {
       showToast(getErrorMessage(error) || t('按模式删除失败'), 'error');
@@ -211,9 +320,11 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
 
   const handleClearAll = useCallback(async () => {
     const confirmed = await showConfirm({
-      title: t('清空所有缓存'),
-      message: t('确定要清空所有缓存吗？此操作不可恢复。'),
-      confirmText: t('确认清空'),
+      title: t('重置监控统计'),
+      message: t(
+        '只重置后端进程内的 L1 内存缓存与命中统计。不会删除 Redis 中的数据，会话、限流计数、IP 黑名单与缓存版本一律不动，不影响任何用户的登录状态。需要清 Redis 请用「按模式删除」。'
+      ),
+      confirmText: t('确认重置'),
       cancelText: t('取消'),
       type: 'warning',
     });
@@ -227,11 +338,11 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
       });
       // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
       // 否则清空失败仍弹"缓存已清空"（破坏性操作，历史 bug）
-      showToast(t('缓存已清空'), 'success');
+      showToast(t('已重置 L1 内存缓存与监控统计'), 'success');
       setResult(null);
       onChanged();
     } catch (error) {
-      showToast(getErrorMessage(error) || t('清空缓存失败'), 'error');
+      showToast(getErrorMessage(error) || t('重置监控统计失败'), 'error');
     } finally {
       setMutating(false);
     }
@@ -258,11 +369,25 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
         )}
       </div>
 
+      <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>
+        {t('L1 在后端进程内存，L2 在 Redis；按模式删除只作用于 Redis')}
+      </p>
+
       <div className={styles.keyOpsRow}>
-        <Input
-          placeholder={t('缓存 Key')}
+        <Autocomplete
           value={keyInput}
-          onChange={(e) => setKeyInput(e.target.value)}
+          onChange={(value) => setKeyInput(value)}
+          items={keyItems}
+          open={keyOpen && keyItems.length > 0}
+          renderItem={renderCatalogItem}
+          onSelectItem={(item) => {
+            const entry = item.entry as CacheKeyCatalogEntryDto;
+            setKeyInput(entry.example);
+            setKeyOpen(false);
+          }}
+          placeholder={t('缓存 Key（点击选择或输入筛选）')}
+          onFocus={openNow(setKeyOpen)}
+          onBlur={closeLater(setKeyOpen)}
           className={styles.keyOpsKeyInput}
           wrapperClassName={styles.keyOpsKeyWrapper}
         />
@@ -326,10 +451,27 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
           </div>
 
           <div className={styles.keyOpsRow}>
-            <Input
-              placeholder={t('匹配模式（如 user:*）')}
+            <Autocomplete
               value={patternInput}
-              onChange={(e) => setPatternInput(e.target.value)}
+              onChange={(value) => setPatternInput(value)}
+              items={patternItems}
+              open={patternOpen && patternItems.length > 0}
+              renderItem={renderCatalogItem}
+              onSelectItem={(item) => {
+                const entry = item.entry as CacheKeyCatalogEntryDto;
+                if (entry.scope === 'infra') {
+                  showToast(
+                    `${t('该键属于基础设施，不允许删除')}：${entry.removalEffect}`,
+                    'warning'
+                  );
+                  return;
+                }
+                setPatternInput(entry.pattern);
+                setPatternOpen(false);
+              }}
+              placeholder={t('匹配模式（点击选择或输入筛选）')}
+              onFocus={openNow(setPatternOpen)}
+              onBlur={closeLater(setPatternOpen)}
               className={styles.keyOpsKeyInput}
               wrapperClassName={styles.keyOpsKeyWrapper}
             />
@@ -347,7 +489,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               loading={mutating}
               icon={Trash2}
             >
-              {t('清空所有缓存')}
+              {t('重置监控统计')}
             </Button>
           </div>
         </>

@@ -14,6 +14,19 @@ import type { CacheLevel } from '../enums/cache-level.enum';
 import type { CacheStrategy } from '../enums/cache-strategy.enum';
 
 /**
+ * 按模式删除的结果
+ *
+ * truncated 为 true 表示命中删除条数上限、还有键没删干净——调用方必须把这一点
+ * 报给操作者，否则「成功删除 5000 条」会被当成全量清理完成。
+ */
+export interface PatternDeleteResult {
+  /** 实际删除的条目数 */
+  deleted: number;
+  /** 是否因达到删除条数上限而提前停止（false 表示该模式已删干净） */
+  truncated: boolean;
+}
+
+/**
  * 缓存管理器接口
  * 定义三级缓存的标准操作
  */
@@ -95,9 +108,9 @@ export interface IL1CacheManager<T = unknown> extends ICacheManager<T> {
   /**
    * 根据模式删除缓存
    * @param pattern 模式（支持 * 和 ? 通配符，与 L2 的 Redis glob 语法一致）
-   * @returns 删除的缓存条目数
+   * @returns 删除结果（deleted 为实际删除条数，truncated 标记是否因上限未删净）
    */
-  deleteByPattern(pattern: string): Promise<number>;
+  deleteByPattern(pattern: string): Promise<PatternDeleteResult>;
 }
 
 /**
@@ -134,7 +147,7 @@ export interface IL2CacheManager<T = unknown> extends ICacheManager<T> {
    * 根据模式删除缓存
    * @param pattern 模式（支持通配符）
    */
-  deleteByPattern(pattern: string): Promise<number>;
+  deleteByPattern(pattern: string): Promise<PatternDeleteResult>;
 }
 
 

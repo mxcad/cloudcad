@@ -23,7 +23,7 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import { SystemPermission } from '../../common/enums/permissions.enum';
 import { MultiLevelCacheService } from '../../cache-architecture/services/multi-level-cache.service';
-import { CacheKeyUtil } from '../../cache-architecture/utils/cache-key.utils';
+import { cacheKey } from '../../cache-architecture/utils/cache-key';
 import {
   CacheVersionService,
   CacheVersionType,
@@ -31,11 +31,16 @@ import {
 
 /**
  * 缓存失效事件
+ *
+ * 没有 `pattern` 成员：67ded98 删除了唯一的生产方（公共 clearPattern 方法），
+ * 此后没有任何实例会广播模式失效事件。接收侧若保留它，等于给 Redis pub/sub 留一个
+ * 无目录白名单的 deleteByPattern 入口——任意发布者用 `*` 就能删掉同库的基础设施键
+ * （token:blacklist:* 登出名单、mxcad:sess:* 会话、ratelimit:* 限流），那是 #467 挡掉的同类风险面。
+ * 按模式的删除只走 cache-monitor 的 HTTP 端点，那里有 cache-pattern.guard 把关。
  */
 interface CacheInvalidationEvent {
-  type: 'user' | 'project' | 'role' | 'all' | 'pattern';
+  type: 'user' | 'project' | 'role' | 'all';
   id?: string;
-  pattern?: string;
   timestamp: number;
   source?: string;
 }
@@ -76,7 +81,6 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
         this.subscriber.unsubscribe(`${this.CHANNEL_PREFIX}:project`),
         this.subscriber.unsubscribe(`${this.CHANNEL_PREFIX}:role`),
         this.subscriber.unsubscribe(`${this.CHANNEL_PREFIX}:all`),
-        this.subscriber.unsubscribe(`${this.CHANNEL_PREFIX}:pattern`),
       ]);
     }
   }
@@ -112,7 +116,6 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
         `${this.CHANNEL_PREFIX}:project`,
         `${this.CHANNEL_PREFIX}:role`,
         `${this.CHANNEL_PREFIX}:all`,
-        `${this.CHANNEL_PREFIX}:pattern`,
       ];
 
       // 分别订阅每个频道
@@ -154,7 +157,7 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
       const eventAge = Date.now() - event.timestamp;
       if (eventAge > 5000) {
         this.logger.debug(
-          `忽略过期缓存失效事件: ${event.type}:${event.id || event.pattern || 'all'} (age: ${eventAge}ms)`
+          `忽略过期缓存失效事件: ${event.type}:${event.id || 'all'} (age: ${eventAge}ms)`
         );
         return;
       }
@@ -182,18 +185,9 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
           // fire-and-forget：内部方法捕获异常，不会产生 unhandledRejection
           void this.clearAllCacheInternal();
           break;
-        case 'pattern': {
-          // 兼容旧实例广播的 {type:'pattern', id} 事件（pattern 字段为独立字段后引入）
-          const pattern = event.pattern ?? event.id;
-          if (pattern) {
-            // fire-and-forget：clearPatternInternal 内部捕获异常，不会产生 unhandledRejection
-            void this.clearPatternInternal(pattern);
-          }
-          break;
-        }
       }
 
-      this.logger.debug(`处理缓存失效事件: ${event.type}:${event.id || event.pattern || 'all'}`);
+      this.logger.debug(`处理缓存失效事件: ${event.type}:${event.id || 'all'}`);
     } catch (error) {
       this.logger.error(`处理缓存失效事件失败: ${error.message}`);
     }
@@ -203,16 +197,14 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
    * 发布缓存失效事件
    */
   private async publishInvalidationEvent(
-    type: 'user' | 'project' | 'role' | 'all' | 'pattern',
+    type: 'user' | 'project' | 'role' | 'all',
     id?: string,
-    source?: string,
-    pattern?: string
+    source?: string
   ): Promise<void> {
     try {
       const event: CacheInvalidationEvent = {
         type,
         id,
-        pattern,
         timestamp: Date.now(),
         source,
       };
@@ -278,13 +270,13 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
     const userIdNum = parseInt(userId, 10);
     // 生成需要删除的缓存键
     const keysToDelete = [
-      CacheKeyUtil.userPermissions(userIdNum),
-      CacheKeyUtil.user(userIdNum),
+      cacheKey('user_permissions', userIdNum),
+      cacheKey('user', userIdNum),
       // 删除 is_admin 缓存
-      `is_admin:${userId}`,
+      cacheKey('is_admin', userId),
       // 删除所有单个权限缓存
       ...Object.values(SystemPermission).map(
-        (perm) => `system_perm:${userId}:${perm}`
+        (perm) => cacheKey('system_perm', userId, perm)
       ),
     ];
 
@@ -330,8 +322,8 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
     const projectIdNum = parseInt(projectId, 10);
     // 生成需要删除的缓存键
     const keysToDelete = [
-      CacheKeyUtil.projectPermissions(projectIdNum),
-      CacheKeyUtil.project(projectIdNum),
+      cacheKey('project_permissions', projectIdNum),
+      cacheKey('project', projectIdNum),
     ];
 
     try {
@@ -376,10 +368,10 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
    */
   private async clearRoleCacheInternal(roleName: string): Promise<void> {
     const keysToDelete = [
-      CacheKeyUtil.custom('role', roleName),
+      cacheKey('role', roleName),
       // 删除该角色的权限缓存
-      `role:permissions:${roleName}`,
-      `role:path:${roleName}`,
+      cacheKey('role_permissions', roleName),
+      cacheKey('role_path', roleName),
     ];
 
     try {
@@ -403,21 +395,6 @@ export class PermissionCacheService implements OnModuleInit, OnModuleDestroy {
       this.logger.error(`清除所有缓存失败: ${(error as Error).message}`);
     }
     this.logger.debug('清除所有缓存');
-  }
-
-  /**
-   * 根据模式清除缓存（内部实现，不发布事件）
-   * 保留 'pattern' 频道订阅：滚动部署期间旧实例仍可能广播 pattern 事件，失败仅记录不抛出
-   */
-  private async clearPatternInternal(pattern: string): Promise<void> {
-    try {
-      await this.multiLevelCache.deleteByPattern(pattern);
-      this.logger.debug(`根据模式清除缓存: ${pattern}`);
-    } catch (error: unknown) {
-      this.logger.error(
-        `根据模式清除缓存失败: ${pattern} - ${(error as Error).message}`
-      );
-    }
   }
 
   /**

@@ -16,7 +16,11 @@ import {
   Logger,
   OnModuleDestroy,
 } from '@nestjs/common';
-import { IL1CacheManager } from '../interfaces/cache-manager.interface';
+import {
+  IL1CacheManager,
+  PatternDeleteResult,
+} from '../interfaces/cache-manager.interface';
+import { globToRegExp } from '../utils/cache-pattern.guard';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheStrategy } from '../enums/cache-strategy.enum';
 
@@ -131,8 +135,8 @@ export class L1CacheProvider<T = unknown>
    * 根据模式删除缓存
    * 遍历 Map 匹配 pattern（支持 * 和 ? 通配符，与 L2 的 Redis glob 语法一致）
    */
-  async deleteByPattern(pattern: string): Promise<number> {
-    const regex = this.patternToRegExp(pattern);
+  async deleteByPattern(pattern: string): Promise<PatternDeleteResult> {
+    const regex = globToRegExp(pattern);
     let deleted = 0;
 
     for (const key of this.cache.keys()) {
@@ -145,7 +149,8 @@ export class L1CacheProvider<T = unknown>
     if (deleted > 0) {
       this.logger.debug(`根据模式删除了 ${deleted} 条 L1 缓存: ${pattern}`);
     }
-    return deleted;
+    // L1 是进程内 Map，全量遍历无条数上限，故 truncated 恒为 false
+    return { deleted, truncated: false };
   }
 
   /**
@@ -236,23 +241,6 @@ export class L1CacheProvider<T = unknown>
       totalRequests: this.hits + this.misses,
       memoryUsage: this.estimateMemoryUsage(),
     };
-  }
-
-  /**
-   * 将 glob 模式转换为正则表达式（支持 * 和 ? 通配符，与 Redis glob 语法一致）
-   */
-  private patternToRegExp(pattern: string): RegExp {
-    let regexStr = '';
-    for (const char of pattern) {
-      if (char === '*') {
-        regexStr += '.*';
-      } else if (char === '?') {
-        regexStr += '.';
-      } else {
-        regexStr += char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      }
-    }
-    return new RegExp(`^${regexStr}$`);
   }
 
   /**

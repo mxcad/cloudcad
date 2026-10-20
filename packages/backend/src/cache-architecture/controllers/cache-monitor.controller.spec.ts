@@ -32,6 +32,7 @@ import {
   type PermissionCheckMode,
 } from '../../common/decorators/require-permissions.decorator';
 import { SystemPermission } from '../../common/enums/permissions.enum';
+import { CustomValidationPipe } from '../../common/pipes/validation.pipe';
 
 describe('CacheMonitorController', () => {
   let app: INestApplication;
@@ -104,7 +105,10 @@ describe('CacheMonitorController', () => {
     mockCacheService.set.mockResolvedValue(undefined);
     mockCacheService.delete.mockResolvedValue(undefined);
     mockCacheService.deleteMany.mockResolvedValue(undefined);
-    mockCacheService.deleteByPattern.mockResolvedValue(3);
+    mockCacheService.deleteByPattern.mockResolvedValue({
+      deleted: 3,
+      truncated: false,
+    });
     mockCacheService.clear.mockResolvedValue(undefined);
     mockCacheService.clearLevel.mockResolvedValue(undefined);
 
@@ -135,6 +139,9 @@ describe('CacheMonitorController', () => {
       type: VersioningType.URI,
       defaultVersion: '1',
     });
+    // 与 AppModule 的 APP_PIPE 保持一致：本测试模块未加载 AppModule，若不挂载全局校验管道，
+    // whitelist + forbidNonWhitelisted 的拒绝行为就完全测不到（6 个请求 DTO 曾因此整体 400 上线）
+    app.useGlobalPipes(new CustomValidationPipe());
     app.use((req, _res, next) => {
       (req as { user?: { id: string } }).user = { id: 'test-user' };
       next();
@@ -155,6 +162,7 @@ describe('CacheMonitorController', () => {
     { method: 'get', path: '/api/v1/cache-monitor/size-trend?minutes=60' },
     { method: 'get', path: '/api/v1/cache-monitor/warnings' },
     { method: 'get', path: '/api/v1/cache-monitor/value?key=foo' },
+    { method: 'get', path: '/api/v1/cache-monitor/key-catalog' },
   ];
 
   const WRITE_ENDPOINTS: Array<{ method: string; path: string }> = [
@@ -207,11 +215,14 @@ describe('CacheMonitorController', () => {
       expect(deleteRes.status).toBe(200);
       expect(mockCacheService.delete).toHaveBeenCalledWith('foo');
 
+      // 必须是目录里的可删模式——目录外的模式现在会被守卫拦下（见下方 #467 用例）
       const patternRes = await request(app.getHttpServer()).delete(
-        '/api/v1/cache-monitor/pattern?pattern=foo*'
+        '/api/v1/cache-monitor/pattern?pattern=user:permissions:*'
       );
       expect(patternRes.status).toBe(200);
-      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith('foo*');
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+        'user:permissions:*'
+      );
 
       const valuesRes = await request(app.getHttpServer())
         .delete('/api/v1/cache-monitor/values')
@@ -239,6 +250,241 @@ describe('CacheMonitorController', () => {
       }
       // 分级清理不应触发整库 clear
       expect(mockCacheService.clear).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('按模式删除的服务端白名单守卫（#467）', () => {
+    // 此前的实现把任意字符串直接喂给 L2 的 SCAN+DEL：共享库里住着会话、token
+    // 吊销名单、限流计数，手输 `*` 会连带删掉。前端只做了提示，不构成防护。
+    beforeEach(() => {
+      mockPermissionService.checkSystemPermission.mockResolvedValue(true);
+    });
+
+    it('目录外的模式一律拒绝，且不触碰缓存服务', async () => {
+      const res = await request(app.getHttpServer()).delete(
+        '/api/v1/cache-monitor/pattern?pattern=*'
+      );
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('*');
+      expect(mockCacheService.deleteByPattern).not.toHaveBeenCalled();
+    });
+
+    it('基础设施模式拒绝（会话键会让全体用户登出）', async () => {
+      const res = await request(app.getHttpServer()).delete(
+        '/api/v1/cache-monitor/pattern?pattern=mxcad:sess:*'
+      );
+      expect(res.status).toBe(400);
+      expect(mockCacheService.deleteByPattern).not.toHaveBeenCalled();
+    });
+
+    it('user:* 放行：与它共享前缀的基础设施键已随 #484 退役', async () => {
+      // user:* 曾因通配会命中基础设施键 user:blacklist:* 被拒；该键退役后 user:*
+      // 只剩 user:<id> 与 user:permissions:*，两类都是可重建的业务缓存。
+      mockCacheService.deleteByPattern.mockResolvedValueOnce({
+        deleted: 3,
+        truncated: false,
+      });
+      const res = await request(app.getHttpServer()).delete(
+        '/api/v1/cache-monitor/pattern?pattern=user:*'
+      );
+      expect(res.status).toBe(200);
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith('user:*');
+    });
+
+    it('目录内的业务缓存模式放行', async () => {
+      mockCacheService.deleteByPattern.mockResolvedValueOnce({
+        deleted: 12,
+        truncated: false,
+      });
+      const res = await request(app.getHttpServer()).delete(
+        '/api/v1/cache-monitor/pattern?pattern=role:permissions:*'
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.truncated).toBe(false);
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+        'role:permissions:*'
+      );
+    });
+
+    it('cleanup 的模式分支走同一守卫', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/cache-monitor/cleanup')
+        .send({ pattern: 'ratelimit:*' });
+      expect(res.status).toBe(400);
+      expect(mockCacheService.deleteByPattern).not.toHaveBeenCalled();
+    });
+
+    it('达到删除上限时明确告知仍有键未删除，不谎报清理完成', async () => {
+      mockCacheService.deleteByPattern.mockResolvedValueOnce({
+        deleted: 5000,
+        truncated: true,
+      });
+      const res = await request(app.getHttpServer()).delete(
+        '/api/v1/cache-monitor/pattern?pattern=user:permissions:*'
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.truncated).toBe(true);
+      expect(res.body.message).toContain('未删除');
+    });
+  });
+
+  describe('请求 DTO 必须能通过全局校验管道（回归：6 个端点曾整体 400）', () => {
+    // 这些 DTO 原先只声明 @ApiProperty、无 class-validator 约束，
+    // 在 whitelist + forbidNonWhitelisted 下每个字段都被判为「未白名单属性」，
+    // 前端按契约发 { level: 'ALL' } 这类合法请求也被拒（property level should not exist）。
+    beforeEach(() => {
+      mockPermissionService.checkSystemPermission.mockResolvedValue(true);
+    });
+
+    it('清空所有缓存：前端实际请求体 { level: "ALL" } 通过', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/cache-monitor/cleanup')
+        .send({ level: 'ALL' });
+      expect(res.status).toBe(200);
+      expect(mockCacheService.clear).toHaveBeenCalled();
+    });
+
+    it('清空缓存的文案如实说明未删除 Redis 数据（#481）', async () => {
+      // L2 的 clear 只重置计数器、不删条目（全仓无 FLUSHDB），
+      // 文案若说「清理所有缓存」会让运维误以为 Redis 已清干净
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/cache-monitor/cleanup')
+        .send({ level: 'ALL' });
+      expect(res.body.message).toContain('未删除 Redis 数据');
+      expect(res.body.message).not.toContain('成功清理所有缓存');
+    });
+
+    it('清空缓存：空请求体也通过（两个字段均声明为可选）', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/cache-monitor/cleanup')
+        .send({});
+      expect(res.status).toBe(200);
+    });
+
+    it('按模式清理：{ pattern } 通过', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/cache-monitor/cleanup')
+        .send({ pattern: 'user:permissions:*' });
+      expect(res.status).toBe(200);
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalledWith(
+        'user:permissions:*'
+      );
+    });
+
+    it('性能趋势：query 参数 { level, minutes } 通过', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/cache-monitor/performance-trend?level=L1&minutes=60'
+      );
+      expect(res.status).toBe(200);
+      expect(mockMonitorService.getPerformanceTrend).toHaveBeenCalledWith(
+        'L1',
+        60
+      );
+    });
+
+    it('设置缓存：{ key, value, ttl } 通过', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/cache-monitor/value')
+        .send({ key: 'permission:1', value: { a: 1 }, ttl: 60 });
+      expect(res.status).toBe(200);
+    });
+
+    it('刷新缓存：{ key } 通过', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/cache-monitor/refresh')
+        .send({ key: 'permission:1' });
+      expect(res.status).toBe(200);
+    });
+
+    it('批量删除：{ keys } 通过', async () => {
+      const res = await request(app.getHttpServer())
+        .delete('/api/v1/cache-monitor/values')
+        .send({ keys: ['a:1', 'b:2'] });
+      expect(res.status).toBe(200);
+    });
+
+    it('统计查询：{ level, includePerformance } 通过', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/cache-monitor/stats?level=L1&includePerformance=true'
+      );
+      expect(res.status).toBe(200);
+    });
+
+    it('放开后原有约束仍然生效：非法枚举/空 key 一律 400', async () => {
+      for (const [method, path, body] of [
+        ['post', '/api/v1/cache-monitor/cleanup', { level: 'L9' }],
+        ['post', '/api/v1/cache-monitor/value', {}],
+        ['delete', '/api/v1/cache-monitor/values', { keys: ['a', 3] }],
+        ['post', '/api/v1/cache-monitor/refresh', { key: '' }],
+        ['post', '/api/v1/cache-monitor/cleanup', { level: 'L9', pattern: 'x' }],
+      ] as const) {
+        const res = await request(app.getHttpServer())[method](path).send(body);
+        expect(res.status).toBe(400);
+      }
+      const trend = await request(app.getHttpServer()).get(
+        '/api/v1/cache-monitor/performance-trend'
+      );
+      expect(trend.status).toBe(400);
+      const badTrend = await request(app.getHttpServer()).get(
+        '/api/v1/cache-monitor/performance-trend?level=L3'
+      );
+      expect(badTrend.status).toBe(400);
+    });
+  });
+
+  describe('缓存键目录（GET key-catalog）', () => {
+    it('返回目录且字段完整', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/cache-monitor/key-catalog'
+      );
+      expect(res.status).toBe(200);
+
+      const { entries } = res.body as {
+        entries: Array<Record<string, string>>;
+      };
+      expect(entries.length).toBeGreaterThan(0);
+
+      for (const entry of entries) {
+        for (const field of [
+          'id',
+          'name',
+          'pattern',
+          'description',
+          'scope',
+          'removalEffect',
+          'ttl',
+          'example',
+        ]) {
+          expect(entry[field]).toBeTruthy();
+        }
+        expect(['cache', 'infra']).toContain(entry.scope);
+      }
+    });
+
+    it('会话与限流键必须标为 infra（页面据此禁用删除）', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/cache-monitor/key-catalog'
+      );
+      const byPattern = new Map(
+        (res.body as { entries: Array<{ pattern: string; scope: string }> })
+          .entries.map((e) => [e.pattern, e.scope])
+      );
+
+      expect(byPattern.get('mxcad:sess:*')).toBe('infra');
+      expect(byPattern.get('ratelimit:*')).toBe('infra');
+      // 业务权限缓存应保持可删除
+      expect(byPattern.get('system_perm:*:*')).toBe('cache');
+      expect(byPattern.get('user:permissions:*')).toBe('cache');
+    });
+
+    it('占位符示例 user:* 必须是真实前缀（前端曾展示不存在的 user: 前缀）', async () => {
+      const res = await request(app.getHttpServer()).get(
+        '/api/v1/cache-monitor/key-catalog'
+      );
+      const patterns = (res.body as { entries: Array<{ pattern: string }> })
+        .entries.map((e) => e.pattern);
+
+      expect(patterns).toContain('user:permissions:*');
     });
   });
 
@@ -279,6 +525,7 @@ describe('CacheMonitorController', () => {
       'getSizeTrend',
       'getWarnings',
       'getValue',
+      'getKeyCatalog',
     ];
 
     const writeHandlers: Array<keyof CacheMonitorController> = [

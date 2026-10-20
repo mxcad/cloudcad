@@ -74,54 +74,34 @@ describe('PermissionCacheService', () => {
   });
 
   // =========================================================================
-  // pattern invalidation event handling
+  // pattern invalidation event（#485：接收侧已移除）
   // =========================================================================
 
-  describe('when receiving a pattern invalidation event', () => {
-    it('should clear cache by pattern on the remote instance', () => {
-      messageHandler!(
+  describe('pattern invalidation event（#485）', () => {
+    it('不订阅 pattern 频道', () => {
+      expect(subscriber.subscribe).not.toHaveBeenCalledWith(
         'permission:cache:invalidation:pattern',
-        JSON.stringify({
-          type: 'pattern',
-          pattern: 'policy:*',
-          timestamp: Date.now(),
-          source: 'other-instance',
-        })
-      );
-
-      expect(mockMultiLevelCache.deleteByPattern).toHaveBeenCalledWith(
-        'policy:*'
+        expect.anything()
       );
     });
 
-    it('should accept legacy events with id field (rolling deployment compatibility)', () => {
+    it('收到 pattern 事件不得调用 deleteByPattern（无白名单的删除入口）', () => {
+      // 旧实现是 clearPattern(pattern) → publishInvalidationEvent('pattern', …)，
+      // 接收侧直接 deleteByPattern(pattern)，没有 cache-pattern.guard 的目录白名单：
+      // 任意发布者用 `*` 就能扫掉同库的 token:blacklist:* / mxcad:sess:* / ratelimit:*。
+      // 67ded98 已删掉唯一的生产方，这条通道不再有兼容价值，收掉入口而不是留着等误用。
       messageHandler!(
         'permission:cache:invalidation:pattern',
         JSON.stringify({
           type: 'pattern',
-          id: 'policy:*',
+          pattern: '*',
           timestamp: Date.now(),
-          source: 'other-instance',
-        })
-      );
-
-      expect(mockMultiLevelCache.deleteByPattern).toHaveBeenCalledWith(
-        'policy:*'
-      );
-    });
-
-    it('should ignore expired invalidation events', () => {
-      messageHandler!(
-        'permission:cache:invalidation:pattern',
-        JSON.stringify({
-          type: 'pattern',
-          pattern: 'policy:*',
-          timestamp: Date.now() - 60000,
-          source: 'other-instance',
+          source: 'legacy-instance',
         })
       );
 
       expect(mockMultiLevelCache.deleteByPattern).not.toHaveBeenCalled();
+      expect(mockMultiLevelCache.clear).not.toHaveBeenCalled();
     });
   });
 
