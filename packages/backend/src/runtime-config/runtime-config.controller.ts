@@ -50,6 +50,9 @@ import {
   RuntimeConfigDefinitionDto,
   RuntimeConfigHistoryDto,
   ResetCategoryDto,
+  ApplyProfileDto,
+  RuntimeProfilePreviewResponseDto,
+  RuntimeProfileApplyResponseDto,
 } from './dto/runtime-config.dto';
 import type { RuntimeConfigValue } from './runtime-config.types';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -364,5 +367,46 @@ export class RuntimeConfigController {
     );
 
     return { success: true, keys };
+  }
+
+  /**
+   * 预览切换安全模式会改动哪些项（只读，不写库）
+   */
+  @Post('profile/preview')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '预览切换安全模式会影响哪些配置项' })
+  @ApiBody({ type: ApplyProfileDto })
+  @ApiResponse({
+    status: 201,
+    description: '返回受影响配置项清单（含当前值与目标值）',
+    type: [RuntimeProfilePreviewResponseDto],
+  })
+  async previewProfile(@Body() dto: ApplyProfileDto) {
+    return this.runtimeConfigService.previewProfileApply(dto.profile);
+  }
+
+  /**
+   * 应用安全模式：把声明了 profile 取值的配置项批量写到目标值
+   */
+  @Post('profile/apply')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '应用安全模式（批量写入配置并记审计）' })
+  @ApiBody({ type: ApplyProfileDto })
+  @ApiResponse({
+    status: 201,
+    description: '返回实际写入与跳过的配置项',
+    type: RuntimeProfileApplyResponseDto,
+  })
+  async applyProfile(@Body() dto: ApplyProfileDto, @Req() req: Request) {
+    const user = req.user as { id: string };
+    const ip = req.ip;
+
+    return this.runtimeConfigService.applyProfile(
+      dto.profile,
+      user.id,
+      ip
+    );
   }
 }

@@ -29,6 +29,9 @@ import {
   RuntimeConfigValueType,
   RuntimeConfigHistoryEntry,
   ConfigValueSource,
+  ConfigProfile,
+  RuntimeProfilePreviewEntry,
+  RuntimeProfileApplyResult,
 } from './runtime-config.types';
 import type { IRuntimeConfigService } from '@cloudcad/contracts';
 
@@ -660,6 +663,190 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     }
 
     return keys;
+  }
+
+  /**
+   * 参与 profile 批量应用的定义项（声明了 `profiles` 的 key，ADR-0077）。
+   * 预览与实际应用都必须走这一个出口取集合，避免两处各写一遍筛选条件而漏项。
+   */
+  private getProfileDefinitions(): RuntimeConfigDefinition[] {
+    return RUNTIME_CONFIG_DEFINITIONS.filter((d) => d.profiles != null);
+  }
+
+  /**
+   * 校验 profile 名称。未知名称必须在写入前抛出——静默回退成某个模式
+   * 会让操作者以为切换成功了。
+   */
+  private assertProfile(profile: string): ConfigProfile {
+    if (profile !== 'secure' && profile !== 'normal') {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.config_extra.unknown_profile', {
+          args: { profile },
+        }) ?? `未知的安全模式: ${profile}`
+      );
+    }
+    return profile;
+  }
+
+  /**
+   * 预览某 profile 的应用结果（只读，不写库）。
+   *
+   * `willChange` 与实际应用的 `applied` 必须完全一致——这是本机制最主要的失效方式
+   * （运维按预览的「将改动项」做过决策，点应用后行为却不同）。为此预览与应用共用
+   * `buildProfilePlan`，而不是各自实现一份判定。
+   */
+  async previewProfileApply(
+    profile: string
+  ): Promise<RuntimeProfilePreviewEntry[]> {
+    const target = this.assertProfile(profile);
+    const plan = await this.buildProfilePlan(target);
+
+    return plan.entries.map((entry) => {
+      const def = entry.def;
+      const row = entry.row;
+      const { value: currentValue, source } = this.resolveValue(def, row);
+      return {
+        key: def.key,
+        type: def.type,
+        category: def.category,
+        currentValue,
+        source,
+        targetValue: entry.targetValue,
+        willChange: entry.willChange,
+        isModified: row?.updatedBy != null,
+        envValue: this.resolveEnvLayer(def) ?? null,
+      };
+    });
+  }
+
+  /**
+   * 应用某 profile：把声明了 `profiles` 的 key 批量写到目标值，覆盖用户已手工修改的
+   * 值（ADR-0077 D5）。
+   *
+   * 实现为「写入 `value` 并记 `updatedBy`」而非写 `source:'profile'` 一类新字段——
+   * 69 个 key 零 schema 改动。回退路径因此也现成：逐个 `resetToDefault` 即清 `updatedBy`。
+   *
+   * 事务边界：值写入与审计写入同在一个交互事务里，任一项失败全部回滚。缓存失效在
+   * 事务**外**——它是尽力而为的加速手段，其失败不应让已经提交的 DB 写入回滚。
+   *
+   * `operatorId` 必填（不可缺省）：写空会让 `resolveValue` 把该行当成安装默认行，
+   * env 层重新压上来，profile 静默不生效——这是本方法最容易踩的坑。
+   */
+  async applyProfile(
+    profile: string,
+    operatorId: string,
+    operatorIp?: string
+  ): Promise<RuntimeProfileApplyResult> {
+    const target = this.assertProfile(profile);
+
+    if (!operatorId) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.config_extra.missing_operator') ??
+          '缺少操作者标识，无法记录修改来源'
+      );
+    }
+
+    const plan = await this.buildProfilePlan(target);
+    const toWrite = plan.entries.filter((entry) => entry.willChange);
+
+    if (toWrite.length > 0) {
+      await this.prisma.$transaction(async (tx) => {
+        for (const entry of toWrite) {
+          const { def, row, targetValue } = entry;
+          const newValueJson = JSON.stringify(targetValue);
+
+          if (row) {
+            await tx.runtimeConfig.update({
+              where: { key: def.key },
+              data: { value: newValueJson, updatedBy: operatorId },
+            });
+          } else {
+            await tx.runtimeConfig.create({
+              data: {
+                key: def.key,
+                value: newValueJson,
+                type: def.type,
+                category: def.category,
+                description: def.description,
+                isPublic: def.isPublic,
+                updatedBy: operatorId,
+              },
+            });
+          }
+
+          await tx.runtimeConfigLog.create({
+            data: {
+              key: def.key,
+              oldValue: row?.value ?? null,
+              newValue: newValueJson,
+              operatorId,
+              operatorIp,
+            },
+          });
+        }
+      });
+    }
+
+    // 全量失效：即使本次无写入，也要清掉「标记项已变化」场景下读到的旧聚合缓存
+    await this.invalidateCacheKeys(plan.defs.map((def) => def.key));
+
+    return {
+      profile: target,
+      applied: toWrite.map((entry) => entry.def.key),
+      unchanged: plan.entries
+        .filter((entry) => !entry.willChange)
+        .map((entry) => entry.def.key),
+    };
+  }
+
+  /**
+   * 构建一次 profile 应用的计划：当前值、目标值、是否会改写。
+   *
+   * 预览（`previewProfileApply`）与实际应用（`applyProfile`）共用本方法，保证两端的
+   * 「当前生效值」与「目标值」来自同一时刻的同一份判定——否则运维看到的是预览、
+   * 实际写入的却是另一套结论。
+   *
+   * 判定基准是**生效值**（含 env 遮蔽），不是数据库行的原始值：运维关心的是「应用后
+   * 实际生效的是什么」，且已等于目标值的项无需写库——写入反而会永久冻掉该 key 的
+   * env 层定制。这类 env 遮蔽项通过预览条目的 `envValue` 字段显式暴露，由 UI 告警。
+   */
+  private async buildProfilePlan(
+    target: ConfigProfile
+  ): Promise<{
+    defs: RuntimeConfigDefinition[];
+    entries: {
+      def: RuntimeConfigDefinition;
+      row: { value: string; type: string; updatedBy: string | null } | null;
+      targetValue: RuntimeConfigValue;
+      willChange: boolean;
+    }[];
+  }> {
+    const defs = this.getProfileDefinitions();
+    if (defs.length === 0) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.config_extra.empty_profile') ??
+          '当前没有任何配置项声明了安全模式取值，无法应用 profile'
+      );
+    }
+
+    const rows = await this.prisma.runtimeConfig.findMany({
+      where: { key: { in: defs.map((def) => def.key) } },
+    });
+    const rowsByKey = new Map(rows.map((row) => [row.key, row]));
+
+    const entries = defs.map((def) => {
+      const row = rowsByKey.get(def.key) ?? null;
+      const { value: currentValue } = this.resolveValue(def, row);
+      const targetValue = def.profiles![target];
+      return {
+        def,
+        row,
+        targetValue,
+        willChange: JSON.stringify(currentValue) !== JSON.stringify(targetValue),
+      };
+    });
+
+    return { defs, entries };
   }
 
   /**

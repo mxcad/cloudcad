@@ -486,6 +486,9 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: false,
     isPublic: true,
     tier: 'admin',
+    // 与 freeExportDownloadEnabled 同理：出厂默认值按 variant 由打包期写 .env
+    // （ADR-0078 D2），私有部署内网环境不需要「防资源滥用」的默认关闭。
+    envKey: 'BATCH_DOWNLOAD_ENABLED',
     impact: '开启后用户可发起批量打包下载，占用磁盘与带宽。',
     dangerous: true,
   },
@@ -560,6 +563,31 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'ALERT_P2_DAILY_HOUR',
     input: { min: 0, max: 23, step: 1, unit: '时' },
     impact: '每日该整点发送前一天 P2 告警汇总；当天无前日告警则不发送。',
+  },
+
+  // ───────────────────────── 安全：模式 ─────────────────────────
+  {
+    key: 'securityMode',
+    type: 'string',
+    category: 'security',
+    description:
+      '安全模式。secure = 完全遵循等保三级；normal = 本地/测试部署，便利高于一切。',
+    defaultValue: 'normal',
+    isPublic: true,
+    tier: 'admin',
+    dangerous: true,
+    hot: false,
+    input: {
+      options: [
+        { value: 'normal', label: '普通模式（便利优先）' },
+        { value: 'secure', label: '安全模式（等保三级）' },
+      ],
+    },
+    impact:
+      '仅切换标记本身不改变任何安全项的实际生效值——切换到某模式必须走 profile 批量应用，' +
+      '否则会出现「界面显示已切安全模式、实际仍是弱值生效」的静默偏离。' +
+      '本项不要手工修改，用「应用安全模式」入口切换。',
+    profiles: { secure: 'secure', normal: 'normal' },
   },
 
   // ───────────────────────── 安全：接口限流 ─────────────────────────
@@ -849,6 +877,9 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: false,
     isPublic: true,
     tier: 'admin',
+    // 私有部署出厂该默认放行（ADR-0078）：出厂默认值按 variant 由打包期写入 .env，
+    // 走 env 中间层而非 DB 行——不进库、无需迁移脚本，运维仍可在配置页覆盖。
+    envKey: 'FREE_EXPORT_DOWNLOAD_ENABLED',
     impact: '开启后免费用户可导出转换结果，会增加转换引擎负载。',
     dangerous: true,
   },
