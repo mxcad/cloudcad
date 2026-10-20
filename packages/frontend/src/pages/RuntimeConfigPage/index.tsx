@@ -32,6 +32,8 @@ import type { RowActions } from './ConfigCard';
 import { CoordinateLogCard } from './CoordinateLogCard';
 import { ConfigHistoryPanel } from './ConfigHistoryPanel';
 import { ResetCategoryModal } from './ResetCategoryModal';
+import { ModeSwitchModal } from './ModeSwitchModal';
+import { useRuntimeConfig as usePublicRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import styles from './RuntimeConfigPage.module.css';
 import { t } from '@/languages';
 
@@ -40,6 +42,7 @@ export const RuntimeConfigPage: React.FC = () => {
   const { isDark } = useTheme();
 
   const rc = useRuntimeConfig();
+  const { config: publicConfig } = usePublicRuntimeConfig();
 
   const allCollapsed =
     rc.groups.length > 0 &&
@@ -81,7 +84,14 @@ export const RuntimeConfigPage: React.FC = () => {
 
   return (
     <div className={styles.configPage} data-theme={isDark ? 'dark' : 'light'}>
-      <PageHeader stats={rc.stats} canManageConfig={rc.canManageConfig} />
+      <PageHeader
+        stats={rc.stats}
+        canManageConfig={rc.canManageConfig}
+        currentMode={publicConfig.securityMode}
+        onModeSwitch={(target) => {
+          void rc.requestModeSwitch(target);
+        }}
+      />
 
       {/* 工具栏：关键词搜索 + 只看已修改 + 全部折叠/展开 */}
       <div className={styles.toolbar}>
@@ -209,6 +219,16 @@ export const RuntimeConfigPage: React.FC = () => {
         saving={rc.savingCategory}
         onConfirm={rc.confirmResetCategory}
         onCancel={rc.cancelResetCategory}
+      />
+
+      {/* 安全模式切换：先预览将改动的项，再确认应用 */}
+      <ModeSwitchModal
+        target={rc.modeSwitchTarget}
+        previewing={rc.modePreviewing}
+        preview={rc.modePreview}
+        saving={rc.modeSaving}
+        onConfirm={rc.confirmModeSwitch}
+        onCancel={rc.cancelModeSwitch}
       />
     </div>
   );

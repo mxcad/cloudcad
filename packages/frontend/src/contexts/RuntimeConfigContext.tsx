@@ -27,6 +27,8 @@ export type PublicRuntimeConfig = {
   freeExportDownloadEnabled: boolean;
   /** 注销冷静期天数：期间重新登录自动取消注销，逾期需联系客服恢复 */
   userCancelGraceDays: number;
+  /** 安全模式：secure=等保收紧 / normal=便利优先（ADR-0077） */
+  securityMode: 'secure' | 'normal';
   /** 品牌档案（标题/标语/Logo/版权/法务主体），覆盖前端内置默认值与 config.json */
   brandProfile: RuntimeBrandConfig;
 };
@@ -53,6 +55,7 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   batchDownloadEnabled: false,
   freeExportDownloadEnabled: false,
   userCancelGraceDays: 7,
+  securityMode: 'normal',
   brandProfile: {},
 };
 
@@ -104,6 +107,7 @@ function mapPublicConfig(
     batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? false),
     freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? false),
     userCancelGraceDays: Number(data.userCancelGraceDays ?? 7),
+    securityMode: data.securityMode === 'secure' ? 'secure' : 'normal',
     brandProfile: toBrandConfig(data.brandProfile),
   };
 }
