@@ -245,3 +245,136 @@ test('auditorId 在无管理员或查询失败时返回空串（调用方据此�
   const failed = makeCapturing({ status: 1, stdout: '', stderr: 'ERROR: relation "users" does not exist' });
   assert.equal(failed.psql.auditorId(), '');
 });
+
+// ==================== run：docker 形态（docker exec cloudcad-pg psql，#442） ====================
+
+function makeDockerHarness(overrides = {}) {
+  const config = {
+    DB_HOST: 'localhost',
+    DB_PORT: '15432',
+    DB_USERNAME: 'postgres',
+    DB_DATABASE: 'cloudcad',
+    DB_PASSWORD: 'env-db-pass',
+    ...overrides.config,
+  };
+  const calls = [];
+  let psqlPathCalls = 0;
+  const dockerExec = {
+    container: 'cloudcad-pg',
+    exec: (args, timeoutMs) => {
+      calls.push({ args, timeoutMs });
+      return {
+        ok: overrides.ok === undefined ? true : overrides.ok,
+        stdout: overrides.stdout === undefined ? '1' : overrides.stdout,
+        stderr: overrides.stderr || '',
+      };
+    },
+  };
+  const psql = makePsql({
+    getPsqlPath: () => {
+      psqlPathCalls++;
+      return '/should/not/be/used';
+    },
+    getDbEnv: () => ({ env: { PGPASSWORD: config.DB_PASSWORD }, config }),
+    dockerExec,
+  });
+  return { psql, calls, psqlPathCalls: () => psqlPathCalls };
+}
+
+test('run docker 形态：经 docker exec cloudcad-pg psql 执行，不触碰宿主 psql', () => {
+  const { psql, calls, psqlPathCalls } = makeDockerHarness();
+  const r = psql.run('SELECT 1');
+  assert.equal(r.ok, true);
+  assert.equal(r.stdout, '1');
+  assert.equal(psqlPathCalls(), 0, 'docker 形态不得解析宿主 psql 路径');
+  const { args } = calls[0];
+  assert.deepEqual(
+    args.slice(0, 5),
+    ['exec', '-e', 'PGPASSWORD=env-db-pass', 'cloudcad-pg', 'psql']
+  );
+  assert.deepEqual(args.slice(5, 12), [
+    '-h',
+    'localhost',
+    '-p',
+    '15432',
+    '-U',
+    'postgres',
+    '-d',
+  ]);
+  assert.equal(args[12], 'cloudcad');
+  assert.equal(args[13], '-tAc');
+  assert.equal(args[14], 'SELECT 1');
+});
+
+test('run docker 形态：override 覆盖数据库与口令（维护库 / 新口令回连验证）', () => {
+  const { psql, calls } = makeDockerHarness();
+  psql.run(`ALTER USER "postgres" WITH PASSWORD 'x'`, {
+    database: 'postgres',
+    password: 'new-pass-1',
+  });
+  const { args } = calls[0];
+  assert.equal(args[2], 'PGPASSWORD=new-pass-1');
+  assert.equal(args[12], 'postgres');
+});
+
+test('run docker 形态：SQL 双引号标识符逐字保留（与裸机分支同回归点）', () => {
+  const { psql, calls } = makeDockerHarness();
+  const sql = `SELECT u."id" FROM "users" u JOIN "roles" r ON u."roleId" = r."id" WHERE r."name" = 'ADMIN'`;
+  psql.run(sql);
+  const { args } = calls[0];
+  assert.equal(args[args.length - 1], sql);
+  assert.ok(args[args.length - 1].includes('"roleId"'));
+});
+
+test('run docker 形态：exec 失败时 ok=false 并带回 stderr', () => {
+  const { psql } = makeDockerHarness({
+    ok: false,
+    stdout: '',
+    stderr: 'ERROR:  column "resourcetype" does not exist\n',
+  });
+  const r = psql.run('SELECT "resourceType" FROM "audit_logs"');
+  assert.equal(r.ok, false);
+  assert.ok(r.stderr.includes('resourcetype'));
+});
+
+test('run docker 形态：dockerExec 为函数访问器（getDockerExec 形态）', () => {
+  const calls = [];
+  const psql = makePsql({
+    getPsqlPath: () => {
+      throw new Error('docker 形态不应解析宿主 psql');
+    },
+    getDbEnv: () => ({
+      env: { PGPASSWORD: 'p' },
+      config: { DB_HOST: 'h', DB_PORT: '5432', DB_USERNAME: 'u', DB_DATABASE: 'd' },
+    }),
+    dockerExec: () => ({
+      container: 'cloudcad-pg',
+      exec: (args) => {
+        calls.push(args);
+        return { ok: true, stdout: '1', stderr: '' };
+      },
+    }),
+  });
+  const r = psql.run('SELECT 1');
+  assert.equal(r.ok, true);
+  assert.equal(calls[0][3], 'cloudcad-pg');
+});
+
+test('run：dockerExec 返回 null 时回落裸机 psql 分支', () => {
+  const calls = [];
+  const psql = makePsql({
+    getPsqlPath: () => '/runtime/psql',
+    getDbEnv: () => ({
+      env: { PGPASSWORD: 'p' },
+      config: { DB_HOST: 'h', DB_PORT: '5432', DB_USERNAME: 'u', DB_DATABASE: 'd' },
+    }),
+    dockerExec: () => null,
+    spawn: (cmd, args) => {
+      calls.push({ cmd, args });
+      return { status: 0, stdout: '1', stderr: '' };
+    },
+  });
+  const r = psql.run('SELECT 1');
+  assert.equal(r.ok, true);
+  assert.equal(calls[0].cmd, '/runtime/psql');
+});

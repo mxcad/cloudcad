@@ -48,8 +48,9 @@ const cleanupLastDurationSeconds = new client.Gauge({
  * 单一代码路径保证日志数值与指标一致。各清理 scheduler 在裸执行函数（定时 + 手动触发共用）
  * 中调用本方法。
  *
- * 结构化日志经 PinoLogger 写入应用日志流（app.log）。生产环境默认根级别为 warn，
- * 需要采集 cleanup_run 日志时设 LOG_LEVEL=info（见 app.module.ts 日志配置）。
+ * 结构化日志经 PinoLogger 写入应用日志流（app.log）。落盘级别默认 debug（全量），
+ * cleanup_run 默认已落盘；实时流默认只放行 error，排障期设 LOG_CONSOLE_LEVEL=info
+ * （见 app.module.ts 日志配置，ADR-0076）。
  */
 @Injectable()
 export class CleanupMetricsService {

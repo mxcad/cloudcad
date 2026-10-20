@@ -2237,6 +2237,69 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(
+    `${baseURL}/api/v1/runtime-config/profile/apply`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerApplyProfile201Response(),
+          { status: 201 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/runtime-config/profile/apply`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/runtime-config/profile/preview`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerPreviewProfile201Response(),
+          { status: 201 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/runtime-config/profile/preview`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.post(`${baseURL}/api/v1/users/me/restore`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -2696,6 +2759,37 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(
+    `${baseURL}/api/v1/cache-monitor/key-catalog`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getCacheMonitorControllerGetKeyCatalog200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/cache-monitor/key-catalog`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.get(
     `${baseURL}/api/v1/cache-monitor/performance`,
     async ({ request }) => {
@@ -3201,6 +3295,36 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(
+    `${baseURL}/api/v1/runtime-config/brand-logo`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [undefined, { status: 200 }],
+        [undefined, { status: 304 }],
+        [undefined, { status: 404 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/runtime-config/brand-logo`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.get(
     `${baseURL}/api/v1/runtime-config/definitions`,
     async ({ request }) => {
@@ -4667,6 +4791,34 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(`${baseURL}/api/v1/notices/batch-delete`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getNoticeCenterControllerBatchDelete200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/notices/batch-delete`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(`${baseURL}/api/v1/public-file/convert`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -4718,6 +4870,38 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(
+    `${baseURL}/api/v1/runtime-config/brand-logo`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerUploadBrandLogo200Response(),
+          { status: 200 },
+        ],
+        [undefined, { status: 400 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/runtime-config/brand-logo`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.post(
     `${baseURL}/api/v1/runtime-config/reset-category`,
     async ({ request }) => {
@@ -5825,6 +6009,38 @@ export const handlers = [
       const [body, init] =
         resultArray[
           next(`post /api/v1/mxcad/conversion/nodes/:nodeId/convert`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/mxcad/conversion/nodes/:nodeId/reconvert`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getConversionTaskControllerReconvertNodedefaultResponse(),
+          { status: 500 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/mxcad/conversion/nodes/:nodeId/reconvert`) %
             resultArray.length
         ];
       const responseJson =
@@ -8649,7 +8865,9 @@ export const handlers = [
 
     const resultArray = [
       [await getUsersControllerUpdateStatus200Response(), { status: 200 }],
+      [undefined, { status: 403 }],
       [undefined, { status: 404 }],
+      [undefined, { status: 409 }],
     ] as [any, { status: number }][];
 
     const [body, init] =
@@ -8996,6 +9214,30 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.delete(`${baseURL}/api/v1/notices/:id`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('delete')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [undefined, { status: 200 }],
+      [undefined, { status: 404 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`delete /api/v1/notices/:id`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.delete(`${baseURL}/api/v1/roles/:id`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -9247,7 +9489,9 @@ export const handlers = [
 
     const resultArray = [
       [await getUsersControllerUpdate200Response(), { status: 200 }],
+      [undefined, { status: 403 }],
       [undefined, { status: 404 }],
+      [undefined, { status: 409 }],
     ] as [any, { status: number }][];
 
     const [body, init] =
@@ -9755,6 +9999,28 @@ export function getCacheMonitorControllerGetWarnings200Response() {
   };
 }
 
+export function getCacheMonitorControllerGetKeyCatalog200Response() {
+  return {
+    entries: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        name: faker.person.fullName(),
+        pattern: faker.lorem.words(),
+        description: faker.lorem.words(),
+        scope: faker.helpers.arrayElement(['cache', 'infra']),
+        removalEffect: faker.lorem.words(),
+        ttl: faker.lorem.words(),
+        example: faker.lorem.words(),
+      }));
+    })(),
+  };
+}
+
 export function getRuntimeConfigControllerGetPublicConfigs200Response() {
   return {};
 }
@@ -9858,6 +10124,13 @@ export function getRuntimeConfigControllerGetDefinitions200Response() {
   })();
 }
 
+export function getRuntimeConfigControllerUploadBrandLogo200Response() {
+  return {
+    logoUrl: '/api/v1/runtime-config/brand-logo',
+    size: 20480,
+  };
+}
+
 export function getRuntimeConfigControllerGetConfig200Response() {
   return {
     key: 'mailEnabled',
@@ -9938,6 +10211,49 @@ export function getRuntimeConfigControllerResetCategory201Response() {
   return {
     success: true,
     keys: ['mailEnabled', 'requireEmailVerification'],
+  };
+}
+
+export function getRuntimeConfigControllerPreviewProfile201Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      key: 'sessionMaxAge',
+      type: 'number',
+      category: 'security',
+      currentValue: {},
+      source: 'default',
+      targetValue: {},
+      willChange: faker.datatype.boolean(),
+      isModified: faker.datatype.boolean(),
+      envValue: {},
+    }));
+  })();
+}
+
+export function getRuntimeConfigControllerApplyProfile201Response() {
+  return {
+    profile: 'secure',
+    applied: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+    unchanged: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
   };
 }
 
@@ -13571,6 +13887,13 @@ export function getConversionTaskControllerListHistorydefaultResponse() {
   };
 }
 
+export function getConversionTaskControllerReconvertNodedefaultResponse() {
+  return {
+    taskId: faker.string.uuid(),
+    nodeId: faker.string.uuid(),
+  };
+}
+
 export function getConversionTaskControllerGetQuotadefaultResponse() {
   return {
     limit: faker.number.int(),
@@ -14062,6 +14385,15 @@ export function getNoticeCenterControllerCreate201Response() {
     publishedById: faker.string.uuid(),
     createdAt: faker.date.anytime().toISOString(),
     updatedAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getNoticeCenterControllerBatchDelete200Response() {
+  return {
+    requested: faker.number.int(),
+    deleted: faker.number.int(),
+    active: faker.number.int(),
+    notFound: [],
   };
 }
 

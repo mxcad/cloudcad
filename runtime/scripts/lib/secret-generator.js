@@ -52,7 +52,10 @@ function generateStrongPassword() {
   const lower = 'abcdefghijklmnopqrstuvwxyz';
   const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const digits = '0123456789';
-  const special = '!@#$%^&*-_=+?';
+  // 刻意排除 `$`：Docker 形态下 .env 经 compose `env_file` 注入容器，compose 对值做
+  // 变量插值——`$xxx` 被当变量引用替换成空串，容器内口令与 .env 记载不一致（用户按
+  // .env 口令登录失败）。用户手工编辑 .env 引入 `$` 时须自行写 `$$` 转义（compose 约定）
+  const special = '!@%^&*-_=+?';
   const all = lower + upper + digits + special;
   const rand = (chars) => chars[crypto.randomInt(chars.length)];
   // 保证四类各至少一个，其余随机补齐到 16 位

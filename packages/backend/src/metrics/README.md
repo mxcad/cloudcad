@@ -51,10 +51,12 @@ GET /api/metrics   （Prometheus 文本格式，已从 Swagger 排除）
 
 ### 生产环境采集结构化日志
 
-生产根级别默认 `warn`，`cleanup_run` 日志不落盘。需要时设置：
+落盘级别默认 `debug`（全量），`cleanup_run` 日志默认已落盘，无需额外配置。
+实时流（stdout）默认只放行 `error`，排障期临时放开：
 
 ```bash
-LOG_LEVEL=info   # 仅影响落盘流；stdout 的 pino/file 目标保持 warn 不刷屏
+LOG_CONSOLE_LEVEL=info   # 仅影响实时流；落盘级别不受影响
+LOG_FILE_LEVEL=info      # 反向收敛落盘体量时（默认 debug 全量）
 ```
 
 ### 备份轮转埋点说明

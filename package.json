@@ -44,7 +44,6 @@
     "pack:offline:win:private-mxcad": "node scripts/pack-offline.js --win --deploy --private-mxcad",
     "pack:offline:linux:private-mxcad": "node scripts/pack-offline.js --linux --deploy --private-mxcad",
     "pack:offline:all": "node scripts/pack-offline.js --all",
-    "pack:docker": "node scripts/pack-docker.js",
     "pack:linux-deploy": "node scripts/pack-linux-deploy.js",
     "pack:linux-deploy:private": "node scripts/pack-linux-deploy.js --variant private",
     "pack:linux-deploy:ubuntu22": "node scripts/pack-linux-deploy.js --os ubuntu22",

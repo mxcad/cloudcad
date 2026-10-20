@@ -17,17 +17,32 @@ export type Notice = NoticeResponseDto
 /** 通知 id → 已读时间戳（毫秒） */
 export type NoticeAckMap = Record<string, number>
 
-/** 与 PC 端共用同一键，便于排查；两端互不读取对方进程内的状态 */
+/** 与 PC 端共用同一键前缀，便于排查；两端互不读取对方进程内的状态 */
 export const NOTICE_ACK_STORAGE_KEY = 'cloudcad_notice_acks'
 
-/** 已读 TTL：每条通知每个设备在 24h 内只提醒一次 */
+/** 未登录账号的统一簿记键：避免把游客期的已读挂到之后登录的账号上 */
+const ANONYMOUS_OWNER = 'anonymous'
+
+/**
+ * 已读簿记按账号分键（与 PC 端同构）。此前全端共用一个键，同一浏览器上 A 账号
+ * 关掉公告后 B 账号在 TTL 内不会再次收到提醒。未登录时归入固定占位键。
+ * 旧键（无账号后缀）无需迁移：内容最多存活 TTL，自然失效。
+ */
+export function ackStorageKey(ownerId?: string | null): string {
+  return `${NOTICE_ACK_STORAGE_KEY}:${ownerId || ANONYMOUS_OWNER}`
+}
+
+/** 已读 TTL：每条通知每个账号在 24h 内只提醒一次 */
 export const NOTICE_ACK_TTL_MS = 24 * 60 * 60 * 1000
 
 /** 读取已读记录。解析失败返回空表而不是抛错（存储被污染不该让应用崩掉） */
-export function readAcks(storage: Storage = localStorage): NoticeAckMap {
+export function readAcks(
+  storage: Storage = localStorage,
+  ownerId?: string | null,
+): NoticeAckMap {
   let raw: string | null
   try {
-    raw = storage.getItem(NOTICE_ACK_STORAGE_KEY)
+    raw = storage.getItem(ackStorageKey(ownerId))
   } catch {
     return {}
   }
@@ -49,9 +64,13 @@ export function readAcks(storage: Storage = localStorage): NoticeAckMap {
 }
 
 /** 写入已读记录。配额满/隐私模式静默失败（下次启动会重新提醒，属可接受降级） */
-export function writeAcks(acks: NoticeAckMap, storage: Storage = localStorage): void {
+export function writeAcks(
+  acks: NoticeAckMap,
+  storage: Storage = localStorage,
+  ownerId?: string | null,
+): void {
   try {
-    storage.setItem(NOTICE_ACK_STORAGE_KEY, JSON.stringify(acks))
+    storage.setItem(ackStorageKey(ownerId), JSON.stringify(acks))
   } catch {
     // 忽略：已读只是体验优化，不是数据安全边界
   }

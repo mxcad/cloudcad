@@ -18,7 +18,10 @@ import {
   runtimeConfigControllerResetConfig,
   runtimeConfigControllerGetConfigHistory,
   runtimeConfigControllerResetCategory,
+  runtimeConfigControllerPreviewProfile,
+  runtimeConfigControllerApplyProfile,
 } from '@/api-sdk';
+import type { RuntimeProfilePreviewResponseDto } from '@/api-sdk';
 import { useNotification } from '@/contexts/NotificationContext';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
@@ -49,6 +52,12 @@ export interface RuntimeConfigStats {
   envDriven: number;
   /** 当前页面尚未提交的草稿数 */
   pendingSave: number;
+  /**
+   * 被安全模式管理的项数（声明了 profile 目标值的键）。
+   * 其中多数属 advanced 档、默认隐藏，页面列表里看不到——这个计数是给
+   * 管理员的「模式实际管住了多少项」锚点。
+   */
+  modeManaged: number;
 }
 
 export interface UseRuntimeConfigReturn {
@@ -61,6 +70,15 @@ export interface UseRuntimeConfigReturn {
   fieldErrors: Record<string, string>;
   saving: Set<string>;
   savingCategory: boolean;
+  /** 当前选定的目标安全模式；null 表示未打开切换对话框 */
+  modeSwitchTarget: 'secure' | 'normal' | null;
+  /** 打开对话框后拉预览的加载态 */
+  modePreviewing: boolean;
+  /** 已取预览对应的目标模式（计数来源，可能早于对话框打开） */
+  modePreviewTarget: 'secure' | 'normal' | null;
+  /** 预览清单（willChange 决定将改动、envValue 标出 env 遮蔽项） */
+  modePreview: RuntimeProfilePreviewResponseDto[];
+  modeSaving: boolean;
   resetPreviewCategory: string | null;
   resetPreviewItems: ConfigItem[];
   historyKey: string | null;
@@ -91,6 +109,9 @@ export interface UseRuntimeConfigReturn {
   requestResetCategory: (category: string) => void;
   confirmResetCategory: () => Promise<void>;
   cancelResetCategory: () => void;
+  requestModeSwitch: (target: 'secure' | 'normal') => void;
+  confirmModeSwitch: () => Promise<void>;
+  cancelModeSwitch: () => void;
   openHistory: (key: string) => void;
   closeHistory: () => void;
 }
@@ -124,6 +145,17 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
   const [savingCategory, setSavingCategory] = useState(false);
+  const [modeSwitchTarget, setModeSwitchTarget] = useState<
+    'secure' | 'normal' | null
+  >(null);
+  const [modePreviewing, setModePreviewing] = useState(false);
+  const [modePreviewTarget, setModePreviewTarget] = useState<
+    'secure' | 'normal' | null
+  >(null);
+  const [modePreview, setModePreview] = useState<
+    RuntimeProfilePreviewResponseDto[]
+  >([]);
+  const [modeSaving, setModeSaving] = useState(false);
   const [resetPreviewCategory, setResetPreviewCategory] = useState<
     string | null
   >(null);
@@ -195,9 +227,47 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     void fetchConfigs();
   }, [fetchConfigs]);
 
+  /**
+   * 拉取模式预览。预览只读不写库，故点击切换时直接发；首次进页也取一次，
+   * 因为「模式受管项」计数没有别的来源（配置列表 DTO 不含 profiles 字段）。
+   * 两种模式返回同一组受管键，故只需取一个模式即可得到计数。
+   */
+  const loadModePreview = useCallback(
+    async (target: 'secure' | 'normal') => {
+      setModePreviewTarget(target);
+      setModePreviewing(true);
+      try {
+        const result = await runtimeConfigControllerPreviewProfile({
+          throwOnError: true,
+          body: { profile: target },
+        });
+        setModePreview(result.data ?? []);
+      } catch (error: unknown) {
+        // 首次静默失败只影响计数（显示 0）；打开对话框时同样失败则停在空清单、确认禁用
+        handleError(error, t('获取切换预览失败'));
+        showToast(getErrorMessage(error) || t('获取切换预览失败'), 'error');
+      } finally {
+        setModePreviewing(false);
+      }
+    },
+    [showToast]
+  );
+
+  // 首次进页取一次模式预览：「模式受管项」计数只来自这里
+  useEffect(() => {
+    if (loading || modePreviewTarget !== null) return;
+    void loadModePreview('secure');
+  }, [loading, modePreviewTarget, loadModePreview]);
+
   const configsByKey = useMemo(
     () => new Map(configs.map((item) => [item.key, item])),
     [configs]
+  );
+
+  /** 受安全模式管理的键：preview 响应只返回这类键，故其条数即受管项数 */
+  const modeProfileKeys = useMemo(
+    () => new Set(modePreview.map((e) => e.key)),
+    [modePreview]
   );
 
   const stats: RuntimeConfigStats = useMemo(
@@ -210,8 +280,9 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       ).length,
       pendingSave: configs.filter((c) => isDraftChanged(c, drafts[c.key]))
         .length,
+      modeManaged: modeProfileKeys.size,
     }),
-    [configs, drafts]
+    [configs, drafts, modeProfileKeys]
   );
 
   /** 搜索 + 只看已修改 + 高级项开关 → 按分类分组（分类顺序固定，已修改项组内置顶） */
@@ -497,6 +568,62 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     setResetPreviewCategory(null);
   }, []);
 
+  /** 打开切换对话框：目标模式与已取预览不同时才重新拉取 */
+  const requestModeSwitch = useCallback(
+    async (target: 'secure' | 'normal') => {
+      setModeSwitchTarget(target);
+      if (modePreviewTarget !== target) {
+        await loadModePreview(target);
+      }
+    },
+    [modePreviewTarget, loadModePreview]
+  );
+
+  /** 应用模式：写库成功后清空被覆盖项的草稿并刷新列表 */
+  const confirmModeSwitch = useCallback(async () => {
+    if (!modeSwitchTarget) return;
+    const target = modeSwitchTarget;
+    setModeSwitchTarget(null);
+    setModeSaving(true);
+    try {
+      const result = await runtimeConfigControllerApplyProfile({
+        throwOnError: true,
+        body: { profile: target },
+      });
+      const applied = result.data?.applied ?? [];
+      const unchanged = result.data?.unchanged ?? [];
+      showToast(
+        t('已切换到{mode}（{n} 项生效）', {
+          mode: target === 'secure' ? t('安全模式') : t('普通模式'),
+          n: String(applied.length),
+        }),
+        'success'
+      );
+      setDrafts((prev) => {
+        const next = { ...prev };
+        for (const key of applied) delete next[key];
+        for (const key of unchanged) delete next[key];
+        return next;
+      });
+      setFieldErrors({});
+      await fetchConfigs({ silent: true });
+      // securityMode 本身是公开项，Layout 横幅读的就是这个缓存
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.runtimeConfig.public,
+      });
+    } catch (error: unknown) {
+      handleError(error, t('切换模式失败'));
+      showToast(getErrorMessage(error) || t('切换模式失败'), 'error');
+    } finally {
+      setModeSaving(false);
+    }
+  }, [modeSwitchTarget, showToast, fetchConfigs, queryClient]);
+
+  const cancelModeSwitch = useCallback(() => {
+    setModeSwitchTarget(null);
+    setModePreview([]);
+  }, []);
+
   /** 分类级批量恢复默认：先预览将恢复的项，确认后走 reset-category 端点 */
   const confirmResetCategory = useCallback(async () => {
     if (!resetPreviewCategory) return;
@@ -578,6 +705,11 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     fieldErrors,
     saving,
     savingCategory,
+    modeSwitchTarget,
+    modePreviewing,
+    modePreviewTarget,
+    modePreview,
+    modeSaving,
     resetPreviewCategory,
     resetPreviewItems,
     historyKey,
@@ -608,6 +740,9 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     requestResetCategory,
     confirmResetCategory,
     cancelResetCategory,
+    requestModeSwitch,
+    confirmModeSwitch,
+    cancelModeSwitch,
     openHistory,
     closeHistory,
   };

@@ -16,9 +16,26 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
     user: {
       count: jest.fn(),
       update: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+    },
+    fileSystemNode: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
     },
     role: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
+    },
+    rolePermission: {
+      createMany: jest.fn(),
+    },
+    projectRole: {
+      findFirst: jest.fn(),
+    },
+    projectRolePermission: {
+      createMany: jest.fn(),
     },
     ipWhitelistEntry: {
       findMany: jest.fn(),
@@ -31,6 +48,7 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
   const mockRoleInheritanceService = {
     initializeRoleHierarchy: jest.fn(),
     forceRefreshRolePermissions: jest.fn(),
+    clearRoleCache: jest.fn(),
   };
   const mockUserService = {
     create: jest.fn(),
@@ -125,6 +143,55 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
 
     expect(mockUserService.create).not.toHaveBeenCalled();
     expect(mockPrisma.role.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('回归：首次启动全流程（onModuleInit）默认白名单条目必须在管理员创建前写入', async () => {
+    // 状态化用户数：首次启动为 0，管理员创建后变 1——复现 onModuleInit 的真实时序。
+    // 缺陷形态：ensureDefaultAdminIpWhitelist 排在 checkAndCreateInitialAdmin 之后时，
+    // 其 userCount==0 守卫恒假 → 默认放行条目永不写入 → 白名单空表 fail-close，
+    // 远程管理员在全新部署上无法登录（2026-10-20 docker windows 宿主 E2E 实测）。
+    let userCount = 0;
+    mockPrisma.user.count.mockImplementation(async () => userCount);
+    mockPrisma.role.findMany.mockResolvedValue([]); // 无重复系统角色
+    mockPrisma.role.findFirst.mockResolvedValue({
+      id: 'role-admin',
+      name: 'ADMIN',
+      permissions: [],
+    });
+    mockPrisma.rolePermission.createMany.mockResolvedValue({ count: 0 });
+    mockPrisma.projectRole.findFirst.mockResolvedValue({
+      id: 'proj-role',
+      name: 'PROJECT_OWNER',
+      permissions: [],
+    });
+    mockPrisma.projectRolePermission.createMany.mockResolvedValue({ count: 0 });
+    mockPrisma.user.update.mockResolvedValue({});
+    mockPrisma.user.findFirst.mockResolvedValue(null); // 无管理员用户 → 跳过资源库
+    mockPrisma.user.findMany.mockResolvedValue([]); // 无用户 → 跳过私人空间
+    mockPrisma.fileSystemNode.findMany.mockResolvedValue([]);
+    mockPrisma.fileSystemNode.findFirst.mockResolvedValue({ id: 'lib-1' });
+    mockPrisma.ipWhitelistEntry.findMany.mockResolvedValue([]);
+    mockPrisma.ipWhitelistEntry.createMany.mockResolvedValue({ count: 2 });
+    mockConfigService.get.mockImplementation((key: string, def?: unknown) => {
+      if (key === 'INITIAL_ADMIN_EMAIL') return 'admin@example.com';
+      if (key === 'INITIAL_ADMIN_USERNAME') return 'admin';
+      if (key === 'INITIAL_ADMIN_PASSWORD') return 'Str0ng!Admin#2026';
+      return def;
+    });
+    mockUserService.create.mockImplementation(async () => {
+      userCount = 1; // 管理员创建完成
+      return { id: 'admin-1' };
+    });
+
+    await service.onModuleInit();
+
+    // 默认放行条目必须已写入（守卫 userCount==0 只在管理员创建前成立）
+    expect(mockPrisma.ipWhitelistEntry.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({ ip: '0.0.0.0/0' }),
+        expect.objectContaining({ ip: '::/0' }),
+      ],
+    });
   });
 
   describe('ensureDefaultAdminIpWhitelist（首次部署默认全局可访问）', () => {

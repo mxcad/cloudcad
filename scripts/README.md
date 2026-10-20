@@ -12,7 +12,7 @@ scripts/
 ├── pack-lib/                  # 打包清单单一事实源（供 pack-offline.js 复用）
 │   ├── manifest.js            # 部署包/升级包正向清单（P9 收敛双清单硬编码）
 │   ├── packignore.json        # 打包排除配置（JSON，无需构建，改后即生效）
-│   └── packignore.js          # 排除规则解析/匹配（被 pack-offline.js / pack-docker.js 引用）
+│   └── packignore.js          # 排除规则解析/匹配（被 pack-offline.js / prepare-mxcad-dist.js 引用）
 ├── e2e/                       # 端到端登录流程测试
 │   ├── fixtures/
 │   └── test-login-flow.py     # Playwright 登录流测试
@@ -28,7 +28,6 @@ scripts/
 |------|------|--------------|
 | `pack-offline.js` | 统一打包入口（部署包 / 升级包，含 Windows/Linux/oss/private 变体） | `pack:offline*`、`pack:upgrade*` |
 | `pack-lib/manifest.js` | 打包清单单一事实源，被 `pack-offline.js` 引用 | —（库文件） |
-| `pack-docker.js` | Docker 部署包打包 | `pack:docker` |
 | `pack-linux-deploy.js` | Linux 部署包打包（Docker 容器内执行） | `pack:linux-deploy*`、`pack:linux-upgrade*` |
 | `pack-linux-local.sh` | 本地 Linux 打包（无需 Docker） | `pack:linux-local` |
 | `pack-menu.js` | 打包交互菜单（避免记忆命令参数） | `pack:menu` |
@@ -40,7 +39,7 @@ scripts/
 
 ### 打包排除配置（`pack-lib/packignore.json`）
 
-`pack-offline.js` 与 `pack-docker.js` 的目录复制统一应用 `pack-lib/packignore.json`
+`pack-offline.js` 的目录复制统一应用 `pack-lib/packignore.json`
 （类 `.gitignore` 但极简）过滤不打包内容，尤其用于排除 **mxcad 保密图纸（`.mxweb`）**。
 纯 JSON 配置，**无需构建，改后下次打包即生效**。
 

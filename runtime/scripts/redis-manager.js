@@ -9,6 +9,8 @@ const net = require('net');
 const path = require('path');
 const fs = require('fs');
 const { readEnvInt } = require('./lib/env');
+const { buildRedisArgs } = require('./lib/redis-args');
+const { rotateAndPrune } = require('./lib/redis-log-rotation');
 
 const { IS_WINDOWS } = require('./lib/context');
 const { getPidByPort } = require('./lib/proc');
@@ -32,6 +34,10 @@ const PLATFORM_DIR = IS_WINDOWS
 const USE_RUNTIME = fs.existsSync(PLATFORM_DIR);
 const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const REDIS_DATA_DIR = path.join(DATA_DIR, 'redis');
+// Redis 日志落文件（ADR-0076 级别分裂）：logfile 非空时 Redis 不再向 stdout
+// 输出任何日志——实时控制台零 Redis 噪音，notice 全量落盘留痕。
+// Redis 自带 loglevel 但没有轮转；notice 体量很小（AOF/fsync/主从事件），可接受。
+const REDIS_LOG_FILE = path.join(DATA_DIR, 'logs', 'redis.log');
 
 // 后端 .env 路径：PM2 拉起本脚本时不注入业务端口，直调
 // （`node redis-manager.js status|stop`）时环境变量通常也没设——若不回落 .env
@@ -198,12 +204,21 @@ function startRedis() {
     // 加载 Redis 密码配置
     const redisPassword = loadRedisPassword();
     
-    // 构建 Redis 启动参数
-    const redisArgs = [
-      '--port', String(REDIS_PORT),
-      '--dir', REDIS_DATA_DIR,
-      '--appendonly', 'yes'
-    ];
+    // 构建 Redis 启动参数（argv 组装走 buildRedisArgs，纯函数便于单测断言）
+    // logfile 必须是已存在目录下的绝对路径：Redis 不创建父目录，目录缺失会直接启动失败
+    fs.mkdirSync(path.dirname(REDIS_LOG_FILE), { recursive: true });
+    // 轮转 + 保留期清理（#472）。只在启动前做：Redis 独占 logfile 的 fd，运行中
+    // rename 只会把写入转移到改名后的文件且 Redis 不会重开（比无界增长更糟）
+    const rotation = rotateAndPrune({ logFile: REDIS_LOG_FILE });
+    if (rotation.rotated) log('info', `Redis 日志已轮转: ${rotation.rotated}`);
+    if (rotation.deleted.length) {
+      log('info', `已清理过期 Redis 日志 ${rotation.deleted.length} 个`);
+    }
+    const redisArgs = buildRedisArgs({
+      port: REDIS_PORT,
+      dataDir: REDIS_DATA_DIR,
+      logFile: REDIS_LOG_FILE,
+    });
     
     // requirepass 走配置文件而非命令行参数：命令行对机器上所有本机会话可见
     // （Get-CimInstance Win32_Process / tasklist / Process Explorer），密码会随

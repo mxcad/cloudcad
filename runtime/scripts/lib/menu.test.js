@@ -118,8 +118,8 @@ test('「密码重置」独立成节，四种环境都出现且只含三条重�
 });
 
 test('核心项在所有（裸机）环境都可见，退出项恒为 [q]', () => {
-  // 注意：ENVS 均为裸机形态（无 isDockerForm）。db-backup / 三条密码重置在
-  // docker 形态被 C5 隐藏（见下方 docker 形态用例），此处只锁定裸机形态可见。
+  // 注意：ENVS 均为裸机形态（无 isDockerForm）。db-backup / 三条密码重置自
+  // #442 起双形态全可见（docker 形态走 docker exec），docker 形态可见性见下方用例。
   const must = [
     '启动服务（含前后端）',
     '查看服务状态',
@@ -152,23 +152,25 @@ test('每个菜单项都有 action（防止数据与命令脱钩）', () => {
   }
 });
 
-// ==================== docker 形态可见性（ADR-0075 C5） ====================
-// docker 形态（isDockerForm）隐藏 v1 长尾命令（db-backup / 密码重置 / infra / dev），
-// 主路径（启动/状态/日志/停止/部署/迁移/TOTP）保留。CLI 侧 docker 形态实际走
-// docker-form-adapter 精简菜单；此处锁定 menu-sections.js 单一事实源的可见性数据。
+// ==================== docker 形态可见性（ADR-0075 C5 + #442） ====================
+// v1 时 docker 形态隐藏全部长尾命令；#442 起 db-backup / 三条密码重置已支持
+// docker 形态（docker exec），解除隐藏，双形态全可见。仍隐藏的只剩
+// form:'bare' 的排障/开发项（仅启动基础服务 / 开发模式 / 数据库种子）。
+// CLI 侧 docker 形态实际走 docker-form-adapter 精简菜单；此处锁定
+// menu-sections.js 单一事实源的可见性数据。
 const DOCKER_ENV = { isLinux: true, isWindows: false, isDeployPackage: true, isDockerForm: true };
 
-test('docker 形态：长尾命令（db-backup/密码重置/infra/dev）隐藏', () => {
+test('docker 形态：db-backup/密码重置可见，infra/dev 项仍隐藏', () => {
   const labels = visibleLabels(DOCKER_ENV);
   for (const label of [
     '数据库备份与恢复',
     '重置管理员密码',
     '重置数据库密码',
     '重置 Redis 密码',
-    '仅启动基础服务',
-    '开发模式',
-    '数据库种子',
   ]) {
+    assert.ok(labels.includes(label), `${label} 应在 docker 形态可见（#442）`);
+  }
+  for (const label of ['仅启动基础服务', '开发模式', '数据库种子']) {
     assert.ok(!labels.includes(label), `${label} 应在 docker 形态隐藏`);
   }
 });
@@ -188,9 +190,9 @@ test('docker 形态：主路径命令保留（启动/状态/日志/停止/部署
   }
 });
 
-test('docker 形态：「密码重置」「开发环境」整节消失（空 section 移除）', () => {
+test('docker 形态：「密码重置」保留、「开发环境」整节消失（空 section 移除）', () => {
   const sections = buildVisibleMenu(menuSections, DOCKER_ENV);
-  assert.ok(!sections.some((s) => s.title === '密码重置'), '密码重置节应在 docker 形态移除');
+  assert.ok(sections.some((s) => s.title === '密码重置'), '密码重置节应在 docker 形态保留（#442）');
   assert.ok(!sections.some((s) => s.title.startsWith('开发环境')), '开发环境节应在 docker 形态移除');
   assert.ok(sections.every((s) => s.items.length > 0), 'docker 形态不应出现空 section');
 });

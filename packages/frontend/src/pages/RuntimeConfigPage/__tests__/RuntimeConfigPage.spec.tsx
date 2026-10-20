@@ -177,6 +177,9 @@ vi.mock('@/hooks/useDocumentTitle');
 vi.mock('@/contexts/ThemeContext', () => ({
   useTheme: () => ({ isDark: false }),
 }));
+vi.mock('@/contexts/RuntimeConfigContext', () => ({
+  useRuntimeConfig: () => ({ config: { securityMode: 'normal' }, loading: false }),
+}));
 
 function makeReturn(
   overrides: Partial<UseRuntimeConfigReturn> = {}
@@ -193,6 +196,11 @@ function makeReturn(
     fieldErrors: {},
     saving: new Set(),
     savingCategory: false,
+    modeSwitchTarget: null,
+    modePreviewing: false,
+    modePreviewTarget: 'secure',
+    modePreview: [],
+    modeSaving: false,
     resetPreviewCategory: null,
     resetPreviewItems: [],
     historyKey: null,
@@ -212,6 +220,7 @@ function makeReturn(
       restartRequired: configs.filter((c) => c.hot === false).length,
       envDriven: configs.filter((c) => c.envValue != null).length,
       pendingSave: 0,
+      modeManaged: 0,
     },
     setKeyword: vi.fn(),
     setOnlyModified: vi.fn(),
@@ -228,6 +237,9 @@ function makeReturn(
     requestResetCategory: vi.fn(),
     confirmResetCategory: vi.fn().mockResolvedValue(undefined),
     cancelResetCategory: vi.fn(),
+    requestModeSwitch: vi.fn().mockResolvedValue(undefined),
+    confirmModeSwitch: vi.fn().mockResolvedValue(undefined),
+    cancelModeSwitch: vi.fn(),
     openHistory: vi.fn().mockResolvedValue(undefined),
     closeHistory: vi.fn(),
     ...overrides,

@@ -123,6 +123,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     impact: '开启后未验证邮箱的用户无法完成需要邮箱的功能；配合 mailEnabled 使用。',
     dangerous: true,
+    profiles: { secure: true, normal: false },
   },
   {
     key: 'refundNotifyEmails',
@@ -158,6 +159,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     impact: '开启后未验证手机号的用户受限；配合 smsEnabled 使用。',
     dangerous: true,
+    profiles: { secure: true, normal: false },
   },
 
   // ───────────────────────── 用户 ─────────────────────────
@@ -171,6 +173,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'user',
     impact: '关闭后注册页隐藏、注册接口拒绝；已注册用户不受影响。',
     dangerous: true,
+    profiles: { secure: false, normal: true },
   },
   {
     key: 'allowAutoRegisterOnPhoneLogin',
@@ -181,6 +184,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'admin',
     impact: '开启后新手机号验证码登录即自动建号，无需填写用户名密码。',
+    profiles: { secure: false, normal: true },
   },
   {
     key: 'userCancelGraceDays',
@@ -193,6 +197,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 365, step: 1, unit: '天' },
     impact: '用户提交注销后，在冷静期内重新登录即可自动撤销；天数越短，误注销后越难自助恢复。',
     dangerous: true,
+    profiles: { secure: 30, normal: 3 },
   },
   {
     key: 'userCleanupEnabled',
@@ -204,6 +209,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     dangerous: true,
     impact: '关闭后注销冷静期到期的用户数据不再自动清理，DB 持续膨胀。',
+    profiles: { secure: false, normal: true },
   },
 
   // ───────────────────────── 微信 ─────────────────────────
@@ -217,6 +223,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'user',
     impact: '开启后登录页出现微信扫码入口；需先在服务端配置微信开放平台凭证。',
     dangerous: true,
+    profiles: { secure: false, normal: true },
   },
   {
     key: 'wechatAutoRegister',
@@ -228,6 +235,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     impact: '开启后微信授权即自动建号，无法强制补填用户名密码。',
+    profiles: { secure: false, normal: true },
   },
 
   // ───────────────────────── 文件 ─────────────────────────
@@ -241,6 +249,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'user',
     input: { min: 1, max: 50000, step: 1, unit: 'MB' },
     impact: '超过该大小的文件上传会被拒绝；保存后同会话内即时生效，其他已打开页面刷新后生效。',
+    profiles: { secure: 100, normal: 500 },
   },
   {
     key: 'fontMaxFileSize',
@@ -486,8 +495,12 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: false,
     isPublic: true,
     tier: 'admin',
+    // 与 freeExportDownloadEnabled 同理：出厂默认值按 variant 由打包期写 .env
+    // （ADR-0078 D2），私有部署内网环境不需要「防资源滥用」的默认关闭。
+    envKey: 'BATCH_DOWNLOAD_ENABLED',
     impact: '开启后用户可发起批量打包下载，占用磁盘与带宽。',
     dangerous: true,
+    profiles: { secure: false, normal: true },
   },
   {
     key: 'fileZipCompressionLevel',
@@ -562,6 +575,31 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     impact: '每日该整点发送前一天 P2 告警汇总；当天无前日告警则不发送。',
   },
 
+  // ───────────────────────── 安全：模式 ─────────────────────────
+  {
+    key: 'securityMode',
+    type: 'string',
+    category: 'security',
+    description:
+      '安全模式。secure = 完全遵循等保三级；normal = 本地/测试部署，便利高于一切。',
+    defaultValue: 'normal',
+    isPublic: true,
+    tier: 'admin',
+    dangerous: true,
+    hot: false,
+    input: {
+      options: [
+        { value: 'normal', label: '普通模式（便利优先）' },
+        { value: 'secure', label: '安全模式（等保三级）' },
+      ],
+    },
+    impact:
+      '仅切换标记本身不改变任何安全项的实际生效值——切换到某模式必须走 profile 批量应用，' +
+      '否则会出现「界面显示已切安全模式、实际仍是弱值生效」的静默偏离。' +
+      '本项不要手工修改，用「应用安全模式」入口切换。',
+    profiles: { secure: 'secure', normal: 'normal' },
+  },
+
   // ───────────────────────── 安全：接口限流 ─────────────────────────
   {
     key: 'rateLimitPublicMax',
@@ -575,6 +613,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'RATE_LIMIT_PUBLIC_MAX',
     input: { min: 1, max: 100000, step: 1, unit: '次' },
     impact: '公开接口（未登录）同一 IP 每窗口超过该次数返回 429。过低会误伤正常使用。',
+    profiles: { secure: 100, normal: 10000 },
   },
   {
     key: 'rateLimitPublicWindowMs',
@@ -600,6 +639,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'RATE_LIMIT_AUTH_MAX',
     input: { min: 1, max: 1000000, step: 1, unit: '次' },
     impact: '已登录用户按 IP 的请求上限；设太小正常操作也会被限流，设太大等于放开限制。',
+    profiles: { secure: 300, normal: 100000 },
   },
   {
     key: 'rateLimitLoginMax',
@@ -613,6 +653,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 10000, step: 1, unit: '次' },
     impact: '超过该次数的登录被限流，是防暴力破解的第一道闸。调太松会降低安全性。',
     dangerous: true,
+    profiles: { secure: 30, normal: 1000 },
   },
   {
     key: 'rateLimitLoginWindowMs',
@@ -639,6 +680,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     impact:
       '关闭后管理员可仅凭密码登录（等保 2.0 8.1.4.1(d) 要求双因素）。' +
       'admin-auth 与 jwt.strategy 均每次读取，改完即生效。',
+    profiles: { secure: true, normal: false },
   },
   // 口令策略 4 项（passwordMinLength / passwordMaxAgeDays / passwordExpiringSoonDays /
   // passwordChangeEnforceEnabled）**刻意不收录**：password-policy.service 在构造期一次性
@@ -664,6 +706,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 10000, step: 1, unit: '次' },
     impact: '每窗口内同一账号超过该次数的登录尝试被限流。每次检查时读取，即时生效。',
     dangerous: true,
+    profiles: { secure: 30, normal: 500 },
   },
   {
     key: 'loginRateLimitWindowSeconds',
@@ -689,6 +732,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'AUTH_RATE_LIMIT_PASSWORD_RESET_MAX',
     input: { min: 1, max: 10000, step: 1, unit: '次' },
     impact: '单个手机号/邮箱在窗口内最多可提交几次密码重置；过小会挡住真实用户，过大等于放开被撞库重置。',
+    profiles: { secure: 5, normal: 100 },
   },
   {
     key: 'passwordResetRateLimitWindowSeconds',
@@ -714,6 +758,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'AUTH_RATE_LIMIT_REGISTER_MAX',
     input: { min: 1, max: 10000, step: 1, unit: '次' },
     impact: '单个 IP 在窗口内的注册次数上限；过小会挡住批量导入，过大等于放开批量注册。',
+    profiles: { secure: 5, normal: 100 },
   },
   {
     key: 'registerRateLimitWindowSeconds',
@@ -739,6 +784,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'AUTH_RATE_LIMIT_ORDER_CREATE_MAX',
     input: { min: 1, max: 10000, step: 1, unit: '次' },
     impact: '下单次数上限，窗口内超出后无法下单（用于保护第三方支付配额）。',
+    profiles: { secure: 10, normal: 1000 },
   },
   {
     key: 'orderCreateRateLimitWindowSeconds',
@@ -764,6 +810,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 3, max: 100, step: 1, unit: '次' },
     impact: '同一账号在窗口内失败达到该次数即被锁定。调太低会把正常输错的用户锁住。',
     dangerous: true,
+    profiles: { secure: 10, normal: 100 },
   },
   {
     key: 'accountLockWindowSeconds',
@@ -790,6 +837,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 60, max: 86400, step: 60, unit: '秒' },
     impact: '账号被锁定后的锁定时长，期间即使密码正确也无法登录；设太大会让账号长时间不可用。',
     dangerous: true,
+    profiles: { secure: 1800, normal: 60 },
   },
   {
     key: 'smsDailyLimitPerPhone',
@@ -803,6 +851,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 200, step: 1, unit: '次/日' },
     impact: '超过后该手机号当日无法再收到验证码，直接控制短信费。',
     dangerous: true,
+    profiles: { secure: 10, normal: 100 },
   },
   {
     key: 'smsHourlyLimitPerIp',
@@ -816,6 +865,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 500, step: 1, unit: '次/时' },
     impact: '单个 IP 每小时最多发送短信条数，超出后验证码发不出，登录与找回密码会卡住。',
     dangerous: true,
+    profiles: { secure: 20, normal: 500 },
   },
 
   // ───────────────────────── 配额：游客转换与免费导出 ─────────────────────────
@@ -829,6 +879,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     input: { min: 1, max: 720, step: 1, unit: '小时' },
     impact: '未登录游客转换次数的统计窗口长度；须与「游客每窗口内最多图纸转换次数」配套理解。',
+    profiles: { secure: 2, normal: 24 },
   },
   {
     key: 'conversionGuestLimit',
@@ -840,6 +891,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     input: { min: 1, max: 1000, step: 1, unit: '次' },
     impact: '未登录游客每窗口的转换次数上限，超出后需登录；设太大会放开匿名刷转换。',
+    profiles: { secure: 5, normal: 20 },
   },
   {
     key: 'freeExportDownloadEnabled',
@@ -849,8 +901,12 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: false,
     isPublic: true,
     tier: 'admin',
+    // 私有部署出厂该默认放行（ADR-0078）：出厂默认值按 variant 由打包期写入 .env，
+    // 走 env 中间层而非 DB 行——不进库、无需迁移脚本，运维仍可在配置页覆盖。
+    envKey: 'FREE_EXPORT_DOWNLOAD_ENABLED',
     impact: '开启后免费用户可导出转换结果，会增加转换引擎负载。',
     dangerous: true,
+    profiles: { secure: false, normal: true },
   },
 
   // ───────────────────────── 计费：支付开关 ─────────────────────────

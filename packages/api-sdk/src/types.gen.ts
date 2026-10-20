@@ -196,6 +196,48 @@ export type CacheWarningsDto = {
     warnings: Array<string>;
 };
 
+export type CacheKeyCatalogEntryDto = {
+    /**
+     * 稳定标识
+     */
+    id: string;
+    /**
+     * 可读名称
+     */
+    name: string;
+    /**
+     * Redis glob 匹配模式
+     */
+    pattern: string;
+    /**
+     * 存的是什么
+     */
+    description: string;
+    /**
+     * 归属层级：cache = 业务缓存（可删除）；infra = 基础设施（禁用）
+     */
+    scope: 'cache' | 'infra';
+    /**
+     * 删除后的实际后果
+     */
+    removalEffect: string;
+    /**
+     * TTL 说明
+     */
+    ttl: string;
+    /**
+     * 真实存在的键示例
+     */
+    example: string;
+};
+
+export type CacheKeyCatalogDto = {
+    /**
+     * 缓存键目录条目
+     */
+    entries: Array<CacheKeyCatalogEntryDto>;
+};
+
 export type CacheOperationDto = {
     /**
      * 缓存键
@@ -475,6 +517,73 @@ export type ResetCategoryDto = {
      * 配置分类
      */
     category: string;
+};
+
+export type ApplyProfileDto = {
+    /**
+     * 目标安全模式
+     */
+    profile: 'secure' | 'normal';
+};
+
+export type RuntimeProfilePreviewResponseDto = {
+    /**
+     * 配置键名
+     */
+    key: string;
+    /**
+     * 值类型
+     */
+    type: 'string' | 'number' | 'boolean' | 'json';
+    /**
+     * 分类
+     */
+    category: string;
+    /**
+     * 当前生效值（含 env 遮蔽后的实际生效值）
+     */
+    currentValue: {
+        [key: string]: unknown;
+    };
+    /**
+     * 当前值生效来源
+     */
+    source: 'runtime' | 'env' | 'default';
+    /**
+     * 本次应用的目标值
+     */
+    targetValue: {
+        [key: string]: unknown;
+    };
+    /**
+     * 本次应用是否会改写该项
+     */
+    willChange: boolean;
+    /**
+     * 该值曾被人工修改过
+     */
+    isModified: boolean;
+    /**
+     * env 层当前值；非 null 表示本 key 有 env 层值，应用 profile 后 env 不再决定生效值
+     */
+    envValue: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type RuntimeProfileApplyResponseDto = {
+    /**
+     * 应用的 profile 名称
+     */
+    profile: 'secure' | 'normal';
+    /**
+     * 实际写入的 key
+     */
+    applied: Array<string>;
+    /**
+     * 值已等于目标值而跳过的 key
+     */
+    unchanged: Array<string>;
 };
 
 export type TaskRunDto = {
@@ -1910,7 +2019,7 @@ export type AuditExportDto = {
     /**
      * 操作类型过滤
      */
-    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET';
+    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET' | 'NOTICE_DELETE';
     /**
      * 项目 ID（项目维度过滤）
      */
@@ -4511,6 +4620,32 @@ export type CreateNoticeDto = {
     publishNow?: boolean;
 };
 
+export type BatchDeleteNoticesDto = {
+    /**
+     * 要删除的通知 ID 列表（已去重）
+     */
+    ids: Array<string>;
+};
+
+export type BatchDeleteNoticesResultDto = {
+    /**
+     * 请求的 ID 数（去重后）
+     */
+    requested: number;
+    /**
+     * 实际删除的条数
+     */
+    deleted: number;
+    /**
+     * 其中原本正在生效的条数（已广播下线）
+     */
+    active: number;
+    /**
+     * 未找到因而未被删除的 ID
+     */
+    notFound: Array<string>;
+};
+
 export type UpdateNoticeDto = {
     /**
      * 通知级别
@@ -5433,6 +5568,22 @@ export type CacheMonitorControllerGetWarningsResponses = {
 
 export type CacheMonitorControllerGetWarningsResponse = CacheMonitorControllerGetWarningsResponses[keyof CacheMonitorControllerGetWarningsResponses];
 
+export type CacheMonitorControllerGetKeyCatalogData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cache-monitor/key-catalog';
+};
+
+export type CacheMonitorControllerGetKeyCatalogResponses = {
+    /**
+     * 成功获取缓存键目录
+     */
+    200: CacheKeyCatalogDto;
+};
+
+export type CacheMonitorControllerGetKeyCatalogResponse = CacheMonitorControllerGetKeyCatalogResponses[keyof CacheMonitorControllerGetKeyCatalogResponses];
+
 export type CacheMonitorControllerDeleteValueData = {
     body?: never;
     path?: never;
@@ -5744,6 +5895,38 @@ export type RuntimeConfigControllerResetCategoryResponses = {
 };
 
 export type RuntimeConfigControllerResetCategoryResponse = RuntimeConfigControllerResetCategoryResponses[keyof RuntimeConfigControllerResetCategoryResponses];
+
+export type RuntimeConfigControllerPreviewProfileData = {
+    body: ApplyProfileDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/profile/preview';
+};
+
+export type RuntimeConfigControllerPreviewProfileResponses = {
+    /**
+     * 返回受影响配置项清单（含当前值与目标值）
+     */
+    201: Array<RuntimeProfilePreviewResponseDto>;
+};
+
+export type RuntimeConfigControllerPreviewProfileResponse = RuntimeConfigControllerPreviewProfileResponses[keyof RuntimeConfigControllerPreviewProfileResponses];
+
+export type RuntimeConfigControllerApplyProfileData = {
+    body: ApplyProfileDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/profile/apply';
+};
+
+export type RuntimeConfigControllerApplyProfileResponses = {
+    /**
+     * 返回实际写入与跳过的配置项
+     */
+    201: RuntimeProfileApplyResponseDto;
+};
+
+export type RuntimeConfigControllerApplyProfileResponse = RuntimeConfigControllerApplyProfileResponses[keyof RuntimeConfigControllerApplyProfileResponses];
 
 export type TaskRunControllerListRunsData = {
     body?: never;
@@ -7190,9 +7373,17 @@ export type UsersControllerUpdateData = {
 
 export type UsersControllerUpdateErrors = {
     /**
+     * 不能修改自己的角色或状态
+     */
+    403: unknown;
+    /**
      * 用户不存在
      */
     404: unknown;
+    /**
+     * 不能移除最后一个管理员的用户管理权限
+     */
+    409: unknown;
 };
 
 export type UsersControllerUpdateResponses = {
@@ -7238,9 +7429,17 @@ export type UsersControllerUpdateStatusData = {
 
 export type UsersControllerUpdateStatusErrors = {
     /**
+     * 不能修改自己的账户状态
+     */
+    403: unknown;
+    /**
      * 用户不存在
      */
     404: unknown;
+    /**
+     * 不能移除最后一个管理员的用户管理权限
+     */
+    409: unknown;
 };
 
 export type UsersControllerUpdateStatusResponses = {
@@ -11592,6 +11791,22 @@ export type NoticeCenterControllerCreateResponses = {
 
 export type NoticeCenterControllerCreateResponse = NoticeCenterControllerCreateResponses[keyof NoticeCenterControllerCreateResponses];
 
+export type NoticeCenterControllerBatchDeleteData = {
+    body: BatchDeleteNoticesDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices/batch-delete';
+};
+
+export type NoticeCenterControllerBatchDeleteResponses = {
+    /**
+     * 批量删除结果
+     */
+    200: BatchDeleteNoticesResultDto;
+};
+
+export type NoticeCenterControllerBatchDeleteResponse = NoticeCenterControllerBatchDeleteResponses[keyof NoticeCenterControllerBatchDeleteResponses];
+
 export type NoticeCenterControllerPublishData = {
     body?: never;
     path: {
@@ -11609,6 +11824,29 @@ export type NoticeCenterControllerPublishResponses = {
 };
 
 export type NoticeCenterControllerPublishResponse = NoticeCenterControllerPublishResponses[keyof NoticeCenterControllerPublishResponses];
+
+export type NoticeCenterControllerRemoveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}';
+};
+
+export type NoticeCenterControllerRemoveErrors = {
+    /**
+     * 通知不存在
+     */
+    404: unknown;
+};
+
+export type NoticeCenterControllerRemoveResponses = {
+    /**
+     * 已删除
+     */
+    200: unknown;
+};
 
 export type NoticeCenterControllerUpdateData = {
     body: UpdateNoticeDto;

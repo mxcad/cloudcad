@@ -53,7 +53,7 @@ class SvnAgent {
       log(`[SVN] 提交成功: ${filePath}`);
       return { success: true, output: String(stdout).trim() };
     } catch (err) {
-      log(`[SVN] 提交失败: ${err.message}`);
+      log('error', `[SVN] 提交失败: ${err.message}`);
       return { success: false, error: err.message };
     }
   }
@@ -77,7 +77,7 @@ class SvnAgent {
         maxBuffer: 50 * 1024 * 1024,
       });
     } catch (err) {
-      log(`[SVN] cat 失败: ${err.message}`);
+      log('error', `[SVN] cat 失败: ${err.message}`);
       throw err;
     }
   }

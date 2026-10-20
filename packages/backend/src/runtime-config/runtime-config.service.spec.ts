@@ -12,6 +12,7 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { DatabaseService } from "../database/database.service";
 import { RUNTIME_CONFIG_DEFINITIONS } from "./runtime-config.constants";
 import { RuntimeConfigService } from "./runtime-config.service";
+import type { RuntimeConfigDefinition } from "./runtime-config.types";
 
 describe("RuntimeConfigService", () => {
 	let service: RuntimeConfigService;
@@ -21,12 +22,13 @@ describe("RuntimeConfigService", () => {
 			findMany: jest.fn(),
 			findUnique: jest.fn(),
 			createMany: jest.fn(),
+			create: jest.fn(),
 			update: jest.fn(),
 			upsert: jest.fn(),
 		},
 		// syncDefaultConfigs 用事务回填 isPublic/description 漂移，未 mock 会在
 		// 构造期的 .catch() 里静默失败
-		$transaction: jest.fn().mockImplementation(async (ops: unknown[]) => ops),
+		$transaction: jest.fn(),
 		runtimeConfigLog: {
 			create: jest.fn(),
 			findMany: jest.fn(),
@@ -45,6 +47,15 @@ describe("RuntimeConfigService", () => {
 		// resetMocks 会清 mock 实现；setex/del 现以 .catch() 链式调用，必须返回 promise
 		mockRedis.setex.mockResolvedValue(undefined);
 		mockRedis.del.mockResolvedValue(undefined);
+
+		// $transaction 两种形态：数组式（syncDefaultConfigs 批量回填）与交互式
+		// （applyProfile 把值写入与审计写入放进同一个事务）。交互式的 tx 直接用
+		// mockPrisma 本身，断言仍落在同一批 mock 上。
+		mockPrisma.$transaction.mockImplementation(async (arg: unknown) =>
+			typeof arg === "function"
+				? (arg as (tx: unknown) => Promise<unknown>)(mockPrisma)
+				: arg,
+		);
 
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
@@ -657,6 +668,221 @@ describe("RuntimeConfigService", () => {
 		});
 	});
 
+	// ==================== profile 预览与应用 ====================
+	// 预览展示的「将改动项」与实际写入集合不一致，是本机制最主要的失效方式
+	// ——运维按预览做过决策、点应用后行为却不同。以下用例把这条不变量钉死。
+	describe("profile 预览与应用", () => {
+		// T11 填真实目标值之前，定义表里只有 securityMode 一个键声明了 profiles，
+		// 不足以验证批量语义。这里注入一个三键定义集覆盖：需改写、已等于目标、
+		// 无 DB 行三种情形。
+		const seededDefs: RuntimeConfigDefinition[] = [
+			{
+				key: "lockFailThreshold",
+				type: "number",
+				category: "security",
+				description: "测试用键",
+				defaultValue: 5,
+				isPublic: false,
+				profiles: { secure: 1, normal: 10 },
+			},
+			{
+				key: "sessionTtlSeconds",
+				type: "number",
+				category: "security",
+				description: "测试用键",
+				defaultValue: 3600,
+				isPublic: false,
+				envKey: "TEST_SESSION_TTL_SECONDS",
+				profiles: { secure: 1800, normal: 7200 },
+			},
+			{
+				key: "auditRetentionDays",
+				type: "number",
+				category: "audit",
+				description: "测试用键",
+				defaultValue: 90,
+				isPublic: false,
+				profiles: { secure: 365, normal: 30 },
+			},
+		];
+
+		const withSeededDefs = () => {
+			jest
+				.spyOn(service as unknown as { getProfileDefinitions: () => unknown }, "getProfileDefinitions")
+				.mockReturnValue(seededDefs);
+		};
+
+		beforeEach(() => {
+			delete process.env.TEST_SESSION_TTL_SECONDS;
+		});
+
+		it("预览的 willChange 集合必须等于应用的 applied 集合", async () => {
+			withSeededDefs();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{ key: "lockFailThreshold", value: JSON.stringify(8), type: "number", updatedBy: "u-1" },
+				{ key: "sessionTtlSeconds", value: JSON.stringify(1800), type: "number", updatedBy: null },
+			]);
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const preview = await service.previewProfileApply("secure");
+			const expected = preview.filter((e) => e.willChange).map((e) => e.key);
+
+			const result = await service.applyProfile("secure", "admin-1", "127.0.0.1");
+
+			expect(expected.sort()).toEqual(expect.not.arrayContaining(["sessionTtlSeconds"]));
+			expect(result.applied.sort()).toEqual(expected.sort());
+			expect(result.unchanged).toContain("sessionTtlSeconds");
+			expect(result.profile).toBe("secure");
+		});
+
+		it("应用时覆盖用户已手工修改的值，并把旧值记进审计", async () => {
+			withSeededDefs();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{ key: "lockFailThreshold", value: JSON.stringify(8), type: "number", updatedBy: "u-77" },
+			]);
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			await service.applyProfile("secure", "admin-1", "10.0.0.2");
+
+			expect(mockPrisma.runtimeConfig.update).toHaveBeenCalledWith({
+				where: { key: "lockFailThreshold" },
+				data: { value: JSON.stringify(1), updatedBy: "admin-1" },
+			});
+			expect(mockPrisma.runtimeConfigLog.create).toHaveBeenCalledWith({
+				data: expect.objectContaining({
+					key: "lockFailThreshold",
+					oldValue: JSON.stringify(8),
+					newValue: JSON.stringify(1),
+					operatorId: "admin-1",
+					operatorIp: "10.0.0.2",
+				}),
+			});
+		});
+
+		it("值写入与审计写入走同一个交互事务，缓存失效在事务外", async () => {
+			withSeededDefs();
+			// 全部无 DB 行 → 三种键都走 create
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+			mockPrisma.runtimeConfig.create.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const result = await service.applyProfile("secure", "admin-1");
+
+			expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+			expect(typeof mockPrisma.$transaction.mock.calls[0][0]).toBe("function");
+			expect(mockPrisma.runtimeConfig.create).toHaveBeenCalledTimes(seededDefs.length);
+			expect(mockPrisma.runtimeConfigLog.create).toHaveBeenCalledTimes(seededDefs.length);
+			expect(mockPrisma.runtimeConfig.create).toHaveBeenCalledWith({
+				data: expect.objectContaining({
+					key: "lockFailThreshold",
+					value: JSON.stringify(1),
+					type: "number",
+					updatedBy: "admin-1",
+				}),
+			});
+			expect(mockRedis.del).toHaveBeenCalledWith("runtime_config:all");
+			expect(result.applied.length).toBe(seededDefs.length);
+			expect(result.unchanged).toEqual([]);
+		});
+
+		it("事务内任一项写入失败 → 抛错且不失效缓存", async () => {
+			withSeededDefs();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{ key: "lockFailThreshold", value: JSON.stringify(5), type: "number", updatedBy: null },
+				{ key: "sessionTtlSeconds", value: JSON.stringify(3600), type: "number", updatedBy: null },
+			]);
+			mockPrisma.runtimeConfig.update.mockRejectedValueOnce(new Error("constraint"));
+
+			await expect(service.applyProfile("secure", "admin-1")).rejects.toThrow("constraint");
+			expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+			// 缓存失效在事务之后，事务抛错时必须走不到
+			expect(mockRedis.del).not.toHaveBeenCalled();
+		});
+
+		it("缓存失效失败不影响应用结果（尽力而为，不回滚已提交的 DB 写入）", async () => {
+			withSeededDefs();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+			mockPrisma.runtimeConfig.create.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+			mockRedis.del.mockRejectedValue(new Error("redis down"));
+
+			const result = await service.applyProfile("secure", "admin-1");
+			expect(result.applied.length).toBe(seededDefs.length);
+		});
+
+		it("生效值已等于目标值 → 跳过写入，但预览暴露 envValue 让运维知情", async () => {
+			withSeededDefs();
+			// env 层把生效值抬到 secure 目标值：DB 行仍是安装默认行
+			process.env.TEST_SESSION_TTL_SECONDS = "1800";
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{ key: "sessionTtlSeconds", value: JSON.stringify(3600), type: "number", updatedBy: null },
+			]);
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+
+			const preview = await service.previewProfileApply("secure");
+			const entry = preview.find((e) => e.key === "sessionTtlSeconds");
+			expect(entry?.source).toBe("env");
+			expect(entry?.envValue).toBe(1800);
+			expect(entry?.currentValue).toBe(1800);
+			expect(entry?.willChange).toBe(false);
+
+			const result = await service.applyProfile("secure", "admin-1");
+			expect(result.applied).not.toContain("sessionTtlSeconds");
+			expect(result.unchanged).toContain("sessionTtlSeconds");
+			expect(mockPrisma.runtimeConfig.update).not.toHaveBeenCalled();
+		});
+
+		it("缺操作者 → BadRequestException 且不写库", async () => {
+			withSeededDefs();
+			await expect(
+				service.applyProfile("secure", undefined as unknown as string),
+			).rejects.toThrow(BadRequestException);
+			// 写空 updatedBy 会让 resolveValue 把该行当成安装默认行、env 重新压上来，
+			// profile 静默不生效——所以必须在任何读取与写入之前拦下
+			expect(mockPrisma.runtimeConfig.findMany).not.toHaveBeenCalled();
+			expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+		});
+
+		it("未知模式 → BadRequestException（拒绝静默回退成某个模式）", async () => {
+			await expect(service.previewProfileApply("strict")).rejects.toThrow(
+				BadRequestException,
+			);
+			await expect(service.applyProfile("strict", "admin-1")).rejects.toThrow(
+				BadRequestException,
+			);
+			expect(mockPrisma.runtimeConfig.findMany).not.toHaveBeenCalled();
+		});
+
+		it("没有任何键声明 profiles → BadRequestException（拒绝静默空操作）", async () => {
+			jest
+				.spyOn(service as unknown as { getProfileDefinitions: () => unknown }, "getProfileDefinitions")
+				.mockReturnValue([]);
+			await expect(service.previewProfileApply("secure")).rejects.toThrow(
+				BadRequestException,
+			);
+			expect(mockPrisma.runtimeConfig.findMany).not.toHaveBeenCalled();
+		});
+
+		it("securityMode 标记键参与应用：标记与取值同批提交", async () => {
+			// 用真实定义表（不注入），验证 wiring 而非只验证注入逻辑
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+			mockPrisma.runtimeConfig.create.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const preview = await service.previewProfileApply("secure");
+			const marker = preview.find((e) => e.key === "securityMode");
+			expect(marker).toBeDefined();
+			expect(marker?.category).toBe("security");
+			expect(marker?.targetValue).toBe("secure");
+			expect(marker?.willChange).toBe(true);
+
+			const result = await service.applyProfile("secure", "admin-1");
+			expect(result.applied).toContain("securityMode");
+		});
+	});
+
 	// ==================== getDefinitions ====================
 	describe("getDefinitions", () => {
 		it("should return all definitions", () => {
@@ -812,6 +1038,57 @@ describe("RuntimeConfigService", () => {
 			const actual = [...new Set(RUNTIME_CONFIG_DEFINITIONS.map((d) => d.category))].sort();
 			expect(actual.filter((c) => !EXPECTED_CATEGORIES.includes(c))).toEqual([]);
 			expect(actual).toEqual([...EXPECTED_CATEGORIES].sort());
+		});
+
+		it("声明 profiles 的键必须同时给出 secure 与 normal 两个目标值", () => {
+			// 只给一个会在切换到「没给的那个」时静默不动作，等价于把偏离项藏起来。
+			const withProfiles = RUNTIME_CONFIG_DEFINITIONS.filter((d) => d.profiles != null);
+			// 断言非空，防止 profiles 全被删掉后此不变式空过
+			expect(withProfiles.map((d) => d.key)).toContain("securityMode");
+			expect(
+				withProfiles
+					.filter(
+						(d) =>
+							!Object.prototype.hasOwnProperty.call(d.profiles as object, "secure") ||
+							!Object.prototype.hasOwnProperty.call(d.profiles as object, "normal"),
+					)
+					.map((d) => d.key),
+			).toEqual([]);
+		});
+
+		it("每个 profile 目标值都必须落在自身 input.min/max 区间内", () => {
+			// profile 目标值是代码常量、不走 set() 的入参校验；越界值会被静默写库，
+			// 然后业务代码按一个不在界内的配置运行。与 service 侧的运行时守卫同源，
+			// 这里让它在测试期就暴露。
+			const validate = (
+				service as unknown as {
+					validateValue: (
+						def: RuntimeConfigDefinition,
+						value: unknown,
+					) => string | null;
+				}
+			).validateValue.bind(service);
+			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => d.profiles != null,
+			)
+				.flatMap((d) => {
+					const secure = validate(d, d.profiles!.secure);
+					const normal = validate(d, d.profiles!.normal);
+					return [
+						...(secure === null ? [] : [{ key: d.key, mode: "secure", reason: secure }]),
+						...(normal === null ? [] : [{ key: d.key, mode: "normal", reason: normal }]),
+					];
+				});
+			expect(offenders).toEqual([]);
+		});
+
+		it("两个 profile 的目标值必须不同（同值键放进 profile 集就是静默空操作）", () => {
+			// secure 与 normal 填同一个值，该键参与批量应用但切换模式对毫无效果——
+			// 界面显示已切换、实际什么都没变，正是 ADR-0077 D5 要消灭的「静默偏离」。
+			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => d.profiles != null && JSON.stringify(d.profiles.secure) === JSON.stringify(d.profiles.normal),
+			).map((d) => d.key);
+			expect(offenders).toEqual([]);
 		});
 	});
 	// ==================== 键登记完整性 ====================

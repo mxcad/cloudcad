@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  NOTICE_ACK_STORAGE_KEY_FOR_TEST,
+  ackStorageKey,
   filterUnacknowledged,
   isAcknowledged,
   readAcks,
@@ -111,15 +111,15 @@ describe('useNoticeStream 纯函数', () => {
 
     it('空存储与非法内容都返回空表（不抛错）', () => {
       expect(readAcks(storage)).toEqual({})
-      storage.setItem(NOTICE_ACK_STORAGE_KEY_FOR_TEST, '{ 不是 JSON')
+      storage.setItem(ackStorageKey(), '{ 不是 JSON')
       expect(readAcks(storage)).toEqual({})
-      storage.setItem(NOTICE_ACK_STORAGE_KEY_FOR_TEST, '["n_1"]')
+      storage.setItem(ackStorageKey(), '["n_1"]')
       expect(readAcks(storage)).toEqual({})
     })
 
     it('非数字时间戳被丢弃', () => {
       storage.setItem(
-        NOTICE_ACK_STORAGE_KEY_FOR_TEST,
+        ackStorageKey(),
         JSON.stringify({ n_1: 'bad', n_2: 123, n_3: null }),
       )
       expect(readAcks(storage)).toEqual({ n_2: 123 })

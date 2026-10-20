@@ -67,6 +67,16 @@ export type ConfigTier = 'user' | 'admin' | 'advanced';
 /** 配置值的生效来源 */
 export type ConfigValueSource = 'runtime' | 'env' | 'default';
 
+/**
+ * 安全模式 profile 名称。
+ * - `secure`：完全遵循等保三级
+ * - `normal`：本地/测试部署，便利高于一切
+ */
+export type ConfigProfile = 'secure' | 'normal';
+
+/** profile 取值表：声明则两个 profile 都必须给出 */
+export type ConfigProfiles = Record<ConfigProfile, RuntimeConfigValue>;
+
 /** 枚举型配置的可选项 */
 export interface ConfigEnumOption {
   value: string;
@@ -129,6 +139,50 @@ export interface RuntimeConfigDefinition {
    * 避免迁移后静默回滚到代码默认值（存量合规配置被悄悄收紧）。
    */
   envAliases?: string[];
+
+  /**
+   * 安全模式 / 普通模式的目标取值表（ADR-0077）。
+   *
+   * 声明后该 key 参与 profile 批量应用：切换到某 profile 时，其目标值被写入
+   * `value` 并记 `updatedBy`（覆盖用户已手工修改的值，ADR-0077 D5）。
+   * 声明则 `secure` 与 `normal` 两个目标值都必须给出——只给一个会在切换到
+   * 「没给的那个」时静默不动作，等价于把偏离项藏起来。
+   * 未声明 `profiles` 的 key 不受 profile 影响。
+   */
+  profiles?: ConfigProfiles;
+}
+
+/**
+ * profile 预览条目：一项将受 profile 应用影响的配置。
+ * 预览与实际应用共用同一套判定（见 `RuntimeConfigService.previewProfileApply`），
+ * 保证预览展示的「将改动项」与实际写入集合完全一致。
+ */
+export interface RuntimeProfilePreviewEntry {
+  key: string;
+  type: RuntimeConfigValueType;
+  category: RuntimeConfigCategory;
+  /** 当前生效值（含 env 遮蔽后的实际生效值） */
+  currentValue: RuntimeConfigValue;
+  /** 当前值来源 */
+  source: ConfigValueSource;
+  /** 本次应用的目标值 */
+  targetValue: RuntimeConfigValue;
+  /** 本次应用是否会改写该项 */
+  willChange: boolean;
+  /** 该值曾被人工修改过（`updatedBy` 非空） */
+  isModified: boolean;
+  /** env 层当前值；非 null 表示本 key 有 env 层值，profile 写入后 env 不再决定生效值 */
+  envValue: RuntimeConfigValue | null;
+}
+
+/** profile 应用结果 */
+export interface RuntimeProfileApplyResult {
+  /** 应用的 profile 名称 */
+  profile: ConfigProfile;
+  /** 实际写入的 key */
+  applied: string[];
+  /** 值已等于目标值而跳过的 key */
+  unchanged: string[];
 }
 
 /**

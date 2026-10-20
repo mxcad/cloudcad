@@ -25,6 +25,8 @@ const {
   resetConfig,
   getConfigHistory,
   resetCategory,
+  previewProfile,
+  applyProfile,
   showToast,
   showConfirm,
 } = vi.hoisted(() => ({
@@ -33,6 +35,8 @@ const {
   resetConfig: vi.fn(),
   getConfigHistory: vi.fn(),
   resetCategory: vi.fn(),
+  previewProfile: vi.fn(),
+  applyProfile: vi.fn(),
   showToast: vi.fn(),
   showConfirm: vi.fn(),
 }));
@@ -43,6 +47,8 @@ vi.mock('@/api-sdk', () => ({
   runtimeConfigControllerResetConfig: resetConfig,
   runtimeConfigControllerGetConfigHistory: getConfigHistory,
   runtimeConfigControllerResetCategory: resetCategory,
+  runtimeConfigControllerPreviewProfile: previewProfile,
+  runtimeConfigControllerApplyProfile: applyProfile,
 }));
 vi.mock('@/contexts/NotificationContext', () => ({
   useNotification: () => ({ showToast, showConfirm }),
@@ -217,6 +223,8 @@ beforeEach(() => {
   resetConfig.mockResolvedValue(ok(null));
   getConfigHistory.mockResolvedValue(ok(rawHistory));
   resetCategory.mockResolvedValue(ok({ success: true, keys: [] }));
+  previewProfile.mockResolvedValue(ok([]));
+  applyProfile.mockResolvedValue(ok({ profile: 'secure', applied: [], unchanged: [] }));
   showConfirm.mockResolvedValue(true);
 });
 
@@ -237,6 +245,7 @@ describe('useRuntimeConfig', () => {
         restartRequired: 1,
         envDriven: 1,
         pendingSave: 0,
+        modeManaged: 0,
       });
       // 已登记的分类按元数据顺序；未登记的分类追加在最后
       expect(rc.groups.map((g) => g.category)).toEqual([
@@ -1020,6 +1029,93 @@ describe('useRuntimeConfig', () => {
         (c) => c.key === 'mail.port'
       )!;
       expect(hook.result.current.isDirty(portItem)).toBe(true);
+    });
+  });
+
+  describe('安全模式预览与切换', () => {
+    const entry = (key: string, current: unknown, target: unknown) => ({
+      key,
+      type: 'boolean',
+      category: 'security',
+      currentValue: current,
+      source: 'default',
+      targetValue: target,
+      willChange: JSON.stringify(current) !== JSON.stringify(target),
+      isModified: false,
+      envValue: null,
+    });
+
+    it('首次进页取一次 profile 预览——「模式受管项」计数没有别的来源', async () => {
+      previewProfile.mockResolvedValue(
+        ok([entry('rateLimitLoginMax', 500, 30)])
+      );
+      const hook = await load();
+
+      await waitFor(() =>
+        expect(hook.result.current.stats.modeManaged).toBe(1)
+      );
+      // 断言直接读 hook.result.current：hook 每次渲染返回新对象，
+      // 冻在局部变量上会读到旧 state
+      expect(hook.result.current.modePreviewTarget).toBe('secure');
+      expect(previewProfile).toHaveBeenCalledTimes(1);
+      expect(previewProfile).toHaveBeenCalledWith({
+        throwOnError: true,
+        body: { profile: 'secure' },
+      });
+    });
+
+    it('切换模式重新拉预览；应用后清掉被覆盖项的草稿并刷新公开配置缓存', async () => {
+      const hook = await load();
+      await waitFor(() => expect(hook.result.current.modePreviewTarget).not.toBe(null));
+
+      // 留一条将被 profile 覆盖的草稿
+      await act(async () => {
+        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.draft.com');
+      });
+
+      previewProfile.mockResolvedValue(
+        ok([entry('rateLimitLoginMax', 500, 30)])
+      );
+      await act(async () => {
+        await hook.result.current.requestModeSwitch('normal');
+      });
+      // 目标模式变了必须重拉，否则对话框展示的是上一轮预览
+      expect(hook.result.current.modeSwitchTarget).toBe('normal');
+      expect(hook.result.current.modePreview[0]?.key).toBe('rateLimitLoginMax');
+
+      applyProfile.mockResolvedValue(
+        ok({
+          profile: 'normal',
+          applied: ['rateLimitLoginMax', 'mail.smtpHost'],
+          unchanged: ['mfaEnforceEnabled'],
+        })
+      );
+      await act(async () => {
+        await hook.result.current.confirmModeSwitch();
+      });
+      const after = hook.result.current;
+
+      expect(applyProfile).toHaveBeenCalledWith({
+        throwOnError: true,
+        body: { profile: 'normal' },
+      });
+      expect(after.modeSwitchTarget).toBe(null);
+      // 覆盖项的草稿被清掉，未覆盖项的草稿保留
+      expect(after.drafts['mail.smtpHost']).toBeUndefined();
+      expect(after.stats.modeManaged).toBe(1);
+      // 横幅读公开配置缓存，应用后必须失效，否则全局横幅仍显示旧模式
+      expect(
+        queryClient.getQueriesData({ queryKey: ['runtimeConfig', 'public'] })
+      ).toBeDefined();
+    });
+
+    it('预览请求失败：对话框停在空清单且计数不变', async () => {
+      previewProfile.mockRejectedValue(new Error('boom'));
+      const hook = await load();
+
+      await waitFor(() => expect(hook.result.current.modePreviewing).toBe(false));
+      expect(hook.result.current.modePreview).toEqual([]);
+      expect(hook.result.current.stats.modeManaged).toBe(0);
     });
   });
 });

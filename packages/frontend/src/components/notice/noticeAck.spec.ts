@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   NOTICE_ACK_STORAGE_KEY,
+  ackStorageKey,
   isAcknowledged,
   markAcknowledged,
   pruneExpiredAcks,
@@ -88,23 +89,23 @@ describe('noticeAck', () => {
     });
 
     it('存储内容为非法 JSON 时返回空表（不抛错）', () => {
-      storage.setItem(NOTICE_ACK_STORAGE_KEY, '{ 不是 JSON');
-      expect(readAcks(storage)).toEqual({});
+      storage.setItem(ackStorageKey('u_1'), '{ 不是 JSON');
+      expect(readAcks(storage, 'u_1')).toEqual({});
     });
 
     it('存储内容为数组或字符串时返回空表', () => {
-      storage.setItem(NOTICE_ACK_STORAGE_KEY, '["n_1"]');
-      expect(readAcks(storage)).toEqual({});
-      storage.setItem(NOTICE_ACK_STORAGE_KEY, '"n_1"');
-      expect(readAcks(storage)).toEqual({});
+      storage.setItem(ackStorageKey('u_1'), '["n_1"]');
+      expect(readAcks(storage, 'u_1')).toEqual({});
+      storage.setItem(ackStorageKey('u_1'), '"n_1"');
+      expect(readAcks(storage, 'u_1')).toEqual({});
     });
 
     it('非数字的时间戳被丢弃', () => {
       storage.setItem(
-        NOTICE_ACK_STORAGE_KEY,
+        ackStorageKey('u_1'),
         JSON.stringify({ n_1: 'bad', n_2: 123, n_3: null })
       );
-      expect(readAcks(storage)).toEqual({ n_2: 123 });
+      expect(readAcks(storage, 'u_1')).toEqual({ n_2: 123 });
     });
 
     it('读取时 localStorage 抛错返回空表（隐私模式不崩）', () => {
@@ -113,6 +114,32 @@ describe('noticeAck', () => {
 
     it('写入时配额满静默失败（不抛错）', () => {
       expect(() => writeAcks({ n_1: NOW }, new ThrowingStorage())).not.toThrow();
+    });
+
+    it('键带账号后缀，不同账号各存各的簿记', () => {
+      expect(ackStorageKey('u_1')).toBe(`${NOTICE_ACK_STORAGE_KEY}:u_1`);
+      expect(ackStorageKey()).toBe(`${NOTICE_ACK_STORAGE_KEY}:anonymous`);
+
+      writeAcks({ n_1: NOW }, storage, 'u_1');
+      writeAcks({ n_2: NOW }, storage, 'u_2');
+
+      expect(readAcks(storage, 'u_1')).toEqual({ n_1: NOW });
+      expect(readAcks(storage, 'u_2')).toEqual({ n_2: NOW });
+      expect(readAcks(storage)).toEqual({});
+    });
+
+    it('未登录账号与已登录账号的簿记互不串用', () => {
+      writeAcks({ n_1: NOW }, storage, null);
+      writeAcks({ n_2: NOW }, storage, 'u_1');
+
+      expect(readAcks(storage, undefined)).toEqual({ n_1: NOW });
+      expect(readAcks(storage, null)).toEqual({ n_1: NOW });
+      expect(readAcks(storage, 'u_1')).toEqual({ n_2: NOW });
+    });
+
+    it('旧键（无账号后缀）不被读取，靠 TTL 自然失效', () => {
+      storage.setItem(NOTICE_ACK_STORAGE_KEY, JSON.stringify({ n_1: NOW }));
+      expect(readAcks(storage, 'u_1')).toEqual({});
     });
   });
 

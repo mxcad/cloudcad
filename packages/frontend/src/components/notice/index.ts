@@ -28,6 +28,7 @@ export { useNoticeStream } from './useNoticeStream';
 export type { NoticeStreamSource } from './useNoticeStream';
 export {
   NOTICE_ACK_STORAGE_KEY,
+  ackStorageKey,
   readAcks,
   writeAcks,
   isAcknowledged,

@@ -7,8 +7,9 @@
  *
  * 覆盖的日志源（ADR-0071 前调研结论）：
  * - PM2 各托管应用 out/error（backend/frontend/conversion/cooperate/
- *   config-service/postgresql/redis，redis/cooperate 无独立文件、输出并入此处）
+ *   config-service/postgresql/redis，cooperate 无独立文件、输出并入此处）
  * - PostgreSQL（data/logs/postgres.log，pg_ctl -l 指定）
+ * - Redis（data/logs/redis.log + 轮转产物 redis-YYYY-MM-DD.log；redis-manager 传 --logfile 脱离 PM2，ADR-0076）
  * - backend pino-roll 按天轮转 app.log + access-*.log
  * - conversion-service / config-service / storage-service 按天 JSON 日志
  * - 部署 / 升级过程（lib/deploy-log.js 镜像落盘）
@@ -22,6 +23,7 @@ const path = require('path');
 const { PROJECT_ROOT } = require('./context');
 const { createZip } = require('./zip-writer');
 const { formatSize } = require('./format');
+const { isRotatedLog } = require('./redis-log-rotation');
 
 /**
  * 日志源清单。slug 同时用作 zip 内的一级目录名（不同源存在同名文件，
@@ -40,6 +42,13 @@ const LOG_SOURCES = [
     service: 'PostgreSQL',
     dir: path.join('data', 'logs'),
     filter: (name) => name === 'postgres.log',
+  },
+  {
+    slug: 'redis',
+    service: 'Redis（redis-manager 传 --logfile，启动前按尺寸轮转为 redis-YYYY-MM-DD.log）',
+    dir: path.join('data', 'logs'),
+    // 当前文件 + 轮转产物都收（isRotatedLog 的 base 是去 .log 的 stem）
+    filter: (name) => name === 'redis.log' || isRotatedLog(name, 'redis'),
   },
   {
     slug: 'backend',

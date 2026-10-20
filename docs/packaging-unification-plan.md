@@ -22,7 +22,7 @@
 > | [#446](http://10.66.66.1:5656/qjx/cloudcad/issues/446) | v3：docker 升级流程 + 启动基线校验 | #432 | #445 |
 > | [#447](http://10.66.66.1:5656/qjx/cloudcad/issues/447) | v3：CI 同 job 双产出 + 跨宿主覆盖 | #432 | #446、#444 |
 > 已拍板：统一打包入口 = `pnpm pack:menu`（package.json 命令保留为薄别名）；runtime CLI 成为**所有交付形态的唯一入口**（深度统一）；命名取最小改动（裸机不动、docker 向裸机风格对齐）；docker 包进 CI；Windows 宿主不捆绑 Docker Desktop（检测+指引）；v1 = 裸机 win / 裸机 linux / docker linux 三类，v2 = docker windows 宿主包 + private，v3 = docker 升级包（跨宿主通用、按架构分）。
-> 不涉及三层一致性（前端/SDK/后端/DB 零改动），纯打包 + 部署运行时工程。
+> 主体不涉及三层一致性（前端/SDK/DB 零改动），纯打包 + 部署运行时工程；唯一后端改动 = v2 E2E 暴露的 `initialization.service.ts` 白名单初始化顺序 bug 修复（#440，见 v2 章节）。
 
 ---
 
@@ -101,7 +101,7 @@
 | C2 | 命名 | 裸机不变：`cloudcad-{type}[-private]-{V}-{DATE}-{platform}.{ext}`（windows=.7z，linux={os}-{arch}.tar.gz）。Docker 全量：`cloudcad-deploy[-private]-{V}-{DATE}-docker-{hostPlatform}-{arch}.{ext}`（例 `cloudcad-deploy-1.0.0-20261016-docker-linux-x86_64.tar.gz`；v2 windows 宿主 = .7z）。Docker 升级（v3）：`cloudcad-upgrade[-private]-{V}-{DATE}-docker-{arch}.tar.gz`（**无平台段** = 跨宿主通用） |
 | C3 | 形态标记 | `.deploy` 文件内容 `form=bare\|docker`（bare 可空，兼容旧包）；检测唯一出口 `detectDeployForm()`（`runtime/scripts/lib/`），兼容存量 `.deploy-docker` 标记；新包只写 `.deploy` |
 | C4 | CLI 单一入口 | `start.*`/`stop.*`/`cloudcad.*` 全形态同构瘦壳 → `cli.js`；`cli.js` 按 `detectDeployForm()` 分派：bare → 现有编排；docker → `runtime/docker-runtime/` 模块（12 步编排保留为形态模块，CLI 薄 adapter）。两 facade（start/cloudcad）必须成对同步（ADR-0056 C4） |
-| C5 | 运维长尾可见性 | v1 docker 形态：`menu-sections.js` 对 db-backup/密码重置/infra/setup-wizard/dev 置不可见；运维中心（config-service）继承同一可见性数据 |
+| C5 | 运维长尾可见性 | v1 docker 形态：`menu-sections.js` 对 db-backup/密码重置/infra/setup-wizard/dev 置不可见；运维中心（config-service）继承同一可见性数据。**#442（v2）已解除 db-backup / 三条密码重置的隐藏**（docker 形态经 `docker exec cloudcad-pg` 支持），双形态全可见；仍隐藏的只剩 infra/dev 项（`form:'bare'`） |
 | C6 | .env 分平台生成 | .env 恒在目标机首次 start 时生成；宿主服务地址按宿主平台写值：linux（`--network=host`，ADR-0074 保持不动）→ `localhost:3100/3091`；windows（bridge + `host.docker.internal`）→ `host.docker.internal:3100/3091`。镜像本身跨平台相同，差异只落在目标机生成的 .env |
 | C7 | 包元数据 | 四类包统一含 SHA256SUMS + VERSION + 部署说明.txt（裸机包补齐，对齐 docker 包现状） |
 | C8 | 验证 | 按形态保留 verify 脚本（docker 有 DinD/`--network none` 特有逻辑，不强行合并）；统一打包入口按形态分派调用；「挑最新包」正则改为按形态过滤（bare 排除 `-docker-`，docker 只匹配 `-docker-`） |
@@ -129,10 +129,10 @@
 
 ### v2：Docker Windows 宿主包 + private + 运维长尾
 
-- **docker windows 宿主包**：`start.bat/stop.bat`（包内 windows node → `cli.js`，与裸机 win 同构）；Docker Desktop 检测 + 安装指引（Q1，不捆绑）；app 容器 bridge 网络 + `host.docker.internal` 访问宿主 conversion-service/cooperate（C6）；宿主侧物料 = `runtime/windows/{node,mxcad}` + 协同服务 windows 二进制（复用 mxcad-stable windows-x64 资产与 `pack-offline.js` 的物料解析逻辑）；`verify-windows-docker`（Docker Desktop 下 `docker run --network none` 同样成立）；CI `build-windows-docker` job
-- **docker private variant**：impl-mx → backend dist → app 镜像构建链路接线（打包机需 `packages/impl-mx`），菜单解除置灰
-- **运维长尾形态感知**：db-backup（`docker exec pg psql pg_dump`）、密码重置（`docker exec`）、infra（容器健康）
-- **删除 `pack-docker.js`** 与 `pack:docker` 命令（v1 已 deprecated）
+- **docker windows 宿主包**（#440 已完成：入口 + 检测 + C6 + 路径双视角；`verify-windows-docker` 与 CI `build-windows-docker` job 拆至 #444）：`start.bat/stop.bat/cloudcad.bat`（包内 windows node → `cli.js`，与裸机 win 同构）；Docker Desktop 检测 + 安装指引（Q1，不捆绑 Docker 物料）；app 容器 bridge 网络 + `host.docker.internal` 访问宿主 conversion-service/cooperate（C6：`.env` 宿主视角 localhost / compose environment 容器视角 pg/redis/host.docker.internal 双视角，`applyHostUrls` 端口定案后改写 COOPERATE_URL/CONVERSION_SERVICE_URL）；**路径双视角**（Linux 宿主靠同路径挂载天然一致，Windows 宿主宿主路径 `D:\...` 容器不可解析）：windows 宿主 `.env` 的 data/ 路径键改容器视角 `/app/data/...`（`WINDOWS_PATH_OVERRIDES`，compose `./data:/app/data` 挂载），容器 backend 下发给宿主 conversion-service 的容器视角路径由 runner 按 `CONTAINER_PATH_PREFIX`/`HOST_PATH_PREFIX`（docker-runtime 仅对 Windows 宿主注入）双向翻译——入站 srcPath/outpath 翻宿主路径供引擎读写、出站 newpath 翻回容器视角回传；例外 `MXCAD_ASSEMBLY_PATH` 保持宿主视角（宿主 spawn 引擎用）；**协同端口固定 3091 不可顺延**（引擎自有黑盒通道，`mxcad_ini.json` 的 `cpp_server_port` 是另一服务；被占用时引擎静默放弃监听——进程存活但无端口，E2E 实测）：step6 端口顺延清单不含 COOPERATE_PORT，step9 启动前按裸机 `cooperate-manager.js` 的 `ensurePortFree` 语义强杀占用者接管（`host-process.js` 的 `getPortPids`/`killPortOwner`，Windows netstat+taskkill /T、Linux fuser）；宿主侧物料 = `runtime/windows/{node,mxcad}`（复用 mxcad-stable windows-x64 资产，registry 单一事实源）；容器内引擎路径占位目录（backend 生产模式 existsSync 校验，`FUNCTION_EXECUTOR=conversion-service` 恒宿主转换）；Windows 进程树杀 `taskkill /T` + mxcadAssembly `windowsVerbatimArguments`；打包 `pack-linux-docker.js --host-platform windows`（Windows x64 打包机 + 7-Zip，产物 .7z）；**2026-10-20 Windows 实机 E2E 全绿**（Docker Desktop 29.0.1，打包产物 start.bat/stop.bat 实跑）：start 12 项检查全 ✔（端口自动顺延 8000→8010 / 3001→3011 / 3002→3032 / 5432→5442 / 6379→6389 / 3100→3130，mxcad 探针真实转换 code=0，协同 3091 被旧部署占用时强杀接管成功，app 容器 healthy）、管理员登录成功、**上传→宿主转换往返**（容器 backend 写 `/app/data/uploads` → 宿主 conversion-service 双视角路径翻译 → 宿主引擎转换 → 产物 mxweb+preloading 在宿主 `data\uploads\` 与容器 `/app/data/uploads/` 双视角可见）、stop.bat 干净停止（端口全释放 + 容器停止）；E2E 暴露并修复一个后端 bug：`initialization.service.ts` 的 `ensureDefaultAdminIpWhitelist` 原排在 `checkAndCreateInitialAdmin` 之后，其守卫 `userCount>0` 在全新启动时恒真 → 默认放行条目（0.0.0.0/0 + ::/0）永不写入 → 白名单空表 fail-close，远程管理员在全新部署上无法登录（已对调顺序 + 回归测试红绿验证）
+- **docker private variant**（#441 已完成：`pack-linux-docker.js --variant private` + 菜单解除置灰）：impl-mx 经 **implmx 命名上下文**烘焙进 app 镜像（与裸机 Dockerfile.linux-deploy 同机制）——打包机须有 `packages/impl-mx`（gitignore 私有包）：step0 非 frozen `pnpm install` 同步 lockfile（补 impl-mx importer，镜像内 frozen install 依赖它）→ step1 打包机构建 impl-mx dist → swagger 以 `IMPL=1` 生成（私有 auth 端点进前端 MSW/类型）→ `Dockerfile.app` 的 base 阶段 `COPY --from=implmx`（private lockfile 含 impl-mx importer，workspace 须可见其 package.json 否则 frozen install 失败）+ production 阶段 `IMPLMX_FILTER=--filter @cloudcad/impl-mx` 装运行时依赖 → `.env.example` 生成 `IMPL=1`（容器 backend 启动时 `require /app/packages/impl-mx/dist`）；命名加 `-private` 段（`cloudcad-deploy-private-...`，与裸机 variantSuffix 同位，裸机挑包正则 `-docker-` 过滤不受影响）；backend 源码不 import impl-mx（仅运行时 require），故 backend-builder 阶段零改动；**2026-10-20 实机双变体镜像构建验证**（私有打包机 Docker Desktop）：private 镜像 30/30 步全过（1.78GB，`/app/packages/impl-mx` 含源码+预构建 dist，`require('/app/packages/impl-mx/dist')` 成功导出 `createAuthProviders`，运行时依赖闭包完整）；OSS 镜像同过（1.64GB，impl-mx 目录为空无代码泄漏）；private 打包机 lockfile 含 impl-mx importer 时 OSS 构建亦通过（pnpm frozen install 容忍 lockfile 多余 importer）
+- **运维长尾形态感知**：db-backup（`docker exec pg psql pg_dump`）、密码重置（`docker exec`）、infra（容器健康）（#442 已完成：psql/pg_dump/restore 走 `docker exec cloudcad-pg`，重启分支 `docker restart`，宿主 conversion 进程经 `restartHostProcess` 重启，菜单隐藏解除；真 docker 实机端到端验证随 v2 docker 包拆出）
+- **删除 `pack-docker.js`** 与 `pack:docker` 命令（v1 已 deprecated；#443 已完成）
 
 ### v3：Docker 升级包
 
@@ -152,7 +152,7 @@
 | V3 | docker linux 全量包 | `node scripts/pack-linux-docker.js --verify` | 新命名产物；断网 DinD 验证全绿；start/stop 经 cli.js 分派行为等价（12 步不变）；品牌前缀为 PRODUCT_NAME |
 | V4 | 菜单路由 | `pnpm pack:menu` 逐组合 | win 打包机：裸机 win / 裸机 linux（容器通道+发行版）/ docker linux 均路由正确；置灰组合（docker+private、docker+windows、upgrade+docker）不可选 |
 | V5 | 存量兼容 | 旧 docker 部署（`.deploy-docker` + 旧 start.sh）→ 覆盖新包 → 重跑 start | 新 start.sh 识别旧标记进入 docker 形态；`.env`/`data/` 保留；服务正常 |
-| V6 | 运维入口 | docker 部署上 `./cloudcad.sh status/stop`；运维中心菜单 | status 显示容器 + 宿主进程；stop 全停；长尾命令在菜单/运维中心不可见 |
+| V6 | 运维入口 | docker 部署上 `./cloudcad.sh status/stop`；运维中心菜单 | status 显示容器 + 宿主进程；stop 全停；长尾命令在菜单/运维中心不可见（v1 判据；#442 起 db-backup/密码重置在 docker 形态亦可见） |
 | V7 | CI | release.yml 三 job（build-linux / build-windows / build-linux-docker） | 全绿、断网门禁通过才上传；docker 包命名符合 C2 |
 | V8 | 品牌 | `pnpm brand:check` | docker-runtime 无硬编码产品名 |
 

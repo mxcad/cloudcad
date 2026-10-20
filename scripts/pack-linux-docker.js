@@ -1,18 +1,33 @@
 #!/usr/bin/env node
 /**
- * @fileoverview Docker 一键部署包（Linux，架构感知）打包脚本（ADR-0074 半容器化）
+ * @fileoverview Docker 一键部署包（架构感知 + 宿主平台感知）打包脚本（ADR-0074 半容器化 / ADR-0075 #440）
  *
- * 用法: node scripts/pack-linux-docker.js [--out <dir>] [--skip-docker-build] [--verify]
+ * 用法: node scripts/pack-linux-docker.js [--out <dir>] [--skip-docker-build] [--verify] [--host-platform linux|windows] [--variant oss|private]
+ *
+ * 变体（--variant，ADR-0075 #441，默认 oss）：
+ *   oss     —— 开源版（默认）
+ *   private —— 含 impl-mx 私有实现包：打包机须已拷贝 packages/impl-mx（gitignore
+ *              私有包，不在仓库）；step0 非 frozen install 同步 lockfile → step1
+ *              构建 impl-mx dist → swagger 以 IMPL=1 生成 → app 镜像 production
+ *              阶段经 implmx 命名上下文烘焙（源码+dist）+ 装其运行时依赖 →
+ *              .env.example 生成 IMPL=1（容器 backend 启动时 require impl-mx/dist）
  *
  * 架构语义：在对应架构的机器上打对应架构的包——x86_64 机器出 x86_64 包，
  * arm64 机器出 aarch64 包（mxcad 两种架构都有转换器；容器镜像全多架构，
  * docker build 在打包机上直接产出本机架构镜像）。
  *
+ * 宿主平台（--host-platform，默认 linux）：
+ *   linux   —— v1：--network=host + rootless 兜底 + 包内静态 Docker 二进制（.tar.gz）
+ *   windows —— v2（#440）：目标机 Docker Desktop（WSL2 跑 linux 容器）+ bridge 网络
+ *              + host.docker.internal；不捆绑任何 Docker 物料（检测 + 安装指引）；
+ *              须在 Windows x64 打包机（Docker Desktop + 7-Zip + runtime/windows 物料线），
+ *              产物 .7z；断网验证（verify-windows-docker）属 #444，--verify 暂不支持
+ *
  * 打包机零假设自举：只需 x86_64/arm64 + Docker + node ≥20.19.5 + 网络（或预置物料），
  * 其余全部兜底——pnpm（PATH → corepack）→ pnpm install（含 preinstall runtime 资产下载）
  * → node 物料（本地三源 → 下载）→ mxcad（本地 → Release 下载）→ schema-engine（本地 → Prisma 官方源）
  * → conversion-service dist（缺失时按依赖链构建：@cloudcad/db → contracts → engine-exec）
- * → swagger_json.json（缺失时跑 backend 构建生成，IMPL 恒空防 .env 劫持）
+ * → swagger_json.json（缺失时跑 backend 构建生成，IMPL 按变体：oss 恒空防 .env 劫持 / private 为 1）
  * → Docker 静态二进制/compose（多源回退下载）→ 镜像（本地 → pull）。
  * 受限网络：RUNTIME_DOWNLOAD_URLS（下载源）、NPM_REGISTRY（镜像内 pnpm registry）。
  *
@@ -23,11 +38,14 @@
  *   → 7 SHA256SUMS + 归档 → 8（--verify）verify-linux-docker-deploy.js 断网验证
  *
  * 产物: <out>/cloudcad-deploy-<version>-<DATE>-docker-linux-<arch>.tar.gz（arch = x86_64 | aarch64）
+ *       <out>/cloudcad-deploy-<version>-<DATE>-docker-windows-x86_64.7z（--host-platform windows）
+ *       private 变体包名加 -private 段（cloudcad-deploy-private-...，与裸机包 variantSuffix 同位）
  * 命名契约见 ADR-0075（docker 全量包与裸机包共享 cloudcad-deploy- 前缀，-docker- 段区分形态）；
  * 包内布局见 ADR-0074「包布局」节。
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
@@ -121,11 +139,40 @@ const OUT_DIR = path.resolve(getArg('--out') || path.join(PROJECT_ROOT, 'release
 // 包名日期段（与 pack-offline.js 同一约定：YYYYMMDD）
 const DATE = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-// docker 全量部署包命名唯一出口（ADR-0075 C4）：
-// cloudcad-deploy-{version}-{DATE}-docker-linux-{arch}
-// 与裸机包共享 cloudcad-deploy- 前缀，-docker- 段是形态区分（挑包正则按它过滤）。
+// 宿主平台（ADR-0075 #440）：linux（v1，--network=host + rootless 兜底 + 包内静态 Docker）
+// / windows（v2，Docker Desktop + bridge 网络 + host.docker.internal，目标机不捆绑任何 Docker 物料）。
+// 容器镜像两端相同（Docker Desktop 经 WSL2 跑 linux 容器）；差异只在宿主侧物料与入口。
+const HOST_PLATFORM = (getArg('--host-platform') || 'linux').toLowerCase();
+const HOST = {
+  linux: { hostPlatform: 'linux', ext: 'tar.gz', needsDockerBin: true },
+  windows: { hostPlatform: 'windows', ext: '7z', needsDockerBin: false },
+}[HOST_PLATFORM];
+if (!HOST) fail(`未知 --host-platform: ${HOST_PLATFORM}（可选 linux | windows）`);
+
+// 变体（ADR-0075 #441）：oss（默认，开源）/ private（含 impl-mx 私有实现包——
+// gitignore 私有包，不在仓库里，打包机须先拷贝 packages/impl-mx 到机器上）。
+// private 链路：step0 非 frozen install 同步 lockfile → step1 构建 impl-mx dist
+// → swagger 以 IMPL=1 生成 → 镜像 production 阶段经 implmx 命名上下文烘焙
+// （源码+dist）+ IMPLMX_FILTER 装其运行时依赖 → .env.example 生成 IMPL=1。
+const VARIANT = (getArg('--variant') || 'oss').toLowerCase();
+if (VARIANT !== 'oss' && VARIANT !== 'private') {
+  fail(`未知 --variant: ${VARIANT}（可选 oss | private）`);
+}
+
+// windows 宿主架构配置（#440）：仅 x64（mxcad 资产仅 windows-x64；Docker Desktop 无 ARM 稳定支持）
+const WINDOWS_ARCH = {
+  pkgArch: 'x86_64',
+  mxcadRegistryKey: 'mxcad-windows-x64',
+};
+
+// docker 全量部署包命名唯一出口（ADR-0075 C2）：
+// cloudcad-deploy[-private]-{version}-{DATE}-docker-{hostPlatform}-{arch}
+// 与裸机包共享 cloudcad-deploy- 前缀，-docker- 段是形态区分（挑包正则按它过滤）；
+// -private 段与裸机包 variantSuffix 同位（前缀后），裸机挑包正则的 !includes('-docker-')
+// 过滤不受影响。
 function dockerPackageName(version, pkgArch) {
-  return `cloudcad-deploy-${version}-${DATE}-docker-linux-${pkgArch}`;
+  const variantSuffix = VARIANT === 'private' ? '-private' : '';
+  return `cloudcad-deploy${variantSuffix}-${version}-${DATE}-docker-${HOST.hostPlatform}-${pkgArch}`;
 }
 
 function log(msg) {
@@ -221,11 +268,20 @@ function step0Bootstrap() {
   }
   resolvePnpm(); // 不可用即 fail
   log(`pnpm: ${runPnpm(['--version'], { capture: true }).stdout.trim()}`);
-  if (!fs.existsSync(path.join(PROJECT_ROOT, 'node_modules', '.pnpm'))) {
+  const hasNm = fs.existsSync(path.join(PROJECT_ROOT, 'node_modules', '.pnpm'));
+  if (hasNm && VARIANT !== 'private') return; // oss 且依赖已装：无需 install
+  if (!hasNm) {
     log('node_modules 缺失，执行 pnpm install（含 preinstall runtime 资产下载，可能数分钟）...');
-    const res = runPnpm(['install', '--frozen-lockfile'], { timeoutMs: 30 * 60000 });
-    if (res.status !== 0) fail('pnpm install 失败：打包机需可访问 npm registry（或机器上预装好依赖）');
+  } else {
+    log('private 变体：执行 pnpm install（非 frozen）同步 lockfile（补 impl-mx importer）...');
   }
+  // private 不加 --frozen-lockfile：impl-mx 是 gitignore 的私有包，不在提交的 pnpm-lock.yaml
+  // 里（否则无 impl-mx 目录的 oss 打包机 / CI 会因 lockfile 引用缺失的 workspace 包而
+  // frozen install 失败）。私有打包机首次 install 须同步 lockfile（补回 impl-mx importer）
+  // 才能继续，镜像内 production 阶段的 frozen install 依赖这份已同步的 lockfile；
+  // oss 变体 lockfile 与 workspace 一致，保持 frozen 保证可复现（与裸机 installFullDeps 同机制）。
+  const res = runPnpm(['install', ...(VARIANT === 'private' ? [] : ['--frozen-lockfile'])], { timeoutMs: 30 * 60000 });
+  if (res.status !== 0) fail('pnpm install 失败：打包机需可访问 npm registry（或机器上预装好依赖）');
 }
 
 /** 同步 sleep（Atomics.wait；打包脚本是同步流程，无需事件循环） */
@@ -254,10 +310,13 @@ async function ensurePackDocker() {
     log(`打包机系统 docker ${sys.stdout.trim()} 可用，直接复用`);
     return 'system';
   }
-  log('打包机无系统 docker，自举本地 docker（三级门禁：root→rootless）...');
   if (process.platform !== 'linux') {
+    if (HOST_PLATFORM === 'windows') {
+      fail('打包机无可用 docker：Windows 打包机请安装 Docker Desktop（启用 Linux 容器）后重跑');
+    }
     fail('打包机需 Linux（无系统 docker 时的自举仅支持 Linux 静态二进制；Windows 请安装 Docker Desktop 并启用 Linux 容器）');
   }
+  log('打包机无系统 docker，自举本地 docker（三级门禁：root→rootless）...');
 
   // 2) 静态 docker 二进制就位（供本地安装 + step5 打包复用）：本地 8 个核心二进制齐全则直接
   //    复用，免重复联网下载 ~70MB tgz。downloadDockerStatic 解压后即删 tgz（重跑时 tgz 不存在），
@@ -451,17 +510,26 @@ function ensureConversionServiceDist() {
  * 干净克隆/工作区重置后不存在，而 Dockerfile.app 的 frontend-builder 阶段要 COPY 它
  * （前端 MSW handler / API 类型源）。缺失时跑 backend 完整构建
  * （prebuild → nest build → generate:swagger → build:seed）。
- * IMPL 恒注入空串（OSS 变体）：dotenv 不覆盖已存在的环境变量，故可挡住打包机
- * packages/backend/.env 里 IMPL=1 的劫持（否则会 require 不存在的 impl-mx/dist 崩溃，
- * 与 bd90de5 的变体修复同机制）。
+ * IMPL 按变体注入：oss 恒空串（dotenv 不覆盖已存在的环境变量，挡住打包机
+ * packages/backend/.env 里 IMPL=1 的劫持——否则会 require 不存在的 impl-mx/dist
+ * 崩溃，与 bd90de5 的变体修复同机制）；private 注入 '1'（impl-mx/dist 已由 step1
+ * 前置检查在打包机构建），让私有 auth 端点进入前端 MSW/API 类型。
  */
 function ensureSwaggerJson() {
   const dest = path.join(PROJECT_ROOT, 'swagger_json.json');
+  // private 强制重生：文件无法标注生成时的变体，共享打包机上 oss 跑出的陈旧
+  // swagger（缺私有 auth 端点）会被 private 包复用 → 前端 MSW/API 类型缺私有端点。
+  // oss 保持「存在即复用」（oss 机器不可能生成出含私有端点的 swagger）。
+  if (VARIANT === 'private' && fs.existsSync(dest)) {
+    log('swagger_json.json 已存在，private 变体强制重生（防跨变体污染）...');
+    fs.unlinkSync(dest);
+  }
   if (fs.existsSync(dest)) return;
-  log('swagger_json.json 缺失，执行 backend 构建生成（IMPL= 空，OSS 变体）...');
+  const impl = VARIANT === 'private' ? '1' : '';
+  log(`swagger_json.json 缺失，执行 backend 构建生成（IMPL=${impl === '' ? '空' : impl}，${VARIANT} 变体）...`);
   const res = runPnpm(['--filter', 'backend', 'run', 'build'], {
     timeoutMs: 30 * 60000,
-    env: { ...process.env, IMPL: '' },
+    env: { ...process.env, IMPL: impl },
   });
   if (res.status !== 0) fail(`backend 构建失败: ${res.stderr || res.stdout}`);
   if (!fs.existsSync(dest)) fail('backend 构建完成但未产出 swagger_json.json');
@@ -568,14 +636,70 @@ const DOCKER_PATH_OVERRIDES = {
 };
 
 /**
+ * Windows 宿主（#440，C6）额外覆盖：
+ * - 宿主进程（conversion-service 等）跑在 Windows 宿主上，DB/Redis 经 compose 发布端口
+ *   走 localhost（与 linux host 网络同视角）；app 容器视角的 pg/redis 服务名与
+ *   host.docker.internal 由 docker-compose.windows.yml 的 environment 覆盖（优先于 env_file）
+ * - COOPERATE_HOST：容器经 host.docker.internal 访问宿主协同服务
+ *   （COOPERATE_URL/CONVERSION_SERVICE_URL 由 start 编排 applyHostUrls 在端口定案后改写）
+ * - FUNCTION_EXECUTOR 恒 conversion-service：引擎二进制是 Windows mxcadAssembly.exe，
+ *   无法在 linux 容器内 spawn，转换必须走宿主 conversion-service
+ * - MXCAD_ASSEMBLY_PATH：宿主 conversion-service 经它 spawn 引擎（Windows 路径原样采用）；
+ *   容器内 backend 按 Linux 规则回退平台默认路径（.exe 判为跨平台误配置），
+ *   由包内 runtime/linux/mxcad 占位目录满足生产模式 existsSync 校验
+ */
+const WINDOWS_HOST_OVERRIDES = {
+  COOPERATE_HOST: 'host.docker.internal',
+  FUNCTION_EXECUTOR: 'conversion-service',
+  MXCAD_ASSEMBLY_PATH: '<DEPLOY_DIR>/runtime/windows/mxcad/mxcadAssembly.exe',
+};
+
+/**
+ * Windows 宿主（#440）路径键覆盖：容器 backend 的数据根是 /app/data（compose 把宿主
+ * ./data 挂到 /app/data），data/ 下的路径键必须写成**容器视角**绝对路径——
+ * DOCKER_PATH_OVERRIDES 的 <DEPLOY_DIR>/data/... 在 Windows 宿主上是 Windows 绝对
+ * 路径（D:\...），容器内不可解析。宿主 conversion-service 收到的容器视角路径由
+ * runner 按 CONTAINER/HOST_PATH_PREFIX 翻译成宿主路径（docker-runtime hostProcessSpec
+ * 注入），产物经同一挂载对两侧可见。
+ * 例外：MXCAD_ASSEMBLY_PATH 保持宿主视角（宿主 conversion-service spawn 引擎用；
+ * 容器 backend 按 Linux 规则回退平台默认路径，由包内 runtime/linux/mxcad 占位目录
+ * 满足 existsSync 校验）。
+ */
+const WINDOWS_PATH_OVERRIDES = {
+  FILES_DATA_PATH: '/app/data/files',
+  AVATAR_PATH: '/app/data/files/avatars',
+  MX_REPO_PATH: '/app/data/mx-repo',
+  MXCAD_UPLOAD_PATH: '/app/data/uploads',
+  MXCAD_TEMP_PATH: '/app/data/temp',
+  MXCAD_DEBUG_PATH: '/app/data/debug',
+  BATCH_DOWNLOAD_EXPORT_DIR: '/app/data/exports',
+  CONVERSION_CACHE_DIR: '/app/data/exports/conversion-cache',
+  LOG_DIR: '/app/data/logs',
+  BACKUP_DIR: '/app/data/backups',
+  WECHATPAY_CERT_PATH: '/app/data/certs/wechat/apiclient_cert.pem',
+  WECHATPAY_KEY_PATH: '/app/data/certs/wechat/apiclient_key.pem',
+};
+
+/**
  * 生成 Docker 形态 .env.example：
  * 基础 = packages/backend/.env.example，路径/host 键按 DOCKER_PATH_OVERRIDES 重写
- * （注释行一并激活），末尾追加 Docker 形态专属键（基础里缺失的才追加，
- * dotenv 首值优先，重复追加无效）。
+ * （注释行一并激活），windows 宿主再叠加 WINDOWS_PATH_OVERRIDES（路径键改容器视角
+ * /app/data/...）+ WINDOWS_HOST_OVERRIDES（C6 双视角地址），
+ * private 变体激活 IMPL=1（基础文件里是注释行 `# IMPL=`，重写机制一并激活；
+ * 容器 backend 据此 require /app/packages/impl-mx/dist，#441），
+ * 末尾追加 Docker 形态专属键（基础里缺失的才追加，dotenv 首值优先，重复追加无效）。
+ * @param {string} version
+ * @param {'linux'|'windows'} [hostPlatform] 宿主平台（默认 linux）
+ * @param {'oss'|'private'} [variant] 变体（默认 oss）
  */
-function generateDockerEnvExample(version) {
+function generateDockerEnvExample(version, hostPlatform = 'linux', variant = 'oss') {
   const basePath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env.example');
   if (!fs.existsSync(basePath)) fail(`缺少 ${basePath}`);
+  const overrides =
+    hostPlatform === 'windows'
+      ? { ...DOCKER_PATH_OVERRIDES, ...WINDOWS_PATH_OVERRIDES, ...WINDOWS_HOST_OVERRIDES }
+      : { ...DOCKER_PATH_OVERRIDES };
+  if (variant === 'private') overrides.IMPL = '1';
   // 基础 .env.example 是 CRLF 行尾：JS 正则 `.` 不匹配 `\r`（行终止符），`(.*)$` 匹配不到
   // 带 `\r` 的行 → DOCKER_PATH_OVERRIDES 重写全部失效（2026-10-13 断网验证暴露：
   // DB_CONNECTION_TIMEOUT/REDIS_CONNECT_TIMEOUT 覆盖没生效，慢环境仍用 30s/10s 超时）。
@@ -587,21 +711,24 @@ function generateDockerEnvExample(version) {
     const m = line.match(/^#\s*([A-Z][A-Z0-9_]*)=(.*)$|^([A-Z][A-Z0-9_]*)=(.*)$/);
     const key = m ? m[1] || m[3] : null;
     if (key) presentKeys.add(key);
-    if (key && DOCKER_PATH_OVERRIDES[key] !== undefined) {
-      out.push(`${key}=${DOCKER_PATH_OVERRIDES[key]}`);
+    if (key && overrides[key] !== undefined) {
+      out.push(`${key}=${overrides[key]}`);
     } else {
       out.push(line);
     }
   }
   const extra = [];
   extra.push('');
-  extra.push('# ==================== Docker 一键部署形态覆盖（ADR-0074） ====================');
-  extra.push('# start.sh 首次运行把 <DEPLOY_DIR> 替换为实际部署目录；本段键仅 Docker 形态生效');
+  extra.push(`# ==================== Docker 一键部署形态覆盖（${hostPlatform === 'windows' ? 'ADR-0075 #440 Windows 宿主' : 'ADR-0074'}） ====================`);
+  extra.push(`# ${hostPlatform === 'windows' ? 'start.bat' : 'start.sh'} 首次运行把 <DEPLOY_DIR> 替换为实际部署目录；本段键仅 Docker 形态生效`);
   extra.push('DEPLOY_FORM=docker');
   extra.push(`APP_VERSION=${version}`);
+  // 基础文件缺失的 host 键兜底：windows 宿主下 app 容器经 host.docker.internal 访问
+  // 宿主协同服务（C6），其余键恒 localhost（宿主进程视角，DB/Redis 走 compose 发布端口）
+  const hostFallback = hostPlatform === 'windows' ? { COOPERATE_HOST: 'host.docker.internal' } : {};
   for (const key of ['DB_HOST', 'REDIS_HOST', 'COOPERATE_HOST', 'TZ']) {
     if (!presentKeys.has(key)) {
-      extra.push(key === 'TZ' ? 'TZ=Asia/Shanghai' : `${key}=localhost`);
+      extra.push(key === 'TZ' ? 'TZ=Asia/Shanghai' : `${key}=${hostFallback[key] || 'localhost'}`);
     }
   }
   return out.join('\n') + '\n' + extra.join('\n') + '\n';
@@ -649,11 +776,82 @@ function resolveLinuxMxcad() {
   return null;
 }
 
+/** 当前宿主平台的架构配置（linux → 按打包机架构的 ARCH；windows → 恒 x64） */
+function targetArch() {
+  return HOST_PLATFORM === 'windows' ? WINDOWS_ARCH : ARCH;
+}
+
+// ==================== Windows 宿主物料解析（#440） ====================
+
+/**
+ * 解析 Windows node 物料（runtime/windows/node，node.exe 判定就绪）。
+ * 缺失时由 build-windows-runtime.js 从官方源下载（与裸机 win 包同一物料线）。
+ */
+function resolveWindowsNode() {
+  const std = path.join(PROJECT_ROOT, 'runtime', 'windows', 'node');
+  if (fs.existsSync(path.join(std, 'node.exe'))) return std;
+  return null;
+}
+
+/** 解析 Windows mxcad 物料（runtime/windows/mxcad，mxcadAssembly.exe 判定就绪） */
+function resolveWindowsMxcad() {
+  const std = path.join(PROJECT_ROOT, 'runtime', 'windows', 'mxcad');
+  if (fs.existsSync(path.join(std, 'mxcadAssembly.exe'))) return std;
+  return null;
+}
+
+/**
+ * Windows mxcad 物料下载兜底（mxcad-registry.json 单一事实源，与 ensureLinuxMxcad 同约定）。
+ */
+async function ensureWindowsMxcad() {
+  const std = path.join(PROJECT_ROOT, 'runtime', 'windows', 'mxcad');
+  if (fs.existsSync(path.join(std, 'mxcadAssembly.exe'))) return std;
+  const registryPath = path.join(PROJECT_ROOT, 'scripts', 'pack-lib', 'mxcad-registry.json');
+  let asset = null;
+  if (fs.existsSync(registryPath)) {
+    const registry = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+    const entry = registry[WINDOWS_ARCH.mxcadRegistryKey];
+    if (entry && entry.asset) asset = entry.asset;
+  }
+  if (!asset) {
+    fail(`mxcad(windows-x64) 资产无法确定：mxcad-registry.json 缺 ${WINDOWS_ARCH.mxcadRegistryKey} 条目（先跑 scripts/upload-mxcad.js 生成产物索引）`);
+  }
+  const url = `https://github.com/${MXCAD_RELEASE_REPO}/releases/download/${MXCAD_RELEASE_TAG}/${asset}`;
+  log(`mxcad(windows-x64) 缺失，下载 ${url} ...`);
+  const { downloadFile } = require(path.join(PROJECT_ROOT, 'scripts', 'lib', 'download-sources'));
+  const cacheDir = path.join(PROJECT_ROOT, 'runtime', 'cache');
+  ensureDir(cacheDir);
+  const zip = path.join(cacheDir, asset);
+  if (!fs.existsSync(zip)) await downloadFile(url, zip);
+  ensureDir(std);
+  // Windows 宿主打包机：bsdtar（System32）解 zip
+  const res = run(TAR_BIN, ['-xf', zip, '-C', std]);
+  if (res.status !== 0) fail(`mxcad 资产解压失败: ${asset}`);
+  const nested = fs.readdirSync(std).find((e) => e.startsWith('.tmp-') && fs.statSync(path.join(std, e)).isDirectory());
+  if (nested) {
+    const nestedDir = path.join(std, nested);
+    for (const e of fs.readdirSync(nestedDir)) fs.renameSync(path.join(nestedDir, e), path.join(std, e));
+    fs.rmdirSync(nestedDir);
+  }
+  if (!fs.existsSync(path.join(std, 'mxcadAssembly.exe'))) fail('mxcad 资产解压后未见 mxcadAssembly.exe（registry 资产结构不符？）');
+  return std;
+}
+
 async function step1Prechecks(version) {
+  const archCfg = targetArch();
   log('============================================');
-  log(` Docker 一键部署包打包（Linux ${ARCH ? ARCH.pkgArch : process.arch}，版本 ${version}，打包机 ${process.platform}/${process.arch}）`);
+  log(` Docker 一键部署包打包（${HOST.hostPlatform} 宿主 ${archCfg.pkgArch}，variant ${VARIANT}，版本 ${version}，打包机 ${process.platform}/${process.arch}）`);
   log('============================================');
-  if (!ARCH) {
+  if (HOST_PLATFORM === 'windows') {
+    // windows 宿主包：须在 Windows 打包机（Docker Desktop 建/存镜像 + 7-Zip 归档 +
+    // runtime/windows 物料线）；仅 x64（mxcad 资产仅 windows-x64）
+    if (process.platform !== 'win32') {
+      fail('windows 宿主包须在 Windows 打包机上打（Docker Desktop + 7-Zip；容器镜像由 Docker Desktop 构建）');
+    }
+    if (process.arch !== 'x64') {
+      fail(`windows 宿主包仅支持 x64 打包机（当前 ${process.arch}；mxcad 仅 windows-x64 资产）`);
+    }
+  } else if (!ARCH) {
     fail(`仅支持 x86_64/arm64 打包机（当前 ${process.arch}）：在对应架构的机器上打对应架构的包`);
   }
   await ensurePackDocker(); // 无系统 docker 时三级门禁自举（root→rootless），设置 PATH/DOCKER_HOST
@@ -661,14 +859,29 @@ async function step1Prechecks(version) {
   step0Bootstrap();
 
   // 本地解析 → 下载兜底（打包机零缓存也能出包）
-  let nodeSrc = resolveLinuxNode();
-  if (!nodeSrc) {
-    nodeSrc = { kind: 'tarball', src: await ensureNodeTarball() };
-  }
-  log(`node 物料: ${nodeSrc.kind === 'tarball' ? path.basename(nodeSrc.src) : nodeSrc.src}`);
-  let mxcadSrc = resolveLinuxMxcad();
-  if (!mxcadSrc) {
-    mxcadSrc = await ensureLinuxMxcad();
+  let nodeSrc;
+  let mxcadSrc;
+  if (HOST_PLATFORM === 'windows') {
+    nodeSrc = resolveWindowsNode();
+    if (!nodeSrc) {
+      log('runtime/windows/node 缺失，执行 build-windows-runtime.js 下载（node 官方源/npmmirror）...');
+      const res = run('node', [path.join(PROJECT_ROOT, 'scripts', 'build-windows-runtime.js')], { timeoutMs: 30 * 60000 });
+      if (res.status !== 0) fail('build-windows-runtime.js 失败：Windows 打包机需可访问 node 官方源（或预置 runtime/windows/node）');
+      nodeSrc = resolveWindowsNode();
+      if (!nodeSrc) fail('build-windows-runtime.js 执行后 runtime/windows/node 仍缺失');
+    }
+    log(`node 物料: ${nodeSrc}`);
+    mxcadSrc = resolveWindowsMxcad() || (await ensureWindowsMxcad());
+  } else {
+    nodeSrc = resolveLinuxNode();
+    if (!nodeSrc) {
+      nodeSrc = { kind: 'tarball', src: await ensureNodeTarball() };
+    }
+    log(`node 物料: ${nodeSrc.kind === 'tarball' ? path.basename(nodeSrc.src) : nodeSrc.src}`);
+    mxcadSrc = resolveLinuxMxcad();
+    if (!mxcadSrc) {
+      mxcadSrc = await ensureLinuxMxcad();
+    }
   }
   if (!fs.existsSync(path.join(mxcadSrc, '1.dwg'))) {
     fail(`mxcad 物料缺 1.dwg（SystemLib 运行时探测依赖）: ${mxcadSrc}`);
@@ -676,15 +889,37 @@ async function step1Prechecks(version) {
   log(`mxcad 物料: ${mxcadSrc}`);
   await ensureSchemaEngine();
   ensureConversionServiceDist();
+  if (VARIANT === 'private') {
+    // 私有实现包（gitignore，不在仓库）：打包机须已拷贝 packages/impl-mx；
+    // dist 在打包机预构建（镜像 production 阶段直接烘焙，容器内不再编译）
+    const implMxDir = path.join(PROJECT_ROOT, 'packages', 'impl-mx');
+    if (!fs.existsSync(path.join(implMxDir, 'package.json'))) {
+      fail('private 变体需要私有包 packages/impl-mx，但打包机上不存在（gitignore 私有包：请先拷贝到打包机，或改用 oss 变体）');
+    }
+    log('构建 impl-mx（私有实现，dist 烘焙进 app 镜像）...');
+    const res = runPnpm(['--filter', '@cloudcad/impl-mx', 'run', 'build'], { timeoutMs: 15 * 60000 });
+    if (res.status !== 0) fail(`impl-mx 构建失败: ${res.stderr || res.stdout}`);
+    if (!fs.existsSync(path.join(implMxDir, 'dist'))) fail('impl-mx 构建完成但 dist 缺失');
+  }
   ensureSwaggerJson();
 
   const required = [
     'runtime/docker-runtime/index.js',
-    'runtime/docker-runtime/docker-compose.yml',
+    HOST_PLATFORM === 'windows'
+      ? 'runtime/docker-runtime/docker-compose.windows.yml'
+      : 'runtime/docker-runtime/docker-compose.yml',
     // 入口薄壳与裸机包共用模板（ADR-0075 C4 同构瘦壳）
-    'scripts/pack-lib/templates/start.sh',
-    'scripts/pack-lib/templates/stop.sh',
-    'scripts/pack-lib/templates/cloudcad.sh',
+    ...(HOST_PLATFORM === 'windows'
+      ? [
+          'scripts/pack-lib/templates/start.bat',
+          'scripts/pack-lib/templates/stop.bat',
+          'scripts/pack-lib/templates/cloudcad.bat',
+        ]
+      : [
+          'scripts/pack-lib/templates/start.sh',
+          'scripts/pack-lib/templates/stop.sh',
+          'scripts/pack-lib/templates/cloudcad.sh',
+        ]),
     'docker/Dockerfile.app',
     'docker/app-entrypoint.js',
     'packages/conversion-service/dist/server.js',
@@ -711,6 +946,44 @@ async function step1Prechecks(version) {
   return { nodeSrc, mxcadSrc };
 }
 
+/**
+ * 准备 impl-mx 命名上下文目录（#441）：
+ * - oss：空目录占位（Dockerfile 的 COPY --from=implmx 需要上下文存在；空目录不含
+ *   package.json，不会进入 pnpm workspace，与裸机 Dockerfile.linux-deploy 同机制）
+ * - private：packages/impl-mx 的暂存副本（排除 node_modules——打包机 pnpm install 后
+ *   该目录带 pnpm 符号链接，命名上下文不受 .dockerignore 约束，原样拷会把整个
+ *   node_modules 带进镜像并与 production 阶段 install 的重链接冲突）
+ * @returns {string} 上下文目录（正斜杠，Docker 跨平台可解析）
+ */
+function prepareImplMxContext() {
+  if (VARIANT !== 'private') {
+    const dir = path.join(os.tmpdir(), 'cloudcad-implmx-empty');
+    fs.mkdirSync(dir, { recursive: true });
+    return dir.replace(/\\/g, '/');
+  }
+  const src = path.join(PROJECT_ROOT, 'packages', 'impl-mx');
+  const dir = path.join(os.tmpdir(), 'cloudcad-implmx-stage');
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.mkdirSync(dir, { recursive: true });
+  copyDirExcluding(src, dir, new Set(['node_modules']));
+  return dir.replace(/\\/g, '/');
+}
+
+/** 递归拷贝目录（跳过 excludeDirs 中的目录名） */
+function copyDirExcluding(src, dest, excludeDirs) {
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (excludeDirs.has(entry.name)) continue;
+    const s = path.join(src, entry.name);
+    const d = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      fs.mkdirSync(d, { recursive: true });
+      copyDirExcluding(s, d, excludeDirs);
+    } else {
+      fs.copyFileSync(s, d);
+    }
+  }
+}
+
 function step2BuildAppImage(version) {
   if (SKIP_DOCKER_BUILD) {
     log('跳过 app 镜像构建（--skip-docker-build）');
@@ -725,11 +998,21 @@ function step2BuildAppImage(version) {
       fail(`拉取基础镜像 ${WORK_IMAGE} 失败（默认源与镜像源 ${REGISTRY_MIRRORS.join(', ')} 均不可达）`);
     }
   }
-  log(`构建 app 镜像 cloudcad/app:${version}（多阶段，本机架构 ${ARCH.pkgArch}，耗时较长）...`);
+  log(`构建 app 镜像 cloudcad/app:${version}（多阶段，本机架构 ${targetArch().pkgArch}，耗时较长）...`);
   // --network host：root 自举 dockerd 用 --bridge=none（无 bridge 网络），build 步骤容器默认
   // 无外网（连 DNS 都解析不了）→ 必须 host 网络才能 apk add / pnpm install 联网。
   // system docker 打包机 host 网络同样可用，无副作用。
-  const buildArgs = ['build', '--network', 'host', '-f', 'docker/Dockerfile.app', '--build-arg', `APP_VERSION=${version}`, '-t', `cloudcad/app:${version}`, '.'];
+  // Windows 宿主（Docker Desktop）：buildkit 不认 --network bridge（只认 default|none|host|
+  // 自定义网络名），且旧版 Docker Desktop 不支持 host → 用 default（默认 bridge 语义，
+  // 经 NAT 有外网，apk add / pnpm install 可联网）。
+  const buildNetwork = HOST_PLATFORM === 'windows' ? 'default' : 'host';
+  const buildArgs = ['build', '--network', buildNetwork, '-f', 'docker/Dockerfile.app', '--build-arg', `APP_VERSION=${version}`, '-t', `cloudcad/app:${version}`, '.'];
+  // impl-mx 命名上下文（#441）：private 传暂存目录（源码 + 打包机预构建 dist，不含
+  // node_modules），oss 传空目录占位（Dockerfile 的 COPY --from=implmx 需要上下文存在）
+  buildArgs.push('--build-context', `implmx=${prepareImplMxContext()}`);
+  if (VARIANT === 'private') {
+    buildArgs.push('--build-arg', 'IMPLMX_FILTER=--filter @cloudcad/impl-mx');
+  }
   // 受限网络：镜像内 pnpm install 走用户指定的 npm registry（Dockerfile.app 的 NPM_REGISTRY build-arg）
   if (process.env.NPM_REGISTRY) buildArgs.push('--build-arg', `NPM_REGISTRY=${process.env.NPM_REGISTRY}`);
   // 受限网络：apk add 走用户指定的 alpine 镜像源（Dockerfile.app 的 ALPINE_MIRROR build-arg，替换官方 dl-cdn）
@@ -1263,26 +1546,168 @@ function extractDeb(debPath, destDir) {
   fs.rmSync(arTmp, { recursive: true, force: true });
 }
 
+/** Linux 宿主部署说明（v1 文案，与既有包一致） */
+function linuxDeployNotes(version, productName) {
+  return [
+    `${productName} Docker 一键部署包（Linux ${ARCH.pkgArch}）`,
+    `版本: ${version}`,
+    '',
+    '【部署】',
+    '  1. 以普通用户解压本包到目标目录（如 /opt/cloudcad，勿用 root 解压）',
+    '  2. 以同一普通用户运行: ./start.sh',
+    '     - 完全无需 root/sudo，不请求任何密码（rootless 模式用包内静态 Docker）',
+    '     - 首次部署自动生成 .env；管理员默认口令 12345678，首次登录后请尽快修改',
+    '     - 三份口令唯一存于 .env（不再另存明文文件），丢失可用 ./runtime/cloudcad.sh 重置',
+    '  3. 浏览器访问 http://<服务器IP>:8000（端口以 .env 为准）',
+    '',
+    '【停止】 ./stop.sh（数据保留在 data/ 目录）',
+    '',
+    '【运维入口】 ./runtime/cloudcad.sh（交互菜单：启动/停止；与裸机包同构）',
+    '',
+    '【升级】 新版包解压覆盖本目录后重跑 ./start.sh',
+    '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
+    '',
+    '【引擎替换】 用官方 mxcad 替换 runtime/linux/mxcad/ 后重跑 ./start.sh，',
+    '  启动时会自动探测转换能力，SystemLib 不匹配时自动补齐。',
+    '',
+    '【运维中心】 http://<服务器IP>:3002（只读运维 + 配置管理）',
+  ].join('\n');
+}
+
+/** Windows 宿主部署说明（#440：Docker Desktop 检测 + 安装指引，不捆绑 Docker 物料） */
+function windowsDeployNotes(version, productName) {
+  return [
+    `${productName} Docker 一键部署包（Windows 宿主 x86_64）`,
+    `版本: ${version}`,
+    '',
+    '【部署】',
+    '  1. 安装 Docker Desktop（https://www.docker.com/products/docker-desktop/，',
+    '     WSL2 后端；未安装时 start.bat 会给出安装指引并暂停）',
+    '  2. 解压本包到目标目录（如 D:\\cloudcad）',
+    '  3. 运行 start.bat',
+    '     - 首次部署自动生成 .env；管理员默认口令 12345678，首次登录后请尽快修改',
+    '     - 三份口令唯一存于 .env（不再另存明文文件），丢失可用 runtime\\cloudcad.bat 重置',
+    '  4. 浏览器访问 http://localhost:8000（端口以 .env 为准）',
+    '',
+    '【停止】 stop.bat（数据保留在 data/ 目录）',
+    '',
+    '【运维入口】 runtime\\cloudcad.bat（交互菜单：启动/停止；与裸机包同构）',
+    '',
+    '【升级】 新版包解压覆盖本目录后重跑 start.bat',
+    '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
+    '',
+    '【引擎替换】 用官方 mxcad 替换 runtime\\windows\\mxcad\\ 后重跑 start.bat，',
+    '  启动时会自动探测转换能力，SystemLib 不匹配时自动补齐。',
+    '',
+    '【运维中心】 http://localhost:3002（只读运维 + 配置管理）',
+  ].join('\n');
+}
+
 function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
   log(`组装包树: ${pkgRoot}`);
   ensureDir(pkgRoot);
 
   // 入口薄壳（与裸机包共用模板，ADR-0075 C4 同构瘦壳）+ compose + .env.example
   const TPL = path.join(PROJECT_ROOT, 'scripts', 'pack-lib', 'templates');
-  fs.copyFileSync(path.join(TPL, 'start.sh'), path.join(pkgRoot, 'start.sh'));
-  fs.copyFileSync(path.join(TPL, 'stop.sh'), path.join(pkgRoot, 'stop.sh'));
-  fs.chmodSync(path.join(pkgRoot, 'start.sh'), 0o755);
-  fs.chmodSync(path.join(pkgRoot, 'stop.sh'), 0o755);
-  // 运维入口（runtime/cloudcad.sh，与裸机包同构；ensure-exec.sh 的 ./runtime/*.sh 清单覆盖执行位自愈）
-  // copyFileSync 不建中间目录，须先确保 runtime/ 存在（否则 Windows 宿主 ENOENT）
+  const isWinHost = HOST_PLATFORM === 'windows';
   ensureDir(path.join(pkgRoot, 'runtime'));
-  fs.copyFileSync(path.join(TPL, 'cloudcad.sh'), path.join(pkgRoot, 'runtime', 'cloudcad.sh'));
-  fs.chmodSync(path.join(pkgRoot, 'runtime', 'cloudcad.sh'), 0o755);
-  fs.copyFileSync(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'docker-compose.yml'), path.join(pkgRoot, 'docker-compose.yml'));
-  fs.writeFileSync(path.join(pkgRoot, '.env.example'), generateDockerEnvExample(version), 'utf8');
+  if (isWinHost) {
+    // Windows 宿主（#440）：.bat 入口（无执行位概念）+ windows compose（bridge 网络）
+    fs.copyFileSync(path.join(TPL, 'start.bat'), path.join(pkgRoot, 'start.bat'));
+    fs.copyFileSync(path.join(TPL, 'stop.bat'), path.join(pkgRoot, 'stop.bat'));
+    fs.copyFileSync(path.join(TPL, 'cloudcad.bat'), path.join(pkgRoot, 'runtime', 'cloudcad.bat'));
+    fs.copyFileSync(
+      path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'docker-compose.windows.yml'),
+      path.join(pkgRoot, 'docker-compose.windows.yml')
+    );
+  } else {
+    fs.copyFileSync(path.join(TPL, 'start.sh'), path.join(pkgRoot, 'start.sh'));
+    fs.copyFileSync(path.join(TPL, 'stop.sh'), path.join(pkgRoot, 'stop.sh'));
+    fs.chmodSync(path.join(pkgRoot, 'start.sh'), 0o755);
+    fs.chmodSync(path.join(pkgRoot, 'stop.sh'), 0o755);
+    // 运维入口（runtime/cloudcad.sh，与裸机包同构；ensure-exec.sh 的 ./runtime/*.sh 清单覆盖执行位自愈）
+    fs.copyFileSync(path.join(TPL, 'cloudcad.sh'), path.join(pkgRoot, 'runtime', 'cloudcad.sh'));
+    fs.chmodSync(path.join(pkgRoot, 'runtime', 'cloudcad.sh'), 0o755);
+    fs.copyFileSync(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'docker-compose.yml'), path.join(pkgRoot, 'docker-compose.yml'));
+  }
+  fs.writeFileSync(path.join(pkgRoot, '.env.example'), generateDockerEnvExample(version, HOST.hostPlatform, VARIANT), 'utf8');
 
-  // 镜像与 Docker 静态二进制（step4/step5 已产出到包内目录）
+  // 镜像与 Docker 静态二进制（step4/step5 已产出到包内目录；windows 宿主跳过 step5）
   // runtime：宿主进程依赖（node/mxcad）+ 纯函数工具链 + docker-runtime 主控
+  if (isWinHost) {
+    // Windows 宿主：宿主进程（协同/转换/运维中心）跑在 Windows 宿主上，node/mxcad 走
+    // runtime/windows/；引擎 .exe 无法在 linux 容器内执行（.env 恒
+    // FUNCTION_EXECUTOR=conversion-service），容器侧只留 runtime/linux/mxcad 占位目录——
+    // backend 生产模式 validateAssemblyPath 对回退后的 runtime/linux/mxcad/mxcadassembly
+    // 做 existsSync 校验（.exe 配置在 linux 上回退平台默认路径），占位文件满足校验。
+    copyDir(nodeSrc, path.join(pkgRoot, 'runtime', 'windows', 'node'));
+    copyDir(mxcadSrc, path.join(pkgRoot, 'runtime', 'windows', 'mxcad'));
+    const stub = path.join(pkgRoot, 'runtime', 'linux', 'mxcad');
+    ensureDir(stub);
+    fs.writeFileSync(
+      path.join(stub, 'mxcadassembly'),
+      'placeholder: windows 宿主包引擎跑在宿主 runtime/windows/mxcad，容器内不执行引擎\n'
+    );
+  } else {
+    placeLinuxRuntime(pkgRoot, nodeSrc, mxcadSrc);
+  }
+
+  copyDir(path.join(PROJECT_ROOT, 'runtime', 'scripts'), path.join(pkgRoot, 'runtime', 'scripts'));
+  copyDir(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime'), path.join(pkgRoot, 'runtime', 'docker-runtime'));
+
+  // packages：宿主进程消费（转换/引擎契约/运维中心）；backend 不在包内（跑在容器里）。
+  // pnpm 的 node_modules 全是符号链接，Windows 打包机无法复制（EPERM，缺
+  // SeCreateSymbolicLink 特权）→ 包树改用**扁平根 node_modules（实体目录）**：
+  // Node 从 packages/*/dist 向上解析必然命中 <pkgroot>/node_modules，各包自身
+  // 不再带 node_modules。运行时依赖闭包（dependencies 并集，不含 devDeps）：
+  //   conversion-service → @cloudcad/contracts, @cloudcad/engine-exec
+  //   engine-exec → @cloudcad/contracts；contracts → @cloudcad/db；
+  //   db → @prisma/client（generated client 只 require runtime/*，WASM query
+  //   compiler，不加载引擎二进制；@prisma/client-runtime-utils 嵌套随包）
+  const wsPkg = (name) => path.join(PROJECT_ROOT, 'packages', name);
+  const rootNm = path.join(pkgRoot, 'node_modules');
+  for (const name of ['contracts', 'engine-exec', 'db']) {
+    const dst = path.join(rootNm, '@cloudcad', name);
+    ensureDir(dst);
+    fs.copyFileSync(path.join(wsPkg(name), 'package.json'), path.join(dst, 'package.json'));
+    copyDir(path.join(wsPkg(name), 'dist'), path.join(dst, 'dist'));
+  }
+  // @prisma/client 的依赖（client-runtime-utils）在 pnpm store 里是包目录的**兄弟项**
+  // （虚拟 node_modules 层），不在包内嵌套 → 拷整个 @prisma 虚拟层（client 实体 +
+  // client-runtime-utils 符号链接解引用）
+  const clientReal = fs.realpathSync(path.join(wsPkg('db'), 'node_modules', '@prisma', 'client'));
+  const storeNm = clientReal.slice(0, -'/@prisma/client'.length);
+  copyDirDeref(path.join(storeNm, '@prisma'), path.join(rootNm, '@prisma'));
+  for (const name of ['conversion-service', 'contracts', 'engine-exec']) {
+    const dst = path.join(pkgRoot, 'packages', name);
+    ensureDir(dst);
+    fs.copyFileSync(path.join(wsPkg(name), 'package.json'), path.join(dst, 'package.json'));
+    copyDir(path.join(wsPkg(name), 'dist'), path.join(dst, 'dist'));
+  }
+  copyDir(path.join(PROJECT_ROOT, 'packages', 'config-service'), path.join(pkgRoot, 'packages', 'config-service'));
+
+  // 标记与元信息
+  // 形态标记统一走 .deploy（ADR-0075 C3：内容 form=docker；detectDeployForm 兼容存量 .deploy-docker）
+  fs.writeFileSync(path.join(pkgRoot, '.deploy'), 'form=docker');
+  fs.writeFileSync(path.join(pkgRoot, 'VERSION'), version + '\n');
+  const { PRODUCT_NAME } = require(path.join(PROJECT_ROOT, 'runtime', 'scripts', 'lib', 'branding'));
+  fs.writeFileSync(
+    path.join(pkgRoot, '部署说明.txt'),
+    isWinHost ? windowsDeployNotes(version, PRODUCT_NAME) : linuxDeployNotes(version, PRODUCT_NAME),
+    'utf8'
+  );
+  log('包树组装完成');
+}
+
+/**
+ * Linux 宿主 runtime 物料就位：node（目录直拷 / tarball 容器内解压）+ mxcad。
+ * tarball 走 WORK_IMAGE 容器内解压：Windows 宿主上宿主侧 tar 解 xz 极慢（且 Git tar
+ * 不认盘符路径），WORK_IMAGE 的 busybox tar 自带 xz 支持，且该镜像 app 构建时已拉取。
+ * @param {string} pkgRoot 包根目录
+ * @param {{ kind: string, src?: string, source?: string }} nodeSrc
+ * @param {string} mxcadSrc
+ */
+function placeLinuxRuntime(pkgRoot, nodeSrc, mxcadSrc) {
   const linuxDir = path.join(pkgRoot, 'runtime', 'linux');
   ensureDir(linuxDir);
   const nodeDest = path.join(linuxDir, 'node');
@@ -1325,80 +1750,32 @@ function step6Assemble(pkgRoot, version, { nodeSrc, mxcadSrc }) {
     log(`node 已解压入包: ${path.basename(nodeSrc.src)}`);
   }
   copyDir(mxcadSrc, path.join(linuxDir, 'mxcad'));
-  copyDir(path.join(PROJECT_ROOT, 'runtime', 'scripts'), path.join(pkgRoot, 'runtime', 'scripts'));
-  copyDir(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime'), path.join(pkgRoot, 'runtime', 'docker-runtime'));
+}
 
-  // packages：宿主进程消费（转换/引擎契约/运维中心）；backend 不在包内（跑在容器里）。
-  // pnpm 的 node_modules 全是符号链接，Windows 打包机无法复制（EPERM，缺
-  // SeCreateSymbolicLink 特权）→ 包树改用**扁平根 node_modules（实体目录）**：
-  // Node 从 packages/*/dist 向上解析必然命中 <pkgroot>/node_modules，各包自身
-  // 不再带 node_modules。运行时依赖闭包（dependencies 并集，不含 devDeps）：
-  //   conversion-service → @cloudcad/contracts, @cloudcad/engine-exec
-  //   engine-exec → @cloudcad/contracts；contracts → @cloudcad/db；
-  //   db → @prisma/client（generated client 只 require runtime/*，WASM query
-  //   compiler，不加载引擎二进制；@prisma/client-runtime-utils 嵌套随包）
-  const wsPkg = (name) => path.join(PROJECT_ROOT, 'packages', name);
-  const rootNm = path.join(pkgRoot, 'node_modules');
-  for (const name of ['contracts', 'engine-exec', 'db']) {
-    const dst = path.join(rootNm, '@cloudcad', name);
-    ensureDir(dst);
-    fs.copyFileSync(path.join(wsPkg(name), 'package.json'), path.join(dst, 'package.json'));
-    copyDir(path.join(wsPkg(name), 'dist'), path.join(dst, 'dist'));
+/** 定位 7-Zip（windows 宿主包 .7z 归档用，#440；候选清单与 pack-offline.js 一致） */
+function find7z() {
+  const candidates = [
+    'C:\\Program Files\\7-Zip\\7z.exe',
+    'C:\\Program Files (x86)\\7-Zip\\7z.exe',
+    path.join(os.homedir(), 'AppData', 'Local', 'Programs', '7-Zip', '7z.exe'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
   }
-  // @prisma/client 的依赖（client-runtime-utils）在 pnpm store 里是包目录的**兄弟项**
-  // （虚拟 node_modules 层），不在包内嵌套 → 拷整个 @prisma 虚拟层（client 实体 +
-  // client-runtime-utils 符号链接解引用）
-  const clientReal = fs.realpathSync(path.join(wsPkg('db'), 'node_modules', '@prisma', 'client'));
-  const storeNm = clientReal.slice(0, -'/@prisma/client'.length);
-  copyDirDeref(path.join(storeNm, '@prisma'), path.join(rootNm, '@prisma'));
-  for (const name of ['conversion-service', 'contracts', 'engine-exec']) {
-    const dst = path.join(pkgRoot, 'packages', name);
-    ensureDir(dst);
-    fs.copyFileSync(path.join(wsPkg(name), 'package.json'), path.join(dst, 'package.json'));
-    copyDir(path.join(wsPkg(name), 'dist'), path.join(dst, 'dist'));
+  try {
+    const res = run('where', ['7z'], { capture: true });
+    const found = (res.stdout || '').trim().split(/\r?\n/)[0];
+    if (found && fs.existsSync(found)) return found;
+  } catch (e) {
+    /* PATH 无 7z */
   }
-  copyDir(path.join(PROJECT_ROOT, 'packages', 'config-service'), path.join(pkgRoot, 'packages', 'config-service'));
-
-  // 标记与元信息
-  // 形态标记统一走 .deploy（ADR-0075 C3：内容 form=docker；detectDeployForm 兼容存量 .deploy-docker）
-  fs.writeFileSync(path.join(pkgRoot, '.deploy'), 'form=docker');
-  fs.writeFileSync(path.join(pkgRoot, 'VERSION'), version + '\n');
-  const { PRODUCT_NAME } = require(path.join(PROJECT_ROOT, 'runtime', 'scripts', 'lib', 'branding'));
-  fs.writeFileSync(
-    path.join(pkgRoot, '部署说明.txt'),
-    [
-      `${PRODUCT_NAME} Docker 一键部署包（Linux ${ARCH.pkgArch}）`,
-      `版本: ${version}`,
-      '',
-      '【部署】',
-      '  1. 以普通用户解压本包到目标目录（如 /opt/cloudcad，勿用 root 解压）',
-      '  2. 以同一普通用户运行: ./start.sh',
-      '     - 完全无需 root/sudo，不请求任何密码（rootless 模式用包内静态 Docker）',
-      '     - 首次部署自动生成 .env；管理员默认口令 12345678，首次登录后请尽快修改',
-      '     - 三份口令唯一存于 .env（不再另存明文文件），丢失可用 ./runtime/cloudcad.sh 重置',
-      '  3. 浏览器访问 http://<服务器IP>:8000（端口以 .env 为准）',
-      '',
-      '【停止】 ./stop.sh（数据保留在 data/ 目录）',
-      '',
-      '【运维入口】 ./runtime/cloudcad.sh（交互菜单：启动/停止；与裸机包同构）',
-      '',
-      '【升级】 新版包解压覆盖本目录后重跑 ./start.sh',
-      '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
-      '',
-      '【引擎替换】 用官方 mxcad 替换 runtime/linux/mxcad/ 后重跑 ./start.sh，',
-      '  启动时会自动探测转换能力，SystemLib 不匹配时自动补齐。',
-      '',
-      '【运维中心】 http://<服务器IP>:3002（只读运维 + 配置管理）',
-    ].join('\n'),
-    'utf8'
-  );
-  log('包树组装完成');
+  return null;
 }
 
 function step7Archive(pkgRoot, version) {
-  const name = dockerPackageName(version, ARCH.pkgArch);
+  const name = dockerPackageName(version, targetArch().pkgArch);
   ensureDir(OUT_DIR);
-  const archive = path.join(OUT_DIR, `${name}.tar.gz`);
+  const archive = path.join(OUT_DIR, `${name}.${HOST.ext}`);
 
   // SHA256SUMS（包内顶层文件）
   const sums = [];
@@ -1410,7 +1787,21 @@ function step7Archive(pkgRoot, version) {
   }
   fs.writeFileSync(path.join(pkgRoot, 'SHA256SUMS'), sums.join('\n') + '\n');
 
-  if (process.platform === 'linux') {
+  if (HOST.ext === '7z') {
+    // Windows 宿主包（#440）：7z 归档（.bat 入口无 Unix 执行位概念，无需容器内 chmod 流程）。
+    // 退出码 1 = 警告（如个别文件被占用），按成功处理（与 pack-offline.js 同约定）。
+    const sevenZip = find7z();
+    if (!sevenZip) fail('未找到 7-Zip：安装 7-Zip（或把 7z.exe 放入 PATH）后重跑');
+    log(`归档（7z）→ ${archive}`);
+    // shell:true 下路径含空格（C:\Program Files\...）必须整体加引号，否则 cmd 按空格拆词
+    // （pack-offline.js 同口径：spawn(`"${sevenZip}"`)）
+    const res = run(`"${sevenZip}"`, ['a', '-t7z', '-mx=5', '-m0=lzma2', '-mmt=on', archive, '.'], {
+      cwd: pkgRoot,
+      timeoutMs: 30 * 60000,
+      shell: true,
+    });
+    if (res.status !== 0 && res.status !== 1) fail(`归档失败（7z 退出码 ${res.status}）`);
+  } else if (process.platform === 'linux') {
     log(`归档 → ${archive}`);
     const res = run('tar', ['-czf', archive, '-C', path.dirname(pkgRoot), path.basename(pkgRoot)], { timeoutMs: 30 * 60000 });
     if (res.status !== 0) fail('归档失败');
@@ -1461,18 +1852,25 @@ function step7Archive(pkgRoot, version) {
 async function main() {
   const version = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, 'package.json'), 'utf8')).version;
   const pkgRoot = path.join(OUT_DIR, `staging-${version}`);
-  const pkgName = dockerPackageName(version, ARCH ? ARCH.pkgArch : process.arch);
+  const pkgName = dockerPackageName(version, targetArch().pkgArch);
   const pkgDir = path.join(pkgRoot, pkgName);
 
   const { nodeSrc, mxcadSrc } = await step1Prechecks(version);
   step2BuildAppImage(version);
   step3TagInfraImages();
   step4SaveImages(path.join(pkgDir, 'images'), version);
-  await step5DockerBinaries(path.join(pkgDir, 'docker'));
+  if (HOST.needsDockerBin) {
+    await step5DockerBinaries(path.join(pkgDir, 'docker'));
+  } else {
+    log('Windows 宿主：目标机用 Docker Desktop，不捆绑 Docker 静态二进制（#440 Q1：检测 + 安装指引）');
+  }
   step6Assemble(pkgDir, version, { nodeSrc, mxcadSrc });
   const archive = step7Archive(pkgDir, version);
 
   if (RUN_VERIFY) {
+    if (HOST_PLATFORM === 'windows') {
+      fail('Windows 宿主断网验证（verify-windows-docker）属 #444 尚未实现：请在装有 Docker Desktop 的 Windows 机器上人工验证（start.bat → 服务健康 → stop.bat）');
+    }
     if (process.platform !== 'linux') {
       fail('--verify（DinD 断网验证）只在 Linux 机器上可靠：Windows 打包后把包交给 Linux CI 跑 scripts/verify-linux-docker-deploy.js');
     }
@@ -1493,4 +1891,14 @@ if (require.main === module) {
   main().catch((err) => fail(err.stack || err.message));
 }
 
-module.exports = { generateDockerEnvExample, DOCKER_PATH_OVERRIDES, ensureRootlessNs, elfArch, dockerPackageName };
+module.exports = {
+  generateDockerEnvExample,
+  DOCKER_PATH_OVERRIDES,
+  WINDOWS_HOST_OVERRIDES,
+  ensureRootlessNs,
+  elfArch,
+  dockerPackageName,
+  find7z,
+  windowsDeployNotes,
+  linuxDeployNotes,
+};

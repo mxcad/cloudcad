@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDefined } from 'class-validator';
+import { IsDefined, IsIn } from 'class-validator';
 
 /**
  * 更新运行时配置 DTO
@@ -33,6 +33,20 @@ export class ResetCategoryDto {
   @ApiProperty({ description: '配置分类', example: 'mail' })
   @IsDefined({ message: '分类不能为空' })
   category: string;
+}
+
+/**
+ * 应用安全模式 profile 请求 DTO
+ */
+export class ApplyProfileDto {
+  @ApiProperty({
+    description: '目标安全模式',
+    enum: ['secure', 'normal'],
+    example: 'secure',
+  })
+  @IsDefined({ message: '模式不能为空' })
+  @IsIn(['secure', 'normal'], { message: '模式必须是 secure 或 normal' })
+  profile: 'secure' | 'normal';
 }
 
 /**
@@ -267,4 +281,72 @@ export class RuntimeConfigHistoryDto {
     example: '2024-01-01T00:00:00.000Z',
   })
   createdAt: Date;
+}
+
+/**
+ * 安全模式 profile 预览条目 DTO
+ */
+export class RuntimeProfilePreviewResponseDto {
+  @ApiProperty({ description: '配置键名', example: 'sessionMaxAge' })
+  key: string;
+
+  @ApiProperty({
+    description: '值类型',
+    enum: ['string', 'number', 'boolean', 'json'],
+    example: 'number',
+  })
+  type: string;
+
+  @ApiProperty({ description: '分类', example: 'security' })
+  category: string;
+
+  @ApiProperty({
+    description: '当前生效值（含 env 遮蔽后的实际生效值）',
+    type: Object,
+  })
+  currentValue: string | number | boolean | Record<string, unknown>;
+
+  @ApiProperty({
+    description: '当前值生效来源',
+    enum: ['runtime', 'env', 'default'],
+    example: 'default',
+  })
+  source: string;
+
+  @ApiProperty({
+    description: '本次应用的目标值',
+    type: Object,
+  })
+  targetValue: string | number | boolean | Record<string, unknown>;
+
+  @ApiProperty({ description: '本次应用是否会改写该项' })
+  willChange: boolean;
+
+  @ApiProperty({ description: '该值曾被人工修改过' })
+  isModified: boolean;
+
+  @ApiProperty({
+    description: 'env 层当前值；非 null 表示本 key 有 env 层值，应用 profile 后 env 不再决定生效值',
+    type: Object,
+    nullable: true,
+  })
+  envValue: string | number | boolean | Record<string, unknown> | null;
+}
+
+/**
+ * 安全模式 profile 应用结果 DTO
+ */
+export class RuntimeProfileApplyResponseDto {
+  @ApiProperty({
+    description: '应用的 profile 名称',
+    enum: ['secure', 'normal'],
+    example: 'secure',
+  })
+  profile: string;
+
+  @ApiProperty({ description: '实际写入的 key', type: [String] })
+  applied: string[];
+
+  @ApiProperty({ description: '值已等于目标值而跳过的 key', type: [String] })
+  unchanged: string[];
 }

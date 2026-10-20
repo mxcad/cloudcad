@@ -449,10 +449,10 @@ class WorkerPool {
     if (!task || !task.callbackUrl) return;
     try {
       this.callbackEngine.notify(taskId, task.callbackUrl, { status, result, error }).catch((err) => {
-        log(`[WorkerPool] 回调失败: ${taskId} - ${(err as Error).message}`);
+        log('error', `[WorkerPool] 回调失败: ${taskId} - ${(err as Error).message}`);
       });
     } catch (err) {
-      log(`[WorkerPool] 回调异常: ${taskId} - ${(err as Error).message}`);
+      log('error', `[WorkerPool] 回调异常: ${taskId} - ${(err as Error).message}`);
     }
   }
 
