@@ -188,3 +188,35 @@ ErrorCode 枚举统一拆独立票。**
   要接就得动 drawing-ingest / upload-utility / file-node-materializer，
   且现有 `validateFileContentDeep` 对 DXF 缺标记会抛错——
   直接接上会让格式不规范的合法 DXF 被拒，需要产品确认能否承受误杀。
+
+---
+
+## 六、Gitea 票据映射
+
+**编号规则：`Tn → #(448+n)`**（2026-10-20 核实，此前未记录在文档中，
+导致 ADR 里写的「子票 T2」在 Gitea 上按 ID 搜不到）。
+
+| 文档编号 | Gitea | 状态 |
+|---|---|---|
+| 地图 | **#448** | 已落 |
+| T1-T17 | **#449-#465** | 已落（`Tn → #448+n`） |
+| T2 spec（预览/应用契约与验收） | **#475** | 新增 |
+| 历史密码不复用（`password_history` 新表，ADR-0079 拆出） | **#476** | 新增，blocked by #451 |
+| `runtime_config_logs` 补字段 expand + contract 收尾（ADR-0079 拆出） | **#477** | 新增，blocked by #454 |
+| 运行时配置现值纳入审计哈希链（ADR-0079 拆出） | **#478** | 新增，blocked by #454 |
+| 合规基线快照与偏离对照（ADR-0079 拆出） | **#479** | 新增，blocked by #454 |
+| 强制全量审计容量核算（ADR-0079 拆出） | **#480** | 新增，blocked by #454 |
+
+已就本轮裁定对 4 张旧票加了指向性评论：**#450**（六问全解 + 指向 #475）、
+**#451**（历史密码拆出 + T17 影响面修正）、**#454**（范围裁定 + 拆出 #477-#480）、
+**#462**（T14 范围修正为打包期出厂默认值）。
+目的是避免 agent 领票时被「待裁决」的旧 body 误导。
+
+### 编号映射的三个坑（已踩）
+
+1. **ADR 与文档里的 `Tn` 不是 issue ID**。必须走 `Tn → #448+n` 换算。
+2. **旧票 body 会过期**。裁定落在 ADR 后，原票的「待裁决」段落变成误导；
+   本轮用评论而非改 body（评论是追加的、可追溯，body 编辑会抹掉历史证据）。
+3. **Gitea API 的 `labels` 参数要重复传整数**，逗号拼接报
+   `[Labels]: Value could not be parsed as integer`。标签 ID：
+   `58`=ready-for-agent、`63`=wayfinder:task、`68`=line-a、`70`=line-b。
