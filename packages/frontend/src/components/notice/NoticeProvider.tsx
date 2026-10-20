@@ -41,6 +41,7 @@ import {
 } from './noticeAck';
 import { NoticeModal } from './NoticeModal';
 import type { Notice } from './noticeTypes';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNoticeStream } from './useNoticeStream';
 
 /** 跨标签页已读同步频道 */
@@ -75,8 +76,15 @@ export const NoticeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { notices } = useNoticeStream(true);
-  const [acks, setAcks] = useState<NoticeAckMap>(() => readAcks());
+  const { user } = useAuth();
+  const ownerId = user?.id ?? null;
+  const [acks, setAcks] = useState<NoticeAckMap>(() => readAcks(localStorage, ownerId));
   const ackChannelRef = useRef<BroadcastChannel | null>(null);
+
+  // 账号切换后重读簿记：已读记录按账号隔离，不能沿用上一个账号的状态
+  useEffect(() => {
+    setAcks(readAcks(localStorage, ownerId));
+  }, [ownerId]);
 
   // 其他标签页标记已读后同步过来。onmessage 只负责重读存储，
   // 不持有跨标签页的写入状态，避免写顺序竞态。
@@ -85,13 +93,13 @@ export const NoticeProvider: React.FC<{ children: React.ReactNode }> = ({
     const channel = new BroadcastChannel(NOTICE_ACK_CHANNEL);
     ackChannelRef.current = channel;
     channel.onmessage = () => {
-      setAcks(readAcks());
+      setAcks(readAcks(localStorage, ownerId));
     };
     return () => {
       channel.close();
       ackChannelRef.current = null;
     };
-  }, []);
+  }, [ownerId]);
 
   // 定期清理过期已读记录，防止 localStorage 随公告数量增长
   useEffect(() => {
@@ -101,19 +109,22 @@ export const NoticeProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const acknowledge = useCallback((notice: Notice) => {
-    const now = Date.now();
-    setAcks((prev) => {
-      const next = pruneExpiredAcks(
-        markAcknowledged(prev, notice.id, now),
-        now
-      );
-      writeAcks(next);
-      return next;
-    });
-    // 写盘后再广播，保证其他标签页读到的一定是已落盘的状态
-    ackChannelRef.current?.postMessage({ noticeId: notice.id });
-  }, []);
+  const acknowledge = useCallback(
+    (notice: Notice) => {
+      const now = Date.now();
+      setAcks((prev) => {
+        const next = pruneExpiredAcks(
+          markAcknowledged(prev, notice.id, now),
+          now
+        );
+        writeAcks(next, localStorage, ownerId);
+        return next;
+      });
+      // 写盘后再广播，保证其他标签页读到的一定是已落盘的状态
+      ackChannelRef.current?.postMessage({ noticeId: notice.id });
+    },
+    [ownerId]
+  );
 
   const pending = useMemo(
     () => filterUnacknowledged(notices, acks, Date.now()),

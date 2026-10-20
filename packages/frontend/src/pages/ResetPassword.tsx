@@ -1,5 +1,5 @@
 import { getCopyrightLine } from '@/constants/appConfig';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -63,6 +63,14 @@ export const ResetPassword: React.FC = () => {
   const phoneFromState = (location.state as LocationState)?.phone || '';
   const contactType = emailFromState ? 'email' : 'phone';
 
+  // 本页是「忘记密码」的续页：邮箱/手机号由上一步选定并已发出验证码，两处字段
+  // 都是 readOnly。直访（手输 URL / 书签）时状态为空，用户会卡在一个不可编辑的
+  // 空字段上，故跳回入口页重新走一遍选方式 + 发验证码。
+  const hasIdentity = !!(emailFromState || phoneFromState);
+  useEffect(() => {
+    if (!hasIdentity) navigate('/forgot-password', { replace: true });
+  }, [hasIdentity, navigate]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const resetPassword = useResetPassword();
@@ -76,6 +84,8 @@ export const ResetPassword: React.FC = () => {
       confirmPassword: '',
     },
   });
+
+  if (!hasIdentity) return null;
 
   const onSubmit = async (data: ResetPasswordValues) => {
     const ok = await resetPassword.submit({

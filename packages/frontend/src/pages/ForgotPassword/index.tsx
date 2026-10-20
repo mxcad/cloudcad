@@ -1,10 +1,10 @@
-import { resolveSupportContact } from '@/constants/appConfig';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useSupportContact } from '@/hooks/useSupportContact';
 import { useBrandConfig } from '@/contexts/BrandContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { t } from '@/languages';
@@ -35,6 +35,7 @@ export const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
   const { config: runtimeConfig } = useRuntimeConfig();
   const { config: brandConfig } = useBrandConfig();
+  const supportContact = useSupportContact();
   const { isDark } = useTheme();
 
   const appName = brandConfig?.title || 'CloudCAD';
@@ -75,23 +76,13 @@ export const ForgotPassword: React.FC = () => {
       phone: data.contactType === 'phone' ? data.phone : undefined,
     });
 
-    if (!result) {
-      if (forgotPassword.error?.includes('账号已被禁用')) {
-        // 客服联系方式走唯一出口，不再各自硬编码
-        const support = resolveSupportContact(runtimeConfig);
-        setSupportInfo({
-          supportEmail: support.email,
-          supportPhone: support.phone,
-        });
-        forgotPassword.setError(null);
-      }
-      return;
-    }
+    if (!result) return;
 
     if (result.mailEnabled === false && result.smsEnabled === false) {
+      // 后端未填客服信息时回落品牌/内置默认值，避免 SupportView 空态
       setSupportInfo({
-        supportEmail: result.supportEmail ?? undefined,
-        supportPhone: result.supportPhone ?? undefined,
+        supportEmail: result.supportEmail || supportContact.email,
+        supportPhone: result.supportPhone || supportContact.phone,
       });
     } else {
       setSuccessContact(data.contactType === 'email' ? data.email : data.phone);

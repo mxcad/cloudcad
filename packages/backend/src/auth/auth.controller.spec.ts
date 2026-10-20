@@ -72,9 +72,15 @@ describe('AuthController', () => {
 
       expect(response.clearCookie).toHaveBeenCalledWith('connect.sid');
       expect(response.clearCookie).toHaveBeenCalledWith('auth_token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
         path: '/',
       });
       expect(response.clearCookie).toHaveBeenCalledWith('refresh_token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
         path: '/api/v1/auth/refresh',
       });
       expect(response.clearCookie).toHaveBeenCalledTimes(3);
@@ -93,6 +99,9 @@ describe('AuthController', () => {
         expect.anything()
       );
       expect(response.clearCookie).toHaveBeenCalledWith('refresh_token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax',
         path: '/api/v1/auth/refresh',
       });
     });
@@ -121,7 +130,14 @@ describe('AuthController', () => {
 
       expect(written).toBeDefined();
       expect(cleared).toBeDefined();
-      expect(cleared[1]).toEqual({ path: written[2].path });
+      // 写入与清除共用同一属性集：任一侧改 secure/sameSite/httpOnly 而另一侧漏改，
+      // 浏览器就会删不掉 cookie（登出后 token 残留），此断言即为防漂移
+      expect(cleared[1]).toEqual({
+        httpOnly: written[2].httpOnly,
+        secure: written[2].secure,
+        sameSite: written[2].sameSite,
+        path: written[2].path,
+      });
     });
   });
 

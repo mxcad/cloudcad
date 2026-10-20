@@ -20,7 +20,7 @@ import {
 } from '@testing-library/react';
 import React from 'react';
 
-import { NOTICE_ACK_STORAGE_KEY } from './noticeAck';
+import { ackStorageKey } from './noticeAck';
 import { filterUnacknowledged } from './NoticeProvider';
 import type { Notice } from './noticeTypes';
 
@@ -31,6 +31,14 @@ const mockGetCurrent = vi.hoisted(() =>
 vi.mock('@/api-sdk', () => ({
   noticeCenterControllerGetCurrent: (...args: unknown[]) =>
     mockGetCurrent(...args),
+}));
+
+// 已读簿记按账号隔离，stub 当前登录账号；默认未登录
+const authState = vi.hoisted(() => ({ userId: null as string | null }));
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: authState.userId ? { id: authState.userId } : null,
+  }),
 }));
 
 import { t } from '@/languages';
@@ -87,7 +95,7 @@ async function expectPending(count: number) {
 
 beforeEach(() => {
   localStorage.clear();
-  window.localStorage.removeItem(NOTICE_ACK_STORAGE_KEY);
+  authState.userId = null;
 });
 
 afterEach(() => {
@@ -136,7 +144,7 @@ describe('NoticeProvider', () => {
 
     // 已读状态落盘，刷新后不重复弹
     const acks = JSON.parse(
-      localStorage.getItem(NOTICE_ACK_STORAGE_KEY) ?? '{}'
+      localStorage.getItem(ackStorageKey(authState.userId)) ?? '{}'
     );
     expect(acks.first).toBeTypeOf('number');
 
@@ -147,13 +155,31 @@ describe('NoticeProvider', () => {
 
   it('TTL 内已读的通知不再弹（localStorage 预置）', async () => {
     localStorage.setItem(
-      NOTICE_ACK_STORAGE_KEY,
+      ackStorageKey(authState.userId),
       JSON.stringify({ n_1: Date.now() })
     );
     renderProvider([notice({ id: 'n_1' })]);
 
     await expectActive('none');
     await expectPending(0);
+  });
+
+  it('A 账号已读不掩盖 B 账号的未读（簿记按账号分键）', async () => {
+    authState.userId = 'u_a';
+    localStorage.setItem(
+      ackStorageKey('u_a'),
+      JSON.stringify({ n_1: Date.now() })
+    );
+    renderProvider([notice({ id: 'n_1' })]);
+    await expectActive('none');
+    await expectPending(0);
+    cleanup();
+
+    // 同一浏览器换 B 账号：同一条公告对 B 仍是未读
+    authState.userId = 'u_b';
+    renderProvider([notice({ id: 'n_1' })]);
+    await expectActive('n_1');
+    await expectPending(1);
   });
 
   it('接口报错时保持空队列（不弹框、不崩）', async () => {

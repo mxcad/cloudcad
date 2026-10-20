@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   NOTICE_ACK_STORAGE_KEY,
   NOTICE_ACK_TTL_MS,
+  ackStorageKey,
   filterUnacknowledged,
   isAcknowledged,
   pruneExpiredAcks,
@@ -64,26 +65,41 @@ describe('readAcks / writeAcks', () => {
     expect(readAcks(storage)).toEqual({ n_1: NOW, n_2: NOW - 1000 })
   })
 
-  it('写入使用跨端契约键 cloudcad_notice_acks', () => {
+  it('写入使用带账号后缀的跨端契约键', () => {
     expect(NOTICE_ACK_STORAGE_KEY).toBe('cloudcad_notice_acks')
-    writeAcks({ n_1: NOW }, storage)
-    expect(storage.getItem(NOTICE_ACK_STORAGE_KEY)).toBe(JSON.stringify({ n_1: NOW }))
+    expect(ackStorageKey('u_1')).toBe('cloudcad_notice_acks:u_1')
+    expect(ackStorageKey()).toBe('cloudcad_notice_acks:anonymous')
+    writeAcks({ n_1: NOW }, storage, 'u_1')
+    expect(storage.getItem('cloudcad_notice_acks:u_1')).toBe(JSON.stringify({ n_1: NOW }))
+  })
+
+  it('不同账号的簿记互不串用（A 已读不掩盖 B 的未读）', () => {
+    writeAcks({ n_1: NOW }, storage, 'u_1')
+    writeAcks({ n_2: NOW }, storage, 'u_2')
+    expect(readAcks(storage, 'u_1')).toEqual({ n_1: NOW })
+    expect(readAcks(storage, 'u_2')).toEqual({ n_2: NOW })
+    expect(readAcks(storage)).toEqual({})
+  })
+
+  it('旧键（无账号后缀）不被读取，靠 TTL 自然失效', () => {
+    storage.setItem(NOTICE_ACK_STORAGE_KEY, JSON.stringify({ n_1: NOW }))
+    expect(readAcks(storage, 'u_1')).toEqual({})
   })
 
   it('空存储 / 非法 JSON / 数组形状都返回空表（不抛错）', () => {
     expect(readAcks(storage)).toEqual({})
-    storage.setItem(NOTICE_ACK_STORAGE_KEY, '{ 不是 JSON')
-    expect(readAcks(storage)).toEqual({})
-    storage.setItem(NOTICE_ACK_STORAGE_KEY, '["n_1"]')
-    expect(readAcks(storage)).toEqual({})
+    storage.setItem(ackStorageKey('u_1'), '{ 不是 JSON')
+    expect(readAcks(storage, 'u_1')).toEqual({})
+    storage.setItem(ackStorageKey('u_1'), '["n_1"]')
+    expect(readAcks(storage, 'u_1')).toEqual({})
   })
 
   it('非有限数字时间戳被丢弃', () => {
     storage.setItem(
-      NOTICE_ACK_STORAGE_KEY,
+      ackStorageKey('u_1'),
       JSON.stringify({ n_1: 'bad', n_2: 123, n_3: null }),
     )
-    expect(readAcks(storage)).toEqual({ n_2: 123 })
+    expect(readAcks(storage, 'u_1')).toEqual({ n_2: 123 })
   })
 
   it('localStorage 不可用（隐私模式）读写都不抛错', () => {

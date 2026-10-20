@@ -24,6 +24,7 @@ import {
   VERSION_NEUTRAL,
   Version,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type {
   Response as ExpressResponse,
   Request as ExpressRequest,
@@ -202,7 +203,7 @@ export class AuthController {
     // 无论是否登录成功，都清除 Cookie（幂等登出）
     const sessionName = this.configService.get('session.name');
     response.clearCookie(sessionName);
-    this.sessionCookieWriter.clearTokenCookies(response);
+    this.sessionCookieWriter.clearTokenCookies(response, request);
 
     return {
       message: I18nContext.current()?.t('success.logout_success') ?? '登出成功',
@@ -245,6 +246,9 @@ export class AuthController {
 
   @Post('verify-email')
   @Public()
+  // 验证端点自身也要限流：全局兜底 100000/60s 太高，逐 IP 放开就是验证码爆破
+  // 入口。每码 5 次尝试上限只限「同一个码的猜测」，不限「每分钟猜多少个码」。
+  @Throttle({ default: { limit: 12, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '验证邮箱' })
   @ApiResponse({
@@ -271,6 +275,7 @@ export class AuthController {
 
   @Post('verify-email-and-register-phone')
   @Public()
+  @Throttle({ default: { limit: 12, ttl: 60000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '验证邮箱并完成手机号注册' })
   @ApiResponse({

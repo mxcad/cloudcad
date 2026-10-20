@@ -41,8 +41,10 @@ import {
   type NoticeAckMap,
 } from '../utils/noticeAck';
 import { unwrap } from '../utils/apiError';
+import { onSessionChanged } from '../utils/authSession';
 
 export {
+  ackStorageKey,
   filterUnacknowledged,
   isAcknowledged,
   readAcks,
@@ -55,10 +57,34 @@ export type { Notice } from '../utils/noticeAck';
 /** 轮询间隔：与后端 Cache-Control（10s）配合，10s 内不重复请求 */
 const NOTICE_POLL_INTERVAL_MS = 30_000;
 
+/**
+ * 当前登录账号 id。读 localStorage.user 而非 useUser 的响应式 ref：已读簿记是
+ * 模块级状态，不挂在组件生命期上，登录/登出改由 authSession 的会话事件重建。
+ */
+function currentOwnerId(): string | null {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    const user = JSON.parse(raw) as { id?: unknown } | null;
+    return typeof user?.id === 'string' && user.id ? user.id : null;
+  } catch {
+    return null;
+  }
+}
+
 // ── 组合式状态 ──────────────────────────────────────────
 
 const notices = ref<Notice[]>([]);
-const acks = ref<NoticeAckMap>(readAcks());
+const acks = ref<NoticeAckMap>(readAcks(localStorage, currentOwnerId()));
+
+// 已读簿记按账号隔离：会话写入/清理后重建，避免继承上一个账号的已读
+onSessionChanged((event) => {
+  if (event === 'written') {
+    acks.value = readAcks(localStorage, currentOwnerId());
+    return;
+  }
+  acks.value = readAcks(localStorage, null);
+});
 
 const pending = computed(() =>
   filterUnacknowledged(notices.value, acks.value, Date.now())
@@ -102,14 +128,14 @@ function acknowledge(notice: Notice): void {
   const now = Date.now();
   const next: NoticeAckMap = { ...acks.value, [notice.id]: now };
   acks.value = next;
-  writeAcks(next);
+  writeAcks(next, localStorage, currentOwnerId());
 }
 
 /** 过期记录清理，防止 localStorage 随公告数量增长 */
 function pruneAcks(): void {
   const kept = pruneExpiredAcks(acks.value, Date.now());
   acks.value = kept;
-  writeAcks(kept);
+  writeAcks(kept, localStorage, currentOwnerId());
 }
 
 export interface UseNoticeStream {

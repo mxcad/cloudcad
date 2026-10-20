@@ -115,11 +115,64 @@ describe('SessionCookieWriter.clearTokenCookies', () => {
 
     makeWriter(undefined).clearTokenCookies(res);
 
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      AUTH_COOKIE_NAME,
+      expect.objectContaining({ path: AUTH_COOKIE_PATH }),
+    );
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      REFRESH_COOKIE_NAME,
+      expect.objectContaining({ path: REFRESH_COOKIE_PATH }),
+    );
+  });
+
+  it('清除沿用写入侧的属性集（secure 跟随同一 resolveSecure 决策）', () => {
+    const res = makeRes();
+
+    makeWriter(undefined).clearTokenCookies(res, { secure: true });
+
     expect(res.clearCookie).toHaveBeenCalledWith(AUTH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
       path: AUTH_COOKIE_PATH,
     });
     expect(res.clearCookie).toHaveBeenCalledWith(REFRESH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
       path: REFRESH_COOKIE_PATH,
     });
+  });
+
+  it('显式 cookieSecure 配置同时约束写入与清除', () => {
+    const res = makeRes();
+
+    makeWriter(true).clearTokenCookies(res);
+
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      AUTH_COOKIE_NAME,
+      expect.objectContaining({ secure: true }),
+    );
+  });
+
+  it('写入与清除共享同一属性构造（防漂移不变量）', () => {
+    const writer = makeWriter(undefined);
+    const res = makeRes();
+
+    writer.setAuthCookies({ secure: true }, res, { accessToken: 'a' });
+    writer.clearTokenCookies(res, { secure: true });
+
+    const [, , setOpts] = (res.cookie as jest.Mock).mock.calls[0] as [
+      string,
+      string,
+      Record<string, unknown>,
+    ];
+    const [, clearOpts] = (res.clearCookie as jest.Mock).mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+    ];
+
+    const { maxAge: _maxAge, ...setRest } = setOpts;
+    expect(clearOpts).toEqual(setRest);
   });
 });
