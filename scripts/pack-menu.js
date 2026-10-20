@@ -11,12 +11,12 @@
  *   - 交付形态 = 产物跑在裸机还是 Docker 容器
  *   - 构建通道 = 在哪打包（本机直打 / Docker 容器内构建），仅裸机 Linux 相关
  *
- * 置灰组合（选中即拒绝并提示，v2/v3 逐步解锁）：
- *   - docker + private   → v2 #441 接入（impl-mx → 镜像构建链路）
+ * 置灰组合（选中即拒绝并提示，v3 逐步解锁）：
  *   - upgrade + docker   → v3（Docker 升级包）
  *
- * 已解锁（v2 #440）：docker + windows 宿主（Docker Desktop 检测 + 安装指引，不捆绑安装器；
- * 须在 Windows x64 打包机上打，断网验证 verify-windows-docker 属 #444）
+ * 已解锁（v2 #440/#441）：docker + windows 宿主（Docker Desktop 检测 + 安装指引，不捆绑
+ * 安装器；须在 Windows x64 打包机上打，断网验证 verify-windows-docker 属 #444）；
+ * docker + private（impl-mx 经 implmx 命名上下文烘焙进 app 镜像，打包机须有 packages/impl-mx）
  *
  * 使用方式：
  *   node scripts/pack-menu.js     # 或 pnpm pack:menu
@@ -47,7 +47,7 @@ const OS_OPTIONS = Object.entries(LINUX_OS).map(([id, def]) => ({
 // 交付形态（ADR-0075 C1）：产物跑在哪
 const FORM_OPTIONS = [
   { key: '1', id: 'bare', label: '裸机部署包（Windows / Linux 裸机，现状保留）' },
-  { key: '2', id: 'docker', label: 'Docker 部署包（linux / windows 宿主；private 变体见 v2 #441）' },
+  { key: '2', id: 'docker', label: 'Docker 部署包（linux / windows 宿主；oss / private 变体）' },
 ];
 
 const TYPE_OPTIONS = [
@@ -226,11 +226,8 @@ async function main() {
   const type = await pick(typeOptions, '请选择打包类型', form.id === 'docker' ? '2' : '1');
   const typeLabel = type.label.split('（')[0];
 
-  // 3. variant（Docker 形态：private 置灰，v1 仅 oss）
-  const variantOptions = VARIANT_OPTIONS.map((o) =>
-    form.id === 'docker' && o.id === 'private' ? { ...o, disabled: 'v1 不可用（Docker 形态仅 oss）' } : o
-  );
-  const variant = await pick(variantOptions, '请选择 variant');
+  // 3. variant（Docker 形态 private 自 #441 起可用：implmx 命名上下文烘焙 impl-mx）
+  const variant = await pick(VARIANT_OPTIONS, '请选择 variant');
   if (variant.id === 'private') {
     const implMxPkg = path.join(PROJECT_ROOT, 'packages', 'impl-mx', 'package.json');
     if (!require('fs').existsSync(implMxPkg)) {
@@ -243,9 +240,11 @@ async function main() {
   let channelLabel;
 
   if (form.id === 'docker') {
-    // Docker 交付形态：宿主平台透传 --host-platform（#440）；路由 pack-linux-docker.js
+    // Docker 交付形态：宿主平台透传 --host-platform（#440）；variant 透传 --variant（#441）；
+    // 路由 pack-linux-docker.js
     const host = await pick(DOCKER_HOST_OPTIONS, '请选择宿主平台');
-    cmdArgs = ['scripts/pack-linux-docker.js', '--host-platform', host.id];
+    const variantArgs = variant.id === 'private' ? ['--variant', 'private'] : [];
+    cmdArgs = ['scripts/pack-linux-docker.js', '--host-platform', host.id, ...variantArgs];
     channelLabel = `Docker 部署包（${host.id} 宿主）`;
   } else {
     // 裸机交付形态

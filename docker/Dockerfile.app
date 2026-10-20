@@ -10,6 +10,9 @@
 #
 # 构建：docker build -f docker/Dockerfile.app --build-arg APP_VERSION=<版本> .
 # 构建上下文 = 仓库根（.dockerignore 生效）；构建机需有 runtime/prisma-engines/schema-engine-linux-musl
+# variant（#441）：oss 加 --build-context implmx=<空目录>；private 加
+#   --build-context implmx=<impl-mx 暂存目录（源码+dist，不含 node_modules）>
+#   --build-arg IMPLMX_FILTER="--filter @cloudcad/impl-mx"（打包脚本自动拼装）
 
 # ==================== 基础依赖阶段 ====================
 FROM node:20.19.5-alpine AS base
@@ -37,6 +40,13 @@ COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/api-sdk/package.json ./packages/api-sdk/
 COPY packages/engine-exec/package.json ./packages/engine-exec/
 COPY packages/platform/package.json ./packages/platform/
+
+# 私有实现包（#441，命名上下文 implmx：private 构建传 impl-mx 暂存目录（源码 + 打包机
+# 预构建 dist，不含 node_modules），oss 构建传空目录占位）。必须在 base 的 pnpm install
+# 之前：private 的 lockfile 含 impl-mx importer，workspace（packages/* glob）须能看到
+# packages/impl-mx/package.json，否则 frozen install 因 lockfile/workspace 不一致失败
+# （与裸机 Dockerfile.linux-deploy 同机制）。
+COPY --from=implmx . ./packages/impl-mx
 
 # 受限网络：打包机可用 --build-arg NPM_REGISTRY=... 指定 npm registry 镜像（空=官方源）
 ARG NPM_REGISTRY
@@ -174,17 +184,27 @@ COPY packages/db/prisma.config.ts ./packages/db/
 COPY packages/backend/prisma ./packages/backend/prisma
 COPY packages/backend/prisma.config.ts ./packages/backend/
 
+# 私有实现包（#441，命名上下文 implmx：private 构建传 impl-mx 暂存目录（源码 + 打包机
+# 预构建的 dist，不含 node_modules），oss 构建传空目录占位）。仅生产阶段需要：backend
+# 源码不 import impl-mx（base/backend-builder 阶段不受影响），运行时经 IMPL 环境变量
+# require /app/packages/impl-mx/dist（auth.module.ts 的 resolveAuthImplPath）；
+# private 的 .env 由打包生成 IMPL=1。
+COPY --from=implmx . ./packages/impl-mx
+
 # 生产依赖（backend 运行时依赖闭包；不跑 3100 故不含 conversion-service——转换服务是宿主进程）。
+# IMPLMX_FILTER：private 构建传 "--filter @cloudcad/impl-mx"（安装 impl-mx 运行时依赖），
+# oss 为空（命名上下文为空目录，无 package.json 不进 workspace）。
 # install / prisma generate / prod 裁剪 / 补装 prisma+tsx 全部合并进同一层，末尾同层删除
 # pnpm 缓存与 store：Docker 分层下「跨层 rm」只加 whiteout、不减体积（被删文件仍占下层空间），
 # 必须与创建缓存的 install 同层才能真瘦身（省 /root/.cache ~370M + store 独享部分）。运行时只跑
 # node dist/main.js，不读 /root/.cache、/root/.local；node_modules 与 store 硬链接，删 store 后数据
 # 不丢。对下次构建零影响：production 全新 FROM node:alpine，缓存本就不跨构建复用。
 # 补装的 prisma/tsx 必须钉死精确版本：实时解析 registry 会随时间漂移，导致同一 tag 镜像不可复现。
-RUN pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --ignore-scripts \
+ARG IMPLMX_FILTER=
+RUN pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec ${IMPLMX_FILTER} --frozen-lockfile --ignore-scripts \
     && pnpm --filter backend exec prisma generate \
-    && (pnpm --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod \
-        || pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec --frozen-lockfile --prod) \
+    && (pnpm --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec ${IMPLMX_FILTER} --frozen-lockfile --prod \
+        || pnpm install --filter backend --filter @cloudcad/mx-version-tool --filter @cloudcad/db --filter @cloudcad/contracts --filter @cloudcad/engine-exec ${IMPLMX_FILTER} --frozen-lockfile --prod) \
     && pnpm --filter backend add prisma@7.8.0 tsx@4.22.4 --ignore-scripts \
     && rm -rf /root/.cache /root/.local
 
