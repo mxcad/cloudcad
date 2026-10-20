@@ -18,7 +18,7 @@
  *   3. 运行 `pnpm brand:sync`：JS 运行时引用立即生效，静态文件同步刷新；
  *   4. 提交改动。
  *
- * 打包入口（pack-offline.js / pack-docker.js / pack-linux-deploy.js 等）打包前会自动
+ * 打包入口（pack-offline.js / pack-linux-deploy.js 等）打包前会自动
  * 调用 applySyncBrand()，保证部署包内静态文件与 branding.js 一致。
  *
  * 注意：

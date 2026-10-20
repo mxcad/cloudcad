@@ -9,7 +9,7 @@
 - **裸机线**：`pack-offline.js`（本机直打）/ `pack-linux-deploy.js`（Docker 容器构建通道），在 `pack-menu.js` 菜单里、在 CI（release.yml）里；
 - **Docker 线**（ADR-0074 一键部署包）：`pack-linux-docker.js` 完全独立——不在菜单、不在 CI、命名风格不同（无日期、arch 段位置不同）、start/stop 走 `runtime/docker-runtime/` 独立 12 步编排而非统一运维 CLI、无 cloudcad 运维入口、无升级包（升级 = 重下 ~800MB 全量包）、包元数据反向不齐（裸机包缺 SHA256SUMS/VERSION/部署说明）。
 
-另有两处结构性混淆：菜单里的「docker 通道」实为*构建通道*（用 Docker 容器打 Linux 包），与 Docker 交付形态一词两义；`pack-docker.js`（源码包，目标机现场 compose build）已被 ADR-0074 一键包取代但仍挂在 package.json。
+另有两处结构性混淆：菜单里的「docker 通道」实为*构建通道*（用 Docker 容器打 Linux 包），与 Docker 交付形态一词两义；`pack-docker.js`（源码包，目标机现场 compose build）已被 ADR-0074 一键包取代（v2 #443 已删除脚本与 `pack:docker` 命令）。
 
 目标：**一个打包入口 + 一个运行时入口 + 一套命名/元数据/验证/CI**，覆盖交付形态矩阵；Windows 宿主 Docker 包与 Docker 升级包按 v2/v3 分期接入同一框架。
 
@@ -85,7 +85,7 @@
 
 ### D10 源码包退役
 
-`pack-docker.js`（源码包，目标机现场 `compose up --build`）已被 ADR-0074 一键包取代：v1 标注 deprecated（JSDoc + 从菜单移除 + 已登记 #429），v2 删除脚本与 `pack:docker` 命令。
+`pack-docker.js`（源码包，目标机现场 `compose up --build`）已被 ADR-0074 一键包取代：v1 标注 deprecated（JSDoc + 从菜单移除 + 已登记 #429），v2 已删除脚本与 `pack:docker` 命令（#443）。
 
 ### D11 Docker 形态完全无 root（取代 ADR-0074 D5 三级权限门禁）
 

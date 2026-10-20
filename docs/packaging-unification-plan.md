@@ -132,7 +132,7 @@
 - **docker windows 宿主包**：`start.bat/stop.bat`（包内 windows node → `cli.js`，与裸机 win 同构）；Docker Desktop 检测 + 安装指引（Q1，不捆绑）；app 容器 bridge 网络 + `host.docker.internal` 访问宿主 conversion-service/cooperate（C6）；宿主侧物料 = `runtime/windows/{node,mxcad}` + 协同服务 windows 二进制（复用 mxcad-stable windows-x64 资产与 `pack-offline.js` 的物料解析逻辑）；`verify-windows-docker`（Docker Desktop 下 `docker run --network none` 同样成立）；CI `build-windows-docker` job
 - **docker private variant**：impl-mx → backend dist → app 镜像构建链路接线（打包机需 `packages/impl-mx`），菜单解除置灰
 - **运维长尾形态感知**：db-backup（`docker exec pg psql pg_dump`）、密码重置（`docker exec`）、infra（容器健康）
-- **删除 `pack-docker.js`** 与 `pack:docker` 命令（v1 已 deprecated）
+- **删除 `pack-docker.js`** 与 `pack:docker` 命令（v1 已 deprecated；#443 已完成）
 
 ### v3：Docker 升级包
 
