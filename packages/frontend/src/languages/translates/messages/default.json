@@ -45,34 +45,6 @@
         ],
         "$id": 4666
     },
-    "业务处理失败": {
-        "zh-TW": "業務處理失敗",
-        "en-US": "Business processing failed",
-        "ko-KR": "업무 처리 실패",
-        "$files": [
-            "src/config/clientSetup.ts(1961-1971)"
-        ],
-        "$id": 4703
-    },
-    "服务器繁忙，请稍后重试": {
-        "zh-TW": "服務器繁忙,請稍後重試",
-        "en-US": "The server is busy, please try again later",
-        "ko-KR": "서버가 사용 중입니다. 나중에 다시 시도하십시오.",
-        "$files": [
-            "src/config/clientSetup.ts(6288-6303)",
-            "src/config/clientSetup.ts(6883-6898)"
-        ],
-        "$id": 4705
-    },
-    "操作过于频繁，请稍后重试": {
-        "zh-TW": "操作過於頻繁,請稍後重試",
-        "en-US": "The operation is too frequent, please try again later",
-        "ko-KR": "작업이 너무 잦습니다. 나중에 다시 시도하십시오.",
-        "$files": [
-            "src/config/clientSetup.ts(6353-6369)"
-        ],
-        "$id": 4708
-    },
     "确认": {
         "zh-TW": "確認",
         "en-US": "confirm",
@@ -94,7 +66,7 @@
             "src/components/BreadcrumbNavigation.tsx(6191-6197)",
             "src/components/DirectoryImportDialog.tsx(16270-16276)",
             "src/components/DirectoryImportDialog.tsx(16626-16632)",
-            "src/components/Layout.tsx(31406-31412)",
+            "src/components/Layout.tsx(31636-31642)",
             "src/contexts/NotificationContext.tsx(2454-2460)",
             "src/contexts/NotificationContext.tsx(2729-2735)",
             "src/contexts/NotificationContext.tsx(2969-2975)",
@@ -102,12 +74,12 @@
             "src/contexts/NotificationContext.tsx(7305-7311)",
             "src/pages/DeviceAuthorize.tsx(9935-9941)",
             "src/pages/MemberCenter.tsx(44278-44284)",
-            "src/components/billing/WechatPayButton.tsx(6177-6183)",
-            "src/components/billing/WechatPayButton.tsx(8314-8320)",
             "src/utils/quotaUpgradeGuide.ts(2189-2195)",
             "src/utils/quotaUpgradeGuide.ts(3314-3320)",
             "src/utils/vipFeatureGuide.ts(1898-1904)",
             "src/utils/vipFeatureGuide.ts(2282-2288)",
+            "src/components/billing/WechatPayButton.tsx(6177-6183)",
+            "src/components/billing/WechatPayButton.tsx(8314-8320)",
             "src/components/conversion-panel/ConversionTab.tsx(5911-5917)",
             "src/components/conversion-panel/ConversionTab.tsx(5960-5966)",
             "src/components/conversion-panel/DownloadTab.tsx(4975-4981)",
@@ -165,7 +137,7 @@
             "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(5858-5864)",
             "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(7059-7065)",
             "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(7992-7998)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10022-10028)",
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10024-10030)",
             "src/pages/SystemMonitorPage/hooks/useBackgroundTasks.ts(4513-4519)",
             "src/pages/UserManagement/UserModals/CreateUserModal.tsx(1668-1674)",
             "src/pages/UserManagement/UserModals/DeleteUserConfirm.tsx(1054-1060)",
@@ -511,7 +483,8 @@
         "ko-KR": "생성 중...",
         "$files": [
             "src/components/CurrentFilePanel.tsx(4157-4167)",
-            "src/components/CurrentFilePanel.tsx(5731-5741)"
+            "src/components/CurrentFilePanel.tsx(5731-5741)",
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(5326-5336)"
         ],
         "$id": 2721
     },
@@ -1300,16 +1273,25 @@
         "en-US": "You are still using the initial password from the first deployment. Change it now",
         "ko-KR": "현재 최초 배포 설정의 초기 암호를 사용하고 있습니다. 지금 수정하십시오.",
         "$files": [
-            "src/components/Layout.tsx(27891-27919)"
+            "src/components/Layout.tsx(28072-28100)"
         ],
         "$id": 8368
+    },
+    "本地测试模式，建议在生产部署前改为强口令": {
+        "zh-TW": "本地测试模式，建议在生产部署前改为强口令",
+        "en-US": "本地测试模式，建议在生产部署前改为强口令",
+        "ko-KR": "本地测试模式，建议在生产部署前改为强口令",
+        "$files": [
+            "src/components/Layout.tsx(28125-28149)"
+        ],
+        "$id": 8531
     },
     "去修改": {
         "zh-TW": "去修改",
         "en-US": "Change password",
         "ko-KR": "수정",
         "$files": [
-            "src/components/Layout.tsx(28135-28142)"
+            "src/components/Layout.tsx(28365-28372)"
         ],
         "$id": 8369
     },
@@ -1318,7 +1300,7 @@
         "en-US": "安全模式：{mode}",
         "ko-KR": "安全模式：{mode}",
         "$files": [
-            "src/components/Layout.tsx(29988-30003)"
+            "src/components/Layout.tsx(30218-30233)"
         ],
         "$id": 8483
     },
@@ -1327,7 +1309,7 @@
         "en-US": "安全模式",
         "ko-KR": "安全模式",
         "$files": [
-            "src/components/Layout.tsx(30117-30125)",
+            "src/components/Layout.tsx(30347-30355)",
             "src/pages/RuntimeConfigPage/ModeSwitchModal.tsx(1183-1191)",
             "src/pages/RuntimeConfigPage/PageHeader.tsx(1248-1256)",
             "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts(18833-18841)"
@@ -1339,7 +1321,7 @@
         "en-US": "普通模式",
         "ko-KR": "普通模式",
         "$files": [
-            "src/components/Layout.tsx(30152-30160)",
+            "src/components/Layout.tsx(30382-30390)",
             "src/pages/RuntimeConfigPage/ModeSwitchModal.tsx(1195-1203)",
             "src/pages/RuntimeConfigPage/PageHeader.tsx(1260-1268)",
             "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts(18845-18853)"
@@ -1351,7 +1333,7 @@
         "en-US": "· 已按等保三级收紧运行限制",
         "ko-KR": "· 已按等保三级收紧运行限制",
         "$files": [
-            "src/components/Layout.tsx(30262-30280)"
+            "src/components/Layout.tsx(30492-30510)"
         ],
         "$id": 8486
     },
@@ -1360,7 +1342,7 @@
         "en-US": "· 限制宽松，适合本地与测试环境",
         "ko-KR": "· 限制宽松，适合本地与测试环境",
         "$files": [
-            "src/components/Layout.tsx(30303-30323)"
+            "src/components/Layout.tsx(30533-30553)"
         ],
         "$id": 8487
     },
@@ -1369,7 +1351,7 @@
         "en-US": "前往配置",
         "ko-KR": "前往配置",
         "$files": [
-            "src/components/Layout.tsx(30565-30573)"
+            "src/components/Layout.tsx(30795-30803)"
         ],
         "$id": 8488
     },
@@ -1378,8 +1360,8 @@
         "en-US": "Confirm to log out and log in",
         "ko-KR": "로그아웃 확인",
         "$files": [
-            "src/components/Layout.tsx(31176-31186)",
-            "src/components/Layout.tsx(32426-32436)"
+            "src/components/Layout.tsx(31406-31416)",
+            "src/components/Layout.tsx(32656-32666)"
         ],
         "$id": 2669
     },
@@ -1388,7 +1370,7 @@
         "en-US": "Exiting ..",
         "ko-KR": "종료 중...",
         "$files": [
-            "src/components/Layout.tsx(31810-31820)"
+            "src/components/Layout.tsx(32040-32050)"
         ],
         "$id": 2670
     },
@@ -1397,7 +1379,7 @@
         "en-US": "Confirm exit",
         "ko-KR": "종료 확인",
         "$files": [
-            "src/components/Layout.tsx(31886-31894)"
+            "src/components/Layout.tsx(32116-32124)"
         ],
         "$id": 2671
     },
@@ -1406,7 +1388,7 @@
         "en-US": "Are you sure you want to exit {appName}? After logging out, you need to log in again to access system functions.",
         "ko-KR": "_ _ $_ $_ $_ $_ 을 (를) 종료하시겠습니까?시스템 기능에 액세스하려면 종료 후 다시 로그인해야 합니다.",
         "$files": [
-            "src/components/Layout.tsx(32547-32605)"
+            "src/components/Layout.tsx(32777-32835)"
         ],
         "$id": 2672
     },
@@ -1606,7 +1588,7 @@
             "src/pages/AdminBillingPage/components/TiersTab.tsx(1186-1192)",
             "src/pages/AuditLogPage/components/AuditFilterSection.tsx(4829-4835)",
             "src/pages/Dashboard/components/WelcomeBanner.tsx(1524-1530)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(12722-12728)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(12724-12730)"
         ],
         "$id": 1021
     },
@@ -1666,6 +1648,34 @@
             "src/components/WorkListPanel.tsx(4595-4603)"
         ],
         "$id": 4702
+    },
+    "业务处理失败": {
+        "zh-TW": "業務處理失敗",
+        "en-US": "Business processing failed",
+        "ko-KR": "업무 처리 실패",
+        "$files": [
+            "src/config/clientSetup.ts(1961-1971)"
+        ],
+        "$id": 4703
+    },
+    "服务器繁忙，请稍后重试": {
+        "zh-TW": "服務器繁忙,請稍後重試",
+        "en-US": "The server is busy, please try again later",
+        "ko-KR": "서버가 사용 중입니다. 나중에 다시 시도하십시오.",
+        "$files": [
+            "src/config/clientSetup.ts(6288-6303)",
+            "src/config/clientSetup.ts(6883-6898)"
+        ],
+        "$id": 4705
+    },
+    "操作过于频繁，请稍后重试": {
+        "zh-TW": "操作過於頻繁,請稍後重試",
+        "en-US": "The operation is too frequent, please try again later",
+        "ko-KR": "작업이 너무 잦습니다. 나중에 다시 시도하십시오.",
+        "$files": [
+            "src/config/clientSetup.ts(6353-6369)"
+        ],
+        "$id": 4708
     },
     "用户权限": {
         "zh-TW": "用戶許可權",
@@ -1930,11 +1940,11 @@
         "ko-KR": "프로젝트 관리",
         "$files": [
             "src/constants/permissions.ts(5745-5753)",
+            "src/components/sidebar/SidebarTabBar.tsx(1112-1120)",
+            "src/components/sidebar/SidebarTrigger.tsx(1644-1652)",
             "src/config/tours/create-project.ts(1454-1462)",
             "src/config/tours/navigate-to-projects.ts(1491-1499)",
             "src/config/tours/project-management-full.ts(1753-1761)",
-            "src/components/sidebar/SidebarTabBar.tsx(1112-1120)",
-            "src/components/sidebar/SidebarTrigger.tsx(1644-1652)",
             "src/pages/FileSystemManager/index.tsx(682-690)"
         ],
         "$id": 2649
@@ -2027,9 +2037,9 @@
         "ko-KR": "역할 관리",
         "$files": [
             "src/constants/permissions.ts(6311-6319)",
-            "src/config/tours/project-management-full.ts(3632-3640)",
             "src/components/file-item/fileActionConfig.tsx(11257-11265)",
-            "src/components/file-item/fileActionConfig.tsx(11284-11292)"
+            "src/components/file-item/fileActionConfig.tsx(11284-11292)",
+            "src/config/tours/project-management-full.ts(3632-3640)"
         ],
         "$id": 2838
     },
@@ -2325,7 +2335,7 @@
         "en-US": "Registration failed. Server returned abnormal data",
         "ko-KR": "등록 실패. 서버가 비정상 데이터를 반환했습니다",
         "$files": [
-            "src/contexts/useAuthActions.ts(6312-6330)"
+            "src/contexts/useAuthActions.ts(6604-6622)"
         ],
         "$id": 945
     },
@@ -2334,9 +2344,18 @@
         "en-US": "Registration successful",
         "ko-KR": "등록 성공",
         "$files": [
-            "src/contexts/useAuthActions.ts(6595-6603)"
+            "src/contexts/useAuthActions.ts(6887-6895)"
         ],
         "$id": 946
+    },
+    "创建失败，服务器返回数据异常": {
+        "zh-TW": "建立失敗，伺服器返回資料異常",
+        "en-US": "Creation failed, server returned invalid data",
+        "ko-KR": "생성에 실패했습니다. 서버 응답 데이터가 올바르지 않습니다",
+        "$files": [
+            "src/contexts/useAuthActions.ts(8284-8302)"
+        ],
+        "$id": 8532
     },
     "根目录": {
         "zh-TW": "根目錄",
@@ -3922,8 +3941,8 @@
         "ko-KR": "인증번호를 입력하세요",
         "$files": [
             "src/pages/PhoneVerification.tsx(3272-3282)",
-            "src/pages/Register/BasicInfoStep.tsx(7380-7390)",
             "src/pages/ResetPassword/resetPasswordSchema.ts(205-215)",
+            "src/pages/Register/BasicInfoStep.tsx(7380-7390)",
             "src/pages/EmailVerification/hooks/useEmailVerificationForm.ts(1336-1346)",
             "src/pages/Login/components/PhoneLoginForm.tsx(2784-2794)",
             "src/pages/Login/hooks/loginFormSchema.ts(678-688)",
@@ -4276,7 +4295,7 @@
         "$files": [
             "src/pages/PhoneVerification.tsx(12901-12917)",
             "src/pages/ResetPassword.tsx(10936-10952)",
-            "src/pages/Login/index.tsx(14275-14291)",
+            "src/pages/Login/index.tsx(15480-15496)",
             "src/pages/Register/RegisterFooter.tsx(753-769)",
             "src/pages/EmailVerification/components/VerificationForm.tsx(7735-7751)",
             "src/pages/ForgotPassword/components/ForgotFormView.tsx(6648-6664)",
@@ -4291,7 +4310,7 @@
         "$files": [
             "src/pages/PhoneVerification.tsx(13080-13093)",
             "src/pages/ResetPassword.tsx(11115-11128)",
-            "src/pages/Login/index.tsx(14495-14508)",
+            "src/pages/Login/index.tsx(15728-15741)",
             "src/pages/Register/RegisterFooter.tsx(908-921)",
             "src/pages/EmailVerification/components/VerificationForm.tsx(7914-7927)",
             "src/pages/ForgotPassword/components/ForgotFormView.tsx(6815-6828)",
@@ -4306,7 +4325,7 @@
         "$files": [
             "src/pages/PhoneVerification.tsx(13258-13271)",
             "src/pages/ResetPassword.tsx(11293-11306)",
-            "src/pages/Login/index.tsx(14714-14727)",
+            "src/pages/Login/index.tsx(15975-15988)",
             "src/pages/Register/RegisterFooter.tsx(1062-1075)",
             "src/pages/EmailVerification/components/VerificationForm.tsx(8092-8105)",
             "src/pages/ForgotPassword/components/ForgotFormView.tsx(6981-6994)",
@@ -4568,1157 +4587,6 @@
         ],
         "$id": 1273
     },
-    "学习如何创建一个新项目，这是使用 CloudCAD 的第一步": {
-        "zh-TW": "學習如何創建一個新項目,這是使用CloudCAD的第一步",
-        "en-US": "Learning how to create a new project is the first step in using CloudCAD",
-        "ko-KR": "CloudCAD를 사용하는 첫 번째 단계인 새 프로젝트를 만드는 방법을 학습합니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(1402-1436)"
-        ],
-        "$id": 4985
-    },
-    "2 分钟": {
-        "zh-TW": "2分鐘",
-        "en-US": "2 minutes",
-        "ko-KR": "2분",
-        "$files": [
-            "src/config/tours/create-project.ts(1485-1493)"
-        ],
-        "$id": 4986
-    },
-    "需要在项目管理页面": {
-        "zh-TW": "需要在專案管理頁面",
-        "en-US": "Need to be on the project management page",
-        "ko-KR": "프로젝트 관리 페이지 필요",
-        "$files": [
-            "src/config/tours/create-project.ts(1683-1696)",
-            "src/config/tours/project-management-full.ts(2021-2034)"
-        ],
-        "$id": 4987
-    },
-    "新建项目": {
-        "zh-TW": "新建項目",
-        "en-US": "New project",
-        "ko-KR": "새 프로젝트",
-        "$files": [
-            "src/config/tours/create-project.ts(1947-1955)",
-            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(7024-7032)",
-            "src/pages/FileSystemManager/FileSystemHeader.tsx(10196-10204)",
-            "src/pages/Dashboard/components/QuickActionsSection.tsx(673-681)"
-        ],
-        "$id": 1034
-    },
-    "点击\"新建项目\"按钮创建项目。": {
-        "zh-TW": "點擊“新建項目”按鈕創建項目。",
-        "en-US": "Click the 'New Project' button to create a project.",
-        "ko-KR": "새 프로젝트 버튼을 클릭하여 프로젝트를 만듭니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(1976-1995)"
-        ],
-        "$id": 4988
-    },
-    "请点击\"新建项目\"按钮": {
-        "zh-TW": "請點擊“新建項目”按鈕",
-        "en-US": "Please click the 'New Project' button",
-        "ko-KR": "\"새 프로젝트\" 버튼을 클릭하십시오.",
-        "$files": [
-            "src/config/tours/create-project.ts(2109-2124)"
-        ],
-        "$id": 4989
-    },
-    "创建项目按钮在项目列表页面的顶部工具栏中。点击可以创建新项目。": {
-        "zh-TW": "創建項目按鈕在項目清單頁面的頂部工具列中。 點擊可以創建新項目。",
-        "en-US": "The Create Project button is located in the top toolbar of the project list page. Click to create a new project.",
-        "ko-KR": "항목 만들기 버튼은 항목 목록 페이지의 위쪽 도구 모음에 있습니다.새 프로젝트를 만들려면 누르십시오.",
-        "$files": [
-            "src/config/tours/create-project.ts(2210-2257)"
-        ],
-        "$id": 4990
-    },
-    "项目名称": {
-        "zh-TW": "項目名稱",
-        "en-US": "Project Name",
-        "ko-KR": "프로젝트 명칭",
-        "$files": [
-            "src/config/tours/create-project.ts(2344-2352)"
-        ],
-        "$id": 4991
-    },
-    "输入项目名称，如\"我的第一个项目\"。": {
-        "zh-TW": "輸入項目名稱,如“我的第一個項目”。",
-        "en-US": "Enter the project name, such as' My First Project '.",
-        "ko-KR": "내 첫 번째 프로젝트와 같은 프로젝트 이름을 입력합니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(2373-2395)"
-        ],
-        "$id": 4992
-    },
-    "请输入项目名称": {
-        "zh-TW": "請輸入項目名稱",
-        "en-US": "Please enter the project name",
-        "ko-KR": "프로젝트 이름을 입력하십시오.",
-        "$files": [
-            "src/config/tours/create-project.ts(2509-2520)"
-        ],
-        "$id": 4993
-    },
-    "在项目创建弹窗中输入项目名称。": {
-        "zh-TW": "在項目創建彈窗中輸入項目名稱。",
-        "en-US": "Enter the project name in the project creation pop-up window.",
-        "ko-KR": "프로젝트 생성 창에 프로젝트 이름을 입력합니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(2580-2599)"
-        ],
-        "$id": 4994
-    },
-    "项目描述": {
-        "zh-TW": "項目描述",
-        "en-US": "Project Description",
-        "ko-KR": "프로젝트 설명",
-        "$files": [
-            "src/config/tours/create-project.ts(2676-2684)"
-        ],
-        "$id": 4995
-    },
-    "填写项目描述（可选）。": {
-        "zh-TW": "填寫項目描述(可選)。",
-        "en-US": "Fill in the project description (optional).",
-        "ko-KR": "항목 설명을 작성합니다 (선택 사항).",
-        "$files": [
-            "src/config/tours/create-project.ts(2705-2720)"
-        ],
-        "$id": 4996
-    },
-    "项目描述可以帮助团队成员了解项目用途。": {
-        "zh-TW": "項目描述可以幫助團隊成員瞭解項目用途。",
-        "en-US": "Project description can help team members understand the purpose of the project.",
-        "ko-KR": "프로젝트 설명은 팀 멤버가 프로젝트의 용도를 이해하는 데 도움이 됩니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(2836-2859)"
-        ],
-        "$id": 4997
-    },
-    "点击\"创建\"按钮完成创建。": {
-        "zh-TW": "點擊“創建”按鈕完成創建。",
-        "en-US": "Click the 'Create' button to complete the creation.",
-        "ko-KR": "만들기 버튼을 클릭하여 만들기를 완료합니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(2968-2985)"
-        ],
-        "$id": 4998
-    },
-    "请点击\"创建\"按钮": {
-        "zh-TW": "請點擊“創建”按鈕",
-        "en-US": "Please click the 'Create' button",
-        "ko-KR": "만들기 버튼을 클릭하십시오.",
-        "$files": [
-            "src/config/tours/create-project.ts(3099-3112)"
-        ],
-        "$id": 4999
-    },
-    "点击创建按钮完成项目创建。": {
-        "zh-TW": "點擊創建按鈕完成項目創建。",
-        "en-US": "Click the create button to complete the project creation.",
-        "ko-KR": "프로젝트 생성을 완료하려면 만들기 단추를 누르십시오.",
-        "$files": [
-            "src/config/tours/create-project.ts(3198-3215)"
-        ],
-        "$id": 5000
-    },
-    "项目创建成功": {
-        "zh-TW": "項目創建成功",
-        "en-US": "Project creation successful",
-        "ko-KR": "프로젝트 생성 성공",
-        "$files": [
-            "src/config/tours/create-project.ts(3283-3293)",
-            "src/hooks/file-system/useFileSystemCRUD.ts(21198-21208)"
-        ],
-        "$id": 2976
-    },
-    "恭喜！项目已创建成功。点击项目卡片可以进入项目进行文件管理。": {
-        "zh-TW": "恭喜！ 項目已創建成功。 點擊項目卡片可以進入項目進行文件管理。",
-        "en-US": "Congratulations! The project has been successfully created. Click on the project card to enter the project for file management.",
-        "ko-KR": "축하합니다!프로젝트가 성공적으로 만들어졌습니다.프로젝트 카드를 클릭하면 프로젝트에 들어가서 파일 관리를 할 수 있습니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(3314-3360)"
-        ],
-        "$id": 5001
-    },
-    "项目创建成功后，可以在项目列表中看到新创建的项目。": {
-        "zh-TW": "項目創建成功後,可以在項目清單中看到新創建的項目。",
-        "en-US": "After the project is successfully created, you can see the newly created project in the project list.",
-        "ko-KR": "프로젝트가 성공적으로 작성되면 프로젝트 목록에 새로 작성된 항목을 볼 수 있습니다.",
-        "$files": [
-            "src/config/tours/create-project.ts(3485-3526)"
-        ],
-        "$id": 5002
-    },
-    "进入项目管理": {
-        "zh-TW": "進入專案管理",
-        "en-US": "Enter project management",
-        "ko-KR": "프로젝트 관리 시작",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(1422-1432)",
-            "src/config/tours/navigate-to-projects.ts(1925-1935)"
-        ],
-        "$id": 5003
-    },
-    "学习如何从侧边栏进入项目管理页面": {
-        "zh-TW": "學習如何從側邊欄進入專案管理頁面",
-        "en-US": "Learn how to access the project management page from the sidebar",
-        "ko-KR": "사이드바에서 프로젝트 관리 페이지로 들어가는 방법 배우기",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(1453-1473)"
-        ],
-        "$id": 5004
-    },
-    "30 秒": {
-        "zh-TW": "30秒",
-        "en-US": "30 seconds",
-        "ko-KR": "30초",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(1522-1530)"
-        ],
-        "$id": 5005
-    },
-    "需要在非 CAD 编辑器页面": {
-        "zh-TW": "需要在非CAD編輯器頁面",
-        "en-US": "Need to be on non CAD editor pages",
-        "ko-KR": "CAD 이외의 편집기 시트 필요",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(1623-1641)"
-        ],
-        "$id": 5006
-    },
-    "点击侧边栏的\"项目管理\"进入项目列表页面。": {
-        "zh-TW": "點擊側邊欄的“專案管理”進入項目清單頁面。",
-        "en-US": "Click on \"Project Management\" in the sidebar to enter the project list page.",
-        "ko-KR": "사이드바의 [프로젝트 관리] 를 클릭하여 프로젝트 목록 페이지로 이동합니다.",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(1956-1981)"
-        ],
-        "$id": 5007
-    },
-    "请点击侧边栏中的\"项目管理\"": {
-        "zh-TW": "請點擊側邊欄中的“專案管理”",
-        "en-US": "Please click on 'Project Management' in the sidebar",
-        "ko-KR": "사이드바에서 \"프로젝트 관리\" 를 클릭하십시오.",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(2094-2112)"
-        ],
-        "$id": 5008
-    },
-    "请点击左侧侧边栏中的\"项目管理\"入口进入项目列表。": {
-        "zh-TW": "請點擊左側側邊欄中的“專案管理”入口進入項目清單。",
-        "en-US": "Please click on the \"Project Management\" entrance in the left sidebar to enter the project list.",
-        "ko-KR": "왼쪽 사이드바에서 프로젝트 관리 포털을 클릭하여 프로젝트 목록으로 들어가십시오.",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(2198-2227)"
-        ],
-        "$id": 5009
-    },
-    "项目列表页面": {
-        "zh-TW": "項目清單頁面",
-        "en-US": "Project List Page",
-        "ko-KR": "항목 목록 페이지",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(2304-2314)"
-        ],
-        "$id": 5010
-    },
-    "这里显示您的所有项目。您可以点击\"新建项目\"创建新项目，或点击项目卡片进入项目。": {
-        "zh-TW": "這裡顯示您的所有項目。 您可以點擊“新建項目”創建新項目,或點擊項目卡片進入項目。",
-        "en-US": "All of your projects are displayed here. You can click on \"New Project\" to create a new project, or click on the project card to enter the project.",
-        "ko-KR": "모든 항목이 표시됩니다.\"새 프로젝트\" 를 클릭하여 새 프로젝트를 만들거나 프로젝트 카드를 클릭하여 프로젝트에 들어갈 수 있습니다.",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(2335-2391)"
-        ],
-        "$id": 5011
-    },
-    "项目列表页面显示您的所有项目，支持创建、编辑和管理项目。": {
-        "zh-TW": "項目清單頁面顯示您的所有項目,支持創建、編輯和管理項目。",
-        "en-US": "The project list page displays all your projects and supports creating, editing, and managing projects.",
-        "ko-KR": "항목 목록 페이지에는 항목 작성, 편집 및 관리를 지원하는 모든 항목이 표시됩니다.",
-        "$files": [
-            "src/config/tours/navigate-to-projects.ts(2517-2561)"
-        ],
-        "$id": 5012
-    },
-    "个人空间": {
-        "zh-TW": "個人空間",
-        "en-US": "Personal space",
-        "ko-KR": "개인 공간",
-        "$files": [
-            "src/config/tours/personal-space.ts(1065-1073)",
-            "src/config/tours/personal-space.ts(1162-1170)",
-            "src/components/modals/SaveAsModal.tsx(6568-6576)",
-            "src/components/modals/SaveAsModal.tsx(9535-9543)",
-            "src/components/modals/SelectFileModal.tsx(2838-2846)",
-            "src/components/modals/SelectFolderModal.tsx(11369-11377)",
-            "src/components/sidebar/SidebarContainer.tsx(2796-2804)",
-            "src/components/sidebar/SidebarTrigger.tsx(2117-2125)",
-            "src/hooks/file-system/trashQuery.ts(3413-3421)",
-            "src/hooks/file-system/useFileSystemData.ts(13511-13519)",
-            "src/pages/FileSystemManager/index.tsx(670-678)"
-        ],
-        "$id": 887
-    },
-    "学习如何在个人空间中上传 CAD 文件、创建文件夹来管理您的图纸": {
-        "zh-TW": "學習如何在個人空間中上傳CAD檔案、創建資料夾來管理您的圖紙",
-        "en-US": "Learn how to upload CAD files and create folders in your personal space to manage your drawings",
-        "ko-KR": "개인 공간에 CAD 파일을 업로드하고 폴더를 작성하여 도면을 관리하는 방법을 학습합니다.",
-        "$files": [
-            "src/config/tours/personal-space.ts(1094-1138)"
-        ],
-        "$id": 5013
-    },
-    "3 分钟": {
-        "zh-TW": "3分鐘",
-        "en-US": "3 minutes",
-        "ko-KR": "3분",
-        "$files": [
-            "src/config/tours/personal-space.ts(1193-1201)"
-        ],
-        "$id": 5014
-    },
-    "进入个人空间": {
-        "zh-TW": "進入個人空間",
-        "en-US": "Enter personal space",
-        "ko-KR": "개인 공간에 들어가다",
-        "$files": [
-            "src/config/tours/personal-space.ts(1401-1411)"
-        ],
-        "$id": 7426
-    },
-    "点击侧边栏的\"个人空间\"，这是您的个人图纸空间，可以上传和管理您的 CAD 文件。": {
-        "zh-TW": "點擊側邊欄的“個人空間”,這是您的個人圖紙空間,可以上傳和管理您的CAD檔案。",
-        "en-US": "Click on \"Personal Space\" in the sidebar, which is your personal drawing space where you can upload and manage your CAD files.",
-        "ko-KR": "CAD 파일을 업로드하고 관리할 수 있는 개인 도면 공간인 사이드바의 \"개인 공간\" 을 클릭합니다.",
-        "$files": [
-            "src/config/tours/personal-space.ts(1432-1489)"
-        ],
-        "$id": 7427
-    },
-    "请点击侧边栏中的\"个人空间\"": {
-        "zh-TW": "請點擊側邊欄中的“個人空間”",
-        "en-US": "Please click on 'Personal Space' in the sidebar",
-        "ko-KR": "사이드바에서 \"개인 공간\" 을 클릭하세요",
-        "$files": [
-            "src/config/tours/personal-space.ts(1612-1630)"
-        ],
-        "$id": 7428
-    },
-    "请点击左侧侧边栏中的\"个人空间\"入口。": {
-        "zh-TW": "請點擊左側側邊欄中的“個人空間”入口。",
-        "en-US": "Please click on the \"Personal Space\" entrance in the left sidebar.",
-        "ko-KR": "왼쪽 사이드바에서 \"개인 공간\" 입구를 클릭하십시오.",
-        "$files": [
-            "src/config/tours/personal-space.ts(1716-1739)"
-        ],
-        "$id": 7429
-    },
-    "这里可以上传 DWG、DXF 等 CAD 格式文件，支持批量上传和拖拽上传。": {
-        "zh-TW": "這裡可以上傳DWG、DXF等CAD格式檔案,支持批量上傳和拖拽上傳。",
-        "en-US": "Here, CAD format files such as DWG and DXF can be uploaded, and batch uploading and drag and drop uploading are supported.",
-        "ko-KR": "DWG, DXF와 같은 CAD 형식 파일을 업로드할 수 있으며 대량 업로드 및 드래그 업로드를 지원합니다.",
-        "$files": [
-            "src/config/tours/personal-space.ts(1837-1891)"
-        ],
-        "$id": 7714
-    },
-    "上传文件功能在工具栏中，可以上传 DWG、DXF 等 CAD 格式文件。": {
-        "zh-TW": "上傳文件功能在工具列中,可以上傳DWG、DXF等CAD格式檔案。",
-        "en-US": "The upload file function is located in the toolbar, where CAD format files such as DWG and DXF can be uploaded.",
-        "ko-KR": "파일 업로드 기능은 도구 모음에서 DWG, DXF와 같은 CAD 형식 파일을 업로드할 수 있습니다.",
-        "$files": [
-            "src/config/tours/personal-space.ts(2044-2096)"
-        ],
-        "$id": 7715
-    },
-    "创建文件夹": {
-        "zh-TW": "創建資料夾",
-        "en-US": "Create folder",
-        "ko-KR": "폴더 만들기",
-        "$files": [
-            "src/config/tours/personal-space.ts(2182-2191)",
-            "src/hooks/file-system/useFileSystemCRUD.ts(6566-6575)",
-            "src/pages/LibraryManager/components/LibraryManagerEmptyView.tsx(1090-1099)"
-        ],
-        "$id": 1122
-    },
-    "点击\"新建文件夹\"按钮可以在当前位置创建文件夹，方便组织和管理您的图纸文件。": {
-        "zh-TW": "點擊“新建資料夾”按鈕可以在當前位置創建資料夾,方便組織和管理您的圖紙檔案。",
-        "en-US": "Click the 'New Folder' button to create a folder in the current location, making it easy to organize and manage your drawing files.",
-        "ko-KR": "[새 폴더] 버튼을 클릭하면 현재 위치에 폴더를 작성하여 도면 파일을 쉽게 구성하고 관리할 수 있습니다.",
-        "$files": [
-            "src/config/tours/personal-space.ts(2212-2266)"
-        ],
-        "$id": 5021
-    },
-    "新建文件夹功能在工具栏中。点击可以创建文件夹来组织图纸文件。": {
-        "zh-TW": "新建資料夾功能在工具列中。 點擊可以創建資料夾來組織圖紙檔案。",
-        "en-US": "The new folder function is located in the toolbar. Click to create a folder to organize drawing files.",
-        "ko-KR": "새 폴더 기능은 도구 모음에 있습니다.폴더를 작성하여 시트 파일을 구성하려면 를 클릭합니다.",
-        "$files": [
-            "src/config/tours/personal-space.ts(2418-2464)"
-        ],
-        "$id": 5022
-    },
-    "项目管理完整流程": {
-        "zh-TW": "專案管理完整流程",
-        "en-US": "Complete project management process",
-        "ko-KR": "프로젝트 관리 전체 프로세스",
-        "$files": [
-            "src/config/tours/project-management-full.ts(1643-1655)"
-        ],
-        "$id": 5023
-    },
-    "从项目设置到使用 CAD 编辑器的完整教程，涵盖角色管理、成员管理、文件管理等功能": {
-        "zh-TW": "從項目設定到使用CAD編輯器的完整教程,涵蓋角色管理、成員管理、文件管理等功能",
-        "en-US": "A complete tutorial from project setup to using CAD editor, covering functions such as role management, member management, file management, etc",
-        "ko-KR": "역할 관리, 멤버 관리, 파일 관리 등의 기능을 포함하는 프로젝트 설정에서 CAD 편집기 사용에 이르는 전체 자습서",
-        "$files": [
-            "src/config/tours/project-management-full.ts(1676-1729)"
-        ],
-        "$id": 5024
-    },
-    "15 分钟": {
-        "zh-TW": "15分鐘",
-        "en-US": "15 minutes",
-        "ko-KR": "15분",
-        "$files": [
-            "src/config/tours/project-management-full.ts(1784-1793)"
-        ],
-        "$id": 5025
-    },
-    "需要至少有一个项目": {
-        "zh-TW": "需要至少有一個項目",
-        "en-US": "At least one project is required",
-        "ko-KR": "하나 이상의 항목 필요",
-        "$files": [
-            "src/config/tours/project-management-full.ts(2230-2243)"
-        ],
-        "$id": 5026
-    },
-    "视图切换": {
-        "zh-TW": "視圖切換",
-        "en-US": "View Switch",
-        "ko-KR": "뷰 전환",
-        "$files": [
-            "src/config/tours/project-management-full.ts(2539-2547)"
-        ],
-        "$id": 5027
-    },
-    "可以切换卡片模式和列表模式查看项目。": {
-        "zh-TW": "可以切換卡片模式和清單模式查看項目。",
-        "en-US": "You can switch between card mode and list mode to view items.",
-        "ko-KR": "카드 모드와 목록 모드를 전환하여 항목을 볼 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(2568-2590)"
-        ],
-        "$id": 5028
-    },
-    "视图切换按钮可以在卡片视图和列表视图之间切换。": {
-        "zh-TW": "視圖切換按鈕可以在卡片視圖和清單視圖之間切換。",
-        "en-US": "The view switch button can switch between card view and list view.",
-        "ko-KR": "보기 전환 버튼은 카드 보기와 목록 보기 사이를 전환할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(2740-2767)"
-        ],
-        "$id": 5029
-    },
-    "更多操作": {
-        "zh-TW": "更多操作",
-        "en-US": "More actions",
-        "ko-KR": "추가 작업",
-        "$files": [
-            "src/config/tours/project-management-full.ts(2901-2909)",
-            "src/config/tours/project-management-full.ts(6584-6592)",
-            "src/config/tours/project-management-full.ts(9258-9266)",
-            "src/components/file-item/FileItemMenu.tsx(1208-1216)"
-        ],
-        "$id": 4865
-    },
-    "点击项目卡片右上角的\"更多\"按钮，展开项目管理操作菜单。": {
-        "zh-TW": "點擊專案卡片右上角的\"更多\"按鈕，展開專案管理操作選單。",
-        "en-US": "Click the \"More\" button in the top-right corner of a project card to open the project management menu.",
-        "ko-KR": "프로젝트 카드 오른쪽 상단의 \"더보기\" 버튼을 클릭하여 프로젝트 관리 메뉴를 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(2930-2962)"
-        ],
-        "$id": 6962
-    },
-    "请点击项目卡片右上角的\"更多\"按钮": {
-        "zh-TW": "請點擊專案卡片右上角的\"更多\"按鈕",
-        "en-US": "Please click the \"More\" button in the top-right corner of a project card.",
-        "ko-KR": "프로젝트 카드 오른쪽 상단의 \"더보기\" 버튼을 클릭하세요.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(3076-3097)"
-        ],
-        "$id": 6963
-    },
-    "列表视图下操作按钮会直接显示在项目行中；卡片视图下\"更多\"按钮位于项目卡片右上角。仍找不到时，可点击\"跳过引导\"继续。": {
-        "zh-TW": "列表視圖下操作按鈕會直接顯示在專案行中；卡片視圖下\"更多\"按鈕位於專案卡片右上角。仍找不到時，可點擊\"跳過引導\"繼續。",
-        "en-US": "In list view, action buttons appear directly in the project row; in card view, the \"More\" button is at the top-right corner of the project card. If you still can't find it, click \"Skip tour\" to continue.",
-        "ko-KR": "목록 보기에서는 작업 버튼이 프로젝트 행에 직접 표시되고, 카드 보기에서는 \"더보기\" 버튼이 프로젝트 카드 오른쪽 상단에 있습니다. 찾을 수 없는 경우 \"투어 건너뛰기\"를 클릭하여 계속하세요.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(3183-3258)",
-            "src/config/tours/project-management-full.ts(6836-6911)",
-            "src/config/tours/project-management-full.ts(9510-9585)"
-        ],
-        "$id": 6964
-    },
-    "点击\"角色管理\"选项，打开项目角色管理弹窗。": {
-        "zh-TW": "點擊\"角色管理\"選項，開啟專案角色管理彈窗。",
-        "en-US": "Click the \"Role Management\" option to open the project role management dialog.",
-        "ko-KR": "\"역할 관리\" 옵션을 클릭하여 프로젝트 역할 관리 창을 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(3661-3687)"
-        ],
-        "$id": 6965
-    },
-    "请点击菜单中的\"角色管理\"选项": {
-        "zh-TW": "請點擊選單中的“角色管理”選項",
-        "en-US": "Please click on the 'Role Management' option in the menu",
-        "ko-KR": "메뉴에서 역할 관리 옵션을 클릭하십시오.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(3799-3818)"
-        ],
-        "$id": 5031
-    },
-    "请在操作菜单中选择\"角色管理\"，打开项目角色管理弹窗。": {
-        "zh-TW": "請在操作選單中選擇\"角色管理\"，開啟專案角色管理彈窗。",
-        "en-US": "Please select \"Role Management\" from the action menu to open the project role management dialog.",
-        "ko-KR": "작업 메뉴에서 \"역할 관리\"를 선택하여 프로젝트 역할 관리 창을 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(3904-3947)"
-        ],
-        "$id": 6966
-    },
-    "点击\"创建角色\"按钮创建自定义角色。": {
-        "zh-TW": "點擊“創建角色”按鈕創建自定義角色。",
-        "en-US": "Click the \"Create Role\" button to create a custom role.",
-        "ko-KR": "사용자 지정 역할을 만들려면 [역할 만들기] 버튼을 클릭합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4060-4082)"
-        ],
-        "$id": 5033
-    },
-    "创建角色功能：在角色管理弹窗中点击\"创建角色\"按钮，然后配置角色名称和权限。": {
-        "zh-TW": "創建角色功能：在角色管理彈窗中點擊“創建角色”按鈕,然後配置角色名稱和許可權。",
-        "en-US": "Create role function: Click the \"Create Role\" button in the role management pop-up window, and then configure the role name and permissions.",
-        "ko-KR": "캐릭터 기능 만들기: 캐릭터 관리 창에서 캐릭터 만들기 단추를 누르고 캐릭터 이름과 권한을 설정합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4232-4286)"
-        ],
-        "$id": 5034
-    },
-    "角色名称": {
-        "zh-TW": "角色名稱",
-        "en-US": "role name",
-        "ko-KR": "역할 이름",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4370-4378)",
-            "src/components/permission/PermissionAssignment.tsx(9343-9351)"
-        ],
-        "$id": 4910
-    },
-    "输入角色名称。": {
-        "zh-TW": "輸入角色名稱。",
-        "en-US": "Enter the character name.",
-        "ko-KR": "역할 이름을 입력합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4399-4410)"
-        ],
-        "$id": 5035
-    },
-    "在角色创建表单中输入角色名称。": {
-        "zh-TW": "在角色創建表單中輸入角色名稱。",
-        "en-US": "Enter the role name in the role creation form.",
-        "ko-KR": "역할 만들기 양식에 역할 이름을 입력합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4526-4545)"
-        ],
-        "$id": 5036
-    },
-    "权限配置": {
-        "zh-TW": "許可權配置",
-        "en-US": "Permission Configuration",
-        "ko-KR": "권한 구성",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4620-4628)"
-        ],
-        "$id": 5037
-    },
-    "后续你可以为角色配置具体的权限，请点击下一步": {
-        "zh-TW": "後續你可以為角色配置具體的許可權,請點擊下一步",
-        "en-US": "You can configure specific permissions for the role in the future, please click next",
-        "ko-KR": "나중에 캐릭터에 대한 구체적인 권한을 설정할 수 있습니다. 다음 단계를 클릭하십시오.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4649-4675)"
-        ],
-        "$id": 5038
-    },
-    "权限配置区域可以为角色分配特定的权限组合。": {
-        "zh-TW": "許可權配置區域可以為角色分配特定的許可權組合。",
-        "en-US": "The permission configuration area can assign specific permission combinations to roles.",
-        "ko-KR": "권한 구성 영역에서는 역할에 특정 권한 조합을 지정할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4789-4814)"
-        ],
-        "$id": 5039
-    },
-    "保存角色": {
-        "zh-TW": "保存角色",
-        "en-US": "Save Role",
-        "ko-KR": "역할 저장",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4886-4894)"
-        ],
-        "$id": 5040
-    },
-    "点击保存完成创建。": {
-        "zh-TW": "點擊保存完成創建。",
-        "en-US": "Click Save to complete the creation.",
-        "ko-KR": "저장을 클릭하여 생성을 완료합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(4915-4928)"
-        ],
-        "$id": 5041
-    },
-    "点击保存按钮完成角色创建。": {
-        "zh-TW": "點擊保存按鈕完成角色創建。",
-        "en-US": "Click the save button to complete the character creation.",
-        "ko-KR": "저장 버튼을 클릭하여 캐릭터 생성을 완료합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5070-5087)"
-        ],
-        "$id": 5042
-    },
-    "关闭弹窗": {
-        "zh-TW": "關閉彈窗",
-        "en-US": "Close pop-up",
-        "ko-KR": "탄창을 닫다",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5161-5169)",
-            "src/config/tours/project-management-full.ts(6198-6206)",
-            "src/config/tours/project-management-full.ts(8872-8880)",
-            "src/config/tours/project-management-full.ts(11242-11250)"
-        ],
-        "$id": 5043
-    },
-    "关闭权限配置弹框。": {
-        "zh-TW": "關閉許可權配置彈框。",
-        "en-US": "Close the permission configuration pop-up box.",
-        "ko-KR": "사용 권한 구성 폭탄 상자를 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5190-5203)"
-        ],
-        "$id": 5044
-    },
-    "请点击关闭按钮": {
-        "zh-TW": "請點擊關閉按鈕",
-        "en-US": "Please click the close button",
-        "ko-KR": "닫기 버튼을 눌러주세요",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5315-5326)",
-            "src/config/tours/project-management-full.ts(6352-6363)",
-            "src/config/tours/project-management-full.ts(9026-9037)",
-            "src/config/tours/project-management-full.ts(11396-11407)"
-        ],
-        "$id": 5045
-    },
-    "点击弹窗右上角的关闭按钮关闭权限配置弹框。": {
-        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉許可權配置彈框。",
-        "en-US": "Click the close button in the upper right corner of the pop-up window to close the permission configuration dialog box.",
-        "ko-KR": "탄창 오른쪽 상단의 닫기 버튼을 클릭하여 권한 설정 탄창을 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5386-5411)"
-        ],
-        "$id": 5046
-    },
-    "项目角色自治": {
-        "zh-TW": "專案角色自治",
-        "en-US": "Project Role Autonomy",
-        "ko-KR": "프로젝트 역할 자율성",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5487-5497)"
-        ],
-        "$id": 6967
-    },
-    "项目角色属于本项目，可自由编辑；删除角色时成员自动降级，若项目已无可用角色会自动创建默认成员角色。": {
-        "zh-TW": "專案角色屬於本專案，可自由編輯；刪除角色時成員自動降級，若專案已無可用角色會自動建立預設成員角色。",
-        "en-US": "Project roles belong to this project and are fully editable; when a role is deleted its members are demoted automatically, and if no usable role remains a default member role will be created automatically.",
-        "ko-KR": "프로젝트 역할은 이 프로젝트에 속하며 자유롭게 편집할 수 있습니다. 역할을 삭제하면 멤버가 자동으로 강등되며, 사용 가능한 역할이 없으면 기본 멤버 역할이 자동으로 생성됩니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5518-5583)",
-            "src/config/tours/project-management-full.ts(5707-5772)"
-        ],
-        "$id": 7435
-    },
-    "默认角色": {
-        "zh-TW": "默認角色",
-        "en-US": "Default role",
-        "ko-KR": "기본 역할",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5858-5866)"
-        ],
-        "$id": 6969
-    },
-    "默认角色来自项目模板，可直接修改名称和权限；项目所有者使用的角色不可删除。": {
-        "zh-TW": "預設角色來自專案範本，可直接修改名稱和權限；專案擁有者使用的角色不可刪除。",
-        "en-US": "Default roles come from the project template and can be renamed or re-permissioned directly; roles used by the project owner cannot be deleted.",
-        "ko-KR": "기본 역할은 프로젝트 템플릿에서 가져오며 이름과 권한을 직접 수정할 수 있습니다. 프로젝트 소유자가 사용하는 역할은 삭제할 수 없습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(5887-5940)"
-        ],
-        "$id": 6970
-    },
-    "角色列表中的默认角色可直接修改，带\"项目所有者\"标记的角色不可删除。": {
-        "zh-TW": "角色清單中的預設角色可直接修改，帶\"專案擁有者\"標記的角色不可刪除。",
-        "en-US": "Default roles in the role list can be edited directly; roles marked \"Project Owner\" cannot be deleted.",
-        "ko-KR": "역할 목록의 기본 역할은 직접 수정할 수 있으며 \"프로젝트 소유자\" 표시가 있는 역할은 삭제할 수 없습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(6064-6114)"
-        ],
-        "$id": 6971
-    },
-    "关闭角色管理弹窗。": {
-        "zh-TW": "關閉角色管理彈窗。",
-        "en-US": "Close the role management pop-up window.",
-        "ko-KR": "역할 관리 팝업 창을 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(6227-6240)"
-        ],
-        "$id": 5049
-    },
-    "点击弹窗右上角的关闭按钮关闭角色管理弹窗。": {
-        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉角色管理彈窗。",
-        "en-US": "Click the close button in the upper right corner of the pop-up window to close the role management pop-up window.",
-        "ko-KR": "창 오른쪽 상단의 닫기 버튼을 클릭하여 캐릭터 관리 창을 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(6423-6448)"
-        ],
-        "$id": 5050
-    },
-    "再次点击\"更多\"按钮，展开项目管理操作菜单。": {
-        "zh-TW": "再次點擊\"更多\"按鈕，展開專案管理操作選單。",
-        "en-US": "Click the \"More\" button again to open the project management menu.",
-        "ko-KR": "\"더보기\" 버튼을 다시 클릭하여 프로젝트 관리 메뉴를 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(6613-6639)",
-            "src/config/tours/project-management-full.ts(9287-9313)"
-        ],
-        "$id": 6972
-    },
-    "请再次点击项目卡片右上角的\"更多\"按钮": {
-        "zh-TW": "請再次點擊專案卡片右上角的\"更多\"按鈕",
-        "en-US": "Please click the \"More\" button in the top-right corner of the project card again.",
-        "ko-KR": "프로젝트 카드 오른쪽 상단의 \"더보기\" 버튼을 다시 클릭하세요.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(6753-6776)",
-            "src/config/tours/project-management-full.ts(9427-9450)"
-        ],
-        "$id": 6973
-    },
-    "点击\"成员\"选项，打开成员管理弹窗。": {
-        "zh-TW": "點擊\"成員\"選項，開啟成員管理彈窗。",
-        "en-US": "Click the \"Members\" option to open the member management dialog.",
-        "ko-KR": "\"구성원\" 옵션을 클릭하여 구성원 관리 창을 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(7316-7338)"
-        ],
-        "$id": 6974
-    },
-    "请点击菜单中的\"成员\"选项": {
-        "zh-TW": "請點擊選單中的“成員”選項",
-        "en-US": "Please click on the 'Members' option in the menu",
-        "ko-KR": "메뉴에서 구성원 옵션을 클릭하십시오.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(7450-7467)"
-        ],
-        "$id": 5052
-    },
-    "请在操作菜单中选择\"成员\"，打开项目成员管理弹窗。": {
-        "zh-TW": "請在操作選單中選擇\"成員\"，開啟專案成員管理彈窗。",
-        "en-US": "Please select \"Members\" from the action menu to open the project member management dialog.",
-        "ko-KR": "작업 메뉴에서 \"구성원\"을 선택하여 프로젝트 구성원 관리 창을 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(7553-7582)"
-        ],
-        "$id": 6975
-    },
-    "添加成员": {
-        "zh-TW": "添加成員",
-        "en-US": "Add member",
-        "ko-KR": "구성원 추가",
-        "$files": [
-            "src/config/tours/project-management-full.ts(7658-7666)",
-            "src/components/modals/MembersModal.tsx(13268-13276)",
-            "src/pages/AuditLogPage/constants.ts(565-573)"
-        ],
-        "$id": 2865
-    },
-    "点击\"添加成员\"按钮邀请新成员。": {
-        "zh-TW": "點擊“添加成員”按鈕邀請新成員。",
-        "en-US": "Click the 'Add Member' button to invite new members.",
-        "ko-KR": "구성원 추가 버튼을 클릭하여 새 구성원을 초대합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(7687-7707)"
-        ],
-        "$id": 5054
-    },
-    "请点击\"添加成员\"按钮": {
-        "zh-TW": "請點擊“添加成員”按鈕",
-        "en-US": "Please click the 'Add Member' button",
-        "ko-KR": "구성원 추가 버튼을 클릭하십시오.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(7821-7836)"
-        ],
-        "$id": 5055
-    },
-    "添加成员功能：在成员管理弹窗中点击\"添加成员\"按钮，邀请新成员加入项目。": {
-        "zh-TW": "添加成員功能：在成員管理彈窗中點擊“添加成員”按鈕,邀請新成員加入項目。",
-        "en-US": "Add member function: Click the \"Add Member\" button in the member management pop-up window to invite new members to join the project.",
-        "ko-KR": "구성원 추가 기능: 구성원 관리 창에서 구성원 추가 버튼을 클릭하여 새 구성원을 프로젝트에 초대합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(7896-7948)"
-        ],
-        "$id": 5056
-    },
-    "搜索用户": {
-        "zh-TW": "蒐索用戶",
-        "en-US": "Search for Users",
-        "ko-KR": "사용자 검색",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8036-8044)"
-        ],
-        "$id": 5057
-    },
-    "搜索要添加的用户名，在搜索结果列表中点击要添加的用户": {
-        "zh-TW": "搜尋要新增的使用者名稱，在搜尋結果清單中點擊要新增的使用者",
-        "en-US": "Search for the username to add, then click the user in the search results.",
-        "ko-KR": "추가할 사용자 이름을 검색하고 검색 결과 목록에서 사용자를 클릭하세요.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8065-8095)"
-        ],
-        "$id": 6976
-    },
-    "在搜索框中输入用户名查找要添加的成员。": {
-        "zh-TW": "在蒐索框中輸入用戶名查找要添加的成員。",
-        "en-US": "Enter the username in the search box to find the member you want to add.",
-        "ko-KR": "검색 상자에 사용자 이름을 입력하여 추가할 구성원을 찾습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8211-8234)"
-        ],
-        "$id": 5059
-    },
-    "选择角色": {
-        "zh-TW": "選擇角色",
-        "en-US": "Select a character",
-        "ko-KR": "역할 선택",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8311-8319)"
-        ],
-        "$id": 5060
-    },
-    "为成员选择角色权限。": {
-        "zh-TW": "為成員選擇角色許可權。",
-        "en-US": "Select role permissions for members.",
-        "ko-KR": "구성원에 대한 역할 사용 권한을 선택합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8340-8354)"
-        ],
-        "$id": 5061
-    },
-    "请选择一个角色": {
-        "zh-TW": "請選擇一個角色",
-        "en-US": "Please select a role",
-        "ko-KR": "역할을 선택하십시오.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8432-8443)"
-        ],
-        "$id": 5062
-    },
-    "角色选择区域可以为成员分配不同的角色权限。": {
-        "zh-TW": "角色選擇區域可以為成員分配不同的角色許可權。",
-        "en-US": "The role selection area can assign different role permissions to members.",
-        "ko-KR": "역할 선택 영역에서는 구성원에게 서로 다른 역할 권한을 할당할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8503-8528)"
-        ],
-        "$id": 5063
-    },
-    "添加": {
-        "zh-TW": "添加",
-        "en-US": "add",
-        "ko-KR": "추가",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8601-8607)",
-            "src/components/modals/MembersModal.tsx(21262-21268)",
-            "src/pages/IpBlacklistPage/index.tsx(7812-7818)",
-            "src/pages/IpWhitelistPage/index.tsx(9037-9043)"
-        ],
-        "$id": 2870
-    },
-    "添加按钮完成邀请。": {
-        "zh-TW": "添加按鈕完成邀請。",
-        "en-US": "Add button to complete the invitation.",
-        "ko-KR": "버튼을 추가하여 초대를 완료합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8628-8641)"
-        ],
-        "$id": 5064
-    },
-    "添加按钮完成成员邀请。": {
-        "zh-TW": "添加按鈕完成成員邀請。",
-        "en-US": "Add button to complete member invitation.",
-        "ko-KR": "추가 버튼을 클릭하여 구성원 초대를 완료합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8783-8798)"
-        ],
-        "$id": 5065
-    },
-    "关闭成员管理弹窗。": {
-        "zh-TW": "關閉成員管理彈窗。",
-        "en-US": "Close the member management pop-up window.",
-        "ko-KR": "구성원 관리 탄창을 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(8901-8914)"
-        ],
-        "$id": 5066
-    },
-    "点击弹窗右上角的关闭按钮关闭成员管理弹窗。": {
-        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉成員管理彈窗。",
-        "en-US": "Click the close button in the upper right corner of the pop-up window to close the member management pop-up window.",
-        "ko-KR": "창 오른쪽 상단의 닫기 버튼을 클릭하여 구성원 관리 창을 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(9097-9122)"
-        ],
-        "$id": 5067
-    },
-    "操作历史": {
-        "zh-TW": "操作歷史",
-        "en-US": "Operation history",
-        "ko-KR": "작업 내역",
-        "$files": [
-            "src/config/tours/project-management-full.ts(9971-9979)",
-            "src/components/file-item/fileActionConfig.tsx(11712-11720)",
-            "src/components/file-item/fileActionConfig.tsx(11739-11747)",
-            "src/components/modals/OperationHistoryModal.tsx(11277-11285)",
-            "src/components/modals/OperationHistoryModal.tsx(11291-11299)"
-        ],
-        "$id": 6687
-    },
-    "点击\"操作历史\"选项，查看项目内的操作记录。": {
-        "zh-TW": "點擊\"操作歷史\"選項，查看專案內的操作記錄。",
-        "en-US": "Click the \"Operation History\" option to view the operation records within the project.",
-        "ko-KR": "\"작업 기록\" 옵션을 클릭하여 프로젝트 내 작업 기록을 확인합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10000-10026)"
-        ],
-        "$id": 6994
-    },
-    "请点击菜单中的\"操作历史\"选项": {
-        "zh-TW": "請點擊選單中的“操作歷史”選項",
-        "en-US": "Please click on the 'Operation History' option in the menu",
-        "ko-KR": "메뉴에서 작업 내역 옵션을 클릭하십시오.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10138-10157)"
-        ],
-        "$id": 6995
-    },
-    "请在操作菜单中选择\"操作历史\"，打开项目操作历史弹窗。": {
-        "zh-TW": "請在操作選單中選擇\"操作歷史\"，開啟專案操作歷史彈窗。",
-        "en-US": "Please select \"Operation History\" from the action menu to open the project operation history dialog.",
-        "ko-KR": "작업 메뉴에서 \"작업 기록\"을 선택하여 프로젝트 작업 기록 창을 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10243-10286)"
-        ],
-        "$id": 6996
-    },
-    "记录筛选": {
-        "zh-TW": "記錄篩選",
-        "en-US": "Filter Records",
-        "ko-KR": "기록 필터",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10379-10387)"
-        ],
-        "$id": 6997
-    },
-    "可以按操作类型、成员、日期或图纸名称筛选项目操作记录。": {
-        "zh-TW": "可以按操作類型、成員、日期或圖紙名稱篩選專案操作記錄。",
-        "en-US": "You can filter project operation records by action type, member, date, or drawing name.",
-        "ko-KR": "작업 유형, 구성원, 날짜 또는 도면 이름으로 프로젝트 작업 기록을 필터링할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10408-10439)"
-        ],
-        "$id": 6998
-    },
-    "操作历史支持按操作类型、成员、日期和图纸名称筛选记录。": {
-        "zh-TW": "操作歷史支援按操作類型、成員、日期和圖紙名稱篩選記錄。",
-        "en-US": "Operation history supports filtering by action type, member, date, and drawing name.",
-        "ko-KR": "작업 기록은 작업 유형, 구성원, 날짜 및 도면 이름으로 필터링할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10553-10596)"
-        ],
-        "$id": 6999
-    },
-    "时间分组与定位": {
-        "zh-TW": "時間分組與定位",
-        "en-US": "Time Grouping & Location",
-        "ko-KR": "시간 그룹 및 위치",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10687-10698)"
-        ],
-        "$id": 7000
-    },
-    "操作记录按今天、昨天、更早分组展示；点击记录可定位到对应图纸或文件夹，打开图纸可直接跳转编辑器。": {
-        "zh-TW": "操作記錄按今天、昨天、更早分組展示；點擊記錄可定位到對應圖紙或資料夾，開啟圖紙可直接跳轉編輯器。",
-        "en-US": "Operation records are grouped by Today, Yesterday, and Earlier. Click a record to locate the corresponding drawing or folder; opening a drawing jumps directly to the editor.",
-        "ko-KR": "작업 기록은 오늘, 어제, 이전으로 그룹화됩니다. 기록을 클릭하면 해당 도면이나 폴더로 이동하며, 도면을 열면 편집기로 바로 이동합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10719-10783)"
-        ],
-        "$id": 7001
-    },
-    "操作记录会按时间分组展示，支持定位到图纸或文件夹所在位置。": {
-        "zh-TW": "操作記錄會按時間分組展示，支援定位到圖紙或資料夾所在位置。",
-        "en-US": "Operation records are grouped by time and can be located to the drawing or folder position.",
-        "ko-KR": "작업 기록은 시간별로 그룹화되어 표시되며 도면이나 폴더 위치로 이동할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(10907-10952)"
-        ],
-        "$id": 7002
-    },
-    "关闭操作历史弹窗。": {
-        "zh-TW": "關閉操作歷史彈窗。",
-        "en-US": "Close the operation history dialog.",
-        "ko-KR": "작업 기록 창을 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(11271-11284)"
-        ],
-        "$id": 7003
-    },
-    "点击弹窗右上角的关闭按钮关闭操作历史弹窗。": {
-        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉操作歷史彈窗。",
-        "en-US": "Click the close button in the top-right corner of the dialog to close the operation history dialog.",
-        "ko-KR": "창 오른쪽 상단의 닫기 버튼을 클릭하여 작업 기록 창을 닫습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(11467-11492)"
-        ],
-        "$id": 7004
-    },
-    "进入项目": {
-        "zh-TW": "進入項目",
-        "en-US": "Enter the project",
-        "ko-KR": "프로젝트 시작",
-        "$files": [
-            "src/config/tours/project-management-full.ts(11620-11628)"
-        ],
-        "$id": 5068
-    },
-    "点击项目进入文件管理。": {
-        "zh-TW": "點擊項目進入文件管理。",
-        "en-US": "Click on the project to enter file management.",
-        "ko-KR": "항목을 클릭하여 파일 관리에 들어가십시오.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(11649-11664)"
-        ],
-        "$id": 5069
-    },
-    "请点击项目卡片进入项目": {
-        "zh-TW": "請點擊項目卡片進入項目",
-        "en-US": "Please click on the project card to enter the project",
-        "ko-KR": "프로젝트 카드를 클릭하여 프로젝트에 입장하세요",
-        "$files": [
-            "src/config/tours/project-management-full.ts(11777-11792)"
-        ],
-        "$id": 5070
-    },
-    "点击项目卡片可以进入项目文件列表。": {
-        "zh-TW": "點擊項目卡片可以進入項目檔案清單。",
-        "en-US": "Click on the project card to enter the project file list.",
-        "ko-KR": "프로젝트 카드를 클릭하면 프로젝트 파일 목록에 들어갈 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(11878-11899)"
-        ],
-        "$id": 5071
-    },
-    "这里可以上传 DWG、DXF 等 CAD 文件。已存在的图纸可以直接使用。": {
-        "zh-TW": "這裡可以上傳DWG、DXF等CAD檔案。 已存在的圖紙可以直接使用。",
-        "en-US": "You can upload CAD files such as DWG and DXF here. Existing drawings can be used directly.",
-        "ko-KR": "DWG, DXF 등의 CAD 파일을 업로드할 수 있습니다.이미 존재하는 시트는 직접 사용할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(11997-12050)"
-        ],
-        "$id": 7716
-    },
-    "上传文件功能可以上传 DWG、DXF 等 CAD 文件。": {
-        "zh-TW": "上傳文件功能可以上傳DWG、DXF等CAD檔案。",
-        "en-US": "The upload file function can upload CAD files such as DWG, DXF, etc.",
-        "ko-KR": "파일 업로드 기능은 DWG, DXF와 같은 CAD 파일을 업로드할 수 있습니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(12176-12208)"
-        ],
-        "$id": 7717
-    },
-    "等待上传": {
-        "zh-TW": "等待上傳",
-        "en-US": "Waiting for upload",
-        "ko-KR": "업로드 대기 중",
-        "$files": [
-            "src/config/tours/project-management-full.ts(12276-12284)"
-        ],
-        "$id": 5075
-    },
-    "等待文件上传完成...": {
-        "zh-TW": "等待文件上傳完成. ..",
-        "en-US": "Wait for the file upload to complete ..",
-        "ko-KR": "파일 업로드가 완료될 때까지 기다립니다...",
-        "$files": [
-            "src/config/tours/project-management-full.ts(12305-12320)"
-        ],
-        "$id": 5076
-    },
-    "上传完成后，文件会显示在列表中。": {
-        "zh-TW": "上傳完成後,檔案會顯示在清單中。",
-        "en-US": "After the upload is completed, the file will be displayed in the list.",
-        "ko-KR": "업로드가 완료되면 파일이 목록에 표시됩니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(12437-12457)"
-        ],
-        "$id": 5077
-    },
-    "打开图纸": {
-        "zh-TW": "打開圖紙",
-        "en-US": "Open the blueprint",
-        "ko-KR": "시트 열기",
-        "$files": [
-            "src/config/tours/project-management-full.ts(12778-12786)",
-            "src/components/modals/OperationHistoryModal.tsx(20503-20511)",
-            "src/components/modals/OperationHistoryModal.tsx(20643-20651)"
-        ],
-        "$id": 5082
-    },
-    "图纸上传完成后，点击图纸文件即可在 CAD 编辑器中打开。": {
-        "zh-TW": "圖紙上傳完成後,點擊圖紙檔案即可在CAD編輯器中打開。",
-        "en-US": "After uploading the drawings, click on the drawing file to open it in the CAD editor.",
-        "ko-KR": "시트 업로드가 완료되면 시트 파일을 클릭하여 CAD 편집기에서 엽니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(12807-12840)"
-        ],
-        "$id": 5876
-    },
-    "点击 DWG 或 DXF 文件可以在编辑器中打开。": {
-        "zh-TW": "點擊DWG或DXF檔案可以在編輯器中打開。",
-        "en-US": "Clicking on a DWG or DXF file can open it in the editor.",
-        "ko-KR": "편집기에서 열려면 DWG 또는 DXF 파일을 클릭합니다.",
-        "$files": [
-            "src/config/tours/project-management-full.ts(12955-12984)"
-        ],
-        "$id": 5085
-    },
     "需要登录": {
         "zh-TW": "需要登入",
         "en-US": "Login required",
@@ -5779,582 +4647,6 @@
             "src/components/auth/LoginPrompt.tsx(2293-2320)"
         ],
         "$id": 1316
-    },
-    "九折": {
-        "zh-TW": "九折",
-        "en-US": "10% off",
-        "ko-KR": "10% 할인",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1180-1186)"
-        ],
-        "$id": 5943
-    },
-    "八折": {
-        "zh-TW": "八折",
-        "en-US": "20% off",
-        "ko-KR": "20% 할인",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1200-1206)"
-        ],
-        "$id": 5944
-    },
-    "七折": {
-        "zh-TW": "七折",
-        "en-US": "30% off",
-        "ko-KR": "30% 할인",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1220-1226)"
-        ],
-        "$id": 5945
-    },
-    "六折": {
-        "zh-TW": "六折",
-        "en-US": "sixty percent off",
-        "ko-KR": "60% 할인",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1240-1246)"
-        ],
-        "$id": 5946
-    },
-    "五折": {
-        "zh-TW": "五折",
-        "en-US": "50% off",
-        "ko-KR": "50% 할인",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1260-1266)"
-        ],
-        "$id": 5947
-    },
-    "{pct}折": {
-        "zh-TW": "{pct}折",
-        "en-US": "{pct} discount",
-        "ko-KR": "_ _ $_ $_ $_ _ 할인",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1297-1307)"
-        ],
-        "$id": 5948
-    },
-    "项目数量已达上限": {
-        "zh-TW": "項目數量已達上限",
-        "en-US": "Project count limit reached",
-        "ko-KR": "프로젝트 개수 한도에 도달했습니다",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1490-1502)"
-        ],
-        "$id": 6076
-    },
-    "升级会员可创建和恢复更多项目": {
-        "zh-TW": "升級會員可建立和恢復更多專案",
-        "en-US": "Upgrade VIP to create and restore more projects",
-        "ko-KR": "멤버십을 업그레이드하면 더 많은 프로젝트를 만들고 복원할 수 있습니다",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1523-1541)"
-        ],
-        "$id": 6077
-    },
-    "个人存储空间已满": {
-        "zh-TW": "個人儲存空間已滿",
-        "en-US": "Personal storage full",
-        "ko-KR": "개인 저장 공간이 가득 찼습니다",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1596-1608)"
-        ],
-        "$id": 6078
-    },
-    "项目体积超出限额": {
-        "zh-TW": "專案體積超出限額",
-        "en-US": "Project size limit exceeded",
-        "ko-KR": "프로젝트 크기 한도 초과",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1695-1707)"
-        ],
-        "$id": 6080
-    },
-    "升级会员可上传更大的项目": {
-        "zh-TW": "升級會員可上傳更大的專案",
-        "en-US": "Upgrade VIP to upload larger projects",
-        "ko-KR": "멤버십을 업그레이드하면 더 큰 프로젝트를 업로드할 수 있습니다",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1728-1744)"
-        ],
-        "$id": 6081
-    },
-    "图纸转换过于频繁": {
-        "zh-TW": "圖紙轉換過於頻繁",
-        "en-US": "Frequent conversion of drawings",
-        "ko-KR": "용지 변환이 너무 잦음",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1803-1815)"
-        ],
-        "$id": 5748
-    },
-    "升级会员可获取更高的转换频率上限": {
-        "zh-TW": "陞級會員可獲取更高的轉換頻率上限",
-        "en-US": "Upgrading members can obtain a higher conversion frequency limit",
-        "ko-KR": "업그레이드 회원은 더 높은 변환 빈도 상한을 획득할 수 있습니다",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1836-1856)"
-        ],
-        "$id": 5749
-    },
-    "导出下载为会员专属功能": {
-        "zh-TW": "匯出下載為會員專屬功能",
-        "en-US": "Export and download as a member exclusive feature",
-        "ko-KR": "회원 전용 기능으로 다운로드 내보내기",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1899-1914)"
-        ],
-        "$id": 6721
-    },
-    "开通 VIP 后可将图纸导出为 PDF / DWG / DXF 下载": {
-        "zh-TW": "開通VIP後可將圖紙匯出為PDF / DWG / DXF下載",
-        "en-US": "After opening VIP, drawings can be exported as PDF/DWG/DXF for download",
-        "ko-KR": "VIP 개통 후 시트를 PDF/DWG/DXF 다운로드로 내보내기",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(1935-1973)"
-        ],
-        "$id": 6722
-    },
-    "加载套餐失败，请重试": {
-        "zh-TW": "加載套餐失敗,請重試",
-        "en-US": "Failed to load package, please try again",
-        "ko-KR": "패키지를 로드하지 못했습니다. 다시 시도하십시오.",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(6121-6135)"
-        ],
-        "$id": 6723
-    },
-    "创建订单失败": {
-        "zh-TW": "創建訂單失敗",
-        "en-US": "Order creation failed",
-        "ko-KR": "주문 생성 실패",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(7047-7057)"
-        ],
-        "$id": 5210
-    },
-    "个月": {
-        "zh-TW": "個月",
-        "en-US": "month",
-        "ko-KR": "개월",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(8061-8067)",
-            "src/components/billing/PlanSelectOverlay.tsx(15173-15179)"
-        ],
-        "$id": 5950
-    },
-    "微信支付": {
-        "zh-TW": "微信支付",
-        "en-US": "WeChat Pay",
-        "ko-KR": "위챗페이",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(8760-8768)",
-            "src/components/billing/WechatPayButton.tsx(5781-5789)",
-            "src/components/billing/WechatPayModal.tsx(788-796)"
-        ],
-        "$id": 4846
-    },
-    "升级方案": {
-        "zh-TW": "陞級方案",
-        "en-US": "upgrade plan",
-        "ko-KR": "업그레이드 시나리오",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(9496-9504)"
-        ],
-        "$id": 5951
-    },
-    "月": {
-        "zh-TW": "月",
-        "en-US": "moon",
-        "ko-KR": "달",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(11510-11515)"
-        ],
-        "$id": 5952
-    },
-    "购买时长": {
-        "zh-TW": "購買時長",
-        "en-US": "Purchase duration",
-        "ko-KR": "구매 기간",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(12378-12386)"
-        ],
-        "$id": 5953
-    },
-    "省¥{amount}": {
-        "zh-TW": "省¥{amount}",
-        "en-US": "Save ¥{amount}",
-        "ko-KR": "인민폐 _ _ $_ $_ $_",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(15411-15425)"
-        ],
-        "$id": 5954
-    },
-    "省 ¥{amount}": {
-        "zh-TW": "省¥{amount}",
-        "en-US": "Save ¥{amount}",
-        "ko-KR": "인민폐 _ _ $_ $_ $_",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(16188-16203)"
-        ],
-        "$id": 5955
-    },
-    "处理中...": {
-        "zh-TW": "處理中. ..",
-        "en-US": "Processing in progress ..",
-        "ko-KR": "처리 중...",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(17253-17263)",
-            "src/components/modals/ProjectModal.tsx(5017-5027)",
-            "src/pages/UserManagement/UserModals/CreateUserModal.tsx(1966-1976)",
-            "src/pages/UserManagement/UserModals/EditUserModal.tsx(3830-3840)",
-            "src/pages/UserManagement/UserModals/MembershipManageModal.tsx(9151-9161)"
-        ],
-        "$id": 4839
-    },
-    "立即续费": {
-        "zh-TW": "立即續費",
-        "en-US": "Renew now",
-        "ko-KR": "즉시 갱신",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(17447-17455)"
-        ],
-        "$id": 5219
-    },
-    "立即升级": {
-        "zh-TW": "立即陞級",
-        "en-US": "Upgrade now",
-        "ko-KR": "지금 업그레이드",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(17517-17525)"
-        ],
-        "$id": 5956
-    },
-    "随时可取消": {
-        "zh-TW": "隨時可取消",
-        "en-US": "Can be cancelled at any time",
-        "ko-KR": "언제든지 취소 가능",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(17660-17669)"
-        ],
-        "$id": 5957
-    },
-    "付款后立即生效": {
-        "zh-TW": "付款後立即生效",
-        "en-US": "Effective immediately after payment",
-        "ko-KR": "지불 후 즉시 효력이 발생한다.",
-        "$files": [
-            "src/components/billing/PlanSelectOverlay.tsx(17705-17716)"
-        ],
-        "$id": 5958
-    },
-    "支付已取消": {
-        "zh-TW": "支付已取消",
-        "en-US": "Payment has been cancelled",
-        "ko-KR": "결제 취소",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(2144-2153)",
-            "src/components/billing/WechatPayButton.tsx(2821-2830)"
-        ],
-        "$id": 4842
-    },
-    "微信支付组件加载超时，请刷新页面重试": {
-        "zh-TW": "微信支付組件加載超時,請刷新頁面重試",
-        "en-US": "WeChat Pay component loading timeout, please refresh the page and try again",
-        "ko-KR": "위챗 결제 구성 요소 로드 시간 초과, 페이지를 새로 고치고 다시 시도하십시오.",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(2508-2530)"
-        ],
-        "$id": 4843
-    },
-    "订单金额": {
-        "zh-TW": "訂單金額",
-        "en-US": "order amount",
-        "ko-KR": "주문 금액",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(5507-5515)",
-            "src/components/billing/WechatPayButton.tsx(7103-7111)",
-            "src/components/billing/WechatPayButton.tsx(7770-7778)",
-            "src/components/billing/WechatPayButton.tsx(8667-8675)"
-        ],
-        "$id": 4844
-    },
-    "支付方式": {
-        "zh-TW": "支付方式",
-        "en-US": "Payment Method",
-        "ko-KR": "결제 방식",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(5768-5776)",
-            "src/pages/AdminBillingPage/components/OrdersTab.tsx(3980-3988)"
-        ],
-        "$id": 4845
-    },
-    "支付中...": {
-        "zh-TW": "支付中. ..",
-        "en-US": "Payment in progress ..",
-        "ko-KR": "지불 중...",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(6441-6451)"
-        ],
-        "$id": 4847
-    },
-    "确认支付": {
-        "zh-TW": "確認支付",
-        "en-US": "Confirm Payment",
-        "ko-KR": "지급 확인",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(6455-6463)"
-        ],
-        "$id": 4848
-    },
-    "请使用微信扫码支付": {
-        "zh-TW": "請使用微信掃碼支付",
-        "en-US": "Please use WeChat to scan the code for payment",
-        "ko-KR": "위챗으로 코드를 스캔하여 지불하십시오.",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(6686-6699)"
-        ],
-        "$id": 4849
-    },
-    "支付成功后返回页面查看会员状态": {
-        "zh-TW": "支付成功後返回頁面查看會員狀態",
-        "en-US": "After successful payment, return to the page to check the membership status",
-        "ko-KR": "결제 성공 후 페이지로 돌아가 회원 상태 보기",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(7342-7361)"
-        ],
-        "$id": 4850
-    },
-    "已完成支付": {
-        "zh-TW": "已完成支付",
-        "en-US": "Payment completed",
-        "ko-KR": "결제 완료",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(7527-7536)"
-        ],
-        "$id": 4851
-    },
-    "前往微信支付": {
-        "zh-TW": "前往微信支付",
-        "en-US": "Go to WeChat Pay",
-        "ko-KR": "위챗페이에 가다",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(8133-8143)"
-        ],
-        "$id": 4853
-    },
-    "请在微信浏览器中打开完成支付": {
-        "zh-TW": "請在微信瀏覽器中打開完成支付",
-        "en-US": "Please open and complete the payment in WeChat browser",
-        "ko-KR": "위챗 브라우저에서 결제 완료 열기",
-        "$files": [
-            "src/components/billing/WechatPayButton.tsx(8540-8558)"
-        ],
-        "$id": 4852
-    },
-    "支付金额: ¥{amount}": {
-        "zh-TW": "支付金額：¥{amount}",
-        "en-US": "Payment amount: ¥{amount}",
-        "ko-KR": "결제 금액: $__$_$_$_",
-        "$files": [
-            "src/components/billing/WechatPayModal.tsx(1099-1118)"
-        ],
-        "$id": 5959
-    },
-    "已选 {count} 项": {
-        "zh-TW": "已選 {count} 項",
-        "en-US": "Selected {count} item(s)",
-        "ko-KR": "선택한 {count}개",
-        "$files": [
-            "src/components/common/BatchActionBar.tsx(3281-3297)"
-        ],
-        "$id": 7048
-    },
-    "粘贴": {
-        "zh-TW": "粘貼",
-        "en-US": "paste",
-        "ko-KR": "붙여넣기",
-        "$files": [
-            "src/components/common/BatchActionBar.tsx(4589-4595)",
-            "src/components/common/BatchActionBar.tsx(5160-5166)",
-            "src/hooks/file-browser/useFileBrowserActions.ts(16461-16467)",
-            "src/hooks/file-browser/useFileBrowserActions.ts(16647-16653)",
-            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(9498-9504)",
-            "src/components/ProjectDrawingsPanel/components/ProjectPanelView.tsx(5475-5481)"
-        ],
-        "$id": 4769
-    },
-    "取消选择": {
-        "zh-TW": "取消選擇",
-        "en-US": "Deselect",
-        "ko-KR": "선택 취소",
-        "$files": [
-            "src/components/common/BatchActionBar.tsx(6618-6626)",
-            "src/components/common/BatchActionBar.tsx(6648-6656)",
-            "src/components/common/BatchActionBar.tsx(6710-6718)"
-        ],
-        "$id": 2771
-    },
-    "暂无分类": {
-        "zh-TW": "暫無分類",
-        "en-US": "Unclassified",
-        "ko-KR": "분류 없음",
-        "$files": [
-            "src/components/common/CascadeCategorySelector.tsx(7453-7461)"
-        ],
-        "$id": 2819
-    },
-    "选择分类": {
-        "zh-TW": "選擇分類",
-        "en-US": "Select Category",
-        "ko-KR": "분류 선택",
-        "$files": [
-            "src/components/common/CascadeCategorySelector.tsx(8675-8683)"
-        ],
-        "$id": 2821
-    },
-    "全部分类": {
-        "zh-TW": "全部分類",
-        "en-US": "All Categories",
-        "ko-KR": "전체 분류",
-        "$files": [
-            "src/components/common/CascadeCategorySelector.tsx(9949-9957)"
-        ],
-        "$id": 2822
-    },
-    "已经是最后一页": {
-        "zh-TW": "已經是最後一頁",
-        "en-US": "It's already the last page",
-        "ko-KR": "벌써 마지막 페이지예요.",
-        "$files": [
-            "src/components/common/FileListGrid.tsx(9153-9164)",
-            "src/components/common/ResourceList.tsx(11414-11425)",
-            "src/components/common/SelectableTable.tsx(11013-11024)",
-            "src/components/ProjectDrawingsPanel/components/ProjectListView.tsx(9055-9066)"
-        ],
-        "$id": 2825
-    },
-    "暂无数据": {
-        "zh-TW": "暫無數據",
-        "en-US": "No data available",
-        "ko-KR": "데이터 없음",
-        "$files": [
-            "src/components/common/ResourceList.tsx(2004-2012)",
-            "src/components/ui/Autocomplete.tsx(3714-3722)",
-            "src/components/ui/Select.tsx(6813-6821)",
-            "src/components/ui/Select.tsx(14980-14988)",
-            "src/components/ui/Select.tsx(23853-23861)",
-            "src/pages/AdminBillingPage/components/DurationsTab.tsx(4184-4192)",
-            "src/pages/AdminBillingPage/components/TiersTab.tsx(4424-4432)",
-            "src/pages/AdminStatsPage/components/PurchasesSection.tsx(2320-2328)",
-            "src/pages/AdminStatsPage/components/RegistrationsSection.tsx(1806-1814)",
-            "src/pages/AuditLogPage/components/AuditLogTable.tsx(2070-2078)",
-            "src/pages/FontLibrary/components/FontListView.tsx(2830-2838)",
-            "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(5924-5932)"
-        ],
-        "$id": 2757
-    },
-    "搜索...": {
-        "zh-TW": "搜尋 ..",
-        "en-US": "Search ..",
-        "ko-KR": "검색...",
-        "$files": [
-            "src/components/common/ResourceList.tsx(5660-5669)",
-            "src/components/search/SearchInput.tsx(685-694)",
-            "src/components/ui/Autocomplete.tsx(1155-1164)",
-            "src/components/ui/Select.tsx(8607-8616)"
-        ],
-        "$id": 2823
-    },
-    "共": {
-        "zh-TW": "共",
-        "en-US": "together",
-        "ko-KR": "공",
-        "$files": [
-            "src/components/common/ResourceList.tsx(5963-5968)",
-            "src/pages/FontLibrary/index.tsx(7176-7181)"
-        ],
-        "$id": 2775
-    },
-    "项": {
-        "zh-TW": "項",
-        "en-US": "item",
-        "ko-KR": "항",
-        "$files": [
-            "src/components/common/ResourceList.tsx(6049-6054)"
-        ],
-        "$id": 2824
-    },
-    "回到顶部": {
-        "zh-TW": "回到頂部",
-        "en-US": "Back to top",
-        "ko-KR": "맨 위로",
-        "$files": [
-            "src/components/common/ScrollToTopButton.tsx(1572-1580)",
-            "src/components/common/ScrollToTopButton.tsx(1597-1605)"
-        ],
-        "$id": 7099
-    },
-    "已复制": {
-        "zh-TW": "已複製",
-        "en-US": "Copied",
-        "ko-KR": "복사됨",
-        "$files": [
-            "src/components/common/ShareLinkBar.tsx(1930-1937)",
-            "src/pages/RuntimeConfigPage/CoordinateLogCard.tsx(1475-1482)",
-            "src/pages/RuntimeConfigPage/CoordinateLogCard.tsx(5200-5207)",
-            "src/pages/FileSystemManager/hooks/useFileSystemUrlEffects.ts(6519-6526)",
-            "src/pages/LibraryManager/hooks/useLibraryClipboardActions.ts(4208-4215)"
-        ],
-        "$id": 893
-    },
-    "复制": {
-        "zh-TW": "複製",
-        "en-US": "Copy",
-        "ko-KR": "복사",
-        "$files": [
-            "src/components/common/ShareLinkBar.tsx(1941-1947)",
-            "src/components/file-item/fileActionConfig.tsx(12747-12753)",
-            "src/components/modals/SelectFolderModal.tsx(14567-14573)",
-            "src/hooks/file-browser/useFileBrowserActions.ts(12796-12802)",
-            "src/hooks/file-system/useMoveCopyOrchestrator.ts(6965-6971)",
-            "src/pages/AuditLogPage/constants.ts(869-875)",
-            "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx(11476-11482)",
-            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(4253-4259)",
-            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(7712-7718)",
-            "src/pages/LibraryManager/index.tsx(13444-13450)",
-            "src/pages/RuntimeConfigPage/CoordinateLogCard.tsx(5211-5217)"
-        ],
-        "$id": 894
-    },
-    "若按钮复制不可用，可手动选中上方链接复制": {
-        "zh-TW": "若按鈕複製不可用,可手動選中上方連結複製",
-        "en-US": "If the copy button is not available, you can manually select the link above to copy",
-        "ko-KR": "버튼 복사를 사용할 수 없는 경우 위쪽 링크 복사를 수동으로 선택할 수 있습니다.",
-        "$files": [
-            "src/components/common/ShareLinkBar.tsx(2223-2247)"
-        ],
-        "$id": 8028
-    },
-    "网格视图": {
-        "zh-TW": "網格視圖",
-        "en-US": "Grid View",
-        "ko-KR": "메쉬 뷰",
-        "$files": [
-            "src/components/common/ViewToggle.tsx(780-788)",
-            "src/components/common/ViewToggle.tsx(1245-1253)"
-        ],
-        "$id": 4863
-    },
-    "列表视图": {
-        "zh-TW": "清單視圖",
-        "en-US": "list view",
-        "ko-KR": "목록 보기",
-        "$files": [
-            "src/components/common/ViewToggle.tsx(1523-1531)",
-            "src/components/common/ViewToggle.tsx(2020-2028)"
-        ],
-        "$id": 4864
     },
     "{user} 授予 {target} 权限 {permission}": {
         "zh-TW": "{user}授予{target}許可權{permission}",
@@ -7098,6 +5390,591 @@
         ],
         "$id": 1000050
     },
+    "九折": {
+        "zh-TW": "九折",
+        "en-US": "10% off",
+        "ko-KR": "10% 할인",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1180-1186)"
+        ],
+        "$id": 5943
+    },
+    "八折": {
+        "zh-TW": "八折",
+        "en-US": "20% off",
+        "ko-KR": "20% 할인",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1200-1206)"
+        ],
+        "$id": 5944
+    },
+    "七折": {
+        "zh-TW": "七折",
+        "en-US": "30% off",
+        "ko-KR": "30% 할인",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1220-1226)"
+        ],
+        "$id": 5945
+    },
+    "六折": {
+        "zh-TW": "六折",
+        "en-US": "sixty percent off",
+        "ko-KR": "60% 할인",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1240-1246)"
+        ],
+        "$id": 5946
+    },
+    "五折": {
+        "zh-TW": "五折",
+        "en-US": "50% off",
+        "ko-KR": "50% 할인",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1260-1266)"
+        ],
+        "$id": 5947
+    },
+    "{pct}折": {
+        "zh-TW": "{pct}折",
+        "en-US": "{pct} discount",
+        "ko-KR": "_ _ $_ $_ $_ _ 할인",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1297-1307)"
+        ],
+        "$id": 5948
+    },
+    "项目数量已达上限": {
+        "zh-TW": "項目數量已達上限",
+        "en-US": "Project count limit reached",
+        "ko-KR": "프로젝트 개수 한도에 도달했습니다",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1490-1502)"
+        ],
+        "$id": 6076
+    },
+    "升级会员可创建和恢复更多项目": {
+        "zh-TW": "升級會員可建立和恢復更多專案",
+        "en-US": "Upgrade VIP to create and restore more projects",
+        "ko-KR": "멤버십을 업그레이드하면 더 많은 프로젝트를 만들고 복원할 수 있습니다",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1523-1541)"
+        ],
+        "$id": 6077
+    },
+    "个人存储空间已满": {
+        "zh-TW": "個人儲存空間已滿",
+        "en-US": "Personal storage full",
+        "ko-KR": "개인 저장 공간이 가득 찼습니다",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1596-1608)"
+        ],
+        "$id": 6078
+    },
+    "项目体积超出限额": {
+        "zh-TW": "專案體積超出限額",
+        "en-US": "Project size limit exceeded",
+        "ko-KR": "프로젝트 크기 한도 초과",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1695-1707)"
+        ],
+        "$id": 6080
+    },
+    "升级会员可上传更大的项目": {
+        "zh-TW": "升級會員可上傳更大的專案",
+        "en-US": "Upgrade VIP to upload larger projects",
+        "ko-KR": "멤버십을 업그레이드하면 더 큰 프로젝트를 업로드할 수 있습니다",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1728-1744)"
+        ],
+        "$id": 6081
+    },
+    "图纸转换过于频繁": {
+        "zh-TW": "圖紙轉換過於頻繁",
+        "en-US": "Frequent conversion of drawings",
+        "ko-KR": "용지 변환이 너무 잦음",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1803-1815)"
+        ],
+        "$id": 5748
+    },
+    "升级会员可获取更高的转换频率上限": {
+        "zh-TW": "陞級會員可獲取更高的轉換頻率上限",
+        "en-US": "Upgrading members can obtain a higher conversion frequency limit",
+        "ko-KR": "업그레이드 회원은 더 높은 변환 빈도 상한을 획득할 수 있습니다",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1836-1856)"
+        ],
+        "$id": 5749
+    },
+    "导出下载为会员专属功能": {
+        "zh-TW": "匯出下載為會員專屬功能",
+        "en-US": "Export and download as a member exclusive feature",
+        "ko-KR": "회원 전용 기능으로 다운로드 내보내기",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1899-1914)"
+        ],
+        "$id": 6721
+    },
+    "开通 VIP 后可将图纸导出为 PDF / DWG / DXF 下载": {
+        "zh-TW": "開通VIP後可將圖紙匯出為PDF / DWG / DXF下載",
+        "en-US": "After opening VIP, drawings can be exported as PDF/DWG/DXF for download",
+        "ko-KR": "VIP 개통 후 시트를 PDF/DWG/DXF 다운로드로 내보내기",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(1935-1973)"
+        ],
+        "$id": 6722
+    },
+    "加载套餐失败，请重试": {
+        "zh-TW": "加載套餐失敗,請重試",
+        "en-US": "Failed to load package, please try again",
+        "ko-KR": "패키지를 로드하지 못했습니다. 다시 시도하십시오.",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(6121-6135)"
+        ],
+        "$id": 6723
+    },
+    "创建订单失败": {
+        "zh-TW": "創建訂單失敗",
+        "en-US": "Order creation failed",
+        "ko-KR": "주문 생성 실패",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(7047-7057)"
+        ],
+        "$id": 5210
+    },
+    "个月": {
+        "zh-TW": "個月",
+        "en-US": "month",
+        "ko-KR": "개월",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(8061-8067)",
+            "src/components/billing/PlanSelectOverlay.tsx(15173-15179)"
+        ],
+        "$id": 5950
+    },
+    "微信支付": {
+        "zh-TW": "微信支付",
+        "en-US": "WeChat Pay",
+        "ko-KR": "위챗페이",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(8760-8768)",
+            "src/components/billing/WechatPayButton.tsx(5781-5789)",
+            "src/components/billing/WechatPayModal.tsx(788-796)"
+        ],
+        "$id": 4846
+    },
+    "升级方案": {
+        "zh-TW": "陞級方案",
+        "en-US": "upgrade plan",
+        "ko-KR": "업그레이드 시나리오",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(9496-9504)"
+        ],
+        "$id": 5951
+    },
+    "月": {
+        "zh-TW": "月",
+        "en-US": "moon",
+        "ko-KR": "달",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(11510-11515)"
+        ],
+        "$id": 5952
+    },
+    "购买时长": {
+        "zh-TW": "購買時長",
+        "en-US": "Purchase duration",
+        "ko-KR": "구매 기간",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(12378-12386)"
+        ],
+        "$id": 5953
+    },
+    "省¥{amount}": {
+        "zh-TW": "省¥{amount}",
+        "en-US": "Save ¥{amount}",
+        "ko-KR": "인민폐 _ _ $_ $_ $_",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(15411-15425)"
+        ],
+        "$id": 5954
+    },
+    "省 ¥{amount}": {
+        "zh-TW": "省¥{amount}",
+        "en-US": "Save ¥{amount}",
+        "ko-KR": "인민폐 _ _ $_ $_ $_",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(16188-16203)"
+        ],
+        "$id": 5955
+    },
+    "处理中...": {
+        "zh-TW": "處理中. ..",
+        "en-US": "Processing in progress ..",
+        "ko-KR": "처리 중...",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(17253-17263)",
+            "src/components/modals/ProjectModal.tsx(5017-5027)",
+            "src/pages/UserManagement/UserModals/CreateUserModal.tsx(1966-1976)",
+            "src/pages/UserManagement/UserModals/EditUserModal.tsx(3830-3840)",
+            "src/pages/UserManagement/UserModals/MembershipManageModal.tsx(9151-9161)"
+        ],
+        "$id": 4839
+    },
+    "立即续费": {
+        "zh-TW": "立即續費",
+        "en-US": "Renew now",
+        "ko-KR": "즉시 갱신",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(17447-17455)"
+        ],
+        "$id": 5219
+    },
+    "立即升级": {
+        "zh-TW": "立即陞級",
+        "en-US": "Upgrade now",
+        "ko-KR": "지금 업그레이드",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(17517-17525)"
+        ],
+        "$id": 5956
+    },
+    "随时可取消": {
+        "zh-TW": "隨時可取消",
+        "en-US": "Can be cancelled at any time",
+        "ko-KR": "언제든지 취소 가능",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(17660-17669)"
+        ],
+        "$id": 5957
+    },
+    "付款后立即生效": {
+        "zh-TW": "付款後立即生效",
+        "en-US": "Effective immediately after payment",
+        "ko-KR": "지불 후 즉시 효력이 발생한다.",
+        "$files": [
+            "src/components/billing/PlanSelectOverlay.tsx(17705-17716)"
+        ],
+        "$id": 5958
+    },
+    "支付已取消": {
+        "zh-TW": "支付已取消",
+        "en-US": "Payment has been cancelled",
+        "ko-KR": "결제 취소",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(2144-2153)",
+            "src/components/billing/WechatPayButton.tsx(2821-2830)"
+        ],
+        "$id": 4842
+    },
+    "微信支付组件加载超时，请刷新页面重试": {
+        "zh-TW": "微信支付組件加載超時,請刷新頁面重試",
+        "en-US": "WeChat Pay component loading timeout, please refresh the page and try again",
+        "ko-KR": "위챗 결제 구성 요소 로드 시간 초과, 페이지를 새로 고치고 다시 시도하십시오.",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(2508-2530)"
+        ],
+        "$id": 4843
+    },
+    "订单金额": {
+        "zh-TW": "訂單金額",
+        "en-US": "order amount",
+        "ko-KR": "주문 금액",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(5507-5515)",
+            "src/components/billing/WechatPayButton.tsx(7103-7111)",
+            "src/components/billing/WechatPayButton.tsx(7770-7778)",
+            "src/components/billing/WechatPayButton.tsx(8667-8675)"
+        ],
+        "$id": 4844
+    },
+    "支付方式": {
+        "zh-TW": "支付方式",
+        "en-US": "Payment Method",
+        "ko-KR": "결제 방식",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(5768-5776)",
+            "src/pages/AdminBillingPage/components/OrdersTab.tsx(3980-3988)"
+        ],
+        "$id": 4845
+    },
+    "支付中...": {
+        "zh-TW": "支付中. ..",
+        "en-US": "Payment in progress ..",
+        "ko-KR": "지불 중...",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(6441-6451)"
+        ],
+        "$id": 4847
+    },
+    "确认支付": {
+        "zh-TW": "確認支付",
+        "en-US": "Confirm Payment",
+        "ko-KR": "지급 확인",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(6455-6463)"
+        ],
+        "$id": 4848
+    },
+    "请使用微信扫码支付": {
+        "zh-TW": "請使用微信掃碼支付",
+        "en-US": "Please use WeChat to scan the code for payment",
+        "ko-KR": "위챗으로 코드를 스캔하여 지불하십시오.",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(6686-6699)"
+        ],
+        "$id": 4849
+    },
+    "支付成功后返回页面查看会员状态": {
+        "zh-TW": "支付成功後返回頁面查看會員狀態",
+        "en-US": "After successful payment, return to the page to check the membership status",
+        "ko-KR": "결제 성공 후 페이지로 돌아가 회원 상태 보기",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(7342-7361)"
+        ],
+        "$id": 4850
+    },
+    "已完成支付": {
+        "zh-TW": "已完成支付",
+        "en-US": "Payment completed",
+        "ko-KR": "결제 완료",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(7527-7536)"
+        ],
+        "$id": 4851
+    },
+    "前往微信支付": {
+        "zh-TW": "前往微信支付",
+        "en-US": "Go to WeChat Pay",
+        "ko-KR": "위챗페이에 가다",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(8133-8143)"
+        ],
+        "$id": 4853
+    },
+    "请在微信浏览器中打开完成支付": {
+        "zh-TW": "請在微信瀏覽器中打開完成支付",
+        "en-US": "Please open and complete the payment in WeChat browser",
+        "ko-KR": "위챗 브라우저에서 결제 완료 열기",
+        "$files": [
+            "src/components/billing/WechatPayButton.tsx(8540-8558)"
+        ],
+        "$id": 4852
+    },
+    "支付金额: ¥{amount}": {
+        "zh-TW": "支付金額：¥{amount}",
+        "en-US": "Payment amount: ¥{amount}",
+        "ko-KR": "결제 금액: $__$_$_$_",
+        "$files": [
+            "src/components/billing/WechatPayModal.tsx(1099-1118)"
+        ],
+        "$id": 5959
+    },
+    "已选 {count} 项": {
+        "zh-TW": "已選 {count} 項",
+        "en-US": "Selected {count} item(s)",
+        "ko-KR": "선택한 {count}개",
+        "$files": [
+            "src/components/common/BatchActionBar.tsx(3281-3297)"
+        ],
+        "$id": 7048
+    },
+    "粘贴": {
+        "zh-TW": "粘貼",
+        "en-US": "paste",
+        "ko-KR": "붙여넣기",
+        "$files": [
+            "src/components/common/BatchActionBar.tsx(4589-4595)",
+            "src/components/common/BatchActionBar.tsx(5160-5166)",
+            "src/hooks/file-browser/useFileBrowserActions.ts(16461-16467)",
+            "src/hooks/file-browser/useFileBrowserActions.ts(16647-16653)",
+            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(9498-9504)",
+            "src/components/ProjectDrawingsPanel/components/ProjectPanelView.tsx(5475-5481)"
+        ],
+        "$id": 4769
+    },
+    "取消选择": {
+        "zh-TW": "取消選擇",
+        "en-US": "Deselect",
+        "ko-KR": "선택 취소",
+        "$files": [
+            "src/components/common/BatchActionBar.tsx(6618-6626)",
+            "src/components/common/BatchActionBar.tsx(6648-6656)",
+            "src/components/common/BatchActionBar.tsx(6710-6718)"
+        ],
+        "$id": 2771
+    },
+    "暂无分类": {
+        "zh-TW": "暫無分類",
+        "en-US": "Unclassified",
+        "ko-KR": "분류 없음",
+        "$files": [
+            "src/components/common/CascadeCategorySelector.tsx(7453-7461)"
+        ],
+        "$id": 2819
+    },
+    "选择分类": {
+        "zh-TW": "選擇分類",
+        "en-US": "Select Category",
+        "ko-KR": "분류 선택",
+        "$files": [
+            "src/components/common/CascadeCategorySelector.tsx(8675-8683)"
+        ],
+        "$id": 2821
+    },
+    "全部分类": {
+        "zh-TW": "全部分類",
+        "en-US": "All Categories",
+        "ko-KR": "전체 분류",
+        "$files": [
+            "src/components/common/CascadeCategorySelector.tsx(9949-9957)"
+        ],
+        "$id": 2822
+    },
+    "已经是最后一页": {
+        "zh-TW": "已經是最後一頁",
+        "en-US": "It's already the last page",
+        "ko-KR": "벌써 마지막 페이지예요.",
+        "$files": [
+            "src/components/common/FileListGrid.tsx(9153-9164)",
+            "src/components/common/ResourceList.tsx(11414-11425)",
+            "src/components/common/SelectableTable.tsx(11013-11024)",
+            "src/components/ProjectDrawingsPanel/components/ProjectListView.tsx(9055-9066)"
+        ],
+        "$id": 2825
+    },
+    "暂无数据": {
+        "zh-TW": "暫無數據",
+        "en-US": "No data available",
+        "ko-KR": "데이터 없음",
+        "$files": [
+            "src/components/common/ResourceList.tsx(2004-2012)",
+            "src/components/ui/Autocomplete.tsx(3714-3722)",
+            "src/components/ui/Select.tsx(6813-6821)",
+            "src/components/ui/Select.tsx(14980-14988)",
+            "src/components/ui/Select.tsx(23853-23861)",
+            "src/pages/AdminBillingPage/components/DurationsTab.tsx(4184-4192)",
+            "src/pages/AdminBillingPage/components/TiersTab.tsx(4424-4432)",
+            "src/pages/AdminStatsPage/components/PurchasesSection.tsx(2320-2328)",
+            "src/pages/AdminStatsPage/components/RegistrationsSection.tsx(1806-1814)",
+            "src/pages/AuditLogPage/components/AuditLogTable.tsx(2070-2078)",
+            "src/pages/FontLibrary/components/FontListView.tsx(2830-2838)",
+            "src/pages/SystemMonitorPage/components/ConversionQueueTab.tsx(5924-5932)"
+        ],
+        "$id": 2757
+    },
+    "搜索...": {
+        "zh-TW": "搜尋 ..",
+        "en-US": "Search ..",
+        "ko-KR": "검색...",
+        "$files": [
+            "src/components/common/ResourceList.tsx(5660-5669)",
+            "src/components/search/SearchInput.tsx(685-694)",
+            "src/components/ui/Autocomplete.tsx(1155-1164)",
+            "src/components/ui/Select.tsx(8607-8616)"
+        ],
+        "$id": 2823
+    },
+    "共": {
+        "zh-TW": "共",
+        "en-US": "together",
+        "ko-KR": "공",
+        "$files": [
+            "src/components/common/ResourceList.tsx(5963-5968)",
+            "src/pages/FontLibrary/index.tsx(7176-7181)"
+        ],
+        "$id": 2775
+    },
+    "项": {
+        "zh-TW": "項",
+        "en-US": "item",
+        "ko-KR": "항",
+        "$files": [
+            "src/components/common/ResourceList.tsx(6049-6054)"
+        ],
+        "$id": 2824
+    },
+    "回到顶部": {
+        "zh-TW": "回到頂部",
+        "en-US": "Back to top",
+        "ko-KR": "맨 위로",
+        "$files": [
+            "src/components/common/ScrollToTopButton.tsx(1572-1580)",
+            "src/components/common/ScrollToTopButton.tsx(1597-1605)"
+        ],
+        "$id": 7099
+    },
+    "已复制": {
+        "zh-TW": "已複製",
+        "en-US": "Copied",
+        "ko-KR": "복사됨",
+        "$files": [
+            "src/components/common/ShareLinkBar.tsx(1930-1937)",
+            "src/pages/RuntimeConfigPage/CoordinateLogCard.tsx(1475-1482)",
+            "src/pages/RuntimeConfigPage/CoordinateLogCard.tsx(5200-5207)",
+            "src/pages/FileSystemManager/hooks/useFileSystemUrlEffects.ts(6519-6526)",
+            "src/pages/LibraryManager/hooks/useLibraryClipboardActions.ts(4208-4215)"
+        ],
+        "$id": 893
+    },
+    "复制": {
+        "zh-TW": "複製",
+        "en-US": "Copy",
+        "ko-KR": "복사",
+        "$files": [
+            "src/components/common/ShareLinkBar.tsx(1941-1947)",
+            "src/components/file-item/fileActionConfig.tsx(12747-12753)",
+            "src/components/modals/SelectFolderModal.tsx(14567-14573)",
+            "src/hooks/file-browser/useFileBrowserActions.ts(12796-12802)",
+            "src/hooks/file-system/useMoveCopyOrchestrator.ts(6965-6971)",
+            "src/pages/AuditLogPage/constants.ts(869-875)",
+            "src/pages/FileSystemManager/buildFileSystemManagerViewProps.tsx(11476-11482)",
+            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(4253-4259)",
+            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(7712-7718)",
+            "src/pages/LibraryManager/index.tsx(13444-13450)",
+            "src/pages/RuntimeConfigPage/CoordinateLogCard.tsx(5211-5217)"
+        ],
+        "$id": 894
+    },
+    "若按钮复制不可用，可手动选中上方链接复制": {
+        "zh-TW": "若按鈕複製不可用,可手動選中上方連結複製",
+        "en-US": "If the copy button is not available, you can manually select the link above to copy",
+        "ko-KR": "버튼 복사를 사용할 수 없는 경우 위쪽 링크 복사를 수동으로 선택할 수 있습니다.",
+        "$files": [
+            "src/components/common/ShareLinkBar.tsx(2223-2247)"
+        ],
+        "$id": 8028
+    },
+    "网格视图": {
+        "zh-TW": "網格視圖",
+        "en-US": "Grid View",
+        "ko-KR": "메쉬 뷰",
+        "$files": [
+            "src/components/common/ViewToggle.tsx(780-788)",
+            "src/components/common/ViewToggle.tsx(1245-1253)"
+        ],
+        "$id": 4863
+    },
+    "列表视图": {
+        "zh-TW": "清單視圖",
+        "en-US": "list view",
+        "ko-KR": "목록 보기",
+        "$files": [
+            "src/components/common/ViewToggle.tsx(1523-1531)",
+            "src/components/common/ViewToggle.tsx(2020-2028)"
+        ],
+        "$id": 4864
+    },
+    "松开即可打开图纸": {
+        "zh-TW": "鬆開即可打開圖紙",
+        "en-US": "Release to open drawing",
+        "ko-KR": "놓으면 도면이 열립니다",
+        "$files": [
+            "src/components/drop-indicator/DropIndicator.tsx(1995-2007)"
+        ],
+        "$id": 1317
+    },
     "重新转换失败": {
         "zh-TW": "重新轉換失敗",
         "en-US": "Conversion failed again",
@@ -7534,15 +6411,6 @@
         ],
         "$id": 7994
     },
-    "松开即可打开图纸": {
-        "zh-TW": "鬆開即可打開圖紙",
-        "en-US": "Release to open drawing",
-        "ko-KR": "놓으면 도면이 열립니다",
-        "$files": [
-            "src/components/drop-indicator/DropIndicator.tsx(1995-2007)"
-        ],
-        "$id": 1317
-    },
     "另存为成功": {
         "zh-TW": "另存為成功",
         "en-US": "Save As successful",
@@ -7662,7 +6530,7 @@
             "src/pages/AdminBillingPage/components/TiersTab.tsx(4096-4102)",
             "src/pages/FontLibrary/components/FontGridView.tsx(5614-5620)",
             "src/pages/FontLibrary/components/FontListView.tsx(5253-5259)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(12498-12504)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(12500-12506)"
         ],
         "$id": 1095
     },
@@ -7712,6 +6580,19 @@
             "src/components/file-item/fileActionConfig.tsx(10850-10856)"
         ],
         "$id": 2837
+    },
+    "操作历史": {
+        "zh-TW": "操作歷史",
+        "en-US": "Operation history",
+        "ko-KR": "작업 내역",
+        "$files": [
+            "src/components/file-item/fileActionConfig.tsx(11712-11720)",
+            "src/components/file-item/fileActionConfig.tsx(11739-11747)",
+            "src/components/modals/OperationHistoryModal.tsx(11277-11285)",
+            "src/components/modals/OperationHistoryModal.tsx(11291-11299)",
+            "src/config/tours/project-management-full.ts(9971-9979)"
+        ],
+        "$id": 6687
     },
     "打开所在位置": {
         "zh-TW": "打開所在位置",
@@ -7826,6 +6707,18 @@
             "src/components/file-item/FileItemInfo.tsx(3216-3231)"
         ],
         "$id": 6147
+    },
+    "更多操作": {
+        "zh-TW": "更多操作",
+        "en-US": "More actions",
+        "ko-KR": "추가 작업",
+        "$files": [
+            "src/components/file-item/FileItemMenu.tsx(1208-1216)",
+            "src/config/tours/project-management-full.ts(2901-2909)",
+            "src/config/tours/project-management-full.ts(6584-6592)",
+            "src/config/tours/project-management-full.ts(9258-9266)"
+        ],
+        "$id": 4865
     },
     "单击取消选择": {
         "zh-TW": "按一下取消選擇",
@@ -8745,6 +7638,17 @@
         ],
         "$id": 2864
     },
+    "添加成员": {
+        "zh-TW": "添加成員",
+        "en-US": "Add member",
+        "ko-KR": "구성원 추가",
+        "$files": [
+            "src/components/modals/MembersModal.tsx(13268-13276)",
+            "src/config/tours/project-management-full.ts(7658-7666)",
+            "src/pages/AuditLogPage/constants.ts(565-573)"
+        ],
+        "$id": 2865
+    },
     "添加新成员": {
         "zh-TW": "添加新成員",
         "en-US": "Add new member",
@@ -8782,6 +7686,18 @@
             "src/components/modals/MembersModal.tsx(21248-21258)"
         ],
         "$id": 2869
+    },
+    "添加": {
+        "zh-TW": "添加",
+        "en-US": "add",
+        "ko-KR": "추가",
+        "$files": [
+            "src/components/modals/MembersModal.tsx(21262-21268)",
+            "src/config/tours/project-management-full.ts(8601-8607)",
+            "src/pages/IpBlacklistPage/index.tsx(7812-7818)",
+            "src/pages/IpWhitelistPage/index.tsx(9037-9043)"
+        ],
+        "$id": 2870
     },
     "共 {n} 人": {
         "zh-TW": "共{n}人",
@@ -9117,6 +8033,17 @@
             "src/components/modals/OperationHistoryModal.tsx(19909-19917)"
         ],
         "$id": 6918
+    },
+    "打开图纸": {
+        "zh-TW": "打開圖紙",
+        "en-US": "Open the blueprint",
+        "ko-KR": "시트 열기",
+        "$files": [
+            "src/components/modals/OperationHistoryModal.tsx(20503-20511)",
+            "src/components/modals/OperationHistoryModal.tsx(20643-20651)",
+            "src/config/tours/project-management-full.ts(12778-12786)"
+        ],
+        "$id": 5082
     },
     "导出 PDF": {
         "zh-TW": "匯出PDF",
@@ -9580,6 +8507,25 @@
             "src/components/modals/SaveAsModal.tsx(5878-5885)"
         ],
         "$id": 1370
+    },
+    "个人空间": {
+        "zh-TW": "個人空間",
+        "en-US": "Personal space",
+        "ko-KR": "개인 공간",
+        "$files": [
+            "src/components/modals/SaveAsModal.tsx(6568-6576)",
+            "src/components/modals/SaveAsModal.tsx(9535-9543)",
+            "src/components/modals/SelectFileModal.tsx(2838-2846)",
+            "src/components/modals/SelectFolderModal.tsx(11369-11377)",
+            "src/components/sidebar/SidebarContainer.tsx(2796-2804)",
+            "src/components/sidebar/SidebarTrigger.tsx(2117-2125)",
+            "src/config/tours/personal-space.ts(1065-1073)",
+            "src/config/tours/personal-space.ts(1162-1170)",
+            "src/hooks/file-system/trashQuery.ts(3413-3421)",
+            "src/hooks/file-system/useFileSystemData.ts(13511-13519)",
+            "src/pages/FileSystemManager/index.tsx(670-678)"
+        ],
+        "$id": 887
     },
     "项目文件夹": {
         "zh-TW": "項目資料夾",
@@ -10333,6 +9279,16 @@
             "src/pages/Register/RegisterSteps.tsx(803-811)"
         ],
         "$id": 2805
+    },
+    "角色名称": {
+        "zh-TW": "角色名稱",
+        "en-US": "role name",
+        "ko-KR": "역할 이름",
+        "$files": [
+            "src/components/permission/PermissionAssignment.tsx(9343-9351)",
+            "src/config/tours/project-management-full.ts(4370-4378)"
+        ],
+        "$id": 4910
     },
     "角色描述": {
         "zh-TW": "角色描述",
@@ -11302,7 +10258,8 @@
             "src/pages/AdminPasswordChange/index.tsx(7918-7926)",
             "src/pages/AdminPasswordChange/index.tsx(9493-9501)",
             "src/pages/AdminPasswordChange/index.tsx(11142-11150)",
-            "src/pages/Login/components/AccountLoginForm.tsx(3464-3472)"
+            "src/pages/Login/components/AccountLoginForm.tsx(3464-3472)",
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(4391-4399)"
         ],
         "$id": 1454
     },
@@ -11316,7 +10273,8 @@
             "src/pages/AdminPasswordChange/index.tsx(7930-7938)",
             "src/pages/AdminPasswordChange/index.tsx(9505-9513)",
             "src/pages/AdminPasswordChange/index.tsx(11154-11162)",
-            "src/pages/Login/components/AccountLoginForm.tsx(3476-3484)"
+            "src/pages/Login/components/AccountLoginForm.tsx(3476-3484)",
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(4403-4411)"
         ],
         "$id": 1455
     },
@@ -11442,6 +10400,1069 @@
             "src/pages/RuntimeConfigPage/BrandProfileForm.tsx(11422-11428)"
         ],
         "$id": 6044
+    },
+    "学习如何创建一个新项目，这是使用 CloudCAD 的第一步": {
+        "zh-TW": "學習如何創建一個新項目,這是使用CloudCAD的第一步",
+        "en-US": "Learning how to create a new project is the first step in using CloudCAD",
+        "ko-KR": "CloudCAD를 사용하는 첫 번째 단계인 새 프로젝트를 만드는 방법을 학습합니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(1402-1436)"
+        ],
+        "$id": 4985
+    },
+    "2 分钟": {
+        "zh-TW": "2分鐘",
+        "en-US": "2 minutes",
+        "ko-KR": "2분",
+        "$files": [
+            "src/config/tours/create-project.ts(1485-1493)"
+        ],
+        "$id": 4986
+    },
+    "需要在项目管理页面": {
+        "zh-TW": "需要在專案管理頁面",
+        "en-US": "Need to be on the project management page",
+        "ko-KR": "프로젝트 관리 페이지 필요",
+        "$files": [
+            "src/config/tours/create-project.ts(1683-1696)",
+            "src/config/tours/project-management-full.ts(2021-2034)"
+        ],
+        "$id": 4987
+    },
+    "新建项目": {
+        "zh-TW": "新建項目",
+        "en-US": "New project",
+        "ko-KR": "새 프로젝트",
+        "$files": [
+            "src/config/tours/create-project.ts(1947-1955)",
+            "src/pages/FileSystemManager/FileSystemContextMenu.tsx(7024-7032)",
+            "src/pages/FileSystemManager/FileSystemHeader.tsx(10196-10204)",
+            "src/pages/Dashboard/components/QuickActionsSection.tsx(673-681)"
+        ],
+        "$id": 1034
+    },
+    "点击\"新建项目\"按钮创建项目。": {
+        "zh-TW": "點擊“新建項目”按鈕創建項目。",
+        "en-US": "Click the 'New Project' button to create a project.",
+        "ko-KR": "새 프로젝트 버튼을 클릭하여 프로젝트를 만듭니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(1976-1995)"
+        ],
+        "$id": 4988
+    },
+    "请点击\"新建项目\"按钮": {
+        "zh-TW": "請點擊“新建項目”按鈕",
+        "en-US": "Please click the 'New Project' button",
+        "ko-KR": "\"새 프로젝트\" 버튼을 클릭하십시오.",
+        "$files": [
+            "src/config/tours/create-project.ts(2109-2124)"
+        ],
+        "$id": 4989
+    },
+    "创建项目按钮在项目列表页面的顶部工具栏中。点击可以创建新项目。": {
+        "zh-TW": "創建項目按鈕在項目清單頁面的頂部工具列中。 點擊可以創建新項目。",
+        "en-US": "The Create Project button is located in the top toolbar of the project list page. Click to create a new project.",
+        "ko-KR": "항목 만들기 버튼은 항목 목록 페이지의 위쪽 도구 모음에 있습니다.새 프로젝트를 만들려면 누르십시오.",
+        "$files": [
+            "src/config/tours/create-project.ts(2210-2257)"
+        ],
+        "$id": 4990
+    },
+    "项目名称": {
+        "zh-TW": "項目名稱",
+        "en-US": "Project Name",
+        "ko-KR": "프로젝트 명칭",
+        "$files": [
+            "src/config/tours/create-project.ts(2344-2352)"
+        ],
+        "$id": 4991
+    },
+    "输入项目名称，如\"我的第一个项目\"。": {
+        "zh-TW": "輸入項目名稱,如“我的第一個項目”。",
+        "en-US": "Enter the project name, such as' My First Project '.",
+        "ko-KR": "내 첫 번째 프로젝트와 같은 프로젝트 이름을 입력합니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(2373-2395)"
+        ],
+        "$id": 4992
+    },
+    "请输入项目名称": {
+        "zh-TW": "請輸入項目名稱",
+        "en-US": "Please enter the project name",
+        "ko-KR": "프로젝트 이름을 입력하십시오.",
+        "$files": [
+            "src/config/tours/create-project.ts(2509-2520)"
+        ],
+        "$id": 4993
+    },
+    "在项目创建弹窗中输入项目名称。": {
+        "zh-TW": "在項目創建彈窗中輸入項目名稱。",
+        "en-US": "Enter the project name in the project creation pop-up window.",
+        "ko-KR": "프로젝트 생성 창에 프로젝트 이름을 입력합니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(2580-2599)"
+        ],
+        "$id": 4994
+    },
+    "项目描述": {
+        "zh-TW": "項目描述",
+        "en-US": "Project Description",
+        "ko-KR": "프로젝트 설명",
+        "$files": [
+            "src/config/tours/create-project.ts(2676-2684)"
+        ],
+        "$id": 4995
+    },
+    "填写项目描述（可选）。": {
+        "zh-TW": "填寫項目描述(可選)。",
+        "en-US": "Fill in the project description (optional).",
+        "ko-KR": "항목 설명을 작성합니다 (선택 사항).",
+        "$files": [
+            "src/config/tours/create-project.ts(2705-2720)"
+        ],
+        "$id": 4996
+    },
+    "项目描述可以帮助团队成员了解项目用途。": {
+        "zh-TW": "項目描述可以幫助團隊成員瞭解項目用途。",
+        "en-US": "Project description can help team members understand the purpose of the project.",
+        "ko-KR": "프로젝트 설명은 팀 멤버가 프로젝트의 용도를 이해하는 데 도움이 됩니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(2836-2859)"
+        ],
+        "$id": 4997
+    },
+    "点击\"创建\"按钮完成创建。": {
+        "zh-TW": "點擊“創建”按鈕完成創建。",
+        "en-US": "Click the 'Create' button to complete the creation.",
+        "ko-KR": "만들기 버튼을 클릭하여 만들기를 완료합니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(2968-2985)"
+        ],
+        "$id": 4998
+    },
+    "请点击\"创建\"按钮": {
+        "zh-TW": "請點擊“創建”按鈕",
+        "en-US": "Please click the 'Create' button",
+        "ko-KR": "만들기 버튼을 클릭하십시오.",
+        "$files": [
+            "src/config/tours/create-project.ts(3099-3112)"
+        ],
+        "$id": 4999
+    },
+    "点击创建按钮完成项目创建。": {
+        "zh-TW": "點擊創建按鈕完成項目創建。",
+        "en-US": "Click the create button to complete the project creation.",
+        "ko-KR": "프로젝트 생성을 완료하려면 만들기 단추를 누르십시오.",
+        "$files": [
+            "src/config/tours/create-project.ts(3198-3215)"
+        ],
+        "$id": 5000
+    },
+    "项目创建成功": {
+        "zh-TW": "項目創建成功",
+        "en-US": "Project creation successful",
+        "ko-KR": "프로젝트 생성 성공",
+        "$files": [
+            "src/config/tours/create-project.ts(3283-3293)",
+            "src/hooks/file-system/useFileSystemCRUD.ts(21198-21208)"
+        ],
+        "$id": 2976
+    },
+    "恭喜！项目已创建成功。点击项目卡片可以进入项目进行文件管理。": {
+        "zh-TW": "恭喜！ 項目已創建成功。 點擊項目卡片可以進入項目進行文件管理。",
+        "en-US": "Congratulations! The project has been successfully created. Click on the project card to enter the project for file management.",
+        "ko-KR": "축하합니다!프로젝트가 성공적으로 만들어졌습니다.프로젝트 카드를 클릭하면 프로젝트에 들어가서 파일 관리를 할 수 있습니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(3314-3360)"
+        ],
+        "$id": 5001
+    },
+    "项目创建成功后，可以在项目列表中看到新创建的项目。": {
+        "zh-TW": "項目創建成功後,可以在項目清單中看到新創建的項目。",
+        "en-US": "After the project is successfully created, you can see the newly created project in the project list.",
+        "ko-KR": "프로젝트가 성공적으로 작성되면 프로젝트 목록에 새로 작성된 항목을 볼 수 있습니다.",
+        "$files": [
+            "src/config/tours/create-project.ts(3485-3526)"
+        ],
+        "$id": 5002
+    },
+    "进入项目管理": {
+        "zh-TW": "進入專案管理",
+        "en-US": "Enter project management",
+        "ko-KR": "프로젝트 관리 시작",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(1422-1432)",
+            "src/config/tours/navigate-to-projects.ts(1925-1935)"
+        ],
+        "$id": 5003
+    },
+    "学习如何从侧边栏进入项目管理页面": {
+        "zh-TW": "學習如何從側邊欄進入專案管理頁面",
+        "en-US": "Learn how to access the project management page from the sidebar",
+        "ko-KR": "사이드바에서 프로젝트 관리 페이지로 들어가는 방법 배우기",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(1453-1473)"
+        ],
+        "$id": 5004
+    },
+    "30 秒": {
+        "zh-TW": "30秒",
+        "en-US": "30 seconds",
+        "ko-KR": "30초",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(1522-1530)"
+        ],
+        "$id": 5005
+    },
+    "需要在非 CAD 编辑器页面": {
+        "zh-TW": "需要在非CAD編輯器頁面",
+        "en-US": "Need to be on non CAD editor pages",
+        "ko-KR": "CAD 이외의 편집기 시트 필요",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(1623-1641)"
+        ],
+        "$id": 5006
+    },
+    "点击侧边栏的\"项目管理\"进入项目列表页面。": {
+        "zh-TW": "點擊側邊欄的“專案管理”進入項目清單頁面。",
+        "en-US": "Click on \"Project Management\" in the sidebar to enter the project list page.",
+        "ko-KR": "사이드바의 [프로젝트 관리] 를 클릭하여 프로젝트 목록 페이지로 이동합니다.",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(1956-1981)"
+        ],
+        "$id": 5007
+    },
+    "请点击侧边栏中的\"项目管理\"": {
+        "zh-TW": "請點擊側邊欄中的“專案管理”",
+        "en-US": "Please click on 'Project Management' in the sidebar",
+        "ko-KR": "사이드바에서 \"프로젝트 관리\" 를 클릭하십시오.",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(2094-2112)"
+        ],
+        "$id": 5008
+    },
+    "请点击左侧侧边栏中的\"项目管理\"入口进入项目列表。": {
+        "zh-TW": "請點擊左側側邊欄中的“專案管理”入口進入項目清單。",
+        "en-US": "Please click on the \"Project Management\" entrance in the left sidebar to enter the project list.",
+        "ko-KR": "왼쪽 사이드바에서 프로젝트 관리 포털을 클릭하여 프로젝트 목록으로 들어가십시오.",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(2198-2227)"
+        ],
+        "$id": 5009
+    },
+    "项目列表页面": {
+        "zh-TW": "項目清單頁面",
+        "en-US": "Project List Page",
+        "ko-KR": "항목 목록 페이지",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(2304-2314)"
+        ],
+        "$id": 5010
+    },
+    "这里显示您的所有项目。您可以点击\"新建项目\"创建新项目，或点击项目卡片进入项目。": {
+        "zh-TW": "這裡顯示您的所有項目。 您可以點擊“新建項目”創建新項目,或點擊項目卡片進入項目。",
+        "en-US": "All of your projects are displayed here. You can click on \"New Project\" to create a new project, or click on the project card to enter the project.",
+        "ko-KR": "모든 항목이 표시됩니다.\"새 프로젝트\" 를 클릭하여 새 프로젝트를 만들거나 프로젝트 카드를 클릭하여 프로젝트에 들어갈 수 있습니다.",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(2335-2391)"
+        ],
+        "$id": 5011
+    },
+    "项目列表页面显示您的所有项目，支持创建、编辑和管理项目。": {
+        "zh-TW": "項目清單頁面顯示您的所有項目,支持創建、編輯和管理項目。",
+        "en-US": "The project list page displays all your projects and supports creating, editing, and managing projects.",
+        "ko-KR": "항목 목록 페이지에는 항목 작성, 편집 및 관리를 지원하는 모든 항목이 표시됩니다.",
+        "$files": [
+            "src/config/tours/navigate-to-projects.ts(2517-2561)"
+        ],
+        "$id": 5012
+    },
+    "学习如何在个人空间中上传 CAD 文件、创建文件夹来管理您的图纸": {
+        "zh-TW": "學習如何在個人空間中上傳CAD檔案、創建資料夾來管理您的圖紙",
+        "en-US": "Learn how to upload CAD files and create folders in your personal space to manage your drawings",
+        "ko-KR": "개인 공간에 CAD 파일을 업로드하고 폴더를 작성하여 도면을 관리하는 방법을 학습합니다.",
+        "$files": [
+            "src/config/tours/personal-space.ts(1094-1138)"
+        ],
+        "$id": 5013
+    },
+    "3 分钟": {
+        "zh-TW": "3分鐘",
+        "en-US": "3 minutes",
+        "ko-KR": "3분",
+        "$files": [
+            "src/config/tours/personal-space.ts(1193-1201)"
+        ],
+        "$id": 5014
+    },
+    "进入个人空间": {
+        "zh-TW": "進入個人空間",
+        "en-US": "Enter personal space",
+        "ko-KR": "개인 공간에 들어가다",
+        "$files": [
+            "src/config/tours/personal-space.ts(1401-1411)"
+        ],
+        "$id": 7426
+    },
+    "点击侧边栏的\"个人空间\"，这是您的个人图纸空间，可以上传和管理您的 CAD 文件。": {
+        "zh-TW": "點擊側邊欄的“個人空間”,這是您的個人圖紙空間,可以上傳和管理您的CAD檔案。",
+        "en-US": "Click on \"Personal Space\" in the sidebar, which is your personal drawing space where you can upload and manage your CAD files.",
+        "ko-KR": "CAD 파일을 업로드하고 관리할 수 있는 개인 도면 공간인 사이드바의 \"개인 공간\" 을 클릭합니다.",
+        "$files": [
+            "src/config/tours/personal-space.ts(1432-1489)"
+        ],
+        "$id": 7427
+    },
+    "请点击侧边栏中的\"个人空间\"": {
+        "zh-TW": "請點擊側邊欄中的“個人空間”",
+        "en-US": "Please click on 'Personal Space' in the sidebar",
+        "ko-KR": "사이드바에서 \"개인 공간\" 을 클릭하세요",
+        "$files": [
+            "src/config/tours/personal-space.ts(1612-1630)"
+        ],
+        "$id": 7428
+    },
+    "请点击左侧侧边栏中的\"个人空间\"入口。": {
+        "zh-TW": "請點擊左側側邊欄中的“個人空間”入口。",
+        "en-US": "Please click on the \"Personal Space\" entrance in the left sidebar.",
+        "ko-KR": "왼쪽 사이드바에서 \"개인 공간\" 입구를 클릭하십시오.",
+        "$files": [
+            "src/config/tours/personal-space.ts(1716-1739)"
+        ],
+        "$id": 7429
+    },
+    "这里可以上传 DWG、DXF 等 CAD 格式文件，支持批量上传和拖拽上传。": {
+        "zh-TW": "這裡可以上傳DWG、DXF等CAD格式檔案,支持批量上傳和拖拽上傳。",
+        "en-US": "Here, CAD format files such as DWG and DXF can be uploaded, and batch uploading and drag and drop uploading are supported.",
+        "ko-KR": "DWG, DXF와 같은 CAD 형식 파일을 업로드할 수 있으며 대량 업로드 및 드래그 업로드를 지원합니다.",
+        "$files": [
+            "src/config/tours/personal-space.ts(1837-1891)"
+        ],
+        "$id": 7714
+    },
+    "上传文件功能在工具栏中，可以上传 DWG、DXF 等 CAD 格式文件。": {
+        "zh-TW": "上傳文件功能在工具列中,可以上傳DWG、DXF等CAD格式檔案。",
+        "en-US": "The upload file function is located in the toolbar, where CAD format files such as DWG and DXF can be uploaded.",
+        "ko-KR": "파일 업로드 기능은 도구 모음에서 DWG, DXF와 같은 CAD 형식 파일을 업로드할 수 있습니다.",
+        "$files": [
+            "src/config/tours/personal-space.ts(2044-2096)"
+        ],
+        "$id": 7715
+    },
+    "创建文件夹": {
+        "zh-TW": "創建資料夾",
+        "en-US": "Create folder",
+        "ko-KR": "폴더 만들기",
+        "$files": [
+            "src/config/tours/personal-space.ts(2182-2191)",
+            "src/hooks/file-system/useFileSystemCRUD.ts(6566-6575)",
+            "src/pages/LibraryManager/components/LibraryManagerEmptyView.tsx(1090-1099)"
+        ],
+        "$id": 1122
+    },
+    "点击\"新建文件夹\"按钮可以在当前位置创建文件夹，方便组织和管理您的图纸文件。": {
+        "zh-TW": "點擊“新建資料夾”按鈕可以在當前位置創建資料夾,方便組織和管理您的圖紙檔案。",
+        "en-US": "Click the 'New Folder' button to create a folder in the current location, making it easy to organize and manage your drawing files.",
+        "ko-KR": "[새 폴더] 버튼을 클릭하면 현재 위치에 폴더를 작성하여 도면 파일을 쉽게 구성하고 관리할 수 있습니다.",
+        "$files": [
+            "src/config/tours/personal-space.ts(2212-2266)"
+        ],
+        "$id": 5021
+    },
+    "新建文件夹功能在工具栏中。点击可以创建文件夹来组织图纸文件。": {
+        "zh-TW": "新建資料夾功能在工具列中。 點擊可以創建資料夾來組織圖紙檔案。",
+        "en-US": "The new folder function is located in the toolbar. Click to create a folder to organize drawing files.",
+        "ko-KR": "새 폴더 기능은 도구 모음에 있습니다.폴더를 작성하여 시트 파일을 구성하려면 를 클릭합니다.",
+        "$files": [
+            "src/config/tours/personal-space.ts(2418-2464)"
+        ],
+        "$id": 5022
+    },
+    "项目管理完整流程": {
+        "zh-TW": "專案管理完整流程",
+        "en-US": "Complete project management process",
+        "ko-KR": "프로젝트 관리 전체 프로세스",
+        "$files": [
+            "src/config/tours/project-management-full.ts(1643-1655)"
+        ],
+        "$id": 5023
+    },
+    "从项目设置到使用 CAD 编辑器的完整教程，涵盖角色管理、成员管理、文件管理等功能": {
+        "zh-TW": "從項目設定到使用CAD編輯器的完整教程,涵蓋角色管理、成員管理、文件管理等功能",
+        "en-US": "A complete tutorial from project setup to using CAD editor, covering functions such as role management, member management, file management, etc",
+        "ko-KR": "역할 관리, 멤버 관리, 파일 관리 등의 기능을 포함하는 프로젝트 설정에서 CAD 편집기 사용에 이르는 전체 자습서",
+        "$files": [
+            "src/config/tours/project-management-full.ts(1676-1729)"
+        ],
+        "$id": 5024
+    },
+    "15 分钟": {
+        "zh-TW": "15分鐘",
+        "en-US": "15 minutes",
+        "ko-KR": "15분",
+        "$files": [
+            "src/config/tours/project-management-full.ts(1784-1793)"
+        ],
+        "$id": 5025
+    },
+    "需要至少有一个项目": {
+        "zh-TW": "需要至少有一個項目",
+        "en-US": "At least one project is required",
+        "ko-KR": "하나 이상의 항목 필요",
+        "$files": [
+            "src/config/tours/project-management-full.ts(2230-2243)"
+        ],
+        "$id": 5026
+    },
+    "视图切换": {
+        "zh-TW": "視圖切換",
+        "en-US": "View Switch",
+        "ko-KR": "뷰 전환",
+        "$files": [
+            "src/config/tours/project-management-full.ts(2539-2547)"
+        ],
+        "$id": 5027
+    },
+    "可以切换卡片模式和列表模式查看项目。": {
+        "zh-TW": "可以切換卡片模式和清單模式查看項目。",
+        "en-US": "You can switch between card mode and list mode to view items.",
+        "ko-KR": "카드 모드와 목록 모드를 전환하여 항목을 볼 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(2568-2590)"
+        ],
+        "$id": 5028
+    },
+    "视图切换按钮可以在卡片视图和列表视图之间切换。": {
+        "zh-TW": "視圖切換按鈕可以在卡片視圖和清單視圖之間切換。",
+        "en-US": "The view switch button can switch between card view and list view.",
+        "ko-KR": "보기 전환 버튼은 카드 보기와 목록 보기 사이를 전환할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(2740-2767)"
+        ],
+        "$id": 5029
+    },
+    "点击项目卡片右上角的\"更多\"按钮，展开项目管理操作菜单。": {
+        "zh-TW": "點擊專案卡片右上角的\"更多\"按鈕，展開專案管理操作選單。",
+        "en-US": "Click the \"More\" button in the top-right corner of a project card to open the project management menu.",
+        "ko-KR": "프로젝트 카드 오른쪽 상단의 \"더보기\" 버튼을 클릭하여 프로젝트 관리 메뉴를 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(2930-2962)"
+        ],
+        "$id": 6962
+    },
+    "请点击项目卡片右上角的\"更多\"按钮": {
+        "zh-TW": "請點擊專案卡片右上角的\"更多\"按鈕",
+        "en-US": "Please click the \"More\" button in the top-right corner of a project card.",
+        "ko-KR": "프로젝트 카드 오른쪽 상단의 \"더보기\" 버튼을 클릭하세요.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(3076-3097)"
+        ],
+        "$id": 6963
+    },
+    "列表视图下操作按钮会直接显示在项目行中；卡片视图下\"更多\"按钮位于项目卡片右上角。仍找不到时，可点击\"跳过引导\"继续。": {
+        "zh-TW": "列表視圖下操作按鈕會直接顯示在專案行中；卡片視圖下\"更多\"按鈕位於專案卡片右上角。仍找不到時，可點擊\"跳過引導\"繼續。",
+        "en-US": "In list view, action buttons appear directly in the project row; in card view, the \"More\" button is at the top-right corner of the project card. If you still can't find it, click \"Skip tour\" to continue.",
+        "ko-KR": "목록 보기에서는 작업 버튼이 프로젝트 행에 직접 표시되고, 카드 보기에서는 \"더보기\" 버튼이 프로젝트 카드 오른쪽 상단에 있습니다. 찾을 수 없는 경우 \"투어 건너뛰기\"를 클릭하여 계속하세요.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(3183-3258)",
+            "src/config/tours/project-management-full.ts(6836-6911)",
+            "src/config/tours/project-management-full.ts(9510-9585)"
+        ],
+        "$id": 6964
+    },
+    "点击\"角色管理\"选项，打开项目角色管理弹窗。": {
+        "zh-TW": "點擊\"角色管理\"選項，開啟專案角色管理彈窗。",
+        "en-US": "Click the \"Role Management\" option to open the project role management dialog.",
+        "ko-KR": "\"역할 관리\" 옵션을 클릭하여 프로젝트 역할 관리 창을 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(3661-3687)"
+        ],
+        "$id": 6965
+    },
+    "请点击菜单中的\"角色管理\"选项": {
+        "zh-TW": "請點擊選單中的“角色管理”選項",
+        "en-US": "Please click on the 'Role Management' option in the menu",
+        "ko-KR": "메뉴에서 역할 관리 옵션을 클릭하십시오.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(3799-3818)"
+        ],
+        "$id": 5031
+    },
+    "请在操作菜单中选择\"角色管理\"，打开项目角色管理弹窗。": {
+        "zh-TW": "請在操作選單中選擇\"角色管理\"，開啟專案角色管理彈窗。",
+        "en-US": "Please select \"Role Management\" from the action menu to open the project role management dialog.",
+        "ko-KR": "작업 메뉴에서 \"역할 관리\"를 선택하여 프로젝트 역할 관리 창을 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(3904-3947)"
+        ],
+        "$id": 6966
+    },
+    "点击\"创建角色\"按钮创建自定义角色。": {
+        "zh-TW": "點擊“創建角色”按鈕創建自定義角色。",
+        "en-US": "Click the \"Create Role\" button to create a custom role.",
+        "ko-KR": "사용자 지정 역할을 만들려면 [역할 만들기] 버튼을 클릭합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4060-4082)"
+        ],
+        "$id": 5033
+    },
+    "创建角色功能：在角色管理弹窗中点击\"创建角色\"按钮，然后配置角色名称和权限。": {
+        "zh-TW": "創建角色功能：在角色管理彈窗中點擊“創建角色”按鈕,然後配置角色名稱和許可權。",
+        "en-US": "Create role function: Click the \"Create Role\" button in the role management pop-up window, and then configure the role name and permissions.",
+        "ko-KR": "캐릭터 기능 만들기: 캐릭터 관리 창에서 캐릭터 만들기 단추를 누르고 캐릭터 이름과 권한을 설정합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4232-4286)"
+        ],
+        "$id": 5034
+    },
+    "输入角色名称。": {
+        "zh-TW": "輸入角色名稱。",
+        "en-US": "Enter the character name.",
+        "ko-KR": "역할 이름을 입력합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4399-4410)"
+        ],
+        "$id": 5035
+    },
+    "在角色创建表单中输入角色名称。": {
+        "zh-TW": "在角色創建表單中輸入角色名稱。",
+        "en-US": "Enter the role name in the role creation form.",
+        "ko-KR": "역할 만들기 양식에 역할 이름을 입력합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4526-4545)"
+        ],
+        "$id": 5036
+    },
+    "权限配置": {
+        "zh-TW": "許可權配置",
+        "en-US": "Permission Configuration",
+        "ko-KR": "권한 구성",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4620-4628)"
+        ],
+        "$id": 5037
+    },
+    "后续你可以为角色配置具体的权限，请点击下一步": {
+        "zh-TW": "後續你可以為角色配置具體的許可權,請點擊下一步",
+        "en-US": "You can configure specific permissions for the role in the future, please click next",
+        "ko-KR": "나중에 캐릭터에 대한 구체적인 권한을 설정할 수 있습니다. 다음 단계를 클릭하십시오.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4649-4675)"
+        ],
+        "$id": 5038
+    },
+    "权限配置区域可以为角色分配特定的权限组合。": {
+        "zh-TW": "許可權配置區域可以為角色分配特定的許可權組合。",
+        "en-US": "The permission configuration area can assign specific permission combinations to roles.",
+        "ko-KR": "권한 구성 영역에서는 역할에 특정 권한 조합을 지정할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4789-4814)"
+        ],
+        "$id": 5039
+    },
+    "保存角色": {
+        "zh-TW": "保存角色",
+        "en-US": "Save Role",
+        "ko-KR": "역할 저장",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4886-4894)"
+        ],
+        "$id": 5040
+    },
+    "点击保存完成创建。": {
+        "zh-TW": "點擊保存完成創建。",
+        "en-US": "Click Save to complete the creation.",
+        "ko-KR": "저장을 클릭하여 생성을 완료합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(4915-4928)"
+        ],
+        "$id": 5041
+    },
+    "点击保存按钮完成角色创建。": {
+        "zh-TW": "點擊保存按鈕完成角色創建。",
+        "en-US": "Click the save button to complete the character creation.",
+        "ko-KR": "저장 버튼을 클릭하여 캐릭터 생성을 완료합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5070-5087)"
+        ],
+        "$id": 5042
+    },
+    "关闭弹窗": {
+        "zh-TW": "關閉彈窗",
+        "en-US": "Close pop-up",
+        "ko-KR": "탄창을 닫다",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5161-5169)",
+            "src/config/tours/project-management-full.ts(6198-6206)",
+            "src/config/tours/project-management-full.ts(8872-8880)",
+            "src/config/tours/project-management-full.ts(11242-11250)"
+        ],
+        "$id": 5043
+    },
+    "关闭权限配置弹框。": {
+        "zh-TW": "關閉許可權配置彈框。",
+        "en-US": "Close the permission configuration pop-up box.",
+        "ko-KR": "사용 권한 구성 폭탄 상자를 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5190-5203)"
+        ],
+        "$id": 5044
+    },
+    "请点击关闭按钮": {
+        "zh-TW": "請點擊關閉按鈕",
+        "en-US": "Please click the close button",
+        "ko-KR": "닫기 버튼을 눌러주세요",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5315-5326)",
+            "src/config/tours/project-management-full.ts(6352-6363)",
+            "src/config/tours/project-management-full.ts(9026-9037)",
+            "src/config/tours/project-management-full.ts(11396-11407)"
+        ],
+        "$id": 5045
+    },
+    "点击弹窗右上角的关闭按钮关闭权限配置弹框。": {
+        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉許可權配置彈框。",
+        "en-US": "Click the close button in the upper right corner of the pop-up window to close the permission configuration dialog box.",
+        "ko-KR": "탄창 오른쪽 상단의 닫기 버튼을 클릭하여 권한 설정 탄창을 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5386-5411)"
+        ],
+        "$id": 5046
+    },
+    "项目角色自治": {
+        "zh-TW": "專案角色自治",
+        "en-US": "Project Role Autonomy",
+        "ko-KR": "프로젝트 역할 자율성",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5487-5497)"
+        ],
+        "$id": 6967
+    },
+    "项目角色属于本项目，可自由编辑；删除角色时成员自动降级，若项目已无可用角色会自动创建默认成员角色。": {
+        "zh-TW": "專案角色屬於本專案，可自由編輯；刪除角色時成員自動降級，若專案已無可用角色會自動建立預設成員角色。",
+        "en-US": "Project roles belong to this project and are fully editable; when a role is deleted its members are demoted automatically, and if no usable role remains a default member role will be created automatically.",
+        "ko-KR": "프로젝트 역할은 이 프로젝트에 속하며 자유롭게 편집할 수 있습니다. 역할을 삭제하면 멤버가 자동으로 강등되며, 사용 가능한 역할이 없으면 기본 멤버 역할이 자동으로 생성됩니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5518-5583)",
+            "src/config/tours/project-management-full.ts(5707-5772)"
+        ],
+        "$id": 7435
+    },
+    "默认角色": {
+        "zh-TW": "默認角色",
+        "en-US": "Default role",
+        "ko-KR": "기본 역할",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5858-5866)"
+        ],
+        "$id": 6969
+    },
+    "默认角色来自项目模板，可直接修改名称和权限；项目所有者使用的角色不可删除。": {
+        "zh-TW": "預設角色來自專案範本，可直接修改名稱和權限；專案擁有者使用的角色不可刪除。",
+        "en-US": "Default roles come from the project template and can be renamed or re-permissioned directly; roles used by the project owner cannot be deleted.",
+        "ko-KR": "기본 역할은 프로젝트 템플릿에서 가져오며 이름과 권한을 직접 수정할 수 있습니다. 프로젝트 소유자가 사용하는 역할은 삭제할 수 없습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(5887-5940)"
+        ],
+        "$id": 6970
+    },
+    "角色列表中的默认角色可直接修改，带\"项目所有者\"标记的角色不可删除。": {
+        "zh-TW": "角色清單中的預設角色可直接修改，帶\"專案擁有者\"標記的角色不可刪除。",
+        "en-US": "Default roles in the role list can be edited directly; roles marked \"Project Owner\" cannot be deleted.",
+        "ko-KR": "역할 목록의 기본 역할은 직접 수정할 수 있으며 \"프로젝트 소유자\" 표시가 있는 역할은 삭제할 수 없습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(6064-6114)"
+        ],
+        "$id": 6971
+    },
+    "关闭角色管理弹窗。": {
+        "zh-TW": "關閉角色管理彈窗。",
+        "en-US": "Close the role management pop-up window.",
+        "ko-KR": "역할 관리 팝업 창을 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(6227-6240)"
+        ],
+        "$id": 5049
+    },
+    "点击弹窗右上角的关闭按钮关闭角色管理弹窗。": {
+        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉角色管理彈窗。",
+        "en-US": "Click the close button in the upper right corner of the pop-up window to close the role management pop-up window.",
+        "ko-KR": "창 오른쪽 상단의 닫기 버튼을 클릭하여 캐릭터 관리 창을 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(6423-6448)"
+        ],
+        "$id": 5050
+    },
+    "再次点击\"更多\"按钮，展开项目管理操作菜单。": {
+        "zh-TW": "再次點擊\"更多\"按鈕，展開專案管理操作選單。",
+        "en-US": "Click the \"More\" button again to open the project management menu.",
+        "ko-KR": "\"더보기\" 버튼을 다시 클릭하여 프로젝트 관리 메뉴를 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(6613-6639)",
+            "src/config/tours/project-management-full.ts(9287-9313)"
+        ],
+        "$id": 6972
+    },
+    "请再次点击项目卡片右上角的\"更多\"按钮": {
+        "zh-TW": "請再次點擊專案卡片右上角的\"更多\"按鈕",
+        "en-US": "Please click the \"More\" button in the top-right corner of the project card again.",
+        "ko-KR": "프로젝트 카드 오른쪽 상단의 \"더보기\" 버튼을 다시 클릭하세요.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(6753-6776)",
+            "src/config/tours/project-management-full.ts(9427-9450)"
+        ],
+        "$id": 6973
+    },
+    "点击\"成员\"选项，打开成员管理弹窗。": {
+        "zh-TW": "點擊\"成員\"選項，開啟成員管理彈窗。",
+        "en-US": "Click the \"Members\" option to open the member management dialog.",
+        "ko-KR": "\"구성원\" 옵션을 클릭하여 구성원 관리 창을 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(7316-7338)"
+        ],
+        "$id": 6974
+    },
+    "请点击菜单中的\"成员\"选项": {
+        "zh-TW": "請點擊選單中的“成員”選項",
+        "en-US": "Please click on the 'Members' option in the menu",
+        "ko-KR": "메뉴에서 구성원 옵션을 클릭하십시오.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(7450-7467)"
+        ],
+        "$id": 5052
+    },
+    "请在操作菜单中选择\"成员\"，打开项目成员管理弹窗。": {
+        "zh-TW": "請在操作選單中選擇\"成員\"，開啟專案成員管理彈窗。",
+        "en-US": "Please select \"Members\" from the action menu to open the project member management dialog.",
+        "ko-KR": "작업 메뉴에서 \"구성원\"을 선택하여 프로젝트 구성원 관리 창을 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(7553-7582)"
+        ],
+        "$id": 6975
+    },
+    "点击\"添加成员\"按钮邀请新成员。": {
+        "zh-TW": "點擊“添加成員”按鈕邀請新成員。",
+        "en-US": "Click the 'Add Member' button to invite new members.",
+        "ko-KR": "구성원 추가 버튼을 클릭하여 새 구성원을 초대합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(7687-7707)"
+        ],
+        "$id": 5054
+    },
+    "请点击\"添加成员\"按钮": {
+        "zh-TW": "請點擊“添加成員”按鈕",
+        "en-US": "Please click the 'Add Member' button",
+        "ko-KR": "구성원 추가 버튼을 클릭하십시오.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(7821-7836)"
+        ],
+        "$id": 5055
+    },
+    "添加成员功能：在成员管理弹窗中点击\"添加成员\"按钮，邀请新成员加入项目。": {
+        "zh-TW": "添加成員功能：在成員管理彈窗中點擊“添加成員”按鈕,邀請新成員加入項目。",
+        "en-US": "Add member function: Click the \"Add Member\" button in the member management pop-up window to invite new members to join the project.",
+        "ko-KR": "구성원 추가 기능: 구성원 관리 창에서 구성원 추가 버튼을 클릭하여 새 구성원을 프로젝트에 초대합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(7896-7948)"
+        ],
+        "$id": 5056
+    },
+    "搜索用户": {
+        "zh-TW": "蒐索用戶",
+        "en-US": "Search for Users",
+        "ko-KR": "사용자 검색",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8036-8044)"
+        ],
+        "$id": 5057
+    },
+    "搜索要添加的用户名，在搜索结果列表中点击要添加的用户": {
+        "zh-TW": "搜尋要新增的使用者名稱，在搜尋結果清單中點擊要新增的使用者",
+        "en-US": "Search for the username to add, then click the user in the search results.",
+        "ko-KR": "추가할 사용자 이름을 검색하고 검색 결과 목록에서 사용자를 클릭하세요.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8065-8095)"
+        ],
+        "$id": 6976
+    },
+    "在搜索框中输入用户名查找要添加的成员。": {
+        "zh-TW": "在蒐索框中輸入用戶名查找要添加的成員。",
+        "en-US": "Enter the username in the search box to find the member you want to add.",
+        "ko-KR": "검색 상자에 사용자 이름을 입력하여 추가할 구성원을 찾습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8211-8234)"
+        ],
+        "$id": 5059
+    },
+    "选择角色": {
+        "zh-TW": "選擇角色",
+        "en-US": "Select a character",
+        "ko-KR": "역할 선택",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8311-8319)"
+        ],
+        "$id": 5060
+    },
+    "为成员选择角色权限。": {
+        "zh-TW": "為成員選擇角色許可權。",
+        "en-US": "Select role permissions for members.",
+        "ko-KR": "구성원에 대한 역할 사용 권한을 선택합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8340-8354)"
+        ],
+        "$id": 5061
+    },
+    "请选择一个角色": {
+        "zh-TW": "請選擇一個角色",
+        "en-US": "Please select a role",
+        "ko-KR": "역할을 선택하십시오.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8432-8443)"
+        ],
+        "$id": 5062
+    },
+    "角色选择区域可以为成员分配不同的角色权限。": {
+        "zh-TW": "角色選擇區域可以為成員分配不同的角色許可權。",
+        "en-US": "The role selection area can assign different role permissions to members.",
+        "ko-KR": "역할 선택 영역에서는 구성원에게 서로 다른 역할 권한을 할당할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8503-8528)"
+        ],
+        "$id": 5063
+    },
+    "添加按钮完成邀请。": {
+        "zh-TW": "添加按鈕完成邀請。",
+        "en-US": "Add button to complete the invitation.",
+        "ko-KR": "버튼을 추가하여 초대를 완료합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8628-8641)"
+        ],
+        "$id": 5064
+    },
+    "添加按钮完成成员邀请。": {
+        "zh-TW": "添加按鈕完成成員邀請。",
+        "en-US": "Add button to complete member invitation.",
+        "ko-KR": "추가 버튼을 클릭하여 구성원 초대를 완료합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8783-8798)"
+        ],
+        "$id": 5065
+    },
+    "关闭成员管理弹窗。": {
+        "zh-TW": "關閉成員管理彈窗。",
+        "en-US": "Close the member management pop-up window.",
+        "ko-KR": "구성원 관리 탄창을 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(8901-8914)"
+        ],
+        "$id": 5066
+    },
+    "点击弹窗右上角的关闭按钮关闭成员管理弹窗。": {
+        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉成員管理彈窗。",
+        "en-US": "Click the close button in the upper right corner of the pop-up window to close the member management pop-up window.",
+        "ko-KR": "창 오른쪽 상단의 닫기 버튼을 클릭하여 구성원 관리 창을 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(9097-9122)"
+        ],
+        "$id": 5067
+    },
+    "点击\"操作历史\"选项，查看项目内的操作记录。": {
+        "zh-TW": "點擊\"操作歷史\"選項，查看專案內的操作記錄。",
+        "en-US": "Click the \"Operation History\" option to view the operation records within the project.",
+        "ko-KR": "\"작업 기록\" 옵션을 클릭하여 프로젝트 내 작업 기록을 확인합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10000-10026)"
+        ],
+        "$id": 6994
+    },
+    "请点击菜单中的\"操作历史\"选项": {
+        "zh-TW": "請點擊選單中的“操作歷史”選項",
+        "en-US": "Please click on the 'Operation History' option in the menu",
+        "ko-KR": "메뉴에서 작업 내역 옵션을 클릭하십시오.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10138-10157)"
+        ],
+        "$id": 6995
+    },
+    "请在操作菜单中选择\"操作历史\"，打开项目操作历史弹窗。": {
+        "zh-TW": "請在操作選單中選擇\"操作歷史\"，開啟專案操作歷史彈窗。",
+        "en-US": "Please select \"Operation History\" from the action menu to open the project operation history dialog.",
+        "ko-KR": "작업 메뉴에서 \"작업 기록\"을 선택하여 프로젝트 작업 기록 창을 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10243-10286)"
+        ],
+        "$id": 6996
+    },
+    "记录筛选": {
+        "zh-TW": "記錄篩選",
+        "en-US": "Filter Records",
+        "ko-KR": "기록 필터",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10379-10387)"
+        ],
+        "$id": 6997
+    },
+    "可以按操作类型、成员、日期或图纸名称筛选项目操作记录。": {
+        "zh-TW": "可以按操作類型、成員、日期或圖紙名稱篩選專案操作記錄。",
+        "en-US": "You can filter project operation records by action type, member, date, or drawing name.",
+        "ko-KR": "작업 유형, 구성원, 날짜 또는 도면 이름으로 프로젝트 작업 기록을 필터링할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10408-10439)"
+        ],
+        "$id": 6998
+    },
+    "操作历史支持按操作类型、成员、日期和图纸名称筛选记录。": {
+        "zh-TW": "操作歷史支援按操作類型、成員、日期和圖紙名稱篩選記錄。",
+        "en-US": "Operation history supports filtering by action type, member, date, and drawing name.",
+        "ko-KR": "작업 기록은 작업 유형, 구성원, 날짜 및 도면 이름으로 필터링할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10553-10596)"
+        ],
+        "$id": 6999
+    },
+    "时间分组与定位": {
+        "zh-TW": "時間分組與定位",
+        "en-US": "Time Grouping & Location",
+        "ko-KR": "시간 그룹 및 위치",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10687-10698)"
+        ],
+        "$id": 7000
+    },
+    "操作记录按今天、昨天、更早分组展示；点击记录可定位到对应图纸或文件夹，打开图纸可直接跳转编辑器。": {
+        "zh-TW": "操作記錄按今天、昨天、更早分組展示；點擊記錄可定位到對應圖紙或資料夾，開啟圖紙可直接跳轉編輯器。",
+        "en-US": "Operation records are grouped by Today, Yesterday, and Earlier. Click a record to locate the corresponding drawing or folder; opening a drawing jumps directly to the editor.",
+        "ko-KR": "작업 기록은 오늘, 어제, 이전으로 그룹화됩니다. 기록을 클릭하면 해당 도면이나 폴더로 이동하며, 도면을 열면 편집기로 바로 이동합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10719-10783)"
+        ],
+        "$id": 7001
+    },
+    "操作记录会按时间分组展示，支持定位到图纸或文件夹所在位置。": {
+        "zh-TW": "操作記錄會按時間分組展示，支援定位到圖紙或資料夾所在位置。",
+        "en-US": "Operation records are grouped by time and can be located to the drawing or folder position.",
+        "ko-KR": "작업 기록은 시간별로 그룹화되어 표시되며 도면이나 폴더 위치로 이동할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(10907-10952)"
+        ],
+        "$id": 7002
+    },
+    "关闭操作历史弹窗。": {
+        "zh-TW": "關閉操作歷史彈窗。",
+        "en-US": "Close the operation history dialog.",
+        "ko-KR": "작업 기록 창을 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(11271-11284)"
+        ],
+        "$id": 7003
+    },
+    "点击弹窗右上角的关闭按钮关闭操作历史弹窗。": {
+        "zh-TW": "點擊彈窗右上角的關閉按鈕關閉操作歷史彈窗。",
+        "en-US": "Click the close button in the top-right corner of the dialog to close the operation history dialog.",
+        "ko-KR": "창 오른쪽 상단의 닫기 버튼을 클릭하여 작업 기록 창을 닫습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(11467-11492)"
+        ],
+        "$id": 7004
+    },
+    "进入项目": {
+        "zh-TW": "進入項目",
+        "en-US": "Enter the project",
+        "ko-KR": "프로젝트 시작",
+        "$files": [
+            "src/config/tours/project-management-full.ts(11620-11628)"
+        ],
+        "$id": 5068
+    },
+    "点击项目进入文件管理。": {
+        "zh-TW": "點擊項目進入文件管理。",
+        "en-US": "Click on the project to enter file management.",
+        "ko-KR": "항목을 클릭하여 파일 관리에 들어가십시오.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(11649-11664)"
+        ],
+        "$id": 5069
+    },
+    "请点击项目卡片进入项目": {
+        "zh-TW": "請點擊項目卡片進入項目",
+        "en-US": "Please click on the project card to enter the project",
+        "ko-KR": "프로젝트 카드를 클릭하여 프로젝트에 입장하세요",
+        "$files": [
+            "src/config/tours/project-management-full.ts(11777-11792)"
+        ],
+        "$id": 5070
+    },
+    "点击项目卡片可以进入项目文件列表。": {
+        "zh-TW": "點擊項目卡片可以進入項目檔案清單。",
+        "en-US": "Click on the project card to enter the project file list.",
+        "ko-KR": "프로젝트 카드를 클릭하면 프로젝트 파일 목록에 들어갈 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(11878-11899)"
+        ],
+        "$id": 5071
+    },
+    "这里可以上传 DWG、DXF 等 CAD 文件。已存在的图纸可以直接使用。": {
+        "zh-TW": "這裡可以上傳DWG、DXF等CAD檔案。 已存在的圖紙可以直接使用。",
+        "en-US": "You can upload CAD files such as DWG and DXF here. Existing drawings can be used directly.",
+        "ko-KR": "DWG, DXF 등의 CAD 파일을 업로드할 수 있습니다.이미 존재하는 시트는 직접 사용할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(11997-12050)"
+        ],
+        "$id": 7716
+    },
+    "上传文件功能可以上传 DWG、DXF 等 CAD 文件。": {
+        "zh-TW": "上傳文件功能可以上傳DWG、DXF等CAD檔案。",
+        "en-US": "The upload file function can upload CAD files such as DWG, DXF, etc.",
+        "ko-KR": "파일 업로드 기능은 DWG, DXF와 같은 CAD 파일을 업로드할 수 있습니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(12176-12208)"
+        ],
+        "$id": 7717
+    },
+    "等待上传": {
+        "zh-TW": "等待上傳",
+        "en-US": "Waiting for upload",
+        "ko-KR": "업로드 대기 중",
+        "$files": [
+            "src/config/tours/project-management-full.ts(12276-12284)"
+        ],
+        "$id": 5075
+    },
+    "等待文件上传完成...": {
+        "zh-TW": "等待文件上傳完成. ..",
+        "en-US": "Wait for the file upload to complete ..",
+        "ko-KR": "파일 업로드가 완료될 때까지 기다립니다...",
+        "$files": [
+            "src/config/tours/project-management-full.ts(12305-12320)"
+        ],
+        "$id": 5076
+    },
+    "上传完成后，文件会显示在列表中。": {
+        "zh-TW": "上傳完成後,檔案會顯示在清單中。",
+        "en-US": "After the upload is completed, the file will be displayed in the list.",
+        "ko-KR": "업로드가 완료되면 파일이 목록에 표시됩니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(12437-12457)"
+        ],
+        "$id": 5077
+    },
+    "图纸上传完成后，点击图纸文件即可在 CAD 编辑器中打开。": {
+        "zh-TW": "圖紙上傳完成後,點擊圖紙檔案即可在CAD編輯器中打開。",
+        "en-US": "After uploading the drawings, click on the drawing file to open it in the CAD editor.",
+        "ko-KR": "시트 업로드가 완료되면 시트 파일을 클릭하여 CAD 편집기에서 엽니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(12807-12840)"
+        ],
+        "$id": 5876
+    },
+    "点击 DWG 或 DXF 文件可以在编辑器中打开。": {
+        "zh-TW": "點擊DWG或DXF檔案可以在編輯器中打開。",
+        "en-US": "Clicking on a DWG or DXF file can open it in the editor.",
+        "ko-KR": "편집기에서 열려면 DWG 또는 DXF 파일을 클릭합니다.",
+        "$files": [
+            "src/config/tours/project-management-full.ts(12955-12984)"
+        ],
+        "$id": 5085
     },
     "请先选择要复制的文件": {
         "zh-TW": "請先選擇要複製的檔案",
@@ -12732,6 +12753,7 @@
             "src/pages/AdminLogin/index.tsx(7739-7745)",
             "src/pages/Register/PasswordStep.tsx(1981-1987)",
             "src/pages/Login/components/AccountLoginForm.tsx(2455-2461)",
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(3385-3391)",
             "src/pages/Register/hooks/useRegisterForm.ts(8910-8916)",
             "src/pages/Register/hooks/useRegisterForm.ts(9396-9402)",
             "src/pages/UserManagement/UserModals/CreateUserModal.tsx(3961-3967)"
@@ -14152,7 +14174,7 @@
         "ko-KR": "개인정보 처리방침",
         "$files": [
             "src/pages/Legal/PrivacyPolicyPage.tsx(576-584)",
-            "src/pages/Login/index.tsx(15027-15035)",
+            "src/pages/Login/index.tsx(16335-16343)",
             "src/pages/Register/BasicInfoStep.tsx(9068-9076)",
             "src/pages/Register/RegisterLayout.tsx(1320-1328)"
         ],
@@ -14174,7 +14196,7 @@
         "ko-KR": "사용자 프로토콜",
         "$files": [
             "src/pages/Legal/TermsOfServicePage.tsx(572-580)",
-            "src/pages/Login/index.tsx(15153-15161)",
+            "src/pages/Login/index.tsx(16461-16469)",
             "src/pages/Register/BasicInfoStep.tsx(8929-8937)",
             "src/pages/Register/RegisterLayout.tsx(1446-1454)",
             "src/pages/Register/hooks/useRegisterForm.ts(9582-9590)"
@@ -14204,7 +14226,7 @@
         "en-US": "Login",
         "ko-KR": "로그인",
         "$files": [
-            "src/pages/Login/index.tsx(2247-2253)"
+            "src/pages/Login/index.tsx(2373-2379)"
         ],
         "$id": 1404
     },
@@ -14213,7 +14235,7 @@
         "en-US": "Your account has been automatically restored, cancellation has been canceled",
         "ko-KR": "계정이 자동으로 복구되고 로그아웃이 취소됨",
         "$files": [
-            "src/pages/Login/index.tsx(4264-4283)",
+            "src/pages/Login/index.tsx(4904-4923)",
             "src/pages/Login/hooks/useLoginForm.ts(7525-7544)",
             "src/pages/Login/hooks/useLoginForm.ts(10087-10106)"
         ],
@@ -14224,7 +14246,7 @@
         "en-US": "Account Login",
         "ko-KR": "계정 로그인",
         "$files": [
-            "src/pages/Login/index.tsx(10897-10905)"
+            "src/pages/Login/index.tsx(11705-11713)"
         ],
         "$id": 1407
     },
@@ -14233,7 +14255,7 @@
         "en-US": "Phone Login",
         "ko-KR": "휴대폰 로그인",
         "$files": [
-            "src/pages/Login/index.tsx(11164-11172)"
+            "src/pages/Login/index.tsx(12004-12012)"
         ],
         "$id": 1408
     },
@@ -14242,7 +14264,7 @@
         "en-US": "Don't have an account?",
         "ko-KR": "계정이 없으신가요?",
         "$files": [
-            "src/pages/Login/index.tsx(13659-13669)"
+            "src/pages/Login/index.tsx(14788-14798)"
         ],
         "$id": 1409
     },
@@ -14251,7 +14273,7 @@
         "en-US": "Register Now",
         "ko-KR": "지금 가입",
         "$files": [
-            "src/pages/Login/index.tsx(13849-13857)",
+            "src/pages/Login/index.tsx(15002-15010)",
             "src/pages/Register/PasswordStep.tsx(5760-5768)"
         ],
         "$id": 1410
@@ -15052,6 +15074,7 @@
             "src/pages/Profile/ProfileInfoTab.tsx(5190-5197)",
             "src/pages/Profile/ProfileInfoTab.tsx(10516-10523)",
             "src/pages/Register/BasicInfoStep.tsx(2068-2075)",
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(2612-2619)",
             "src/pages/Login/hooks/useLoginForm.ts(5320-5327)",
             "src/pages/Register/hooks/useRegisterForm.ts(9365-9372)",
             "src/pages/UserManagement/UserModals/CreateUserModal.tsx(2532-2539)",
@@ -15500,6 +15523,57 @@
         ],
         "$id": 5186
     },
+    "密码至少10个字符": {
+        "zh-TW": "密碼至少10個字元",
+        "en-US": "Password must be at least 10 characters long",
+        "ko-KR": "암호 최소 10자",
+        "$files": [
+            "src/pages/ResetPassword/resetPasswordSchema.ts(337-350)",
+            "src/pages/Profile/hooks/usePasswordProfile.ts(2798-2811)",
+            "src/pages/Register/hooks/registerFormSchema.ts(989-1002)"
+        ],
+        "$id": 8377
+    },
+    "密码需包含大小写字母、数字、特殊字符中至少三类": {
+        "zh-TW": "密碼需包含大小寫字母、數位、特殊字元中至少三類",
+        "en-US": "The password must contain at least three types of uppercase and lowercase letters, numbers, and special characters",
+        "ko-KR": "암호는 대소문자, 숫자, 특수 문자 중 적어도 세 종류를 포함해야 한다",
+        "$files": [
+            "src/pages/ResetPassword/resetPasswordSchema.ts(446-473)",
+            "src/pages/Profile/hooks/usePasswordProfile.ts(2826-2853)",
+            "src/pages/Register/hooks/registerFormSchema.ts(1130-1157)"
+        ],
+        "$id": 8378
+    },
+    "请确认新密码": {
+        "zh-TW": "請確認新密碼",
+        "en-US": "Please confirm the new password",
+        "ko-KR": "새 비밀번호 확인",
+        "$files": [
+            "src/pages/ResetPassword/resetPasswordSchema.ts(559-569)"
+        ],
+        "$id": 5257
+    },
+    "两次输入的密码不一致": {
+        "zh-TW": "兩次輸入的密碼不一致",
+        "en-US": "The two entered passwords do not match",
+        "ko-KR": "입력한 두 비밀번호가 일치하지 않습니다",
+        "$files": [
+            "src/pages/ResetPassword/resetPasswordSchema.ts(659-673)",
+            "src/pages/Register/hooks/registerFormSchema.ts(1338-1352)",
+            "src/pages/Register/hooks/registerFormSchema.ts(1853-1867)"
+        ],
+        "$id": 1310
+    },
+    "重置密码失败，请检查验证码": {
+        "zh-TW": "重置密碼失敗,請檢查驗證碼",
+        "en-US": "Password reset failed, please check the verification code",
+        "ko-KR": "암호를 재설정하지 못했습니다. 인증 코드를 확인하십시오.",
+        "$files": [
+            "src/pages/ResetPassword/useResetPassword.ts(1245-1262)"
+        ],
+        "$id": 5258
+    },
     "请输入昵称（可选）": {
         "zh-TW": "請輸入昵稱(可選)",
         "en-US": "Please enter a nickname (optional)",
@@ -15715,57 +15789,6 @@
         ],
         "$id": 2806
     },
-    "密码至少10个字符": {
-        "zh-TW": "密碼至少10個字元",
-        "en-US": "Password must be at least 10 characters long",
-        "ko-KR": "암호 최소 10자",
-        "$files": [
-            "src/pages/ResetPassword/resetPasswordSchema.ts(337-350)",
-            "src/pages/Profile/hooks/usePasswordProfile.ts(2798-2811)",
-            "src/pages/Register/hooks/registerFormSchema.ts(989-1002)"
-        ],
-        "$id": 8377
-    },
-    "密码需包含大小写字母、数字、特殊字符中至少三类": {
-        "zh-TW": "密碼需包含大小寫字母、數位、特殊字元中至少三類",
-        "en-US": "The password must contain at least three types of uppercase and lowercase letters, numbers, and special characters",
-        "ko-KR": "암호는 대소문자, 숫자, 특수 문자 중 적어도 세 종류를 포함해야 한다",
-        "$files": [
-            "src/pages/ResetPassword/resetPasswordSchema.ts(446-473)",
-            "src/pages/Profile/hooks/usePasswordProfile.ts(2826-2853)",
-            "src/pages/Register/hooks/registerFormSchema.ts(1130-1157)"
-        ],
-        "$id": 8378
-    },
-    "请确认新密码": {
-        "zh-TW": "請確認新密碼",
-        "en-US": "Please confirm the new password",
-        "ko-KR": "새 비밀번호 확인",
-        "$files": [
-            "src/pages/ResetPassword/resetPasswordSchema.ts(559-569)"
-        ],
-        "$id": 5257
-    },
-    "两次输入的密码不一致": {
-        "zh-TW": "兩次輸入的密碼不一致",
-        "en-US": "The two entered passwords do not match",
-        "ko-KR": "입력한 두 비밀번호가 일치하지 않습니다",
-        "$files": [
-            "src/pages/ResetPassword/resetPasswordSchema.ts(659-673)",
-            "src/pages/Register/hooks/registerFormSchema.ts(1338-1352)",
-            "src/pages/Register/hooks/registerFormSchema.ts(1853-1867)"
-        ],
-        "$id": 1310
-    },
-    "重置密码失败，请检查验证码": {
-        "zh-TW": "重置密碼失敗,請檢查驗證碼",
-        "en-US": "Password reset failed, please check the verification code",
-        "ko-KR": "암호를 재설정하지 못했습니다. 인증 코드를 확인하십시오.",
-        "$files": [
-            "src/pages/ResetPassword/useResetPassword.ts(1245-1262)"
-        ],
-        "$id": 5258
-    },
     "角色权限": {
         "zh-TW": "角色許可權",
         "en-US": "Role permissions",
@@ -15839,6 +15862,277 @@
             "src/pages/RoleManagement/index.tsx(5740-5752)"
         ],
         "$id": 6936
+    },
+    "IP 不在白名单": {
+        "zh-TW": "IP不在白名單",
+        "en-US": "IP is not on the whitelist",
+        "ko-KR": "IP가 화이트리스트에 없습니다.",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/constants.ts(571-583)"
+        ],
+        "$id": 7336
+    },
+    "IP 被拉黑": {
+        "zh-TW": "IP被拉黑",
+        "en-US": "IP has been blocked",
+        "ko-KR": "IP 차단",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/constants.ts(631-641)"
+        ],
+        "$id": 7337
+    },
+    "账号不存在": {
+        "zh-TW": "帳號不存在",
+        "en-US": "Account does not exist.",
+        "ko-KR": "계정이 존재하지 않습니다.",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/constants.ts(692-701)"
+        ],
+        "$id": 7338
+    },
+    "账号不可用": {
+        "zh-TW": "帳號不可用",
+        "en-US": "Account not available",
+        "ko-KR": "계정 사용 불가",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/constants.ts(759-768)"
+        ],
+        "$id": 7339
+    },
+    "非管理员账号": {
+        "zh-TW": "非管理員帳號",
+        "en-US": "Non administrator account",
+        "ko-KR": "비관리자 계정",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/constants.ts(816-826)"
+        ],
+        "$id": 7340
+    },
+    "密码错误": {
+        "zh-TW": "密碼錯誤",
+        "en-US": "Incorrect password",
+        "ko-KR": "비밀번호 오류",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/constants.ts(877-885)"
+        ],
+        "$id": 7341
+    },
+    "该 IP 已在白名单中": {
+        "zh-TW": "該IP已在白名單中",
+        "en-US": "This IP is already on the whitelist",
+        "ko-KR": "이 IP는 이미 화이트리스트에 있습니다",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(2374-2389)"
+        ],
+        "$id": 7342
+    },
+    "确定将该 IP（{ip}）加入管理员白名单？": {
+        "zh-TW": "確定將該IP({ip})加入管理員白名單？",
+        "en-US": "Are you sure to add this IP ({ip}) to the administrator whitelist?",
+        "ko-KR": "이 IP(_ _ $_ $_ $_ _)를 관리자 화이트리스트에 추가하시겠습니까?",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(2465-2491)"
+        ],
+        "$id": 7343
+    },
+    "该 IP 已在黑名单中": {
+        "zh-TW": "該IP已在黑名單中",
+        "en-US": "This IP is already on the blacklist",
+        "ko-KR": "이 IP는 이미 블랙리스트에 있습니다",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(2708-2723)"
+        ],
+        "$id": 7344
+    },
+    "确定将该 IP（{ip}）加入黑名单？": {
+        "zh-TW": "確定將該IP({ip})加入黑名單？",
+        "en-US": "Are you sure to add this IP ({ip}) to the blacklist?",
+        "ko-KR": "이 IP(_ _ $_ $_ $_ _)를 블랙리스트에 추가하시겠습니까?",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(2799-2822)"
+        ],
+        "$id": 7345
+    },
+    "管理员登录被拒记录": {
+        "zh-TW": "管理員登錄被拒記錄",
+        "en-US": "Administrator login denied record",
+        "ko-KR": "관리자 로그인 거부 기록",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(3968-3981)"
+        ],
+        "$id": 7346
+    },
+    "搜索 IP/账号": {
+        "zh-TW": "蒐索IP/帳號",
+        "en-US": "Search IP/Account",
+        "ko-KR": "IP/계정 검색",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(4467-4479)"
+        ],
+        "$id": 7347
+    },
+    "暂无高危访问尝试": {
+        "zh-TW": "暫無高危訪問嘗試",
+        "en-US": "There are currently no high-risk access attempts",
+        "ko-KR": "고위험 방문 시도 없음",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(5994-6006)"
+        ],
+        "$id": 7348
+    },
+    "IP": {
+        "zh-TW": "IP",
+        "en-US": "IP",
+        "ko-KR": "IP",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(6382-6388)"
+        ],
+        "$id": 7349
+    },
+    "次数": {
+        "zh-TW": "次數",
+        "en-US": "Count",
+        "ko-KR": "횟수",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(6456-6462)",
+            "src/pages/ShareManagePage/constants.ts(272-278)"
+        ],
+        "$id": 1403
+    },
+    "拒绝原因": {
+        "zh-TW": "拒絕原因",
+        "en-US": "Reason for rejection",
+        "ko-KR": "거부 이유",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(6518-6526)"
+        ],
+        "$id": 7350
+    },
+    "最近账号": {
+        "zh-TW": "最近帳號",
+        "en-US": "Recent account",
+        "ko-KR": "최근 계정",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(6582-6590)"
+        ],
+        "$id": 7351
+    },
+    "最近尝试": {
+        "zh-TW": "最近嘗試",
+        "en-US": "Recently attempted",
+        "ko-KR": "최근 시도",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(6646-6654)"
+        ],
+        "$id": 7352
+    },
+    "当前状态": {
+        "zh-TW": "當前狀態",
+        "en-US": "Current Status",
+        "ko-KR": "현재 상태",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(6722-6730)"
+        ],
+        "$id": 7353
+    },
+    "白名单": {
+        "zh-TW": "白名單",
+        "en-US": "Whitelist",
+        "ko-KR": "화이트리스트",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(9829-9836)"
+        ],
+        "$id": 7354
+    },
+    "黑名单": {
+        "zh-TW": "黑名單",
+        "en-US": "blacklist",
+        "ko-KR": "블랙리스트",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(10048-10055)"
+        ],
+        "$id": 7355
+    },
+    "未处理": {
+        "zh-TW": "未處理",
+        "en-US": "unprocessed",
+        "ko-KR": "미처리",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(10418-10425)"
+        ],
+        "$id": 7356
+    },
+    "加白": {
+        "zh-TW": "加白",
+        "en-US": "whitening",
+        "ko-KR": "가백",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(11056-11062)"
+        ],
+        "$id": 7357
+    },
+    "拉黑": {
+        "zh-TW": "拉黑",
+        "en-US": "block",
+        "ko-KR": "검게 하다",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(11481-11487)"
+        ],
+        "$id": 7358
+    },
+    "共 {total} 个 IP": {
+        "zh-TW": "共{total}個IP",
+        "en-US": "A total of {total} IP addresses",
+        "ko-KR": "총 _ _ $_ $_ $_ 개의 IP",
+        "$files": [
+            "src/pages/SecurityAccessAttemptPage/index.tsx(12014-12032)"
+        ],
+        "$id": 7359
+    },
+    "缺少转移凭证": {
+        "zh-TW": "缺少轉移憑證",
+        "en-US": "Lack of transfer voucher",
+        "ko-KR": "전송 자격 증명이 없습니다.",
+        "$files": [
+            "src/pages/SessionTransfer/index.tsx(2790-2800)"
+        ],
+        "$id": 8042
+    },
+    "会话转移失败，请重试": {
+        "zh-TW": "會話轉移失敗,請重試",
+        "en-US": "Session transfer failed, please try again",
+        "ko-KR": "세션 전송에 실패했습니다. 다시 시도하십시오.",
+        "$files": [
+            "src/pages/SessionTransfer/index.tsx(3916-3930)"
+        ],
+        "$id": 8043
+    },
+    "正在切换账号...": {
+        "zh-TW": "正在切換帳號. ..",
+        "en-US": "Switching accounts ..",
+        "ko-KR": "계정을 바꾸는 중입니다...",
+        "$files": [
+            "src/pages/SessionTransfer/index.tsx(4650-4663)"
+        ],
+        "$id": 8044
+    },
+    "正在为您切换登录状态": {
+        "zh-TW": "正在為您切換登入狀態",
+        "en-US": "Switching login status for you",
+        "ko-KR": "로그인 상태 전환 중",
+        "$files": [
+            "src/pages/SessionTransfer/index.tsx(4718-4732)"
+        ],
+        "$id": 8045
+    },
+    "会话转移失败": {
+        "zh-TW": "會話轉移失敗",
+        "en-US": "Session transfer failed",
+        "ko-KR": "세션 전송 실패",
+        "$files": [
+            "src/pages/SessionTransfer/index.tsx(5084-5094)"
+        ],
+        "$id": 8046
     },
     "当前 Logo": {
         "zh-TW": "當前Logo",
@@ -16159,7 +16453,7 @@
         "$files": [
             "src/pages/RuntimeConfigPage/ConfigItemRow.tsx(6904-6910)",
             "src/pages/RuntimeConfigPage/CoordinateLogCard.tsx(5805-5811)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11191-11197)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11193-11199)"
         ],
         "$id": 6344
     },
@@ -16826,277 +17120,6 @@
             "src/pages/RuntimeConfigPage/validate.ts(4086-4103)"
         ],
         "$id": 8320
-    },
-    "IP 不在白名单": {
-        "zh-TW": "IP不在白名單",
-        "en-US": "IP is not on the whitelist",
-        "ko-KR": "IP가 화이트리스트에 없습니다.",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/constants.ts(571-583)"
-        ],
-        "$id": 7336
-    },
-    "IP 被拉黑": {
-        "zh-TW": "IP被拉黑",
-        "en-US": "IP has been blocked",
-        "ko-KR": "IP 차단",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/constants.ts(631-641)"
-        ],
-        "$id": 7337
-    },
-    "账号不存在": {
-        "zh-TW": "帳號不存在",
-        "en-US": "Account does not exist.",
-        "ko-KR": "계정이 존재하지 않습니다.",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/constants.ts(692-701)"
-        ],
-        "$id": 7338
-    },
-    "账号不可用": {
-        "zh-TW": "帳號不可用",
-        "en-US": "Account not available",
-        "ko-KR": "계정 사용 불가",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/constants.ts(759-768)"
-        ],
-        "$id": 7339
-    },
-    "非管理员账号": {
-        "zh-TW": "非管理員帳號",
-        "en-US": "Non administrator account",
-        "ko-KR": "비관리자 계정",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/constants.ts(816-826)"
-        ],
-        "$id": 7340
-    },
-    "密码错误": {
-        "zh-TW": "密碼錯誤",
-        "en-US": "Incorrect password",
-        "ko-KR": "비밀번호 오류",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/constants.ts(877-885)"
-        ],
-        "$id": 7341
-    },
-    "该 IP 已在白名单中": {
-        "zh-TW": "該IP已在白名單中",
-        "en-US": "This IP is already on the whitelist",
-        "ko-KR": "이 IP는 이미 화이트리스트에 있습니다",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(2374-2389)"
-        ],
-        "$id": 7342
-    },
-    "确定将该 IP（{ip}）加入管理员白名单？": {
-        "zh-TW": "確定將該IP({ip})加入管理員白名單？",
-        "en-US": "Are you sure to add this IP ({ip}) to the administrator whitelist?",
-        "ko-KR": "이 IP(_ _ $_ $_ $_ _)를 관리자 화이트리스트에 추가하시겠습니까?",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(2465-2491)"
-        ],
-        "$id": 7343
-    },
-    "该 IP 已在黑名单中": {
-        "zh-TW": "該IP已在黑名單中",
-        "en-US": "This IP is already on the blacklist",
-        "ko-KR": "이 IP는 이미 블랙리스트에 있습니다",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(2708-2723)"
-        ],
-        "$id": 7344
-    },
-    "确定将该 IP（{ip}）加入黑名单？": {
-        "zh-TW": "確定將該IP({ip})加入黑名單？",
-        "en-US": "Are you sure to add this IP ({ip}) to the blacklist?",
-        "ko-KR": "이 IP(_ _ $_ $_ $_ _)를 블랙리스트에 추가하시겠습니까?",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(2799-2822)"
-        ],
-        "$id": 7345
-    },
-    "管理员登录被拒记录": {
-        "zh-TW": "管理員登錄被拒記錄",
-        "en-US": "Administrator login denied record",
-        "ko-KR": "관리자 로그인 거부 기록",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(3968-3981)"
-        ],
-        "$id": 7346
-    },
-    "搜索 IP/账号": {
-        "zh-TW": "蒐索IP/帳號",
-        "en-US": "Search IP/Account",
-        "ko-KR": "IP/계정 검색",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(4467-4479)"
-        ],
-        "$id": 7347
-    },
-    "暂无高危访问尝试": {
-        "zh-TW": "暫無高危訪問嘗試",
-        "en-US": "There are currently no high-risk access attempts",
-        "ko-KR": "고위험 방문 시도 없음",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(5994-6006)"
-        ],
-        "$id": 7348
-    },
-    "IP": {
-        "zh-TW": "IP",
-        "en-US": "IP",
-        "ko-KR": "IP",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(6382-6388)"
-        ],
-        "$id": 7349
-    },
-    "次数": {
-        "zh-TW": "次數",
-        "en-US": "Count",
-        "ko-KR": "횟수",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(6456-6462)",
-            "src/pages/ShareManagePage/constants.ts(272-278)"
-        ],
-        "$id": 1403
-    },
-    "拒绝原因": {
-        "zh-TW": "拒絕原因",
-        "en-US": "Reason for rejection",
-        "ko-KR": "거부 이유",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(6518-6526)"
-        ],
-        "$id": 7350
-    },
-    "最近账号": {
-        "zh-TW": "最近帳號",
-        "en-US": "Recent account",
-        "ko-KR": "최근 계정",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(6582-6590)"
-        ],
-        "$id": 7351
-    },
-    "最近尝试": {
-        "zh-TW": "最近嘗試",
-        "en-US": "Recently attempted",
-        "ko-KR": "최근 시도",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(6646-6654)"
-        ],
-        "$id": 7352
-    },
-    "当前状态": {
-        "zh-TW": "當前狀態",
-        "en-US": "Current Status",
-        "ko-KR": "현재 상태",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(6722-6730)"
-        ],
-        "$id": 7353
-    },
-    "白名单": {
-        "zh-TW": "白名單",
-        "en-US": "Whitelist",
-        "ko-KR": "화이트리스트",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(9829-9836)"
-        ],
-        "$id": 7354
-    },
-    "黑名单": {
-        "zh-TW": "黑名單",
-        "en-US": "blacklist",
-        "ko-KR": "블랙리스트",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(10048-10055)"
-        ],
-        "$id": 7355
-    },
-    "未处理": {
-        "zh-TW": "未處理",
-        "en-US": "unprocessed",
-        "ko-KR": "미처리",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(10418-10425)"
-        ],
-        "$id": 7356
-    },
-    "加白": {
-        "zh-TW": "加白",
-        "en-US": "whitening",
-        "ko-KR": "가백",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(11056-11062)"
-        ],
-        "$id": 7357
-    },
-    "拉黑": {
-        "zh-TW": "拉黑",
-        "en-US": "block",
-        "ko-KR": "검게 하다",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(11481-11487)"
-        ],
-        "$id": 7358
-    },
-    "共 {total} 个 IP": {
-        "zh-TW": "共{total}個IP",
-        "en-US": "A total of {total} IP addresses",
-        "ko-KR": "총 _ _ $_ $_ $_ 개의 IP",
-        "$files": [
-            "src/pages/SecurityAccessAttemptPage/index.tsx(12014-12032)"
-        ],
-        "$id": 7359
-    },
-    "缺少转移凭证": {
-        "zh-TW": "缺少轉移憑證",
-        "en-US": "Lack of transfer voucher",
-        "ko-KR": "전송 자격 증명이 없습니다.",
-        "$files": [
-            "src/pages/SessionTransfer/index.tsx(2790-2800)"
-        ],
-        "$id": 8042
-    },
-    "会话转移失败，请重试": {
-        "zh-TW": "會話轉移失敗,請重試",
-        "en-US": "Session transfer failed, please try again",
-        "ko-KR": "세션 전송에 실패했습니다. 다시 시도하십시오.",
-        "$files": [
-            "src/pages/SessionTransfer/index.tsx(3916-3930)"
-        ],
-        "$id": 8043
-    },
-    "正在切换账号...": {
-        "zh-TW": "正在切換帳號. ..",
-        "en-US": "Switching accounts ..",
-        "ko-KR": "계정을 바꾸는 중입니다...",
-        "$files": [
-            "src/pages/SessionTransfer/index.tsx(4650-4663)"
-        ],
-        "$id": 8044
-    },
-    "正在为您切换登录状态": {
-        "zh-TW": "正在為您切換登入狀態",
-        "en-US": "Switching login status for you",
-        "ko-KR": "로그인 상태 전환 중",
-        "$files": [
-            "src/pages/SessionTransfer/index.tsx(4718-4732)"
-        ],
-        "$id": 8045
-    },
-    "会话转移失败": {
-        "zh-TW": "會話轉移失敗",
-        "en-US": "Session transfer failed",
-        "ko-KR": "세션 전송 실패",
-        "$files": [
-            "src/pages/SessionTransfer/index.tsx(5084-5094)"
-        ],
-        "$id": 8046
     },
     "分享管理": {
         "zh-TW": "分享管理",
@@ -19199,24 +19222,6 @@
         ],
         "$id": 7493
     },
-    "加载审计日志失败": {
-        "zh-TW": "加載稽核日誌失敗",
-        "en-US": "Failed to load audit log",
-        "ko-KR": "감사 로그 로드 실패",
-        "$files": [
-            "src/pages/AuditLogPage/hooks/useAuditLog.ts(1644-1656)"
-        ],
-        "$id": 5326
-    },
-    "加载统计信息失败": {
-        "zh-TW": "加載統計資訊失敗",
-        "en-US": "Failed to load statistical information",
-        "ko-KR": "통계 로드 실패",
-        "$files": [
-            "src/pages/AuditLogPage/hooks/useAuditLog.ts(2393-2405)"
-        ],
-        "$id": 5327
-    },
     "用户 ID": {
         "zh-TW": "用戶ID",
         "en-US": "User ID",
@@ -19359,6 +19364,24 @@
             "src/pages/AuditLogPage/components/AuditStatsGrid.tsx(1170-1177)"
         ],
         "$id": 2743
+    },
+    "加载审计日志失败": {
+        "zh-TW": "加載稽核日誌失敗",
+        "en-US": "Failed to load audit log",
+        "ko-KR": "감사 로그 로드 실패",
+        "$files": [
+            "src/pages/AuditLogPage/hooks/useAuditLog.ts(1644-1656)"
+        ],
+        "$id": 5326
+    },
+    "加载统计信息失败": {
+        "zh-TW": "加載統計資訊失敗",
+        "en-US": "Failed to load statistical information",
+        "ko-KR": "통계 로드 실패",
+        "$files": [
+            "src/pages/AuditLogPage/hooks/useAuditLog.ts(2393-2405)"
+        ],
+        "$id": 5327
     },
     "IP 地址": {
         "zh-TW": "IP 位址",
@@ -20644,6 +20667,78 @@
         ],
         "$id": 1115
     },
+    "创建失败，请稍后重试": {
+        "zh-TW": "建立失敗，請稍後重試",
+        "en-US": "Creation failed, please try again later",
+        "ko-KR": "생성에 실패했습니다. 잠시 후 다시 시도하세요",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(1921-1935)"
+        ],
+        "$id": 8548
+    },
+    "系统首次启动": {
+        "zh-TW": "系統首次啟動",
+        "en-US": "First-time setup",
+        "ko-KR": "최초 설정",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(2158-2168)"
+        ],
+        "$id": 8549
+    },
+    "请创建首个管理员账号，创建后即可登录管理本系统": {
+        "zh-TW": "請建立第一個管理員帳號，建立後即可登入管理本系統",
+        "en-US": "Create the first administrator account. You can log in and manage this system once created.",
+        "ko-KR": "첫 번째 관리자 계정을 생성하세요. 생성 후 이 시스템을 관리하기 위해 로그인할 수 있습니다.",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(2227-2254)"
+        ],
+        "$id": 8550
+    },
+    "3-20 位字母、数字或下划线": {
+        "zh-TW": "3-20 位字母、數字或底線",
+        "en-US": "3-20 letters, digits or underscores",
+        "ko-KR": "3~20자의 영문, 숫자 또는 밑줄",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(3063-3082)"
+        ],
+        "$id": 8551
+    },
+    "至少 8 位，需包含大小写字母、数字、特殊字符": {
+        "zh-TW": "至少 8 位，需包含大小寫字母、數字、特殊字元",
+        "en-US": "At least 8 characters, including upper/lowercase letters, digits and special characters",
+        "ko-KR": "8자 이상, 대소문자/숫자/특수문자 포함",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(3934-3961)"
+        ],
+        "$id": 8552
+    },
+    "邮箱（可选）": {
+        "zh-TW": "電子郵件（選填）",
+        "en-US": "Email (optional)",
+        "ko-KR": "이메일 (선택)",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(4624-4634)"
+        ],
+        "$id": 8553
+    },
+    "用于接收通知，可留空": {
+        "zh-TW": "用於接收通知，可留空",
+        "en-US": "For receiving notifications, can be left empty",
+        "ko-KR": "알림 수신에 사용되며 비워 둘 수 있습니다",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(4960-4974)"
+        ],
+        "$id": 8554
+    },
+    "创建并登录": {
+        "zh-TW": "创建并登录",
+        "en-US": "创建并登录",
+        "ko-KR": "创建并登录",
+        "$files": [
+            "src/pages/Login/components/FirstAdminSetupForm.tsx(5392-5401)"
+        ],
+        "$id": 8555
+    },
     "欢迎回来": {
         "zh-TW": "歡迎回來",
         "en-US": "Welcome back",
@@ -21274,7 +21369,7 @@
         "ko-KR": "설치",
         "$files": [
             "src/pages/Profile/hooks/usePasswordProfile.ts(3925-3931)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(13700-13706)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(13702-13708)"
         ],
         "$id": 4785
     },
@@ -22332,7 +22427,7 @@
             "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(5016-5029)",
             "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(5642-5655)",
             "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(6843-6856)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8949-8962)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8951-8964)"
         ],
         "$id": 6317
     },
@@ -22441,7 +22536,7 @@
         "ko-KR": "패턴별 삭제",
         "$files": [
             "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(7869-7878)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(14996-15005)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(14998-15007)"
         ],
         "$id": 6329
     },
@@ -22454,21 +22549,21 @@
         ],
         "$id": 6330
     },
-    "已删除部分缓存，但已达单次删除条数上限，仍有匹配键未删除": {
-        "zh-TW": "已删除部分缓存，但已达单次删除条数上限，仍有匹配键未删除",
-        "en-US": "已删除部分缓存，但已达单次删除条数上限，仍有匹配键未删除",
-        "ko-KR": "已删除部分缓存，但已达单次删除条数上限，仍有匹配键未删除",
+    "已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除": {
+        "zh-TW": "已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除",
+        "en-US": "已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除",
+        "ko-KR": "已删除部分缓存，但已达单次删除条数上限，可能仍有匹配键未删除",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8471-8503)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8471-8505)"
         ],
-        "$id": 8505
+        "$id": 8533
     },
     "按模式删除成功": {
         "zh-TW": "按模式刪除成功",
         "en-US": "Deleted by pattern successfully",
         "ko-KR": "패턴별 삭제 성공",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8574-8585)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8576-8587)"
         ],
         "$id": 6331
     },
@@ -22477,7 +22572,7 @@
         "en-US": "Failed to delete by pattern",
         "ko-KR": "패턴별 삭제 실패",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8695-8706)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(8697-8708)"
         ],
         "$id": 6332
     },
@@ -22486,7 +22581,7 @@
         "en-US": "Cache refreshed successfully",
         "ko-KR": "캐시 새로고침 성공",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9459-9469)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9461-9471)"
         ],
         "$id": 6333
     },
@@ -22495,7 +22590,7 @@
         "en-US": "Cache does not exist, cannot refresh",
         "ko-KR": "캐시가 없어 새로고침할 수 없음",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9473-9487)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9475-9489)"
         ],
         "$id": 6334
     },
@@ -22504,7 +22599,7 @@
         "en-US": "Failed to refresh cache",
         "ko-KR": "캐시 새로고침 실패",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9607-9617)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9609-9619)"
         ],
         "$id": 6335
     },
@@ -22513,8 +22608,8 @@
         "en-US": "重置监控统计",
         "ko-KR": "重置监控统计",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9822-9832)",
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(15218-15228)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9824-9834)",
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(15220-15230)"
         ],
         "$id": 8389
     },
@@ -22523,7 +22618,7 @@
         "en-US": "只重置后端进程内的 L1 内存缓存与命中统计。不会删除 Redis 中的数据，会话、限流计数、IP 黑名单与缓存版本一律不动，不影响任何用户的登录状态。需要清 Redis 请用「按模式删除」。",
         "ko-KR": "只重置后端进程内的 L1 内存缓存与命中统计。不会删除 Redis 中的数据，会话、限流计数、IP 黑名单与缓存版本一律不动，不影响任何用户的登录状态。需要清 Redis 请用「按模式删除」。",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9851-9961)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9853-9963)"
         ],
         "$id": 8390
     },
@@ -22532,7 +22627,7 @@
         "en-US": "确认重置",
         "ko-KR": "确认重置",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9992-10000)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(9994-10002)"
         ],
         "$id": 8391
     },
@@ -22541,7 +22636,7 @@
         "en-US": "已重置 L1 内存缓存与监控统计",
         "ko-KR": "已重置 L1 内存缓存与监控统计",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10368-10388)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10370-10390)"
         ],
         "$id": 8392
     },
@@ -22550,7 +22645,7 @@
         "en-US": "重置监控统计失败",
         "ko-KR": "重置监控统计失败",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10513-10525)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10515-10527)"
         ],
         "$id": 8393
     },
@@ -22559,7 +22654,7 @@
         "en-US": "Cache Key Operations",
         "ko-KR": "캐시 Key 작업",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10931-10944)",
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10933-10946)",
             "src/pages/SystemMonitorPage/components/CacheMonitorTab.tsx(2886-2899)"
         ],
         "$id": 6341
@@ -22569,7 +22664,7 @@
         "en-US": "Querying, setting, and deleting cache entries",
         "ko-KR": "캐시 엔트리 질의, 설정 및 삭제",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10967-10983)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(10969-10985)"
         ],
         "$id": 6342
     },
@@ -22578,7 +22673,7 @@
         "en-US": "Admin Mode",
         "ko-KR": "관리자 모드",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11087-11096)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11089-11098)"
         ],
         "$id": 6343
     },
@@ -22587,7 +22682,7 @@
         "en-US": "L1 在后端进程内存，L2 在 Redis；按模式删除只作用于 Redis",
         "ko-KR": "L1 在后端进程内存，L2 在 Redis；按模式删除只作用于 Redis",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11331-11372)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11333-11374)"
         ],
         "$id": 8394
     },
@@ -22596,7 +22691,7 @@
         "en-US": "缓存 Key（点击选择或输入筛选）",
         "ko-KR": "缓存 Key（点击选择或输入筛选）",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11867-11888)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(11869-11890)"
         ],
         "$id": 8395
     },
@@ -22605,7 +22700,7 @@
         "en-US": "Query",
         "ko-KR": "조회",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(12245-12251)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(12247-12253)"
         ],
         "$id": 6346
     },
@@ -22614,7 +22709,7 @@
         "en-US": "Cache Value",
         "ko-KR": "캐시 값",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(13006-13013)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(13008-13015)"
         ],
         "$id": 6347
     },
@@ -22623,7 +22718,7 @@
         "en-US": "TTL (s)",
         "ko-KR": "TTL(초)",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(13284-13294)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(13286-13296)"
         ],
         "$id": 6348
     },
@@ -22632,7 +22727,7 @@
         "en-US": "该键属于基础设施，不允许删除",
         "ko-KR": "该键属于基础设施，不允许删除",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(14277-14295)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(14279-14297)"
         ],
         "$id": 8396
     },
@@ -22641,7 +22736,7 @@
         "en-US": "匹配模式（点击选择或输入筛选）",
         "ko-KR": "匹配模式（点击选择或输入筛选）",
         "$files": [
-            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(14557-14576)"
+            "src/pages/SystemMonitorPage/components/CacheKeyOperations.tsx(14559-14578)"
         ],
         "$id": 8397
     },

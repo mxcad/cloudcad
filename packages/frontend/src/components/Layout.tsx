@@ -764,7 +764,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         {/* 弱口令软提示（仅 ADMIN）：后端 passwordUnchanged = isAdmin && passwordChangedAt === null。
             所有改密入口都过 assertPasswordPolicy（拒绝弱口令），故「当前口令可能过弱」
             ⇔「部署初始口令从未改过」，无需新增字段/迁移即可判定。软提示不拦截、不设关闭按钮，
-            改密成功即自动消失（与上方到期横幅同形态）。点击进入个人中心（含修改密码页签）。 */}
+            改密成功即自动消失（与上方到期横幅同形态）。点击进入个人中心（含修改密码页签）。
+            文案按安全模式分档：secure 模式初始口令不合规、需立即改；normal 模式初始口令
+            是正当默认（DEFAULT_ADMIN_PASSWORD），改成建议式而非合规式，避免误导。 */}
         {user?.role?.name === 'ADMIN' &&
           (user as { passwordUnchanged?: boolean }).passwordUnchanged && (
             <div
@@ -783,7 +785,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                   style={{ color: 'var(--warning)' }}
                 />
                 <span className="text-sm" style={{ color: 'var(--warning)' }}>
-                  {t('您当前仍在使用首次部署设置的初始密码，请立即修改')}
+                  {publicConfig.securityMode === 'secure'
+                    ? t('您当前仍在使用首次部署设置的初始密码，请立即修改')
+                    : t('本地测试模式，建议在生产部署前改为强口令')}
                 </span>
                 <Button
                   variant="secondary"
