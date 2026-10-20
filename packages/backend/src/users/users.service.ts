@@ -67,8 +67,12 @@ export class UsersService implements IUserService {
     return this.crudService.findByEmailWithPassword(email);
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<ICreatedUser> {
-    return this.crudService.update(id, updateUserDto);
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    operatorId: string
+  ): Promise<ICreatedUser> {
+    return this.crudService.update(id, updateUserDto, operatorId);
   }
 
   /**
@@ -278,8 +282,12 @@ export class UsersService implements IUserService {
     return this.statusService.restoreAccount(userId, verificationMethod, code);
   }
 
-  async updateStatus(id: string, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED') {
-    return this.statusService.updateStatus(id, status);
+  async updateStatus(
+    id: string,
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
+    operatorId: string
+  ) {
+    return this.statusService.updateStatus(id, status, operatorId);
   }
 
   async validatePassword(
@@ -302,7 +310,8 @@ export class UsersService implements IUserService {
     const avatarUrl = await this.saveAvatarToDisk(userId, buffer, ext);
     this.logger.log(`头像上传成功：userId=${userId}`);
 
-    return this.crudService.update(userId, { avatar: avatarUrl });
+    // 仅更新 avatar：两道自我降权守卫在 nextRoleId/nextStatus 为空时早退，此路径不触发任何不变量
+    return this.crudService.update(userId, { avatar: avatarUrl }, userId);
   }
 
   /**
@@ -387,7 +396,8 @@ export class UsersService implements IUserService {
 
     try {
       const avatarUrl = await this.saveAvatarToDisk(userId, buffer, ext);
-      await this.crudService.update(userId, { avatar: avatarUrl });
+      // 登录/注册时的系统写入，仅更新 avatar：操作者取用户自身，守卫对此路径无影响
+      await this.crudService.update(userId, { avatar: avatarUrl }, userId);
       this.logger.log(`微信头像已同步到本地：userId=${userId}`);
       return avatarUrl;
     } catch (error) {

@@ -61,8 +61,12 @@ export interface IUserService {
   /** 根据邮箱查询用户详情 */
   findByEmail(email: string): Promise<IUserDetail>;
 
-  /** 更新用户信息 */
-  update(id: string, dto: unknown): Promise<ICreatedUser>;
+  /** 更新用户信息；operatorId 为操作者 ID（谁在改），用于自我降权与最后一个管理员不变量 */
+  update(
+    id: string,
+    dto: unknown,
+    operatorId: string
+  ): Promise<ICreatedUser>;
 
   /**
    * 同步微信头像到本地存储：下载微信头像并落盘，成功后把用户 avatar 更新为本地 URL。

@@ -354,8 +354,15 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: 404, description: '用户不存在' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  @ApiResponse({ status: 403, description: '不能修改自己的角色或状态' })
+  @ApiResponse({ status: 409, description: '不能移除最后一个管理员的用户管理权限' })
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    // operatorId 供自我降权与「最后一个管理员」不变量判定（UserCrudService）
+    return this.usersService.update(id, updateUserDto, req.user.id);
   }
 
   @Delete(':id')
@@ -389,11 +396,18 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: 403, description: '不能修改自己的账户状态' })
+  @ApiResponse({ status: 409, description: '不能移除最后一个管理员的用户管理权限' })
   updateStatus(
     @Param('id') id: string,
-    @Body() updateUserStatusDto: UpdateUserStatusDto
+    @Body() updateUserStatusDto: UpdateUserStatusDto,
+    @Request() req: AuthenticatedRequest
   ) {
-    return this.usersService.updateStatus(id, updateUserStatusDto.status);
+    return this.usersService.updateStatus(
+      id,
+      updateUserStatusDto.status,
+      req.user.id
+    );
   }
 
   @Patch(':id/membership')

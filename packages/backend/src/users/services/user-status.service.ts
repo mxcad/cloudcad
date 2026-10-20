@@ -20,6 +20,11 @@ import { I18nContext } from 'nestjs-i18n';
 import { IRuntimeConfigService } from '@cloudcad/contracts';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
+import {
+  assertNotSelfStatusChange,
+  assertKeepsUserAdminSurvivor,
+  roleGrantsUserAdmin,
+} from './admin-privilege-guard';
 
 @Injectable()
 export class UserStatusService {
@@ -313,8 +318,33 @@ export class UserStatusService {
     }
   }
 
-  async updateStatus(id: string, status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED') {
+  async updateStatus(
+    id: string,
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED',
+    operatorId: string
+  ) {
     try {
+      const existing = await this.prisma.user.findUnique({
+        where: { id },
+        select: { id: true, roleId: true, status: true },
+      });
+      if (!existing) {
+        throw new NotFoundException(
+          I18nContext.current()?.t('error.user.not_found') ?? '用户不存在'
+        );
+      }
+
+      // 挂起唯一的用户管理员等于关掉整个用户管理入口，故与改角色共用同一套不变量
+      assertNotSelfStatusChange(operatorId, id, status, existing.status);
+      if (status !== existing.status) {
+        await assertKeepsUserAdminSurvivor(
+          this.prisma,
+          id,
+          await roleGrantsUserAdmin(this.prisma, existing.roleId),
+          status === 'ACTIVE'
+        );
+      }
+
       const user = await this.prisma.user.update({
         where: { id }, data: { status },
         select: {
