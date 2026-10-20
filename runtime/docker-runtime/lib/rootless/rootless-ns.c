@@ -219,10 +219,13 @@ int main(int argc, char **argv) {
         const char *nu = newuidmap ? newuidmap : "newuidmap";
         const char *ng = newgidmap ? newgidmap : "newgidmap";
         char cmd[600];
-        snprintf(cmd, sizeof cmd, "%s %ld \"0 %ld 1\" \"1 %ld %ld\" >/dev/null 2>&1",
+        // newuidmap/newgidmap 的每个映射是「独立参数」(uid loweruid count)，不是带引号的整串——
+        // 旧代码把 "0 uid 1" 当单个参数传，newuidmap 报 "Not enough arguments" 而静默失败 →
+        // 永远降级单段映射（仅能跑全 0:0 镜像，拉不动含非 0 uid 的基础镜像层，lchown EINVAL）。
+        snprintf(cmd, sizeof cmd, "%s %ld 0 %ld 1 1 %ld %ld >/dev/null 2>&1",
                  nu, (long)child, real_uid, uid_start, uid_count);
         if (system(cmd) == 0) {
-            snprintf(cmd, sizeof cmd, "%s %ld \"0 %ld 1\" \"1 %ld %ld\" >/dev/null 2>&1",
+            snprintf(cmd, sizeof cmd, "%s %ld 0 %ld 1 1 %ld %ld >/dev/null 2>&1",
                      ng, (long)child, real_gid, gid_start, gid_count);
             if (system(cmd) == 0) have_newuidmap = 1;
         }

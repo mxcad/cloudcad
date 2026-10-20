@@ -331,6 +331,8 @@ async function ensurePackDocker() {
   const rootless = require(path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'lib', 'rootless'));
   // rootless 完整网络需 slirp4netns（拉取基础镜像用）；best-effort（缺失则降级 plain-netns）
   await ensureSlirp4netns(PACK_DOCKER_DIR);
+  // rootless dockerd 启动要求 PATH 里有 rootlesskit-docker-proxy（端口实际走 slirp hostfwd，桩即可）
+  ensureRootlessKitDockerProxy(PACK_DOCKER_DIR);
   const res = rootless.start({
     deployDir: PROJECT_ROOT,
     dockerDir: PACK_DOCKER_DIR,
@@ -732,8 +734,30 @@ function step2BuildAppImage(version) {
   if (process.env.NPM_REGISTRY) buildArgs.push('--build-arg', `NPM_REGISTRY=${process.env.NPM_REGISTRY}`);
   // 受限网络：apk add 走用户指定的 alpine 镜像源（Dockerfile.app 的 ALPINE_MIRROR build-arg，替换官方 dl-cdn）
   if (process.env.ALPINE_MIRROR) buildArgs.push('--build-arg', `ALPINE_MIRROR=${process.env.ALPINE_MIRROR}`);
-  const res = run('docker', buildArgs, { timeoutMs: 60 * 60000 });
+  // rootless 打包机（用户命名空间）：classic builder 的层提交路径在 rootless+overlay2
+  // （无内核原生 diff，用户态 diff 兜底）下复杂多阶段构建会丢层（实测 step 33 COPY 后
+  // "layer does not exist"，20.10.24/26.1.4 复现一致）→ 恒走 dockerd 内置 BuildKit
+  // （20.10 客户端 DOCKER_BUILDKIT=1 即用内置 buildkit，无需 buildx 插件；rootless 下
+  // 实测全量多阶段构建通过）。system/root 模式 classic builder 正常，不改变其行为。
+  const buildEnv = PACK_DOCKER_MODE === 'rootless' ? { ...process.env, DOCKER_BUILDKIT: '1' } : process.env;
+  const res = run('docker', buildArgs, { timeoutMs: 60 * 60000, env: buildEnv });
   if (res.status !== 0) fail('app 镜像构建失败');
+  // 多阶段构建的中间镜像（<none>）对后续步骤无用，及时清掉释放数据目录空间
+  //（磁盘紧张的打包机上，builder 链层可达数 GB，不清会在 docker save/归档阶段写满磁盘）
+  pruneDanglingImages();
+}
+
+/**
+ * 清理 dangling（无 tag 的 <none>）中间镜像。已 tag 的镜像（cloudcad/app、cloudcad/pg、
+ * 基础镜像）不受影响；仅释放独占层。best-effort：失败不阻塞打包。
+ */
+function pruneDanglingImages() {
+  const res = run('docker', ['image', 'prune', '-f'], { capture: true, timeoutMs: 5 * 60000 });
+  if (res.status === 0) {
+    log(`已清理 dangling 中间镜像：${(res.stdout || '').trim().split('\n').pop()}`);
+  } else {
+    log(`警告：dangling 镜像清理失败（不阻塞打包）：${(res.stderr || res.stdout || '').trim().split('\n').pop()}`);
+  }
 }
 
 /**
@@ -811,6 +835,8 @@ function step3TagInfraImages() {
   }
   run('docker', ['tag', REDIS_IMAGE, 'cloudcad/redis:7-alpine']);
   log(`${REDIS_IMAGE} → cloudcad/redis:7-alpine`);
+  // pg 构建的中间镜像同样清理，给 step4 docker save 腾出空间
+  pruneDanglingImages();
 }
 
 function step4SaveImages(imagesDir, version) {
@@ -1004,7 +1030,26 @@ async function step5DockerBinaries(dockerDir) {
   // slirp4netns 静态二进制（rootless 完整网络兜底；best-effort——失败不阻塞出包，
   // 目标机 rootless 模式将降级 plain-netns，或装系统 slirp4netns 后重跑 start.sh）
   await ensureSlirp4netns(dockerDir);
+  // rootlesskit-docker-proxy 桩（rootless dockerd 启动的 PATH 存在性检查；端口走 slirp hostfwd）
+  ensureRootlessKitDockerProxy(dockerDir);
   log('Docker 静态二进制 + compose v2 就位');
+}
+
+/**
+ * rootlesskit-docker-proxy 桩就位：rootless 模式 dockerd 启动时 exec.LookPath 该二进制，
+ * 缺失则 daemon 启动失败。本项目 rootless 架构下容器/服务端口经 slirp4netns hostfwd 暴露，
+ * 代理从不实际调用，vendor 桩（shell 脚本，无架构依赖）仅满足存在性检查。
+ * @param {string} dir 目标 docker/ 目录
+ */
+function ensureRootlessKitDockerProxy(dir) {
+  const vendored = path.join(PROJECT_ROOT, 'runtime', 'docker-runtime', 'vendor', 'rootlesskit-docker-proxy');
+  const dest = path.join(dir, 'rootlesskit-docker-proxy');
+  if (!fs.existsSync(vendored)) {
+    log(`警告：vendor 桩缺失（${vendored}），rootless 目标机 dockerd 将无法启动`);
+    return;
+  }
+  fs.copyFileSync(vendored, dest);
+  fs.chmodSync(dest, 0o755);
 }
 
 /**
@@ -1028,7 +1073,15 @@ async function ensureSlirp4netns(dockerDir) {
   //    动态版（发行版 1.0.1，需 GLIBC_2.33+）会 exec 失败，静态版不受 glibc 影响。
   const vendored = path.join(VENDOR_SLIRP_DIR, `slirp4netns-${slirpArch}`);
   if (fs.existsSync(vendored)) {
-    fs.copyFileSync(vendored, dest);
+    // dest 与内置版内容一致则跳过拷贝：打包机 rootless dockerd 运行时 slirp 进程持有该二进制，
+    // 直接覆写 ETXTBSY（Linux 不允许写正被执行的文本文件）。不一致时先写临时文件再 rename
+    // 原子换 inode（运行中实例不受影响，新 exec 拿到新二进制）。
+    const same = fs.existsSync(dest) && fs.readFileSync(vendored).equals(fs.readFileSync(dest));
+    if (!same) {
+      const tmp = path.join(dockerDir, '.slirp4netns-vendor');
+      fs.copyFileSync(vendored, tmp);
+      fs.renameSync(tmp, dest);
+    }
     fs.chmodSync(dest, 0o755);
     let runnable = false;
     let detail = '';

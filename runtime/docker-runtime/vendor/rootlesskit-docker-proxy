@@ -1,0 +1,8 @@
+#!/bin/sh
+# 桩二进制：rootless 模式 dockerd 启动时要求 PATH 里有 rootlesskit-docker-proxy
+# （官方 rootlesskit 附带，用于把容器端口转发到宿主）。
+# 本项目 rootless 架构下服务端口经 slirp4netns hostfwd 暴露（见 runtime/docker-runtime/lib/rootless.js），
+# 该代理从不实际调用；桩仅满足 dockerd 的 PATH 存在性检查。
+# 若真被调用说明端口暴露路径配置有误，显式报错。
+echo "rootlesskit-docker-proxy stub invoked: should never happen (slirp4netns hostfwd handles port exposure)" >&2
+exit 1
