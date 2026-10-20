@@ -834,6 +834,24 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     });
     const rowsByKey = new Map(rows.map((row) => [row.key, row]));
 
+    // profile 目标值是代码里声明的常量，不走 set() 的入参校验——越界值会被静默写库，
+    // 然后业务代码按一个不在 input.min/max 内的配置运行。这里复用 set() 的同一套
+    // validateValue 提前拦下，失败在写库之前。
+    const invalidTargets = defs
+      .map((def) => {
+        const reason = this.validateValue(def, def.profiles![target]);
+        return reason === null ? null : { key: def.key, reason };
+      })
+      .filter((entry): entry is { key: string; reason: string } => entry !== null);
+    if (invalidTargets.length > 0) {
+      const detail = invalidTargets.map((e) => `${e.key}（${e.reason}）`).join('；');
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.config_extra.invalid_profile_target', {
+          args: { keys: detail },
+        }) ?? `profile 目标值无效: ${detail}`
+      );
+    }
+
     const entries = defs.map((def) => {
       const row = rowsByKey.get(def.key) ?? null;
       const { value: currentValue } = this.resolveValue(def, row);

@@ -1055,6 +1055,41 @@ describe("RuntimeConfigService", () => {
 					.map((d) => d.key),
 			).toEqual([]);
 		});
+
+		it("每个 profile 目标值都必须落在自身 input.min/max 区间内", () => {
+			// profile 目标值是代码常量、不走 set() 的入参校验；越界值会被静默写库，
+			// 然后业务代码按一个不在界内的配置运行。与 service 侧的运行时守卫同源，
+			// 这里让它在测试期就暴露。
+			const validate = (
+				service as unknown as {
+					validateValue: (
+						def: RuntimeConfigDefinition,
+						value: unknown,
+					) => string | null;
+				}
+			).validateValue.bind(service);
+			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => d.profiles != null,
+			)
+				.flatMap((d) => {
+					const secure = validate(d, d.profiles!.secure);
+					const normal = validate(d, d.profiles!.normal);
+					return [
+						...(secure === null ? [] : [{ key: d.key, mode: "secure", reason: secure }]),
+						...(normal === null ? [] : [{ key: d.key, mode: "normal", reason: normal }]),
+					];
+				});
+			expect(offenders).toEqual([]);
+		});
+
+		it("两个 profile 的目标值必须不同（同值键放进 profile 集就是静默空操作）", () => {
+			// secure 与 normal 填同一个值，该键参与批量应用但切换模式对毫无效果——
+			// 界面显示已切换、实际什么都没变，正是 ADR-0077 D5 要消灭的「静默偏离」。
+			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => d.profiles != null && JSON.stringify(d.profiles.secure) === JSON.stringify(d.profiles.normal),
+			).map((d) => d.key);
+			expect(offenders).toEqual([]);
+		});
 	});
 	// ==================== 键登记完整性 ====================
 	describe("getValue 键登记完整性", () => {
