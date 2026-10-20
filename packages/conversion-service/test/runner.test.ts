@@ -337,3 +337,116 @@ describe('MxcadRunner.execute newpath 补齐', () => {
     assert.equal(result.newpath, '');
   });
 });
+
+describe('MxcadRunner 双视角路径翻译（Windows 宿主 docker 形态，#440）', () => {
+  // 前缀由 docker-runtime hostProcessSpec 仅对 Windows 宿主注入；测试用 env 模拟
+  const savedEnv: { c?: string; h?: string } = {};
+  const setPrefixes = (c?: string, h?: string) => {
+    if (c === undefined) delete process.env.CONTAINER_PATH_PREFIX;
+    else process.env.CONTAINER_PATH_PREFIX = c;
+    if (h === undefined) delete process.env.HOST_PATH_PREFIX;
+    else process.env.HOST_PATH_PREFIX = h;
+  };
+
+  // 直调 _mapInbound/_mapOutbound：行为与平台无关（不经 _resolvePath 的 cwd 解析），
+  // 保证 CI（linux）与 Windows 打包机断言一致
+  it('前缀未注入：入站/出站均 no-op（裸机 / Linux 宿主 / 嵌入式形态两侧路径天然一致）', () => {
+    savedEnv.c = process.env.CONTAINER_PATH_PREFIX;
+    savedEnv.h = process.env.HOST_PATH_PREFIX;
+    setPrefixes(undefined, undefined);
+    const runner = new MxcadRunner();
+    assert.equal(runner._mapInbound('/app/data/uploads/a.mxweb'), '/app/data/uploads/a.mxweb');
+    assert.equal(runner._mapOutbound('/app/data/exports/a.dwg'), '/app/data/exports/a.dwg');
+    setPrefixes(savedEnv.c, savedEnv.h);
+  });
+
+  it('入站：容器视角 srcPath 翻成宿主路径（引擎按宿主路径读写同一份挂载文件）', () => {
+    savedEnv.c = process.env.CONTAINER_PATH_PREFIX;
+    savedEnv.h = process.env.HOST_PATH_PREFIX;
+    setPrefixes('/app/data', '/host/data');
+    const runner = new MxcadRunner();
+    assert.equal(
+      runner._mapInbound('/app/data/uploads/a.mxweb'),
+      '/host/data/uploads/a.mxweb'
+    );
+    setPrefixes(savedEnv.c, savedEnv.h);
+  });
+
+  it('入站：前缀边界防误伤（/app/dataX 不得当 /app/data 翻译）', () => {
+    savedEnv.c = process.env.CONTAINER_PATH_PREFIX;
+    savedEnv.h = process.env.HOST_PATH_PREFIX;
+    setPrefixes('/app/data', '/host/data');
+    const runner = new MxcadRunner();
+    assert.equal(runner._mapInbound('/app/dataX/a.dwg'), '/app/dataX/a.dwg');
+    setPrefixes(savedEnv.c, savedEnv.h);
+  });
+
+  it('入站：反斜杠宿主前缀（Windows path.join 产物）与正斜杠入参混合后原样拼接，由 _resolvePath 归一', () => {
+    savedEnv.c = process.env.CONTAINER_PATH_PREFIX;
+    savedEnv.h = process.env.HOST_PATH_PREFIX;
+    setPrefixes('/app/data', 'D:\\deploy\\data');
+    const runner = new MxcadRunner();
+    assert.equal(
+      runner._mapInbound('/app/data/uploads/a.mxweb'),
+      'D:\\deploy\\data/uploads/a.mxweb'
+    );
+    setPrefixes(savedEnv.c, savedEnv.h);
+  });
+
+  it('出站：宿主前缀（含反斜杠形态）翻回容器视角正斜杠', () => {
+    savedEnv.c = process.env.CONTAINER_PATH_PREFIX;
+    savedEnv.h = process.env.HOST_PATH_PREFIX;
+    setPrefixes('/app/data', 'D:\\deploy\\data');
+    const runner = new MxcadRunner();
+    assert.equal(
+      runner._mapOutbound('D:/deploy/data/uploads/a.mxweb'),
+      '/app/data/uploads/a.mxweb'
+    );
+    setPrefixes(savedEnv.c, savedEnv.h);
+  });
+
+  it('出站：宿主前缀之外的 newpath 不翻译（引擎自定产物名场景）', async () => {
+    savedEnv.c = process.env.CONTAINER_PATH_PREFIX;
+    savedEnv.h = process.env.HOST_PATH_PREFIX;
+    setPrefixes('/app/data', '/host/data');
+    const okRun = async () => ({
+      stdout: '{"code":0,"message":"ok","newpath":"/elsewhere/a.dwg"}',
+      stderr: '',
+      exitCode: 2123,
+      signal: null,
+      timedOut: false,
+    });
+    const runner = new MxcadRunner();
+    const result = await runner.execute(
+      { srcPath: '/in/a.dwg', fileHash: 'h1' },
+      60000,
+      undefined,
+      okRun
+    );
+    assert.equal(result.newpath, '/elsewhere/a.dwg');
+    setPrefixes(savedEnv.c, savedEnv.h);
+  });
+
+  it('出站（经 execute 全链路）：引擎回显的宿主视角 newpath 翻回容器视角再回传 backend', async () => {
+    savedEnv.c = process.env.CONTAINER_PATH_PREFIX;
+    savedEnv.h = process.env.HOST_PATH_PREFIX;
+    setPrefixes('/app/data', '/host/data');
+    const okRun = async () => ({
+      stdout: '{"code":0,"message":"ok","newpath":"/host/data/exports/a.dwg"}',
+      stderr: '',
+      exitCode: 2123,
+      signal: null,
+      timedOut: false,
+    });
+    const runner = new MxcadRunner();
+    const result = await runner.execute(
+      { srcPath: '/app/data/uploads/a.mxweb', outpath: '/app/data/exports', outname: 'a.dwg' },
+      60000,
+      undefined,
+      okRun
+    );
+    assert.equal(result.code, 0);
+    assert.equal(result.newpath, '/app/data/exports/a.dwg');
+    setPrefixes(savedEnv.c, savedEnv.h);
+  });
+});

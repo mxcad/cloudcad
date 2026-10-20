@@ -105,7 +105,12 @@ class MxcadRunner {
           ? `[MxcadRunner] 转换超时但已写完产物，采信成功结果: ${params.srcPath}`
           : `[MxcadRunner] 转换成功: ${params.srcPath}`
       );
-      return outcome.result!;
+      const okResult = outcome.result!;
+      // Windows 宿主 docker 形态：引擎按宿主路径写产物，newpath 是宿主视角；
+      // 容器内 backend 按容器视角路径做文件 IO，回传前翻回（未注入前缀时 no-op）
+      return okResult.newpath
+        ? { ...okResult, newpath: this._mapOutbound(okResult.newpath) }
+        : okResult;
     }
 
     if (outcome.category === 'content-error') {
@@ -192,11 +197,16 @@ class MxcadRunner {
     }
 
     const param = buildEngineParams(params);
-    // 入站路径先按本机 cwd 绝对化（_resolvePath），再交 buildEngineParams 归一为
-    // 引擎约定的正斜杠；srcpath/outpath 之外的字段不含路径，无需二次处理。
-    param.srcpath = this._resolvePath(params.srcPath).replace(/\\/g, '/');
+    // 入站路径先做双视角翻译（mapInbound，Windows 宿主 docker 形态），再按本机 cwd
+    // 绝对化（_resolvePath），最后归一为引擎约定的正斜杠；srcpath/outpath 之外的
+    // 字段不含路径，无需二次处理。
+    param.srcpath = this._resolvePath(
+      this._mapInbound(params.srcPath)
+    ).replace(/\\/g, '/');
     if (params.outpath) {
-      param.outpath = this._resolvePath(params.outpath).replace(/\\/g, '/');
+      param.outpath = this._resolvePath(
+        this._mapInbound(params.outpath)
+      ).replace(/\\/g, '/');
     }
     return param;
   }
@@ -205,6 +215,44 @@ class MxcadRunner {
     if (!inputPath) return inputPath;
     if (path.isAbsolute(inputPath)) return path.normalize(inputPath);
     return path.resolve(process.cwd(), inputPath);
+  }
+
+  /**
+   * 双视角路径翻译（Windows 宿主 docker 形态，#440）：容器内 backend 按容器视角
+   * 路径（/app/data/...）计算 srcPath/outpath，宿主引擎必须按宿主路径
+   * （<DEPLOY_DIR>/data/...）读写——同一份物理文件（./data 挂载）的两种写法。
+   * 启动编排（docker-runtime hostProcessSpec）仅对 Windows 宿主注入
+   * CONTAINER_PATH_PREFIX / HOST_PATH_PREFIX 两个环境变量；裸机 / Linux 宿主 /
+   * 嵌入式形态两侧路径天然一致，前缀缺省 → 全部 no-op。
+   *
+   * 比较前统一正斜杠：引擎侧路径恒为正斜杠（_buildParam 归一 / 引擎回显），
+   * 而 HOST_PATH_PREFIX 在 Windows 上是反斜杠（path.join 产物）。
+   */
+  _mapInbound(inputPath: string): string {
+    const containerPrefix = process.env.CONTAINER_PATH_PREFIX;
+    const hostPrefix = process.env.HOST_PATH_PREFIX;
+    if (!containerPrefix || !hostPrefix || !inputPath) return inputPath;
+    const norm = (p: string) => p.replace(/\\/g, '/');
+    const n = norm(inputPath);
+    const c = norm(containerPrefix);
+    if (n === c || n.startsWith(c + '/')) {
+      return hostPrefix + n.slice(c.length);
+    }
+    return inputPath;
+  }
+
+  /** _mapInbound 的逆操作：引擎产物路径（宿主视角）翻回容器视角回传给 backend。 */
+  _mapOutbound(inputPath: string): string {
+    const containerPrefix = process.env.CONTAINER_PATH_PREFIX;
+    const hostPrefix = process.env.HOST_PATH_PREFIX;
+    if (!containerPrefix || !hostPrefix || !inputPath) return inputPath;
+    const norm = (p: string) => p.replace(/\\/g, '/');
+    const n = norm(inputPath);
+    const h = norm(hostPrefix);
+    if (n === h || n.startsWith(h + '/')) {
+      return norm(containerPrefix) + n.slice(h.length);
+    }
+    return inputPath;
   }
 }
 

@@ -31,7 +31,14 @@ const LOG_DIR = path.join(DATA_DIR, 'logs');
 const PID_DIR = path.join(DATA_DIR, 'pid');
 const ENV_FILE = path.join(DEPLOY_DIR, '.env');
 const ENV_EXAMPLE = path.join(DEPLOY_DIR, '.env.example');
-const COMPOSE_FILE = path.join(DEPLOY_DIR, 'docker-compose.yml');
+// 宿主平台（#440）：windows 宿主包（Docker Desktop，bridge 网络 + host.docker.internal）
+// 与 linux 宿主包（--network=host，rootless 兜底）共用本编排，按平台分叉网络/物料/入口。
+// 本模块运行在**目标机**上，process.platform 即宿主平台。
+const IS_WINDOWS_HOST = process.platform === 'win32';
+const COMPOSE_FILE = path.join(
+  DEPLOY_DIR,
+  IS_WINDOWS_HOST ? 'docker-compose.windows.yml' : 'docker-compose.yml'
+);
 const DOCKER_DATA_ROOT = path.join(DEPLOY_DIR, 'docker-data');
 
 const { parseEnvFile, updateEnvFile } = require(path.join(
@@ -72,6 +79,20 @@ function warn(msg) {
 function fail(msg) {
   console.error(`[${PRODUCT_NAME}][错误] ${msg}`);
   process.exit(1);
+}
+
+/**
+ * Windows 宿主未装 Docker Desktop 时的安装指引（#440，Q1 拍板：检测 + 指引，不捆绑安装器）。
+ */
+function failDockerDesktopMissing() {
+  fail(
+    '未检测到可用的 Docker Desktop（Windows 宿主包依赖 Docker Desktop 运行容器）。\n' +
+      '  安装指引：\n' +
+      '    1. 下载并安装 Docker Desktop: https://www.docker.com/products/docker-desktop/\n' +
+      '       （需 Windows 10 21H2+ / Windows 11，且 BIOS 已开启虚拟化）\n' +
+      '    2. 安装时按向导启用 WSL2 后端\n' +
+      '    3. 安装完成后重新运行 start.bat'
+  );
 }
 
 function readVersion() {
@@ -217,10 +238,14 @@ function step0Artifacts() {
   log('============================================');
   log(` ${VERSION} Docker 一键部署（start）`);
   log('============================================');
+  // windows 宿主：无包内 docker/ 静态二进制（Docker Desktop 提供），宿主物料在
+  // runtime/windows/；runtime/linux/mxcad 是占位目录（容器内引擎路径校验用，#440）
   const required = [
-    'docker',
+    ...(IS_WINDOWS_HOST ? [] : ['docker']),
     'images',
-    'runtime/linux/node',
+    ...(IS_WINDOWS_HOST
+      ? ['runtime/windows/node', 'runtime/windows/mxcad']
+      : ['runtime/linux/node']),
     'runtime/linux/mxcad',
     'runtime/scripts',
     'packages/conversion-service/dist',
@@ -228,7 +253,7 @@ function step0Artifacts() {
     'packages/contracts/dist',
     'packages/config-service',
     '.env.example',
-    'docker-compose.yml',
+    IS_WINDOWS_HOST ? 'docker-compose.windows.yml' : 'docker-compose.yml',
   ];
   for (const rel of required) {
     if (!fs.existsSync(path.join(DEPLOY_DIR, rel))) {
@@ -264,6 +289,18 @@ function step0Artifacts() {
  *     零管理员前置：包内镜像全部以 uid 0 运行，单段 0→euid 映射即够（无需 uidmap/subuid）。
  */
 function step1Permission() {
+  // Windows 宿主（#440）：恒 system 模式（Docker Desktop 提供 docker CLI + compose 插件，
+  // 经 WSL2 跑 linux 容器）；rootless/静态二进制是 Linux 专属概念，不适用。
+  if (IS_WINDOWS_HOST) {
+    if (dockerBootstrap.dockerReady('')) {
+      const v = dockerBootstrap.run(`docker version --format '{{.Server.Version}}'`, { timeoutMs: 15000 });
+      MODE = 'system';
+      SUDO = '';
+      log(`Docker Desktop（${v.stdout || '版本未知'}）可用 → 直接复用`);
+      return;
+    }
+    failDockerDesktopMissing();
+  }
   if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
     MODE = 'root';
     SUDO = '';
@@ -420,6 +457,19 @@ function step2Env() {
 // ==================== Step 4 Docker 检测/自装 ====================
 
 function step4Docker() {
+  // Windows 宿主（#440）：只复用 Docker Desktop，不做包内静态安装（Q1：检测 + 指引）
+  if (IS_WINDOWS_HOST) {
+    if (dockerBootstrap.dockerReady('')) {
+      const v = docker(['version', '--format', '{{.Server.Version}}']);
+      log(`Docker Desktop（${v.stdout}）就绪`);
+      INSTALLED_BY_US = false;
+    } else {
+      failDockerDesktopMissing();
+    }
+    detectCompose();
+    log(`compose 形态：${COMPOSE}`);
+    return;
+  }
   if (MODE === 'rootless') {
     // rootless：用包内静态 dockerd 经用户命名空间启动（lib/rootless.js），
     // 经 DOCKER_HOST（影子 /run 的 unix socket）与真实宿主通信；netns pid 供宿主进程/stop 用
@@ -510,13 +560,16 @@ function isPortOurs(key, env) {
 
 async function step6Ports() {
   const env = parseEnvFile(ENV_FILE);
+  // 注意：COOPERATE_PORT 不在顺延清单——协同端口是引擎（mxcadAssembly 折叠形态）
+  // 自有的固定通道（3091，黑盒不可配置，.env 的 COOPERATE_PORT 只影响
+  // COOPERATE_URL 指向）。被占用时引擎会静默放弃监听（进程存活但无端口），
+  // 故 step9 启动前按裸机 cooperate-manager 的 ensurePortFree 语义强杀占用者接管。
   const portKeys = [
     ['FRONTEND_PORT', '前端页面'],
     ['PORT', '后端'],
     ['CONFIG_SERVICE_PORT', '运维中心'],
     ['DB_PORT', '数据库'],
     ['REDIS_PORT', 'Redis'],
-    ['COOPERATE_PORT', '协同服务'],
     ['CONVERSION_SERVICE_PORT', '转换服务'],
   ];
   const changes = {};
@@ -545,9 +598,10 @@ async function step6Ports() {
 // ==================== Step 7 mxcad 探针 ====================
 
 async function step7MxcadProbe() {
+  // 引擎二进制在宿主（#440：windows 宿主 = runtime/windows/mxcad 的 mxcadAssembly.exe）
   const result = await probeAndFix({
     deployDir: DEPLOY_DIR,
-    mxcadDir: path.join(DEPLOY_DIR, 'runtime', 'linux', 'mxcad'),
+    mxcadDir: path.join(DEPLOY_DIR, 'runtime', IS_WINDOWS_HOST ? 'windows' : 'linux', 'mxcad'),
     dataDir: DATA_DIR,
     log,
   });
@@ -580,19 +634,26 @@ async function step8InfraContainers() {
 /**
  * 宿主进程启动规格（单一事实源：step9 启动与 #442 restartHostProcess 共用，
  * 避免同一启动参数散落两份）。
+ * 宿主平台（#440）：windows 宿主用 runtime/windows/{node,mxcad}（node.exe /
+ * mxcadAssembly.exe）；linux 宿主用 runtime/linux/{node,mxcad}。
  * @param {'cooperate'|'conversion'|'config-service'} name
  * @param {object} env .env 配置（parseEnvFile 结果）
- * @returns {{exe: string, args: string[], cwd: string, env?: object}}
+ * @returns {{exe: string, args: string[], cwd: string, env?: object, verbatim?: boolean}}
+ *   verbatim=true 表示参数须原样进命令行（Windows 下 windowsVerbatimArguments：
+ *   mxcadAssembly 按原始命令行解析、不认 Node 的引号转义，AGENTS.md 铁律）
  */
 function hostProcessSpec(name, env) {
-  const nodeExe = path.join(DEPLOY_DIR, 'runtime', 'linux', 'node', 'bin', 'node');
-  const mxcadDir = path.join(DEPLOY_DIR, 'runtime', 'linux', 'mxcad');
+  const nodeExe = IS_WINDOWS_HOST
+    ? path.join(DEPLOY_DIR, 'runtime', 'windows', 'node', 'node.exe')
+    : path.join(DEPLOY_DIR, 'runtime', 'linux', 'node', 'bin', 'node');
+  const mxcadDir = path.join(DEPLOY_DIR, 'runtime', IS_WINDOWS_HOST ? 'windows' : 'linux', 'mxcad');
   if (name === 'cooperate') {
     // 协同服务（mxcadAssembly 折叠形态，参数协议与 cooperate-manager.js 一致）
     return {
-      exe: path.join(mxcadDir, 'mxcadassembly'),
+      exe: path.join(mxcadDir, IS_WINDOWS_HOST ? 'mxcadAssembly.exe' : 'mxcadassembly'),
       args: [JSON.stringify({ run_cooperate_server: true, print_server: true })],
       cwd: mxcadDir,
+      verbatim: true,
     };
   }
   if (name === 'conversion') {
@@ -606,6 +667,13 @@ function hostProcessSpec(name, env) {
     };
     if (env.INTERNAL_SERVICE_SECRET) convEnv.INTERNAL_SERVICE_SECRET = env.INTERNAL_SERVICE_SECRET;
     if (env.CONVERSION_SERVICE_SECRET) convEnv.CONVERSION_SERVICE_SECRET = env.CONVERSION_SERVICE_SECRET;
+    if (IS_WINDOWS_HOST) {
+      // Windows 宿主：容器 backend 下发容器视角路径（/app/data/...），宿主引擎须按
+      // 宿主路径读写同一份挂载文件 → 注入双向翻译前缀（conversion-service runner
+      // 据此翻译 srcPath/outpath 入参与 newpath 回传）。Linux 宿主两侧同路径，不注入。
+      convEnv.CONTAINER_PATH_PREFIX = '/app/data';
+      convEnv.HOST_PATH_PREFIX = path.join(DEPLOY_DIR, 'data');
+    }
     return {
       exe: nodeExe,
       args: [path.join(DEPLOY_DIR, 'packages', 'conversion-service', 'dist', 'server.js')],
@@ -655,6 +723,19 @@ async function step9HostProcesses() {
   if (await hostProcess.isServiceRunning({ pidFile: path.join(PID_DIR, 'cooperate.pid'), port: coopPort })) {
     log('协同服务已在运行，复用');
   } else {
+    // 协同端口是引擎自有固定通道（黑盒不可配置，step6 不对其顺延）：被其他程序
+    // 占用时引擎会静默放弃监听（进程存活但无端口，E2E 实测）→ 按裸机
+    // cooperate-manager 的 ensurePortFree 语义强杀占用者接管后再启动
+    if (await hostProcess.portOpen(coopPort)) {
+      const pids = hostProcess.getPortPids(coopPort);
+      warn(`协同端口 ${coopPort} 被其他程序占用（PID ${pids.join(',') || '未知'}），正在结束占用进程（协同端口为引擎固定通道，无法换端口）`);
+      hostProcess.killPortOwner(coopPort);
+      const deadline = Date.now() + 10000;
+      while ((await hostProcess.portOpen(coopPort)) && Date.now() < deadline) sleep(500);
+      if (await hostProcess.portOpen(coopPort)) {
+        warn(`协同端口 ${coopPort} 10s 内未释放，协同服务可能无法就绪（看 ${path.join(LOG_DIR, 'cooperate.log')}）`);
+      }
+    }
     hostProcess.startHostProcess({
       name: 'cooperate',
       ...hostProcessSpec('cooperate', env),
@@ -730,25 +811,51 @@ async function step9HostProcesses() {
  * root 模式：app 容器与宿主进程同处真实宿主 netns，后端默认 http://localhost:<port>
  * 即可达，无需改。
  */
-function applyRootlessHostUrls() {
-  if (MODE !== 'rootless') return;
-  const env = parseEnvFile(ENV_FILE);
-  const hostIp = '10.0.2.2';
-  const coopPort = env.COOPERATE_PORT || '3091';
-  const convPort = env.CONVERSION_SERVICE_PORT || '3100';
-  updateEnvFile(
-    ENV_FILE,
-    {
-      COOPERATE_URL: `http://${hostIp}:${coopPort}`,
-      CONVERSION_SERVICE_URL: `http://${hostIp}:${convPort}`,
-    },
-    ENV_EXAMPLE
-  );
-  log(`rootless 模式：app 容器经 ${hostIp} 访问宿主进程（协同 :${coopPort}，转换 :${convPort}）`);
+/**
+ * app 容器访问宿主进程（协同/转换）的地址改写（端口由 step6 定案，故在 step10
+ * 启动 app 容器前调用，.env 此时已含最终端口）：
+ * - rootless：app 容器（子 netns）经 slirp4netns 宿主 IP（10.0.2.2）访问真实宿主；
+ *   DB/Redis 是子 netns 内容器（与 app 同 netns），恒 localhost 无需改。
+ * - Windows 宿主（#440）：bridge 网络下容器经 host.docker.internal 访问宿主进程
+ *   （Docker Desktop 内置解析）；DB/Redis 是 compose 网络内容器，容器视角走服务名
+ *   （compose environment 覆盖），.env 保持宿主视角 localhost 供宿主进程消费。
+ * - Linux root/system：host 网络直通，localhost 即可达，无需改。
+ */
+function applyHostUrls() {
+  if (MODE === 'rootless') {
+    const env = parseEnvFile(ENV_FILE);
+    const hostIp = '10.0.2.2';
+    const coopPort = env.COOPERATE_PORT || '3091';
+    const convPort = env.CONVERSION_SERVICE_PORT || '3100';
+    updateEnvFile(
+      ENV_FILE,
+      {
+        COOPERATE_URL: `http://${hostIp}:${coopPort}`,
+        CONVERSION_SERVICE_URL: `http://${hostIp}:${convPort}`,
+      },
+      ENV_EXAMPLE
+    );
+    log(`rootless 模式：app 容器经 ${hostIp} 访问宿主进程（协同 :${coopPort}，转换 :${convPort}）`);
+    return;
+  }
+  if (IS_WINDOWS_HOST) {
+    const env = parseEnvFile(ENV_FILE);
+    const coopPort = env.COOPERATE_PORT || '3091';
+    const convPort = env.CONVERSION_SERVICE_PORT || '3100';
+    updateEnvFile(
+      ENV_FILE,
+      {
+        COOPERATE_URL: `http://host.docker.internal:${coopPort}`,
+        CONVERSION_SERVICE_URL: `http://host.docker.internal:${convPort}`,
+      },
+      ENV_EXAMPLE
+    );
+    log(`Windows 宿主：app 容器经 host.docker.internal 访问宿主进程（协同 :${coopPort}，转换 :${convPort}）`);
+  }
 }
 
 async function step10AppContainer() {
-  applyRootlessHostUrls();
+  applyHostUrls();
   log('启动应用容器（backend + 前端）...');
   const up = compose(['up', '-d', 'app']);
   if (!up.ok) fail(`docker compose up app 失败：${up.stderr || up.error}`);
@@ -840,8 +947,10 @@ function step12Summary() {
   log(`║  API:    http://<服务器IP>:${be}/api                     ║`);
   log(`║  API文档: http://<服务器IP>:${be}/api/docs                ║`);
   log(`║  运维中心: http://<服务器IP>:${cfg}                       ║`);
+  const stopCmd = IS_WINDOWS_HOST ? 'stop.bat' : './stop.sh';
+  const startCmd = IS_WINDOWS_HOST ? 'start.bat' : './start.sh';
   log('╠══════════════════════════════════════════════════════════╣');
-  log('║  停止: ./stop.sh    升级: 新包解压到本目录后重跑 ./start.sh ║');
+  log(`║  停止: ${stopCmd}    升级: 新包解压到本目录后重跑 ${startCmd} ║`);
   log('╚══════════════════════════════════════════════════════════╝');
   // 凭据不再落明文文件：三份口令唯一存于 .env，丢失走免旧密码的重置通道
   log(`凭据文件: ${ENV_FILE}`);
@@ -893,7 +1002,12 @@ function detectRuntimeMode() {
     DOCKER_HOST = `unix://${rootless.resolveSocketPath(DOCKER_DATA_ROOT)}`;
     COMPOSE = 'docker-compose';
   } else {
-    if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
+    if (IS_WINDOWS_HOST) {
+      // Windows 宿主（#440）：恒 system 模式（Docker Desktop）；Docker Desktop 未运行时
+      // docker 侧无可停对象，compose down 自然失败走 warn 分支
+      MODE = 'system';
+      SUDO = '';
+    } else if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
       MODE = 'root';
       SUDO = '';
     } else {

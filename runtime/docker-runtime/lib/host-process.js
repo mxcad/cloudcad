@@ -10,6 +10,10 @@
  *   避免「端口被别的进程占着也被误报成功」的假成功。
  * - 停止走进程组：detached 子进程是进程组 leader，kill(-pid) 杀整组（含其 fork 的
  *   引擎子进程），SIGTERM → 5s → SIGKILL 升级。
+ * - Windows 宿主（#440）：无进程组信号，停止走 `taskkill /PID <pid> /T /F`
+ *   杀进程树（含 conversion-service fork 的 mxcadAssembly.exe 子进程）；
+ *   拉起时 mxcadAssembly 的 JSON 参数须 windowsVerbatimArguments（引擎按原始
+ *   命令行解析、不认 Node 引号转义，AGENTS.md 铁律；node.exe 进程用默认转义）。
  * - 日志轮转：nohup 重定向本身不轮转，这里按大小轮转（50MB × 3），
  *   防止 cooperate.log / dockerd.log 无限增长。
  *
@@ -63,10 +67,12 @@ function rotateLog(logFile) {
  * @param {Object} [opts.env] 追加到 process.env 的环境变量
  * @param {string} opts.logFile 日志文件绝对路径（先轮转再打开）
  * @param {string} opts.pidFile pidfile 绝对路径
+ * @param {boolean} [opts.verbatim] Windows 下参数原样进命令行（windowsVerbatimArguments，
+ *   供 mxcadAssembly 这类按原始命令行解析的引擎二进制用；node.exe 等标准解析器勿用）
  * @param {Function} [log] 日志函数
  * @returns {{ pid: number }}
  */
-function startHostProcess({ name, exe, args = [], cwd, env = {}, logFile, pidFile, log = () => {} }) {
+function startHostProcess({ name, exe, args = [], cwd, env = {}, logFile, pidFile, verbatim = false, log = () => {} }) {
   rotateLog(logFile);
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
   fs.mkdirSync(path.dirname(pidFile), { recursive: true });
@@ -76,7 +82,8 @@ function startHostProcess({ name, exe, args = [], cwd, env = {}, logFile, pidFil
     cwd: cwd || path.dirname(exe),
     env: { ...process.env, ...env },
     stdio: ['ignore', out, out],
-    detached: true, // 新进程组 leader：停止时 kill(-pid) 杀整组
+    detached: true, // Linux：新进程组 leader（停止时 kill(-pid) 杀整组）；Windows：独立进程
+    windowsVerbatimArguments: process.platform === 'win32' && verbatim,
   });
   child.unref();
 
@@ -163,6 +170,12 @@ async function stopHostProcess({ name, pidFile, log = () => {} }) {
   }
 
   const killGroup = (signal) => {
+    if (process.platform === 'win32') {
+      // Windows 无进程组信号：taskkill /T 杀进程树（含 conversion-service fork 的
+      // mxcadAssembly.exe 子进程）；Windows 下 SIGTERM 语义即直接终止，无优雅阶段
+      const r = spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { encoding: 'utf8' });
+      return r.status === 0;
+    }
     try {
       process.kill(-pid, signal); // 进程组
       return true;
@@ -195,6 +208,48 @@ async function stopHostProcess({ name, pidFile, log = () => {} }) {
   return isProcessAlive(pid) ? 'failed' : 'stopped';
 }
 
+/**
+ * 获取占用指定端口的 PID 列表（Windows：netstat -ano 解析 LISTENING 行）。
+ * Linux 走 fuser 按端口直接杀（见 killPortOwner），无需先定位 PID。
+ * @param {number} port
+ * @returns {number[]}
+ */
+function getPortPids(port) {
+  if (process.platform !== 'win32') return [];
+  const res = spawnSync('netstat', ['-ano'], { encoding: 'utf8' });
+  if (res.error || !res.stdout) return [];
+  const pids = new Set();
+  const re = new RegExp(`:${port}\\s+\\S+\\s+LISTENING\\s+(\\d+)\\s*$`, 'i');
+  for (const line of res.stdout.split(/\r?\n/)) {
+    const m = line.trim().match(re);
+    if (m) pids.add(parseInt(m[1], 10));
+  }
+  return Array.from(pids);
+}
+
+/**
+ * 强制结束占用指定端口的进程（与裸机 cooperate-manager.js 的 killPortOwner 同语义）：
+ * Windows 按 netstat 定位 PID 后 taskkill /T /F 杀进程树；Linux 优先 fuser -k
+ * （精确按端口），fuser 不可用回退 pkill 按进程名清理遗留 mxcadassembly。
+ * @param {number} port
+ * @returns {boolean} 是否执行了清理动作
+ */
+function killPortOwner(port) {
+  if (process.platform === 'win32') {
+    const pids = getPortPids(port);
+    for (const pid of pids) {
+      spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'pipe' });
+    }
+    return pids.length > 0;
+  }
+  const fuser = spawnSync('fuser', ['-k', `${port}/tcp`], { encoding: 'utf8', stdio: 'pipe' });
+  if (fuser.error) {
+    spawnSync('pkill', ['-9', '-x', 'mxcadassembly'], { stdio: 'pipe' });
+    return true;
+  }
+  return fuser.status === 0;
+}
+
 module.exports = {
   rotateLog,
   startHostProcess,
@@ -203,6 +258,8 @@ module.exports = {
   portOpen,
   isServiceRunning,
   stopHostProcess,
+  getPortPids,
+  killPortOwner,
   LOG_MAX_BYTES,
   LOG_KEEP,
 };

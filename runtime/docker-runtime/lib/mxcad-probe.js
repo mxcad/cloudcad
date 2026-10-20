@@ -43,8 +43,12 @@ async function runProbe({ engineExec, contracts, bin, mxcadDir, outDir }) {
     outName: 'probe.mxweb',
     compression: true,
   });
-  // Linux 单引号 JSON（mxcadassembly 约定，与 backend 进程内 spawn 同一序列化）
-  const paramStr = JSON.stringify(param).replace(/"/g, "'");
+  // 参数序列化按宿主平台（与生产链路同一约定）：
+  // - Linux：单引号 JSON（mxcadassembly 约定，与 backend 进程内 spawn 同一序列化）
+  // - Windows：保留双引号 JSON——runMxcadAssembly 走 windowsVerbatimArguments 原样传参，
+  //   引擎按原始命令行以双引号分词；单引号不被识别为定界符，部署路径含空格时参数会被拆散
+  const paramStr =
+    process.platform === 'win32' ? JSON.stringify(param) : JSON.stringify(param).replace(/"/g, "'");
 
   const runResult = await engineExec.runMxcadAssembly(bin, paramStr, {
     cwd: mxcadDir,
@@ -76,7 +80,8 @@ async function runProbe({ engineExec, contracts, bin, mxcadDir, outDir }) {
  * @returns {Promise<{ status: 'ok'|'ok-systemlib'|'unavailable', detail: string }>}
  */
 async function probeAndFix({ deployDir, mxcadDir, dataDir, log = () => {} }) {
-  const bin = path.join(mxcadDir, 'mxcadassembly');
+  // 引擎二进制名按宿主平台（#440：windows 宿主 = mxcadAssembly.exe）
+  const bin = path.join(mxcadDir, process.platform === 'win32' ? 'mxcadAssembly.exe' : 'mxcadassembly');
   const systemLibDir = path.join(mxcadDir, 'SystemLib');
   const appliedMarker = path.join(dataDir, '.systemlib-applied');
   const unavailableMarker = path.join(dataDir, '.mxcad-unavailable');

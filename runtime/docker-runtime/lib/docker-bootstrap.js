@@ -229,7 +229,9 @@ function loadImages({ sudo, imagesDir, tags, log = () => {}, dockerCli = 'docker
   const loaded = [];
   const skipped = [];
   for (const tag of tags) {
-    const inspect = run(`${dockerCli} image inspect ${tag} >/dev/null 2>&1`, { sudo, timeoutMs: 15000, env: dEnv });
+    // 不加 shell 重定向（>/dev/null 在 Windows cmd 下无效且使退出码恒非零）：
+    // run() 本就捕获 stdout/stderr，inspect 输出直接丢弃即可
+    const inspect = run(`${dockerCli} image inspect ${tag}`, { sudo, timeoutMs: 15000, env: dEnv });
     if (inspect.ok) {
       skipped.push(tag);
       continue;
@@ -239,12 +241,13 @@ function loadImages({ sudo, imagesDir, tags, log = () => {}, dockerCli = 'docker
       return { ok: false, loaded, skipped, message: `镜像 tar 缺失：${tar}` };
     }
     log(`[docker] 加载镜像 ${tag}（${path.basename(tar)}）...`);
-    const res = run(`${sudo} ${dockerCli} load -i ${tar}`, { sudo: '', timeoutMs: 600000, env: dEnv });
+    // 路径加引号：部署目录可能含空格（shell:true 下 cmd 按空格拆词）
+    const res = run(`${sudo} ${dockerCli} load -i "${tar}"`, { sudo: '', timeoutMs: 600000, env: dEnv });
     if (!res.ok) {
       return { ok: false, loaded, skipped, message: `docker load 失败（${tag}）：${res.stderr || res.error}` };
     }
     // load 后的 tag 以 tar 内 manifest 为准，校验期望 tag 已存在
-    const again = run(`${dockerCli} image inspect ${tag} >/dev/null 2>&1`, { sudo, timeoutMs: 15000, env: dEnv });
+    const again = run(`${dockerCli} image inspect ${tag}`, { sudo, timeoutMs: 15000, env: dEnv });
     if (!again.ok) {
       return { ok: false, loaded, skipped, message: `镜像加载后未找到 tag ${tag}（tar 内 tag 与期望不符？）` };
     }

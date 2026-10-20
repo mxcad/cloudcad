@@ -1,0 +1,132 @@
+# MxCloudCAD Docker 一键部署包（Windows 宿主）—— 容器编排（ADR-0075 #440）
+#
+# 与 docker-compose.yml（Linux 宿主）的区别：
+#   - Windows Docker Desktop 不支持 network_mode: host → 全部走 compose 默认 bridge 网络
+#   - pg/redis 端口发布到宿主 localhost（宿主侧 conversion-service 等经 localhost 访问）
+#   - app 容器访问宿主进程（协同/转换）经 host.docker.internal（Docker Desktop 内置
+#     解析 + extra_hosts host-gateway 双保险）；.env 的 COOPERATE_URL/CONVERSION_SERVICE_URL
+#     由 start 编排（applyHostUrls）在端口定案后写成 http://host.docker.internal:<port>
+#   - 容器视角地址与 .env（宿主视角）不同：.env 恒为 localhost（宿主进程消费），
+#     app 服务的 environment 显式覆盖为 pg/redis 服务名 + host.docker.internal
+#     （compose environment 优先于 env_file，防 .env 漂移，与 Linux 版同机制）
+#   - DATABASE_URL 在 .env 中是宿主视角（@localhost，宿主进程消费）；app 容器用
+#     compose 插值重组成容器视角（@pg）——${DB_*} 由 compose 从 .env 插值
+#   - mxcad 引擎二进制在宿主（Windows mxcadAssembly.exe，conversion-service 宿主进程
+#     spawn）；容器内 /app/runtime/linux/mxcad 挂载的是占位目录（backend 生产模式
+#     启动校验 existsSync 用，conversion-service 模式下 backend 不在容器内 spawn 引擎）
+#   - 卷路径用相对路径（./data 等）：compose 经 --project-directory <部署目录> 解析。
+#     Windows 绝对路径（D:\...）的盘符冒号会破坏 docker 的 source:target:mode 三段
+#     解析（"too many colons"，E2E 实测）；相对路径由 Docker Desktop 自动映射 WSL 路径
+#   - .env 值含 `$` 时 compose env_file 插值会替换成空串：生成器已排除 `$`；
+#     手工编辑 .env 引入 `$` 须写 `$$` 转义
+#
+# 插值来源：.env（start.bat 生成，含 DEPLOY_DIR=<实际部署目录>、APP_VERSION=<版本>）
+
+name: cloudcad
+
+services:
+  # PostgreSQL 数据库
+  pg:
+    image: cloudcad/pg:15-alpine
+    container_name: cloudcad-pg
+    restart: unless-stopped
+    ports:
+      - '${DB_PORT:-5432}:${DB_PORT:-5432}'
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-cloudcad}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    # 官方镜像恒绑 5432（无 POSTGRES_PORT 环境变量）；经 docker-entrypoint.sh 透传
+    # -p 让 PG 监听 .env 的 DB_PORT（如 5433 绕开宿主系统 PG），发布映射两端同值
+    command: ['sh', '-c', 'exec docker-entrypoint.sh postgres -p ${DB_PORT:-5432}']
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USERNAME:-postgres} -p ${DB_PORT:-5432}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'
+
+  # Redis 缓存（无 maxmemory，与裸机形态对齐）
+  redis:
+    image: cloudcad/redis:7-alpine
+    container_name: cloudcad-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:${REDIS_PORT:-6379}'
+    # 官方镜像默认 USER redis（非 0 uid）：Windows 宿主 bind mount 的属主语义与
+    # Linux rootless 不同（Docker Desktop 以当前用户映射），保持 root 运行与 Linux 版统一
+    user: root
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: >-
+      sh -c 'redis-server --port ${REDIS_PORT:-6379} --appendonly yes
+      $${REDIS_PASSWORD:+--requirepass $$REDIS_PASSWORD}
+      $${REDIS_MAXMEMORY:+--maxmemory $$REDIS_MAXMEMORY}'
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -p ${REDIS_PORT:-6379} $${REDIS_PASSWORD:+-a $$REDIS_PASSWORD} --no-auth-warning ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'
+
+  # 应用（backend + 前端静态服务双进程，入口 docker/app-entrypoint.js）
+  app:
+    image: cloudcad/app:${APP_VERSION:-dev}
+    container_name: cloudcad-app
+    restart: unless-stopped
+    ports:
+      - '${PORT:-3001}:${PORT:-3001}'
+      - '${FRONTEND_PORT:-8000}:${FRONTEND_PORT:-8000}'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    env_file:
+      - .env
+    environment:
+      # bridge 网络：容器视角地址（显式覆盖 .env 的宿主视角值，防 .env 漂移）
+      DB_HOST: pg
+      REDIS_HOST: redis
+      COOPERATE_HOST: host.docker.internal
+      # .env 的 DATABASE_URL 是宿主视角（@localhost）；容器内重组为 @pg
+      # （${DB_*} 由 compose 从 .env 插值）
+      DATABASE_URL: postgresql://${DB_USERNAME:-postgres}:${DB_PASSWORD}@pg:${DB_PORT:-5432}/${DB_DATABASE:-cloudcad}
+    volumes:
+      # 数据目录挂到容器 /app/data（backend 的 data/ 路径键在 .env 里是容器视角
+      # /app/data/...，见 pack 脚本 WINDOWS_PATH_OVERRIDES）。Windows 宿主不设
+      # Linux 版的同路径挂载（./data:./data）：宿主进程不靠同路径读容器数据——
+      # conversion-service 按 runner 翻译后的宿主路径读写，探针直接写宿主 data 目录；
+      # 且 ./data:./data 与 ./data:/app/data 目标重复（容器 WORKDIR=/app），易触发
+      # duplicate mount point
+      - ./data:/app/data
+      # 占位目录（Windows 宿主包内 runtime/linux/mxcad 仅含 mxcadassembly 占位文件）：
+      # backend 生产模式启动校验 existsSync(MXCAD_ASSEMBLY_PATH 回退默认路径) 用；
+      # conversion-service 模式下 backend 不在容器内 spawn 引擎（引擎在宿主 Windows 上）
+      - ./runtime/linux/mxcad:/app/runtime/linux/mxcad
+    depends_on:
+      pg:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fs http://localhost:${PORT:-3001}/api/health/live || exit 1']
+      interval: 15s
+      timeout: 10s
+      start_period: 90s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'

@@ -841,7 +841,10 @@ function updateEnvFile(filePath, updates, examplePath) {
       serializeBlocks(blocks),
       exampleContent
     );
-    if (mergedContent !== serializeBlocks(blocks)) {
+    // 与磁盘原内容比较：merged 与 serializeBlocks(blocks) 都含新值，结构一致时恒相等，
+    // 按旧判据比较会跳过写入 → 值更新静默丢失（windows 宿主 E2E 暴露：端口移位未落盘，
+    // v1 linux 端口冲突场景同样受影响）
+    if (mergedContent !== content) {
       fs.writeFileSync(filePath, mergedContent, 'utf8');
       log(`更新：${filePath}（同步注释和结构）`);
     }

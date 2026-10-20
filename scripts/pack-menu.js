@@ -11,10 +11,12 @@
  *   - 交付形态 = 产物跑在裸机还是 Docker 容器
  *   - 构建通道 = 在哪打包（本机直打 / Docker 容器内构建），仅裸机 Linux 相关
  *
- * v1 置灰组合（选中即拒绝并提示，v2/v3 逐步解锁）：
- *   - docker + private   → v2 接入（impl-mx → 镜像构建链路）
- *   - docker + windows   → v2（Docker Desktop 检测 + 指引，不捆绑安装器）
+ * 置灰组合（选中即拒绝并提示，v2/v3 逐步解锁）：
+ *   - docker + private   → v2 #441 接入（impl-mx → 镜像构建链路）
  *   - upgrade + docker   → v3（Docker 升级包）
+ *
+ * 已解锁（v2 #440）：docker + windows 宿主（Docker Desktop 检测 + 安装指引，不捆绑安装器；
+ * 须在 Windows x64 打包机上打，断网验证 verify-windows-docker 属 #444）
  *
  * 使用方式：
  *   node scripts/pack-menu.js     # 或 pnpm pack:menu
@@ -45,7 +47,7 @@ const OS_OPTIONS = Object.entries(LINUX_OS).map(([id, def]) => ({
 // 交付形态（ADR-0075 C1）：产物跑在哪
 const FORM_OPTIONS = [
   { key: '1', id: 'bare', label: '裸机部署包（Windows / Linux 裸机，现状保留）' },
-  { key: '2', id: 'docker', label: 'Docker 部署包（v1 仅 linux 宿主 / oss；windows 宿主见 v2）' },
+  { key: '2', id: 'docker', label: 'Docker 部署包（linux / windows 宿主；private 变体见 v2 #441）' },
 ];
 
 const TYPE_OPTIONS = [
@@ -71,10 +73,11 @@ const BUILD_CHANNEL_OPTIONS = {
   ],
 };
 
-// Docker 交付形态的宿主平台（v1 仅 linux；windows 宿主见 v2，Q1 检测+指引不捆绑）
+// Docker 交付形态的宿主平台（ADR-0075 #440：windows 宿主 = Docker Desktop 检测 + 安装指引，
+// 不捆绑 Docker 物料；须在 Windows x64 打包机上打）
 const DOCKER_HOST_OPTIONS = [
-  { key: '1', id: 'linux', label: 'Linux 宿主（v1）' },
-  { key: '2', id: 'windows', label: 'Windows 宿主', disabled: 'v2 不可用（Docker Desktop 检测 + 安装指引）' },
+  { key: '1', id: 'linux', label: 'Linux 宿主（--network=host + rootless 兜底 + 包内静态 Docker）' },
+  { key: '2', id: 'windows', label: 'Windows 宿主（Docker Desktop + bridge 网络；须在 Windows 打包机）' },
 ];
 
 const rl = readline.createInterface({
@@ -240,9 +243,9 @@ async function main() {
   let channelLabel;
 
   if (form.id === 'docker') {
-    // Docker 交付形态：v1 仅 linux 宿主（windows 置灰）；路由 pack-linux-docker.js
+    // Docker 交付形态：宿主平台透传 --host-platform（#440）；路由 pack-linux-docker.js
     const host = await pick(DOCKER_HOST_OPTIONS, '请选择宿主平台');
-    cmdArgs = ['scripts/pack-linux-docker.js'];
+    cmdArgs = ['scripts/pack-linux-docker.js', '--host-platform', host.id];
     channelLabel = `Docker 部署包（${host.id} 宿主）`;
   } else {
     // 裸机交付形态
