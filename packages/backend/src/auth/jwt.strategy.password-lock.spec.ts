@@ -44,7 +44,6 @@ describe('JwtStrategy.validate - 口令到期强制引导锁定（#416）', () =
     (s as any).prisma = { user: { findUnique: userFindUnique } };
     (s as any).tokenBlacklistService = {
       isBlacklisted: jest.fn().mockResolvedValue(false),
-      isUserBlacklisted: jest.fn().mockResolvedValue(false),
     };
     (s as any).roleInheritanceService = { getRolePermissions };
     (s as any).runtimeConfigService = { getValue };
@@ -170,7 +169,6 @@ describe('JwtStrategy.validate - 口令到期强制引导锁定（#416）', () =
       (s as any).prisma = { user: { findUnique: userFindUnique } };
       (s as any).tokenBlacklistService = {
         isBlacklisted: jest.fn().mockResolvedValue(false),
-        isUserBlacklisted: jest.fn().mockResolvedValue(false),
       };
       (s as any).roleInheritanceService = { getRolePermissions };
       (s as any).runtimeConfigService = { getValue };

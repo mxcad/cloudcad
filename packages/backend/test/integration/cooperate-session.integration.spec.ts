@@ -400,7 +400,6 @@ const signRefreshToken = (userId: string): string =>
 
 const createTokenBlacklistMock = () => ({
   isBlacklisted: jest.fn().mockResolvedValue(false),
-  isUserBlacklisted: jest.fn().mockResolvedValue(false),
 });
 
 const createDatabaseMock = () => ({

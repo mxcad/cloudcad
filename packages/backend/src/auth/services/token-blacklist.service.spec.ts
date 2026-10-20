@@ -18,7 +18,6 @@ describe('TokenBlacklistService', () => {
     setex: jest.fn(),
     exists: jest.fn(),
     del: jest.fn(),
-    keys: jest.fn(),
     scan: jest.fn(),
     get: jest.fn(),
     on: jest.fn(),
@@ -30,9 +29,9 @@ describe('TokenBlacklistService', () => {
     // Re-establish the default config value — resetMocks: true in jest.config.ts
     // wipes mock implementations, and the constructor reads cacheTTL on init.
     mockConfigService.get.mockReturnValue({ tokenBlacklist: 3600 });
-    // Default: keys returns empty array — prevents TypeError in getBlacklistStats
-    // when resetMocks wipes per-test mockResolvedValueOnce before it runs.
-    mockRedis.keys.mockResolvedValue([]);
+    // Default: scan returns an empty page — prevents a destructure TypeError in
+    // getBlacklistStats when resetMocks wipes per-test mockResolvedValueOnce.
+    mockRedis.scan.mockResolvedValue(['0', []]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -110,89 +109,14 @@ describe('TokenBlacklistService', () => {
       expect(result).toBe(false);
     });
 
-    it('should return true when Redis fails (secure fallback)', async () => {
+    it('should fail open (return false) when Redis fails', async () => {
+      // 刻意 fail-open：写入方是登出/改密/会话转移三条真实路径，作用域只有单个 token，
+      // 放行的代价是「一次登出没生效」，远小于 Redis 一抖就全平台拒绝。
       mockRedis.exists.mockRejectedValue(new Error('Redis error'));
 
       const result = await service.isBlacklisted(token);
 
-      expect(result).toBe(true);
-    });
-  });
-
-  // =========================================================================
-  // blacklistUserTokens
-  // =========================================================================
-
-  describe('blacklistUserTokens', () => {
-    const userId = 'user-001';
-
-    it('should set user blacklist key in Redis', async () => {
-      await service.blacklistUserTokens(userId);
-
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        'user:blacklist:user-001',
-        3600,
-        '1'
-      );
-    });
-
-    it('should throw error when Redis setex fails', async () => {
-      mockRedis.setex.mockRejectedValue(new Error('Redis error'));
-
-      await expect(service.blacklistUserTokens(userId)).rejects.toThrow('Redis error');
-    });
-  });
-
-  // =========================================================================
-  // isUserBlacklisted
-  // =========================================================================
-
-  describe('isUserBlacklisted', () => {
-    const userId = 'user-001';
-
-    it('should return true when user is blacklisted', async () => {
-      mockRedis.exists.mockResolvedValue(1);
-
-      const result = await service.isUserBlacklisted(userId);
-
-      expect(mockRedis.exists).toHaveBeenCalledWith('user:blacklist:user-001');
-      expect(result).toBe(true);
-    });
-
-    it('should return false when user is not blacklisted', async () => {
-      mockRedis.exists.mockResolvedValue(0);
-
-      const result = await service.isUserBlacklisted(userId);
-
       expect(result).toBe(false);
-    });
-
-    it('should return true when Redis fails (secure fallback)', async () => {
-      mockRedis.exists.mockRejectedValue(new Error('Redis error'));
-
-      const result = await service.isUserBlacklisted(userId);
-
-      expect(result).toBe(true);
-    });
-  });
-
-  // =========================================================================
-  // removeUserFromBlacklist
-  // =========================================================================
-
-  describe('removeUserFromBlacklist', () => {
-    const userId = 'user-001';
-
-    it('should delete user blacklist key from Redis', async () => {
-      await service.removeUserFromBlacklist(userId);
-
-      expect(mockRedis.del).toHaveBeenCalledWith('user:blacklist:user-001');
-    });
-
-    it('should throw error when Redis del fails', async () => {
-      mockRedis.del.mockRejectedValue(new Error('Redis error'));
-
-      await expect(service.removeUserFromBlacklist(userId)).rejects.toThrow('Redis error');
     });
   });
 
@@ -221,30 +145,34 @@ describe('TokenBlacklistService', () => {
   // =========================================================================
 
   describe('getBlacklistStats', () => {
-    it('should return counts of blacklisted tokens and users', async () => {
-      mockRedis.scan
-        .mockResolvedValueOnce(['0', ['token:blacklist:abc', 'token:blacklist:def']])
-        .mockResolvedValueOnce(['0', ['user:blacklist:u1', 'user:blacklist:u2', 'user:blacklist:u3']]);
+    it('should count only token-level entries', async () => {
+      mockRedis.scan.mockResolvedValueOnce([
+        '0',
+        ['token:blacklist:abc', 'token:blacklist:def'],
+      ]);
 
       const result = await service.getBlacklistStats();
 
-      expect(result).toEqual({ totalTokens: 2, blacklistedUsers: 3 });
+      expect(result).toEqual({ totalTokens: 2 });
+      expect(Object.keys(result)).toEqual(['totalTokens']);
+      // 用户级计数已随 Gitea #484 退役；只扫 token 前缀，别让它被加回来
+      expect(mockRedis.scan.mock.calls[0][2]).toBe('token:blacklist:*');
     });
 
     it('should return zero counts when no entries exist', async () => {
-      mockRedis.keys.mockResolvedValue([]);
+      mockRedis.scan.mockResolvedValue(['0', []]);
 
       const result = await service.getBlacklistStats();
 
-      expect(result).toEqual({ totalTokens: 0, blacklistedUsers: 0 });
+      expect(result).toEqual({ totalTokens: 0 });
     });
 
     it('should return zero counts when Redis fails (graceful degradation)', async () => {
-      mockRedis.keys.mockRejectedValue(new Error('Redis error'));
+      mockRedis.scan.mockRejectedValue(new Error('Redis error'));
 
       const result = await service.getBlacklistStats();
 
-      expect(result).toEqual({ totalTokens: 0, blacklistedUsers: 0 });
+      expect(result).toEqual({ totalTokens: 0 });
     });
   });
 

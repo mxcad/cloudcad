@@ -32,7 +32,6 @@ describe('JwtStrategyExecutor - 抓取令牌认证（#315）', () => {
     executor = new JwtStrategyExecutor(
       reflector as unknown as Reflector,
       {} as any,
-      {} as any,
       configService as unknown as ConfigService,
     );
   });

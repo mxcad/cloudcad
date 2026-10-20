@@ -2,7 +2,7 @@ import { Injectable, Logger, UnauthorizedException, BadRequestException, Inject 
 import { AuthTokenService } from './auth-token.service';
 import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
 import type { IPasswordHasher } from '../../../users/interfaces/password-hasher.interface';
-import type { IUserRepository, IEmailVerificationService, ISmsVerificationService, IRuntimeConfigService, ITokenBlacklistService, IPasswordService } from '@cloudcad/contracts';
+import type { IUserRepository, IEmailVerificationService, ISmsVerificationService, IRuntimeConfigService, IPasswordService } from '@cloudcad/contracts';
 import { USER_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
@@ -19,7 +19,6 @@ export class PasswordService implements IPasswordService {
     @Inject('SMS') private readonly smsVerificationService: ISmsVerificationService,
     @Inject('CONFIG') private readonly runtimeConfigService: IRuntimeConfigService,
     private authTokenService: AuthTokenService,
-    @Inject('TOKEN_BLACKLIST') private readonly tokenBlacklistService: ITokenBlacklistService,
     private accountRateLimitService: AccountRateLimitService,
     private passwordPolicyService: PasswordPolicyService
   ) {}
@@ -135,7 +134,6 @@ export class PasswordService implements IPasswordService {
     // 记录口令修改时间（#416）
     await this.userRepo.update(user.id, { password: hashedPassword, passwordChangedAt: new Date() });
     await this.authTokenService.deleteAllRefreshTokens(user.id);
-    await this.tokenBlacklistService.removeUserFromBlacklist(user.id);
 
     this.logger.log(`密码重置成功：email=${email ?? phone}`);
     return { message: I18nContext.current()?.t('success.password_reset_success') ?? '密码重置成功，请使用新密码登录' };

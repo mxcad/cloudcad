@@ -15,20 +15,14 @@ describe('CooperateAuthService', () => {
   const USER_ID = 'user-001';
 
   let service: CooperateAuthService;
-  let mockTokenBlacklist: {
-    isBlacklisted: jest.Mock;
-    isUserBlacklisted: jest.Mock;
-  };
+  let mockTokenBlacklist: { isBlacklisted: jest.Mock };
   let mockDatabase: { user: { findUnique: jest.Mock } };
 
   const signToken = (payload: object): string =>
     jwt.sign(payload, JWT_SECRET);
 
   beforeEach(async () => {
-    mockTokenBlacklist = {
-      isBlacklisted: jest.fn().mockResolvedValue(false),
-      isUserBlacklisted: jest.fn().mockResolvedValue(false),
-    };
+    mockTokenBlacklist = { isBlacklisted: jest.fn().mockResolvedValue(false) };
     mockDatabase = {
       user: {
         findUnique: jest
@@ -67,15 +61,12 @@ describe('CooperateAuthService', () => {
         await expect(service.authenticateJwt(token)).resolves.toBe(USER_ID);
       });
 
-      it('should run blacklist and user status checks', async () => {
+      it('should run token blacklist and user status checks', async () => {
         const token = signToken({ sub: USER_ID, type: 'access' });
 
         await service.authenticateJwt(token);
 
         expect(mockTokenBlacklist.isBlacklisted).toHaveBeenCalledWith(token);
-        expect(mockTokenBlacklist.isUserBlacklisted).toHaveBeenCalledWith(
-          USER_ID
-        );
         expect(mockDatabase.user.findUnique).toHaveBeenCalledWith({
           where: { id: USER_ID, deletedAt: null },
           select: { id: true, status: true },
@@ -113,17 +104,6 @@ describe('CooperateAuthService', () => {
     describe('when token is blacklisted', () => {
       it('should reject with UnauthorizedException', async () => {
         mockTokenBlacklist.isBlacklisted.mockResolvedValue(true);
-        const token = signToken({ sub: USER_ID, type: 'access' });
-
-        await expect(service.authenticateJwt(token)).rejects.toThrow(
-          UnauthorizedException
-        );
-      });
-    });
-
-    describe('when user is blacklisted', () => {
-      it('should reject with UnauthorizedException', async () => {
-        mockTokenBlacklist.isUserBlacklisted.mockResolvedValue(true);
         const token = signToken({ sub: USER_ID, type: 'access' });
 
         await expect(service.authenticateJwt(token)).rejects.toThrow(
@@ -182,16 +162,6 @@ describe('CooperateAuthService', () => {
   });
 
   describe('authenticateSession', () => {
-    describe('when user is blacklisted', () => {
-      it('should reject with UnauthorizedException', async () => {
-        mockTokenBlacklist.isUserBlacklisted.mockResolvedValue(true);
-
-        await expect(service.authenticateSession(USER_ID)).rejects.toThrow(
-          UnauthorizedException
-        );
-      });
-    });
-
     describe('when user status is not ACTIVE', () => {
       it('should reject with UnauthorizedException', async () => {
         mockDatabase.user.findUnique.mockResolvedValue({

@@ -112,16 +112,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    // 检查用户是否在黑名单中
-    const isUserBlacklisted =
-      await this.tokenBlacklistService.isUserBlacklisted(payload.sub);
-    if (isUserBlacklisted) {
-      if (this.isDevelopment) {
-        this.logger.warn(`用户已被禁用: ${payload.sub}`);
-      }
-      throw new UnauthorizedException(I18nContext.current()?.t('error.auth.user_disabled') ?? '用户已被禁用');
-    }
-
+    // 没有用户级 Redis 名单门（Gitea #484）：下面的 DB 查询已按 status 判定并抛同一个
+    // error.auth.user_disabled，而那道门在 Redis 出错时 fail-closed 返回 true——Redis 一抖
+    // 全平台用户被拒。令牌级名单（上面 isBlacklisted）保留。
     // 快速检查用户状态（1 次轻量查询，查 id + status + 实时角色 + TOTP 状态 + 口令修改时间）
     const userStatus = await this.prisma.user.findUnique({
       where: { id: payload.sub, deletedAt: null },

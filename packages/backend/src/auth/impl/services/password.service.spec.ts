@@ -34,10 +34,6 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
     deleteAllRefreshTokens: jest.fn(),
   };
 
-  const mockTokenBlacklistService = {
-    removeUserFromBlacklist: jest.fn(),
-  };
-
   const mockPasswordHasher = {
     hash: jest.fn(),
     compare: jest.fn(),
@@ -75,7 +71,6 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
         { provide: 'SMS', useValue: mockSmsVerificationService },
         { provide: 'CONFIG', useValue: mockRuntimeConfigService },
         { provide: AuthTokenService, useValue: mockAuthTokenService },
-        { provide: 'TOKEN_BLACKLIST', useValue: mockTokenBlacklistService },
         { provide: PASSWORD_HASHER, useValue: mockPasswordHasher },
         { provide: AccountRateLimitService, useValue: mockAccountRateLimitService },
         {

@@ -15,7 +15,6 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { DatabaseService } from '../../database/database.service';
-import { TokenBlacklistService } from '../services/token-blacklist.service';
 
 import { I18nContext } from 'nestjs-i18n';
 @Injectable()
@@ -24,12 +23,10 @@ export class RefreshTokenStrategy extends PassportStrategy(
   'refresh-token'
 ) {
   private readonly prisma: DatabaseService;
-  private readonly tokenBlacklistService: TokenBlacklistService;
 
   constructor(
     @Inject(ConfigService) configService: ConfigService,
-    @Inject(DatabaseService) prisma: DatabaseService,
-    @Inject(TokenBlacklistService) tokenBlacklistService: TokenBlacklistService
+    @Inject(DatabaseService) prisma: DatabaseService
   ) {
     const jwtRefreshSecret = configService.get<string>('jwt.refreshSecret');
     if (!jwtRefreshSecret) {
@@ -43,7 +40,6 @@ export class RefreshTokenStrategy extends PassportStrategy(
     });
 
     this.prisma = prisma;
-    this.tokenBlacklistService = tokenBlacklistService;
   }
 
   async validate(payload: { sub: string; type: string }) {
@@ -51,13 +47,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
       throw new BadRequestException(I18nContext.current()?.t('error.auth.refresh_token_invalid_type') ?? '无效的刷新Token类型');
     }
 
-    // 检查用户是否在黑名单中
-    const isUserBlacklisted =
-      await this.tokenBlacklistService.isUserBlacklisted(payload.sub);
-    if (isUserBlacklisted) {
-      throw new UnauthorizedException(I18nContext.current()?.t('error.auth.user_disabled') ?? '用户已被禁用');
-    }
-
+    // 用户停用/删除只由下面的 DB 判定（deletedAt + status）负责，无用户级 Redis 名单门（Gitea #484）
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub, deletedAt: null },
       select: {

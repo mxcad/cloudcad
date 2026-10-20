@@ -23,7 +23,6 @@ import { ConfigService } from '@nestjs/config';
 import { IS_PUBLIC_KEY } from './decorators/public.decorator';
 import { IS_OPTIONAL_AUTH_KEY } from './decorators/optional-auth.decorator';
 import { SCRAPE_AUTH_KEY } from './decorators/scrape-auth.decorator';
-import { TokenBlacklistService } from './services/token-blacklist.service';
 import { DatabaseService } from '../database/database.service';
 import { extractTokenFromRequest } from './utils/token-extractor';
 import { matchScrapeCredentials } from './utils/scrape-token';
@@ -35,8 +34,6 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
 
   constructor(
     private reflector: Reflector,
-    @Inject(TokenBlacklistService)
-    private readonly tokenBlacklistService: TokenBlacklistService,
     @Inject(DatabaseService)
     private readonly prisma: DatabaseService,
     private readonly configService: ConfigService
@@ -99,18 +96,7 @@ export class JwtStrategyExecutor extends AuthGuard('jwt') {
     if (request.session?.userId) {
       let sessionRoleId: string | undefined;
       try {
-        const isUserBlacklisted =
-          await this.tokenBlacklistService.isUserBlacklisted(
-            request.session.userId
-          );
-        if (isUserBlacklisted) {
-          this.logger.warn(`Session 用户已被禁用: ${request.session.userId}`);
-          throw new UnauthorizedException(
-            I18nContext.current()?.t('error.auth.user_disabled') ??
-              '用户已被禁用'
-          );
-        }
-
+        // 用户停用/删除只由下面的 DB 判定（deletedAt + status）负责，无用户级 Redis 名单门（Gitea #484）
         const userStatus = await this.prisma.user.findUnique({
           where: {
             id: request.session.userId,

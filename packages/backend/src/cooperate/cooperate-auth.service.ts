@@ -79,14 +79,7 @@ export class CooperateAuthService {
   }
 
   private async ensureUserActive(userId: string): Promise<void> {
-    // 用户黑名单
-    if (await this.tokenBlacklistService.isUserBlacklisted(userId)) {
-      throw new UnauthorizedException(
-        I18nContext.current()?.t('error.auth.user_disabled') ?? '用户已被禁用'
-      );
-    }
-
-    // 用户状态（禁用/删除）
+    // 用户状态（禁用/删除）——唯一判定来源；没有用户级 Redis 名单门（Gitea #484）
     const user = await this.databaseService.user.findUnique({
       where: { id: userId, deletedAt: null },
       select: { id: true, status: true },
