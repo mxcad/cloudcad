@@ -93,8 +93,13 @@ export class InitializationService implements OnModuleInit {
     }
 
     // 串行执行有依赖的任务
-    await this.checkAndCreateInitialAdmin();
+    // 白名单必须先于管理员创建：其守卫是 userCount==0（仅首次启动），若排在
+    // checkAndCreateInitialAdmin 之后，全新部署时管理员已创建、守卫恒真 → 默认
+    // 放行条目（0.0.0.0/0 + ::/0）永不写入 → 白名单空表 fail-close，远程管理员
+    // 在全新部署上无法登录（仅环回/本地文件自救通道可用）。2026-10-20 docker
+    // windows 宿主 E2E 实测：全新部署 ip_whitelist_entries 恒 0 行。
     await this.ensureDefaultAdminIpWhitelist();
+    await this.checkAndCreateInitialAdmin();
     await this.ensureAllUsersHavePersonalSpace();
     await this.ensurePublicLibraries();
 
