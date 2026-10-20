@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const { readEnvInt } = require('./lib/env');
 const { buildRedisArgs } = require('./lib/redis-args');
+const { rotateAndPrune } = require('./lib/redis-log-rotation');
 
 const { IS_WINDOWS } = require('./lib/context');
 const { getPidByPort } = require('./lib/proc');
@@ -206,6 +207,13 @@ function startRedis() {
     // 构建 Redis 启动参数（argv 组装走 buildRedisArgs，纯函数便于单测断言）
     // logfile 必须是已存在目录下的绝对路径：Redis 不创建父目录，目录缺失会直接启动失败
     fs.mkdirSync(path.dirname(REDIS_LOG_FILE), { recursive: true });
+    // 轮转 + 保留期清理（#472）。只在启动前做：Redis 独占 logfile 的 fd，运行中
+    // rename 只会把写入转移到改名后的文件且 Redis 不会重开（比无界增长更糟）
+    const rotation = rotateAndPrune({ logFile: REDIS_LOG_FILE });
+    if (rotation.rotated) log('info', `Redis 日志已轮转: ${rotation.rotated}`);
+    if (rotation.deleted.length) {
+      log('info', `已清理过期 Redis 日志 ${rotation.deleted.length} 个`);
+    }
     const redisArgs = buildRedisArgs({
       port: REDIS_PORT,
       dataDir: REDIS_DATA_DIR,
