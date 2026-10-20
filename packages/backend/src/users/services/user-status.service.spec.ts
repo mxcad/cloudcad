@@ -1,5 +1,10 @@
 import { Test, type TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserStatusService } from './user-status.service';
 import { UserCleanupService } from '../../user-cleanup/user-cleanup.service';
@@ -20,6 +25,10 @@ describe('UserStatusService（注销/恢复）', () => {
     user: {
       findUnique: jest.fn(),
       update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
+    },
+    rolePermission: {
+      count: jest.fn().mockResolvedValue(0),
     },
     refreshToken: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -219,5 +228,119 @@ describe('UserStatusService（注销/恢复）', () => {
       BadRequestException
     );
     expect(mockPrisma.user.update).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 状态变更路径的两条不变量（与改角色共用同一套判定）：
+ * - 操作者不得修改自己的状态（自我挂起 = 比改角色更快的锁死路径）
+ * - 不得让「持有用户管理权限的账号」归零（SUSPENDED/INACTIVE 均视为失去使用能力）
+ */
+describe('UserStatusService.updateStatus（自我降权 / 最后一个管理员）', () => {
+  let service: UserStatusService;
+
+  const mockPrisma = {
+    user: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
+    },
+    rolePermission: {
+      count: jest.fn().mockResolvedValue(0),
+    },
+  };
+
+  const adminTarget = { id: 'user-1', roleId: 'role-admin', status: 'ACTIVE' };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    mockPrisma.user.update.mockResolvedValue({ ...adminTarget, username: 'admin', email: 'a@x.com' });
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserStatusService,
+        { provide: DatabaseService, useValue: mockPrisma },
+        { provide: UserCleanupService, useValue: { deleteUserCompletely: jest.fn() } },
+        { provide: 'CONFIG', useValue: { getValue: jest.fn().mockResolvedValue(7) } },
+        { provide: VERIFICATION_STRATEGIES, useValue: [] },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        { provide: AuditLogService, useValue: { log: jest.fn().mockResolvedValue(undefined) } },
+      ],
+    }).compile();
+    service = module.get<UserStatusService>(UserStatusService);
+  });
+
+  it('操作者挂起自己 → 403 且不写库', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(adminTarget);
+
+    await expect(
+      service.updateStatus('user-1', 'SUSPENDED', 'user-1')
+    ).rejects.toThrow(ForbiddenException);
+    expect(mockPrisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('管理员挂起持用户管理权的别人 → 放行', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(adminTarget);
+    mockPrisma.rolePermission.count.mockResolvedValue(1);
+    mockPrisma.user.count.mockResolvedValue(1);
+
+    await service.updateStatus('user-1', 'SUSPENDED', 'admin-1');
+
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { status: 'SUSPENDED' },
+      select: expect.any(Object),
+    });
+  });
+
+  it('挂起唯一的用户管理员 → 409 且不写库', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(adminTarget);
+    mockPrisma.rolePermission.count.mockResolvedValue(1); // 目标当前持 SYSTEM_USER_UPDATE
+    mockPrisma.user.count.mockResolvedValue(0); // 排除目标后已无其他管理员
+
+    await expect(service.updateStatus('user-1', 'SUSPENDED', 'admin-1')).rejects.toThrow(
+      ConflictException
+    );
+    expect(mockPrisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('挂起用户管理员但仍有其他管理员 → 放行', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(adminTarget);
+    mockPrisma.rolePermission.count.mockResolvedValue(1);
+    mockPrisma.user.count.mockResolvedValue(2);
+
+    await service.updateStatus('user-1', 'SUSPENDED', 'admin-1');
+
+    expect(mockPrisma.user.update).toHaveBeenCalled();
+  });
+
+  it('提回 ACTIVE 不受最后一个管理员约束', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      roleId: 'role-admin',
+      status: 'SUSPENDED',
+    });
+    mockPrisma.rolePermission.count.mockResolvedValue(1);
+
+    await service.updateStatus('user-1', 'ACTIVE', 'admin-1');
+
+    expect(mockPrisma.user.update).toHaveBeenCalled();
+    expect(mockPrisma.user.count).not.toHaveBeenCalled();
+  });
+
+  it('状态未变的幂等保存 → 放行', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(adminTarget);
+
+    await service.updateStatus('user-1', 'ACTIVE', 'user-1');
+
+    expect(mockPrisma.user.update).toHaveBeenCalled();
+  });
+
+  it('目标不存在 → 404', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.updateStatus('ghost', 'ACTIVE', 'admin-1')).rejects.toThrow(
+      NotFoundException
+    );
   });
 });

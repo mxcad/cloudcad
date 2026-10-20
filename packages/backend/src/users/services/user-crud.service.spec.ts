@@ -1,5 +1,10 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserCrudService } from './user-crud.service';
 import { PermissionCacheService } from '../../permission/services/permission-cache.service';
@@ -146,5 +151,166 @@ describe('UserCrudService.updateMembership', () => {
       ACCOUNT_EVENTS_CHANNEL('user-1'),
       { type: 'membership-changed' }
     );
+  });
+});
+
+/**
+ * UserCrudService.update 的三条不变量接线验证（判定逻辑见 admin-privilege-guard.spec.ts）：
+ * - 操作者不得改自己的角色 / 状态（自我降权会把账户锁死在用户管理页之外）
+ * - 不得让「持有 SYSTEM_USER_UPDATE 的账号」归零（换角色与改状态两条路径都要拦）
+ */
+describe('UserCrudService.update（自我降权 / 最后一个管理员）', () => {
+  let service: UserCrudService;
+  let prisma: any;
+  let permissionCacheService: { clearUserCache: jest.Mock };
+
+  const adminUser = {
+    id: 'user-1',
+    email: 'admin@x.com',
+    username: 'admin',
+    roleId: 'role-admin',
+    status: 'ACTIVE',
+  };
+
+  const updatedUser = {
+    ...adminUser,
+    role: {
+      id: 'role-admin',
+      name: 'ADMIN',
+      description: null,
+      isSystem: true,
+      permissions: [],
+    },
+    membership: null,
+  };
+
+  beforeEach(async () => {
+    prisma = {
+      user: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        count: jest.fn(),
+      },
+      rolePermission: { count: jest.fn() },
+    };
+    permissionCacheService = { clearUserCache: jest.fn() };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        UserCrudService,
+        { provide: DatabaseService, useValue: prisma },
+        { provide: PermissionCacheService, useValue: permissionCacheService },
+        { provide: RuntimeConfigService, useValue: {} },
+        { provide: PASSWORD_HASHER, useValue: {} },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: MembershipService,
+          useValue: { hasValidExternalWatermark: jest.fn().mockResolvedValue(false) },
+        },
+        { provide: StorageInfoService, useValue: {} },
+        {
+          provide: StorageUsageService,
+          useValue: { usageSize: jest.fn().mockResolvedValue(0) },
+        },
+        {
+          provide: PasswordPolicyService,
+          useValue: {
+            assertPasswordPolicy: jest.fn(),
+            getPasswordChangeStatus: jest.fn(),
+          },
+        },
+        {
+          provide: PiiCryptoService,
+          useValue: {
+            emailHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            phoneHmacIndex: jest.fn((v: string) => `hmac:${v}`),
+            derivePiiFields: jest.fn(() => ({})),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get(UserCrudService);
+  });
+
+  // clearMocks/restoreMocks/resetMocks 全 true 会在每个用例前清掉实现，
+  // 故默认值必须在用例内显式重建（beforeEach 里设的 jest.fn 实现会被重置）
+  const defineMocks = (overrides: {
+    otherAdmins?: number;
+    grants?: Record<string, boolean>;
+  } = {}) => {
+    prisma.user.findUnique.mockResolvedValue(adminUser);
+    prisma.user.update.mockResolvedValue(updatedUser);
+    prisma.user.count.mockResolvedValue(overrides.otherAdmins ?? 0);
+    const grants = overrides.grants ?? {};
+    prisma.rolePermission.count.mockImplementation(
+      async ({ where }: { where: { roleId: string } }) =>
+        (grants[where.roleId] ? 1 : 0)
+    );
+  };
+
+  it('操作者改自己的角色 → 403 且不写库', async () => {
+    defineMocks();
+
+    await expect(
+      service.update('user-1', { roleId: 'role-user' } as never, 'user-1')
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('管理员改自己的账户状态 → 403 且不写库', async () => {
+    defineMocks();
+
+    await expect(
+      service.update('user-1', { status: 'SUSPENDED' } as never, 'user-1')
+    ).rejects.toThrow(ForbiddenException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('改别人的角色 → 放行并清权限缓存', async () => {
+    defineMocks();
+
+    await service.update('user-1', { roleId: 'role-user' } as never, 'admin-1');
+
+    expect(prisma.user.update).toHaveBeenCalled();
+    expect(permissionCacheService.clearUserCache).toHaveBeenCalledWith('user-1');
+  });
+
+  it('把唯一持用户管理权的账号换成非管理员角色 → 409', async () => {
+    defineMocks({ grants: { 'role-admin': true }, otherAdmins: 0 });
+
+    await expect(
+      service.update('user-1', { roleId: 'role-user' } as never, 'admin-1')
+    ).rejects.toThrow(ConflictException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('降级但仍有其他管理员 → 放行', async () => {
+    defineMocks({ grants: { 'role-admin': true }, otherAdmins: 2 });
+
+    await service.update('user-1', { roleId: 'role-user' } as never, 'admin-1');
+
+    expect(prisma.user.update).toHaveBeenCalled();
+  });
+
+  it('把唯一管理员的状态改为非 ACTIVE → 409', async () => {
+    defineMocks({ grants: { 'role-admin': true }, otherAdmins: 0 });
+
+    await expect(
+      service.update('user-1', { status: 'INACTIVE' } as never, 'admin-1')
+    ).rejects.toThrow(ConflictException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('角色与状态均未变（幂等保存自己的行）→ 放行', async () => {
+    defineMocks();
+
+    await service.update(
+      'user-1',
+      { roleId: 'role-admin', status: 'ACTIVE' } as never,
+      'user-1'
+    );
+
+    expect(prisma.user.update).toHaveBeenCalled();
   });
 });

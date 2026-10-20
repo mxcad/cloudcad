@@ -95,9 +95,10 @@ describe('UsersService.syncWechatAvatar', () => {
       wechatUrl,
       expect.objectContaining({ redirect: 'error' })
     );
+    // 第三个参数是操作者：avatar-only 写入取用户自身，使自我降权守卫对该路径无影响
     expect(crudService.update).toHaveBeenCalledWith(userId, {
       avatar: `/api/v1/users/avatar/${userId}`,
-    });
+    }, userId);
     // 落盘文件存在且内容一致
     const filePath = path.join(avatarDir, `${userId}.jpg`);
     expect(fs.existsSync(filePath)).toBe(true);
@@ -238,7 +239,7 @@ describe('UsersService.uploadAvatar', () => {
     expect(fs.existsSync(path.join(avatarDir, `${userId}.jfif`))).toBe(false);
     expect(crudService.update).toHaveBeenCalledWith(userId, {
       avatar: `/api/v1/users/avatar/${userId}`,
-    });
+    }, userId);
   });
 
   it('image/jfif MIME 应通过白名单校验', async () => {
