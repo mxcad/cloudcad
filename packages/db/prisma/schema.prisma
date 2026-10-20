@@ -511,6 +511,8 @@ enum AuditAction {
   USER_BIND_WECHAT
   USER_UNBIND_WECHAT
   USER_CHANGE_PASSWORD
+  USER_ROLE_CHANGE
+  USER_STATUS_CHANGE
   USER_DEACTIVATE
   PROJECT_CREATE
   PROJECT_DELETE
@@ -551,6 +553,8 @@ enum AuditAction {
   // 基础设施密码重置（ADR-0073：改服务端 + 成对改 .env + 审计留痕，resourceType=SYSTEM）
   DB_PASSWORD_RESET
   REDIS_PASSWORD_RESET
+  // 通知中心：删除公告（硬删不可恢复，params 记 wasActive 与批量条数）
+  NOTICE_DELETE
 }
 
 enum ResourceType {
@@ -564,6 +568,8 @@ enum ResourceType {
   ALERT
   IpBlacklistEntry
   IpWhitelistEntry
+  // 通知中心公告（notice-center）
+  NOTICE
 }
 
 enum RoleCategory {

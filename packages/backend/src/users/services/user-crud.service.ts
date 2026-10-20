@@ -37,6 +37,8 @@ import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
 import { ACCOUNT_EVENTS_CHANNEL } from '../account-events-sse.constants';
 
 import { I18nContext } from 'nestjs-i18n';
+import { AuditLogService } from '../../audit/audit-log.service';
+import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 import {
   assertNotSelfRoleChange,
   assertNotSelfStatusChange,
@@ -55,6 +57,7 @@ export class UserCrudService {
     @Inject(PASSWORD_HASHER)
     private readonly passwordHasher: IPasswordHasher,
     private readonly eventEmitter: EventEmitter2,
+    private readonly auditLogService: AuditLogService,
     private readonly membershipService: MembershipService,
     private readonly storageInfoService: StorageInfoService,
     private readonly storageUsageService: StorageUsageService,
@@ -693,6 +696,44 @@ export class UserCrudService {
 
       if (updateUserDto.roleId || updateUserDto.status) {
         this.permissionCacheService.clearUserCache(id);
+      }
+
+      // #487 账号安全审计：角色/状态变更留痕（resourceType=USER，params 记 old/new；
+      // 写库失败不阻塞业务——与注销类埋点同一约束）
+      try {
+        if (updateUserDto.roleId && updateUserDto.roleId !== existingUser.roleId) {
+          await this.auditLogService.log({
+            action: AuditAction.USER_ROLE_CHANGE,
+            resourceType: ResourceType.USER,
+            resourceId: id,
+            userId: operatorId,
+            success: true,
+            resourceName: user.email ?? user.username ?? id,
+            params: {
+              oldRoleId: existingUser.roleId,
+              newRoleId: updateUserDto.roleId,
+            },
+          });
+        }
+        if (
+          updateUserDto.status &&
+          updateUserDto.status !== existingUser.status
+        ) {
+          await this.auditLogService.log({
+            action: AuditAction.USER_STATUS_CHANGE,
+            resourceType: ResourceType.USER,
+            resourceId: id,
+            userId: operatorId,
+            success: true,
+            resourceName: user.email ?? user.username ?? id,
+            params: {
+              oldStatus: existingUser.status,
+              newStatus: updateUserDto.status,
+            },
+          });
+        }
+      } catch {
+        // 审计写库失败不阻塞业务
       }
 
       return userWithMembership;

@@ -17,6 +17,8 @@ import { PASSWORD_HASHER } from '../interfaces/password-hasher.interface';
 import { PasswordPolicyService } from '../../auth/services/password-policy.service';
 import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
 import { ACCOUNT_EVENTS_CHANNEL } from '../account-events-sse.constants';
+import { AuditLogService } from '../../audit/audit-log.service';
+import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 
 describe('UserCrudService.updateMembership', () => {
   let service: UserCrudService;
@@ -47,6 +49,7 @@ describe('UserCrudService.updateMembership', () => {
         UserCrudService,
         { provide: DatabaseService, useValue: prisma },
         { provide: PermissionCacheService, useValue: {} },
+        { provide: AuditLogService, useValue: { log: jest.fn().mockResolvedValue(undefined) } },
         { provide: RuntimeConfigService, useValue: {} },
         { provide: PASSWORD_HASHER, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -163,6 +166,7 @@ describe('UserCrudService.update（自我降权 / 最后一个管理员）', () 
   let service: UserCrudService;
   let prisma: any;
   let permissionCacheService: { clearUserCache: jest.Mock };
+  let auditLogService: { log: jest.Mock };
 
   const adminUser = {
     id: 'user-1',
@@ -194,12 +198,14 @@ describe('UserCrudService.update（自我降权 / 最后一个管理员）', () 
       rolePermission: { count: jest.fn() },
     };
     permissionCacheService = { clearUserCache: jest.fn() };
+    auditLogService = { log: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [
         UserCrudService,
         { provide: DatabaseService, useValue: prisma },
         { provide: PermissionCacheService, useValue: permissionCacheService },
+        { provide: AuditLogService, useValue: auditLogService },
         { provide: RuntimeConfigService, useValue: {} },
         { provide: PASSWORD_HASHER, useValue: {} },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
@@ -312,5 +318,50 @@ describe('UserCrudService.update（自我降权 / 最后一个管理员）', () 
     );
 
     expect(prisma.user.update).toHaveBeenCalled();
+  });
+
+  it('#487 改角色 → 记 USER_ROLE_CHANGE 审计（resourceType=USER，params 记 old/new）', async () => {
+    defineMocks();
+
+    await service.update('user-1', { roleId: 'role-user' } as never, 'admin-1');
+
+    expect(auditLogService.log).toHaveBeenCalledWith({
+      action: AuditAction.USER_ROLE_CHANGE,
+      resourceType: ResourceType.USER,
+      resourceId: 'user-1',
+      userId: 'admin-1',
+      success: true,
+      resourceName: 'admin@x.com',
+      params: { oldRoleId: 'role-admin', newRoleId: 'role-user' },
+    });
+  });
+
+  it('#487 改状态 → 记 USER_STATUS_CHANGE 审计', async () => {
+    defineMocks();
+
+    await service.update('user-1', { status: 'SUSPENDED' } as never, 'admin-1');
+
+    expect(auditLogService.log).toHaveBeenCalledWith({
+      action: AuditAction.USER_STATUS_CHANGE,
+      resourceType: ResourceType.USER,
+      resourceId: 'user-1',
+      userId: 'admin-1',
+      success: true,
+      resourceName: 'admin@x.com',
+      params: { oldStatus: 'ACTIVE', newStatus: 'SUSPENDED' },
+    });
+  });
+
+  it('#487 角色与状态均未变 → 不记审计（避免幂等保存灌噪音）', async () => {
+    defineMocks();
+
+    await service.update(
+      'user-1',
+      { roleId: 'role-admin', status: 'ACTIVE' } as never,
+      'user-1'
+    );
+
+    expect(prisma.user.update).toHaveBeenCalled();
+    expect(auditLogService.log).not.toHaveBeenCalled();
   });
 });

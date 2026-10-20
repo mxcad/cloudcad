@@ -11,6 +11,7 @@ import { UserCleanupService } from '../../user-cleanup/user-cleanup.service';
 import { DatabaseService } from '../../database/database.service';
 import { VERIFICATION_STRATEGIES } from '../interfaces/account-verification-strategy.interface';
 import { AuditLogService } from '../../audit/audit-log.service';
+import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
 
 /**
  * UserStatusService 注销/恢复行为：
@@ -252,6 +253,8 @@ describe('UserStatusService.updateStatus（自我降权 / 最后一个管理员�
 
   const adminTarget = { id: 'user-1', roleId: 'role-admin', status: 'ACTIVE' };
 
+  const mockAuditLogService = { log: jest.fn().mockResolvedValue(undefined) };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     mockPrisma.user.update.mockResolvedValue({ ...adminTarget, username: 'admin', email: 'a@x.com' });
@@ -264,7 +267,7 @@ describe('UserStatusService.updateStatus（自我降权 / 最后一个管理员�
         { provide: 'CONFIG', useValue: { getValue: jest.fn().mockResolvedValue(7) } },
         { provide: VERIFICATION_STRATEGIES, useValue: [] },
         { provide: EventEmitter2, useValue: { emit: jest.fn() } },
-        { provide: AuditLogService, useValue: { log: jest.fn().mockResolvedValue(undefined) } },
+        { provide: AuditLogService, useValue: mockAuditLogService },
       ],
     }).compile();
     service = module.get<UserStatusService>(UserStatusService);
@@ -342,5 +345,52 @@ describe('UserStatusService.updateStatus（自我降权 / 最后一个管理员�
     await expect(service.updateStatus('ghost', 'ACTIVE', 'admin-1')).rejects.toThrow(
       NotFoundException
     );
+  });
+
+  it('#487 状态变更 → 记 USER_STATUS_CHANGE 审计（resourceType=USER，params 记 old/new）', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(adminTarget);
+    mockPrisma.rolePermission.count.mockResolvedValue(1);
+    mockPrisma.user.count.mockResolvedValue(1);
+
+    await service.updateStatus('user-1', 'SUSPENDED', 'admin-1');
+
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: AuditAction.USER_STATUS_CHANGE,
+      resourceType: ResourceType.USER,
+      resourceId: 'user-1',
+      userId: 'admin-1',
+      success: true,
+      resourceName: 'a@x.com',
+      params: { oldStatus: 'ACTIVE', newStatus: 'SUSPENDED' },
+    });
+  });
+
+  it('#487 提回 ACTIVE → 同样记审计', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      roleId: 'role-admin',
+      status: 'SUSPENDED',
+    });
+    mockPrisma.rolePermission.count.mockResolvedValue(1);
+
+    await service.updateStatus('user-1', 'ACTIVE', 'admin-1');
+
+    expect(mockAuditLogService.log).toHaveBeenCalledWith({
+      action: AuditAction.USER_STATUS_CHANGE,
+      resourceType: ResourceType.USER,
+      resourceId: 'user-1',
+      userId: 'admin-1',
+      success: true,
+      resourceName: 'a@x.com',
+      params: { oldStatus: 'SUSPENDED', newStatus: 'ACTIVE' },
+    });
+  });
+
+  it('#487 状态未变的幂等保存 → 不记审计（避免灌噪音）', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(adminTarget);
+
+    await service.updateStatus('user-1', 'ACTIVE', 'user-1');
+
+    expect(mockPrisma.user.update).toHaveBeenCalled();
+    expect(mockAuditLogService.log).not.toHaveBeenCalled();
   });
 });

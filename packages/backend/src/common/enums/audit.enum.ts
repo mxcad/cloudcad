@@ -38,6 +38,8 @@ export enum AuditAction {
   FILE_SHARE = 'FILE_SHARE',
   // —— 高价值保留：账号安全 ——
   USER_CHANGE_PASSWORD = 'USER_CHANGE_PASSWORD',
+  USER_ROLE_CHANGE = 'USER_ROLE_CHANGE',
+  USER_STATUS_CHANGE = 'USER_STATUS_CHANGE',
   USER_DEACTIVATE = 'USER_DEACTIVATE',
   USER_UNBIND_EMAIL = 'USER_UNBIND_EMAIL',
   USER_UNBIND_PHONE = 'USER_UNBIND_PHONE',
@@ -95,6 +97,8 @@ export enum AuditAction {
   // resourceType=SYSTEM，resourceName=被改的对象名，params.source=ops_cli）——
   DB_PASSWORD_RESET = 'DB_PASSWORD_RESET',
   REDIS_PASSWORD_RESET = 'REDIS_PASSWORD_RESET',
+  // —— 通知中心：删除公告（硬删不可恢复，params 记 wasActive 与批量条数）——
+  NOTICE_DELETE = 'NOTICE_DELETE',
 }
 
 /**
@@ -111,4 +115,5 @@ export enum ResourceType {
   ALERT = 'ALERT',
   IpBlacklistEntry = 'IpBlacklistEntry',
   IpWhitelistEntry = 'IpWhitelistEntry',
+  NOTICE = 'NOTICE',
 }

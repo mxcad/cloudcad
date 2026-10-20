@@ -354,6 +354,25 @@ export class UserStatusService {
         },
       });
       this.logger.log(`用户状态更新成功：${user.email} -> ${status}`);
+
+      // #487 账号安全审计：状态变更留痕（resourceType=USER，params 记 old/new；
+      // 状态未变的幂等保存不记，避免灌噪音；写库失败不阻塞业务）
+      if (status !== existing.status) {
+        try {
+          await this.auditLogService.log({
+            action: AuditAction.USER_STATUS_CHANGE,
+            resourceType: ResourceType.USER,
+            resourceId: id,
+            userId: operatorId,
+            success: true,
+            resourceName: user.email ?? user.username ?? id,
+            params: { oldStatus: existing.status, newStatus: status },
+          });
+        } catch {
+          // 审计写库失败不阻塞业务
+        }
+      }
+
       return user;
     } catch (error) {
       this.logger.error(`用户状态更新失败：${error.message}`, error.stack);
