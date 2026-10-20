@@ -116,7 +116,7 @@ class TaskStore {
         try {
           this.tasks.set(arr[i].toString(), JSON.parse(arr[i + 1].toString()) as TaskRecord);
         } catch (err) {
-          log(`[TaskStore] 跳过损坏的任务记录: ${arr[i]} - ${(err as Error).message}`);
+          log('error', `[TaskStore] 跳过损坏的任务记录: ${arr[i]} - ${(err as Error).message}`);
         }
       }
       this._redis = client;
@@ -124,7 +124,7 @@ class TaskStore {
     } catch (err) {
       this._redis = null;
       this._fallback = true;
-      log(`[TaskStore] Redis 不可用 (${(err as Error).message}), 回退到内存模式`);
+      log('error', `[TaskStore] Redis 不可用 (${(err as Error).message}), 回退到内存模式`);
     }
     return this;
   }
@@ -336,13 +336,13 @@ class TaskStore {
     if (!this.isRedis()) return;
     this._persistQueue = this._persistQueue
       .then(() => this._redis!.command(['HSET', TASKS_HASH_KEY, taskId, JSON.stringify(record)]))
-      .catch((err) => log(`[TaskStore] Redis 持久化失败 ${taskId}: ${(err as Error).message}`));
+      .catch((err) => log('error', `[TaskStore] Redis 持久化失败 ${taskId}: ${(err as Error).message}`));
   }
 
   _persistDelete(taskId: string): void {
     this._persistQueue = this._persistQueue
       .then(() => this._redis!.command(['HDEL', TASKS_HASH_KEY, taskId]))
-      .catch((err) => log(`[TaskStore] Redis 删除失败 ${taskId}: ${(err as Error).message}`));
+      .catch((err) => log('error', `[TaskStore] Redis 删除失败 ${taskId}: ${(err as Error).message}`));
   }
 
   // 等待所有排队中的持久化完成（优雅关闭时调用）

@@ -42,7 +42,7 @@ class StorageRouter {
         log(`[StorageRouter] 无路由表文件, 使用默认路径: ${FILES_DATA_PATH}`);
       }
     } catch (err) {
-      log(`[StorageRouter] 加载路由表失败: ${err.message}, 使用默认路径`);
+      log('error', `[StorageRouter] 加载路由表失败: ${err.message}, 使用默认路径`);
     }
   }
 

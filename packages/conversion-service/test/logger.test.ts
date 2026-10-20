@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { log, resolveRequestId, runWithRequest, getLogDir } from '../lib/logger';
+import { log, resolveRequestId, runWithRequest, getLogDir, resolveLogLevels } from '../lib/logger';
 import { PROJECT_ROOT } from '../lib/constants';
 
 // 测试专用日志目录（logger 在调用时读取 env，支持运行时覆盖）
@@ -120,5 +120,93 @@ describe('logger (零依赖 JSON 日志)', () => {
       if (prev === undefined) delete process.env.LOG_DIR;
       else process.env.LOG_DIR = prev;
     }
+  });
+
+  describe('级别分裂（ADR-0076）', () => {
+    it('resolveLogLevels：生产默认 文件=debug / 实时=error', () => {
+      assert.deepEqual(resolveLogLevels({ NODE_ENV: 'production' }), {
+        file: 'debug',
+        console: 'error',
+      });
+    });
+
+    it('resolveLogLevels：开发默认 实时=debug（保留全量输出）', () => {
+      assert.deepEqual(resolveLogLevels({}), { file: 'debug', console: 'debug' });
+    });
+
+    it('LOG_FILE_LEVEL / LOG_CONSOLE_LEVEL 各自覆盖，互不影响', () => {
+      const plan = resolveLogLevels({
+        NODE_ENV: 'production',
+        LOG_FILE_LEVEL: 'info',
+        LOG_CONSOLE_LEVEL: 'debug',
+      });
+      assert.deepEqual(plan, { file: 'info', console: 'debug' });
+    });
+
+    it('LOG_LEVEL 作为旧别名生效，显式 LOG_FILE_LEVEL 优先', () => {
+      assert.equal(resolveLogLevels({ NODE_ENV: 'production', LOG_LEVEL: 'warn' }).file, 'warn');
+      assert.equal(
+        resolveLogLevels({ NODE_ENV: 'production', LOG_FILE_LEVEL: 'info', LOG_LEVEL: 'warn' }).file,
+        'info',
+      );
+    });
+
+    it('非法级别名静默回落到默认，不让服务起不来', () => {
+      assert.equal(resolveLogLevels({ NODE_ENV: 'production', LOG_FILE_LEVEL: 'verbose' }).file, 'debug');
+      assert.equal(
+        resolveLogLevels({ NODE_ENV: 'production', LOG_CONSOLE_LEVEL: 'all' }).console,
+        'error',
+      );
+    });
+
+    it('生产下 info 不上实时流，但仍全量落盘', () => {
+      const prevNodeEnv = process.env.NODE_ENV;
+      const prevConsole = process.env.LOG_CONSOLE_LEVEL;
+      process.env.NODE_ENV = 'production';
+      delete process.env.LOG_CONSOLE_LEVEL;
+      try {
+        const out = captureStdout(() => log('info 不上实时流'));
+        assert.equal(out, '');
+
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const file = path.join(process.env.LOG_DIR!, 'conversion-service', `app-${dateStr}.log`);
+        const content = fs.readFileSync(file, 'utf8');
+        assert.ok(content.includes('info 不上实时流'));
+      } finally {
+        if (prevNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = prevNodeEnv;
+        if (prevConsole === undefined) delete process.env.LOG_CONSOLE_LEVEL;
+        else process.env.LOG_CONSOLE_LEVEL = prevConsole;
+      }
+    });
+
+    it('error 级恒上实时流（排障第一现场不被级别淹没）', () => {
+      const prevNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      try {
+        const out = captureStdout(() => log('error', '启动失败'));
+        assert.equal(JSON.parse(out.trim()).level, 'error');
+      } finally {
+        if (prevNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = prevNodeEnv;
+      }
+    });
+
+    it('LOG_FILE_LEVEL=error 时 info 不落盘（反向收敛体量）', () => {
+      const prevFile = process.env.LOG_FILE_LEVEL;
+      const marker = `不落盘验证-${Date.now()}`;
+      process.env.LOG_FILE_LEVEL = 'error';
+      try {
+        captureStdout(() => log(marker));
+        const today = new Date();
+        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const file = path.join(process.env.LOG_DIR!, 'conversion-service', `app-${dateStr}.log`);
+        assert.ok(!fs.readFileSync(file, 'utf8').includes(marker));
+      } finally {
+        if (prevFile === undefined) delete process.env.LOG_FILE_LEVEL;
+        else process.env.LOG_FILE_LEVEL = prevFile;
+      }
+    });
   });
 });

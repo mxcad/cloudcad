@@ -14,11 +14,11 @@ class TokenValidator {
   validate(token) {
     const payload = verifyToken(token);
     if (!payload) {
-      log('[Token] 令牌验证失败');
+      log('warn', '[Token] 令牌验证失败');
       return null;
     }
     if (payload.operation !== 'upload' && payload.operation !== 'file:write') {
-      log(`[Token] 非法操作: ${payload.operation}`);
+      log('warn', `[Token] 非法操作: ${payload.operation}`);
       return null;
     }
     return {

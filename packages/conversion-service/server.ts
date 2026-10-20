@@ -144,6 +144,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err) => {
-  log(`[server] 启动失败: ${(err as Error).message}`);
+  log('error', `[server] 启动失败: ${(err as Error).message}`);
   process.exit(1);
 });

@@ -352,6 +352,18 @@ Docker 部署包对 mxcad 二进制 glibc 兼容性的运行时判定（ADR-0074
 已知局限：无法区分 glibc 失败与授权/机器码失败，替换是启发式。
 _避免_: SystemLib 自动替换（那是被取代的构建期行为）
 
+**实时日志（Realtime Log）**:
+应用进程的 stdout 流——前台终端 / `pm2 logs` / `docker logs` 里直接看到的输出。定位是「有没有出事」的即时信号而非留痕，生产默认只放行 `error`（`LOG_CONSOLE_LEVEL`）。
+_避免_: 控制台日志（UI 上的日志查看页）、标准输出（实现细节）
+
+**落盘日志（File Log）**:
+按天轮转写入 `data/logs/<service>/` 的文件日志，排障与合规的唯一全量留痕，默认 `debug`（`LOG_FILE_LEVEL`）。与实时日志各自限级、互不影响（ADR-0076）。
+_避免_: 实时日志（同一进程的另一条流，级别独立）
+
+**访问日志（Access Log）**:
+每次 HTTP 请求的结构化审计流水，独立 pino 实例 + 独立落盘文件（`data/logs/backend/access.log`），固定 `info` 级、不进实时流，不受级别分裂影响。等保 8.3.5.1/2 网络访问行为审计依赖，`LOG_ACCESS_ENABLED=false` 才关闭。
+_避免_: 应用日志（app.log，业务与错误事件）
+
 ## 关系
 
 - 一张 **图纸** 是一个 `NodeType=FILE` 的 **文件节点** 的业务别名——图纸不独立于文件节点存在

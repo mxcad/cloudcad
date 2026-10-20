@@ -21,6 +21,8 @@ import { ClsServiceManager } from 'nestjs-cls';
 import { join, resolve } from 'path';
 import { mkdirSync } from 'fs';
 import { PROJECT_ROOT } from './config/configuration';
+import { buildPinoHttpOptions } from './config/pino-http-options';
+import { resolveLogLevels } from './config/log-levels';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -101,10 +103,12 @@ const logDirAbs = resolve(PROJECT_ROOT, logDirRaw);
 mkdirSync(join(logDirAbs, 'backend'), { recursive: true, mode: 0o750 });
 const logRetentionDays =
   parseInt(process.env.LOG_RETENTION_DAYS || '180', 10) || 180;
-// 根日志级别（#325）：生产默认 warn 保持历史行为不变；需要采集
-// cleanup_run 结构化清理日志（cleanup_* 指标对账）时设 LOG_LEVEL=info。
-// 仅影响 pino-roll 落盘流；生产 stdout 的 pino/file 目标保持 warn 不刷屏。
-const logLevel = process.env.LOG_LEVEL || (isProduction ? 'warn' : 'debug');
+// 级别分裂（ADR-0076）：落盘流拿全量（默认 debug），实时流（stdout）生产默认
+// 只放行 error。pino 的实例级别是硬门槛——落盘流永远拿不到根级别之外的记录，
+// 所以根级别必须等于文件级别，"文件记全量"才真正成立（此前根级别 warn 让
+// cleanup_run 等 info 日志在落盘前就被丢弃，#325 需临时 LOG_LEVEL=info 补救）。
+// 实时排障期用 LOG_CONSOLE_LEVEL 临时放开，不动落盘级别。
+const logLevels = resolveLogLevels(process.env, isProduction);
 
 @Module({
   imports: [
@@ -115,80 +119,9 @@ const logLevel = process.env.LOG_LEVEL || (isProduction ? 'warn' : 'debug');
     }),
     LoggerModule.forRoot({
       forRoutes: [{ path: '*path', method: RequestMethod.ALL }],
-      pinoHttp: {
-        level: logLevel,
-        autoLogging: false,
-        // pino redact 全量脱敏（ADR-0055 §1）：password/token/authorization/cookie/验证码/手机号/邮箱 等
-        redact: {
-          paths: [
-            'password',
-            'passwd',
-            'pwd',
-            'token',
-            'refreshToken',
-            'secret',
-            'authorization',
-            'cookie',
-            'set-cookie',
-            'req.headers.authorization',
-            'req.headers.cookie',
-            '*.password',
-            '*.passwd',
-            '*.pwd',
-            '*.token',
-            '*.refreshToken',
-            '*.secret',
-            '*.verificationCode',
-            '*.code',
-            '*.mobile',
-            '*.phone',
-            '*.email',
-            '*.accessKey',
-            '*.accessKeySecret',
-            '*.apiKey',
-          ],
-          censor: '[Redacted]',
-        },
-        // 多流输出：stdout（容器/PM2 兜底）+ pino-roll 按天轮转落盘（保留 LOG_RETENTION_DAYS 天）
-        transport: {
-          targets: [
-            !isProduction
-              ? {
-                  target: 'pino-pretty',
-                  options: { singleLine: true, colorize: true },
-                  level: 'debug',
-                }
-              : {
-                  target: 'pino/file',
-                  options: { destination: 1 },
-                  level: 'warn',
-                },
-            {
-              target: 'pino-roll',
-              options: {
-                file: join(logDirAbs, 'backend', 'app.log'),
-                frequency: 'daily',
-                dateFormat: 'yyyy-MM-dd',
-                mkdir: true,
-                // 保留 N 个已轮转文件 + 当前文件（pino-roll@4 用 limit.count，非 maxFiles）
-                limit: { count: logRetentionDays },
-              },
-              level: logLevel,
-            },
-          ],
-        },
-        mixin() {
-          try {
-            const cls = ClsServiceManager.getClsService();
-            const traceId = cls?.get('traceId');
-            const requestId = cls?.get('requestId');
-            if (traceId || requestId) return { traceId, requestId };
-          } catch {
-            // CLS 未初始化时静默跳过
-          }
-          return {};
-        },
-      },
+      // pinoHttp 配置整体由 buildPinoHttpOptions 构建（src/config/pino-http-options.ts）：
+      // 级别分裂的三个赋值点（根级别 / stdout 目标 / pino-roll 目标）在纯函数里可被单测断言
+      pinoHttp: buildPinoHttpOptions(logLevels, logDirAbs, logRetentionDays, isProduction),
     }),
     EventEmitterModule.forRoot(),
     DatabaseModule,

@@ -71,15 +71,18 @@ test('LOG_SOURCES 覆盖调研确认的全部日志源，slug 唯一', () => {
   ]) {
     assert.ok(dirs.includes(must), `LOG_SOURCES 应含 ${must}`);
   }
-  // data/logs 根只收 postgres.log，子目录由独立条目覆盖（防重复打包）
+  // data/logs 根只收 postgres.log / redis.log，子目录由独立条目覆盖（防重复打包）
   const logsRoot = LOG_SOURCES.find((s) => s.dir === path.join('data', 'logs'));
   assert.ok(logsRoot, 'data/logs 根目录条目存在（postgres.log）');
+  const redisRoot = LOG_SOURCES.find((s) => s.dir === path.join('data', 'logs') && s.slug === 'redis');
+  assert.ok(redisRoot, 'data/logs 根目录另有 redis.log 条目（ADR-0076）');
 });
 
 test('collectLogFiles：全源收集 + zipName 按 slug 隔离同名文件', () => {
   const root = tmpRoot();
   touch(root, 'data/pm2/logs/backend-out.log', 'pm2 log');
   touch(root, 'data/logs/postgres.log', 'pg log');
+  touch(root, 'data/logs/redis.log', 'redis log');
   touch(root, 'data/logs/backend/app-2026-10-01.log', 'backend app');
   touch(root, 'data/logs/conversion-service/app-2026-10-01.log', 'conv app');
   touch(root, 'data/logs/config-service/app-2026-10-01.log', 'config app');
@@ -94,13 +97,14 @@ test('collectLogFiles：全源收集 + zipName 按 slug 隔离同名文件', () 
     'ops/202610.ops.log',
     'pm2/backend-out.log',
     'postgres/postgres.log',
+    'redis/redis.log',
   ]);
 
   // 非 .log 文件与子目录不收
   touch(root, 'data/pm2/logs/not-a-log.txt', 'skip');
   touch(root, 'data/logs/backend/subdir/nested.log', 'skip');
   const again = collectLogFiles({ rootDir: root });
-  assert.equal(again.length, 6, '仅平铺 .log 文件入清单');
+  assert.equal(again.length, 7, '仅平铺 .log 文件入清单');
 });
 
 test('collectLogFiles：days 过滤只收最近 N 天内有修改的文件', () => {

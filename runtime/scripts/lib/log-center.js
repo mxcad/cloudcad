@@ -7,8 +7,9 @@
  *
  * 覆盖的日志源（ADR-0071 前调研结论）：
  * - PM2 各托管应用 out/error（backend/frontend/conversion/cooperate/
- *   config-service/postgresql/redis，redis/cooperate 无独立文件、输出并入此处）
+ *   config-service/postgresql/redis，cooperate 无独立文件、输出并入此处）
  * - PostgreSQL（data/logs/postgres.log，pg_ctl -l 指定）
+ * - Redis（data/logs/redis.log，redis-manager 传 --logfile 脱离 PM2，ADR-0076）
  * - backend pino-roll 按天轮转 app.log + access-*.log
  * - conversion-service / config-service / storage-service 按天 JSON 日志
  * - 部署 / 升级过程（lib/deploy-log.js 镜像落盘）
@@ -40,6 +41,12 @@ const LOG_SOURCES = [
     service: 'PostgreSQL',
     dir: path.join('data', 'logs'),
     filter: (name) => name === 'postgres.log',
+  },
+  {
+    slug: 'redis',
+    service: 'Redis（redis-manager 传 --logfile，不自带轮转）',
+    dir: path.join('data', 'logs'),
+    filter: (name) => name === 'redis.log',
   },
   {
     slug: 'backend',

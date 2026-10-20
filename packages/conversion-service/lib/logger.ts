@@ -3,6 +3,9 @@
  *
  * - JSON 单行：{"time","level","service","message","requestId"?}
  * - 双输出：stdout + 文件落盘 data/logs/<service>/app-YYYY-MM-DD.log
+ * - 级别分裂（ADR-0076）：两条流各自限级——落盘 LOG_FILE_LEVEL 默认 debug（全量），
+ *   实时 stdout LOG_CONSOLE_LEVEL 生产默认 error / 开发 debug。LOG_LEVEL 是
+ *   LOG_FILE_LEVEL 的旧别名
  * - 按天轮转 + 保留期清理（LOG_RETENTION_DAYS，默认 180 天，与 backend 一致）
  * - 目录经 LOG_DIR env 可配（相对路径基于项目根解析，默认 data/logs，与 backend 语义一致）
  * - 请求级 requestId 经 AsyncLocalStorage 传播（纯 Node 能力，非第三方依赖）
@@ -97,15 +100,45 @@ function normalizeArgs(args: unknown[]): { level: string; message: string } {
   return { level, message: args.map(safeStringify).join(' ') };
 }
 
+/**
+ * 级别解析（ADR-0076）。env 每次调用时读取，支持运行时覆盖（与 LOG_DIR 同一约定）。
+ * 非法值静默回落到默认，不报错：运维误写一个级别名不应让服务起不来。
+ */
+export function resolveLogLevels(env: NodeJS.ProcessEnv = process.env): { file: string; console: string } {
+  const defaultConsole = env.NODE_ENV === 'production' ? 'error' : 'debug';
+  return {
+    file: pickLevel('debug', env.LOG_FILE_LEVEL, env.LOG_LEVEL),
+    console: pickLevel(defaultConsole, env.LOG_CONSOLE_LEVEL),
+  };
+}
+
+function pickLevel(fallback: string, ...candidates: (string | undefined)[]): string {
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') continue;
+    const value = candidate.trim().toLowerCase();
+    if (LEVELS.includes(value)) return value;
+  }
+  return fallback;
+}
+
+function isAtLeast(level: string, threshold: string): boolean {
+  const i = LEVELS.indexOf(String(level).toLowerCase());
+  const t = LEVELS.indexOf(String(threshold).toLowerCase());
+  return i >= 0 && t >= 0 && i >= t;
+}
+
 function writeLine(level: string, message: string, requestId?: string): void {
   const record: Record<string, unknown> = { time: new Date().toISOString(), level, service: SERVICE_NAME, message };
   if (requestId) record.requestId = requestId;
   const line = `${JSON.stringify(record)}\n`;
-  process.stdout.write(line);
-  try {
-    appendLine(localDateStr(), line);
-  } catch {
-    // 落盘失败不影响 stdout（PM2/docker 仍可采集）
+  const levels = resolveLogLevels();
+  if (isAtLeast(level, levels.console)) process.stdout.write(line);
+  if (isAtLeast(level, levels.file)) {
+    try {
+      appendLine(localDateStr(), line);
+    } catch {
+      // 落盘失败不影响 stdout（PM2/docker 仍可采集）
+    }
   }
 }
 
