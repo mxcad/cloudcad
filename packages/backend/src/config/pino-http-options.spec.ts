@@ -1,7 +1,7 @@
 import { join } from 'path';
 
 import { buildPinoHttpOptions } from './pino-http-options';
-import { resolveLogLevels, LogLevelPlan } from './log-levels';
+import { resolveLogLevels, type LogLevelPlan } from '@cloudcad/contracts';
 
 describe('buildPinoHttpOptions（ADR-0076 pino 配置形态）', () => {
 	const logDirAbs = '/data/logs';

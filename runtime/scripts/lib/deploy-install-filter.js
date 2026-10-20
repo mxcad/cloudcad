@@ -21,6 +21,10 @@ const DEPLOY_PROD_FILTER_PACKAGES = [
   '@cloudcad/contracts',
   '@cloudcad/engine-exec',
   '@cloudcad/conversion-service',
+  // config-service 现依赖 @cloudcad/contracts（ADR-0076 级别契约收敛）。漏掉这个 filter，
+  // pnpm 会跳过它、不建 node_modules 链接，require 要到运行时才炸；它无第三方依赖，
+  // 加入本清单不增加 store 体积（contracts 本就在清单内）。
+  '@cloudcad/config-service',
 ];
 
 // 私有部署包额外携带 packages/impl-mx（gitignore 的私有包，OSS 包无此目录）。

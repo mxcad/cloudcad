@@ -586,10 +586,13 @@ const PACK_SHARED_FILTER_PACKAGES = [
   '@cloudcad/contracts',
   '@cloudcad/engine-exec',
   '@cloudcad/conversion-service',
+  // config-service 现依赖 @cloudcad/contracts（ADR-0076）→ 从 build-only 移到 shared：
+  // prod install 不给它建 workspace 链接会让 require 到运行时才炸。它无第三方依赖，
+  // 不增加 store 体积（contracts 本就在清单内）。
+  '@cloudcad/config-service',
 ];
 const PACK_BUILD_ONLY_FILTER_PACKAGES = [
   '@cloudcad/mx-version-tool',
-  '@cloudcad/config-service',
 ];
 
 function buildInstallFilters(variant = 'oss', scope = 'prod') {

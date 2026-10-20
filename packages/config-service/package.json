@@ -1,8 +1,11 @@
 {
   "name": "@cloudcad/config-service",
   "version": "1.0.0",
-  "description": "CloudCAD 部署配置中心 - 0依赖独立服务",
+  "description": "CloudCAD 部署配置中心 - 仅依赖 @cloudad/contracts（日志级别契约）",
   "main": "server.js",
+  "dependencies": {
+    "@cloudcad/contracts": "workspace:*"
+  },
   "scripts": {
     "dev": "node -e process.exit(0)",
     "start": "node server.js",

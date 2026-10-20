@@ -15,6 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import { AsyncLocalStorage } from 'async_hooks';
 import type { IncomingHttpHeaders } from 'http';
+import { isAtLeast, resolveLogLevels } from '@cloudcad/contracts';
 import { PROJECT_ROOT } from './constants';
 
 const SERVICE_NAME = 'conversion-service';
@@ -100,38 +101,15 @@ function normalizeArgs(args: unknown[]): { level: string; message: string } {
   return { level, message: args.map(safeStringify).join(' ') };
 }
 
-/**
- * 级别解析（ADR-0076）。env 每次调用时读取，支持运行时覆盖（与 LOG_DIR 同一约定）。
- * 非法值静默回落到默认，不报错：运维误写一个级别名不应让服务起不来。
- */
-export function resolveLogLevels(env: NodeJS.ProcessEnv = process.env): { file: string; console: string } {
-  const defaultConsole = env.NODE_ENV === 'production' ? 'error' : 'debug';
-  return {
-    file: pickLevel('debug', env.LOG_FILE_LEVEL, env.LOG_LEVEL),
-    console: pickLevel(defaultConsole, env.LOG_CONSOLE_LEVEL),
-  };
-}
-
-function pickLevel(fallback: string, ...candidates: (string | undefined)[]): string {
-  for (const candidate of candidates) {
-    if (typeof candidate !== 'string') continue;
-    const value = candidate.trim().toLowerCase();
-    if (LEVELS.includes(value)) return value;
-  }
-  return fallback;
-}
-
-function isAtLeast(level: string, threshold: string): boolean {
-  const i = LEVELS.indexOf(String(level).toLowerCase());
-  const t = LEVELS.indexOf(String(threshold).toLowerCase());
-  return i >= 0 && t >= 0 && i >= t;
-}
+// 级别解析与阈值比较在 @cloudcad/contracts（ADR-0076，四服务共享唯一事实源）。
+// env 每次调用时读取，支持运行时覆盖（与 LOG_DIR 同一约定）；非法值静默回落默认，
+// 运维误写一个级别名不应让服务起不来。LEVELS 仅供 normalizeArgs 解析调用方的级别前缀。
 
 function writeLine(level: string, message: string, requestId?: string): void {
   const record: Record<string, unknown> = { time: new Date().toISOString(), level, service: SERVICE_NAME, message };
   if (requestId) record.requestId = requestId;
   const line = `${JSON.stringify(record)}\n`;
-  const levels = resolveLogLevels();
+  const levels = resolveLogLevels(process.env);
   if (isAtLeast(level, levels.console)) process.stdout.write(line);
   if (isAtLeast(level, levels.file)) {
     try {

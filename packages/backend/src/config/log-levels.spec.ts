@@ -1,4 +1,4 @@
-import { resolveLogLevels } from './log-levels';
+import { resolveLogLevels } from '@cloudcad/contracts';
 
 describe('resolveLogLevels（ADR-0076 级别分裂）', () => {
 	describe('生产环境默认值', () => {

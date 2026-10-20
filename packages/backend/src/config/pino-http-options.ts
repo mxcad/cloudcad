@@ -2,7 +2,7 @@ import { join } from 'path';
 
 import { ClsServiceManager } from 'nestjs-cls';
 
-import type { LogLevelPlan } from './log-levels';
+import type { LogLevelPlan } from '@cloudcad/contracts';
 
 /**
  * pinoHttp 配置构建（ADR-0055 §1 脱敏与多流输出 / ADR-0076 级别分裂）

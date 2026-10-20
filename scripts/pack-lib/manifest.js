@@ -118,7 +118,7 @@ function getSharedEntries() {
       dest: 'packages/mxVersionTool',
       isDir: true,
     },
-    // 部署配置中心（0 依赖独立服务）
+    // 部署配置中心（仅依赖 @cloudcad/contracts 的日志级别契约，ADR-0076）
     {
       src: 'packages/config-service',
       dest: 'packages/config-service',

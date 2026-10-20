@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { log, resolveRequestId, runWithRequest, getLogDir, resolveLogLevels } from '../lib/logger';
+import { log, resolveRequestId, runWithRequest, getLogDir } from '../lib/logger';
 import { PROJECT_ROOT } from '../lib/constants';
 
 // 测试专用日志目录（logger 在调用时读取 env，支持运行时覆盖）
@@ -122,43 +122,9 @@ describe('logger (零依赖 JSON 日志)', () => {
     }
   });
 
-  describe('级别分裂（ADR-0076）', () => {
-    it('resolveLogLevels：生产默认 文件=debug / 实时=error', () => {
-      assert.deepEqual(resolveLogLevels({ NODE_ENV: 'production' }), {
-        file: 'debug',
-        console: 'error',
-      });
-    });
-
-    it('resolveLogLevels：开发默认 实时=debug（保留全量输出）', () => {
-      assert.deepEqual(resolveLogLevels({}), { file: 'debug', console: 'debug' });
-    });
-
-    it('LOG_FILE_LEVEL / LOG_CONSOLE_LEVEL 各自覆盖，互不影响', () => {
-      const plan = resolveLogLevels({
-        NODE_ENV: 'production',
-        LOG_FILE_LEVEL: 'info',
-        LOG_CONSOLE_LEVEL: 'debug',
-      });
-      assert.deepEqual(plan, { file: 'info', console: 'debug' });
-    });
-
-    it('LOG_LEVEL 作为旧别名生效，显式 LOG_FILE_LEVEL 优先', () => {
-      assert.equal(resolveLogLevels({ NODE_ENV: 'production', LOG_LEVEL: 'warn' }).file, 'warn');
-      assert.equal(
-        resolveLogLevels({ NODE_ENV: 'production', LOG_FILE_LEVEL: 'info', LOG_LEVEL: 'warn' }).file,
-        'info',
-      );
-    });
-
-    it('非法级别名静默回落到默认，不让服务起不来', () => {
-      assert.equal(resolveLogLevels({ NODE_ENV: 'production', LOG_FILE_LEVEL: 'verbose' }).file, 'debug');
-      assert.equal(
-        resolveLogLevels({ NODE_ENV: 'production', LOG_CONSOLE_LEVEL: 'all' }).console,
-        'error',
-      );
-    });
-
+  // 策略本身（默认值 / 优先级 / 旧别名 / 非法值回落 / 级别刻度）在 @cloudcad/contracts 测；
+  // 这里只钉死本服务的接线：env 每次调用时读取、两条流各自限级真实生效。
+  describe('级别分裂接线（ADR-0076）', () => {
     it('生产下 info 不上实时流，但仍全量落盘', () => {
       const prevNodeEnv = process.env.NODE_ENV;
       const prevConsole = process.env.LOG_CONSOLE_LEVEL;

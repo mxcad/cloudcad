@@ -36,13 +36,14 @@ describe('deploy-install-filter', () => {
     }
   });
 
-  it('基础清单精确等于 5 个后端生产依赖包（无 impl-mx）', () => {
+  it('基础清单精确等于 6 个后端生产依赖包（无 impl-mx）', () => {
     expect(DEPLOY_PROD_FILTER_PACKAGES).toEqual([
       'backend',
       '@cloudcad/db',
       '@cloudcad/contracts',
       '@cloudcad/engine-exec',
       '@cloudcad/conversion-service',
+      '@cloudcad/config-service',
     ]);
   });
 
@@ -56,6 +57,7 @@ describe('deploy-install-filter', () => {
       '--filter', '@cloudcad/contracts',
       '--filter', '@cloudcad/engine-exec',
       '--filter', '@cloudcad/conversion-service',
+      '--filter', '@cloudcad/config-service',
     ]);
   });
 
@@ -69,6 +71,7 @@ describe('deploy-install-filter', () => {
       '--filter', '@cloudcad/contracts',
       '--filter', '@cloudcad/engine-exec',
       '--filter', '@cloudcad/conversion-service',
+      '--filter', '@cloudcad/config-service',
       '--filter', '@cloudcad/impl-mx',
     ]);
   });
@@ -83,6 +86,7 @@ describe('deploy-install-filter', () => {
       '--filter', '@cloudcad/contracts',
       '--filter', '@cloudcad/engine-exec',
       '--filter', '@cloudcad/conversion-service',
+      '--filter', '@cloudcad/config-service',
       '--filter', '@cloudcad/impl-mx',
     ]);
     // 显式排除 → 不追加（即便目录存在）

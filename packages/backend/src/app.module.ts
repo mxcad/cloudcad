@@ -22,7 +22,7 @@ import { join, resolve } from 'path';
 import { mkdirSync } from 'fs';
 import { PROJECT_ROOT } from './config/configuration';
 import { buildPinoHttpOptions } from './config/pino-http-options';
-import { resolveLogLevels } from './config/log-levels';
+import { resolveLogLevels } from '@cloudcad/contracts';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';

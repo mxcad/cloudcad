@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "CloudCAD 存储服务 — 文件存储与 SVN 版本控制",
   "main": "server.js",
+  "dependencies": {
+    "@cloudcad/contracts": "workspace:*"
+  },
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",

@@ -78,6 +78,9 @@ export {
   SYSTEM_ROLE_LEVELS,
 } from './domain/system-role.types';
 
+// 日志级别分裂（ADR-0076）：四个服务共享的级别刻度 + env 解析策略 + 阈值比较
+export { resolveLogLevels, isAtLeast } from './log-levels';
+export type { LogLevelName, LogLevelPlan } from './log-levels';
 // Conversion engine contract (types + values，ADR-0064 / ADR-0069)
 export {
   ENGINE_INPUT_FIELDS,

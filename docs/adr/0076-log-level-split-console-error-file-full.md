@@ -25,7 +25,11 @@
 
 级别分裂真正的风险点是「三个赋值点分别取对值」——pino 的根级别、stdout target 的 `level`、pino-roll target 的 `level`。此前这份 pinoHttp 配置是 `app.module.ts` 模块顶层的内联对象字面量，只能靠启动整个 NestJS 应用再起 pino transport 子进程才能观测。为此把它抽成无装饰器的纯函数 `buildPinoHttpOptions(logLevels, logDirAbs, logRetentionDays, isProduction)`（`src/config/pino-http-options.ts`），`app.module.ts` 只做一行调用。搬家不改变运行时行为，同一份对象字面量；返回类型刻意不标注 pino-http 的 `Options`——`pino-http` 不是 backend 的直接依赖，只由 `nestjs-pino` 传递引入，`import type` 解析不到，改由调用点做结构性检查。
 
-- `resolveLogLevels()`：backend 14 例 + 三份手写 logger 各 8 例，覆盖默认值、env 优先级、旧别名、非法值回落。
+- `resolveLogLevels()` / `isAtLeast()`（已收敛到 `@cloudcad/contracts` 的 `src/log-levels.ts`，唯一实现）：
+  contracts 13 例 node:test，覆盖默认值、env 优先级、旧别名、非法值回落、pino 全量刻度接受、超集级别语义
+  （`trace` 阈值放行一切 / `silent` 阈值静默一切 / `fatal` 对手写 logger 的任何级别都不达标）、交集 4 级索引
+  与旧 4 级量表逐一对齐。backend 另留 14 例 jest（消费侧），三份手写 logger 各留 3 例接线测试（env 每次调用
+  时读取 + 两条流限级真实生效）——纯策略断言的 3×5 重复测试已删。
 - `buildPinoHttpOptions()`：13 例，断言根级别 = 文件级别、生产实时 target = `error`、落盘 target = 文件级别、`LOG_CONSOLE_LEVEL` 只动实时流、`LOG_FILE_LEVEL` 只动根 + 落盘、两条流级别互不影响、生产/开发 target 分叉、pino-roll 路径与 `limit.count`、流清单恰为两条且 `autoLogging: false`、redact 敏感路径未随抽取丢失、`mixin()` 未初始化时返回空对象。
 
 Redis 那边是同一个缺陷类：`redis-manager.js` 的 argv 也是内联数组，而「Redis 实时零输出」的全部依据就是 `--logfile` 这个参数在不在——参数被删掉没有任何测试会红。argv 组装同样抽成纯函数 `buildRedisArgs({ port, dataDir, logFile, authConfPath })`（`runtime/scripts/lib/redis-args.js`，纯函数无顶层副作用，与 `lib/redis-takeover.js` 同约定），6 例断言 `--logfile`/`--loglevel notice` 恒在、密码经配置文件时置于 argv 首位且命令行不出现 `--requirepass`、`--port`/`--dir`/`--appendonly` 必须留在命令行（`detectRedisOwnership` 靠 cmdline 里的数据目录判实例归属）。密码配置文件写不进去的 `--requirepass` 降级分支留在 `startRedis()`，不放进纯函数。
@@ -40,7 +44,16 @@ Redis 那边是同一个缺陷类：`redis-manager.js` 的 argv 也是内联数�
 
 **`LOG_LEVEL` 保留为旧别名**（优先级 `LOG_FILE_LEVEL` > `LOG_LEVEL`）。已部署实例的 `.env` 里写着显式 `LOG_LEVEL=warn`，直接删掉这个名字会让「想收敛落盘体量的人」静默升级成 debug 刷屏。代价：这些实例的落盘级别**不会自动变成 debug**，要拿全量须删除该行或改名。
 
-**`resolveLogLevels()` 保留 4 份重复**（backend `src/config/log-levels.ts` + 三份手写 logger）。收敛目标是既有的 `@cloudcad/contracts`（后端域、有 scan:purity 门禁、tsc→dist 产物线），不需要新建包；真正的成本在依赖面——config-service 与 storage-service 当前**零 `@cloudcad/*` 依赖**，收敛等于给这两个零依赖服务引入首个 workspace 依赖，须同步离线安装清单三处（`pack-offline.js` / `setup-offline.js` / `verify-deploy.js`）并复验断网验证门禁。另注：contracts 的 purity 门禁禁 `process`，共享实现必须吃 env 快照参数、不能读 `process.env`。与本次改级别的体量不匹配，另立票据。`@cloudad/platform` 是跨端（PC / 移动端）共用层，承载后端日志级别解析器是错误归宿。
+**`resolveLogLevels()` 的 4 份重复已收敛**（#474，本节为落地结论，取代立项时的代价评估）。落点是既有的 `@cloudcad/contracts`（后端域、有 scan:purity 门禁、tsc→dist 产物线），不新建包；被否决的 `@cloudcad/platform` 是跨端（PC / 移动端）共用层，且其 `main` 直指 `src/index.ts` 源文件、供 Vite 打包消费，而 config-service / storage-service 是零构建的 `node server.js`，运行时吃不了 TS。
+
+两个立项时没算到的坑，都在勘察中被发现并已解决：
+
+1. **部署形态的真正约束不在「加 workspace 依赖」，而在离线安装 filter 清单**。config-service 原先只进 `PACK_BUILD_ONLY_FILTER_PACKAGES`（构建期），不在 prod install 清单里——给它加运行时依赖后，目标机 `setup-offline.js` 的 `pnpm install --offline --prod` 不会为它建 workspace 链接，`require` 要到运行时才炸。已把它移进 `PACK_SHARED_FILTER_PACKAGES`，并同步 `deploy-install-filter.js`（`setup-offline` 与 `verify-deploy` 共用同一份，故清单只有两处、不是三处）与其 L1 特征测试。
+2. **级别刻度必须取 pino 全量表**（`trace < debug < info < warn < error < fatal < silent`，与 pino 默认数值序一致），而非三份手写 logger 自用的 4 级表——backend 的 `LOG_FILE_LEVEL=trace` / `LOG_CONSOLE_LEVEL=silent` 是既有合法配置（spec 有断言），收窄成 4 级会静默回归。4 级表是 7 级表的连续子集且交集索引完全相同，故收敛对 logger 侧零行为变化；同时把比较器也提为共享的 `isAtLeast`，让超集级别给出正确语义（`silent` = 静音、`trace` = 全放行），而不是旧的「未知级别一律丢弃全部」的静默丢日志。
+
+依赖面代价比预想小：两服务**零第三方依赖**，新依赖是 workspace 内部链接，离线 store 体积零增长。purity 门禁禁 `process` 已按原判断处理（共享实现吃 env 快照，调用点显式传 `process.env`）；顺带发现 `isProduction` 原先的默认值读真实 `process.env`、与传入的 `env` 快照是两个事实源，已改为省略时从 `env.NODE_ENV` 派生——backend 那 14 例测试因此**一行未改**通过。
+
+**未复验**：断网验证门禁（`verify-deploy.js`）未重跑——本机 Docker Windows 模式不可用，须出包才能跑。已做的替代验证：`pnpm --filter @cloudcad/config-service list` 解析通过、`tests/runtime-unit` 的 filter 特征测试 4 例绿。下次出部署包时顺带复验即可。
 
 **级别审计只提级「明确的失败语义」**：`conversion-service` 启动失败 / Redis 持久化与删除失败 / Redis 不可用回退 / 任务记录损坏跳过 / 回调失败与异常；`storage-service` 路由表加载失败 / SVN 提交与 cat 失败。以下**刻意不提级**：
 
