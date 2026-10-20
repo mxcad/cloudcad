@@ -30,6 +30,39 @@ const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { parseEnvFile } = require('../lib/env');
 const { prompt, promptConfirm } = require('../lib/prompt');
 const { formatSize } = require('../lib/format');
+const { detectDeployForm } = require('../lib/deploy-form');
+
+/**
+ * .env 路径（单一事实源，#442）：裸机形态 = packages/backend/.env；
+ * docker 形态 = 部署根 .env（docker 包没有 packages/backend/.env，根 .env 是
+ * 容器 env_file 的唯一事实源，由 docker-runtime step2 生成）。
+ * @param {string} [rootDir] 部署根（缺省 PROJECT_ROOT；测试可注入临时目录）
+ * @returns {string}
+ */
+function getEnvPath(rootDir = PROJECT_ROOT) {
+  if (detectDeployForm(rootDir) === 'docker') {
+    return path.join(rootDir, '.env');
+  }
+  return path.join(rootDir, 'packages', 'backend', '.env');
+}
+
+/**
+ * Docker 形态 psql 执行上下文（#442）：宿主没有 psql，全部经
+ * `docker exec cloudcad-pg psql …` 在容器内执行。裸机形态返回 null
+ * （调用方回落宿主 psql 分支）。
+ * @param {string} [rootDir] 部署根（缺省 PROJECT_ROOT；测试可注入临时目录）
+ * @returns {?{container: string, exec: Function}} exec = docker CLI 执行器
+ *   （docker-runtime 的 docker()，已含 rootless 影子 socket env）
+ */
+function getDockerExec(rootDir = PROJECT_ROOT) {
+  if (detectDeployForm(rootDir) !== 'docker') return null;
+  const dockerRuntime = require('../../docker-runtime/index');
+  dockerRuntime.detectRuntimeMode();
+  return {
+    container: 'cloudcad-pg',
+    exec: (args, timeoutMs) => dockerRuntime.docker(args, timeoutMs),
+  };
+}
 
 /**
  * 列出所有备份文件
@@ -104,11 +137,10 @@ function getRuntimeLibPaths() {
 }
 
 /**
- * 构建数据库命令的环境变量
+ * 构建数据库命令的环境变量（.env 路径走 getEnvPath：docker 形态读部署根 .env）
  */
 function getDbEnv() {
-  const envPath = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
-  const envConfig = parseEnvFile(envPath);
+  const envConfig = parseEnvFile(getEnvPath());
 
   return {
     env: {
@@ -224,9 +256,10 @@ async function isDatabaseEmpty(host, port, user, database) {
  * @param {Object} options - 选项
  * @param {string} options.backupDir - 备份目录（可选）
  * @param {string} options.filename - 文件名（可选）
+ * @param {Object} [deps] - 可注入的 IO 缝（测试用）：dockerExec
  * @returns {Promise<boolean>} - 是否成功
  */
-async function backupDatabase(options = {}) {
+async function backupDatabase(options = {}, deps = {}) {
   log('blue', '📦 正在备份数据库...');
 
   const backupDir = options.backupDir || path.join(DATA_DIR, 'backups');
@@ -246,6 +279,72 @@ async function backupDatabase(options = {}) {
   const dbPort = envConfig.DB_PORT || '5432';
   const dbUser = envConfig.DB_USERNAME || 'postgres';
   const dbName = envConfig.DB_DATABASE || 'cloudcad';
+
+  // Docker 形态（#442）：pg_dump 在 cloudcad-pg 容器内执行，产物经 docker cp
+  // 取回宿主备份目录（避免整份 dump 缓冲在宿主内存）。
+  const dockerCtx = deps.dockerExec !== undefined ? deps.dockerExec : getDockerExec();
+  if (dockerCtx) {
+    const containerTmp = `/tmp/${filename}`;
+    const dumpArgs = [
+      '-h',
+      dbHost,
+      '-p',
+      dbPort,
+      '-U',
+      dbUser,
+      '-d',
+      dbName,
+      '-f',
+      containerTmp,
+      '--no-owner',
+      '--no-privileges',
+      '--clean',
+      '--if-exists',
+    ];
+    log(
+      'cyan',
+      `执行: docker exec ${dockerCtx.container} pg_dump ${dumpArgs.join(' ')}`
+    );
+    const dumpRes = dockerCtx.exec(
+      [
+        'exec',
+        '-e',
+        `PGPASSWORD=${env.PGPASSWORD || ''}`,
+        dockerCtx.container,
+        'pg_dump',
+        ...dumpArgs,
+      ],
+      300000
+    );
+    if (!dumpRes.ok) {
+      log(
+        'red',
+        `❌ 数据库备份失败：${dumpRes.stderr || dumpRes.stdout || '未知错误'}`
+      );
+      return false;
+    }
+    const cpRes = dockerCtx.exec(
+      ['cp', `${dockerCtx.container}:${containerTmp}`, backupFile],
+      300000
+    );
+    dockerCtx.exec(['exec', dockerCtx.container, 'rm', '-f', containerTmp], 15000);
+    if (!cpRes.ok || !fs.existsSync(backupFile)) {
+      log(
+        'red',
+        `❌ 备份产物取回失败：${cpRes.stderr || cpRes.error || '未知错误'}`
+      );
+      return false;
+    }
+    const size = fs.statSync(backupFile).size;
+    log('green', '✅ 数据库备份成功');
+    log('cyan', `   文件：${path.relative(PROJECT_ROOT, backupFile)}`);
+    log('cyan', `   大小：${formatSize(size)}`);
+
+    // 自动清理旧备份（保留 10 个）
+    cleanupOldBackups(10);
+
+    return true;
+  }
 
   // 确定 pg_dump 路径
   const pgDumpPath = getPgDumpPath();
@@ -371,9 +470,11 @@ async function promptSelectBackup(backups) {
 /**
  * 恢复数据库
  * @param {string} backupFile - 备份文件路径（可选）
+ * @param {Object} [deps] - 可注入的 IO 缝（测试用）：dockerExec/confirm
  * @returns {Promise<boolean>} - 是否成功
  */
-async function restoreDatabase(backupFile) {
+async function restoreDatabase(backupFile, deps = {}) {
+  const { confirm = promptConfirm } = deps;
   log('blue', '🔄 数据库恢复');
   console.log('');
 
@@ -400,7 +501,7 @@ async function restoreDatabase(backupFile) {
   log('cyan', `目标备份：${path.relative(PROJECT_ROOT, backupFile)}`);
   console.log('');
 
-  const confirmed = await promptConfirm('是否继续？(yes/no): ');
+  const confirmed = await confirm('是否继续？(yes/no): ');
   if (!confirmed) {
     log('yellow', '已取消恢复');
     return false;
@@ -413,6 +514,95 @@ async function restoreDatabase(backupFile) {
   const dbPort = envConfig.DB_PORT || '5432';
   const dbUser = envConfig.DB_USERNAME || 'postgres';
   const dbName = envConfig.DB_DATABASE || 'cloudcad';
+
+  // Docker 形态（#442）：清空/恢复经 docker exec 在 cloudcad-pg 容器内执行；
+  // Prisma schema 同步 = 重启 app 容器（其 entrypoint 每次启动幂等跑
+  // prisma migrate deploy，宿主侧没有 pnpm/Prisma CLI 可用）。
+  const dockerCtx = deps.dockerExec !== undefined ? deps.dockerExec : getDockerExec();
+  if (dockerCtx) {
+    // 步骤 1: 清空数据库（DROP SCHEMA public CASCADE; CREATE SCHEMA public;）
+    log('cyan', '步骤 1/3: 清空数据库...');
+    const dropRes = dockerCtx.exec(
+      [
+        'exec',
+        '-e',
+        `PGPASSWORD=${env.PGPASSWORD || ''}`,
+        dockerCtx.container,
+        'psql',
+        '-h',
+        dbHost,
+        '-p',
+        dbPort,
+        '-U',
+        dbUser,
+        '-d',
+        dbName,
+        '-c',
+        'DROP SCHEMA public CASCADE; CREATE SCHEMA public;',
+      ],
+      120000
+    );
+    if (!dropRes.ok) {
+      log('red', `❌ 清空数据库失败: ${dropRes.stderr || dropRes.stdout}`);
+      return false;
+    }
+    log('green', '✓ 数据库已清空');
+
+    // 步骤 2: 恢复备份（docker cp 进容器 + psql -f）
+    log('cyan', '步骤 2/3: 恢复备份...');
+    const containerTmp = '/tmp/cloudcad-restore.sql';
+    const cpRes = dockerCtx.exec(
+      ['cp', backupFile, `${dockerCtx.container}:${containerTmp}`],
+      300000
+    );
+    if (!cpRes.ok) {
+      log('red', `❌ 备份文件拷入容器失败: ${cpRes.stderr || cpRes.error || '未知错误'}`);
+      return false;
+    }
+    const restoreRes = dockerCtx.exec(
+      [
+        'exec',
+        '-i',
+        '-e',
+        `PGPASSWORD=${env.PGPASSWORD || ''}`,
+        dockerCtx.container,
+        'psql',
+        '-h',
+        dbHost,
+        '-p',
+        dbPort,
+        '-U',
+        dbUser,
+        '-d',
+        dbName,
+        '-f',
+        containerTmp,
+      ],
+      300000
+    );
+    dockerCtx.exec(['exec', dockerCtx.container, 'rm', '-f', containerTmp], 15000);
+    if (!restoreRes.ok) {
+      log(
+        'red',
+        `❌ 数据库恢复失败: ${restoreRes.stderr || restoreRes.stdout || '未知错误'}`
+      );
+      return false;
+    }
+    log('green', '✓ 备份恢复成功');
+
+    // 步骤 3: 同步 Prisma schema（重启 app 容器触发 entrypoint 的 migrate deploy）
+    log('cyan', '步骤 3/3: 同步 Prisma schema（重启 app 容器）...');
+    const restartRes = dockerCtx.exec(['restart', 'cloudcad-app'], 180000);
+    if (restartRes.ok) {
+      log('green', '✅ 数据库恢复完成，Prisma schema 已同步');
+      return true;
+    }
+    log(
+      'yellow',
+      `⚠️  数据库恢复成功，但 app 容器重启失败（${restartRes.stderr || restartRes.error}），请重跑 ./start.sh 触发 schema 同步`
+    );
+    return true;
+  }
 
   // 确定 psql 路径
   const psqlPath = getPsqlPath();
@@ -605,6 +795,8 @@ module.exports = {
   formatSize,
   getPgDumpPath,
   getPsqlPath,
+  getEnvPath,
+  getDockerExec,
   getDbEnv,
   checkDatabaseExists,
   isDatabaseEmpty,

@@ -577,22 +577,87 @@ async function step8InfraContainers() {
 
 // ==================== Step 9 宿主进程 ====================
 
-async function step9HostProcesses() {
-  const env = parseEnvFile(ENV_FILE);
+/**
+ * 宿主进程启动规格（单一事实源：step9 启动与 #442 restartHostProcess 共用，
+ * 避免同一启动参数散落两份）。
+ * @param {'cooperate'|'conversion'|'config-service'} name
+ * @param {object} env .env 配置（parseEnvFile 结果）
+ * @returns {{exe: string, args: string[], cwd: string, env?: object}}
+ */
+function hostProcessSpec(name, env) {
   const nodeExe = path.join(DEPLOY_DIR, 'runtime', 'linux', 'node', 'bin', 'node');
   const mxcadDir = path.join(DEPLOY_DIR, 'runtime', 'linux', 'mxcad');
-  const mxcadBin = path.join(mxcadDir, 'mxcadassembly');
+  if (name === 'cooperate') {
+    // 协同服务（mxcadAssembly 折叠形态，参数协议与 cooperate-manager.js 一致）
+    return {
+      exe: path.join(mxcadDir, 'mxcadassembly'),
+      args: [JSON.stringify({ run_cooperate_server: true, print_server: true })],
+      cwd: mxcadDir,
+    };
+  }
+  if (name === 'conversion') {
+    const redisAuth = env.REDIS_PASSWORD ? `:${env.REDIS_PASSWORD}@` : '';
+    const convEnv = {
+      NODE_ENV: 'production',
+      CONVERSION_SERVICE_PORT: String(parseInt(env.CONVERSION_SERVICE_PORT || '3100', 10)),
+      REDIS_URL: `redis://${redisAuth}${env.REDIS_HOST || 'localhost'}:${env.REDIS_PORT || 6379}/${env.REDIS_DB || 0}`,
+      QUEUE_DRIVER: 'redis',
+      MXCAD_ASSEMBLY_PATH: resolveMxcadAssemblyPath(env),
+    };
+    if (env.INTERNAL_SERVICE_SECRET) convEnv.INTERNAL_SERVICE_SECRET = env.INTERNAL_SERVICE_SECRET;
+    if (env.CONVERSION_SERVICE_SECRET) convEnv.CONVERSION_SERVICE_SECRET = env.CONVERSION_SERVICE_SECRET;
+    return {
+      exe: nodeExe,
+      args: [path.join(DEPLOY_DIR, 'packages', 'conversion-service', 'dist', 'server.js')],
+      cwd: path.join(DEPLOY_DIR, 'packages', 'conversion-service'),
+      env: convEnv,
+    };
+  }
+  if (name === 'config-service') {
+    return {
+      exe: nodeExe,
+      args: [path.join(DEPLOY_DIR, 'packages', 'config-service', 'server.js')],
+      cwd: path.join(DEPLOY_DIR, 'packages', 'config-service'),
+      env: {
+        CONFIG_SERVICE_PORT: String(parseInt(env.CONFIG_SERVICE_PORT || '3002', 10)),
+        DEPLOY_FORM: 'docker',
+      },
+    };
+  }
+  throw new Error(`未知宿主进程: ${name}`);
+}
 
-  // 协同服务（mxcadAssembly 折叠形态，参数协议与 cooperate-manager.js 一致）
+/**
+ * 重启单个宿主进程（#442 长尾运维：Redis 改密后 conversion-service 的 REDIS_URL
+ * 是启动期烘焙的，必须重启才生效）。启动规格与 step9 共用 hostProcessSpec。
+ * @param {'cooperate'|'conversion'|'config-service'} name
+ * @param {object} env .env 配置（parseEnvFile 结果）
+ * @returns {Promise<'restarted'|'not-running'|'failed'>}
+ */
+async function restartHostProcess(name, env = {}) {
+  const pidFile = path.join(PID_DIR, `${name}.pid`);
+  const logFile = path.join(LOG_DIR, `${name}.log`);
+  const stopped = await hostProcess.stopHostProcess({ name, pidFile, log });
+  if (stopped === 'not-running') return 'not-running';
+  if (stopped === 'failed') {
+    warn(`${name} 停止失败，未执行重启`);
+    return 'failed';
+  }
+  hostProcess.startHostProcess({ name, ...hostProcessSpec(name, env), logFile, pidFile, log });
+  return 'restarted';
+}
+
+async function step9HostProcesses() {
+  const env = parseEnvFile(ENV_FILE);
+
+  // 协同服务
   const coopPort = parseInt(env.COOPERATE_PORT || '3091', 10);
   if (await hostProcess.isServiceRunning({ pidFile: path.join(PID_DIR, 'cooperate.pid'), port: coopPort })) {
     log('协同服务已在运行，复用');
   } else {
     hostProcess.startHostProcess({
       name: 'cooperate',
-      exe: mxcadBin,
-      args: [JSON.stringify({ run_cooperate_server: true, print_server: true })],
-      cwd: mxcadDir,
+      ...hostProcessSpec('cooperate', env),
       logFile: path.join(LOG_DIR, 'cooperate.log'),
       pidFile: path.join(PID_DIR, 'cooperate.pid'),
       log,
@@ -616,22 +681,9 @@ async function step9HostProcesses() {
     if (await hostProcess.isServiceRunning({ pidFile: path.join(PID_DIR, 'conversion.pid'), port: convPort })) {
       log('转换服务已在运行，复用');
     } else {
-      const redisAuth = env.REDIS_PASSWORD ? `:${env.REDIS_PASSWORD}@` : '';
-      const convEnv = {
-        NODE_ENV: 'production',
-        CONVERSION_SERVICE_PORT: String(convPort),
-        REDIS_URL: `redis://${redisAuth}${env.REDIS_HOST || 'localhost'}:${env.REDIS_PORT || 6379}/${env.REDIS_DB || 0}`,
-        QUEUE_DRIVER: 'redis',
-        MXCAD_ASSEMBLY_PATH: resolveMxcadAssemblyPath(env),
-      };
-      if (env.INTERNAL_SERVICE_SECRET) convEnv.INTERNAL_SERVICE_SECRET = env.INTERNAL_SERVICE_SECRET;
-      if (env.CONVERSION_SERVICE_SECRET) convEnv.CONVERSION_SERVICE_SECRET = env.CONVERSION_SERVICE_SECRET;
       hostProcess.startHostProcess({
         name: 'conversion',
-        exe: nodeExe,
-        args: [dist],
-        cwd: path.join(DEPLOY_DIR, 'packages', 'conversion-service'),
-        env: convEnv,
+        ...hostProcessSpec('conversion', env),
         logFile: path.join(LOG_DIR, 'conversion.log'),
         pidFile: path.join(PID_DIR, 'conversion.pid'),
         log,
@@ -653,10 +705,7 @@ async function step9HostProcesses() {
   } else {
     hostProcess.startHostProcess({
       name: 'config-service',
-      exe: nodeExe,
-      args: [path.join(DEPLOY_DIR, 'packages', 'config-service', 'server.js')],
-      cwd: path.join(DEPLOY_DIR, 'packages', 'config-service'),
-      env: { CONFIG_SERVICE_PORT: String(cfgPort), DEPLOY_FORM: 'docker' },
+      ...hostProcessSpec('config-service', env),
       logFile: path.join(LOG_DIR, 'config-service.log'),
       pidFile: path.join(PID_DIR, 'config-service.pid'),
       log,
@@ -999,4 +1048,18 @@ if (require.main === module) {
   }
 }
 
-module.exports = { cmdStart, cmdStop, cmdStatus, cmdVerify };
+module.exports = {
+  cmdStart,
+  cmdStop,
+  cmdStatus,
+  cmdVerify,
+  // Docker 形态长尾运维原语（#442）：runtime/scripts/commands 的 db-backup /
+  // 密码重置在 docker 形态经这些执行 `docker exec cloudcad-pg psql …`、
+  // `docker restart cloudcad-*` 与宿主进程重启。调用方须先 detectRuntimeMode()
+  // 重新推导 MODE/DOCKER_CLI/DOCKER_HOST（rootless.pid 存活 → 影子 socket）。
+  detectRuntimeMode,
+  docker,
+  compose,
+  dockerEnv,
+  restartHostProcess,
+};

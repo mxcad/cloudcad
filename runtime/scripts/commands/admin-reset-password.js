@@ -37,13 +37,18 @@ const readline = require('readline');
 const { log } = require('../lib/logger');
 const { promptConfirm, promptPasswordWithConfirm } = require('../lib/prompt');
 const { sqlQuote, makePsql } = require('../lib/psql');
-const { PROJECT_ROOT, BACKEND_ENV_PATH } = require('../lib/context');
+const { PROJECT_ROOT } = require('../lib/context');
 const { parseEnvFile } = require('../lib/env');
 const { generateStrongPassword } = require('./setup-wizard');
-const { getDbEnv, getPsqlPath } = require('./db-backup');
+const { getDbEnv, getPsqlPath, getEnvPath, getDockerExec } = require('./db-backup');
 
-// psql 执行 + 审计写入统一走 lib/psql 唯一出口（与 mfa.js 共用）
-const { run: runPsql, writeAudit } = makePsql({ getPsqlPath, getDbEnv });
+// psql 执行 + 审计写入统一走 lib/psql 唯一出口（与 mfa.js 共用）；
+// docker 形态经 dockerExec 在 cloudcad-pg 容器内执行（#442）
+const { run: runPsql, writeAudit } = makePsql({
+  getPsqlPath,
+  getDbEnv,
+  dockerExec: getDockerExec,
+});
 
 /** bcrypt 成本因子，与后端 password.service.ts 的 bcrypt.hash(p, 12) 保持一致 */
 const BCRYPT_COST = 12;
@@ -86,7 +91,8 @@ function assertPasswordPolicy(password, minLength) {
 function resolveMinLength(envConfig = null) {
   if (!envConfig) {
     try {
-      envConfig = parseEnvFile(BACKEND_ENV_PATH);
+      // .env 路径走 getEnvPath（docker 形态 = 部署根 .env，#442）
+      envConfig = parseEnvFile(getEnvPath());
     } catch (_) {
       // .env 缺失或不可读时回退后端默认
       envConfig = {};

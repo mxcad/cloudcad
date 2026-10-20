@@ -101,7 +101,7 @@
 | C2 | 命名 | 裸机不变：`cloudcad-{type}[-private]-{V}-{DATE}-{platform}.{ext}`（windows=.7z，linux={os}-{arch}.tar.gz）。Docker 全量：`cloudcad-deploy[-private]-{V}-{DATE}-docker-{hostPlatform}-{arch}.{ext}`（例 `cloudcad-deploy-1.0.0-20261016-docker-linux-x86_64.tar.gz`；v2 windows 宿主 = .7z）。Docker 升级（v3）：`cloudcad-upgrade[-private]-{V}-{DATE}-docker-{arch}.tar.gz`（**无平台段** = 跨宿主通用） |
 | C3 | 形态标记 | `.deploy` 文件内容 `form=bare\|docker`（bare 可空，兼容旧包）；检测唯一出口 `detectDeployForm()`（`runtime/scripts/lib/`），兼容存量 `.deploy-docker` 标记；新包只写 `.deploy` |
 | C4 | CLI 单一入口 | `start.*`/`stop.*`/`cloudcad.*` 全形态同构瘦壳 → `cli.js`；`cli.js` 按 `detectDeployForm()` 分派：bare → 现有编排；docker → `runtime/docker-runtime/` 模块（12 步编排保留为形态模块，CLI 薄 adapter）。两 facade（start/cloudcad）必须成对同步（ADR-0056 C4） |
-| C5 | 运维长尾可见性 | v1 docker 形态：`menu-sections.js` 对 db-backup/密码重置/infra/setup-wizard/dev 置不可见；运维中心（config-service）继承同一可见性数据 |
+| C5 | 运维长尾可见性 | v1 docker 形态：`menu-sections.js` 对 db-backup/密码重置/infra/setup-wizard/dev 置不可见；运维中心（config-service）继承同一可见性数据。**#442（v2）已解除 db-backup / 三条密码重置的隐藏**（docker 形态经 `docker exec cloudcad-pg` 支持），双形态全可见；仍隐藏的只剩 infra/dev 项（`form:'bare'`） |
 | C6 | .env 分平台生成 | .env 恒在目标机首次 start 时生成；宿主服务地址按宿主平台写值：linux（`--network=host`，ADR-0074 保持不动）→ `localhost:3100/3091`；windows（bridge + `host.docker.internal`）→ `host.docker.internal:3100/3091`。镜像本身跨平台相同，差异只落在目标机生成的 .env |
 | C7 | 包元数据 | 四类包统一含 SHA256SUMS + VERSION + 部署说明.txt（裸机包补齐，对齐 docker 包现状） |
 | C8 | 验证 | 按形态保留 verify 脚本（docker 有 DinD/`--network none` 特有逻辑，不强行合并）；统一打包入口按形态分派调用；「挑最新包」正则改为按形态过滤（bare 排除 `-docker-`，docker 只匹配 `-docker-`） |
@@ -131,7 +131,7 @@
 
 - **docker windows 宿主包**：`start.bat/stop.bat`（包内 windows node → `cli.js`，与裸机 win 同构）；Docker Desktop 检测 + 安装指引（Q1，不捆绑）；app 容器 bridge 网络 + `host.docker.internal` 访问宿主 conversion-service/cooperate（C6）；宿主侧物料 = `runtime/windows/{node,mxcad}` + 协同服务 windows 二进制（复用 mxcad-stable windows-x64 资产与 `pack-offline.js` 的物料解析逻辑）；`verify-windows-docker`（Docker Desktop 下 `docker run --network none` 同样成立）；CI `build-windows-docker` job
 - **docker private variant**：impl-mx → backend dist → app 镜像构建链路接线（打包机需 `packages/impl-mx`），菜单解除置灰
-- **运维长尾形态感知**：db-backup（`docker exec pg psql pg_dump`）、密码重置（`docker exec`）、infra（容器健康）
+- **运维长尾形态感知**：db-backup（`docker exec pg psql pg_dump`）、密码重置（`docker exec`）、infra（容器健康）（#442 已完成：psql/pg_dump/restore 走 `docker exec cloudcad-pg`，重启分支 `docker restart`，宿主 conversion 进程经 `restartHostProcess` 重启，菜单隐藏解除；真 docker 实机端到端验证随 v2 docker 包拆出）
 - **删除 `pack-docker.js`** 与 `pack:docker` 命令（v1 已 deprecated；#443 已完成）
 
 ### v3：Docker 升级包
@@ -152,7 +152,7 @@
 | V3 | docker linux 全量包 | `node scripts/pack-linux-docker.js --verify` | 新命名产物；断网 DinD 验证全绿；start/stop 经 cli.js 分派行为等价（12 步不变）；品牌前缀为 PRODUCT_NAME |
 | V4 | 菜单路由 | `pnpm pack:menu` 逐组合 | win 打包机：裸机 win / 裸机 linux（容器通道+发行版）/ docker linux 均路由正确；置灰组合（docker+private、docker+windows、upgrade+docker）不可选 |
 | V5 | 存量兼容 | 旧 docker 部署（`.deploy-docker` + 旧 start.sh）→ 覆盖新包 → 重跑 start | 新 start.sh 识别旧标记进入 docker 形态；`.env`/`data/` 保留；服务正常 |
-| V6 | 运维入口 | docker 部署上 `./cloudcad.sh status/stop`；运维中心菜单 | status 显示容器 + 宿主进程；stop 全停；长尾命令在菜单/运维中心不可见 |
+| V6 | 运维入口 | docker 部署上 `./cloudcad.sh status/stop`；运维中心菜单 | status 显示容器 + 宿主进程；stop 全停；长尾命令在菜单/运维中心不可见（v1 判据；#442 起 db-backup/密码重置在 docker 形态亦可见） |
 | V7 | CI | release.yml 三 job（build-linux / build-windows / build-linux-docker） | 全绿、断网门禁通过才上传；docker 包命名符合 C2 |
 | V8 | 品牌 | `pnpm brand:check` | docker-runtime 无硬编码产品名 |
 

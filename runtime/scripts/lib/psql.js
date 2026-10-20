@@ -9,6 +9,12 @@
  * 因此本模块不直接依赖 commands/db-backup，而是由调用方把 DB 连接访问器
  * （getPsqlPath/getDbEnv）注入进来——接受依赖、不自己创建，也让测试可注入假访问器。
  * spawn 亦可注入（默认 child_process.spawnSync）。
+ *
+ * Docker 形态（#442）：宿主没有 psql，psql 在 cloudcad-pg 容器内执行
+ * （`docker exec -e PGPASSWORD=… cloudcad-pg psql …`）。docker 执行上下文由调用方
+ * 注入 dockerExec 访问器（commands/db-backup 的 getDockerExec）：裸机形态返回
+ * null 走宿主 psql 分支，docker 形态返回 { container, exec }（exec = docker CLI
+ * 执行器，返回 {ok, stdout, stderr}）。
  */
 
 const { spawnSync: defaultSpawn } = require('child_process');
@@ -22,10 +28,17 @@ function sqlQuote(value) {
 /**
  * 构造 psql 执行器。DB 连接配置访问器由调用方注入（来自 commands/db-backup），
  * 返回绑定好的 { run, writeAudit, auditorId }。
- * @param {{getPsqlPath: Function, getDbEnv: Function, spawn?: Function}} accessors
+ * @param {{getPsqlPath: Function, getDbEnv: Function, dockerExec?: Function|null, spawn?: Function}} accessors
+ *   dockerExec 缺省或返回 null = 裸机形态（宿主 psql）；返回 { container, exec }
+ *   = docker 形态（容器内 psql，#442）。
  * @returns {{run: Function, writeAudit: Function, auditorId: Function}}
  */
-function makePsql({ getPsqlPath, getDbEnv, spawn: spawnSync = defaultSpawn }) {
+function makePsql({
+  getPsqlPath,
+  getDbEnv,
+  dockerExec = null,
+  spawn: spawnSync = defaultSpawn,
+}) {
   /**
    * 执行 psql 单条 SQL。-tAc：tuples-only + 非对齐（多列以 | 分隔）+ 命令串。
    * @param {string} sql
@@ -36,7 +49,6 @@ function makePsql({ getPsqlPath, getDbEnv, spawn: spawnSync = defaultSpawn }) {
    * @returns {{ok: boolean, stdout: string, stderr: string}}
    */
   function run(sql, override = {}) {
-    const psqlPath = getPsqlPath();
     const { env, config } = getDbEnv();
     const dbHost = config.DB_HOST || 'localhost';
     const dbPort = config.DB_PORT || '5432';
@@ -44,6 +56,36 @@ function makePsql({ getPsqlPath, getDbEnv, spawn: spawnSync = defaultSpawn }) {
     const dbName = override.database || config.DB_DATABASE || 'cloudcad';
     const dbPassword =
       override.password === undefined ? env.PGPASSWORD : override.password;
+
+    // Docker 形态（#442）：宿主无 psql，经 docker exec 在 cloudcad-pg 容器内执行。
+    // PGPASSWORD 走 -e 注入容器环境（宿主 env 与容器无关，不复用 env 参数）。
+    const exec = typeof dockerExec === 'function' ? dockerExec() : dockerExec;
+    if (exec) {
+      const result = exec.exec([
+        'exec',
+        '-e',
+        `PGPASSWORD=${dbPassword}`,
+        exec.container,
+        'psql',
+        '-h',
+        dbHost,
+        '-p',
+        dbPort,
+        '-U',
+        dbUser,
+        '-d',
+        dbName,
+        '-tAc',
+        sql,
+      ]);
+      return {
+        ok: Boolean(result && result.ok),
+        stdout: ((result && result.stdout) || '').trim(),
+        stderr: ((result && result.stderr) || '').trim(),
+      };
+    }
+
+    const psqlPath = getPsqlPath();
 
     // 必须走参数数组、不能拼命令串 + shell:true：SQL 里全是双引号包裹的
     // 驼峰标识符（"resourceType" / "roleId" …），经 shell 传递时引号被吃掉、

@@ -28,12 +28,11 @@
 const { log } = require('../lib/logger');
 const { promptConfirm } = require('../lib/prompt');
 const { sqlQuote, makePsql } = require('../lib/psql');
-const { BACKEND_ENV_PATH } = require('../lib/context');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { composeDatabaseUrl } = require('../lib/database-url');
 const { runPm2 } = require('../lib/proc');
 const { generateStrongPassword } = require('./setup-wizard');
-const { getDbEnv, getPsqlPath } = require('./db-backup');
+const { getDbEnv, getPsqlPath, getEnvPath, getDockerExec } = require('./db-backup');
 const {
   assertPasswordPolicy,
   resolveMinLength,
@@ -41,10 +40,12 @@ const {
   promptNewPassword,
 } = require('./admin-reset-password');
 
-// psql 执行 + 审计写入统一走 lib/psql 唯一出口（与 mfa.js / admin-reset-password.js 共用）
+// psql 执行 + 审计写入统一走 lib/psql 唯一出口（与 mfa.js / admin-reset-password.js 共用）；
+// docker 形态经 dockerExec 在 cloudcad-pg 容器内执行（#442）
 const { run: runPsql, writeAudit, auditorId } = makePsql({
   getPsqlPath,
   getDbEnv,
+  dockerExec: getDockerExec,
 });
 
 /**
@@ -88,13 +89,15 @@ function isConnectVerified(result) {
  */
 async function dbResetPassword(options = null, deps = {}) {
   const {
-    envPath = BACKEND_ENV_PATH,
+    // .env 路径走 getEnvPath（docker 形态 = 部署根 .env，#442）
+    envPath = getEnvPath(),
     parseEnv = parseEnvFile,
     updateEnv = updateEnvFile,
     run = runPsql,
     audit = writeAudit,
     getAuditor = auditorId,
     restart = runPm2,
+    dockerExec = getDockerExec,
     generatePassword = generateStrongPassword,
     resolveLimit = resolveMinLength,
   } = deps;
@@ -234,7 +237,16 @@ async function dbResetPassword(options = null, deps = {}) {
   if (options?.restart === false) {
     restartNote = '，未重启 backend（需手动重启才生效）';
   } else {
-    const ok = restart(['restart', 'backend']);
+    const exec = typeof dockerExec === 'function' ? dockerExec() : dockerExec;
+    let ok;
+    if (exec) {
+      // Docker 形态（#442）：backend 在 cloudcad-app 容器内，重启容器即重新烘焙
+      // .env（entrypoint 同时幂等跑 migrate deploy）
+      const r = exec.exec(['restart', 'cloudcad-app'], 180000);
+      ok = Boolean(r && r.ok);
+    } else {
+      ok = restart(['restart', 'backend']);
+    }
     restartNote = ok ? '' : '，但 backend 重启失败（请手动重启）';
   }
 

@@ -28,12 +28,12 @@
 const { log } = require('../lib/logger');
 const { promptConfirm } = require('../lib/prompt');
 const { makePsql } = require('../lib/psql');
-const { BACKEND_ENV_PATH, PORTS } = require('../lib/context');
+const { PORTS } = require('../lib/context');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { runPm2, getPm2AppStatus } = require('../lib/proc');
 const { isPortOpen } = require('../lib/health');
 const { generateStrongPassword } = require('./setup-wizard');
-const { getDbEnv, getPsqlPath } = require('./db-backup');
+const { getDbEnv, getPsqlPath, getEnvPath, getDockerExec } = require('./db-backup');
 const {
   assertPasswordPolicy,
   resolveMinLength,
@@ -47,8 +47,26 @@ const {
   persistRedisConfig,
 } = require('../lib/redis-takeover');
 
-// 审计写入统一走 lib/psql 唯一出口（与 mfa.js / admin-reset-password.js 共用）
-const { writeAudit, auditorId } = makePsql({ getPsqlPath, getDbEnv });
+// 审计写入统一走 lib/psql 唯一出口（与 mfa.js / admin-reset-password.js 共用）；
+// docker 形态经 dockerExec 在 cloudcad-pg 容器内执行（#442）
+const { writeAudit, auditorId } = makePsql({
+  getPsqlPath,
+  getDbEnv,
+  dockerExec: getDockerExec,
+});
+
+/**
+ * 宿主进程重启默认实现（docker 形态，#442）：conversion-service 是宿主进程
+ * （nohup），其 REDIS_URL 启动期烘焙，改密后必须重启才生效。惰性 require
+ * 避免裸机形态引入 docker-runtime 依赖。
+ * @param {string} name
+ * @param {object} env
+ * @returns {Promise<'restarted'|'not-running'|'failed'>}
+ */
+async function defaultRestartHostProcess(name, env) {
+  const dockerRuntime = require('../../docker-runtime/index');
+  return dockerRuntime.restartHostProcess(name, env);
+}
 
 /**
  * 按序重启，跳过未注册的 PM2 app（未注册返回 'unknown'，重启只会白报错）。
@@ -87,7 +105,8 @@ function restartRegistered(names, statusOf = getPm2AppStatus, restart = runPm2) 
  */
 async function redisResetPassword(options = null, deps = {}) {
   const {
-    envPath = BACKEND_ENV_PATH,
+    // .env 路径走 getEnvPath（docker 形态 = 部署根 .env，#442）
+    envPath = getEnvPath(),
     parseEnv = parseEnvFile,
     updateEnv = updateEnvFile,
     audit = writeAudit,
@@ -97,6 +116,8 @@ async function redisResetPassword(options = null, deps = {}) {
     setPassword = setRedisPasswordAtRuntime,
     persist = persistRedisConfig,
     doRestart = restartRegistered,
+    dockerExec = getDockerExec,
+    restartHostProcess = defaultRestartHostProcess,
     generatePassword = generateStrongPassword,
     resolveLimit = resolveMinLength,
   } = deps;
@@ -239,12 +260,39 @@ async function redisResetPassword(options = null, deps = {}) {
   if (options?.restart === false) {
     restartNote = '，未重启服务（需手动重启才生效）';
   } else {
-    const { done, failed } = doRestart(['redis', 'backend', 'conversion']);
+    const exec = typeof dockerExec === 'function' ? dockerExec() : dockerExec;
+    let done = [];
+    let failed = [];
+    if (exec) {
+      // Docker 形态（#442）：redis/backend 是容器（重启即按 .env 重新注入配置）；
+      // conversion 是宿主进程（nohup），经 docker-runtime 重启（未启用/未运行则跳过）
+      const steps = [
+        { name: 'redis', run: () => exec.exec(['restart', 'cloudcad-redis'], 120000) },
+        { name: 'backend', run: () => exec.exec(['restart', 'cloudcad-app'], 180000) },
+      ];
+      for (const s of steps) {
+        const r = s.run();
+        (Boolean(r && r.ok) ? done : failed).push(s.name);
+      }
+      if (
+        (envConfig.FUNCTION_EXECUTOR || 'process-pool').toLowerCase() ===
+        'conversion-service'
+      ) {
+        const r = await restartHostProcess('conversion', envConfig);
+        if (r === 'restarted') done.push('conversion');
+        else if (r === 'failed') failed.push('conversion');
+        // not-running = 未拉起过，跳过（与裸机形态「未注册则跳过」同语义）
+      }
+    } else {
+      const r = doRestart(['redis', 'backend', 'conversion']);
+      done = r.done;
+      failed = r.failed;
+    }
     if (failed.length) {
       log('yellow', `以下服务重启失败，请手动重启：${failed.join('、')}`);
     }
     restartNote = failed.length
-      ? `，已重启 ${done.join('、')}，${failed.join('、')} 重启失败`
+      ? `，已重启 ${done.join('、') || '无注册服务'}，${failed.join('、')} 重启失败`
       : `，已重启 ${done.join('、') || '无注册服务'}`;
   }
 

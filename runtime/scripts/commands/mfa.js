@@ -18,10 +18,15 @@ const readline = require('readline');
 const { log } = require('../lib/logger');
 const { promptConfirm } = require('../lib/prompt');
 const { sqlQuote, makePsql } = require('../lib/psql');
-const { getDbEnv, getPsqlPath } = require('./db-backup');
+const { getDbEnv, getPsqlPath, getDockerExec } = require('./db-backup');
 
-// psql 执行 + 审计写入统一走 lib/psql 唯一出口（与 admin-reset-password 共用）
-const { run: runPsql, writeAudit } = makePsql({ getPsqlPath, getDbEnv });
+// psql 执行 + 审计写入统一走 lib/psql 唯一出口（与 admin-reset-password 共用）；
+// docker 形态经 dockerExec 在 cloudcad-pg 容器内执行（#442）
+const { run: runPsql, writeAudit } = makePsql({
+  getPsqlPath,
+  getDbEnv,
+  dockerExec: getDockerExec,
+});
 
 /** 交互输入用户名（CLI 未传参时） */
 function promptUsername() {
