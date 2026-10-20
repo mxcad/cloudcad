@@ -157,6 +157,22 @@ ErrorCode 枚举统一拆独立票。**
 管理员门之前，导致「已注销的 ADMIN 凭一次普通入口尝试即触发写库 + `user.restored` 审计」
 随后才被拒，恢复成为无意义且有害的副作用。
 
+**第 1 步（判定收敛）已落地**：实际是 **8 处**（本条记的 6 处 + `jwt.strategy.ts`
+MFA 锁定与口令到期锁定两处），全部改走 `@cloudcad/contracts` 的
+`isAdminRole()` / `isAdminUser()`，`SystemRole.ADMIN` 是唯一事实源
+（`common/enums/permissions.enum` 一并 re-export，保持业务代码既有 import 路径）。
+`contracts/test/system-role.test.js` 新增 8 例钉死判定语义（严格全等 + 大小写敏感 +
+role/name/user 各级缺失不命中不抛错）。**零行为变化**：backend tsc 0 错、
+全量 225 套件 / 3151 例绿、contracts 41 例绿 + 纯度门禁通过。
+
+**第 2 步（入口开关）未做**，前置已满足，可独立推进：`adminLoginEntry` 配置项
+（普通 `MERGED` / 安全 `ISOLATED`）+ `admin-auth.service.login()` 第 0 步闸门
+（必须在一切写库/emit 之前）+ 前端 `App.tsx` 路由门控与 `tokenRefresh` 跳转目标。
+
+⚠️ **`@Roles('ADMIN')`（`admin-mfa.controller.ts:83`）刻意不动**：`RolesGuard` 的
+语义是通用 `requiredRoles.includes(userRole)`（支持任意角色名），不是 ADMIN 专用判定；
+改成 `@Roles(SystemRole.ADMIN)` 会让通用 guard 绑死一个具体值。
+
 ---
 
 ## 四、下游推进顺序
@@ -170,7 +186,8 @@ ErrorCode 枚举统一拆独立票。**
 5. **T14**（私有化默认值断裂三件套）→ 按 ADR-0078 D2 走「打包期按 variant 设出厂默认值」
 6. **T3**（口令策略全面模式化，最大结构项）→ 6 项配置本次做 5 项，历史密码新表单独排票
 7. **T6**（审计证据链）→ 按 ADR-0079：CONFIG 类 `AuditAction` + `mlps3-drill.sh` 改读现值
-8. **T4**（管理员入口）→ 先做 6 处 `role?.name==='ADMIN'` 判定收敛，再做入口开关
+8. **T4**（管理员入口）→ ~~先做 6 处 `role?.name==='ADMIN'` 判定收敛~~
+   **判定收敛已完成**（实测 8 处 → `isAdminRole`/`isAdminUser` 唯一出口）；剩入口开关
 9. **T15**（错误契约）→ 先修 7 处缺陷，ErrorCode 枚举另开票（形状待定）
 10. **待排票**：历史密码不复用新表、`runtime_config_logs` 补字段并入收尾票、
     现值纳入哈希链、配置基线快照、全量审计容量核算

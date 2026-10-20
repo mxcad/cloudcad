@@ -76,6 +76,8 @@ export {
   SystemRole,
   SYSTEM_ROLE_PERMISSIONS,
   SYSTEM_ROLE_LEVELS,
+  isAdminRole,
+  isAdminUser,
 } from './domain/system-role.types';
 
 // 日志级别分裂（ADR-0076）：四个服务共享的级别刻度 + env 解析策略 + 阈值比较

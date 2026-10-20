@@ -17,6 +17,7 @@ import type { LoginDto, AuthResponseDto } from '../../dto/auth.dto';
 import type { SessionRequest } from '../../interfaces/jwt-payload.interface';
 import { AuditLogService } from '../../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../../common/enums/audit.enum';
+import { SystemRole, isAdminUser } from '../../../common/enums/permissions.enum';
 import { IpWhitelistService } from '../../../ip-whitelist/ip-whitelist.service';
 import { IpBlacklistService } from '../../../ip-blacklist/ip-blacklist.service';
 import { SecurityAccessAttemptService } from '../../../security/security-access-attempt.service';
@@ -142,7 +143,7 @@ export class AdminAuthService {
     }
 
     // 仅系统管理员角色可通过此入口；非管理员与密码错误同文案（防枚举）
-    if (user.role?.name !== 'ADMIN') {
+    if (!isAdminUser(user)) {
       this.logger.warn(`管理员登录失败 - 非管理员账号: ${account}`);
       await this.auditAdminLoginFailure(
         account,
@@ -254,7 +255,7 @@ export class AdminAuthService {
       await this.authTokenService.generateTokens(userWithoutPassword);
 
     // 5. Session（与普通登录一致，供 cookie 会话链路复用）
-    const roleName = user.role?.name ?? 'ADMIN';
+    const roleName = user.role?.name ?? SystemRole.ADMIN;
     if (req && req.session) {
       await establishSession(req, user, { fallbackRole: 'ADMIN', withEmail: true });
       this.logger.log(

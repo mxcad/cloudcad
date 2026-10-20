@@ -17,7 +17,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { DatabaseService } from '../../database/database.service';
 import { TokenBlacklistService } from '../services/token-blacklist.service';
 import { RoleInheritanceService } from '../../permission/services/role-inheritance.service';
-import { SystemRole } from '../../common/enums/permissions.enum';
+import { SystemRole, isAdminRole } from '../../common/enums/permissions.enum';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { PasswordPolicyService } from '../services/password-policy.service';
 
@@ -155,7 +155,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // profile 刷新/登出可用，后台其余端点一律拒绝。基于 DB 实时状态判定，
     // 绑定完成（totpEnabled=true）后锁定自动解除，无需刷新 token。
     // 总闸 mfaEnforceEnabled（运行时配置，默认关闭）关闭时整个锁定不生效。
-    if (effectiveRole === 'ADMIN' && !userStatus.totpEnabled) {
+    if (isAdminRole(effectiveRole) && !userStatus.totpEnabled) {
       const mfaEnforceEnabled =
         await this.runtimeConfigService.getValue<boolean>(
           'mfaEnforceEnabled',
@@ -189,7 +189,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // 与 profile 刷新/登出可用，后台其余端点一律拒绝。基于 DB 实时 passwordChangedAt 判定，
     // 改密成功（change-password 写 passwordChangedAt=now）后锁定自动解除，无需刷新 token。
     // 仅 ADMIN 角色生效；普通用户不做 180 天拦截（体验优先）。
-    if (effectiveRole === 'ADMIN') {
+    if (isAdminRole(effectiveRole)) {
       const passwordChangeStatus =
         await this.passwordPolicyService.getPasswordChangeStatus(
           userStatus.passwordChangedAt

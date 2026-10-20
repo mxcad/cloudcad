@@ -20,6 +20,7 @@ import { I18nContext } from 'nestjs-i18n';
 import { IRuntimeConfigService } from '@cloudcad/contracts';
 import { AuditLogService } from '../../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../../common/enums/audit.enum';
+import { isAdminUser } from '../../common/enums/permissions.enum';
 import {
   assertNotSelfStatusChange,
   assertKeepsUserAdminSurvivor,
@@ -52,7 +53,7 @@ export class UserStatusService {
       if (existingUser.deletedAt) {
         throw new BadRequestException(I18nContext.current()?.t('error.user.deactivated') ?? '用户已注销');
       }
-      if (existingUser.role.name === 'ADMIN') {
+      if (isAdminUser(existingUser)) {
         throw new BadRequestException(I18nContext.current()?.t('error.user.cannot_delete_admin') ?? '不能删除管理员账户');
       }
       await this.prisma.user.update({
@@ -104,7 +105,7 @@ export class UserStatusService {
       if (existingUser.deletedAt) {
         throw new BadRequestException(I18nContext.current()?.t('error.user.deactivated') ?? '用户已注销');
       }
-      if (existingUser.role.name === 'ADMIN') {
+      if (isAdminUser(existingUser)) {
         throw new BadRequestException(I18nContext.current()?.t('error.user.cannot_delete_admin') ?? '不能删除管理员账户');
       }
       await this.userCleanupService.deleteUserCompletely(id);

@@ -20,6 +20,7 @@ import type {
   UserRecord,
 } from '@cloudcad/contracts';
 import { USER_REPOSITORY, USER_SYNC_HOOK } from '@cloudcad/contracts';
+import { isAdminUser } from '../../../common/enums/permissions.enum';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { membershipTierOf } from '../../../vip/membership-tier';
 import { I18nContext } from 'nestjs-i18n';
@@ -342,7 +343,7 @@ export class LoginService {
     user: UserRecord,
     entry: string
   ): Promise<{ user: UserRecord; restored: boolean }> {
-    if (user.role?.name === 'ADMIN') {
+    if (isAdminUser(user)) {
       this.logger.warn(
         `${entry} 登录拒绝 - 系统管理员账号须使用管理员专用入口: ${
           user.username || user.email || user.id

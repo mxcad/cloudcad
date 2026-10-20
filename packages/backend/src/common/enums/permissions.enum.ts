@@ -27,6 +27,8 @@ import {
   SystemRole,
   SYSTEM_ROLE_PERMISSIONS,
   SYSTEM_ROLE_LEVELS,
+  isAdminRole,
+  isAdminUser,
 } from '@cloudcad/contracts';
 
 /**
@@ -83,6 +85,12 @@ export { ProjectRole };
  * 无法 import backend/src），此处 re-export 保持既有 import 路径兼容
  */
 export { SystemRole, SYSTEM_ROLE_PERMISSIONS, SYSTEM_ROLE_LEVELS };
+
+/**
+ * ADMIN 判定唯一出口（isAdminRole/isAdminUser），随 SystemRole 一起 re-export，
+ * 使业务代码的角色判定与权限定义共用同一条 import 路径
+ */
+export { isAdminRole, isAdminUser };
 
 /**
  * 系统角色继承关系

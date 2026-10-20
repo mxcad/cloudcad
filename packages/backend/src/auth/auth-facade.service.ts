@@ -26,6 +26,7 @@ import {
   UserForToken,
 } from './interfaces/jwt-payload.interface';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
+import { isAdminUser } from '../common/enums/permissions.enum';
 import { Audit } from '../common/decorators/audit.decorator';
 import { maskAccount, maskEmail, maskPhone } from '../common/pii/pii-crypto.service';
 
@@ -492,7 +493,7 @@ export class AuthFacadeService implements IAuthFacade {
 
     // #416 等保 8.1.4.1：仅 ADMIN 角色补口令到期状态（180 天到期/首登未改密 + 提前 14 天软提示），
     // 供前端刷新时展示强改引导/提示条。普通用户不做 180 天判定，不返回这两个字段。
-    const isAdmin = freshUser.role?.name === 'ADMIN';
+    const isAdmin = isAdminUser(freshUser);
     const passwordChangeStatus = isAdmin
       ? await this.passwordPolicyService.getPasswordChangeStatus(
           freshUser.passwordChangedAt ?? null

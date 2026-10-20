@@ -27,6 +27,27 @@ export enum SystemRole {
 }
 
 /**
+ * 判定「已解析的角色名」是否为系统管理员。
+ * Role.name 在 schema 中是自由字符串（无 Prisma 枚举），SystemRole.ADMIN 是
+ * 其唯一事实源；本函数是 ADMIN 判定的唯一出口，业务代码不得再内联
+ * `role?.name === 'ADMIN'`。
+ */
+export function isAdminRole(roleName: string | null | undefined): boolean {
+  return roleName === SystemRole.ADMIN;
+}
+
+/**
+ * 判定带（可选、可空）role 关系的用户记录是否为系统管理员。
+ * 入参只要求 `{ name }` 而非 UserRoleRef/Prisma 全量对象，
+ * 使 include 深度不同的查询结果都能传入。
+ */
+export function isAdminUser(
+  user: { role?: { name?: string | null } | null } | null | undefined
+): boolean {
+  return isAdminRole(user?.role?.name);
+}
+
+/**
  * 系统角色权限映射
  * 定义系统角色拥有的系统权限（直接权限，不包括继承）
  * 单一来源：backend 初始化播种、prisma seed、权限审计脚本均从此读取
