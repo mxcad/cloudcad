@@ -92,7 +92,7 @@
 用户铁律（2026-10-19）：部署**始终不依赖 root**——不弹 sudo 密码、部署目录不归 root 独占。
 
 - **普通用户优先复用系统 Docker，不可用才 rootless**（2026-10-19 修订）：`step1Permission` 按 euid + 系统 Docker 可用性定案——euid==0 → root dockerd 路径；普通用户且系统 Docker 无需 sudo 即可用（`docker version` 有 Server 端返回，如用户在 docker 组）→ 直接复用系统 Docker（零安装、不碰包内静态 Docker）；普通用户且系统 Docker 不可用（未安装 / 需 root）→ rootless（用户命名空间 + 包内静态 dockerd + 静态 slirp4netns）。全程**不探测 sudo、不请求任何密码**；rootless 路径下 `data/`、`docker-data/`、日志全部归当前用户；
-- **零管理员前置**：包内镜像全部以容器内 uid 0 运行（pg 定制镜像数据目录 uid 0 + 跳过 gosu / redis `user: root` / app 无 USER）→ rootless-ns 的**单段 0→euid 映射**（无 newuidmap 时自写，go=2 降级路径）即够，**无需 uidmap 包、无需 subuid/subgid 配置**（有则用多段，兼容非 0:0 属主镜像）；
+- **零管理员前置**：rootless-ns 的**单段 0→euid 映射**（无 newuidmap 时自写，go=2 降级路径）即够的前提是**包内镜像全部层的所有文件属主均为 0:0**——容器运行时 uid 0 只是其中一半（pg 定制镜像数据目录 uid 0 + 跳过 gosu / redis `user: root` / app 无 USER）；官方基础层含非零属主文件（alpine `/etc/shadow` root:shadow gid=42、nginx 100/101、node 1000/1000 等），无 newuidmap 的目标机 `docker load` ApplyLayer 会 lchown 到层内记录属主，内核对未映射 id 返回 EINVAL（`lchown /etc/shadow: invalid argument`，mx@ubuntu 无 root 机器实测，2026-10-20）。故打包时由 `scripts/pack-lib/normalize-image-ownership.js` 把三镜像全部层重写为 0:0（容器内均以 uid 0 运行，属主无运行时意义），同步更新 config `diff_ids`（层目录不重命名：docker load 按 diff_ids 校验、不看目录名，且 docker save 对同内容层用符号链接去重），断言全层 0:0 后才允许进包 → **无需 uidmap 包、无需 subuid/subgid 配置**（有则用多段，兼容非 0:0 属主镜像）；
 - **root 仅当用户自愿以 root 运行 `./start.sh` 时出现**（root dockerd 路径，root 本就不需要密码）——是用户选择，不是部署依赖；
 - **root 残留预检**：`checkDeployDirOwnership()` 在 12 步入口快速失败——部署目录/data 不可写（此前 root 部署或以 root 解压）时给出 `chown -R` / 重新解压指引，而非中途 EACCES 难懂报错；
 - 代价：目标机内核须支持非特权用户命名空间（CentOS 7 / Ubuntu 均默认支持）；断网验证（DinD 容器内 root 运行）仍走 root 路径，不受影响。

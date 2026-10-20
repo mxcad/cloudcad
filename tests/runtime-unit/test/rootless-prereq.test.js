@@ -3,7 +3,8 @@
  *
  * 断言目标（checkPrerequisites 的 missing/notes 分类是「零管理员前置」的契约）：
  * 1. newuidmap/newgidmap/subuid/subgid 缺失**永不进 missing**（只进 notes）——
- *    包内镜像全部以 uid 0 运行，单段 0→euid 映射即够，缺它们不阻塞 rootless 启动
+ *    包内镜像全部层文件均 0:0 属主（打包时归一化）且容器以 uid 0 运行，
+ *    单段 0→euid 映射即够，缺它们不阻塞 rootless 启动
  * 2. missing 只可能含 rootless-ns 与 slirp4netns 两项（slirp 缺失可降级 plain-netns）
  * 3. 包内 rootless-ns 二进制缺失 → 进 missing（部署包不完整，硬失败）
  * 4. rootless-ns 架构与本机不符 → 进 missing（错架构二进制 exec 是 ENOEXEC）

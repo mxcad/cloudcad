@@ -840,6 +840,7 @@ function step3TagInfraImages() {
 }
 
 function step4SaveImages(imagesDir, version) {
+  const { normalizeImageTar } = require(path.join(PROJECT_ROOT, 'scripts', 'pack-lib', 'normalize-image-ownership'));
   ensureDir(imagesDir);
   const saves = [
     ['cloudcad/pg:15-alpine', 'cloudcad-pg-15-alpine.tar'],
@@ -853,6 +854,14 @@ function step4SaveImages(imagesDir, version) {
     if (res.status !== 0 || !fs.existsSync(dest) || fs.statSync(dest).size < 1024 * 1024) {
       fail(`docker save ${tag} 失败或产物异常`);
     }
+    // rootless 单段映射兼容（ADR-0075）：官方基础层含非 0:0 属主文件（如 alpine 的
+    // /etc/shadow root:shadow gid=42），无 newuidmap 的目标机 docker load 会
+    // lchown EINVAL。三镜像容器内均以 uid 0 运行，属主无运行时意义 → 全部层归一化
+    // 为 0:0（真实文件原地替换，docker save 去重符号链接自动生效，同步更新 config
+    // diff_ids；层目录不重命名——docker load 按 diff_ids 校验，不看目录名），
+    // 断言全层 0:0 后才允许进包。
+    log(`层属主归一化 0:0（${file}）...`);
+    normalizeImageTar(dest, { log, tarBin: TAR_BIN });
   }
 }
 

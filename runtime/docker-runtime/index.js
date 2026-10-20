@@ -261,7 +261,8 @@ function step0Artifacts() {
  *     如用户在 docker 组）→ 直接复用系统 Docker：零安装、不碰包内静态 Docker
  *   - 普通用户 + 系统 Docker 不可用（未安装 / 需 root 权限）→ rootless（用户命名空间 + 包内静态 Docker）：
  *     **不探测 sudo、不请求任何密码**，部署目录（data/、docker-data/、日志）全部归当前用户。
- *     零管理员前置：包内镜像全部以 uid 0 运行，单段 0→euid 映射即够（无需 uidmap/subuid）。
+ *     零管理员前置：包内镜像全部层文件均 0:0 属主（打包时归一化）且容器以 uid 0 运行，
+ *     单段 0→euid 映射即够（无需 uidmap/subuid）。
  */
 function step1Permission() {
   if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
