@@ -145,6 +145,34 @@ function sleep(ms) {
 }
 
 /**
+ * Linux unix socket 路径上限：sun_path 108 字节（含结尾 NUL，路径本身须 < 108）。
+ * 部署目录由用户解压位置决定、深度任意（如 /home/mx/Music/cloudcad-deploy-...），
+ * 包内影子 socket 全路径超限后 dockerd 报 "bind: invalid argument"（EINVAL）且无指向性，
+ * 必须在拉起前解析并回退（CI 断网验证容器路径短，暴露不了此类问题，2026-10-19 实机暴露）。
+ */
+const SUN_PATH_LIMIT = 108;
+
+/**
+ * 解析 rootless dockerd 的 socket 路径：
+ * 首选包内影子目录（<dataRoot>/shadow-run/docker-rootless.sock，对宿主可见且私有）；
+ * 全路径达 108 字节上限（部署目录过深）时回退 /tmp 短路径——命名空间内 /tmp 与宿主
+ * 是同一目录（未影子挂载），dockerd 在 ns 内 bind 后宿主 docker CLI 可直接连。
+ * 回退目录名含 dataRoot 的 FNV-1a 短哈希：同一用户多份部署包各用各的 socket 互不串。
+ * @param {string} dataRoot dockerd 数据目录（<deployDir>/docker-data）
+ * @returns {string}
+ */
+function resolveSocketPath(dataRoot) {
+  const inPkg = path.join(dataRoot, 'shadow-run', 'docker-rootless.sock');
+  if (inPkg.length < SUN_PATH_LIMIT) return inPkg;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < dataRoot.length; i++) {
+    h ^= dataRoot.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return path.join(`/tmp/cloudcad-docker-${process.getuid()}-${(h >>> 0).toString(36)}`, 'docker.sock');
+}
+
+/**
  * rootless dockerd 是否已就绪（经指定 DOCKER_HOST 的 docker CLI 能取到 Server 版本）。
  * @param {string} dockerHost 形如 unix:///path/to/docker.sock
  * @param {string} dockerDir 包内 docker/ 目录（含 docker CLI）
@@ -225,11 +253,33 @@ set -e
 SHADOW_RUN="${shadowRun}"
 mkdir -p "$SHADOW_RUN"
 
-# 1) DNS 兜底：在任何挂载前读宿主 nameserver（/etc/resolv.conf 可能是指向 /run/* 的符号链接）
-NS="$(grep '^nameserver' /etc/resolv.conf 2>/dev/null | head -5 || true)"
+# 1) DNS：必须在 /etc overlay 挂载前读宿主真实上游 nameserver（/etc/resolv.conf 可能是指向 /run/* 的符号链接）。
+#    slirp 模式：guest netns 隔离（仅 slirp TAP + 环回），宿主 DNS（127.0.0.53 stub / LAN 上游）在 guest 内不可达，
+#    guest 须用 slirp 用户态 DNS 代理 10.0.2.3；slirp 自身跑在宿主 netns，其上游须显式 -d 传真实上游
+#    （否则 slirp 读子 mount ns 里 overlay 的 /etc/resolv.conf=10.0.2.3 即它自己，DNS 转发成环超时）。
+#    plain netns 模式无外网，DNS 无意义，保留宿主 resolv.conf（overlay lower）。
+REAL_NS="$(grep '^nameserver' /etc/resolv.conf 2>/dev/null | head -5 || true)"
+case "$REAL_NS" in
+  *127.0.0.53*)
+    if [ -r /run/systemd/resolve/resolv.conf ]; then
+      REAL_NS="$(grep '^nameserver' /run/systemd/resolve/resolv.conf 2>/dev/null | head -5 || true)"
+    fi
+    ;;
+esac
+if [ -n "${slirpPath}" ]; then
+  NS="nameserver 10.0.2.3"
+else
+  NS=""
+fi
 
-# 2) /run 影子 bind：dockerd 的 unix socket 落在此影子目录，对真实宿主可见
+# 2) /run 影子 bind：dockerd 的 unix socket 落在此影子目录（部署目录过深时回退 /tmp 短路径），对真实宿主可见
 mount --bind "$SHADOW_RUN" /run
+
+# 2a) 清理上一实例的 docker.pid（影子 /run 专属于本 dockerd；stop+start 重启时 pid 文件残留，
+#     不删则新 dockerd 报 "pid file found" 拒绝启动）。rootless 模式 pidfile 在
+#     $XDG_RUNTIME_DIR/docker.pid（/run/user/<uid>/docker.pid，落在影子 /run 内），两条路径都清
+rm -f /run/docker.pid
+if [ -n "\${XDG_RUNTIME_DIR:-}" ]; then rm -f "\${XDG_RUNTIME_DIR}/docker.pid"; fi
 
 # 3) /etc overlay：lower=真实 /etc（bind），upper=影子（可写），使 dockerd 可写 /etc 而不污染宿主
 mkdir -p "${etcLower}" "${etcUpper}" "${etcWork}"
@@ -237,11 +287,38 @@ if [ -n "$NS" ]; then printf '%s\\n' "$NS" > "${etcUpper}/resolv.conf"; fi
 mount --bind /etc "${etcLower}"
 mount -t overlay overlay -o lowerdir=${etcLower},upperdir=${etcUpper},workdir=${etcWork} /etc
 
+# 3a) /etc/docker 遮蔽：宿主 /etc/docker 可能残留 root 属主 key.json（rootless ns 内 uid0 映射宿主普通用户，
+#     读不了 → dockerd 按 root 默认 TLS 证书目录 /etc/docker 加载 key.json 时 EACCES，daemon 起不来；
+#     该读取路径不受 DOCKER_TLS_CERTDIR 控制）。bind 空目录覆盖，使该目录对 dockerd 恒为空
+#     （rootless 走 unix socket、无 TLS，空证书目录无副作用；也不影响 rootless 实际读取的
+#     $HOME/.config/docker/daemon.json 用户配置）。
+mkdir -p "$SHADOW_RUN/etc-docker"
+mkdir -p /etc/docker
+mount --bind "$SHADOW_RUN/etc-docker" /etc/docker
+
+# 3b) apparmor 遮蔽：子 userns 内 /sys/kernel/security/apparmor/profiles 读 EACCES（内核 securityfs
+#     可见性检查：init userns 加载的 profile 对子 userns 不可见）→ dockerd 容器创建时的 AppArmor
+#     profile 检查硬失败（实测容器卡 Created）。dockerd 启动时 stat /sys/module/apparmor（或
+#     /sys/kernel/security/apparmor）判 apparmor 可用性 → 两处都 bind 空目录覆盖，使其判「不可用」
+#     而跳过全部检查（rootless 容器本就无法使用 init userns 的 apparmor profile，unconfined 是正确行为）
+if [ -d /sys/module/apparmor ]; then
+  mkdir -p "$SHADOW_RUN/sys-module-apparmor"
+  mount --bind "$SHADOW_RUN/sys-module-apparmor" /sys/module/apparmor
+fi
+if [ -d /sys/kernel/security/apparmor ]; then
+  mkdir -p "$SHADOW_RUN/sys-apparmor"
+  mount --bind "$SHADOW_RUN/sys-apparmor" /sys/kernel/security/apparmor
+fi
+
 # 4) netns + dockerd（socket/数据目录/cgroup 参数已含在 DOCKERD_ARGS）
 DOCKERD="${dockerd}"
 DOCKERD_ARGS="${dockerdArgs}${cgArg}"
 REAL_UID="${realUid}"
 PORTS="${portsList}"
+# rootless 检测：dockerd 靠 ROOTLESSKIT_STATE_DIR 环境变量判 rootless 模式（官方 rootlesskit 会设置）。
+# 缺失时按普通 daemon 走 → 容器创建时 AppArmor profile 检查读 /sys/kernel/security/apparmor
+# （rootless 下 EACCES）直接硬失败（实测容器卡 Created）。置为本实例影子 /run 目录（存在且可写）
+export ROOTLESSKIT_STATE_DIR="$SHADOW_RUN"
 
 # hostfwd 发送器（slirp4netns API socket，QMP 风格 JSON）。协议：发 JSON 后 SHUT_WR（无 keep-alive），读响应。
 # 优先 python3（Ubuntu 默认有），回退 nc -U；都无则跳过（端口不暴露但 dockerd 仍跑）。
@@ -282,8 +359,27 @@ if [ -n "${slirpPath}" ] && [ -x "${slirpPath}" ]; then
   # 1) 新 netns 里起 dockerd（后台；unshare 建 netns 后 exec dockerd，PID 不变）
   unshare -n "$DOCKERD" $DOCKERD_ARGS &
   DOCKERD_PID=$!
-  # 2) slirp4netns 附着 dockerd 的 netns（按 PID），建 TAP + 用户态网络 + API socket
-  "${slirpPath}" -c --netns-type=pid "\${DOCKERD_PID}" --api-socket "\${SLIRP_API_SOCK}" tap0 &
+  # 1a) 等 unshare 真正进入新 netns：在此之前 /proc/PID/ns/net 仍是宿主 netns，slirp 抢先
+  #     setns 宿主 netns 会 EPERM（子 userns 无 init userns 的 CAP_SYS_ADMIN）退出，dockerd 只剩
+  #     环回（无 tap0/外网）——启动竞态，必须等 netns 切换完成再附着（实测：不等待时竞态必现）
+  HOST_NET="\$(readlink /proc/self/ns/net)"
+  i=0
+  while [ -d "/proc/\${DOCKERD_PID}" ] && [ "\$(readlink /proc/\${DOCKERD_PID}/ns/net 2>/dev/null)" = "\$HOST_NET" ] && [ \$i -lt 100 ]; do
+    sleep 0.1
+    i=\$((i+1))
+  done
+  # 2) slirp4netns 附着 dockerd 的 netns（按 PID），建 TAP + 用户态网络 + API socket。
+  #    1.3.x 无 -d 选项（≤1.2 接口，传了直接 usage 退出）：上游 DNS 恒读 /etc/resolv.conf。
+  #    子 mount ns 里 /etc 是 overlay（resolv.conf=10.0.2.3=slirp 自身）→ DNS 转发成环（实测 i/o timeout）。
+  #    故给 slirp 私有 mount ns：bind 宿主真实 resolv.conf 覆盖 /etc/resolv.conf 后 exec slirp
+  #    （exec 不换 PID，SLIRP_PID 仍指 slirp 本体；slirp 跑在宿主 netns，真实上游可达）。
+  rm -f "\${SLIRP_API_SOCK}"
+  if [ -n "$REAL_NS" ]; then
+    printf '%s\\n' "$REAL_NS" > "$SHADOW_RUN/slirp-resolv.conf"
+    unshare -m sh -c "mount --bind \$SHADOW_RUN/slirp-resolv.conf /etc/resolv.conf && exec '${slirpPath}' -c --netns-type=pid \${DOCKERD_PID} --api-socket \${SLIRP_API_SOCK} tap0" &
+  else
+    "${slirpPath}" -c --netns-type=pid "\${DOCKERD_PID}" --api-socket "\${SLIRP_API_SOCK}" tap0 &
+  fi
   SLIRP_PID=$!
   # 3) 等 API socket 就绪，对每个端口发 add_hostfwd（TCP + UDP，宿主端口 → guest 10.0.2.100 同端口）
   if [ -n "$PORTS" ]; then
@@ -301,6 +397,7 @@ if [ -n "${slirpPath}" ] && [ -x "${slirpPath}" ]; then
   # 4) 脚本存活与 dockerd 绑定：dockerd 退出即清理 slirp 并结束（rootless-ns 据此回收 netns）
   wait "\${DOCKERD_PID}" || true
   kill "\${SLIRP_PID}" 2>/dev/null || true
+  exit 0
 fi
 
 # 4b) 无 slirp4netns：降级 plain netns（仅 loopback，服务端口对真实宿主不可达）
@@ -362,17 +459,20 @@ function checkPrerequisites({ toolsDir, log = () => {} }) {
     notes.push(`用户 ${user} 未配置 subuid/subgid 范围：使用单段 uid 映射（包内镜像全部以 uid 0 运行，不受影响）`);
   }
 
-  // slirp4netns（系统或包内）—— 用户态网络 + 端口暴露。
-  // 必须「实测可运行」而非仅查文件存在：包内动态版（发行版 1.0.1）在 glibc 过低的目标机
+  // slirp4netns（包内静态优先，系统兜底）—— 用户态网络 + 端口暴露。
+  // 必须「实测可运行」而非仅查文件存在：动态版（发行版 1.0.1）在 glibc 过低的目标机
   // （如 Ubuntu 20.04/2.31）会因 libslirp 需 GLIBC_2.33+ 而 exec 失败，若只查存在会误判可用
-  // → dockerd 90s 超时。实测 --version，跑不了就降级 plain-netns（或改用系统 slirp4netns）。
+  // → dockerd 90s 超时。实测 --version，跑不了就降级 plain-netns。
+  // 偏好顺序：包内静态版（vendor/slirp4netns，无 glibc 依赖、任意 Linux 可跑、建网稳定）优先，
+  // 系统版兜底——系统版（如老 v1.0.1）虽能过 --version，但运行时建网在部分宿主上不稳定
+  // （时而降级 plain-netns 致镜像拉取无外网），故有包内静态版时恒用它。
   const sysSlirp = which('slirp4netns');
   const bundledSlirp = path.join(toolsDir, 'slirp4netns');
   let slirp4netns = null;
-  if (sysSlirp && slirpUsable(sysSlirp)) {
-    slirp4netns = sysSlirp;
-  } else if (slirpUsable(bundledSlirp)) {
+  if (slirpUsable(bundledSlirp)) {
     slirp4netns = bundledSlirp;
+  } else if (sysSlirp && slirpUsable(sysSlirp)) {
+    slirp4netns = sysSlirp;
   }
   if (!slirp4netns) {
     const foundButBroken = Boolean(sysSlirp) || fs.existsSync(bundledSlirp);
@@ -440,7 +540,7 @@ function checkPrerequisites({ toolsDir, log = () => {} }) {
  */
 function start({ deployDir, dockerDir, dataRoot, logFile, ports = [], toolsDir, log = () => {} }) {
   const shadowRun = path.join(dataRoot, 'shadow-run');
-  const socketPath = path.join(shadowRun, 'docker-rootless.sock');
+  const socketPath = resolveSocketPath(dataRoot);
   const dockerHost = `unix://${socketPath}`;
   const pidFile = path.join(dataRoot, 'rootless.pid');
   const setupScript = path.join(dataRoot, 'rootless-setup.sh');
@@ -491,6 +591,12 @@ function start({ deployDir, dockerDir, dataRoot, logFile, ports = [], toolsDir, 
     ports,
   });
   fs.mkdirSync(dataRoot, { recursive: true });
+  // 部署目录过深时 socket 回退 /tmp 短路径：dockerd bind 前父目录必须已存在（dockerd 不建父目录），
+  // 宿主侧 /tmp 与命名空间内 /tmp 是同一目录，此处建好 ns 内即可见；0700 防其他用户抢先建符号链接
+  if (!socketPath.startsWith(dataRoot)) {
+    log(`[rootless] 部署目录路径过深（socket 全路径 ≥${SUN_PATH_LIMIT} 字节，超 unix socket 上限），改用短路径 ${socketPath}`);
+    fs.mkdirSync(path.dirname(socketPath), { recursive: true, mode: 0o700 });
+  }
   fs.writeFileSync(setupScript, setup, { mode: 0o755 });
 
   const env = {
@@ -597,6 +703,7 @@ module.exports = {
   start,
   stop,
   isDockerReady,
+  resolveSocketPath,
   // 内部导出（供测试 / index.js 复用）
   _elfArch: elfArch,
   _which: which,

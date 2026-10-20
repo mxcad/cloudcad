@@ -93,11 +93,14 @@ const IMAGE_TAGS = [`cloudcad/app:${VERSION}`, 'cloudcad/pg:15-alpine', 'cloudca
 let SUDO = '';
 let INSTALLED_BY_US = false;
 let COMPOSE = 'docker compose';
-// 权限模式：'root'（用户自愿以 root 运行）| 'rootless'（普通用户恒走此路，ADR-0075 完全无 root）
+// 权限模式：'root'（用户自愿以 root 运行）| 'system'（普通用户但系统 Docker 无需 sudo 即可用，
+// 直接复用）| 'rootless'（普通用户且系统 Docker 不可用 → 包内静态 Docker 走用户命名空间，
+// ADR-0075 完全无 root）
 let MODE = 'root';
 // rootless 时指向包内静态 docker CLI（/usr/local/bin 未必有）；root 用 PATH 的 docker
 let DOCKER_CLI = 'docker';
-// rootless 时 = unix://<影子目录>/docker-rootless.sock；root 时 = ''（默认 socket）
+// rootless 时 = unix://<影子目录>/docker-rootless.sock（部署目录过深超 unix socket 108 字节上限时
+// 回退 /tmp 短路径，见 rootless.resolveSocketPath）；root 时 = ''（默认 socket）
 let DOCKER_HOST = '';
 // rootless 启动结果（netnsPid/pidFile/degraded 等），供 stop / 宿主进程 host IP 使用
 let ROOTLESS = null;
@@ -191,12 +194,12 @@ function sleep(ms) {
  * 就绪窗口。把客户端 SYN 重试拉到 15 次（~16 分钟窗口），给 CPU 饿死的服务端足够机会回
  * SYN-ACK，客户端即可在窗口内完成握手。
  *
- * 仅 root 模式可写 /proc/sys（rootless 无 CAP_SYS_ADMIN，跳过）；写失败只警告不阻塞
- * （正常部署机核数充足、服务端应答快，本参数无副作用）。per-netns 参数：host 网络下 app
- * 容器与宿主共享 netns，此处写入即对后端客户端生效。
+ * 仅 root 模式可写 /proc/sys（rootless 无 CAP_SYS_ADMIN、system 模式是普通用户，均跳过）；
+ * 写失败只警告不阻塞（正常部署机核数充足、服务端应答快，本参数无副作用）。per-netns 参数：
+ * host 网络下 app 容器与宿主共享 netns，此处写入即对后端客户端生效。
  */
 function tuneTcpForSlowEnv() {
-  if (MODE === 'rootless') return;
+  if (MODE !== 'root') return;
   const sysctlPath = '/proc/sys/net/ipv4/tcp_syn_retries';
   try {
     const cur = fs.readFileSync(sysctlPath, 'utf8').trim();
@@ -254,7 +257,9 @@ function step0Artifacts() {
 /**
  * 权限模式定案（ADR-0075：部署完全无 root；取代 ADR-0074 D5 的三级门禁）：
  *   - euid == 0（用户自愿以 root 运行）→ root dockerd 路径（root 无需密码；这是用户选择，非依赖）
- *   - 普通用户 → 恒 rootless（用户命名空间 + 包内静态 Docker）：
+ *   - 普通用户 + 系统 Docker 当前用户无需 sudo 即可用（docker version 有 Server 端返回，
+ *     如用户在 docker 组）→ 直接复用系统 Docker：零安装、不碰包内静态 Docker
+ *   - 普通用户 + 系统 Docker 不可用（未安装 / 需 root 权限）→ rootless（用户命名空间 + 包内静态 Docker）：
  *     **不探测 sudo、不请求任何密码**，部署目录（data/、docker-data/、日志）全部归当前用户。
  *     零管理员前置：包内镜像全部以 uid 0 运行，单段 0→euid 映射即够（无需 uidmap/subuid）。
  */
@@ -262,6 +267,15 @@ function step1Permission() {
   if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
     MODE = 'root';
     SUDO = '';
+    return;
+  }
+  // 系统 Docker 对当前用户直接可用（无需 sudo）→ 复用；仅当系统 docker 不可用
+  // （未安装 / 需 root）才回退包内 rootless 静态 Docker
+  if (dockerBootstrap.dockerReady('')) {
+    const v = dockerBootstrap.run(`docker version --format '{{.Server.Version}}'`, { timeoutMs: 15000 });
+    MODE = 'system';
+    SUDO = '';
+    log(`系统 Docker（${v.stdout || '版本未知'}）当前用户可直接使用 → 直接复用（不使用包内静态 Docker）`);
     return;
   }
   log('普通用户模式 → rootless（用户命名空间 + 包内静态 Docker，无需 root/sudo 密码）');
@@ -281,7 +295,7 @@ function step1Permission() {
   // 提前设置 DOCKER_HOST（影子 socket 路径固定）：step6 的 isPortOurs 需经影子 socket 探测
   // 已运行的 app 容器（rootless dockerd 若已在上次 start 拉起），否则会误判端口被他人占用而顺延。
   // step4 的 rootless.start 会再次确认（幂等）。
-  DOCKER_HOST = `unix://${path.join(DOCKER_DATA_ROOT, 'shadow-run', 'docker-rootless.sock')}`;
+  DOCKER_HOST = `unix://${rootless.resolveSocketPath(DOCKER_DATA_ROOT)}`;
   // 剩余可缺失项只有 slirp4netns（包内静态版恒在；缺失仅降级 plain-netns，不中止）
   for (const m of prereq.missing) {
     warn(`rootless 前置缺失：${m.name}\n      ${m.hint}`);
@@ -827,7 +841,7 @@ function detectRuntimeMode() {
     MODE = 'rootless';
     SUDO = '';
     DOCKER_CLI = path.join(DEPLOY_DIR, 'docker', 'docker');
-    DOCKER_HOST = `unix://${path.join(DOCKER_DATA_ROOT, 'shadow-run', 'docker-rootless.sock')}`;
+    DOCKER_HOST = `unix://${rootless.resolveSocketPath(DOCKER_DATA_ROOT)}`;
     COMPOSE = 'docker-compose';
   } else {
     if (typeof process.geteuid === 'function' && process.geteuid() === 0) {
@@ -888,7 +902,7 @@ async function cmdVerify() {
     MODE = 'rootless';
     SUDO = '';
     DOCKER_CLI = path.join(DEPLOY_DIR, 'docker', 'docker');
-    DOCKER_HOST = `unix://${path.join(DOCKER_DATA_ROOT, 'shadow-run', 'docker-rootless.sock')}`;
+    DOCKER_HOST = `unix://${rootless.resolveSocketPath(DOCKER_DATA_ROOT)}`;
   }
   const env = parseEnvFile(ENV_FILE);
   const result = await verifyDeployment({

@@ -91,7 +91,7 @@
 
 用户铁律（2026-10-19）：部署**始终不依赖 root**——不弹 sudo 密码、部署目录不归 root 独占。
 
-- **普通用户恒 rootless**（用户命名空间 + 包内静态 dockerd + 静态 slirp4netns）：`step1Permission` 不再探测 sudo（`sudo -n` / 交互式 `sudo -v` 两条路径删除），不请求任何密码；`data/`、`docker-data/`、日志全部归当前用户；
+- **普通用户优先复用系统 Docker，不可用才 rootless**（2026-10-19 修订）：`step1Permission` 按 euid + 系统 Docker 可用性定案——euid==0 → root dockerd 路径；普通用户且系统 Docker 无需 sudo 即可用（`docker version` 有 Server 端返回，如用户在 docker 组）→ 直接复用系统 Docker（零安装、不碰包内静态 Docker）；普通用户且系统 Docker 不可用（未安装 / 需 root）→ rootless（用户命名空间 + 包内静态 dockerd + 静态 slirp4netns）。全程**不探测 sudo、不请求任何密码**；rootless 路径下 `data/`、`docker-data/`、日志全部归当前用户；
 - **零管理员前置**：包内镜像全部以容器内 uid 0 运行（pg 定制镜像数据目录 uid 0 + 跳过 gosu / redis `user: root` / app 无 USER）→ rootless-ns 的**单段 0→euid 映射**（无 newuidmap 时自写，go=2 降级路径）即够，**无需 uidmap 包、无需 subuid/subgid 配置**（有则用多段，兼容非 0:0 属主镜像）；
 - **root 仅当用户自愿以 root 运行 `./start.sh` 时出现**（root dockerd 路径，root 本就不需要密码）——是用户选择，不是部署依赖；
 - **root 残留预检**：`checkDeployDirOwnership()` 在 12 步入口快速失败——部署目录/data 不可写（此前 root 部署或以 root 解压）时给出 `chown -R` / 重新解压指引，而非中途 EACCES 难懂报错；

@@ -95,7 +95,14 @@ function cleanup() {
     containerName = null;
   }
   if (tmpDir && !KEEP) {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch (e) {
+      // best-effort：rootless 验证环境下包内 dockerd 产物（docker-data/overlay2）属主是
+      // 用户命名空间映射 uid，宿主当前用户删不掉；rootful CI 下若 docker 以 root 跑、
+      // 脚本以普通用户跑同样会 EACCES。清理失败不影响验证结论，提示手动清理即可。
+      log(`警告：临时目录清理失败（${e.message}），请手动删除：sudo rm -rf ${tmpDir}`);
+    }
   }
 }
 
