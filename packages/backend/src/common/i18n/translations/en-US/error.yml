@@ -82,6 +82,9 @@ user:
   deactivated: "User has been deactivated"
   already_deactivated: "Account has been deactivated"
   cannot_delete_admin: "Cannot delete administrator account"
+  cannot_modify_own_role: "You cannot modify your own role"
+  cannot_modify_own_status: "You cannot modify your own account status"
+  cannot_demote_last_admin: "Cannot remove the last administrator's user-management permission"
   not_deactivated_cannot_restore: "User is not deactivated, cannot restore"
   already_deactivated_cannot_restore: "Account is not deactivated, no restoration needed"
   past_cooling_period: "Past cooling-off period, cannot restore. Please contact support"
@@ -326,7 +329,7 @@ rate_limit:
 
 password_policy:
   too_short: "Password must be at least {min} characters long"
-  complexity: "Password must contain at least 3 of the following: uppercase, lowercase, digits, special characters"
+  complexity: "Password must contain at least {min} of the following: uppercase, lowercase, digits, special characters"
   weak: "Password is too weak (matches a common weak password). Please use a stronger password"
 
 initialization:
@@ -524,6 +527,10 @@ font_extra:
 
 config_extra:
   unknown_key: "Unknown config key: {key}"
+  unknown_profile: "Unknown security mode: {profile}"
+  missing_operator: "Missing operator id; cannot record who changed the config"
+  empty_profile: "No config keys declare security-mode values, so no profile can be applied"
+  invalid_profile_target: "Invalid profile target values: {keys}"
 
 sms_extra:
   network_limit: "Current network has reached the limit, please try again later"

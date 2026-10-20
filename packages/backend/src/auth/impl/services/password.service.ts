@@ -129,7 +129,7 @@ export class PasswordService implements IPasswordService {
     if (!user) { throw new UnauthorizedException(I18nContext.current()?.t('error.user.not_found') ?? '用户不存在'); }
 
     // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
-    this.passwordPolicyService.assertPasswordPolicy(newPassword);
+    await this.passwordPolicyService.assertPasswordPolicy(newPassword);
 
     const hashedPassword = await this.passwordHasher.hash(newPassword);
     // 记录口令修改时间（#416）

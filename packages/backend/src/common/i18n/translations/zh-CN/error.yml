@@ -82,6 +82,9 @@ user:
   deactivated: "用户已注销"
   already_deactivated: "账户已注销"
   cannot_delete_admin: "不能删除管理员账户"
+  cannot_modify_own_role: "不能修改自己的角色"
+  cannot_modify_own_status: "不能修改自己的账户状态"
+  cannot_demote_last_admin: "不能移除最后一个管理员的用户管理权限"
   not_deactivated_cannot_restore: "用户未注销，无法恢复"
   already_deactivated_cannot_restore: "账户未注销，无需恢复"
   past_cooling_period: "已过冷静期，无法恢复，请联系客服"
@@ -326,7 +329,7 @@ rate_limit:
 
 password_policy:
   too_short: "密码长度至少 {min} 位"
-  complexity: "密码需包含大小写字母、数字、特殊字符中至少三类"
+  complexity: "密码需包含大小写字母、数字、特殊字符中至少 {min} 类"
   weak: "密码过于简单（命中常见弱密码），请更换为更复杂的密码"
 
 initialization:
@@ -524,6 +527,10 @@ font_extra:
 
 config_extra:
   unknown_key: "未知的配置项: {key}"
+  unknown_profile: "未知的安全模式: {profile}"
+  missing_operator: "缺少操作者标识，无法记录修改来源"
+  empty_profile: "当前没有任何配置项声明了安全模式取值，无法应用配置档"
+  invalid_profile_target: "配置档目标取值无效: {keys}"
 
 sms_extra:
   network_limit: "当前网络发送次数已达上限，请稍后再试"

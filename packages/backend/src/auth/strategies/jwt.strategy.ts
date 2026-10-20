@@ -191,7 +191,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // 仅 ADMIN 角色生效；普通用户不做 180 天拦截（体验优先）。
     if (effectiveRole === 'ADMIN') {
       const passwordChangeStatus =
-        this.passwordPolicyService.getPasswordChangeStatus(
+        await this.passwordPolicyService.getPasswordChangeStatus(
           userStatus.passwordChangedAt
         );
       if (passwordChangeStatus.required) {

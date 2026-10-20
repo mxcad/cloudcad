@@ -682,14 +682,115 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
       'admin-auth 与 jwt.strategy 均每次读取，改完即生效。',
     profiles: { secure: true, normal: false },
   },
-  // 口令策略 4 项（passwordMinLength / passwordMaxAgeDays / passwordExpiringSoonDays /
-  // passwordChangeEnforceEnabled）**刻意不收录**：password-policy.service 在构造期一次性
-  // 读取 configService.get('passwordPolicy') 并固化到 readonly 字段，assertPasswordPolicy
-  // 与 getPasswordChangeStatus 都是同步方法、后者被 jwt.strategy 每请求调用。
-  // 迁入运行时配置需把这两个方法改成异步并 ripple 到 4 处调用点，属于对最热安全路径的
-  // 结构性改造；且当前 env 值与这里若填的 defaultValue 完全一致，无行为缺陷。
-  // 按文件头「构造期一次性读取 → 不收录」原则保持 env + 重启语义
-  //（PASSWORD_POLICY_MIN_LENGTH / MAX_AGE_DAYS / EXPIRING_SOON_DAYS / CHANGE_ENFORCE_ENABLED）。
+  // ───────────────────────── 安全：口令策略 ─────────────────────────
+  // 以下项在 password-policy.service 的 assertPasswordPolicy() /
+  // getPasswordChangeStatus() 中**每次调用时读取**（经 Redis 缓存），改完即生效。
+  // 原先这 4 项在构造期一次性快照 configService，改不了不重启；已改惰性读取后收录。
+  {
+    key: 'passwordPolicyMinLength',
+    type: 'number',
+    category: 'security',
+    description: '设置口令时的最小长度',
+    defaultValue: 10,
+    isPublic: false,
+    tier: 'advanced',
+    dangerous: true,
+    envKey: 'PASSWORD_POLICY_MIN_LENGTH',
+    input: { min: 0, max: 64, step: 1, unit: '位' },
+    impact:
+      '仅约束设置口令的入口（注册/改密/重置/管理员创建），存量口令不追溯校验。' +
+      '每次设密时读取，改完即生效；调太小会显著降低抗暴力破解能力。',
+    profiles: { secure: 10, normal: 6 },
+  },
+  {
+    key: 'passwordPolicyMinCategories',
+    type: 'number',
+    category: 'security',
+    description:
+      '设置口令时至少需要的字符类别数（小写、大写、数字、特殊字符四类计），0 = 不要求类别构成',
+    defaultValue: 3,
+    isPublic: false,
+    tier: 'advanced',
+    dangerous: true,
+    input: { min: 0, max: 4, step: 1, unit: '类' },
+    impact:
+      '0 表示纯数字口令（如 8 位数字）也能通过；1-4 依次为至少含一类至四类。' +
+      '每次设密时读取，改完即生效。',
+    profiles: { secure: 3, normal: 0 },
+  },
+  {
+    key: 'passwordPolicyWeakCheckEnabled',
+    type: 'boolean',
+    category: 'security',
+    description: '启用内置常见弱口令黑名单校验',
+    defaultValue: true,
+    isPublic: false,
+    tier: 'advanced',
+    dangerous: true,
+    impact:
+      '关闭后不再拦截 123456、password、admin123! 等常见弱口令，任何长度与类别合规的口令都能通过。' +
+      '每次设密时读取，改完即生效。',
+    profiles: { secure: true, normal: false },
+  },
+  {
+    key: 'passwordPolicyChangeIntervalDays',
+    type: 'number',
+    category: 'security',
+    description: '管理员口令强制更换周期（天），0 = 永不强制',
+    defaultValue: 180,
+    isPublic: false,
+    tier: 'advanced',
+    dangerous: true,
+    envKey: 'PASSWORD_POLICY_MAX_AGE_DAYS',
+    input: { min: 0, max: 3650, step: 1, unit: '天' },
+    impact:
+      '仅 ADMIN 角色生效（普通用户不做周期判定，体验优先）。0 表示永不因到期强制改密，' +
+      '但仍受「首登未改密」判定影响。每次登录时读取，改完即生效。',
+    profiles: { secure: 180, normal: 0 },
+  },
+  {
+    key: 'passwordPolicyExpiringSoonDays',
+    type: 'number',
+    category: 'security',
+    description: '距到期多少天开始软提示（仅提示，不拦截）',
+    defaultValue: 14,
+    isPublic: false,
+    tier: 'advanced',
+    input: { min: 0, max: 365, step: 1, unit: '天' },
+    impact:
+      '配合「口令强制更换周期」使用：进入该窗口后管理员看到改密提醒但不被锁定。' +
+      '必须小于更换周期才有意义；0 = 不提示。每次登录时读取，改完即生效。',
+  },
+  {
+    key: 'passwordPolicyChangeEnforceEnabled',
+    type: 'boolean',
+    category: 'security',
+    description:
+      '启用管理员定期更换/首登未改密的强制改密（关闭时仅显示标记、不锁定）',
+    defaultValue: false,
+    isPublic: false,
+    tier: 'advanced',
+    dangerous: true,
+    envKey: 'PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED',
+    impact:
+      '仅 ADMIN 角色生效。开启后：口令到期或首登未改密的管理员被锁定，只能走改密入口；' +
+      '关闭时判定仍计算但不拦截。每次登录与每次 token 校验时读取，改完即生效。' +
+      '默认关闭，与 mfaEnforceEnabled 一致；切换安全模式会开启。',
+    profiles: { secure: true, normal: false },
+  },
+  {
+    key: 'passwordPolicyHistoryCheckEnabled',
+    type: 'boolean',
+    category: 'security',
+    description: '启用口令历史校验（禁止近期用过的口令）',
+    defaultValue: false,
+    isPublic: false,
+    tier: 'advanced',
+    dangerous: true,
+    impact:
+      '预留项：口令历史存储与校验尚未实现，当前无论填什么值都不生效。' +
+      '实现后才会声明 secure/normal 目标值并纳入模式切换（等保 8.1.4.1 要求）。',
+  },
 
   // ───────────────────────── 安全：账号锁定与业务限流 ─────────────────────────
   // 以下 8 + 3 项在 account-rate-limit.service 的 getConfig()/getLockConfig() 中
@@ -971,10 +1072,11 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
   // 同类「死配置」同样刻意不收录（全仓零消费者，收录即陷阱）：
   //   PAGINATION_DEFAULT_PAGE_SIZE / PAGINATION_MAX_PAGE_SIZE
   //   TIMEOUT_RATE_LIMITER / TIMEOUT_DIRECTORY_ALLOCATOR
-  //   CACHE_TTL_PERMISSION / CACHE_TTL_POLICY / CACHE_TTL_DEFAULT
-  //   CACHE_L2_DEFAULT_TTL / CACHE_VERSION_MAX_AGE
   //   UPLOAD_ALLOWED_TYPES / UPLOAD_MAX_SIZE
   //   FILE_LIMIT_MAX_PATH_LENGTH / FILE_LIMIT_MAX_DIRECTORY_DEPTH / FILE_LIMIT_MAX_HIERARCHY_DEPTH
+  // CACHE_TTL_PERMISSION / CACHE_TTL_POLICY / CACHE_TTL_DEFAULT、
+  // CACHE_L2_DEFAULT_TTL / CACHE_VERSION_MAX_AGE 连 env 读取方都没有，已彻底删除（Gitea #483）——
+  // configuration.ts、app.config.ts 与 .env.example 三处一并移除。
   // 构造期一次性读取、改了必须重启才生效的配置（TIMEOUT_FILE_CONVERSION、
   // CACHE_TTL_*、FILE_LOCK_*、FILE_EXT_*、THUMBNAIL_*、UPLOAD_*）也不收录：
   // 它们在运行时配置里会有值但实际不生效，属于「填了没反应」的陷阱字段。

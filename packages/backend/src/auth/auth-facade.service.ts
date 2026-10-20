@@ -494,7 +494,7 @@ export class AuthFacadeService implements IAuthFacade {
     // 供前端刷新时展示强改引导/提示条。普通用户不做 180 天判定，不返回这两个字段。
     const isAdmin = freshUser.role?.name === 'ADMIN';
     const passwordChangeStatus = isAdmin
-      ? this.passwordPolicyService.getPasswordChangeStatus(
+      ? await this.passwordPolicyService.getPasswordChangeStatus(
           freshUser.passwordChangedAt ?? null
         )
       : null;

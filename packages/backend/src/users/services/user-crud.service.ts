@@ -37,6 +37,12 @@ import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
 import { ACCOUNT_EVENTS_CHANNEL } from '../account-events-sse.constants';
 
 import { I18nContext } from 'nestjs-i18n';
+import {
+  assertNotSelfRoleChange,
+  assertNotSelfStatusChange,
+  assertKeepsUserAdminSurvivor,
+  roleGrantsUserAdmin,
+} from './admin-privilege-guard';
 
 @Injectable()
 export class UserCrudService {
@@ -123,7 +129,7 @@ export class UserCrudService {
       }
 
       // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
-      this.passwordPolicyService.assertPasswordPolicy(createUserDto.password);
+      await this.passwordPolicyService.assertPasswordPolicy(createUserDto.password);
 
       const hashedPassword = await this.passwordHasher.hash(
         createUserDto.password
@@ -520,7 +526,8 @@ export class UserCrudService {
 
   async update(
     id: string,
-    updateUserDto: UpdateUserDto
+    updateUserDto: UpdateUserDto,
+    operatorId: string
   ): Promise<ICreatedUser> {
     try {
       const existingUser = await this.prisma.user.findUnique({ where: { id } });
@@ -576,6 +583,40 @@ export class UserCrudService {
         }
       }
 
+      // 自我降权与「最后一个管理员」不变量：操作者不能借用户管理页锁死自己，
+      // 也不能让全平台持有用户管理权限的账号归零
+      assertNotSelfRoleChange(
+        operatorId,
+        id,
+        updateUserDto.roleId,
+        existingUser.roleId
+      );
+      assertNotSelfStatusChange(
+        operatorId,
+        id,
+        updateUserDto.status,
+        existingUser.status
+      );
+      const roleIdChanged =
+        !!updateUserDto.roleId && updateUserDto.roleId !== existingUser.roleId;
+      if (roleIdChanged) {
+        await assertKeepsUserAdminSurvivor(
+          this.prisma,
+          id,
+          await roleGrantsUserAdmin(this.prisma, existingUser.roleId),
+          await roleGrantsUserAdmin(this.prisma, updateUserDto.roleId)
+        );
+      }
+      // 非 ACTIVE 状态同样让账号失去使用用户管理能力的可能（SUSPENDED 无法登录）
+      if (updateUserDto.status && updateUserDto.status !== existingUser.status) {
+        await assertKeepsUserAdminSurvivor(
+          this.prisma,
+          id,
+          await roleGrantsUserAdmin(this.prisma, existingUser.roleId),
+          updateUserDto.status === 'ACTIVE'
+        );
+      }
+
       const updateData: Prisma.UserUpdateInput = {};
       if (updateUserDto.email) updateData.email = updateUserDto.email;
       if (updateUserDto.username) updateData.username = updateUserDto.username;
@@ -593,7 +634,7 @@ export class UserCrudService {
       if (updateUserDto.status) updateData.status = updateUserDto.status;
       if (updateUserDto.password) {
         // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
-        this.passwordPolicyService.assertPasswordPolicy(updateUserDto.password);
+        await this.passwordPolicyService.assertPasswordPolicy(updateUserDto.password);
         updateData.password = await this.passwordHasher.hash(
           updateUserDto.password
         );

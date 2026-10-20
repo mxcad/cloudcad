@@ -8,6 +8,7 @@ import type { IUserRepository, IEmailVerificationService, IRuntimeConfigService,
 import { USER_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
+import { InitializationService } from '../../services/initialization.service';
 import { establishSession } from '../../session-establishment';
 import { I18nContext } from 'nestjs-i18n';
 
@@ -25,14 +26,19 @@ export class RegistrationService implements IRegistrationService {
     private authTokenService: AuthTokenService,
     @InjectRedis() private readonly redis: Redis,
     private accountRateLimitService: AccountRateLimitService,
-    private passwordPolicyService: PasswordPolicyService
+    private passwordPolicyService: PasswordPolicyService,
+    private initializationService: InitializationService
   ) {}
 
   async register(registerDto: RegisterDto, req?: SessionRequest): Promise<AuthResponseDto> {
     const { email, username, password, nickname, wechatTempToken } = registerDto;
 
+    // 首启守卫：零用户系统禁止注册普通用户抢先占用「首个用户」，
+    // 否则 Web 首启页的「创建首个管理员」永久关闭、系统永远缺管理员
+    await this.initializationService.assertInitialized();
+
     // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
-    this.passwordPolicyService.assertPasswordPolicy(password);
+    await this.passwordPolicyService.assertPasswordPolicy(password);
 
     const allowRegister = await this.runtimeConfigService.getValue<boolean>('allowRegister', true);
     if (!allowRegister) {

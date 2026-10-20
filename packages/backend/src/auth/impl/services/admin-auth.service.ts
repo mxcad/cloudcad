@@ -235,7 +235,7 @@ export class AdminAuthService {
     // >166 天 → 提前 14 天软提示（不拦截）。
     // 标记随响应下发，JwtStrategy 据此对未改密管理员做强制引导（复用 #415 MFA 锁定模式）。
     const passwordChangeStatus =
-      this.passwordPolicyService.getPasswordChangeStatus(
+      await this.passwordPolicyService.getPasswordChangeStatus(
         user.passwordChangedAt
       );
     const passwordChangeRequired = passwordChangeStatus.required;

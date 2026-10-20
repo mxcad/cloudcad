@@ -82,6 +82,9 @@ user:
   deactivated: "用戶已登出"
   already_deactivated: "帳戶已登出"
   cannot_delete_admin: "不能刪除管理員帳戶"
+  cannot_modify_own_role: "不能修改自己的角色"
+  cannot_modify_own_status: "不能修改自己的帳戶狀態"
+  cannot_demote_last_admin: "不能移除最後一個管理員的使用者管理權限"
   not_deactivated_cannot_restore: "用戶未登出，無法恢復"
   already_deactivated_cannot_restore: "帳戶未登出，無需恢復"
   past_cooling_period: "已過冷靜期，無法恢復，請聯絡客服"
@@ -326,7 +329,7 @@ rate_limit:
 
 password_policy:
   too_short: "密碼長度至少 {min} 位"
-  complexity: "密碼需包含大小寫字母、數字、特殊字元中至少三類"
+  complexity: "密碼需包含大小寫字母、數字、特殊字元中至少 {min} 類"
   weak: "密碼過於簡單（命中常見弱密碼），請更換為更複雜的密碼"
 
 initialization:
@@ -524,6 +527,10 @@ font_extra:
 
 config_extra:
   unknown_key: "未知的配置項: {key}"
+  unknown_profile: "未知的安全模式: {profile}"
+  missing_operator: "缺少操作者標識，無法記錄修改來源"
+  empty_profile: "目前沒有任何配置項宣告了安全模式取值，無法套用配置檔"
+  invalid_profile_target: "配置檔目標取值無效: {keys}"
 
 sms_extra:
   network_limit: "目前網路發送次數已達上限，請稍後再試"
