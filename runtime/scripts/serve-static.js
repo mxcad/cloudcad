@@ -146,13 +146,35 @@ function proxyRequest(req, res, target) {
     // 4. 发送响应头
     res.writeHead(proxyRes.statusCode, headers);
 
+    // 后端响应流中途出错（如 ECONNRESET）：此时响应头往往已发给客户端，
+    // 只能中止，不能再 writeHead，否则 ERR_HTTP_HEADERS_SENT 直接崩进程
+    proxyRes.on('error', (err) => {
+      console.error(`[代理错误] ${err.message}`);
+      if (!res.headersSent) {
+        res.writeHead(502);
+      }
+      res.end();
+    });
+
     proxyRes.pipe(res);
   });
 
+  // 到后端的请求出错（连接被拒/重置等）：
+  // 头未发 → 回 502；头已发（后端回包中途断）→ 只能中止，不能重复 writeHead
   proxyReq.on('error', (err) => {
     console.error(`[代理错误] ${err.message}`);
-    res.writeHead(502);
-    res.end(`Proxy Error: ${err.message}`);
+    if (!res.headersSent) {
+      res.writeHead(502);
+      res.end(`Proxy Error: ${err.message}`);
+    } else {
+      res.end();
+    }
+  });
+
+  // 客户端中途断开（关页面/取消请求）：主动掐断到后端的请求，
+  // 否则后端白干到底 + 连接泄漏
+  res.on('close', () => {
+    proxyReq.destroy();
   });
 
   // 转发请求体
