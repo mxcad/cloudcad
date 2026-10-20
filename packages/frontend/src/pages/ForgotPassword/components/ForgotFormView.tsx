@@ -172,6 +172,7 @@ export const ForgotFormView: React.FC<ForgotFormViewProps> = ({
           )}
 
           <Button
+            type="submit"
             variant="primary"
             size="lg"
             loading={loading}
