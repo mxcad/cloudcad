@@ -11,6 +11,8 @@
  * - PostgreSQL（data/logs/postgres.log，pg_ctl -l 指定）
  * - Redis（data/logs/redis.log + 轮转产物 redis-YYYY-MM-DD.log；redis-manager 传 --logfile 脱离 PM2，ADR-0076）
  * - backend pino-roll 按天轮转 app.log + access-*.log
+ * - docker 形态宿主 nohup 进程 stdout 捕获（data/logs/{cooperate,conversion,
+ *   config-service,dockerd}.log；裸机形态这些进程归 PM2，由 pm2 源收）
  * - conversion-service / config-service / storage-service 按天 JSON 日志
  * - 部署 / 升级过程（lib/deploy-log.js 镜像落盘）
  * - 运维 CLI 留痕（data/ops-log/YYYYMM.ops.log）
@@ -49,6 +51,15 @@ const LOG_SOURCES = [
     dir: path.join('data', 'logs'),
     // 当前文件 + 轮转产物都收（isRotatedLog 的 base 是去 .log 的 stem）
     filter: (name) => name === 'redis.log' || isRotatedLog(name, 'redis'),
+  },
+  {
+    slug: 'host-launch',
+    service: '宿主 nohup 进程 stdout 捕获（docker 形态：cooperate/conversion/config-service/dockerd）',
+    dir: path.join('data', 'logs'),
+    // docker 形态不起 PM2，宿主进程的 stdout 由 docker-runtime 直接重定向到 data/logs
+    // 根；裸机形态这些进程归 PM2、落 data/pm2/logs，由 pm2 源收。filter 用显式名单而
+    // 非 catch-all，避免 data/logs 根下将来新增的文件被静默并进来。
+    filter: (name) => /^(cooperate|conversion|config-service|dockerd)\.log$/.test(name),
   },
   {
     slug: 'backend',
@@ -152,6 +163,9 @@ function listLogLocations({ rootDir = PROJECT_ROOT } = {}) {
     const files = exists
       ? collectLogFiles({ rootDir })
           .filter((f) => path.dirname(f.absPath) === absDir)
+          // data/logs 根有三个源（postgres/redis/host-launch）：只按目录过滤会把三个源
+          // 的条目重复列在每个源名下，故同 collectLogFiles 一样复用 source.filter
+          .filter((f) => !source.filter || source.filter(path.basename(f.absPath)))
           .map((f) => ({
             name: path.basename(f.absPath),
             size: f.size,

@@ -71,11 +71,43 @@ test('LOG_SOURCES 覆盖调研确认的全部日志源，slug 唯一', () => {
   ]) {
     assert.ok(dirs.includes(must), `LOG_SOURCES 应含 ${must}`);
   }
-  // data/logs 根只收 postgres.log / redis.log（含轮转产物），子目录由独立条目覆盖（防重复打包）
+  // data/logs 根有三个源，filter 两两互斥（postgres / redis 含轮转产物 / 宿主 nohup），
+  // 子目录由独立条目覆盖（防重复打包）
   const logsRoot = LOG_SOURCES.find((s) => s.dir === path.join('data', 'logs'));
   assert.ok(logsRoot, 'data/logs 根目录条目存在（postgres.log）');
   const redisRoot = LOG_SOURCES.find((s) => s.dir === path.join('data', 'logs') && s.slug === 'redis');
   assert.ok(redisRoot, 'data/logs 根目录另有 redis.log 条目（ADR-0076）');
+  const hostLaunch = LOG_SOURCES.find((s) => s.slug === 'host-launch');
+  assert.ok(hostLaunch, 'data/logs 根另有宿主 nohup 进程日志条目（docker 形态）');
+  assert.equal(
+    hostLaunch.dir,
+    path.join('data', 'logs'),
+    'host-launch 与 postgres/redis 同根目录'
+  );
+  // 三个源的 filter 互斥：任一文件名至多被一个源认领（防重复打包），且非名单内的不收
+  const rootSources = LOG_SOURCES.filter((s) => s.dir === path.join('data', 'logs'));
+  const probe = [
+    'postgres.log',
+    'redis.log',
+    'redis-2026-10-01.log',
+    'cooperate.log',
+    'conversion.log',
+    'config-service.log',
+    'dockerd.log',
+    'app.log',
+    'backup.log',
+  ];
+  for (const name of probe) {
+    assert.ok(
+      rootSources.filter((s) => s.filter(name)).length <= 1,
+      `${name} 至多被一个源认领`
+    );
+  }
+  assert.equal(
+    probe.filter((name) => rootSources.some((s) => s.filter(name))).length,
+    7,
+    'postgres/redis×3/host-launch×4 共 7 个被认领，app.log 与 backup.log 无人认领'
+  );
 });
 
 test('collectLogFiles：全源收集 + zipName 按 slug 隔离同名文件', () => {
@@ -86,6 +118,10 @@ test('collectLogFiles：全源收集 + zipName 按 slug 隔离同名文件', () 
   touch(root, 'data/logs/redis-2026-10-01.log', 'redis rotated');
   touch(root, 'data/logs/redis-2026-10-01-103000.log', 'redis rotated same-day');
   touch(root, 'data/logs/backend/app-2026-10-01.log', 'backend app');
+  touch(root, 'data/logs/cooperate.log', 'cooperate stdout');
+  touch(root, 'data/logs/conversion.log', 'conversion stdout');
+  touch(root, 'data/logs/config-service.log', 'config-service stdout');
+  touch(root, 'data/logs/dockerd.log', 'dockerd stdout');
   touch(root, 'data/logs/conversion-service/app-2026-10-01.log', 'conv app');
   touch(root, 'data/logs/config-service/app-2026-10-01.log', 'config app');
   touch(root, 'data/ops-log/202610.ops.log', 'ops');
@@ -96,6 +132,10 @@ test('collectLogFiles：全源收集 + zipName 按 slug 隔离同名文件', () 
     'backend/app-2026-10-01.log',
     'config-service/app-2026-10-01.log',
     'conversion/app-2026-10-01.log',
+    'host-launch/config-service.log',
+    'host-launch/conversion.log',
+    'host-launch/cooperate.log',
+    'host-launch/dockerd.log',
     'ops/202610.ops.log',
     'pm2/backend-out.log',
     'postgres/postgres.log',
@@ -104,11 +144,12 @@ test('collectLogFiles：全源收集 + zipName 按 slug 隔离同名文件', () 
     'redis/redis.log',
   ]);
 
-  // 非 .log 文件与子目录不收
+  // 非 .log 文件、子目录、以及 data/logs 根下未被任何源认领的文件都不收
   touch(root, 'data/pm2/logs/not-a-log.txt', 'skip');
   touch(root, 'data/logs/backend/subdir/nested.log', 'skip');
+  touch(root, 'data/logs/unknown.log', 'skip');
   const again = collectLogFiles({ rootDir: root });
-  assert.equal(again.length, 9, '仅平铺 .log 文件入清单');
+  assert.equal(again.length, 13, '仅平铺 .log 且被某源认领的文件入清单');
 });
 
 test('collectLogFiles：days 过滤只收最近 N 天内有修改的文件', () => {
@@ -141,6 +182,26 @@ test('listLogLocations：缺失目录 exists=false，存在目录给出文件明
   const missing = groups.filter((g) => !g.exists);
   assert.ok(missing.length > 0, '未创建的源 exists=false');
   assert.ok(missing.every((g) => g.files.length === 0));
+});
+
+test('listLogLocations：同根目录三个源各自只列自己认领的文件', () => {
+  const root = tmpRoot();
+  touch(root, 'data/logs/postgres.log', 'pg');
+  touch(root, 'data/logs/redis.log', 'redis');
+  touch(root, 'data/logs/cooperate.log', 'coop');
+  touch(root, 'data/logs/unknown.log', 'unclaimed');
+
+  const bySlug = Object.fromEntries(
+    listLogLocations({ rootDir: root }).map((g) => [g.slug, g])
+  );
+  assert.deepEqual(bySlug.postgres.files.map((f) => f.name), ['postgres.log']);
+  assert.deepEqual(bySlug.redis.files.map((f) => f.name), ['redis.log']);
+  assert.deepEqual(bySlug['host-launch'].files.map((f) => f.name), ['cooperate.log']);
+  assert.equal(
+    Object.values(bySlug).reduce((n, g) => n + g.files.length, 0),
+    3,
+    '未被任何源认领的 data/logs 根文件不出现在任何条目下'
+  );
 });
 
 test('bundleLogs：默认落 data/log-bundles、产物为合法 zip、内容与磁盘一致', () => {
