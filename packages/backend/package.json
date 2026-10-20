@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "predev": "node scripts/db-bootstrap.js",
     "dev": "node node_modules/@nestjs/cli/bin/nest.js start --watch",
     "prebuild": "pnpm --filter @cloudcad/db build && pnpm --filter @cloudcad/contracts build && pnpm --filter @cloudcad/engine-exec build",
     "build": "pnpm prebuild && node node_modules/@nestjs/cli/bin/nest.js build && pnpm generate:swagger && pnpm build:seed",

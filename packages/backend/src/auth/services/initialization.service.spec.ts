@@ -1,6 +1,4 @@
-import {
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { BlacklistSource } from '@cloudcad/db';
@@ -8,6 +6,7 @@ import { InitializationService } from './initialization.service';
 import { DatabaseService } from '../../database/database.service';
 import { RoleInheritanceService } from '../../permission/services/role-inheritance.service';
 import { USER_SERVICE } from '../../common/interfaces/user-service.interface';
+import { PASSWORD_HASHER } from '../../users/interfaces/password-hasher.interface';
 
 describe('InitializationService（#416 初始管理员 env 必填）', () => {
   let service: InitializationService;
@@ -53,6 +52,9 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
   const mockUserService = {
     create: jest.fn(),
   };
+  const mockPasswordHasher = {
+    compare: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -74,6 +76,7 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
           useValue: mockRoleInheritanceService,
         },
         { provide: USER_SERVICE, useValue: mockUserService },
+        { provide: PASSWORD_HASHER, useValue: mockPasswordHasher },
       ],
     }).compile();
 
@@ -94,14 +97,18 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
     mockUserService.create.mockResolvedValue({ id: 'admin-1' });
   }
 
-  it('无 INITIAL_ADMIN_PASSWORD env 时首次启动抛 InternalServerErrorException（启动失败）', async () => {
+  it('无 INITIAL_ADMIN_PASSWORD env 时首次启动不崩溃：告警并等待 Web 首启页创建首个管理员', async () => {
     mockFirstBoot(undefined);
+    const warnSpy = jest
+      .spyOn((service as any).logger, 'warn')
+      .mockImplementation(() => undefined);
 
-    await expect(
-      (service as any).checkAndCreateInitialAdmin()
-    ).rejects.toThrow(InternalServerErrorException);
-    // 不应创建用户
+    // 不再抛错（旧行为：抛 InternalServerErrorException 致启动失败）
+    await (service as any).checkAndCreateInitialAdmin();
+
+    // 不创建用户，仅告警提示走 Web 首启页
     expect(mockUserService.create).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
   });
 
   it('有 INITIAL_ADMIN_PASSWORD env 时创建初始管理员并置 passwordChangedAt=null（首登未改密标记）', async () => {
@@ -263,6 +270,110 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
       await (service as any).ensureDefaultAdminIpWhitelist();
 
       expect(mockPrisma.ipWhitelistEntry.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('assertInitialized（首启守卫：零用户系统禁止非供给路径建用户）', () => {
+    it('零用户时抛 BadRequestException（注册等入口据此拒绝）', async () => {
+      mockPrisma.user.count.mockResolvedValue(0);
+
+      await expect(service.assertInitialized()).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('已有用户时放行', async () => {
+      mockPrisma.user.count.mockResolvedValue(1);
+
+      await expect(service.assertInitialized()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('warnIfStaleInitialAdminPassword（幽灵初始管理员密码告警）', () => {
+    /** 已有用户 + 预置口令的前置条件 */
+    function mockInitializedWithPreset(preset: string) {
+      mockPrisma.user.count.mockResolvedValue(1);
+      mockConfigService.get.mockImplementation((key: string) => {
+        if (key === 'INITIAL_ADMIN_USERNAME') return 'admin';
+        if (key === 'INITIAL_ADMIN_PASSWORD') return preset;
+        return undefined;
+      });
+    }
+
+    it('初始管理员不存在（由 Web 首启等路径以其他用户名创建）→ 告警', async () => {
+      mockInitializedWithPreset('Phantom#Pass2026');
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      const warnSpy = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      await (service as any).checkAndCreateInitialAdmin();
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('不会生效'));
+    });
+
+    it('初始管理员从未改密但哈希与预置口令不符（上次部署/手工改 .env 残留）→ 告警', async () => {
+      mockInitializedWithPreset('Phantom#Pass2026');
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: 'admin-1',
+        username: 'admin',
+        password: '$2b$10$someOtherHash',
+        passwordChangedAt: null,
+      });
+      mockPasswordHasher.compare.mockResolvedValue(false);
+      const warnSpy = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      await (service as any).checkAndCreateInitialAdmin();
+
+      expect(mockPasswordHasher.compare).toHaveBeenCalledWith(
+        'Phantom#Pass2026',
+        '$2b$10$someOtherHash'
+      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('不会生效'));
+    });
+
+    it('哈希相符（预置口令正是当前生效密码，正常部署重启）→ 静默不误报', async () => {
+      mockInitializedWithPreset('Str0ng!Admin#2026');
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: 'admin-1',
+        username: 'admin',
+        password: '$2b$10$matchingHash',
+        passwordChangedAt: null,
+      });
+      mockPasswordHasher.compare.mockResolvedValue(true);
+      const warnSpy = jest
+        .spyOn((service as any).logger, 'warn')
+        .mockImplementation(() => undefined);
+
+      await (service as any).checkAndCreateInitialAdmin();
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('用户已自行改密（passwordChangedAt 非空）→ 静默（预置值已无意义）', async () => {
+      mockInitializedWithPreset('Phantom#Pass2026');
+      mockPrisma.user.findFirst.mockResolvedValue({
+        id: 'admin-1',
+        username: 'admin',
+        password: '$2b$10$someHash',
+        passwordChangedAt: new Date(),
+      });
+
+      await (service as any).checkAndCreateInitialAdmin();
+
+      // 已改密 → 连哈希比对都不做
+      expect(mockPasswordHasher.compare).not.toHaveBeenCalled();
+    });
+
+    it('未设置 INITIAL_ADMIN_PASSWORD → 不查用户、不告警', async () => {
+      mockPrisma.user.count.mockResolvedValue(1);
+      mockConfigService.get.mockImplementation(() => undefined);
+
+      await (service as any).checkAndCreateInitialAdmin();
+
+      expect(mockPrisma.user.findFirst).not.toHaveBeenCalled();
     });
   });
 });

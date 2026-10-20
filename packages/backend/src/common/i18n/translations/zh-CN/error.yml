@@ -25,6 +25,9 @@ auth:
   wechat_already_bound: "该微信已绑定其他账号"
   wechat_takeover_not_allowed: "该微信绑定的账号仅支持微信登录，无法转移绑定"
   wechat_token_invalid: "无效的微信临时 Token"
+  system_not_initialized: "系统尚未初始化，请先创建首个管理员"
+  setup_already_completed: "系统已完成初始化，无法再创建首个管理员"
+  setup_admin_role_missing: "ADMIN 角色不存在，请检查系统初始化"
   email_required_for_registration: "邮箱验证已启用，注册需要提供邮箱地址"
   email_or_phone_required: "邮箱和手机号不能同时为空"
   email_not_registered: "该邮箱未注册"
@@ -331,9 +334,6 @@ password_policy:
   too_short: "密码长度至少 {min} 位"
   complexity: "密码需包含大小写字母、数字、特殊字符中至少 {min} 类"
   weak: "密码过于简单（命中常见弱密码），请更换为更复杂的密码"
-
-initialization:
-  admin_password_required: "INITIAL_ADMIN_PASSWORD 环境变量未设置，首次启动必须提供初始管理员密码"
 
 ip_blacklist:
   invalid_ip: "无效的 IP 或 CIDR 格式"

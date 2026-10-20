@@ -25,6 +25,9 @@ auth:
   wechat_already_bound: "해당 WeChat은 이미 다른 계정에 연결되어 있습니다"
   wechat_takeover_not_allowed: "이 WeChat에 연결된 계정은 WeChat 로그인만 지원하므로 연결을 이전할 수 없습니다"
   wechat_token_invalid: "유효하지 않은 WeChat 임시 토큰"
+  system_not_initialized: "시스템이 아직 초기화되지 않았습니다. 먼저 최초 관리자 계정을 생성해 주세요."
+  setup_already_completed: "시스템이 이미 초기화되었습니다. 최초 관리자 계정을 더 이상 생성할 수 없습니다."
+  setup_admin_role_missing: "ADMIN 역할이 존재하지 않습니다. 시스템 초기화를 확인해 주세요."
   email_required_for_registration: "이메일 인증이 활성화되어 있습니다. 등록하려면 이메일이 필요합니다"
   email_or_phone_required: "이메일과 휴대폰 번호가 모두 비어 있을 수 없습니다"
   email_not_registered: "등록되지 않은 이메일입니다"
@@ -331,9 +334,6 @@ password_policy:
   too_short: "비밀번호는 최소 {min}자 이상이어야 합니다"
   complexity: "비밀번호는 대문자, 소문자, 숫자, 특수문자 중 {min}종 이상을 포함해야 합니다"
   weak: "비밀번호가 너무 약합니다(흔히 사용되는 약한 비밀번호와 일치). 더 강력한 비밀번호를 사용하세요"
-
-initialization:
-  admin_password_required: "INITIAL_ADMIN_PASSWORD 환경변수가 설정되지 않았습니다. 첫 시작 시 초기 관리자 비밀번호가 필요합니다."
 
 ip_blacklist:
   invalid_ip: "잘못된 IP 또는 CIDR 형식입니다"

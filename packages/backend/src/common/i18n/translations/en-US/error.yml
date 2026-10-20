@@ -25,6 +25,9 @@ auth:
   wechat_already_bound: "This WeChat account is already bound to another user"
   wechat_takeover_not_allowed: "The account bound to this WeChat can only log in via WeChat, so the binding cannot be transferred"
   wechat_token_invalid: "Invalid WeChat temporary token"
+  system_not_initialized: "The system is not initialized yet. Please create the first admin account."
+  setup_already_completed: "The system is already initialized. The first admin account can no longer be created."
+  setup_admin_role_missing: "The ADMIN role does not exist. Please check system initialization."
   email_required_for_registration: "Email verification is enabled, registration requires email"
   email_or_phone_required: "Email and phone number cannot both be empty"
   email_not_registered: "This email is not registered"
@@ -331,9 +334,6 @@ password_policy:
   too_short: "Password must be at least {min} characters long"
   complexity: "Password must contain at least {min} of the following: uppercase, lowercase, digits, special characters"
   weak: "Password is too weak (matches a common weak password). Please use a stronger password"
-
-initialization:
-  admin_password_required: "INITIAL_ADMIN_PASSWORD environment variable is not set. An initial admin password is required on first startup."
 
 ip_blacklist:
   invalid_ip: "Invalid IP or CIDR format"

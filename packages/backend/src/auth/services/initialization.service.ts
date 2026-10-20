@@ -10,6 +10,7 @@ import {
   Injectable,
   Logger,
   OnModuleInit,
+  BadRequestException,
   InternalServerErrorException,
   Inject,
   Optional,
@@ -35,6 +36,8 @@ import {
   IUserService,
 } from '../../common/interfaces/user-service.interface';
 import { RoleInheritanceService } from '../../permission/services/role-inheritance.service';
+import { PASSWORD_HASHER } from '../../users/interfaces/password-hasher.interface';
+import type { IPasswordHasher } from '../../users/interfaces/password-hasher.interface';
 import { I18nContext } from 'nestjs-i18n';
 
 /**
@@ -64,7 +67,10 @@ export class InitializationService implements OnModuleInit {
     private readonly roleInheritanceService: RoleInheritanceService,
     @Optional()
     @Inject(USER_SERVICE)
-    private readonly userService?: IUserService
+    private readonly userService?: IUserService,
+    @Optional()
+    @Inject(PASSWORD_HASHER)
+    private readonly passwordHasher?: IPasswordHasher
   ) {}
 
   /**
@@ -105,6 +111,25 @@ export class InitializationService implements OnModuleInit {
 
     const duration = Date.now() - startTime;
     this.logger.log(`✅ 系统初始化完成，耗时 ${duration}ms`);
+  }
+
+  /**
+   * 断言系统已完成初始化（至少存在一个用户）。
+   *
+   * 所有非供给（provisioning）的用户创建入口——注册 / 手机号注册 /
+   * 微信自动注册 / 手机号登录自动注册——必须先调用本方法：
+   * 全新系统（零用户）若先被创建出普通用户，「创建首个管理员」入口
+   * （userCount===0 守卫）将永久关闭，系统永远缺管理员（锁死）。
+   * 供给路径（checkAndCreateInitialAdmin / FirstAdminSetupService）不调用。
+   */
+  async assertInitialized(): Promise<void> {
+    const userCount = await this.prisma.user.count();
+    if (userCount === 0) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.auth.system_not_initialized') ??
+          '系统尚未初始化，请先创建首个管理员'
+      );
+    }
   }
 
   /**
@@ -481,6 +506,7 @@ export class InitializationService implements OnModuleInit {
 
       if (userCount > 0) {
         this.logger.log(`系统已初始化，当前有 ${userCount} 个用户`);
+        await this.warnIfStaleInitialAdminPassword();
         return;
       }
 
@@ -506,18 +532,20 @@ export class InitializationService implements OnModuleInit {
         'INITIAL_ADMIN_USERNAME',
         'admin'
       );
-      // #416 等保 8.1.4.1：INITIAL_ADMIN_PASSWORD env 必填无缺省——首次启动（无用户）时
-      // 缺失则启动失败，不再有 Admin123! 缺省。部署工具（setup-offline/wizard）生成随机强口令写入 .env。
+      // #416 等保 8.1.4.1：INITIAL_ADMIN_PASSWORD 无缺省口令（不再有 Admin123! 缺省）。
+      // 两条腿并存（Portainer/n8n 模式）：
+      // - env 预置了口令 → 此处自动建管理员（部署包路径，部署工具生成随机强口令写入 .env）
+      // - env 未预置 → 不崩，系统以零用户状态启动，登录页展示 Web 首启设置表单，
+      //   由人交互创建首个管理员（源码启动 / 手动跑 backend 的路径，FirstAdminSetupService）
       const adminPassword = this.configService.get<string>(
         'INITIAL_ADMIN_PASSWORD'
       );
       if (!adminPassword) {
-        throw new InternalServerErrorException(
-          I18nContext.current()?.t(
-            'error.initialization.admin_password_required'
-          ) ??
-            'INITIAL_ADMIN_PASSWORD 环境变量未设置，首次启动必须提供初始管理员密码'
+        this.logger.warn(
+          'INITIAL_ADMIN_PASSWORD 未设置且系统无用户：' +
+            '请通过登录页首启设置创建首个管理员，或在 .env 预置 INITIAL_ADMIN_PASSWORD 后重启'
         );
+        return;
       }
 
       // 使用 IUserService 创建用户（会自动创建私人空间）
@@ -546,6 +574,69 @@ export class InitializationService implements OnModuleInit {
     } catch (error) {
       this.logger.error('创建初始管理员账户失败', error);
       throw error;
+    }
+  }
+
+  /**
+   * 检测「幽灵初始管理员密码」并告警：INITIAL_ADMIN_PASSWORD 已设置，但系统
+   * 的初始管理员由其他路径创建（Web 首启页 / 上次部署），该值永不生效。
+   *
+   * 典型场景：在已用源码启动（Web 首启页建管理员）的机器上部署部署包——
+   * 部署向导往 .env 写了新密码，但后端因 userCount>0 跳过创建。不显式告警，
+   * 用户会拿着一个永不生效的密码登录失败。
+   *
+   * 精确判定（避免正常部署系统每次重启误报）：
+   * - 初始管理员（INITIAL_ADMIN_USERNAME）不存在 → 由其他路径创建 → 告警
+   * - 存在且从未改密（passwordChangedAt===null）但哈希与预置口令不符
+   *   → 预置值是上次部署/手工改 .env 的残留 → 告警
+   * - 哈希相符（预置值正是当前生效密码），或用户已自行改密 → 静默
+   */
+  private async warnIfStaleInitialAdminPassword(): Promise<void> {
+    const presetPassword = this.configService.get<string>(
+      'INITIAL_ADMIN_PASSWORD'
+    );
+    if (!presetPassword) {
+      return;
+    }
+
+    const adminUsername =
+      this.configService.get<string>('INITIAL_ADMIN_USERNAME') || 'admin';
+    const adminUser = await this.prisma.user.findFirst({
+      where: { username: adminUsername, deletedAt: null },
+    });
+
+    if (!adminUser) {
+      this.logger.warn(
+        `INITIAL_ADMIN_PASSWORD 已设置，但初始管理员 "${adminUsername}" 不存在：` +
+          '首个管理员由其他路径创建（Web 首启页 / 上次部署），该值不会生效'
+      );
+      return;
+    }
+
+    // 用户已自行改密 → 预置口令已无意义且由用户自管，静默
+    if (adminUser.passwordChangedAt !== null) {
+      return;
+    }
+
+    if (!this.passwordHasher || !adminUser.password) {
+      return;
+    }
+
+    let matches = false;
+    try {
+      matches = await this.passwordHasher.compare(
+        presetPassword,
+        adminUser.password
+      );
+    } catch {
+      return; // 哈希异常 → 不判定
+    }
+
+    if (!matches) {
+      this.logger.warn(
+        `INITIAL_ADMIN_PASSWORD 与现有初始管理员的密码不一致` +
+          '（可能来自上次部署或手工修改 .env 的残留），该值不会生效'
+      );
     }
   }
 
@@ -686,8 +777,12 @@ export class InitializationService implements OnModuleInit {
    * 确保公共资源库存在
    * 创建公共图纸库和公共图块库
    * 优化：并行检查和创建
+   *
+   * 公开方法：Web 首启路径（FirstAdminSetupService）在零用户启动跳过了
+   * 本步骤（找不到 owner）后，于首个管理员创建成功时补调，保持两条
+   * 首启路径的最终状态一致。
    */
-  private async ensurePublicLibraries(): Promise<void> {
+  async ensurePublicLibraries(): Promise<void> {
     try {
       const startTime = Date.now();
 

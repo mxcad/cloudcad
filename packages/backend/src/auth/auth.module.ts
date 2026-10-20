@@ -25,6 +25,7 @@ import { AuditLogModule } from '../audit/audit-log.module';
 import { SmsModule } from './services/sms/sms.module';
 import { WechatModule } from './services/wechat/wechat.module';
 import { AuthController } from './auth.controller';
+import { AuthSetupController } from './auth-setup.controller';
 import { AdminAuthController } from './admin-auth.controller';
 import { AdminMfaController } from './admin-mfa.controller';
 import { SessionTransferController } from './session-transfer/session-transfer.controller';
@@ -37,6 +38,7 @@ import { IpBlacklistModule } from '../ip-blacklist/ip-blacklist.module';
 import { SecurityAccessAttemptModule } from '../security/security-access-attempt.module';
 import { TokenBlacklistService } from './services/token-blacklist.service';
 import { InitializationService } from './services/initialization.service';
+import { FirstAdminSetupService } from './services/first-admin-setup.service';
 import { AccountRateLimitService } from './services/account-rate-limit.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { MfaService } from './services/mfa.service';
@@ -135,6 +137,7 @@ export class AuthModule {
       ],
       controllers: [
         AuthController,
+        AuthSetupController,
         AdminAuthController,
         AdminMfaController,
         SessionTransferController,
@@ -150,6 +153,7 @@ export class AuthModule {
         },
         TokenBlacklistService,
         InitializationService,
+        FirstAdminSetupService,
         AccountRateLimitService,
         PasswordPolicyService,
         MfaService,
