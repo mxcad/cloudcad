@@ -45,20 +45,72 @@ profile 应用 = 对目标 key 集做批量 `update`：写 `value`、置 `update
 **必须同时清掉 runtime 值**（重置该 key）env 才会重新生效。这条在 ADR-0075 体系里
 已有先例（`resetToDefault()` 的职责就是这件事），不做新解释。
 
-### D3 切换回退 = 批量清 `updatedBy`
+### D3 切换回退 = 批量「写回 `def.defaultValue` + 清 `updatedBy`」
 
-从安全模式切回普通模式，对同一目标 key 集执行与 `resetToDefault()` 等价的
-`updateMany({ where: { key in [...] }, data: { value: null, updatedBy: null } })`。
-清掉后 resolveValue 自然落回 env / DB 默认行 / 代码默认，无需任何反向映射表。
+从安全模式切回普通模式，对同一目标 key 集逐项执行与 `resetToDefault()` 等价的写入：
+
+```
+value: JSON.stringify(def.defaultValue), updatedBy: null
+```
+
+**不可写 `value: null`**。`resetToDefault()` 的实际实现（`runtime-config.service.ts:612`）
+是写回 `def.defaultValue` 再清 `updatedBy`，不是把值置空：`resolveValue()` 的第三分支
+对 `updatedBy == null` 的行会 `parseValue(row.value, def.type)`，传 null 会在解析阶段抛错。
+
+清掉后 `resolveValue()` 自然落回 env / DB 默认行 / 代码默认，无需任何反向映射表。
 
 `resetToDefault()` 因此从「单 key 重置」升级为 profile 回退的**天然原型**，
-批量版是它的 `where: { key in [...] }` 变体。
+批量版是它的 `where: { key in [...] }` 变体（按 definition 逐项写回默认值）。
+
+### D3a 缓存失效复用既有 `invalidateCacheKeys(keys[])`
+
+`runtime-config.service.ts:411` 的 `invalidateCacheKeys` **已接受数组**，逐键删
+`runtime_config:<key>` 并额外删聚合缓存 `runtime_config:all`，Redis 不可达时静默降级。
+批量应用一次传整个目标 key 集即可，**不需要新的失效机制**。
+注意聚合缓存：只删单键会让 `getAllConfigs` 继续吐旧值，必须让 `runtime_config:all`
+也一起失效（既有实现已覆盖）。
+
+### D3b 审计日志噪声是已接受的代价
+
+每次写入都落一条 `runtimeConfigLog`（`key/oldValue/newValue/operatorId/operatorIp`）。
+因此「一次切换到安全模式」= 目标 key 集中**实际发生变化的每个 key 一条日志**，
+数量级是几十行。
+
+`resetToDefault()` 已有「值实际变化才留审计」的判断（`:625`），批量应用沿用该判断，
+可把噪声压到「真正变了的项」。但**仍是 N 条而非 1 条**——等保审计按单条配置变更记，
+这是既有模型，不为 profile 造「批量变更」日志聚合。
 
 ### D4 不生成 schema migration
 
 profile 归属不落 DDL。代价是**没有持久化的「当前处于哪个模式」状态**——它只能从
 目标 key 集的实际 `value` 反推。这是有意的：模式是**运行时状态**而非**部署形态**，
 形态才进 schema（ADR-0078）。
+
+### D4 一次切换 = 一次事务
+
+现状 Controller **只有单键 `PUT /runtime-config/:key`**，而 `POST reset-category` 是
+循环调 `resetToDefault` 的**批量重置**（逐项 upsert + 逐项日志 + 逐项失效缓存），
+**没有事务**——半成功不可回滚。等保切换不允许出现「改了 15/25 项，剩下 10 项没改成」
+的中间态。
+
+因此批量应用必须包在**单个数据库事务**里（写入 + 日志 + 缓存失效中的写入部分），
+事务失败则整体回滚。缓存失效留在事务之外（它是尽力而为，失败不应回滚 DB）。
+
+### D5（未决）是否覆盖用户已手工修改的值
+
+本 ADR **刻意未裁决**这一点，因为它是一个真正的产品取舍而非技术选择：
+
+- 仓库既有哲学是「不替用户做决定」（`mergeExampleIntoEnv` 绝不替用户解开注释项，
+  有注释记述历史缺陷）→ 倾向**跳过** `updatedBy != null` 的项。
+- 等保通常要求**强制收敛**到合规基线 → 倾向**覆盖**，否则管理员手工调弱过的项
+  会永久脱离 profile 管理，切回安全模式后仍是不合规值。
+
+**这条未决期间，下游不能实现「批量应用」**——覆盖与否决定写入的 `where` 条件
+（`where: { key in [...] }` 还是 `where: { key in [...], updatedBy: null }`），
+也决定影响面预览要显示「将被改动的项」还是「被跳过的项」。
+建议按「**跳过手改项 + 在预览中列出被跳过的项**」实现，理由：
+与仓库哲学一致、可逆（管理员重新手工确认即可收敛）、且不违背
+「不替用户做决定」——系统展示偏离，不替用户改。
 
 ## 后果与代价
 
