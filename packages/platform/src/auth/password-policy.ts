@@ -13,7 +13,15 @@
  * `scorePasswordStrength` 的 score 映射，本函数只负责「是否可提交 + 原因」。
  */
 
-/** 口令策略默认参数（与后端 `passwordPolicy` 配置默认值一致）。 */
+/**
+ * 口令策略**兜底**参数（与后端 `passwordPolicy` 配置默认值一致，secure 基线）。
+ *
+ * 仅当调用方拿不到运行时生效值（旧后端未公开该两键 / 配置请求失败）时兜底。
+ * 策略默认值的唯一事实源是后端 `RUNTIME_CONFIG_DEFINITIONS` 的
+ * `passwordPolicyMinLength` / `passwordPolicyMinCategories`（含 env 覆盖与安全
+ * 模式 profile 目标值）；调用方应经 `/runtime-config/public` 取生效值后显式传入
+ * `opts`，勿依赖本常量（normal 模式生效值为 6/0，与本常量不同）。
+ */
 export const PASSWORD_POLICY = {
   minLength: 10,
   minCategories: 3,
@@ -30,13 +38,15 @@ export interface PasswordPolicyResult {
 
 /**
  * 判定口令是否满足「长度 + 复杂度」策略（弱口令黑名单由后端兜底，不在本函数内）。
- * 纯函数：不读配置、不读全局，minLength 由调用方传入（默认 PASSWORD_POLICY.minLength）。
+ * 纯函数：不读配置、不读全局，minLength / minCategories 由调用方传入
+ * （缺省回落 PASSWORD_POLICY，见其注释）。
  */
 export function validatePasswordPolicy(
   password: string,
-  opts?: { minLength?: number }
+  opts?: { minLength?: number; minCategories?: number }
 ): PasswordPolicyResult {
   const minLength = opts?.minLength ?? PASSWORD_POLICY.minLength;
+  const minCategories = opts?.minCategories ?? PASSWORD_POLICY.minCategories;
 
   if (!password || password.length < minLength) {
     return { valid: false, reason: 'too_short' };
@@ -49,7 +59,7 @@ export function validatePasswordPolicy(
     /[^a-zA-Z0-9]/.test(password),
   ].filter(Boolean).length;
 
-  if (categories < PASSWORD_POLICY.minCategories) {
+  if (categories < minCategories) {
     return { valid: false, reason: 'complexity' };
   }
 

@@ -16,6 +16,12 @@ import {
 import { showDialog, showSuccessToast } from 'vant';
 import { scorePasswordStrength, validatePasswordPolicy } from '@cloudcad/platform';
 import { t } from '@/languages';
+import {
+  passwordComplexityMessage,
+  passwordLengthLabel,
+  passwordPolicyHint,
+  usePasswordPolicy,
+} from '@/utils/passwordPolicy';
 import { applyAuthResponse, clearSession } from '@/utils/authSession';
 import { unwrap, errMsg } from '@/utils/apiError';
 import type { UserProfile } from './useProfileData';
@@ -30,6 +36,9 @@ export function useProfilePassword(
   const confirmPassword = ref('');
   const pwdErr = ref('');
   const submittingPwd = ref(false);
+
+  // 生效口令策略（/runtime-config/public 下发）：文案与预检都读它，禁止写死数字
+  const policy = usePasswordPolicy();
 
   // 密码可见性切换（D-15）：Vant van-field 无内置眼睛切换，用 right-icon 手动实现
   const showOldPwd = ref(false);
@@ -61,8 +70,8 @@ export function useProfilePassword(
   );
   const newPwdPlaceholder = computed(() =>
     isSettingPassword.value
-      ? t('至少10位，包含大小写字母、数字、特殊字符中至少三类')
-      : t('请输入新密码（至少 10 位）')
+      ? passwordPolicyHint(policy.value)
+      : t('请输入新密码（至少 {min} 位）', { min: String(policy.value.minLength) })
   );
 
   // 强度打分（D-06）：评分收敛到 @cloudcad/platform 的 scorePasswordStrength
@@ -98,19 +107,28 @@ export function useProfilePassword(
   );
 
   // 建议清单里已完成项打勾（D-06）：让用户看到差什么，而不是只看到颜色
-  // 口径与后端 assertPasswordPolicy 对齐（长度≥10 + 复杂度≥3 类）
-  const pwdSuggestions = computed(() => [
-    { text: t('密码长度至少 10 个字符'), ok: newPassword.value.length >= 10 },
-    {
-      text: t('包含大小写字母、数字、特殊字符中至少三类'),
-      ok: pwdCategoryCount.value >= 3,
-    },
-    { text: t('不要在多个网站使用相同的密码'), ok: false },
-  ]);
+  // 口径与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories，策略关闭的项不显示）
+  const pwdSuggestions = computed(() => {
+    const items: { text: string; ok: boolean }[] = [];
+    if (policy.value.minLength > 0) {
+      items.push({
+        text: passwordLengthLabel(policy.value.minLength),
+        ok: newPassword.value.length >= policy.value.minLength,
+      });
+    }
+    if (policy.value.minCategories > 0) {
+      items.push({
+        text: passwordComplexityMessage(policy.value.minCategories),
+        ok: pwdCategoryCount.value >= policy.value.minCategories,
+      });
+    }
+    items.push({ text: t('不要在多个网站使用相同的密码'), ok: false });
+    return items;
+  });
 
   const canSubmitPwd = computed(
     () =>
-      validatePasswordPolicy(newPassword.value).valid &&
+      validatePasswordPolicy(newPassword.value, policy.value).valid &&
       newPassword.value === confirmPassword.value &&
       (!isSettingPassword.value ? oldPassword.value.length > 0 : true)
   );

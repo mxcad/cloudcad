@@ -23,6 +23,13 @@ import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { LoginHeader } from '@/pages/Login/components/LoginHeader';
 import { getDefaultAppBrandConfig } from '@/constants/appConfig';
 import { t } from '@/languages';
+import {
+  passwordComplexityMessage,
+  passwordLengthLabel,
+  passwordTooShortMessage,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
+import { validatePasswordPolicy } from '@cloudcad/platform';
 import styles from '../Login/Login.module.css';
 
 /** 从 SDK 抛出的错误对象提取后端 code / message */
@@ -35,22 +42,6 @@ function getErrorInfo(err: unknown): { code?: string; message: string } {
     (err instanceof Error ? err.message : '') ||
     '';
   return { code, message };
-}
-
-/** 口令策略最小长度（与后端 passwordPolicy.minLength 默认值一致） */
-const MIN_PASSWORD_LENGTH = 10;
-
-/**
- * 校验新口令是否满足复杂度要求（大小写/数字/特殊字符四类至少三类）。
- * 与后端 PasswordPolicyService.assertPasswordPolicy 同规则，前端提前给出实时反馈。
- */
-function meetsComplexity(password: string): boolean {
-  return [
-    /[a-z]/.test(password),
-    /[A-Z]/.test(password),
-    /\d/.test(password),
-    /[^a-zA-Z0-9]/.test(password),
-  ].filter(Boolean).length >= 3;
 }
 
 /**
@@ -71,6 +62,8 @@ const AdminPasswordChange: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const { isDark } = useTheme();
   const { changePassword, loading } = usePasswordChange();
+  // 口令策略生效值经 /runtime-config/public 下发，预检与提示均据此（禁写死策略数字）
+  const policy = usePasswordPolicy();
 
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -101,13 +94,13 @@ const AdminPasswordChange: React.FC = () => {
 
   const checks = useMemo(
     () => [
-      { label: t(`至少 ${MIN_PASSWORD_LENGTH} 位`), ok: newPassword.length >= MIN_PASSWORD_LENGTH },
+      { label: passwordLengthLabel(policy.minLength), ok: newPassword.length >= policy.minLength },
       { label: t('包含大写字母'), ok: /[A-Z]/.test(newPassword) },
       { label: t('包含小写字母'), ok: /[a-z]/.test(newPassword) },
       { label: t('包含数字'), ok: /\d/.test(newPassword) },
       { label: t('包含特殊字符'), ok: /[^a-zA-Z0-9]/.test(newPassword) },
     ],
-    [newPassword]
+    [newPassword, policy.minLength]
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,12 +110,14 @@ const AdminPasswordChange: React.FC = () => {
       setError(t('请输入当前密码'));
       return;
     }
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      setError(t(`新密码长度至少 ${MIN_PASSWORD_LENGTH} 位`));
-      return;
-    }
-    if (!meetsComplexity(newPassword)) {
-      setError(t('新密码需包含大小写字母、数字、特殊字符中至少三类'));
+    // 预检与后端 assertPasswordPolicy 对齐（生效值经 /runtime-config/public 下发）
+    const policyCheck = validatePasswordPolicy(newPassword, policy);
+    if (!policyCheck.valid) {
+      setError(
+        policyCheck.reason === 'too_short'
+          ? passwordTooShortMessage(policy.minLength)
+          : passwordComplexityMessage(policy.minCategories)
+      );
       return;
     }
     if (newPassword === oldPassword) {

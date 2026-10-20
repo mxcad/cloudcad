@@ -74,6 +74,10 @@ export interface PublicRuntimeConfig {
   collaborationDomains: string;
   /** 批量下载开关 */
   batchDownloadEnabled: boolean
+  /** 口令最小长度（生效值，后端 passwordPolicyMinLength 下发；旧后端未公开时回落 10，与 secure 基线一致） */
+  passwordPolicyMinLength: number
+  /** 口令最小字符类别数（0 = 不要求；生效值，后端 passwordPolicyMinCategories 下发；旧后端未公开时回落 3） */
+  passwordPolicyMinCategories: number
   /** 品牌档案（法务条款的品牌占位符）；缺省走移动端内置默认品牌 */
   brandProfile: RuntimeBrandProfile
 }
@@ -97,6 +101,9 @@ const DEFAULTS: PublicRuntimeConfig = {
   collaborationEnabled: true,
   collaborationDomains: '',
   batchDownloadEnabled: false,
+  // 回落值 = 后端 secure 基线默认（旧后端未公开该两键时与 @cloudcad/platform PASSWORD_POLICY 兜底一致）
+  passwordPolicyMinLength: 10,
+  passwordPolicyMinCategories: 3,
   brandProfile: {},
 };
 
@@ -187,6 +194,16 @@ async function fetchConfig(): Promise<void> {
             data,
             'batchDownloadEnabled',
             DEFAULTS.batchDownloadEnabled
+          ),
+          passwordPolicyMinLength: numberField(
+            data,
+            'passwordPolicyMinLength',
+            DEFAULTS.passwordPolicyMinLength
+          ),
+          passwordPolicyMinCategories: numberField(
+            data,
+            'passwordPolicyMinCategories',
+            DEFAULTS.passwordPolicyMinCategories
           ),
           brandProfile: objectField<RuntimeBrandProfile>(
             data,

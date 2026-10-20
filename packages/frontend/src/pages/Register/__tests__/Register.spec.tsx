@@ -73,7 +73,9 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   wechatAutoRegister: false,
   maxFileSize: 100,
   collaborationEnabled: false,
-};
+  passwordPolicyMinLength: 10,
+  passwordPolicyMinCategories: 3,
+} as PublicRuntimeConfig;
 
 function mockConfig(overrides: Partial<PublicRuntimeConfig> = {}) {
   vi.mocked(useRuntimeConfig).mockReturnValue({

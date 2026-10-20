@@ -16,6 +16,34 @@ vi.mock('@/contexts/NotificationContext', () => ({
   useConfirmDialog: () => ({ showConfirm: vi.fn().mockResolvedValue(true) }),
 }));
 
+vi.mock('@/contexts/RuntimeConfigContext', () => ({
+  useRuntimeConfig: () => ({
+    config: {
+      mailEnabled: false,
+      requireEmailVerification: false,
+      smsEnabled: true,
+      requirePhoneVerification: true,
+      supportEmail: '',
+      supportPhone: '',
+      docsUrl: '',
+      allowRegister: true,
+      wechatEnabled: false,
+      wechatAutoRegister: false,
+      maxFileSize: 100,
+      collaborationEnabled: true,
+      collaborationDomains: '',
+      batchDownloadEnabled: false,
+      freeExportDownloadEnabled: false,
+      userCancelGraceDays: 7,
+      securityMode: 'normal',
+      passwordPolicyMinLength: 10,
+      passwordPolicyMinCategories: 3,
+      brandProfile: {},
+    },
+    loading: false,
+  }),
+}));
+
 const navigate = vi.fn();
 
 vi.mock('react-router-dom', () => ({

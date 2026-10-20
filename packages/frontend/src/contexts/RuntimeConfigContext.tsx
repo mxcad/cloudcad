@@ -29,6 +29,10 @@ export type PublicRuntimeConfig = {
   userCancelGraceDays: number;
   /** 安全模式：secure=等保收紧 / normal=便利优先（ADR-0077） */
   securityMode: 'secure' | 'normal';
+  /** 口令策略：最小长度（后端 passwordPolicyMinLength 生效值；旧后端无此键时回落 10） */
+  passwordPolicyMinLength: number;
+  /** 口令策略：至少需要的字符类别数（后端 passwordPolicyMinCategories 生效值；回落 3） */
+  passwordPolicyMinCategories: number;
   /** 品牌档案（标题/标语/Logo/版权/法务主体），覆盖前端内置默认值与 config.json */
   brandProfile: RuntimeBrandConfig;
 };
@@ -56,6 +60,9 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   freeExportDownloadEnabled: false,
   userCancelGraceDays: 7,
   securityMode: 'normal',
+  // 回落值 = 后端 secure 基线默认（与 @cloudcad/platform 的 PASSWORD_POLICY 兜底一致）
+  passwordPolicyMinLength: 10,
+  passwordPolicyMinCategories: 3,
   brandProfile: {},
 };
 
@@ -108,6 +115,9 @@ function mapPublicConfig(
     freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? false),
     userCancelGraceDays: Number(data.userCancelGraceDays ?? 7),
     securityMode: data.securityMode === 'secure' ? 'secure' : 'normal',
+    // 旧后端未公开该两键（isPublic 未回填）时回落 secure 基线默认
+    passwordPolicyMinLength: Number(data.passwordPolicyMinLength ?? 10),
+    passwordPolicyMinCategories: Number(data.passwordPolicyMinCategories ?? 3),
     brandProfile: toBrandConfig(data.brandProfile),
   };
 }

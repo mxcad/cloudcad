@@ -19,6 +19,7 @@ import { t } from '@/languages'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isCode, getPasswordStrength, isContactType, type ContactType } from '@/utils/authValidation'
 import { validatePasswordPolicy } from '@cloudcad/platform'
+import { passwordPolicyHint, usePasswordPolicy } from '@/utils/passwordPolicy'
 import { CODE_COOLDOWN_SECONDS, useCountdown } from '@/composables/useCountdown'
 import { redirectQueryOf } from '@/utils/authNavigate'
 import AuthBrandHeader from '@/components/AuthBrandHeader.vue'
@@ -42,8 +43,11 @@ const error = ref('')
 const { countdown, start: countdownStart, isReady } = useCountdown(CODE_COOLDOWN_SECONDS)
 
 const strength = computed(() => getPasswordStrength(newPassword.value))
-// 与后端 assertPasswordPolicy 对齐（长度≥10 + 复杂度≥3 类），弱口令黑名单由后端兜底
-const passwordValid = computed(() => validatePasswordPolicy(newPassword.value).valid)
+// 生效口令策略（/runtime-config/public 下发）：提示与预检都读它，禁止写死数字
+const policy = usePasswordPolicy()
+const policyHint = computed(() => passwordPolicyHint(policy.value))
+// 与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories），弱口令黑名单由后端兜底
+const passwordValid = computed(() => validatePasswordPolicy(newPassword.value, policy.value).valid)
 const confirmMatch = computed(() => confirmPassword.value === newPassword.value)
 const canSubmit = computed(() => isCode(code.value) && passwordValid.value && confirmMatch.value)
 
@@ -167,7 +171,7 @@ function goForgot() {
             v-model="newPassword"
             :type="showPassword ? 'text' : 'password'"
             :label="t('新密码')"
-            :placeholder="t('至少 10 位，含大小写字母、数字、特殊字符中至少三类')"
+            :placeholder="policyHint"
             clearable
           >
             <template #right-icon>

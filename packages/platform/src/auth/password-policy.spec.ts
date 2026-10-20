@@ -56,4 +56,24 @@ describe('@cloudcad/platform · auth/password-policy', () => {
       reason: null,
     });
   });
+
+  it('minCategories 可被调用方覆盖（normal 模式 6/0：纯数字通过）', () => {
+    // 默认策略下 10 位纯数字（长度够、仅一类）→ complexity；normal 模式生效值 6/0 时通过
+    expect(validatePasswordPolicy('1234567890')).toEqual({
+      valid: false,
+      reason: 'complexity',
+    });
+    expect(
+      validatePasswordPolicy('1234567890', { minLength: 6, minCategories: 0 }),
+    ).toEqual({ valid: true, reason: null });
+  });
+
+  it('minCategories=4 时四类必须齐全', () => {
+    expect(
+      validatePasswordPolicy('Abcdef1234', { minLength: 10, minCategories: 4 }),
+    ).toEqual({ valid: false, reason: 'complexity' });
+    expect(
+      validatePasswordPolicy('Abcdef12!x', { minLength: 10, minCategories: 4 }),
+    ).toEqual({ valid: true, reason: null });
+  });
 });

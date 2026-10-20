@@ -44,6 +44,8 @@ describe('默认值（接口未返回或失败时）', () => {
       collaborationEnabled: true,
       collaborationDomains: '',
       batchDownloadEnabled: false,
+      passwordPolicyMinLength: 10,
+      passwordPolicyMinCategories: 3,
       brandProfile: {},
     });
   });
@@ -79,6 +81,8 @@ describe('字段解析', () => {
         collaborationEnabled: true,
         collaborationDomains: 'mxdraw.com,*.mxdraw.cn',
         batchDownloadEnabled: true,
+        passwordPolicyMinLength: 12,
+        passwordPolicyMinCategories: 2,
       },
     });
     const { config } = await loadConfig();
@@ -88,6 +92,9 @@ describe('字段解析', () => {
     expect(config.value.allowRegister).toBe(false);
     expect(config.value.maxFileSize).toBe(500);
     expect(config.value.docsUrl).toBe('https://docs.mx.com/');
+    // 口令策略两键按 number 解析（normal 模式 12/2 是真实取值形态）
+    expect(config.value.passwordPolicyMinLength).toBe(12);
+    expect(config.value.passwordPolicyMinCategories).toBe(2);
   });
 
   it('brandProfile 按对象解析：管理端只填的字段透传，其余交给消费方回落', async () => {
@@ -138,6 +145,7 @@ describe('字段解析', () => {
         maxFileSize: 'big',
         supportEmail: 123,
         collaborationDomains: 12345,
+        passwordPolicyMinLength: 'ten',
       },
     });
     const { config } = await loadConfig();
@@ -147,6 +155,9 @@ describe('字段解析', () => {
     expect(config.value.maxFileSize).toBe(100);
     expect(config.value.supportEmail).toBe('');
     expect(config.value.collaborationDomains).toBe('');
+    // 非数字的口令策略值回退默认（secure 基线 10/3），不整包失败
+    expect(config.value.passwordPolicyMinLength).toBe(10);
+    expect(config.value.passwordPolicyMinCategories).toBe(3);
   });
 
   it('布尔型严格判型：字符串与数字都不当真值，一律回退默认值', async () => {

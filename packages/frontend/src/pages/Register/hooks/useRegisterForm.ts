@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,10 +7,11 @@ import { useConfirmDialog } from '@/contexts/NotificationContext';
 import { authControllerCheckFieldUniqueness } from '@/api-sdk';
 import type { RegisterDto } from '@/api-sdk';
 import { t } from '@/languages';
+import { usePasswordPolicy } from '@/lib/passwordPolicy';
 import {
   step1Schema,
-  step2Schema,
-  registerFormSchema,
+  makeStep2Schema,
+  makeRegisterFormSchema,
   type RegisterFormValues,
 } from './registerFormSchema';
 import { read, erase } from '@/lib/browserStorage';
@@ -93,6 +94,17 @@ export function useRegisterForm(
     {}
   );
 
+  // ── 口令策略（生效值经 /runtime-config/public 下发，schema 据此构建） ──
+  const policy = usePasswordPolicy();
+  const registerSchema = useMemo(
+    () => makeRegisterFormSchema(policy),
+    [policy.minLength, policy.minCategories]
+  );
+  const step2 = useMemo(
+    () => makeStep2Schema(policy),
+    [policy.minLength, policy.minCategories]
+  );
+
   // ── react-hook-form ────────────────────────────
   const {
     register,
@@ -104,7 +116,7 @@ export function useRegisterForm(
     setValue,
     trigger,
   } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerFormSchema),
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       username: '',
       nickname: wechatNickname || '',
@@ -260,7 +272,7 @@ export function useRegisterForm(
 
       const values = getValues();
 
-      const step2Result = step2Schema.safeParse({
+      const step2Result = step2.safeParse({
         password: values.password,
         confirmPassword: values.confirmPassword,
       });
@@ -389,6 +401,7 @@ export function useRegisterForm(
     [
       getValues,
       fieldErrors,
+      step2,
       mailEnabled,
       requireEmailVerification,
       smsEnabled,

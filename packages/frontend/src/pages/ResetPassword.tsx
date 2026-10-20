@@ -1,5 +1,5 @@
 import { getCopyrightLine } from '@/constants/appConfig';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,8 +10,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { InteractiveBackground } from '../components/InteractiveBackground';
+import { passwordPolicyHint, usePasswordPolicy } from '@/lib/passwordPolicy';
 import {
-  resetPasswordSchema,
+  makeResetPasswordSchema,
   type ResetPasswordValues,
 } from './ResetPassword/resetPasswordSchema';
 import { useResetPassword } from './ResetPassword/useResetPassword';
@@ -76,8 +77,15 @@ export const ResetPassword: React.FC = () => {
   const resetPassword = useResetPassword();
   const [success, setSuccess] = useState(false);
 
+  // 口令策略生效值经 /runtime-config/public 下发，schema 据此构建（禁写死策略数字）
+  const policy = usePasswordPolicy();
+  const resetSchema = useMemo(
+    () => makeResetPasswordSchema(policy),
+    [policy.minLength, policy.minCategories]
+  );
+
   const { register, handleSubmit: rhfSubmit } = useForm<ResetPasswordValues>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: zodResolver(resetSchema),
     defaultValues: {
       code: '',
       newPassword: '',
@@ -242,7 +250,7 @@ export const ResetPassword: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   className={styles.inputField}
-                  placeholder={t('新密码（至少10个字符）')}
+                  placeholder={passwordPolicyHint(policy)}
                   {...register('newPassword')}
                 />
                 <Button

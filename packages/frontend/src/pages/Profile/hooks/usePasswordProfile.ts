@@ -4,6 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePasswordChange } from './usePasswordChange';
 import { usersControllerUploadAvatar } from '@/api-sdk';
 import { t } from '@/languages';
+import {
+  passwordComplexityMessage,
+  passwordTooShortMessage,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
 import { scorePasswordStrength, validatePasswordPolicy } from '@cloudcad/platform';
 
 export interface PasswordStrengthResult {
@@ -30,6 +35,8 @@ export function usePasswordProfile({
   const navigate = useNavigate();
   const { user, logout, login, refreshUser } = useAuth();
   const { changePassword } = usePasswordChange();
+  // 预检用生效策略值（/runtime-config/public 下发），与后端 assertPasswordPolicy 对齐
+  const policy = usePasswordPolicy();
 
   const [passwordForm, setPasswordForm] = useState({
     oldPassword: '',
@@ -78,13 +85,13 @@ export function usePasswordProfile({
       setLoading(false);
       return;
     }
-    // 预检与后端 assertPasswordPolicy 对齐（长度≥10 + 复杂度≥3类），弱口令黑名单由后端兜底
-    const policy = validatePasswordPolicy(passwordForm.newPassword);
-    if (!policy.valid) {
+    // 预检与后端 assertPasswordPolicy 对齐（生效值经 /runtime-config/public 下发），弱口令黑名单由后端兜底
+    const check = validatePasswordPolicy(passwordForm.newPassword, policy);
+    if (!check.valid) {
       setError(
-        policy.reason === 'too_short'
-          ? t('密码至少10个字符')
-          : t('密码需包含大小写字母、数字、特殊字符中至少三类')
+        check.reason === 'too_short'
+          ? passwordTooShortMessage(policy.minLength)
+          : passwordComplexityMessage(policy.minCategories)
       );
       setLoading(false);
       return;

@@ -31,6 +31,7 @@ import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isPhone, isCode, isEmail, getPasswordStrength } from '@/utils/authValidation'
 import { validatePasswordPolicy } from '@cloudcad/platform'
+import { passwordPolicyHint, usePasswordPolicy } from '@/utils/passwordPolicy'
 import { useCountdown } from '@/composables/useCountdown'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { useBrand } from '@/composables/useBrand'
@@ -75,8 +76,11 @@ const emailValid = computed(() => !needEmail.value || isEmail(email.value))
 const usernameValid = computed(
   () => username.value.trim().length >= 3 && username.value.trim().length <= 20
 )
-// 与后端 assertPasswordPolicy 对齐（长度≥10 + 复杂度≥3 类），弱口令黑名单由后端兜底
-const passwordValid = computed(() => validatePasswordPolicy(password.value).valid)
+// 生效口令策略（/runtime-config/public 下发）：提示与预检都读它，禁止写死数字
+const policy = usePasswordPolicy()
+const policyHint = computed(() => passwordPolicyHint(policy.value))
+// 与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories），弱口令黑名单由后端兜底
+const passwordValid = computed(() => validatePasswordPolicy(password.value, policy.value).valid)
 const strength = computed(() => getPasswordStrength(password.value))
 
 // 协议勾选（H-02，对齐 PC 注册页 agreedToTerms 必填）：未勾选时按钮禁用
@@ -288,7 +292,7 @@ onMounted(() => {
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
             :label="t('密码')"
-            :placeholder="t('至少 10 位，含大小写字母、数字、特殊字符中至少三类')"
+            :placeholder="policyHint"
             clearable
           >
             <template #right-icon>

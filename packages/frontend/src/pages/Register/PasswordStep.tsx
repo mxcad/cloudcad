@@ -10,6 +10,7 @@ import {
 import { t } from '@/languages';
 import { Button } from '@/components/ui/Button';
 import { UseFormRegister } from 'react-hook-form';
+import { passwordPolicyHint, usePasswordPolicy } from '@/lib/passwordPolicy';
 import { RegisterFormValues } from './hooks/registerFormSchema';
 import { FieldErrors } from './types';
 import styles from './register.module.css';
@@ -63,6 +64,8 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
   loading,
   onBack,
 }) => {
+  // 口令要求提示由生效策略值推导（/runtime-config/public 下发），禁写死策略数字
+  const policy = usePasswordPolicy();
   return (
     <div className={`${styles.formStep} animate-fade-in`}>
       <div
@@ -86,7 +89,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             autoComplete="new-password"
             required
             className={`${styles.inputField} ${styles.inputFieldHasToggle}`}
-            placeholder={t('至少10位，包含大小写字母、数字、特殊字符中至少三类')}
+            placeholder={passwordPolicyHint(policy)}
             {...register('password')}
             onFocus={() => setFocusedField('password')}
           />

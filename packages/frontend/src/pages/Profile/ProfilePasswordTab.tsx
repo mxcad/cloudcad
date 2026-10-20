@@ -4,6 +4,12 @@ import { UserDto } from '@/api-sdk';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui';
 import { t } from '@/languages';
+import {
+  passwordComplexityMessage,
+  passwordPolicyHint,
+  passwordTooShortMessage,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
 import styles from './Profile.module.css';
 
 interface ProfilePasswordTabProps {
@@ -33,6 +39,8 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
   onFocusField,
   onNavigate,
 }) => {
+  // 口令要求提示由生效策略值推导（/runtime-config/public 下发），禁写死策略数字
+  const policy = usePasswordPolicy();
   return (
     <div className={`${styles.tabContent} animate-fade-in`}>
       <form onSubmit={onPasswordSubmit} className={styles.passwordForm}>
@@ -60,6 +68,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             </div>
             <div className={styles.fieldHint}>
               <Button
+                type="button"
                 variant="secondary"
                 size="xs"
                 onClick={() => onNavigate('/forgot-password')}
@@ -101,7 +110,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               onChange={onPasswordChange}
               onFocus={() => onFocusField('newPassword')}
               onBlur={() => onFocusField(null)}
-              placeholder={t('至少8位，包含大小写字母和数字')}
+              placeholder={passwordPolicyHint(policy)}
               required
               showPasswordToggle
             />
@@ -171,8 +180,12 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             {t('安全建议')}
           </h4>
           <ul>
-            <li>{t('密码长度至少 10 个字符')}</li>
-            <li>{t('包含大小写字母、数字、特殊字符中至少三类')}</li>
+            {policy.minLength > 0 && (
+              <li>{passwordTooShortMessage(policy.minLength)}</li>
+            )}
+            {policy.minCategories > 0 && (
+              <li>{passwordComplexityMessage(policy.minCategories)}</li>
+            )}
             <li>{t('避免使用常见的密码组合')}</li>
             <li>{t('不要在多个网站使用相同的密码')}</li>
           </ul>

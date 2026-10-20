@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { getRoleDisplayName } from '@/constants/permissions';
+import { passwordPolicyHint, usePasswordPolicy } from '@/lib/passwordPolicy';
 import styles from '../UserManagement.module.css';
 
 interface CreateUserModalProps {
@@ -47,6 +48,8 @@ export function CreateUserModal({
   onFormChange,
   submitError,
 }: CreateUserModalProps) {
+  // 口令策略生效值经 /runtime-config/public 下发（后端建用户同样强制该策略）
+  const policy = usePasswordPolicy();
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
@@ -134,7 +137,7 @@ export function CreateUserModal({
               type="password"
               value={formData.password}
               onChange={(e) => onFormChange('password', e.target.value)}
-              placeholder={t('至少8个字符')}
+              placeholder={passwordPolicyHint(policy)}
               showPasswordToggle
             />
             {formErrors.password && (

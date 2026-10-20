@@ -1,23 +1,40 @@
 import { t } from '@/languages';
 import { z } from 'zod/v4';
 import { validatePasswordPolicy } from '@cloudcad/platform';
+import {
+  passwordComplexityMessage,
+  passwordTooShortMessage,
+  type PasswordPolicyParams,
+} from '@/lib/passwordPolicy';
 
-export const resetPasswordSchema = z
-  .object({
-    code: z.string().min(1, t('请输入验证码')),
-    // 长度下限与后端 assertPasswordPolicy 对齐（≥10）；复杂度（≥3 类）走下方 refine
-    newPassword: z
-      .string()
-      .min(10, t('密码至少10个字符'))
-      .refine((v) => validatePasswordPolicy(v).reason !== 'complexity', {
-        message: t('密码需包含大小写字母、数字、特殊字符中至少三类'),
-        path: ['newPassword'],
-      }),
-    confirmPassword: z.string().min(1, t('请确认新密码')),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: t('两次输入的密码不一致'),
-    path: ['confirmPassword'],
-  });
+/**
+ * 工厂：口令策略（最小长度 / 类别构成）是按部署可配置的运行时事实，
+ * schema 必须由生效值（usePasswordPolicy）构建，禁止写死策略数字
+ * （门禁：pnpm scan:password-policy）。
+ */
+export function makeResetPasswordSchema(policy: PasswordPolicyParams) {
+  return z
+    .object({
+      code: z.string().min(1, t('请输入验证码')),
+      // 长度下限与后端 assertPasswordPolicy 对齐（生效值经 /runtime-config/public 下发）
+      newPassword: z
+        .string()
+        .min(policy.minLength, passwordTooShortMessage(policy.minLength))
+        .refine(
+          (v) => validatePasswordPolicy(v, policy).reason !== 'complexity',
+          {
+            message: passwordComplexityMessage(policy.minCategories),
+            path: ['newPassword'],
+          }
+        ),
+      confirmPassword: z.string().min(1, t('请确认新密码')),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: t('两次输入的密码不一致'),
+      path: ['confirmPassword'],
+    });
+}
 
-export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
+export type ResetPasswordValues = z.infer<
+  ReturnType<typeof makeResetPasswordSchema>
+>;
