@@ -5,7 +5,7 @@
 
 ## 结论
 
-后端 i18n 目录共 591 个叶子键，**173 个零引用（29%）**。但零引用 ≠ 都是垃圾——真正需要改代码的只有 25 个（14%），其余是纯冗余（50）与机制缺口（66）。
+后端 i18n 目录共 591 个叶子键，**169 个零引用（29%）**。但零引用 ≠ 都是垃圾——真正需要改代码的只有 25 个（14%），其余是纯冗余（50）与机制缺口（66）。
 
 ### 处置优先级
 
@@ -24,7 +24,7 @@
 ## 扫描口径（可复现）
 
 - 键范围：四语齐全（zh-CN / en-US / zh-TW / ko-KR）的叶子键，排除动态构造节 `error.project_member`、`error.mxcad_engine_extra`（键名由代码拼接，不可静态枚举）。
-- 语料：820 个后端文件 + 1624 个其余文件；排除 `translations/`、`dist/`、`node_modules/`、`.pnpm/` 与一次性迁移脚本 `migrate-i18n.mjs`。
+- 语料：820 个后端文件 + 1630 个其余文件；排除 `translations/`、`dist/`、`node_modules/`、`.pnpm/` 与一次性迁移脚本 `migrate-i18n.mjs`。
 - 死键判据：全点路径（如 `error.auth.not_logged_in`）作为子串在语料中零命中。
 
 ### 假阳性陷阱（本次踩过的，重跑时勿再踩）
@@ -43,7 +43,7 @@
 
 | 分类 | 数量 | 处置 |
 |---|---|---|
-| MECHANISM_GAP | 66 | 机制缺失：整节未接线，修机制而非逐键 |
+| MECHANISM_GAP | 62 | 机制缺失：整节未接线，修机制而非逐键 |
 | HARDCODED | 9 | 接线错：面向用户的文案硬编码，逐键排票 |
 | HARDCODED_WEAK | 5 | 疑似接线错：命中少，需人工确认 |
 | ALIAS | 51 | 冗余别名：文案已被另一活键翻译，可直接删 |
@@ -51,14 +51,10 @@
 | DOC_ONLY | 1 | 仅 Swagger 描述：非运行时文案，可直接删 |
 | ORPHAN | 40 | 疑真废弃：全仓无踪迹 |
 
-## MECHANISM_GAP（66）
+## MECHANISM_GAP（62）
 
 > 机制缺失：整节未接线，修机制而非逐键
 
-### error.library（1）
-
-- `error.library.not_found` — 公共资源库不存在，请先初始化
-  - error.library 整节 1/1 键全死
 ### error.policy（5）
 
 - `error.policy.unknown_type` — 未知的策略类型
@@ -97,14 +93,6 @@
   - error.seed 整节 10/10 键全死
 - `error.seed.yearly_membership` — 年度会员
   - error.seed 整节 10/10 键全死
-### error.version_control_extra（3）
-
-- `error.version_control_extra.submit_failed_detail` — 提交失败: {error}
-  - error.version_control_extra 整节 3/3 键全死
-- `error.version_control_extra.delete_failed_detail` — 删除失败: {error}
-  - error.version_control_extra 整节 3/3 键全死
-- `error.version_control_extra.fetch_failed_detail` — 获取失败: {error}
-  - error.version_control_extra 整节 3/3 键全死
 ### validation（46）
 
 - `validation.phone_must_be_string` — 手机号必须是字符串
@@ -211,7 +199,7 @@
 - `error.file.format_unsupported` — 不支持的文件格式
   - packages/backend/src/mxcad/save/save-as.service.ts:241
 - `error.file.upload_failed` — 文件上传失败
-  - packages/backend/src/fonts/fonts.service.ts:260
+  - packages/backend/src/fonts/fonts.service.ts:259
 - `error.file.upload_file_not_found` — 上传文件不存在
   - packages/backend/src/mxcad/save/save-as.service.ts:437
 - `error.file.version_history_not_found` — 历史版本目录不存在
@@ -223,7 +211,7 @@
 ### error.public_file（2）
 
 - `error.public_file.file_not_found` — 文件不存在
-  - packages/backend/src/backup/backup.service.ts:351, packages/backend/src/mxcad/core/mxcad-version-history.service.ts:193, packages/backend/src/mxcad/infra/thumbnail-generation.service.ts:182, packages/backend/src/mxcad/infra/thumbnail.controller.ts:205, packages/backend/src/mxcad/save/save-as.service.ts:437
+  - packages/backend/src/backup/backup.service.ts:350, packages/backend/src/mxcad/core/mxcad-version-history.service.ts:193, packages/backend/src/mxcad/infra/thumbnail-generation.service.ts:182, packages/backend/src/mxcad/infra/thumbnail.controller.ts:205, packages/backend/src/mxcad/save/save-as.service.ts:437
 - `error.public_file.conversion_failed` — 文件转换失败
   - packages/backend/src/public-file/public-file.controller.ts:407, packages/backend/src/public-file/public-file.service.ts:248, packages/backend/src/public-file/public-file.service.ts:271, packages/backend/src/public-file/public-file.service.ts:484
 ### error.version_control（1）
@@ -265,7 +253,7 @@
 - `error.auth.not_logged_in` — 未登录
   - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/auth/jwt.strategy.executor.ts:160, packages/backend/src/file-system/controllers/download.controller.ts:301, packages/backend/src/mxcad/save/mxcad-save.service.ts:76, packages/backend/src/mxcad/save/save.controller.ts:160
 - `error.auth.phone_network_limit` — 当前网络发送次数已达上限，请稍后再试
-  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/auth/services/sms/sms-verification.service.ts:244
+  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/auth/services/sms/sms-verification.service.ts:241
 ### error.cache（1）
 
 - `error.cache.project_not_found` — 项目不存在
@@ -289,7 +277,7 @@
 - `error.file.save_success` — 保存成功
   - 文案已被另一活键 i18n 化（3 处兜底串），本键冗余可直接删: packages/backend/src/mxcad/save/mxcad-save.service.ts:270, packages/backend/src/mxcad/save/save-as.service.ts:344, packages/backend/src/mxcad/save/save-as.service.ts:535
 - `error.file.delete_success` — 删除成功
-  - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-trash.service.ts:1186, packages/backend/src/users/services/user-status.service.ts:173, packages/backend/src/users/services/user-status.service.ts:174, packages/backend/src/version-control/providers/mx-version-control.provider.ts:746
+  - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-trash.service.ts:1186, packages/backend/src/users/services/user-status.service.ts:173, packages/backend/src/users/services/user-status.service.ts:174, packages/backend/src/version-control/providers/mx-version-control.provider.ts:754
 - `error.file.thumbnail_upload_success` — 缩略图上传成功
   - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/mxcad/infra/thumbnail.controller.ts:222
 - `error.file.history_conversion_failed` — 历史版本文件转换失败
@@ -317,13 +305,13 @@
 ### error.font（5）
 
 - `error.font.upload_failed` — 上传字体失败
-  - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:275, packages/backend/src/fonts/fonts.service.ts:276
+  - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:274, packages/backend/src/fonts/fonts.service.ts:275
 - `error.font.name_invalid` — 无效的文件名
-  - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/common/utils/file-utils.ts:114, packages/backend/src/fonts/fonts.service.ts:290, packages/backend/src/fonts/fonts.service.ts:358, packages/backend/src/fonts/fonts.service.ts:505
+  - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/common/utils/file-utils.ts:114, packages/backend/src/fonts/fonts.service.ts:289, packages/backend/src/fonts/fonts.service.ts:357, packages/backend/src/fonts/fonts.service.ts:503
 - `error.font.delete_failed` — 删除字体失败
-  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:339
+  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:338
 - `error.font.download_failed` — 下载字体失败
-  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:406
+  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:405
 - `error.font.size_exceeded` — 文件大小超出限制
   - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/mxcad/external-ref/ext-ref-validator.service.ts:91, packages/backend/src/public-file/public-file.controller.ts:250
 ### error.general（3）
@@ -375,19 +363,19 @@
 - `error.storage.path_illegal_chars` — 路径包含非法字符
   - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/common/utils/file-utils.ts:86, packages/backend/src/storage/local-storage.provider.ts:70, packages/backend/src/storage/local-storage.provider.ts:105, packages/backend/src/storage/local-storage.provider.ts:109
 - `error.storage.is_directory_not_file` — 路径是目录而非文件
-  - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:380, packages/backend/src/storage/local-storage.provider.ts:217
+  - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:379, packages/backend/src/storage/local-storage.provider.ts:217
 ### error.user（3）
 
 - `error.user.email_required_field` — 邮箱验证已启用，邮箱为必填项
-  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/users/services/user-crud.service.ts:79
+  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/users/services/user-crud.service.ts:78
 - `error.user.create_error` — 用户创建失败
-  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/auth/impl/providers/local-auth.provider.ts:146
+  - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/auth/impl/providers/local-auth.provider.ts:144
 - `error.user.project_owner_role_missing` — PROJECT_OWNER 角色不存在
-  - 文案已被另一活键 i18n 化（3 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/project-crud.service.ts:127, packages/backend/src/roles/project-roles.service.ts:171, packages/backend/src/users/services/user-crud.service.ts:201
+  - 文案已被另一活键 i18n 化（3 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/project-crud.service.ts:127, packages/backend/src/roles/project-roles.service.ts:171, packages/backend/src/users/services/user-crud.service.ts:200
 ### error.version_control（1）
 
 - `error.version_control.delete_success` — 删除成功
-  - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-trash.service.ts:1186, packages/backend/src/users/services/user-status.service.ts:173, packages/backend/src/users/services/user-status.service.ts:174, packages/backend/src/version-control/providers/mx-version-control.provider.ts:746
+  - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-trash.service.ts:1186, packages/backend/src/users/services/user-status.service.ts:173, packages/backend/src/users/services/user-status.service.ts:174, packages/backend/src/version-control/providers/mx-version-control.provider.ts:754
 
 ## LOG_ONLY（1）
 
@@ -481,10 +469,8 @@
 
 ## 整节全死的节
 
-- `error.library` — 1/1 键
 - `error.policy` — 5/5 键
 - `error.public_file_extra` — 1/1 键
 - `error.seed` — 10/10 键
-- `error.version_control_extra` — 3/3 键
 - `validation` — 46/46 键
 

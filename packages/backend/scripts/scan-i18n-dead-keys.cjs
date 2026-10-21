@@ -29,13 +29,32 @@ const EXCLUDE_FILE = /migrate-i18n\.mjs$/;
 // 动态构造键的节：键名由代码拼接，不可静态枚举
 const DYNAMIC_SECTIONS = new Set(['error.project_member', 'error.mxcad_engine_extra']);
 
-/** 解析 yaml：优先随 backend 依赖解析，回退 pnpm 内容寻址路径 */
+/**
+ * 解析 yaml：逐候选 require 并在 require 前校验存在。
+ *
+ * 不能用 require.resolve 的结果直接 require——pnpm 在解析失败时可能仍返回
+ * 内容寻址路径（packages/backend/node_modules/.pnpm/...），该路径在部分机器上
+ * 不存在，直接 require 会得到令人困惑的 MODULE_NOT_FOUND。
+ */
 function loadYaml() {
-  try {
-    return require(require.resolve('yaml', { paths: [path.join(ROOT, 'packages/backend')] }));
-  } catch {
-    return require(path.join(ROOT, 'node_modules/.pnpm/yaml@1.10.3/node_modules/yaml'));
+  const candidates = [
+    path.join(ROOT, 'node_modules/.pnpm/yaml@1.10.3/node_modules/yaml'),
+    path.join(ROOT, 'packages/backend/node_modules/.pnpm/yaml@1.10.3/node_modules/yaml'),
+    path.join(ROOT, 'packages/backend/node_modules/yaml'),
+  ];
+  const missing = [];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) {
+      try {
+        return require(c);
+      } catch (err) {
+        missing.push(`${c}: ${err.message.split('\n')[0]}`);
+      }
+    } else {
+      missing.push(`${c}: 不存在`);
+    }
   }
+  throw new Error(`无法解析 yaml 模块，已尝试：\n${missing.join('\n')}`);
 }
 const yaml = loadYaml();
 

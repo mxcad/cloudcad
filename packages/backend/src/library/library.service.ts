@@ -17,6 +17,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileSystemNode, NodeType } from '@cloudcad/db';
+import { I18nContext } from 'nestjs-i18n';
 import { DatabaseService } from '../database/database.service';
 import { FileTreeService } from '../file-system/file-tree/file-tree.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
@@ -86,7 +87,9 @@ export class LibraryService {
     });
     if (!library) {
       throw new NotFoundException(
-        `公共资源库 (${libraryType}) 不存在，请先初始化`
+        I18nContext.current()?.t('error.library.not_found', {
+          args: { libraryType },
+        }) ?? `公共资源库（${libraryType}）不存在，请先初始化`
       );
     }
     return library.id;

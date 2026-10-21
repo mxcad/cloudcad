@@ -12,6 +12,7 @@
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { NodeType } from '@cloudcad/db';
+import { I18nContext } from 'nestjs-i18n';
 import { DatabaseService } from '../../database/database.service';
 import { NodeTrashService } from '../../file-operations/node-trash.service';
 import { ProjectCrudService } from '../../file-operations/project-crud.service';
@@ -43,7 +44,9 @@ export class PublicLibraryService implements IPublicLibraryProvider {
 
     if (!library) {
       throw new NotFoundException(
-        `公共资源库 (${this.libraryType}) 不存在，请先初始化`
+        I18nContext.current()?.t('error.library.not_found', {
+          args: { libraryType: this.libraryType },
+        }) ?? `公共资源库（${this.libraryType}）不存在，请先初始化`
       );
     }
 

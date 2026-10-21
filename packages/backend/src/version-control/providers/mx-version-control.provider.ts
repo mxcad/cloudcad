@@ -607,7 +607,10 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
 
       return {
         success: false,
-        message: `提交失败: ${error.message}`,
+        message: I18nContext.current()?.t(
+          'error.version_control_extra.submit_failed_detail',
+          { args: { error: error.message } }
+        ) ?? `提交失败: ${error.message}`,
         data: JSON.stringify({
           error: error.message,
           backedUpFilePaths,
@@ -671,7 +674,10 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       this.logger.error(`批量提交失败: ${error.message}`);
       return {
         success: false,
-        message: `提交失败: ${error.message}`,
+        message: I18nContext.current()?.t(
+          'error.version_control_extra.submit_failed_detail',
+          { args: { error: error.message } }
+        ) ?? `提交失败: ${error.message}`,
       };
     }
   }
@@ -709,7 +715,10 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       this.logger.error(`工作副本提交失败: ${error.message}`);
       return {
         success: false,
-        message: `提交失败: ${error.message}`,
+        message: I18nContext.current()?.t(
+          'error.version_control_extra.submit_failed_detail',
+          { args: { error: error.message } }
+        ) ?? `提交失败: ${error.message}`,
       };
     }
   }
@@ -751,7 +760,10 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       );
       return {
         success: false,
-        message: `删除失败: ${error.message}`,
+        message: I18nContext.current()?.t(
+          'error.version_control_extra.delete_failed_detail',
+          { args: { error: error.message } }
+        ) ?? `删除失败: ${error.message}`,
       };
     }
   }
@@ -868,7 +880,10 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       );
       return {
         success: false,
-        message: `获取失败: ${error.message}`,
+        message: I18nContext.current()?.t(
+          'error.version_control_extra.fetch_failed_detail',
+          { args: { error: error.message } }
+        ) ?? `获取失败: ${error.message}`,
         entries: [],
         totalCount: 0,
       };
@@ -1034,7 +1049,10 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       );
       return {
         success: false,
-        message: `获取失败: ${err.message}`,
+        message: I18nContext.current()?.t(
+          'error.version_control_extra.fetch_failed_detail',
+          { args: { error: err.message } }
+        ) ?? `获取失败: ${err.message}`,
       };
     }
   }
@@ -1100,7 +1118,10 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       );
       return {
         success: false,
-        message: `获取失败: ${error.message}`,
+        message: I18nContext.current()?.t(
+          'error.version_control_extra.fetch_failed_detail',
+          { args: { error: error.message } }
+        ) ?? `获取失败: ${error.message}`,
       };
     }
   }

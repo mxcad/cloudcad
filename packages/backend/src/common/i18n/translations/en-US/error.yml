@@ -440,7 +440,7 @@ quota:
   export_download_vip_only: "Export/download is a VIP-exclusive feature. Upgrade to VIP to use it"
 
 library:
-  not_found: "Public library does not exist, please initialize first"
+  not_found: "Public library ({libraryType}) does not exist, please initialize first"
 
 personal_space:
   not_found: "Personal space does not exist"

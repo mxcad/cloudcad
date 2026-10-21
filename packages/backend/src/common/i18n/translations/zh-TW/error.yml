@@ -440,7 +440,7 @@ quota:
   export_download_vip_only: "匯出下載為會員專屬功能，開通 VIP 後即可使用"
 
 library:
-  not_found: "公共資源庫不存在，請先初始化"
+  not_found: "公共資源庫（{libraryType}）不存在，請先初始化"
 
 personal_space:
   not_found: "個人空間不存在"
