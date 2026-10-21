@@ -92,13 +92,6 @@ describe("RuntimeConfigService", () => {
 			expect(mockRedis.setex).toHaveBeenCalled();
 		});
 
-		it("should return default value when not found", async () => {
-			mockRedis.get.mockResolvedValue(null);
-			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
-
-			const result = await service.getValue("unknown-key", "default");
-			expect(result).toBe("default");
-		});
 
 		it("should return definition default when no default provided", async () => {
 			mockRedis.get.mockResolvedValue(null);
@@ -122,11 +115,11 @@ describe("RuntimeConfigService", () => {
 			);
 		};
 
-		it("启动期数据库不可达且传 fallback → 降级返回定义默认值，不抛错", async () => {
+		it("启动期数据库不可达 → 降级返回定义默认值，不抛错", async () => {
 			const warnSpy = jest.spyOn(Logger.prototype, "warn");
 			dbDown();
 
-			const result = await service.getValue("maxFileSize", 500);
+			const result = await service.getValue("maxFileSize");
 
 			expect(result).toBe(100);
 			expect(warnSpy).toHaveBeenCalledWith(
@@ -147,7 +140,7 @@ describe("RuntimeConfigService", () => {
 
 			dbDown();
 
-			await expect(service.getValue("maxFileSize", 500)).rejects.toThrow(
+			await expect(service.getValue("maxFileSize")).rejects.toThrow(
 				"Can't reach database server",
 			);
 		});
@@ -225,49 +218,13 @@ describe("RuntimeConfigService", () => {
 			expect(await service.getValue("unknown-key")).toBe("db-default-row");
 		});
 
-		it("调用方传 fallback 且不等于三层解析结果 → 三层结果优先（fallback 不遮蔽 env）", async () => {
-			// 回归：resolveValue 永不返回 nullish，`(fallback ?? value)` 恒为 fallback，
-			// 使 93/94 个带 fallback 的调用点全部静默无效。
-			process.env.RATE_LIMIT_PUBLIC_MAX = "33";
-			try {
-				mockRedis.get.mockResolvedValue(null);
-				mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
-					key: "rateLimitPublicMax",
-					value: JSON.stringify(100),
-					type: "number",
-					updatedBy: null,
-				});
-
-				expect(await service.getValue("rateLimitPublicMax", 100)).toBe(33);
-			} finally {
-				delete process.env.RATE_LIMIT_PUBLIC_MAX;
-			}
-		});
-
-		it("DB 行 updatedBy 非空且传 fallback → 运行时值优先", async () => {
-			process.env.TEST_RUNTIME_ENV = "99";
-			try {
-				mockRedis.get.mockResolvedValue(null);
-				mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
-					key: "maxFileSize",
-					value: JSON.stringify(256),
-					type: "number",
-					updatedBy: "user-1",
-				});
-
-				expect(await service.getValue("maxFileSize", 500)).toBe(256);
-			} finally {
-				delete process.env.TEST_RUNTIME_ENV;
-			}
-		});
-
-		it("未登记在定义表的 key + 传 fallback → fallback 生效", async () => {
+		it("未登记在定义表的 key → 无 DB 行时返回空串（默认值由调用方自带）", async () => {
+			// 删参前的行为是返回调用方 fallback；现由 impl-mx 的 oldSiteApiBase 这样
+			// 刻意不登记的键在自己的唯一消费点做 `|| 默认值`。
 			mockRedis.get.mockResolvedValue(null);
 			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
 
-			expect(await service.getValue("unregistered-key", "fallback")).toBe(
-				"fallback",
-			);
+			expect(await service.getValue("unregistered-key")).toBe("");
 		});
 
 		it("getAllConfigs 附带来源、默认值与元数据", async () => {
@@ -1090,10 +1047,52 @@ describe("RuntimeConfigService", () => {
 			).map((d) => d.key);
 			expect(offenders).toEqual([]);
 		});
+
+		it("adminLoginEntry 出厂默认必须是 MERGED（不要为「与其余 profile 键一致」改回 ISOLATED）", () => {
+			// 其余声明 profiles 的键出厂默认都取安全侧（如 rateLimitPublicMax 出厂 100 <
+			// normal 10000、passwordPolicyMinLength 出厂 10 > normal 6），即新装偏保守、
+			// 放宽靠显式应用普通模式 profile。本键是刻意的例外：新装即允许管理员走普通登录入口。
+			const def = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "adminLoginEntry",
+			);
+			expect(def?.defaultValue).toBe("MERGED");
+		});
+
+		it("依赖外部基础设施或属业务/容量配置的键不得声明 profiles（切换模式不替用户开关它们）", () => {
+			// 两类键一律排除在模式批量应用之外：
+			// ① 依赖客户自建基础设施才生效（SMTP / 短信通道 / 微信 AppID+Secret）——
+			//    替用户开启等于造死锁（未配 SMTP 却打开 requireEmailVerification、
+			//    未配微信凭据却打开 wechatEnabled）；
+			// ② 业务功能开关、业务策略、容量与配额类（是否开放注册/批量下载、
+			//    注销冷静期、上传上限、下单与短信与游客转换配额）——是否启用、
+			//    放宽多少是部署方的产品决策，不是等保要求。
+			// profile 只收「等保必需 + 无外部依赖即可生效」的项。
+			const excluded = new Set([
+				"requireEmailVerification",
+				"requirePhoneVerification",
+				"allowRegister",
+				"allowAutoRegisterOnPhoneLogin",
+				"userCancelGraceDays",
+				"userCleanupEnabled",
+				"wechatEnabled",
+				"wechatAutoRegister",
+				"maxFileSize",
+				"batchDownloadEnabled",
+				"orderCreateRateLimitMax",
+				"smsDailyLimitPerPhone",
+				"smsHourlyLimitPerIp",
+				"conversionGuestWindowHours",
+				"conversionGuestLimit",
+			]);
+			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => excluded.has(d.key) && d.profiles != null,
+			).map((d) => d.key);
+			expect(offenders).toEqual([]);
+		});
 	});
 	// ==================== 键登记完整性 ====================
 	describe("getValue 键登记完整性", () => {
-		it("业务代码读取的配置键必须都已登记（拼错的键会静默回落到 fallback，配置页改不动）", () => {
+		it("业务代码读取的配置键必须都已登记（拼错的键静默返回空串，配置页也改不动）", () => {
 			const fs = require("fs");
 			const path = require("path");
 			const srcRoot = path.join(__dirname, "..");

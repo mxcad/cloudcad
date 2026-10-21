@@ -123,7 +123,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     impact: '开启后未验证邮箱的用户无法完成需要邮箱的功能；配合 mailEnabled 使用。',
     dangerous: true,
-    profiles: { secure: true, normal: false },
   },
   {
     key: 'refundNotifyEmails',
@@ -159,7 +158,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     impact: '开启后未验证手机号的用户受限；配合 smsEnabled 使用。',
     dangerous: true,
-    profiles: { secure: true, normal: false },
   },
 
   // ───────────────────────── 用户 ─────────────────────────
@@ -173,7 +171,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'user',
     impact: '关闭后注册页隐藏、注册接口拒绝；已注册用户不受影响。',
     dangerous: true,
-    profiles: { secure: false, normal: true },
   },
   {
     key: 'allowAutoRegisterOnPhoneLogin',
@@ -184,7 +181,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'admin',
     impact: '开启后新手机号验证码登录即自动建号，无需填写用户名密码。',
-    profiles: { secure: false, normal: true },
   },
   {
     key: 'userCancelGraceDays',
@@ -197,7 +193,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 365, step: 1, unit: '天' },
     impact: '用户提交注销后，在冷静期内重新登录即可自动撤销；天数越短，误注销后越难自助恢复。',
     dangerous: true,
-    profiles: { secure: 30, normal: 3 },
   },
   {
     key: 'userCleanupEnabled',
@@ -209,7 +204,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     dangerous: true,
     impact: '关闭后注销冷静期到期的用户数据不再自动清理，DB 持续膨胀。',
-    profiles: { secure: false, normal: true },
   },
 
   // ───────────────────────── 微信 ─────────────────────────
@@ -223,7 +217,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'user',
     impact: '开启后登录页出现微信扫码入口；需先在服务端配置微信开放平台凭证。',
     dangerous: true,
-    profiles: { secure: false, normal: true },
   },
   {
     key: 'wechatAutoRegister',
@@ -235,7 +228,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     impact: '开启后微信授权即自动建号，无法强制补填用户名密码。',
-    profiles: { secure: false, normal: true },
   },
 
   // ───────────────────────── 文件 ─────────────────────────
@@ -249,7 +241,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'user',
     input: { min: 1, max: 50000, step: 1, unit: 'MB' },
     impact: '超过该大小的文件上传会被拒绝；保存后同会话内即时生效，其他已打开页面刷新后生效。',
-    profiles: { secure: 100, normal: 500 },
   },
   {
     key: 'fontMaxFileSize',
@@ -500,7 +491,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'BATCH_DOWNLOAD_ENABLED',
     impact: '开启后用户可发起批量打包下载，占用磁盘与带宽。',
     dangerous: true,
-    profiles: { secure: false, normal: true },
   },
   {
     key: 'fileZipCompressionLevel',
@@ -607,7 +597,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description:
       '管理员登录入口形态。ISOLATED = 管理员只能走专用入口，普通登录入口拒绝；' +
       'MERGED = 管理员与普通用户共用登录入口。',
-    defaultValue: 'ISOLATED',
+    defaultValue: 'MERGED',
     isPublic: false,
     tier: 'advanced',
     dangerous: true,
@@ -914,7 +904,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'AUTH_RATE_LIMIT_ORDER_CREATE_MAX',
     input: { min: 1, max: 10000, step: 1, unit: '次' },
     impact: '下单次数上限，窗口内超出后无法下单（用于保护第三方支付配额）。',
-    profiles: { secure: 10, normal: 1000 },
   },
   {
     key: 'orderCreateRateLimitWindowSeconds',
@@ -981,7 +970,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 200, step: 1, unit: '次/日' },
     impact: '超过后该手机号当日无法再收到验证码，直接控制短信费。',
     dangerous: true,
-    profiles: { secure: 10, normal: 100 },
   },
   {
     key: 'smsHourlyLimitPerIp',
@@ -995,7 +983,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     input: { min: 1, max: 500, step: 1, unit: '次/时' },
     impact: '单个 IP 每小时最多发送短信条数，超出后验证码发不出，登录与找回密码会卡住。',
     dangerous: true,
-    profiles: { secure: 20, normal: 500 },
   },
 
   // ───────────────────────── 配额：游客转换与免费导出 ─────────────────────────
@@ -1009,7 +996,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     input: { min: 1, max: 720, step: 1, unit: '小时' },
     impact: '未登录游客转换次数的统计窗口长度；须与「游客每窗口内最多图纸转换次数」配套理解。',
-    profiles: { secure: 2, normal: 24 },
   },
   {
     key: 'conversionGuestLimit',
@@ -1021,7 +1007,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     input: { min: 1, max: 1000, step: 1, unit: '次' },
     impact: '未登录游客每窗口的转换次数上限，超出后需登录；设太大会放开匿名刷转换。',
-    profiles: { secure: 5, normal: 20 },
   },
   {
     key: 'freeExportDownloadEnabled',
@@ -1078,7 +1063,9 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
 
   // ───────────────────────── 安全：设备授权 ─────────────────────────
   // deviceAuthFrontendDomain 由 device 分类并入 security（碎分类不单独成组）。
-  // oldSiteApiBase 刻意不收录：全后端零消费者，收录等于给用户一个改了没反应的字段。
+  // oldSiteApiBase 刻意不收录：唯一消费者在 impl-mx 私有包（不在 backend/src，
+  // 键登记完整性门禁扫不到），收录会给 OSS 包的用户一个改了没反应的字段；
+  // 其默认值由 impl-mx 的 old-site-api-client.ts 自带。
   {
     key: 'deviceAuthFrontendDomain',
     type: 'string',

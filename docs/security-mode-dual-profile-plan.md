@@ -122,7 +122,8 @@ T9 variant 边界      （独立，需 ADR）
 二轮实证比一轮更集中：**4 条登录路径全部收口在 `assertLoginEligible`**（`login.service.ts:119`、`local-auth.provider.ts:147/289/452`）——密码、微信、手机码、邮箱。管理员入口仅收 ADMIN 在 `admin-auth.service.ts:145-155`（非管理员与密码错误同文案，防枚举）。
 - ~~全仓 `runtime-config` keys 中**不存在 `adminLoginEnabled` / `adminLoginEntry`**（已核实）~~
   → **`adminLoginEntry` 已新增**：`ISOLATED`/`MERGED`，profiles `{ secure: 'ISOLATED', normal: 'MERGED' }`，
-  `defaultValue: 'ISOLATED'`（升级零行为变化）。**T4 已完成。**
+  `defaultValue: 'MERGED'`（出厂默认，2026-10-21 用户裁定；初版取 `ISOLATED` 求「升级零行为变化」，
+  理由与代价见 deferred-decisions R5）。**T4 已完成。**
 - ~~新增开关最合理落点 3 处：① `admin-auth.service.login()` 第 0 步前加闸；② 前端 `App.tsx:278-285` 路由门控 + `tokenRefresh.ts:169/219` redirect 目标；③ 配置项~~
   → 实际落点为 **③配置项 + ①的变体**：闸门放在 **`assertLoginEligible`**（四条普通登录路径的共同出口），
   而不是 `admin-auth.service.login()`——后者只管管理员专用入口，放那里覆盖不到普通入口。
@@ -235,7 +236,29 @@ ADR-0075 已有**打包期** `variant=private|oss`，与运行时 `securityMode`
 
 ## 四、默认值目标表（69 项全景）
 
-**25 项需按 profile 分档，44 项两模式同值。** 同值项不列（结论：`audit/backup/alert` 全 12 项同值、`system/storage/file` 清理类 15 项同值、`brand` 全 4 项按部署填、`paymentEnabled` 前端零消费故同值）。
+**17 项需按 profile 分档，52 项两模式同值。** 同值项不列（结论：`audit/backup/alert` 全 12 项同值、`system/storage/file` 清理类 15 项同值、`brand` 全 4 项按部署填、`paymentEnabled` 前端零消费故同值）。
+
+> **2026-10-21 范围收敛（用户裁定）**：初版建议 25 项分档、T11 实装 32 项，现收敛到 **17 项**。
+> 判定标准——profile 只装「**等保必需 + 不依赖客户自建基础设施即可生效**」的项；切换模式
+> 不替用户开关业务功能、容量与配额类配置。移出 15 项，理由见下节。本节以下三张表是
+> **原始勘察结论**（含已移出的行），保留以便追溯取舍依据。
+> 闸门已加：`runtime-config.service.spec.ts` 的「依赖外部基础设施或属业务/容量配置的键
+> 不得声明 profiles」不变式钉死 15 个键名，防止回流。
+
+### 已移出 profile 的 15 项（2026-10-21）
+| 组 | 键 | 移出理由 |
+|---|---|---|
+| 依赖外部基础设施 | `requireEmailVerification` `requirePhoneVerification` `wechatEnabled` `wechatAutoRegister` | 依赖 SMTP / 短信通道 / 微信 AppID+Secret。未配置时替用户开启等于空开关；更糟的是 `requireEmailVerification=true` + `mailEnabled=false` 会让未绑邮箱的微信用户 100% 死锁（§六 R2：`local-auth.provider.ts:326` 未按 `mailEnabled`/`smsEnabled` 门控） |
+| 业务功能开关 | `allowRegister` `allowAutoRegisterOnPhoneLogin` `batchDownloadEnabled` | 是否开放注册、批量下载是部署方的**产品决策**，不是等保项 |
+| 业务策略 / 运维 | `userCancelGraceDays` `userCleanupEnabled` | 注销冷静期与过期用户数据清理是运维选择；且 `userCancelGraceDays` 原值 secure=30 / normal=3 方向本身可疑（normal 反而更短） |
+| 容量配置 | `maxFileSize` | 上传上限由部署方按带宽与磁盘决定，与安全无关 |
+| 配额（防滥用/成本） | `orderCreateRateLimitMax` `smsDailyLimitPerPhone` `smsHourlyLimitPerIp` `conversionGuestLimit` `conversionGuestWindowHours` | 防资源滥用与成本配额，非等保要求（原表已自注「配额非安全」「成本类」） |
+
+> ⚠️ **移出 ≠ 出厂值自动变成便利侧。** 上述 15 键中 `batchDownloadEnabled`(false)、
+> `maxFileSize`(100)、`orderCreateRateLimitMax`(10)、`smsDailyLimitPerPhone`(10)、
+> `smsHourlyLimitPerIp`(20)、`conversionGuestLimit`(5)、`conversionGuestWindowHours`(2)
+> 的出厂默认取的是**严格侧**。私有化部署要「便利」出厂值，须由打包期按 variant 写 `.env`
+> （**T14 / ADR-0078 D2**，仍待落地）；本次收敛只处理「模式不该管这些」，不解决出厂默认值。
 
 ### security 组 · 12 项分档（全 `isPublic: false`）
 | key | 默认 | normal | secure | 备注 |

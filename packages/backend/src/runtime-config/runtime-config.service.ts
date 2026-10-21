@@ -252,8 +252,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
    * 获取单个配置值（用于内部调用）
    */
   async getValue<T = string | number | boolean | Record<string, unknown>>(
-    key: string,
-    defaultValue?: T
+    key: string
   ): Promise<T> {
     // 1. 查 Redis 缓存（可选加速层：Redis 不可达时必须降级直查数据库，
     //    否则启动期（如 multer 注册 useFactory）await 此处会因 Redis 故障
@@ -276,7 +275,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     //    与 cache miss + DB miss 后的降级行为一致，跳过 DB 查询避免构建崩溃。
     if (process.env.GENERATE_SWAGGER === '1') {
       const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
-      return (defaultValue ?? (def?.defaultValue as T)) as T;
+      return def?.defaultValue as T;
     }
 
     // 3. 查数据库。启动期数据库不可达时降级用默认值，不再抛错：
@@ -300,10 +299,10 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     const { value } = this.resolveValue(def, row);
     // 三层解析结果优先：定义表的 defaultValue 是唯一权威默认值，env 层由 envKey 声明。
-    // 调用方 fallback 只对「未登记在 RUNTIME_CONFIG_DEFINITIONS 的 key」生效——否则
-    // resolveValue 永不返回 nullish，fallback 恒遮蔽 DB/env 层，用户在配置页改的值全部
-    // 静默无效（回归：见 spec 的「传 fallback 且 DB 值不同」用例）。
-    const result = (def ? value : (defaultValue ?? value)) as T;
+    // getValue 故意不接受调用方兜底：对已登记键 fallback 恒被忽略（resolveValue 永不
+    // 返回 nullish），那些写着却不生效的字面量在 112 个调用点堆成了「假默认值」。
+    // 默认值只写定义表；新增配置项请登记 RUNTIME_CONFIG_DEFINITIONS。
+    const result = value as T;
 
     // 4. 写入缓存（写缓存失败不阻塞：下次读会重试）
     try {
