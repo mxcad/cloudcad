@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable, Inject } from '@nestjs/common';
+import { I18nContext } from 'nestjs-i18n';
 import {
   EMAIL_VERIFICATION_SERVICE,
   IEmailVerificationService,
@@ -36,6 +37,12 @@ export class EmailCodeVerificationStrategy implements IAccountVerificationStrate
       user.email!,
       params.emailCode!
     );
-    return { valid: result.valid, message: result.valid ? undefined : result.message || '邮箱验证码不正确或已过期' };
+    const fallback =
+      I18nContext.current()?.t('error.user.email_code_incorrect_or_expired') ??
+      '邮箱验证码不正确或已过期';
+    return {
+      valid: result.valid,
+      message: result.valid ? undefined : result.message || fallback,
+    };
   }
 }

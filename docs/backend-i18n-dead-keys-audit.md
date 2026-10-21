@@ -5,7 +5,7 @@
 
 ## 结论
 
-后端 i18n 目录共 591 个叶子键，**181 个零引用（31%）**。但零引用 ≠ 都是垃圾——真正需要改代码的只有 25 个（14%），其余是纯冗余（50）与机制缺口（66）。
+后端 i18n 目录共 591 个叶子键，**173 个零引用（29%）**。但零引用 ≠ 都是垃圾——真正需要改代码的只有 25 个（14%），其余是纯冗余（50）与机制缺口（66）。
 
 ### 处置优先级
 
@@ -37,15 +37,16 @@
 6. **`logger.` / `console.` 文案**面向运维不面向用户，不算 i18n 缺陷。
 7. **仓库有两套 i18n 访问器**：`I18nContext.current()?.t()`（801 处，标准）与 `this.i18nService.t()`（20 处，全在 `mx-version-control.provider.ts`）。别名检测必须同时认两者，否则该文件的死键会被误判成接线错。
 8. **别名判断要用 ±3 行窗口**：`I18nContext.current()?.t(...)` 常写成多行，`.t(` 落在字面量的下一行，只看本行会漏判。
+9. **键匹配不能用 `String.includes`**：`error.user.verification_failed` 会被 `error.user.verification_failed_default` 包含而误判为「活」。全仓有 18 组这种前缀遮蔽对，裸 includes 让它们全部漏检。本脚本用 `keyRe()` 加 `(?![\w.])` 边界断言。
 
 ## 分类统计
 
 | 分类 | 数量 | 处置 |
 |---|---|---|
 | MECHANISM_GAP | 66 | 机制缺失：整节未接线，修机制而非逐键 |
-| HARDCODED | 20 | 接线错：面向用户的文案硬编码，逐键排票 |
+| HARDCODED | 9 | 接线错：面向用户的文案硬编码，逐键排票 |
 | HARDCODED_WEAK | 5 | 疑似接线错：命中少，需人工确认 |
-| ALIAS | 48 | 冗余别名：文案已被另一活键翻译，可直接删 |
+| ALIAS | 51 | 冗余别名：文案已被另一活键翻译，可直接删 |
 | LOG_ONLY | 1 | 仅日志使用：非面向用户，可直接删 |
 | DOC_ONLY | 1 | 仅 Swagger 描述：非运行时文案，可直接删 |
 | ORPHAN | 40 | 疑真废弃：全仓无踪迹 |
@@ -199,7 +200,7 @@
 - `validation.search_keyword_max_length` — 搜索关键词最长200个字符
   - validation 整节 46/46 键全死
 
-## HARDCODED（20）
+## HARDCODED（9）
 
 > 接线错：面向用户的文案硬编码，逐键排票
 
@@ -219,36 +220,12 @@
 
 - `error.file_extra_v2.file_not_found_or_no_path` — 文件不存在或没有 path
   - packages/backend/src/mxcad/infra/thumbnail.controller.ts:205
-### error.public_file（1）
+### error.public_file（2）
 
+- `error.public_file.file_not_found` — 文件不存在
+  - packages/backend/src/backup/backup.service.ts:351, packages/backend/src/mxcad/core/mxcad-version-history.service.ts:193, packages/backend/src/mxcad/infra/thumbnail-generation.service.ts:182, packages/backend/src/mxcad/infra/thumbnail.controller.ts:205, packages/backend/src/mxcad/save/save-as.service.ts:437
 - `error.public_file.conversion_failed` — 文件转换失败
   - packages/backend/src/public-file/public-file.controller.ts:407, packages/backend/src/public-file/public-file.service.ts:248, packages/backend/src/public-file/public-file.service.ts:271, packages/backend/src/public-file/public-file.service.ts:484
-### error.user（12）
-
-- `error.user.no_password_set` — 该账户未设置密码
-  - packages/backend/src/users/services/user-status.service.ts:385, packages/backend/src/users/services/user-status.service.ts:405
-- `error.user.no_phone_bound` — 该账户未绑定手机
-  - packages/backend/src/users/services/user-status.service.ts:386, packages/backend/src/users/services/user-status.service.ts:406
-- `error.user.no_email_bound` — 该账户未绑定邮箱
-  - packages/backend/src/users/services/user-status.service.ts:387, packages/backend/src/users/services/user-status.service.ts:407
-- `error.user.verification_code_incorrect` — 验证码不正确
-  - packages/backend/src/users/services/user-status.service.ts:396, packages/backend/src/users/services/user-status.service.ts:397, packages/backend/src/users/services/user-status.service.ts:415, packages/backend/src/users/services/user-status.service.ts:416, packages/backend/src/users/strategies/email-code-verification.strategy.ts:39
-- `error.user.email_code_incorrect_or_expired` — 邮箱验证码不正确或已过期
-  - packages/backend/src/users/services/user-status.service.ts:397, packages/backend/src/users/services/user-status.service.ts:416, packages/backend/src/users/strategies/email-code-verification.strategy.ts:39
-- `error.user.verification_failed_default` — 验证失败
-  - packages/backend/src/file-system/file-validation/file-validation.service.ts:156, packages/backend/src/users/services/user-status.service.ts:398, packages/backend/src/users/services/user-status.service.ts:400, packages/backend/src/users/services/user-status.service.ts:418
-- `error.user.no_password_choose_other` — 该账户未设置密码，请选择其他验证方式
-  - packages/backend/src/users/services/user-status.service.ts:385
-- `error.user.no_phone_choose_other` — 该账户未绑定手机，请选择其他验证方式
-  - packages/backend/src/users/services/user-status.service.ts:386
-- `error.user.no_email_choose_other` — 该账户未绑定邮箱，请选择其他验证方式
-  - packages/backend/src/users/services/user-status.service.ts:387
-- `error.user.no_wechat_choose_other` — 该账户未绑定微信，请选择其他验证方式
-  - packages/backend/src/users/services/user-status.service.ts:388
-- `error.user.wechat_verification_failed` — 微信验证失败
-  - packages/backend/src/users/services/user-status.service.ts:398
-- `error.user.project_owner_role_missing` — PROJECT_OWNER 角色不存在
-  - packages/backend/src/file-operations/project-crud.service.ts:126
 ### error.version_control（1）
 
 - `error.version_control.fetch_success` — 获取成功
@@ -258,6 +235,10 @@
 
 > 疑似接线错：命中少，需人工确认
 
+### error.auth（1）
+
+- `error.auth.user_not_found` — 用户不存在
+  - 短文案5字仅 1 处命中，需人工确认: packages/backend/src/auth/services/mfa.service.ts:62
 ### error.cache（1）
 
 - `error.cache.user_not_found` — 用户不存在
@@ -270,16 +251,12 @@
 
 - `error.mxcad.refresh_success` — 刷新成功
   - 短文案4字仅 1 处命中，需人工确认: packages/backend/src/cache-architecture/controllers/cache-monitor.controller.ts:311
-### error.user（1）
-
-- `error.user.password_incorrect_verify` — 密码不正确
-  - 短文案5字仅 2 处命中，需人工确认: packages/backend/src/users/services/user-status.service.ts:395, packages/backend/src/users/services/user-status.service.ts:414
 ### error.version_control（1）
 
 - `error.version_control.submit_success` — 提交成功
   - 短文案4字仅 1 处命中，需人工确认: packages/backend/src/version-control/providers/http-version-control.provider.ts:118
 
-## ALIAS（48）
+## ALIAS（51）
 
 > 冗余别名：文案已被另一活键翻译，可直接删
 
@@ -292,11 +269,13 @@
 ### error.cache（1）
 
 - `error.cache.project_not_found` — 项目不存在
-  - 文案已被另一活键 i18n 化（15 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-trash.service.ts:385, packages/backend/src/file-operations/node-trash.service.ts:969, packages/backend/src/file-operations/project-crud.service.ts:571, packages/backend/src/file-operations/project-crud.service.ts:596
-### error.file（15）
+  - 文案已被另一活键 i18n 化（15 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-trash.service.ts:385, packages/backend/src/file-operations/node-trash.service.ts:969, packages/backend/src/file-operations/project-crud.service.ts:572, packages/backend/src/file-operations/project-crud.service.ts:597
+### error.file（17）
 
 - `error.file.node_not_found` — 文件节点不存在
   - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/file-system/controllers/download.controller.ts:103
+- `error.file.parent_must_be_folder` — 父节点必须是文件夹
+  - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-copy-move.service.ts:143, packages/backend/src/file-operations/node-copy-move.service.ts:328
 - `error.file.name_illegal_chars` — 文件名包含非法字符
   - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/common/utils/file-utils.ts:158, packages/backend/src/mxcad/external-ref/ext-ref-validator.service.ts:56, packages/backend/src/public-file/public-file.controller.ts:240, packages/backend/src/public-file/public-file.service.ts:178
 - `error.file.path_invalid` — 无效的文件路径
@@ -305,6 +284,8 @@
   - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/mxcad/external-ref/external-ref.controller.ts:230
 - `error.file.permission_verification_failed` — 权限验证失败
   - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/mxcad/external-ref/external-ref.controller.ts:240
+- `error.file.size_exceeded` — 文件大小超出限制
+  - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/mxcad/external-ref/ext-ref-validator.service.ts:91, packages/backend/src/public-file/public-file.controller.ts:250
 - `error.file.save_success` — 保存成功
   - 文案已被另一活键 i18n 化（3 处兜底串），本键冗余可直接删: packages/backend/src/mxcad/save/mxcad-save.service.ts:270, packages/backend/src/mxcad/save/save-as.service.ts:344, packages/backend/src/mxcad/save/save-as.service.ts:535
 - `error.file.delete_success` — 删除成功
@@ -362,7 +343,7 @@
 ### error.node（5）
 
 - `error.node.parent_not_found` — 父节点不存在
-  - 文案已被另一活键 i18n 化（5 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-copy-move.service.ts:130, packages/backend/src/file-operations/node-copy-move.service.ts:315, packages/backend/src/file-operations/node-trash.service.ts:522, packages/backend/src/file-operations/project-crud.service.ts:171
+  - 文案已被另一活键 i18n 化（5 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-copy-move.service.ts:130, packages/backend/src/file-operations/node-copy-move.service.ts:315, packages/backend/src/file-operations/node-trash.service.ts:522, packages/backend/src/file-operations/project-crud.service.ts:172
 - `error.node.target_parent_not_found` — 目标父节点不存在
   - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/node-copy-move.service.ts:130, packages/backend/src/file-operations/node-copy-move.service.ts:315
 - `error.node.not_found_in_tree` — 节点不存在
@@ -370,7 +351,7 @@
 - `error.node.not_found_or_no_parent` — 节点不存在或没有父节点
   - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/file-system/file-tree/file-tree.service.ts:1400
 - `error.node.sort_unsupported` — 不支持的排序字段
-  - 文案已被另一活键 i18n 化（5 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/project-crud.service.ts:280, packages/backend/src/file-operations/project-crud.service.ts:399, packages/backend/src/file-system/file-tree/file-tree.service.ts:513, packages/backend/src/file-system/file-tree/file-tree.service.ts:1203
+  - 文案已被另一活键 i18n 化（5 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/project-crud.service.ts:281, packages/backend/src/file-operations/project-crud.service.ts:400, packages/backend/src/file-system/file-tree/file-tree.service.ts:513, packages/backend/src/file-system/file-tree/file-tree.service.ts:1203
 ### error.public_file（2）
 
 - `error.public_file.name_contains_illegal_chars` — 文件名包含非法字符
@@ -395,12 +376,14 @@
   - 文案已被另一活键 i18n 化（4 处兜底串），本键冗余可直接删: packages/backend/src/common/utils/file-utils.ts:86, packages/backend/src/storage/local-storage.provider.ts:70, packages/backend/src/storage/local-storage.provider.ts:105, packages/backend/src/storage/local-storage.provider.ts:109
 - `error.storage.is_directory_not_file` — 路径是目录而非文件
   - 文案已被另一活键 i18n 化（2 处兜底串），本键冗余可直接删: packages/backend/src/fonts/fonts.service.ts:380, packages/backend/src/storage/local-storage.provider.ts:217
-### error.user（2）
+### error.user（3）
 
 - `error.user.email_required_field` — 邮箱验证已启用，邮箱为必填项
   - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/users/services/user-crud.service.ts:79
 - `error.user.create_error` — 用户创建失败
   - 文案已被另一活键 i18n 化（1 处兜底串），本键冗余可直接删: packages/backend/src/auth/impl/providers/local-auth.provider.ts:146
+- `error.user.project_owner_role_missing` — PROJECT_OWNER 角色不存在
+  - 文案已被另一活键 i18n 化（3 处兜底串），本键冗余可直接删: packages/backend/src/file-operations/project-crud.service.ts:127, packages/backend/src/roles/project-roles.service.ts:171, packages/backend/src/users/services/user-crud.service.ts:201
 ### error.version_control（1）
 
 - `error.version_control.delete_success` — 删除成功

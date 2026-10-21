@@ -176,7 +176,19 @@ const allCorpus = allCorpusOf(beFiles, restFiles);
 function allCorpusOf(a, b) {
   return [...a, ...b].map((f) => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 }
-const dead = keys.filter(([k]) => !allCorpus.includes(k));
+
+/**
+ * 全点路径匹配，带「不被更长键名继续延伸」的边界断言。
+ *
+ * 必须用正则而不是 String.includes：`error.user.verification_failed` 会被
+ * `error.user.verification_failed_default` 包含而误判为活。全仓有 18 个这样的
+ * 前缀遮蔽对，裸 includes 会让它们全部漏检。
+ */
+function keyRe(key) {
+  return new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![\\w.])');
+}
+
+const dead = keys.filter(([k]) => !keyRe(k).test(allCorpus));
 console.error(`叶子键 ${keys.length}，死键 ${dead.length}`);
 
 const sectionStats = {};
@@ -310,6 +322,7 @@ const out = [
   '6. **`logger.` / `console.` 文案**面向运维不面向用户，不算 i18n 缺陷。',
   '7. **仓库有两套 i18n 访问器**：`I18nContext.current()?.t()`（801 处，标准）与 `this.i18nService.t()`（20 处，全在 `mx-version-control.provider.ts`）。别名检测必须同时认两者，否则该文件的死键会被误判成接线错。',
   '8. **别名判断要用 ±3 行窗口**：`I18nContext.current()?.t(...)` 常写成多行，`.t(` 落在字面量的下一行，只看本行会漏判。',
+  '9. **键匹配不能用 `String.includes`**：`error.user.verification_failed` 会被 `error.user.verification_failed_default` 包含而误判为「活」。全仓有 18 组这种前缀遮蔽对，裸 includes 让它们全部漏检。本脚本用 `keyRe()` 加 `(?![\\w.])` 边界断言。',
   '',
   '## 分类统计',
   '',

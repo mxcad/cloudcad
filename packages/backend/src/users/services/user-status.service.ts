@@ -382,39 +382,83 @@ export class UserStatusService {
 
   private getPrerequisiteError(type: string): string {
     const messages: Record<string, string> = {
-      password: '该账户未设置密码，请选择其他验证方式',
-      phoneCode: '该账户未绑定手机，请选择其他验证方式',
-      emailCode: '该账户未绑定邮箱，请选择其他验证方式',
-      wechatCode: '该账户未绑定微信，请选择其他验证方式',
+      password:
+        I18nContext.current()?.t('error.user.no_password_choose_other') ??
+        '该账户未设置密码，请选择其他验证方式',
+      phoneCode:
+        I18nContext.current()?.t('error.user.no_phone_choose_other') ??
+        '该账户未绑定手机，请选择其他验证方式',
+      emailCode:
+        I18nContext.current()?.t('error.user.no_email_choose_other') ??
+        '该账户未绑定邮箱，请选择其他验证方式',
+      wechatCode:
+        I18nContext.current()?.t('error.user.no_wechat_choose_other') ??
+        '该账户未绑定微信，请选择其他验证方式',
     };
-    return messages[type] || '验证条件不满足';
+    return messages[type] || this.getVerificationFailedMessage();
   }
 
   private getVerifyFailedError(type: string): string {
     const messages: Record<string, string> = {
-      password: '密码不正确',
-      phoneCode: '验证码不正确',
-      emailCode: '邮箱验证码不正确或已过期',
-      wechatCode: '微信验证失败',
+      password:
+        I18nContext.current()?.t('error.user.password_incorrect_verify') ??
+        '密码不正确',
+      phoneCode:
+        I18nContext.current()?.t('error.user.verification_code_incorrect') ??
+        '验证码不正确',
+      emailCode:
+        I18nContext.current()?.t('error.user.email_code_incorrect_or_expired') ??
+        '邮箱验证码不正确或已过期',
+      wechatCode:
+        I18nContext.current()?.t('error.user.wechat_verification_failed') ??
+        '微信验证失败',
     };
-    return messages[type] || '验证失败';
+    return messages[type] || this.getVerifyFailedDefault();
   }
 
   private getRestorePrerequisiteError(type: string): string {
     const messages: Record<string, string> = {
-      password: '该账户未设置密码',
-      phoneCode: '该账户未绑定手机',
-      emailCode: '该账户未绑定邮箱',
+      password:
+        I18nContext.current()?.t('error.user.no_password_set') ??
+        '该账户未设置密码',
+      phoneCode:
+        I18nContext.current()?.t('error.user.no_phone_bound') ??
+        '该账户未绑定手机',
+      emailCode:
+        I18nContext.current()?.t('error.user.no_email_bound') ??
+        '该账户未绑定邮箱',
     };
-    return messages[type] || '验证条件不满足';
+    return messages[type] || this.getVerificationFailedMessage();
   }
 
   private getRestoreVerifyFailedError(type: string): string {
     const messages: Record<string, string> = {
-      password: '密码不正确',
-      phoneCode: '验证码不正确',
-      emailCode: '邮箱验证码不正确或已过期',
+      password:
+        I18nContext.current()?.t('error.user.password_incorrect_verify') ??
+        '密码不正确',
+      phoneCode:
+        I18nContext.current()?.t('error.user.verification_code_incorrect') ??
+        '验证码不正确',
+      emailCode:
+        I18nContext.current()?.t('error.user.email_code_incorrect_or_expired') ??
+        '邮箱验证码不正确或已过期',
     };
-    return messages[type] || '验证失败';
+    return messages[type] || this.getVerifyFailedDefault();
+  }
+
+  /** 未知验证方式时的前置条件错误文案（error.user.verification_failed） */
+  private getVerificationFailedMessage(): string {
+    return (
+      I18nContext.current()?.t('error.user.verification_failed') ??
+      '验证条件不满足'
+    );
+  }
+
+  /** 未知验证方式时的验证失败文案（error.user.verification_failed_default） */
+  private getVerifyFailedDefault(): string {
+    return (
+      I18nContext.current()?.t('error.user.verification_failed_default') ??
+      '验证失败'
+    );
   }
 }

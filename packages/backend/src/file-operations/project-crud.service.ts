@@ -123,7 +123,8 @@ export class ProjectCrudService {
           const ownerRoleId = roleMap.get(ProjectRole.OWNER);
           if (!ownerRoleId) {
             throw new InternalServerErrorException(
-              'PROJECT_OWNER 角色不存在，请检查系统初始化'
+              I18nContext.current()?.t('error.user.project_owner_role_not_found') ??
+                'PROJECT_OWNER 角色不存在，请检查系统初始化'
             );
           }
 
