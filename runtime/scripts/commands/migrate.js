@@ -152,6 +152,10 @@ async function hasPendingMigrations() {
     // 实测（pnpm 9.15.9）输出是 `No projects matched the filters "…"`；
     // 注意这行警告**正确的 `exec` 形式首行也会打**（exec 之后 prisma 照常运行），
     // 别看到它就去「修」，也别拿它当失败判据——成败只看 exit code。
+    //
+    // ⚠️ 本行**不在 lib/proc.js 的 isDirectPrismaCall 守卫覆盖范围内**：那个守卫
+    // 只拦 runPnpm 的参数数组，这里走的是 spawnSync + 模板串命令。所以本注释是
+    // 这一处的唯一防线，改前请先读上面那段。
     const cmd = `${pnpmCmd} --filter backend exec prisma migrate status`;
     const result = spawnSync(cmd, [], {
       cwd: PROJECT_ROOT,

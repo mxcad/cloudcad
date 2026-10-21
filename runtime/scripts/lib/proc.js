@@ -170,7 +170,51 @@ function runCommandWithProgress(command, args, options = {}) {
   });
 }
 
+/**
+ * pnpm 直调 prisma 判定（纯函数，可单测）。
+ *
+ * backend 包没有名为 `prisma` 的 script（全仓无任何一个包有），
+ * `pnpm --filter backend prisma …` 会被 pnpm 静默丢弃且 **exit 0**——
+ * 调用方拿到的 success 是「什么都没跑」。正确写法是 `pnpm --filter backend exec prisma …`。
+ * 实例：hasPendingMigrations 曾因此恒判「无待应用迁移」而跳过迁移前备份（eb6b08c）。
+ *
+ * 判据：`prisma` 出现时紧邻前一 token 必须是 `exec` 或 `run`。
+ * 放行 `run` 是因为 `pnpm -F x run <script>` 缺 script 时会正常报错，
+ * 不属「静默成功」这类；裸跟在后面的 `prisma` 才是。
+ * args 元素本身也可能是整条 shell 命令串（模板串），故先按空白/逗号分词。
+ * @param {string[]} args pnpm 参数数组
+ * @returns {boolean} true = 裸直调（恒必失败）
+ */
+function isDirectPrismaCall(args) {
+  const VALID_PRECEDERS = new Set(['exec', 'run']);
+  // 必须先跨参数摊平再找前驱：`['exec', 'prisma']` 里 exec 与 prisma 是相邻的
+  // 两个数组元素，按元素逐个分词会取不到前驱而误判。
+  const tokens = (Array.isArray(args) ? args : [args])
+    .map((a) => String(a).split(/[\s,]+/))
+    .flat()
+    .filter(Boolean);
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] === 'prisma' && !VALID_PRECEDERS.has(tokens[i - 1])) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function runPnpm(args, options = {}) {
+  if (isDirectPrismaCall(args)) {
+    // throw 而非 return false：这种调用永远不会成功，返回 false 只会让调用方打出
+    // 自己的泛化「命令失败」再走失败路径——而 pnpm 的 exit 0 早已把「失败」伪装成
+    // 「成功」，泛化文案会让排查者继续在错误方向上找。
+    throw new Error(
+      '[runPnpm] pnpm 直调 prisma 恒为静默 no-op：backend 包没有名为 prisma 的 script，' +
+        'pnpm 会丢弃该子命令且 exit 0。\n' +
+        `  实际调用: pnpm ${args.join(' ')}\n` +
+        '  正确写法: pnpm --filter <包> exec prisma …\n' +
+        '  （见 migrate.js hasPendingMigrations 内的同型注释）'
+    );
+  }
+
   // 设置 PATH：包含 node bin 目录和 node_modules/.bin
   const nodeBinDir = IS_LINUX
     ? path.join(PLATFORM_DIR, 'node', 'bin')
@@ -739,6 +783,7 @@ function runInNewWindow(title, command, args) {
 module.exports = {
   runCommand,
   runCommandWithProgress,
+  isDirectPrismaCall,
   runPnpm,
   runPm2,
   runInNewWindow,
