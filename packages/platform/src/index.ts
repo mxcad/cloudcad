@@ -107,6 +107,10 @@ export {
   isServerError,
 } from './errors/classify';
 
+// ── API 错误文案提取（纯提取，兜底文案与分隔符留端包） ──
+export { extractApiError } from './errors/api-message';
+export type { ApiErrorDetail } from './errors/api-message';
+
 // ── 跨项目转移策略预判（纯判定，6 域矩阵 + 库-move，reason 枚举留端包映射） ──
 export { evaluateCrossProjectTransfer } from './transfer/policy';
 export type {
