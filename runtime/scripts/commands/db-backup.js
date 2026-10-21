@@ -25,6 +25,7 @@ const {
   NODE_EXE,
   PNPM_JS,
   pgLibDir,
+  OPS_ENTRY,
 } = require('../lib/context');
 const { colors, log, clearScreen, printHeader } = require('../lib/logger');
 const { parseEnvFile } = require('../lib/env');
@@ -184,9 +185,11 @@ async function checkDatabaseExists(host, port, user, database) {
     encoding: 'utf-8',
   });
 
-  // 命令执行成功，检查输出
+  // 命令执行成功，检查输出。
+  // 注意：勿写 `result.stdout && …`——库不存在时 stdout 为空串，短路会返回 ''
+  // 而非文档契约的 false，`!== false` 式判断会漏判（2026-10-20 db-bootstrap 踩坑）
   if (result.status === 0) {
-    return result.stdout && result.stdout.trim() === '1';
+    return (result.stdout || '').trim() === '1';
   }
 
   // 命令执行失败，区分处理
@@ -249,6 +252,37 @@ async function isDatabaseEmpty(host, port, user, database) {
 
   const hasUsersTable = result.stdout && result.stdout.trim() === '1';
   return !hasUsersTable;
+}
+
+/**
+ * 统计 users 行数（系统是否已初始化的权威判据）。
+ * @returns {Promise<number|null>} 用户数；null = 无法判定
+ *   （psql 缺失 / 实例未就绪 / 认证失败 / users 表不存在）。
+ *   调用方须把 null 当「未知」处理，不可当 0（那会让向导对已有账号的库
+ *   误判为全新部署，配置一个永不生效的初始管理员密码）。
+ */
+async function countUsers(host, port, user, database) {
+  const psqlPath = getPsqlPath();
+  if (!fs.existsSync(psqlPath)) {
+    return null;
+  }
+
+  const { env } = getDbEnv();
+  const cmd = `"${psqlPath}" -h "${host}" -p "${port}" -U "${user}" -d "${database}" -tAc "SELECT count(*) FROM users"`;
+
+  const result = spawnSync(cmd, [], {
+    env,
+    shell: true,
+    stdio: 'pipe',
+    encoding: 'utf-8',
+  });
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  const n = parseInt((result.stdout || '').trim(), 10);
+  return Number.isNaN(n) ? null : n;
 }
 
 /**
@@ -688,7 +722,7 @@ async function restoreDatabase(backupFile, deps = {}) {
     return true;
   } else {
     log('yellow', '⚠️  数据库恢复成功，但 Prisma schema 同步失败');
-    log('cyan', '请手动运行: pnpm --filter backend prisma migrate deploy');
+    log('cyan', `下次启动会由 ${OPS_ENTRY} start 自动补齐；也可立即手动执行: ${OPS_ENTRY} migrate`);
     return true; // 恢复成功，但迁移同步失败
   }
 }
@@ -800,6 +834,7 @@ module.exports = {
   getDbEnv,
   checkDatabaseExists,
   isDatabaseEmpty,
+  countUsers,
   backupDatabase,
   listBackups,
   promptSelectBackup,

@@ -48,15 +48,21 @@ const {
   isPortOpen,
   waitPortReleased,
 } = require('../lib/health');
-const { parseEnvFile } = require('../lib/env');
+const { parseEnvFile, updateEnvFile } = require('../lib/env');
+const { findFreePortUpFrom } = require('../lib/infra-gate');
 const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
 const { promptConfirm } = require('../lib/prompt');
 const { alignConversionServiceUrl } = require('../config-updater');
 const state = require('../lib/state');
 const { startInfrastructure, isPm2AppFromThisProject } = require('./infra');
 const { stopAppServices } = require('./stop');
+const { runDatabaseMigration, runPiiBackfill } = require('./migrate');
 const { runSetupWizard, showCurrentPasswords } = require('./setup-wizard');
 const { setupSignalHandlers } = require('../foreground/registry');
+
+// 后端 .env：conversion-service 端口顺延时回写 CONVERSION_SERVICE_PORT 的事实源，
+// 与 getConversionServiceConfig 内的 envPath 同一路径。
+const BACKEND_ENV_PATH = path.join(PROJECT_ROOT, 'packages', 'backend', '.env');
 
 /**
  * 前台模式：等待服务就绪，后端进程退出时即时显示错误
@@ -357,6 +363,62 @@ function getConversionServiceConfig() {
 }
 
 /**
+ * 转换服务端口被占时自动顺延到空闲端口并改写 .env（单一事实源）。
+ *
+ * 与 infra.js 的 relocateRedisPort / relocatePostgresPort 同语义：找空闲端口 →
+ * 回写 .env → 同步内存 PORTS。只有 conversion 可以安全顺延——它是唯一没有前端
+ * 构建期常量牵连的应用端口（前端 API base URL 在构建期折叠，顺延 backend/frontend
+ * 就要重建 dist），后端经 CONVERSION_SERVICE_URL 轮询它。
+ *
+ * 两处必须同步，缺一会让服务仍监听旧端口而后端按新端口找它：
+ *   1. PORTS.conversion —— 本进程后续 waitForPort/健康检查/停止用它
+ *   2. conversion.env.CONVERSION_SERVICE_PORT —— PM2 与前台两路启动都从这里注入
+ *
+ * 注意对齐顺序：getConversionServiceConfig 内已按旧端口调过一次
+ * alignConversionServiceUrl，顺延后必须再调一次，否则 CONVERSION_SERVICE_URL 恒指向
+ * 旧端口——正是该函数顶部注释警示的「只改 PORT 不改 URL 后端恒连旧端口」。
+ *
+ * 不在此中止部署：blocked 时由调用方决定（前台模式交给端口冲突提示，PM2 模式维持
+ * 原有行为），避免本函数越权扩大影响面。
+ *
+ * @param {object} conversion getConversionServiceConfig() 的返回值
+ * @returns {Promise<'relocated'|'blocked'>}
+ */
+async function relocateConversionPort(conversion) {
+  const oldPort = PORTS.conversion;
+  const newPort = await findFreePortUpFrom(oldPort + 1, {
+    maxTries: 100,
+    isPortOpen: (p) => isPortOpen(p, '127.0.0.1'),
+    exclude: new Set(Object.values(PORTS)),
+  });
+  if (!newPort) {
+    log(
+      'red',
+      `  [错误] 转换服务端口 ${oldPort} 被占用，且 ${oldPort + 1}-${oldPort + 100} 范围内未找到空闲端口。` +
+        '请手动释放端口或修改 .env 的 CONVERSION_SERVICE_PORT 后重跑。'
+    );
+    return 'blocked';
+  }
+  if (!updateEnvFile(BACKEND_ENV_PATH, { CONVERSION_SERVICE_PORT: String(newPort) })) {
+    log(
+      'red',
+      `  [错误] 新转换服务端口 ${newPort} 写入 ${BACKEND_ENV_PATH} 失败。` +
+        `请手动把 .env 的 CONVERSION_SERVICE_PORT 改为 ${newPort} 后重跑。`
+    );
+    return 'blocked';
+  }
+  PORTS.conversion = newPort;
+  conversion.env.CONVERSION_SERVICE_PORT = String(newPort);
+  alignConversionServiceUrl(BACKEND_ENV_PATH);
+  log(
+    'yellow',
+    `  [换端口] 转换服务端口 ${oldPort} 被占用 → 已自动切换到空闲端口 ${newPort}` +
+      '，.env 的 CONVERSION_SERVICE_PORT 与 CONVERSION_SERVICE_URL 已同步更新'
+  );
+  return 'relocated';
+}
+
+/**
  * 统一的应用服务启动函数
  * @param {'pm2' | 'foreground'} mode - 启动模式
  * @param {Function} [onReady] - 服务就绪后、阻塞等待前回调（P2.4 部署收尾时序修正）
@@ -392,6 +454,14 @@ async function startAppServices(mode, onReady) {
         '部署包与配置不一致——继续启动会让后端所有转换静默失败。请改用包含 conversion-service 的完整部署包，或将后端 .env 的 FUNCTION_EXECUTOR 改回 process-pool。'
     );
     process.exit(1);
+  }
+
+  // 转换服务端口被占时自动顺延（两路模式共用；取舍见 relocateConversionPort）。
+  // PM2 模式不做端口冲突检测，不提前顺延就会 EADDRINUSE 反复重试。
+  // 顺延失败（blocked）不在此中止：前台模式交给下方端口冲突提示处理，PM2 模式维持原有行为。
+  let conversionPortRelocated = false;
+  if (conversionReady && (await isPortOpen(PORTS.conversion))) {
+    conversionPortRelocated = (await relocateConversionPort(conversion)) === 'relocated';
   }
 
   if (mode === 'pm2') {
@@ -476,10 +546,10 @@ async function startAppServices(mode, onReady) {
     // 先判定占用者并提示，避免 EADDRINUSE 静默失败或重复 spawn 双实例。
     const backendPortTaken = await isPortOpen(PORTS.backend);
     const frontendPortTaken = await isPortOpen(PORTS.frontend);
-    // 转换服务端口（仅启用时检测，避免 process-pool 模式下误报 3100 占用）
-    const conversionPortTaken = conversionReady
-      ? await isPortOpen(PORTS.conversion)
-      : false;
+    // 转换服务端口（仅启用时检测，避免 process-pool 模式下误报 3100 占用）。
+    // 已顺延成功则不再算冲突——顺延到的端口必然空闲；顺延失败才保留冲突语义。
+    const conversionPortTaken =
+      conversionReady && !conversionPortRelocated && (await isPortOpen(PORTS.conversion));
     if (backendPortTaken || frontendPortTaken || conversionPortTaken) {
       const takenDesc = [];
       if (backendPortTaken) takenDesc.push(`后端 ${PORTS.backend}`);
@@ -841,7 +911,7 @@ async function startAppServicesWithInfra(mode, options = null) {
   // 失败时不打印 "[1/2] 启动基础服务..."，避免让调用者误以为已进入启动流程。
   if (!(await assertNoForeignAppConflict())) return false;
 
-  log('blue', '[1/2] 启动基础服务...');
+  log('blue', '[1/3] 启动基础服务...');
 
   // 统一走 startInfrastructure（P2.5 双实现合一 + Q0 统一 PM2 托管）：
   // - 部署机（PM2 可用）：基础服务一律 PM2 托管（无论应用层前台/后台）
@@ -898,8 +968,28 @@ async function startAppServicesWithInfra(mode, options = null) {
 
   log('green', '[✓] 基础服务已启动');
 
+  // 自动迁移 + PII 存量回填（均幂等：无待应用迁移 / 已回填时秒跳过）。
+  // deploy 路径本就做了这两步；start 是升级包「解压覆盖 → 重跑 start」的入口，
+  // 这里跳过会让后端带着陈旧 schema 启动（列缺失、枚举新增值未落库），
+  // 且数据库不存在时后端直接连不上。
+  //
+  // 迁移失败必须中止：带着旧 schema 拉起应用只会表现为随机 5xx。
+  // PII 回填失败只告警——deploy 已把回填放在启动前，start 再拦一次会新增
+  // 「从旧备份整体还原部署目录后 start 起不来」的回归（那个 dist/ 里还没有
+  // pii-backfill.js 依赖的产物），而登录侧的降级本就该由回填脚本自己负责。
+  if (!(await runDatabaseMigration(options))) {
+    log('red', '数据库迁移失败，已中止启动');
+    return false;
+  }
+  if (!(await runPiiBackfill())) {
+    log(
+      'yellow',
+      '⚠️  PII 存量回填失败，应用仍会继续启动（deploy 路径已拦过）；如需立即执行: node packages/backend/scripts/pii-backfill.js'
+    );
+  }
+
   // 启动应用服务
-  log('blue', '[2/2] 启动应用服务...');
+  log('blue', '[3/3] 启动应用服务...');
   await startAppServices(mode);
   return true;
 }
