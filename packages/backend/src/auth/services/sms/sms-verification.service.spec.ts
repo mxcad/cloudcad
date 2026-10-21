@@ -120,4 +120,17 @@ describe('SmsVerificationService.verifyCode', () => {
     expect(accepted).toBeLessThanOrEqual(5);
     expect(mockRedis.get).not.toHaveBeenCalledWith(attemptsKey);
   });
+
+  it('配置缺失时构造期立刻失败，而不是静默兜底验证码有效期（#483）', () => {
+    // 历史实现是 `cacheTTL?.verificationCode ?? 300`，与 configuration.ts 的默认 900
+    // 悄悄差 3 倍：运维改 .env 以为改了验证码有效期，实际生效的仍是配置中心的值。
+    // 配置面不提供兜底后，取值失败必须在这里暴露出来，不许再各写一份默认值。
+    expect(() =>
+      new SmsVerificationService(
+        { get: () => undefined } as never,
+        { getValue: jest.fn() } as never,
+        mockRedis as never
+      )
+    ).toThrow(/verificationCode/);
+  });
 });

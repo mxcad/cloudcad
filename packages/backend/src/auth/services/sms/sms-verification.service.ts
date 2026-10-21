@@ -63,10 +63,10 @@ export class SmsVerificationService implements ISmsVerificationService {
     this.codeStore = new VerificationCodeStore(this.redis);
     const cacheTTL = this.configService.get('cacheTTL');
 
-    // 设置验证码有效期（默认 5 分钟）
-    this.codeTTL = cacheTTL?.verificationCode ?? 300;
-    // 设置发送频率限制（默认 60 秒）
-    this.rateLimitTTL = cacheTTL?.verificationRateLimit ?? 60;
+    // 有效期与限流周期一律取 configuration.ts 的默认值（900s / 60s），这里不再各自兜底：
+    // 历史上 SMS 兜底写成 300，与配置中心悄悄差 3 倍，运维只改 .env 却以为没生效（Gitea #483）
+    this.codeTTL = cacheTTL.verificationCode;
+    this.rateLimitTTL = cacheTTL.verificationRateLimit;
 
     // 设置验证限制（默认最多尝试 5 次）
     const smsVerifyConfig = this.configService.get<{
