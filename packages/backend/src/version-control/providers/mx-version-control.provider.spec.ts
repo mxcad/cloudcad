@@ -1,7 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { I18nService } from 'nestjs-i18n';
 import * as path from 'path';
 import { FileUtils } from '../../common/utils/file-utils';
 import { MxVersionControlProvider } from './mx-version-control.provider';
@@ -57,14 +56,10 @@ jest.mock('../../common/utils/file-utils', () => ({
 
 describe('MxVersionControlProvider', () => {
   let provider: MxVersionControlProvider;
-  let mockI18n: jest.Mocked<I18nService>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    mockI18n = {
-      t: jest.fn().mockReturnValue('translated'),
-    } as unknown as jest.Mocked<I18nService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -80,7 +75,6 @@ describe('MxVersionControlProvider', () => {
             }),
           },
         },
-        { provide: I18nService, useValue: mockI18n },
       ],
     }).compile();
 
@@ -96,7 +90,6 @@ describe('MxVersionControlProvider', () => {
     });
 
     it('多文件提交应调用 add + commit', async () => {
-      mockI18n.t.mockReturnValue('提交成功');
       mockMxAdd.mockImplementation((...args: unknown[]) => {
         const cb = args[args.length - 1];
         if (typeof cb === 'function') cb(null, 'added');
@@ -184,7 +177,6 @@ describe('MxVersionControlProvider', () => {
         const cb = args[args.length - 1];
         if (typeof cb === 'function') cb(null, 'committed');
       });
-      mockI18n.t.mockReturnValue('提交成功');
 
       const result = await provider.commitNodeDirectory(
         '/tmp/test-files-data/202607/some-node',
@@ -312,7 +304,6 @@ describe('MxVersionControlProvider', () => {
   describe('commitWorkingCopy', () => {
     describe('when successful', () => {
       it('should return success and call mxCommit', async () => {
-        mockI18n.t.mockReturnValue('提交成功');
         mockMxCommit.mockImplementation((...args: unknown[]) => {
           const cb = args[args.length - 1];
           if (typeof cb === 'function') cb(null, 'committed');
@@ -384,7 +375,6 @@ describe('MxVersionControlProvider', () => {
   describe('getFileHistory', () => {
     describe('when successful', () => {
       it('should return history entries in ascending revision order with totalCount', async () => {
-        mockI18n.t.mockReturnValue('获取成功');
         mockMxLog.mockImplementation((...args: unknown[]) => {
           const cb = args[args.length - 1];
           if (typeof cb === 'function') {
@@ -411,7 +401,6 @@ describe('MxVersionControlProvider', () => {
       });
 
       it('should limit returned entries but keep real totalCount', async () => {
-        mockI18n.t.mockReturnValue('获取成功');
         mockMxLog.mockImplementation((...args: unknown[]) => {
           const cb = args[args.length - 1];
           if (typeof cb === 'function') {
@@ -440,7 +429,6 @@ describe('MxVersionControlProvider', () => {
       });
 
       it('should request full history (limit 0) for accurate totalCount', async () => {
-        mockI18n.t.mockReturnValue('获取成功');
         mockMxLog.mockImplementation((...args: unknown[]) => {
           const cb = args[args.length - 1];
           if (typeof cb === 'function') {
@@ -468,7 +456,6 @@ describe('MxVersionControlProvider', () => {
       });
 
       it('should accept absolute path without double-prefixing repoUrl', async () => {
-        mockI18n.t.mockReturnValue('获取成功');
         mockMxLog.mockImplementation((...args: unknown[]) => {
           const cb = args[args.length - 1];
           if (typeof cb === 'function') {
@@ -490,7 +477,6 @@ describe('MxVersionControlProvider', () => {
       });
 
       it('should strip filesData\\ backslash prefix', async () => {
-        mockI18n.t.mockReturnValue('获取成功');
         mockMxLog.mockImplementation((...args: unknown[]) => {
           const cb = args[args.length - 1];
           if (typeof cb === 'function') {
@@ -511,7 +497,6 @@ describe('MxVersionControlProvider', () => {
       });
 
       it('should default to 50 entries when limit is omitted but keep real totalCount', async () => {
-        mockI18n.t.mockReturnValue('获取成功');
         const logEntries: string[] = [];
         for (let i = 60; i >= 1; i--) {
           logEntries.push(
@@ -575,7 +560,6 @@ describe('MxVersionControlProvider', () => {
   describe('listDirectoryAtRevision', () => {
     describe('when successful', () => {
       it('should return file list', async () => {
-        mockI18n.t.mockReturnValue('获取成功');
         mockMxList.mockImplementation((...args: unknown[]) => {
           const cb = args[args.length - 1];
           if (typeof cb === 'function') cb(null, 'file1.dwg\nfile2.dxf');

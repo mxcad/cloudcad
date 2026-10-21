@@ -40,7 +40,7 @@ import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
 import { FileUtils } from '../../common/utils/file-utils';
-import { I18nService } from 'nestjs-i18n';
+import { I18nContext } from 'nestjs-i18n';
 import {
   IVersionControl,
   CommitResult,
@@ -108,8 +108,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
   private static initMutex: Promise<void> | null = null;
 
   constructor(
-    private readonly configService: ConfigService<AppConfig>,
-    private readonly i18nService: I18nService
+    private readonly configService: ConfigService<AppConfig>
   ) {
     const mxRepoPath = this.configService.get('mxRepoPath', { infer: true });
     if (!mxRepoPath) {
@@ -409,7 +408,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: false,
         message:
-          this.i18nService.t('error.version_control.mx_not_initialized') ??
+          I18nContext.current()?.t('error.version_control.mx_not_initialized') ??
           'MX 未初始化',
       };
     }
@@ -471,7 +470,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       this.logger.debug(`[MX_COMMIT 原始输出] ${result}`);
       return {
         success: true,
-        message: this.i18nService.t('success.submitted') ?? '提交成功',
+        message: I18nContext.current()?.t('success.submitted') ?? '提交成功',
         data: result,
       };
     } catch (error) {
@@ -520,7 +519,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
           this.logger.log(`重试提交成功: ${directoryPath}`);
           return {
             success: true,
-            message: this.i18nService.t('success.submitted') ?? '提交成功',
+            message: I18nContext.current()?.t('success.submitted') ?? '提交成功',
             data: retryResult,
           };
         } catch (retryError) {
@@ -575,7 +574,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
             );
             return {
               success: true,
-              message: this.i18nService.t('success.submitted') ?? '提交成功',
+              message: I18nContext.current()?.t('success.submitted') ?? '提交成功',
               data: commitResult,
             };
           } catch (commitError) {
@@ -629,7 +628,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: false,
         message:
-          this.i18nService.t('error.version_control.mx_not_initialized') ??
+          I18nContext.current()?.t('error.version_control.mx_not_initialized') ??
           'MX 未初始化',
       };
     }
@@ -638,7 +637,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: true,
         message:
-          this.i18nService.t('error.version_control.no_files_to_commit') ??
+          I18nContext.current()?.t('error.version_control.no_files_to_commit') ??
           '没有文件需要提交',
       };
     }
@@ -665,7 +664,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       this.logger.debug(`[MX_COMMIT 原始输出] ${result}`);
       return {
         success: true,
-        message: this.i18nService.t('success.submitted') ?? '提交成功',
+        message: I18nContext.current()?.t('success.submitted') ?? '提交成功',
         data: result,
       };
     } catch (error) {
@@ -685,7 +684,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: false,
         message:
-          this.i18nService.t('error.version_control.mx_not_initialized') ??
+          I18nContext.current()?.t('error.version_control.mx_not_initialized') ??
           'MX 未初始化',
       };
     }
@@ -703,7 +702,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       this.logger.debug(`[MX_COMMIT 原始输出] ${result}`);
       return {
         success: true,
-        message: this.i18nService.t('success.submitted') ?? '提交成功',
+        message: I18nContext.current()?.t('success.submitted') ?? '提交成功',
         data: result,
       };
     } catch (error) {
@@ -725,7 +724,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: false,
         message:
-          this.i18nService.t('error.version_control.mx_not_initialized') ??
+          I18nContext.current()?.t('error.version_control.mx_not_initialized') ??
           'MX 未初始化',
       };
     }
@@ -743,7 +742,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       this.logger.debug(`[MX_DELETE 原始输出] ${result}`);
       return {
         success: true,
-        message: this.i18nService.t('success.deleted') ?? '删除成功',
+        message: I18nContext.current()?.t('success.deleted') ?? '删除成功',
         data: result,
       };
     } catch (error) {
@@ -773,7 +772,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: false,
         message:
-          this.i18nService.t('error.version_control.mx_not_initialized') ??
+          I18nContext.current()?.t('error.version_control.mx_not_initialized') ??
           'MX 未初始化',
         entries: [],
         totalCount: 0,
@@ -830,11 +829,11 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
           entries.unshift({
             revision: MxVersionControlProvider.INITIAL_VERSION_REVISION,
             author:
-              this.i18nService.t('error.version_control.initial_version') ??
+              I18nContext.current()?.t('error.version_control.initial_version') ??
               '初始',
             date: stats.mtime,
             message:
-              this.i18nService.t('error.version_control.initial_version') ??
+              I18nContext.current()?.t('error.version_control.initial_version') ??
               '初始',
           });
         }
@@ -859,7 +858,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       );
       return {
         success: true,
-        message: this.i18nService.t('success.fetched') ?? '获取成功',
+        message: I18nContext.current()?.t('success.fetched') ?? '获取成功',
         entries,
         totalCount,
       };
@@ -990,7 +989,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: false,
         message:
-          this.i18nService.t('error.version_control.mx_not_initialized') ??
+          I18nContext.current()?.t('error.version_control.mx_not_initialized') ??
           'MX 未初始化',
       };
     }
@@ -1025,7 +1024,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       );
       return {
         success: true,
-        message: this.i18nService.t('success.fetched') ?? '获取成功',
+        message: I18nContext.current()?.t('success.fetched') ?? '获取成功',
         files,
       };
     } catch (error: unknown) {
@@ -1053,7 +1052,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       return {
         success: false,
         message:
-          this.i18nService.t('error.version_control.mx_not_initialized') ??
+          I18nContext.current()?.t('error.version_control.mx_not_initialized') ??
           'MX 未初始化',
       };
     }
@@ -1081,7 +1080,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
         return {
           success: false,
           message:
-            this.i18nService.t(
+            I18nContext.current()?.t(
               'error.version_control.fetch_failed_content_empty'
             ) ?? '获取失败: 文件内容为空',
         };
@@ -1092,7 +1091,7 @@ export class MxVersionControlProvider implements IVersionControl, OnModuleInit {
       );
       return {
         success: true,
-        message: this.i18nService.t('success.fetched') ?? '获取成功',
+        message: I18nContext.current()?.t('success.fetched') ?? '获取成功',
         content,
       };
     } catch (error) {
