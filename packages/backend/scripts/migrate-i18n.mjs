@@ -40,7 +40,7 @@ const MAPPING = {
   '系统已关闭注册功能': 'error.auth.registration_disabled',
   '未登录': 'error.auth.not_logged_in',
   '请先登录': 'error.auth.login_required',
-  '登录已过期，正在跳转到登录页...': 'error.auth.login_expired_redirect',
+
   '需要登录才能使用协同功能': 'error.auth.collaboration_login_required',
   '用户未认证': 'error.auth.unauthorized',
   '身份验证失败': 'error.auth.authentication_failed',
@@ -71,7 +71,7 @@ const MAPPING = {
   '验证码无效或已过期': 'error.auth.verification_code_invalid',
   '验证次数已用完，请重新获取验证码': 'error.auth.verification_attempts_exhausted',
   '手机号格式不正确': 'error.auth.phone_format_invalid',
-  '该手机号今日发送次数已达上限（N次），请明天再试': 'error.auth.phone_too_many_today',
+
   '当前网络发送次数已达上限，请稍后再试': 'error.auth.phone_network_limit',
   '腾讯云短信配置缺失': 'error.auth.tencent_sms_config_missing',
   '阿里云短信配置缺失': 'error.auth.aliyun_sms_config_missing',
@@ -290,7 +290,7 @@ const MAPPING = {
   '文件不存在或已被删除': 'error.public_file.file_not_found_or_deleted',
   '未上传文件': 'error.public_file.no_file_uploaded',
   '仅支持 ... 文件': 'error.public_file.only_supported_types',
-  '文件大小超出限制（最大 NMB）': 'error.public_file.size_exceeded',
+
   '缺少文件哈希值': 'error.public_file.missing_file_hash',
   '缺少 fileHash': 'error.public_file.missing_file_hash',
   '读取文件失败': 'error.public_file.read_failed',

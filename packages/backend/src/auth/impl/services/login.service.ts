@@ -320,8 +320,10 @@ export class LoginService {
     throw new UnauthorizedException({
       code: ACCOUNT_DEACTIVATED_CODE,
       message:
-        I18nContext.current()?.t('error.auth.account_deactivated_expired') ??
-        '账号已注销且已过冷静期，请联系客服恢复。数据将在30天后彻底删除',
+        I18nContext.current()?.t('error.auth.account_deactivated_expired', {
+          args: { cleanupDays },
+        }) ??
+        `账号已注销且已过冷静期，请联系客服恢复。数据将在${cleanupDays}天后彻底删除`,
       graceDays,
       cleanupDays,
     });
