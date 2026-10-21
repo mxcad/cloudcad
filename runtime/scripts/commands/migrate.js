@@ -2,8 +2,8 @@
  * @fileoverview 数据库迁移命令域
  *
  * Step A-1 机械拆分自 runtime/scripts/cli.js：
- * - createDatabase / hasPendingMigrations / fixMigrationStatus
- *   repairMigrationRecords / preflightMigrationCheck / getDatabaseSize
+ * - createDatabase / hasPendingMigrations / repairMigrationRecords
+ *   preflightMigrationCheck / getDatabaseSize
  *   runDatabaseMigration / runDatabaseSeed
  *
  * 依赖方向：commands → lib + commands/db-backup。
@@ -145,7 +145,14 @@ async function hasPendingMigrations() {
     const pnpmCmd =
       PNPM_JS && fs.existsSync(PNPM_JS) ? `"${NODE_EXE}" "${PNPM_JS}"` : 'pnpm';
 
-    const cmd = `${pnpmCmd} --filter backend prisma migrate status`;
+    // 必须用 `exec` 形式：backend 包没有名为 `prisma` 的 script，
+    // `pnpm -F backend prisma …` 会被 pnpm 静默丢弃、**exit 0 且什么都没执行**。
+    // 后果是本函数误判「无待应用迁移」（返回 false）→ 跳过迁移前备份。
+    //
+    // 实测（pnpm 9.15.9）输出是 `No projects matched the filters "…"`；
+    // 注意这行警告**正确的 `exec` 形式首行也会打**（exec 之后 prisma 照常运行），
+    // 别看到它就去「修」，也别拿它当失败判据——成败只看 exit code。
+    const cmd = `${pnpmCmd} --filter backend exec prisma migrate status`;
     const result = spawnSync(cmd, [], {
       cwd: PROJECT_ROOT,
       shell: isWin,
@@ -173,89 +180,20 @@ async function hasPendingMigrations() {
   }
 }
 
-async function fixMigrationStatus() {
-  log('cyan', '检查数据库迁移状态...');
-
-  const statusResult = runPnpm(
-    ['--filter', 'backend', 'prisma', 'migrate', 'status'],
-    {
-      captureOutput: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }
-  );
-
-  if (statusResult) {
-    log('cyan', '[跳过] 迁移状态正常');
-    return true;
-  }
-
-  // 迁移状态异常，解析错误并修复
-  log('yellow', '⚠️  检测到迁移状态异常，尝试自动修复...');
-
-  // 解析 migrate status 输出找出失败的迁移
-  // 常见问题：
-  // 1. 数据库有失败迁移记录但本地无文件 -> 标记为 rolled back
-  // 2. 迁移已应用但字段已存在 -> 标记为 applied
-
-  // 尝试获取失败迁移名称
-  const statusOutput = execSync(`pnpm --filter backend prisma migrate status`, {
-    encoding: 'utf-8',
-    cwd: PROJECT_ROOT,
-  });
-
-  // 查找数据库中存在但本地不存在的迁移
-  const dbOnlyMigrationMatch = statusOutput.match(
-    /The migration from the database are not found locally in prisma\/migrations:\s*(\d+)/
-  );
-  // 查找未应用的迁移
-  const pendingMatch = statusOutput.match(
-    /The migration have not yet been applied:\s*(\d+)/
-  );
-
-  if (dbOnlyMigrationMatch) {
-    const failedMigration = dbOnlyMigrationMatch[1];
-    log('cyan', `修复: 标记失败迁移 ${failedMigration} 为 rolled back`);
-    execSync(
-      `pnpm --filter backend prisma migrate resolve --rolled-back ${failedMigration}`,
-      {
-        cwd: PROJECT_ROOT,
-        stdio: 'pipe',
-      }
-    );
-  }
-
-  if (pendingMatch) {
-    const pendingMigration = pendingMatch[1];
-    log('cyan', `修复: 标记待处理迁移 ${pendingMigration} 为 applied`);
-    execSync(
-      `pnpm --filter backend prisma migrate resolve --applied ${pendingMigration}`,
-      {
-        cwd: PROJECT_ROOT,
-        stdio: 'pipe',
-      }
-    );
-  }
-
-  // 再次检查状态
-  const retryResult = runPnpm(
-    ['--filter', 'backend', 'prisma', 'migrate', 'status'],
-    {
-      captureOutput: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    }
-  );
-
-  if (!retryResult) {
-    log('yellow', '⚠️  自动修复后仍有异常，但继续尝试部署');
-    return true; // 不阻塞部署流程
-  }
-
-  log('green', '[✓] 迁移状态已修复');
-  return true;
-}
 
 // reconcileMigrations 已删除。migrate deploy 自身能处理所有情况，
 // 下方的重试逻辑可处理 db push 导致的 "对象已存在" 错误。
+//
+// fixMigrationStatus 也已删除（曾在本文件，无消费者）。删除理由：
+// 1. 裸 `pnpm -F backend prisma …` 静默 no-op 且 exit 0 → 恒报「迁移状态正常」，
+//    即它没读到任何状态就宣布正常（见 hasPendingMigrations 内的同型注释）；
+// 2. 唯一能走到修复分支的前置 execSync 遇到非零退出即 throw，
+//    而「状态异常」恰恰是唯一返回非零的场景 → 自修复路径必然崩溃；
+// 3. 其正则与 Prisma 真实输出不符，`(\d+)` 还会把 `20261020120000_xxx`
+//    截断成 `20261020120000`，resolve 时必然找不到迁移名；
+// 4. 职责已由 repairMigrationRecords()（直查 _prisma_migrations +
+//    information_schema）与下方 migrate deploy 的重试/resolve 循环取代。
+// 勿以「补上缺失功能」为由原样恢复；要真修得先造异常迁移状态实测正则。
 
 /**
  * 修复 reconcileMigrations() 历史 bug 遗留的错误记录（通用方案）
@@ -790,7 +728,6 @@ async function runPiiBackfill() {
 module.exports = {
   createDatabase,
   hasPendingMigrations,
-  fixMigrationStatus,
   repairMigrationRecords,
   preflightMigrationCheck,
   getDatabaseSize,
