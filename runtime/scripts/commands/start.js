@@ -54,6 +54,7 @@ const {
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { findFreePortUpFrom, decideConversionPortAction } = require('../lib/infra-gate');
 const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
+const { probeAndFix } = require('../lib/mxcad-probe');
 const { promptConfirm } = require('../lib/prompt');
 const { alignConversionServiceUrl, syncConversionServiceEnvPort } = require('../config-updater');
 const state = require('../lib/state');
@@ -368,6 +369,38 @@ function getConversionServiceConfig() {
     ? mxcadAssemblyRaw
     : path.join(PROJECT_ROOT, mxcadAssemblyRaw);
   return { enabled: true, dist, env };
+}
+
+/**
+ * mxcad 双向探针（dwg→mxweb + mxweb→dwg，与 docker 部署路径共用 lib/mxcad-probe）：
+ * 失败时 SystemLib 覆盖重试，两次都失败只落标记 + 告警，**永不阻塞启动**
+ * （转换不可用不影响登录与协同）。
+ *
+ * 引擎二进制按后端 .env 的 MXCAD_ASSEMBLY_PATH 解析（与 getConversionServiceConfig
+ * 注入转换服务的是同一事实源），保证探针测的就是应用实际使用的那个二进制；
+ * 未配置时回退平台默认 runtime/<platform>/mxcad/（lib/mxcad-path）。
+ */
+async function runMxcadProbe() {
+  // 无 runtime/<platform> 的纯开发树没有 mxcad 物料，探针必失败——跳过，
+  // 也避免给开发树留下「mxcad 不可用」的误判标记（标记会短路后续探针）
+  if (!USE_RUNTIME) return;
+  try {
+    const envConfig = fs.existsSync(BACKEND_ENV_PATH)
+      ? parseEnvFile(BACKEND_ENV_PATH)
+      : {};
+    const mxcadAssemblyRaw = resolveMxcadAssemblyPath(envConfig);
+    const mxcadAssemblyPath = path.isAbsolute(mxcadAssemblyRaw)
+      ? mxcadAssemblyRaw
+      : path.join(PROJECT_ROOT, mxcadAssemblyRaw);
+    await probeAndFix({
+      deployDir: PROJECT_ROOT,
+      mxcadDir: path.dirname(mxcadAssemblyPath),
+      dataDir: DATA_DIR,
+      log: (msg) => log('cyan', msg),
+    });
+  } catch (err) {
+    log('yellow', `[mxcad-probe] 探针异常（不影响启动）：${err.message}`);
+  }
 }
 
 /**
@@ -1147,6 +1180,10 @@ async function startAppServicesWithInfra(mode, options = null) {
   }
 
   log('green', '[✓] 基础服务已启动');
+
+  // mxcad 双向探针（与 docker 部署路径 step7 同语义）：基础服务就绪后、迁移与应用
+  // 服务启动前执行；失败只告警不阻塞（见 runMxcadProbe）。
+  await runMxcadProbe();
 
   // 自动迁移 + PII 存量回填（均幂等：无待应用迁移 / 已回填时秒跳过）。
   // deploy 路径本就做了这两步；start 是升级包「解压覆盖 → 重跑 start」的入口，

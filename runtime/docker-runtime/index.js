@@ -57,11 +57,11 @@ const {
 } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'secret-generator'));
 const { composeDatabaseUrl } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'database-url'));
 const { resolveMxcadAssemblyPath } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'mxcad-path'));
+const { probeAndFix } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'mxcad-probe'));
 const { PRODUCT_NAME } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'branding'));
 
 const dockerBootstrap = require('./lib/docker-bootstrap');
 const hostProcess = require('./lib/host-process');
-const { probeAndFix } = require('./lib/mxcad-probe');
 const { verifyDeployment } = require('./lib/verify');
 const rootless = require('./lib/rootless');
 const {
