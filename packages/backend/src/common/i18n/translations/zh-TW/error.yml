@@ -430,6 +430,8 @@ config_extra:
   dependency_not_met: "無法開啟 {key}：依賴項 {deps} 未開啟，請先開啟"
   dependency_in_use: "無法關閉 {key}：仍被 {dependents} 依賴，請先關閉它們"
   dependency_violation: "無法套用安全模式 {profile}：{edges}"
+  channel_gate_not_met: "無法開啟 {key}（{channel} 通道）：{reasons}"
+  channel_not_registered: "通道 {channel} 未註冊"
 
 sms_extra:
   network_limit: "目前網路發送次數已達上限，請稍後再試"

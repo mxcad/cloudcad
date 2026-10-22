@@ -331,6 +331,20 @@ model RuntimeConfigLog {
   @@map("runtime_config_logs")
 }
 
+/// 通道验证记录（ADR-0082 D4）：通道开关须「配置完整 + 通道测试通过」才可开启；
+/// 该通道任一配置项变更即删除记录（比配置哈希更简单可靠）。
+/// testedBy 为测试操作者用户 ID（与 runtime_config_logs.operatorId 同口径，不设外键）
+model ChannelVerification {
+  id         String   @id @default(cuid())
+  channel    String   @unique
+  verifiedAt DateTime @default(now())
+  testedBy   String
+  testedByIp String?
+  createdAt  DateTime @default(now())
+
+  @@map("channel_verifications")
+}
+
 enum BlacklistSource {
   MANUAL
   AUTO
@@ -555,6 +569,8 @@ enum AuditAction {
   REDIS_PASSWORD_RESET
   // 通知中心：删除公告（硬删不可恢复，params 记 wasActive 与批量条数）
   NOTICE_DELETE
+  // 通道测试动作（ADR-0082 D9：测试发送外发真实消息属敏感操作，承接 ADR-0079 CONFIG 类审计）
+  CHANNEL_TEST
 }
 
 enum ResourceType {

@@ -161,6 +161,29 @@ export interface RuntimeConfigDefinition {
    * 门禁只拦「新制造」的。
    */
   requires?: string[];
+
+  /**
+   * 通道配置项标记（ADR-0082 D4/D6）：本 key 是哪个通道的配置项（凭据/参数，
+   * 如 SMTP 主机/端口/口令）。通道 = 一组配置项 + 一个开关 + 一个测试动作 +
+   * 一组依赖边；本标记只覆盖「一组配置项」：
+   * - 配置完整性判定：该通道全部配置项中必填项（非 `input.allowNull`）生效值非空；
+   * - 验证失效：任一配置项被更新/重置/profile 改写 → 删除该通道验证记录
+   *   （开关本身变化不算——凭据没变，验证仍有效）。
+   *
+   * 通道名须与通道测试动作（`ChannelTestAction.channel`）注册名一致。
+   */
+  channel?: string;
+
+  /**
+   * 通道开关标记（ADR-0082 D4）：本 key 是哪个通道的开/关开关（如 `mailEnabled`
+   * 之于邮件通道）。开启门禁：本 key 被置为 `true` 时（set / 重置回 `true` 默认 /
+   * profile 批量应用），须该通道「配置完整 + 通道测试通过」，否则拒绝——
+   * 通道没验证过，开关就开不了。
+   *
+   * 与 `channel` 分开标记：布尔配置项（如 SMTP TLS 开关）是配置项不是开关，
+   * 置 `true` 不应触发开启门禁。
+   */
+  channelSwitch?: string;
 }
 
 /**
@@ -229,6 +252,10 @@ export interface RuntimeConfigItem {
   hot?: boolean;
   /** 开关依赖声明（依赖的 key 列表，见 RuntimeConfigDefinition.requires） */
   requires?: string[];
+  /** 通道配置项标记（见 RuntimeConfigDefinition.channel） */
+  channel?: string;
+  /** 通道开关标记（见 RuntimeConfigDefinition.channelSwitch） */
+  channelSwitch?: string;
 }
 
 /**
@@ -253,4 +280,56 @@ export interface RuntimeConfigHistoryEntry {
   operatorId: string | null;
   operatorIp: string | null;
   createdAt: Date;
+}
+
+/**
+ * 通道状态（ADR-0082 D4）：配置完整度 + 验证记录。
+ * 通道开关只有在 `configComplete && verified` 时才允许开启。
+ */
+export interface ChannelStatus {
+  /** 通道名（与定义表 `channel` 标记、测试动作注册名一致） */
+  channel: string;
+  /** 配置是否完整（必填项生效值均非空） */
+  configComplete: boolean;
+  /** 缺失（生效值为空）的必填配置键 */
+  missingKeys: string[];
+  /** 是否存在有效的验证记录（测试通过后写入，配置变更即删除） */
+  verified: boolean;
+  /** 最近一次测试通过时间 */
+  verifiedAt: Date | null;
+  /** 最近一次测试操作者 */
+  testedBy: string | null;
+}
+
+/**
+ * 通道测试动作执行上下文：动作经此读取通道配置（三层解析后的生效值），
+ * 不直接接触数据库或加密层。
+ */
+export interface ChannelTestContext {
+  /** 读取配置生效值（与业务消费方同一出口） */
+  getValue: <T>(key: string) => Promise<T>;
+  /** 测试发信目标（邮件通道：收件人；缺省由动作自行决定，如 supportEmail） */
+  recipient?: string;
+}
+
+/** 通道测试动作结果 */
+export interface ChannelTestResult {
+  ok: boolean;
+  /** 成功说明或失败原因（面向操作员） */
+  message: string;
+}
+
+/**
+ * 通道测试动作（ADR-0082 D4）：每通道注册一个真实验证动作
+ * （邮件 = 测试发信；短信 = 凭据探测；微信 = gettoken 探测……）。
+ * 机制层只定义框架，具体动作随各通道落地（邮件见 #495）。
+ *
+ * 注册方式：模块内 `providers: [XxxAction, { provide: CHANNEL_TEST_ACTIONS,
+ * useFactory: (a: XxxAction) => [a], inject: [XxxAction] }]`（NestJS 11 已
+ * 移除 multi 注入，用 useFactory 聚合）。
+ */
+export interface ChannelTestAction {
+  /** 通道名：必须与定义表 `channel` 标记一致 */
+  readonly channel: string;
+  test(ctx: ChannelTestContext): Promise<ChannelTestResult>;
 }

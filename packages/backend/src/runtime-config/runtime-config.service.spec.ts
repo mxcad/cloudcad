@@ -40,6 +40,11 @@ describe("RuntimeConfigService", () => {
 			create: jest.fn(),
 			findMany: jest.fn(),
 		},
+		// 通道验证记录（ADR-0082 D4）：门禁读验证状态、配置写路径删验证记录
+		channelVerification: {
+			findUnique: jest.fn(),
+			deleteMany: jest.fn(),
+		},
 	};
 
 	const mockRedis = {
@@ -58,6 +63,12 @@ describe("RuntimeConfigService", () => {
 			// 依赖门禁与一致性检测走 findMany 批量读生效值；默认空行集
 			// （全部键落到定义默认值），各用例按需覆盖
 			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+
+			// 通道验证记录：默认「无验证」（findUnique 返回 null），删除为 no-op
+			mockPrisma.channelVerification.findUnique.mockResolvedValue(null);
+			mockPrisma.channelVerification.deleteMany.mockResolvedValue({
+				count: 0,
+			});
 
 		// $transaction 两种形态：数组式（syncDefaultConfigs 批量回填）与交互式
 		// （applyProfile 把值写入与审计写入放进同一个事务）。交互式的 tx 直接用
@@ -1722,6 +1733,234 @@ describe("RuntimeConfigService", () => {
 					.filter((d) => d.isPublic || d.profiles != null)
 					.map((d) => d.key)
 			).toEqual([]);
+		});
+	});
+
+	describe("通道门禁与验证失效（ADR-0082 D4）", () => {
+		// 合成通道 testChannel：2 个配置项（host 必填 + profile 项）+ 1 个开关（默认关）。
+		// 真实 SMTP 键在 #495 登记，机制层用合成定义验证。
+		const channelItemDef: RuntimeConfigDefinition = {
+			key: "testChannelHost",
+			type: "string",
+			category: "system",
+			description: "测试通道主机",
+			defaultValue: "",
+			isPublic: false,
+			channel: "testChannel",
+		};
+		const channelSwitchDef: RuntimeConfigDefinition = {
+			key: "testChannelEnabled",
+			type: "boolean",
+			category: "system",
+			description: "测试通道开关",
+			defaultValue: false,
+			isPublic: false,
+			channelSwitch: "testChannel",
+			// 声明 profiles 才参与 profile 批量应用（验证「不得经 profile 绕过门禁」）
+			profiles: { secure: true, normal: false },
+		};
+		const channelProfileItemDef: RuntimeConfigDefinition = {
+			key: "testChannelProfileHost",
+			type: "string",
+			category: "system",
+			description: "测试通道 profile 主机",
+			defaultValue: "",
+			isPublic: false,
+			channel: "testChannel",
+			profiles: { secure: "smtp.secure.test", normal: "" },
+		};
+
+		beforeEach(() => {
+			RUNTIME_CONFIG_DEFINITIONS.push(
+				channelItemDef,
+				channelSwitchDef,
+				channelProfileItemDef
+			);
+		});
+
+		afterEach(() => {
+			RUNTIME_CONFIG_DEFINITIONS.pop();
+			RUNTIME_CONFIG_DEFINITIONS.pop();
+			RUNTIME_CONFIG_DEFINITIONS.pop();
+		});
+
+		/** 通道配置项行集：两项均已配置（updatedBy 非空，遮蔽 env/默认层） */
+		const mockChannelRowsConfigured = () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "testChannelHost",
+					value: JSON.stringify("smtp.test"),
+					type: "string",
+					updatedBy: "op-1",
+				},
+				{
+					key: "testChannelProfileHost",
+					value: JSON.stringify("smtp.old.test"),
+					type: "string",
+					updatedBy: "op-1",
+				},
+			]);
+		};
+
+		const mockVerified = () => {
+			mockPrisma.channelVerification.findUnique.mockResolvedValue({
+				id: "cv-1",
+				channel: "testChannel",
+				verifiedAt: new Date("2026-10-22T08:00:00Z"),
+				testedBy: "op-1",
+				testedByIp: "127.0.0.1",
+				createdAt: new Date("2026-10-22T08:00:00Z"),
+			});
+		};
+
+		// ==================== getChannelStatus ====================
+		it("getChannelStatus：必填项生效值为空 → 不完整，missingKeys 列出缺失键", async () => {
+			// findMany 默认空行集 → 两项落到默认值 ''
+			const status = await service.getChannelStatus("testChannel");
+
+			expect(status.configComplete).toBe(false);
+			expect(status.missingKeys).toEqual(
+				expect.arrayContaining([
+					"testChannelHost",
+					"testChannelProfileHost",
+				])
+			);
+			expect(status.verified).toBe(false);
+		});
+
+		it("getChannelStatus：配置完整 + 验证记录存在 → verified", async () => {
+			mockChannelRowsConfigured();
+			mockVerified();
+
+			const status = await service.getChannelStatus("testChannel");
+
+			expect(status.configComplete).toBe(true);
+			expect(status.missingKeys).toEqual([]);
+			expect(status.verified).toBe(true);
+			expect(status.testedBy).toBe("op-1");
+		});
+
+		it("getChannelStatus：未登记配置项的通道 → 抛错", async () => {
+			await expect(service.getChannelStatus("noSuchChannel")).rejects.toThrow(
+				BadRequestException
+			);
+		});
+
+		// ==================== 开启门禁 ====================
+		it("配置不完整且未验证时开启通道开关 → 拒绝，不写库", async () => {
+			await expect(service.set("testChannelEnabled", true, "op-1")).rejects.toThrow(
+				BadRequestException
+			);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("配置完整但未通过测试 → 拒绝（通道没验证过，开关就开不了）", async () => {
+			mockChannelRowsConfigured();
+			// channelVerification.findUnique 默认 null → 未验证
+
+			await expect(service.set("testChannelEnabled", true, "op-1")).rejects.toThrow(
+				BadRequestException
+			);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("配置完整 + 测试通过 → 允许开启", async () => {
+			mockChannelRowsConfigured();
+			mockVerified();
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("testChannelEnabled", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		it("关闭通道开关不受测试门禁约束", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("testChannelEnabled", false, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		it("通道配置项（非开关）变更不触发开启门禁", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("testChannelHost", "smtp.new.test", "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		// ==================== 验证失效 ====================
+		it("通道配置项变更 → 删除该通道验证记录", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("testChannelHost", "smtp.new.test", "op-1");
+
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "testChannel" },
+			});
+		});
+
+		it("通道配置项重置 → 删除该通道验证记录", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+				key: "testChannelHost",
+				value: JSON.stringify("smtp.test"),
+				type: "string",
+				updatedBy: "op-1",
+			});
+
+			await service.resetToDefault("testChannelHost", "op-1");
+
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "testChannel" },
+			});
+		});
+
+		it("profile 批量应用改写通道配置项 → 删除该通道验证记录", async () => {
+			// 当前值 ≠ secure 目标值 → 会写入；门禁要求已验证 + 完整
+			mockChannelRowsConfigured();
+			mockVerified();
+
+			const result = await service.applyProfile("secure", "op-1");
+
+			expect(result.applied).toContain("testChannelProfileHost");
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "testChannel" },
+			});
+		});
+
+		it("profile 批量应用开启通道开关但通道未验证 → 拒绝（不得经 profile 绕过门禁）", async () => {
+			// findMany 默认空行集 → 配置不完整 + 未验证
+			await expect(service.applyProfile("secure", "op-1")).rejects.toThrow(
+				BadRequestException
+			);
+			expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+		});
+
+		// ==================== 不变式 ====================
+		it("不变式：通道开关必须是布尔键（门禁只对布尔开关有意义）", () => {
+			const switchDefs = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => d.channelSwitch
+			);
+			expect(
+				switchDefs.filter((d) => d.type !== "boolean").map((d) => d.key)
+			).toEqual([]);
+		});
+
+		it("不变式：通道开关对应的通道必须登记了配置项（否则完整性判定空转）", () => {
+			const switchChannels = [
+				...new Set(
+					RUNTIME_CONFIG_DEFINITIONS.filter((d) => d.channelSwitch).map(
+						(d) => d.channelSwitch as string
+					)
+				),
+			];
+			for (const channel of switchChannels) {
+				// 开关对应的通道没有配置项 → 完整性判定空转，门禁形同虚设
+				expect(
+					RUNTIME_CONFIG_DEFINITIONS.some((d) => d.channel === channel)
+				).toBe(true);
+			}
 		});
 	});
 

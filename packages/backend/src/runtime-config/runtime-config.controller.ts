@@ -43,6 +43,7 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { RuntimeConfigService } from './runtime-config.service';
+import { ChannelTestService } from './channel-test.service';
 import { BrandAssetService } from './brand-asset.service';
 import {
   UpdateRuntimeConfigDto,
@@ -54,6 +55,9 @@ import {
   RuntimeProfilePreviewResponseDto,
   RuntimeProfileApplyResponseDto,
   RuntimeConfigDependencyViolationDto,
+  ChannelStatusDto,
+  TestChannelDto,
+  ChannelTestResultDto,
 } from './dto/runtime-config.dto';
 import type { RuntimeConfigValue } from './runtime-config.types';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -68,6 +72,7 @@ import type { Request, Response } from 'express';
 export class RuntimeConfigController {
   constructor(
     private readonly runtimeConfigService: RuntimeConfigService,
+    private readonly channelTestService: ChannelTestService,
     private readonly brandAssetService: BrandAssetService
   ) {}
 
@@ -145,6 +150,56 @@ export class RuntimeConfigController {
   })
   async checkDependencies(): Promise<RuntimeConfigDependencyViolationDto[]> {
     return this.runtimeConfigService.detectDependencyViolations();
+  }
+
+  /**
+   * 获取全部已注册通道的状态（配置完整度 + 验证记录，ADR-0082 D4）。
+   * 注意路径声明顺序：必须排在 `:key` 之前，否则 `channels` 会被当成配置键名。
+   */
+  @Get('channels')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取通道状态（配置完整度 + 验证记录）' })
+  @ApiResponse({
+    status: 200,
+    description: '返回已注册通道的状态列表（未注册任何通道测试动作时为空数组）',
+    type: [ChannelStatusDto],
+  })
+  async getChannelsStatus(): Promise<ChannelStatusDto[]> {
+    return this.channelTestService.getChannelsStatus();
+  }
+
+  /**
+   * 执行通道测试（ADR-0082 D4）：真实验证动作（如邮件测试发信）。
+   * 成功 → 写验证记录（通道开关自此可开启）；失败 → 不写记录。
+   * 测试动作入审计（谁、何时、结果）。
+   */
+  @Post('channels/:channel/test')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '执行通道测试（成功写验证记录，失败不写）' })
+  @ApiParam({ name: 'channel', description: '通道名', example: 'mail' })
+  @ApiBody({ type: TestChannelDto, required: false })
+  @ApiResponse({
+    status: 200,
+    description: '返回测试结果（成功说明或失败原因）',
+    type: ChannelTestResultDto,
+  })
+  @ApiResponse({ status: 400, description: '通道未注册测试动作' })
+  async testChannel(
+    @Param('channel') channel: string,
+    @Body() dto: TestChannelDto,
+    @Req() req: Request
+  ): Promise<ChannelTestResultDto> {
+    const user = req.user as { id: string };
+    const ip = req.ip;
+
+    return this.channelTestService.testChannel(
+      channel,
+      dto?.to,
+      user.id,
+      ip
+    );
   }
 
   /**

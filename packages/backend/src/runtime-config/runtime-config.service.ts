@@ -33,6 +33,7 @@ import {
   RuntimeProfilePreviewEntry,
   RuntimeProfileApplyResult,
   ConfigDependencyViolation,
+  ChannelStatus,
 } from './runtime-config.types';
 import {
   getDependencyEdges,
@@ -442,6 +443,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       await this.assertSingleKeyDependencyGate(def, value);
     }
 
+    // 通道开启门禁（ADR-0082 D4）：通道开关置 true 须「配置完整 + 通道测试通过」
+    if (def.channelSwitch && value === true) {
+      await this.assertChannelGate(def);
+    }
+
     // 获取旧值用于日志
     const oldConfig = await this.prisma.runtimeConfig.findUnique({
       where: { key },
@@ -485,6 +491,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     });
 
     await this.invalidateCacheKeys([key]);
+
+    // 通道配置项变更 → 失效该通道验证记录（凭据变了，旧验证不再可信）
+    if (def.channel) {
+      await this.invalidateChannelVerification(def.channel);
+    }
   }
 
   /**
@@ -612,6 +623,123 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     return edges.filter(
       (edge) => current[edge.dependent] === true && current[edge.required] !== true
     );
+  }
+
+  /**
+   * 通道状态（ADR-0082 D4）：配置完整度 + 验证记录。
+   *
+   * 配置项 = 定义表中标记 `channel === channel` 的全部键。完整性判定：必填项
+   * （非 `input.allowNull`）的生效值非空。生效值走数据库直查（与依赖门禁同一
+   * 理由：门禁是写路径上的安全判定，必须读到最新状态，不吃缓存 TTL）。
+   */
+  async getChannelStatus(channel: string): Promise<ChannelStatus> {
+    const defs = RUNTIME_CONFIG_DEFINITIONS.filter(
+      (d) => d.channel === channel
+    );
+    if (defs.length === 0) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.config_extra.channel_not_registered', {
+          args: { channel },
+        }) ?? `通道 ${channel} 未登记配置项`
+      );
+    }
+
+    const rows =
+      (await this.prisma.runtimeConfig.findMany({
+        where: { key: { in: defs.map((def) => def.key) } },
+      })) ?? [];
+    const rowsByKey = new Map(rows.map((row) => [row.key, row]));
+
+    const missingKeys: string[] = [];
+    for (const def of defs) {
+      const { value } = this.resolveValue(def, rowsByKey.get(def.key) ?? null);
+      if (this.isChannelValueMissing(def, value)) {
+        missingKeys.push(def.key);
+      }
+    }
+
+    const verification =
+      (await this.prisma.channelVerification.findUnique({
+        where: { channel },
+      })) ?? null;
+
+    return {
+      channel,
+      configComplete: missingKeys.length === 0,
+      missingKeys,
+      verified: verification != null,
+      verifiedAt: verification?.verifiedAt ?? null,
+      testedBy: verification?.testedBy ?? null,
+    };
+  }
+
+  /**
+   * 通道配置项「空值」判定：显式允许空值的项（`input.allowNull`，如退款通知
+   * 邮箱）不参与完整性判定；布尔/数字恒非空；字符串按 trim 判空；JSON 按空对象判空。
+   */
+  private isChannelValueMissing(
+    def: RuntimeConfigDefinition,
+    value: RuntimeConfigValue
+  ): boolean {
+    if (def.input?.allowNull) {
+      return false;
+    }
+    if (typeof value === 'string') {
+      return value.trim() === '';
+    }
+    if (typeof value === 'object' && value !== null) {
+      return Object.keys(value).length === 0;
+    }
+    return false;
+  }
+
+  /**
+   * 通道开启门禁（ADR-0082 D4，硬阻断、无绕过）：通道开关置 `true` 须该通道
+   * 「配置完整 + 通道测试通过」。通道没验证过，开关就开不了——这是把「开关翻了
+   * 等于没翻」从根上堵住的机制。通道日后坏了由既有「连续失败升级 P0 告警」兜住，
+   * 管理员改配置重测即热生效，开启时不需要后门。
+   */
+  private async assertChannelGate(def: RuntimeConfigDefinition): Promise<void> {
+    const channel = def.channelSwitch;
+    if (!channel) {
+      return;
+    }
+    const status = await this.getChannelStatus(channel);
+    if (status.configComplete && status.verified) {
+      return;
+    }
+
+    const reasons: string[] = [];
+    if (!status.configComplete) {
+      reasons.push(`配置不完整（缺失：${status.missingKeys.join('、')}）`);
+    }
+    if (!status.verified) {
+      reasons.push('未通过通道测试');
+    }
+    throw new BadRequestException(
+      I18nContext.current()?.t('error.config_extra.channel_gate_not_met', {
+        args: {
+          key: def.key,
+          channel,
+          reasons: reasons.join('；'),
+        },
+      }) ?? `无法开启 ${def.key}：${reasons.join('；')}`
+    );
+  }
+
+  /**
+   * 失效通道验证记录（该通道任一配置项变更 → 删除记录，比配置哈希更简单可靠）。
+   * 尽力而为：删除失败不阻塞配置写入（DB 写入已成功，回滚已提交的写操作代价更大；
+   * 残留「陈旧验证记录」的风险由测试动作本身在下次开启时重新暴露）。
+   */
+  private async invalidateChannelVerification(channel: string): Promise<void> {
+    try {
+      await this.prisma.channelVerification.deleteMany({ where: { channel } });
+    } catch (error) {
+      this.logger.warn(
+        `删除通道验证记录失败 (${channel}): ${(error as Error).message}`
+      );
+    }
   }
 
   /**
@@ -812,6 +940,8 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     | 'dangerous'
     | 'hot'
     | 'requires'
+    | 'channel'
+    | 'channelSwitch'
   > {
     const envValue = this.resolveEnvLayer(def);
 
@@ -833,6 +963,8 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       dangerous: def?.dangerous ?? false,
       hot: def?.hot ?? true,
       requires: def?.requires,
+      channel: def?.channel,
+      channelSwitch: def?.channelSwitch,
     };
   }
 
@@ -857,6 +989,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 否则「重置通道开关为关」会绕过 set() 的门禁，重新制造静默失效状态
     if (def.type === 'boolean' && typeof def.defaultValue === 'boolean') {
       await this.assertSingleKeyDependencyGate(def, def.defaultValue);
+    }
+
+    // 通道开启门禁：默认值为 true 时，恢复默认等价于「把通道开关打开」，同样须过测试门禁
+    if (def.channelSwitch && def.defaultValue === true) {
+      await this.assertChannelGate(def);
     }
 
     const defaultValueJson = JSON.stringify(def.defaultValue);
@@ -892,6 +1029,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     }
 
     await this.invalidateCacheKeys([key]);
+
+    // 通道配置项变更 → 失效该通道验证记录
+    if (def.channel) {
+      await this.invalidateChannelVerification(def.channel);
+    }
   }
 
   /**
@@ -1044,6 +1186,18 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 全量失效：即使本次无写入，也要清掉「标记项已变化」场景下读到的旧聚合缓存
     await this.invalidateCacheKeys(plan.defs.map((def) => def.key));
 
+    // 通道配置项被改写 → 失效对应通道的验证记录（只对本次实际写入的键）
+    const touchedChannels = [
+      ...new Set(
+        toWrite
+          .filter((entry) => entry.def.channel)
+          .map((entry) => entry.def.channel as string)
+      ),
+    ];
+    for (const channel of touchedChannels) {
+      await this.invalidateChannelVerification(channel);
+    }
+
     return {
       profile: target,
       applied: toWrite.map((entry) => entry.def.key),
@@ -1121,6 +1275,13 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 依赖门禁（ADR-0082）：批量应用不得新制造「功能开关开、依赖的通道开关关」
     // 的不一致状态。预览与应用共用本方法，两端行为一致。
     await this.assertProfileDependencyGate(target, entries);
+
+    // 通道开启门禁（ADR-0082 D4）：批量应用不得绕过通道测试门禁把通道开关打开
+    for (const entry of entries) {
+      if (entry.def.channelSwitch && entry.targetValue === true) {
+        await this.assertChannelGate(entry.def);
+      }
+    }
 
     return { defs, entries };
   }

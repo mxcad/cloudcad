@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDefined, IsIn } from 'class-validator';
+import { IsDefined, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import { I18nContext } from 'nestjs-i18n';
 
 /**
@@ -201,6 +201,18 @@ export class RuntimeConfigResponseDto {
     example: ['mailEnabled'],
   })
   requires?: string[];
+
+  @ApiPropertyOptional({
+    description: '通道配置项标记：本项属于哪个通道（如 mail）',
+    example: 'mail',
+  })
+  channel?: string;
+
+  @ApiPropertyOptional({
+    description: '通道开关标记：本项是哪个通道的开/关开关（开启须通道配置完整+测试通过）',
+    example: 'mail',
+  })
+  channelSwitch?: string;
 }
 
 /**
@@ -267,6 +279,18 @@ export class RuntimeConfigDefinitionDto {
     example: ['mailEnabled'],
   })
   requires?: string[];
+
+  @ApiPropertyOptional({
+    description: '通道配置项标记：本项属于哪个通道（如 mail）',
+    example: 'mail',
+  })
+  channel?: string;
+
+  @ApiPropertyOptional({
+    description: '通道开关标记：本项是哪个通道的开/关开关',
+    example: 'mail',
+  })
+  channelSwitch?: string;
 }
 
 /**
@@ -381,4 +405,75 @@ export class RuntimeProfileApplyResponseDto {
 
   @ApiProperty({ description: '值已等于目标值而跳过的 key', type: [String] })
   unchanged: string[];
+}
+
+/**
+ * 通道状态 DTO（ADR-0082 D4）：配置完整度 + 验证记录
+ */
+export class ChannelStatusDto {
+  @ApiProperty({ description: '通道名', example: 'mail' })
+  channel: string;
+
+  @ApiProperty({
+    description: '配置是否完整（必填项生效值均非空）',
+    example: true,
+  })
+  configComplete: boolean;
+
+  @ApiProperty({
+    description: '缺失（生效值为空）的必填配置键',
+    type: [String],
+    example: ['smtpHost', 'smtpPassword'],
+  })
+  missingKeys: string[];
+
+  @ApiProperty({
+    description: '是否存在有效的验证记录（测试通过后写入，配置变更即删除）',
+    example: true,
+  })
+  verified: boolean;
+
+  @ApiPropertyOptional({
+    description: '最近一次测试通过时间',
+    example: '2026-10-22T08:00:00.000Z',
+    nullable: true,
+  })
+  verifiedAt: Date | null;
+
+  @ApiPropertyOptional({
+    description: '最近一次测试操作者 ID',
+    nullable: true,
+  })
+  testedBy: string | null;
+}
+
+/**
+ * 通道测试请求 DTO
+ */
+export class TestChannelDto {
+  @ApiPropertyOptional({
+    description: '测试发信收件人（缺省由通道动作自行决定，如 supportEmail）',
+    example: 'admin@example.com',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  to?: string;
+}
+
+/**
+ * 通道测试结果 DTO
+ */
+export class ChannelTestResultDto {
+  @ApiProperty({ description: '通道名', example: 'mail' })
+  channel: string;
+
+  @ApiProperty({ description: '测试是否通过', example: true })
+  ok: boolean;
+
+  @ApiProperty({
+    description: '成功说明或失败原因（面向操作员）',
+    example: '测试邮件已发送至 admin@example.com',
+  })
+  message: string;
 }
