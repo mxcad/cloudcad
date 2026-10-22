@@ -83,4 +83,13 @@ describe('editorDisplayName', () => {
     expect(editorDisplayName('图纸.dwg')).toBe('图纸.dwg');
     expect(editorDisplayName('empty_template.mxweb')).toBe('');
   });
+
+  it('剥掉 .mxweb 存储容器层（回归：分享节点名 plan.dwg.mxweb 显示成内部标识）', () => {
+    expect(editorDisplayName('plan.dwg.mxweb')).toBe('plan.dwg');
+    expect(editorDisplayName('plan.mxweb')).toBe('plan');
+    // 引擎导出会再叠一层容器后缀，标题也必须归一
+    expect(editorDisplayName('plan.dwg.mxweb.mxweb')).toBe('plan.dwg');
+    state.isInCollaboration = true;
+    expect(editorDisplayName('plan.dwg.mxweb')).toBe('[协同中] - plan.dwg');
+  });
 });

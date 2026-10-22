@@ -6,7 +6,6 @@ import { unwrap } from '../utils/apiError';
 import { triggerBlobDownload } from '../utils/download';
 import { showToast } from 'vant';
 import { t } from '@/languages';
-import { createApp } from 'vue';
 import { useEditorStore } from '../stores/editor';
 
 export type ExportFormat = 'dwg' | 'dxf' | 'pdf' | 'mxweb';
@@ -39,8 +38,10 @@ export async function exportDrawing(
   const blob = await getMxwebBlob();
 
   if (format === 'mxweb') {
+    // MXWEB 是源格式、不转换：这是「本地另存为」的唯一实现，
+    // 命令 Mx_SaveAsMxWeb 与导出面板「另存为」都走这里（勿在别处重写取 blob 逻辑）
     triggerBlobDownload(blob, `${baseName}.mxweb`);
-    showToast(t('下载完成'));
+    showToast(t('文件已保存到本地'));
     return;
   }
 
@@ -80,55 +81,4 @@ export async function exportDrawing(
   } catch (e) {
     handleApiError(e, t('转换失败'));
   }
-}
-
-export function showDwgOptionsDialog(format: 'dwg' | 'dxf'): Promise<number | null> {
-  return new Promise((resolve) => {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    let app: ReturnType<typeof createApp> | null = null;
-
-    import('../../src/pages/home/components/DwgOptionsPopup.vue').then((mod) => {
-      const comp = mod.default || mod;
-      app = createApp(comp, {
-        format,
-        onConfirm: (dwgVersion: number) => {
-          resolve(dwgVersion);
-          app?.unmount();
-          container.remove();
-        },
-        onCancel: () => {
-          resolve(null);
-          app?.unmount();
-          container.remove();
-        },
-      });
-      app.mount(container);
-    });
-  });
-}
-
-export function showPdfOptionsDialog(): Promise<PdfOptions | null> {
-  return new Promise((resolve) => {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    let app: ReturnType<typeof createApp> | null = null;
-
-    import('../../src/pages/home/components/PdfOptionsPopup.vue').then((mod) => {
-      const comp = mod.default || mod;
-      app = createApp(comp, {
-        onConfirm: (options: PdfOptions) => {
-          resolve(options);
-          app?.unmount();
-          container.remove();
-        },
-        onCancel: () => {
-          resolve(null);
-          app?.unmount();
-          container.remove();
-        },
-      });
-      app.mount(container);
-    });
-  });
 }

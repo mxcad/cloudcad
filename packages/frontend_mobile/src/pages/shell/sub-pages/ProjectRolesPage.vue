@@ -24,6 +24,7 @@ import {
 } from 'vant'
 import { t } from '@/languages'
 import { unwrap, errMsg } from '@/utils/apiError'
+import { backOrFallback } from '@/utils/backNavigation'
 import {
   rolesControllerGetProjectRolesByProject,
   projectRolesControllerCreateProjectRole,
@@ -253,7 +254,7 @@ onMounted(() => {
 
 <template>
   <div class="subpage">
-    <van-nav-bar :title="t('项目角色管理')" left-arrow @click-left="() => router.back()" />
+    <van-nav-bar :title="t('项目角色管理')" left-arrow @click-left="() => backOrFallback(router, '/shell')" />
 
     <div class="roles-body">
       <div class="roles-hint">

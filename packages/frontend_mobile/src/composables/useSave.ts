@@ -190,10 +190,12 @@ export function useSave() {
       const libraryKey = state.libraryKey || undefined;
       const projectId = fileInfo?.projectId as string | undefined;
 
+      // 「我的图纸」判据：直接落在个人空间根，或位于其子文件夹（此时 parentId 是
+      // 子文件夹，但 projectId 仍是解析出的根 = 个人空间 ID）。只看 parentId 会让
+      // 子文件夹里的图纸被判成「无归属」，再保存时又弹一次另存为。
       const isMyDrawing = !!(
         personalSpaceId &&
-        parentId &&
-        parentId === personalSpaceId
+        (parentId === personalSpaceId || projectId === personalSpaceId)
       );
 
       if (isMyDrawing) {

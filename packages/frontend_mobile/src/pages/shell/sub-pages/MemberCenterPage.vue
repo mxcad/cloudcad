@@ -30,6 +30,7 @@ import {
   resolveQuotaValue,
   usagePercent,
 } from '@/utils/billing'
+import { backOrFallback } from '@/utils/backNavigation'
 
 const router = useRouter()
 
@@ -407,7 +408,7 @@ const initialLoading = computed(
 const fatal = computed(() => !!loadError.value && tiers.value.length === 0)
 
 function onBack(): void {
-  router.back()
+  backOrFallback(router, '/shell')
 }
 
 async function onRefresh(): Promise<void> {

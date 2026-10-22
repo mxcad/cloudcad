@@ -1,6 +1,7 @@
 import { t } from '@/languages';
 import { errorKind } from './apiError';
 import {
+  extractApiError,
   isAbortError as platformIsAbortError,
   isPermissionError as platformIsPermissionError,
   isServerError as platformIsServerError,
@@ -51,6 +52,16 @@ export function classifyApiError(error: unknown): ClassifiedError {
     return { type: 'server', message: t('服务器错误，请稍后重试'), status: (error as Record<string, unknown>).status as number };
   }
 
-  const msg = error instanceof Error ? error.message : t('未知错误');
-  return { type: 'unknown', message: msg };
+  // openapi-ts 在 !response.ok 时抛的是响应体普通对象（不是 Error），
+  // 所以 `error instanceof Error` 恒为 false：此前每个 API 错误都退回「未知错误」，
+  // 后端给的文案与 errors[] 字段级原因全部丢失（#469）
+  const detail = extractApiError(error);
+  const msg =
+    detail.message || (error instanceof Error ? error.message : t('未知错误'));
+  return {
+    type: 'unknown',
+    message: detail.fields.length
+      ? `${msg}（${detail.fields.join('；')}）`
+      : msg,
+  };
 }

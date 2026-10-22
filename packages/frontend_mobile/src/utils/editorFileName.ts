@@ -1,3 +1,4 @@
+import { stripMxwebContainer } from '@cloudcad/platform';
 import { t } from '@/languages';
 import { useEditorStore } from '@/stores/editor';
 import { useUser } from '@/composables/useUser';
@@ -34,7 +35,11 @@ export function editorDisplayName(fileName: string | null | undefined): string {
   if (!authenticated) prefixes.push(t('[未登录]'));
 
   if (!fileName || isEmptyDocumentName(fileName)) return prefixes.join(' - ');
+  // 剥掉存储容器层 `.mxweb`（可叠多层），保留 .dwg/.dxf 等真实格式后缀——
+  // 与 PC 端 toDisplayFileName 同一口径，节点名 `plan.dwg.mxweb` 显示为 `plan.dwg`
+  const displayName = stripMxwebContainer(fileName);
+  if (!displayName) return prefixes.join(' - ');
   return prefixes.length === 0
-    ? fileName
-    : `${prefixes.join(' - ')} - ${fileName}`;
+    ? displayName
+    : `${prefixes.join(' - ')} - ${displayName}`;
 }

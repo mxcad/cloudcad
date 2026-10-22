@@ -24,6 +24,7 @@ import { shareUrl } from '@/utils/shareUrl'
 import { formatShareExpiry } from '@/utils/shareDate'
 import { vibrate } from '@/utils/vibrate'
 import { isNearScrollBottom } from '@/utils/scroll'
+import { backOrFallback } from '@/utils/backNavigation'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
 import {
   SHARE_CUSTOM_DAYS_DEFAULT,
@@ -735,7 +736,7 @@ function onCustomDaysInput(e: Event) {
   <div class="subpage">
     <ShareLinkSheet v-model:show="showLinkSheet" :url="linkSheetUrl" />
 
-    <van-nav-bar :title="t('分享管理')" left-arrow @click-left="() => router.back()" />
+    <van-nav-bar :title="t('分享管理')" left-arrow @click-left="() => backOrFallback(router, '/shell')" />
 
     <van-search v-model="keyword" :placeholder="t('搜索分享')" shape="round" />
 

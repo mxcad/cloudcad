@@ -1,11 +1,6 @@
 import { uiConfig } from '@/config/uiConfig';
 import { t } from '@/languages';
 import { addCommand, callCommand } from '@/plugins/mxcad/command';
-import {
-  exportDrawing,
-  showDwgOptionsDialog,
-  showPdfOptionsDialog,
-} from '@/services/exportService';
 import { canExportDownloadGate } from '@/services/permissionService';
 import { useVoerkaI18n } from '@voerkai18n/vue';
 import { MxCpp } from 'mxcad';
@@ -18,7 +13,6 @@ import {
   saveLoginRequiredTrigger,
 } from '../../../composables/useSaveAs';
 import { useUser } from '../../../composables/useUser';
-import { useRuntimeConfig } from '../../../composables/useRuntimeConfig';
 
 /**
  * M7 编辑器菜单裁剪：壳模式下从编辑器菜单剥离的入口。
@@ -41,85 +35,22 @@ function isShellMenuCmd(cmd: string): boolean {
 // 此处转出以兼容本文件既有的导入方。
 export { canExportDownloadGate };
 
+/**
+ * 导出对话框触发器（模块级，home/index.vue 监听）：菜单「导出」打开
+ * DownloadFormatPopup，而不是展开二级子菜单。
+ */
+export const exportDialogTrigger = ref(0);
+
 export const useMenu = () => {
   const i18n = useVoerkaI18n();
   const isShowMenu = ref(false);
-  const { user } = useUser();
-  const { config } = useRuntimeConfig();
 
-  const canExportDownload = (): boolean =>
-    canExportDownloadGate(user.value, config.value.freeExportDownloadEnabled);
-
-  // 导出下载为 VIP 专属功能：菜单项用主题强调色标识（vant PopoverAction.color 作用于
-  // 图标与文字），无需独立 VIP 图标；移动端 UI 完全可控，不依赖 mxcad-app 图标替换。
-  // 标识色跟随运行时开关 freeExportDownloadEnabled：开关开放后导出人人可用，恢复正常样式。
-  const EXPORT_VIP_COLOR = 'var(--accent)';
-
-  const buildExportActions = (): PopoverAction[] => {
-    const vipColor = config.value.freeExportDownloadEnabled
-      ? undefined
-      : EXPORT_VIP_COLOR;
-    return [
-      {
-        // MXWEB 是源格式：纯前端导出、不做转换，因此不走 VIP 门控（与 PC 一致）
-        text: '导出 MXWEB',
-        icon: 'geshi',
-        call: async () => {
-          isShowMenu.value = false;
-          await exportDrawing('mxweb');
-        },
-      },
-      {
-        text: '导出 PDF',
-        icon: 'pdf',
-        color: vipColor,
-        call: async () => {
-          if (!canExportDownload()) return;
-          isShowMenu.value = false;
-
-          const pdfOptions = await showPdfOptionsDialog();
-          if (pdfOptions) {
-            exportDrawing('pdf', undefined, pdfOptions);
-          }
-        },
-      },
-      {
-        text: '导出 DWG',
-        icon: 'Dwg',
-        color: vipColor,
-        call: async () => {
-          if (!canExportDownload()) return;
-          isShowMenu.value = false;
-
-          const dwgVersion = await showDwgOptionsDialog('dwg');
-          if (dwgVersion) {
-            exportDrawing('dwg', undefined, undefined, { dwgVersion });
-          }
-        },
-      },
-      {
-        text: '导出 DXF',
-        icon: 'DXF',
-        color: vipColor,
-        call: async () => {
-          if (!canExportDownload()) return;
-          isShowMenu.value = false;
-
-          const dwgVersion = await showDwgOptionsDialog('dxf');
-          if (dwgVersion) {
-            exportDrawing('dxf', undefined, undefined, { dwgVersion });
-          }
-        },
-      },
-    ];
-  };
-
-  const showExportSubMenu = () => {
-    setTimeout(() => {
-      isShowMenu.value = true;
-      // 每次打开时重建，读取最新运行时开关状态（freeExportDownloadEnabled）
-      actions.value = buildExportActions();
-    }, 200);
+  // 菜单「导出」不展开二级子菜单，直接打开 DownloadFormatPopup——它与 PC 的
+  // DownloadFormatModal 同构（MXWEB/DWG/DXF/PDF 单选 + DWG 版本 / PDF 宽高与色彩），
+  // 由 home/index.vue 渲染，VIP 门控在确认时做（MXWEB 是源格式、纯前端导出、免门控）。
+  const openExportDialog = () => {
+    isShowMenu.value = false;
+    exportDialogTrigger.value++;
   };
 
   const getDefaultMenuData = () => {
@@ -131,7 +62,7 @@ export const useMenu = () => {
           copy.cmd === 'Mx_saveDwg' ||
           copy.cmd === 'Mx_exportPDF'
         ) {
-          copy.call = showExportSubMenu;
+          copy.call = openExportDialog;
         }
         if (copy.cmd === 'Mx_versionHistory') {
           copy.call = () => {
@@ -198,9 +129,9 @@ export const useMenu = () => {
       })
     );
   });
-  addCommand('Mx_export', showExportSubMenu);
-  addCommand('Mx_saveDwg', showExportSubMenu);
-  addCommand('Mx_exportPDF', showExportSubMenu);
+  addCommand('Mx_export', openExportDialog);
+  addCommand('Mx_saveDwg', openExportDialog);
+  addCommand('Mx_exportPDF', openExportDialog);
   // 分享当前图纸：home/index.vue 监听 mxcad-share-current 打开分享底部弹窗
   addCommand('Mx_Share', () => {
     window.dispatchEvent(new CustomEvent('mxcad-share-current'));

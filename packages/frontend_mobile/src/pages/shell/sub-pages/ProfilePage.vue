@@ -48,6 +48,7 @@ import { formatSize, formatStorageSize } from '@/composables/useNodeFormatter';
 import { logout as logoutSession } from '@/utils/authSession';
 import { errMsg, toError, errorCode } from '@/utils/apiError';
 import { avatarInitial, displayName } from '@/utils/profileDisplay';
+import { backOrFallback } from '@/utils/backNavigation';
 
 const route = useRoute();
 const router = useRouter();
@@ -332,7 +333,7 @@ useLoginPrompt(() => {
     <van-nav-bar
       :title="t('个人中心')"
       left-arrow
-      @click-left="() => router.back()"
+      @click-left="() => backOrFallback(router, '/shell')"
     />
 
     <div v-if="loading && !profile.username" class="loading-state">

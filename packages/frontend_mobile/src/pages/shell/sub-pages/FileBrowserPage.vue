@@ -47,6 +47,7 @@ import { useFileNodeOps, type FabActionKey } from '@/composables/useFileNodeOps'
 import { isCadFileName } from '@/utils/cadFile'
 import { getFileNodeMenuActions, getProjectMenuActions, type ProjectMenuAction } from '@/utils/projectPermissions'
 import { isNearScrollBottom } from '@/utils/scroll'
+import { backOrFallback } from '@/utils/backNavigation'
 import { useNodeDownload } from '@/composables/useNodeDownload'
 import UndoSnackbar from '@/components/UndoSnackbar.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
@@ -630,7 +631,7 @@ const {
     <van-nav-bar
       :title="trashContext ? t('回收站') : t('文件')"
       left-arrow
-      @click-left="trashContext ? closeTrash() : router.back()"
+      @click-left="trashContext ? closeTrash() : backOrFallback(router, '/shell')"
     >
       <template v-if="!trashContext" #right>
         <van-icon name="delete-o" size="20" @click="openTrash" />

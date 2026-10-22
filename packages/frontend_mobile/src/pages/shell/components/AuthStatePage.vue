@@ -15,6 +15,7 @@ import { t } from '@/languages'
 import { useRouter } from 'vue-router'
 import { useAuthState } from '@/composables/useAuthState'
 import { navigateToLogin } from '@/utils/authNavigate'
+import { backOrFallback } from '@/utils/backNavigation'
 
 const { authState, clearNetworkError, setGuest } = useAuthState()
 const router = useRouter()
@@ -72,7 +73,7 @@ function handleAction() {
       router.replace(router.currentRoute.value.fullPath)
       break
     case 'forbidden':
-      router.back()
+      backOrFallback(router, '/shell')
       break
     case 'deactivated':
       setGuest()

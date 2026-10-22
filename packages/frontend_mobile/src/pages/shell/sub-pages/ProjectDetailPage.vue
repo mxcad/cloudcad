@@ -53,6 +53,7 @@ import { useClipboardPaste } from '@/composables/useClipboardPaste'
 import { useUndoSnackbar } from '@/composables/useUndoSnackbar'
 import { useFileNodeOps, type FabActionKey } from '@/composables/useFileNodeOps'
 import { isCadFileName } from '@/utils/cadFile'
+import { backOrFallback } from '@/utils/backNavigation'
 import { useNodeDownload } from '@/composables/useNodeDownload'
 import UndoSnackbar from '@/components/UndoSnackbar.vue'
 import RenameNodePopup from '../components/RenameNodePopup.vue'
@@ -562,7 +563,7 @@ const projectActions = useProjectActions(async () => {
 /** 删除项目：成功后回退项目列表（文件浏览器） */
 async function onManageDelete() {
   const ok = await projectActions.remove(projectId.value, projectName.value)
-  if (ok) router.back()
+  if (ok) backOrFallback(router, '/shell/file')
 }
 
 /** 编辑项目（名称+描述）：composable 的刷新会更新 projectInfo，名称本地同步 */
@@ -776,7 +777,7 @@ onMounted(() => {
     <van-nav-bar
       :title="isTrashView ? t('回收站') : projectName"
       left-arrow
-      @click-left="isTrashView ? closeTrash() : router.back()"
+      @click-left="isTrashView ? closeTrash() : backOrFallback(router, '/shell')"
     >
       <template v-if="!isTrashView" #right>
         <van-icon name="delete-o" size="20" @click="isTrashView = true" />

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { stripDrawingExtension } from '@cloudcad/platform';
 import { t } from '@/languages';
 import { useSaveAs, type SaveTargetType, type LibraryType, type SaveFormat } from '../../../composables/useSaveAs';
 import { useUser } from '../../../composables/useUser';
@@ -77,7 +78,7 @@ const formatOptions = computed(() => {
 
 const displayFileName = computed(() => {
   const name = saveAs.fileName.value || '';
-  return name.replace(/\.[^/.]+$/, '');
+  return stripDrawingExtension(name);
 });
 
 const folderDisplayText = computed(() => {
@@ -98,7 +99,9 @@ const folderDisplayText = computed(() => {
 async function init() {
   error.value = null;
   step.value = 'form';
-  const baseName = props.currentFileName?.replace(/\.[^/.]+$/, '') || 'untitled';
+  // 基名归一（剥 .dwg/.dxf/.dwt 与 .mxweb 任意层叠）：只剥一层时打开
+  // `plan.dwg.mxweb` 会默认成 `plan.dwg`，提交后再叠后缀继续滚雪球
+  const baseName = stripDrawingExtension(props.currentFileName || '') || 'untitled';
   await saveAs.loadPersonalSpace();
   await saveAs.loadProjects();
   saveAs.init(baseName);
@@ -147,6 +150,9 @@ async function handleSave() {
 
   try {
     const blob = await getMxwebBlob();
+    // 提交前归一：输入框里可能带格式后缀（含历史双层 plan.dwg.mxweb），
+    // 直接透传会让后端拼出 plan.dwg.mxweb.dwg 这类叠扩展名节点
+    const baseName = stripDrawingExtension(saveAs.fileName.value) || 'untitled';
     const result = await saveAs.executeSaveAs({
       blob,
       targetType: saveAs.targetType.value,
@@ -154,14 +160,14 @@ async function handleSave() {
       selectedProjectId: saveAs.targetType.value === 'project' ? saveAs.selectedProjectId.value : undefined,
       selectedParentId: saveAs.selectedParentId.value,
       format: saveAs.format.value,
-      fileName: saveAs.fileName.value,
+      fileName: baseName,
     });
 
     if (result.success) {
       showToast(t('保存成功'));
       emit('success', {
         nodeId: result.nodeId || '',
-        fileName: saveAs.fileName.value,
+        fileName: baseName,
         targetType: saveAs.targetType.value,
         libraryType: saveAs.targetType.value === 'library' ? saveAs.libraryType.value : undefined,
       });
@@ -587,7 +593,7 @@ async function onTargetTypeChange(newType: SaveTargetType) {
       <template v-if="step === 'form'">
         <button class="footer-btn footer-btn--primary" @click="handleSave" :loading="saveAs.saving.value">
           <van-icon name="arrow-up" size="18" />
-          {{ t('保存到云图') }}
+          {{ t('另存为到云图') }}
         </button>
       </template>
       <template v-else-if="step === 'folder'">
@@ -617,7 +623,10 @@ async function onTargetTypeChange(newType: SaveTargetType) {
     position="bottom"
     round
     teleport="body"
-    :style="{ zIndex: 2100 }"
+    :style="{
+      zIndex: 2100,
+      '--van-popup-background': 'var(--bg-secondary)',
+    }"
   >
     <van-picker
       :columns="projectColumns"
@@ -1027,19 +1036,32 @@ async function onTargetTypeChange(newType: SaveTargetType) {
   transform: translateY(-8px);
 }
 
-// === Project Picker ===
+</style>
+
+<style lang="scss">
+// === Project Picker（非 scoped）===
+// 两块约束同时存在，故不能写在 scoped 里：
+// 1) van-popup teleport 到 body，scoped 选择器追不到被搬走的子树；
+// 2) 全局 button reset（styles/main.scss `button:not(.van-button)`，特异性 (0,1,1)）
+//    压过 vant 的 `.van-picker__confirm/--cancel`（(0,1,0)），把按钮文字色变成
+//    inherit（默认黑）→ 暗色抽屉上「取消/确认」黑字黑底直接消失。这里用 (0,2,0) 压回去。
+// 底色/选项色/遮罩统一钉到暗色 token：否则它们回落到 Vant 亮色默认值
+// （--van-background-2 / --van-text-color=#323233 / 白色遮罩渐变），同样黑底黑字。
 .project-picker {
+  --van-picker-background: var(--bg-secondary);
+  --van-picker-option-text-color: var(--text-primary);
+  --van-picker-mask-color: linear-gradient(180deg, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.15)),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.15));
+
   min-height: 200px;
 
-  :deep(.van-picker__toolbar) {
-    button {
-      background: none;
-      border: none;
-    }
+  .van-picker__confirm {
+    color: var(--primary);
+    font-weight: 600;
   }
 
-  :deep(.van-picker__confirm) {
-    font-weight: 600;
+  .van-picker__cancel {
+    color: var(--text-secondary);
   }
 }
 </style>

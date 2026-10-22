@@ -42,14 +42,14 @@
       "cmd": "Mx_ShowCollaborate"
     },
     {
-      "text": "另存为",
+      "text": "保存到云图",
       "icon": "baocun",
-      "cmd": "Mx_SaveAsToCloud"
+      "cmd": "Mx_SaveToCloud"
     },
     {
-      "text": "另存为本地",
+      "text": "另存为到云图",
       "icon": "baocun",
-      "cmd": "Mx_SaveAsMxWeb"
+      "cmd": "Mx_SaveAsToCloud"
     },
     {
       "text": "分享",

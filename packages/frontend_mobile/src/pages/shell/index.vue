@@ -18,7 +18,6 @@ import { useShellStack } from '../../stores/shellStack'
 import { t, i18nScope } from '../../languages'
 import { useUser } from '../../composables/useUser'
 import { useBrand } from '../../composables/useBrand'
-import { buildPcUrlForPath } from '../../utils/pcTarget'
 import Home from '../home/index.vue'
 import FileBrowserPage from './sub-pages/FileBrowserPage.vue'
 import ProfilePage from './sub-pages/ProfilePage.vue'
@@ -48,7 +47,6 @@ const SHEET_NAV_ITEMS: SheetItem[] = [
 /** 非导航项的标识值，用于在 onSheetSelect 里区分处理方式 */
 const ACTION_LANGUAGE = 'language'
 const ACTION_LOGOUT = 'logout'
-const ACTION_OPEN_PC = 'open-pc'
 
 const route = useRoute()
 const router = useRouter()
@@ -103,9 +101,6 @@ function onSheetSelect(action: SheetItem) {
   if (action.value === ACTION_LOGOUT) {
     void confirmLogout()
   }
-  if (action.value === ACTION_OPEN_PC) {
-    window.open(pcUrl.value, '_blank', 'noopener')
-  }
 }
 
 function pop() {
@@ -137,9 +132,6 @@ const currentLanguageName = computed(() => {
   return current ? languageDisplayName(current) : ''
 })
 
-// 「用电脑端打开」——PC 与移动端是两套 UI，手机上做不到的事在这里出口
-const pcUrl = computed(() => buildPcUrlForPath(route.path))
-
 const languageSheetItems = computed<SheetItem[]>(() => {
   // 读一下当前语言，保证语言切换后二级菜单重新求值
   void i18n.activeLanguage.value
@@ -159,7 +151,6 @@ const sheetItems = computed<SheetItem[]>(() => [
     value: ACTION_LANGUAGE,
     subname: currentLanguageName.value,
   },
-  { name: t('用电脑端打开'), value: ACTION_OPEN_PC },
   // 退出登录仅登录用户可见
   ...(isAuthenticated.value ? [{ name: t('退出登录'), value: ACTION_LOGOUT, color: 'var(--danger)' }] : []),
 ])

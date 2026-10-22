@@ -21,6 +21,18 @@ import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { unwrap, errMsg } from '@/utils/apiError'
 import { maskPhone, membershipBadge, membershipExpiry } from '@/utils/profileDisplay'
 
+/**
+ * 系统角色显示名。原先按 `name === 'ADMIN'` 二元判定，AUDIT_ADMIN 等其它系统角色
+ * 会被误显示成「普通用户」；未收录的角色回落到原始角色名，不再误判成普通用户。
+ */
+const SYSTEM_ROLE_LABELS: Record<string, string> = {
+  ADMIN: '系统管理员',
+  AUDIT_ADMIN: '审计管理员',
+  USER_MANAGER: '用户管理员',
+  FONT_MANAGER: '字体管理员',
+  USER: '普通用户',
+}
+
 /** 后端 UserProfileResponseDto（仅声明移动端实际消费的字段） */
 export interface UserProfile {
   id?: string
@@ -136,8 +148,12 @@ export function useProfileData() {
     return days !== null && days > 0 && days <= 7
   })
 
-  // 账号元信息（D-02）：角色按 name === 'ADMIN' 判定（与 PC usePermission.isAdmin 同口径）
-  const roleLabel = computed(() => (profile.value.role?.name === 'ADMIN' ? t('系统管理员') : t('普通用户')))
+  // 账号元信息（D-02）：角色走显式映射表，未收录时回落到原始角色名
+  const roleLabel = computed(() => {
+    const roleName = profile.value.role?.name
+    if (!roleName) return t('普通用户')
+    return SYSTEM_ROLE_LABELS[roleName] ?? roleName
+  })
   const statusLabel = computed(() =>
     profile.value.status === 'INACTIVE' ? t('未激活') : profile.value.status === 'SUSPENDED' ? t('已禁用') : t('正常')
   )

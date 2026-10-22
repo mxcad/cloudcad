@@ -29,8 +29,10 @@ const pdfWidth = ref('2000')
 const pdfHeight = ref('2000')
 const pdfColor = ref<'mono' | 'color'>('mono')
 
+// MXWEB 是源格式：纯本地另存为、不做转换，故标「另存为」而非「导出 MXWEB」
+// （对齐 PC Mx_SaveAsMxWeb 的「另存为」标签）
 const formatOptions: Array<{ key: DownloadFormat; label: string }> = [
-  { key: 'mxweb', label: t('MXWEB（原格式）') },
+  { key: 'mxweb', label: t('另存为') },
   { key: 'dwg', label: t('DWG') },
   { key: 'dxf', label: t('DXF') },
   { key: 'pdf', label: t('PDF') },

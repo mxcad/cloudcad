@@ -11,7 +11,7 @@ import ObserveImage from '@better-scroll/observe-image';
 import { McCmColor, McObject, MxCpp } from 'mxcad';
 import { useColorPicker } from './useColorPicker';
 import iro from '@jaames/iro';
-import { useMenu } from './hooks/useMenu';
+import { useMenu, exportDialogTrigger } from './hooks/useMenu';
 import { useEditObjectToolbar } from './hooks/useEditObjectToolbar';
 import { useSimulatedMouse } from './hooks/useSimulatedMouse';
 import { useRunCmdOperationBtnList } from './hooks/useRunCmdOperationBtnList';
@@ -23,9 +23,14 @@ import {
   checkPublicFileExternalRefs,
 } from '../../composables/useFileLoader';
 import { openDrawing } from '../../services/drawingOpener';
+import { exportDrawing } from '../../services/exportService';
 import { uploadThumbnailForNode } from '../../services/thumbnailService';
 import { isHashLike } from '../../services/publicFileService';
-import { checkLibraryPermissions } from '../../services/permissionService';
+import {
+  checkLibraryPermissions,
+  canExportDownloadGate,
+  loadCADPermissions,
+} from '../../services/permissionService';
 import { useEditorStore } from '@/stores/editor';
 import { useSave } from '../../composables/useSave';
 import {
@@ -53,6 +58,8 @@ import { useBrand } from '../../composables/useBrand';
 import { isCollaborationAllowed } from '@cloudcad/platform';
 import CommitMessageDialog from './components/CommitMessageDialog.vue';
 import SaveAsSheet from './components/SaveAsSheet.vue';
+import DownloadFormatPopup from '../shell/components/DownloadFormatPopup.vue';
+import type { DownloadFormatPayload } from '../shell/components/DownloadFormatPopup.vue';
 import VersionHistoryPopup from './components/VersionHistoryPopup.vue';
 import LoginPromptPopup from '@/components/LoginPromptPopup.vue';
 import CooperatePopup from './components/CooperatePopup.vue';
@@ -272,6 +279,32 @@ const { config: runtimeConfig } = useRuntimeConfig();
 // 「查看文档」地址走品牌运行时配置（管理端可改），不硬编码
 const { brand } = useBrand();
 
+// 导出（菜单「导出」→ DownloadFormatPopup，对齐 PC 的 DownloadFormatModal：
+// MXWEB/DWG/DXF/PDF 单选 + DWG 版本 / PDF 宽高与色彩）。
+const showExportFormat = ref(false);
+watch(exportDialogTrigger, () => {
+  showExportFormat.value = true;
+});
+
+async function onExportFormatConfirm(payload: DownloadFormatPayload) {
+  // MXWEB 是源格式：纯前端导出、不做转换，不走会员门控（与 PC 一致）
+  if (
+    payload.format !== 'mxweb' &&
+    !canExportDownloadGate(
+      user.value,
+      runtimeConfig.value.freeExportDownloadEnabled,
+    )
+  ) {
+    return;
+  }
+  await exportDrawing(
+    payload.format,
+    undefined,
+    payload.pdfOptions,
+    payload.dwgOptions,
+  );
+}
+
 // 协同入口可用性 = 功能开关 && 当前域名在白名单内。
 // 与 PC SidebarContainer（collaborationEnabled && isCollaborationAllowed）同口径，
 // 判定逻辑共用 @cloudcad/platform 的一份实现。
@@ -339,6 +372,69 @@ async function onSaveAsSuccess(result: {
 }) {
   showSaveAsSheet.value = false;
   if (!result.nodeId) return;
+
+  // 分享图纸另存为：会话必须切到新节点并退出分享模式（对齐 PC adoptSavedAsFile）。
+  // 否则会话仍指着分享者那张图，用户每点一次保存都会再走一遍另存为、每点一次
+  // 就多一份副本；同时清空时间戳，避免下一次保存拿旧 expectedTimestamp 撞乐观锁。
+  const wasFromShare = editorState.state.fromShare;
+  if (wasFromShare) {
+    const isLibrary = result.targetType === 'library';
+    const isProject = result.targetType === 'project';
+    const libraryKey = isLibrary ? (result.libraryType ?? 'drawing') : undefined;
+    // 落点根：个人空间落点写个人空间根（另存为面板可落到子文件夹，但会话里
+    // projectId 的语义是「所在根」，useSave 的 isMyDrawing 据此判归属）；
+    // 项目落点写项目根；库落点两者都为空、靠 libraryKey 分流
+    const rootId = isProject
+      ? editorState.state.projectId
+      : isLibrary
+        ? null
+        : editorState.state.personalSpaceId;
+
+    editorState.setFileId(result.nodeId);
+    editorState.setProjectId(rootId);
+    editorState.setLibraryKey(libraryKey ?? null);
+    // fileInfo 是保存归属判据（parentId / projectId === 个人空间 → 我的图纸）
+    editorState.setFileInfo({
+      id: result.nodeId,
+      name: result.fileName,
+      parentId: rootId ?? '',
+      projectId: rootId,
+    });
+    editorState.setFileName(result.fileName);
+    editorState.setUpdatedAt(null);
+    editorState.setFromShare(false);
+    // 分享态权限恒为 canSave:false，不重算会让下一次保存又被判「无权限，请另存为」
+    if (isProject && rootId) {
+      await loadCADPermissions(rootId);
+    } else if (libraryKey) {
+      const { canManageDrawing, canManageBlock } = await checkLibraryPermissions();
+      editorState.setPermissions({
+        canSave: libraryKey === 'block' ? canManageBlock : canManageDrawing,
+        canExport: editorState.state.permissions.canExport,
+        canManageExternalRef: false,
+      });
+    } else {
+      // 个人空间落点：自己的文件恒可保存
+      editorState.setPermissions({
+        canSave: true,
+        canExport: editorState.state.permissions.canExport,
+        canManageExternalRef: false,
+      });
+    }
+
+    // 地址栏跟着切到新节点（丢掉 shareToken）：否则刷新一下跳回分享者图纸
+    const url = new URL(window.location.href);
+    url.searchParams.delete('shareToken');
+    url.searchParams.delete('fileName');
+    url.searchParams.set('fileId', result.nodeId);
+    if (libraryKey) {
+      url.searchParams.set('library', libraryKey);
+    }
+    const pathMatch = url.pathname.match(/^(\/cad-editor)\/[^/]+$/);
+    if (pathMatch) url.pathname = `${pathMatch[1]}/${result.nodeId}`;
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    return;
+  }
 
   // E-27：另存为成功后询问是否打开新图纸（对齐 PC useExportModals.handleSaveAsSuccess）
   try {
@@ -826,6 +922,11 @@ setViewportHeight();
       @close="onSaveAsClose"
       @success="onSaveAsSuccess"
       @login-required="showLoginPrompt = true"
+    />
+    <DownloadFormatPopup
+      v-model:show="showExportFormat"
+      :file-name="currentDrawingName()"
+      @confirm="onExportFormatConfirm"
     />
     <VersionHistoryPopup
       v-if="showVersionHistory"
