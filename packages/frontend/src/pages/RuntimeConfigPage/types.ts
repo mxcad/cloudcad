@@ -56,6 +56,8 @@ export interface ConfigItem {
   value: ConfigValue;
   type: ConfigValueType;
   category: string;
+  /** 子分组标识（对齐后端 subgroup 字段；文案由前端 i18n 提供） */
+  subgroup?: string;
   description?: string | null;
   isPublic: boolean;
   updatedBy?: string | null;
@@ -94,12 +96,23 @@ export interface ConfigHistoryEntry {
   createdAt: string | Date;
 }
 
+/** 分类内的子分组小节（项数多的大类按子分组拆小节，避免一屏翻找） */
+export interface ConfigSubgroup {
+  /** 子分组 slug（与后端 subgroup 字段一致）；空串 = 未声明子分组的项，不渲染小节标题 */
+  subgroup: string;
+  label: string;
+  items: ConfigItem[];
+}
+
 /** 分组视图模型 */
 export interface ConfigGroup {
   category: string;
   label: string;
   icon: LucideIcon;
+  /** 全部分组内项（按展示顺序拼接），计数 / 分类批量恢复用它 */
   items: ConfigItem[];
+  /** 子分组小节；空数组 = 该分类无子分组，直接平铺 items */
+  subgroups: ConfigSubgroup[];
   modifiedCount: number;
 }
 

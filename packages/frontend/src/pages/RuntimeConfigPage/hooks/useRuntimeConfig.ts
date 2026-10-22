@@ -34,6 +34,7 @@ import {
   CATEGORY_META,
   FALLBACK_CATEGORY_META,
   CATEGORY_ORDER,
+  buildSubgroupSections,
   toConfigItems,
   toHistoryEntries,
   toChannelStatuses,
@@ -408,6 +409,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
         label: CATEGORY_META[category]?.label ?? category,
         icon: CATEGORY_META[category]?.icon ?? FALLBACK_CATEGORY_META.icon,
         items,
+        subgroups: buildSubgroupSections(category, items),
         modifiedCount: items.filter((i) => i.isModified).length,
       };
     });

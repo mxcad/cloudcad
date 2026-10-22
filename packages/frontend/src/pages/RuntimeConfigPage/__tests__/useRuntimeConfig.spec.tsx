@@ -67,13 +67,15 @@ const ok = (data: unknown) => ({ data, error: undefined });
 
 const DANGEROUS_IMPACT = '关闭后新用户将无法自助注册，已有账号不受影响。';
 
-/** 覆盖全部控件形态的配置项，字段形态与后端 RuntimeConfigResponseDto 一致 */
+/** 覆盖全部控件形态的配置项，字段形态与后端 RuntimeConfigResponseDto 一致
+ *（分类用 #498 重划后的 10 个任务分类 + 子分组） */
 const rawConfigs = [
   {
     key: 'mail.smtpHost',
     value: 'smtp.example.com',
     type: 'string',
-    category: 'mail',
+    category: 'alert',
+    subgroup: 'mail-channel',
     description: 'SMTP 服务器地址',
     isPublic: false,
     defaultValue: '',
@@ -89,7 +91,8 @@ const rawConfigs = [
     key: 'mail.port',
     value: 2525,
     type: 'number',
-    category: 'mail',
+    category: 'alert',
+    subgroup: 'mail-channel',
     description: 'SMTP 端口',
     isPublic: false,
     defaultValue: 25,
@@ -123,7 +126,8 @@ const rawConfigs = [
     key: 'user.allowRegister',
     value: false,
     type: 'boolean',
-    category: 'user',
+    category: 'account',
+    subgroup: 'registration',
     description: '是否开放注册',
     isPublic: true,
     defaultValue: true,
@@ -139,7 +143,7 @@ const rawConfigs = [
     key: 'system.logLevel',
     value: 'info',
     type: 'string',
-    category: 'system',
+    category: 'maintenance',
     description: '日志级别',
     isPublic: false,
     defaultValue: 'info',
@@ -259,19 +263,28 @@ describe('useRuntimeConfig', () => {
       });
       // 已登记的分类按元数据顺序；未登记的分类追加在最后
       expect(rc.groups.map((g) => g.category)).toEqual([
-        'mail',
+        'account',
         'file',
-        'user',
-        'system',
+        'alert',
         'security',
+        'maintenance',
         'experimental',
       ]);
-      expect(rc.groups[0].label).toBe('邮件配置');
-      expect(rc.groups[0].items.map((i) => i.key)).toEqual([
+      const alertGroup = rc.groups.find((g) => g.category === 'alert')!;
+      expect(alertGroup.label).toBe('告警配置');
+      expect(alertGroup.items.map((i) => i.key)).toEqual([
         'mail.port',
         'mail.smtpHost',
       ]);
-      expect(rc.groups[0].modifiedCount).toBe(1);
+      expect(alertGroup.modifiedCount).toBe(1);
+      // 有子分组的分类拆出小节（标题走 i18n），无子分组的分类平铺
+      expect(alertGroup.subgroups.map((s) => s.subgroup)).toEqual([
+        'mail-channel',
+      ]);
+      expect(alertGroup.subgroups[0]!.label).toBe('邮件通道');
+      expect(
+        rc.groups.find((g) => g.category === 'file')!.subgroups
+      ).toEqual([]);
       expect(rc.canManageConfig).toBe(true);
     });
 
@@ -679,10 +692,10 @@ describe('useRuntimeConfig', () => {
       await act(async () => {
         hook.result.current.handleDraftChange('mail.port', '25');
         hook.result.current.handleDraftChange('mail.smtpHost', 'x');
-        hook.result.current.requestResetCategory('mail');
+        hook.result.current.requestResetCategory('alert');
       });
 
-      expect(hook.result.current.resetPreviewCategory).toBe('mail');
+      expect(hook.result.current.resetPreviewCategory).toBe('alert');
       expect(hook.result.current.resetPreviewItems.map((i) => i.key)).toEqual([
         'mail.smtpHost',
         'mail.port',
@@ -694,7 +707,7 @@ describe('useRuntimeConfig', () => {
 
       expect(resetCategory).toHaveBeenCalledWith({
         throwOnError: true,
-        body: { category: 'mail' },
+        body: { category: 'alert' },
       });
       expect(showToast).toHaveBeenCalledWith('已恢复默认', 'success');
       expect(hook.result.current.resetPreviewCategory).toBeNull();
@@ -793,9 +806,9 @@ describe('useRuntimeConfig', () => {
         'user.allowRegister',
       ]);
 
-      // 中文分类名可搜（搜英文 category 原值命中不了用户认知）
+      // 中文分类名按新标签命中（#500 重划后安全类标签是「安全策略」）
       await act(async () => {
-        hook.result.current.setKeyword('安全配置');
+        hook.result.current.setKeyword('安全策略');
       });
       expect(hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key))).toEqual([
         'security.corsOrigins',
@@ -872,31 +885,34 @@ describe('useRuntimeConfig', () => {
         mk('backupEnabled', 'backup'),
         mk('alertEmailEnabled', 'alert'),
         mk('auditArchiveEnabled', 'audit'),
-        mk('taskRunRetentionDays', 'audit'),
-        mk('storageCleanupEnabled', 'storage'),
-        mk('deviceAuthFrontendDomain', 'security'),
+        mk('taskRunRetentionDays', 'maintenance'),
+        mk('storageCleanupEnabled', 'maintenance'),
+        mk('deviceAuthFrontendDomain', 'account'),
+        mk('accountLockFailThreshold', 'security'),
         mk('rateLimitLoginMax', 'security', 'advanced'),
       ]));
 
       const hook = await load();
       expect(hook.result.current.showAdvanced).toBe(false);
-      // 分组顺序即 CATEGORY_META 的登记顺序（storage < security < audit < alert < backup），
+      // 分组顺序即 CATEGORY_META 的登记顺序（account < alert < security < audit < maintenance < backup），
       // 组内已修改项置顶、其余按 key 升序（本例无已修改项）
       expect(hook.result.current.groups.map((g) => g.category)).toEqual([
-        'storage',
+        'account',
+        'alert',
         'security',
         'audit',
-        'alert',
+        'maintenance',
         'backup',
       ]);
       const keys = () =>
         hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key));
       expect(keys()).toEqual([
-        'storageCleanupEnabled',
         'deviceAuthFrontendDomain',
-        'auditArchiveEnabled',
-        'taskRunRetentionDays',
         'alertEmailEnabled',
+        'accountLockFailThreshold',
+        'auditArchiveEnabled',
+        'storageCleanupEnabled',
+        'taskRunRetentionDays',
         'backupEnabled',
       ]);
       // 限流阈值仍是高级项，默认收起
@@ -907,7 +923,67 @@ describe('useRuntimeConfig', () => {
         hook.result.current.setShowAdvanced(true);
       });
       expect(keys()).toContain('rateLimitLoginMax');
-      expect(keys().length).toBe(7);
+      expect(keys().length).toBe(8);
+    });
+
+    it('有子分组的分类按声明顺序拆小节：未声明子分组的项排最前，未登记子分组排最后', async () => {
+      const mk = (key: string, subgroup?: string, isModified = false) => ({
+        key,
+        value: true,
+        type: 'boolean',
+        category: 'security',
+        subgroup,
+        description: key,
+        isPublic: false,
+        defaultValue: true,
+        source: 'default',
+        isModified: isModified,
+        envValue: null,
+        tier: 'admin' as const,
+        input: {},
+        dangerous: false,
+        hot: true,
+      });
+      getAllConfigs.mockResolvedValue(ok([
+        mk('securityMode', 'mode-mfa'),
+        mk('passwordPolicyMinLength', 'password-policy'),
+        mk('rateLimitLoginMax', 'rate-limit', true),
+        mk('accountLockFailThreshold', 'account-lock'),
+        mk('orphanKey'),
+        mk('futureKey', 'future-subgroup'),
+      ]));
+
+      const hook = await load();
+      const group = hook.result.current.groups.find(
+        (g) => g.category === 'security'
+      )!;
+      // 空串小节（未声明子分组）在最前；已登记子分组按 SUBGROUP_ORDER；
+      // 未登记的 future-subgroup 追加在最后
+      expect(group.subgroups.map((s) => s.subgroup)).toEqual([
+        '',
+        'mode-mfa',
+        'password-policy',
+        'rate-limit',
+        'account-lock',
+        'future-subgroup',
+      ]);
+      expect(group.subgroups[0]!.items.map((i) => i.key)).toEqual([
+        'orphanKey',
+      ]);
+      // 小节内同样已修改项置顶（rate-limit 是第 4 个小节）
+      expect(group.subgroups[3]!.items.map((i) => i.key)).toEqual([
+        'rateLimitLoginMax',
+      ]);
+      // 平铺 items 保持「已修改置顶 → 键名」排序（计数/批量恢复用它），
+      // 小节顺序只影响渲染
+      expect(group.items.map((i) => i.key)).toEqual([
+        'rateLimitLoginMax',
+        'accountLockFailThreshold',
+        'futureKey',
+        'orphanKey',
+        'passwordPolicyMinLength',
+        'securityMode',
+      ]);
     });
 
     it('只看已修改项时只保留 isModified 的项', async () => {
@@ -916,7 +992,8 @@ describe('useRuntimeConfig', () => {
         hook.result.current.setOnlyModified(true);
       });
       const keys = hook.result.current.groups.flatMap((g) => g.items.map((i) => i.key));
-      expect(keys).toEqual(['mail.port', 'user.allowRegister']);
+      // 分组顺序按元数据：account 在 alert 之前
+      expect(keys).toEqual(['user.allowRegister', 'mail.port']);
 
       await act(async () => {
         hook.result.current.setOnlyModified(false);
@@ -941,12 +1018,12 @@ describe('useRuntimeConfig', () => {
         hook.result.current.setAllCollapsed(true);
       });
       expect([...hook.result.current.collapsed].sort()).toEqual([
+        'account',
+        'alert',
         'experimental',
         'file',
-        'mail',
+        'maintenance',
         'security',
-        'system',
-        'user',
       ]);
 
       await act(async () => {

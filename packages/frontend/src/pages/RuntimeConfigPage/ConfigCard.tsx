@@ -109,25 +109,48 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
 
       {!collapsed && (
         <div className={styles.cardContent}>
-          {group.items.map((item) => (
-            <ConfigItemRow
-              key={item.key}
-              item={item}
-              draft={actions.draftOf(item)}
-              dirty={actions.isDirty(item)}
-              saving={actions.saving.has(item.key)}
-              canManageConfig={actions.canManageConfig}
-              secretVisible={actions.secretVisible.has(item.key)}
-              fieldError={actions.fieldErrors[item.key] ?? ''}
-              dependencyStatus={actions.dependencyStatus.get(item.key) ?? []}
-              onDraftChange={(value) => actions.onDraftChange(item.key, value)}
-              onFormatJson={() => actions.onFormatJson(item.key)}
-              onToggleSecret={() => actions.onToggleSecret(item.key)}
-              onSave={() => actions.onSave(item.key)}
-              onReset={() => actions.onReset(item.key)}
-              onShowHistory={() => actions.onShowHistory(item.key)}
-            />
-          ))}
+          {(() => {
+            const renderRow = (item: ConfigItem) => (
+              <ConfigItemRow
+                key={item.key}
+                item={item}
+                draft={actions.draftOf(item)}
+                dirty={actions.isDirty(item)}
+                saving={actions.saving.has(item.key)}
+                canManageConfig={actions.canManageConfig}
+                secretVisible={actions.secretVisible.has(item.key)}
+                fieldError={actions.fieldErrors[item.key] ?? ''}
+                dependencyStatus={actions.dependencyStatus.get(item.key) ?? []}
+                onDraftChange={(value) => actions.onDraftChange(item.key, value)}
+                onFormatJson={() => actions.onFormatJson(item.key)}
+                onToggleSecret={() => actions.onToggleSecret(item.key)}
+                onSave={() => actions.onSave(item.key)}
+                onReset={() => actions.onReset(item.key)}
+                onShowHistory={() => actions.onShowHistory(item.key)}
+              />
+            );
+            // 有子分组的分类按小节渲染（空串小节 = 未声明子分组的项，无标题）；
+            // 无子分组的分类直接平铺
+            if (group.subgroups.length > 0) {
+              return group.subgroups.map((sub) => (
+                <div
+                  key={sub.subgroup || '__unsorted__'}
+                  className={styles.subgroupSection}
+                >
+                  {sub.subgroup && (
+                    <h4
+                      className={styles.subgroupTitle}
+                      data-testid="rc-subgroup-title"
+                    >
+                      {sub.label}
+                    </h4>
+                  )}
+                  {sub.items.map(renderRow)}
+                </div>
+              ));
+            }
+            return group.items.map(renderRow);
+          })()}
           {extraContent}
         </div>
       )}

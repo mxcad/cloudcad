@@ -22,6 +22,7 @@ import type { ConfigItem, ConfigGroup } from '../types';
 import type { DraftValue } from '../validate';
 import type { UseRuntimeConfigReturn } from '../hooks/useRuntimeConfig';
 import { defaultDraftOf } from '../validate';
+import { buildSubgroupSections } from '../meta';
 
 /** 取某个配置项的行容器（页面上同类文本很多，断言必须作用域化） */
 function rowOf(key: string) {
@@ -59,6 +60,7 @@ function toGroups(list: ConfigItem[]): ConfigGroup[] {
     label: category,
     icon: () => null,
     items,
+    subgroups: buildSubgroupSections(category, items),
     modifiedCount: items.filter((i) => i.isModified).length,
   }));
 }
@@ -67,6 +69,7 @@ const mockItems: ConfigItem[] = [
   item({
     key: 'mail.smtpHost',
     category: 'mail',
+    subgroup: 'mail-channel',
     value: 'smtp.mx.com',
     description: 'SMTP 服务器地址',
     tier: 'user',
@@ -81,6 +84,7 @@ const mockItems: ConfigItem[] = [
   item({
     key: 'mail.port',
     category: 'mail',
+    subgroup: 'mail-channel',
     value: 587,
     type: 'number',
     description: 'SMTP 端口',
@@ -134,6 +138,7 @@ const mockItems: ConfigItem[] = [
   item({
     key: 'mail.smtpPassword',
     category: 'mail',
+    subgroup: 'mail-channel',
     value: 'secret-value',
     description: 'SMTP 密码',
     input: { secret: true, maxLength: 128, placeholder: 'smtp-password' },
@@ -313,6 +318,23 @@ describe('RuntimeConfigPage 渲染', () => {
 
     fireEvent.click(screen.getAllByTestId('rc-card-toggle')[0]);
     expect(mockState.return.toggleCollapsed).toHaveBeenCalledWith('mail');
+  });
+
+  it('有子分组的分类渲染小节标题（文案走 i18n），无子分组的分类平铺无标题', () => {
+    render(<RuntimeConfigPage />);
+    // mock 数据里只有 mail 分类声明了子分组（mail-channel）→ 全页仅一个小节标题
+    const titles = screen
+      .getAllByTestId('rc-subgroup-title')
+      .map((el) => el.textContent);
+    expect(titles).toEqual(['邮件通道']);
+
+    const cardOf = (category: string) =>
+      screen
+        .getAllByTestId('rc-card')
+        .find((el) => el.getAttribute('data-category') === category)!;
+    expect(within(cardOf('mail')).getByText('邮件通道')).toBeTruthy();
+    // brand 分类无子分组：平铺渲染，不出现小节标题
+    expect(within(cardOf('brand')).queryAllByTestId('rc-subgroup-title')).toEqual([]);
   });
 
   it('「折叠全部 / 展开全部」按当前状态切换文案', () => {
