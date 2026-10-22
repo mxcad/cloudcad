@@ -40,20 +40,24 @@ function isLocalHost(host) {
  * 处置原则（2026-10 修订）：
  * - 本部署实例（ours）：可复用/运行中设密/停止重拉——是自己的进程，怎么处置都不
  *   影响外部；
- * - **外部实例**（系统装的 redis / 其他用户 / 另一部署目录），任何认证状态：
- *   一律不碰（不停、不改密、不采纳）——停系统服务/改其配置属于对用户机器的
- *   越权操作；改为让本部署自带 redis 换到空闲端口（relocate）；
+ * - **另一部署目录**（foreign-deploy，同包多解压）：停止对方、起本目录的——
+ *   数据按 --dir 隔离，停对方不碰其数据目录（与 PG 门禁的 stop-foreign 同口径）。
+ *   不可改换端口：每多一个部署目录就吃掉一个端口且永不回收（.env 不回迁），
+ *   端口随部署目录数单调递增；
+ * - **外部实例**（系统装的 redis / 其他用户进程），任何认证状态：一律不碰
+ *   （不停、不改密、不采纳）——停系统服务/改其配置属于对用户机器的越权操作；
+ *   改为让本部署自带 redis 换到空闲端口（relocate）；
  * - PID 无法定位但全量扫描已执行（fullScanDone）：本部署进程与当前用户同属，
  *   全量扫描必然可见，故定位不到 ⇒ 占用者必属其他用户 ⇒ 按外部实例换端口；
  * - PID 无法定位且全量扫描未执行：无法排除是本部署实例（换端口会让新旧两个
  *   实例共写同一 --dir，有数据损坏风险）⇒ 中止，须人工介入。
  *
- * @param {{probeState: 'ok'|'noauth'|'wrongpass'|'unknown', ownership: 'ours'|'foreign'|'unknown'|null, fullScanDone: boolean, isLocal: boolean}} p
+ * @param {{probeState: 'ok'|'noauth'|'wrongpass'|'unknown', ownership: 'ours'|'foreign-deploy'|'foreign'|'unknown'|null, fullScanDone: boolean, isLocal: boolean}} p
  *   probeState   probeRedisAuth 的认证探测结果
  *   ownership    detectRedisOwnership 结果（pid 未定位时为 null）
  *   fullScanDone detectPortOwner 的置信度（全量可见性扫描是否执行过）
  *   isLocal      REDIS_HOST 是否指向本机
- * @returns {'ok'|'fix-ours'|'takeover-ours'|'relocate'|'blocked'}
+ * @returns {'ok'|'fix-ours'|'takeover-ours'|'stop-foreign'|'relocate'|'blocked'}
  */
 function decideRedisGateAction({
   probeState,
@@ -70,6 +74,10 @@ function decideRedisGateAction({
     if (probeState === 'noauth') return 'fix-ours';
     return 'takeover-ours'; // wrongpass / unknown：本部署实例，停止重拉
   }
+  // 另一部署目录（同包多解压）：与 PG 门禁同口径，停对方、起本目录的。
+  // redis 数据按 --dir 隔离，停对方不碰其数据目录；继续换端口则每多一个部署
+  // 目录就吃掉一个端口、永不回收（.env 不回迁），端口随部署目录数单调递增。
+  if (ownership === 'foreign-deploy') return 'stop-foreign';
   if (ownership === 'foreign') return 'relocate';
   // ownership 为 null（PID 未定位）或 'unknown'（PID 在但 cmdline 不可读）：
   if (ownership === null && fullScanDone) return 'relocate';

@@ -172,6 +172,65 @@ function areAllInfraOnline(pm2StatusMap) {
 }
 
 /**
+ * 描述 redis 门禁 relocate 路径上的占用者（日志用）。
+ *
+ * PID 为空是决策矩阵里"全量扫描已排除本部署实例"的情形——此时必须写出
+ * "无法定位进程"而非"外部实例"，否则排查时会去找一个找不到的进程。
+ * @param {{pid?: number|null, exe?: string|null}} owner
+ * @returns {string}
+ */
+function describeRedisOwner(owner) {
+  if (!owner.pid) {
+    return '无法定位进程的实例（全量扫描已排除本部署实例）';
+  }
+  return owner.exe
+    ? `外部进程 PID ${owner.pid}（${owner.exe}）`
+    : `外部进程 PID ${owner.pid}（可执行文件路径不可读）`;
+}
+
+/**
+ * 停止另一部署目录的 redis 实例（redis 门禁 stop-foreign 处置动作）。
+ *
+ * 与 PG 门禁的 stop-foreign 同口径：经对方目录 PM2_HOME 执行 `pm2 stop redis`
+ * （PM2 标记 stopped，不触发对方 autorestart 竞态）。对方 redis 数据按 --dir
+ * 隔离在对方目录，停止不影响其数据；与真外部实例不同，这里不停留告警而是接管
+ * 端口——否则会因部署目录数量单调递增地消耗端口（.env 不回迁）。
+ *
+ * stopForeignService 的 killTree 回退对 redis 信号语义不可靠（killTree 发进程组
+ * 信号，对方 redis-server 的 pgid 可能已随退出的 PM2 包装进程消失，被误判成功，
+ * 见 redis-takeover.js 的同款告警），故其返回失败时再按 PID 发 SIGTERM 兜底——
+ * redis 会优雅落盘 AOF 后退出。最终以端口释放为准绳。
+ * @param {number|null} pid
+ * @param {string|null} [exe] 占用者可执行文件路径（调用方已取过则复用，省一次
+ *   进程查询）
+ * @returns {Promise<'stopped-foreign'|'blocked'>}
+ */
+async function stopForeignRedis(pid, exe) {
+  if (!pid) return 'blocked';
+  exe = exe || getProcessExecutablePath(pid) || '未知路径';
+  log(
+    'yellow',
+    `  [停止] redis 端口 ${PORTS.redis} 被另一部署目录的服务占用 (PID ${pid}): ${exe}——停止对方并启动本目录的 redis（对方数据按 --dir 隔离，不受影响）...`
+  );
+  if (!stopForeignService('redis', pid)) {
+    stopRedisProcess(pid);
+  }
+  const released = await waitPortReleased(PORTS.redis, 15000);
+  if (!released) {
+    log(
+      'red',
+      `  [错误] 已发停止信号但另一部署目录的 redis (PID ${pid}) 未释放端口 ${PORTS.redis}，部署中止。请手动停止该实例后重跑。`
+    );
+    return 'blocked';
+  }
+  log(
+    'green',
+    `  [✓] 另一部署目录的 redis 已停止，端口已释放，本目录实例将接管端口 ${PORTS.redis}`
+  );
+  return 'stopped-foreign';
+}
+
+/**
  * 把本部署自带 redis 切换到空闲端口并改写 .env（单一事实源）。
  *
  * 触发条件：.env 端口被**外部实例**（系统装的 redis / 其他用户 / 另一部署目录）
@@ -184,9 +243,12 @@ function areAllInfraOnline(pm2StatusMap) {
  * 换端口后不回迁（外部实例消失也不迁回）：.env 即长期事实源，避免端口抖动。
  *
  * @param {string} redisHost .env 的 REDIS_HOST（仅用于日志展示）
+ * @param {{pid?: number|null, exe?: string|null}} [owner] 占用者信息，用于日志
+ *   点明"到底是谁占着"——此前三档归属共用这条路径与同一句"如系统安装的 redis"，
+ *   事后无法分辨是真外部实例还是误判
  * @returns {Promise<'relocated'|'blocked'>}
  */
-async function relocateRedisPort(redisHost) {
+async function relocateRedisPort(redisHost, owner = {}) {
   const oldPort = PORTS.redis;
   const newPort = await findFreePortUpFrom(oldPort + 1, {
     maxTries: 100,
@@ -196,7 +258,7 @@ async function relocateRedisPort(redisHost) {
   if (!newPort) {
     log(
       'red',
-      `  [错误] redis 端口 ${oldPort} 被外部实例占用，且 ${oldPort + 1}-${oldPort + 100} 范围内未找到空闲端口，部署中止。请手动释放端口或修改 .env 的 REDIS_PORT 后重跑。`
+      `  [错误] redis 端口 ${oldPort} 被${describeRedisOwner(owner)}占用，且 ${oldPort + 1}-${oldPort + 100} 范围内未找到空闲端口，部署中止。请手动释放端口或修改 .env 的 REDIS_PORT 后重跑。`
     );
     return 'blocked';
   }
@@ -211,7 +273,7 @@ async function relocateRedisPort(redisHost) {
   PORTS.redis = newPort;
   log(
     'yellow',
-    `  [换端口] redis 端口 ${oldPort} 被外部实例占用（如系统安装的 redis，主机 ${redisHost}）——该实例未被停止、未改密、未被采纳`
+    `  [换端口] redis 端口 ${oldPort} 被${describeRedisOwner(owner)}占用（主机 ${redisHost}）——该实例未被停止、未改密、未被采纳`
   );
   log(
     'yellow',
@@ -222,8 +284,10 @@ async function relocateRedisPort(redisHost) {
 
 /**
  * 升级路径强制门禁（#419，2026-10 修订）：.env 端口上的 redis 实例必须属于本
- * 部署并接受 .env 的 REDIS_PASSWORD；外部实例（系统 redis 等）一律不碰，改为
- * 本部署自带 redis 自动换端口（见 decideRedisGateAction / relocateRedisPort）。
+ * 部署并接受 .env 的 REDIS_PASSWORD；另一部署目录的实例停止后接管端口（同 PG
+ * 门禁的 stop-foreign，数据按 --dir 隔离不受影响）；真外部实例（系统 redis
+ * 等）一律不碰，改为本部署自带 redis 自动换端口
+ * （见 decideRedisGateAction / relocateRedisPort / stopForeignRedis）。
  *
  * 为什么不复用 reconcile 里"端口开但 PM2 未托管"的分支：PM2 的 `redis` app 为
  * online 只说明 redis-manager 包装进程存活——包装进程见端口已占即采纳现有实例
@@ -231,20 +295,25 @@ async function relocateRedisPort(redisHost) {
  * 升级前的无密码旧实例。那种情况下 `allPortsOpen + areAllInfraOnline` 会判定"健康
  * 复用"，旧实例永远不被设密，后端 AUTH 恒 NOAUTH。
  *
- * @returns {Promise<'ok'|'configured'|'taken-over'|'relocated'|'blocked'>}
- *   ok         无需再处理：端口未开 / 未配置密码 / 本部署实例密码正确
- *   configured 本部署无密码实例已在运行中按 .env 设好密码（CONFIG SET +
- *              CONFIG REWRITE，未杀进程、数据不动），调用方须把 PM2 的 redis
- *              包装进程拉起以采纳该实例
- *   taken-over 本部署旧实例（密码不一致/未知）已停止并等端口释放，后续流程以
- *              --requirepass 重拉本目录实例
- *   relocated  端口被外部实例占用（未被触碰），本部署自带 redis 已切换到空闲
- *              端口且 .env 的 REDIS_PORT 已改写，调用方须强制重注册 PM2 redis
- *              定义（旧 env 的 REDIS_PORT 在 pm2 start 时固化，restart 不刷新）
- *   blocked    无法自动修复（远程实例 / 探测手段不足无法排除本部署实例 /
- *              本部署实例停止后端口未释放 / 无空闲端口 / .env 写入失败），调用方中止
+ * @param {{stopForeign?: (pid: number|null) => Promise<'stopped-foreign'|'blocked'>}} [deps]
+ *   注入用（测试）；默认取 stopForeignRedis
+ * @returns {Promise<'ok'|'configured'|'taken-over'|'stopped-foreign'|'relocated'|'blocked'>}
+ *   ok              无需再处理：端口未开 / 未配置密码 / 本部署实例密码正确
+ *   configured      本部署无密码实例已在运行中按 .env 设好密码（CONFIG SET +
+ *                   CONFIG REWRITE，未杀进程、数据不动），调用方须把 PM2 的 redis
+ *                   包装进程拉起以采纳该实例
+ *   taken-over      本部署旧实例（密码不一致/未知）已停止并等端口释放，后续流程以
+ *                   --requirepass 重拉本目录实例
+ *   stopped-foreign 端口被另一部署目录的实例占用，已停止并等端口释放，后续流程在
+ *                   原端口启动本目录实例
+ *   relocated       端口被外部实例占用（未被触碰），本部署自带 redis 已切换到空闲
+ *                   端口且 .env 的 REDIS_PORT 已改写，调用方须强制重注册 PM2 redis
+ *                   定义（旧 env 的 REDIS_PORT 在 pm2 start 时固化，restart 不刷新）
+ *   blocked         无法自动修复（远程实例 / 探测手段不足无法排除本部署实例 /
+ *                   停止后端口未释放 / 无空闲端口 / .env 写入失败），调用方中止
  */
-async function ensureRedisPasswordManaged() {
+async function ensureRedisPasswordManaged(deps = {}) {
+  const stopForeign = deps.stopForeign || stopForeignRedis;
   const password = loadRedisPassword();
   if (!password) {
     // 部署入口 setupOffline → fillEmptySecrets 本应生成该值；走到这里说明 .env 仍为空。
@@ -277,7 +346,12 @@ async function ensureRedisPasswordManaged() {
   });
 
   if (action === 'ok') return 'ok';
-  if (action === 'relocate') return relocateRedisPort(redisHost);
+  // exe 取一次：relocate 与 stop-foreign 两条分支都要在日志里点明占用者
+  const exe = owner.pid ? getProcessExecutablePath(owner.pid) : null;
+  if (action === 'relocate') {
+    return relocateRedisPort(redisHost, { pid: owner.pid, exe });
+  }
+  if (action === 'stop-foreign') return stopForeign(owner.pid, exe);
   if (action === 'blocked') {
     if (!isLocal) {
       log(

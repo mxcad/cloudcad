@@ -2,9 +2,13 @@
  * redis-takeover.js 回归测试（node:test，0 外部依赖）
  *
  * 锁定升级路径接管语义：老无托管 redis 实例（可能无密码/密码不一致，#419）
- * 不在当前 PM2 daemon 名下时，只有"cmdline 含本部署 data/redis 目录"才确认
- * 为本部署旧实例并接管（停旧 + PM2 按 .env 密码重启）；系统自带 redis /
- * 其他部署目录 / 归属未知一律不触碰。
+ * 不在当前 PM2 daemon 名下时，只有确认属于本部署才接管（停旧 + PM2 按 .env
+ * 密码重启）；判定分四档——
+ *   ours           cmdline 的 --dir 与本部署数据目录同一物理目录（realpath 比对），
+ *                  或 cmdline 读不到 --dir 但可执行文件在本部署 runtime 下
+ *   foreign-deploy 可执行文件在**另一** CloudCAD 部署目录的 runtime 下（同包多解压）
+ *   foreign        系统自带 redis / 其他用户进程（不触碰）
+ *   unknown        pid 为空或 cmdline 不可读（归属未知，不触碰）
  *
  * 运行：node --test runtime/scripts/lib/redis-takeover.test.js
  */
@@ -18,6 +22,7 @@ const os = require('os');
 const path = require('path');
 
 const {
+  parseRedisDirArg,
   isOurRedisInstance,
   detectRedisOwnership,
   stopRedisProcess,
@@ -35,18 +40,87 @@ const {
 const OUR_DATA_DIR = '/srv/dev/cloudcad/data/redis';
 const OUR_CMDLINE = `redis-server --port 6379 --dir ${OUR_DATA_DIR} --appendonly yes`;
 
+// ---------- parseRedisDirArg ----------
+
+test('parseRedisDirArg: --dir 的三种书写形态', () => {
+  assert.equal(
+    parseRedisDirArg('redis-server --dir /data/redis'),
+    '/data/redis'
+  );
+  assert.equal(
+    parseRedisDirArg('redis-server --dir=/data/redis'),
+    '/data/redis'
+  );
+  assert.equal(
+    parseRedisDirArg('redis-server --dir "C:\\a b\\data\\redis"'),
+    'C:\\a b\\data\\redis'
+  );
+});
+
+test('parseRedisDirArg: 无 --dir / 空 cmdline → null', () => {
+  assert.equal(parseRedisDirArg('redis-server /etc/redis/redis.conf'), null);
+  assert.equal(parseRedisDirArg('redis-server --port 6379'), null);
+  assert.equal(parseRedisDirArg(''), null);
+});
+
 // ---------- isOurRedisInstance ----------
 
+// 只做归一化、不解析 realpath，用于锁定分隔符/大小写口径
+const normalizeOnly = (p) =>
+  (p || '').toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
+
 test('cmdline 含本部署 data/redis 绝对路径 → 本部署旧实例', () => {
-  assert.equal(isOurRedisInstance(OUR_CMDLINE, OUR_DATA_DIR), true);
+  assert.equal(
+    isOurRedisInstance(OUR_CMDLINE, OUR_DATA_DIR, normalizeOnly),
+    true
+  );
+});
+
+test('cmdline --dir 与本部署目录经 realpath 解析为同一物理目录 → 本部署旧实例', () => {
+  // 模拟 data 为符号链接/挂载卷：部署目录换名后 cmdline 带旧绝对路径，
+  // 但物理目录相同——必须判 ours，否则会换端口留下两个实例共写同一份 AOF
+  const canonical = (p) => {
+    const n = String(p).toLowerCase().replace(/\\/g, '/');
+    return n === '/mnt/vol/data/redis' ? '/srv/dev/cloudcad/data/redis' : n;
+  };
+  assert.equal(
+    isOurRedisInstance(
+      'redis-server --dir /mnt/vol/data/redis',
+      OUR_DATA_DIR,
+      canonical
+    ),
+    true
+  );
+});
+
+test('默认解析器：路径不存在时回落到归一化比较（部署目录被移动的常态）', () => {
+  assert.equal(
+    isOurRedisInstance(
+      'redis-server --dir /moved/away/data/redis',
+      '/moved/away/data/redis'
+    ),
+    true
+  );
 });
 
 test('cmdline 指向其他部署目录的 data/redis → 非本部署实例', () => {
   const foreign = 'redis-server --port 6379 --dir /other/root/data/redis';
-  assert.equal(isOurRedisInstance(foreign, OUR_DATA_DIR), false);
+  assert.equal(isOurRedisInstance(foreign, OUR_DATA_DIR, normalizeOnly), false);
 });
 
-test('系统 redis（config 文件启动）→ 非本部署实例', () => {
+test('数据目录字样只出现在 --logfile 等其他参数 → 不认作归属证据', () => {
+  assert.equal(
+    isOurRedisInstance(
+      `redis-server --logfile ${OUR_DATA_DIR}/out.log --dir /elsewhere`,
+      OUR_DATA_DIR,
+      normalizeOnly
+    ),
+    false,
+    '全文子串匹配会把他人实例误判成本部署（走 takeover-ours 杀掉别人的进程）'
+  );
+});
+
+test('系统 redis（config 文件启动，无 --dir）→ 非本部署实例', () => {
   assert.equal(
     isOurRedisInstance('redis-server /etc/redis/redis.conf', OUR_DATA_DIR),
     false
@@ -57,7 +131,11 @@ test('Windows 反斜杠 + 大小写差异 → 归一化后仍识别', () => {
   const winCmdline =
     'C:\\srv\\CloudCAD\\runtime\\windows\\redis\\redis-server.exe --port 6379 --dir C:\\srv\\CloudCAD\\data\\redis';
   assert.equal(
-    isOurRedisInstance(winCmdline, 'c:\\srv\\cloudcad\\data\\redis'),
+    isOurRedisInstance(
+      winCmdline,
+      'c:\\srv\\cloudcad\\data\\redis',
+      normalizeOnly
+    ),
     true
   );
 });
@@ -68,6 +146,9 @@ test('空 cmdline / 空 dataDir → 无法确认归属', () => {
 });
 
 // ---------- detectRedisOwnership ----------
+
+// isOurs/isForeign 默认会真查进程表，纯函数测试必须显式注入
+const NO_EXE = { isOurs: () => false, isForeign: () => false };
 
 test('PID 未知（空）→ unknown，不触碰', () => {
   assert.equal(
@@ -94,7 +175,19 @@ test('cmdline 含本部署 data/redis 目录 → ours，可接管', () => {
   );
 });
 
-test('cmdline 指向其他部署目录 → foreign，不触碰', () => {
+test('cmdline 指向另一部署目录 + 可执行文件在另一 runtime 下 → foreign-deploy', () => {
+  assert.equal(
+    detectRedisOwnership(
+      14584,
+      OUR_DATA_DIR,
+      () => 'redis-server --dir /other/root/data/redis',
+      { isOurs: () => false, isForeign: () => true }
+    ),
+    'foreign-deploy'
+  );
+});
+
+test('cmdline 指向另一部署目录 + 系统二进制 → foreign，不触碰', () => {
   assert.equal(
     detectRedisOwnership(
       14584,
@@ -113,6 +206,23 @@ test('系统 redis（config 文件启动）→ foreign，不触碰', () => {
       () => 'redis-server /etc/redis/redis.conf'
     ),
     'foreign'
+  );
+});
+
+test('cmdline 读不到 --dir 但可执行文件在本部署 runtime 下 → ours', () => {
+  // cmdline 被截断 / 改用配置文件启动时仍能按二进制归属确认是自己的实例；
+  // 判成 foreign 会换端口留下孤儿实例（旧实例继续无密码运行，#419 的原问题）
+  assert.equal(
+    detectRedisOwnership(
+      14584,
+      OUR_DATA_DIR,
+      () => 'redis-server --port 6379',
+      {
+        isOurs: () => true,
+        isForeign: () => false,
+      }
+    ),
+    'ours'
   );
 });
 

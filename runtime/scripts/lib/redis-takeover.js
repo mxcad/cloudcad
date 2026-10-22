@@ -40,6 +40,12 @@ const {
   USE_RUNTIME,
   PLATFORM_DIR,
 } = require('./context');
+// 进程归属判定（本部署 runtime / 另一部署目录 runtime）：与 infra-gate 的
+// detectPostgresOwnership 同源口径，redis 门禁据此分出「另一部署目录」一档
+const {
+  isOurRuntimeProcess,
+  isForeignCloudCadRuntimeProcess,
+} = require('./proc');
 
 const BACKEND_ENV_PATH = path.join(
   PROJECT_ROOT,
@@ -49,19 +55,71 @@ const BACKEND_ENV_PATH = path.join(
 );
 
 /**
+ * 路径归一化：Windows 反斜杠转正斜杠 + 全小写 + 去尾分隔符（路径大小写不敏感）。
+ * @param {string} s
+ * @returns {string}
+ */
+function normalizePath(s) {
+  return (s || '').toLowerCase().replace(/\\/g, '/').replace(/\/+$/, '');
+}
+
+/**
+ * 解析为物理路径（realpath）；不可解析时返回归一化原值。
+ *
+ * 路径不存在是常态而非异常——部署目录被移动/重命名后，旧实例仍带着旧绝对路径
+ * 在跑，此时只能退化到归一化字符串比较。
+ * @param {string} p
+ * @returns {string}
+ */
+function canonicalPath(p) {
+  const n = normalizePath(p);
+  if (!n) return '';
+  try {
+    return normalizePath(fs.realpathSync(n));
+  } catch {
+    return n;
+  }
+}
+
+/**
+ * 取出 redis cmdline 里的 `--dir` 取值（支持 `--dir /p` 与 `--dir=/p`，
+ * 路径含空格时须带引号）。无 `--dir` 时返回 null。
+ *
+ * 只认显式 `--dir` 参数，不做全文子串匹配：cmdline 别处出现数据目录字样
+ * （如 `--logfile` 落在同一目录树）不构成归属证据，全文匹配会把他人实例误判
+ * 成本部署 → 走 takeover-ours 杀掉别人的进程。误判方向必须落在"不敢认领"侧。
+ * @param {string} cmdline
+ * @returns {string|null}
+ */
+function parseRedisDirArg(cmdline) {
+  const m = /(?:^|\s)--dir[= ](?:"([^"]*)"|'([^']*)'|([^\s]+))/i.exec(
+    cmdline || ''
+  );
+  if (!m) return null;
+  const v = (m[1] || m[2] || m[3] || '').trim();
+  return v || null;
+}
+
+/**
  * 判定占用进程是否本部署的 redis 旧实例：
  * 本部署的 redis 恒由 redis-manager 以 `--dir <PROJECT_ROOT>/data/redis` 拉起，
- * 故 cmdline 含该绝对路径即视为本部署旧实例。
- * 归一化：Windows 反斜杠转正斜杠 + 全小写（路径大小写不敏感）。
+ * 故 cmdline 的 `--dir` 与 DATA_DIR/redis 指向**同一物理目录**即视为本部署旧实例。
+ *
+ * 比对走 realpath 而非字符串相等：部署目录移动/重命名、或 data 为符号链接/
+ * 挂载卷时，cmdline 里的绝对路径与当前 PROJECT_ROOT 不同但物理目录相同。
+ * 按旧逻辑（路径子串相等）这类实例会被判成 foreign 而换端口，留下旧实例与新
+ * 实例**共写同一份 AOF/RDB**（PG 门禁把同一风险判为 blocked，redis 此前没有
+ * 这道保护）。
  * @param {string} cmdline
  * @param {string} dataDir
+ * @param {(p: string) => string} canonical 路径解析器（测试注入）
  * @returns {boolean}
  */
-function isOurRedisInstance(cmdline, dataDir) {
-  const norm = (s) => (s || '').toLowerCase().replace(/\\/g, '/');
-  const target = norm(dataDir);
-  if (!target) return false;
-  return norm(cmdline).includes(target);
+function isOurRedisInstance(cmdline, dataDir, canonical = canonicalPath) {
+  const dir = parseRedisDirArg(cmdline);
+  if (!dir) return false;
+  const target = canonical(dataDir);
+  return !!target && canonical(dir) === target;
 }
 
 /**
@@ -91,22 +149,37 @@ function getProcessCmdline(pid) {
 /**
  * 归属检测：
  * - pid 为空或 cmdline 不可读 → 'unknown'（归属未知，不触碰）
- * - cmdline 含本部署 data/redis 目录 → 'ours'（本部署旧实例，可接管）
- * - 其余 → 'foreign'（系统自带 / 其他部署目录，不触碰）
+ * - `--dir` 指向本部署 data/redis（同一物理目录）→ 'ours'（本部署旧实例，可接管）
+ * - cmdline 读不到 `--dir` 但可执行文件在本部署 runtime/ 下 → 'ours'
+ *   （redis-manager 把 `--dir` 钉在命令行，正常不会走到这里；cmdline 被截断或
+ *   实例改用配置文件启动时，仍能按二进制归属确认是自己的实例——判成 foreign
+ *   会换端口留下孤儿，判成 ours 至多是重启一次本部署自己的进程）
+ * - 可执行文件在**另一** CloudCAD 部署目录的 runtime/ 下 → 'foreign-deploy'
+ *   （同包多解压：数据按 --dir 隔离，停对方不影响其数据目录）
+ * - 其余 → 'foreign'（系统自带 redis / 其他用户进程，不触碰）
  * @param {number|null} [pid]
  * @param {string} [dataDir] 本部署 redis 数据目录（默认 data/redis）
  * @param {(pid: number) => string} [getCmdline] 注入用（测试）
- * @returns {'ours'|'foreign'|'unknown'}
+ * @param {{isOurs?: (pid: number) => boolean, isForeign?: (pid: number) => boolean}} [deps]
+ *   注入用（测试）；默认取 lib/proc 的本机进程归属判定
+ * @returns {'ours'|'foreign-deploy'|'foreign'|'unknown'}
  */
 function detectRedisOwnership(
   pid,
   dataDir = path.join(DATA_DIR, 'redis'),
-  getCmdline = getProcessCmdline
+  getCmdline = getProcessCmdline,
+  {
+    isOurs = isOurRuntimeProcess,
+    isForeign = isForeignCloudCadRuntimeProcess,
+  } = {}
 ) {
   if (!pid) return 'unknown';
   const cmdline = getCmdline(pid);
   if (!cmdline) return 'unknown';
-  return isOurRedisInstance(cmdline, dataDir) ? 'ours' : 'foreign';
+  if (isOurRedisInstance(cmdline, dataDir)) return 'ours';
+  if (isOurs(pid)) return 'ours';
+  if (isForeign(pid)) return 'foreign-deploy';
+  return 'foreign';
 }
 
 /**
@@ -433,6 +506,7 @@ function persistRedisConfig(host, port, password, timeoutMs = 3000) {
 }
 
 module.exports = {
+  parseRedisDirArg,
   isOurRedisInstance,
   getProcessCmdline,
   detectRedisOwnership,

@@ -9,12 +9,16 @@
  * 新策略锁定的行为：
  *  1. 本部署实例：密码正确→复用；无密码→运行中设密（configured）；
  *     不一致/未知→停止重拉（taken-over）；停止后端口未释放→blocked；
- *  2. 外部实例（任何认证状态）：一律不碰（不停、不改密、不采纳）→ 自带 redis
- *     自动换到空闲端口并改写 .env 的 REDIS_PORT（relocated）；
- *  3. PID 无法定位但全量扫描已执行（fullScanDone）→ 必属其他用户 → 换端口；
+ *  2. 另一部署目录的实例（同包多解压）：停对方、接管原端口（stopped-foreign）
+ *     ——不换端口，否则每个部署目录吃掉一个端口且永不回收（.env 不回迁），
+ *     端口随部署目录数单调递增；停不掉→blocked；
+ *  3. 外部实例（系统装的 redis / 其他用户进程，任何认证状态）：一律不碰
+ *     （不停、不改密、不采纳）→ 自带 redis 自动换到空闲端口并改写 .env 的
+ *     REDIS_PORT（relocated）；
+ *  4. PID 无法定位但全量扫描已执行（fullScanDone）→ 必属其他用户 → 换端口；
  *     手段不足（!fullScanDone）→ blocked（无法排除是本部署实例，防共写 --dir）；
- *  4. 远程 REDIS_HOST：密码正确→复用，否则 blocked（远程实例无法自动处置）；
- *  5. 换端口落盘失败 / 无空闲端口 → blocked 且内存 PORTS 不变。
+ *  5. 远程 REDIS_HOST：密码正确→复用，否则 blocked（远程实例无法自动处置）；
+ *  6. 换端口落盘失败 / 无空闲端口 → blocked 且内存 PORTS 不变。
  *
  * mock 手法（同 infra-reconcile.test.js）：infra.js 在模块加载期从 lib/proc、
  * lib/health、lib/redis-takeover、config-updater 解构导出，故必须在 require('./infra')
@@ -99,6 +103,35 @@ test('decideRedisGateAction: 外部实例任何认证状态都换端口（不碰
         `external + ${probeState} + fullScanDone=${fullScanDone} 必须换端口`
       );
     }
+  }
+});
+
+test('decideRedisGateAction: 另一部署目录的实例任何认证状态都停对方接管（不换端口）', () => {
+  // 换端口会让每个部署目录吃掉一个端口且永不回收（.env 不回迁），
+  // 端口随部署目录数单调递增；redis 数据按 --dir 隔离，停对方不影响其数据
+  const base = { ownership: 'foreign-deploy', isLocal: true };
+  for (const probeState of ['ok', 'noauth', 'wrongpass', 'unknown']) {
+    for (const fullScanDone of [true, false]) {
+      assert.equal(
+        D({ ...base, probeState, fullScanDone }),
+        'stop-foreign',
+        `foreign-deploy + ${probeState} + fullScanDone=${fullScanDone} 必须停对方接管`
+      );
+    }
+  }
+});
+
+test('decideRedisGateAction: 远程实例上归属不影响结论（远程一律不处置进程）', () => {
+  for (const ownership of ['foreign-deploy', 'foreign', 'unknown']) {
+    assert.equal(
+      D({
+        probeState: 'wrongpass',
+        ownership,
+        fullScanDone: true,
+        isLocal: false,
+      }),
+      'blocked'
+    );
   }
 });
 
@@ -187,18 +220,22 @@ function loadGate({
   stopOk = true,
   waitReleased = true,
   updateEnvOk = true,
+  stopForeignResult = 'stopped-foreign',
 } = {}) {
-  const calls = { set: 0, persist: 0, stop: 0 };
+  const calls = { set: 0, persist: 0, stop: 0, stopForeign: 0 };
 
   const proc = require(require.resolve('../lib/proc'));
   const prevProc = {
     detectPortOwner: proc.detectPortOwner,
     getPm2AppStatus: proc.getPm2AppStatus,
     runPm2: proc.runPm2,
+    getProcessExecutablePath: proc.getProcessExecutablePath,
   };
   proc.detectPortOwner = () => owner;
   proc.getPm2AppStatus = () => 'unknown';
   proc.runPm2 = () => true;
+  proc.getProcessExecutablePath = () =>
+    '/srv/foreign/runtime/linux/redis/redis-server';
 
   const health = require(require.resolve('../lib/health'));
   const prevHealth = {
@@ -254,10 +291,15 @@ function loadGate({
     gate,
     calls,
     envWrites,
+    stopForeign: async (pid) => {
+      calls.stopForeign++;
+      return stopForeignResult;
+    },
     restore() {
       proc.detectPortOwner = prevProc.detectPortOwner;
       proc.getPm2AppStatus = prevProc.getPm2AppStatus;
       proc.runPm2 = prevProc.runPm2;
+      proc.getProcessExecutablePath = prevProc.getProcessExecutablePath;
       health.isPortOpen = prevHealth.isPortOpen;
       health.waitPortReleased = prevHealth.waitPortReleased;
       rt.loadRedisPassword = prevRt.loadRedisPassword;
@@ -313,6 +355,71 @@ test('门禁：外部实例（wrongpass）→ 换端口，不停不改密，.env
     assert.equal(PORTS.redis, 6380);
     assert.equal(g.calls.set, 0, '外部实例不得运行中改密');
     assert.equal(g.calls.stop, 0, '外部实例不得被停止');
+  } finally {
+    g.restore();
+    restorePorts();
+  }
+});
+
+test('门禁：另一部署目录的实例 → 停对方接管端口，不换端口、不改密、不写 .env', async () => {
+  const g = loadGate({
+    portOpen: { 6379: true },
+    probeStates: ['wrongpass'],
+    owner: { pid: 961, fullScanDone: true },
+    ownership: 'foreign-deploy',
+  });
+  resetPorts();
+  try {
+    assert.equal(
+      await g.gate.ensureRedisPasswordManaged({ stopForeign: g.stopForeign }),
+      'stopped-foreign'
+    );
+    assert.equal(g.calls.stopForeign, 1, '必须停止另一部署目录的实例');
+    assert.equal(g.calls.set, 0, '不得对对方实例运行中改密');
+    assert.equal(g.calls.persist, 0);
+    assert.equal(g.envWrites.length, 0, '接管原端口，不得改写 .env');
+    assert.equal(PORTS.redis, 6379, '端口不漂移');
+  } finally {
+    g.restore();
+    restorePorts();
+  }
+});
+
+test('门禁：另一部署目录的实例 → 停不掉（端口未释放）→ blocked，不改写 .env', async () => {
+  const g = loadGate({
+    portOpen: { 6379: true },
+    probeStates: ['wrongpass'],
+    owner: { pid: 961, fullScanDone: true },
+    ownership: 'foreign-deploy',
+    stopForeignResult: 'blocked',
+  });
+  resetPorts();
+  try {
+    assert.equal(
+      await g.gate.ensureRedisPasswordManaged({ stopForeign: g.stopForeign }),
+      'blocked'
+    );
+    assert.equal(g.envWrites.length, 0, '停不掉不得悄悄换端口掩盖失败');
+    assert.equal(PORTS.redis, 6379);
+  } finally {
+    g.restore();
+    restorePorts();
+  }
+});
+
+test('门禁：归属未知（cmdline 不可读）→ blocked，绝不误停、不误换端口', async () => {
+  const g = loadGate({
+    portOpen: { 6379: true },
+    probeStates: ['wrongpass'],
+    owner: { pid: 961, fullScanDone: true },
+    ownership: 'unknown',
+  });
+  resetPorts();
+  try {
+    assert.equal(await g.gate.ensureRedisPasswordManaged(), 'blocked');
+    assert.equal(g.envWrites.length, 0);
+    assert.equal(g.calls.set, 0);
+    assert.equal(g.calls.stop, 0);
   } finally {
     g.restore();
     restorePorts();
