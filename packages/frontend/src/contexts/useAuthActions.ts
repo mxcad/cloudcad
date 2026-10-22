@@ -9,6 +9,7 @@ import {
   authControllerVerifyEmail,
   authControllerVerifyPhone,
   adminAuthControllerLogin,
+  authSetupControllerCreateFirstAdmin,
 } from '@/api-sdk';
 import type { UserDto } from '@/api-sdk';
 import { t } from '@/languages';
@@ -73,6 +74,16 @@ export interface UseAuthActionsResult {
   }) => Promise<void>;
   verifyEmailAndLogin: (email: string, code: string) => Promise<unknown>;
   verifyPhoneAndLogin: (phone: string, code: string) => Promise<unknown>;
+  /**
+   * 首启「创建首个管理员」（仅系统零用户时后端放行）。
+   * 成功后写入标准登录态（复用 applyAuthData），登录态写入唯一出口仍在 AuthProvider。
+   */
+  createFirstAdmin: (data: {
+    username: string;
+    password: string;
+    email?: string;
+    nickname?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<boolean>;
 }
@@ -262,6 +273,38 @@ export function useAuthActions({
     [applyAuthData]
   );
 
+  // 首启创建首个管理员：成功后复用 applyAuthData 写入登录态（token/user/主动刷新），
+  // 与 register 一致——登录态写入唯一出口仍在 AuthProvider 内
+  const createFirstAdmin = useCallback(
+    async (data: {
+      username: string;
+      password: string;
+      email?: string;
+      nickname?: string;
+    }) => {
+      const response = await authSetupControllerCreateFirstAdmin({
+        throwOnError: true,
+        body: data,
+      });
+      const authData = response.data as {
+        accessToken: string;
+        refreshToken: string;
+        user: User;
+      };
+
+      if (!authData?.accessToken) {
+        throw new Error(t('创建失败，服务器返回数据异常'));
+      }
+
+      applyAuthData({
+        accessToken: authData.accessToken,
+        refreshToken: authData.refreshToken || '',
+        user: authData.user,
+      });
+    },
+    [applyAuthData]
+  );
+
   const verifyEmailAndLogin = useCallback(
     async (email: string, code: string) => {
       const response = await authControllerVerifyEmail({
@@ -374,6 +417,7 @@ export function useAuthActions({
     loginByPhone,
     register,
     registerByPhone,
+    createFirstAdmin,
     verifyEmailAndLogin,
     verifyPhoneAndLogin,
     logout,

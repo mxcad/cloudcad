@@ -21,7 +21,9 @@ import {
   setSpaNavigate,
   setAuthFailureCallback,
   cancelLoginRedirect,
+  tryRefreshToken,
 } from './tokenRefresh';
+import { authControllerRefreshToken } from '@/api-sdk';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 
 const spyNavigate = vi.fn();
@@ -131,5 +133,18 @@ describe('handleTokenRefreshFailure', () => {
     );
     expect(localStorage.getItem('accessToken')).toBeNull();
     expect(spyAuthFailure).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('tryRefreshToken', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(authControllerRefreshToken).mockClear();
+  });
+
+  it('从未登录（无 access token 也无 refresh token）时直接返回失败，不发 /auth/refresh', async () => {
+    // 回归：游客态任何 401 都会先打一个必然失败的 /auth/refresh（无意义往返 + 控制台噪音）
+    expect(await tryRefreshToken()).toBe(false);
+    expect(authControllerRefreshToken).not.toHaveBeenCalled();
   });
 });

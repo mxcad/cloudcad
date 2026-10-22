@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -34,11 +34,15 @@ import { useLoginForm } from './hooks/useLoginForm';
 import { getReturnUrl } from '@/config/clientSetup';
 import { isAccessTokenExpired } from '@/utils/tokenUtils';
 import { read, write, erase } from '@/lib/browserStorage';
-import { authControllerGetProfile } from '@/api-sdk';
+import {
+  authControllerGetProfile,
+  authSetupControllerGetSetupStatus,
+} from '@/api-sdk';
 import { t } from '@/languages';
 import { QUOTA_GUIDE_EVENT } from '@/utils/quotaUpgradeGuide';
 import styles from './Login.module.css';
 import { LoginHeader } from './components/LoginHeader';
+import { FirstAdminSetupForm } from './components/FirstAdminSetupForm';
 import { AccountLoginForm } from './components/AccountLoginForm';
 import { PhoneLoginForm } from './components/PhoneLoginForm';
 import { SupportModal } from './components/SupportModal';
@@ -64,6 +68,7 @@ export const Login: React.FC = () => {
     loading: authLoading,
     token,
     setWechatLoginCallbacks,
+    createFirstAdmin,
   } = useAuth();
   const { isDark } = useTheme();
   const { config } = useBrandConfig();
@@ -90,6 +95,23 @@ export const Login: React.FC = () => {
   const { setSuccess: setFormSuccess, setSupportModalVariant, setSupportModalCleanupDays, setShowSupportModal } = form;
   const redirectPerformed = useRef(false);
   const redirectTokenRef = useRef<string | null>(null);
+
+  // 首启分支：系统零用户时展示「创建首个管理员」表单替代登录表单。
+  // 探测失败（API 未就绪/非 200）保持常规登录 UI，不因首启探测失败阻塞登录。
+  const [setupRequired, setSetupRequired] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    let cancelled = false;
+    authSetupControllerGetSetupStatus()
+      .then((res) => {
+        if (!cancelled && res.data?.setupRequired) setSetupRequired(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   const smsEnabled = runtimeConfig?.smsEnabled ?? false;
   const wechatEnabled = runtimeConfig?.wechatEnabled ?? false;
@@ -285,130 +307,138 @@ export const Login: React.FC = () => {
             appTagline={appTagline}
           />
 
-          {/* 登录方式 Tab 切换 */}
-          {smsEnabled && (
-            <Tabs>
-              <Tab
-                active={form.activeTab === 'account'}
-                tabVariant="primary"
-                icon={Mail}
-                onClick={() => handleTabSwitch('account')}
-              >
-                {t('账号登录')}
-              </Tab>
-              <Tab
-                active={form.activeTab === 'phone'}
-                tabVariant="primary"
-                icon={Phone}
-                onClick={() => handleTabSwitch('phone')}
-              >
-                {t('手机登录')}
-              </Tab>
-            </Tabs>
+          {setupRequired ? (
+            <FirstAdminSetupForm onSubmit={createFirstAdmin} />
+          ) : (
+            <>
+              {/* 登录方式 Tab 切换 */}
+              {smsEnabled && (
+                <Tabs>
+                  <Tab
+                    active={form.activeTab === 'account'}
+                    tabVariant="primary"
+                    icon={Mail}
+                    onClick={() => handleTabSwitch('account')}
+                  >
+                    {t('账号登录')}
+                  </Tab>
+                  <Tab
+                    active={form.activeTab === 'phone'}
+                    tabVariant="primary"
+                    icon={Phone}
+                    onClick={() => handleTabSwitch('phone')}
+                  >
+                    {t('手机登录')}
+                  </Tab>
+                </Tabs>
+              )}
+
+              {/* 消息提示 */}
+              {form.success && (
+                <div className={`${styles.alert} ${styles.alertSuccess}`}>
+                  <CheckCircle size={18} className={styles.alertIcon} />
+                  <span>{form.success}</span>
+                </div>
+              )}
+
+              {(form.error || form.authError) && (
+                <div className={`${styles.alert} ${styles.alertError}`}>
+                  <AlertCircle size={18} className={styles.alertIcon} />
+                  <span>{form.error || form.authError}</span>
+                </div>
+              )}
+
+              {/* 账号登录表单 */}
+              {form.activeTab === 'account' && (
+                <AccountLoginForm
+                  formData={form.accountForm.watch()}
+                  loading={form.loading}
+                  showPassword={form.showPassword}
+                  focusedField={form.focusedField}
+                  getAccountLoginLabel={form.getAccountLoginLabel}
+                  getAccountLoginPlaceholder={form.getAccountLoginPlaceholder}
+                  onChange={(e) =>
+                    form.accountForm.setValue(
+                      e.target.name as 'account' | 'password',
+                      e.target.value
+                    )
+                  }
+                  onFocus={form.setFocusedField}
+                  onBlur={() => form.setFocusedField(null)}
+                  onTogglePassword={() =>
+                    form.setShowPassword(!form.showPassword)
+                  }
+                  onSubmit={form.handleAccountSubmit}
+                  onForgotPassword={() => navigate('/forgot-password')}
+                />
+              )}
+
+              {/* 手机登录表单 */}
+              {form.activeTab === 'phone' && (
+                <PhoneLoginForm
+                  phoneForm={form.phoneFormHook.watch()}
+                  loading={form.loading}
+                  countdown={form.countdown}
+                  sendingCode={form.sendingCode}
+                  focusedField={form.focusedField}
+                  onChange={(e) =>
+                    form.phoneFormHook.setValue(
+                      e.target.name as 'phone' | 'code',
+                      e.target.value
+                    )
+                  }
+                  onFocus={form.setFocusedField}
+                  onBlur={() => form.setFocusedField(null)}
+                  onSendCode={form.handleSendCode}
+                  onSubmit={form.handlePhoneSubmit}
+                />
+              )}
+
+              {/* 注册链接 */}
+              <div className={styles.formFooter}>
+                <p className={styles.registerText}>
+                  {t('还没有账户？')}
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    onClick={() => navigate('/register')}
+                  >
+                    {t('立即注册')}
+                  </Button>
+                </p>
+              </div>
+
+              {/* 微信登录按钮 */}
+              {wechatEnabled && (
+                <WechatLoginButton onWechatLogin={form.handleWechatLogin} />
+              )}
+
+              {/* 特性图标 */}
+              <div className={styles.featuresBar}>
+                <div
+                  className={styles.featureDot}
+                  data-testid="feature-dot"
+                  data-tooltip={t('高性能 CAD 在线预览')}
+                >
+                  <Cpu size={14} />
+                </div>
+                <div
+                  className={styles.featureDot}
+                  data-testid="feature-dot"
+                  data-tooltip={t('多用户实时协同编辑')}
+                >
+                  <Boxes size={14} />
+                </div>
+                <div
+                  className={styles.featureDot}
+                  data-testid="feature-dot"
+                  data-tooltip={t('企业级数据安全保障')}
+                >
+                  <ShieldCheck size={14} />
+                </div>
+              </div>
+            </>
           )}
-
-          {/* 消息提示 */}
-          {form.success && (
-            <div className={`${styles.alert} ${styles.alertSuccess}`}>
-              <CheckCircle size={18} className={styles.alertIcon} />
-              <span>{form.success}</span>
-            </div>
-          )}
-
-          {(form.error || form.authError) && (
-            <div className={`${styles.alert} ${styles.alertError}`}>
-              <AlertCircle size={18} className={styles.alertIcon} />
-              <span>{form.error || form.authError}</span>
-            </div>
-          )}
-
-          {/* 账号登录表单 */}
-          {form.activeTab === 'account' && (
-            <AccountLoginForm
-              formData={form.accountForm.watch()}
-              loading={form.loading}
-              showPassword={form.showPassword}
-              focusedField={form.focusedField}
-              getAccountLoginLabel={form.getAccountLoginLabel}
-              getAccountLoginPlaceholder={form.getAccountLoginPlaceholder}
-              onChange={(e) =>
-                form.accountForm.setValue(
-                  e.target.name as 'account' | 'password',
-                  e.target.value
-                )
-              }
-              onFocus={form.setFocusedField}
-              onBlur={() => form.setFocusedField(null)}
-              onTogglePassword={() => form.setShowPassword(!form.showPassword)}
-              onSubmit={form.handleAccountSubmit}
-              onForgotPassword={() => navigate('/forgot-password')}
-            />
-          )}
-
-          {/* 手机登录表单 */}
-          {form.activeTab === 'phone' && (
-            <PhoneLoginForm
-              phoneForm={form.phoneFormHook.watch()}
-              loading={form.loading}
-              countdown={form.countdown}
-              sendingCode={form.sendingCode}
-              focusedField={form.focusedField}
-              onChange={(e) =>
-                form.phoneFormHook.setValue(
-                  e.target.name as 'phone' | 'code',
-                  e.target.value
-                )
-              }
-              onFocus={form.setFocusedField}
-              onBlur={() => form.setFocusedField(null)}
-              onSendCode={form.handleSendCode}
-              onSubmit={form.handlePhoneSubmit}
-            />
-          )}
-
-          {/* 注册链接 */}
-          <div className={styles.formFooter}>
-            <p className={styles.registerText}>
-              {t('还没有账户？')}
-              <Button
-                variant="secondary"
-                size="xs"
-                onClick={() => navigate('/register')}
-              >
-                {t('立即注册')}
-              </Button>
-            </p>
-          </div>
-
-          {/* 微信登录按钮 */}
-          {wechatEnabled && (
-            <WechatLoginButton onWechatLogin={form.handleWechatLogin} />
-          )}
-
-          {/* 特性图标 */}
-          <div className={styles.featuresBar}>
-            <div
-              className={styles.featureDot}
-              data-testid="feature-dot"
-              data-tooltip={t('高性能 CAD 在线预览')}
-            >
-              <Cpu size={14} />
-            </div>
-            <div
-              className={styles.featureDot}
-              data-testid="feature-dot"
-              data-tooltip={t('多用户实时协同编辑')}
-            >
-              <Boxes size={14} />
-            </div>
-            <div
-              className={styles.featureDot}
-              data-testid="feature-dot"
-              data-tooltip={t('企业级数据安全保障')}
-            >
-              <ShieldCheck size={14} />
-            </div>
-          </div>
         </div>
 
         {/* 版权信息 */}

@@ -149,6 +149,24 @@
   color: var(--text-tertiary);
 }
 
+/* ===== 首启「创建首个管理员」 ===== */
+.setup-intro {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.setup-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.setup-desc {
+  font-size: var(--text-md);
+  color: var(--text-tertiary);
+}
+
 /* ===== 消息提示 ===== */
 .alert {
   display: flex;

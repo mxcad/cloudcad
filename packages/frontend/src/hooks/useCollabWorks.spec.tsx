@@ -10,7 +10,7 @@ import React, { useEffect } from 'react';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { useCollabWorks } from './useCollabWorks';
 import { refreshFileName } from '../services/mxcadManager';
-import { nodeControllerGetNode } from '@/api-sdk';
+import { nodeControllerGetNode, projectControllerGetProjects } from '@/api-sdk';
 
 function makeWork(workId: number, drawingName: string, realUserId = 'u1') {
   return {
@@ -239,5 +239,29 @@ describe('useCollabWorks — fetchWorks 以服务端为准', () => {
     // resetStore 已置 collaborationWorkId=101
     render(<Probe />);
     expect(lastCurrentWorkId).toBe(101);
+  });
+});
+
+describe('useCollabWorks — 游客态（未登录）', () => {
+  it('无 user 时不发协同请求：getProjects / getWorks / getNode 全部跳过', async () => {
+    // 回归：游客态 CAD 编辑器曾启动 2s 轮询 get_wrok_list，控制台刷屏 401
+    const GuestProbe = () => {
+      const { fetchWorks } = useCollabWorks(false, null, true);
+      useEffect(() => {
+        fetchWorks(false, true);
+      }, []);
+      return null;
+    };
+
+    render(<GuestProbe />);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(projectControllerGetProjects).not.toHaveBeenCalled();
+    expect(cooperateMock.getWorks).not.toHaveBeenCalled();
+    expect(nodeControllerGetNode).not.toHaveBeenCalled();
   });
 });

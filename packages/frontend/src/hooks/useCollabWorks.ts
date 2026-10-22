@@ -327,6 +327,9 @@ export function useCollabWorks(
 
   const fetchWorks = useCallback(
     async (showLoading = false, force = false) => {
+      // 协同数据必须登录：游客态不发 getProjects / getWorks / getNode
+      //（曾游客态轮询恒 401，getWorks 走 WASM fetch、不经 SDK 拦截器）
+      if (!userId) return;
       // in-flight 保护：上一次请求未完成时跳过本轮，避免慢网络下请求堆积
       // force 用于事件驱动场景（如文件打开完成），即使轮询请求在途中也强制执行
       if ((fromShare && !force) || (fetchingRef.current && !force)) return;
@@ -383,7 +386,7 @@ export function useCollabWorks(
         setLoading(false);
       }
     },
-    [fromShare, fetchMyProjectIds, withSelfInJoinedWork]
+    [userId, fromShare, fetchMyProjectIds, withSelfInJoinedWork]
   );
 
   const resolveNames = useCallback(

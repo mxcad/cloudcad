@@ -20,6 +20,7 @@ import {
   getBatchTaskProgress,
 } from '@/utils/download';
 import { t } from '@/languages';
+import { getValidToken } from '@/utils/tokenUtils';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { isVipFeatureRequiredError } from '@/utils/vipFeatureGuide';
 import {
@@ -321,6 +322,9 @@ export function useBatchDownload(
    * 且活跃任务（PENDING/PROCESSING）恒保留，避免与在途任务竞态。
    */
   const syncTasksFromServer = useCallback(async () => {
+    // 与 conversionQueueStore.refreshCloud 同款门控：任务列表是登录用户数据，
+    // 游客态请求后端必然 401（面板常驻，面板层不按 token 掐断，见 refreshCloud 注释）
+    if (!getValidToken()) return;
     try {
       const result = await batchDownloadControllerGetUserTasks();
       if (result.error) return;

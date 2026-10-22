@@ -21,6 +21,8 @@ import React, {
 import { Button, Tab, Tabs, Tag } from '@/components/ui';
 import { Modal } from '@/components/ui/Modal';
 import { usePermission } from '@/hooks/usePermission';
+import { useAuth } from '@/contexts/AuthContext';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { SystemPermission } from '@/constants/permissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useFileBrowserSelection } from '@/hooks/file-browser';
@@ -38,6 +40,7 @@ import { UserTable, type UserTableUser } from './UserTable';
 import { UserSearchBar } from './UserSearchBar';
 import { CreateUserModal } from './UserModals/CreateUserModal';
 import { EditUserModal } from './UserModals/EditUserModal';
+import { isAdminDemotion } from './utils/userAdminPrivilege';
 import { MembershipManageModal } from './UserModals/MembershipManageModal';
 import { DeleteUserConfirm } from './UserModals/DeleteUserConfirm';
 import styles from './UserManagement.module.css';
@@ -48,6 +51,8 @@ const AdminStatsPage = lazy(() => import('../AdminStatsPage'));
 export const UserManagement = () => {
   useDocumentTitle(t('用户管理'));
   const { hasPermission } = usePermission();
+  const { user: currentUser } = useAuth();
+  const showConfirm = useConfirmAction();
   const [canAccess, setCanAccess] = useState(false);
 
   const {
@@ -450,6 +455,28 @@ export const UserManagement = () => {
     );
   };
 
+  /** 编辑的是操作者自己的行：角色/账户状态不可改（自我降权会把账户锁死） */
+  const isSelf = !!editingUser && !!currentUser && editingUser.id === currentUser.id;
+
+  const doSubmitUserUpdate = async () => {
+    if (!editingUser) return;
+    const updateData: Record<string, unknown> = {
+      username: formData.username,
+      roleId: formData.roleId,
+      status: formData.status,
+    };
+    // 可选字段：仅当有值时传递
+    if (formData.email) updateData.email = formData.email;
+    if (formData.nickname) updateData.nickname = formData.nickname;
+    if (formData.phone) updateData.phone = formData.phone;
+    if (formData.avatar) updateData.avatar = formData.avatar;
+    if (formData.password) updateData.password = formData.password;
+    await updateUser(editingUser.id, updateData as UpdateUserDto);
+    showSuccess(t('用户更新成功'));
+    setIsModalOpen(false);
+    await loadUsers();
+  };
+
   const handleSubmit = async (_data: {
     username: string;
     email: string;
@@ -460,21 +487,34 @@ export const UserManagement = () => {
     status?: string;
   }) => {
     if (!validateForm()) return;
+
+    // 降级保护：目标曾是用户管理员、改后不再是（或账户状态被关掉）时二次确认
+    if (editingUser && !isSelf) {
+      const roleName =
+        roles.find((r) => r.id === formData.roleId)?.name || formData.roleId;
+      if (
+        isAdminDemotion({
+          currentRoleId: editingUser.role?.id || '',
+          nextRoleId: formData.roleId,
+          roles: roles as Array<{ id: string; permissions?: string[] }>,
+          currentStatus: editingUser.status || '',
+          nextStatus: formData.status || '',
+        })
+      ) {
+        showConfirm(
+          t('确认移除用户管理权限'),
+          `${t('该用户将被取消「')}${roleName}${t('」的用户管理权限，取消后无法再管理用户。请确认已存在其他管理员账号，否则将无人可管理用户。')}`,
+          doSubmitUserUpdate,
+          'warning',
+          t('确认')
+        );
+        return;
+      }
+    }
+
     try {
       if (editingUser) {
-        const updateData: Record<string, unknown> = {
-          username: formData.username,
-          roleId: formData.roleId,
-          status: formData.status,
-        };
-        // 可选字段：仅当有值时传递
-        if (formData.email) updateData.email = formData.email;
-        if (formData.nickname) updateData.nickname = formData.nickname;
-        if (formData.phone) updateData.phone = formData.phone;
-        if (formData.avatar) updateData.avatar = formData.avatar;
-        if (formData.password) updateData.password = formData.password;
-        await updateUser(editingUser.id, updateData as UpdateUserDto);
-        showSuccess(t('用户更新成功'));
+        await doSubmitUserUpdate();
       } else {
         const createData: Record<string, unknown> = {
           username: formData.username,
@@ -813,6 +853,7 @@ export const UserManagement = () => {
           onSubmit={handleSubmit}
           onAvatarUploaded={() => loadUsers()}
           roles={roles}
+          isSelf={isSelf}
           mailEnabled={mailEnabled}
           loading={loading}
           user={editingUser}

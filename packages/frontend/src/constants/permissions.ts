@@ -299,6 +299,7 @@ export const getDependentPermissions = (
  */
 export const SYSTEM_ROLE_NAMES: Record<string, string> = {
   ADMIN: '系统管理员',
+  AUDIT_ADMIN: '审计管理员',
   USER_MANAGER: '用户管理员',
   FONT_MANAGER: '字体管理员',
   USER: '普通用户',

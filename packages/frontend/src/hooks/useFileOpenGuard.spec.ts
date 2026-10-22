@@ -7,13 +7,26 @@ vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: '/cad-editor', search: '' }),
 }));
 
+// 共享可变量：让「文档是否已加载完」按用例切换，而不靠 mockReturnValue 覆盖
+// （clearAllMocks 不清实现，跨用例泄漏）
+const mxState = vi.hoisted(() => ({ documentLoaded: true }));
+
 vi.mock('@/services/mxcadManager', () => ({
   exitCurrentCollaboration: vi.fn(),
-  mxcadManager: { showMxCAD: vi.fn(), isCreated: vi.fn(() => false) },
+  clearShareChain: vi.fn(),
+  resumeShareChain: vi.fn(),
+  mxcadManager: {
+    showMxCAD: vi.fn(),
+    isCreated: vi.fn(() => false),
+    isReady: vi.fn(() => true),
+    reloadCurrentFile: vi.fn(() => Promise.resolve()),
+  },
   refreshFileName: vi.fn(),
+  hasDocumentLoaded: vi.fn(() => mxState.documentLoaded),
 }));
 
 import { emit, clearDrawingSessionListeners } from '@/services/drawingSession';
+import { clearShareChain, resumeShareChain } from '@/services/mxcadManager';
 import { useFileOpenGuard } from './useFileOpenGuard';
 
 const baseOptions = {
@@ -36,6 +49,7 @@ function renderGuard(overrides: Partial<typeof baseOptions> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   clearDrawingSessionListeners();
+  mxState.documentLoaded = true;
 });
 
 describe('useFileOpenGuard — SAVE_REQUIRED 经类型化 bus（T1 迁移）', () => {
@@ -61,6 +75,17 @@ describe('useFileOpenGuard — SAVE_REQUIRED 经类型化 bus（T1 迁移）', (
 
     expect(result.current.loginGate.showLoginPrompt).toBe(true);
     expect(result.current.loginGate.loginPromptAction).toBe('另存为');
+  });
+
+  it('未登录收到 SAVE_REQUIRED（kind=share，意图链挂起后复用闸门）→ 文案=保存并分享', () => {
+    const { result } = renderGuard();
+
+    act(() => {
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'share' });
+    });
+
+    expect(result.current.loginGate.showLoginPrompt).toBe(true);
+    expect(result.current.loginGate.loginPromptAction).toBe('保存并分享');
   });
 
   it('已登录 → 不弹登录提示', () => {
@@ -112,5 +137,58 @@ describe('useFileOpenGuard — SAVE_REQUIRED 经类型化 bus（T1 迁移）', (
     });
     // 无异常即通过（订阅已解除）
     expect(true).toBe(true);
+  });
+});
+
+describe('useFileOpenGuard — 意图链续跑（ADR-0081 D4/D5）', () => {
+  it('已认证且文档已加载 → 续跑挂起的意图链（锚点 document-loaded）', async () => {
+    renderGuard({ isAuthenticated: true });
+
+    await vi.waitFor(() => expect(resumeShareChain).toHaveBeenCalledTimes(1));
+  });
+
+  it('文档仍在下载/解析 → 等 openFileComplete 才续跑', async () => {
+    mxState.documentLoaded = false;
+
+    renderGuard({ isAuthenticated: true });
+    expect(resumeShareChain).not.toHaveBeenCalled();
+
+    act(() => {
+      emit(CAD_EVENTS.OPEN_COMPLETE, { fileId: 'file-1', fileName: 'a.mxweb' });
+    });
+    expect(resumeShareChain).toHaveBeenCalledTimes(1);
+  });
+
+  it('文档仍在下载/解析 → 卸载后不再续跑', () => {
+    mxState.documentLoaded = false;
+
+    const { unmount } = renderGuard({ isAuthenticated: true });
+    expect(resumeShareChain).not.toHaveBeenCalled();
+    unmount();
+
+    act(() => {
+      emit(CAD_EVENTS.OPEN_COMPLETE, { fileId: 'file-1', fileName: 'a.mxweb' });
+    });
+    expect(resumeShareChain).not.toHaveBeenCalled();
+  });
+
+  it('未登录 → 不续跑', async () => {
+    renderGuard({ isAuthenticated: false });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(resumeShareChain).not.toHaveBeenCalled();
+  });
+
+  it('关闭登录提示 → 清除挂起的意图链（用户放弃该动作）', () => {
+    const { result } = renderGuard();
+
+    act(() => {
+      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'share' });
+    });
+    expect(result.current.loginGate.showLoginPrompt).toBe(true);
+
+    act(() => {
+      result.current.loginGate.handleLoginPromptClose();
+    });
+    expect(clearShareChain).toHaveBeenCalledTimes(1);
   });
 });

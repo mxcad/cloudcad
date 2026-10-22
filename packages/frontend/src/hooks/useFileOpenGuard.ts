@@ -2,7 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { CAD_EVENTS } from '@/constants/events';
 import { t } from '@/languages';
-import { exitCurrentCollaboration } from '@/services/mxcadManager';
+import {
+  clearShareChain,
+  exitCurrentCollaboration,
+  hasDocumentLoaded,
+  mxcadManager,
+  refreshFileName,
+  resumeShareChain,
+} from '@/services/mxcadManager';
 import { subscribe, type SaveRequiredDetail } from '@/services/drawingSession';
 import { useLoginGate, type LoginGate } from './useLoginGate';
 
@@ -51,6 +58,8 @@ export function useFileOpenGuard({
     onLoginStart: () => {
       pendingShowActionRef.current = false;
     },
+    // 用户放弃该动作 → 清除已挂起的意图链，避免下次登录时自动续跑（ADR-0081 D5）
+    onLoginPromptClose: clearShareChain,
   });
 
   const hideEditor = useCallback(() => {
@@ -128,34 +137,40 @@ export function useFileOpenGuard({
   }, [isAuthenticated, isHomeMode, loginGate.resetLoginSuppression]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      import('../services/mxcadManager')
-        .then(({ refreshFileName, hasDocumentLoaded, mxcadManager }) => {
-          refreshFileName();
-          // 必须等首个文档真正加载完（openFileComplete）才 reload：引擎同一时刻只能打开
-          // 一个文档，初次打开进行中就 reload 会发并发 openWebFile，锁死首次打开的
-          // hideLoading/openFileComplete，loading 永久转圈。isReady() 只表示引擎对象已创建
-          // （WASM 加载完），此时 mxweb 往往还在下载/解析——这也是原来只防了 401 没防住的原因。
-          if (
-            fileId &&
-            mxcadManager.isReady() &&
-            hasDocumentLoaded(mxcadManager)
-          ) {
-            mxcadManager
-              .reloadCurrentFile()
-              .catch(() =>
-                console.warn('[useFileOpenGuard] reloadCurrentFile 失败')
-              );
-          }
-        })
-        .catch(() => {});
+    if (!isAuthenticated) return;
+
+    refreshFileName();
+    let openCompleteUnsubscribe: (() => void) | null = null;
+
+    // 必须等首个文档真正加载完（openFileComplete）才 reload：引擎同一时刻只能打开
+    // 一个文档，初次打开进行中就 reload 会发并发 openWebFile，锁死首次打开的
+    // hideLoading/openFileComplete，loading 永久转圈。isReady() 只表示引擎对象已创建
+    // （WASM 加载完），此时 mxweb 往往还在下载/解析——这也是原来只防了 401 没防住的原因。
+    if (fileId && mxcadManager.isReady() && hasDocumentLoaded(mxcadManager)) {
+      // 意图链续跑锚点 = document-loaded（ADR-0081 D4）：排在 reload 之后
+      void mxcadManager
+        .reloadCurrentFile()
+        .catch(() => console.warn('[useFileOpenGuard] reloadCurrentFile 失败'))
+        .finally(resumeShareChain);
+    } else if (fileId && !hasDocumentLoaded(mxcadManager)) {
+      // 云图纸仍在下载/解析 → 等 openFileComplete 才续跑（不改变原有 reload 判据）
+      openCompleteUnsubscribe = subscribe(
+        CAD_EVENTS.OPEN_COMPLETE,
+        resumeShareChain
+      );
+    } else {
+      // 本地/新建文档无 fileId 可 reload，文档本就是加载态 → 直接续跑
+      resumeShareChain();
     }
+
+    // 清理必须覆盖所有分支：早退分支若在 return 前 return，订阅会泄漏到卸载之后
+    return () => {
+      openCompleteUnsubscribe?.();
+    };
   }, [isAuthenticated, fileId]);
 
-  const {
-    showLoginPrompt: gateShowLoginPrompt,
-    handleLoginPromptClose,
-  } = loginGate;
+  const { showLoginPrompt: gateShowLoginPrompt, handleLoginPromptClose } =
+    loginGate;
   useEffect(() => {
     // 路由变化时关闭仍打开的闸门视图（依赖只含路由：若含 showLoginPrompt，
     // 非主页模式下提示一弹出就会被本 effect 立刻关闭，SAVE_REQUIRED 提示不可见）
@@ -170,8 +185,13 @@ export function useFileOpenGuard({
     const handleSaveRequired = (payload: SaveRequiredDetail) => {
       // 按稳定 kind 取展示文案：原 action.includes(t('另存为')) 分派因生产端恒发
       // t('保存文件') 而不可达，且跳过 saveAs 会吞掉登录提示（saveAsToCloud 已
-      // cancelLoginRedirect，提示是未登录用户唯一的登录入口），故两种 kind 都弹提示
-      const label = payload?.kind === 'saveAs' ? t('另存为') : t('保存文件');
+      // cancelLoginRedirect，提示是未登录用户唯一的登录入口），故各 kind 都弹提示
+      const label =
+        payload?.kind === 'saveAs'
+          ? t('另存为')
+          : payload?.kind === 'share'
+            ? t('保存并分享')
+            : t('保存文件');
       loginGate.requireLogin(label);
     };
 

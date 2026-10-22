@@ -16,7 +16,14 @@ interface EditUserModalProps {
   onClose: () => void;
   onSubmit: (data: EditUserModalProps['formData']) => void;
   onAvatarUploaded?: () => void;
-  roles: Array<{ id: string; name: string; isSystem?: boolean }>;
+  roles: Array<{
+    id: string;
+    name: string;
+    isSystem?: boolean;
+    permissions?: string[];
+  }>;
+  /** 编辑的是操作者自己：角色/账户状态不可改（自我降权会锁死账户），隐藏对应下拉 */
+  isSelf?: boolean;
   mailEnabled: boolean;
   loading: boolean;
   user: {
@@ -57,6 +64,7 @@ export function EditUserModal({
   onSubmit,
   onAvatarUploaded,
   roles,
+  isSelf,
   mailEnabled,
   loading,
   user,
@@ -262,28 +270,38 @@ export function EditUserModal({
           <label className={styles.formLabel}>
             {t('角色')} <span className={styles.required}>*</span>
           </label>
-          <Select
-            value={formData.roleId}
-            onChange={(value) => onFormChange('roleId', value)}
-            options={roles.map((role) => ({
-              value: role.id,
-              label: getRoleDisplayName(role.name, role.isSystem ?? false),
-            }))}
-            placeholder={t('请选择角色')}
-          />
+          {isSelf ? (
+            <div className={styles.formNotice}>{t('不能修改自己的角色')}</div>
+          ) : (
+            <Select
+              value={formData.roleId}
+              onChange={(value) => onFormChange('roleId', value)}
+              options={roles.map((role) => ({
+                value: role.id,
+                label: getRoleDisplayName(role.name, role.isSystem ?? false),
+              }))}
+              placeholder={t('请选择角色')}
+            />
+          )}
         </div>
         <div className={styles.formGroup}>
           <label className={styles.formLabel}>{t('账户状态')}</label>
-          <Select
-            value={formData.status}
-            onChange={(value) => onFormChange('status', value)}
-            options={[
-              { value: 'ACTIVE', label: t('正常') },
-              { value: 'INACTIVE', label: t('未激活') },
-              { value: 'SUSPENDED', label: t('已禁用') },
-            ]}
-            placeholder={t('请选择状态')}
-          />
+          {isSelf ? (
+            <div className={styles.formNotice}>
+              {t('不能修改自己的账户状态')}
+            </div>
+          ) : (
+            <Select
+              value={formData.status}
+              onChange={(value) => onFormChange('status', value)}
+              options={[
+                { value: 'ACTIVE', label: t('正常') },
+                { value: 'INACTIVE', label: t('未激活') },
+                { value: 'SUSPENDED', label: t('已禁用') },
+              ]}
+              placeholder={t('请选择状态')}
+            />
+          )}
         </div>
       </form>
     </Modal>

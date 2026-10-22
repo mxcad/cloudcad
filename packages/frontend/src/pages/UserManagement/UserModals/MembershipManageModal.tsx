@@ -32,6 +32,19 @@ interface VipTierDto {
   isActive: boolean;
 }
 
+/**
+ * tierLevel 归一为 number。DTO 声明的是 number，但后端偶尔以字符串形态下发
+ * （如 "0"、"2"），不归一化会踩两个具体的坑：
+ * - 上架判定 `tiers.some((tier) => tier.level === currentTierLevel)` 是严格
+ *   相等，number 与 string 永不匹配 → 当前等级被误判为「已下架」；
+ * - 各处 `=== 0` / `> 0` 混用时，字符串 0 与数字 0 语义不一致。
+ * 归一后全弹窗的比较都在同一类型上进行。
+ */
+const toTierLevel = (value: number | string | null | undefined): number => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
 interface MembershipManageModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,11 +84,33 @@ export function MembershipManageModal({
   const [tiersLoading, setTiersLoading] = useState(false);
   const [tiersError, setTiersError] = useState<string | null>(null);
 
+  // 当前等级单一事实源：全弹窗统一走它，禁止各处裸读 currentMembership.tierLevel
+  const currentTierLevel = toTierLevel(currentMembership?.tierLevel);
+
+  // 下拉选项必须当场包含当前等级，不能等 GET /vip/tiers 返回：等级列表是异步的，
+  // 选项里查不到选中值时 Select 会回退显示占位符「请选择等级」，看起来像默认等级没取到
+  // （实为接口往返期间 Select 被禁用 + 显示占位符）。此处按当前等级补一条；
+  // 接口返回后真实列表覆盖它（等级已下架会被细化为「VIP{n}（已下架）」，不产生重复项）。
+  const tierSelectOptions = useMemo(() => {
+    if (
+      currentTierLevel === 0 ||
+      tierOptions.some((option) => Number(option.value) === currentTierLevel)
+    ) {
+      return tierOptions;
+    }
+    return [
+      ...tierOptions,
+      {
+        value: String(currentTierLevel),
+        label: t('VIP{level}', { level: String(currentTierLevel) }),
+      },
+    ];
+  }, [tierOptions, currentTierLevel]);
+
   useEffect(() => {
     if (isOpen) {
-      const currentTier = currentMembership?.tierLevel ?? 0;
-      setTierLevel(String(currentTier));
-      if (currentTier > 0 && currentMembership?.expiresAt) {
+      setTierLevel(String(currentTierLevel));
+      if (currentTierLevel > 0 && currentMembership?.expiresAt) {
         setDurationMode('custom');
         setCustomDate(currentMembership.expiresAt.slice(0, 10));
       } else {
@@ -86,7 +121,7 @@ export function MembershipManageModal({
       setSignedDays(30);
       setDaysDraft('30');
     }
-  }, [isOpen, currentMembership]);
+  }, [isOpen, currentTierLevel, currentMembership?.expiresAt]);
 
   // 会员等级列表只展示"上架"的等级（GET /vip/tiers 仅返回启用等级），
   // 不硬编码 0-10：已下架等级不再出现在可选列表中
@@ -116,14 +151,13 @@ export function MembershipManageModal({
           options.unshift({ value: '0', label: t('免费用户') });
         }
         // 当前等级已下架时补充为只读选项，保证下拉能显示现有会员等级
-        const currentTier = currentMembership?.tierLevel ?? 0;
         if (
-          currentTier > 0 &&
-          !tiers.some((tier) => tier.level === currentTier)
+          currentTierLevel > 0 &&
+          !tiers.some((tier) => tier.level === currentTierLevel)
         ) {
           options.push({
-            value: String(currentTier),
-            label: `${t('VIP{level}', { level: String(currentTier) })}（${t('已下架')}）`,
+            value: String(currentTierLevel),
+            label: `${t('VIP{level}', { level: String(currentTierLevel) })}（${t('已下架')}）`,
           });
         }
         setTierOptions(options);
@@ -140,7 +174,7 @@ export function MembershipManageModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, currentMembership?.tierLevel]);
+  }, [isOpen, currentTierLevel]);
 
   // 调整基准：当前到期时间晚于此刻则从到期时间起算，否则从此刻起算（与后端 user-crud 一致）
   const adjustBase = useMemo(() => {
@@ -281,7 +315,7 @@ export function MembershipManageModal({
                 setDurationMode('preset');
               }
             }}
-            options={tierOptions}
+            options={tierSelectOptions}
             placeholder={t('请选择等级')}
             loading={tiersLoading}
             disabled={tiersLoading}
@@ -423,15 +457,13 @@ export function MembershipManageModal({
           </div>
         )}
 
-        {Number(tierLevel) === 0 &&
-          currentMembership?.tierLevel &&
-          currentMembership.tierLevel > 0 && (
-            <div className={styles.formNotice}>
-              {t('将移除该用户的 VIP 会员资格（当前 VIP{level}）', {
-                level: String(currentMembership.tierLevel),
-              })}
-            </div>
-          )}
+        {Number(tierLevel) === 0 && currentTierLevel > 0 && (
+          <div className={styles.formNotice}>
+            {t('将移除该用户的 VIP 会员资格（当前 VIP{level}）', {
+              level: String(currentTierLevel),
+            })}
+          </div>
+        )}
       </form>
     </Modal>
   );

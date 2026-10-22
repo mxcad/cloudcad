@@ -7,6 +7,12 @@ export interface UseLoginGateOptions {
   isAuthenticated: boolean;
   /** 登录跳转前的钩子（如编辑器页隐藏 CAD 视图/结算 show 动作） */
   onLoginStart?: () => void;
+  /**
+   * 「稍后再说」关闭闸门视图的钩子：用户此刻放弃该动作，消费方据此清理
+   * 已挂起的意图链（ADR-0081），避免下次登录时自动续跑一个用户已放弃的动作。
+   * 路由变化触发的关闭同样会走这里——意图链只由显式动作创建，重建成本是一次点击。
+   */
+  onLoginPromptClose?: () => void;
 }
 
 export interface LoginGate {
@@ -43,6 +49,7 @@ export interface LoginGate {
 export function useLoginGate({
   isAuthenticated,
   onLoginStart,
+  onLoginPromptClose,
 }: UseLoginGateOptions): LoginGate {
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,7 +100,8 @@ export function useLoginGate({
 
   const handleLoginPromptClose = useCallback(() => {
     setShowLoginPrompt(false);
-  }, []);
+    onLoginPromptClose?.();
+  }, [onLoginPromptClose]);
 
   const loginPrompt = (
     <LoginPrompt

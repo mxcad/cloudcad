@@ -210,3 +210,101 @@ describe('MembershipManageModal 调整时长计数器', () => {
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
 });
+
+describe('MembershipManageModal tierLevel 归一（真值陷阱回归）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(vipControllerGetActiveTiers).mockResolvedValue({
+      data: [
+        { id: 't0', level: 0, name: 'VIP0', isActive: true },
+        { id: 't2', level: 2, name: 'VIP2', isActive: true },
+      ],
+    } as never);
+  });
+
+  const selectTier = (value: string) => {
+    fireEvent.change(screen.getByLabelText('VIP 等级'), { target: { value } });
+  };
+
+  it('回归：tierLevel 为字符串 "0" 时不渲染移除提示', async () => {
+    // "0" 是 JS 真值且 "0" > 0 为 true，裸判会让移除提示渲染成「当前 VIP0」
+    renderModal({
+      tierLevel: '0' as unknown as number,
+      expiresAt: null,
+    });
+
+    await screen.findByRole('button', { name: '保存' });
+    selectTier('0');
+    expect(screen.queryByText(/将移除该用户/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/VIP0/)).not.toBeInTheDocument();
+  });
+
+  it('数值 0 与字符串 "0" 行为一致', async () => {
+    renderModal({ tierLevel: 0, expiresAt: null });
+
+    await screen.findByRole('button', { name: '保存' });
+    selectTier('0');
+    expect(screen.queryByText(/将移除该用户/)).not.toBeInTheDocument();
+  });
+
+  it('字符串等级的 VIP 用户降级到免费时仍正常提示当前等级', async () => {
+    renderModal({
+      tierLevel: '2' as unknown as number,
+      expiresAt: EXPIRY_IN_2_DAYS,
+    });
+
+    await screen.findByRole('button', { name: '保存' });
+    selectTier('0');
+    expect(screen.getByText(/当前 VIP2/)).toBeInTheDocument();
+  });
+});
+
+describe('MembershipManageModal 默认等级选项不依赖接口返回', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const getTierSelect = () =>
+    screen.getByLabelText('VIP 等级') as HTMLSelectElement;
+
+  it('回归：等级列表请求未返回时下拉已含当前等级（否则 Select 回退显示占位符）', () => {
+    vi.mocked(vipControllerGetActiveTiers).mockReturnValue(
+      new Promise(() => {}) as never
+    );
+    renderModal({ tierLevel: 2, expiresAt: EXPIRY_IN_2_DAYS });
+
+    const select = getTierSelect();
+    expect(select.value).toBe('2');
+    expect(Array.from(select.options).map((o) => o.value)).toContain('2');
+  });
+
+  it('等级列表返回后不重复添加当前等级选项', async () => {
+    vi.mocked(vipControllerGetActiveTiers).mockResolvedValue({
+      data: [
+        { id: 't0', level: 0, name: 'VIP0', isActive: true },
+        { id: 't2', level: 2, name: 'VIP2', isActive: true },
+      ],
+    } as never);
+    renderModal({ tierLevel: 2, expiresAt: EXPIRY_IN_2_DAYS });
+
+    await waitFor(() => {
+      expect(Array.from(getTierSelect().options).map((o) => o.value)).toEqual([
+        '0',
+        '2',
+      ]);
+    });
+  });
+
+  it('当前等级已下架时以「已下架」标签呈现且无重复项', async () => {
+    vi.mocked(vipControllerGetActiveTiers).mockResolvedValue({
+      data: [{ id: 't0', level: 0, name: 'VIP0', isActive: true }],
+    } as never);
+    renderModal({ tierLevel: 2, expiresAt: EXPIRY_IN_2_DAYS });
+
+    await waitFor(() => {
+      const select = getTierSelect();
+      expect(Array.from(select.options).map((o) => o.value)).toEqual(['0', '2']);
+      expect(select.options[1]?.textContent).toContain('已下架');
+    });
+  });
+});

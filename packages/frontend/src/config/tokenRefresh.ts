@@ -74,6 +74,10 @@ async function doRefresh(token?: string): Promise<boolean> {
 
 export async function tryRefreshToken(): Promise<boolean> {
   if (isRedirecting) return false;
+  // 从未登录（无 access token 也无 refresh token）时不发起刷新：否则游客态任何 401
+  // 都会先打一个必然失败的 /auth/refresh（无意义往返 + 控制台噪音）。
+  // 判据与 handleTokenRefreshFailure 的「从未登录」分支一致
+  if (!getAccessToken() && !getRefreshToken()) return false;
   // 冷却期内 401 直接返回失败，不再重复发起刷新
   if (Date.now() < refreshCooldownUntil) return false;
   if (isRefreshing && refreshPromise) {

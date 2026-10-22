@@ -12,6 +12,7 @@ import {
   setTokenRefreshCallback,
   setAuthFailureCallback,
   cancelProactiveRefresh,
+  triggerProactiveRefresh,
 } from '@/config/clientSetup';
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
 import { clearSavePermissionCache } from '@/services/mxcadManager/saveDefaults';
@@ -20,7 +21,7 @@ import {
   isAccessTokenExpired,
   getUser,
 } from '@/utils/tokenUtils';
-import { clearAuthState } from '@/lib/authState';
+import { clearAuthState, loadAuthState } from '@/lib/authState';
 import { openEventStream } from '@/services/eventStream';
 import {
   useAuthActions,
@@ -65,6 +66,13 @@ interface AuthContextType {
   }) => Promise<void>;
   verifyEmailAndLogin: (email: string, code: string) => Promise<unknown>;
   verifyPhoneAndLogin: (phone: string, code: string) => Promise<unknown>;
+  /** 首启「创建首个管理员」（仅系统零用户时可用），成功后自动登录 */
+  createFirstAdmin: (data: {
+    username: string;
+    password: string;
+    email?: string;
+    nickname?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<boolean>;
   /**
@@ -201,19 +209,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => setAuthFailureCallback(() => {});
   }, []);
 
-  // 跨标签页同步：其他标签页登出/清除 token 时，本标签页同步清除
+  // 跨标签页同步：跟随认证三元组的存储快照对齐。storage 事件仅在其他标签页
+  // 写入时触发（本标签页自身写入不触发），不会自我递归。
+  // 清空 → 其他标签页登出，本标签页同步清除；写入 → 其他标签页登录/静默刷新，
+  // 本标签页采用存储快照。setToken 会连带触发下方 [token] 的验证 effect 重跑
+  // /auth/profile 校验（顺带刷新 user），此处不另写校验；该 effect 有 10s 超时
+  // 兜底不会永久卡 loading，且 CAD 编辑器是全局覆盖层、不在 ProtectedRoute 内，
+  // 不会因此闪全屏 spinner。本标签页后续请求自带校验能力：token 无效时
+  // 401 → tryRefreshToken 自行收敛。
+  // 登录按 accessToken → refreshToken → user 顺序落盘，单键事件到达时三元组
+  // 可能尚未写全，缺 token 或 user 时跳过，等后续键的事件补齐。
   useEffect(() => {
     const handleCrossTabAuth = (e: StorageEvent) => {
       if (
-        (e.key === 'accessToken' || e.key === 'refreshToken') &&
-        !e.newValue
+        e.key !== 'accessToken' &&
+        e.key !== 'refreshToken' &&
+        e.key !== 'user'
       ) {
+        return;
+      }
+
+      if (!e.newValue) {
         setToken(null);
         setUser(null);
         clearProjectPermissionsCache();
         clearSavePermissionCache();
         cancelProactiveRefresh();
+        return;
       }
+
+      const { accessToken, user: storedUser } = loadAuthState();
+      if (!accessToken || !storedUser) return;
+
+      setToken(accessToken);
+      setUser(storedUser);
+      triggerProactiveRefresh();
     };
     window.addEventListener('storage', handleCrossTabAuth);
     return () => window.removeEventListener('storage', handleCrossTabAuth);
@@ -225,6 +255,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loginByPhone,
     register,
     registerByPhone,
+    createFirstAdmin,
     verifyEmailAndLogin,
     verifyPhoneAndLogin,
     logout,
@@ -267,6 +298,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       loginWithWechat,
       register,
       registerByPhone,
+      createFirstAdmin,
       verifyEmailAndLogin,
       verifyPhoneAndLogin,
       logout,
@@ -286,6 +318,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       loginWithWechat,
       register,
       registerByPhone,
+      createFirstAdmin,
       verifyEmailAndLogin,
       verifyPhoneAndLogin,
       logout,

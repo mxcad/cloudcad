@@ -153,7 +153,13 @@ export function useUserCRUD(params?: UserSearchParams) {
       membershipMutation.isPending,
     isLoading,
     error,
-    roles: roles.map((r) => ({ id: r.id, name: r.name, isSystem: r.isSystem })),
+    // permissions 供「降级确认」判定：目标是用户管理员而目标角色不再是 → 二次确认
+    roles: roles.map((r) => ({
+      id: r.id,
+      name: r.name,
+      isSystem: r.isSystem,
+      permissions: r.permissions || [],
+    })),
     mailEnabled: false,
     smsEnabled: false,
     cleanupStats,

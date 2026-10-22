@@ -75,7 +75,7 @@ export function useCollaboration(visible: boolean, onFileLoaded?: () => void): U
     if (isCadReady) {
       fetchWorks(true);
     }
-  }, [isCadReady, visible]);
+  }, [isCadReady, visible, user]);
 
   return {
     works,

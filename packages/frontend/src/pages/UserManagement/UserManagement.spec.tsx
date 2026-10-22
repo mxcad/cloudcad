@@ -17,8 +17,43 @@ vi.mock('./hooks/useUserSearch');
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ hasPermission: () => true }),
 }));
+const { showConfirmMock } = vi.hoisted(() => ({ showConfirmMock: vi.fn() }));
+// 操作者 id 与被测用户 id 均不相等 → isSelf=false，覆盖「编辑别人」的分支
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ user: { id: 'operator-1' }, isAuthenticated: true, loading: false }),
+}));
+vi.mock('@/hooks/useConfirmAction', () => ({
+  useConfirmAction: () => showConfirmMock,
+}));
 vi.mock('@/contexts/ThemeContext', () => ({
   useTheme: () => ({ isDark: false }),
+}));
+vi.mock('@/contexts/RuntimeConfigContext', () => ({
+  useRuntimeConfig: () => ({
+    config: {
+      mailEnabled: false,
+      requireEmailVerification: false,
+      smsEnabled: false,
+      requirePhoneVerification: false,
+      supportEmail: '',
+      supportPhone: '',
+      docsUrl: '',
+      allowRegister: true,
+      wechatEnabled: false,
+      wechatAutoRegister: false,
+      maxFileSize: 100,
+      collaborationEnabled: false,
+      collaborationDomains: '',
+      batchDownloadEnabled: false,
+      freeExportDownloadEnabled: false,
+      userCancelGraceDays: 7,
+      securityMode: 'normal',
+      passwordPolicyMinLength: 10,
+      passwordPolicyMinCategories: 3,
+      brandProfile: {},
+    },
+    loading: false,
+  }),
 }));
 vi.mock('@/hooks/useDocumentTitle');
 vi.mock('@/components/ui/Button', () => ({
@@ -240,6 +275,55 @@ describe('UserManagement', () => {
         useUserSearchModule.useUserSearch
       ) as unknown as Mock<UseUserSearchReturn>;
       expect(mockUseUserSearch).toHaveBeenCalled();
+    });
+  });
+
+  describe('编辑用户：自我降权与降级确认（回归：admin 不能改自己的角色）', () => {
+    const openEditModal = () => {
+      fireEvent.click(screen.getAllByRole('button', { name: /编辑/i })[0]);
+    };
+
+    it('编辑自己的行：角色与账户状态下拉隐藏并给出提示', () => {
+      vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue({
+        ...mockCRUDReturn,
+        users: [
+          { ...mockUsers[0], id: 'operator-1', username: 'selfuser' },
+        ],
+      });
+
+      render(<UserManagement />);
+      openEditModal();
+
+      expect(screen.getByText('不能修改自己的角色')).toBeTruthy();
+      expect(screen.getByText('不能修改自己的账户状态')).toBeTruthy();
+    });
+
+    it('编辑别人且未降级：直接提交，不弹二次确认', () => {
+      vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue({
+        ...mockCRUDReturn,
+        users: [{ ...mockUsers[0], id: 'someone-else' }],
+      });
+
+      render(<UserManagement />);
+      openEditModal();
+      fireEvent.click(screen.getByRole('button', { name: /保存修改/i }));
+
+      expect(showConfirmMock).not.toHaveBeenCalled();
+      expect(mockCRUDReturn.updateUser).toHaveBeenCalledTimes(1);
+    });
+
+    it('编辑自己的行：不弹二次确认（下拉已隐藏，值不会变）', () => {
+      vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue({
+        ...mockCRUDReturn,
+        users: [{ ...mockUsers[0], id: 'operator-1', username: 'selfuser' }],
+      });
+
+      render(<UserManagement />);
+      openEditModal();
+      fireEvent.click(screen.getByRole('button', { name: /保存修改/i }));
+
+      expect(showConfirmMock).not.toHaveBeenCalled();
+      expect(mockCRUDReturn.updateUser).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -485,7 +569,8 @@ describe('UserManagement 操作失败错误提示（回归：mutation 失败必�
     fireEvent.change(screen.getByPlaceholderText('请输入邮箱地址'), {
       target: { value: 'admin@example.com' },
     });
-    fireEvent.change(screen.getByPlaceholderText('至少8个字符'), {
+    // 密码 placeholder 由生效策略（mock 10/3）动态渲染，按前缀匹配不锁死措辞
+    fireEvent.change(screen.getByPlaceholderText(/至少 10 位/), {
       target: { value: 'password123' },
     });
     fireEvent.click(screen.getByRole('button', { name: '创建用户' }));

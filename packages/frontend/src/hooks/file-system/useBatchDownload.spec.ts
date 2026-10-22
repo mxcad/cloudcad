@@ -61,6 +61,7 @@ import {
 } from '@/utils/download';
 import { useBatchDownload } from './useBatchDownload';
 import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
+import * as tokenUtils from '@/utils/tokenUtils';
 
 const fileItem = { nodeId: 'node-1', fileName: 'a.mxweb', formats: ['mxweb'] };
 
@@ -346,6 +347,18 @@ describe('useBatchDownload — syncTasksFromServer 顺序（最新在前）', ()
     expect(
       useBatchDownloadStore.getState().tasks.map((t) => t.taskId)
     ).toEqual(['srv-new', 'srv-old']);
+  });
+});
+
+describe('useBatchDownload — syncTasksFromServer 游客门控', () => {
+  it('无 token 时不发 getUserTasks 请求（任务列表是登录用户数据，游客必 401）', async () => {
+    const spy = vi.spyOn(tokenUtils, 'getValidToken').mockReturnValue(null);
+    const { result } = renderHook(() => useBatchDownload());
+    await act(async () => {
+      await result.current.syncTasksFromServer();
+    });
+    expect(mockGetUserTasks).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 
