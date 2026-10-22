@@ -15,6 +15,7 @@ const { PRODUCT_NAME } = require('./lib/branding');
 const { resolveMxcadAssemblyPath } = require('./lib/mxcad-path');
 const { fillEmptySecrets } = require('./setup-offline');
 const { alignConversionServiceUrl } = require('./config-updater');
+const { migrateEnvFiles } = require('./lib/env-migration');
 
 // ==================== 配置 ====================
 
@@ -405,6 +406,16 @@ async function step2_InstallDeps() {
  */
 async function step3_StartInfrastructure() {
   logStep(3, 7, '启动基础服务...');
+
+  // 废弃键迁移（升级部署时 .env 残留旧键）。须先于下方 fillEmptySecrets：先删废弃键，
+  // 再为保留的空白密钥生成值，避免给即将被删的键白填一次口令。
+  // 本脚本既是目标机部署路径，也是 CI 断网门禁（verify-windows-deploy.js 在干净解压包内
+  // 调它）——干净包无残留，迁移为无操作，故对门禁零影响。
+  try {
+    migrateEnvFiles(PROJECT_ROOT, (m) => log('step', m));
+  } catch (err) {
+    log('warn', `环境变量迁移出错: ${err.message}`);
+  }
 
   // 生成 .env 空白密钥（SESSION_SECRET/JWT_SECRET/PII_*/REDIS_PASSWORD/INTERNAL_SERVICE_SECRET）。
   // 验收器不跑 start.js（其 fillEmptySecrets 生成密钥），须自行补齐——否则后端生产模式

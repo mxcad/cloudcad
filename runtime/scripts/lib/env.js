@@ -104,12 +104,18 @@ function parseEnvFile(filePath) {
  * - 新增 KEY（原版忽略新增）
  * - 可选传入 examplePath 同步注释和结构
  *
+ * 返回值必须透传：config-updater 的 updateEnvFile 返回 boolean（文件不存在→false，
+ * 其余→true）。曾漏 return 使本 wrapper 恒返回 undefined，调用方写 `if (!ok)` 守卫
+ * 会恒为真、把成功当失败——infra.js:203 即该模式的正确示范，照抄时若从本模块导入
+ * 就永远走「写入失败」分支。
+ *
  * @param {string} filePath .env 文件路径
  * @param {Object} updates 要更新的键值对
  * @param {string} [examplePath] .env.example 路径
+ * @returns {boolean} 写入是否成功
  */
 function updateEnvFile(filePath, updates, examplePath) {
-  updateEnvFileEnhanced(filePath, updates, examplePath);
+  return updateEnvFileEnhanced(filePath, updates, examplePath);
 }
 
 module.exports = {

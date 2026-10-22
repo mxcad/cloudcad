@@ -27,6 +27,7 @@ const {
   escapeEnvValue,
   updateEnvFile,
   alignConversionServiceUrl,
+  syncConversionServiceEnvPort,
   mergeExampleIntoEnv,
   parseEnvToBlocks,
 } = require('./config-updater');
@@ -429,6 +430,37 @@ test('alignConversionServiceUrl: FUNCTION_EXECUTOR 大小写/首尾空白容忍�
       assert.equal(alignConversionServiceUrl(file), 'repaired');
       assert.equal(rawValue(file, 'CONVERSION_SERVICE_URL'), 'http://localhost:3102');
     }
+  );
+});
+
+test('syncConversionServiceEnvPort: 顺延后把新端口写进 conversion-service 自己的 .env', () => {
+  // 缺陷机理（2026-10-21）：端口顺延只回写 backend/.env，而源码 dev 起的转换服务
+  // 只读自己那份 .env → 它仍监听旧端口、后端连新端口，上传转换全部 ECONNREFUSED。
+  withTempEnv('QUEUE_DRIVER=local\nCONVERSION_SERVICE_PORT=3100\n', (file) => {
+    assert.equal(syncConversionServiceEnvPort(file, 3103), 'repaired');
+    assert.equal(parseEnvFile(file).CONVERSION_SERVICE_PORT, '3103');
+  });
+});
+
+test('syncConversionServiceEnvPort: 端口缺失时补写（原文件无该 key）', () => {
+  withTempEnv('QUEUE_DRIVER=local\n', (file) => {
+    assert.equal(syncConversionServiceEnvPort(file, 3103), 'repaired');
+    assert.equal(parseEnvFile(file).CONVERSION_SERVICE_PORT, '3103');
+  });
+});
+
+test('syncConversionServiceEnvPort: 已一致时不动文件（幂等）', () => {
+  const content = 'QUEUE_DRIVER=local\nCONVERSION_SERVICE_PORT=3100\n';
+  withTempEnv(content, (file) => {
+    assert.equal(syncConversionServiceEnvPort(file, 3100), 'ok');
+    assert.equal(fs.readFileSync(file, 'utf8'), content);
+  });
+});
+
+test('syncConversionServiceEnvPort: 文件不存在返回 missing（部署包不带该文件）', () => {
+  assert.equal(
+    syncConversionServiceEnvPort('/nonexistent/path/conversion-service/.env', 3103),
+    'missing'
   );
 });
 

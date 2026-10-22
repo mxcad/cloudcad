@@ -14,8 +14,9 @@
  * 置灰组合（选中即拒绝并提示，v3 逐步解锁）：
  *   - upgrade + docker   → v3（Docker 升级包）
  *
- * 已解锁（v2 #440/#441）：docker + windows 宿主（Docker Desktop 检测 + 安装指引，不捆绑
- * 安装器；须在 Windows x64 打包机上打，断网验证 verify-windows-docker 属 #444）；
+ * 已解锁（v2 #440/#441/#444）：docker + windows 宿主（Docker Desktop 检测 + 安装指引，
+ * 不捆绑安装器；须在 Windows x64 打包机上打；--verify 走 verify-windows-docker.js：
+ * start.bat E2E + 宿主侧二次探针 + stop.bat，#444）；
  * docker + private（impl-mx 经 implmx 命名上下文烘焙进 app 镜像，打包机须有 packages/impl-mx）
  *
  * 使用方式：

@@ -21,7 +21,8 @@
  *   windows —— v2（#440）：目标机 Docker Desktop（WSL2 跑 linux 容器）+ bridge 网络
  *              + host.docker.internal；不捆绑任何 Docker 物料（检测 + 安装指引）；
  *              须在 Windows x64 打包机（Docker Desktop + 7-Zip + runtime/windows 物料线），
- *              产物 .7z；断网验证（verify-windows-docker）属 #444，--verify 暂不支持
+ *              产物 .7z；--verify 走 verify-windows-docker.js（#444：部署横跨宿主进程 +
+ *              WSL2 VM，无法 --network none 断网，门禁 = start.bat E2E + 独立二次探针 + stop.bat）
  *
  * 打包机零假设自举：只需 x86_64/arm64 + Docker + node ≥20.19.5 + 网络（或预置物料），
  * 其余全部兜底——pnpm（PATH → corepack）→ pnpm install（含 preinstall runtime 资产下载）
@@ -35,7 +36,8 @@
  *   0 打包机自举（node/pnpm/依赖）→ 1 前置检查 + 物料解析（含下载兜底）
  *   → 2 构建 app 镜像 → 3 pg/redis 打 tag → 4 docker save 离线镜像
  *   → 5 下载 Docker 静态二进制 + compose v2 → 6 组装包树（含 .env.example 生成）
- *   → 7 SHA256SUMS + 归档 → 8（--verify）verify-linux-docker-deploy.js 断网验证
+ *   → 7 SHA256SUMS + 归档 → 8（--verify）验证（linux 宿主 = verify-linux-docker-deploy.js
+ *     DinD 断网；windows 宿主 = verify-windows-docker.js start.bat E2E + 二次探针 + stop.bat）
  *
  * 产物: <out>/cloudcad-deploy-<version>-<DATE>-docker-linux-<arch>.tar.gz（arch = x86_64 | aarch64）
  *       <out>/cloudcad-deploy-<version>-<DATE>-docker-windows-x86_64.7z（--host-platform windows）
@@ -1564,6 +1566,10 @@ function linuxDeployNotes(version, productName) {
     '',
     '【运维入口】 ./runtime/cloudcad.sh（交互菜单：启动/停止；与裸机包同构）',
     '',
+    '【日志】 data/logs/ 下全部服务日志；运维中心或 ./runtime/cloudcad.sh [日志中心] 一键打包。',
+    '  PostgreSQL / Redis 在容器内，其日志由容器 json-file 驱动轮转（50MB × 3 份），',
+    '  不进入上面的打包；排查用 docker logs --timestamps cloudcad-pg cloudcad-redis',
+    '',
     '【升级】 新版包解压覆盖本目录后重跑 ./start.sh',
     '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
     '',
@@ -1592,6 +1598,10 @@ function windowsDeployNotes(version, productName) {
     '【停止】 stop.bat（数据保留在 data/ 目录）',
     '',
     '【运维入口】 runtime\\cloudcad.bat（交互菜单：启动/停止；与裸机包同构）',
+    '',
+    '【日志】 data/logs/ 下全部服务日志；运维中心或 runtime\\cloudcad.bat [日志中心] 一键打包。',
+    '  PostgreSQL / Redis 在容器内，其日志由容器 json-file 驱动轮转（50MB × 3 份），',
+    '  不进入上面的打包；排查用 docker logs --timestamps cloudcad-pg cloudcad-redis',
     '',
     '【升级】 新版包解压覆盖本目录后重跑 start.bat',
     '  （.env 与 data/ 自动保留；数据库迁移自动执行）',
@@ -1869,19 +1879,33 @@ async function main() {
 
   if (RUN_VERIFY) {
     if (HOST_PLATFORM === 'windows') {
-      fail('Windows 宿主断网验证（verify-windows-docker）属 #444 尚未实现：请在装有 Docker Desktop 的 Windows 机器上人工验证（start.bat → 服务健康 → stop.bat）');
+      // Windows 宿主（#444）：部署横跨宿主进程 + Docker Desktop WSL2 VM，无法整体塞进
+      // --network none 容器做物理断网；门禁 = start.bat 完整 E2E（12 步含包内 13 项验证，
+      // 自足性断言）+ 独立二次探针 + stop.bat 干净停止。
+      if (process.platform !== 'win32') {
+        fail('Windows 宿主包验证须在装有 Docker Desktop（Linux 容器模式）的 Windows 机器上跑 scripts/verify-windows-docker.js');
+      }
+      log('执行 Windows 宿主验证（verify-windows-docker.js）...');
+      // 70 分钟：verify 脚本自身 start 45 分钟 + stop 15 分钟总超时，外层留解压余量
+      // （同 linux 侧「外层须比内层宽」约定，否则慢环境下外层先杀内层 → 误判失败）。
+      const res = run('node', [path.join(PROJECT_ROOT, 'scripts', 'verify-windows-docker.js'), '--package', archive], {
+        timeoutMs: 70 * 60000,
+      });
+      if (res.status !== 0) fail('Windows 宿主验证失败，本包不得上传 Release');
+      log('Windows 宿主验证通过');
+    } else {
+      if (process.platform !== 'linux') {
+        fail('--verify（DinD 断网验证）只在 Linux 机器上可靠：Windows 打包后把包交给 Linux CI 跑 scripts/verify-linux-docker-deploy.js');
+      }
+      log('执行断网验证（verify-linux-docker-deploy.js）...');
+      // 50 分钟：verify 脚本自身 45 分钟总超时（2 核断网 DinD 慢环境实测 start.sh 需 ~15-25 分钟），
+      // 外层须再留解压+二次探针余量，否则慢环境下外层先杀内层 → 误判失败（2026-10 暴露）。
+      const res = run('node', [path.join(PROJECT_ROOT, 'scripts', 'verify-linux-docker-deploy.js'), '--package', archive], {
+        timeoutMs: 50 * 60000,
+      });
+      if (res.status !== 0) fail('断网验证失败，本包不得上传 Release');
+      log('断网验证通过');
     }
-    if (process.platform !== 'linux') {
-      fail('--verify（DinD 断网验证）只在 Linux 机器上可靠：Windows 打包后把包交给 Linux CI 跑 scripts/verify-linux-docker-deploy.js');
-    }
-    log('执行断网验证（verify-linux-docker-deploy.js）...');
-    // 50 分钟：verify 脚本自身 45 分钟总超时（2 核断网 DinD 慢环境实测 start.sh 需 ~15-25 分钟），
-    // 外层须再留解压+二次探针余量，否则慢环境下外层先杀内层 → 误判失败（2026-10 暴露）。
-    const res = run('node', [path.join(PROJECT_ROOT, 'scripts', 'verify-linux-docker-deploy.js'), '--package', archive], {
-      timeoutMs: 50 * 60000,
-    });
-    if (res.status !== 0) fail('断网验证失败，本包不得上传 Release');
-    log('断网验证通过');
   }
   log(`\n产物: ${archive}`);
   cleanupPackDocker(); // 停止自举的本地 docker（data-root 保留供下次打包复用基础镜像）

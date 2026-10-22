@@ -29,6 +29,7 @@ const {
 
 // 导入配置更新器
 const { mergeExampleIntoEnv } = require('./config-updater');
+const { migrateEnvFiles } = require('./lib/env-migration');
 
 // 导入图纸版本部署辅助
 const versionHelper = require('./drawing-version-helper');
@@ -281,7 +282,20 @@ async function bootstrap() {
     state.isFirstDeploy = true;
     await autoSetupAndShowPasswords();
   } else {
-    // 升级 / 已确认过密码 / 查询维护类命令：合并 .env.example 新增配置项
+    // 升级 / 已确认过密码 / 查询维护类命令。首次部署生成的 .env 全新无残留，
+    // 故下方两块都不挂在上方 autoSetupAndShowPasswords 分支。
+
+    // 环境变量迁移：清理废弃键与重命名。须先于 merge——rename 若排在 merge 之后，
+    // merge 会先用 .env.example 的默认值补出新键，而 rename 按「不覆盖已存在的新键」
+    // 跳过，用户的旧值会被示例默认值静默顶掉。独立于 merge：merge 负责"补齐新增项"，
+    // 清理是另一关注点，取舍见 lib/env-migration.js 文件头注释。
+    try {
+      migrateEnvFiles(PROJECT_ROOT, (m) => log('yellow', m));
+    } catch (err) {
+      log('yellow', `[警告] 环境变量迁移出错: ${err.message}`);
+    }
+
+    // 合并 .env.example 新增配置项
     const examplePath = BACKEND_ENV_PATH + '.example';
     if (
       fs.existsSync(examplePath) &&

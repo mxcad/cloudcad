@@ -49,6 +49,7 @@ const { parseEnvFile, updateEnvFile } = require(path.join(
   'env'
 ));
 const { mergeExampleIntoEnv } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'config-updater'));
+const { migrateEnvFiles } = require(path.join(DEPLOY_DIR, 'runtime', 'scripts', 'lib', 'env-migration'));
 const {
   fillEmptySecrets,
   generateStrongPassword,
@@ -421,6 +422,15 @@ function step2Env() {
     }
     fs.writeFileSync(ENV_FILE, content, 'utf8');
     log(`已把配置中的 <DEPLOY_DIR> 替换为实际部署目录：${DEPLOY_DIR}`);
+  }
+
+  // 废弃键迁移，须先于下方 merge：rename 若排在 merge 之后，merge 会先用 .env.example
+  // 的默认值补出新键，而 rename 按「不覆盖已存在的新键」跳过，用户的旧值被示例默认值
+  // 静默顶掉。取舍见 lib/env-migration.js 文件头注释。
+  try {
+    migrateEnvFiles(DEPLOY_DIR, (m) => log(m));
+  } catch (err) {
+    warn(`环境变量迁移出错: ${err.message}`);
   }
 
   // 增量合并模板（升级部署时补新键、保留用户值）

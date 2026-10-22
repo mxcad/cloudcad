@@ -36,6 +36,11 @@ const {
   DEFAULT_ADMIN_PASSWORD,
 } = require('../lib/secret-generator');
 const { promptPasswordWithConfirm } = require('../lib/prompt');
+const {
+  getDbEnv,
+  checkDatabaseExists,
+  countUsers,
+} = require('./db-backup');
 const state = require('../lib/state');
 
 /**
@@ -91,6 +96,32 @@ function generateNumericPassword(length = 10) {
  */
 function generateJwtSecret(length = 32) {
   return generateNumericPassword(length);
+}
+
+/**
+ * 查询当前数据库的用户数（无法判定时返回 null）。
+ *
+ * 用于决定是否跳过初始管理员密码配置：后端仅在 userCount===0 时创建初始管理员
+ * （env 预置或 Web 首启）。若库中已有账号（此前源码启动经 Web 首启页创建、
+ * 或上次部署已建），本向导写入的 INITIAL_ADMIN_PASSWORD 永不生效——此时再向用户
+ * 收集/展示一个永不生效的密码只会造成「抄了密码却登不进去」的困惑。
+ * PG 未启动 / 库未创建 / 认证失败 → null（无法判定），调用方回落原流程
+ * （全新部署的库此时本就不存在，按全新处理是正确的）。
+ * @returns {Promise<number|null>}
+ */
+async function existingUserCount() {
+  try {
+    const { config } = getDbEnv();
+    const host = config.DB_HOST || 'localhost';
+    const port = Number(config.DB_PORT || 5432);
+    const user = config.DB_USERNAME || 'postgres';
+    const db = config.DB_DATABASE || 'cloudcad';
+    const exists = await checkDatabaseExists(host, port, user, db);
+    if (exists !== true) return null; // 库未创建或无法判定 → 按全新部署处理
+    return await countUsers(host, port, user, db);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -219,7 +250,16 @@ async function runSetupWizard() {
     // 3. 管理员密码 - 三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）
     console.log('');
     console.log(`${colors.cyan}[安全配置]${colors.reset}`);
-    updates.INITIAL_ADMIN_PASSWORD = await promptAdminPassword(rl);
+    const existingUsers = await existingUserCount();
+    if (existingUsers > 0) {
+      // 库已有账号：INITIAL_ADMIN_PASSWORD 永不生效（后端仅 userCount===0 时建初始管理员），
+      // 跳过配置并说明，避免向用户展示一个永不生效的密码
+      console.log(
+        `  → 数据库已有 ${existingUsers} 个账号，跳过初始管理员密码配置（已有账号密码保持不变）`
+      );
+    } else {
+      updates.INITIAL_ADMIN_PASSWORD = await promptAdminPassword(rl);
+    }
 
     // 显示所有密码
     console.log('');
@@ -239,7 +279,9 @@ async function runSetupWizard() {
       `  ${colors.bright}Redis密码:${colors.reset} ${updates.REDIS_PASSWORD || '无密码'}`
     );
     console.log(
-      `  ${colors.bright}管理员密码:${colors.reset} ${updates.INITIAL_ADMIN_PASSWORD}`
+      `  ${colors.bright}管理员密码:${colors.reset} ${
+        updates.INITIAL_ADMIN_PASSWORD || '（已有账号，保持不变）'
+      }`
     );
     console.log('');
 
@@ -259,7 +301,11 @@ async function runSetupWizard() {
       `Redis:  localhost:${PORTS.redis} (密码: ${updates.REDIS_PASSWORD ? '******' : '无密码'})`
     );
     console.log(
-      `管理员密码: ${updates.INITIAL_ADMIN_PASSWORD || '******'} (已在上方显示)`
+      `管理员密码: ${
+        updates.INITIAL_ADMIN_PASSWORD
+          ? `${updates.INITIAL_ADMIN_PASSWORD} (已在上方显示)`
+          : '（已有账号，保持不变）'
+      }`
     );
     console.log(`JWT密钥: 已自动生成`);
     console.log('');
@@ -344,7 +390,10 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   if (!interactive) {
     updates.DB_PASSWORD = dbPassword;
     updates.REDIS_PASSWORD = redisPassword;
-    updates.INITIAL_ADMIN_PASSWORD = DEFAULT_ADMIN_PASSWORD;
+    // 库已有账号 → 不写 INITIAL_ADMIN_PASSWORD（永不生效，见 existingUserCount 注释）
+    if (!((await existingUserCount()) > 0)) {
+      updates.INITIAL_ADMIN_PASSWORD = DEFAULT_ADMIN_PASSWORD;
+    }
     writeFinalEnv(updates, envConfig);
     return true;
   }
@@ -380,7 +429,15 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
 
   updates.DB_PASSWORD = dbPassword;
   updates.REDIS_PASSWORD = redisPassword;
-  updates.INITIAL_ADMIN_PASSWORD = await promptAdminPassword(rl);
+  const existingUsers = await existingUserCount();
+  if (existingUsers > 0) {
+    // 库已有账号：INITIAL_ADMIN_PASSWORD 永不生效，跳过配置并说明
+    console.log(
+      `  → 数据库已有 ${existingUsers} 个账号，跳过初始管理员密码配置（已有账号密码保持不变）`
+    );
+  } else {
+    updates.INITIAL_ADMIN_PASSWORD = await promptAdminPassword(rl);
+  }
   rl.close();
 
   // 写入 .env
@@ -395,17 +452,23 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}数据库密码:${colors.reset}     ${updates.DB_PASSWORD}`);
   console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${updates.REDIS_PASSWORD}`);
   console.log(`  ${colors.bright}管理员账号:${colors.reset} ${envConfig.INITIAL_ADMIN_USERNAME || 'admin'}`);
-  console.log(`  ${colors.bright}管理员密码:${colors.reset}    ${updates.INITIAL_ADMIN_PASSWORD}`);
-  console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
+  console.log(
+    `  ${colors.bright}管理员密码:${colors.reset}    ${
+      updates.INITIAL_ADMIN_PASSWORD || '（已有账号，保持不变）'
+    }`
+  );
+  console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || 3002}`);
   console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
-  console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
-  console.log(
-    updates.INITIAL_ADMIN_PASSWORD === DEFAULT_ADMIN_PASSWORD
-      ? `${colors.red}  ⚠ 管理员使用的是默认简单密码，请立即登录修改！${colors.reset}`
-      : `${colors.red}  ⚠ 安全提醒：登录后请及时修改管理员密码！${colors.reset}`
-  );
-  console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
+  if (updates.INITIAL_ADMIN_PASSWORD) {
+    console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
+    console.log(
+      updates.INITIAL_ADMIN_PASSWORD === DEFAULT_ADMIN_PASSWORD
+        ? `${colors.red}  ⚠ 管理员使用的是默认简单密码，请立即登录修改！${colors.reset}`
+        : `${colors.red}  ⚠ 安全提醒：登录后请及时修改管理员密码！${colors.reset}`
+    );
+    console.log(`${colors.red}  ─────────────────────────────────────────${colors.reset}`);
+  }
   console.log('');
 
   // 展示最终密码后暂停等待，避免后续服务启动日志刷屏覆盖密码

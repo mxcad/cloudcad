@@ -118,7 +118,9 @@ function setup(opts = {}) {
     }, 'runPiiBackfill'),
   });
   stub('./setup-wizard', { runSetupWizard: async () => {}, showCurrentPasswords: () => {} });
-  stub('../foreground/registry', { setupSignalHandlers: () => {} });
+  stub('../foreground/registry', {
+    setupSignalHandlers: rec(async () => {}, 'setupSignalHandlers'),
+  });
 
   // startAppServices 走 fs.existsSync 早退，必须全返 false
   require('fs').realpathSync.native = () => false;
@@ -193,4 +195,27 @@ test('PII 回填失败 → 告警但不中止，应用服务照常启动', async
     logLines.some((l) => l.includes('[3/3] 启动应用服务')),
     '告警之后仍要继续启动应用服务'
   );
+});
+
+test('前台模式：退出处理器早于 startInfrastructure 注册（关终端即全停的前提）', async () => {
+  const { start, calls } = setup({});
+
+  const ok = await start.startAppServicesWithInfra('foreground', { mode: 'foreground' });
+
+  assert.equal(ok, true, '前台模式同样应完成启动');
+  assert.ok(calls.includes('setupSignalHandlers'), '前台模式必须注册退出处理器');
+  assert.ok(
+    calls.indexOf('setupSignalHandlers') < calls.indexOf('startInfrastructure'),
+    '处理器必须早于 startInfrastructure——否则就绪等待 / 重配向导 / 迁移期间的' +
+      '关终端只会触发 OS 硬杀，不派生 detached 全量停止，PM2 托管的基础服务残留'
+  );
+});
+
+test('PM2 模式：不注册前台退出处理器（后台模式关终端不该停服务）', async () => {
+  const { start, calls } = setup({});
+
+  const ok = await start.startAppServicesWithInfra('pm2', { mode: 'pm2' });
+
+  assert.equal(ok, true);
+  assert.ok(!calls.includes('setupSignalHandlers'));
 });

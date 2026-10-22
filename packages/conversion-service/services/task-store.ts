@@ -2,7 +2,6 @@ import { log } from '../lib/utils';
 import RedisClient, { RedisError } from '../lib/redis-client';
 
 const TASKS_HASH_KEY = 'fworkflow:tasks';
-const DEFAULT_REDIS_URL = 'redis://127.0.0.1:6379/0';
 // 终态任务保留上限：超出后按入队顺序淘汰最旧的终态记录（内存 + Redis 同步删除），
 // 防止任务记录随进程生命周期无限增长；同时该有界集合即耗时统计的样本窗口
 const MAX_TERMINAL_RETAIN = 500;
@@ -104,7 +103,9 @@ class TaskStore {
   // Redis 模式异步初始化: 连接 + 加载存量任务。失败时回退内存模式。
   async init(): Promise<TaskStore> {
     if (this.driver !== 'redis') return this;
-    const url = this.options.redisUrl || DEFAULT_REDIS_URL;
+    // REDIS_URL 非空由 lib/env.ts 启动期校验保证（QUEUE_DRIVER=redis 时 fail-fast）；
+    // ?? '' 仅为类型收窄——空值会落到 RedisClient 的「无效的 REDIS_URL」并走回退分支。
+    const url = this.options.redisUrl ?? '';
     try {
       const client = new RedisClient(url, {
         commandTimeoutMs: this.options.commandTimeoutMs,
@@ -124,7 +125,13 @@ class TaskStore {
     } catch (err) {
       this._redis = null;
       this._fallback = true;
-      log('error', `[TaskStore] Redis 不可用 (${(err as Error).message}), 回退到内存模式`);
+      // 回退是刻意的降级（bootstrap-port-conflict.test 依赖它做测试隔离），但能力损失
+      // 必须可见：只写「回退到内存模式」不足以让人意识到队列不再持久化。
+      log(
+        'error',
+        `[TaskStore] Redis 不可用 (${(err as Error).message}), 回退到内存模式——` +
+          '任务队列不再持久化，进程重启将丢失全部存量任务'
+      );
     }
     return this;
   }

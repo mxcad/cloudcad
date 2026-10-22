@@ -136,8 +136,12 @@ function getSharedEntries() {
       src: 'packages/conversion-service/package.json',
       dest: 'packages/conversion-service/package.json',
     },
-    // .env.example：conversion-service 配置模板（QUEUE_DRIVER / REDIS_URL / CONVERSION_SERVICE_SECRET 等），
-    // 目标机 bootstrap 合并新增配置项（同 backend .env.example，mergeExampleIntoEnv）
+    // .env.example：conversion-service 配置模板，随包携带作为文档参考。
+    // ⚠️ bootstrap 不会合并它——cli.js 只对 packages/backend/.env 跑 mergeExampleIntoEnv，
+    // 目标机通常根本没有 packages/conversion-service/.env（首次部署不生成、升级也不合并）。
+    // 部署形态下 REDIS_URL / QUEUE_DRIVER 由 start.js / docker-runtime / verify-deploy
+    // 现场从后端 REDIS_* 拼串注入，.env 里的值永不生效；已部署机器上残留的模板占位符
+    // 由 runtime/scripts/lib/env-migration.js 的 ENV_MIGRATIONS 在升级时清理。
     {
       src: 'packages/conversion-service/.env.example',
       dest: 'packages/conversion-service/.env.example',

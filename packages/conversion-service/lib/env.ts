@@ -45,3 +45,36 @@ for (const envFilePath of candidatePaths) {
     }
   }
 }
+
+// Redis 模式配置校验（fail-fast）：QUEUE_DRIVER=redis 时 REDIS_URL 必须是真实连接串。
+// 两种残缺形态都会让 TaskStore 静默回退内存模式（队列不持久化、重启丢存量任务），
+// 错误全程不可见——正是「REDIS_URL 指向不存在端口却无人发现」那类事故的入口：
+//   1. 未设置：task-store 曾硬编码兜底 redis://127.0.0.1:6379/0，目标机常无此实例；
+//   2. 占位符：.env.example 曾写成 redis://:your-redis-password@... ，复制后忘改。
+// 部署形态不受影响：start.js / docker-runtime / verify-deploy 三条启动路径都从后端
+// .env 的 REDIS_* 现场拼串注入 process.env，此处读到的已是真实值（本服务刻意不引
+// dotenv，真实 env 优先于 .env 文件，见上方加载循环）。
+// 用 console.error 而非 logger：本模块早于 logger 求值，且启动失败信息不应受日志
+// 级别/落盘策略影响。
+const PLACEHOLDER_RE = /your-|<[^>]*>|placeholder|changeme/i;
+if (process.env.QUEUE_DRIVER?.toLowerCase() === 'redis') {
+  const redisUrl = (process.env.REDIS_URL ?? '').trim();
+  if (!redisUrl) {
+    console.error(
+      '[env] QUEUE_DRIVER=redis 但 REDIS_URL 未设置。\n' +
+        '      不设 REDIS_URL 会静默回退内存模式（队列不持久化、重启丢存量任务）。\n' +
+        '      请配置真实连接串（须与 backend .env 的 REDIS_HOST/PORT/PASSWORD/DB 一致），' +
+        '或把 QUEUE_DRIVER 改回 local。'
+    );
+    process.exit(1);
+  }
+  if (PLACEHOLDER_RE.test(redisUrl)) {
+    console.error(
+      `[env] REDIS_URL 仍是占位符值 (${redisUrl})，但 QUEUE_DRIVER=redis。\n` +
+        '      该地址必然连不上，队列驱动将静默回退内存模式（不持久化、重启丢存量任务）。\n' +
+        '      请改为真实连接串（须与 backend .env 的 REDIS_HOST/PORT/PASSWORD/DB 一致），' +
+        '或把 QUEUE_DRIVER 改回 local。'
+    );
+    process.exit(1);
+  }
+}

@@ -21,6 +21,7 @@ const { runDatabaseMigration, runPiiBackfill } = require('./migrate');
 const { startAppServices, assertNoForeignAppConflict } = require('./start');
 const { rimdir } = require('./dev');
 const { runWithDeployLog } = require('../lib/deploy-log');
+const { setupSignalHandlers } = require('../foreground/registry');
 
 async function deployModeImpl(skipBuild = false, options = null) {
   clearScreen();
@@ -69,6 +70,12 @@ async function deployModeImpl(skipBuild = false, options = null) {
   // 基础服务被换成新包（新 .env 密钥），backend/frontend 沿用旧包定义，本目录后端用旧
   // REDIS_PASSWORD 连新 redis → AUTH 恒失败（ERR invalid password）。
   if (!(await assertNoForeignAppConflict())) return false;
+
+  // 前台模式：在拉起基础服务**之前**武装退出处理器（见 start.js 同名注释）。
+  // deploy 路径不经 startAppServicesWithInfra，必须独立注册——否则从此处到
+  // startAppServices 之间的整段部署窗口（图纸版本检查、数据库迁移、PII 回填、
+  // 构建校验）里关终端只会触发 OS 硬杀，PM2 托管的基础服务就此残留。
+  if (!usePm2) setupSignalHandlers();
 
   // 1. 启动基础服务（幂等：已在运行则复用，不重启）
   //    基础服务（PG/Redis 等）是有状态的数据服务，切换前后台/重复启动时

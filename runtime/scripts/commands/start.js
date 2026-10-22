@@ -37,6 +37,9 @@ const {
   getPidByPort,
   isNodePid,
   isOurRuntimeProcess,
+  isForeignCloudCadRuntimeProcess,
+  getProcessExecutablePath,
+  getProcessCmdlines,
   killTree,
 } = require('../lib/proc');
 const {
@@ -49,12 +52,17 @@ const {
   waitPortReleased,
 } = require('../lib/health');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
-const { findFreePortUpFrom } = require('../lib/infra-gate');
+const { findFreePortUpFrom, decideConversionPortAction } = require('../lib/infra-gate');
 const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
 const { promptConfirm } = require('../lib/prompt');
-const { alignConversionServiceUrl } = require('../config-updater');
+const { alignConversionServiceUrl, syncConversionServiceEnvPort } = require('../config-updater');
 const state = require('../lib/state');
-const { startInfrastructure, isPm2AppFromThisProject } = require('./infra');
+const {
+  startInfrastructure,
+  isPm2AppFromThisProject,
+  askForeignServiceStop,
+  stopForeignService,
+} = require('./infra');
 const { stopAppServices } = require('./stop');
 const { runDatabaseMigration, runPiiBackfill } = require('./migrate');
 const { runSetupWizard, showCurrentPasswords } = require('./setup-wizard');
@@ -363,29 +371,151 @@ function getConversionServiceConfig() {
 }
 
 /**
- * 转换服务端口被占时自动顺延到空闲端口并改写 .env（单一事实源）。
+ * 判定应用层端口占用者的归属（与 infra.js 基础服务门禁同一口径）。
  *
- * 与 infra.js 的 relocateRedisPort / relocatePostgresPort 同语义：找空闲端口 →
- * 回写 .env → 同步内存 PORTS。只有 conversion 可以安全顺延——它是唯一没有前端
- * 构建期常量牵连的应用端口（前端 API base URL 在构建期折叠，顺延 backend/frontend
- * 就要重建 dist），后端经 CONVERSION_SERVICE_URL 轮询它。
+ * 只认三类证据，判不出就如实返回 unknown，不做"看着像就杀掉"的猜测：
+ *   1. PM2 注册表里的 app 名 + pm_cwd 归属（Windows 上 PM2 是机器全局寻址，
+ *      注册表本身能覆盖同机所有部署目录）；
+ *   2. 可执行文件路径在本目录 runtime/ 下（本部署包产物）；
+ *   3. 可执行文件路径含另一目录的 /runtime/<platform>/（另一部署包产物）。
  *
- * 两处必须同步，缺一会让服务仍监听旧端口而后端按新端口找它：
+ * @param {{name: string, pid: number|null}} p
+ * @returns {'ours-pm2'|'ours-residual'|'foreign-deploy'|'unknown'|'external'}
+ */
+function classifyAppPortOwner({ name, pid }) {
+  const entry = getPm2StatusList().find((a) => a.name === name);
+  if (entry && entry.pm2_env && entry.pm2_env.status === 'online') {
+    return isPm2AppFromThisProject(entry) ? 'ours-pm2' : 'foreign-deploy';
+  }
+  if (!pid) return 'unknown';
+  if (isOurRuntimeProcess(pid)) return 'ours-residual';
+  if (isForeignCloudCadRuntimeProcess(pid)) return 'foreign-deploy';
+  if (!isNodePid(pid)) return 'external';
+  // plain node：exe 是系统 node，既可能是本仓库 pnpm dev 起的同名服务，也可能是
+  // 另一部署目录的前台实例——两者在进程表里完全同形，无法区分。
+  return 'unknown';
+}
+
+/** 描述占用者（PID / 可执行文件 / 命令行），用于把"杀掉谁"摆在用户面前。 */
+function describeAppPortOwner(pid) {
+  const proc = getProcessCmdlines().find((p) => p.pid === pid) || {};
+  const exe = getProcessExecutablePath(pid) || proc.exe || '未知路径';
+  const cmdline = proc.cmdline || '未知命令行';
+  return { exe, cmdline };
+}
+
+/**
+ * 转换服务端口冲突处置（归属感知）。
+ *
+ * 与 infra.js 的 relocatePostgresPort / relocateRedisPort 同语义的部分：换端口时
+ * 找空闲端口 → 回写 .env → 同步内存 PORTS。不同之处是**先判归属再决定**——上一版
+ * 只看"端口是否被占"，把本部署自己的 PM2 实例和另一部署目录的实例都当成外部冲突
+ * 静默顺延，于是每 start 一次端口 +1、多部署并存无人知晓。
+ *
+ * 换端口时两处必须同步，缺一会让服务仍监听旧端口而后端按新端口找它：
  *   1. PORTS.conversion —— 本进程后续 waitForPort/健康检查/停止用它
  *   2. conversion.env.CONVERSION_SERVICE_PORT —— PM2 与前台两路启动都从这里注入
- *
- * 注意对齐顺序：getConversionServiceConfig 内已按旧端口调过一次
- * alignConversionServiceUrl，顺延后必须再调一次，否则 CONVERSION_SERVICE_URL 恒指向
- * 旧端口——正是该函数顶部注释警示的「只改 PORT 不改 URL 后端恒连旧端口」。
- *
- * 不在此中止部署：blocked 时由调用方决定（前台模式交给端口冲突提示，PM2 模式维持
- * 原有行为），避免本函数越权扩大影响面。
+ * 同时 alignConversionServiceUrl 与 syncConversionServiceEnvPort 各回写一份 .env
+ * （后端侧 URL、conversion-service 自己那份端口），三份配置一次性对齐。
  *
  * @param {object} conversion getConversionServiceConfig() 的返回值
- * @returns {Promise<'relocated'|'blocked'>}
+ * @returns {Promise<'ok'|'blocked'>} blocked = 归属是别人的且用户未同意让位，调用方须中止
  */
-async function relocateConversionPort(conversion) {
+async function resolveConversionPortConflict(conversion) {
   const oldPort = PORTS.conversion;
+  const pid = getPidByPort(oldPort);
+  const ownership = classifyAppPortOwner({ name: 'conversion', pid });
+  const action = decideConversionPortAction({ ownership });
+
+  if (action === 'reuse') {
+    log(
+      'cyan',
+      `  [端口] 转换服务端口 ${oldPort} 由本部署 PM2 托管，沿用（重启后重新绑定）`
+    );
+    return 'ok';
+  }
+
+  if (action === 'clean') {
+    const owner = describeAppPortOwner(pid);
+    log(
+      'yellow',
+      `  [清理] 转换服务端口 ${oldPort} 被本部署残留进程占用 (PID ${pid}: ${owner.cmdline})，先清理...`
+    );
+    killTree(pid, { silent: false });
+    if (!(await waitPortReleased(oldPort, 15000))) {
+      log(
+        'red',
+        `  [错误] 清理后端口 ${oldPort} 仍被占用，请手动释放后重跑。`
+      );
+      return 'blocked';
+    }
+    return 'ok';
+  }
+
+  if (action === 'ask-foreign') {
+    const owner = describeAppPortOwner(pid);
+    log(
+      'red',
+      `  [冲突] 转换服务端口 ${oldPort} 被另一部署目录的服务占用 (PID ${pid})`
+    );
+    log('red', `         可执行文件：${owner.exe}`);
+    log('red', `         命令行：${owner.cmdline}`);
+    const stopIt = await askForeignServiceStop('conversion', oldPort, pid);
+    if (!stopIt) {
+      log(
+        'red',
+        '  本次不接管——静默换端口会让两个部署同时对外服务，且没有任何入口提示旧部署仍在运行。'
+      );
+      log(
+        'cyan',
+        `  继续方式：先在旧部署目录运行 stop（或直接关闭其终端），确认端口 ${oldPort} 释放后重跑本流程。`
+      );
+      return 'blocked';
+    }
+    if (!stopForeignService('conversion', pid)) {
+      log(
+        'red',
+        `  [错误] 停止另一部署目录的转换服务失败。请在该目录手动执行 stop 后重跑。`
+      );
+      return 'blocked';
+    }
+    if (!(await waitPortReleased(oldPort, 15000))) {
+      log('red', `  [错误] 对方服务已停止但端口 ${oldPort} 仍未释放，请手动检查。`);
+      return 'blocked';
+    }
+    return 'ok';
+  }
+
+  if (action === 'ask-unknown') {
+    const owner = describeAppPortOwner(pid);
+    log(
+      'yellow',
+      `  [冲突] 转换服务端口 ${oldPort} 被无法判定归属的 node 进程占用 (PID ${pid})`
+    );
+    log('yellow', `         命令行：${owner.cmdline}`);
+    log(
+      'yellow',
+      '         它可能是本仓库 pnpm dev 起的转换服务，也可能是另一部署目录的前台实例——两者在进程表里同形。'
+    );
+    const stopIt = await promptConfirm(
+      `是否停止该进程后继续启动？(y/N；不确定请选 N，先到对应目录确认)`
+    );
+    if (!stopIt) {
+      log(
+        'cyan',
+        `  已取消。若确认是另一部署目录的实例，请先在该目录运行 stop；若不确定占用者是谁，可修改 .env 的 CONVERSION_SERVICE_PORT 避开 ${oldPort}。`
+      );
+      return 'blocked';
+    }
+    killTree(pid, { silent: false });
+    if (!(await waitPortReleased(oldPort, 15000))) {
+      log('red', `  [错误] 停止后端口 ${oldPort} 仍未释放，请手动检查。`);
+      return 'blocked';
+    }
+    return 'ok';
+  }
+
+  // external：非 node 的系统服务，不碰别人的进程，自己换端口避让
   const newPort = await findFreePortUpFrom(oldPort + 1, {
     maxTries: 100,
     isPortOpen: (p) => isPortOpen(p, '127.0.0.1'),
@@ -394,7 +524,7 @@ async function relocateConversionPort(conversion) {
   if (!newPort) {
     log(
       'red',
-      `  [错误] 转换服务端口 ${oldPort} 被占用，且 ${oldPort + 1}-${oldPort + 100} 范围内未找到空闲端口。` +
+      `  [错误] 转换服务端口 ${oldPort} 被外部服务占用，且 ${oldPort + 1}-${oldPort + 100} 范围内未找到空闲端口。` +
         '请手动释放端口或修改 .env 的 CONVERSION_SERVICE_PORT 后重跑。'
     );
     return 'blocked';
@@ -410,12 +540,18 @@ async function relocateConversionPort(conversion) {
   PORTS.conversion = newPort;
   conversion.env.CONVERSION_SERVICE_PORT = String(newPort);
   alignConversionServiceUrl(BACKEND_ENV_PATH);
+  // 同一事实的第二份：源码 dev（pnpm -r dev）起的转换服务只读自己那份 .env，
+  // 不同步会让它仍监听旧端口、后端连新端口 → 转换全部 ECONNREFUSED。
+  syncConversionServiceEnvPort(
+    path.join(PROJECT_ROOT, 'packages', 'conversion-service', '.env'),
+    newPort
+  );
   log(
     'yellow',
-    `  [换端口] 转换服务端口 ${oldPort} 被占用 → 已自动切换到空闲端口 ${newPort}` +
+    `  [换端口] 转换服务端口 ${oldPort} 被外部服务占用 → 已切换到空闲端口 ${newPort}` +
       '，.env 的 CONVERSION_SERVICE_PORT 与 CONVERSION_SERVICE_URL 已同步更新'
   );
-  return 'relocated';
+  return 'ok';
 }
 
 /**
@@ -456,12 +592,12 @@ async function startAppServices(mode, onReady) {
     process.exit(1);
   }
 
-  // 转换服务端口被占时自动顺延（两路模式共用；取舍见 relocateConversionPort）。
-  // PM2 模式不做端口冲突检测，不提前顺延就会 EADDRINUSE 反复重试。
-  // 顺延失败（blocked）不在此中止：前台模式交给下方端口冲突提示处理，PM2 模式维持原有行为。
-  let conversionPortRelocated = false;
+  // 转换服务端口冲突：先判归属再决定（复用 / 清理本部署残留 / 询问对方部署 / 换端口）。
+  // PM2 模式自身不做端口冲突检测，不提前处理就会 EADDRINUSE 反复重试，故两路模式共用。
+  let conversionPortHandled = false;
   if (conversionReady && (await isPortOpen(PORTS.conversion))) {
-    conversionPortRelocated = (await relocateConversionPort(conversion)) === 'relocated';
+    if ((await resolveConversionPortConflict(conversion)) === 'blocked') return;
+    conversionPortHandled = true;
   }
 
   if (mode === 'pm2') {
@@ -547,9 +683,10 @@ async function startAppServices(mode, onReady) {
     const backendPortTaken = await isPortOpen(PORTS.backend);
     const frontendPortTaken = await isPortOpen(PORTS.frontend);
     // 转换服务端口（仅启用时检测，避免 process-pool 模式下误报 3100 占用）。
-    // 已顺延成功则不再算冲突——顺延到的端口必然空闲；顺延失败才保留冲突语义。
+    // 已由 resolveConversionPortConflict 处理过则不再算冲突——它保证返回后端口要么
+    // 归本部署且即将重绑，要么已释放，要么已换到空闲端口。
     const conversionPortTaken =
-      conversionReady && !conversionPortRelocated && (await isPortOpen(PORTS.conversion));
+      conversionReady && !conversionPortHandled && (await isPortOpen(PORTS.conversion));
     if (backendPortTaken || frontendPortTaken || conversionPortTaken) {
       const takenDesc = [];
       if (backendPortTaken) takenDesc.push(`后端 ${PORTS.backend}`);
@@ -574,13 +711,38 @@ async function startAppServices(mode, onReady) {
         }
       }
 
-      // 判定占用者类型：全为 node/本部署包进程 → 可安全清理；含外部进程 → 不自动处理
-      const cleanable = [...takenPids].filter(
-        (pid) => isNodePid(pid) || isOurRuntimeProcess(pid)
-      );
-      const external = [...takenPids].filter(
-        (pid) => !isNodePid(pid) && !isOurRuntimeProcess(pid)
-      );
+      // 判定占用者归属。三类分开处置，**不能合并成"node 进程即可清理"**：
+      // 另一部署目录的 backend/frontend 同样是 node 进程，按残留杀掉等于直接把
+      // 别人的部署打掉（且其 PM2 autorestart 会立刻拉起，端口继续被占）。
+      const foreignPids = [];
+      const cleanable = [];
+      const external = [];
+      for (const pid of takenPids) {
+        if (isForeignCloudCadRuntimeProcess(pid)) foreignPids.push(pid);
+        else if (isNodePid(pid) || isOurRuntimeProcess(pid)) cleanable.push(pid);
+        else external.push(pid);
+      }
+
+      if (foreignPids.length > 0) {
+        log(
+          'red',
+          '  [错误] 以下端口被另一部署目录的服务占用，本次不接管：'
+        );
+        for (const pid of foreignPids) {
+          const owner = describeAppPortOwner(pid);
+          log('red', `         PID ${pid}: ${owner.cmdline}`);
+          log('red', `         可执行文件：${owner.exe}`);
+        }
+        log(
+          'red',
+          '  杀掉对方进程只会被其 PM2 自动拉起，且会造成对方服务中断；静默换端口则会让两个部署同时对外服务。'
+        );
+        log(
+          'cyan',
+          `  继续方式：先在旧部署目录运行 ${OPS_ENTRY} stop（或直接关闭其终端），确认端口全部释放后重跑本流程。`
+        );
+        return;
+      }
 
       if (external.length > 0) {
         log(
@@ -593,6 +755,15 @@ async function startAppServices(mode, onReady) {
         log(
           'yellow',
           `  （占用者 PID ${cleanable.join(', ')}，疑似残留的应用实例）`
+        );
+        for (const pid of cleanable) {
+          const owner = describeAppPortOwner(pid);
+          log('yellow', `         PID ${pid}: ${owner.cmdline}`);
+        }
+        log(
+          'yellow',
+          '  提示：命令行是相对路径（如 node dist/main）时无法据此判断属于哪个部署目录；' +
+            '若是另一部署目录的前台实例，请选 N 并在该目录用 stop 退出。'
         );
         const killOld = await promptConfirm(
           `是否停止占用这些端口的残留实例后重新启动？(y/N)`
@@ -685,6 +856,9 @@ async function startAppServices(mode, onReady) {
       state.appProcesses.add(conversionProcess);
     }
 
+    // 兜底再武装一次（startAppServicesWithInfra 已在前台模式提前注册过）：
+    // setupSignalHandlers 会 removeAllListeners，中间若向导/readline 装过自己的
+    // SIGINT 处理器会把它清掉；这里在最长的 waitForServicesForeground 之前补回。
     setupSignalHandlers();
 
     // 等待所有服务就绪（前台模式）
@@ -911,6 +1085,12 @@ async function startAppServicesWithInfra(mode, options = null) {
   // 失败时不打印 "[1/2] 启动基础服务..."，避免让调用者误以为已进入启动流程。
   if (!(await assertNoForeignAppConflict())) return false;
 
+  // 前台模式：在拉起基础服务**之前**武装退出处理器。此前处理器在 startAppServices
+  // 内注册（应用层子进程 spawn 之后），而 startInfrastructure 到 startAppServices
+  // 之间那整段窗口（DB/Redis 就绪等待、重配向导、数据库迁移、PII 回填）里关终端
+  // 只会触发 OS 硬杀——不派生 detached 全量停止，PM2 托管的基础服务就此残留。
+  if (mode === 'foreground') setupSignalHandlers();
+
   log('blue', '[1/3] 启动基础服务...');
 
   // 统一走 startInfrastructure（P2.5 双实现合一 + Q0 统一 PM2 托管）：
@@ -1000,6 +1180,9 @@ module.exports = {
   shouldRestartAppServices,
   assertNoForeignAppConflict,
   deleteForeignAppDefinitions,
+  // 应用层端口归属判定与冲突处置（导出供回归测试；决策表本身在 lib/infra-gate）
+  classifyAppPortOwner,
+  resolveConversionPortConflict,
   APP_PM2_NAMES,
   startOnly,
   testConnection,

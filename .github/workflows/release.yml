@@ -361,6 +361,96 @@ jobs:
           draft: true
 
   # ============================================================
+  # Windows 宿主 Docker 一键部署包（ADR-0075 C9 v2 / #440 + #444）
+  # windows-latest x64（自带 Docker Desktop，WSL2 跑 linux 容器）出 x86_64 包。
+  # pack-linux-docker.js 自举宿主物料（node 走 build-windows-runtime.js、mxcad 走
+  # Release 下载兜底），Docker Desktop 构建 app 镜像，7-Zip 归档 .7z；--verify 走
+  # verify-windows-docker.js（start.bat E2E + 宿主侧二次探针 + stop.bat——部署横跨
+  # 宿主进程 + WSL2 VM，无法 --network none 断网，门禁语义见 #444）。
+  # 验证通过（本 step 成功）才执行下方上传 step。
+  # ============================================================
+  build-windows-docker:
+    name: Windows 宿主 Docker x86_64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9.15.9
+
+      # 缓存 pnpm store（与 build-linux / build-windows / build-linux-docker 对齐）
+      - name: 获取 pnpm 存储目录
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: 设置 pnpm 缓存
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      # app 镜像消费两端前端 dist（Dockerfile.app production 阶段），须先构建
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @cloudcad/db build
+      - run: pnpm --filter @cloudcad/contracts build
+      - run: pnpm build
+        working-directory: packages/frontend
+      - run: pnpm build
+        working-directory: packages/frontend_mobile
+
+      # app 镜像是 linux 镜像：Docker Desktop 必须处于 Linux 容器模式。runner 若处于
+      # Windows 容器模式则切 desktop-linux context；切不过去即明确失败（非静默跳过）。
+      - name: 确保 Docker 处于 Linux 容器模式
+        shell: bash
+        run: |
+          mode=$(docker info --format '{{.OSType}}')
+          echo "Docker OSType: $mode"
+          if [ "$mode" != "linux" ]; then
+            docker context use desktop-linux || {
+              echo "::error::Docker 处于 Windows 容器模式且无法切换到 desktop-linux（本 job 需要 Linux 容器）"
+              exit 1
+            }
+            mode=$(docker info --format '{{.OSType}}')
+            if [ "$mode" != "linux" ]; then
+              echo "::error::切换后仍非 Linux 容器模式: $mode"
+              exit 1
+            fi
+          fi
+
+      # 打包 + Windows 宿主验证（pack-linux-docker.js --host-platform windows --verify：
+      # step8 调 verify-windows-docker.js——start.bat E2E（12 步含包内 13 项验证）+
+      # 宿主侧二次探针 + stop.bat；verify 脚本自身 start 45 分钟 + stop 15 分钟总超时）。
+      # 验证失败 → 本 step 失败 → 下方上传 step 不执行（draft Release 只含验证过的包）。
+      # 超时预算：app 镜像 build（Docker Desktop WSL2，30-60 分钟级）+ 镜像 save +
+      # 归档 + verify（最长 ~60 分钟）。
+      - name: 打包 Windows 宿主 Docker 部署包 + 验证（验证通过才上传）
+        env:
+          CI: 'true'
+        timeout-minutes: 240
+        run: node scripts/pack-linux-docker.js --host-platform windows --verify
+
+      # 上传产物到 Release（同名 Release 已存在则追加产物）。
+      # 只挑 docker 形态 windows 宿主包（-docker- 段，C2 命名），
+      # 与裸机 windows 包（build-windows job 的 release/*.7z）区分。
+      - name: 上传产物到 Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: release/*-docker-windows-*.7z
+          draft: true
+
+  # ============================================================
   # Release 汇总（可选）：Linux + Windows 产物合并确认
   # ============================================================
   # 由于 Linux/Windows job 各自 upload-artifact 到软 props，此 job 可用于

@@ -1279,4 +1279,8 @@ module.exports = {
   relocatePostgresPort,
   stopForeignPostgres,
   relocateRedisPort,
+  // 应用层端口门禁复用同一套「另一部署目录」处置（询问 + 经对方 PM2_HOME 停止），
+  // 避免 start.js 再写一份 killTree 把对方 PM2 autorestart 的进程反复拉起来。
+  askForeignServiceStop,
+  stopForeignService,
 };

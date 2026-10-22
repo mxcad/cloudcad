@@ -986,6 +986,46 @@ function alignConversionServiceUrl(envPath) {
   return 'repaired';
 }
 
+/**
+ * 把转换服务端口同步到 conversion-service 自己的 .env。
+ *
+ * conversion-service 刻意不读 backend 的 .env（独立进程/独立部署，只认自己的），
+ * 而 start.js 的端口顺延只回写 backend/.env。于是同一事实存两份、只有一份被改写：
+ * 顺延到 3103 后，源码 dev 起的转换服务仍按自己 .env 的 3100 监听，后端却连 3103
+ * ——上传转换全部 ECONNREFUSED，且错误信息为空串（2026-10-21 实例：连续多次 start
+ * 各自撞上上一轮残留实例，端口从 3100 一路顺延到 3103）。
+ *
+ * 文件不存在时返回 'missing'（部署包不带该文件、端口由 start.js 经 process.env 注入，
+ * 无需同步）。
+ *
+ * @param {string} conversionEnvPath packages/conversion-service/.env 路径
+ * @param {number|string} port 顺延后的端口
+ * @returns {'missing'|'ok'|'repaired'|'failed'}
+ */
+function syncConversionServiceEnvPort(conversionEnvPath, port) {
+  if (!conversionEnvPath || !fs.existsSync(conversionEnvPath)) return 'missing';
+  let current;
+  try {
+    current = parseEnvContent(fs.readFileSync(conversionEnvPath, 'utf8'))
+      .CONVERSION_SERVICE_PORT;
+  } catch {
+    return 'missing';
+  }
+  const wanted = String(port);
+  if (String(current ?? '').trim() === wanted) return 'ok';
+
+  if (!updateEnvFile(conversionEnvPath, { CONVERSION_SERVICE_PORT: wanted })) {
+    error(`转换服务端口同步写入失败：${conversionEnvPath}`);
+    return 'failed';
+  }
+  log(
+    current === undefined
+      ? `conversion-service/.env 补写 CONVERSION_SERVICE_PORT=${wanted}（与后端对齐）`
+      : `conversion-service/.env 的端口 ${current} 已同步为 ${wanted}（与后端对齐）`
+  );
+  return 'repaired';
+}
+
 // ==================== 导出 ====================
 
 module.exports = {
@@ -1009,6 +1049,7 @@ module.exports = {
   updateEnvFile,
   escapeEnvValue,
   alignConversionServiceUrl,
+  syncConversionServiceEnvPort,
 
   // 包装函数
   updateFrontendConfigsWrapper,

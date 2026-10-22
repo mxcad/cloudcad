@@ -137,6 +137,36 @@ function decidePostgresGateAction({ ownership, fullScanDone, isLocal }) {
 }
 
 /**
+ * 转换服务端口门禁的纯决策（应用层端口，与 PG/Redis 基础服务门禁同一套归属口径）。
+ *
+ * 此前该端口是全仓唯一「不看占用者、只搬家」的端口处理：被占就顺延 +1 并回写 .env。
+ * 后果（2026-10-21 实例）：反复 start 时每轮都撞上自己上一轮的 PM2 托管实例
+ * （stopAppServices 只停 backend/frontend），端口从 3100 一路被推到 3103，而
+ * conversion-service 自己那份 .env 没同步 → 后端连 3103、服务监听 3100，上传全失败。
+ * 更严重的是：同机另一部署目录的前台实例占着端口时，也会被静默绕开——两个部署
+ * 并存对外服务，没有任何入口提示「旧部署还在跑」。
+ *
+ * 处置原则（与 decidePostgresGateAction 对齐）：
+ * - ours-pm2：本部署 PM2 托管 → 复用端口，交给 PM2 重启重新绑定（不搬、不杀）；
+ * - ours-residual：本部署上一轮残留进程 → 清掉再用同一端口（自己的，安全）；
+ * - foreign-deploy：可执行文件证明属于另一部署目录 → 交由用户决定谁让位，
+ *   **不得静默顺延**（这正是「两个部署包并存、谁也关不掉谁」的来源）；
+ * - unknown：plain node 进程，归属无法判定（可能是另一部署的前台实例，也可能是
+ *   本仓库 pnpm dev 起的同名服务）→ 询问，不做任何静默处置；
+ * - external：非 node 的系统服务 → 不碰别人的进程，自己换端口避让。
+ *
+ * @param {{ownership: 'ours-pm2'|'ours-residual'|'foreign-deploy'|'unknown'|'external'}} p
+ * @returns {'reuse'|'clean'|'ask-foreign'|'ask-unknown'|'relocate'}
+ */
+function decideConversionPortAction({ ownership }) {
+  if (ownership === 'ours-pm2') return 'reuse';
+  if (ownership === 'ours-residual') return 'clean';
+  if (ownership === 'foreign-deploy') return 'ask-foreign';
+  if (ownership === 'external') return 'relocate';
+  return 'ask-unknown';
+}
+
+/**
  * 解析 DATABASE_URL 的 host:port 段（URL 其余部分逐字保留）。
  *
  * URL 形状识别的单一事实源：rewriteDatabaseUrlPort（换端口改写）与
@@ -229,6 +259,7 @@ module.exports = {
   decideRedisGateAction,
   findFreePortUpFrom,
   decidePostgresGateAction,
+  decideConversionPortAction,
   parseDatabaseUrlHostPort,
   rewriteDatabaseUrlPort,
   detectPostgresOwnership,
