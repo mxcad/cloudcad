@@ -146,13 +146,38 @@ describe('useNoticeStream 纯函数', () => {
 
     it('过滤掉已读的并保留原有顺序', () => {
       const list = [notice({ id: 'a' }), notice({ id: 'b' })]
-      expect(filterUnacknowledged(list, { b: NOW - 1000 }, NOW, TTL).map((n) => n.id)).toEqual([
-        'a',
-      ])
+      expect(
+        filterUnacknowledged(
+          list,
+          { 'b:2026-09-17T00:00:00.000Z': NOW - 1000 },
+          NOW,
+          TTL,
+        ).map((n) => n.id),
+      ).toEqual(['a'])
     })
 
     it('全部已读返回空数组', () => {
-      expect(filterUnacknowledged([notice({ id: 'a' })], { a: NOW }, NOW, TTL)).toEqual([])
+      expect(
+        filterUnacknowledged(
+          [notice({ id: 'a' })],
+          { 'a:2026-09-17T00:00:00.000Z': NOW },
+          NOW,
+          TTL,
+        ),
+      ).toEqual([])
+    })
+
+    it('updatedAt 变化（改级别/改文案/重新发布）后旧 ack 失配，重新提醒', () => {
+      const acks = { 'a:2026-09-17T00:00:00.000Z': NOW - 1000 }
+      expect(filterUnacknowledged([notice({ id: 'a' })], acks, NOW, TTL)).toEqual([])
+      expect(
+        filterUnacknowledged(
+          [notice({ id: 'a', updatedAt: '2026-09-18T00:00:00.000Z' })],
+          acks,
+          NOW,
+          TTL,
+        ).map((n) => n.id),
+      ).toEqual(['a'])
     })
   })
 })

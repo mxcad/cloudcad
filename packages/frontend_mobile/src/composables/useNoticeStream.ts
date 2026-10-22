@@ -32,6 +32,7 @@ import {
 } from 'vue';
 import { noticeCenterControllerGetCurrent } from '../api-sdk';
 import {
+  ackEntryKey,
   filterUnacknowledged,
   pruneExpiredAcks,
   readAcks,
@@ -44,6 +45,7 @@ import { unwrap } from '../utils/apiError';
 import { onSessionChanged } from '../utils/authSession';
 
 export {
+  ackEntryKey,
   ackStorageKey,
   filterUnacknowledged,
   isAcknowledged,
@@ -126,7 +128,10 @@ function stopPolling(): void {
 /** 标记已读（落盘后更新响应式状态） */
 function acknowledge(notice: Notice): void {
   const now = Date.now();
-  const next: NoticeAckMap = { ...acks.value, [notice.id]: now };
+  const next: NoticeAckMap = {
+    ...acks.value,
+    [ackEntryKey(notice.id, notice.updatedAt)]: now,
+  };
   acks.value = next;
   writeAcks(next, localStorage, currentOwnerId());
 }

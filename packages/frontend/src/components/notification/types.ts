@@ -6,6 +6,10 @@ export interface ToastItem {
   id: string;
   type: ToastType;
   message: string;
+  /** 点击整卡触发（右上角关闭按钮独立） */
+  onClick?: () => void;
+  /** 展示时长，默认 5000ms */
+  duration?: number;
 }
 
 export interface ConfirmDialogState {

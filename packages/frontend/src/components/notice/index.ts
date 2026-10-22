@@ -13,7 +13,7 @@
 /**
  * 通知中心（PC 前端）对外出口。
  *
- * App.tsx 挂 NoticeProvider，Layout.tsx 放 NoticeBanner。
+ * App.tsx 挂 NoticeProvider，Layout.tsx 放 NoticeBellDropdown。
  * 纯函数与类型也从这里导出，便于单测直接引用。
  */
 
@@ -21,20 +21,36 @@ export {
   NoticeProvider,
   useNotice,
   NOTICE_ACK_CHANNEL,
+  WARNING_TOAST_DURATION_MS,
+  filterUnacknowledged,
 } from './NoticeProvider';
 export type { NoticeContextValue } from './NoticeProvider';
-export { NoticeBanner } from './NoticeBanner';
+export { NoticeBellDropdown } from './NoticeBellDropdown';
+export { NoticeListView } from './NoticeListView';
+export type { NoticeListViewProps } from './NoticeListView';
 export { useNoticeStream } from './useNoticeStream';
 export type { NoticeStreamSource } from './useNoticeStream';
 export {
   NOTICE_ACK_STORAGE_KEY,
   ackStorageKey,
+  ackEntryKey,
   readAcks,
   writeAcks,
   isAcknowledged,
   markAcknowledged,
   pruneExpiredAcks,
+  NOTICE_VIEWED_STORAGE_KEY,
+  viewedStorageKey,
+  readViewed,
+  writeViewed,
+  isViewed,
+  markViewed,
+  pruneViewed,
 } from './noticeAck';
 export type { NoticeAckMap } from './noticeAck';
-export { NOTICE_LEVEL_PRIORITY, sortNotices } from './noticeTypes';
+export {
+  NOTICE_LEVEL_PRIORITY,
+  NOTICE_LEVEL_COLORS,
+  sortNotices,
+} from './noticeTypes';
 export type { Notice } from './noticeTypes';

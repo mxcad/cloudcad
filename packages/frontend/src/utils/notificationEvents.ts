@@ -44,12 +44,30 @@ export interface PromptOptions {
   required?: boolean;
 }
 
+/** Toast 可选行为（全部向后兼容：不传即原行为） */
+export interface ToastOptions {
+  /** 点击整卡触发（右上角关闭按钮独立，不受影响） */
+  onClick?: () => void;
+  /** 展示时长，默认 5000ms */
+  duration?: number;
+  /**
+   * true 时即使 CAD 编辑器活动也走本应用浮层。
+   * 系统公告必须可点击（点击展开通知列表），而 CAD 消息条不可点击，
+   * 故带 onClick 的通知提示不能进 CAD 路由。
+   */
+  forceOverlay?: boolean;
+}
+
 /**
  * 全局 Toast。CAD 路由决策由 NotificationProvider 在收到事件后执行。
  */
-export const globalShowToast = (message: string, type: ToastType = 'info') => {
+export const globalShowToast = (
+  message: string,
+  type: ToastType = 'info',
+  options?: ToastOptions
+) => {
   window.dispatchEvent(
-    new CustomEvent(TOAST_EVENT, { detail: { message, type } })
+    new CustomEvent(TOAST_EVENT, { detail: { message, type, ...options } })
   );
 };
 

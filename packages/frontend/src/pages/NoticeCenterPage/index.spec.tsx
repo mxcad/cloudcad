@@ -11,20 +11,34 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import NoticeCenterPage from './index';
 import type { NoticeResponseDto } from '@/api-sdk';
 
-const { listAllMock, createMock, updateMock, retractMock, confirmMock } =
-  vi.hoisted(() => ({
-    listAllMock: vi.fn(),
-    createMock: vi.fn(async () => ({ data: null, error: undefined })),
-    updateMock: vi.fn(async () => ({ data: null, error: undefined })),
-    retractMock: vi.fn(async () => ({ data: null, error: undefined })),
-    confirmMock: vi.fn(async () => true),
-  }));
+const {
+  listAllMock,
+  createMock,
+  updateMock,
+  publishMock,
+  retractMock,
+  deleteMock,
+  batchDeleteMock,
+  confirmMock,
+} = vi.hoisted(() => ({
+  listAllMock: vi.fn(),
+  createMock: vi.fn(async () => ({ data: null, error: undefined })),
+  updateMock: vi.fn(async () => ({ data: null, error: undefined })),
+  publishMock: vi.fn(async () => ({ data: null, error: undefined })),
+  retractMock: vi.fn(async () => ({ data: null, error: undefined })),
+  deleteMock: vi.fn(async () => ({ data: null, error: undefined })),
+  batchDeleteMock: vi.fn(async () => ({ data: null, error: undefined })),
+  confirmMock: vi.fn(async () => true),
+}));
 
 vi.mock('@/api-sdk', () => ({
   noticeCenterControllerListAll: listAllMock,
   noticeCenterControllerCreate: createMock,
   noticeCenterControllerUpdate: updateMock,
+  noticeCenterControllerPublish: publishMock,
   noticeCenterControllerRetract: retractMock,
+  noticeCenterControllerRemove: deleteMock,
+  noticeCenterControllerBatchDelete: batchDeleteMock,
 }));
 
 vi.mock('@/contexts/NotificationContext', () => ({
@@ -73,12 +87,11 @@ describe('NoticeCenterPage', () => {
     vi.clearAllMocks();
   });
 
-  it('渲染列表：类型/级别/状态标签齐全（状态由时间窗客户端派生）', async () => {
+  it('渲染列表：级别/状态标签齐全（状态由时间窗客户端派生）', async () => {
     listAllMock.mockResolvedValueOnce({
       data: [
         makeNotice({
           title: '系统升级通知',
-          kind: 'download',
           level: 'warning',
         }),
         // endAt 已过期 → 派生为「已过期」
@@ -96,13 +109,114 @@ describe('NoticeCenterPage', () => {
 
     expect(await screen.findByText('系统升级通知')).toBeTruthy();
     expect(screen.getByText('上周公告')).toBeTruthy();
-    // kind/level 走中文标签映射
-    expect(screen.getByText('下载公告')).toBeTruthy();
+    // level 走中文标签映射
     expect(screen.getByText('警告')).toBeTruthy();
     expect(screen.getByText('紧急')).toBeTruthy();
     // 两条状态各不相同：一条生效中、一条已过期
-    expect(screen.getByText('生效中')).toBeTruthy();
-    expect(screen.getByText('已过期')).toBeTruthy();
+    // （「生效中」「已过期」同时出现在状态筛选行与表格状态标签里，故用 getAllByText）
+    expect(screen.getAllByText('生效中').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('已过期').length).toBeGreaterThan(0);
+  });
+
+  it('状态筛选：选中后只渲染该状态的行，切回全部恢复', async () => {
+    listAllMock.mockResolvedValueOnce({
+      data: [
+        makeNotice({ id: 'n-1', title: '生效公告' }),
+        makeNotice({
+          id: 'n-2',
+          title: '上周公告',
+          endAt: '2026-08-01T00:00:00.000Z',
+        }),
+      ],
+      error: undefined,
+    });
+
+    renderPage();
+    expect(await screen.findByText('生效公告')).toBeTruthy();
+    expect(screen.getByText('上周公告')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '已过期' }));
+    expect(screen.queryByText('生效公告')).toBeNull();
+    expect(screen.getByText('上周公告')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '全部' }));
+    expect(screen.getByText('生效公告')).toBeTruthy();
+  });
+
+  it('删除：确认弹窗通过后调用删除接口', async () => {
+    listAllMock.mockResolvedValueOnce({ data: [makeNotice()], error: undefined });
+
+    renderPage();
+
+    fireEvent.click((await screen.findByText('删除')).closest('button')!);
+    await waitFor(() => {
+      expect(confirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: '删除公告', type: 'danger' })
+      );
+    });
+    await waitFor(() => {
+      expect(deleteMock).toHaveBeenCalledWith({
+        throwOnError: true,
+        path: { id: 'n-1' },
+      });
+    });
+  });
+
+  it('删除：取消确认则不发请求', async () => {
+    confirmMock.mockResolvedValueOnce(false);
+    listAllMock.mockResolvedValueOnce({ data: [makeNotice()], error: undefined });
+
+    renderPage();
+
+    fireEvent.click((await screen.findByText('删除')).closest('button')!);
+    await waitFor(() => {
+      expect(confirmMock).toHaveBeenCalledTimes(1);
+    });
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it('批量删除：选中行后浮出批量操作条，确认后一次调用 batch-delete', async () => {
+    listAllMock.mockResolvedValueOnce({
+      data: [
+        makeNotice({ id: 'n-1', title: '公告一' }),
+        makeNotice({ id: 'n-2', title: '公告二' }),
+      ],
+      error: undefined,
+    });
+
+    renderPage();
+    expect(await screen.findByText('公告一')).toBeTruthy();
+
+    // 点行体勾选；第二行需按住 Ctrl 才能叠加选择（单击会替换选择集）
+    fireEvent.click(screen.getByText('公告一'));
+    fireEvent.click(screen.getByText('公告二'), { ctrlKey: true });
+
+    expect(screen.getByText('已选 2 项')).toBeTruthy();
+    // 行内「删除」与批量条「删除」同名；批量条在表格之后渲染
+    const deleteButtons = screen.getAllByRole('button', { name: '删除' });
+    expect(deleteButtons).toHaveLength(3);
+    fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(confirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: '批量删除公告', type: 'danger' })
+      );
+    });
+    await waitFor(() => {
+      expect(batchDeleteMock).toHaveBeenCalledWith({
+        throwOnError: true,
+        body: { ids: ['n-1', 'n-2'] },
+      });
+    });
+  });
+
+  it('批量删除：未选中任何行时不显示批量操作条', async () => {
+    listAllMock.mockResolvedValueOnce({ data: [makeNotice()], error: undefined });
+
+    renderPage();
+    await screen.findByText('系统升级通知');
+
+    expect(screen.queryByText('已选 1 项')).toBeNull();
   });
 
   it('草稿行「下线」按钮禁用（后端对草稿抛「草稿不能下线」）', async () => {
@@ -115,6 +229,28 @@ describe('NoticeCenterPage', () => {
 
     const retractButton = (await screen.findByText('下线')).closest('button')!;
     expect(retractButton).toHaveAttribute('disabled');
+  });
+
+  it('已下线行给出「发布」入口并可重新上线（下线不是死分支）', async () => {
+    listAllMock.mockResolvedValueOnce({
+      data: [
+        makeNotice({
+          id: 'n-retracted',
+          publishedAt: undefined,
+          retractedAt: '2026-08-07T08:00:00.000Z',
+        }),
+      ],
+      error: undefined,
+    });
+
+    renderPage();
+
+    const publishButton = await screen.findByRole('button', { name: '发布' });
+    expect(publishButton).toBeEnabled();
+    fireEvent.click(publishButton);
+
+    await waitFor(() => expect(publishMock).toHaveBeenCalledTimes(1));
+    expect(publishMock.mock.calls[0][0].path).toEqual({ id: 'n-retracted' });
   });
 
   it('发布公告：空标题/空正文被前置校验拦下，不发请求', async () => {
@@ -191,7 +327,7 @@ describe('NoticeCenterPage', () => {
     fireEvent.click(
       (await screen.findByText('编辑')).closest('button')!
     );
-    // 编辑态：类型禁用、时间窗只读、提交按钮文案切换
+    // 编辑态：时间窗只读、提交按钮文案切换
     expect(screen.getByText('编辑公告')).toBeTruthy();
     expect(screen.getByText('需要调整时间窗，请下线后重新发布。')).toBeTruthy();
     expect(screen.queryByText('立即发布')).toBeNull();

@@ -14,12 +14,20 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   NOTICE_ACK_STORAGE_KEY,
+  NOTICE_VIEWED_STORAGE_KEY,
+  ackEntryKey,
   ackStorageKey,
   isAcknowledged,
+  isViewed,
   markAcknowledged,
+  markViewed,
   pruneExpiredAcks,
+  pruneViewed,
   readAcks,
+  readViewed,
+  viewedStorageKey,
   writeAcks,
+  writeViewed,
 } from './noticeAck';
 
 const NOW = 1_800_000_000_000;
@@ -161,6 +169,30 @@ describe('noticeAck', () => {
     });
   });
 
+  describe('ackEntryKey', () => {
+    it('键为 id + 内容版本', () => {
+      expect(ackEntryKey('n_1', '2026-09-17T00:00:00.000Z')).toBe(
+        'n_1:2026-09-17T00:00:00.000Z'
+      );
+    });
+
+    it('updatedAt 变化产生新键：改级别/改文案/下线重发后旧 ack 失配，会重弹', () => {
+      expect(ackEntryKey('n_1', 'v1')).not.toBe(ackEntryKey('n_1', 'v2'));
+      expect(ackEntryKey('n_1', 'v1')).not.toBe(ackEntryKey('n_2', 'v1'));
+    });
+
+    it('Date 实例按 ISO 串参与组键', () => {
+      const date = new Date('2026-09-17T00:00:00.000Z');
+      expect(ackEntryKey('n_1', date)).toBe('n_1:2026-09-17T00:00:00.000Z');
+    });
+
+    it('updatedAt 缺失仍保持复合形态，不退回按 id 判重', () => {
+      expect(ackEntryKey('n_1')).toBe('n_1:');
+      expect(ackEntryKey('n_1', null)).toBe('n_1:');
+      expect(ackEntryKey('n_1')).not.toBe('n_1');
+    });
+  });
+
   describe('markAcknowledged', () => {
     it('写入新记录', () => {
       expect(markAcknowledged({}, 'n_1', NOW)).toEqual({ n_1: NOW });
@@ -197,6 +229,92 @@ describe('noticeAck', () => {
       const acks = { n_1: NOW, n_2: 1 };
       pruneExpiredAcks(acks, NOW, TTL);
       expect(acks).toEqual({ n_1: NOW, n_2: 1 });
+    });
+  });
+
+  describe('readViewed / writeViewed', () => {
+    it('往返读写一致', () => {
+      writeViewed(['n_1', 'n_2'], storage);
+      expect(readViewed(storage)).toEqual(['n_1', 'n_2']);
+    });
+
+    it('空存储返回空数组', () => {
+      expect(readViewed(storage)).toEqual([]);
+    });
+
+    it('非法 JSON / 非数组 / 空串与非字符串元素都被丢弃', () => {
+      storage.setItem(viewedStorageKey('u_1'), '{ 不是 JSON');
+      expect(readViewed(storage, 'u_1')).toEqual([]);
+      storage.setItem(viewedStorageKey('u_1'), '"n_1"');
+      expect(readViewed(storage, 'u_1')).toEqual([]);
+      storage.setItem(
+        viewedStorageKey('u_1'),
+        JSON.stringify(['n_1', '', 7, null, 'n_1'])
+      );
+      expect(readViewed(storage, 'u_1')).toEqual(['n_1']);
+    });
+
+    it('读取或写入时 localStorage 抛错都不崩（隐私模式 / 配额满）', () => {
+      expect(readViewed(new ThrowingStorage())).toEqual([]);
+      expect(() => writeViewed(['n_1'], new ThrowingStorage())).not.toThrow();
+    });
+
+    it('键带账号后缀，未登录归入 anonymous', () => {
+      expect(viewedStorageKey('u_1')).toBe(`${NOTICE_VIEWED_STORAGE_KEY}:u_1`);
+      expect(viewedStorageKey()).toBe(`${NOTICE_VIEWED_STORAGE_KEY}:anonymous`);
+
+      writeViewed(['n_1'], storage, 'u_1');
+      writeViewed(['n_2'], storage, null);
+
+      expect(readViewed(storage, 'u_1')).toEqual(['n_1']);
+      expect(readViewed(storage, undefined)).toEqual(['n_2']);
+      expect(readViewed(storage)).toEqual(['n_2']);
+    });
+
+    it('与 ack 簿记使用不同的存储键（互不串用）', () => {
+      expect(viewedStorageKey('u_1')).not.toBe(ackStorageKey('u_1'));
+      writeViewed(['n_1'], storage, 'u_1');
+      expect(readAcks(storage, 'u_1')).toEqual({});
+    });
+  });
+
+  describe('isViewed / markViewed', () => {
+    it('记录过即为已查看', () => {
+      expect(isViewed(['n_1'], 'n_1')).toBe(true);
+      expect(isViewed(['n_1'], 'n_2')).toBe(false);
+    });
+
+    it('标记写入新记录且不修改原数组', () => {
+      const viewed = ['n_1'];
+      expect(markViewed(viewed, 'n_2')).toEqual(['n_1', 'n_2']);
+      expect(viewed).toEqual(['n_1']);
+    });
+
+    it('重复标记幂等（不产生重复条目）', () => {
+      const viewed = ['n_1'];
+      expect(markViewed(viewed, 'n_1')).toEqual(['n_1']);
+      expect(markViewed(viewed, 'n_1')).toBe(viewed);
+    });
+  });
+
+  describe('pruneViewed', () => {
+    it('剔除不再生效的条目', () => {
+      expect(pruneViewed(['n_1', 'n_2', 'n_3'], new Set(['n_1']))).toEqual([
+        'n_1',
+      ]);
+    });
+
+    it('空集合不清理：首屏尚未拉回数据时不能抹掉全部已读记录', () => {
+      const viewed = ['n_1', 'n_2'];
+      const pruned = pruneViewed(viewed, new Set());
+      expect(pruned).toEqual(['n_1', 'n_2']);
+      expect(pruned).toBe(viewed);
+    });
+
+    it('不修改原数组', () => {
+      const viewed = ['n_1', 'n_2'];
+      pruneViewed(viewed, new Set(['n_1']));
+      expect(viewed).toEqual(['n_1', 'n_2']);
     });
   });
 });

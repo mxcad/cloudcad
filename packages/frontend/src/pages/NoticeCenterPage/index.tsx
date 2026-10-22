@@ -5,10 +5,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useMemo, useState } from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { BatchActionBar } from '@/components/common/BatchActionBar';
 import { SelectableTable } from '@/components/common/SelectableTable';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { TabButton } from '@/components/ui/TabButton';
 import { Tag } from '@/components/ui/Tag';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -18,20 +20,25 @@ import { t } from '@/languages';
 import { formatDateTime } from '@/utils/dateUtils';
 import { NoticeFormModal } from './components/NoticeFormModal';
 import {
-  NOTICE_KIND_LABELS,
   NOTICE_LEVEL_LABELS,
   NOTICE_LEVEL_TAG_VARIANTS,
   NOTICE_STATUS_LABELS,
   NOTICE_STATUS_TAG_VARIANTS,
 } from './constants';
 import {
+  useBatchDeleteNotices,
   useCreateNotice,
+  useDeleteNotice,
   useNoticeList,
   usePublishNotice,
   useRetractNotice,
   useUpdateNotice,
 } from './hooks/useNotices';
-import { deriveNoticeStatus, type NoticeFormValues } from './types';
+import {
+  deriveNoticeStatus,
+  type NoticeFormValues,
+  type NoticeStatus,
+} from './types';
 
 /**
  * 公告管理：发布 / 编辑 / 下线部署更新等系统通知。
@@ -48,16 +55,57 @@ export default function NoticeCenterPage() {
   const updateMutation = useUpdateNotice(() => setEditing(null));
   const publishMutation = usePublishNotice();
   const retractMutation = useRetractNotice();
+  const deleteMutation = useDeleteNotice();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<NoticeResponseDto | null>(null);
+  /** 状态筛选：列表含草稿/已过期/已下线时噪音大，先按状态收窄再筛选 */
+  const [statusFilter, setStatusFilter] = useState<NoticeStatus | 'all'>('all');
+
+  const filteredItems = useMemo(
+    () =>
+      statusFilter === 'all'
+        ? items
+        : items.filter((n) => deriveNoticeStatus(n) === statusFilter),
+    [items, statusFilter]
+  );
 
   const selectableItems = useMemo(
-    () => items.map((notice) => ({ id: notice.id })),
-    [items]
+    () => filteredItems.map((notice) => ({ id: notice.id })),
+    [filteredItems]
   );
-  const { selectedNodes, handleNodeSelect, handleSelectAll, selectMany } =
-    useFileBrowserSelection({ nodes: selectableItems, multiple: 'always' });
+  const {
+    selectedNodes,
+    handleNodeSelect,
+    handleSelectAll,
+    selectMany,
+    clearSelection,
+  } = useFileBrowserSelection({ nodes: selectableItems, multiple: 'always' });
+
+  // 删除成功后清空选中：残留的选中集合会指向已不在视图内的行
+  const batchDeleteMutation = useBatchDeleteNotices(() => {
+    clearSelection();
+  });
+
+  const handleBatchDelete = () => {
+    const ids = Array.from(selectedNodes).filter((id) =>
+      items.some((n) => n.id === id)
+    );
+    if (ids.length === 0) return;
+
+    void (async () => {
+      const confirmed = await showConfirm({
+        title: t('批量删除公告'),
+        message: t(
+          '将永久删除已选的 {count} 条公告（不可恢复）。其中正在生效的会立即下线，所有用户不再看到。',
+          { count: String(ids.length) }
+        ),
+        type: 'danger',
+        confirmText: t('永久删除'),
+      });
+      if (confirmed) batchDeleteMutation.mutate({ ids });
+    })();
+  };
 
   const handleCreate = (values: NoticeFormValues) => {
     createMutation.mutate(values);
@@ -82,6 +130,27 @@ export default function NoticeCenterPage() {
     })();
   };
 
+  const handleDelete = (notice: NoticeResponseDto) => {
+    void (async () => {
+      const confirmed = await showConfirm({
+        title: t('删除公告'),
+        message: t('将永久删除「{title}」（不可恢复），所有用户立即不再看到。', {
+          title: notice.title,
+        }),
+        type: 'danger',
+        confirmText: t('永久删除'),
+      });
+      if (confirmed) deleteMutation.mutate({ id: notice.id });
+    })();
+  };
+
+  /** 切换状态筛选：重置选中，避免选中集合指向已不在视图内的行 */
+  const handleFilterChange = (next: NoticeStatus | 'all') => {
+    if (next === statusFilter) return;
+    setStatusFilter(next);
+    clearSelection();
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden p-6 text-text-secondary">
       <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
@@ -104,6 +173,26 @@ export default function NoticeCenterPage() {
           </div>
         </div>
 
+        <div className="flex-shrink-0 mb-4 flex flex-wrap items-center gap-1.5">
+          <TabButton
+            size="sm"
+            active={statusFilter === 'all'}
+            onClick={() => handleFilterChange('all')}
+          >
+            {t('全部')}
+          </TabButton>
+          {(Object.keys(NOTICE_STATUS_LABELS) as NoticeStatus[]).map((status) => (
+            <TabButton
+              key={status}
+              size="sm"
+              active={statusFilter === status}
+              onClick={() => handleFilterChange(status)}
+            >
+              {t(NOTICE_STATUS_LABELS[status])}
+            </TabButton>
+          ))}
+        </div>
+
         <Card
           variant="outlined"
           padding="none"
@@ -112,8 +201,29 @@ export default function NoticeCenterPage() {
         >
           <div className="flex-1 min-h-0 flex flex-col">
             <SelectableTable<NoticeResponseDto>
-              rows={items}
+              rows={filteredItems}
               selectedIds={selectedNodes}
+              bottomBar={
+                selectedNodes.size > 0 ? (
+                  <BatchActionBar
+                    count={selectedNodes.size}
+                    onClear={() => {
+                      clearSelection();
+                    }}
+                    actions={[
+                      {
+                        key: 'delete',
+                        label: t('删除'),
+                        icon: Trash2,
+                        variant: 'danger',
+                        disabled: batchDeleteMutation.isPending,
+                        loading: batchDeleteMutation.isPending,
+                        onClick: handleBatchDelete,
+                      },
+                    ]}
+                  />
+                ) : undefined
+              }
               loading={loading}
               loadingView={
                 <div className="flex justify-center py-16">
@@ -131,7 +241,7 @@ export default function NoticeCenterPage() {
                   className="text-center py-8 text-sm"
                   style={{ color: 'var(--text-tertiary)' }}
                 >
-                  {t('暂无公告')}
+                  {items.length > 0 ? t('该状态下暂无公告') : t('暂无公告')}
                 </div>
               }
               onToggleSelect={handleNodeSelect}
@@ -140,7 +250,6 @@ export default function NoticeCenterPage() {
               renderHeader={() => (
                 <>
                   <th className="text-left">{t('标题')}</th>
-                  <th className="text-center">{t('类型')}</th>
                   <th className="text-center">{t('级别')}</th>
                   <th className="text-center">{t('状态')}</th>
                   <th className="text-left">{t('生效开始')}</th>
@@ -168,11 +277,6 @@ export default function NoticeCenterPage() {
                           {notice.body}
                         </div>
                       )}
-                    </td>
-                    <td className="text-center">
-                      <Tag size="xs">
-                        {t(NOTICE_KIND_LABELS[notice.kind] ?? notice.kind)}
-                      </Tag>
                     </td>
                     <td className="text-center">
                       <Tag
@@ -214,7 +318,7 @@ export default function NoticeCenterPage() {
                     </td>
                     <td className="text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
-                        {deriveNoticeStatus(notice) === 'draft' && (
+                        {(status === 'draft' || status === 'retracted') && (
                           <Button
                             variant="ghost"
                             size="xs"
@@ -250,6 +354,18 @@ export default function NoticeCenterPage() {
                           }}
                         >
                           {t('下线')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          disabled={deleteMutation.isPending}
+                          style={{ color: 'var(--error)' }}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDelete(notice);
+                          }}
+                        >
+                          {t('删除')}
                         </Button>
                       </div>
                     </td>

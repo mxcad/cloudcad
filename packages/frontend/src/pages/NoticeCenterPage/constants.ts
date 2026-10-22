@@ -14,19 +14,12 @@ export const NOTICE_LIST_REFRESH_MS = 60_000;
 export const NOTICE_TITLE_MAX = 200;
 export const NOTICE_BODY_MAX = 4000;
 
-/** 与后端 NOTICE_KINDS / NOTICE_LEVELS 白名单保持一致 */
-export const NOTICE_KINDS = ['system', 'download'] as const;
+/** 与后端 NOTICE_LEVELS 白名单保持一致 */
 export const NOTICE_LEVELS = ['info', 'warning', 'danger'] as const;
 
-export type NoticeKind = (typeof NOTICE_KINDS)[number];
 export type NoticeLevel = (typeof NOTICE_LEVELS)[number];
 
 /** 中文原文作 key，渲染时统一走 t() */
-export const NOTICE_KIND_LABELS: Record<string, string> = {
-  system: '系统公告',
-  download: '下载公告',
-};
-
 export const NOTICE_LEVEL_LABELS: Record<string, string> = {
   info: '普通',
   warning: '警告',

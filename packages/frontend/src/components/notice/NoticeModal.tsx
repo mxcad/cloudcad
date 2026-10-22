@@ -28,23 +28,21 @@ import { t } from '@/languages';
 
 import type { Notice } from './noticeTypes';
 
-/** 级别 → 顶部色条与标题颜色。未知级别按 info 兜底 */
-const LEVEL_STYLES: Record<string, { border: string; title: string }> = {
-  info: {
-    border: 'border-t-blue-500',
-    title: 'text-blue-700 dark:text-blue-300',
-  },
-  warning: {
-    border: 'border-t-amber-500',
-    title: 'text-amber-700 dark:text-amber-300',
-  },
-  danger: {
-    border: 'border-t-red-500',
-    title: 'text-red-700 dark:text-red-300',
-  },
+/**
+ * 级别 → 强调色。取主题功能色变量（theme.css 在浅/深主题各定义一份），不写死色值。
+ *
+ * 勿用 Tailwind 的 `dark:` 变体：本项目按 `[data-theme]` + CSS 变量切换主题，
+ * Tailwind v4 的 `dark:` 默认只认系统 `prefers-color-scheme`，与主题开关无关——
+ * 深色主题下 `dark:text-gray-300` 永不命中，正文回落成 text-gray-700，在深灰弹窗底上
+ * 几乎不可见（只有选中高亮时看得到）。
+ */
+const LEVEL_STYLES: Record<string, { color: string; border: string }> = {
+  info: { color: 'var(--info)', border: 'border-t-[var(--info)]' },
+  warning: { color: 'var(--warning)', border: 'border-t-[var(--warning)]' },
+  danger: { color: 'var(--error)', border: 'border-t-[var(--error)]' },
 };
 
-const FALLBACK_STYLES = LEVEL_STYLES.info as { border: string; title: string };
+const FALLBACK_STYLES = LEVEL_STYLES.info as { color: string; border: string };
 
 export interface NoticeModalProps {
   notice: Notice | null;
@@ -64,9 +62,14 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
       isOpen
       onClose={() => onAcknowledge(notice)}
       title={
-        <span className={`font-semibold ${styles.title}`}>{notice.title}</span>
+        <span className="font-semibold" style={{ color: styles.color }}>
+          {notice.title}
+        </span>
       }
-      contentClassName={`border-t-4 ${styles.border} p-0`}
+      // 色条钉在卡片最上沿（而非内容区顶部）：作为卡片边框才读作「级别色条」，
+      // 挂在正文上方会读成一条莫名的分割线
+      className={`border-t-4 ${styles.border}`}
+      contentClassName="p-0"
       closeOnOverlayClick={false}
       zIndex={Z_LAYERS.MODAL}
       size="md"
@@ -77,7 +80,10 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
       }
     >
       <div className="px-6 py-4">
-        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-700 dark:text-gray-300">
+        <p
+          className="text-sm leading-relaxed whitespace-pre-wrap break-words"
+          style={{ color: 'var(--text-primary)' }}
+        >
           {notice.body}
         </p>
       </div>

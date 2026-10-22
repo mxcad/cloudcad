@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   NOTICE_ACK_STORAGE_KEY,
   NOTICE_ACK_TTL_MS,
+  ackEntryKey,
   ackStorageKey,
   filterUnacknowledged,
   isAcknowledged,
@@ -129,8 +130,38 @@ describe('isAcknowledged / filterUnacknowledged', () => {
 
   it('filterUnacknowledged 过滤已读并保留原有顺序', () => {
     const list = [notice({ id: 'a' }), notice({ id: 'b' }), notice({ id: 'c' })]
-    const kept = filterUnacknowledged(list, { a: NOW - 1000, c: NOW - 1000 }, NOW, TTL)
+    const U = '2026-09-17T00:00:00.000Z'
+    const kept = filterUnacknowledged(
+      list,
+      { [`${ackEntryKey('a', U)}`]: NOW - 1000, [ackEntryKey('c', U)]: NOW - 1000 },
+      NOW,
+      TTL,
+    )
     expect(kept.map((n) => n.id)).toEqual(['b'])
+  })
+})
+
+describe('ackEntryKey', () => {
+  it('键为 id + 内容版本', () => {
+    expect(ackEntryKey('n_1', '2026-09-17T00:00:00.000Z')).toBe(
+      'n_1:2026-09-17T00:00:00.000Z',
+    )
+  })
+
+  it('updatedAt 变化产生新键（级别升级/文案修改/下线重发都会重弹）', () => {
+    expect(ackEntryKey('n_1', 'v1')).not.toBe(ackEntryKey('n_1', 'v2'))
+    expect(ackEntryKey('n_1', 'v1')).not.toBe(ackEntryKey('n_2', 'v1'))
+  })
+
+  it('Date 实例按 ISO 串参与组键', () => {
+    const d = new Date('2026-09-17T00:00:00.000Z')
+    expect(ackEntryKey('n_1', d)).toBe('n_1:2026-09-17T00:00:00.000Z')
+  })
+
+  it('updatedAt 缺失仍保持复合形态，不退回按 id 判重', () => {
+    expect(ackEntryKey('n_1')).toBe('n_1:')
+    expect(ackEntryKey('n_1', null)).toBe('n_1:')
+    expect(ackEntryKey('n_1')).not.toBe('n_1')
   })
 })
 

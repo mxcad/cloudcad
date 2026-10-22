@@ -3,8 +3,8 @@
  *
  * 与 PC 端 packages/frontend/src/components/notice/noticeAck.ts、noticeTypes.ts
  * 是同构实现。存储键（cloudcad_notice_acks）、TTL（24h）与数据结构
- * （Record<通知id, 已读时间戳毫秒>）是与 PC 共享同一个 localStorage 键的跨端契约，
- * 必须逐字节一致；调整前先对照 PC 端同步，禁止单端擅改。
+ * （Record<通知id + 内容版本, 已读时间戳毫秒>）是与 PC 共享同一个 localStorage
+ * 键的跨端契约，必须逐字节一致；调整前先对照 PC 端同步，禁止单端擅改。
  *
  * 不依赖 Vue 响应式、不持有模块状态，便于单测直接断言；
  * 组合式状态（轮询 / pending 队列）在 composables/useNoticeStream.ts。
@@ -14,8 +14,25 @@ import type { NoticeResponseDto } from '@cloudcad/api-sdk'
 /** 后端返回的一条通知 */
 export type Notice = NoticeResponseDto
 
-/** 通知 id → 已读时间戳（毫秒） */
+/** 簿记键 → 已读时间戳（毫秒） */
 export type NoticeAckMap = Record<string, number>
+
+/**
+ * 已读簿记键 = 通知 id + 内容版本（updatedAt）。与 PC 端同构，必须逐字节一致。
+ *
+ * 只按 id 记会让「同一条通知的更新」被静默吞掉：级别从普通升成紧急、标题正文
+ * 被改过、或下线后重新发布，客户端都认作「已经提醒过了」而不再弹框。把
+ * updatedAt 编进键里后，任何一次写库都会让旧键失配、新内容重新提醒一次。
+ */
+export function ackEntryKey(
+  noticeId: string,
+  updatedAt?: string | Date | null,
+): string {
+  // Date 走 toISOString：String(date) 用本地时区与本地格式，同一时刻在不同机器
+  // 上会算出不同的键，等于把判重随机化
+  const version = updatedAt instanceof Date ? updatedAt.toISOString() : (updatedAt ?? '')
+  return `${noticeId}:${version}`
+}
 
 /** 与 PC 端共用同一键前缀，便于排查；两端互不读取对方进程内的状态 */
 export const NOTICE_ACK_STORAGE_KEY = 'cloudcad_notice_acks'
@@ -76,14 +93,14 @@ export function writeAcks(
   }
 }
 
-/** TTL 内是否已读过 */
+/** TTL 内是否已读过（entryKey 见 ackEntryKey） */
 export function isAcknowledged(
   acks: NoticeAckMap,
-  noticeId: string,
+  entryKey: string,
   now: number,
   ttlMs: number = NOTICE_ACK_TTL_MS
 ): boolean {
-  const at = acks[noticeId]
+  const at = acks[entryKey]
   return typeof at === 'number' && now - at < ttlMs
 }
 
@@ -94,7 +111,9 @@ export function filterUnacknowledged(
   now: number,
   ttlMs: number = NOTICE_ACK_TTL_MS
 ): Notice[] {
-  return notices.filter((notice) => !isAcknowledged(acks, notice.id, now, ttlMs))
+  return notices.filter((notice) =>
+    !isAcknowledged(acks, ackEntryKey(notice.id, notice.updatedAt), now, ttlMs),
+  )
 }
 
 /** 剔除过期记录，防止 localStorage 随公告数量无限增长 */

@@ -32,12 +32,20 @@ import {
   type ConfirmOptions,
   type PromptOptions,
   type ThreeButtonConfirmOptions,
+  type ToastOptions,
 } from '../utils/notificationEvents';
 
 interface NotificationContextValue {
-  showToast: (message: string, type?: ToastType) => void;
+  showToast: (
+    message: string,
+    type?: ToastType,
+    options?: ToastOptions
+  ) => void;
   showConfirm: (options: ConfirmOptions) => Promise<boolean>;
 }
+
+/** 同文案 toast 的展示时长（与 ToastStack 的默认值保持一致） */
+const TOAST_DEFAULT_DURATION_MS = 5000;
 
 function routeToCadMessage(message: string, type: ToastType) {
   const mx = window.MxPluginContext?.useMessage;
@@ -174,8 +182,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const showToast = useCallback(
-    (message: string, type: ToastType = 'info') => {
-      if (isCadActive && routeToCadMessage(message, type)) return;
+    (message: string, type: ToastType = 'info', options?: ToastOptions) => {
+      // CAD 编辑器活动时普通提示走 CAD 消息条；但通知提示必须可点击，
+      // CAD 消息条不可点，故 forceOverlay 时保留本应用浮层。
+      if (
+        !options?.forceOverlay &&
+        isCadActive &&
+        routeToCadMessage(message, type)
+      ) {
+        return;
+      }
       const id =
         Date.now().toString() + Math.random().toString(36).substr(2, 9);
       // 同文案去重：相同 message+type 的 toast 已在展示中时不重复追加，
@@ -187,13 +203,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         ) {
           return prev;
         }
-        return [...prev, { id, type, message }];
+        return [...prev, { id, type, message, onClick: options?.onClick, duration: options?.duration }];
       });
 
       const timerId = setTimeout(() => {
         setToasts((prev) => prev.filter((toast) => toast.id !== id));
         timerRefs.current.delete(timerId);
-      }, 5000);
+      }, options?.duration ?? TOAST_DEFAULT_DURATION_MS);
       timerRefs.current.add(timerId);
     },
     [isCadActive]
@@ -263,11 +279,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     const handleToastEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<{
+      const customEvent = e as CustomEvent<ToastOptions & {
         message: string;
         type: ToastType;
       }>;
-      showToast(customEvent.detail.message, customEvent.detail.type);
+      const { message, type, ...options } = customEvent.detail;
+      showToast(message, type, options);
     };
 
     const handleConfirmEvent = (e: Event) => {

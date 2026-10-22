@@ -39,7 +39,6 @@ export function deriveNoticeStatus(
 
 /** 发布弹窗的表单值（ISO 字符串；空串表示未填写） */
 export interface NoticeFormValues {
-  kind: 'system' | 'download';
   level: 'info' | 'warning' | 'danger';
   title: string;
   body: string;

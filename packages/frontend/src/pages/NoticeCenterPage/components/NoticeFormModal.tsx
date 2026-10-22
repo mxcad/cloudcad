@@ -17,8 +17,6 @@ import { t } from '@/languages';
 import { formatDateTime } from '@/utils/dateUtils';
 import {
   NOTICE_BODY_MAX,
-  NOTICE_KINDS,
-  NOTICE_KIND_LABELS,
   NOTICE_LEVELS,
   NOTICE_LEVEL_LABELS,
   NOTICE_TITLE_MAX,
@@ -35,7 +33,6 @@ interface NoticeFormModalProps {
 }
 
 const EMPTY_VALUES: NoticeFormValues = {
-  kind: 'system',
   level: 'info',
   title: '',
   body: '',
@@ -99,7 +96,7 @@ function Counter({ count, max }: { count: number; max: number }) {
 /**
  * 发布/编辑公告弹窗。
  *
- * - 发布：类型、级别、标题、正文、生效时间窗、自动过期均可填
+ * - 发布：级别、标题、正文、生效时间窗、自动过期均可填
  * - 编辑：只改级别/标题/正文。后端 PATCH 配 forbidNonWhitelisted，多传时间窗
  *   会直接 400，所以时间窗只读展示并提示「下线后重新发布」
  * - 打开即重置（关闭/提交成功不卸载，靠 isOpen 复位，避免留下上次输入）
@@ -119,7 +116,6 @@ export function NoticeFormModal({
   const seed = () => {
     if (notice) {
       setValues({
-        kind: notice.kind === 'download' ? 'download' : 'system',
         level:
           notice.level === 'warning' || notice.level === 'danger'
             ? notice.level
@@ -216,38 +212,20 @@ export function NoticeFormModal({
       closeOnOverlayClick={!saving}
     >
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FieldLabel text={t('类型')} />
-            <Select
-              value={values.kind}
-              onChange={(value) =>
-                setValue('kind', value as NoticeFormValues['kind'])
-              }
-              disabled={saving || isEdit}
-              options={NOTICE_KINDS.map((kind) => ({
-                value: kind,
-                label: t(NOTICE_KIND_LABELS[kind] || kind),
-              }))}
-              size="lg"
-            />
-            {isEdit && <FieldHint message={t('类型发布后不可修改')} />}
-          </div>
-          <div>
-            <FieldLabel text={t('级别')} />
-            <Select
-              value={values.level}
-              onChange={(value) =>
-                setValue('level', value as NoticeFormValues['level'])
-              }
-              disabled={saving}
-              options={NOTICE_LEVELS.map((level) => ({
-                value: level,
-                label: t(NOTICE_LEVEL_LABELS[level] || level),
-              }))}
-              size="lg"
-            />
-          </div>
+        <div>
+          <FieldLabel text={t('级别')} />
+          <Select
+            value={values.level}
+            onChange={(value) =>
+              setValue('level', value as NoticeFormValues['level'])
+            }
+            disabled={saving}
+            options={NOTICE_LEVELS.map((level) => ({
+              value: level,
+              label: t(NOTICE_LEVEL_LABELS[level] || level),
+            }))}
+            size="lg"
+          />
         </div>
 
         <div>

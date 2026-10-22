@@ -29,6 +29,13 @@ export const NOTICE_LEVEL_PRIORITY: Record<string, number> = {
   danger: 3,
 };
 
+/** 级别 → 主题色（CSS 变量）。列表色条 / 详情标题 / 徽标共用 */
+export const NOTICE_LEVEL_COLORS: Record<string, string> = {
+  info: 'var(--info)',
+  warning: 'var(--warning)',
+  danger: 'var(--error)',
+};
+
 /** 取一条通知的排序时间戳（发布时间，缺失时退回创建时间） */
 function noticeTimestamp(notice: Notice): number {
   const raw = notice.publishedAt ?? notice.createdAt ?? null;
