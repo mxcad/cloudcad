@@ -362,6 +362,10 @@ export type RuntimeConfigResponseDto = {
      */
     category: string;
     /**
+     * 子分组标识（项数多的大类内再分小节；文案由前端 i18n 提供）
+     */
+    subgroup?: string;
+    /**
      * 配置说明
      */
     description?: string;
@@ -444,6 +448,10 @@ export type RuntimeConfigDefinitionDto = {
      * 分类
      */
     category: string;
+    /**
+     * 子分组标识（项数多的大类内再分小节；文案由前端 i18n 提供）
+     */
+    subgroup?: string;
     /**
      * 配置说明
      */

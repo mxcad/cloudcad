@@ -118,7 +118,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
     // 获取所有已存在的配置
     const existingConfigs = await this.prisma.runtimeConfig.findMany({
-      select: { key: true, isPublic: true, description: true },
+      select: { key: true, isPublic: true, description: true, category: true },
     });
     const existingKeys = new Set(existingConfigs.map((c) => c.key));
     const existingByKey = new Map(existingConfigs.map((c) => [c.key, c]));
@@ -128,13 +128,16 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       (def) => !existingKeys.has(def.key)
     );
 
-    // `isPublic` / `description` 是定义表独有的元数据，管理端没有编辑入口——
+    // `isPublic` / `description` / `category` 是定义表独有的元数据，管理端没有编辑入口——
     // 定义表改了就回填，否则 isPublic 变更对已初始化的存量部署永久无效。
     // 刻意不碰 value / updatedBy：那两项是「用户改过」与「env 层生效」的判据。
     const drifted = RUNTIME_CONFIG_DEFINITIONS.filter((def) => {
       const row = existingByKey.get(def.key);
       return (
-        row && (row.isPublic !== def.isPublic || row.description !== def.description)
+        row &&
+        (row.isPublic !== def.isPublic ||
+          row.description !== def.description ||
+          row.category !== def.category)
       );
     });
 
@@ -158,12 +161,16 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     }
 
     if (drifted.length > 0) {
-      // 逐键更新：各键的 isPublic / description 互不相同，updateMany 只能写同一份数据
+      // 逐键更新：各键的 isPublic / description / category 互不相同，updateMany 只能写同一份数据
       await this.prisma.$transaction(
         drifted.map((def) =>
           this.prisma.runtimeConfig.update({
             where: { key: def.key },
-            data: { isPublic: def.isPublic, description: def.description },
+            data: {
+              isPublic: def.isPublic,
+              description: def.description,
+              category: def.category,
+            },
           }),
         ),
       );
@@ -399,7 +406,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       key: config.key,
       value: isSecret ? maskChannelSecret(String(value)) : value,
       type: config.type as RuntimeConfigValueType,
-      category: config.category as RuntimeConfigItem['category'],
+      category: (def?.category ?? config.category) as RuntimeConfigItem['category'],
       description: config.description,
       isPublic: config.isPublic,
       updatedBy: config.updatedBy,
@@ -910,7 +917,9 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         key: config.key,
         value: isSecret ? maskChannelSecret(String(value)) : value,
         type: config.type as RuntimeConfigValueType,
-        category: config.category as RuntimeConfigItem['category'],
+        // 分类以定义表为准：存量行可能在 quota→billing 重划后仍留旧值，照 DB 回会让
+        // 前端渲染出无显示名的幽灵分组，且对它「恢复默认」会被 resetCategory 判未知分类
+        category: (def?.category ?? config.category) as RuntimeConfigItem['category'],
         description: config.description,
         isPublic: config.isPublic,
         updatedBy: config.updatedBy,
@@ -935,6 +944,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     | 'isModified'
     | 'envValue'
     | 'tier'
+    | 'subgroup'
     | 'input'
     | 'impact'
     | 'dangerous'
@@ -958,6 +968,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       // 秘密键的 env 层值是明文凭据，同样不出 API 边界
       envValue: def?.input?.secret ? null : envValue ?? null,
       tier: def?.tier ?? 'admin',
+      subgroup: def?.subgroup,
       input: def?.input,
       impact: def?.impact,
       dangerous: def?.dangerous ?? false,

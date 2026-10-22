@@ -437,13 +437,44 @@ describe("RuntimeConfigService", () => {
 			const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "mailEnabled")!;
 			expect(mockPrisma.runtimeConfig.createMany).not.toHaveBeenCalled();
 			expect(mockPrisma.runtimeConfig.update).toHaveBeenCalledTimes(1);
-			// 只回填定义表独有的元数据两列——value / updatedBy 是「用户改过」与
+			// 只回填定义表独有的元数据列——value / updatedBy 是「用户改过」与
 			// 「env 层生效」的判据，碰了会让私有化定制静默失效
 			expect(mockPrisma.runtimeConfig.update).toHaveBeenCalledWith({
 				where: { key: "mailEnabled" },
-				data: { isPublic: def.isPublic, description: def.description },
+				data: {
+					isPublic: def.isPublic,
+					description: def.description,
+					category: def.category,
+				},
 			});
 			expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+		});
+
+		it("分类漂移时回填 category（#498 重划后存量行不再落回裸英文分类名）", async () => {
+			// mailEnabled 重划后归 alert（原 mail 类已并入）；
+			// 存量行还停在旧分类 → 启动期同步应回填为新分类
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue(
+				allDefRows({
+					mailEnabled: { category: "mail" as never },
+				}),
+			);
+			mockPrisma.runtimeConfig.createMany.mockResolvedValue({});
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+			mockPrisma.$transaction.mockResolvedValue([]);
+
+			await (service as any).syncDefaultConfigs();
+
+			const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "mailEnabled")!;
+			expect(def.category).toBe("alert");
+			expect(mockPrisma.runtimeConfig.update).toHaveBeenCalledTimes(1);
+			expect(mockPrisma.runtimeConfig.update).toHaveBeenCalledWith({
+				where: { key: "mailEnabled" },
+				data: {
+					isPublic: def.isPublic,
+					description: def.description,
+					category: "alert",
+				},
+			});
 		});
 
 		it("全新键仍走 createMany + skipDuplicates，不做任何 update", async () => {
@@ -468,6 +499,26 @@ describe("RuntimeConfigService", () => {
 			expect(mockPrisma.runtimeConfig.createMany).not.toHaveBeenCalled();
 			expect(mockPrisma.runtimeConfig.update).not.toHaveBeenCalled();
 			expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+		});
+
+		it("分类以定义表为准：存量行残留旧分类时读路径不回 DB 旧值", async () => {
+			// quota 并入 billing 后存量行仍停在旧分类。照 DB 回会让前端渲染出无显示名的
+			// 幽灵分组，且对该分组「恢复默认」会被 resetCategory 判为未知分类而 400。
+			const rows = allDefRows({
+				conversionGuestLimit: { category: "quota" as never },
+			});
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue(rows);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(
+				rows.find((r) => r.key === "conversionGuestLimit")!,
+			);
+
+			const item = (await service.getAllConfigs()).find(
+				(i) => i.key === "conversionGuestLimit",
+			)!;
+			const single = await service.get("conversionGuestLimit");
+
+			expect(item.category).toBe("billing");
+			expect(single.category).toBe("billing");
 		});
 
 		it("envValue 与 resolveValue 同口径：只配兼容别名时管理端也能看到 env 值", async () => {
@@ -883,8 +934,8 @@ describe("RuntimeConfigService", () => {
 			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
 			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
 
-			const keys = await service.resetCategory("mail", "user-1");
-			expect(keys).toEqual(expect.arrayContaining(["mailEnabled", "requireEmailVerification", "refundNotifyEmails"]));
+			const keys = await service.resetCategory("alert", "user-1");
+			expect(keys).toEqual(expect.arrayContaining(["mailEnabled", "refundNotifyEmails", "alertEmailEnabled"]));
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(keys.length);
 		});
 
@@ -1272,21 +1323,19 @@ describe("RuntimeConfigService", () => {
 		// 与前端 packages/frontend/src/pages/RuntimeConfigPage/meta.ts 的
 		// CATEGORY_META 键集合必须一致：任一侧改动都要同步另一侧
 		// （后端新增分类 → 前端补图标与标签，否则页面掉到末尾用 key 当标签）。
+		// #498 按用户任务重划的 10 类（mail/sms/wechat/user/system/storage 六类
+		// 已并入 account/alert/maintenance/file）
 		const EXPECTED_CATEGORIES = [
 			"brand",
-			"mail",
-			"sms",
+			"account",
 			"file",
-			"user",
-			"system",
-			"wechat",
-			"storage",
 			"billing",
-			"collaboration",
+			"alert",
 			"security",
 			"audit",
-			"alert",
+			"maintenance",
 			"backup",
+			"collaboration",
 		];
 
 		// 账号锁定的窗口与时长和阈值是一套：改一个不改另一个会互相抵消，故一起标 dangerous
@@ -1360,6 +1409,31 @@ describe("RuntimeConfigService", () => {
 			const actual = [...new Set(RUNTIME_CONFIG_DEFINITIONS.map((d) => d.category))].sort();
 			expect(actual.filter((c) => !EXPECTED_CATEGORIES.includes(c))).toEqual([]);
 			expect(actual).toEqual([...EXPECTED_CATEGORIES].sort());
+		});
+
+		it("子分组闭集：四个多项大类各钉死子分组集合，其余分类不声明（#498）", () => {
+			const EXPECTED_SUBGROUPS: Record<string, string[]> = {
+				security: ["mode-mfa", "password-policy", "rate-limit", "account-lock"],
+				account: ["login-methods", "registration"],
+				alert: ["alert-policy", "mail-channel", "sms-channel", "webhook-channel"],
+				maintenance: ["storage-trash", "cache-disk", "data-retention"],
+			};
+			for (const [category, expected] of Object.entries(EXPECTED_SUBGROUPS)) {
+				const actual = [
+					...new Set(
+						RUNTIME_CONFIG_DEFINITIONS.filter(
+							(d) => d.category === category && d.subgroup,
+						).map((d) => d.subgroup!),
+					),
+				].sort();
+				expect(actual).toEqual([...expected].sort());
+			}
+			// 其余 6 个分类项数不多，不声明子分组
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.filter(
+					(d) => d.subgroup && !Object.keys(EXPECTED_SUBGROUPS).includes(d.category),
+				).map((d) => d.key),
+			).toEqual([]);
 		});
 
 		it("声明 profiles 的键必须同时给出 secure 与 normal 两个目标值", () => {
@@ -1643,7 +1717,7 @@ describe("RuntimeConfigService", () => {
 		const secretDef: RuntimeConfigDefinition = {
 			key: "testChannelSecret",
 			type: "string",
-			category: "mail",
+			category: "alert",
 			description: "测试通道秘密",
 			defaultValue: "",
 			isPublic: false,
@@ -1796,7 +1870,7 @@ describe("RuntimeConfigService", () => {
 		const channelItemDef: RuntimeConfigDefinition = {
 			key: "testChannelHost",
 			type: "string",
-			category: "system",
+			category: "alert",
 			description: "测试通道主机",
 			defaultValue: "",
 			isPublic: false,
@@ -1805,7 +1879,7 @@ describe("RuntimeConfigService", () => {
 		const channelSwitchDef: RuntimeConfigDefinition = {
 			key: "testChannelEnabled",
 			type: "boolean",
-			category: "system",
+			category: "alert",
 			description: "测试通道开关",
 			defaultValue: false,
 			isPublic: false,
@@ -1816,7 +1890,7 @@ describe("RuntimeConfigService", () => {
 		const channelProfileItemDef: RuntimeConfigDefinition = {
 			key: "testChannelProfileHost",
 			type: "string",
-			category: "system",
+			category: "alert",
 			description: "测试通道 profile 主机",
 			defaultValue: "",
 			isPublic: false,

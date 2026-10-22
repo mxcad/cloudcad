@@ -29,26 +29,28 @@ export type RuntimeConfigValue =
   | RuntimeConfigJsonValue;
 
 /**
- * 运行时配置分类
+ * 运行时配置分类（按用户任务划分，#498）
  */
-// 页面分组。历史遗留的 support / device / quota / cache / session / pagination /
-// performance / logging 已无定义项（碎分类合并：quota+支付→billing、cache→system、
-// device→security、客服并入 brand），从联合类型里删掉，避免类型上仍存在空壳分类。
+// 页面分组。按「一次进入一个分类即可找齐完成该任务所需的全部配置」划分：
+// brand 品牌与客服 / account 账号与登录 / file 文件与导出 / billing 配额与计费 /
+// alert 通知与告警 / security 安全策略 / audit 审计与合规 / maintenance 自动任务与清理 /
+// backup 备份与恢复 / collaboration 协同配置。
+// 历史遗留的 support / device / quota / cache / session / pagination / performance /
+// logging 已无定义项（碎分类合并：quota+支付→billing、cache→system、device→security、
+// 客服并入 brand）；按模块划分的 mail / sms / wechat / user / system / storage 六类
+// 已并入 account / alert / maintenance / file（#498），从联合类型里删掉，
+// 避免类型上仍存在空壳分类。
 export type RuntimeConfigCategory =
   | 'brand'
-  | 'mail'
-  | 'sms'
+  | 'account'
   | 'file'
-  | 'user'
-  | 'system'
-  | 'wechat'
-  | 'storage'
   | 'billing'
-  | 'collaboration'
+  | 'alert'
   | 'security'
   | 'audit'
-  | 'alert'
-  | 'backup';
+  | 'maintenance'
+  | 'backup'
+  | 'collaboration';
 
 /**
  * 配置项显示层级：决定在前端管理页的可见档位。
@@ -118,6 +120,12 @@ export interface RuntimeConfigDefinition {
   key: string;
   type: RuntimeConfigValueType;
   category: RuntimeConfigCategory;
+  /**
+   * 子分组标识（#498）：项数多的大类内部按子分组渲染小节标题，
+   * 运维不用在一个二三十项的分类里翻找。标识是稳定 slug，
+   * 展示文案由前端 i18n 提供（后端只回标识）。
+   */
+  subgroup?: string;
   description: string;
   defaultValue: RuntimeConfigValue;
   isPublic: boolean;
@@ -227,6 +235,8 @@ export interface RuntimeConfigItem {
   value: RuntimeConfigValue;
   type: RuntimeConfigValueType;
   category: RuntimeConfigCategory;
+  /** 子分组标识（见 RuntimeConfigDefinition.subgroup） */
+  subgroup?: string;
   description: string | null;
   isPublic: boolean;
   updatedBy: string | null;

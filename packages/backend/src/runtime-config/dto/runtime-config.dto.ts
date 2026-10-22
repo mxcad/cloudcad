@@ -120,8 +120,14 @@ export class RuntimeConfigResponseDto {
   })
   type: string;
 
-  @ApiProperty({ description: '分类', example: 'mail' })
+  @ApiProperty({ description: '分类', example: 'alert' })
   category: string;
+
+  @ApiPropertyOptional({
+    description: '子分组标识（项数多的大类内再分小节；文案由前端 i18n 提供）',
+    example: 'password-policy',
+  })
+  subgroup?: string;
 
   @ApiPropertyOptional({ description: '配置说明', example: '邮件服务开关' })
   description?: string;
@@ -229,8 +235,14 @@ export class RuntimeConfigDefinitionDto {
   })
   type: string;
 
-  @ApiProperty({ description: '分类', example: 'mail' })
+  @ApiProperty({ description: '分类', example: 'alert' })
   category: string;
+
+  @ApiPropertyOptional({
+    description: '子分组标识（项数多的大类内再分小节；文案由前端 i18n 提供）',
+    example: 'password-policy',
+  })
+  subgroup?: string;
 
   @ApiProperty({ description: '配置说明', example: '邮件服务开关' })
   description: string;
