@@ -347,11 +347,10 @@ export default (): AppConfig => {
 
     // 存储路径配置（默认在 data/ 目录下）
     filesDataPath,
-    avatarPath: resolvePath(
-      process.env.AVATAR_PATH || path.join(filesDataPath, 'avatars')
-    ),
     // 与 filesDataPath 解耦：data/files 是 SVN 工作副本、且被 DirectoryAllocator 按
-    // {YYYYMM}/{nodeId}/ 扫描，非图纸资产落进去会被当月份目录列举并卷入版本提交
+    // {YYYYMM}/{nodeId}/ 扫描，非图纸资产（头像/品牌）落进去会被当月份目录列举并卷入
+    // 版本提交（.png 不在 MX_IGNORE_PATTERNS 内）
+    avatarPath: resolvePath(process.env.AVATAR_PATH || 'data/avatars'),
     brandAssetPath: resolvePath(process.env.BRAND_ASSET_PATH || 'data/brand'),
     mxRepoPath: resolvePath(process.env.MX_REPO_PATH || 'data/mx-repo'),
     mxcadUploadPath: resolvePath(
