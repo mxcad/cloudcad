@@ -104,6 +104,26 @@ export interface ConfigGroup {
 }
 
 /**
+ * 通道状态视图模型（对齐后端 ChannelStatusDto，ADR-0082 #494/#496）。
+ * 通道 = 一组配置项 + 一个开关 + 一个测试动作 + 一组依赖边；
+ * 开启开关要求「配置完整 + 测试通过」，配置项变更使验证记录失效。
+ */
+export interface ChannelStatus {
+  /** 通道名（与后端 channel 标记、测试动作注册名一致） */
+  channel: string;
+  /** 配置完整：必填项（非 allowNull）生效值非空 */
+  configComplete: boolean;
+  /** 缺失的必填键（configComplete 为 true 时为空数组） */
+  missingKeys: string[];
+  /** 是否通过通道测试（存在验证记录） */
+  verified: boolean;
+  /** 上次测试通过时间（未验证为 null） */
+  verifiedAt?: string | null;
+  /** 上次测试操作者（未验证为 null） */
+  testedBy?: string | null;
+}
+
+/**
  * 草稿值：布尔取布尔，其余（含数字与 JSON）保留用户原文。
  * 数字保留原文是为了避免输入中间态（空串、"1."）被 `Number()` 转成 NaN 后无法回退。
  */

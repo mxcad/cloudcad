@@ -27,6 +27,8 @@ const {
   resetCategory,
   previewProfile,
   applyProfile,
+  getChannelsStatus,
+  testChannel,
   showToast,
   showConfirm,
 } = vi.hoisted(() => ({
@@ -37,6 +39,8 @@ const {
   resetCategory: vi.fn(),
   previewProfile: vi.fn(),
   applyProfile: vi.fn(),
+  getChannelsStatus: vi.fn(),
+  testChannel: vi.fn(),
   showToast: vi.fn(),
   showConfirm: vi.fn(),
 }));
@@ -49,6 +53,8 @@ vi.mock('@/api-sdk', () => ({
   runtimeConfigControllerResetCategory: resetCategory,
   runtimeConfigControllerPreviewProfile: previewProfile,
   runtimeConfigControllerApplyProfile: applyProfile,
+  runtimeConfigControllerGetChannelsStatus: getChannelsStatus,
+  runtimeConfigControllerTestChannel: testChannel,
 }));
 vi.mock('@/contexts/NotificationContext', () => ({
   useNotification: () => ({ showToast, showConfirm }),
@@ -225,6 +231,10 @@ beforeEach(() => {
   resetCategory.mockResolvedValue(ok({ success: true, keys: [] }));
   previewProfile.mockResolvedValue(ok([]));
   applyProfile.mockResolvedValue(ok({ profile: 'secure', applied: [], unchanged: [] }));
+  getChannelsStatus.mockResolvedValue(ok([]));
+  testChannel.mockResolvedValue(
+    ok({ channel: 'mail', ok: true, message: '测试邮件已发送至 a@b.c' })
+  );
   showConfirm.mockResolvedValue(true);
 });
 
@@ -1116,6 +1126,108 @@ describe('useRuntimeConfig', () => {
       await waitFor(() => expect(hook.result.current.modePreviewing).toBe(false));
       expect(hook.result.current.modePreview).toEqual([]);
       expect(hook.result.current.stats.modeManaged).toBe(0);
+    });
+  });
+
+  describe('通道状态与测试发送（ADR-0082 #496）', () => {
+    const mailChannel = {
+      channel: 'mail',
+      configComplete: true,
+      missingKeys: [],
+      verified: false,
+      verifiedAt: null,
+      testedBy: null,
+    };
+
+    it('首屏加载后拉取一次通道状态', async () => {
+      getChannelsStatus.mockResolvedValue(ok([mailChannel]));
+      const hook = await load();
+
+      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+      expect(hook.result.current.channelStatuses[0].channel).toBe('mail');
+      expect(getChannelsStatus).toHaveBeenCalledWith({ throwOnError: true });
+    });
+
+    it('测试发送成功：toast 后端文案 + 关对话框 + 刷新通道状态', async () => {
+      getChannelsStatus.mockResolvedValue(ok([mailChannel]));
+      const hook = await load();
+      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+
+      await act(async () => {
+        hook.result.current.openChannelTest('mail');
+      });
+      await act(async () => {
+        hook.result.current.setChannelTestRecipient('a@b.c');
+      });
+      await act(async () => {
+        await hook.result.current.confirmChannelTest();
+      });
+
+      expect(testChannel).toHaveBeenCalledWith({
+        throwOnError: true,
+        path: { channel: 'mail' },
+        body: { to: 'a@b.c' },
+      });
+      expect(showToast).toHaveBeenCalledWith('测试邮件已发送至 a@b.c', 'success');
+      // 成功后关对话框并清空收件人
+      expect(hook.result.current.channelTestTarget).toBe(null);
+      expect(hook.result.current.channelTestRecipient).toBe('');
+      // 成功会写验证记录，必须刷新通道状态
+      expect(getChannelsStatus).toHaveBeenCalledTimes(2);
+    });
+
+    it('测试发送失败（ok:false）：toast 后端原因，对话框保持打开', async () => {
+      getChannelsStatus.mockResolvedValue(ok([mailChannel]));
+      testChannel.mockResolvedValue(
+        ok({ channel: 'mail', ok: false, message: '配置不完整（缺失：smtpHost）' })
+      );
+      const hook = await load();
+      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+
+      await act(async () => {
+        hook.result.current.openChannelTest('mail');
+      });
+      await act(async () => {
+        await hook.result.current.confirmChannelTest();
+      });
+
+      expect(showToast).toHaveBeenCalledWith('配置不完整（缺失：smtpHost）', 'error');
+      // 失败不关对话框：用户可改配置后重试
+      expect(hook.result.current.channelTestTarget).toBe('mail');
+    });
+
+    it('测试发送请求异常（4xx/5xx）：toast 后端错误信息', async () => {
+      getChannelsStatus.mockResolvedValue(ok([mailChannel]));
+      testChannel.mockRejectedValue(new Error('通道 mail 未注册测试动作'));
+      const hook = await load();
+      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+
+      await act(async () => {
+        hook.result.current.openChannelTest('mail');
+      });
+      await act(async () => {
+        await hook.result.current.confirmChannelTest();
+      });
+
+      expect(showToast).toHaveBeenCalledWith('通道 mail 未注册测试动作', 'error');
+    });
+
+    it('保存配置项后刷新通道状态（配置变更使验证记录失效）', async () => {
+      getChannelsStatus.mockResolvedValue(ok([mailChannel]));
+      const hook = await load();
+      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+      // 首屏拉取一次
+      expect(getChannelsStatus).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        hook.result.current.handleDraftChange('mail.smtpHost', 'smtp.new.com');
+      });
+      await act(async () => {
+        await hook.result.current.handleSave('mail.smtpHost');
+      });
+
+      // 保存成功后刷新一次
+      expect(getChannelsStatus).toHaveBeenCalledTimes(2);
     });
   });
 });

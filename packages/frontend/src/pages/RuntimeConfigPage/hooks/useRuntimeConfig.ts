@@ -20,6 +20,8 @@ import {
   runtimeConfigControllerResetCategory,
   runtimeConfigControllerPreviewProfile,
   runtimeConfigControllerApplyProfile,
+  runtimeConfigControllerGetChannelsStatus,
+  runtimeConfigControllerTestChannel,
 } from '@/api-sdk';
 import type { RuntimeProfilePreviewResponseDto } from '@/api-sdk';
 import { useNotification } from '@/contexts/NotificationContext';
@@ -34,8 +36,10 @@ import {
   CATEGORY_ORDER,
   toConfigItems,
   toHistoryEntries,
+  toChannelStatuses,
 } from '../meta';
 import type {
+  ChannelStatus,
   ConfigGroup,
   ConfigHistoryEntry,
   ConfigItem,
@@ -74,6 +78,14 @@ export interface UseRuntimeConfigReturn {
    * 满足与否按依赖项的**当前生效值**判定，页面据此渲染「依赖项 + 满足/不满足」。
    */
   dependencyStatus: Map<string, DependencyStatus[]>;
+  /** 通道状态（ADR-0082 #496）：配置完整度 + 验证记录，空数组表示后端未注册任何通道 */
+  channelStatuses: ChannelStatus[];
+  /** 正在执行测试发送的通道（按钮 loading 态） */
+  channelTesting: Set<string>;
+  /** 打开中的测试对话框对应的通道；null 表示未打开 */
+  channelTestTarget: string | null;
+  /** 测试对话框中的收件人草稿（留空 = 后端回落客服邮箱） */
+  channelTestRecipient: string;
   groups: ConfigGroup[];
   loading: boolean;
   configsError: string | null;
@@ -118,6 +130,10 @@ export interface UseRuntimeConfigReturn {
   handleSave: (key: string) => Promise<boolean>;
   handleReset: (key: string) => Promise<void>;
   toggleSecretVisibility: (key: string) => void;
+  openChannelTest: (channel: string) => void;
+  closeChannelTest: () => void;
+  setChannelTestRecipient: (value: string) => void;
+  confirmChannelTest: () => Promise<void>;
   requestResetCategory: (category: string) => void;
   confirmResetCategory: () => Promise<void>;
   cancelResetCategory: () => void;
@@ -184,6 +200,13 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [secretVisible, setSecretVisible] = useState<Set<string>>(new Set());
   /** 首次拉取失败时的错误文案；非空时页面渲染错误态而非「暂无配置项」 */
   const [configsError, setConfigsError] = useState<string | null>(null);
+  /** 通道状态（配置完整度 + 验证记录）；拉取失败保持空数组，区块不渲染 */
+  const [channelStatuses, setChannelStatuses] = useState<ChannelStatus[]>([]);
+  const [channelTesting, setChannelTesting] = useState<Set<string>>(new Set());
+  const [channelTestTarget, setChannelTestTarget] = useState<string | null>(
+    null
+  );
+  const [channelTestRecipient, setChannelTestRecipient] = useState('');
 
   const canManageConfig = hasPermission(SystemPermission.SYSTEM_CONFIG_WRITE);
 
@@ -238,6 +261,32 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   useEffect(() => {
     void fetchConfigs();
   }, [fetchConfigs]);
+
+  /**
+   * 拉取通道状态（配置完整度 + 验证记录）。通道区块是辅助信息：拉取失败
+   * 只 toast 不阻塞页面（配置列表已成功渲染），失败时保持空数组、区块不显示。
+   */
+  const fetchChannelStatuses = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      try {
+        const result = await runtimeConfigControllerGetChannelsStatus({
+          throwOnError: true,
+        });
+        setChannelStatuses(toChannelStatuses(result.data));
+      } catch (error: unknown) {
+        if (opts?.silent) return;
+        handleError(error, t('获取通道状态失败'));
+        showToast(getErrorMessage(error) || t('获取通道状态失败'), 'error');
+      }
+    },
+    [showToast]
+  );
+
+  // 配置列表加载完成后拉一次通道状态
+  useEffect(() => {
+    if (loading) return;
+    void fetchChannelStatuses();
+  }, [loading, fetchChannelStatuses]);
 
   /**
    * 拉取模式预览。预览只读不写库，故点击切换时直接发；首次进页也取一次，
@@ -440,6 +489,52 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     });
   }, []);
 
+  const openChannelTest = useCallback((channel: string) => {
+    setChannelTestRecipient('');
+    setChannelTestTarget(channel);
+  }, []);
+
+  const closeChannelTest = useCallback(() => {
+    setChannelTestTarget(null);
+    setChannelTestRecipient('');
+  }, []);
+
+  /**
+   * 执行通道测试发送。后端语义：配置不完整/测试失败都返回 200 + ok:false
+   * （带原因文案），只有通道未注册等参数错误才 4xx——两种失败都 toast 后端
+   * 文案，随后刷新通道状态（成功会写验证记录，失败不写）。
+   */
+  const confirmChannelTest = useCallback(async () => {
+    const channel = channelTestTarget;
+    if (!channel) return;
+    setChannelTesting((prev) => new Set(prev).add(channel));
+    try {
+      const result = await runtimeConfigControllerTestChannel({
+        throwOnError: true,
+        path: { channel },
+        body: { to: channelTestRecipient.trim() || undefined },
+      });
+      const data = result.data;
+      if (data?.ok) {
+        showToast(data.message || t('测试发送成功'), 'success');
+        setChannelTestTarget(null);
+        setChannelTestRecipient('');
+      } else {
+        showToast(data?.message || t('测试发送失败'), 'error');
+      }
+    } catch (error: unknown) {
+      handleError(error, t('测试发送失败'));
+      showToast(getErrorMessage(error) || t('测试发送失败'), 'error');
+    } finally {
+      setChannelTesting((prev) => {
+        const next = new Set(prev);
+        next.delete(channel);
+        return next;
+      });
+      await fetchChannelStatuses({ silent: true });
+    }
+  }, [channelTestTarget, channelTestRecipient, showToast, fetchChannelStatuses]);
+
   /**
    * 保存单项。流程：本地校验 → 危险项二次确认 → 提交 → 就地错误 / toast。
    * 危险项（dangerous）在保存前确认并说明 impact；普通项不弹确认框，避免干扰日常操作。
@@ -489,6 +584,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
         });
         await fetchConfigs({ silent: true });
         await invalidatePublicConfigCache(item.isPublic);
+        // 通道配置项变更会使验证记录失效，刷新通道区块状态
+        await fetchChannelStatuses({ silent: true });
         return true;
       } catch (error: unknown) {
         handleError(error, t('保存配置失败'));
@@ -514,6 +611,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       showToast,
       fetchConfigs,
       invalidatePublicConfigCache,
+      fetchChannelStatuses,
     ]
   );
 
@@ -572,6 +670,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
         });
         await fetchConfigs({ silent: true });
         await invalidatePublicConfigCache(item.isPublic);
+        // 通道配置项重置会使验证记录失效，刷新通道区块状态
+        await fetchChannelStatuses({ silent: true });
       } catch (error: unknown) {
         handleError(error, t('恢复默认失败'));
         showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
@@ -589,6 +689,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       showToast,
       fetchConfigs,
       invalidatePublicConfigCache,
+      fetchChannelStatuses,
     ]
   );
 
@@ -643,13 +744,15 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.runtimeConfig.public,
       });
+      // profile 批量应用改写通道配置项会使验证记录失效
+      await fetchChannelStatuses({ silent: true });
     } catch (error: unknown) {
       handleError(error, t('切换模式失败'));
       showToast(getErrorMessage(error) || t('切换模式失败'), 'error');
     } finally {
       setModeSaving(false);
     }
-  }, [modeSwitchTarget, showToast, fetchConfigs, queryClient]);
+  }, [modeSwitchTarget, showToast, fetchConfigs, queryClient, fetchChannelStatuses]);
 
   const cancelModeSwitch = useCallback(() => {
     setModeSwitchTarget(null);
@@ -676,10 +779,12 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
         return next;
       });
       setFieldErrors({});
-      await fetchConfigs({ silent: true });
-      await invalidatePublicConfigCache(
-        configs.some((c) => c.category === category && c.isPublic)
-      );
+        await fetchConfigs({ silent: true });
+        await invalidatePublicConfigCache(
+          configs.some((c) => c.category === category && c.isPublic)
+        );
+        // 分类批量重置可能覆盖通道配置项，刷新通道区块状态
+        await fetchChannelStatuses({ silent: true });
     } catch (error: unknown) {
       handleError(error, t('恢复默认失败'));
       showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
@@ -692,6 +797,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     showToast,
     fetchConfigs,
     invalidatePublicConfigCache,
+    fetchChannelStatuses,
   ]);
 
   const resetPreviewItems = useMemo(
@@ -732,6 +838,10 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     configs,
     configsByKey,
     dependencyStatus,
+    channelStatuses,
+    channelTesting,
+    channelTestTarget,
+    channelTestRecipient,
     groups,
     loading,
     configsError,
@@ -771,6 +881,10 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     handleSave,
     handleReset,
     toggleSecretVisibility,
+    openChannelTest,
+    closeChannelTest,
+    setChannelTestRecipient,
+    confirmChannelTest,
     requestResetCategory,
     confirmResetCategory,
     cancelResetCategory,

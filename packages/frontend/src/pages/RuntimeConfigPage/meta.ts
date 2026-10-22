@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { t } from '@/languages';
 import type {
+  ChannelStatus,
   ConfigHistoryEntry,
   ConfigItem,
   ConfigSource,
@@ -128,6 +129,29 @@ export function toHistoryEntries(raw: unknown): ConfigHistoryEntry[] {
       operatorId: (o.operatorId ?? null) as string | null,
       operatorIp: (o.operatorIp ?? null) as string | null,
       createdAt: (o.createdAt ?? '') as string | Date,
+    };
+  });
+}
+
+/** 通道显示名（未登记的通道直接用通道名，如 sms） */
+export const CHANNEL_LABEL: Record<string, string> = {
+  mail: t('邮件通道'),
+};
+
+/** 归一化通道状态列表（SDK 响应 → 视图模型，缺失字段给安全默认值） */
+export function toChannelStatuses(raw: unknown): ChannelStatus[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row) => {
+    const o = (row ?? {}) as Record<string, unknown>;
+    return {
+      channel: String(o.channel ?? ''),
+      configComplete: Boolean(o.configComplete),
+      missingKeys: Array.isArray(o.missingKeys)
+        ? (o.missingKeys as unknown[]).map(String)
+        : [],
+      verified: Boolean(o.verified),
+      verifiedAt: (o.verifiedAt ?? null) as string | null,
+      testedBy: (o.testedBy ?? null) as string | null,
     };
   });
 }

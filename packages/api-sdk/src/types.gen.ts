@@ -417,6 +417,18 @@ export type RuntimeConfigResponseDto = {
      * 改动是否即时生效
      */
     hot?: boolean;
+    /**
+     * 开关依赖声明：本项为 true 时列出的配置项必须同为 true
+     */
+    requires?: Array<string>;
+    /**
+     * 通道配置项标记：本项属于哪个通道（如 mail）
+     */
+    channel?: string;
+    /**
+     * 通道开关标记：本项是哪个通道的开/关开关（开启须通道配置完整+测试通过）
+     */
+    channelSwitch?: string;
 };
 
 export type RuntimeConfigDefinitionDto = {
@@ -470,6 +482,82 @@ export type RuntimeConfigDefinitionDto = {
      * 底层 env 变量名（部署期默认值层）
      */
     envKey?: string;
+    /**
+     * 开关依赖声明：本项为 true 时列出的配置项必须同为 true
+     */
+    requires?: Array<string>;
+    /**
+     * 通道配置项标记：本项属于哪个通道（如 mail）
+     */
+    channel?: string;
+    /**
+     * 通道开关标记：本项是哪个通道的开/关开关
+     */
+    channelSwitch?: string;
+};
+
+export type RuntimeConfigDependencyViolationDto = {
+    /**
+     * 依赖方配置键（功能开关，如 requireEmailVerification）
+     */
+    dependent: string;
+    /**
+     * 被依赖的配置键（通道/服务开关，如 mailEnabled）
+     */
+    required: string;
+};
+
+export type ChannelStatusDto = {
+    /**
+     * 通道名
+     */
+    channel: string;
+    /**
+     * 配置是否完整（必填项生效值均非空）
+     */
+    configComplete: boolean;
+    /**
+     * 缺失（生效值为空）的必填配置键
+     */
+    missingKeys: Array<string>;
+    /**
+     * 是否存在有效的验证记录（测试通过后写入，配置变更即删除）
+     */
+    verified: boolean;
+    /**
+     * 最近一次测试通过时间
+     */
+    verifiedAt?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * 最近一次测试操作者 ID
+     */
+    testedBy?: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type TestChannelDto = {
+    /**
+     * 测试发信收件人（缺省由通道动作自行决定，如 supportEmail）
+     */
+    to?: string;
+};
+
+export type ChannelTestResultDto = {
+    /**
+     * 通道名
+     */
+    channel: string;
+    /**
+     * 测试是否通过
+     */
+    ok: boolean;
+    /**
+     * 成功说明或失败原因（面向操作员）
+     */
+    message: string;
 };
 
 export type UpdateRuntimeConfigDto = {
@@ -1412,6 +1500,32 @@ export type BindWechatDto = {
     takeover?: boolean;
 };
 
+export type SetupStatusResponseDto = {
+    /**
+     * 是否需要首启设置（系统尚无任何用户）
+     */
+    setupRequired: boolean;
+};
+
+export type CreateFirstAdminDto = {
+    /**
+     * 管理员邮箱（可选）
+     */
+    email?: string;
+    /**
+     * 管理员用户名
+     */
+    username: string;
+    /**
+     * 管理员密码（需满足口令策略）
+     */
+    password: string;
+    /**
+     * 管理员昵称（缺省取用户名）
+     */
+    nickname?: string;
+};
+
 export type MfaSetupResponseDto = {
     /**
      * TOTP 密钥（Base32，前端据此渲染二维码）
@@ -2019,7 +2133,7 @@ export type AuditExportDto = {
     /**
      * 操作类型过滤
      */
-    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET' | 'NOTICE_DELETE';
+    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_ROLE_CHANGE' | 'USER_STATUS_CHANGE' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET' | 'NOTICE_DELETE' | 'CHANNEL_TEST';
     /**
      * 项目 ID（项目维度过滤）
      */
@@ -2658,6 +2772,11 @@ export type PermissionsDto = {
     permissions: Array<string>;
 };
 
+/**
+ * 出向：本项目文件 → 其他项目
+ */
+export type CrossProjectTransferModeEnum = 'NONE' | 'COPY_ONLY' | 'MOVE_ONLY' | 'ALL';
+
 export type CreateProjectDto = {
     /**
      * 项目名称
@@ -2667,17 +2786,36 @@ export type CreateProjectDto = {
      * 项目描述
      */
     description?: string;
+    /**
+     * 出向：本项目文件 → 其他项目
+     */
+    transferOutToProject?: CrossProjectTransferModeEnum;
+    /**
+     * 出向：本项目文件 → 个人空间（默认禁止，防图纸私有化）
+     */
+    transferOutToPersonalSpace?: CrossProjectTransferModeEnum;
+    /**
+     * 出向：本项目文件 → 公共资源库（发布，默认仅复制）
+     */
+    transferOutToLibrary?: CrossProjectTransferModeEnum;
+    /**
+     * 入向：其他项目文件 → 本项目
+     */
+    transferInFromProject?: CrossProjectTransferModeEnum;
+    /**
+     * 入向：个人空间文件 → 本项目
+     */
+    transferInFromPersonalSpace?: CrossProjectTransferModeEnum;
+    /**
+     * 入向：公共资源库文件 → 本项目
+     */
+    transferInFromLibrary?: CrossProjectTransferModeEnum;
 };
 
 /**
  * 项目状态
  */
 export type ProjectStatusEnum = 'ACTIVE' | 'ARCHIVED' | 'DELETED';
-
-/**
- * 出向：本项目文件 → 其他项目
- */
-export type CrossProjectTransferModeEnum = 'NONE' | 'COPY_ONLY' | 'MOVE_ONLY' | 'ALL';
 
 export type ProjectDto = {
     /**
@@ -4585,7 +4723,7 @@ export type CreateNoticeDto = {
     /**
      * 通知类型
      */
-    kind: 'system' | 'download';
+    kind: 'system';
     /**
      * 通知级别，驱动弹框配色与队列优先级
      */
@@ -5737,6 +5875,66 @@ export type RuntimeConfigControllerGetDefinitionsResponses = {
 };
 
 export type RuntimeConfigControllerGetDefinitionsResponse = RuntimeConfigControllerGetDefinitionsResponses[keyof RuntimeConfigControllerGetDefinitionsResponses];
+
+export type RuntimeConfigControllerCheckDependenciesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/dependency-check';
+};
+
+export type RuntimeConfigControllerCheckDependenciesResponses = {
+    /**
+     * 返回当前依赖不一致清单（无违规时为空数组）
+     */
+    200: Array<RuntimeConfigDependencyViolationDto>;
+};
+
+export type RuntimeConfigControllerCheckDependenciesResponse = RuntimeConfigControllerCheckDependenciesResponses[keyof RuntimeConfigControllerCheckDependenciesResponses];
+
+export type RuntimeConfigControllerGetChannelsStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/channels';
+};
+
+export type RuntimeConfigControllerGetChannelsStatusResponses = {
+    /**
+     * 返回已注册通道的状态列表（未注册任何通道测试动作时为空数组）
+     */
+    200: Array<ChannelStatusDto>;
+};
+
+export type RuntimeConfigControllerGetChannelsStatusResponse = RuntimeConfigControllerGetChannelsStatusResponses[keyof RuntimeConfigControllerGetChannelsStatusResponses];
+
+export type RuntimeConfigControllerTestChannelData = {
+    body?: TestChannelDto;
+    path: {
+        /**
+         * 通道名
+         */
+        channel: string;
+    };
+    query?: never;
+    url: '/api/v1/runtime-config/channels/{channel}/test';
+};
+
+export type RuntimeConfigControllerTestChannelErrors = {
+    /**
+     * 通道未注册测试动作
+     */
+    400: unknown;
+};
+
+export type RuntimeConfigControllerTestChannelResponses = {
+    /**
+     * 返回测试结果（成功说明或失败原因）
+     */
+    200: ChannelTestResultDto;
+};
+
+export type RuntimeConfigControllerTestChannelResponse = RuntimeConfigControllerTestChannelResponses[keyof RuntimeConfigControllerTestChannelResponses];
 
 export type RuntimeConfigControllerServeBrandLogoData = {
     body?: never;
@@ -6914,6 +7112,49 @@ export type AuthControllerUnbindPhoneResponses = {
      */
     200: unknown;
 };
+
+export type AuthSetupControllerGetSetupStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/setup/status';
+};
+
+export type AuthSetupControllerGetSetupStatusResponses = {
+    /**
+     * 首启状态
+     */
+    200: SetupStatusResponseDto;
+};
+
+export type AuthSetupControllerGetSetupStatusResponse = AuthSetupControllerGetSetupStatusResponses[keyof AuthSetupControllerGetSetupStatusResponses];
+
+export type AuthSetupControllerCreateFirstAdminData = {
+    body: CreateFirstAdminDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/setup/first-admin';
+};
+
+export type AuthSetupControllerCreateFirstAdminErrors = {
+    /**
+     * 请求参数错误或口令不符合策略
+     */
+    400: unknown;
+    /**
+     * 系统已完成初始化
+     */
+    403: unknown;
+};
+
+export type AuthSetupControllerCreateFirstAdminResponses = {
+    /**
+     * 首个管理员创建成功
+     */
+    201: AuthApiResponseDto;
+};
+
+export type AuthSetupControllerCreateFirstAdminResponse = AuthSetupControllerCreateFirstAdminResponses[keyof AuthSetupControllerCreateFirstAdminResponses];
 
 export type AdminAuthControllerLoginData = {
     body: LoginDto;

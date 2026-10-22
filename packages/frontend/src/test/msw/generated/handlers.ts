@@ -766,6 +766,32 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(`${baseURL}/api/v1/auth/setup/status`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getAuthSetupControllerGetSetupStatus200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/auth/setup/status`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(`${baseURL}/api/v1/auth/wechat/login`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -1579,6 +1605,36 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(`${baseURL}/api/v1/auth/setup/first-admin`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getAuthSetupControllerCreateFirstAdmin201Response(),
+        { status: 201 },
+      ],
+      [undefined, { status: 400 }],
+      [undefined, { status: 403 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/auth/setup/first-admin`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(`${baseURL}/api/v1/auth/wechat/bind`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -3325,6 +3381,34 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(`${baseURL}/api/v1/runtime-config/channels`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getRuntimeConfigControllerGetChannelsStatus200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`get /api/v1/runtime-config/channels`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(
     `${baseURL}/api/v1/runtime-config/definitions`,
     async ({ request }) => {
@@ -3348,6 +3432,38 @@ export const handlers = [
       const [body, init] =
         resultArray[
           next(`get /api/v1/runtime-config/definitions`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(
+    `${baseURL}/api/v1/runtime-config/dependency-check`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerCheckDependencies200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/runtime-config/dependency-check`) %
+            resultArray.length
         ];
       const responseJson =
         requestJson && body && typeof body === 'object' && !Array.isArray(body)
@@ -7781,6 +7897,39 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.post(
+    `${baseURL}/api/v1/runtime-config/channels/:channel/test`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerTestChannel200Response(),
+          { status: 200 },
+        ],
+        [undefined, { status: 400 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/runtime-config/channels/:channel/test`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.put(
     `${baseURL}/api/v1/admin/vip/config-keys/:id`,
     async ({ request }) => {
@@ -10073,6 +10222,9 @@ export function getRuntimeConfigControllerGetAllConfigs200Response() {
       impact: '关闭后邮件验证码发送全部停止',
       dangerous: true,
       hot: true,
+      requires: ['mailEnabled'],
+      channel: 'mail',
+      channelSwitch: 'mail',
     }));
   })();
 }
@@ -10120,8 +10272,51 @@ export function getRuntimeConfigControllerGetDefinitions200Response() {
       dangerous: faker.datatype.boolean(),
       hot: faker.datatype.boolean(),
       envKey: 'SESSION_MAX_AGE',
+      requires: ['mailEnabled'],
+      channel: 'mail',
+      channelSwitch: 'mail',
     }));
   })();
+}
+
+export function getRuntimeConfigControllerCheckDependencies200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      dependent: 'requireEmailVerification',
+      required: 'mailEnabled',
+    }));
+  })();
+}
+
+export function getRuntimeConfigControllerGetChannelsStatus200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      channel: 'mail',
+      configComplete: true,
+      missingKeys: ['smtpHost', 'smtpPassword'],
+      verified: true,
+      verifiedAt: '2026-10-22T08:00:00.000Z',
+      testedBy: {},
+    }));
+  })();
+}
+
+export function getRuntimeConfigControllerTestChannel200Response() {
+  return {
+    channel: 'mail',
+    ok: true,
+    message: '测试邮件已发送至 admin@example.com',
+  };
 }
 
 export function getRuntimeConfigControllerUploadBrandLogo200Response() {
@@ -10173,6 +10368,9 @@ export function getRuntimeConfigControllerGetConfig200Response() {
     impact: '关闭后邮件验证码发送全部停止',
     dangerous: true,
     hot: true,
+    requires: ['mailEnabled'],
+    channel: 'mail',
+    channelSwitch: 'mail',
   };
 }
 
@@ -10998,6 +11196,61 @@ export function getAuthControllerUnbindEmail200Response() {
 
 export function getAuthControllerUnbindPhone200Response() {
   return { success: true, message: '手机号解绑成功' };
+}
+
+export function getAuthSetupControllerGetSetupStatus200Response() {
+  return {
+    setupRequired: true,
+  };
+}
+
+export function getAuthSetupControllerCreateFirstAdmin201Response() {
+  return {
+    accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    user: {
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      email: 'user@example.com',
+      username: 'username',
+      nickname: '用户昵称',
+      avatar: 'https://example.com/avatar.jpg',
+      role: {
+        id: 'clxxxxxxx',
+        name: 'USER',
+        description: '普通用户，基础权限',
+        isSystem: true,
+        permissions: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => ({
+            permission: faker.lorem.words(),
+          }));
+        })(),
+      },
+      status: 'ACTIVE',
+      phone: '13800138000',
+      phoneVerified: faker.datatype.boolean(),
+      wechatId: 'oXYZ123...',
+      provider: 'LOCAL',
+      hasPassword: true,
+      membershipTierLevel: faker.number.int(),
+      membershipExpiresAt: faker.lorem.words(),
+      membershipTier: 'VIP0',
+      isVip: faker.datatype.boolean(),
+    },
+    restored: faker.datatype.boolean(),
+    mfaSetupRequired: faker.datatype.boolean(),
+    passwordChangeRequired: faker.helpers.arrayElement([
+      'first_login',
+      'expired',
+    ]),
+    passwordExpiringSoon: faker.datatype.boolean(),
+  };
 }
 
 export function getAdminAuthControllerLogin200Response() {

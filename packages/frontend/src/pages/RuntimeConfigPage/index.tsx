@@ -29,6 +29,7 @@ import { useRuntimeConfig } from './hooks/useRuntimeConfig';
 import { PageHeader } from './PageHeader';
 import { ConfigCard } from './ConfigCard';
 import type { RowActions } from './ConfigCard';
+import { ChannelStatusCard } from './ChannelStatusCard';
 import { CoordinateLogCard } from './CoordinateLogCard';
 import { ConfigHistoryPanel } from './ConfigHistoryPanel';
 import { ResetCategoryModal } from './ResetCategoryModal';
@@ -137,6 +138,21 @@ export const RuntimeConfigPage: React.FC = () => {
           {allCollapsed ? t('展开全部') : t('折叠全部')}
         </Button>
       </div>
+
+      {/* 通道状态：配置完整度 + 验证状态 + 测试发送（ADR-0082 #496） */}
+      {rc.channelStatuses.length > 0 && (
+        <ChannelStatusCard
+          channels={rc.channelStatuses}
+          canManageConfig={rc.canManageConfig}
+          testing={rc.channelTesting}
+          testTarget={rc.channelTestTarget}
+          testRecipient={rc.channelTestRecipient}
+          onOpenTest={rc.openChannelTest}
+          onCloseTest={rc.closeChannelTest}
+          onRecipientChange={rc.setChannelTestRecipient}
+          onConfirmTest={rc.confirmChannelTest}
+        />
+      )}
 
       {/* 配置分组卡片 */}
       {rc.groups.length > 0 && (
