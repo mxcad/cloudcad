@@ -64,6 +64,31 @@ PC 的自动跳移动端（`frontend/src/App.tsx`）只在 `pathname === '/' || 
 
 当前内容见 `packages/platform/README.md`（`env/device`、`env/auth-transfer`、`routes/{match,aliases,resolve}`）。
 
+#### 已知结构边界：没有同时被 {backend, PC, 移动端} 消费的包
+
+2026-10-21 口令策略判定收口时暴露：本仓**不存在**同时被后端与两端前端依赖的包。
+`@cloudcad/platform` 无构建步骤（`main: ./src/index.ts`，Vite/Vitest 直接吃 TS 源码，`type: module`），
+而后端产物是纯 CJS（`node dist/main.js`），**运行时 require 不了 `.ts` 文件**——
+后端依赖 platform 需要 platform 增加一个产出 CJS 的构建步骤，那会改变它「无构建、吃源码」
+对现有消费者的契约。反过来让两端前端依赖 `@cloudcad/contracts` 又违反本仓约定
+（前端只依赖 api-sdk + platform，从不 import contracts），且撞上一节表格里
+「让后端包依赖前端语义，方向反了」的原始理由。
+
+因此**任何需要后端与前端共享的纯判定，在现行包拓扑下都必须写两份**。首例是
+`packages/platform/src/auth/password-policy.ts` 的「类别构成」判定（`countPasswordCategories`
+的四个字符类别正则）与后端 `PasswordPolicyService.assertPasswordPolicy` 的对应数组：
+两处刻意逐字一致，由 `scripts/scan-password-policy.js` 的**检查 C** 拦住单侧改动；
+参数侧的漂移由同一门禁的**检查 B** 拦（后端定义表 defaultValue ≡ platform 兜底 ≡ 两端回落字面量）。
+
+判定顺序的差异是刻意保留的，不是遗漏：后端在「长度 → 复杂度」之外还夹一条
+**弱口令黑名单**检查，黑名单是后端随包分发的静态资产、**不下发客户端**（下发等于把绕过
+方式告诉攻击者），所以 `validatePasswordPolicy` 只覆盖长度 + 复杂度两条。失败原因
+词汇表 `PasswordPolicyReason = 'too_short' | 'complexity' | 'weak'` 里 `'weak'` 只由后端产出，
+留在类型里是为了让后端到 i18n 键的映射穷举、两端共用同一份名称。
+
+要真正消掉这份重复，需要一次有意的包拓扑变更（给 platform 加 CJS 构建、或允许前端消费
+contracts），属于架构决策而非局部重构，未在此处单方面执行。
+
 ### 二、语义等价 + 双向翻译层（不改路由模式）
 
 评估过三种方案，选"语义等价 + 双向翻译层"：

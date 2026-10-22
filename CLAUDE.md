@@ -73,3 +73,17 @@
 ## Issues
 
 Issues 在自建 Gitea（`qjx/cloudcad`）中跟踪，**所有记录只保留在 Gitea**（GitHub 侧为 2026-10-12 迁移前的只读归档）。参见 `docs/agents/issue-tracker.md`（API 用法与 GitHub→Gitea 编号映射见 `docs/agents/issue-mapping.md`）。
+
+## Agent skills
+
+### Issue tracker
+
+Issues 在自建 Gitea（`qjx/cloudcad`，`http://10.66.66.1:5656`）跟踪，GitHub 侧为只读归档。See `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+五角色映射以 Gitea 实际标签表为准（`needs-info`→`question`、`ready-for-human`→`enhancement` 为近似替代）；标签只能在建票时定对，事后改不动。See `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+Multi-context：根 `CONTEXT-MAP.md` 指向各 context 的 `CONTEXT.md`，系统级 ADR 在 `docs/adr/`。See `docs/agents/domain.md`。

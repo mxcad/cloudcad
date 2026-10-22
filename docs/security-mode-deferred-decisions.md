@@ -166,12 +166,25 @@ role/name/user 各级缺失不命中不抛错）。**零行为变化**：backend
 全量 225 套件 / 3151 例绿、contracts 41 例绿 + 纯度门禁通过。
 
 **第 2 步（入口开关）已落地**：新增 `adminLoginEntry` 配置项
-（`ISOLATED` / `MERGED`，profiles `{ secure: 'ISOLATED', normal: 'MERGED' }`，
-`defaultValue: 'ISOLATED'` = 升级零行为变化），闸门落在 **`assertLoginEligible`**
+（`ISOLATED` / `MERGED`，profiles `{ secure: 'ISOLATED', normal: 'MERGED' }`），
+闸门落在 **`assertLoginEligible`**
 而非 `admin-auth.service.login()`——后者只管管理员专用入口，而普通入口的四条登录路径
 （密码/微信/手机码/邮箱）共同收口在 `assertLoginEligible`，闸门放这里才覆盖全部入口，
 且仍在注销冷静期恢复逻辑之前（守住第 1 步的前科）。
 配置读取**仅当用户是管理员时**才发生，普通用户的登录尝试不产生额外查询。
+
+**⚠️ 出厂默认值 2026-10-21 改为 `MERGED`**（用户裁定）：初版取 `ISOLATED`，理由是
+「升级零行为变化」——但那只保护已建库的部署（DB runtime 值恒优先于代码默认值），
+代价是**新装 / 未应用过 profile 的部署出厂即拒绝管理员走普通入口**。改成 `MERGED` 后
+新装部署的出厂值与普通模式 profile 目标一致。代价是**与其余声明 profiles 的键的约定
+相反**：那批键出厂默认一律取安全侧（`rateLimitPublicMax` 100 vs normal 10000、
+`passwordPolicyMinLength` 10 vs normal 6、`accountLockFailThreshold` 10 vs normal 100），
+放宽靠显式「应用普通模式」批量写入。本键是这个约定的唯一例外，已用
+`runtime-config.service.spec.ts` 的「adminLoginEntry 出厂默认必须是 MERGED」钉死，
+防止被「顺手对齐约定」改回。出厂默认现在只有一处事实源：`runtime-config.constants.ts`
+的 `defaultValue`——`login.service.ts` 的 `getValue` 调用不传调用侧兜底参数，键未登记时
+由 `getValue` 内部回落到 `def.defaultValue`。该键没有 envKey，只能靠 DB runtime 值或
+profile 应用改变。
 
 **语义取「放宽」而非「合并后禁用专用入口」**：`MERGED` = 管理员可走任一入口，
 专用入口两种形态下都可用。不采用「MERGED 时禁用专用入口」——那会打断既有部署的
