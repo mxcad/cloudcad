@@ -21,7 +21,7 @@ export class AccountBindingService implements IAccountBindingService {
   ) {}
 
   async sendBindEmailCode(userId: string, email: string, isRebind: boolean = false): Promise<{ message: string }> {
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
     if (!mailEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.email_service_disabled') ?? '邮件服务未启用，无法绑定邮箱'); }
 
     if (!isRebind) {
@@ -44,7 +44,7 @@ export class AccountBindingService implements IAccountBindingService {
   }
 
   async verifyBindEmail(userId: string, email: string, code: string, isRebind: boolean = false): Promise<{ message: string }> {
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
     if (!mailEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.email_service_disabled') ?? '邮件服务未启用，无法绑定邮箱'); }
 
     if (!isRebind) {
@@ -83,7 +83,7 @@ export class AccountBindingService implements IAccountBindingService {
   }
 
   async sendUnbindPhoneCode(userId: string): Promise<{ success: boolean; message: string }> {
-    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled', false);
+    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled');
     if (!smsEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.sms_service_disabled') ?? '短信服务未启用'); }
 
     const user = await this.userRepo.findById(userId);
@@ -101,7 +101,7 @@ export class AccountBindingService implements IAccountBindingService {
   }
 
   async verifyUnbindPhoneCode(userId: string, code: string): Promise<{ success: boolean; message: string; token: string }> {
-    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled', false);
+    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled');
     if (!smsEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.sms_service_disabled') ?? '短信服务未启用'); }
 
     const user = await this.userRepo.findById(userId);
@@ -120,7 +120,7 @@ export class AccountBindingService implements IAccountBindingService {
   }
 
   async rebindPhone(userId: string, phone: string, code: string, token: string): Promise<{ success: boolean; message: string }> {
-    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled', false);
+    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled');
     if (!smsEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.sms_service_disabled') ?? '短信服务未启用'); }
 
     try {
@@ -144,7 +144,7 @@ export class AccountBindingService implements IAccountBindingService {
   }
 
   async sendUnbindEmailCode(userId: string): Promise<{ success: boolean; message: string }> {
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
     if (!mailEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.email_service_disabled_general') ?? '邮件服务未启用'); }
 
     const user = await this.userRepo.findById(userId);
@@ -162,7 +162,7 @@ export class AccountBindingService implements IAccountBindingService {
   }
 
   async verifyUnbindEmailCode(userId: string, code: string): Promise<{ success: boolean; message: string; token: string }> {
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
     if (!mailEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.email_service_disabled_general') ?? '邮件服务未启用'); }
 
     const user = await this.userRepo.findById(userId);
@@ -182,7 +182,7 @@ export class AccountBindingService implements IAccountBindingService {
   }
 
   async rebindEmail(userId: string, email: string, code: string, token: string): Promise<{ success: boolean; message: string }> {
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
     if (!mailEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.email_service_disabled_general') ?? '邮件服务未启用'); }
 
     try {
@@ -267,7 +267,7 @@ export class AccountBindingService implements IAccountBindingService {
     userId: string,
     code: string
   ): Promise<{ success: boolean; message: string }> {
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
     if (!mailEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.email_service_disabled_general') ?? '邮件服务未启用'); }
 
     const user = await this.userRepo.findById(userId);
@@ -295,7 +295,7 @@ export class AccountBindingService implements IAccountBindingService {
     userId: string,
     code: string
   ): Promise<{ success: boolean; message: string }> {
-    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled', false);
+    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled');
     if (!smsEnabled) { throw new BadRequestException(I18nContext.current()?.t('error.account_binding.sms_service_disabled') ?? '短信服务未启用'); }
 
     const user = await this.userRepo.findById(userId);

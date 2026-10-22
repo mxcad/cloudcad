@@ -13,14 +13,14 @@
 /**
  * 通用通知中心的共享常量与事件契约。
  *
- * kind / level 用 String 而非 Prisma 枚举：公告类型会随业务增长（system / download
- * 之后还会加），而 Prisma 枚举既不能直接 @ApiProperty，新增值又要跑迁移。
+ * kind / level 用 String 而非 Prisma 枚举：公告类型会随业务增长，而 Prisma 枚举
+ * 既不能直接 @ApiProperty，新增值又要跑迁移。
  */
 
 import type { Notice } from '@cloudcad/db';
 
-/** 通知类型白名单 */
-export const NOTICE_KINDS = ['system', 'download'] as const;
+/** 通知类型白名单。当前只有系统公告；下载定向推送（原 `download`）已砍掉，要恢复再加回 */
+export const NOTICE_KINDS = ['system'] as const;
 export type NoticeKind = (typeof NOTICE_KINDS)[number];
 
 /** 通知级别白名单，驱动前端弹框配色与队列优先级 */

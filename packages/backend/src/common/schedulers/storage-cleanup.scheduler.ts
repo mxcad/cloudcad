@@ -94,7 +94,7 @@ export class StorageCleanupScheduler {
   }
 
   private async isEnabled(key: string): Promise<boolean> {
-    return this.runtimeConfigService.getValue<boolean>(key, true);
+    return this.runtimeConfigService.getValue<boolean>(key);
   }
 
   @Cron(STORAGE_CLEANUP_CRON)

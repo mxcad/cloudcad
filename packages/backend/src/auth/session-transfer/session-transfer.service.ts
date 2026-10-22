@@ -128,8 +128,7 @@ export class SessionTransferService {
     );
 
     const domain = await this.runtimeConfigService.getValue<string>(
-      'deviceAuthFrontendDomain',
-      'http://localhost:8000',
+      'deviceAuthFrontendDomain'
     );
     const sanitized = this.sanitizeRedirect(redirect);
     const query = `token=${token}`;

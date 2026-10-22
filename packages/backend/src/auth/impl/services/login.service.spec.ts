@@ -66,6 +66,18 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
 
   let loginUser: Record<string, unknown>;
 
+  // 按 key 返回 runtime-config：登录功能开关默认 false、注销冷静期默认 7 天，
+  // 管理员入口形态由入参指定（出厂默认 MERGED，见 runtime-config.constants.ts）
+  const mockRuntimeConfig = (adminLoginEntry: string) => {
+    mockRuntimeConfigService.getValue.mockImplementation(
+      async (key: string) => {
+        if (key === 'userCancelGraceDays') return 7;
+        if (key === 'adminLoginEntry') return adminLoginEntry;
+        return false;
+      }
+    );
+  };
+
   beforeEach(async () => {
     // resetMocks:true 会清空 mock 实现，这里统一恢复依赖实现
     jest.clearAllMocks();
@@ -86,14 +98,8 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     mockAccountRateLimitService.clearLoginFailures.mockResolvedValue(
       undefined
     );
-    // 按 key 返回：登录功能开关默认 false，注销冷静期默认 7 天，管理员入口默认隔离
-    mockRuntimeConfigService.getValue.mockImplementation(
-      async (key: string) => {
-        if (key === 'userCancelGraceDays') return 7;
-        if (key === 'adminLoginEntry') return 'ISOLATED';
-        return false;
-      }
-    );
+    // 出厂默认：登录功能开关 false、注销冷静期 7 天、管理员入口合并
+    mockRuntimeConfig('MERGED');
     // resetMocks 清掉了按 key 实现，这里恢复（jwt secret + cleanupDays 单一来源）
     mockConfigService.get.mockImplementation((key: string) => {
       if (key === 'userCleanup.delayDays') return 30;
@@ -338,7 +344,8 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     expect(mockUserRepo.update).not.toHaveBeenCalled();
   });
 
-  it('系统管理员禁止通过普通登录入口认证（统一防枚举文案，不发 token）', async () => {
+  it('ISOLATED 配置下系统管理员禁止通过普通登录入口认证（防枚举文案，不发 token）', async () => {
+    mockRuntimeConfig('ISOLATED');
     service = await compileModule();
     mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({
       ...loginUser,
@@ -353,17 +360,7 @@ describe('LoginService（登录同步扩展点 + 注销冷静期自动恢复）'
     expect(mockUserRepo.update).not.toHaveBeenCalled();
   });
 
-  describe('adminLoginEntry=MERGED（普通模式：管理员与普通用户共用登录入口）', () => {
-    beforeEach(() => {
-      mockRuntimeConfigService.getValue.mockImplementation(
-        async (key: string) => {
-          if (key === 'userCancelGraceDays') return 7;
-          if (key === 'adminLoginEntry') return 'MERGED';
-          return false;
-        }
-      );
-    });
-
+  describe('adminLoginEntry=MERGED（出厂默认：管理员与普通用户共用登录入口）', () => {
     it('管理员可走普通登录入口：token 正常签发，不触发恢复写库', async () => {
       service = await compileModule();
       mockUserRepo.findLoginUserIncludingDeleted.mockResolvedValue({

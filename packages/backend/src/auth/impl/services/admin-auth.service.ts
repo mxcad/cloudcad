@@ -180,8 +180,7 @@ export class AdminAuthService {
     //   暴露"码错误"不构成账号枚举风险）
     let mfaSetupRequired = false;
     const mfaEnforceEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'mfaEnforceEnabled',
-      false
+      'mfaEnforceEnabled'
     );
     if (mfaEnforceEnabled) {
       if (!user.totpEnabled) {

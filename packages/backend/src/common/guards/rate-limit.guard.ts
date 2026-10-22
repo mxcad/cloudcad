@@ -77,11 +77,11 @@ export class RateLimitGuard implements CanActivate {
   }> {
     const [windowMs, publicMax, authMax, loginMax, loginWindowMs] =
       await Promise.all([
-        this.runtimeConfig.getValue<number>('rateLimitPublicWindowMs', 60000),
-        this.runtimeConfig.getValue<number>('rateLimitPublicMax', 100),
-        this.runtimeConfig.getValue<number>('rateLimitAuthMax', 300),
-        this.runtimeConfig.getValue<number>('rateLimitLoginMax', 30),
-        this.runtimeConfig.getValue<number>('rateLimitLoginWindowMs', 15 * 60 * 1000),
+        this.runtimeConfig.getValue<number>('rateLimitPublicWindowMs'),
+        this.runtimeConfig.getValue<number>('rateLimitPublicMax'),
+        this.runtimeConfig.getValue<number>('rateLimitAuthMax'),
+        this.runtimeConfig.getValue<number>('rateLimitLoginMax'),
+        this.runtimeConfig.getValue<number>('rateLimitLoginWindowMs'),
       ]);
 
     return {

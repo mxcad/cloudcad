@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import type { PaymentGateway } from './payment-gateway.interface';
 import { MockPaymentGateway } from './mock/mock-payment.gateway';
@@ -10,7 +9,6 @@ export class PaymentGatewayFactory {
   private gateways: Map<string, PaymentGateway> = new Map();
 
   constructor(
-    private configService: ConfigService,
     private runtimeConfigService: RuntimeConfigService,
     mockPaymentGateway: MockPaymentGateway,
     wechatPayGateway: WechatPayGateway,
@@ -41,8 +39,9 @@ export class PaymentGatewayFactory {
   }
 
   private async resolveProvider(): Promise<string> {
-    const runtimeEnabled = await this.runtimeConfigService.getValue<boolean>('paymentEnabled', false);
+    const runtimeEnabled = await this.runtimeConfigService.getValue<boolean>('paymentEnabled');
     if (!runtimeEnabled) throw new Error('payment is disabled');
-    return this.configService.get<string>('payment.provider', 'mock');
+    // 三层解析（runtime > env(PAYMENT_PROVIDER) > 默认 mock），与凭据键同一出口
+    return this.runtimeConfigService.getValue<string>('paymentProvider');
   }
 }

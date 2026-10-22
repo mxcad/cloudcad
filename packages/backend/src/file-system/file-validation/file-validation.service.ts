@@ -99,8 +99,7 @@ export class FileValidationService {
   private async getMaxFileSize(): Promise<number> {
     // 运行时配置中的值是 MB，需要转换为字节
     const maxFileSizeMB = await this.runtimeConfigService.getValue<number>(
-      'maxFileSize',
-      100
+      'maxFileSize'
     );
     return maxFileSizeMB * 1024 * 1024;
   }

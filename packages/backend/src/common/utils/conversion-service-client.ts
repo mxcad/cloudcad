@@ -94,7 +94,7 @@ export class ConversionServiceClient {
           });
         }
       );
-      req.on('error', reject);
+      req.on('error', (err) => reject(formatTransportError(err, method, path)));
       req.on('timeout', () => {
         req.destroy();
         reject(new Error(`Request timeout: ${method} ${path}`));
@@ -103,4 +103,42 @@ export class ConversionServiceClient {
       req.end();
     });
   }
+}
+
+/**
+ * 传输层失败（ECONNREFUSED / ENOTFOUND / ECONNRESET …）的统一文案。
+ *
+ * Node 对 localhost 双栈解析失败抛的是 AggregateError，其 message 为空字符串，
+ * 真实原因只落在 code 与 errors[] 上。此前原样 reject，上游只看到
+ * 「Failed to submit task: 」——端口配错这类问题因此完全无法定位。
+ *
+ * 刻意不用 `instanceof Error`：这些错误对象由 Node 内部创建，在 jest 的 vm realm
+ * 下与模块侧的 Error 不同源，instanceof 恒 false（实测会把 AggregateError 降级成
+ * 无信息的一行）。鸭子类型取值对跨 realm 同样有效。
+ */
+function formatTransportError(
+  error: unknown,
+  method: string,
+  path: string
+): Error {
+  const e = (error ?? {}) as {
+    code?: unknown;
+    message?: unknown;
+    errors?: unknown;
+  };
+  const parts: string[] = [];
+  if (typeof e.code === 'string' && e.code) parts.push(e.code);
+  if (typeof e.message === 'string' && e.message) parts.push(e.message);
+  if (Array.isArray(e.errors)) {
+    for (const sub of e.errors) {
+      const text =
+        typeof sub === 'string'
+          ? sub
+          : ((sub as { message?: unknown })?.message as string) || '';
+      if (text) parts.push(text);
+    }
+  }
+  return new Error(
+    `${method} ${path} failed: ${parts.length > 0 ? parts.join('; ') : String(error)}`
+  );
 }

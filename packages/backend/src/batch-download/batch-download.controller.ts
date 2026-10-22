@@ -260,8 +260,7 @@ export class BatchDownloadController {
 
   private async assertEnabled(): Promise<void> {
     const enabled = await this.runtimeConfigService.getValue<boolean>(
-      'batchDownloadEnabled',
-      false
+      'batchDownloadEnabled'
     );
     if (!enabled) {
       throw new ForbiddenException(

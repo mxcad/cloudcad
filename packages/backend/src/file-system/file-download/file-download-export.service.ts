@@ -859,8 +859,7 @@ export class FileDownloadExportService {
    */
   private async resolveZipCompressionLevel(): Promise<number> {
     return this.runtimeConfigService.getValue<number>(
-      'fileZipCompressionLevel',
-      1
+      'fileZipCompressionLevel'
     );
   }
 

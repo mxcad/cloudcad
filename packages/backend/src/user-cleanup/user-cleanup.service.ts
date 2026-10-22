@@ -154,8 +154,7 @@ export class UserCleanupService {
     overrideDays?: number
   ): Promise<number> {
     const graceDays = await this.runtimeConfigService.getValue<number>(
-      'userCancelGraceDays',
-      7
+      'userCancelGraceDays'
     );
     return Math.max(overrideDays ?? this.cleanupDelayDays, graceDays);
   }

@@ -40,7 +40,7 @@ export class RegistrationService implements IRegistrationService {
     // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
     await this.passwordPolicyService.assertPasswordPolicy(password);
 
-    const allowRegister = await this.runtimeConfigService.getValue<boolean>('allowRegister', true);
+    const allowRegister = await this.runtimeConfigService.getValue<boolean>('allowRegister');
     if (!allowRegister) {
       throw new BadRequestException(I18nContext.current()?.t('error.auth.registration_disabled') ?? '系统已关闭注册功能');
     }
@@ -87,7 +87,7 @@ export class RegistrationService implements IRegistrationService {
       }
     }
 
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
 
     if (!mailEnabled) {
       const user = await this.userService.create({
@@ -116,7 +116,7 @@ export class RegistrationService implements IRegistrationService {
       return { ...tokens, user: { ...user, role: user.role, status: user.status } };
     }
 
-    const requireEmailVerification = await this.runtimeConfigService.getValue<boolean>('requireEmailVerification', false);
+    const requireEmailVerification = await this.runtimeConfigService.getValue<boolean>('requireEmailVerification');
 
     if (requireEmailVerification && !email) {
       throw new BadRequestException(I18nContext.current()?.t('error.auth.email_required_for_registration') ?? '邮箱验证已启用，注册需要提供邮箱地址');

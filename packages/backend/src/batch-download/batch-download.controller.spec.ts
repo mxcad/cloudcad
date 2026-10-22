@@ -90,7 +90,7 @@ describe('BatchDownloadController', () => {
 
       const result = await controller.createTask(dto, mockRequest());
 
-      expect(mockRuntimeConfig.getValue).toHaveBeenCalledWith('batchDownloadEnabled', false);
+      expect(mockRuntimeConfig.getValue).toHaveBeenCalledWith('batchDownloadEnabled');
       expect(mockService.createTask).toHaveBeenCalledWith('user-1', dto);
       expect(result).toEqual({ taskId: 'task-1' });
     });

@@ -3,6 +3,7 @@ import {
   CONVERSION_FAILURE_CATEGORIES,
   type ConversionFailureCategory,
 } from '@cloudcad/contracts';
+import { IsIn, IsObject, IsOptional } from 'class-validator';
 
 /**
  * 转换任务类型（#467）
@@ -31,15 +32,19 @@ export class SubmitConversionTaskDto {
     enum: ['open', 'download'],
     example: 'open',
   })
+  @IsIn(['open', 'download'])
   type: ConversionTaskType;
 
   @ApiProperty({ description: '转换目标', type: () => ConversionTargetDto })
+  @IsObject()
   target: ConversionTargetDto;
 
   @ApiPropertyOptional({
     description: '优先级 1=打开（命脉）2=导出 3=后台',
     example: 1,
   })
+  @IsOptional()
+  @IsIn([1, 2, 3])
   priority?: 1 | 2 | 3;
 }
 

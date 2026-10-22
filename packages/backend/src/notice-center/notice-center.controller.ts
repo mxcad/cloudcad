@@ -27,6 +27,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -54,6 +55,8 @@ import { Public } from '../auth/decorators/public.decorator';
 import { NoticeCenterService } from './notice-center.service';
 import { NoticeSseService } from './notice-sse.service';
 import {
+  BatchDeleteNoticesDto,
+  BatchDeleteNoticesResultDto,
   CreateNoticeDto,
   NoticeResponseDto,
   NoticeTicketDto,
@@ -169,6 +172,28 @@ export class NoticeCenterController {
     return this.noticeService.create(dto, userId);
   }
 
+  /**
+   * 批量删除（硬删）。放在 `:id/publish` 之前声明：字面量段优先于参数段，
+   * 避免 `batch-delete` 被当作某个 `:id` 吃掉。
+   */
+  @Post('batch-delete')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @ApiOperation({ summary: '批量删除通知（不可恢复）' })
+  @ApiResponse({
+    status: 200,
+    description: '批量删除结果',
+    type: BatchDeleteNoticesResultDto,
+  })
+  async batchDelete(
+    @Body() dto: BatchDeleteNoticesDto,
+    @Req() req: Request
+  ): Promise<BatchDeleteNoticesResultDto> {
+    const userId = (req.user as { id: string }).id;
+    return this.noticeService.removeMany(dto.ids, userId);
+  }
+
   /** 发布草稿：草稿经 publishNow=false 保存，此前无端点能使其对外生效 */
   @Post(':id/publish')
   @HttpCode(HttpStatus.OK)
@@ -206,5 +231,22 @@ export class NoticeCenterController {
   @ApiResponse({ status: 200, description: '已下线', type: NoticeResponseDto })
   async retract(@Param('id') id: string): Promise<NoticeResponseDto> {
     return this.noticeService.retract(id);
+  }
+
+  /**
+   * 删除（硬删，不可恢复）。与下线互补：下线留档，删除清理历史。
+   * 删除一条正在生效的公告等价于「下线并删除」，后端不加状态机约束，
+   * 保护在前端确认文案。
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_WRITE])
+  @ApiOperation({ summary: '删除通知（不可恢复）' })
+  @ApiResponse({ status: 200, description: '已删除' })
+  @ApiResponse({ status: 404, description: '通知不存在' })
+  async remove(@Param('id') id: string, @Req() req: Request) {
+    const userId = (req.user as { id: string }).id;
+    return this.noticeService.remove(id, userId);
   }
 }

@@ -30,6 +30,8 @@ describe('NoticeCenterService', () => {
       create: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
+      delete: jest.fn(),
+      deleteMany: jest.fn(),
     },
   };
 
@@ -76,6 +78,10 @@ describe('NoticeCenterService', () => {
       makeNotice(data as Partial<Notice>)
     );
     mockPrisma.notice.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.notice.delete.mockImplementation(async ({ where }) =>
+      makeNotice({ id: where.id as string })
+    );
+    mockPrisma.notice.deleteMany.mockResolvedValue({ count: 0 });
     mockRedis.publish.mockResolvedValue(1);
     mockRedis.set.mockResolvedValue('OK');
     mockRedis.eval.mockResolvedValue(null);
@@ -257,7 +263,7 @@ describe('NoticeCenterService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('失效时间已过的草稿拒绝发布（发布会立即被 cron 下线）', async () => {
+    it('失效时间已过的草稿拒绝发布（发布会立即被 cron 下线），并指明时间窗不可编辑', async () => {
       mockPrisma.notice.findUnique.mockResolvedValue(
         makeNotice({
           publishedAt: null,
@@ -266,7 +272,9 @@ describe('NoticeCenterService', () => {
       );
       await expect(
         service.publish('notice_1', 'admin_1')
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(
+        '失效时间已过，无法重新发布；时间窗不可编辑，请删除后新建一条'
+      );
       expect(mockPrisma.notice.update).not.toHaveBeenCalled();
     });
 
@@ -280,6 +288,7 @@ describe('NoticeCenterService', () => {
         data: {
           publishedAt: expect.any(Date),
           publishedById: 'admin_2',
+          notifiedAt: null,
         },
       });
       expect(notice.publishedAt).not.toBeNull();
@@ -308,6 +317,30 @@ describe('NoticeCenterService', () => {
         })
       );
       await service.publish('notice_1', 'admin_2');
+      expect(mockRedis.publish).not.toHaveBeenCalled();
+    });
+
+    it('下线后重新上线：清零 notifiedAt，startAt 在未来的重发才等得到 cron 到点推送', async () => {
+      const futureStart = new Date(Date.now() + 3600_000);
+      mockPrisma.notice.findUnique.mockResolvedValue(
+        makeNotice({
+          publishedAt: null,
+          publishedById: null,
+          retractedAt: new Date(),
+          notifiedAt: new Date('2026-09-01T00:00:00.000Z'),
+          startAt: futureStart,
+        })
+      );
+      // update 的 mock 默认只回显传入的 data，须显式带上原行的 startAt，
+      // 否则 isWithinWindow 看到的是 null 而误判为当前已生效
+      mockPrisma.notice.update.mockResolvedValue(
+        makeNotice({ publishedAt: new Date(), publishedById: 'admin_2', startAt: futureStart })
+      );
+      await service.publish('notice_1', 'admin_2');
+      expect(mockPrisma.notice.update).toHaveBeenCalledWith({
+        where: { id: 'notice_1' },
+        data: expect.objectContaining({ notifiedAt: null }),
+      });
       expect(mockRedis.publish).not.toHaveBeenCalled();
     });
 
@@ -347,6 +380,32 @@ describe('NoticeCenterService', () => {
       expect(mockRedis.publish).not.toHaveBeenCalled();
     });
 
+    it('全部字段与现值相同时跳过写库（不 bump updatedAt，客户端不会把未变内容当新公告重弹）', async () => {
+      const existing = makeNotice();
+      mockPrisma.notice.findUnique.mockResolvedValue(existing);
+      const result = await service.update('notice_1', {
+        level: 'info',
+        title: '标题',
+        body: '正文',
+      });
+      expect(mockPrisma.notice.update).not.toHaveBeenCalled();
+      expect(mockRedis.publish).not.toHaveBeenCalled();
+      expect(result).toBe(existing);
+    });
+
+    it('仅级别变化照常写库并推送（级别升级要重新提醒，不能算 no-op）', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(makeNotice());
+      await service.update('notice_1', { level: 'danger' });
+      expect(mockPrisma.notice.update).toHaveBeenCalledWith({
+        where: { id: 'notice_1' },
+        data: { level: 'danger' },
+      });
+      expect(mockRedis.publish).toHaveBeenCalledWith(
+        NOTICE_EVENTS_CHANNEL,
+        expect.stringContaining('"type":"update"')
+      );
+    });
+
     it('非法 level 拒绝', async () => {
       await expect(
         service.update('notice_1', { level: 'fatal' as never })
@@ -378,6 +437,92 @@ describe('NoticeCenterService', () => {
         NOTICE_EVENTS_CHANNEL,
         expect.stringContaining('"type":"retract"')
       );
+    });
+  });
+
+  describe('remove', () => {
+    it('不存在的通知抛 NotFound', async () => {
+      await expect(service.remove('missing', 'admin_1')).rejects.toThrow(
+        NotFoundException
+      );
+    });
+
+    it('删除草稿：物理删除且不广播 retract', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(
+        makeNotice({ publishedAt: null })
+      );
+      const result = await service.remove('notice_1', 'admin_1');
+      expect(result.wasActive).toBe(false);
+      expect(mockPrisma.notice.delete).toHaveBeenCalledWith({
+        where: { id: 'notice_1' },
+      });
+      expect(mockRedis.publish).not.toHaveBeenCalled();
+    });
+
+    it('删除生效中的公告：广播 retract 让在线客户端立即清掉，并回传标题快照', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(makeNotice());
+      const result = await service.remove('notice_1', 'admin_1');
+      expect(result.wasActive).toBe(true);
+      expect(result.title).toBe('标题');
+      expect(mockRedis.publish).toHaveBeenCalledWith(
+        NOTICE_EVENTS_CHANNEL,
+        expect.stringContaining('"type":"retract"')
+      );
+    });
+
+    it('已过 endAt 的公告不算生效中，删除时不广播', async () => {
+      mockPrisma.notice.findUnique.mockResolvedValue(
+        makeNotice({ endAt: new Date('2026-01-01T00:00:00.000Z') })
+      );
+      const result = await service.remove('notice_1', 'admin_1');
+      expect(result.wasActive).toBe(false);
+      expect(mockRedis.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeMany', () => {
+    it('空列表或全空白抛 BadRequest', async () => {
+      await expect(service.removeMany([], 'admin_1')).rejects.toThrow(
+        BadRequestException
+      );
+      await expect(service.removeMany(['  ', ''], 'admin_1')).rejects.toThrow(
+        BadRequestException
+      );
+    });
+
+    it('去重 + 一次 deleteMany，只广播原本生效中的条目', async () => {
+      mockPrisma.notice.findMany.mockResolvedValue([
+        makeNotice(),
+        makeNotice({ id: 'notice_2', publishedAt: null }),
+      ]);
+      mockPrisma.notice.deleteMany.mockResolvedValue({ count: 2 });
+
+      const result = await service.removeMany(
+        ['notice_1', 'notice_1', 'notice_2', 'missing'],
+        'admin_1'
+      );
+
+      expect(result.requested).toBe(3);
+      expect(result.deleted).toBe(2);
+      expect(result.active).toBe(1);
+      expect(result.notFound).toEqual(['missing']);
+      // deleteMany 带上全部去重 ID：不存在的 ID 删 0 行，不报错
+      expect(mockPrisma.notice.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: ['notice_1', 'notice_2', 'missing'] } },
+      });
+      expect(mockRedis.publish).toHaveBeenCalledTimes(1);
+      expect(mockRedis.publish).toHaveBeenCalledWith(
+        NOTICE_EVENTS_CHANNEL,
+        expect.stringContaining('"type":"retract"')
+      );
+    });
+
+    it('全部不存在：删 0 条、全部进 notFound、不广播', async () => {
+      mockPrisma.notice.findMany.mockResolvedValue([]);
+      const result = await service.removeMany(['missing'], 'admin_1');
+      expect(result.deleted).toBe(0);
+      expect(result.notFound).toEqual(['missing']);
+      expect(mockRedis.publish).not.toHaveBeenCalled();
     });
   });
 

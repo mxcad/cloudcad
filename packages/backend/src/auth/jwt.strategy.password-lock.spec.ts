@@ -104,12 +104,15 @@ describe('JwtStrategy.validate - 口令到期强制引导锁定（#416）', () =
       }
     });
 
-    it('不覆盖 TOTP 绑定路径：口令锁定期访问 mfa/setup 仍被拒', async () => {
+    it('同时放行 TOTP 绑定路径（两把锁白名单取并集，避免锁定态之间来回跳转）', async () => {
       const s = buildStrategy('first_login');
-      const err = await (s as any)
-        .validate(request('/api/v1/admin/auth/mfa/setup'), basePayload)
-        .catch((e: unknown) => e);
-      expect(err).toBeInstanceOf(ForbiddenException);
+      for (const path of [
+        '/api/v1/admin/auth/mfa/setup',
+        '/api/v1/admin/auth/mfa/bind',
+      ]) {
+        const result = await (s as any).validate(request(path), basePayload);
+        expect(result.id).toBe('user-1');
+      }
     });
 
     it('锁定判定基于 DB 实时 passwordChangedAt（改密后自动解除）', async () => {

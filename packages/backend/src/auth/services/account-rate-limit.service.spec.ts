@@ -23,7 +23,7 @@ describe('AccountRateLimitService', () => {
     raise: jest.fn(),
   };
 
-  /** 运行时配置键 → 默认值（与服务内 getValue 的 fallback 参数一致） */
+  /** 运行时配置键 → 默认值（与 RUNTIME_CONFIG_DEFINITIONS 的 defaultValue 一致） */
   const runtimeDefaults: Record<string, number> = {
     loginRateLimitMax: 30,
     loginRateLimitWindowSeconds: 60,
@@ -44,7 +44,7 @@ describe('AccountRateLimitService', () => {
     // jest 配置了 resetMocks，describe 顶层设定的 mockImplementation 每个用例前都会被清空，
     // 所以默认值必须在 clearAllMocks 之后重设；单用例用 mockReturnValueOnce 覆盖。
     mockRuntimeConfig.getValue.mockImplementation(
-      async (key: string, fallback?: number) => runtimeDefaults[key] ?? fallback ?? 0
+      async (key: string) => runtimeDefaults[key] ?? ''
     );
     mockAlertService.raise.mockResolvedValue({ id: 'alert-1' });
 
@@ -119,8 +119,8 @@ describe('AccountRateLimitService', () => {
 
     it('max 为 0 时禁用限流（不调用 Redis）', async () => {
       mockRuntimeConfig.getValue.mockImplementation(
-        async (key: string, fallback?: number) =>
-          key === 'loginRateLimitMax' ? 0 : runtimeDefaults[key] ?? fallback ?? 0
+        async (key: string) =>
+          key === 'loginRateLimitMax' ? 0 : runtimeDefaults[key] ?? ''
       );
 
       await expect(service.checkLimit('login', 'user@example.com')).resolves.toBeUndefined();

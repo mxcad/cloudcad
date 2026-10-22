@@ -130,8 +130,7 @@ describe('BackupScheduler', () => {
       await scheduler.handleScheduledBackup();
 
       expect(mockRuntimeConfigService.getValue).toHaveBeenCalledWith(
-        TASK_ENABLED_KEYS.BACKUP,
-        true
+        TASK_ENABLED_KEYS.BACKUP
       );
     });
   });

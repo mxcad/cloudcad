@@ -90,7 +90,45 @@ describe('configuration', () => {
 				expect(configuration().upload.conversionMaxConcurrent).toBe(3);
 			});
 		});
-	describe('session cookie 段（占位符与死配置归一化，2026-10-15 部署包实跑定位）', () => {
+		describe('cacheTTL 段（字段必须有消费方，防止「填了没反应」的死配置回归）', () => {
+			beforeEach(() => {
+				process.env.NODE_ENV = 'development';
+				[
+					'CACHE_TTL_VERIFICATION_CODE',
+					'CACHE_TTL_VERIFICATION_RATE_LIMIT',
+					'CACHE_TTL_TOKEN_BLACKLIST',
+					'CACHE_TTL_CACHE_VERSION',
+					'CACHE_TTL_MXCAD',
+				].forEach((v) => delete process.env[v]);
+			});
+
+			it('字段集只含有真实读取方的项（#483）', () => {
+				// CACHE_TTL_DEFAULT / _PERMISSION / _POLICY 与 CACHE_L2_DEFAULT_TTL、
+				// CACHE_VERSION_MAX_AGE 曾在此声明但全仓零读取方，已删除（连同 cache 整段）——
+				// 权限缓存的实际 TTL 在 CACHE_TTL 常量表，按角色/项目/成员角色细分，
+				// 不是一个 permission/policy 标量能表达的。
+				expect(Object.keys(configuration().cacheTTL).sort()).toEqual([
+					'cacheVersion',
+					'mxcad',
+					'tokenBlacklist',
+					'verificationCode',
+					'verificationRateLimit',
+				]);
+			});
+
+			it('零读取方的 cache 段不再出现（#483）', () => {
+				expect(
+					Object.prototype.hasOwnProperty.call(configuration(), 'cache')
+				).toBe(false);
+			});
+
+			it('CACHE_TTL_MXCAD 默认 300 秒，非法数值回退 300', () => {
+				expect(configuration().cacheTTL.mxcad).toBe(300);
+				process.env.CACHE_TTL_MXCAD = 'not-a-number';
+				expect(configuration().cacheTTL.mxcad).toBe(300);
+			});
+		});
+		describe('session cookie 段（占位符与死配置归一化，2026-10-15 部署包实跑定位）', () => {
 		// 历史缺陷：旧版 mergeExampleIntoEnv 把 .env.example 的 25 项「注释 + 示例值」
 		// 逐字激活写进 .env，其守卫只防注释态、不收敛已激活存量（生成端刻意保留「已激活的
 		// 同值项不得被反向注释」），故只能在这里归一化。三条配置各自让离线 http 部署的 cookie

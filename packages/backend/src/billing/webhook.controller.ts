@@ -30,7 +30,7 @@ export class WebhookController {
   @ApiExcludeEndpoint()
   async wechatNotify(@Req() req: Request, @Res() res: Response) {
     try {
-      const enabled = await this.runtimeConfigService.getValue<boolean>('paymentEnabled', false);
+      const enabled = await this.runtimeConfigService.getValue<boolean>('paymentEnabled');
       if (!enabled) {
         res.status(503).setHeader('Content-Type', 'application/xml');
         res.send('<xml><return_code><![CDATA[FAIL]]></return_code><return_msg><![CDATA[payment disabled]]></return_msg></xml>');

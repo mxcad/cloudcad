@@ -40,7 +40,10 @@ describe('AuditArchiveService (#322)', () => {
 	};
 
 	const mockRuntimeConfigService = {
-		getValue: jest.fn(async (_key: string, def: unknown) => def),
+		// 与 RUNTIME_CONFIG_DEFINITIONS 的 defaultValue 一致
+		getValue: jest.fn(async (key: string) =>
+			key === 'auditArchiveEnabled' ? false : ''
+		),
 	};
 
 	function makeLog(overrides: Partial<AuditLogListItem> = {}): AuditLogListItem {

@@ -1118,8 +1118,8 @@ export class BillingService {
     order: { orderNo: string; description: string | null }
   ) {
     const [mailEnabled, recipients] = await Promise.all([
-      this.runtimeConfigService.getValue<boolean>('mailEnabled', false),
-      this.runtimeConfigService.getValue<string>('refundNotifyEmails', ''),
+      this.runtimeConfigService.getValue<boolean>('mailEnabled'),
+      this.runtimeConfigService.getValue<string>('refundNotifyEmails'),
     ]);
     if (!mailEnabled) return;
     const toList = recipients
@@ -1155,8 +1155,7 @@ export class BillingService {
     note?: string
   ) {
     const mailEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'mailEnabled',
-      false
+      'mailEnabled'
     );
     if (!mailEnabled) return;
     const user = await this.prisma.user.findUnique({

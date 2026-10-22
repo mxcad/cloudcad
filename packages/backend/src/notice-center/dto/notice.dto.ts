@@ -20,6 +20,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsIn,
   IsISO8601,
@@ -27,6 +28,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Min,
 } from 'class-validator';
 import {
   NOTICE_KINDS,
@@ -212,4 +214,36 @@ export class NoticeTicketDto {
     description: '一次性连接票据，5 分钟内有效，连接时立即失效',
   })
   ticket!: string;
+}
+
+export class BatchDeleteNoticesDto {
+  @ApiProperty({
+    description: '要删除的通知 ID 列表（已去重）',
+    type: [String],
+    example: ['notice_1', 'notice_2'],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @Min(1)
+  @MaxLength(200, { each: true })
+  ids!: string[];
+}
+
+export class BatchDeleteNoticesResultDto {
+  @ApiProperty({ description: '请求的 ID 数（去重后）' })
+  requested!: number;
+
+  @ApiProperty({ description: '实际删除的条数' })
+  deleted!: number;
+
+  @ApiProperty({ description: '其中原本正在生效的条数（已广播下线）' })
+  active!: number;
+
+  @ApiProperty({
+    description: '未找到因而未被删除的 ID',
+    type: [String],
+    example: [],
+  })
+  notFound!: string[];
 }

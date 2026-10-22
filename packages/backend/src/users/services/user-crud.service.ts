@@ -69,8 +69,7 @@ export class UserCrudService {
     try {
       const requireEmailVerification =
         await this.runtimeConfigService.getValue<boolean>(
-          'requireEmailVerification',
-          false
+          'requireEmailVerification'
         );
 
       if (requireEmailVerification && !createUserDto.email) {

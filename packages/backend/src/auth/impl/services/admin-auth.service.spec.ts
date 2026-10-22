@@ -64,10 +64,11 @@ describe('AdminAuthService（管理员专用登录）', () => {
       .fn()
       .mockReturnValue({ required: undefined, expiringSoon: false }),
   };
-  // 总闸默认关闭（与生产默认一致）：mfaEnforceEnabled=false → TOTP 完全不生效
+  // 总闸默认关闭（与 RUNTIME_CONFIG_DEFINITIONS 的 defaultValue 一致）：
+  // mfaEnforceEnabled=false → TOTP 完全不生效
   const mockRuntimeConfigService = {
-    getValue: jest.fn().mockImplementation((_key: string, def: unknown) =>
-      Promise.resolve(def)
+    getValue: jest.fn().mockImplementation((key: string) =>
+      Promise.resolve(key === 'mfaEnforceEnabled' ? false : '')
     ),
   };
 
@@ -98,9 +99,9 @@ describe('AdminAuthService（管理员专用登录）', () => {
     mockSecurityAccessAttemptService.record.mockResolvedValue(undefined);
     mockMfaService.verifyCode.mockResolvedValue(true);
     mockMfaService.isTotpEnabled.mockResolvedValue(false);
-    // 默认关闭总闸（getValue 返回传入的 defaultValue，mfaEnforceEnabled 默认 false）
-    mockRuntimeConfigService.getValue.mockImplementation(
-      (_key: string, def: unknown) => Promise.resolve(def)
+    // 默认关闭总闸（mfaEnforceEnabled 的定义默认值即 false）
+    mockRuntimeConfigService.getValue.mockImplementation((key: string) =>
+      Promise.resolve(key === 'mfaEnforceEnabled' ? false : '')
     );
 
     adminUser = {

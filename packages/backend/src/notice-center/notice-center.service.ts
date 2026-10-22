@@ -32,6 +32,8 @@ import Redis from 'ioredis';
 import { randomBytes } from 'node:crypto';
 import type { Notice } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
+import { Audit } from '../common/decorators/audit.decorator';
+import { AuditAction, ResourceType } from '../common/enums/audit.enum';
 import {
   NOTICE_EVENTS_CHANNEL,
   NOTICE_KINDS,
@@ -40,7 +42,11 @@ import {
   NOTICE_TICKET_TTL_SECONDS,
   type NoticeEvent,
 } from './notice.types';
-import type { CreateNoticeDto, UpdateNoticeDto } from './dto/notice.dto';
+import type {
+  BatchDeleteNoticesResultDto,
+  CreateNoticeDto,
+  UpdateNoticeDto,
+} from './dto/notice.dto';
 
 /** Prisma 的 `lte` 不匹配 NULL，必须写成 OR 形式；拆成片段避免两个 AND 键互相覆盖 */
 function startAtOr(now: Date): unknown[] {
@@ -148,10 +154,12 @@ export class NoticeCenterService {
   }
 
   /**
-   * 发布草稿。草稿只允许改文案、不可下线（retract 拒绝草稿），此前缺这个端点，
+   * 发布草稿，或把已下线的公告重新上线（retract 置空 publishedAt，本端点是唯一
+   * 回正路径）。草稿只允许改文案、不可下线（retract 拒绝草稿），此前缺这个端点，
    * 草稿是「能保存、既发不出也撤不掉」的死分支。
    *
    * endAt 可能在草稿停留期间已过期，此时发布会让公告立即被 cron 下线，直接拒绝。
+   * 时间窗在 v1 不可 PATCH（见 dto 文件头），所以已过期只能删除后新建一条。
    * startAt 在未来时只落库不推送，交给 cron 到点处理（与 create 同语义）。
    */
   async publish(id: string, publishedById: string): Promise<Notice> {
@@ -162,12 +170,17 @@ export class NoticeCenterService {
     }
     const now = new Date();
     if (existing.endAt && existing.endAt <= now) {
-      throw new BadRequestException('失效时间已过，请先下线后重新发布');
+      throw new BadRequestException(
+        '失效时间已过，无法重新发布；时间窗不可编辑，请删除后新建一条'
+      );
     }
 
     const updated = await this.prisma.notice.update({
       where: { id },
-      data: { publishedAt: now, publishedById },
+      // notifiedAt 必须一起清零：retract 不清它，pushDueNotices 按
+      // notifiedAt === null 挑任务，残留旧值会让 startAt 在未来的重发永远等不到
+      // 到点推送（下线后重新上线是这条路径的主要用例）
+      data: { publishedAt: now, publishedById, notifiedAt: null },
     });
 
     if (this.isWithinWindow(updated.startAt, updated.endAt, now)) {
@@ -180,6 +193,15 @@ export class NoticeCenterService {
     if (dto.level !== undefined) this.assertLevel(dto.level);
     const existing = await this.prisma.notice.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('通知不存在');
+
+    // 全部字段与现值相同时跳过写库：不 bump updatedAt 就不会让客户端把「没变
+    // 的公告」当成新内容重新提醒一次——客户端已读键是 id + updatedAt，管理员
+    // 无意义地保存一次不该让全体用户在 24h 内重收一遍
+    const changed =
+      (dto.level !== undefined && dto.level !== existing.level) ||
+      (dto.title !== undefined && dto.title !== existing.title) ||
+      (dto.body !== undefined && dto.body !== existing.body);
+    if (!changed) return existing;
 
     const updated = await this.prisma.notice.update({
       where: { id },
@@ -215,6 +237,108 @@ export class NoticeCenterService {
     // 轮询兜底：GET /notices/current 已按 publishedAt 过滤，最坏 30s 内自行消失。
     await this.publishEvent({ type: 'retract', noticeId: id });
     return updated;
+  }
+
+  /**
+   * 删除通知（硬删，不可恢复）。Notice 表零外键零关联，删了不产生孤儿。
+   *
+   * 与 retract 互补：retract 是「下线留档」（publishedAt 置空 + 记 retractedAt，
+   * 管理列表里还能看到），删除是「清理历史」（物理删除，列表里不再出现）。
+   * v1 不设状态机约束：删除一条正在生效的公告等价于「下线并删除」，保护放在
+   * 前端确认文案（说明它对全体用户生效且不可恢复），而不是后端拒绝。
+   *
+   * 若该通知当前仍在对外生效，必须广播 retract 事件：否则在线客户端的列表条目
+   * 会挂着，最坏等下一轮 30s 轮询才消失（GET /current 是权威全集）。
+   *
+   * 返回 title 快照供审计留存——删除是不可恢复操作，「谁在什么时候删掉了哪条
+   * 生效中的公告」只能靠这条审计记录追溯。
+   */
+  @Audit(AuditAction.NOTICE_DELETE, ResourceType.NOTICE, {
+    resourceId: (_result, args) => args[0] as string,
+    userId: (_result, args) => args[1] as string,
+    details: (result, args) => {
+      const { wasActive, title } = (result ?? {}) as {
+        wasActive?: boolean;
+        title?: string;
+      };
+      return { noticeId: args[0] as string, wasActive, title };
+    },
+  })
+  async remove(
+    id: string,
+    operatorId: string
+  ): Promise<{ id: string; title: string; wasActive: boolean }> {
+    const existing = await this.prisma.notice.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('通知不存在');
+
+    const wasActive =
+      existing.publishedAt !== null &&
+      this.isWithinWindow(existing.startAt, existing.endAt, new Date());
+
+    await this.prisma.notice.delete({ where: { id } });
+
+    if (wasActive) {
+      await this.publishEvent({ type: 'retract', noticeId: id });
+    }
+    return { id, title: existing.title, wasActive };
+  }
+
+  /**
+   * 批量删除。一次 deleteMany + 一次审计，避免前端循环 N 次单删：中途网络抖动
+   * 会留下半删除状态，且审计要记 N 条冗余记录。
+   *
+   * 不存在的 ID 不报错、收集进 notFound 返回：批量清理拿的通常是上一次列表的
+   * 快照，个别条目已被定时任务或他人删除是常态，不该让整个批量操作失败。
+   */
+  @Audit(AuditAction.NOTICE_DELETE, ResourceType.NOTICE, {
+    resourceId: (_result, args) => `batch:${(args[0] as string[]).length}`,
+    userId: (_result, args) => args[1] as string,
+    details: (result) => {
+      const r = (result ?? {}) as BatchDeleteNoticesResultDto;
+      return {
+        requested: r.requested,
+        deleted: r.deleted,
+        active: r.active,
+        notFound: r.notFound,
+      };
+    },
+  })
+  async removeMany(
+    ids: string[],
+    operatorId: string
+  ): Promise<BatchDeleteNoticesResultDto> {
+    const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+    if (unique.length === 0) {
+      throw new BadRequestException('ids 不能为空');
+    }
+
+    const existing = await this.prisma.notice.findMany({
+      where: { id: { in: unique } },
+    });
+    const now = new Date();
+    const active = existing.filter(
+      (notice) =>
+        notice.publishedAt !== null &&
+        this.isWithinWindow(notice.startAt, notice.endAt, now)
+    );
+
+    const { count } = await this.prisma.notice.deleteMany({
+      where: { id: { in: unique } },
+    });
+
+    // 逐条广播下线，语义同 retract：让在线客户端立即清掉生效中的条目
+    await Promise.all(
+      active.map((notice) =>
+        this.publishEvent({ type: 'retract', noticeId: notice.id })
+      )
+    );
+
+    return {
+      requested: unique.length,
+      deleted: count,
+      active: active.length,
+      notFound: unique.filter((id) => !existing.some((notice) => notice.id === id)),
+    };
   }
 
   /**

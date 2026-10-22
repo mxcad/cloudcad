@@ -283,6 +283,66 @@ describe('SaveAsService', () => {
       expect(result.success).toBe(false);
       expect(result.message).toBe('目标必须是文件夹');
     });
+
+    describe('落库文件名归一（回归：叠扩展名 plan.dwg.mxweb.dwg）', () => {
+      const prepareSuccessMocks = () => {
+        mockFileTreeService.getNode.mockResolvedValue({
+          id: 'parent1',
+          nodeType: 'FOLDER',
+        });
+        mockFileTreeService.createFileNode.mockResolvedValue({ id: 'node1' });
+        mockStorageManager.allocateNodeStorage.mockResolvedValue({
+          nodeDirectoryPath: '/storage/node1',
+          nodeDirectoryRelativePath: '2026/04/node1',
+        });
+        mockFileSystemNodeService.findById.mockResolvedValue({ id: 'node1' });
+        mockFileTreeService.getChildren.mockResolvedValue({ nodes: [] });
+      };
+
+      const saveWithFileName = async (fileName: string) => {
+        prepareSuccessMocks();
+        const result = await service.saveMxwebAs({
+          file: {
+            path: path.join(os.tmpdir(), 'test.mxweb'),
+            originalname: 'test.mxweb',
+          } as Express.Multer.File,
+          targetType: 'personal',
+          targetParentId: 'parent1',
+          projectId: undefined,
+          format: 'dwg',
+          userId: 'user1',
+          userName: 'Test User',
+          fileName,
+        });
+        expect(result.success).toBe(true);
+        return mockFileTreeService.createFileNode.mock.calls.at(-1)![0].name;
+      };
+
+      it('历史双层节点名当基名传入时剥掉容器层与重复格式后缀', async () => {
+        // 客户端（旧版本/移动端）把节点名原样当基名传上来
+        await expect(saveWithFileName('plan.dwg.mxweb')).resolves.toBe(
+          'plan.dwg'
+        );
+      });
+
+      it('基名已带同格式后缀时不重复追加', async () => {
+        await expect(saveWithFileName('plan.dwg')).resolves.toBe('plan.dwg');
+      });
+
+      it('多层容器后缀一次剥净，保留用户的真实基名', async () => {
+        await expect(
+          saveWithFileName('111122 41.dwg.mxweb.mxweb')
+        ).resolves.toBe('111122 41.dwg');
+      });
+
+      it('空基名回落 untitled（不产出只有扩展名的节点）', async () => {
+        await expect(saveWithFileName('   ')).resolves.toBe('untitled.dwg');
+      });
+
+      it('剥后缀后只剩尾点也不拼出双点', async () => {
+        await expect(saveWithFileName('plan..mxweb')).resolves.toBe('plan.dwg');
+      });
+    });
   });
 
   describe('assertSavePermission 三态权限分派', () => {

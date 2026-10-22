@@ -5,6 +5,7 @@ import { AuditArchiveService } from '../../audit/audit-archive.service';
 import { AlertService } from '../../alert/alert.service';
 import { AlertLevel } from '../../alert/enums/alert.enum';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
+import { RUNTIME_CONFIG_DEFINITIONS } from '../../runtime-config/runtime-config.constants';
 import { TaskRunService } from '../../task-run/task-run.service';
 import { TASK_NAMES } from '../../task-run/task-run.constants';
 import {
@@ -32,6 +33,17 @@ describe('AuditCleanupScheduler', () => {
 		getValue: jest.fn(),
 	};
 
+	// 直接取定义表 defaultValue：默认值只有一处事实源，测试里不再抄一份
+	const runtimeDefaults = new Map(
+		RUNTIME_CONFIG_DEFINITIONS.map((d) => [d.key, d.defaultValue])
+	);
+
+	// 按定义默认值驱动 getValue，overrides 覆盖指定键
+	const applyRuntimeDefaults = (overrides: Record<string, unknown> = {}) =>
+		mockRuntimeConfigService.getValue.mockImplementation(async (key: string) =>
+			key in overrides ? overrides[key] : runtimeDefaults.get(key) ?? ''
+		);
+
 	const mockTaskRunService = {
 		run: jest.fn(
 			async (_taskName: string, fn: () => Promise<unknown>) => fn()
@@ -48,7 +60,7 @@ describe('AuditCleanupScheduler', () => {
 
 	beforeEach(async () => {
 		jest.clearAllMocks();
-		mockRuntimeConfigService.getValue.mockImplementation(async (_key: string, def: unknown) => def);
+		applyRuntimeDefaults();
 		mockTaskRunService.run.mockImplementation(
 			async (_taskName: string, fn: () => Promise<unknown>) => fn()
 		);
@@ -87,8 +99,7 @@ describe('AuditCleanupScheduler', () => {
 			await scheduler.cleanupOldAuditLogs();
 
 			expect(mockRuntimeConfigService.getValue).toHaveBeenCalledWith(
-				'auditRetentionDays',
-				183
+				'auditRetentionDays'
 			);
 			expect(mockAuditLogService.cleanupOldLogs).toHaveBeenCalledWith(183);
 		});
@@ -100,17 +111,13 @@ describe('AuditCleanupScheduler', () => {
 			await scheduler.cleanupOldAuditLogs();
 
 			expect(mockRuntimeConfigService.getValue).toHaveBeenCalledWith(
-				'taskRunRetentionDays',
-				180
+				'taskRunRetentionDays'
 			);
 			expect(mockTaskRunService.cleanupOldRuns).toHaveBeenCalledWith(180);
 		});
 
 		it('should route to archive-then-delete when archive enabled (#322 fail-closed)', async () => {
-			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
-				if (key === 'auditArchiveEnabled') return true;
-				return def;
-			});
+			applyRuntimeDefaults({ auditArchiveEnabled: true });
 			mockAuditArchiveService.archiveExpiredLogs.mockResolvedValue({
 				files: [{ month: '2026-06', sha256: 'abc', recordCount: 7 }],
 				archivedCount: 7,
@@ -126,10 +133,7 @@ describe('AuditCleanupScheduler', () => {
 		});
 
 		it('should raise task_run_failed when archive fails (fail-closed keeps logs)', async () => {
-			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
-				if (key === 'auditArchiveEnabled') return true;
-				return def;
-			});
+			applyRuntimeDefaults({ auditArchiveEnabled: true });
 			mockAuditArchiveService.archiveExpiredLogs.mockRejectedValue(
 				new Error('archive write failed')
 			);
@@ -210,10 +214,7 @@ describe('AuditCleanupScheduler', () => {
 		});
 
 		it('observes archived delete count on the archive-enabled path', async () => {
-			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
-				if (key === 'auditArchiveEnabled') return true;
-				return def;
-			});
+			applyRuntimeDefaults({ auditArchiveEnabled: true });
 			mockAuditArchiveService.archiveExpiredLogs.mockResolvedValue({
 				files: [],
 				archivedCount: 7,
@@ -233,10 +234,7 @@ describe('AuditCleanupScheduler', () => {
 	// ==================== manualCleanup ====================
 	describe('manualCleanup', () => {
 		it('should route to archive service when archive enabled (#322)', async () => {
-			mockRuntimeConfigService.getValue.mockImplementation(async (key: string, def: unknown) => {
-				if (key === 'auditArchiveEnabled') return true;
-				return def;
-			});
+			applyRuntimeDefaults({ auditArchiveEnabled: true });
 			mockAuditArchiveService.archiveExpiredLogs.mockResolvedValue({
 				files: [],
 				archivedCount: 30,

@@ -102,8 +102,7 @@ export class AuditArchiveService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const isProduction = process.env.NODE_ENV === 'production';
     const archiveEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'auditArchiveEnabled',
-      false
+      'auditArchiveEnabled'
     );
     if (isProduction && !archiveEnabled) {
       this.logger.warn(

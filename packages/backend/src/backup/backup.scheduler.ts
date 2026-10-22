@@ -110,8 +110,7 @@ export class BackupScheduler {
     }
 
     const enabled = await this.runtimeConfigService.getValue<boolean>(
-      TASK_ENABLED_KEYS.BACKUP,
-      true
+      TASK_ENABLED_KEYS.BACKUP
     );
     if (!enabled) {
       this.logger.log('备份已通过运行时开关禁用，跳过');
@@ -197,8 +196,7 @@ export class BackupScheduler {
   @Cron(BACKUP_DRILL_CRON)
   async handleScheduledRestoreDrill(): Promise<void> {
     const drillEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'backupDrillEnabled',
-      true
+      'backupDrillEnabled'
     );
     if (!drillEnabled) {
       this.logger.log('恢复演练已通过运行时开关禁用，跳过');

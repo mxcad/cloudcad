@@ -59,8 +59,7 @@ export class UserCleanupScheduler {
   @Cron(USER_CLEANUP_CRON)
   async handleCleanup() {
     const enabled = await this.runtimeConfigService.getValue<boolean>(
-      TASK_ENABLED_KEYS.USER_CLEANUP,
-      true
+      TASK_ENABLED_KEYS.USER_CLEANUP
     );
     if (!enabled) {
       this.logger.log('用户清理已禁用，跳过');

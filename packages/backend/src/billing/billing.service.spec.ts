@@ -1564,10 +1564,7 @@ describe('BillingService', () => {
 
       const result = await service.applyRefund('user-1', 'PAYtest123', '不想要了');
       expect(result).toEqual(created);
-      expect(runtimeConfigService.getValue).toHaveBeenCalledWith(
-        'mailEnabled',
-        false
-      );
+      expect(runtimeConfigService.getValue).toHaveBeenCalledWith('mailEnabled');
       // 资金敏感操作审计
       expect(auditLogService.log).toHaveBeenCalledWith({
         action: AuditAction.REFUND_APPLY,

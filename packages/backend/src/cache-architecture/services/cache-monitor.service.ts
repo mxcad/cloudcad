@@ -95,8 +95,7 @@ export class CacheMonitorService {
   @Cron(PERFORMANCE_DATA_CLEANUP_CRON)
   async cleanOldPerformanceData(): Promise<void> {
     const enabled = await this.runtimeConfigService.getValue<boolean>(
-      TASK_ENABLED_KEYS.CACHE_MONITOR,
-      true
+      TASK_ENABLED_KEYS.CACHE_MONITOR
     );
     if (!enabled) {
       return;

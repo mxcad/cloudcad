@@ -56,16 +56,13 @@ export class PasswordPolicyService {
    */
   async assertPasswordPolicy(password: string): Promise<void> {
     const minLength = await this.runtimeConfig.getValue<number>(
-      'passwordPolicyMinLength',
-      10,
+      'passwordPolicyMinLength'
     );
     const minCategories = await this.runtimeConfig.getValue<number>(
-      'passwordPolicyMinCategories',
-      3,
+      'passwordPolicyMinCategories'
     );
     const weakCheckEnabled = await this.runtimeConfig.getValue<boolean>(
-      'passwordPolicyWeakCheckEnabled',
-      true,
+      'passwordPolicyWeakCheckEnabled'
     );
 
     if (!password || password.length < minLength) {
@@ -84,7 +81,10 @@ export class PasswordPolicyService {
       );
     }
 
-    // 类别构成：小写/大写/数字/特殊字符四类计数，下限可配（0 = 不要求）
+    // 类别构成：小写/大写/数字/特殊字符四类计数，下限可配（0 = 不要求）。
+    // 这四个判据刻意与 @cloudcad/platform 的 countPasswordCategories 逐字一致——
+    // 后端无法依赖 platform（platform 无构建、只吃 TS 源码，后端产物是纯 CJS），
+    // 判定体因此保留两份，由 scripts/scan-password-policy.js 的检查 C 拦单侧改动。
     const categories = [
       /[a-z]/.test(password),
       /[A-Z]/.test(password),
@@ -120,8 +120,7 @@ export class PasswordPolicyService {
     passwordChangedAt: Date | null,
   ): Promise<PasswordChangeStatus> {
     const changeEnforceEnabled = await this.runtimeConfig.getValue<boolean>(
-      'passwordPolicyChangeEnforceEnabled',
-      false,
+      'passwordPolicyChangeEnforceEnabled'
     );
     // 总开关关闭（默认）：恒返回「无需强改」
     if (!changeEnforceEnabled) {
@@ -129,12 +128,10 @@ export class PasswordPolicyService {
     }
 
     const intervalDays = await this.runtimeConfig.getValue<number>(
-      'passwordPolicyChangeIntervalDays',
-      180,
+      'passwordPolicyChangeIntervalDays'
     );
     const expiringSoonDays = await this.runtimeConfig.getValue<number>(
-      'passwordPolicyExpiringSoonDays',
-      14,
+      'passwordPolicyExpiringSoonDays'
     );
 
     if (passwordChangedAt === null) {

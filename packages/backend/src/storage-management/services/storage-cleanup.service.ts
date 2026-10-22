@@ -83,36 +83,31 @@ export class StorageCleanupService {
 
   private async getStorageCleanupDelayDays(): Promise<number> {
     return this.runtimeConfigService.getValue<number>(
-      'storageCleanupDelayDays',
-      30
+      'storageCleanupDelayDays'
     );
   }
 
   private async isStorageCleanupEnabled(): Promise<boolean> {
     return this.runtimeConfigService.getValue<boolean>(
-      'storageCleanupEnabled',
-      true
+      'storageCleanupEnabled'
     );
   }
 
   private async getTrashCleanupDelayDays(): Promise<number> {
     return this.runtimeConfigService.getValue<number>(
-      'trashCleanupDelayDays',
-      30
+      'trashCleanupDelayDays'
     );
   }
 
   private async isTrashCleanupEnabled(): Promise<boolean> {
     return this.runtimeConfigService.getValue<boolean>(
-      'trashCleanupEnabled',
-      true
+      'trashCleanupEnabled'
     );
   }
 
   private async isOrphanCleanupEnabled(): Promise<boolean> {
     return this.runtimeConfigService.getValue<boolean>(
-      'orphanCleanupEnabled',
-      true
+      'orphanCleanupEnabled'
     );
   }
 

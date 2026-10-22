@@ -378,8 +378,7 @@ async function bootstrap() {
     // 1. 运行时配置检查：collaboration_enabled 为 false 时拒绝
     try {
       const enabled = await runtimeConfigService.getValue<boolean>(
-        'collaborationEnabled',
-        false
+        'collaborationEnabled'
       );
       if (!enabled) {
         return res.status(403).json({

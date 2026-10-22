@@ -573,12 +573,10 @@ describe('RestrictionEngine', () => {
       const result = await engine.tryReserveGuestConversionCount('1.2.3.4');
 
       expect(runtimeConfigService.getValue).toHaveBeenCalledWith(
-        'conversionGuestLimit',
-        5
+        'conversionGuestLimit'
       );
       expect(runtimeConfigService.getValue).toHaveBeenCalledWith(
-        'conversionGuestWindowHours',
-        2
+        'conversionGuestWindowHours'
       );
       expect(result).toBe(true);
       expect(redis.eval).toHaveBeenCalledWith(

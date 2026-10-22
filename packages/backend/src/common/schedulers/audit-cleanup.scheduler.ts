@@ -70,8 +70,7 @@ export class AuditCleanupScheduler {
   })
   async cleanupOldAuditLogs(): Promise<void> {
     const enabled = await this.runtimeConfigService.getValue<boolean>(
-      TASK_ENABLED_KEYS.AUDIT_CLEANUP,
-      true
+      TASK_ENABLED_KEYS.AUDIT_CLEANUP
     );
     if (!enabled) {
       this.logger.log('审计日志清理已禁用，跳过');
@@ -98,8 +97,7 @@ export class AuditCleanupScheduler {
   private async cleanupTaskRunsTask(): Promise<void> {
     const startedAt = Date.now();
     const retentionDays = await this.runtimeConfigService.getValue<number>(
-      'taskRunRetentionDays',
-      180
+      'taskRunRetentionDays'
     );
     const deletedCount = await this.taskRunService.cleanupOldRuns(retentionDays);
     const durationSeconds = (Date.now() - startedAt) / 1000;
@@ -135,10 +133,9 @@ export class AuditCleanupScheduler {
     // 每轮任务读取，运行时配置页修改后下一轮即生效（三层：运行时 > env > 默认）
     const days =
       retentionDays ??
-      (await this.runtimeConfigService.getValue<number>('auditRetentionDays', 183));
+      (await this.runtimeConfigService.getValue<number>('auditRetentionDays'));
     const archiveEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'auditArchiveEnabled',
-      false
+      'auditArchiveEnabled'
     );
     this.logger.log(
       `开始执行审计日志清理任务 (保留天数: ${days}, 归档: ${archiveEnabled})`

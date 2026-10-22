@@ -377,6 +377,32 @@ describe('ProjectCrudService', () => {
         description: undefined,
       });
     });
+
+    it('should pass transfer settings through to createNode when provided', async () => {
+      const userId = 'user-123';
+      const dto = {
+        name: 'Transfer Project',
+        transferOutToProject: 'COPY_ONLY' as const,
+        transferOutToPersonalSpace: 'NONE' as const,
+        transferInFromLibrary: 'MOVE_ONLY' as const,
+      };
+      const mockProject = { id: 'project-3', name: dto.name };
+
+      jest.spyOn(service, 'createNode').mockResolvedValue(mockProject as any);
+
+      const result = await service.createProject(userId, dto as any);
+
+      expect(result).toEqual(mockProject);
+      expect(service.createNode).toHaveBeenCalledWith(userId, dto.name, {
+        description: undefined,
+        transferOutToProject: 'COPY_ONLY',
+        transferOutToPersonalSpace: 'NONE',
+        transferOutToLibrary: undefined,
+        transferInFromProject: undefined,
+        transferInFromPersonalSpace: undefined,
+        transferInFromLibrary: 'MOVE_ONLY',
+      });
+    });
   });
 
   describe('createFolder', () => {

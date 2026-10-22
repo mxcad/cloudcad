@@ -107,6 +107,36 @@ describe('JwtStrategy.validate - TOTP 强制引导锁定（#415）', () => {
       }
     });
 
+    it('同时放行改密路径（两把锁白名单取并集，避免锁定态之间来回跳转）', async () => {
+      const s = buildStrategy(ADMIN_USER, true);
+      const result = await (s as any).validate(
+        request('/api/v1/users/change-password'),
+        basePayload
+      );
+      expect(result.id).toBe('user-1');
+    });
+
+    it('两把锁同时生效（未绑 TOTP + 首登未改密）：两个解锁端点都放行，其余仍拒', async () => {
+      const s = buildStrategy(ADMIN_USER, true);
+      (s as any).passwordPolicyService = {
+        getPasswordChangeStatus: jest
+          .fn()
+          .mockReturnValue({ required: 'first_login', expiringSoon: false }),
+      };
+      // 前端在锁定态的两个页面之间跳转所依赖的请求必须都通
+      for (const path of [
+        '/api/v1/admin/auth/mfa/setup',
+        '/api/v1/users/change-password',
+      ]) {
+        const result = await (s as any).validate(request(path), basePayload);
+        expect(result.id).toBe('user-1');
+      }
+      const err = await (s as any)
+        .validate(request('/api/v1/files'), basePayload)
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ForbiddenException);
+    });
+
     it('已绑定 TOTP 的管理员：任意路径不锁定', async () => {
       const s = buildStrategy(
         { ...ADMIN_USER, totpEnabled: true },

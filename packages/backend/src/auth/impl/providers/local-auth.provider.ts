@@ -27,6 +27,7 @@ import type {
 } from '@cloudcad/contracts';
 import { USER_REPOSITORY, ROLE_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
+import { InitializationService } from '../../services/initialization.service';
 import { establishSession } from '../../session-establishment';
 import { I18nContext } from 'nestjs-i18n';
 
@@ -56,7 +57,8 @@ export class OssAuthProvider
     private loginService: LoginService,
     private passwordService: PasswordService,
     private authTokenService: AuthTokenService,
-    private accountRateLimitService: AccountRateLimitService
+    private accountRateLimitService: AccountRateLimitService,
+    private initializationService: InitializationService
   ) {}
 
   async login(
@@ -92,16 +94,16 @@ export class OssAuthProvider
 
     if (!user) {
       const allowAutoRegister = await this.runtimeConfigService.getValue<boolean>(
-        'allowAutoRegisterOnPhoneLogin',
-        false
+        'allowAutoRegisterOnPhoneLogin'
       );
 
       const allowRegister = await this.runtimeConfigService.getValue<boolean>(
-        'allowRegister',
-        true
+        'allowRegister'
       );
 
       if (allowAutoRegister && allowRegister) {
+        // 首启守卫：零用户系统禁止自动注册抢先占用「首个用户」
+        await this.initializationService.assertInitialized();
         this.logger.log(`手机号未注册，开始自动注册: ${formattedPhone}`);
 
         const baseUsername = `u_${formattedPhone.slice(-8)}`;
@@ -187,8 +189,7 @@ export class OssAuthProvider
     }
 
     const wechatEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'wechatEnabled',
-      false
+      'wechatEnabled'
     );
     if (!wechatEnabled) {
       throw new BadRequestException(I18nContext.current()?.t('error.auth_extra.wechat_login_disabled') ?? '微信登录功能未启用');
@@ -212,25 +213,23 @@ export class OssAuthProvider
     let restored = false;
 
     const wechatAutoRegister = await this.runtimeConfigService.getValue<boolean>(
-      'wechatAutoRegister',
-      false
+      'wechatAutoRegister'
     );
     const requireEmailVerification = await this.runtimeConfigService.getValue<boolean>(
-      'requireEmailVerification',
-      false
+      'requireEmailVerification'
     );
     const requirePhoneVerification = await this.runtimeConfigService.getValue<boolean>(
-      'requirePhoneVerification',
-      false
+      'requirePhoneVerification'
     );
 
     if (!user) {
       const allowRegister = await this.runtimeConfigService.getValue<boolean>(
-        'allowRegister',
-        true
+        'allowRegister'
       );
 
       if (wechatAutoRegister && allowRegister) {
+        // 首启守卫：零用户系统禁止微信自动注册抢先占用「首个用户」
+        await this.initializationService.assertInitialized();
         let username = `wechat_${wechatUser.openid.slice(0, 8)}`;
         let counter = 0;
         while (await this.userRepo.findByUsername(username)) {
@@ -690,24 +689,24 @@ export class OssAuthProvider
     const { phone, code, username, password, nickname } = registerDto;
 
     const allowRegister = await this.runtimeConfigService.getValue<boolean>(
-      'allowRegister',
-      true
+      'allowRegister'
     );
     if (!allowRegister) {
       throw new BadRequestException(I18nContext.current()?.t('error.auth.registration_disabled') ?? '系统已关闭注册功能');
     }
 
+    // 首启守卫：零用户系统禁止注册抢先占用「首个用户」
+    await this.initializationService.assertInitialized();
+
     // 账号维度限流（防批量注册），与 IP 维度 RateLimitGuard 互补
     await this.accountRateLimitService.checkLimit('register', phone);
 
     const smsEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'smsEnabled',
-      false
+      'smsEnabled'
     );
     const requirePhoneVerification =
       await this.runtimeConfigService.getValue<boolean>(
-        'requirePhoneVerification',
-        false
+        'requirePhoneVerification'
       );
     if (!smsEnabled || !requirePhoneVerification) {
       throw new BadRequestException(I18nContext.current()?.t('error.auth_extra.phone_registration_disabled') ?? '手机号注册未启用，请使用邮箱注册');

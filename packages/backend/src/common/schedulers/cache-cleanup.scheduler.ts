@@ -64,7 +64,7 @@ export class CacheCleanupScheduler {
   }
 
   private async isEnabled(key: string): Promise<boolean> {
-    return this.runtimeConfigService.getValue<boolean>(key, true);
+    return this.runtimeConfigService.getValue<boolean>(key);
   }
 
   /**

@@ -26,16 +26,24 @@ describe('RateLimitGuard', () => {
   let multi: Record<string, jest.Mock>;
   let windowCount = 0;
 
+  /** 配额定义表 defaultValue（运行时配置页未改时的取值） */
+  const runtimeConfigDefaults: Record<string, number> = {
+    rateLimitPublicWindowMs: 60000,
+    rateLimitPublicMax: 100,
+    rateLimitAuthMax: 300,
+    rateLimitLoginMax: 30,
+    rateLimitLoginWindowMs: 900000,
+  };
+
   /** 按运行条件构造守卫（测试只关心端点分类与配额命中，不校验 DI 元数据） */
   const buildGuard = (opts: { ip?: string; nodeEnv?: string; isPublic?: boolean } = {}) =>
     new RateLimitGuard(
       { getAllAndOverride: jest.fn(() => opts.isPublic ?? false) } as any,
       { get: jest.fn(() => opts.ip ?? '10.0.0.5') } as any,
       { get: jest.fn(() => opts.nodeEnv ?? 'production') } as any,
-      // getValue(key, defaultValue) → 返回定义默认值（30 / 900000 / 100 / 300）
       {
         getValue: jest.fn().mockImplementation(
-          async (_key: string, def: unknown) => def,
+          async (key: string) => runtimeConfigDefaults[key] ?? '',
         ),
       } as any,
       { multi: jest.fn(() => multi) } as any,

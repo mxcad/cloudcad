@@ -81,8 +81,7 @@ export class DeviceAuthService {
     await pipeline.exec();
 
     const domain = await this.runtimeConfigService.getValue<string>(
-      'deviceAuthFrontendDomain',
-      'http://localhost:8000',
+      'deviceAuthFrontendDomain'
     );
 
     return new DeviceCodeResponseDto({

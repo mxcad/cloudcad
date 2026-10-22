@@ -49,7 +49,10 @@ function createMocks() {
   };
 
   const runtimeConfig = {
-    getValue: jest.fn().mockImplementation(async (_key: string, def: unknown) => def),
+    // 与 RUNTIME_CONFIG_DEFINITIONS 的 defaultValue 一致
+    getValue: jest.fn().mockImplementation(async (key: string) =>
+      key === 'fileZipCompressionLevel' ? 1 : ''
+    ),
   };
 
   const job = new BatchDownloadJob(

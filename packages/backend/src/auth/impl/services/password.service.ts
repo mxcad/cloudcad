@@ -55,19 +55,19 @@ export class PasswordService implements IPasswordService {
       await this.accountRateLimitService.checkLimit('password_reset', phone);
     }
 
-    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled', false);
-    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled', false);
+    const mailEnabled = await this.runtimeConfigService.getValue<boolean>('mailEnabled');
+    const smsEnabled = await this.runtimeConfigService.getValue<boolean>('smsEnabled');
 
     if (!mailEnabled && !smsEnabled) {
-      const supportEmail = await this.runtimeConfigService.getValue<string>('supportEmail', '');
-      const supportPhone = await this.runtimeConfigService.getValue<string>('supportPhone', '');
+      const supportEmail = await this.runtimeConfigService.getValue<string>('supportEmail');
+      const supportPhone = await this.runtimeConfigService.getValue<string>('supportPhone');
       return { message: I18nContext.current()?.t('success.password_reset_email_service_disabled') ?? '邮件服务和短信服务均未启用，请联系客服重置密码', mailEnabled: false, smsEnabled: false, supportEmail, supportPhone };
     }
 
     if (email) {
       if (!mailEnabled) {
-        const supportEmail = await this.runtimeConfigService.getValue<string>('supportEmail', '');
-        const supportPhone = await this.runtimeConfigService.getValue<string>('supportPhone', '');
+        const supportEmail = await this.runtimeConfigService.getValue<string>('supportEmail');
+        const supportPhone = await this.runtimeConfigService.getValue<string>('supportPhone');
         return { message: I18nContext.current()?.t('success.password_reset_email_disabled') ?? '邮件服务未启用，无法使用邮箱重置密码，请联系客服', mailEnabled: false, smsEnabled, supportEmail, supportPhone };
       }
 
@@ -85,8 +85,8 @@ export class PasswordService implements IPasswordService {
 
     if (phone) {
       if (!smsEnabled) {
-        const supportEmail = await this.runtimeConfigService.getValue<string>('supportEmail', '');
-        const supportPhone = await this.runtimeConfigService.getValue<string>('supportPhone', '');
+        const supportEmail = await this.runtimeConfigService.getValue<string>('supportEmail');
+        const supportPhone = await this.runtimeConfigService.getValue<string>('supportPhone');
         return { message: I18nContext.current()?.t('success.password_reset_sms_disabled') ?? '短信服务未启用，无法使用手机号重置密码，请联系客服', mailEnabled, smsEnabled: false, supportEmail, supportPhone };
       }
 

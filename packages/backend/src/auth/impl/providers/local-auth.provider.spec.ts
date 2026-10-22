@@ -9,6 +9,7 @@ import { LoginService } from '../services/login.service';
 import { PasswordService } from '../services/password.service';
 import { AuthTokenService } from '../services/auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
+import { InitializationService } from '../../services/initialization.service';
 
 /** 微信头像 CDN 地址：落库后在 COEP 页面下前端直连必被拦，故只能作为落盘输入 */
 const WECHAT_AVATAR_URL =
@@ -65,6 +66,11 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
   const mockAccountRateLimitService = {
     checkLimit: jest.fn().mockResolvedValue(undefined),
     reset: jest.fn().mockResolvedValue(undefined),
+  };
+
+  // 首启守卫替身：默认透传（await undefined 直接继续），不改变既有测试行为
+  const mockInitializationService = {
+    assertInitialized: jest.fn(),
   };
 
   const noopService = {
@@ -124,6 +130,10 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
         {
           provide: AccountRateLimitService,
           useValue: mockAccountRateLimitService,
+        },
+        {
+          provide: InitializationService,
+          useValue: mockInitializationService,
         },
       ],
     }).compile();

@@ -88,8 +88,7 @@ export class BatchDownloadCleanupService {
 
   private async isEnabled(): Promise<boolean> {
     return this.runtimeConfigService.getValue<boolean>(
-      TASK_ENABLED_KEYS.BATCH_DOWNLOAD,
-      true
+      TASK_ENABLED_KEYS.BATCH_DOWNLOAD
     );
   }
 

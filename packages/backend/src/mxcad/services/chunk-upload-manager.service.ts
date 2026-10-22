@@ -51,8 +51,7 @@ export class ChunkUploadManagerService {
     try {
       if (chunk === 0) {
         const maxFileSizeMB = await this.runtimeConfigService.getValue<number>(
-          'maxFileSize',
-          100
+          'maxFileSize'
         );
         const maxFileSizeBytes = maxFileSizeMB * 1024 * 1024;
         if (size > maxFileSizeBytes) {

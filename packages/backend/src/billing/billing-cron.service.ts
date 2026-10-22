@@ -45,8 +45,7 @@ export class BillingCron {
 
   private async isEnabled(): Promise<boolean> {
     return this.runtimeConfigService.getValue<boolean>(
-      TASK_ENABLED_KEYS.BILLING,
-      true
+      TASK_ENABLED_KEYS.BILLING
     );
   }
 

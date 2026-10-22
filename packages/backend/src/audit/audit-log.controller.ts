@@ -240,8 +240,7 @@ export class AuditLogController {
     // 否则管理员把保留期改成 730 天后，定时任务按 730 天删，这里仍按 env 的
     // 旧下限拦，两条链路不一致（曾出现 730 天部署被静默收紧回 183 天）。
     const retentionDays = await this.runtimeConfigService.getValue<number>(
-      'auditRetentionDays',
-      183
+      'auditRetentionDays'
     );
     const days = dto.daysToKeep ?? retentionDays;
 

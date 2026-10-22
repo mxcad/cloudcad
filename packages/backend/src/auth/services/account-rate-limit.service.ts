@@ -77,32 +77,32 @@ export class AccountRateLimitService {
     switch (action) {
       case 'login':
         return {
-          max: await this.runtimeConfig.getValue<number>('loginRateLimitMax', 30),
-          windowSeconds: await this.runtimeConfig.getValue<number>('loginRateLimitWindowSeconds', 60),
+          max: await this.runtimeConfig.getValue<number>('loginRateLimitMax'),
+          windowSeconds: await this.runtimeConfig.getValue<number>('loginRateLimitWindowSeconds'),
         };
       case 'password_reset':
         return {
-          max: await this.runtimeConfig.getValue<number>('passwordResetRateLimitMax', 5),
-          windowSeconds: await this.runtimeConfig.getValue<number>('passwordResetRateLimitWindowSeconds', 3600),
+          max: await this.runtimeConfig.getValue<number>('passwordResetRateLimitMax'),
+          windowSeconds: await this.runtimeConfig.getValue<number>('passwordResetRateLimitWindowSeconds'),
         };
       case 'register':
         return {
-          max: await this.runtimeConfig.getValue<number>('registerRateLimitMax', 5),
-          windowSeconds: await this.runtimeConfig.getValue<number>('registerRateLimitWindowSeconds', 3600),
+          max: await this.runtimeConfig.getValue<number>('registerRateLimitMax'),
+          windowSeconds: await this.runtimeConfig.getValue<number>('registerRateLimitWindowSeconds'),
         };
       case 'order_create':
         return {
-          max: await this.runtimeConfig.getValue<number>('orderCreateRateLimitMax', 10),
-          windowSeconds: await this.runtimeConfig.getValue<number>('orderCreateRateLimitWindowSeconds', 3600),
+          max: await this.runtimeConfig.getValue<number>('orderCreateRateLimitMax'),
+          windowSeconds: await this.runtimeConfig.getValue<number>('orderCreateRateLimitWindowSeconds'),
         };
     }
   }
 
   private async getLockConfig(): Promise<AccountLockConfig> {
     return {
-      failThreshold: await this.runtimeConfig.getValue<number>('accountLockFailThreshold', 10),
-      windowSeconds: await this.runtimeConfig.getValue<number>('accountLockWindowSeconds', 900),
-      durationSeconds: await this.runtimeConfig.getValue<number>('accountLockDurationSeconds', 1800),
+      failThreshold: await this.runtimeConfig.getValue<number>('accountLockFailThreshold'),
+      windowSeconds: await this.runtimeConfig.getValue<number>('accountLockWindowSeconds'),
+      durationSeconds: await this.runtimeConfig.getValue<number>('accountLockDurationSeconds'),
     };
   }
 

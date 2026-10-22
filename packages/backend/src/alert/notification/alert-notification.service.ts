@@ -75,14 +75,13 @@ export class AlertNotificationService
   }> {
     const [enabled, rawTo, failEscalate, p1WindowMinutes, p2DailyHour] =
       await Promise.all([
-        this.runtimeConfigService.getValue<boolean>('alertEmailEnabled', false),
-        this.runtimeConfigService.getValue<string>('alertEmailTo', ''),
-        this.runtimeConfigService.getValue<number>('alertEmailFailEscalate', 5),
+        this.runtimeConfigService.getValue<boolean>('alertEmailEnabled'),
+        this.runtimeConfigService.getValue<string>('alertEmailTo'),
+        this.runtimeConfigService.getValue<number>('alertEmailFailEscalate'),
         this.runtimeConfigService.getValue<number>(
-          'alertEmailP1WindowMinutes',
-          15
+          'alertEmailP1WindowMinutes'
         ),
-        this.runtimeConfigService.getValue<number>('alertEmailP2DailyHour', 9),
+        this.runtimeConfigService.getValue<number>('alertEmailP2DailyHour'),
       ]);
     const clampInt = (
       value: number,

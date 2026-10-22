@@ -137,8 +137,7 @@ export class BackupService {
    */
   private async resolveKeepLocal(): Promise<number> {
     const value = await this.runtimeConfigService.getValue<number>(
-      'backupKeepLocal',
-      14
+      'backupKeepLocal'
     );
     return Number.isInteger(value) && value > 0 ? value : 14;
   }

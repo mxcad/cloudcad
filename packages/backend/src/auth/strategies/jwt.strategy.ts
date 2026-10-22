@@ -26,6 +26,26 @@ import { I18nContext } from 'nestjs-i18n';
 import { extractTokenFromRequest } from '../utils/token-extractor';
 
 /**
+ * 安全锁（#415 TOTP / #416 口令强改）共用的解锁白名单。
+ *
+ * 两把锁必须取**并集**，不能各自只放行自己的解锁端点：安全模式会同时开启
+ * mfaEnforceEnabled 与 passwordPolicyChangeEnforceEnabled，而初始管理员通常
+ * 既未绑定 TOTP 也未改过初始口令。白名单互斥时，绑定页的 mfa/setup 被口令锁
+ * 打回 PASSWORD_CHANGE_REQUIRED → 前端跳改密页；改密页的轮询/提交又被 MFA 锁
+ * 打回 MFA_SETUP_REQUIRED → 前端跳绑定页，两页无限跳转。
+ *
+ * 这些端点都只作用于当前登录用户自己的凭据（改密需旧口令、绑定需动态码），
+ * 在任一锁定态下放行都不扩大权限。
+ */
+const SECURITY_UNLOCK_PATHS = [
+  '/api/v1/admin/auth/mfa/setup',
+  '/api/v1/admin/auth/mfa/bind',
+  '/api/v1/users/change-password',
+  '/api/v1/auth/profile',
+  '/api/v1/auth/logout',
+];
+
+/**
  * Passport JWT 请求最小形状：extractedJwtToken 在 jwtFromRequest 与 validate 间
  * 经 request 传递（passport 无全局类型增强，用结构接口精确化而非 any）。
  */
@@ -144,26 +164,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // 优先使用 DB 查出的实时角色（角色降级/升级在 token 有效期内立即生效），否则回退到 payload 角色
     const effectiveRole = userStatus.role?.name ?? payload.role;
 
-    // #415 强制引导：未绑定 TOTP 的管理员被锁定——仅 MFA 绑定页（setup/bind）与
-    // profile 刷新/登出可用，后台其余端点一律拒绝。基于 DB 实时状态判定，
+    // #415 强制引导：未绑定 TOTP 的管理员被锁定——仅解锁端点（MFA 绑定、
+    // 改密、profile 刷新/登出）可用，后台其余端点一律拒绝。基于 DB 实时状态判定，
     // 绑定完成（totpEnabled=true）后锁定自动解除，无需刷新 token。
     // 总闸 mfaEnforceEnabled（运行时配置，默认关闭）关闭时整个锁定不生效。
+    // 判定顺序固定：MFA 锁先于口令锁（前端登录落地页依赖此优先级）。
     if (isAdminRole(effectiveRole) && !userStatus.totpEnabled) {
       const mfaEnforceEnabled =
         await this.runtimeConfigService.getValue<boolean>(
-          'mfaEnforceEnabled',
-          false
+          'mfaEnforceEnabled'
         );
       // 总闸开启时才执行锁定；关闭时未绑定管理员不被锁定，正常放行
       if (mfaEnforceEnabled) {
         const reqPath = (request as { path?: string })?.path ?? '';
-        const mfaAllowedPaths = [
-          '/api/v1/admin/auth/mfa/setup',
-          '/api/v1/admin/auth/mfa/bind',
-          '/api/v1/auth/profile',
-          '/api/v1/auth/logout',
-        ];
-        if (!mfaAllowedPaths.includes(reqPath)) {
+        if (!SECURITY_UNLOCK_PATHS.includes(reqPath)) {
           this.logger.warn(
             `未绑定 TOTP 的管理员访问被拒: ${payload.username} -> ${reqPath}`
           );
@@ -178,10 +192,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    // #416 强制引导：口令到期/首登未改密的管理员被锁定——仅改密入口（change-password）
-    // 与 profile 刷新/登出可用，后台其余端点一律拒绝。基于 DB 实时 passwordChangedAt 判定，
-    // 改密成功（change-password 写 passwordChangedAt=now）后锁定自动解除，无需刷新 token。
-    // 仅 ADMIN 角色生效；普通用户不做 180 天拦截（体验优先）。
+    // #416 强制引导：口令到期/首登未改密的管理员被锁定——仅解锁端点（改密、
+    // MFA 绑定、profile 刷新/登出）可用，后台其余端点一律拒绝。基于 DB 实时
+    // passwordChangedAt 判定，改密成功（写 passwordChangedAt=now）后锁定自动解除，
+    // 无需刷新 token。仅 ADMIN 角色生效；普通用户不做 180 天拦截（体验优先）。
     if (isAdminRole(effectiveRole)) {
       const passwordChangeStatus =
         await this.passwordPolicyService.getPasswordChangeStatus(
@@ -189,12 +203,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         );
       if (passwordChangeStatus.required) {
         const reqPath = (request as { path?: string })?.path ?? '';
-        const passwordAllowedPaths = [
-          '/api/v1/users/change-password',
-          '/api/v1/auth/profile',
-          '/api/v1/auth/logout',
-        ];
-        if (!passwordAllowedPaths.includes(reqPath)) {
+        if (!SECURITY_UNLOCK_PATHS.includes(reqPath)) {
           this.logger.warn(
             `口令到期/首登未改密的管理员访问被拒: ${payload.username} -> ${reqPath} (required=${passwordChangeStatus.required})`
           );

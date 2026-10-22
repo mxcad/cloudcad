@@ -81,8 +81,7 @@ describe("CacheMonitorService", () => {
 			await service.cleanOldPerformanceData();
 
 			expect(mockRuntimeConfigService.getValue).toHaveBeenCalledWith(
-				expect.any(String),
-				true
+				expect.any(String)
 			);
 			expect(mockTaskRunService.run).toHaveBeenCalledTimes(1);
 		});

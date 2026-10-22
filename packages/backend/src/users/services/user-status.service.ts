@@ -280,8 +280,7 @@ export class UserStatusService {
 
       // 冷静期与登录自动恢复一致：读运行时配置 userCancelGraceDays（默认 7 天），逾期需联系客服
       const graceDays = await this.runtimeConfigService.getValue<number>(
-        'userCancelGraceDays',
-        7
+        'userCancelGraceDays'
       );
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() - graceDays);

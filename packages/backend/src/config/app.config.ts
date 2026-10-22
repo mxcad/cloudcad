@@ -93,11 +93,6 @@ export interface SessionConfig {
   cookieSecure: boolean | null;
 }
 
-export interface CacheConfig {
-  l2DefaultTTL: number;
-  versionMaxAge: number;
-}
-
 export interface UserCleanupConfig {
   delayDays: number;
   enabled: boolean;
@@ -129,10 +124,7 @@ export interface CacheTTLConfig {
   verificationRateLimit: number;
   tokenBlacklist: number;
   cacheVersion: number;
-  default: number;
   mxcad: number;
-  permission: number;
-  policy: number;
 }
 
 export interface FileLimitsConfig {
@@ -280,28 +272,6 @@ export interface AuthRateLimitConfig {
 }
 
 /**
- * 口令策略配置（#416 等保 8.1.4.1 a)/b)）
- *
- * 复杂度：新设口令 ≥minLength 位 + 大小写/数字/特殊字符四类至少三类 + 弱口令黑名单。
- * 定期更换（仅 ADMIN 角色生效）：maxAgeDays 天到期强制改密，提前 expiringSoonDays 天提示。
- */
-export interface PasswordPolicyConfig {
-  /** 口令最小长度（默认 10） */
-  minLength: number;
-  /** 口令最大有效期（天，默认 180；到期强制改密，仅 ADMIN 角色生效） */
-  maxAgeDays: number;
-  /** 提前提示天数（默认 14；到期前 N 天提示，仅 ADMIN 角色生效） */
-  expiringSoonDays: number;
-  /**
-   * 定期更换 / 首登未改密「强制改密」总开关（默认 false=关闭，仅 ADMIN 角色生效）。
-   * 关闭时 getPasswordChangeStatus 恒返回「无需强改」：登录不下发 passwordChangeRequired、
-   * JWT 不做改密锁定（上游 jwt.strategy / admin-auth 自动生效）。
-   * 复杂度校验（assertPasswordPolicy）不受此开关影响，恒生效。
-   */
-  changeEnforceEnabled: boolean;
-}
-
-/**
  * 账号失败锁定配置（#416 等保 8.1.4.1 c) 防暴力破解）
  *
  * 与 AuthRateLimitConfig（5次/60s 频率限流）独立叠加：限流管「请求频率」，
@@ -411,7 +381,6 @@ export interface AppConfig {
   redis: RedisConfig;
   upload: UploadConfig;
   session: SessionConfig;
-  cache: CacheConfig;
   userCleanup: UserCleanupConfig;
   fileLock: FileLockConfig;
   mail: MailConfig;
@@ -419,6 +388,7 @@ export interface AppConfig {
   mxcad: MxcadConfig;
   filesDataPath: string;
   avatarPath: string;
+  brandAssetPath: string;
   mxRepoPath: string;
   mxcadUploadPath: string;
   mxcadTempPath: string;
@@ -439,8 +409,6 @@ export interface AppConfig {
   cooperate: CooperateConfig;
   batchDownload: BatchDownloadConfig;
   authRateLimit: AuthRateLimitConfig;
-  /** 口令策略（#416 等保 8.1.4.1 a)/b)） */
-  passwordPolicy: PasswordPolicyConfig;
   /** 账号失败锁定（#416 等保 8.1.4.1 c) 防暴力破解） */
   accountLock: AccountLockConfig;
   audit: AuditConfig;

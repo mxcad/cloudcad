@@ -152,4 +152,23 @@ describe('ConversionServiceClient', () => {
       client.request('/v1/conversions/stats', 'GET')
     ).rejects.toThrow(/Request timeout: GET \/v1\/conversions\/stats/);
   });
+
+  it('should surface errno detail when the connection is refused', async () => {
+    // 回归：localhost 双栈解析失败时 Node 抛 AggregateError，其 message 为空串。
+    // 原样透传会让上游只看到「Failed to submit task: 」，端口写错无从定位
+    // （实例：backend 连 3103、conversion-service 实际监听 3100）。
+    const probe = http.createServer();
+    await new Promise<void>((resolve) => probe.listen(0, resolve));
+    const closedPort = (probe.address() as AddressInfo).port;
+    await new Promise<void>((resolve) => probe.close(() => resolve()));
+
+    const closedClient = new ConversionServiceClient({
+      baseUrl: `http://localhost:${closedPort}`,
+      timeoutMs: 2000,
+    });
+
+    await expect(
+      closedClient.request('/v1/conversions/stats', 'GET')
+    ).rejects.toThrow(/ECONNREFUSED/);
+  });
 });

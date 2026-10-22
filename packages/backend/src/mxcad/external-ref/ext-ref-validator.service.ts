@@ -83,7 +83,7 @@ export class ExtRefValidatorService {
    * 返回 { success } 与动态上限文案。
    */
   async validateFileSize(fileSize: number): Promise<{ success: boolean; message?: string }> {
-    const maxFileSizeMB = await this.runtimeConfigService.getValue<number>('extRefMaxFileSize', 100);
+    const maxFileSizeMB = await this.runtimeConfigService.getValue<number>('extRefMaxFileSize');
     const maxSize = maxFileSizeMB * 1024 * 1024;
     if (fileSize > 0 && fileSize <= maxSize) return { success: true };
     return {

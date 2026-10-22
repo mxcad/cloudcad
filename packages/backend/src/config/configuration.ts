@@ -295,14 +295,6 @@ export default (): AppConfig => {
       ),
     },
 
-    cache: {
-      l2DefaultTTL:
-        parseInt(process.env.CACHE_L2_DEFAULT_TTL || '1800', 10) || 1800, // 30分钟
-      versionMaxAge:
-        parseInt(process.env.CACHE_VERSION_MAX_AGE || '3600000', 10) ||
-        60 * 60 * 1000, // 1小时
-    },
-
     userCleanup: {
       delayDays:
         parseInt(process.env.USER_CLEANUP_DELAY_DAYS || '30', 10) || 30,
@@ -358,6 +350,9 @@ export default (): AppConfig => {
     avatarPath: resolvePath(
       process.env.AVATAR_PATH || path.join(filesDataPath, 'avatars')
     ),
+    // 与 filesDataPath 解耦：data/files 是 SVN 工作副本、且被 DirectoryAllocator 按
+    // {YYYYMM}/{nodeId}/ 扫描，非图纸资产落进去会被当月份目录列举并卷入版本提交
+    brandAssetPath: resolvePath(process.env.BRAND_ASSET_PATH || 'data/brand'),
     mxRepoPath: resolvePath(process.env.MX_REPO_PATH || 'data/mx-repo'),
     mxcadUploadPath: resolvePath(
       process.env.MXCAD_UPLOAD_PATH || 'data/uploads'
@@ -366,6 +361,11 @@ export default (): AppConfig => {
     mxcadDebugPath: resolvePath(process.env.MXCAD_DEBUG_PATH || 'data/debug'),
 
     // 缓存 TTL 配置（单位：秒）
+    // 只收录有真实读取方的项。CACHE_TTL_DEFAULT / CACHE_TTL_PERMISSION / CACHE_TTL_POLICY、
+    // CACHE_L2_DEFAULT_TTL、CACHE_VERSION_MAX_AGE 曾在此声明但全仓零消费者，已删除——
+    // 运维改了不生效是「填了没反应」的陷阱字段（同 FILE_EXT_* 六项）。
+    // 权限类缓存的真实 TTL 在 CACHE_TTL 常量表（common/constants/cache.constants.ts），
+    // 按角色/项目/成员角色细分，不是一个 permission/policy 标量能表达的。
     cacheTTL: {
       verificationCode:
         parseInt(process.env.CACHE_TTL_VERIFICATION_CODE || '900', 10) || 900, // 15分钟
@@ -377,11 +377,7 @@ export default (): AppConfig => {
         604800, // 7天
       cacheVersion:
         parseInt(process.env.CACHE_TTL_CACHE_VERSION || '86400', 10) || 86400, // 24小时
-      default: parseInt(process.env.CACHE_TTL_DEFAULT || '300', 10) || 300, // 5分钟
       mxcad: parseInt(process.env.CACHE_TTL_MXCAD || '300', 10) || 300, // 5分钟
-      permission:
-        parseInt(process.env.CACHE_TTL_PERMISSION || '300', 10) || 300, // 5分钟
-      policy: parseInt(process.env.CACHE_TTL_POLICY || '600', 10) || 600, // 10分钟
     },
 
     // 文件限制配置
@@ -565,23 +561,6 @@ export default (): AppConfig => {
       orderCreateWindowSeconds: parseInt(
         process.env.AUTH_RATE_LIMIT_ORDER_CREATE_WINDOW_SECONDS || '3600',
         10
-      ),
-    },
-
-    // 口令策略配置（#416 等保 8.1.4.1 a)/b)）
-    // 复杂度：≥minLength 位 + 大小写/数字/特殊字符四类至少三类 + 弱口令黑名单
-    // 定期更换（仅 ADMIN 角色生效）：maxAgeDays 天到期强制改密，提前 expiringSoonDays 天提示
-    passwordPolicy: {
-      minLength: parseInt(process.env.PASSWORD_POLICY_MIN_LENGTH || '10', 10),
-      maxAgeDays: parseInt(process.env.PASSWORD_POLICY_MAX_AGE_DAYS || '180', 10),
-      expiringSoonDays: parseInt(
-        process.env.PASSWORD_POLICY_EXPIRING_SOON_DAYS || '14',
-        10
-      ),
-      // 定期更换 / 首登未改密「强制改密」总开关（默认关闭；PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED=true 开启，仅 ADMIN 角色）
-      changeEnforceEnabled: parseBoolean(
-        process.env.PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED,
-        false
       ),
     },
 

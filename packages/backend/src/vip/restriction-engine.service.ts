@@ -541,13 +541,12 @@ export class RestrictionEngine implements IConversionAccessGuard {
   }
 
   private async getGuestConversionLimit(): Promise<number> {
-    return this.runtimeConfigService.getValue<number>(GUEST_LIMIT_KEY, 5);
+    return this.runtimeConfigService.getValue<number>(GUEST_LIMIT_KEY);
   }
 
   private async getGuestWindowHours(): Promise<number> {
     const hours = await this.runtimeConfigService.getValue<number>(
-      GUEST_WINDOW_HOURS_KEY,
-      DEFAULT_WINDOW_HOURS
+      GUEST_WINDOW_HOURS_KEY
     );
     return hours > 0 ? hours : DEFAULT_WINDOW_HOURS;
   }
@@ -569,8 +568,7 @@ export class RestrictionEngine implements IConversionAccessGuard {
       if (tierLevel > 0) return;
     }
     const enabled = await this.runtimeConfigService.getValue<boolean>(
-      EXPORT_DOWNLOAD_FREE_KEY,
-      false
+      EXPORT_DOWNLOAD_FREE_KEY
     );
     if (enabled) return;
     const message =

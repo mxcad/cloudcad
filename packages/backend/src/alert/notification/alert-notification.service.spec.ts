@@ -20,7 +20,7 @@ describe('AlertNotificationService', () => {
     alertRecord: { update: jest.fn(), findMany: jest.fn(), count: jest.fn() },
   };
 
-  /** 键名与运行时配置 key 对齐，未设的键回落服务内默认值 */
+  /** 键名与运行时配置 key 对齐；表外的键模拟 getValue 对未登记键返回空串 */
   const baseConfig: Record<string, unknown> = {
     alertEmailEnabled: true,
     alertEmailTo: 'ops@example.com',
@@ -31,10 +31,10 @@ describe('AlertNotificationService', () => {
   let alertEmailConfig = { ...baseConfig };
 
   const mockRuntimeConfigService = {
-    getValue: jest.fn(async (key: string, fallback: unknown) =>
+    getValue: jest.fn(async (key: string) =>
       Object.prototype.hasOwnProperty.call(alertEmailConfig, key)
         ? alertEmailConfig[key]
-        : fallback
+        : ''
     ),
   };
 
@@ -59,10 +59,10 @@ describe('AlertNotificationService', () => {
     // resetMocks 会清除实现，这里显式恢复（仓库 jest 约定）
     alertEmailConfig = { ...baseConfig };
     mockRuntimeConfigService.getValue.mockImplementation(
-      async (key: string, fallback: unknown) =>
+      async (key: string) =>
         Object.prototype.hasOwnProperty.call(alertEmailConfig, key)
           ? alertEmailConfig[key]
-          : fallback
+          : ''
     );
 
     const module: TestingModule = await Test.createTestingModule({

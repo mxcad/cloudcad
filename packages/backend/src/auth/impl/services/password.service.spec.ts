@@ -54,10 +54,10 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    mockRuntimeConfigService.getValue.mockImplementation((key: string, fallback: unknown) => {
+    mockRuntimeConfigService.getValue.mockImplementation((key: string) => {
       if (key === 'mailEnabled') return true;
       if (key === 'smsEnabled') return true;
-      return fallback;
+      return '';
     });
     mockAccountRateLimitService.checkLimit.mockResolvedValue(undefined);
     mockEmailVerificationService.sendVerificationEmail.mockResolvedValue(undefined);

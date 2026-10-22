@@ -226,7 +226,7 @@ describe('FileValidationService', () => {
       } as Express.Multer.File;
 
       await expect(service.validateFileSize(file)).rejects.toThrow('文件大小超过限制');
-      expect(runtimeConfigService.getValue).toHaveBeenCalledWith('maxFileSize', 100);
+      expect(runtimeConfigService.getValue).toHaveBeenCalledWith('maxFileSize');
     });
   });
 

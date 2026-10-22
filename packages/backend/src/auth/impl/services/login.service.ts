@@ -138,13 +138,11 @@ export class LoginService {
     }
 
     const mailEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'mailEnabled',
-      false
+      'mailEnabled'
     );
     const requireEmailVerification =
       await this.runtimeConfigService.getValue<boolean>(
-        'requireEmailVerification',
-        false
+        'requireEmailVerification'
       );
 
     if (mailEnabled && requireEmailVerification && !user.emailVerified) {
@@ -174,13 +172,11 @@ export class LoginService {
     }
 
     const smsEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'smsEnabled',
-      false
+      'smsEnabled'
     );
     const requirePhoneVerification =
       await this.runtimeConfigService.getValue<boolean>(
-        'requirePhoneVerification',
-        false
+        'requirePhoneVerification'
       );
 
     if (smsEnabled && requirePhoneVerification && !user.phoneVerified) {
@@ -283,8 +279,7 @@ export class LoginService {
     }
 
     const graceDays = await this.runtimeConfigService.getValue<number>(
-      'userCancelGraceDays',
-      7
+      'userCancelGraceDays'
     );
     const graceEnd = new Date(user.deletedAt);
     graceEnd.setDate(graceEnd.getDate() + graceDays);
@@ -352,8 +347,7 @@ export class LoginService {
       // 仅管理员才读配置：普通用户的绝大多数登录尝试不做这次查询。
       const adminLoginEntry =
         await this.runtimeConfigService.getValue<string>(
-          'adminLoginEntry',
-          'ISOLATED'
+          'adminLoginEntry'
         );
       if (adminLoginEntry === 'ISOLATED') {
         this.logger.warn(

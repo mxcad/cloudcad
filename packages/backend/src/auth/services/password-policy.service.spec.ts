@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { PasswordPolicyService } from './password-policy.service';
+import { RUNTIME_CONFIG_DEFINITIONS } from '../../runtime-config/runtime-config.constants';
 
 /**
  * 策略参数默认值（与 runtime-config.constants.ts 的 defaultValue 一致，secure 基线）：
@@ -23,11 +24,9 @@ describe('PasswordPolicyService', () => {
   let getValue: jest.Mock;
 
   const buildService = (overrides: Record<string, unknown> = {}) => {
-    getValue = jest.fn(async (key: string, fallback: unknown) => {
-      const values = { ...defaultConfig, ...overrides };
-      const value = values[key as keyof typeof values];
-      return value === undefined ? fallback : value;
-    });
+    getValue = jest.fn(async (key: string) =>
+      ({ ...defaultConfig, ...overrides })[key as keyof typeof defaultConfig]
+    );
     service = new PasswordPolicyService({ getValue } as never);
   };
 
@@ -245,6 +244,16 @@ describe('PasswordPolicyService', () => {
       await expect(
         service.assertPasswordPolicy('Ab1!xy'),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('定义表公开性', () => {
+    it('两个策略键已公开（前端动态渲染口令提示依赖 /runtime-config/public）', () => {
+      const byKey = new Map(
+        RUNTIME_CONFIG_DEFINITIONS.map((d) => [d.key, d]),
+      );
+      expect(byKey.get('passwordPolicyMinLength')?.isPublic).toBe(true);
+      expect(byKey.get('passwordPolicyMinCategories')?.isPublic).toBe(true);
     });
   });
 });

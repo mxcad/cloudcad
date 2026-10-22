@@ -16,6 +16,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import {
+  CrossProjectTransferMode,
   ProjectStatus,
   FileSystemNode as PrismaFileSystemNode,
   Prisma,
@@ -76,9 +77,25 @@ export class ProjectCrudService {
     options?: {
       parentId?: string;
       description?: string;
+      /** 跨项目转移 6 域（仅项目分支生效；undefined 字段回落 Prisma 默认值） */
+      transferOutToProject?: CrossProjectTransferMode;
+      transferOutToPersonalSpace?: CrossProjectTransferMode;
+      transferOutToLibrary?: CrossProjectTransferMode;
+      transferInFromProject?: CrossProjectTransferMode;
+      transferInFromPersonalSpace?: CrossProjectTransferMode;
+      transferInFromLibrary?: CrossProjectTransferMode;
     }
   ) {
-    const { parentId, description } = options || {};
+    const {
+      parentId,
+      description,
+      transferOutToProject,
+      transferOutToPersonalSpace,
+      transferOutToLibrary,
+      transferInFromProject,
+      transferInFromPersonalSpace,
+      transferInFromLibrary,
+    } = options || {};
     const isProject = !parentId;
 
     try {
@@ -111,6 +128,14 @@ export class ProjectCrudService {
               nodeType: NodeType.PROJECT,
               projectStatus: ProjectStatus.ACTIVE,
               ownerId: userId,
+              // 跨项目转移 6 域：仅写入传入字段（undefined 字段 Prisma 忽略，
+              // 回落 schema 默认值，与 updateTransferSettings 的部分更新语义一致）
+              transferOutToProject,
+              transferOutToPersonalSpace,
+              transferOutToLibrary,
+              transferInFromProject,
+              transferInFromPersonalSpace,
+              transferInFromLibrary,
             },
           });
 
@@ -222,7 +247,16 @@ export class ProjectCrudService {
   }
 
   async createProject(userId: string, dto: CreateProjectDto) {
-    return this.createNode(userId, dto.name, { description: dto.description });
+    return this.createNode(userId, dto.name, {
+      description: dto.description,
+      // 跨项目转移 6 域：创建时即可设定（省略字段回落 Prisma 默认值）
+      transferOutToProject: dto.transferOutToProject,
+      transferOutToPersonalSpace: dto.transferOutToPersonalSpace,
+      transferOutToLibrary: dto.transferOutToLibrary,
+      transferInFromProject: dto.transferInFromProject,
+      transferInFromPersonalSpace: dto.transferInFromPersonalSpace,
+      transferInFromLibrary: dto.transferInFromLibrary,
+    });
   }
 
   async createFolder(userId: string, parentId: string, dto: CreateFolderDto) {
