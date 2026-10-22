@@ -1250,7 +1250,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     // isPublic：前端（登录/注册/改密/首启表单）经 /runtime-config/public 读取生效值
     // 动态渲染口令要求提示，杜绝前端写死文案与策略失同步（2026-10-20）
     isPublic: true,
-    tier: 'advanced',
+    tier: 'admin',
     dangerous: true,
     envKey: 'PASSWORD_POLICY_MIN_LENGTH',
     input: { min: 0, max: 64, step: 1, unit: '位' },
@@ -1269,7 +1269,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: 3,
     // isPublic：同 passwordPolicyMinLength，前端动态渲染口令要求提示
     isPublic: true,
-    tier: 'advanced',
+    tier: 'admin',
     dangerous: true,
     input: { min: 0, max: 4, step: 1, unit: '类' },
     impact:
@@ -1285,7 +1285,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '启用内置常见弱口令黑名单校验',
     defaultValue: true,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     dangerous: true,
     impact:
       '关闭后不再拦截 123456、password、admin123! 等常见弱口令，任何长度与类别合规的口令都能通过。' +
@@ -1300,7 +1300,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '管理员口令强制更换周期（天），0 = 永不强制',
     defaultValue: 180,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     dangerous: true,
     envKey: 'PASSWORD_POLICY_MAX_AGE_DAYS',
     input: { min: 0, max: 3650, step: 1, unit: '天' },
@@ -1317,7 +1317,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '距到期多少天开始软提示（仅提示，不拦截）',
     defaultValue: 14,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     input: { min: 0, max: 365, step: 1, unit: '天' },
     impact:
       '配合「口令强制更换周期」使用：进入该窗口后管理员看到改密提醒但不被锁定。' +
@@ -1332,7 +1332,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
       '启用管理员定期更换/首登未改密的强制改密（关闭时仅显示标记、不锁定）',
     defaultValue: false,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     dangerous: true,
     envKey: 'PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED',
     impact:
@@ -1349,7 +1349,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     description: '启用口令历史校验（禁止近期用过的口令）',
     defaultValue: false,
     isPublic: false,
-    tier: 'advanced',
+    tier: 'admin',
     dangerous: true,
     impact:
       '预留项：口令历史存储与校验尚未实现，当前无论填什么值都不生效。' +

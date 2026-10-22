@@ -1401,6 +1401,27 @@ describe("RuntimeConfigService", () => {
 			).toEqual([]);
 		});
 
+		it("口令策略 7 项落在 admin 档：高频运维项 + profile 托管项不得藏进 advanced（#504）", () => {
+			// 落回 advanced 等于「默认看不见」：4 项受安全模式 profile 覆盖，
+			// 运维看不见当前生效值就等于把偏离项藏起来。
+			// 账号锁定 3 项与限流 15 项仍保持 advanced（见上条），不在此列。
+			const PASSWORD_POLICY_KEYS = [
+				"passwordPolicyMinLength",
+				"passwordPolicyMinCategories",
+				"passwordPolicyWeakCheckEnabled",
+				"passwordPolicyChangeIntervalDays",
+				"passwordPolicyExpiringSoonDays",
+				"passwordPolicyChangeEnforceEnabled",
+				"passwordPolicyHistoryCheckEnabled",
+			];
+			expect(PASSWORD_POLICY_KEYS.filter((k) => !def(k))).toEqual([]);
+			expect(
+				PASSWORD_POLICY_KEYS.filter(
+					(k) => def(k)?.tier !== "admin" || def(k)?.category !== "security"
+				)
+			).toEqual([]);
+		});
+
 		it("dangerous 只标在阈值上：次数阈值必须标记，窗口长度除账号锁定外不得标记", () => {
 			const thresholds = RUNTIME_CONFIG_DEFINITIONS.filter(
 				(d) => d.key.endsWith("Max") || d.key === "accountLockFailThreshold"
