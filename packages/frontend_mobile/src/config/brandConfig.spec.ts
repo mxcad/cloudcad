@@ -92,6 +92,36 @@ describe('resolveBrand', () => {
       DEFAULT_BRAND.title,
     )
   })
+
+  it('版权三项 + 法务产品短名：单项运行时键优先于 brandProfile 同名字段（#501）', () => {
+    const b = resolveBrand({
+      brandCopyrightLine: '© {year} {appName} — 单项',
+      brandCopyrightYear: '2031',
+      brandCopyrightHolder: '单项持有方',
+      brandLegalProductShortName: '单项短名',
+      brandProfile: {
+        copyrightLine: '© {year} {appName} — 整块',
+        copyrightYear: '2030',
+        copyrightHolder: '整块持有方',
+        legal: { productShortName: '整块短名' },
+      },
+    })
+    expect(b.copyrightText).toBe('© 2031 梦想网页CAD实时协同平台 — 单项')
+    expect(b.copyrightYear).toBe('2031')
+    expect(b.copyrightHolder).toBe('单项持有方')
+    expect(b.shortName).toBe('单项短名')
+
+    // 单项为空串回落整块，整块也没配回落内置默认
+    expect(
+      resolveBrand({
+        brandCopyrightYear: '',
+        brandProfile: { copyrightYear: '2030' },
+      }).copyrightYear,
+    ).toBe('2030')
+    expect(resolveBrand({ brandCopyrightYear: '', brandProfile: {} }).copyrightYear).toBe(
+      DEFAULT_BRAND.copyrightYear,
+    )
+  })
 })
 
 describe('brandAssetPath', () => {
@@ -172,6 +202,29 @@ describe('resolveLegalVars', () => {
     for (const lang of ['zh-CN', 'zh-TW', 'en-US', 'ko-KR']) {
       expect(resolveLegalVars(lang, config).productName).toBe('某某工业CAD云')
     }
+  })
+
+  it('brandLegalProductName 单项运行时键优先于 legal.productName，留空回落内置按语言值（#501）', () => {
+    const config = {
+      brandLegalProductName: '单项全称',
+      brandProfile: { legal: { productName: '整块全称' } },
+    }
+    for (const lang of ['zh-CN', 'zh-TW', 'en-US', 'ko-KR']) {
+      expect(resolveLegalVars(lang, config).productName).toBe('单项全称')
+    }
+
+    expect(
+      resolveLegalVars('en-US', {
+        brandLegalProductName: '',
+        brandProfile: { legal: { productName: '整块全称' } },
+      }).productName,
+    ).toBe('整块全称')
+    expect(
+      resolveLegalVars('en-US', {
+        brandLegalProductName: '',
+        brandProfile: {},
+      }).productName,
+    ).toBe(DEFAULT_BRAND.legalProductNames['en-US'])
   })
 
   it('未取到配置时返回完整内置默认值', () => {

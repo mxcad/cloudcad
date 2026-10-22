@@ -96,8 +96,9 @@ export function brandAssetPath(path: string): string {
 /**
  * 品牌档案解析：runtime-config `brandProfile` > 内置默认。
  * 逐字段浅合并——只覆盖管理端声明了的字段，避免只填了 copyrightHolder 把标题一起清掉。
- * 单项运行时键例外（与 PC 合并链一致，#499）：`brandTitle` / `brandLogo` / `docsUrl`
- * 单项项优先于 brandProfile 里的同名字段，两层都为空才回落内置默认。
+ * 单项运行时键例外（与 PC 合并链一致，#499/#501）：`brandTitle` / `brandLogo` /
+ * `docsUrl` / 版权三项 / 法务产品短名 等单项项优先于 brandProfile 里的同名字段，
+ * 两层都为空才回落内置默认。
  */
 export function resolveBrand(runtime?: Partial<PublicRuntimeConfig> | null): MobileBrand {
   const brand = runtime?.brandProfile ?? null
@@ -107,10 +108,22 @@ export function resolveBrand(runtime?: Partial<PublicRuntimeConfig> | null): Mob
   const logo = asText(runtime?.brandLogo) || asText(brand?.logo) || DEFAULT_BRAND.logo
   const docsUrl =
     asText(runtime?.docsUrl) || asText(brand?.docsUrl) || DEFAULT_BRAND.docsUrl
-  const shortName = asText(legal?.productShortName) || DEFAULT_BRAND.shortName
-  const copyrightYear = asText(brand?.copyrightYear) || DEFAULT_BRAND.copyrightYear
-  const copyrightHolder = asText(brand?.copyrightHolder) || DEFAULT_BRAND.copyrightHolder
-  const copyrightLine = asText(brand?.copyrightLine) || DEFAULT_BRAND.copyrightLine
+  const shortName =
+    asText(runtime?.brandLegalProductShortName) ||
+    asText(legal?.productShortName) ||
+    DEFAULT_BRAND.shortName
+  const copyrightYear =
+    asText(runtime?.brandCopyrightYear) ||
+    asText(brand?.copyrightYear) ||
+    DEFAULT_BRAND.copyrightYear
+  const copyrightHolder =
+    asText(runtime?.brandCopyrightHolder) ||
+    asText(brand?.copyrightHolder) ||
+    DEFAULT_BRAND.copyrightHolder
+  const copyrightLine =
+    asText(runtime?.brandCopyrightLine) ||
+    asText(brand?.copyrightLine) ||
+    DEFAULT_BRAND.copyrightLine
 
   return {
     title,
@@ -129,6 +142,8 @@ export function resolveBrand(runtime?: Partial<PublicRuntimeConfig> | null): Mob
  * 法务正文品牌变量：语言兜底顺序与 PC getBrandLegalNames 一致（当前语言 → zh-CN → 空串）。
  * `productName` / `productShortName` 是单值（管理端只填一份，各语言共用）；
  * `identities` 按语言取，不跨语言借用——否则只填中文名会让英文条款出现中文主体。
+ * 单项运行时键（`brandLegalProductName` / `brandLegalProductShortName`，#501）
+ * 优先于 brandProfile 里的同名字段，与 resolveBrand 的回落链一致。
  */
 export function resolveLegalVars(
   language: string,
@@ -142,8 +157,15 @@ export function resolveLegalVars(
   const defaultIdentity = identities[DEFAULT_LANGUAGE]?.entityName ?? ''
 
   return {
-    productName: asText(legal?.productName) || names[language] || fallback,
-    productShortName: asText(legal?.productShortName) || DEFAULT_BRAND.shortName,
+    productName:
+      asText(runtime?.brandLegalProductName) ||
+      asText(legal?.productName) ||
+      names[language] ||
+      fallback,
+    productShortName:
+      asText(runtime?.brandLegalProductShortName) ||
+      asText(legal?.productShortName) ||
+      DEFAULT_BRAND.shortName,
     // 兜底阶梯须与 PC `appConfig.ts getBrandLegalNames` 一致：运营可能只填
     // `legal.identities.default` 作为通用主体名，漏掉该分支会让 PC 生效、移动端静默忽略。
     entityName:

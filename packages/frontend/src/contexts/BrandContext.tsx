@@ -39,7 +39,7 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   const { config: runtimeConfig } = useRuntimeConfig();
 
   const effectiveConfig = useMemo(() => {
-    // 单项运行时键（标题/副标题/标语/Logo/客服邮箱/电话/文档地址，声明表见
+    // 单项运行时键（外观/客服/文档/版权/法务，声明表见
     // appConfig.BRAND_FIELD_OVERRIDE_PATHS）覆盖品牌档案整块里的同名字段；
     // 合并结果整体作为「运行时层」参与三层合并，品牌运行时配置始终是最高优先级。
     const runtimeBrand: RuntimeBrandConfig = { ...runtimeConfig.brandProfile };
@@ -50,7 +50,13 @@ export function BrandProvider({ children }: { children: ReactNode }) {
       brandLogo: runtimeConfig.brandLogo,
       supportEmail: runtimeConfig.supportEmail,
       supportPhone: runtimeConfig.supportPhone,
+      supportHours: runtimeConfig.supportHours,
       docsUrl: runtimeConfig.docsUrl,
+      brandCopyrightLine: runtimeConfig.brandCopyrightLine,
+      brandCopyrightYear: runtimeConfig.brandCopyrightYear,
+      brandCopyrightHolder: runtimeConfig.brandCopyrightHolder,
+      brandLegalProductName: runtimeConfig.brandLegalProductName,
+      brandLegalProductShortName: runtimeConfig.brandLegalProductShortName,
     };
     const merged = mergeBrandOverrides(
       data ?? null,

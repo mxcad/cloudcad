@@ -18,10 +18,11 @@
  * 该键（前端语义是「缺省走内置默认值」，空串不是清空）。
  *
  * 表单不覆盖的键（如历史遗留字段）原样保留，不做整块重建。
- * 标题/副标题/标语/Logo 不在这里：它们已拆为独立配置项（brandTitle /
- * brandSubtitle / brandTagline / brandLogo，#499），以单项为准，避免双写。
- * 客服邮箱/电话不在这里：它们各有 `supportEmail` / `supportPhone` 配置项，
- * 以那两项为准，本表单只保留服务时间，避免双写。
+ * 所有固定路径字段都不在这里：它们已拆为独立配置项（#499 外观四键 + 客服邮箱/
+ * 电话/文档地址，#501 版权三项 + 法务产品名两项 + 服务时间），以单项为准，
+ * 避免双写。表单只剩必须嵌套的动态结构：legal.identities（多主体/多语言）与
+ * apps（多端品牌）——这两类平铺会污染键空间，且其「恢复默认」是删除整个条目，
+ * 与固定路径字段语义不同。
  */
 
 import React, { useMemo, useState } from 'react';
@@ -109,7 +110,6 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
   const value = useMemo(() => parseDraft(draft), [draft]);
   const [newAppId, setNewAppId] = useState('');
 
-  const support = isJsonObject(value.support) ? value.support : {};
   const legal = isJsonObject(value.legal) ? value.legal : {};
   const identities = isJsonObject(legal.identities) ? legal.identities : {};
   const apps = isJsonObject(value.apps) ? value.apps : {};
@@ -141,59 +141,13 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
   return (
     <div data-testid="rc-brand-profile-form" className={styles.brandForm}>
       <div className={styles.brandSection}>
-        <h4 className={styles.brandSectionTitle}>品牌与文档</h4>
-        <div className={styles.brandFields}>
-          <Field
-            label="帮助文档地址"
-            value={readString(value.docsUrl)}
-            disabled={disabled}
-            placeholder="https://help.mxdraw.com/"
-            onChange={(v) => setField(['docsUrl'], v)}
-          />
+        <div className={styles.brandSectionHead}>
+          <h4 className={styles.brandSectionTitle}>签约主体（按语言）</h4>
+          <span className={styles.brandSectionHint}>
+            {t('法务侧唯一必须本地化的字段；留空用内置默认值')}
+          </span>
         </div>
-      </div>
-
-      <div className={styles.brandSection}>
-        <h4 className={styles.brandSectionTitle}>版权与法务</h4>
         <div className={styles.brandFields}>
-          <Field
-            label="版权年份"
-            value={readString(value.copyrightYear)}
-            disabled={disabled}
-            placeholder="2026"
-            onChange={(v) => setField(['copyrightYear'], v)}
-          />
-          <Field
-            label="版权持有者"
-            value={readString(value.copyrightHolder)}
-            disabled={disabled}
-            placeholder="留空用内置默认值"
-            onChange={(v) => setField(['copyrightHolder'], v)}
-          />
-          <Field
-            label="版权行模板"
-            hint="支持 {year} {appName}"
-            value={readString(value.copyrightLine)}
-            disabled={disabled}
-            placeholder="© {year} {appName}. All rights reserved."
-            full
-            onChange={(v) => setField(['copyrightLine'], v)}
-          />
-          <Field
-            label="法务产品短名"
-            value={readString(legal.productShortName)}
-            disabled={disabled}
-            placeholder="CloudCAD"
-            onChange={(v) => setField(['legal', 'productShortName'], v)}
-          />
-          <Field
-            label="法务产品全称"
-            hint="留空用内置按语言值"
-            value={readString(legal.productName)}
-            disabled={disabled}
-            placeholder="留空用内置按语言值"
-            onChange={(v) => setField(['legal', 'productName'], v)}
-          />
           {LEGAL_LANGUAGES.map(({ code, label }) => (
             <Field
               key={code}
@@ -206,24 +160,6 @@ export const BrandProfileForm: React.FC<BrandProfileFormProps> = ({
               onChange={(v) => setField(['legal', 'identities', code, 'entityName'], v)}
             />
           ))}
-        </div>
-      </div>
-
-      <div className={styles.brandSection}>
-        <h4 className={styles.brandSectionTitle}>客服</h4>
-        <div className={styles.brandFields}>
-          <Field
-            label="服务时间"
-            value={readString(support.hours)}
-            disabled={disabled}
-            placeholder="周一至周五 9:00-18:00"
-            onChange={(v) => setField(['support', 'hours'], v)}
-          />
-          <div className={styles.brandField}>
-            <span className={styles.brandSectionHint}>
-              {t('客服邮箱/电话请改「客服邮箱」「客服电话」配置项，优先级高于此处。')}
-            </span>
-          </div>
         </div>
       </div>
 

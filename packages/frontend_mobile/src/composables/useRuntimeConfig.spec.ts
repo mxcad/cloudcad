@@ -32,11 +32,17 @@ describe('默认值（接口未返回或失败时）', () => {
       requirePhoneVerification: false,
       supportEmail: '',
       supportPhone: '',
+      supportHours: '',
       docsUrl: '',
       brandTitle: '',
       brandSubtitle: '',
       brandTagline: '',
       brandLogo: '',
+      brandCopyrightLine: '',
+      brandCopyrightYear: '',
+      brandCopyrightHolder: '',
+      brandLegalProductName: '',
+      brandLegalProductShortName: '',
       maxFileSize: 100,
       allowRegister: true,
       wechatEnabled: false,
@@ -73,9 +79,12 @@ describe('字段解析', () => {
         requirePhoneVerification: true,
         supportEmail: 'cs@mx.com',
         supportPhone: '400-123-4567',
+        supportHours: '周一至周五 9:00-18:00',
         docsUrl: 'https://docs.mx.com/',
         brandTitle: '运行时标题',
         brandLogo: '/runtime-logo.png',
+        brandCopyrightYear: '2031',
+        brandLegalProductShortName: 'MxCAD',
         maxFileSize: 500,
         allowRegister: false,
         wechatEnabled: true,
@@ -103,6 +112,13 @@ describe('字段解析', () => {
     expect(config.value.brandLogo).toBe('/runtime-logo.png');
     expect(config.value.brandSubtitle).toBe('');
     expect(config.value.brandTagline).toBe('');
+    // #501 六键按字符串解析（未下发的保持空串）
+    expect(config.value.supportHours).toBe('周一至周五 9:00-18:00');
+    expect(config.value.brandCopyrightYear).toBe('2031');
+    expect(config.value.brandLegalProductShortName).toBe('MxCAD');
+    expect(config.value.brandCopyrightLine).toBe('');
+    expect(config.value.brandCopyrightHolder).toBe('');
+    expect(config.value.brandLegalProductName).toBe('');
     // 口令策略两键按 number 解析（normal 模式 12/2 是真实取值形态）
     expect(config.value.passwordPolicyMinLength).toBe(12);
     expect(config.value.passwordPolicyMinCategories).toBe(2);

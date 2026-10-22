@@ -65,16 +65,19 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'json',
     category: 'brand',
     description:
-      '品牌档案（版权/法务主体/按应用覆盖等），整块覆盖前端内置默认值。' +
-      '标题/副标题/标语/Logo/客服邮箱/电话/文档地址已拆为独立配置项' +
-      '（brandTitle、brandSubtitle、brandTagline、brandLogo、supportEmail、supportPhone、docsUrl），' +
-      '单项优先于此处同名字段，此处 support 仅支持 hours（服务时间）。PC 与移动端都消费同一份。',
+      '品牌档案（动态结构），整块覆盖前端内置默认值。' +
+      '固定字段已全部拆为独立配置项（brandTitle、brandSubtitle、brandTagline、brandLogo、' +
+      'supportEmail、supportPhone、supportHours、docsUrl、brandCopyrightLine、brandCopyrightYear、' +
+      'brandCopyrightHolder、brandLegalProductName、brandLegalProductShortName），' +
+      '单项优先于此处同名字段；此处只剩必须嵌套的动态结构：legal.identities（多主体/多语言）' +
+      '与 apps（多端品牌）。PC 与移动端都消费同一份。',
     defaultValue: {},
     isPublic: true,
     tier: 'user',
     impact:
       '保存后 PC（BrandContext）与移动端（启动期与配置快照）即刻生效；字段缺失时回退到前端内置默认品牌，' +
-      '需清空某字段请从 JSON 中删除该键（不支持空串清空，前端校验会拒绝）。',
+      '需清空某字段请从 JSON 中删除该键（不支持空串清空，前端校验会拒绝）。' +
+      'legal.identities / apps 的「恢复默认」是删除整个条目，与固定路径字段语义不同。',
   },
   {
     key: 'supportEmail',
@@ -165,6 +168,98 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     impact:
       'PC 与移动端的 Logo（favicon、认证页 Logo）。' +
       '留空时回落到品牌档案（brandProfile）里的 logo 字段 → /brand/config.json → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandCopyrightLine',
+    type: 'string',
+    category: 'brand',
+    description: '版权行模板（页脚版权行，支持 {year} / {appName} 占位符）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: {
+      maxLength: 200,
+      allowNull: true,
+      placeholder: '© {year} {appName}. All rights reserved.',
+    },
+    impact:
+      'PC 与移动端页脚版权行模板，{year} / {appName} 占位符按版权年份与应用名解析。' +
+      '留空时回落到品牌档案（brandProfile）里的 copyrightLine 字段 → /brand/config.json → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandCopyrightYear',
+    type: 'string',
+    category: 'brand',
+    description: '版权年份（版权行 {year} 占位符的取值）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: '2026' },
+    impact:
+      'PC 与移动端版权行 {year} 占位符的取值。' +
+      '留空时回落到品牌档案（brandProfile）里的 copyrightYear 字段 → /brand/config.json → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandCopyrightHolder',
+    type: 'string',
+    category: 'brand',
+    description: '版权持有方（法务条款与页脚展示）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: {
+      maxLength: 200,
+      allowNull: true,
+      placeholder: 'Chengdu Dreamkaide Technology Co., Ltd.',
+    },
+    impact:
+      'PC 与移动端法务条款/页脚展示的版权持有方。' +
+      '留空时回落到品牌档案（brandProfile）里的 copyrightHolder 字段 → /brand/config.json → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandLegalProductName',
+    type: 'string',
+    category: 'brand',
+    description: '法务产品全称（法务条款正文；留空用内置按语言值）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: '留空用内置按语言值' },
+    impact:
+      'PC 与移动端法务条款正文的产品全称（单值，各语言共用）。' +
+      '留空时回落到品牌档案（brandProfile）里的 legal.productName 字段 → 内置按语言值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandLegalProductShortName',
+    type: 'string',
+    category: 'brand',
+    description: '法务产品短名（i18n 文案插值，如「创建账户，开始使用 {shortName}」）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: 'CloudCAD' },
+    impact:
+      'PC 与移动端 i18n 文案插值用的产品短名。' +
+      '留空时回落到品牌档案（brandProfile）里的 legal.productShortName 字段 → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'supportHours',
+    type: 'string',
+    category: 'brand',
+    description: '客服服务时间（客服弹框展示）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: '周一至周五 9:00-18:00' },
+    impact:
+      'PC 客服弹框展示的服务时间（移动端无对应展示位）。' +
+      '留空时回落到品牌档案（brandProfile）里的 support.hours 字段 → /brand/config.json → 内置默认值；' +
       '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
   },
 

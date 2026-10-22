@@ -296,14 +296,64 @@ describe('mergeBrandOverrides（运行时 brandProfile 覆盖）', () => {
     );
   });
 
-  it('声明表覆盖全部 7 个单项运行时键：新增覆盖项只加一行声明', () => {
+  it('版权/法务/服务时间六键单项覆盖整块同名字段（声明表驱动，#501）', () => {
+    const merged = mergeBrandOverrides(
+      base,
+      {
+        copyrightYear: '2020',
+        copyrightHolder: '整块持有方',
+        copyrightLine: '整块版权行',
+        support: { hours: '整块服务时间' },
+        legal: {
+          productName: '整块全称',
+          productShortName: '整块短名',
+        },
+      },
+      {
+        brandCopyrightYear: '2026',
+        brandCopyrightHolder: '单项持有方',
+        brandCopyrightLine: '单项版权行',
+        supportHours: '单项服务时间',
+        brandLegalProductName: '单项全称',
+        brandLegalProductShortName: '单项短名',
+      }
+    );
+    expect(merged.copyrightYear).toBe('2026');
+    expect(merged.copyrightHolder).toBe('单项持有方');
+    expect(merged.copyrightLine).toBe('单项版权行');
+    expect(merged.support.hours).toBe('单项服务时间');
+    expect(merged.legal.productName).toBe('单项全称');
+    expect(merged.legal.productShortName).toBe('单项短名');
+  });
+
+  it('六键单项为空时回落整块同名字段，整块也没配时回落 base', () => {
+    const merged = mergeBrandOverrides(
+      base,
+      { copyrightYear: '2020', support: { hours: '整块服务时间' } },
+      { brandCopyrightYear: '', supportHours: '' }
+    );
+    expect(merged.copyrightYear).toBe('2020');
+    expect(merged.support.hours).toBe('整块服务时间');
+
+    expect(
+      mergeBrandOverrides(base, {}, { brandCopyrightYear: '' }).copyrightYear
+    ).toBe(base.copyrightYear);
+  });
+
+  it('声明表覆盖全部 13 个单项运行时键：新增覆盖项只加一行声明', () => {
     expect(Object.keys(BRAND_FIELD_OVERRIDE_PATHS).sort()).toEqual([
+      'brandCopyrightHolder',
+      'brandCopyrightLine',
+      'brandCopyrightYear',
+      'brandLegalProductName',
+      'brandLegalProductShortName',
       'brandLogo',
       'brandSubtitle',
       'brandTagline',
       'brandTitle',
       'docsUrl',
       'supportEmail',
+      'supportHours',
       'supportPhone',
     ]);
   });
@@ -379,7 +429,7 @@ describe('resolveSupportContact（三层优先级）', () => {
     expect(contact.phone).toBe(SUPPORT_DEFAULTS.phone);
   });
 
-  it('hours 不受运行时配置影响（只在配置中心维护）', () => {
+  it('hours 不受本函数参数影响（运行时 supportHours 键走 BrandContext 合并链）', () => {
     const contact = resolveSupportContact({
       supportEmail: 'x@x.com',
       supportPhone: '1',

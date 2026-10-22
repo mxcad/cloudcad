@@ -233,7 +233,13 @@ export const BRAND_FIELD_OVERRIDE_PATHS: Record<string, readonly string[]> = {
   brandLogo: ['logo'],
   supportEmail: ['support', 'email'],
   supportPhone: ['support', 'phone'],
+  supportHours: ['support', 'hours'],
   docsUrl: ['docsUrl'],
+  brandCopyrightLine: ['copyrightLine'],
+  brandCopyrightYear: ['copyrightYear'],
+  brandCopyrightHolder: ['copyrightHolder'],
+  brandLegalProductName: ['legal', 'productName'],
+  brandLegalProductShortName: ['legal', 'productShortName'],
 };
 
 /**

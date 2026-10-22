@@ -51,6 +51,8 @@ export interface PublicRuntimeConfig {
   supportEmail: string;
   /** 客服电话 */
   supportPhone: string;
+  /** 客服服务时间（移动端无对应展示位，随公开配置一并下发） */
+  supportHours: string
   /** 帮助文档地址（「实时协同」提示里的「查看文档」链接） */
   docsUrl: string
   /** 品牌标题（页签标题 + 认证页品牌名）；留空回落品牌档案整块 title → 内置默认 */
@@ -61,6 +63,16 @@ export interface PublicRuntimeConfig {
   brandTagline: string
   /** Logo URL（favicon + 认证页 Logo）；留空回落品牌档案整块 logo → 内置默认 */
   brandLogo: string
+  /** 版权行模板（{year}/{appName} 占位符）；留空回落品牌档案整块 copyrightLine → 内置默认 */
+  brandCopyrightLine: string
+  /** 版权年份（版权行 {year} 取值）；留空回落品牌档案整块 copyrightYear → 内置默认 */
+  brandCopyrightYear: string
+  /** 版权持有方（法务条款/页脚）；留空回落品牌档案整块 copyrightHolder → 内置默认 */
+  brandCopyrightHolder: string
+  /** 法务产品全称（法务条款正文）；留空回落品牌档案整块 legal.productName → 内置按语言值 */
+  brandLegalProductName: string
+  /** 法务产品短名（i18n 插值）；留空回落品牌档案整块 legal.productShortName → 内置默认 */
+  brandLegalProductShortName: string
   /** 文件上传大小限制 (MB) */
   maxFileSize: number;
   /** 用户注册开关 */
@@ -98,11 +110,17 @@ const DEFAULTS: PublicRuntimeConfig = {
   requirePhoneVerification: false,
   supportEmail: '',
   supportPhone: '',
+  supportHours: '',
   docsUrl: '',
   brandTitle: '',
   brandSubtitle: '',
   brandTagline: '',
   brandLogo: '',
+  brandCopyrightLine: '',
+  brandCopyrightYear: '',
+  brandCopyrightHolder: '',
+  brandLegalProductName: '',
+  brandLegalProductShortName: '',
   maxFileSize: 100,
   allowRegister: true,
   wechatEnabled: false,
@@ -176,11 +194,37 @@ async function fetchConfig(): Promise<void> {
           ),
           supportEmail: stringField(data, 'supportEmail', DEFAULTS.supportEmail),
           supportPhone: stringField(data, 'supportPhone', DEFAULTS.supportPhone),
+          supportHours: stringField(data, 'supportHours', DEFAULTS.supportHours),
           docsUrl: stringField(data, 'docsUrl', DEFAULTS.docsUrl),
           brandTitle: stringField(data, 'brandTitle', DEFAULTS.brandTitle),
           brandSubtitle: stringField(data, 'brandSubtitle', DEFAULTS.brandSubtitle),
           brandTagline: stringField(data, 'brandTagline', DEFAULTS.brandTagline),
           brandLogo: stringField(data, 'brandLogo', DEFAULTS.brandLogo),
+          brandCopyrightLine: stringField(
+            data,
+            'brandCopyrightLine',
+            DEFAULTS.brandCopyrightLine
+          ),
+          brandCopyrightYear: stringField(
+            data,
+            'brandCopyrightYear',
+            DEFAULTS.brandCopyrightYear
+          ),
+          brandCopyrightHolder: stringField(
+            data,
+            'brandCopyrightHolder',
+            DEFAULTS.brandCopyrightHolder
+          ),
+          brandLegalProductName: stringField(
+            data,
+            'brandLegalProductName',
+            DEFAULTS.brandLegalProductName
+          ),
+          brandLegalProductShortName: stringField(
+            data,
+            'brandLegalProductShortName',
+            DEFAULTS.brandLegalProductShortName
+          ),
           maxFileSize: numberField(data, 'maxFileSize', DEFAULTS.maxFileSize),
           allowRegister: boolField(data, 'allowRegister', DEFAULTS.allowRegister),
           wechatEnabled: boolField(data, 'wechatEnabled', DEFAULTS.wechatEnabled),

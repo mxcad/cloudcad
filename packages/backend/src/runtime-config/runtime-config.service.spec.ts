@@ -1355,15 +1355,22 @@ describe("RuntimeConfigService", () => {
 			// PC 的 BrandContext 与移动端 resolveBrand 都只消费
 			// GET /runtime-config/public 返回的键；isPublic 一旦改成 false，
 			// 管理端改了配置两端毫无反应且不报任何错。
-			// 客服三件套 + 外观四键（#499 从 brandProfile 拆出的独立键）
+			// 客服三件套 + 外观四键（#499）+ 版权/法务/服务时间六键（#501），
+			// 全部是从 brandProfile 拆出的独立键
 			const BRAND_PUBLIC_KEYS = [
 				"supportEmail",
 				"supportPhone",
+				"supportHours",
 				"docsUrl",
 				"brandTitle",
 				"brandSubtitle",
 				"brandTagline",
 				"brandLogo",
+				"brandCopyrightLine",
+				"brandCopyrightYear",
+				"brandCopyrightHolder",
+				"brandLegalProductName",
+				"brandLegalProductShortName",
 			];
 			expect(BRAND_PUBLIC_KEYS.filter((k) => !def(k))).toEqual([]);
 			expect(

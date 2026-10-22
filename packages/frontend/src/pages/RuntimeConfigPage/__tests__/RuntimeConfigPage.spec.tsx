@@ -159,8 +159,14 @@ const mockItems: ConfigItem[] = [
     // 后端定义的 key 不带分类前缀（`brandProfile`），表单分支按此精确匹配
     key: 'brandProfile',
     category: 'brand',
-    // title/logo 是 #499 拆出的独立键的旧值：表单不渲染但草稿原样保留
-    value: { title: '品牌名', logo: '/logo.png', docsUrl: 'https://docs.mx.com/' },
+    // title/logo/docsUrl 是 #499/#501 拆出的独立键的旧值：表单不渲染但草稿原样保留；
+    // legal.identities 是表单唯一渲染的固定结构之一
+    value: {
+      title: '品牌名',
+      logo: '/logo.png',
+      docsUrl: 'https://docs.mx.com/',
+      legal: { identities: { 'zh-CN': { entityName: '主体A' } } },
+    },
     type: 'json',
     description: '品牌档案',
     source: 'runtime',
@@ -530,11 +536,13 @@ describe('RuntimeConfigPage 类型感知控件', () => {
 
     expect(within(row).getByTestId('rc-brand-profile-form')).toBeTruthy();
     expect(row.querySelectorAll('textarea')).toHaveLength(0);
-    // #499：外观四键（标题/副标题/标语/Logo）拆为独立项后，表单不再渲染它们
+    // #499/#501：13 个固定路径键拆为独立项后，表单不再渲染它们（含 Logo 上传入口），
+    // 只剩 legal.identities 与 apps 两个动态结构
     expect(within(row).queryByTestId('rc-brand-upload-logo')).toBeNull();
+    expect(within(row).queryByDisplayValue('https://docs.mx.com/')).toBeNull();
 
-    fireEvent.change(within(row).getByDisplayValue('https://docs.mx.com/'), {
-      target: { value: 'https://docs.other.com/' },
+    fireEvent.change(within(row).getByDisplayValue('主体A'), {
+      target: { value: '主体B' },
     });
     expect(mockState.return.handleDraftChange).toHaveBeenCalledWith(
       'brandProfile',

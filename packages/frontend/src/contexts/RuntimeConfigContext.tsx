@@ -13,6 +13,8 @@ export type PublicRuntimeConfig = {
   requirePhoneVerification: boolean;
   supportEmail: string;
   supportPhone: string;
+  /** 客服服务时间（客服弹框）；留空回落品牌档案整块 support.hours → config.json → 内置默认 */
+  supportHours: string;
   /** 帮助文档地址（「实时协同」提示里的「查看文档」链接） */
   docsUrl: string;
   /** 品牌标题（页签标题 + 认证页品牌名）；留空回落品牌档案整块 title → config.json → 内置默认 */
@@ -23,6 +25,16 @@ export type PublicRuntimeConfig = {
   brandTagline: string;
   /** Logo URL（favicon + 认证页 Logo）；留空回落品牌档案整块 logo → config.json → 内置默认 */
   brandLogo: string;
+  /** 版权行模板（{year}/{appName} 占位符）；留空回落品牌档案整块 copyrightLine → config.json → 内置默认 */
+  brandCopyrightLine: string;
+  /** 版权年份（版权行 {year} 取值）；留空回落品牌档案整块 copyrightYear → config.json → 内置默认 */
+  brandCopyrightYear: string;
+  /** 版权持有方（法务条款/页脚）；留空回落品牌档案整块 copyrightHolder → config.json → 内置默认 */
+  brandCopyrightHolder: string;
+  /** 法务产品全称（法务条款正文）；留空回落品牌档案整块 legal.productName → 内置按语言值 */
+  brandLegalProductName: string;
+  /** 法务产品短名（i18n 插值）；留空回落品牌档案整块 legal.productShortName → 内置默认 */
+  brandLegalProductShortName: string;
   allowRegister: boolean;
   wechatEnabled: boolean;
   wechatAutoRegister: boolean;
@@ -57,11 +69,17 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   requirePhoneVerification: false,
   supportEmail: '',
   supportPhone: '',
+  supportHours: '',
   docsUrl: '',
   brandTitle: '',
   brandSubtitle: '',
   brandTagline: '',
   brandLogo: '',
+  brandCopyrightLine: '',
+  brandCopyrightYear: '',
+  brandCopyrightHolder: '',
+  brandLegalProductName: '',
+  brandLegalProductShortName: '',
   allowRegister: true,
   wechatEnabled: false,
   wechatAutoRegister: false,
@@ -116,11 +134,17 @@ function mapPublicConfig(
     requirePhoneVerification: Boolean(data.requirePhoneVerification),
     supportEmail: String(data.supportEmail ?? ''),
     supportPhone: String(data.supportPhone ?? ''),
+    supportHours: String(data.supportHours ?? ''),
     docsUrl: String(data.docsUrl ?? ''),
     brandTitle: String(data.brandTitle ?? ''),
     brandSubtitle: String(data.brandSubtitle ?? ''),
     brandTagline: String(data.brandTagline ?? ''),
     brandLogo: String(data.brandLogo ?? ''),
+    brandCopyrightLine: String(data.brandCopyrightLine ?? ''),
+    brandCopyrightYear: String(data.brandCopyrightYear ?? ''),
+    brandCopyrightHolder: String(data.brandCopyrightHolder ?? ''),
+    brandLegalProductName: String(data.brandLegalProductName ?? ''),
+    brandLegalProductShortName: String(data.brandLegalProductShortName ?? ''),
     allowRegister: Boolean(data.allowRegister ?? true),
     wechatEnabled: Boolean(data.wechatEnabled ?? false),
     wechatAutoRegister: Boolean(data.wechatAutoRegister ?? false),
