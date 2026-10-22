@@ -44,28 +44,21 @@ export class ExtRefPreloadingService {
 
   /**
    * 根据节点路径获取 preloading JSON 文件名
-   * node.path 格式为 {nodeId}.{ext}.mxweb，从中提取 ext 构造 preloading 文件名
+   *
+   * 命名规律：主文件 basename 追加 `_preloading.json`（与 PublicFileService
+   * 的构造方式一致），即锚定磁盘上真实存在的主文件。不用 nodeId 拼接——复制
+   * 产生的副本节点目录名是新 nodeId，但目录内文件沿用源节点文件名，按 nodeId
+   * 构造会指向磁盘上不存在的文件，读侧静默降级、写侧另造孤儿文件。
    */
   getPreloadingFileName(nodeId: string, nodePath: string): string {
     if (!nodePath) {
       return `${nodeId}.dwg.mxweb_preloading.json`;
     }
     const basename = path.basename(nodePath);
-    const withoutMxweb = basename.replace(/\.mxweb$/, '');
-
-    let ext: string;
-    if (withoutMxweb.startsWith(nodeId + '.')) {
-      ext = withoutMxweb.substring(nodeId.length + 1);
-    } else if (withoutMxweb.startsWith(nodeId)) {
-      ext = withoutMxweb.substring(nodeId.length);
-    } else {
-      ext = path.extname(withoutMxweb).replace(/^\./, '');
-    }
-
-    if (!ext) {
-      return `${nodeId}.dwg.mxweb_preloading.json`;
-    }
-    return `${nodeId}.${ext}.mxweb_preloading.json`;
+    const mainFileName = basename.endsWith('.mxweb')
+      ? basename
+      : `${basename}.mxweb`;
+    return `${mainFileName}_preloading.json`;
   }
 
   /**

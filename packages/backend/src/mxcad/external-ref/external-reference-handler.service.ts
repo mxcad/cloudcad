@@ -76,7 +76,7 @@ export class ExternalReferenceHandler {
       }
 
       // 3. 获取外部参照目录名称（从 preloading.json 中提取 src_file_md5）
-      // preloading.json 文件命名：{nodeId}.{ext}.mxweb_preloading.json
+      // preloading.json 文件命名：{主文件名}_preloading.json，锚定磁盘实际主文件
       const filesDataPath = this.configService.get('filesDataPath', {
         infer: true,
       });

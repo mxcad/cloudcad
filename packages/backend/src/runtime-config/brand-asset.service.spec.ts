@@ -20,34 +20,32 @@ import {
 
 describe('BrandAssetService', () => {
   let service: BrandAssetService;
-  let filesDataPath: string;
+  let brandDir: string;
 
-  /** ConfigService 只被用来取 `filesDataPath`，给个最小替身即可 */
-  const buildService = (dataRoot: string): BrandAssetService =>
+  /** ConfigService 只被用来取 `brandAssetPath`，给个最小替身即可 */
+  const buildService = (assetDir: string): BrandAssetService =>
     new BrandAssetService({
-      get: jest.fn(() => dataRoot),
+      get: jest.fn(() => assetDir),
     } as unknown as ConfigService<AppConfig>);
 
   beforeAll(async () => {
-    filesDataPath = await fs.promises.mkdtemp(
+    brandDir = await fs.promises.mkdtemp(
       path.join(os.tmpdir(), 'brand-logo-')
     );
   });
 
   // jest.config 开了 resetMocks，beforeAll 里建的 mock 到第一个用例实现就被清掉
   beforeEach(() => {
-    service = buildService(filesDataPath);
+    service = buildService(brandDir);
   });
 
   afterAll(async () => {
-    await fs.promises.rm(filesDataPath, { recursive: true, force: true });
+    await fs.promises.rm(brandDir, { recursive: true, force: true });
   });
 
   afterEach(async () => {
-    await fs.promises.rm(path.join(filesDataPath, 'brand'), {
-      recursive: true,
-      force: true,
-    });
+    await fs.promises.rm(brandDir, { recursive: true, force: true });
+    await fs.promises.mkdir(brandDir, { recursive: true });
   });
 
   it('MIME 白名单与落盘后缀表同源，覆盖 png/jpg/gif/webp', () => {
@@ -75,13 +73,13 @@ describe('BrandAssetService', () => {
       await service.uploadLogo(Buffer.from('png-bytes'), 'image/png');
 
       await expect(service.readLogo()).resolves.toEqual({
-        filePath: path.join(filesDataPath, 'brand', 'logo.png'),
+        filePath: path.join(brandDir, 'logo.png'),
         mimeType: 'image/png',
       });
     });
 
     it('目录不存在时同样返回 null，而不是把 ENOENT 抛给调用方', async () => {
-      const fresh = buildService(path.join(filesDataPath, 'no-such-root'));
+      const fresh = buildService(path.join(brandDir, 'no-such-root'));
       await expect(fresh.readLogo()).resolves.toBeNull();
     });
   });
@@ -92,7 +90,7 @@ describe('BrandAssetService', () => {
         service.uploadLogo(Buffer.from('x'), 'text/plain')
       ).rejects.toBeInstanceOf(BadRequestException);
       await expect(
-        fs.promises.access(path.join(filesDataPath, 'brand'), fs.constants.F_OK)
+        fs.promises.access(path.join(brandDir, 'logo.png'), fs.constants.F_OK)
       ).rejects.toThrow();
     });
 
@@ -114,7 +112,7 @@ describe('BrandAssetService', () => {
       ).resolves.toBeDefined();
     });
 
-    it('写入 <filesDataPath>/brand/logo.png 并返回前端可直接引用的 URL 与字节数', async () => {
+    it('写入 brandAssetPath/logo.png 并返回前端可直接引用的 URL 与字节数', async () => {
       const buffer = Buffer.from('fake-png-content');
 
       await expect(service.uploadLogo(buffer, 'image/png')).resolves.toEqual({
@@ -123,7 +121,7 @@ describe('BrandAssetService', () => {
       });
 
       await expect(
-        fs.promises.readFile(path.join(filesDataPath, 'brand', 'logo.png'))
+        fs.promises.readFile(path.join(brandDir, 'logo.png'))
       ).resolves.toEqual(buffer);
     });
 
@@ -135,13 +133,10 @@ describe('BrandAssetService', () => {
       ).resolves.toEqual({ logoUrl: BRAND_LOGO_URL, size: buffer.length });
 
       await expect(
-        fs.promises.readFile(path.join(filesDataPath, 'brand', 'logo.jpg'))
+        fs.promises.readFile(path.join(brandDir, 'logo.jpg'))
       ).resolves.toEqual(buffer);
       await expect(
-        fs.promises.access(
-          path.join(filesDataPath, 'brand', 'logo.png'),
-          fs.constants.F_OK
-        )
+        fs.promises.access(path.join(brandDir, 'logo.png'), fs.constants.F_OK)
       ).rejects.toThrow();
     });
 
@@ -150,17 +145,14 @@ describe('BrandAssetService', () => {
       await service.uploadLogo(Buffer.from('new-webp'), 'image/webp');
 
       await expect(
-        fs.promises.readFile(path.join(filesDataPath, 'brand', 'logo.webp'))
+        fs.promises.readFile(path.join(brandDir, 'logo.webp'))
       ).resolves.toEqual(Buffer.from('new-webp'));
       await expect(
-        fs.promises.access(
-          path.join(filesDataPath, 'brand', 'logo.png'),
-          fs.constants.F_OK
-        )
+        fs.promises.access(path.join(brandDir, 'logo.png'), fs.constants.F_OK)
       ).rejects.toThrow();
 
       await expect(service.readLogo()).resolves.toEqual({
-        filePath: path.join(filesDataPath, 'brand', 'logo.webp'),
+        filePath: path.join(brandDir, 'logo.webp'),
         mimeType: 'image/webp',
       });
     });
@@ -173,7 +165,7 @@ describe('BrandAssetService', () => {
       );
 
       await expect(
-        fs.promises.readFile(path.join(filesDataPath, 'brand', 'logo.png'))
+        fs.promises.readFile(path.join(brandDir, 'logo.png'))
       ).resolves.toEqual(Buffer.from('67890'));
     });
   });

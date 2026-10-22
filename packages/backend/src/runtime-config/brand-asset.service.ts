@@ -16,8 +16,13 @@
  * 品牌静态资源（Logo）读写。
  *
  * 运行时配置页的 `brandProfile.logo` 是前端直接引用的 URL：运维在页面上上传图片，
- * 文件落在 `<filesDataPath>/brand/`，由 `GET /api/v1/runtime-config/brand-logo`
- * 公开流出（登录页与 favicon 都要读，故 `@Public()`）。
+ * 文件落在 `brandAssetPath`（默认 `data/brand`），由
+ * `GET /api/v1/runtime-config/brand-logo` 公开流出（登录页与 favicon 都要读，
+ * 故 `@Public()`）。
+ *
+ * 刻意不落 `filesDataPath`：`data/files` 既是 SVN 工作副本（`setupGlobalIgnores`
+ * 会对整个 `filesDataPath` 做 `svn commit`），又被 `DirectoryAllocator` 按
+ * `{YYYYMM}/{nodeId}/` 扫描目录，非图纸资产落进去会被当成月份目录列举。
  *
  * 单个 Logo 只保留一份文件，上传即覆盖并清掉旧后缀——与 config-service 的品牌
  * Logo 上传同一语义，历史多后缀文件不会残留成孤儿。
@@ -74,7 +79,7 @@ export class BrandAssetService {
   constructor(private readonly configService: ConfigService<AppConfig>) {}
 
   private get brandDir(): string {
-    return path.join(this.configService.get('filesDataPath', { infer: true }), 'brand');
+    return this.configService.get('brandAssetPath', { infer: true });
   }
 
   private logoPathOf(ext: string): string {

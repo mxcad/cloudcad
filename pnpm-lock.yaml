@@ -136,6 +136,9 @@ importers:
       '@nestjs/throttler':
         specifier: ^6.5.0
         version: 6.5.0(@nestjs/common@11.1.27(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.27)(reflect-metadata@0.2.2)
+      '@paralleldrive/cuid2':
+        specifier: ^2.3.1
+        version: 2.3.1
       '@prisma/adapter-pg':
         specifier: ^7.1.0
         version: 7.8.0

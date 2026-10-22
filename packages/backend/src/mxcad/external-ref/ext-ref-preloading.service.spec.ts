@@ -41,8 +41,17 @@ describe('ExtRefPreloadingService', () => {
       expect(service.getPreloadingFileName('node-1', '')).toBe('node-1.dwg.mxweb_preloading.json');
     });
 
-    it('should handle path without nodeId prefix', () => {
-      expect(service.getPreloadingFileName('node-1', 'custom.pdf.mxweb')).toBe('node-1.pdf.mxweb_preloading.json');
+    it('should anchor to the real main file name, not rewrite the nodeId prefix', () => {
+      expect(service.getPreloadingFileName('node-1', 'custom.pdf.mxweb')).toBe('custom.pdf.mxweb_preloading.json');
+    });
+
+    it('副本节点：目录名是新 nodeId、文件名沿用源节点，preloading 锚定真实文件名', () => {
+      expect(
+        service.getPreloadingFileName(
+          '462e96ab-b438-4cd5-9987-5f1f47c3b0c0',
+          '202610/462e96ab-b438-4cd5-9987-5f1f47c3b0c0/cmviw1wxx002ovkufnnw98j53.dwg.mxweb'
+        )
+      ).toBe('cmviw1wxx002ovkufnnw98j53.dwg.mxweb_preloading.json');
     });
 
     it('should handle path without mxweb extension', () => {

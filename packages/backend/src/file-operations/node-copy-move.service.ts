@@ -5,7 +5,6 @@
   BadRequestException,
 } from '@nestjs/common';
 import { NodeType, FileStatus } from '@cloudcad/db';
-import { randomUUID } from 'crypto';
 import { DatabaseService } from '../database/database.service';
 import { TreeWalker } from '../file-system/file-tree/tree-walker.service';
 import type { SubtreeRowInfo } from '../file-system/file-tree/tree-walker.service';
@@ -18,6 +17,7 @@ import { NodeNameService } from './node-name.service';
 import { NodeMutationGuard } from './node-mutation.guard';
 import { AuditLogService } from '../audit/audit-log.service';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
+import { generateNodeId } from '../common/utils/node-id';
 
 /** 复制计划节点（阶段一产出，阶段三落库输入） */
 interface PlannedCopyNode {
@@ -492,7 +492,7 @@ export class NodeCopyMoveService {
       newParentId: string,
       forcedName?: string
     ): string => {
-      const newId = randomUUID();
+      const newId = generateNodeId();
       plans.push({
         id: newId,
         parentId: newParentId,
