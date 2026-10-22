@@ -459,10 +459,6 @@ export function getAppName(): string {
 export const APP_COOPERATE_URL =
   import.meta.env.VITE_APP_COOPERATE_URL || '/api/cooperate';
 
-/** 会员/支付功能开关 */
-export const MEMBERSHIP_ENABLED =
-  import.meta.env.VITE_MEMBERSHIP_ENABLED === 'true';
-
 /**
  * 协同功能域名白名单检查
  * 仅允许白名单中的域名使用协同功能。

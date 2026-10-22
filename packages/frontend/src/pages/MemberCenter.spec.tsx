@@ -27,6 +27,12 @@ vi.mock('@/hooks/useMembership', () => ({
 vi.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({ loading: false, refreshUser: vi.fn() }),
 }));
+// 会员中心开关改为运行时配置后（原 VITE_MEMBERSHIP_ENABLED 构建期常量已删），
+// 用 hoisted 可变对象支持「开/关」两种用例
+const runtimeConfigState = vi.hoisted(() => ({ membershipEnabled: true }));
+vi.mock('@/contexts/RuntimeConfigContext', () => ({
+  useRuntimeConfig: () => ({ loading: false, config: runtimeConfigState }),
+}));
 vi.mock('@/hooks/useStorageQuota', () => ({
   useStorageQuota: () => ({
     data: { usedBytes: 0, totalBytes: 1024 * 1024 * 1024 },
@@ -316,6 +322,21 @@ describe('MemberCenter ?auto=1 自动下单', () => {
     // 自动建单成功 → 弹出微信支付弹窗，展示「档位 · 时长」订单标签
     expect(await screen.findByText(t('微信支付'))).toBeInTheDocument();
     expect(screen.getByText('VIP1 · 1个月')).toBeInTheDocument();
+  });
+});
+
+describe('MemberCenter 会员中心开关（运行时配置）', () => {
+  afterEach(() => {
+    runtimeConfigState.membershipEnabled = true;
+  });
+
+  it('开关关闭时整页显示「会员功能暂未开放」，会员内容整体不渲染', () => {
+    runtimeConfigState.membershipEnabled = false;
+    stubOrdersApi();
+    renderPage();
+    expect(screen.getByText(t('会员功能暂未开放'))).toBeInTheDocument();
+    // 权益明细是启用分支的内容（MemberCenter.tsx 两处 benefitItems.map）
+    expect(screen.queryByText(t('个人存储空间'))).not.toBeInTheDocument();
   });
 });
 

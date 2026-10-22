@@ -6,7 +6,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useMembership } from '@/hooks/useMembership';
-import { MEMBERSHIP_ENABLED } from '@/constants/appConfig';
+import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import styles from './Profile.module.css';
 
 interface ProfileUser {
@@ -34,6 +34,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onAvatarChange,
   onNavigate,
 }) => {
+  const { config: runtimeConfig } = useRuntimeConfig();
   return (
     <>
       <div className={styles.profileHeader}>
@@ -81,7 +82,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
       </div>
 
-      {MEMBERSHIP_ENABLED && (
+      {runtimeConfig.membershipEnabled && (
         <div
           className="ml-6 mr-6 mt-6 p-4 rounded-xl flex items-center justify-between"
           style={{

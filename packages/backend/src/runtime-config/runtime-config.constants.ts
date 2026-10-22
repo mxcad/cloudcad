@@ -1543,6 +1543,25 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     dangerous: true,
   },
 
+  // ───────────────────────── 计费：会员入口 ─────────────────────────
+  {
+    key: 'membershipEnabled',
+    type: 'boolean',
+    category: 'billing',
+    description: '会员中心开关',
+    defaultValue: true,
+    isPublic: true,
+    tier: 'admin',
+    // 出厂默认开启：会员中心是用户自助购买/续费/退款与查看订单的唯一入口，
+    // 关闭后用户无从办理会员业务，仅「不售卖会员的私有化部署」才需要关。
+    // 保留 envKey 供部署期注入（与 freeExportDownloadEnabled 同款：默认放行，
+    // 部署期可用 env 强制关闭）；不声明 profiles——这是商业策略而非等保项。
+    envKey: 'MEMBERSHIP_ENABLED',
+    dangerous: true,
+    impact:
+      '关闭后 PC 端会员中心整体隐藏，用户无法自助购买/续费/升级/退款，也看不到会员状态与订单；已开通会员的等级权益不受影响，支付通道需另行关闭。',
+  },
+
   // ───────────────────────── 配额：游客转换与免费导出 ─────────────────────────
   {
     key: 'conversionGuestWindowHours',

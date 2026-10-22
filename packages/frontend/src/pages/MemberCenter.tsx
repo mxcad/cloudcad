@@ -22,7 +22,7 @@ import { usePlanSelectStore } from '@/stores/planSelectStore';
 import { useMembership } from '@/hooks/useMembership';
 import { useStorageQuota } from '@/hooks/useStorageQuota';
 import { useAuth } from '@/contexts/AuthContext';
-import { MEMBERSHIP_ENABLED } from '@/constants/appConfig';
+import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { Z_LAYERS } from '@/constants/layers';
 import { formatFileSize } from '@/utils/fileUtils';
 import { t } from '@/languages';
@@ -90,6 +90,7 @@ const STATUS_COLORS: Record<string, TagVariant> = {
 export default function MemberCenter() {
   const membership = useMembership();
   const { loading: authLoading } = useAuth();
+  const { config: runtimeConfig } = useRuntimeConfig();
   const { data: storageInfo } = useStorageQuota();
   const { tiers, loading } = useVipOffering();
   const refreshAfterPayment = usePaymentRefresh();
@@ -309,7 +310,7 @@ export default function MemberCenter() {
     [registry]
   );
 
-  if (!MEMBERSHIP_ENABLED) {
+  if (!runtimeConfig.membershipEnabled) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
         <Card variant="outlined" padding="lg" radius="2xl">

@@ -45,6 +45,8 @@ export type PublicRuntimeConfig = {
   batchDownloadEnabled: boolean;
   /** 免费用户（含游客）是否允许导出下载转换（mxweb 转其他格式） */
   freeExportDownloadEnabled: boolean;
+  /** 会员中心开关：关闭时不显示会员相关界面（原 VITE_MEMBERSHIP_ENABLED 构建期常量已改为运行时配置） */
+  membershipEnabled: boolean;
   /** 注销冷静期天数：期间重新登录自动取消注销，逾期需联系客服恢复 */
   userCancelGraceDays: number;
   /** 安全模式：secure=等保收紧 / normal=便利优先（ADR-0077） */
@@ -88,6 +90,7 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   collaborationDomains: '',
   batchDownloadEnabled: false,
   freeExportDownloadEnabled: false,
+  membershipEnabled: true,
   userCancelGraceDays: 7,
   securityMode: 'normal',
   // 回落值 = 后端 secure 基线默认（与 @cloudcad/platform 的 PASSWORD_POLICY 兜底一致）
@@ -153,6 +156,8 @@ function mapPublicConfig(
     collaborationDomains: String(data.collaborationDomains ?? ''),
     batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? false),
     freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? false),
+    // 缺键（旧后端未上线此键）回落开启：配置拉取结果缺键不能把会员中心整块藏掉
+    membershipEnabled: Boolean(data.membershipEnabled ?? true),
     userCancelGraceDays: Number(data.userCancelGraceDays ?? 7),
     securityMode: data.securityMode === 'secure' ? 'secure' : 'normal',
     // 旧后端未公开该两键（isPublic 未回填）时回落 secure 基线默认

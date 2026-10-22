@@ -1383,6 +1383,22 @@ describe("RuntimeConfigService", () => {
 			).toEqual([]);
 		});
 
+		it("会员入口开关必须公开 + billing 分类 + admin 档：前端只读 /public", () => {
+			// PC 的 MemberCenter / ProfileHeader 只消费 GET /runtime-config/public
+			// 返回的 membershipEnabled 决定会员中心显不显示（原 VITE_MEMBERSHIP_ENABLED
+			// 构建期常量已删除，改为运行时可关）。isPublic 一旦改成 false，
+			// 管理端关掉开关后前端毫无反应且不报任何错，与品牌公开键同款陷阱。
+			// defaultValue 钉死为 true：会员中心是自助购买/续费的唯一入口，
+			// 出厂改回 false 等于「装了会员功能但用户看不见」。
+			const d = def("membershipEnabled");
+			expect(d).toBeDefined();
+			expect(d!.isPublic).toBe(true);
+			expect(d!.category).toBe("billing");
+			expect(d!.tier).toBe("admin");
+			expect(d!.defaultValue).toBe(true);
+			expect(d!.envKey).toBe("MEMBERSHIP_ENABLED");
+		});
+
 		it("运维基线必须在 admin 档，不能落到默认收起的 advanced", () => {
 			expect(OPS_BASELINE.filter((k) => !def(k))).toEqual([]);
 			expect(
