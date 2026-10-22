@@ -12,21 +12,79 @@
 
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MailerService } from '@nestjs-modules/mailer';
+import { ISendMailOptions, MailerService } from '@nestjs-modules/mailer';
 import { Prisma as PrismaRuntime } from '@cloudcad/db';
 import { AppConfig } from '../config/app.config';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
+/**
+ * 邮件发送客户端（ADR-0082 #495）：
+ * SMTP 参数（主机/端口/安全连接/账号/密码/发件人）发送时经运行时配置
+ * 三层解析（runtime > env(MAIL_*) > 默认），配置指纹变化即重建命名
+ * transporter 'mail'——改配置后下一次发信立即用新配置，无需重启。
+ * MailerModule.forRootAsync 启动期建的默认 transport（env 快照）不再用于
+ * 发送，仅满足 MailerService 的 transport 必填校验；模板目录/适配器仍由
+ * 主 MailerOptions 提供（命名 transporter 共享同一 HandlebarsAdapter）。
+ */
 @Injectable()
 export class EmailService {
+  private static readonly TRANSPORTER_NAME = 'mail';
+
+  /** 当前生效 SMTP 参数的指纹；变化即重建命名 transporter */
+  private smtpFingerprint: string | null = null;
+  /** 当前生效发件人（模板 context 的 supportEmail 也用它） */
+  private smtpFrom = '';
+
   constructor(
     private readonly mailerService: MailerService,
-    private readonly configService: ConfigService<AppConfig>
+    private readonly configService: ConfigService<AppConfig>,
+    private readonly runtimeConfig: RuntimeConfigService
   ) {}
+
+  /**
+   * 三层解析 SMTP 参数；指纹变化时重建命名 transporter 'mail'。
+   * 返回当前生效发件人。
+   */
+  private async ensureSmtpTransporter(): Promise<string> {
+    const [host, port, secure, user, pass, from] = await Promise.all([
+      this.runtimeConfig.getValue<string>('smtpHost'),
+      this.runtimeConfig.getValue<number>('smtpPort'),
+      this.runtimeConfig.getValue<boolean>('smtpSecure'),
+      this.runtimeConfig.getValue<string>('smtpUser'),
+      this.runtimeConfig.getValue<string>('smtpPassword'),
+      this.runtimeConfig.getValue<string>('smtpFrom'),
+    ]);
+    const fingerprint = JSON.stringify([host, port, secure, user, pass, from]);
+    if (fingerprint !== this.smtpFingerprint) {
+      this.mailerService.removeTransporter(EmailService.TRANSPORTER_NAME);
+      this.mailerService.addTransporter(EmailService.TRANSPORTER_NAME, {
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+      });
+      this.smtpFingerprint = fingerprint;
+      this.smtpFrom = from;
+    }
+    return this.smtpFrom;
+  }
+
+  /** 统一发送出口：热重建 transport + 显式 from + 命名 transporter */
+  private async send(
+    options: Omit<ISendMailOptions, 'from' | 'transporterName'>
+  ): Promise<void> {
+    const from = await this.ensureSmtpTransporter();
+    await this.mailerService.sendMail({
+      ...options,
+      from,
+      transporterName: EmailService.TRANSPORTER_NAME,
+    });
+  }
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
     const baseUrl = this.configService.get('frontendUrl', { infer: true });
-    const mailConfig = this.configService.get('mail', { infer: true })!;
-    await this.mailerService.sendMail({
+    const from = await this.ensureSmtpTransporter();
+    await this.send({
       to: email,
       subject: 'CloudCAD - 验证码',
       template: 'email-verification',
@@ -34,7 +92,7 @@ export class EmailService {
         token,
         baseUrl,
         expiresIn: '15分钟',
-        supportEmail: mailConfig.from,
+        supportEmail: from,
         productName: 'CloudCAD',
       },
     });
@@ -55,7 +113,7 @@ export class EmailService {
     }
   ): Promise<void> {
     const baseUrl = this.configService.get('frontendUrl', { infer: true });
-    await this.mailerService.sendMail({
+    await this.send({
       to: to.join(', '),
       subject: 'CloudCAD - 新退款申请待审核',
       template: 'refund-application',
@@ -82,7 +140,7 @@ export class EmailService {
     }
   ): Promise<void> {
     const approved = ctx.status === 'approved';
-    await this.mailerService.sendMail({
+    await this.send({
       to,
       subject: `CloudCAD - 退款申请${approved ? '已通过' : '已驳回'}`,
       template: 'refund-result',
@@ -126,7 +184,7 @@ export class EmailService {
       `详情: ${detailText}`,
     ].join('\n');
 
-    await this.mailerService.sendMail({
+    await this.send({
       to: to.join(', '),
       subject,
       text,
@@ -161,7 +219,7 @@ export class EmailService {
           `[${item.time.toLocaleString('zh-CN')}] ${item.messageKey}: ${item.message}`
       ),
     ];
-    await this.mailerService.sendMail({
+    await this.send({
       to: to.join(', '),
       subject,
       text: lines.join('\n'),
@@ -203,7 +261,7 @@ export class EmailService {
       '--- 告警清单 ---',
       ...(itemLines.length > 0 ? itemLines : ['无']),
     ].join('\n');
-    await this.mailerService.sendMail({
+    await this.send({
       to: to.join(', '),
       subject,
       text,

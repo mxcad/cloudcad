@@ -316,12 +316,14 @@ describe("RuntimeConfigService", () => {
 	// ==================== set ====================
 	describe("set", () => {
 		it("should set config value", async () => {
+			// 样例键用 smsEnabled：无通道门禁/依赖边，纯验证 set 写路径
+			// （mailEnabled 自 #495 起是通道开关，置 true 会触发通道门禁）
 			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
-				value: JSON.stringify("old"),
+				value: JSON.stringify(false),
 			});
 			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
 
-			await service.set("mailEnabled", true, "admin", "192.168.1.1");
+			await service.set("smsEnabled", true, "admin", "192.168.1.1");
 
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
 			expect(mockPrisma.runtimeConfigLog.create).toHaveBeenCalled();
@@ -338,7 +340,7 @@ describe("RuntimeConfigService", () => {
 			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
 			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
 
-			await service.set("mailEnabled", true);
+			await service.set("smsEnabled", true);
 
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
 		});
@@ -651,6 +653,57 @@ describe("RuntimeConfigService", () => {
 			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
 		};
 
+		/** 邮件通道完整 + 已验证（#495 起开启 mailEnabled 的通道门禁前提） */
+		const mockMailChannelReady = (rows: object[]) => {
+			mockWritePath([
+				...rows,
+				{
+					key: "smtpHost",
+					value: JSON.stringify("smtp.test.com"),
+					type: "string",
+					updatedBy: "u-1",
+				},
+				{
+					key: "smtpPort",
+					value: JSON.stringify(465),
+					type: "number",
+					updatedBy: "u-1",
+				},
+				{
+					key: "smtpSecure",
+					value: JSON.stringify(true),
+					type: "boolean",
+					updatedBy: "u-1",
+				},
+				{
+					key: "smtpUser",
+					value: JSON.stringify("u@test"),
+					type: "string",
+					updatedBy: "u-1",
+				},
+				{
+					key: "smtpPassword",
+					value: JSON.stringify(channelCrypto.encrypt("p")),
+					type: "string",
+					updatedBy: "u-1",
+				},
+				{
+					key: "smtpFrom",
+					value: JSON.stringify("CloudCAD <noreply@test.com>"),
+					type: "string",
+					updatedBy: "u-1",
+				},
+			]);
+			mockPrisma.channelVerification.findUnique.mockResolvedValue({
+				id: "cv-mail",
+				channel: "mail",
+				verifiedAt: new Date("2026-10-22T08:00:00Z"),
+				testedBy: "u-1",
+				testedByIp: "127.0.0.1",
+				createdAt: new Date("2026-10-22T08:00:00Z"),
+			});
+		};
+
 		it("开启功能开关而依赖的通道开关为关 → 拒绝，错误明确指出缺失的依赖", async () => {
 			mockWritePath([]); // mailEnabled 落默认值 false
 
@@ -723,7 +776,8 @@ describe("RuntimeConfigService", () => {
 		});
 
 		it("开启依赖项修复遗留不一致 → 放行", async () => {
-			mockWritePath([boolRow("requireEmailVerification", true)]);
+			// 通道门禁（#495）：开启 mailEnabled 还须邮件通道完整 + 已验证
+			mockMailChannelReady([boolRow("requireEmailVerification", true)]);
 
 			await service.set("mailEnabled", true, "admin");
 
@@ -1961,6 +2015,210 @@ describe("RuntimeConfigService", () => {
 					RUNTIME_CONFIG_DEFINITIONS.some((d) => d.channel === channel)
 				).toBe(true);
 			}
+		});
+	});
+
+	describe("邮件通道（ADR-0082 #495）：机制层对真实 SMTP 键生效", () => {
+		const SMTP_ENV: Record<string, string> = {
+			smtpHost: "MAIL_HOST",
+			smtpPort: "MAIL_PORT",
+			smtpSecure: "MAIL_SECURE",
+			smtpUser: "MAIL_USER",
+			smtpPassword: "MAIL_PASS",
+			smtpFrom: "MAIL_FROM",
+		};
+
+		/** 六个 SMTP 键均在 runtime 层配置（updatedBy 非空，遮蔽 env/默认层） */
+		const smtpRowsConfigured = () => [
+			{
+				key: "smtpHost",
+				value: JSON.stringify("smtp.test.com"),
+				type: "string",
+				updatedBy: "op-1",
+			},
+			{
+				key: "smtpPort",
+				value: JSON.stringify(465),
+				type: "number",
+				updatedBy: "op-1",
+			},
+			{
+				key: "smtpSecure",
+				value: JSON.stringify(true),
+				type: "boolean",
+				updatedBy: "op-1",
+			},
+			{
+				key: "smtpUser",
+				value: JSON.stringify("user@test"),
+				type: "string",
+				updatedBy: "op-1",
+			},
+			{
+				key: "smtpPassword",
+				value: JSON.stringify(channelCrypto.encrypt("smtp-pass")),
+				type: "string",
+				updatedBy: "op-1",
+			},
+			{
+				key: "smtpFrom",
+				value: JSON.stringify("CloudCAD <noreply@test.com>"),
+				type: "string",
+				updatedBy: "op-1",
+			},
+		];
+
+		const mockSmtpRowsConfigured = () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue(smtpRowsConfigured());
+		};
+
+		const mockMailVerified = () => {
+			mockPrisma.channelVerification.findUnique.mockResolvedValue({
+				id: "cv-mail",
+				channel: "mail",
+				verifiedAt: new Date("2026-10-22T08:00:00Z"),
+				testedBy: "op-1",
+				testedByIp: "127.0.0.1",
+				createdAt: new Date("2026-10-22T08:00:00Z"),
+			});
+		};
+
+		it("不变式：SMTP 六键登记在通道 mail 下、envKey 指向既有 MAIL_* 变量、全部非公开", () => {
+			for (const [key, envKey] of Object.entries(SMTP_ENV)) {
+				const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
+				// jest expect 只收 1 参；缺失键会让下面的断言直接抛错并带上 key
+				expect(def).toBeDefined();
+				expect(def!.channel).toBe("mail");
+				expect(def!.envKey).toBe(envKey);
+				expect(def!.isPublic).toBe(false);
+			}
+			const switchDef = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "mailEnabled"
+			)!;
+			expect(switchDef.channelSwitch).toBe("mail");
+			expect(switchDef.type).toBe("boolean");
+			// SMTP 密码是秘密键：加密落库 + 掩码回读（#493 不变式）
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "smtpPassword")!
+					.input?.secret
+			).toBe(true);
+		});
+
+		it("不变式：#492 声明的依赖边对邮件通道生效（强制邮箱验证/告警邮件 → 邮件服务开关）", () => {
+			for (const key of ["requireEmailVerification", "alertEmailEnabled"]) {
+				const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key)!;
+				expect(def.requires).toContain("mailEnabled");
+			}
+		});
+
+		it("getChannelStatus('mail')：六键 runtime 层配置齐 → 配置完整", async () => {
+			mockSmtpRowsConfigured();
+
+			const status = await service.getChannelStatus("mail");
+
+			expect(status.configComplete).toBe(true);
+			expect(status.missingKeys).toEqual([]);
+			expect(status.verified).toBe(false);
+		});
+
+		it("getChannelStatus('mail')：主机被显式清空 → 不完整，missingKeys 指向 smtpHost", async () => {
+			mockSmtpRowsConfigured();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "smtpHost",
+					value: '""',
+					type: "string",
+					updatedBy: "op-1",
+				},
+				{
+					key: "smtpFrom",
+					value: JSON.stringify("CloudCAD <noreply@test.com>"),
+					type: "string",
+					updatedBy: "op-1",
+				},
+			]);
+
+			const status = await service.getChannelStatus("mail");
+
+			expect(status.configComplete).toBe(false);
+			expect(status.missingKeys).toEqual(["smtpHost"]);
+		});
+
+		it("配置完整但未通过测试 → 邮件服务开关无法开启（硬阻断，不写库）", async () => {
+			mockSmtpRowsConfigured();
+			// channelVerification.findUnique 默认 null → 未验证
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(service.set("mailEnabled", true, "op-1")).rejects.toThrow(
+				BadRequestException
+			);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("配置完整 + 测试通过 → 允许开启邮件服务开关", async () => {
+			mockSmtpRowsConfigured();
+			mockMailVerified();
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("mailEnabled", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		it("配置不完整（主机为空）→ 拒绝开启，原因点出缺失键", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "smtpHost",
+					value: '""',
+					type: "string",
+					updatedBy: "op-1",
+				},
+			]);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(service.set("mailEnabled", true, "op-1")).rejects.toThrow(
+				/smtpHost/
+			);
+		});
+
+		it("改任一 SMTP 配置项 → 删除 mail 通道验证记录（测试通过状态失效）", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("smtpHost", "smtp.new.com", "op-1");
+
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "mail" },
+			});
+		});
+
+		it("依赖边生效：邮件服务开关未开时，强制邮箱验证被拒绝（依赖门禁先于通道门禁）", async () => {
+			// mailEnabled 无 runtime 行、无 envKey → 生效值 = 默认 false
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.set("requireEmailVerification", true, "op-1")
+			).rejects.toThrow(BadRequestException);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("邮件服务开关已开（通道已验证）时，强制邮箱验证允许开启", async () => {
+			// 依赖门禁与通道门禁都经 findMany 读生效值：行集须同时含
+			// mailEnabled（依赖门禁）与六个 SMTP 键（通道完整性）
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				...smtpRowsConfigured(),
+				{
+					key: "mailEnabled",
+					value: "true",
+					type: "boolean",
+					updatedBy: "op-1",
+				},
+			]);
+			mockMailVerified();
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("requireEmailVerification", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
 		});
 	});
 
