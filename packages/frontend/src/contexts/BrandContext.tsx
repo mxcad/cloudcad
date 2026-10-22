@@ -8,6 +8,7 @@ import {
   type BrandConfig,
   type BrandProfile,
   type RuntimeBrandConfig,
+  type RuntimeBrandFieldOverrides,
 } from '../constants/appConfig';
 import { queryKeys } from '@/lib/queryKeys';
 import { STALE_TIME_DEFAULT } from '@/constants/timeouts';
@@ -38,25 +39,28 @@ export function BrandProvider({ children }: { children: ReactNode }) {
   const { config: runtimeConfig } = useRuntimeConfig();
 
   const effectiveConfig = useMemo(() => {
-    // 单项运行时配置（docsUrl）优先于品牌档案整块里的同名字段；合并结果
-    // 整体作为「运行时层」参与三层合并，品牌运行时配置始终是最高优先级。
-    const runtimeBrand: RuntimeBrandConfig = {
-      ...runtimeConfig.brandProfile,
-      docsUrl: runtimeConfig.docsUrl || runtimeConfig.brandProfile.docsUrl,
+    // 单项运行时键（标题/副标题/标语/Logo/客服邮箱/电话/文档地址，声明表见
+    // appConfig.BRAND_FIELD_OVERRIDE_PATHS）覆盖品牌档案整块里的同名字段；
+    // 合并结果整体作为「运行时层」参与三层合并，品牌运行时配置始终是最高优先级。
+    const runtimeBrand: RuntimeBrandConfig = { ...runtimeConfig.brandProfile };
+    const runtimeFields: RuntimeBrandFieldOverrides = {
+      brandTitle: runtimeConfig.brandTitle,
+      brandSubtitle: runtimeConfig.brandSubtitle,
+      brandTagline: runtimeConfig.brandTagline,
+      brandLogo: runtimeConfig.brandLogo,
+      supportEmail: runtimeConfig.supportEmail,
+      supportPhone: runtimeConfig.supportPhone,
+      docsUrl: runtimeConfig.docsUrl,
     };
     const merged = mergeBrandOverrides(
       data ?? null,
       runtimeBrand,
-      // 客服邮箱/电话以 supportEmail / supportPhone 运行时项为准，
-      // 高于 brandProfile.support，避免客服邮箱出现双事实源
-      {
-        email: runtimeConfig.supportEmail,
-        phone: runtimeConfig.supportPhone,
-      }
+      runtimeFields
     );
     // 同步进模块级缓存，让 getAppBrandConfig / getAppName / getBrandProfile 等
     // 不走 context 的消费者（标题、版权行、法务正文）也能读到运行时品牌
-    setRuntimeBrandConfig(runtimeBrand);
+    //（含单项键覆盖），两条读取路径结果一致（#499）
+    setRuntimeBrandConfig(runtimeBrand, runtimeFields);
     return merged;
   }, [data, runtimeConfig]);
 

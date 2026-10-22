@@ -154,13 +154,24 @@ const mockItems: ConfigItem[] = [
     // 后端定义的 key 不带分类前缀（`brandProfile`），表单分支按此精确匹配
     key: 'brandProfile',
     category: 'brand',
-    value: { title: '品牌名', logo: '/logo.png' },
+    // title/logo 是 #499 拆出的独立键的旧值：表单不渲染但草稿原样保留
+    value: { title: '品牌名', logo: '/logo.png', docsUrl: 'https://docs.mx.com/' },
     type: 'json',
     description: '品牌档案',
     source: 'runtime',
     tier: 'user',
     hot: true,
     impact: '保存后 PC 与移动端即刻生效',
+  }),
+  item({
+    // #499：Logo 拆为独立配置项，上传入口随项保留
+    key: 'brandLogo',
+    category: 'brand',
+    value: '/logo.png',
+    type: 'string',
+    description: 'Logo URL',
+    tier: 'user',
+    input: { maxLength: 200, placeholder: '/logo.png' },
   }),
 ];
 
@@ -497,15 +508,24 @@ describe('RuntimeConfigPage 类型感知控件', () => {
 
     expect(within(row).getByTestId('rc-brand-profile-form')).toBeTruthy();
     expect(row.querySelectorAll('textarea')).toHaveLength(0);
-    expect(within(row).queryByTestId('rc-brand-upload-logo')).toBeTruthy();
+    // #499：外观四键（标题/副标题/标语/Logo）拆为独立项后，表单不再渲染它们
+    expect(within(row).queryByTestId('rc-brand-upload-logo')).toBeNull();
 
-    fireEvent.change(within(row).getByDisplayValue('品牌名'), {
-      target: { value: '新品牌名' },
+    fireEvent.change(within(row).getByDisplayValue('https://docs.mx.com/'), {
+      target: { value: 'https://docs.other.com/' },
     });
     expect(mockState.return.handleDraftChange).toHaveBeenCalledWith(
       'brandProfile',
       expect.any(String)
     );
+  });
+
+  it('brandLogo 渲染为文本输入 + Logo 上传（#499 拆为独立项后保留上传入口）', () => {
+    render(<RuntimeConfigPage />);
+    const row = rowOf('brandLogo');
+
+    expect(within(row).getByTestId('rc-brand-upload-logo')).toBeTruthy();
+    expect(within(row).getByDisplayValue('/logo.png')).toBeTruthy();
   });
 
   it('secret 渲染为 password 输入并可切换显示', () => {

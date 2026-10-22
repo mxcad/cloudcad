@@ -7,6 +7,7 @@ import { useIsMobile } from '../lib/useIsMobile';
 import { usePermission } from '../hooks/usePermission';
 import { SystemPermission } from '../constants/permissions';
 import { useBrandConfig } from '../contexts/BrandContext';
+import { getAppBrandConfig } from '../constants/appConfig';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { Tag } from './ui/Tag';
@@ -166,7 +167,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
   const navigate = useNavigate();
   const { logout, user, loading } = useAuth();
   const { hasPermission, hasAnyPermission } = usePermission();
-  const { config: brandConfig, profile: brandProfile } = useBrandConfig();
+  const { profile: brandProfile } = useBrandConfig();
   const { isDark } = useTheme();
   const { config: publicConfig } = useRuntimeConfig();
   const { isActive: isTourActive, openTourCenter } = useTour();
@@ -284,7 +285,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
     return <div style={{ display: 'none' }} />;
   }
 
-  const appName = brandConfig?.title || 'CloudCAD';
+  // 品牌名走唯一出口：运行时单项键（brandTitle）/ 整块 / config.json / 内置默认
+  // 逐层回落，不再直读原始 config.json（#499）
+  const appName = getAppBrandConfig().title;
 
   return (
     <div

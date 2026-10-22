@@ -10,13 +10,12 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { getCopyrightLine } from '@/constants/appConfig';
+import { getAppBrandConfig, getCopyrightLine } from '@/constants/appConfig';
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { deviceAuthControllerAuthorizeDevice } from '@/api-sdk';
 import { useAuth } from '../contexts/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { InteractiveBackground } from '../components/InteractiveBackground';
 import { ThemeToggle } from '../components/ThemeToggle';
@@ -49,16 +48,18 @@ export const DeviceAuthorize: React.FC = () => {
   const clientId = searchParams.get('client_id') || '';
   const forceLogin = searchParams.get('force_login') === '1';
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
+  // 品牌标题/Logo 走唯一出口：运行时单项键（brandTitle/brandLogo）/ 整块 /
+  // config.json / 内置默认逐层回落（#499）
+  const appBrand = getAppBrandConfig();
 
   const productInfo = CLIENT_DISPLAY[clientId] || {
-    title: brandConfig?.title || 'CloudCAD',
+    title: appBrand.title,
     tagline: '',
   };
   const appName = productInfo.title;
   const appTagline = productInfo.tagline;
-  const appLogo = brandConfig?.logo || '/logo.png';
+  const appLogo = appBrand.logo;
 
   // 授权成功后的重定向地址（EXE 购买 VIP 场景：授权成功后跳转购买页）。
   // 兼容两种形式：相对路径（/member-center）与完整 URL（https://app.mxdraw.com/member-center）。

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useSupportContact } from '@/hooks/useSupportContact';
-import { useBrandConfig } from '@/contexts/BrandContext';
+import { getAppBrandConfig } from '@/constants/appConfig';
 import { useTheme } from '@/contexts/ThemeContext';
 import { t } from '@/languages';
 import {
@@ -34,12 +34,12 @@ export const ForgotPassword: React.FC = () => {
   useDocumentTitle(t('忘记密码'));
   const navigate = useNavigate();
   const { config: runtimeConfig } = useRuntimeConfig();
-  const { config: brandConfig } = useBrandConfig();
   const supportContact = useSupportContact();
   const { isDark } = useTheme();
 
-  const appName = brandConfig?.title || 'CloudCAD';
-  const appLogo = brandConfig?.logo || '/logo.png';
+  // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
+  const appName = getAppBrandConfig().title;
+  const appLogo = getAppBrandConfig().logo;
 
   const mailAvailable = runtimeConfig.mailEnabled;
   const phoneAvailable = runtimeConfig.smsEnabled;

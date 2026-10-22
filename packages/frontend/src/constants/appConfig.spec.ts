@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   APP_COOPERATE_URL,
+  BRAND_FIELD_OVERRIDE_PATHS,
   DEFAULT_APP_LOGO,
   DEFAULT_APP_NAME,
   getAppBrandConfig,
@@ -193,7 +194,7 @@ describe('mergeBrandOverrides（运行时 brandProfile 覆盖）', () => {
     const merged = mergeBrandOverrides(
       base,
       { support: { email: 'brand@x.com', hours: '运行时服务时间' } },
-      { email: 'runtime@x.com' }
+      { supportEmail: 'runtime@x.com' }
     );
     expect(merged.support.email).toBe('runtime@x.com');
     // 运行时 supportEmail 未设置时回落 brandProfile，再回落 base
@@ -227,7 +228,7 @@ describe('mergeBrandOverrides（运行时 brandProfile 覆盖）', () => {
   it('brandProfile 为空对象时单项运行时项仍生效，不被空 JSON 短路', () => {
     const merged = mergeBrandOverrides(base, {}, {
       docsUrl: 'https://runtime.example/',
-      email: 'runtime@x.com',
+      supportEmail: 'runtime@x.com',
     });
     expect(merged.docsUrl).toBe('https://runtime.example/');
     expect(merged.support.email).toBe('runtime@x.com');
@@ -260,6 +261,78 @@ describe('mergeBrandOverrides（运行时 brandProfile 覆盖）', () => {
     const merged = mergeBrandOverrides(null, { title: '运行时品牌' });
     expect(merged.title).toBe('运行时品牌');
     expect(merged.logo).toBe(DEFAULT_APP_LOGO);
+  });
+
+  it('外观四键单项覆盖整块同名字段（声明表驱动，#499）', () => {
+    const merged = mergeBrandOverrides(
+      base,
+      {
+        title: '整块标题',
+        subtitle: '整块副标题',
+        tagline: '整块标语',
+        logo: '/整块-logo.png',
+      },
+      {
+        brandTitle: '单项标题',
+        brandSubtitle: '单项副标题',
+        brandTagline: '单项标语',
+        brandLogo: '/单项-logo.png',
+      }
+    );
+    expect(merged.title).toBe('单项标题');
+    expect(merged.subtitle).toBe('单项副标题');
+    expect(merged.tagline).toBe('单项标语');
+    expect(merged.logo).toBe('/单项-logo.png');
+  });
+
+  it('外观四键单项为空时回落整块同名字段，整块也没配时回落 base', () => {
+    const merged = mergeBrandOverrides(base, { title: '整块标题' }, {
+      brandTitle: '',
+    });
+    expect(merged.title).toBe('整块标题');
+
+    expect(mergeBrandOverrides(base, {}, { brandTitle: '' }).title).toBe(
+      base.title
+    );
+  });
+
+  it('声明表覆盖全部 7 个单项运行时键：新增覆盖项只加一行声明', () => {
+    expect(Object.keys(BRAND_FIELD_OVERRIDE_PATHS).sort()).toEqual([
+      'brandLogo',
+      'brandSubtitle',
+      'brandTagline',
+      'brandTitle',
+      'docsUrl',
+      'supportEmail',
+      'supportPhone',
+    ]);
+  });
+});
+
+describe('裸读取路径与页面合并路径一致（#499 缺口修复）', () => {
+  afterEach(() => {
+    setRuntimeBrandConfig(null);
+  });
+
+  it('注入单项覆盖后，裸 getBrandProfile() / getAppBrandConfig() 读到单项值', () => {
+    setRuntimeBrandConfig(
+      { subtitle: '整块副标题' },
+      {
+        brandTitle: '单项标题',
+        supportEmail: 's@x.com',
+        docsUrl: 'https://s.example/',
+      }
+    );
+    expect(getAppBrandConfig().title).toBe('单项标题');
+    const profile = getBrandProfile();
+    expect(profile.subtitle).toBe('整块副标题');
+    expect(profile.support.email).toBe('s@x.com');
+    expect(profile.docsUrl).toBe('https://s.example/');
+  });
+
+  it('未注入单项覆盖时裸路径保持静态值', () => {
+    expect(getAppBrandConfig().title).toBe(DEFAULT_APP_NAME);
+    expect(getBrandProfile().support.email).toBe(SUPPORT_DEFAULTS.email);
   });
 });
 

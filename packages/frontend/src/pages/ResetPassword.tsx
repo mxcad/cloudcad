@@ -1,11 +1,10 @@
-import { getCopyrightLine } from '@/constants/appConfig';
+import { getAppBrandConfig, getCopyrightLine } from '@/constants/appConfig';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { t } from '@/languages';
-import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -54,11 +53,11 @@ export const ResetPassword: React.FC = () => {
   useDocumentTitle(t('重置密码'));
   const navigate = useNavigate();
   const location = useLocation();
-  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
 
-  const appName = brandConfig?.title || 'CloudCAD';
-  const appLogo = brandConfig?.logo || '/logo.png';
+  // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
+  const appName = getAppBrandConfig().title;
+  const appLogo = getAppBrandConfig().logo;
 
   const emailFromState = (location.state as LocationState)?.email || '';
   const phoneFromState = (location.state as LocationState)?.phone || '';

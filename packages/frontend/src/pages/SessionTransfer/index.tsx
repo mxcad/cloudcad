@@ -24,14 +24,13 @@
  * 失败（凭证过期/无效）→ 极简错误页 + 「前往登录」按钮。
  */
 
-import { getCopyrightLine } from '@/constants/appConfig';
+import { getAppBrandConfig, getCopyrightLine } from '@/constants/appConfig';
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { sessionTransferControllerConsume } from '@/api-sdk';
 import { useFileSystemStore } from '@/stores/fileSystemStore';
 import { clearAuthState, saveAuthState } from '@/lib/authState';
 import { cancelProactiveRefresh } from '@/config/tokenRefresh';
-import { useBrandConfig } from '../../contexts/BrandContext';
 import { Button } from '@/components/ui/Button';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -43,9 +42,9 @@ const DEFAULT_REDIRECT = '/profile';
 export const SessionTransfer: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const { config: brandConfig } = useBrandConfig();
-  const appName = brandConfig?.title || 'CloudCAD';
-  const appLogo = brandConfig?.logo || '/logo.png';
+  // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
+  const appName = getAppBrandConfig().title;
+  const appLogo = getAppBrandConfig().logo;
 
   // redirect 参数消毒：new URL 解析后只取同源 pathname+search+hash（防开放重定向，
   // 与 DeviceAuthorize 一致）；缺省 /profile。

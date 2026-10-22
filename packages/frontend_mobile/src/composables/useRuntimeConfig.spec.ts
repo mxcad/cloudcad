@@ -33,6 +33,10 @@ describe('默认值（接口未返回或失败时）', () => {
       supportEmail: '',
       supportPhone: '',
       docsUrl: '',
+      brandTitle: '',
+      brandSubtitle: '',
+      brandTagline: '',
+      brandLogo: '',
       maxFileSize: 100,
       allowRegister: true,
       wechatEnabled: false,
@@ -70,6 +74,8 @@ describe('字段解析', () => {
         supportEmail: 'cs@mx.com',
         supportPhone: '400-123-4567',
         docsUrl: 'https://docs.mx.com/',
+        brandTitle: '运行时标题',
+        brandLogo: '/runtime-logo.png',
         maxFileSize: 500,
         allowRegister: false,
         wechatEnabled: true,
@@ -92,6 +98,11 @@ describe('字段解析', () => {
     expect(config.value.allowRegister).toBe(false);
     expect(config.value.maxFileSize).toBe(500);
     expect(config.value.docsUrl).toBe('https://docs.mx.com/');
+    // 外观四键按字符串解析（brandSubtitle / brandTagline 未下发时保持空串）
+    expect(config.value.brandTitle).toBe('运行时标题');
+    expect(config.value.brandLogo).toBe('/runtime-logo.png');
+    expect(config.value.brandSubtitle).toBe('');
+    expect(config.value.brandTagline).toBe('');
     // 口令策略两键按 number 解析（normal 模式 12/2 是真实取值形态）
     expect(config.value.passwordPolicyMinLength).toBe(12);
     expect(config.value.passwordPolicyMinCategories).toBe(2);

@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useBrandConfig } from '@/contexts/BrandContext';
+import { getAppBrandConfig } from '@/constants/appConfig';
 import { useTheme } from '@/contexts/ThemeContext';
 import { t } from '@/languages';
 import { RESEND_COOLDOWN_SECONDS } from './constants';
@@ -28,11 +28,11 @@ export const EmailVerification: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const { resendVerification } = useEmailVerification();
-  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
 
-  const appName = brandConfig?.title || 'CloudCAD';
-  const appLogo = brandConfig?.logo || '/logo.png';
+  // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
+  const appName = getAppBrandConfig().title;
+  const appLogo = getAppBrandConfig().logo;
 
   const bindMode = location.state?.mode === 'bind';
   const tempToken = location.state?.tempToken || '';

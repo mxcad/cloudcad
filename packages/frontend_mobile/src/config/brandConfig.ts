@@ -96,15 +96,15 @@ export function brandAssetPath(path: string): string {
 /**
  * 品牌档案解析：runtime-config `brandProfile` > 内置默认。
  * 逐字段浅合并——只覆盖管理端声明了的字段，避免只填了 copyrightHolder 把标题一起清掉。
- * `docsUrl` 例外：`docsUrl` 单项运行时项优先于 brandProfile 里的同名字段（与 PC 一致），
- * 两层都为空才回落内置默认，保证「查看文档」链接永不为空。
+ * 单项运行时键例外（与 PC 合并链一致，#499）：`brandTitle` / `brandLogo` / `docsUrl`
+ * 单项项优先于 brandProfile 里的同名字段，两层都为空才回落内置默认。
  */
 export function resolveBrand(runtime?: Partial<PublicRuntimeConfig> | null): MobileBrand {
   const brand = runtime?.brandProfile ?? null
   const legal = brand?.legal ?? null
 
-  const title = asText(brand?.title) || DEFAULT_BRAND.title
-  const logo = asText(brand?.logo) || DEFAULT_BRAND.logo
+  const title = asText(runtime?.brandTitle) || asText(brand?.title) || DEFAULT_BRAND.title
+  const logo = asText(runtime?.brandLogo) || asText(brand?.logo) || DEFAULT_BRAND.logo
   const docsUrl =
     asText(runtime?.docsUrl) || asText(brand?.docsUrl) || DEFAULT_BRAND.docsUrl
   const shortName = asText(legal?.productShortName) || DEFAULT_BRAND.shortName

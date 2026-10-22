@@ -15,6 +15,14 @@ export type PublicRuntimeConfig = {
   supportPhone: string;
   /** 帮助文档地址（「实时协同」提示里的「查看文档」链接） */
   docsUrl: string;
+  /** 品牌标题（页签标题 + 认证页品牌名）；留空回落品牌档案整块 title → config.json → 内置默认 */
+  brandTitle: string;
+  /** 侧边栏品牌副标题；留空回落品牌档案整块 subtitle → config.json → 内置默认 */
+  brandSubtitle: string;
+  /** 品牌标语（登录/认证页）；留空回落品牌档案整块 tagline → config.json → 内置默认 */
+  brandTagline: string;
+  /** Logo URL（favicon + 认证页 Logo）；留空回落品牌档案整块 logo → config.json → 内置默认 */
+  brandLogo: string;
   allowRegister: boolean;
   wechatEnabled: boolean;
   wechatAutoRegister: boolean;
@@ -50,6 +58,10 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   supportEmail: '',
   supportPhone: '',
   docsUrl: '',
+  brandTitle: '',
+  brandSubtitle: '',
+  brandTagline: '',
+  brandLogo: '',
   allowRegister: true,
   wechatEnabled: false,
   wechatAutoRegister: false,
@@ -105,6 +117,10 @@ function mapPublicConfig(
     supportEmail: String(data.supportEmail ?? ''),
     supportPhone: String(data.supportPhone ?? ''),
     docsUrl: String(data.docsUrl ?? ''),
+    brandTitle: String(data.brandTitle ?? ''),
+    brandSubtitle: String(data.brandSubtitle ?? ''),
+    brandTagline: String(data.brandTagline ?? ''),
+    brandLogo: String(data.brandLogo ?? ''),
     allowRegister: Boolean(data.allowRegister ?? true),
     wechatEnabled: Boolean(data.wechatEnabled ?? false),
     wechatAutoRegister: Boolean(data.wechatAutoRegister ?? false),

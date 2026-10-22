@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
-import { useBrandConfig } from '@/contexts/BrandContext';
+import { getAppBrandConfig } from '@/constants/appConfig';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useDashboardProjects } from '@/hooks/useDashboardProjects';
 import { useStorageQuota } from '@/hooks/useStorageQuota';
@@ -43,9 +43,9 @@ export const Dashboard: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { isDark } = useTheme();
-  const { config: brandConfig } = useBrandConfig();
 
-  const appName = brandConfig?.title || 'CloudCAD';
+  // 品牌标题走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
+  const appName = getAppBrandConfig().title;
   const queryClient = useQueryClient();
 
   const {

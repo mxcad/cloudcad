@@ -1351,14 +1351,23 @@ describe("RuntimeConfigService", () => {
 			).toEqual([]);
 		});
 
-		it("品牌客服三件套必须是公开 + brand 分类 + user 档：两端只读 /public", () => {
+		it("品牌公开配置项必须是公开 + brand 分类 + user 档：两端只读 /public", () => {
 			// PC 的 BrandContext 与移动端 resolveBrand 都只消费
 			// GET /runtime-config/public 返回的键；isPublic 一旦改成 false，
 			// 管理端改了配置两端毫无反应且不报任何错。
-			const SUPPORT_KEYS = ["supportEmail", "supportPhone", "docsUrl"];
-			expect(SUPPORT_KEYS.filter((k) => !def(k))).toEqual([]);
+			// 客服三件套 + 外观四键（#499 从 brandProfile 拆出的独立键）
+			const BRAND_PUBLIC_KEYS = [
+				"supportEmail",
+				"supportPhone",
+				"docsUrl",
+				"brandTitle",
+				"brandSubtitle",
+				"brandTagline",
+				"brandLogo",
+			];
+			expect(BRAND_PUBLIC_KEYS.filter((k) => !def(k))).toEqual([]);
 			expect(
-				SUPPORT_KEYS.filter(
+				BRAND_PUBLIC_KEYS.filter(
 					(k) =>
 						def(k)?.isPublic !== true ||
 						def(k)?.category !== "brand" ||

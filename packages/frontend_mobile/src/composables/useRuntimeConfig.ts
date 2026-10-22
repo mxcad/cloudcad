@@ -12,8 +12,9 @@ import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 /**
  * 运行时品牌档案里移动端消费的部分。字段名与 PC `appConfig.ts` 的
  * `RuntimeBrandConfig`（= `Partial<BrandConfig>`）同名同义——管理端配一份两端共用。
- * PC 独有的 `subtitle` / `apps` / `tagline` 移动端无对应消费点，
- * 故不在此声明（后端 brandProfile 是 type:json，未声明字段照样能存）。
+ * `apps` 移动端无对应消费点，故不在此声明（后端 brandProfile 是 type:json，
+ * 未声明字段照样能存）；`subtitle` / `tagline` 的单项运行时键
+ * （brandSubtitle / brandTagline）移动端无展示位，随公开配置下发但不在此消费。
  * DB 里只有管理端填了的键，故全部可选。
  * 移动端消费入口统一走 `config/brandConfig.ts` 的 `resolveBrand` / `resolveLegalVars`。
  */
@@ -51,7 +52,15 @@ export interface PublicRuntimeConfig {
   /** 客服电话 */
   supportPhone: string;
   /** 帮助文档地址（「实时协同」提示里的「查看文档」链接） */
-  docsUrl: string;
+  docsUrl: string
+  /** 品牌标题（页签标题 + 认证页品牌名）；留空回落品牌档案整块 title → 内置默认 */
+  brandTitle: string
+  /** 侧边栏副标题（移动端无对应展示位，随公开配置一并下发） */
+  brandSubtitle: string
+  /** 品牌标语（移动端无对应展示位，随公开配置一并下发） */
+  brandTagline: string
+  /** Logo URL（favicon + 认证页 Logo）；留空回落品牌档案整块 logo → 内置默认 */
+  brandLogo: string
   /** 文件上传大小限制 (MB) */
   maxFileSize: number;
   /** 用户注册开关 */
@@ -90,6 +99,10 @@ const DEFAULTS: PublicRuntimeConfig = {
   supportEmail: '',
   supportPhone: '',
   docsUrl: '',
+  brandTitle: '',
+  brandSubtitle: '',
+  brandTagline: '',
+  brandLogo: '',
   maxFileSize: 100,
   allowRegister: true,
   wechatEnabled: false,
@@ -164,6 +177,10 @@ async function fetchConfig(): Promise<void> {
           supportEmail: stringField(data, 'supportEmail', DEFAULTS.supportEmail),
           supportPhone: stringField(data, 'supportPhone', DEFAULTS.supportPhone),
           docsUrl: stringField(data, 'docsUrl', DEFAULTS.docsUrl),
+          brandTitle: stringField(data, 'brandTitle', DEFAULTS.brandTitle),
+          brandSubtitle: stringField(data, 'brandSubtitle', DEFAULTS.brandSubtitle),
+          brandTagline: stringField(data, 'brandTagline', DEFAULTS.brandTagline),
+          brandLogo: stringField(data, 'brandLogo', DEFAULTS.brandLogo),
           maxFileSize: numberField(data, 'maxFileSize', DEFAULTS.maxFileSize),
           allowRegister: boolField(data, 'allowRegister', DEFAULTS.allowRegister),
           wechatEnabled: boolField(data, 'wechatEnabled', DEFAULTS.wechatEnabled),

@@ -1,11 +1,10 @@
-import { getCopyrightLine } from '@/constants/appConfig';
+import { getAppBrandConfig, getCopyrightLine } from '@/constants/appConfig';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePhoneVerification } from '../hooks/usePhoneVerification';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { t } from '@/languages';
-import { useBrandConfig } from '../contexts/BrandContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -37,11 +36,11 @@ export const PhoneVerification: React.FC = () => {
   const location = useLocation();
   const { verifyPhoneAndLogin, isAuthenticated } = useAuth();
   const { bindPhoneAndLogin, sendSmsCode } = usePhoneVerification();
-  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
 
-  const appName = brandConfig?.title || 'CloudCAD';
-  const appLogo = brandConfig?.logo || '/logo.png';
+  // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
+  const appName = getAppBrandConfig().title;
+  const appLogo = getAppBrandConfig().logo;
 
   // 绑定模式：用户没有手机号，需要先输入手机号再验证
   const bindMode = location.state?.mode === 'bind';

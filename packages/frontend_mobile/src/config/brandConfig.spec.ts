@@ -74,6 +74,24 @@ describe('resolveBrand', () => {
       DEFAULT_BRAND.docsUrl,
     )
   })
+
+  it('brandTitle / brandLogo 单项运行时项优先于 brandProfile 同名字段（#499）', () => {
+    const b = resolveBrand({
+      brandTitle: '运行时标题',
+      brandLogo: 'runtime-logo.png',
+      brandProfile: { title: '整块标题', logo: 'block-logo.png' },
+    })
+    expect(b.title).toBe('运行时标题')
+    expect(b.logo).toContain('runtime-logo.png')
+
+    // 单项为空串回落整块，整块也没配回落内置默认
+    expect(
+      resolveBrand({ brandTitle: '', brandProfile: { title: '整块标题' } }).title,
+    ).toBe('整块标题')
+    expect(resolveBrand({ brandTitle: '', brandProfile: {} }).title).toBe(
+      DEFAULT_BRAND.title,
+    )
+  })
 })
 
 describe('brandAssetPath', () => {

@@ -65,9 +65,10 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'json',
     category: 'brand',
     description:
-      '品牌档案（标题/标语/Logo 路径/版权/法务主体），整块覆盖前端内置默认值。' +
-      'PC 与移动端都消费同一份。客服邮箱/电话/文档地址请用 supportEmail、supportPhone、docsUrl 项，' +
-      '此处 support 仅支持 hours（服务时间）。',
+      '品牌档案（版权/法务主体/按应用覆盖等），整块覆盖前端内置默认值。' +
+      '标题/副标题/标语/Logo/客服邮箱/电话/文档地址已拆为独立配置项' +
+      '（brandTitle、brandSubtitle、brandTagline、brandLogo、supportEmail、supportPhone、docsUrl），' +
+      '单项优先于此处同名字段，此处 support 仅支持 hours（服务时间）。PC 与移动端都消费同一份。',
     defaultValue: {},
     isPublic: true,
     tier: 'user',
@@ -110,6 +111,63 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
       'PC 与移动端「实时协同」提示里的「查看文档」链接地址，两端刷新页面后生效；' +
       '优先级高于品牌档案（brandProfile）里的 docsUrl 字段，留空时回落到品牌档案 / /brand/config.json / 内置默认值。',
   },
+  {
+    key: 'brandTitle',
+    type: 'string',
+    category: 'brand',
+    description: '品牌标题（浏览器页签标题 + 认证页品牌名）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: '梦想网页CAD实时协同平台' },
+    impact:
+      'PC 与移动端的应用标题（页签标题、认证页品牌名）。' +
+      '留空时回落到品牌档案（brandProfile）里的 title 字段 → /brand/config.json → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandSubtitle',
+    type: 'string',
+    category: 'brand',
+    description: '侧边栏品牌副标题',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: 'CAD 协同平台' },
+    impact:
+      'PC 侧边栏品牌副标题（移动端无对应展示位）。' +
+      '留空时回落到品牌档案（brandProfile）里的 subtitle 字段 → /brand/config.json → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandTagline',
+    type: 'string',
+    category: 'brand',
+    description: '品牌标语（tagline，登录/认证页展示）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: '留空不显示' },
+    impact:
+      'PC 登录/认证页的品牌标语（移动端无对应展示位）。' +
+      '留空时回落到品牌档案（brandProfile）里的 tagline 字段 → /brand/config.json → 内置默认值（空串）；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandLogo',
+    type: 'string',
+    category: 'brand',
+    description: 'Logo URL（浏览器 favicon + 认证页 Logo）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: '/logo.png' },
+    impact:
+      'PC 与移动端的 Logo（favicon、认证页 Logo）。' +
+      '留空时回落到品牌档案（brandProfile）里的 logo 字段 → /brand/config.json → 内置默认值；' +
+      '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+
   // ───────────────────────── 邮件（通道 mail，ADR-0082 #495）─────────────────────────
   {
     key: 'mailEnabled',
@@ -956,7 +1014,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     dangerous: true,
-    hot: false,
     input: {
       options: [
         { value: 'normal', label: '普通模式（便利优先）' },
@@ -982,7 +1039,6 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'advanced',
     dangerous: true,
-    hot: false,
     input: {
       options: [
         { value: 'ISOLATED', label: '隔离入口（管理员专用入口）' },

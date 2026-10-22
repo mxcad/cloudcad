@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { Button } from '@/components/ui/Button';
 import styles from './RuntimeConfigPage.module.css';
 import { BrandProfileForm } from './BrandProfileForm';
+import { BrandLogoInput } from './BrandLogoInput';
 import type { ConfigItem } from './types';
 import type { DraftValue } from './validate';
 import { t } from '@/languages';
@@ -216,6 +217,15 @@ export const ConfigInput: React.FC<ConfigInputProps> = ({
             {text.length} / {meta.maxLength}
           </span>
         )}
+      </div>
+    );
+  }
+
+  // ── brandLogo：文本输入 + Logo 上传（#499 拆为独立项后保留原上传入口） ──
+  if (item.key === 'brandLogo') {
+    return (
+      <div data-testid="rc-input" className={styles.controlRow}>
+        <BrandLogoInput value={text} disabled={disabled} onChange={onChange} />
       </div>
     );
   }

@@ -100,10 +100,18 @@ let cachedEnvAppConfigs: Record<string, Partial<AppBrandConfig>> | null = null;
 // 与 cachedBrandConfig 同为模块级缓存：注入前计算的 getAppBrandConfig 仍是静态值，
 // 因此品牌变更的生效时机是「下次加载」（后端 brandProfile 的 impact 已如此说明）。
 let runtimeBrandOverride: RuntimeBrandConfig | null = null;
+// 单项运行时键覆盖（brandTitle / supportEmail / …，见 BRAND_FIELD_OVERRIDE_PATHS），
+// 与整块覆盖一同注入：裸 getBrandProfile() / getAppBrandConfig() 才能读到单项值，
+// 页面合并侧与模块级裸调用两条读取路径返回一致结果（#499）
+let runtimeBrandFields: RuntimeBrandFieldOverrides | null = null;
 
 /** 注入运行时品牌配置（BrandProvider 在运行时配置就绪后调用） */
-export function setRuntimeBrandConfig(config: RuntimeBrandConfig | null): void {
+export function setRuntimeBrandConfig(
+  config: RuntimeBrandConfig | null,
+  fields?: RuntimeBrandFieldOverrides | null
+): void {
   runtimeBrandOverride = config;
+  runtimeBrandFields = fields ?? null;
 }
 
 const DEFAULT_BRAND_PROFILE: BrandProfile = {
@@ -160,9 +168,13 @@ function getEnvAppConfigs(): Record<string, Partial<AppBrandConfig>> {
   return configs;
 }
 
-/** config.json + 运行时覆盖后的有效品牌配置（不带客服联系方式注入） */
+/** config.json + 运行时覆盖（含单项键）后的有效品牌配置 */
 function resolveBrandConfig(): BrandConfig {
-  return mergeBrandOverrides(cachedBrandConfig, runtimeBrandOverride);
+  return mergeBrandOverrides(
+    cachedBrandConfig,
+    runtimeBrandOverride,
+    runtimeBrandFields ?? undefined
+  );
 }
 
 /**
@@ -209,14 +221,27 @@ function mergeLegalIdentities(
 export type RuntimeBrandConfig = Partial<BrandConfig>;
 
 /**
- * 单项运行时配置对品牌档案同名字段的覆盖（`supportEmail` / `supportPhone` /
- * `docsUrl` 运行时配置项），优先级高于品牌档案整块里的同名字段。
+ * 单项运行时配置键 → 品牌档案字段路径的声明表（#499 数据驱动）。
+ * 新增一个单项覆盖键只在这里加一行，不再逐字段手写合并分支。
+ * 键 = 运行时配置键名（与后端定义表一致）；值 = `BrandConfig` 内的字段路径
+ * （`support.email` 这类两级路径）。
  */
-export interface RuntimeBrandFieldOverrides {
-  email?: string;
-  phone?: string;
-  docsUrl?: string;
-}
+export const BRAND_FIELD_OVERRIDE_PATHS: Record<string, readonly string[]> = {
+  brandTitle: ['title'],
+  brandSubtitle: ['subtitle'],
+  brandTagline: ['tagline'],
+  brandLogo: ['logo'],
+  supportEmail: ['support', 'email'],
+  supportPhone: ['support', 'phone'],
+  docsUrl: ['docsUrl'],
+};
+
+/**
+ * 单项运行时配置覆盖值（键 = 运行时配置键名，见 `BRAND_FIELD_OVERRIDE_PATHS`）。
+ * 优先级高于品牌档案整块里的同名字段；空串/缺省 = 不覆盖，
+ * 回落「整块同名字段 → config.json → 内置默认值」。
+ */
+export type RuntimeBrandFieldOverrides = Record<string, string>;
 
 /**
  * 三层品牌配置合并：内置默认值（`getBrandProfile` 兜底）+ `/brand/config.json`
@@ -224,8 +249,9 @@ export interface RuntimeBrandFieldOverrides {
  *
  * 逐字段浅合并而非整块替换：只覆盖运行时声明了的字段，其余字段继续走
  * config.json 或内置默认值——否则运维只配了 copyrightHolder 就会把标语、Logo 一起清掉。
- * 客服邮箱/电话与文档地址例外：以 `supportEmail` / `supportPhone` / `docsUrl`
- * 单项运行时项为准，`brandProfile.support` 只用于补充 hours，避免双事实源。
+ * 单项运行时键（brandTitle / supportEmail / docsUrl 等，见
+ * `BRAND_FIELD_OVERRIDE_PATHS`）按声明表统一叠在整块之上，避免双事实源；
+ * 单项值为空 = 不覆盖，回落链「整块 → config.json → 内置默认值」保持不变。
  */
 export function mergeBrandOverrides(
   base: BrandConfig | null,
@@ -237,12 +263,14 @@ export function mergeBrandOverrides(
     logo: DEFAULT_APP_LOGO,
   };
 
-  // 品牌档案（brandProfile）可能是空对象，但单项运行时项（supportEmail /
-  // supportPhone / docsUrl）仍有值——两者都必须有值才走「原样返回 base」，
-  // 否则会出现「JSON 清空后单项配置被静默忽略」的假阳性回落。
-  const hasFieldOverrides = Boolean(
-    fields && (fields.email || fields.phone || fields.docsUrl)
-  );
+  // 品牌档案（brandProfile）可能是空对象，但单项运行时项仍有值——
+  // 两者都为空才走「原样返回 base」，否则会出现
+  // 「JSON 清空后单项配置被静默忽略」的假阳性回落。
+  const hasFieldOverrides = fields
+    ? Object.keys(fields).some(
+        (key) => Boolean(fields[key]) && key in BRAND_FIELD_OVERRIDE_PATHS
+      )
+    : false;
   if ((!runtime || Object.keys(runtime).length === 0) && !hasFieldOverrides) {
     return b;
   }
@@ -250,11 +278,8 @@ export function mergeBrandOverrides(
   // brandProfile 可能为空（此时只有单项运行时项在生效），统一按空对象处理
   const r: RuntimeBrandConfig = runtime ?? {};
 
-  const support: Partial<BrandSupport> = { ...b.support, ...r.support };
-  if (fields?.email) support.email = fields.email;
-  if (fields?.phone) support.phone = fields.phone;
-
-  return {
+  const merged: BrandConfig = {
+    ...b,
     title: r.title || b.title,
     logo: r.logo || b.logo,
     tagline: r.tagline ?? b.tagline,
@@ -262,8 +287,8 @@ export function mergeBrandOverrides(
     copyrightYear: r.copyrightYear || b.copyrightYear,
     copyrightHolder: r.copyrightHolder || b.copyrightHolder,
     copyrightLine: r.copyrightLine || b.copyrightLine,
-    support,
-    docsUrl: fields?.docsUrl || r.docsUrl || b.docsUrl,
+    support: { ...b.support, ...r.support },
+    docsUrl: r.docsUrl || b.docsUrl,
     subtitle: r.subtitle || b.subtitle,
     legal: {
       productShortName:
@@ -272,15 +297,48 @@ export function mergeBrandOverrides(
       identities: { ...b.legal?.identities, ...r.legal?.identities },
     },
   };
+
+  // 单项运行时键覆盖整块同名字段（声明表驱动，#499）：
+  // 值为空 = 不覆盖，回落到整块同名字段
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) {
+      const path = BRAND_FIELD_OVERRIDE_PATHS[key];
+      if (!path || !value) continue;
+      applyBrandFieldPath(merged, path, value);
+    }
+  }
+
+  return merged;
+}
+
+/** 按声明表路径写品牌字段（支持 `support.email` 这类两级路径） */
+function applyBrandFieldPath(
+  target: BrandConfig,
+  path: readonly string[],
+  value: string
+): void {
+  let node: Record<string, unknown> = target as unknown as Record<
+    string,
+    unknown
+  >;
+  // 声明表里的路径都是非空字面量，索引必然有效
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i]!;
+    const next = node[key];
+    if (!next || typeof next !== 'object') node[key] = {};
+    node = node[key] as Record<string, unknown>;
+  }
+  node[path[path.length - 1]!] = value;
 }
 
 /**
- * 品牌档案唯一出口：内置默认值 + config.json 覆盖。
- * `docsUrl` 为四层：`docsUrl` 运行时项 > brandProfile > config.json > 内置默认值。
+ * 品牌档案唯一出口：内置默认值 + config.json + 运行时覆盖（含单项键）。
+ * 缺省参数走 `resolveBrandConfig()`（config.json + 运行时整块 + 单项键覆盖），
+ * 裸调用与页面合并路径结果一致（#499）；
  * 传 `override` 可在 react-query 数据就绪时直接求值，不依赖模块级缓存时机。
  */
 export function getBrandProfile(
-  override: BrandConfig | null = cachedBrandConfig
+  override: BrandConfig | null = resolveBrandConfig()
 ): BrandProfile {
   const def = DEFAULT_BRAND_PROFILE;
   return {
