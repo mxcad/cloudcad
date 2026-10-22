@@ -175,6 +175,7 @@ export const ProjectListView: React.FC<ProjectListViewProps> = ({
                       !!currentOpenProjectId &&
                       project.id === currentOpenProjectId
                     }
+                    activeGutter
                     viewMode="list"
                     isTrash={false}
                     forceCompactActions={true}

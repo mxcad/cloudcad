@@ -35,3 +35,7 @@ _Avoid_: 无限滚动、滚动加载、loadDirection（外部方向状态已废�
 **sourceType**:
 文件的协同来源归属，取值 'my' | 'project' | 'library' | 'local' | 'share'。前后端共享 V3 协议，移动端与 PC 端编码解码逻辑完全一致。
 _Avoid_: 来源类型
+
+**意图链（Intent Chain）**:
+用户声明的一个动作 + 一串前置条件；前置不满足则挂起链，前置满足后按序续跑直至原始动作真实完成（ADR-0081）。声明式而非命令式流程编排。与登录闸门的边界：闸门是「未登录则不放行」的单向阻止、无恢复路径，意图链是可恢复的阻止——意图链的 `auth` 前置会调用闸门，闸门不感知链，二者是上下游不是同一个东西。纯状态机在 `@cloudcad/platform`（存储走依赖注入的 port，不读全局 sessionStorage），两端只做薄 adapter。前置仅 `auth` 与 `cloud-existence` 两类，且二者非因果关系（缺云端节点不是未登录的推论）：先判 `auth`，已登录但无云端节点才走 `cloud-existence`。挂起载体为 sessionStorage 单键、仅一条活跃链、新同类意图覆盖旧链、无 TTL；续跑锚点为 `document-loaded`。失败不回滚但保留原始意图、不自动重试。
+_Avoid_: 待办动作、pending 任务、登录闸门（那是单向阻止、无恢复路径）、重定向回跳

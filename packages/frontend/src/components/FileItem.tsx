@@ -65,6 +65,13 @@ interface FileItemProps {
   selected?: boolean;
   isSelected?: boolean;
   isActive?: boolean;
+  /**
+   * 列表模式是否预留左侧 active 指示条（inset 3px 高亮条）的槽位。
+   * 侧边栏等会渲染 active 高亮条的列表须传 true：给整列统一加左内边距，
+   * 使高亮条与缩略图之间留出空隙、缩略图不再盖住高亮条，且各行缩略图保持对齐。
+   * 无 active 高亮条的列表（如 FileSystemContent）保持 false，外观不变。
+   */
+  activeGutter?: boolean;
   viewMode?: 'grid' | 'list';
   /** 紧凑模式：用于 Dashboard 等简化场景，隐藏菜单和选择框 */
   compact?: boolean;
@@ -145,6 +152,7 @@ export const FileItem: React.FC<FileItemProps> = ({
   node,
   isSelected = false,
   isActive = false,
+  activeGutter = false,
   viewMode = 'list',
   compact = false,
   galleryMode = false,
@@ -855,6 +863,7 @@ export const FileItem: React.FC<FileItemProps> = ({
         title={doubleClickToOpen ? t('单击打开') : undefined}
         className={`group relative grid items-center rounded-lg transition-all duration-200 cursor-pointer select-none
           ${galleryMode ? 'gap-2' : 'gap-4'}
+          ${activeGutter ? 'pl-2' : ''}
           ${isSelected || isActive ? '' : 'hover:border-[var(--border-default)]'}
       `}
         style={{

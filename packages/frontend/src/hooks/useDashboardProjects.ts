@@ -2,9 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   projectControllerCreateProject,
   nodeControllerGetChildren,
-  nodeControllerCreateDrawing,
 } from '@/api-sdk';
 import type { FileSystemNodeDto } from '@/api-sdk';
+import type { TransferSettings } from '@/types/filesystem';
 import { queryKeys } from '@/lib/queryKeys';
 import { fetchProjects } from '@/lib/projects';
 import { usePersonalSpaceQuery } from '@/hooks/usePersonalSpaceQuery';
@@ -48,47 +48,25 @@ export function useDashboardProjects() {
     throwOnError: false,
   });
 
-  // 4. 创建项目 mutation
+  // 4. 创建项目 mutation（transferSettings：创建时设定跨项目转移 6 域，省略回落后端默认值）
   const createProjectMutation = useMutation({
-    mutationFn: async (payload: { name: string; description?: string }) => {
+    mutationFn: async (payload: {
+      name: string;
+      description?: string;
+      transferSettings?: TransferSettings;
+    }) => {
       const result = await projectControllerCreateProject({
         throwOnError: true,
         body: {
           name: payload.name.trim(),
           description: payload.description?.trim() || undefined,
+          ...payload.transferSettings,
         },
       });
       return result.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
-    },
-  });
-
-  // 5. 创建图纸 mutation（固定创建到个人空间根目录）
-  const createDrawingMutation = useMutation({
-    mutationFn: async (payload: { name: string }) => {
-      if (!personalSpaceId) {
-        throw new Error(t('无法确定创建位置'));
-      }
-      const result = await nodeControllerCreateDrawing({
-        throwOnError: true,
-        body: {
-          parentId: personalSpaceId,
-          name: payload.name.trim() || undefined,
-        },
-      });
-      return result.data;
-    },
-    onSuccess: () => {
-      if (personalSpaceId) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.dashboard.personalSpaceChildren(personalSpaceId),
-        });
-      }
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.fileSystem.storageQuota,
-      });
     },
   });
 
@@ -115,11 +93,5 @@ export function useDashboardProjects() {
         t('创建项目失败，请重试')
       : null,
     personalSpaceId,
-    createDrawing: createDrawingMutation.mutateAsync,
-    isCreatingDrawing: createDrawingMutation.isPending,
-    createDrawingError: createDrawingMutation.error
-      ? getErrorMessage(createDrawingMutation.error) ||
-        t('创建图纸失败，请重试')
-      : null,
   };
 }

@@ -829,6 +829,32 @@
   white-space: nowrap;
 }
 
+/* 模式切换预览：主标题为配置项说明，原始 key 作副标签（.config-key 自带等宽小字）。
+   说明不省略——本弹窗就是让操作员确认「要改什么」，长文案（如 mfaEnforceEnabled
+   含解锁条件）截断会藏掉判断依据，宁可让行变高、列表滚动。 */
+.preview-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-name {
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+/* 取值对比（当前 → 目标）：等宽字体便于对齐数字与 true/false */
+.preview-values {
+  flex-shrink: 0;
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 .preview-tag {
   font-size: var(--text-xs);
   font-weight: 600;

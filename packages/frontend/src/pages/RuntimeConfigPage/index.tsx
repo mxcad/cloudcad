@@ -243,6 +243,7 @@ export const RuntimeConfigPage: React.FC = () => {
         target={rc.modeSwitchTarget}
         previewing={rc.modePreviewing}
         preview={rc.modePreview}
+        configsByKey={rc.configsByKey}
         saving={rc.modeSaving}
         onConfirm={rc.confirmModeSwitch}
         onCancel={rc.cancelModeSwitch}

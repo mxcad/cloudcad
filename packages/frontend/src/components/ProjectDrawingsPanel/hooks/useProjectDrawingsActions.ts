@@ -188,6 +188,17 @@ export function useProjectDrawingsActions({
     setEditingProject(node);
     setIsOperationHistoryModalOpen(true);
   }, []);
+
+  // Share dialog（图纸项菜单「分享」，与项目管理页 ShareDialog 同一组件）
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareFileId, setShareFileId] = useState('');
+  const [shareFileName, setShareFileName] = useState('');
+
+  const handleShare = useCallback((node: FileSystemNode) => {
+    setShareFileId(node.id);
+    setShareFileName(node.name);
+    setShareDialogOpen(true);
+  }, []);
   const handleEditProject = useCallback(
     (node: FileSystemNode) => {
       openEditProjectModal(node);
@@ -321,6 +332,13 @@ export function useProjectDrawingsActions({
     handleEditProject,
     handleSubmitProject,
     handleRenameSubmit,
+    shareDialogOpen,
+    setShareDialogOpen,
+    shareFileId,
+    setShareFileId,
+    shareFileName,
+    setShareFileName,
+    handleShare,
   };
 }
 

@@ -408,6 +408,28 @@
   font-weight: 500;
 }
 
+/* 口令要求实时清单：项由生效策略生成（minLength / minCategories 关闭时该项不出现） */
+.passwordRequirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.passwordRequirements li {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.passwordRequirements li[data-ok='true'] {
+  color: var(--text-secondary);
+}
+
 /* SMS code button */
 .inputWrapperHasButton {
   position: relative;

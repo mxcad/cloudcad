@@ -901,7 +901,8 @@
   background: var(--bg-secondary);
   border: 1px solid var(--border-default);
   border-radius: 16px;
-  overflow: hidden;
+  /* 不加 overflow: hidden：卡片内 Autocomplete 的下拉是 absolute 定位，
+     裁剪会把候选列表压在卡片内（卡片是本页最后一个区块，模式输入框在末行） */
 }
 
 .keyOpsCard:hover {

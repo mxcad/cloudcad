@@ -69,6 +69,9 @@ export interface TransferSettings {
   transferInFromLibrary?: TransferMode;
 }
 
+/** 新建项目 6 域默认转移设置（单一事实源 @cloudcad/platform，与 Prisma schema @default 对齐） */
+export { DEFAULT_TRANSFER_SETTINGS } from '@cloudcad/platform';
+
 export interface FileSystemNode extends FileSystemNodeDto, TransferSettings {
   /** 文件扩展名（前端解析） */
   extension?: string;

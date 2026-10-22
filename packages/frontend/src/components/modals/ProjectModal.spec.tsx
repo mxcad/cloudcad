@@ -32,9 +32,53 @@ describe('ProjectModal — 跨项目转移设置区块', () => {
     vi.clearAllMocks();
   });
 
-  it('创建模式：不显示跨项目转移区块', () => {
+  it('创建模式但未传管理权限/回调：不显示跨项目转移区块', () => {
     renderModal({ editingProject: null });
     expect(screen.queryByText('跨项目转移')).toBeNull();
+  });
+
+  it('创建模式且有管理权限：显示区块，6 个下拉初始值为 6 域默认值', () => {
+    renderModal({
+      editingProject: null,
+      canManageTransferSettings: true,
+      onTransferSettingsChange: vi.fn(),
+    });
+    expect(screen.getByText('跨项目转移')).toBeTruthy();
+    // 默认值须与 Prisma schema @default 一致（platform DEFAULT_TRANSFER_SETTINGS）；
+    // Select 为 Radix 自定义下拉，当前值渲染为触发按钮文本
+    const selects = screen.getAllByRole('combobox');
+    expect(selects.map((s) => s.textContent)).toEqual([
+      '复制+移动', // 移出到其他项目 = ALL
+      '禁止', // 移出到个人空间 = NONE
+      '仅复制', // 移出到公共库 = COPY_ONLY
+      '复制+移动', // 从其他项目移入 = ALL
+      '复制+移动', // 从个人空间移入 = ALL
+      '复制+移动', // 从公共库移入 = ALL
+    ]);
+  });
+
+  it('创建模式变更方向设置：回调收到完整 6 域对象（默认值 + 本次变更）', () => {
+    const onChange = vi.fn();
+    renderModal({
+      editingProject: null,
+      canManageTransferSettings: true,
+      onTransferSettingsChange: onChange,
+    });
+    // 触发「移出到个人空间」（第 2 个下拉，默认 NONE）→ 选择「仅复制」
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.click(selects[1] as HTMLElement);
+    const options = screen.getAllByRole('option');
+    const copyOnlyOption = options.find((o) => o.textContent === '仅复制');
+    expect(copyOnlyOption).toBeTruthy();
+    fireEvent.click(copyOnlyOption as HTMLElement);
+    expect(onChange).toHaveBeenCalledWith({
+      transferOutToProject: 'ALL',
+      transferOutToPersonalSpace: 'COPY_ONLY',
+      transferOutToLibrary: 'COPY_ONLY',
+      transferInFromProject: 'ALL',
+      transferInFromPersonalSpace: 'ALL',
+      transferInFromLibrary: 'ALL',
+    });
   });
 
   it('编辑模式但无管理权限：不显示跨项目转移区块', () => {

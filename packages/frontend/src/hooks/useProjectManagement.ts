@@ -11,7 +11,11 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useState, useCallback } from 'react';
-import { FileSystemNode } from '../types/filesystem';
+import {
+  DEFAULT_TRANSFER_SETTINGS,
+  FileSystemNode,
+  type TransferSettings,
+} from '../types/filesystem';
 import { t } from '@/languages';
 
 interface UseProjectManagementOptions {
@@ -42,6 +46,10 @@ export function useProjectManagement(
   });
   const [loading, setLoading] = useState(false);
 
+  // 创建模式跨项目转移设置缓冲（项目尚不存在无法即时保存，随创建请求提交）
+  const [createTransferSettings, setCreateTransferSettings] =
+    useState<TransferSettings>(DEFAULT_TRANSFER_SETTINGS);
+
   // 删除确认模态框状态
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<FileSystemNode | null>(
@@ -54,6 +62,7 @@ export function useProjectManagement(
   const openCreateModal = useCallback(() => {
     setEditingProject(null);
     setFormData({ name: '', description: '' });
+    setCreateTransferSettings(DEFAULT_TRANSFER_SETTINGS);
     setIsModalOpen(true);
   }, []);
 
@@ -70,17 +79,26 @@ export function useProjectManagement(
     setIsModalOpen(false);
     setEditingProject(null);
     setFormData({ name: '', description: '' });
+    setCreateTransferSettings(DEFAULT_TRANSFER_SETTINGS);
   }, []);
 
   const handleCreate = useCallback(
     async (
-      createProject: (name: string, description: string) => Promise<void>
+      createProject: (
+        name: string,
+        description: string,
+        transferSettings?: TransferSettings
+      ) => Promise<void>
     ) => {
       if (!formData.name.trim()) return;
 
       setLoading(true);
       try {
-        await createProject(formData.name.trim(), formData.description.trim());
+        await createProject(
+          formData.name.trim(),
+          formData.description.trim(),
+          createTransferSettings
+        );
         options.onProjectCreated?.();
         closeModal();
       } catch (error) {
@@ -90,7 +108,7 @@ export function useProjectManagement(
         setLoading(false);
       }
     },
-    [formData, options, closeModal]
+    [formData, createTransferSettings, options, closeModal]
   );
 
   const handleUpdate = useCallback(
@@ -162,6 +180,8 @@ export function useProjectManagement(
     setEditingProject,
     formData,
     loading,
+    createTransferSettings,
+    setCreateTransferSettings,
     openCreateModal,
     openEditModal,
     closeModal,

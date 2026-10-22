@@ -111,7 +111,22 @@ const SimpleSelect: React.FC<SelectProps> = ({
   return (
     <SelectPrimitive.Root
       value={value !== undefined ? String(value) : undefined}
-      onValueChange={(strVal) => onChange?.(strVal)}
+      onValueChange={(strVal) => {
+        // Radix 为表单兼容渲染的隐藏原生 <select>，其 <option> 只在弹层打开过之后才由
+        // SelectItemText 注册。弹层从未打开时受控值发生外部变更（如异步回填当前会员等级），
+        // 它 setValue 失败会把值改写成 '' 并冒泡 change，清空外部受控值
+        // （实例：会员管理弹窗恒显示「请选择等级」）。
+        // 只有 options 里存在空值项（"全部/不限"）时 '' 才可能是真实选择。
+        if (
+          strVal === '' &&
+          value !== undefined &&
+          value !== '' &&
+          !options.some((option) => String(option.value) === '')
+        ) {
+          return;
+        }
+        onChange?.(strVal);
+      }}
       disabled={disabled}
     >
       <div className={`relative ${wrapperClassName || ''}`}>

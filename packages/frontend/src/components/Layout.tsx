@@ -800,70 +800,41 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
             </div>
           )}
 
-        {/* 安全模式状态横幅（仅 SYSTEM_CONFIG_READ 可见）：全局只读展示，切换在运行时配置页完成。
-            secure=等保三级收紧、normal=便利优先；securityMode 是公开配置项，读公开配置缓存无需额外请求。 */}
-        {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) && (
-          <div
-            className="px-4 py-2 animate-slide-up"
-            style={{
-              background: isDark
-                ? publicConfig.securityMode === 'secure'
-                  ? 'var(--success-dim)'
-                  : 'var(--warning-dim)'
-                : publicConfig.securityMode === 'secure'
-                  ? 'var(--success-light)'
+        {/* 安全模式状态横幅（仅 SYSTEM_CONFIG_READ 且处于普通模式时展示）：全局只读提示 + 切换入口，
+            切换在运行时配置页完成。securityMode 是公开配置项，读公开配置缓存无需额外请求。
+            已收紧到安全模式后不再展示——此时横幅只剩「安全模式：安全模式」式重复告知；
+            需要确认当前模式可去运行时配置页，那里有完整横幅与切换按钮。 */}
+        {hasPermission(SystemPermission.SYSTEM_CONFIG_READ) &&
+          publicConfig.securityMode !== 'secure' && (
+            <div
+              className="px-4 py-2 animate-slide-up"
+              style={{
+                background: isDark
+                  ? 'var(--warning-dim)'
                   : 'var(--warning-light)',
-              borderBottom: `1px solid ${
-                isDark
-                  ? publicConfig.securityMode === 'secure'
-                    ? 'var(--success)'
-                    : 'var(--warning)'
-                  : publicConfig.securityMode === 'secure'
-                    ? 'var(--success-dim)'
-                    : 'var(--warning-dim)'
-              }`,
-            }}
-          >
-            <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
-              <ShieldAlert
-                size={18}
-                className="flex-shrink-0"
-                style={{
-                  color:
-                    publicConfig.securityMode === 'secure'
-                      ? 'var(--success)'
-                      : 'var(--warning)',
-                }}
-              />
-              <span
-                className="text-sm"
-                style={{
-                  color:
-                    publicConfig.securityMode === 'secure'
-                      ? 'var(--success)'
-                      : 'var(--warning)',
-                }}
-              >
-                {t('安全模式：{mode}', {
-                  mode:
-                    publicConfig.securityMode === 'secure'
-                      ? t('安全模式')
-                      : t('普通模式'),
-                })}
-                {publicConfig.securityMode === 'secure'
-                  ? t('· 已按等保三级收紧运行限制')
-                  : t('· 限制宽松，适合本地与测试环境')}
-              </span>
-              <Link
-                to="/runtime-config"
-                className="text-sm font-medium hover:underline"
-                style={{ color: 'var(--primary-500)' }}
-              >
-                {t('前往配置')}
-              </Link>
+                borderBottom: `1px solid ${isDark ? 'var(--warning)' : 'var(--warning-dim)'}`,
+              }}
+            >
+              <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+                <ShieldAlert
+                  size={18}
+                  className="flex-shrink-0"
+                  style={{ color: 'var(--warning)' }}
+                />
+                <span className="text-sm" style={{ color: 'var(--warning)' }}>
+                  {t('安全模式：{mode}', { mode: t('普通模式') })}
+                  {t('· 限制宽松，适合本地与测试环境')}
+                </span>
+                <Link
+                  to="/runtime-config"
+                  className="text-sm font-medium hover:underline"
+                  style={{ color: 'var(--primary-500)' }}
+                >
+                  {t('前往配置')}
+                </Link>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* 页面内容 */}
         <main

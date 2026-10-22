@@ -14,6 +14,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import styles from './RuntimeConfigPage.module.css';
 import type { RuntimeProfilePreviewResponseDto } from '@/api-sdk';
+import type { ConfigItem } from './types';
 import { t } from '@/languages';
 
 interface ModeSwitchModalProps {
@@ -22,6 +23,8 @@ interface ModeSwitchModalProps {
   /** 预览请求进行中（点击切换后尚未拿到受影响清单） */
   previewing: boolean;
   preview: RuntimeProfilePreviewResponseDto[];
+  /** key → 配置项：预览只返回 key，中文说明从这里取 */
+  configsByKey: Map<string, ConfigItem>;
   saving: boolean;
   onConfirm: () => Promise<void>;
   onCancel: () => void;
@@ -31,6 +34,7 @@ export const ModeSwitchModal: React.FC<ModeSwitchModalProps> = ({
   target,
   previewing,
   preview,
+  configsByKey,
   saving,
   onConfirm,
   onCancel,
@@ -109,22 +113,35 @@ export const ModeSwitchModal: React.FC<ModeSwitchModalProps> = ({
               )}
 
               <div className={styles.previewList} data-testid="rc-mode-preview">
-                {preview.map((entry) => (
-                  <div
-                    key={entry.key}
-                    className={`${styles.previewRow} ${entry.isModified ? styles.previewRowModified : ''}`}
-                  >
-                    <span className={styles.configKey}>{entry.key}</span>
-                    <span className={styles.previewDesc}>
-                      {`${String(entry.currentValue)} → ${String(
-                        entry.targetValue
-                      )}`}
-                    </span>
-                    {!entry.willChange && (
-                      <span className={styles.previewTag}>{t('不变动')}</span>
-                    )}
-                  </div>
-                ))}
+                {preview.map((entry) => {
+                  // 预览接口只回 key：用配置列表里的 description 作主标题，
+                  // 原始 key 降为副标签保留可追溯性（.env 排查仍按 key 找）
+                  const description = configsByKey.get(entry.key)?.description;
+                  return (
+                    <div
+                      key={entry.key}
+                      className={`${styles.previewRow} ${entry.isModified ? styles.previewRowModified : ''}`}
+                      data-key={entry.key}
+                    >
+                      <div className={styles.previewMain}>
+                        <span className={styles.previewName}>
+                          {description || entry.key}
+                        </span>
+                        {description && (
+                          <span className={styles.configKey}>{entry.key}</span>
+                        )}
+                      </div>
+                      <span className={styles.previewValues}>
+                        {`${String(entry.currentValue)} → ${String(
+                          entry.targetValue
+                        )}`}
+                      </span>
+                      {!entry.willChange && (
+                        <span className={styles.previewTag}>{t('不变动')}</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}

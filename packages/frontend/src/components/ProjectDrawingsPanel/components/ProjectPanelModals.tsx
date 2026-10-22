@@ -14,6 +14,7 @@ import { SelectFolderModal } from '@/components/modals/SelectFolderModal';
 import { LibrarySelectFolderModal } from '@/components/modals/LibrarySelectFolderModal';
 import { VersionHistoryModal } from '@/components/modals/VersionHistoryModal';
 import { BatchDownloadDialog } from '@/components/modals/BatchDownloadDialog';
+import { ShareDialog } from '@/components/modals/ShareDialog';
 import { FileSystemNode, TransferSettings } from '@/types/filesystem';
 import type { UseVersionHistoryReturn } from '@/hooks/useVersionHistory';
 
@@ -78,6 +79,10 @@ interface ProjectPanelModalsProps {
   showBatchDownloadDialog: boolean;
   onCloseBatchDownloadDialog: () => void;
   libraryType: LibraryType | undefined;
+  shareDialogOpen: boolean;
+  shareFileId: string;
+  shareFileName: string;
+  setShareDialogOpen: (open: boolean) => void;
 }
 
 /**
@@ -132,6 +137,10 @@ export const ProjectPanelModals: React.FC<ProjectPanelModalsProps> = ({
   showBatchDownloadDialog,
   onCloseBatchDownloadDialog,
   libraryType,
+  shareDialogOpen,
+  shareFileId,
+  shareFileName,
+  setShareDialogOpen,
 }) => {
   // 跨项目转移设置（编辑项目时按 PROJECT_TRANSFER_MANAGE 门控显示）
   const {
@@ -234,6 +243,12 @@ export const ProjectPanelModals: React.FC<ProjectPanelModalsProps> = ({
           libraryType={libraryType}
         />
       )}
+      <ShareDialog
+        isOpen={shareDialogOpen}
+        fileId={shareFileId || undefined}
+        fileName={shareFileName}
+        onClose={() => setShareDialogOpen(false)}
+      />
     </>
   );
 };

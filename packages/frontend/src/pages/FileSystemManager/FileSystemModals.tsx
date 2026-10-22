@@ -45,6 +45,8 @@ export interface FileSystemModalsProps {
   projectLoading: boolean;
   closeProjectModal: () => void;
   setProjectFormData: (v: { name: string; description: string }) => void;
+  /** 创建模式跨项目转移设置缓冲（项目尚不存在无法即时保存，随创建请求提交） */
+  setCreateTransferSettings: (v: TransferSettings) => void;
   handleSubmitProject: (e: React.FormEvent) => void;
   deleteConfirmOpen: boolean;
   projectToDelete: FileSystemNode | null;
@@ -130,6 +132,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
     projectLoading,
     closeProjectModal,
     setProjectFormData,
+    setCreateTransferSettings,
     handleSubmitProject,
     deleteConfirmOpen,
     projectToDelete,
@@ -181,11 +184,17 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
 
   // 跨项目目标根（个人空间 + 我的项目）：弹窗打开时才拉取
   const transferRoots = useTransferTargetRoots(showSelectFolderModal);
-  // 跨项目转移设置（编辑项目时按 PROJECT_TRANSFER_MANAGE 门控显示）
+  // 跨项目转移设置（编辑项目时按 PROJECT_TRANSFER_MANAGE 门控显示；
+  // 创建模式创建者即 owner 恒可管理，传 true）
   const { canManage: canManageTransfer, save: saveTransferSettings } =
     useTransferSettings(editingProject?.id);
 
   const handleTransferSettingsChange = async (settings: TransferSettings) => {
+    if (!editingProject) {
+      // 创建模式：项目尚不存在无法即时保存，缓冲后随创建请求提交
+      setCreateTransferSettings(settings);
+      return;
+    }
     try {
       await saveTransferSettings(settings);
     } catch (error) {
@@ -242,7 +251,7 @@ export const FileSystemModals: React.FC<FileSystemModalsProps> = (props) => {
         onFormDataChange={setProjectFormData}
         onSubmit={handleSubmitProject}
         transferSettings={editingProject ?? null}
-        canManageTransferSettings={canManageTransfer}
+        canManageTransferSettings={editingProject ? canManageTransfer : true}
         onTransferSettingsChange={handleTransferSettingsChange}
       />
 

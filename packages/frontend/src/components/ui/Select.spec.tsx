@@ -6,6 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import React, { useEffect, useState } from 'react';
 import { Select, MultiSelect } from './Select';
 
 vi.mock('@voerkai18n/react', async (importOriginal) => ({
@@ -74,6 +75,49 @@ describe('Select (SimpleSelect)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '清除' }));
     expect(onChange).toHaveBeenCalledWith('');
+  });
+
+  // 回归：弹层从未打开时，Radix 为表单兼容渲染的隐藏原生 <select> 里没有任何
+  // <option>（选项由 Content 内的 SelectItemText 注册）；受控 value 从 "0" 改成 "1"
+  // 时它 setValue 失败会把值改写成 '' 并冒泡 change，把外部状态清空
+  // （实例：会员管理弹窗回填 VIP1 却恒显示「请选择等级」）
+  it('回归：外部异步切换受控值且弹层未打开时，值不被隐藏原生 select 清空', async () => {
+    const onChange = vi.fn();
+    // 与会员管理弹窗同形：等级列表加载期下拉禁用，加载完成后解除，
+    // 期间外部把受控值从免费档回填为当前会员等级
+    function Harness() {
+      const [v, setV] = useState('0');
+      const [loading, setLoading] = useState(true);
+      useEffect(() => {
+        setV('1');
+        const timer = setTimeout(() => setLoading(false), 10);
+        return () => clearTimeout(timer);
+      }, []);
+      return (
+        <form>
+          <Select
+            value={v}
+            onChange={(next) => {
+              onChange(next);
+              setV(next);
+            }}
+            options={[
+              { value: '0', label: '免费用户' },
+              { value: '1', label: 'VIP1' },
+            ]}
+            placeholder="请选择等级"
+            loading={loading}
+            disabled={loading}
+          />
+        </form>
+      );
+    }
+    render(<Harness />);
+
+    // Radix 的冒泡是 layout effect 内 dispatch 的 change，需等事件派发完成再断言
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox')).toHaveTextContent('VIP1');
   });
 });
 

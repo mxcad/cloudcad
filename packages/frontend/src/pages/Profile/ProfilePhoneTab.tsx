@@ -126,6 +126,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 required
               />
               <Button
+                type="button"
                 variant="secondary"
                 size="sm"
                 disabled={countdown > 0}
@@ -139,6 +140,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
           </div>
           <div className={styles.buttonGroup}>
             <Button
+              type="button"
               variant="secondary"
               className="flex-1"
               onClick={() => onSetEditingPhone(false)}
@@ -205,6 +207,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
                 required
               />
               <Button
+                type="button"
                 variant="secondary"
                 size="sm"
                 disabled={countdown > 0}
@@ -245,6 +248,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
           <div className={styles.buttonGroup}>
             {isRebind ? (
               <Button
+                type="button"
                 variant="secondary"
                 className="flex-1"
                 onClick={() => onSetEditingPhone(false)}
@@ -253,6 +257,7 @@ export const ProfilePhoneTab: React.FC<ProfilePhoneTabProps> = ({
               </Button>
             ) : (
               <Button
+                type="button"
                 variant="secondary"
                 className="flex-1"
                 onClick={() => {

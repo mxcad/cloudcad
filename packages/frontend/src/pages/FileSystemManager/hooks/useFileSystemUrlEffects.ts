@@ -12,7 +12,7 @@ import { resolveRootKindFromMode } from '@/lib/crossProjectPaste';
 import { t } from '@/languages';
 import { useCopy } from '@/hooks/useCopy';
 import { getErrorMessage } from '@/utils/errorHandler';
-import type { FileSystemNode } from '@/types/filesystem';
+import type { FileSystemNode, TransferSettings } from '@/types/filesystem';
 
 interface UseFileSystemNavigationOptions {
   mode: 'project' | 'personal-space';
@@ -31,7 +31,11 @@ interface UseFileSystemNavigationOptions {
     ) => Promise<void>
   ) => void;
   handleCreateProjectSubmit: (
-    fn: (name: string, description: string) => Promise<void>
+    fn: (
+      name: string,
+      description: string,
+      transferSettings?: TransferSettings
+    ) => Promise<void>
   ) => void;
   showToast: (
     message: string,
@@ -245,9 +249,9 @@ export function useFileSystemUrlEffects({
           } as Parameters<typeof nodeControllerUpdateNode>[0]);
         });
       } else {
-        handleCreateProjectSubmit(async (name, description) => {
+        handleCreateProjectSubmit(async (name, description, transferSettings) => {
           await projectControllerCreateProject({
-            body: { name, description },
+            body: { name, description, ...transferSettings },
             throwOnError: true,
           } as Parameters<typeof projectControllerCreateProject>[0]);
         });

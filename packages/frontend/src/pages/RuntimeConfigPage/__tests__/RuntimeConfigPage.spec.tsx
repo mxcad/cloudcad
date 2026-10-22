@@ -693,3 +693,177 @@ describe('RuntimeConfigPage 分类批量恢复', () => {
     }
   });
 });
+
+describe('RuntimeConfigPage 安全模式切换预览', () => {
+  const previewEntry = (
+    key: string,
+    currentValue: unknown,
+    targetValue: unknown,
+    willChange = true
+  ) => ({
+    key,
+    type: 'boolean' as const,
+    category: 'security',
+    currentValue: currentValue as never,
+    source: 'runtime' as const,
+    targetValue: targetValue as never,
+    willChange,
+    isModified: false,
+    envValue: null,
+  });
+
+  it('预览行显示配置项说明，原始 key 降为副标签', () => {
+    mockState.return = makeReturn({
+      modeSwitchTarget: 'normal',
+      modePreview: [
+        previewEntry('mail.smtpHost', 'a', 'b'),
+        previewEntry('file.maxFileSize', 100, 500),
+      ],
+    });
+    render(<RuntimeConfigPage />);
+    const preview = screen.getByTestId('rc-mode-preview');
+    // 说明作主标题
+    expect(within(preview).getByText('SMTP 服务器地址')).toBeTruthy();
+    expect(within(preview).getByText('单个文件大小上限')).toBeTruthy();
+    // key 仍保留（.env 排查按 key 找）
+    expect(within(preview).getByText('mail.smtpHost')).toBeTruthy();
+    expect(within(preview).getByText('file.maxFileSize')).toBeTruthy();
+  });
+
+  it('configsByKey 查不到该键时回退显示 key 本身', () => {
+    mockState.return = makeReturn({
+      modeSwitchTarget: 'normal',
+      modePreview: [previewEntry('unknown.key', false, true)],
+    });
+    render(<RuntimeConfigPage />);
+    const preview = screen.getByTestId('rc-mode-preview');
+    expect(within(preview).getByText('unknown.key')).toBeTruthy();
+    expect(within(preview).getByText('false → true')).toBeTruthy();
+  });
+
+  it('无改动的项标注「不变动」', () => {
+    mockState.return = makeReturn({
+      modeSwitchTarget: 'normal',
+      modePreview: [previewEntry('mail.smtpHost', 'a', 'a', false)],
+    });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByText('不变动')).toBeTruthy();
+  });
+});
+
+describe('RuntimeConfigPage 首次加载错误态', () => {
+  it('拉取失败显示错误与重试，而不是「暂无配置项」', () => {
+    mockState.return = makeReturn({
+      configs: [],
+      groups: [],
+      configsError: '网络异常',
+    });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByTestId('rc-error-state')).toBeTruthy();
+    expect(screen.getByText('获取配置失败')).toBeTruthy();
+    expect(screen.getByText('网络异常')).toBeTruthy();
+    expect(screen.queryByText('暂无配置项')).toBeNull();
+    fireEvent.click(screen.getByTestId('rc-retry'));
+    expect(mockState.return.retryFetch).toHaveBeenCalled();
+  });
+
+  it('正常空态仍显示「暂无配置项」', () => {
+    mockState.return = makeReturn({ configs: [], groups: [] });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByText('暂无配置项')).toBeTruthy();
+    expect(screen.queryByTestId('rc-error-state')).toBeNull();
+  });
+});
+
+describe('RuntimeConfigPage 修改历史', () => {
+  it('加载中文案', () => {
+    mockState.return = makeReturn({
+      historyKey: 'mail.smtpHost',
+      historyLoading: true,
+    });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByTestId('rc-history-loading')).toBeTruthy();
+    expect(screen.getByText('正在加载修改历史...')).toBeTruthy();
+  });
+
+  it('加载失败显示错误', () => {
+    mockState.return = makeReturn({
+      historyKey: 'mail.smtpHost',
+      historyError: '获取修改历史失败',
+    });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByTestId('rc-history-error')).toBeTruthy();
+  });
+
+  it('无记录时显示空态', () => {
+    mockState.return = makeReturn({ historyKey: 'mail.smtpHost' });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByText('该配置项暂无修改记录')).toBeTruthy();
+  });
+
+  it('展示历史记录：旧值 → 新值、操作人、IP', async () => {
+    mockState.return = makeReturn({
+      historyKey: 'mail.smtpHost',
+      history: [
+        {
+          id: 'h1',
+          key: 'mail.smtpHost',
+          oldValue: '"smtp.example.com"',
+          newValue: '"smtp.mx.com"',
+          operatorId: 'admin-1',
+          operatorIp: '10.0.0.7',
+          createdAt: '2026-09-01T02:00:00.000Z',
+        },
+      ],
+    });
+    render(<RuntimeConfigPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('rc-history-list')).toBeTruthy();
+    });
+    const historyList = within(screen.getByTestId('rc-history-list'));
+    expect(historyList.getByText('smtp.example.com')).toBeTruthy();
+    expect(historyList.getByText('smtp.mx.com')).toBeTruthy();
+    expect(historyList.getByText('admin-1')).toBeTruthy();
+    expect(historyList.getByText('10.0.0.7')).toBeTruthy();
+  });
+});
+
+describe('RuntimeConfigPage 只读模式', () => {
+  it('无写权限时展示只读横幅并禁用控件', () => {
+    mockState.return = makeReturn({ canManageConfig: false });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByTestId('rc-readonly-banner')).toBeTruthy();
+    for (const btn of screen.getAllByTestId('rc-save')) {
+      expect(btn).toBeDisabled();
+    }
+    for (const btn of screen.getAllByTestId('rc-reset')) {
+      expect(btn).toBeDisabled();
+    }
+    const fields = document.querySelectorAll(
+      '[data-testid="rc-item"] input, [data-testid="rc-item"] textarea'
+    );
+    expect(fields.length).toBeGreaterThan(0);
+    for (const field of fields) {
+      expect(field).toBeDisabled();
+    }
+  });
+
+  it('有环境变量项时展示顶部 env 说明横幅', () => {
+    render(<RuntimeConfigPage />);
+    expect(
+      screen.getByText(/项配置已由环境变量注入。修改后运行时配置优先级更高/)
+    ).toBeTruthy();
+  });
+
+  it('无环境变量项时不展示该横幅', () => {
+    const configs = mockItems.filter((i) => !i.envValue);
+    mockState.return = makeReturn({
+      configs,
+      groups: toGroups(configs),
+    });
+    render(<RuntimeConfigPage />);
+    expect(
+      screen.queryByText(/项配置已由环境变量注入/)
+    ).toBeNull();
+  });
+});

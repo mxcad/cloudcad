@@ -244,6 +244,28 @@
   white-space: nowrap;
 }
 
+/* 口令要求实时清单：项由生效策略生成（minLength / minCategories 关闭时该项不出现） */
+.passwordRequirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passwordRequirements li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.passwordRequirements li[data-ok='true'] {
+  color: var(--text-secondary);
+}
+
 /* ============================================
    10. 安全提示
    ============================================ */

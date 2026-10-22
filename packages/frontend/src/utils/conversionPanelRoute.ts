@@ -13,6 +13,10 @@ import { ADMIN_LOGIN_PATH } from '@/constants/adminLoginConfig';
  * 登录、注册、找回密码、隐私政策、用户协议、设备授权等公开页渲染面板属于噪音，
  * 还会白白触发无登录态的云端任务拉取与 SSE 订阅。
  *
+ * 管理员安全锁页（/admin/mfa、/admin/change-password）同属此类：后端 JwtStrategy
+ * 在锁定态只放行解锁端点，面板的转换任务轮询必然 403，而全局错误拦截器会据此
+ * 把用户重定向到另一把锁的页面 —— 两个锁页互相打回即死循环。故锁定页不渲染面板。
+ *
  * 新增公开路由时必须同步登记，否则面板会在该页重新出现。
  */
 const HIDDEN_PATHS: readonly string[] = [
@@ -29,6 +33,9 @@ const HIDDEN_PATHS: readonly string[] = [
   '/session-transfer',
   '/privacy',
   '/terms',
+  // 管理员安全锁页（#415 TOTP 绑定 / #416 强制改密）：锁定态下后台请求一律 403
+  '/admin/mfa',
+  '/admin/change-password',
 ];
 
 /**

@@ -62,8 +62,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
   const [querying, setQuerying] = useState(false);
   const [mutating, setMutating] = useState(false);
   const [catalog, setCatalog] = useState<CacheKeyCatalogEntryDto[]>([]);
-  const [keyOpen, setKeyOpen] = useState(false);
-  const [patternOpen, setPatternOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<'key' | 'pattern' | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -87,14 +86,16 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
     []
   );
 
-  // 输入框 focus 即展开候选；blur 延迟收起，避免点候选项时先 blur 把下拉关掉
-  const openNow = (setter: (v: boolean) => void) => () => {
+  // 同一时间只允许一个下拉：聚焦哪个输入框就打开哪个，另一个随 state 收敛关闭
+  const openNow = (menu: 'key' | 'pattern') => () => setOpenMenu(menu);
+  // blur 延迟收起，避免点候选项时先 blur 把下拉关掉。延迟收起按「发起 blur 的
+  // 菜单」判定——原先共用一把计时器且无条件关闭，后聚焦的 openNow 会把先前那次
+  // 收起定时 clearTimeout 掉，两个下拉从此同时展开、先聚焦的永不收起
+  const closeLater = (menu: 'key' | 'pattern') => () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
-    setter(true);
-  };
-  const closeLater = (setter: (v: boolean) => void) => () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setter(false), 150);
+    closeTimer.current = setTimeout(() => {
+      setOpenMenu((current) => (current === menu ? null : current));
+    }, 150);
   };
 
   const filterEntries = (query: string): CacheKeyCatalogEntryDto[] => {
@@ -378,16 +379,16 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
           value={keyInput}
           onChange={(value) => setKeyInput(value)}
           items={keyItems}
-          open={keyOpen && keyItems.length > 0}
+          open={openMenu === 'key' && keyItems.length > 0}
           renderItem={renderCatalogItem}
           onSelectItem={(item) => {
             const entry = item.entry as CacheKeyCatalogEntryDto;
             setKeyInput(entry.example);
-            setKeyOpen(false);
+            setOpenMenu(null);
           }}
           placeholder={t('缓存 Key（点击选择或输入筛选）')}
-          onFocus={openNow(setKeyOpen)}
-          onBlur={closeLater(setKeyOpen)}
+          onFocus={openNow('key')}
+          onBlur={closeLater('key')}
           className={styles.keyOpsKeyInput}
           wrapperClassName={styles.keyOpsKeyWrapper}
         />
@@ -455,7 +456,7 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
               value={patternInput}
               onChange={(value) => setPatternInput(value)}
               items={patternItems}
-              open={patternOpen && patternItems.length > 0}
+              open={openMenu === 'pattern' && patternItems.length > 0}
               renderItem={renderCatalogItem}
               onSelectItem={(item) => {
                 const entry = item.entry as CacheKeyCatalogEntryDto;
@@ -467,11 +468,11 @@ export const CacheKeyOperations: React.FC<CacheKeyOperationsProps> = ({
                   return;
                 }
                 setPatternInput(entry.pattern);
-                setPatternOpen(false);
+                setOpenMenu(null);
               }}
               placeholder={t('匹配模式（点击选择或输入筛选）')}
-              onFocus={openNow(setPatternOpen)}
-              onBlur={closeLater(setPatternOpen)}
+              onFocus={openNow('pattern')}
+              onBlur={closeLater('pattern')}
               className={styles.keyOpsKeyInput}
               wrapperClassName={styles.keyOpsKeyWrapper}
             />

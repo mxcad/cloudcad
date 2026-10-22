@@ -408,6 +408,7 @@ function buildModalsProps(a: Actions): FileSystemModalsProps {
     projectLoading: projectManagement.loading,
     closeProjectModal: projectManagement.closeModal,
     setProjectFormData: projectManagement.setFormData,
+    setCreateTransferSettings: projectManagement.setCreateTransferSettings,
     handleSubmitProject: urlEffects.handleSubmitProject,
     deleteConfirmOpen: projectManagement.deleteConfirmOpen,
     projectToDelete: projectManagement.projectToDelete,

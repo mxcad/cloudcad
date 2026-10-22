@@ -185,6 +185,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
     handleShowRoles,
     handleShowOperationHistory,
     handleEditProject,
+    shareDialogOpen,
+    setShareDialogOpen,
+    shareFileId,
+    shareFileName,
   } = actions;
 
   const {
@@ -399,6 +403,10 @@ export const ProjectDrawingsPanel: React.FC<ProjectDrawingsPanelProps> = ({
           showBatchDownloadDialog={showBatchDownloadDialog}
           onCloseBatchDownloadDialog={() => setShowBatchDownloadDialog(false)}
           libraryType={libraryType}
+          shareDialogOpen={shareDialogOpen}
+          shareFileId={shareFileId}
+          shareFileName={shareFileName}
+          setShareDialogOpen={setShareDialogOpen}
         />
         <OperationHistoryModal
           isOpen={isOperationHistoryModalOpen}

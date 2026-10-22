@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
 const notificationMock = vi.hoisted(() => ({
   showToast: vi.fn(),
@@ -359,8 +359,36 @@ describe('CacheKeyOperations', () => {
       expect(input).toHaveValue('sess');
     });
 
-    it('目录拉取失败时退回纯手输，不阻塞操作', async () => {
-      apiMocks.cacheMonitorControllerGetKeyCatalog.mockRejectedValue(
+    it('聚焦另一个输入框时先前的下拉收起，不会两个菜单同时展开', async () => {
+      render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);
+
+      const keyInput = screen.getByPlaceholderText('缓存 Key（点击选择或输入筛选）');
+      const patternInput = screen.getByPlaceholderText('匹配模式（点击选择或输入筛选）');
+
+      fireEvent.focus(keyInput);
+      await waitFor(() => {
+        expect(screen.getAllByText('user:permissions:*')).toHaveLength(1);
+      });
+
+      fireEvent.blur(keyInput);
+      fireEvent.focus(patternInput);
+
+      // 两个下拉渲染同一份目录；先前的菜单没收起时这里是 2
+      expect(screen.getAllByText('user:permissions:*')).toHaveLength(1);
+
+      // 在匹配模式里筛选，剩余下拉随之过滤，证明开着的是模式菜单
+      fireEvent.change(patternInput, { target: { value: 'sess' } });
+      expect(screen.getByText('mxcad:sess:*')).toBeInTheDocument();
+      expect(screen.queryByText('user:permissions:*')).not.toBeInTheDocument();
+
+      // 先前那次 blur 的延迟收起到期后，后聚焦的菜单仍开着（不被误关）
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      });
+      expect(screen.getByText('mxcad:sess:*')).toBeInTheDocument();
+    });
+
+    it('目录拉取失败时退回纯手输，不阻塞操作', async () => {      apiMocks.cacheMonitorControllerGetKeyCatalog.mockRejectedValue(
         new Error('boom')
       );
       render(<CacheKeyOperations isAdmin onChanged={() => undefined} />);

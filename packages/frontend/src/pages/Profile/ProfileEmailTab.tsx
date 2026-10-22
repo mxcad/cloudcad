@@ -146,6 +146,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 required
               />
               <Button
+                type="button"
                 variant="secondary"
                 size="sm"
                 disabled={countdown > 0}
@@ -159,6 +160,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
           </div>
           <div className={styles.buttonGroup}>
             <Button
+              type="button"
               variant="secondary"
               className="flex-1"
               onClick={() => onSetEditingEmail(false)}
@@ -211,6 +213,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                 required
               />
               <Button
+                type="button"
                 variant="secondary"
                 size="sm"
                 disabled={countdown > 0}
@@ -250,6 +253,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
           )}
           <div className={styles.buttonGroup}>
             <Button
+              type="button"
               variant="secondary"
               className="flex-1"
               onClick={() => onSetEditingEmail(false)}
@@ -339,6 +343,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
                   required
                 />
                 <Button
+                  type="button"
                   variant="secondary"
                   size="sm"
                   disabled={countdown > 0}
@@ -352,6 +357,7 @@ export const ProfileEmailTab: React.FC<ProfileEmailTabProps> = ({
             </div>
             <div className={styles.buttonGroup}>
               <Button
+                type="button"
                 variant="secondary"
                 className="flex-1"
                 onClick={() => onSetEditingEmail(false)}

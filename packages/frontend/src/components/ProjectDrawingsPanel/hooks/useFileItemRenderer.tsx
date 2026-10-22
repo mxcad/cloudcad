@@ -19,7 +19,7 @@ import { UrlHelper } from '@/utils/mxcadUtils';
 import { CAD_EXTENSIONS } from '@/utils/fileUtils';
 import { t } from '@/languages';
 
-interface UseFileItemRendererOptions {
+export interface UseFileItemRendererOptions {
   nodes: FileSystemNode[];
   isLibraryMode: boolean;
   libraryType?: LibraryType;
@@ -38,6 +38,7 @@ interface UseFileItemRendererOptions {
   handleShowVersionHistory: (node: FileSystemNode) => Promise<void>;
   handleMove?: (node: FileSystemNode) => void;
   handleCopy?: (node: FileSystemNode) => void;
+  handleShare?: (node: FileSystemNode) => void;
   handleDragStart?: (e: React.DragEvent, node: FileSystemNode) => void;
   handleDragOver?: (e: React.DragEvent, node: FileSystemNode) => void;
   handleDragLeave?: () => void;
@@ -83,6 +84,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
     handleShowVersionHistory,
     handleMove,
     handleCopy,
+    handleShare,
     handleDragStart,
     handleDragOver,
     handleDragLeave,
@@ -201,6 +203,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
             showSelection ? (selectedNodes?.has(node.id) ?? false) : false
           }
           isActive={item.isActive}
+          activeGutter
           viewMode={viewMode}
           galleryMode={isLibraryMode}
           isTrash={false}
@@ -240,6 +243,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
           }
           onMove={!isLibraryMode && !node.isRoot ? handleMove : undefined}
           onCopy={!isLibraryMode && !node.isRoot ? handleCopy : undefined}
+          onShare={!isLibraryMode && !node.isFolder ? handleShare : undefined}
           onDragStart={!isLibraryMode ? handleDragStart : undefined}
           onDragOver={!isLibraryMode ? handleDragOver : undefined}
           onDragLeave={!isLibraryMode ? handleDragLeave : undefined}
@@ -265,6 +269,7 @@ export function useFileItemRenderer(options: UseFileItemRendererOptions) {
       handleShowVersionHistory,
       handleMove,
       handleCopy,
+      handleShare,
       handleDragStart,
       handleDragOver,
       handleDragLeave,

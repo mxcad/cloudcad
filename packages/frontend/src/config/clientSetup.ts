@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { client } from '@cloudcad/api-sdk/client.gen';
+import { extractApiError } from '@cloudcad/platform';
 import { getApiBaseUrl } from '@/config/apiConfig';
 import { getValidToken, isAccessTokenExpired } from '@/utils/tokenUtils';
 import { t, i18nScope } from '@/languages';
@@ -168,10 +169,13 @@ client.interceptors.response.use(async (response) => {
     try {
       const cloned = response.clone();
       const body = await cloned.json();
+      // extractApiError 会把 errors[] 的字段级原因也带出来（#469），
+      // 否则这里只能看到「请求参数验证失败」，看不到改哪个字段
+      const detail = extractApiError(body);
       message =
-        (body?.message as string) ||
-        (body?.error as string) ||
-        (body?.code as string) ||
+        detail.message ||
+        (body?.error as string | undefined) ||
+        (body?.code as string | undefined) ||
         '';
     } catch {
       // 非 JSON 响应体（HTML/空白等），message 保持为空，使用兜底文案

@@ -42,6 +42,12 @@ describe('isConversionPanelRoute', () => {
     }
   });
 
+  it('管理员安全锁页不显示面板（面板请求会被另一把锁打回，造成两页死循环）', () => {
+    for (const path of ['/admin/mfa', '/admin/change-password']) {
+      expect(isConversionPanelRoute(path)).toBe(false, path);
+    }
+  });
+
   it('默认取当前 location.pathname', () => {
     const original = window.location.pathname;
     try {

@@ -404,21 +404,6 @@ export function getProjectManagementFullGuide(): TourGuide {
         waitForElement: 3000,
         fallbackContent: t('上传文件功能可以上传 DWG、DXF 等 CAD 文件。'),
       },
-      {
-        target: 'file-item',
-        title: t('等待上传'),
-        content: t('等待文件上传完成...'),
-        placement: 'bottom',
-        mode: 'display',
-        waitForElement: 60000,
-        fallbackContent: t('上传完成后，文件会显示在列表中。'),
-        // 已有图纸时跳过等待
-        skipCondition: {
-          type: 'custom',
-          customCheck: () =>
-            document.querySelectorAll('[data-tour="file-item"]').length > 0,
-        },
-      },
       // ====================  后续操作 ====================
       {
         target: 'file-item',

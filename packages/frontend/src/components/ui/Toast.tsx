@@ -3,6 +3,7 @@ import { CheckCircle } from 'lucide-react';
 import { AlertCircle } from 'lucide-react';
 import { Info } from 'lucide-react';
 import { X } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Z_LAYERS } from '@/constants/layers';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -11,15 +12,24 @@ export interface Toast {
   id: string;
   type: ToastType;
   message: string;
+  /** 点击整卡触发（右上角关闭按钮独立） */
+  onClick?: () => void;
 }
 
 interface ToastProps {
   message: string;
   type: ToastType;
   onClose: () => void;
+  /** 提供时整卡可点击：点击后触发回调并收起本条 */
+  onClick?: () => void;
 }
 
-export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
+export const Toast: React.FC<ToastProps> = ({
+  message,
+  type,
+  onClose,
+  onClick,
+}) => {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -47,8 +57,26 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-in-right border border-[var(--border-default)] bg-[var(--bg-elevated)]"
+      className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-in-right border border-[var(--border-default)] bg-[var(--bg-elevated)] ${
+        onClick
+          ? 'cursor-pointer transition-colors hover:bg-[var(--bg-tertiary)]'
+          : ''
+      }`}
       style={{ color: 'var(--text-primary)' }}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? message : undefined}
+      onClick={onClick ? () => {
+        onClick();
+        onClose();
+      } : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+          onClose();
+        }
+      } : undefined}
     >
       {type === 'success' && (
         <CheckCircle size={20} className={iconColorStyles[type]} />
@@ -61,6 +89,13 @@ export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
         <AlertCircle size={20} className={iconColorStyles[type]} />
       )}
       <span className="text-sm font-medium flex-1">{message}</span>
+      {onClick && (
+        <ChevronRight
+          size={16}
+          className="flex-shrink-0"
+          style={{ color: 'var(--text-tertiary)' }}
+        />
+      )}
       <button
         ref={closeRef}
         type="button"
@@ -92,6 +127,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
           key={toast.id}
           message={toast.message}
           type={toast.type}
+          onClick={toast.onClick}
           onClose={() => onRemove(toast.id)}
         />
       ))}

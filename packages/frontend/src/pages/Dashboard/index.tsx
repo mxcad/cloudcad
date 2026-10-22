@@ -1,10 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,15 +11,16 @@ import { useStorageQuota } from '@/hooks/useStorageQuota';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/languages';
 import { ProjectModal } from '@/components/modals/ProjectModal';
-import { NewDrawingModal } from '@/components/modals/NewDrawingModal';
 import { ViewAllFilesModal } from '@/components/modals/ViewAllFilesModal';
 import { ViewAllProjectsModal } from '@/components/modals/ViewAllProjectsModal';
-import { MxCadUploader } from '@/components/MxCadUploader';
-import type { MxCadUploaderRef } from '@/components/MxCadUploader';
 import { usersControllerGetDashboardStats } from '@/api-sdk';
 import type { UserDashboardStatsDto } from '@/api-sdk';
 import type { FileSystemNodeDto } from '@/api-sdk';
-import type { FileSystemNode } from '@/types/filesystem';
+import {
+  DEFAULT_TRANSFER_SETTINGS,
+  type FileSystemNode,
+  type TransferSettings,
+} from '@/types/filesystem';
 import { globalShowToast } from '@/utils/notificationEvents';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { WelcomeBanner } from './components/WelcomeBanner';
@@ -75,9 +70,6 @@ export const Dashboard: React.FC = () => {
     createProject,
     isCreating,
     createError,
-    personalSpaceId,
-    createDrawing,
-    isCreatingDrawing,
   } = useDashboardProjects();
 
   const loading = statsLoading || projectsLoading;
@@ -93,11 +85,10 @@ export const Dashboard: React.FC = () => {
     name: '',
     description: '',
   });
+  // 创建模式跨项目转移设置缓冲（项目尚不存在无法即时保存，随创建请求提交）
+  const [createTransferSettings, setCreateTransferSettings] =
+    useState<TransferSettings>(DEFAULT_TRANSFER_SETTINGS);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
-
-  const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
-  const [drawingName, setDrawingName] = useState('');
-  const uploaderRef = useRef<MxCadUploaderRef>(null);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefreshDashboard = useCallback(async () => {
@@ -148,10 +139,12 @@ export const Dashboard: React.FC = () => {
         await createProject({
           name: projectFormData.name.trim(),
           description: projectFormData.description.trim() || undefined,
+          transferSettings: createTransferSettings,
         });
 
         setIsProjectModalOpen(false);
         setProjectFormData({ name: '', description: '' });
+        setCreateTransferSettings(DEFAULT_TRANSFER_SETTINGS);
 
         try {
           const result = await usersControllerGetDashboardStats({
@@ -169,53 +162,15 @@ export const Dashboard: React.FC = () => {
         setTimeout(() => setCreateSuccess(null), 3000);
       } catch (err) {
         console.error('创建项目失败:', err);
-        // 同类问题：创建失败必须可见（与 handleCreateDrawing 一致），
-        // 仅 console.error 用户看不到任何提示
+        // 创建失败必须可见：仅 console.error 用户看不到任何提示
         globalShowToast(
           getErrorMessage(err) || t('创建项目失败，请重试'),
           'error'
         );
       }
     },
-    [projectFormData, createProject]
+    [projectFormData, createTransferSettings, createProject]
   );
-
-  // 新建图纸：当前页弹框创建到个人空间根目录
-  const handleCreateDrawing = useCallback(async () => {
-    if (!drawingName.trim()) return;
-    try {
-      await createDrawing({ name: drawingName });
-      setIsDrawingModalOpen(false);
-      setDrawingName('');
-      try {
-        const result = await usersControllerGetDashboardStats({
-          throwOnError: true,
-        });
-        if (result.data) {
-          setRefreshedStats(result.data);
-        }
-      } catch (refreshErr) {
-        console.error('刷新统计数据失败:', refreshErr);
-      }
-      globalShowToast(t('图纸创建成功'), 'success');
-    } catch (err) {
-      console.error('创建图纸失败:', err);
-      globalShowToast(
-        getErrorMessage(err) || t('创建图纸失败，请重试'),
-        'error'
-      );
-    }
-  }, [drawingName, createDrawing]);
-
-  // 上传图纸成功后刷新私人空间文件与统计
-  const handleUploadSuccess = useCallback(() => {
-    if (personalSpaceId) {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.dashboard.personalSpaceChildren(personalSpaceId),
-      });
-    }
-    queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
-  }, [personalSpaceId, queryClient]);
 
   const stats = useMemo(() => {
     if (!finalStats || !finalStats.fileTypeStats) {
@@ -318,21 +273,8 @@ export const Dashboard: React.FC = () => {
         <div className="space-y-6">
           <QuickActionsSection
             onNewProject={() => setIsProjectModalOpen(true)}
-            onUpload={() => uploaderRef.current?.triggerUpload()}
-            onNewDrawing={() => setIsDrawingModalOpen(true)}
           />
         </div>
-      </div>
-
-      {/* 隐藏上传器：供「上传图纸」快捷操作在当前页直接触发文件选择 */}
-      <div className="hidden">
-        <MxCadUploader
-          ref={uploaderRef}
-          nodeId={() => personalSpaceId || ''}
-          openAfterUpload={false}
-          onSuccess={handleUploadSuccess}
-          buttonText=""
-        />
       </div>
 
       <ProjectModal
@@ -343,21 +285,13 @@ export const Dashboard: React.FC = () => {
         onClose={() => {
           setIsProjectModalOpen(false);
           setProjectFormData({ name: '', description: '' });
+          setCreateTransferSettings(DEFAULT_TRANSFER_SETTINGS);
         }}
         onFormDataChange={setProjectFormData}
         onSubmit={handleCreateProject}
-      />
-
-      <NewDrawingModal
-        isOpen={isDrawingModalOpen}
-        drawingName={drawingName}
-        loading={isCreatingDrawing}
-        onClose={() => {
-          setIsDrawingModalOpen(false);
-          setDrawingName('');
-        }}
-        onDrawingNameChange={setDrawingName}
-        onCreate={handleCreateDrawing}
+        // 创建者即 owner 恒可管理转移设置；变更缓冲随创建请求提交
+        canManageTransferSettings={true}
+        onTransferSettingsChange={setCreateTransferSettings}
       />
 
       <ViewAllFilesModal

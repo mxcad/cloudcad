@@ -87,4 +87,12 @@ describe('project-management-full 引导 - "更多操作"步骤', () => {
       expect(step.skipCondition!.customCheck!()).toBe(false);
     });
   });
+
+  it('任何步骤都不应长时间等待用户真实操作（上传步骤只做介绍，避免引导卡住）', () => {
+    const guide = getProjectManagementFullGuide();
+    expect(guide.steps.length).toBeGreaterThan(0);
+    guide.steps.forEach((step) => {
+      expect(step.waitForElement ?? 3000).toBeLessThan(60000);
+    });
+  });
 });

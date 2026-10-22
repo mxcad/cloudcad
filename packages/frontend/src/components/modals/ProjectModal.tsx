@@ -4,7 +4,12 @@ import { Modal } from '../ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import type { FileSystemNode, TransferMode, TransferSettings } from '../../types/filesystem';
+import {
+  DEFAULT_TRANSFER_SETTINGS,
+  type FileSystemNode,
+  type TransferMode,
+  type TransferSettings,
+} from '../../types/filesystem';
 import { t } from '@/languages';
 
 export type { TransferMode, TransferSettings };
@@ -43,11 +48,17 @@ interface ProjectModalProps {
   onClose: () => void;
   onFormDataChange: (data: { name: string; description: string }) => void;
   onSubmit: (e: React.FormEvent) => void;
-  /** 跨项目转移设置（编辑项目当前值；PROJECT_TRANSFER_MANAGE 时显示） */
+  /** 跨项目转移设置（编辑项目当前值；创建模式忽略此值，用 DEFAULT_TRANSFER_SETTINGS 初始化） */
   transferSettings?: TransferSettings | null;
-  /** 是否有跨项目转移管理权限（PROJECT_TRANSFER_MANAGE） */
+  /**
+   * 是否显示跨项目转移区块：
+   * 编辑模式 = PROJECT_TRANSFER_MANAGE 权限；创建模式 = 创建者即 owner 恒可管理，调用方传 true。
+   */
   canManageTransferSettings?: boolean;
-  /** 变更回调（选择即保存，外部调 PUT transfer-settings） */
+  /**
+   * 变更回调：编辑模式 = 选择即保存（外部调 PUT transfer-settings）；
+   * 创建模式 = 缓冲（外部把最终值随创建请求提交，项目尚不存在无法即时保存）。
+   */
   onTransferSettingsChange?: (settings: TransferSettings) => void;
 }
 
@@ -84,13 +95,21 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   canManageTransferSettings,
   onTransferSettingsChange,
 }) => {
-  // 本地维护当前值（打开时同步外部传入；变更即回调外部保存）
-  const [localSettings, setLocalSettings] = useState<TransferSettings>(
-    () => pickTransferSettings(transferSettings)
+  // 本地维护当前值（打开时同步：编辑模式取外部当前值，创建模式取 6 域默认值；变更即回调外部）
+  const [localSettings, setLocalSettings] = useState<TransferSettings>(() =>
+    editingProject
+      ? pickTransferSettings(transferSettings)
+      : { ...DEFAULT_TRANSFER_SETTINGS }
   );
   useEffect(() => {
-    if (isOpen) setLocalSettings(pickTransferSettings(transferSettings));
-  }, [isOpen, transferSettings]);
+    if (isOpen) {
+      setLocalSettings(
+        editingProject
+          ? pickTransferSettings(transferSettings)
+          : { ...DEFAULT_TRANSFER_SETTINGS }
+      );
+    }
+  }, [isOpen, transferSettings, editingProject]);
 
   const { modeOptions, outItems, inItems } = useTransferItems();
 
@@ -99,10 +118,9 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
     onClose();
   };
 
+  // 编辑模式：按 PROJECT_TRANSFER_MANAGE 门控；创建模式：创建者即 owner 恒可管理（调用方传 true）
   const showTransferSection =
-    !!editingProject &&
-    canManageTransferSettings === true &&
-    !!onTransferSettingsChange;
+    canManageTransferSettings === true && !!onTransferSettingsChange;
 
   const handleTransferChange = (key: keyof TransferSettings, value: string) => {
     const next = pickTransferSettings({
@@ -216,9 +234,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                 {t('跨项目转移')}
               </div>
               <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {t(
-                  '控制本项目文件可被跨项目复制/移动，以及可接收的来源；变更即时生效'
-                )}
+                {editingProject
+                  ? t(
+                      '控制本项目文件可被跨项目复制/移动，以及可接收的来源；变更即时生效'
+                    )
+                  : t(
+                      '控制本项目文件可被跨项目复制/移动，以及可接收的来源；创建项目后生效'
+                    )}
               </p>
             </div>
             {renderGroup(outItems)}
