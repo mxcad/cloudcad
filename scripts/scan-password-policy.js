@@ -6,14 +6,21 @@
  * （运维可改、env 可覆盖、安全模式 profile 有不同目标值），经
  * /runtime-config/public 下发，前端必须从生效值渲染提示与预检。
  *
- * 两道检查：
+ * 三道检查：
  *   A. 扫两个前端包源码的硬编码策略字面量（「至少 N 位」/「至少 N 个字符」/
  *      MIN_PASSWORD_LENGTH /「三类」）——languages/ 编译语言包与两端唯一出口
  *      helper（及其 spec）豁免；
  *   B. 回落值同步：后端定义表 defaultValue ≡ platform PASSWORD_POLICY 兜底 ≡
  *      两端前端回落字面量（DEFAULT_CONFIG/DEFAULTS 与 map 回落）。
  *      后端改默认值而任一兜底没跟着改，红灯。
+ *   C. 「类别构成」判定体同步：四个字符类别正则必须同时出现在
+ *      platform/password-policy.ts 与 backend/password-policy.service.ts
+ *      （后端无法依赖 platform，判定体永久两份，靠这里拦单侧改动）；
+ *      并且**全仓不得出现第三条持有者**——四条判据齐全的文件若不在上述两处，
+ *      说明又抄了一份「类别构成」判定（客户端一律走 getPasswordClassFlags）。
  *
+ * 服务端不再需要兜底门禁：getValue 的签名只有 key 一个参数，调用方传字面量
+ * 默认值直接编译失败。
  * 用法: node scripts/scan-password-policy.js
  */
 const fs = require('fs');
@@ -208,6 +215,72 @@ for (const [key, spec] of Object.entries(KEYS)) {
         );
       }
     }
+  }
+}
+
+// ── 检查 C：「类别构成」判定的两份副本必须同口径 ──
+// 后端无法依赖 @cloudcad/platform（platform 无构建步骤、只吃 TS 源码，
+// 后端产物是纯 CJS、require 不了 .ts），所以长度/复杂度判定在后端与 platform
+// 各保留一份。参数漂移由检查 B 拦住，判定体本身靠这里：四个字符类别正则
+// 一旦只在其中一份被改，前端的预检与「建议清单」就会与后端权威校验分叉。
+const CATEGORY_PREDICATES = ['[a-z]', '[A-Z]', '\\d', '[^a-zA-Z0-9]'];
+const CATEGORY_HOLDS = [
+  'packages/platform/src/auth/password-policy.ts',
+  'packages/backend/src/auth/services/password-policy.service.ts',
+];
+
+for (const rel of CATEGORY_HOLDS) {
+  const src = read(rel);
+  for (const cls of CATEGORY_PREDICATES) {
+    if (!src.includes(`/${cls}/`)) {
+      issues.push(
+        `${rel} 缺少字符类别判据 /${cls}/——「类别构成」判定必须与另一份副本同口径`
+      );
+    }
+  }
+}
+
+// 全仓扫「第四条副本」：四条判据齐全才判（只用其中一条的合法用例不报）。
+// 必须逐条扫——这套判据曾抄进 password-strength 与 PC AdminPasswordChange 的
+// 建议清单，第一次收敛只按「类别数」关键字搜，两处都被漏掉。
+const CODE_EXT = new Set(['.ts', '.tsx', '.vue', '.js']);
+const IGNORE_SEG = new Set(['node_modules', 'dist', 'languages', 'translations']);
+const IGNORE_FILE = /\.(spec|test)\.[a-z]+$/;
+
+function listSourceFiles() {
+  const files = [];
+  const walk = (dir) => {
+    let ents = [];
+    try {
+      ents = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (_) {
+      return;
+    }
+    for (const ent of ents) {
+      const abs = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (!IGNORE_SEG.has(ent.name)) walk(abs);
+        continue;
+      }
+      const rel = path.relative(ROOT, abs).split(path.sep).join('/');
+      if (!CODE_EXT.has(path.extname(rel))) continue;
+      if (IGNORE_FILE.test(rel)) continue;
+      files.push(rel);
+    }
+  };
+  walk(path.join(ROOT, 'packages'));
+  return files;
+}
+
+for (const rel of listSourceFiles()) {
+  if (CATEGORY_HOLDS.includes(rel)) continue;
+  const src = read(rel);
+  const all = CATEGORY_PREDICATES.every((cls) => src.includes(`/${cls}/`));
+  if (all) {
+    issues.push(
+      `${rel} 四条字符类别判据齐全——「类别构成」判定已重复实现（同能力 ≥3 份即缺陷）；` +
+        '客户端请改用 @cloudcad/platform 的 getPasswordClassFlags'
+    );
   }
 }
 

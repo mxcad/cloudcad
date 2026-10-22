@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui';
 import { t } from '@/languages';
 import {
-  passwordComplexityMessage,
   passwordPolicyHint,
-  passwordTooShortMessage,
+  passwordRequirementLabel,
   usePasswordPolicy,
 } from '@/lib/passwordPolicy';
+import type { PasswordRequirement } from '@cloudcad/platform';
 import styles from './Profile.module.css';
 
 interface ProfilePasswordTabProps {
@@ -21,6 +21,7 @@ interface ProfilePasswordTabProps {
   };
   focusedField: string | null;
   passwordStrength: { strength: number; label: string; color: string };
+  passwordRequirements: PasswordRequirement[];
   loading: boolean;
   onPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPasswordSubmit: (e: React.FormEvent) => void;
@@ -33,6 +34,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
   passwordForm,
   focusedField,
   passwordStrength,
+  passwordRequirements,
   loading,
   onPasswordChange,
   onPasswordSubmit,
@@ -135,6 +137,16 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               </span>
             </div>
           )}
+          {passwordForm.newPassword && passwordRequirements.length > 0 && (
+            <ul className={styles.passwordRequirements}>
+              {passwordRequirements.map((requirement) => (
+                <li key={requirement.key} data-ok={requirement.ok}>
+                  <span aria-hidden>{requirement.ok ? '✓' : '·'}</span>
+                  {passwordRequirementLabel(requirement, policy)}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div
@@ -180,12 +192,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             {t('安全建议')}
           </h4>
           <ul>
-            {policy.minLength > 0 && (
-              <li>{passwordTooShortMessage(policy.minLength)}</li>
-            )}
-            {policy.minCategories > 0 && (
-              <li>{passwordComplexityMessage(policy.minCategories)}</li>
-            )}
+            {/* 长度 / 类别两条要求已上移到输入框下的实时清单（带 ✓/· 状态），此处只留通用建议 */}
             <li>{t('避免使用常见的密码组合')}</li>
             <li>{t('不要在多个网站使用相同的密码')}</li>
           </ul>

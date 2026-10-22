@@ -10,7 +10,12 @@ import {
 import { t } from '@/languages';
 import { Button } from '@/components/ui/Button';
 import { UseFormRegister } from 'react-hook-form';
-import { passwordPolicyHint, usePasswordPolicy } from '@/lib/passwordPolicy';
+import {
+  passwordPolicyHint,
+  passwordRequirementLabel,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
+import type { PasswordRequirement } from '@cloudcad/platform';
 import { RegisterFormValues } from './hooks/registerFormSchema';
 import { FieldErrors } from './types';
 import styles from './register.module.css';
@@ -32,6 +37,7 @@ interface PasswordStepProps {
   setShowConfirmPassword: (v: boolean) => void;
   passwordValue: string;
   passwordStrength: PasswordStrength;
+  passwordRequirements: PasswordRequirement[];
   loading: boolean;
   onBack: () => void;
 }
@@ -61,6 +67,7 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
   setShowConfirmPassword,
   passwordValue,
   passwordStrength,
+  passwordRequirements,
   loading,
   onBack,
 }) => {
@@ -122,6 +129,16 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
               {passwordStrength.label}
             </span>
           </div>
+        )}
+        {passwordValue && passwordRequirements.length > 0 && (
+          <ul className={styles.passwordRequirements}>
+            {passwordRequirements.map((requirement) => (
+              <li key={requirement.key} data-ok={requirement.ok}>
+                <span aria-hidden>{requirement.ok ? '✓' : '·'}</span>
+                {passwordRequirementLabel(requirement, policy)}
+              </li>
+            ))}
+          </ul>
         )}
         {fieldErrors.password && (
           <p className={styles.errorMessage}>{fieldErrors.password}</p>
