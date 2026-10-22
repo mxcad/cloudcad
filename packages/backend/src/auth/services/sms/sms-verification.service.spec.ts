@@ -134,3 +134,128 @@ describe('SmsVerificationService.verifyCode', () => {
     ).toThrow(/verificationCode/);
   });
 });
+
+describe('SmsVerificationService 短信 provider 指纹热重建（ADR-0082 #502）', () => {
+  let service: SmsVerificationService;
+  let values: Record<string, unknown>;
+
+  const baseValues: Record<string, unknown> = {
+    smsEnabled: true,
+    smsProvider: 'aliyun',
+    aliyunSmsAccessKeyId: 'LTAI-ak',
+    aliyunSmsAccessKeySecret: 'aliyun-sk',
+    aliyunSmsSignName: 'CloudCAD',
+    aliyunSmsTemplateCode: 'SMS_123',
+    aliyunSmsRegionId: 'cn-hangzhou',
+    tencentSmsSecretId: 'AKID-tid',
+    tencentSmsSecretKey: 'tencent-sk',
+    tencentSmsAppId: '1400000000',
+    tencentSmsSignName: 'CloudCAD',
+    tencentSmsTemplateCode: '100000',
+    tencentSmsRegion: 'ap-guangzhou',
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    values = { ...baseValues };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        SmsVerificationService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) =>
+              key === 'cacheTTL'
+                ? { verificationCode: 900, verificationRateLimit: 60 }
+                : undefined
+            ),
+          },
+        },
+        {
+          provide: RuntimeConfigService,
+          useValue: {
+            getValue: jest.fn(async (key: string) => values[key]),
+          },
+        },
+        { provide: getRedisConnectionToken(), useValue: createMockRedis() },
+      ],
+    }).compile();
+
+    service = module.get<SmsVerificationService>(SmsVerificationService);
+  });
+
+  it('smsEnabled=false → Mock 模式', async () => {
+    values.smsEnabled = false;
+
+    const provider = (service as never as {
+      getProvider: () => Promise<{ name: string }>;
+    }).getProvider();
+
+    expect((await provider).name).toBe('mock');
+  });
+
+  it('启用 + aliyun 凭据完整 → 阿里云 provider；配置不变时复用同一实例', async () => {
+    const first = await (
+      service as never as { getProvider: () => Promise<{ name: string }> }
+    ).getProvider();
+    const second = await (
+      service as never as { getProvider: () => Promise<{ name: string }> }
+    ).getProvider();
+
+    expect(first.name).toBe('aliyun');
+    expect(second).toBe(first);
+  });
+
+  it('凭据被改写 → 指纹变化，重建 provider', async () => {
+    const first = await (
+      service as never as { getProvider: () => Promise<{ name: string }> }
+    ).getProvider();
+
+    values.aliyunSmsAccessKeyId = 'LTAI-ak-2';
+
+    const second = await (
+      service as never as { getProvider: () => Promise<{ name: string }> }
+    ).getProvider();
+
+    expect(second.name).toBe('aliyun');
+    expect(second).not.toBe(first);
+  });
+
+  it('启用但所选服务商凭据缺失 → 回落 Mock 模式（不抛错）', async () => {
+    values.aliyunSmsAccessKeyId = '';
+    values.aliyunSmsAccessKeySecret = '';
+
+    const provider = (service as never as {
+      getProvider: () => Promise<{ name: string }>;
+    }).getProvider();
+
+    expect((await provider).name).toBe('mock');
+  });
+
+  it('smsProvider 切换 aliyun → tencent → 腾讯云 provider', async () => {
+    const first = await (
+      service as never as { getProvider: () => Promise<{ name: string }> }
+    ).getProvider();
+    expect(first.name).toBe('aliyun');
+
+    values.smsProvider = 'tencent';
+
+    const second = await (
+      service as never as { getProvider: () => Promise<{ name: string }> }
+    ).getProvider();
+
+    expect(second.name).toBe('tencent');
+    expect(second).not.toBe(first);
+  });
+
+  it('smsProvider=mock → Mock 模式', async () => {
+    values.smsProvider = 'mock';
+
+    const provider = (service as never as {
+      getProvider: () => Promise<{ name: string }>;
+    }).getProvider();
+
+    expect((await provider).name).toBe('mock');
+  });
+});

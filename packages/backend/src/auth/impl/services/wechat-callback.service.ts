@@ -54,8 +54,8 @@ export class WechatCallbackService implements IWechatCallbackService {
       : callbackBase;
 
     const authUrl = isMobile
-      ? this.wechatService.getMobileAuthUrl(state, callbackWithTxn)
-      : this.wechatService.getAuthUrl(state, callbackWithTxn);
+      ? await this.wechatService.getMobileAuthUrl(state, callbackWithTxn)
+      : await this.wechatService.getAuthUrl(state, callbackWithTxn);
 
     return { authUrl, state, transactionId };
   }

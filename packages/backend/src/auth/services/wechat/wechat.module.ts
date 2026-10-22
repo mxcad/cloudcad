@@ -13,6 +13,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { RedisModule } from '../../../redis/redis.module';
+import { RuntimeConfigModule } from '../../../runtime-config/runtime-config.module';
 import { WechatService } from '../../impl/services/wechat.service';
 import { WECHAT_VERIFICATION_SERVICE } from '../../../common/interfaces/verification.interface';
 
@@ -21,9 +22,10 @@ import { WECHAT_VERIFICATION_SERVICE } from '../../../common/interfaces/verifica
  *
  * 供 users 模块（注销微信授权验证）等跨模块场景复用 WechatService，
  * 避免 users 直接依赖 AuthModule 造成循环（AuthModule imports UsersModule）。
+ * RuntimeConfigModule 供 WechatService 热解析微信凭据（ADR-0082 #503）。
  */
 @Module({
-  imports: [ConfigModule, RedisModule],
+  imports: [ConfigModule, RedisModule, RuntimeConfigModule],
   providers: [
     WechatService,
     { provide: WECHAT_VERIFICATION_SERVICE, useExisting: WechatService },

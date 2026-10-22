@@ -316,14 +316,14 @@ describe("RuntimeConfigService", () => {
 	// ==================== set ====================
 	describe("set", () => {
 		it("should set config value", async () => {
-			// 样例键用 smsEnabled：无通道门禁/依赖边，纯验证 set 写路径
-			// （mailEnabled 自 #495 起是通道开关，置 true 会触发通道门禁）
+			// 样例键用 allowRegister：无通道门禁/依赖边，纯验证 set 写路径
+			// （mailEnabled/smsEnabled 自 #495/#502 起是通道开关，置 true 会触发通道门禁）
 			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
 				value: JSON.stringify(false),
 			});
 			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
 
-			await service.set("smsEnabled", true, "admin", "192.168.1.1");
+			await service.set("allowRegister", true, "admin", "192.168.1.1");
 
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
 			expect(mockPrisma.runtimeConfigLog.create).toHaveBeenCalled();
@@ -340,7 +340,7 @@ describe("RuntimeConfigService", () => {
 			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
 			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
 
-			await service.set("smsEnabled", true);
+			await service.set("allowRegister", false);
 
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
 		});
@@ -2217,6 +2217,256 @@ describe("RuntimeConfigService", () => {
 			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
 
 			await service.set("requireEmailVerification", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe("短信通道（ADR-0082 #502）：机制层对真实短信键生效", () => {
+		const SMS_ENV: Record<string, string> = {
+			smsProvider: "SMS_PROVIDER",
+			aliyunSmsAccessKeyId: "ALIYUN_ACCESS_KEY_ID",
+			aliyunSmsAccessKeySecret: "ALIYUN_ACCESS_KEY_SECRET",
+			aliyunSmsSignName: "ALIYUN_SMS_SIGN_NAME",
+			aliyunSmsTemplateCode: "ALIYUN_SMS_TEMPLATE_CODE",
+			aliyunSmsRegionId: "ALIYUN_SMS_REGION_ID",
+			tencentSmsSecretId: "TENCENT_SECRET_ID",
+			tencentSmsSecretKey: "TENCENT_SECRET_KEY",
+			tencentSmsAppId: "TENCENT_SMS_APP_ID",
+			tencentSmsSignName: "TENCENT_SMS_SIGN_NAME",
+			tencentSmsTemplateCode: "TENCENT_SMS_TEMPLATE_CODE",
+			tencentSmsRegion: "TENCENT_SMS_REGION",
+		};
+
+		const mockSmsVerified = () => {
+			mockPrisma.channelVerification.findUnique.mockResolvedValue({
+				id: "cv-sms",
+				channel: "sms",
+				verifiedAt: new Date("2026-10-22T08:00:00Z"),
+				testedBy: "op-1",
+				testedByIp: "127.0.0.1",
+				createdAt: new Date("2026-10-22T08:00:00Z"),
+			});
+		};
+
+		it("不变式：12 键登记在通道 sms 下、envKey 指向既有环境变量、全部非公开", () => {
+			for (const [key, envKey] of Object.entries(SMS_ENV)) {
+				const def = RUNTIME_CONFIG_DEFINITIONS.find(
+					(d) => d.key === key
+				);
+				expect(def).toBeDefined();
+				expect(def!.channel).toBe("sms");
+				expect(def!.envKey).toBe(envKey);
+				expect(def!.isPublic).toBe(false);
+			}
+			const switchDef = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "smsEnabled"
+			)!;
+			expect(switchDef.channelSwitch).toBe("sms");
+			expect(switchDef.type).toBe("boolean");
+			// 凭据是秘密键：加密落库 + 掩码回读（#493 不变式）
+			for (const key of [
+				"aliyunSmsAccessKeyId",
+				"aliyunSmsAccessKeySecret",
+				"tencentSmsSecretId",
+				"tencentSmsSecretKey",
+			]) {
+				expect(
+					RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key)!.input
+						?.secret
+				).toBe(true);
+			}
+			// 条件完整性（#502 设计决策）：凭据键全部 allowNull——静态完整性
+			// 只要求 smsProvider 非空，按 provider 的凭据校验交给测试动作
+			for (const key of Object.keys(SMS_ENV)) {
+				if (key === "smsProvider" || key === "aliyunSmsRegionId" || key === "tencentSmsRegion") {
+					continue;
+				}
+				expect(
+					RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key)!.input
+						?.allowNull
+				).toBe(true);
+			}
+		});
+
+		it("不变式：#492 声明的依赖边对短信通道生效（强制手机号验证 → 短信服务开关）", () => {
+			const def = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "requirePhoneVerification"
+			)!;
+			expect(def.requires).toContain("smsEnabled");
+		});
+
+		it("getChannelStatus('sms')：零行也配置完整（smsProvider 有默认值 mock，凭据键 allowNull）", async () => {
+			const status = await service.getChannelStatus("sms");
+
+			expect(status.configComplete).toBe(true);
+			expect(status.missingKeys).toEqual([]);
+			expect(status.verified).toBe(false);
+		});
+
+		it("配置完整但未通过测试 → 短信服务开关无法开启（硬阻断，不写库）", async () => {
+			// channelVerification.findUnique 默认 null → 未验证
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(service.set("smsEnabled", true, "op-1")).rejects.toThrow(
+				BadRequestException
+			);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("配置完整 + 测试通过 → 允许开启短信服务开关", async () => {
+			mockSmsVerified();
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("smsEnabled", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		it("改任一短信配置项 → 删除 sms 通道验证记录（测试通过状态失效）", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("aliyunSmsAccessKeyId", "LTAI-new", "op-1");
+
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "sms" },
+			});
+		});
+
+		it("依赖边生效：短信服务开关未开时，强制手机号验证被拒绝", async () => {
+			// smsEnabled 无 runtime 行、无 envKey → 生效值 = 默认 false
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.set("requirePhoneVerification", true, "op-1")
+			).rejects.toThrow(BadRequestException);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("短信服务开关已开时，强制手机号验证允许开启", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "smsEnabled",
+					value: "true",
+					type: "boolean",
+					updatedBy: "op-1",
+				},
+			]);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("requirePhoneVerification", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe("微信通道（ADR-0082 #503）：机制层对真实微信键生效", () => {
+		const WECHAT_ENV: Record<string, string> = {
+			wechatAppId: "WECHAT_APP_ID",
+			wechatAppSecret: "WECHAT_APP_SECRET",
+		};
+
+		const mockWechatVerified = () => {
+			mockPrisma.channelVerification.findUnique.mockResolvedValue({
+				id: "cv-wechat",
+				channel: "wechat",
+				verifiedAt: new Date("2026-10-22T08:00:00Z"),
+				testedBy: "op-1",
+				testedByIp: "127.0.0.1",
+				createdAt: new Date("2026-10-22T08:00:00Z"),
+			});
+		};
+
+		it("不变式：2 键登记在通道 wechat 下、envKey 指向既有环境变量、全部非公开", () => {
+			for (const [key, envKey] of Object.entries(WECHAT_ENV)) {
+				const def = RUNTIME_CONFIG_DEFINITIONS.find(
+					(d) => d.key === key
+				);
+				expect(def).toBeDefined();
+				expect(def!.channel).toBe("wechat");
+				expect(def!.envKey).toBe(envKey);
+				expect(def!.isPublic).toBe(false);
+				// 凭据键 allowNull：静态完整性恒满足，凭据校验交给测试动作
+				expect(def!.input?.allowNull).toBe(true);
+			}
+			const switchDef = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "wechatEnabled"
+			)!;
+			expect(switchDef.channelSwitch).toBe("wechat");
+			expect(switchDef.type).toBe("boolean");
+			// AppSecret 是秘密键：加密落库 + 掩码回读（#493 不变式）
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "wechatAppSecret")!
+					.input?.secret
+			).toBe(true);
+		});
+
+		it("不变式：#492 声明的依赖边对微信通道生效（微信自动注册 → 微信登录开关）", () => {
+			const def = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "wechatAutoRegister"
+			)!;
+			expect(def.requires).toContain("wechatEnabled");
+		});
+
+		it("getChannelStatus('wechat')：零行也配置完整（凭据键 allowNull）", async () => {
+			const status = await service.getChannelStatus("wechat");
+
+			expect(status.configComplete).toBe(true);
+			expect(status.missingKeys).toEqual([]);
+			expect(status.verified).toBe(false);
+		});
+
+		it("配置完整但未通过测试 → 微信登录开关无法开启（硬阻断，不写库）", async () => {
+			// channelVerification.findUnique 默认 null → 未验证
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(service.set("wechatEnabled", true, "op-1")).rejects.toThrow(
+				BadRequestException
+			);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("配置完整 + 测试通过 → 允许开启微信登录开关", async () => {
+			mockWechatVerified();
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("wechatEnabled", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		it("改任一微信配置项 → 删除 wechat 通道验证记录（测试通过状态失效）", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("wechatAppId", "wx_new", "op-1");
+
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "wechat" },
+			});
+		});
+
+		it("依赖边生效：微信登录开关未开时，微信自动注册被拒绝", async () => {
+			// wechatEnabled 无 runtime 行、无 envKey → 生效值 = 默认 false
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.set("wechatAutoRegister", true, "op-1")
+			).rejects.toThrow(BadRequestException);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("微信登录开关已开时，微信自动注册允许开启", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "wechatEnabled",
+					value: "true",
+					type: "boolean",
+					updatedBy: "op-1",
+				},
+			]);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("wechatAutoRegister", true, "op-1");
 
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
 		});

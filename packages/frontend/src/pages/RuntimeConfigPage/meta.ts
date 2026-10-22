@@ -133,9 +133,11 @@ export function toHistoryEntries(raw: unknown): ConfigHistoryEntry[] {
   });
 }
 
-/** 通道显示名（未登记的通道直接用通道名，如 sms） */
+/** 通道显示名（未登记的通道直接用通道名） */
 export const CHANNEL_LABEL: Record<string, string> = {
   mail: t('邮件通道'),
+  sms: t('短信通道'),
+  wechat: t('微信通道'),
 };
 
 /** 归一化通道状态列表（SDK 响应 → 视图模型，缺失字段给安全默认值） */

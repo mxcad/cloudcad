@@ -24247,5 +24247,23 @@
             "src/services/mxcadManager/cmd/shareCommand.ts(1642-1656)"
         ],
         "$id": 7883
+    },
+    "短信通道": {
+        "zh-TW": "簡訊通道",
+        "en-US": "SMS Channel",
+        "ko-KR": "SMS 채널",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(139-139)"
+        ],
+        "$id": 1000131
+    },
+    "微信通道": {
+        "zh-TW": "微信通道",
+        "en-US": "WeChat Channel",
+        "ko-KR": "WeChat 채널",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(140-140)"
+        ],
+        "$id": 1000132
     }
 }

@@ -11,6 +11,7 @@ import * as crypto from 'crypto';
 import { I18nContext } from 'nestjs-i18n';
 import { ClsService } from 'nestjs-cls';
 import { buildOutboundTraceHeaders } from '../../../common/utils/outbound-trace';
+import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
 
 export interface WechatUserInfo {
   openid: string;
@@ -43,6 +44,8 @@ export class WechatService {
   private _appId: string | undefined;
   private _appSecret: string | undefined;
   private _callbackUrl: string | undefined;
+  /** 当前生效微信凭据的指纹（ADR-0082 #503）；变化即重置 memo 快照 */
+  private credentialsFingerprint: string | null = null;
 
   /** access_token 幂等缓存 TTL（秒），大于微信 code 有效期（5 分钟） */
   private readonly cacheTtl = 600;
@@ -52,22 +55,37 @@ export class WechatService {
   constructor(
     private readonly configService: ConfigService,
     @InjectRedis() private readonly redis: Redis,
-    private readonly cls: ClsService
+    private readonly cls: ClsService,
+    private readonly runtimeConfigService: RuntimeConfigService
   ) {}
 
-  private get appId(): string {
-    if (this._appId === undefined) {
-      this._appId = this.configService.get<string>('WECHAT_APP_ID') || '';
+  /**
+   * 热解析微信凭据（ADR-0082 #503 指纹热重建）：
+   * 三层解析（runtime > env(WECHAT_APP_ID/WECHAT_APP_SECRET) > 默认）取
+   * AppID/AppSecret，指纹变化才更新 memo 快照，配置页改完即生效。
+   * callbackUrl 是部署身份地址（非凭据），保持 env 快照（ADR-0082 D1）。
+   */
+  private async resolveCredentials(): Promise<void> {
+    const [appId, appSecret] = await Promise.all([
+      this.runtimeConfigService.getValue<string>('wechatAppId'),
+      this.runtimeConfigService.getValue<string>('wechatAppSecret'),
+    ]);
+    const fingerprint = JSON.stringify([appId, appSecret]);
+    if (fingerprint !== this.credentialsFingerprint) {
+      this._appId = appId;
+      this._appSecret = appSecret;
+      this.credentialsFingerprint = fingerprint;
     }
-    return this._appId;
   }
 
-  private get packagesecret(): string {
-    if (this._appSecret === undefined) {
-      this._appSecret =
-        this.configService.get<string>('WECHAT_APP_SECRET') || '';
-    }
-    return this._appSecret;
+  private async appId(): Promise<string> {
+    await this.resolveCredentials();
+    return this._appId ?? '';
+  }
+
+  private async packagesecret(): Promise<string> {
+    await this.resolveCredentials();
+    return this._appSecret ?? '';
   }
 
   private get callbackUrl(): string {
@@ -82,11 +100,12 @@ export class WechatService {
     return this.callbackUrl;
   }
 
-  getAuthUrl(state: string, customRedirectUri?: string): string {
-    if (!this.appId) {
+  async getAuthUrl(state: string, customRedirectUri?: string): Promise<string> {
+    const appId = await this.appId();
+    if (!appId) {
       throw new BadRequestException(
         I18nContext.current()?.t('error.auth.wechat_appid_missing') ??
-          '微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID'
+          '微信 AppID 未配置，请在运行时配置页或 .env 文件中设置 WECHAT_APP_ID'
       );
     }
     if (!this.callbackUrl) {
@@ -100,7 +119,7 @@ export class WechatService {
     );
     return (
       `https://open.weixin.qq.com/connect/qrconnect?` +
-      `appid=${this.appId}` +
+      `appid=${appId}` +
       `&redirect_uri=${redirectUri}` +
       `&response_type=code` +
       `&scope=snsapi_login` +
@@ -109,11 +128,15 @@ export class WechatService {
     );
   }
 
-  getMobileAuthUrl(state: string, customRedirectUri?: string): string {
-    if (!this.appId) {
+  async getMobileAuthUrl(
+    state: string,
+    customRedirectUri?: string
+  ): Promise<string> {
+    const appId = await this.appId();
+    if (!appId) {
       throw new BadRequestException(
         I18nContext.current()?.t('error.auth.wechat_appid_missing') ??
-          '微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID'
+          '微信 AppID 未配置，请在运行时配置页或 .env 文件中设置 WECHAT_APP_ID'
       );
     }
     if (!this.callbackUrl) {
@@ -127,7 +150,7 @@ export class WechatService {
     );
     return (
       `https://open.weixin.qq.com/connect/oauth2/authorize?` +
-      `appid=${this.appId}` +
+      `appid=${appId}` +
       `&redirect_uri=${redirectUri}` +
       `&response_type=code` +
       `&scope=snsapi_userinfo` +
@@ -139,7 +162,8 @@ export class WechatService {
   async getAccessToken(code: string): Promise<WechatTokenResponse> {
     // 幂等缓存：微信 code 一次性有效，CDN 回源重试/客户端重放同一 code 时
     // 直接命中首次结果，避免微信拒绝（40029 code been used）
-    const cacheKey = `wechat:access_token:${this.appId}:${code}`;
+    const appId = await this.appId();
+    const cacheKey = `wechat:access_token:${appId}:${code}`;
     const lockKey = `${cacheKey}:lock`;
 
     const cached = await this.readAccessTokenCache(cacheKey);
@@ -223,10 +247,14 @@ export class WechatService {
   }
 
   private async requestAccessToken(code: string): Promise<WechatTokenResponse> {
+    const [appId, appSecret] = await Promise.all([
+      this.appId(),
+      this.packagesecret(),
+    ]);
     const url =
       `https://api.weixin.qq.com/sns/oauth2/access_token?` +
-      `appid=${this.appId}` +
-      `&secret=${this.packagesecret}` +
+      `appid=${appId}` +
+      `&secret=${appSecret}` +
       `&code=${code}` +
       `&grant_type=authorization_code`;
 
@@ -292,9 +320,10 @@ export class WechatService {
   }
 
   async refreshAccessToken(refreshToken: string): Promise<WechatTokenResponse> {
+    const appId = await this.appId();
     const url =
       `https://api.weixin.qq.com/sns/oauth2/refresh_token?` +
-      `appid=${this.appId}` +
+      `appid=${appId}` +
       `&grant_type=refresh_token` +
       `&refresh_token=${refreshToken}`;
 

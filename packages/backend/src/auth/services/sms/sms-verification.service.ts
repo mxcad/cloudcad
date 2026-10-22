@@ -47,7 +47,8 @@ export class SmsVerificationService implements ISmsVerificationService {
   private readonly logger = new Logger(SmsVerificationService.name);
 
   private provider: SmsProvider | null = null;
-  private providerInitialized = false;
+  /** 当前生效短信配置的指纹（ADR-0082 #502）；变化即热重建 provider */
+  private providerFingerprint: string | null = null;
 
   private readonly codeTTL: number;
   private readonly rateLimitTTL: number;
@@ -84,42 +85,83 @@ export class SmsVerificationService implements ISmsVerificationService {
   }
 
   /**
-   * 获取或初始化短信服务商
+   * 获取短信服务商（ADR-0082 #502 指纹热重建）
+   *
+   * 每次调用按三层解析（runtime > env > 默认）取 smsEnabled + smsProvider
+   * + 所选服务商凭据键，拼指纹；指纹变化即重建 provider，配置页改完即生效。
+   * 关闭 / 所选服务商凭据缺失时回落 Mock 模式（与旧行为一致）。
    */
   private async getProvider(): Promise<SmsProvider> {
-    if (this.providerInitialized) {
+    const [smsEnabled, providerName] = await Promise.all([
+      this.runtimeConfigService.getValue<boolean>('smsEnabled'),
+      this.runtimeConfigService.getValue<string>('smsProvider'),
+    ]);
+
+    let aliyun: SmsProviderConfig['aliyun'] | undefined;
+    let tencent: SmsProviderConfig['tencent'] | undefined;
+
+    if (providerName === 'aliyun') {
+      const [accessKeyId, accessKeySecret, signName, templateCode, regionId] =
+        await Promise.all([
+          this.runtimeConfigService.getValue<string>('aliyunSmsAccessKeyId'),
+          this.runtimeConfigService.getValue<string>('aliyunSmsAccessKeySecret'),
+          this.runtimeConfigService.getValue<string>('aliyunSmsSignName'),
+          this.runtimeConfigService.getValue<string>('aliyunSmsTemplateCode'),
+          this.runtimeConfigService.getValue<string>('aliyunSmsRegionId'),
+        ]);
+      aliyun = { accessKeyId, accessKeySecret, signName, templateCode, regionId };
+    } else if (providerName === 'tencent') {
+      const [secretId, secretKey, appId, signName, templateId, region] =
+        await Promise.all([
+          this.runtimeConfigService.getValue<string>('tencentSmsSecretId'),
+          this.runtimeConfigService.getValue<string>('tencentSmsSecretKey'),
+          this.runtimeConfigService.getValue<string>('tencentSmsAppId'),
+          this.runtimeConfigService.getValue<string>('tencentSmsSignName'),
+          this.runtimeConfigService.getValue<string>('tencentSmsTemplateCode'),
+          this.runtimeConfigService.getValue<string>('tencentSmsRegion'),
+        ]);
+      tencent = { secretId, secretKey, appId, signName, templateId, region };
+    }
+
+    const fingerprint = JSON.stringify([
+      smsEnabled,
+      providerName,
+      aliyun,
+      tencent,
+    ]);
+    if (fingerprint === this.providerFingerprint) {
       return this.provider!;
     }
 
-    // 检查运行时配置是否启用短信服务
-    const smsEnabled = await this.runtimeConfigService.getValue<boolean>(
-      'smsEnabled',
-      false
-    );
-
     if (!smsEnabled) {
       this.provider = new MockSmsProvider();
-      this.providerInitialized = true;
       this.logger.log('短信服务未启用（运行时配置），使用 Mock 模式');
-      return this.provider;
-    }
-
-    // 获取静态配置
-    const smsConfig = this.configService.get<SmsProviderConfig>('sms');
-
-    if (smsConfig) {
-      this.provider = SmsProviderFactory.create({
-        provider: smsConfig.provider,
-        aliyun: smsConfig.aliyun,
-        tencent: smsConfig.tencent,
-      });
-      this.logger.log(`短信服务已启用，使用 ${this.provider.name} 服务商`);
-    } else {
+    } else if (providerName === 'mock') {
       this.provider = new MockSmsProvider();
-      this.logger.log('短信服务配置缺失，使用 Mock 模式');
+      this.logger.log('短信服务已启用，使用 Mock 模式（开发测试）');
+    } else {
+      const hasCredentials =
+        providerName === 'aliyun'
+          ? !!(aliyun?.accessKeyId && aliyun?.accessKeySecret)
+          : !!(tencent?.secretId && tencent?.secretKey);
+
+      if (!hasCredentials) {
+        this.provider = new MockSmsProvider();
+        this.logger.warn(
+          `短信服务已启用但 ${providerName} 凭据缺失，使用 Mock 模式`
+        );
+      } else {
+        this.provider = SmsProviderFactory.create({
+          // 走到这里 providerName 必为 'aliyun' | 'tencent'（'mock' 已在上分支处理）
+          provider: providerName as SmsProviderConfig['provider'],
+          aliyun,
+          tencent,
+        });
+        this.logger.log(`短信服务已启用，使用 ${this.provider.name} 服务商`);
+      }
     }
 
-    this.providerInitialized = true;
+    this.providerFingerprint = fingerprint;
     return this.provider;
   }
 

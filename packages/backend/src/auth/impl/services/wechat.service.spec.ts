@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { ClsService } from 'nestjs-cls';
 import { WechatService } from './wechat.service';
+import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
 
 const originalFetch = global.fetch;
 
@@ -42,6 +43,18 @@ describe('WechatService', () => {
         },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: ClsService, useValue: { get: jest.fn() } },
+        {
+          provide: RuntimeConfigService,
+          useValue: {
+            getValue: jest.fn(async (key: string) => {
+              const map: Record<string, string> = {
+                wechatAppId: 'wx_test',
+                wechatAppSecret: 'secret',
+              };
+              return map[key] ?? '';
+            }),
+          },
+        },
       ],
     }).compile();
 
@@ -181,7 +194,7 @@ describe('WechatService', () => {
   });
 
   describe('getAuthUrl / getMobileAuthUrl', () => {
-    it('state 做 URL 编码：含 +/=/ 的 base64 不会被 query 解析破坏', () => {
+    it('state 做 URL 编码：含 +/=/ 的 base64 不会被 query 解析破坏', async () => {
       // base64 JSON 常见字符 + / = 若不编码，+ 会被 Express 解析为空格，
       // 回调侧 validateState 失败导致登录/绑定全链路 400（历史缺陷）
       const state = Buffer.from(
@@ -189,12 +202,12 @@ describe('WechatService', () => {
       ).toString('base64');
       expect(state).toMatch(/[+/=]/);
 
-      const authUrl = service.getAuthUrl(state);
+      const authUrl = await service.getAuthUrl(state);
       const encodedState = encodeURIComponent(state);
       expect(authUrl).toContain(`state=${encodedState}`);
       expect(authUrl).not.toContain(`state=${state}`);
 
-      const mobileAuthUrl = service.getMobileAuthUrl(state);
+      const mobileAuthUrl = await service.getMobileAuthUrl(state);
       expect(mobileAuthUrl).toContain(`state=${encodedState}`);
     });
   });
@@ -212,5 +225,101 @@ describe('WechatService', () => {
         /刷新授权失败/
       );
     });
+  });
+});
+
+describe('WechatService 微信凭据指纹热重建（ADR-0082 #503）', () => {
+  let service: WechatService;
+  let values: Record<string, string>;
+  const getValueMock = jest.fn();
+
+  const mockRedis = {
+    get: jest.fn(),
+    setex: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    values = { wechatAppId: 'wx_test', wechatAppSecret: 'secret' };
+    getValueMock.mockImplementation(async (key: string) => values[key] ?? '');
+    mockRedis.set.mockResolvedValue('OK');
+    mockRedis.get.mockResolvedValue(null);
+    mockRedis.setex.mockResolvedValue('OK');
+    global.fetch = jest.fn().mockResolvedValue({
+      json: async () => ({ access_token: 'at1', openid: 'o1' }),
+    }) as unknown as typeof fetch;
+
+    const module = await Test.createTestingModule({
+      providers: [
+        WechatService,
+        {
+          provide: 'default_IORedisModuleConnectionToken',
+          useValue: mockRedis,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) =>
+              key === 'WECHAT_CALLBACK_URL'
+                ? 'https://example.com/api/v1/auth/wechat/callback'
+                : undefined
+            ),
+          },
+        },
+        { provide: ClsService, useValue: { get: jest.fn() } },
+        {
+          provide: RuntimeConfigService,
+          useValue: { getValue: getValueMock },
+        },
+      ],
+    }).compile();
+
+    service = module.get<WechatService>(WechatService);
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('凭据不变 → 每次调用仍热解析，但快照稳定（cacheKey 不变）', async () => {
+    await service.getAccessToken('code1');
+    const callsAfterFirst = getValueMock.mock.calls.length;
+
+    await service.getAccessToken('code2');
+
+    // 热检查：每次调用都重新三层解析（与 EmailService 指纹模式一致）
+    expect(getValueMock.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+    // 指纹未变：快照稳定，cacheKey 仍用原 AppID
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      'wechat:access_token:wx_test:code2:lock',
+      '1',
+      'EX',
+      15,
+      'NX'
+    );
+  });
+
+  it('凭据被改写 → 指纹变化，后续请求用新 AppID（cacheKey 随之变化）', async () => {
+    await service.getAccessToken('code1');
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      'wechat:access_token:wx_test:code1:lock',
+      '1',
+      'EX',
+      15,
+      'NX'
+    );
+
+    values.wechatAppId = 'wx_new';
+
+    await service.getAccessToken('code2');
+    expect(mockRedis.set).toHaveBeenCalledWith(
+      'wechat:access_token:wx_new:code2:lock',
+      '1',
+      'EX',
+      15,
+      'NX'
+    );
   });
 });

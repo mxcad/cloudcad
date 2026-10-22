@@ -16,6 +16,8 @@ import { RuntimeConfigService } from './runtime-config.service';
 import { ChannelCryptoService } from './channel-crypto.service';
 import { ChannelTestService } from './channel-test.service';
 import { MailChannelTestAction } from './mail-channel-test-action';
+import { SmsChannelTestAction } from './sms-channel-test-action';
+import { WechatChannelTestAction } from './wechat-channel-test-action';
 import { BrandAssetService } from './brand-asset.service';
 import { RuntimeConfigController } from './runtime-config.controller';
 import { CHANNEL_TEST_ACTIONS } from './channel-test.service';
@@ -33,10 +35,20 @@ import { CHANNEL_TEST_ACTIONS } from './channel-test.service';
     ChannelTestService,
     BrandAssetService,
     MailChannelTestAction,
+    SmsChannelTestAction,
+    WechatChannelTestAction,
     {
       provide: CHANNEL_TEST_ACTIONS,
-      useFactory: (action: MailChannelTestAction) => [action],
-      inject: [MailChannelTestAction],
+      useFactory: (
+        mail: MailChannelTestAction,
+        sms: SmsChannelTestAction,
+        wechat: WechatChannelTestAction
+      ) => [mail, sms, wechat],
+      inject: [
+        MailChannelTestAction,
+        SmsChannelTestAction,
+        WechatChannelTestAction,
+      ],
     },
   ],
   exports: [
