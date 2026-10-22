@@ -53,6 +53,7 @@ import {
   ApplyProfileDto,
   RuntimeProfilePreviewResponseDto,
   RuntimeProfileApplyResponseDto,
+  RuntimeConfigDependencyViolationDto,
 } from './dto/runtime-config.dto';
 import type { RuntimeConfigValue } from './runtime-config.types';
 import { RequirePermissions } from '../common/decorators/require-permissions.decorator';
@@ -126,6 +127,24 @@ export class RuntimeConfigController {
   })
   async getDefinitions(): Promise<RuntimeConfigDefinitionDto[]> {
     return this.runtimeConfigService.getDefinitions();
+  }
+
+  /**
+   * 检测开关依赖不一致（ADR-0082 检查手段①）：揪出门禁上线前遗留的
+   * 「功能开关开、依赖的通道开关关」状态（含告警邮件反向偏离），供管理端呈现。
+   * 注意路径声明顺序：必须排在 `:key` 之前，否则会被当成配置键名。
+   */
+  @Get('dependency-check')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '检测开关依赖不一致（验证开+通道关的遗留状态）' })
+  @ApiResponse({
+    status: 200,
+    description: '返回当前依赖不一致清单（无违规时为空数组）',
+    type: [RuntimeConfigDependencyViolationDto],
+  })
+  async checkDependencies(): Promise<RuntimeConfigDependencyViolationDto[]> {
+    return this.runtimeConfigService.detectDependencyViolations();
   }
 
   /**

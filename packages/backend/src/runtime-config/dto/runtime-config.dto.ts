@@ -12,6 +12,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsDefined, IsIn } from 'class-validator';
+import { I18nContext } from 'nestjs-i18n';
 
 /**
  * 更新运行时配置 DTO
@@ -22,7 +23,7 @@ export class UpdateRuntimeConfigDto {
     type: Object,
     example: false,
   })
-  @IsDefined({ message: '配置值不能为空' })
+  @IsDefined({ message: () => I18nContext.current()?.t('validation.config_value_required') ?? '配置值不能为空' })
   val: string | number | boolean | Record<string, unknown>;
 }
 
@@ -31,7 +32,7 @@ export class UpdateRuntimeConfigDto {
  */
 export class ResetCategoryDto {
   @ApiProperty({ description: '配置分类', example: 'mail' })
-  @IsDefined({ message: '分类不能为空' })
+  @IsDefined({ message: () => I18nContext.current()?.t('validation.category_required') ?? '分类不能为空' })
   category: string;
 }
 
@@ -44,8 +45,8 @@ export class ApplyProfileDto {
     enum: ['secure', 'normal'],
     example: 'secure',
   })
-  @IsDefined({ message: '模式不能为空' })
-  @IsIn(['secure', 'normal'], { message: '模式必须是 secure 或 normal' })
+  @IsDefined({ message: () => I18nContext.current()?.t('validation.profile_required') ?? '模式不能为空' })
+  @IsIn(['secure', 'normal'], { message: () => I18nContext.current()?.t('validation.profile_invalid') ?? '模式必须是 secure 或 normal' })
   profile: 'secure' | 'normal';
 }
 
@@ -193,6 +194,13 @@ export class RuntimeConfigResponseDto {
     example: true,
   })
   hot?: boolean;
+
+  @ApiPropertyOptional({
+    description: '开关依赖声明：本项为 true 时列出的配置项必须同为 true',
+    type: [String],
+    example: ['mailEnabled'],
+  })
+  requires?: string[];
 }
 
 /**
@@ -252,6 +260,30 @@ export class RuntimeConfigDefinitionDto {
     example: 'SESSION_MAX_AGE',
   })
   envKey?: string;
+
+  @ApiPropertyOptional({
+    description: '开关依赖声明：本项为 true 时列出的配置项必须同为 true',
+    type: [String],
+    example: ['mailEnabled'],
+  })
+  requires?: string[];
+}
+
+/**
+ * 开关依赖违规（依赖方为开、被依赖项为关）
+ */
+export class RuntimeConfigDependencyViolationDto {
+  @ApiProperty({
+    description: '依赖方配置键（功能开关，如 requireEmailVerification）',
+    example: 'requireEmailVerification',
+  })
+  dependent: string;
+
+  @ApiProperty({
+    description: '被依赖的配置键（通道/服务开关，如 mailEnabled）',
+    example: 'mailEnabled',
+  })
+  required: string;
 }
 
 /**

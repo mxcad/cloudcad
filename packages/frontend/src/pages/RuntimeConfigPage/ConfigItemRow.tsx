@@ -20,6 +20,7 @@ import {
   TerminalSquare,
   AlertCircle,
   Clock,
+  GitBranch,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
@@ -30,6 +31,7 @@ import { SOURCE_LABEL, TIER_LABEL, formatValue } from './meta';
 import type { ConfigItem, ConfigTier, ConfigSource } from './types';
 import { toSubmitValue } from './validate';
 import type { DraftValue } from './validate';
+import type { DependencyStatus } from './types';
 import { t } from '@/languages';
 
 interface ConfigItemRowProps {
@@ -40,6 +42,8 @@ interface ConfigItemRowProps {
   canManageConfig: boolean;
   secretVisible: boolean;
   fieldError: string;
+  /** 开关依赖状态（检查手段②）：依赖项 + 满足/不满足 */
+  dependencyStatus: DependencyStatus[];
   onDraftChange: (value: DraftValue) => void;
   onFormatJson: () => void;
   onToggleSecret: () => void;
@@ -68,6 +72,7 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
   canManageConfig,
   secretVisible,
   fieldError,
+  dependencyStatus,
   onDraftChange,
   onFormatJson,
   onToggleSecret,
@@ -209,6 +214,23 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
                 </span>
               )}
             </span>
+          </div>
+        )}
+
+        {/* 开关依赖状态（检查手段②）：依赖项 + 满足/不满足，解释开关为什么开不了 */}
+        {dependencyStatus.length > 0 && (
+          <div className={styles.dependencyRow} data-testid="rc-dependency">
+            <GitBranch size={13} />
+            <span>{t('依赖')}</span>
+            {dependencyStatus.map((dep) => (
+              <Tag
+                key={dep.key}
+                variant={dep.satisfied ? 'success' : 'error'}
+              >
+                {dep.label}
+                {dep.satisfied ? t('（已满足）') : t('（未满足）')}
+              </Tag>
+            ))}
           </div>
         )}
 

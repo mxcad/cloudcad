@@ -427,6 +427,9 @@ config_extra:
   missing_operator: "Missing operator id; cannot record who changed the config"
   empty_profile: "No config keys declare security-mode values, so no profile can be applied"
   invalid_profile_target: "Invalid profile target values: {keys}"
+  dependency_not_met: "Cannot enable {key}: its dependencies {deps} are not enabled; enable them first"
+  dependency_in_use: "Cannot disable {key}: it is still required by {dependents}; disable them first"
+  dependency_violation: "Cannot apply security mode {profile}: {edges}"
 
 sms_extra:
   network_limit: "Current network has reached the limit, please try again later"

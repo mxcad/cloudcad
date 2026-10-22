@@ -427,6 +427,9 @@ config_extra:
   missing_operator: "缺少操作者标识，无法记录修改来源"
   empty_profile: "当前没有任何配置项声明了安全模式取值，无法应用配置档"
   invalid_profile_target: "配置档目标取值无效: {keys}"
+  dependency_not_met: "无法开启 {key}：依赖项 {deps} 未开启，请先开启"
+  dependency_in_use: "无法关闭 {key}：仍被 {dependents} 依赖，请先关闭它们"
+  dependency_violation: "无法应用安全模式 {profile}：{edges}"
 
 sms_extra:
   network_limit: "当前网络发送次数已达上限，请稍后再试"

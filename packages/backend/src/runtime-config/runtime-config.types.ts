@@ -150,6 +150,17 @@ export interface RuntimeConfigDefinition {
    * 未声明 `profiles` 的 key 不受 profile 影响。
    */
   profiles?: ConfigProfiles;
+
+  /**
+   * 开关依赖声明（ADR-0082）：本 key 为 `true` 时，列出的 key 必须同为 `true`，
+   * 否则是「功能开着、它依赖的服务关着」的静默失效状态。
+   *
+   * 只在布尔键之间声明（如 `requireEmailVerification → mailEnabled`）。更新路径
+   * （单键 set / 重置 / profile 批量应用）按拒绝式门禁强制：开启依赖方而依赖项未开
+   * → 拒绝；关闭仍被依赖的项 → 拒绝。已存在的遗留不一致由一致性检测上报，
+   * 门禁只拦「新制造」的。
+   */
+  requires?: string[];
 }
 
 /**
@@ -216,6 +227,19 @@ export interface RuntimeConfigItem {
   dangerous?: boolean;
   /** 即时生效标记 */
   hot?: boolean;
+  /** 开关依赖声明（依赖的 key 列表，见 RuntimeConfigDefinition.requires） */
+  requires?: string[];
+}
+
+/**
+ * 开关依赖违规：依赖方（dependent）为开、其依赖项（required）为关。
+ * 「新制造」的违规由更新路径门禁拒绝；已存在的遗留违规由一致性检测上报。
+ */
+export interface ConfigDependencyViolation {
+  /** 依赖方 key（功能开关，如 requireEmailVerification） */
+  dependent: string;
+  /** 被依赖的 key（通道/服务开关，如 mailEnabled） */
+  required: string;
 }
 
 /**

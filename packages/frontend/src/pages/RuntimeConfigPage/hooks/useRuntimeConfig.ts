@@ -35,7 +35,12 @@ import {
   toConfigItems,
   toHistoryEntries,
 } from '../meta';
-import type { ConfigGroup, ConfigHistoryEntry, ConfigItem } from '../types';
+import type {
+  ConfigGroup,
+  ConfigHistoryEntry,
+  ConfigItem,
+  DependencyStatus,
+} from '../types';
 import { defaultDraftOf, toSubmitValue, prettyJson } from '../validate';
 import type { DraftValue } from '../validate';
 
@@ -62,6 +67,13 @@ export interface RuntimeConfigStats {
 
 export interface UseRuntimeConfigReturn {
   configs: ConfigItem[];
+  /** key → 配置项：预览接口只返回 key，展示中文说明时据此取 description */
+  configsByKey: Map<string, ConfigItem>;
+  /**
+   * 开关依赖状态（检查手段②）：key → 该开关每个依赖项的满足情况。
+   * 满足与否按依赖项的**当前生效值**判定，页面据此渲染「依赖项 + 满足/不满足」。
+   */
+  dependencyStatus: Map<string, DependencyStatus[]>;
   groups: ConfigGroup[];
   loading: boolean;
   configsError: string | null;
@@ -263,6 +275,26 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     () => new Map(configs.map((item) => [item.key, item])),
     [configs]
   );
+
+  /** 开关依赖状态：声明了 requires 的键，逐项判定依赖项当前生效值是否为 true */
+  const dependencyStatus = useMemo(() => {
+    const map = new Map<string, DependencyStatus[]>();
+    for (const item of configs) {
+      if (!item.requires?.length) continue;
+      map.set(
+        item.key,
+        item.requires.map((depKey) => {
+          const dep = configsByKey.get(depKey);
+          return {
+            key: depKey,
+            label: dep?.description || depKey,
+            satisfied: dep?.value === true,
+          };
+        })
+      );
+    }
+    return map;
+  }, [configs, configsByKey]);
 
   /** 受安全模式管理的键：preview 响应只返回这类键，故其条数即受管项数 */
   const modeProfileKeys = useMemo(
@@ -698,6 +730,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
 
   return {
     configs,
+    configsByKey,
+    dependencyStatus,
     groups,
     loading,
     configsError,

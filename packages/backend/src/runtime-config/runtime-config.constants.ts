@@ -22,16 +22,23 @@ import { RuntimeConfigDefinition } from './runtime-config.types';
  * 定制，不进 DB、无需迁移脚本；用户在页面上改过的值优先级更高。
  *
  * ## 收录原则（什么进、什么不进）
- * - **进**：运行期语义、无秘密、改了不该重启即生效。
+ * - **进**：运行期语义、改了不该重启即生效。
+ *   **通道凭据是「无秘密」的唯一例外（ADR-0082）**：SMTP 密码/短信/微信/支付凭据
+ *   可经 `secret` 输入类型进 DB（通道主密钥 `CHANNEL_ENCRYPTION_KEY` 加密落库、
+ *   掩码回读、永不返回明文），且其通道开关受「配置完整 + 通道测试通过」门禁约束；
+ *   通道主密钥本身留在 env。
  * - **不进**：
- *   1. 秘密（JWT/数据库/Redis/SMTP/短信/支付/TOTP/PII 密钥）—— 存 DB 等于摊进
- *      明文 pg_dump 备份与运维 UI，比 env 更差；
+ *   1. 主密钥与进程间共享密钥（JWT/数据库/Redis/TOTP/PII 密钥、
+ *      BACKEND_JWT_SECRET/INTERNAL_SERVICE_SECRET/CONVERSION_SERVICE_SECRET）——
+ *      存 DB 等于摊进明文 pg_dump 备份与运维 UI，比 env 更差；进程间共享密钥由兄弟
+ *      进程从自己的 env 读取，架构上不可能进 DB（ADR-0082 D1）；
  *   2. 启动期必需（DATABASE_URL、端口、CORS、MXCAD_*_PATH、FILES_DATA_PATH）
  *      —— 运行时配置存在 DB 里，读它之前必须先连上 DB；
  *   3. 部署身份（部署根路径、PM2、备份远端主机）；
  *   4. 前端构建期（VITE_*）。
  * - **不进（重要）**：构造期一次性读取、改了必须重启才生效的配置。此类配置若收录
  *   会变成「填了没反应」的陷阱字段，因此保持 env + 重启语义，UI 上不假装热生效。
+ *   （通道配置例外，ADR-0082：通道客户端随配置变更热重建。）
  *
  * ## 元数据字段
  * - `tier`     显示档位（仅展示分层，不是权限/安全边界）：
@@ -47,6 +54,9 @@ import { RuntimeConfigDefinition } from './runtime-config.types';
  *              其余窗口长度字段不标记（配套关系写在 impact 里），避免二次确认泛滥。
  * - `hot`      是否即时生效；`false` = 需刷新页面或重启服务
  * - `envKey`   底层 env 变量名（部署期默认值层）
+ * - `requires` 开关依赖声明（ADR-0082）：布尔键为 true 时列出的键必须同为 true。
+ *              更新路径（单键 set / 重置 / profile 批量应用）按拒绝式门禁强制，
+ *              已存在的遗留不一致由一致性检测上报。只在布尔键之间声明。
  */
 export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
   // ───────────────────────── 品牌与客服 ─────────────────────────
@@ -123,6 +133,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     impact: '开启后未验证邮箱的用户无法完成需要邮箱的功能；配合 mailEnabled 使用。',
     dangerous: true,
+    requires: ['mailEnabled'],
   },
   {
     key: 'refundNotifyEmails',
@@ -158,6 +169,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     impact: '开启后未验证手机号的用户受限；配合 smsEnabled 使用。',
     dangerous: true,
+    requires: ['smsEnabled'],
   },
 
   // ───────────────────────── 用户 ─────────────────────────
@@ -228,6 +240,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: true,
     tier: 'admin',
     impact: '开启后微信授权即自动建号，无法强制补填用户名密码。',
+    requires: ['wechatEnabled'],
   },
 
   // ───────────────────────── 文件 ─────────────────────────
@@ -516,6 +529,8 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'ALERT_EMAIL_ENABLED',
     impact: '关闭后磁盘/备份/任务失败等告警只落库不发邮件，故障要等人登录后台才发现。',
+    // 告警邮件实际走 SMTP 发送，此前未声明依赖导致「邮件服务关着、告警照发」的反向偏离
+    requires: ['mailEnabled'],
   },
   {
     key: 'alertEmailTo',
@@ -1013,11 +1028,11 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     type: 'boolean',
     category: 'billing',
     description: '免费用户（含游客）是否允许导出下载转换（mxweb 转其他格式）',
-    defaultValue: false,
+    defaultValue: true,
     isPublic: true,
     tier: 'admin',
-    // 私有部署出厂该默认放行（ADR-0078）：出厂默认值按 variant 由打包期写入 .env，
-    // 走 env 中间层而非 DB 行——不进库、无需迁移脚本，运维仍可在配置页覆盖。
+    // 出厂默认放行：导出门控是商业策略而非等保项，新装即放开，安全模式才收敛（profiles.secure）。
+    // 保留 envKey 供部署期注入定制——env 层优先于安装期写入的默认行，运维也可在配置页覆盖。
     envKey: 'FREE_EXPORT_DOWNLOAD_ENABLED',
     impact: '开启后免费用户可导出转换结果，会增加转换引擎负载。',
     dangerous: true,

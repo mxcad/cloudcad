@@ -69,6 +69,18 @@ export interface ConfigItem {
   impact?: string;
   dangerous?: boolean;
   hot?: boolean;
+  /** 开关依赖声明：本项为 true 时列出的配置项必须同为 true（对齐后端 requires） */
+  requires?: string[];
+}
+
+/** 单个依赖项的满足状态（检查手段②：开关依赖状态在配置页可见） */
+export interface DependencyStatus {
+  /** 依赖项的 key */
+  key: string;
+  /** 展示名（依赖项的中文说明，缺失时退回 key） */
+  label: string;
+  /** 依赖是否满足（依赖项生效值为 true） */
+  satisfied: boolean;
 }
 
 /** 修改历史条目（对齐后端 RuntimeConfigHistoryDto） */

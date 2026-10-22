@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
 import styles from './RuntimeConfigPage.module.css';
 import { ConfigItemRow } from './ConfigItemRow';
-import type { ConfigGroup, ConfigItem } from './types';
+import type { ConfigGroup, ConfigItem, DependencyStatus } from './types';
 import type { DraftValue } from './validate';
 import { t } from '@/languages';
 
@@ -24,6 +24,8 @@ export interface RowActions {
   canManageConfig: boolean;
   secretVisible: Set<string>;
   fieldErrors: Record<string, string>;
+  /** 开关依赖状态：key → 依赖项满足情况（检查手段②） */
+  dependencyStatus: Map<string, DependencyStatus[]>;
   draftOf: (item: ConfigItem) => DraftValue;
   isDirty: (item: ConfigItem) => boolean;
   onDraftChange: (key: string, value: DraftValue) => void;
@@ -117,6 +119,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
               canManageConfig={actions.canManageConfig}
               secretVisible={actions.secretVisible.has(item.key)}
               fieldError={actions.fieldErrors[item.key] ?? ''}
+              dependencyStatus={actions.dependencyStatus.get(item.key) ?? []}
               onDraftChange={(value) => actions.onDraftChange(item.key, value)}
               onFormatJson={() => actions.onFormatJson(item.key)}
               onToggleSecret={() => actions.onToggleSecret(item.key)}

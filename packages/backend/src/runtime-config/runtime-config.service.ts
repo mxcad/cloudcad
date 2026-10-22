@@ -32,13 +32,22 @@ import {
   ConfigProfile,
   RuntimeProfilePreviewEntry,
   RuntimeProfileApplyResult,
+  ConfigDependencyViolation,
 } from './runtime-config.types';
+import {
+  getDependencyEdges,
+  findNewDependencyViolations,
+  formatDependencyLabel,
+} from './runtime-config.dependency';
 import type { IRuntimeConfigService } from '@cloudcad/contracts';
 
 const CACHE_PREFIX = 'runtime_config:';
 const CACHE_TTL = 3600; // 1 小时
 const TRUTHY_ENV_VALUES = ['true', '1', 'yes', 'on'];
 const FALSY_ENV_VALUES = ['false', '0', 'no', 'off'];
+
+/** 依赖边从定义表派生（单一事实源），定义表是静态常量，进程内派生一次即可 */
+const DEPENDENCY_EDGES = getDependencyEdges(RUNTIME_CONFIG_DEFINITIONS);
 
 /** env 层解析结果：`undefined` 表示该 env 未设置（回退下一层） */
 type EnvResolveResult = RuntimeConfigValue | undefined;
@@ -72,6 +81,23 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     this.syncDefaultConfigs().catch((error) => {
       this.logger.error('运行时配置同步失败:', error);
     });
+
+    // 依赖一致性检测：揪出门禁上线前遗留的「功能开关开、依赖的通道开关关」
+    // 状态并上报（门禁只拦新制造的，存量不一致靠这里暴露给运维）
+    this.detectDependencyViolations()
+      .then((violations) => {
+        if (violations.length > 0) {
+          const detail = violations
+            .map((v) => `${v.dependent} 依赖 ${v.required} 未开启`)
+            .join('；');
+          this.logger.warn(
+            `检测到开关依赖不一致（门禁上线前遗留，请在运行时配置页处理）: ${detail}`
+          );
+        }
+      })
+      .catch((error) => {
+        this.logger.error('开关依赖一致性检测失败:', error);
+      });
   }
 
   /**
@@ -369,6 +395,12 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       );
     }
 
+    // 依赖门禁（ADR-0082）：布尔键的开关依赖在写库前强制校验，
+    // 拒绝「功能开着、依赖的通道关着」这种静默失效状态被新制造出来
+    if (def.type === 'boolean' && typeof value === 'boolean') {
+      await this.assertSingleKeyDependencyGate(def, value);
+    }
+
     // 获取旧值用于日志
     const oldConfig = await this.prisma.runtimeConfig.findUnique({
       where: { key },
@@ -422,9 +454,169 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   }
 
   /**
-   * 按配置定义校验值。返回 null 表示合法，否则返回原因。
-   * 服务端必须独立校验——前端控件不是安全边界，绕过前端直调 PUT 必须同样被拦。
+   * 批量解析一组键的生效值（三层解析），归一为布尔语义（true=开）。
+   *
+   * 走数据库直查而非 Redis 缓存：门禁是写路径上的安全判定，必须读到最新状态，
+   * 缓存的 1 小时 TTL 会让「刚关掉的通道开关」在门禁眼里仍是开的。
    */
+  private async resolveEffectiveBooleans(
+    keys: string[]
+  ): Promise<Record<string, boolean>> {
+    const uniqueKeys = [...new Set(keys)];
+    const rows =
+      (await this.prisma.runtimeConfig.findMany({
+        where: { key: { in: uniqueKeys } },
+      })) ?? [];
+    const rowsByKey = new Map(rows.map((row) => [row.key, row]));
+    const result: Record<string, boolean> = {};
+    for (const key of uniqueKeys) {
+      const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
+      const row = rowsByKey.get(key) ?? null;
+      result[key] = this.resolveValue(def, row).value === true;
+    }
+    return result;
+  }
+
+  /**
+   * 依赖边来源。生产实现从定义表派生（单一事实源）；测试可 spy 本方法注入
+   * 合成边集，验证门禁语义而不必改动真实定义表。
+   */
+  private getDependencyEdges() {
+    return DEPENDENCY_EDGES;
+  }
+
+  /**
+   * 单键更新/重置的依赖门禁（拒绝式，ADR-0082）。
+   *
+   * 只检查与本次变更相关的边（本键作为依赖方或被依赖方的边），其余边的
+   * 前后状态不变、不可能产生新违规。已存在的遗留不一致不拦（重放同一个值
+   * 不算「新制造」），由一致性检测负责上报。
+   */
+  private async assertSingleKeyDependencyGate(
+    def: RuntimeConfigDefinition,
+    value: boolean
+  ): Promise<void> {
+    const edges = this.getDependencyEdges().filter(
+      (edge) => edge.dependent === def.key || edge.required === def.key
+    );
+    if (edges.length === 0) {
+      return;
+    }
+
+    const keys = [
+      ...new Set(edges.flatMap((edge) => [edge.dependent, edge.required])),
+    ];
+    const current = await this.resolveEffectiveBooleans(keys);
+    const final = { ...current, [def.key]: value };
+    const violations = findNewDependencyViolations(edges, current, final);
+    if (violations.length === 0) {
+      return;
+    }
+
+    const i18n = I18nContext.current();
+    if (value === true) {
+      // 本键是依赖方：开启它而依赖项未开
+      const missing = violations
+        .map((v) => v.required)
+        .map((key) => formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, key));
+      throw new BadRequestException(
+        i18n?.t('error.config_extra.dependency_not_met', {
+          args: {
+            key: formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, def.key),
+            deps: missing.join('、'),
+          },
+        }) ??
+          `无法开启 ${def.key}：依赖项 ${missing.join('、')} 未开启`
+      );
+    }
+
+    // 本键是被依赖方：关闭它而依赖方仍开着
+    const dependents = violations
+      .map((v) => v.dependent)
+      .map((key) => formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, key));
+    throw new BadRequestException(
+      i18n?.t('error.config_extra.dependency_in_use', {
+        args: {
+          key: formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, def.key),
+          dependents: dependents.join('、'),
+        },
+      }) ??
+        `无法关闭 ${def.key}：仍被 ${dependents.join('、')} 依赖`
+    );
+  }
+
+  /**
+   * 检测当前已存在的依赖不一致（门禁上线前遗留的「功能开关开、通道开关关」，
+   * 含告警邮件「邮件服务关着、告警照发」的反向偏离）。
+   *
+   * 与更新路径门禁分工：门禁拦「新制造」的违规，本方法揪「已存在」的违规
+   * ——启动时上报日志，管理端经 GET dependency-check 查询后在页面呈现。
+   */
+  async detectDependencyViolations(): Promise<ConfigDependencyViolation[]> {
+    const edges = this.getDependencyEdges();
+    if (edges.length === 0) {
+      return [];
+    }
+    const keys = [
+      ...new Set(edges.flatMap((edge) => [edge.dependent, edge.required])),
+    ];
+    const current = await this.resolveEffectiveBooleans(keys);
+    return edges.filter(
+      (edge) => current[edge.dependent] === true && current[edge.required] !== true
+    );
+  }
+
+  /**
+   * profile 批量应用的依赖门禁（与单键门禁同一套判定，ADR-0082）。
+   *
+   * 最终态 = 计划内键取目标值、计划外键取当前生效值。只拦「本次应用新制造」的
+   * 违规：当前已不一致且本次不动相关键的，不算新制造（遗留状态由一致性检测上报）。
+   * 预览与应用共用 buildProfilePlan，因此两端行为一致。
+   */
+  private async assertProfileDependencyGate(
+    target: ConfigProfile,
+    entries: {
+      def: RuntimeConfigDefinition;
+      targetValue: RuntimeConfigValue;
+    }[]
+  ): Promise<void> {
+    const edges = this.getDependencyEdges();
+    if (edges.length === 0) {
+      return;
+    }
+
+    const keys = [
+      ...new Set(edges.flatMap((edge) => [edge.dependent, edge.required])),
+    ];
+    const current = await this.resolveEffectiveBooleans(keys);
+    const final = { ...current };
+    for (const entry of entries) {
+      final[entry.def.key] = entry.targetValue === true;
+    }
+
+    const violations = findNewDependencyViolations(edges, current, final);
+    if (violations.length === 0) {
+      return;
+    }
+
+    const detail = violations
+      .map(
+        (v) =>
+          `「${formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, v.dependent)}」` +
+          `依赖「${formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, v.required)}」未开启`
+      )
+      .join('；');
+    throw new BadRequestException(
+      I18nContext.current()?.t('error.config_extra.dependency_violation', {
+        args: { profile: target, edges: detail },
+      }) ?? `无法应用安全模式 ${target}: ${detail}`
+    );
+  }
+
+  /**
+  * 按配置定义校验值。返回 null 表示合法，否则返回原因。
+  * 服务端必须独立校验——前端控件不是安全边界，绕过前端直调 PUT 必须同样被拦。
+  */
   private validateValue(
     def: RuntimeConfigDefinition,
     value: string | number | boolean | Record<string, unknown>
@@ -565,6 +757,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     | 'impact'
     | 'dangerous'
     | 'hot'
+    | 'requires'
   > {
     const envValue = this.resolveEnvLayer(def);
 
@@ -584,6 +777,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       impact: def?.impact,
       dangerous: def?.dangerous ?? false,
       hot: def?.hot ?? true,
+      requires: def?.requires,
     };
   }
 
@@ -602,6 +796,12 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     if (!def) {
       throw new BadRequestException(I18nContext.current()?.t('error.config_extra.unknown_key', { args: { key } }) ?? `未知的配置项: ${key}`);
+    }
+
+    // 恢复默认同样是「把开关置为默认值」的更新路径，走同一套依赖门禁：
+    // 否则「重置通道开关为关」会绕过 set() 的门禁，重新制造静默失效状态
+    if (def.type === 'boolean' && typeof def.defaultValue === 'boolean') {
+      await this.assertSingleKeyDependencyGate(def, def.defaultValue);
     }
 
     const defaultValueJson = JSON.stringify(def.defaultValue);
@@ -862,6 +1062,10 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         willChange: JSON.stringify(currentValue) !== JSON.stringify(targetValue),
       };
     });
+
+    // 依赖门禁（ADR-0082）：批量应用不得新制造「功能开关开、依赖的通道开关关」
+    // 的不一致状态。预览与应用共用本方法，两端行为一致。
+    await this.assertProfileDependencyGate(target, entries);
 
     return { defs, entries };
   }

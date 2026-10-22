@@ -61,6 +61,7 @@ export const RuntimeConfigPage: React.FC = () => {
     canManageConfig: rc.canManageConfig,
     secretVisible: rc.secretVisible,
     fieldErrors: rc.fieldErrors,
+    dependencyStatus: rc.dependencyStatus,
     draftOf: rc.draftOf,
     isDirty: rc.isDirty,
     onDraftChange: rc.handleDraftChange,

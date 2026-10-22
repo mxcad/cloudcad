@@ -12,6 +12,10 @@ import { Test, type TestingModule } from "@nestjs/testing";
 import { DatabaseService } from "../database/database.service";
 import { RUNTIME_CONFIG_DEFINITIONS } from "./runtime-config.constants";
 import { RuntimeConfigService } from "./runtime-config.service";
+import {
+	getDependencyEdges,
+	findDependencyCycles,
+} from "./runtime-config.dependency";
 import type { RuntimeConfigDefinition } from "./runtime-config.types";
 
 describe("RuntimeConfigService", () => {
@@ -41,12 +45,16 @@ describe("RuntimeConfigService", () => {
 		del: jest.fn(),
 	};
 
-	beforeEach(async () => {
-		jest.clearAllMocks();
+		beforeEach(async () => {
+			jest.clearAllMocks();
 
-		// resetMocks 会清 mock 实现；setex/del 现以 .catch() 链式调用，必须返回 promise
-		mockRedis.setex.mockResolvedValue(undefined);
-		mockRedis.del.mockResolvedValue(undefined);
+			// resetMocks 会清 mock 实现；setex/del 现以 .catch() 链式调用，必须返回 promise
+			mockRedis.setex.mockResolvedValue(undefined);
+			mockRedis.del.mockResolvedValue(undefined);
+
+			// 依赖门禁与一致性检测走 findMany 批量读生效值；默认空行集
+			// （全部键落到定义默认值），各用例按需覆盖
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
 
 		// $transaction 两种形态：数组式（syncDefaultConfigs 批量回填）与交互式
 		// （applyProfile 把值写入与审计写入放进同一个事务）。交互式的 tx 直接用
@@ -594,6 +602,189 @@ describe("RuntimeConfigService", () => {
 		});
 	});
 
+	// ==================== 依赖门禁（requires，ADR-0082） ====================
+	// 「功能开关开着、它依赖的通道开关关着」的静默失效状态必须无法被新制造：
+	// 单键 set / 重置 / profile 批量应用三条更新路径共用同一套拒绝式判定。
+	describe("依赖门禁（requires）", () => {
+		// 布尔键的生效行：updatedBy 非空 = 运行时层生效
+		const boolRow = (key: string, value: boolean) => ({
+			key,
+			value: JSON.stringify(value),
+			type: "boolean",
+			category: "mail",
+			description: "",
+			isPublic: true,
+			updatedBy: "u-1",
+			updatedAt: new Date(),
+		});
+
+		const mockWritePath = (rows: object[]) => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue(rows);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+		};
+
+		it("开启功能开关而依赖的通道开关为关 → 拒绝，错误明确指出缺失的依赖", async () => {
+			mockWritePath([]); // mailEnabled 落默认值 false
+
+			await expect(
+				service.set("requireEmailVerification", true, "admin"),
+			).rejects.toThrow("mailEnabled");
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("依赖的通道开关已开 → 功能开关正常开启", async () => {
+			mockWritePath([boolRow("mailEnabled", true)]);
+
+			await service.set("requireEmailVerification", true, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("关闭仍被功能开关依赖的通道开关 → 拒绝，提示先关闭依赖方", async () => {
+			// mailEnabled 当前为开（有运行时行）：关闭它才会新制造违规
+			mockWritePath([
+				boolRow("requireEmailVerification", true),
+				boolRow("mailEnabled", true),
+			]);
+
+			await expect(
+				service.set("mailEnabled", false, "admin"),
+			).rejects.toThrow("requireEmailVerification");
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("依赖方为关时，通道开关可正常关闭", async () => {
+			mockWritePath([]);
+
+			await service.set("mailEnabled", false, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("告警邮件依赖邮件服务（现代码缺失的边）：邮件关着时开告警邮件 → 拒绝", async () => {
+			mockWritePath([]);
+
+			await expect(
+				service.set("alertEmailEnabled", true, "admin"),
+			).rejects.toThrow("mailEnabled");
+		});
+
+		it("微信自动建号依赖微信登录开关 → 微信关着时拒绝", async () => {
+			mockWritePath([]);
+
+			await expect(
+				service.set("wechatAutoRegister", true, "admin"),
+			).rejects.toThrow("wechatEnabled");
+		});
+
+		it("强制手机号验证依赖短信服务开关 → 短信关着时拒绝", async () => {
+			mockWritePath([]);
+
+			await expect(
+				service.set("requirePhoneVerification", true, "admin"),
+			).rejects.toThrow("smsEnabled");
+		});
+
+		it("已存在的遗留不一致（重放同一个值）不算新制造 → 放行", async () => {
+			// requireEmailVerification 已开、mailEnabled 已关：门禁上线前的遗留状态
+			mockWritePath([boolRow("requireEmailVerification", true)]);
+
+			await service.set("requireEmailVerification", true, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("开启依赖项修复遗留不一致 → 放行", async () => {
+			mockWritePath([boolRow("requireEmailVerification", true)]);
+
+			await service.set("mailEnabled", true, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("非布尔键不受门禁影响", async () => {
+			mockWritePath([]);
+
+			await service.set("maxFileSize", 256, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("重置通道开关为默认（关）而依赖方仍开 → 同样被门禁拦截", async () => {
+			mockWritePath([
+				boolRow("requireEmailVerification", true),
+				boolRow("mailEnabled", true),
+			]);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.resetToDefault("mailEnabled", "admin"),
+			).rejects.toThrow("requireEmailVerification");
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("依赖方为关时，重置通道开关放行", async () => {
+			mockWritePath([]);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			await service.resetToDefault("mailEnabled", "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+	});
+
+	// ==================== 依赖一致性检测（检查手段①） ====================
+	describe("依赖一致性检测（detectDependencyViolations）", () => {
+		const boolRow = (key: string, value: boolean) => ({
+			key,
+			value: JSON.stringify(value),
+			type: "boolean",
+			updatedBy: "u-1",
+		});
+
+		it("状态一致 → 空清单", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+
+			expect(await service.detectDependencyViolations()).toEqual([]);
+		});
+
+		it("揪出门禁上线前遗留的「验证开+通道关」", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("requireEmailVerification", true),
+			]);
+
+			const violations = await service.detectDependencyViolations();
+
+			expect(violations).toEqual([
+				{ dependent: "requireEmailVerification", required: "mailEnabled" },
+			]);
+		});
+
+		it("揪出告警邮件「邮件服务关着、告警照发」的反向偏离", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("alertEmailEnabled", true),
+			]);
+
+			const violations = await service.detectDependencyViolations();
+
+			expect(violations).toEqual([
+				{ dependent: "alertEmailEnabled", required: "mailEnabled" },
+			]);
+		});
+
+		it("通道开着、功能关着（未使用依赖）→ 不是违规", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("mailEnabled", true),
+			]);
+
+			expect(await service.detectDependencyViolations()).toEqual([]);
+		});
+	});
+
 	describe("getHistory", () => {
 		it("返回倒序历史并截断 limit", async () => {
 			mockPrisma.runtimeConfigLog.findMany.mockResolvedValue([]);
@@ -838,6 +1029,100 @@ describe("RuntimeConfigService", () => {
 			const result = await service.applyProfile("secure", "admin-1");
 			expect(result.applied).toContain("securityMode");
 		});
+
+		// ── profile 批量应用的依赖门禁（ADR-0082） ──
+		// 真实定义表里没有任何 profile 键声明 requires，无法用真实边触发批量门禁；
+		// 这里注入「profile 键依赖非 profile 通道键」的合成边，验证门禁语义本身。
+		const seededEdgeDefs: RuntimeConfigDefinition[] = [
+			{
+				key: "featureX",
+				type: "boolean",
+				category: "security",
+				description: "测试功能开关",
+				defaultValue: false,
+				isPublic: false,
+				profiles: { secure: true, normal: false },
+				requires: ["channelY"],
+			},
+		];
+
+		const withSeededEdge = () => {
+			jest
+				.spyOn(
+					service as unknown as { getProfileDefinitions: () => unknown },
+					"getProfileDefinitions",
+				)
+				.mockReturnValue(seededEdgeDefs);
+			jest
+				.spyOn(
+					service as unknown as { getDependencyEdges: () => unknown },
+					"getDependencyEdges",
+				)
+				.mockReturnValue([{ dependent: "featureX", required: "channelY" }]);
+		};
+
+		const boolRow = (key: string, value: boolean) => ({
+			key,
+			value: JSON.stringify(value),
+			type: "boolean",
+			updatedBy: "u-1",
+		});
+
+		it("批量应用会新制造「功能开+通道关」→ 预览与应用都拒绝", async () => {
+			withSeededEdge();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]); // channelY 关
+			mockPrisma.runtimeConfig.create.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			await expect(service.previewProfileApply("secure")).rejects.toThrow(
+				"channelY",
+			);
+			await expect(
+				service.applyProfile("secure", "admin-1"),
+			).rejects.toThrow("channelY");
+			expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+		});
+
+		it("依赖的通道开关已开 → 批量应用放行", async () => {
+			withSeededEdge();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("channelY", true),
+			]);
+			mockPrisma.runtimeConfig.create.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const result = await service.applyProfile("secure", "admin-1");
+
+			expect(result.applied).toContain("featureX");
+		});
+
+		it("遗留不一致且本次不动相关键（目标值=当前值）→ 不算新制造，放行", async () => {
+			withSeededEdge();
+			// featureX 已开、channelY 已关：secure 目标 featureX=true 与当前一致
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("featureX", true),
+			]);
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const result = await service.applyProfile("secure", "admin-1");
+
+			expect(result.applied).toEqual([]);
+			expect(result.unchanged).toContain("featureX");
+		});
+
+		it("批量应用修复遗留不一致（功能开关目标为关）→ 放行", async () => {
+			withSeededEdge();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("featureX", true),
+			]);
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const result = await service.applyProfile("normal", "admin-1");
+
+			expect(result.applied).toContain("featureX");
+		});
 	});
 
 	// ==================== getDefinitions ====================
@@ -1048,14 +1333,21 @@ describe("RuntimeConfigService", () => {
 			expect(offenders).toEqual([]);
 		});
 
-		it("adminLoginEntry 出厂默认必须是 MERGED（不要为「与其余 profile 键一致」改回 ISOLATED）", () => {
+		it("出厂默认不取安全侧的两个刻意例外（不要为「与其余 profile 键一致」改回严侧）", () => {
 			// 其余声明 profiles 的键出厂默认都取安全侧（如 rateLimitPublicMax 出厂 100 <
 			// normal 10000、passwordPolicyMinLength 出厂 10 > normal 6），即新装偏保守、
-			// 放宽靠显式应用普通模式 profile。本键是刻意的例外：新装即允许管理员走普通登录入口。
-			const def = RUNTIME_CONFIG_DEFINITIONS.find(
-				(d) => d.key === "adminLoginEntry",
-			);
-			expect(def?.defaultValue).toBe("MERGED");
+			// 放宽靠显式应用普通模式 profile。两个刻意例外：新装即允许管理员走普通登录入口、
+			// 新装即放开免费导出下载（导出门控是商业策略而非等保项，安全模式才收敛）。
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find(
+					(d) => d.key === "adminLoginEntry",
+				)?.defaultValue,
+			).toBe("MERGED");
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find(
+					(d) => d.key === "freeExportDownloadEnabled",
+				)?.defaultValue,
+			).toBe(true);
 		});
 
 		it("依赖外部基础设施或属业务/容量配置的键不得声明 profiles（切换模式不替用户开关它们）", () => {
@@ -1088,6 +1380,45 @@ describe("RuntimeConfigService", () => {
 				(d) => excluded.has(d.key) && d.profiles != null,
 			).map((d) => d.key);
 			expect(offenders).toEqual([]);
+		});
+
+		it("依赖图：四条已知边已声明、引用键存在、两端都是布尔键、无环", () => {
+			// 依赖边是门禁的事实源：漏声明一条边，对应的「功能开+通道关」
+			// 静默失效状态就再也拦不住了。已知四条边逐一钉死。
+			const edges = getDependencyEdges(RUNTIME_CONFIG_DEFINITIONS);
+			const edgePairs = edges.map((e) => `${e.dependent}->${e.required}`);
+			for (const pinned of [
+				"requireEmailVerification->mailEnabled",
+				"requirePhoneVerification->smsEnabled",
+				"wechatAutoRegister->wechatEnabled",
+				"alertEmailEnabled->mailEnabled",
+			]) {
+				expect(edgePairs).toContain(pinned);
+			}
+
+			const registered = new Set(RUNTIME_CONFIG_DEFINITIONS.map((d) => d.key));
+			const byKey = new Map(RUNTIME_CONFIG_DEFINITIONS.map((d) => [d.key, d]));
+
+			// 引用的键必须已登记（拼错的键名会让门禁静默空转）
+			expect(
+				edges
+					.filter((e) => !registered.has(e.required))
+					.map((e) => e.required),
+			).toEqual([]);
+
+			// 依赖只在布尔开关之间声明：非布尔键没有「开/关」语义
+			expect(
+				[
+					...new Set(
+						edges
+							.flatMap((e) => [e.dependent, e.required])
+							.filter((k) => byKey.get(k)?.type !== "boolean"),
+					),
+				],
+			).toEqual([]);
+
+			// 环会让「沿依赖判定」失去定义
+			expect(findDependencyCycles(edges)).toEqual([]);
 		});
 	});
 	// ==================== 键登记完整性 ====================

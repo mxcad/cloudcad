@@ -188,6 +188,25 @@ function makeReturn(
   const groups = overrides.groups ?? toGroups(configs);
   return {
     configs,
+    configsByKey:
+      overrides.configsByKey ?? new Map(configs.map((c) => [c.key, c])),
+    dependencyStatus:
+      overrides.dependencyStatus ??
+      new Map(
+        configs
+          .filter((c) => c.requires?.length)
+          .map((c) => [
+            c.key,
+            c.requires!.map((depKey) => {
+              const dep = configs.find((d) => d.key === depKey);
+              return {
+                key: depKey,
+                label: dep?.description || depKey,
+                satisfied: dep?.value === true,
+              };
+            }),
+          ]),
+      ),
     groups,
     loading: false,
     configsError: null,
@@ -351,6 +370,79 @@ describe('RuntimeConfigPage 渲染', () => {
   it('渲染更新时间与操作人', () => {
     render(<RuntimeConfigPage />);
     expect(screen.getByText(/admin-1/)).toBeTruthy();
+  });
+});
+
+describe('RuntimeConfigPage 开关依赖状态（检查手段②）', () => {
+  const dependentItem = item({
+    key: 'requireEmailVerification',
+    category: 'mail',
+    type: 'boolean',
+    value: false,
+    description: '强制邮箱验证',
+    requires: ['mailEnabled'],
+  });
+
+  it('依赖项未满足：渲染依赖项名称与「未满足」', () => {
+    mockState.return = makeReturn({
+      configs: [
+        item({
+          key: 'mailEnabled',
+          category: 'mail',
+          type: 'boolean',
+          value: false,
+          description: '邮件服务开关',
+        }),
+        dependentItem,
+      ],
+    });
+    render(<RuntimeConfigPage />);
+
+    const dep = within(rowOf('requireEmailVerification')).getByTestId(
+      'rc-dependency',
+    );
+    expect(dep.textContent).toContain('邮件服务开关');
+    expect(dep.textContent).toContain('未满足');
+  });
+
+  it('依赖项已满足：渲染「已满足」', () => {
+    mockState.return = makeReturn({
+      configs: [
+        item({
+          key: 'mailEnabled',
+          category: 'mail',
+          type: 'boolean',
+          value: true,
+          description: '邮件服务开关',
+        }),
+        dependentItem,
+      ],
+    });
+    render(<RuntimeConfigPage />);
+
+    const dep = within(rowOf('requireEmailVerification')).getByTestId(
+      'rc-dependency',
+    );
+    expect(dep.textContent).toContain('已满足');
+  });
+
+  it('未声明依赖的开关不渲染依赖行', () => {
+    mockState.return = makeReturn({
+      configs: [
+        item({
+          key: 'mailEnabled',
+          category: 'mail',
+          type: 'boolean',
+          value: true,
+          description: '邮件服务开关',
+        }),
+      ],
+    });
+    render(<RuntimeConfigPage />);
+
+    expect(
+      within(rowOf('mailEnabled')).queryByTestId('rc-dependency'),
+    ).toBeNull();
   });
 });
 

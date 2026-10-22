@@ -107,6 +107,10 @@ export function toConfigItems(raw: unknown): ConfigItem[] {
       // 后端 enrichFromDefinition 对未声明 hot 的定义按「即时生效」处理，此处保持一致：
       // 只有显式 hot: false 才标记为「需重启服务」
       hot: o.hot !== false,
+      // 开关依赖声明（老 SDK / 灰度期后端可能缺字段，缺失按「无依赖」处理）
+      requires: Array.isArray(o.requires)
+        ? (o.requires as unknown[]).map(String)
+        : undefined,
     };
   });
 }
