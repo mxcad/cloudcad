@@ -2,10 +2,22 @@ import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { getRedisConnectionToken } from '@nestjs-modules/ioredis';
 import { ClsService } from 'nestjs-cls';
+import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
 import { WechatPayGateway } from './wechat-pay.gateway';
 import { buildXML, sign } from './wechat-pay.util';
 
 const MCH_KEY = 'test_mch_key_0123456789abcdef';
+
+/** 运行时配置键与 ConfigService env 键同值（三层解析的 env 层由 ConfigService mock 承担） */
+function createRuntimeConfig() {
+  const values: Record<string, string> = {
+    wechatPayAppId: 'wx_test_appid',
+    wechatPayMchId: '1234567890',
+    wechatPayKey: MCH_KEY,
+    wechatPayNotifyUrl: 'https://example.com/billing/webhook/wechat',
+  };
+  return { values, getValue: jest.fn(async (key: string) => values[key] ?? '') };
+}
 
 function createConfig(overrides: Record<string, string> = {}) {
   const values: Record<string, string> = {
@@ -32,6 +44,7 @@ function buildWebhookXml(
 
 describe('WechatPayGateway', () => {
   let gateway: WechatPayGateway;
+  let runtimeConfig: ReturnType<typeof createRuntimeConfig>;
 
   const successFields: Record<string, string> = {
     appid: 'wx_test_appid',
@@ -46,10 +59,12 @@ describe('WechatPayGateway', () => {
   };
 
   beforeEach(async () => {
+    runtimeConfig = createRuntimeConfig();
     const module = await Test.createTestingModule({
       providers: [
         WechatPayGateway,
         { provide: ConfigService, useValue: createConfig() },
+        { provide: RuntimeConfigService, useValue: runtimeConfig },
         {
           provide: getRedisConnectionToken(),
           useValue: { set: jest.fn(), del: jest.fn() },
@@ -176,6 +191,44 @@ describe('WechatPayGateway', () => {
       expect(result.isValid).toBe(true);
       expect(result.orderNo).toBe('PAYcd123');
       expect(result.amount).toBe(4275);
+    });
+  });
+
+  describe('凭据指纹热重建（ADR-0082 #505）', () => {
+    it('指纹不变：每次调用仍热解析配置，但快照不重建', async () => {
+      const rebuildSpy = jest
+        .spyOn(gateway as any, 'buildHttpsAgent')
+        .mockImplementation(() => undefined);
+
+      const xml = buildWebhookXml(successFields);
+      await gateway.verifyWebhook(xml, {});
+      await gateway.verifyWebhook(xml, {});
+
+      // 每次调用前都重解析（4 键 × 2 次调用）——热读不依赖启动期快照
+      expect(runtimeConfig.getValue).toHaveBeenCalledTimes(8);
+      // 指纹未变 → 仅首次建立快照
+      expect(rebuildSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('凭据改写：指纹变化触发重建，新 key 生效、旧 key 失效', async () => {
+      const rebuildSpy = jest
+        .spyOn(gateway as any, 'buildHttpsAgent')
+        .mockImplementation(() => undefined);
+      const newKey = 'new_mch_key_9876543210fedcba';
+
+      const oldSigned = buildWebhookXml(successFields, 'MD5', MCH_KEY);
+      const newSigned = buildWebhookXml(successFields, 'MD5', newKey);
+
+      // 首次调用建立快照（MCH_KEY）
+      expect((await gateway.verifyWebhook(oldSigned, {})).isValid).toBe(true);
+
+      // 运维在配置页改写商户密钥
+      runtimeConfig.values.wechatPayKey = newKey;
+
+      // 指纹变化 → 重建快照：新 key 验签通过、旧 key 验签失败
+      expect((await gateway.verifyWebhook(newSigned, {})).isValid).toBe(true);
+      expect((await gateway.verifyWebhook(oldSigned, {})).isValid).toBe(false);
+      expect(rebuildSpy).toHaveBeenCalledTimes(2);
     });
   });
 });

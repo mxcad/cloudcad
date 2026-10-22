@@ -24265,5 +24265,23 @@
             "src/pages/RuntimeConfigPage/meta.ts(140-140)"
         ],
         "$id": 1000132
+    },
+    "支付通道": {
+        "zh-TW": "支付通道",
+        "en-US": "Payment Channel",
+        "ko-KR": "결제 채널",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(141-141)"
+        ],
+        "$id": 1000133
+    },
+    "Webhook 通道": {
+        "zh-TW": "Webhook 通道",
+        "en-US": "Webhook Channel",
+        "ko-KR": "Webhook 채널",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(142-142)"
+        ],
+        "$id": 1000134
     }
 }

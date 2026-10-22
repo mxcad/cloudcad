@@ -2472,6 +2472,205 @@ describe("RuntimeConfigService", () => {
 		});
 	});
 
+	describe("支付通道（ADR-0082 #505）：机制层对真实支付键生效", () => {
+		const PAYMENT_ENV: Record<string, string> = {
+			paymentProvider: "PAYMENT_PROVIDER",
+			wechatPayAppId: "WECHATPAY_APPID",
+			wechatPayMchId: "WECHATPAY_MCHID",
+			wechatPayKey: "WECHATPAY_KEY",
+			wechatPayNotifyUrl: "WECHATPAY_NOTIFY_URL",
+		};
+
+		const mockPaymentVerified = () => {
+			mockPrisma.channelVerification.findUnique.mockResolvedValue({
+				id: "cv-payment",
+				channel: "payment",
+				verifiedAt: new Date("2026-10-22T08:00:00Z"),
+				testedBy: "op-1",
+				testedByIp: "127.0.0.1",
+				createdAt: new Date("2026-10-22T08:00:00Z"),
+			});
+		};
+
+		it("不变式：5 键登记在通道 payment 下、envKey 指向既有环境变量、全部非公开", () => {
+			for (const [key, envKey] of Object.entries(PAYMENT_ENV)) {
+				const def = RUNTIME_CONFIG_DEFINITIONS.find(
+					(d) => d.key === key
+				);
+				expect(def).toBeDefined();
+				expect(def!.channel).toBe("payment");
+				expect(def!.envKey).toBe(envKey);
+				expect(def!.isPublic).toBe(false);
+			}
+			const switchDef = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "paymentEnabled"
+			)!;
+			expect(switchDef.channelSwitch).toBe("payment");
+			expect(switchDef.type).toBe("boolean");
+			// AppID 是完整性锚点（非 allowNull）；其余凭据键 allowNull，
+			// 完整凭据校验交给测试动作（与短信通道「测试通过才是真闸门」同语义）
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "wechatPayAppId")!
+					.input?.allowNull
+			).toBeFalsy();
+			for (const key of ["wechatPayMchId", "wechatPayKey", "wechatPayNotifyUrl"]) {
+				expect(
+					RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key)!.input
+						?.allowNull
+				).toBe(true);
+			}
+			// API 密钥是秘密键：加密落库 + 掩码回读（#493 不变式）
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "wechatPayKey")!
+					.input?.secret
+			).toBe(true);
+		});
+
+		it("getChannelStatus('payment')：AppID 未配置 → 不完整并报缺失键", async () => {
+			const status = await service.getChannelStatus("payment");
+
+			expect(status.configComplete).toBe(false);
+			expect(status.missingKeys).toEqual(["wechatPayAppId"]);
+			expect(status.verified).toBe(false);
+		});
+
+		it("配置不完整 → 支付开关无法开启（硬阻断，不写库）", async () => {
+			// channelVerification.findUnique 默认 null → 未验证；AppID 零行 → 不完整
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(service.set("paymentEnabled", true, "op-1")).rejects.toThrow(
+				BadRequestException
+			);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("配置完整 + 测试通过 → 允许开启支付开关", async () => {
+			mockPaymentVerified();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "wechatPayAppId",
+					value: "wx_test",
+					type: "string",
+					updatedBy: "op-1",
+				},
+			]);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("paymentEnabled", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		it("改任一支付配置项 → 删除 payment 通道验证记录（测试通过状态失效）", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("wechatPayKey", "new_key", "op-1");
+
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "payment" },
+			});
+		});
+	});
+
+	describe("Webhook 通道（ADR-0082 #506）：机制层对真实 Webhook 键生效", () => {
+		const WEBHOOK_ENV: Record<string, string> = {
+			alertWebhookEnabled: "ALERT_WEBHOOK_ENABLED",
+			alertWebhookUrl: "ALERT_WEBHOOK_URL",
+			alertWebhookTemplate: "ALERT_WEBHOOK_TEMPLATE",
+		};
+
+		const mockWebhookVerified = () => {
+			mockPrisma.channelVerification.findUnique.mockResolvedValue({
+				id: "cv-webhook",
+				channel: "webhook",
+				verifiedAt: new Date("2026-10-22T08:00:00Z"),
+				testedBy: "op-1",
+				testedByIp: "127.0.0.1",
+				createdAt: new Date("2026-10-22T08:00:00Z"),
+			});
+		};
+
+		it("不变式：3 键登记在通道 webhook 下、envKey 指向既有环境变量、全部非公开", () => {
+			for (const [key, envKey] of Object.entries(WEBHOOK_ENV)) {
+				const def = RUNTIME_CONFIG_DEFINITIONS.find(
+					(d) => d.key === key
+				);
+				expect(def).toBeDefined();
+				// 开关键走 channelSwitch 标记，配置键走 channel 标记
+				expect(
+					key === "alertWebhookEnabled" ? def!.channelSwitch : def!.channel
+				).toBe("webhook");
+				expect(def!.envKey).toBe(envKey);
+				expect(def!.isPublic).toBe(false);
+			}
+			const switchDef = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "alertWebhookEnabled"
+			)!;
+			expect(switchDef.channelSwitch).toBe("webhook");
+			expect(switchDef.type).toBe("boolean");
+			// URL 是完整性锚点（非 allowNull）；模板有默认值（allowNull）
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "alertWebhookUrl")!
+					.input?.allowNull
+			).toBeFalsy();
+			expect(
+				RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === "alertWebhookTemplate")!
+					.input?.allowNull
+			).toBe(true);
+		});
+
+		it("不变式：Webhook 通道无 requires 依赖边（独立通道，不依赖邮件通道）", () => {
+			const def = RUNTIME_CONFIG_DEFINITIONS.find(
+				(d) => d.key === "alertWebhookEnabled"
+			)!;
+			expect(def.requires ?? []).toEqual([]);
+		});
+
+		it("getChannelStatus('webhook')：URL 未配置 → 不完整并报缺失键", async () => {
+			const status = await service.getChannelStatus("webhook");
+
+			expect(status.configComplete).toBe(false);
+			expect(status.missingKeys).toEqual(["alertWebhookUrl"]);
+			expect(status.verified).toBe(false);
+		});
+
+		it("配置不完整 → Webhook 开关无法开启（硬阻断，不写库）", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.set("alertWebhookEnabled", true, "op-1")
+			).rejects.toThrow(BadRequestException);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("配置完整 + 测试通过 → 允许开启 Webhook 开关", async () => {
+			mockWebhookVerified();
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "alertWebhookUrl",
+					value: "https://example.com/hook",
+					type: "string",
+					updatedBy: "op-1",
+				},
+			]);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("alertWebhookEnabled", true, "op-1");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		it("改任一 Webhook 配置项 → 删除 webhook 通道验证记录（测试通过状态失效）", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("alertWebhookUrl", "https://new.example.com/hook", "op-1");
+
+			expect(mockPrisma.channelVerification.deleteMany).toHaveBeenCalledWith({
+				where: { channel: "webhook" },
+			});
+		});
+	});
+
 	describe("parseValue", () => {
 		it("should parse boolean type", () => {
 			const result = (service as any).parseValue(

@@ -138,6 +138,8 @@ export const CHANNEL_LABEL: Record<string, string> = {
   mail: t('邮件通道'),
   sms: t('短信通道'),
   wechat: t('微信通道'),
+  payment: t('支付通道'),
+  webhook: t('Webhook 通道'),
 };
 
 /** 归一化通道状态列表（SDK 响应 → 视图模型，缺失字段给安全默认值） */

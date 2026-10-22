@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma as PrismaRuntime } from '@cloudcad/db';
 import { ClsService } from 'nestjs-cls';
+import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { buildOutboundTraceHeaders } from '../../common/utils/outbound-trace';
 import { AlertLevel } from '../enums/alert.enum';
 
@@ -13,18 +14,14 @@ export interface WebhookAlertInput {
 }
 
 /**
- * 默认 body 模板：钉钉 / 企业微信兼容的 text 消息结构（见 docs/research/webhook-message-formats.md 5.3）。
- * 部署方可用 ALERT_WEBHOOK_TEMPLATE 覆盖为任意平台结构（飞书 msg_type / Slack 顶层 text 等）。
- */
-const DEFAULT_TEMPLATE =
-  '{"msgtype":"text","text":{"content":"[{{level}}] {{source}} {{timestamp}}\\n{{message}}\\n{{detail}}"}}';
-
-/**
  * 通用 Webhook 告警适配器（L1 基础设施层）
  *
  * 职责：
- * 1. 条件启用：仅配置 ALERT_WEBHOOK_URL 时启用（SENTRY_DSN 模式），未配置零影响（send 直接返回）
+ * 1. 条件启用（ADR-0082 三期 #506）：alertWebhookEnabled 开关 + URL 非空，
+ *    每次发送前经 RuntimeConfigService 三层解析（runtime > env(ALERT_WEBHOOK_*) > 默认）
+ *    惰性热读——改配置即生效，无需重启；未启用/未配置 URL 时零影响（send 直接返回）
  * 2. 模板渲染：{{message}} / {{level}} / {{source}} / {{timestamp}} / {{detail}} 占位符替换
+ *    （默认模板 = 钉钉/企业微信兼容 text 结构，见 alertWebhookTemplate 键定义）
  * 3. 失败不阻断：发送失败仅记日志，不抛出（不影响主流程）
  *
  * 不绑定具体 IM 平台，body 结构由部署方通过模板配置。
@@ -32,27 +29,35 @@ const DEFAULT_TEMPLATE =
 @Injectable()
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
-  private readonly url: string | undefined;
-  private readonly template: string;
 
-  constructor(private readonly cls: ClsService) {
-    this.url = process.env.ALERT_WEBHOOK_URL;
-    this.template = process.env.ALERT_WEBHOOK_TEMPLATE ?? DEFAULT_TEMPLATE;
-  }
+  constructor(
+    private readonly cls: ClsService,
+    private readonly runtimeConfigService: RuntimeConfigService,
+  ) {}
 
-  get isEnabled(): boolean {
-    return !!this.url;
+  /** 有效启用 = 开关开 且 URL 非空（每次调用热解析，与 send 同一出口） */
+  async isEnabled(): Promise<boolean> {
+    const [enabled, url] = await Promise.all([
+      this.runtimeConfigService.getValue<boolean>('alertWebhookEnabled'),
+      this.runtimeConfigService.getValue<string>('alertWebhookUrl'),
+    ]);
+    return enabled && !!url;
   }
 
   /**
-   * 发送告警到 webhook。未配置 URL 时直接返回；任何发送失败仅记日志，不抛出。
+   * 发送告警到 webhook。未启用或 URL 为空时直接返回；任何发送失败仅记日志，不抛出。
    */
   async send(input: WebhookAlertInput): Promise<void> {
-    if (!this.url) return;
+    const [enabled, url, template] = await Promise.all([
+      this.runtimeConfigService.getValue<boolean>('alertWebhookEnabled'),
+      this.runtimeConfigService.getValue<string>('alertWebhookUrl'),
+      this.runtimeConfigService.getValue<string>('alertWebhookTemplate'),
+    ]);
+    if (!enabled || !url) return;
 
-    const body = this.render(input);
+    const body = this.render(input, template);
     try {
-      const response = await fetch(this.url, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +95,7 @@ export class WebhookService {
    * 全部占位符做 JSON 文本转义（防止破坏部署方模板的 JSON 结构）；
    * detail 为对象时整体 JSON.stringify 后再转义，undefined 时替换为空串。
    */
-  render(input: WebhookAlertInput): string {
+  render(input: WebhookAlertInput, template: string): string {
     const replacements: Record<string, string> = {
       message: this.escapeJsonText(input.message),
       level: this.escapeJsonText(input.level),
@@ -103,7 +108,7 @@ export class WebhookService {
           ? ''
           : this.escapeJsonText(JSON.stringify(input.detail)),
     };
-    return this.template.replace(
+    return template.replace(
       /\{\{(\w+)\}\}/g,
       (match, key: string) => replacements[key] ?? match
     );

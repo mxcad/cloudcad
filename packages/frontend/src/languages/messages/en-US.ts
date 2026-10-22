@@ -2600,5 +2600,7 @@ export default  {
     "1000129": "Source project policy does not allow {action}, blocked",
     "1000130": "Current project policy does not allow {action}, blocked",
     "1000131": "SMS Channel",
-    "1000132": "WeChat Channel"
+    "1000132": "WeChat Channel",
+    "1000133": "Payment Channel",
+    "1000134": "Webhook Channel"
 }

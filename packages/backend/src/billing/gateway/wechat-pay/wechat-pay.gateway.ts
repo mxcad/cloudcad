@@ -6,6 +6,7 @@ import { ClsService } from 'nestjs-cls';
 import * as https from 'https';
 import * as tls from 'tls';
 import * as fs from 'fs';
+import { RuntimeConfigService } from '../../../runtime-config/runtime-config.service';
 import { buildXML, parseXML, generateNonceStr, sign, parseTimeEnd } from './wechat-pay.util';
 import { buildOutboundTraceHeaders } from '../../../common/utils/outbound-trace';
 import type { PaymentGateway, CreatePaymentParams, CreatePaymentResult, WebhookVerifyResult, QueryOrderResult } from '../payment-gateway.interface';
@@ -29,80 +30,107 @@ export class WechatPayGateway implements PaymentGateway {
 
   private readonly apiBase = 'https://api.mch.weixin.qq.com';
   private readonly backupApiBase = 'https://api2.mch.weixin.qq.com';
-  private readonly appId: string;
-  private readonly mchId: string;
-  private readonly key: string;
-  private readonly notifyUrl: string;
-  private readonly signType: 'MD5' | 'HMAC-SHA256';
-  private readonly httpsAgent?: https.Agent;
+
+  /**
+   * 凭据快照（指纹热重建，ADR-0082 三期 #505）：
+   * appId/mchId/key/notifyUrl 走运行时配置三层解析（runtime > env(WECHATPAY_*) > 默认），
+   * signType/证书路径按 ADR-0082 D7 留 env。每次 API 调用前经 syncCredentials()
+   * 重解析拼指纹，变化才更新快照并重建 mTLS agent——与 EmailService/SmsProvider 同型。
+   */
+  private appId = '';
+  private mchId = '';
+  private key = '';
+  private notifyUrl = '';
+  private signType: 'MD5' | 'HMAC-SHA256' = 'MD5';
+  private httpsAgent?: https.Agent;
+  private credsFingerprint: string | null = null;
 
   constructor(
     private configService: ConfigService,
+    private runtimeConfigService: RuntimeConfigService,
     @InjectRedis() private readonly redis: Redis,
     private readonly cls: ClsService,
   ) {
-    this.appId = this.configService.get<string>('wechatPay.appId', '');
-    this.mchId = this.configService.get<string>('wechatPay.mchId', '');
-    this.key = this.configService.get<string>('wechatPay.key', '');
-    this.notifyUrl = this.configService.get<string>('wechatPay.notifyUrl', '');
-    this.signType = this.configService.get<'MD5' | 'HMAC-SHA256'>('wechatPay.signType', 'MD5');
+    // 证书路径是 env（D7），启动期先打一条检查日志便于部署排障；
+    // agent 本体在首次 API 调用时由 syncCredentials() 建立（PFX 口令依赖运行时 mchId）。
+    const certPath = this.configService.get<string>('wechatPay.certPath');
+    const keyPath = this.configService.get<string>('wechatPay.keyPath');
+    this.logger.warn(`wechat pay cert check: certPath=${certPath} keyPath=${keyPath}（agent 首次调用时加载）`);
+  }
 
+  /**
+   * 热重建凭据快照：每次调用前重解析（与生产配置同源），指纹不变则直接复用。
+   * 证书路径变化或 mchId（PFX 口令）变化都会改变指纹 → 重建 agent。
+   */
+  private async syncCredentials(): Promise<void> {
+    const [appId, mchId, key, notifyUrl] = await Promise.all([
+      this.runtimeConfigService.getValue<string>('wechatPayAppId'),
+      this.runtimeConfigService.getValue<string>('wechatPayMchId'),
+      this.runtimeConfigService.getValue<string>('wechatPayKey'),
+      this.runtimeConfigService.getValue<string>('wechatPayNotifyUrl'),
+    ]);
+    const signType = this.configService.get<'MD5' | 'HMAC-SHA256'>('wechatPay.signType', 'MD5');
     const certPath = this.configService.get<string>('wechatPay.certPath');
     const keyPath = this.configService.get<string>('wechatPay.keyPath');
 
-    // 支持两种证书格式：
-    // 1. PEM 格式：certPath = apiclient_cert.pem, keyPath = apiclient_key.pem
-    // 2. PFX 格式：certPath = apiclient_cert.p12, keyPath 可选
-    this.logger.warn(`wechat pay cert check: certPath=${certPath} keyPath=${keyPath}`);
-    if (certPath && fs.existsSync(certPath)) {
-      if (keyPath && fs.existsSync(keyPath) && certPath.endsWith('.pem')) {
-        // PEM 格式
-        this.httpsAgent = this.createHttpsAgentPem(certPath, keyPath);
-      } else if (certPath.endsWith('.p12') || certPath.endsWith('.pfx')) {
-        // PFX 格式
-        this.httpsAgent = this.createHttpsAgentPfx(certPath);
-      } else {
-        this.logger.warn(`unsupported cert format: ${certPath}`);
-      }
-    } else {
+    const fingerprint = JSON.stringify([appId, mchId, key, notifyUrl, signType, certPath, keyPath]);
+    if (fingerprint === this.credsFingerprint) return;
+
+    this.appId = appId;
+    this.mchId = mchId;
+    this.key = key;
+    this.notifyUrl = notifyUrl;
+    this.signType = signType;
+    this.httpsAgent = this.buildHttpsAgent(certPath, keyPath);
+    this.credsFingerprint = fingerprint;
+  }
+
+  /**
+   * 建立 mTLS agent（仅退款等 useCert 接口需要）。支持两种证书格式：
+   * 1. PEM 格式：certPath = apiclient_cert.pem, keyPath = apiclient_key.pem
+   * 2. PFX 格式：certPath = apiclient_cert.p12, keyPath 可选（口令 = mchId）
+   */
+  private buildHttpsAgent(certPath: string | undefined, keyPath: string | undefined): https.Agent | undefined {
+    if (!certPath || !fs.existsSync(certPath)) {
       this.logger.warn(`wechat pay cert not found at: ${certPath} — refund API will fail`);
-    }
-    this.logger.warn(`wechat pay httpsAgent status: ${this.httpsAgent ? 'loaded' : 'NOT loaded'}`);
-  }
-
-  /** PEM 格式：cert + key 分开 */
-  private createHttpsAgentPem(certPath: string, keyPath: string): https.Agent | undefined {
-    try {
-      const cert = fs.readFileSync(certPath);
-      const key = fs.readFileSync(keyPath);
-      // 验证证书有效性
-      const secureContext = tls.createSecureContext({ cert, key });
-      this.logger.warn(`wechat pay cert loaded (PEM) cert=${certPath} key=${keyPath}`);
-      return new https.Agent({ secureContext });
-    } catch (err) {
-      this.logger.error(`wechat pay cert load failed (PEM) cert=${certPath} key=${keyPath}`, err);
       return undefined;
     }
-  }
-
-  /** PFX/P12 格式：证书 + 私钥打包在一个文件里 */
-  private createHttpsAgentPfx(certPath: string): https.Agent | undefined {
-    try {
-      const pfx = fs.readFileSync(certPath);
-      // 验证证书有效性（密码 + 格式）
-      const secureContext = tls.createSecureContext({
-        pfx,
-        passphrase: this.mchId,
-      });
-      this.logger.warn(`wechat pay cert loaded (PFX) from ${certPath}`);
-      return new https.Agent({ secureContext });
-    } catch (err) {
-      this.logger.error(`wechat pay cert load failed (PFX) from ${certPath}`, err);
-      return undefined;
+    if (keyPath && fs.existsSync(keyPath) && certPath.endsWith('.pem')) {
+      // PEM 格式：cert + key 分开
+      try {
+        const cert = fs.readFileSync(certPath);
+        const key = fs.readFileSync(keyPath);
+        // 验证证书有效性
+        const secureContext = tls.createSecureContext({ cert, key });
+        this.logger.warn(`wechat pay cert loaded (PEM) cert=${certPath} key=${keyPath}`);
+        return new https.Agent({ secureContext });
+      } catch (err) {
+        this.logger.error(`wechat pay cert load failed (PEM) cert=${certPath} key=${keyPath}`, err);
+        return undefined;
+      }
     }
+    if (certPath.endsWith('.p12') || certPath.endsWith('.pfx')) {
+      // PFX/P12 格式：证书 + 私钥打包在一个文件里
+      try {
+        const pfx = fs.readFileSync(certPath);
+        // 验证证书有效性（密码 + 格式）
+        const secureContext = tls.createSecureContext({
+          pfx,
+          passphrase: this.mchId,
+        });
+        this.logger.warn(`wechat pay cert loaded (PFX) from ${certPath}`);
+        return new https.Agent({ secureContext });
+      } catch (err) {
+        this.logger.error(`wechat pay cert load failed (PFX) from ${certPath}`, err);
+        return undefined;
+      }
+    }
+    this.logger.warn(`unsupported cert format: ${certPath}`);
+    return undefined;
   }
 
   async createPayment(params: CreatePaymentParams): Promise<CreatePaymentResult> {
+    await this.syncCredentials();
     const data: Record<string, any> = {
       appid: this.appId,
       mch_id: this.mchId,
@@ -161,6 +189,7 @@ export class WechatPayGateway implements PaymentGateway {
     payload: any,
     _headers: Record<string, string>,
   ): Promise<WebhookVerifyResult> {
+    await this.syncCredentials();
     const xml = typeof payload === 'string' ? payload : payload;
     const parsed = parseXML(xml);
     const data = parsed?.xml ?? parsed;
@@ -222,6 +251,7 @@ export class WechatPayGateway implements PaymentGateway {
   }
 
   async queryOrder(orderNo: string): Promise<QueryOrderResult> {
+    await this.syncCredentials();
     const data: Record<string, any> = {
       appid: this.appId,
       mch_id: this.mchId,
@@ -255,6 +285,7 @@ export class WechatPayGateway implements PaymentGateway {
   }
 
   async refund(orderNo: string, amount: number): Promise<void> {
+    await this.syncCredentials();
     const refundKey = `${REFUND_PREFIX}${orderNo}`;
     // 原子 SET NX 加锁，避免 setnx + expire 两步间崩溃遗留锁
     const alreadyRefunding = await this.redis.set(refundKey, '1', 'EX', 3600, 'NX');

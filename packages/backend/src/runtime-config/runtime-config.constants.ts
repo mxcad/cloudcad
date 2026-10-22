@@ -851,6 +851,50 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     impact: '每日该整点发送前一天 P2 告警汇总；当天无前日告警则不发送。',
   },
 
+  // ───────────────────────── 告警 Webhook（ADR-0082 三期 #506） ─────────────────────────
+  {
+    key: 'alertWebhookEnabled',
+    type: 'boolean',
+    category: 'alert',
+    description: '是否启用告警 Webhook 通知（钉钉/企业微信/飞书等，body 结构由模板决定）',
+    defaultValue: false,
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'ALERT_WEBHOOK_ENABLED',
+    // 通道开关：开启要求 URL 已配置 + 通道测试通过（硬阻断，无绕过）
+    channelSwitch: 'webhook',
+    impact: '关闭后告警不再推送到 Webhook（告警邮件不受影响），故障要等人登录后台才发现。',
+  },
+  {
+    key: 'alertWebhookUrl',
+    type: 'string',
+    category: 'alert',
+    description: '告警 Webhook 地址（钉钉/企业微信机器人或任意接收 POST JSON 的端点）',
+    defaultValue: '',
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'ALERT_WEBHOOK_URL',
+    channel: 'webhook',
+    input: { maxLength: 500 },
+    impact: 'URL 为空时 Webhook 通道不发送任何告警（等同关闭），告警只会留在后台告警列表。',
+  },
+  {
+    key: 'alertWebhookTemplate',
+    type: 'string',
+    category: 'alert',
+    description:
+      '告警 Webhook body 模板（占位符 {{message}}/{{level}}/{{source}}/{{timestamp}}/{{detail}}）',
+    // 默认 = 钉钉/企业微信兼容的 text 消息结构（与 webhook.service 的 DEFAULT_TEMPLATE 同源）
+    defaultValue:
+      '{"msgtype":"text","text":{"content":"[{{level}}] {{source}} {{timestamp}}\\n{{message}}\\n{{detail}}"}}',
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'ALERT_WEBHOOK_TEMPLATE',
+    channel: 'webhook',
+    input: { maxLength: 2000, allowNull: true },
+    impact: '按目标平台调整 body 结构（飞书 msg_type / Slack 顶层 text 等）；留空用默认模板。',
+  },
+
   // ───────────────────────── 安全：模式 ─────────────────────────
   {
     key: 'securityMode',
@@ -1310,7 +1354,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     profiles: { secure: false, normal: true },
   },
 
-  // ───────────────────────── 计费：支付开关 ─────────────────────────
+  // ───────────────────────── 计费：支付通道（ADR-0082 三期 #505） ─────────────────────────
   {
     key: 'paymentEnabled',
     type: 'boolean',
@@ -1320,8 +1364,82 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     isPublic: false,
     tier: 'admin',
     dangerous: true,
+    // 通道开关：开启要求支付配置完整 + 通道测试通过（硬阻断，无绕过）
+    channelSwitch: 'payment',
     impact: '开启后进入付费/会员下单流程；需先在服务端配置支付网关凭证。',
   },
+  {
+    key: 'paymentProvider',
+    type: 'string',
+    category: 'billing',
+    description: '支付网关服务商',
+    defaultValue: 'mock',
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'PAYMENT_PROVIDER',
+    channel: 'payment',
+    input: {
+      options: [
+        { value: 'wechat_pay', label: '微信支付' },
+        { value: 'mock', label: 'Mock（开发测试）' },
+      ],
+    },
+    impact: '决定使用哪组凭据键；切换后对应网关的凭据需通过通道测试。',
+  },
+  {
+    key: 'wechatPayAppId',
+    type: 'string',
+    category: 'billing',
+    description: '微信支付 AppID',
+    defaultValue: '',
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'WECHATPAY_APPID',
+    channel: 'payment',
+    input: { maxLength: 100 },
+    impact: 'paymentProvider=wechat_pay 时必填；商户平台「开发配置-AppID」。',
+  },
+  {
+    key: 'wechatPayMchId',
+    type: 'string',
+    category: 'billing',
+    description: '微信支付商户号',
+    defaultValue: '',
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'WECHATPAY_MCHID',
+    channel: 'payment',
+    input: { maxLength: 100, allowNull: true },
+    impact: 'paymentProvider=wechat_pay 时必填；商户平台「商户信息-商户号」。',
+  },
+  {
+    key: 'wechatPayKey',
+    type: 'string',
+    category: 'billing',
+    description: '微信支付 API 密钥（V2 签名密钥）',
+    defaultValue: '',
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'WECHATPAY_KEY',
+    channel: 'payment',
+    input: { maxLength: 200, secret: true, allowNull: true },
+    impact: 'paymentProvider=wechat_pay 时必填；加密落库、管理端只回掩码。',
+  },
+  {
+    key: 'wechatPayNotifyUrl',
+    type: 'string',
+    category: 'billing',
+    description: '微信支付异步回调地址',
+    defaultValue: '',
+    isPublic: false,
+    tier: 'admin',
+    envKey: 'WECHATPAY_NOTIFY_URL',
+    channel: 'payment',
+    input: { maxLength: 500, allowNull: true },
+    impact: 'paymentProvider=wechat_pay 时必填；须为公网可达的 HTTPS 地址。',
+  },
+  // 证书文件路径（WECHATPAY_CERT_PATH/WECHATPAY_KEY_PATH）与 signType（WECHATPAY_SIGN_TYPE）
+  // 按 ADR-0082 D7 留 env：文件内容无法用 UI 文本框填写，属部署身份性质。
 
   // ───────────────────────── 协同 ─────────────────────────
   {

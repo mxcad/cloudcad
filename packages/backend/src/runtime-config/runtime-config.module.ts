@@ -18,6 +18,8 @@ import { ChannelTestService } from './channel-test.service';
 import { MailChannelTestAction } from './mail-channel-test-action';
 import { SmsChannelTestAction } from './sms-channel-test-action';
 import { WechatChannelTestAction } from './wechat-channel-test-action';
+import { PaymentChannelTestAction } from './payment-channel-test-action';
+import { WebhookChannelTestAction } from './webhook-channel-test-action';
 import { BrandAssetService } from './brand-asset.service';
 import { RuntimeConfigController } from './runtime-config.controller';
 import { CHANNEL_TEST_ACTIONS } from './channel-test.service';
@@ -37,17 +39,23 @@ import { CHANNEL_TEST_ACTIONS } from './channel-test.service';
     MailChannelTestAction,
     SmsChannelTestAction,
     WechatChannelTestAction,
+    PaymentChannelTestAction,
+    WebhookChannelTestAction,
     {
       provide: CHANNEL_TEST_ACTIONS,
       useFactory: (
         mail: MailChannelTestAction,
         sms: SmsChannelTestAction,
-        wechat: WechatChannelTestAction
-      ) => [mail, sms, wechat],
+        wechat: WechatChannelTestAction,
+        payment: PaymentChannelTestAction,
+        webhook: WebhookChannelTestAction
+      ) => [mail, sms, wechat, payment, webhook],
       inject: [
         MailChannelTestAction,
         SmsChannelTestAction,
         WechatChannelTestAction,
+        PaymentChannelTestAction,
+        WebhookChannelTestAction,
       ],
     },
   ],
