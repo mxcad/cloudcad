@@ -12,6 +12,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
+import { I18nContext } from 'nestjs-i18n';
 import {
   IsEmail,
   IsNotEmpty,
@@ -32,7 +33,7 @@ export class CreateUserDto {
   })
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_invalid') ?? '请输入有效的邮箱地址' })
   email?: string;
 
   @ApiProperty({
@@ -42,8 +43,8 @@ export class CreateUserDto {
   })
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsString({ message: '手机号必须是字符串' })
-  @Matches(/^1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @Matches(/^1[3-9]\d{9}$/, { message: () => I18nContext.current()?.t('validation.phone_invalid') ?? '请输入有效的中国大陆手机号' })
   phone?: string;
 
   @ApiProperty({
@@ -53,12 +54,12 @@ export class CreateUserDto {
     maxLength: 20,
     pattern: '^[a-zA-Z0-9_]+$',
   })
-  @IsString({ message: '用户名必须是字符串' })
-  @IsNotEmpty({ message: '用户名不能为空' })
-  @MinLength(3, { message: '用户名至少3个字符' })
-  @MaxLength(20, { message: '用户名最多20个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.username_must_be_string') ?? '用户名必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.username_required') ?? '用户名不能为空' })
+  @MinLength(3, { message: () => I18nContext.current()?.t('validation.username_min_length') ?? '用户名至少3个字符' })
+  @MaxLength(20, { message: () => I18nContext.current()?.t('validation.username_max_length') ?? '用户名最多20个字符' })
   @Matches(/^[a-zA-Z0-9_]+$/, {
-    message: '用户名只能包含字母、数字和下划线',
+    message: () => I18nContext.current()?.t('validation.username_pattern') ?? '用户名只能包含字母、数字和下划线',
   })
   username: string;
 
@@ -68,17 +69,17 @@ export class CreateUserDto {
     minLength: 8,
     maxLength: 50,
   })
-  @IsString({ message: '密码必须是字符串' })
-  @IsNotEmpty({ message: '密码不能为空' })
-  @MinLength(8, { message: '密码至少8个字符' })
-  @MaxLength(50, { message: '密码最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
+  @MinLength(8, { message: () => I18nContext.current()?.t('validation.password_min_length') ?? '密码至少8个字符' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.password_max_length') ?? '密码最多50个字符' })
   password: string;
 
   @ApiProperty({ description: '昵称', required: false, maxLength: 50 })
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsString({ message: '昵称必须是字符串' })
-  @MaxLength(50, { message: '昵称最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.nickname_must_be_string') ?? '昵称必须是字符串' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.nickname_max_length') ?? '昵称最多50个字符' })
   nickname?: string;
 
   @ApiProperty({ description: '头像URL', required: false })
@@ -94,7 +95,7 @@ export class CreateUserDto {
   })
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsString({ message: '角色ID必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.role_id_must_be_string') ?? '角色ID必须是字符串' })
   roleId?: string;
 
   @ApiProperty({
@@ -103,7 +104,7 @@ export class CreateUserDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean({ message: 'phoneVerified 必须是布尔值' })
+  @IsBoolean({ message: () => I18nContext.current()?.t('validation.phone_verified_must_be_boolean') ?? 'phoneVerified 必须是布尔值' })
   phoneVerified?: boolean;
 
   @ApiProperty({
@@ -112,7 +113,7 @@ export class CreateUserDto {
     default: false,
   })
   @IsOptional()
-  @IsBoolean({ message: 'emailVerified 必须是布尔值' })
+  @IsBoolean({ message: () => I18nContext.current()?.t('validation.email_verified_must_be_boolean') ?? 'emailVerified 必须是布尔值' })
   emailVerified?: boolean;
 
   @ApiProperty({ description: '微信 OpenID', required: false })

@@ -13,6 +13,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserStatus } from '../../common/enums/user-status.enum';
 import { Transform } from 'class-transformer';
+import { I18nContext } from 'nestjs-i18n';
 import {
   IsEmail,
   IsEnum,
@@ -37,8 +38,8 @@ export class UpdateUserDto {
   })
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsString({ message: '手机号必须是字符串' })
-  @Matches(/^1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @Matches(/^1[3-9]\d{9}$/, { message: () => I18nContext.current()?.t('validation.phone_invalid') ?? '请输入有效的中国大陆手机号' })
   phone?: string;
 
   @ApiProperty({ description: '用户名', required: false, minLength: 3 })
@@ -58,8 +59,8 @@ export class UpdateUserDto {
   @ApiProperty({ description: '昵称', required: false, maxLength: 50 })
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsString({ message: '昵称必须是字符串' })
-  @MaxLength(50, { message: '昵称最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.nickname_must_be_string') ?? '昵称必须是字符串' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.nickname_max_length') ?? '昵称最多50个字符' })
   nickname?: string;
 
   @ApiProperty({ description: '头像URL', required: false })
@@ -71,7 +72,7 @@ export class UpdateUserDto {
   @ApiProperty({ description: '角色ID', required: false })
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsString({ message: '角色ID必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.role_id_must_be_string') ?? '角色ID必须是字符串' })
   roleId?: string;
 
   @ApiProperty({

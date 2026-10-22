@@ -22,6 +22,7 @@ import {
 } from 'class-validator';
 
 import { Transform } from 'class-transformer';
+import { I18nContext } from 'nestjs-i18n';
 
 export class RegisterDto {
   @ApiPropertyOptional({
@@ -30,7 +31,7 @@ export class RegisterDto {
     format: 'email',
   })
   @IsOptional()
-  @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_invalid') ?? '请输入有效的邮箱地址' })
   @Transform(({ value }) => (value === '' ? undefined : value))
   email?: string;
 
@@ -42,12 +43,12 @@ export class RegisterDto {
     maxLength: 20,
     pattern: '^[a-zA-Z0-9_]+$',
   })
-  @IsString({ message: '用户名必须是字符串' })
-  @IsNotEmpty({ message: '用户名不能为空' })
-  @MinLength(3, { message: '用户名至少3个字符' })
-  @MaxLength(20, { message: '用户名最多20个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.username_must_be_string') ?? '用户名必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.username_required') ?? '用户名不能为空' })
+  @MinLength(3, { message: () => I18nContext.current()?.t('validation.username_min_length') ?? '用户名至少3个字符' })
+  @MaxLength(20, { message: () => I18nContext.current()?.t('validation.username_max_length') ?? '用户名最多20个字符' })
   @Matches(/^[a-zA-Z0-9_]+$/, {
-    message: '用户名只能包含字母、数字和下划线',
+    message: () => I18nContext.current()?.t('validation.username_pattern') ?? '用户名只能包含字母、数字和下划线',
   })
   username: string;
 
@@ -58,10 +59,10 @@ export class RegisterDto {
     minLength: 8,
     maxLength: 50,
   })
-  @IsString({ message: '密码必须是字符串' })
-  @IsNotEmpty({ message: '密码不能为空' })
-  @MinLength(8, { message: '密码至少8个字符' })
-  @MaxLength(50, { message: '密码最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
+  @MinLength(8, { message: () => I18nContext.current()?.t('validation.password_min_length') ?? '密码至少8个字符' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.password_max_length') ?? '密码最多50个字符' })
   password: string;
 
   @ApiProperty({
@@ -71,8 +72,8 @@ export class RegisterDto {
     maxLength: 50,
   })
   @IsOptional()
-  @IsString({ message: '昵称必须是字符串' })
-  @MaxLength(50, { message: '昵称最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.nickname_must_be_string') ?? '昵称必须是字符串' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.nickname_max_length') ?? '昵称最多50个字符' })
   nickname?: string;
 
   @ApiPropertyOptional({
@@ -80,7 +81,7 @@ export class RegisterDto {
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @IsOptional()
-  @IsString({ message: '微信临时 Token 必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.wechat_token_must_be_string') ?? '微信临时 Token 必须是字符串' })
   wechatTempToken?: string;
 }
 
@@ -89,16 +90,16 @@ export class LoginDto {
     description: '邮箱、用户名或手机号',
     example: 'user@example.com',
   })
-  @IsString({ message: '登录账号必须是字符串' })
-  @IsNotEmpty({ message: '登录账号不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.login_account_must_be_string') ?? '登录账号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.login_account_required') ?? '登录账号不能为空' })
   account: string;
 
   @ApiProperty({
     description: '密码',
     example: 'Password123!',
   })
-  @IsString({ message: '密码必须是字符串' })
-  @IsNotEmpty({ message: '密码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
   password: string;
 
   @ApiPropertyOptional({
@@ -107,8 +108,8 @@ export class LoginDto {
     example: '123456',
   })
   @IsOptional()
-  @IsString({ message: '双因素动态码必须是字符串' })
-  @MaxLength(8, { message: '双因素动态码最多8个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.totp_must_be_string') ?? '双因素动态码必须是字符串' })
+  @MaxLength(8, { message: () => I18nContext.current()?.t('validation.totp_max_length') ?? '双因素动态码最多8个字符' })
   totpCode?: string;
 }
 
@@ -119,8 +120,8 @@ export class RefreshTokenDto {
     required: false,
   })
   @IsOptional()
-  @IsString({ message: '刷新Token必须是字符串' })
-  @IsNotEmpty({ message: '刷新Token不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.refresh_token_must_be_string') ?? '刷新Token必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.refresh_token_required') ?? '刷新Token不能为空' })
   refreshToken?: string;
 }
 
@@ -324,7 +325,7 @@ export class CheckFieldUniquenessDto {
     format: 'email',
   })
   @IsOptional()
-  @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_invalid') ?? '请输入有效的邮箱地址' })
   email?: string;
 
   @ApiPropertyOptional({

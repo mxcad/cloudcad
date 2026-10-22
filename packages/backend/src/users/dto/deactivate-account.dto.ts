@@ -12,6 +12,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
+import { I18nContext } from 'nestjs-i18n';
 
 
 export class DeactivateAccountDto {
@@ -19,7 +20,7 @@ export class DeactivateAccountDto {
     description: '用户密码（密码登录用户必填）',
     example: 'UserPassword123!',
   })
-  @IsString({ message: '密码必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
   @IsOptional()
   password?: string;
 
@@ -27,7 +28,7 @@ export class DeactivateAccountDto {
     description: '手机验证码（绑定手机的用户必填）',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
   @IsOptional()
   phoneCode?: string;
 
@@ -35,7 +36,7 @@ export class DeactivateAccountDto {
     description: '邮箱验证码（邮箱注册用户必填）',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
   @IsOptional()
   emailCode?: string;
 
@@ -43,7 +44,7 @@ export class DeactivateAccountDto {
     description: '微信扫码授权 code（微信登录用户必填，后端用 code 换 openid 校验）',
     example: 'wx-auth-code',
   })
-  @IsString({ message: '微信授权 code 必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.wechat_auth_code_must_be_string') ?? '微信授权 code 必须是字符串' })
   @IsOptional()
   wechatCode?: string;
 }

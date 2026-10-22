@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { I18nContext } from 'nestjs-i18n';
 import {
   IsIn,
   IsNotEmpty,
@@ -32,9 +33,9 @@ export class SendSmsCodeDto {
     example: '13800138000',
     pattern: '^(\\+86)?1[3-9]\\d{9}$',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
-  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
+  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: () => I18nContext.current()?.t('validation.phone_invalid') ?? '请输入有效的中国大陆手机号' })
   phone: string;
 
   @ApiPropertyOptional({
@@ -45,7 +46,7 @@ export class SendSmsCodeDto {
     enum: ['login', 'register', 'bind'],
   })
   @IsOptional()
-  @IsIn(['login', 'register', 'bind'], { message: '无效的验证码场景' })
+  @IsIn(['login', 'register', 'bind'], { message: () => I18nContext.current()?.t('validation.sms_scene_invalid') ?? '无效的验证码场景' })
   scene?: SmsCodeScene;
 }
 
@@ -58,9 +59,9 @@ export class VerifySmsCodeDto {
     example: '13800138000',
     pattern: '^(\\+86)?1[3-9]\\d{9}$',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
-  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
+  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: () => I18nContext.current()?.t('validation.phone_invalid') ?? '请输入有效的中国大陆手机号' })
   phone: string;
 
   @ApiProperty({
@@ -69,11 +70,11 @@ export class VerifySmsCodeDto {
     minLength: 6,
     maxLength: 6,
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
-  @MinLength(6, { message: '验证码必须是6位' })
-  @MaxLength(6, { message: '验证码必须是6位' })
-  @Matches(/^\d{6}$/, { message: '验证码必须是6位数字' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
+  @MinLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @MaxLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @Matches(/^\d{6}$/, { message: () => I18nContext.current()?.t('validation.code_digit') ?? '验证码必须是6位数字' })
   code: string;
 }
 
@@ -86,9 +87,9 @@ export class RegisterByPhoneDto {
     example: '13800138000',
     pattern: '^(\\+86)?1[3-9]\\d{9}$',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
-  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
+  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: () => I18nContext.current()?.t('validation.phone_invalid') ?? '请输入有效的中国大陆手机号' })
   phone: string;
 
   @ApiProperty({
@@ -97,11 +98,11 @@ export class RegisterByPhoneDto {
     minLength: 6,
     maxLength: 6,
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
-  @MinLength(6, { message: '验证码必须是6位' })
-  @MaxLength(6, { message: '验证码必须是6位' })
-  @Matches(/^\d{6}$/, { message: '验证码必须是6位数字' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
+  @MinLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @MaxLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @Matches(/^\d{6}$/, { message: () => I18nContext.current()?.t('validation.code_digit') ?? '验证码必须是6位数字' })
   code: string;
 
   @ApiProperty({
@@ -112,12 +113,12 @@ export class RegisterByPhoneDto {
     maxLength: 20,
     pattern: '^[a-zA-Z0-9_]+$',
   })
-  @IsString({ message: '用户名必须是字符串' })
-  @IsNotEmpty({ message: '用户名不能为空' })
-  @MinLength(3, { message: '用户名至少3个字符' })
-  @MaxLength(20, { message: '用户名最多20个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.username_must_be_string') ?? '用户名必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.username_required') ?? '用户名不能为空' })
+  @MinLength(3, { message: () => I18nContext.current()?.t('validation.username_min_length') ?? '用户名至少3个字符' })
+  @MaxLength(20, { message: () => I18nContext.current()?.t('validation.username_max_length') ?? '用户名最多20个字符' })
   @Matches(/^[a-zA-Z0-9_]+$/, {
-    message: '用户名只能包含字母、数字和下划线',
+    message: () => I18nContext.current()?.t('validation.username_pattern') ?? '用户名只能包含字母、数字和下划线',
   })
   username: string;
 
@@ -128,10 +129,10 @@ export class RegisterByPhoneDto {
     minLength: 8,
     maxLength: 50,
   })
-  @IsString({ message: '密码必须是字符串' })
-  @IsNotEmpty({ message: '密码不能为空' })
-  @MinLength(8, { message: '密码至少8个字符' })
-  @MaxLength(50, { message: '密码最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
+  @MinLength(8, { message: () => I18nContext.current()?.t('validation.password_min_length') ?? '密码至少8个字符' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.password_max_length') ?? '密码最多50个字符' })
   password: string;
 
   @ApiPropertyOptional({
@@ -140,8 +141,8 @@ export class RegisterByPhoneDto {
     maxLength: 50,
   })
   @IsOptional()
-  @IsString({ message: '昵称必须是字符串' })
-  @MaxLength(50, { message: '昵称最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.nickname_must_be_string') ?? '昵称必须是字符串' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.nickname_max_length') ?? '昵称最多50个字符' })
   nickname?: string;
 }
 
@@ -154,9 +155,9 @@ export class LoginByPhoneDto {
     example: '13800138000',
     pattern: '^(\\+86)?1[3-9]\\d{9}$',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
-  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
+  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: () => I18nContext.current()?.t('validation.phone_invalid') ?? '请输入有效的中国大陆手机号' })
   phone: string;
 
   @ApiProperty({
@@ -165,11 +166,11 @@ export class LoginByPhoneDto {
     minLength: 6,
     maxLength: 6,
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
-  @MinLength(6, { message: '验证码必须是6位' })
-  @MaxLength(6, { message: '验证码必须是6位' })
-  @Matches(/^\d{6}$/, { message: '验证码必须是6位数字' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
+  @MinLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @MaxLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @Matches(/^\d{6}$/, { message: () => I18nContext.current()?.t('validation.code_digit') ?? '验证码必须是6位数字' })
   code: string;
 }
 
@@ -182,9 +183,9 @@ export class BindPhoneDto {
     example: '13800138000',
     pattern: '^(\\+86)?1[3-9]\\d{9}$',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
-  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: '请输入有效的中国大陆手机号' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
+  @Matches(/^(\+86)?1[3-9]\d{9}$/, { message: () => I18nContext.current()?.t('validation.phone_invalid') ?? '请输入有效的中国大陆手机号' })
   phone: string;
 
   @ApiProperty({
@@ -193,10 +194,10 @@ export class BindPhoneDto {
     minLength: 6,
     maxLength: 6,
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
-  @MinLength(6, { message: '验证码必须是6位' })
-  @MaxLength(6, { message: '验证码必须是6位' })
-  @Matches(/^\d{6}$/, { message: '验证码必须是6位数字' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
+  @MinLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @MaxLength(6, { message: () => I18nContext.current()?.t('validation.code_length') ?? '验证码必须是6位' })
+  @Matches(/^\d{6}$/, { message: () => I18nContext.current()?.t('validation.code_digit') ?? '验证码必须是6位数字' })
   code: string;
 }

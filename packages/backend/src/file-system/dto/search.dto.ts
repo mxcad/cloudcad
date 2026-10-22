@@ -13,6 +13,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { I18nContext } from 'nestjs-i18n';
 
 export enum SearchScope {
   PROJECT = 'project',
@@ -36,7 +37,7 @@ export enum SearchEntity {
 export class SearchDto {
   @ApiProperty({ description: '搜索关键词', required: true })
   @IsString()
-  @MaxLength(200, { message: '搜索关键词最长200个字符' })
+  @MaxLength(200, { message: () => I18nContext.current()?.t('validation.search_keyword_max_length') ?? '搜索关键词最长200个字符' })
   keyword: string;
 
   @ApiProperty({

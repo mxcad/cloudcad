@@ -21,6 +21,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { I18nContext } from 'nestjs-i18n';
 
 /**
  * 首启「创建首个管理员」请求体。
@@ -36,7 +37,7 @@ export class CreateFirstAdminDto {
     format: 'email',
   })
   @IsOptional()
-  @IsEmail({}, { message: '请输入有效的邮箱地址' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_invalid') ?? '请输入有效的邮箱地址' })
   @Transform(({ value }) => (value === '' ? undefined : value))
   email?: string;
 
@@ -48,12 +49,12 @@ export class CreateFirstAdminDto {
     maxLength: 20,
     pattern: '^[a-zA-Z0-9_]+$',
   })
-  @IsString({ message: '用户名必须是字符串' })
-  @IsNotEmpty({ message: '用户名不能为空' })
-  @MinLength(3, { message: '用户名至少3个字符' })
-  @MaxLength(20, { message: '用户名最多20个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.username_must_be_string') ?? '用户名必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.username_required') ?? '用户名不能为空' })
+  @MinLength(3, { message: () => I18nContext.current()?.t('validation.username_min_length') ?? '用户名至少3个字符' })
+  @MaxLength(20, { message: () => I18nContext.current()?.t('validation.username_max_length') ?? '用户名最多20个字符' })
   @Matches(/^[a-zA-Z0-9_]+$/, {
-    message: '用户名只能包含字母、数字和下划线',
+    message: () => I18nContext.current()?.t('validation.username_pattern') ?? '用户名只能包含字母、数字和下划线',
   })
   username: string;
 
@@ -64,10 +65,10 @@ export class CreateFirstAdminDto {
     minLength: 8,
     maxLength: 50,
   })
-  @IsString({ message: '密码必须是字符串' })
-  @IsNotEmpty({ message: '密码不能为空' })
-  @MinLength(8, { message: '密码至少8个字符' })
-  @MaxLength(50, { message: '密码最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
+  @MinLength(8, { message: () => I18nContext.current()?.t('validation.password_min_length') ?? '密码至少8个字符' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.password_max_length') ?? '密码最多50个字符' })
   password: string;
 
   @ApiPropertyOptional({
@@ -75,8 +76,8 @@ export class CreateFirstAdminDto {
     example: '系统管理员',
   })
   @IsOptional()
-  @IsString({ message: '昵称必须是字符串' })
-  @MaxLength(50, { message: '昵称最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.nickname_must_be_string') ?? '昵称必须是字符串' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.nickname_max_length') ?? '昵称最多50个字符' })
   nickname?: string;
 }
 

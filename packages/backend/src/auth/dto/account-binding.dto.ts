@@ -11,6 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { I18nContext } from 'nestjs-i18n';
 import {
   IsEmail,
   IsNotEmpty,
@@ -29,32 +30,32 @@ export class VerifyEmailAndRegisterPhoneDto {
     description: '邮箱地址',
     example: 'user@example.com',
   })
-  @IsEmail({}, { message: '请输入有效的邮箱地址' })
-  @IsNotEmpty({ message: '邮箱不能为空' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_invalid') ?? '请输入有效的邮箱地址' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.email_required') ?? '邮箱不能为空' })
   email: string;
 
   @ApiProperty({
     description: '邮箱验证码（6位数字）',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 
   @ApiProperty({
     description: '手机号（中国大陆，可带 +86 前缀）',
     example: '13800138000',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
   phone: string;
 
   @ApiProperty({
     description: '手机验证码（6位数字）',
     example: '123456',
   })
-  @IsString({ message: '手机验证码必须是字符串' })
-  @IsNotEmpty({ message: '手机验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.sms_code_must_be_string') ?? '手机验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.sms_code_required') ?? '手机验证码不能为空' })
   phoneCode: string;
 
   @ApiProperty({
@@ -63,12 +64,12 @@ export class VerifyEmailAndRegisterPhoneDto {
     minLength: 3,
     maxLength: 20,
   })
-  @IsString({ message: '用户名必须是字符串' })
-  @IsNotEmpty({ message: '用户名不能为空' })
-  @MinLength(3, { message: '用户名至少3个字符' })
-  @MaxLength(20, { message: '用户名最多20个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.username_must_be_string') ?? '用户名必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.username_required') ?? '用户名不能为空' })
+  @MinLength(3, { message: () => I18nContext.current()?.t('validation.username_min_length') ?? '用户名至少3个字符' })
+  @MaxLength(20, { message: () => I18nContext.current()?.t('validation.username_max_length') ?? '用户名最多20个字符' })
   @Matches(/^[a-zA-Z0-9_]+$/, {
-    message: '用户名只能包含字母、数字和下划线',
+    message: () => I18nContext.current()?.t('validation.username_pattern') ?? '用户名只能包含字母、数字和下划线',
   })
   username: string;
 
@@ -78,10 +79,10 @@ export class VerifyEmailAndRegisterPhoneDto {
     minLength: 8,
     maxLength: 50,
   })
-  @IsString({ message: '密码必须是字符串' })
-  @IsNotEmpty({ message: '密码不能为空' })
-  @MinLength(8, { message: '密码至少8个字符' })
-  @MaxLength(50, { message: '密码最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
+  @MinLength(8, { message: () => I18nContext.current()?.t('validation.password_min_length') ?? '密码至少8个字符' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.password_max_length') ?? '密码最多50个字符' })
   password: string;
 
   @ApiPropertyOptional({
@@ -90,8 +91,8 @@ export class VerifyEmailAndRegisterPhoneDto {
     maxLength: 50,
   })
   @IsOptional()
-  @IsString({ message: '昵称必须是字符串' })
-  @MaxLength(50, { message: '昵称最多50个字符' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.nickname_must_be_string') ?? '昵称必须是字符串' })
+  @MaxLength(50, { message: () => I18nContext.current()?.t('validation.nickname_max_length') ?? '昵称最多50个字符' })
   nickname?: string;
 }
 
@@ -103,24 +104,24 @@ export class BindEmailAndLoginDto {
     description: '临时令牌',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
-  @IsString({ message: '临时令牌必须是字符串' })
-  @IsNotEmpty({ message: '临时令牌不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.temp_token_must_be_string') ?? '临时令牌必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.temp_token_required') ?? '临时令牌不能为空' })
   tempToken: string;
 
   @ApiProperty({
     description: '邮箱地址',
     example: 'user@example.com',
   })
-  @IsEmail({}, { message: '请输入有效的邮箱地址' })
-  @IsNotEmpty({ message: '邮箱不能为空' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_invalid') ?? '请输入有效的邮箱地址' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.email_required') ?? '邮箱不能为空' })
   email: string;
 
   @ApiProperty({
     description: '邮箱验证码',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 }
 
@@ -132,24 +133,24 @@ export class BindPhoneAndLoginDto {
     description: '临时令牌',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
-  @IsString({ message: '临时令牌必须是字符串' })
-  @IsNotEmpty({ message: '临时令牌不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.temp_token_must_be_string') ?? '临时令牌必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.temp_token_required') ?? '临时令牌不能为空' })
   tempToken: string;
 
   @ApiProperty({
     description: '手机号（中国大陆，可带 +86 前缀）',
     example: '13800138000',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
   phone: string;
 
   @ApiProperty({
     description: '验证码',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 }
 
@@ -161,8 +162,8 @@ export class VerifyUnbindCodeDto {
     description: '验证码（6位数字）',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 }
 
@@ -174,24 +175,24 @@ export class RebindEmailDto {
     description: '新邮箱地址',
     example: 'newuser@example.com',
   })
-  @IsEmail({}, { message: '请输入有效的邮箱地址' })
-  @IsNotEmpty({ message: '邮箱不能为空' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_invalid') ?? '请输入有效的邮箱地址' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.email_required') ?? '邮箱不能为空' })
   email: string;
 
   @ApiProperty({
     description: '新邮箱验证码',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 
   @ApiProperty({
     description: '解绑原邮箱的验证令牌',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
-  @IsString({ message: '令牌必须是字符串' })
-  @IsNotEmpty({ message: '令牌不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.token_must_be_string') ?? '令牌必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.token_required') ?? '令牌不能为空' })
   token: string;
 }
 
@@ -203,23 +204,23 @@ export class RebindPhoneDto {
     description: '新手机号（中国大陆，可带 +86 前缀）',
     example: '13900139000',
   })
-  @IsString({ message: '手机号必须是字符串' })
-  @IsNotEmpty({ message: '手机号不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.phone_must_be_string') ?? '手机号必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.phone_required') ?? '手机号不能为空' })
   phone: string;
 
   @ApiProperty({
     description: '新手机号验证码',
     example: '123456',
   })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 
   @ApiProperty({
     description: '解绑原手机号的验证令牌',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
-  @IsString({ message: '令牌必须是字符串' })
-  @IsNotEmpty({ message: '令牌不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.token_must_be_string') ?? '令牌必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.token_required') ?? '令牌不能为空' })
   token: string;
 }

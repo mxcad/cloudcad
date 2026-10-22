@@ -27,12 +27,12 @@ import { IsMatch } from '../../common/decorators/validation.decorator';
 import { I18nContext } from 'nestjs-i18n';
 export class ForgotPasswordDto {
   @ApiPropertyOptional({ description: '邮箱地址', example: 'user@example.com' })
-  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_format_invalid') ?? '邮箱格式不正确' })
   @IsOptional()
   email?: string;
 
   @ApiPropertyOptional({ description: '手机号码', example: '13800138000' })
-  @IsMobilePhone('zh-CN', {}, { message: () => I18nContext.current()?.t('error.auth.phone_format_invalid') ?? '手机号格式不正确' })
+  @IsMobilePhone('zh-CN', {}, { message: () => I18nContext.current()?.t('validation.phone_format_invalid') ?? '手机号格式不正确' })
   @IsOptional()
   phone?: string;
 
@@ -40,7 +40,7 @@ export class ForgotPasswordDto {
     description: '验证联系方式（内部使用，用于触发邮箱或手机号验证器）',
     example: '',
   })
-  @Validate(HasEmailOrPhone, { message: '必须提供邮箱或手机号' })
+  @Validate(HasEmailOrPhone, { message: () => I18nContext.current()?.t('validation.email_or_phone_required') ?? '必须提供邮箱或手机号' })
   validateContact: string;
 }
 
@@ -54,31 +54,31 @@ function HasEmailOrPhone(value: unknown, args: ValidationArguments) {
 
 export class ResetPasswordDto {
   @ApiPropertyOptional({ description: '邮箱地址', example: 'user@example.com' })
-  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_format_invalid') ?? '邮箱格式不正确' })
   @IsOptional()
   email?: string;
 
   @ApiPropertyOptional({ description: '手机号码', example: '13800138000' })
-  @IsMobilePhone('zh-CN', {}, { message: () => I18nContext.current()?.t('error.auth.phone_format_invalid') ?? '手机号格式不正确' })
+  @IsMobilePhone('zh-CN', {}, { message: () => I18nContext.current()?.t('validation.phone_format_invalid') ?? '手机号格式不正确' })
   @IsOptional()
   phone?: string;
 
   @ApiProperty({ description: '验证码', example: '123456' })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 
   @ApiProperty({ description: '新密码', example: 'NewPassword123!' })
-  @IsString({ message: '密码必须是字符串' })
-  @MinLength(6, { message: '密码至少 6 个字符' })
-  @IsNotEmpty({ message: '密码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
+  @MinLength(6, { message: () => I18nContext.current()?.t('validation.password_min_length_6') ?? '密码至少 6 个字符' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
   newPassword: string;
 
   @ApiProperty({ description: '确认新密码', example: 'NewPassword123!' })
-  @IsString({ message: '确认密码必须是字符串' })
-  @IsNotEmpty({ message: '确认密码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.confirm_password_must_be_string') ?? '确认密码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.confirm_password_required') ?? '确认密码不能为空' })
   @Validate(IsMatch, ['newPassword'], {
-    message: '两次输入的密码不一致',
+    message: () => I18nContext.current()?.t('validation.passwords_mismatch') ?? '两次输入的密码不一致',
   })
   confirmPassword: string;
 
@@ -86,7 +86,7 @@ export class ResetPasswordDto {
     description: '验证联系方式（内部使用，用于触发邮箱或手机号验证器）',
     example: '',
   })
-  @Validate(HasEmailOrPhoneReset, { message: '必须提供邮箱或手机号' })
+  @Validate(HasEmailOrPhoneReset, { message: () => I18nContext.current()?.t('validation.email_or_phone_required') ?? '必须提供邮箱或手机号' })
   validateContact: string;
 }
 
@@ -103,14 +103,14 @@ export class ChangePasswordDto {
     description: '当前密码（无密码用户可不填）',
     example: 'OldPassword123!',
   })
-  @IsString({ message: '当前密码必须是字符串' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.current_password_must_be_string') ?? '当前密码必须是字符串' })
   @IsOptional()
   oldPassword?: string;
 
   @ApiProperty({ description: '新密码', example: 'NewPassword123!' })
-  @IsString({ message: '新密码必须是字符串' })
-  @MinLength(6, { message: '新密码至少 6 个字符' })
-  @IsNotEmpty({ message: '新密码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.new_password_must_be_string') ?? '新密码必须是字符串' })
+  @MinLength(6, { message: () => I18nContext.current()?.t('validation.new_password_min_length') ?? '新密码至少 6 个字符' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.new_password_required') ?? '新密码不能为空' })
   newPassword: string;
 }
 
@@ -162,8 +162,8 @@ export class ChangePasswordApiResponseDto extends ChangePasswordResponseDto {
 // 绑定邮箱相关 DTO
 export class BindEmailDto {
   @ApiProperty({ description: '要绑定的邮箱地址', example: 'user@example.com' })
-  @IsEmail({}, { message: '邮箱格式不正确' })
-  @IsNotEmpty({ message: '邮箱不能为空' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_format_invalid') ?? '邮箱格式不正确' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.email_required') ?? '邮箱不能为空' })
   email: string;
 
   @ApiPropertyOptional({
@@ -177,13 +177,13 @@ export class BindEmailDto {
 
 export class VerifyBindEmailDto {
   @ApiProperty({ description: '邮箱地址', example: 'user@example.com' })
-  @IsEmail({}, { message: '邮箱格式不正确' })
-  @IsNotEmpty({ message: '邮箱不能为空' })
+  @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_format_invalid') ?? '邮箱格式不正确' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.email_required') ?? '邮箱不能为空' })
   email: string;
 
   @ApiProperty({ description: '验证码', example: '123456' })
-  @IsString({ message: '验证码必须是字符串' })
-  @IsNotEmpty({ message: '验证码不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string') ?? '验证码必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required') ?? '验证码不能为空' })
   code: string;
 }
 

@@ -10,6 +10,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { I18nContext } from 'nestjs-i18n';
 
 /**
  * 微信登录响应中的用户信息 DTO（包含完整用户数据）
@@ -202,16 +203,16 @@ export class BindWechatDto {
     description: '微信授权回调返回的 code',
     example: '081x7J0w3Q4e1Z2B5L1w3FVKJT0x7J0Z',
   })
-  @IsString({ message: 'code 必须是字符串' })
-  @IsNotEmpty({ message: 'code 不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.code_must_be_string_wechat') ?? 'code 必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.code_required_wechat') ?? 'code 不能为空' })
   code: string;
 
   @ApiProperty({
     description: '微信授权 state 参数（包含 csrf token）',
     example: 'eyJjc3JmIjoiYWJjZGVmIiwib3JpZ2luIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwIn0=',
   })
-  @IsString({ message: 'state 必须是字符串' })
-  @IsNotEmpty({ message: 'state 不能为空' })
+  @IsString({ message: () => I18nContext.current()?.t('validation.state_must_be_string') ?? 'state 必须是字符串' })
+  @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.state_required') ?? 'state 不能为空' })
   state: string;
 
   @ApiPropertyOptional({
@@ -220,6 +221,6 @@ export class BindWechatDto {
     example: false,
   })
   @IsOptional()
-  @IsBoolean({ message: 'takeover 必须是布尔值' })
+  @IsBoolean({ message: () => I18nContext.current()?.t('validation.takeover_must_be_boolean') ?? 'takeover 必须是布尔值' })
   takeover?: boolean;
 }
