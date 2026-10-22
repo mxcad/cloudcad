@@ -29,9 +29,14 @@ export const CLIENT_ID_WHITELIST: ReadonlySet<string> = new Set([
 export const DEVICE_CODE_EXPIRES_IN = 300;
 
 /**
- * EXE 轮询间隔建议值（秒）
+ * EXE 轮询节奏建议值（秒），0.3 = 每 300ms 发一次请求。
+ * 这是唯一的节奏定义处；device-auth.controller.ts 的 @Throttle 只是兜底保护，
+ * 必须保持高于此值对应的请求率，否则客户端按此间隔轮询自己就会撞 429（见那里）。
+ * 授权确认在后端是瞬时状态切换（Redis HSET），间隔只影响 EXE 拿到 token 的
+ * 等待时间，不影响服务端代价。
+ * 注意单位是秒不是毫秒：EXE 侧用 interval * 1000。
  */
-export const DEVICE_CODE_POLL_INTERVAL = 5;
+export const DEVICE_CODE_POLL_INTERVAL = 0.3;
 
 /**
  * Redis Key 前缀

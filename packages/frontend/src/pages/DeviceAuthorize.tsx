@@ -21,7 +21,7 @@ import { InteractiveBackground } from '../components/InteractiveBackground';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { Button } from '@/components/ui/Button';
-import { t, $t } from '@/languages';
+import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { CheckCircle, AlertCircle, Smartphone, Loader2 } from 'lucide-react';
 import type { PageState } from './DeviceAuthorize.types';
@@ -77,11 +77,8 @@ export const DeviceAuthorize: React.FC = () => {
   }
 
   const [pageState, setPageState] = useState<PageState>('missing_code');
-  const [countdown, setCountdown] = useState(5);
   const [errorMessage, setErrorMessage] = useState('');
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hasAutoTriggered = useRef(false);
-  // 授权流程是否已开始（手动确认 / 倒计时自动触发）。
+  // 授权流程是否已开始（进页面即自动触发确认授权）。
   // 一旦开始，authLoading/isAuthenticated 抖动不得再重置页面状态，
   // 否则授权失败后会陷入 ready → 自动授权 → 失败 → 重置 的无限循环
   const authorizationAttempted = useRef(false);
@@ -117,43 +114,16 @@ export const DeviceAuthorize: React.FC = () => {
       return;
     }
     setPageState('ready');
-    setCountdown(5);
-    hasAutoTriggered.current = false;
   }, [userCode, clientId, forceLogin, isAuthenticated, authLoading, navigate]);
 
+  // 进入 ready 即自动确认授权，不再等倒计时。
+  // authorizationAttempted 挡住重复触发（StrictMode 双调用/竞态）：
+  // 同一 user_code 二次授权会拿到 "not in PENDING state" 误判为授权码过期
   useEffect(() => {
-    if (pageState !== 'ready') {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
+    if (pageState !== 'ready' || authorizationAttempted.current) {
       return;
     }
-
-    countdownRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
-          }
-          if (!hasAutoTriggered.current) {
-            hasAutoTriggered.current = true;
-            setPageState('authorizing');
-            handleAuthorize();
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
-    };
+    handleAuthorize();
   }, [pageState]);
 
   const handleAuthorize = async () => {
@@ -243,18 +213,6 @@ export const DeviceAuthorize: React.FC = () => {
 
         <div className={styles.codeDisplay}>
           <span className={styles.codeText}>{userCode}</span>
-        </div>
-
-        <div className={styles.countdownBar}>
-          <div className={styles.countdownProgress}>
-            <div
-              className={styles.countdownFill}
-              style={{ width: `${(countdown / 5) * 100}%` }}
-            />
-          </div>
-          <span className={styles.countdownLabel}>
-            {$t('{countdown}秒后自动授权', { countdown: String(countdown) })}
-          </span>
         </div>
 
         <div className={styles.deviceActions}>

@@ -2204,7 +2204,7 @@ export type DeviceCodeResponseDto = {
      */
     expires_in: number;
     /**
-     * 轮询间隔建议（秒）
+     * 轮询间隔建议（秒，0.3 = 300 毫秒）
      */
     interval: number;
 };

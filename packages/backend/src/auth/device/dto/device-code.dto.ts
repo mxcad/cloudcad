@@ -45,7 +45,7 @@ export class DeviceCodeResponseDto {
   @ApiProperty({ description: '设备码过期时间（秒）', example: 300 })
   expires_in: number;
 
-  @ApiProperty({ description: '轮询间隔建议（秒）', example: 5 })
+  @ApiProperty({ description: '轮询间隔建议（秒，0.3 = 300 毫秒）', example: 0.3 })
   interval: number;
 
   constructor(partial: Partial<DeviceCodeResponseDto>) {

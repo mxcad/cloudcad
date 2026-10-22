@@ -70,7 +70,16 @@ export class DeviceAuthController {
 
   @Post('oauth/token')
   @Public()
-  @Throttle({ default: { limit: 12, ttl: 60000 } })
+  // 轮询节奏由 DEVICE_CODE_POLL_INTERVAL 定义（客户端按 interval 定时发请求），
+  // 这里的 limit 只是兜底保护、不是节奏上限，只是不能低于
+  // ttl / (DEVICE_CODE_POLL_INTERVAL * 1000)，否则客户端按建议间隔轮询自己就会
+  // 撞 429。配额按请求计数、不看响应码：authorization_pending 的 400 同样占额度，
+  // 用户还没点确认时配额已在消耗。
+  // 当前 300/60s = 5 req/s（允许最快 200ms 一次），对 300ms 节奏留 50% 余量，
+  // 所以它永远不会成为实际生效的上限。
+  // 单请求代价仅为一次 Redis EVAL（成功时 DEL key，令牌不可重复取走），
+  // 放宽上限不改变安全边界。
+  @Throttle({ default: { limit: 300, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '轮询获取 Token（EXE 客户端调用）' })
   @ApiResponse({

@@ -219,27 +219,6 @@
   color: var(--primary-500);
   font-family: var(--font-family-mono, 'SF Mono', 'Fira Code', monospace);
 }
-.countdown-bar {
-  margin-bottom: 1.5rem;
-}
-.countdown-progress {
-  width: 100%;
-  height: 4px;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
-  margin-bottom: 0.5rem;
-  overflow: hidden;
-}
-.countdown-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
-  border-radius: 2px;
-  transition: width 1s linear;
-}
-.countdown-label {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
 .device-actions {
   display: flex;
   flex-direction: column;

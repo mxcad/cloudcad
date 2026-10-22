@@ -94,7 +94,7 @@ describe('DeviceAuthService', () => {
       expect(result.verification_uri_complete).toContain('user_code=');
       expect(result.verification_uri_complete).toContain('client_id=mx_cad_viewer');
       expect(result.expires_in).toBe(300);
-      expect(result.interval).toBe(5);
+      expect(result.interval).toBe(0.3);
 
       expect(mockPipeline.hset).toHaveBeenCalled();
       expect(mockPipeline.expire).toHaveBeenCalled();
