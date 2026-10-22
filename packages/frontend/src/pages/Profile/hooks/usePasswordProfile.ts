@@ -6,16 +6,14 @@ import { usersControllerUploadAvatar } from '@/api-sdk';
 import { t } from '@/languages';
 import {
   passwordComplexityMessage,
+  passwordStrengthDisplay,
   passwordTooShortMessage,
   usePasswordPolicy,
 } from '@/lib/passwordPolicy';
-import { scorePasswordStrength, validatePasswordPolicy } from '@cloudcad/platform';
-
-export interface PasswordStrengthResult {
-  strength: number;
-  label: string;
-  color: string;
-}
+import {
+  buildPasswordRequirements,
+  validatePasswordPolicy,
+} from '@cloudcad/platform';
 
 interface UsePasswordProfileOptions {
   error: string | null;
@@ -47,23 +45,11 @@ export function usePasswordProfile({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const getPasswordStrength = (password: string): PasswordStrengthResult => {
-    if (!password) return { strength: 0, label: '', color: '' };
-    // 评分收敛到 @cloudcad/platform（与移动端共用），这里只映射本端标签/颜色
-    const score = scorePasswordStrength(password);
-    const levels = [
-      { label: t('太弱'), color: '#ef4444' },
-      { label: t('较弱'), color: '#f97316' },
-      { label: t('一般'), color: '#eab308' },
-      { label: t('较强'), color: '#22c55e' },
-      { label: t('很强'), color: '#10b981' },
-    ];
-    return {
-      strength: score,
-      label: levels[score]?.label || levels[0]!.label,
-      color: levels[score]?.color || levels[0]!.color,
-    };
-  };
+  // 强度条与要求清单都读生效策略（/runtime-config/public 下发）：
+  // 评分阈值随策略变化，清单项随策略增删
+  const newPassword = passwordForm.newPassword;
+  const passwordStrength = passwordStrengthDisplay(newPassword, policy);
+  const passwordRequirements = buildPasswordRequirements(newPassword, policy);
 
   const handlePasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,7 +185,8 @@ export function usePasswordProfile({
     setPasswordForm,
     avatarUploading,
     fileInputRef,
-    passwordStrength: getPasswordStrength(passwordForm.newPassword),
+    passwordStrength,
+    passwordRequirements,
     handlePasswordChange,
     handlePasswordSubmit,
     handleAvatarChange,

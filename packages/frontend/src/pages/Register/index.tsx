@@ -4,12 +4,16 @@ import { AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { useBrandConfig } from '../../contexts/BrandContext';
+import { getAppBrandConfig } from '../../constants/appConfig';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useRegisterForm } from './hooks/useRegisterForm';
 import { usePhoneVerification } from './hooks/usePhoneVerification';
 import { t } from '@/languages';
-import { scorePasswordStrength } from '@cloudcad/platform';
+import {
+  passwordStrengthDisplay,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
+import { buildPasswordRequirements } from '@cloudcad/platform';
 import { RegisterLayout } from './RegisterLayout';
 import { RegisterClosed } from './RegisterClosed';
 import { RegisterBrand } from './RegisterBrand';
@@ -26,11 +30,13 @@ export const Register: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { config: runtimeConfig, loading: configLoading } = useRuntimeConfig();
-  const { config: brandConfig } = useBrandConfig();
   const { isDark } = useTheme();
+  // 生效口令策略：强度条阈值与要求清单都随部署策略变化（须在早返回前调用）
+  const policy = usePasswordPolicy();
 
-  const appName = brandConfig?.title || 'CloudCAD';
-  const appLogo = brandConfig?.logo || '/logo.png';
+  // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
+  const appName = getAppBrandConfig().title;
+  const appLogo = getAppBrandConfig().logo;
   const mailEnabled = runtimeConfig.mailEnabled;
   const requireEmailVerification =
     runtimeConfig.requireEmailVerification ?? false;
@@ -147,7 +153,6 @@ export const Register: React.FC = () => {
       <RegisterLayout
         appName={appName}
         isDark={isDark}
-        withBackground={false}
         withLanguageSwitcher
       >
         <RegisterClosed />
@@ -158,25 +163,9 @@ export const Register: React.FC = () => {
   // Wrap handleNext to pass phoneForm
   const onNext = () => handleNext(phoneForm);
 
-  const getPasswordStrength = (
-    password: string
-  ): { strength: number; label: string; color: string } => {
-    if (!password) return { strength: 0, label: '', color: '' };
-    // 评分收敛到 @cloudcad/platform（与移动端共用），这里只映射本端标签/颜色
-    const score = scorePasswordStrength(password);
-
-    const levels = [
-      { label: t('太弱'), color: '#ef4444' },
-      { label: t('较弱'), color: '#f97316' },
-      { label: t('一般'), color: '#eab308' },
-      { label: t('较强'), color: '#22c55e' },
-      { label: t('很强'), color: '#10b981' },
-    ];
-    const level = levels[score] ?? levels[0]!;
-    return { strength: score, label: level.label, color: level.color };
-  };
-
-  const passwordStrength = getPasswordStrength(passwordValue);
+  // 强度条阈值与要求清单项均由生效策略推导（/runtime-config/public 下发）
+  const passwordStrength = passwordStrengthDisplay(passwordValue, policy);
+  const passwordRequirements = buildPasswordRequirements(passwordValue, policy);
 
   return (
     <RegisterLayout appName={appName} isDark={isDark} withLanguageSwitcher>
@@ -233,6 +222,7 @@ export const Register: React.FC = () => {
               setShowConfirmPassword={setShowConfirmPassword}
               passwordValue={passwordValue}
               passwordStrength={passwordStrength}
+              passwordRequirements={passwordRequirements}
               loading={loading}
               onBack={handleBack}
             />

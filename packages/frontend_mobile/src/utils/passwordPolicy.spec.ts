@@ -3,6 +3,7 @@ import {
   passwordComplexityMessage,
   passwordLengthLabel,
   passwordPolicyHint,
+  passwordRequirementLabel,
 } from './passwordPolicy'
 
 /**
@@ -42,5 +43,11 @@ describe('passwordPolicy（移动端口令策略唯一出口）', () => {
   it('清单标签跟随生效值', () => {
     expect(passwordLengthLabel(12)).toContain('12')
     expect(passwordComplexityMessage(2)).toContain('中至少 2 类')
+  })
+
+  it('清单项文案由生效策略推导（非默认值 12/2 必须出现）', () => {
+    const policy = { minLength: 12, minCategories: 2 }
+    expect(passwordRequirementLabel({ key: 'length', ok: true }, policy)).toContain('12')
+    expect(passwordRequirementLabel({ key: 'categories', ok: false }, policy)).toContain('中至少 2 类')
   })
 })

@@ -14,12 +14,15 @@ import {
   usersControllerChangePassword,
 } from '@cloudcad/api-sdk/sdk.gen';
 import { showDialog, showSuccessToast } from 'vant';
-import { scorePasswordStrength, validatePasswordPolicy } from '@cloudcad/platform';
+import {
+  buildPasswordRequirements,
+  scorePasswordStrength,
+  validatePasswordPolicy,
+} from '@cloudcad/platform';
 import { t } from '@/languages';
 import {
-  passwordComplexityMessage,
-  passwordLengthLabel,
   passwordPolicyHint,
+  passwordRequirementLabel,
   usePasswordPolicy,
 } from '@/utils/passwordPolicy';
 import { applyAuthResponse, clearSession } from '@/utils/authSession';
@@ -79,7 +82,7 @@ export function useProfilePassword(
   const pwdStrength = computed(() => {
     const pwd = newPassword.value;
     if (!pwd) return { score: 0, label: '', color: '' };
-    const score = scorePasswordStrength(pwd);
+    const score = scorePasswordStrength(pwd, policy.value);
     const levels = [
       { label: t('太弱'), color: '#ef4444' },
       { label: t('较弱'), color: '#f97316' },
@@ -95,33 +98,17 @@ export function useProfilePassword(
     () => `${(pwdStrength.value.score / 4) * 100}%`
   );
 
-  // 复杂度类别数（小写/大写/数字/特殊字符）：建议清单独立展示，与 validatePasswordPolicy 同口径
-  const pwdCategoryCount = computed(
-    () =>
-      [
-        /[a-z]/.test(newPassword.value),
-        /[A-Z]/.test(newPassword.value),
-        /\d/.test(newPassword.value),
-        /[^a-zA-Z0-9]/.test(newPassword.value),
-      ].filter(Boolean).length
-  );
-
-  // 建议清单里已完成项打勾（D-06）：让用户看到差什么，而不是只看到颜色
-  // 口径与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories，策略关闭的项不显示）
+  // 建议清单里已完成项打勾（D-06）：让用户看到差什么，而不是只看到颜色。
+  // 清单项与判定收敛到 @cloudcad/platform 的 buildPasswordRequirements（与预检同口径），
+  // 策略关闭的维度不出项；末尾一条是通用建议，与策略无关。
   const pwdSuggestions = computed(() => {
-    const items: { text: string; ok: boolean }[] = [];
-    if (policy.value.minLength > 0) {
-      items.push({
-        text: passwordLengthLabel(policy.value.minLength),
-        ok: newPassword.value.length >= policy.value.minLength,
-      });
-    }
-    if (policy.value.minCategories > 0) {
-      items.push({
-        text: passwordComplexityMessage(policy.value.minCategories),
-        ok: pwdCategoryCount.value >= policy.value.minCategories,
-      });
-    }
+    const items: { text: string; ok: boolean }[] = buildPasswordRequirements(
+      newPassword.value,
+      policy.value,
+    ).map((requirement) => ({
+      text: passwordRequirementLabel(requirement, policy.value),
+      ok: requirement.ok,
+    }));
     items.push({ text: t('不要在多个网站使用相同的密码'), ok: false });
     return items;
   });

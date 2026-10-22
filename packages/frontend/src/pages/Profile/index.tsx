@@ -308,6 +308,9 @@ export const Profile: React.FC = () => {
                       passwordForm={passwordProfile.passwordForm}
                       focusedField={focusedField}
                       passwordStrength={passwordProfile.passwordStrength}
+                      passwordRequirements={
+                        passwordProfile.passwordRequirements
+                      }
                       loading={loading}
                       onPasswordChange={passwordProfile.handlePasswordChange}
                       onPasswordSubmit={passwordProfile.handlePasswordSubmit}

@@ -3,7 +3,7 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -25,11 +25,14 @@ import { getDefaultAppBrandConfig } from '@/constants/appConfig';
 import { t } from '@/languages';
 import {
   passwordComplexityMessage,
-  passwordLengthLabel,
+  passwordRequirementLabel,
   passwordTooShortMessage,
   usePasswordPolicy,
 } from '@/lib/passwordPolicy';
-import { validatePasswordPolicy } from '@cloudcad/platform';
+import {
+  buildPasswordRequirements,
+  validatePasswordPolicy,
+} from '@cloudcad/platform';
 import styles from '../Login/Login.module.css';
 
 /** 从 SDK 抛出的错误对象提取后端 code / message */
@@ -92,16 +95,9 @@ const AdminPasswordChange: React.FC = () => {
         ? t('当前密码已超过有效期，请设置新密码')
         : t('建议定期更换密码，可降低账号被盗风险');
 
-  const checks = useMemo(
-    () => [
-      { label: passwordLengthLabel(policy.minLength), ok: newPassword.length >= policy.minLength },
-      { label: t('包含大写字母'), ok: /[A-Z]/.test(newPassword) },
-      { label: t('包含小写字母'), ok: /[a-z]/.test(newPassword) },
-      { label: t('包含数字'), ok: /\d/.test(newPassword) },
-      { label: t('包含特殊字符'), ok: /[^a-zA-Z0-9]/.test(newPassword) },
-    ],
-    [newPassword, policy.minLength]
-  );
+  // 清单项由生效策略生成：minCategories 关闭时不再列出写死的四类要求
+  // （纯函数、每渲染重算即可；不用 useMemo 以免依赖数组漏 policy 触发 exhaustive-deps）
+  const requirements = buildPasswordRequirements(newPassword, policy);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,31 +296,37 @@ const AdminPasswordChange: React.FC = () => {
               </div>
             </div>
 
-            {/* 口令策略提示（与后端 PasswordPolicyService 同规则） */}
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-                padding: '0.75rem',
-                background: 'var(--bg-secondary)',
-                borderRadius: '0.5rem',
-                border: '1px solid var(--border-default)',
-              }}
-            >
-              {checks.map((c) => (
-                <span
-                  key={c.label}
-                  style={
-                    c.ok
-                      ? { color: 'var(--text-secondary)', fontSize: '0.8rem' }
-                      : { color: 'var(--text-tertiary)', fontSize: '0.8rem' }
-                  }
-                >
-                  {c.ok ? '✓' : '·'} {c.label}
-                </span>
-              ))}
-            </div>
+            {/* 口令策略要求（项与文案均由生效策略生成，与后端 PasswordPolicyService 同规则） */}
+            {requirements.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                  padding: '0.75rem',
+                  background: 'var(--bg-secondary)',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border-default)',
+                }}
+              >
+                {requirements.map((requirement) => {
+                  const label = passwordRequirementLabel(requirement, policy);
+                  return (
+                    <span
+                      key={requirement.key}
+                      style={{
+                        color: requirement.ok
+                          ? 'var(--text-secondary)'
+                          : 'var(--text-tertiary)',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      {`${requirement.ok ? '✓' : '·'} ${label}`}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
             <Button
               type="submit"

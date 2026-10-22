@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { t } from '@/languages'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import type { PasswordRequirement } from '@cloudcad/platform'
 
 /**
  * 口令策略参数与文案的唯一出口（移动端，与 PC `lib/passwordPolicy.ts` 同构）。
@@ -67,4 +68,14 @@ export function passwordComplexityMessage(minCategories: number): string {
   return t('密码需包含大小写字母、数字、特殊字符中至少 {cats} 类', {
     cats: String(minCategories),
   })
+}
+
+/** 清单文案（platform 只给 key，i18n 文案按端渲染，唯一出口） */
+export function passwordRequirementLabel(
+  requirement: PasswordRequirement,
+  { minLength, minCategories }: PasswordPolicyParams,
+): string {
+  return requirement.key === 'length'
+    ? passwordLengthLabel(minLength)
+    : passwordComplexityMessage(minCategories)
 }

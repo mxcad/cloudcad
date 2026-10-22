@@ -37,6 +37,7 @@ const defaultProps = {
   passwordForm: { oldPassword: '', newPassword: '', confirmPassword: '' },
   focusedField: null,
   passwordStrength: { strength: 0, label: '', color: '#000' },
+  passwordRequirements: [] as { key: string; ok: boolean }[],
   loading: false,
   onPasswordChange: vi.fn(),
   onPasswordSubmit: vi.fn(),
@@ -79,5 +80,43 @@ describe('ProfilePasswordTab', () => {
 
     expect(onNavigate).toHaveBeenCalledWith('/forgot-password');
     expect(onPasswordSubmit).not.toHaveBeenCalled();
+  });
+
+  it('口令要求清单按生效策略渲染，未满足项不打勾', () => {
+    render(
+      <ProfilePasswordTab
+        {...defaultProps}
+        passwordForm={{
+          oldPassword: '',
+          newPassword: 'Abcdef1234',
+          confirmPassword: '',
+        }}
+        passwordRequirements={[
+          { key: 'length', ok: true },
+          { key: 'categories', ok: false },
+        ]}
+      />
+    );
+
+    expect(screen.getByText(/至少 10 位/)).toBeTruthy();
+    expect(screen.getByText(/中至少 3 类/)).toBeTruthy();
+  });
+
+  it('策略放宽（无要求项）时不渲染写死的长度/类别要求', () => {
+    render(
+      <ProfilePasswordTab
+        {...defaultProps}
+        passwordForm={{
+          oldPassword: '',
+          newPassword: 'aaaaaa',
+          confirmPassword: '',
+        }}
+        passwordRequirements={[]}
+      />
+    );
+
+    // 安全建议里只留通用提示，不再复述长度/类别要求
+    expect(screen.queryByText(/中至少/)).toBeNull();
+    expect(screen.queryByText(/避免使用常见的密码组合/)).toBeTruthy();
   });
 });

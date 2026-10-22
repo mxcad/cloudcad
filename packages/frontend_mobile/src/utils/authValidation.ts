@@ -8,6 +8,7 @@ import {
   scorePasswordStrength,
   type PasswordStrengthScore,
 } from '@cloudcad/platform'
+import type { PasswordPolicyParams } from '@/utils/passwordPolicy'
 
 const PHONE_RE = /^1[3-9]\d{9}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -37,9 +38,9 @@ export function isContactType(value: unknown): value is ContactType {
 }
 
 /**
- * 密码强度（与 PC Register getPasswordStrength 同评分口径）。
- * 评分 0-4：长度≥8 / 大小写齐 / 含数字 / 含特殊字符，各 1 分。
- * 颜色走 token（不用 PC 的硬编码 hex），供注册与改密页共用。
+ * 密码强度（与 PC 共用 @cloudcad/platform 的评分口径）。
+ * 评分 0-4 的四个阈值取传入的**生效策略**（长度下限 / 类别下限），
+ * 因此强弱标签随部署策略相对变化；颜色走 token（不用 PC 的硬编码 hex）。
  */
 export interface PasswordStrengthInfo {
   score: PasswordStrengthScore
@@ -57,11 +58,14 @@ const STRENGTH_COLORS = [
   'var(--strength-strong)',
 ] as const
 
-export function getPasswordStrength(password: string): PasswordStrengthInfo {
+export function getPasswordStrength(
+  password: string,
+  policy: PasswordPolicyParams,
+): PasswordStrengthInfo {
   if (!password) return { score: 0, label: '', color: '' }
 
   // 评分收敛到 @cloudcad/platform（与 PC 共用），这里只映射本端标签/颜色
-  const level = scorePasswordStrength(password)
+  const level = scorePasswordStrength(password, policy)
   return {
     score: level,
     label: STRENGTH_LABELS[level] ?? STRENGTH_LABELS[0],

@@ -42,9 +42,9 @@ const sending = ref(false)
 const error = ref('')
 const { countdown, start: countdownStart, isReady } = useCountdown(CODE_COOLDOWN_SECONDS)
 
-const strength = computed(() => getPasswordStrength(newPassword.value))
-// 生效口令策略（/runtime-config/public 下发）：提示与预检都读它，禁止写死数字
+// 生效口令策略（/runtime-config/public 下发）：提示、预检与强度评分都读它，禁止写死数字
 const policy = usePasswordPolicy()
+const strength = computed(() => getPasswordStrength(newPassword.value, policy.value))
 const policyHint = computed(() => passwordPolicyHint(policy.value))
 // 与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories），弱口令黑名单由后端兜底
 const passwordValid = computed(() => validatePasswordPolicy(newPassword.value, policy.value).valid)

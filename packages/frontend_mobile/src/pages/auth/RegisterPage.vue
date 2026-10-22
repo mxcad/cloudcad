@@ -81,7 +81,7 @@ const policy = usePasswordPolicy()
 const policyHint = computed(() => passwordPolicyHint(policy.value))
 // 与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories），弱口令黑名单由后端兜底
 const passwordValid = computed(() => validatePasswordPolicy(password.value, policy.value).valid)
-const strength = computed(() => getPasswordStrength(password.value))
+const strength = computed(() => getPasswordStrength(password.value, policy.value))
 
 // 协议勾选（H-02，对齐 PC 注册页 agreedToTerms 必填）：未勾选时按钮禁用
 const agreed = ref(false)

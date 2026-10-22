@@ -66,33 +66,53 @@ describe('isContactType', () => {
   });
 });
 
-describe('getPasswordStrength', () => {
+describe('getPasswordStrength（阈值取生效策略）', () => {
+  const SECURE = { minLength: 10, minCategories: 3 };
+  const NORMAL = { minLength: 6, minCategories: 0 };
+
   it('空密码返回 0 分与空标签', () => {
-    expect(getPasswordStrength('')).toEqual({ score: 0, label: '', color: '' });
+    expect(getPasswordStrength('', SECURE)).toEqual({
+      score: 0,
+      label: '',
+      color: '',
+    });
   });
 
-  it('长度不足 8 且无数字/特殊字符为 0 分（太弱）', () => {
-    const r = getPasswordStrength('ab');
+  it('未达标显示太弱', () => {
+    const r = getPasswordStrength('ab', SECURE);
     expect(r.score).toBe(0);
     expect(r.label).toBe('太弱');
   });
 
-  it('长度≥8 且大小写齐全计 2 分', () => {
-    const r = getPasswordStrength('Abcdefgh');
+  it('恰好合规显示「一般」，不会被标成太弱/较弱', () => {
+    const r = getPasswordStrength('Abcdef1234', SECURE);
     expect(r.score).toBe(2);
     expect(r.label).toBe('一般');
   });
 
-  it('含数字与特殊字符时计满 4 分（很强）', () => {
-    const r = getPasswordStrength('Abcdef1!');
+  it('达标且长度有余量、四类全含时计满 4 分（很强）', () => {
+    const r = getPasswordStrength('Abcdefgh12!x', SECURE);
     expect(r.score).toBe(4);
     expect(r.label).toBe('很强');
   });
 
+  it('强弱随策略相对变化：6 位纯小写在 normal 合规、在 secure 太弱', () => {
+    expect(getPasswordStrength('aaaaaa', SECURE).score).toBeLessThanOrEqual(1);
+    expect(getPasswordStrength('aaaaaa', NORMAL)).toEqual({
+      score: 2,
+      label: '一般',
+      color: 'var(--strength-medium)',
+    });
+  });
+
   it('颜色必须走 token 而非硬编码色值', () => {
-    expect(getPasswordStrength('1').color).toBe('var(--warning)');
-    expect(getPasswordStrength('Abcdefgh').color).toBe('var(--strength-medium)');
-    expect(getPasswordStrength('Abcdef1!').color).toBe('var(--strength-strong)');
+    expect(getPasswordStrength('ab', SECURE).color).toBe('var(--danger)');
+    expect(getPasswordStrength('Abcdef1234', SECURE).color).toBe(
+      'var(--strength-medium)',
+    );
+    expect(getPasswordStrength('Abcdefgh12!x', SECURE).color).toBe(
+      'var(--strength-strong)',
+    );
   });
 });
 
@@ -102,15 +122,15 @@ describe('scorePasswordStrength (platform)', () => {
     expect(scorePasswordStrength('')).toBe(0);
   });
 
-  it('四条件各 1 分：长度≥8 / 大小写齐 / 数字 / 特殊字符', () => {
-    expect(scorePasswordStrength('abcdefgh')).toBe(1); // 仅长度
-    expect(scorePasswordStrength('Abcdefgh')).toBe(2); // 长度 + 大小写
-    expect(scorePasswordStrength('Abcdefg1')).toBe(3); // + 数字
-    expect(scorePasswordStrength('Abcdef1!')).toBe(4); // + 特殊字符
+  it('缺省回落 secure 基线（10/3）：四项各 1 分', () => {
+    expect(scorePasswordStrength('Abcdefgh12!x')).toBe(4); // 达标 + 余量 + 四类全含
+    expect(scorePasswordStrength('Abcdef1234')).toBe(2); // 恰好合规
+    expect(scorePasswordStrength('Abcdefgh1')).toBe(1); // 三类齐但仅 9 位
+    expect(scorePasswordStrength('ab')).toBe(0);
   });
 
-  it('长度不足 8 时长度项不计分', () => {
-    expect(scorePasswordStrength('Ab1!')).toBe(3); // 大小写 + 数字 + 特殊，无长度
-    expect(scorePasswordStrength('ab')).toBe(0);
+  it('阈值随生效策略变化，不写死 8 位', () => {
+    expect(scorePasswordStrength('aaaaaa', { minLength: 6, minCategories: 0 })).toBe(2);
+    expect(scorePasswordStrength('aaaaaa', { minLength: 10, minCategories: 3 })).toBe(0);
   });
 });
