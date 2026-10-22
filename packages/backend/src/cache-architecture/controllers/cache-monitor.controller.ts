@@ -37,6 +37,7 @@ import { CacheMonitorService } from '../services/cache-monitor.service';
 import { MultiLevelCacheService } from '../services/multi-level-cache.service';
 import { CacheLevel } from '../enums/cache-level.enum';
 import { CacheMonitoringSummaryDto } from '../dto/cache-stats.dto';
+import { I18nContext } from 'nestjs-i18n';
 import { CacheWarningsDto } from '../dto/cache-stats.dto';
 import { CacheStatsQueryDto } from '../dto/cache-stats.dto';
 import { PerformanceTrendQueryDto } from '../dto/cache-stats.dto';
@@ -308,7 +309,10 @@ export class CacheMonitorController {
     }
     await this.cacheService.delete(dto.key);
     await this.cacheService.set(dto.key, value);
-    return { success: true, message: '缓存刷新成功' };
+    return {
+      success: true,
+      message: I18nContext.current()?.t('error.mxcad.cache_refresh_success') ?? '缓存刷新成功',
+    };
   }
 
   /**
@@ -376,3 +380,4 @@ export class CacheMonitorController {
       : `成功删除 ${result.deleted} 条缓存`;
   }
 }
+

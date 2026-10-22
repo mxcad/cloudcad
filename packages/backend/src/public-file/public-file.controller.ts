@@ -245,7 +245,7 @@ export class PublicFileController {
       throw new BadRequestException(I18nContext.current()?.t('error.public_file.only_supported_types') ?? `仅支持 ${allowed} 文件`);
     }
 
-    const extRefMaxFileSizeMB = await this.runtimeConfigService.getValue<number>('extRefMaxFileSize', 100);
+    const extRefMaxFileSizeMB = await this.runtimeConfigService.getValue<number>('extRefMaxFileSize');
     if (file.size > extRefMaxFileSizeMB * 1024 * 1024) {
       throw new BadRequestException(I18nContext.current()?.t('error.file.size_exceeded_limit', { args: { limit: extRefMaxFileSizeMB } }) ?? `文件大小超出限制（最大 ${extRefMaxFileSizeMB}MB）`);
     }
@@ -404,7 +404,11 @@ export class PublicFileController {
         `[convertAndDownload] 转换失败: ${error.message}`,
         error.stack,
       );
-      throw new BadRequestException(error.message || '文件转换失败');
+      throw new BadRequestException(
+        error.message ||
+          (I18nContext.current()?.t('error.file.conversion_failed') ?? '文件转换失败'),
+      );
     }
   }
 }
+

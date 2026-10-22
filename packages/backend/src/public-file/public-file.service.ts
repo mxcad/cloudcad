@@ -245,7 +245,10 @@ export class PublicFileService {
                     );
 
                   if (!isOk) {
-                    return `文件转换失败: ${ret?.message || '未知错误'}`;
+                    return I18nContext.current()?.t(
+                      'error.file_extra.conversion_failed_detail',
+                      { args: { error: ret?.message || '未知错误' } },
+                    ) ?? `文件转换失败: ${ret?.message || '未知错误'}`;
                   }
 
                   // 转换工具在原始文件旁边生成 {originalName}.mxweb，如: {hash}.dwg -> {hash}.dwg.mxweb
@@ -268,7 +271,10 @@ export class PublicFileService {
             `[uploadExtReference] 转换文件失败: ${convertError.message}`,
             convertError.stack
           );
-          convertFailure = `文件转换失败: ${convertError.message}`;
+          convertFailure = I18nContext.current()?.t(
+            'error.file_extra.conversion_failed_detail',
+            { args: { error: convertError.message } },
+          ) ?? `文件转换失败: ${convertError.message}`;
         }
         if (convertFailure) {
           return { ret: 'failed', message: convertFailure };
@@ -481,7 +487,10 @@ export class PublicFileService {
       if (error instanceof ConversionCoreError) {
         throw new Error(
           error.kind === 'engine-failed'
-            ? `文件转换失败: ${error.detail || '未知错误'}`
+            ? I18nContext.current()?.t(
+                'error.file_extra.conversion_failed_detail',
+                { args: { error: error.detail || '未知错误' } },
+              ) ?? `文件转换失败: ${error.detail || '未知错误'}`
             : '转换后的文件未生成',
         );
       }
@@ -497,3 +506,4 @@ export class PublicFileService {
     }
   }
 }
+

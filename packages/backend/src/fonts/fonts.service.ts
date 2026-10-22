@@ -91,8 +91,7 @@ export class FontsService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     const fontMaxFileSizeMB = await this.runtimeConfigService.getValue<number>(
-      'fontMaxFileSize',
-      50
+      'fontMaxFileSize'
     );
     this.logger.log(`字体上传大小限制: ${fontMaxFileSizeMB}MB`);
   }
@@ -257,7 +256,9 @@ export class FontsService implements OnModuleInit {
 
       if (results.length === 0 && errors.length > 0) {
         throw new BadRequestException(
-          `所有文件上传失败: ${errors.map((e) => `${e.fileName}: ${e.error}`).join('; ')}`
+          I18nContext.current()?.t('error.file_extra_v2.upload_failed_detail', {
+            args: { detail: errors.map((e) => `${e.fileName}: ${e.error}`).join('; ') },
+          }) ?? `所有文件上传失败: ${errors.map((e) => `${e.fileName}: ${e.error}`).join('; ')}`
         );
       }
 
@@ -484,8 +485,7 @@ export class FontsService implements OnModuleInit {
 
     // 验证文件大小（每次动态读取运行时配置，运行期修改即时生效）
     const fontMaxFileSizeMB = await this.runtimeConfigService.getValue<number>(
-      'fontMaxFileSize',
-      50
+      'fontMaxFileSize'
     );
     const fontMaxSizeBytes = fontMaxFileSizeMB * 1024 * 1024;
     if (file.size > fontMaxSizeBytes) {
@@ -614,3 +614,4 @@ export class FontsService implements OnModuleInit {
     };
   }
 }
+

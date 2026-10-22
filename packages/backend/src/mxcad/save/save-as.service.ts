@@ -238,7 +238,10 @@ export class SaveAsService {
       if (ext !== '.mxweb') {
         return {
           success: false,
-          message: `不支持的文件格式: ${ext}，仅支持 .mxweb 文件`,
+          message: I18nContext.current()?.t(
+            'error.mxcad_extra.format_unsupported_mxweb',
+            { args: { ext } },
+          ) ?? `不支持的文件格式: ${ext}，仅支持 .mxweb 文件`,
         };
       }
 
@@ -250,9 +253,7 @@ export class SaveAsService {
       }
 
       // ========== 同名文件处理 ==========
-      const baseFileName = userFileName
-        ? `${userFileName}.${format}`
-        : `untitled.${format}`;
+      const baseFileName = this.buildSaveAsBaseName(userFileName, format);
 
       const uniqueFileName = await this.generateUniqueFileName(
         targetParentId,
@@ -434,7 +435,13 @@ export class SaveAsService {
         path.join(process.cwd(), 'uploads');
       const mxwebFile = findReadyArtifactByHash(uploadPath, fileHash);
       if (!mxwebFile) {
-        return { success: false, message: `上传文件不存在: ${fileHash}` };
+        return {
+          success: false,
+          message: I18nContext.current()?.t(
+            'error.mxcad_extra.upload_file_not_found_detail',
+            { args: { hash: fileHash } },
+          ) ?? `上传文件不存在: ${fileHash}`,
+        };
       }
 
       const mxwebSourcePath = path.join(uploadPath, mxwebFile);
@@ -450,9 +457,7 @@ export class SaveAsService {
       }
 
       // 同名文件处理
-      const baseFileName = userFileName
-        ? `${userFileName}.${format}`
-        : `untitled.${format}`;
+      const baseFileName = this.buildSaveAsBaseName(userFileName, format);
 
       const uniqueFileName = await this.generateUniqueFileName(
         targetParentId,
@@ -710,6 +715,33 @@ export class SaveAsService {
   }
 
   /**
+   * 另存为的落库文件名（含目标格式扩展名）。
+   *
+   * `fileName` 契约是「不含扩展名」，但客户端可能把带后缀的名字直接传上来
+   * （历史节点名 `plan.dwg.mxweb` 被当成新基名，或用户把完整文件名粘进输入框）。
+   * 不归一就会滚出 `plan.dwg.mxweb.dwg`，分享/列表里显示的内部标识越叠越长。
+   * 所有入口（未登录另存为 / 打开失败另存为 / 移动端）都经这里，故兜底放在服务端。
+   */
+  private buildSaveAsBaseName(
+    userFileName: string | undefined,
+    format: 'dwg' | 'dxf' | 'mxweb',
+  ): string {
+    let base = (userFileName ?? '').trim();
+    const containerSuffix = '.mxweb';
+    while (base.toLowerCase().endsWith(containerSuffix)) {
+      base = base.slice(0, -containerSuffix.length);
+    }
+    // 客户端已带目标格式后缀（plan.dwg + format=dwg）时不再重复追加
+    const formatSuffix = `.${format}`;
+    if (base.toLowerCase().endsWith(formatSuffix)) {
+      base = base.slice(0, -formatSuffix.length);
+    }
+    // 剥后缀后可能只剩尾点（`plan..mxweb` → `plan.`）：留着会拼出 `plan..dwg`
+    base = base.replace(/\.+$/, '').trim();
+    return base ? `${base}${formatSuffix}` : `untitled${formatSuffix}`;
+  }
+
+  /**
    * 生成唯一的文件名（处理同名文件）
    * 如果文件名已存在，自动添加序号
    * 例如：file.dwg -> file (1).dwg, file (2).dwg, ...
@@ -793,3 +825,4 @@ export class SaveAsService {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 }
+

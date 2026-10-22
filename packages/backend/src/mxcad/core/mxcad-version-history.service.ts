@@ -494,7 +494,12 @@ export class MxcadVersionHistoryService {
       );
 
     if (!listResult.success || !listResult.files) {
-      abort(new Error('历史版本目录不存在'));
+      abort(
+        new Error(
+          I18nContext.current()?.t('error.file.version_history_not_found') ??
+            '历史版本目录不存在',
+        ),
+      );
     }
 
     const binFiles = listResult.files.filter(
@@ -789,3 +794,4 @@ export class MxcadVersionHistoryService {
     return NodeUtils.getMimeType(path.extname(filePath));
   }
 }
+

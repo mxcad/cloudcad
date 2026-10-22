@@ -1,498 +1,446 @@
 auth:
-  login_expired: "未登入或登入已過期"
-  token_revoked: "Token已被撤銷"
-  invalid_credentials: "帳號或密碼錯誤"
-  account_deactivated: "帳號已被登出"
-  account_deactivated_expired: "帳號已登出且已過冷靜期，請聯絡客服恢復。資料將在{cleanupDays}天後徹底刪除"
-  user_disabled: "用戶已被停用"
-  user_not_found_or_disabled: "用戶不存在或已被停用"
-  session_transfer_invalid: "轉移憑證無效或已過期"
-  refresh_token_invalid_type: "無效的刷新Token類型"
-  registration_disabled: "系統已關閉註冊功能"
-  login_required: "請先登入"
-  collaboration_login_required: "需要登入才能使用協同功能"
-  unauthorized: "用戶未認證"
-  authentication_failed: "身份驗證失敗"
-  missing_auth_header: "缺少Authorization header"
-  jwt_invalid: "JWT token無效或已過期"
-  permission_denied: "您沒有權限執行此操作"
-  permission_insufficient: "權限不足"
-  registration_conflict: "註冊資訊已被使用，請更換後重試"
-  wechat_already_bound: "該微信已綁定其他帳號"
-  wechat_takeover_not_allowed: "該微信綁定的帳號僅支援微信登入，無法轉移綁定"
-  wechat_token_invalid: "無效的微信臨時 Token"
-  system_not_initialized: "系統尚未初始化，請先建立首位管理員"
-  setup_already_completed: "系統已完成初始化，無法再建立首位管理員"
-  setup_admin_role_missing: "ADMIN 角色不存在，請檢查系統初始化"
-  email_required_for_registration: "信箱驗證已啟用，註冊需要提供信箱地址"
-  email_or_phone_required: "信箱和手機號不能同時為空"
-  refresh_token_invalid: "無效的刷新Token"
-  refresh_token_expired: "刷新Token無效或已過期"
-  refresh_token_required: "缺少刷新令牌"
-  logout_failed: "登出失敗"
-  token_invalid: "無效的Token"
-  delete_refresh_token_failed: "刪除刷新Token失敗"
-  user_not_found: "用戶不存在"
-  password_required: "請輸入目前密碼"
-  password_incorrect: "目前密碼不正確"
-  send_code_failed: "發送驗證碼失敗，請稍後再試"
-  send_too_frequent: "發送過於頻繁，請稍後再試"
-  verification_code_invalid: "驗證碼無效或已過期"
-  verification_attempts_exhausted: "驗證次數已用完，請重新獲取驗證碼"
-  phone_format_invalid: "手機號格式不正確"
-  tencent_sms_config_missing: "騰訊雲簡訊配置缺失"
-  aliyun_sms_config_missing: "阿里雲簡訊配置缺失"
-  wechat_appid_missing: "微信 AppID 未配置，請在 .env 檔案中設定 WECHAT_APP_ID"
-  wechat_auth_failed: "微信授權失敗"
-  wechat_auth_service_error: "微信授權服務異常"
-  wechat_user_info_error: "微信使用者資訊服務異常"
-  wechat_user_info_failed: "獲取使用者資訊失敗"
-  wechat_refresh_failed: "重新整理授權失敗"
-  wechat_verification_failed: "微信驗證失敗"
-  wechat_not_match_account: "該微信與目前帳戶不匹配"
-  password_change_required: "您的密碼已到期或首次登入未修改，請立即修改密碼"
-
+  login_expired: 未登入或登入已過期
+  token_revoked: Token已被撤銷
+  invalid_credentials: 帳號或密碼錯誤
+  account_deactivated: 帳號已被登出
+  account_deactivated_expired: 帳號已登出且已過冷靜期，請聯絡客服恢復。資料將在{cleanupDays}天後徹底刪除
+  user_disabled: 用戶已被停用
+  user_not_found_or_disabled: 用戶不存在或已被停用
+  session_transfer_invalid: 轉移憑證無效或已過期
+  refresh_token_invalid_type: 無效的刷新Token類型
+  registration_disabled: 系統已關閉註冊功能
+  login_required: 請先登入
+  collaboration_login_required: 需要登入才能使用協同功能
+  unauthorized: 用戶未認證
+  authentication_failed: 身份驗證失敗
+  missing_auth_header: 缺少Authorization header
+  jwt_invalid: JWT token無效或已過期
+  permission_denied: 您沒有權限執行此操作
+  permission_insufficient: 權限不足
+  registration_conflict: 註冊資訊已被使用，請更換後重試
+  wechat_already_bound: 該微信已綁定其他帳號
+  wechat_takeover_not_allowed: 該微信綁定的帳號僅支援微信登入，無法轉移綁定
+  wechat_token_invalid: 無效的微信臨時 Token
+  system_not_initialized: 系統尚未初始化，請先建立首位管理員
+  setup_already_completed: 系統已完成初始化，無法再建立首位管理員
+  setup_admin_role_missing: ADMIN 角色不存在，請檢查系統初始化
+  email_required_for_registration: 信箱驗證已啟用，註冊需要提供信箱地址
+  email_or_phone_required: 信箱和手機號不能同時為空
+  refresh_token_invalid: 無效的刷新Token
+  refresh_token_expired: 刷新Token無效或已過期
+  refresh_token_required: 缺少刷新令牌
+  logout_failed: 登出失敗
+  token_invalid: 無效的Token
+  delete_refresh_token_failed: 刪除刷新Token失敗
+  password_required: 請輸入目前密碼
+  password_incorrect: 目前密碼不正確
+  send_code_failed: 發送驗證碼失敗，請稍後再試
+  send_too_frequent: 發送過於頻繁，請稍後再試
+  verification_code_invalid: 驗證碼無效或已過期
+  verification_attempts_exhausted: 驗證次數已用完，請重新獲取驗證碼
+  phone_format_invalid: 手機號格式不正確
+  tencent_sms_config_missing: 騰訊雲簡訊配置缺失
+  aliyun_sms_config_missing: 阿里雲簡訊配置缺失
+  wechat_appid_missing: 微信 AppID 未配置，請在 .env 檔案中設定 WECHAT_APP_ID
+  wechat_auth_failed: 微信授權失敗
+  wechat_auth_service_error: 微信授權服務異常
+  wechat_user_info_error: 微信使用者資訊服務異常
+  wechat_user_info_failed: 獲取使用者資訊失敗
+  wechat_refresh_failed: 重新整理授權失敗
+  wechat_verification_failed: 微信驗證失敗
+  wechat_not_match_account: 該微信與目前帳戶不匹配
+  password_change_required: 您的密碼已到期或首次登入未修改，請立即修改密碼
 account_binding:
-  email_service_disabled: "郵件服務未啟用，無法綁定信箱"
-  email_already_bound: "您已綁定信箱，如需更換請聯絡管理員"
-  email_conflict: "該信箱已被其他用戶綁定"
-  phone_conflict: "該手機號已被其他用戶綁定"
-  sms_service_disabled: "簡訊服務未啟用"
-  phone_not_bound: "您還未綁定手機號"
-  email_not_bound: "您還未綁定信箱"
-  verify_token_invalid: "驗證 token 無效"
-  verify_token_expired: "驗證 token 無效或已過期"
-  email_service_disabled_general: "郵件服務未啟用"
-  wechat_not_bound: "未綁定微信"
-  invalid_state_param: "無效的狀態參數"
-  keep_one_login_method_password_email_phone: "至少需要保留一種登入方式（設定密碼、綁定信箱或綁定手機）"
-  keep_one_login_method_password_phone_wechat: "至少需要保留一種登入方式（設定密碼、綁定手機或綁定微信）"
-  keep_one_login_method_password_email_wechat: "至少需要保留一種登入方式（設定密碼、綁定信箱或綁定微信）"
-
+  email_service_disabled: 郵件服務未啟用，無法綁定信箱
+  email_already_bound: 您已綁定信箱，如需更換請聯絡管理員
+  email_conflict: 該信箱已被其他用戶綁定
+  phone_conflict: 該手機號已被其他用戶綁定
+  sms_service_disabled: 簡訊服務未啟用
+  phone_not_bound: 您還未綁定手機號
+  email_not_bound: 您還未綁定信箱
+  verify_token_invalid: 驗證 token 無效
+  verify_token_expired: 驗證 token 無效或已過期
+  email_service_disabled_general: 郵件服務未啟用
+  wechat_not_bound: 未綁定微信
+  invalid_state_param: 無效的狀態參數
+  keep_one_login_method_password_email_phone: 至少需要保留一種登入方式（設定密碼、綁定信箱或綁定手機）
+  keep_one_login_method_password_phone_wechat: 至少需要保留一種登入方式（設定密碼、綁定手機或綁定微信）
+  keep_one_login_method_password_email_wechat: 至少需要保留一種登入方式（設定密碼、綁定信箱或綁定微信）
 user:
-  not_found: "用戶不存在"
-  deactivated: "用戶已登出"
-  already_deactivated: "帳戶已登出"
-  cannot_delete_admin: "不能刪除管理員帳戶"
-  cannot_modify_own_role: "不能修改自己的角色"
-  cannot_modify_own_status: "不能修改自己的帳戶狀態"
-  cannot_demote_last_admin: "不能移除最後一個管理員的使用者管理權限"
-  not_deactivated_cannot_restore: "用戶未登出，無法恢復"
-  already_deactivated_cannot_restore: "帳戶未登出，無需恢復"
-  past_cooling_period: "已過冷靜期，無法恢復，請聯絡客服"
-  restore_requires_support: "該帳戶需聯絡客服恢復"
-  invalid_verification_method: "驗證方式無效"
-  select_verification_method: "請選擇一種驗證方式"
-  username_change_limit: "使用者名稱一個月內只能修改3次"
-  email_required: "信箱驗證已啟用，信箱為必填項"
-  email_exists: "信箱已存在"
-  username_exists: "使用者名稱已存在"
-  phone_exists: "手機號已存在"
-  default_role_not_found: "預設角色不存在，請聯絡管理員"
-  project_owner_role_not_found: "PROJECT_OWNER 角色不存在"
-  not_project_member: "您不是該專案的成員"
-  create_failed: "使用者建立失敗"
-  default_role_missing: "預設角色不存在"
-  no_password_set: "該帳戶未設定密碼"
-  no_phone_bound: "該帳戶未綁定手機"
-  no_email_bound: "該帳戶未綁定信箱"
-  verification_failed: "驗證條件不滿足"
-  verification_failed_generic: "驗證條件不滿足"
-  password_incorrect_verify: "密碼不正確"
-  verification_code_incorrect: "驗證碼不正確"
-  email_code_incorrect_or_expired: "信箱驗證碼不正確或已過期"
-  verification_failed_default: "驗證失敗"
-  no_password_choose_other: "該帳戶未設定密碼，請選擇其他驗證方式"
-  no_phone_choose_other: "該帳戶未綁定手機，請選擇其他驗證方式"
-  no_email_choose_other: "該帳戶未綁定信箱，請選擇其他驗證方式"
-  no_wechat_choose_other: "該帳戶未綁定微信，請選擇其他驗證方式"
-  wechat_verification_failed: "微信驗證失敗"
-  avatar_required: "請上傳頭像檔案"
-  avatar_not_found: "頭像檔案不存在"
-
+  not_found: 用戶不存在
+  deactivated: 用戶已登出
+  already_deactivated: 帳戶已登出
+  cannot_delete_admin: 不能刪除管理員帳戶
+  cannot_modify_own_role: 不能修改自己的角色
+  cannot_modify_own_status: 不能修改自己的帳戶狀態
+  cannot_demote_last_admin: 不能移除最後一個管理員的使用者管理權限
+  not_deactivated_cannot_restore: 用戶未登出，無法恢復
+  already_deactivated_cannot_restore: 帳戶未登出，無需恢復
+  past_cooling_period: 已過冷靜期，無法恢復，請聯絡客服
+  restore_requires_support: 該帳戶需聯絡客服恢復
+  invalid_verification_method: 驗證方式無效
+  select_verification_method: 請選擇一種驗證方式
+  username_change_limit: 使用者名稱一個月內只能修改3次
+  email_required: 信箱驗證已啟用，信箱為必填項
+  email_exists: 信箱已存在
+  username_exists: 使用者名稱已存在
+  phone_exists: 手機號已存在
+  default_role_not_found: 預設角色不存在，請聯絡管理員
+  project_owner_role_not_found: PROJECT_OWNER 角色不存在
+  not_project_member: 您不是該專案的成員
+  create_failed: 使用者建立失敗
+  default_role_missing: 預設角色不存在
+  no_password_set: 該帳戶未設定密碼
+  no_phone_bound: 該帳戶未綁定手機
+  no_email_bound: 該帳戶未綁定信箱
+  verification_failed: 驗證條件不滿足
+  verification_failed_generic: 驗證條件不滿足
+  password_incorrect_verify: 密碼不正確
+  verification_code_incorrect: 驗證碼不正確
+  email_code_incorrect_or_expired: 信箱驗證碼不正確或已過期
+  verification_failed_default: 驗證失敗
+  no_password_choose_other: 該帳戶未設定密碼，請選擇其他驗證方式
+  no_phone_choose_other: 該帳戶未綁定手機，請選擇其他驗證方式
+  no_email_choose_other: 該帳戶未綁定信箱，請選擇其他驗證方式
+  no_wechat_choose_other: 該帳戶未綁定微信，請選擇其他驗證方式
+  wechat_verification_failed: 微信驗證失敗
+  avatar_required: 請上傳頭像檔案
+  avatar_not_found: 頭像檔案不存在
 project:
-  not_found: "專案不存在"
-  transfer_out_disabled: "該項目的跨項目轉移策略不允許此操作"
-  transfer_in_disabled: "目標項目的跨項目轉移策略不允許此操作"
-  already_exists: "已存在同名專案，請使用其他名稱"
-
+  not_found: 專案不存在
+  transfer_out_disabled: 該項目的跨項目轉移策略不允許此操作
+  transfer_in_disabled: 目標項目的跨項目轉移策略不允許此操作
+  already_exists: 已存在同名專案，請使用其他名稱
 project_member:
-  no_permission_add: "無權限新增專案成員"
-  private_space_no_add: "私人空間不支援新增成員操作"
-  user_not_found: "用戶不存在"
-  role_not_found: "角色不存在"
-  already_member: "用戶已經是專案成員"
-  no_permission_update_role: "無權限修改成員角色"
-  private_space_no_update: "私人空間不支援更新成員操作"
-  cannot_modify_owner_role: "不能修改專案所有者的角色"
-  cannot_assign_owner_role: "不能直接設定為專案所有者，請使用轉讓功能"
-  member_not_found: "成員不存在"
-  no_permission_remove: "無權限移除專案成員"
-  private_space_no_remove: "私人空間不支援移除成員操作"
-  cannot_remove_owner: "不能移除專案所有者"
-  private_space_no_transfer: "私人空間不支援轉讓操作"
-  only_owner_can_transfer: "只有專案所有者可以轉讓專案"
-  cannot_remove_admin: "只有專案所有者可以移除管理員"
-  cannot_modify_admin_role: "只有專案所有者可以修改管理員的角色"
-  cannot_modify_self_role: "不能修改自己的角色"
-  cannot_remove_self: "不能移除自己"
-  only_owner_can_delete: "只有專案所有者可以刪除專案"
-  cannot_transfer_to_self: "不能轉讓給自己"
-  transfer_target_must_be_member: "轉讓目標必須是專案成員"
-  owner_role_not_found: "專案所有者角色不存在"
-  roles_missing: "PROJECT_ADMIN 和 PROJECT_MEMBER 角色均不存在，請檢查系統初始化"
-  private_space_no_batch_add: "私人空間不支援批次新增成員操作"
-  private_space_no_batch_update: "私人空間不支援批次更新成員操作"
-
+  no_permission_add: 無權限新增專案成員
+  private_space_no_add: 私人空間不支援新增成員操作
+  user_not_found: 用戶不存在
+  role_not_found: 角色不存在
+  already_member: 用戶已經是專案成員
+  no_permission_update_role: 無權限修改成員角色
+  private_space_no_update: 私人空間不支援更新成員操作
+  cannot_modify_owner_role: 不能修改專案所有者的角色
+  cannot_assign_owner_role: 不能直接設定為專案所有者，請使用轉讓功能
+  member_not_found: 成員不存在
+  no_permission_remove: 無權限移除專案成員
+  private_space_no_remove: 私人空間不支援移除成員操作
+  cannot_remove_owner: 不能移除專案所有者
+  private_space_no_transfer: 私人空間不支援轉讓操作
+  only_owner_can_transfer: 只有專案所有者可以轉讓專案
+  cannot_remove_admin: 只有專案所有者可以移除管理員
+  cannot_modify_admin_role: 只有專案所有者可以修改管理員的角色
+  cannot_modify_self_role: 不能修改自己的角色
+  cannot_remove_self: 不能移除自己
+  only_owner_can_delete: 只有專案所有者可以刪除專案
+  cannot_transfer_to_self: 不能轉讓給自己
+  transfer_target_must_be_member: 轉讓目標必須是專案成員
+  owner_role_not_found: 專案所有者角色不存在
+  roles_missing: PROJECT_ADMIN 和 PROJECT_MEMBER 角色均不存在，請檢查系統初始化
+  private_space_no_batch_add: 私人空間不支援批次新增成員操作
+  private_space_no_batch_update: 私人空間不支援批次更新成員操作
 file:
-  not_found: "檔案不存在"
-  parent_not_found: "父節點不存在"
-  target_parent_not_found: "目標父節點不存在"
-  parent_must_not_be_file: "父節點不能是檔案"
-  root_not_found: "未找到根節點"
-  name_empty: "檔案名稱不能為空"
-  name_invalid: "無效的檔案名稱"
-  name_too_long: "檔案名稱過長"
-  name_dot_only: "檔案名稱不能僅為點號"
-  name_sanitize_failed: "檔案名稱清理失敗"
-  name_sanitize_contains_path: "清理後的檔案名稱仍包含路徑字元"
-  name_sanitize_starts_with_dot: "清理後的檔案名稱不能以點開頭"
-  name_sanitize_has_spaces: "清理後的檔案名稱包含前導或尾隨空格"
-  name_windows_reserved: "Windows 保留檔案名稱"
-  name_dangerous_chars: "檔案名稱包含危險字元"
-  name_sanitized_empty: "清理後的檔案名稱為空"
-  path_empty: "路徑不能為空"
-  path_illegal_chars: "路徑包含非法字元"
-  path_out_of_bounds: "路徑不在允許的目錄內"
-  extension_forbidden: "禁止上傳 {extension} 類型檔案"
-  magic_number_failed: "檔案魔數驗證失敗"
-  dwg_too_small: "DWG 檔案太小，可能已損壞"
-  dxf_missing_marker: "DXF 檔案缺少必需的 DXF 標記，可能已損壞"
-  no_access: "沒有檔案存取權限"
-  already_modified: "檔案已被他人修改，請重新整理後重試"
-  conversion_incomplete: "檔案尚未轉換完成"
-  conversion_failed: "檔案轉換失敗"
-  format_unsupported: "不支援的檔案格式"
-  count_exceeded: "檔案數量超過限制"
-  download_failed: "檔案下載失敗"
-  upload_failed: "檔案上傳失敗"
-  upload_missing: "缺少上傳檔案"
-  upload_file_not_found: "上傳檔案不存在"
-  missing_required_params: "缺少必要參數"
-  missing_file: "缺少檔案"
-  submit_success: "提交成功"
-  version_history_not_found: "歷史版本目錄不存在"
-  history_file_not_found: "歷史版本原始檔案不存在"
-  file_stream_error: "檔案流錯誤"
-  access_failed: "存取檔案失敗"
-  fetch_failed: "獲取檔案失敗"
-  directory_not_exist: "目錄深度超過限制"
-  total_size_exceeded: "壓縮包總大小超過限制"
-  private_space_no_delete: "私人空間不支援刪除操作"
-  node_not_deleted: "節點未被刪除，無需恢復"
-  parent_deleted: "父節點已被刪除，無法恢復"
-  no_repo_access: "沒有存取該資源庫的權限"
-  no_personal_space_access: "您沒有權限存取該個人空間"
-  no_target_parent_access: "沒有存取目標父節點的權限"
-  recycle_bin_not_found: "回收站中不存在該項目"
-  cannot_move_root: "不能移動根節點"
-  parent_must_be_folder_or_root: "目標父節點必須是資料夾或專案根目錄"
-  cannot_move_to_self: "不能將節點移動到自身"
-  cannot_move_to_descendant: "不能將資料夾移動到其自身內部"
-  cannot_copy_root: "不能拷貝根節點"
-  cannot_copy_to_self: "不能將節點拷貝到自身"
-  cannot_copy_to_descendant: "不能將資料夾複製到其自身內部"
-  copy_physical_failed: "檔案複製失敗：儲存目錄複製未成功，請稍後重試"
-  cannot_move_out_of_library: "不能從資源庫移出文件"
-  source_not_found: "源節點不存在"
-  project_not_found_in_recycle: "未找到要恢復的項目"
-  delete_item_not_found: "未找到要刪除的項目"
-  search_missing_project_id: "搜尋專案檔案時必須提供 projectId"
-  mxweb_not_found: "MXWEB 檔案不存在，請確認檔案已轉換完成"
-  external_ref_not_found: "外部參照檔案不存在"
-  node_is_folder_not_file: "該節點是資料夾，不是檔案"
-  external_ref_invalid: "無效的外部參照檔案"
-  name_contains_illegal_chars: "檔案名稱包含非法字元"
-  size_exceeded_limit: "檔案大小超出限制（最大 {limit}MB）"
-  file_size_unavailable: "無法讀取檔案大小，操作已取消"
-
+  not_found: 檔案不存在
+  parent_not_found: 父節點不存在
+  target_parent_not_found: 目標父節點不存在
+  parent_must_not_be_file: 父節點不能是檔案
+  root_not_found: 未找到根節點
+  name_empty: 檔案名稱不能為空
+  name_invalid: 無效的檔案名稱
+  name_too_long: 檔案名稱過長
+  name_dot_only: 檔案名稱不能僅為點號
+  name_sanitize_failed: 檔案名稱清理失敗
+  name_sanitize_contains_path: 清理後的檔案名稱仍包含路徑字元
+  name_sanitize_starts_with_dot: 清理後的檔案名稱不能以點開頭
+  name_sanitize_has_spaces: 清理後的檔案名稱包含前導或尾隨空格
+  name_windows_reserved: Windows 保留檔案名稱
+  name_dangerous_chars: 檔案名稱包含危險字元
+  name_sanitized_empty: 清理後的檔案名稱為空
+  path_empty: 路徑不能為空
+  path_illegal_chars: 路徑包含非法字元
+  path_out_of_bounds: 路徑不在允許的目錄內
+  extension_forbidden: 禁止上傳 {extension} 類型檔案
+  magic_number_failed: 檔案魔數驗證失敗
+  dwg_too_small: DWG 檔案太小，可能已損壞
+  dxf_missing_marker: DXF 檔案缺少必需的 DXF 標記，可能已損壞
+  no_access: 沒有檔案存取權限
+  already_modified: 檔案已被他人修改，請重新整理後重試
+  conversion_incomplete: 檔案尚未轉換完成
+  conversion_failed: 檔案轉換失敗
+  count_exceeded: 檔案數量超過限制
+  download_failed: 檔案下載失敗
+  upload_missing: 缺少上傳檔案
+  missing_required_params: 缺少必要參數
+  missing_file: 缺少檔案
+  version_history_not_found: 歷史版本目錄不存在
+  history_file_not_found: 歷史版本原始檔案不存在
+  file_stream_error: 檔案流錯誤
+  access_failed: 存取檔案失敗
+  fetch_failed: 獲取檔案失敗
+  directory_not_exist: 目錄深度超過限制
+  total_size_exceeded: 壓縮包總大小超過限制
+  private_space_no_delete: 私人空間不支援刪除操作
+  node_not_deleted: 節點未被刪除，無需恢復
+  parent_deleted: 父節點已被刪除，無法恢復
+  no_repo_access: 沒有存取該資源庫的權限
+  no_personal_space_access: 您沒有權限存取該個人空間
+  no_target_parent_access: 沒有存取目標父節點的權限
+  recycle_bin_not_found: 回收站中不存在該項目
+  cannot_move_root: 不能移動根節點
+  parent_must_be_folder_or_root: 目標父節點必須是資料夾或專案根目錄
+  cannot_move_to_self: 不能將節點移動到自身
+  cannot_move_to_descendant: 不能將資料夾移動到其自身內部
+  cannot_copy_root: 不能拷貝根節點
+  cannot_copy_to_self: 不能將節點拷貝到自身
+  cannot_copy_to_descendant: 不能將資料夾複製到其自身內部
+  copy_physical_failed: 檔案複製失敗：儲存目錄複製未成功，請稍後重試
+  cannot_move_out_of_library: 不能從資源庫移出文件
+  source_not_found: 源節點不存在
+  project_not_found_in_recycle: 未找到要恢復的項目
+  delete_item_not_found: 未找到要刪除的項目
+  search_missing_project_id: 搜尋專案檔案時必須提供 projectId
+  mxweb_not_found: MXWEB 檔案不存在，請確認檔案已轉換完成
+  external_ref_not_found: 外部參照檔案不存在
+  node_is_folder_not_file: 該節點是資料夾，不是檔案
+  external_ref_invalid: 無效的外部參照檔案
+  name_contains_illegal_chars: 檔案名稱包含非法字元
+  size_exceeded_limit: 檔案大小超出限制（最大 {limit}MB）
+  file_size_unavailable: 無法讀取檔案大小，操作已取消
 node:
-  not_found: "節點不存在"
-
+  not_found: 節點不存在
 role:
-  not_found: "角色不存在"
-  system_cannot_delete: "系統角色不允許刪除"
-  system_default_cannot_modify_name: "無法修改系統預設角色的名稱"
-  owner_role_cannot_delete: "專案所有者使用的角色不可刪除"
-  owner_template_cannot_delete: "專案所有者範本不可刪除"
-  template_in_use_cannot_delete: "該範本仍被專案成員引用，無法刪除"
-  project_not_found: "專案角色不存在"
-  update_failed: "更新專案角色失敗"
-  delete_failed: "刪除專案角色失敗"
-  fetch_detail_failed: "取得專案角色詳情失敗"
-  fetch_permissions_failed: "取得角色權限失敗"
-  remove_permissions_failed: "移除角色權限失敗"
-  update_permissions_failed: "更新角色權限失敗"
-
+  not_found: 角色不存在
+  system_cannot_delete: 系統角色不允許刪除
+  system_default_cannot_modify_name: 無法修改系統預設角色的名稱
+  owner_role_cannot_delete: 專案所有者使用的角色不可刪除
+  owner_template_cannot_delete: 專案所有者範本不可刪除
+  template_in_use_cannot_delete: 該範本仍被專案成員引用，無法刪除
+  project_not_found: 專案角色不存在
+  update_failed: 更新專案角色失敗
+  delete_failed: 刪除專案角色失敗
+  fetch_detail_failed: 取得專案角色詳情失敗
+  fetch_permissions_failed: 取得角色權限失敗
+  remove_permissions_failed: 移除角色權限失敗
+  update_permissions_failed: 更新角色權限失敗
 share:
-  not_found: "分享連結不存在"
-  revoked: "分享連結已撤銷"
-  expired: "分享連結已過期"
-  file_not_found: "分享的檔案不存在"
-  file_deleted: "檔案已被刪除"
-  only_creator_can_revoke: "只有建立者可以撤銷分享"
-  token_mismatch: "分享令牌與請求的檔案不匹配"
-  only_creator_can_modify: "只有建立者可以修改分享設定"
-
+  not_found: 分享連結不存在
+  revoked: 分享連結已撤銷
+  expired: 分享連結已過期
+  file_not_found: 分享的檔案不存在
+  file_deleted: 檔案已被刪除
+  only_creator_can_revoke: 只有建立者可以撤銷分享
+  token_mismatch: 分享令牌與請求的檔案不匹配
+  only_creator_can_modify: 只有建立者可以修改分享設定
 public_file:
-  missing_source_hash: "缺少源圖紙雜湊值"
-  missing_ref_filename: "缺少外部參照檔案名"
-  type_unsupported: "不支援的檔案類型"
-  source_path_invalid: "無效的源路徑"
-  file_not_found: "檔案不存在"
-  file_not_found_or_deleted: "檔案不存在或已被刪除"
-  no_file_uploaded: "未上傳檔案"
-  only_supported_types: "僅支援 ... 檔案"
-  missing_file_hash: "缺少檔案雜湊值"
-  conversion_failed: "檔案轉換失敗"
-  read_failed: "讀取檔案失敗"
-
+  missing_source_hash: 缺少源圖紙雜湊值
+  missing_ref_filename: 缺少外部參照檔案名
+  type_unsupported: 不支援的檔案類型
+  source_path_invalid: 無效的源路徑
+  file_not_found_or_deleted: 檔案不存在或已被刪除
+  no_file_uploaded: 未上傳檔案
+  only_supported_types: 僅支援 ... 檔案
+  missing_file_hash: 缺少檔案雜湊值
+  read_failed: 讀取檔案失敗
 storage:
-  path_invalid: "無效的路徑"
-  absolute_path_not_allowed: "不允許使用絕對路徑"
-  path_too_long: "路徑過長"
-  path_out_of_bounds: "路徑超出允許的範圍"
-
+  path_invalid: 無效的路徑
+  absolute_path_not_allowed: 不允許使用絕對路徑
+  path_too_long: 路徑過長
+  path_out_of_bounds: 路徑超出允許的範圍
 database:
-  unique_constraint: "欄位 {fields} 已存在"
-  foreign_key_constraint: "資料關聯錯誤，請檢查關聯資料是否存在"
-  constraint_failed: "資料庫約束校驗失敗"
-
+  unique_constraint: 欄位 {fields} 已存在
+  foreign_key_constraint: 資料關聯錯誤，請檢查關聯資料是否存在
+  constraint_failed: 資料庫約束校驗失敗
 rate_limit:
-  too_many_requests: "請求過於頻繁，請稍後再試"
-  account_locked: "帳號因多次登入失敗已被暫時鎖定，請 {minutes} 分鐘後再試"
-
+  too_many_requests: 請求過於頻繁，請稍後再試
+  account_locked: 帳號因多次登入失敗已被暫時鎖定，請 {minutes} 分鐘後再試
 password_policy:
-  too_short: "密碼長度至少 {min} 位"
-  complexity: "密碼需包含大小寫字母、數字、特殊字元中至少 {min} 類"
-  weak: "密碼過於簡單（命中常見弱密碼），請更換為更複雜的密碼"
-
+  too_short: 密碼長度至少 {min} 位
+  complexity: 密碼需包含大小寫字母、數字、特殊字元中至少 {min} 類
+  weak: 密碼過於簡單（命中常見弱密碼），請更換為更複雜的密碼
 ip_blacklist:
-  invalid_ip: "無效的 IP 或 CIDR 格式"
-  duplicate_entry: "該 IP/CIDR 已在黑名單中"
-  blocked: "拒絕訪問"
-  not_found: "黑名單條目不存在"
-
+  invalid_ip: 無效的 IP 或 CIDR 格式
+  duplicate_entry: 該 IP/CIDR 已在黑名單中
+  blocked: 拒絕訪問
+  not_found: 黑名單條目不存在
 ip_whitelist:
-  invalid_ip: "無效的 IP 或 CIDR 格式"
-  duplicate_entry: "該 IP/CIDR 已在白名單中"
-  not_found: "白名單條目不存在"
-  file_entry_immutable: "本地文件條目請在伺服器上直接編輯白名單文件移除"
-
+  invalid_ip: 無效的 IP 或 CIDR 格式
+  duplicate_entry: 該 IP/CIDR 已在白名單中
+  not_found: 白名單條目不存在
+  file_entry_immutable: 本地文件條目請在伺服器上直接編輯白名單文件移除
 admin_auth:
-  ip_not_allowed: "當前 IP 不在管理員白名單中，禁止登入"
-  ip_blocked: "當前 IP 已被加入黑名單，禁止登入"
-
+  ip_not_allowed: 當前 IP 不在管理員白名單中，禁止登入
+  ip_blocked: 當前 IP 已被加入黑名單，禁止登入
 mfa:
-  required: "請輸入雙因素認證動態碼"
-  code_invalid: "雙因素認證動態碼錯誤，請重試"
-  setup_required: "請先完成 TOTP 雙因素認證綁定"
-  already_enabled: "TOTP 已啟用，無需重複綁定"
-
+  required: 請輸入雙因素認證動態碼
+  code_invalid: 雙因素認證動態碼錯誤，請重試
+  setup_required: 請先完成 TOTP 雙因素認證綁定
+  already_enabled: TOTP 已啟用，無需重複綁定
 resource:
-  not_found: "請求的資源不存在"
-  missing_project_id: "缺少專案ID參數"
-
+  not_found: 請求的資源不存在
+  missing_project_id: 缺少專案ID參數
 mxcad:
   missing_params_hash_name_size: "缺少必要參數: hash, name 或 size"
   missing_params_chunks: "缺少必要參數: chunks"
-  save_to_project_requires_project_id: "儲存到專案時必須提供 projectId"
-  save_to_library_requires_library_type: "儲存到資源庫時必須提供 libraryType"
-  target_folder_not_found: "目標資料夾不存在"
-  target_must_be_folder: "目標必須是資料夾"
-  no_permission_save_to_location: "您沒有權限儲存到此位置"
-  no_permission_library_management: "您沒有資源庫管理權限"
-  no_permission_save_to_project: "您沒有權限儲存到此專案"
-  history_file_conversion_failed: "歷史版本檔案轉換失敗"
-  copy_image_failed: "圖片檔案拷貝失敗"
-  fetch_history_failed: "獲取歷史版本檔案失敗"
-  no_access_drawing: "無權限存取該圖紙"
-  path_invalid: "無效的檔案路徑"
-  permission_verification_failed: "權限驗證失敗"
-  refresh_success: "重新整理成功"
-
+  save_to_project_requires_project_id: 儲存到專案時必須提供 projectId
+  save_to_library_requires_library_type: 儲存到資源庫時必須提供 libraryType
+  target_folder_not_found: 目標資料夾不存在
+  target_must_be_folder: 目標必須是資料夾
+  no_permission_save_to_location: 您沒有權限儲存到此位置
+  no_permission_library_management: 您沒有資源庫管理權限
+  no_permission_save_to_project: 您沒有權限儲存到此專案
+  history_file_conversion_failed: 歷史版本檔案轉換失敗
+  copy_image_failed: 圖片檔案拷貝失敗
+  fetch_history_failed: 獲取歷史版本檔案失敗
+  no_access_drawing: 無權限存取該圖紙
+  path_invalid: 無效的檔案路徑
+  permission_verification_failed: 權限驗證失敗
+  cache_refresh_success: 快取刷新成功
 version_control:
-  mx_not_initialized: "MX 未初始化"
-  no_files_to_commit: "沒有檔案需要提交"
-  submit_success: "提交成功"
-  fetch_success: "獲取成功"
+  mx_not_initialized: MX 未初始化
+  no_files_to_commit: 沒有檔案需要提交
   fetch_failed_content_empty: "獲取失敗: 檔案內容為空"
-  initial_version: "初始"
-
+  initial_version: 初始
 cache:
-  user_not_found: "用戶不存在"
-  capacity_must_be_positive: "容量必須大於 0"
-
+  capacity_must_be_positive: 容量必須大於 0
 audit:
-  log_not_found: "審計日誌 ID 不存在"
-
+  log_not_found: 審計日誌 ID 不存在
 font:
-  fetch_failed: "取得字型列表失敗"
-  no_file: "未提供檔案"
-  cannot_create_directory: "無法建立字型目錄"
-
+  fetch_failed: 取得字型列表失敗
+  no_file: 未提供檔案
+  cannot_create_directory: 無法建立字型目錄
 billing:
-  order_already_refunded: "訂單已被退款或狀態已變更，請重新整理後重試"
-  refund_failed_state_restored: "退款請求發送失敗，訂單狀態已恢復"
-  downgrade_not_allowed: "不能降級購買，請選擇升級或續費當前等級"
-  amount_below_minimum: "訂單金額低於支付網關最低限額，請檢查檔位價格配置"
-  refund_apply_not_allowed: "目前訂單狀態不允許申請退款"
-  refund_apply_already_pending: "該訂單已有待審核的退款申請"
-  refund_application_not_found: "退款申請不存在"
-  refund_application_not_pending: "該退款申請已處理，請重新整理後重試"
-
+  order_already_refunded: 訂單已被退款或狀態已變更，請重新整理後重試
+  refund_failed_state_restored: 退款請求發送失敗，訂單狀態已恢復
+  downgrade_not_allowed: 不能降級購買，請選擇升級或續費當前等級
+  amount_below_minimum: 訂單金額低於支付網關最低限額，請檢查檔位價格配置
+  refund_apply_not_allowed: 目前訂單狀態不允許申請退款
+  refund_apply_already_pending: 該訂單已有待審核的退款申請
+  refund_application_not_found: 退款申請不存在
+  refund_application_not_pending: 該退款申請已處理，請重新整理後重試
 quota:
-  max_projects_exceeded: "項目數量已達上限（當前 {current} 個，上限 {limit} 個），無法執行此操作"
-  project_size_exceeded: "項目體積超出限額（{limit}MB），無法執行此操作"
-  personal_storage_exceeded: "個人空間超出限額（{limit}MB），無法執行此操作"
-  conversion_frequency_exceeded: "圖紙轉換過於頻繁，每 {hours} 小時最多可轉換 {count} 次，請稍後再試"
-  save_frequency_exceeded: "圖紙保存過於頻繁，每 {hours} 小時最多可保存 {count} 次，請稍後再試"
-  history_frequency_exceeded: "歷史版本查看過於頻繁，每 {hours} 小時最多可查看 {count} 次，請稍後再試"
-  export_download_vip_only: "匯出下載為會員專屬功能，開通 VIP 後即可使用"
-
+  max_projects_exceeded: 項目數量已達上限（當前 {current} 個，上限 {limit} 個），無法執行此操作
+  project_size_exceeded: 項目體積超出限額（{limit}MB），無法執行此操作
+  personal_storage_exceeded: 個人空間超出限額（{limit}MB），無法執行此操作
+  conversion_frequency_exceeded: 圖紙轉換過於頻繁，每 {hours} 小時最多可轉換 {count} 次，請稍後再試
+  save_frequency_exceeded: 圖紙保存過於頻繁，每 {hours} 小時最多可保存 {count} 次，請稍後再試
+  history_frequency_exceeded: 歷史版本查看過於頻繁，每 {hours} 小時最多可查看 {count} 次，請稍後再試
+  export_download_vip_only: 匯出下載為會員專屬功能，開通 VIP 後即可使用
 library:
-  not_found: "公共資源庫（{libraryType}）不存在，請先初始化"
-
+  not_found: 公共資源庫（{libraryType}）不存在，請先初始化
 personal_space:
-  not_found: "個人空間不存在"
-  project_id_or_user_id_required: "請指定專案 ID 或用戶 ID"
-  path_parse_not_found: "路徑解析結果不存在"
-
+  not_found: 個人空間不存在
+  project_id_or_user_id_required: 請指定專案 ID 或用戶 ID
+  path_parse_not_found: 路徑解析結果不存在
 validation:
-  failed: "請求參數驗證失敗"
-
+  failed: 請求參數驗證失敗
 general:
-  internal_server_error: "伺服器內部錯誤"
-
+  internal_server_error: 伺服器內部錯誤
 file_extra:
-  cannot_create_subfolder_in_file: "只能在資料夾下建立子資料夾"
+  cannot_create_subfolder_in_file: 只能在資料夾下建立子資料夾
   sort_unsupported: "不支援的排序欄位: {field}"
   search_scope_unsupported: "不支援的搜尋範圍: {scope}"
-  path_not_exist: "檔案路徑不存在"
-  project_not_exist_or_deleted: "專案不存在或已被刪除"
-  node_not_exist_or_no_parent: "節點不存在或沒有父節點"
-  missing_permission_param: "缺少 permission 參數"
+  path_not_exist: 檔案路徑不存在
+  project_not_exist_or_deleted: 專案不存在或已被刪除
+  node_not_exist_or_no_parent: 節點不存在或沒有父節點
+  missing_permission_param: 缺少 permission 參數
   conversion_failed_detail: "檔案轉換失敗: {error}"
   download_format_unsupported_detail: "不支援的下載格式: {format}"
   size_exceeded_with_name: "檔案大小超出限制: {name}"
-  filename_starts_with_dot: "檔案名稱不能以點開頭"
-  missing_file_or_hash: "缺少檔案或檔案 hash"
+  filename_starts_with_dot: 檔案名稱不能以點開頭
+  missing_file_or_hash: 缺少檔案或檔案 hash
   file_not_exist_detail: "檔案不存在: {key}"
   path_is_directory_not_file: "路徑是目錄而非檔案: {key}"
-  file_node_not_exist: "檔案節點不存在"
+  file_node_not_exist: 檔案節點不存在
   converted_file_not_exist: "轉換後的檔案不存在: {path}"
   file_not_exist_by_hash: "檔案不存在: {hash}"
-
 auth_extra:
-  wechat_login_disabled: "微信登入功能未啟用"
-  temp_token_invalid: "臨時令牌無效或已過期，請重新登入"
-  invalid_token_type: "無效的令牌類型"
-  phone_registration_disabled: "手機號註冊未啟用，請使用信箱註冊"
-  account_suspended: "帳號已被暫停使用"
-  account_not_activated: "帳號尚未啟用"
-  account_status_abnormal: "帳號狀態異常"
-  user_not_logged_in: "使用者未登入"
-  user_account_disabled: "使用者帳號已被停用"
-  registration_info_expired: "註冊資訊已過期，請重新註冊"
-  send_too_frequent_with_ttl: "發送過於頻繁，請{ttl}秒後再試"
-
+  wechat_login_disabled: 微信登入功能未啟用
+  temp_token_invalid: 臨時令牌無效或已過期，請重新登入
+  invalid_token_type: 無效的令牌類型
+  phone_registration_disabled: 手機號註冊未啟用，請使用信箱註冊
+  account_suspended: 帳號已被暫停使用
+  account_not_activated: 帳號尚未啟用
+  account_status_abnormal: 帳號狀態異常
+  user_not_logged_in: 使用者未登入
+  user_account_disabled: 使用者帳號已被停用
+  registration_info_expired: 註冊資訊已過期，請重新註冊
+  send_too_frequent_with_ttl: 發送過於頻繁，請{ttl}秒後再試
 role_extra:
   create_system_default_failed: "建立系統預設角色失敗: {error}"
   create_project_role_failed_detail: "建立專案角色失敗: {error}"
-  fetch_project_role_failed: "取得專案角色失敗"
-  fetch_project_role_list_failed: "取得專案角色列表失敗"
-  fetch_system_project_roles_failed: "取得系統專案角色失敗"
+  fetch_project_role_failed: 取得專案角色失敗
+  fetch_project_role_list_failed: 取得專案角色列表失敗
+  fetch_system_project_roles_failed: 取得系統專案角色失敗
   assign_permissions_failed_detail: "分配角色權限失敗: {error}"
-  not_found_by_id: "角色 ID {id} 不存在"
-
+  not_found_by_id: 角色 ID {id} 不存在
 font_extra:
   upload_failed_detail: "上傳字型失敗: {error}"
   delete_failed_detail: "刪除字型失敗: {error}"
   download_failed_detail: "下載字型失敗: {error}"
-  file_not_exist_by_name: "字型檔案 {name} 不存在"
-
+  file_not_exist_by_name: 字型檔案 {name} 不存在
 config_extra:
   unknown_key: "未知的配置項: {key}"
   unknown_profile: "未知的安全模式: {profile}"
-  missing_operator: "缺少操作者標識，無法記錄修改來源"
-  empty_profile: "目前沒有任何配置項宣告了安全模式取值，無法套用配置檔"
+  missing_operator: 缺少操作者標識，無法記錄修改來源
+  empty_profile: 目前沒有任何配置項宣告了安全模式取值，無法套用配置檔
   invalid_profile_target: "配置檔目標取值無效: {keys}"
-  dependency_not_met: "無法開啟 {key}：依賴項 {deps} 未開啟，請先開啟"
-  dependency_in_use: "無法關閉 {key}：仍被 {dependents} 依賴，請先關閉它們"
-  dependency_violation: "無法套用安全模式 {profile}：{edges}"
-  channel_gate_not_met: "無法開啟 {key}（{channel} 通道）：{reasons}"
-  channel_not_registered: "通道 {channel} 未註冊"
-
+  dependency_not_met: 無法開啟 {key}：依賴項 {deps} 未開啟，請先開啟
+  dependency_in_use: 無法關閉 {key}：仍被 {dependents} 依賴，請先關閉它們
+  dependency_violation: 無法套用安全模式 {profile}：{edges}
+  channel_gate_not_met: 無法開啟 {key}（{channel} 通道）：{reasons}
+  channel_not_registered: 通道 {channel} 未註冊
 sms_extra:
-  network_limit: "目前網路發送次數已達上限，請稍後再試"
-  send_failed_retry: "發送失敗，請稍後再試"
-
+  network_limit: 目前網路發送次數已達上限，請稍後再試
+  send_failed_retry: 發送失敗，請稍後再試
 storage_extra:
   directory_not_exist_param: "儲存目錄不存在: {path}"
   directory_not_writable: "儲存目錄不可寫: {path}"
   unavailable: "儲存服務不可用: {error}"
-  service_error: "儲存服務異常"
-
+  service_error: 儲存服務異常
 database_extra:
-  connection_error: "資料庫連線異常"
-  connection_failed: "資料庫連線失敗"
-
+  connection_error: 資料庫連線異常
+  connection_failed: 資料庫連線失敗
 file_extra_v2:
-  file_not_found_or_no_path: "檔案不存在或沒有 path"
-  read_failed: "檔案讀取失敗"
-  read_thumbnail_failed: "讀取縮圖失敗"
-
+  file_not_found_or_no_path: 檔案不存在或沒有 path
+  read_failed: 檔案讀取失敗
+  read_thumbnail_failed: 讀取縮圖失敗
+  upload_failed_detail: "所有檔案上傳失敗: {detail}"
 mxcad_extra:
-  drawing_not_found: "圖紙檔案不存在"
+  drawing_not_found: 圖紙檔案不存在
   history_conversion_failed_detail: "歷史版本檔案轉換失敗: {error}"
-  only_allowed_types: "僅支援 {types} 檔案"
-  only_allowed_mime_type: "僅支援 {type} 類型的檔案"
+  only_allowed_types: 僅支援 {types} 檔案
+  only_allowed_mime_type: 僅支援 {type} 類型的檔案
   format_unsupported_mxweb: "不支援的檔案格式: {ext}，僅支援 .mxweb 檔案"
   save_failed_detail: "儲存失敗: {error}"
   upload_file_not_found_detail: "上傳檔案不存在: {hash}"
-
 version_control_extra:
   submit_failed_detail: "提交失敗: {error}"
   delete_failed_detail: "刪除失敗: {error}"
   fetch_failed_detail: "獲取失敗: {error}"
-
 vip:
-  tier_not_found: "VIP 等級不存在"
-  config_must_be_number: "配置項 {key} 必須是數字"
-  config_must_be_boolean: "配置項 {key} 必須是布林值"
-  free_tier_cannot_create: "level 0 為系統預設等級，不可建立"
-  free_tier_locked: "系統預設等級僅可調整權益配置，名稱/價格/上下架狀態不可修改"
-  free_tier_cannot_deactivate: "系統預設等級不可下架"
-  free_tier_cannot_remove: "系統預設等級不可刪除"
-  expires_at_required: "有效會員必須設定到期時間"
-
+  tier_not_found: VIP 等級不存在
+  config_must_be_number: 配置項 {key} 必須是數字
+  config_must_be_boolean: 配置項 {key} 必須是布林值
+  free_tier_cannot_create: level 0 為系統預設等級，不可建立
+  free_tier_locked: 系統預設等級僅可調整權益配置，名稱/價格/上下架狀態不可修改
+  free_tier_cannot_deactivate: 系統預設等級不可下架
+  free_tier_cannot_remove: 系統預設等級不可刪除
+  expires_at_required: 有效會員必須設定到期時間
 batch_download:
-  disabled: "批次下載功能未開啟"
+  disabled: 批次下載功能未開啟
 alert:
-  not_found: "警示不存在"
+  not_found: 警示不存在
 task_run:
-  not_found: "任務不存在或未註冊"
+  not_found: 任務不存在或未註冊
 security:
-  brute_force_suspected: "帳號 {account} 連續 {count} 次登入失敗觸發鎖定，疑似暴力破解，已鎖定 {minutes} 分鐘"
+  brute_force_suspected: 帳號 {account} 連續 {count} 次登入失敗觸發鎖定，疑似暴力破解，已鎖定 {minutes} 分鐘
 conversion_task:
-  no_node_id: "統一提交端點僅支援節點關聯的轉換（open/download + nodeId）；無節點關聯的轉換由前端本地記錄"
-  download_requires_format: "下載類型（download）必須提供目標格式（dwg/dxf/mxweb/pdf）"
-  download_requires_user: "下載類型（download）需要登入使用者（用於配額佔位）"
-  cancel_not_supported: "目前執行模式不支援取消（僅獨立轉換服務支援）"
-  not_found_or_no_access: "轉換任務不存在或您沒有訪問權限"
-  node_deleted: "檔案已刪除，無法重試"
-  retry_not_failed: "只有失敗的轉換任務可以重試"
-
+  no_node_id: 統一提交端點僅支援節點關聯的轉換（open/download + nodeId）；無節點關聯的轉換由前端本地記錄
+  download_requires_format: 下載類型（download）必須提供目標格式（dwg/dxf/mxweb/pdf）
+  download_requires_user: 下載類型（download）需要登入使用者（用於配額佔位）
+  cancel_not_supported: 目前執行模式不支援取消（僅獨立轉換服務支援）
+  not_found_or_no_access: 轉換任務不存在或您沒有訪問權限
+  node_deleted: 檔案已刪除，無法重試
+  retry_not_failed: 只有失敗的轉換任務可以重試
 mxcad_engine_extra:
   ini_read_failed: "讀取引擎設定檔失敗: {path}"
   ini_parse_failed: "引擎設定檔不是有效 JSON: {path}"

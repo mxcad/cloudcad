@@ -12,6 +12,7 @@
 
 import { Injectable, Logger, NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { I18nContext } from 'nestjs-i18n';
 import { ClsService } from 'nestjs-cls';
 import * as path from 'path';
 import { FileUtils } from '../../common/utils/file-utils';
@@ -115,7 +116,7 @@ export class HttpVersionControlProvider implements IVersionControl {
       this.logger.log(`目录提交成功: ${directoryPath}`);
       return {
         success: true,
-        message: '提交成功',
+        message: I18nContext.current()?.t('success.submitted') ?? '提交成功',
         revision: result.revision,
         data: result.output,
       };
@@ -142,7 +143,7 @@ export class HttpVersionControlProvider implements IVersionControl {
         );
       }
       this.logger.log(`批量提交成功: ${filePaths.length} 个文件`);
-      return { success: true, message: '提交成功' };
+      return { success: true, message: I18nContext.current()?.t('success.submitted') ?? '提交成功' };
     } catch (error) {
       this.logger.error(`批量提交失败: ${error.message}`);
       return { success: false, message: `提交失败: ${error.message}` };
@@ -201,7 +202,7 @@ export class HttpVersionControlProvider implements IVersionControl {
       );
       return {
         success: true,
-        message: '获取成功',
+        message: I18nContext.current()?.t('success.fetched') ?? '获取成功',
         entries,
         totalCount,
       };
@@ -254,7 +255,7 @@ export class HttpVersionControlProvider implements IVersionControl {
       );
       return {
         success: true,
-        message: '获取成功',
+        message: I18nContext.current()?.t('success.fetched') ?? '获取成功',
         content: data,
       };
     } catch (error) {
@@ -286,3 +287,4 @@ export class HttpVersionControlProvider implements IVersionControl {
   }
 
 }
+

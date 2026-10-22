@@ -1,498 +1,446 @@
 auth:
-  login_expired: "未登录或登录已过期"
-  token_revoked: "Token已被撤销"
-  invalid_credentials: "账号或密码错误"
-  account_deactivated: "账号已被注销"
-  account_deactivated_expired: "账号已注销且已过冷静期，请联系客服恢复。数据将在{cleanupDays}天后彻底删除"
-  user_disabled: "用户已被禁用"
-  user_not_found_or_disabled: "用户不存在或已被禁用"
-  session_transfer_invalid: "转移凭证无效或已过期"
-  refresh_token_invalid_type: "无效的刷新Token类型"
-  registration_disabled: "系统已关闭注册功能"
-  login_required: "请先登录"
-  collaboration_login_required: "需要登录才能使用协同功能"
-  unauthorized: "用户未认证"
-  authentication_failed: "身份验证失败"
-  missing_auth_header: "缺少Authorization header"
-  jwt_invalid: "JWT token无效或已过期"
-  permission_denied: "您没有权限执行此操作"
-  permission_insufficient: "权限不足"
-  registration_conflict: "注册信息已被占用，请更换后重试"
-  wechat_already_bound: "该微信已绑定其他账号"
-  wechat_takeover_not_allowed: "该微信绑定的账号仅支持微信登录，无法转移绑定"
-  wechat_token_invalid: "无效的微信临时 Token"
-  system_not_initialized: "系统尚未初始化，请先创建首个管理员"
-  setup_already_completed: "系统已完成初始化，无法再创建首个管理员"
-  setup_admin_role_missing: "ADMIN 角色不存在，请检查系统初始化"
-  email_required_for_registration: "邮箱验证已启用，注册需要提供邮箱地址"
-  email_or_phone_required: "邮箱和手机号不能同时为空"
-  refresh_token_invalid: "无效的刷新Token"
-  refresh_token_expired: "刷新Token无效或已过期"
-  refresh_token_required: "缺少刷新令牌"
-  logout_failed: "登出失败"
-  token_invalid: "无效的Token"
-  delete_refresh_token_failed: "删除刷新Token失败"
-  user_not_found: "用户不存在"
-  password_required: "请输入当前密码"
-  password_incorrect: "当前密码不正确"
-  send_code_failed: "发送验证码失败，请稍后重试"
-  send_too_frequent: "发送过于频繁，请稍后再试"
-  verification_code_invalid: "验证码无效或已过期"
-  verification_attempts_exhausted: "验证次数已用完，请重新获取验证码"
-  phone_format_invalid: "手机号格式不正确"
-  tencent_sms_config_missing: "腾讯云短信配置缺失"
-  aliyun_sms_config_missing: "阿里云短信配置缺失"
-  wechat_appid_missing: "微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID"
-  wechat_auth_failed: "微信授权失败"
-  wechat_auth_service_error: "微信授权服务异常"
-  wechat_user_info_error: "微信用户信息服务异常"
-  wechat_user_info_failed: "获取用户信息失败"
-  wechat_refresh_failed: "刷新授权失败"
-  wechat_verification_failed: "微信验证失败"
-  wechat_not_match_account: "该微信与当前账户不匹配"
-  password_change_required: "您的密码已到期或首次登录未修改，请立即修改密码"
-
+  login_expired: 未登录或登录已过期
+  token_revoked: Token已被撤销
+  invalid_credentials: 账号或密码错误
+  account_deactivated: 账号已被注销
+  account_deactivated_expired: 账号已注销且已过冷静期，请联系客服恢复。数据将在{cleanupDays}天后彻底删除
+  user_disabled: 用户已被禁用
+  user_not_found_or_disabled: 用户不存在或已被禁用
+  session_transfer_invalid: 转移凭证无效或已过期
+  refresh_token_invalid_type: 无效的刷新Token类型
+  registration_disabled: 系统已关闭注册功能
+  login_required: 请先登录
+  collaboration_login_required: 需要登录才能使用协同功能
+  unauthorized: 用户未认证
+  authentication_failed: 身份验证失败
+  missing_auth_header: 缺少Authorization header
+  jwt_invalid: JWT token无效或已过期
+  permission_denied: 您没有权限执行此操作
+  permission_insufficient: 权限不足
+  registration_conflict: 注册信息已被占用，请更换后重试
+  wechat_already_bound: 该微信已绑定其他账号
+  wechat_takeover_not_allowed: 该微信绑定的账号仅支持微信登录，无法转移绑定
+  wechat_token_invalid: 无效的微信临时 Token
+  system_not_initialized: 系统尚未初始化，请先创建首个管理员
+  setup_already_completed: 系统已完成初始化，无法再创建首个管理员
+  setup_admin_role_missing: ADMIN 角色不存在，请检查系统初始化
+  email_required_for_registration: 邮箱验证已启用，注册需要提供邮箱地址
+  email_or_phone_required: 邮箱和手机号不能同时为空
+  refresh_token_invalid: 无效的刷新Token
+  refresh_token_expired: 刷新Token无效或已过期
+  refresh_token_required: 缺少刷新令牌
+  logout_failed: 登出失败
+  token_invalid: 无效的Token
+  delete_refresh_token_failed: 删除刷新Token失败
+  password_required: 请输入当前密码
+  password_incorrect: 当前密码不正确
+  send_code_failed: 发送验证码失败，请稍后重试
+  send_too_frequent: 发送过于频繁，请稍后再试
+  verification_code_invalid: 验证码无效或已过期
+  verification_attempts_exhausted: 验证次数已用完，请重新获取验证码
+  phone_format_invalid: 手机号格式不正确
+  tencent_sms_config_missing: 腾讯云短信配置缺失
+  aliyun_sms_config_missing: 阿里云短信配置缺失
+  wechat_appid_missing: 微信 AppID 未配置，请在 .env 文件中设置 WECHAT_APP_ID
+  wechat_auth_failed: 微信授权失败
+  wechat_auth_service_error: 微信授权服务异常
+  wechat_user_info_error: 微信用户信息服务异常
+  wechat_user_info_failed: 获取用户信息失败
+  wechat_refresh_failed: 刷新授权失败
+  wechat_verification_failed: 微信验证失败
+  wechat_not_match_account: 该微信与当前账户不匹配
+  password_change_required: 您的密码已到期或首次登录未修改，请立即修改密码
 account_binding:
-  email_service_disabled: "邮件服务未启用，无法绑定邮箱"
-  email_already_bound: "您已绑定邮箱，如需更换请联系管理员"
-  email_conflict: "该邮箱已被其他用户绑定"
-  phone_conflict: "该手机号已被其他用户绑定"
-  sms_service_disabled: "短信服务未启用"
-  phone_not_bound: "您还未绑定手机号"
-  email_not_bound: "您还未绑定邮箱"
-  verify_token_invalid: "验证 token 无效"
-  verify_token_expired: "验证 token 无效或已过期"
-  email_service_disabled_general: "邮件服务未启用"
-  wechat_not_bound: "未绑定微信"
-  invalid_state_param: "无效的状态参数"
-  keep_one_login_method_password_email_phone: "至少需要保留一种登录方式（设置密码、绑定邮箱或绑定手机）"
-  keep_one_login_method_password_phone_wechat: "至少需要保留一种登录方式（设置密码、绑定手机或绑定微信）"
-  keep_one_login_method_password_email_wechat: "至少需要保留一种登录方式（设置密码、绑定邮箱或绑定微信）"
-
+  email_service_disabled: 邮件服务未启用，无法绑定邮箱
+  email_already_bound: 您已绑定邮箱，如需更换请联系管理员
+  email_conflict: 该邮箱已被其他用户绑定
+  phone_conflict: 该手机号已被其他用户绑定
+  sms_service_disabled: 短信服务未启用
+  phone_not_bound: 您还未绑定手机号
+  email_not_bound: 您还未绑定邮箱
+  verify_token_invalid: 验证 token 无效
+  verify_token_expired: 验证 token 无效或已过期
+  email_service_disabled_general: 邮件服务未启用
+  wechat_not_bound: 未绑定微信
+  invalid_state_param: 无效的状态参数
+  keep_one_login_method_password_email_phone: 至少需要保留一种登录方式（设置密码、绑定邮箱或绑定手机）
+  keep_one_login_method_password_phone_wechat: 至少需要保留一种登录方式（设置密码、绑定手机或绑定微信）
+  keep_one_login_method_password_email_wechat: 至少需要保留一种登录方式（设置密码、绑定邮箱或绑定微信）
 user:
-  not_found: "用户不存在"
-  deactivated: "用户已注销"
-  already_deactivated: "账户已注销"
-  cannot_delete_admin: "不能删除管理员账户"
-  cannot_modify_own_role: "不能修改自己的角色"
-  cannot_modify_own_status: "不能修改自己的账户状态"
-  cannot_demote_last_admin: "不能移除最后一个管理员的用户管理权限"
-  not_deactivated_cannot_restore: "用户未注销，无法恢复"
-  already_deactivated_cannot_restore: "账户未注销，无需恢复"
-  past_cooling_period: "已过冷静期，无法恢复，请联系客服"
-  restore_requires_support: "该账户需联系客服恢复"
-  invalid_verification_method: "验证方式无效"
-  select_verification_method: "请选择一种验证方式"
-  username_change_limit: "用户名一月内只能修改3次"
-  email_required: "邮箱验证已启用，邮箱为必填项"
-  email_exists: "邮箱已存在"
-  username_exists: "用户名已存在"
-  phone_exists: "手机号已存在"
-  default_role_not_found: "默认角色不存在，请联系管理员"
-  project_owner_role_not_found: "PROJECT_OWNER 角色不存在"
-  not_project_member: "您不是该项目的成员"
-  create_failed: "用户创建失败"
-  default_role_missing: "默认角色不存在"
-  no_password_set: "该账户未设置密码"
-  no_phone_bound: "该账户未绑定手机"
-  no_email_bound: "该账户未绑定邮箱"
-  verification_failed: "验证条件不满足"
-  password_incorrect_verify: "密码不正确"
-  verification_code_incorrect: "验证码不正确"
-  email_code_incorrect_or_expired: "邮箱验证码不正确或已过期"
-  verification_failed_generic: "验证失败"
-  verification_failed_default: "验证失败"
-  no_password_choose_other: "该账户未设置密码，请选择其他验证方式"
-  no_phone_choose_other: "该账户未绑定手机，请选择其他验证方式"
-  no_email_choose_other: "该账户未绑定邮箱，请选择其他验证方式"
-  no_wechat_choose_other: "该账户未绑定微信，请选择其他验证方式"
-  wechat_verification_failed: "微信验证失败"
-  avatar_required: "请上传头像文件"
-  avatar_not_found: "头像文件不存在"
-
+  not_found: 用户不存在
+  deactivated: 用户已注销
+  already_deactivated: 账户已注销
+  cannot_delete_admin: 不能删除管理员账户
+  cannot_modify_own_role: 不能修改自己的角色
+  cannot_modify_own_status: 不能修改自己的账户状态
+  cannot_demote_last_admin: 不能移除最后一个管理员的用户管理权限
+  not_deactivated_cannot_restore: 用户未注销，无法恢复
+  already_deactivated_cannot_restore: 账户未注销，无需恢复
+  past_cooling_period: 已过冷静期，无法恢复，请联系客服
+  restore_requires_support: 该账户需联系客服恢复
+  invalid_verification_method: 验证方式无效
+  select_verification_method: 请选择一种验证方式
+  username_change_limit: 用户名一月内只能修改3次
+  email_required: 邮箱验证已启用，邮箱为必填项
+  email_exists: 邮箱已存在
+  username_exists: 用户名已存在
+  phone_exists: 手机号已存在
+  default_role_not_found: 默认角色不存在，请联系管理员
+  project_owner_role_not_found: PROJECT_OWNER 角色不存在
+  not_project_member: 您不是该项目的成员
+  create_failed: 用户创建失败
+  default_role_missing: 默认角色不存在
+  no_password_set: 该账户未设置密码
+  no_phone_bound: 该账户未绑定手机
+  no_email_bound: 该账户未绑定邮箱
+  verification_failed: 验证条件不满足
+  password_incorrect_verify: 密码不正确
+  verification_code_incorrect: 验证码不正确
+  email_code_incorrect_or_expired: 邮箱验证码不正确或已过期
+  verification_failed_generic: 验证失败
+  verification_failed_default: 验证失败
+  no_password_choose_other: 该账户未设置密码，请选择其他验证方式
+  no_phone_choose_other: 该账户未绑定手机，请选择其他验证方式
+  no_email_choose_other: 该账户未绑定邮箱，请选择其他验证方式
+  no_wechat_choose_other: 该账户未绑定微信，请选择其他验证方式
+  wechat_verification_failed: 微信验证失败
+  avatar_required: 请上传头像文件
+  avatar_not_found: 头像文件不存在
 project:
-  not_found: "项目不存在"
-  transfer_out_disabled: "该项目的跨项目转移策略不允许此操作"
-  transfer_in_disabled: "目标项目的跨项目转移策略不允许此操作"
-  already_exists: "已存在同名项目，请使用其他名称"
-
+  not_found: 项目不存在
+  transfer_out_disabled: 该项目的跨项目转移策略不允许此操作
+  transfer_in_disabled: 目标项目的跨项目转移策略不允许此操作
+  already_exists: 已存在同名项目，请使用其他名称
 project_member:
-  no_permission_add: "无权限添加项目成员"
-  private_space_no_add: "私人空间不支持添加成员操作"
-  user_not_found: "用户不存在"
-  role_not_found: "角色不存在"
-  already_member: "用户已经是项目成员"
-  no_permission_update_role: "无权限修改成员角色"
-  private_space_no_update: "私人空间不支持更新成员操作"
-  cannot_modify_owner_role: "不能修改项目所有者的角色"
-  cannot_assign_owner_role: "不能直接设置为项目所有者，请使用转让功能"
-  member_not_found: "成员不存在"
-  no_permission_remove: "无权限移除项目成员"
-  private_space_no_remove: "私人空间不支持移除成员操作"
-  cannot_remove_owner: "不能移除项目所有者"
-  private_space_no_transfer: "私人空间不支持转让操作"
-  only_owner_can_transfer: "只有项目所有者可以转让项目"
-  cannot_remove_admin: "只有项目所有者可以移除管理员"
-  cannot_modify_admin_role: "只有项目所有者可以修改管理员的角色"
-  cannot_modify_self_role: "不能修改自己的角色"
-  cannot_remove_self: "不能移除自己"
-  only_owner_can_delete: "只有项目所有者可以删除项目"
-  cannot_transfer_to_self: "不能转让给自己"
-  transfer_target_must_be_member: "转让目标必须是项目成员"
-  owner_role_not_found: "项目所有者角色不存在"
-  roles_missing: "PROJECT_ADMIN 和 PROJECT_MEMBER 角色均不存在，请检查系统初始化"
-  private_space_no_batch_add: "私人空间不支持批量添加成员操作"
-  private_space_no_batch_update: "私人空间不支持批量更新成员操作"
-
+  no_permission_add: 无权限添加项目成员
+  private_space_no_add: 私人空间不支持添加成员操作
+  user_not_found: 用户不存在
+  role_not_found: 角色不存在
+  already_member: 用户已经是项目成员
+  no_permission_update_role: 无权限修改成员角色
+  private_space_no_update: 私人空间不支持更新成员操作
+  cannot_modify_owner_role: 不能修改项目所有者的角色
+  cannot_assign_owner_role: 不能直接设置为项目所有者，请使用转让功能
+  member_not_found: 成员不存在
+  no_permission_remove: 无权限移除项目成员
+  private_space_no_remove: 私人空间不支持移除成员操作
+  cannot_remove_owner: 不能移除项目所有者
+  private_space_no_transfer: 私人空间不支持转让操作
+  only_owner_can_transfer: 只有项目所有者可以转让项目
+  cannot_remove_admin: 只有项目所有者可以移除管理员
+  cannot_modify_admin_role: 只有项目所有者可以修改管理员的角色
+  cannot_modify_self_role: 不能修改自己的角色
+  cannot_remove_self: 不能移除自己
+  only_owner_can_delete: 只有项目所有者可以删除项目
+  cannot_transfer_to_self: 不能转让给自己
+  transfer_target_must_be_member: 转让目标必须是项目成员
+  owner_role_not_found: 项目所有者角色不存在
+  roles_missing: PROJECT_ADMIN 和 PROJECT_MEMBER 角色均不存在，请检查系统初始化
+  private_space_no_batch_add: 私人空间不支持批量添加成员操作
+  private_space_no_batch_update: 私人空间不支持批量更新成员操作
 file:
-  not_found: "文件不存在"
-  parent_not_found: "父节点不存在"
-  target_parent_not_found: "目标父节点不存在"
-  parent_must_not_be_file: "父节点不能是文件"
-  root_not_found: "未找到根节点"
-  name_empty: "文件名不能为空"
-  name_invalid: "无效的文件名"
-  name_too_long: "文件名过长"
-  name_dot_only: "文件名不能仅为点号"
-  name_sanitize_failed: "文件名清理失败"
-  name_sanitize_contains_path: "清理后的文件名仍包含路径字符"
-  name_sanitize_starts_with_dot: "清理后的文件名不能以点开头"
-  name_sanitize_has_spaces: "清理后的文件名包含前导或尾随空格"
-  name_windows_reserved: "Windows 保留文件名"
-  name_dangerous_chars: "文件名包含危险字符"
-  name_sanitized_empty: "清理后的文件名为空"
-  path_empty: "路径不能为空"
-  path_illegal_chars: "路径包含非法字符"
-  path_out_of_bounds: "路径不在允许的目录内"
-  extension_forbidden: "禁止上传 {extension} 类型文件"
-  magic_number_failed: "文件魔数验证失败"
-  dwg_too_small: "DWG 文件太小，可能已损坏"
-  dxf_missing_marker: "DXF 文件缺少必需的 DXF 标记，可能已损坏"
-  no_access: "没有文件访问权限"
-  already_modified: "文件已被他人修改，请刷新后重试"
-  conversion_incomplete: "文件尚未转换完成"
-  conversion_failed: "文件转换失败"
-  format_unsupported: "不支持的文件格式"
-  count_exceeded: "文件数量超过限制"
-  download_failed: "文件下载失败"
-  upload_failed: "文件上传失败"
-  upload_missing: "缺少上传文件"
-  upload_file_not_found: "上传文件不存在"
-  missing_required_params: "缺少必要参数"
-  missing_file: "缺少文件"
-  submit_success: "提交成功"
-  version_history_not_found: "历史版本目录不存在"
-  history_file_not_found: "历史版本原始文件不存在"
-  file_stream_error: "文件流错误"
-  access_failed: "访问文件失败"
-  fetch_failed: "获取文件失败"
-  directory_not_exist: "目录深度超过限制"
-  total_size_exceeded: "压缩包总大小超过限制"
-  private_space_no_delete: "私人空间不支持删除操作"
-  node_not_deleted: "节点未被删除，无需恢复"
-  parent_deleted: "父节点已被删除，无法恢复"
-  no_repo_access: "没有访问该资源库的权限"
-  no_personal_space_access: "您没有权限访问该个人空间"
-  no_target_parent_access: "没有访问目标父节点的权限"
-  recycle_bin_not_found: "回收站中不存在该项目"
-  cannot_move_root: "不能移动根节点"
-  parent_must_be_folder_or_root: "目标父节点必须是文件夹或项目根目录"
-  cannot_move_to_self: "不能将节点移动到自身"
-  cannot_move_to_descendant: "不能将文件夹移动到其自身内部"
-  cannot_copy_root: "不能拷贝根节点"
-  cannot_copy_to_self: "不能将节点拷贝到自身"
-  cannot_copy_to_descendant: "不能将文件夹复制到其自身内部"
-  copy_physical_failed: "文件复制失败：存储目录复制未成功，请稍后重试"
-  cannot_move_out_of_library: "不能从资源库移出文件"
-  source_not_found: "源节点不存在"
-  project_not_found_in_recycle: "未找到要恢复的项目"
-  delete_item_not_found: "未找到要删除的项目"
-  search_missing_project_id: "搜索项目文件时必须提供 projectId"
-  mxweb_not_found: "MXWEB 文件不存在，请确认文件已转换完成"
-  external_ref_not_found: "外部参照文件不存在"
-  node_is_folder_not_file: "该节点是文件夹，不是文件"
-  external_ref_invalid: "无效的外部参照文件"
-  name_contains_illegal_chars: "文件名包含非法字符"
-  size_exceeded_limit: "文件大小超出限制（最大 {limit}MB）"
-  file_size_unavailable: "无法读取文件大小，操作已取消"
-
+  not_found: 文件不存在
+  parent_not_found: 父节点不存在
+  target_parent_not_found: 目标父节点不存在
+  parent_must_not_be_file: 父节点不能是文件
+  root_not_found: 未找到根节点
+  name_empty: 文件名不能为空
+  name_invalid: 无效的文件名
+  name_too_long: 文件名过长
+  name_dot_only: 文件名不能仅为点号
+  name_sanitize_failed: 文件名清理失败
+  name_sanitize_contains_path: 清理后的文件名仍包含路径字符
+  name_sanitize_starts_with_dot: 清理后的文件名不能以点开头
+  name_sanitize_has_spaces: 清理后的文件名包含前导或尾随空格
+  name_windows_reserved: Windows 保留文件名
+  name_dangerous_chars: 文件名包含危险字符
+  name_sanitized_empty: 清理后的文件名为空
+  path_empty: 路径不能为空
+  path_illegal_chars: 路径包含非法字符
+  path_out_of_bounds: 路径不在允许的目录内
+  extension_forbidden: 禁止上传 {extension} 类型文件
+  magic_number_failed: 文件魔数验证失败
+  dwg_too_small: DWG 文件太小，可能已损坏
+  dxf_missing_marker: DXF 文件缺少必需的 DXF 标记，可能已损坏
+  no_access: 没有文件访问权限
+  already_modified: 文件已被他人修改，请刷新后重试
+  conversion_incomplete: 文件尚未转换完成
+  conversion_failed: 文件转换失败
+  count_exceeded: 文件数量超过限制
+  download_failed: 文件下载失败
+  upload_missing: 缺少上传文件
+  missing_required_params: 缺少必要参数
+  missing_file: 缺少文件
+  version_history_not_found: 历史版本目录不存在
+  history_file_not_found: 历史版本原始文件不存在
+  file_stream_error: 文件流错误
+  access_failed: 访问文件失败
+  fetch_failed: 获取文件失败
+  directory_not_exist: 目录深度超过限制
+  total_size_exceeded: 压缩包总大小超过限制
+  private_space_no_delete: 私人空间不支持删除操作
+  node_not_deleted: 节点未被删除，无需恢复
+  parent_deleted: 父节点已被删除，无法恢复
+  no_repo_access: 没有访问该资源库的权限
+  no_personal_space_access: 您没有权限访问该个人空间
+  no_target_parent_access: 没有访问目标父节点的权限
+  recycle_bin_not_found: 回收站中不存在该项目
+  cannot_move_root: 不能移动根节点
+  parent_must_be_folder_or_root: 目标父节点必须是文件夹或项目根目录
+  cannot_move_to_self: 不能将节点移动到自身
+  cannot_move_to_descendant: 不能将文件夹移动到其自身内部
+  cannot_copy_root: 不能拷贝根节点
+  cannot_copy_to_self: 不能将节点拷贝到自身
+  cannot_copy_to_descendant: 不能将文件夹复制到其自身内部
+  copy_physical_failed: 文件复制失败：存储目录复制未成功，请稍后重试
+  cannot_move_out_of_library: 不能从资源库移出文件
+  source_not_found: 源节点不存在
+  project_not_found_in_recycle: 未找到要恢复的项目
+  delete_item_not_found: 未找到要删除的项目
+  search_missing_project_id: 搜索项目文件时必须提供 projectId
+  mxweb_not_found: MXWEB 文件不存在，请确认文件已转换完成
+  external_ref_not_found: 外部参照文件不存在
+  node_is_folder_not_file: 该节点是文件夹，不是文件
+  external_ref_invalid: 无效的外部参照文件
+  name_contains_illegal_chars: 文件名包含非法字符
+  size_exceeded_limit: 文件大小超出限制（最大 {limit}MB）
+  file_size_unavailable: 无法读取文件大小，操作已取消
 node:
-  not_found: "节点不存在"
-
+  not_found: 节点不存在
 role:
-  not_found: "角色不存在"
-  system_cannot_delete: "系统角色不允许删除"
-  system_default_cannot_modify_name: "无法修改系统默认角色的名称"
-  owner_role_cannot_delete: "项目所有者使用的角色不可删除"
-  owner_template_cannot_delete: "项目所有者模板不可删除"
-  template_in_use_cannot_delete: "该模板仍被项目成员引用，无法删除"
-  project_not_found: "项目角色不存在"
-  update_failed: "更新项目角色失败"
-  delete_failed: "删除项目角色失败"
-  fetch_detail_failed: "获取项目角色详情失败"
-  fetch_permissions_failed: "获取角色权限失败"
-  remove_permissions_failed: "移除角色权限失败"
-  update_permissions_failed: "更新角色权限失败"
-
+  not_found: 角色不存在
+  system_cannot_delete: 系统角色不允许删除
+  system_default_cannot_modify_name: 无法修改系统默认角色的名称
+  owner_role_cannot_delete: 项目所有者使用的角色不可删除
+  owner_template_cannot_delete: 项目所有者模板不可删除
+  template_in_use_cannot_delete: 该模板仍被项目成员引用，无法删除
+  project_not_found: 项目角色不存在
+  update_failed: 更新项目角色失败
+  delete_failed: 删除项目角色失败
+  fetch_detail_failed: 获取项目角色详情失败
+  fetch_permissions_failed: 获取角色权限失败
+  remove_permissions_failed: 移除角色权限失败
+  update_permissions_failed: 更新角色权限失败
 share:
-  not_found: "分享链接不存在"
-  revoked: "分享链接已撤销"
-  expired: "分享链接已过期"
-  file_not_found: "分享的文件不存在"
-  file_deleted: "文件已被删除"
-  only_creator_can_revoke: "只有创建者可以撤销分享"
-  token_mismatch: "分享令牌与请求的文件不匹配"
-  only_creator_can_modify: "只有创建者可以修改分享设置"
-
+  not_found: 分享链接不存在
+  revoked: 分享链接已撤销
+  expired: 分享链接已过期
+  file_not_found: 分享的文件不存在
+  file_deleted: 文件已被删除
+  only_creator_can_revoke: 只有创建者可以撤销分享
+  token_mismatch: 分享令牌与请求的文件不匹配
+  only_creator_can_modify: 只有创建者可以修改分享设置
 public_file:
-  missing_source_hash: "缺少源图纸哈希值"
-  missing_ref_filename: "缺少外部参照文件名"
-  type_unsupported: "不支持的文件类型"
-  source_path_invalid: "无效的源路径"
-  file_not_found: "文件不存在"
-  file_not_found_or_deleted: "文件不存在或已被删除"
-  no_file_uploaded: "未上传文件"
-  only_supported_types: "仅支持 ... 文件"
-  missing_file_hash: "缺少文件哈希值"
-  conversion_failed: "文件转换失败"
-  read_failed: "读取文件失败"
-
+  missing_source_hash: 缺少源图纸哈希值
+  missing_ref_filename: 缺少外部参照文件名
+  type_unsupported: 不支持的文件类型
+  source_path_invalid: 无效的源路径
+  file_not_found_or_deleted: 文件不存在或已被删除
+  no_file_uploaded: 未上传文件
+  only_supported_types: 仅支持 ... 文件
+  missing_file_hash: 缺少文件哈希值
+  read_failed: 读取文件失败
 storage:
-  path_invalid: "无效的路径"
-  absolute_path_not_allowed: "不允许使用绝对路径"
-  path_too_long: "路径过长"
-  path_out_of_bounds: "路径超出允许的范围"
-
+  path_invalid: 无效的路径
+  absolute_path_not_allowed: 不允许使用绝对路径
+  path_too_long: 路径过长
+  path_out_of_bounds: 路径超出允许的范围
 database:
-  unique_constraint: "字段 {fields} 已存在"
-  foreign_key_constraint: "数据关联错误，请检查关联数据是否存在"
-  constraint_failed: "数据库约束校验失败"
-
+  unique_constraint: 字段 {fields} 已存在
+  foreign_key_constraint: 数据关联错误，请检查关联数据是否存在
+  constraint_failed: 数据库约束校验失败
 rate_limit:
-  too_many_requests: "请求过于频繁，请稍后再试"
-  account_locked: "账号因多次登录失败已被临时锁定，请 {minutes} 分钟后再试"
-
+  too_many_requests: 请求过于频繁，请稍后再试
+  account_locked: 账号因多次登录失败已被临时锁定，请 {minutes} 分钟后再试
 password_policy:
-  too_short: "密码长度至少 {min} 位"
-  complexity: "密码需包含大小写字母、数字、特殊字符中至少 {min} 类"
-  weak: "密码过于简单（命中常见弱密码），请更换为更复杂的密码"
-
+  too_short: 密码长度至少 {min} 位
+  complexity: 密码需包含大小写字母、数字、特殊字符中至少 {min} 类
+  weak: 密码过于简单（命中常见弱密码），请更换为更复杂的密码
 ip_blacklist:
-  invalid_ip: "无效的 IP 或 CIDR 格式"
-  duplicate_entry: "该 IP/CIDR 已在黑名单中"
-  blocked: "访问被拒绝"
-  not_found: "黑名单条目不存在"
-
+  invalid_ip: 无效的 IP 或 CIDR 格式
+  duplicate_entry: 该 IP/CIDR 已在黑名单中
+  blocked: 访问被拒绝
+  not_found: 黑名单条目不存在
 ip_whitelist:
-  invalid_ip: "无效的 IP 或 CIDR 格式"
-  duplicate_entry: "该 IP/CIDR 已在白名单中"
-  not_found: "白名单条目不存在"
-  file_entry_immutable: "本地文件条目请在服务器上直接编辑白名单文件移除"
-
+  invalid_ip: 无效的 IP 或 CIDR 格式
+  duplicate_entry: 该 IP/CIDR 已在白名单中
+  not_found: 白名单条目不存在
+  file_entry_immutable: 本地文件条目请在服务器上直接编辑白名单文件移除
 admin_auth:
-  ip_not_allowed: "当前 IP 不在管理员白名单中，禁止登录"
-  ip_blocked: "当前 IP 已被加入黑名单，禁止登录"
-
+  ip_not_allowed: 当前 IP 不在管理员白名单中，禁止登录
+  ip_blocked: 当前 IP 已被加入黑名单，禁止登录
 mfa:
-  required: "请输入双因素认证动态码"
-  code_invalid: "双因素认证动态码错误，请重试"
-  setup_required: "请先完成 TOTP 双因素认证绑定"
-  already_enabled: "TOTP 已启用，无需重复绑定"
-
+  required: 请输入双因素认证动态码
+  code_invalid: 双因素认证动态码错误，请重试
+  setup_required: 请先完成 TOTP 双因素认证绑定
+  already_enabled: TOTP 已启用，无需重复绑定
 resource:
-  not_found: "请求的资源不存在"
-  missing_project_id: "缺少项目ID参数"
-
+  not_found: 请求的资源不存在
+  missing_project_id: 缺少项目ID参数
 mxcad:
   missing_params_hash_name_size: "缺少必要参数: hash, name 或 size"
   missing_params_chunks: "缺少必要参数: chunks"
-  save_to_project_requires_project_id: "保存到项目时必须提供projectId"
-  save_to_library_requires_library_type: "保存到资源库时必须提供libraryType"
-  target_folder_not_found: "目标文件夹不存在"
-  target_must_be_folder: "目标必须是文件夹"
-  no_permission_save_to_location: "您没有权限保存到此位置"
-  no_permission_library_management: "您没有资源库管理权限"
-  no_permission_save_to_project: "您没有权限保存到此项目"
-  refresh_success: "刷新成功"
-  history_file_conversion_failed: "历史版本文件转换失败"
-  copy_image_failed: "图片文件拷贝失败"
-  fetch_history_failed: "获取历史版本文件失败"
-  no_access_drawing: "无权限访问该图纸"
-  path_invalid: "无效的文件路径"
-  permission_verification_failed: "权限验证失败"
-
+  save_to_project_requires_project_id: 保存到项目时必须提供projectId
+  save_to_library_requires_library_type: 保存到资源库时必须提供libraryType
+  target_folder_not_found: 目标文件夹不存在
+  target_must_be_folder: 目标必须是文件夹
+  no_permission_save_to_location: 您没有权限保存到此位置
+  no_permission_library_management: 您没有资源库管理权限
+  no_permission_save_to_project: 您没有权限保存到此项目
+  history_file_conversion_failed: 历史版本文件转换失败
+  copy_image_failed: 图片文件拷贝失败
+  fetch_history_failed: 获取历史版本文件失败
+  no_access_drawing: 无权限访问该图纸
+  path_invalid: 无效的文件路径
+  permission_verification_failed: 权限验证失败
+  cache_refresh_success: 缓存刷新成功
 version_control:
-  mx_not_initialized: "MX 未初始化"
-  submit_success: "提交成功"
-  no_files_to_commit: "没有文件需要提交"
-  fetch_success: "获取成功"
+  mx_not_initialized: MX 未初始化
+  no_files_to_commit: 没有文件需要提交
   fetch_failed_content_empty: "获取失败: 文件内容为空"
-  initial_version: "初始"
-
+  initial_version: 初始
 cache:
-  user_not_found: "用户不存在"
-  capacity_must_be_positive: "容量必须大于 0"
-
+  capacity_must_be_positive: 容量必须大于 0
 audit:
-  log_not_found: "审计日志 ID 不存在"
-
+  log_not_found: 审计日志 ID 不存在
 font:
-  fetch_failed: "获取字体列表失败"
-  no_file: "未提供文件"
-  cannot_create_directory: "无法创建字体目录"
-
+  fetch_failed: 获取字体列表失败
+  no_file: 未提供文件
+  cannot_create_directory: 无法创建字体目录
 billing:
-  order_already_refunded: "订单已被退款或状态已变更，请刷新后重试"
-  refund_failed_state_restored: "退款请求发送失败，订单状态已恢复"
-  downgrade_not_allowed: "不能降级购买，请选择升级或续费当前等级"
-  amount_below_minimum: "订单金额低于支付网关最低限额，请检查档位价格配置"
-  refund_apply_not_allowed: "当前订单状态不允许申请退款"
-  refund_apply_already_pending: "该订单已有待审核的退款申请"
-  refund_application_not_found: "退款申请不存在"
-  refund_application_not_pending: "该退款申请已处理，请刷新后重试"
-
+  order_already_refunded: 订单已被退款或状态已变更，请刷新后重试
+  refund_failed_state_restored: 退款请求发送失败，订单状态已恢复
+  downgrade_not_allowed: 不能降级购买，请选择升级或续费当前等级
+  amount_below_minimum: 订单金额低于支付网关最低限额，请检查档位价格配置
+  refund_apply_not_allowed: 当前订单状态不允许申请退款
+  refund_apply_already_pending: 该订单已有待审核的退款申请
+  refund_application_not_found: 退款申请不存在
+  refund_application_not_pending: 该退款申请已处理，请刷新后重试
 quota:
-  max_projects_exceeded: "项目数量已达上限（当前 {current} 个，上限 {limit} 个），无法执行此操作"
-  project_size_exceeded: "项目体积超出限额（{limit}MB），无法执行此操作"
-  personal_storage_exceeded: "个人空间超出限额（{limit}MB），无法执行此操作"
-  conversion_frequency_exceeded: "图纸转换过于频繁，每 {hours} 小时最多可转换 {count} 次，请稍后再试"
-  save_frequency_exceeded: "图纸保存过于频繁，每 {hours} 小时最多可保存 {count} 次，请稍后再试"
-  history_frequency_exceeded: "历史版本查看过于频繁，每 {hours} 小时最多可查看 {count} 次，请稍后再试"
-  export_download_vip_only: "导出下载为会员专属功能，开通 VIP 后即可使用"
-
+  max_projects_exceeded: 项目数量已达上限（当前 {current} 个，上限 {limit} 个），无法执行此操作
+  project_size_exceeded: 项目体积超出限额（{limit}MB），无法执行此操作
+  personal_storage_exceeded: 个人空间超出限额（{limit}MB），无法执行此操作
+  conversion_frequency_exceeded: 图纸转换过于频繁，每 {hours} 小时最多可转换 {count} 次，请稍后再试
+  save_frequency_exceeded: 图纸保存过于频繁，每 {hours} 小时最多可保存 {count} 次，请稍后再试
+  history_frequency_exceeded: 历史版本查看过于频繁，每 {hours} 小时最多可查看 {count} 次，请稍后再试
+  export_download_vip_only: 导出下载为会员专属功能，开通 VIP 后即可使用
 library:
-  not_found: "公共资源库（{libraryType}）不存在，请先初始化"
-
+  not_found: 公共资源库（{libraryType}）不存在，请先初始化
 personal_space:
-  not_found: "个人空间不存在"
-  project_id_or_user_id_required: "请指定项目 ID 或用户 ID"
-  path_parse_not_found: "路径解析结果不存在"
-
+  not_found: 个人空间不存在
+  project_id_or_user_id_required: 请指定项目 ID 或用户 ID
+  path_parse_not_found: 路径解析结果不存在
 validation:
-  failed: "请求参数验证失败"
-
+  failed: 请求参数验证失败
 general:
-  internal_server_error: "服务器内部错误"
-
+  internal_server_error: 服务器内部错误
 file_extra:
-  cannot_create_subfolder_in_file: "不能在文件下创建子文件夹"
+  cannot_create_subfolder_in_file: 不能在文件下创建子文件夹
   sort_unsupported: "不支持的排序字段: {field}"
   search_scope_unsupported: "不支持的搜索范围: {scope}"
-  path_not_exist: "文件路径不存在"
-  project_not_exist_or_deleted: "项目不存在或已被删除"
-  node_not_exist_or_no_parent: "节点不存在或没有父节点"
-  missing_permission_param: "缺少 permission 参数"
+  path_not_exist: 文件路径不存在
+  project_not_exist_or_deleted: 项目不存在或已被删除
+  node_not_exist_or_no_parent: 节点不存在或没有父节点
+  missing_permission_param: 缺少 permission 参数
   conversion_failed_detail: "文件转换失败: {error}"
   download_format_unsupported_detail: "不支持的下载格式: {format}"
   size_exceeded_with_name: "文件大小超过限制: {name}"
-  filename_starts_with_dot: "文件名不能以点开头"
-  missing_file_or_hash: "缺少文件或文件 hash"
+  filename_starts_with_dot: 文件名不能以点开头
+  missing_file_or_hash: 缺少文件或文件 hash
   file_not_exist_detail: "文件不存在: {key}"
   path_is_directory_not_file: "路径是目录而非文件: {key}"
-  file_node_not_exist: "文件节点不存在"
+  file_node_not_exist: 文件节点不存在
   converted_file_not_exist: "转换后的文件不存在: {path}"
   file_not_exist_by_hash: "文件不存在: {hash}"
-
 auth_extra:
-  wechat_login_disabled: "微信登录功能未启用"
-  temp_token_invalid: "临时令牌无效或已过期，请重新登录"
-  invalid_token_type: "无效的令牌类型"
-  phone_registration_disabled: "手机号注册未启用，请使用邮箱注册"
-  account_suspended: "账号已被暂停使用"
-  account_not_activated: "账号尚未激活"
-  account_status_abnormal: "账号状态异常"
-  user_not_logged_in: "用户未登录"
-  user_account_disabled: "用户账号已被禁用"
-  registration_info_expired: "注册信息已过期，请重新注册"
-  send_too_frequent_with_ttl: "发送过于频繁，请{ttl}秒后再试"
-
+  wechat_login_disabled: 微信登录功能未启用
+  temp_token_invalid: 临时令牌无效或已过期，请重新登录
+  invalid_token_type: 无效的令牌类型
+  phone_registration_disabled: 手机号注册未启用，请使用邮箱注册
+  account_suspended: 账号已被暂停使用
+  account_not_activated: 账号尚未激活
+  account_status_abnormal: 账号状态异常
+  user_not_logged_in: 用户未登录
+  user_account_disabled: 用户账号已被禁用
+  registration_info_expired: 注册信息已过期，请重新注册
+  send_too_frequent_with_ttl: 发送过于频繁，请{ttl}秒后再试
 role_extra:
   create_system_default_failed: "创建系统默认角色失败: {error}"
   create_project_role_failed_detail: "创建项目角色失败: {error}"
-  fetch_project_role_failed: "获取项目角色失败"
-  fetch_project_role_list_failed: "获取项目角色列表失败"
-  fetch_system_project_roles_failed: "获取系统项目角色失败"
+  fetch_project_role_failed: 获取项目角色失败
+  fetch_project_role_list_failed: 获取项目角色列表失败
+  fetch_system_project_roles_failed: 获取系统项目角色失败
   assign_permissions_failed_detail: "分配角色权限失败: {error}"
-  not_found_by_id: "角色 ID {id} 不存在"
-
+  not_found_by_id: 角色 ID {id} 不存在
 font_extra:
   upload_failed_detail: "上传字体失败: {error}"
   delete_failed_detail: "删除字体失败: {error}"
   download_failed_detail: "下载字体失败: {error}"
-  file_not_exist_by_name: "字体文件 {name} 不存在"
-
+  file_not_exist_by_name: 字体文件 {name} 不存在
 config_extra:
   unknown_key: "未知的配置项: {key}"
   unknown_profile: "未知的安全模式: {profile}"
-  missing_operator: "缺少操作者标识，无法记录修改来源"
-  empty_profile: "当前没有任何配置项声明了安全模式取值，无法应用配置档"
+  missing_operator: 缺少操作者标识，无法记录修改来源
+  empty_profile: 当前没有任何配置项声明了安全模式取值，无法应用配置档
   invalid_profile_target: "配置档目标取值无效: {keys}"
-  dependency_not_met: "无法开启 {key}：依赖项 {deps} 未开启，请先开启"
-  dependency_in_use: "无法关闭 {key}：仍被 {dependents} 依赖，请先关闭它们"
-  dependency_violation: "无法应用安全模式 {profile}：{edges}"
-  channel_gate_not_met: "无法开启 {key}（{channel} 通道）：{reasons}"
-  channel_not_registered: "通道 {channel} 未注册"
-
+  dependency_not_met: 无法开启 {key}：依赖项 {deps} 未开启，请先开启
+  dependency_in_use: 无法关闭 {key}：仍被 {dependents} 依赖，请先关闭它们
+  dependency_violation: 无法应用安全模式 {profile}：{edges}
+  channel_gate_not_met: 无法开启 {key}（{channel} 通道）：{reasons}
+  channel_not_registered: 通道 {channel} 未注册
 sms_extra:
-  network_limit: "当前网络发送次数已达上限，请稍后再试"
-  send_failed_retry: "发送失败，请稍后重试"
-
+  network_limit: 当前网络发送次数已达上限，请稍后再试
+  send_failed_retry: 发送失败，请稍后重试
 storage_extra:
   directory_not_exist_param: "存储目录不存在: {path}"
   directory_not_writable: "存储目录不可写: {path}"
   unavailable: "存储服务不可用: {error}"
-  service_error: "存储服务异常"
-
+  service_error: 存储服务异常
 database_extra:
-  connection_error: "数据库连接异常"
-  connection_failed: "数据库连接失败"
-
+  connection_error: 数据库连接异常
+  connection_failed: 数据库连接失败
 file_extra_v2:
-  file_not_found_or_no_path: "文件不存在或没有 path"
-  read_failed: "文件读取失败"
-  read_thumbnail_failed: "读取缩略图失败"
-
+  file_not_found_or_no_path: 文件不存在或没有 path
+  read_failed: 文件读取失败
+  read_thumbnail_failed: 读取缩略图失败
+  upload_failed_detail: "所有文件上传失败: {detail}"
 mxcad_extra:
-  drawing_not_found: "图纸文件不存在"
+  drawing_not_found: 图纸文件不存在
   history_conversion_failed_detail: "历史版本文件转换失败: {error}"
-  only_allowed_types: "仅支持 {types} 文件"
-  only_allowed_mime_type: "仅支持 {type} 类型的文件"
+  only_allowed_types: 仅支持 {types} 文件
+  only_allowed_mime_type: 仅支持 {type} 类型的文件
   format_unsupported_mxweb: "不支持的文件格式: {ext}，仅支持 .mxweb 文件"
   save_failed_detail: "保存失败: {error}"
   upload_file_not_found_detail: "上传文件不存在: {hash}"
-
 version_control_extra:
   submit_failed_detail: "提交失败: {error}"
   delete_failed_detail: "删除失败: {error}"
   fetch_failed_detail: "获取失败: {error}"
-
 vip:
-  tier_not_found: "VIP 等级不存在"
-  config_must_be_number: "配置项 {key} 必须是数字"
-  config_must_be_boolean: "配置项 {key} 必须是布尔值"
-  free_tier_cannot_create: "level 0 为系统默认等级，不可创建"
-  free_tier_locked: "系统默认等级仅可调整权益配置，名称/价格/上下架状态不可修改"
-  free_tier_cannot_deactivate: "系统默认等级不可下架"
-  free_tier_cannot_remove: "系统默认等级不可删除"
-  expires_at_required: "有效会员必须设置到期时间"
-
+  tier_not_found: VIP 等级不存在
+  config_must_be_number: 配置项 {key} 必须是数字
+  config_must_be_boolean: 配置项 {key} 必须是布尔值
+  free_tier_cannot_create: level 0 为系统默认等级，不可创建
+  free_tier_locked: 系统默认等级仅可调整权益配置，名称/价格/上下架状态不可修改
+  free_tier_cannot_deactivate: 系统默认等级不可下架
+  free_tier_cannot_remove: 系统默认等级不可删除
+  expires_at_required: 有效会员必须设置到期时间
 batch_download:
-  disabled: "批量下载功能未开启"
+  disabled: 批量下载功能未开启
 alert:
-  not_found: "告警不存在"
+  not_found: 告警不存在
 task_run:
-  not_found: "任务不存在或未注册"
+  not_found: 任务不存在或未注册
 security:
-  brute_force_suspected: "账号 {account} 连续 {count} 次登录失败触发锁定，疑似暴力破解，已锁定 {minutes} 分钟"
+  brute_force_suspected: 账号 {account} 连续 {count} 次登录失败触发锁定，疑似暴力破解，已锁定 {minutes} 分钟
 conversion_task:
-  no_node_id: "统一提交端点仅支持节点关联的转换（open/download + nodeId）；无节点关联的转换由前端本地记录"
-  download_requires_format: "下载类型（download）必须提供目标格式（dwg/dxf/mxweb/pdf）"
-  download_requires_user: "下载类型（download）需要登录用户（用于配额占位）"
-  cancel_not_supported: "当前执行模式不支持取消（仅独立转换服务支持）"
-  not_found_or_no_access: "转换任务不存在或您没有访问权限"
-  retry_not_failed: "只有失败的转换任务可以重试"
-  node_deleted: "文件已删除，无法重试"
-
+  no_node_id: 统一提交端点仅支持节点关联的转换（open/download + nodeId）；无节点关联的转换由前端本地记录
+  download_requires_format: 下载类型（download）必须提供目标格式（dwg/dxf/mxweb/pdf）
+  download_requires_user: 下载类型（download）需要登录用户（用于配额占位）
+  cancel_not_supported: 当前执行模式不支持取消（仅独立转换服务支持）
+  not_found_or_no_access: 转换任务不存在或您没有访问权限
+  retry_not_failed: 只有失败的转换任务可以重试
+  node_deleted: 文件已删除，无法重试
 mxcad_engine_extra:
   ini_read_failed: "读取引擎配置文件失败: {path}"
   ini_parse_failed: "引擎配置文件不是有效 JSON: {path}"

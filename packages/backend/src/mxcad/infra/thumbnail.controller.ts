@@ -202,7 +202,13 @@ export class ThumbnailController {
       if (result.notFound) {
         return res
           .status(404)
-          .json({ code: -1, message: '文件不存在或没有 path' });
+          .json({
+            code: -1,
+            message:
+              I18nContext.current()?.t(
+                'error.file_extra_v2.file_not_found_or_no_path'
+              ) ?? '文件不存在或没有 path',
+          });
       }
 
       if (!result.success) {
@@ -236,3 +242,4 @@ export class ThumbnailController {
     }
   }
 }
+

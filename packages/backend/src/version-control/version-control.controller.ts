@@ -34,6 +34,7 @@ import { RequireProjectPermissionGuard } from '../common/guards/require-project-
 import { ProjectPermission } from '../common/enums/permissions.enum';
 import { RequireProjectPermission } from '../common/decorators/require-project-permission.decorator';
 import { FileUtils } from '../common/utils/file-utils';
+import { I18nContext } from 'nestjs-i18n';
 import {
   IVersionControl,
   VERSION_CONTROL_TOKEN,
@@ -146,12 +147,16 @@ export class VersionControlController {
         );
         return {
           success: false,
-          message: result.message || '获取失败: 文件内容为空',
+          message:
+            result.message ||
+              (I18nContext.current()?.t(
+                'error.version_control.fetch_failed_content_empty'
+              ) ?? '获取失败: 文件内容为空'),
         };
       }
       return {
         success: true,
-        message: '获取成功',
+        message: I18nContext.current()?.t('success.fetched') ?? '获取成功',
         content: result.content.toString('utf-8'),
       };
     } catch (error) {
@@ -209,3 +214,4 @@ export class VersionControlController {
     );
   }
 }
+
