@@ -203,7 +203,7 @@ export const CADEditorDirect: React.FC = () => {
   // 浏览器标签标题随当前文件同步：编辑器标题栏走引擎 useFileName，标签标题此前从不更新，
   // 打开/新建图纸后一直停留上一页的标题。编辑器不可见时跳过，交回当前页面。
   const currentFileName = useCADEditorStore((s) => s.currentFileName);
-  useDocumentTitle(editorDisplayName(currentFileName), !isActive);
+  useDocumentTitle(editorDisplayName(currentFileName, isAuthenticated), !isActive);
 
   // 用 ref 包装避免 effect 依赖不稳定对象导致重复执行
   const externalReferenceUploadRef = useRef(externalReferenceUpload);
@@ -363,15 +363,19 @@ export const CADEditorDirect: React.FC = () => {
         }
         // URL 由文件身份派生（唯一合成出口）：无云端节点身份的新建/本地文件不携带
         // fileId 路径段与 nodeId；back（返回地址）跨文件保留；v 归属于声明它的文件，
-        // 只有 URL 里的文件与本次打开的一致才保留，避免切换文件时串用上一张的版本号
+        // 只有 URL 里的文件与本次打开的一致才保留，避免切换文件时串用上一张的版本号。
+        // shareToken 同理：分享链接打开后若从 URL 上抹掉，刷新会改走节点鉴权接口，
+        // 游客直接被判未登录——分享链接变成一次性的。只跟随它所属的那个文件。
         const urlFileId = parseCADEditorRoute(window.location.pathname) ?? '';
+        const sameFileAsUrl = urlFileId === (openedFileId || '');
         const url = buildCadEditorUrl({
           fileId: openedFileId,
           parentId,
           libraryKey,
           fileHash,
           fileName,
-          version: urlFileId === (openedFileId || '') ? versionParam : null,
+          version: sameFileAsUrl ? versionParam : null,
+          shareToken: sameFileAsUrl ? shareTokenParam : null,
           back: getCadEditorBackUrl(),
         });
         window.history.replaceState(null, '', url);

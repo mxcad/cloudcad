@@ -312,6 +312,25 @@ describe('setEditorFileName — 同步引擎内部 _name（回归：新建/打�
     expect(() => setEditorFileName('new.dwg')).not.toThrow();
     expect(fileNameRef.value).toBe(' - new.dwg');
   });
+
+  it('剥掉 .mxweb 容器层后再写入标题与 _name（回归：导出文件名叠成 plan.dwg.mxweb.dwg）', () => {
+    // 节点名带存储容器层（`plan.dwg.mxweb`）。_name 同时是引擎导出的原始文件名，
+    // 写脏名会让导出的 DWG 叫 `plan.dwg.mxweb.dwg`，标题栏也露出内部标识。
+    setEditorFileName('plan.dwg.mxweb');
+
+    expect(fileNameRef.value).toBe(' - plan.dwg');
+    expect(setFileName).toHaveBeenCalledWith('plan.dwg');
+  });
+
+  it('多层容器后缀一次剥净；纯 mxweb 节点名只剥容器层', () => {
+    setEditorFileName('plan.dwg.mxweb.mxweb');
+    expect(fileNameRef.value).toBe(' - plan.dwg');
+    expect(setFileName).toHaveBeenLastCalledWith('plan.dwg');
+
+    setEditorFileName('plan.mxweb');
+    expect(fileNameRef.value).toBe(' - plan');
+    expect(setFileName).toHaveBeenLastCalledWith('plan');
+  });
 });
 
 describe('editorDisplayName / formatEditorFileName — 显示名与标签标题共用同一判据', () => {
@@ -335,6 +354,17 @@ describe('editorDisplayName / formatEditorFileName — 显示名与标签标题�
       workId: 9,
     });
     expect(editorDisplayName('drawing.dwg')).toBe('[协同中] - drawing.dwg');
+  });
+
+  it('剥掉 .mxweb 容器层（回归：标签标题/分享图纸名露出内部标识）', () => {
+    expect(editorDisplayName('plan.dwg.mxweb')).toBe('plan.dwg');
+    expect(editorDisplayName('plan.mxweb')).toBe('plan');
+    expect(editorDisplayName('111122 41.dwg.mxweb')).toBe('111122 41.dwg');
+    useCADEditorStore.getState().setCollaborationState({
+      isInCollaboration: true,
+      workId: 9,
+    });
+    expect(editorDisplayName('plan.dwg.mxweb')).toBe('[协同中] - plan.dwg');
   });
 
   it('formatEditorFileName 保持既有 " - 名" 形态（编辑器标题栏渲染约定）', () => {

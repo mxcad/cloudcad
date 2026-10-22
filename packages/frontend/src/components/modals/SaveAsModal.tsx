@@ -24,6 +24,8 @@ interface SaveAsModalProps {
     path: string;
     projectId?: string;
     parentId: string;
+    targetType?: 'personal' | 'project' | 'library';
+    libraryType?: 'drawing' | 'block';
   }) => void;
   sourceNodeId?: string | null;
   sourceFileHash?: string | null;
@@ -150,6 +152,8 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
           path: result.path || '',
           projectId: result.projectId,
           parentId: result.parentId || '',
+          targetType: result.targetType,
+          libraryType: result.libraryType,
         });
       } else {
         setError(result?.message || t('保存失败'));

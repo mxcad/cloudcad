@@ -53,6 +53,12 @@ export function buildCadEditorUrl(params: {
   back?: string | null;
   /** 打开某个版本时的版本号 */
   version?: string | null;
+  /**
+   * 分享访问令牌。分享链接打开后必须留在 URL 上：丢掉它刷新页面会改走
+   * 节点鉴权接口，游客直接被判未登录、分享链接等于一次性失效。
+   * 与 version 同一归属判据——只跟随声明它的那个文件，切换文件时不带。
+   */
+  shareToken?: string | null;
 }): string {
   const path = params.fileId ? `/cad-editor/${params.fileId}` : '/cad-editor';
   const search = new URLSearchParams();
@@ -68,6 +74,7 @@ export function buildCadEditorUrl(params: {
     }
   }
   if (params.version) search.set('v', params.version);
+  if (params.shareToken) search.set('shareToken', params.shareToken);
   if (params.back) search.set('back', params.back);
 
   const query = search.toString();

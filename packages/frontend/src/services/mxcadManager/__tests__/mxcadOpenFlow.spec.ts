@@ -378,6 +378,27 @@ describe('MxCADOpenFlow — reloadCurrentFile 结果码门控', () => {
     expect(fileNameValue.value).not.toContain('b.mxweb');
   });
 
+  // 回归：登录后 / 外部参照上传后的 reload 不经过 openSession，引擎把标题换成 URL
+  // 尾部的内部访问名；成功后不刷回会话里的图纸名，标题栏就一直显示内部标识
+  it('成功后按会话图纸名刷回标题（reload 不经过 openSession）', async () => {
+    useCADEditorStore.getState().setCurrentFileInfo({
+      fileId: 'current-id',
+      parentId: null,
+      projectId: 'project-current',
+      name: 'plan.dwg.mxweb',
+      personalSpaceId: null,
+    });
+    const p = flow.reloadCurrentFile();
+    await Promise.resolve();
+    await Promise.resolve();
+    fileNameValue.value = ' - b.mxweb'; // 引擎重载后写入的内部访问名
+    engine.fireOpenComplete(0);
+
+    await expect(p).resolves.toBe(true);
+    expect(fileNameValue.value).toContain('plan.dwg');
+    expect(fileNameValue.value).not.toContain('.mxweb');
+  });
+
   it('无任何完成信号（403 类）：超时兜底 resolve(false)', async () => {
     vi.useFakeTimers();
     const p = flow.reloadCurrentFile();

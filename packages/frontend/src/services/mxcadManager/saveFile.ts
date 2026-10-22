@@ -72,7 +72,13 @@ export async function saveCurrentFile(
     // ignore
   }
 
-  const isMyDrawing = personalSpaceId && fileInfo.parentId === personalSpaceId;
+  // 「我的图纸」判据：直接落在个人空间根，或位于其子文件夹（此时 parentId 是
+  // 子文件夹，但会话 projectId 仍是解析出的根 = 个人空间 ID）。只看 parentId
+  // 会让子文件夹里的图纸被判成「无归属」，再保存时又弹一次另存为。
+  const isMyDrawing =
+    !!personalSpaceId &&
+    (fileInfo.parentId === personalSpaceId ||
+      fileInfo.projectId === personalSpaceId);
   const isLibraryFile = !!fileInfo.libraryKey;
 
   if (isMyDrawing) {

@@ -35,6 +35,24 @@ export interface TransferSettings {
   transferInFromLibrary?: TransferMode | null;
 }
 
+/**
+ * 新建项目的 6 域默认转移设置——必须与 packages/db/prisma/schema.prisma
+ * FileSystemNode 六个 transfer 字段的 @default 保持一致（schema 是最终事实源，
+ * 后端创建时省略字段即回落这些默认值）。
+ * 两端「创建项目」表单转移区块的初始显示值共用此常量，避免 PC/移动端各写一份。
+ */
+export const DEFAULT_TRANSFER_SETTINGS: Record<
+  keyof TransferSettings,
+  TransferMode
+> = {
+  transferOutToProject: 'ALL',
+  transferOutToPersonalSpace: 'NONE',
+  transferOutToLibrary: 'COPY_ONLY',
+  transferInFromProject: 'ALL',
+  transferInFromPersonalSpace: 'ALL',
+  transferInFromLibrary: 'ALL',
+};
+
 /** 被拒原因枚举（文案映射留端包：PC 走 TRANSFER_BLOCK_REASONS，移动端走本端 i18n 源串） */
 export type TransferBlockReason =
   | 'SOURCE_PROJECT_FORBIDDEN'

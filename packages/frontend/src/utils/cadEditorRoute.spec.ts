@@ -128,4 +128,30 @@ describe('buildCadEditorUrl — URL 由文件身份派生（新建/本地文件�
       })
     ).toBe('/cad-editor/n1?nodeId=p1&v=3&back=%2Fprojects%2Fproject-1%2Ffiles');
   });
+
+  // 回归：分享链接打开后 URL 被重写成不含 shareToken 的形态，刷新即从分享通道
+  // 掉进节点鉴权通道（游客被判未登录），分享链接变成一次性
+  it('分享图纸 → URL 保留 shareToken，刷新后仍走分享鉴权', () => {
+    expect(
+      buildCadEditorUrl({
+        fileId: 'n1',
+        shareToken: 'tok-1',
+        back: '/projects/project-1/files',
+      })
+    ).toBe('/cad-editor/n1?shareToken=tok-1&back=%2Fprojects%2Fproject-1%2Ffiles');
+  });
+
+  it('无 shareToken（普通节点/本地文件）不写空参数', () => {
+    expect(buildCadEditorUrl({ fileId: 'n1' })).toBe('/cad-editor/n1');
+    expect(buildCadEditorUrl({ fileId: 'n1', shareToken: null })).toBe(
+      '/cad-editor/n1'
+    );
+  });
+
+  it('资源库文件与 shareToken 互斥使用：库 URL 带 library、不带 shareToken', () => {
+    // 库形式的 URL 维持既有协议（认证走请求头），调用方传 null 时不产生该参数
+    expect(
+      buildCadEditorUrl({ fileId: 'n1', libraryKey: 'drawing', shareToken: null })
+    ).toBe('/cad-editor/n1?library=drawing');
+  });
 });

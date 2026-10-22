@@ -3,6 +3,7 @@ import { useFileSystemStore } from '../../stores/fileSystemStore';
 import { isAuthenticated } from '../../utils/authCheck';
 import { isAccessTokenExpired } from '../../utils/tokenUtils';
 import { cancelLoginRedirect } from '../../config/clientSetup';
+import { stripMxwebContainer } from '@cloudcad/platform';
 import { t } from '@/languages';
 import { showGlobalLoading, hideGlobalLoading } from '../loadingService';
 import { handleError } from '@/utils/errorHandler';
@@ -40,17 +41,38 @@ export function isEmptyDocumentName(name: string | null | undefined): boolean {
   return !!name && EMPTY_DOCUMENT_NAMES.includes(name);
 }
 
-/** 编辑器当前文件标识（含 [协同中]/[未登录] 前缀）；无文件/默认空模板返回 '' */
-export function editorDisplayName(fileName: string | null): string {
+/**
+ * 给用户看的图纸名：剥掉存储容器扩展名 `.mxweb`（可叠多层），保留 `.dwg`/`.dxf`。
+ *
+ * 云端节点名会把容器层一起带出来（`计划.dwg.mxweb`），直接显示就是内部标识；
+ * 引擎还会在导出时拿它当原始名再叠一层。空模板名不在此归一——它由
+ * isEmptyDocumentName 单独识别。
+ */
+function toDisplayFileName(fileName: string): string {
+  if (isEmptyDocumentName(fileName)) return fileName;
+  return stripMxwebContainer(fileName) || fileName;
+}
+
+/**
+ * 编辑器当前文件标识（含 [协同中]/[未登录] 前缀）；无文件/默认空模板返回 ''。
+ * authenticated 由 React 调用方传入时可让标题响应登录态变化（跨标签页登录后
+ * [未登录] 前缀随之消失）；不传则现读 localStorage，保持命令式调用点原语义。
+ */
+export function editorDisplayName(
+  fileName: string | null,
+  authenticated = isAuthenticated()
+): string {
   const prefixes: string[] = [];
   if (useCADEditorStore.getState().isInCollaboration) {
     prefixes.push(t('[协同中]'));
   }
-  if (!isAuthenticated()) prefixes.push(t('[未登录]'));
+  if (!authenticated) prefixes.push(t('[未登录]'));
   if (!fileName || isEmptyDocumentName(fileName)) return prefixes.join(' - ');
+  const displayName = toDisplayFileName(fileName);
+  if (!displayName) return prefixes.join(' - ');
   return prefixes.length === 0
-    ? fileName
-    : `${prefixes.join(' - ')} - ${fileName}`;
+    ? displayName
+    : `${prefixes.join(' - ')} - ${displayName}`;
 }
 
 export function formatEditorFileName(fileName: string): string {
@@ -69,13 +91,18 @@ export function formatEditorFileName(fileName: string): string {
  * openFileComplete 时写 fileName.value = " - " + _name，而前端从未经过引擎的
  * openWebFile 包装（直接发 __openWebFile__ → mxcad.openWebFile），_name 不会
  * 自动更新。不在此同步，本函数写入的标题会被引擎立刻覆盖回上一张图纸的旧名。
+ *
+ * `_name` 同时是引擎导出时的原始文件名（openFileComplete 里写进
+ * setCurrentOriginaFileName），故这里必须写**剥掉 `.mxweb` 容器层**的显示名：
+ * 写脏名会让导出的 DWG 叫 `计划.dwg.mxweb.dwg`。
  */
 export function setEditorFileName(fileName: string): void {
   try {
     const { fileName: titleRef, setFileName } =
       globalThis.MxPluginContext.useFileName();
-    if (!isEmptyDocumentName(fileName)) setFileName?.(fileName);
-    titleRef.value = formatEditorFileName(fileName);
+    const displayName = toDisplayFileName(fileName);
+    if (!isEmptyDocumentName(displayName)) setFileName?.(displayName);
+    titleRef.value = formatEditorFileName(displayName);
   } catch (error) {
     console.error('[setEditorFileName] 刷新文件名失败:', error);
   }

@@ -70,6 +70,19 @@ export type { OpenDrawingRequest } from './openDrawing';
 
 export { openLocalFile, handleOpenFileCommand } from './mxcadOpenFile';
 
+// ==================== 意图链（ADR-0081） ====================
+
+export {
+  SHARE_CHAIN,
+  beginShareChain,
+  resumeShareChain,
+  clearShareChain,
+  hasShareChain,
+  isShareChainResumeInFlight,
+  signalShareChainCloudNodeCreated,
+} from './intentChain';
+export type { ShareChainStart } from './intentChain';
+
 // ==================== 私人空间 ID ====================
 
 export function setPersonalSpaceId(personalSpaceId: string | null) {

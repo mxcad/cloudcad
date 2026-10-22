@@ -65,23 +65,34 @@ export { membershipState } from './billing/membership';
 export type { MembershipStateInput, MembershipState } from './billing/membership';
 
 // ── 文件名规则（纯判定，文案留端包） ──
-export { checkFileName } from './files/name-rules';
+export {
+  checkFileName,
+  stripDrawingExtension,
+  stripMxwebContainer,
+} from './files/name-rules';
 
 // ── 法务文本占位符（纯替换，品牌实体映射留端包） ──
 export { resolvePlaceholders } from './legal/placeholder';
 
-// ── 密码强度评分（纯计算 0-4，标签/颜色留端包） ──
+// ── 密码强度评分（纯计算 0-4，阈值取生效策略，标签/颜色留端包） ──
 export { scorePasswordStrength } from './auth/password-strength';
 export type { PasswordStrengthScore } from './auth/password-strength';
 
-// ── 口令策略预检（长度+复杂度纯判定，弱口令黑名单留后端兜底） ──
+// ── 口令策略预检与要求清单（长度+复杂度纯判定，弱口令黑名单留后端兜底） ──
 export {
   PASSWORD_POLICY,
+  buildPasswordRequirements,
+  countPasswordCategories,
+  getPasswordClassFlags,
   validatePasswordPolicy,
 } from './auth/password-policy';
 export type {
+  PasswordClassFlags,
+  PasswordPolicyOptions,
   PasswordPolicyReason,
   PasswordPolicyResult,
+  PasswordRequirement,
+  PasswordRequirementKey,
 } from './auth/password-policy';
 
 // ── 角色权限判定（纯判定，会话存储读取留端包） ──
@@ -112,7 +123,10 @@ export { extractApiError } from './errors/api-message';
 export type { ApiErrorDetail } from './errors/api-message';
 
 // ── 跨项目转移策略预判（纯判定，6 域矩阵 + 库-move，reason 枚举留端包映射） ──
-export { evaluateCrossProjectTransfer } from './transfer/policy';
+export {
+  evaluateCrossProjectTransfer,
+  DEFAULT_TRANSFER_SETTINGS,
+} from './transfer/policy';
 export type {
   TransferDomain,
   TransferOperation,
@@ -158,3 +172,22 @@ export type {
   ProjectRoleKey,
   PermissionDependencyGraph,
 } from './permissions/project';
+
+// ── 意图链（被前置阻塞的编辑器动作，跨登录中断可恢复；ADR-0081） ──
+// 只做「定义 → 持久化 → 前置判定」。执行顺序 / 登录闸门 / 引擎命令 / 会话回填
+// 是必绑端副作用，留在各端 adapter，不进这里。
+export {
+  PENDING_INTENT_KEY,
+  isPreconditionSatisfied,
+  firstBlockedPrecondition,
+  startPendingIntent,
+  readPendingIntent,
+  clearPendingIntent,
+  hasPendingIntent,
+} from './intentChain/chain';
+export type {
+  IntentPrecondition,
+  IntentResumeAnchor,
+  IntentDef,
+  IntentStorage,
+} from './intentChain/chain';

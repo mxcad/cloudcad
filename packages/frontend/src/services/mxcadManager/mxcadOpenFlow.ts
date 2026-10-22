@@ -6,7 +6,7 @@ import { ensureFreshAuthCookie } from '@/config/clientSetup';
 import { FILE_OPEN_RETRY_CONFIG } from './mxcadTypes';
 import type { OpenFilePayload, CurrentFileInfo } from './mxcadTypes';
 import { getCurrentFileUrl, setCurrentFileUrl } from '../drawingSession';
-import { getFileInfo, restoreEditorTitle } from './mxcadHelpers';
+import { getFileInfo, restoreEditorTitle, refreshFileName } from './mxcadHelpers';
 import type { MxCADInstanceManager } from './mxcadInstanceManager';
 import { setCurrentShareToken } from './mxcadInstanceManager';
 import { extractShareTokenFromUrl } from './mxcadHelpers';
@@ -242,7 +242,13 @@ export class MxCADOpenFlow {
       this.sendOpenWebFile({
         url: currentMxwebUrl,
         fetchAttributes: 0,
-        onSuccess: () => resolve(true),
+        onSuccess: () => {
+          // 重载不经过 openSession，引擎会把 currentFileName 换成 URL 尾部的内部
+          // 访问名、标题栏跟着脏掉（登录后重载、外部参照上传后重载都会命中）。
+          // 会话里记着真正的图纸名，重载成功后立刻刷回来。
+          refreshFileName();
+          resolve(true);
+        },
         onFail: () => {
           // reload 针对当前已打开文件，失败时恢复为当前文件标题
           restoreEditorTitle();

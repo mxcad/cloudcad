@@ -333,6 +333,19 @@ describe('createDefaultPermissionQuerier', () => {
 });
 
 describe('saveCurrentFile — 单入口判别（node / library / saveAs）', () => {
+  it('我的图纸子文件夹（parentId 是子目录、projectId 是个人空间根）→ 仍走节点保存', async () => {
+    // 回归：只看 parentId === personalSpaceId 会让个人空间子文件夹里的图纸被判
+    // 成「无归属」，再点保存又弹一次另存为——另存为到子目录后每次保存都复制一份
+    const deps = makeDeps();
+    const result = await saveCurrentFile(
+      makeFileInfo({ parentId: 'sub-folder', projectId: 'ps-1' }),
+      deps
+    );
+
+    expect(result).toEqual({ status: 'saved' });
+    expect(deps.sdk.saveMxwebToNode).toHaveBeenCalledTimes(1);
+  });
+
   it('我的图纸（parentId === personalSpaceId）→ 节点保存成功', async () => {
     const deps = makeDeps();
     const result = await saveCurrentFile(makeFileInfo(), deps);

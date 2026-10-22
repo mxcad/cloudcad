@@ -47,3 +47,53 @@ export function checkFileName(
 
   return { valid: true };
 }
+
+/** 图纸类源文件扩展名：另存为时这一层属于「格式」而不是「名字」 */
+const DRAWING_EXTENSIONS = ['.dwg', '.dxf', '.dwt'];
+/** 引擎内部容器扩展名（后端节点名会带这一层，如 `plan.dwg.mxweb`） */
+const MXWEB_EXTENSION = '.mxweb';
+
+/**
+ * 去掉图纸名尾部的「格式扩展名」，得到另存为对话框的默认基名。
+ *
+ * 节点名可能是 `plan.dwg`（上传原图）或 `plan.dwg.mxweb`（历史另存为留下的
+ * 双层扩展名），两者都必须归一到 `plan`。只剥一层会滚雪球：打开
+ * `plan.dwg.mxweb` 再另存为 DWG 会得到 `plan.dwg.dwg`、另存为 MXWEB 会继续
+ * 产出 `plan.dwg.mxweb`，一个分支都没处理干净。
+ *
+ * 只认已知扩展名：`v1.2`、`plan(final)` 这类没有格式后缀的名字原样返回，
+ * 不做「最后一个点」的猜测式截断。
+ */
+export function stripDrawingExtension(fileName: string): string {
+  let name = fileName.trim();
+  while (name.toLowerCase().endsWith(MXWEB_EXTENSION)) {
+    name = name.slice(0, -MXWEB_EXTENSION.length);
+  }
+  const lower = name.toLowerCase();
+  for (const ext of DRAWING_EXTENSIONS) {
+    if (lower.endsWith(ext)) {
+      name = name.slice(0, -ext.length);
+      break;
+    }
+  }
+  return name;
+}
+
+/**
+ * 去掉引擎内部容器扩展名 `.mxweb`（可叠多层），得到**给用户看的图纸名**。
+ *
+ * `.mxweb` 是本系统的存储容器，不是用户的图纸格式：节点名 `计划.dwg.mxweb`
+ * 在编辑器标题栏、分享页、导出文件名里都应显示为 `计划.dwg`。不清这一层，
+ * 用户看到的是内部标识，且引擎导出时会拿它当原始名再叠一层，
+ * 变成 `计划.dwg.mxweb.mxweb`。
+ *
+ * 只剥 `.mxweb`，`.dwg`/`.dxf` 等真实格式后缀保留——它们对用户是有意义的信息。
+ * 剥空（名字本身就叫 `.mxweb`）时返回空串，由调用方决定兜底文案。
+ */
+export function stripMxwebContainer(fileName: string): string {
+  let name = fileName.trim();
+  while (name.toLowerCase().endsWith(MXWEB_EXTENSION)) {
+    name = name.slice(0, -MXWEB_EXTENSION.length);
+  }
+  return name;
+}

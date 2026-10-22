@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { stripDrawingExtension } from '@cloudcad/platform';
 import { saveControllerSaveMxwebAs } from '@/api-sdk';
 import { fetchProjects } from '@/lib/projects';
 import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
@@ -30,6 +31,12 @@ interface SaveAsResult {
   path?: string;
   projectId?: string;
   parentId?: string;
+  /**
+   * 落点类型（客户端提交值回填）：后端响应不带它，但「打开新图纸」必须知道
+   * 资源库落点才能拼出 `?library=`——否则库节点会被当成普通节点去查。
+   */
+  targetType?: 'personal' | 'project' | 'library';
+  libraryType?: 'drawing' | 'block';
 }
 
 export const useSaveAs = ({
@@ -84,8 +91,10 @@ export const useSaveAs = ({
       setFormat('dwg');
       setError(null);
 
-      const baseName = currentFileName.replace(/\.[^/.]+$/, '');
-      setFileName(baseName || 'untitled');
+      // 基名归一（剥掉 .dwg/.dxf/.dwt 与 .mxweb 的任意层叠），否则打开
+      // `plan.dwg.mxweb` 的节点另存为时会默认成「plan.dwg」，提交后再叠一层
+      // 后缀得到 `plan.dwg.mxweb`——分享出去显示的名字就是这串内部标识
+      setFileName(stripDrawingExtension(currentFileName) || 'untitled');
     }
   }, [isOpen, personalSpaceId, currentFileName]);
 
@@ -121,8 +130,13 @@ export const useSaveAs = ({
         mxwebBlob,
       } = params;
 
-      // 分片上传 mxweb 到 uploads 缓存
-      const file = new File([mxwebBlob], `${fileName || 'untitled'}.mxweb`, {
+      // 分片上传 mxweb 到 uploads 缓存。
+      // 用户在输入框里可能带格式后缀（含历史双层 `plan.dwg.mxweb`），提交前统一
+      // 归一：默认名与提交名共用 platform 的同一判据，否则会滚出
+      // `plan.dwg.mxweb.dwg` 这类叠扩展名节点，分享/列表里显示的图纸名随之变脏
+      const baseName = stripDrawingExtension(fileName) || 'untitled';
+
+      const file = new File([mxwebBlob], `${baseName}.mxweb`, {
         type: mxwebBlob.type || 'application/octet-stream',
       });
       const hash = await calculateFileHash(file);
@@ -147,8 +161,8 @@ export const useSaveAs = ({
             ? { libraryType: libraryType || 'drawing' }
             : {}),
           format,
-          commitMessage: `Save as: ${fileName}.${format}`,
-          fileName: fileName.trim(),
+          commitMessage: `Save as: ${baseName}.${format}`,
+          fileName: baseName,
           ...(sourceNodeId ? { sourceNodeId } : {}),
           ...(sourceFileHash ? { sourceFileHash } : {}),
         } as never,
@@ -159,7 +173,15 @@ export const useSaveAs = ({
       }
       const saveResult: SaveAsResult = (result.data ?? {}) as SaveAsResult;
 
-      return saveResult;
+      // 后端响应只给 nodeId/fileName/path/parentId，落点类型是客户端才知道的事实。
+      // 回填给调用方，让「打开新图纸」能按库/非库拼正确的 URL（库节点必须带
+      // ?library=，否则被当成普通节点查询 → 打开失败）。
+      return {
+        ...saveResult,
+        targetType,
+        libraryType:
+          targetType === 'library' ? libraryType || 'drawing' : undefined,
+      };
     },
   });
 

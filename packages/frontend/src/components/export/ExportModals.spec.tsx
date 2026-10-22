@@ -94,6 +94,10 @@ vi.mock('mxcad', () => ({
 vi.mock('@/services/mxcadManager', () => ({
   generateThumbnail: vi.fn(),
   uploadThumbnail: vi.fn(),
+  // 缺这个键会让 useExportModals 拿到 undefined，另存为成功路径一调用就抛错
+  signalShareChainCloudNodeCreated: vi.fn().mockReturnValue(false),
+  // 另存为成功后刷新编辑器标题（分享图纸接管会话路径会调用）
+  refreshFileName: vi.fn(),
 }));
 
 vi.mock('@/components/ui/Modal', () => ({
@@ -144,6 +148,8 @@ vi.mock('@/components/modals/SaveAsModal', () => ({
       fileName: string;
       path: string;
       parentId: string;
+      targetType?: 'personal' | 'project' | 'library';
+      libraryType?: 'drawing' | 'block';
     }) => void;
   }) => {
     if (!isOpen) return null;
@@ -171,6 +177,21 @@ vi.mock('@/components/modals/SaveAsModal', () => ({
         >
           success
         </button>
+        <button
+          data-testid="save-as-success-library"
+          onClick={() =>
+            onSuccess?.({
+              nodeId: 'lib-1',
+              fileName: 'saved.dwg',
+              path: '/p',
+              parentId: 'lib-parent',
+              targetType: 'library',
+              libraryType: 'drawing',
+            })
+          }
+        >
+          success-library
+        </button>
       </div>
     );
   },
@@ -185,6 +206,7 @@ import { triggerBlobDownload } from '@/utils/download';
 import { uploadFile } from '@/utils/mxcadUploadUtils';
 import { saveAsFileDialog } from 'mxcad';
 import { emit, clearDrawingSessionListeners } from '@/services/drawingSession';
+import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { CAD_EVENTS } from '@/constants/events';
 import { ExportModals } from './index';
 import type { ExportModalsHandle } from './index';
@@ -364,6 +386,118 @@ describe('ExportModals', () => {
     expect(modal.getAttribute('data-personal-space')).toBe('ps-1');
     expect(modal.getAttribute('data-source-node')).toBe('file-1');
     expect(modal.getAttribute('data-source-hash')).toBe('hash-1');
+  });
+
+  describe('另存为成功：会话接管与「打开新图纸」URL', () => {
+    beforeEach(() => {
+      // 分享图纸会话：store 顶层 fromShare 是接管判据（不是 currentFileInfo.fromShare）
+      useCADEditorStore.setState({
+        fromShare: true,
+        currentFileId: 'share-node',
+        currentFileName: 'plan.dwg.mxweb',
+        currentFileInfo: {
+          fileId: 'share-node',
+          parentId: null,
+          projectId: null,
+          name: 'plan.dwg.mxweb',
+          fromShare: true,
+        },
+      });
+      showConfirmMock.mockResolvedValue(false); // 默认用户点「关闭」，只看会话副作用
+    });
+
+    const openSaveAsModal = () => {
+      act(() => {
+        emit(CAD_EVENTS.SAVE_AS, {
+          currentFileName: 'plan.dwg.mxweb',
+          mxwebBlob: new Blob(['m']),
+          personalSpaceId: 'ps-1',
+        });
+      });
+      return screen.getByTestId('save-as-modal');
+    };
+
+    it('分享图纸另存为成功 → 会话切到新节点并退出分享模式（回归：每点一次保存就多一份副本）', async () => {
+      renderExportModals({ isAuthenticated: true });
+      openSaveAsModal();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-as-success'));
+      });
+
+      const state = useCADEditorStore.getState();
+      // fromShare 是 store 顶层字段（patchSession 把它从 infoPatch 里摘出来单独写），
+      // 协同面板的 fetchWorks/名称解析都以它为准
+      expect(state.fromShare).toBe(false);
+      expect(state.currentFileId).toBe('new-1');
+      expect(state.currentFileName).toBe('saved.dwg');
+      expect(state.currentFileInfo?.fileId).toBe('new-1');
+      // 地址栏同步切到新节点，且不再带 shareToken（否则刷新跳回分享者图纸）
+      expect(window.location.pathname).toBe('/cad-editor/new-1');
+      expect(window.location.search).toBe('?nodeId=parent-1');
+    });
+
+    it('非分享图纸另存为成功 → 会话保持原图（另存为只是存副本）', async () => {
+      useCADEditorStore.setState({ fromShare: false });
+      renderExportModals({ isAuthenticated: true });
+      openSaveAsModal();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-as-success'));
+      });
+
+      const state = useCADEditorStore.getState();
+      expect(state.currentFileId).toBe('share-node');
+      expect(state.currentFileName).toBe('plan.dwg.mxweb');
+    });
+
+    it('「打开新图纸」URL 走唯一出口：普通落点带 nodeId', async () => {
+      // 非分享图纸才走「提示 → 新标签页」这条线（分享图纸会接管会话并跳过提示）
+      useCADEditorStore.setState({ fromShare: false });
+      showConfirmMock.mockResolvedValue(true);
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      renderExportModals({ isAuthenticated: true });
+      openSaveAsModal();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-as-success'));
+      });
+
+      expect(openSpy).toHaveBeenCalledWith(
+        '/cad-editor/new-1?nodeId=parent-1',
+        '_blank'
+      );
+      openSpy.mockRestore();
+    });
+
+    it('「打开新图纸」URL 带 library（回归：库节点被当普通节点查询而打开失败）', async () => {
+      useCADEditorStore.setState({ fromShare: false });
+      showConfirmMock.mockResolvedValue(true);
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      renderExportModals({ isAuthenticated: true });
+      openSaveAsModal();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-as-success-library'));
+      });
+
+      expect(openSpy).toHaveBeenCalledWith(
+        '/cad-editor/lib-1?library=drawing',
+        '_blank'
+      );
+      openSpy.mockRestore();
+    });
+
+    it('分享图纸另存为成功后不再弹「打开新图纸」（回归：保存完像被重开一次）', async () => {
+      renderExportModals({ isAuthenticated: true });
+      openSaveAsModal();
+
+      await act(async () => {
+        fireEvent.click(screen.getByTestId('save-as-success'));
+      });
+
+      expect(showConfirmMock).not.toHaveBeenCalled();
+    });
   });
 
   it('SAVE_AS（未登录）走下载格式弹窗本地下载分支', async () => {
