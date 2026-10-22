@@ -262,8 +262,7 @@ export class SmsVerificationService implements ISmsVerificationService {
     // 兜底值与 definition 的 defaultValue 一致，DB 不可达时的降级语义由
     // RuntimeConfigService.getValue 统一处理。
     const dailyLimitPerPhone = await this.runtimeConfigService.getValue<number>(
-      'smsDailyLimitPerPhone',
-      10
+      'smsDailyLimitPerPhone'
     );
 
     if (dailyCount >= dailyLimitPerPhone) {
@@ -278,8 +277,7 @@ export class SmsVerificationService implements ISmsVerificationService {
       const ipCount = parseInt((await this.redis.get(ipCountKey)) || '0', 10);
       const hourlyLimitPerIp =
         await this.runtimeConfigService.getValue<number>(
-          'smsHourlyLimitPerIp',
-          20
+          'smsHourlyLimitPerIp'
         );
 
       if (ipCount >= hourlyLimitPerIp) {
@@ -445,7 +443,7 @@ export class SmsVerificationService implements ISmsVerificationService {
    * 检查短信服务是否启用
    */
   async isEnabled(): Promise<boolean> {
-    return this.runtimeConfigService.getValue<boolean>('smsEnabled', false);
+    return this.runtimeConfigService.getValue<boolean>('smsEnabled');
   }
 
   /**
