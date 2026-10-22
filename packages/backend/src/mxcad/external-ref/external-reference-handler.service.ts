@@ -4,7 +4,6 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import { DatabaseService } from '../../database/database.service';
 import { streamFileToResponse } from '../../common/utils/stream-file';
@@ -29,7 +28,6 @@ export class ExternalReferenceHandler {
   private readonly logger = new Logger(ExternalReferenceHandler.name);
 
   constructor(
-    private readonly configService: ConfigService,
     private readonly db: DatabaseService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly extRefPreloadingService: ExtRefPreloadingService,
@@ -76,11 +74,13 @@ export class ExternalReferenceHandler {
       }
 
       // 3. 获取外部参照目录名称（从 preloading.json 中提取 src_file_md5）
-      // preloading.json 文件命名：{主文件名}_preloading.json，锚定磁盘实际主文件
-      const filesDataPath = this.configService.get('filesDataPath', {
-        infer: true,
-      });
-      const storageRootPath = path.resolve(filesDataPath, node.path, '..');
+      // 文件名与根目录都锚定磁盘实际主文件，且都收口 ExtRefPreloadingService：
+      // 根目录统一走 resolveStorageRoot——自建 path.resolve(filesDataPath, ...)
+      // 不剥 /mxcad/file/ 前缀、无游客 mxcadUploadPath 回落、不经 validatePath 守卫。
+      const storageRootPath = await this.extRefPreloadingService.resolveStorageRoot(
+        nodeId,
+        node
+      );
       const preloadingFileName = this.extRefPreloadingService.getPreloadingFileName(nodeId, node.path);
       const preloadingFilePath = path.join(
         storageRootPath,

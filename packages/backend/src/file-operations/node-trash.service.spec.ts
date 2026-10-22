@@ -1,6 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { NodeType, FileStatus as PrismaFileStatus } from '@cloudcad/db';
 import { FileStatus } from '../common/enums/file-status.enum';
@@ -23,6 +22,8 @@ describe('NodeTrashService', () => {
   let service: NodeTrashService;
   let prisma: any;
   let storageManager: Record<string, jest.Mock>;
+  let versionControlService: Record<string, jest.Mock>;
+  let storageProvider: Record<string, jest.Mock>;
   let nodeNameService: Record<string, jest.Mock>;
   let treeWalker: Record<string, jest.Mock>;
   let nodeMutationGuard: Record<string, jest.Mock>;
@@ -92,6 +93,14 @@ describe('NodeTrashService', () => {
       getFullPath: jest
         .fn()
         .mockReturnValue('/data/202607/node-1/drawing.dwg.mxweb'),
+      parseNodeDirectory: jest.fn().mockReturnValue('202607/node-1'),
+    };
+    versionControlService = {
+      isReady: jest.fn().mockReturnValue(false),
+      deleteNodeDirectory: jest.fn().mockResolvedValue({ success: true }),
+    };
+    storageProvider = {
+      deleteAll: jest.fn().mockResolvedValue(undefined),
     };
     nodeNameService = {
       generateUniqueName: jest.fn().mockResolvedValue('drawing.dwg'),
@@ -136,12 +145,8 @@ describe('NodeTrashService', () => {
         NodeTrashService,
         { provide: DatabaseService, useValue: prisma },
         { provide: StorageManager, useValue: storageManager },
-        { provide: ConfigService, useValue: { get: jest.fn() } },
-        {
-          provide: VERSION_CONTROL_TOKEN,
-          useValue: { isReady: jest.fn().mockReturnValue(false) },
-        },
-        { provide: IStorageProvider, useValue: {} },
+        { provide: VERSION_CONTROL_TOKEN, useValue: versionControlService },
+        { provide: IStorageProvider, useValue: storageProvider },
         {
           provide: IPROJECT_PERMISSION_SERVICE,
           useValue: projectPermissionService,
@@ -425,6 +430,53 @@ describe('NodeTrashService', () => {
       expect(prisma.fileSystemNode.findMany.mock.invocationCallOrder[0]).toBeLessThan(
         prisma.$transaction.mock.invocationCallOrder[0]
       );
+    });
+  });
+
+  describe('deleteFileInStorage — 节点目录统一走 StorageManager 解码单点', () => {
+    // 默认 getFullPath 返回 /data/202607/node-1/drawing.dwg.mxweb，
+    // dirname 恰以 nodeId 结尾，守卫放行。
+    const nodePath = '202607/node-1/drawing.dwg.mxweb';
+
+    it('成功路径：MX 标记删除与物理删除共用同一条解码结果', async () => {
+      versionControlService.isReady.mockReturnValue(true);
+
+      await service.deleteFileInStorage(nodePath, { commitMx: true });
+
+      expect(versionControlService.deleteNodeDirectory).toHaveBeenCalledWith(
+        '/data/202607/node-1'
+      );
+      expect(storageProvider.deleteAll).toHaveBeenCalledWith('202607/node-1');
+    });
+
+    it('commitMx 为 false 时只做物理删除', async () => {
+      await service.deleteFileInStorage(nodePath, { commitMx: false });
+
+      expect(versionControlService.deleteNodeDirectory).not.toHaveBeenCalled();
+      expect(storageProvider.deleteAll).toHaveBeenCalledWith('202607/node-1');
+    });
+
+    it('目录校验失败：两项守卫先于任何删除，MX 与物理删除都不发生', async () => {
+      // dirname 不以 nodeId 结尾 → 校验拒绝
+      storageManager.getFullPath.mockReturnValue(
+        '/data/202607/other-node/drawing.dwg.mxweb'
+      );
+      versionControlService.isReady.mockReturnValue(true);
+
+      await service.deleteFileInStorage(nodePath, { commitMx: true });
+
+      expect(versionControlService.deleteNodeDirectory).not.toHaveBeenCalled();
+      expect(storageProvider.deleteAll).not.toHaveBeenCalled();
+    });
+
+    it('parseNodeDirectory 无法解码：跳过删除，不触碰 MX 与存储', async () => {
+      storageManager.parseNodeDirectory.mockReturnValue(null);
+      versionControlService.isReady.mockReturnValue(true);
+
+      await service.deleteFileInStorage(nodePath, { commitMx: true });
+
+      expect(versionControlService.deleteNodeDirectory).not.toHaveBeenCalled();
+      expect(storageProvider.deleteAll).not.toHaveBeenCalled();
     });
   });
 });

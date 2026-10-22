@@ -15,7 +15,6 @@ import {
 import { FileStatus } from '../common/enums/file-status.enum';
 import { DatabaseService } from '../database/database.service';
 import { StorageManager } from '../storage-management/services/storage-manager.service';
-import { ConfigService } from '@nestjs/config';
 import {
   IVersionControl,
   VERSION_CONTROL_TOKEN,
@@ -55,7 +54,6 @@ export class NodeTrashService {
   constructor(
     private readonly prisma: DatabaseService,
     private readonly storageManager: StorageManager,
-    private readonly configService: ConfigService,
     @Inject(VERSION_CONTROL_TOKEN)
     private readonly versionControlService: IVersionControl,
     @Inject(IStorageProvider)
@@ -876,7 +874,9 @@ export class NodeTrashService {
    * - fileHash 引用计数：同内容仍被其他存活节点引用时跳过物理删除；传 tx 时引用计数
    *   与节点删除同事务读取（防并发引用漏判）。
    * - commitMx：是否在 MX 版本控制（SVN）标记删除目录；false 时仅删物理目录。
-   * - 路径解码（节点目录相对键）收口 StorageManager.parseNodeDirectory 单点。
+   *   目录绝对路径取 StorageManager.getFullPath 的 dirname，与前缀剥离、.. / ~ 校验共用同一条结果。
+   * - 路径解码（节点目录相对键）收口 StorageManager.parseNodeDirectory 单点；
+   *   段数不足与目录校验两项守卫先于任何删除执行。
    * - 路径验证失败/删除失败仅记日志不上抛（调用方决定上层流程语义）。
    */
   async deleteFileInStorage(
@@ -909,23 +909,10 @@ export class NodeTrashService {
     }
     this.logger.log(`准备删除节点物理目录: ${nodePath}`);
     try {
-      const filesDataPath = this.configService.get('filesDataPath', {
-        infer: true,
-      });
-      const nodeDirectory = path.join(filesDataPath, path.dirname(nodePath));
-      if (commitMx && this.versionControlService.isReady()) {
-        try {
-          const deleteResult =
-            await this.versionControlService.deleteNodeDirectory(nodeDirectory);
-          if (deleteResult.success) {
-            this.logger.log(`节点目录已从 MX 标记删除: ${nodeDirectory}`);
-          }
-        } catch (mxError) {
-          this.logger.error(
-            `节点目录从 MX 标记删除失败: ${nodeDirectory}, 错误: ${mxError.message}`
-          );
-        }
-      }
+      // 节点目录只认 StorageManager 解码结果（C8 单点）：已剥 /mxcad/file/ 前缀，
+      // 且经 getAbsolutePath 内 validatePath fail-closed 拒绝 .. / ~。
+      // 两项校验必须先于任何删除完成——此前校验排在 MX 标记删除之后，
+      // 且 MX 删除用的是另建一份、无前缀剥离的路径。
       const fullPath = this.storageManager.getFullPath(nodePath);
       const nodeDirectoryPath = path.dirname(fullPath);
       if (!nodeDirectoryPath.endsWith(nodeId)) {
@@ -940,6 +927,19 @@ export class NodeTrashService {
       if (!nodeDirRelativeKey) {
         this.logger.warn(`无法解析节点目录，跳过删除: ${nodePath}`);
         return;
+      }
+      if (commitMx && this.versionControlService.isReady()) {
+        try {
+          const deleteResult =
+            await this.versionControlService.deleteNodeDirectory(nodeDirectoryPath);
+          if (deleteResult.success) {
+            this.logger.log(`节点目录已从 MX 标记删除: ${nodeDirectoryPath}`);
+          }
+        } catch (mxError) {
+          this.logger.error(
+            `节点目录从 MX 标记删除失败: ${nodeDirectoryPath}, 错误: ${mxError.message}`
+          );
+        }
       }
       await this.storageProvider.deleteAll(nodeDirRelativeKey);
       this.logger.log(`节点目录已删除: ${nodeDirectoryPath}`);
