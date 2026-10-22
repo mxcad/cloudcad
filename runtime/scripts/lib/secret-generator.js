@@ -90,6 +90,9 @@ function fillEmptySecrets(envFile, logFn = () => {}) {
     // （正则只匹配空白行），避免重启后密钥变化导致存量密文无法解密。
     'PII_ENCRYPTION_KEY',
     'PII_HMAC_KEY',
+    // ADR-0082 #493：通道秘密（SMTP 口令等）AES-256-GCM 密文存储主密钥。
+    // 首次部署自动生成；升级部署保留已有值（避免重启后密钥变化导致存量密文无法解密）。
+    'CHANNEL_ENCRYPTION_KEY',
     // #419 等保 8.1.2.2：Redis requirepass 密码。生产必填（configuration.ts 校验），
     // 首次部署自动生成；升级部署保留已有值（避免 Redis 密码变化导致后端连不上）。
     'REDIS_PASSWORD',

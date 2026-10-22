@@ -53,6 +53,12 @@ export interface PiiConfig {
   hmacKey: string;
 }
 
+/** 通道秘密加密配置（ADR-0082 #493）：通道秘密（SMTP 口令等）AES-256-GCM 密文存储主密钥 */
+export interface ChannelConfig {
+  /** AES-256-GCM 加密密钥（32 字节 hex，64 字符；env CHANNEL_ENCRYPTION_KEY 显式设置时启动校验长度，缺省回退 SHA-256(JWT_SECRET)） */
+  encryptionKey: string;
+}
+
 export interface UploadConfig {
   maxFilesPerUpload: number;
   allowedExtensions: string[];
@@ -399,6 +405,8 @@ export interface AppConfig {
   jwt: JwtConfig;
   totp: TotpConfig;
   pii: PiiConfig;
+  /** 通道秘密加密（ADR-0082 #493） */
+  channel: ChannelConfig;
   database: DatabaseConfig;
   redis: RedisConfig;
   upload: UploadConfig;

@@ -15,6 +15,7 @@ import * as path from 'path';
 import type { AppConfig } from './app.config';
 import { resolveMxExecutablePath } from '@cloudcad/engine-exec';
 import { resolvePiiKey } from '../common/pii/pii-crypto.service';
+import { resolveChannelKey } from '../runtime-config/channel-crypto.service';
 
 /**
  * 判断当前操作系统是否为 Windows
@@ -214,6 +215,16 @@ export default (): AppConfig => {
           'JWT_REFRESH_SECRET',
           'dev-only-jwt-refresh-secret-change-me'
         )
+      ).toString('hex'),
+    },
+
+    // 通道秘密加密（ADR-0082 #493）：通道秘密（SMTP 口令等）AES-256-GCM 密文存储主密钥；
+    // env 显式设置时启动即校验（必须解码为 32 字节），缺省回退 JWT 密钥（开发环境可用）。
+    // 与 PII 同理以 hex 字符串形式存入配置（Buffer 非基础类型，ConfigService 路径类型推断不兼容）
+    channel: {
+      encryptionKey: resolveChannelKey(
+        process.env.CHANNEL_ENCRYPTION_KEY,
+        getRequiredEnv('JWT_SECRET', 'dev-only-jwt-secret-change-me')
       ).toString('hex'),
     },
 

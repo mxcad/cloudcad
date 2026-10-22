@@ -39,6 +39,10 @@ import {
   findNewDependencyViolations,
   formatDependencyLabel,
 } from './runtime-config.dependency';
+import {
+  ChannelCryptoService,
+  maskChannelSecret,
+} from './channel-crypto.service';
 import type { IRuntimeConfigService } from '@cloudcad/contracts';
 
 const CACHE_PREFIX = 'runtime_config:';
@@ -66,7 +70,8 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
   constructor(
     private readonly prisma: DatabaseService,
-    @InjectRedis() private readonly redis: Redis
+    @InjectRedis() private readonly redis: Redis,
+    private readonly channelCrypto: ChannelCryptoService
   ) {}
 
   /**
@@ -188,8 +193,10 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
     const isModified = row != null && row.updatedBy != null;
     if (isModified && row) {
+      // 秘密键（通道秘密）落库为密文（chan:v1），在此解密回明文供内部消费方使用；
+      // env 层与默认层恒为明文，无需解密
       return {
-        value: this.parseValue(row.value, def.type),
+        value: this.decryptIfSecret(def, this.parseValue(row.value, def.type)),
         source: 'runtime',
       };
     }
@@ -207,6 +214,24 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     }
 
     return { value: def.defaultValue, source: 'default' };
+  }
+
+  /**
+   * 秘密键（`input.secret`）的 DB 值以密文落库，读取时解密回明文。
+   * 密文前缀判断是双保险：未命中前缀的值（如存量明文行）原样返回，不抛错。
+   */
+  private decryptIfSecret(
+    def: RuntimeConfigDefinition,
+    value: RuntimeConfigValue
+  ): RuntimeConfigValue {
+    if (
+      def.input?.secret &&
+      typeof value === 'string' &&
+      this.channelCrypto.isCiphertext(value)
+    ) {
+      return this.channelCrypto.decrypt(value);
+    }
+    return value;
   }
 
   /**
@@ -280,19 +305,27 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   async getValue<T = string | number | boolean | Record<string, unknown>>(
     key: string
   ): Promise<T> {
+    const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
+
+    // 秘密键（通道秘密）不进缓存：缓存存的是解密后的明文，把明文凭据放进 Redis
+    // 是泄露路径；直查数据库 + 读取时解密（低频读，不值得优化）
+    const isSecret = def?.input?.secret === true;
+
     // 1. 查 Redis 缓存（可选加速层：Redis 不可达时必须降级直查数据库，
     //    否则启动期（如 multer 注册 useFactory）await 此处会因 Redis 故障
     //    直接中断进程，实例：Redis 未启动时 pnpm build 崩溃）
     let cached: string | null = null;
-    try {
-      cached = await this.redis.get(`${CACHE_PREFIX}${key}`);
-    } catch (error) {
-      this.logger.warn(
-        `读取运行时配置缓存失败，降级直查数据库: ${(error as Error).message}`
-      );
-    }
-    if (cached != null) {
-      return JSON.parse(cached) as T;
+    if (!isSecret) {
+      try {
+        cached = await this.redis.get(`${CACHE_PREFIX}${key}`);
+      } catch (error) {
+        this.logger.warn(
+          `读取运行时配置缓存失败，降级直查数据库: ${(error as Error).message}`
+        );
+      }
+      if (cached != null) {
+        return JSON.parse(cached) as T;
+      }
     }
 
     // 2. 构建 Swagger 时（GENERATE_SWAGGER=1）启动整棵 AppModule 仅为生成文档，
@@ -300,7 +333,6 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     //    （记忆 build-redis-unreachable-crash：Redis 降级后此处会继续查库），默认值
     //    与 cache miss + DB miss 后的降级行为一致，跳过 DB 查询避免构建崩溃。
     if (process.env.GENERATE_SWAGGER === '1') {
-      const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
       return def?.defaultValue as T;
     }
 
@@ -322,7 +354,6 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         return null;
       });
 
-    const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     const { value } = this.resolveValue(def, row);
     // 三层解析结果优先：定义表的 defaultValue 是唯一权威默认值，env 层由 envKey 声明。
     // getValue 故意不接受调用方兜底：对已登记键 fallback 恒被忽略（resolveValue 永不
@@ -330,15 +361,17 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 默认值只写定义表；新增配置项请登记 RUNTIME_CONFIG_DEFINITIONS。
     const result = value as T;
 
-    // 4. 写入缓存（写缓存失败不阻塞：下次读会重试）
-    try {
-      await this.redis.setex(
-        `${CACHE_PREFIX}${key}`,
-        CACHE_TTL,
-        JSON.stringify(result)
-      );
-    } catch {
-      // 写缓存失败不阻塞
+    // 4. 写入缓存（写缓存失败不阻塞：下次读会重试）。秘密键跳过（见方法开头注释）
+    if (!isSecret) {
+      try {
+        await this.redis.setex(
+          `${CACHE_PREFIX}${key}`,
+          CACHE_TTL,
+          JSON.stringify(result)
+        );
+      } catch {
+        // 写缓存失败不阻塞
+      }
     }
 
     return result;
@@ -358,10 +391,12 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
     const def = RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
     const { value, source } = this.resolveValue(def, config);
+    // 秘密键对管理端只回掩码（首尾 2 字符），明文不出 API 边界
+    const isSecret = def?.input?.secret === true;
 
     return {
       key: config.key,
-      value,
+      value: isSecret ? maskChannelSecret(String(value)) : value,
       type: config.type as RuntimeConfigValueType,
       category: config.category as RuntimeConfigItem['category'],
       description: config.description,
@@ -395,6 +430,12 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       );
     }
 
+    // 秘密键：清空（空值）走「恢复默认」语义——清掉显式修改标记，
+    // env 层值重新生效（界面清空 SMTP 口令回落到 .env 的值）
+    if (def.input?.secret && value === '') {
+      return this.resetToDefault(key, operatorId, operatorIp);
+    }
+
     // 依赖门禁（ADR-0082）：布尔键的开关依赖在写库前强制校验，
     // 拒绝「功能开着、依赖的通道关着」这种静默失效状态被新制造出来
     if (def.type === 'boolean' && typeof value === 'boolean') {
@@ -407,16 +448,23 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     });
     const oldValue = oldConfig?.value;
 
+    // 秘密键以密文（chan:v1）落库，历史日志同存密文：明文不落盘
+    const storedValue =
+      def.input?.secret && typeof value === 'string'
+        ? this.channelCrypto.encrypt(value)
+        : value;
+    const storedValueJson = JSON.stringify(storedValue);
+
     // 更新数据库
     await this.prisma.runtimeConfig.upsert({
       where: { key },
       update: {
-        value: JSON.stringify(value),
+        value: storedValueJson,
         updatedBy: operatorId,
       },
       create: {
         key,
-        value: JSON.stringify(value),
+        value: storedValueJson,
         type: def.type,
         category: def.category,
         description: def.description,
@@ -430,7 +478,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       data: {
         key,
         oldValue,
-        newValue: JSON.stringify(value),
+        newValue: storedValueJson,
         operatorId,
         operatorIp,
       },
@@ -693,6 +741,10 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       const def = RUNTIME_CONFIG_DEFINITIONS.find(
         (d) => d.key === config.key
       );
+      // 秘密键永不进公开端点（纵深防御：即使存量行 isPublic 被误置为 true 也不泄露）
+      if (def?.input?.secret) {
+        continue;
+      }
       const { value } = this.resolveValue(def, config);
       result[config.key] = value;
     }
@@ -724,9 +776,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         (d) => d.key === config.key
       );
       const { value, source } = this.resolveValue(def, config);
+      // 秘密键对管理端只回掩码（首尾 2 字符），明文不出 API 边界
+      const isSecret = def?.input?.secret === true;
       return {
         key: config.key,
-        value,
+        value: isSecret ? maskChannelSecret(String(value)) : value,
         type: config.type as RuntimeConfigValueType,
         category: config.category as RuntimeConfigItem['category'],
         description: config.description,
@@ -771,7 +825,8 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       defaultValue,
       source,
       isModified,
-      envValue: envValue ?? null,
+      // 秘密键的 env 层值是明文凭据，同样不出 API 边界
+      envValue: def?.input?.secret ? null : envValue ?? null,
       tier: def?.tier ?? 'admin',
       input: def?.input,
       impact: def?.impact,

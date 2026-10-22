@@ -13,13 +13,14 @@
 import { Module } from '@nestjs/common';
 import { PermissionModule } from '../permission/permission.module';
 import { RuntimeConfigService } from './runtime-config.service';
+import { ChannelCryptoService } from './channel-crypto.service';
 import { BrandAssetService } from './brand-asset.service';
 import { RuntimeConfigController } from './runtime-config.controller';
 
 @Module({
   imports: [PermissionModule],
   controllers: [RuntimeConfigController],
-  providers: [RuntimeConfigService, BrandAssetService],
-  exports: [RuntimeConfigService, BrandAssetService],
+  providers: [RuntimeConfigService, ChannelCryptoService, BrandAssetService],
+  exports: [RuntimeConfigService, ChannelCryptoService, BrandAssetService],
 })
 export class RuntimeConfigModule {}

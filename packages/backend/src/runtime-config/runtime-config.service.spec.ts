@@ -8,10 +8,12 @@ import {
 	Logger,
 	NotFoundException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { DatabaseService } from "../database/database.service";
 import { RUNTIME_CONFIG_DEFINITIONS } from "./runtime-config.constants";
 import { RuntimeConfigService } from "./runtime-config.service";
+import { ChannelCryptoService } from "./channel-crypto.service";
 import {
 	getDependencyEdges,
 	findDependencyCycles,
@@ -20,6 +22,7 @@ import type { RuntimeConfigDefinition } from "./runtime-config.types";
 
 describe("RuntimeConfigService", () => {
 	let service: RuntimeConfigService;
+	let channelCrypto: ChannelCryptoService;
 
 	const mockPrisma = {
 		runtimeConfig: {
@@ -68,15 +71,27 @@ describe("RuntimeConfigService", () => {
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
 				RuntimeConfigService,
+				ChannelCryptoService,
 				{ provide: DatabaseService, useValue: mockPrisma },
 				{
 					provide: "default_IORedisModuleConnectionToken",
 					useValue: mockRedis,
 				},
+				// 通道加密密钥：固定 64 位 hex（真实 AES-256-GCM 加解密走真实现）
+				{
+					provide: ConfigService,
+					useValue: {
+						get: (path: string) =>
+							path === "channel.encryptionKey"
+								? "ab".repeat(32)
+								: undefined,
+					},
+				},
 			],
 		}).compile();
 
 		service = module.get<RuntimeConfigService>(RuntimeConfigService);
+		channelCrypto = module.get<ChannelCryptoService>(ChannelCryptoService);
 	});
 
 	// ==================== getValue ====================
@@ -1556,6 +1571,160 @@ describe("RuntimeConfigService", () => {
 	});
 
 	// ==================== parseValue ====================
+	// ==================== 秘密键（通道秘密密文落库，ADR-0082 #493） ====================
+	// 定义表当前尚无 secret 键（SMTP 等通道密钥在 #495 登记），
+	// 这里注入合成定义验证机制层的通用行为。
+	describe("秘密键（通道秘密密文落库）", () => {
+		const secretDef: RuntimeConfigDefinition = {
+			key: "testChannelSecret",
+			type: "string",
+			category: "mail",
+			description: "测试通道秘密",
+			defaultValue: "",
+			isPublic: false,
+			input: { secret: true },
+			envKey: "TEST_CHANNEL_SECRET_ENV",
+		};
+
+		beforeEach(() => {
+			RUNTIME_CONFIG_DEFINITIONS.push(secretDef);
+		});
+
+		afterEach(() => {
+			RUNTIME_CONFIG_DEFINITIONS.pop();
+			delete process.env.TEST_CHANNEL_SECRET_ENV;
+		});
+
+		it("set() 秘密键以密文落库，历史日志同存密文（明文不落盘）", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			await service.set("testChannelSecret", "smtp-pass-123", "op-1");
+
+			const upsert = mockPrisma.runtimeConfig.upsert.mock.calls[0][0];
+			expect(upsert.update.value.startsWith('"chan:v1:')).toBe(true);
+			expect(upsert.update.value).not.toContain("smtp-pass-123");
+			expect(upsert.create.value).toBe(upsert.update.value);
+			const log = mockPrisma.runtimeConfigLog.create.mock.calls[0][0];
+			expect(log.data.newValue).toBe(upsert.update.value);
+		});
+
+		it("getValue 返回明文（内部消费方），且不读写 Redis 缓存", async () => {
+			const ciphertext = channelCrypto.encrypt("smtp-pass-123");
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+				key: "testChannelSecret",
+				value: JSON.stringify(ciphertext),
+				type: "string",
+				updatedBy: "op-1",
+			});
+
+			const result = await service.getValue("testChannelSecret");
+
+			expect(result).toBe("smtp-pass-123");
+			expect(mockRedis.get).not.toHaveBeenCalled();
+			expect(mockRedis.setex).not.toHaveBeenCalled();
+		});
+
+		it("get() 对管理端只回掩码，envValue 不泄露 env 层明文", async () => {
+			const ciphertext = channelCrypto.encrypt("smtp-pass-123");
+			process.env.TEST_CHANNEL_SECRET_ENV = "env-smtp-pass";
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+				key: "testChannelSecret",
+				value: JSON.stringify(ciphertext),
+				type: "string",
+				updatedBy: "op-1",
+			});
+
+			const item = await service.get("testChannelSecret");
+
+			expect(item.value).toBe("sm****23");
+			expect(item.envValue).toBeNull();
+		});
+
+		it("getAllConfigs 秘密键回掩码", async () => {
+			const ciphertext = channelCrypto.encrypt("smtp-pass-123");
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "testChannelSecret",
+					value: JSON.stringify(ciphertext),
+					type: "string",
+					category: "mail",
+					description: "测试通道秘密",
+					isPublic: false,
+					updatedBy: "op-1",
+					updatedAt: new Date(),
+				},
+			]);
+
+			const items = await service.getAllConfigs();
+
+			expect(items[0].value).toBe("sm****23");
+		});
+
+		it("公开端点永不包含秘密键（纵深防御）", async () => {
+			mockRedis.get.mockResolvedValue(null);
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "testChannelSecret",
+					value: JSON.stringify("x"),
+					type: "string",
+					updatedBy: null,
+				},
+				{
+					key: "mailEnabled",
+					value: "true",
+					type: "boolean",
+					updatedBy: null,
+				},
+			]);
+
+			const result = await service.getPublicConfigs();
+
+			expect(result).not.toHaveProperty("testChannelSecret");
+			expect(result).toHaveProperty("mailEnabled");
+		});
+
+		it("清空秘密键（空值）= 恢复默认：清 updatedBy，env 层重新生效", async () => {
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+				key: "testChannelSecret",
+				value: JSON.stringify(channelCrypto.encrypt("old-pass")),
+				type: "string",
+				updatedBy: "op-1",
+			});
+
+			await service.set("testChannelSecret", "", "op-1");
+
+			const upsert = mockPrisma.runtimeConfig.upsert.mock.calls[0][0];
+			expect(upsert.update).toEqual({ value: '""', updatedBy: null });
+		});
+
+		it("未显式修改时 env 层明文生效（env 层不加密、不解密）", async () => {
+			process.env.TEST_CHANNEL_SECRET_ENV = "env-smtp-pass";
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+				key: "testChannelSecret",
+				value: '""',
+				type: "string",
+				updatedBy: null,
+			});
+
+			const result = await service.getValue("testChannelSecret");
+
+			expect(result).toBe("env-smtp-pass");
+		});
+
+		it("不变式：秘密键不得公开、不得声明 profiles", () => {
+			// 定义表当前无 secret 键（SMTP 键在 #495 登记），不变式先行钉死：
+			// 秘密键进公开端点或 profile 批量应用都是泄露/静默改写路径
+			const secretDefs = RUNTIME_CONFIG_DEFINITIONS.filter(
+				(d) => d.input?.secret
+			);
+			expect(
+				secretDefs
+					.filter((d) => d.isPublic || d.profiles != null)
+					.map((d) => d.key)
+			).toEqual([]);
+		});
+	});
+
 	describe("parseValue", () => {
 		it("should parse boolean type", () => {
 			const result = (service as any).parseValue(
