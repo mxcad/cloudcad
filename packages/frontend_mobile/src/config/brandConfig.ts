@@ -1,6 +1,7 @@
 import {
   ensureRuntimeConfig,
   getRuntimeConfigSnapshot,
+  subscribeRuntimeConfig,
   type PublicRuntimeConfig,
 } from '@/composables/useRuntimeConfig'
 
@@ -178,16 +179,103 @@ export function resolveLegalVars(
 }
 
 /**
+ * 匹配 `rel="icon"` 与 `rel="apple-touch-icon"`。
+ * 不能用 `link[rel~="icon"]`——`~=` 按空白分词，`apple-touch-icon` 是单个整词，
+ * 匹配不到，会让 iOS 主屏图标一直停在打包值。
+ */
+export const ICON_LINK_SELECTOR = 'link[rel*="icon"]'
+
+const ICON_TYPE_BY_EXTENSION: Record<string, string> = {
+  ico: 'image/x-icon',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+}
+
+/** 按扩展名推断图标 MIME；无扩展名（后端同源 Logo URL）不推断，保留原值 */
+function iconTypeOf(href: string): string | undefined {
+  const path = href.split(/[?#]/, 1)[0] ?? ''
+  const dotIndex = path.lastIndexOf('.')
+  if (dotIndex < 0 || dotIndex === path.length - 1) return undefined
+  return ICON_TYPE_BY_EXTENSION[path.slice(dotIndex + 1).toLowerCase()]
+}
+
+/** 把品牌写入文档标题与所有图标 link */
+export function applyBrandChrome(brand: MobileBrand): void {
+  document.title = brand.title
+  const iconType = iconTypeOf(brand.logo)
+  for (const link of Array.from(
+    document.head.querySelectorAll<HTMLLinkElement>(ICON_LINK_SELECTOR),
+  )) {
+    link.href = brand.logo
+    if (iconType) link.type = iconType
+  }
+}
+
+function applyResolvedBrandChrome(): void {
+  const brand = resolveBrand(getRuntimeConfigSnapshot())
+  applyBrandChrome(brand)
+  saveBrandChromeCache(brand.title, brand.logo)
+}
+
+/**
+ * 首帧品牌缓存键。`index.html` 的内联脚本在 bundle 加载前读取它，
+ * 让回访用户第一次绘制就已经是运行时配置的值——否则管理端改过
+ * brandTitle / brandLogo 后，每次打开都会先闪一下打包兜底值。
+ * 改这个值要同时改 `index.html`（`brandConfig.spec.ts` 有一条断言钉住）。
+ */
+export const BRAND_CHROME_CACHE_KEY = 'mx-brand-chrome'
+
+interface BrandChromeCache {
+  appName: string
+  logo: string
+}
+
+/** 只放行同源相对路径：挡住 `javascript:`、`data:`、协议相对等可执行或外泄地址 */
+function isSafeChromeUrl(value: string): boolean {
+  const url = value.trim()
+  return (
+    url.startsWith('/') &&
+    !url.startsWith('//') &&
+    !url.includes(':') &&
+    !/\s/.test(url)
+  )
+}
+
+/**
+ * 把当前生效的品牌标题与 Logo 写进 localStorage，供下次打开页面时
+ * `index.html` 内联脚本在 JS 加载前直接应用。
+ * 写失败（隐私模式、存储配额满）静默忽略：缓存只是省一次首帧闪烁，
+ * 失败时首帧仍显示 index.html 静态兜底值，JS 随后照常覆写。
+ */
+export function saveBrandChromeCache(appName: string, logo: string): void {
+  try {
+    const cache: BrandChromeCache = {
+      appName: appName.trim().slice(0, 200),
+      // 非同源相对路径不落盘，首帧保留 index.html 的静态 Logo
+      logo: isSafeChromeUrl(logo) ? logo.trim().slice(0, 300) : '',
+    }
+    localStorage.setItem(BRAND_CHROME_CACHE_KEY, JSON.stringify(cache))
+  } catch {
+    // 见函数注释
+  }
+}
+
+let brandChromeWatched = false
+
+/**
  * 启动期把品牌写入文档（main.ts 调用）：先确保公开配置已取回，
  * 再按解析结果覆盖页签标题与 favicon。取配置失败时保持 index.html 静态值。
+ * 同时挂上配置变更订阅，配置刷新后标题/favicon 跟着更新，
+ * 与组件里的响应式品牌保持同步。
  */
 export async function ensureBrandApplied(): Promise<void> {
   await ensureRuntimeConfig()
-  const brand = resolveBrand(getRuntimeConfigSnapshot())
-  document.title = brand.title
-  for (const link of Array.from(
-    document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]'),
-  )) {
-    link.href = brand.logo
+  applyResolvedBrandChrome()
+  if (!brandChromeWatched) {
+    brandChromeWatched = true
+    subscribeRuntimeConfig(applyResolvedBrandChrome)
   }
 }

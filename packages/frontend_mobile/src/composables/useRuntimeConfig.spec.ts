@@ -50,7 +50,7 @@ describe('默认值（接口未返回或失败时）', () => {
       userCancelGraceDays: 7,
       conversionGuestWindowHours: 2,
       conversionGuestLimit: 5,
-      freeExportDownloadEnabled: false,
+      freeExportDownloadEnabled: true,
       collaborationEnabled: true,
       collaborationDomains: '',
       batchDownloadEnabled: false,
@@ -205,7 +205,8 @@ describe('字段解析', () => {
     expect(config.value.allowRegister).toBe(true);
     expect(config.value.wechatEnabled).toBe(false);
     expect(config.value.wechatAutoRegister).toBe(false);
-    expect(config.value.freeExportDownloadEnabled).toBe(false);
+    // 出厂默认 true（对齐后端 invariant：freeExportDownloadEnabled 默认必须是 true）
+    expect(config.value.freeExportDownloadEnabled).toBe(true);
     expect(config.value.batchDownloadEnabled).toBe(false);
     expect(config.value.collaborationEnabled).toBe(true);
   });

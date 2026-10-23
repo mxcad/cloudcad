@@ -1,10 +1,11 @@
-import { ref, readonly, onMounted, getCurrentInstance, watch } from 'vue';
+import { ref, readonly } from 'vue';
 import {
   authTransferParamNames,
   parseAuthTransferQuery,
   hasAnyPermission,
 } from '@cloudcad/platform';
 import {
+  isTokenExpired,
   logout as logoutSession,
   onSessionChanged,
   readToken,
@@ -95,8 +96,13 @@ onSessionChanged((event) => {
 //
 // 管理员改会员（updateMembership）后后端向本用户通道 emit membership-changed；
 // 已登录的移动端经此长连接收到后重拉 /users/profile/me（含最新会员态）并回写
-// localStorage.user，无需退出重登。token 走 query（EventSource 无法带 header）；
-// 静默刷新（fetch 层 401 刷新不触发会话事件）后由 onerror 的 token 比对重开。
+// localStorage.user，无需退出重登。token 走 query（EventSource 无法带 header）。
+//
+// 建连条件绑 token **值**而非「是否已登录」布尔：过期 token 不建连（省掉必然的 401），
+// token 变化（登录 / 静默刷新）带新 token 重开，登出断连。PC 端用 useEffect([token])
+// 达成同一效果，此处经 onSessionChanged（authSession 写入/清理的唯一通知口）驱动。
+// EventSource 收到 401/403 会永久关闭（不走内置重连），故 onerror 里比对 token 主动
+// 重开——不能指望浏览器自己重连。
 let accountEventsStream: EventSource | null = null;
 let accountEventsToken: string | null = null;
 
@@ -120,13 +126,16 @@ async function handleAccountEvent(): Promise<void> {
   }
 }
 
-function openAccountEventsStream(): void {
+/** 让 SSE 与当前 access token 对齐：过期/缺失则断连，token 变化则带新 token 重开 */
+function syncAccountEventsStream(): void {
   const token = readToken();
-  if (!token) {
+  // 过期 token 不建连：后端 verify 必然 401 且 EventSource 会永久关闭，
+  // 等静默刷新成功后由会话通知重开
+  if (!token || isTokenExpired(token)) {
     closeAccountEventsStream();
     return;
   }
-  // 已用同一 token 建连 → 跳过（避免会员同步触发的状态刷新造成无谓重连）
+  // 已用同一 token 建连 → 跳过（会员同步触发的状态刷新不算 token 变化）
   if (accountEventsStream && accountEventsToken === token) return;
   closeAccountEventsStream();
   if (typeof EventSource === 'undefined') return;
@@ -138,32 +147,42 @@ function openAccountEventsStream(): void {
     void handleAccountEvent();
   };
   es.onerror = () => {
-    // token 可能已静默刷新：localStorage 里的 token 与建连时不同 → 用新 token 重开
+    // 静默刷新换了 token 而通知尚未到达时自行重开
     const current = readToken();
-    if (current && current !== accountEventsToken) openAccountEventsStream();
+    if (current && !isTokenExpired(current) && current !== accountEventsToken) {
+      syncAccountEventsStream();
+    }
   };
   accountEventsStream = es;
 }
 
-// 登录（含应用加载时已有会话）→ 建连；登出 → 断连。immediate 覆盖「加载即已登录」
-watch(
-  isAuthenticated,
-  (authed) => {
-    if (authed) openAccountEventsStream();
-    else closeAccountEventsStream();
-  },
-  { immediate: true }
-);
+// 会话写入（登录 / 静默刷新）或清理（登出 / 刷新失效）后对齐；
+// 模块加载即执行一次，覆盖「加载时已有会话」
+onSessionChanged(() => syncAccountEventsStream());
+syncAccountEventsStream();
+
+// 跨标签页同步：其他标签写入/清理会话时同步用户态并让 SSE 跟上新 token。
+// 模块级注册一次——原先放在组件 onMounted 里，按实例重复注册且无清理；放在
+// onMounted 还意味着从事件处理器调 useUser()（permissionService）时监听器根本
+// 不会注册，跨标签页登录/登出后旧标签的 SSE 仍钉在旧 token 上。
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (
+      e.key !== null &&
+      e.key !== 'accessToken' &&
+      e.key !== 'refreshToken' &&
+      e.key !== 'user'
+    ) {
+      return;
+    }
+    refreshUserState();
+    syncAccountEventsStream();
+  });
+}
 
 export function useUser() {
   function refresh() {
     refreshUserState();
-  }
-
-  if (getCurrentInstance()) {
-    onMounted(() => {
-      window.addEventListener('storage', refresh);
-    });
   }
 
   async function logout() {

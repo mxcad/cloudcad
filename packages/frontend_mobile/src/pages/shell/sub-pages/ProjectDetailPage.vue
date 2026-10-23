@@ -12,7 +12,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { showDialog, showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant'
 import { t } from '@/languages'
 import { unwrap, errMsg } from '@/utils/apiError'
-import { nodeControllerDeleteNode } from '@cloudcad/api-sdk/sdk.gen'
 import { nodeControllerGetParentContext } from '@cloudcad/api-sdk/sdk.gen'
 import ProjectAuditLogPopup from '@/pages/shell/components/ProjectAuditLogPopup.vue'
 import type { AuditLogItem } from '@/composables/useProjectAuditLog'
@@ -626,18 +625,11 @@ const pasteDisabledReasonNow = computed(() =>
 const undo = useUndoSnackbar(5000, () => showFailToast(t('撤销失败')))
 
 // ── 新建图纸（create-drawing 空白模板，后端自动补 .mxweb 后缀）──
+// 撤销决策内聚在 useCreateDrawing（对齐 useFileNodeOps.onCreateFolderConfirm）
 const createDrawing = useCreateDrawing(
   () => fileList.currentFolderId.value ?? projectId.value,
   () => fileList.refresh(),
-  // 撤销：彻底删除新建图纸（对齐 PC createDrawing undo rollback）
-  (createdId) => {
-    undo.trackUndo(t('已创建图纸'), async () => {
-      const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
-      unwrap(r)
-      showSuccessToast(t('已撤销'))
-      await fileList.refresh()
-    })
-  },
+  undo,
 )
 const {
   showCreateDrawingDialog,

@@ -14,13 +14,12 @@
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast } from 'vant'
+import { showToast, showLoadingToast, closeToast, showFailToast } from 'vant'
 import type { ActionSheetAction } from 'vant'
 import {
   projectControllerGetProjects,
   projectControllerCreateProject,
   projectControllerGetPersonalSpace,
-  nodeControllerDeleteNode,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { loadProjectPermissions, invalidateProjectPermissions } from '@/services/permissionService'
 import { t } from '@/languages'
@@ -533,18 +532,11 @@ const fabActions = computed<FabAction[]>(() => [
 ])
 
 // ── 新建图纸（create-drawing 空白模板，后端自动补 .mxweb 后缀）──
+// 撤销决策内聚在 useCreateDrawing（对齐 useFileNodeOps.onCreateFolderConfirm）
 const createDrawing = useCreateDrawing(
   () => personalFileList.currentFolderId.value,
   () => personalFileList.loadNodes(),
-  // 撤销：彻底删除新建图纸（对齐 PC createDrawing undo rollback）
-  (createdId) => {
-    undo.trackUndo(t('已创建图纸'), async () => {
-      const r = await nodeControllerDeleteNode({ path: { nodeId: createdId }, query: { permanently: true } })
-      unwrap(r)
-      showSuccessToast(t('已撤销'))
-      await personalFileList.loadNodes()
-    })
-  },
+  undo,
 )
 const {
   showCreateDrawingDialog,

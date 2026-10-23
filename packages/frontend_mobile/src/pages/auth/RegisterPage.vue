@@ -31,7 +31,7 @@ import { navigateAfterAuth, redirectQueryOf } from '@/utils/authNavigate'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isPhone, isCode, isEmail, getPasswordStrength } from '@/utils/authValidation'
 import { validatePasswordPolicy } from '@cloudcad/platform'
-import { passwordPolicyHint, usePasswordPolicy } from '@/utils/passwordPolicy'
+import { passwordPlaceholder, usePasswordPolicy } from '@/utils/passwordPolicy'
 import { useCountdown } from '@/composables/useCountdown'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
 import { useBrand } from '@/composables/useBrand'
@@ -78,7 +78,7 @@ const usernameValid = computed(
 )
 // 生效口令策略（/runtime-config/public 下发）：提示与预检都读它，禁止写死数字
 const policy = usePasswordPolicy()
-const policyHint = computed(() => passwordPolicyHint(policy.value))
+const policyHint = computed(() => passwordPlaceholder(policy.value))
 // 与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories），弱口令黑名单由后端兜底
 const passwordValid = computed(() => validatePasswordPolicy(password.value, policy.value).valid)
 const strength = computed(() => getPasswordStrength(password.value, policy.value))

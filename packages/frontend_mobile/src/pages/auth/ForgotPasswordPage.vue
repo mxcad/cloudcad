@@ -169,7 +169,8 @@ function goLogin() {
 
           <template v-if="sent">
             <div class="notice">
-              {{ t('验证码已发送至') }} {{ sentContact }}
+              {{ contactType === 'email' ? t('邮件已发送至') : t('验证码已发送至') }}
+              {{ sentContact }}
             </div>
             <button class="primary-btn" type="button" @click="goReset">{{ t('前往重置密码') }}</button>
           </template>

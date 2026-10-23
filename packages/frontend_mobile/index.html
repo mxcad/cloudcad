@@ -12,6 +12,31 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <title>梦想网页CAD实时协同平台</title>
+    <!-- 首帧品牌缓存：管理端改过 brandTitle / brandLogo 后，运行时配置要等 bundle 加载 +
+         /runtime-config/public 返回才会生效，这段时间标签标题与图标都停在上面的打包兜底值，
+         肉眼就是「闪一下」。上次生效的值由 src/config/brandConfig.ts 存进 localStorage，
+         这里在 bundle 加载之前就直接应用。首次访问 / 禁用 JS 时保持静态兜底值。
+         键名必须与 BRAND_CHROME_CACHE_KEY 一致。 -->
+    <script>
+      (function () {
+        var store = window.localStorage
+        var cache
+        try {
+          cache = JSON.parse(store.getItem('mx-brand-chrome') || 'null')
+        } catch (err) {
+          return
+        }
+        if (!cache) return
+        var appName = typeof cache.appName === 'string' ? cache.appName.trim() : ''
+        if (appName) document.title = appName
+        var logo = typeof cache.logo === 'string' ? cache.logo.trim() : ''
+        // 与写入侧同一套校验：只放行同源相对路径，挡住 javascript:/data:/协议相对地址
+        if (logo.charAt(0) !== '/' || logo.charAt(1) === '/') return
+        if (logo.indexOf(':') !== -1 || /[ \t\n]/.test(logo)) return
+        var links = document.querySelectorAll('link[rel*="icon"]')
+        for (var i = 0; i < links.length; i++) links[i].href = logo
+      })()
+    </script>
   </head>
   <body ontouchstart="">
     <div id="app"></div>

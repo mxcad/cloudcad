@@ -21,7 +21,7 @@ import {
 } from '@cloudcad/platform';
 import { t } from '@/languages';
 import {
-  passwordPolicyHint,
+  passwordPlaceholder,
   passwordRequirementLabel,
   usePasswordPolicy,
 } from '@/utils/passwordPolicy';
@@ -71,9 +71,10 @@ export function useProfilePassword(
         ? t('设置密码')
         : t('确认修改')
   );
+  // 「设置」弹窗标题已说明语境，占位符只放长度要求；「修改」弹窗有三框，保留「新密码」区分
   const newPwdPlaceholder = computed(() =>
     isSettingPassword.value
-      ? passwordPolicyHint(policy.value)
+      ? passwordPlaceholder(policy.value)
       : t('请输入新密码（至少 {min} 位）', { min: String(policy.value.minLength) })
   );
 

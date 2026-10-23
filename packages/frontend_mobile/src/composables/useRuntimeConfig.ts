@@ -128,7 +128,7 @@ const DEFAULTS: PublicRuntimeConfig = {
   userCancelGraceDays: 7,
   conversionGuestWindowHours: 2,
   conversionGuestLimit: 5,
-  freeExportDownloadEnabled: false,
+  freeExportDownloadEnabled: true,
   collaborationEnabled: true,
   collaborationDomains: '',
   batchDownloadEnabled: false,
@@ -168,6 +168,20 @@ function objectField<T extends object>(
 }
 
 const config = ref<PublicRuntimeConfig>({ ...DEFAULTS });
+
+const configListeners = new Set<() => void>();
+
+/** 订阅运行时配置取回/刷新（仅成功时触发）。返回退订函数。 */
+export function subscribeRuntimeConfig(listener: () => void): () => void {
+  configListeners.add(listener);
+  return () => {
+    configListeners.delete(listener);
+  };
+}
+
+function notifyRuntimeConfig(): void {
+  configListeners.forEach((listener) => listener());
+}
 
 let fetched = false;
 let fetchPromise: Promise<void> | null = null;
@@ -272,6 +286,7 @@ async function fetchConfig(): Promise<void> {
             DEFAULTS.brandProfile
           ),
         };
+        notifyRuntimeConfig();
       }
     } catch {
       // 保持默认值

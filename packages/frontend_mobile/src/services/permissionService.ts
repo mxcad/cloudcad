@@ -1,7 +1,6 @@
 import { membershipState } from '@cloudcad/platform';
 import { memberControllerGetUserProjectPermissions } from '../api-sdk';
 import { useEditorStore } from '@/stores/editor';
-import { useUser } from '../composables/useUser';
 import { showToast } from 'vant';
 import { t } from '@/languages';
 import { unwrap } from '@/utils/apiError';
@@ -81,11 +80,6 @@ export function invalidateProjectPermissions(projectId?: string): void {
   else projectPermissionsCache.clear();
 }
 
-export async function checkSystemPermission(permission: PermissionKey): Promise<boolean> {
-  const { hasPermission } = useUser();
-  return hasPermission(permission);
-}
-
 export async function loadCADPermissions(projectId: string | null): Promise<void> {
   const editorState = useEditorStore();
 
@@ -108,14 +102,6 @@ export async function loadCADPermissions(projectId: string | null): Promise<void
   const result = { canSave, canExport, canManageExternalRef };
   permissionCache.set(projectId, { permissions: result, timestamp: Date.now() });
   editorState.setPermissions(result);
-}
-
-export async function checkLibraryPermissions(): Promise<{ canManageDrawing: boolean; canManageBlock: boolean }> {
-  const [canManageDrawing, canManageBlock] = await Promise.all([
-    checkSystemPermission(PERMISSIONS.LIBRARY_DRAWING_MANAGE),
-    checkSystemPermission(PERMISSIONS.LIBRARY_BLOCK_MANAGE),
-  ]);
-  return { canManageDrawing, canManageBlock };
 }
 
 /**

@@ -19,7 +19,7 @@ import { t } from '@/languages'
 import { toError, unwrap, errMsg } from '@/utils/authFeedback'
 import { isCode, getPasswordStrength, isContactType, type ContactType } from '@/utils/authValidation'
 import { validatePasswordPolicy } from '@cloudcad/platform'
-import { passwordPolicyHint, usePasswordPolicy } from '@/utils/passwordPolicy'
+import { passwordPlaceholder, usePasswordPolicy } from '@/utils/passwordPolicy'
 import { CODE_COOLDOWN_SECONDS, useCountdown } from '@/composables/useCountdown'
 import { redirectQueryOf } from '@/utils/authNavigate'
 import AuthBrandHeader from '@/components/AuthBrandHeader.vue'
@@ -45,7 +45,7 @@ const { countdown, start: countdownStart, isReady } = useCountdown(CODE_COOLDOWN
 // 生效口令策略（/runtime-config/public 下发）：提示、预检与强度评分都读它，禁止写死数字
 const policy = usePasswordPolicy()
 const strength = computed(() => getPasswordStrength(newPassword.value, policy.value))
-const policyHint = computed(() => passwordPolicyHint(policy.value))
+const policyHint = computed(() => passwordPlaceholder(policy.value))
 // 与后端 assertPasswordPolicy 对齐（生效 minLength / minCategories），弱口令黑名单由后端兜底
 const passwordValid = computed(() => validatePasswordPolicy(newPassword.value, policy.value).valid)
 const confirmMatch = computed(() => confirmPassword.value === newPassword.value)
@@ -142,7 +142,8 @@ function goForgot() {
         <div class="auth-header">
           <h1 class="auth-title">{{ t('重置密码') }}</h1>
           <p class="auth-subtitle">
-            {{ t('验证码已发送至') }} {{ contact }}
+            {{ contactType === 'email' ? t('邮件已发送至') : t('验证码已发送至') }}
+            {{ contact }}
           </p>
         </div>
 

@@ -1,7 +1,7 @@
 import { stripMxwebContainer } from '@cloudcad/platform';
 import { t } from '@/languages';
 import { useEditorStore } from '@/stores/editor';
-import { useUser } from '@/composables/useUser';
+import { readToken } from './authSession';
 
 /**
  * 引擎默认空模板文件名。与 PC 端 mxcadHelpers 的 EMPTY_DOCUMENT_NAMES 逐字一致：
@@ -15,19 +15,28 @@ export function isEmptyDocumentName(name: string | null | undefined): boolean {
   return !!name && EMPTY_DOCUMENT_NAMES.includes(name);
 }
 
+/** 命令式登录态：与 useUser().isAuthenticated 同一语义（access token 是否存在） */
+function hasSessionToken(): boolean {
+  return !!readToken();
+}
+
 /**
  * 编辑器当前文件标识（含 [协同中]/[未登录] 前缀）；无文件/默认空模板返回 ''。
  * 与 PC 端 editorDisplayName 同一套规则，前缀之间与文件名之间统一用 ' - ' 连接。
- * 读全局会话态，故只在编辑器页面（已有 pinia 与 store）内调用。
+ *
+ * authenticated 由调用方传入时标题响应登录态变化；不传则现读 localStorage，保持
+ * 命令式调用点的原语义。默认值必须是命令式读取而非 composable——本函数会在
+ * computed/render 期被调用，在 render 期调 useUser() 会命中 Vue 的 onMounted 告警。
  */
-export function editorDisplayName(fileName: string | null | undefined): string {
+export function editorDisplayName(
+  fileName: string | null | undefined,
+  authenticated = hasSessionToken()
+): string {
   let inCollaboration = false;
-  let authenticated = true;
   try {
     inCollaboration = useEditorStore().state.isInCollaboration;
-    authenticated = useUser().isAuthenticated.value;
   } catch {
-    // 会话态不可用时按「非协同、已登录」降级，只影响前缀不丢文件名
+    // pinia 未安装时按「非协同」降级，只影响前缀不丢文件名
   }
 
   const prefixes: string[] = [];

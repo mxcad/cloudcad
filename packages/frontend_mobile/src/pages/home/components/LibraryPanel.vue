@@ -33,16 +33,6 @@
           >
             <van-icon name="replay" size="16" />
           </div>
-          <div
-            v-if="canManage"
-            class="refresh-btn"
-            :class="{ 'refresh-btn--spinning': uploading }"
-            role="button"
-            :aria-label="t('上传')"
-            @click="pickFiles"
-          >
-            <van-icon :name="uploading ? 'replay' : 'photo-o'" size="16" />
-          </div>
         </div>
         <div class="header-meta">
           <span class="total-count">{{ t('共') }} {{ library.total.value }} {{ t('项') }}</span>
@@ -82,15 +72,6 @@
       <!-- 空 -->
       <div v-else-if="library.isEmpty.value" class="state-box">
         <span class="state-text">{{ t('暂无内容') }}</span>
-        <van-button
-          v-if="canManage && !selecting"
-          size="small"
-          round
-          type="primary"
-          @click="pickFiles"
-        >
-          {{ t('上传图纸') }}
-        </van-button>
       </div>
 
       <!-- 网格 -->
@@ -210,17 +191,7 @@
     </template>
   </FloatingPopup>
 
-  <!-- 上传用隐藏 file input（E-08） -->
-  <input
-    ref="fileInputRef"
-    type="file"
-    class="file-input-hidden"
-    multiple
-    :accept="UPLOAD_ACCEPT"
-    @change="onFilesPicked"
-  />
-
-  <!-- ═══ 条目操作（E-10/E-11/E-13） ═══ -->
+  <!-- ═══ 条目操作（E-11/E-13） ═══ -->
   <van-action-sheet
     v-model:show="showActionSheet"
     :actions="actionSheetActions"
@@ -231,30 +202,6 @@
 
   <!-- ═══ 下载任务（H2：「下载所选」zip 任务进度/下载入口） ═══ -->
   <BatchDownloadPanel v-model:show="showBatchPanel" />
-
-  <!-- ═══ 重命名（E-10） ═══ -->
-  <van-popup v-model:show="showRename" position="bottom" round>
-    <div class="rename-popup">
-      <div class="rename-popup-title">{{ t('重命名') }}</div>
-      <van-field
-        v-model="renameText"
-        :label="t('名称')"
-        :placeholder="t('请输入名称')"
-        maxlength="100"
-        clearable
-      />
-      <div class="rename-popup-actions">
-        <button class="select-bar-btn" @click="showRename = false">{{ t('取消') }}</button>
-        <button
-          class="select-bar-btn select-bar-btn--primary"
-          :disabled="!renameText.trim()"
-          @click="confirmRename"
-        >
-          {{ t('确定') }}
-        </button>
-      </div>
-    </div>
-  </van-popup>
 
   <!-- ═══ 分类级联选择 ═══ -->
   <van-popup
@@ -294,7 +241,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast, showImagePreview, showConfirmDialog } from 'vant'
+import { showToast, showLoadingToast, closeToast, showSuccessToast, showFailToast, showImagePreview } from 'vant'
 
 // Vant 的 ActionSheetAction 未从 'vant' 根导出（只在 lib/action-sheet 内部），
 // 且 van-action-sheet 用 name 字段（van-popover 用 text），故在此按实际使用字段声明
@@ -313,16 +260,10 @@ import { useEditorStore } from '@/stores/editor'
 import { useOpenGuard } from '@/composables/useOpenGuard'
 import { openDrawing } from '@/services/drawingOpener'
 import { useUser } from '@/composables/useUser'
-import { PERMISSIONS, canExportDownloadGate } from '@/services/permissionService'
+import { canExportDownloadGate } from '@/services/permissionService'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
-import { calculateFileHash } from '@/utils/hashUtils'
-import { runUploadPool } from '@/utils/uploadPool'
-import { uploadFile } from '@/services/mobileUploadService'
 import {
   buildLibraryFileUrl,
-  renameLibraryNode,
-  deleteLibraryNode,
-  batchDeleteLibraryNodes,
   downloadLibraryNode,
 } from '@/services/libraryOperationService'
 import { useBatchDownload } from '@/composables/useBatchDownload'
@@ -357,17 +298,8 @@ const library = useLibrary(props.libraryType)
 const mode = useViewMode(`library_${props.libraryType}`)
 const editorState = useEditorStore()
 const { guardBeforeOpen } = useOpenGuard()
-const { user, hasPermission } = useUser()
+const { user } = useUser()
 const { config: runtimeConfig } = useRuntimeConfig()
-
-// ── 库管理权限：上传/重命名/删除/下载等写操作统一门控 ──
-const canManage = computed(() =>
-  hasPermission(
-    props.libraryType === 'drawing'
-      ? PERMISSIONS.LIBRARY_DRAWING_MANAGE
-      : PERMISSIONS.LIBRARY_BLOCK_MANAGE,
-  ),
-)
 
 // ── 当前打开文件（高亮当前图纸） ──
 const currentFileId = computed(() => editorState.state.fileId ?? '')
@@ -584,63 +516,8 @@ function retry() {
   library.loadNodes()
 }
 
-// ── 上传（E-08） ──
-const UPLOAD_ACCEPT =
-  '.dwg,.dxf,.dxl,.3ds,.x_t,.sat,.iges,.igs,.step,.stp,.smt,.dwt,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.tif,.pdf'
-const fileInputRef = ref<HTMLInputElement | null>(null)
-const uploading = ref(false)
-
-function pickFiles() {
-  if (!canManage.value) {
-    showToast(t('当前角色无权管理此库'))
-    return
-  }
-  fileInputRef.value?.click()
-}
-
-async function onFilesPicked(e: Event) {
-  const input = e.target as HTMLInputElement
-  const files = Array.from(input.files ?? [])
-  input.value = ''
-  if (files.length === 0) return
-
-  const parentId = library.resolveCategoryNodeId()
-  if (!parentId) {
-    showToast(t('当前分类不可用'))
-    return
-  }
-
-  // 多文件上传：唯一出口 runUploadPool（并发 2，对齐 FileBrowserPage / ProjectDetailPage）；
-  // 本面板保留计数式 toast（一次传多文件时比逐文件 toast 更易读），失败明细进 console
-  uploading.value = true
-  try {
-    const { ok, failed } = await runUploadPool(
-      files,
-      async (file) => {
-        const hash = await calculateFileHash(file)
-        await uploadFile({ file, hash, nodeId: parentId })
-      },
-      (file, ok) => {
-        if (!ok) console.error('[LibraryPanel] upload failed:', file.name)
-      },
-    )
-    if (ok > 0) {
-      showToast(t('已上传 {count} 个文件', { count: String(ok) }))
-      library.page.value = 1
-      library.loadNodes()
-    } else if (failed > 0) {
-      showToast(t('上传失败'))
-    }
-  } finally {
-    uploading.value = false
-  }
-}
-
-// ── 条目操作（E-10 / E-11 / E-13） ──
+// ── 条目操作（E-11 / E-13，库在移动端只读：仅预览/下载/导出） ──
 const showActionSheet = ref(false)
-const showRename = ref(false)
-const renameText = ref('')
-let renameTarget: FileSystemNodeDto | null = null
 
 // H2：「下载所选」走 zip 任务队列（并行锚点下载会被浏览器拦截，仅首个生效）；
 // 任务面板复用 BatchDownloadPanel（库任务带 libraryType，后端按库根解析+库权限门控）
@@ -668,14 +545,6 @@ const actionSheetActions = computed<LibraryActionItem[]>(() => {
     }
   } else {
     actions.push({ name: t('下载所选') })
-  }
-
-  if (single && canManage.value) actions.push({ name: t('重命名') })
-  if (canManage.value) {
-    actions.push({
-      name: selectedNodes.value.length > 1 ? t('删除所选') : t('删除'),
-      color: '#ee0a24',
-    })
   }
   return actions
 })
@@ -729,65 +598,6 @@ async function onActionSheetSelect(action: LibraryActionItem) {
     exitSelection()
     return
   }
-
-  if (name === t('重命名')) {
-    if (!single) return
-    renameTarget = single
-    renameText.value = stripExt(single.name)
-    showRename.value = true
-    return
-  }
-
-  if (name === t('删除') || name === t('删除所选')) {
-    await confirmDelete()
-  }
-}
-
-async function confirmDelete() {
-  const nodes = selectedNodes.value
-  if (nodes.length === 0) return
-  try {
-    await showConfirmDialog({
-      title: nodes.length > 1 ? t('删除所选') : t('删除'),
-      message:
-        nodes.length > 1
-          ? t('确定删除 {count} 个文件？删除后不可恢复。', { count: String(nodes.length) })
-          : t('确定删除「{name}」？删除后不可恢复。', { name: nodes[0]?.name ?? '' }),
-      confirmButtonText: t('删除'),
-      cancelButtonText: t('取消'),
-    })
-  } catch {
-    return
-  }
-
-  if (nodes.length === 1) {
-    const ok = await deleteLibraryNode(props.libraryType, nodes[0].id)
-    if (ok) refresh()
-  } else {
-    const ids = nodes.map((node) => node.id)
-    const result = await batchDeleteLibraryNodes(props.libraryType, ids)
-    if (result) {
-      if (result.failedCount > 0) {
-        showToast(t('已删除 {ok} 个，{fail} 个失败', {
-          ok: String(result.successCount),
-          fail: String(result.failedCount),
-        }))
-      } else {
-        showToast(t('已删除 {count} 个文件', { count: String(ids.length) }))
-      }
-      refresh()
-    }
-  }
-  exitSelection()
-}
-
-async function confirmRename() {
-  const node = renameTarget
-  const name = renameText.value.trim()
-  if (!node || !name) return
-  showRename.value = false
-  const ok = await renameLibraryNode(props.libraryType, node.id, name)
-  if (ok) refresh()
 }
 
 
@@ -1262,30 +1072,6 @@ watch(
       background: var(--primary);
     }
   }
-}
-
-/* ── 重命名弹窗（E-10） ── */
-.rename-popup {
-  padding: var(--space-md) var(--space-lg) calc(var(--space-lg) + env(safe-area-inset-bottom));
-}
-
-.rename-popup-title {
-  margin-bottom: var(--space-md);
-  font-size: var(--font-size-body);
-  font-weight: 600;
-  color: var(--text-primary);
-  text-align: center;
-}
-
-.rename-popup-actions {
-  display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
-}
-
-/* ── 上传用隐藏 file input（E-08） ── */
-.file-input-hidden {
-  display: none;
 }
 </style>
 

@@ -2,6 +2,7 @@
  * 认证会话**唯一出口**：写入 / 清理 / 读取 / JWT exp 判定 / redirect 目标解析。
  *
  * - applyAuthResponse：登录（含改密重登、验证页自动登录）后写入 token/user 并通知状态机。
+ * - applyTokenRefresh：静默刷新成功后的 token 轮换回写（只换 token、不碰 user）。
  * - clearSession：唯一的「清空 accessToken/refreshToken/user 三键」出口，登出、
  *   刷新失效、陈旧 token 清理一律走这里（历史上同一套三连 removeItem 散落 6 处）。
  * - logout：用户主动登出的统一失败协议——API 失败 toast 后端错误文案 + **仍然**清本地
@@ -153,6 +154,21 @@ export function applyAuthResponse(data: AuthResponseData) {
   if (data.refreshToken)
     localStorage.setItem('refreshToken', data.refreshToken);
   if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+  notifySessionChanged('written');
+}
+
+/**
+ * 静默刷新成功后的回写（refresh token 轮换语义）：只换 token 不碰 user。
+ * 必须走本出口而非裸 localStorage.setItem——刷新后 access token 换了，
+ * useUser 的账户事件 SSE 依赖 written 通知带新 token 重开（EventSource 带不了
+ * Authorization header，建连时把 token 冻结在 query 里）。
+ */
+export function applyTokenRefresh(
+  accessToken: string,
+  refreshToken?: string
+): void {
+  localStorage.setItem('accessToken', accessToken);
+  if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
   notifySessionChanged('written');
 }
 

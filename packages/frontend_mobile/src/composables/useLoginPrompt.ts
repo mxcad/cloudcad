@@ -9,8 +9,9 @@
  * （useAuthState.initFromStorage 的静默刷新还在跑），同步判 guest 会在挂载那一刻把
  * 「可续期会话」弹回原生登录页，用户明明没退出过却被要求重登。故这两个态先等路由守卫的
  * hasValidAuth（同一刷新出口 refreshTokensOnce、in-flight 去重、4s 上限）再决定跳登录；
- * 判定为已登录时显式同步状态机——刷新直写 localStorage 不触发 onSessionChanged，
- * 不会自动翻回 authenticated，页面也就永远不会加载数据。
+ * 判定为已登录时显式同步状态机：静默刷新经 authSession.applyTokenRefresh 会发
+ * written 通知、通常已自动翻回 authenticated，此处仍显式兜底（hasValidAuth 可能在不
+ * 写 token 的路径上判定为真）；setAuthenticated 有 kind 判重，不会重复触发回调。
  *
  * 用法（子页 setup 内，须放在 load 函数与相关 ref 定义之后）：
  *   useLoginPrompt(() => loadXxx())
@@ -26,17 +27,22 @@ export function useLoginPrompt(onAuthenticated: () => void) {
 
   // 判定在途时不重复发起（避免并发多次刷新/多次跳转）
   let deciding = false
+  // 已跳一次就不再重复跳：判定 settle 之后刷新才落定（guest → token_expired）
+  // 会让 watch 串行重入一次，deciding 只拦并发拦不住这种，故记已跳转标记；
+  // 回到 authenticated 时复位，下次登出仍可再跳。
+  let navigated = false
 
   watch(
     () => authState.value.kind,
     async (kind) => {
       if (kind === 'authenticated') {
+        navigated = false
         onAuthenticated()
         return
       }
       // 其他态（network_error / forbidden / deactivated）由页面各自 UI 处理
       if (kind !== 'guest' && kind !== 'token_expired') return
-      if (deciding) return
+      if (deciding || navigated) return
 
       deciding = true
       try {
@@ -49,6 +55,7 @@ export function useLoginPrompt(onAuthenticated: () => void) {
           authState.value.kind === 'token_expired'
         ) {
           // 判定失败 = 确实未登录，才跳登录页（判定期间状态机可能已翻转，翻转后不再跳）
+          navigated = true
           navigateToLogin()
         }
       } finally {

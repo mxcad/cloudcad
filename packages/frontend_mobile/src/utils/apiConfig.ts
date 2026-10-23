@@ -1,7 +1,7 @@
 import { t, i18nScope } from '@/languages';
 import { client } from '@cloudcad/api-sdk/client.gen';
 import { authControllerRefreshToken } from '../api-sdk';
-import { clearSession, readToken } from './authSession';
+import { applyTokenRefresh, clearSession, readToken } from './authSession';
 import { errorKind } from './apiError';
 import {
   classifyApiError,
@@ -53,14 +53,6 @@ function getRefreshToken(): string | null {
   return null;
 }
 
-function setAccessToken(token: string): void {
-  localStorage.setItem('accessToken', token);
-}
-
-function setRefreshToken(token: string): void {
-  localStorage.setItem('refreshToken', token);
-}
-
 /**
  * 唯一刷新出口：并发调用共享同一 in-flight promise，避免轮换制 refresh token 被重复消费。
  * fetch 层 401 刷新与 useAuthState 启动/错误刷新都汇入此函数，不再各自发请求互相作废。
@@ -86,10 +78,10 @@ async function doRefreshTokens(): Promise<boolean> {
     });
     const inner = res.data as unknown as Record<string, unknown> | undefined;
     if (inner?.accessToken) {
-      setAccessToken(inner.accessToken as string);
-      if (inner.refreshToken) {
-        setRefreshToken(inner.refreshToken as string);
-      }
+      applyTokenRefresh(
+        inner.accessToken as string,
+        inner.refreshToken as string | undefined
+      );
       return true;
     }
     return false;

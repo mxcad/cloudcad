@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const state = vi.hoisted(() => ({
   isInCollaboration: false,
-  authenticated: true,
+  readToken: 'tok' as string | null,
   throwOnRead: false,
 }));
 
@@ -15,8 +15,8 @@ vi.mock('@/stores/editor', () => ({
     return { state };
   },
 }));
-vi.mock('@/composables/useUser', () => ({
-  useUser: () => ({ isAuthenticated: { value: state.authenticated } }),
+vi.mock('./authSession', () => ({
+  readToken: () => state.readToken,
 }));
 
 import { editorDisplayName, isEmptyDocumentName } from './editorFileName';
@@ -39,57 +39,61 @@ describe('isEmptyDocumentName', () => {
 describe('editorDisplayName', () => {
   beforeEach(() => {
     state.isInCollaboration = false;
-    state.authenticated = true;
+    state.readToken = 'tok';
     state.throwOnRead = false;
   });
 
-  it('已登录非协同时原样返回文件名', () => {
-    expect(editorDisplayName('图纸.dwg')).toBe('图纸.dwg');
+  it('显式传登录态：已登录非协同时原样返回文件名', () => {
+    expect(editorDisplayName('图纸.dwg', true)).toBe('图纸.dwg');
   });
 
-  it('协同时加 [协同中] 前缀，分隔符为 " - "', () => {
+  it('显式传登录态：协同时加 [协同中] 前缀，分隔符为 " - "', () => {
     state.isInCollaboration = true;
-    expect(editorDisplayName('图纸.dwg')).toBe('[协同中] - 图纸.dwg');
+    expect(editorDisplayName('图纸.dwg', true)).toBe('[协同中] - 图纸.dwg');
   });
 
-  it('未登录时加 [未登录] 前缀', () => {
-    state.authenticated = false;
+  it('显式传登录态：未登录时加 [未登录] 前缀', () => {
+    expect(editorDisplayName('图纸.dwg', false)).toBe('[未登录] - 图纸.dwg');
+  });
+
+  it('显式传登录态：协同与未登录同时成立时两个前缀按序拼接', () => {
+    state.isInCollaboration = true;
+    expect(editorDisplayName('图纸.dwg', false)).toBe(
+      '[协同中] - [未登录] - 图纸.dwg'
+    );
+  });
+
+  it('不传登录态时现读 localStorage（命令式调用点原语义）', () => {
+    expect(editorDisplayName('图纸.dwg')).toBe('图纸.dwg');
+    state.readToken = null;
     expect(editorDisplayName('图纸.dwg')).toBe('[未登录] - 图纸.dwg');
   });
 
-  it('协同与未登录同时成立时两个前缀按序拼接', () => {
-    state.isInCollaboration = true;
-    state.authenticated = false;
-    expect(editorDisplayName('图纸.dwg')).toBe('[协同中] - [未登录] - 图纸.dwg');
-  });
-
   it('默认空模板名视为无图纸，不显示内部模板名', () => {
-    expect(editorDisplayName('empty_template.mxweb')).toBe('');
-    expect(editorDisplayName('empty.mxweb')).toBe('');
+    expect(editorDisplayName('empty_template.mxweb', true)).toBe('');
+    expect(editorDisplayName('empty.mxweb', true)).toBe('');
     state.isInCollaboration = true;
-    expect(editorDisplayName('empty_template.mxweb')).toBe('[协同中]');
+    expect(editorDisplayName('empty_template.mxweb', true)).toBe('[协同中]');
   });
 
   it('空文件名只返回前缀', () => {
-    expect(editorDisplayName('')).toBe('');
-    expect(editorDisplayName(null)).toBe('');
-    expect(editorDisplayName(undefined)).toBe('');
-    state.authenticated = false;
-    expect(editorDisplayName(null)).toBe('[未登录]');
+    expect(editorDisplayName(null, true)).toBe('');
+    expect(editorDisplayName(undefined, true)).toBe('');
+    expect(editorDisplayName(null, false)).toBe('[未登录]');
   });
 
-  it('会话态读取失败时按已登录非协同降级，文件名不丢', () => {
+  it('pinia 未安装时按非协同降级，文件名不丢', () => {
     state.throwOnRead = true;
-    expect(editorDisplayName('图纸.dwg')).toBe('图纸.dwg');
-    expect(editorDisplayName('empty_template.mxweb')).toBe('');
+    expect(editorDisplayName('图纸.dwg', true)).toBe('图纸.dwg');
+    expect(editorDisplayName('empty_template.mxweb', true)).toBe('');
   });
 
   it('剥掉 .mxweb 存储容器层（回归：分享节点名 plan.dwg.mxweb 显示成内部标识）', () => {
-    expect(editorDisplayName('plan.dwg.mxweb')).toBe('plan.dwg');
-    expect(editorDisplayName('plan.mxweb')).toBe('plan');
+    expect(editorDisplayName('plan.dwg.mxweb', true)).toBe('plan.dwg');
+    expect(editorDisplayName('plan.mxweb', true)).toBe('plan');
     // 引擎导出会再叠一层容器后缀，标题也必须归一
-    expect(editorDisplayName('plan.dwg.mxweb.mxweb')).toBe('plan.dwg');
+    expect(editorDisplayName('plan.dwg.mxweb.mxweb', true)).toBe('plan.dwg');
     state.isInCollaboration = true;
-    expect(editorDisplayName('plan.dwg.mxweb')).toBe('[协同中] - plan.dwg');
+    expect(editorDisplayName('plan.dwg.mxweb', true)).toBe('[协同中] - plan.dwg');
   });
 });

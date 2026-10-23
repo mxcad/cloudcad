@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { stripDrawingExtension } from '@cloudcad/platform';
 import { t } from '@/languages';
-import { useSaveAs, type SaveTargetType, type SaveFormat } from '../../../composables/useSaveAs';
+import { useSaveAs, type SaveTargetType, type SaveFormat, type LibraryType } from '../../../composables/useSaveAs';
 import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
@@ -35,12 +35,17 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'success', result: { nodeId: string; fileName: string; targetType: 'personal' | 'project' }): void;
+  (e: 'success', result: {
+    nodeId: string;
+    fileName: string;
+    targetType: SaveTargetType;
+    libraryType?: LibraryType;
+  }): void;
   (e: 'login-required'): void;
 }>();
 
 const saveAs = useSaveAs();
-const { isAuthenticated } = useUser();
+const { isAuthenticated, hasPermission } = useUser();
 const error = ref<string | null>(null);
 const step = ref<'form' | 'folder'>('form');
 const showProjectPicker = ref(false);
