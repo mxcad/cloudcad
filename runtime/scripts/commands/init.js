@@ -9,8 +9,39 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const { IS_LINUX, PLATFORM, RUNTIME_DIR } = require('../lib/context');
+const {
+  IS_LINUX,
+  PLATFORM,
+  PROJECT_ROOT,
+  BACKEND_ENV_PATH,
+} = require('../lib/context');
+const { parseEnvFile } = require('../lib/env');
+const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
 const { log, clearScreen, printHeader } = require('../lib/logger');
+
+/**
+ * 解析 init 要处理的 mxcad 目录 —— 走 lib/mxcad-path（与 start.js 探针、
+ * verify-deploy.js 同一事实源）：后端 .env 配了 MXCAD_ASSEMBLY_PATH 就处理该二进制
+ * 所在目录，未配回退平台默认 runtime/<platform>/mxcad/。
+ *
+ * init 要 chmod 二进制 / chmod mx/so / 复制 mx/locale 的必须是应用实际使用的那个目录；
+ * 硬编码默认路径在自定义安装位置下会改错目录，还会误报「转换功能将不可用」。
+ *
+ * 回归背景（2026-10-23 Linux 部署实例）：此处曾写
+ * `path.join(RUNTIME_DIR, '..', 'linux', 'mxcad')`，而 RUNTIME_DIR 已是
+ * <root>/runtime，多退一级落到 <root>/linux/mxcad——部署包内实际是
+ * runtime/linux/mxcad，故 init 恒报「mxcad 目录不存在」并跳过全部初始化。
+ *
+ * @param {Object} [envConfig] parseEnvFile 读出的后端 .env 键值对
+ * @param {Object} [opts] { isLinux, projectRoot } 注入以便跨平台单测
+ * @returns {string} mxcad 目录绝对路径
+ */
+function resolveMxcadDir(envConfig = {}, opts = {}) {
+  const isLinux = opts.isLinux === undefined ? IS_LINUX : opts.isLinux;
+  const projectRoot = opts.projectRoot || PROJECT_ROOT;
+  const raw = resolveMxcadAssemblyPath(envConfig, isLinux);
+  return path.dirname(path.isAbsolute(raw) ? raw : path.join(projectRoot, raw));
+}
 
 async function linuxInit() {
   clearScreen();
@@ -24,7 +55,10 @@ async function linuxInit() {
     return;
   }
 
-  const mxcadDir = path.join(RUNTIME_DIR, '..', 'linux', 'mxcad');
+  const envConfig = fs.existsSync(BACKEND_ENV_PATH)
+    ? parseEnvFile(BACKEND_ENV_PATH)
+    : {};
+  const mxcadDir = resolveMxcadDir(envConfig);
 
   if (!fs.existsSync(mxcadDir)) {
     log('yellow', `mxcad 目录不存在: ${mxcadDir}`);
@@ -46,7 +80,7 @@ async function linuxInit() {
     } else {
       log(
         'yellow',
-        '[!] 设置权限失败，请手动执行: sudo chmod +x runtime/linux/mxcad/mxcadassembly'
+        `[!] 设置权限失败，请手动执行: sudo chmod +x ${mxcadAssemblyPath}`
       );
       hasError = true;
     }
@@ -67,7 +101,7 @@ async function linuxInit() {
     } else {
       log(
         'yellow',
-        '[!] 设置权限失败，请手动执行: sudo chmod -R 755 runtime/linux/mxcad/mx/so'
+        `[!] 设置权限失败，请手动执行: sudo chmod -R 755 ${mxSoPath}`
       );
       hasError = true;
     }
@@ -92,7 +126,7 @@ async function linuxInit() {
     } else {
       log(
         'yellow',
-        '[!] 复制 locale 失败，请手动执行: sudo cp -r -f runtime/linux/mxcad/mx/locale /usr/local/share/locale'
+        `[!] 复制 locale 失败，请手动执行: sudo cp -r -f ${localeSourcePath} /usr/local/share/locale`
       );
       hasError = true;
     }
@@ -108,4 +142,5 @@ async function linuxInit() {
 
 module.exports = {
   linuxInit,
+  resolveMxcadDir,
 };

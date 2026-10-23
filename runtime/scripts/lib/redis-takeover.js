@@ -45,6 +45,7 @@ const {
 const {
   isOurRuntimeProcess,
   isForeignCloudCadRuntimeProcess,
+  classifyPortOwner,
 } = require('./proc');
 
 const BACKEND_ENV_PATH = path.join(
@@ -173,13 +174,19 @@ function detectRedisOwnership(
     isForeign = isForeignCloudCadRuntimeProcess,
   } = {}
 ) {
-  if (!pid) return 'unknown';
-  const cmdline = getCmdline(pid);
-  if (!cmdline) return 'unknown';
-  if (isOurRedisInstance(cmdline, dataDir)) return 'ours';
-  if (isOurs(pid)) return 'ours';
-  if (isForeign(pid)) return 'foreign-deploy';
-  return 'foreign';
+  return classifyPortOwner(pid, {
+    oursEvidence: (p) => {
+      // pid 为空或 cmdline 读不到都判 unknown 不往下走：归属未知时不触碰实例，
+      // 也不能靠二进制路径兜回来（redis 无 pid 时 getCmdline 未必返空）
+      if (!p) return 'unknown';
+      const cmdline = getCmdline(p);
+      if (!cmdline) return 'unknown';
+      return isOurRedisInstance(cmdline, dataDir) ? 'ours' : null;
+    },
+    fallback: () => 'foreign',
+    isOurs,
+    isForeign,
+  });
 }
 
 /**

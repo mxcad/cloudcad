@@ -94,6 +94,8 @@ function setup(opts) {
   });
   stub('../lib/admin-login', { getAdminLoginPath: () => '/admin' });
   stub('../lib/proc', {
+    // 保留真实的 classifyPortOwner：归属阶梯本体就是被测语义，只覆盖它的钩子
+    ...require('../lib/proc'),
     runPm2: () => true,
     getPm2AppStatus: () => 'unknown',
     // ours-pm2 走 PM2 注册表判定，其余走 PID 判定

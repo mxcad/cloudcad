@@ -38,6 +38,7 @@ const {
   isNodePid,
   isOurRuntimeProcess,
   isForeignCloudCadRuntimeProcess,
+  classifyPortOwner,
   getProcessExecutablePath,
   getProcessCmdlines,
   killTree,
@@ -406,27 +407,35 @@ async function runMxcadProbe() {
 /**
  * 判定应用层端口占用者的归属（与 infra.js 基础服务门禁同一口径）。
  *
- * 只认三类证据，判不出就如实返回 unknown，不做"看着像就杀掉"的猜测：
+ * 走 classifyPortOwner 的统一阶梯，本函数只提供第一级证据（PM2 注册表）与
+ * 最终兜底档：
  *   1. PM2 注册表里的 app 名 + pm_cwd 归属（Windows 上 PM2 是机器全局寻址，
- *      注册表本身能覆盖同机所有部署目录）；
- *   2. 可执行文件路径在本目录 runtime/ 下（本部署包产物）；
- *   3. 可执行文件路径含另一目录的 /runtime/<platform>/（另一部署包产物）。
+ *      注册表本身能覆盖同机所有部署目录）——注意这一级在 pid 为 null 时也能
+ *      给出结论，PM2 说在线就说明有实例，端口探测未必扫得到；
+ *   2. 可执行文件路径在本目录 runtime/ 下 → 'ours-residual'（本部署包产物，
+ *      不是 PM2 托管的残留进程，区别于 'ours-pm2'）；
+ *   3. 可执行文件路径含另一目录的 /runtime/<platform>/ → 'foreign-deploy'。
  *
  * @param {{name: string, pid: number|null}} p
  * @returns {'ours-pm2'|'ours-residual'|'foreign-deploy'|'unknown'|'external'}
  */
 function classifyAppPortOwner({ name, pid }) {
-  const entry = getPm2StatusList().find((a) => a.name === name);
-  if (entry && entry.pm2_env && entry.pm2_env.status === 'online') {
-    return isPm2AppFromThisProject(entry) ? 'ours-pm2' : 'foreign-deploy';
-  }
-  if (!pid) return 'unknown';
-  if (isOurRuntimeProcess(pid)) return 'ours-residual';
-  if (isForeignCloudCadRuntimeProcess(pid)) return 'foreign-deploy';
-  if (!isNodePid(pid)) return 'external';
-  // plain node：exe 是系统 node，既可能是本仓库 pnpm dev 起的同名服务，也可能是
-  // 另一部署目录的前台实例——两者在进程表里完全同形，无法区分。
-  return 'unknown';
+  return classifyPortOwner(pid, {
+    oursEvidence: () => {
+      const entry = getPm2StatusList().find((a) => a.name === name);
+      if (!entry || !entry.pm2_env || entry.pm2_env.status !== 'online') return null;
+      return isPm2AppFromThisProject(entry) ? 'ours-pm2' : 'foreign-deploy';
+    },
+    oursLabel: 'ours-residual',
+    fallback: (p) => {
+      if (!isNodePid(p)) return 'external';
+      // plain node：exe 是系统 node，既可能是本仓库 pnpm dev 起的同名服务，也可能是
+      // 另一部署目录的前台实例——两者在进程表里完全同形，无法区分。
+      return 'unknown';
+    },
+    isOurs: isOurRuntimeProcess,
+    isForeign: isForeignCloudCadRuntimeProcess,
+  });
 }
 
 /** 描述占用者（PID / 可执行文件 / 命令行），用于把"杀掉谁"摆在用户面前。 */

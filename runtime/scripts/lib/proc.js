@@ -669,6 +669,56 @@ function isForeignCloudCadRuntimeProcess(pid) {
 }
 
 /**
+ * 端口占用者归属判定的统一阶梯。
+ *
+ * 四类证据按固定顺序走，前面判不出才落到下一级：
+ *   1. `oursEvidence`——调用方那一级技术专属的强证据（PG 的 postmaster.pid、
+ *      Redis 的 `--dir` 物理目录、应用层端口的 PM2 注册表）。可返回任意档位
+ *      （含 'unknown' 表示强制中止），返回 null 才继续往下走；
+ *   2. 可执行文件在本目录 runtime/ 下 → `oursLabel`（本部署残留，可清理）；
+ *   3. 可执行文件在另一 CloudCAD 部署目录的 runtime/ 下 → `foreignLabel`
+ *      （同包多解压，停它不影响对方数据目录）；
+ *   4. `fallback`——上面都判不出时的兜底档（各调用方的失败语义不同）。
+ *
+ * 第 2、3 步的原语本来就在本模块，但三条业务路径此前各自重写同样的走查顺序
+ * 与同样的二元归属检查：口径要改就得改三处，漏改一处就是「本目录实例被当成
+ * 外部实例换端口」（每 start 一次端口 +1，多部署并存无人知晓）。这里把顺序
+ * 收口为一份，各调用方只保留自己那一级证据与自己的兜底档。
+ *
+ * @param {number|null} pid
+ * @param {{
+ *   oursEvidence?: (pid: number|null) => (string|null),
+ *   fallback?: (pid: number) => string,
+ *   noPid?: (string|null),
+ *   oursLabel?: string,
+ *   foreignLabel?: string,
+ *   isOurs?: (pid: number) => boolean,
+ *   isForeign?: (pid: number) => boolean,
+ * }} [opts] 注入用（测试）；默认取本模块的进程归属判定
+ * @returns {string} 归属档位（'ours' / 'foreign-deploy' / 'foreign' / 'unknown' /
+ *   'external' 等由调用方定义的取值，或 noPid 指定的空 PID 档位）
+ */
+function classifyPortOwner(
+  pid,
+  {
+    oursEvidence = () => null,
+    fallback = () => 'foreign',
+    noPid = 'unknown',
+    oursLabel = 'ours',
+    foreignLabel = 'foreign-deploy',
+    isOurs = isOurRuntimeProcess,
+    isForeign = isForeignCloudCadRuntimeProcess,
+  } = {}
+) {
+  const evidence = oursEvidence(pid);
+  if (evidence) return evidence;
+  if (!pid) return noPid;
+  if (isOurs(pid)) return oursLabel;
+  if (isForeign(pid)) return foreignLabel;
+  return fallback(pid);
+}
+
+/**
  * 一次性读取全机进程的 pid / 名称 / 命令行 / 可执行文件路径。
  *
  * 判断"停止后是否还有进程占用本部署目录"必须扫进程表：Windows 上 PM2 用
@@ -800,5 +850,6 @@ module.exports = {
   getProcessExecutablePath,
   isOurRuntimeProcess,
   isForeignCloudCadRuntimeProcess,
+  classifyPortOwner,
   getProcessCmdlines,
 };

@@ -20,6 +20,7 @@ const {
   getProcessExecutablePath,
   isOurRuntimeProcess,
   isForeignCloudCadRuntimeProcess,
+  classifyPortOwner,
 } = require('./proc');
 const { isPortOpen } = require('./health');
 
@@ -247,19 +248,27 @@ function detectPostgresOwnership(
     isForeign = isForeignCloudCadRuntimeProcess,
   } = {}
 ) {
-  if (!pid) return null;
-  try {
-    const pidFile = path.join(pgDataDir, 'postmaster.pid');
-    if (fs.existsSync(pidFile)) {
-      const first = fs.readFileSync(pidFile, 'utf8').split('\n')[0].trim();
-      if (first === String(pid)) return 'ours';
-    }
-  } catch {
-    /* 锁文件不可读，落到可执行文件判定 */
-  }
-  if (isOurs(pid)) return 'ours';
-  if (isForeign(pid)) return 'foreign-deploy';
-  return getExe(pid) ? 'foreign' : 'unknown';
+  return classifyPortOwner(pid, {
+    oursEvidence: (p) => {
+      if (!p) return null;
+      try {
+        const pidFile = path.join(pgDataDir, 'postmaster.pid');
+        if (fs.existsSync(pidFile)) {
+          const first = fs.readFileSync(pidFile, 'utf8').split('\n')[0].trim();
+          if (first === String(p)) return 'ours';
+        }
+      } catch {
+        /* 锁文件不可读，落到可执行文件判定 */
+      }
+      return null;
+    },
+    // PG 区分「没扫到 PID」(null) 与「扫到但不可读」('unknown')，前者由调用方
+    // 结合 fullScanDone 判定，不能合并成同一档
+    noPid: null,
+    fallback: (p) => (getExe(p) ? 'foreign' : 'unknown'),
+    isOurs,
+    isForeign,
+  });
 }
 
 module.exports = {
