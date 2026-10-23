@@ -4,13 +4,15 @@ import { createPinia, setActivePinia } from 'pinia';
 /**
  * useSave.save —— 保存分流门禁的契约测试
  *
- * 锁定的缺陷：库图纸的保存分支曾经无条件不可达，原因有两层——
- * 1. 项目保存权限门禁（`!canSave && fileId`）在库分支之前执行，
- *    而 useFileLoader 对库源固定写入 canSave:false，门禁必然先命中；
- * 2. 库分支的判定值取自 `fileInfo.libraryKey`，但 libraryKey 不是
- *    FileSystemNode 的字段，接口返回里永远没有它。
- * 于是库图纸保存恒报「没有保存权限，请另存为」，saveLibraryDrawing /
- * saveLibraryBlock 成为死码。这两条是各自的必要条件，缺一都不能修好。
+ * 库图纸/库图块走「库管理权限」而非项目保存权限：
+ * 持 LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE → 库内原位保存
+ * （对齐 PC saveFile 的 library 分支）；不持权限 → 只读并引导另存为，
+ * 不动库原件。
+ *
+ * 库判定必须先于项目保存权限门禁：useFileLoader 对库源固定写 canSave:false，
+ * 放在门禁之后会被误报成「没有保存权限」，用户按提示另存为却永远回不到库，
+ * 只看到一句与原因无关的提示。该排除条件不得回退成库图纸一律只读——
+ * 那样会让 saveLibraryDrawing / saveLibraryBlock 重新变成无消费者死码。
  *
  * 未认证的守卫（isAuthenticated）不属于被测对象，经 useUser().refresh()
  * 让真实状态机重读 localStorage。
@@ -114,6 +116,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   getMxwebBlob.mockResolvedValue(new Blob(['x']));
+  saveLibraryDrawing.mockResolvedValue({});
+  saveLibraryBlock.mockResolvedValue({});
   // 节点仍存在、无新更新时间（顺带让缓存分支短路）
   nodeControllerGetNode.mockResolvedValue({
     data: { updatedAt: null, path: null },
@@ -121,8 +125,8 @@ beforeEach(() => {
   projectControllerGetPersonalSpace.mockResolvedValue({ data: null });
 });
 
-describe('useSave.save — 资源库图纸保存', () => {
-  it('库图纸无项目保存权限但有资源库管理权限 → 走 saveLibraryDrawing 成功', async () => {
+describe('useSave.save — 资源库图纸/图块保存', () => {
+  it('持 LIBRARY_DRAWING_MANAGE → 库内原位保存，走 saveLibraryDrawing', async () => {
     loginAs(['LIBRARY_DRAWING_MANAGE']);
     openLibraryDrawing('drawing');
 
@@ -130,10 +134,11 @@ describe('useSave.save — 资源库图纸保存', () => {
 
     expect(res).toEqual({ success: true });
     expect(saveLibraryDrawing).toHaveBeenCalledWith('node-1', expect.any(Blob));
+    expect(saveLibraryBlock).not.toHaveBeenCalled();
     expect(saveToNode).not.toHaveBeenCalled();
   });
 
-  it('图块库图纸 → 走 saveLibraryBlock', async () => {
+  it('持 LIBRARY_BLOCK_MANAGE → 走 saveLibraryBlock', async () => {
     loginAs(['LIBRARY_BLOCK_MANAGE']);
     openLibraryDrawing('block');
 
@@ -142,9 +147,10 @@ describe('useSave.save — 资源库图纸保存', () => {
     expect(res).toEqual({ success: true });
     expect(saveLibraryBlock).toHaveBeenCalledWith('node-1', expect.any(Blob));
     expect(saveLibraryDrawing).not.toHaveBeenCalled();
+    expect(saveToNode).not.toHaveBeenCalled();
   });
 
-  it('库图纸无资源库管理权限 → 库专属文案，不得误报项目保存权限', async () => {
+  it('无库管理权限 → 库原件只读并引导另存为，不发任何写请求', async () => {
     loginAs(['CAD_SAVE']);
     openLibraryDrawing('drawing');
 
@@ -153,9 +159,10 @@ describe('useSave.save — 资源库图纸保存', () => {
     expect(res).toEqual({
       success: false,
       needSaveAs: true,
-      message: '无资源库管理权限，请另存为到其他位置',
+      message: '资源库图纸只读，请另存为到其他位置',
     });
     expect(saveLibraryDrawing).not.toHaveBeenCalled();
+    expect(saveToNode).not.toHaveBeenCalled();
   });
 });
 
@@ -206,7 +213,6 @@ describe('useSave.save — 既有门禁不得回归', () => {
       undefined,
       null
     );
-    expect(saveLibraryDrawing).not.toHaveBeenCalled();
   });
 
   it('新建未保存的图纸（无 fileId）→ 请另存为到云图', async () => {

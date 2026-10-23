@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { t } from '@/languages';
-import { relativeTime } from '@cloudcad/platform';
+import {
+  relativeTime,
+  toVersionDisplayList,
+  extractUserNote,
+} from '@cloudcad/platform';
 import { useVersionHistory, type VersionEntry } from '../../../composables/useVersionHistory';
+import { useEditorStore } from '../../../stores/editor';
 import FloatingPopup from "../../../components/FloatingPopup.vue"
 
 const props = withDefaults(
@@ -20,13 +25,24 @@ const emit = defineEmits<{
 }>();
 
 const show = ref(true);
+const editorStore = useEditorStore();
 const { loading, entries, totalCount, error, loadHistory, openHistoricalVersion, reset } = useVersionHistory();
 
-// 后端返回时间正序 [r0(初始), r1, ..., rN]，渲染反转（顶部最新、底部 r0）
+// 当前正在编辑的版本（useFileLoader 从 URL ?v= 写入 store）。未显式钉版本时
+// （普通打开，无 ?v=）用户停在最新版本，即反转后的第一行；只按 revision 匹配会让
+// 标记恒不出现，看完历史版回来不知道现在停在哪个版本
+const pinnedRevision = computed(() => editorStore.state.currentVersion);
+
+// 后端返回时间正序 [r0(初始), r1, ..., rN]，编号基于 totalCount（截断时不漂移）；
+// 提交消息是后端拼的 `Save: <文件名> - <说明>`，列表只留用户填的说明（与 PC 共用口径）
 const displayEntries = computed(() =>
-  [...entries.value].reverse().map((entry, index) => ({
+  toVersionDisplayList(entries.value, totalCount.value).map(({ entry, versionIndex }, i) => ({
     entry,
-    versionIndex: entry.revision === -1 ? 0 : totalCount.value - index,
+    versionIndex,
+    note: extractUserNote(entry.message || ''),
+    author: entry.userName || entry.author || t('系统'),
+    isCurrent:
+      pinnedRevision.value === undefined ? i === 0 : entry.revision === pinnedRevision.value,
   }))
 );
 
@@ -100,20 +116,22 @@ function formatRelativeTime(dateStr: string): string {
 
     <div v-else class="version-list">
       <div
-        v-for="({ entry, versionIndex }, index) in displayEntries"
+        v-for="({ entry, versionIndex, note, author, isCurrent }, index) in displayEntries"
         :key="index"
         class="version-item"
+        :class="{ 'version-item--current': isCurrent }"
         @click="onSelectVersion(entry)"
       >
         <div class="version-revision">r{{ versionIndex }}</div>
         <div class="version-info">
-          <div class="version-message">{{ entry.message || t('无说明') }}</div>
+          <div v-if="note" class="version-message">{{ note }}</div>
           <div class="version-meta">
-            <span class="version-author">{{ entry.author || entry.userName || t('未知') }}</span>
+            <span class="version-author">{{ author }}</span>
             <span class="version-date">{{ formatRelativeTime(entry.date) }}</span>
           </div>
         </div>
-        <van-icon name="arrow" class="version-arrow" />
+        <span v-if="isCurrent" class="version-current-tag">{{ t('当前') }}</span>
+        <van-icon v-else name="arrow" class="version-arrow" />
       </div>
     </div>
   </FloatingPopup >
@@ -160,6 +178,21 @@ function formatRelativeTime(dateStr: string): string {
 
 .version-item:active {
   background: var(--active-color);
+}
+
+.version-item--current {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--popup-card-bg));
+}
+
+.version-current-tag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: var(--radius-full);
 }
 
 .version-revision {

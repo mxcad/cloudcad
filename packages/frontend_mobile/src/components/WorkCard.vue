@@ -25,9 +25,10 @@ export interface WorkDisplay {
 const props = withDefaults(defineProps<{
   display: WorkDisplay;
   connecting: boolean;
-  showFooter?: boolean;
+  /** 图纸分组卡片里分组头已经显示了图纸名，卡片内不再重复 */
+  showTitle?: boolean;
 }>(), {
-  showFooter: true,
+  showTitle: true,
 });
 
 const emit = defineEmits<{
@@ -97,11 +98,11 @@ async function handleCopy() {
     <!-- 主体行 -->
     <div class="card-main">
       <div class="card-info">
-        <div class="card-title-row">
+        <div v-if="showTitle" class="card-title-row">
           <span class="card-title">{{ display.drawingName }}</span>
           <span v-if="display.sourceType === 'local'" class="card-local-tag">{{ t('本地') }}</span>
         </div>
-        <span v-if="showFooter" class="card-meta">
+        <span class="card-meta">
           <template v-if="display.sourceType === 'local'">
             {{ t('协同ID') }}: {{ display.work.work_id }}
           </template>
@@ -118,7 +119,7 @@ async function handleCopy() {
     </div>
 
     <!-- 底部行：头像 + 按钮 -->
-    <div v-if="showFooter" class="card-foot">
+    <div class="card-foot">
       <div class="avatars">
         <span v-if="display.participants.length === 0" class="no-participants">{{ t('暂无参与者') }}</span>
         <div
@@ -151,25 +152,6 @@ async function handleCopy() {
           <span v-else>{{ t('加入') }}</span>
         </button>
       </div>
-    </div>
-
-    <!-- 简化版（无 footer）：当前图纸组用，同样需要退出分支（对齐 PC isJoined ? 退出 : 加入） -->
-    <div v-else class="card-actions">
-      <button class="btn btn-outline" @click="handleShare">{{ t('分享') }}</button>
-      <button
-        v-if="display.isJoined"
-        class="btn btn-danger"
-        @click="emit('exit')"
-      >{{ t('退出') }}</button>
-      <button
-        v-else
-        class="btn btn-primary"
-        :disabled="connecting"
-        @click="emit('join', display.work.work_id)"
-      >
-        <van-loading v-if="connecting" color="var(--van-white)" size="14px" />
-        <span v-else>{{ t('加入') }}</span>
-      </button>
     </div>
   </div>
 </template>

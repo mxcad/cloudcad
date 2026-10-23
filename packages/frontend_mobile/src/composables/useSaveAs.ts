@@ -110,6 +110,8 @@ export function useSaveAs() {
     selectedParentId: string;
     format: SaveFormat;
     fileName: string;
+    sourceNodeId?: string;
+    sourceFileHash?: string;
   }): Promise<{ success: boolean; nodeId?: string; message?: string }> {
     saving.value = true;
     try {
@@ -126,6 +128,8 @@ export function useSaveAs() {
         libraryType:
           params.targetType === 'library' ? params.libraryType : undefined,
         commitMessage: `Save as: ${params.fileName}.${params.format}`,
+        sourceNodeId: params.sourceNodeId,
+        sourceFileHash: params.sourceFileHash,
       });
       if (result.nodeId) {
         if (pendingImageCount() > 0) {

@@ -124,14 +124,6 @@ describe('E-25 版本历史相对时间 i18n', () => {
   });
 });
 
-describe('E-27 另存为后打开新图纸 i18n', () => {
-  it('打开新图纸/确认消息标签有 i18n', () => {
-    expect(
-      assertLabelsHaveI18n(['打开新图纸', '{fileName} 已保存成功，是否打开？'])
-    ).toEqual([]);
-  });
-});
-
 describe('E-06 视图子菜单', () => {
   const group = findGroup('视图');
   it('视图组存在且命令顺序正确', () => {

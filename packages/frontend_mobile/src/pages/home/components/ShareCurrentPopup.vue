@@ -105,6 +105,13 @@ function onCustomDaysInput(v: string | number) {
 // `/share/:token`，拼出来是两端都打不开的死链。后端漏返回 url 时宁可显示为空并
 // 提示失败，也不生成一个静默失效的链接。
 
+// 「已有分享」列表里不重复列刚刚创建的那条：它已在上方结果区展示（二维码 +
+// 链接 + 复制 + 有效期），列表区再出一份同样的链接会把「已创建 1 个」显示成
+// 两条完全相同的条目，读起来像后端重复建了两条。
+const listShares = computed(() =>
+  existingShares.value.filter((s) => s.token !== created.value?.token)
+)
+
 async function loadExistingShares() {
   if (!props.fileId) return
   loadingShares.value = true
@@ -297,21 +304,23 @@ function onClose() {
             </div>
           </div>
 
-          <!-- 已有分享（对齐 PC ShareDialog 列表视图：链接 + 复制 + 有效期 + 撤销） -->
-          <div v-if="!loadingShares" class="sc-section">
+          <!-- 已有分享（对齐 PC ShareDialog 列表视图：链接 + 复制 + 有效期 + 撤销）。
+               刚创建的那条已在上方结果区展示，若它也是唯一一条，整节收起——
+               否则标题下只剩「还没有分享过这个文件」，与结果区自相矛盾。 -->
+          <div v-if="!loadingShares && (listShares.length > 0 || !created)" class="sc-section">
             <div class="sc-section-title">
-              {{ t('已有分享') }}{{ existingShares.length > 0 ? `（${existingShares.length}）` : '' }}
+              {{ t('已有分享') }}{{ listShares.length > 0 ? `（${listShares.length}）` : '' }}
             </div>
             <div v-if="sharesLoadFailed" class="sc-share-empty sc-share-empty--error">
               <van-icon name="warning-o" size="20" />
               <span>{{ t('加载失败，请重试') }}</span>
               <button class="sc-retry" @click="loadExistingShares">{{ t('重试') }}</button>
             </div>
-            <div v-else-if="existingShares.length === 0" class="sc-share-empty">
+            <div v-else-if="listShares.length === 0" class="sc-share-empty">
               {{ t('还没有分享过这个文件') }}
             </div>
             <div v-else class="sc-share-list">
-              <div v-for="item in existingShares" :key="item.token" class="sc-share-item">
+              <div v-for="item in listShares" :key="item.token" class="sc-share-item">
                 <div v-if="item.url" class="sc-share-row">
                   <input class="sc-share-url" :value="item.url" readonly />
                   <button class="sc-share-copy" @click="copyExistingShare(item)">

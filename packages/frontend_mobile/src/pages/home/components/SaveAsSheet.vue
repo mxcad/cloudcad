@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { stripDrawingExtension } from '@cloudcad/platform';
 import { t } from '@/languages';
-import { useSaveAs, type SaveTargetType, type LibraryType, type SaveFormat } from '../../../composables/useSaveAs';
+import { useSaveAs, type SaveTargetType, type SaveFormat } from '../../../composables/useSaveAs';
 import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
@@ -20,13 +20,12 @@ interface FolderNode {
 const props = defineProps<{
   show: boolean;
   currentFileName?: string;
-  canManageLibrary?: boolean;
   currentNodeId?: string;
 }>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'success', result: { nodeId: string; fileName: string; targetType: SaveTargetType; libraryType?: LibraryType }): void;
+  (e: 'success', result: { nodeId: string; fileName: string; targetType: 'personal' | 'project' }): void;
   (e: 'login-required'): void;
 }>();
 
@@ -52,19 +51,12 @@ const selectedProjectName = computed(() => {
   return p ? p.name : '';
 });
 
-const hasLibraryPermission = computed(() => {
-  return props.canManageLibrary === true;
-});
-
+// 移动端库只读：库图纸的入库是管理员（PC 端）职责，故不提供「资源库」保存目标
 const saveAsOptions = computed(() => {
-  const options: Array<{ label: string; value: SaveTargetType; icon: string }> = [
+  return [
     { label: t('我的图纸'), value: 'personal', icon: 'home-o' },
     { label: t('项目文件夹'), value: 'project', icon: 'orders-o' },
-  ];
-  if (hasLibraryPermission.value) {
-    options.push({ label: t('公开资源库'), value: 'library', icon: 'apps-o' });
-  }
-  return options;
+  ] as Array<{ label: string; value: SaveTargetType; icon: string }>;
 });
 
 const formatOptions = computed(() => {
@@ -88,9 +80,6 @@ const folderDisplayText = computed(() => {
   }
   if (saveAs.targetType.value === 'personal') {
     return t('我的图纸');
-  }
-  if (saveAs.targetType.value === 'library') {
-    return saveAs.libraryType.value === 'drawing' ? t('图纸库') : t('图块库');
   }
   const p = saveAs.projects.value.find(p => p.id === saveAs.selectedParentId.value);
   return p ? p.name : t('根目录');
@@ -140,9 +129,6 @@ async function handleSave() {
         return;
       }
       saveAs.selectedParentId.value = saveAs.selectedProjectId.value;
-    } else if (saveAs.targetType.value === 'library') {
-      error.value = t('请先选择文件夹');
-      return;
     }
   }
 
@@ -155,12 +141,15 @@ async function handleSave() {
     const baseName = stripDrawingExtension(saveAs.fileName.value) || 'untitled';
     const result = await saveAs.executeSaveAs({
       blob,
-      targetType: saveAs.targetType.value,
-      libraryType: saveAs.targetType.value === 'library' ? saveAs.libraryType.value : undefined,
+      // useSaveAs 的 SaveTargetType 仍含 'library'，但本面板已不提供库目标
+      targetType: saveAs.targetType.value as 'personal' | 'project',
       selectedProjectId: saveAs.targetType.value === 'project' ? saveAs.selectedProjectId.value : undefined,
       selectedParentId: saveAs.selectedParentId.value,
       format: saveAs.format.value,
       fileName: baseName,
+      // 源节点 ID：后端据此复制外部参照 preloading 数据，让「另存为」的副本
+      // 保留原图纸的外部参照根（PC SaveAs 传同样的字段）
+      sourceNodeId: props.currentNodeId || undefined,
     });
 
     if (result.success) {
@@ -168,8 +157,7 @@ async function handleSave() {
       emit('success', {
         nodeId: result.nodeId || '',
         fileName: baseName,
-        targetType: saveAs.targetType.value,
-        libraryType: saveAs.targetType.value === 'library' ? saveAs.libraryType.value : undefined,
+        targetType: saveAs.targetType.value as 'personal' | 'project',
       });
       emit('close');
     } else {
@@ -195,18 +183,6 @@ async function openFolderPicker() {
       folderLoading.value = false;
       return;
     }
-  } else if (saveAs.targetType.value === 'library') {
-    rootId = saveAs.libraryRootId.value || '';
-    if (!rootId) {
-      await saveAs.loadLibraryRoot(saveAs.libraryType.value);
-      rootId = saveAs.libraryRootId.value || '';
-    }
-    if (!rootId) {
-      showToast(t('无法加载资源库'));
-      step.value = 'form';
-      folderLoading.value = false;
-      return;
-    }
   }
 
   if (lastFolderPath.value.length > 0) {
@@ -223,23 +199,6 @@ async function openFolderPicker() {
 async function loadFolderChildren(parentId: string): Promise<FolderNode[]> {
   if (!parentId) return [];
   try {
-    if (saveAs.targetType.value === 'library') {
-      const { libraryControllerGetDrawingChildren, libraryControllerGetBlockChildren } = await import('../../../api-sdk');
-      const apiFn: (options: { path: { nodeId: string }; query?: { nodeType?: 'folder' | 'file' } }) => Promise<{ error?: unknown; data?: unknown }> =
-        saveAs.libraryType.value === 'drawing'
-          ? libraryControllerGetDrawingChildren
-          : libraryControllerGetBlockChildren;
-      const result = await apiFn({ path: { nodeId: parentId }, query: { nodeType: 'folder' } });
-      unwrap(result);
-      const data = result.data as unknown as { nodes: FileSystemNodeDto[] };
-      return (data?.nodes || [])
-        .filter(n => n.isFolder && n.id !== props.currentNodeId)
-        .map(n => ({
-          id: n.id,
-          name: n.name,
-          isFolder: n.isFolder,
-        }));
-    }
     const { nodeControllerGetChildren } = await import('../../../api-sdk');
     const result = await nodeControllerGetChildren({ path: { nodeId: parentId }, query: { nodeType: 'folder' } });
     unwrap(result);
@@ -287,8 +246,6 @@ async function loadRootChildren() {
     rootId = saveAs.personalSpaceId.value || '';
   } else if (saveAs.targetType.value === 'project') {
     rootId = saveAs.selectedProjectId.value;
-  } else if (saveAs.targetType.value === 'library') {
-    rootId = saveAs.libraryRootId.value || '';
   }
   if (rootId) {
     folderLoading.value = true;
@@ -307,8 +264,6 @@ async function goUp() {
     parentId = saveAs.personalSpaceId.value || '';
   } else if (saveAs.targetType.value === 'project') {
     parentId = saveAs.selectedProjectId.value;
-  } else if (saveAs.targetType.value === 'library') {
-    parentId = saveAs.libraryRootId.value || '';
   }
 
   if (parentId) {
@@ -347,8 +302,6 @@ function getRootName(): string {
   } else if (saveAs.targetType.value === 'project') {
     const p = saveAs.projects.value.find(p => p.id === saveAs.selectedProjectId.value);
     return p ? p.name : '';
-  } else if (saveAs.targetType.value === 'library') {
-    return saveAs.libraryType.value === 'drawing' ? t('图纸库') : t('图块库');
   }
   return '';
 }
@@ -359,22 +312,12 @@ function selectRootFolder() {
     rootId = saveAs.personalSpaceId.value || '';
   } else if (saveAs.targetType.value === 'project') {
     rootId = saveAs.selectedProjectId.value;
-  } else if (saveAs.targetType.value === 'library') {
-    rootId = saveAs.libraryRootId.value || '';
   }
   if (rootId) {
     saveAs.selectedParentId.value = rootId;
     lastFolderPath.value = [];
     step.value = 'form';
   }
-}
-
-async function onLibraryTypeChange(newType: LibraryType) {
-  saveAs.libraryType.value = newType;
-  saveAs.selectedParentId.value = '';
-  folderPath.value = [];
-  await saveAs.loadLibraryRoot(newType);
-  saveAs.selectedParentId.value = saveAs.libraryRootId.value || '';
 }
 
 async function onTargetTypeChange(newType: SaveTargetType) {
@@ -384,10 +327,12 @@ async function onTargetTypeChange(newType: SaveTargetType) {
   if (newType === 'personal') {
     saveAs.selectedParentId.value = saveAs.personalSpaceId.value || '';
   } else if (newType === 'project') {
+    // 对齐 PC useSaveAs：切到「项目文件夹」时自动选中第一个项目并落项目根，
+    // 否则直接落在「请先选择项目」的报错上，默认落点反而不可见
+    if (!saveAs.selectedProjectId.value && saveAs.projects.value.length > 0) {
+      saveAs.selectedProjectId.value = saveAs.projects.value[0].id;
+    }
     saveAs.selectedParentId.value = saveAs.selectedProjectId.value || '';
-  } else if (newType === 'library') {
-    await saveAs.loadLibraryRoot(saveAs.libraryType.value);
-    saveAs.selectedParentId.value = saveAs.libraryRootId.value || '';
   }
 }
 </script>
@@ -457,15 +402,6 @@ async function onTargetTypeChange(newType: SaveTargetType) {
             <p>{{ t('无子文件夹') }}</p>
           </div>
         </div>
-
-        <!-- Library root hint -->
-        <div
-          v-if="folderPath.length === 0 && saveAs.targetType.value === 'library'"
-          class="root-hint"
-        >
-          <van-icon name="info-o" size="16" />
-          <span>{{ t('当前为资源库根目录，请选择子文件夹') }}</span>
-        </div>
       </div>
     </template>
 
@@ -525,33 +461,6 @@ async function onTargetTypeChange(newType: SaveTargetType) {
           </div>
         </Transition>
 
-        <!-- Library Type (when library selected) -->
-        <Transition name="slide-fade">
-          <div v-if="saveAs.targetType.value === 'library'" class="form-section">
-            <label class="form-label">{{ t('选择资源库') }}</label>
-            <div class="library-tabs">
-              <button
-                class="library-tab"
-                :class="{ active: saveAs.libraryType.value === 'drawing' }"
-                :disabled="saveAs.saving.value"
-                @click="onLibraryTypeChange('drawing')"
-              >
-                <van-icon name="description" size="18" />
-                <span>{{ t('图纸库') }}</span>
-              </button>
-              <button
-                class="library-tab"
-                :class="{ active: saveAs.libraryType.value === 'block' }"
-                :disabled="saveAs.saving.value"
-                @click="onLibraryTypeChange('block')"
-              >
-                <van-icon name="apps-o" size="18" />
-                <span>{{ t('图块库') }}</span>
-              </button>
-            </div>
-          </div>
-        </Transition>
-
         <!-- Folder Picker -->
         <div class="form-section">
           <label class="form-label">{{ t('保存位置') }}</label>
@@ -598,7 +507,7 @@ async function onTargetTypeChange(newType: SaveTargetType) {
       </template>
       <template v-else-if="step === 'folder'">
         <button
-          v-if="folderPath.length === 0 && saveAs.targetType.value !== 'library'"
+          v-if="folderPath.length === 0"
           class="footer-btn footer-btn--primary"
           @click="selectRootFolder"
         >
@@ -765,37 +674,6 @@ async function onTargetTypeChange(newType: SaveTargetType) {
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: left;
-  }
-}
-
-// === Library Tabs ===
-.library-tabs {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-.library-tab {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  padding: var(--space-md);
-  background: var(--popup-card-bg);
-  border: var(--popup-card-border);
-  border-radius: var(--radius-lg);
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  transition: all 0.2s ease;
-
-  &:active {
-    transform: scale(0.97);
-  }
-
-  &.active {
-    border-color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 12%, var(--popup-card-bg));
-    color: var(--primary);
   }
 }
 
@@ -969,19 +847,6 @@ async function onTargetTypeChange(newType: SaveTargetType) {
     margin: 0;
     font-size: var(--font-size-sm);
   }
-}
-
-.root-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  margin: var(--space-md) var(--space-lg);
-  padding: var(--space-md);
-  background: var(--bg-tertiary);
-  color: var(--text-muted);
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-sm);
 }
 
 // === Footer Button ===

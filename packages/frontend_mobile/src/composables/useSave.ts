@@ -8,6 +8,8 @@ import {
   saveLibraryDrawing,
   saveLibraryBlock,
 } from '../services/saveService';
+import { hasAnyPermission } from '@cloudcad/platform';
+import { PERMISSIONS } from '../services/permissionService';
 import {
   projectControllerGetPersonalSpace,
   nodeControllerGetNode,
@@ -23,24 +25,17 @@ import { handleApiError } from '../utils/apiConfig';
 import { unwrap } from '../utils/apiError';
 import { isTokenExpired, readToken } from '../utils/authSession';
 import { showToast, showLoadingToast, closeToast } from 'vant';
-import { PERMISSIONS } from '../services/permissionService';
-import { hasAnyPermission } from '@cloudcad/platform';
 
-export interface SaveResult {
-  success: boolean;
-  needLogin?: boolean;
-  needSaveAs?: boolean;
-  message?: string;
-}
-
+/**
+ * 库图纸/库图块的「库内保存」权限（对齐 PC saveDefaults.hasLibraryPermission）。
+ * 只负责端侧取数（localStorage 'user'）；权限码判定走 @cloudcad/platform 一份实现。
+ * 须同步读取：本判定在 save() 的 await 之前执行，useUser 的响应式状态在此不可用。
+ */
 function checkLibraryPermission(): boolean {
   try {
     const userStr = localStorage.getItem('user');
     if (!userStr) return false;
     const userData = JSON.parse(userStr);
-    // 权限码判定收敛到 @cloudcad/platform（与 PC 共用一份）；
-    // 这里只负责端侧取数（localStorage）与目标权限码清单。
-    // 须同步读取：本判定在 save() 的 await 之前执行，useUser 的响应式状态不在此用。
     return hasAnyPermission(userData?.role?.permissions, [
       PERMISSIONS.LIBRARY_DRAWING_MANAGE,
       PERMISSIONS.LIBRARY_BLOCK_MANAGE,
@@ -48,6 +43,13 @@ function checkLibraryPermission(): boolean {
   } catch {
     return false;
   }
+}
+
+export interface SaveResult {
+  success: boolean;
+  needLogin?: boolean;
+  needSaveAs?: boolean;
+  message?: string;
 }
 
 /** 保存后更新 IndexedDB 缓存和编辑器状态（参考 PC 端 saveToCurrentFile） */
@@ -120,9 +122,9 @@ export function useSave() {
         return { success: false, message: t('公开文件不支持保存') };
       }
 
-      // 项目保存权限门禁。库文件在此排除：useFileLoader 对库源固定写
-      // canSave:false，不排除会让库文件在下方 checkLibraryPermission 判定之前
-      // 被误拦成「没有保存权限」，saveLibraryDrawing/Block 恒不可达。
+      // 项目保存权限门禁。库源在此排除：useFileLoader 对库源固定写 canSave:false，
+      // 不排除会在下方库分支判定之前被误拦成「没有保存权限」，用户按提示另存为
+      // 却永远回不到库，只看到一句与原因无关的提示。
       if (!state.permissions.canSave && state.fileId && !state.libraryKey) {
         saving.value = false;
         closeToast();
@@ -143,6 +145,30 @@ export function useSave() {
           needSaveAs: true,
           message: t('请另存为到云图'),
         };
+      }
+
+      // 库源：有库管理权限则库内原位保存（对齐 PC saveFile 的 library 分支），
+      // 无权限引导另存为到其他位置，不动库原件。放在文件系统节点存在性检查之前——
+      // 库图纸不在 file_system 节点体系里，走 nodeControllerGetNode 是错的判定。
+      if (state.libraryKey) {
+        if (!checkLibraryPermission()) {
+          saving.value = false;
+          closeToast();
+          return {
+            success: false,
+            needSaveAs: true,
+            message: t('资源库图纸只读，请另存为到其他位置'),
+          };
+        }
+        await (state.libraryKey === 'block'
+          ? saveLibraryBlock(state.fileId, blob)
+          : saveLibraryDrawing(state.fileId, blob));
+        await updateCacheAndState(state.fileId, blob, editorState);
+        await processPendingImages(state.fileId).catch(() => {});
+        closeToast();
+        showToast(t('保存成功'));
+        saving.value = false;
+        return { success: true };
       }
 
       // 远程检查文件是否存在（处理跨会话/跨用户删除）
@@ -184,10 +210,6 @@ export function useSave() {
 
       const fileInfo = state.fileInfo as Record<string, unknown> | null;
       const parentId = fileInfo?.parentId as string | null | undefined;
-      // libraryKey 只存在于 store 字段：loadByNodeId 经 options.libraryKey 写入
-      // state.libraryKey。FileSystemNode 没有该字段，接口返回的 fileInfo 上读它
-      // 恒为 undefined——曾因此让库保存分支彻底不可达。
-      const libraryKey = state.libraryKey || undefined;
       const projectId = fileInfo?.projectId as string | undefined;
 
       // 「我的图纸」判据：直接落在个人空间根，或位于其子文件夹（此时 parentId 是
@@ -213,31 +235,6 @@ export function useSave() {
         uploadThumbnailForNode(state.fileId).catch(() => {});
         saving.value = false;
         return { success: true };
-      }
-
-      if (libraryKey) {
-        if (checkLibraryPermission()) {
-          if (libraryKey === 'block') {
-            await saveLibraryBlock(state.fileId, blob);
-          } else {
-            await saveLibraryDrawing(state.fileId, blob);
-          }
-          // 后处理：缓存更新 + 状态重置
-          await updateCacheAndState(state.fileId, blob, editorState);
-          await processPendingImages(state.fileId).catch(() => {});
-          closeToast();
-          showToast(t('保存成功'));
-          uploadThumbnailForNode(state.fileId).catch(() => {});
-          saving.value = false;
-          return { success: true };
-        }
-        saving.value = false;
-        closeToast();
-        return {
-          success: false,
-          needSaveAs: true,
-          message: t('无资源库管理权限，请另存为到其他位置'),
-        };
       }
 
       if (projectId && state.permissions.canSave) {

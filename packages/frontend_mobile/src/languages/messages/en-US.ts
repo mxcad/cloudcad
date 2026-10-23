@@ -1113,8 +1113,6 @@ export default  {
     "3846": "Create an account and start using it{shortName}",
     "3847": "I have read and agree",
     "3848": "and",
-    "3849": "Open a new drawing",
-    "3850": "{fileName} has been saved successfully. Do you want to open it?",
     "3851": "The current domain name is not on the real-time collaboration whitelist. Please contact the administrator to configure the collaboration domain name.",
     "3852": "Update Date:{date}",
     "3853": "Navigation",
@@ -1181,5 +1179,15 @@ export default  {
     "3916": "view",
     "3917": "replace",
     "3918": "There are still {count} files that have not been processed",
-    "3919": "All files have been processed"
+    "3919": "All files have been processed",
+    "3920": "We have sent an email to",
+    "3921": "system",
+    "3922": "The drawing is being opened. Please try again shortly.",
+    "3924": "The drawing must be saved to the cloud first.",
+    "3925": "Sharing requires the drawing to be saved to the cloud first. Save it now and continue sharing?",
+    "3926": "Save to cloud and share",
+    "3927": "The editor is not ready yet. Please wait.",
+    "3928": "Library drawings are read-only. Save as a copy elsewhere.",
+    "3929": "Save to Cloud",
+    "3930": "File name cannot contain these characters: \\ / : * ? \" < > |"
 }

@@ -197,9 +197,15 @@ function groupByDrawing(items: WorkDisplay[]): DrawingGroup[] {
 const myDrawingGroups = computed(() => groupByDrawing(myWorks.value));
 const projectDrawingGroups = computed(() => groupByDrawing(projectWorks.value));
 
-const totalWorksCount = computed(() =>
-  currentFileWorks.value.length + myWorks.value.length + projectWorks.value.length,
-);
+const totalWorksCount = computed(() => {
+  // 按 work_id 去重：我创建的那张本图纸的会话会同时出现在「当前图纸」和「我创建的」，
+  // 直接三段相加会把这个会话计两遍，顶栏活跃数虚高
+  const ids = new Set<number>();
+  for (const w of currentFileWorks.value) ids.add(w.work_id);
+  for (const w of myWorks.value) ids.add(w.work.work_id);
+  for (const w of projectWorks.value) ids.add(w.work.work_id);
+  return ids.size;
+});
 
 // --- Handlers ---
 
@@ -342,7 +348,7 @@ function mapUser() {
           :key="w.work_id"
           :display="mapWorkToDisplay(w)"
           :connecting="joiningWorkId === w.work_id"
-          :show-footer="false"
+          :show-title="false"
           @join="handleJoinWork"
           @exit="handleExitWork"
         />
@@ -412,6 +418,11 @@ function mapUser() {
         <van-loading v-if="creating || connecting" color="#fff" size="16px" />
         <span v-else>{{ t('创建协同') }}</span>
       </button>
+      <!-- 引擎未就绪时按钮是灰的但没有任何解释（原来静默禁用），补一行原因 -->
+      <p
+        v-if="currentWorkId === null && !isCadReady && !creating && !connecting"
+        class="btn-hint"
+      >{{ t('编辑器未就绪，请稍候') }}</p>
       <button
         v-else
         class="btn-exit"
@@ -649,6 +660,13 @@ function mapUser() {
   color: var(--danger);
   background: var(--van-background);
   border: 1px solid var(--danger);
+}
+
+.btn-hint {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  text-align: center;
 }
 
 /* ===== 未保存更改三按钮守卫 ===== */

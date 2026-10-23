@@ -111,6 +111,14 @@ export {
   formatDateTimeWithSeconds,
 } from './format/date';
 
+// ── 版本历史展示（倒序编号 + 提交说明提取，两端共用） ──
+export {
+  INITIAL_VERSION_REVISION,
+  toVersionDisplayList,
+  extractUserNote,
+} from './version/history';
+export type { VersionDisplayEntry } from './version/history';
+
 // ── API 错误分类谓词（纯判定，并集更宽，文案留端包） ──
 export {
   isAbortError,

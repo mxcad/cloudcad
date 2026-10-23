@@ -21,16 +21,23 @@ const {
   warmupMock,
   openDrawingMock,
   showToastMock,
+  setCurrentVersionMock,
   editorStateMock,
-} = vi.hoisted(() => ({
-  guardMock: vi.fn(),
-  warmupMock: vi.fn(),
-  openDrawingMock: vi.fn(),
-  showToastMock: vi.fn(),
-  editorStateMock: {
+} = vi.hoisted(() => {
+  const setCurrentVersionMock = vi.fn();
+  const editorStateMock = {
+    setCurrentVersion: setCurrentVersionMock,
     state: { fileId: 'n1', fileInfo: { path: 'p/a.mxweb' }, libraryKey: null },
-  },
-}));
+  };
+  return {
+    guardMock: vi.fn(),
+    warmupMock: vi.fn(),
+    openDrawingMock: vi.fn(),
+    showToastMock: vi.fn(),
+    setCurrentVersionMock,
+    editorStateMock,
+  };
+});
 
 vi.mock('../api-sdk', () => ({ versionControlControllerGetFileHistory: vi.fn() }));
 vi.mock('../languages', () => ({ t: (s: string) => s }));
@@ -92,6 +99,7 @@ describe('openHistoricalVersion', () => {
     expect(warmupMock).not.toHaveBeenCalled();
     expect(openDrawingMock).not.toHaveBeenCalled();
     expect(replacedUrls).toHaveLength(0);
+    expect(setCurrentVersionMock).not.toHaveBeenCalled();
   });
 
   it('守卫通过：原地改写 ?v= 后用重建的请求打开（无 libraryKey → node 源）', async () => {
@@ -102,6 +110,20 @@ describe('openHistoricalVersion', () => {
     expect(warmupMock).toHaveBeenCalledWith('p/a.mxweb', 3);
     expect(new URL(replacedUrls[replacedUrls.length - 1]).searchParams.get('v')).toBe('3');
     expect(openDrawingMock).toHaveBeenCalledWith({ source: 'node', nodeId: 'n1' });
+  });
+
+  it('打开成功后回填 currentVersion：标题栏能显示历史版徽标、列表不误标最新版本为当前', async () => {
+    await setup().openHistoricalVersion(3);
+
+    expect(setCurrentVersionMock).toHaveBeenCalledWith(3);
+  });
+
+  it('打开失败不回填 currentVersion', async () => {
+    openDrawingMock.mockResolvedValue(false);
+
+    await expect(setup().openHistoricalVersion(3)).resolves.toBe(false);
+
+    expect(setCurrentVersionMock).not.toHaveBeenCalled();
   });
 
   it('预热失败：中止且不打开', async () => {

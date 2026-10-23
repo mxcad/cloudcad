@@ -80,6 +80,8 @@ export async function saveAs(params: {
   projectId?: string;
   libraryType?: 'drawing' | 'block';
   format?: 'dwg' | 'dxf' | 'mxweb';
+  sourceNodeId?: string;
+  sourceFileHash?: string;
 }): Promise<{ nodeId: string }> {
   const { blob, format, ...rest } = params;
   const file = new File([blob], 'drawing.mxweb', {
@@ -98,6 +100,8 @@ export async function saveAs(params: {
       ...(rest.commitMessage ? { commitMessage: rest.commitMessage } : {}),
       ...(rest.projectId ? { projectId: rest.projectId } : {}),
       ...(rest.libraryType ? { libraryType: rest.libraryType } : {}),
+      ...(rest.sourceNodeId ? { sourceNodeId: rest.sourceNodeId } : {}),
+      ...(rest.sourceFileHash ? { sourceFileHash: rest.sourceFileHash } : {}),
     } as never,
   });
   unwrap(result);

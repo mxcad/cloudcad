@@ -5215,8 +5215,8 @@
         ],
         "$id": 879
     },
-    "至少 {min} 位，需包含大小写字母、数字、特殊字符": {
-        "zh-TW": "至少 {min} 位，需包含大小寫字母、數字、特殊字符",
+    "至少 {min} 位，需包含大写字母、小写字母、数字、特殊字符": {
+        "zh-TW": "至少 {min} 位，需包含大寫字母、小寫字母、數字、特殊字符",
         "en-US": "At least {min} characters, must contain uppercase letters, lowercase letters, digits, and special characters",
         "ko-KR": "{min}자 이상, 대문자·소문자·숫자·특수문자를 모두 포함해야 합니다",
         "$files": [
@@ -5224,8 +5224,8 @@
         ],
         "$id": 3833
     },
-    "至少 {min} 位，需包含大小写字母、数字、特殊字符中至少 {cats} 类": {
-        "zh-TW": "至少 {min} 位，需包含大小寫字母、數字、特殊字符中至少 {cats} 類",
+    "至少 {min} 位，需包含大写字母、小写字母、数字、特殊字符中至少 {cats} 类": {
+        "zh-TW": "至少 {min} 位，需包含大寫字母、小寫字母、數字、特殊字符中至少 {cats} 類",
         "en-US": "At least {min} characters, must contain at least {cats} of: uppercase letters, lowercase letters, digits, special characters",
         "ko-KR": "{min}자 이상, 대문자·소문자·숫자·특수문자 중 {cats}가지 이상 포함",
         "$files": [
@@ -5243,21 +5243,21 @@
         ],
         "$id": 3835
     },
-    "需包含大小写字母、数字、特殊字符": {
-        "zh-TW": "需包含大小寫字母、數字、特殊字符",
+    "需包含大写字母、小写字母、数字、特殊字符": {
+        "zh-TW": "需包含大寫字母、小寫字母、數字、特殊字符",
         "en-US": "Must contain uppercase letters, lowercase letters, digits, and special characters",
         "ko-KR": "대문자·소문자·숫자·특수문자를 모두 포함해야 합니다",
         "$files": [
-            "src/utils/passwordPolicy.ts(1692-1712)"
+            "src\\utils\\passwordPolicy.ts(2484-2544)"
         ],
         "$id": 3836
     },
-    "需包含大小写字母、数字、特殊字符中至少 {cats} 类": {
-        "zh-TW": "需包含大小寫字母、數字、特殊字符中至少 {cats} 類",
+    "需包含大写字母、小写字母、数字、特殊字符中至少 {cats} 类": {
+        "zh-TW": "需包含大寫字母、小寫字母、數字、特殊字符中至少 {cats} 類",
         "en-US": "Must contain at least {cats} of: uppercase letters, lowercase letters, digits, special characters",
         "ko-KR": "대문자·소문자·숫자·특수문자 중 {cats}가지 이상 포함",
         "$files": [
-            "src/utils/passwordPolicy.ts(1756-1788)"
+            "src\\utils\\passwordPolicy.ts(2484-2564)"
         ],
         "$id": 3837
     },
@@ -5270,12 +5270,12 @@
         ],
         "$id": 3838
     },
-    "密码需包含大小写字母、数字、特殊字符中至少 {cats} 类": {
-        "zh-TW": "密碼需包含大小寫字母、數字、特殊字符中至少 {cats} 類",
+    "密码需包含大写字母、小写字母、数字、特殊字符中至少 {cats} 类": {
+        "zh-TW": "密碼需包含大寫字母、小寫字母、數字、特殊字符中至少 {cats} 類",
         "en-US": "Password must contain at least {cats} of: uppercase letters, lowercase letters, digits, special characters",
         "ko-KR": "비밀번호는 대문자·소문자·숫자·특수문자 중 {cats}가지 이상 포함해야 합니다",
         "$files": [
-            "src/utils/passwordPolicy.ts(2147-2181)"
+            "src\\utils\\passwordPolicy.ts(2478-2564)"
         ],
         "$id": 3839
     },
@@ -6553,24 +6553,6 @@
             "src/pages/home/index.vue(8432-8442)"
         ],
         "$id": 945
-    },
-    "打开新图纸": {
-        "zh-TW": "打開新圖紙",
-        "en-US": "Open a new drawing",
-        "ko-KR": "새 시트 열기",
-        "$files": [
-            "src/pages/home/index.vue(11541-11550)"
-        ],
-        "$id": 3849
-    },
-    "{fileName} 已保存成功，是否打开？": {
-        "zh-TW": "{fileName}已保存成功,是否打開？",
-        "en-US": "{fileName} has been saved successfully. Do you want to open it?",
-        "ko-KR": "_ _ $_ $_ $_ 이 (가) 성공적으로 저장되었습니다. 켜져 있습니까?",
-        "$files": [
-            "src/pages/home/index.vue(11569-11595)"
-        ],
-        "$id": 3850
     },
     "关闭": {
         "zh-TW": "關閉",
@@ -11105,5 +11087,115 @@
             "src/plugins/vant/components/popup/ExternalRefUploadPopup.vue(6198-6204)"
         ],
         "$id": 844
+    },
+    "系统": {
+        "zh-TW": "系統",
+        "en-US": "system",
+        "ko-KR": "시스템",
+        "$files": [
+            "src\\App.vue(3330-3336)",
+            "src\\components\\NoticeDialog.vue(364-370)",
+            "src\\composables\\useInsertBlock.ts(1513-1519)",
+            "src\\composables\\useMemberCenter.ts(540-546)",
+            "src\\composables\\useProfileData.ts(1086-1092)",
+            "src\\composables\\useProfileData.ts(1175-1181)",
+            "src\\composables\\useProfileData.ts(1377-1383)",
+            "src\\composables\\useUnifiedFileList.ts(438-444)",
+            "src\\pages\\auth\\ForgotPasswordPage.vue(4288-4294)",
+            "src\\pages\\auth\\RegisterPage.vue(8891-8897)",
+            "src\\pages\\home\\components\\VersionHistoryPopup.vue(1863-1869)",
+            "src\\pages\\shell\\sub-pages\\MemberCenterPage.vue(529-535)",
+            "src\\pages\\shell\\sub-pages\\MemberCenterPage.vue(3241-3247)",
+            "src\\pages\\shell\\sub-pages\\MemberCenterPage.vue(3649-3655)",
+            "src\\pages\\shell\\sub-pages\\MemberCenterPage.vue(5121-5127)",
+            "src\\pages\\shell\\sub-pages\\MemberCenterPage.vue(5311-5317)",
+            "src\\services\\drawingOpener.spec.ts(7239-7245)",
+            "src\\stores\\fileSystemClipboard.ts(14-20)",
+            "src\\utils\\billing.spec.ts(1337-1343)",
+            "src\\utils\\billing.ts(1719-1725)",
+            "src\\utils\\billing.ts(4916-4922)",
+            "src\\utils\\clipboard.ts(86-92)",
+            "src\\utils\\navigateBack.ts(3032-3038)",
+            "src\\utils\\navigateBack.ts(3839-3845)",
+            "src\\utils\\transferPolicy.spec.ts(3694-3700)",
+            "src\\utils\\validateName.ts(1011-1017)"
+        ],
+        "$id": 3921
+    },
+    "图纸正在打开，请稍后再保存": {
+        "zh-TW": "圖紙正在打開，請稍後再保存",
+        "en-US": "The drawing is being opened. Please try again shortly.",
+        "ko-KR": "도면이 열리고 있습니다. 잠시 후 다시 시도하세요.",
+        "$files": [
+            "src/pages/home/index.vue(257-275)"
+        ],
+        "$id": 3922
+    },
+    "需要先将图纸保存到云端": {
+        "zh-TW": "需要先將圖紙儲存到雲端",
+        "en-US": "The drawing must be saved to the cloud first.",
+        "ko-KR": "먼저 도면을 클라우드로 저장해야 합니다.",
+        "$files": [
+            "src/pages/home/index.vue(640-670)"
+        ],
+        "$id": 3924
+    },
+    "分享需要图纸先保存到云端，是否现在保存到云端并继续分享？": {
+        "zh-TW": "分享需要圖紙先儲存到雲端，是否現在儲存到雲端並繼續分享？",
+        "en-US": "Sharing requires the drawing to be saved to the cloud first. Save it now and continue sharing?",
+        "ko-KR": "공유하려면 먼저 도면을 클라우드로 저장해야 합니다. 지금 저장하고 공유를 계속할까요?",
+        "$files": [
+            "src/pages/home/index.vue(21600-21684)"
+        ],
+        "$id": 3925
+    },
+    "保存到云端并分享": {
+        "zh-TW": "儲存到雲端並分享",
+        "en-US": "Save to cloud and share",
+        "ko-KR": "클라우드에 저장하고 공유",
+        "$files": [
+            "src/pages/home/index.vue(640-670)"
+        ],
+        "$id": 3926
+    },
+    "编辑器未就绪，请稍候": {
+        "zh-TW": "編輯器未就緒，請稍候",
+        "en-US": "The editor is not ready yet. Please wait.",
+        "ko-KR": "편집기가 준비되지 않았습니다. 잠시 기다려 주세요.",
+        "$files": [
+            "src/pages/home/components/CooperatePopup.vue(400-425)"
+        ],
+        "$id": 3927
+    },
+    "资源库图纸只读，请另存为到其他位置": {
+        "zh-TW": "資源庫圖紙唯讀，請另存為到其他位置",
+        "en-US": "Library drawings are read-only. Save as a copy elsewhere.",
+        "ko-KR": "자원 라이브러리 도면은 읽기 전용입니다. 다른 위치에 저장하세요.",
+        "$files": [
+            "composables/useSave.spec.ts (4046-4097)",
+            "composables/useSave.spec.ts (4455-4506)",
+            "composables/useSave.spec.ts (4817-4868)",
+            "composables/useSave.ts (3611-3662)"
+        ],
+        "$id": 3928
+    },
+    "保存到云端": {
+        "zh-TW": "儲存到雲端",
+        "en-US": "Save to Cloud",
+        "ko-KR": "클라우드에 저장",
+        "$files": [
+            "src/pages/home/index.vue(21436-21451)",
+            "src/pages/home/index.vue(21562-21577)"
+        ],
+        "$id": 3929
+    },
+    "文件名不能包含以下字符: \\ / : * ? \" < > |": {
+        "zh-TW": "檔案名不能包含以下字元: \\ / : * ? \" < > |",
+        "en-US": "File name cannot contain these characters: \\ / : * ? \" < > |",
+        "ko-KR": "파일 이름에 포함할 수 없는 문자입니다: \\ / : * ? \" < > |",
+        "$files": [
+            "src/pages/home/components/SaveAsSheet.vue(4073-4126)"
+        ],
+        "$id": 3930
     }
 }

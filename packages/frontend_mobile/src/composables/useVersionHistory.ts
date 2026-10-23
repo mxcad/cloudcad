@@ -140,7 +140,11 @@ export function useVersionHistory() {
     window.history.replaceState(history.state, '', currentUrl.toString());
 
     try {
-      return await openDrawing(request);
+      const ok = await openDrawing(request);
+      // openDrawing 内部走 resetNewFile 会把 currentVersion 清掉——不回填会让标题栏
+      // 不显示「r3」徽标，版本历史列表还会把最新版本误标成「当前」
+      if (ok) editorState.setCurrentVersion(revision);
+      return ok;
     } catch {
       return false;
     }

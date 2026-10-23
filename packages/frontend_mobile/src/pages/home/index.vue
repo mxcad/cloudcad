@@ -27,7 +27,6 @@ import { exportDrawing } from '../../services/exportService';
 import { uploadThumbnailForNode } from '../../services/thumbnailService';
 import { isHashLike } from '../../services/publicFileService';
 import {
-  checkLibraryPermissions,
   canExportDownloadGate,
   loadCADPermissions,
 } from '../../services/permissionService';
@@ -39,6 +38,11 @@ import {
   saveToCloudTrigger,
 } from '../../composables/useSaveAs';
 import { useUser } from '../../composables/useUser';
+import {
+  projectControllerGetPersonalSpace,
+  nodeControllerGetNode,
+} from '../../api-sdk';
+import { unwrap } from '../../utils/apiError';
 import { useCollabStore } from '../../stores/collab';
 import { editorDisplayName } from '@/utils/editorFileName';
 import { parseEditorOpenParams } from '@/utils/editorOpenParams';
@@ -159,6 +163,7 @@ const {
 } = useFileLoader();
 const editorState = useEditorStore();
 const collabStore = useCollabStore();
+const { user, isAuthenticated } = useUser();
 
 /**
  * 当前打开的原始图纸名。协同图纸以协同 store 的 fileNameCache（按 drawingId
@@ -171,8 +176,11 @@ function currentDrawingName(): string {
   return collabStore.fileNameCache[state.fileId || ''] || state.fileName;
 }
 
-// 标题唯一出口：前缀（[协同中]/[未登录]）与空模板名抑制在 editorDisplayName 内
-const drawName = computed(() => editorDisplayName(currentDrawingName()));
+// 标题唯一出口：前缀（[协同中]/[未登录]）与空模板名抑制在 editorDisplayName 内；
+// 传响应式登录态让标题随登录变化，别走其默认的命令式读取（那样标题不会更新）
+const drawName = computed(() =>
+  editorDisplayName(currentDrawingName(), isAuthenticated.value)
+);
 const isInCollaboration = computed(() => editorState.state.isInCollaboration);
 const currentVersion = computed(() => editorState.state.currentVersion);
 const isPublicFile = computed(() => editorState.state.isPublicFile);
@@ -241,7 +249,6 @@ function dismissError() {
 }
 
 const { saving, save: saveAction } = useSave();
-const { user, isAuthenticated } = useUser();
 const showCommitDialog = ref(false);
 const showSaveAsSheet = ref(false);
 watch(saveAsToCloudTrigger, () => {
@@ -253,12 +260,11 @@ watch(saveLoginRequiredTrigger, () => {
 });
 watch(saveToCloudTrigger, () => {
   const state = editorState.state;
-  if (state.isPublicFile) {
-    showToast(t('公开文件不支持保存'));
-    return;
-  }
-  if (!state.permissions.canSave) {
-    showToast(t('没有保存权限'));
+  // 判定顺序对齐 PC SaveCommand：打开中 → 登录 → 公开文件 → 权限 → 弹修改说明。
+  // 登录必须排最前：游客在分享图纸上点保存，若先判权限只会看到「没有保存权限」，
+  // 完全没有登录入口。
+  if (state.loading) {
+    showToast(t('图纸正在打开，请稍后再保存'));
     return;
   }
   if (!isAuthenticated.value) {
@@ -266,14 +272,32 @@ watch(saveToCloudTrigger, () => {
     showLoginPrompt.value = true;
     return;
   }
+  if (state.isPublicFile) {
+    showToast(t('公开文件不支持保存'));
+    return;
+  }
+  // 无云端节点（新建本地图纸）：对齐 PC SaveCommand 的 fileId 缺失分支——直接转
+  // 「另存为到云图」。不先弹修改说明：保存对象还不存在，先填说明是徒劳往返。
+  if (!state.fileId) {
+    showSaveAsSheet.value = true;
+    return;
+  }
+  // 资源库源不在此拦：库源 canSave 恒为 false（useFileLoader 固定写入），
+  // 但库图纸是否可保存取决于 LIBRARY_DRAWING_MANAGE / LIBRARY_BLOCK_MANAGE
+  // 系统权限（useSave 内部判定）——有权限走库内原位保存，无权限返回
+  // needSaveAs + 库专属文案。在此拦会让用户看到与原因无关的权限提示，
+  // 而不是可行动的指引。
+  if (!state.libraryKey && !state.permissions.canSave) {
+    showToast(t('没有保存权限，请另存为'));
+    return;
+  }
   showCommitDialog.value = true;
 });
 const pendingCommitMessage = ref('');
-const canManageLibrary = ref(false);
 const showVersionHistory = ref(false);
 const showLoginPrompt = ref(false);
 const pendingActionAfterLogin = ref<
-  'save' | 'saveAs' | 'version-history' | null
+  'save' | 'saveAs' | 'version-history' | 'share' | null
 >(null);
 const { config: runtimeConfig } = useRuntimeConfig();
 // 「查看文档」地址走品牌运行时配置（管理端可改），不硬编码
@@ -333,10 +357,6 @@ const onInsertBlockClose = () => {
   showInsertBlock.value = false;
 };
 
-checkLibraryPermissions().then((result) => {
-  canManageLibrary.value = result.canManageDrawing || result.canManageBlock;
-});
-
 function onCommitConfirm(message: string) {
   pendingCommitMessage.value = message;
   showCommitDialog.value = false;
@@ -352,6 +372,9 @@ async function executeSave() {
     return;
   }
   if (result.needSaveAs) {
+    // 先说清为什么转另存为（文件已被删除 / 无保存权限），再打开面板。
+    // 直接弹出面板会把「保存失败」伪装成「用户主动另存」，用户不知道自己为什么在这。
+    if (result.message) showToast(result.message);
     showSaveAsSheet.value = true;
     return;
   }
@@ -367,95 +390,94 @@ function onSaveAsClose() {
 async function onSaveAsSuccess(result: {
   nodeId: string;
   fileName: string;
-  targetType: 'personal' | 'project' | 'library';
-  libraryType?: 'drawing' | 'block';
+  targetType: 'personal' | 'project';
 }) {
   showSaveAsSheet.value = false;
   if (!result.nodeId) return;
 
-  // 分享图纸另存为：会话必须切到新节点并退出分享模式（对齐 PC adoptSavedAsFile）。
-  // 否则会话仍指着分享者那张图，用户每点一次保存都会再走一遍另存为、每点一次
-  // 就多一份副本；同时清空时间戳，避免下一次保存拿旧 expectedTimestamp 撞乐观锁。
-  const wasFromShare = editorState.state.fromShare;
-  if (wasFromShare) {
-    const isLibrary = result.targetType === 'library';
-    const isProject = result.targetType === 'project';
-    const libraryKey = isLibrary ? (result.libraryType ?? 'drawing') : undefined;
-    // 落点根：个人空间落点写个人空间根（另存为面板可落到子文件夹，但会话里
-    // projectId 的语义是「所在根」，useSave 的 isMyDrawing 据此判归属）；
-    // 项目落点写项目根；库落点两者都为空、靠 libraryKey 分流
-    const rootId = isProject
-      ? editorState.state.projectId
-      : isLibrary
-        ? null
-        : editorState.state.personalSpaceId;
-
-    editorState.setFileId(result.nodeId);
-    editorState.setProjectId(rootId);
-    editorState.setLibraryKey(libraryKey ?? null);
-    // fileInfo 是保存归属判据（parentId / projectId === 个人空间 → 我的图纸）
-    editorState.setFileInfo({
-      id: result.nodeId,
-      name: result.fileName,
-      parentId: rootId ?? '',
-      projectId: rootId,
-    });
-    editorState.setFileName(result.fileName);
-    editorState.setUpdatedAt(null);
-    editorState.setFromShare(false);
-    // 分享态权限恒为 canSave:false，不重算会让下一次保存又被判「无权限，请另存为」
-    if (isProject && rootId) {
-      await loadCADPermissions(rootId);
-    } else if (libraryKey) {
-      const { canManageDrawing, canManageBlock } = await checkLibraryPermissions();
-      editorState.setPermissions({
-        canSave: libraryKey === 'block' ? canManageBlock : canManageDrawing,
-        canExport: editorState.state.permissions.canExport,
-        canManageExternalRef: false,
-      });
-    } else {
-      // 个人空间落点：自己的文件恒可保存
-      editorState.setPermissions({
-        canSave: true,
-        canExport: editorState.state.permissions.canExport,
-        canManageExternalRef: false,
-      });
+  const isProject = result.targetType === 'project';
+  // 落点根：项目落点写项目根；个人空间落点写个人空间根（另存为面板可落到
+  // 子文件夹，但会话里 projectId 的语义是「所在根」，useSave 的 isMyDrawing
+  // 据此判归属）。会话里的 personalSpaceId 移动端从未写入（setPersonalSpaceId
+  // 零调用），直接用会得到 undefined → parentId/projectId 落空，下一次保存被
+  // useSave 判成「无归属」又跳回另存为，因此个人空间落点必须实时取一次。
+  let rootId = isProject
+    ? editorState.state.projectId
+    : editorState.state.personalSpaceId;
+  if (!isProject && !rootId) {
+    try {
+      const resp = await projectControllerGetPersonalSpace();
+      const data = unwrap<{ id: string }>(resp);
+      rootId = data?.id || null;
+    } catch {
+      rootId = null;
     }
-
-    // 地址栏跟着切到新节点（丢掉 shareToken）：否则刷新一下跳回分享者图纸
-    const url = new URL(window.location.href);
-    url.searchParams.delete('shareToken');
-    url.searchParams.delete('fileName');
-    url.searchParams.set('fileId', result.nodeId);
-    if (libraryKey) {
-      url.searchParams.set('library', libraryKey);
-    }
-    const pathMatch = url.pathname.match(/^(\/cad-editor)\/[^/]+$/);
-    if (pathMatch) url.pathname = `${pathMatch[1]}/${result.nodeId}`;
-    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-    return;
   }
+  editorState.setPersonalSpaceId(rootId);
 
-  // E-27：另存为成功后询问是否打开新图纸（对齐 PC useExportModals.handleSaveAsSuccess）
+  // 分享意图链续跑（对齐 PC signalShareChainCloudNodeCreated）：另存为刚拿到云端
+  // 节点，接管后直接开分享面板
+  const resumeShare = resumingShare.value;
+  resumingShare.value = false;
+
+  // 会话必须切到新节点（对齐 PC adoptSavedAsFile）：不接管就会话仍指着旧节点，
+  // 用户每点一次保存都会再走一遍另存为、每点一次就多一份副本；同时清空时间戳，
+  // 避免下一次保存拿旧 expectedTimestamp 撞乐观锁。新建本地图纸首次落云同理，
+  // 不再问「是否打开新图纸」——同一份内存内容重开一遍是重复劳动，点「关闭」还会
+  // 停在本地会话里，下一次保存又得重来一遍另存为。
+  editorState.setFileId(result.nodeId);
+  editorState.setFileName(result.fileName);
+  editorState.setProjectId(rootId);
+  // 移动端另存为不提供库目标：清掉会话残留的 libraryKey，否则下一次保存
+  // 会被判成库图纸只读。
+  editorState.setLibraryKey(null);
+  // fileInfo 是保存归属判据（parentId / projectId === 个人空间 → 我的图纸），
+  // 也是版本历史 / 外部参照检查的数据源——useFileLoader 存的是完整节点对象，
+  // 只填归属字段会让版本历史拿不到 path 报「缺少项目信息或文件路径」。
+  // 取不到时回退最小对象，保存链路本身不依赖 path。
+  let fileInfo: Record<string, unknown> | null = null;
   try {
-    await showConfirmDialog({
-      title: t('打开新图纸'),
-      message: t('{fileName} 已保存成功，是否打开？', { fileName: result.fileName }),
-      confirmButtonText: t('打开'),
-      cancelButtonText: t('关闭'),
-    });
+    const nodeResp = await nodeControllerGetNode({ path: { nodeId: result.nodeId } });
+    fileInfo = unwrap<Record<string, unknown>>(nodeResp) || null;
   } catch {
-    return; // 点「关闭」
+    fileInfo = null;
+  }
+  editorState.setFileInfo(
+    fileInfo ||
+      {
+        id: result.nodeId,
+        name: result.fileName,
+        parentId: rootId ?? '',
+        projectId: rootId,
+      }
+  );
+  editorState.setUpdatedAt(null);
+  editorState.setExpectedTimestamp(null);
+  editorState.setIsCurrentFileDeleted(false);
+  editorState.setFromShare(false);
+
+  // 分享态权限恒为 canSave:false，不重算会让下一次保存又被判「无权限，请另存为」
+  if (isProject && rootId) {
+    await loadCADPermissions(rootId);
+  } else {
+    // 个人空间落点：自己的文件恒可保存
+    editorState.setPermissions({
+      canSave: true,
+      canExport: editorState.state.permissions.canExport,
+      canManageExternalRef: false,
+    });
   }
 
-  const ok = await openDrawing(
-    result.targetType === 'library' && result.libraryType
-      ? { source: 'library', libraryKey: result.libraryType, nodeId: result.nodeId }
-      : { source: 'node', nodeId: result.nodeId }
-  );
-  if (!ok) {
-    showToast(t('打开文件失败'));
-  }
+  // 地址栏跟着切到新节点（丢掉 shareToken）：否则刷新一下跳回分享者图纸
+  const url = new URL(window.location.href);
+  url.searchParams.delete('shareToken');
+  url.searchParams.delete('fileName');
+  url.searchParams.set('fileId', result.nodeId);
+  const pathMatch = url.pathname.match(/^(\/cad-editor)\/[^/]+$/);
+  if (pathMatch) url.pathname = `${pathMatch[1]}/${result.nodeId}`;
+  window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+
+  if (resumeShare) openSharePopup();
 }
 
 function onShowVersionHistory() {
@@ -467,13 +489,16 @@ function onShowVersionHistory() {
     showToast(t('本地图纸无版本历史'));
     return;
   }
-  if (!editorState.state.permissions.canSave) {
-    showToast(t('没有查看版本历史的权限'));
-    return;
-  }
   if (!isAuthenticated.value) {
     pendingActionAfterLogin.value = 'version-history';
     showLoginPrompt.value = true;
+    return;
+  }
+  // 版本历史是只读能力（对齐 PC 的 VERSION_READ 判定），不该用 canSave 拦：
+  // 共享图纸里的只读协作者能开文件却看不到历史，与 PC 行为不一致。
+  // 移动端 CAD 权限只有 canSave/canExport 两档读能力，按「能看文件即可看历史」放宽。
+  if (!editorState.state.permissions.canSave && !editorState.state.permissions.canExport) {
+    showToast(t('没有查看版本历史的权限'));
     return;
   }
   showVersionHistory.value = true;
@@ -504,6 +529,9 @@ watch(isAuthenticated, (authed) => {
     if (pending === 'save') showCommitDialog.value = true;
     else if (pending === 'saveAs') showSaveAsSheet.value = true;
     else if (pending === 'version-history') showVersionHistory.value = true;
+    // 分享走 handleShareCurrent 重跑整条意图链：登录后可能仍无云端节点，
+    // 此时应转入「先保存到云端再分享」而不是直接弹一个没有 fileId 的分享面板
+    else if (pending === 'share') handleShareCurrent();
   }, 500);
 });
 
@@ -521,8 +549,13 @@ async function handleNewFile() {
         cancelButtonText: t('不保存'),
       });
       try {
-        const success = await saveAction();
-        if (!success) return;
+        // saveAction 返回 SaveResult 对象（恒为真值），按 truthy 判断会让
+        // 「无权限/需另存为」的失败被当成成功，直接 resetNewFile 丢掉未保存更改
+        const res = await saveAction();
+        if (!res.success) {
+          if (res.message) showToast(res.message);
+          return;
+        }
       } catch {
         return;
       }
@@ -555,11 +588,72 @@ const handleShowInsertBlock = (e: Event) => {
   showInsertBlock.value = true;
 };
 
-// E-07 分享当前图纸：编辑器菜单经 mxcad-share-current 事件唤起
+// E-07 分享当前图纸：编辑器菜单经 mxcad-share-current 事件唤起。
+// 对齐 PC ShareCommand 的意图链（ADR-0081）：
+//   未登录 → 登录，回来后自动续跑
+//   已登录但无云端节点 → 确认「先保存到云端并分享」→ 保存成功后自动打开分享面板
+// 旧实现无云端节点时直接开面板、面板里只有一句「请先打开图纸」，用户不知道下一步该干什么。
 const showShareCurrent = ref(false);
-const handleShareCurrent = () => {
+const resumingShare = ref(false);
+
+function openSharePopup() {
   showShareCurrent.value = true;
+}
+
+const handleShareCurrent = () => {
+  if (!isAuthenticated.value) {
+    pendingActionAfterLogin.value = 'share';
+    showLoginPrompt.value = true;
+    return;
+  }
+  // 分享链接打开的图纸同样有 fileId（节点 id），可直接分享
+  if (editorState.state.fileId) {
+    openSharePopup();
+    return;
+  }
+  void confirmSaveBeforeShare();
 };
+
+async function confirmSaveBeforeShare() {
+  // 用户在确认框停留期间可能手动点了保存导致会话变化，重复弹会死循环
+  if (resumingShare.value) {
+    showToast(t('需要先将图纸保存到云端'));
+    return;
+  }
+  resumingShare.value = true;
+  try {
+    await showConfirmDialog({
+      title: t('保存到云端'),
+      message: t('分享需要图纸先保存到云端，是否现在保存到云端并继续分享？'),
+      confirmButtonText: t('保存到云端并分享'),
+      cancelButtonText: t('取消'),
+    });
+  } catch {
+    // 取消 = 放弃这次分享意图，必须清标记：留着会让之后每次点分享都只弹
+    // 「需要先将图纸保存到云端」而永远进不了流程（实测死循环）。
+    resumingShare.value = false;
+    return;
+  }
+  const result = await saveAction('');
+  if (result.needSaveAs) {
+    // 唯一保留标记的分支：意图还在等云端节点，另存为成功后由 onSaveAsSuccess
+    // 续跑分享（那里会自己清标记）。这里必须真的把另存为面板弹出来——按钮写的是
+    // 「保存到云端并分享」，只弹一句 toast 会让用户以为点了没反应。
+    saveAsToCloudTrigger.value++;
+    return;
+  }
+  resumingShare.value = false;
+  if (result.success) {
+    openSharePopup();
+    return;
+  }
+  if (result.needLogin) {
+    pendingActionAfterLogin.value = 'share';
+    showLoginPrompt.value = true;
+    return;
+  }
+  showToast(result.message || t('保存失败，请稍后重试'));
+}
 
 function onBeforeUnloadHandler(e: BeforeUnloadEvent) {
   exitCollaborationIfNeeded();
@@ -796,7 +890,9 @@ setViewportHeight();
         <button
           class="item"
           :disabled="
-            saving || isPublicFile || !editorState.state.permissions.canSave
+            saving ||
+            isPublicFile ||
+            (!!editorState.state.fileId && !editorState.state.permissions.canSave)
           "
           @click="callCommand('Mx_SaveToCloud')"
         >
@@ -917,7 +1013,6 @@ setViewportHeight();
     <SaveAsSheet
       :show="showSaveAsSheet"
       :current-file-name="currentDrawingName()"
-      :can-manage-library="canManageLibrary"
       :current-node-id="editorState.state.fileId || undefined"
       @close="onSaveAsClose"
       @success="onSaveAsSuccess"
