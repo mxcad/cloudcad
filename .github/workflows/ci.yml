@@ -204,6 +204,18 @@ jobs:
           npm install
           npm test
 
+      - name: 运行部署运行时脚本测试（runtime/scripts 自带 node:test）
+        # runtime/scripts 下的脚本没有 package.json，测试与源码并排放置（node:test，
+        # 0 外部依赖）。包含 infra/redis 端口归属判定的决策矩阵——此前不在任何
+        # workflow 里，归属分类改了也不会被 CI 拦住。
+        run: pnpm test:runtime-scripts
+
+      - name: 运行配置同步门禁（scan:password-policy / scan:runtime-config-registry）
+        # 两个脚本此前只在本地 pnpm check 里跑，改动不会被拦。0 依赖，各 <1s。
+        run: |
+          pnpm scan:password-policy
+          pnpm scan:runtime-config-registry
+
       - name: 安装 Playwright 浏览器
         run: |
           cd packages/frontend

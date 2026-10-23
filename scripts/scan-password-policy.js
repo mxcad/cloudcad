@@ -1,5 +1,5 @@
 /**
- * 口令策略同步门禁（scan:password-policy，挂根 pnpm check）。
+ * 公开运行时配置同步门禁（scan:password-policy，挂根 pnpm check）。
  *
  * 口令策略（最小长度 / 字符类别构成）是**按部署可配置的运行时事实**：
  * 后端 runtimeConfig 键 passwordPolicyMinLength / passwordPolicyMinCategories
@@ -136,17 +136,28 @@ function read(rel) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8');
 }
 
-// 后端定义表：取 key 所在块（到下一个 key: 为止）里的 defaultValue
-function backendDefault(key) {
+// 标量字面量 → JS 值（'str' / true / false / 12.5）
+function parseScalar(raw) {
+  if (raw.startsWith("'")) return raw.slice(1, -1);
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return Number(raw);
+}
+
+// 后端定义表：{ key: defaultValue }（只取标量；json 对象键无法逐值比较）
+function backendDefaults() {
   const src = read(
     'packages/backend/src/runtime-config/runtime-config.constants.ts'
   );
-  const seg = src
-    .split('key: ')
-    .slice(1)
-    .find((s) => s.startsWith(`'${key}',`));
-  const m = seg && seg.match(/defaultValue:\s*(\d+)/);
-  return m ? Number(m[1]) : null;
+  const out = {};
+  for (const seg of src.split(/key:\s*'/).slice(1)) {
+    const key = seg.split("'")[0];
+    const m = seg.match(
+      /defaultValue:\s*('[^']*'|false|true|-?\d+(?:\.\d+)?)/
+    );
+    if (m) out[key] = parseScalar(m[1]);
+  }
+  return out;
 }
 
 // platform PASSWORD_POLICY 兜底常量
@@ -161,57 +172,108 @@ function platformFallback() {
   };
 }
 
-// 前端文件里某键的全部字面量回落（`key: N` 与 `key ?? N` 两种形态，逐行匹配）
-function frontendLiterals(rel, key) {
+// TS 对象字面量声明块（`const NAME: T = { ... };`）里的一级 `key: 标量` 回落
+function parseLiteralBlock(src, decl) {
+  const start = src.indexOf(decl);
+  if (start === -1) return null;
+  const open = src.indexOf('{', start);
+  let depth = 0;
+  let end = -1;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end === -1) return null;
+  const out = {};
+  for (const line of src.slice(open, end + 1).split('\n')) {
+    const m = line.match(
+      /^\s*([A-Za-z_]\w*):\s*('[^']*'|false|true|-?\d+(?:\.\d+)?),?\s*(?:\/\/.*)?$/
+    );
+    if (m) out[m[1]] = parseScalar(m[2]);
+  }
+  return out;
+}
+
+// `mapPublicConfig` 里的 `key ?? 回落` 缺键回落（同一文件第二处回落口径）
+function parseCoalesceFallbacks(src, key) {
   const found = [];
-  read(rel)
+  src
     .split('\n')
     .forEach((line, i) => {
       if (!line.includes(key)) return;
-      for (const m of line.matchAll(/(?::\s*|\?\?\s*)(\d+)/g)) {
-        found.push({ line: i + 1, value: Number(m[1]) });
+      for (const m of line.matchAll(
+        /\?\?\s*('[^']*'|false|true|-?\d+(?:\.\d+)?)/g
+      )) {
+        found.push({ line: i + 1, value: parseScalar(m[1]) });
       }
     });
   return found;
 }
 
-const KEYS = {
-  passwordPolicyMinLength: {
-    platformKey: 'minLength',
-    pcFile: 'packages/frontend/src/contexts/RuntimeConfigContext.tsx',
-    mobileFile: 'packages/frontend_mobile/src/composables/useRuntimeConfig.ts',
+// 两端「公开配置视图模型 + 回落表」：后端改默认值而任一回落没跟着改，红灯
+const FRONTEND_SOURCES = [
+  {
+    file: 'packages/frontend/src/contexts/RuntimeConfigContext.tsx',
+    decl: 'const DEFAULT_CONFIG: PublicRuntimeConfig = {',
   },
-  passwordPolicyMinCategories: {
-    platformKey: 'minCategories',
-    pcFile: 'packages/frontend/src/contexts/RuntimeConfigContext.tsx',
-    mobileFile: 'packages/frontend_mobile/src/composables/useRuntimeConfig.ts',
+  {
+    file: 'packages/frontend_mobile/src/composables/useRuntimeConfig.ts',
+    decl: 'const DEFAULTS: PublicRuntimeConfig = {',
   },
+];
+
+// 平台层口令策略兜底（移动端与任何够不到后端的调用方吃它）
+const PASSWORD_POLICY_PLATFORM_KEYS = {
+  passwordPolicyMinLength: 'minLength',
+  passwordPolicyMinCategories: 'minCategories',
 };
 
-const expected = {
-  passwordPolicyMinLength: backendDefault('passwordPolicyMinLength'),
-  passwordPolicyMinCategories: backendDefault('passwordPolicyMinCategories'),
-};
+const backend = backendDefaults();
 const pf = platformFallback();
 
-for (const [key, spec] of Object.entries(KEYS)) {
-  const want = expected[key];
-  if (want === null) {
+for (const [key, platformKey] of Object.entries(
+  PASSWORD_POLICY_PLATFORM_KEYS
+)) {
+  if (backend[key] !== undefined && pf[platformKey] !== backend[key]) {
     issues.push(
-      `后端 runtime-config.constants.ts 找不到 ${key} 的 defaultValue`
+      `packages/platform/src/auth/password-policy.ts  PASSWORD_POLICY.${platformKey}` +
+        `=${pf[platformKey]} ≠ 后端 defaultValue=${backend[key]}`
     );
+  }
+}
+
+for (const { file, decl } of FRONTEND_SOURCES) {
+  const src = read(file);
+  const fallbacks = parseLiteralBlock(src, decl);
+  if (!fallbacks) {
+    issues.push(`${file} 找不到回落表声明：${decl}`);
     continue;
   }
-  if (pf[spec.platformKey] !== want) {
-    issues.push(
-      `packages/platform/src/auth/password-policy.ts  PASSWORD_POLICY.${spec.platformKey}=${pf[spec.platformKey]} ≠ 后端 defaultValue=${want}`
-    );
-  }
-  for (const file of [spec.pcFile, spec.mobileFile]) {
-    for (const { line, value } of frontendLiterals(file, key)) {
-      if (value !== want) {
+  for (const [key, value] of Object.entries(fallbacks)) {
+    if (backend[key] === undefined) {
+      issues.push(
+        `${file} 回落表 ${key} 在后端定义表无定义（键名漂移或后端已删该键）`
+      );
+      continue;
+    }
+    if (value !== backend[key]) {
+      issues.push(
+        `${file} 回落 ${key}=${JSON.stringify(value)}` +
+          ` ≠ 后端 defaultValue=${JSON.stringify(backend[key])}`
+      );
+    }
+    // mapPublicConfig 的第二处缺键回落必须同值（两处口径不同就会分叉）
+    for (const { line, value: coalesced } of parseCoalesceFallbacks(src, key)) {
+      if (backend[key] !== coalesced) {
         issues.push(
-          `${file}:${line}  ${key} 回落值=${value} ≠ 后端 defaultValue=${want}`
+          `${file}:${line}  ${key} 缺键回落=${JSON.stringify(coalesced)}` +
+            ` ≠ 后端 defaultValue=${JSON.stringify(backend[key])}`
         );
       }
     }
