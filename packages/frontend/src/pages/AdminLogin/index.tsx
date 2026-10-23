@@ -25,19 +25,8 @@ import { InteractiveBackground } from '@/components/InteractiveBackground';
 import { LoginHeader } from '@/pages/Login/components/LoginHeader';
 import { getDefaultAppBrandConfig } from '@/constants/appConfig';
 import { t } from '@/languages';
+import { getErrorInfo } from '@/utils/errorHandler';
 import styles from '../Login/Login.module.css';
-
-/** 从 SDK 抛出的错误对象提取后端 code / message（@hey-api 错误对象顶层含 code/message） */
-function getErrorInfo(err: unknown): { code?: string; message: string } {
-  const errAny = err as Record<string, unknown> | null;
-  const code =
-    typeof errAny?.code === 'string' ? (errAny.code as string) : undefined;
-  const message =
-    (typeof errAny?.message === 'string' && errAny.message) ||
-    (err instanceof Error ? err.message : '') ||
-    '';
-  return { code, message };
-}
 
 /**
  * 管理员独立登录页面（/admin-login）

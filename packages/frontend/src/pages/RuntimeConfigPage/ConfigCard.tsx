@@ -26,6 +26,8 @@ export interface RowActions {
   fieldErrors: Record<string, string>;
   /** 开关依赖状态：key → 依赖项满足情况（检查手段②） */
   dependencyStatus: Map<string, DependencyStatus[]>;
+  /** 待高亮的配置项 key（通道缺失键点击定位的落点） */
+  highlightKey: string | null;
   draftOf: (item: ConfigItem) => DraftValue;
   isDirty: (item: ConfigItem) => boolean;
   onDraftChange: (key: string, value: DraftValue) => void;
@@ -120,6 +122,7 @@ export const ConfigCard: React.FC<ConfigCardProps> = ({
                 canManageConfig={actions.canManageConfig}
                 secretVisible={actions.secretVisible.has(item.key)}
                 fieldError={actions.fieldErrors[item.key] ?? ''}
+                highlight={actions.highlightKey === item.key}
                 dependencyStatus={actions.dependencyStatus.get(item.key) ?? []}
                 onDraftChange={(value) => actions.onDraftChange(item.key, value)}
                 onFormatJson={() => actions.onFormatJson(item.key)}

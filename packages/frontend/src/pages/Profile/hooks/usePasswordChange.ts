@@ -4,6 +4,8 @@ import { usersControllerChangePassword } from '@/api-sdk';
 interface ChangePasswordParams {
   oldPassword?: string;
   newPassword: string;
+  /** TOTP 动态码：管理员开启双因素总闸且已绑定时必填（后端 step-up 校验） */
+  totpCode?: string;
 }
 
 export const usePasswordChange = () => {
@@ -14,6 +16,7 @@ export const usePasswordChange = () => {
         body: {
           oldPassword: params.oldPassword,
           newPassword: params.newPassword,
+          totpCode: params.totpCode,
         },
       });
       return result;

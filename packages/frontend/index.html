@@ -8,49 +8,60 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
-    <!-- 首屏 loading：SPA 资源加载期间（index.html → JS bundles → React 挂载）页面为空白，
-         此处内联纯 CSS 动画兜底；React createRoot 挂载时会清空 #root 子节点，自动替换为应用内容。
-         注意：此处无法使用主题 CSS 变量（JS 未加载），颜色为固定值。 -->
-    <style>
-      #app-boot-loading {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 16px;
-        background: #f6f7f9;
-        font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
-          'Microsoft YaHei', sans-serif;
-      }
-      #app-boot-loading .app-boot-spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid #e3e6ea;
-        border-top-color: #3b82f6;
-        border-radius: 50%;
-        animation: app-boot-spin 0.9s linear infinite;
-      }
-      #app-boot-loading .app-boot-text {
-        color: #6b7280;
-        font-size: 14px;
-        margin: 0;
-      }
-      @keyframes app-boot-spin {
-        to {
-          transform: rotate(360deg);
+    <!-- 首帧品牌缓存：管理端改过 brandTitle / brandLogo 后，运行时配置要等 bundle 加载 +
+         /runtime-config/public 返回才会生效，这段时间标签标题与图标都停在上面的打包兜底值，
+         肉眼就是「闪一下」。上次生效的值由 src/lib/brandChrome.ts 存进 localStorage，
+         这里在 bundle 加载之前就直接应用，回访用户第一次绘制就已经是运行时配置的值。
+         首次访问 / 禁用 JS 时保持静态兜底值。键名必须与 BRAND_CHROME_CACHE_KEY 一致。 -->
+    <script>
+      (function () {
+        // 主题：在 bundle 加载前给 <html> 设 data-theme，使 JS 加载期的兜底背景（见下方
+        // html 背景规则）跟随主题，避免「白屏」与暗色主题不一致而闪一下。
+        // 键名与 ThemeContext 的 THEME_STORAGE_KEY 一致；无存储时默认暗色（与 mxcad-app 默认一致）。
+        try {
+          var storedTheme = window.localStorage.getItem('mx-user-dark');
+          var isDark = storedTheme ? storedTheme === 'true' : true;
+          document.documentElement.setAttribute(
+            'data-theme',
+            isDark ? 'dark' : 'light'
+          );
+        } catch (err) {
+          /* localStorage 不可用时保持默认暗色 */
         }
+        var store = window.localStorage;
+        var cache;
+        try {
+          cache = JSON.parse(store.getItem('mx-brand-chrome') || 'null');
+        } catch (err) {
+          return;
+        }
+        if (!cache) return;
+        var appName =
+          typeof cache.appName === 'string' ? cache.appName.trim() : '';
+        if (appName) document.title = appName;
+        var logo = typeof cache.logo === 'string' ? cache.logo.trim() : '';
+        // 与写入侧同一套校验：只放行同源相对路径，挡住 javascript:/data:/协议相对地址
+        if (logo.charAt(0) !== '/' || logo.charAt(1) === '/') return;
+        if (logo.indexOf(':') !== -1 || /[ \t\n]/.test(logo)) return;
+        var links = document.querySelectorAll('link[rel*="icon"]');
+        for (var i = 0; i < links.length; i++) links[i].href = logo;
+      })();
+    </script>
+    <!-- JS 加载期兜底背景：SPA 资源加载期间（index.html → JS bundles → React 挂载）#root 为空，
+         此处给 html 一个跟随主题的固定背景避免白屏；React createRoot 挂载后替换为应用内容。
+         首屏不再显示骨架屏。注意：此处无法使用主题 CSS 变量（JS 未加载），颜色为固定值
+         （浅色/暗色值 = theme.css 的 --bg-primary；body 背景透明（app.css），透出此背景）。 -->
+    <style>
+      html {
+        background: #f8fafc;
+      }
+      html[data-theme='dark'] {
+        background: #141619;
       }
     </style>
   </head>
   <body>
-    <div id="root">
-      <div id="app-boot-loading">
-        <div class="app-boot-spinner"></div>
-        <p class="app-boot-text">正在加载...</p>
-      </div>
-    </div>
+    <div id="root"></div>
     <div id="modal-root"></div>
     <div id="toast-root"></div>
     <script type="module" src="./src/index.tsx"></script>

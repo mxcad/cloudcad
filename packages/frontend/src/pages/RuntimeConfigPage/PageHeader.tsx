@@ -7,7 +7,7 @@
  * 页面头部：标题 + 生效语义说明 + 安全模式横幅 + 统计条 + 只读提示。
  *
  * 说明面向非技术运维：不出现「取值优先级 / 即时生效」等术语，只讲
- * 「在这里改、保存就生效」；只有真的存在需重启的项（hot === false）才提示。
+ * 「在这里改、保存就生效」。
  *
  * 模式横幅报出的受管项数大多落在 advanced 档、默认隐藏，
  * 管理员若只看列表会误判「模式没管住任何东西」。
@@ -54,13 +54,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <div className={styles.titleContent}>
             <h1 className={styles.pageTitle}>{t('运行时配置')}</h1>
             <p className={styles.pageSubtitle}>
-              {t(
-                '在这里修改并保存即可，不用去改 .env 文件；这里设置的值优先于环境变量和代码默认值。'
-              )}
-              {stats.restartRequired > 0 &&
-                t('其中 {n} 项需重启后端服务后才生效。', {
-                  n: String(stats.restartRequired),
-                })}
+              {t('在这里修改并保存即可；这里保存的值优先于系统预置值。')}
             </p>
           </div>
         </div>
@@ -89,7 +83,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <div className={styles.statDivider} />
             <div className={styles.statItem}>
               <span className={styles.statValue}>{stats.envDriven}</span>
-              <span className={styles.statLabel}>{t('环境变量')}</span>
+              <span className={styles.statLabel}>{t('系统预置')}</span>
             </div>
             <div className={styles.statDivider} />
             <div className={styles.statItem} data-testid="rc-mode-managed">
@@ -150,7 +144,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <Info size={18} />
           <span>
             {t(
-              '共 {n} 项配置已由环境变量注入。修改后运行时配置优先级更高；恢复默认会退回环境变量值，而非代码默认值。',
+              '共 {n} 项配置由系统预置。在这里保存会覆盖预置值；恢复出厂会退回预置值，而不是出厂默认值。',
               {
                 n: String(stats.envDriven),
               }

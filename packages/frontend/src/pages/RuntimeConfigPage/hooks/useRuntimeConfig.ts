@@ -38,9 +38,11 @@ import {
   toConfigItems,
   toHistoryEntries,
   toChannelStatuses,
+  configItemId,
 } from '../meta';
 import type {
   ChannelStatus,
+  ChannelTestResult,
   ConfigGroup,
   ConfigHistoryEntry,
   ConfigItem,
@@ -56,8 +58,6 @@ export interface RuntimeConfigStats {
   total: number;
   /** 后端标记的已修改项（区别于安装默认行） */
   modified: number;
-  /** 需要重启才生效的项 */
-  restartRequired: number;
   /** 环境变量已注入、优先级低于运行时配置的项 */
   envDriven: number;
   /** 当前页面尚未提交的草稿数 */
@@ -85,8 +85,13 @@ export interface UseRuntimeConfigReturn {
   channelTesting: Set<string>;
   /** 打开中的测试对话框对应的通道；null 表示未打开 */
   channelTestTarget: string | null;
-  /** 测试对话框中的收件人草稿（留空 = 后端回落客服邮箱） */
+  /** 测试对话框中的接收方草稿（邮箱/手机号，语义随通道而定；留空由通道动作自行决定） */
   channelTestRecipient: string;
+  /**
+   * 最近一次测试的结果（失败时保留在对话框里展示错误文案 + 可定位的出错配置项；
+   * 成功/关闭对话框时清空）
+   */
+  channelTestResult: ChannelTestResult | null;
   groups: ConfigGroup[];
   loading: boolean;
   configsError: string | null;
@@ -124,6 +129,10 @@ export interface UseRuntimeConfigReturn {
   setShowAdvanced: (showAdvanced: boolean) => void;
   toggleCollapsed: (category: string) => void;
   setAllCollapsed: (collapsed: boolean) => void;
+  /** 待高亮的配置项 key：通道缺失键点击定位后短暂闪烁，提示位置 */
+  highlightKey: string | null;
+  /** 定位到指定配置项（通道缺失键清单的跳转入口） */
+  focusConfigItem: (key: string) => void;
   draftOf: (item: ConfigItem) => DraftValue;
   isDirty: (item: ConfigItem) => boolean;
   handleDraftChange: (key: string, value: DraftValue) => void;
@@ -192,6 +201,13 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [history, setHistory] = useState<ConfigHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  /** 待定位的配置项（seq 递增保证连续点击同一键也能重新触发滚动） */
+  const [focusRequest, setFocusRequest] = useState<{
+    key: string;
+    seq: number;
+  } | null>(null);
+  /** 正在高亮闪烁的配置项 key（定位落点后短暂提示位置） */
+  const [highlightKey, setHighlightKey] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [keyword, setKeyword] = useState('');
   const [onlyModified, setOnlyModified] = useState(false);
@@ -208,6 +224,10 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     null
   );
   const [channelTestRecipient, setChannelTestRecipient] = useState('');
+  /** 最近一次测试失败的结果（对话框内展示错误 + 出错配置项定位入口） */
+  const [channelTestResult, setChannelTestResult] = useState<
+    ChannelTestResult | null
+  >(null);
 
   const canManageConfig = hasPermission(SystemPermission.SYSTEM_CONFIG_WRITE);
 
@@ -356,7 +376,6 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     () => ({
       total: configs.length,
       modified: configs.filter((c) => c.isModified).length,
-      restartRequired: configs.filter((c) => c.hot === false).length,
       envDriven: configs.filter(
         (c) => c.envValue !== null && c.envValue !== undefined
       ).length,
@@ -475,6 +494,44 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     });
   }, []);
 
+  /**
+   * 定位到指定配置项：通道缺失键清单的跳转入口。
+   * 目标项可能被搜索关键词、只看已修改、高级项收起、分类折叠挡住，
+   * 先把这些挡住的条件清掉再发定位请求——滚动与高亮由下方 effect 在
+   * DOM 更新后执行。
+   */
+  const focusConfigItem = useCallback(
+    (key: string) => {
+      const item = configsByKey.get(key);
+      if (!item) return;
+      if (keyword.trim()) setKeyword('');
+      if (onlyModified) setOnlyModified(false);
+      if (item.tier === 'advanced' && !showAdvanced) setShowAdvanced(true);
+      if (collapsed.has(item.category)) {
+        setCollapsed((prev) => {
+          const next = new Set(prev);
+          next.delete(item.category);
+          return next;
+        });
+      }
+      setFocusRequest((prev) => ({ key, seq: (prev?.seq ?? 0) + 1 }));
+    },
+    [configsByKey, keyword, onlyModified, showAdvanced, collapsed]
+  );
+
+  /** 定位生效：滚动到配置项并短暂高亮（seq 变化即重新定位） */
+  useEffect(() => {
+    if (!focusRequest) return;
+    const key = focusRequest.key;
+    setHighlightKey(key);
+    document.getElementById(configItemId(key))?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    const timer = setTimeout(() => setHighlightKey(null), 2400);
+    return () => clearTimeout(timer);
+  }, [focusRequest]);
+
   const setAllCollapsed = useCallback(
     (value: boolean) => {
       setCollapsed(value ? new Set(groups.map((g) => g.category)) : new Set());
@@ -493,18 +550,21 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
 
   const openChannelTest = useCallback((channel: string) => {
     setChannelTestRecipient('');
+    setChannelTestResult(null);
     setChannelTestTarget(channel);
   }, []);
 
   const closeChannelTest = useCallback(() => {
     setChannelTestTarget(null);
     setChannelTestRecipient('');
+    setChannelTestResult(null);
   }, []);
 
   /**
-   * 执行通道测试发送。后端语义：配置不完整/测试失败都返回 200 + ok:false
-   * （带原因文案），只有通道未注册等参数错误才 4xx——两种失败都 toast 后端
-   * 文案，随后刷新通道状态（成功会写验证记录，失败不写）。
+   * 执行通道验证。后端语义：配置不完整/验证失败都返回 200 + ok:false
+   * （带原因文案 + 疑似出错的配置键），只有通道未注册等参数错误才 4xx——
+   * 两种失败都 toast 后端文案，并把结果保留在对话框里（错误文案 + 可点击
+   * 定位的出错配置项），随后刷新通道状态（成功会写验证记录，失败不写）。
    */
   const confirmChannelTest = useCallback(async () => {
     const channel = channelTestTarget;
@@ -518,15 +578,28 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       });
       const data = result.data;
       if (data?.ok) {
-        showToast(data.message || t('测试发送成功'), 'success');
+        showToast(data.message || t('验证成功'), 'success');
+        setChannelTestResult(null);
         setChannelTestTarget(null);
         setChannelTestRecipient('');
       } else {
-        showToast(data?.message || t('测试发送失败'), 'error');
+        showToast(data?.message || t('验证失败'), 'error');
+        setChannelTestResult({
+          ok: false,
+          message: data?.message || t('验证失败'),
+          problemKeys: Array.isArray(data?.problemKeys)
+            ? (data.problemKeys as unknown[]).map(String)
+            : [],
+        });
       }
     } catch (error: unknown) {
-      handleError(error, t('测试发送失败'));
-      showToast(getErrorMessage(error) || t('测试发送失败'), 'error');
+      handleError(error, t('验证失败'));
+      showToast(getErrorMessage(error) || t('验证失败'), 'error');
+      setChannelTestResult({
+        ok: false,
+        message: getErrorMessage(error) || t('验证失败'),
+        problemKeys: [],
+      });
     } finally {
       setChannelTesting((prev) => {
         const next = new Set(prev);
@@ -632,7 +705,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       if (hasEnv) {
         lines.push(
           t(
-            '该项已由环境变量设置，恢复默认后生效值将变为环境变量值「{env}」，而不是代码默认值「{def}」。',
+            '该项由系统预置为「{env}」，恢复出厂后仍由它生效，不会变成出厂默认值「{def}」。',
             {
               env: String(item.envValue),
               def: String(item.defaultValue ?? ''),
@@ -844,6 +917,7 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     channelTesting,
     channelTestTarget,
     channelTestRecipient,
+    channelTestResult,
     groups,
     loading,
     configsError,
@@ -876,6 +950,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     retryFetch: () => fetchConfigs(),
     toggleCollapsed,
     setAllCollapsed,
+    highlightKey,
+    focusConfigItem,
     draftOf,
     isDirty,
     handleDraftChange,

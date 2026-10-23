@@ -381,54 +381,7 @@
   gap: 0.25rem;
 }
 
-/* Password strength */
-.passwordStrength {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.375rem;
-}
-
-.strengthBar {
-  flex: 1;
-  height: 3px;
-  background: var(--border-default);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.strengthFill {
-  height: 100%;
-  border-radius: 2px;
-  transition: all 0.3s;
-}
-
-.strengthLabel {
-  font-size: var(--text-xs);
-  font-weight: 500;
-}
-
-/* 口令要求实时清单：项由生效策略生成（minLength / minCategories 关闭时该项不出现） */
-.passwordRequirements {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
-  margin-top: 0.25rem;
-  padding: 0;
-  list-style: none;
-}
-
-.passwordRequirements li {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-}
-
-.passwordRequirements li[data-ok='true'] {
-  color: var(--text-secondary);
-}
+/* 密码强度条 + 要求清单已收敛到共享组件 components/ui/PasswordStrength */
 
 /* SMS code button */
 .inputWrapperHasButton {

@@ -767,7 +767,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
         {/* 弱口令软提示（仅 ADMIN）：后端 passwordUnchanged = isAdmin && passwordChangedAt === null。
             所有改密入口都过 assertPasswordPolicy（拒绝弱口令），故「当前口令可能过弱」
             ⇔「部署初始口令从未改过」，无需新增字段/迁移即可判定。软提示不拦截、不设关闭按钮，
-            改密成功即自动消失（与上方到期横幅同形态）。点击进入个人中心（含修改密码页签）。
+            改密成功即自动消失（与上方到期横幅同形态）。点击深链 /profile?section=password
+            直达修改密码子页（Profile 页按 section 参数初始化子视图）。
             文案按安全模式分档：secure 模式初始口令不合规、需立即改；normal 模式初始口令
             是正当默认（DEFAULT_ADMIN_PASSWORD），改成建议式而非合规式，避免误导。 */}
         {user?.role?.name === 'ADMIN' &&
@@ -795,7 +796,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({
                 <Button
                   variant="secondary"
                   size="xs"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate('/profile?section=password')}
                 >
                   {t('去修改')}
                 </Button>

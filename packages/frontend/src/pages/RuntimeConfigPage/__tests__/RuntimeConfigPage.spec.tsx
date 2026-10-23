@@ -11,6 +11,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -18,11 +19,11 @@ import {
   within,
 } from '@testing-library/react';
 import RuntimeConfigPage, { RuntimeConfigPage as NamedPage } from '../index';
-import type { ConfigItem, ConfigGroup } from '../types';
+import type { ChannelStatus, ConfigItem, ConfigGroup } from '../types';
 import type { DraftValue } from '../validate';
 import type { UseRuntimeConfigReturn } from '../hooks/useRuntimeConfig';
 import { defaultDraftOf } from '../validate';
-import { buildSubgroupSections } from '../meta';
+import { buildSubgroupSections, channelTestMeta } from '../meta';
 
 /** 取某个配置项的行容器（页面上同类文本很多，断言必须作用域化） */
 function rowOf(key: string) {
@@ -45,7 +46,6 @@ function item(patch: Partial<ConfigItem> & { key: string; category: string }): C
     source: 'default',
     isModified: false,
     envValue: null,
-    hot: true,
     ...patch,
   };
 }
@@ -124,7 +124,6 @@ const mockItems: ConfigItem[] = [
     isModified: true,
     defaultValue: {},
     tier: 'advanced',
-    hot: false,
     impact: '配置错误会阻塞所有跨域请求',
   }),
   item({
@@ -171,7 +170,6 @@ const mockItems: ConfigItem[] = [
     description: '品牌档案',
     source: 'runtime',
     tier: 'user',
-    hot: true,
     impact: '保存后 PC 与移动端即刻生效',
   }),
   item({
@@ -258,7 +256,6 @@ function makeReturn(
     stats: {
       total: configs.length,
       modified: configs.filter((c) => c.isModified).length,
-      restartRequired: configs.filter((c) => c.hot === false).length,
       envDriven: configs.filter((c) => c.envValue != null).length,
       pendingSave: 0,
       modeManaged: 0,
@@ -268,6 +265,8 @@ function makeReturn(
     setShowAdvanced: vi.fn(),
     toggleCollapsed: vi.fn(),
     setAllCollapsed: vi.fn(),
+    highlightKey: null,
+    focusConfigItem: vi.fn(),
     draftOf: (it) => defaultDraftOf(it),
     isDirty: (it) => it.isModified,
     handleDraftChange: vi.fn(),
@@ -279,6 +278,7 @@ function makeReturn(
     channelTesting: new Set(),
     channelTestTarget: null,
     channelTestRecipient: '',
+    channelTestResult: null,
     openChannelTest: vi.fn(),
     closeChannelTest: vi.fn(),
     setChannelTestRecipient: vi.fn(),
@@ -308,14 +308,12 @@ describe('RuntimeConfigPage 渲染', () => {
   it('渲染标题、优先级说明与统计条', () => {
     render(<RuntimeConfigPage />);
     expect(screen.getByText('运行时配置')).toBeTruthy();
-    // 需重启项数（security.corsOrigins hot=false）计入说明
-    expect(screen.getByText(/需重启后端服务后才生效/)).toBeTruthy();
     // 保存即可生效的说明面向非技术用户，不出现「取值优先级」这类术语
-    expect(screen.getByText(/不用去改 \.env 文件/)).toBeTruthy();
+    expect(screen.getByText(/这里保存的值优先于系统预置值/)).toBeTruthy();
     expect(screen.getByTestId('rc-stats')).toBeTruthy();
     const stats = within(screen.getByTestId('rc-stats'));
     expect(stats.getByText('配置项')).toBeTruthy();
-    expect(stats.getByText('环境变量')).toBeTruthy();
+    expect(stats.getByText('系统预置')).toBeTruthy();
   });
 
   it('分类卡片可折叠，折叠后隐藏配置项', () => {
@@ -354,14 +352,14 @@ describe('RuntimeConfigPage 渲染', () => {
     expect(screen.getByText('展开全部')).toBeTruthy();
   });
 
-  it('渲染徽标：档位 / 来源 / 生效方式 / 危险 / 已修改', () => {
+  it('渲染徽标：档位 / 来源 / 危险 / 已修改', () => {
     render(<RuntimeConfigPage />);
     expect(screen.getAllByText('管理项').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('高级项').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('运行时修改').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('代码默认值').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('已修改').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('出厂默认').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('即时生效')).toBeNull();
-    expect(screen.getAllByText('需重启服务').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('需重启服务')).toBeNull();
     expect(screen.getAllByText('危险').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('已修改').length).toBeGreaterThanOrEqual(3);
   });
@@ -399,14 +397,14 @@ describe('RuntimeConfigPage 渲染', () => {
     render(<RuntimeConfigPage />);
     const row = rowOf('file.maxFileSize');
     expect(
-      within(row).getByText(/环境变量已设置该值（200），运行时配置优先级更高/)
+      within(row).getByText(/此项由系统预置为 200，你在这里保存后会覆盖它/)
     ).toBeTruthy();
-    expect(within(row).getByText('恢复默认将改由环境变量生效。')).toBeTruthy();
+    expect(within(row).getByText('恢复出厂后这一项会改由系统预置值接管。')).toBeTruthy();
   });
 
   it('环境变量项未修改时不出现「恢复默认将改由环境变量生效」提示', () => {
     render(<RuntimeConfigPage />);
-    expect(screen.queryByText('恢复默认将改由环境变量生效。')).toBeNull();
+    expect(screen.queryByText('恢复出厂后这一项会改由系统预置值接管。')).toBeNull();
   });
 
   it('危险项展示影响说明', () => {
@@ -715,7 +713,7 @@ describe('RuntimeConfigPage 分类批量恢复', () => {
     render(<RuntimeConfigPage />);
     expect(
       screen.getByText(
-        /已由环境变量注入：恢复默认后取值回到环境变量值，而不是代码默认值/
+        /由系统预置：恢复出厂后取值会退回预置值，而不是出厂默认值/
       )
     ).toBeTruthy();
     // 引导语不得再声称「恢复后取值回到代码默认值」——与 env 提示自相矛盾
@@ -901,7 +899,7 @@ describe('RuntimeConfigPage 只读模式', () => {
   it('有环境变量项时展示顶部 env 说明横幅', () => {
     render(<RuntimeConfigPage />);
     expect(
-      screen.getByText(/项配置已由环境变量注入。修改后运行时配置优先级更高/)
+      screen.getByText(/项配置由系统预置。在这里保存会覆盖预置值/)
     ).toBeTruthy();
   });
 
@@ -913,7 +911,286 @@ describe('RuntimeConfigPage 只读模式', () => {
     });
     render(<RuntimeConfigPage />);
     expect(
-      screen.queryByText(/项配置已由环境变量注入/)
+      screen.queryByText(/项配置由系统预置/)
     ).toBeNull();
+  });
+});
+
+describe('RuntimeConfigPage 通道测试对话框（按通道能力渲染）', () => {
+  /** 回归背景：对话框曾对所有通道套邮件口径（收件人 + 客服邮箱占位），
+   * 短信是手机号、微信/支付/Webhook 根本不读接收方 */
+  function statusOf(channel: string): ChannelStatus {
+    return {
+      channel,
+      configComplete: true,
+      missingKeys: [],
+      verified: false,
+      verifiedAt: null,
+      testedBy: null,
+    };
+  }
+
+  function cardOf(channel: string) {
+    const card = screen
+      .getAllByTestId('rc-channel-card')
+      .find((el) => el.getAttribute('data-channel') === channel);
+    expect(card, `未找到通道卡片 ${channel}`).toBeTruthy();
+    return card!;
+  }
+
+  it('邮件通道：显示接收方输入框，占位说明留空只校验连接不发信', () => {
+    mockState.return = makeReturn({
+      channelStatuses: [statusOf('mail')],
+      channelTestTarget: 'mail',
+    });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByTestId('rc-channel-test-recipient')).toBeTruthy();
+    expect(screen.getByPlaceholderText(/不发送邮件/)).toBeTruthy();
+    // 留空不再回落客服邮箱（ADR-0082 D4 修订：留空 = 无副作用验证）
+    expect(screen.queryByPlaceholderText(/客服邮箱/)).toBeNull();
+  });
+
+  it('短信通道：接收方标签是手机号，占位说明留空只探测不发短信', () => {
+    mockState.return = makeReturn({
+      channelStatuses: [statusOf('sms')],
+      channelTestTarget: 'sms',
+    });
+    render(<RuntimeConfigPage />);
+    expect(screen.getByText('手机号（可选）')).toBeTruthy();
+    expect(screen.getByPlaceholderText(/不发送短信/)).toBeTruthy();
+    expect(screen.queryByPlaceholderText(/客服邮箱/)).toBeNull();
+  });
+
+  it('微信/支付/Webhook：不渲染接收方输入框，说明各自探测行为', () => {
+    const probes: Array<[string, RegExp]> = [
+      ['wechat', /微信凭据探测/],
+      ['payment', /不产生订单/],
+      ['webhook', /Webhook URL 发送一次 POST/],
+    ];
+    for (const [channel, note] of probes) {
+      mockState.return = makeReturn({
+        channelStatuses: [statusOf(channel)],
+        channelTestTarget: channel,
+      });
+      render(<RuntimeConfigPage />);
+      expect(
+        screen.queryByTestId('rc-channel-test-recipient'),
+        `${channel} 通道测试不应出现接收方输入框`
+      ).toBeNull();
+      expect(
+        screen.queryByPlaceholderText(/客服邮箱/),
+        `${channel} 通道测试不应出现邮件口径占位`
+      ).toBeNull();
+      expect(
+        screen.getByText(note),
+        `${channel} 通道未渲染各自的探测说明`
+      ).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it('每个通道有各自图标，非邮件通道不再共用 Plug 兜底', () => {
+    const channels = ['mail', 'sms', 'wechat', 'payment', 'webhook'];
+    mockState.return = makeReturn({ channelStatuses: channels.map(statusOf) });
+    render(<RuntimeConfigPage />);
+    const icons = channels.map(
+      (channel) =>
+        cardOf(channel).querySelector('svg[class*="lucide-"]')?.getAttribute('class') ?? ''
+    );
+    expect(icons.length).toBe(5);
+    expect(new Set(icons).size, '五张通道卡片的图标应互不相同').toBe(5);
+    expect(
+      icons.every((cls) => cls.includes('lucide-') && !cls.includes('lucide-plug'))
+    ).toBe(true);
+  });
+});
+
+describe('RuntimeConfigPage 通道缺失键清单（定位 + 格式示例）', () => {
+  /** 回归背景：缺失键曾只渲染一串裸键名（smtpHost），用户既找不到对应的
+   * 配置项也不知道该填什么格式，补全入口断在「配置不完整」这五个字上 */
+  function statusOf(missing: string[]): ChannelStatus {
+    return {
+      channel: 'mail',
+      configComplete: missing.length === 0,
+      missingKeys: missing,
+      verified: false,
+      verifiedAt: null,
+      testedBy: null,
+    };
+  }
+
+  const smtpHostItem: ConfigItem = {
+    key: 'smtpHost',
+    value: '',
+    type: 'string',
+    category: 'alert',
+    isPublic: false,
+    description: 'SMTP 服务器主机',
+    tier: 'admin',
+    input: { maxLength: 200, placeholder: 'smtp.example.com' },
+  };
+
+  it('缺失键渲染中文说明、键名与格式示例，而非只给裸键名', () => {
+    mockState.return = makeReturn({
+      configs: [smtpHostItem],
+      channelStatuses: [statusOf(['smtpHost'])],
+    });
+    render(<RuntimeConfigPage />);
+    const list = screen.getByTestId('rc-missing-keys');
+    expect(list.textContent).toContain('SMTP 服务器主机');
+    expect(list.textContent).toContain('smtpHost');
+    expect(list.textContent).toContain('smtp.example.com');
+  });
+
+  it('点击缺失键定位到对应配置项', () => {
+    const focusConfigItem = vi.fn();
+    mockState.return = makeReturn({
+      configs: [smtpHostItem],
+      channelStatuses: [statusOf(['smtpHost'])],
+      focusConfigItem,
+    });
+    render(<RuntimeConfigPage />);
+    fireEvent.click(screen.getByTestId('rc-missing-key'));
+    expect(focusConfigItem).toHaveBeenCalledWith('smtpHost');
+  });
+
+  it('配置完整时不渲染缺失键清单', () => {
+    mockState.return = makeReturn({ channelStatuses: [statusOf([])] });
+    render(<RuntimeConfigPage />);
+    expect(screen.queryByTestId('rc-missing-keys')).toBeNull();
+  });
+
+  it('配置列表查不到该键时回落显示键名，不猜格式示例', () => {
+    mockState.return = makeReturn({
+      channelStatuses: [statusOf(['smtpHost'])],
+    });
+    render(<RuntimeConfigPage />);
+    const list = screen.getByTestId('rc-missing-keys');
+    expect(list.textContent).toContain('smtpHost');
+    expect(list.textContent).not.toContain('smtp.example.com');
+  });
+
+  it('测试对话框的缺失提示用中文说明而非裸键名', () => {
+    mockState.return = makeReturn({
+      configs: [smtpHostItem],
+      channelStatuses: [statusOf(['smtpHost'])],
+      channelTestTarget: 'mail',
+    });
+    render(<RuntimeConfigPage />);
+    expect(
+      screen.getByText(/通道配置不完整/).textContent
+    ).toContain('SMTP 服务器主机');
+  });
+});
+
+describe('RuntimeConfigPage 通道测试失败结果（错误文案 + 出错配置项定位）', () => {
+  /** 回归背景：测试失败曾只 toast 后端原始文案（如「errcode 40013: invalid
+   * appid」），用户看不懂是什么错，也没有到对应配置项的入口；现在对话框
+   * 保留错误文案，后端归因的出错配置键渲染为可点击定位的条目 */
+  function statusOf(channel: string): ChannelStatus {
+    return {
+      channel,
+      configComplete: true,
+      missingKeys: [],
+      verified: false,
+      verifiedAt: null,
+      testedBy: null,
+    };
+  }
+
+  const wechatAppIdItem: ConfigItem = {
+    key: 'wechatAppId',
+    value: 'wx_wrong',
+    type: 'string',
+    category: 'alert',
+    isPublic: false,
+    description: '微信 AppID',
+    tier: 'admin',
+    input: { maxLength: 100, placeholder: 'wx1234567890abcdef' },
+  };
+
+  it('测试失败：对话框展示错误文案与后端归因的出错配置项（中文说明 + 键名 + 示例）', () => {
+    mockState.return = makeReturn({
+      configs: [wechatAppIdItem],
+      channelStatuses: [statusOf('wechat')],
+      channelTestTarget: 'wechat',
+      channelTestResult: {
+        ok: false,
+        message:
+          '微信凭据探测失败（errcode 40013：invalid appid rid: xxx）——AppID 不正确：请核对填写的 AppID 与微信公众平台后台一致',
+        problemKeys: ['wechatAppId'],
+      },
+    });
+    render(<RuntimeConfigPage />);
+    expect(
+      screen.getByTestId('rc-test-failure-message').textContent
+    ).toContain('errcode 40013');
+    const block = screen.getByTestId('rc-test-failure');
+    expect(block.textContent).toContain('微信 AppID');
+    expect(block.textContent).toContain('wechatAppId');
+    expect(block.textContent).toContain('wx1234567890abcdef');
+  });
+
+  it('点击出错配置项定位到对应配置项并关闭对话框', () => {
+    const focusConfigItem = vi.fn();
+    const closeChannelTest = vi.fn();
+    mockState.return = makeReturn({
+      configs: [wechatAppIdItem],
+      channelStatuses: [statusOf('wechat')],
+      channelTestTarget: 'wechat',
+      channelTestResult: {
+        ok: false,
+        message: '微信凭据探测失败（errcode 40013）——AppID 不正确',
+        problemKeys: ['wechatAppId'],
+      },
+      focusConfigItem,
+      closeChannelTest,
+    });
+    render(<RuntimeConfigPage />);
+    fireEvent.click(screen.getByTestId('rc-test-problem-key'));
+    expect(focusConfigItem).toHaveBeenCalledWith('wechatAppId');
+    expect(closeChannelTest).toHaveBeenCalled();
+  });
+
+  it('后端无法归因出错配置键（problemKeys 为空）：只展示错误文案，不渲染清单', () => {
+    mockState.return = makeReturn({
+      channelStatuses: [statusOf('wechat')],
+      channelTestTarget: 'wechat',
+      channelTestResult: {
+        ok: false,
+        message: '微信 gettoken 探测失败：fetch failed',
+        problemKeys: [],
+      },
+    });
+    render(<RuntimeConfigPage />);
+    expect(
+      screen.getByTestId('rc-test-failure-message').textContent
+    ).toContain('fetch failed');
+    expect(screen.queryByTestId('rc-test-problem-key')).toBeNull();
+  });
+});
+
+describe('CHANNEL_TEST_META 通道测试能力表', () => {
+  it('接收方能力与后端各通道测试动作一致', () => {
+    expect(channelTestMeta('mail').acceptsRecipient).toBe(true);
+    expect(channelTestMeta('mail').recipientLabel).toBe('收件人（可选）');
+    expect(channelTestMeta('sms').recipientLabel).toBe('手机号（可选）');
+    for (const channel of ['wechat', 'payment', 'webhook']) {
+      expect(channelTestMeta(channel).acceptsRecipient, channel).toBe(false);
+    }
+  });
+
+  it('说明文案覆盖后端测试动作的实际行为', () => {
+    expect(channelTestMeta('mail').description).toContain('收件人');
+    expect(channelTestMeta('sms').description).toContain('短信费用');
+    expect(channelTestMeta('wechat').description).toContain('不会向任何人发送消息');
+    expect(channelTestMeta('payment').description).toContain('不扣费');
+    expect(channelTestMeta('webhook').description).toContain('POST');
+  });
+
+  it('未登记通道回落兜底：不渲染接收方输入框且有说明', () => {
+    const meta = channelTestMeta('unknown-channel');
+    expect(meta.acceptsRecipient).toBe(false);
+    expect(meta.description.length).toBeGreaterThan(0);
   });
 });

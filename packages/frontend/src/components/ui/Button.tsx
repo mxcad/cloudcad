@@ -133,6 +133,8 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       className={`${baseStyles} ${variants[variant]} ${sizeClasses} ${className}`}
       disabled={disabled || loading}
+      // 图标按钮无文本时以 tooltip 作可访问名（调用方显式 aria-label 可覆盖）
+      aria-label={isIconButton && tooltip ? tooltip : undefined}
       {...props}
     >
       {loading ? (

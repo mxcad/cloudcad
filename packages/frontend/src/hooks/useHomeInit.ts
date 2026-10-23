@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { initThemeSync, initMxCADConfig } from '../services/mxcadManager';
+import { VIEW_INIT_TIMEOUT_MS } from '../services/mxcadManager/mxcadTypes';
 import { t } from '@/languages';
+import { withTimeout } from '@/utils/withTimeout';
 
 export interface UseHomeInitOptions {
   isHomeMode: boolean;
@@ -55,9 +57,14 @@ export function useHomeInit({
           await import('../services/mxcadManager');
         setNavigateFunction(navigate);
 
-        await initMxCADConfig();
-
-        await mxcadManager.initializeMxCADView();
+        // 引擎初始化链（静态配置 fetch + token 刷新 + WASM 加载 + View 创建）内部无超时：
+        // @hey-api client 不带 AbortController，ensureFreshAuthCookie 的刷新请求悬挂时
+        // initializeMxCADView 永不 resolve，骨架屏永久停留且不进入下方错误分支。
+        // 外层兜底，超时按初始化失败处理。
+        await withTimeout(
+          initMxCADConfig().then(() => mxcadManager.initializeMxCADView()),
+          VIEW_INIT_TIMEOUT_MS
+        );
         mxcadManager.showMxCAD(true);
 
         await initThemeSync();
@@ -69,7 +76,10 @@ export function useHomeInit({
         isInitializedRef.current = true;
         onSetLoading(false);
         onSetStoreLoading(false);
-      } catch {
+      } catch (error) {
+        // 空 catch 会静默吞掉异常对象：初始化失败/悬挂时既无日志也无错误态，
+        // 无法区分是 WASM 加载、token 刷新还是静态配置哪一步出了问题
+        console.error('[MxCAD] 编辑器初始化失败', error);
         homeInitStartedRef.current = false;
         onSetError(t('CAD 编辑器初始化失败，请刷新页面重试'));
         onSetStoreError(t('CAD 编辑器初始化失败，请刷新页面重试'));

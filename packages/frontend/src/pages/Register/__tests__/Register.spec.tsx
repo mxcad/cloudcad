@@ -202,10 +202,12 @@ describe('Register', () => {
         expect.objectContaining({ confirmText: '同意并继续' })
       );
     });
+    // 取消后错误态落在复选框上：标签变红 + aria-invalid（不再另起一行重复文案）
     await waitFor(() => {
-      expect(
-        screen.getByText('请先阅读并同意《用户协议》和《隐私政策》')
-      ).toBeTruthy();
+      expect(screen.getByRole('checkbox')).toHaveAttribute(
+        'aria-invalid',
+        'true'
+      );
     });
     expect(screen.getByText('创建账户')).toBeTruthy();
     expect(screen.getByRole('checkbox')).not.toBeChecked();

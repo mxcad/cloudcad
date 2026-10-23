@@ -63,6 +63,33 @@ export const getErrorMessage = (error: unknown): string => {
   }
 
   if (typeof error === 'object' && error !== null) {
+    return extractRawErrorMessage(error);
+  }
+
+  return t('未知错误');
+};
+
+/**
+ * 从错误里取「原始」消息文本（不含后端字段级明细拼接）。
+ *
+ * 提取链此前在三个管理端页面逐字节复制，这里收成唯一出口：
+ * 字符串 → 响应体 message → Error.message → JSON 序列化，逐层回落。
+ */
+function extractRawErrorMessage(error: unknown): string {
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  const errAny = error as Record<string, unknown> | null;
+  if (typeof errAny?.message === 'string' && errAny.message) {
+    return errAny.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'object' && error !== null) {
     // 尝试转换为字符串（空对象返回有意义的默认消息）
     try {
       const str = JSON.stringify(error);
@@ -76,6 +103,21 @@ export const getErrorMessage = (error: unknown): string => {
   }
 
   return t('未知错误');
+}
+
+/**
+ * 提取后端业务 code 与可读消息，供调用方按 code 分流（如 MFA_REQUIRED）。
+ * 原先 AdminLogin / AdminMfaSetup / AdminPasswordChange 各写一份逐字节副本，
+ * 统一收口到这里，提取链与 getErrorMessage 共用 extractRawErrorMessage。
+ */
+export const getErrorInfo = (
+  error: unknown
+): { code?: string; message: string } => {
+  const errAny = error as Record<string, unknown> | null;
+  const code =
+    typeof errAny?.code === 'string' ? (errAny.code as string) : undefined;
+
+  return { code, message: extractRawErrorMessage(error) };
 };
 
 /**

@@ -4,40 +4,45 @@ import React from 'react';
 
 import { ProfilePasswordTab } from './ProfilePasswordTab';
 
+// 运行时配置 mock 为可变对象：个别用例需切换口令策略（如放宽到无要求项）
+const { mockConfig } = vi.hoisted(() => ({
+  mockConfig: {
+    mailEnabled: false,
+    requireEmailVerification: false,
+    smsEnabled: false,
+    requirePhoneVerification: false,
+    supportEmail: '',
+    supportPhone: '',
+    docsUrl: '',
+    allowRegister: true,
+    wechatEnabled: false,
+    wechatAutoRegister: false,
+    maxFileSize: 100,
+    collaborationEnabled: true,
+    collaborationDomains: '',
+    batchDownloadEnabled: false,
+    freeExportDownloadEnabled: false,
+    userCancelGraceDays: 7,
+    securityMode: 'normal',
+    passwordPolicyMinLength: 10,
+    passwordPolicyMinCategories: 3,
+    brandProfile: {},
+  },
+}));
+
 vi.mock('@/contexts/RuntimeConfigContext', () => ({
-  useRuntimeConfig: () => ({
-    config: {
-      mailEnabled: false,
-      requireEmailVerification: false,
-      smsEnabled: false,
-      requirePhoneVerification: false,
-      supportEmail: '',
-      supportPhone: '',
-      docsUrl: '',
-      allowRegister: true,
-      wechatEnabled: false,
-      wechatAutoRegister: false,
-      maxFileSize: 100,
-      collaborationEnabled: true,
-      collaborationDomains: '',
-      batchDownloadEnabled: false,
-      freeExportDownloadEnabled: false,
-      userCancelGraceDays: 7,
-      securityMode: 'normal',
-      passwordPolicyMinLength: 10,
-      passwordPolicyMinCategories: 3,
-      brandProfile: {},
-    },
-    loading: false,
-  }),
+  useRuntimeConfig: () => ({ config: mockConfig, loading: false }),
 }));
 
 const defaultProps = {
   user: { hasPassword: true } as never,
-  passwordForm: { oldPassword: '', newPassword: '', confirmPassword: '' },
+  passwordForm: {
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+    totpCode: '',
+  },
   focusedField: null,
-  passwordStrength: { strength: 0, label: '', color: '#000' },
-  passwordRequirements: [] as { key: string; ok: boolean }[],
   loading: false,
   onPasswordChange: vi.fn(),
   onPasswordSubmit: vi.fn(),
@@ -45,7 +50,12 @@ const defaultProps = {
   onNavigate: vi.fn(),
 };
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  // 恢复默认策略，避免用例间串扰
+  mockConfig.passwordPolicyMinLength = 10;
+  mockConfig.passwordPolicyMinCategories = 3;
+});
 
 describe('ProfilePasswordTab', () => {
   it('表单内位置最靠前的可提交按钮就是真正的提交按钮', () => {
@@ -83,18 +93,16 @@ describe('ProfilePasswordTab', () => {
   });
 
   it('口令要求清单按生效策略渲染，未满足项不打勾', () => {
+    // 'abcdefghij'：10 位达标、仅小写一类 → 长度项打勾、类别项不打勾
     render(
       <ProfilePasswordTab
         {...defaultProps}
         passwordForm={{
           oldPassword: '',
-          newPassword: 'Abcdef1234',
+          newPassword: 'abcdefghij',
           confirmPassword: '',
+          totpCode: '',
         }}
-        passwordRequirements={[
-          { key: 'length', ok: true },
-          { key: 'categories', ok: false },
-        ]}
       />
     );
 
@@ -103,6 +111,8 @@ describe('ProfilePasswordTab', () => {
   });
 
   it('策略放宽（无要求项）时不渲染写死的长度/类别要求', () => {
+    mockConfig.passwordPolicyMinLength = 0;
+    mockConfig.passwordPolicyMinCategories = 0;
     render(
       <ProfilePasswordTab
         {...defaultProps}
@@ -110,13 +120,39 @@ describe('ProfilePasswordTab', () => {
           oldPassword: '',
           newPassword: 'aaaaaa',
           confirmPassword: '',
+          totpCode: '',
         }}
-        passwordRequirements={[]}
       />
     );
 
     // 安全建议里只留通用提示，不再复述长度/类别要求
     expect(screen.queryByText(/中至少/)).toBeNull();
     expect(screen.queryByText(/避免使用常见的密码组合/)).toBeTruthy();
+  });
+
+  it('passwordChangeRequiresMfa 为 true 时渲染 TOTP 动态码字段，否则不渲染', () => {
+    // #415 管理员开启双因素且已绑定：改密需额外动态码（服务端算好下发）
+    render(
+      <ProfilePasswordTab
+        {...defaultProps}
+        passwordChangeRequiresMfa
+        passwordForm={{
+          oldPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+          totpCode: '',
+        }}
+      />
+    );
+    expect(
+      screen.getByPlaceholderText('请输入验证器 App 中的 6 位动态码')
+    ).toBeTruthy();
+    cleanup();
+
+    // 不需要动态码（普通用户 / 未开启 / 未绑定）：字段不渲染
+    render(<ProfilePasswordTab {...defaultProps} />);
+    expect(
+      screen.queryByPlaceholderText('请输入验证器 App 中的 6 位动态码')
+    ).toBeNull();
   });
 });

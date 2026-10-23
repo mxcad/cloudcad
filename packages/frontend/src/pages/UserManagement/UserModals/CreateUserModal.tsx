@@ -2,11 +2,15 @@ import React from 'react';
 import { t } from '@/languages';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { getRoleDisplayName } from '@/constants/permissions';
-import { passwordPolicyHint, usePasswordPolicy } from '@/lib/passwordPolicy';
+import {
+  passwordComplexityMessage,
+  passwordPlaceholder,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
 import styles from '../UserManagement.module.css';
 
 interface CreateUserModalProps {
@@ -14,7 +18,8 @@ interface CreateUserModalProps {
   onClose: () => void;
   onSubmit: (data: CreateUserModalProps['formData']) => void;
   roles: Array<{ id: string; name: string; isSystem?: boolean }>;
-  mailEnabled: boolean;
+  /** 邮箱验证开关：开启时创建用户邮箱必填（与后端 create 校验一致） */
+  requireEmailVerification: boolean;
   loading: boolean;
   formData: {
     username: string;
@@ -41,7 +46,7 @@ export function CreateUserModal({
   onClose,
   onSubmit,
   roles,
-  mailEnabled,
+  requireEmailVerification,
   loading,
   formData,
   formErrors,
@@ -111,14 +116,18 @@ export function CreateUserModal({
           >
             <label className={styles.formLabel}>
               {t('邮箱')}{' '}
-              {mailEnabled && <span className={styles.required}>*</span>}
+              {requireEmailVerification && (
+                <span className={styles.required}>*</span>
+              )}
             </label>
             <Input
               type="email"
               value={formData.email}
               onChange={(e) => onFormChange('email', e.target.value)}
               placeholder={
-                mailEnabled ? t('请输入邮箱地址') : t('可选，用于接收通知')
+                requireEmailVerification
+                  ? t('请输入邮箱地址')
+                  : t('可选，用于接收通知')
               }
             />
             {formErrors.email && (
@@ -131,15 +140,22 @@ export function CreateUserModal({
             className={`${styles.formGroup} ${formErrors.password ? styles.hasError : ''}`}
           >
             <label className={styles.formLabel}>
+              <Lock size={14} />
               {t('密码')} <span className={styles.required}>*</span>
             </label>
             <Input
               type="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={(e) => onFormChange('password', e.target.value)}
-              placeholder={passwordPolicyHint(policy)}
+              placeholder={passwordPlaceholder(policy)}
               showPasswordToggle
             />
+            {policy.minCategories > 0 && (
+              <span className={styles.fieldHint}>
+                {passwordComplexityMessage(policy.minCategories)}
+              </span>
+            )}
             {formErrors.password && (
               <span className={styles.errorText}>{formErrors.password}</span>
             )}

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { UseFormRegister } from 'react-hook-form';
 import { RegisterFormValues } from './hooks/registerFormSchema';
 import { FieldErrors } from './types';
+import { FieldErrorMessage } from './FieldErrorMessage';
 import styles from './register.module.css';
 
 interface BasicInfoStepProps {
@@ -87,12 +88,18 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             className={styles.inputField}
             placeholder={t('请输入用户名')}
             {...register('username')}
+            aria-invalid={!!fieldErrors.username}
+            aria-describedby={
+              fieldErrors.username ? 'username-error' : undefined
+            }
             onFocus={() => setFocusedField('username')}
           />
           <div className={styles.inputGlow} />
         </div>
         {fieldErrors.username && (
-          <p className={styles.errorMessage}>{fieldErrors.username}</p>
+          <FieldErrorMessage id="username-error">
+            {fieldErrors.username}
+          </FieldErrorMessage>
         )}
       </div>
 
@@ -117,12 +124,18 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             className={styles.inputField}
             placeholder={t('请输入昵称（可选）')}
             {...register('nickname')}
+            aria-invalid={!!fieldErrors.nickname}
+            aria-describedby={
+              fieldErrors.nickname ? 'nickname-error' : undefined
+            }
             onFocus={() => setFocusedField('nickname')}
           />
           <div className={styles.inputGlow} />
         </div>
         {fieldErrors.nickname && (
-          <p className={styles.errorMessage}>{fieldErrors.nickname}</p>
+          <FieldErrorMessage id="nickname-error">
+            {fieldErrors.nickname}
+          </FieldErrorMessage>
         )}
       </div>
 
@@ -153,12 +166,16 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
               className={styles.inputField}
               placeholder={t('请输入邮箱地址')}
               {...register('email')}
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={fieldErrors.email ? 'email-error' : undefined}
               onFocus={() => setFocusedField('email')}
             />
             <div className={styles.inputGlow} />
           </div>
           {fieldErrors.email && (
-            <p className={styles.errorMessage}>{fieldErrors.email}</p>
+            <FieldErrorMessage id="email-error">
+              {fieldErrors.email}
+            </FieldErrorMessage>
           )}
         </div>
       )}
@@ -194,13 +211,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
                 placeholder={t('请输入手机号')}
                 value={phoneForm.phone}
                 onChange={handlePhoneChange}
+                aria-invalid={!!fieldErrors.phone}
+                aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
                 onFocus={() => setFocusedField('phone')}
                 onBlur={() => setFocusedField(null)}
               />
               <div className={styles.inputGlow} />
             </div>
             {fieldErrors.phone && (
-              <p className={styles.errorMessage}>{fieldErrors.phone}</p>
+              <FieldErrorMessage id="phone-error">
+                {fieldErrors.phone}
+              </FieldErrorMessage>
             )}
           </div>
 
@@ -235,6 +256,8 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
                 placeholder={t('请输入验证码')}
                 value={phoneForm.code}
                 onChange={handlePhoneChange}
+                aria-invalid={!!fieldErrors.code}
+                aria-describedby={fieldErrors.code ? 'code-error' : undefined}
                 onFocus={() => setFocusedField('code')}
                 onBlur={() => setFocusedField(null)}
               />
@@ -257,12 +280,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
               <div className={styles.inputGlow} />
             </div>
             {fieldErrors.code && (
-              <p className={styles.errorMessage}>{fieldErrors.code}</p>
+              <FieldErrorMessage id="code-error">
+                {fieldErrors.code}
+              </FieldErrorMessage>
             )}
           </div>
         </>
       )}
 
+      {/* 协议勾选的错误态只靠标签变红（.agreementGroupError）+ aria-invalid 表达，
+          不再另起一行重复文案：标签本身已是「我已阅读并同意…」，再写一句
+          「请先阅读并同意…」对用户是纯重复、无可执行信息 */}
       <div
         className={`${styles.agreementGroup} ${
           fieldErrors.agreedToTerms ? styles.agreementGroupError : ''
@@ -270,9 +298,11 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
       >
         <label className={styles.agreementLabel}>
           <input
+            id="agreedToTerms"
             type="checkbox"
             className={styles.agreementCheckbox}
             {...register('agreedToTerms')}
+            aria-invalid={!!fieldErrors.agreedToTerms}
           />
           <span className={styles.agreementText}>
             {t('我已阅读并同意')}
@@ -285,9 +315,6 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({
             </Link>
           </span>
         </label>
-        {fieldErrors.agreedToTerms && (
-          <p className={styles.errorMessage}>{fieldErrors.agreedToTerms}</p>
-        )}
       </div>
 
       <Button

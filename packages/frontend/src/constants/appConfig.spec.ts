@@ -6,14 +6,19 @@ import {
   DEFAULT_APP_LOGO,
   DEFAULT_APP_NAME,
   getAppBrandConfig,
+  getAppBrandSnapshot,
   getAppName,
   getDefaultAppBrandConfig,
   getBrandLegalNames,
   getBrandProfile,
   getCopyrightLine,
+  getRuntimeBrandField,
   mergeBrandOverrides,
+  notifyBrandChanges,
+  resolveBrandFallbackValue,
   resolveSupportContact,
   setRuntimeBrandConfig,
+  subscribeBrandChanges,
   type BrandConfig,
 } from './appConfig';
 
@@ -572,4 +577,122 @@ describe('fetchBrandConfig（config.json 生效后的全链覆盖）', () => {
       cleanup();
     }
   }, 10000);
+});
+
+describe('品牌快照与变更订阅（useSyncExternalStore 供给）', () => {
+  let unsubscribe: (() => void) | null = null;
+
+  afterEach(() => {
+    setRuntimeBrandConfig(null);
+    unsubscribe?.();
+    unsubscribe = null;
+  });
+
+  it('配置未变时返回同一引用，内容变化后才换新引用', () => {
+    const first = getAppBrandSnapshot();
+    expect(getAppBrandSnapshot()).toBe(first);
+
+    // 每次渲染都是新对象字面量，必须按值比对而非按引用
+    setRuntimeBrandConfig({ title: '运行时品牌' }, { brandTitle: '单项标题' });
+    const next = getAppBrandSnapshot();
+    expect(next).not.toBe(first);
+    expect(next.title).toBe('单项标题');
+    expect(getAppBrandSnapshot()).toBe(next);
+
+    // 内容相同但字面量不同：仍复用同一快照
+    setRuntimeBrandConfig({ title: '运行时品牌' }, { brandTitle: '单项标题' });
+    expect(getAppBrandSnapshot()).toBe(next);
+
+    // 单槽缓存：回到旧状态会重算出新对象（内容一致），但后续重复读取引用稳定
+    setRuntimeBrandConfig(null);
+    const restored = getAppBrandSnapshot();
+    expect(restored).toEqual(first);
+    expect(getAppBrandSnapshot()).toBe(restored);
+  });
+
+  it('notifyBrandChanges 通知订阅者；退订后不再收到', () => {
+    const spy = vi.fn();
+    unsubscribe = subscribeBrandChanges(spy);
+
+    notifyBrandChanges();
+    notifyBrandChanges();
+    expect(spy).toHaveBeenCalledTimes(2);
+
+    unsubscribe();
+    notifyBrandChanges();
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it('setRuntimeBrandConfig 自身不通知：通知留在 Provider 的 effect 里发', () => {
+    const spy = vi.fn();
+    unsubscribe = subscribeBrandChanges(spy);
+    setRuntimeBrandConfig({ title: '运行时品牌' });
+    expect(spy).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+});
+
+describe('getRuntimeBrandField（运行时单项值读取）', () => {
+  afterEach(() => {
+    setRuntimeBrandConfig(null);
+  });
+
+  it('返回运行时单项值；未配置与空值统一为空串', () => {
+    setRuntimeBrandConfig(null, {
+      brandTitle: '单项标题',
+      brandLogo: '',
+      supportEmail: 's@x.com',
+    });
+    expect(getRuntimeBrandField('brandTitle')).toBe('单项标题');
+    expect(getRuntimeBrandField('brandLogo')).toBe('');
+    expect(getRuntimeBrandField('supportEmail')).toBe('s@x.com');
+    expect(getRuntimeBrandField('supportPhone')).toBe('');
+  });
+});
+
+describe('resolveBrandFallbackValue（留空时生效的默认值）', () => {
+  afterEach(() => {
+    setRuntimeBrandConfig(null);
+  });
+
+  it('未配置时返回内置默认值：单层与两级路径', () => {
+    expect(resolveBrandFallbackValue('brandTitle')).toBe(DEFAULT_APP_NAME);
+    expect(resolveBrandFallbackValue('brandLogo')).toBe(DEFAULT_APP_LOGO);
+    expect(resolveBrandFallbackValue('supportEmail')).toBe(
+      SUPPORT_DEFAULTS.email
+    );
+    expect(resolveBrandFallbackValue('supportHours')).toBe(
+      SUPPORT_DEFAULTS.hours
+    );
+    expect(resolveBrandFallbackValue('brandLegalProductShortName')).toBe(
+      'CloudCAD'
+    );
+  });
+
+  it('brandLegalProductName 的内置值按语言存放，解析为中文默认产品名', () => {
+    expect(resolveBrandFallbackValue('brandLegalProductName')).toBe(
+      '梦想网页CAD实时协同平台'
+    );
+  });
+
+  it('剔除自身后回落整块字段，再回落内置默认值', () => {
+    setRuntimeBrandConfig(
+      { support: { email: '整块邮箱' }, title: '整块标题' },
+      {
+        supportEmail: '单项邮箱',
+        supportPhone: '单项电话',
+        brandTitle: '单项标题',
+      }
+    );
+    expect(resolveBrandFallbackValue('supportEmail')).toBe('整块邮箱');
+    expect(resolveBrandFallbackValue('supportPhone')).toBe(
+      SUPPORT_DEFAULTS.phone
+    );
+    expect(resolveBrandFallbackValue('brandTitle')).toBe('整块标题');
+  });
+
+  it('无声明路径的键返回 null（页面沿用原有默认值展示）', () => {
+    expect(resolveBrandFallbackValue('brandProfile')).toBeNull();
+    expect(resolveBrandFallbackValue('nonexistent')).toBeNull();
+  });
 });

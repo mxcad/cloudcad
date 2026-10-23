@@ -48,6 +48,10 @@ import type { MxCADInstanceManager } from '../mxcadInstanceManager';
 /** 模拟 mxcad-app 插件上下文（编辑器标题的唯一出口：fileName.value） */
 const fileNameValue = { value: '' };
 
+/** 打开生命周期上报（MxCADOpenFlow 只调用 dispatched/terminated 两个） */
+const notifyDispatchedMock = vi.fn();
+const notifyTerminatedMock = vi.fn();
+
 /** 引擎事件/retCall 仿真：按真实派发顺序记录，测试中手动触发 */
 function createEngineSim() {
   const openCompleteHandlers: Array<(iResult: number) => void> = [];
@@ -104,6 +108,8 @@ describe('MxCADOpenFlow — openFileComplete 结果码门控（打开失败不�
       getMxcadObject: () => ({}),
       getCurrentFileName: () => engineCurrentFileName,
       getInitPromise: () => null,
+      notifyOpenDispatched: notifyDispatchedMock,
+      notifyOpenTerminated: notifyTerminatedMock,
       getPendingOpenInfo: () => pendingInfo,
       setPendingOpenInfo: (info: typeof pendingInfo) => {
         pendingInfo = info;
@@ -326,6 +332,8 @@ describe('MxCADOpenFlow — reloadCurrentFile 结果码门控', () => {
       getMxcadObject: () => ({}),
       getCurrentFileName: () => null,
       getInitPromise: () => null,
+      notifyOpenDispatched: notifyDispatchedMock,
+      notifyOpenTerminated: notifyTerminatedMock,
       getPendingOpenInfo: () => null,
       setPendingOpenInfo: () => undefined,
     };
@@ -408,5 +416,50 @@ describe('MxCADOpenFlow — reloadCurrentFile 结果码门控', () => {
     const assertion = expect(p).resolves.toBe(false);
     await vi.advanceTimersByTimeAsync(60000);
     await assertion;
+  });
+
+  // 侧边栏门控靠 dispatched/terminated 配对判「本次打开是否仍在进行」；
+  // 漏一次 terminated 会让 inFlight 永不为零，门控退回兜底超时——用户看到
+  // 「图纸早加载完，侧边栏还在转」
+  it('生命周期上报严格配对：成功路径派发一次、终止恰好一次', async () => {
+    const p = flow.reloadCurrentFile();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(notifyDispatchedMock).toHaveBeenCalledTimes(1);
+    expect(notifyTerminatedMock).not.toHaveBeenCalled();
+
+    engine.fireOpenComplete(0);
+    await expect(p).resolves.toBe(true);
+    expect(notifyTerminatedMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('生命周期上报严格配对：失败只终止一次（结果码非 0 刻意不终止）', async () => {
+    const p = flow.reloadCurrentFile();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // 结果码非 0 走 retCall 统一收尾，故此处不计终止——否则会双终止、inFlight 变负
+    engine.fireOpenComplete(1);
+    expect(notifyTerminatedMock).not.toHaveBeenCalled();
+
+    engine.fireRetCall(1);
+    await expect(p).resolves.toBe(false);
+    expect(notifyDispatchedMock).toHaveBeenCalledTimes(1);
+    expect(notifyTerminatedMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('生命周期上报严格配对：60s 超时兜底也只终止一次', async () => {
+    vi.useFakeTimers();
+    const p = flow.reloadCurrentFile();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const assertion = expect(p).resolves.toBe(false);
+    await vi.advanceTimersByTimeAsync(60000);
+    await assertion;
+
+    expect(notifyDispatchedMock).toHaveBeenCalledTimes(1);
+    expect(notifyTerminatedMock).toHaveBeenCalledTimes(1);
   });
 });

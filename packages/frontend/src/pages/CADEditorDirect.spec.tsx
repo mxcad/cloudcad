@@ -26,6 +26,7 @@ const { mxcadManagerMock } = vi.hoisted(() => ({
     isReady: vi.fn(() => true),
     ensureEngineReady: vi.fn(async () => true),
     hasPendingOpen: vi.fn(() => false),
+    getOpenState: vi.fn(() => ({ inFlight: 0, settled: 0 })),
     getCurrentFileName: vi.fn(() => 'empty_template.mxweb'),
     openFile: vi.fn(async () => {}),
     reloadCurrentFile: vi.fn(async () => {}),

@@ -3003,8 +3003,8 @@
         ],
         "$id": 8567
     },
-    "密码需包含大小写字母、数字、特殊字符中至少 {cats} 类": {
-        "zh-TW": "密碼需包含大小寫字母、數字、特殊字符中至少 {cats} 類",
+    "密码需包含大写字母、小写字母、数字、特殊字符中至少 {cats} 类": {
+        "zh-TW": "密碼需包含大寫字母、小寫字母、數字、特殊字符中至少 {cats} 類",
         "en-US": "Password must contain at least {cats} of: uppercase letters, lowercase letters, digits, special characters",
         "ko-KR": "비밀번호는 대문자·소문자·숫자·특수문자 중 {cats}가지 이상 포함해야 합니다",
         "$files": [
@@ -24348,5 +24348,203 @@
             "src/services/mxcadManager/cmd/shareCommand.ts(1642-1656)"
         ],
         "$id": 7883
+    },
+    "测试手机号": {
+        "zh-TW": "測試手機號",
+        "en-US": "Test phone number",
+        "ko-KR": "테스트 전화번호",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(7307-7316)"
+        ],
+        "$id": 8635
+    },
+    "留空则只探测凭据，不发送短信": {
+        "zh-TW": "留空則只探測憑證，不發送簡訊",
+        "en-US": "Leave empty to only verify credentials without sending an SMS",
+        "ko-KR": "비워 두면 자격 증명만 검증하고 문자를 보내지 않습니다",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(7346-7364)"
+        ],
+        "$id": 8636
+    },
+    "将向该手机号发送一条测试短信（产生一条短信费用）。": {
+        "zh-TW": "將向該手機號發送一條測試簡訊（產生一條簡訊費用）。",
+        "en-US": "A test SMS will be sent to this phone number (incurs one SMS charge).",
+        "ko-KR": "해당 전화번호로 테스트 문자 1건을 발송합니다(문자 요금 1건 발생).",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(7385-7414)"
+        ],
+        "$id": 8637
+    },
+    "测试只调用微信凭据探测接口，不会向任何人发送消息。": {
+        "zh-TW": "測試只呼叫微信憑證探測介面，不會向任何人發送訊息。",
+        "en-US": "The test only calls the WeChat credential probe API and sends no messages to anyone.",
+        "ko-KR": "테스트는 WeChat 자격 증명 탐지 API만 호출하며 누구에게도 메시지를 보내지 않습니다.",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(7484-7513)"
+        ],
+        "$id": 8638
+    },
+    "测试只做支付网关签名往返验证，不产生订单、不扣费。": {
+        "zh-TW": "測試只進行支付閘道簽名往返驗證，不產生訂單、不扣費。",
+        "en-US": "The test only verifies payment gateway signatures and creates no orders or charges.",
+        "ko-KR": "테스트는 결제 게이트웨이 서명만 검증하며 주문이나 결제가 발생하지 않습니다.",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(7584-7613)"
+        ],
+        "$id": 8639
+    },
+    "测试将向已配置的 Webhook URL 发送一次 POST 请求。": {
+        "zh-TW": "測試將向已設定的 Webhook URL 發送一次 POST 請求。",
+        "en-US": "The test sends one POST request to the configured Webhook URL.",
+        "ko-KR": "테스트는 설정된 Webhook URL로 POST 요청을 한 번 보내습니다.",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(7684-7722)"
+        ],
+        "$id": 8640
+    },
+    "测试将验证当前通道的配置是否可用。": {
+        "zh-TW": "測試將驗證目前通道的設定是否可用。",
+        "en-US": "The test verifies whether the current channel configuration is usable.",
+        "ko-KR": "테스트는 현재 채널 설정이 사용 가능한지 검증합니다.",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts(7880-7901)"
+        ],
+        "$id": 8641
+    },
+    "补全以下配置项后即可测试发送，点击可定位到该项": {
+        "zh-TW": "補全以下配置項後即可測試發送，點擊可定位到該項",
+        "en-US": "Fill in the items below to enable test sending. Click an item to jump to it",
+        "ko-KR": "아래 항목을 입력하면 테스트 전송을 사용할 수 있습니다. 클릭하여 해당 항목으로 이동합니다",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx(5991-6054)"
+        ],
+        "$id": 1000139
+    },
+    "以下配置项可能是错误原因，点击可定位到该项": {
+        "zh-TW": "以下配置項可能是錯誤原因，點擊可定位到該項",
+        "en-US": "The items below may be causing the error. Click an item to jump to it",
+        "ko-KR": "아래 항목이 오류 원인일 수 있습니다. 클릭하여 해당 항목으로 이동합니다",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx"
+        ],
+        "$id": 1000140
+    },
+    "上次验证：{time}": {
+        "zh-TW": "上次驗證：{time}",
+        "en-US": "Last verified: {time}",
+        "ko-KR": "마지막 인증: {time}",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx"
+        ],
+        "$id": 1000141
+    },
+    "补全以下配置项后即可验证，点击可定位到该项": {
+        "zh-TW": "補全以下配置項後即可驗證，點擊可定位到該項",
+        "en-US": "Fill in the items below to verify. Click an item to jump to it",
+        "ko-KR": "아래 항목을 입력하면 인증할 수 있습니다. 클릭하여 해당 항목으로 이동합니다",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx"
+        ],
+        "$id": 1000142
+    },
+    "验证{channel}通道": {
+        "zh-TW": "驗證{channel}通道",
+        "en-US": "Verify {channel} channel",
+        "ko-KR": "{channel} 채널 인증",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx"
+        ],
+        "$id": 1000143
+    },
+    "验证通道": {
+        "zh-TW": "驗證通道",
+        "en-US": "Verify channel",
+        "ko-KR": "채널 인증",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx"
+        ],
+        "$id": 1000144
+    },
+    "开始验证": {
+        "zh-TW": "開始驗證",
+        "en-US": "Start verification",
+        "ko-KR": "인증 시작",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx"
+        ],
+        "$id": 1000145
+    },
+    "通道配置不完整（缺失：{keys}），验证将直接失败。": {
+        "zh-TW": "通道配置不完整（缺失：{keys}），驗證將直接失敗。",
+        "en-US": "Channel configuration is incomplete (missing: {keys}). Verification will fail immediately.",
+        "ko-KR": "채널 구성이 불완전합니다(누락: {keys}). 인증이 즉시 실패합니다.",
+        "$files": [
+            "src/pages/RuntimeConfigPage/ChannelStatusCard.tsx"
+        ],
+        "$id": 1000146
+    },
+    "收件人（可选）": {
+        "zh-TW": "收件人（可選）",
+        "en-US": "Recipient (optional)",
+        "ko-KR": "수신자 (선택)",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts"
+        ],
+        "$id": 1000147
+    },
+    "留空则只校验连接与认证，不发送邮件": {
+        "zh-TW": "留空則只校驗連接與認證，不寄送郵件",
+        "en-US": "Leave empty to only check the connection and authentication; no email will be sent",
+        "ko-KR": "비워두면 연결과 인증만 확인하며 메일을 보내지 않습니다",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts"
+        ],
+        "$id": 1000148
+    },
+    "将校验 SMTP 连接与认证；填写收件人则额外发送一封测试邮件。": {
+        "zh-TW": "將校驗 SMTP 連接與認證；填寫收件人則額外寄送一封測試郵件。",
+        "en-US": "Verifies the SMTP connection and authentication. Filling in a recipient additionally sends a test email.",
+        "ko-KR": "SMTP 연결과 인증을 확인합니다. 수신자를 입력하면 테스트 메일 1통이 추가로 발송됩니다.",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts"
+        ],
+        "$id": 1000149
+    },
+    "手机号（可选）": {
+        "zh-TW": "手機號（可選）",
+        "en-US": "Phone number (optional)",
+        "ko-KR": "전화번호 (선택)",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts"
+        ],
+        "$id": 1000150
+    },
+    "将校验短信凭据；填写手机号则额外发送一条测试短信（产生一条短信费用）。": {
+        "zh-TW": "將校驗簡訊憑證；填寫手機號則額外出送一條測試簡訊（產生一條簡訊費用）。",
+        "en-US": "Verifies the SMS credentials. Filling in a phone number additionally sends a test SMS (one SMS charge).",
+        "ko-KR": "SMS 자격 증명을 확인합니다. 전화번호를 입력하면 테스트 SMS 1건이 추가로 발송됩니다(1건 요금 발생).",
+        "$files": [
+            "src/pages/RuntimeConfigPage/meta.ts"
+        ],
+        "$id": 1000151
+    },
+    "验证成功": {
+        "zh-TW": "驗證成功",
+        "en-US": "Verification succeeded",
+        "ko-KR": "인증 성공",
+        "$files": [
+            "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts"
+        ],
+        "$id": 1000152
+    },
+    "验证失败": {
+        "zh-TW": "驗證失敗",
+        "en-US": "Verification failed",
+        "ko-KR": "인증 실패",
+        "$files": [
+            "src/pages/RuntimeConfigPage/hooks/useRuntimeConfig.ts"
+        ],
+        "$id": 1000153
     }
 }

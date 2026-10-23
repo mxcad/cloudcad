@@ -211,60 +211,7 @@
   margin-top: var(--space-6);
 }
 
-/* ============================================
-   9. 密码强度
-   ============================================ */
-
-.passwordStrength {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-}
-
-.strengthBar {
-  flex: 1;
-  height: 4px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.strengthFill {
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition:
-    width var(--transition-base),
-    background var(--transition-base);
-}
-
-.strengthLabel {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* 口令要求实时清单：项由生效策略生成（minLength / minCategories 关闭时该项不出现） */
-.passwordRequirements {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.passwordRequirements li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-
-.passwordRequirements li[data-ok='true'] {
-  color: var(--text-secondary);
-}
+/* 密码强度条 + 要求清单已收敛到共享组件 components/ui/PasswordStrength */
 
 /* ============================================
    10. 安全提示

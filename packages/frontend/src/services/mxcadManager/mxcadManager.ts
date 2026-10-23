@@ -82,6 +82,14 @@ export class MxCADManager {
   hasPendingOpen(): boolean {
     return this.instanceManager.getPendingOpenInfo() !== null;
   }
+  /**
+   * 打开生命周期状态：inFlight = 已派发未终止的打开命令数，
+   * settled = 引擎已派发的 openFileComplete 累计次数（成功/失败都计）。
+   * 覆盖 reload 与协同/引擎内部打开——hasPendingOpen 只反映 openFile 路径。
+   */
+  getOpenState(): { inFlight: number; settled: number } {
+    return this.instanceManager.getOpenState();
+  }
   getCurrentFileName(): string | null {
     return this.instanceManager.getCurrentFileName();
   }

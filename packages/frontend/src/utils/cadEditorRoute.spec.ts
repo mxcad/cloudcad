@@ -3,6 +3,8 @@ import {
   isCadEditorEntry,
   getCadEditorBackUrl,
   buildCadEditorUrl,
+  parseCADEditorRoute,
+  isHomeRoute,
 } from './cadEditorRoute';
 
 describe('isCadEditorEntry', () => {
@@ -19,6 +21,25 @@ describe('isCadEditorEntry', () => {
     expect(isCadEditorEntry('/projects/project-1/files')).toBe(false);
     expect(isCadEditorEntry('/personal-space')).toBe(false);
     expect(isCadEditorEntry('/library/drawing')).toBe(false);
+  });
+});
+
+describe('尾斜杠 URL 与无斜杠等价（回归：/cad-editor/ 白屏）', () => {
+  it('isHomeRoute 命中 /cad-editor/ 与 /', () => {
+    expect(isHomeRoute('/cad-editor')).toBe(true);
+    expect(isHomeRoute('/cad-editor/')).toBe(true);
+    expect(isHomeRoute('/')).toBe(true);
+    expect(isHomeRoute('')).toBe(true);
+    expect(isHomeRoute('/projects')).toBe(false);
+    expect(isHomeRoute('/cad-editor/file-1')).toBe(false);
+  });
+
+  it('parseCADEditorRoute 容忍尾斜杠', () => {
+    expect(parseCADEditorRoute('/cad-editor/file-1')).toBe('file-1');
+    expect(parseCADEditorRoute('/cad-editor/file-1/')).toBe('file-1');
+    expect(parseCADEditorRoute('/cad-editor')).toBeNull();
+    expect(parseCADEditorRoute('/cad-editor/')).toBeNull();
+    expect(parseCADEditorRoute('/projects')).toBeNull();
   });
 });
 

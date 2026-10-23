@@ -17,6 +17,7 @@ import React, {
   useMemo,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Z_LAYERS } from '@/constants/layers';
 import { CAD_EVENTS } from '@/constants/events';
@@ -617,8 +618,22 @@ export const CADEditorDirect: React.FC = () => {
       }}
     >
       {error && (
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="text-red-500 text-lg mb-4">{error}</div>
+        <div
+          className="flex flex-col items-center justify-center h-full px-4"
+          style={{ background: 'var(--bg-primary)' }}
+        >
+          <div
+            className="flex items-center justify-center w-20 h-20 rounded-full mb-6"
+            style={{ background: 'var(--bg-tertiary)' }}
+          >
+            <AlertCircle size={40} style={{ color: 'var(--error)' }} />
+          </div>
+          <div
+            className="text-lg mb-6 max-w-md text-center"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {error}
+          </div>
           <Button onClick={handleGoBack} variant="primary">
             {isHomeMode ? t('刷新页面') : t('返回项目列表')}
           </Button>
@@ -659,61 +674,6 @@ export const CADEditorDirect: React.FC = () => {
             className="flex-1 relative"
             style={{ background: 'transparent' }}
           >
-            {loading && (
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  backgroundColor: 'var(--bg-primary)',
-                  zIndex: Z_LAYERS.OVERLAY,
-                }}
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div
-                    className="animate-pulse rounded-lg"
-                    style={{
-                      width: 120,
-                      height: 120,
-                      backgroundColor: 'var(--bg-tertiary)',
-                    }}
-                  />
-                  <div
-                    className="animate-pulse rounded"
-                    style={{
-                      width: 200,
-                      height: 14,
-                      backgroundColor: 'var(--bg-tertiary)',
-                    }}
-                  />
-                  <div
-                    className="animate-pulse rounded"
-                    style={{
-                      width: 140,
-                      height: 12,
-                      backgroundColor: 'var(--bg-tertiary)',
-                    }}
-                  />
-                  {/* 加载状态文字 + spinner：明确告知引擎初始化/图纸加载中（#349） */}
-                  <div
-                    className="flex items-center gap-2 mt-2"
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
-                    <span
-                      className="animate-spin rounded-full"
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderWidth: 2,
-                        borderStyle: 'solid',
-                        borderColor: 'var(--border-strong)',
-                        borderTopColor: 'var(--accent-600)',
-                      }}
-                    />
-                    <span className="text-sm">{t('正在加载图纸...')}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* 导出/另存为子系统（ADR-0040）：5 组导出/另存为弹窗全部收进 ExportModals */}
             <ExportModals
               ref={exportModalsRef}

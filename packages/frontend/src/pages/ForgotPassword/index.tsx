@@ -128,6 +128,7 @@ export const ForgotPassword: React.FC = () => {
         appLogo={appLogo}
         isDark={isDark}
         successContact={successContact}
+        contactType={contactType}
         onGoReset={() =>
           navigate('/reset-password', {
             state: {

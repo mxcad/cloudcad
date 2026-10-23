@@ -2,8 +2,21 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement, type ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
+import { vi } from 'vitest';
 import { server } from '@/test/setup';
 import { useUserCRUD } from './useUserCRUD';
+
+// useUserCRUD 读取运行时通道开关（邮箱/手机列显隐），测试环境无 Provider，mock 为静态配置
+vi.mock('@/contexts/RuntimeConfigContext', () => ({
+  useRuntimeConfig: () => ({
+    config: {
+      mailEnabled: false,
+      requireEmailVerification: false,
+      smsEnabled: false,
+    },
+    loading: false,
+  }),
+}));
 
 function createTestWrapper() {
   const queryClient = new QueryClient({

@@ -1,15 +1,24 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   fetchBrandConfig,
+  getAppBrandSnapshot,
   getBrandProfile,
   mergeBrandOverrides,
+  notifyBrandChanges,
   setRuntimeBrandConfig,
   type BrandConfig,
   type BrandProfile,
   type RuntimeBrandConfig,
   type RuntimeBrandFieldOverrides,
 } from '../constants/appConfig';
+import { applyBrandFavicon, saveBrandChromeCache } from '@/lib/brandChrome';
 import { queryKeys } from '@/lib/queryKeys';
 import { STALE_TIME_DEFAULT } from '@/constants/timeouts';
 import { useRuntimeConfig } from './RuntimeConfigContext';
@@ -48,6 +57,9 @@ export function BrandProvider({ children }: { children: ReactNode }) {
       brandSubtitle: runtimeConfig.brandSubtitle,
       brandTagline: runtimeConfig.brandTagline,
       brandLogo: runtimeConfig.brandLogo,
+      // 不在 BRAND_FIELD_OVERRIDE_PATHS 里（编辑器 ini 的产品面，不进品牌档案链），
+      // 只经此通道交付给 initMxCAD 的 getRuntimeBrandField 读取
+      brandEditorTitle: runtimeConfig.brandEditorTitle,
       supportEmail: runtimeConfig.supportEmail,
       supportPhone: runtimeConfig.supportPhone,
       supportHours: runtimeConfig.supportHours,
@@ -76,6 +88,19 @@ export function BrandProvider({ children }: { children: ReactNode }) {
     () => getBrandProfile(effectiveConfig),
     [effectiveConfig]
   );
+
+  // 品牌变更广播 + 浏览器 chrome 落地。setRuntimeBrandConfig 在上面的 memo
+  // （渲染期）已写完缓存，这里只做「通知订阅者」「写 favicon」「落首帧缓存」三件事：
+  // 渲染期直接通知订阅者会触发「渲染中更新其他组件」告警，且 favicon 不该
+  // 在渲染期改 DOM。订阅者（页签标题、Logo、法务正文）据此重渲染。
+  // 首帧缓存让下次打开页面时 index.html 的内联脚本就能直接用上这两个值，
+  // 不必等 bundle 加载 + 运行时配置返回——否则每次打开都会先闪打包兜底值。
+  useEffect(() => {
+    const brand = getAppBrandSnapshot();
+    notifyBrandChanges();
+    applyBrandFavicon(brand.logo);
+    saveBrandChromeCache(brand.title, brand.logo);
+  }, [effectiveConfig]);
 
   return (
     <BrandContext.Provider

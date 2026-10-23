@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   passwordComplexityMessage,
-  passwordPolicyHint,
+  passwordPlaceholder,
   passwordRequirementLabel,
   passwordStrengthDisplay,
   passwordTooShortMessage,
@@ -13,33 +13,30 @@ import {
  * （喂 12/2 的文案里必须出现 12 与 2）。
  */
 describe('passwordPolicy（PC 口令策略唯一出口）', () => {
-  it('提示跟随生效值动态推导（secure 基线 10/3）', () => {
-    const hint = passwordPolicyHint({ minLength: 10, minCategories: 3 });
-    expect(hint).toContain('10');
-    expect(hint).toContain('中至少 3 类');
+  it('placeholder 跟随生效值动态推导（secure 基线 10/3）', () => {
+    expect(passwordPlaceholder({ minLength: 10, minCategories: 3 })).toContain(
+      '10',
+    );
   });
 
-  it('提示跟随生效值动态推导（非默认值 12/2 必须出现在文案中）', () => {
-    const hint = passwordPolicyHint({ minLength: 12, minCategories: 2 });
-    expect(hint).toContain('12');
-    expect(hint).toContain('中至少 2 类');
+  it('placeholder 跟随生效值动态推导（非默认值 12/2 必须出现在文案中）', () => {
+    expect(passwordPlaceholder({ minLength: 12, minCategories: 2 })).toContain(
+      '12',
+    );
   });
 
-  it('minCategories=0（normal 模式）→ 只说长度，不提类别', () => {
-    const hint = passwordPolicyHint({ minLength: 6, minCategories: 0 });
-    expect(hint).toContain('6');
-    expect(hint).not.toContain('中至少');
+  it('placeholder 只放最小长度，完整要求交清单与错误文案（防单行框截断）', () => {
+    expect(passwordPlaceholder({ minLength: 10, minCategories: 3 })).toBe(
+      '至少 10 位',
+    );
+    expect(passwordPlaceholder({ minLength: 10, minCategories: 4 })).toBe(
+      '至少 10 位',
+    );
   });
 
-  it('minCategories=4 → 要求四类齐全，无「至少 N 类」措辞', () => {
-    const hint = passwordPolicyHint({ minLength: 10, minCategories: 4 });
-    expect(hint).toContain('10');
-    expect(hint).not.toContain('中至少');
-  });
-
-  it('minLength=0 且 minCategories=0 → 无复杂度要求', () => {
-    expect(passwordPolicyHint({ minLength: 0, minCategories: 0 })).toBe(
-      '无密码复杂度要求',
+  it('minLength=0（无长度要求）→ 回落到通用提示，不出现「至少 0 位」', () => {
+    expect(passwordPlaceholder({ minLength: 0, minCategories: 0 })).toBe(
+      '请输入密码',
     );
   });
 

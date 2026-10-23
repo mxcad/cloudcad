@@ -14,8 +14,15 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { PasswordStrength } from '@/components/ui/PasswordStrength';
 import { t } from '@/languages';
-import { passwordPolicyHint, usePasswordPolicy } from '@/lib/passwordPolicy';
+import {
+  passwordComplexityMessage,
+  passwordPlaceholder,
+  passwordTooShortMessage,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
+import { validatePasswordPolicy } from '@cloudcad/platform';
 import styles from '../Login.module.css';
 
 interface FirstAdminSetupFormProps {
@@ -44,10 +51,22 @@ export const FirstAdminSetupForm: React.FC<FirstAdminSetupFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 密码字段级校验错误（策略预检失败时内联提示，与注册/重置页一致）
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
+    // 预检与后端 assertPasswordPolicy 对齐（生效值经 /runtime-config/public 下发）
+    const policyCheck = validatePasswordPolicy(password, policy);
+    if (!policyCheck.valid) {
+      setFieldError(
+        policyCheck.reason === 'too_short'
+          ? passwordTooShortMessage(policy.minLength)
+          : passwordComplexityMessage(policy.minCategories)
+      );
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -129,12 +148,15 @@ export const FirstAdminSetupForm: React.FC<FirstAdminSetupFormProps> = ({
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             required
-            minLength={8}
             maxLength={50}
             className={`${styles.inputField} ${styles.hasToggle}`}
-            placeholder={passwordPolicyHint(policy)}
+            placeholder={passwordPlaceholder(policy)}
+            aria-invalid={!!fieldError}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFieldError(null);
+            }}
           />
           <Button
             type="button"
@@ -148,6 +170,14 @@ export const FirstAdminSetupForm: React.FC<FirstAdminSetupFormProps> = ({
           />
           <div className={styles.inputGlow} />
         </div>
+        {/* 强度条 + 要求清单走共享组件（唯一呈现出口）：清单常显，兼作
+            提交失败时的错误信号；策略预检错误另在下方内联提示 */}
+        <PasswordStrength password={password} policy={policy} />
+        {fieldError && (
+          <p className={styles.fieldError} role="alert">
+            {fieldError}
+          </p>
+        )}
       </div>
 
       <div className={styles.inputGroup}>

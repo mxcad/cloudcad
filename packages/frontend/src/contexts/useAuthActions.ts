@@ -223,23 +223,37 @@ export function useAuthActions({
         throwOnError: true,
         body: data,
       });
-      const authData = response.data!;
+      // 后端两种返回：① 直接成功 { accessToken, refreshToken, user }；
+      // ② 需邮箱验证 { message, email }（无 token，用户尚未创建，须跳 /verify-email 输码）。
+      // SDK 的 AuthResponseDto 类型不含 email/message（后端 as unknown 硬转），按运行时形状读取。
+      const authData = response.data as unknown as {
+        accessToken?: string;
+        refreshToken?: string;
+        user?: User;
+        message?: string;
+        email?: string;
+      } | null;
 
       // 如果 API 返回的 data 为空，抛出错误
       if (!authData) {
         throw new Error(t('注册失败，服务器返回数据异常'));
       }
 
-      // 直接注册成功：后端返回 { accessToken, refreshToken, user }
-      applyAuthData(
-        authData as unknown as {
-          accessToken: string;
-          refreshToken: string;
-          user: User;
-        }
-      );
+      // 有 accessToken = 直接注册成功 → 写入登录态
+      if (authData.accessToken) {
+        applyAuthData({
+          accessToken: authData.accessToken,
+          refreshToken: authData.refreshToken || '',
+          user: (authData.user ?? {}) as User,
+        });
+        return { message: t('注册成功') };
+      }
 
-      return { message: t('注册成功') };
+      // 无 accessToken = 已发验证码待验证 → 不写登录态，透传 email 让调用方跳 /verify-email 输码
+      return {
+        message: authData.message || t('验证码已发送到您的邮箱'),
+        email: authData.email,
+      };
     },
     [applyAuthData]
   );

@@ -51,7 +51,10 @@ export const Profile: React.FC = () => {
 
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>('info');
-  const [infoSubView, setInfoSubView] = useState<InfoSubView>('grid');
+  // 弱口令横幅「去修改」深链：/profile?section=password 直达修改密码子页
+  const [infoSubView, setInfoSubView] = useState<InfoSubView>(
+    searchParams.get('section') === 'password' ? 'password' : 'grid'
+  );
   const membership = useMembership();
 
   useDocumentTitle(t('个人资料'));
@@ -306,11 +309,10 @@ export const Profile: React.FC = () => {
                     <ProfilePasswordTab
                       user={passwordProfile.user}
                       passwordForm={passwordProfile.passwordForm}
-                      focusedField={focusedField}
-                      passwordStrength={passwordProfile.passwordStrength}
-                      passwordRequirements={
-                        passwordProfile.passwordRequirements
+                      passwordChangeRequiresMfa={
+                        passwordProfile.passwordChangeRequiresMfa
                       }
+                      focusedField={focusedField}
                       loading={loading}
                       onPasswordChange={passwordProfile.handlePasswordChange}
                       onPasswordSubmit={passwordProfile.handlePasswordSubmit}

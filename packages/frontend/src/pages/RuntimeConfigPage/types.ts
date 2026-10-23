@@ -7,8 +7,8 @@
  * 运行时配置页的视图模型（纯类型，无运行时依赖）。
  *
  * 为什么不直接 `extends` SDK 的 `RuntimeConfigResponseDto`：后端一次改造给 DTO
- * 扩了 9 个字段（defaultValue/source/isModified/envValue/tier/input/impact/dangerous/
- * hot），SDK 由并行任务重生成。视图模型若继承 SDK 类型，在 SDK 重生成前后两个
+ * 扩了 8 个字段（defaultValue/source/isModified/envValue/tier/input/impact/dangerous），
+ * SDK 由并行任务重生成。视图模型若继承 SDK 类型，在 SDK 重生成前后两个
  * 时间窗里都会编译不过。这里定义自足视图模型，由 `meta.ts` 的 mapper 承接 SDK 响应。
  */
 
@@ -70,7 +70,6 @@ export interface ConfigItem {
   input?: ConfigInputMeta;
   impact?: string;
   dangerous?: boolean;
-  hot?: boolean;
   /** 开关依赖声明：本项为 true 时列出的配置项必须同为 true（对齐后端 requires） */
   requires?: string[];
 }
@@ -141,3 +140,17 @@ export interface ChannelStatus {
  * 数字保留原文是为了避免输入中间态（空串、"1."）被 `Number()` 转成 NaN 后无法回退。
  */
 export type DraftValue = string | boolean;
+
+/**
+ * 通道测试结果视图模型（对齐后端 ChannelTestResultDto）。
+ * 失败时保留在测试对话框里：错误文案 + 可点击定位的疑似出错配置项
+ * （老 SDK / 灰度期后端缺 problemKeys 字段时归一为空数组，对话框只展示文案）。
+ */
+export interface ChannelTestResult {
+  /** 测试是否通过 */
+  ok: boolean;
+  /** 成功说明或失败原因（后端文案） */
+  message: string;
+  /** 失败时疑似出错的配置键（空 = 无法定位） */
+  problemKeys: string[];
+}

@@ -63,6 +63,7 @@ export const RuntimeConfigPage: React.FC = () => {
     secretVisible: rc.secretVisible,
     fieldErrors: rc.fieldErrors,
     dependencyStatus: rc.dependencyStatus,
+    highlightKey: rc.highlightKey,
     draftOf: rc.draftOf,
     isDirty: rc.isDirty,
     onDraftChange: rc.handleDraftChange,
@@ -147,10 +148,13 @@ export const RuntimeConfigPage: React.FC = () => {
           testing={rc.channelTesting}
           testTarget={rc.channelTestTarget}
           testRecipient={rc.channelTestRecipient}
+          testResult={rc.channelTestResult}
           onOpenTest={rc.openChannelTest}
           onCloseTest={rc.closeChannelTest}
           onRecipientChange={rc.setChannelTestRecipient}
           onConfirmTest={rc.confirmChannelTest}
+          configsByKey={rc.configsByKey}
+          onFocusConfig={rc.focusConfigItem}
         />
       )}
 

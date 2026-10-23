@@ -10,6 +10,12 @@ import {
 } from 'lucide-react';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
+import {
+  passwordComplexityMessage,
+  passwordTooShortMessage,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
+import { validatePasswordPolicy } from '@cloudcad/platform';
 import React, {
   useState,
   useEffect,
@@ -53,6 +59,8 @@ export const UserManagement = () => {
   const { hasPermission } = usePermission();
   const { user: currentUser } = useAuth();
   const showConfirm = useConfirmAction();
+  // 口令策略生效值（/runtime-config/public 下发）：表单预检与弹窗提示共用
+  const policy = usePasswordPolicy();
   const [canAccess, setCanAccess] = useState(false);
 
   const {
@@ -136,6 +144,7 @@ export const UserManagement = () => {
     roles,
     mailEnabled,
     smsEnabled,
+    requireEmailVerification,
     createUser,
     updateUser,
     deleteUser,
@@ -428,7 +437,8 @@ export const UserManagement = () => {
     } else if (formData.username.length > 20) {
       errors.username = t('用户名最多20个字符');
     }
-    if (mailEnabled && !formData.email) {
+    // 与后端 create 对齐：requireEmailVerification 开启时创建必填邮箱（编辑可选）
+    if (!editingUser && requireEmailVerification && !formData.email) {
       errors.email = t('邮箱不能为空');
     } else if (
       formData.email &&
@@ -438,6 +448,16 @@ export const UserManagement = () => {
     }
     if (!editingUser && !formData.password) {
       errors.password = t('密码不能为空');
+    } else if (formData.password) {
+      // 预检与后端 assertPasswordPolicy 对齐（生效值经 /runtime-config/public 下发）：
+      // 创建必填、编辑可选（留空不改），非空即按策略校验
+      const check = validatePasswordPolicy(formData.password, policy);
+      if (!check.valid) {
+        errors.password =
+          check.reason === 'too_short'
+            ? passwordTooShortMessage(policy.minLength)
+            : passwordComplexityMessage(policy.minCategories);
+      }
     }
     if (formData.phone && !/^1[3-9]\d{9}$/.test(formData.phone)) {
       errors.phone = t('请输入正确的手机号');
@@ -854,7 +874,6 @@ export const UserManagement = () => {
           onAvatarUploaded={() => loadUsers()}
           roles={roles}
           isSelf={isSelf}
-          mailEnabled={mailEnabled}
           loading={loading}
           user={editingUser}
           formData={formData}
@@ -868,7 +887,7 @@ export const UserManagement = () => {
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleSubmit}
           roles={roles}
-          mailEnabled={mailEnabled}
+          requireEmailVerification={requireEmailVerification}
           loading={loading}
           formData={formData}
           formErrors={formErrors}

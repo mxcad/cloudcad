@@ -1,5 +1,5 @@
 import React from 'react';
-import { useBrandConfig } from '../contexts/BrandContext';
+import { useAppBrand } from '../hooks/useAppBrand';
 import './Logo.css';
 
 interface LogoProps {
@@ -8,8 +8,9 @@ interface LogoProps {
 }
 
 export const Logo: React.FC<LogoProps> = ({ size = 'md', animated = true }) => {
-  const { config } = useBrandConfig();
-  const logoSrc = config?.logo || '/logo.png';
+  // 走响应式唯一出口：`config.logo` 只含 /brand/config.json 一层，
+  // 缺运行时层会让管理端改 `brandLogo` 时侧边栏 Logo 不更新。
+  const logoSrc = useAppBrand().logo;
 
   const sizeClasses = {
     sm: 'logo--sm',

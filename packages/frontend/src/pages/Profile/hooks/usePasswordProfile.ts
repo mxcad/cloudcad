@@ -6,14 +6,10 @@ import { usersControllerUploadAvatar } from '@/api-sdk';
 import { t } from '@/languages';
 import {
   passwordComplexityMessage,
-  passwordStrengthDisplay,
   passwordTooShortMessage,
   usePasswordPolicy,
 } from '@/lib/passwordPolicy';
-import {
-  buildPasswordRequirements,
-  validatePasswordPolicy,
-} from '@cloudcad/platform';
+import { validatePasswordPolicy } from '@cloudcad/platform';
 
 interface UsePasswordProfileOptions {
   error: string | null;
@@ -40,16 +36,18 @@ export function usePasswordProfile({
     oldPassword: '',
     newPassword: '',
     confirmPassword: '',
+    totpCode: '',
   });
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 强度条与要求清单都读生效策略（/runtime-config/public 下发）：
-  // 评分阈值随策略变化，清单项随策略增删
-  const newPassword = passwordForm.newPassword;
-  const passwordStrength = passwordStrengthDisplay(newPassword, policy);
-  const passwordRequirements = buildPasswordRequirements(newPassword, policy);
+  // #415 TOTP step-up：profile 响应（authControllerGetProfile → UserProfileResponseDto）
+  // 由服务端算好的「当前用户改密是否需要动态码」。auth context 把 user 类型标为 UserDto，
+  // 运行时实为 UserProfileResponseDto，故断言取该字段（缺省 false）。
+  const passwordChangeRequiresMfa =
+    (user as unknown as { passwordChangeRequiresMfa?: boolean } | null)
+      ?.passwordChangeRequiresMfa ?? false;
 
   const handlePasswordChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,11 +85,20 @@ export function usePasswordProfile({
       setLoading(false);
       return;
     }
+    // #415 TOTP step-up：需动态码时缺码则拦截（后端同样校验，前端预检提升体验）
+    if (passwordChangeRequiresMfa && !passwordForm.totpCode) {
+      setError(t('请输入 6 位动态码'));
+      setLoading(false);
+      return;
+    }
     try {
       await changePassword({
         oldPassword:
           user?.hasPassword === false ? undefined : passwordForm.oldPassword,
         newPassword: passwordForm.newPassword,
+        totpCode: passwordChangeRequiresMfa
+          ? passwordForm.totpCode
+          : undefined,
       });
 
       if (user?.username) {
@@ -111,11 +118,13 @@ export function usePasswordProfile({
           } catch (logoutErr) {
             console.error('Logout error:', logoutErr);
           }
+          // 完整键而非碎片拼接：碎片在 en-US 译成病句（"Password has been Setting Success..."）
           navigate('/login', {
             state: {
-              message: `${t('密码已')}${
-                user?.hasPassword === false ? t('设置') : t('修改')
-              }${t('成功，请使用新密码登录')}`,
+              message:
+                user?.hasPassword === false
+                  ? t('密码已设置成功')
+                  : t('密码已修改成功'),
             },
           });
         }
@@ -127,9 +136,10 @@ export function usePasswordProfile({
         }
         navigate('/login', {
           state: {
-            message: t(
-              `密码已${user?.hasPassword === false ? '设置' : '修改'}成功，请使用新密码登录`
-            ),
+            message:
+              user?.hasPassword === false
+                ? t('密码已设置成功')
+                : t('密码已修改成功'),
           },
         });
       }
@@ -183,10 +193,9 @@ export function usePasswordProfile({
     user,
     passwordForm,
     setPasswordForm,
+    passwordChangeRequiresMfa,
     avatarUploading,
     fileInputRef,
-    passwordStrength,
-    passwordRequirements,
     handlePasswordChange,
     handlePasswordSubmit,
     handleAvatarChange,

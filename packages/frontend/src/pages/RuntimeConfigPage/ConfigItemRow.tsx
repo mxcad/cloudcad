@@ -4,19 +4,19 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * 单个配置项行：key + 徽标（危险/已修改/档位/来源/生效方式/公开）+ 描述 +
- * 影响说明 + 环境变量提示 + 默认值对比 + 类型感知控件 + 就地错误 + 操作按钮。
+ * 单个配置项行：key + 徽标（危险/档位/来源/公开）+ 描述 +
+ * 影响说明 + 系统预置提示 + 默认值对比 + 类型感知控件 + 就地错误 + 操作按钮。
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { resolveBrandFallbackValue } from '@/constants/appConfig';
+import { useAppBrand } from '@/hooks/useAppBrand';
 import {
   Save,
   RotateCcw,
   History,
   ShieldAlert,
-  Sparkles,
   Eye,
-  Power,
   TerminalSquare,
   AlertCircle,
   Clock,
@@ -27,7 +27,7 @@ import { Tag } from '@/components/ui/Tag';
 import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import styles from './RuntimeConfigPage.module.css';
 import { ConfigInput } from './ConfigInput';
-import { SOURCE_LABEL, TIER_LABEL, formatValue } from './meta';
+import { SOURCE_LABEL, TIER_LABEL, configItemId, formatValue } from './meta';
 import type { ConfigItem, ConfigTier, ConfigSource } from './types';
 import { toSubmitValue } from './validate';
 import type { DraftValue } from './validate';
@@ -50,6 +50,8 @@ interface ConfigItemRowProps {
   onSave: () => Promise<boolean>;
   onReset: () => Promise<void>;
   onShowHistory: () => void;
+  /** 是否为「点击定位」的落点（通道缺失键跳转过来后短暂闪烁） */
+  highlight?: boolean;
 }
 
 const TIER_VARIANT: Record<ConfigTier, 'neutral' | 'primary' | 'warning'> = {
@@ -79,13 +81,21 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
   onSave,
   onReset,
   onShowHistory,
+  highlight = false,
 }) => {
   const source = item.source ?? 'default';
   const tier = item.tier ?? 'admin';
-  const hot = item.hot !== false;
   const hasEnv = item.envValue !== null && item.envValue !== undefined;
   const outcome = toSubmitValue(item, draft);
   const invalid = dirty && !outcome.valid;
+
+  // 品牌与客服项的后端 `defaultValue` 是空串哨兵（真实默认值只存在于前端品牌链），
+  // 改用回落值展示。订阅品牌变更：管理端改完品牌后这些行的默认值要跟着变。
+  const appBrand = useAppBrand();
+  const brandFallback = useMemo(
+    () => resolveBrandFallbackValue(item.key),
+    [item.key, appBrand]
+  );
 
   const badges = (
     <div className={styles.configBadges}>
@@ -94,18 +104,8 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
           {t('危险')}
         </Tag>
       )}
-      {item.isModified && (
-        <Tag variant="warning" icon={Sparkles}>
-          {t('已修改')}
-        </Tag>
-      )}
       <Tag variant={TIER_VARIANT[tier]}>{TIER_LABEL[tier]}</Tag>
       <Tag variant={SOURCE_VARIANT[source]}>{SOURCE_LABEL[source]}</Tag>
-      {!hot && (
-        <Tag variant="warning" icon={Power}>
-          {t('需重启服务')}
-        </Tag>
-      )}
       {item.isPublic && (
         <Tag variant="neutral" icon={Eye}>
           {t('公开')}
@@ -129,7 +129,10 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
 
   return (
     <div
-      className={`${styles.configItem} ${item.isModified ? styles.modified : ''}`}
+      id={configItemId(item.key)}
+      className={`${styles.configItem} ${item.isModified ? styles.modified : ''} ${
+        highlight ? styles.focusFlash : ''
+      }`}
       data-testid="rc-item"
       data-key={item.key}
       data-modified={item.isModified}
@@ -155,7 +158,7 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
             disabled={!dirty || !canManageConfig}
             loading={saving}
             data-testid="rc-save"
-            tooltip={hot ? t('保存') : t('保存（该项需重启服务后生效）')}
+            tooltip={t('保存')}
           />
           <Button
             variant="ghost"
@@ -183,34 +186,42 @@ export const ConfigItemRow: React.FC<ConfigItemRowProps> = ({
       <div className={styles.itemBody}>
         {item.type !== 'boolean' && control}
 
-        {/* 差异对比：默认值 → 当前值 */}
-        {item.isModified && (
+        {/* 默认值 → 当前值。品牌与客服项的后端 defaultValue 是空串哨兵（真实默认值
+            只在前端品牌链里），改用回落值展示；这些行即使未修改也显示，否则永远
+            看不到「留空时生效的是什么」。 */}
+        {(item.isModified || brandFallback !== null) && (
           <div className={styles.diffRow}>
             <span className={styles.diffLabel}>{t('默认值')}</span>
             <code className={styles.diffValue}>
-              {formatValue(item.defaultValue ?? null)}
+              {brandFallback !== null
+                ? brandFallback || t('（空）')
+                : formatValue(item.defaultValue ?? null)}
             </code>
-            <span className={styles.diffArrow}>→</span>
-            <span className={styles.diffLabel}>{t('当前值')}</span>
-            <code className={`${styles.diffValue} ${styles.diffCurrent}`}>
-              {dirty && outcome.valid && outcome.value !== undefined
-                ? formatValue(outcome.value)
-                : formatValue(item.value)}
-            </code>
+            {item.isModified && (
+              <>
+                <span className={styles.diffArrow}>→</span>
+                <span className={styles.diffLabel}>{t('当前值')}</span>
+                <code className={`${styles.diffValue} ${styles.diffCurrent}`}>
+                  {dirty && outcome.valid && outcome.value !== undefined
+                    ? formatValue(outcome.value)
+                    : formatValue(item.value)}
+                </code>
+              </>
+            )}
           </div>
         )}
 
-        {/* 环境变量提示：恢复默认不会回到代码默认值 */}
+        {/* 系统预置提示：恢复默认不会回到代码默认值，会退回预置值 */}
         {hasEnv && (
           <div className={styles.envNote}>
             <TerminalSquare size={13} />
             <span>
-              {t('环境变量已设置该值（{env}），运行时配置优先级更高。', {
+              {t('此项由系统预置为 {env}，你在这里保存后会覆盖它。', {
                 env: formatValue(item.envValue as never),
               })}
               {item.isModified && (
                 <span className={styles.envNoteHint}>
-                  {t('恢复默认将改由环境变量生效。')}
+                  {t('恢复出厂后这一项会改由系统预置值接管。')}
                 </span>
               )}
             </span>

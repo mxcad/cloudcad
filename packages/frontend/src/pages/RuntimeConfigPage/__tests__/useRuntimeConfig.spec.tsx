@@ -85,7 +85,6 @@ const rawConfigs = [
     tier: 'admin',
     input: { maxLength: 100, placeholder: '如 smtp.example.com' },
     dangerous: false,
-    hot: true,
   },
   {
     key: 'mail.port',
@@ -102,7 +101,6 @@ const rawConfigs = [
     tier: 'admin',
     input: { min: 1, max: 65535, step: 1, unit: '端口' },
     dangerous: false,
-    hot: true,
     updatedBy: 'u-1',
     updatedAt: '2026-08-01T00:00:00.000Z',
   },
@@ -120,7 +118,6 @@ const rawConfigs = [
     tier: 'admin',
     input: { min: 1, max: 5000, step: 10, unit: 'MB' },
     dangerous: false,
-    hot: true,
   },
   {
     key: 'user.allowRegister',
@@ -137,7 +134,6 @@ const rawConfigs = [
     tier: 'user',
     dangerous: true,
     impact: DANGEROUS_IMPACT,
-    hot: true,
   },
   {
     key: 'system.logLevel',
@@ -158,7 +154,6 @@ const rawConfigs = [
       ],
     },
     dangerous: false,
-    hot: true,
   },
   {
     key: 'security.corsOrigins',
@@ -175,7 +170,6 @@ const rawConfigs = [
     input: { placeholder: '{"allow":[]}' },
     impact: '配置错误会阻塞所有跨域请求',
     dangerous: false,
-    hot: false,
   },
   {
     key: 'experimental.featureFlags',
@@ -191,7 +185,6 @@ const rawConfigs = [
     tier: 'admin',
     input: {},
     dangerous: false,
-    hot: true,
   },
 ];
 
@@ -256,7 +249,6 @@ describe('useRuntimeConfig', () => {
       expect(rc.stats).toEqual({
         total: 7,
         modified: 2,
-        restartRequired: 1,
         envDriven: 1,
         pendingSave: 0,
         modeManaged: 0,
@@ -674,7 +666,7 @@ describe('useRuntimeConfig', () => {
         await hook.result.current.handleReset('maxFileSize');
       });
       const message = showConfirm.mock.calls[0]![0].message;
-      expect(message).toContain('环境变量');
+      expect(message).toContain('系统预置');
       expect(message).toContain('100');
     });
 
@@ -879,7 +871,6 @@ describe('useRuntimeConfig', () => {
         tier,
         input: {},
         dangerous: false,
-        hot: true,
       });
       getAllConfigs.mockResolvedValue(ok([
         mk('backupEnabled', 'backup'),
@@ -942,7 +933,6 @@ describe('useRuntimeConfig', () => {
         tier: 'admin' as const,
         input: {},
         dangerous: false,
-        hot: true,
       });
       getAllConfigs.mockResolvedValue(ok([
         mk('securityMode', 'mode-mfa'),
@@ -1246,14 +1236,55 @@ describe('useRuntimeConfig', () => {
         body: { to: 'a@b.c' },
       });
       expect(showToast).toHaveBeenCalledWith('测试邮件已发送至 a@b.c', 'success');
-      // 成功后关对话框并清空收件人
+      // 成功后关对话框并清空收件人与测试结果
       expect(hook.result.current.channelTestTarget).toBe(null);
       expect(hook.result.current.channelTestRecipient).toBe('');
+      expect(hook.result.current.channelTestResult).toBe(null);
       // 成功会写验证记录，必须刷新通道状态
       expect(getChannelsStatus).toHaveBeenCalledTimes(2);
     });
 
-    it('测试发送失败（ok:false）：toast 后端原因，对话框保持打开', async () => {
+    it('测试发送失败（ok:false）：toast 后端原因，对话框保持打开并保留错误与出错配置键', async () => {
+      getChannelsStatus.mockResolvedValue(ok([mailChannel]));
+      testChannel.mockResolvedValue(
+        ok({
+          channel: 'mail',
+          ok: false,
+          message: '微信凭据探测失败（errcode 40013）：invalid appid',
+          problemKeys: ['wechatAppId'],
+        })
+      );
+      const hook = await load();
+      await waitFor(() => expect(hook.result.current.channelStatuses.length).toBe(1));
+
+      await act(async () => {
+        hook.result.current.openChannelTest('mail');
+      });
+      await act(async () => {
+        await hook.result.current.confirmChannelTest();
+      });
+
+      expect(showToast).toHaveBeenCalledWith(
+        '微信凭据探测失败（errcode 40013）：invalid appid',
+        'error'
+      );
+      // 失败不关对话框：用户可改配置后重试
+      expect(hook.result.current.channelTestTarget).toBe('mail');
+      // 失败结果保留在对话框：错误文案 + 可定位的出错配置键
+      expect(hook.result.current.channelTestResult).toEqual({
+        ok: false,
+        message: '微信凭据探测失败（errcode 40013）：invalid appid',
+        problemKeys: ['wechatAppId'],
+      });
+
+      await act(async () => {
+        hook.result.current.closeChannelTest();
+      });
+      // 关闭对话框清空测试结果
+      expect(hook.result.current.channelTestResult).toBe(null);
+    });
+
+    it('后端未返回 problemKeys（老版本）：归一为空数组，对话框只展示文案', async () => {
       getChannelsStatus.mockResolvedValue(ok([mailChannel]));
       testChannel.mockResolvedValue(
         ok({ channel: 'mail', ok: false, message: '配置不完整（缺失：smtpHost）' })
@@ -1268,9 +1299,11 @@ describe('useRuntimeConfig', () => {
         await hook.result.current.confirmChannelTest();
       });
 
-      expect(showToast).toHaveBeenCalledWith('配置不完整（缺失：smtpHost）', 'error');
-      // 失败不关对话框：用户可改配置后重试
-      expect(hook.result.current.channelTestTarget).toBe('mail');
+      expect(hook.result.current.channelTestResult).toEqual({
+        ok: false,
+        message: '配置不完整（缺失：smtpHost）',
+        problemKeys: [],
+      });
     });
 
     it('测试发送请求异常（4xx/5xx）：toast 后端错误信息', async () => {

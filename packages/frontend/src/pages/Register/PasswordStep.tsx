@@ -9,22 +9,13 @@ import {
 } from 'lucide-react';
 import { t } from '@/languages';
 import { Button } from '@/components/ui/Button';
+import { PasswordStrength } from '@/components/ui/PasswordStrength';
 import { UseFormRegister } from 'react-hook-form';
-import {
-  passwordPolicyHint,
-  passwordRequirementLabel,
-  usePasswordPolicy,
-} from '@/lib/passwordPolicy';
-import type { PasswordRequirement } from '@cloudcad/platform';
+import { passwordPlaceholder, usePasswordPolicy } from '@/lib/passwordPolicy';
 import { RegisterFormValues } from './hooks/registerFormSchema';
 import { FieldErrors } from './types';
+import { FieldErrorMessage } from './FieldErrorMessage';
 import styles from './register.module.css';
-
-interface PasswordStrength {
-  strength: number;
-  label: string;
-  color: string;
-}
 
 interface PasswordStepProps {
   register: UseFormRegister<RegisterFormValues>;
@@ -36,8 +27,6 @@ interface PasswordStepProps {
   setShowPassword: (v: boolean) => void;
   setShowConfirmPassword: (v: boolean) => void;
   passwordValue: string;
-  passwordStrength: PasswordStrength;
-  passwordRequirements: PasswordRequirement[];
   loading: boolean;
   onBack: () => void;
 }
@@ -66,8 +55,6 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
   setShowPassword,
   setShowConfirmPassword,
   passwordValue,
-  passwordStrength,
-  passwordRequirements,
   loading,
   onBack,
 }) => {
@@ -96,53 +83,26 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             autoComplete="new-password"
             required
             className={`${styles.inputField} ${styles.inputFieldHasToggle}`}
-            placeholder={passwordPolicyHint(policy)}
+            placeholder={passwordPlaceholder(policy)}
             {...register('password')}
+            aria-invalid={!!fieldErrors.password}
             onFocus={() => setFocusedField('password')}
           />
           <Button
             type="button"
-            variant="secondary"
-            size="sm"
+            variant="icon"
+            size="xs"
             className="absolute right-4 top-1/2 -translate-y-1/2"
             icon={showPassword ? EyeOff : Eye}
+            tooltip={showPassword ? t('隐藏密码') : t('显示密码')}
             onClick={() => setShowPassword(!showPassword)}
             tabIndex={-1}
           />
           <div className={styles.inputGlow} />
         </div>
-        {passwordValue && (
-          <div className={styles.passwordStrength}>
-            <div className={styles.strengthBar}>
-              <div
-                className={styles.strengthFill}
-                style={{
-                  width: `${(passwordStrength.strength / 4) * 100}%`,
-                  background: passwordStrength.color,
-                }}
-              />
-            </div>
-            <span
-              className={styles.strengthLabel}
-              style={{ color: passwordStrength.color }}
-            >
-              {passwordStrength.label}
-            </span>
-          </div>
-        )}
-        {passwordValue && passwordRequirements.length > 0 && (
-          <ul className={styles.passwordRequirements}>
-            {passwordRequirements.map((requirement) => (
-              <li key={requirement.key} data-ok={requirement.ok}>
-                <span aria-hidden>{requirement.ok ? '✓' : '·'}</span>
-                {passwordRequirementLabel(requirement, policy)}
-              </li>
-            ))}
-          </ul>
-        )}
-        {fieldErrors.password && (
-          <p className={styles.errorMessage}>{fieldErrors.password}</p>
-        )}
+        {/* 强度条 + 要求清单走共享组件（唯一呈现出口）：清单常显，既是实时达标
+            反馈，也是密码框提交失败时的唯一错误信号。空密码时清单仍显示未达标项 */}
+        <PasswordStrength password={passwordValue} policy={policy} />
       </div>
 
       <div
@@ -166,23 +126,30 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             autoComplete="new-password"
             required
             className={`${styles.inputField} ${styles.inputFieldHasToggle}`}
-            placeholder={t('请再次输入密码')}
+            placeholder={t('请再次输入新密码')}
             {...register('confirmPassword')}
+            aria-invalid={!!fieldErrors.confirmPassword}
+            aria-describedby={
+              fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined
+            }
             onFocus={() => setFocusedField('confirmPassword')}
           />
           <Button
             type="button"
-            variant="secondary"
-            size="sm"
+            variant="icon"
+            size="xs"
             className="absolute right-4 top-1/2 -translate-y-1/2"
             icon={showConfirmPassword ? EyeOff : Eye}
+            tooltip={showConfirmPassword ? t('隐藏密码') : t('显示密码')}
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             tabIndex={-1}
           />
           <div className={styles.inputGlow} />
         </div>
         {fieldErrors.confirmPassword && (
-          <p className={styles.errorMessage}>{fieldErrors.confirmPassword}</p>
+          <FieldErrorMessage id="confirmPassword-error">
+            {fieldErrors.confirmPassword}
+          </FieldErrorMessage>
         )}
       </div>
 

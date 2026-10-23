@@ -2,9 +2,13 @@ import React, { useRef, useState } from 'react';
 import { t } from '@/languages';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2, Upload, Lock } from 'lucide-react';
 import { getRoleDisplayName } from '@/constants/permissions';
 import { Input } from '@/components/ui/Input';
+import {
+  passwordComplexityMessage,
+  usePasswordPolicy,
+} from '@/lib/passwordPolicy';
 import { Select } from '@/components/ui/Select';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { usersControllerUploadUserAvatar } from '@/api-sdk';
@@ -24,7 +28,6 @@ interface EditUserModalProps {
   }>;
   /** 编辑的是操作者自己：角色/账户状态不可改（自我降权会锁死账户），隐藏对应下拉 */
   isSelf?: boolean;
-  mailEnabled: boolean;
   loading: boolean;
   user: {
     id: string;
@@ -65,7 +68,6 @@ export function EditUserModal({
   onAvatarUploaded,
   roles,
   isSelf,
-  mailEnabled,
   loading,
   user,
   formData,
@@ -76,6 +78,8 @@ export function EditUserModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
+  // 口令策略生效值（/runtime-config/public 下发）：非空新密码的提示与预检共用
+  const policy = usePasswordPolicy();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,14 +166,12 @@ export function EditUserModal({
           <div
             className={`${styles.formGroup} ${formErrors.email ? styles.hasError : ''}`}
           >
-            <label className={styles.formLabel}>
-              {t('邮箱')}{' '}
-              {mailEnabled && <span className={styles.required}>*</span>}
-            </label>
+            <label className={styles.formLabel}>{t('邮箱')}</label>
             <Input
               type="email"
               value={formData.email}
               onChange={(e) => onFormChange('email', e.target.value)}
+              placeholder={t('可选，用于接收通知')}
             />
             {formErrors.email && (
               <span className={styles.errorText}>{formErrors.email}</span>
@@ -181,16 +183,23 @@ export function EditUserModal({
             className={`${styles.formGroup} ${formErrors.password ? styles.hasError : ''}`}
           >
             <label className={styles.formLabel}>
+              <Lock size={14} />
               {t('新密码')}{' '}
               <span className={styles.optional}>{t('（留空则不修改）')}</span>
             </label>
             <Input
               type="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={(e) => onFormChange('password', e.target.value)}
               placeholder={t('留空保持原密码')}
               showPasswordToggle
             />
+            {formData.password && policy.minCategories > 0 && (
+              <span className={styles.fieldHint}>
+                {passwordComplexityMessage(policy.minCategories)}
+              </span>
+            )}
             {formErrors.password && (
               <span className={styles.errorText}>{formErrors.password}</span>
             )}

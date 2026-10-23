@@ -85,7 +85,15 @@ export const EmailVerification: React.FC = () => {
     const stateEmail = location.state?.email;
     if (stateEmail) {
       setEmail(stateEmail);
-      if (location.state?.mode !== 'bind' && !hasAutoSent.current) {
+      // 注册流程跳来时后端 register() 已发过码（state 带 message 标记）：只标记「已发送」
+      // + 进入重发冷却，不再自动重发——否则会与注册那次发送命中同一邮箱的频率限制
+      // （email_verification:rate_limit），页面一进来就红框「发送过于频繁」。
+      // 登录流程（EMAIL_NOT_VERIFIED，state 仅 email 无 message）才需要页面代发码。
+      const codeAlreadySent = Boolean(location.state?.message);
+      if (codeAlreadySent) {
+        setEmailSent(true);
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      } else if (location.state?.mode !== 'bind' && !hasAutoSent.current) {
         hasAutoSent.current = true;
         setEmailSent(true);
         setResendCooldown(RESEND_COOLDOWN_SECONDS);

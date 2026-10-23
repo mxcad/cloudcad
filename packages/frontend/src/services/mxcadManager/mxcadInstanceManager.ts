@@ -298,6 +298,10 @@ export class MxCADInstanceManager {
   private initialLoadOk = false;
   /** 是否已发起过用户打开：初始加载结算只对首开有意义，之后不得用于跳过等待 */
   private userOpenDispatched = false;
+  /** 已派发但尚未终止的打开命令数（与 notifyOpenTerminated 严格配对） */
+  private openInFlight = 0;
+  /** 引擎已派发的 openFileComplete 累计次数（成功/失败都计，含协同与引擎内部打开） */
+  private openSettledCount = 0;
   private readonly openFlow: MxCADOpenFlow;
 
   constructor() {
@@ -313,6 +317,33 @@ export class MxCADInstanceManager {
   getOpenSettled(): { count: number; ok: boolean } {
     if (this.userOpenDispatched) return { count: 0, ok: false };
     return { count: this.initialLoadSettled ? 1 : 0, ok: this.initialLoadOk };
+  }
+
+  /**
+   * 打开生命周期状态（会话无关，供 UI 门控判定「本次打开是否已终态」）。
+   *
+   * 与 getOpenSettled 的区别：这里统计的是所有打开命令（含 reload、协同 SDK 加载、
+   * 引擎内部命令触发的打开），不区分首开，也不受 userOpenDispatched 影响。
+   * 会话字段 currentFileInfo 只在 openSession 写入，绕开 openFile 的打开路径
+   * （协同 auto-join、引擎内部 __openWebFile__）不会更新它，故门控不能用它判终态。
+   */
+  getOpenState(): { inFlight: number; settled: number } {
+    return { inFlight: this.openInFlight, settled: this.openSettledCount };
+  }
+
+  /** 派发一次打开命令前调用（__openWebFile__ 发出前），与 notifyOpenTerminated 配对 */
+  notifyOpenDispatched(): void {
+    this.openInFlight++;
+  }
+
+  /** 本次打开命令已终止（成功或失败），与 notifyOpenDispatched 严格一一对应 */
+  notifyOpenTerminated(): void {
+    if (this.openInFlight > 0) this.openInFlight--;
+  }
+
+  /** 引擎派发 openFileComplete（成功/失败都计）：任意来源的打开加载结束 */
+  notifyOpenSettled(): void {
+    this.openSettledCount++;
   }
 
   private settleInitial(ok: boolean): void {
@@ -410,6 +441,10 @@ export class MxCADInstanceManager {
     const onOpen = async (iResult: number) => {
       // 成功/失败都计入初始加载已结算：引擎一派发就算「已结束」
       this.settleInitial(iResult === 0);
+      // 任意来源的打开（openFile / reload / 协同 auto-join / 引擎内部命令）都经此监听，
+      // 是「图纸加载已终态」的唯一可靠信号；openSession 只在 pendingOpenInfo 非空时写入，
+      // 绕开 openFile 的路径不会更新 currentFileInfo
+      this.notifyOpenSettled();
       if (iResult !== 0) {
         // 打开失败（含首次进入的 config.openFile 初始加载失败）：不记录当前文件状态
         // （不 openSession），但引擎会把标题置为 URL 尾部的 mxweb 内部访问文件名

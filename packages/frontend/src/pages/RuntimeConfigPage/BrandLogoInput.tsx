@@ -95,7 +95,7 @@ export const BrandLogoInput: React.FC<BrandLogoInputProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/x-icon"
         style={{ display: 'none' }}
         disabled={disabled}
         onChange={(e) => void handleFile(e)}

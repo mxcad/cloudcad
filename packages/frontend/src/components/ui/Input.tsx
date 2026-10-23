@@ -85,6 +85,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const hasRightContent = !!RightIcon || !!rightNode || showPasswordToggle;
     const [passwordVisible, setPasswordVisible] = useState(false);
 
+    // variant="error"：边框标红（失焦/聚焦均保持错误色），此前该 variant 未生效
+    const isInvalid = variant === 'error';
+    const baseBorderColor = isInvalid
+      ? 'var(--error)'
+      : 'var(--border-default)';
+
     const resolvedType =
       showPasswordToggle && type === 'password'
         ? passwordVisible
@@ -125,15 +131,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           `}
           style={{
             background: 'var(--bg-primary)',
-            border: '1px solid var(--border-default)',
+            border: `1px solid ${baseBorderColor}`,
             color: 'var(--text-primary)',
           }}
           onFocus={(e) => {
-            e.target.style.borderColor = 'var(--primary-500)';
+            e.target.style.borderColor = isInvalid
+              ? 'var(--error)'
+              : 'var(--primary-500)';
             props.onFocus?.(e);
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = 'var(--border-default)';
+            e.target.style.borderColor = baseBorderColor;
             props.onBlur?.(e);
           }}
           {...props}

@@ -9,6 +9,10 @@
  * 注意：浏览器模块加载器对同一 URL 的请求去重，悬挂请求在同一页面内重新
  * import 无效——重试只对硬失败（404 / 网络错误）有意义；悬挂请求只能靠
  * 刷新页面恢复。
+ *
+ * 仅生产构建套本包装（见 App.tsx 的 import.meta.env.DEV 分支）：dev 下 Vite
+ * 按需 transform CAD 链约 473 个模块，首次冷加载常超 60s，套 30s 阈值会把
+ * 「慢」误判成「加载失败」。
  */
 export function importWithTimeout<T>(
   loader: () => Promise<T>,

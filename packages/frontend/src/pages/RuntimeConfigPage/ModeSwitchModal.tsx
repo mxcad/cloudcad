@@ -5,7 +5,7 @@
 
 /**
  * 安全模式切换确认：应用前先展示「将改动这 N 项」的预览列表，
- * 并对当前由环境变量注入的项单独提示（切换不会改变它的实际生效值）。
+ * 并对当前由系统预置的项单独提示（切换不会改变它们的实际生效值）。
  */
 
 import React from 'react';
@@ -105,7 +105,7 @@ export const ModeSwitchModal: React.FC<ModeSwitchModalProps> = ({
                   <TerminalSquare size={13} />
                   <span>
                     {t(
-                      '其中 {n} 项当前由环境变量注入：切换后它们保持环境变量值，实际生效值不变。',
+                      '其中 {n} 项由系统预置：切换模式后它们的实际生效值不变。',
                       { n: String(envShaded.length) }
                     )}
                   </span>

@@ -10,13 +10,16 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useTheme } from '@/contexts/ThemeContext';
 import { usePasswordChange } from '@/pages/Profile/hooks/usePasswordChange';
 import {
-  KeyRound,
+  Lock,
+  CheckCircle,
+  AlertCircle,
   ShieldCheck,
   Eye,
   EyeOff,
   ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { PasswordStrength } from '@/components/ui/PasswordStrength';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { InteractiveBackground } from '@/components/InteractiveBackground';
@@ -25,27 +28,13 @@ import { getDefaultAppBrandConfig } from '@/constants/appConfig';
 import { t } from '@/languages';
 import {
   passwordComplexityMessage,
-  passwordRequirementLabel,
+  passwordPlaceholder,
   passwordTooShortMessage,
   usePasswordPolicy,
 } from '@/lib/passwordPolicy';
-import {
-  buildPasswordRequirements,
-  validatePasswordPolicy,
-} from '@cloudcad/platform';
+import { validatePasswordPolicy } from '@cloudcad/platform';
+import { getErrorInfo } from '@/utils/errorHandler';
 import styles from '../Login/Login.module.css';
-
-/** 从 SDK 抛出的错误对象提取后端 code / message */
-function getErrorInfo(err: unknown): { code?: string; message: string } {
-  const errAny = err as Record<string, unknown> | null;
-  const code =
-    typeof errAny?.code === 'string' ? (errAny.code as string) : undefined;
-  const message =
-    (typeof errAny?.message === 'string' && errAny.message) ||
-    (err instanceof Error ? err.message : '') ||
-    '';
-  return { code, message };
-}
 
 /**
  * 管理员强制改密页（#416 等保 8.1.4.1 a)/b)）
@@ -94,10 +83,6 @@ const AdminPasswordChange: React.FC = () => {
       : reason === 'expired'
         ? t('当前密码已超过有效期，请设置新密码')
         : t('建议定期更换密码，可降低账号被盗风险');
-
-  // 清单项由生效策略生成：minCategories 关闭时不再列出写死的四类要求
-  // （纯函数、每渲染重算即可；不用 useMemo 以免依赖数组漏 policy 触发 exhaustive-deps）
-  const requirements = buildPasswordRequirements(newPassword, policy);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +159,7 @@ const AdminPasswordChange: React.FC = () => {
           {/* 错误提示 */}
           {error && (
             <div className={`${styles.alert} ${styles.alertError}`}>
-              <KeyRound size={18} className={styles.alertIcon} />
+              <AlertCircle size={18} className={styles.alertIcon} />
               <span>{error}</span>
             </div>
           )}
@@ -185,7 +170,7 @@ const AdminPasswordChange: React.FC = () => {
                 {t('当前密码')}
               </label>
               <div className={styles.inputWrapper}>
-                <KeyRound
+                <Lock
                   size={18}
                   className={`${styles.inputIcon} ${focused === 'old' ? styles.active : ''}`}
                 />
@@ -223,7 +208,7 @@ const AdminPasswordChange: React.FC = () => {
                 {t('新密码')}
               </label>
               <div className={styles.inputWrapper}>
-                <KeyRound
+                <Lock
                   size={18}
                   className={`${styles.inputIcon} ${focused === 'new' ? styles.active : ''}`}
                 />
@@ -234,7 +219,7 @@ const AdminPasswordChange: React.FC = () => {
                   autoComplete="new-password"
                   required
                   className={styles.inputField}
-                  placeholder={t('请输入新密码')}
+                  placeholder={passwordPlaceholder(policy)}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   onFocus={() => setFocused('new')}
@@ -261,7 +246,7 @@ const AdminPasswordChange: React.FC = () => {
                 {t('确认新密码')}
               </label>
               <div className={styles.inputWrapper}>
-                <KeyRound
+                <CheckCircle
                   size={18}
                   className={`${styles.inputIcon} ${focused === 'confirm' ? styles.active : ''}`}
                 />
@@ -296,37 +281,9 @@ const AdminPasswordChange: React.FC = () => {
               </div>
             </div>
 
-            {/* 口令策略要求（项与文案均由生效策略生成，与后端 PasswordPolicyService 同规则） */}
-            {requirements.length > 0 && (
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                  padding: '0.75rem',
-                  background: 'var(--bg-secondary)',
-                  borderRadius: '0.5rem',
-                  border: '1px solid var(--border-default)',
-                }}
-              >
-                {requirements.map((requirement) => {
-                  const label = passwordRequirementLabel(requirement, policy);
-                  return (
-                    <span
-                      key={requirement.key}
-                      style={{
-                        color: requirement.ok
-                          ? 'var(--text-secondary)'
-                          : 'var(--text-tertiary)',
-                        fontSize: '0.8rem',
-                      }}
-                    >
-                      {`${requirement.ok ? '✓' : '·'} ${label}`}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
+            {/* 强度条 + 要求清单走共享组件（唯一呈现出口）：项与文案均由
+                生效策略生成，与后端 PasswordPolicyService 同规则 */}
+            <PasswordStrength password={newPassword} policy={policy} />
 
             <Button
               type="submit"

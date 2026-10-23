@@ -209,6 +209,7 @@ export const ProfileDeactivateTab: React.FC<ProfileDeactivateTabProps> = ({
               <div className={styles.inputWrapper}>
                 <Input
                   type="password"
+                  autoComplete="current-password"
                   value={deactivateForm.password}
                   onChange={(e) => onPasswordChange(e.target.value)}
                   placeholder={t('请输入密码')}

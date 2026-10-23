@@ -20,6 +20,8 @@ export function makeResetPasswordSchema(policy: PasswordPolicyParams) {
       newPassword: z
         .string()
         .min(policy.minLength, passwordTooShortMessage(policy.minLength))
+        // 上限与后端 DTO @MaxLength(50) 对齐
+        .max(50, t('密码最多50个字符'))
         .refine(
           (v) => validatePasswordPolicy(v, policy).reason !== 'complexity',
           {
@@ -30,7 +32,7 @@ export function makeResetPasswordSchema(policy: PasswordPolicyParams) {
       confirmPassword: z.string().min(1, t('请确认新密码')),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
-      message: t('两次输入的密码不一致'),
+      message: t('两次输入的新密码不一致'),
       path: ['confirmPassword'],
     });
 }

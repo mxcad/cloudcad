@@ -5,7 +5,7 @@
 
 /**
  * 分类级批量恢复默认：确认前展示「将恢复这 N 项」的预览列表，
- * 并对已由环境变量注入的项单独提示（恢复默认不会回到代码默认值）。
+ * 并对已由系统预置的项单独提示（恢复出厂不会回到出厂默认值）。
  */
 
 import React from 'react';
@@ -81,7 +81,7 @@ export const ResetCategoryModal: React.FC<ResetCategoryModalProps> = ({
               <TerminalSquare size={13} />
               <span>
                 {t(
-                  '其中 {n} 项已由环境变量注入：恢复默认后取值回到环境变量值，而不是代码默认值。',
+                  '其中 {n} 项由系统预置：恢复出厂后取值会退回预置值，而不是出厂默认值。',
                   {
                     n: String(envItems.length),
                   }

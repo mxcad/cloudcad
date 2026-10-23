@@ -9,11 +9,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useRegisterForm } from './hooks/useRegisterForm';
 import { usePhoneVerification } from './hooks/usePhoneVerification';
 import { t } from '@/languages';
-import {
-  passwordStrengthDisplay,
-  usePasswordPolicy,
-} from '@/lib/passwordPolicy';
-import { buildPasswordRequirements } from '@cloudcad/platform';
 import { RegisterLayout } from './RegisterLayout';
 import { RegisterClosed } from './RegisterClosed';
 import { RegisterBrand } from './RegisterBrand';
@@ -31,8 +26,6 @@ export const Register: React.FC = () => {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { config: runtimeConfig, loading: configLoading } = useRuntimeConfig();
   const { isDark } = useTheme();
-  // 生效口令策略：强度条阈值与要求清单都随部署策略变化（须在早返回前调用）
-  const policy = usePasswordPolicy();
 
   // 品牌标题/Logo 走唯一出口：运行时单项键 / 整块 / config.json / 内置默认逐层回落（#499）
   const appName = getAppBrandConfig().title;
@@ -163,10 +156,6 @@ export const Register: React.FC = () => {
   // Wrap handleNext to pass phoneForm
   const onNext = () => handleNext(phoneForm);
 
-  // 强度条阈值与要求清单项均由生效策略推导（/runtime-config/public 下发）
-  const passwordStrength = passwordStrengthDisplay(passwordValue, policy);
-  const passwordRequirements = buildPasswordRequirements(passwordValue, policy);
-
   return (
     <RegisterLayout appName={appName} isDark={isDark} withLanguageSwitcher>
       <div className={styles.registerCard}>
@@ -183,7 +172,7 @@ export const Register: React.FC = () => {
         />
 
         {error && (
-          <div className={`${styles.alert} ${styles.alertError}`}>
+          <div className={`${styles.alert} ${styles.alertError}`} role="alert">
             <AlertCircle size={18} className={styles.alertIcon} />
             <span>{error}</span>
           </div>
@@ -221,8 +210,6 @@ export const Register: React.FC = () => {
               setShowPassword={setShowPassword}
               setShowConfirmPassword={setShowConfirmPassword}
               passwordValue={passwordValue}
-              passwordStrength={passwordStrength}
-              passwordRequirements={passwordRequirements}
               loading={loading}
               onBack={handleBack}
             />

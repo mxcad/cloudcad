@@ -17,6 +17,7 @@ interface SuccessViewProps {
   appLogo: string;
   isDark: boolean;
   successContact: string;
+  contactType: 'email' | 'phone';
   onGoReset: () => void;
   onBack: () => void;
 }
@@ -26,6 +27,7 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
   appLogo,
   isDark,
   successContact,
+  contactType,
   onGoReset,
   onBack,
 }) => (
@@ -54,17 +56,23 @@ export const SuccessView: React.FC<SuccessViewProps> = ({
           <div className={styles.successIcon}>
             <CheckCircle size={32} />
           </div>
-          <h2 className={styles.successTitle}>{t('验证码已发送')}</h2>
+          <h2 className={styles.successTitle}>
+            {contactType === 'email' ? t('邮件已发送') : t('验证码已发送')}
+          </h2>
           <p className={styles.successSubtitle}>
             {t('我们已向')}{' '}
             <span className={styles.successEmail}>{successContact}</span>{' '}
-            {t('发送了验证码')}
+            {contactType === 'email' ? t('发送了一封邮件') : t('发送了验证码')}
           </p>
 
           <div className={styles.successCard}>
             <div className={styles.successTip}>
               <AlertCircle size={16} />
-              <span>{t('请使用验证码重置密码')}</span>
+              <span>
+                {contactType === 'email'
+                  ? t('请查收邮件并按提示重置密码。如未收到，请检查邮箱是否输入正确')
+                  : t('请使用验证码重置密码。如未收到，请检查手机号是否正确')}
+              </span>
             </div>
           </div>
 

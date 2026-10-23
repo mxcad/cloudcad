@@ -50,8 +50,17 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => navigate,
 }));
 
-// mock react-hook-form 的 useForm：注入预设表单值（getValues 返回固定值），
-// 让测试聚焦提交分支（手机注册 → context.registerByPhone + SPA 导航）而非表单 UI
+// mock react-hook-form 的 useForm：getValues / watch 都读这份**可变**表单值，
+// 便于用例模拟「用户改字段后再次提交」，同时聚焦提交分支而非表单 UI
+const mockFormValues = {
+  username: 'testuser',
+  nickname: '',
+  email: '',
+  password: 'Password123!',
+  confirmPassword: 'Password123!',
+  agreedToTerms: true,
+};
+
 vi.mock('react-hook-form', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-hook-form')>();
   return {
@@ -60,16 +69,9 @@ vi.mock('react-hook-form', async (importOriginal) => {
       register: vi.fn(() => ({ name: '', onChange: vi.fn(), ref: vi.fn() })),
       handleSubmit: vi.fn(),
       formState: { errors: {} },
-      watch: vi.fn(() => ''),
+      watch: vi.fn(() => ({ ...mockFormValues })),
       setError: vi.fn(),
-      getValues: vi.fn(() => ({
-        username: 'testuser',
-        nickname: '',
-        email: '',
-        password: 'Password123!',
-        confirmPassword: 'Password123!',
-        agreedToTerms: true,
-      })),
+      getValues: vi.fn(() => ({ ...mockFormValues })),
       setValue: vi.fn(),
       trigger: vi.fn().mockResolvedValue(true),
     })),
@@ -84,14 +86,17 @@ const baseOptions = {
   isWechatRegister: false,
 };
 
-function mockAuth(registerByPhone = vi.fn().mockResolvedValue(undefined)) {
+function mockAuth(
+  registerByPhone = vi.fn().mockResolvedValue(undefined),
+  register = vi.fn().mockResolvedValue({ message: 'ok' })
+) {
   vi.mocked(useAuth).mockReturnValue({
     user: null,
     token: null,
     login: vi.fn(),
     loginByPhone: vi.fn(),
     loginWithWechat: vi.fn(),
-    register: vi.fn().mockResolvedValue({ message: 'ok' }),
+    register,
     registerByPhone,
     verifyEmailAndLogin: vi.fn(),
     verifyPhoneAndLogin: vi.fn(),
@@ -110,6 +115,7 @@ describe('useRegisterForm - phone registration', () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
+    mockFormValues.confirmPassword = 'Password123!';
     vi.mocked(authControllerCheckFieldUniqueness).mockResolvedValue({
       data: {},
     } as never);
@@ -182,5 +188,95 @@ describe('useRegisterForm - phone registration', () => {
     });
 
     expect(registerByPhone).not.toHaveBeenCalled();
+  });
+});
+
+describe('useRegisterForm - 短信通道关闭（出厂默认）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    vi.mocked(authControllerCheckFieldUniqueness).mockResolvedValue({
+      data: {},
+    } as never);
+  });
+
+  it('空 phoneForm 不拦截提交（回归：短信关闭时 phone/code 字段不渲染，错误对用户不可见 → 点注册毫无反应）', async () => {
+    const registerUser = vi.fn().mockResolvedValue({ message: 'ok' });
+    mockAuth(vi.fn(), registerUser);
+    const { result } = renderHook(() =>
+      useRegisterForm({
+        ...baseOptions,
+        smsEnabled: false,
+        requirePhoneVerification: false,
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleFormSubmit(
+        { preventDefault: vi.fn() } as unknown as React.FormEvent,
+        { phone: '', code: '' }
+      );
+    });
+
+    expect(registerUser).toHaveBeenCalledWith({
+      username: 'testuser',
+      password: 'Password123!',
+      nickname: undefined,
+      email: undefined,
+      wechatTempToken: undefined,
+    });
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+});
+
+describe('useRegisterForm - 改对字段后再次提交', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+    mockFormValues.confirmPassword = 'Password123!';
+    vi.mocked(authControllerCheckFieldUniqueness).mockResolvedValue({
+      data: {},
+    } as never);
+  });
+
+  const submit = (hook: { current: ReturnType<typeof useRegisterForm> }) =>
+    act(async () => {
+      await hook.current.handleFormSubmit(
+        { preventDefault: vi.fn() } as unknown as React.FormEvent,
+        { phone: '13800138000', code: '123456' }
+      );
+    });
+
+  it('确认密码改对后再次提交必须真正走注册流程（此前提交静默失效、控制台无输出）', async () => {
+    const registerByPhone = mockAuth();
+    const { result, rerender } = renderHook((options) => useRegisterForm(options), {
+      initialProps: baseOptions,
+    });
+
+    // 第一次提交：两次密码不一致 → 被拦下
+    mockFormValues.confirmPassword = 'Wrong123!';
+    await submit(result);
+
+    expect(registerByPhone).not.toHaveBeenCalled();
+    expect(result.current.fieldErrors.confirmPassword).toBeTruthy();
+
+    // 用户改对确认密码，错误提示应立即消失
+    mockFormValues.confirmPassword = 'Password123!';
+    await act(async () => {
+      rerender(baseOptions);
+    });
+    expect(result.current.fieldErrors.confirmPassword).toBeFalsy();
+
+    // 再次提交：不得被上一次失败留下的错误快照挡住
+    await submit(result);
+    expect(registerByPhone).toHaveBeenCalledWith({
+      phone: '13800138000',
+      code: '123456',
+      username: 'testuser',
+      password: 'Password123!',
+      nickname: undefined,
+    });
   });
 });

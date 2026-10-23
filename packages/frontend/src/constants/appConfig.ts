@@ -114,6 +114,55 @@ export function setRuntimeBrandConfig(
   runtimeBrandFields = fields ?? null;
 }
 
+type BrandSubscriber = () => void;
+
+const brandSubscribers = new Set<BrandSubscriber>();
+
+/**
+ * 订阅品牌配置变更，供 `useSyncExternalStore` 消费。
+ * 裸 `getAppBrandConfig()` / `getBrandProfile()` 只读模块级缓存，不参与 React 依赖，
+ * 管理端改完品牌后那些调用点不会重渲染；挂上订阅才会跟着变。
+ * 变更通知由 `notifyBrandChanges` 发出——`setRuntimeBrandConfig` 在 BrandProvider
+ * 的 memo 里（渲染期）调用，渲染期直接通知会触发「渲染中更新其他组件」告警。
+ */
+export function subscribeBrandChanges(subscriber: BrandSubscriber): () => void {
+  brandSubscribers.add(subscriber);
+  return () => {
+    brandSubscribers.delete(subscriber);
+  };
+}
+
+/** 广播品牌配置已变更（BrandProvider 在配置就绪后的 effect 里调用） */
+export function notifyBrandChanges(): void {
+  brandSubscribers.forEach((subscriber) => subscriber());
+}
+
+let brandSnapshotKey = '';
+let brandSnapshot: AppBrandConfig | null = null;
+
+/**
+ * 品牌标题/标语/Logo 快照：配置未变时返回同一引用，可安全交给
+ * `useSyncExternalStore`（getSnapshot 必须在订阅未变时引用稳定）。
+ * 键取三层输入的 JSON——`runtimeBrandOverride` / `runtimeBrandFields` 每次
+ * 渲染都是新对象，只能按值比对；对象很小，直接序列化即可。
+ */
+export function getAppBrandSnapshot(): AppBrandConfig {
+  const key = `${cachedBrandConfig ? '1' : '0'}|${JSON.stringify(
+    runtimeBrandOverride ?? null
+  )}|${JSON.stringify(runtimeBrandFields ?? null)}`;
+  if (brandSnapshot === null || key !== brandSnapshotKey) {
+    brandSnapshot = getAppBrandConfig();
+    brandSnapshotKey = key;
+  }
+  return brandSnapshot;
+}
+
+/** 运行时显式配置的品牌单项值（未配置返回空串） */
+export function getRuntimeBrandField(key: string): string {
+  const value = runtimeBrandFields?.[key];
+  return value ? value : '';
+}
+
 const DEFAULT_BRAND_PROFILE: BrandProfile = {
   copyrightYear: '2026',
   copyrightHolder: 'Chengdu Dreamkaide Technology Co., Ltd.',
@@ -368,6 +417,46 @@ export function getBrandProfile(
       ),
     },
   };
+}
+
+/**
+ * 品牌单项运行时键「留空时生效」的值：剔除该键后，按剩余回落链
+ * （brandProfile 整块 → /brand/config.json → 内置默认值）求值。
+ *
+ * 运行时配置页用它展示品牌与客服项的默认值——这些键的后端 `defaultValue`
+ * 是空串哨兵，真实回落值只存在于前端品牌链里，页面无法从配置接口得到。
+ * `brandProfile` 这类无声明路径的键返回 null（沿用页面原有的展示逻辑）。
+ */
+export function resolveBrandFallbackValue(key: string): string | null {
+  const path = BRAND_FIELD_OVERRIDE_PATHS[key];
+  if (!path) return null;
+
+  const fields = { ...(runtimeBrandFields ?? {}) };
+  delete fields[key];
+  const config = mergeBrandOverrides(
+    cachedBrandConfig,
+    runtimeBrandOverride ?? null,
+    fields
+  );
+  // 标题/标语/Logo 不在 BrandProfile 里（那是法务与客服档案），从合并结果单独取
+  const source: Record<string, unknown> = {
+    title: config.title,
+    logo: config.logo,
+    tagline: config.tagline,
+    ...getBrandProfile(config),
+  };
+
+  let node: unknown = source;
+  for (const segment of path) {
+    node = (node as Record<string, unknown> | undefined)?.[segment];
+  }
+  if (typeof node === 'string' && node) return node;
+
+  // legal.productName 的内置值按语言存放（DEFAULT_LEGAL_PRODUCT_NAMES），
+  // 不落进品牌档案单值，需单独解析
+  return key === 'brandLegalProductName'
+    ? (DEFAULT_LEGAL_PRODUCT_NAMES[DEFAULT_LEGAL_LANGUAGE] ?? null)
+    : null;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,20 @@ import {
   type RegisterFormValues,
 } from './registerFormSchema';
 import { read, erase } from '@/lib/browserStorage';
+import { focusFirstInvalid } from '@/lib/formErrors';
+import { getErrorMessage } from '@/utils/errorHandler';
+
+/** 字段在页面上的实际顺序，校验失败后据此聚焦第一个出错字段 */
+const FIELD_ORDER = [
+  'username',
+  'nickname',
+  'email',
+  'phone',
+  'code',
+  'password',
+  'confirmPassword',
+  'agreedToTerms',
+] as const;
 
 // ──────────────────────────────────────────────
 // Options & return type
@@ -144,28 +158,115 @@ export function useRegisterForm(
   if (formState.errors.agreedToTerms)
     fieldErrors.agreedToTerms = formState.errors.agreedToTerms.message || '';
 
+  // 外部错误（唯一性预检、短信验证码等）要按「写入时的值」判定时效：
+  // 用户改动该字段后才失效，否则错误会在提交校验设置它的那一轮就被误清
+  const valueWhenSetRef = useRef<Record<string, unknown>>({});
+  const writeExternalErrors = useCallback(
+    (updater: React.SetStateAction<Record<string, string>>) => {
+      const values = getValues() as unknown as Record<string, unknown>;
+      setExternalErrors((prev) => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        const snapshot: Record<string, unknown> = {};
+        Object.keys(next).forEach((key) => {
+          snapshot[key] = values[key];
+        });
+        valueWhenSetRef.current = snapshot;
+        return next;
+      });
+    },
+    [getValues]
+  );
+
+  // 用户改动某字段后，该字段的外部错误自动失效——否则「改对了但提示还挂着」，
+  // 用户会以为提交没反应
+  const watchedValues = watch() as unknown as Record<string, unknown>;
+  useEffect(() => {
+    const snapshot = valueWhenSetRef.current;
+    const stale = Object.keys(snapshot).filter(
+      (key) => watchedValues[key] !== snapshot[key]
+    );
+    if (stale.length === 0) return;
+    setExternalErrors((prev) => {
+      if (!Object.keys(prev).some((key) => stale.includes(key))) return prev;
+      const next = { ...prev };
+      stale.forEach((key) => delete next[key]);
+      return next;
+    });
+    const freshSnapshot: Record<string, unknown> = {};
+    Object.keys(snapshot).forEach((key) => {
+      if (!stale.includes(key)) freshSnapshot[key] = snapshot[key];
+    });
+    valueWhenSetRef.current = freshSnapshot;
+  }, [watchedValues, setExternalErrors]);
+
+  // ── 同步校验（无 IO）。提交闸门与内联提示共用实时结果，绝不读上次失败快照 ──
+  // 两步的规则必须分开：step1 闸门若连 step2 的密码规则一起跑，step1 时密码必然
+  // 为空 → errors.password 恒非空 → 「下一步」永远进不去，而密码框在 step1 不渲染，
+  // 用户只会看到点击毫无反应。同理每个字段的门控必须与它实际渲染的步骤一致。
+  const validateStep1Fields = useCallback(
+    (values: RegisterFormValues): Record<string, string> => {
+      const errors: Record<string, string> = {};
+
+      const step1Result = step1Schema.safeParse({
+        username: values.username,
+        nickname: values.nickname || '',
+        email: values.email || '',
+        agreedToTerms: values.agreedToTerms,
+      });
+      if (!step1Result.success) {
+        for (const issue of step1Result.error.issues) {
+          const key = issue.path[0] as string;
+          if (!errors[key]) errors[key] = issue.message || '';
+        }
+      }
+
+      if (mailEnabled && requireEmailVerification && !values.email) {
+        errors.email = t('请输入邮箱');
+      }
+
+      return errors;
+    },
+    [mailEnabled, requireEmailVerification]
+  );
+
+  const validateFormNow = useCallback(
+    (
+      values: RegisterFormValues,
+      phoneForm?: { phone: string; code: string }
+    ): Record<string, string> => {
+      const errors = { ...validateStep1Fields(values) };
+
+      if (phoneForm && smsEnabled && requirePhoneVerification) {
+        if (!phoneForm.phone) {
+          errors.phone = t('请输入手机号');
+        } else if (!/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
+          errors.phone = t('请输入正确的手机号');
+        }
+        if (!phoneForm.code) {
+          errors.code = t('请输入验证码');
+        }
+      }
+
+      const step2Result = step2.safeParse({
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+      });
+      if (!step2Result.success) {
+        for (const issue of step2Result.error.issues) {
+          const key = issue.path[0] as string;
+          if (!errors[key]) errors[key] = issue.message || '';
+        }
+      }
+
+      return errors;
+    },
+    [validateStep1Fields, step2, smsEnabled, requirePhoneVerification]
+  );
+
   // ── Step 1 validation (Zod + async uniqueness) ─
   const validateStep1 = useCallback(async (): Promise<boolean> => {
     const values = getValues();
-
-    const step1Result = step1Schema.safeParse({
-      username: values.username,
-      nickname: values.nickname || '',
-      email: values.email || '',
-      agreedToTerms: values.agreedToTerms,
-    });
-
-    const errors: Record<string, string> = {};
-    if (!step1Result.success) {
-      for (const issue of step1Result.error.issues) {
-        const key = issue.path[0] as string;
-        if (!errors[key]) errors[key] = issue.message || '';
-      }
-    }
-
-    if (mailEnabled && requireEmailVerification && !values.email) {
-      errors.email = t('请输入邮箱');
-    }
+    const errors = validateStep1Fields(values);
 
     if (values.username || values.email) {
       try {
@@ -189,15 +290,9 @@ export function useRegisterForm(
       }
     }
 
-    setExternalErrors(errors);
+    writeExternalErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [
-    getValues,
-    mailEnabled,
-    requireEmailVerification,
-    smsEnabled,
-    requirePhoneVerification,
-  ]);
+  }, [getValues, validateStep1Fields, writeExternalErrors]);
 
   // ── Step navigation ────────────────────────────
   const handleNext = useCallback(
@@ -213,10 +308,10 @@ export function useRegisterForm(
           phoneErrors.code = t('请输入验证码');
         }
         if (Object.keys(phoneErrors).length > 0) {
-          setExternalErrors((prev) => ({ ...prev, ...phoneErrors }));
+          writeExternalErrors((prev) => ({ ...prev, ...phoneErrors }));
           return;
         }
-        setExternalErrors((prev) => {
+        writeExternalErrors((prev) => {
           const next = { ...prev };
           delete next.phone;
           delete next.code;
@@ -233,7 +328,7 @@ export function useRegisterForm(
           type: 'info',
         });
         if (!confirmed) {
-          setExternalErrors((prev) => ({
+          writeExternalErrors((prev) => ({
             ...prev,
             agreedToTerms: t('请先阅读并同意《用户协议》和《隐私政策》'),
           }));
@@ -244,7 +339,7 @@ export function useRegisterForm(
 
       const isValid = await validateStep1();
       if (isValid) {
-        setExternalErrors({});
+        writeExternalErrors({});
         setCurrentStep((prev) => prev + 1);
       }
     },
@@ -255,6 +350,7 @@ export function useRegisterForm(
       showConfirm,
       setValue,
       getValues,
+      writeExternalErrors,
     ]
   );
 
@@ -272,43 +368,12 @@ export function useRegisterForm(
 
       const values = getValues();
 
-      const step2Result = step2.safeParse({
-        password: values.password,
-        confirmPassword: values.confirmPassword,
-      });
-
-      if (!step2Result.success) {
-        const step2Errors: Record<string, string> = {};
-        for (const issue of step2Result.error.issues) {
-          const key = issue.path[0] as string;
-          if (!step2Errors[key]) step2Errors[key] = issue.message || '';
-        }
-        setExternalErrors(step2Errors);
-        const labels: Record<string, string> = {
-          password: t('密码'),
-          confirmPassword: t('确认密码'),
-        };
-        const errorFields = Object.keys(step2Errors).map((k) => labels[k] || k);
-        setError(t(`请修正以下字段：${errorFields.join('、')}`));
-        return;
-      }
-
-      const allRelevantErrors = Object.entries(fieldErrors).filter(
-        ([, v]) => v && v.trim()
-      );
-      if (allRelevantErrors.length > 0) {
-        const labels: Record<string, string> = {
-          username: t('用户名'),
-          password: t('密码'),
-          confirmPassword: t('确认密码'),
-          nickname: t('昵称'),
-          email: t('邮箱'),
-          phone: t('手机号'),
-          code: t('验证码'),
-          agreedToTerms: t('用户协议'),
-        };
-        const errorFields = allRelevantErrors.map(([k]) => labels[k] || k);
-        setError(t(`请修正以下字段：${errorFields.join('、')}`));
+      // 提交闸门 = 本次实时校验结果。失败只走字段内联提示 + 聚焦首个出错字段，
+      // 不再拼「请修正以下字段：X」——那只是把字段名重复一遍，没有可执行信息
+      const errors = validateFormNow(values, currentPhoneForm);
+      if (Object.keys(errors).length > 0) {
+        writeExternalErrors(errors);
+        focusFirstInvalid(errors, FIELD_ORDER);
         return;
       }
 
@@ -379,29 +444,24 @@ export function useRegisterForm(
           }
         }
       } catch (err: unknown) {
-        const axiosError = err as Error & {
-          response?: {
-            data?: { message?: string };
-            status?: number;
-            statusText?: string;
-          };
-        };
+        // 服务端错误保留通栏提示，并带上后端 errors[] 里的字段级原因
+        // （此前只有一句「请求参数验证失败」，用户不知道哪一项没过）
+        const httpStatus =
+          (err as { status?: number; statusCode?: number }).status ??
+          (err as { statusCode?: number }).statusCode;
         setError(
-          axiosError.message ||
-            (axiosError.response?.status === 409
-              ? t('用户名或邮箱已被使用')
-              : axiosError.response?.statusText) ||
-            t('注册失败，请稍后重试')
+          httpStatus === 409
+            ? t('用户名或邮箱已被使用')
+            : getErrorMessage(err) || t('注册失败，请稍后重试')
         );
       } finally {
         setLoading(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       getValues,
-      fieldErrors,
-      step2,
+      validateFormNow,
+      writeExternalErrors,
       mailEnabled,
       requireEmailVerification,
       smsEnabled,
@@ -429,7 +489,7 @@ export function useRegisterForm(
     error,
     setError,
     fieldErrors,
-    setExternalErrors,
+    setExternalErrors: writeExternalErrors,
     handleNext,
     handleBack,
     handleFormSubmit,

@@ -62,6 +62,9 @@ export class MxCADOpenFlow {
     onSuccess: () => void;
     onFail: (error: Error) => void;
   }): void {
+    // 上报一次在途打开：后续无论走 onSuccess 还是 fail（含 60s 超时）都会 notifyOpenTerminated，
+    // 保证 inFlight 严格配对归零。UI 门控据此判定「本次打开是否仍在进行」。
+    this.manager.notifyOpenDispatched();
     // 先取 MxDrawObject（openFileComplete 结果码的唯一来源）：cleanup/fail 闭包引用它，
     // 必须在其声明前完成初始化——若获取表达式抛错且 mxdraw 声明在闭包之后，会触发 TDZ
     // ReferenceError，掩盖真实错误并跳过恢复逻辑
@@ -84,6 +87,7 @@ export class MxCADOpenFlow {
     const onOpen = (iResult: number) => {
       if (iResult !== 0) return;
       cleanup();
+      this.manager.notifyOpenTerminated();
       opts.onSuccess();
     };
     const cleanup = () => {
@@ -92,6 +96,7 @@ export class MxCADOpenFlow {
     };
     const fail = (error: Error) => {
       cleanup();
+      this.manager.notifyOpenTerminated();
       opts.onFail(error);
     };
     if (!mxdraw) {

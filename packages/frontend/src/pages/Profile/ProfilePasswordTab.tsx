@@ -2,14 +2,10 @@ import React from 'react';
 import { Lock, Key, CheckCircle, Shield } from 'lucide-react';
 import { UserDto } from '@/api-sdk';
 import { Input } from '@/components/ui/Input';
+import { PasswordStrength } from '@/components/ui/PasswordStrength';
 import { Button } from '@/components/ui';
 import { t } from '@/languages';
-import {
-  passwordPolicyHint,
-  passwordRequirementLabel,
-  usePasswordPolicy,
-} from '@/lib/passwordPolicy';
-import type { PasswordRequirement } from '@cloudcad/platform';
+import { passwordPlaceholder, usePasswordPolicy } from '@/lib/passwordPolicy';
 import styles from './Profile.module.css';
 
 interface ProfilePasswordTabProps {
@@ -18,10 +14,11 @@ interface ProfilePasswordTabProps {
     oldPassword: string;
     newPassword: string;
     confirmPassword: string;
+    totpCode: string;
   };
+  /** #415 当前用户改密是否需要 TOTP 动态码（服务端算好下发），true 时渲染动态码字段 */
+  passwordChangeRequiresMfa?: boolean;
   focusedField: string | null;
-  passwordStrength: { strength: number; label: string; color: string };
-  passwordRequirements: PasswordRequirement[];
   loading: boolean;
   onPasswordChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPasswordSubmit: (e: React.FormEvent) => void;
@@ -32,9 +29,8 @@ interface ProfilePasswordTabProps {
 export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
   user,
   passwordForm,
+  passwordChangeRequiresMfa,
   focusedField,
-  passwordStrength,
-  passwordRequirements,
   loading,
   onPasswordChange,
   onPasswordSubmit,
@@ -58,6 +54,7 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
               <Input
                 type="password"
                 name="oldPassword"
+                autoComplete="current-password"
                 value={passwordForm.oldPassword}
                 onChange={onPasswordChange}
                 onFocus={() => onFocusField('oldPassword')}
@@ -101,52 +98,30 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
           className={`${styles.inputGroup} ${focusedField === 'newPassword' ? styles.inputGroupFocused : ''}`}
         >
           <label className={styles.inputLabel}>
-            <Key size={14} />
+            <Lock size={14} />
             {t('新密码')}
           </label>
           <div className={styles.inputWrapper}>
             <Input
               type="password"
               name="newPassword"
+              autoComplete="new-password"
               value={passwordForm.newPassword}
               onChange={onPasswordChange}
               onFocus={() => onFocusField('newPassword')}
               onBlur={() => onFocusField(null)}
-              placeholder={passwordPolicyHint(policy)}
+              placeholder={passwordPlaceholder(policy)}
               required
               showPasswordToggle
             />
             <div className={styles.inputGlow} />
           </div>
-          {passwordForm.newPassword && (
-            <div className={styles.passwordStrength}>
-              <div className={styles.strengthBar}>
-                <div
-                  className={styles.strengthFill}
-                  style={{
-                    width: `${(passwordStrength.strength / 4) * 100}%`,
-                    background: passwordStrength.color,
-                  }}
-                />
-              </div>
-              <span
-                className={styles.strengthLabel}
-                style={{ color: passwordStrength.color }}
-              >
-                {passwordStrength.label}
-              </span>
-            </div>
-          )}
-          {passwordForm.newPassword && passwordRequirements.length > 0 && (
-            <ul className={styles.passwordRequirements}>
-              {passwordRequirements.map((requirement) => (
-                <li key={requirement.key} data-ok={requirement.ok}>
-                  <span aria-hidden>{requirement.ok ? '✓' : '·'}</span>
-                  {passwordRequirementLabel(requirement, policy)}
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* 强度条 + 要求清单走共享组件（唯一呈现出口）：清单常显，兼作
+              提交失败时的错误信号 */}
+          <PasswordStrength
+            password={passwordForm.newPassword}
+            policy={policy}
+          />
         </div>
 
         <div
@@ -160,17 +135,45 @@ export const ProfilePasswordTab: React.FC<ProfilePasswordTabProps> = ({
             <Input
               type="password"
               name="confirmPassword"
+              autoComplete="new-password"
               value={passwordForm.confirmPassword}
               onChange={onPasswordChange}
               onFocus={() => onFocusField('confirmPassword')}
               onBlur={() => onFocusField(null)}
-              placeholder={t('再次输入新密码')}
+              placeholder={t('请再次输入新密码')}
               required
               showPasswordToggle
             />
             <div className={styles.inputGlow} />
           </div>
         </div>
+
+        {/* #415 TOTP step-up：仅当服务端判定当前用户改密需动态码时渲染 */}
+        {passwordChangeRequiresMfa && (
+          <div
+            className={`${styles.inputGroup} ${focusedField === 'totpCode' ? styles.inputGroupFocused : ''}`}
+          >
+            <label className={styles.inputLabel}>
+              <Shield size={14} />
+              {t('双因素动态码')}
+            </label>
+            <div className={styles.inputWrapper}>
+              <Input
+                type="text"
+                name="totpCode"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={passwordForm.totpCode}
+                onChange={onPasswordChange}
+                onFocus={() => onFocusField('totpCode')}
+                onBlur={() => onFocusField(null)}
+                placeholder={t('请输入验证器 App 中的 6 位动态码')}
+                required
+              />
+              <div className={styles.inputGlow} />
+            </div>
+          </div>
+        )}
 
         <Button
           type="submit"

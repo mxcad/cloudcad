@@ -566,12 +566,16 @@ describe('UserManagement 操作失败错误提示（回归：mutation 失败必�
       screen.getByPlaceholderText('3-20个字符，只能包含字母、数字和下划线'),
       { target: { value: 'admin' } }
     );
-    fireEvent.change(screen.getByPlaceholderText('请输入邮箱地址'), {
+    // mock 配置 requireEmailVerification=false → 邮箱 placeholder 为「可选」
+    fireEvent.change(screen.getByPlaceholderText('可选，用于接收通知'), {
       target: { value: 'admin@example.com' },
     });
-    // 密码 placeholder 由生效策略（mock 10/3）动态渲染，按前缀匹配不锁死措辞
+    // 完整复杂度要求常显在密码字段下（此前整句塞在 placeholder 里，被单行输入框截断）
+    expect(screen.getByText(/中至少 3 类/)).toBeTruthy();
+    // 密码 placeholder 由生效策略（mock 10/3）动态渲染，按前缀匹配不锁死措辞；
+    // 口令须满足 10/3 策略（前端预检与后端同规则），否则走不到后端重名错误
     fireEvent.change(screen.getByPlaceholderText(/至少 10 位/), {
-      target: { value: 'password123' },
+      target: { value: 'Password123' },
     });
     fireEvent.click(screen.getByRole('button', { name: '创建用户' }));
 

@@ -9,7 +9,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { InteractiveBackground } from '../components/InteractiveBackground';
-import { passwordPolicyHint, usePasswordPolicy } from '@/lib/passwordPolicy';
+import { passwordPlaceholder, usePasswordPolicy } from '@/lib/passwordPolicy';
+import { PasswordStrength } from '@/components/ui/PasswordStrength';
 import {
   makeResetPasswordSchema,
   type ResetPasswordValues,
@@ -83,7 +84,12 @@ export const ResetPassword: React.FC = () => {
     [policy.minLength, policy.minCategories]
   );
 
-  const { register, handleSubmit: rhfSubmit } = useForm<ResetPasswordValues>({
+  const {
+    register,
+    handleSubmit: rhfSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetSchema),
     defaultValues: {
       code: '',
@@ -91,6 +97,9 @@ export const ResetPassword: React.FC = () => {
       confirmPassword: '',
     },
   });
+
+  // 强度条 + 要求清单（共享组件）需要实时密码值
+  const newPasswordValue = watch('newPassword');
 
   if (!hasIdentity) return null;
 
@@ -232,10 +241,16 @@ export const ResetPassword: React.FC = () => {
                   maxLength={6}
                   className={styles.inputField}
                   placeholder={t('请输入6位验证码')}
+                  aria-invalid={!!errors.code}
                   {...register('code')}
                 />
                 <div className={styles.inputGlow} />
               </div>
+              {errors.code && (
+                <p className={styles.fieldError} role="alert">
+                  {errors.code.message}
+                </p>
+              )}
             </div>
 
             <div className={styles.inputGroup}>
@@ -249,19 +264,30 @@ export const ResetPassword: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   className={styles.inputField}
-                  placeholder={passwordPolicyHint(policy)}
+                  placeholder={passwordPlaceholder(policy)}
+                  aria-invalid={!!errors.newPassword}
                   {...register('newPassword')}
                 />
                 <Button
                   type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="absolute right-4"
+                  variant="icon"
+                  size="xs"
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
                   icon={showPassword ? EyeOff : Eye}
+                  tooltip={showPassword ? t('隐藏密码') : t('显示密码')}
                   onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
                 />
                 <div className={styles.inputGlow} />
               </div>
+              {/* 强度条 + 要求清单走共享组件（唯一呈现出口）：清单常显，兼作
+                  提交失败时的错误信号；字段级错误另在下方内联提示 */}
+              <PasswordStrength password={newPasswordValue} policy={policy} />
+              {errors.newPassword && (
+                <p className={styles.fieldError} role="alert">
+                  {errors.newPassword.message}
+                </p>
+              )}
             </div>
 
             <div className={styles.inputGroup}>
@@ -269,25 +295,33 @@ export const ResetPassword: React.FC = () => {
                 {t('确认新密码')}
               </label>
               <div className={styles.inputWrapper}>
-                <Lock size={18} className={styles.inputIcon} />
+                <CheckCircle size={18} className={styles.inputIcon} />
                 <input
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   className={styles.inputField}
                   placeholder={t('请再次输入新密码')}
+                  aria-invalid={!!errors.confirmPassword}
                   {...register('confirmPassword')}
                 />
                 <Button
                   type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="absolute right-4"
+                  variant="icon"
+                  size="xs"
+                  className="absolute right-4 top-1/2 -translate-y-1/2"
                   icon={showConfirmPassword ? EyeOff : Eye}
+                  tooltip={showConfirmPassword ? t('隐藏密码') : t('显示密码')}
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  tabIndex={-1}
                 />
                 <div className={styles.inputGlow} />
               </div>
+              {errors.confirmPassword && (
+                <p className={styles.fieldError} role="alert">
+                  {errors.confirmPassword.message}
+                </p>
+              )}
             </div>
 
             <Button

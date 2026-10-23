@@ -25,6 +25,12 @@ export type PublicRuntimeConfig = {
   brandTagline: string;
   /** Logo URL（favicon + 认证页 Logo）；留空回落品牌档案整块 logo → config.json → 内置默认 */
   brandLogo: string;
+  /**
+   * CAD 编辑器标题栏标题（编辑器 ini 的 title/headerTitle）。
+   * 刻意独立于 brandTitle：那是平台品牌名（页签 + 认证页），改它不应带动编辑器文案。
+   * 留空时使用编辑器 ini 自带的值。
+   */
+  brandEditorTitle: string;
   /** 版权行模板（{year}/{appName} 占位符）；留空回落品牌档案整块 copyrightLine → config.json → 内置默认 */
   brandCopyrightLine: string;
   /** 版权年份（版权行 {year} 取值）；留空回落品牌档案整块 copyrightYear → config.json → 内置默认 */
@@ -77,6 +83,7 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   brandSubtitle: '',
   brandTagline: '',
   brandLogo: '',
+  brandEditorTitle: '',
   brandCopyrightLine: '',
   brandCopyrightYear: '',
   brandCopyrightHolder: '',
@@ -89,7 +96,7 @@ const DEFAULT_CONFIG: PublicRuntimeConfig = {
   collaborationEnabled: true,
   collaborationDomains: '',
   batchDownloadEnabled: false,
-  freeExportDownloadEnabled: false,
+  freeExportDownloadEnabled: true,
   membershipEnabled: true,
   userCancelGraceDays: 7,
   securityMode: 'normal',
@@ -143,6 +150,8 @@ function mapPublicConfig(
     brandSubtitle: String(data.brandSubtitle ?? ''),
     brandTagline: String(data.brandTagline ?? ''),
     brandLogo: String(data.brandLogo ?? ''),
+    // 编辑器专属标题面：缺键（旧后端未上线）回落空串 = 使用编辑器 ini 自带值
+    brandEditorTitle: String(data.brandEditorTitle ?? ''),
     brandCopyrightLine: String(data.brandCopyrightLine ?? ''),
     brandCopyrightYear: String(data.brandCopyrightYear ?? ''),
     brandCopyrightHolder: String(data.brandCopyrightHolder ?? ''),
@@ -155,7 +164,10 @@ function mapPublicConfig(
     collaborationEnabled: Boolean(data.collaborationEnabled ?? true),
     collaborationDomains: String(data.collaborationDomains ?? ''),
     batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? false),
-    freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? false),
+    // 缺键回落开启（同 membershipEnabled）：配置拉取结果缺键不能把免费导出静默关掉
+    freeExportDownloadEnabled: Boolean(
+      data.freeExportDownloadEnabled ?? true
+    ),
     // 缺键（旧后端未上线此键）回落开启：配置拉取结果缺键不能把会员中心整块藏掉
     membershipEnabled: Boolean(data.membershipEnabled ?? true),
     userCancelGraceDays: Number(data.userCancelGraceDays ?? 7),

@@ -40,35 +40,11 @@ export function usePasswordPolicy(): PasswordPolicyParams {
 }
 
 /**
- * 口令要求提示（placeholder / 安全建议清单用），由生效策略值推导。
- * minCategories：0 = 不要求类别构成；≥4 = 四类全要。
+ * 输入框 placeholder：单行输入框装不下完整策略句（10/3 时 26 字会被截断），
+ * 只放最小长度要求；完整要求由清单（passwordRequirementLabel）与错误文案承载。
  */
-export function passwordPolicyHint({
-  minLength,
-  minCategories,
-}: PasswordPolicyParams): string {
-  if (minLength > 0 && minCategories >= 4) {
-    return t('至少 {min} 位，需包含大小写字母、数字、特殊字符', {
-      min: String(minLength),
-    });
-  }
-  if (minLength > 0) {
-    return minCategories > 0
-      ? t('至少 {min} 位，需包含大小写字母、数字、特殊字符中至少 {cats} 类', {
-          min: String(minLength),
-          cats: String(minCategories),
-        })
-      : t('至少 {min} 位', { min: String(minLength) });
-  }
-  if (minCategories >= 4) {
-    return t('需包含大小写字母、数字、特殊字符');
-  }
-  if (minCategories > 0) {
-    return t('需包含大小写字母、数字、特殊字符中至少 {cats} 类', {
-      cats: String(minCategories),
-    });
-  }
-  return t('无密码复杂度要求');
+export function passwordPlaceholder({ minLength }: PasswordPolicyParams): string {
+  return minLength > 0 ? passwordLengthLabel(minLength) : t('请输入密码');
 }
 
 /** 清单标签：最小长度要求（实时校验清单用）。 */
@@ -83,7 +59,7 @@ export function passwordTooShortMessage(minLength: number): string {
 
 /** 错误文案：类别构成不足（对齐后端 password_policy.complexity 语义）。 */
 export function passwordComplexityMessage(minCategories: number): string {
-  return t('密码需包含大小写字母、数字、特殊字符中至少 {cats} 类', {
+  return t('密码需包含大写字母、小写字母、数字、特殊字符中至少 {cats} 类', {
     cats: String(minCategories),
   });
 }

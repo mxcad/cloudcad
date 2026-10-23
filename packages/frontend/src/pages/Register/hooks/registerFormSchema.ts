@@ -52,10 +52,10 @@ export function makeStep2Schema(policy: PasswordPolicyParams) {
             path: ['password'],
           }
         ),
-      confirmPassword: z.string().min(1, t('请再次输入密码')),
+      confirmPassword: z.string().min(1, t('请再次输入新密码')),
     })
     .refine((data) => data.password === data.confirmPassword, {
-      message: t('两次输入的密码不一致'),
+      message: t('两次输入的新密码不一致'),
       path: ['confirmPassword'],
     });
 }
@@ -70,11 +70,13 @@ export function makeRegisterFormSchema(policy: PasswordPolicyParams) {
       nickname: step1Schema.shape.nickname,
       email: step1Schema.shape.email,
       password: makeStep2Schema(policy).shape.password,
-      confirmPassword: z.string(),
+      // 与 makeStep2Schema 对齐：留空的确认密码要说「请再次输入」，
+      // 而不是被下方的不一致 refine 抢先报「两次输入的密码不一致」
+      confirmPassword: makeStep2Schema(policy).shape.confirmPassword,
       agreedToTerms: step1Schema.shape.agreedToTerms,
     })
     .refine((data) => data.password === data.confirmPassword, {
-      message: t('两次输入的密码不一致'),
+      message: t('两次输入的新密码不一致'),
       path: ['confirmPassword'],
     });
 }

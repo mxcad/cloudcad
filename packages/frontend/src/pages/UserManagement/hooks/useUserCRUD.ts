@@ -14,6 +14,7 @@ import {
 } from '@/api-sdk';
 import type { UpdateUserDto, CreateUserDto } from '@/api-sdk';
 import { t } from '@/languages';
+import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 
 const USERS_KEY = ['users'] as const;
 const ROLES_KEY = ['roles'] as const;
@@ -32,6 +33,9 @@ export interface UserSearchParams {
 
 export function useUserCRUD(params?: UserSearchParams) {
   const queryClient = useQueryClient();
+  // 通道开关取运行时配置真实值（/runtime-config/public 下发），
+  // 供用户表格邮箱/手机列显隐；此前硬编码 false 致邮箱列恒隐藏
+  const { config: runtimeConfig } = useRuntimeConfig();
 
   const {
     data: usersResult,
@@ -160,8 +164,9 @@ export function useUserCRUD(params?: UserSearchParams) {
       isSystem: r.isSystem,
       permissions: r.permissions || [],
     })),
-    mailEnabled: false,
-    smsEnabled: false,
+    mailEnabled: runtimeConfig.mailEnabled,
+    smsEnabled: runtimeConfig.smsEnabled,
+    requireEmailVerification: runtimeConfig.requireEmailVerification,
     cleanupStats,
     createUser: async (data: CreateUserDto) => {
       await createMutation.mutateAsync(data);

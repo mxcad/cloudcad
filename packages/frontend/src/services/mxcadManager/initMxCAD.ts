@@ -1,5 +1,62 @@
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { read } from '@/lib/browserStorage';
+import {
+  getAppBrandSnapshot,
+  getRuntimeBrandField,
+} from '@/constants/appConfig';
+
+const UI_CONFIG_PATH = 'ini/myUiConfig.json';
+
+let cachedUiConfig: { brandKey: string; url: string } | null = null;
+
+/**
+ * CAD 编辑器自身的 chrome（标题栏标题 + 标题栏 Logo）取自静态
+ * `ini/myUiConfig.json`，不经过运行时配置。这里读出后按当前品牌就地覆写，
+ * 交给引擎一个 blob URL：
+ *   - `title` / `headerTitle`：只由**编辑器专属**的 `brandEditorTitle` 驱动，
+ *     留空保持 ini 自带值。刻意不跟随 `brandTitle`（平台品牌名，用于页签
+ *     与认证页）——两个产品面互不牵连，改平台名不应改编辑器标题栏文案。
+ *   - `logoImg`：始终跟随品牌 Logo 链（`brandLogo`）——留空时该链回落到与 ini
+ *     同值的内置默认 Logo，故无回归。
+ * 取文件失败时退回静态 URL，编辑器功能不受品牌配置影响。
+ */
+async function resolveUiConfigUrl(configUrl: string): Promise<string> {
+  const staticUrl = `${configUrl}/${UI_CONFIG_PATH}`;
+  const brand = getAppBrandSnapshot();
+  const editorTitle = getRuntimeBrandField('brandEditorTitle');
+  const brandKey = `${brand.logo}|${editorTitle}`;
+
+  if (cachedUiConfig && cachedUiConfig.brandKey === brandKey) {
+    return cachedUiConfig.url;
+  }
+
+  let url = staticUrl;
+  try {
+    // eslint-disable-next-line no-restricted-globals -- 豁免：静态编辑器配置 /ini/myUiConfig.json（非后端 API，ADR-0034 豁免清单）
+    const res = await fetch(staticUrl);
+    if (res.ok) {
+      const uiConfig = (await res.json()) as Record<string, unknown>;
+      if (editorTitle) {
+        if (typeof uiConfig.title === 'string') uiConfig.title = editorTitle;
+        if (typeof uiConfig.headerTitle === 'string') {
+          uiConfig.headerTitle = editorTitle;
+        }
+      }
+      if (typeof uiConfig.logoImg === 'string') uiConfig.logoImg = brand.logo;
+      url = URL.createObjectURL(
+        new Blob([JSON.stringify(uiConfig)], { type: 'application/json' })
+      );
+    }
+  } catch (error) {
+    console.warn('[MxCAD] 读取编辑器 UI 配置失败，使用静态配置:', error);
+  }
+
+  if (cachedUiConfig && cachedUiConfig.url !== staticUrl) {
+    URL.revokeObjectURL(cachedUiConfig.url);
+  }
+  cachedUiConfig = { brandKey, url };
+  return url;
+}
 
 let isThemeSyncInitialized = false;
 
@@ -55,7 +112,7 @@ export async function initMxCADConfig(currentFile?: {
   // 整个 mxcad-app 目录 = npm 包 dist 原样，可整体覆盖更新
   mxcadApp.setStaticAssetPath('/mxcad-app/mxcadAppAssets/');
   mxcadApp.initConfig({
-    uiConfig: `${configUrl}/ini/myUiConfig.json`,
+    uiConfig: await resolveUiConfigUrl(configUrl),
     sketchesUiConfig: `${configUrl}/ini/mySketchesAndNotesUiConfig.json`,
     serverConfig: `${configUrl}/ini/myServerConfig.json`,
     quickCommandConfig: `${configUrl}/ini/myQuickCommand.json`,

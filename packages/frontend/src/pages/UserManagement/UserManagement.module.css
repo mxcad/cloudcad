@@ -561,7 +561,11 @@
   box-shadow: 0 0 0 3px var(--error-dim);
 }
 
+/* inline-flex：密码字段 label 内带锁图标（与 Profile 页 label 图标模式一致） */
 .form-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-md);
   font-weight: 500;
   color: var(--text-secondary);
@@ -575,6 +579,11 @@
   font-weight: 400;
   color: var(--text-muted);
   font-size: var(--text-base);
+}
+
+.field-hint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
 .form-select {

@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { useEffect, useRef } from 'react';
-import { getAppName } from '../constants/appConfig';
+import { useAppBrand } from './useAppBrand';
 
 /**
  * 设置页面标题的 Hook
@@ -28,13 +28,15 @@ import { getAppName } from '../constants/appConfig';
 export function useDocumentTitle(title: string, skip = false): void {
   const previousTitle = useRef<string>(document.title);
 
+  // 品牌标题走响应式出口：改完运行时 `brandTitle` 后页签标题要跟着变。
+  // 原实现只读模块级缓存 `getAppName()` 且不在依赖里，管理端改品牌后
+  // 页签标题（含常驻的 CAD 编辑器）会一直停留旧值直到整页刷新。
+  const appName = useAppBrand().title;
+
   useEffect(() => {
     if (skip) {
       return;
     }
-
-    const appName = getAppName();
-
     // 保存当前标题
     previousTitle.current = document.title;
 
@@ -49,5 +51,5 @@ export function useDocumentTitle(title: string, skip = false): void {
     return () => {
       document.title = previousTitle.current;
     };
-  }, [title, skip]);
+  }, [title, skip, appName]);
 }

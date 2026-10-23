@@ -40,6 +40,8 @@ export type { CheckboxProps } from './Checkbox';
 
 export { Input } from './Input';
 export type { InputProps } from './Input';
+export { PasswordStrength } from './PasswordStrength';
+export type { PasswordStrengthProps } from './PasswordStrength';
 export { DatePicker } from './DatePicker';
 export type { DatePickerProps } from './DatePicker';
 export { Textarea } from './Textarea';
