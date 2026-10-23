@@ -264,3 +264,58 @@ profile 应用改变。
 3. **Gitea API 的 `labels` 参数要重复传整数**，逗号拼接报
    `[Labels]: Value could not be parsed as integer`。标签 ID：
    `58`=ready-for-agent、`63`=wayfinder:task、`68`=line-a、`70`=line-b。
+
+---
+
+## 七、2026-10-23 拍板：两管理员安全开关改「建议」+ 改密 step-up 双因素
+
+> 用户裁定，推翻 T11 目标表对 `mfaEnforceEnabled` / `passwordPolicyChangeEnforceEnabled`
+> 的「secure 强制开」取值（见 `security-mode-dual-profile-plan.md` §四 两行）。
+
+### 裁定一：两开关从「安全模式强制开」改为「建议开、默认关、切模式重置为关」
+
+**原语义**（T11 目标表）：两键 profile 取 `{ secure: true, normal: false }`——
+切到安全模式即**强制**开启：未绑定 TOTP 的管理员被锁到绑定页、口令到期/首登未改密
+的管理员被锁到改密入口。
+
+**新语义**（2026-10-23 用户裁定）：
+- **切安全模式不自动开启**（安全模式仅**建议**、不强制），两键 profile 目标值改为
+  `{ secure: false, normal: false }`——**两种模式基线都是关**。
+- **切普通模式一定关闭**：切换模式会把管理员手动打开的值**重置为关**（沿用 R1「覆盖」
+  语义，profile 应用把目标值 false 写到该 key 上）。
+- 需管理员**手动开启**才生效。
+- 「建议」的承载：`mfaEnforceEnabled` 靠配置项 `impact` 文案（「安全模式仅建议、不强制，
+  需手动开启」）；`passwordPolicyChangeEnforceEnabled` 的「建议」由**口令更换周期**
+  （`passwordPolicyChangeIntervalDays` 保持 `{ secure: 180, normal: 0 }`）的软提示承载，
+  不依赖本开关。
+
+**理由**：强制开启对用户体验太差——管理员会被锁到绑定/改密页，本地部署与测试场景尤甚。
+改为「建议 + 手动开启」后，安全模式不再替管理员做「必须双因素 / 必须定期改密」的决定，
+等保 8.1.4.1(d) 的双因素要求由管理员按部署需要自行开启。
+
+**连带改动**：
+- `runtime-config.service.spec.ts` 的「两个 profile 目标值必须不同」不变式对这两键开例外
+  （`sameValueAllowed` 集合），因它们现在 secure/normal 同为 false。
+- 配置页「建议开启」提示由后端 `impact` 文案承载（显示在每个开关行），**不另加**模式条件
+  徽标——RuntimeConfigPage 组件树处于并发会话修改中，重复徽标的边际价值不值得冲突风险。
+
+### 裁定二：管理员开启 TOTP 后，修改密码也须 step-up 双因素
+
+**问题**：TOTP 只守「登录」这一步，不守「账号控制」这一步。攻击者拿到密码 + 有效会话后，
+可在无 TOTP 的情况下改密，永久接管账号。
+
+**裁定**：当 `mfaEnforceEnabled=true` 且当前用户是 ADMIN 且已绑定 TOTP 时，
+`changePassword` 必须额外校验一个**新鲜的 TOTP 动态码**（step-up 认证）。
+
+**落地**：
+- 后端 `UserPasswordService.changePassword` 在 `assertPasswordPolicy` 前插入 step-up 校验
+  （`mfaEnforceEnabled && isAdminRole && totpEnabled` → 缺码/错码 401）。`MfaService` 经
+  `AuthModule`（global）导出、跨模块注入（复用 `PasswordPolicyService` 既有先例，免循环依赖）。
+- `ChangePasswordDto` 增 `totpCode?`（可选，仅上述情形必填）；controller/service 透传。
+- 前端信号：`mfaEnforceEnabled` 是 `isPublic: false`，前端读不到，故由
+  `auth-facade.getProfileWithMembership` 服务端计算 `passwordChangeRequiresMfa`
+  （ADMIN 且 `mfaEnforceEnabled && totpEnabled`）随 profile 下发；改密表单据此条件渲染
+  TOTP 动态码字段（复用登录页既有 i18n 键 7679/7677/7680，零新键）。
+- SDK 重生成：`totpCode` / `passwordChangeRequiresMfa` 入 `types.gen.ts`。
+
+**门禁**：backend type-check 0 错、相关 5 spec 215 例绿；frontend type-check 0 错。

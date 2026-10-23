@@ -10,6 +10,7 @@ import { PasswordService } from '../services/password.service';
 import { AuthTokenService } from '../services/auth-token.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { InitializationService } from '../../services/initialization.service';
+import { PasswordPolicyService } from '../../services/password-policy.service';
 
 /** 微信头像 CDN 地址：落库后在 COEP 页面下前端直连必被拦，故只能作为落盘输入 */
 const WECHAT_AVATAR_URL =
@@ -71,6 +72,11 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
   // 首启守卫替身：默认透传（await undefined 直接继续），不改变既有测试行为
   const mockInitializationService = {
     assertInitialized: jest.fn(),
+  };
+
+  // 口令策略替身：默认放行，个别用例改为抛错以验证注册路径的拦截
+  const mockPasswordPolicyService = {
+    assertPasswordPolicy: jest.fn(),
   };
 
   const noopService = {
@@ -135,6 +141,10 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
           provide: InitializationService,
           useValue: mockInitializationService,
         },
+        {
+          provide: PasswordPolicyService,
+          useValue: mockPasswordPolicyService,
+        },
       ],
     }).compile();
     return module.get<OssAuthProvider>(OssAuthProvider);
@@ -156,6 +166,8 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
     });
     mockAccountRateLimitService.checkLimit.mockResolvedValue(undefined);
     mockAccountRateLimitService.reset.mockResolvedValue(undefined);
+    // resetMocks 会清掉实现：口令策略默认放行
+    mockPasswordPolicyService.assertPasswordPolicy.mockResolvedValue(undefined);
     // 微信启用 + 允许注册 + 自动注册；不强制邮箱/手机绑定
     mockRuntimeConfigService.getValue.mockImplementation(
       async (key: string) => {
@@ -265,5 +277,138 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
     expect(result.user.password).toBeUndefined();
     expect(result.user.id).toBe('user-1');
     expect(result.user.status).toBe('ACTIVE');
+  });
+});
+
+// 回归：手机号注册 / 邮箱验证后注册两条路径此前完全跳过口令策略校验，
+// DTO 的 @MinLength(8) 是唯一的长度闸门 → 等保档下 9 字符纯字母口令被直接建成用户。
+// 现由 PasswordPolicyService 统一把关，DTO 只保留结构性校验。
+describe('OssAuthProvider 注册路径的口令策略校验', () => {
+  let service: OssAuthProvider;
+
+  const mockUserRepo = {
+    create: jest.fn(),
+    findByPhone: jest.fn(),
+    findByUsername: jest.fn(),
+    findByEmail: jest.fn(),
+  };
+
+  const mockAuthTokenService = {
+    generateTokens: jest
+      .fn()
+      .mockResolvedValue({ accessToken: 'at', refreshToken: 'rt' }),
+  };
+
+  const mockAccountRateLimitService = {
+    checkLimit: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockPasswordPolicyService = {
+    assertPasswordPolicy: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const noopService = {
+    verifyCode: jest.fn().mockResolvedValue({ valid: true, message: '' }),
+    verifyEmail: jest.fn().mockResolvedValue({ valid: true, message: '' }),
+  };
+
+  async function compileModule() {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        OssAuthProvider,
+        { provide: USER_REPOSITORY, useValue: mockUserRepo },
+        { provide: ROLE_REPOSITORY, useValue: { findByName: jest.fn() } },
+        { provide: JwtService, useValue: { sign: jest.fn() } },
+        { provide: ConfigService, useValue: { get: jest.fn(() => 'jwt-secret') } },
+        { provide: 'SMS', useValue: noopService },
+        { provide: 'EMAIL', useValue: noopService },
+        { provide: WechatService, useValue: {} },
+        {
+          provide: 'CONFIG',
+          useValue: {
+            getValue: jest.fn(async (key: string) =>
+              key === 'smsEnabled' ||
+              key === 'requirePhoneVerification' ||
+              key === 'allowRegister'
+                ? true
+                : false
+            ),
+          },
+        },
+        { provide: 'USER_SERVICE', useValue: mockUserRepo },
+        { provide: RegistrationService, useValue: noopService },
+        { provide: LoginService, useValue: noopService },
+        { provide: PasswordService, useValue: noopService },
+        { provide: AuthTokenService, useValue: mockAuthTokenService },
+        { provide: AccountRateLimitService, useValue: mockAccountRateLimitService },
+        { provide: InitializationService, useValue: { assertInitialized: jest.fn() } },
+        { provide: PasswordPolicyService, useValue: mockPasswordPolicyService },
+      ],
+    }).compile();
+    return module.get<OssAuthProvider>(OssAuthProvider);
+  }
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    service = await compileModule();
+    // resetMocks 会清掉实现：默认验证码/邮箱验证均通过、口令策略放行
+    noopService.verifyCode.mockResolvedValue({ valid: true, message: '' });
+    noopService.verifyEmail.mockResolvedValue({ valid: true, message: '' });
+    mockPasswordPolicyService.assertPasswordPolicy.mockResolvedValue(undefined);
+  });
+
+  it('registerByPhone：弱口令被拒，且不建用户、不消耗短信验证码', async () => {
+    mockPasswordPolicyService.assertPasswordPolicy.mockRejectedValue(
+      new Error('密码长度至少 10 位')
+    );
+
+    await expect(
+      service.registerByPhone({
+        phone: '13800000000',
+        code: '123456',
+        username: 'newuser',
+        password: 'aaaaaaa',
+      } as never)
+    ).rejects.toThrow('密码长度至少 10 位');
+
+    expect(mockUserRepo.create).not.toHaveBeenCalled();
+    expect(noopService.verifyCode).not.toHaveBeenCalled();
+  });
+
+  it('registerByPhone：策略放行后照常建用户', async () => {
+    mockUserRepo.create.mockResolvedValue({ id: 'user-9' });
+
+    await expect(
+      service.registerByPhone({
+        phone: '13800000000',
+        code: '123456',
+        username: 'newuser',
+        password: 'Password123!',
+      } as never)
+    ).resolves.toBeDefined();
+
+    expect(mockPasswordPolicyService.assertPasswordPolicy).toHaveBeenCalledWith(
+      'Password123!'
+    );
+    expect(mockUserRepo.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('verifyEmailAndRegisterPhone：弱口令被拒，且不建用户、不消耗验证码', async () => {
+    mockPasswordPolicyService.assertPasswordPolicy.mockRejectedValue(
+      new Error('密码过于简单')
+    );
+
+    await expect(
+      service.verifyEmailAndRegisterPhone('a@example.com', '111111', {
+        phone: '13800000000',
+        code: '123456',
+        username: 'newuser',
+        password: 'aaa',
+      })
+    ).rejects.toThrow('密码过于简单');
+
+    expect(mockUserRepo.create).not.toHaveBeenCalled();
+    expect(noopService.verifyEmail).not.toHaveBeenCalled();
+    expect(noopService.verifyCode).not.toHaveBeenCalled();
   });
 });

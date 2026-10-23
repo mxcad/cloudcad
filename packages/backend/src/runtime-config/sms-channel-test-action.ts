@@ -52,8 +52,12 @@ export class SmsChannelTestAction implements ChannelTestAction {
 
     switch (provider) {
       case 'mock':
+        // simulated：未接触任何外部系统，永不满足通道开启门禁——
+        // smsProvider 出厂默认 mock 且是所有短信键里唯一必填项，若把这类
+        // 结论当门禁证据，smsEnabled 可在完全没配短信服务的情况下被开启。
         return {
           ok: true,
+          verdict: 'simulated',
           message: 'Mock 模式（开发测试）：未接真实短信服务，视为通过',
         };
       case 'aliyun':
@@ -61,7 +65,11 @@ export class SmsChannelTestAction implements ChannelTestAction {
       case 'tencent':
         return this.testTencent(ctx);
       default:
-        return { ok: false, message: `未知短信服务商：${provider}` };
+        return {
+          ok: false,
+          message: `未知短信服务商：${provider}`,
+          problemKeys: ['smsProvider'],
+        };
     }
   }
 
@@ -84,6 +92,7 @@ export class SmsChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: `阿里云凭据不完整（缺失：${missing.join('、')}）`,
+        problemKeys: missing,
       };
     }
 
@@ -102,6 +111,8 @@ export class SmsChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: `阿里云凭据探测失败：${this.describeError(error)}`,
+        // 探测接口无业务参数，失败即 AK/SK 无效
+        problemKeys: ['aliyunSmsAccessKeyId', 'aliyunSmsAccessKeySecret'],
       };
     }
 
@@ -109,6 +120,7 @@ export class SmsChannelTestAction implements ChannelTestAction {
     if (!to) {
       return {
         ok: true,
+        verdict: 'probe',
         message: '阿里云短信凭据探测通过（QuerySmsSignList，未发送短信）',
       };
     }
@@ -121,6 +133,7 @@ export class SmsChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: `真实发送需配置签名与模板（缺失：${missingSend.join('、')}）`,
+        problemKeys: missingSend,
       };
     }
 
@@ -139,13 +152,20 @@ export class SmsChannelTestAction implements ChannelTestAction {
         return {
           ok: false,
           message: `测试短信发送失败：${result.body?.message ?? '未知错误'}`,
+          // 凭据已探测通过，发送失败多为签名/模板未审核通过
+          problemKeys: ['aliyunSmsSignName', 'aliyunSmsTemplateCode'],
         };
       }
-      return { ok: true, message: `凭据探测通过，测试短信已发送至 ${to}` };
+      return {
+        ok: true,
+        verdict: 'end-to-end',
+        message: `凭据探测通过，测试短信已发送至 ${to}`,
+      };
     } catch (error) {
       return {
         ok: false,
         message: `测试短信发送失败：${this.describeError(error)}`,
+        problemKeys: ['aliyunSmsSignName', 'aliyunSmsTemplateCode'],
       };
     }
   }
@@ -171,6 +191,7 @@ export class SmsChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: `腾讯云凭据不完整（缺失：${missing.join('、')}）`,
+        problemKeys: missing,
       };
     }
 
@@ -194,6 +215,8 @@ export class SmsChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: `腾讯云凭据探测失败：${this.describeError(error)}`,
+        // 探测接口无业务参数，失败即 SecretId/Key 无效
+        problemKeys: ['tencentSmsSecretId', 'tencentSmsSecretKey'],
       };
     }
 
@@ -201,6 +224,7 @@ export class SmsChannelTestAction implements ChannelTestAction {
     if (!to) {
       return {
         ok: true,
+        verdict: 'probe',
         message: '腾讯云短信凭据探测通过（DescribeSmsSignList，未发送短信）',
       };
     }
@@ -214,6 +238,7 @@ export class SmsChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: `真实发送需配置 AppID、签名与模板（缺失：${missingSend.join('、')}）`,
+        problemKeys: missingSend,
       };
     }
 
@@ -232,13 +257,20 @@ export class SmsChannelTestAction implements ChannelTestAction {
         return {
           ok: false,
           message: `测试短信发送失败：${status?.Message ?? '未知错误'}`,
+          // 凭据已探测通过，发送失败多为 AppID/签名/模板未审核通过
+          problemKeys: ['tencentSmsAppId', 'tencentSmsSignName', 'tencentSmsTemplateCode'],
         };
       }
-      return { ok: true, message: `凭据探测通过，测试短信已发送至 ${to}` };
+      return {
+        ok: true,
+        verdict: 'end-to-end',
+        message: `凭据探测通过，测试短信已发送至 ${to}`,
+      };
     } catch (error) {
       return {
         ok: false,
         message: `测试短信发送失败：${this.describeError(error)}`,
+        problemKeys: ['tencentSmsAppId', 'tencentSmsSignName', 'tencentSmsTemplateCode'],
       };
     }
   }

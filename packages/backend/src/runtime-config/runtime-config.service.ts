@@ -34,6 +34,8 @@ import {
   RuntimeProfileApplyResult,
   ConfigDependencyViolation,
   ChannelStatus,
+  isGateSatisfyingVerdict,
+  fromChannelVerdictColumn,
 } from './runtime-config.types';
 import {
   getDependencyEdges,
@@ -411,7 +413,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       isPublic: config.isPublic,
       updatedBy: config.updatedBy,
       updatedAt: config.updatedAt,
-      ...this.enrichFromDefinition(def, config, value, source),
+      ...this.enrichFromDefinition(def, value, source),
     };
   }
 
@@ -453,6 +455,18 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 通道开启门禁（ADR-0082 D4）：通道开关置 true 须「配置完整 + 通道测试通过」
     if (def.channelSwitch && value === true) {
       await this.assertChannelGate(def);
+    }
+
+    // 把值改回出厂默认、且该键没有 env 层注入时，等价于「恢复默认」：清掉显式修改
+    // 标记，而不是写一条与出厂值相同的冗余行。否则那行会永久遮蔽 env 层，审计日志
+    // 也会记成「把一个没变的值又写了一遍」。env 层有值时不能短路——写库压住 env 正是
+    // 「显式覆盖部署期配置」的唯一通道，砍掉它会让用户在页面改完、刷新后又弹回 env 值。
+    // 必须在两道门禁之后判断：改回默认值本身也可能触发门禁拒绝（如把受管开关改回关闭态）。
+    if (
+      this.resolveEnvLayer(def) === undefined &&
+      JSON.stringify(value) === JSON.stringify(def.defaultValue)
+    ) {
+      return this.resetToDefault(key, operatorId, operatorIp);
     }
 
     // 获取旧值用于日志
@@ -670,11 +684,14 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         where: { channel },
       })) ?? null;
 
+    const verdict = fromChannelVerdictColumn(verification?.verdict);
+
     return {
       channel,
       configComplete: missingKeys.length === 0,
       missingKeys,
-      verified: verification != null,
+      verified: isGateSatisfyingVerdict(verdict),
+      verdict,
       verifiedAt: verification?.verifiedAt ?? null,
       testedBy: verification?.testedBy ?? null,
     };
@@ -702,9 +719,13 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
 
   /**
    * 通道开启门禁（ADR-0082 D4，硬阻断、无绕过）：通道开关置 `true` 须该通道
-   * 「配置完整 + 通道测试通过」。通道没验证过，开关就开不了——这是把「开关翻了
-   * 等于没翻」从根上堵住的机制。通道日后坏了由既有「连续失败升级 P0 告警」兜住，
-   * 管理员改配置重测即热生效，开启时不需要后门。
+   * 「配置完整 + 验证结论强度足够」。通道没验证过，开关就开不了——这是把「开关
+   * 翻了等于没翻」从根上堵住的机制。通道日后坏了由既有「连续失败升级 P0 告警」
+   * 兜住，管理员改配置重测即热生效，开启时不需要后门。
+   *
+   * 判定走 `status.verified` 一处：它即「结论强度 ∈ {probe, end-to-end}」
+   * （见 {@link isGateSatisfyingVerdict}），mock 模式（simulated）永不满足——
+   * 那类结论未接触任何外部系统，采信它等于用「什么都没配」证明「可以开启」。
    */
   private async assertChannelGate(def: RuntimeConfigDefinition): Promise<void> {
     const channel = def.channelSwitch;
@@ -721,7 +742,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       reasons.push(`配置不完整（缺失：${status.missingKeys.join('、')}）`);
     }
     if (!status.verified) {
-      reasons.push('未通过通道测试');
+      reasons.push(
+        status.verdict === 'simulated'
+          ? '最近一次验证为模拟模式（mock），未接触真实服务，不满足开启门禁'
+          : '未通过通道测试'
+      );
     }
     throw new BadRequestException(
       I18nContext.current()?.t('error.config_extra.channel_gate_not_met', {
@@ -924,7 +949,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         isPublic: config.isPublic,
         updatedBy: config.updatedBy,
         updatedAt: config.updatedAt,
-        ...this.enrichFromDefinition(def, config, value, source),
+        ...this.enrichFromDefinition(def, value, source),
       };
     });
   }
@@ -934,7 +959,6 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
    */
   private enrichFromDefinition(
     def: RuntimeConfigDefinition | undefined,
-    row: { value: string; updatedBy: string | null },
     effectiveValue: RuntimeConfigValue,
     source: ConfigValueSource
   ): Pick<
@@ -948,7 +972,6 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     | 'input'
     | 'impact'
     | 'dangerous'
-    | 'hot'
     | 'requires'
     | 'channel'
     | 'channelSwitch'
@@ -956,10 +979,14 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     const envValue = this.resolveEnvLayer(def);
 
     const defaultValue = def?.defaultValue;
+    // 「已修改」= 生效值偏离出厂默认值，不区分是谁写的（用户显式改过，还是部署期
+    // env 注入）。归属信息走 source 字段——两者回答不同问题：这个标签决定
+    // 「这一项要不要动」，source 决定「动了、或恢复默认后会归谁管」。
+    // 若按 `updatedBy` 判定，把值改回出厂默认值时会永远显示「已修改」，
+    // 因为清标记只能走 resetToDefault。
     const isModified =
-      row.updatedBy != null ||
-      (defaultValue !== undefined &&
-        JSON.stringify(effectiveValue) !== JSON.stringify(defaultValue));
+      defaultValue !== undefined &&
+      JSON.stringify(effectiveValue) !== JSON.stringify(defaultValue);
 
     return {
       defaultValue,
@@ -972,7 +999,6 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       input: def?.input,
       impact: def?.impact,
       dangerous: def?.dangerous ?? false,
-      hot: def?.hot ?? true,
       requires: def?.requires,
       channel: def?.channel,
       channelSwitch: def?.channelSwitch,
@@ -1101,6 +1127,9 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
    * `willChange` 与实际应用的 `applied` 必须完全一致——这是本机制最主要的失效方式
    * （运维按预览的「将改动项」做过决策，点应用后行为却不同）。为此预览与应用共用
    * `buildProfilePlan`，而不是各自实现一份判定。
+   *
+   * `isModified` 与列表页（`enrichFromDefinition`）共用同一口径：生效值是否偏离出厂
+   * 默认值。两处口径一旦分叉，模式切换弹窗的高亮项就会和列表页对不上。
    */
   async previewProfileApply(
     profile: string
@@ -1120,7 +1149,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
         source,
         targetValue: entry.targetValue,
         willChange: entry.willChange,
-        isModified: row?.updatedBy != null,
+        isModified:
+          def.defaultValue !== undefined
+            ? JSON.stringify(currentValue) !==
+              JSON.stringify(def.defaultValue)
+            : false,
         envValue: this.resolveEnvLayer(def) ?? null,
       };
     });

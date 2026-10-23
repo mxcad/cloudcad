@@ -138,8 +138,6 @@ export interface RuntimeConfigDefinition {
   impact?: string;
   /** 危险项：改动需二次确认 */
   dangerous?: boolean;
-  /** 改动是否即时生效；`false` 表示需刷新页面或重启服务才完全生效 */
-  hot?: boolean;
   /** 底层 env 变量名：作为部署期默认值层，优先于代码默认值、次于运行时配置 */
   envKey?: string;
   /**
@@ -258,8 +256,6 @@ export interface RuntimeConfigItem {
   impact?: string;
   /** 危险项标记 */
   dangerous?: boolean;
-  /** 即时生效标记 */
-  hot?: boolean;
   /** 开关依赖声明（依赖的 key 列表，见 RuntimeConfigDefinition.requires） */
   requires?: string[];
   /** 通道配置项标记（见 RuntimeConfigDefinition.channel） */
@@ -294,7 +290,9 @@ export interface RuntimeConfigHistoryEntry {
 
 /**
  * 通道状态（ADR-0082 D4）：配置完整度 + 验证记录。
- * 通道开关只有在 `configComplete && verified` 时才允许开启。
+ * 通道开关只有在 `configComplete && verified` 时才允许开启——`verified` 即
+ * 「存在结论强度足以作为门禁证据的验证记录」（见 {@link isGateSatisfyingVerdict}），
+ * 因此该字段同时是 UI 提示与门禁判定的同一事实，不存在两处各判一次的分歧。
  */
 export interface ChannelStatus {
   /** 通道名（与定义表 `channel` 标记、测试动作注册名一致） */
@@ -303,11 +301,19 @@ export interface ChannelStatus {
   configComplete: boolean;
   /** 缺失（生效值为空）的必填配置键 */
   missingKeys: string[];
-  /** 是否存在有效的验证记录（测试通过后写入，配置变更即删除） */
+  /**
+   * 验证结论是否足以作为开启门禁的证据。`false` 覆盖三种情形：无验证记录、
+   * 最近一次验证为 `simulated`（mock 模式）、或结论值未知（旧版写入的记录）。
+   */
   verified: boolean;
-  /** 最近一次测试通过时间 */
+  /**
+   * 最近一次验证的结论强度（无记录为 `null`）。供操作员分辨「只探测了连接」
+   * 与「端到端真发确认过」；`simulated` 不满足门禁，故此时 `verified` 为 `false`。
+   */
+  verdict: string | null;
+  /** 最近一次验证通过时间 */
   verifiedAt: Date | null;
-  /** 最近一次测试操作者 */
+  /** 最近一次验证操作者 */
   testedBy: string | null;
 }
 
@@ -322,11 +328,91 @@ export interface ChannelTestContext {
   recipient?: string;
 }
 
+/**
+ * 通道验证动作对外的单次请求超时（毫秒）。
+ *
+ * 验证发生在管理端点上、同步等操作员响应，任何一个无界的出站请求都是「点一次
+ * 验证把管理页挂死」的缺陷。此前 payment / webhook 各自内联 `AbortSignal.timeout(10000)`、
+ * mail 与 wechat 完全没有超时——同一策略四种写法，收敛为这一个事实。
+ */
+export const CHANNEL_TEST_REQUEST_TIMEOUT_MS = 10000;
+
+/** 数据库侧的验证结论强度枚举值 */
+export type ChannelVerdictColumn = 'PROBE' | 'END_TO_END' | 'SIMULATED';
+
+/**
+ * 通道验证结论强度（ADR-0082 D4 修订）。
+ *
+ * 旧接口只有 `ok: boolean`——mock 模式通过、EHLO-only 探测通过、端到端真发
+ * 通过，三种强度完全不同的事实被压成同一个 bit、写进同一条验证记录，门禁于
+ * 是从无区分「真的验过」与「什么都没接触就报通过」。
+ */
+export type ChannelVerdict = 'probe' | 'end-to-end' | 'simulated';
+
+/**
+ * 满足通道开启门禁的验证结论（ADR-0082 D4 修订，硬阻断、无绕过）。
+ * - `probe`：无副作用探测通过（SMTP verify / 服务商查询 API / gettoken /
+ *   签名往返）。探测测不到的（MAIL FROM 被拒、SPF/DKIM、发信配额、收件人
+ *   有效性）由「连续失败升级 P0 告警」兜住，故接受探测为最低充分证据；
+ * - `end-to-end`：真实发送或读写往返确认通过，强于探测；
+ * - `simulated`（mock 模式）**永不满足**：未接触任何外部系统，把它当门禁证据
+ *   等于用「什么都没配」证明「可以开启」。
+ */
+export const GATE_SATISFYING_VERDICTS: readonly ChannelVerdict[] = [
+  'probe',
+  'end-to-end',
+];
+
+/** 该验证结论是否足以作为通道开启门禁的证据（`null` = 无验证记录） */
+export function isGateSatisfyingVerdict(
+  verdict: string | null | undefined
+): boolean {
+  if (verdict === null || verdict === undefined) {
+    return false;
+  }
+  return GATE_SATISFYING_VERDICTS.includes(verdict as ChannelVerdict);
+}
+
+/** 通道验证结论强度 → 数据库枚举值 */
+export const CHANNEL_VERDICT_COLUMNS: Record<
+  ChannelVerdict,
+  ChannelVerdictColumn
+> = {
+  probe: 'PROBE',
+  'end-to-end': 'END_TO_END',
+  simulated: 'SIMULATED',
+};
+
+/** 数据库枚举值 → 通道验证结论强度 */
+export function fromChannelVerdictColumn(
+  column: ChannelVerdictColumn | null | undefined
+): ChannelVerdict | null {
+  if (!column) {
+    return null;
+  }
+  for (const [verdict, value] of Object.entries(CHANNEL_VERDICT_COLUMNS)) {
+    if (value === column) {
+      return verdict as ChannelVerdict;
+    }
+  }
+  return null;
+}
+
 /** 通道测试动作结果 */
 export interface ChannelTestResult {
   ok: boolean;
+  /**
+   * 成功时的验证结论强度（`ok: false` 时缺省）。动作必须如实声明自己做到了哪
+   * 一步——这是门禁判定的唯一依据，机制层不做推断。
+   */
+  verdict?: ChannelVerdict;
   /** 成功说明或失败原因（面向操作员） */
   message: string;
+  /**
+   * 失败时疑似出错的配置键（各动作按错误类型判定，如微信 40013 → wechatAppId）。
+   * 前端据此把失败原因翻译成「可点击定位的配置项」；无法定位时缺省/空数组。
+   */
+  problemKeys?: string[];
 }
 
 /**

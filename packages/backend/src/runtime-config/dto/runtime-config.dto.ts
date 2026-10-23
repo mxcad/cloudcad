@@ -196,12 +196,6 @@ export class RuntimeConfigResponseDto {
   dangerous?: boolean;
 
   @ApiPropertyOptional({
-    description: '改动是否即时生效',
-    example: true,
-  })
-  hot?: boolean;
-
-  @ApiPropertyOptional({
     description: '开关依赖声明：本项为 true 时列出的配置项必须同为 true',
     type: [String],
     example: ['mailEnabled'],
@@ -275,9 +269,6 @@ export class RuntimeConfigDefinitionDto {
 
   @ApiPropertyOptional({ description: '危险项标记' })
   dangerous?: boolean;
-
-  @ApiPropertyOptional({ description: '即时生效标记' })
-  hot?: boolean;
 
   @ApiPropertyOptional({
     description: '底层 env 变量名（部署期默认值层）',
@@ -440,20 +431,30 @@ export class ChannelStatusDto {
   missingKeys: string[];
 
   @ApiProperty({
-    description: '是否存在有效的验证记录（测试通过后写入，配置变更即删除）',
+    description:
+      '验证结论是否足以作为开启门禁的证据。false 覆盖：无验证记录、最近一次为模拟模式（mock）、或结论值未知（旧版记录）',
     example: true,
   })
   verified: boolean;
 
   @ApiPropertyOptional({
-    description: '最近一次测试通过时间',
+    description:
+      '最近一次验证的结论强度（无记录为 null）。probe = 无副作用探测；end-to-end = 真实发送/往返确认；simulated = mock 模式，永不满足开启门禁',
+    enum: ['probe', 'end-to-end', 'simulated'],
+    example: 'probe',
+    nullable: true,
+  })
+  verdict: string | null;
+
+  @ApiPropertyOptional({
+    description: '最近一次验证通过时间',
     example: '2026-10-22T08:00:00.000Z',
     nullable: true,
   })
   verifiedAt: Date | null;
 
   @ApiPropertyOptional({
-    description: '最近一次测试操作者 ID',
+    description: '最近一次验证操作者 ID',
     nullable: true,
   })
   testedBy: string | null;
@@ -464,7 +465,8 @@ export class ChannelStatusDto {
  */
 export class TestChannelDto {
   @ApiPropertyOptional({
-    description: '测试发信收件人（缺省由通道动作自行决定，如 supportEmail）',
+    description:
+      '测试接收方（语义随通道而定：邮件 = 收件人，短信 = 手机号；微信 / 支付 / Webhook 的测试动作不读取该字段）。留空只做无副作用探测；填写才额外做端到端发送',
     example: 'admin@example.com',
   })
   @IsOptional()
@@ -483,9 +485,25 @@ export class ChannelTestResultDto {
   @ApiProperty({ description: '测试是否通过', example: true })
   ok: boolean;
 
+  @ApiPropertyOptional({
+    description:
+      '成功时的验证结论强度：probe = 无副作用探测；end-to-end = 真实发送/往返确认；simulated = mock 模式（未接触任何外部系统，永不满足通道开启门禁）。失败时缺省',
+    enum: ['probe', 'end-to-end', 'simulated'],
+    example: 'probe',
+  })
+  verdict?: string;
+
   @ApiProperty({
     description: '成功说明或失败原因（面向操作员）',
     example: '测试邮件已发送至 admin@example.com',
   })
   message: string;
+
+  @ApiPropertyOptional({
+    description:
+      '失败时疑似出错的配置键（按错误类型判定，如微信 40013 → wechatAppId）；前端据此定位到对应配置项，无法定位时缺省',
+    type: [String],
+    example: ['wechatAppId'],
+  })
+  problemKeys?: string[];
 }

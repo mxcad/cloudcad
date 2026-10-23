@@ -331,16 +331,31 @@ model RuntimeConfigLog {
   @@map("runtime_config_logs")
 }
 
+/// 通道验证结论强度（ADR-0082 D4 修订）：
+/// PROBE = 无副作用探测通过；END_TO_END = 真实发送/往返确认通过；
+/// SIMULATED = mock 模式，未接触任何外部系统，永不满足开启门禁。
+enum ChannelVerdict {
+  PROBE
+  END_TO_END
+  SIMULATED
+}
+
 /// 通道验证记录（ADR-0082 D4）：通道开关须「配置完整 + 通道测试通过」才可开启；
 /// 该通道任一配置项变更即删除记录（比配置哈希更简单可靠）。
 /// testedBy 为测试操作者用户 ID（与 runtime_config_logs.operatorId 同口径，不设外键）
+///
+/// verdict 记录测试动作如实声明的结论强度——旧实现把「什么都没接触就报通过」
+/// （mock）与真实探测、端到端真发压成同一个 `ok` bit，三者写同一条记录、被开启
+/// 门禁同等采信。默认 PROBE：早于本列的存量记录按「探测通过」采信，等价于升级前
+/// 既有行为，升级不阻断已验证部署；通道配置一变记录即删除，存量记录自然过期。
 model ChannelVerification {
-  id         String   @id @default(cuid())
-  channel    String   @unique
-  verifiedAt DateTime @default(now())
+  id         String         @id @default(cuid())
+  channel    String         @unique
+  verifiedAt DateTime       @default(now())
   testedBy   String
   testedByIp String?
-  createdAt  DateTime @default(now())
+  verdict    ChannelVerdict @default(PROBE)
+  createdAt  DateTime       @default(now())
 
   @@map("channel_verifications")
 }

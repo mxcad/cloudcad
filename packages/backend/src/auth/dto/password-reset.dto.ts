@@ -15,7 +15,6 @@ import {
   IsEmail,
   IsNotEmpty,
   IsString,
-  MinLength,
   Validate,
   IsOptional,
   IsMobilePhone,
@@ -70,7 +69,6 @@ export class ResetPasswordDto {
 
   @ApiProperty({ description: '新密码', example: 'NewPassword123!' })
   @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
-  @MinLength(6, { message: () => I18nContext.current()?.t('validation.password_min_length_6') ?? '密码至少 6 个字符' })
   @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
   newPassword: string;
 
@@ -109,9 +107,19 @@ export class ChangePasswordDto {
 
   @ApiProperty({ description: '新密码', example: 'NewPassword123!' })
   @IsString({ message: () => I18nContext.current()?.t('validation.new_password_must_be_string') ?? '新密码必须是字符串' })
-  @MinLength(6, { message: () => I18nContext.current()?.t('validation.new_password_min_length') ?? '新密码至少 6 个字符' })
   @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.new_password_required') ?? '新密码不能为空' })
   newPassword: string;
+
+  // TOTP step-up（#415）：管理员开启双因素总闸且已绑定时，改密须额外提供动态码，
+  // 防止「持有密码 + 有效会话」绕过第二因子改密永久接管账号。是否必填由服务端按
+  // 运行时状态判定（mfaEnforceEnabled && 管理员 && totpEnabled），DTO 层仅做可选字符串校验。
+  @ApiPropertyOptional({
+    description: 'TOTP 动态码（管理员开启双因素且已绑定时必填，其余情况可留空）',
+    example: '123456',
+  })
+  @IsString({ message: '动态码必须是字符串' })
+  @IsOptional()
+  totpCode?: string;
 }
 
 export class ForgotPasswordResponseDto {

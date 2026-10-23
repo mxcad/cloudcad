@@ -52,16 +52,17 @@ export class RegisterDto {
   })
   username: string;
 
+  // 最小长度不在 DTO 写死：口令策略（长度/复杂度/弱口令）统一由
+  // PasswordPolicyService.assertPasswordPolicy 按运行时配置校验，
+  // DTO 只留结构性校验（类型/非空/上限），避免硬编码与配置双轨漂移
   @ApiProperty({
     type: String,
     description: '密码',
     example: 'password123',
-    minLength: 8,
     maxLength: 50,
   })
   @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
   @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
-  @MinLength(8, { message: () => I18nContext.current()?.t('validation.password_min_length') ?? '密码至少8个字符' })
   @MaxLength(50, { message: () => I18nContext.current()?.t('validation.password_max_length') ?? '密码最多50个字符' })
   password: string;
 

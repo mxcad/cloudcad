@@ -44,23 +44,25 @@ describe("ChannelTestService", () => {
 		getValue: jest.fn(),
 	};
 
-	const completeStatus: ChannelStatus = {
-		channel: "testChannel",
-		configComplete: true,
-		missingKeys: [],
-		verified: false,
-		verifiedAt: null,
-		testedBy: null,
-	};
+		const completeStatus: ChannelStatus = {
+			channel: "testChannel",
+			configComplete: true,
+			missingKeys: [],
+			verified: false,
+			verdict: null,
+			verifiedAt: null,
+			testedBy: null,
+		};
 
-	const incompleteStatus: ChannelStatus = {
-		channel: "testChannel",
-		configComplete: false,
-		missingKeys: ["testChannelHost", "testChannelPassword"],
-		verified: false,
-		verifiedAt: null,
-		testedBy: null,
-	};
+		const incompleteStatus: ChannelStatus = {
+			channel: "testChannel",
+			configComplete: false,
+			missingKeys: ["testChannelHost", "testChannelPassword"],
+			verified: false,
+			verdict: null,
+			verifiedAt: null,
+			testedBy: null,
+		};
 
 	const action: ChannelTestAction = {
 		channel: "testChannel",
@@ -147,11 +149,13 @@ describe("ChannelTestService", () => {
 					verifiedAt: expect.any(Date),
 					testedBy: "op-1",
 					testedByIp: "127.0.0.1",
+					verdict: "PROBE",
 				},
 				create: {
 					channel: "testChannel",
 					testedBy: "op-1",
 					testedByIp: "127.0.0.1",
+					verdict: "PROBE",
 				},
 			});
 			expect(auditMock.audit).toHaveBeenCalledWith(
@@ -161,6 +165,27 @@ describe("ChannelTestService", () => {
 					userId: "op-1",
 				})
 			);
+		});
+
+		// 结论强度如实落库：动作声明什么就存什么，机制层不推断、不静默降格
+		it.each([
+			["end-to-end", "END_TO_END"],
+			["simulated", "SIMULATED"],
+		])("动作声明 verdict=%s → 以 %s 落库", async (verdict, column) => {
+			mockRuntimeConfig.getChannelStatus.mockResolvedValue(completeStatus);
+			(action.test as jest.Mock).mockResolvedValue({
+				ok: true,
+				message: "ok",
+				verdict,
+			});
+
+			await service.testChannel("testChannel", undefined, "op-1");
+
+			expect(mockPrisma.channelVerification.upsert).toHaveBeenCalledWith({
+				where: { channel: "testChannel" },
+				update: expect.objectContaining({ verdict: column }),
+				create: expect.objectContaining({ verdict: column }),
+			});
 		});
 
 		it("测试失败 → 不写验证记录，仍入审计（success=false）", async () => {
@@ -204,6 +229,10 @@ describe("ChannelTestService", () => {
 			expect(result.ok).toBe(false);
 			expect(result.message).toContain("testChannelHost");
 			expect(result.message).toContain("testChannelPassword");
+			expect(result.problemKeys).toEqual([
+				"testChannelHost",
+				"testChannelPassword",
+			]);
 			expect(action.test).not.toHaveBeenCalled();
 			expect(mockPrisma.channelVerification.upsert).not.toHaveBeenCalled();
 			expect(auditMock.audit).toHaveBeenCalledWith(

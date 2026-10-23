@@ -55,6 +55,7 @@ describe('WechatChannelTestAction（ADR-0082 #503）', () => {
     expect(result.ok).toBe(false);
     expect(result.message).toContain('wechatAppId');
     expect(result.message).toContain('wechatAppSecret');
+    expect(result.problemKeys).toEqual(['wechatAppId', 'wechatAppSecret']);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -68,6 +69,8 @@ describe('WechatChannelTestAction（ADR-0082 #503）', () => {
 
     expect(result.ok).toBe(true);
     expect(result.message).toContain('探测通过');
+    // gettoken 是凭据探测，没有向任何人发消息
+    expect(result.verdict).toBe('probe');
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toContain('grant_type=client_credential');
     expect(url).toContain('appid=wx_test');
@@ -85,14 +88,21 @@ describe('WechatChannelTestAction（ADR-0082 #503）', () => {
 
       expect(result.ok).toBe(true);
       expect(result.message).toContain(String(errcode));
+      // 接口未授权也证明凭据有效 → 仍是探测强度
+      expect(result.verdict).toBe('probe');
     }
   });
 
-  it('errcode 40013/40125/40001（凭据无效）→ 失败', async () => {
-    for (const [errcode, errmsg] of [
-      [40013, 'invalid appid'],
-      [40125, 'invalid appsecret'],
-      [40001, 'invalid grant_type'],
+  it('errcode 40013/40125/40001（凭据无效）→ 失败并附中文原因提示与出错配置键', async () => {
+    for (const [errcode, errmsg, hint, keys] of [
+      [40013, 'invalid appid', 'AppID 不正确', ['wechatAppId']],
+      [40125, 'invalid appsecret', 'AppSecret 不正确', ['wechatAppSecret']],
+      [
+        40001,
+        'invalid grant_type',
+        '尚未开通接口',
+        ['wechatAppId', 'wechatAppSecret'],
+      ],
     ]) {
       mockFetchJson({ errcode, errmsg });
 
@@ -100,10 +110,12 @@ describe('WechatChannelTestAction（ADR-0082 #503）', () => {
 
       expect(result.ok).toBe(false);
       expect(result.message).toContain(String(errcode));
+      expect(result.message).toContain(hint);
+      expect(result.problemKeys).toEqual(keys);
     }
   });
 
-  it('未知 errcode → 失败并带 errmsg', async () => {
+  it('未知 errcode → 失败并带 errmsg，无法归因到具体配置键', async () => {
     mockFetchJson({ errcode: 50012, errmsg: 'daily api limit reached' });
 
     const result = await action.test(makeCtx());
@@ -111,6 +123,7 @@ describe('WechatChannelTestAction（ADR-0082 #503）', () => {
     expect(result.ok).toBe(false);
     expect(result.message).toContain('50012');
     expect(result.message).toContain('daily api limit reached');
+    expect(result.problemKeys).toBeUndefined();
   });
 
   it('网络异常 → 失败', async () => {

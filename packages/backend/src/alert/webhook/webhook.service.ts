@@ -3,6 +3,7 @@ import { Prisma as PrismaRuntime } from '@cloudcad/db';
 import { ClsService } from 'nestjs-cls';
 import { RuntimeConfigService } from '../../runtime-config/runtime-config.service';
 import { buildOutboundTraceHeaders } from '../../common/utils/outbound-trace';
+import { escapeJsonText, renderTemplate } from '@cloudcad/contracts';
 import { AlertLevel } from '../enums/alert.enum';
 
 export interface WebhookAlertInput {
@@ -97,24 +98,17 @@ export class WebhookService {
    */
   render(input: WebhookAlertInput, template: string): string {
     const replacements: Record<string, string> = {
-      message: this.escapeJsonText(input.message),
-      level: this.escapeJsonText(input.level),
-      source: this.escapeJsonText(input.source),
-      timestamp: this.escapeJsonText(
+      message: escapeJsonText(input.message),
+      level: escapeJsonText(input.level),
+      source: escapeJsonText(input.source),
+      timestamp: escapeJsonText(
         (input.timestamp ?? new Date()).toISOString()
       ),
       detail:
         input.detail === undefined
           ? ''
-          : this.escapeJsonText(JSON.stringify(input.detail)),
+          : escapeJsonText(JSON.stringify(input.detail)),
     };
-    return template.replace(
-      /\{\{(\w+)\}\}/g,
-      (match, key: string) => replacements[key] ?? match
-    );
-  }
-
-  private escapeJsonText(value: string): string {
-    return JSON.stringify(value).slice(1, -1);
+    return renderTemplate(template, replacements);
   }
 }

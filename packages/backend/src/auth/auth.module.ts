@@ -177,6 +177,8 @@ export class AuthModule {
         // #416 口令策略：UsersModule（UserCrudService/UserPasswordService）跨模块注入，
         // AuthModule 为 global 模块，导出后全局可见，无需 UsersModule 反向 import（避免循环依赖）
         PasswordPolicyService,
+        // #415 TOTP：UserPasswordService 改密 step-up 校验跨模块注入（同上，global 导出免循环依赖）
+        MfaService,
         SmsModule,
         WechatModule,
       ],

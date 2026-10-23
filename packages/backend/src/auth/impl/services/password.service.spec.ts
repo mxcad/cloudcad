@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { PasswordService } from './password.service';
 import { AuthTokenService } from './auth-token.service';
+import { EmailService } from '../../../notification/email.service';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
 import { USER_REPOSITORY } from '@cloudcad/contracts';
@@ -19,6 +20,10 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
   const mockEmailVerificationService = {
     sendVerificationEmail: jest.fn(),
     verifyEmail: jest.fn(),
+  };
+
+  const mockEmailService = {
+    sendPasswordResetNotRegisteredEmail: jest.fn(),
   };
 
   const mockSmsVerificationService = {
@@ -61,6 +66,7 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
     });
     mockAccountRateLimitService.checkLimit.mockResolvedValue(undefined);
     mockEmailVerificationService.sendVerificationEmail.mockResolvedValue(undefined);
+    mockEmailService.sendPasswordResetNotRegisteredEmail.mockResolvedValue(undefined);
     mockSmsVerificationService.sendVerificationCode.mockResolvedValue({ success: true });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,6 +74,7 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
         PasswordService,
         { provide: USER_REPOSITORY, useValue: mockUserRepo },
         { provide: 'EMAIL', useValue: mockEmailVerificationService },
+        { provide: EmailService, useValue: mockEmailService },
         { provide: 'SMS', useValue: mockSmsVerificationService },
         { provide: 'CONFIG', useValue: mockRuntimeConfigService },
         { provide: AuthTokenService, useValue: mockAuthTokenService },
@@ -96,19 +103,39 @@ describe('PasswordService（认证加固：防账号枚举 + 限流）', () => {
       expect(result.mailEnabled).toBe(true);
     });
 
-    it('账号不存在：不发送验证码，但返回相同的成功消息（防枚举）', async () => {
+    it('账号不存在：不发送验证码，改发账号不存在通知，仍返回相同的成功消息（防枚举）', async () => {
       mockUserRepo.findByEmail.mockResolvedValue(null);
 
       const result = await service.forgotPassword('ghost@example.com');
 
       expect(mockEmailVerificationService.sendVerificationEmail).not.toHaveBeenCalled();
+      expect(mockEmailService.sendPasswordResetNotRegisteredEmail).toHaveBeenCalledWith(
+        'ghost@example.com',
+        { productName: 'CloudCAD', supportEmail: '', supportPhone: '' },
+      );
       expect(result.message).toBe('密码重置验证码已发送到您的邮箱');
     });
 
-    it('账号已禁用：不发送验证码，但返回相同的成功消息（防枚举）', async () => {
+    it('账号已禁用：走与「不存在」完全相同的分支，防止按状态区分反成枚举信号', async () => {
       mockUserRepo.findByEmail.mockResolvedValue({ id: 'u2', status: 'SUSPENDED' });
 
       const result = await service.forgotPassword('disabled@example.com');
+
+      expect(mockEmailVerificationService.sendVerificationEmail).not.toHaveBeenCalled();
+      expect(mockEmailService.sendPasswordResetNotRegisteredEmail).toHaveBeenCalledWith(
+        'disabled@example.com',
+        { productName: 'CloudCAD', supportEmail: '', supportPhone: '' },
+      );
+      expect(result.message).toBe('密码重置验证码已发送到您的邮箱');
+    });
+
+    it('通知邮件发送失败：吞掉异常，响应仍与真实发送一致（不因 500 分叉成枚举信号）', async () => {
+      mockUserRepo.findByEmail.mockResolvedValue(null);
+      mockEmailService.sendPasswordResetNotRegisteredEmail.mockRejectedValue(
+        new Error('smtp down')
+      );
+
+      const result = await service.forgotPassword('ghost@example.com');
 
       expect(mockEmailVerificationService.sendVerificationEmail).not.toHaveBeenCalled();
       expect(result.message).toBe('密码重置验证码已发送到您的邮箱');

@@ -35,6 +35,8 @@ export interface ICreatedUser {
   updatedAt?: Date;
   /** #416 口令最后修改时间（null=初始管理员首登未改密） */
   passwordChangedAt?: Date | null;
+  /** #415 是否已启用 TOTP 双因素（仅管理员有意义，普通用户恒 false） */
+  totpEnabled?: boolean;
 }
 
 /** 用户详情（包含 hasPassword 标志） */

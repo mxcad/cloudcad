@@ -14,10 +14,7 @@ import { DatabaseService } from "../database/database.service";
 import { RUNTIME_CONFIG_DEFINITIONS } from "./runtime-config.constants";
 import { RuntimeConfigService } from "./runtime-config.service";
 import { ChannelCryptoService } from "./channel-crypto.service";
-import {
-	getDependencyEdges,
-	findDependencyCycles,
-} from "./runtime-config.dependency";
+import { validateDefinitions } from "./runtime-config.invariants";
 import type { RuntimeConfigDefinition } from "./runtime-config.types";
 
 describe("RuntimeConfigService", () => {
@@ -283,7 +280,6 @@ describe("RuntimeConfigService", () => {
 			expect(item.defaultValue).toBe(false);
 			expect(item.tier).toBe("user");
 			expect(item.dangerous).toBe(true);
-			expect(item.hot).toBe(true);
 			expect(item.impact).toContain("邮件");
 		});
 	});
@@ -343,6 +339,136 @@ describe("RuntimeConfigService", () => {
 			await service.set("allowRegister", false);
 
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("改回出厂默认值且无 env 层 → 清 updatedBy，不写冗余行", async () => {
+			// 「切 true 保存 → 再切回出厂值 true」这条路径的第二步：DB 行还挂着旧值，
+			// 用户视角是「本质没改」。若照旧写 updatedBy，该行会永久遮蔽 env 层，
+			// 且「已修改」标记只能靠 resetToDefault 才能清掉。
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue({
+				value: JSON.stringify(false),
+				updatedBy: "user-1",
+			});
+			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			await service.set("allowRegister", true, "admin", "192.168.1.1");
+
+			// 关键不变式：updatedBy 必须归零而非带上操作者 id
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledWith({
+				where: { key: "allowRegister" },
+				update: { value: JSON.stringify(true), updatedBy: null },
+				create: expect.objectContaining({
+					key: "allowRegister",
+					value: JSON.stringify(true),
+					updatedBy: null,
+				}),
+			});
+			expect(mockRedis.del).toHaveBeenCalled();
+		});
+
+		it("env 层有值时不短路：写库压住 env 是显式覆盖部署期配置的唯一通道", async () => {
+			delete process.env.AUDIT_RETENTION_DAYS;
+			delete process.env.AUDIT_LOG_RETENTION_DAYS;
+			process.env.AUDIT_RETENTION_DAYS = "183";
+
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
+
+			// 提交值恰好等于出厂默认值，但 env 也设了同值——仍须写库，
+			// 否则用户改完刷新页面又会弹回 env 值
+			await service.set("auditRetentionDays", 183, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledWith(
+				expect.objectContaining({
+					update: expect.objectContaining({ updatedBy: "admin" }),
+				}),
+			);
+
+			delete process.env.AUDIT_RETENTION_DAYS;
+		});
+	});
+
+	// ==================== 已修改标记口径 ====================
+	describe("isModified 口径", () => {
+		beforeEach(() => {
+			delete process.env.AUDIT_RETENTION_DAYS;
+			delete process.env.AUDIT_LOG_RETENTION_DAYS;
+		});
+
+		afterEach(() => {
+			delete process.env.AUDIT_RETENTION_DAYS;
+			delete process.env.AUDIT_LOG_RETENTION_DAYS;
+		});
+
+		it("已修改 = 生效值偏离出厂值，不看 updatedBy", async () => {
+			// allowRegister：值已等于出厂默认 true，但历史上被写过（updatedBy 挂着）
+			// → 不标记。按 updatedBy 判的话，用户把值切回出厂值后标记永远清不掉。
+			// auditRetentionDays：从未被改过（updatedBy 为空），但 env 注入了偏离
+			// 出厂值 183 的值 → 标记，来源归 env。
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "allowRegister",
+					value: JSON.stringify(true),
+					type: "boolean",
+					updatedBy: "user-1",
+					updatedAt: new Date(),
+				},
+				{
+					key: "auditRetentionDays",
+					value: JSON.stringify(90),
+					type: "number",
+					updatedBy: null,
+					updatedAt: new Date(),
+				},
+			]);
+			process.env.AUDIT_RETENTION_DAYS = "365";
+
+			const result = await service.getAllConfigs();
+			const backToDefault = result.find((c) => c.key === "allowRegister");
+			const envDriven = result.find((c) => c.key === "auditRetentionDays");
+
+			expect(backToDefault?.value).toBe(true);
+			expect(backToDefault?.isModified).toBe(false);
+			expect(envDriven?.value).toBe(365);
+			expect(envDriven?.isModified).toBe(true);
+			expect(envDriven?.source).toBe("env");
+			expect(envDriven?.envValue).toBe(365);
+		});
+
+		it("profile 预览与列表页共用同一口径", async () => {
+			// 真实定义表的 allowRegister 未声明 profiles，注入一个声明了 profiles
+			// 的同名测试定义，只验证 isModified 判据、不验证 profile 值本身
+			jest
+				.spyOn(
+					service as unknown as { getProfileDefinitions: () => unknown },
+					"getProfileDefinitions",
+				)
+				.mockReturnValue([
+					{
+						key: "allowRegister",
+						type: "boolean",
+						category: "account",
+						description: "测试用键",
+						defaultValue: true,
+						isPublic: true,
+						profiles: { normal: true, secure: false },
+					},
+				]);
+
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				{
+					key: "allowRegister",
+					value: JSON.stringify(true),
+					type: "boolean",
+					updatedBy: "user-1",
+				},
+			]);
+
+			const preview = await service.previewProfileApply("normal");
+			const entry = preview.find((e) => e.key === "allowRegister");
+
+			expect(entry?.isModified).toBe(false);
 		});
 	});
 
@@ -751,6 +877,7 @@ describe("RuntimeConfigService", () => {
 				verifiedAt: new Date("2026-10-22T08:00:00Z"),
 				testedBy: "u-1",
 				testedByIp: "127.0.0.1",
+				verdict: "PROBE",
 				createdAt: new Date("2026-10-22T08:00:00Z"),
 			});
 		};
@@ -1267,365 +1394,14 @@ describe("RuntimeConfigService", () => {
 
 
 	// ==================== 定义表元数据不变式 ====================
-	// tier / category / dangerous 只做展示分层，不参与任何权限与校验逻辑，
-	// 因此这些字段的正确性没有别的测试能拦：写错只会让配置页「分组错位、
-	// 运维基线默认看不见、该二次确认的没确认」。这里把运营上定下来的规则写成断言。
+	// tier / category / dangerous 等只做展示分层与运维习惯约定，不参与任何权限
+	// 与校验逻辑，因此这些字段的正确性没有别的机制能拦：写错只会让配置页
+	// 「分组错位、运维基线默认看不见、该二次确认的没确认」。规则本体与定义表
+	// 同处一个模块（runtime-config.invariants.ts）跟着数据走，改定义的人在改动
+	// 点旁边就能看到全部约束；这里只断言全部满足，失败信息含键名与期望值。
 	describe("RUNTIME_CONFIG_DEFINITIONS 元数据不变式", () => {
-		// 运维基线：系统管理员日常要动、改错后果可接受的项。
-		// 必须在 admin 档——advanced 在 PC 配置页默认整档收起，放错等于「默认看不见」。
-		const OPS_BASELINE = [
-			"backupEnabled",
-			"backupKeepLocal",
-			"backupDrillEnabled",
-			"alertEmailEnabled",
-			"alertEmailTo",
-			"alertEmailFailEscalate",
-			"alertEmailP1WindowMinutes",
-			"alertEmailP2DailyHour",
-			"auditArchiveEnabled",
-			"taskRunRetentionDays",
-			"storageCleanupEnabled",
-			"storageCleanupDelayDays",
-			"trashCleanupEnabled",
-			"trashCleanupDelayDays",
-			"orphanCleanupEnabled",
-			"lockCleanupEnabled",
-			"userCleanupEnabled",
-			"cacheCleanupEnabled",
-			"cacheMonitorEnabled",
-			"batchDownloadCleanupEnabled",
-			"deviceAuthFrontendDomain",
-		];
-
-		// 各接口限流与账号锁定：必须在同一个 security 分组的同一个 advanced 档里，
-		// 否则「调一处安全策略」要翻好几个分组。
-		const RATE_LIMIT_KEYS = [
-			"rateLimitPublicMax",
-			"rateLimitPublicWindowMs",
-			"rateLimitAuthMax",
-			"rateLimitLoginMax",
-			"rateLimitLoginWindowMs",
-			"loginRateLimitMax",
-			"loginRateLimitWindowSeconds",
-			"passwordResetRateLimitMax",
-			"passwordResetRateLimitWindowSeconds",
-			"registerRateLimitMax",
-			"registerRateLimitWindowSeconds",
-			"orderCreateRateLimitMax",
-			"orderCreateRateLimitWindowSeconds",
-			"accountLockFailThreshold",
-			"accountLockWindowSeconds",
-			"accountLockDurationSeconds",
-			"smsDailyLimitPerPhone",
-			"smsHourlyLimitPerIp",
-		];
-
-		// 与前端 packages/frontend/src/pages/RuntimeConfigPage/meta.ts 的
-		// CATEGORY_META 键集合必须一致：任一侧改动都要同步另一侧
-		// （后端新增分类 → 前端补图标与标签，否则页面掉到末尾用 key 当标签）。
-		// #498 按用户任务重划的 10 类（mail/sms/wechat/user/system/storage 六类
-		// 已并入 account/alert/maintenance/file）
-		const EXPECTED_CATEGORIES = [
-			"brand",
-			"account",
-			"file",
-			"billing",
-			"alert",
-			"security",
-			"audit",
-			"maintenance",
-			"backup",
-			"collaboration",
-		];
-
-		// 账号锁定的窗口与时长和阈值是一套：改一个不改另一个会互相抵消，故一起标 dangerous
-		const LOCK_SET_KEYS = ["accountLockWindowSeconds", "accountLockDurationSeconds"];
-
-		const def = (key: string) =>
-			RUNTIME_CONFIG_DEFINITIONS.find((d) => d.key === key);
-
-		it("每项必须声明 impact（没有「改了会怎样」的项不该出现在配置页）", () => {
-			expect(RUNTIME_CONFIG_DEFINITIONS.length).toBeGreaterThan(0);
-			expect(
-				RUNTIME_CONFIG_DEFINITIONS.filter((d) => !d.impact).map((d) => d.key)
-			).toEqual([]);
-		});
-
-		it("品牌公开配置项必须是公开 + brand 分类 + user 档：两端只读 /public", () => {
-			// PC 的 BrandContext 与移动端 resolveBrand 都只消费
-			// GET /runtime-config/public 返回的键；isPublic 一旦改成 false，
-			// 管理端改了配置两端毫无反应且不报任何错。
-			// 客服三件套 + 外观四键（#499）+ 版权/法务/服务时间六键（#501），
-			// 全部是从 brandProfile 拆出的独立键
-			const BRAND_PUBLIC_KEYS = [
-				"supportEmail",
-				"supportPhone",
-				"supportHours",
-				"docsUrl",
-				"brandTitle",
-				"brandSubtitle",
-				"brandTagline",
-				"brandLogo",
-				"brandCopyrightLine",
-				"brandCopyrightYear",
-				"brandCopyrightHolder",
-				"brandLegalProductName",
-				"brandLegalProductShortName",
-			];
-			expect(BRAND_PUBLIC_KEYS.filter((k) => !def(k))).toEqual([]);
-			expect(
-				BRAND_PUBLIC_KEYS.filter(
-					(k) =>
-						def(k)?.isPublic !== true ||
-						def(k)?.category !== "brand" ||
-						def(k)?.tier !== "user"
-				)
-			).toEqual([]);
-		});
-
-		it("会员入口开关必须公开 + billing 分类 + admin 档：前端只读 /public", () => {
-			// PC 的 MemberCenter / ProfileHeader 只消费 GET /runtime-config/public
-			// 返回的 membershipEnabled 决定会员中心显不显示（原 VITE_MEMBERSHIP_ENABLED
-			// 构建期常量已删除，改为运行时可关）。isPublic 一旦改成 false，
-			// 管理端关掉开关后前端毫无反应且不报任何错，与品牌公开键同款陷阱。
-			// defaultValue 钉死为 true：会员中心是自助购买/续费的唯一入口，
-			// 出厂改回 false 等于「装了会员功能但用户看不见」。
-			const d = def("membershipEnabled");
-			expect(d).toBeDefined();
-			expect(d!.isPublic).toBe(true);
-			expect(d!.category).toBe("billing");
-			expect(d!.tier).toBe("admin");
-			expect(d!.defaultValue).toBe(true);
-			expect(d!.envKey).toBe("MEMBERSHIP_ENABLED");
-		});
-
-		it("运维基线必须在 admin 档，不能落到默认收起的 advanced", () => {
-			expect(OPS_BASELINE.filter((k) => !def(k))).toEqual([]);
-			expect(
-				OPS_BASELINE.filter((k) => def(k)?.tier !== "admin")
-			).toEqual([]);
-		});
-
-		it("限流与锁定阈值成组落在 advanced + security", () => {
-			expect(RATE_LIMIT_KEYS.filter((k) => !def(k))).toEqual([]);
-			expect(
-				RATE_LIMIT_KEYS.filter(
-					(k) =>
-						def(k)?.tier !== "advanced" ||
-						def(k)?.category !== "security"
-				)
-			).toEqual([]);
-		});
-
-		it("口令策略 7 项落在 admin 档：高频运维项 + profile 托管项不得藏进 advanced（#504）", () => {
-			// 落回 advanced 等于「默认看不见」：4 项受安全模式 profile 覆盖，
-			// 运维看不见当前生效值就等于把偏离项藏起来。
-			// 账号锁定 3 项与限流 15 项仍保持 advanced（见上条），不在此列。
-			const PASSWORD_POLICY_KEYS = [
-				"passwordPolicyMinLength",
-				"passwordPolicyMinCategories",
-				"passwordPolicyWeakCheckEnabled",
-				"passwordPolicyChangeIntervalDays",
-				"passwordPolicyExpiringSoonDays",
-				"passwordPolicyChangeEnforceEnabled",
-				"passwordPolicyHistoryCheckEnabled",
-			];
-			expect(PASSWORD_POLICY_KEYS.filter((k) => !def(k))).toEqual([]);
-			expect(
-				PASSWORD_POLICY_KEYS.filter(
-					(k) => def(k)?.tier !== "admin" || def(k)?.category !== "security"
-				)
-			).toEqual([]);
-		});
-
-		it("dangerous 只标在阈值上：次数阈值必须标记，窗口长度除账号锁定外不得标记", () => {
-			const thresholds = RUNTIME_CONFIG_DEFINITIONS.filter(
-				(d) => d.key.endsWith("Max") || d.key === "accountLockFailThreshold"
-			);
-			expect(thresholds.length).toBeGreaterThan(0);
-			expect(thresholds.filter((d) => !d.dangerous).map((d) => d.key)).toEqual([]);
-
-			const windows = RUNTIME_CONFIG_DEFINITIONS.filter(
-				(d) =>
-					d.key.endsWith("WindowMs") ||
-					d.key.endsWith("WindowSeconds") ||
-					d.key.endsWith("DurationSeconds")
-			);
-			expect(
-				windows
-					.filter((d) => d.dangerous && !LOCK_SET_KEYS.includes(d.key))
-					.map((d) => d.key)
-			).toEqual([]);
-		});
-
-		it("分类集合闭集：与前端 CATEGORY_META 的键集合一致", () => {
-			const actual = [...new Set(RUNTIME_CONFIG_DEFINITIONS.map((d) => d.category))].sort();
-			expect(actual.filter((c) => !EXPECTED_CATEGORIES.includes(c))).toEqual([]);
-			expect(actual).toEqual([...EXPECTED_CATEGORIES].sort());
-		});
-
-		it("子分组闭集：四个多项大类各钉死子分组集合，其余分类不声明（#498）", () => {
-			const EXPECTED_SUBGROUPS: Record<string, string[]> = {
-				security: ["mode-mfa", "password-policy", "rate-limit", "account-lock"],
-				account: ["login-methods", "registration"],
-				alert: ["alert-policy", "mail-channel", "sms-channel", "webhook-channel"],
-				maintenance: ["storage-trash", "cache-disk", "data-retention"],
-			};
-			for (const [category, expected] of Object.entries(EXPECTED_SUBGROUPS)) {
-				const actual = [
-					...new Set(
-						RUNTIME_CONFIG_DEFINITIONS.filter(
-							(d) => d.category === category && d.subgroup,
-						).map((d) => d.subgroup!),
-					),
-				].sort();
-				expect(actual).toEqual([...expected].sort());
-			}
-			// 其余 6 个分类项数不多，不声明子分组
-			expect(
-				RUNTIME_CONFIG_DEFINITIONS.filter(
-					(d) => d.subgroup && !Object.keys(EXPECTED_SUBGROUPS).includes(d.category),
-				).map((d) => d.key),
-			).toEqual([]);
-		});
-
-		it("声明 profiles 的键必须同时给出 secure 与 normal 两个目标值", () => {
-			// 只给一个会在切换到「没给的那个」时静默不动作，等价于把偏离项藏起来。
-			const withProfiles = RUNTIME_CONFIG_DEFINITIONS.filter((d) => d.profiles != null);
-			// 断言非空，防止 profiles 全被删掉后此不变式空过
-			expect(withProfiles.map((d) => d.key)).toContain("securityMode");
-			expect(
-				withProfiles
-					.filter(
-						(d) =>
-							!Object.prototype.hasOwnProperty.call(d.profiles as object, "secure") ||
-							!Object.prototype.hasOwnProperty.call(d.profiles as object, "normal"),
-					)
-					.map((d) => d.key),
-			).toEqual([]);
-		});
-
-		it("每个 profile 目标值都必须落在自身 input.min/max 区间内", () => {
-			// profile 目标值是代码常量、不走 set() 的入参校验；越界值会被静默写库，
-			// 然后业务代码按一个不在界内的配置运行。与 service 侧的运行时守卫同源，
-			// 这里让它在测试期就暴露。
-			const validate = (
-				service as unknown as {
-					validateValue: (
-						def: RuntimeConfigDefinition,
-						value: unknown,
-					) => string | null;
-				}
-			).validateValue.bind(service);
-			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
-				(d) => d.profiles != null,
-			)
-				.flatMap((d) => {
-					const secure = validate(d, d.profiles!.secure);
-					const normal = validate(d, d.profiles!.normal);
-					return [
-						...(secure === null ? [] : [{ key: d.key, mode: "secure", reason: secure }]),
-						...(normal === null ? [] : [{ key: d.key, mode: "normal", reason: normal }]),
-					];
-				});
-			expect(offenders).toEqual([]);
-		});
-
-		it("两个 profile 的目标值必须不同（同值键放进 profile 集就是静默空操作）", () => {
-			// secure 与 normal 填同一个值，该键参与批量应用但切换模式对毫无效果——
-			// 界面显示已切换、实际什么都没变，正是 ADR-0077 D5 要消灭的「静默偏离」。
-			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
-				(d) => d.profiles != null && JSON.stringify(d.profiles.secure) === JSON.stringify(d.profiles.normal),
-			).map((d) => d.key);
-			expect(offenders).toEqual([]);
-		});
-
-		it("出厂默认不取安全侧的两个刻意例外（不要为「与其余 profile 键一致」改回严侧）", () => {
-			// 其余声明 profiles 的键出厂默认都取安全侧（如 rateLimitPublicMax 出厂 100 <
-			// normal 10000、passwordPolicyMinLength 出厂 10 > normal 6），即新装偏保守、
-			// 放宽靠显式应用普通模式 profile。两个刻意例外：新装即允许管理员走普通登录入口、
-			// 新装即放开免费导出下载（导出门控是商业策略而非等保项，安全模式才收敛）。
-			expect(
-				RUNTIME_CONFIG_DEFINITIONS.find(
-					(d) => d.key === "adminLoginEntry",
-				)?.defaultValue,
-			).toBe("MERGED");
-			expect(
-				RUNTIME_CONFIG_DEFINITIONS.find(
-					(d) => d.key === "freeExportDownloadEnabled",
-				)?.defaultValue,
-			).toBe(true);
-		});
-
-		it("依赖外部基础设施或属业务/容量配置的键不得声明 profiles（切换模式不替用户开关它们）", () => {
-			// 两类键一律排除在模式批量应用之外：
-			// ① 依赖客户自建基础设施才生效（SMTP / 短信通道 / 微信 AppID+Secret）——
-			//    替用户开启等于造死锁（未配 SMTP 却打开 requireEmailVerification、
-			//    未配微信凭据却打开 wechatEnabled）；
-			// ② 业务功能开关、业务策略、容量与配额类（是否开放注册/批量下载、
-			//    注销冷静期、上传上限、下单与短信与游客转换配额）——是否启用、
-			//    放宽多少是部署方的产品决策，不是等保要求。
-			// profile 只收「等保必需 + 无外部依赖即可生效」的项。
-			const excluded = new Set([
-				"requireEmailVerification",
-				"requirePhoneVerification",
-				"allowRegister",
-				"allowAutoRegisterOnPhoneLogin",
-				"userCancelGraceDays",
-				"userCleanupEnabled",
-				"wechatEnabled",
-				"wechatAutoRegister",
-				"maxFileSize",
-				"batchDownloadEnabled",
-				"orderCreateRateLimitMax",
-				"smsDailyLimitPerPhone",
-				"smsHourlyLimitPerIp",
-				"conversionGuestWindowHours",
-				"conversionGuestLimit",
-			]);
-			const offenders = RUNTIME_CONFIG_DEFINITIONS.filter(
-				(d) => excluded.has(d.key) && d.profiles != null,
-			).map((d) => d.key);
-			expect(offenders).toEqual([]);
-		});
-
-		it("依赖图：四条已知边已声明、引用键存在、两端都是布尔键、无环", () => {
-			// 依赖边是门禁的事实源：漏声明一条边，对应的「功能开+通道关」
-			// 静默失效状态就再也拦不住了。已知四条边逐一钉死。
-			const edges = getDependencyEdges(RUNTIME_CONFIG_DEFINITIONS);
-			const edgePairs = edges.map((e) => `${e.dependent}->${e.required}`);
-			for (const pinned of [
-				"requireEmailVerification->mailEnabled",
-				"requirePhoneVerification->smsEnabled",
-				"wechatAutoRegister->wechatEnabled",
-				"alertEmailEnabled->mailEnabled",
-			]) {
-				expect(edgePairs).toContain(pinned);
-			}
-
-			const registered = new Set(RUNTIME_CONFIG_DEFINITIONS.map((d) => d.key));
-			const byKey = new Map(RUNTIME_CONFIG_DEFINITIONS.map((d) => [d.key, d]));
-
-			// 引用的键必须已登记（拼错的键名会让门禁静默空转）
-			expect(
-				edges
-					.filter((e) => !registered.has(e.required))
-					.map((e) => e.required),
-			).toEqual([]);
-
-			// 依赖只在布尔开关之间声明：非布尔键没有「开/关」语义
-			expect(
-				[
-					...new Set(
-						edges
-							.flatMap((e) => [e.dependent, e.required])
-							.filter((k) => byKey.get(k)?.type !== "boolean"),
-					),
-				],
-			).toEqual([]);
-
-			// 环会让「沿依赖判定」失去定义
-			expect(findDependencyCycles(edges)).toEqual([]);
+		it("定义表元数据不变式全部满足", () => {
+			expect(validateDefinitions()).toEqual([]);
 		});
 	});
 	// ==================== 键登记完整性 ====================
@@ -1983,13 +1759,16 @@ describe("RuntimeConfigService", () => {
 			]);
 		};
 
-		const mockVerified = () => {
+		const mockVerified = (
+			verdict: "PROBE" | "END_TO_END" | "SIMULATED" = "PROBE"
+		) => {
 			mockPrisma.channelVerification.findUnique.mockResolvedValue({
 				id: "cv-1",
 				channel: "testChannel",
 				verifiedAt: new Date("2026-10-22T08:00:00Z"),
 				testedBy: "op-1",
 				testedByIp: "127.0.0.1",
+				verdict,
 				createdAt: new Date("2026-10-22T08:00:00Z"),
 			});
 		};
@@ -2007,6 +1786,7 @@ describe("RuntimeConfigService", () => {
 				])
 			);
 			expect(status.verified).toBe(false);
+			expect(status.verdict).toBeNull();
 		});
 
 		it("getChannelStatus：配置完整 + 验证记录存在 → verified", async () => {
@@ -2018,6 +1798,7 @@ describe("RuntimeConfigService", () => {
 			expect(status.configComplete).toBe(true);
 			expect(status.missingKeys).toEqual([]);
 			expect(status.verified).toBe(true);
+			expect(status.verdict).toBe("probe");
 			expect(status.testedBy).toBe("op-1");
 		});
 
@@ -2052,6 +1833,36 @@ describe("RuntimeConfigService", () => {
 
 			await service.set("testChannelEnabled", true, "op-1");
 
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
+		});
+
+		// 门禁按结论强度判：模拟模式（mock 探测）不算「验证过」，否则「测试通过」
+		// 会被当成开启证据，通道开着等于没开（sms/payment 出厂默认即 mock 模式）
+		it("最近一次验证为模拟模式 → verified=false，门禁拒绝开启且点出原因", async () => {
+			mockChannelRowsConfigured();
+			mockVerified("SIMULATED");
+
+			const status = await service.getChannelStatus("testChannel");
+
+			expect(status.verified).toBe(false);
+			expect(status.verdict).toBe("simulated");
+
+			await expect(service.set("testChannelEnabled", true, "op-1")).rejects.toThrow(
+				"模拟模式"
+			);
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("端到端验证（END_TO_END）→ 与探测同样满足门禁", async () => {
+			mockChannelRowsConfigured();
+			mockVerified("END_TO_END");
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+
+			const status = await service.getChannelStatus("testChannel");
+
+			expect(status.verified).toBe(true);
+			expect(status.verdict).toBe("end-to-end");
+			await service.set("testChannelEnabled", true, "op-1");
 			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalledTimes(1);
 		});
 
@@ -2206,6 +2017,7 @@ describe("RuntimeConfigService", () => {
 				verifiedAt: new Date("2026-10-22T08:00:00Z"),
 				testedBy: "op-1",
 				testedByIp: "127.0.0.1",
+				verdict: "PROBE",
 				createdAt: new Date("2026-10-22T08:00:00Z"),
 			});
 		};
@@ -2372,6 +2184,7 @@ describe("RuntimeConfigService", () => {
 				verifiedAt: new Date("2026-10-22T08:00:00Z"),
 				testedBy: "op-1",
 				testedByIp: "127.0.0.1",
+				verdict: "PROBE",
 				createdAt: new Date("2026-10-22T08:00:00Z"),
 			});
 		};
@@ -2500,6 +2313,7 @@ describe("RuntimeConfigService", () => {
 				verifiedAt: new Date("2026-10-22T08:00:00Z"),
 				testedBy: "op-1",
 				testedByIp: "127.0.0.1",
+				verdict: "PROBE",
 				createdAt: new Date("2026-10-22T08:00:00Z"),
 			});
 		};
@@ -2615,6 +2429,7 @@ describe("RuntimeConfigService", () => {
 				verifiedAt: new Date("2026-10-22T08:00:00Z"),
 				testedBy: "op-1",
 				testedByIp: "127.0.0.1",
+				verdict: "PROBE",
 				createdAt: new Date("2026-10-22T08:00:00Z"),
 			});
 		};
@@ -2713,6 +2528,7 @@ describe("RuntimeConfigService", () => {
 				verifiedAt: new Date("2026-10-22T08:00:00Z"),
 				testedBy: "op-1",
 				testedByIp: "127.0.0.1",
+				verdict: "PROBE",
 				createdAt: new Date("2026-10-22T08:00:00Z"),
 			});
 		};

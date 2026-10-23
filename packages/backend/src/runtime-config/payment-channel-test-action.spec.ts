@@ -63,19 +63,23 @@ describe('PaymentChannelTestAction（ADR-0082 #505）', () => {
     expect(action.channel).toBe('payment');
   });
 
-  it('provider=mock → 直接通过，不调微信 API', async () => {
+  it('provider=mock → 直接通过，不调微信 API，且结论强度是 simulated', async () => {
     const result = await action.test(makeCtx({ paymentProvider: 'mock' }));
 
     expect(result.ok).toBe(true);
     expect(result.message).toContain('Mock');
     expect(fetchMock).not.toHaveBeenCalled();
+    // 模拟模式未接触任何外部系统：门禁必须因此拒绝开启支付通道，
+    // 否则「测试通过」会变成下单走 MockPaymentGateway 的假成功证据
+    expect(result.verdict).toBe('simulated');
   });
 
-  it('未知 provider → 失败', async () => {
+  it('未知 provider → 失败并归因 paymentProvider 配置键', async () => {
     const result = await action.test(makeCtx({ paymentProvider: 'alipay' }));
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('alipay');
+    expect(result.problemKeys).toEqual(['paymentProvider']);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -88,6 +92,7 @@ describe('PaymentChannelTestAction（ADR-0082 #505）', () => {
     expect(result.message).toContain('wechatPayMchId');
     expect(result.message).toContain('wechatPayKey');
     expect(result.message).not.toContain('wechatPayAppId');
+    expect(result.problemKeys).toEqual(['wechatPayMchId', 'wechatPayKey']);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -105,6 +110,8 @@ describe('PaymentChannelTestAction（ADR-0082 #505）', () => {
 
     expect(result.ok).toBe(true);
     expect(result.message).toContain('探测通过');
+    // 签名往返通过 = 无副作用探测，未产生订单
+    expect(result.verdict).toBe('probe');
     // 请求体是签名后的 XML（appid/mch_id 参与签名）
     const body = fetchMock.mock.calls[0][1].body as string;
     expect(body).toContain('<appid>wx_test_appid</appid>');
@@ -124,6 +131,11 @@ describe('PaymentChannelTestAction（ADR-0082 #505）', () => {
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('签名失败');
+    expect(result.problemKeys).toEqual([
+      'wechatPayAppId',
+      'wechatPayMchId',
+      'wechatPayKey',
+    ]);
   });
 
   it('主域名 5xx → 切备用域名重试', async () => {
@@ -157,6 +169,8 @@ describe('PaymentChannelTestAction（ADR-0082 #505）', () => {
     expect(result.ok).toBe(false);
     expect(result.message).toContain('不可达');
     expect(result.message).toContain('fetch failed');
+    // 网络不可达无法归因到配置键
+    expect(result.problemKeys).toBeUndefined();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

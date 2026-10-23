@@ -32,6 +32,6 @@ export class PasswordVerificationStrategy implements IAccountVerificationStrateg
 
   async verify(user: UserVerificationData, params: VerificationParams): Promise<{ valid: boolean; message?: string }> {
     const match = await this.passwordHasher.compare(params.password!, user.password!);
-    return { valid: match, message: match ? undefined : (I18nContext.current()?.t('error.auth.password_incorrect_verify') ?? '密码不正确') };
+    return { valid: match, message: match ? undefined : (I18nContext.current()?.t('error.user.password_incorrect_verify') ?? '密码不正确') };
   }
 }

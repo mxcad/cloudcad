@@ -12,10 +12,11 @@
 
 import { Injectable } from '@nestjs/common';
 import { buildXML, parseXML, generateNonceStr, sign } from '../billing/gateway/wechat-pay/wechat-pay.util';
-import type {
-  ChannelTestAction,
-  ChannelTestContext,
-  ChannelTestResult,
+import {
+  CHANNEL_TEST_REQUEST_TIMEOUT_MS,
+  type ChannelTestAction,
+  type ChannelTestContext,
+  type ChannelTestResult,
 } from './runtime-config.types';
 
 // 与生产网关同源的 API 域名（主 + 备，网络错误时切换）
@@ -53,14 +54,22 @@ export class PaymentChannelTestAction implements ChannelTestAction {
 
     switch (provider) {
       case 'mock':
+        // simulated：未接触任何外部系统，永不满足通道开启门禁——否则
+        // paymentEnabled 可在完全没接支付网关的情况下被开启，订单走
+        // MockPaymentGateway「假成功」而不产生任何真实收款。
         return {
           ok: true,
+          verdict: 'simulated',
           message: 'Mock 模式（开发测试）：未接真实支付网关，视为通过',
         };
       case 'wechat_pay':
         return this.testWechatPay(ctx);
       default:
-        return { ok: false, message: `未知支付网关：${provider}` };
+        return {
+          ok: false,
+          message: `未知支付网关：${provider}`,
+          problemKeys: ['paymentProvider'],
+        };
     }
   }
 
@@ -84,6 +93,7 @@ export class PaymentChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: `微信支付凭据不完整（缺失：${missing.join('、')}）`,
+        problemKeys: missing,
       };
     }
 
@@ -104,7 +114,7 @@ export class PaymentChannelTestAction implements ChannelTestAction {
           method: 'POST',
           headers: { 'Content-Type': 'application/xml' },
           body: xml,
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(CHANNEL_TEST_REQUEST_TIMEOUT_MS),
         });
         if (!response.ok) {
           lastError = `HTTP ${response.status}`;
@@ -114,9 +124,12 @@ export class PaymentChannelTestAction implements ChannelTestAction {
         const body = parsed?.xml ?? parsed;
 
         if (body?.return_code === 'SUCCESS') {
-          // 签名通过 = 凭据有效；随机订单号查无订单属预期业务错误
+          // 签名通过 = 凭据有效；随机订单号查无订单属预期业务错误。
+          // 结论是 probe：orderquery 是只读往返，确认了凭据与链路，
+          // 但没有产生任何真实的资金/订单动作。
           return {
             ok: true,
+            verdict: 'probe',
             message: '微信支付凭据探测通过（orderquery 签名往返，未产生订单、未动资金）',
           };
         }
@@ -125,6 +138,8 @@ export class PaymentChannelTestAction implements ChannelTestAction {
           message: `微信支付凭据探测失败：${
             body?.return_msg ?? '未知错误'
           }`,
+          // 签名未通过 = AppID/商户号/API 密钥三者之一无效
+          problemKeys: ['wechatPayAppId', 'wechatPayMchId', 'wechatPayKey'],
         };
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);

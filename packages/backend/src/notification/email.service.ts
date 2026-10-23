@@ -99,6 +99,28 @@ export class EmailService {
   }
 
   /**
+   * 密码重置请求指向未注册/已注销邮箱时的说明邮件（防账号枚举配套）。
+   *
+   * forgotPassword 对这类邮箱**不生成验证码**，但仍发一封说明信，让填错邮箱的
+   * 真实用户当场得到确切答案——否则前端只能显示「验证码已发送」，用户卡死且
+   * 无法自助。账号存在性只出现在收件人自己的邮箱里：HTTP 响应与真实发送完全
+   * 一致，外部探测只能消耗 SMTP 额度、无法区分邮件内容。
+   *
+   * 不含验证码、不含重置链接——不携带任何可自助完成重置的凭据。
+   */
+  async sendPasswordResetNotRegisteredEmail(
+    email: string,
+    ctx: { productName: string; supportEmail?: string; supportPhone?: string }
+  ): Promise<void> {
+    await this.send({
+      to: email,
+      subject: 'CloudCAD - 未找到该邮箱的账号',
+      template: 'password-reset-not-found',
+      context: { recipientEmail: email, ...ctx },
+    });
+  }
+
+  /**
    * 退款申请提交后通知管理员邮箱列表（to 为逗号分隔解析出的多个收件人）
    */
   async sendRefundApplicationNotify(

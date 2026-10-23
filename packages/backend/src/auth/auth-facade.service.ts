@@ -61,6 +61,7 @@ import type { AuthenticatedUser } from '../common/types/request.types';
 import { USER_SERVICE, IUserService, IUserDetail } from '../common/interfaces/user-service.interface';
 import { IAuthFacade } from './interfaces/auth-facade.interface';
 import { PasswordPolicyService } from './services/password-policy.service';
+import { RuntimeConfigService } from '../runtime-config/runtime-config.service';
 
 @Injectable()
 export class AuthFacadeService implements IAuthFacade {
@@ -79,6 +80,7 @@ export class AuthFacadeService implements IAuthFacade {
     private readonly membershipService: MembershipService,
     @Inject(USER_SERVICE) private readonly userService: IUserService,
     private readonly passwordPolicyService: PasswordPolicyService,
+    private readonly runtimeConfigService: RuntimeConfigService,
   ) {}
 
   @Audit(AuditAction.USER_REGISTER, ResourceType.USER, {
@@ -506,6 +508,16 @@ export class AuthFacadeService implements IAuthFacade {
     // 刻意不挂 changeEnforceEnabled 开关——那是「强制改密」的总开关，本字段是软提示、不拦截。
     const passwordUnchanged = isAdmin && freshUser.passwordChangedAt === null;
 
+    // #415 TOTP step-up：当前用户改密是否需要动态码 = 总闸开 && 管理员 && 已绑定。
+    // 服务端算好下发（单一事实源），前端据此决定是否渲染改密表单的动态码字段，
+    // 不向所有用户暴露全局 mfaEnforceEnabled 开关。仅管理员才读配置（普通用户短路）。
+    let passwordChangeRequiresMfa = false;
+    if (isAdmin) {
+      const mfaEnforceEnabled =
+        await this.runtimeConfigService.getValue<boolean>('mfaEnforceEnabled');
+      passwordChangeRequiresMfa = mfaEnforceEnabled && !!freshUser.totpEnabled;
+    }
+
     return {
       ...safeUser,
       membershipTierLevel: membership.tierLevel,
@@ -519,6 +531,7 @@ export class AuthFacadeService implements IAuthFacade {
         ? { passwordExpiringSoon: true }
         : {}),
       ...(passwordUnchanged ? { passwordUnchanged: true } : {}),
+      ...(passwordChangeRequiresMfa ? { passwordChangeRequiresMfa: true } : {}),
     };
   }
 }

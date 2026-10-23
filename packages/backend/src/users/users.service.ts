@@ -448,8 +448,14 @@ export class UsersService implements IUserService {
   async changePassword(
     userId: string,
     oldPassword: string | undefined,
-    newPassword: string
+    newPassword: string,
+    totpCode?: string
   ): Promise<{ message: string }> {
-    return this.passwordService.changePassword(userId, oldPassword, newPassword);
+    return this.passwordService.changePassword(
+      userId,
+      oldPassword,
+      newPassword,
+      totpCode
+    );
   }
 }

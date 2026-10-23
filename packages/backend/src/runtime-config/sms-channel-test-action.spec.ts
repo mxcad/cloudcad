@@ -103,13 +103,16 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
     expect(action.channel).toBe('sms');
   });
 
-  it('mock 服务商：直接通过，不构造任何 SDK 客户端', async () => {
+  it('mock 服务商：直接通过，不构造任何 SDK 客户端，结论强度是 simulated', async () => {
     const result = await action.test(makeCtx({ smsProvider: 'mock' }));
 
     expect(result.ok).toBe(true);
     expect(result.message).toContain('Mock');
     expect(AliyunClientMock).not.toHaveBeenCalled();
     expect(TencentClientMock).not.toHaveBeenCalled();
+    // mock 模式未接触任何短信服务商：门禁必须因此拒绝开启短信通道，
+    // 否则「测试通过」会变成验证码发送全部静默失败的证据
+    expect(result.verdict).toBe('simulated');
   });
 
   it('未知服务商 → 失败', async () => {
@@ -119,6 +122,7 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('huawei');
+    expect(result.problemKeys).toEqual(['smsProvider']);
   });
 
   describe('阿里云', () => {
@@ -130,10 +134,14 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
       expect(result.ok).toBe(false);
       expect(result.message).toContain('aliyunSmsAccessKeyId');
       expect(result.message).toContain('aliyunSmsAccessKeySecret');
+      expect(result.problemKeys).toEqual([
+        'aliyunSmsAccessKeyId',
+        'aliyunSmsAccessKeySecret',
+      ]);
       expect(AliyunClientMock).not.toHaveBeenCalled();
     });
 
-    it('凭据探测失败（QuerySmsSignList 抛错）→ 失败', async () => {
+    it('凭据探测失败（QuerySmsSignList 抛错）→ 失败并归因 AK/SK 配置键', async () => {
       querySmsSignListMock.mockRejectedValue(
         new Error('InvalidAccessKeyId.NotFound : The AccessKey ID provided does not exist')
       );
@@ -142,6 +150,10 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
       expect(result.ok).toBe(false);
       expect(result.message).toContain('InvalidAccessKeyId');
+      expect(result.problemKeys).toEqual([
+        'aliyunSmsAccessKeyId',
+        'aliyunSmsAccessKeySecret',
+      ]);
     });
 
     it('探测通过且未填收件人 → 通过，不发送短信', async () => {
@@ -149,6 +161,8 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
       expect(result.ok).toBe(true);
       expect(result.message).toContain('未发送短信');
+      // 签名列表查询是凭据探测，未产生短信
+      expect(result.verdict).toBe('probe');
       expect(querySmsSignListMock).toHaveBeenCalledWith({});
       expect(aliyunSendSmsMock).not.toHaveBeenCalled();
     });
@@ -161,6 +175,10 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
       expect(result.ok).toBe(false);
       expect(result.message).toContain('aliyunSmsSignName');
       expect(result.message).toContain('aliyunSmsTemplateCode');
+      expect(result.problemKeys).toEqual([
+        'aliyunSmsSignName',
+        'aliyunSmsTemplateCode',
+      ]);
       expect(aliyunSendSmsMock).not.toHaveBeenCalled();
     });
 
@@ -169,6 +187,8 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
       expect(result.ok).toBe(true);
       expect(result.message).toContain('13800000000');
+      // 短信真的发出去了（产生一条短信费用）
+      expect(result.verdict).toBe('end-to-end');
       expect(aliyunSendSmsMock).toHaveBeenCalledWith({
         phoneNumbers: '13800000000',
         signName: 'CloudCAD',
@@ -186,6 +206,10 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
       expect(result.ok).toBe(false);
       expect(result.message).toContain('签名不合法');
+      expect(result.problemKeys).toEqual([
+        'aliyunSmsSignName',
+        'aliyunSmsTemplateCode',
+      ]);
     });
   });
 
@@ -202,10 +226,14 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
       expect(result.ok).toBe(false);
       expect(result.message).toContain('tencentSmsSecretId');
       expect(result.message).toContain('tencentSmsSecretKey');
+      expect(result.problemKeys).toEqual([
+        'tencentSmsSecretId',
+        'tencentSmsSecretKey',
+      ]);
       expect(TencentClientMock).not.toHaveBeenCalled();
     });
 
-    it('凭据探测失败（DescribeSmsSignList 抛错）→ 失败', async () => {
+    it('凭据探测失败（DescribeSmsSignList 抛错）→ 失败并归因 SecretId/Key 配置键', async () => {
       describeSmsSignListMock.mockRejectedValue(
         new Error('UnauthorizedOperation: credential invalid')
       );
@@ -214,6 +242,10 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
       expect(result.ok).toBe(false);
       expect(result.message).toContain('credential invalid');
+      expect(result.problemKeys).toEqual([
+        'tencentSmsSecretId',
+        'tencentSmsSecretKey',
+      ]);
     });
 
     it('探测通过且未填收件人 → 通过，不发送短信', async () => {
@@ -221,6 +253,7 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
       expect(result.ok).toBe(true);
       expect(result.message).toContain('未发送短信');
+      expect(result.verdict).toBe('probe');
       expect(describeSmsSignListMock).toHaveBeenCalledWith({ International: 0 });
       expect(tencentSendSmsMock).not.toHaveBeenCalled();
     });
@@ -242,6 +275,11 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
       expect(result.message).toContain('tencentSmsAppId');
       expect(result.message).toContain('tencentSmsSignName');
       expect(result.message).toContain('tencentSmsTemplateCode');
+      expect(result.problemKeys).toEqual([
+        'tencentSmsAppId',
+        'tencentSmsSignName',
+        'tencentSmsTemplateCode',
+      ]);
       expect(tencentSendSmsMock).not.toHaveBeenCalled();
     });
 
@@ -249,6 +287,7 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
       const result = await action.test(makeCtx({ smsProvider: 'tencent' }, '13800000000'));
 
       expect(result.ok).toBe(true);
+      expect(result.verdict).toBe('end-to-end');
       expect(tencentSendSmsMock).toHaveBeenCalledWith({
         SmsSdkAppId: '1400000000',
         SignName: 'CloudCAD',
@@ -267,6 +306,11 @@ describe('SmsChannelTestAction（ADR-0082 #502）', () => {
 
       expect(result.ok).toBe(false);
       expect(result.message).toContain('签名未审核通过');
+      expect(result.problemKeys).toEqual([
+        'tencentSmsAppId',
+        'tencentSmsSignName',
+        'tencentSmsTemplateCode',
+      ]);
     });
   });
 });

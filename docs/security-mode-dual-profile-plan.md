@@ -244,6 +244,14 @@ ADR-0075 已有**打包期** `variant=private|oss`，与运行时 `securityMode`
 > **原始勘察结论**（含已移出的行），保留以便追溯取舍依据。
 > 闸门已加：`runtime-config.service.spec.ts` 的「依赖外部基础设施或属业务/容量配置的键
 > 不得声明 profiles」不变式钉死 15 个键名，防止回流。
+>
+> **2026-10-23 裁定（用户，推翻下表两行取值）**：`mfaEnforceEnabled`（§四 security 组表）
+> 与 `passwordPolicyChangeEnforceEnabled`（T3 表）从「secure 强制开」改为
+> **`{ secure: false, normal: false }`**——两种模式基线都是关、切模式重置为关、
+> 需管理员手动开启（安全模式仅「建议」不强制，「建议」由 `impact` 文案 / 口令更换周期
+> 软提示承载）。下表这两行的 `secure: true` 是**原始勘察结论**，已被此裁定取代；
+> 权威记录见 `security-mode-deferred-decisions.md` §七。连带：管理员开启 TOTP 后
+> 改密须 step-up 双因素（`ChangePasswordDto.totpCode` + 服务端 `passwordChangeRequiresMfa`）。
 
 ### 已移出 profile 的 15 项（2026-10-21）
 | 组 | 键 | 移出理由 |

@@ -76,12 +76,10 @@ export class VerifyEmailAndRegisterPhoneDto {
   @ApiProperty({
     description: '密码',
     example: 'Password123!',
-    minLength: 8,
     maxLength: 50,
   })
   @IsString({ message: () => I18nContext.current()?.t('validation.password_must_be_string') ?? '密码必须是字符串' })
   @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.password_required') ?? '密码不能为空' })
-  @MinLength(8, { message: () => I18nContext.current()?.t('validation.password_min_length') ?? '密码至少8个字符' })
   @MaxLength(50, { message: () => I18nContext.current()?.t('validation.password_max_length') ?? '密码最多50个字符' })
   password: string;
 

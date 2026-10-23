@@ -21,10 +21,11 @@ import { DatabaseService } from '../database/database.service';
 import { RuntimeConfigService } from './runtime-config.service';
 import { getAuditLoggerInstance } from '../audit/audit-logger.service';
 import { AuditAction, ResourceType } from '../common/enums/audit.enum';
-import type {
-  ChannelStatus,
-  ChannelTestAction,
-  ChannelTestResult,
+import {
+  CHANNEL_VERDICT_COLUMNS,
+  type ChannelStatus,
+  type ChannelTestAction,
+  type ChannelTestResult,
 } from './runtime-config.types';
 
 /**
@@ -72,8 +73,9 @@ export class ChannelTestService {
   }
 
   /**
-   * 执行通道测试。成功 → 写验证记录；失败 → 不写记录。
-   * 无论成败都入审计（测试发送外发真实消息，属敏感操作，ADR-0082 D9）。
+   * 执行通道验证。成功 → 写验证记录；失败 → 不写记录。
+   * 无论成败都入审计（会写入验证门禁证据，且可选端到端发送会外发真实消息，
+   * 属敏感操作，ADR-0082 D9）。
    */
   async testChannel(
     channel: string,
@@ -94,8 +96,13 @@ export class ChannelTestService {
     const status = await this.runtimeConfig.getChannelStatus(channel);
     if (!status.configComplete) {
       const message = `配置不完整（缺失：${status.missingKeys.join('、')}）`;
-      await this.audit(channel, operatorId, { ok: false, message });
-      return { channel, ok: false, message };
+      const result: ChannelTestResult = {
+        ok: false,
+        message,
+        problemKeys: status.missingKeys,
+      };
+      await this.audit(channel, operatorId, result);
+      return { channel, ...result };
     }
 
     let result: ChannelTestResult;
@@ -113,14 +120,24 @@ export class ChannelTestService {
     }
 
     if (result.ok) {
+      // 结论强度随证据一起落库：门禁只认 probe / end-to-end，`simulated`
+      // （mock 模式，未接触任何外部系统）记录在册但不满足门禁。动作未声明
+      // verdict 按 probe 采信——与存量记录同口径，不静默降格。
+      const verdict = result.verdict ?? 'probe';
       await this.prisma.channelVerification.upsert({
         where: { channel },
         update: {
           verifiedAt: new Date(),
           testedBy: operatorId,
           testedByIp: operatorIp,
+          verdict: CHANNEL_VERDICT_COLUMNS[verdict],
         },
-        create: { channel, testedBy: operatorId, testedByIp: operatorIp },
+        create: {
+          channel,
+          testedBy: operatorId,
+          testedByIp: operatorIp,
+          verdict: CHANNEL_VERDICT_COLUMNS[verdict],
+        },
       });
     }
 

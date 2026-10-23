@@ -418,10 +418,6 @@ export type RuntimeConfigResponseDto = {
      */
     dangerous?: boolean;
     /**
-     * 改动是否即时生效
-     */
-    hot?: boolean;
-    /**
      * 开关依赖声明：本项为 true 时列出的配置项必须同为 true
      */
     requires?: Array<string>;
@@ -483,10 +479,6 @@ export type RuntimeConfigDefinitionDto = {
      */
     dangerous?: boolean;
     /**
-     * 即时生效标记
-     */
-    hot?: boolean;
-    /**
      * 底层 env 变量名（部署期默认值层）
      */
     envKey?: string;
@@ -529,17 +521,21 @@ export type ChannelStatusDto = {
      */
     missingKeys: Array<string>;
     /**
-     * 是否存在有效的验证记录（测试通过后写入，配置变更即删除）
+     * 验证结论是否足以作为开启门禁的证据。false 覆盖：无验证记录、最近一次为模拟模式（mock）、或结论值未知（旧版记录）
      */
     verified: boolean;
     /**
-     * 最近一次测试通过时间
+     * 最近一次验证的结论强度（无记录为 null）。probe = 无副作用探测；end-to-end = 真实发送/往返确认；simulated = mock 模式，永不满足开启门禁
+     */
+    verdict?: 'probe' | 'end-to-end' | 'simulated';
+    /**
+     * 最近一次验证通过时间
      */
     verifiedAt?: {
         [key: string]: unknown;
     } | null;
     /**
-     * 最近一次测试操作者 ID
+     * 最近一次验证操作者 ID
      */
     testedBy?: {
         [key: string]: unknown;
@@ -548,7 +544,7 @@ export type ChannelStatusDto = {
 
 export type TestChannelDto = {
     /**
-     * 测试发信收件人（缺省由通道动作自行决定，如 supportEmail）
+     * 测试接收方（语义随通道而定：邮件 = 收件人，短信 = 手机号；微信 / 支付 / Webhook 的测试动作不读取该字段）。留空只做无副作用探测；填写才额外做端到端发送
      */
     to?: string;
 };
@@ -563,9 +559,17 @@ export type ChannelTestResultDto = {
      */
     ok: boolean;
     /**
+     * 成功时的验证结论强度：probe = 无副作用探测；end-to-end = 真实发送/往返确认；simulated = mock 模式（未接触任何外部系统，永不满足通道开启门禁）。失败时缺省
+     */
+    verdict?: 'probe' | 'end-to-end' | 'simulated';
+    /**
      * 成功说明或失败原因（面向操作员）
      */
     message: string;
+    /**
+     * 失败时疑似出错的配置键（按错误类型判定，如微信 40013 → wechatAppId）；前端据此定位到对应配置项，无法定位时缺省
+     */
+    problemKeys?: Array<string>;
 };
 
 export type UpdateRuntimeConfigDto = {
@@ -1083,6 +1087,10 @@ export type UserProfileResponseDto = {
      * 是否已设置密码（手机/微信自动注册用户可能未设置）
      */
     hasPassword: boolean;
+    /**
+     * 当前用户修改密码是否需要 TOTP 动态码（管理员开启双因素总闸且已绑定时为 true，前端据此渲染动态码字段）
+     */
+    passwordChangeRequiresMfa?: boolean;
     /**
      * VIP 等级（0=VIP0, 1=VIP1, 2=VIP2, ...）
      */
@@ -1970,6 +1978,10 @@ export type ChangePasswordDto = {
      * 新密码
      */
     newPassword: string;
+    /**
+     * TOTP 动态码（管理员开启双因素且已绑定时必填，其余情况可留空）
+     */
+    totpCode?: string;
 };
 
 export type ChangePasswordApiResponseDto = {

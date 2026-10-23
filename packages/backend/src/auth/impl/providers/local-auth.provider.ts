@@ -17,6 +17,7 @@ import { RegistrationService } from '../services/registration.service';
 import { LoginService } from '../services/login.service';
 import { PasswordService } from '../services/password.service';
 import { AuthTokenService } from '../services/auth-token.service';
+import { PasswordPolicyService } from '../../services/password-policy.service';
 import type {
   LoginDto, RegisterDto, AuthResponseDto, UserDto,
   WechatLoginResponseDto, WechatLoginUserDto, SessionRequest,
@@ -58,7 +59,8 @@ export class OssAuthProvider
     private passwordService: PasswordService,
     private authTokenService: AuthTokenService,
     private accountRateLimitService: AccountRateLimitService,
-    private initializationService: InitializationService
+    private initializationService: InitializationService,
+    private passwordPolicyService: PasswordPolicyService
   ) {}
 
   async login(
@@ -617,6 +619,10 @@ export class OssAuthProvider
     // 账号维度限流（防批量注册），与 IP 维度 RateLimitGuard 互补
     await this.accountRateLimitService.checkLimit('register', email);
 
+    // 口令策略（长度/复杂度/弱口令）由运行时配置驱动，DTO 只保留结构性校验。
+    // 此路径此前跳过策略校验，等保档下 9 字符纯字母口令会被直接建成用户
+    await this.passwordPolicyService.assertPasswordPolicy(registerData.password);
+
     const emailVerifyResult = await this.emailVerificationService.verifyEmail(
       email,
       emailCode
@@ -694,6 +700,9 @@ export class OssAuthProvider
     if (!allowRegister) {
       throw new BadRequestException(I18nContext.current()?.t('error.auth.registration_disabled') ?? '系统已关闭注册功能');
     }
+
+    // 策略校验前置到限流与验证码消耗之前，与 RegistrationService.register 顺序一致
+    await this.passwordPolicyService.assertPasswordPolicy(password);
 
     // 首启守卫：零用户系统禁止注册抢先占用「首个用户」
     await this.initializationService.assertInitialized();

@@ -8,13 +8,18 @@ describe("PaymentGatewayFactory", () => {
   let factory: PaymentGatewayFactory;
   let module: TestingModule;
 
-  /** 按键分派的 getValue mock：paymentEnabled / paymentProvider 各自取值 */
+  /** 按键分派的 getValue mock：paymentEnabled / paymentMockAllowed / paymentProvider 各自取值 */
   const mockRuntimeValues = (
     enabled: boolean,
-    provider: string
+    provider: string,
+    mockAllowed: boolean = false
   ): jest.Mock =>
     jest.fn(async (key: string) =>
-      key === "paymentEnabled" ? enabled : provider
+      key === "paymentEnabled"
+        ? enabled
+        : key === "paymentMockAllowed"
+          ? mockAllowed
+          : provider
     );
 
   beforeEach(async () => {
@@ -46,12 +51,20 @@ describe("PaymentGatewayFactory", () => {
     factory = module.get<PaymentGatewayFactory>(PaymentGatewayFactory);
   });
 
-  const setRuntimeValues = (enabled: boolean, provider: string) => {
+  const setRuntimeValues = (
+    enabled: boolean,
+    provider: string,
+    mockAllowed: boolean = false
+  ) => {
     const runtimeConfig = module.get<RuntimeConfigService>(RuntimeConfigService);
     jest
       .spyOn(runtimeConfig, "getValue")
       .mockImplementation(async (key: string) =>
-        key === "paymentEnabled" ? enabled : provider
+        key === "paymentEnabled"
+          ? enabled
+          : key === "paymentMockAllowed"
+            ? mockAllowed
+            : provider
       );
   };
 
@@ -60,6 +73,19 @@ describe("PaymentGatewayFactory", () => {
       setRuntimeValues(false, "mock");
 
       await expect(factory.getActiveGateway()).rejects.toThrow("payment is disabled");
+    });
+
+    it("should throw when provider is mock and paymentMockAllowed is false", async () => {
+      setRuntimeValues(true, "mock", false);
+
+      await expect(factory.getActiveGateway()).rejects.toThrow("不产生真实收款");
+    });
+
+    it("should return mock gateway when paymentMockAllowed is true", async () => {
+      setRuntimeValues(true, "mock", true);
+
+      const gateway = await factory.getActiveGateway();
+      expect(gateway.name).toBe("mock");
     });
 
     it("should return wechat_pay gateway when paymentEnabled is true and provider is wechat_pay", async () => {

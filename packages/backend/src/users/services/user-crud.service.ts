@@ -415,6 +415,7 @@ export class UserCrudService {
           createdAt: true,
           updatedAt: true,
           passwordChangedAt: true,
+          totpEnabled: true,
         },
       });
 

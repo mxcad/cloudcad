@@ -17,6 +17,8 @@ export interface IProfileWithMembership extends IUserDetail {
   passwordChangeRequired?: 'first_login' | 'expired';
   /** #416 口令即将到期软提示（仅 ADMIN 角色有值） */
   passwordExpiringSoon?: boolean;
+  /** #415 当前用户改密是否需要 TOTP 动态码（总闸开 && 管理员 && 已绑定），供前端改密表单渲染动态码字段 */
+  passwordChangeRequiresMfa?: boolean;
 }
 
 export interface IAuthFacade {

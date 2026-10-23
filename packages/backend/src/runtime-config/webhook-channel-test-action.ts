@@ -11,10 +11,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { Injectable } from '@nestjs/common';
-import type {
-  ChannelTestAction,
-  ChannelTestContext,
-  ChannelTestResult,
+import { escapeJsonText, renderTemplate } from '@cloudcad/contracts';
+import {
+  CHANNEL_TEST_REQUEST_TIMEOUT_MS,
+  type ChannelTestAction,
+  type ChannelTestContext,
+  type ChannelTestResult,
 } from './runtime-config.types';
 
 /**
@@ -46,6 +48,7 @@ export class WebhookChannelTestAction implements ChannelTestAction {
       return {
         ok: false,
         message: 'Webhook 通道未配置（缺失：alertWebhookUrl）',
+        problemKeys: ['alertWebhookUrl'],
       };
     }
 
@@ -55,14 +58,22 @@ export class WebhookChannelTestAction implements ChannelTestAction {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(CHANNEL_TEST_REQUEST_TIMEOUT_MS),
       });
       if (response.ok) {
-        return { ok: true, message: 'Webhook 测试 POST 成功（HTTP 2xx）' };
+        // end-to-end：真实出站 POST 已送达对方端点并拿到 2xx，
+        // URL 与鉴权（token/IP 白名单）链路确认可用。
+        return {
+          ok: true,
+          verdict: 'end-to-end',
+          message: 'Webhook 测试 POST 成功（HTTP 2xx）',
+        };
       }
+      // 4xx/5xx 多为 URL 失效、token 过期或 IP 未加白——都指向 URL 配置
       return {
         ok: false,
         message: `Webhook 测试 POST 失败：HTTP ${response.status} ${response.statusText}`,
+        problemKeys: ['alertWebhookUrl'],
       };
     } catch (error) {
       return {
@@ -70,27 +81,21 @@ export class WebhookChannelTestAction implements ChannelTestAction {
         message: `Webhook 测试 POST 失败：${
           error instanceof Error ? error.message : String(error)
         }`,
+        problemKeys: ['alertWebhookUrl'],
       };
     }
   }
 
-  /** 测试 payload：与生产发送同一模板、同一占位符语义（WebhookService.render 同构） */
+  /** 测试 payload：与生产发送同一模板、同一占位符语义（共用 @cloudcad/contracts 的 renderTemplate） */
   private renderTestPayload(template: string): string {
     const now = new Date().toISOString();
     const replacements: Record<string, string> = {
-      message: this.escapeJsonText('CloudCAD 告警通道测试'),
-      level: this.escapeJsonText('P2'),
-      source: this.escapeJsonText('channel-test'),
-      timestamp: this.escapeJsonText(now),
+      message: escapeJsonText('CloudCAD 告警通道测试'),
+      level: escapeJsonText('P2'),
+      source: escapeJsonText('channel-test'),
+      timestamp: escapeJsonText(now),
       detail: '',
     };
-    return template.replace(
-      /\{\{(\w+)\}\}/g,
-      (match, key: string) => replacements[key] ?? match
-    );
-  }
-
-  private escapeJsonText(value: string): string {
-    return JSON.stringify(value).slice(1, -1);
+    return renderTemplate(template, replacements);
   }
 }

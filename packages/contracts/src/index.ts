@@ -83,6 +83,8 @@ export {
 // 日志级别分裂（ADR-0076）：四个服务共享的级别刻度 + env 解析策略 + 阈值比较
 export { resolveLogLevels, isAtLeast } from './log-levels';
 export type { LogLevelName, LogLevelPlan } from './log-levels';
+// Webhook 告警模板渲染（ADR-0082 通道测试）：alert 生产发送与通道测试动作共享的纯算法
+export { escapeJsonText, renderTemplate } from './webhook-template';
 // Conversion engine contract (types + values，ADR-0064 / ADR-0069)
 export {
   ENGINE_INPUT_FIELDS,

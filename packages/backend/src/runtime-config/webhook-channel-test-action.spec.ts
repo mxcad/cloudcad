@@ -59,6 +59,7 @@ describe('WebhookChannelTestAction（ADR-0082 #506）', () => {
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('alertWebhookUrl');
+    expect(result.problemKeys).toEqual(['alertWebhookUrl']);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -69,6 +70,8 @@ describe('WebhookChannelTestAction（ADR-0082 #506）', () => {
 
     expect(result.ok).toBe(true);
     expect(result.message).toContain('HTTP 2xx');
+    // 真实收到 2xx 响应 → 端到端结论强度
+    expect(result.verdict).toBe('end-to-end');
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://example.com/hook');
     expect(init.method).toBe('POST');
@@ -79,31 +82,34 @@ describe('WebhookChannelTestAction（ADR-0082 #506）', () => {
     expect(init.body).not.toContain('{{');
   });
 
-  it('HTTP 4xx（机器人 token 失效等）→ 失败并报状态码', async () => {
+  it('HTTP 4xx（机器人 token 失效等）→ 失败并报状态码，归因 URL 配置键', async () => {
     mockFetchStatus(401, false);
 
     const result = await action.test(makeCtx());
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('401');
+    expect(result.problemKeys).toEqual(['alertWebhookUrl']);
   });
 
-  it('HTTP 5xx → 失败并报状态码', async () => {
+  it('HTTP 5xx → 失败并报状态码，归因 URL 配置键', async () => {
     mockFetchStatus(500, false);
 
     const result = await action.test(makeCtx());
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('500');
+    expect(result.problemKeys).toEqual(['alertWebhookUrl']);
   });
 
-  it('网络异常/超时 → 失败并报原因', async () => {
+  it('网络异常/超时 → 失败并报原因，归因 URL 配置键', async () => {
     fetchMock.mockRejectedValue(new TypeError('fetch failed'));
 
     const result = await action.test(makeCtx());
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('fetch failed');
+    expect(result.problemKeys).toEqual(['alertWebhookUrl']);
   });
 
   it('自定义模板按占位符渲染（飞书 msg_type 形态）', async () => {

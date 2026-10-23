@@ -504,7 +504,8 @@ export class UsersController {
     return this.usersService.changePassword(
       req.user.id,
       dto.oldPassword,
-      dto.newPassword
+      dto.newPassword,
+      dto.totpCode
     );
   }
 }

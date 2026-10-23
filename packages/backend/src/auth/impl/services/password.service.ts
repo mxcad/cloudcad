@@ -1,5 +1,6 @@
 import { Injectable, Logger, UnauthorizedException, BadRequestException, Inject } from '@nestjs/common';
 import { AuthTokenService } from './auth-token.service';
+import { EmailService } from '../../../notification/email.service';
 import { PASSWORD_HASHER } from '../../../users/interfaces/password-hasher.interface';
 import type { IPasswordHasher } from '../../../users/interfaces/password-hasher.interface';
 import type { IUserRepository, IEmailVerificationService, ISmsVerificationService, IRuntimeConfigService, IPasswordService } from '@cloudcad/contracts';
@@ -18,6 +19,7 @@ export class PasswordService implements IPasswordService {
     @Inject('EMAIL') private readonly emailVerificationService: IEmailVerificationService,
     @Inject('SMS') private readonly smsVerificationService: ISmsVerificationService,
     @Inject('CONFIG') private readonly runtimeConfigService: IRuntimeConfigService,
+    private emailService: EmailService,
     private authTokenService: AuthTokenService,
     private accountRateLimitService: AccountRateLimitService,
     private passwordPolicyService: PasswordPolicyService
@@ -76,8 +78,26 @@ export class PasswordService implements IPasswordService {
         await this.emailVerificationService.sendVerificationEmail(email);
         this.logger.log(`密码重置验证码已发送：${email}`);
       } else {
-        // 防账号枚举：账号不存在/已禁用时不发送验证码，但返回相同的成功消息
-        this.logger.warn(`忘记密码：邮箱账号不存在或不可用，不发送验证码 (email=${email})`);
+        // 防账号枚举：账号不存在/已禁用时不生成验证码，HTTP 响应与真实发送完全一致。
+        // 但补发一封「未找到该邮箱的账号」说明信（不含验证码），让填错邮箱的真实用户
+        // 当场得知真相——否则前端只能显示「验证码已发送」，用户永久卡死且无法自助。
+        // 账号存在性只出现在收件人自己的邮箱内，外部探测无法区分邮件内容。
+        // 通知发送失败必须吞掉：冒泡会让响应与真实发送分叉（500 vs 200），反成枚举信号。
+        try {
+          await this.emailService.sendPasswordResetNotRegisteredEmail(email, {
+            productName: 'CloudCAD',
+            supportEmail: await this.runtimeConfigService.getValue<string>('supportEmail'),
+            supportPhone: await this.runtimeConfigService.getValue<string>('supportPhone'),
+          });
+        } catch (error) {
+          this.logger.warn(
+            `账号不存在通知邮件发送失败（忽略以保持响应一致）：email=${email}, ` +
+              (error instanceof Error ? error.message : String(error))
+          );
+        }
+        this.logger.warn(
+          `忘记密码：邮箱账号不存在或不可用，不发送验证码，改发账号不存在通知 (email=${email})`
+        );
       }
 
       return { message: I18nContext.current()?.t('success.password_reset_code_sent_email') ?? '密码重置验证码已发送到您的邮箱', mailEnabled: true, smsEnabled };

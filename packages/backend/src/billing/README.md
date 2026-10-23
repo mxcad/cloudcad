@@ -96,7 +96,7 @@ interface PaymentGateway {
 #### 工厂（payment-gateway.factory.ts）
 
 - 注册表：`mock`、`wechat_pay` 两个实例。
-- `getActiveGateway()`：运行时配置 `paymentEnabled` 为 false 时抛错；否则取配置 `payment.provider`（默认 `mock`）。
+- `getActiveGateway()`：运行时配置 `paymentEnabled` 为 false 时抛错；否则取配置 `payment.provider`（默认 `mock`）。`provider=mock` 时需额外 `paymentMockAllowed=true`，否则抛错——防止支付开关打开却接到不真实收款的 mock。
 - `getGateway(name)`：按名称取指定网关（回调/查单/退款按订单记录中的 gateway 路由）。
 
 #### MockPaymentGateway（mock）
@@ -104,6 +104,7 @@ interface PaymentGateway {
 - `name = 'mock'`，下单返回伪 codeUrl/payParams/redirectUrl。
 - 查单时订单创建超过 **15s** 自动返回 SUCCESS；`forceComplete()` 立即置为完成；`refund` 记入已退款集合。
 - 用于开发/联调：前端可调 `POST /billing/orders/:orderNo/mock-scan` 模拟扫码。
+- 前置：需运行时配置 `paymentMockAllowed=true`（`dangerous`，默认 `false`）；否则 `getActiveGateway()` 抛错，生产环境保持关闭。
 
 #### WechatPayGateway（wechat-pay）
 
@@ -281,6 +282,7 @@ POST /billing/orders
 |------|------|------|------|
 | `payment.provider` | env | `mock` | 活跃网关（`mock` / `wechat_pay`） |
 | `paymentEnabled` | 运行时配置 | `false` | 支付总开关（下单、回调均校验） |
+| `paymentMockAllowed` | 运行时配置 / env | `false` | 允许 `mock` 网关受理订单；`false` 时 mock 下单直接抛错，本地联调才开启 |
 | `wechatPay.appId/mchId/key/notifyUrl` | env | — | 微信支付商户参数 |
 | `wechatPay.signType` | env | `MD5` | 签名算法（`MD5` / `HMAC-SHA256`） |
 | `wechatPay.certPath/keyPath` | env | — | 商户证书（退款接口必需） |

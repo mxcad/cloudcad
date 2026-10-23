@@ -99,8 +99,10 @@ export enum AuditAction {
   REDIS_PASSWORD_RESET = 'REDIS_PASSWORD_RESET',
   // —— 通知中心：删除公告（硬删不可恢复，params 记 wasActive 与批量条数）——
   NOTICE_DELETE = 'NOTICE_DELETE',
-  // —— 通道测试动作（ADR-0082 D9：测试发送外发真实消息属敏感操作，
-  // 承接 ADR-0079 的 CONFIG 类审计；resourceType=SYSTEM，resourceName=通道名）——
+  // —— 通道验证动作（ADR-0082 D9：动作会写入验证门禁证据，且可选端到端发送
+  // 会外发真实消息，属敏感操作；承接 ADR-0079 的 CONFIG 类审计；
+  // resourceType=SYSTEM，resourceName=通道名。枚举值不因 D4 修订改名，
+  // 既有审计数据仍按 CHANNEL_TEST 匹配）——
   CHANNEL_TEST = 'CHANNEL_TEST',
 }
 

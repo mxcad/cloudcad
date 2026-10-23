@@ -52,7 +52,6 @@ import { RuntimeConfigDefinition } from './runtime-config.types';
  *              各限流/锁定的次数阈值（`*Max`、`accountLockFailThreshold`），以及账号锁定的
  *              计数窗口与锁定时长（三者是一套，改一个不改另一个会互相抵消）。
  *              其余窗口长度字段不标记（配套关系写在 impact 里），避免二次确认泛滥。
- * - `hot`      是否即时生效；`false` = 需刷新页面或重启服务
  * - `envKey`   底层 env 变量名（部署期默认值层）
  * - `requires` 开关依赖声明（ADR-0082）：布尔键为 true 时列出的键必须同为 true。
  *              更新路径（单键 set / 重置 / profile 批量应用）按拒绝式门禁强制，
@@ -169,6 +168,20 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
       'PC 与移动端的 Logo（favicon、认证页 Logo）。' +
       '留空时回落到品牌档案（brandProfile）里的 logo 字段 → /brand/config.json → 内置默认值；' +
       '「恢复默认」清空的是本项，回落目标不是内置默认值而是整块里可能存在的值。',
+  },
+  {
+    key: 'brandEditorTitle',
+    type: 'string',
+    category: 'brand',
+    description: 'CAD 编辑器标题栏标题（编辑器自己的产品名，与品牌标题互不牵连）',
+    defaultValue: '',
+    isPublic: true,
+    tier: 'user',
+    input: { maxLength: 200, allowNull: true, placeholder: 'CAD梦想在线画图' },
+    impact:
+      '只影响 CAD 编辑器标题栏的标题与副标题（编辑器 ini 里的 title/headerTitle）。' +
+      '与品牌标题 brandTitle（页签标题、认证页品牌名）是两个独立产品面：改 brandTitle 不会带动本项。' +
+      '留空时使用编辑器 ini（/ini/myUiConfig.json）自带的值；「恢复默认」清空后同样回落到 ini 值。',
   },
   {
     key: 'brandCopyrightLine',
@@ -303,7 +316,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'MAIL_PORT',
     channel: 'mail',
-    input: { min: 1, max: 65535, step: 1 },
+    input: { min: 1, max: 65535, step: 1, placeholder: '587' },
     impact: '常用端口：587（STARTTLS）/ 465（SSL）。',
   },
   {
@@ -489,7 +502,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'ALIYUN_SMS_REGION_ID',
     channel: 'sms',
-    input: { maxLength: 100 },
+    input: { maxLength: 100, placeholder: 'cn-hangzhou' },
     impact: '短信服务地域 ID，默认 cn-hangzhou。',
   },
   {
@@ -573,7 +586,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'TENCENT_SMS_REGION',
     channel: 'sms',
-    input: { maxLength: 100 },
+    input: { maxLength: 100, placeholder: 'ap-guangzhou' },
     impact: '短信服务地域，默认 ap-guangzhou。',
   },
   {
@@ -1076,7 +1089,10 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'ALERT_WEBHOOK_URL',
     channel: 'webhook',
-    input: { maxLength: 500 },
+    input: {
+      maxLength: 500,
+      placeholder: 'https://oapi.dingtalk.com/robot/send?access_token=…',
+    },
     impact: 'URL 为空时 Webhook 通道不发送任何告警（等同关闭），告警只会留在后台告警列表。',
   },
   {
@@ -1232,9 +1248,11 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     dangerous: true,
     impact:
+      '两种模式切换都不会自动开启本项（安全模式仅建议、不强制），切换模式会将其重置为关闭，' +
+      '需管理员手动开启。开启后：未绑定者登录锁定至绑定页、已绑定者登录与修改密码必须带动态码；' +
       '关闭后管理员可仅凭密码登录（等保 2.0 8.1.4.1(d) 要求双因素）。' +
-      'admin-auth 与 jwt.strategy 均每次读取，改完即生效。',
-    profiles: { secure: true, normal: false },
+      'admin-auth、jwt.strategy 与改密校验均每次读取，改完即生效。',
+    profiles: { secure: false, normal: false },
   },
   // ───────────────────────── 安全：口令策略 ─────────────────────────
   // 以下项在 password-policy.service 的 assertPasswordPolicy() /
@@ -1337,9 +1355,10 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     envKey: 'PASSWORD_POLICY_CHANGE_ENFORCE_ENABLED',
     impact:
       '仅 ADMIN 角色生效。开启后：口令到期或首登未改密的管理员被锁定，只能走改密入口；' +
-      '关闭时判定仍计算但不拦截。每次登录与每次 token 校验时读取，改完即生效。' +
-      '默认关闭，与 mfaEnforceEnabled 一致；切换安全模式会开启。',
-    profiles: { secure: true, normal: false },
+      '关闭时判定仍计算但不拦截（仅显示标记）。每次登录与每次 token 校验时读取，改完即生效。' +
+      '两种模式切换都不会自动开启（安全模式仅建议、不强制），切换模式会将其重置为关闭，' +
+      '需管理员手动开启；「建议」由口令更换周期的软提示承载，不依赖本开关。',
+    profiles: { secure: false, normal: false },
   },
   {
     key: 'passwordPolicyHistoryCheckEnabled',
@@ -1616,6 +1635,18 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     impact: '开启后进入付费/会员下单流程；需先在服务端配置支付网关凭证。',
   },
   {
+    key: 'paymentMockAllowed',
+    type: 'boolean',
+    category: 'billing',
+    description: '允许 Mock 网关受理订单（仅本地联调；开启即订单不真实收款）',
+    defaultValue: false,
+    isPublic: false,
+    tier: 'admin',
+    dangerous: true,
+    envKey: 'PAYMENT_MOCK_ALLOWED',
+    impact: 'paymentProvider=mock 时是否允许创建订单。开启可走通下单-支付全流程但不真实收款；生产环境必须关闭。',
+  },
+  {
     key: 'paymentProvider',
     type: 'string',
     category: 'billing',
@@ -1643,7 +1674,7 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     tier: 'admin',
     envKey: 'WECHATPAY_APPID',
     channel: 'payment',
-    input: { maxLength: 100 },
+    input: { maxLength: 100, placeholder: 'wx1234567890abcdef' },
     impact: 'paymentProvider=wechat_pay 时必填；商户平台「开发配置-AppID」。',
   },
   {

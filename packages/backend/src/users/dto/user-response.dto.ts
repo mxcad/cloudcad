@@ -223,6 +223,14 @@ export class UserProfileResponseDto {
   })
   hasPassword: boolean;
 
+  @ApiPropertyOptional({
+    description:
+      '当前用户修改密码是否需要 TOTP 动态码（管理员开启双因素总闸且已绑定时为 true，前端据此渲染动态码字段）',
+    type: Boolean,
+    example: false,
+  })
+  passwordChangeRequiresMfa?: boolean;
+
   @ApiProperty({
     description: 'VIP 等级（0=VIP0, 1=VIP1, 2=VIP2, ...）',
     type: Number,

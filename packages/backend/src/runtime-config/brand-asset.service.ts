@@ -40,6 +40,8 @@ export const BRAND_LOGO_MIME_BY_EXTENSION: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
+  // 浏览器标签图标常用格式；上传后同时作为 favicon 使用
+  '.ico': 'image/x-icon',
 };
 
 /** 全部落盘后缀：读取侧扫描与旧文件清理共用 */

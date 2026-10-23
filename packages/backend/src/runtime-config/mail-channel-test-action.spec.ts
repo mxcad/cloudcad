@@ -1,11 +1,21 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Copyright (C) 2002-2026, Chengdu Dream Kaide Technology Co., Ltd.
 // All rights reserved.
+// The code, documentation, and related materials of this software belong to
+// Chengdu Dream Kaide Technology Co., Ltd. Applications that include this
+// software must include the following copyright statement.
+// This application should reach an agreement with Chengdu Dream Kaide
+// Technology Co., Ltd. to use this software, its documentation, or related
+// materials.
+// https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
 import nodemailer from 'nodemailer';
 import { MailChannelTestAction } from './mail-channel-test-action';
-import type { ChannelTestContext } from './runtime-config.types';
+import {
+  CHANNEL_TEST_REQUEST_TIMEOUT_MS,
+  type ChannelTestContext,
+} from './runtime-config.types';
 
 jest.mock('nodemailer', () => ({
   createTransport: jest.fn(),
@@ -16,6 +26,7 @@ const createTransportMock = jest.mocked(nodemailer.createTransport);
 describe('MailChannelTestAction（ADR-0082 #495）', () => {
   const action = new MailChannelTestAction();
 
+  const verifyMock = jest.fn();
   const sendMailMock = jest.fn();
   const closeMock = jest.fn();
 
@@ -23,6 +34,7 @@ describe('MailChannelTestAction（ADR-0082 #495）', () => {
     jest.clearAllMocks();
     closeMock.mockResolvedValue(undefined);
     createTransportMock.mockReturnValue({
+      verify: verifyMock,
       sendMail: sendMailMock,
       close: closeMock,
     } as never);
@@ -39,7 +51,6 @@ describe('MailChannelTestAction（ADR-0082 #495）', () => {
       smtpUser: 'user@test',
       smtpPassword: 'smtp-pass',
       smtpFrom: 'CloudCAD <noreply@test.com>',
-      supportEmail: 'support@test.com',
       ...overrides,
     };
     return {
@@ -48,51 +59,105 @@ describe('MailChannelTestAction（ADR-0082 #495）', () => {
     };
   };
 
-  it('向指定收件人发测试信，一次性 transport 发送后关闭', async () => {
-    sendMailMock.mockResolvedValue({ messageId: 'm-1' });
+  describe('验证（未指定收件人）', () => {
+    it('只做连接与认证验证（verify），不发送任何邮件', async () => {
+      verifyMock.mockResolvedValue(undefined);
 
-    const result = await action.test(makeCtx({}, 'admin@test.com'));
+      const result = await action.test(makeCtx());
 
-    expect(result.ok).toBe(true);
-    expect(result.message).toContain('admin@test.com');
-    expect(createTransportMock).toHaveBeenCalledWith({
-      host: 'smtp.test.com',
-      port: 465,
-      secure: true,
-      auth: { user: 'user@test', pass: 'smtp-pass' },
+      expect(result.ok).toBe(true);
+      expect(result.message).toContain('未发送邮件');
+      // 无副作用探测 → 结论强度为 probe，不足以作为「已端到端验证」的证据
+      expect(result.verdict).toBe('probe');
+      expect(createTransportMock).toHaveBeenCalledWith({
+        host: 'smtp.test.com',
+        port: 465,
+        secure: true,
+        auth: { user: 'user@test', pass: 'smtp-pass' },
+        socketTimeout: CHANNEL_TEST_REQUEST_TIMEOUT_MS,
+      });
+      expect(verifyMock).toHaveBeenCalled();
+      expect(sendMailMock).not.toHaveBeenCalled();
+      expect(closeMock).toHaveBeenCalled();
     });
-    expect(sendMailMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: 'CloudCAD <noreply@test.com>',
-        to: 'admin@test.com',
-      })
-    );
-    expect(closeMock).toHaveBeenCalled();
+
+    it('空白收件人视同未指定（只验证不发送）', async () => {
+      verifyMock.mockResolvedValue(undefined);
+
+      const result = await action.test(makeCtx({}, '   '));
+
+      expect(result.ok).toBe(true);
+      expect(verifyMock).toHaveBeenCalled();
+      expect(sendMailMock).not.toHaveBeenCalled();
+    });
+
+    it('不回落客服邮箱：supportEmail 空或缺失都不影响验证', async () => {
+      verifyMock.mockResolvedValue(undefined);
+
+      const result = await action.test(makeCtx({ supportEmail: '' }));
+
+      expect(result.ok).toBe(true);
+      expect(verifyMock).toHaveBeenCalled();
+      expect(sendMailMock).not.toHaveBeenCalled();
+    });
+
+    it('认证失败（EAUTH）→ 失败并归因账号/口令配置键，transport 仍被关闭', async () => {
+      const error = new Error('Invalid login') as Error & { code?: string };
+      error.code = 'EAUTH';
+      verifyMock.mockRejectedValue(error);
+
+      const result = await action.test(makeCtx());
+
+      expect(result.ok).toBe(false);
+      expect(result.message).toContain('Invalid login');
+      expect(result.message).toContain('SMTP 验证失败');
+      expect(result.problemKeys).toEqual(['smtpUser', 'smtpPassword']);
+      expect(closeMock).toHaveBeenCalled();
+    });
+
+    it('主机不可达（ENOTFOUND）→ 失败并归因主机/端口配置键', async () => {
+      const error = new Error(
+        'getaddrinfo ENOTFOUND smtp.test.com'
+      ) as Error & { code?: string };
+      error.code = 'ENOTFOUND';
+      verifyMock.mockRejectedValue(error);
+
+      const result = await action.test(makeCtx());
+
+      expect(result.ok).toBe(false);
+      expect(result.problemKeys).toEqual(['smtpHost', 'smtpPort']);
+    });
   });
 
-  it('未指定收件人时回落客服邮箱（supportEmail）配置值', async () => {
-    sendMailMock.mockResolvedValue({ messageId: 'm-2' });
+  describe('发送（指定收件人）', () => {
+    it('向指定收件人发测试信，一次性 transport 发送后关闭', async () => {
+      sendMailMock.mockResolvedValue({ messageId: 'm-1' });
 
-    const result = await action.test(makeCtx());
+      const result = await action.test(makeCtx({}, 'admin@test.com'));
 
-    expect(result.ok).toBe(true);
-    expect(sendMailMock).toHaveBeenCalledWith(
-      expect.objectContaining({ to: 'support@test.com' })
-    );
-  });
+      expect(result.ok).toBe(true);
+      expect(result.message).toContain('admin@test.com');
+      // 真实发信成功 → 端到端结论强度
+      expect(result.verdict).toBe('end-to-end');
+      expect(verifyMock).not.toHaveBeenCalled();
+      expect(sendMailMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: 'CloudCAD <noreply@test.com>',
+          to: 'admin@test.com',
+        })
+      );
+      expect(closeMock).toHaveBeenCalled();
+    });
 
-  it('未指定收件人且客服邮箱为空 → 失败，不建 transport、不发信', async () => {
-    const result = await action.test(makeCtx({ supportEmail: '' }));
+    it('发送失败（无法归因）→ 失败且不带 problemKeys', async () => {
+      sendMailMock.mockRejectedValue(new Error('socket hang up'));
 
-    expect(result.ok).toBe(false);
-    expect(result.message).toContain('supportEmail');
-    expect(createTransportMock).not.toHaveBeenCalled();
-  });
+      const result = await action.test(makeCtx({}, 'admin@test.com'));
 
-  it('SMTP 服务器拒绝（sendMail 抛错）→ 异常上抛由 ChannelTestService 归一为失败，transport 仍被关闭', async () => {
-    sendMailMock.mockRejectedValue(new Error('Invalid login'));
-
-    await expect(action.test(makeCtx())).rejects.toThrow('Invalid login');
-    expect(closeMock).toHaveBeenCalled();
+      expect(result.ok).toBe(false);
+      expect(result.message).toContain('测试邮件发送失败');
+      expect(result.problemKeys).toEqual([]);
+      expect(closeMock).toHaveBeenCalled();
+    });
   });
 });

@@ -48,7 +48,7 @@ describe('BrandAssetService', () => {
     await fs.promises.mkdir(brandDir, { recursive: true });
   });
 
-  it('MIME 白名单与落盘后缀表同源，覆盖 png/jpg/gif/webp', () => {
+  it('MIME 白名单与落盘后缀表同源，覆盖 png/jpg/gif/webp/ico', () => {
     expect([...BRAND_LOGO_ALLOWED_MIME_TYPES].sort()).toEqual([
       'image/gif',
       'image/jfif',
@@ -56,6 +56,7 @@ describe('BrandAssetService', () => {
       'image/jpg',
       'image/png',
       'image/webp',
+      'image/x-icon',
     ]);
     expect([...BRAND_LOGO_EXTENSIONS].sort()).toEqual(
       [...Object.keys(BRAND_LOGO_MIME_BY_EXTENSION)].sort()
