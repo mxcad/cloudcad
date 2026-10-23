@@ -373,6 +373,7 @@ function mapUser() {
               :key="w.work.work_id"
               :display="w"
               :connecting="joiningWorkId === w.work.work_id"
+              :show-title="false"
               @join="handleJoinWork"
               @exit="handleExitWork"
             />
@@ -399,6 +400,7 @@ function mapUser() {
               :key="w.work.work_id"
               :display="w"
               :connecting="joiningWorkId === w.work.work_id"
+              :show-title="false"
               @join="handleJoinWork"
               @exit="handleExitWork"
             />

@@ -17,11 +17,21 @@ interface FolderNode {
   children?: FolderNode[];
 }
 
-const props = defineProps<{
-  show: boolean;
-  currentFileName?: string;
-  currentNodeId?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    show: boolean;
+    currentFileName?: string;
+    currentNodeId?: string;
+    /**
+     * 面板顶部提示：面板是被动弹出的（保存失败转另存为）时必须给出原因，
+     * 否则用户不知道自己为什么在这。提示常驻表单顶部，不随 Toast 消失。
+     */
+    notice?: string;
+  }>(),
+  {
+    notice: '',
+  },
+);
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -416,6 +426,12 @@ async function onTargetTypeChange(newType: SaveTargetType) {
           </div>
         </Transition>
 
+        <!-- 被动弹出原因（保存被拒后转另存为） -->
+        <div v-if="notice" class="form-notice">
+          <van-icon name="info-o" size="16" />
+          <span>{{ notice }}</span>
+        </div>
+
         <!-- File Name -->
         <div class="form-section">
           <label class="form-label">{{ t('文件名') }}</label>
@@ -566,6 +582,20 @@ async function onTargetTypeChange(newType: SaveTargetType) {
   border-radius: var(--radius-lg);
   color: var(--danger);
   font-size: var(--font-size-caption);
+}
+
+// 被动弹出的原因提示（区别于校验错误：不是用户做错了，是上一步被拒）
+.form-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 32%, transparent);
+  border-radius: var(--radius-lg);
+  color: var(--warning);
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
 }
 
 // === Form Section ===

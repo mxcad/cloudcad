@@ -251,6 +251,8 @@ function dismissError() {
 const { saving, save: saveAction } = useSave();
 const showCommitDialog = ref(false);
 const showSaveAsSheet = ref(false);
+// 面板被动弹出时的原因（保存被拒转另存为）。用户主动点「另存为」时为空。
+const saveAsNotice = ref('');
 watch(saveAsToCloudTrigger, () => {
   showSaveAsSheet.value = true;
 });
@@ -374,7 +376,9 @@ async function executeSave() {
   if (result.needSaveAs) {
     // 先说清为什么转另存为（文件已被删除 / 无保存权限），再打开面板。
     // 直接弹出面板会把「保存失败」伪装成「用户主动另存」，用户不知道自己为什么在这。
-    if (result.message) showToast(result.message);
+    // 原因走面板内的常驻提示而非 Toast：Toast 会压在面板标题上且几秒后消失，
+    // 而用户停在面板里时正是最需要原因的时刻。
+    saveAsNotice.value = result.message ?? '';
     showSaveAsSheet.value = true;
     return;
   }
@@ -385,6 +389,7 @@ async function executeSave() {
 
 function onSaveAsClose() {
   showSaveAsSheet.value = false;
+  saveAsNotice.value = '';
 }
 
 async function onSaveAsSuccess(result: {
@@ -393,6 +398,7 @@ async function onSaveAsSuccess(result: {
   targetType: 'personal' | 'project';
 }) {
   showSaveAsSheet.value = false;
+  saveAsNotice.value = '';
   if (!result.nodeId) return;
 
   const isProject = result.targetType === 'project';
@@ -494,9 +500,12 @@ function onShowVersionHistory() {
     showLoginPrompt.value = true;
     return;
   }
-  // 版本历史是只读能力（对齐 PC 的 VERSION_READ 判定），不该用 canSave 拦：
-  // 共享图纸里的只读协作者能开文件却看不到历史，与 PC 行为不一致。
-  // 移动端 CAD 权限只有 canSave/canExport 两档读能力，按「能看文件即可看历史」放宽。
+  // 版本历史是只读能力，不该用 canSave 拦：共享图纸里的只读协作者能开文件却看不到
+  // 历史，与 PC 行为不一致。
+  // 注意这不是 PC 的 VERSION_READ 判定的等价移植——PC 按项目权限
+  // ProjectPermission.VERSION_READ 拦（useVersionHistory.ts），那是「项目成员能否看版本」
+  // 这一档；移动端 CAD 权限只有 canSave/canExport 两档「能否改/能否导」，是另一条能力轴，
+  // 按「能看文件即可看历史」放宽。若后端日后给移动端下发版本读权限，这里要改成那个键。
   if (!editorState.state.permissions.canSave && !editorState.state.permissions.canExport) {
     showToast(t('没有查看版本历史的权限'));
     return;
@@ -892,7 +901,9 @@ setViewportHeight();
           :disabled="
             saving ||
             isPublicFile ||
-            (!!editorState.state.fileId && !editorState.state.permissions.canSave)
+            (!!editorState.state.fileId &&
+              !editorState.state.permissions.canSave &&
+              !editorState.state.libraryKey)
           "
           @click="callCommand('Mx_SaveToCloud')"
         >
@@ -1014,6 +1025,7 @@ setViewportHeight();
       :show="showSaveAsSheet"
       :current-file-name="currentDrawingName()"
       :current-node-id="editorState.state.fileId || undefined"
+      :notice="saveAsNotice"
       @close="onSaveAsClose"
       @success="onSaveAsSuccess"
       @login-required="showLoginPrompt = true"
