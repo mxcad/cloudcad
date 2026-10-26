@@ -422,6 +422,10 @@ export type RuntimeConfigResponseDto = {
      */
     requires?: Array<string>;
     /**
+     * 互斥声明：本项为 true 时列出的配置项必须同为 false（不可同时开启）
+     */
+    conflictsWith?: Array<string>;
+    /**
      * 通道配置项标记：本项属于哪个通道（如 mail）
      */
     channel?: string;
@@ -487,6 +491,10 @@ export type RuntimeConfigDefinitionDto = {
      */
     requires?: Array<string>;
     /**
+     * 互斥声明：本项为 true 时列出的配置项必须同为 false（不可同时开启）
+     */
+    conflictsWith?: Array<string>;
+    /**
      * 通道配置项标记：本项属于哪个通道（如 mail）
      */
     channel?: string;
@@ -505,6 +513,17 @@ export type RuntimeConfigDependencyViolationDto = {
      * 被依赖的配置键（通道/服务开关，如 mailEnabled）
      */
     required: string;
+};
+
+export type RuntimeConfigConflictViolationDto = {
+    /**
+     * 互斥对的一端配置键
+     */
+    key: string;
+    /**
+     * 互斥对的另一端配置键
+     */
+    other: string;
 };
 
 export type ChannelStatusDto = {
@@ -5911,6 +5930,22 @@ export type RuntimeConfigControllerCheckDependenciesResponses = {
 };
 
 export type RuntimeConfigControllerCheckDependenciesResponse = RuntimeConfigControllerCheckDependenciesResponses[keyof RuntimeConfigControllerCheckDependenciesResponses];
+
+export type RuntimeConfigControllerCheckConflictsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/runtime-config/conflict-check';
+};
+
+export type RuntimeConfigControllerCheckConflictsResponses = {
+    /**
+     * 返回当前互斥共存清单（无违规时为空数组）
+     */
+    200: Array<RuntimeConfigConflictViolationDto>;
+};
+
+export type RuntimeConfigControllerCheckConflictsResponse = RuntimeConfigControllerCheckConflictsResponses[keyof RuntimeConfigControllerCheckConflictsResponses];
 
 export type RuntimeConfigControllerGetChannelsStatusData = {
     body?: never;
