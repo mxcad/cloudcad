@@ -19,11 +19,53 @@ import {
   IsOptional,
   IsMobilePhone,
   ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 
 import { IsMatch } from '../../common/decorators/validation.decorator';
 
 import { I18nContext } from 'nestjs-i18n';
+
+/**
+ * 自定义验证器：确保邮箱或手机号至少提供一个。
+ *
+ * 必须是 @ValidatorConstraint() 注册的**类**——`@Validate()` 通过
+ * `getTargetValidatorConstraints(cls)` 查 `constraintClsToValidatorMap` 拿元数据，
+ * 普通函数不在该 map 中，校验会被**静默跳过**（不报错），形同未写校验。
+ * 类有 TDZ、不提升，故须定义在消费它的 DTO 之前。
+ */
+@ValidatorConstraint({ name: 'hasEmailOrPhone', async: false })
+export class HasEmailOrPhone implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const dto = args.object as ForgotPasswordDto;
+    return !!(dto.email || dto.phone);
+  }
+
+  defaultMessage(): string {
+    return (
+      I18nContext.current()?.t('validation.email_or_phone_required') ??
+      '必须提供邮箱或手机号'
+    );
+  }
+}
+
+/** 同上，用于重置密码 DTO（validator name 必须唯一） */
+@ValidatorConstraint({ name: 'hasEmailOrPhoneReset', async: false })
+export class HasEmailOrPhoneReset implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments): boolean {
+    const dto = args.object as ResetPasswordDto;
+    return !!(dto.email || dto.phone);
+  }
+
+  defaultMessage(): string {
+    return (
+      I18nContext.current()?.t('validation.email_or_phone_required') ??
+      '必须提供邮箱或手机号'
+    );
+  }
+}
+
 export class ForgotPasswordDto {
   @ApiPropertyOptional({ description: '邮箱地址', example: 'user@example.com' })
   @IsEmail({}, { message: () => I18nContext.current()?.t('validation.email_format_invalid') ?? '邮箱格式不正确' })
@@ -41,14 +83,6 @@ export class ForgotPasswordDto {
   })
   @Validate(HasEmailOrPhone, { message: () => I18nContext.current()?.t('validation.email_or_phone_required') ?? '必须提供邮箱或手机号' })
   validateContact: string;
-}
-
-/**
- * 自定义验证器：确保邮箱或手机号至少提供一个
- */
-function HasEmailOrPhone(value: unknown, args: ValidationArguments) {
-  const dto = args.object as ForgotPasswordDto;
-  return !!(dto.email || dto.phone);
 }
 
 export class ResetPasswordDto {
@@ -75,7 +109,9 @@ export class ResetPasswordDto {
   @ApiProperty({ description: '确认新密码', example: 'NewPassword123!' })
   @IsString({ message: () => I18nContext.current()?.t('validation.confirm_password_must_be_string') ?? '确认密码必须是字符串' })
   @IsNotEmpty({ message: () => I18nContext.current()?.t('validation.confirm_password_required') ?? '确认密码不能为空' })
-  @Validate(IsMatch, ['newPassword'], {
+  // `@Validate()` 只认 @ValidatorConstraint() 注册的类；`IsMatch` 是装饰器工厂函数，
+  // 传进去会静默跳过校验（曾致 confirmPassword 不匹配仍返回 200 并真的改密码）。
+  @IsMatch('newPassword', {
     message: () => I18nContext.current()?.t('validation.passwords_mismatch') ?? '两次输入的密码不一致',
   })
   confirmPassword: string;
@@ -86,14 +122,6 @@ export class ResetPasswordDto {
   })
   @Validate(HasEmailOrPhoneReset, { message: () => I18nContext.current()?.t('validation.email_or_phone_required') ?? '必须提供邮箱或手机号' })
   validateContact: string;
-}
-
-/**
- * 自定义验证器：确保邮箱或手机号至少提供一个（用于重置密码）
- */
-function HasEmailOrPhoneReset(value: unknown, args: ValidationArguments) {
-  const dto = args.object as ResetPasswordDto;
-  return !!(dto.email || dto.phone);
 }
 
 export class ChangePasswordDto {
