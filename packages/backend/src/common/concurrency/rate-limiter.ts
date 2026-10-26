@@ -17,6 +17,8 @@ interface TaskState {
   priority: TaskPriority;
   /** 执行超时定时器句柄：任务真正结束时（execute finally）清除 */
   timeoutTimer?: ReturnType<typeof setTimeout>;
+  /** 排队等待超时定时器句柄：任务开始执行或结算时清除 */
+  queueTimer?: ReturnType<typeof setTimeout>;
 }
 
 /** 最近完成任务的耗时/等待时长样本（有界环形，超出上限丢弃最旧） */
@@ -42,6 +44,8 @@ export class RateLimiter {
   private readonly logger = new Logger(RateLimiter.name);
   private readonly maxConcurrent: number;
   private readonly timeout: number;
+  /** 排队等待上限（ms）：0 = 不限（默认，向后兼容）。>0 时排队超过该时长未拿到槽位的任务按失败结算 */
+  private readonly queueTimeout: number;
   private readonly criticalPriorityQueue: TaskState[] = [];
   private readonly highPriorityQueue: TaskState[] = [];
   private readonly lowPriorityQueue: TaskState[] = [];
@@ -49,11 +53,16 @@ export class RateLimiter {
   private readonly recentCompletions: CompletionSample[] = [];
   private nextTaskId = 0;
 
-  constructor(maxConcurrent: number, timeoutMs: number = 600000) {
+  constructor(
+    maxConcurrent: number,
+    timeoutMs: number = 600000,
+    queueTimeoutMs: number = 0,
+  ) {
     this.maxConcurrent = maxConcurrent;
     this.timeout = timeoutMs;
+    this.queueTimeout = queueTimeoutMs;
     this.logger.log(
-      `限流器初始化: 最大并发数=${this.maxConcurrent}, 超时=${this.timeout}ms`
+      `限流器初始化: 最大并发数=${this.maxConcurrent}, 超时=${this.timeout}ms, 排队等待上限=${this.queueTimeout}ms`
     );
   }
 
@@ -97,6 +106,27 @@ export class RateLimiter {
 
     this.processNext();
 
+    // 排队等待上限（可选）：入队后超过 queueTimeout 仍未拿到槽位 → 出队并按失败结算。
+    // 此前排队无上限：持续高负载下任务无限等待，调用方（前端等待超时）先放弃而任务
+    // 仍占着队列位置空跑。结算走 settleError（transient 语义由调用方按错误处理）。
+    if (this.queueTimeout > 0) {
+      taskState.queueTimer = setTimeout(() => {
+        if (taskState.startedAt) return; // 已开始执行，定时器失效
+        const q =
+          taskState.priority === 'critical'
+            ? this.criticalPriorityQueue
+            : taskState.priority === 'high'
+              ? this.highPriorityQueue
+              : this.lowPriorityQueue;
+        const idx = q.indexOf(taskState);
+        if (idx !== -1) q.splice(idx, 1);
+        this.logger.warn(`任务排队等待超时: ${taskId} (${this.queueTimeout}ms)`);
+        taskState.settleError(
+          new Error(`任务排队等待超时 (${this.queueTimeout}ms)`),
+        );
+      }, this.queueTimeout);
+    }
+
     // 拿到槽位后执行任务，结算结果 promise
     startPromise
       .then(() => task())
@@ -118,6 +148,12 @@ export class RateLimiter {
       if (taskState.timeoutTimer) {
         clearTimeout(taskState.timeoutTimer);
         taskState.timeoutTimer = undefined;
+      }
+      // 清除排队等待超时定时器：未开始即被结算（排队超时/clearQueue）时，
+      // 残留的定时器会在之后误打「排队等待超时」日志
+      if (taskState.queueTimer) {
+        clearTimeout(taskState.queueTimer);
+        taskState.queueTimer = undefined;
       }
       const finishedAt = Date.now();
       taskState.finishedAt = finishedAt;
@@ -160,6 +196,11 @@ export class RateLimiter {
 
     taskState.startedAt = Date.now();
     this.running.set(taskState.id, taskState);
+    // 已拿到槽位：排队等待超时定时器不再需要
+    if (taskState.queueTimer) {
+      clearTimeout(taskState.queueTimer);
+      taskState.queueTimer = undefined;
+    }
 
     this.logger.debug(
       `任务开始执行: ${taskState.id} (${taskState.priority}), 等待时间=${taskState.startedAt - taskState.queuedAt}ms`

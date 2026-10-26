@@ -326,7 +326,11 @@ export class FileDownloadExportService {
       height?: string;
       colorPolicy?: string;
       dwgVersion?: number;
-    }
+    },
+    // 后台预转换（convertNodeForExport）透传：priority 进内层限流器队列档位，
+    // taskId（node.taskId）远端模式按 clientTaskId 别名登记
+    priority?: 'high' | 'low',
+    taskId?: string
   ): Promise<{ alreadyCached: boolean; cacheKey: string | null }> {
     const node = await this.prisma.fileSystemNode.findUnique({
       where: { id: nodeId },
@@ -419,6 +423,8 @@ export class FileDownloadExportService {
             userId,
             outname,
             engineParams: resolved.engineParams,
+            ...(priority ? { priority } : {}),
+            ...(taskId ? { taskId } : {}),
           });
           return artifactPath;
         }

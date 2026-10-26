@@ -31,6 +31,9 @@ describe('ProcessPoolExecutor', () => {
     convertFile: jest.fn(),
     convertBinToMxweb: jest.fn(),
     generateBinFiles: jest.fn(),
+    // 可选统计出口：不设置时执行器回落零值统计（测试 mock 无内层限流器）
+    getConversionLimiterStats: jest.fn(),
+    getConversionLimiterDurationStats: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -81,6 +84,57 @@ describe('ProcessPoolExecutor', () => {
 
       expect(result.status).toBe('FAILED');
       expect(result.error).toBe('boom');
+    });
+  });
+
+  describe('when invoking a convertFile task with priority', () => {
+    it('should map priority 1 to critical and pass it to convertFile', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { newpath: '/out/result.mxweb', code: 0 },
+      });
+
+      await executor.invoke(makeTask({ priority: 1 }));
+
+      expect(mockConversionService.convertFile).toHaveBeenCalledWith(
+        expect.objectContaining({ priority: 'critical' }),
+      );
+    });
+
+    it('should map priority 3 to low and pass it to convertFile', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { newpath: '/out/result.mxweb', code: 0 },
+      });
+
+      await executor.invoke(makeTask({ priority: 3 }));
+
+      expect(mockConversionService.convertFile).toHaveBeenCalledWith(
+        expect.objectContaining({ priority: 'low' }),
+      );
+    });
+
+    it('should not override an explicit params priority for priority 2', async () => {
+      mockConversionService.convertFile.mockResolvedValue({
+        isOk: true,
+        ret: { newpath: '/out/result.mxweb', code: 0 },
+      });
+
+      await executor.invoke(
+        makeTask({
+          priority: 2,
+          params: {
+            srcPath: '/in/a.dwg',
+            fileHash: 'hash_a',
+            priority: 'low',
+          } as never,
+        }),
+      );
+
+      // priority 2（导出档）不映射 critical/low：保留调用方显式指定的档位
+      expect(mockConversionService.convertFile).toHaveBeenCalledWith(
+        expect.objectContaining({ priority: 'low' }),
+      );
     });
   });
 
@@ -210,17 +264,26 @@ describe('ProcessPoolExecutor', () => {
   });
 
   describe('queue stats helpers', () => {
-    it('should expose queue stats', async () => {
-      // 嵌入式执行器恒有排队队列，null 分支由 cloud-faas 覆盖
+    it('should fall back to zero stats when the service exposes no limiter stats', async () => {
+      // 外层限流器已移除：统计透传内层（FileConversionService 的 conversionRateLimiter）；
+      // 服务未提供统计出口（测试 mock）时回落全零，不报错
+      mockConversionService.getConversionLimiterStats.mockReturnValue(undefined);
+      mockConversionService.getConversionLimiterDurationStats.mockReturnValue(
+        undefined,
+      );
       const stats = await executor.queueStats();
-      expect(stats?.kind).toBe('priority-queue');
-      expect(stats).toMatchObject({
+      expect(stats).toEqual({
         kind: 'priority-queue',
-        stats: { maxConcurrent: 4, queueLength: 0 },
+        stats: {
+          queueLength: 0,
+          criticalPriorityQueueLength: 0,
+          highPriorityQueueLength: 0,
+          lowPriorityQueueLength: 0,
+          runningCount: 0,
+          maxConcurrent: 0,
+          timeout: 0,
+        },
       });
-    });
-
-    it('should expose duration stats from the rate limiter', async () => {
       expect(await executor.durationStats()).toEqual({
         kind: 'priority-queue',
         stats: {
@@ -230,6 +293,23 @@ describe('ProcessPoolExecutor', () => {
           p50WaitMs: null,
           p95WaitMs: null,
         },
+      });
+    });
+
+    it('should pass through the inner limiter stats when provided', async () => {
+      mockConversionService.getConversionLimiterStats.mockReturnValue({
+        queueLength: 3,
+        criticalPriorityQueueLength: 1,
+        highPriorityQueueLength: 2,
+        lowPriorityQueueLength: 0,
+        runningCount: 2,
+        maxConcurrent: 8,
+        timeout: 600000,
+      });
+      const stats = await executor.queueStats();
+      expect(stats).toMatchObject({
+        kind: 'priority-queue',
+        stats: { queueLength: 3, maxConcurrent: 8 },
       });
     });
   });

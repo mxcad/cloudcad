@@ -2644,5 +2644,7 @@ export default  {
     "1000159": "{n} items are system-preset. Saving here overrides the preset values; resetting to factory default reverts to the preset values, not the factory defaults.",
     "1000160": "{n} of them are system-preset: switching mode does not change their effective values.",
     "1000161": "{n} of them are system-preset: after resetting to factory default, they revert to the preset values, not the factory defaults.",
-    "1000162": "This item is system-preset to {env}. After resetting to factory default, it still takes effect instead of the factory default {def}."
+    "1000162": "This item is system-preset to {env}. After resetting to factory default, it still takes effect instead of the factory default {def}.",
+    "1000163": "The file has been uploaded and converted, but automatic opening failed: {error}",
+    "1000164": "Network connection error. Please check your network and try again later"
 }

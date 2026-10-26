@@ -35,6 +35,7 @@ import { VipFeatureRequiredException } from "../../vip/errors/vip-feature-requir
 import {
 	interpretEngineRun,
 	resolveEngineNewpath,
+	resolveMxExecutablePath,
 	runMxcadAssembly,
 	salvageSuccessResult,
 } from "@cloudcad/engine-exec";
@@ -42,10 +43,13 @@ import type { EngineRunOutcome } from "@cloudcad/engine-exec";
 import {
 	IFunctionExecutor,
 	type ConversionTask,
+	type PriorityQueueStats,
+	type PriorityQueueDurationStats,
 } from "../../function-executor/function-executor.interface";
 import {
 	ENGINE_INPUT_FIELDS,
 	buildEngineParams,
+	isConversionFailureCategory,
 	isTransientFailure,
 	FileTypeDetector,
 } from "@cloudcad/contracts";
@@ -56,6 +60,13 @@ import type {
 } from "@cloudcad/contracts";
 import { cachedArtifactReady } from "../utils/conversion-artifact";
 import { buildIngestConversionOptions } from "../utils/ingest-conversion-options";
+
+/**
+ * 转换限流器排队等待上限：持续高负载下排队任务此前无限等待（单任务最长跑满
+ * 引擎超时 180s），前端 240s 等待先超时而任务仍占槽位空跑。30 分钟 ≈ 让排在前面的
+ * ~10 个任务有机会完成；超上限按失败结算（transient，可重试），与引擎超时同族。
+ */
+const CONVERSION_QUEUE_TIMEOUT_MS = 30 * 60 * 1000;
 
 /**
  * 从转换选项中挑选契约定义的引擎输入字段（camelCase），丢弃 undefined 字段。
@@ -136,29 +147,45 @@ export class FileConversionService implements IMxcadConversionService {
 			cpuCount,
 		);
 
-		// 初始化文件转换限流器
-		this.conversionRateLimiter = new RateLimiter(maxConcurrent);
+		// 初始化文件转换限流器（第三参 = 排队等待上限，见 CONVERSION_QUEUE_TIMEOUT_MS）
+		this.conversionRateLimiter = new RateLimiter(
+			maxConcurrent,
+			undefined,
+			CONVERSION_QUEUE_TIMEOUT_MS,
+		);
 		this.logger.log(
-			`文件转换限流器初始化: CPU核心数=${cpuCount}, 最大并发数=${maxConcurrent}`,
+			`文件转换限流器初始化: CPU核心数=${cpuCount}, 最大并发数=${maxConcurrent}, 排队等待上限=${CONVERSION_QUEUE_TIMEOUT_MS}ms`,
 		);
 
 		// 检测操作系统
 		const isLinux = os.platform() === "linux";
 
-		// 根据平台配置转换程序路径
+		// 根据平台配置转换程序路径。
+		// 跨平台误配置回退走 @cloudcad/engine-exec 的 resolveMxExecutablePath（与
+		// conversion-service 同一出口）：Windows 配好的 MXCAD_ASSEMBLY_PATH 被复制到
+		// Linux 后指向 .exe，直接 spawn 会 ENOENT 被归类 not-started 反复重试，
+		// 回退到 Linux 默认路径才能暴露真实的环境问题。
 		const projectRoot = path.join(process.cwd(), "..", "..");
 
-		this.mxCadAssemblyPath =
-			mxcadConfig?.assemblyPath ||
-			(isLinux
-				? path.join(projectRoot, "runtime", "linux", "mxcad", "mxcadassembly")
-				: path.join(
-						projectRoot,
-						"runtime",
-						"windows",
-						"mxcad",
-						"mxcadassembly.exe",
-					));
+		this.mxCadAssemblyPath = resolveMxExecutablePath(
+			mxcadConfig?.assemblyPath,
+			{
+				windowsDefault: path.join(
+					projectRoot,
+					"runtime",
+					"windows",
+					"mxcad",
+					"mxcadassembly.exe",
+				),
+				linuxDefault: path.join(
+					projectRoot,
+					"runtime",
+					"linux",
+					"mxcad",
+					"mxcadassembly",
+				),
+			},
+		);
 
 		// Linux 下需要的工作目录（runtime/linux/mxcad）
 		this.mxCadBinPath = isLinux
@@ -308,6 +335,12 @@ export class FileConversionService implements IMxcadConversionService {
 				options.userId,
 			);
 		}
+		if (this.getFunctionExecutor()?.isRemote === true) {
+			// 远端模式：conversion-service 自己的工作池就是并发闸门，本地限流器只会
+			// 叠加第二层排队（双限流）——本侧等待已由执行器轮询超时兜底（超时即取消
+			// 远端任务，不留孤儿），本地 CPU 约束对远端执行无意义。
+			return this.executeConversion(options);
+		}
 		return this.conversionRateLimiter.execute(async () => {
 			return this.executeConversion(options);
 		}, options.priority || 'high');
@@ -410,6 +443,15 @@ export class FileConversionService implements IMxcadConversionService {
 			// convertFile↔invoke 无限递归死锁（f2df958 曾删此守卫，2026-09-18 回归）。
 			// 执行器选谁仍由 FunctionExecutorModule 按 FUNCTION_EXECUTOR 一处决定，此处不读配置。
 			if (this.getFunctionExecutor()?.isRemote === true) {
+				// 优先级按方向映射到远端档位（PRIORITY_CONFIG：1=打开 2=导出 3=后台），
+				// 与内嵌模式「打开 > 导出 > 后台」的相对次序一致；此前恒映射 2（导出档），
+				// 上传/打开转换在远端被降级到导出并发池。显式 'low' 仍归 3 档。
+				const remotePriority: 1 | 2 | 3 =
+					options.priority === "low"
+						? 3
+						: this.isExportDirection(absoluteSrcPath)
+							? 2
+							: 1;
 				return await this.forwardViaExecutor(
 					"convertFile",
 					pickContractFields({
@@ -417,8 +459,16 @@ export class FileConversionService implements IMxcadConversionService {
 						srcPath: absoluteSrcPath,
 						compression,
 					}),
-					options.priority === "low" ? 3 : 2,
+					remotePriority,
 					options.debugNodeId,
+					{
+						// clientTaskId 协议：调用方已持有任务 id（node.taskId）时透传，
+						// 远端按别名登记，状态查询/取消/对账按 node.taskId 即可解析
+						taskId: options.taskId,
+						timeoutMs: options.timeout,
+						// 远端 CallbackEngine 终态回调（本地 postCallback 在远端模式跳过）
+						callbackUrl: options.resultposturl,
+					},
 				);
 			}
 
@@ -655,8 +705,16 @@ export class FileConversionService implements IMxcadConversionService {
 		// 编排字段不进契约（pickContractFields 已剔除），调试信息落盘单独透传——
 		// 否则转发模式失败时 saveConversionDebugInfo 永不执行，运维丢失失败现场
 		debugNodeId?: string,
+		// 任务级编排字段（不进 params 契约）：taskId 供远端按 clientTaskId 别名登记
+		// （node.taskId 可被状态查询/取消/对账解析）；timeoutMs 覆盖远端档位默认超时；
+		// callbackUrl 由远端 CallbackEngine 终态投递
+		forward?: { taskId?: string; timeoutMs?: number; callbackUrl?: string },
 	): Promise<ConversionResult> {
-		const taskId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+		// 调用方已持有任务 id（node.taskId）时沿用，否则生成本地 id——
+		// 沿用使远端任务与 backend 节点任务同一身份，双 id 体系不再分裂
+		const taskId =
+			forward?.taskId ||
+			`cs_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 		// taskType 是 ConversionTask 三元联合中「convertFile | convertBinToMxweb」两元子集，
 		// 两分支 params 形状不同，无法由单一 ConversionRequest 静态对应到具体分支，故整体断言
 		// （运行期字段形状由 buildEngineParams/pickContractFields 与调用方字面量保证）。
@@ -666,6 +724,10 @@ export class FileConversionService implements IMxcadConversionService {
 			params: param,
 			priority,
 			createdAt: new Date(),
+			...(forward?.timeoutMs !== undefined
+				? { timeoutMs: forward.timeoutMs }
+				: {}),
+			...(forward?.callbackUrl ? { callbackUrl: forward.callbackUrl } : {}),
 		} as ConversionTask;
 		const executor = this.getFunctionExecutor();
 		if (!executor) {
@@ -742,11 +804,16 @@ export class FileConversionService implements IMxcadConversionService {
 		callbackUrl?: string,
 	): Promise<string> {
 		const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+		// 远端模式：转换经 conversion-service 执行，其 CallbackEngine 在任务终态时
+		// 向 resultposturl 投递回调（payload 形状为远端契约 {taskId,status,result,error}）；
+		// 本侧再 postCallback 会双重回调，故远端模式跳过本地回调。
+		const remoteCallbackDelivered =
+			this.getFunctionExecutor()?.isRemote === true;
 
 		this.convertFile(options)
 			.then(async (result) => {
 				this.logger.log(`异步转换完成: taskId=${taskId}, isOk=${result.isOk}`);
-				if (callbackUrl) {
+				if (callbackUrl && !remoteCallbackDelivered) {
 					try {
 						await this.postCallback(callbackUrl, {
 							taskId,
@@ -761,7 +828,7 @@ export class FileConversionService implements IMxcadConversionService {
 			})
 			.catch((error: Error) => {
 				this.logger.error(`异步转换失败: taskId=${taskId}, ${error.message}`, error.stack);
-				if (callbackUrl) {
+				if (callbackUrl && !remoteCallbackDelivered) {
 					this.postCallback(callbackUrl, {
 						taskId,
 						status: "failed",
@@ -835,6 +902,20 @@ export class FileConversionService implements IMxcadConversionService {
 		return FileTypeDetector.needsConversion(filename);
 	}
 
+	/**
+	 * 进程内转换限流器统计（IMxcadConversionService 可选方法）。
+	 * ProcessPoolExecutor 移除外层限流器后，转换的唯一限流器是本服务的
+	 * conversionRateLimiter，执行器只透传其统计（监控 API 契约形状不变）。
+	 */
+	getConversionLimiterStats(): PriorityQueueStats {
+		return this.conversionRateLimiter.getStats();
+	}
+
+	/** 进程内转换限流器耗时/等待时长统计（有界样本，透传 RateLimiter） */
+	getConversionLimiterDurationStats(): PriorityQueueDurationStats {
+		return this.conversionRateLimiter.getDurationStats();
+	}
+
 	async convertServerFile(
 		param: ConvertServerFileParam
 	): Promise<MxCadConversionResult> {
@@ -853,6 +934,8 @@ export class FileConversionService implements IMxcadConversionService {
 				fileHash: param.fileHash || param.src_file_md5 || '',
 				userId: param.userId,
 				priority: param.priority,
+				// 编排字段：调用方任务 id（node.taskId）透传到远端作 clientTaskId 别名
+				taskId: param.taskId,
 			};
 
 			if (param.async === 'true' && param.resultposturl) {
@@ -865,11 +948,22 @@ export class FileConversionService implements IMxcadConversionService {
 				return { code: 0, message: 'async calling' };
 			}
 
-			const { isOk, ret } = await this.convertFile(conversionOptions);
+			const { isOk, ret, errorCategory } =
+				await this.convertFile(conversionOptions);
 			// 失败保留引擎原始 message：本入口的 message 会被 runConversionCore 折进
 			// ConversionCoreError.detail，并原样回到调用方面向用户的文案
 			// （此前恒回 'param error'，公开转换端点的用户只能看到这个）。
-			return isOk ? ret : { code: 12, message: ret?.message || 'param error' };
+			// errorCategory 结构化过线（此前失败分支只折 code+message，六值分类在此
+			// 被丢弃，上层只能按文案反推「可重试 vs 确定性失败」）；非法值按缺省处理。
+			if (isOk) return ret;
+			const category = isConversionFailureCategory(errorCategory)
+				? errorCategory
+				: undefined;
+			return {
+				code: 12,
+				message: ret?.message || 'param error',
+				...(category ? { errorCategory: category } : {}),
+			};
 		} catch (error) {
 			// 导出下载方向会员门控拒绝（VipFeatureRequiredException）必须原样透传，
 			// 前端据此弹购买会员引导；其余转换失败按既有语义折叠为 code 12。
@@ -920,6 +1014,7 @@ export class FileConversionService implements IMxcadConversionService {
 	 * 收进同一并发池才能真实约束 mxcadassembly 进程总数。此前走 ProcessPoolExecutor 时被独立
 	 * RateLimiter(4) 限流、version-history 直连路径则完全裸奔，两池相加可超 CPU 核数。
 	 * 保存为用户同步等待步骤，优先级 'high'。
+	 * 远端模式同 convertFile：转换服务工作池是并发闸门，跳过本地限流。
 	 *
 	 * 返回 `transient` 供调用方区分「可重试的环境性失败」与「确定性内容失败」
 	 * （与 convertFile 的 ConversionResult.transient 同语义）。
@@ -934,6 +1029,9 @@ export class FileConversionService implements IMxcadConversionService {
 		error?: string;
 		transient?: boolean;
 	}> {
+		if (this.getFunctionExecutor()?.isRemote === true) {
+			return this.executeBinToMxweb(binPath, outputPath, outName);
+		}
 		return this.conversionRateLimiter.execute(
 			async () => this.executeBinToMxweb(binPath, outputPath, outName),
 			"high",

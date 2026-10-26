@@ -160,8 +160,18 @@ export interface ConversionOptions {
   dwgVersion?: number;
   /** 转换失败时用于保存调试信息的节点ID（目录名） */
   debugNodeId?: string;
-  /** 任务优先级，'high' 优先执行（默认），'low' 仅在高优队列空闲时执行 */
-  priority?: 'high' | 'low';
+  /**
+   * 任务优先级（内嵌模式限流器队列档）：'critical' 最高（打开/上传转换，
+   * 用户同步等待）、'high' 默认（导出/保存链路）、'low' 仅在高优队列空闲时执行
+   * （批处理）。与远端模式 PRIORITY_CONFIG 档位（1=打开 2=导出 3=后台）相对次序一致。
+   */
+  priority?: 'high' | 'low' | 'critical';
+  /**
+   * 调用方任务 id（编排字段，不在 ENGINE_INPUT_FIELDS 中，不进引擎参数）。
+   * 远端模式经 forwardViaExecutor 透传为 clientTaskId 别名：远端任务按 backend
+   * 的 node.taskId 可被状态查询/取消/对账解析，双 id 体系（async_* vs fw_*）不再分裂。
+   */
+  taskId?: string;
   /** 跳过导出下载方向（mxweb→其他）的会员门控。
    * 仅用于转换方向推导会被误判为"导出下载"的内部转换（如保存时生成 bin 文件：mxweb→bin）。
    * 用户主动触发的导出下载（savepdf/savedwg/批量下载等）禁止设置此标志。 */

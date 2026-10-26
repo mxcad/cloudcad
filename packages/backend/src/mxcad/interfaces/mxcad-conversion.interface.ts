@@ -4,6 +4,10 @@ import type {
   MxCadConversionResult,
 } from './file-conversion.interface';
 import type { ConvertServerFileParam } from '../types/mxcad-context.types';
+import type {
+  PriorityQueueStats,
+  PriorityQueueDurationStats,
+} from '../../function-executor/function-executor.interface';
 
 /** bin→mxweb 转换结果（引擎直出路径无 isOk/ret 包装，只回成功标志与落盘路径） */
 export interface ConvertBinToMxwebResult {
@@ -36,4 +40,15 @@ export interface IMxcadConversionService {
   ): Promise<ConvertBinToMxwebResult>;
 
   generateBinFiles(mxwebPath: string, nodeName: string): Promise<void>;
+
+  /**
+   * 进程内转换限流器统计（可选，嵌入式模式）。
+   * ProcessPoolExecutor 移除外层限流器后，转换的唯一限流器是本服务的
+   * conversionRateLimiter，执行器透传其统计（监控 API 契约形状不变）。
+   * 测试 mock / 远端实现可不提供，调用方回落零值统计。
+   */
+  getConversionLimiterStats?(): PriorityQueueStats;
+
+  /** 进程内转换限流器耗时/等待时长统计（可选，语义同上） */
+  getConversionLimiterDurationStats?(): PriorityQueueDurationStats;
 }

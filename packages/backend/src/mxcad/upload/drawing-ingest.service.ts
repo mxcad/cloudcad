@@ -834,13 +834,16 @@ export class DrawingIngestService {
         // S5-2 上传链路统一：注册后台转换任务（写 node.taskId + 确保 PROCESSING），
         // 使上传图纸进面板「云端」列表（node.taskId 非空 = 云端任务）。
         // 转换仍走同步 convertFile（下方）+ finalizeCadNode 落盘，不触发 executor.invoke。
-        await this.asyncConversionService.registerTask(cadNodeId);
+        const taskId = await this.asyncConversionService.registerTask(cadNodeId);
         await this.fileSystemService.writeStatusFile(name, size, hash, filePath);
         const result = await this.fileConversionService.convertFile(
           buildIngestConversionOptions({
             srcPath: filePath,
             fileHash: hash,
             debugNodeId: cadNodeId,
+            // 透传 node.taskId：远端模式按 clientTaskId 别名登记，状态查询/取消/
+            // 重启对账按 node.taskId 即可解析到远端任务（内嵌模式该字段被忽略）
+            taskId,
           })
         );
 

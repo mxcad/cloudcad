@@ -87,4 +87,28 @@ describe('POST /v1/conversions/tasks/:taskId/cancel 路由（#431 取消机制�
     const payload = JSON.parse(res.body);
     assert.equal(payload.status, 'COMPLETED');
   });
+
+  it('按 clientTaskId 别名取消 → 解析到真实任务并取消（backend node.taskId 直查）', () => {
+    const store = new TaskStore('local');
+    const runner = { execute: async () => ({ newpath: '/out/x.mxweb' }) };
+    const pool = new WorkerPool(store, runner, null, { autoScale: false });
+    // 不 start（避免自动执行），手动建一个带 clientTaskId 别名的 PENDING 任务
+    store.create({
+      id: 'fw_alias',
+      priority: 3,
+      params: {},
+      clientTaskIds: ['async_node_alias_123'],
+      createdAt: new Date().toISOString(),
+    });
+
+    const routes = createRoutes(pool, store);
+    const req = makeReq('/v1/conversions/tasks/async_node_alias_123/cancel');
+    const res = makeRes();
+    routes.handle(req, res, '/v1/conversions/tasks/async_node_alias_123/cancel', 'POST');
+
+    assert.equal(res.status, 200);
+    const payload = JSON.parse(res.body);
+    assert.equal(payload.status, 'CANCELLED');
+    assert.equal(store.get('fw_alias')!.status, 'CANCELLED', '别名应解析到真实任务并取消');
+  });
 });

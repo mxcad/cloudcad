@@ -61,4 +61,6 @@ export interface ConvertServerFileParam extends ConversionRequest {
   resultposturl?: string;
   /** 任务优先级，'high' 优先执行（默认），'low' 仅在高优队列空闲时执行 */
   priority?: 'high' | 'low';
+  /** 调用方任务 id（编排字段）：远端模式透传为 clientTaskId 别名，node.taskId 可被远端解析 */
+  taskId?: string;
 }

@@ -223,8 +223,18 @@ export class AsyncConversionService {
     const exportService = this.moduleRef.get(FileDownloadExportService, {
       strict: false,
     });
+    // priority 透传（此前恒缺省 'high'，3 档后台导出在内嵌模式被提到高优队列、
+    // 在远端模式被提到导出档）：导出方向无 critical 档，1/2→'high'、3→'low'；
+    // taskId 透传使远端任务可按 node.taskId 解析（状态查询/取消/重启对账）
     exportService
-      .precomputeExport(nodeId, userId, format as CadDownloadFormat)
+      .precomputeExport(
+        nodeId,
+        userId,
+        format as CadDownloadFormat,
+        undefined,
+        priority === 3 ? 'low' : 'high',
+        taskId,
+      )
       .then(() => this.updateNodeStatus(nodeId, FileStatus.COMPLETED))
       .catch((error: unknown) => {
         const errMsg = error instanceof Error ? error.message : String(error);

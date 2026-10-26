@@ -174,4 +174,60 @@ describe('TaskStore', () => {
     assert.equal(rec!.status, 'CANCELLED');
     assert.ok(rec!.completedAt, 'updateStatus CANCELLED must set completedAt');
   });
+
+  describe('clientTaskId 别名协议（backend node.taskId ↔ 远端 fw_* id）', () => {
+    it('should keep clientTaskIds and timeoutMs on the created record', () => {
+      const record = store.create({
+        id: 'fw_1',
+        priority: 1,
+        params: {},
+        clientTaskIds: ['async_node_1_123'],
+        timeoutMs: 90000,
+      });
+
+      assert.deepEqual(record.clientTaskIds, ['async_node_1_123']);
+      assert.equal(record.timeoutMs, 90000);
+    });
+
+    it('should find a task by client task id', () => {
+      store.create({
+        id: 'fw_2',
+        priority: 1,
+        params: {},
+        clientTaskIds: ['async_node_2_123'],
+      });
+
+      assert.equal(store.findByClientTaskId('async_node_2_123')!.id, 'fw_2');
+      assert.equal(store.findByClientTaskId('unknown'), null);
+    });
+
+    it('should resolve an exact id first, then fall back to the alias', () => {
+      store.create({
+        id: 'fw_3',
+        priority: 1,
+        params: {},
+        clientTaskIds: ['async_node_3_123'],
+      });
+
+      assert.equal(store.resolveTaskId('fw_3'), 'fw_3');
+      assert.equal(store.resolveTaskId('async_node_3_123'), 'fw_3');
+      assert.equal(store.resolveTaskId('missing'), null);
+    });
+
+    it('should add a client task id on dedup merge and stay idempotent', () => {
+      store.create({
+        id: 'fw_4',
+        priority: 1,
+        params: {},
+        clientTaskIds: ['async_a'],
+      });
+
+      store.addClientTaskId('fw_4', 'async_b');
+      store.addClientTaskId('fw_4', 'async_b'); // 重复登记幂等
+      store.addClientTaskId('nope', 'async_c'); // 未知任务静默忽略
+
+      assert.deepEqual(store.get('fw_4')!.clientTaskIds, ['async_a', 'async_b']);
+      assert.equal(store.findByClientTaskId('async_c'), null);
+    });
+  });
 });

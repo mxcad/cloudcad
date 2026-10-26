@@ -250,6 +250,23 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
       setIsUploading(true);
       let pendingCount = allowedFiles.length;
+      // 每个任务的收尾只记一次：failTask/finalizeTask 内部是同步 emit，
+      // 本 listener 的 task-failed 分支会被同一事件立刻回调，各自递减会重复计数
+      const settledTasks = new Set<string>();
+      const settleTask = (taskId: string): void => {
+        if (settledTasks.has(taskId)) return;
+        settledTasks.add(taskId);
+        pendingCount--;
+        if (pendingCount <= 0) {
+          setIsUploading(false);
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.fileSystem.storageQuota,
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.fileSystem.all,
+          });
+        }
+      };
 
       const listener: UploadListener = async (event) => {
         if (event.type === 'task-processing') {
@@ -258,9 +275,33 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
           try {
             if (openAfterUpload) {
-              const { openUploadedFile } =
-                await import('../services/mxcadManager');
-              await openUploadedFile(task.result.nodeId, effectiveNodeId || '');
+              // 能进到这里说明上传与转换都已成功（task.result.nodeId 已落库），
+              // 剩下的只是「自动打开」：它要懒加载 CAD 引擎模块，任一个子模块
+              // 请求失败都会打断它。把任务标 failed 会让用户重传一份已入库的文件，
+              // 故只告警，任务照常 finalize 成 done——行内保留「打开」入口可重试
+              try {
+                const { openUploadedFile } =
+                  await import('../services/mxcadManager');
+                await openUploadedFile(
+                  task.result.nodeId,
+                  effectiveNodeId || ''
+                );
+              } catch (openError) {
+                const detail =
+                  openError instanceof Error ? openError.message : undefined;
+                if (detail) {
+                  console.error(
+                    '[MxCadUploader] 上传后自动打开失败:',
+                    detail
+                  );
+                }
+                globalShowToast(
+                  t('文件已上传并转换完成，但自动打开失败：{error}', {
+                    error: detail || t('打开文件失败'),
+                  }),
+                  'error'
+                );
+              }
             } else {
               const { waitForFileReady } =
                 await import('../services/mxcadManager');
@@ -269,17 +310,7 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
 
             manager.finalizeTask(event.taskId);
             onSuccess?.();
-
-            pendingCount--;
-            if (pendingCount <= 0) {
-              setIsUploading(false);
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.fileSystem.storageQuota,
-              });
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.fileSystem.all,
-              });
-            }
+            settleTask(event.taskId);
 
             // 异步检查外部参照，不阻塞上传完成状态更新
             const isSkipXrefCheck = task.fileName
@@ -296,36 +327,18 @@ export const MxCadUploader = forwardRef<MxCadUploaderRef, MxCadUploaderProps>(
               );
             }
           } catch (error) {
+            // 仅剩 waitForFileReady 的失败路径：转换产物缺失或 FAILED，
+            // 文件确实不可用，标 failed 正确
             const errorMessage =
               error instanceof Error ? error.message : t('文件处理失败');
             manager.failTask(event.taskId, errorMessage);
-            globalShowToast(errorMessage, 'error');
             onError?.(errorMessage);
-
-            pendingCount--;
-            if (pendingCount <= 0) {
-              setIsUploading(false);
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.fileSystem.storageQuota,
-              });
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.fileSystem.all,
-              });
-            }
+            settleTask(event.taskId);
           }
         }
 
         if (event.type === 'task-failed') {
-          pendingCount--;
-          if (pendingCount <= 0) {
-            setIsUploading(false);
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.fileSystem.storageQuota,
-            });
-            queryClient.invalidateQueries({
-              queryKey: queryKeys.fileSystem.all,
-            });
-          }
+          settleTask(event.taskId);
           const errorMsg = event.error || t('上传失败');
           globalShowToast(
             t('文件上传失败: {errorMsg}', { errorMsg }),

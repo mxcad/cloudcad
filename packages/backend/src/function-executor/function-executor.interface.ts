@@ -20,6 +20,18 @@ export type ConversionTask = {
   id: string;
   priority: TaskPriority;
   createdAt: Date;
+  /**
+   * 异步结果回调 URL（编排字段，仅远端执行器消费）。
+   * 远端 conversion-service 的 CallbackEngine 在任务终态时向该 URL 投递结果；
+   * 本地执行器忽略（本地路径由调用方自行 postCallback）。
+   */
+  callbackUrl?: string;
+  /**
+   * 单任务引擎超时（毫秒，编排字段，仅远端执行器消费）。
+   * 透传到 conversion-service 覆盖其 PRIORITY_CONFIG 档位默认超时；
+   * 缺省时远端按档位默认（打开/导出 180s、后台 120s）。
+   */
+  timeoutMs?: number;
 } & (
   | { type: 'convertFile'; params: ConversionOptions }
   | {

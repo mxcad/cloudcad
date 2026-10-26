@@ -102,7 +102,9 @@ export async function openUnderLoading(plan: {
 
 export async function waitForFileReady(
   nodeId: string,
-  maxAttempts: number = 60,
+  // 120×2s=240s：须大于后端引擎超时（打开/导出档 180s）+ 排队余量，
+  // 否则前端先于后端放弃，后端任务仍在跑（用户看到失败但文件稍后又好了）
+  maxAttempts: number = 120,
   intervalMs: number = 2000
 ): Promise<{
   fileHash: string;
@@ -128,7 +130,7 @@ export async function waitForFileReady(
     const fileInfo = fileInfoResponse.data;
     if (!fileInfo) return null;
     // 打开/导出链路失败保留 FAILED 节点（真实文件不删），若继续轮询会空等满
-    // maxAttempts（默认 60×2s=120s）才报「文件转换未完成」，用户误以为还在转换。
+    // maxAttempts（默认 120×2s=240s）才报「文件转换未完成」，用户误以为还在转换。
     // 这里立即失败并给出与 useCadFileLoader 一致的失败文案。
     if (isTerminalFailureStatus(fileInfo.fileStatus)) {
       throw new Error(t('该文件转换失败，请检查文件内容'));

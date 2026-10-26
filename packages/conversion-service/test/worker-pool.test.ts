@@ -52,6 +52,63 @@ describe('WorkerPool', () => {
     pool.stop();
   });
 
+  it('should pass the per-task timeoutMs to the runner, falling back to the level default', async () => {
+    const seenTimeouts: number[] = [];
+    const recordingRunner = {
+      execute: async (params: any, timeout: number) => {
+        seenTimeouts.push(timeout);
+        return { code: 0, newpath: `/out/${params.name}.mxweb` };
+      },
+    };
+    const pool = new WorkerPool(store, recordingRunner);
+    pool.start();
+
+    // 必须经 pool.enqueue 入队（内部 store.create + 触发 _tick）：
+    // 直接 store.create 的任务不进任何信号量池，WorkerPool 永不消费。
+    // 显式 timeoutMs（backend options.timeout 透传）覆盖档位默认超时
+    pool.enqueue({
+      id: 'task_t1',
+      priority: 1,
+      params: { name: 't1' },
+      timeoutMs: 90000,
+      createdAt: new Date().toISOString(),
+    });
+    // 无 timeoutMs：回落 PRIORITY_CONFIG[1].timeout
+    pool.enqueue({
+      id: 'task_t2',
+      priority: 1,
+      params: { name: 't2' },
+      createdAt: new Date().toISOString(),
+    });
+    // 非法 timeoutMs（0/负数）：同样回落档位默认
+    pool.enqueue({
+      id: 'task_t3',
+      priority: 1,
+      params: { name: 't3' },
+      timeoutMs: 0,
+      createdAt: new Date().toISOString(),
+    });
+
+    await waitUntil(
+      () =>
+        store.get('task_t1')?.status === 'COMPLETED' &&
+        store.get('task_t2')?.status === 'COMPLETED' &&
+        store.get('task_t3')?.status === 'COMPLETED',
+    );
+
+    const { PRIORITY_CONFIG } = require('../lib/constants');
+    const defaultTimeout = PRIORITY_CONFIG[1].timeout;
+    assert.ok(
+      seenTimeouts.includes(90000),
+      `显式 timeoutMs 应透传给 runner（实际: ${seenTimeouts}）`,
+    );
+    assert.ok(
+      seenTimeouts.filter((t) => t === defaultTimeout).length === 2,
+      `缺省/非法 timeoutMs 应回落档位默认 ${defaultTimeout}（实际: ${seenTimeouts}）`,
+    );
+    pool.stop();
+  });
+
   it('should mark a task FAILED when the runner throws', async () => {
     const pool = new WorkerPool(store, runner);
     pool.start();

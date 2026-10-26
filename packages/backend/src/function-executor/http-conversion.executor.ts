@@ -46,23 +46,28 @@ export class HttpConversionExecutor implements IFunctionExecutor {
   private readonly client: ConversionServiceClient;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
+  /** 服务地址与请求头（主客户端与启动期自检共用，避免两处配置漂移） */
+  private readonly baseUrl: string;
+  private readonly headers: Record<string, string>;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly cls: ClsService,
   ) {
+    this.baseUrl =
+      this.configService.get<string>('CONVERSION_SERVICE_URL') ||
+      'http://localhost:3100';
+    // #419：conversion-service 非 health 路由需共享密钥（空则不带头，向后兼容本地开发）
+    this.headers = {
+      'Content-Type': 'application/json',
+      ...internalServiceSecretHeader(
+        this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
+      ),
+    };
     this.client = new ConversionServiceClient({
-      baseUrl:
-        this.configService.get<string>('CONVERSION_SERVICE_URL') ||
-        'http://localhost:3100',
+      baseUrl: this.baseUrl,
       timeoutMs: 300000,
-      // #419：conversion-service 非 health 路由需共享密钥（空则不带头，向后兼容本地开发）
-      headers: {
-        'Content-Type': 'application/json',
-        ...internalServiceSecretHeader(
-          this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
-        ),
-      },
+      headers: this.headers,
     });
     this.pollIntervalMs = Number(
       this.configService.get<string>('CONVERSION_SERVICE_POLL_INTERVAL') || 1000,
@@ -72,16 +77,57 @@ export class HttpConversionExecutor implements IFunctionExecutor {
     );
   }
 
+  /**
+   * 启动期连通性/密钥自检（C2）：本执行器仅在 FUNCTION_EXECUTOR=conversion-service
+   * 时实例化，故自检天然只发生在远端模式。此前密钥配错（两侧 INTERNAL_SERVICE_SECRET
+   * 不一致）要到第一次转换提交才以 401 暴露，且症状是「所有转换失败」——启动期一次
+   * 轻量探测把配置错误提前到部署日志。
+   *
+   * 只记日志、永不抛错：conversion-service 允许晚于 backend 就绪（独立部署形态），
+   * 启动期不可达只 warn，不阻塞 backend 启动。
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      const probe = new ConversionServiceClient({
+        baseUrl: this.baseUrl,
+        timeoutMs: 5000,
+        headers: this.headers,
+      });
+      await probe.request('/v1/conversions/stats', 'GET', undefined, {});
+      this.logger.log(`conversion-service 连通性与密钥校验通过: ${this.baseUrl}`);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      if (errMsg.includes('HTTP 401')) {
+        this.logger.error(
+          `conversion-service 返回 401：INTERNAL_SERVICE_SECRET 与转换服务侧配置不一致，` +
+            `所有转换提交将被拒绝。请核对两侧密钥（backend env INTERNAL_SERVICE_SECRET ` +
+            `vs conversion-service env INTERNAL_SERVICE_SECRET/CONVERSION_SERVICE_SECRET）`,
+        );
+      } else {
+        this.logger.warn(
+          `conversion-service 连通性检查失败（${this.baseUrl}: ${errMsg}）：` +
+            `转换提交将失败，请确认 CONVERSION_SERVICE_URL 与服务状态`,
+        );
+      }
+    }
+  }
+
   async invoke(task: ConversionTask): Promise<ConversionResult> {
     let submitted: any;
     try {
       // 异步提交：返回 taskId 后由轮询等待终态，避免在 conversion-service 服务侧长期占用连接
+      // clientTaskId 协议：本任务 id（backend 的 node.taskId / cs_*）作为别名登记到远端
+      // 任务上，getTaskStatus/cancelTask/对账按本 id 查询时远端能解析到真实任务，
+      // 不再因双 id 体系（backend async_* vs 远端 fw_*）恒 404。
+      // timeoutMs：convertFile 的调用方超时（options.timeout）透传，远端按它覆盖档位默认超时。
       submitted = await this.client.request(
         '/v1/conversions/async/convertFile',
         'POST',
         {
           priority: task.priority,
-          callbackUrl: null,
+          clientTaskId: task.id,
+          callbackUrl: task.callbackUrl ?? null,
+          timeoutMs: task.timeoutMs,
           params: {
             type: task.type,
             ...task.params,
@@ -207,6 +253,22 @@ export class HttpConversionExecutor implements IFunctionExecutor {
         this.logger.warn(`Task status poll failed for ${taskId}: ${errMsg}`);
       }
       await new Promise((resolve) => setTimeout(resolve, this.pollIntervalMs));
+    }
+    // 轮询超时 = 本侧放弃等待，但远端任务可能仍在排队/执行（孤儿任务白占工作池槽位，
+    // 拖慢同池其他任务）。best-effort 取消：排队中出队 / 运行中杀进程组；取消失败
+    // （服务不可达/任务已终态）只记日志，不改变本侧的超时结论。
+    try {
+      const cancelled = await this.cancelTask(taskId);
+      if (!cancelled.ok) {
+        this.logger.warn(
+          `Best-effort cancel after poll timeout failed for ${taskId}: ${cancelled.reason}`,
+        );
+      }
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `Best-effort cancel after poll timeout failed for ${taskId}: ${errMsg}`,
+      );
     }
     return {
       taskId,

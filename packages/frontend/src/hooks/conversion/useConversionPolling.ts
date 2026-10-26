@@ -39,7 +39,7 @@ export type ConversionStatus = {
 export interface ConversionPollingOptions {
   /** 轮询间隔（毫秒），默认 2000 */
   intervalMs?: number;
-  /** 总超时（毫秒），默认 120000 */
+  /** 总超时（毫秒），默认 240000 */
   timeoutMs?: number;
   /** 是否在转换尚未开始（非 PROCESSING）时先触发一次异步转换，默认 false */
   autoTrigger?: boolean;
@@ -83,7 +83,9 @@ export interface UseConversionPollingState {
 }
 
 const DEFAULT_INTERVAL_MS = 2000;
-const DEFAULT_TIMEOUT_MS = 120000;
+// 240s：须大于后端引擎超时（打开/导出档 180s）+ 排队余量，
+// 否则前端先于后端放弃，后端任务仍在跑（用户看到失败但文件稍后又好了）
+const DEFAULT_TIMEOUT_MS = 240000;
 /** hook 默认 FAILED 自动重试次数（waitForConversion 默认 0，hook 默认 1 次防死循环） */
 const DEFAULT_FAILED_RETRIES = 1;
 /**
@@ -103,7 +105,7 @@ const delay = (ms: number): Promise<void> =>
  *
  * @param nodeId 文件节点 ID
  * @param options.intervalMs 轮询间隔（默认 2s）
- * @param options.timeoutMs 总超时（默认 120s）
+ * @param options.timeoutMs 总超时（默认 240s）
  * @param options.autoTrigger 转换尚未开始（非 PROCESSING）时先触发一次转换
  * @param options.shouldContinue 每轮开始前的取消回调，返回 false 则提前终止
  */

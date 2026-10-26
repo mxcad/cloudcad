@@ -1304,6 +1304,105 @@ describe("FileConversionService", () => {
 			expect(runMxcadAssembly).toHaveBeenCalledTimes(1);
 			await module.close();
 		});
+
+		// 远端优先级按方向映射（PRIORITY_CONFIG：1=打开 2=导出 3=后台），与内嵌模式
+		// 「打开 > 导出 > 后台」相对次序一致；此前恒映射 2（导出档），上传/打开转换
+		// 在远端被降级到导出并发池。
+		it.each([
+			["/tmp/f.dwg", undefined, 1],
+			["/tmp/f.mxweb", undefined, 2],
+			["/tmp/f.dwg", "low", 3],
+		] as Array<[string, "low" | undefined, number]>)(
+			"conversion-service 模式：远端优先级按方向映射（src=%s, priority=%s → 档 %s）",
+			async (srcPath, priority, expected) => {
+				const mockExecutor = {
+					isRemote: true,
+					invoke: jest.fn(async () => ({
+						taskId: "cs_1",
+						status: "COMPLETED",
+						outputPath: "/out/f.mxweb",
+						metadata: { code: 0, newpath: "/out/f.mxweb" },
+					})),
+					getTaskStatus: jest.fn(),
+				} as unknown as IFunctionExecutorType;
+				const module = await Test.createTestingModule({
+					providers: [
+						FileConversionService,
+						{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+						{ provide: IFunctionExecutor, useValue: mockExecutor },
+					],
+				})
+					.setLogger(silentLogger)
+					.compile();
+				const svc = module.get<FileConversionService>(FileConversionService);
+
+				await svc.convertFile({
+					srcPath,
+					fileHash: "abc",
+					...(priority ? { priority } : {}),
+				});
+				const task = (mockExecutor.invoke as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+					priority: number;
+				};
+				expect(task.priority).toBe(expected);
+				await module.close();
+			},
+		);
+
+		it("conversion-service 模式：taskId/timeoutMs/callbackUrl 透传到远端任务（clientTaskId 别名 + 档位超时覆盖 + 终态回调）", async () => {
+			const mockExecutor = {
+				isRemote: true,
+				invoke: jest.fn(async () => ({
+					taskId: "async_node_1_123",
+					status: "COMPLETED",
+					outputPath: "/out/f.mxweb",
+					metadata: { code: 0, newpath: "/out/f.mxweb" },
+				})),
+				getTaskStatus: jest.fn(),
+			} as unknown as IFunctionExecutorType;
+			const module = await Test.createTestingModule({
+				providers: [
+					FileConversionService,
+					{ provide: ConfigService, useValue: configWithExecutorMode("conversion-service") },
+					{ provide: IFunctionExecutor, useValue: mockExecutor },
+				],
+			})
+				.setLogger(silentLogger)
+				.compile();
+			const svc = module.get<FileConversionService>(FileConversionService);
+
+			await svc.convertFile({
+				srcPath: "/tmp/f.dwg",
+				fileHash: "abc",
+				taskId: "async_node_1_123",
+				timeout: 90000,
+				resultposturl: "http://127.0.0.1:3001/v1/mxcad/conversion-callback",
+			});
+			const task = (mockExecutor.invoke as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0] as {
+				id: string;
+				timeoutMs?: number;
+				callbackUrl?: string;
+			};
+			// 调用方已持有任务 id（node.taskId）时沿用：远端任务与 backend 节点任务同一身份
+			expect(task.id).toBe("async_node_1_123");
+			expect(task.timeoutMs).toBe(90000);
+			expect(task.callbackUrl).toBe("http://127.0.0.1:3001/v1/mxcad/conversion-callback");
+
+			// 调用方未持有任务 id：生成本地 id（cs_ 前缀），且不带 timeoutMs/callbackUrl 键
+			await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
+			const task2 = (mockExecutor.invoke as unknown as { mock: { calls: unknown[][] } }).mock.calls[1][0] as {
+				id: string;
+			};
+			expect(task2.id).toMatch(/^cs_/);
+			expect(task2).not.toHaveProperty("timeoutMs");
+			expect(task2).not.toHaveProperty("callbackUrl");
+			await module.close();
+		});
+
+		// 跨平台误配置回退（Linux + .exe → Linux 默认路径）的规则在唯一出口
+		// @cloudcad/engine-exec 的 resolveMxExecutablePath 处钉死（engine-exec/test/mx-path.test.ts，
+		// 含大小写不敏感/非 .exe 原样采用/未配置取默认）；本服务构造器只是它的消费点，
+		// 不重复测规则（os.platform 不可 spy，服务层无法注入目标平台）。
 	});
 
 	// ==================== 失败分类（process-pool 对齐 conversion-service） ====================

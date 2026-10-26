@@ -23,6 +23,10 @@ interface RouteTaskStore {
   getStats(): TaskStats;
   getDurationStats(): DurationStats;
   findInFlightByContentKey(contentKey: string): TaskRecord | null;
+  // clientTaskId 协议（backend 任务 id 别名 → 本服务任务 id）
+  findByClientTaskId(clientTaskId: string): TaskRecord | null;
+  resolveTaskId(idOrClientTaskId: string): string | null;
+  addClientTaskId(taskId: string, clientTaskId: string): void;
   create(task: TaskInput): TaskRecord;
   updateStatus(taskId: string, status: string, extra?: Partial<TaskRecord>): TaskRecord | null;
 }
@@ -102,10 +106,25 @@ function create(
   } {
     const params: Record<string, unknown> = (body.params as Record<string, unknown>) || body;
     const contentKey = deriveContentKey(params);
+    // clientTaskId 协议：调用方（backend）任务 id 别名，登记后 GET /tasks/:id 与
+    // cancel 路由按别名解析到本服务生成的任务 id（backend 的 node.taskId 与远端
+    // fw_ id 双 id 体系因此对齐，状态查询/取消/对账不再 404）。
+    const clientTaskId =
+      typeof body.clientTaskId === 'string' && body.clientTaskId
+        ? body.clientTaskId.slice(0, 128)
+        : undefined;
+    // 单任务超时透传（backend timeout.fileConversion / 调用方 options.timeout）：
+    // 正值才生效，上限 1h 防误配把档位超时打穿；缺省回落到 PRIORITY_CONFIG 档位默认。
+    const timeoutMs =
+      typeof body.timeoutMs === 'number' && Number.isFinite(body.timeoutMs) && body.timeoutMs > 0
+        ? Math.min(body.timeoutMs, 3600000)
+        : undefined;
     if (contentKey) {
       const inFlight = taskStore.findInFlightByContentKey(contentKey);
       if (inFlight) {
         log(`[Dedup] 同内容身份合并到在途任务: ${inFlight.id} (contentKey=${contentKey})`);
+        // 合并时把本提交者的别名也挂到在途任务：两个 backend 任务 id 都能解析到同一任务
+        if (clientTaskId) taskStore.addClientTaskId(inFlight.id, clientTaskId);
         return { taskId: inFlight.id, status: inFlight.status, merged: true, contentKey };
       }
     }
@@ -118,6 +137,8 @@ function create(
       callbackUrl,
       createdAt: new Date().toISOString(),
       contentKey,
+      clientTaskIds: clientTaskId ? [clientTaskId] : undefined,
+      timeoutMs,
     });
     return { taskId, status: 'PENDING', merged: false, contentKey };
   }
@@ -209,7 +230,12 @@ function create(
     const cancelMatch = pathname.match(new RegExp(`^${base}/tasks/([^/]+)/cancel$`));
     if (method === 'POST' && cancelMatch) {
       const taskId = cancelMatch[1];
-      const result = workerPool.cancel(taskId);
+      // clientTaskId 协议：调用方任务 id 别名先解析为真实任务 id 再取消
+      const resolvedId = taskStore.resolveTaskId(taskId);
+      if (!resolvedId) {
+        return sendJson(res, 404, { error: 'Task not found', taskId });
+      }
+      const result = workerPool.cancel(resolvedId);
       if (result.reason === 'not_found') {
         return sendJson(res, 404, { error: 'Task not found', taskId });
       }
@@ -235,7 +261,8 @@ function create(
     const taskMatch = pathname.match(new RegExp(`^${base}/tasks/([^/]+)$`));
     if (method === 'GET' && taskMatch) {
       const taskId = taskMatch[1];
-      const task = taskStore.get(taskId);
+      // clientTaskId 协议：本服务 id 精确命中优先，未命中按调用方任务 id 别名解析
+      const task = taskStore.get(taskId) || taskStore.findByClientTaskId(taskId);
       if (!task) return sendJson(res, 404, { error: 'Task not found', taskId });
       return sendJson(res, 200, {
         taskId: task.id,

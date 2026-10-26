@@ -6,6 +6,7 @@
 import * as http from 'http';
 import { AddressInfo } from 'net';
 import { Test } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ClsService } from 'nestjs-cls';
 import { HttpConversionExecutor } from './http-conversion.executor';
@@ -116,6 +117,8 @@ describe('HttpConversionExecutor', () => {
         path: '/v1/conversions/async/convertFile',
         body: {
           priority: 1,
+          // clientTaskId 协议：本任务 id 作远端别名，状态查询/取消/对账按本 id 可解析
+          clientTaskId: 'task_1',
           callbackUrl: null,
           params: { type: 'convertFile', srcPath: '/in/a.dwg' },
         },
@@ -211,6 +214,143 @@ describe('HttpConversionExecutor', () => {
 
       expect(result.status).toBe('FAILED');
       expect(result.error).toContain('timed out');
+    });
+
+    it('should best-effort cancel the remote task on poll timeout (no orphan task)', async () => {
+      port = await startServer((req, res) => {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          requests.push({ method: req.method ?? '', path: req.url ?? '' });
+          if (req.method === 'POST' && req.url === '/v1/conversions/async/convertFile') {
+            res.writeHead(202, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ taskId: 'fw_10' }));
+            return;
+          }
+          if (req.method === 'POST' && req.url === '/v1/conversions/tasks/fw_10/cancel') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, status: 'CANCELLED' }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ taskId: 'fw_10', status: 'PENDING' }));
+        });
+      });
+      executor = await createExecutor();
+
+      const result = await executor.invoke(makeTask({ id: 'async_node_1' }));
+
+      expect(result.status).toBe('FAILED');
+      expect(result.error).toContain('timed out');
+      // 超时后向远端发取消：排队中出队 / 运行中杀进程组，不留孤儿任务
+      expect(
+        requests.some(
+          (r) => r.method === 'POST' && r.path === '/v1/conversions/tasks/fw_10/cancel',
+        ),
+      ).toBe(true);
+    });
+
+    it('should pass timeoutMs through to the submit body', async () => {
+      port = await startServer((req, res) => {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          requests.push({ method: req.method ?? '', path: req.url ?? '', body: body ? JSON.parse(body) : undefined });
+          if (req.method === 'POST') {
+            res.writeHead(202, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ taskId: 'fw_11' }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ taskId: 'fw_11', status: 'COMPLETED', result: { code: 0, newpath: '/out/r.mxweb' } }));
+        });
+      });
+      executor = await createExecutor();
+
+      await executor.invoke(makeTask({ timeoutMs: 90000 }));
+
+      expect(requests[0].body).toMatchObject({
+        clientTaskId: 'task_1',
+        timeoutMs: 90000,
+      });
+    });
+
+    it('should pass callbackUrl through to the submit body when set', async () => {
+      port = await startServer((req, res) => {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          requests.push({ method: req.method ?? '', path: req.url ?? '', body: body ? JSON.parse(body) : undefined });
+          if (req.method === 'POST') {
+            res.writeHead(202, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ taskId: 'fw_12' }));
+            return;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ taskId: 'fw_12', status: 'COMPLETED', result: { code: 0, newpath: '/out/r.mxweb' } }));
+        });
+      });
+      executor = await createExecutor();
+
+      await executor.invoke(makeTask({ callbackUrl: 'http://127.0.0.1:9/callback' }));
+
+      expect(requests[0].body).toMatchObject({
+        callbackUrl: 'http://127.0.0.1:9/callback',
+      });
+    });
+  });
+
+  describe('startup connectivity/secret probe (onModuleInit)', () => {
+    it('should log an error when the service answers 401 (secret mismatch)', async () => {
+      port = await startServer((_req, res) => {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'unauthorized' }));
+      });
+      executor = await createExecutor();
+      const errorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+
+      await executor.onModuleInit();
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('INTERNAL_SERVICE_SECRET'),
+      );
+      errorSpy.mockRestore();
+    });
+
+    it('should warn (not throw) when the service is unreachable', async () => {
+      const module = await Test.createTestingModule({
+        providers: [
+          HttpConversionExecutor,
+          {
+            provide: ConfigService,
+            useValue: { get: jest.fn(() => 'http://127.0.0.1:1') },
+          },
+          { provide: ClsService, useValue: { get: jest.fn() } },
+        ],
+      }).compile();
+      executor = module.get(HttpConversionExecutor);
+      const warnSpy = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+
+      // 不可达只告警不抛错：conversion-service 允许晚于 backend 就绪
+      await expect(executor.onModuleInit()).resolves.toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('连通性检查失败'));
+      warnSpy.mockRestore();
+    });
+
+    it('should log success when the service is reachable and the secret matches', async () => {
+      port = await startServer((_req, res) => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ tasks: {}, duration: {}, workers: {} }));
+      });
+      executor = await createExecutor();
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+
+      await executor.onModuleInit();
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('连通性与密钥校验通过'),
+      );
+      logSpy.mockRestore();
     });
   });
 

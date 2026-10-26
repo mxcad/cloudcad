@@ -31,6 +31,15 @@ export interface TaskRecord {
   // 内容身份（content_hash + 源文件 + 目标格式派生，见 utils.deriveContentKey）。
   // 同 key 的在途任务合并去重（#431 门禁3）。
   contentKey?: string | null;
+  // 调用方（backend）侧的任务 id 别名（clientTaskId 协议）：backend 的 node.taskId
+  // （async_*/async_export_*）经此别名登记，GET /tasks/:id 与 cancel 路由按别名解析到
+  // 本服务生成的 fw_ id。数组形态：同内容身份合并去重时，后到的提交者把别名挂到
+  // 在途任务上，两个 backend 任务 id 都能解析到同一任务。
+  clientTaskIds?: string[];
+  // 调用方下发的单任务超时（ms）：backend 的 timeout.fileConversion / 调用方 options.timeout
+  // 经此透传，覆盖 PRIORITY_CONFIG 的档位默认超时（此前远端恒按档位超时，backend 调
+  // 大/调小引擎超时对独立服务模式不生效）。缺省回落到档位默认。
+  timeoutMs?: number;
   // 允许入队时透传的额外字段（如 task.params 之外的自定义字段）
   [key: string]: unknown;
 }
@@ -44,6 +53,8 @@ export interface TaskInput {
   callbackUrl?: string | null;
   createdAt?: string;
   contentKey?: string | null;
+  clientTaskIds?: string[];
+  timeoutMs?: number;
   [key: string]: unknown;
 }
 
@@ -182,6 +193,44 @@ class TaskStore {
       }
     }
     return null;
+  }
+
+  /**
+   * 按调用方任务 id 别名查任务（clientTaskId 协议）。
+   * 遍历有界（内存 Map + Redis 恢复的存量，终态保留上限 500），线性扫描可接受。
+   */
+  findByClientTaskId(clientTaskId: string): TaskRecord | null {
+    for (const t of this.tasks.values()) {
+      if (t.clientTaskIds && t.clientTaskIds.includes(clientTaskId)) {
+        return t;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * 把调用方任务 id 别名挂到任务上（同内容身份合并去重时，后到的提交者
+   * 把自己的 clientTaskId 登记到在途任务，使两侧 backend 任务 id 都能解析）。
+   * 幂等：已存在不重复登记；任务不存在静默返回（提交者可能已被淘汰）。
+   */
+  addClientTaskId(taskId: string, clientTaskId: string): void {
+    const record = this.tasks.get(taskId);
+    if (!record) return;
+    if (!record.clientTaskIds) record.clientTaskIds = [];
+    if (record.clientTaskIds.includes(clientTaskId)) return;
+    record.clientTaskIds.push(clientTaskId);
+    this._persist(taskId, record);
+  }
+
+  /**
+   * 任务 id 解析：先按本服务生成的 id 精确命中，再按 clientTaskId 别名命中。
+   * 返回任务真实 id（供 cancel / getQueuePosition 等按 id 操作的方法复用），
+   * 未命中返回 null。
+   */
+  resolveTaskId(idOrClientTaskId: string): string | null {
+    if (this.tasks.has(idOrClientTaskId)) return idOrClientTaskId;
+    const byAlias = this.findByClientTaskId(idOrClientTaskId);
+    return byAlias ? byAlias.id : null;
   }
 
   /**

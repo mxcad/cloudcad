@@ -107,4 +107,70 @@ describe('RateLimiter', () => {
       expect(limiter.getDurationStats().sampleCount).toBe(1);
     });
   });
+
+  describe('queue wait timeout (queueTimeoutMs)', () => {
+    it('should reject a queued task that never gets a slot within the queue timeout', async () => {
+      const limiter = new RateLimiter(1, 60000, 50);
+      // 占住唯一槽位：排队任务在 50ms 排队上限内拿不到槽位
+      const blocker = limiter.execute(async () => {
+        await sleep(200);
+      });
+      const queued = limiter.execute(async () => {
+        /* 排队超时被出队 */
+      });
+      const queuedExpect = expect(queued).rejects.toThrow(
+        '任务排队等待超时 (50ms)',
+      );
+      await sleep(80);
+      await queuedExpect;
+
+      // 被出队的任务不再占队列位置：blocker 结束后队列应为空
+      await blocker;
+      expect(limiter.getQueueLength()).toBe(0);
+      expect(limiter.getRunningCount()).toBe(0);
+    });
+
+    it('should not reject a task that starts before the queue timeout', async () => {
+      const limiter = new RateLimiter(1, 60000, 100);
+      const blocker = limiter.execute(async () => {
+        await sleep(30);
+      });
+      const queued = limiter.execute(async () => {
+        await sleep(10);
+      });
+      // 30ms 后槽位释放 < 100ms 排队上限：任务正常执行
+      await blocker;
+      await expect(queued).resolves.toBeUndefined();
+      expect(limiter.getQueueLength()).toBe(0);
+    });
+
+    it('should keep unlimited queue waiting by default (queueTimeoutMs=0)', async () => {
+      const limiter = new RateLimiter(1);
+      const blocker = limiter.execute(async () => {
+        await sleep(100);
+      });
+      const queued = limiter.execute(async () => {
+        /* 默认无排队上限：等待远超 100ms 仍正常执行 */
+      });
+      await blocker;
+      await expect(queued).resolves.toBeUndefined();
+    });
+
+    it('should settle with clearQueue reason, not a stale queue-timeout timer', async () => {
+      const limiter = new RateLimiter(1, 60000, 100);
+      const blocker = limiter.execute(async () => {
+        await sleep(300);
+      });
+      const queued = limiter.execute(async () => {
+        /* 被 clearQueue 取消 */
+      });
+      await sleep(10);
+      expect(limiter.clearQueue()).toBe(1);
+      // clearQueue 已结算（并清除排队定时器）：再等过排队上限不应改判为排队超时
+      await expect(queued).rejects.toThrow('队列已清空');
+      await sleep(120);
+      await blocker;
+      expect(limiter.getQueueLength()).toBe(0);
+    });
+  });
 });

@@ -233,17 +233,20 @@ class WorkerPool {
    * @returns killed: 是否触发了进程组终止（运行中任务为 true）
    */
   cancel(taskId: string): { ok: boolean; status?: string; reason?: string; killed: boolean } {
-    const task = this.taskStore.get(taskId);
+    // clientTaskId 协议：入参可能是调用方任务 id 别名，先解析为真实任务 id
+    const resolvedId = this.taskStore.resolveTaskId(taskId);
+    if (!resolvedId) return { ok: false, reason: 'not_found', killed: false };
+    const task = this.taskStore.get(resolvedId);
     if (!task) return { ok: false, reason: 'not_found', killed: false };
     const wasProcessing = task.status === 'PROCESSING';
-    const result = this.taskStore.cancel(taskId);
+    const result = this.taskStore.cancel(resolvedId);
     if (!result.ok) {
       return { ok: false, status: result.status || undefined, reason: result.reason, killed: false };
     }
     let killed = false;
     if (wasProcessing) {
       // 运行中：杀 mxcadassembly 进程组（子进程未拉起时 _onChild 会立即杀）
-      const handle = this.cancelHandles.get(taskId);
+      const handle = this.cancelHandles.get(resolvedId);
       if (handle) {
         handle();
         killed = true;
@@ -251,9 +254,9 @@ class WorkerPool {
     } else if (task.priority !== undefined) {
       // 排队中：从 acquire 队列出队，清掉 acquire 超时计时器（否则计时器悬空阻碍进程优雅退出）
       const pool = this.pools[String(task.priority)];
-      if (pool) pool.remove(taskId);
+      if (pool) pool.remove(resolvedId);
     }
-    this._queued.delete(taskId);
+    this._queued.delete(resolvedId);
     log(`[WorkerPool] 任务取消: ${taskId}${killed ? '（已杀进程组）' : '（排队中出队）'}`);
     return { ok: true, status: 'CANCELLED', killed };
   }
@@ -265,11 +268,14 @@ class WorkerPool {
    * → 前端面板对 pending 任务展示「第 N 位」。
    */
   getQueuePosition(taskId: string): number | null {
-    const task = this.taskStore.get(taskId);
+    // clientTaskId 协议：入参可能是调用方任务 id 别名，先解析为真实任务 id
+    const resolvedId = this.taskStore.resolveTaskId(taskId);
+    if (!resolvedId) return null;
+    const task = this.taskStore.get(resolvedId);
     if (!task || task.status !== 'PENDING' || task.priority === undefined) return null;
     const pool = this.pools[String(task.priority)];
     if (!pool) return null;
-    const idx = pool.queue.findIndex((e) => e.taskId === taskId);
+    const idx = pool.queue.findIndex((e) => e.taskId === resolvedId);
     return idx === -1 ? null : idx + 1;
   }
 
@@ -377,7 +383,14 @@ class WorkerPool {
       if (task.type === 'batch') {
         result = await this._executeBatch(task, level, onChild);
       } else {
-        result = await this.runner.execute(task.params, PRIORITY_CONFIG[level].timeout, onChild);
+        // 单任务超时透传（clientTaskId 协议同源）：调用方（backend）下发的 timeoutMs
+        // 优先于档位默认超时——此前远端恒按 PRIORITY_CONFIG 档位超时，backend 的
+        // timeout.fileConversion / options.timeout 对独立服务模式不生效。
+        const timeout =
+          typeof task.timeoutMs === 'number' && task.timeoutMs > 0
+            ? task.timeoutMs
+            : PRIORITY_CONFIG[level].timeout;
+        result = await this.runner.execute(task.params, timeout, onChild);
       }
       // 取消守卫：执行期间任务被取消（store 已是 CANCELLED 终态）→ 不覆盖、不发回调
       const current = this.taskStore.get(task.id);

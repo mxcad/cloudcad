@@ -1,6 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import type { ConversionRequest } from '@cloudcad/contracts';
+import { isConversionFailureCategory } from '@cloudcad/contracts';
+import type {
+  ConversionFailureCategory,
+  ConversionRequest,
+} from '@cloudcad/contracts';
 import type { IMxcadConversionService } from '../../mxcad/interfaces/mxcad-conversion.interface';
 import type { ConvertServerFileParam } from '../../mxcad/types/mxcad-context.types';
 
@@ -17,6 +21,11 @@ export class ConversionCoreError extends Error {
   constructor(
     public readonly kind: 'engine-failed' | 'artifact-missing',
     public readonly detail: string,
+    /**
+     * 引擎失败分类（仅 engine-failed 携带）：调用方据此区分「可重试的环境性失败」
+     * 与「确定性内容失败」（如批量下载的重试决策），不再按文案反推。
+     */
+    public readonly category?: ConversionFailureCategory,
   ) {
     super(detail);
     this.name = 'ConversionCoreError';
@@ -32,6 +41,8 @@ export interface ConversionCoreInput {
   nodeId: string;
   /** 发起转换的用户 ID（游客/匿名不传） */
   userId?: string;
+  /** 调用方任务 id（node.taskId）：远端模式按 clientTaskId 别名登记，状态查询/取消/对账可解析 */
+  taskId?: string;
   /** 输出文件名（含扩展名；版本绑定 {hash}-{paramKey}{ext} 或直取名） */
   outname: string;
   /**
@@ -78,6 +89,7 @@ export async function runConversionCore(
     createPreloadingData: false,
   };
   if (input.priority) conversionOptions.priority = input.priority;
+  if (input.taskId) conversionOptions.taskId = input.taskId;
   if (input.engineParams) {
     Object.assign(conversionOptions, input.engineParams);
   }
@@ -87,7 +99,16 @@ export async function runConversionCore(
   );
 
   if (result.code !== 0) {
-    throw new ConversionCoreError('engine-failed', result.message || '');
+    // errorCategory 结构化过线（此前失败只折 code+message，六值分类在此被丢弃，
+    // 上层只能按文案反推「可重试 vs 确定性失败」）；非法值按缺省处理
+    const category = isConversionFailureCategory(result.errorCategory)
+      ? result.errorCategory
+      : undefined;
+    throw new ConversionCoreError(
+      'engine-failed',
+      result.message || '',
+      category,
+    );
   }
 
   // 引擎把 outname 写到 srcPath 同目录：产物 = dirname(srcPath)/outname

@@ -167,3 +167,109 @@ describe('内容身份去重（#431 门禁3）', () => {
     pool.stop();
   });
 });
+
+describe('clientTaskId 别名协议（backend node.taskId ↔ 远端 fw_* id）', () => {
+  function makeGetReq(url: string): any {
+    const req: any = new Readable({ read() {} });
+    req.push(null);
+    req.headers = {};
+    req.method = 'GET';
+    req.url = url;
+    return req;
+  }
+
+  it('提交携带 clientTaskId + timeoutMs：任务记录保留两者', async () => {
+    const store = new TaskStore('local');
+    const runner = { execute: () => new Promise(() => {}) };
+    const pool = new WorkerPool(store, runner, null, { autoScale: false });
+    const routes = create(pool, store);
+    pool.start();
+
+    const res = makeRes();
+    await routes.handle(
+      makeReq({
+        priority: 1,
+        clientTaskId: 'async_node_1_123',
+        timeoutMs: 90000,
+        params: { srcPath: '/in/1.dwg', fileHash: 'abc', cmd: 'to_mxweb' },
+      }),
+      res,
+      '/v1/conversions/async/convertFile',
+      'POST',
+    );
+    const p = JSON.parse(res.body);
+    const record = store.get(p.taskId)!;
+    assert.deepEqual(record.clientTaskIds, ['async_node_1_123']);
+    assert.equal(record.timeoutMs, 90000, '调用方超时透传，覆盖档位默认超时');
+
+    pool.stop();
+  });
+
+  it('同内容身份合并时，后提交者的 clientTaskId 追加到在途任务', async () => {
+    const store = new TaskStore('local');
+    const runner = { execute: () => new Promise(() => {}) };
+    const pool = new WorkerPool(store, runner, null, { autoScale: false });
+    const routes = create(pool, store);
+    pool.start();
+
+    const params = { srcPath: '/in/1.dwg', fileHash: 'abc', cmd: 'to_mxweb' };
+    const res1 = makeRes();
+    await routes.handle(
+      makeReq({ clientTaskId: 'async_a', params }),
+      res1,
+      '/v1/conversions/async/convertFile',
+      'POST',
+    );
+    const res2 = makeRes();
+    await routes.handle(
+      makeReq({ clientTaskId: 'async_b', params }),
+      res2,
+      '/v1/conversions/async/convertFile',
+      'POST',
+    );
+    const p2 = JSON.parse(res2.body);
+    assert.equal(p2.merged, true);
+    const record = store.get(p2.taskId)!;
+    assert.deepEqual(
+      record.clientTaskIds,
+      ['async_a', 'async_b'],
+      '两个 backend 任务 id 都能解析到同一远端任务',
+    );
+
+    pool.stop();
+  });
+
+  it('GET /tasks/:clientTaskId 按别名解析到真实任务', async () => {
+    const store = new TaskStore('local');
+    const runner = { execute: () => new Promise(() => {}) };
+    const pool = new WorkerPool(store, runner, null, { autoScale: false });
+    const routes = create(pool, store);
+    pool.start();
+
+    const res = makeRes();
+    await routes.handle(
+      makeReq({
+        clientTaskId: 'async_node_9_123',
+        params: { srcPath: '/in/9.dwg', fileHash: 'z', cmd: 'to_mxweb' },
+      }),
+      res,
+      '/v1/conversions/async/convertFile',
+      'POST',
+    );
+    const p = JSON.parse(res.body);
+    assert.notEqual(p.taskId, 'async_node_9_123', '远端 id 与 clientTaskId 不同源');
+
+    const getRes = makeRes();
+    await routes.handle(
+      makeGetReq('/v1/conversions/tasks/async_node_9_123'),
+      getRes,
+      '/v1/conversions/tasks/async_node_9_123',
+      'GET',
+    );
+    assert.equal(getRes.status, 200);
+    const body = JSON.parse(getRes.body);
+    assert.equal(body.taskId, p.taskId, '按 clientTaskId 查询应解析到真实任务');
+
+    pool.stop();
+  });
+});

@@ -8,7 +8,6 @@ import type {
   ExecutorQueueStats,
   ExecutorDurationStats,
 } from './function-executor.interface';
-import { RateLimiter } from '../common/concurrency/rate-limiter';
 import type { IMxcadConversionService } from '../mxcad/interfaces/mxcad-conversion.interface';
 import { MXCAD_CONVERSION_SERVICE } from '../mxcad/interfaces/mxcad-service-tokens';
 
@@ -36,16 +35,13 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
     batch: false,
   };
   private readonly taskStore = new Map<string, TaskRecord>();
-  private readonly rateLimiter: RateLimiter;
   /** 终态任务 id 的入队顺序（Map 淘汰依据；仅终态 id 入列，每个任务只入列一次） */
   private readonly terminalOrder: string[] = [];
 
   constructor(
     @Inject(MXCAD_CONVERSION_SERVICE)
     private readonly fileConversionService: IMxcadConversionService
-  ) {
-    this.rateLimiter = new RateLimiter(4);
-  }
+  ) {}
 
   async invoke(task: ConversionTask): Promise<ConversionResult> {
     const record: TaskRecord = {
@@ -60,11 +56,11 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
       record.status = 'PROCESSING';
       record.updatedAt = new Date();
 
-      const priority =
-        task.priority === 1 ? 'critical' : task.priority === 2 ? 'high' : 'low';
-      const result = await this.rateLimiter.execute(async () => {
-        return this.executeTask(task);
-      }, priority);
+      // 并发闸门下沉到 FileConversionService 的内层限流器（convertFile 自带排队
+      // 上限 + 按方向/优先级入队）：此前这里再套一层 RateLimiter(4) 形成双限流——
+      // 外层无排队上限，持续高负载下任务在外层无限排队，前端先超时放弃而引擎
+      // 从未启动。此处只透传任务，不再二次排队。
+      const result = await this.executeTask(task);
 
       record.status = result.status;
       record.result = result;
@@ -123,8 +119,19 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
 
     switch (task.type) {
       case 'convertFile': {
+        // 优先级透传到内层限流器（1=打开→critical / 2=导出→high / 3=后台→low），
+        // 与远端模式「打开 > 导出 > 后台」的档位次序一致；调用方未显式指定时不覆盖
+        // params 里已有的 priority（如 convertFileAsync 的 'low'）
+        const priority =
+          task.priority === 1
+            ? 'critical'
+            : task.priority === 3
+              ? 'low'
+              : undefined;
         const { isOk, ret, error, errorCategory } =
-          await this.fileConversionService.convertFile(task.params);
+          await this.fileConversionService.convertFile(
+            priority ? { ...task.params, priority } : task.params,
+          );
         return {
           taskId,
           status: isOk ? 'COMPLETED' : 'FAILED',
@@ -167,15 +174,40 @@ export class ProcessPoolExecutor implements IFunctionExecutor {
     }
   }
 
+  /**
+   * 队列统计读内层限流器（FileConversionService 的 conversionRateLimiter，
+   * 即真正的并发闸门）。执行器未接线内层统计出口（测试 mock / 旧实现）时
+   * 回落全零，不报错。
+   */
   async queueStats(): Promise<ExecutorQueueStats | null> {
-    return { kind: 'priority-queue', stats: this.rateLimiter.getStats() };
-  }
-
-  /** 最近完成任务的耗时/等待时长统计（透传 RateLimiter 有界样本） */
-  async durationStats(): Promise<ExecutorDurationStats | null> {
+    const stats = this.fileConversionService.getConversionLimiterStats?.();
     return {
       kind: 'priority-queue',
-      stats: this.rateLimiter.getDurationStats(),
+      stats: stats ?? {
+        queueLength: 0,
+        criticalPriorityQueueLength: 0,
+        highPriorityQueueLength: 0,
+        lowPriorityQueueLength: 0,
+        runningCount: 0,
+        maxConcurrent: 0,
+        timeout: 0,
+      },
+    };
+  }
+
+  /** 最近完成任务的耗时/等待时长统计（透传内层限流器有界样本） */
+  async durationStats(): Promise<ExecutorDurationStats | null> {
+    const stats =
+      this.fileConversionService.getConversionLimiterDurationStats?.();
+    return {
+      kind: 'priority-queue',
+      stats: stats ?? {
+        sampleCount: 0,
+        p50DurationMs: null,
+        p95DurationMs: null,
+        p50WaitMs: null,
+        p95WaitMs: null,
+      },
     };
   }
 }
