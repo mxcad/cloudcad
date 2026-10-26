@@ -28,6 +28,13 @@ interface ModalProps {
   overlayClassName?: string;
   /** 点击遮罩层是否可关闭，默认 true */
   closeOnOverlayClick?: boolean;
+  /**
+   * 是否为「必须做出选择」的弹窗：点遮罩、按 Esc 都不关闭，并隐藏右上角关闭按钮——
+   * 只能点底部按钮作答。用于确认/输入类弹框（删除、未保存更改等）：点空处或按 Esc
+   * 不是「选择取消」，而是误触；CAD 编辑器内 Esc 还会被引擎当作取消命令，必须拦掉。
+   * 优先级高于 closeOnOverlayClick。默认 false（保持原有随手可关行为）。
+   */
+  mustChoose?: boolean;
 }
 
 const sizeToMaxWidth: Record<string, string> = {
@@ -72,6 +79,7 @@ export const Modal: React.FC<ModalProps> = ({
   hideCard,
   overlayClassName,
   closeOnOverlayClick = true,
+  mustChoose = false,
 }) => {
   const isMobile = useIsMobile();
   const defaultMaxWidth = 'max-w-md';
@@ -92,14 +100,14 @@ export const Modal: React.FC<ModalProps> = ({
     if (!isOpen) return;
     document.body.style.overflow = 'hidden';
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !mustChoose) onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = '';
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, mustChoose]);
 
   React.useEffect(() => {
     if (isOpen && cardRef.current) {
@@ -230,13 +238,13 @@ export const Modal: React.FC<ModalProps> = ({
       className={`absolute inset-0 transition-opacity duration-300${overlayClassName ? ` ${overlayClassName}` : ''}`}
       onPointerDown={(e) => {
         e.stopPropagation();
-        if (!closeOnOverlayClick) return;
+        if (!closeOnOverlayClick || mustChoose) return;
         if (isTourModeActive()) return;
         onClose();
       }}
       onClick={(e) => {
         e.stopPropagation();
-        if (!closeOnOverlayClick) return;
+        if (!closeOnOverlayClick || mustChoose) return;
         if (isTourModeActive()) return;
         onClose();
       }}
@@ -264,24 +272,26 @@ export const Modal: React.FC<ModalProps> = ({
           }}
         >
           <Card.Title as="h3">{title}</Card.Title>
-          <button
-            data-tour="modal-close-btn"
-            onClick={onClose}
-            className={`p-1 rounded-lg transition-all duration-200 hover:scale-110${isMobile ? ' p-3' : ''}`}
-            style={{
-              color: 'var(--text-muted)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--bg-tertiary)';
-              e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--text-muted)';
-            }}
-          >
-            <X size={18} />
-          </button>
+          {!mustChoose && (
+            <button
+              data-tour="modal-close-btn"
+              onClick={onClose}
+              className={`p-1 rounded-lg transition-all duration-200 hover:scale-110${isMobile ? ' p-3' : ''}`}
+              style={{
+                color: 'var(--text-muted)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--bg-tertiary)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--text-muted)';
+              }}
+            >
+              <X size={18} />
+            </button>
+          )}
         </Card.Header>
       )}
 

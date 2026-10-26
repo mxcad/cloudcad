@@ -5,6 +5,11 @@ import { Textarea } from '../ui/Textarea';
 import { Z_LAYERS } from '../../constants/layers';
 import type { PromptDialogState } from './types';
 
+/**
+ * 输入弹框——必须做选择，mustChoose：点遮罩/按 Esc 都不关闭，也不能点右上角 ×。
+ * 输入内容属于用户正在编辑的数据，误触关掉会静默丢弃已输入内容。
+ */
+
 interface PromptDialogProps {
   state: PromptDialogState;
   value: string;
@@ -26,6 +31,7 @@ export function PromptDialog({
       isOpen
       onClose={onCancel}
       title={state.title}
+      mustChoose
       zIndex={Z_LAYERS.TOAST - 1}
       footer={
         <>

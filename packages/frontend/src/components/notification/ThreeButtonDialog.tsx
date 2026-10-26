@@ -4,6 +4,11 @@ import { Z_LAYERS } from '../../constants/layers';
 import type { ThreeButtonDialogState } from './types';
 import { renderConfirmIcon } from './ConfirmDialogIcon';
 
+/**
+ * 三按钮弹框——必须做选择，mustChoose：点遮罩/按 Esc 都不关闭，也不能点右上角 ×。
+ * 保存/不保存/取消三者语义不同，任一「没点按钮」的关闭都只能是猜测，故只认按钮。
+ */
+
 interface ThreeButtonDialogProps {
   state: ThreeButtonDialogState;
   onConfirm: () => void;
@@ -23,6 +28,7 @@ export function ThreeButtonDialog({
       isOpen
       onClose={onCancel}
       title={state.title}
+      mustChoose
       zIndex={Z_LAYERS.TOAST - 1}
       footer={
         <>
