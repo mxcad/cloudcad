@@ -15,6 +15,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 const { URL } = require('url');
 
 const { getMobileAccessPathForRuntime } = require('./lib/mobile-access-path');
@@ -82,6 +83,7 @@ const MIME_TYPES = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
   '.eot': 'application/vnd.ms-fontobject',
   '.webp': 'image/webp',
   '.mp3': 'audio/mpeg',
@@ -98,6 +100,63 @@ const MIME_TYPES = {
 function getMimeType(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   return MIME_TYPES[ext] || 'application/octet-stream';
+}
+
+// 值得 gzip 压缩的 MIME（高压缩比或大体积：JS/wasm/JSON/HTML/OTF 字体）。
+// woff/woff2、图片、音视频、PDF 本身已压缩，跳过；.shx/.lin/.pat/.data 等
+// 二进制资产落到 octet-stream 同样不压。
+const COMPRESSIBLE_MIME = new Set([
+  'text/html',
+  'text/css',
+  'text/plain',
+  'text/xml',
+  'application/javascript',
+  'application/json',
+  'application/wasm',
+  'application/xml',
+  'image/svg+xml',
+  'font/ttf',
+  'font/otf',
+  'font/eot',
+]);
+
+// 解析 Accept-Encoding：仅当客户端显式接受 gzip 且 q>0 时返回 true
+// （浏览器默认发 "gzip, deflate, br"；q=0 表示显式拒绝）
+function clientAcceptsGzip(req) {
+  const ae = req.headers['accept-encoding'];
+  if (!ae) return false;
+  for (const part of ae.split(',')) {
+    const segs = part.trim().split(';');
+    if (segs[0].trim().toLowerCase() !== 'gzip') continue;
+    let q = 1;
+    for (const p of segs.slice(1)) {
+      const m = /^\s*q\s*=\s*([0-9.]+)/i.exec(p);
+      if (m) q = parseFloat(m[1]);
+    }
+    return q > 0;
+  }
+  return false;
+}
+
+// 该响应是否按 gzip 下发（返回 'gzip' 或 null）。
+// MIME 可能带参数（如 'application/javascript; charset=utf-8'），先剥参数再匹配
+function shouldGzip(req, mimeType) {
+  if (!COMPRESSIBLE_MIME.has(mimeType.split(';')[0].trim())) return null;
+  return clientAcceptsGzip(req) ? 'gzip' : null;
+}
+
+// 代理错误日志。历史上只打 err.message 有三个盲区：无时间戳，无法与后端日志对齐；
+// 无 err.code，无法定性（Node 内部以空 Error 触发时 message 为空串，看着像日志被截断）；
+// 无失败侧，无法区分「后端未回响应头」与「后端已开始回包后中断」——同一条
+// "socket hang up" 两种情况都会出现。
+function logProxyError(side, err, target, req) {
+  const e = err || {};
+  const message =
+    e.message == null || e.message === '' ? '(空 message)' : JSON.stringify(e.message);
+  console.error(
+    `[代理错误] ${new Date().toISOString()} code=${e.code || 'UNKNOWN'} ` +
+      `message=${message} 侧=${side} 后端=${target} ${req.method} ${req.url}`
+  );
 }
 
 // API 代理函数
@@ -149,7 +208,7 @@ function proxyRequest(req, res, target) {
     // 后端响应流中途出错（如 ECONNRESET）：此时响应头往往已发给客户端，
     // 只能中止，不能再 writeHead，否则 ERR_HTTP_HEADERS_SENT 直接崩进程
     proxyRes.on('error', (err) => {
-      console.error(`[代理错误] ${err.message}`);
+      logProxyError('响应侧（响应头已发给客户端）', err, target, req);
       if (!res.headersSent) {
         res.writeHead(502);
       }
@@ -162,7 +221,7 @@ function proxyRequest(req, res, target) {
   // 到后端的请求出错（连接被拒/重置等）：
   // 头未发 → 回 502；头已发（后端回包中途断）→ 只能中止，不能重复 writeHead
   proxyReq.on('error', (err) => {
-    console.error(`[代理错误] ${err.message}`);
+    logProxyError('请求侧（后端未回响应头）', err, target, req);
     if (!res.headersSent) {
       res.writeHead(502);
       res.end(`Proxy Error: ${err.message}`);
@@ -182,14 +241,17 @@ function proxyRequest(req, res, target) {
 }
 
 // 从指定目录提供静态文件
-function serveStaticFile(res, filePath, urlPath, options) {
+function serveStaticFile(req, res, filePath, urlPath, options) {
   // 如果是目录，尝试 index.html
   if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
     filePath = path.join(filePath, 'index.html');
   }
 
-  // 检查文件是否存在
-  if (!fs.existsSync(filePath)) {
+  // 检查文件是否存在。预压缩 dist（mxcad-app 引擎产物）只带 <file>.gz、无原始文件，
+  // 故原始路径缺失但 <file>.gz 存在时同样视为命中，否则会误走 SPA 回退把 index.html
+  // 当 JS/wasm 模块下发（浏览器 import() 一个 text/html → "Failed to fetch dynamically
+  // imported module"，整页白屏）。等价于 nginx 的 gzip_static on 行为。
+  if (!fs.existsSync(filePath) && !fs.existsSync(filePath + '.gz')) {
     // SPA 模式：返回 index.html
     if (options.spa) {
       const indexHtml = path.join(options.dir, 'index.html');
@@ -207,38 +269,90 @@ function serveStaticFile(res, filePath, urlPath, options) {
     }
   }
 
-  // 读取并返回文件
   const mimeType = getMimeType(filePath);
 
-  fs.readFile(filePath, (err, data) => {
+  const headers = {
+    'Content-Type': mimeType,
+  };
+
+  // 静态资源缓存。/mxcad-app/* 是运行时原样 dist（index.js、chunks/ 均无 hash），
+  // 部署模型是「覆盖服务器 mxcad-app/ 目录即热更新」，强缓存会让已访问用户永久拿到
+  // 旧入口，故改按校验下发
+  if (!filePath.endsWith('.html')) {
+    headers['Cache-Control'] = urlPath.startsWith('/mxcad-app/')
+      ? 'no-cache'
+      : 'public, max-age=31536000';
+  }
+
+  // COOP/COEP：wasm 多线程（SharedArrayBuffer）的前提。浏览器只在顶层文档
+  // （index.html）响应上读到这两个头才启用跨源隔离——只加在 .wasm 文件上无效。
+  // 与 dev 环境同口径（mxcadAssetsPlugin 的全局中间件对全部响应加这两个头）
+  headers['Cross-Origin-Opener-Policy'] = 'same-origin';
+  headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
+
+  // gzip 下发：优先用预生成的 <file>.gz（零 CPU，mxcad-app 的 JS/wasm/配置均自带），
+  // 否则 zlib 在线压缩（应用外壳 assets/ 无预生成 .gz）。Vary 防止共享缓存把
+  // gzip 响应发给不接受 gzip 的客户端
+  if (shouldGzip(req, mimeType)) {
+    headers['Content-Encoding'] = 'gzip';
+    headers['Vary'] = 'Accept-Encoding';
+    const hasPreGz = fs.existsSync(filePath + '.gz');
+    const src = fs.createReadStream(hasPreGz ? filePath + '.gz' : filePath);
+
+    // 头必须等流真正打开成功才提交：existsSync 通过之后文件仍可能因权限/竞态
+    // 打不开。先 writeHead(200) 再失败只能 res.end()，浏览器拿到的是「声称 200
+    // 实则截断」的响应——对 ES 模块表现为 "Failed to fetch dynamically imported
+    // module"，HTTP 状态码看不出错，网络面板也查不出 5xx
+    src.on('error', (err) => {
+      console.error(`[静态服务错误] ${urlPath}: ${err.message}`);
+      if (res.headersSent) {
+        // 头已发出、状态码无法再改：掐断连接比把截断字节继续发出去好
+        res.destroy();
+      } else {
+        res.writeHead(500);
+        res.end('Internal Server Error');
+      }
+    });
+    src.on('open', () => {
+      res.writeHead(200, headers);
+      if (hasPreGz) {
+        src.pipe(res);
+      } else {
+        src.pipe(zlib.createGzip({ level: 6 })).pipe(res);
+      }
+    });
+    return;
+  }
+
+  // 读取并返回文件（客户端不接受 gzip 的分支）。原始文件存在则直接发；
+  // 预压缩 dist 里仅 <file>.gz 存在时，解压后以未压缩形式下发（不发 Content-Encoding）。
+  if (fs.existsSync(filePath)) {
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Internal Server Error');
+        return;
+      }
+      res.writeHead(200, headers);
+      res.end(data);
+    });
+    return;
+  }
+  fs.readFile(filePath + '.gz', (err, gzData) => {
     if (err) {
       res.writeHead(500);
       res.end('Internal Server Error');
       return;
     }
-
-    // WASM 需要特殊响应头
-    const headers = {
-      'Content-Type': mimeType,
-    };
-
-    // 静态资源缓存。/mxcad-app/* 是运行时原样 dist（index.js、chunks/ 均无 hash），
-    // 部署模型是「覆盖服务器 mxcad-app/ 目录即热更新」，强缓存会让已访问用户永久拿到
-    // 旧入口，故改按校验下发
-    if (!filePath.endsWith('.html')) {
-      headers['Cache-Control'] = urlPath.startsWith('/mxcad-app/')
-        ? 'no-cache'
-        : 'public, max-age=31536000';
-    }
-
-    // WASM 支持
-    if (filePath.endsWith('.wasm')) {
-      headers['Cross-Origin-Opener-Policy'] = 'same-origin';
-      headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
-    }
-
-    res.writeHead(200, headers);
-    res.end(data);
+    zlib.gunzip(gzData, (err2, data) => {
+      if (err2) {
+        res.writeHead(500);
+        res.end('Internal Server Error');
+        return;
+      }
+      res.writeHead(200, headers);
+      res.end(data);
+    });
   });
 }
 
@@ -274,7 +388,10 @@ function createServer(options) {
         const wghName = wghMatch[1];
         const wghFilePath = path.join(options.mobileDir, wghName);
         if (fs.existsSync(wghFilePath)) {
-          serveStaticFile(res, wghFilePath, urlPath, { ...options, dir: options.mobileDir });
+          serveStaticFile(req, res, wghFilePath, urlPath, {
+            ...options,
+            dir: options.mobileDir,
+          });
           return;
         }
         // 文件不存在时落到下面 SPA fallback（返回 404 或 index.html）
@@ -302,13 +419,16 @@ function createServer(options) {
         return;
       }
 
-      serveStaticFile(res, filePath, urlPath, { ...options, dir: options.mobileDir });
+      serveStaticFile(req, res, filePath, urlPath, {
+        ...options,
+        dir: options.mobileDir,
+      });
       return;
     }
 
     // 桌面端静态文件
     let filePath = path.join(options.dir, urlPath);
-    serveStaticFile(res, filePath, urlPath, options);
+    serveStaticFile(req, res, filePath, urlPath, options);
   });
 
   return server;
@@ -355,4 +475,16 @@ function main() {
   });
 }
 
-main();
+// PM2/前台模式均以独立 node 进程拉起（spawn/PM2 script），require.main 守卫
+// 只影响测试 require 本文件时的行为
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  createServer,
+  clientAcceptsGzip,
+  shouldGzip,
+  logProxyError,
+  COMPRESSIBLE_MIME,
+};

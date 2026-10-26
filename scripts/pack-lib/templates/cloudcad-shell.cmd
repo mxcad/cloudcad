@@ -15,8 +15,10 @@ if not exist "%NODE_EXE%" (
     exit /b 1
 )
 
-REM 将离线 node 加入 PATH，并设置 PM2_HOME 到本项目（隔离系统 pm2）
-set "PATH=%NODE_DIR%;%PATH%"
+REM 将离线 node 加入 PATH。pm2 / pnpm 的 cmd shim 在 node_modules\.bin（不在 node 根目录），
+REM 漏掉该目录会让本窗口 `pm2`/`pnpm` 解析失败；runtime\ 使 cloudcad.bat 可裸调 cloudcad。
+REM PM2_HOME 指向本项目 data\pm2，隔离系统 pm2。
+set "PATH=%NODE_DIR%;%NODE_DIR%\node_modules\.bin;%APP_ROOT%\runtime;%PATH%"
 set "PM2_HOME=%APP_ROOT%\data\pm2"
 
 REM 禁用 Corepack 严格检查，支持离线部署
@@ -26,7 +28,7 @@ echo.
 echo  ============================================================
 echo   梦想网页CAD实时协同平台 命令行已就绪（离线 Node.js）
 echo   Node:  %NODE_EXE%
-echo   PATH:  已加入离线 node 目录
+echo   PATH:  已加入离线 node 目录与包内 .bin
 echo   PM2:   %PM2_HOME%
 echo.
 echo   在本窗口可执行:  node / npm / npx / pnpm / pm2 / cloudcad

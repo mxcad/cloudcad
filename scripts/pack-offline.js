@@ -167,6 +167,41 @@ function find7z() {
   return null;
 }
 
+/** 命令行判据（辅助）：形态可辨的 dev server。形态多变时由下面的模块扫描兜底 */
+const DEV_SERVER_CMD_RE =
+  /(?:corepack[\/\\]dist[\/\\]pnpm\.js|vite[\/\\]bin[\/\\]vite\.js|@nestjs[\/\\]cli[\/\\]bin[\/\\]nest\.js)/;
+
+/**
+ * Windows：找出已 dlopen 本仓 node_modules 原生模块的 node.exe 进程。
+ *
+ * 启动形态多变（`nohup node dist/main`、`node node_modules/vite/bin/vite.js` 等），
+ * 命令行正则易漏；但 Windows 下真正会让 pnpm unlink 失败的只有已 mmap .node 的进程，
+ * 故按「已加载模块路径落在 PROJECT_ROOT/node_modules 下」判定，与启动方式无关。
+ * 注：部署包后端（exe 在 release 目录）不命中——它锁的是自己的目录，不阻塞仓库打包。
+ *
+ * @returns {string[]} 命中的 PID 列表
+ */
+function findNodeModulesLockingPids() {
+  if (os.platform() !== 'win32') return [];
+  // 反斜杠勿翻倍：${} 插值按值原样插入模板串，不会被 JS 重新解释转义。
+  // -like 默认大小写不敏感（StartsWith 是 Ordinal 敏感的），路径字母大小写不可控，故选它。
+  const prefix = PROJECT_ROOT + '\\node_modules';
+  const res = spawnSync(
+    'powershell',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne ${process.pid} } | ForEach-Object { $id = $_.Id; $m = @($_.Modules | Where-Object { $_.FileName -like '${prefix}*' }); if ($m.Count -gt 0) { 'PID ' + $id } }`,
+    ],
+    { encoding: 'utf8' }
+  );
+  return (res.stdout || '')
+    .split(/\r?\n/)
+    .map((line) => (line.match(/PID (\d+)/) || [])[1])
+    .filter(Boolean);
+}
+
 /**
  * 打包前置守卫：开发服务器存活时拒绝打包（原生打包机：Windows / Linux）
  *
@@ -205,9 +240,11 @@ function assertNoDevServerRunning(allowDevRunning) {
       if (!line) break;
       const m = line.match(/^(\d+),\s*"?(.*?)"$/);
       if (!m || Number(m[1]) === process.pid) continue;
-      rows.push(m[1]);
+      rows.push([m[1], m[2] || '']);
     }
-    found = rows.filter((cmd) => /(?:corepack[\/\\]dist[\/\\]pnpm\.js|\.bin[\/\\]?\.\.[\/\\]vite[\/\\]bin[\/\\]vite\.js|nest\.js start --watch)/.test(cmd));
+    found = rows
+      .filter(([, cmd]) => DEV_SERVER_CMD_RE.test(cmd))
+      .map(([pid]) => pid);
   } else if (os.platform() === 'linux') {
     // Linux：ps 枚举进程命令行（procps 为开发机标配；ps 不可用时不阻断，与 Windows 探测失败同语义）
     const res = spawnSync('ps', ['-eo', 'pid=,args='], { encoding: 'utf8' });
@@ -223,10 +260,14 @@ function assertNoDevServerRunning(allowDevRunning) {
     }
   }
 
+  // 兜底：命令行形态识别不到的占用者（如 `node dist/main` 起的后端），
+  // 按「已加载本仓 node_modules 原生模块」判定。两者取并集去重。
+  found = [...new Set(found.concat(findNodeModulesLockingPids()))];
+
   if (found.length === 0) return;
 
   error('');
-  error('检测到开发服务器正在运行，已中止打包：');
+  error('检测到开发服务器 / node_modules 占用进程正在运行，已中止打包：');
   for (const pid of found) error(`  - PID ${pid}`);
   error('');
   error('原因：vite / nest --watch 长期占用 node_modules 与 dist，打包以 --prod');
@@ -860,7 +901,27 @@ function ensureDeployStoreComplete(storePath, variant = 'oss', storeName = '.pnp
       encoding: 'utf8',
     });
   } catch (err) {
-    error(`${storeName} 联网补齐失败，请检查网络：${err.message.split('\n')[0]}`);
+    const msg = err.message || '';
+    // EPERM/EBUSY 是文件句柄问题（Windows 下 node.exe dlopen 的 .node 句柄无法被 unlink），
+    // 不是网络问题。err.message 首行是 "Command failed: ..."，真实原因在后续 stderr 行，须逐行找。
+    const lockLine = msg
+      .split('\n')
+      .find((line) => /\b(EPERM|EBUSY)\b/.test(line));
+    if (lockLine) {
+      const locked = (lockLine.match(/'([^']+)'/) || [])[1];
+      error(
+        `⚠ ${storeName} 补齐失败——文件被进程占用（EPERM/EBUSY），不是网络问题：`
+      );
+      if (locked) error(`      ${locked}`);
+      error(
+        '      Windows 下 node.exe 已 dlopen 的 .node 原生模块句柄无法被 pnpm unlink。'
+      );
+      error(
+        '      请先关闭占用 node_modules 的进程（pnpm dev 按 Ctrl+C），再重跑打包。'
+      );
+    } else {
+      error(`${storeName} 联网补齐失败，请检查网络：${msg.split('\n')[0]}`);
+    }
     throw new Error('部署 store 联网补齐失败');
   }
 
