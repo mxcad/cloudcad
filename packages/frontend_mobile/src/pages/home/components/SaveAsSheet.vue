@@ -66,13 +66,31 @@ const selectedProjectName = computed(() => {
   return p ? p.name : '';
 });
 
-// 移动端库只读：库图纸的入库是管理员（PC 端）职责，故不提供「资源库」保存目标
+// 「公开资源库」目标与 PC SaveAsModal 同口径：有 LIBRARY_DRAWING_MANAGE /
+// LIBRARY_BLOCK_MANAGE 之一才给。没权限就不给入口——选了也必然撞后端
+// 「您没有资源库管理权限」，等于给一个点了必失败的死选项。
+const hasLibraryPermission = computed(
+  () =>
+    hasPermission('LIBRARY_DRAWING_MANAGE') ||
+    hasPermission('LIBRARY_BLOCK_MANAGE')
+);
+
 const saveAsOptions = computed(() => {
-  return [
+  const options = [
     { label: t('我的图纸'), value: 'personal', icon: 'home-o' },
     { label: t('项目文件夹'), value: 'project', icon: 'orders-o' },
-  ] as Array<{ label: string; value: SaveTargetType; icon: string }>;
+  ];
+  if (hasLibraryPermission.value) {
+    options.push({ label: t('公开资源库'), value: 'library', icon: 'bookmark-o' });
+  }
+  return options as Array<{ label: string; value: SaveTargetType; icon: string }>;
 });
+
+// 库落点要指定落哪个库（后端按 libraryType 校验管理权限并解析根节点）
+const libraryTypeOptions = computed<Array<{ label: string; value: LibraryType }>>(() => [
+  { label: t('图纸库'), value: 'drawing' },
+  { label: t('图块库'), value: 'block' },
+]);
 
 const formatOptions = computed(() => {
   const formats: Array<{ label: string; value: SaveFormat; desc: string }> = [
@@ -96,6 +114,9 @@ const folderDisplayText = computed(() => {
   if (saveAs.targetType.value === 'personal') {
     return t('我的图纸');
   }
+  if (saveAs.targetType.value === 'library') {
+    return t('公开资源库');
+  }
   const p = saveAs.projects.value.find(p => p.id === saveAs.selectedParentId.value);
   return p ? p.name : t('根目录');
 });
@@ -106,9 +127,25 @@ async function init() {
   // 基名归一（剥 .dwg/.dxf/.dwt 与 .mxweb 任意层叠）：只剥一层时打开
   // `plan.dwg.mxweb` 会默认成 `plan.dwg`，提交后再叠后缀继续滚雪球
   const baseName = stripDrawingExtension(props.currentFileName || '') || 'untitled';
+  // 权限每次打开都重算（会话期间可能改过角色 / 重新登录），不再复用上次的判断
+  saveAs.setCanSaveToLibrary(hasLibraryPermission.value);
   await saveAs.loadPersonalSpace();
   await saveAs.loadProjects();
+  if (hasLibraryPermission.value) {
+    await saveAs.loadLibraryRoot();
+  }
   saveAs.init(baseName);
+}
+
+// 当前目标类型的根节点：文件夹浏览的起点，也是未选子文件夹时的默认落点
+function resolveRootId(): string {
+  if (saveAs.targetType.value === 'personal') {
+    return saveAs.personalSpaceId.value || '';
+  }
+  if (saveAs.targetType.value === 'project') {
+    return saveAs.selectedProjectId.value;
+  }
+  return saveAs.libraryRootId.value || '';
 }
 
 function onProjectConfirm({ selectedValues }: { selectedValues: string[] }) {
@@ -132,18 +169,15 @@ async function handleSave() {
     return;
   }
   if (!saveAs.selectedParentId.value) {
-    if (saveAs.targetType.value === 'personal') {
-      saveAs.selectedParentId.value = saveAs.personalSpaceId.value || '';
-      if (!saveAs.selectedParentId.value) {
-        error.value = t('无法获取个人空间');
-        return;
-      }
-    } else if (saveAs.targetType.value === 'project') {
-      if (!saveAs.selectedProjectId.value) {
-        error.value = t('请先选择项目');
-        return;
-      }
-      saveAs.selectedParentId.value = saveAs.selectedProjectId.value;
+    if (saveAs.targetType.value === 'project' && !saveAs.selectedProjectId.value) {
+      error.value = t('请先选择项目');
+      return;
+    }
+    saveAs.selectedParentId.value = resolveRootId();
+    if (!saveAs.selectedParentId.value) {
+      error.value =
+        saveAs.targetType.value === 'library' ? t('无法加载资源库') : t('无法获取个人空间');
+      return;
     }
   }
 
@@ -156,8 +190,9 @@ async function handleSave() {
     const baseName = stripDrawingExtension(saveAs.fileName.value) || 'untitled';
     const result = await saveAs.executeSaveAs({
       blob,
-      // useSaveAs 的 SaveTargetType 仍含 'library'，但本面板已不提供库目标
-      targetType: saveAs.targetType.value as 'personal' | 'project',
+      targetType: saveAs.targetType.value,
+      libraryType:
+        saveAs.targetType.value === 'library' ? saveAs.libraryType.value : undefined,
       selectedProjectId: saveAs.targetType.value === 'project' ? saveAs.selectedProjectId.value : undefined,
       selectedParentId: saveAs.selectedParentId.value,
       format: saveAs.format.value,
@@ -172,7 +207,9 @@ async function handleSave() {
       emit('success', {
         nodeId: result.nodeId || '',
         fileName: baseName,
-        targetType: saveAs.targetType.value as 'personal' | 'project',
+        targetType: saveAs.targetType.value,
+        libraryType:
+          saveAs.targetType.value === 'library' ? saveAs.libraryType.value : undefined,
       });
       emit('close');
     } else {
@@ -187,17 +224,14 @@ async function openFolderPicker() {
   folderLoading.value = true;
   step.value = 'folder';
 
-  let rootId = '';
-  if (saveAs.targetType.value === 'personal') {
-    rootId = saveAs.personalSpaceId.value || '';
-  } else if (saveAs.targetType.value === 'project') {
-    rootId = saveAs.selectedProjectId.value;
-    if (!rootId) {
-      showToast(t('请先选择项目'));
-      step.value = 'form';
-      folderLoading.value = false;
-      return;
-    }
+  const rootId = resolveRootId();
+  if (!rootId) {
+    showToast(
+      saveAs.targetType.value === 'library' ? t('无法加载资源库') : t('请先选择项目')
+    );
+    step.value = 'form';
+    folderLoading.value = false;
+    return;
   }
 
   if (lastFolderPath.value.length > 0) {
@@ -214,8 +248,19 @@ async function openFolderPicker() {
 async function loadFolderChildren(parentId: string): Promise<FolderNode[]> {
   if (!parentId) return [];
   try {
-    const { nodeControllerGetChildren } = await import('../../../api-sdk');
-    const result = await nodeControllerGetChildren({ path: { nodeId: parentId }, query: { nodeType: 'folder' } });
+    // 库节点走库专用子节点接口（与 PC LibrarySelectFolderModal 同口径）：
+    // 通用接口对库节点会多过一遍 RequireProjectPermission 的库访问判定
+    const {
+      nodeControllerGetChildren,
+      libraryControllerGetDrawingChildren,
+      libraryControllerGetBlockChildren,
+    } = await import('../../../api-sdk');
+    const apiFn = saveAs.targetType.value === 'library'
+      ? saveAs.libraryType.value === 'block'
+        ? libraryControllerGetBlockChildren
+        : libraryControllerGetDrawingChildren
+      : nodeControllerGetChildren;
+    const result = await apiFn({ path: { nodeId: parentId }, query: { nodeType: 'folder' } });
     unwrap(result);
     const data = result.data as unknown as { nodes: FileSystemNodeDto[] };
     return (data?.nodes || [])
@@ -256,12 +301,7 @@ async function navigateToBreadcrumb(index: number) {
 }
 
 async function loadRootChildren() {
-  let rootId = '';
-  if (saveAs.targetType.value === 'personal') {
-    rootId = saveAs.personalSpaceId.value || '';
-  } else if (saveAs.targetType.value === 'project') {
-    rootId = saveAs.selectedProjectId.value;
-  }
+  const rootId = resolveRootId();
   if (rootId) {
     folderLoading.value = true;
     folderNodes.value = await loadFolderChildren(rootId);
@@ -272,14 +312,10 @@ async function loadRootChildren() {
 async function goUp() {
   if (folderPath.value.length === 0) return;
   folderPath.value.pop();
-  let parentId = '';
-  if (folderPath.value.length > 0) {
-    parentId = folderPath.value[folderPath.value.length - 1].id;
-  } else if (saveAs.targetType.value === 'personal') {
-    parentId = saveAs.personalSpaceId.value || '';
-  } else if (saveAs.targetType.value === 'project') {
-    parentId = saveAs.selectedProjectId.value;
-  }
+  const parentId =
+    folderPath.value.length > 0
+      ? folderPath.value[folderPath.value.length - 1].id
+      : resolveRootId();
 
   if (parentId) {
     folderLoading.value = true;
@@ -318,16 +354,11 @@ function getRootName(): string {
     const p = saveAs.projects.value.find(p => p.id === saveAs.selectedProjectId.value);
     return p ? p.name : '';
   }
-  return '';
+  return t('公开资源库');
 }
 
 function selectRootFolder() {
-  let rootId = '';
-  if (saveAs.targetType.value === 'personal') {
-    rootId = saveAs.personalSpaceId.value || '';
-  } else if (saveAs.targetType.value === 'project') {
-    rootId = saveAs.selectedProjectId.value;
-  }
+  const rootId = resolveRootId();
   if (rootId) {
     saveAs.selectedParentId.value = rootId;
     lastFolderPath.value = [];
@@ -339,6 +370,8 @@ async function onTargetTypeChange(newType: SaveTargetType) {
   saveAs.targetType.value = newType;
   saveAs.selectedParentId.value = '';
   folderPath.value = [];
+  // 换目标后上次的浏览位置不属于新目标，不清会让新目标继承别的树的残留路径
+  lastFolderPath.value = [];
   if (newType === 'personal') {
     saveAs.selectedParentId.value = saveAs.personalSpaceId.value || '';
   } else if (newType === 'project') {
@@ -348,7 +381,25 @@ async function onTargetTypeChange(newType: SaveTargetType) {
       saveAs.selectedProjectId.value = saveAs.projects.value[0].id;
     }
     saveAs.selectedParentId.value = saveAs.selectedProjectId.value || '';
+  } else {
+    // 库根不是面板打开时的事实，切过来才取，取回后落库根作为默认落点
+    await saveAs.loadLibraryRoot();
+    saveAs.selectedParentId.value = saveAs.libraryRootId.value || '';
+    // 后端对库落点恒按 mxweb 入库（DWG/DXF 只是数据库文件名后缀），
+    // 归一到 mxweb 避免「选了 DWG 实际存成 mxweb」的静默不符
+    saveAs.format.value = 'mxweb';
   }
+}
+
+function onLibraryTypeChange(newType: LibraryType) {
+  saveAs.libraryType.value = newType;
+  // 图纸库与图块库根节点不同：换库后旧根失效，立即换回，避免用旧根提交
+  saveAs.selectedParentId.value = '';
+  folderPath.value = [];
+  lastFolderPath.value = [];
+  saveAs.loadLibraryRoot().then(() => {
+    saveAs.selectedParentId.value = saveAs.libraryRootId.value || '';
+  });
 }
 </script>
 
@@ -482,6 +533,25 @@ async function onTargetTypeChange(newType: SaveTargetType) {
           </div>
         </Transition>
 
+        <!-- Library Type (when library selected) -->
+        <Transition name="slide-fade">
+          <div v-if="saveAs.targetType.value === 'library'" class="form-section">
+            <label class="form-label">{{ t('选择资源库') }}</label>
+            <div class="location-tabs">
+              <button
+                v-for="opt in libraryTypeOptions"
+                :key="opt.value"
+                class="location-tab"
+                :class="{ active: saveAs.libraryType.value === opt.value }"
+                :disabled="saveAs.saving.value"
+                @click="onLibraryTypeChange(opt.value)"
+              >
+                <span>{{ opt.label }}</span>
+              </button>
+            </div>
+          </div>
+        </Transition>
+
         <!-- Folder Picker -->
         <div class="form-section">
           <label class="form-label">{{ t('保存位置') }}</label>
@@ -507,7 +577,7 @@ async function onTargetTypeChange(newType: SaveTargetType) {
               :key="fmt.value"
               class="format-card"
               :class="{ active: saveAs.format.value === fmt.value }"
-              :disabled="saveAs.saving.value"
+              :disabled="saveAs.saving.value || saveAs.targetType.value === 'library'"
               @click="saveAs.format.value = fmt.value"
             >
               <span class="format-label">{{ fmt.label }}</span>
@@ -732,6 +802,10 @@ async function onTargetTypeChange(newType: SaveTargetType) {
 
   &:active {
     transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.5;
   }
 
   &.active {

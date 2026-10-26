@@ -395,22 +395,32 @@ function onSaveAsClose() {
 async function onSaveAsSuccess(result: {
   nodeId: string;
   fileName: string;
-  targetType: 'personal' | 'project';
+  targetType: 'personal' | 'project' | 'library';
+  libraryType?: 'drawing' | 'block';
 }) {
   showSaveAsSheet.value = false;
   saveAsNotice.value = '';
   if (!result.nodeId) return;
 
+  const isLibrary = result.targetType === 'library';
   const isProject = result.targetType === 'project';
+  // 库落点记哪个库（图纸库/图块库）：会话据此决定刷新后按哪条链路重开
+  const libraryKey = isLibrary ? (result.libraryType || 'drawing') : null;
+
   // 落点根：项目落点写项目根；个人空间落点写个人空间根（另存为面板可落到
   // 子文件夹，但会话里 projectId 的语义是「所在根」，useSave 的 isMyDrawing
   // 据此判归属）。会话里的 personalSpaceId 移动端从未写入（setPersonalSpaceId
   // 零调用），直接用会得到 undefined → parentId/projectId 落空，下一次保存被
   // useSave 判成「无归属」又跳回另存为，因此个人空间落点必须实时取一次。
+  // 库落点不参与这一层：库根绝不能被当成 personalSpaceId / projectId 采纳，
+  // 否则下一次保存会同时撞 libraryKey（判库只读）与非库归属（判可保存），
+  // 两条判据互斥。库落点只走 libraryKey 一条路。
   let rootId = isProject
     ? editorState.state.projectId
-    : editorState.state.personalSpaceId;
-  if (!isProject && !rootId) {
+    : isLibrary
+      ? null
+      : editorState.state.personalSpaceId;
+  if (!isProject && !isLibrary && !rootId) {
     try {
       const resp = await projectControllerGetPersonalSpace();
       const data = unwrap<{ id: string }>(resp);
@@ -419,7 +429,9 @@ async function onSaveAsSuccess(result: {
       rootId = null;
     }
   }
-  editorState.setPersonalSpaceId(rootId);
+  if (!isLibrary) {
+    editorState.setPersonalSpaceId(rootId);
+  }
 
   // 分享意图链续跑（对齐 PC signalShareChainCloudNodeCreated）：另存为刚拿到云端
   // 节点，接管后直接开分享面板
@@ -433,10 +445,10 @@ async function onSaveAsSuccess(result: {
   // 停在本地会话里，下一次保存又得重来一遍另存为。
   editorState.setFileId(result.nodeId);
   editorState.setFileName(result.fileName);
-  editorState.setProjectId(rootId);
-  // 移动端另存为不提供库目标：清掉会话残留的 libraryKey，否则下一次保存
-  // 会被判成库图纸只读。
-  editorState.setLibraryKey(null);
+  // 库落点不写 projectId：库节点不属任何项目，写了会让归属判定 / 版本历史
+  // 把它当项目文件去查（对齐 PC adoptSavedAsFile 对库落点 parentId 置 null）
+  editorState.setProjectId(isLibrary ? null : rootId);
+  editorState.setLibraryKey(libraryKey);
   // fileInfo 是保存归属判据（parentId / projectId === 个人空间 → 我的图纸），
   // 也是版本历史 / 外部参照检查的数据源——useFileLoader 存的是完整节点对象，
   // 只填归属字段会让版本历史拿不到 path 报「缺少项目信息或文件路径」。
@@ -466,7 +478,8 @@ async function onSaveAsSuccess(result: {
   if (isProject && rootId) {
     await loadCADPermissions(rootId);
   } else {
-    // 个人空间落点：自己的文件恒可保存
+    // 个人空间落点：自己的文件恒可保存。库落点同理——能选到「公开资源库」
+    // 目标即持有 LIBRARY_*_MANAGE，原位保存同样放行，也不能走项目权限重算
     editorState.setPermissions({
       canSave: true,
       canExport: editorState.state.permissions.canExport,
@@ -479,6 +492,13 @@ async function onSaveAsSuccess(result: {
   url.searchParams.delete('shareToken');
   url.searchParams.delete('fileName');
   url.searchParams.set('fileId', result.nodeId);
+  // 库落点必须带 library：刷新后首屏按 library 链路取节点，缺了它库节点会走
+  // 普通节点链路、权限算成只读（对齐 PC buildCadEditorUrl 的 libraryKey）
+  if (libraryKey) {
+    url.searchParams.set('library', libraryKey);
+  } else {
+    url.searchParams.delete('library');
+  }
   const pathMatch = url.pathname.match(/^(\/cad-editor)\/[^/]+$/);
   if (pathMatch) url.pathname = `${pathMatch[1]}/${result.nodeId}`;
   window.history.replaceState(null, '', url.pathname + url.search + url.hash);
