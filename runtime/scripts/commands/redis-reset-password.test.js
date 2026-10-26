@@ -81,9 +81,11 @@ function makeDeps(o = {}) {
 
   const calls = {
     setPassword: 0,
+    setPasswordWith: undefined,
     probes: [],
     persist: 0,
     audit: 0,
+    generated: 0,
     restart: [],
   };
   const envWrites = [];
@@ -110,8 +112,9 @@ function makeDeps(o = {}) {
       // 旧口令按 oldState 返回（用于「改密被拒」时的原因分类）；新口令按 verifyState
       return { state: pwd === OLD ? oldState : verifyState, reason: '' };
     },
-    setPassword: async () => {
+    setPassword: async (_h, _p, pwd) => {
       calls.setPassword += 1;
+      calls.setPasswordWith = pwd;
       return setPasswordOk ? { ok: true, reason: '' } : { ok: false, reason: 'NOAUTH' };
     },
     persist: async () => {
@@ -122,7 +125,10 @@ function makeDeps(o = {}) {
       calls.restart.push(names);
       return { done: [...names], failed: [], skipped: [] };
     },
-    generatePassword: () => NEW,
+    generatePassword: () => {
+      calls.generated += 1;
+      return NEW;
+    },
     resolveLimit: () => 10,
   };
 
@@ -279,4 +285,69 @@ test('审计失败：不改变成功结果，仅附告警', async () => {
   assert.equal(res.ok, true);
   assert.equal(envWrites.length, 1);
   assert.match(res.message, /审计写入失败/);
+});
+
+// ==================== interactive 分支（交互菜单与 CLI --interactive 的入口） ====================
+
+/**
+ * 构造交互输入缝：返回交互式提示被采用的口令；记录是否真的走了交互提示
+ * （交互提示从不返回空白——空白在内部已回退自动生成，见 admin-reset-password.test.js）。
+ */
+function interactiveDeps(password, o = {}) {
+  const { deps, calls, envWrites } = makeDeps(o);
+  let prompted = 0;
+  const wrapped = {
+    ...deps,
+    // 交互提示被调用的次数挂在 deps 上（0 = 走了别的分支）
+    get prompted() {
+      return prompted;
+    },
+    promptInteractivePassword: async () => {
+      prompted += 1;
+      return { ok: true, password };
+    },
+    promptNewPassword: async () => password,
+  };
+  return { deps: wrapped, calls, envWrites };
+}
+
+test('interactive：采用交互输入的口令，不走自动生成，改密与账本都用该口令', async () => {
+  const { deps, calls, envWrites } = interactiveDeps('Typed-Rp1234');
+  const res = await redisResetPassword({ confirmed: true, interactive: true }, deps);
+  assert.equal(res.ok, true);
+  assert.equal(res.password, 'Typed-Rp1234');
+  assert.equal(deps.prompted, 1, '必须真的走交互提示');
+  assert.equal(calls.generated, 0, '交互路径不得回落自动生成');
+  assert.equal(calls.setPasswordWith, 'Typed-Rp1234', 'CONFIG SET 用的是输入口令');
+  assert.deepEqual(envWrites[0], { REDIS_PASSWORD: 'Typed-Rp1234' });
+});
+
+test('interactive：输入的弱口令同样过不了策略闸门', async () => {
+  const { deps, calls, envWrites } = interactiveDeps('abcdefgh12');
+  const res = await redisResetPassword({ confirmed: true, interactive: true }, deps);
+  assert.equal(res.ok, false);
+  assert.match(res.message, /不符合策略/);
+  assert.equal(calls.setPassword, 0);
+  assert.equal(envWrites.length, 0);
+});
+
+test('interactive：输成当前口令仍被拦（与指定口令同判据）', async () => {
+  const { deps, calls, envWrites } = interactiveDeps(OLD);
+  const res = await redisResetPassword({ confirmed: true, interactive: true }, deps);
+  assert.equal(res.ok, false);
+  assert.match(res.message, /相同/);
+  assert.equal(calls.setPassword, 0);
+  assert.equal(envWrites.length, 0);
+});
+
+test('interactive：同时给了指定密码时，指定优先、不触发交互提示', async () => {
+  const { deps, calls, envWrites } = interactiveDeps('Typed-Rp1234');
+  const res = await redisResetPassword(
+    { confirmed: true, interactive: true, password: 'Spec-Rp1234' },
+    deps
+  );
+  assert.equal(res.ok, true);
+  assert.equal(res.password, 'Spec-Rp1234');
+  assert.equal(deps.prompted, 0, '已显式给口令时无需再问用户');
+  assert.deepEqual(envWrites[0], { REDIS_PASSWORD: 'Spec-Rp1234' });
 });

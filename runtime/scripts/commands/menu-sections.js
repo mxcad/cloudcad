@@ -120,13 +120,13 @@ const menuSections = [
       },
       {
         label: '重置数据库密码',
-        desc: '数据库口令轮换，改密后自动更新 .env 并重启后端',
-        action: () => dbResetPassword(),
+        desc: '可输入自定义密码（空白=自动生成），改密后更新 .env 并重启后端',
+        action: () => dbResetPassword({ interactive: true }),
       },
       {
         label: '重置 Redis 密码',
-        desc: 'Redis 口令轮换，改密后自动更新 .env 并重启服务',
-        action: () => redisResetPassword(),
+        desc: '可输入自定义密码（空白=自动生成），改密后更新 .env 并重启服务',
+        action: () => redisResetPassword({ interactive: true }),
       },
     ],
   },

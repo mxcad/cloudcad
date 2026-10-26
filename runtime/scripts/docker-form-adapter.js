@@ -132,9 +132,10 @@ async function runMenu() {
     } else if (choice === '5') {
       action = () => adminResetPassword();
     } else if (choice === '6') {
-      action = () => dbResetPassword();
+      // 菜单恒为交互调用：可输入自定义密码，空白回退自动生成（与裸机菜单同语义）
+      action = () => dbResetPassword({ interactive: true });
     } else if (choice === '7') {
-      action = () => redisResetPassword();
+      action = () => redisResetPassword({ interactive: true });
     } else if (choice === '8') {
       action = () => mfaTotpUnbind();
     }

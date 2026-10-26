@@ -68,7 +68,7 @@ test('isConnectVerified 只认 ok 且 stdout 恰为 "1"', () => {
  */
 function makeDeps(o = {}) {
   const { alterOk = true, verifyOk = true, rollbackOk = true } = o;
-  const calls = { alter: 0, verify: 0, rollback: 0, audit: 0, restart: [] };
+  const calls = { alter: 0, verify: 0, rollback: 0, audit: 0, generated: 0, restart: [] };
   const envWrites = [];
 
   const deps = {
@@ -86,6 +86,7 @@ function makeDeps(o = {}) {
       }
       if (sql.includes('ALTER USER')) {
         calls.alter += 1;
+        calls.lastAlter = sql;
         return alterOk
           ? { ok: true, stdout: 'ALTER USER', stderr: '' }
           : { ok: false, stdout: '', stderr: 'alter denied' };
@@ -104,7 +105,10 @@ function makeDeps(o = {}) {
       calls.restart.push(args);
       return true;
     },
-    generatePassword: () => 'NewPass1234',
+    generatePassword: () => {
+      calls.generated += 1;
+      return 'NewPass1234';
+    },
     resolveLimit: () => 10,
   };
 
@@ -268,4 +272,69 @@ test('指定密码优先于自动生成，且同样受策略约束', async () =>
   assert.equal(envWrites[0].DB_PASSWORD, 'Spec-P@ss99');
   assert.match(envWrites[0].DATABASE_URL, /Spec-P%40ss99/);
   assert.equal(calls.alter, 1);
+});
+
+// ==================== interactive 分支（交互菜单与 CLI --interactive 的入口） ====================
+
+/**
+ * 构造交互输入缝：返回交互式提示被采用的口令；记录是否真的走了交互提示
+ * （交互提示从不返回空白——空白在内部已回退自动生成，见 admin-reset-password.test.js）。
+ */
+function interactiveDeps(password, o = {}) {
+  const { deps, calls, envWrites } = makeDeps(o);
+  let prompted = 0;
+  const wrapped = {
+    ...deps,
+    // 交互提示被调用的次数挂在 deps 上（0 = 走了别的分支）
+    get prompted() {
+      return prompted;
+    },
+    promptInteractivePassword: async () => {
+      prompted += 1;
+      return { ok: true, password };
+    },
+    promptNewPassword: async () => password,
+  };
+  return { deps: wrapped, calls, envWrites };
+}
+
+test('interactive：采用交互输入的口令，不走自动生成，改密与账本都用该口令', async () => {
+  const { deps, calls, envWrites } = interactiveDeps('Typed-P@ss99');
+  const res = await dbResetPassword({ confirmed: true, interactive: true }, deps);
+  assert.equal(res.ok, true);
+  assert.equal(res.password, 'Typed-P@ss99');
+  assert.equal(deps.prompted, 1, '必须真的走交互提示');
+  assert.equal(calls.generated, 0, '交互路径不得回落自动生成');
+  assert.match(calls.lastAlter, /WITH PASSWORD 'Typed-P@ss99'/);
+  assert.equal(envWrites[0].DB_PASSWORD, 'Typed-P@ss99');
+});
+
+test('interactive：输入的弱口令同样过不了策略闸门', async () => {
+  const { deps, calls, envWrites } = interactiveDeps('abcdefgh12');
+  const res = await dbResetPassword({ confirmed: true, interactive: true }, deps);
+  assert.equal(res.ok, false);
+  assert.match(res.message, /不符合策略/);
+  assert.equal(calls.alter, 0);
+  assert.equal(envWrites.length, 0);
+});
+
+test('interactive：输成当前口令仍被拦（与指定口令同判据）', async () => {
+  const { deps, calls, envWrites } = interactiveDeps('old-pass-1');
+  const res = await dbResetPassword({ confirmed: true, interactive: true }, deps);
+  assert.equal(res.ok, false);
+  assert.match(res.message, /相同/);
+  assert.equal(calls.alter, 0);
+  assert.equal(envWrites.length, 0);
+});
+
+test('interactive：同时给了指定密码时，指定优先、不触发交互提示', async () => {
+  const { deps, calls, envWrites } = interactiveDeps('Typed-P@ss99');
+  const res = await dbResetPassword(
+    { confirmed: true, interactive: true, password: 'Spec-P@ss99' },
+    deps
+  );
+  assert.equal(res.ok, true);
+  assert.equal(res.password, 'Spec-P@ss99');
+  assert.equal(deps.prompted, 0, '已显式给口令时无需再问用户');
+  assert.equal(envWrites[0].DB_PASSWORD, 'Spec-P@ss99');
 });

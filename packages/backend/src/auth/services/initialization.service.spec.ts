@@ -120,7 +120,9 @@ describe('InitializationService（#416 初始管理员 env 必填）', () => {
       expect.objectContaining({
         password: 'Str0ng!Admin#2026',
         roleId: 'role-admin',
-      })
+      }),
+      // env 供给路径跳过口令策略断言（部署工具代写口令，默认弱口令是有意放松）
+      { skipPasswordPolicy: true }
     );
     // 创建后置 passwordChangedAt=null（覆盖 create 默认写入的 now()）
     expect(mockPrisma.user.update).toHaveBeenCalledWith({

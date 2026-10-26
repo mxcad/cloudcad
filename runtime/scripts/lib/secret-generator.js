@@ -28,13 +28,24 @@ const { escapeEnvValue } = require('../config-updater');
  * 初始密码」并给改密入口，把「默认弱口令」转成「部署即提示改密」的运营约束。
  *
  * 注意：非交互兜底路径（fillEmptySecrets）不使用本常量，而是生成强随机口令
- * （generateStrongPassword）——非交互路径没有用户可提示改密，必须满足后端
- * assertPasswordPolicy 的 ≥10 位 + 复杂度校验，否则初始管理员创建会被拒绝
- * （c909003 回归：曾误用本常量致 8 位口令被后端拒绝→PM2 崩溃重启循环，
- * 2026-10-19 修复）。交互路径（setup-wizard 三分支）仍用本常量作"回车"默认，
- * 用户可改选 y（强随机）/ n（自定义）。
+ * （generateStrongPassword）——非交互路径没有用户可提示改密，强随机是产品选择。
+ * 历史上本常量曾致 8 位口令被后端 assertPasswordPolicy 拒绝→PM2 崩溃重启循环
+ * （c909003 回归，2026-10-19 修复）；2026-10-26 起后端 env 供给路径
+ * （initialization.service 传 skipPasswordPolicy）不再断言口令策略，本常量
+ * 走 env 路径已不会被后端拒绝，崩溃循环双重免疫。交互路径（setup-wizard
+ * 三分支）仍用本常量作"回车"默认，用户可改选 y（强随机）/ n（自定义）。
  */
 const DEFAULT_ADMIN_PASSWORD = '12345678';
+
+/**
+ * 首次部署基础设施（数据库 / Redis）默认口令。
+ *
+ * 与管理员默认口令同值（12345678）：部署目标用户是非技术人员，统一简单口令
+ * 降低记录/记忆成本；两者都只监听本机（localhost），暴露面有限。基础设施口令
+ * 丢失/想轮换走 cli.js db:reset-password / redis:reset-password（ADR-0073 带外
+ * 恢复通道），不影响数据目录。
+ */
+const DEFAULT_INFRA_PASSWORD = '12345678';
 
 /**
  * 生成长度为 64 的随机密钥（十六进制）
@@ -114,11 +125,11 @@ function fillEmptySecrets(envFile, logFn = () => {}) {
     }
   }
   // INITIAL_ADMIN_PASSWORD 必填无缺省。非交互兜底（离线安装 / docker 一键包）没有
-  // stdin 可问 y/n，直接生成符合 #416 等保 8.1.4.1 的强随机口令（16 位四类，满足后端
-  // assertPasswordPolicy 的 ≥10 位 + 四类至少三类 + 弱口令黑名单校验）。
-  // 曾误用简单口令 DEFAULT_ADMIN_PASSWORD（8 位纯数字）被后端 assertPasswordPolicy
-  // 拒绝→初始管理员创建抛 400→PM2 崩溃重启循环（c909003 回归，2026-10-19 修复）。
-  // 有交互的部署路径（setup-wizard 三分支）仍可用 y 选强随机或 n 自定义。
+  // stdin 可问 y/n，直接生成强随机口令（16 位四类，产品选择：非交互路径无人可提示
+  // 改密）。历史：曾误用简单口令 DEFAULT_ADMIN_PASSWORD（8 位纯数字）被后端
+  // assertPasswordPolicy 拒绝→PM2 崩溃重启循环（c909003 回归，2026-10-19 修复）；
+  // 2026-10-26 起后端 env 供给路径跳过策略断言，本路径强随机仅为产品策略而非
+  // 崩溃规避。有交互的部署路径（setup-wizard 三分支）仍可用 y 选强随机或 n 自定义。
   // 恒走 escapeEnvValue 通道：强随机口令含 # 时裸写会被 dotenv 当行内注释截断。
   const adminPasswordRegex = /^INITIAL_ADMIN_PASSWORD=[ \t]*$/m;
   if (adminPasswordRegex.test(content)) {
@@ -140,6 +151,7 @@ function fillEmptySecrets(envFile, logFn = () => {}) {
 
 module.exports = {
   DEFAULT_ADMIN_PASSWORD,
+  DEFAULT_INFRA_PASSWORD,
   generateSecret,
   generateStrongPassword,
   fillEmptySecrets,

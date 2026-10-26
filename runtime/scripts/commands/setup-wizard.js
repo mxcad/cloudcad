@@ -34,6 +34,7 @@ const { getAdminLoginPath } = require('../lib/admin-login');
 const {
   generateStrongPassword,
   DEFAULT_ADMIN_PASSWORD,
+  DEFAULT_INFRA_PASSWORD,
 } = require('../lib/secret-generator');
 const { promptPasswordWithConfirm } = require('../lib/prompt');
 const {
@@ -364,11 +365,12 @@ async function runSetupWizard() {
 }
 
 /**
- * 首次部署自动配置（数据库/Redis 随机生成 + 管理员口令三分支）
+ * 首次部署自动配置（数据库/Redis 统一默认口令 + 管理员口令三分支）
  *
  * 流程：
- * 1. 数据库 / Redis 密码随机生成并一次性展示（基础设施口令，部署后可用
- *    cli.js db:reset-password / redis:reset-password 轮换，不在本向导内编辑）
+ * 1. 数据库 / Redis 密码取统一默认值（DEFAULT_INFRA_PASSWORD，12345678）并一次性
+ *    展示（基础设施口令，部署后可用 cli.js db:reset-password / redis:reset-password
+ *    轮换，不在本向导内编辑）
  * 2. 管理员口令三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）
  * 3. 写入 .env 并展示最终生效配置，暂停等待用户记录后再启动服务
  *
@@ -383,9 +385,10 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   // JWT 密钥自动生成（无需用户编辑）
   updates.JWT_SECRET = generateJwtSecret(32);
 
-  // 数据库 / Redis 用 10 位纯数字；管理员口令走三分支（默认简单口令）
-  const dbPassword = generateNumericPassword(10);
-  const redisPassword = generateNumericPassword(10);
+  // 数据库 / Redis 用统一默认口令（12345678，与管理员默认口令同值）；
+  // 管理员口令走三分支（默认简单口令）
+  const dbPassword = DEFAULT_INFRA_PASSWORD;
+  const redisPassword = DEFAULT_INFRA_PASSWORD;
 
   if (!interactive) {
     updates.DB_PASSWORD = dbPassword;
@@ -410,7 +413,7 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
   console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
-  console.log(`${colors.yellow}  已自动生成以下密码：${colors.reset}`);
+  console.log(`${colors.yellow}  以下密码为首次部署默认值，请记录保存：${colors.reset}`);
   console.log('');
   console.log(`  ${colors.bright}数据库密码:${colors.reset}     ${dbPassword}`);
   console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${redisPassword}`);

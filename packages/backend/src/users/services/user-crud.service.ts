@@ -34,6 +34,7 @@ import {
 import { UserLifecycleEventPayload } from '../interfaces/user-lifecycle-event.interface';
 import { PasswordPolicyService } from '../../auth/services/password-policy.service';
 import { PiiCryptoService } from '../../common/pii/pii-crypto.service';
+import { ICreateUserOptions } from '../../common/interfaces/user-service.interface';
 import { ACCOUNT_EVENTS_CHANNEL } from '../account-events-sse.constants';
 
 import { I18nContext } from 'nestjs-i18n';
@@ -65,7 +66,10 @@ export class UserCrudService {
     private readonly pii: PiiCryptoService
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<ICreatedUser> {
+  async create(
+    createUserDto: CreateUserDto,
+    options?: ICreateUserOptions
+  ): Promise<ICreatedUser> {
     try {
       const requireEmailVerification =
         await this.runtimeConfigService.getValue<boolean>(
@@ -130,8 +134,16 @@ export class UserCrudService {
         );
       }
 
-      // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单
-      await this.passwordPolicyService.assertPasswordPolicy(createUserDto.password);
+      // 口令策略校验（#416 等保 8.1.4.1 a)/b)）：复杂度 + 弱口令黑名单。
+      // env 初始管理员供给路径（initialization.service）传 skipPasswordPolicy 跳过：
+      // 部署工具代写口令（默认简单口令是有意放松，产品内横幅承接代价；首登强制改密
+      // 仅在 passwordPolicyChangeEnforceEnabled 手动开启时生效，默认关闭），
+      // 若被策略拦截会致 onModuleInit 抛错 → 启动崩溃重启循环。
+      if (!options?.skipPasswordPolicy) {
+        await this.passwordPolicyService.assertPasswordPolicy(
+          createUserDto.password
+        );
+      }
 
       const hashedPassword = await this.passwordHasher.hash(
         createUserDto.password

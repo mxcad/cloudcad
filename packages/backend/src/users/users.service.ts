@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   IUserService,
   ICreatedUser,
+  ICreateUserOptions,
   IUserDetail,
   IUserActionResponse,
 } from '../common/interfaces/user-service.interface';
@@ -43,8 +44,11 @@ export class UsersService implements IUserService {
     private readonly pii: PiiCryptoService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<ICreatedUser> {
-    return this.crudService.create(createUserDto);
+  async create(
+    createUserDto: CreateUserDto,
+    options?: ICreateUserOptions
+  ): Promise<ICreatedUser> {
+    return this.crudService.create(createUserDto, options);
   }
 
   async findAll(query: QueryUsersDto, userId?: string) {

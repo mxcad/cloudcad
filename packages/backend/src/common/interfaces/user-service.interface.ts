@@ -50,12 +50,26 @@ export interface IUserActionResponse {
 }
 
 /**
+ * 创建用户选项（仅进程内供给路径使用，不属于 API DTO，客户端无法传入）
+ */
+export interface ICreateUserOptions {
+  /**
+   * 跳过口令策略断言（复杂度 + 弱口令黑名单）。
+   * 仅 INITIAL_ADMIN_PASSWORD env 供给路径（initialization.service）允许传 true：
+   * 部署工具代写口令，默认简单口令是有意放松（产品内横幅承接代价；首登强制改密
+   * 仅在 passwordPolicyChangeEnforceEnabled 手动开启时生效，默认关闭）。
+   * Web 首启页 / 注册 / 管理员创建等人工入口不得传。
+   */
+  skipPasswordPolicy?: boolean;
+}
+
+/**
  * 用户服务接口
  * 用于解耦 CommonModule 与 UsersModule、AuthModule 与 UsersModule 之间的循环依赖
  */
 export interface IUserService {
   /** 创建用户 */
-  create(dto: unknown): Promise<ICreatedUser>;
+  create(dto: unknown, options?: ICreateUserOptions): Promise<ICreatedUser>;
 
   /** 根据 ID 查询用户详情 */
   findById(id: string): Promise<IUserDetail>;

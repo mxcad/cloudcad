@@ -100,7 +100,8 @@ function restartRegistered(names, statusOf = getPm2AppStatus, restart = runPm2) 
  *   password 指定新口令；restart=false 跳过重启（默认重启）。
  * @param {object} [deps] 可注入的 IO 缝（测试用）：envPath/parseEnv/updateEnv/
  *   audit/auditorId/isPortOpen/probe/setPassword/persist/restartRegistered/
- *   generatePassword/resolveLimit。
+ *   generatePassword/resolveLimit/promptInteractivePassword/promptNewPassword
+ *   （交互分支的口令输入）。
  * @returns {Promise<{ok: boolean, message: string, password?: string}>}
  */
 async function redisResetPassword(options = null, deps = {}) {
@@ -120,6 +121,9 @@ async function redisResetPassword(options = null, deps = {}) {
     restartHostProcess = defaultRestartHostProcess,
     generatePassword = generateStrongPassword,
     resolveLimit = resolveMinLength,
+    // 交互分支的可注入缝（默认 = 真实交互输入，与 CLI --interactive 同一条路）
+    promptInteractivePassword,
+    promptNewPassword,
   } = deps;
 
   // 1. 目标（来自 .env）

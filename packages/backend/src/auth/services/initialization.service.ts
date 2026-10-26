@@ -552,13 +552,21 @@ export class InitializationService implements OnModuleInit {
       if (!this.userService) {
         throw new Error('UserService 不可用，无法创建管理员账户');
       }
-      const createdAdmin = await this.userService.create({
-        email: adminEmail,
-        username: adminUsername,
-        password: adminPassword,
-        nickname: '系统管理员',
-        roleId: adminRole.id,
-      });
+      const createdAdmin = await this.userService.create(
+        {
+          email: adminEmail,
+          username: adminUsername,
+          password: adminPassword,
+          nickname: '系统管理员',
+          roleId: adminRole.id,
+        },
+        // 部署工具代写口令（默认简单口令是有意放松）：跳过口令策略断言，
+        // 否则 8 位默认口令被「密码长度至少 10 位」拒绝 → onModuleInit 抛错 →
+        // 启动崩溃重启循环。代价由产品内横幅承接（passwordChangedAt=null 恒显示
+        // 「仍在首次部署初始密码」并给改密入口）；首登强制改密仅在管理员手动开启
+        // passwordPolicyChangeEnforceEnabled 时生效（默认关闭，只建议不强制）。
+        { skipPasswordPolicy: true }
+      );
 
       // #416 首登未改密标记：初始管理员创建后 passwordChangedAt 置 null（覆盖 create 默认写入的 now()），
       // 据此判定"首登未改密"强制改密。
