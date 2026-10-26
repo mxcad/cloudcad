@@ -13,7 +13,7 @@
 #   - /api、/mxcad/、/health 反代后端（含 WebSocket upgrade、大文件上传、keepalive）
 #   - 桌面端 SPA 回退 index.html；/mxcad-app/ 按校验下发（no-cache）
 #   - 移动端 SPA（/@MOBILE_PATH@/）+ cooperate 引擎文件 /buf/$<name>.mxb<N>.wgh → <name>
-#   - .wasm 加 COOP/COEP（SharedArrayBuffer 需要）
+#   - 全部静态响应加 COOP/COEP（SharedArrayBuffer 需要，顶层文档必须带，只加 .wasm 无效）
 #   - 静态资源强缓存 1 年；隐藏文件禁访
 
 user nginx;
@@ -40,13 +40,15 @@ http {
     # 代理缓冲关闭：流式响应（SSE / 大文件下载 / 引擎文件）不被 nginx 截断缓冲
     proxy_buffering off;
 
-    # gzip 压缩
+    # gzip 压缩：gzip_static 优先下发预生成的 <file>.gz（mxcad-app 的 JS/wasm 自带，
+    # 零 CPU），无 .gz 的走在线压缩；wasm/字体类型与 serve-static.js 对齐
     gzip on;
+    gzip_static on;
     gzip_vary on;
     gzip_min_length 1024;
     gzip_proxied any;
     gzip_comp_level 6;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml application/pdf image/svg+xml;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml application/pdf image/svg+xml application/wasm font/ttf font/otf font/eot;
 
     # 后端上游（host 网络：容器与后端共享网络栈，恒为 127.0.0.1）
     upstream backend {
@@ -64,6 +66,12 @@ http {
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-XSS-Protection "1; mode=block" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        # COOP/COEP：wasm 多线程（SharedArrayBuffer）的前提。浏览器只在顶层文档
+        # （index.html）响应上读到这两个头才启用跨源隔离，只加在 .wasm 上无效，
+        # 故覆盖全部静态响应（与 dev / serve-static.js 同口径）。location 内一旦出现
+        # 自己的 add_header 就不再继承 server 级，下方各 location 显式重列。
+        add_header Cross-Origin-Opener-Policy "same-origin" always;
+        add_header Cross-Origin-Embedder-Policy "require-corp" always;
 
         # 静态文件目录（前端 dist，含合并的移动端 dist）
         root @DIST_DIR@;
@@ -79,6 +87,9 @@ http {
             add_header X-Content-Type-Options "nosniff" always;
             add_header X-XSS-Protection "1; mode=block" always;
             add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            # 真实 wasm 文件都在本 location 下（^~ 优先于 .wasm regex），COOP/COEP 必须在此重列
+            add_header Cross-Origin-Opener-Policy "same-origin" always;
+            add_header Cross-Origin-Embedder-Policy "require-corp" always;
             try_files $uri $uri/ =404;
         }
 
@@ -95,6 +106,8 @@ http {
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json|mp3|mp4|webm|pdf|data|mem)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
+            add_header Cross-Origin-Opener-Policy "same-origin" always;
+            add_header Cross-Origin-Embedder-Policy "require-corp" always;
             try_files $uri =404;
         }
 

@@ -8,6 +8,7 @@
 |------|------|
 | [`codebase-guide.md`](codebase-guide.md) | 代码库全景指南（包、目录、关键流程） |
 | [`elastic-conversion-architecture.md`](elastic-conversion-architecture.md) | 转换架构 + 容量规划（调 `maxConcurrent` 前必读） |
+| [`deployment-static-and-esa-cache.md`](deployment-static-and-esa-cache.md) | 线上 Linux nginx 静态资源 + ESA 缓存配置（COOP/COEP 与 `add_header` 继承陷阱） |
 | [`adr/README.md`](adr/README.md) | 架构决策记录索引（47 个 ADR，含状态） |
 | [`agents/`](agents/) | 工程技能配置（issue-tracker / domain / triage-labels） |
 | [`archive/README.md`](archive/README.md) | 归档目录说明与分类 |
