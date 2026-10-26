@@ -87,15 +87,20 @@ export class SmsVerificationService implements ISmsVerificationService {
   /**
    * 获取短信服务商（ADR-0082 #502 指纹热重建）
    *
-   * 每次调用按三层解析（runtime > env > 默认）取 smsEnabled + smsProvider
+   * 每次调用按三层解析（runtime > env > 默认）取 smsProvider
    * + 所选服务商凭据键，拼指纹；指纹变化即重建 provider，配置页改完即生效。
-   * 关闭 / 所选服务商凭据缺失时回落 Mock 模式（与旧行为一致）。
+   *
+   * 本方法只回答「用哪个 provider 发信」，**不**回答「能不能发信」——后者由
+   * 总闸门禁（sendVerificationCode 的 smsEnabled 检查）决定。旧实现里
+   * `!smsEnabled` 也回落 MockSmsProvider，导致 `smsEnabled=false` 时
+   * send-sms-code 照样落码（开关形同虚设，运维者对开关的信任被破坏）；
+   * 现在 `smsEnabled` 是纯总闸，Mock 只由 `smsProvider=mock` 或
+   * 所选服务商凭据缺失两条路径进入。
    */
   private async getProvider(): Promise<SmsProvider> {
-    const [smsEnabled, providerName] = await Promise.all([
-      this.runtimeConfigService.getValue<boolean>('smsEnabled'),
-      this.runtimeConfigService.getValue<string>('smsProvider'),
-    ]);
+    const providerName = await this.runtimeConfigService.getValue<string>(
+      'smsProvider'
+    );
 
     let aliyun: SmsProviderConfig['aliyun'] | undefined;
     let tencent: SmsProviderConfig['tencent'] | undefined;
@@ -123,22 +128,14 @@ export class SmsVerificationService implements ISmsVerificationService {
       tencent = { secretId, secretKey, appId, signName, templateId, region };
     }
 
-    const fingerprint = JSON.stringify([
-      smsEnabled,
-      providerName,
-      aliyun,
-      tencent,
-    ]);
+    const fingerprint = JSON.stringify([providerName, aliyun, tencent]);
     if (fingerprint === this.providerFingerprint) {
       return this.provider!;
     }
 
-    if (!smsEnabled) {
+    if (providerName === 'mock') {
       this.provider = new MockSmsProvider();
-      this.logger.log('短信服务未启用（运行时配置），使用 Mock 模式');
-    } else if (providerName === 'mock') {
-      this.provider = new MockSmsProvider();
-      this.logger.log('短信服务已启用，使用 Mock 模式（开发测试）');
+      this.logger.log('短信服务使用 Mock 模式（开发测试，需 smsEnabled 已开启）');
     } else {
       const hasCredentials =
         providerName === 'aliyun'
@@ -235,6 +232,18 @@ export class SmsVerificationService implements ISmsVerificationService {
     phone: string,
     clientIp?: string
   ): Promise<{ success: boolean; message: string }> {
+    // 总闸门禁（ADR-0082）：smsEnabled 是唯一总闸，关闭时一律不发码，也不回落
+    // Mock。旧实现无此检查、且 getProvider 在 !smsEnabled 时回落 Mock，导致
+    // `smsEnabled=false` 下 send-sms-code 仍返回 200 且 Redis 真实落码——与
+    // account-binding / forgot-password 的 4 个 sibling 端点结论相反，同一配置
+    // 两个相反语义。与 sibling 端点共用 error.account_binding.sms_service_disabled。
+    if (!(await this.isEnabled())) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.account_binding.sms_service_disabled') ??
+          '短信服务未启用'
+      );
+    }
+
     // 验证手机号格式
     if (!this.validatePhone(phone)) {
       throw new BadRequestException(I18nContext.current()?.t('error.auth.phone_format_invalid') ?? '手机号格式不正确');

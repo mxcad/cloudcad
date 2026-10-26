@@ -138,6 +138,7 @@ describe('SmsVerificationService.verifyCode', () => {
 describe('SmsVerificationService 短信 provider 指纹热重建（ADR-0082 #502）', () => {
   let service: SmsVerificationService;
   let values: Record<string, unknown>;
+  let runtimeConfigGetValue: jest.Mock;
 
   const baseValues: Record<string, unknown> = {
     smsEnabled: true,
@@ -175,7 +176,7 @@ describe('SmsVerificationService 短信 provider 指纹热重建（ADR-0082 #502
         {
           provide: RuntimeConfigService,
           useValue: {
-            getValue: jest.fn(async (key: string) => values[key]),
+            getValue: (runtimeConfigGetValue = jest.fn(async (key: string) => values[key])),
           },
         },
         { provide: getRedisConnectionToken(), useValue: createMockRedis() },
@@ -185,8 +186,40 @@ describe('SmsVerificationService 短信 provider 指纹热重建（ADR-0082 #502
     service = module.get<SmsVerificationService>(SmsVerificationService);
   });
 
-  it('smsEnabled=false → Mock 模式', async () => {
+  it('getProvider 不再读取 smsEnabled：总闸语义与 provider 选择分离', async () => {
+    const getProvider = (service as never as {
+      getProvider: () => Promise<{ name: string }>;
+    }).getProvider.bind(service);
+
+    // 回归（缺陷 #2）：旧实现在 !smsEnabled 时回落 MockSmsProvider，导致
+    // `smsEnabled=false` 下 send-sms-code 照样落码——开关形同虚设，与
+    // account-binding / forgot-password 的 4 个 sibling 端点结论相反。
+    // 现在总闸门禁在 sendVerificationCode，getProvider 只回答「用哪个 provider」，
+    // 因此翻转 smsEnabled 既不改变 provider，也不改变指纹（不触发重建）。
     values.smsEnabled = false;
+    const first = await getProvider();
+    expect(first.name).toBe('aliyun');
+
+    values.smsEnabled = true;
+    const second = await getProvider();
+    expect(second).toBe(first);
+
+    expect(values).toHaveProperty('smsEnabled');
+  });
+
+  it('smsEnabled=false → sendVerificationCode 直接拒绝，且不解析 provider（总闸生效）', async () => {
+    values.smsEnabled = false;
+
+    await expect(service.sendVerificationCode(PHONE)).rejects.toThrow(
+      '短信服务未启用'
+    );
+    // 门禁在 provider 解析之前短路：若门禁失效，会去读 smsProvider 并落码
+    expect(runtimeConfigGetValue).not.toHaveBeenCalledWith('smsProvider');
+  });
+
+  it('smsEnabled=true + smsProvider=mock → Mock 是唯一的开发期 Mock 入口', async () => {
+    values.smsEnabled = true;
+    values.smsProvider = 'mock';
 
     const provider = (service as never as {
       getProvider: () => Promise<{ name: string }>;
