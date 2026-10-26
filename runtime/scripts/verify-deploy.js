@@ -34,8 +34,14 @@ const {
   NODE_EXE,
   PNPM_JS,
 } = require('./lib/context');
-const { runCommand, runPm2 } = require('./lib/proc');
+const { runCommand } = require('./lib/proc');
 const { checkHttpOnce, isPortOpen } = require('./lib/health');
+// PM2 启动编排原语（pm2 超时包装 / 就绪轮询 / PM2 配置文件序列化），与 start.js 共用
+const {
+  runPm2WithTimeout,
+  waitForService,
+  writePm2AppConfig,
+} = require('./lib/pm2-bootstrap');
 const { findSchemaEngine } = require('./lib/schema-engine');
 // 后端生产依赖 pnpm --filter 清单（与 setup-offline.js 共用，见 lib/deploy-install-filter）
 const { buildDeployInstallFilters } = require('./lib/deploy-install-filter');
@@ -104,10 +110,6 @@ function getPorts() {
 
 // 端口配置（动态读取）
 const PORTS = getPorts();
-
-// 超时配置
-const MAX_STARTUP_WAIT = 120000; // 120秒
-const HEALTH_CHECK_INTERVAL = 2000; // 2秒
 
 /**
  * 转换服务（conversion-service）启动配置（与 start.js 逻辑一致，D5：验收器独立，
@@ -247,30 +249,6 @@ function runPnpm(args, options = {}) {
     return runCommand(NODE_EXE, [PNPM_JS, ...args], { ...options, env });
   }
   return runCommand('pnpm', args, { ...options, env });
-}
-
-/**
- * pm2 命令包装（lib/proc runPm2 + 60s 超时）：验收脚本非交互运行，
- * pm2 命令挂起时不能让验收流程永久挂住（对齐旧 runCommand 的默认超时）。
- */
-function pm2(args, options = {}) {
-  return runPm2(args, { timeout: 60000, ...options });
-}
-
-/**
- * 等待服务就绪
- */
-async function waitForService(name, checkFn, maxWait = MAX_STARTUP_WAIT) {
-  const startTime = Date.now();
-
-  while (Date.now() - startTime < maxWait) {
-    if (await checkFn()) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, HEALTH_CHECK_INTERVAL));
-  }
-
-  return false;
 }
 
 // ==================== 验证步骤 ====================
@@ -426,12 +404,12 @@ async function step3_StartInfrastructure() {
   const ecosystemPath = path.join(RUNTIME_DIR, 'ecosystem.config.js');
 
   // 停止旧进程
-  pm2(['delete', 'all'], { silent: true });
-  pm2(['kill'], { silent: true });
+  runPm2WithTimeout(['delete', 'all'], { silent: true });
+  runPm2WithTimeout(['kill'], { silent: true });
 
   // 启动基础服务
   if (
-    !pm2([
+    !runPm2WithTimeout([
       'start',
       ecosystemPath,
       '--only',
@@ -592,13 +570,12 @@ async function step5_StartBackend() {
     },
   };
 
-  const tempConfigPath = path.join(DATA_DIR, 'pm2-backend.config.js');
-  fs.writeFileSync(
-    tempConfigPath,
-    `module.exports = { apps: [${JSON.stringify(backendConfig)}] };`
+  const tempConfigPath = writePm2AppConfig(
+    path.join(DATA_DIR, 'pm2-backend.config.js'),
+    [backendConfig]
   );
 
-  if (!pm2(['start', tempConfigPath])) {
+  if (!runPm2WithTimeout(['start', tempConfigPath])) {
     logError('后端启动失败');
     return false;
   }
@@ -668,13 +645,12 @@ async function step6_StartFrontend() {
     },
   };
 
-  const tempConfigPath = path.join(DATA_DIR, 'pm2-frontend.config.js');
-  fs.writeFileSync(
-    tempConfigPath,
-    `module.exports = { apps: [${JSON.stringify(frontendConfig)}] };`
+  const tempConfigPath = writePm2AppConfig(
+    path.join(DATA_DIR, 'pm2-frontend.config.js'),
+    [frontendConfig]
   );
 
-  if (!pm2(['start', tempConfigPath])) {
+  if (!runPm2WithTimeout(['start', tempConfigPath])) {
     logError('前端启动失败');
     return false;
   }
@@ -715,12 +691,11 @@ async function step6_StartFrontend() {
         max_restarts: 10,
         env: conversion.env,
       };
-      const conversionTempConfig = path.join(DATA_DIR, 'pm2-conversion.config.js');
-      fs.writeFileSync(
-        conversionTempConfig,
-        `module.exports = { apps: [${JSON.stringify(conversionConfig)}] };`
+      const conversionTempConfig = writePm2AppConfig(
+        path.join(DATA_DIR, 'pm2-conversion.config.js'),
+        [conversionConfig]
       );
-      if (!pm2(['start', conversionTempConfig])) {
+      if (!runPm2WithTimeout(['start', conversionTempConfig])) {
         logError('转换服务启动失败');
         return false;
       }
@@ -799,7 +774,7 @@ async function step7_FinalVerification() {
   // 获取 PM2 状态
   console.log('');
   log('info', 'PM2 服务状态:');
-  pm2(['status']);
+  runPm2WithTimeout(['status']);
 
   // 检查日志是否有错误（行级匹配，不是整文件子串）：
   // 旧逻辑对整文件 includes('failed')，RouterExplorer 启动期路由注册日志里的
@@ -853,9 +828,9 @@ async function stopAll() {
   console.log('');
   log('info', '停止所有服务...');
 
-  pm2(['stop', 'all'], { silent: true });
-  pm2(['delete', 'all'], { silent: true });
-  pm2(['kill'], { silent: true });
+  runPm2WithTimeout(['stop', 'all'], { silent: true });
+  runPm2WithTimeout(['delete', 'all'], { silent: true });
+  runPm2WithTimeout(['kill'], { silent: true });
 
   logSuccess('服务已停止');
 }

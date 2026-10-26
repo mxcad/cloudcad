@@ -306,6 +306,19 @@ packages/
 > - P2.1 的"直接 spawn `postgres -D`"与 supervisor 完整版（§4.3）：本会话采用"pg-manager daemon + 进程组"低风险路径达成 P2.1/P2.2 目标。**基础服务 supervisor 直跑版本已由 Q0 决策取代**（基础服务统一 PM2 托管，前台仅应用层 supervisor spawn），不再落地；supervisor 仅收敛应用层。
 > - Step A-1 验收的"打包 dry-run 确认子目录进包"（C1）与 PM2 黄金路径实测：需打包机 + 部署机执行（V1-V8）。
 
+#### 前台关窗哨兵 + stop daemon 归属收敛落地记录（2026-10-26）
+
+- **缺口**：Windows 关闭控制台窗口发 `CTRL_CLOSE_EVENT`，Node 不把它映射为任何 JS 信号（winconsole 只处理 CTRL_C→SIGINT / CTRL_BREAK→SIGBREAK / 注销关机→SIGTERM），OS 在 ~5s 宽限后直接强杀 CLI，`foreground/registry.js` 的信号处理器从不执行 → 全部服务残留、部署目录删不掉（旧注释"SIGTERM：Windows 关终端"是错误假设，已修正）。实例：关窗后连应用层 serve-static 都存活，`cli.js stop` 之后本目录 PM2 daemon 仍锁住 `node.exe`。
+- **哨兵设计**（纯 JS、零新依赖；`runtime/scripts` 整目录进包，新文件自动随包）：
+  - `foreground/heartbeat.js`：CLI 以**非 detached** 方式拉起的子进程（共享控制台，关窗 CTRL_CLOSE_EVENT / Linux SIGHUP 随 CLI 同亡），每 2s 刷新存活文件 `data/foreground-alive-<token>` 的 mtime。独立进程的意义：CLI 事件循环被 spawnSync 阻塞（pm2 引导、数据库迁移）时文件仍新鲜，哨兵不误判「CLI 已死」；
+  - `foreground/sentinel.js`：以 **detached + unref**（与 `spawnDetachedCleanup` 同参数）拉起，关窗后存活；每 1s 轮询存活文件，**陈旧 >8s**（心跳 2s 一次、连续 4 次缺失）时按序判定：clean 标记存在 → 静默退出（信号处理器已派生 cleanup.js）；本目录有另一前台**驱动**在跑（`stop.js` 的 `listOurDriverProcesses`：只认 `cli.js deploy|start` 驱动进程）→ 静默退出（残留由新实例的端口归属门禁处理，避免与快速重试 start 竞态）；否则 → 派生既有 `cleanup.js`（全量 `stopInfrastructure`，日志落 `data/logs/deploy/foreground-cleanup-*.log`）后退出。**判据必须是驱动而非应用层进程**：真机 E2E 实测暴露——驱动被杀后 config-service 等应用层残留仍在进程表里，若按 `listOurAppProcesses` 判「另一实例在跑」会静默退出、全部服务残留（旧实现即此缺陷，已修）；
+  - `foreground/registry.js`：`setupSignalHandlers()`（仅前台路径调用：`start.js` 两处）武装哨兵（幂等、只拉一次）；信号处理器路径在 `process.exit(0)` 前写 clean 标记；CLI 正常退出/启动失败提前退出时由 `process.on('exit')` 杀掉心跳子进程 → 哨兵触发全量停止（语义：没有前台驱动就没有服务）。
+- **stop daemon 归属收敛**（`commands/stop.js`）：PM2 daemon 的归属按**双判据**细分——exe 在本目录内，**或**命令行引用本目录（`<root>/` 带尾斜杠防目录名前缀误判）：真机 E2E 发现 daemon 可能由**系统 node**（如 `D:\nodejs\node.exe`）拉起但运行本目录的 pm2 代码（cmdline 指向本目录 `pm2/lib/Daemon.js`），仅按 exe 判会漏掉它、目录仍删不掉。命中任一判据即**计入残留**并由 `stopResidualServices` 收尾强杀（杀它安全：daemon 死亡不终止其托管的进程，他目录后续 pm2 命令经客户端自举自动重拉 daemon）；两判据都不命中的他目录 daemon 是机器全局共享、不锁本目录文件，继续排除（强杀会打断同机其他部署目录的 `pm2 restart`）。
+- **stop 前台驱动强杀 + 终检清扫**（`commands/stop.js`，真机 E2E 暴露）：start.bat 前台驱动是 `cli.js deploy --skip-build`（旧 `APP_ENTRY_RE` 只认 `cli.js start`，驱动存活过 stop）；且驱动是**监督进程**，活着就会重启刚被停掉的应用层子进程（conversion-service 同残留），终检永远"仍占用"。修复：`stopResidualServices` **最先**强杀前台驱动（`listOurDriverProcesses`，killTree 连子进程整树带走）；`APP_ENTRY_RE` 补 conversion-service 入口；终检从"只报不杀"改为**清扫后复查**（定向步骤漏掉的进程强杀一次再复查，仍不过才报失败）。
+- **时序**：关窗 → CLI/心跳子进程 ~5s 被 OS 强杀 → 哨兵 ~8-13s 检测到 → 全量停止 10-45s → 关窗后约 **15~60s** 目录可删。纯 JS 做不到 0 延迟（拦截 CTRL_CLOSE_EVENT 需 N-API 原生模块，要给离线包引入原生构建与二进制分发，风险/收益不划算，不采用）。
+- **测试**：`foreground/sentinel.test.js`（真实 sentinel 拷入临时沙箱 + stub cleanup，覆盖判定矩阵四出口）、`foreground/heartbeat.test.js`（启动即写/周期刷新/缺参退出码 1/路径失效不崩）、`foreground/registry.test.js` 增补（哨兵只拉一次、clean 标记、spawn 失败降级）、`commands/stop.test.js` 增补（本目录 daemon 计入残留并强杀、他目录 daemon 排除、系统 node 拉起的本包 daemon 双判据命中、他目录名前缀不误判、驱动判据只认 `cli.js deploy|start`、前台驱动最先强杀、终检清扫强杀定向漏网进程）；runtime/scripts 全量测试全绿（stop.test.js 29/29；config-updater.test.js 因工作区 `@cloudcad/contracts` dist 缺失的基线环境失败与本改动无关）。
+- **真机 E2E**（部署包 `release/cloudcad-deploy-1.0.0-20261026-windows`，修复版 runtime 脚本覆盖进包后实测）：①旧哨兵判据误判（应用层残留被判"另一实例"）被关窗模拟暴露 → 修驱动判据；②`cli.js stop` 实测停掉全部服务含系统 node 拉起的本包 daemon（双判据命中）；③stop 对存活前台实例的驱动/转换服务漏杀被暴露 → 修驱动强杀 + 终检清扫；④前台实例被 stop 停掉监督对象后，驱动经信号处理器正常退出（写 clean 标记 + 派生 cleanup.js）自行收尾全部残留——clean 退出路径与哨兵路径互为兜底；⑤**干净实例关窗全链路 PASS**：新起前台实例（无并发干扰）→ 程序化强杀驱动+心跳（等价 CTRL_CLOSE_EVENT）→ 哨兵 7s 内派生 cleanup.js（`foreground-cleanup-20261026-151417.log`）→ 20s 内 postgres/redis/mxcadassembly/manager/serve-static/PM2 daemon 全部消失、6 端口（3001/8000/3002/3091/5432/6379）全关、无任何进程再引用该目录。
+
 ---
 
 ## 五、分阶段实施路线图

@@ -134,17 +134,119 @@ test('进程表中只有调用者自身 → 判为无残留（stop 得以报告�
   assert.deepEqual(listOurResidualProcesses(), []);
 });
 
-test('PM2 守护进程由本目录 node 拉起 → 不算本目录残留（否则 stop 恒失败）', () => {
+test('PM2 守护进程由本目录 node 拉起 → 计入本目录残留（它锁住本目录 node.exe，不杀目录删不掉）', () => {
   // 目标机首次启动时 daemon 就是 runPm2 用本目录 node 拉起的：exe 落在本目录
-  // runtime/windows/node/ 下，命令行又带 --pm_home 指向本目录 data/pm2 ——
-  // 归属判据的两条分支都会命中它。而 daemon 是机器全局进程、本目录三个 stop
-  // 函数都不管它，计入残留会让终检恒非零 → stop 恒返回 false → 恒提示"不能删包"。
+  // runtime/windows/node/ 下，命令行又带 --pm_home 指向本目录 data/pm2。
+  // daemon 的 exe 锁住本目录 node.exe——不计入残留则「stop 后可删包」不成立
+  // （实测：stop 成功后目录仍删不掉，须手动 pm2 kill）。杀它安全：daemon 死亡
+  // 不终止其托管进程（stop 走到这里时已全部停止），他目录后续 pm2 命令会自动
+  // 重拉 daemon（客户端自举）。
   const { listOurResidualProcesses } = loadStopWithRows([
     {
       pid: 607,
       name: 'node.exe',
       exe: `${OUR_RUNTIME}/node/node.exe`,
       cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${OUR_RUNTIME}\\node\\node_modules\\pm2\\lib\\Daemon.js" --pm_home="${DATA_DIR}/pm2"`,
+    },
+  ]);
+  assert.deepEqual(listOurResidualProcesses().map((p) => p.pid), [607]);
+});
+
+test('PM2 daemon 由系统 node 拉起但运行本目录 pm2 代码（cmdline 引用本目录）→ 计入本目录残留', () => {
+  // 真机 E2E 发现：daemon 的 exe 可能是系统 node（D:/nodejs/node.exe，cmdline 为
+  // 裸 `node`），但它运行的是本目录的 pm2/lib/Daemon.js、cwd 在本目录——同样锁住
+  // 本目录的重命名/删除。只按 exe 判归属会漏掉它，stop 后目录仍删不掉。
+  const { listOurResidualProcesses } = loadStopWithRows([
+    {
+      pid: 610,
+      name: 'node.exe',
+      exe: 'D:/nodejs/node.exe',
+      cmdline: `node "${OUR_RUNTIME}\\node\\node_modules\\pm2\\lib\\Daemon.js"`,
+    },
+  ]);
+  assert.deepEqual(listOurResidualProcesses().map((p) => p.pid), [610]);
+});
+
+test('他目录名是本目录名前缀（如 .../cloud 与 .../cloudcad）→ 其 daemon 不误判为本目录', () => {
+  // cmdline 判据用 `<root>/`（带尾斜杠）做子串匹配：他目录路径虽以本目录路径为
+  // 字符串前缀，但后续字符是 `-`/字母而非 `/`，不会误命中。
+  const { listOurResidualProcesses } = loadStopWithRows([
+    {
+      pid: 611,
+      name: 'node.exe',
+      exe: 'D:/nodejs/node.exe',
+      cmdline: `node "D:/web/MxCADOnline/cloud\\runtime\\windows\\node\\node_modules\\pm2\\lib\\Daemon.js"`,
+    },
+  ]);
+  assert.deepEqual(listOurResidualProcesses(), []);
+});
+
+test('listOurDriverProcesses：只认前台驱动（cli.js deploy / cli.js start）', () => {
+  // 关窗哨兵用它判「是否有另一前台实例」：只认驱动进程。
+  const { listOurDriverProcesses } = loadStopWithRows([
+    {
+      pid: 701,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${PROJECT_ROOT}/runtime/scripts/cli.js" deploy --skip-build`,
+    },
+    {
+      pid: 702,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${PROJECT_ROOT}/runtime/scripts/cli.js" start`,
+    },
+  ]);
+  assert.deepEqual(listOurDriverProcesses().map((p) => p.pid), [701, 702]);
+});
+
+test('listOurDriverProcesses：应用层残留（config-service 等）不算驱动', () => {
+  // 真机 E2E 回归：旧实例驱动死后，config-service 等残留仍在进程表——若按
+  // 应用层判据（listOurAppProcesses）判「另一实例」，哨兵会静默退出、服务全留活。
+  const { listOurDriverProcesses } = loadStopWithRows([
+    {
+      pid: 703,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${PROJECT_ROOT}/packages/config-service/server.js"`,
+    },
+    {
+      pid: 704,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${PROJECT_ROOT}/packages/backend/dist/main.js"`,
+    },
+  ]);
+  assert.deepEqual(listOurDriverProcesses(), []);
+});
+
+test('listOurDriverProcesses：其他 cli.js 子命令（status/stop）不算驱动', () => {
+  const { listOurDriverProcesses } = loadStopWithRows([
+    {
+      pid: 705,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${PROJECT_ROOT}/runtime/scripts/cli.js" status`,
+    },
+    {
+      pid: 706,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${PROJECT_ROOT}/runtime/scripts/cli.js" stop`,
+    },
+  ]);
+  assert.deepEqual(listOurDriverProcesses(), []);
+});
+
+test('PM2 守护进程归属他目录 → 排除（机器全局共享，强杀会打断他目录 pm2 restart）', () => {
+  // daemon 是机器全局唯一进程：若它由同机另一部署目录的 node 拉起（exe 在别处、
+  // --pm_home 指向别处），不锁本目录任何文件，强杀它只会打断那个目录的 pm2 命令。
+  const { listOurResidualProcesses } = loadStopWithRows([
+    {
+      pid: 609,
+      name: 'node.exe',
+      exe: `${OTHER_RUNTIME}/node/node.exe`,
+      cmdline: `"${OTHER_RUNTIME}\\node\\node.exe" "${OTHER_RUNTIME}\\node\\node_modules\\pm2\\lib\\Daemon.js" --pm_home="${OTHER_ROOT}/data/pm2"`,
     },
   ]);
   assert.deepEqual(listOurResidualProcesses(), []);
@@ -514,5 +616,201 @@ test('stopResidualServices：残留探测为空但应用层可匹配 → 仍清�
     assert.deepEqual(h.kills, [777]);
   } finally {
     h.restore();
+  }
+});
+
+test('stopResidualServices：收尾强杀本目录归属的 PM2 daemon（它锁住本目录 node.exe）', async () => {
+  // 回归背景：daemon 由本目录 node 拉起、exe 锁住本目录 node.exe，旧实现刻意把它
+  // 排除在残留之外——stop 报"文件已释放"后目录仍删不掉（须手动 pm2 kill）。
+  // 现在本目录归属的 daemon 计入残留、收尾强杀；杀它安全（daemon 死亡不终止其
+  // 托管进程，他目录 pm2 命令会自动重拉 daemon）。
+  // 与 loadStopWithPm2Lie 不同：killTree 把被杀进程从进程表移除，模拟进程退出，
+  // 终检才能通过。
+  const fs = require('fs');
+  const procPath = require.resolve('../lib/proc');
+  const proc = require(procPath);
+  const fgPath = require.resolve('../foreground/registry');
+  const loggerPath = require.resolve('../lib/logger');
+  const logger = require(loggerPath);
+  const origExists = fs.existsSync;
+  const origGetCmdlines = proc.getProcessCmdlines;
+  const origKillTree = proc.killTree;
+  const origLog = logger.log;
+  const origFg = require.cache[fgPath];
+
+  const rows = [
+    {
+      pid: 778,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}\\node\\node.exe" "${OUR_RUNTIME}\\node\\node_modules\\pm2\\lib\\Daemon.js" --pm_home="${DATA_DIR}/pm2"`,
+    },
+    // 系统 node 拉起、运行本目录 pm2 代码的 daemon（真机 E2E 形态）：
+    // exe 不在本目录，但 cmdline 引用本目录 → 同样必须被强杀。
+    {
+      pid: 779,
+      name: 'node.exe',
+      exe: 'D:/nodejs/node.exe',
+      cmdline: `node "${OUR_RUNTIME}\\node\\node_modules\\pm2\\lib\\Daemon.js"`,
+    },
+  ];
+  const kills = [];
+  fs.existsSync = () => false;
+  proc.getProcessCmdlines = () => rows;
+  proc.killTree = (pid) => {
+    kills.push(pid);
+    const i = rows.findIndex((r) => r.pid === pid);
+    if (i >= 0) rows.splice(i, 1);
+    return true;
+  };
+  logger.log = () => {};
+  require.cache[fgPath] = {
+    id: fgPath,
+    filename: fgPath,
+    loaded: true,
+    exports: { cleanupForeground: () => {} },
+  };
+  delete require.cache[require.resolve('./stop')];
+  try {
+    const { stopResidualServices } = require('./stop');
+    const ok = await stopResidualServices();
+    assert.ok(kills.includes(778), '本目录 node 拉起的 daemon 必须被强杀');
+    assert.ok(kills.includes(779), '系统 node 拉起但运行本目录 pm2 代码的 daemon 必须被强杀');
+    assert.equal(ok, true, 'daemon 被杀后终检应通过');
+  } finally {
+    fs.existsSync = origExists;
+    proc.getProcessCmdlines = origGetCmdlines;
+    proc.killTree = origKillTree;
+    logger.log = origLog;
+    if (origFg) require.cache[fgPath] = origFg;
+    else delete require.cache[fgPath];
+    delete require.cache[require.resolve('./stop')];
+    require('./stop');
+  }
+});
+
+test('stopResidualServices：前台驱动（cli.js deploy）最先被杀，其监督的应用层残留一并清掉', async () => {
+  // 回归背景：start.bat 前台驱动是 `cli.js deploy --skip-build`——旧 APP_ENTRY_RE 只认
+  // `cli.js start`，驱动存活过 stop；且驱动是监督进程，其监督的应用层子进程
+  // （conversion-service 等）同残留，终检报"仍占用"、退出码 1、目录删不掉。
+  // 现在 stopResidualServices 最先强杀驱动（killTree 连子进程整树带走），应用层
+  // 残留由 APP_ENTRY_RE（已含 conversion-service）或终检清扫兜底。
+  const fs = require('fs');
+  const procPath = require.resolve('../lib/proc');
+  const proc = require(procPath);
+  const fgPath = require.resolve('../foreground/registry');
+  const loggerPath = require.resolve('../lib/logger');
+  const logger = require(loggerPath);
+  const origExists = fs.existsSync;
+  const origGetCmdlines = proc.getProcessCmdlines;
+  const origKillTree = proc.killTree;
+  const origLog = logger.log;
+  const origFg = require.cache[fgPath];
+
+  const rows = [
+    {
+      pid: 780,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}/node/node.exe" runtime/scripts/cli.js deploy --skip-build`,
+    },
+    {
+      pid: 781,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}/node/node.exe" "${PROJECT_ROOT}/packages/conversion-service/dist/server.js"`,
+    },
+  ];
+  const kills = [];
+  fs.existsSync = () => false;
+  proc.getProcessCmdlines = () => rows;
+  proc.killTree = (pid) => {
+    kills.push(pid);
+    const i = rows.findIndex((r) => r.pid === pid);
+    if (i >= 0) rows.splice(i, 1);
+    return true;
+  };
+  logger.log = () => {};
+  require.cache[fgPath] = {
+    id: fgPath,
+    filename: fgPath,
+    loaded: true,
+    exports: { cleanupForeground: () => {} },
+  };
+  delete require.cache[require.resolve('./stop')];
+  try {
+    const { stopResidualServices } = require('./stop');
+    const ok = await stopResidualServices();
+    assert.ok(kills.includes(780), '前台驱动（cli.js deploy）必须被强杀');
+    assert.ok(kills.includes(781), '应用层残留（conversion-service）必须被清掉');
+    assert.equal(ok, true, '驱动与残留被杀后终检应通过');
+  } finally {
+    fs.existsSync = origExists;
+    proc.getProcessCmdlines = origGetCmdlines;
+    proc.killTree = origKillTree;
+    logger.log = origLog;
+    if (origFg) require.cache[fgPath] = origFg;
+    else delete require.cache[fgPath];
+    delete require.cache[require.resolve('./stop')];
+    require('./stop');
+  }
+});
+
+test('stopResidualServices：终检清扫强杀定向步骤漏掉的进程（终检不再只报不杀）', async () => {
+  // 回归背景：旧终检只报不杀——定向步骤漏掉的进程（或被监督者重启的）会让 stop
+  // 退出码 1、目录仍删不掉。现在终检发现残留先强杀再复查，复查仍不过才报失败。
+  const fs = require('fs');
+  const procPath = require.resolve('../lib/proc');
+  const proc = require(procPath);
+  const fgPath = require.resolve('../foreground/registry');
+  const loggerPath = require.resolve('../lib/logger');
+  const logger = require(loggerPath);
+  const origExists = fs.existsSync;
+  const origGetCmdlines = proc.getProcessCmdlines;
+  const origKillTree = proc.killTree;
+  const origLog = logger.log;
+  const origFg = require.cache[fgPath];
+
+  // exe 在本目录 node 下、命令行是其他脚本：归属判据判为本目录进程，但不在任何
+  // 定向步骤（应用层/包装/daemon/PG/Redis/协同）的匹配范围内 → 只能靠终检清扫。
+  const rows = [
+    {
+      pid: 782,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}/node/node.exe" C:/some/other/app/server.js`,
+    },
+  ];
+  const kills = [];
+  fs.existsSync = () => false;
+  proc.getProcessCmdlines = () => rows;
+  proc.killTree = (pid) => {
+    kills.push(pid);
+    const i = rows.findIndex((r) => r.pid === pid);
+    if (i >= 0) rows.splice(i, 1);
+    return true;
+  };
+  logger.log = () => {};
+  require.cache[fgPath] = {
+    id: fgPath,
+    filename: fgPath,
+    loaded: true,
+    exports: { cleanupForeground: () => {} },
+  };
+  delete require.cache[require.resolve('./stop')];
+  try {
+    const { stopResidualServices } = require('./stop');
+    const ok = await stopResidualServices();
+    assert.ok(kills.includes(782), '定向步骤漏掉的进程必须由终检清扫强杀');
+    assert.equal(ok, true, '清扫后复查应通过');
+  } finally {
+    fs.existsSync = origExists;
+    proc.getProcessCmdlines = origGetCmdlines;
+    proc.killTree = origKillTree;
+    logger.log = origLog;
+    if (origFg) require.cache[fgPath] = origFg;
+    else delete require.cache[fgPath];
+    delete require.cache[require.resolve('./stop')];
+    require('./stop');
   }
 });

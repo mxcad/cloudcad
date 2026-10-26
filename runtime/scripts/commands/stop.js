@@ -109,15 +109,15 @@ function pm2OwnedApps() {
 }
 
 /**
- * 判断是否 PM2 守护进程。
+ * 判断是否 PM2 守护进程（不分归属）。
  *
- * daemon 由 runPm2 用**本目录** node 拉起（exe 在本目录 runtime/ 下），命令行又
- * 带 `--pm_home="<本目录>/data/pm2"`——归属判据的两条分支都会命中它。但 daemon
- * 是**机器全局唯一**进程：PM2_HOME 只决定它的文件位置、不隔离 app 注册表，所以
- * 它不"属于"本目录，本目录三个 stop 函数也没有任何一个会停它。若把它计入残留，
- * 终检恒非零 → stop 恒返回 false → 恒提示"不能删除部署包"，而实际上没有任何产品
- * 进程占用文件（实测：daemon 存活时 data/pm2/pm2.log 仍可重命名，PM2 按写关闭）。
- * 故排除而非强杀——杀机器全局 daemon 会打断同机其他部署目录的 `pm2 restart`。
+ * daemon 通常由 runPm2 用**本目录** node 拉起（exe 在本目录 runtime/ 下），
+ * 命令行又带 `--pm_home="<本目录>/data/pm2"`；真机 E2E 也发现它可能由**系统
+ * node** 拉起但运行本目录的 pm2 代码（cmdline 引用本目录）。但 daemon 是
+ * **机器全局唯一**进程：PM2_HOME 只决定它的文件位置、不隔离 app 注册表。
+ * 归属再按 exe/cmdline 细分（见 isLocalPm2Daemon）：本目录归属的 daemon 锁住
+ * 本目录文件，必须计入残留并强杀；他目录归属的 daemon 不锁本目录文件，
+ * 强杀会打断同机其他部署目录的 `pm2 restart`，必须排除。
  *
  * 识别只认 pm2 的 Daemon.js 入口：manager 脚本进程的命令行不含 Daemon.js，
  * 不会误伤（它们由 stopNodeWrappersForDataDir 按脚本名单独处理）。
@@ -125,6 +125,34 @@ function pm2OwnedApps() {
 function isPm2Daemon(p) {
   if (!/node/i.test(p.name)) return false;
   return /pm2\/lib\/daemon\.js/.test(normPath(p.cmdline));
+}
+
+/**
+ * 判断 PM2 daemon 是否归属本目录。双判据（命中其一即本目录归属）：
+ *
+ * 1. **exe 在本目录内**：目标机首次启动时 daemon 由本目录 node 拉起，exe 锁住
+ *    本目录 node.exe——不杀掉它「stop 之后部署包可以直接删除」不成立（实测：
+ *    stop 成功后目录仍删不掉，须手动 pm2 kill）。
+ * 2. **命令行引用本目录**（真机 E2E 发现）：daemon 也可能由**系统 node**
+ *    （exe 在别处）拉起，但运行的是本目录的 pm2 代码
+ *    （cmdline 形如 `node <本目录>/runtime/.../pm2/lib/Daemon.js`），其 cwd 在
+ *    本目录、同样锁住本目录的重命名/删除。判据用 `<root>/`（带尾斜杠）做
+ *    子串匹配，避免本目录是他目录名前缀时的误判（如 `...-1.0.0` 与
+ *    `...-1.0.0-20261026-windows` 并存）。
+ *
+ * 杀本目录归属的 daemon 安全：daemon 死亡不会终止它托管的进程（stop 走到这里
+ * 时它们已全部停止）；同机其他部署目录后续执行 pm2 命令会自动重拉 daemon
+ * （PM2 客户端自举），自愈。
+ * 他目录归属的 daemon（exe 与 cmdline 都不引用本目录）是机器全局共享进程、
+ * 不锁本目录文件，必须排除——强杀会打断同机其他部署目录的 `pm2 restart`。
+ */
+function isLocalPm2Daemon(p) {
+  if (!isPm2Daemon(p)) return false;
+  const root = normPath(PROJECT_ROOT);
+  if (!root) return false;
+  const exe = normPath(p.exe);
+  if (exe && (exe === root || exe.startsWith(`${root}/`))) return true;
+  return normPath(p.cmdline).includes(`${root}/`);
 }
 
 /**
@@ -141,8 +169,10 @@ function isPm2Daemon(p) {
  *   `stop` 的残留校验恒为"仍有进程占用"→ 恒返回 false → 恒退出码 1，
  *   用户按提示删包前每次都被告知失败（且这条校验从此失去鉴别力：
  *   进程表扫描修好之前返回空表、恒"无残留"，修好之后若无此排除恒"有残留"）。
- * - **PM2 daemon**：见 isPm2Daemon，目标机首次启动时由本目录 node 拉起，
- *   两条归属判据都命中，却是机器全局进程且不在本目录 stop 职责内。
+ * - **他目录归属的 PM2 daemon**：见 isLocalPm2Daemon，机器全局共享进程、不锁
+ *   本目录文件，强杀会打断同机其他部署目录的 `pm2 restart`。本目录归属的
+ *   daemon（exe 在本目录，或 cmdline 引用本目录——系统 node 拉起但运行本目录
+ *   pm2 代码的情形）锁住本目录文件，计入残留、由 stopResidualServices 收尾强杀。
  * @returns {Array<{pid:number,name:string,cmdline:string,exe:string}>}
  */
 function listOurResidualProcesses() {
@@ -151,7 +181,7 @@ function listOurResidualProcesses() {
   if (!root) return [];
   return getProcessCmdlines().filter((p) => {
     if (p.pid === process.pid) return false;
-    if (isPm2Daemon(p)) return false;
+    if (isPm2Daemon(p)) return isLocalPm2Daemon(p);
     const exe = normPath(p.exe);
     if (exe && (exe === root || exe.startsWith(`${root}/`))) return true;
     return dataDir !== '' && normPath(p.cmdline).includes(dataDir);
@@ -338,15 +368,21 @@ function stopNodeWrappersForDataDir() {
   return listOurWrapperProcesses().length === 0 ? 'stopped' : 'failed';
 }
 
-// 本部署的应用层入口（后端 / 前端静态服务 / 配置中心 / 前台模式的 CLI 驱动）。
+// 本部署的应用层入口（后端 / 前端静态服务 / 配置中心 / 转换服务）。
 //
 // 必须含 `cli.js start`：前台模式下 `cli.js start` 拉起服务后会 `await
 // new Promise(...)` 常驻不退（start.js 的前台监督），它就是「终端 A 跑 start、
 // 终端 B 跑 stop」那个永远在跑的驱动进程，cwd 与脚本都在本目录——不杀掉它
 // 「stop 之后部署包可以直接删除」就不成立（实测：stop 报"仍有服务进程占用"、
 // 退出码 1）。只认 `start` 子命令，`status`/交互菜单等不在此列。
+//
+// `cli.js deploy` 驱动（start.bat 走 deploy 进交互菜单选前台）**不进本表**：
+// 它是监督进程，必须**先于**应用层子进程被杀，否则它会重启刚被停掉的子进程——
+// 见 stopResidualServices 开头的驱动强杀步骤（listOurDriverProcesses）。
+// conversion-service 是应用层入口：前台模式下它是驱动 spawn 的子进程，部分配置
+// 下由 PM2 托管；漏掉它会占着本目录文件、终检报"仍占用"（真机 E2E 实测）。
 const APP_ENTRY_RE =
-  /(packages[/]backend[/]dist[/]main\.js|runtime[/]scripts[/]serve-static\.js|packages[/]config-service[/]server\.js|runtime[/]scripts[/]cli\.js["']?\s+start\b)/;
+  /(packages[/]backend[/]dist[/]main\.js|runtime[/]scripts[/]serve-static\.js|packages[/]config-service[/]server\.js|packages[/]conversion-service[/]dist[/]server\.js|runtime[/]scripts[/]cli\.js["']?\s+start\b)/;
 
 /**
  * 列出本目录的"应用层"node 进程。
@@ -373,6 +409,37 @@ function listOurAppProcesses() {
     if (!/node/i.test(p.name)) return false;
     const cmd = normPath(p.cmdline);
     return cmd.includes(root) && APP_ENTRY_RE.test(cmd);
+  });
+}
+
+// 前台驱动进程入口（`cli.js start` 或 `cli.js deploy`——start.bat 走 deploy 进交互
+// 菜单选前台，cloudcad.bat 走 start）。驱动是前台实例的唯一标志：它活着 = 有前台
+// 实例在跑；它死了且无新驱动 = 前台实例已亡，服务不应再存活。
+const DRIVER_ENTRY_RE = /runtime[/]scripts[/]cli\.js["']?\s+(?:deploy|start)\b/;
+
+/**
+ * 列出本目录的前台驱动进程（`cli.js deploy` / `cli.js start`）。
+ *
+ * 关窗哨兵（foreground/sentinel.js）用它判定「是否有另一个前台实例在跑」：
+ * 有新驱动 → 用户已重新 start，残留交给新实例的端口归属门禁处理，哨兵让位；
+ * 无驱动 → 旧实例已死且没有新实例，哨兵应触发全量停止。
+ * stopResidualServices 也用它**最先**强杀前台驱动：驱动是监督进程，活着就会
+ * 重启刚被停掉的应用层子进程，终检永远"仍占用"（真机 E2E 实测：start.bat 的
+ * `cli.js deploy --skip-build` 驱动存活过 stop，其监督的 conversion-service 同残留）。
+ *
+ * 刻意不用 listOurAppProcesses 做此判定：它还匹配 config-service / backend /
+ * serve-static 等应用层进程，旧实例驱动死后这些残留仍在进程表里，哨兵会误判
+ * 「有另一实例在跑」而静默退出、服务全部留活（真机 E2E 实测暴露）。
+ * @returns {Array<{pid:number,name:string,cmdline:string,exe:string}>}
+ */
+function listOurDriverProcesses() {
+  const root = normPath(PROJECT_ROOT);
+  if (!root) return [];
+  return getProcessCmdlines().filter((p) => {
+    if (p.pid === process.pid) return false;
+    if (!/node/i.test(p.name)) return false;
+    const cmd = normPath(p.cmdline);
+    return cmd.includes(root) && DRIVER_ENTRY_RE.test(cmd);
   });
 }
 
@@ -413,7 +480,23 @@ async function stopResidualServices() {
       : '  本目录未发现残留服务进程，仍按目录归属复查应用层...'
   );
 
-  // 先停应用层：后端/前端仍在跑时会持续连库，先停它们再动 PG/Redis。
+  // 先杀前台驱动（cli.js deploy / cli.js start）：驱动是监督进程，活着就会重启
+  // 刚被停掉的应用层子进程，终检永远"仍占用"（真机 E2E 实测：start.bat 前台驱动
+  // `cli.js deploy --skip-build` 存活过 stop，其监督的 conversion-service 同残留）。
+  // killTree 连驱动 spawn 的应用层子进程整树带走；PM2 daemon 是 detached、不在
+  // 树内，由第 4 步单独处理。
+  const drivers = listOurDriverProcesses();
+  if (drivers.length > 0) {
+    log(
+      'cyan',
+      `  停止本目录前台驱动进程（PID ${drivers.map((d) => d.pid).join(', ')}）...`
+    );
+    for (const d of drivers) {
+      killResidualPid(d.pid);
+    }
+  }
+
+  // 再停应用层：后端/前端仍在跑时会持续连库，先停它们再动 PG/Redis。
   // 无条件执行——不被 before 是否为空门控。本目录应用层的 PM2 fork 包装进程 cmdline
   // 只含 ProcessContainerFork.js（业务脚本路径在 env 里、不在 cmdline），exe 又可能是
   // 全局 node 而非本目录 node，listOurResidualProcesses 的两条归属判据都可能漏掉它，
@@ -455,10 +538,45 @@ async function stopResidualServices() {
     log('cyan', '  node 包装进程残留已停止');
   }
 
+  // 4. 强杀本目录归属的 PM2 daemon（它锁住本目录 node.exe，不杀则目录删不掉）。
+  //    他目录归属的 daemon 不碰（机器全局共享，见 isLocalPm2Daemon）。
+  const localDaemons = getProcessCmdlines().filter(isLocalPm2Daemon);
+  if (localDaemons.length > 0) {
+    log(
+      'cyan',
+      `  停止本目录 PM2 daemon（PID ${localDaemons.map((d) => d.pid).join(', ')}）...`
+    );
+    for (const d of localDaemons) {
+      killResidualPid(d.pid);
+    }
+  }
+
   // 稍等进程表刷新：killTree 用 taskkill（同步）发出信号，但 Win32_Process
   // 快照有滞后，立即复查可能读到已退出的进程而误报"未释放"。
   await new Promise((resolve) => setTimeout(resolve, 800));
-  return listOurResidualProcesses().length === 0;
+  let left = listOurResidualProcesses();
+  if (left.length > 0) {
+    // 终检清扫：定向步骤之后仍匹配归属判据的进程（定向步骤漏掉的、或被监督者
+    // 重启的）一律强杀后复查——终检不再"只报不杀"（真机 E2E 实测：前台驱动存活、
+    // 终检只报不杀，stop 退出码 1、目录仍删不掉）。
+    log(
+      'yellow',
+      `  终检清扫：本目录仍有 ${left.length} 个服务进程在跑（PID ${left.map((p) => p.pid).join(', ')}），强杀...`
+    );
+    for (const p of left) {
+      killResidualPid(p.pid);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    left = listOurResidualProcesses();
+    if (left.length > 0) {
+      log(
+        'red',
+        `  [错误] 本目录以下进程仍无法停止：${left.map((p) => `${p.name} PID ${p.pid}`).join(', ')}`
+      );
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -636,5 +754,7 @@ module.exports = {
   listOurResidualProcesses,
   listOurWrapperProcesses,
   listOurAppProcesses,
+  listOurDriverProcesses,
   pm2OwnedApps,
+  isLocalPm2Daemon,
 };

@@ -54,6 +54,7 @@ const {
 } = require('../lib/health');
 const { parseEnvFile, updateEnvFile } = require('../lib/env');
 const { findFreePortUpFrom, decideConversionPortAction } = require('../lib/infra-gate');
+const { writePm2AppConfig } = require('../lib/pm2-bootstrap');
 const { resolveMxcadAssemblyPath } = require('../lib/mxcad-path');
 const { probeAndFix } = require('../lib/mxcad-probe');
 const { promptConfirm } = require('../lib/prompt');
@@ -697,10 +698,9 @@ async function startAppServices(mode, onReady) {
     // 会误走 restart 去跑别家脚本。
     deleteForeignAppDefinitions(apps.map((a) => a.name));
 
-    const tempConfigPath = path.join(DATA_DIR, 'pm2-deploy.config.js');
-    fs.writeFileSync(
-      tempConfigPath,
-      `module.exports = { apps: [${apps.map((a) => JSON.stringify(a)).join(', ')}] };`
+    const tempConfigPath = writePm2AppConfig(
+      path.join(DATA_DIR, 'pm2-deploy.config.js'),
+      apps
     );
 
     // 用"是否已注册"（unknown = 未注册）而非"是否 online"判断 start/restart：
@@ -841,21 +841,35 @@ async function startAppServices(mode, onReady) {
     };
 
     // 前台模式捕获后端 stdout+stderr（P2.7），健康检查失败时显示尾部
+    // stdin 必须 ignore：后端不读输入，pipe 会让它持有父进程控制台输入句柄，
+    // 表现为命令行"卡住、要点回车才继续"——与下方前端/转换服务同一约束
+    //
+    // 只保留有界尾部：waitForServicesForeground 只取 slice(-30) 行。此前无界 push
+    // 会让 CLI 驱动进程在前台整个生命周期（终端开着就常驻）内持续累积后端全量日志
+    // ——按 0.35KB/s 量级约 1.2MB/h、5.3KB/s 量级约 180MB/h，长开终端会一路涨到
+    // 堆上限，驱动进程随后被杀，关窗哨兵按「无前台驱动」触发全量停止。
+    const BACKEND_OUTPUT_MAX_CHUNKS = 2000;
     const backendOutput = [];
+    const pushBackendOutput = (chunk) => {
+      backendOutput.push(chunk.toString());
+      if (backendOutput.length > BACKEND_OUTPUT_MAX_CHUNKS) {
+        backendOutput.shift();
+      }
+    };
     const backendProcess = spawn(NODE_EXE, [backendDist], {
       cwd: path.join(PROJECT_ROOT, 'packages', 'backend'),
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
       windowsHide: true,
       detached: IS_LINUX,
       env: backendEnv,
     });
     backendProcess.stdout.on('data', (chunk) => {
-      backendOutput.push(chunk.toString());
+      pushBackendOutput(chunk);
       process.stdout.write(chunk);
     });
     backendProcess.stderr.on('data', (chunk) => {
-      backendOutput.push(chunk.toString());
+      pushBackendOutput(chunk);
       process.stderr.write(chunk);
     });
     state.childProcesses.add(backendProcess);
