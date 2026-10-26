@@ -9,14 +9,21 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import './env';
-import { INestApplication, Module, RequestMethod } from '@nestjs/common';
+import {
+  INestApplication,
+  Logger,
+  Module,
+  RequestMethod,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { LoggerModule } from 'nestjs-pino';
+import { LoggerModule, NativeLogger } from 'nestjs-pino';
+import type { PinoLogger } from 'nestjs-pino';
 import { ClsServiceManager } from 'nestjs-cls';
+import { pino } from 'pino';
 
 import { join, resolve } from 'path';
 import { mkdirSync } from 'fs';
@@ -109,6 +116,29 @@ const logRetentionDays =
 // cleanup_run 等 info 日志在落盘前就被丢弃，#325 需临时 LOG_LEVEL=info 补救）。
 // 实时排障期用 LOG_CONSOLE_LEVEL 临时放开，不动落盘级别。
 const logLevels = resolveLogLevels(process.env, isProduction);
+// 应用日志实例：级别分裂 transport 的唯一持有者。放在模块求值期创建，
+// 因为必须在 NestFactory.create() 之前就接管 NestJS 内置 Logger（见下方注释）。
+const appPinoOptions = buildPinoHttpOptions(
+  logLevels,
+  logDirAbs,
+  logRetentionDays,
+  isProduction,
+);
+const appLogger = pino(appPinoOptions);
+// NestJS 内置 Logger（全仓 181 处 `new Logger(...)`）与框架内部 logger
+//（[InstanceLoader] / [RouterExplorer] / [NestFactory]）直写 process.stdout，
+// 完全绕过上面的 pino transport：LOG_CONSOLE_LEVEL=error 对它们零作用
+//（实测生产前台启动 22s 打出 648 行纯文本、0 行 JSON），这些日志也不落盘。
+// 用同一份实例接管：实时流按 LOG_CONSOLE_LEVEL 过滤、落盘流按 LOG_FILE_LEVEL
+// 全量写 app.log。overrideLogger 在模块求值期生效，早于 NestFactory.create()，
+// 故启动期（含路由映射 360 行）同样收敛。
+// NativeLogger 首参的类型标注是它自己的 PinoLogger 包装类（DI 元数据用途），
+// 运行时只调用 logger[level](objArg, msg)，pino 原生实例完全满足该契约。
+Logger.overrideLogger(
+  new NativeLogger(appLogger as unknown as PinoLogger, {
+    renameContext: 'context',
+  }),
+);
 
 @Module({
   imports: [
@@ -120,8 +150,10 @@ const logLevels = resolveLogLevels(process.env, isProduction);
     LoggerModule.forRoot({
       forRoutes: [{ path: '*path', method: RequestMethod.ALL }],
       // pinoHttp 配置整体由 buildPinoHttpOptions 构建（src/config/pino-http-options.ts）：
-      // 级别分裂的三个赋值点（根级别 / stdout 目标 / pino-roll 目标）在纯函数里可被单测断言
-      pinoHttp: buildPinoHttpOptions(logLevels, logDirAbs, logRetentionDays, isProduction),
+      // 级别分裂的三个赋值点（根级别 / stdout 目标 / pino-roll 目标）在纯函数里可被单测断言。
+      // logger: 复用上面同一个 pino 实例——nestjs-pino 的 PinoLogger 见到 `logger` 键即不新建
+      // 实例（isPassedLogger），否则 cleanup_run 等业务日志会走第二个 pino-roll 写同一个 app.log。
+      pinoHttp: { ...appPinoOptions, logger: appLogger },
     }),
     EventEmitterModule.forRoot(),
     DatabaseModule,
