@@ -61,6 +61,7 @@ export const ForgotPassword: React.FC = () => {
     register,
     handleSubmit: rhfSubmit,
     setValue,
+    formState: { errors },
   } = useForm<ForgotPasswordValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
@@ -69,6 +70,16 @@ export const ForgotPassword: React.FC = () => {
       phone: '',
     },
   });
+
+  // 客户端 zod 校验与服务端错误互斥：客户端拦下时请求根本不会发出，所以两者只会
+  // 命中其一。此前只解构了 register/handleSubmit/setValue，校验消息无人读取 ——
+  // 空邮箱点「发送验证码」既不报错也不请求，是纯静默失败（实测无提示）。
+  // 错误须读 errors.email / errors.phone：schema 用 superRefine 带显式 path，
+  // 若改用顶层 .refine()，zodResolver 会把错误放进 key ""，RHF 不映射进
+  // formState.errors（实测 errorKeys 为空）——提交被拦下但消息永不可达。
+  const clientError =
+    errors.email?.message || errors.phone?.message || null;
+  const displayError = forgotPassword.error || clientError;
 
   const onSubmit = async (data: ForgotPasswordValues) => {
     const result = await forgotPassword.submit({
@@ -151,7 +162,7 @@ export const ForgotPassword: React.FC = () => {
         mailAvailable={mailAvailable}
         phoneAvailable={phoneAvailable}
         contactType={contactType}
-        error={forgotPassword.error}
+        error={displayError}
         loading={forgotPassword.loading}
         register={register}
         handleSubmit={rhfSubmit}
