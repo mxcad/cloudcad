@@ -71,6 +71,7 @@ description: 用浏览器实测 CloudCAD 前端功能（登录、CAD 编辑器�
 | 脚本 | 覆盖流程 | 用途 | 何时结晶 |
 |---|---|---|---|
 | `packages/backend/scripts/ensure-e2e-accounts.ts` | 建测试账号 | 卡点「没账号」的解法，幂等 | 2026-10-23 |
+| `packages/backend/scripts/e2e-auth-fixtures.ts` | **造任意分支前置态的临时用户**（`create`/`list`/`destroy`） | 认证分支测试的「摆前置」统一入口：`--no-password`（无密码/微信注册账号）`--phone + --phone-verified`（手机登录）`--email-unverified` / `--no-email`（`EMAIL_NOT_VERIFIED` / `EMAIL_REQUIRED` 拦截）`--status SUSPENDED` `--deleted-days -N`（注销冷静期内/超期，配 `--deactivated-by SELF\|ADMIN`）；复用后端真实 bcrypt/PII 路径，与登录校验零漂移。**并发隔离靠 username 前缀**（`w1l_`/`w2p_`…），测完 `destroy --like '<前缀>_'` | 2026-10-26 |
 | `packages/frontend/e2e/scripts/login-flow.mjs` | 登录→进首页 | 一次性登录流程验证 | 2026-10-23（待 chromium 装完跑通确认） |
 
 ## 七、已知测试账号（ensure-e2e-accounts.ts 建的）
@@ -88,6 +89,7 @@ description: 用浏览器实测 CloudCAD 前端功能（登录、CAD 编辑器�
 - `references/agent-browser.md` — agent-browser 完整命令 + 坑（session / ref / state / 等待）
 - `references/playwright.md` — 把流程结晶成 Playwright 脚本的范式（config / fixtures / 等待策略 / login-flow 模板）
 - `references/environment.md` — 服务环境搭建 + 测试账号 + 卡点解法细节
+- `references/auth-e2e-playbook.md` — **认证模块浏览器 e2e 剧本**（登录/注册/验证码/忘记密码/邮箱·手机验证：逐流程 UI 选择器 + 分支前置用 DB/Redis 构造 + Redis 取码填 UI + 断言 + 收尾）
 
 ## 九、自动优化协议（主动沉淀，不等提醒）
 
@@ -126,3 +128,12 @@ description: 用浏览器实测 CloudCAD 前端功能（登录、CAD 编辑器�
 - **测拦截分支改数据库**：如未验证邮箱拦截，改 `users.emailVerified`（有邮箱未验证→`EMAIL_NOT_VERIFIED`；清空 email 三列→`EMAIL_REQUIRED`+tempToken）。**改 PII 列必须 trap 恢复**（备份原值，EXIT 时写回）。
 - **60s 发送冷却**：同一手机号 60s 内只能 `send-sms-code` 一次，测多分支**换手机号**或 `sleep 65`（后台跑）。
 - **PG/Redis 连接**：`psql -h localhost -p 5433 -U postgres -d cloudcad`（密码 `wdx123456`）、`redis-cli -p 6380 -a wdx123456`。
+
+## 十二、认证模块浏览器 e2e（agent-browser 剧本，可重复跑）
+
+要**用浏览器真操作页面**跑认证 e2e（验证 UI 渲染 + 流程走通，而非只打 API 看返回码）时，直接按 `references/auth-e2e-playbook.md` 的剧本执行——它把登录 / 注册 / 验证码 / 忘记密码 / 邮箱·手机验证六条流程的**逐步骤 + UI 选择器 + 分支前置构造 + Redis 取码 + 断言 + 收尾**都结晶好了。
+
+- **主测法 = agent-browser 真操作页面**；DB/Redis 脚本**只在「构造某分支前置状态」时**用（如把用户 `emailVerified` 置 false 触发邮箱拦截、直建 phone 用户触发手机登录成功），改完立刻用浏览器走 UI 验证。
+- **验证码从 Redis 拿、在 UI 里填**：UI 点「获取/发送验证码」触发后端 Mock 写码 → `redis-cli GET` 取 6 位码 → 填回 UI 验证码框。**不依赖真邮箱/真短信**，故可离线稳定复跑。
+- **与第十一节的关系**：第十一节是「纯 API 穷举后端分支」（快、全、不看 UI）；本节是「浏览器 e2e」（看 UI、走真实用户路径）。两者互补——先跑本节验证 UI 流程，再用第十一节穷举后端边界分支。
+- **移动端**：`agent-browser set device "iPhone 14"` 切手机形态后 `open 7001`，流程同 PC（选择器文案一致）。
