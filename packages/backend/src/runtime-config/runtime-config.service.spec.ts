@@ -995,6 +995,105 @@ describe("RuntimeConfigService", () => {
 		});
 	});
 
+	// ==================== 互斥门禁（conflictsWith） ====================
+	describe("互斥门禁（conflictsWith）", () => {
+		// 用真实定义表的 allowAutoRegisterOnPhoneLogin ↔ requireEmailVerification：
+		// 手机登录自动注册会建**无邮箱**账号，而强制邮箱验证要求登录前有已验证
+		// 邮箱——两者同开会造出永远无法再登录的永久死账号（坏数据，非静默失效）。
+		const boolRow = (key: string, value: boolean) => ({
+			key,
+			value: JSON.stringify(value),
+			type: "boolean",
+			category: "account",
+			description: "",
+			isPublic: false,
+			updatedBy: "u-1",
+			updatedAt: new Date(),
+		});
+
+		const mockWritePath = (rows: object[]) => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue(rows);
+			mockPrisma.runtimeConfig.findUnique.mockResolvedValue(null);
+			mockPrisma.runtimeConfig.upsert.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+		};
+
+		it("强制邮箱验证开着时，开启手机自动注册被拒绝（点名互斥对方）", async () => {
+			mockWritePath([boolRow("requireEmailVerification", true)]);
+
+			await expect(
+				service.set("allowAutoRegisterOnPhoneLogin", true, "admin"),
+			).rejects.toThrow("requireEmailVerification");
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("互斥对方为关时放行", async () => {
+			mockWritePath([boolRow("requireEmailVerification", false)]);
+
+			await service.set("allowAutoRegisterOnPhoneLogin", true, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("对称性：自动注册开着时，开启强制邮箱验证同样被拒绝", async () => {
+			// 带上 mailEnabled=true，让先行执行的依赖门禁（requireEmailVerification
+			// -> mailEnabled）通过，从而确认拒绝来自互斥门禁而非依赖门禁
+			mockWritePath([
+				boolRow("allowAutoRegisterOnPhoneLogin", true),
+				boolRow("mailEnabled", true),
+			]);
+
+			await expect(
+				service.set("requireEmailVerification", true, "admin"),
+			).rejects.toThrow("allowAutoRegisterOnPhoneLogin");
+			expect(mockPrisma.runtimeConfig.upsert).not.toHaveBeenCalled();
+		});
+
+		it("关闭任一互斥方恒放行（不会新制造共存）", async () => {
+			mockWritePath([
+				boolRow("allowAutoRegisterOnPhoneLogin", true),
+				boolRow("requireEmailVerification", true),
+			]);
+
+			await service.set("requireEmailVerification", false, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("遗留共存（重放同一个值）不算新制造 → 放行", async () => {
+			mockWritePath([
+				boolRow("allowAutoRegisterOnPhoneLogin", true),
+				boolRow("requireEmailVerification", true),
+			]);
+
+			await service.set("allowAutoRegisterOnPhoneLogin", true, "admin");
+
+			expect(mockPrisma.runtimeConfig.upsert).toHaveBeenCalled();
+		});
+
+		it("遗留共存被一致性检测揪出（门禁只拦新制造，遗留态必须看得见）", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("allowAutoRegisterOnPhoneLogin", true),
+				boolRow("requireEmailVerification", true),
+			]);
+
+			await expect(service.detectConflictViolations()).resolves.toEqual([
+				{
+					key: "allowAutoRegisterOnPhoneLogin",
+					other: "requireEmailVerification",
+				},
+			]);
+		});
+
+		it("无共存时一致性检测返回空数组", async () => {
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("requireEmailVerification", true),
+			]);
+
+			await expect(service.detectConflictViolations()).resolves.toEqual([]);
+		});
+	});
+
 	// ==================== 依赖一致性检测（检查手段①） ====================
 	describe("依赖一致性检测（detectDependencyViolations）", () => {
 		const boolRow = (key: string, value: boolean) => ({
@@ -1380,6 +1479,96 @@ describe("RuntimeConfigService", () => {
 			const result = await service.applyProfile("normal", "admin-1");
 
 			expect(result.applied).toContain("featureX");
+		});
+
+		// ── profile 批量应用的互斥门禁（ADR-0082 二期） ──
+		// 真实定义表的互斥对两端都在 PROFILES_EXCLUDED_KEYS 里（安全模式不接管它们），
+		// 无法用真实对触发批量门禁；这里注入合成对，验证门禁语义本身。
+		const boolDef = (
+			key: string,
+			profileValue: boolean,
+			conflictsWith?: string[]
+		): RuntimeConfigDefinition => ({
+			key,
+			type: "boolean",
+			category: "security",
+			description: `测试开关 ${key}`,
+			defaultValue: false,
+			isPublic: false,
+			profiles: { secure: profileValue, normal: false },
+			conflictsWith,
+		});
+
+		const withSeededPair = (defs: RuntimeConfigDefinition[]) => {
+			jest
+				.spyOn(
+					service as unknown as { getProfileDefinitions: () => unknown },
+					"getProfileDefinitions"
+				)
+				.mockReturnValue(defs);
+			jest
+				.spyOn(
+					service as unknown as { getConflictPairs: () => unknown },
+					"getConflictPairs"
+				)
+				.mockReturnValue([{ a: "featureX", b: "featureY" }]);
+			// 依赖边置空：确保拒绝只可能来自互斥门禁，不与先行执行的依赖门禁混淆
+			jest
+				.spyOn(
+					service as unknown as { getDependencyEdges: () => unknown },
+					"getDependencyEdges"
+				)
+				.mockReturnValue([]);
+		};
+
+		it("批量应用会新制造互斥共存 → 预览与应用都拒绝（点名互斥对方）", async () => {
+			withSeededPair([
+				boolDef("featureX", true, ["featureY"]),
+				boolDef("featureY", true),
+			]);
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+			mockPrisma.runtimeConfig.create.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			await expect(service.previewProfileApply("secure")).rejects.toThrow(
+				"featureY"
+			);
+			await expect(
+				service.applyProfile("secure", "admin-1")
+			).rejects.toThrow("featureY");
+			expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+		});
+
+		it("目标态只有一端为开 → 不构成共存，放行", async () => {
+			withSeededPair([
+				boolDef("featureX", true, ["featureY"]),
+				boolDef("featureY", false),
+			]);
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([]);
+			mockPrisma.runtimeConfig.create.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const result = await service.applyProfile("secure", "admin-1");
+
+			expect(result.applied).toContain("featureX");
+		});
+
+		it("遗留共存且本次两端都不变（目标值=当前值）→ 不算新制造，放行", async () => {
+			withSeededPair([
+				boolDef("featureX", true, ["featureY"]),
+				boolDef("featureY", true),
+			]);
+			mockPrisma.runtimeConfig.findMany.mockResolvedValue([
+				boolRow("featureX", true),
+				boolRow("featureY", true),
+			]);
+			mockPrisma.runtimeConfig.update.mockResolvedValue({});
+			mockPrisma.runtimeConfigLog.create.mockResolvedValue({});
+
+			const result = await service.applyProfile("secure", "admin-1");
+
+			expect(result.applied).toEqual([]);
+			expect(result.unchanged).toContain("featureX");
 		});
 	});
 

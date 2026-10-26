@@ -33,6 +33,7 @@ import {
   RuntimeProfilePreviewEntry,
   RuntimeProfileApplyResult,
   ConfigDependencyViolation,
+  ConfigConflictViolation,
   ChannelStatus,
   isGateSatisfyingVerdict,
   fromChannelVerdictColumn,
@@ -41,6 +42,8 @@ import {
   getDependencyEdges,
   findNewDependencyViolations,
   formatDependencyLabel,
+  getConflictPairs,
+  findNewConflictViolations,
 } from './runtime-config.dependency';
 import {
   ChannelCryptoService,
@@ -55,6 +58,7 @@ const FALSY_ENV_VALUES = ['false', '0', 'no', 'off'];
 
 /** 依赖边从定义表派生（单一事实源），定义表是静态常量，进程内派生一次即可 */
 const DEPENDENCY_EDGES = getDependencyEdges(RUNTIME_CONFIG_DEFINITIONS);
+const CONFLICT_PAIRS = getConflictPairs(RUNTIME_CONFIG_DEFINITIONS);
 
 /** env 层解析结果：`undefined` 表示该 env 未设置（回退下一层） */
 type EnvResolveResult = RuntimeConfigValue | undefined;
@@ -105,6 +109,24 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       })
       .catch((error) => {
         this.logger.error('开关依赖一致性检测失败:', error);
+      });
+
+    // 互斥一致性检测：同一分工。互斥共存的危害是坏数据（例如强制邮箱验证开着、
+    // 手机自动注册也开着 → 自动注册的无邮箱账号永远无法再次登录），比依赖反向
+    // 偏离更严重，故同样必须能在启动日志里被运维看见。
+    this.detectConflictViolations()
+      .then((violations) => {
+        if (violations.length > 0) {
+          const detail = violations
+            .map((v) => `${v.key} 与 ${v.other} 同时开启`)
+            .join('；');
+          this.logger.warn(
+            `检测到开关互斥共存（门禁上线前遗留，请在运行时配置页处理）: ${detail}`
+          );
+        }
+      })
+      .catch((error) => {
+        this.logger.error('开关互斥一致性检测失败:', error);
       });
   }
 
@@ -450,6 +472,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 拒绝「功能开着、依赖的通道关着」这种静默失效状态被新制造出来
     if (def.type === 'boolean' && typeof value === 'boolean') {
       await this.assertSingleKeyDependencyGate(def, value);
+      await this.assertSingleKeyConflictGate(def, value);
     }
 
     // 通道开启门禁（ADR-0082 D4）：通道开关置 true 须「配置完整 + 通道测试通过」
@@ -565,6 +588,11 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     return DEPENDENCY_EDGES;
   }
 
+  /** 互斥对来源，来源与 getDependencyEdges 同构（均可被测试 spy 替换） */
+  private getConflictPairs() {
+    return CONFLICT_PAIRS;
+  }
+
   /**
    * 单键更新/重置的依赖门禁（拒绝式，ADR-0082）。
    *
@@ -626,6 +654,48 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   }
 
   /**
+   * 单键更新/重置的互斥门禁（拒绝式，ADR-0082 二期）。
+   *
+   * 与依赖门禁分工：依赖边是有向的（开启依赖方须依赖项已开），互斥对是
+   * **对称**的——两个开关都开着会造出坏数据（永久死账号），而不是静默失效。
+   * 对称性意味着门禁无需感知改的是哪一端：互斥对已按双向展开，改 a 或改 b
+   * 都命中同一对，判定时把「本键」与「另一端」按字典序对齐即可。
+   *
+   * 只拦「新制造」：重放同一个已共存状态不算违规（遗留状态由一致性检测上报）。
+   */
+  private async assertSingleKeyConflictGate(
+    def: RuntimeConfigDefinition,
+    value: boolean
+  ): Promise<void> {
+    const pairs = this.getConflictPairs().filter(
+      (pair) => pair.a === def.key || pair.b === def.key
+    );
+    if (pairs.length === 0) {
+      return;
+    }
+
+    const keys = [
+      ...new Set(pairs.flatMap((pair) => [pair.a, pair.b])),
+    ];
+    const current = await this.resolveEffectiveBooleans(keys);
+    const final = { ...current, [def.key]: value };
+    const violations = findNewConflictViolations(pairs, current, final);
+    if (violations.length === 0) {
+      return;
+    }
+
+    const label = formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, def.key);
+    // 互斥对已按字典序对齐，故 def.key 必为其中一端；另一端取另一值
+    const other = violations[0].key === def.key ? violations[0].other : violations[0].key;
+    const otherLabel = formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, other);
+    throw new BadRequestException(
+      I18nContext.current()?.t('error.config_extra.conflict_not_allowed', {
+        args: { key: label, other: otherLabel },
+      }) ?? `无法开启 ${label}：与 ${otherLabel} 互斥，请先关闭后者`
+    );
+  }
+
+  /**
    * 检测当前已存在的依赖不一致（门禁上线前遗留的「功能开关开、通道开关关」，
    * 含告警邮件「邮件服务关着、告警照发」的反向偏离）。
    *
@@ -644,6 +714,29 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     return edges.filter(
       (edge) => current[edge.dependent] === true && current[edge.required] !== true
     );
+  }
+
+  /**
+   * 检测当前已存在的互斥共存（两个互斥开关同时为 true）。
+   *
+   * 与 detectDependencyViolations 同一分工：门禁拦「新制造」，本方法揪「已存在」
+   * 的门禁上线前遗留状态。互斥共存的危害是坏数据而非静默失效，因此必须能在
+   * 页面上一眼看见——已存在的共存不该被门禁的存在掩盖掉。
+   */
+  async detectConflictViolations(): Promise<ConfigConflictViolation[]> {
+    const pairs = this.getConflictPairs();
+    if (pairs.length === 0) {
+      return [];
+    }
+    const keys = [
+      ...new Set(pairs.flatMap((pair) => [pair.a, pair.b])),
+    ];
+    const current = await this.resolveEffectiveBooleans(keys);
+    return pairs
+      .filter(
+        (pair) => current[pair.a] === true && current[pair.b] === true
+      )
+      .map((pair) => ({ key: pair.a, other: pair.b }));
   }
 
   /**
@@ -822,6 +915,51 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
   }
 
   /**
+   * profile 批量应用的互斥门禁。与 assertProfileDependencyGate 共用同一套
+   * 「最终态 = 计划内键取目标值、计划外键取当前生效值」的判定，只拦本次应用
+   * 新制造的共存（预览与应用共用 buildProfilePlan，两端行为一致）。
+   */
+  private async assertProfileConflictGate(
+    target: ConfigProfile,
+    entries: {
+      def: RuntimeConfigDefinition;
+      targetValue: RuntimeConfigValue;
+    }[]
+  ): Promise<void> {
+    const pairs = this.getConflictPairs();
+    if (pairs.length === 0) {
+      return;
+    }
+
+    const keys = [
+      ...new Set(pairs.flatMap((pair) => [pair.a, pair.b])),
+    ];
+    const current = await this.resolveEffectiveBooleans(keys);
+    const final = { ...current };
+    for (const entry of entries) {
+      final[entry.def.key] = entry.targetValue === true;
+    }
+
+    const violations = findNewConflictViolations(pairs, current, final);
+    if (violations.length === 0) {
+      return;
+    }
+
+    const detail = violations
+      .map(
+        (v) =>
+          `「${formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, v.key)}」` +
+          `与「${formatDependencyLabel(RUNTIME_CONFIG_DEFINITIONS, v.other)}」互斥`
+      )
+      .join('；');
+    throw new BadRequestException(
+      I18nContext.current()?.t('error.config_extra.conflict_violation', {
+        args: { profile: target, pairs: detail },
+      }) ?? `无法应用安全模式 ${target}: ${detail}`
+    );
+  }
+
+  /**
   * 按配置定义校验值。返回 null 表示合法，否则返回原因。
   * 服务端必须独立校验——前端控件不是安全边界，绕过前端直调 PUT 必须同样被拦。
   */
@@ -973,6 +1111,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     | 'impact'
     | 'dangerous'
     | 'requires'
+    | 'conflictsWith'
     | 'channel'
     | 'channelSwitch'
   > {
@@ -1000,6 +1139,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
       impact: def?.impact,
       dangerous: def?.dangerous ?? false,
       requires: def?.requires,
+      conflictsWith: def?.conflictsWith,
       channel: def?.channel,
       channelSwitch: def?.channelSwitch,
     };
@@ -1026,6 +1166,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 否则「重置通道开关为关」会绕过 set() 的门禁，重新制造静默失效状态
     if (def.type === 'boolean' && typeof def.defaultValue === 'boolean') {
       await this.assertSingleKeyDependencyGate(def, def.defaultValue);
+      await this.assertSingleKeyConflictGate(def, def.defaultValue);
     }
 
     // 通道开启门禁：默认值为 true 时，恢复默认等价于「把通道开关打开」，同样须过测试门禁
@@ -1319,6 +1460,7 @@ export class RuntimeConfigService implements OnModuleInit, IRuntimeConfigService
     // 依赖门禁（ADR-0082）：批量应用不得新制造「功能开关开、依赖的通道开关关」
     // 的不一致状态。预览与应用共用本方法，两端行为一致。
     await this.assertProfileDependencyGate(target, entries);
+    await this.assertProfileConflictGate(target, entries);
 
     // 通道开启门禁（ADR-0082 D4）：批量应用不得绕过通道测试门禁把通道开关打开
     for (const entry of entries) {

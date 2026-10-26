@@ -55,6 +55,7 @@ import {
   RuntimeProfilePreviewResponseDto,
   RuntimeProfileApplyResponseDto,
   RuntimeConfigDependencyViolationDto,
+  RuntimeConfigConflictViolationDto,
   ChannelStatusDto,
   TestChannelDto,
   ChannelTestResultDto,
@@ -150,6 +151,24 @@ export class RuntimeConfigController {
   })
   async checkDependencies(): Promise<RuntimeConfigDependencyViolationDto[]> {
     return this.runtimeConfigService.detectDependencyViolations();
+  }
+
+  /**
+   * 检测开关互斥共存（ADR-0082 二期检查手段）：揪出门禁上线前遗留的
+   * 「两个互斥开关同时为开」状态，供管理端呈现。与 dependency-check 同一分工：
+   * 门禁只拦新制造，遗留态靠这里暴露。同样必须排在 `:key` 之前。
+   */
+  @Get('conflict-check')
+  @RequirePermissions([SystemPermission.SYSTEM_CONFIG_READ])
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '检测开关互斥共存（互斥对两端同时开启的遗留状态）' })
+  @ApiResponse({
+    status: 200,
+    description: '返回当前互斥共存清单（无违规时为空数组）',
+    type: [RuntimeConfigConflictViolationDto],
+  })
+  async checkConflicts(): Promise<RuntimeConfigConflictViolationDto[]> {
+    return this.runtimeConfigService.detectConflictViolations();
   }
 
   /**

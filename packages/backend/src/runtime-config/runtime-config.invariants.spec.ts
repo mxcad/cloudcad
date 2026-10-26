@@ -198,6 +198,39 @@ describe("validateDefinitions", () => {
     expectViolation(defs, "依赖图存在环");
   });
 
+  it("互斥对漏声明会被抓住", () => {
+    expectViolation(
+      patch("allowAutoRegisterOnPhoneLogin", { conflictsWith: undefined }),
+      "互斥对未声明：allowAutoRegisterOnPhoneLogin|requireEmailVerification"
+    );
+  });
+
+  it("互斥对引用未登记的键会被抓住", () => {
+    expectViolation(
+      patch("allowAutoRegisterOnPhoneLogin", {
+        conflictsWith: ["requireEmailVerificationTYPO"],
+      }),
+      "引用了未登记的键 requireEmailVerificationTYPO"
+    );
+  });
+
+  it("互斥对的一端不是布尔键会被抓住", () => {
+    expectViolation(
+      patch("rateLimitPublicMax", { conflictsWith: ["mailEnabled"] }),
+      "的 rateLimitPublicMax 不是布尔键"
+    );
+  });
+
+  it("互斥对两侧都声明会被抓住（只允许单边声明，避免双份维护漂移）", () => {
+    const defs = patch("requireEmailVerification", {
+      conflictsWith: ["allowAutoRegisterOnPhoneLogin"],
+    });
+    expectViolation(
+      defs,
+      "互斥对 allowAutoRegisterOnPhoneLogin|requireEmailVerification 两侧都声明了 conflictsWith"
+    );
+  });
+
   it("一次报出全部违规而不是停在第一条", () => {
     const defs: RuntimeConfigDefinition[] = BASE.map((d): RuntimeConfigDefinition => {
       if (d.key === "backupEnabled") return { ...d, tier: "advanced", impact: undefined };

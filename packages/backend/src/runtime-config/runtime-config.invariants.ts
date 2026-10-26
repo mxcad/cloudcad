@@ -26,6 +26,7 @@
 import {
   getDependencyEdges,
   findDependencyCycles,
+  getConflictPairs,
 } from './runtime-config.dependency';
 import type { RuntimeConfigDefinition } from './runtime-config.types';
 import { RUNTIME_CONFIG_DEFINITIONS } from './runtime-config.constants';
@@ -173,6 +174,15 @@ const PINNED_DEPENDENCY_EDGES = [
   'requirePhoneVerification->smsEnabled',
   'wechatAutoRegister->wechatEnabled',
   'alertEmailEnabled->mailEnabled',
+];
+
+/**
+ * 互斥对已知的全部对（与依赖边同理钉住：漏声明一对，「两个开关同时开」
+ * 造出的坏数据状态就再也拦不住了）。按字典序书写，与 getConflictPairs 的
+ * 排序口径一致，避免「声明侧写反」造成的字符串不匹配。
+ */
+const PINNED_CONFLICT_PAIRS = [
+  'allowAutoRegisterOnPhoneLogin|requireEmailVerification',
 ];
 
 /**
@@ -457,6 +467,38 @@ export function validateDefinitions(
   if (inCycle.length > 0) {
     // 环会让「沿依赖判定」失去定义
     violations.push(`依赖图存在环：${inCycle.join('、')}`);
+  }
+
+  // ── 互斥对：已知对已声明、引用键存在、两端都是布尔键、同侧不重复声明 ──
+  const pairs = getConflictPairs(definitions);
+  const pairIds = pairs.map((p) => `${p.a}|${p.b}`);
+  for (const pinned of PINNED_CONFLICT_PAIRS) {
+    if (!pairIds.includes(pinned)) {
+      violations.push(`互斥对未声明：${pinned}`);
+    }
+  }
+  for (const p of pairs) {
+    for (const end of [p.a, p.b]) {
+      if (!registered.has(end)) {
+        violations.push(`互斥对 ${p.a}|${p.b} 引用了未登记的键 ${end}`);
+      } else if (byKey.get(end)?.type !== 'boolean') {
+        violations.push(`互斥对 ${p.a}|${p.b} 的 ${end} 不是布尔键`);
+      }
+    }
+  }
+  // 同一对若两侧都声明了，声明侧无信息量且易漂移，只允许单边声明
+  for (const d of definitions) {
+    for (const other of d.conflictsWith ?? []) {
+      const a = d.key < other ? d.key : other;
+      const b = d.key < other ? other : d.key;
+      const bothSides =
+        a !== b && byKey.get(other)?.conflictsWith?.includes(d.key) === true;
+      if (bothSides) {
+        violations.push(
+          `互斥对 ${a}|${b} 两侧都声明了 conflictsWith，只允许单边声明`
+        );
+      }
+    }
   }
 
   return violations;

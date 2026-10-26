@@ -386,6 +386,8 @@ config_extra:
   dependency_not_met: "{key}을(를) 활성화할 수 없습니다: 의존 항목 {deps}이(가) 비활성화되어 있습니다. 먼저 활성화하세요"
   dependency_in_use: "{key}을(를) 비활성화할 수 없습니다: {dependents}이(가) 아직 이 항목에 의존하고 있습니다. 먼저 비활성화하세요"
   dependency_violation: "보안 모드 {profile}을(를) 적용할 수 없습니다: {edges}"
+  conflict_not_allowed: "{key}을(를) 활성화할 수 없습니다: {other}과(와) 상극입니다(둘은 동시에 활성화할 수 없습니다). 먼저 {other}을(를) 비활성화하세요"
+  conflict_violation: "보안 모드 {profile}을(를) 적용할 수 없습니다: {pairs}"
   channel_gate_not_met: "{key}({channel} 채널)을(를) 활성화할 수 없습니다: {reasons}"
   channel_not_registered: 채널 {channel}이(가) 등록되어 있지 않습니다
 sms_extra:

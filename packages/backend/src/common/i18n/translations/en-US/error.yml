@@ -386,6 +386,8 @@ config_extra:
   dependency_not_met: "Cannot enable {key}: its dependencies {deps} are not enabled; enable them first"
   dependency_in_use: "Cannot disable {key}: it is still required by {dependents}; disable them first"
   dependency_violation: "Cannot apply security mode {profile}: {edges}"
+  conflict_not_allowed: "Cannot enable {key}: it is mutually exclusive with {other} (both cannot be enabled at once); disable {other} first"
+  conflict_violation: "Cannot apply security mode {profile}: {pairs}"
   channel_gate_not_met: "Cannot enable {key} ({channel} channel): {reasons}"
   channel_not_registered: Channel {channel} is not registered
 sms_extra:

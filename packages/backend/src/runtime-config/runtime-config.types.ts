@@ -169,6 +169,28 @@ export interface RuntimeConfigDefinition {
   requires?: string[];
 
   /**
+   * 互斥声明（ADR-0082 二期）：本 key 与列出的 key **不得同时为 `true`**。
+   *
+   * 与 `requires`（同开）方向相反的语义，且**关系是对称的**——因此只需在
+   * 任一侧声明一次，`getConflictPairs` 会把每对展开成双向两条（与
+   * `getDependencyEdges` 把单边声明展开成有向边同一套路），门禁无需感知方向。
+   * 双向展开的前提是**只允许单边声明**：同一对若两侧都写了，`getConflictPairs`
+   * 会按 `key < pair` 字典序去重，声明侧无信息量、徒增误改风险，故本仓库约定
+   * 只在「业务功能开关」一侧声明（见 constants 的 `allowAutoRegisterOnPhoneLogin`）。
+   *
+   * 用途：两个开关同时开着会造出**坏数据**而非静默失效。当前唯一用例是
+   * `allowAutoRegisterOnPhoneLogin ↔ requireEmailVerification`——手机登录自动
+   * 注册会创建**无邮箱**账号，而邮箱验证强制开启时该账号永远无法再登录，
+   * 成为永久死账号。这是数据质量问题，比 `requires` 的静默失效更严重，
+   * 必须在配置期拦下。
+   *
+   * 与 `requires` 同套门禁语义：更新路径拒绝「新制造」的违规，已存在的遗留
+   * 状态由一致性检测上报；运行时另有一道防御（见 local-auth.provider 自动
+   * 注册路径）覆盖门禁上线前遗留的共存状态。
+   */
+  conflictsWith?: string[];
+
+  /**
    * 通道配置项标记（ADR-0082 D4/D6）：本 key 是哪个通道的配置项（凭据/参数，
    * 如 SMTP 主机/端口/口令）。通道 = 一组配置项 + 一个开关 + 一个测试动作 +
    * 一组依赖边；本标记只覆盖「一组配置项」：
@@ -258,6 +280,8 @@ export interface RuntimeConfigItem {
   dangerous?: boolean;
   /** 开关依赖声明（依赖的 key 列表，见 RuntimeConfigDefinition.requires） */
   requires?: string[];
+  /** 互斥声明（见 RuntimeConfigDefinition.conflictsWith） */
+  conflictsWith?: string[];
   /** 通道配置项标记（见 RuntimeConfigDefinition.channel） */
   channel?: string;
   /** 通道开关标记（见 RuntimeConfigDefinition.channelSwitch） */
@@ -273,6 +297,17 @@ export interface ConfigDependencyViolation {
   dependent: string;
   /** 被依赖的 key（通道/服务开关，如 mailEnabled） */
   required: string;
+}
+
+/**
+ * 互斥违规：两个互斥的布尔键同时为 `true`。
+ * 「新制造」的违规由更新路径门禁拒绝；已存在的遗留违规由一致性检测上报。
+ */
+export interface ConfigConflictViolation {
+  /** 互斥对的一端 */
+  key: string;
+  /** 互斥对的另一端 */
+  other: string;
 }
 
 /**

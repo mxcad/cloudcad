@@ -19,6 +19,7 @@
 
 import type { RuntimeConfigDefinition } from './runtime-config.types';
 import type { ConfigDependencyViolation } from './runtime-config.types';
+import type { ConfigConflictViolation } from './runtime-config.types';
 
 /** 一条依赖边：dependent 为 true 时 required 必须同为 true */
 export interface ConfigDependencyEdge {
@@ -128,4 +129,69 @@ export function findDependencyCycles(
   }
 
   return [...inCycle].sort();
+}
+
+// ────────────────────────── 互斥对（conflictsWith） ──────────────────────────
+//
+// 与依赖边的差别：互斥关系是**对称**的（A 与 B 互斥 ⇔ B 与 A 互斥），而依赖边
+// 是有向的（A requires B ≠ B requires A）。因此互斥对只需在任一侧声明一次，
+// 展开时补出双向两条，门禁（set / reset / profile 批量应用）无需感知方向——
+// 改 A 或改 B 都会命中同一对。
+
+/** 一条互斥对：两个布尔键不得同时为 true */
+export interface ConfigConflictPair {
+  a: string;
+  b: string;
+}
+
+/**
+ * 从定义表派生全部互斥对（`conflictsWith` 声明的展开 + 双向补齐 + 去重）。
+ *
+ * 只允许单边声明：同一对若两侧都写了，按 `key < pair` 字典序去重——声明侧没有
+ * 信息量，还会让「改一侧忘了另一侧」变成静默的双份维护。
+ * 结果按 `a|b` 排序，保证单测与 invariant 的比对稳定。
+ */
+export function getConflictPairs(
+  definitions: RuntimeConfigDefinition[]
+): ConfigConflictPair[] {
+  const seen = new Set<string>();
+  const pairs: ConfigConflictPair[] = [];
+  for (const def of definitions) {
+    for (const other of def.conflictsWith ?? []) {
+      const a = def.key < other ? def.key : other;
+      const b = def.key < other ? other : def.key;
+      const id = `${a}|${b}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      pairs.push({ a, b });
+    }
+  }
+  return pairs.sort((x, y) => `${x.a}|${x.b}`.localeCompare(`${y.a}|${y.b}`));
+}
+
+/**
+ * 找出「新制造」的互斥违规：最终态里互斥对两端同时为 true，且当前态并非已处于
+ * 该共存状态。
+ *
+ * 已存在的遗留共存（门禁上线前的状态）不算新违规——与 findNewDependencyViolations
+ * 同一分工：门禁拦「新制造」，一致性检测（detectConflictViolations）揪「已存在」。
+ *
+ * 对称性：传入的 pairs 由 getConflictPairs 补齐为双向，故本函数无需关心本次
+ * 变更的是 a 还是 b。
+ */
+export function findNewConflictViolations(
+  pairs: ConfigConflictPair[],
+  current: Record<string, boolean>,
+  final: Record<string, boolean>
+): ConfigConflictViolation[] {
+  const result: ConfigConflictViolation[] = [];
+  for (const pair of pairs) {
+    const bothOn = final[pair.a] === true && final[pair.b] === true;
+    if (!bothOn) continue;
+    const alreadyOn =
+      current[pair.a] === true && current[pair.b] === true;
+    if (alreadyOn) continue;
+    result.push({ key: pair.a, other: pair.b });
+  }
+  return result;
 }

@@ -625,7 +625,13 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
     defaultValue: false,
     isPublic: false,
     tier: 'admin',
-    impact: '开启后新手机号验证码登录即自动建号，无需填写用户名密码。',
+    impact:
+      '开启后新手机号验证码登录即自动建号，无需填写用户名密码。' +
+      '与 requireEmailVerification（强制邮箱验证）互斥：自动注册创建的是无邮箱账号，' +
+      '而强制邮箱验证要求登录前必须有已验证邮箱——两者同时开启会让自动注册的账号' +
+      '永远无法再次登录（永久死账号）。二者只能开其一：要自动注册须先关闭' +
+      'requireEmailVerification，要强制邮箱验证须先关闭本项。',
+    conflictsWith: ['requireEmailVerification'],
   },
   {
     key: 'userCancelGraceDays',
@@ -1251,7 +1257,12 @@ export const RUNTIME_CONFIG_DEFINITIONS: RuntimeConfigDefinition[] = [
       '两种模式切换都不会自动开启本项（安全模式仅建议、不强制），切换模式会将其重置为关闭，' +
       '需管理员手动开启。开启后：未绑定者登录锁定至绑定页、已绑定者登录与修改密码必须带动态码；' +
       '关闭后管理员可仅凭密码登录（等保 2.0 8.1.4.1(d) 要求双因素）。' +
-      'admin-auth、jwt.strategy 与改密校验均每次读取，改完即生效。',
+      'admin-auth、jwt.strategy 与改密校验均每次读取，改完即生效。' +
+      '【逃生口】开启后只有带 TOTP 的管理员能进门。若密钥丢失、或本机只剩未绑定的' +
+      '管理员，配置页也进不去——/runtime-config 不在 TOTP 解锁白名单内，锁定态下' +
+      '「改配置」本身也被同一道锁拦下，页面上关不掉本项。此时须直接改库把 value ' +
+      '改回 false，并清掉缓存键 runtime_config:mfaEnforceEnabled 与 ' +
+      'runtime_config:all 才生效。开启前请确认至少一把 TOTP 密钥已离线备份。',
     profiles: { secure: false, normal: false },
   },
   // ───────────────────────── 安全：口令策略 ─────────────────────────

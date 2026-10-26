@@ -203,6 +203,14 @@ export class RuntimeConfigResponseDto {
   requires?: string[];
 
   @ApiPropertyOptional({
+    description:
+      '互斥声明：本项为 true 时列出的配置项必须同为 false（不可同时开启）',
+    type: [String],
+    example: ['requireEmailVerification'],
+  })
+  conflictsWith?: string[];
+
+  @ApiPropertyOptional({
     description: '通道配置项标记：本项属于哪个通道（如 mail）',
     example: 'mail',
   })
@@ -284,6 +292,14 @@ export class RuntimeConfigDefinitionDto {
   requires?: string[];
 
   @ApiPropertyOptional({
+    description:
+      '互斥声明：本项为 true 时列出的配置项必须同为 false（不可同时开启）',
+    type: [String],
+    example: ['requireEmailVerification'],
+  })
+  conflictsWith?: string[];
+
+  @ApiPropertyOptional({
     description: '通道配置项标记：本项属于哪个通道（如 mail）',
     example: 'mail',
   })
@@ -311,6 +327,23 @@ export class RuntimeConfigDependencyViolationDto {
     example: 'mailEnabled',
   })
   required: string;
+}
+
+/**
+ * 开关互斥违规（互斥对两端同时为开）
+ */
+export class RuntimeConfigConflictViolationDto {
+  @ApiProperty({
+    description: '互斥对的一端配置键',
+    example: 'allowAutoRegisterOnPhoneLogin',
+  })
+  key: string;
+
+  @ApiProperty({
+    description: '互斥对的另一端配置键',
+    example: 'requireEmailVerification',
+  })
+  other: string;
 }
 
 /**

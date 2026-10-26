@@ -106,6 +106,32 @@ export class OssAuthProvider
       if (allowAutoRegister && allowRegister) {
         // 首启守卫：零用户系统禁止自动注册抢先占用「首个用户」
         await this.initializationService.assertInitialized();
+
+        // 死账号防御：自动注册创建的是**无邮箱**账号（见下方 create 调用，
+        // 不传 email），而 requireEmailVerification 开启时登录必须有已验证邮箱
+        // ——两者同时开启会让自动注册的账号永远无法再次登录。配置层已用
+        // conflictsWith 在更新路径拦下「新制造」的共存，这里覆盖门禁上线前
+        // 遗留的共存状态（门禁只拦新制造、不动遗留态）。
+        const requireEmailVerification = await this.runtimeConfigService.getValue<boolean>(
+          'requireEmailVerification'
+        );
+        if (requireEmailVerification) {
+          this.logger.warn(
+            `拒绝手机自动注册（requireEmailVerification 已开启，` +
+              `自动注册的账号将无邮箱、永远无法登录）: ${formattedPhone}`
+          );
+          throw new HttpException(
+            {
+              code: 'PHONE_NOT_REGISTERED',
+              message:
+                I18nContext.current()?.t('success.phone_not_registered') ??
+                '手机号未注册，请先注册',
+              phone: formattedPhone,
+            },
+            HttpStatus.PRECONDITION_FAILED,
+          );
+        }
+
         this.logger.log(`手机号未注册，开始自动注册: ${formattedPhone}`);
 
         const baseUsername = `u_${formattedPhone.slice(-8)}`;
