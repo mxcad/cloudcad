@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
  * 因此 vi.mock('mxdraw') 提供包含 store.state.MxFun 的假对象供 guard 打补丁。
  */
 const mocks = vi.hoisted(() => ({
-  handleVipFeatureRequiredError: vi.fn(),
+  beginIntent: vi.fn(),
   getQueryData: vi.fn(),
   mxdraw: {
     MxFun: {},
@@ -25,9 +25,43 @@ vi.mock('mxdraw', () => ({
   MxFun: mocks.mxdraw.MxFun,
   store: mocks.mxdraw.store,
 }));
-vi.mock('@/utils/vipFeatureGuide', () => ({
-  handleVipFeatureRequiredError: mocks.handleVipFeatureRequiredError,
+vi.mock('./intentChain', () => ({
+  VIP_EXPORT_CHAINS: {
+    Mx_ExportPDF: {
+      id: 'vip-Mx_ExportPDF',
+      action: { type: 'Mx_ExportPDF' },
+      preconditions: ['auth', 'vip'],
+      resumeAfter: 'document-loaded',
+    },
+    Mx_ExportDWG: {
+      id: 'vip-Mx_ExportDWG',
+      action: { type: 'Mx_ExportDWG' },
+      preconditions: ['auth', 'vip'],
+      resumeAfter: 'document-loaded',
+    },
+    Mx_ExportDXF: {
+      id: 'vip-Mx_ExportDXF',
+      action: { type: 'Mx_ExportDXF' },
+      preconditions: ['auth', 'vip'],
+      resumeAfter: 'document-loaded',
+    },
+    showDWGCutDialog: {
+      id: 'vip-showDWGCutDialog',
+      action: { type: 'showDWGCutDialog' },
+      preconditions: ['auth', 'vip'],
+      resumeAfter: 'document-loaded',
+    },
+    Mx_PrintDialog: {
+      id: 'vip-Mx_PrintDialog',
+      action: { type: 'Mx_PrintDialog' },
+      preconditions: ['auth', 'vip'],
+      resumeAfter: 'document-loaded',
+    },
+  },
+  beginIntent: mocks.beginIntent,
 }));
+// exportGate 用真实实现（会员判定走 localStorage user + @cloudcad/platform
+// membershipState）；只 mock 它的运行时开关来源（React 查询缓存）
 vi.mock('@/lib/queryClient', () => ({
   queryClient: { getQueryData: mocks.getQueryData },
 }));
@@ -53,8 +87,8 @@ async function loadInstalled(): Promise<VipCommandGuardModule> {
 
 describe('vipCommandGuard', () => {
   beforeEach(() => {
-    mocks.handleVipFeatureRequiredError.mockReset();
-    mocks.getQueryData.mockReset().mockReturnValue({ freeExportDownloadEnabled: false });
+    mocks.beginIntent.mockReset();
+    mocks.getQueryData.mockReset().mockReturnValue(undefined);
 
     originalSend = vi.fn().mockReturnValue(true);
     originalInit = vi.fn();
@@ -88,20 +122,19 @@ describe('vipCommandGuard', () => {
     const result = await fakeMxFun.sendStringToExecute('Mx_Undo');
     expect(result).toBe(true);
     expect(originalSend.mock.calls[0][0]).toBe('Mx_Undo');
-    expect(mocks.handleVipFeatureRequiredError).not.toHaveBeenCalled();
+    expect(mocks.beginIntent).not.toHaveBeenCalled();
   });
 
-  it('VIP 命令：非会员（含游客）拦截，不执行原命令，提示错误并复用购买弹窗', async () => {
+  it('VIP 命令：非会员（含游客）拦截，不执行原命令，挂起意图链（ADR-0081）', async () => {
     await loadInstalled();
     await fakeMxFun.sendStringToExecute('Mx_ExportDWG');
 
-    // 原实现未被调用（命令未发往引擎）；错误提示与购买弹窗统一由
-    // handleVipFeatureRequiredError 承担（内部 confirm 引导，guard 不直接 toast）
+    // 原实现未被调用（命令未发往引擎）；登录/购买引导统一由意图链承担
+    // （beginIntent 内部按前置顺序：未登录走登录闸门、已登录弹购买引导）
     expect(originalSend.mock.results).toEqual([]);
-    expect(mocks.handleVipFeatureRequiredError).toHaveBeenCalledTimes(1);
-    expect(mocks.handleVipFeatureRequiredError).toHaveBeenCalledWith(
-      undefined,
-      '导出下载为会员专属功能，开通 VIP 后即可使用'
+    expect(mocks.beginIntent).toHaveBeenCalledTimes(1);
+    expect(mocks.beginIntent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'vip-Mx_ExportDWG' })
     );
   });
 
@@ -115,7 +148,7 @@ describe('vipCommandGuard', () => {
     await fakeMxFun.sendStringToExecute('Mx_ExportDWG');
     expect(originalSend.mock.calls[0][0]).toBe('Mx_ExportDWG');
     expect(originalSend.mock.results[0].value).toBe(true);
-    expect(mocks.handleVipFeatureRequiredError).not.toHaveBeenCalled();
+    expect(mocks.beginIntent).not.toHaveBeenCalled();
   });
 
   it('VIP 命令：会员到期（expiresAt 已过）按非会员拦截', async () => {
@@ -130,7 +163,7 @@ describe('vipCommandGuard', () => {
 
     await fakeMxFun.sendStringToExecute('Mx_ExportPDF');
     expect(originalSend.mock.results).toEqual([]);
-    expect(mocks.handleVipFeatureRequiredError).toHaveBeenCalledTimes(1);
+    expect(mocks.beginIntent).toHaveBeenCalledTimes(1);
   });
 
   it('VIP 命令：freeExportDownloadEnabled 开关开放时非会员也放行（后端仍有门控兜底）', async () => {
@@ -139,7 +172,7 @@ describe('vipCommandGuard', () => {
 
     await fakeMxFun.sendStringToExecute('Mx_ExportDXF');
     expect(originalSend.mock.results[0].value).toBe(true);
-    expect(mocks.handleVipFeatureRequiredError).not.toHaveBeenCalled();
+    expect(mocks.beginIntent).not.toHaveBeenCalled();
   });
 
   it('initQuickCommand 记录命令组：组内子命令随组首的 VIP 命令一并门控', async () => {
@@ -149,7 +182,11 @@ describe('vipCommandGuard', () => {
     // 组首为 VIP 命令 → 组内子命令受门控
     await fakeMxFun.sendStringToExecute('print_sub');
     expect(originalSend.mock.results).toEqual([]);
-    expect(mocks.handleVipFeatureRequiredError).toHaveBeenCalledTimes(1);
+    // 子命令随组首挂链：充值/登录成功后续跑组首 Mx_PrintDialog 重新触发整组
+    expect(mocks.beginIntent).toHaveBeenCalledTimes(1);
+    expect(mocks.beginIntent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'vip-Mx_PrintDialog' })
+    );
 
     // 非 VIP 组命令不受影响（print_sub 被拦截，底层仅记录 undo_sub 这一次调用)
     await fakeMxFun.sendStringToExecute('undo_sub');

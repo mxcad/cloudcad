@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   fileId: null as string | null,
   fileName: null as string | null,
   resumeInFlight: false,
-  beginShareChain: vi.fn(),
+  beginIntent: vi.fn(),
   emit: vi.fn(),
   handleError: vi.fn(),
   globalShowToast: vi.fn(),
@@ -33,8 +33,14 @@ vi.mock('@/stores/useCADEditorStore', () => ({
 }));
 vi.mock('../../drawingSession', () => ({ emit: mocks.emit }));
 vi.mock('../intentChain', () => ({
-  beginShareChain: mocks.beginShareChain,
-  isShareChainResumeInFlight: () => mocks.resumeInFlight,
+  SHARE_CHAIN: {
+    id: 'share-current-drawing',
+    action: { type: 'Mx_Share' },
+    preconditions: ['auth', 'cloud-existence'],
+    resumeAfter: 'document-loaded',
+  },
+  beginIntent: mocks.beginIntent,
+  isChainResumeInFlight: () => mocks.resumeInFlight,
 }));
 
 type ShareCommandModule = typeof import('./shareCommand');
@@ -64,7 +70,7 @@ describe('ShareCommand', () => {
       fileId: 'node-1',
       fileName: 'a.mxweb',
     });
-    expect(mocks.beginShareChain).not.toHaveBeenCalled();
+    expect(mocks.beginIntent).not.toHaveBeenCalled();
   });
 
   it('文件名缺省 → 用 untitled 兜底', async () => {
@@ -81,19 +87,19 @@ describe('ShareCommand', () => {
 
   it('无云端节点 + auth-blocked → unauthorized（链已挂起，等登录后续跑）', async () => {
     const { ShareCommand } = await load();
-    mocks.beginShareChain.mockResolvedValue('auth-blocked');
+    mocks.beginIntent.mockResolvedValue('auth-blocked');
 
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: false,
       error: 'unauthorized',
     });
-    expect(mocks.beginShareChain).toHaveBeenCalledTimes(1);
+    expect(mocks.beginIntent).toHaveBeenCalledTimes(1);
     expect(mocks.emit).not.toHaveBeenCalled();
   });
 
   it('无云端节点 + cancelled → cancelled', async () => {
     const { ShareCommand } = await load();
-    mocks.beginShareChain.mockResolvedValue('cancelled');
+    mocks.beginIntent.mockResolvedValue('cancelled');
 
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: false,
@@ -103,7 +109,7 @@ describe('ShareCommand', () => {
 
   it('无云端节点 + cloud-save-pending → success（后续由另存为回报推进）', async () => {
     const { ShareCommand } = await load();
-    mocks.beginShareChain.mockResolvedValue('cloud-save-pending');
+    mocks.beginIntent.mockResolvedValue('cloud-save-pending');
 
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: true,
@@ -118,7 +124,7 @@ describe('ShareCommand', () => {
       success: false,
       error: 'no-file-id',
     });
-    expect(mocks.beginShareChain).not.toHaveBeenCalled();
+    expect(mocks.beginIntent).not.toHaveBeenCalled();
     expect(mocks.globalShowToast).toHaveBeenCalledWith(
       '请先保存图纸到云端后再分享',
       'warning'
@@ -127,7 +133,7 @@ describe('ShareCommand', () => {
 
   it('意图链抛错 → 记录 + 弹错误提示 + success:false', async () => {
     const { ShareCommand } = await load();
-    mocks.beginShareChain.mockRejectedValue(new Error('boom'));
+    mocks.beginIntent.mockRejectedValue(new Error('boom'));
 
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: false,

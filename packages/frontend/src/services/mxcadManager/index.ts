@@ -74,14 +74,18 @@ export { openLocalFile, handleOpenFileCommand } from './mxcadOpenFile';
 
 export {
   SHARE_CHAIN,
-  beginShareChain,
-  resumeShareChain,
-  clearShareChain,
-  hasShareChain,
-  isShareChainResumeInFlight,
+  SAVE_AS_CHAIN,
+  SAVE_CHAIN,
+  VIP_EXPORT_CHAINS,
+  beginIntent,
+  resumeIntent,
+  clearIntentChain,
+  hasIntentChain,
+  isChainResumeInFlight,
+  intentFacts,
   signalShareChainCloudNodeCreated,
 } from './intentChain';
-export type { ShareChainStart } from './intentChain';
+export type { IntentStart } from './intentChain';
 
 // ==================== 私人空间 ID ====================
 

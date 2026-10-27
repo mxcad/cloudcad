@@ -53,12 +53,12 @@ export interface SaveAsDetail {
 }
 
 /**
- * 需要登录信号的稳定类型：区分「保存」「另存为」与「分享」（分享经意图链
- * 挂起后复用本总线请求登录，ADR-0081）。
+ * 需要登录信号的稳定类型：区分「保存」「另存为」「分享」与「导出」（后三者经
+ * 意图链挂起后复用本总线请求登录，ADR-0081）。
  * 消费端据此取展示文案，禁止再用翻译串（如 action.includes(t('另存为'))）做分派——
  * 生产端曾恒发 t('保存文件')，导致「另存为」分支不可达且两端译文互为隐式协议。
  */
-export type SaveRequiredKind = 'save' | 'saveAs' | 'share';
+export type SaveRequiredKind = 'save' | 'saveAs' | 'share' | 'export';
 
 /** 需要保存信号 payload（对应原 mxcad-save-required window 事件） */
 export interface SaveRequiredDetail {

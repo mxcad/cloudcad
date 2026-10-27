@@ -16,6 +16,20 @@ vi.mock('@/utils/notificationEvents', () => ({
   globalShowToast: vi.fn(),
 }));
 
+// 意图链整体 mock 掉（ADR-0081）：未登录分支只断言「挂链 + unauthorized」，
+// 链的判定/持久化语义在 intentChain.spec 与平台层覆盖；同时避免真实
+// intentChain → vipFeatureGuide → tokenRefresh 的顶层副作用进入本测试
+const intentMocks = vi.hoisted(() => ({ beginIntent: vi.fn() }));
+vi.mock('../intentChain', () => ({
+  SAVE_CHAIN: {
+    id: 'save-to-cloud',
+    action: { type: 'Mx_Save' },
+    preconditions: ['auth'],
+    resumeAfter: 'document-loaded',
+  },
+  beginIntent: intentMocks.beginIntent,
+}));
+
 vi.mock('../mxcadHelpers', () => ({
   isEmptyDocumentName: vi.fn(
     (name: string | null | undefined) =>
@@ -36,8 +50,7 @@ vi.mock('../mxcadManager', () => ({
   },
 }));
 
-import { emit, subscribe, clearDrawingSessionListeners } from '../../drawingSession';
-import { CAD_EVENTS } from '@/constants/events';
+import { clearDrawingSessionListeners } from '../../drawingSession';
 import { isAuthenticated } from '@/utils/authCheck';
 import { isAccessTokenExpired } from '@/utils/tokenUtils';
 import { globalShowToast } from '@/utils/notificationEvents';
@@ -93,18 +106,18 @@ beforeEach(() => {
 });
 
 describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
-  it('未登录/令牌过期 → bus 发出 SAVE_REQUIRED 并返回 unauthorized', async () => {
+  it('未登录/令牌过期 → 挂起保存意图链（登录成功后自动续跑）并返回 unauthorized', async () => {
     (isAuthenticated as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
       false
     );
-    const handler = vi.fn();
-    subscribe(CAD_EVENTS.SAVE_REQUIRED, handler);
 
     const command = new SaveCommand();
     const result = await command.execute(makeCtx());
 
     expect(result).toEqual({ success: false, error: 'unauthorized' });
-    expect(handler).toHaveBeenCalledWith({ kind: 'save' });
+    expect(intentMocks.beginIntent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'save-to-cloud' })
+    );
   });
 
   it('新图纸打开中（pendingOpen）→ 拒绝保存并提示，不进入保存分支', async () => {

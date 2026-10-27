@@ -1,8 +1,7 @@
 import { isAuthenticated } from '@/utils/authCheck';
 import { isAccessTokenExpired } from '@/utils/tokenUtils';
 import { cancelLoginRedirect } from '@/config/clientSetup';
-import { CAD_EVENTS } from '@/constants/events';
-import { emit } from '../../drawingSession';
+import { SAVE_AS_CHAIN, beginIntent } from '../intentChain';
 import { triggerSaveAs } from '../mxcadHelpers';
 import type { Command, CommandContext, CommandResult } from './types';
 
@@ -12,7 +11,9 @@ export class SaveAsToCloudCommand implements Command {
   async execute(_ctx: CommandContext): Promise<CommandResult> {
     if (!isAuthenticated() || isAccessTokenExpired()) {
       cancelLoginRedirect();
-      emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'saveAs' });
+      // 挂起另存为意图链（ADR-0081）：登录成功后自动续跑打开另存为对话框，
+      // 用户原始意图不丢失（此前只弹登录提示，回来后意图即丢）
+      void beginIntent(SAVE_AS_CHAIN);
       return { success: false, error: 'unauthorized' };
     }
     await triggerSaveAs();

@@ -1,10 +1,7 @@
 import { MxFun, store } from 'mxdraw';
-import { membershipState } from '@cloudcad/platform';
-import { t } from '@/languages';
-import { queryClient } from '@/lib/queryClient';
-import { queryKeys } from '@/lib/queryKeys';
-import { handleVipFeatureRequiredError } from '@/utils/vipFeatureGuide';
 import { VIP_EXPORT_COMMANDS } from './applyVipExportIcons';
+import { VIP_EXPORT_CHAINS, beginIntent } from './intentChain';
+import { isExportDownloadAllowed } from './exportGate';
 
 /**
  * VIP 命令前置门控（CAD 编辑器内命令触发前先校验会员，再放行执行）。
@@ -16,16 +13,18 @@ import { VIP_EXPORT_COMMANDS } from './applyVipExportIcons';
  *   最后整体 Object.freeze 防止后续任何修改）
  * - initQuickCommand 每次调用记录最新命令组，供 sendStringToExecute 判断
  *   组内子命令是否属于某个以 VIP 命令开头的命令组
- * - 非会员拦截时不把命令发往引擎：web 版以「复用 API 403 兜底时的购买弹窗
- *   （handleVipFeatureRequiredError）」等价替换参考实现的
- *   `originalSendStringToExecute("MxPayVIP")`（web 引擎无此命令），并同样给出错误提示
+ * - 非会员拦截时不把命令发往引擎：web 版以「挂起意图链（ADR-0081）」等价替换
+ *   参考实现的 `originalSendStringToExecute("MxPayVIP")`（web 引擎无此命令）——
+ *   未登录走登录闸门、已登录弹购买引导，登录/充值成功后由意图链自动续跑原命令
  *
  * web 版差异：
  * - 参照 `MxElectronAPI.applyQueryMemberPermission()`（异步服务端校验）的位置，
- *   改为 isExportDownloadAllowed()：会员状态读 localStorage user（AuthContext 在
- *   登录/刷新/购买成功后同步），并叠加运行时开关 freeExportDownloadEnabled 放行
- *   （与 useDownloadFormatModal 的 canExportDownload 判定一致，后端仍有门控兜底）
- * - 门控命令清单与 applyVipExportIcons 的 VIP 图标替换同源（VIP_EXPORT_COMMANDS）
+ *   改为 isExportDownloadAllowed()（exportGate 唯一出口）：会员状态读 localStorage
+ *   user（AuthContext 在登录/刷新/购买成功后同步），并叠加运行时开关
+ *   freeExportDownloadEnabled 放行（与 useDownloadFormatModal 的 canExportDownload
+ *   判定一致，后端仍有门控兜底）
+ * - 门控命令清单与 applyVipExportIcons 的 VIP 图标替换同源（VIP_EXPORT_COMMANDS），
+ *   意图链定义（VIP_EXPORT_CHAINS）亦从该清单派生
  */
 let installed = false;
 
@@ -57,25 +56,28 @@ export function installVipCommandGuard(): void {
 
   Object.defineProperty(mxf, 'sendStringToExecute', {
     value: async function (cmd: string, ...args: any[]) {
-      if (
-        VIP_EXPORT_COMMANDS.includes(cmd) ||
-        initQuickCommand.some((item) => {
-          const first = item[0];
-          return (
-            first !== undefined &&
-            VIP_EXPORT_COMMANDS.includes(first) &&
-            item.includes(cmd)
-          );
-        })
-      ) {
+      // 本次调用归属的 VIP 命令：命令本身，或其所属快捷命令组的组首
+      // （引擎按组内子命令分发，组首为 VIP 命令时子命令随组首门控）
+      const vipCommand = VIP_EXPORT_COMMANDS.includes(cmd)
+        ? cmd
+        : initQuickCommand.find((item) => {
+            const first = item[0];
+            return (
+              first !== undefined &&
+              VIP_EXPORT_COMMANDS.includes(first) &&
+              item.includes(cmd)
+            );
+          })?.[0];
+
+      if (vipCommand) {
         // 会员前置验证（web 版对应参考实现的 MxElectronAPI.applyQueryMemberPermission）
-        if (await isExportDownloadAllowed()) {
+        if (isExportDownloadAllowed()) {
           return originalSendStringToExecute.call(mxf, cmd, ...args);
         }
-        void handleVipFeatureRequiredError(
-          undefined,
-          t('导出下载为会员专属功能，开通 VIP 后即可使用')
-        );
+        // 会员前置未过：挂起意图链（ADR-0081）——未登录走登录闸门、已登录弹购买
+        // 引导，登录/充值成功后由 resumeIntent 自动续跑组首命令（重新触发整组）
+        const chain = VIP_EXPORT_CHAINS[vipCommand];
+        if (chain) void beginIntent(chain);
         return undefined;
       }
       return originalSendStringToExecute.call(mxf, cmd, ...args);
@@ -88,51 +90,4 @@ export function installVipCommandGuard(): void {
   Object.freeze(mxf);
 
   installed = true;
-}
-
-/** 本地缓存用户（AuthContext 登录/刷新时同步写入 localStorage 'user'） */
-interface LocalUserLike {
-  membershipTierLevel?: number;
-  membershipExpiresAt?: string | null;
-}
-
-function readLocalUser(): LocalUserLike | null {
-  try {
-    const raw = localStorage.getItem('user');
-    if (!raw) return null;
-    return JSON.parse(raw) as LocalUserLike;
-  } catch {
-    return null;
-  }
-}
-
-/** 会员判定走 @cloudcad/platform 唯一出口（与 useMembership 同口径，永久会员 expiresAt === null 视为长期有效） */
-function isVipUser(user: LocalUserLike | null): boolean {
-  if (!user) return false;
-  return membershipState({
-    tierLevel: user.membershipTierLevel ?? 0,
-    expiresAt: user.membershipExpiresAt ?? null,
-  }).isVip;
-}
-
-/**
- * 非 React 环境读取运行时开关（freeExportDownloadEnabled）：
- * 复用 React 查询缓存（RuntimeConfigProvider 已按 ADR-0030 预取缓存），
- * 未就绪时按未开放处理（保守默认，避免误放行）。
- */
-function readFreeExportDownloadEnabled(): boolean {
-  try {
-    const config = queryClient.getQueryData<{
-      freeExportDownloadEnabled?: boolean;
-    }>(queryKeys.runtimeConfig.public);
-    return config?.freeExportDownloadEnabled ?? false;
-  } catch {
-    return false;
-  }
-}
-
-/** 导出下载门控放行判定：运行时开关开放 或 当前用户为会员（游客/非会员均拦截） */
-async function isExportDownloadAllowed(): Promise<boolean> {
-  if (readFreeExportDownloadEnabled()) return true;
-  return isVipUser(readLocalUser());
 }

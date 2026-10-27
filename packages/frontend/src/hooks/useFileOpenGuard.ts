@@ -3,14 +3,17 @@ import { useLocation } from 'react-router-dom';
 import { CAD_EVENTS } from '@/constants/events';
 import { t } from '@/languages';
 import {
-  clearShareChain,
+  clearIntentChain,
   exitCurrentCollaboration,
   hasDocumentLoaded,
   mxcadManager,
   refreshFileName,
-  resumeShareChain,
+  resumeIntent,
 } from '@/services/mxcadManager';
 import { subscribe, type SaveRequiredDetail } from '@/services/drawingSession';
+import { canExportDownload } from '@/utils/vipFeatureGuide';
+import { useMembership } from './useMembership';
+import { useRuntimeConfig } from '@/contexts/RuntimeConfigContext';
 import { useLoginGate, type LoginGate } from './useLoginGate';
 
 export interface UseFileOpenGuardOptions {
@@ -59,7 +62,7 @@ export function useFileOpenGuard({
       pendingShowActionRef.current = false;
     },
     // 用户放弃该动作 → 清除已挂起的意图链，避免下次登录时自动续跑（ADR-0081 D5）
-    onLoginPromptClose: clearShareChain,
+    onLoginPromptClose: clearIntentChain,
   });
 
   const hideEditor = useCallback(() => {
@@ -151,16 +154,16 @@ export function useFileOpenGuard({
       void mxcadManager
         .reloadCurrentFile()
         .catch(() => console.warn('[useFileOpenGuard] reloadCurrentFile 失败'))
-        .finally(resumeShareChain);
+        .finally(resumeIntent);
     } else if (fileId && !hasDocumentLoaded(mxcadManager)) {
       // 云图纸仍在下载/解析 → 等 openFileComplete 才续跑（不改变原有 reload 判据）
       openCompleteUnsubscribe = subscribe(
         CAD_EVENTS.OPEN_COMPLETE,
-        resumeShareChain
+        resumeIntent
       );
     } else {
       // 本地/新建文档无 fileId 可 reload，文档本就是加载态 → 直接续跑
-      resumeShareChain();
+      resumeIntent();
     }
 
     // 清理必须覆盖所有分支：早退分支若在 return 前 return，订阅会泄漏到卸载之后
@@ -168,6 +171,25 @@ export function useFileOpenGuard({
       openCompleteUnsubscribe?.();
     };
   }, [isAuthenticated, fileId]);
+
+  // 导出闸门（会员 ∨ 开放免费导出）翻转 → 续跑意图链：充值成功 / 管理员开放
+  // 免费导出后，被 VIP 闸门拦下的原始导出动作自动续跑（ADR-0081）。
+  // 登录翻转已由上面的 [isAuthenticated, fileId] effect 续跑（document-loaded
+  // 锚点）；这里只兜「已登录」翻转，文档未就绪或 reload 进行中时跳过
+  // （锚点路径稍后会续跑，resumeIntent 幂等）。
+  const membership = useMembership();
+  const { config: runtimeConfig } = useRuntimeConfig();
+  const exportAllowed = canExportDownload(
+    !!membership?.isVip,
+    runtimeConfig.freeExportDownloadEnabled
+  );
+
+  useEffect(() => {
+    if (!exportAllowed) return;
+    if (!mxcadManager.isReady() || mxcadManager.hasPendingOpen()) return;
+    if (fileId && !hasDocumentLoaded(mxcadManager)) return;
+    resumeIntent();
+  }, [exportAllowed, fileId]);
 
   const { showLoginPrompt: gateShowLoginPrompt, handleLoginPromptClose } =
     loginGate;
@@ -191,7 +213,9 @@ export function useFileOpenGuard({
           ? t('另存为')
           : payload?.kind === 'share'
             ? t('保存并分享')
-            : t('保存文件');
+            : payload?.kind === 'export'
+              ? t('导出文件')
+              : t('保存文件');
       loginGate.requireLogin(label);
     };
 

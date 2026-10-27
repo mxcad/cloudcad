@@ -1,6 +1,5 @@
 import { t } from '@/languages';
-import { CAD_EVENTS } from '@/constants/events';
-import { emit } from '../../drawingSession';
+import { SAVE_CHAIN, beginIntent } from '../intentChain';
 import { handleError } from '@/utils/errorHandler';
 import { hideGlobalLoading } from '@/services/loadingService';
 import { globalShowToast } from '@/utils/notificationEvents';
@@ -21,7 +20,8 @@ export class SaveCommand implements Command {
   async execute(ctx: CommandContext): Promise<CommandResult> {
     try {
       if (!isAuthenticated() || isAccessTokenExpired()) {
-        emit(CAD_EVENTS.SAVE_REQUIRED, { kind: 'save' });
+        // 挂起保存意图链（ADR-0081）：登录成功后自动续跑执行保存
+        void beginIntent(SAVE_CHAIN);
         return { success: false, error: 'unauthorized' };
       }
 

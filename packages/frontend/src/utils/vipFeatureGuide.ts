@@ -35,11 +35,14 @@ export function canExportDownload(
  * 导出下载门控提示（预检失败或后端 403 兜底时统一调用）：
  * - 游客：confirm 弹窗引导登录，确认后存储购买意图并跳转登录页，登录成功后自动弹出 VIP 购买弹窗
  * - 登录用户：confirm 后打开 VIP 购买弹窗（PlanSelectOverlay）
+ *
+ * 返回 true = 用户确认并触发了购买/登录流程；false = 用户取消
+ * （意图链据此清链，避免后续锚点续跑重复弹引导）。
  */
 export async function handleVipFeatureRequiredError(
   error?: unknown,
   message?: string
-): Promise<void> {
+): Promise<boolean> {
   const fallback = t('导出下载为会员专属功能，开通 VIP 后即可使用');
   const msg =
     message ||
@@ -54,7 +57,7 @@ export async function handleVipFeatureRequiredError(
       confirmText: t('前往登录'),
       cancelText: t('取消'),
     });
-    if (!confirmed) return;
+    if (!confirmed) return false;
     // 存储待办购买意图，登录后自动弹出 VIP 购买弹窗
     writeJson(
       'pendingVipPurchase',
@@ -62,7 +65,7 @@ export async function handleVipFeatureRequiredError(
       'session'
     );
     redirectToLogin();
-    return;
+    return true;
   }
 
   const confirmed = await globalShowConfirm({
@@ -71,7 +74,7 @@ export async function handleVipFeatureRequiredError(
     confirmText: t('去购买'),
     cancelText: t('取消'),
   });
-  if (!confirmed) return;
+  if (!confirmed) return false;
 
   // 打开购买弹窗（planSelectStore 监听 QUOTA_GUIDE_EVENT）；reason 用于弹窗内展示引导文案
   window.dispatchEvent(
@@ -79,4 +82,5 @@ export async function handleVipFeatureRequiredError(
       detail: { restrictionKey: EXPORT_DOWNLOAD_FEATURE },
     })
   );
+  return true;
 }
