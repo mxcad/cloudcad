@@ -162,11 +162,14 @@ describe("validateDefinitions", () => {
     expectViolation(without("securityMode"), "必须包含 securityMode");
   });
 
-  it("出厂默认的刻意例外被改掉会被抓住", () => {
-    expectViolation(patch("adminLoginEntry", { defaultValue: "ADMIN_ONLY" }), "adminLoginEntry 出厂默认必须是 MERGED");
+  it("profile 键出厂默认偏离 normal 侧会被抓住", () => {
+    expectViolation(
+      patch("adminLoginEntry", { defaultValue: "ADMIN_ONLY" }),
+      "profiles:adminLoginEntry 出厂默认必须取 normal 侧"
+    );
     expectViolation(
       patch("freeExportDownloadEnabled", { defaultValue: false }),
-      "freeExportDownloadEnabled 出厂默认必须是 true"
+      "profiles:freeExportDownloadEnabled 出厂默认必须取 normal 侧"
     );
   });
 

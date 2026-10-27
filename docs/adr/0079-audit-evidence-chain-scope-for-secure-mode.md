@@ -95,6 +95,4 @@ profile 批量应用写**一条**切换级审计记录（谁、何时、目标�
 - **ADR-0077** — 安全模式 profile 批量应用复用既有优先级链（D1 的调用方；
   且 T17 选 A 使本 ADR 的 D1 + D2 从可选升为刚需）
 - **ADR-0078** — `variant` 不下沉运行时（形态进打包期、模式进运行时）
-- `docs/security-mode-deferred-decisions.md` — 拍板记录
-- `docs/security-mode-dual-profile-plan.md` — T6 四重缺口与容量数据原始勘察
 - 子票：**T6**（本 ADR）；相关待排：`runtime_config_logs` 补字段、现值纳入哈希链、配置基线快照、全量审计容量核算

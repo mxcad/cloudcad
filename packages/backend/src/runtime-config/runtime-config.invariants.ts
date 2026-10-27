@@ -413,22 +413,19 @@ export function validateDefinitions(
     }
   }
 
-  // ── 出厂默认不取安全侧的两个刻意例外 ──
-  // 其余声明 profiles 的键出厂默认都取安全侧（如 rateLimitPublicMax 出厂 100 <
-  // normal 10000、passwordPolicyMinLength 出厂 10 > normal 6），即新装偏保守、
-  // 放宽靠显式应用普通模式 profile。两个刻意例外：新装即允许管理员走普通登录入口、
-  // 新装即放开免费导出下载（导出门控是商业策略而非等保项，安全模式才收敛）。
-  const adminLoginEntry = byKey.get('adminLoginEntry');
-  if (adminLoginEntry && adminLoginEntry.defaultValue !== 'MERGED') {
-    violations.push(
-      `adminLoginEntry 出厂默认必须是 MERGED（实际 ${String(adminLoginEntry.defaultValue)}）`
-    );
-  }
-  const freeExport = byKey.get('freeExportDownloadEnabled');
-  if (freeExport && freeExport.defaultValue !== true) {
-    violations.push(
-      `freeExportDownloadEnabled 出厂默认必须是 true（实际 ${String(freeExport.defaultValue)}）`
-    );
+  // ── 出厂默认统一取普通侧（normal）──
+  // 声明 profiles 的键，出厂默认必须等于 normal 目标值：模式标签（securityMode 出厂
+  // normal）与真实生效值保持一致，新装即普通模式，收紧靠显式应用安全模式 profile。
+  // 曾有一段（2026-10-21 设计）让出厂默认取安全侧、放宽靠应用普通模式 profile，
+  // 导致「标签 normal、实际安全档」的脱节，已按用户裁定改回（2026-10-27）。
+  // 此不变式防止再出现某个 profile 键的 defaultValue 偷偷落到安全侧的回归。
+  for (const d of withProfiles) {
+    const normal = d.profiles.normal;
+    if (JSON.stringify(d.defaultValue) !== JSON.stringify(normal)) {
+      violations.push(
+        `profiles:${d.key} 出厂默认必须取 normal 侧（normal=${JSON.stringify(normal)}，实际 ${JSON.stringify(d.defaultValue)}）`
+      );
+    }
   }
 
   // ── profiles：排除清单里的键不得声明 ──

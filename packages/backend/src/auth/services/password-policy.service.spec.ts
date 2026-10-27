@@ -3,9 +3,12 @@ import { PasswordPolicyService } from './password-policy.service';
 import { RUNTIME_CONFIG_DEFINITIONS } from '../../runtime-config/runtime-config.constants';
 
 /**
- * 策略参数默认值（与 runtime-config.constants.ts 的 defaultValue 一致，secure 基线）：
+ * 策略参数测试夹具（刻意保持严格档，验证「严格策略下弱口令被拒」的强校验路径）：
  * minLength=10 / minCategories=3 / weakCheck=true / changeEnforce=true /
  * changeIntervalDays=180 / expiringSoonDays=14
+ *
+ * 夹具与运行时默认值无关：真实 defaultValue 现取 normal 侧（6/0/false/...），
+ * 此处显式构造严格档以覆盖强校验分支。
  *
  * 弱口令黑名单 143 条，'12345678' / 'password123' / 'admin123' 在列，
  * 'abcdefgh' / 'Ab1!xy' 不在列——用例的密码选取受此约束。

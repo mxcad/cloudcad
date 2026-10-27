@@ -166,6 +166,11 @@ profile 归属不落 DDL。代价是**没有持久化的「当前处于哪个模
 - **ADR-0078** — `variant` 不下沉运行时（与「模式是运行时状态」互为对照：形态进打包期，
   模式进运行时）
 - **ADR-0075** — 统一打包入口与交付形态矩阵（variant 为打包期概念的既定事实）
-- `docs/security-mode-deferred-decisions.md` — 拍板记录与下游推进顺序
 - `packages/backend/src/runtime-config/runtime-config.constants.ts` — `RUNTIME_CONFIG_DEFINITIONS` 单一事实源
 - 子票：**T2**（本 ADR）/ **T10**（profile 应用 UI，被本 ADR 解锁）/ **T11**（25 项目标取值）
+
+> **2026-10-27 裁定**：安全模式的**计划文档已删除**
+> （`docs/security-mode-dual-profile-plan.md` / `docs/security-mode-deferred-decisions.md`）。
+> 不做部署期模式 env（`DEPLOY_SECURITY_MODE`），出厂恒普通模式；切换安全模式走本 ADR
+> 的 `POST /runtime-config/profile/apply` 按钮即可。profile 键出厂默认统一取 normal 侧
+> （不变式钉死，见 `runtime-config.invariants.ts`）。
