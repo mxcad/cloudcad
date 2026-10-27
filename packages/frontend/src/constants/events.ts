@@ -8,6 +8,8 @@ export const CAD_EVENTS = {
   SAVE_AS_REQUIRED: 'mxcad-saveas-required',
   FILE_OPENED: 'mxcad-file-opened',
   OPEN_COMPLETE: 'mxcad-file-open-complete',
+  /** 文件上下文变更（setFileContext 唯一写入者发布）：协同面板/标题/URL 等消费方的统一刷新信号 */
+  FILE_CONTEXT_CHANGED: 'mxcad-file-context-changed',
   DATABASE_MODIFIED: 'mxcad-database-modified',
   NEW_FILE: 'mxcad-new-file',
   UPLOAD_COMPLETED: 'mxcad-upload-completed',

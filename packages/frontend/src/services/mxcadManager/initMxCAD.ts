@@ -261,6 +261,8 @@ export async function initMxCADConfig(currentFile?: {
         projectId: null,
         name: file.name,
         personalSpaceId: null,
+        // 本地图纸协同识别的唯一标识（drawingId 为空串，按内容 MD5 匹配）
+        fileHash: hash,
       });
 
       const ext = file.name.includes('.')

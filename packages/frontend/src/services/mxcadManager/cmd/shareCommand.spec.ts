@@ -92,18 +92,20 @@ describe('ShareCommand', () => {
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: false,
       error: 'unauthorized',
+      message: '请先登录后再分享',
     });
     expect(mocks.beginIntent).toHaveBeenCalledTimes(1);
     expect(mocks.emit).not.toHaveBeenCalled();
   });
 
-  it('无云端节点 + cancelled → cancelled', async () => {
+  it('无云端节点 + cancelled → cancelled（用户取消，分发层静默）', async () => {
     const { ShareCommand } = await load();
     mocks.beginIntent.mockResolvedValue('cancelled');
 
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: false,
       error: 'cancelled',
+      silent: true,
     });
   });
 
@@ -123,23 +125,24 @@ describe('ShareCommand', () => {
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: false,
       error: 'no-file-id',
+      message: '请先保存图纸到云端后再分享',
+      severity: 'warning',
     });
     expect(mocks.beginIntent).not.toHaveBeenCalled();
-    expect(mocks.globalShowToast).toHaveBeenCalledWith(
-      '请先保存图纸到云端后再分享',
-      'warning'
-    );
+    expect(mocks.globalShowToast).not.toHaveBeenCalled();
   });
 
-  it('意图链抛错 → 记录 + 弹错误提示 + success:false', async () => {
+  it('意图链抛错 → 记录 + success:false + message（分发层统一弹错）', async () => {
     const { ShareCommand } = await load();
     mocks.beginIntent.mockRejectedValue(new Error('boom'));
 
     expect(await new ShareCommand().execute({} as never)).toEqual({
       success: false,
       error: 'Error: boom',
+      message: 'boom',
+      severity: 'error',
     });
     expect(mocks.handleError).toHaveBeenCalled();
-    expect(mocks.globalShowToast).toHaveBeenCalledWith('boom', 'error');
+    expect(mocks.globalShowToast).not.toHaveBeenCalled();
   });
 });

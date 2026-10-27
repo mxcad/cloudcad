@@ -463,7 +463,20 @@ export function useCadFileLoader(
           }
         }
 
+        // 有效库标识：URL 参数优先，回落节点自身的 libraryKey
+        const fileLibraryKey: 'drawing' | 'block' | undefined =
+          libraryKeyParam === 'drawing' || libraryKeyParam === 'block'
+            ? libraryKeyParam
+            : file.libraryKey === 'drawing' || file.libraryKey === 'block'
+              ? file.libraryKey
+              : undefined;
+
         if (shareTokenParam) projectId = null;
+        // 库图纸不归属任何用户项目：projectId 恒 null（与 openLibraryFile 的 payload 对齐）。
+        // 上方推导出的库根节点 ID 不是项目 ID——不置空的话，URL 驱动（刷新/直达链接）的
+        // 库图纸打开会把 currentProjectId 留在库根 ID 上（本分支不发 FILE_OPENED，
+        // onFileOpened 的置 null 不会执行）
+        if (fileLibraryKey) projectId = null;
         const fromPlatform = !!nodeIdParam;
 
         setFromShare(!!shareTokenParam);
@@ -472,15 +485,10 @@ export function useCadFileLoader(
         fileInfoForOpen = {
           fileId: file.id || '',
           parentId: shareTokenParam ? null : file.parentId || null,
-          projectId: shareTokenParam ? null : projectId,
+          projectId,
           name: file.name || '',
           personalSpaceId,
-          libraryKey: (libraryKeyParam === 'drawing' ||
-          libraryKeyParam === 'block'
-            ? libraryKeyParam
-            : file.libraryKey === 'drawing' || file.libraryKey === 'block'
-              ? file.libraryKey
-              : undefined) as 'drawing' | 'block' | undefined,
+          libraryKey: fileLibraryKey,
           fromPlatform,
           fromShare: !!shareTokenParam,
         };

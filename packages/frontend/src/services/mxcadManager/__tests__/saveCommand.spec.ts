@@ -114,23 +114,30 @@ describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
     const command = new SaveCommand();
     const result = await command.execute(makeCtx());
 
-    expect(result).toEqual({ success: false, error: 'unauthorized' });
+    expect(result).toEqual({
+      success: false,
+      error: 'unauthorized',
+      message: '请先登录后再保存',
+    });
     expect(intentMocks.beginIntent).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'save-to-cloud' })
     );
   });
 
-  it('新图纸打开中（pendingOpen）→ 拒绝保存并提示，不进入保存分支', async () => {
+  it('新图纸打开中（pendingOpen）→ 拒绝保存并返回 warning 文案，不进入保存分支', async () => {
     pendingOpenMocks.hasPendingOpen.mockReturnValue(true);
     const saveFile = vi.fn().mockResolvedValue({ status: 'saved' });
     const command = new SaveCommand();
     const result = await command.execute(makeCtx({ saveFile }));
 
-    expect(result).toEqual({ success: false, error: 'file-opening' });
-    expect(globalShowToast).toHaveBeenCalledWith(
-      '图纸正在打开，请稍后再保存',
-      'warning'
-    );
+    expect(result).toEqual({
+      success: false,
+      error: 'file-opening',
+      message: '图纸正在打开，请稍后再保存',
+      severity: 'warning',
+    });
+    // toast 由 rebindMxCommands 统一消费 CommandResult，命令内不再直发
+    expect(globalShowToast).not.toHaveBeenCalled();
     expect(saveFile).not.toHaveBeenCalled();
     expect(showSaveAsDialog).not.toHaveBeenCalled();
   });
@@ -174,7 +181,11 @@ describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
     const command = new SaveCommand();
     const result = await command.execute(makeCtx({ saveFile }));
 
-    expect(result).toEqual({ success: false, error: '配额不足' });
+    expect(result).toEqual({
+      success: false,
+      error: '配额不足',
+      message: '配额不足',
+    });
   });
 
   it('权限拒绝（denied）→ 返回 success:false 透传错误', async () => {
@@ -188,16 +199,22 @@ describe('SaveCommand（Mx_Save）— CommandContext 注入后', () => {
     expect(result).toEqual({
       success: false,
       error: '您没有保存图纸的权限',
+      message: '您没有保存图纸的权限',
     });
   });
 
-  it('深服务抛异常 → handleError + 错误 toast + success:false', async () => {
+  it('深服务抛异常 → handleError + success:false（toast 由 rebindMxCommands 统一消费）', async () => {
     const saveFile = vi.fn().mockRejectedValue(new Error('boom'));
     const command = new SaveCommand();
     const result = await command.execute(makeCtx({ saveFile }));
 
-    expect(result).toEqual({ success: false, error: 'Error: boom' });
+    expect(result).toEqual({
+      success: false,
+      error: 'Error: boom',
+      message: 'boom',
+      severity: 'error',
+    });
     expect(handleError).toHaveBeenCalled();
-    expect(globalShowToast).toHaveBeenCalledWith('boom', 'error');
+    expect(globalShowToast).not.toHaveBeenCalled();
   });
 });

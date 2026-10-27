@@ -70,10 +70,8 @@ interface SidebarContainerProps {
   onInsertFile?: (file: InsertFileParams) => void | Promise<void>;
   /** 是否可见 - 用于 loading 期间隐藏但保持 DOM 布局稳定 */
   visible?: boolean;
-  /** 是否处于加载状态（骨架屏已移除，保留字段兼容既有调用方；协同场景经 onCollabFileLoaded 控制节奏） */
+  /** 是否处于加载状态（骨架屏已移除，保留字段兼容既有调用方） */
   loading?: boolean;
-  /** 协同文件加载完成回调（协同链接进入时用于延迟关闭加载态） */
-  onCollabFileLoaded?: () => void;
   /** 内容就绪门控：false 时数据面板不挂载，显示一行轻提示（引擎就绪 + 图纸打开终态前） */
   contentReady?: boolean;
 }
@@ -81,7 +79,6 @@ interface SidebarContainerProps {
 export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   projectId,
   onInsertFile,
-  onCollabFileLoaded,
   contentReady = true,
 }) => {
   // ==================== Hooks ====================
@@ -108,8 +105,11 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
   // 当前激活的 Tab
   const [activeTab, setActiveTab] = useState<SidebarTab>(() => {
     // 协同分享链接（URL 带合法 collabWorkId，与 useCollabShare 同一校验口径）：
-    // 初始直接落协同 tab，使 auto-join（useCollabActions 依赖 visible）立即触发，
-    // 同时避免默认图纸 tab 在协同场景下发无用请求。URL 参数优先级高于 localStorage 记忆。
+    // 初始落协同 tab 仅为展示协同面板（用户意图是加入协同）；auto-join 执行体已
+    // 上移路由级 useCollabAutoJoin，不再依赖本 tab 可见（历史缺陷：靠此处让
+    // visible=true 才触发，面板被 collaborationEnabled/域白名单等任一开关关掉即
+    // 静默吞掉意图）。同时避免默认图纸 tab 在协同场景下发无用请求。
+    // URL 参数优先级高于 localStorage 记忆。
     const collabWorkId = new URLSearchParams(window.location.search).get(
       'collabWorkId'
     );
@@ -186,7 +186,9 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
     });
   }, [settings.width, settings.isVisible]);
 
-  // 协同功能关闭时，修正初始 activeTab 避免停留在协同 tab
+  // 协同功能关闭时，修正初始 activeTab 避免停留在协同 tab。
+  // 纯展示层兜底：协同链接意图的 auto-join 执行体已上移路由级 useCollabAutoJoin，
+  // 不依赖本 tab，配置异步首帧 false 也不会再吞掉意图（仅面板落在图纸 tab）。
   useEffect(() => {
     if (!runtimeConfig.collaborationEnabled && activeTab === 'collaborate') {
       setActiveTab('drawings');
@@ -451,17 +453,16 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
           isCollaborationAllowed(runtimeConfig.collaborationDomains) ? (
             <>
               <div className={styles.content}>
-                <CollaborateSidebar
-                  visible={activeTab === 'collaborate'}
-                  onFileLoaded={onCollabFileLoaded}
-                />
+                <CollaborateSidebar visible={activeTab === 'collaborate'} />
               </div>
               {!isAuthenticated && (
                 <div className={styles.loginPromptOverlay}>
                   <LoginPromptCard
                     icon={<FolderOpen size={40} />}
                     title={t('登录以使用完整功能')}
-                    description={t('登录后可以使用个人空间、我的项目、协同等功能')}
+                    description={t(
+                      '登录后可以使用个人空间、我的项目、协同等功能'
+                    )}
                     onLogin={handleLoginClick}
                   />
                 </div>
@@ -480,7 +481,7 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        color: 'var(--primary)',
+                        color: 'var(--primary-500)',
                         textDecoration: 'underline',
                         margin: '0 2px',
                       }}

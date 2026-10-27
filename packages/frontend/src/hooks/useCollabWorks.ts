@@ -16,10 +16,11 @@ import {
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { refreshFileName } from '../services/mxcadManager';
 import {
+  contextIdentity,
   patchSession,
-  patchSessionFlags,
   subscribe,
 } from '../services/drawingSession';
+import type { FileContext } from '../services/mxcadManager/mxcadTypes';
 import { CAD_EVENTS } from '@/constants/events';
 import { queryKeys } from '@/lib/queryKeys';
 import { t } from '@/languages';
@@ -37,17 +38,30 @@ function isLocalWorkData(
   return !!data && data.v === 3 && data.sourceType === 'local';
 }
 
-/** 本地协同无 drawingId（空串），按内容 MD5 判断是否当前图纸 */
+/**
+ * 判断协同 work 是否属于当前打开的图纸（按 FileContext.kind 分派）：
+ * - none/new：未打开图纸 / 新建空白图 → 无任何协同匹配。
+ *   （旧实现在 fileId='' 且无 hash 时回退 creatorId/link_user_ids 匹配，
+ *   新建图纸会把我全部本地协同都列出来）
+ * - local：本地图纸（drawingId 为空串）按内容 MD5 匹配；任一侧缺 hash
+ *   无法确认是同一张图 → 不匹配
+ * - cloud：按节点 ID 匹配
+ */
 function matchesCurrentDrawing(
   data: WorkData | null,
-  currentFileHashValue: string | null | undefined,
-  currentFileIdValue: string | null | undefined
+  ctx: FileContext
 ): boolean {
   if (!data) return false;
+  if (ctx.kind === 'none' || ctx.kind === 'new') return false;
   if (isLocalWorkData(data)) {
-    return currentFileHashValue ? data.fileHash === currentFileHashValue : false;
+    return (
+      ctx.kind === 'local' &&
+      !!ctx.fileHash &&
+      !!data.fileHash &&
+      data.fileHash === ctx.fileHash
+    );
   }
-  return data.drawingId === currentFileIdValue;
+  return ctx.kind === 'cloud' && !!ctx.fileId && data.drawingId === ctx.fileId;
 }
 
 /** 图纸聚合键：本地=fileHash，云图/项目等=drawingId */
@@ -225,13 +239,14 @@ function mergeNameCache<T extends { id: string; name: string }>(
 
 export function useCollabWorks(
   fromShare: boolean,
-  user: { id: string; username: string; avatar?: string | null } | null | undefined,
+  user:
+    { id: string; username: string; avatar?: string | null } | null | undefined,
   visible: boolean
 ): CollabWorksState {
   const userId = user?.id;
-  const currentFileIdState = useCADEditorStore((s) => s.currentFileId);
-  const storeFileNameState = useCADEditorStore((s) => s.currentFileName);
-  const currentFileInfoState = useCADEditorStore((s) => s.currentFileInfo);
+  // 文件上下文（单一事实源）：打开/新建/另存为/协同加入退出全部经 setFileContext
+  // 写入并发布 FILE_CONTEXT_CHANGED，面板据此匹配当前图纸的协同、刷新列表
+  const fileContext = useCADEditorStore((s) => s.fileContext);
 
   const [works, setWorksState] = useState<Work[]>([]);
   // 等价短路：内容未变的轮询结果不换引用，避免每轮触发整棵协同面板重渲染
@@ -250,6 +265,16 @@ export function useCollabWorks(
   const [currentWorkId, setCurrentWorkId] = useState<number | null>(
     () => useCADEditorStore.getState().collaborationWorkId
   );
+  // 路由级 auto-join（useCollabAutoJoin）落定时直接写 store.collaborationWorkId，
+  // 面板本地 currentWorkId 需跟随 store，否则加入成功后面板仍显示「加入」而非「退出」。
+  // 仅 store 非 null 时同步：退出协同走 handleExitWork 显式 setCurrentWorkId(null)，
+  // 避免本同步在退出瞬间把 store 的 null 回写、与本地退出流程抢写。
+  const storeCollabWorkId = useCADEditorStore((s) => s.collaborationWorkId);
+  useEffect(() => {
+    if (storeCollabWorkId !== null) {
+      setCurrentWorkId(storeCollabWorkId);
+    }
+  }, [storeCollabWorkId, setCurrentWorkId]);
   const [loading, setLoading] = useState(false);
   const [fileNameCache, setFileNameCache] = useState<Record<string, string>>(
     {}
@@ -263,10 +288,6 @@ export function useCollabWorks(
   const fetchWorksTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const fetchingRef = useRef(false);
 
-  const currentFileIdValue = currentFileIdState;
-  const storeFileNameValue = storeFileNameState;
-  // 当前本地图纸的内容 MD5（local 类型唯一标识；云图等为 undefined）
-  const currentFileHashValue = currentFileInfoState?.fileHash;
   const queryClient = useQueryClient();
 
   // 自己这条参与者数据：协同会话里我本人必然在场，服务端偶发漏回自己的
@@ -471,19 +492,17 @@ export function useCollabWorks(
     }
   }, [works, resolveNames, fromShare]);
 
+  // 云图节点 ID（名称缓存按它建）；本地/新建/未打开为 null
+  const cloudFileId = fileContext.kind === 'cloud' ? fileContext.fileId : null;
   useEffect(() => {
-    const resolved = currentFileIdValue
-      ? fileNameCache[currentFileIdValue]
-      : undefined;
+    if (!cloudFileId) return;
+    const resolved = fileNameCache[cloudFileId];
     if (!resolved) return;
-    // 双写：有会话时 patchSession 同步 currentFileInfo.name；协同链接直达
-    // （auto-join 不经过 openSession，currentFileInfo=null）时 patchSession
-    // 会被 patchCurrentFileInfo 静默丢弃，必须用 patchSessionFlags 直写
-    // currentFileName 兜底链，编辑器标题才能显示图纸名
+    // 单写：patchSession 合并进 FileContext（唯一写入者），名称变化经
+    // FILE_CONTEXT_CHANGED 通知消费方；旧双写兜底链已随 FileContext 收敛移除
     patchSession({ name: resolved });
-    patchSessionFlags({ fileName: resolved });
     refreshFileName();
-  }, [fileNameCache, currentFileIdValue]);
+  }, [fileNameCache, cloudFileId]);
 
   useEffect(() => {
     // 仅当协同面板可见时轮询；页面切到后台（document.hidden）时跳过本轮
@@ -496,38 +515,27 @@ export function useCollabWorks(
   }, [fetchWorks, fromShare, visible]);
 
   useEffect(() => {
-    // 仅协同面板可见时在文件打开完成时强制刷新列表；不可见时不订阅——
-    // 避免每次打开图纸都连带发 projectControllerGetProjects + getWorks + 名称解析请求，
-    // 与图纸渲染抢带宽。切到协同 tab 时由 useCollaboration 的 visible+isCadReady 兜底拉取。
-    if (fromShare || !visible) return;
-    const onFileOpenComplete = () => {
-      fetchWorks(true, true);
+    // 文件身份变化（打开/新建/另存为/协同加入退出）→ 强制刷新列表。
+    // 不按 visible 门控：文件变更是路由级事实，隐藏面板的列表必须在用户切到
+    // 协同 tab 时已是最新（旧实现靠 visible 门控 + 2s 轮询，fromShare 场景
+    // 轮询整体关闭，新建文件后面板恒显示上一张图纸的协同）。
+    // 按身份（kind+fileId+fileHash）去重：仅名称变化（协同名称同步）不重拉。
+    let lastIdentity = contextIdentity(
+      useCADEditorStore.getState().fileContext
+    );
+    const onContextChanged = (ctx: FileContext) => {
+      const identity = contextIdentity(ctx);
+      if (identity === lastIdentity) return;
+      lastIdentity = identity;
+      void fetchWorks(false, true);
     };
-    return subscribe(CAD_EVENTS.OPEN_COMPLETE, onFileOpenComplete);
-  }, [fetchWorks, fromShare, visible]);
+    return subscribe(CAD_EVENTS.FILE_CONTEXT_CHANGED, onContextChanged);
+  }, [fetchWorks]);
 
   const currentFileWorks = useMemo(() => {
-    const filtered = works.filter((w) => {
-      const data = parseWorkData(w.work_data);
-      if (!data) return false;
-      if (data.v === 3 && data.sourceType === 'local') {
-        // 本地图纸（drawingId 为空串）：优先按文件内容 MD5（fileHash）匹配，
-        // 使同一张本地图纸创建的多个协同准确聚合，避免不同图纸协同混杂。
-        // 当前文件已记录 fileHash（新版本地打开/上传流程）时走 hash 匹配；
-        // 无 hash（历史数据/未记录）时回退到按创建者/参与者匹配以兼容旧行为。
-        if (currentFileIdValue === '' && data.drawingId === '') {
-          if (currentFileHashValue) {
-            return data.fileHash === currentFileHashValue;
-          }
-          return (
-            userId &&
-            (data.creatorId === userId || w.link_user_ids.includes(userId))
-          );
-        }
-        return data.drawingId === currentFileIdValue;
-      }
-      return data.drawingId === currentFileIdValue;
-    });
+    const filtered = works.filter((w) =>
+      matchesCurrentDrawing(parseWorkData(w.work_data), fileContext)
+    );
     if (
       currentWorkId !== null &&
       !filtered.some((w) => w.work_id === currentWorkId)
@@ -536,12 +544,12 @@ export function useCollabWorks(
       if (activeWork) return [...filtered, activeWork];
     }
     return filtered;
-  }, [works, currentFileIdValue, currentFileHashValue, userId, currentWorkId]);
+  }, [works, fileContext, currentWorkId]);
 
   const isSameCurrentDrawing = useCallback(
     (data: WorkData | null): boolean =>
-      matchesCurrentDrawing(data, currentFileHashValue, currentFileIdValue),
-    [currentFileHashValue, currentFileIdValue]
+      matchesCurrentDrawing(data, fileContext),
+    [fileContext]
   );
 
   const myWorks = useMemo(
@@ -549,14 +557,15 @@ export function useCollabWorks(
       works
         .filter((w) => userId && w.real_user_id === userId)
         .map((w) =>
-      buildWorkListItem(w, parseWorkData(w.work_data), {
-        currentWorkId,
-        projectNameCache,
-        fileNameCache,
-        emptyProjectName: t('未知项目'),
-        isSameCurrentDrawing,
-      }))
-      .sort((a, b) => b.work.work_id - a.work.work_id),
+          buildWorkListItem(w, parseWorkData(w.work_data), {
+            currentWorkId,
+            projectNameCache,
+            fileNameCache,
+            emptyProjectName: t('未知项目'),
+            isSameCurrentDrawing,
+          })
+        )
+        .sort((a, b) => b.work.work_id - a.work.work_id),
 
     [
       works,
@@ -585,14 +594,15 @@ export function useCollabWorks(
           );
         })
         .map((w) =>
-      buildWorkListItem(w, parseWorkData(w.work_data), {
-        currentWorkId,
-        projectNameCache,
-        fileNameCache,
-        emptyProjectName: '',
-        isSameCurrentDrawing,
-      }))
-      .sort((a, b) => b.work.work_id - a.work.work_id),
+          buildWorkListItem(w, parseWorkData(w.work_data), {
+            currentWorkId,
+            projectNameCache,
+            fileNameCache,
+            emptyProjectName: '',
+            isSameCurrentDrawing,
+          })
+        )
+        .sort((a, b) => b.work.work_id - a.work.work_id),
 
     [
       works,
@@ -606,12 +616,14 @@ export function useCollabWorks(
   );
 
   const currentFileName = useMemo(() => {
-    if (currentFileIdValue === null || currentFileIdValue === undefined)
-      return '';
-    const cached = fileNameCache[currentFileIdValue];
-    if (cached) return cached;
-    return storeFileNameValue || t('当前图纸');
-  }, [currentFileIdValue, fileNameCache, storeFileNameValue]);
+    if (fileContext.kind === 'new') return t('未命名图纸');
+    if (fileContext.kind === 'none') return '';
+    if (fileContext.kind === 'cloud' && fileContext.fileId) {
+      const cached = fileNameCache[fileContext.fileId];
+      if (cached) return cached;
+    }
+    return fileContext.name || t('当前图纸');
+  }, [fileContext, fileNameCache]);
 
   return {
     works,

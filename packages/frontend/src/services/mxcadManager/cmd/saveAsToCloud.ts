@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import { isAuthenticated } from '@/utils/authCheck';
 import { isAccessTokenExpired } from '@/utils/tokenUtils';
 import { cancelLoginRedirect } from '@/config/clientSetup';
@@ -14,7 +15,11 @@ export class SaveAsToCloudCommand implements Command {
       // 挂起另存为意图链（ADR-0081）：登录成功后自动续跑打开另存为对话框，
       // 用户原始意图不丢失（此前只弹登录提示，回来后意图即丢）
       void beginIntent(SAVE_AS_CHAIN);
-      return { success: false, error: 'unauthorized' };
+      return {
+        success: false,
+        error: 'unauthorized',
+        message: t('请先登录后再保存'),
+      };
     }
     await triggerSaveAs();
     return { success: true };

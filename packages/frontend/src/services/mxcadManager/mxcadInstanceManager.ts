@@ -12,12 +12,17 @@ import { handleError } from '@/utils/errorHandler';
 import { UrlHelper } from '@/utils/mxcadUtils';
 import { read } from '@/lib/browserStorage';
 import { extractShareTokenFromUrl } from './mxcadHelpers';
-import type { CurrentFileInfo, OpenFilePayload } from './mxcadTypes';
+import type {
+  CurrentFileInfo,
+  FileContext,
+  OpenFilePayload,
+} from './mxcadTypes';
 import { VIEW_INIT_TIMEOUT_MS, ENGINE_READY_POLL_INTERVAL_MS } from './mxcadTypes';
 import { MxCADOpenFlow } from './mxcadOpenFlow';
 import { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
 import {
-  openSession,
+  setFileContext,
+  contextFromFileInfo,
   emitOpenComplete,
   emit,
   subscribe,
@@ -40,9 +45,10 @@ import { ensureFreshAuthCookie } from '@/config/tokenRefresh';
 
 /**
  * 待打开会话信息：文件打开成功后由 openFileComplete 监听器消费
+ * （setFileContext 落定 FileContext；失败路径由 MxCADOpenFlow 回滚清理）
  */
 export interface PendingOpenInfo {
-  fileInfo: CurrentFileInfo;
+  context: FileContext;
   onSuccess?: () => void;
 }
 
@@ -223,8 +229,12 @@ async function handleOpenCompleteSideEffects(): Promise<void> {
   // 协同链接（auto-join）不经过 openSession，currentFileInfo 为 null；引擎在协同文件
   // 加载完成触发 openFileComplete 时会把标题重置为引擎当前文件名（如 empty_template.mxweb），
   // 这里用 refreshFileName（currentFileName 兜底）修正，保持 [协同中]-xxx 不被覆盖。
+  // 新建图纸（kind 'new'）同样 currentFileInfo 为 null：引擎 openFileComplete 固定回写
+  // " - " + _name，须主动清空 _name 与标题，防止停留在上一张图纸名。
   if (info) {
     setEditorFileName(info.name);
+  } else if (useCADEditorStore.getState().fileContext.kind === 'new') {
+    setEditorFileName('');
   } else if (useCADEditorStore.getState().isInCollaboration) {
     refreshFileName();
     // openFileComplete 之后引擎可能异步再把标题改回当前文件名，延迟重设一次确保稳定
@@ -447,17 +457,17 @@ export class MxCADInstanceManager {
       this.notifyOpenSettled();
       if (iResult !== 0) {
         // 打开失败（含首次进入的 config.openFile 初始加载失败）：不记录当前文件状态
-        // （不 openSession），但引擎会把标题置为 URL 尾部的 mxweb 内部访问文件名
+        // （不 setFileContext），但引擎会把标题置为 URL 尾部的 mxweb 内部访问文件名
         // （如 <md5>.mxweb?t=...），这里用待打开的图纸名修正标题，避免显示 id.mxweb。
         // 与 MxCADOpenFlow.openFile 的 fail 路径（restoreEditorTitle）保持一致。
         // pendingOpenInfo 保留：由 MxCADOpenFlow 的 retCall（openFile 路径）统一清理回滚
-        const pendingName = this.pendingOpenInfo?.fileInfo?.name;
+        const pendingName = this.pendingOpenInfo?.context?.name;
         if (pendingName) restoreEditorTitle(pendingName);
         return;
       }
       if (this.pendingOpenInfo) {
-        const { fileInfo, onSuccess } = this.pendingOpenInfo;
-        openSession(fileInfo);
+        const { context, onSuccess } = this.pendingOpenInfo;
+        setFileContext(context);
         this.pendingOpenInfo = null;
         onSuccess?.();
       }
@@ -599,7 +609,9 @@ export class MxCADInstanceManager {
   }
 
   setPendingFileInfo(fileInfo: CurrentFileInfo | null): void {
-    this.pendingOpenInfo = fileInfo ? { fileInfo } : null;
+    this.pendingOpenInfo = fileInfo
+      ? { context: contextFromFileInfo(fileInfo) }
+      : null;
   }
 
   getCurrentFileName(): string | null {

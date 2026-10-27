@@ -5,6 +5,7 @@
  * payload 类型在此单一来源定义，禁止新增 window 裸字符串事件。
  */
 import { CAD_EVENTS } from '@/constants/events';
+import type { FileContext } from '../mxcadManager/mxcadTypes';
 
 /** 文件打开信号 payload（对应原 mxcad-file-opened window 事件） */
 export interface FileOpenedDetail {
@@ -91,6 +92,8 @@ export interface ShareFileDetail {
 export interface DrawingEventPayloads {
   [CAD_EVENTS.FILE_OPENED]: FileOpenedDetail;
   [CAD_EVENTS.OPEN_COMPLETE]: OpenCompleteDetail;
+  // 文件上下文变更（setFileContext 唯一写入者发布，payload = 变更后的 FileContext）
+  [CAD_EVENTS.FILE_CONTEXT_CHANGED]: FileContext;
   [CAD_EVENTS.DATABASE_MODIFIED]: void;
   [CAD_EVENTS.EXPORT_FILE]: ExportFileDetail;
   [CAD_EVENTS.EXPORT_PDF]: ExportPdfDetail;

@@ -1,5 +1,9 @@
 import { create } from 'zustand';
-import type { CurrentFileInfo } from '../services/mxcadManager/mxcadTypes';
+import type {
+  CurrentFileInfo,
+  FileContext,
+} from '../services/mxcadManager/mxcadTypes';
+import { FILE_CONTEXT_NONE } from '../services/mxcadManager/mxcadTypes';
 
 /**
  * 协同会话阶段（C5 状态机）：
@@ -35,6 +39,16 @@ interface CADEditorState {
   collabPhase: CollabPhase;
   /** 退出协同后的短窗守卫（3s），阻止 auto-join 把刚退出的 session 拉回 */
   collabExitGuard: boolean;
+  /** 待对账的协同 work（加入已落定、但图纸身份还没从 work_data 补齐）；
+   *  auto-join 已上移路由级，面板靠此字段在拿到 works 列表后补齐 fileId/projectId/名称 */
+  pendingJoinWorkId: number | null;
+  /**
+   * 当前文件上下文（单一事实源）：唯一写入者是 drawingSession 的 setFileContext，
+   * 它同步派生下方 currentFileInfo/currentFileId/currentFileName/currentProjectId
+   * 兼容字段并发布 FILE_CONTEXT_CHANGED。裸 setter 仅供 drawingSession 使用，
+   * 业务代码禁止直写（ADR-0039）。
+   */
+  fileContext: FileContext;
   currentFileInfo: CurrentFileInfo | null;
   isDirty: boolean;
   isCurrentFileDeleted: boolean;
@@ -66,6 +80,8 @@ interface CADEditorState {
   }) => void;
   setCollabPhase: (phase: CollabPhase) => void;
   setCollabExitGuard: (guard: boolean) => void;
+  setPendingJoinWorkId: (id: number | null) => void;
+  setFileContext: (ctx: FileContext) => void;
   setCurrentFileInfo: (info: CurrentFileInfo | null) => void;
   patchCurrentFileInfo: (partial: Partial<CurrentFileInfo>) => void;
   setIsDirty: (dirty: boolean) => void;
@@ -95,6 +111,8 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
   collaborationWorkId: null,
   collabPhase: 'idle',
   collabExitGuard: false,
+  pendingJoinWorkId: null,
+  fileContext: FILE_CONTEXT_NONE,
   currentFileInfo: null,
   isDirty: false,
   isCurrentFileDeleted: false,
@@ -131,6 +149,8 @@ export const useCADEditorStore = create<CADEditorState>((set) => ({
     }),
   setCollabPhase: (phase) => set({ collabPhase: phase }),
   setCollabExitGuard: (guard) => set({ collabExitGuard: guard }),
+  setPendingJoinWorkId: (id) => set({ pendingJoinWorkId: id }),
+  setFileContext: (ctx) => set({ fileContext: ctx }),
   setCurrentFileInfo: (info) => set({ currentFileInfo: info }),
   patchCurrentFileInfo: (partial) =>
     set((state) => ({

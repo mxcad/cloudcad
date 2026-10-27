@@ -30,7 +30,11 @@ export class SaveAsMxWebCommand implements Command {
     } catch (error) {
       hideGlobalLoading();
       handleError(error, 'Mx_SaveAsMxWeb');
-      return { success: false, error: String(error) };
+      return {
+        success: false,
+        error: String(error),
+        message: t('文件保存失败'),
+      };
     }
   }
 }

@@ -5,7 +5,11 @@ import { read } from '@/lib/browserStorage';
 import { ensureFreshAuthCookie } from '@/config/clientSetup';
 import { FILE_OPEN_RETRY_CONFIG } from './mxcadTypes';
 import type { OpenFilePayload, CurrentFileInfo } from './mxcadTypes';
-import { getCurrentFileUrl, setCurrentFileUrl } from '../drawingSession';
+import {
+  contextFromFileInfo,
+  getCurrentFileUrl,
+  setCurrentFileUrl,
+} from '../drawingSession';
 import { getFileInfo, restoreEditorTitle, refreshFileName } from './mxcadHelpers';
 import type { MxCADInstanceManager } from './mxcadInstanceManager';
 import { setCurrentShareToken } from './mxcadInstanceManager';
@@ -172,7 +176,7 @@ export class MxCADOpenFlow {
     await ensureFreshAuthCookie();
     if (payload.fileInfo) {
       this.manager.setPendingOpenInfo({
-        fileInfo: payload.fileInfo,
+        context: contextFromFileInfo(payload.fileInfo),
         onSuccess: payload.onSuccess,
       });
     }
@@ -207,12 +211,12 @@ export class MxCADOpenFlow {
     const mxcad = this.manager.getMxcadObject();
     if (!mxcad) throw new Error(t('mxcad 对象不可用'));
     // 打开失败（含游客 IP 转换限制 403 等）时恢复上一个图纸状态：
-    // 回滚引擎侧当前文件 URL 和 shareToken，并清理待生效的文件信息，避免影响后续打开/重载
+    // 回滚引擎侧当前文件 URL 和 shareToken，并清理待生效的文件信息，避免影响后续打开/重载。
+    // pending 无条件清理：串行队列保证此刻的 pending 必属本次打开（上一个打开已结算
+    // 才放行），条件式清理会在 payload.fileInfo 缺省（新建图纸）时泄漏 pending，
+    // hasPendingOpen() 恒 true → Mx_Save 被永久拦截。
     const restorePreviousFile = () => {
-      const pending = this.manager.getPendingOpenInfo();
-      if (pending?.fileInfo.fileId === payload.fileInfo?.fileId) {
-        this.manager.setPendingOpenInfo(null);
-      }
+      this.manager.setPendingOpenInfo(null);
       setCurrentFileUrl(previousUrl);
       // 恢复之前的 shareToken
       setCurrentShareToken(extractShareTokenFromUrl(previousUrl));
@@ -220,11 +224,13 @@ export class MxCADOpenFlow {
     return new Promise<void>((resolve, reject) => {
       this.sendOpenWebFile({
         url: payload.url,
-        fetchAttributes: payload.noCache
-          ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY |
-            FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE |
-            FetchAttributes.EMSCRIPTEN_FETCH_REPLACE
-          : 0,
+        fetchAttributes:
+          payload.fetchAttributes ??
+          (payload.noCache
+            ? FetchAttributes.EMSCRIPTEN_FETCH_LOAD_TO_MEMORY |
+              FetchAttributes.EMSCRIPTEN_FETCH_PERSIST_FILE |
+              FetchAttributes.EMSCRIPTEN_FETCH_REPLACE
+            : 0),
         onSuccess: () => resolve(),
         onFail: (error) => {
           restorePreviousFile();

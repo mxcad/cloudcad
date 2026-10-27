@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { CAD_EVENTS } from '@/constants/events';
+import { FILE_CONTEXT_NONE } from '@/services/mxcadManager/mxcadTypes';
 import {
+  contextIdentity,
   openSession,
   newSession,
   closeSession,
@@ -45,6 +47,7 @@ function resetStore(): void {
     isInCollaboration: false,
     collaborationWorkId: null,
     currentFileInfo: null,
+    fileContext: FILE_CONTEXT_NONE,
     isDirty: false,
     isCurrentFileDeleted: false,
     isLeavingPage: false,
@@ -150,11 +153,14 @@ describe('openSession / closeSession — 唯一 writer', () => {
 
   it('patchSessionFlags 未提供的字段保持不变', () => {
     openSession(sampleInfo);
+    // openSession 现从 payload 派生 currentProjectId（与 currentFileInfo 对齐）；
+    // 断言的是 patchSessionFlags({fromShare}) 之后它仍保持不变
+    expect(useCADEditorStore.getState().currentProjectId).toBe('project-1');
     patchSessionFlags({ fromShare: true });
     const state = useCADEditorStore.getState();
     expect(state.currentFileId).toBe('file-1');
     expect(state.currentFileName).toBe('drawing.dwg');
-    expect(state.currentProjectId).toBeNull();
+    expect(state.currentProjectId).toBe('project-1');
     expect(state.fromShare).toBe(true);
   });
 
@@ -423,25 +429,18 @@ describe('useDrawingSession — React 薄读 hook', () => {
 });
 
 
-describe('newSession — 新建图纸 / 无云端节点文件（清干净上一张的文件身份）', () => {
+describe('newSession — 新建空白图纸（kind "new"，清干净上一张的文件身份）', () => {
   // 历史 bug：新建图纸只 patch 部分字段，新图纸继承了旧图纸的 currentFileInfo /
   // currentProjectId / fromShare，保存归属与权限判断全部落在已关闭的旧文件上
-  const newFileInfo = {
-    fileId: '',
-    parentId: null,
-    projectId: null,
-    name: 'new.dwg',
-    personalSpaceId: null,
-  };
-
-  it('替换旧文件身份后写入新文件信息', () => {
+  it('替换旧文件身份后进入 kind "new" 态（无云端身份，派生字段全空）', () => {
     openSession(sampleInfo);
-    newSession(newFileInfo);
+    newSession();
 
     const state = useCADEditorStore.getState();
-    expect(state.currentFileInfo).toEqual(newFileInfo);
-    expect(state.currentFileId).toBe('');
-    expect(state.currentFileName).toBe('new.dwg');
+    expect(state.fileContext.kind).toBe('new');
+    expect(state.currentFileInfo).toBeNull();
+    expect(state.currentFileId).toBeNull();
+    expect(state.currentFileName).toBeNull();
     expect(state.currentProjectId).toBeNull();
   });
 
@@ -453,7 +452,7 @@ describe('newSession — 新建图纸 / 无云端节点文件（清干净上一�
     store.setIsPersonalSpaceMode(true);
     store.setFromShare(true);
 
-    newSession(newFileInfo);
+    newSession();
 
     const state = useCADEditorStore.getState();
     expect(state.isDirty).toBe(false);
@@ -466,7 +465,7 @@ describe('newSession — 新建图纸 / 无云端节点文件（清干净上一�
     openSession(sampleInfo);
     useCADEditorStore.getState().setOpenedBackInfo('/projects/project-1', 'file-1');
 
-    newSession(newFileInfo);
+    newSession();
 
     const state = useCADEditorStore.getState();
     expect(state.openedBackUrl).toBeNull();
@@ -481,12 +480,73 @@ describe('newSession — 新建图纸 / 无云端节点文件（清干净上一�
       workId: 9,
     });
 
-    newSession(newFileInfo);
+    newSession();
 
     const state = useCADEditorStore.getState();
     expect(state.isActive).toBe(true);
     expect(state.error).toBe('boom');
     expect(state.isInCollaboration).toBe(true);
     expect(state.collaborationWorkId).toBe(9);
+  });
+});
+
+describe('FILE_CONTEXT_CHANGED — 单一事件驱动全部消费方', () => {
+  it('openSession 发布事件（payload = 变更后的 FileContext）', () => {
+    const handler = vi.fn();
+    const unsubscribe = subscribe(CAD_EVENTS.FILE_CONTEXT_CHANGED, handler);
+    openSession(sampleInfo);
+    expect(handler).toHaveBeenCalledTimes(1);
+    const ctx = handler.mock.calls[0][0];
+    expect(ctx.kind).toBe('cloud');
+    expect(ctx.fileId).toBe('file-1');
+    expect(ctx.name).toBe('drawing.dwg');
+    unsubscribe();
+  });
+
+  it('同一上下文幂等重放不重复发布（openFileComplete 对新建图纸的幂等确认）', () => {
+    const handler = vi.fn();
+    const unsubscribe = subscribe(CAD_EVENTS.FILE_CONTEXT_CHANGED, handler);
+    openSession(sampleInfo);
+    openSession(sampleInfo);
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('newSession 发布 kind "new"；closeSession 发布 "none"', () => {
+    const handler = vi.fn();
+    const unsubscribe = subscribe(CAD_EVENTS.FILE_CONTEXT_CHANGED, handler);
+    newSession();
+    closeSession();
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler.mock.calls[0][0].kind).toBe('new');
+    expect(handler.mock.calls[1][0].kind).toBe('none');
+    unsubscribe();
+  });
+
+  it('仅名称变化发布事件但身份键不变（消费方按 identity 去重，不重拉列表）', () => {
+    const handler = vi.fn();
+    const unsubscribe = subscribe(CAD_EVENTS.FILE_CONTEXT_CHANGED, handler);
+    openSession(sampleInfo);
+    const before = contextIdentity(useCADEditorStore.getState().fileContext);
+    patchSession({ name: 'renamed.dwg' });
+    const after = contextIdentity(useCADEditorStore.getState().fileContext);
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(before).toBe(after);
+    unsubscribe();
+  });
+
+  it('本地图纸（fileId ""）→ kind "local"，fileHash 派生进 currentFileInfo（协同识别依据）', () => {
+    openSession({
+      fileId: '',
+      parentId: null,
+      projectId: null,
+      name: 'local.dwg',
+      fileHash: 'abc123',
+    });
+    const state = useCADEditorStore.getState();
+    expect(state.fileContext.kind).toBe('local');
+    expect(state.currentFileId).toBe('');
+    expect(state.currentFileInfo?.fileId).toBe('');
+    expect(state.currentFileInfo?.fileHash).toBe('abc123');
   });
 });

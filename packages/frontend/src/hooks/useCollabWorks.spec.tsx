@@ -8,6 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, act } from '@testing-library/react';
 import React, { useEffect } from 'react';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
+import { FILE_CONTEXT_NONE } from '../services/mxcadManager/mxcadTypes';
 import { useCollabWorks } from './useCollabWorks';
 import { refreshFileName } from '../services/mxcadManager';
 import { nodeControllerGetNode, projectControllerGetProjects } from '@/api-sdk';
@@ -71,6 +72,7 @@ function resetStore(): void {
     isInCollaboration: true,
     collaborationWorkId: 101,
     currentFileInfo: null,
+    fileContext: FILE_CONTEXT_NONE,
     isDirty: false,
     isCurrentFileDeleted: false,
     isLeavingPage: false,
@@ -140,15 +142,16 @@ describe('useCollabWorks — fetchWorks 以服务端为准', () => {
     expect(latestWorks.map((w) => w.work_id)).toEqual([101]);
   });
 
-  it('协同链接直达（currentFileInfo=null）：drawingId 反查到图纸名后直写 currentFileName 兜底并刷新标题', async () => {
+  it('协同链接直达（currentFileInfo=null）：drawingId 反查到图纸名后合并进 FileContext 并刷新标题', async () => {
     // 回归：协同链接 auto-join 不经过 openSession，currentFileInfo=null 时
-    // patchSession({name}) 被 patchCurrentFileInfo 静默丢弃，标题停留在
-    // "[协同中] - "。修复后必须 patchSessionFlags 直写 currentFileName。
+    // 名称同步曾被静默丢弃，标题停留在 "[协同中] - "。auto-join 经
+    // patchSessionFlags({fileId}) 把 fileContext 置为 cloud 上下文后，
+    // 名称反查经 patchSession 合并（唯一写入者），派生 currentFileName。
     vi.mocked(nodeControllerGetNode).mockResolvedValue({
       data: { name: '真实图纸.dwg' },
     } as never);
     useCADEditorStore.setState({
-      currentFileId: 'node-1',
+      fileContext: { kind: 'cloud', fileId: 'node-1', name: null },
       currentFileInfo: null,
       isInCollaboration: true,
     });

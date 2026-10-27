@@ -109,7 +109,11 @@ vi.mock('@/utils/errorHandler', () => ({
   getErrorMessage: vi.fn(() => ''),
 }));
 
-import { nodeControllerGetNode } from '@/api-sdk';
+import {
+  nodeControllerGetNode,
+  nodeControllerGetRootNode,
+  libraryControllerGetDrawingNode,
+} from '@/api-sdk';
 
 const mockedGetNode = vi.mocked(nodeControllerGetNode);
 
@@ -469,5 +473,94 @@ describe('useCadFileLoader — 首开（?hash= 直接进入）打开期必须有
     expect(hideGlobalLoadingMock).toHaveBeenCalled();
     // 失败原因透传，不用「CAD编辑器初始化失败」兜底误导用户
     expect(fns.onError).toHaveBeenCalledWith('文件打开超时');
+  });
+});
+
+describe('useCadFileLoader — URL 驱动库图纸：payload projectId 恒 null', () => {
+  const LIB_FILE = {
+    id: 'lib-1',
+    path: '202609/lib-root/lib-1/a.mxweb',
+    fileHash: 'hash-lib',
+    isRoot: false,
+    parentId: 'lib-parent',
+    name: 'lib-a.dwg',
+    updatedAt: '2026-09-16T10:00:00Z',
+    fileStatus: 'COMPLETED',
+    libraryKey: 'drawing',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mxcadManagerMock.isCreated.mockReturnValue(true);
+    mxcadManagerMock.isReady.mockReturnValue(true);
+    vi.mocked(libraryControllerGetDrawingNode).mockReturnValue({
+      data: LIB_FILE,
+      error: undefined,
+    });
+    // 有库管理权限时 getRootNode 会返回库根节点 ID——它不是项目 ID，
+    // 必须被 fileLibraryKey 置空逻辑拦下
+    vi.mocked(nodeControllerGetRootNode).mockReturnValue({
+      data: { id: 'lib-root' },
+    });
+  });
+
+  afterEach(() => {
+    clearDrawingSessionListeners();
+  });
+
+  it('URL ?library=drawing + 有库管理权限（getRootNode 返回库根）→ openFile payload projectId 为 null', async () => {
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            fileId: 'lib-1',
+            isActive: true,
+            isAuthenticated: true,
+            personalSpaceId: 'ps-1',
+            libraryKeyParam: 'drawing',
+            hasLibraryDrawingManage: true,
+          }),
+          createFns()
+        )
+    );
+    await flush();
+
+    expect(mxcadManagerMock.openFile).toHaveBeenCalledTimes(1);
+    const payload = mxcadManagerMock.openFile.mock.calls[0]![0]!;
+    expect(payload.fileInfo).toEqual(
+      expect.objectContaining({
+        fileId: 'lib-1',
+        libraryKey: 'drawing',
+        projectId: null,
+      })
+    );
+  });
+
+  it('无库管理权限（不调 getRootNode）→ parentId 不被当作 projectId，payload projectId 同样为 null', async () => {
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            fileId: 'lib-1',
+            isActive: true,
+            isAuthenticated: true,
+            personalSpaceId: 'ps-1',
+            libraryKeyParam: 'drawing',
+            hasLibraryDrawingManage: false,
+          }),
+          createFns()
+        )
+    );
+    await flush();
+
+    expect(nodeControllerGetRootNode).not.toHaveBeenCalled();
+    expect(mxcadManagerMock.openFile).toHaveBeenCalledTimes(1);
+    const payload = mxcadManagerMock.openFile.mock.calls[0]![0]!;
+    expect(payload.fileInfo).toEqual(
+      expect.objectContaining({
+        libraryKey: 'drawing',
+        projectId: null,
+      })
+    );
   });
 });

@@ -9,6 +9,12 @@ export interface CommandResult {
   success: boolean;
   data?: unknown;
   error?: string;
+  /** 中心化展示的 toast 文案（缺省时由分发层用通用文案）；设置后分发层不再另配默认文案 */
+  message?: string;
+  /** 中心化 toast 的级别，缺省 'error' */
+  severity?: 'success' | 'warning' | 'error';
+  /** true = 不中心化 toast（用户主动取消等，分发层静默） */
+  silent?: boolean;
 }
 
 export interface CommandContext {

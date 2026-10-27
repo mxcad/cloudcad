@@ -36,6 +36,21 @@ vi.mock('@/api-sdk', () => ({
 }));
 
 vi.mock('@/services/drawingSession', () => ({
+  // 与真实 contextFromFileInfo 同语义：fileId 非空 = cloud，否则 = local
+  contextFromFileInfo: vi.fn(
+    (info: { fileId?: string; name?: string; fileHash?: string }): FileContext => {
+      if (info.fileId) {
+        return { kind: 'cloud', fileId: info.fileId, name: info.name ?? null };
+      }
+      const ctx: FileContext = {
+        kind: 'local',
+        fileId: '',
+        name: info.name ?? null,
+      };
+      if (info.fileHash) ctx.fileHash = info.fileHash;
+      return ctx;
+    }
+  ),
   getCurrentFileUrl: vi.fn(),
   setCurrentFileUrl: vi.fn(),
 }));
@@ -44,6 +59,7 @@ import { MxCADOpenFlow } from '../mxcadOpenFlow';
 import { getCurrentFileUrl, setCurrentFileUrl } from '@/services/drawingSession';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import type { MxCADInstanceManager } from '../mxcadInstanceManager';
+import type { FileContext } from '../mxcadTypes';
 
 /** 模拟 mxcad-app 插件上下文（编辑器标题的唯一出口：fileName.value） */
 const fileNameValue = { value: '' };
@@ -85,7 +101,7 @@ function createEngineSim() {
 
 describe('MxCADOpenFlow — openFileComplete 结果码门控（打开失败不得记录当前文件状态）', () => {
   let engine: ReturnType<typeof createEngineSim>;
-  let pendingInfo: { fileInfo: { fileId: string } } | null;
+  let pendingInfo: { context: FileContext; onSuccess?: () => void } | null;
   let flow: MxCADOpenFlow;
   /** 引擎 getCurrentFileName 返回值（早退捷径测试用，可配置） */
   let engineCurrentFileName: string | null = null;
@@ -148,8 +164,10 @@ describe('MxCADOpenFlow — openFileComplete 结果码门控（打开失败不�
     engine.fireRetCall(0);
 
     await expect(p).resolves.toBeUndefined();
-    // 成功路径不清理 pending（由 setupFileOpenListener 消费 openSession），不回滚 URL
-    expect(pendingInfo).toEqual({ fileInfo: { fileId: 'new-id' } });
+    // 成功路径不清理 pending（由 openFileComplete 监听消费 setFileContext），不回滚 URL
+    expect(pendingInfo).toEqual({
+      context: { kind: 'cloud', fileId: 'new-id', name: null },
+    });
     expect(setCurrentFileUrl).toHaveBeenCalledTimes(1);
     expect(setCurrentFileUrl).toHaveBeenCalledWith(targetUrl);
   });

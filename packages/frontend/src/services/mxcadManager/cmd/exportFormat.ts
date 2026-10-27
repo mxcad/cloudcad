@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import { handleError } from '@/utils/errorHandler';
 import { CAD_EVENTS } from '@/constants/events';
 import { emit } from '../../drawingSession';
@@ -46,7 +47,11 @@ export class ExportFormatCommand implements Command {
       return { success: true };
     } catch (error) {
       handleError(error, this.name);
-      return { success: false, error: String(error) };
+      return {
+        success: false,
+        error: String(error),
+        message: t('导出失败，请稍后重试'),
+      };
     }
   }
 }

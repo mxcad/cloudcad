@@ -2,7 +2,6 @@ import { t } from '@/languages';
 import { SAVE_CHAIN, beginIntent } from '../intentChain';
 import { handleError } from '@/utils/errorHandler';
 import { hideGlobalLoading } from '@/services/loadingService';
-import { globalShowToast } from '@/utils/notificationEvents';
 import { isAuthenticated } from '@/utils/authCheck';
 import { isAccessTokenExpired } from '@/utils/tokenUtils';
 import {
@@ -22,14 +21,22 @@ export class SaveCommand implements Command {
       if (!isAuthenticated() || isAccessTokenExpired()) {
         // 挂起保存意图链（ADR-0081）：登录成功后自动续跑执行保存
         void beginIntent(SAVE_CHAIN);
-        return { success: false, error: 'unauthorized' };
+        return {
+          success: false,
+          error: 'unauthorized',
+          message: t('请先登录后再保存'),
+        };
       }
 
       // 新图纸打开中：会话仍持上一张图纸的 fileInfo，此时保存会把引擎当前
       // 内容写到旧节点（或保存旧图纸），必须拒绝
       if (mxcadManager.hasPendingOpen()) {
-        globalShowToast(t('图纸正在打开，请稍后再保存'), 'warning');
-        return { success: false, error: 'file-opening' };
+        return {
+          success: false,
+          error: 'file-opening',
+          message: t('图纸正在打开，请稍后再保存'),
+          severity: 'warning',
+        };
       }
 
       const fileInfo = ctx.fileInfo;
@@ -46,7 +53,7 @@ export class SaveCommand implements Command {
 
       const outcome = await ctx.saveFile(fileInfo);
       if (outcome.status === 'failed' || outcome.status === 'denied') {
-        return { success: false, error: outcome.error };
+        return { success: false, error: outcome.error, message: outcome.error };
       }
       return { success: true };
     } catch (error) {
@@ -54,8 +61,12 @@ export class SaveCommand implements Command {
       hideGlobalLoading();
       const errorMessage =
         error instanceof Error ? error.message : t('保存失败，请稍后重试');
-      globalShowToast(errorMessage, 'error');
-      return { success: false, error: String(error) };
+      return {
+        success: false,
+        error: String(error),
+        message: errorMessage,
+        severity: 'error',
+      };
     }
   }
 }

@@ -3,6 +3,7 @@ import { useCADEditorStore } from '../../stores/useCADEditorStore';
 import { getFileInfo } from './mxcadHelpers';
 import { MxCADContainerManager } from './mxcadContainerManager';
 import { MxCADInstanceManager } from './mxcadInstanceManager';
+import type { PendingOpenInfo } from './mxcadInstanceManager';
 import type { CurrentFileInfo, OpenFilePayload } from './mxcadTypes';
 
 export function setNavigateFunction(fn: ((path: string) => void) | null): void {
@@ -60,6 +61,11 @@ export class MxCADManager {
 
   setPendingFileInfo(fileInfo: CurrentFileInfo | null): void {
     this.instanceManager.setPendingFileInfo(fileInfo);
+  }
+
+  /** 直接登记待打开上下文（新建图纸等无 CurrentFileInfo 的场景） */
+  setPendingOpenInfo(info: PendingOpenInfo | null): void {
+    this.instanceManager.setPendingOpenInfo(info);
   }
 
   isCreated(): boolean {

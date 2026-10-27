@@ -15,7 +15,8 @@ vi.mock('@/utils/authCheck', () => ({ isAuthenticated: vi.fn() }));
 vi.mock('@/utils/errorHandler', () => ({ handleError: vi.fn() }));
 vi.mock('@/languages', () => ({ t: (msg: string) => msg }));
 vi.mock('@/services/drawingSession', () => ({
-  openSession: vi.fn(),
+  setFileContext: vi.fn(),
+  contextFromFileInfo: vi.fn(),
   emitOpenComplete: vi.fn(),
   emit: vi.fn(),
   subscribe: vi.fn(),
@@ -60,10 +61,11 @@ vi.mock('@/config/tokenRefresh', () => ({
 
 import { MxCADInstanceManager } from '../mxcadInstanceManager';
 import {
-  openSession,
+  setFileContext,
   emitOpenComplete,
   setModified,
 } from '@/services/drawingSession';
+import { FILE_CONTEXT_NONE } from '../mxcadTypes';
 import {
   getFileInfo,
   setEditorFileName,
@@ -110,11 +112,17 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
     name: '图纸A.dwg',
     personalSpaceId: null,
   };
+  const pendingContext = {
+    kind: 'cloud' as const,
+    fileId: 'drawing-a',
+    name: '图纸A.dwg',
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useCADEditorStore.getState).mockReturnValue({
       isInCollaboration: false,
+      fileContext: FILE_CONTEXT_NONE,
     });
     vi.mocked(getFileInfo).mockReturnValue(null);
     openCompleteHandlers = [];
@@ -140,17 +148,17 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
     );
   });
 
-  it('成功（结果码 0）：消费 pendingOpenInfo → openSession 记录当前文件状态', async () => {
+  it('成功（结果码 0）：消费 pendingOpenInfo → setFileContext 记录当前文件状态', async () => {
     const onSuccess = vi.fn();
-    manager.setPendingOpenInfo({ fileInfo, onSuccess });
+    manager.setPendingOpenInfo({ context: pendingContext, onSuccess });
 
     openCompleteHandlers.forEach((h) => h(0));
 
-    // 等待异步 onOpen 完成（openSession + onSuccess + 副作用）
+    // 等待异步 onOpen 完成（setFileContext + onSuccess + 副作用）
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(openSession).toHaveBeenCalledWith(fileInfo);
+    expect(setFileContext).toHaveBeenCalledWith(pendingContext);
     expect(onSuccess).toHaveBeenCalled();
     expect(manager.getPendingOpenInfo()).toBeNull();
     expect(emitOpenComplete).toHaveBeenCalled();
@@ -158,19 +166,19 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
   });
 
   it('失败（结果码非 0）：不消费 pendingOpenInfo，不记录当前文件状态，不触发副作用', async () => {
-    manager.setPendingOpenInfo({ fileInfo, onSuccess: vi.fn() });
+    manager.setPendingOpenInfo({ context: pendingContext, onSuccess: vi.fn() });
 
     // 打开失败时引擎仍会派发 openFileComplete（携带非 0 结果码）：
-    // 修复前在此无条件 openSession → title/currentFileInfo 写成失败图纸（回归场景）
+    // 修复前在此无条件 setFileContext → title/currentFileInfo 写成失败图纸（回归场景）
     openCompleteHandlers.forEach((h) => h(1));
 
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(openSession).not.toHaveBeenCalled();
+    expect(setFileContext).not.toHaveBeenCalled();
     // pending 保留：由 MxCADOpenFlow 失败路径（retCall）统一清理回滚
     expect(manager.getPendingOpenInfo()).toEqual({
-      fileInfo,
+      context: pendingContext,
       onSuccess: expect.any(Function),
     });
     expect(emitOpenComplete).not.toHaveBeenCalled();
@@ -184,6 +192,7 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
     // 需用 refreshFileName（currentFileName 兜底）修正保持 [协同中]-xxx。
     vi.mocked(useCADEditorStore.getState).mockReturnValue({
       isInCollaboration: true,
+      fileContext: FILE_CONTEXT_NONE,
     });
     vi.mocked(getFileInfo).mockReturnValue(null);
 
@@ -191,7 +200,7 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(openSession).not.toHaveBeenCalled();
+    expect(setFileContext).not.toHaveBeenCalled();
     expect(setEditorFileName).not.toHaveBeenCalled();
     // 协同场景走 refreshFileName（currentFileName 兜底）修正标题
     expect(refreshFileName).toHaveBeenCalled();
@@ -202,6 +211,7 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
     try {
       vi.mocked(useCADEditorStore.getState).mockReturnValue({
         isInCollaboration: true,
+        fileContext: FILE_CONTEXT_NONE,
       });
       vi.mocked(getFileInfo).mockReturnValue(null);
 

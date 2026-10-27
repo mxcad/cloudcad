@@ -1,4 +1,6 @@
 import { MxFun } from 'mxdraw';
+import { t } from '@/languages';
+import { globalShowToast } from '@/utils/notificationEvents';
 import { getFileInfo, saveCurrentDrawingToBlob } from '../mxcadHelpers';
 import { CommandRegistry } from './types';
 import type { CommandContext } from './types';
@@ -44,7 +46,17 @@ export async function buildCommandContext(): Promise<CommandContext> {
 export function rebindMxCommands(): void {
   for (const cmd of CommandRegistry.getAll()) {
     MxFun.addCommand(cmd.name, async () => {
-      await CommandRegistry.execute(cmd.name, await buildCommandContext());
+      const result = await CommandRegistry.execute(
+        cmd.name,
+        await buildCommandContext()
+      );
+      // 命令失败反馈中心化：唯一消费点，避免各命令重复 toast 与静默失败
+      if (result && !result.success && !result.silent) {
+        globalShowToast(
+          result.message ?? t('操作失败'),
+          result.severity ?? 'error'
+        );
+      }
     });
   }
 }

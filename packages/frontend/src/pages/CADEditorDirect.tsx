@@ -35,10 +35,7 @@ import { ExternalReferencePanel } from '../components/modals/ExternalReferencePa
 import type { ExternalReferenceFile } from '../types/filesystem';
 import { SidebarContainer } from '../components/sidebar/SidebarContainer';
 import { useExternalReferenceUpload } from '../hooks/useExternalReferenceUpload';
-import {
-  hideGlobalLoading,
-  getLoadingState,
-} from '../services/loadingService';
+import { hideGlobalLoading, getLoadingState } from '../services/loadingService';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import { globalShowToast } from '../utils/notificationEvents';
 import {
@@ -92,6 +89,7 @@ import { useFileOpenGuard } from '../hooks/useFileOpenGuard';
 import { useCadPermissions } from '../hooks/useCadPermissions';
 import { useExternalRefCompletion } from '../hooks/useExternalRefCompletion';
 import { useCollabShare } from '../hooks/useCollabShare';
+import { useCollabAutoJoin } from '../hooks/useCollabAutoJoin';
 import { useFileInsert } from '../hooks/useFileInsert';
 import { useHomeInit } from '../hooks/useHomeInit';
 import { useSidebarContentReady } from '../hooks/useSidebarContentReady';
@@ -204,7 +202,10 @@ export const CADEditorDirect: React.FC = () => {
   // 浏览器标签标题随当前文件同步：编辑器标题栏走引擎 useFileName，标签标题此前从不更新，
   // 打开/新建图纸后一直停留上一页的标题。编辑器不可见时跳过，交回当前页面。
   const currentFileName = useCADEditorStore((s) => s.currentFileName);
-  useDocumentTitle(editorDisplayName(currentFileName, isAuthenticated), !isActive);
+  useDocumentTitle(
+    editorDisplayName(currentFileName, isAuthenticated),
+    !isActive
+  );
 
   // 用 ref 包装避免 effect 依赖不稳定对象导致重复执行
   const externalReferenceUploadRef = useRef(externalReferenceUpload);
@@ -264,10 +265,10 @@ export const CADEditorDirect: React.FC = () => {
     }
   }, [personalSpaceId]);
 
-  // 当前文件所属项目 ID
-  const [currentProjectId, setCurrentProjectId] = React.useState<string | null>(
-    null
-  );
+  // 当前文件所属项目 ID：唯一事实源是 store（setFileContext/patchSessionFlags
+  // 派生）。组件不再维护本地镜像——旧本地 state 只在 onFileOpened 回调里更新，
+  // URL 驱动打开（不发 FILE_OPENED）时永远停在 null，isPersonalSpaceMode 误判
+  const currentProjectId = useCADEditorStore((s) => s.currentProjectId);
 
   // 判断是否为私人空间模式（根据当前文件所属项目）
   const isPersonalSpaceMode = React.useMemo(() => {
@@ -356,10 +357,8 @@ export const CADEditorDirect: React.FC = () => {
         fileHash,
       }) => {
         if (!libraryKey) {
-          setCurrentProjectId(projectId);
           patchSessionFlags({ projectId });
         } else {
-          setCurrentProjectId(null);
           patchSessionFlags({ projectId: null });
         }
         // URL 由文件身份派生（唯一合成出口）：无云端节点身份的新建/本地文件不携带
@@ -384,8 +383,10 @@ export const CADEditorDirect: React.FC = () => {
         patchSessionFlags({ fileId: openedFileId, fileName: fileName || null });
       },
       onNewFile: () => {
-        setCurrentProjectId(null);
-        patchSessionFlags({ projectId: null, fileId: null, fileName: null });
+        // 新建命令已经经 setFileContext 唯一写入者把会话切到 kind 'new'
+        // （FILE_CONTEXT_CHANGED 驱动全部消费方，currentProjectId 随之派生为
+        // null）；这里若再 patchSessionFlags 清 fileId 会把 'new' 覆盖成
+        // 'none'，协同面板误判「未打开图纸」。只同步回退导航引用。
         currentFileIdRef.current = null;
       },
     }
@@ -534,6 +535,12 @@ export const CADEditorDirect: React.FC = () => {
     onSetStoreLoading: setStoreLoading,
   });
 
+  // 协同链接（?collabWorkId=）的 auto-join：路由级意图驱动（不再挂在协同面板里，
+  // 脱离 collaborationEnabled/域白名单/侧边栏可见性/activeTab 四重门禁）。
+  // loading 从意图出现即弹，覆盖引擎 WASM 初始化间隙；成功/失败/超时都回调
+  // setLoading(false) 关骨架屏。意图执行体内部保证 onFileLoaded 身份稳定。
+  useCollabAutoJoin(() => setLoading(false));
+
   // 协同链接：auto-join 结束（成功/超时/失败/引擎挂起）都会把 fromCollabShare 置 false，
   // 以此作为骨架屏关闭的兜底信号——即使 onFileLoaded 回调链未覆盖到，页面也不会卡在加载态。
   // wasCollabShareActiveRef 确保只在「从 true 变 false」时触发（首帧初始值即 false，不能误关）。
@@ -664,9 +671,6 @@ export const CADEditorDirect: React.FC = () => {
             onInsertFile={handleInsertFile}
             loading={loading}
             contentReady={contentReady}
-            onCollabFileLoaded={
-              isCollabLink && isAuthenticated ? () => setLoading(false) : undefined
-            }
           />
 
           {/* CAD编辑器内容区域 */}

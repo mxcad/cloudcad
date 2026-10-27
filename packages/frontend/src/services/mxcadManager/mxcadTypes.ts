@@ -39,6 +39,45 @@ export interface CurrentFileInfo {
 }
 
 /**
+ * 当前文件上下文（「编辑器里正开着一张什么图纸」的单一事实源）
+ *
+ * kind 显式区分四态，消除历史 null/''/真实id 三态混用（三个写入者各写各的
+ * 派生字段，消费方无法判断「没开文件 / 新建空白图 / 本地图 / 云图」）：
+ * - none：未打开文件（初始态 / 关闭会话）
+ * - new：新建空白图纸（Mx_NewFile，无云端身份，fileId 恒 null）
+ * - local：本地文件（fileId 恒 ''，以 fileHash 或名称识别）
+ * - cloud：云端文件（fileId = 节点 ID）
+ *
+ * 唯一写入者是 drawingSession 的 setFileContext（ADR-0039 延伸），它同步派生
+ * currentFileInfo/currentFileId/currentFileName/currentProjectId 兼容字段并
+ * 发布 FILE_CONTEXT_CHANGED 事件；消费方（协同面板/标题/URL/保存门控）一律
+ * 订阅该事件，禁止各自监听零散 CAD 事件手拼状态。
+ */
+export interface FileContext {
+  kind: 'none' | 'new' | 'local' | 'cloud';
+  /** cloud：节点 ID；local：''；new/none：null */
+  fileId: string | null;
+  name: string | null;
+  /** local：原始文件内容 MD5（本地图纸协同识别的唯一标识）；cloud 不使用 */
+  fileHash?: string;
+  projectId?: string | null;
+  parentId?: string | null;
+  personalSpaceId?: string | null;
+  libraryKey?: 'drawing' | 'block' | null;
+  fromPlatform?: boolean;
+  path?: string;
+  updatedAt?: string;
+  expectedTimestamp?: string;
+}
+
+/** 未打开文件时的空上下文（store 初始值 / closeSession 目标态） */
+export const FILE_CONTEXT_NONE: FileContext = {
+  kind: 'none',
+  fileId: null,
+  name: null,
+};
+
+/**
  * 待上传的图片
  */
 export interface PendingImage {
@@ -103,6 +142,8 @@ export interface OpenFilePayload {
   url: string;
   fileInfo?: CurrentFileInfo;
   noCache?: boolean;
+  /** 引擎 fetchAttributes 覆盖（缺省按 noCache 推导）：新建空模板传 1（仅载入内存） */
+  fetchAttributes?: number;
   onSuccess?: () => void;
 }
 

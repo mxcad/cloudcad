@@ -1,3 +1,4 @@
+import { t } from '@/languages';
 import type { Command, CommandContext, CommandResult } from './types';
 
 export class ToggleFileQueueCommand implements Command {
@@ -13,7 +14,11 @@ export class ToggleFileQueueCommand implements Command {
       toggleFileQueuePanel();
       return { success: true };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return {
+        success: false,
+        error: String(error),
+        message: t('切换文件队列失败，请稍后重试'),
+      };
     }
   }
 }

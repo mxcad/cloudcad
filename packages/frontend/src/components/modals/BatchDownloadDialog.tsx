@@ -208,7 +208,11 @@ export const BatchDownloadDialog: React.FC<BatchDownloadDialogProps> = ({
   };
 
   const handleSubmitIndividual = async () => {
-    if (!hasSelection || individualProgress) return;
+    if (!hasSelection) {
+      showToast?.(t('请至少选择一个文件格式'), 'warning');
+      return;
+    }
+    if (individualProgress) return; // 在途防连点，不该 toast
     // 导出下载方向（dwg/dxf/pdf）会员预检：非 VIP 且开关未开放时弹购买引导，不发请求
     if (
       hasExportFormat &&

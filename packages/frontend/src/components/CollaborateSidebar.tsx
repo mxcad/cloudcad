@@ -9,12 +9,10 @@ import { t } from '@/languages';
 
 interface CollaborateSidebarProps {
   visible: boolean;
-  onFileLoaded?: () => void;
 }
 
 export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({
   visible,
-  onFileLoaded,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'current' | 'list'>(
     'current'
@@ -37,7 +35,7 @@ export const CollaborateSidebar: React.FC<CollaborateSidebarProps> = ({
     handleCreateWork,
     handleJoinWork,
     handleExitWork,
-  } = useCollaboration(visible, onFileLoaded);
+  } = useCollaboration(visible);
 
   return (
     <div className={styles.container} data-tour="collaborators-panel">
