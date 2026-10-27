@@ -30,6 +30,11 @@ vi.mock('@/api-sdk', () => ({
   authControllerVerifyEmail: vi.fn(),
   authControllerVerifyPhone: vi.fn(),
   authControllerGetWechatAuthUrl: vi.fn(),
+  // userEventStream 协调器（统一用户事件流）降级路径会签 ticket
+  noticeCenterControllerIssueTicket: vi.fn().mockResolvedValue({
+    error: undefined,
+    data: { ticket: 'tk_test' },
+  }),
 }));
 
 vi.mock('@/config/clientSetup', () => ({
@@ -220,9 +225,7 @@ describe('AuthContext - 跨标签页认证同步', () => {
     expect(screen.getByTestId('token').textContent).toBe(PHONE_JWT);
     // 同步后走既有 /auth/profile 校验链路，user 以接口返回为准
     expect(authControllerGetProfile).toHaveBeenCalled();
-    expect(screen.getByTestId('user').textContent).toBe(
-      'otheruser'
-    );
+    expect(screen.getByTestId('user').textContent).toBe('otheruser');
   });
 
   it('其他标签页登出 → 本标签页同步清除登录态（既有行为回归）', async () => {

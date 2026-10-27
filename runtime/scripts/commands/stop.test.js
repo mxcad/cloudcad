@@ -238,6 +238,30 @@ test('listOurDriverProcesses：其他 cli.js 子命令（status/stop）不算驱
   assert.deepEqual(listOurDriverProcesses(), []);
 });
 
+test('前缀碰撞：他目录是本目录名前缀扩展（...cloudcad ⊂ ...cloudcad1）→ 驱动/应用层都不误判', () => {
+  // 归属判据必须带尾分隔符边界（同 isLocalPm2Daemon）：裸 cmd.includes(root)
+  // 会把 ...cloudcad1 的进程判成本目录（root 是其字符串前缀）而误杀——
+  // 部署包改名（...windows → ...windows1）后两目录实例并存时 stop/哨兵即踩此坑。
+  const siblingRoot = `${PROJECT_ROOT}1`;
+  const siblingRuntime = `${siblingRoot}/runtime/windows`;
+  const { listOurDriverProcesses, listOurAppProcesses } = loadStopWithRows([
+    {
+      pid: 707,
+      name: 'node.exe',
+      exe: `${siblingRuntime}/node/node.exe`,
+      cmdline: `"${siblingRuntime}\\node\\node.exe" "${siblingRoot}/runtime/scripts/cli.js" start`,
+    },
+    {
+      pid: 708,
+      name: 'node.exe',
+      exe: `${siblingRuntime}/node/node.exe`,
+      cmdline: `"${siblingRuntime}\\node\\node.exe" "${siblingRoot}/packages/backend/dist/main.js"`,
+    },
+  ]);
+  assert.deepEqual(listOurDriverProcesses(), [], '他目录驱动不得判为本目录');
+  assert.deepEqual(listOurAppProcesses(), [], '他目录应用层进程不得判为本目录');
+});
+
 test('PM2 守护进程归属他目录 → 排除（机器全局共享，强杀会打断他目录 pm2 restart）', () => {
   // daemon 是机器全局唯一进程：若它由同机另一部署目录的 node 拉起（exe 在别处、
   // --pm_home 指向别处），不锁本目录任何文件，强杀它只会打断那个目录的 pm2 命令。
@@ -427,7 +451,7 @@ test('进程表查询失败 → stopInfrastructure 返回 false，不谎报成�
     id: fgPath,
     filename: fgPath,
     loaded: true,
-    exports: { cleanupForeground: () => {} },
+    exports: { cleanupForeground: () => {}, sweepForegroundMarkers: () => [] },
   };
   delete require.cache[require.resolve('./stop')];
   try {
@@ -549,7 +573,7 @@ function loadStopWithPm2Lie({ pm2Entries, appStatus, rows }) {
     id: fgPath,
     filename: fgPath,
     loaded: true,
-    exports: { cleanupForeground: () => {} },
+    exports: { cleanupForeground: () => {}, sweepForegroundMarkers: () => [] },
   };
   delete require.cache[require.resolve('./stop')];
 
@@ -668,7 +692,7 @@ test('stopResidualServices：收尾强杀本目录归属的 PM2 daemon（它锁�
     id: fgPath,
     filename: fgPath,
     loaded: true,
-    exports: { cleanupForeground: () => {} },
+    exports: { cleanupForeground: () => {}, sweepForegroundMarkers: () => [] },
   };
   delete require.cache[require.resolve('./stop')];
   try {
@@ -735,7 +759,7 @@ test('stopResidualServices：前台驱动（cli.js deploy）最先被杀，其�
     id: fgPath,
     filename: fgPath,
     loaded: true,
-    exports: { cleanupForeground: () => {} },
+    exports: { cleanupForeground: () => {}, sweepForegroundMarkers: () => [] },
   };
   delete require.cache[require.resolve('./stop')];
   try {
@@ -795,7 +819,7 @@ test('stopResidualServices：终检清扫强杀定向步骤漏掉的进程（终
     id: fgPath,
     filename: fgPath,
     loaded: true,
-    exports: { cleanupForeground: () => {} },
+    exports: { cleanupForeground: () => {}, sweepForegroundMarkers: () => [] },
   };
   delete require.cache[require.resolve('./stop')];
   try {
@@ -803,6 +827,129 @@ test('stopResidualServices：终检清扫强杀定向步骤漏掉的进程（终
     const ok = await stopResidualServices();
     assert.ok(kills.includes(782), '定向步骤漏掉的进程必须由终检清扫强杀');
     assert.equal(ok, true, '清扫后复查应通过');
+  } finally {
+    fs.existsSync = origExists;
+    proc.getProcessCmdlines = origGetCmdlines;
+    proc.killTree = origKillTree;
+    logger.log = origLog;
+    if (origFg) require.cache[fgPath] = origFg;
+    else delete require.cache[fgPath];
+    delete require.cache[require.resolve('./stop')];
+    require('./stop');
+  }
+});
+
+test('stopResidualServices：驱动被强杀后清扫残留哨兵标记（无存活驱动才扫）', async () => {
+  // 背景：驱动强杀会连带强杀其 detached 哨兵子进程，哨兵走不到 finish() 的自删
+  // 逻辑，标记文件就此永久孤儿化。stop 必须替它收尾，否则 data/ 会随每次
+  // 异常终止的前台运行累积标记。清扫须晚于进程表刷新（上面等过 800ms）且确认
+  // 无存活驱动——否则用户快速重试 start 后，新实例的新鲜存活标记会被误删。
+  const fs = require('fs');
+  const procPath = require.resolve('../lib/proc');
+  const proc = require(procPath);
+  const fgPath = require.resolve('../foreground/registry');
+  const loggerPath = require.resolve('../lib/logger');
+  const logger = require(loggerPath);
+  const origExists = fs.existsSync;
+  const origGetCmdlines = proc.getProcessCmdlines;
+  const origKillTree = proc.killTree;
+  const origLog = logger.log;
+  const origFg = require.cache[fgPath];
+
+  const rows = [
+    {
+      pid: 783,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}/node/node.exe" runtime/scripts/cli.js start`,
+    },
+  ];
+  const kills = [];
+  const sweeps = [];
+  fs.existsSync = () => false;
+  proc.getProcessCmdlines = () => rows;
+  proc.killTree = (pid) => {
+    kills.push(pid);
+    const i = rows.findIndex((r) => r.pid === pid);
+    if (i >= 0) rows.splice(i, 1);
+    return true;
+  };
+  logger.log = () => {};
+  require.cache[fgPath] = {
+    id: fgPath,
+    filename: fgPath,
+    loaded: true,
+    exports: {
+      cleanupForeground: () => {},
+      sweepForegroundMarkers: (maxAgeMs) => {
+        sweeps.push(maxAgeMs);
+        return ['foreground-alive-orphan'];
+      },
+    },
+  };
+  delete require.cache[require.resolve('./stop')];
+  try {
+    const { stopResidualServices } = require('./stop');
+    const ok = await stopResidualServices();
+    assert.equal(ok, true);
+    assert.ok(kills.includes(783), '前台驱动必须先被强杀');
+    assert.deepEqual(sweeps, [0], '驱动全部消失后须无门槛清扫一次残留标记');
+  } finally {
+    fs.existsSync = origExists;
+    proc.getProcessCmdlines = origGetCmdlines;
+    proc.killTree = origKillTree;
+    logger.log = origLog;
+    if (origFg) require.cache[fgPath] = origFg;
+    else delete require.cache[fgPath];
+    delete require.cache[require.resolve('./stop')];
+    require('./stop');
+  }
+});
+
+test('stopResidualServices：仍有存活驱动时不清扫（不删他人新鲜存活标记）', async () => {
+  const fs = require('fs');
+  const procPath = require.resolve('../lib/proc');
+  const proc = require(procPath);
+  const fgPath = require.resolve('../foreground/registry');
+  const loggerPath = require.resolve('../lib/logger');
+  const logger = require(loggerPath);
+  const origExists = fs.existsSync;
+  const origGetCmdlines = proc.getProcessCmdlines;
+  const origKillTree = proc.killTree;
+  const origLog = logger.log;
+  const origFg = require.cache[fgPath];
+
+  const rows = [
+    {
+      pid: 784,
+      name: 'node.exe',
+      exe: `${OUR_RUNTIME}/node/node.exe`,
+      cmdline: `"${OUR_RUNTIME}/node/node.exe" runtime/scripts/cli.js start`,
+    },
+  ];
+  // killTree 记但不真删行：模拟用户刚重新 start、驱动仍存活（强杀无效或竞态）
+  const sweeps = [];
+  fs.existsSync = () => false;
+  proc.getProcessCmdlines = () => rows;
+  proc.killTree = () => true;
+  logger.log = () => {};
+  require.cache[fgPath] = {
+    id: fgPath,
+    filename: fgPath,
+    loaded: true,
+    exports: {
+      cleanupForeground: () => {},
+      sweepForegroundMarkers: (maxAgeMs) => {
+        sweeps.push(maxAgeMs);
+        return [];
+      },
+    },
+  };
+  delete require.cache[require.resolve('./stop')];
+  try {
+    const { stopResidualServices } = require('./stop');
+    await stopResidualServices();
+    assert.deepEqual(sweeps, [], '仍有驱动在跑时不得清扫（会删掉新实例的新鲜存活标记）');
   } finally {
     fs.existsSync = origExists;
     proc.getProcessCmdlines = origGetCmdlines;

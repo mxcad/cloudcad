@@ -53,6 +53,7 @@ import {
   batchDownloadControllerCreateSingleFileTask,
   batchDownloadControllerCancelTask,
   batchDownloadControllerRetryTask,
+  batchDownloadControllerRetryFailedItems,
   batchDownloadControllerGetUserTasks,
 } from '@/api-sdk';
 import {
@@ -60,7 +61,10 @@ import {
   downloadBatchItem,
 } from '@/utils/download';
 import { useBatchDownload } from './useBatchDownload';
-import { useBatchDownloadStore } from '@/stores/useBatchDownloadStore';
+import {
+  useBatchDownloadStore,
+  type BatchTask,
+} from '@/stores/useBatchDownloadStore';
 import * as tokenUtils from '@/utils/tokenUtils';
 
 const fileItem = { nodeId: 'node-1', fileName: 'a.mxweb', formats: ['mxweb'] };
@@ -543,5 +547,269 @@ describe('useBatchDownload — SSE 关闭后重试可重订阅（回归：实例
     // 重试：必须能重新订阅（新建 EventSource）
     await a.result.current.retryTask('task-1');
     expect(FakeEventSource.instances).toHaveLength(2);
+  });
+});
+
+describe('useBatchDownload — 任务感知终态提示（回归：单文件通道曾误报"批量下载完成"并与自动下载背靠背双提示）', () => {
+  const completedMsg = JSON.stringify({
+    status: 'COMPLETED',
+    completedCount: 1,
+    totalCount: 1,
+    errorCount: 0,
+  });
+  const failedMsg = JSON.stringify({
+    status: 'FAILED',
+    completedCount: 0,
+    totalCount: 1,
+    errorCount: 1,
+  });
+  const cancelledMsg = JSON.stringify({
+    status: 'CANCELLED',
+    completedCount: 0,
+    totalCount: 1,
+    errorCount: 0,
+  });
+
+  // 注意：autoDownloadedTaskIds 是模块级防重表（跨测试不清空），且上一个
+  // describe 的 retryTask 测试在 activeSSEs 留有 task-1 残留条目——本块全部
+  // 使用独立 taskId，两者都不受影响
+  it('单文件 COMPLETED：不弹"批量下载完成"，自动下载后提示"下载完成"（用户报障主回归）', async () => {
+    (downloadBatchItem as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+    });
+    mockCreateSingleFile.mockResolvedValue({
+      data: { taskId: 'task-s1' },
+      error: undefined,
+    });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+
+    await act(async () => {
+      FakeEventSource.instances[0].onmessage?.({ data: completedMsg });
+    });
+
+    expect(downloadBatchItem).toHaveBeenCalledTimes(1);
+    expect(showToast).not.toHaveBeenCalledWith('批量下载完成', 'success');
+    expect(showToast).toHaveBeenCalledWith('下载完成', 'success');
+  });
+
+  it('单文件 COMPLETED 但浏览器下载失败：报"下载失败"（全部失败不再说"其余已下载"）', async () => {
+    (downloadBatchItem as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 404,
+    });
+    mockCreateSingleFile.mockResolvedValue({
+      data: { taskId: 'task-s2' },
+      error: undefined,
+    });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+
+    await act(async () => {
+      FakeEventSource.instances[0].onmessage?.({ data: completedMsg });
+    });
+
+    expect(showToast).not.toHaveBeenCalledWith('批量下载完成', 'success');
+    expect(showToast).not.toHaveBeenCalledWith('下载完成', 'success');
+    expect(showToast).toHaveBeenCalledWith('下载失败', 'error');
+  });
+
+  it('单文件 FAILED 帧：提示"下载失败"（非"批量下载失败"），不触发下载', async () => {
+    mockCreateSingleFile.mockResolvedValue({
+      data: { taskId: 'task-s3' },
+      error: undefined,
+    });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+
+    act(() => {
+      FakeEventSource.instances[0].onmessage?.({ data: failedMsg });
+    });
+
+    expect(showToast).toHaveBeenCalledWith('下载失败', 'error');
+    expect(showToast).not.toHaveBeenCalledWith('批量下载失败', 'error');
+    expect(downloadBatchItem).not.toHaveBeenCalled();
+  });
+
+  it('单文件 CANCELLED 帧：提示"下载已取消"（非"批量下载已取消"）', async () => {
+    mockCreateSingleFile.mockResolvedValue({
+      data: { taskId: 'task-s4' },
+      error: undefined,
+    });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+
+    act(() => {
+      FakeEventSource.instances[0].onmessage?.({ data: cancelledMsg });
+    });
+
+    expect(showToast).toHaveBeenCalledWith('下载已取消', 'info');
+    expect(showToast).not.toHaveBeenCalledWith('批量下载已取消', 'info');
+  });
+
+  it('zip 任务终态文案不变：COMPLETED→"批量下载完成"，重试后 FAILED→"批量下载失败"', async () => {
+    mockCreate.mockResolvedValue({ data: { taskId: 'task-z1' }, error: undefined });
+    const mockRetry = batchDownloadControllerRetryTask as ReturnType<
+      typeof vi.fn
+    >;
+    mockRetry.mockResolvedValue({ data: {}, error: undefined });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createZipTask([fileItem]);
+
+    act(() => {
+      FakeEventSource.instances[0].onmessage?.({ data: completedMsg });
+    });
+    expect(showToast).toHaveBeenCalledWith('批量下载完成', 'success');
+
+    await a.result.current.retryTask('task-z1');
+    act(() => {
+      FakeEventSource.instances[1].onmessage?.({ data: failedMsg });
+    });
+    expect(showToast).toHaveBeenCalledWith('批量下载失败', 'error');
+  });
+
+  it('cancelTask：单文件任务提示"下载已取消"，zip 任务提示"批量下载已取消"', async () => {
+    mockCreateSingleFile.mockResolvedValue({
+      data: { taskId: 'task-c1' },
+      error: undefined,
+    });
+    mockCreate.mockResolvedValue({ data: { taskId: 'task-c2' }, error: undefined });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+    await a.result.current.createZipTask([fileItem]);
+
+    await a.result.current.cancelTask('task-c1');
+    expect(showToast).toHaveBeenCalledWith('下载已取消', 'info');
+
+    await a.result.current.cancelTask('task-c2');
+    expect(showToast).toHaveBeenCalledWith('批量下载已取消', 'info');
+  });
+
+  it('单文件任务失败后 retryTask：重订阅后 COMPLETED 仍自动下载且不弹"批量下载完成"', async () => {
+    (downloadBatchItem as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+    });
+    mockCreateSingleFile.mockResolvedValue({
+      data: { taskId: 'task-r1' },
+      error: undefined,
+    });
+    const mockRetry = batchDownloadControllerRetryTask as ReturnType<
+      typeof vi.fn
+    >;
+    mockRetry.mockResolvedValue({ data: {}, error: undefined });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+
+    // FAILED 终态 → 连接关闭
+    act(() => {
+      FakeEventSource.instances[0].onmessage?.({ data: failedMsg });
+    });
+    // 重试 → 重新订阅（新 EventSource）
+    await a.result.current.retryTask('task-r1');
+    expect(FakeEventSource.instances).toHaveLength(2);
+
+    await act(async () => {
+      FakeEventSource.instances[1].onmessage?.({ data: completedMsg });
+    });
+
+    expect(downloadBatchItem).toHaveBeenCalledTimes(1);
+    expect(showToast).not.toHaveBeenCalledWith('批量下载完成', 'success');
+    expect(showToast).toHaveBeenCalledWith('下载完成', 'success');
+  });
+
+  it('retryFailedItems：新任务继承 autoDownload，COMPLETED 后自动下载', async () => {
+    (downloadBatchItem as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+    });
+    mockCreateSingleFile.mockResolvedValue({
+      data: { taskId: 'task-f1' },
+      error: undefined,
+    });
+    const mockRetryFailed = batchDownloadControllerRetryFailedItems as ReturnType<
+      typeof vi.fn
+    >;
+    mockRetryFailed.mockResolvedValue({
+      data: { newTaskId: 'task-f2' },
+      error: undefined,
+    });
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    await a.result.current.createSingleFormatTask('node-9', 'a.mxweb', 'pdf');
+
+    // 带失败明细的 FAILED 帧（errors 供新任务显示名继承）
+    act(() => {
+      FakeEventSource.instances[0].onmessage?.({
+        data: JSON.stringify({
+          status: 'FAILED',
+          completedCount: 0,
+          totalCount: 1,
+          errorCount: 1,
+          errors: [{ nodeId: 'node-9', fileName: 'a.pdf', error: 'x' }],
+        }),
+      });
+    });
+
+    await a.result.current.retryFailedItems('task-f1');
+    expect(findTask('task-f2')?.autoDownload).toBe(true);
+
+    await act(async () => {
+      FakeEventSource.instances[1].onmessage?.({ data: completedMsg });
+    });
+
+    expect(downloadBatchItem).toHaveBeenCalledWith('task-f2', 0, 'a.pdf');
+    expect(showToast).not.toHaveBeenCalledWith('批量下载完成', 'success');
+    expect(showToast).toHaveBeenCalledWith('下载完成', 'success');
+  });
+});
+
+describe('useBatchDownload — downloadAllItems 汇总提示（单/多文件文案分档）', () => {
+  const multiTask: BatchTask = {
+    taskId: 'task-m1',
+    status: 'COMPLETED',
+    mode: 'individual',
+    itemNames: ['a.dwg', 'b.dwg'],
+    totalCount: 2,
+    completedCount: 2,
+    errorCount: 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  it('多文件部分失败："{count} 个文件下载失败，其余已下载"', async () => {
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    (downloadBatchItem as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ ok: true })
+      .mockResolvedValueOnce({ ok: false, status: 404 });
+
+    await act(async () => {
+      await a.result.current.downloadAllItems(multiTask);
+    });
+
+    expect(showToast).toHaveBeenCalledWith(
+      '{count} 个文件下载失败，其余已下载',
+      'warning'
+    );
+  });
+
+  it('多文件全部失败：直接报"下载失败"（"其余已下载"不成立）', async () => {
+    const showToast = vi.fn();
+    const a = renderHook(() => useBatchDownload(showToast));
+    (downloadBatchItem as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 404,
+    });
+
+    await act(async () => {
+      await a.result.current.downloadAllItems(multiTask);
+    });
+
+    expect(showToast).toHaveBeenCalledWith('下载失败', 'error');
   });
 });

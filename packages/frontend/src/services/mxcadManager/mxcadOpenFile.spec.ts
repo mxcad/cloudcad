@@ -571,7 +571,7 @@ describe('转换等待期解锁 + 打开前 guardBeforeOpen 复查', () => {
 
     await handlePublicUpload(makeFile('drawing.dwg'));
 
-    // 缓存命中不登记任务：cancelled 回写找不到记录，队列保持为空
+    // 缓存命中不登记任务：completed 回写找不到记录，队列保持为空
     expect(
       useConversionQueueStore
         .getState()
@@ -580,6 +580,34 @@ describe('转换等待期解锁 + 打开前 guardBeforeOpen 复查', () => {
 
     await capturedCallback()();
     expect(mockOpenFile).not.toHaveBeenCalled();
+  });
+
+  it('公开路径：转换成功后守卫失败（选保存但被登录拦截等）→ 不打开，任务置 completed 而非 cancelled', async () => {
+    // 回归：转换队列显示的是转换结果——走到打开回调时转换必然已成功（SSE COMPLETED
+    // 后才触发），打开意图被打断不得把已转好的文件标成「已取消」（cancelled 态面板
+    // 不显示「打开」按钮，会把已转好的文件关死）
+    mockCalculateFileHash.mockResolvedValue('hash123');
+    mockCheckFileExist.mockResolvedValue({ data: { exists: false } });
+    mockUploadMxCadFile.mockResolvedValue(undefined);
+    mockCheckUnsaved.mockResolvedValueOnce(false);
+    // 前一用例残留的 SSE 实例：本用例自建连接，先清空保证计数判据成立
+    MockEventSource.instances = [];
+
+    const uploadPromise = handlePublicUpload(makeFile('drawing.dwg'));
+    await vi.waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+    });
+    // 服务端通知转换完成 → emit 打开入口（emit 被 mock，手动触发回调）
+    MockEventSource.instances[0].send('COMPLETED', 'hash123');
+    await uploadPromise;
+
+    await capturedCallback()();
+
+    expect(mockOpenFile).not.toHaveBeenCalled();
+    const localTask = useConversionQueueStore
+      .getState()
+      .tasks.find((t) => t.source === 'local')!;
+    expect(localTask.status).toBe('completed');
   });
 
   it('本地 mxweb 打开：守卫取消 → 不打开、清遮罩（入口从未查过未保存，打开点是唯一检查点）', async () => {

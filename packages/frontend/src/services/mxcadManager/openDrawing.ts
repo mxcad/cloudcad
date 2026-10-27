@@ -322,10 +322,14 @@ async function openFromPublicHash(req: {
   localTaskId: string;
 }): Promise<void> {
   const { updateTaskStatus } = useConversionQueueStore.getState();
-  // 转换等待期编辑器可交互：打开前复查；用户取消则不打开，任务置 cancelled（终态，
-  // 避免面板卡在 processing；文件已转换完成，可稍后从面板重新打开）
+  // 转换等待期编辑器可交互：打开前复查；守卫失败（用户取消，或选保存但保存被
+  // 登录拦截等）则不打开。任务置 completed 而非 cancelled：走到这里时转换必然
+  // 已成功（本函数只在 SSE COMPLETED 后被调用；秒传路径不登记任务，回写是 no-op）——
+  // 转换队列显示的是转换结果，打开意图被打断不应把已转好的文件标成「已取消」
+  // （cancelled 态面板不显示「打开」按钮，会把已转好的文件关死）。completed 同为
+  // 终态（面板不会卡在 processing），且保留面板「打开」入口。
   if (!(await guardBeforeOpen())) {
-    updateTaskStatus(req.localTaskId, 'cancelled');
+    updateTaskStatus(req.localTaskId, 'completed');
     return;
   }
   try {

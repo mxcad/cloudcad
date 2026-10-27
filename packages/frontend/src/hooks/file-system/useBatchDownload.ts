@@ -166,23 +166,49 @@ export function useBatchDownload(
   const downloadAllItems = useCallback(
     async (task: BatchTask): Promise<void> => {
       const names = task.itemNames || [];
+      const total = Math.max(names.length, task.totalCount);
       let failed = 0;
-      for (let i = 0; i < Math.max(names.length, task.totalCount); i++) {
+      for (let i = 0; i < total; i++) {
         const res = await downloadBatchItem(task.taskId, i, names[i] || '');
         if (!res.ok) failed++;
       }
-      if (failed > 0) {
+      if (failed === 0) {
+        // 单文件通道用「下载完成」（单文件谈不上"逐个"）；多文件保持原文案
+        showToast?.(
+          names.length <= 1 ? t('下载完成') : t('逐个下载完成'),
+          'success'
+        );
+      } else if (failed >= total) {
+        // 全部失败：「其余已下载」不成立，直接报失败
+        showToast?.(t('下载失败'), 'error');
+      } else {
         showToast?.(
           t('{count} 个文件下载失败，其余已下载', {
             count: String(failed),
           }),
           'warning'
         );
-      } else {
-        showToast?.(t('逐个下载完成'), 'success');
       }
     },
     [showToast]
+  );
+
+  /**
+   * 终态自动下载回调（单文件通道入队/重试共用）：仅 autoDownload 任务触发浏览器
+   * 下载，全局防重表防 SSE 重连重复推送终态时重复下载。
+   */
+  const handleAutoDownloadTerminal = useCallback(
+    (completedTask: BatchTask | undefined) => {
+      if (
+        completedTask &&
+        completedTask.status === 'COMPLETED' &&
+        completedTask.autoDownload &&
+        tryMarkAutoDownloaded(completedTask.taskId)
+      ) {
+        void downloadAllItems(completedTask);
+      }
+    },
+    [downloadAllItems]
   );
 
   /**
@@ -219,16 +245,7 @@ export function useBatchDownload(
         };
         addTask(task);
         setProgressTaskId(taskId);
-        subscribeToProgressSSE(taskId, (completedTask) => {
-          if (
-            completedTask &&
-            completedTask.status === 'COMPLETED' &&
-            completedTask.autoDownload &&
-            tryMarkAutoDownloaded(taskId)
-          ) {
-            void downloadAllItems(completedTask);
-          }
-        });
+        subscribeToProgressSSE(taskId, handleAutoDownloadTerminal);
 
         showToast?.(t('已加入下载队列'), 'info');
         return taskId;
@@ -244,7 +261,7 @@ export function useBatchDownload(
       addTask,
       setProgressTaskId,
       subscribeToProgressSSE,
-      downloadAllItems,
+      handleAutoDownloadTerminal,
       showToast,
     ]
   );
@@ -450,8 +467,15 @@ export function useBatchDownload(
         // 已取消并弹"批量下载已取消"，实际后端取消失败仍在后台执行
         closeBatchTaskProgress(taskId);
         mySubscriptionsRef.current.delete(taskId);
+        const task = useBatchDownloadStore
+          .getState()
+          .tasks.find((item) => item.taskId === taskId);
         updateTask(taskId, { status: 'CANCELLED' });
-        showToast?.(t('批量下载已取消'), 'info');
+        // 文案与 SSE CANCELLED 帧一致（同文案被 NotificationContext 去重，防双弹）
+        showToast?.(
+          task?.autoDownload ? t('下载已取消') : t('批量下载已取消'),
+          'info'
+        );
       } catch (err) {
         // SDK error 是普通对象（非 Error 实例），用 getErrorMessage 提取后端消息
         showToast?.(getErrorMessage(err) || t('取消失败'), 'error');
@@ -469,8 +493,9 @@ export function useBatchDownload(
           path: { taskId },
         });
         updateTask(taskId, { status: 'PROCESSING' });
-        // 失败时进度 SSE 已关闭（onClosed 清实例订阅标记），重试后须重新订阅才能收到新进度
-        subscribeToProgressSSE(taskId);
+        // 失败时进度 SSE 已关闭（onClosed 清实例订阅标记），重试后须重新订阅才能收到新进度；
+        // 重挂自动下载回调：单文件任务失败重试完成后同样自动下载（与入队行为一致）
+        subscribeToProgressSSE(taskId, handleAutoDownloadTerminal);
         showToast?.(t('已重新加入下载队列'), 'info');
       } catch (err) {
         // VIP_FEATURE_REQUIRED 已由全局 error 拦截器弹购买弹窗（含后端消息），此处不再重复 toast
@@ -479,7 +504,7 @@ export function useBatchDownload(
         }
       }
     },
-    [updateTask, showToast, subscribeToProgressSSE]
+    [updateTask, showToast, subscribeToProgressSSE, handleAutoDownloadTerminal]
   );
 
   /** 重试 FAILED 任务中失败的文件项：后端创建新任务（仅重跑失败项，成功项不重跑），
@@ -506,9 +531,11 @@ export function useBatchDownload(
           completedCount: 0,
           errorCount: 0,
           createdAt: new Date().toISOString(),
+          // 继承原任务自动下载标记：单文件任务失败项重试完成后同样自动下载
+          autoDownload: original?.autoDownload,
         });
         setProgressTaskId(newTaskId);
-        subscribeToProgressSSE(newTaskId);
+        subscribeToProgressSSE(newTaskId, handleAutoDownloadTerminal);
         showToast?.(t('已重新加入下载队列（仅失败项）'), 'info');
       } catch (err) {
         // VIP_FEATURE_REQUIRED 已由全局 error 拦截器弹购买弹窗（含后端消息），此处不再重复 toast
@@ -517,7 +544,13 @@ export function useBatchDownload(
         }
       }
     },
-    [addTask, setProgressTaskId, subscribeToProgressSSE, showToast]
+    [
+      addTask,
+      setProgressTaskId,
+      subscribeToProgressSSE,
+      handleAutoDownloadTerminal,
+      showToast,
+    ]
   );
 
   const downloadZip = useCallback(

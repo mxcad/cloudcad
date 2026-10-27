@@ -82,10 +82,13 @@ import type { AuthenticatedRequest } from '../common/types/request.types';
 
 import { I18nContext } from 'nestjs-i18n';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
 import type { Request as ExpressRequest, Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
+import { UserEventsSseService } from './user-events-sse.service';
+import { NoticeCenterService } from '../notice-center/notice-center.service';
 @ApiTags('用户管理')
 @ApiBearerAuth()
 @Controller('users')
@@ -95,6 +98,8 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly accountEventsSseService: AccountEventsSseService,
+    private readonly userEventsSseService: UserEventsSseService,
+    private readonly noticeCenterService: NoticeCenterService
   ) {}
 
   @Post()
@@ -191,11 +196,41 @@ export class UsersController {
   @ApiExcludeEndpoint()
   async streamAccountEvents(
     @Req() req: ExpressRequest,
-    @Res() res: Response,
+    @Res() res: Response
   ): Promise<void> {
     const userId = this.accountEventsSseService.resolveUserId(req, res);
     if (!userId) return;
     await this.accountEventsSseService.streamAccountEvents(userId, res, req);
+  }
+
+  /**
+   * 统一用户事件流（ADR-0083；ADR-0034 豁免：EventSource 无 SDK 形态）。
+   *
+   * 一条长连接复用全部用户级事件（命名事件 account / notice）。前端
+   * sse-coordinator 按浏览器选举一个领导者标签建连、BroadcastChannel 分发给
+   * 其余标签，N 个标签只占 1 条常驻连接（HTTP/1.1 下浏览器每主机 6 连接上限
+   * 曾使第 3 个标签起整站卡死）。
+   *
+   * `@Public` 绕过全局守卫（EventSource 无法带 Authorization header），身份经
+   * 一次性 ticket 校验（POST /notices/stream/ticket 签发），无效 ticket 直接
+   * 401 结束响应（不走异常过滤器，与 notices/stream 同款）。声明在 `:id` 之前：
+   * 字面量段优先于参数段。
+   */
+  @Get('events/stream')
+  @Public()
+  @ApiExcludeEndpoint()
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async openUserEventStream(
+    @Req() req: ExpressRequest,
+    @Res() res: Response,
+    @Query('ticket') ticket?: string
+  ): Promise<void> {
+    const userId = await this.noticeCenterService.redeemTicket(ticket ?? '');
+    if (!userId) {
+      res.status(HttpStatus.UNAUTHORIZED).end();
+      return;
+    }
+    await this.userEventsSseService.openUserEventStream(userId, res, req);
   }
 
   @Patch('profile/me')
@@ -226,17 +261,28 @@ export class UsersController {
   })
   @ApiResponse({ status: 400, description: '文件类型或大小不符合要求' })
   @UseInterceptors(
-    FileInterceptor('file', { storage: memoryStorage(), defParamCharset: 'utf8' })
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      defParamCharset: 'utf8',
+    })
   )
   async uploadAvatar(
     @Request() req: AuthenticatedRequest,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File
   ) {
     if (!file) {
-      throw new BadRequestException(I18nContext.current()?.t('error.user.avatar_required') ?? '请上传头像文件');
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.user.avatar_required') ??
+          '请上传头像文件'
+      );
     }
 
-    return this.usersService.uploadAvatar(req.user.id, file.buffer, path.extname(file.originalname), file.mimetype);
+    return this.usersService.uploadAvatar(
+      req.user.id,
+      file.buffer,
+      path.extname(file.originalname),
+      file.mimetype
+    );
   }
 
   @Post(':id/avatar')
@@ -252,17 +298,28 @@ export class UsersController {
   })
   @ApiResponse({ status: 400, description: '文件类型或大小不符合要求' })
   @UseInterceptors(
-    FileInterceptor('file', { storage: memoryStorage(), defParamCharset: 'utf8' })
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      defParamCharset: 'utf8',
+    })
   )
   async uploadUserAvatar(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File
   ) {
     if (!file) {
-      throw new BadRequestException(I18nContext.current()?.t('error.user.avatar_required') ?? '请上传头像文件');
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.user.avatar_required') ??
+          '请上传头像文件'
+      );
     }
 
-    return this.usersService.uploadAvatar(id, file.buffer, path.extname(file.originalname), file.mimetype);
+    return this.usersService.uploadAvatar(
+      id,
+      file.buffer,
+      path.extname(file.originalname),
+      file.mimetype
+    );
   }
 
   @Get('avatar/:id')
@@ -274,7 +331,7 @@ export class UsersController {
   async serveAvatar(
     @Param('id') id: string,
     @Request() req: ExpressRequest,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     // 路径遍历防护：id 来自 URL（@Public 无鉴权），Express 会解码 %2f→/ 与 %5c→\，
     // basename 剥离路径段，确保头像路径不逃逸 avatarDir（否则可读服务器上任意图片文件）
@@ -297,10 +354,15 @@ export class UsersController {
             ?.split(',')
             .map((tag) => tag.trim().replace(/^W\//, ''))
             .includes(etag) ?? false;
-        const ifModifiedSince = Date.parse(req.headers['if-modified-since'] || '');
+        const ifModifiedSince = Date.parse(
+          req.headers['if-modified-since'] || ''
+        );
         const lastModifiedMs = Math.floor(stats.mtimeMs / 1000) * 1000;
         const notModified =
-          etagMatches || (!ifNoneMatch && !Number.isNaN(ifModifiedSince) && ifModifiedSince >= lastModifiedMs);
+          etagMatches ||
+          (!ifNoneMatch &&
+            !Number.isNaN(ifModifiedSince) &&
+            ifModifiedSince >= lastModifiedMs);
 
         if (notModified) {
           res.status(304);
@@ -329,7 +391,10 @@ export class UsersController {
       }
     }
 
-    throw new NotFoundException(I18nContext.current()?.t('error.user.avatar_not_found') ?? '头像文件不存在');
+    throw new NotFoundException(
+      I18nContext.current()?.t('error.user.avatar_not_found') ??
+        '头像文件不存在'
+    );
   }
 
   @Get(':id')
@@ -355,7 +420,10 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: '用户不存在' })
   @ApiResponse({ status: 403, description: '不能修改自己的角色或状态' })
-  @ApiResponse({ status: 409, description: '不能移除最后一个管理员的用户管理权限' })
+  @ApiResponse({
+    status: 409,
+    description: '不能移除最后一个管理员的用户管理权限',
+  })
   update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -397,7 +465,10 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: '用户不存在' })
   @ApiResponse({ status: 403, description: '不能修改自己的账户状态' })
-  @ApiResponse({ status: 409, description: '不能移除最后一个管理员的用户管理权限' })
+  @ApiResponse({
+    status: 409,
+    description: '不能移除最后一个管理员的用户管理权限',
+  })
   updateStatus(
     @Param('id') id: string,
     @Body() updateUserStatusDto: UpdateUserStatusDto,
@@ -422,7 +493,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: '用户不存在' })
   updateMembership(
     @Param('id') id: string,
-    @Body() dto: UpdateUserMembershipDto,
+    @Body() dto: UpdateUserMembershipDto
   ) {
     return this.usersService.updateMembership(id, dto);
   }

@@ -28,6 +28,44 @@ const { log } = require('../lib/logger');
 const { killTree } = require('../lib/proc');
 const state = require('../lib/state');
 
+// 哨兵标记目录：存活/干净标记是关窗哨兵的跨进程存活信号，属可随时丢弃的运行时
+// 状态，放 scratch 子目录（同 data/temp/probe）而非 data/ 根，避免与用户数据混放。
+const MARKER_DIR = path.join(DATA_DIR, 'temp', 'foreground');
+const MARKER_RE = /^foreground-(?:alive|clean)-/;
+// 哨兵本应在 8-13s 内自删标记（sentinel.js 的 finish）；仍存留 1 分钟以上必然是
+// 哨兵被强杀（stop 的驱动强杀、taskkill /F）留下的孤儿，可安全清扫。
+const MARKER_SWEEP_MAX_AGE_MS = 60 * 1000;
+
+/**
+ * 清扫残留的哨兵标记文件。
+ *
+ * 哨兵正常退出时自行删除（sentinel.js 的 finish），但它被强杀时永远走不到
+ * finish，标记就成了永久孤儿——本目录会随每次异常终止的前台运行不断累积。
+ * @param {number} [maxAgeMs=0] 只删 mtime 早于此门槛的；0 = 不加年龄门槛全删
+ * @returns {string[]} 已删除的文件名
+ */
+function sweepForegroundMarkers(maxAgeMs = 0) {
+  const removed = [];
+  let entries;
+  try {
+    entries = fs.readdirSync(MARKER_DIR);
+  } catch {
+    return removed;
+  }
+  for (const name of entries) {
+    if (!MARKER_RE.test(name)) continue;
+    const file = path.join(MARKER_DIR, name);
+    try {
+      if (maxAgeMs > 0 && Date.now() - fs.statSync(file).mtimeMs <= maxAgeMs) continue;
+      fs.unlinkSync(file);
+      removed.push(name);
+    } catch {
+      /* 已被并发进程删除 */
+    }
+  }
+  return removed;
+}
+
 /**
  * 同步终止全部前台子进程（信号处理器专用）。
  *
@@ -99,12 +137,14 @@ let guard = null;
 function armForegroundGuard() {
   if (guard) return guard;
   const token = `${Date.now().toString(36)}${crypto.randomBytes(3).toString('hex')}`;
-  const aliveFile = path.join(DATA_DIR, `foreground-alive-${token}`);
-  const cleanFile = path.join(DATA_DIR, `foreground-clean-${token}`);
+  const aliveFile = path.join(MARKER_DIR, `foreground-alive-${token}`);
+  const cleanFile = path.join(MARKER_DIR, `foreground-clean-${token}`);
   let heartbeat = null;
   let sentinel = null;
   try {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.mkdirSync(MARKER_DIR, { recursive: true });
+    // 新驱动替已死的旧驱动收尾：清掉上一轮被强杀而留下的陈旧标记
+    sweepForegroundMarkers(MARKER_SWEEP_MAX_AGE_MS);
     fs.writeFileSync(aliveFile, String(Date.now()));
     heartbeat = spawn(
       NODE_EXE,
@@ -128,10 +168,32 @@ function armForegroundGuard() {
     );
     return null;
   }
-  // spawn 异步失败（ENOENT 等）不致命：哨兵缺位时行为退回信号处理器覆盖
-  if (heartbeat) heartbeat.on('error', () => {});
+  // spawn 异步失败（ENOENT 等）不致命：哨兵缺位时行为退回信号处理器覆盖。
+  // 但**必须打日志**——2026-10-27 真机事故中哨兵/心跳静默缺位是"关窗未全停"
+  // 的排查盲区，静默吞掉让前台日志里看不到任何异常。
+  if (heartbeat) {
+    heartbeat.on('error', (err) => {
+      log(
+        'yellow',
+        `[警告] 前台心跳子进程拉起失败: ${err.message}（关窗陈旧检测将失效）`
+      );
+    });
+    // unref：心跳子进程不得保持驱动事件循环存活。否则驱动主流程结束（如部署
+    // 失败返回）后进程退不出去——心跳只在驱动的 process.on('exit') 里被杀，
+    // 而驱动不退出（心跳活着）↔ 心跳不被杀（驱动不退出）死锁：alive 文件持续
+    // 刷新、哨兵恒判"驱动存活"一直等待、基础服务不停、目录锁死（2026-10-27
+    // 真机事故根因）。unref 只解除对驱动事件循环的持有：子进程照常独立运行
+    // （仍每 2s 刷新 alive 文件、关窗时仍随控制台同亡）；前台成功路径的驱动
+    // 存活由 start.js 自己的 setInterval 维持，与此无关。
+    if (typeof heartbeat.unref === 'function') heartbeat.unref();
+  }
   if (sentinel) {
-    sentinel.on('error', () => {});
+    sentinel.on('error', (err) => {
+      log(
+        'yellow',
+        `[警告] 前台关窗哨兵拉起失败: ${err.message}（关终端全停退化为仅信号处理器覆盖）`
+      );
+    });
     if (typeof sentinel.unref === 'function') sentinel.unref();
   }
   // CLI 正常退出（非信号路径）时杀掉心跳子进程，让哨兵及时触发全量停止
@@ -244,4 +306,5 @@ module.exports = {
   createCleanupHandler,
   armForegroundGuard,
   markCleanExit,
+  sweepForegroundMarkers,
 };

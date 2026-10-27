@@ -145,10 +145,20 @@ function shouldGzip(req, mimeType) {
   return clientAcceptsGzip(req) ? 'gzip' : null;
 }
 
+// 代理错误「失败侧」由响应头是否已发给客户端派生，而非硬编码。同一条
+// "socket hang up" 在 SSE 长连接上，后端 `flushHeaders` 往往早已发出响应头
+// （`headersSent` 已为 true），只是连接随后被掐断——硬编码「请求侧」会误标成
+// 「后端未回响应头」，把排障引向「后端卡死」的假线索（2026-10-26 前台排障暴露）。
+function proxyErrorSide(res) {
+  return res.headersSent
+    ? '响应侧（响应头已发给客户端）'
+    : '请求侧（后端未回响应头）';
+}
+
 // 代理错误日志。历史上只打 err.message 有三个盲区：无时间戳，无法与后端日志对齐；
 // 无 err.code，无法定性（Node 内部以空 Error 触发时 message 为空串，看着像日志被截断）；
 // 无失败侧，无法区分「后端未回响应头」与「后端已开始回包后中断」——同一条
-// "socket hang up" 两种情况都会出现。
+// "socket hang up" 两种情况都会出现。失败侧现由 `proxyErrorSide` 按 `headersSent` 派生。
 function logProxyError(side, err, target, req) {
   const e = err || {};
   const message =
@@ -208,7 +218,7 @@ function proxyRequest(req, res, target) {
     // 后端响应流中途出错（如 ECONNRESET）：此时响应头往往已发给客户端，
     // 只能中止，不能再 writeHead，否则 ERR_HTTP_HEADERS_SENT 直接崩进程
     proxyRes.on('error', (err) => {
-      logProxyError('响应侧（响应头已发给客户端）', err, target, req);
+      logProxyError(proxyErrorSide(res), err, target, req);
       if (!res.headersSent) {
         res.writeHead(502);
       }
@@ -221,7 +231,7 @@ function proxyRequest(req, res, target) {
   // 到后端的请求出错（连接被拒/重置等）：
   // 头未发 → 回 502；头已发（后端回包中途断）→ 只能中止，不能重复 writeHead
   proxyReq.on('error', (err) => {
-    logProxyError('请求侧（后端未回响应头）', err, target, req);
+    logProxyError(proxyErrorSide(res), err, target, req);
     if (!res.headersSent) {
       res.writeHead(502);
       res.end(`Proxy Error: ${err.message}`);
@@ -290,14 +300,16 @@ function serveStaticFile(req, res, filePath, urlPath, options) {
   headers['Cross-Origin-Opener-Policy'] = 'same-origin';
   headers['Cross-Origin-Embedder-Policy'] = 'require-corp';
 
-  // gzip 下发：优先用预生成的 <file>.gz（零 CPU，mxcad-app 的 JS/wasm/配置均自带），
-  // 否则 zlib 在线压缩（应用外壳 assets/ 无预生成 .gz）。Vary 防止共享缓存把
-  // gzip 响应发给不接受 gzip 的客户端
-  if (shouldGzip(req, mimeType)) {
+  // gzip 下发：仅当存在预生成 <file>.gz 时直接 pipe（零 CPU，mxcad-app 的 JS/wasm/
+  // 配置均自带 .gz）。无预生成 .gz 时绝不做在线 zlib 压缩——zlib 压缩是同步 CPU，
+  // 跑在单进程主事件循环，CAD 页并发加载大 chunk 时会阻塞所有标签的前端资源 + /api
+  // 代理（2026-10-26 事故）。无 .gz 的文件直接以未压缩形式下发。Vary 防止共享缓存
+  // 把 gzip 响应发给不接受 gzip 的客户端
+  const hasPreGz = fs.existsSync(filePath + '.gz');
+  if (hasPreGz && shouldGzip(req, mimeType)) {
     headers['Content-Encoding'] = 'gzip';
     headers['Vary'] = 'Accept-Encoding';
-    const hasPreGz = fs.existsSync(filePath + '.gz');
-    const src = fs.createReadStream(hasPreGz ? filePath + '.gz' : filePath);
+    const src = fs.createReadStream(filePath + '.gz');
 
     // 头必须等流真正打开成功才提交：existsSync 通过之后文件仍可能因权限/竞态
     // 打不开。先 writeHead(200) 再失败只能 res.end()，浏览器拿到的是「声称 200
@@ -315,17 +327,14 @@ function serveStaticFile(req, res, filePath, urlPath, options) {
     });
     src.on('open', () => {
       res.writeHead(200, headers);
-      if (hasPreGz) {
-        src.pipe(res);
-      } else {
-        src.pipe(zlib.createGzip({ level: 6 })).pipe(res);
-      }
+      src.pipe(res);
     });
     return;
   }
 
-  // 读取并返回文件（客户端不接受 gzip 的分支）。原始文件存在则直接发；
-  // 预压缩 dist 里仅 <file>.gz 存在时，解压后以未压缩形式下发（不发 Content-Encoding）。
+  // 读取并返回文件（无预生成 .gz，或客户端不接受 gzip 的分支）。原始文件存在则直接发；
+  // 预压缩 dist 里仅 <file>.gz 存在（无原始文件）时，解压后以未压缩形式下发（不发
+  // Content-Encoding）。此分支不做任何在线压缩。
   if (fs.existsSync(filePath)) {
     fs.readFile(filePath, (err, data) => {
       if (err) {
@@ -447,7 +456,7 @@ function main() {
 
   const server = createServer(options);
 
-  server.listen(options.port, () => {
+  server.listen(options.port, '0.0.0.0', () => {
     console.log(`[静态服务] 已启动`);
     console.log(`  桌面端: ${options.dir}`);
     console.log(`  移动端: ${options.mobileDir}`);
@@ -486,5 +495,6 @@ module.exports = {
   clientAcceptsGzip,
   shouldGzip,
   logProxyError,
+  proxyErrorSide,
   COMPRESSIBLE_MIME,
 };

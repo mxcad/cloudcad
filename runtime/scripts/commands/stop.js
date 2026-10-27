@@ -408,7 +408,9 @@ function listOurAppProcesses() {
     if (p.pid === process.pid) return false;
     if (!/node/i.test(p.name)) return false;
     const cmd = normPath(p.cmdline);
-    return cmd.includes(root) && APP_ENTRY_RE.test(cmd);
+    // 带尾分隔符做子串匹配（同 isLocalPm2Daemon）：本目录是他目录名前缀时
+    // （...windows ⊂ ...windows1），裸 includes(root) 会把他目录进程误判为本目录
+    return cmd.includes(`${root}/`) && APP_ENTRY_RE.test(cmd);
   });
 }
 
@@ -439,7 +441,10 @@ function listOurDriverProcesses() {
     if (p.pid === process.pid) return false;
     if (!/node/i.test(p.name)) return false;
     const cmd = normPath(p.cmdline);
-    return cmd.includes(root) && DRIVER_ENTRY_RE.test(cmd);
+    // 带尾分隔符做子串匹配（同 isLocalPm2Daemon）：本目录是他目录名前缀时
+    // （...windows ⊂ ...windows1），裸 includes(root) 会把他目录驱动误判为本目录
+    // 而误杀（哨兵/stop 的「另一实例」判定同样依赖此函数）
+    return cmd.includes(`${root}/`) && DRIVER_ENTRY_RE.test(cmd);
   });
 }
 
@@ -554,6 +559,18 @@ async function stopResidualServices() {
   // 稍等进程表刷新：killTree 用 taskkill（同步）发出信号，但 Win32_Process
   // 快照有滞后，立即复查可能读到已退出的进程而误报"未释放"。
   await new Promise((resolve) => setTimeout(resolve, 800));
+
+  // 驱动强杀会连带强杀其 detached 哨兵子进程，哨兵走不到 finish() 的自删逻辑，
+  // 标记文件就此永久孤儿化。上面已等过进程表刷新，确认无存活驱动后无门槛清扫
+  // （此时若还有驱动在跑，说明是用户刚重新 start，不能删它的存活标记）。
+  const { sweepForegroundMarkers } = require('../foreground/registry');
+  if (listOurDriverProcesses().length === 0) {
+    const swept = sweepForegroundMarkers(0);
+    if (swept.length > 0) {
+      log('cyan', `  清理残留的前台哨兵标记（${swept.length} 个）...`);
+    }
+  }
+
   let left = listOurResidualProcesses();
   if (left.length > 0) {
     // 终检清扫：定向步骤之后仍匹配归属判据的进程（定向步骤漏掉的、或被监督者

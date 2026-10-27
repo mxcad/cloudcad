@@ -564,6 +564,78 @@ function calcLockHash() {
 }
 
 /**
+ * 检测 node_modules 是否真实可用（而非仅"目录存在"）。
+ *
+ * Windows 上 pnpm 用**绝对路径 junction** 建 node_modules（顶层包链接与
+ * .bin shim 的 NODE_PATH 都指向安装时的绝对路径）。部署目录被改名/移动后
+ * 整棵树随迁，但所有 junction 指向旧路径而失效：安装门禁
+ * （shouldReinstallDependencies）只查"目录存在 + lock 哈希匹配"会误判就绪，
+ * 随后 prisma CLI 找不到（MODULE_NOT_FOUND）。Linux 上 pnpm 用相对符号链接，
+ * 改名不受影响，本探测天然通过。
+ *
+ * 两级判据：
+ * 1. 根 node_modules/.pnpm 虚拟仓与 backend 的包级链接目录须存在（缺失=安装不完整）；
+ * 2. 金丝雀：packages/backend 下的 prisma 包链接。lstat 只查链接本身（失效的
+ *    junction 仍是重解析点，lstat 成功）；链接存在时再用 existsSync 跟随 junction
+ *    验证目标文件——目标缺失 = 链接指向旧路径（目录被改名/移动）。链接本身
+ *    不存在（如该变体未装 prisma）时此金丝雀无法判定，不误报失效。
+ * @returns {boolean} true = 健康（或无法判定，交由其余门禁把关）
+ */
+function checkNodeModulesHealth() {
+  if (!fs.existsSync(path.join(PROJECT_ROOT, 'node_modules', '.pnpm'))) {
+    return false;
+  }
+  const backendNm = path.join(PROJECT_ROOT, 'packages', 'backend', 'node_modules');
+  if (!fs.existsSync(backendNm)) return false;
+  const prismaLink = path.join(backendNm, 'prisma');
+  let linkExists = false;
+  try {
+    fs.lstatSync(prismaLink);
+    linkExists = true;
+  } catch {
+    /* 链接不存在：此金丝雀无法判定，不误报 */
+  }
+  if (!linkExists) return true;
+  return fs.existsSync(path.join(prismaLink, 'build', 'index.js'));
+}
+
+/**
+ * 删除根与包级 node_modules（链接失效后从零重建用）。
+ * @returns {boolean} true = 全部删除成功（不存在视为成功）
+ */
+function removeNodeModulesDirs() {
+  const dirs = [path.join(PROJECT_ROOT, 'node_modules')];
+  const packagesDir = path.join(PROJECT_ROOT, 'packages');
+  let entries = [];
+  try {
+    entries = fs.readdirSync(packagesDir, { withFileTypes: true });
+  } catch {
+    /* 无 packages 目录 */
+  }
+  for (const e of entries) {
+    if (e.isDirectory()) dirs.push(path.join(packagesDir, e.name, 'node_modules'));
+  }
+  for (const d of dirs) {
+    if (!fs.existsSync(d)) continue;
+    try {
+      fs.rmSync(d, { recursive: true, force: true });
+    } catch (err) {
+      error(`删除 ${d} 失败: ${err.message}`);
+      return false;
+    }
+  }
+  return true;
+}
+
+/** 路径比较归一化（Windows 大小写不敏感 + 反斜杠 + 结尾分隔符） */
+function normPathForCompare(p) {
+  return String(p || '')
+    .toLowerCase()
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '');
+}
+
+/**
  * 检查是否需要重新安装依赖
  * 通过对比已记录的 Lock Hash 与当前 lock 文件的哈希值来判断
  * @returns {boolean} true 表示需要重新安装
@@ -576,6 +648,13 @@ function shouldReinstallDependencies() {
   // 1. node_modules 不存在 → 需要安装
   if (!fs.existsSync(nodeModulesDir)) {
     log('⚠ node_modules 不存在，需要安装依赖');
+    return true;
+  }
+
+  // 1.5 node_modules 存在但链接失效（目录被改名/移动：Windows 上 pnpm 用绝对
+  //     路径 junction，目录一移全部失效）→ 需要重装
+  if (!checkNodeModulesHealth()) {
+    log('⚠ 检测到 node_modules 链接失效（部署目录可能被改名/移动），需要重新安装依赖');
     return true;
   }
 
@@ -608,12 +687,39 @@ function shouldReinstallDependencies() {
     return true;
   }
 
+  // 5. 部署目录改名/移动检测（仅 Windows：pnpm 绝对路径 junction 随目录移动
+  //    全部失效；Linux 相对符号链接不受影响）。标记由 markInstalledVersion 在
+  //    安装成功后写入。旧包无标记：链接健康则回填（把当前目录记为安装目录），
+  //    链接失效已被第 1.5 步拦截。
+  if (IS_WINDOWS) {
+    const rootMarkerFile = path.join(PROJECT_ROOT, '.deploy-root');
+    if (fs.existsSync(rootMarkerFile)) {
+      const installedRoot = normPathForCompare(
+        fs.readFileSync(rootMarkerFile, 'utf8').trim()
+      );
+      const currentRoot = normPathForCompare(PROJECT_ROOT);
+      if (installedRoot && installedRoot !== currentRoot) {
+        log('⚠ 检测到部署目录被改名/移动，node_modules 链接已失效，需要重新安装依赖');
+        log(`  安装时目录: ${installedRoot}`);
+        log(`  当前目录:   ${currentRoot}`);
+        return true;
+      }
+    } else {
+      try {
+        fs.writeFileSync(rootMarkerFile, PROJECT_ROOT);
+        log('  ✓ 已回填部署目录标记（.deploy-root）');
+      } catch {
+        /* 写失败不阻塞启动，下次再补 */
+      }
+    }
+  }
+
   log('  ✓ node_modules 已存在且版本匹配，跳过安装');
   return false;
 }
 
 /**
- * 记录当前已安装的 Lock Hash
+ * 记录当前已安装的 Lock Hash 与部署目录绝对路径
  * 在安装完成后调用，用于下次启动时对比
  */
 function markInstalledVersion() {
@@ -622,6 +728,14 @@ function markInstalledVersion() {
   if (currentHash) {
     fs.writeFileSync(deployHashFile, currentHash);
     log('  ✓ 已记录依赖版本标记');
+  }
+  // 记录安装时的部署目录绝对路径：Windows 上 pnpm 用绝对路径 junction 建
+  // node_modules，目录改名/移动后链接全部失效，门禁（shouldReinstallDependencies
+  // 第 5 步）对比此标记触发自愈重装
+  try {
+    fs.writeFileSync(path.join(PROJECT_ROOT, '.deploy-root'), PROJECT_ROOT);
+  } catch {
+    /* 写失败不阻塞启动，门禁退化为金丝雀判据 */
   }
 }
 
@@ -652,6 +766,19 @@ function runPnpmInstallOffline(options = {}) {
   const needReinstall = shouldReinstallDependencies();
   if (!needReinstall) {
     return true; // 跳过安装
+  }
+
+  // 链接失效（目录被改名/移动）时先删旧 node_modules 再从零重建：其中的
+  // .modules.yaml 记录着旧绝对路径（storeDir），不删的话 pnpm 可能误判状态
+  // 而不重建链接。删除失败（文件被运行中的服务占用）立即中止——在失效的
+  // 树上叠装不可靠，与其装出半坏状态不如明确报错让用户先停服务。
+  if (!checkNodeModulesHealth()) {
+    log('  → 删除失效的 node_modules，从离线仓重建...');
+    if (!removeNodeModulesDirs()) {
+      error('删除失效的 node_modules 失败（文件可能被运行中的服务占用）');
+      error('请先停止全部服务（stop）再重新运行 start');
+      return false;
+    }
   }
 
   // 查找 pnpm store
@@ -940,6 +1067,8 @@ module.exports = {
   copyEnvExampleToEnv,
   checkPrismaClientExists,
   calcLockHash,
+  checkNodeModulesHealth,
+  removeNodeModulesDirs,
   shouldReinstallDependencies,
   markInstalledVersion,
   // 生成 .env 空白密钥（SESSION_SECRET/JWT_SECRET/PII_*/REDIS_PASSWORD/INTERNAL_SERVICE_SECRET）。

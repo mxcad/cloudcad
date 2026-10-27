@@ -319,6 +319,15 @@ packages/
 - **测试**：`foreground/sentinel.test.js`（真实 sentinel 拷入临时沙箱 + stub cleanup，覆盖判定矩阵四出口）、`foreground/heartbeat.test.js`（启动即写/周期刷新/缺参退出码 1/路径失效不崩）、`foreground/registry.test.js` 增补（哨兵只拉一次、clean 标记、spawn 失败降级）、`commands/stop.test.js` 增补（本目录 daemon 计入残留并强杀、他目录 daemon 排除、系统 node 拉起的本包 daemon 双判据命中、他目录名前缀不误判、驱动判据只认 `cli.js deploy|start`、前台驱动最先强杀、终检清扫强杀定向漏网进程）；runtime/scripts 全量测试全绿（stop.test.js 29/29；config-updater.test.js 因工作区 `@cloudcad/contracts` dist 缺失的基线环境失败与本改动无关）。
 - **真机 E2E**（部署包 `release/cloudcad-deploy-1.0.0-20261026-windows`，修复版 runtime 脚本覆盖进包后实测）：①旧哨兵判据误判（应用层残留被判"另一实例"）被关窗模拟暴露 → 修驱动判据；②`cli.js stop` 实测停掉全部服务含系统 node 拉起的本包 daemon（双判据命中）；③stop 对存活前台实例的驱动/转换服务漏杀被暴露 → 修驱动强杀 + 终检清扫；④前台实例被 stop 停掉监督对象后，驱动经信号处理器正常退出（写 clean 标记 + 派生 cleanup.js）自行收尾全部残留——clean 退出路径与哨兵路径互为兜底；⑤**干净实例关窗全链路 PASS**：新起前台实例（无并发干扰）→ 程序化强杀驱动+心跳（等价 CTRL_CLOSE_EVENT）→ 哨兵 7s 内派生 cleanup.js（`foreground-cleanup-20261026-151417.log`）→ 20s 内 postgres/redis/mxcadassembly/manager/serve-static/PM2 daemon 全部消失、6 端口（3001/8000/3002/3091/5432/6379）全关、无任何进程再引用该目录。
 
+### 前台哨兵标记的落点与孤儿清扫（2026-10-26 追加）
+
+- **缺口**：标记文件原本写 `data/` 根（与 backups/files/uploads/logs 同级），而唯一删除方是 `sentinel.js` 的 `finish()`。`stopResidualServices` 第一步就用 `killResidualPid`（`taskkill /T /F`）强杀前台驱动，detached 哨兵仍在该驱动的进程树内、被一并强杀，永远走不到 `finish()` → 标记永久孤儿化，`data/` 随每次异常终止的前台运行累积（实测 1 小时攒 3 个）。
+- **修复**：①标记迁入 scratch 子目录 `data/temp/foreground/`（同 `data/temp/probe` 先例），不再混入 `data/` 根；②`foreground/registry.js` 新增 `sweepForegroundMarkers(maxAgeMs)`（`0` = 不加年龄门槛）作为**唯一清扫出口**，两处调用：`armForegroundGuard` 武装时以 60s 门槛清扫（新驱动替已死的旧驱动收尾——哨兵 8-13s 内自删，超过 1 分钟仍在的必然是被强杀的哨兵留下的孤儿）；`stopResidualServices` 在进程表刷新（已等过 800ms）且确认**无存活驱动**后以 0 门槛清扫（驱动全灭后才敢无门槛，否则用户快速重试 start 后新实例的新鲜存活标记会被误删、关窗兜底静默失效）。
+- **为何不换无文件方案**：改判据为「探测驱动 PID/cmdline」看似更简，但进程表查询会瞬时失败——若把它当主判据，瞬时失败即等价于「健康实例被误判已死 → 触发全量停止」，比遗留 13 字节文件严重得多。当前设计刻意分离**不可伪造的存活信号**（心跳写文件，只可能是该实例自己写的）与**有失败率的进程表查询**（仅作二级判定、fail 向停止），此分工保持不变。
+- **测试**：`foreground/registry.test.js`（标记落点、清扫三态、武装时清扫）+ `commands/stop.test.js`（驱动全灭后清扫一次、仍有驱动时不清扫）；runtime/scripts 前台相关全绿。
+- **遗留**：部署包需重新出包才持久（已手动覆盖 `foreground/registry.js` + `commands/stop.js` 进包，原文件备份为 `*.orig-pre-sweep`）。
+
+
 ---
 
 ## 五、分阶段实施路线图

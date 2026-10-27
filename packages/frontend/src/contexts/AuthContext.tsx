@@ -17,12 +17,9 @@ import {
 import { clearProjectPermissionsCache } from '@/utils/permissionUtils';
 import { clearSavePermissionCache } from '@/services/mxcadManager/saveDefaults';
 import { read, writeJson } from '@/lib/browserStorage';
-import {
-  isAccessTokenExpired,
-  getUser,
-} from '@/utils/tokenUtils';
+import { isAccessTokenExpired, getUser } from '@/utils/tokenUtils';
 import { clearAuthState, loadAuthState } from '@/lib/authState';
-import { openEventStream } from '@/services/eventStream';
+import { subscribeUserEvents } from '@/services/userEventStream';
 import {
   useAuthActions,
   type User,
@@ -271,22 +268,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setError,
   });
 
-  // 账户事件 SSE：管理员改会员等账户写操作后，后端向本用户通道推送 membership-changed，
+  // 账户事件：管理员改会员等账户写操作后，后端经统一用户事件流推送 membership-changed，
   // 收到即 refreshUser() 重拉 /auth/profile，使已登录用户无需退出重登即拿到最新会员态。
-  // 以 token 为依赖：token 刷新时自动重开（带新 token）；登出（token 清空）时关流。
-  // closeOnError=false：断连由 EventSource 自动重连（token 过期 401 会随下次 token 刷新重开）。
+  // 全浏览器共享一条 SSE（领导者选举 + 跨标签扇出，见 services/userEventStream，ADR-0083）；
+  // 以 token/user 为依赖：登出（token 清空）或切换用户时退订（最后一个订阅者移除即关流放锁）。
+  // 静默刷新 token 不需要重开流（统一流走一次性 ticket 鉴权，与 token 无关）。
+  // 依赖 user?.id（稳定原始值）而非 user 对象：refreshUser 每次都会产生
+  // 新 user 对象，依赖对象身份会让 effect 在每次刷新后重跑——退订使订阅数
+  // 归零触发关流放锁，再订阅又重签 ticket 重开流，纯浪费且有事件空窗。
   useEffect(() => {
-    if (!token) return;
-    const handle = openEventStream({
-      path: '/v1/users/profile/account-events',
-      query: { token },
-      closeOnError: false,
-      onFrame: () => {
-        void refreshUser();
-      },
+    if (!token || !user?.id) return undefined;
+    const unsubscribe = subscribeUserEvents('account', () => {
+      void refreshUser();
     });
-    return () => handle?.close();
-  }, [token, refreshUser]);
+    return unsubscribe;
+  }, [token, user?.id, refreshUser]);
 
   const value = useMemo<AuthContextType>(
     () => ({

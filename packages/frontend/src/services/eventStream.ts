@@ -26,8 +26,15 @@ export interface OpenEventStreamOptions {
   /** 出错是否关流。默认 true（关流 + onClose('error')，轮询等兜底接管）；
    *  断连需依赖 EventSource 自动重连的端点传 false（后端重连后重推当前状态） */
   closeOnError?: boolean;
-  /** 每帧回调，入参为已 JSON.parse 的帧数据；畸形帧已在实现内静默忽略 */
-  onFrame: (data: unknown) => void;
+  /** 无名帧（`data:` 无 `event:` 前缀）回调，入参为已 JSON.parse 的帧数据；
+   *  畸形帧已在实现内静默忽略。纯命名事件端点可不传 */
+  onFrame?: (data: unknown) => void;
+  /** 命名事件名列表（SSE `event:` 字段），按名各注册一个监听 */
+  namedEvents?: string[];
+  /** 命名事件帧回调（kind = 事件名，data 已 JSON.parse）；畸形帧静默忽略 */
+  onNamedFrame?: (kind: string, data: unknown) => void;
+  /** 建连成功（响应头到达）回调，供调用方重置重试退避等 */
+  onOpen?: () => void;
   onClose?: (reason: EventStreamCloseReason) => void;
 }
 
@@ -70,12 +77,28 @@ export function openEventStream(
   }
 
   es.onmessage = (event: MessageEvent) => {
+    if (!options.onFrame) return;
     try {
       options.onFrame(JSON.parse(event.data));
     } catch {
       // 畸形帧静默忽略（单帧失败不影响后续帧；断连重连由 EventSource 处理）
     }
   };
+
+  for (const kind of options.namedEvents ?? []) {
+    es.addEventListener(kind, (event: Event) => {
+      if (!options.onNamedFrame) return;
+      try {
+        options.onNamedFrame(kind, JSON.parse((event as MessageEvent).data));
+      } catch {
+        // 畸形帧静默忽略
+      }
+    });
+  }
+
+  if (options.onOpen) {
+    es.onopen = () => options.onOpen?.();
+  }
 
   if (options.closeOnError !== false) {
     es.onerror = () => close('error');

@@ -10,9 +10,13 @@
  * 锁定点：
  * - 前台模式（options.mode === 'foreground'）：setupSignalHandlers 必须早于 startInfrastructure
  * - PM2 模式：不注册（后台模式关终端不该停服务）
+ * - 基础服务启动后失败（前台）：立即派生全量停止（killChildProcessesSync +
+ *   spawnDetachedCleanup + markCleanExit）再 exit(1)——不留 PG/Redis 跑着锁目录
+ *   （2026-10-27 真机事故：迁移失败后驱动常驻、目录锁死）
+ * - 基础服务启动后失败（PM2）：不停服务（按设计常驻），直接 exit(1)
  *
  * startInfrastructure 桩默认返回 false，使 deployModeImpl 在注册点之后立即
- * return——下游步骤（版本检查 / 迁移 / 构建校验 / 尾验）无需逐个 stub。
+ * 走失败收尾——下游步骤（版本检查 / 迁移 / 构建校验 / 尾验）无需逐个 stub。
  *
  * 运行：node --test runtime/scripts/commands/deploy-foreground-signal.test.js
  */
@@ -67,6 +71,9 @@ function setup(opts = {}) {
   stub('../lib/deploy-log', { runWithDeployLog: async (_name, fn) => fn() });
   stub('../foreground/registry', {
     setupSignalHandlers: rec(async () => {}, 'setupSignalHandlers'),
+    killChildProcessesSync: rec(() => 0, 'killChildProcessesSync'),
+    spawnDetachedCleanup: rec(() => {}, 'spawnDetachedCleanup'),
+    markCleanExit: rec(() => {}, 'markCleanExit'),
   });
   stub('../drawing-version-helper', {
     runHealthCheck: async () => ({ failures: 0, warnings: 0 }),
@@ -97,12 +104,36 @@ test.after(() => {
   for (const [rel, resolved] of stubs) delete require.cache[resolved];
 });
 
-test('前台模式：退出处理器早于 startInfrastructure 注册', async () => {
+/**
+ * 拦截 process.exit：abortAfterInfra 在部署失败时 exit(1)，测试里替换为
+ * 「记录退出码 + 抛错」让调用栈正常返回。返回捕获的退出码（未退出则 null）。
+ */
+async function runUntilExit(deploy, args) {
+  let exitCode = null;
+  const realExit = process.exit;
+  process.exit = (code) => {
+    exitCode = code;
+    throw new Error('__process_exit__');
+  };
+  try {
+    await deploy.deployMode(...args);
+  } catch (err) {
+    if (err.message !== '__process_exit__') throw err; // 预期的退出信号
+  } finally {
+    process.exit = realExit;
+  }
+  return exitCode;
+}
+
+test('前台模式：退出处理器早于 startInfrastructure 注册；失败即全停后退出', async () => {
   const { deploy, calls } = setup({});
 
-  const ok = await deploy.deployMode(false, { mode: 'foreground' });
+  const exitCode = await runUntilExit(deploy, [
+    false,
+    { mode: 'foreground' },
+  ]);
 
-  assert.equal(ok, false, 'startInfrastructure 失败即中止部署');
+  assert.equal(exitCode, 1, '前台部署失败：全停收尾后 exit(1)');
   assert.ok(
     calls.includes('setupSignalHandlers'),
     '前台模式必须注册退出处理器'
@@ -115,16 +146,31 @@ test('前台模式：退出处理器早于 startInfrastructure 注册', async ()
     calls.indexOf('stopAppServices') < calls.indexOf('setupSignalHandlers'),
     '注册点应在应用层停止之后（不干扰应用层端口让渡）'
   );
+  // 2026-10-27 真机事故回归：基础服务启动后失败须立即派生全量停止，
+  // 不留 PG/Redis 跑着锁住部署目录
+  assert.ok(calls.includes('killChildProcessesSync'), '前台失败：同步杀子进程');
+  assert.ok(calls.includes('spawnDetachedCleanup'), '前台失败：派生 detached 全量停止');
+  assert.ok(calls.includes('markCleanExit'), '前台失败：写 clean 标记（哨兵不重复停止）');
+  assert.ok(
+    calls.indexOf('killChildProcessesSync') <
+      calls.indexOf('spawnDetachedCleanup') &&
+      calls.indexOf('spawnDetachedCleanup') < calls.indexOf('markCleanExit'),
+    '全停顺序：杀子进程 → 派生 cleanup → 写 clean 标记'
+  );
 });
 
-test('PM2 模式：不注册前台退出处理器', async () => {
+test('PM2 模式：不注册前台退出处理器；失败只退出不全停', async () => {
   const { deploy, calls } = setup({});
 
-  const ok = await deploy.deployMode(false, { mode: 'pm2' });
+  const exitCode = await runUntilExit(deploy, [false, { mode: 'pm2' }]);
 
-  assert.equal(ok, false, 'startInfrastructure 失败即中止部署');
+  assert.equal(exitCode, 1, 'PM2 部署失败：直接 exit(1)');
   assert.ok(
     !calls.includes('setupSignalHandlers'),
     'PM2 模式不得注册前台退出处理器'
+  );
+  assert.ok(
+    !calls.includes('spawnDetachedCleanup'),
+    'PM2 模式失败不触发全停（基础服务按设计常驻）'
   );
 });

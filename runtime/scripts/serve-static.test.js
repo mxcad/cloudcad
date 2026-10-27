@@ -4,7 +4,10 @@
  * 背景缺陷（2026-10-26 4G 加载分析）：静态服务恒发原始字节，dist 里预生成的
  * .gz 文件（mxcad-app 的 JS/wasm/配置自带）从未被使用——CAD 页首载 ~53MB 原始
  * 体积，4G 下 2~4 分钟。修复：客户端接受 gzip 时优先下发预生成 <file>.gz
- * （零 CPU），否则 zlib 在线压缩；响应带 Vary: Accept-Encoding 防共享缓存串味。
+ * （零 CPU）；无预生成 .gz 时绝不做在线 zlib 压缩——zlib 压缩是同步 CPU，跑在
+ * 单进程主事件循环，CAD 页并发加载大 chunk 会阻塞所有标签的前端资源 + /api 代理
+ * （2026-10-26 事故），直接以未压缩形式下发原始字节。响应带 Vary: Accept-Encoding
+ * 防共享缓存串味。
  * 同批修复：COOP/COEP 从「只加在 .wasm」扩到全部静态响应——浏览器只在顶层
  * 文档读到这两个头才启用跨源隔离，原实现下生产环境 SharedArrayBuffer 不可用、
  * wasm 多线程（wasmConfig.type=2d）实际失效。
@@ -29,6 +32,7 @@ const {
   clientAcceptsGzip,
   shouldGzip,
   logProxyError,
+  proxyErrorSide,
 } = require('./serve-static');
 
 // --- clientAcceptsGzip ---
@@ -174,15 +178,15 @@ test('gzip: 客户端接受时优先下发预生成 .gz，带 Vary，解码后�
   });
 });
 
-test('gzip: 无预生成 .gz 时 zlib 在线压缩（应用外壳 assets/ 场景）', async () => {
+test('无预生成 .gz 时直接下发原始字节，绝不做在线压缩（应用外壳 assets/ 场景）', async () => {
   await withServer(async (port) => {
     const res = await rawGet(port, '/index.html', { 'accept-encoding': 'gzip' });
     assert.equal(res.status, 200);
-    assert.equal(res.headers['content-encoding'], 'gzip');
-    assert.equal(
-      zlib.gunzipSync(res.body).toString('utf8'),
-      '<html>desktop</html>'
-    );
+    // 关键回归：曾走 zlib 在线压缩（同步 CPU 阻塞单进程事件循环，连累其他标签），
+    // 现无 .gz 一律发原始字节、不带 Content-Encoding / Vary
+    assert.equal(res.headers['content-encoding'], undefined);
+    assert.equal(res.headers['vary'], undefined);
+    assert.equal(res.body.toString('utf8'), '<html>desktop</html>');
   });
 });
 
@@ -213,13 +217,13 @@ test('gzip: 不可压缩类型即使客户端接受也发原始字节', async ()
   });
 });
 
-test('gzip: otf 字体走在线压缩（syadobe.otf 7.9MB 场景）', async () => {
+test('无预生成 .gz 的 otf 字体直接下发原始字节（syadobe.otf 7.9MB 场景）', async () => {
   await withServer(async (port) => {
     const res = await rawGet(port, '/font.otf', { 'accept-encoding': 'gzip' });
     assert.equal(res.status, 200);
     assert.equal(res.headers['content-type'], 'font/otf');
-    assert.equal(res.headers['content-encoding'], 'gzip');
-    assert.equal(zlib.gunzipSync(res.body).length, 2048);
+    assert.equal(res.headers['content-encoding'], undefined);
+    assert.equal(res.body.length, 2048);
   });
 });
 
@@ -269,24 +273,22 @@ test('SPA 回退与缓存头策略不受 gzip 影响', async () => {
     // 顶层文档必须带 COOP/COEP，否则 Chrome 不启用跨源隔离、SAB 不可用
     assert.equal(res.headers['cross-origin-opener-policy'], 'same-origin');
     assert.equal(res.headers['cross-origin-embedder-policy'], 'require-corp');
-    assert.match(zlib.gunzipSync(res.body).toString('utf8'), /<html>/);
+    // index.html 无预生成 .gz → SPA 回退直接发原始字节（不在线压缩）
+    assert.match(res.body.toString('utf8'), /<html>/);
 
     const res2 = await rawGet(port, '/app.js');
     assert.equal(res2.headers['cache-control'], 'public, max-age=31536000');
   });
 });
 
-test('移动端目录同样走 gzip 下发', async () => {
+test('移动端目录无预生成 .gz 时直接下发原始字节', async () => {
   await withServer(async (port) => {
     const res = await rawGet(port, '/mxcad_mobile/', {
       'accept-encoding': 'gzip',
     });
     assert.equal(res.status, 200);
-    assert.equal(res.headers['content-encoding'], 'gzip');
-    assert.equal(
-      zlib.gunzipSync(res.body).toString('utf8'),
-      '<html>mobile</html>'
-    );
+    assert.equal(res.headers['content-encoding'], undefined);
+    assert.equal(res.body.toString('utf8'), '<html>mobile</html>');
   });
 });
 
@@ -484,4 +486,19 @@ test('代理错误: 后端回包中途断开时标记响应侧（客户端已收
   } finally {
     await backend.stop();
   }
+});
+
+test('proxyErrorSide: 按 headersSent 派生失败侧，不再硬编码', () => {
+  // 背景（2026-10-26 前台排障）：SSE 长连接后端 `flushHeaders` 早已发出响应头
+  // （headersSent 已为真），但旧代码在 proxyReq.on('error') 硬编码「请求侧（后端
+  // 未回响应头）」，误标成「后端未回响应头」把排障引向「后端卡死」假线索。现改为
+  // 按 res.headersSent 派生，与 502 分支的判据同源。
+  assert.strictEqual(
+    proxyErrorSide({ headersSent: false }),
+    '请求侧（后端未回响应头）'
+  );
+  assert.strictEqual(
+    proxyErrorSide({ headersSent: true }),
+    '响应侧（响应头已发给客户端）'
+  );
 });

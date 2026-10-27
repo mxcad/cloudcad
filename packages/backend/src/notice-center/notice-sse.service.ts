@@ -30,10 +30,13 @@ import {
 
 /** 本机 SSE 连接。closed 标志防止关闭后重复清理 */
 interface StreamConnection {
-  res: Response;
+  /** raw attach（统一用户事件流）时为 null：帧由 write 回调写，不走 res */
+  res: Response | null;
   userId: string;
   heartbeat: ReturnType<typeof setInterval> | null;
   closed: boolean;
+  /** raw attach 模式：调用方提供的带 `event:` 前缀的写帧函数 */
+  write?: (frame: unknown) => void;
 }
 
 /**
@@ -97,6 +100,23 @@ export class NoticeSseService implements OnModuleInit, OnModuleDestroy {
     res.on('close', onClientClosed);
   }
 
+  /**
+   * 挂接一条 raw 连接（统一用户事件流，ADR-0083）：复用本服务的 Redis fan-out 与
+   * 受众过滤，但帧由调用方的 write 写出（带 `event: notice` 前缀），且不带独立心跳
+   * （统一流自带 15s 保活）。返回 detach 函数（幂等）。
+   */
+  attachRaw(userId: string, write: (frame: unknown) => void): () => void {
+    const conn: StreamConnection = {
+      res: null,
+      userId,
+      heartbeat: null,
+      closed: false,
+      write,
+    };
+    this.connections.add(conn);
+    return () => this.dispose(conn);
+  }
+
   get activeConnections(): number {
     return this.connections.size;
   }
@@ -128,7 +148,11 @@ export class NoticeSseService implements OnModuleInit, OnModuleDestroy {
   }
 
   private writeFrame(conn: StreamConnection, frame: unknown): void {
-    conn.res.write(`data: ${JSON.stringify(frame)}\n\n`);
+    if (conn.write) {
+      conn.write(frame);
+      return;
+    }
+    conn.res?.write(`data: ${JSON.stringify(frame)}\n\n`);
   }
 
   private dispose(conn: StreamConnection): void {

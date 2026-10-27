@@ -23,6 +23,30 @@ const { rimdir } = require('./dev');
 const { runWithDeployLog } = require('../lib/deploy-log');
 const { setupSignalHandlers } = require('../foreground/registry');
 
+/**
+ * 基础服务已启动之后的部署失败收尾。
+ *
+ * 前台模式：立即派生与信号处理器相同的全量停止（detached cleanup.js），
+ * 不依赖关窗、也不等哨兵的 8-13s 陈旧检测——否则失败后 PG/Redis 一直跑着
+ * 锁住目录，用户只能关窗/手动 stop 才能改名/删包（2026-10-27 真机事故：
+ * 迁移失败后驱动常驻，基础服务无人停，目录锁死近 2 分钟）。
+ * PM2 模式：基础服务按设计常驻（下次 start 幂等复用），直接退出即可。
+ */
+function abortAfterInfra(usePm2) {
+  if (!usePm2) {
+    const {
+      killChildProcessesSync,
+      spawnDetachedCleanup,
+      markCleanExit,
+    } = require('../foreground/registry');
+    log('yellow', '[部署失败] 正在停止已启动的全部服务（前台模式：失败即全停）...');
+    killChildProcessesSync();
+    spawnDetachedCleanup();
+    markCleanExit();
+  }
+  process.exit(1);
+}
+
 async function deployModeImpl(skipBuild = false, options = null) {
   clearScreen();
   printHeader();
@@ -81,7 +105,8 @@ async function deployModeImpl(skipBuild = false, options = null) {
   //    基础服务（PG/Redis 等）是有状态的数据服务，切换前后台/重复启动时
   //    若已在运行则应复用，避免每次全量停止重建造成数据中断。
   if (!(await startInfrastructure(usePm2))) {
-    return false;
+    // 基础服务可能已部分启动（PG 起了、Redis 失败），同样走失败全停收尾
+    abortAfterInfra(usePm2);
   }
 
   // 等待基础服务就绪（协议级：PG 须接受查询、Redis 须回 PONG）
@@ -91,7 +116,7 @@ async function deployModeImpl(skipBuild = false, options = null) {
     await waitForRedis(PORTS.redis, 'Redis', 30000);
   } catch (err) {
     log('red', `[错误] ${err.message}`);
-    return false;
+    abortAfterInfra(usePm2);
   }
 
   // 2. 图纸版本部署前检查
@@ -99,7 +124,7 @@ async function deployModeImpl(skipBuild = false, options = null) {
   const healthResult = await versionHelper.runHealthCheck({ silent: false });
   if (healthResult.failures > 0) {
     log('red', '[错误] 图纸版本检查未通过，请修复后重新部署');
-    return false;
+    abortAfterInfra(usePm2);
   }
   if (healthResult.warnings > 0) {
     log('yellow', '[警告] 图纸版本检查存在警告，继续部署...');
@@ -109,7 +134,7 @@ async function deployModeImpl(skipBuild = false, options = null) {
 
   // 3. 数据库迁移（依赖已在 setupOffline 中安装）
   if (!(await runDatabaseMigration())) {
-    return false;
+    abortAfterInfra(usePm2);
   }
 
   // 3.5 PII 字段级加密存量回填（#417 等保 8.1.4.8）：migration 应用后、读切换代码
@@ -117,7 +142,7 @@ async function deployModeImpl(skipBuild = false, options = null) {
   //     幂等：已回填则秒跳过（升级部署无额外开销）。失败则中止部署——读切换代码
   //     查 HMAC 列，若存量行 HMAC 列缺失，存量用户登录/查重会落空。
   if (!(await runPiiBackfill())) {
-    return false;
+    abortAfterInfra(usePm2);
   }
 
   // 3. 检测是否已有构建产物
@@ -138,7 +163,7 @@ async function deployModeImpl(skipBuild = false, options = null) {
   if (skipBuild) {
     if (!hasBackendDist) {
       log('red', '[错误] 指定了 --skip-build 但构建产物不存在');
-      return false;
+      abortAfterInfra(usePm2);
     }
       log('green', '[4/6] 跳过构建，使用现有 dist');
     shouldBuild = false;
@@ -194,7 +219,7 @@ async function deployModeImpl(skipBuild = false, options = null) {
 
     if (!runPnpm(['build'])) {
       log('red', '[错误] 构建失败');
-      return false;
+      abortAfterInfra(usePm2);
     }
 
     log('green', '[✓] 构建完成');

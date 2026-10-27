@@ -85,16 +85,20 @@ const TermsOfServicePage = lazy(
 );
 
 // CAD 编辑器（高频使用，单独分包）
-// 生产构建：懒加载链有 23 个 chunk（vendor-cad 8.3MB），React.lazy 无超时——
-// 任一 chunk 请求悬挂时加载中会永远显示，故限定每次尝试的时间并允许重试一次，
-// 全部失败则 reject，由 CadLoadFailedFallback 给出刷新页面出口。
-// dev 不套超时：Vite 按需 transform 该链约 473 个模块 / 10MB+ 源码（含 sdk.gen、
-// 四语言 i18n 包、lucide-react 等未预构建依赖），首次冷加载常超 60s，套阈值只会
-// 把「慢」误判成「失败」并提示刷新形成死循环——悬挂请求重试无效（见 lazyImport.ts
-// 头部注释）。真实损坏仍会 reject 走同一兜底。import.meta.env.DEV 是编译期常量，
-// 生产产物里的死分支会被消除。
+// 懒加载链有 23 个 chunk（vendor-cad 8.3MB），React.lazy 无超时——任一 chunk 请求
+// 悬挂时加载中会永远显示，故两端都套 importWithTimeout 限定时间，全部失败则 reject，
+// 由 CadLoadFailedFallback 给出刷新页面出口。
+// dev 阈值（180s）远大于 prod（30s）：Vite 按需 transform 该链约 473 个模块 / 10MB+
+// 源码（含 sdk.gen、四语言 i18n 包、lucide-react 等未预构建依赖），首次冷加载常超
+// 60s，套 prod 的 30s 会把「慢」误判成「失败」形成刷新死循环。但完全移除超时会让
+// 真悬挂（WASM / index.js 请求 TCP stall）时无逃生口——cad-editor 永久 loading，且
+// 悬挂连接占用所有标签共享的 Vite dev server（前端 API 也走它的 /api proxy），连累
+// 其他标签任何页面一起卡。180s 覆盖 dev 慢冷加载，真悬挂（>3 分钟）时 reject 给
+// 「刷新页面」逃生口。dev 不重试（maxAttempts=1）：同 URL 悬挂请求重试无效（见
+// lazyImport.ts 头部注释）。import.meta.env.DEV 是编译期常量，生产产物里的 dev 分支
+// 会被消除。
 const CADEditorDirect = import.meta.env.DEV
-  ? lazy(() => import('./pages/CADEditorDirect'))
+  ? lazy(() => importWithTimeout(() => import('./pages/CADEditorDirect'), 180_000, 1))
   : lazy(() => importWithTimeout(() => import('./pages/CADEditorDirect'), 30_000, 2));
 
 // 分享管理页

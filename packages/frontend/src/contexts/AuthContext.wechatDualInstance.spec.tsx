@@ -27,6 +27,11 @@ vi.mock('@/api-sdk', () => ({
   authControllerVerifyPhone: vi.fn(),
   authControllerGetWechatAuthUrl: vi.fn(),
   authControllerPollWechatTransaction: vi.fn(),
+  // userEventStream 协调器（统一用户事件流）降级路径会签 ticket
+  noticeCenterControllerIssueTicket: vi.fn().mockResolvedValue({
+    error: undefined,
+    data: { ticket: 'tk_test' },
+  }),
 }));
 
 vi.mock('@/config/clientSetup', () => ({
@@ -146,9 +151,7 @@ describe('wechat dual-instance (AuthContext provider + Login page)', () => {
 
   it('desktop EXE hash callback: single instance updates auth state and navigates (no stuck)', () => {
     // hash 在页面加载时已存在（EXE 回调 URL），先设置再挂载
-    setHash(
-      `wechat_result=${encodeURIComponent(rawOf(LOGIN_RESULT))}`
-    );
+    setHash(`wechat_result=${encodeURIComponent(rawOf(LOGIN_RESULT))}`);
     const { navigate } = renderDualInstance();
 
     // AuthContext 唯一实例处理 hash → token state 更新（React state，非仅 localStorage）

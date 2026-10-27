@@ -13,29 +13,24 @@
 /**
  * 通知订阅：SSE 推送为主、30s 轮询兜底。
  *
- * 后端 /v1/notices/stream 在发布、编辑、下线时即时下发（ticket 认证，见控制器注释），
- * 收到任意一帧就整表重拉一次 GET /current —— 帧只当「有变化」的信号，权威全集
- * 始终来自 GET /current，避免帧与轮询两条路径各自拼状态。
+ * 统一用户事件流（ADR-0083）在发布、编辑、下线时即时下发（ticket 认证，见后端
+ * users 模块端点注释），全浏览器共享一条 SSE（领导者选举 + 跨标签扇出，见
+ * services/userEventStream）。收到任意一帧就整表重拉一次 GET /current —— 帧只当
+ * 「有变化」的信号，权威全集始终来自 GET /current，避免帧与轮询两条路径各自拼状态。
  *
  * 轮询不删：SSE 建连失败、断网、代理截断长连接时，最坏退化为 30s 到达，不至于
  * 完全收不到。页面隐藏时暂停轮询（省无谓请求），变可见立即补拉一次。
  *
  * 未登录时只轮询：GET /current 是 @Public，游客轮询只拿到广播公告；而 ticket 端点
- * 需要 JWT，故轮询不按登录态门控、SSE 才按登录态门控。
+ * 需要 JWT，故轮询不按登录态门控、统一事件流才按登录态门控。
  *
  * 移动端刻意只用轮询：WebView 与后台退出的长连接极不稳定，重连风暴会打爆限流
  * （见 frontend_mobile 同名文件头注释）。
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  noticeCenterControllerGetCurrent,
-  noticeCenterControllerIssueTicket,
-} from '@/api-sdk';
-import {
-  openEventStream,
-  type EventStreamHandle,
-} from '@/services/eventStream';
+import { noticeCenterControllerGetCurrent } from '@/api-sdk';
+import { subscribeUserEvents } from '@/services/userEventStream';
 import { useAuth } from '@/contexts/AuthContext';
 
 import { NOTICE_POLL_INTERVAL_MS } from '@/constants/timeouts';
@@ -51,13 +46,6 @@ export interface UseNoticeStreamResult {
   /** 'polling' = 轮询中；'idle' = 未启用 */
   source: NoticeStreamSource;
 }
-
-/**
- * SSE 断连后的重建间隔。ticket 是一次性凭据（后端 Redis GETDEL 消费），复用同一
- * ticket 重连只会拿到 401 并无限重试，故用 closeOnError 默认关流 + 定时重签；
- * 间隔取得比心跳略长，兼顾「立即」与「不要打爆签发限流」。
- */
-const NOTICE_SSE_RETRY_MS = 5000;
 
 /**
  * 拉取一次当前生效通知。返回 null 表示保持现状：整表替换是破坏性的（会清掉失效
@@ -128,51 +116,10 @@ export function useNoticeStream(enabled: boolean): UseNoticeStreamResult {
   useEffect(() => {
     if (!enabled || !token) return undefined;
 
-    let disposed = false;
-    let handle: EventStreamHandle | null = null;
-    let retryTimer: ReturnType<typeof setTimeout> | undefined;
-
-    const scheduleRetry = () => {
-      if (disposed || retryTimer) return;
-      retryTimer = setTimeout(() => {
-        retryTimer = undefined;
-        void openStream();
-      }, NOTICE_SSE_RETRY_MS);
-    };
-
-    const openStream = async () => {
-      // 每次建连前重新签发：ticket 一次性，且签发端点限流 60/min
-      const res = await noticeCenterControllerIssueTicket({
-        throwOnError: false,
-      });
-      if (disposed) return;
-      const ticket = res.data?.ticket;
-      if (!ticket) {
-        scheduleRetry();
-        return;
-      }
-      handle = openEventStream({
-        // 后端全局前缀 api/v1（@Controller('notices')），漏 /v1 会 404 后无限重签 ticket
-        path: '/v1/notices/stream',
-        query: { ticket },
-        onFrame: () => {
-          // 帧只是「有变化」的信号，真实内容仍整表重拉
-          if (!disposed) refetch();
-        },
-        onClose: (reason) => {
-          // manual 是本条连接被下一次签发取代，无需重试
-          if (reason !== 'manual') scheduleRetry();
-        },
-      });
-    };
-
-    void openStream();
-
-    return () => {
-      disposed = true;
-      if (retryTimer) clearTimeout(retryTimer);
-      handle?.close();
-    };
+    // 统一用户事件流（ADR-0083）：建连快照帧与后续推送帧都只是「有变化」的信号，
+    // 真实内容仍整表重拉。重签 ticket / 退避重连 / 跨标签领导者接管全在协调器内
+    // 完成（services/userEventStream），本处只登记信号回调；轮询兜底见上方 effect。
+    return subscribeUserEvents('notice', () => refetch());
   }, [enabled, token, refetch]);
 
   return { notices, source };

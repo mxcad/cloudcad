@@ -87,6 +87,7 @@
     "pack:linux-upgrade:centos7:private": "node scripts/pack-linux-deploy.js --upgrade --os centos7 --variant private",
     "pack:linux-upgrade:rocky9:private": "node scripts/pack-linux-deploy.js --upgrade --os rocky9 --variant private",
     "pack:menu": "node scripts/pack-menu.js",
+    "convert:7z2zip": "node scripts/convert-7z-to-zip.js",
     "brand:check": "node scripts/sync-brand.js",
     "brand:sync": "node scripts/sync-brand.js --apply"
   },

@@ -99,19 +99,29 @@ export function subscribeBatchTaskProgress(
         zipPath: payload.zipPath,
       });
 
+      // 任务感知终态提示：单文件通道（autoDownload）用「下载」文案；其 COMPLETED
+      // 不在此提示——自动下载层在真正触发浏览器下载后回报实际结果，避免
+      // 「批量下载完成」+「逐个下载完成」背靠背双提示（单文件谈不上批量）
+      const task = useBatchDownloadStore
+        .getState()
+        .tasks.find((item) => item.taskId === taskId);
+      const isSingle = task?.autoDownload === true;
       if (payload.status === 'COMPLETED') {
         closeEntry(taskId);
-        current.onToast.forEach((fn) => fn(t('批量下载完成'), 'success'));
-        const task = useBatchDownloadStore
-          .getState()
-          .tasks.find((item) => item.taskId === taskId);
+        if (!isSingle) {
+          current.onToast.forEach((fn) => fn(t('批量下载完成'), 'success'));
+        }
         current.onTerminal.forEach((fn) => fn(task));
       } else if (payload.status === 'FAILED') {
         closeEntry(taskId);
-        current.onToast.forEach((fn) => fn(t('批量下载失败'), 'error'));
+        current.onToast.forEach((fn) =>
+          fn(isSingle ? t('下载失败') : t('批量下载失败'), 'error')
+        );
       } else if (payload.status === 'CANCELLED') {
         closeEntry(taskId);
-        current.onToast.forEach((fn) => fn(t('批量下载已取消'), 'info'));
+        current.onToast.forEach((fn) =>
+          fn(isSingle ? t('下载已取消') : t('批量下载已取消'), 'info')
+        );
       }
     },
     // 出错即关流（清实例订阅标记，retryTask 可重新订阅；轮询/重订阅兜底）

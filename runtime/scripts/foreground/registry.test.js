@@ -263,7 +263,7 @@ test('setupSignalHandlers：SIGHUP 全平台注册（Linux 关终端 = SIGHUP）
 });
 
 test('armForegroundGuard：心跳（非 detached）+ 哨兵（detached+unref）各拉一次，写存活文件', () => {
-  withTempDataDir(() => {
+  withTempDataDir((tmpDataDir) => {
     const spawnCalls = [];
     const unrefCalls = [];
     const { armForegroundGuard } = loadRegistry({
@@ -278,6 +278,9 @@ test('armForegroundGuard：心跳（非 detached）+ 哨兵（detached+unref）�
     const guard = armForegroundGuard();
     assert.ok(guard, '武装成功应返回 guard 信息');
     assert.equal(spawnCalls.length, 2);
+
+    // 标记落在 scratch 子目录 data/temp/foreground（同 data/temp/probe），不混入 data/ 根
+    assert.equal(path.dirname(guard.aliveFile), path.join(tmpDataDir, 'temp', 'foreground'));
 
     // 心跳子进程：非 detached（共享 CLI 控制台，关窗 CTRL_CLOSE_EVENT 随 CLI 同亡）
     const [hb, sent] = spawnCalls;
@@ -297,7 +300,11 @@ test('armForegroundGuard：心跳（非 detached）+ 哨兵（detached+unref）�
     assert.equal(sent.opts.detached, true);
     assert.equal(sent.opts.stdio, 'ignore');
     assert.equal(sent.opts.windowsHide, true);
-    assert.equal(unrefCalls.length, 1, '哨兵 unref（不拖住 CLI 进程）');
+    assert.equal(
+      unrefCalls.length,
+      2,
+      '心跳 + 哨兵都 unref（谁都不拖住 CLI 事件循环）'
+    );
 
     // 存活文件已写好（心跳子进程负责持续刷新）
     assert.ok(fs.existsSync(guard.aliveFile));
@@ -332,6 +339,29 @@ test('armForegroundGuard：spawn 失败 → 返回 null（降级为仅信号处�
   });
 });
 
+test('armForegroundGuard：心跳子进程必须 unref（2026-10-27 真机事故回归）', () => {
+  // 未 unref 的心跳子进程会保持驱动事件循环存活：部署失败后驱动主流程结束
+  // 却退不出去（心跳只在驱动的 process.on('exit') 里被杀）↔ 心跳不被杀
+  // （驱动不退出）死锁 → alive 文件持续刷新、哨兵恒判驱动存活一直等待、
+  // 基础服务不停、部署目录锁死。心跳 unref 后子进程照常独立运行（仍随控制台
+  // 同亡、仍刷新 alive 文件），只是不再拖住驱动进程。
+  withTempDataDir(() => {
+    const unrefByScript = new Map();
+    const { armForegroundGuard } = loadRegistry({
+      spawnMock: (cmd, args) => {
+        const child = fakeChild();
+        child.unref = () => unrefByScript.set(path.basename(args[0]), true);
+        return child;
+      },
+    });
+
+    const guard = armForegroundGuard();
+    assert.ok(guard, '武装成功应返回 guard 信息');
+    assert.equal(unrefByScript.get('heartbeat.js'), true, '心跳必须 unref');
+    assert.equal(unrefByScript.get('sentinel.js'), true, '哨兵必须 unref');
+  });
+});
+
 test('createCleanupHandler：退出前写 clean 标记（哨兵见标记静默退出，不重复全量停止）', () => {
   withTempDataDir(() => {
     clearState();
@@ -353,6 +383,67 @@ test('createCleanupHandler：退出前写 clean 标记（哨兵见标记静默�
 
     assert.deepEqual(exitCalls, [0]);
     assert.ok(fs.existsSync(guard.cleanFile), 'clean 标记须在 exit 前同步落盘');
+  });
+});
+
+test('sweepForegroundMarkers：删除两个前缀的标记并返回文件名', () => {
+  withTempDataDir((tmpDataDir) => {
+    const markerDir = path.join(tmpDataDir, 'temp', 'foreground');
+    fs.mkdirSync(markerDir, { recursive: true });
+    const files = ['foreground-alive-aaa', 'foreground-clean-bbb'];
+    for (const f of files) fs.writeFileSync(path.join(markerDir, f), '1');
+
+    const removed = loadRegistry().sweepForegroundMarkers(0);
+
+    assert.deepEqual(removed.sort(), files);
+    for (const f of files) assert.ok(!fs.existsSync(path.join(markerDir, f)));
+  });
+});
+
+test('sweepForegroundMarkers：年龄门槛保留新鲜标记、删除陈旧标记、不碰同名异前缀文件', () => {
+  withTempDataDir((tmpDataDir) => {
+    const markerDir = path.join(tmpDataDir, 'temp', 'foreground');
+    fs.mkdirSync(markerDir, { recursive: true });
+    const fresh = path.join(markerDir, 'foreground-alive-fresh');
+    const stale = path.join(markerDir, 'foreground-clean-stale');
+    const notMine = path.join(markerDir, 'probe-result.txt');
+    for (const f of [fresh, stale, notMine]) fs.writeFileSync(f, '1');
+
+    const past = (Date.now() - 120 * 1000) / 1000;
+    fs.utimesSync(stale, past, past);
+
+    const removed = loadRegistry().sweepForegroundMarkers(60 * 1000);
+
+    assert.deepEqual(removed, ['foreground-clean-stale']);
+    assert.ok(fs.existsSync(fresh), '新鲜标记（本实例刚写）必须保留');
+    assert.ok(fs.existsSync(notMine), '非标记文件不得触碰');
+  });
+});
+
+test('sweepForegroundMarkers：目录不存在时返回空数组（不抛）', () => {
+  withTempDataDir(() => {
+    assert.deepEqual(loadRegistry().sweepForegroundMarkers(0), []);
+  });
+});
+
+test('armForegroundGuard：武装时清扫上一轮被强杀留下的陈旧标记，保留新鲜标记', () => {
+  withTempDataDir((tmpDataDir) => {
+    const markerDir = path.join(tmpDataDir, 'temp', 'foreground');
+    fs.mkdirSync(markerDir, { recursive: true });
+    const stale = path.join(markerDir, 'foreground-alive-oldrun');
+    const fresh = path.join(markerDir, 'foreground-alive-liverun');
+    fs.writeFileSync(stale, '1');
+    fs.writeFileSync(fresh, '1');
+    const past = (Date.now() - 5 * 60 * 1000) / 1000;
+    fs.utimesSync(stale, past, past);
+
+    const { armForegroundGuard } = loadRegistry({ spawnMock: () => fakeChild() });
+    const guard = armForegroundGuard();
+    assert.ok(guard);
+
+    assert.ok(!fs.existsSync(stale), '陈旧标记应被新驱动收尾清掉');
+    assert.ok(fs.existsSync(fresh), '他人新鲜标记不受影响');
+    assert.ok(fs.existsSync(guard.aliveFile), '本实例存活文件仍已写入');
   });
 });
 
