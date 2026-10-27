@@ -197,5 +197,6 @@ export type {
   IntentPrecondition,
   IntentResumeAnchor,
   IntentDef,
+  IntentFacts,
   IntentStorage,
 } from './intentChain/chain';

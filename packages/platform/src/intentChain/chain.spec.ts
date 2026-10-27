@@ -9,6 +9,7 @@ import {
   readPendingIntent,
   startPendingIntent,
   type IntentDef,
+  type IntentFacts,
   type IntentStorage,
 } from './chain';
 
@@ -34,37 +35,50 @@ function intentDef(overrides: Partial<IntentDef> = {}): IntentDef {
   };
 }
 
+function facts(overrides: Partial<IntentFacts> = {}): IntentFacts {
+  return { authenticated: false, hasCloudNode: false, isVip: false, ...overrides };
+}
+
 describe('@cloudcad/platform · intentChain/chain', () => {
   describe('isPreconditionSatisfied', () => {
     it('auth：已登录即满足', () => {
-      expect(isPreconditionSatisfied('auth', true, false)).toBe(true);
+      expect(isPreconditionSatisfied('auth', facts({ authenticated: true }))).toBe(true);
     });
 
     it('auth：未登录不满足', () => {
-      expect(isPreconditionSatisfied('auth', false, true)).toBe(false);
+      expect(isPreconditionSatisfied('auth', facts())).toBe(false);
     });
 
     it('cloud-existence：已登录且有云端节点才满足', () => {
-      expect(isPreconditionSatisfied('cloud-existence', true, true)).toBe(true);
-      expect(isPreconditionSatisfied('cloud-existence', true, false)).toBe(false);
+      expect(isPreconditionSatisfied('cloud-existence', facts({ authenticated: true, hasCloudNode: true }))).toBe(true);
+      expect(isPreconditionSatisfied('cloud-existence', facts({ authenticated: true }))).toBe(false);
     });
 
     it('cloud-existence：蕴含 auth——未登录即使命中节点也不满足', () => {
-      expect(isPreconditionSatisfied('cloud-existence', false, true)).toBe(false);
+      expect(isPreconditionSatisfied('cloud-existence', facts({ hasCloudNode: true }))).toBe(false);
+    });
+
+    it('vip：已登录且过会员闸门才满足', () => {
+      expect(isPreconditionSatisfied('vip', facts({ authenticated: true, isVip: true }))).toBe(true);
+      expect(isPreconditionSatisfied('vip', facts({ authenticated: true }))).toBe(false);
+    });
+
+    it('vip：蕴含 auth——未登录即使闸门放行也不满足', () => {
+      expect(isPreconditionSatisfied('vip', facts({ isVip: true }))).toBe(false);
     });
   });
 
   describe('firstBlockedPrecondition', () => {
     it('全部满足 → null', () => {
-      expect(firstBlockedPrecondition(intentDef(), true, true)).toBeNull();
+      expect(firstBlockedPrecondition(intentDef(), facts({ authenticated: true, hasCloudNode: true }))).toBeNull();
     });
 
     it('未登录 → 先报 auth', () => {
-      expect(firstBlockedPrecondition(intentDef(), false, true)).toBe('auth');
+      expect(firstBlockedPrecondition(intentDef(), facts({ hasCloudNode: true }))).toBe('auth');
     });
 
     it('已登录但无云端节点 → 报 cloud-existence', () => {
-      expect(firstBlockedPrecondition(intentDef(), true, false)).toBe(
+      expect(firstBlockedPrecondition(intentDef(), facts({ authenticated: true }))).toBe(
         'cloud-existence'
       );
     });
@@ -73,10 +87,36 @@ describe('@cloudcad/platform · intentChain/chain', () => {
       expect(
         firstBlockedPrecondition(
           intentDef({ preconditions: ['cloud-existence', 'auth'] }),
-          false,
-          false
+          facts()
         )
       ).toBe('cloud-existence');
+    });
+
+    it('vip 链（auth → vip）：未登录先报 auth', () => {
+      expect(
+        firstBlockedPrecondition(
+          intentDef({ preconditions: ['auth', 'vip'] }),
+          facts({ isVip: true })
+        )
+      ).toBe('auth');
+    });
+
+    it('vip 链：已登录但闸门未过 → 报 vip', () => {
+      expect(
+        firstBlockedPrecondition(
+          intentDef({ preconditions: ['auth', 'vip'] }),
+          facts({ authenticated: true })
+        )
+      ).toBe('vip');
+    });
+
+    it('vip 链：已登录且闸门放行 → null', () => {
+      expect(
+        firstBlockedPrecondition(
+          intentDef({ preconditions: ['auth', 'vip'] }),
+          facts({ authenticated: true, isVip: true })
+        )
+      ).toBeNull();
     });
   });
 
@@ -102,6 +142,17 @@ describe('@cloudcad/platform · intentChain/chain', () => {
       startPendingIntent(storage, def);
       expect(readPendingIntent(storage)).toEqual(def);
       expect(storage.entries()).toHaveLength(1);
+    });
+
+    it('vip 前置的意图可原样挂起并读回', () => {
+      const storage = memoryStorage();
+      const def = intentDef({
+        id: 'export-dwg',
+        action: { type: 'Mx_ExportDWG' },
+        preconditions: ['auth', 'vip'],
+      });
+      startPendingIntent(storage, def);
+      expect(readPendingIntent(storage)).toEqual(def);
     });
 
     it('storage key 固定为 PENDING_INTENT_KEY', () => {

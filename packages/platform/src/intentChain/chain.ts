@@ -15,8 +15,25 @@
  * 「阻塞了就怎么办、满足了跑什么」由端侧决定（ADR-0081 D3/D4）。
  */
 
-/** 前置条件类型。 */
-export type IntentPrecondition = 'auth' | 'cloud-existence';
+/**
+ * 前置条件类型。
+ * - `auth`：已登录；
+ * - `cloud-existence`：已登录且当前图纸已有云端节点（蕴含 `auth`）；
+ * - `vip`：已登录且通过会员功能闸门（蕴含 `auth`）。
+ */
+export type IntentPrecondition = 'auth' | 'cloud-existence' | 'vip';
+
+/**
+ * 端侧世界状态快照：前置判定只吃这三个布尔，不感知它们的来源。
+ * `isVip` 由 adapter 按「会员功能闸门」口径填充——可以是纯会员判定，
+ * 也可以是「会员 ∨ 管理员开放免费导出」这类更宽的放行谓词
+ * （闸门放行时命令直接执行、根本不会挂起链，故此处只需与闸门同口径）。
+ */
+export interface IntentFacts {
+  authenticated: boolean;
+  hasCloudNode: boolean;
+  isVip: boolean;
+}
 
 /** 续跑锚点：`document-loaded` = 当前文档真正加载完成后才允许续跑。 */
 export type IntentResumeAnchor = 'document-loaded';
@@ -25,8 +42,8 @@ export type IntentResumeAnchor = 'document-loaded';
 export interface IntentDef {
   /** 意图标识：续跑时按它分派具体动作（端侧 switch 的唯一入口）。 */
   id: string;
-  /** 原始动作。`type` 是命令名；其余字段留给端侧扩展。 */
-  action: { type: string };
+  /** 原始动作。`type` 是命令名；其余字段留给端侧扩展（如移动端导出参数）。 */
+  action: { type: string; [key: string]: unknown };
   /** 前置条件，**按序判定**；返回第一个不满足的。 */
   preconditions: readonly IntentPrecondition[];
   resumeAfter: IntentResumeAnchor;
@@ -45,27 +62,29 @@ export interface IntentStorage {
 /** 单键存储：同一时刻只保留一条活跃链，新意图覆盖旧链（后发生的用户意图优先）。 */
 export const PENDING_INTENT_KEY = 'cloudcad.pendingIntent';
 
-const INTENT_IDS = ['auth', 'cloud-existence'] as const;
+const INTENT_IDS = ['auth', 'cloud-existence', 'vip'] as const;
 const INTENT_ANCHORS = ['document-loaded'] as const;
 
-/** 判定一个前置是否满足。`cloud-existence` 蕴含 `auth`（未登录时无从建档）。 */
+/**
+ * 判定一个前置是否满足。`cloud-existence` 与 `vip` 均蕴含 `auth`
+ * （未登录时无从建档，也无从成为会员）。
+ */
 export function isPreconditionSatisfied(
   precondition: IntentPrecondition,
-  authenticated: boolean,
-  hasCloudNode: boolean
+  facts: IntentFacts
 ): boolean {
-  if (precondition === 'auth') return authenticated;
-  return authenticated && hasCloudNode;
+  if (precondition === 'auth') return facts.authenticated;
+  if (precondition === 'vip') return facts.authenticated && facts.isVip;
+  return facts.authenticated && facts.hasCloudNode;
 }
 
 /** 返回第一个不满足的前置；全部满足返回 null（即可以执行原始动作）。 */
 export function firstBlockedPrecondition(
   def: Pick<IntentDef, 'preconditions'>,
-  authenticated: boolean,
-  hasCloudNode: boolean
+  facts: IntentFacts
 ): IntentPrecondition | null {
   for (const precondition of def.preconditions) {
-    if (!isPreconditionSatisfied(precondition, authenticated, hasCloudNode)) {
+    if (!isPreconditionSatisfied(precondition, facts)) {
       return precondition;
     }
   }
