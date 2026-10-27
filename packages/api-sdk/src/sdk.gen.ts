@@ -1466,6 +1466,99 @@ export const userCleanupControllerTriggerCleanup = <ThrowOnError extends boolean
 });
 
 /**
+ * 获取当前生效中的通知（公开）
+ */
+export const noticeCenterControllerGetCurrent = <ThrowOnError extends boolean = false>(options?: Options<NoticeCenterControllerGetCurrentData, ThrowOnError>) => (options?.client ?? client).get<NoticeCenterControllerGetCurrentResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices/current',
+    ...options
+});
+
+/**
+ * 签发一次性 SSE 连接票据
+ */
+export const noticeCenterControllerIssueTicket = <ThrowOnError extends boolean = false>(options?: Options<NoticeCenterControllerIssueTicketData, ThrowOnError>) => (options?.client ?? client).post<NoticeCenterControllerIssueTicketResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices/stream/ticket',
+    ...options
+});
+
+/**
+ * 列出全部通知（管理后台）
+ */
+export const noticeCenterControllerListAll = <ThrowOnError extends boolean = false>(options?: Options<NoticeCenterControllerListAllData, ThrowOnError>) => (options?.client ?? client).get<NoticeCenterControllerListAllResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices',
+    ...options
+});
+
+/**
+ * 发布通知
+ */
+export const noticeCenterControllerCreate = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerCreateData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerCreateResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 批量删除通知（不可恢复）
+ */
+export const noticeCenterControllerBatchDelete = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerBatchDeleteData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerBatchDeleteResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices/batch-delete',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 发布草稿
+ */
+export const noticeCenterControllerPublish = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerPublishData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerPublishResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices/{id}/publish',
+    ...options
+});
+
+/**
+ * 删除通知（不可恢复）
+ */
+export const noticeCenterControllerRemove = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<NoticeCenterControllerRemoveResponses, NoticeCenterControllerRemoveErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices/{id}',
+    ...options
+});
+
+/**
+ * 更新通知文案（不改时间窗）
+ */
+export const noticeCenterControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerUpdateData, ThrowOnError>) => (options.client ?? client).patch<NoticeCenterControllerUpdateResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * 下线通知
+ */
+export const noticeCenterControllerRetract = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerRetractData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerRetractResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notices/{id}/retract',
+    ...options
+});
+
+/**
  * 获取所有角色
  */
 export const rolesControllerFindAll = <ThrowOnError extends boolean = false>(options?: Options<RolesControllerFindAllData, ThrowOnError>) => (options?.client ?? client).get<RolesControllerFindAllResponses, unknown, ThrowOnError>({
@@ -2673,99 +2766,6 @@ export const healthControllerCheckStorage = <ThrowOnError extends boolean = fals
  * 转换队列统计
  */
 export const queueControllerGetQueueStats = <ThrowOnError extends boolean = false>(options?: Options<QueueControllerGetQueueStatsData, ThrowOnError>) => (options?.client ?? client).get<QueueControllerGetQueueStatsResponses, unknown, ThrowOnError>({ url: '/api/v1/queue/stats', ...options });
-
-/**
- * 获取当前生效中的通知（公开）
- */
-export const noticeCenterControllerGetCurrent = <ThrowOnError extends boolean = false>(options?: Options<NoticeCenterControllerGetCurrentData, ThrowOnError>) => (options?.client ?? client).get<NoticeCenterControllerGetCurrentResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices/current',
-    ...options
-});
-
-/**
- * 签发一次性 SSE 连接票据
- */
-export const noticeCenterControllerIssueTicket = <ThrowOnError extends boolean = false>(options?: Options<NoticeCenterControllerIssueTicketData, ThrowOnError>) => (options?.client ?? client).post<NoticeCenterControllerIssueTicketResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices/stream/ticket',
-    ...options
-});
-
-/**
- * 列出全部通知（管理后台）
- */
-export const noticeCenterControllerListAll = <ThrowOnError extends boolean = false>(options?: Options<NoticeCenterControllerListAllData, ThrowOnError>) => (options?.client ?? client).get<NoticeCenterControllerListAllResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices',
-    ...options
-});
-
-/**
- * 发布通知
- */
-export const noticeCenterControllerCreate = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerCreateData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerCreateResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 批量删除通知（不可恢复）
- */
-export const noticeCenterControllerBatchDelete = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerBatchDeleteData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerBatchDeleteResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices/batch-delete',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 发布草稿
- */
-export const noticeCenterControllerPublish = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerPublishData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerPublishResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices/{id}/publish',
-    ...options
-});
-
-/**
- * 删除通知（不可恢复）
- */
-export const noticeCenterControllerRemove = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<NoticeCenterControllerRemoveResponses, NoticeCenterControllerRemoveErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices/{id}',
-    ...options
-});
-
-/**
- * 更新通知文案（不改时间窗）
- */
-export const noticeCenterControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerUpdateData, ThrowOnError>) => (options.client ?? client).patch<NoticeCenterControllerUpdateResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices/{id}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * 下线通知
- */
-export const noticeCenterControllerRetract = <ThrowOnError extends boolean = false>(options: Options<NoticeCenterControllerRetractData, ThrowOnError>) => (options.client ?? client).post<NoticeCenterControllerRetractResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/api/v1/notices/{id}/retract',
-    ...options
-});
 
 /**
  * 通过文件哈希访问目录下的文件

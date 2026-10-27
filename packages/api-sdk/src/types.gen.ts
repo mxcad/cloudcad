@@ -2594,6 +2594,156 @@ export type UserCleanupTriggerResponseDto = {
     errors: Array<UserCleanupErrorDto>;
 };
 
+export type NoticeResponseDto = {
+    /**
+     * 通知 ID
+     */
+    id: string;
+    /**
+     * 通知类型
+     */
+    kind: string;
+    /**
+     * 通知级别
+     */
+    level: string;
+    /**
+     * 标题
+     */
+    title: string;
+    /**
+     * 正文
+     */
+    body: string;
+    /**
+     * 定向用户 ID，null 表示广播
+     */
+    userId?: string;
+    /**
+     * 生效开始时间
+     */
+    startAt?: string;
+    /**
+     * 自动失效时间
+     */
+    endAt?: string;
+    /**
+     * 到期自动下线
+     */
+    autoExpire: boolean;
+    /**
+     * 发布时间，null 表示草稿
+     */
+    publishedAt?: string;
+    /**
+     * 已推送时间（null 表示待定时任务推送）
+     */
+    notifiedAt?: string;
+    /**
+     * 下线时间，null 表示未下线
+     */
+    retractedAt?: string;
+    /**
+     * 发布人 ID
+     */
+    publishedById?: string;
+    /**
+     * 创建时间
+     */
+    createdAt: string;
+    /**
+     * 更新时间
+     */
+    updatedAt: string;
+};
+
+export type NoticeTicketDto = {
+    /**
+     * 一次性连接票据，5 分钟内有效，连接时立即失效
+     */
+    ticket: string;
+};
+
+export type CreateNoticeDto = {
+    /**
+     * 通知类型
+     */
+    kind: 'system';
+    /**
+     * 通知级别，驱动弹框配色与队列优先级
+     */
+    level: 'info' | 'warning' | 'danger';
+    /**
+     * 标题，按管理员填写的原文渲染，不走 i18n
+     */
+    title: string;
+    /**
+     * 正文纯文本，支持换行，按原文渲染，不走 i18n
+     */
+    body: string;
+    /**
+     * 定向用户 ID；为空表示广播给所有用户
+     */
+    userId?: string;
+    /**
+     * 生效开始时间；为空表示发布即生效。未来的 startAt 不会立即推送，由定时任务到点处理
+     */
+    startAt?: string;
+    /**
+     * 失效时间；为空表示手动下线
+     */
+    endAt?: string;
+    /**
+     * 到期自动下线（依赖 endAt）
+     */
+    autoExpire?: boolean;
+    /**
+     * false = 保存为草稿（不发布、不推送）
+     */
+    publishNow?: boolean;
+};
+
+export type BatchDeleteNoticesDto = {
+    /**
+     * 要删除的通知 ID 列表（已去重）
+     */
+    ids: Array<string>;
+};
+
+export type BatchDeleteNoticesResultDto = {
+    /**
+     * 请求的 ID 数（去重后）
+     */
+    requested: number;
+    /**
+     * 实际删除的条数
+     */
+    deleted: number;
+    /**
+     * 其中原本正在生效的条数（已广播下线）
+     */
+    active: number;
+    /**
+     * 未找到因而未被删除的 ID
+     */
+    notFound: Array<string>;
+};
+
+export type UpdateNoticeDto = {
+    /**
+     * 通知级别
+     */
+    level?: 'info' | 'warning' | 'danger';
+    /**
+     * 标题（后端原文）
+     */
+    title?: string;
+    /**
+     * 正文（后端原文，支持换行）
+     */
+    body?: string;
+};
+
 /**
  * 角色类别
  */
@@ -4686,156 +4836,6 @@ export type QueueStatsDto = {
      * 任务执行超时阈值(ms)
      */
     timeout: number;
-};
-
-export type NoticeResponseDto = {
-    /**
-     * 通知 ID
-     */
-    id: string;
-    /**
-     * 通知类型
-     */
-    kind: string;
-    /**
-     * 通知级别
-     */
-    level: string;
-    /**
-     * 标题
-     */
-    title: string;
-    /**
-     * 正文
-     */
-    body: string;
-    /**
-     * 定向用户 ID，null 表示广播
-     */
-    userId?: string;
-    /**
-     * 生效开始时间
-     */
-    startAt?: string;
-    /**
-     * 自动失效时间
-     */
-    endAt?: string;
-    /**
-     * 到期自动下线
-     */
-    autoExpire: boolean;
-    /**
-     * 发布时间，null 表示草稿
-     */
-    publishedAt?: string;
-    /**
-     * 已推送时间（null 表示待定时任务推送）
-     */
-    notifiedAt?: string;
-    /**
-     * 下线时间，null 表示未下线
-     */
-    retractedAt?: string;
-    /**
-     * 发布人 ID
-     */
-    publishedById?: string;
-    /**
-     * 创建时间
-     */
-    createdAt: string;
-    /**
-     * 更新时间
-     */
-    updatedAt: string;
-};
-
-export type NoticeTicketDto = {
-    /**
-     * 一次性连接票据，5 分钟内有效，连接时立即失效
-     */
-    ticket: string;
-};
-
-export type CreateNoticeDto = {
-    /**
-     * 通知类型
-     */
-    kind: 'system';
-    /**
-     * 通知级别，驱动弹框配色与队列优先级
-     */
-    level: 'info' | 'warning' | 'danger';
-    /**
-     * 标题，按管理员填写的原文渲染，不走 i18n
-     */
-    title: string;
-    /**
-     * 正文纯文本，支持换行，按原文渲染，不走 i18n
-     */
-    body: string;
-    /**
-     * 定向用户 ID；为空表示广播给所有用户
-     */
-    userId?: string;
-    /**
-     * 生效开始时间；为空表示发布即生效。未来的 startAt 不会立即推送，由定时任务到点处理
-     */
-    startAt?: string;
-    /**
-     * 失效时间；为空表示手动下线
-     */
-    endAt?: string;
-    /**
-     * 到期自动下线（依赖 endAt）
-     */
-    autoExpire?: boolean;
-    /**
-     * false = 保存为草稿（不发布、不推送）
-     */
-    publishNow?: boolean;
-};
-
-export type BatchDeleteNoticesDto = {
-    /**
-     * 要删除的通知 ID 列表（已去重）
-     */
-    ids: Array<string>;
-};
-
-export type BatchDeleteNoticesResultDto = {
-    /**
-     * 请求的 ID 数（去重后）
-     */
-    requested: number;
-    /**
-     * 实际删除的条数
-     */
-    deleted: number;
-    /**
-     * 其中原本正在生效的条数（已广播下线）
-     */
-    active: number;
-    /**
-     * 未找到因而未被删除的 ID
-     */
-    notFound: Array<string>;
-};
-
-export type UpdateNoticeDto = {
-    /**
-     * 通知级别
-     */
-    level?: 'info' | 'warning' | 'danger';
-    /**
-     * 标题（后端原文）
-     */
-    title?: string;
-    /**
-     * 正文（后端原文，支持换行）
-     */
-    body?: string;
 };
 
 export type UploadExtReferenceDto = {
@@ -8711,6 +8711,163 @@ export type UserCleanupControllerTriggerCleanupResponses = {
 
 export type UserCleanupControllerTriggerCleanupResponse = UserCleanupControllerTriggerCleanupResponses[keyof UserCleanupControllerTriggerCleanupResponses];
 
+export type NoticeCenterControllerGetCurrentData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices/current';
+};
+
+export type NoticeCenterControllerGetCurrentResponses = {
+    /**
+     * 生效中的通知列表
+     */
+    200: Array<NoticeResponseDto>;
+};
+
+export type NoticeCenterControllerGetCurrentResponse = NoticeCenterControllerGetCurrentResponses[keyof NoticeCenterControllerGetCurrentResponses];
+
+export type NoticeCenterControllerIssueTicketData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices/stream/ticket';
+};
+
+export type NoticeCenterControllerIssueTicketResponses = {
+    /**
+     * 一次性票据（5 分钟内有效，连接时立即失效）
+     */
+    200: NoticeTicketDto;
+};
+
+export type NoticeCenterControllerIssueTicketResponse = NoticeCenterControllerIssueTicketResponses[keyof NoticeCenterControllerIssueTicketResponses];
+
+export type NoticeCenterControllerListAllData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices';
+};
+
+export type NoticeCenterControllerListAllResponses = {
+    /**
+     * 全部通知
+     */
+    200: Array<NoticeResponseDto>;
+};
+
+export type NoticeCenterControllerListAllResponse = NoticeCenterControllerListAllResponses[keyof NoticeCenterControllerListAllResponses];
+
+export type NoticeCenterControllerCreateData = {
+    body: CreateNoticeDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices';
+};
+
+export type NoticeCenterControllerCreateResponses = {
+    /**
+     * 已创建
+     */
+    201: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerCreateResponse = NoticeCenterControllerCreateResponses[keyof NoticeCenterControllerCreateResponses];
+
+export type NoticeCenterControllerBatchDeleteData = {
+    body: BatchDeleteNoticesDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/notices/batch-delete';
+};
+
+export type NoticeCenterControllerBatchDeleteResponses = {
+    /**
+     * 批量删除结果
+     */
+    200: BatchDeleteNoticesResultDto;
+};
+
+export type NoticeCenterControllerBatchDeleteResponse = NoticeCenterControllerBatchDeleteResponses[keyof NoticeCenterControllerBatchDeleteResponses];
+
+export type NoticeCenterControllerPublishData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}/publish';
+};
+
+export type NoticeCenterControllerPublishResponses = {
+    /**
+     * 已发布
+     */
+    200: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerPublishResponse = NoticeCenterControllerPublishResponses[keyof NoticeCenterControllerPublishResponses];
+
+export type NoticeCenterControllerRemoveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}';
+};
+
+export type NoticeCenterControllerRemoveErrors = {
+    /**
+     * 通知不存在
+     */
+    404: unknown;
+};
+
+export type NoticeCenterControllerRemoveResponses = {
+    /**
+     * 已删除
+     */
+    200: unknown;
+};
+
+export type NoticeCenterControllerUpdateData = {
+    body: UpdateNoticeDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}';
+};
+
+export type NoticeCenterControllerUpdateResponses = {
+    /**
+     * 已更新
+     */
+    200: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerUpdateResponse = NoticeCenterControllerUpdateResponses[keyof NoticeCenterControllerUpdateResponses];
+
+export type NoticeCenterControllerRetractData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/notices/{id}/retract';
+};
+
+export type NoticeCenterControllerRetractResponses = {
+    /**
+     * 已下线
+     */
+    200: NoticeResponseDto;
+};
+
+export type NoticeCenterControllerRetractResponse = NoticeCenterControllerRetractResponses[keyof NoticeCenterControllerRetractResponses];
+
 export type RolesControllerFindAllData = {
     body?: never;
     path?: never;
@@ -12022,163 +12179,6 @@ export type QueueControllerGetQueueStatsResponses = {
 };
 
 export type QueueControllerGetQueueStatsResponse = QueueControllerGetQueueStatsResponses[keyof QueueControllerGetQueueStatsResponses];
-
-export type NoticeCenterControllerGetCurrentData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/notices/current';
-};
-
-export type NoticeCenterControllerGetCurrentResponses = {
-    /**
-     * 生效中的通知列表
-     */
-    200: Array<NoticeResponseDto>;
-};
-
-export type NoticeCenterControllerGetCurrentResponse = NoticeCenterControllerGetCurrentResponses[keyof NoticeCenterControllerGetCurrentResponses];
-
-export type NoticeCenterControllerIssueTicketData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/notices/stream/ticket';
-};
-
-export type NoticeCenterControllerIssueTicketResponses = {
-    /**
-     * 一次性票据（5 分钟内有效，连接时立即失效）
-     */
-    200: NoticeTicketDto;
-};
-
-export type NoticeCenterControllerIssueTicketResponse = NoticeCenterControllerIssueTicketResponses[keyof NoticeCenterControllerIssueTicketResponses];
-
-export type NoticeCenterControllerListAllData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/api/v1/notices';
-};
-
-export type NoticeCenterControllerListAllResponses = {
-    /**
-     * 全部通知
-     */
-    200: Array<NoticeResponseDto>;
-};
-
-export type NoticeCenterControllerListAllResponse = NoticeCenterControllerListAllResponses[keyof NoticeCenterControllerListAllResponses];
-
-export type NoticeCenterControllerCreateData = {
-    body: CreateNoticeDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/notices';
-};
-
-export type NoticeCenterControllerCreateResponses = {
-    /**
-     * 已创建
-     */
-    201: NoticeResponseDto;
-};
-
-export type NoticeCenterControllerCreateResponse = NoticeCenterControllerCreateResponses[keyof NoticeCenterControllerCreateResponses];
-
-export type NoticeCenterControllerBatchDeleteData = {
-    body: BatchDeleteNoticesDto;
-    path?: never;
-    query?: never;
-    url: '/api/v1/notices/batch-delete';
-};
-
-export type NoticeCenterControllerBatchDeleteResponses = {
-    /**
-     * 批量删除结果
-     */
-    200: BatchDeleteNoticesResultDto;
-};
-
-export type NoticeCenterControllerBatchDeleteResponse = NoticeCenterControllerBatchDeleteResponses[keyof NoticeCenterControllerBatchDeleteResponses];
-
-export type NoticeCenterControllerPublishData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/notices/{id}/publish';
-};
-
-export type NoticeCenterControllerPublishResponses = {
-    /**
-     * 已发布
-     */
-    200: NoticeResponseDto;
-};
-
-export type NoticeCenterControllerPublishResponse = NoticeCenterControllerPublishResponses[keyof NoticeCenterControllerPublishResponses];
-
-export type NoticeCenterControllerRemoveData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/notices/{id}';
-};
-
-export type NoticeCenterControllerRemoveErrors = {
-    /**
-     * 通知不存在
-     */
-    404: unknown;
-};
-
-export type NoticeCenterControllerRemoveResponses = {
-    /**
-     * 已删除
-     */
-    200: unknown;
-};
-
-export type NoticeCenterControllerUpdateData = {
-    body: UpdateNoticeDto;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/notices/{id}';
-};
-
-export type NoticeCenterControllerUpdateResponses = {
-    /**
-     * 已更新
-     */
-    200: NoticeResponseDto;
-};
-
-export type NoticeCenterControllerUpdateResponse = NoticeCenterControllerUpdateResponses[keyof NoticeCenterControllerUpdateResponses];
-
-export type NoticeCenterControllerRetractData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: never;
-    url: '/api/v1/notices/{id}/retract';
-};
-
-export type NoticeCenterControllerRetractResponses = {
-    /**
-     * 已下线
-     */
-    200: NoticeResponseDto;
-};
-
-export type NoticeCenterControllerRetractResponse = NoticeCenterControllerRetractResponses[keyof NoticeCenterControllerRetractResponses];
 
 export type PublicFileControllerAccessFileData = {
     body?: never;
