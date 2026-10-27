@@ -235,3 +235,4 @@ test-*.yml
 # 临时产物（一次性会话输出，不入库）
 .scratch/
 playwright-report/
+gui-test-screenshots/
