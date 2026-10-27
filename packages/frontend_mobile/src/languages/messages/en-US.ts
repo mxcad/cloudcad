@@ -1189,5 +1189,22 @@ export default  {
     "3927": "The editor is not ready yet. Please wait.",
     "3928": "Library drawings are read-only. Save as a copy elsewhere.",
     "3929": "Save to Cloud",
-    "3930": "File name cannot contain these characters: \\ / : * ? \" < > |"
+    "3930": "File name cannot contain these characters: \\ / : * ? \" < > |",
+    "3931": "VIP required",
+    "3932": "Purchase"
+,
+    "3933": "Clipboard",
+    "3934": "Compare Drawings",
+    "3935": "Object Properties",
+    "3936": "Insert Table",
+    "3937": "Text Style",
+    "3938": "Dimension Style",
+    "3939": "Window Zoom",
+    "3940": "Linetype",
+    "3941": "Custom Rotation Angle",
+    "3942": "Pan",
+    "3943": "View",
+    "3944": "Rotate 90 Degrees CCW",
+    "3945": "Rotate 90 Degrees CW",
+    "3946": "Color"
 }

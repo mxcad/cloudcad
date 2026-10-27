@@ -27,9 +27,23 @@ import { exportDrawing } from '../../services/exportService';
 import { uploadThumbnailForNode } from '../../services/thumbnailService';
 import { isHashLike } from '../../services/publicFileService';
 import {
-  canExportDownloadGate,
+  isExportDownloadAllowedFor,
   loadCADPermissions,
 } from '../../services/permissionService';
+import {
+  SAVE_CHAIN,
+  SAVE_AS_CHAIN,
+  VERSION_HISTORY_CHAIN,
+  SHARE_CHAIN,
+  exportChainDef,
+  beginIntent,
+  resumeIntent,
+  clearIntentChain,
+  hasIntentChain,
+  loginPromptRequired,
+  cloudSaveConfirmRequired,
+  resumeAction,
+} from '../../services/intentChain';
 import { useEditorStore } from '@/stores/editor';
 import { useSave } from '../../composables/useSave';
 import {
@@ -257,8 +271,7 @@ watch(saveAsToCloudTrigger, () => {
   showSaveAsSheet.value = true;
 });
 watch(saveLoginRequiredTrigger, () => {
-  pendingActionAfterLogin.value = 'saveAs';
-  showLoginPrompt.value = true;
+  void beginIntent(SAVE_AS_CHAIN);
 });
 watch(saveToCloudTrigger, () => {
   const state = editorState.state;
@@ -270,8 +283,7 @@ watch(saveToCloudTrigger, () => {
     return;
   }
   if (!isAuthenticated.value) {
-    pendingActionAfterLogin.value = 'save';
-    showLoginPrompt.value = true;
+    void beginIntent(SAVE_CHAIN);
     return;
   }
   if (state.isPublicFile) {
@@ -298,12 +310,65 @@ watch(saveToCloudTrigger, () => {
 const pendingCommitMessage = ref('');
 const showVersionHistory = ref(false);
 const showLoginPrompt = ref(false);
-const pendingActionAfterLogin = ref<
-  'save' | 'saveAs' | 'version-history' | 'share' | null
->(null);
 const { config: runtimeConfig } = useRuntimeConfig();
 // 「查看文档」地址走品牌运行时配置（管理端可改），不硬编码
 const { brand } = useBrand();
+
+// ====== 意图链（ADR-0081，与 PC 共用 @cloudcad/platform 判定/持久化语义） ======
+// 所有被前置阻塞的编辑器操作（保存/另存/版本历史/分享/导出）统一挂起为意图链，
+// 登录 / 文档打开完成 / 导出闸门翻转（充值成功、管理员开放免费导出）后自动续跑。
+
+// 登录闸门触发：adapter 置位 → 展示登录提示
+watch(loginPromptRequired, (def) => {
+  if (!def) return;
+  loginPromptRequired.value = null;
+  showLoginPrompt.value = true;
+});
+
+// 云端缺口触发：adapter 置位 → 弹「先保存到云端并分享」确认
+watch(cloudSaveConfirmRequired, (def) => {
+  if (!def) return;
+  cloudSaveConfirmRequired.value = null;
+  void confirmSaveBeforeShare();
+});
+
+// 续跑分派：链的前置全部满足后，adapter 置位原始动作，按 type 分派
+watch(resumeAction, (act) => {
+  if (!act) return;
+  resumeAction.value = null;
+  if (act.type === 'save') {
+    showCommitDialog.value = true;
+  } else if (act.type === 'saveAs') {
+    showSaveAsSheet.value = true;
+  } else if (act.type === 'version-history') {
+    showVersionHistory.value = true;
+  } else if (act.type === 'share') {
+    // 重跑整条意图链：续跑时可能仍无云端节点，应转入「先保存到云端再分享」
+    // 而不是直接弹一个没有 fileId 的分享面板
+    handleShareCurrent();
+  } else if (act.type === 'export' && act.payload) {
+    void exportDrawing(
+      act.payload.format,
+      undefined,
+      act.payload.pdfOptions,
+      act.payload.dwgOptions,
+    );
+  }
+});
+
+// 导出闸门翻转（充值成功 → useUser 刷新；管理员开放免费导出 → 配置刷新）
+// → 续跑挂起链。图纸打开中不续跑（document-loaded 锚点）。
+const exportAllowed = computed(() =>
+  isExportDownloadAllowedFor(
+    user.value,
+    runtimeConfig.value.freeExportDownloadEnabled,
+  ),
+);
+watch(exportAllowed, (allowed) => {
+  if (!allowed) return;
+  if (editorState.state.loading) return;
+  resumeIntent();
+});
 
 // 导出（菜单「导出」→ DownloadFormatPopup，对齐 PC 的 DownloadFormatModal：
 // MXWEB/DWG/DXF/PDF 单选 + DWG 版本 / PDF 宽高与色彩）。
@@ -316,11 +381,14 @@ async function onExportFormatConfirm(payload: DownloadFormatPayload) {
   // MXWEB 是源格式：纯前端导出、不做转换，不走会员门控（与 PC 一致）
   if (
     payload.format !== 'mxweb' &&
-    !canExportDownloadGate(
+    !isExportDownloadAllowedFor(
       user.value,
       runtimeConfig.value.freeExportDownloadEnabled,
     )
   ) {
+    // 闸门未过 → 挂起导出意图链：未登录走登录闸门，已登录走购买引导
+    // （确认后跳会员中心，充值/开放免费导出后自动续跑重放本次导出）
+    void beginIntent(exportChainDef(payload));
     return;
   }
   await exportDrawing(
@@ -369,8 +437,7 @@ async function executeSave() {
   const result = await saveAction(pendingCommitMessage.value);
   if (result.success) return;
   if (result.needLogin) {
-    pendingActionAfterLogin.value = 'save';
-    showLoginPrompt.value = true;
+    void beginIntent(SAVE_CHAIN);
     return;
   }
   if (result.needSaveAs) {
@@ -390,6 +457,12 @@ async function executeSave() {
 function onSaveAsClose() {
   showSaveAsSheet.value = false;
   saveAsNotice.value = '';
+  // 分享意图链走到另存为后用户直接关掉面板 = 放弃本次分享：清链并复位守卫，
+  // 否则之后每次点分享都只弹「需要先将图纸保存到云端」而永远进不了流程
+  if (resumingShare.value) {
+    resumingShare.value = false;
+    clearIntentChain();
+  }
 }
 
 async function onSaveAsSuccess(result: {
@@ -433,8 +506,8 @@ async function onSaveAsSuccess(result: {
     editorState.setPersonalSpaceId(rootId);
   }
 
-  // 分享意图链续跑（对齐 PC signalShareChainCloudNodeCreated）：另存为刚拿到云端
-  // 节点，接管后直接开分享面板
+  // 分享意图链（对齐 PC signalShareChainCloudNodeCreated）：另存为刚拿到云端
+  // 节点，接管后由函数末尾 resumeIntent 续跑开分享面板
   const resumeShare = resumingShare.value;
   resumingShare.value = false;
 
@@ -503,7 +576,7 @@ async function onSaveAsSuccess(result: {
   if (pathMatch) url.pathname = `${pathMatch[1]}/${result.nodeId}`;
   window.history.replaceState(null, '', url.pathname + url.search + url.hash);
 
-  if (resumeShare) openSharePopup();
+  if (resumeShare) resumeIntent();
 }
 
 function onShowVersionHistory() {
@@ -516,8 +589,7 @@ function onShowVersionHistory() {
     return;
   }
   if (!isAuthenticated.value) {
-    pendingActionAfterLogin.value = 'version-history';
-    showLoginPrompt.value = true;
+    void beginIntent(VERSION_HISTORY_CHAIN);
     return;
   }
   // 版本历史是只读能力，不该用 canSave 拦：共享图纸里的只读协作者能开文件却看不到
@@ -534,33 +606,27 @@ function onShowVersionHistory() {
 }
 
 function onLoginPromptLogin(target: 'login' | 'register' = 'login') {
-  if (pendingActionAfterLogin.value) {
-    sessionStorage.setItem('pendingAction', pendingActionAfterLogin.value);
-    pendingActionAfterLogin.value = null;
-  }
+  // 意图链已在 beginIntent 时持久化到 sessionStorage，跨登录页导航不丢；
+  // 登录完成后由下方 watch / 打开完成钩子 resumeIntent 续跑
   showLoginPrompt.value = false;
-  // 原生登录页（同 tab，带 redirect 回跳当前编辑器）；登录完成后由下方 watch 恢复待执行动作
+  loginPromptRequired.value = null;
   if (target === 'register') navigateToRegister();
   else navigateToLogin();
 }
 
 function onLoginPromptClose() {
   showLoginPrompt.value = false;
+  loginPromptRequired.value = null;
+  // 关闭登录提示 = 放弃本次意图，清链（与 PC 登录闸门关闭语义一致）
+  clearIntentChain();
 }
 
-// 原生登录完成后（同 tab 无 storage 事件）恢复登录后待执行动作（保存/另存/版本历史）
+// 原生登录完成后（同 tab 无 storage 事件）续跑挂起的意图链
+// （保存/另存/版本历史/分享/导出）
 watch(isAuthenticated, (authed) => {
   if (!authed) return;
-  const pending = sessionStorage.getItem('pendingAction');
-  if (!pending) return;
-  sessionStorage.removeItem('pendingAction');
   setTimeout(() => {
-    if (pending === 'save') showCommitDialog.value = true;
-    else if (pending === 'saveAs') showSaveAsSheet.value = true;
-    else if (pending === 'version-history') showVersionHistory.value = true;
-    // 分享走 handleShareCurrent 重跑整条意图链：登录后可能仍无云端节点，
-    // 此时应转入「先保存到云端再分享」而不是直接弹一个没有 fileId 的分享面板
-    else if (pending === 'share') handleShareCurrent();
+    resumeIntent();
   }, 500);
 });
 
@@ -631,8 +697,7 @@ function openSharePopup() {
 
 const handleShareCurrent = () => {
   if (!isAuthenticated.value) {
-    pendingActionAfterLogin.value = 'share';
-    showLoginPrompt.value = true;
+    void beginIntent(SHARE_CHAIN);
     return;
   }
   // 分享链接打开的图纸同样有 fileId（节点 id），可直接分享
@@ -658,9 +723,10 @@ async function confirmSaveBeforeShare() {
       cancelButtonText: t('取消'),
     });
   } catch {
-    // 取消 = 放弃这次分享意图，必须清标记：留着会让之后每次点分享都只弹
-    // 「需要先将图纸保存到云端」而永远进不了流程（实测死循环）。
+    // 取消 = 放弃这次分享意图，必须清链：留着会让之后每次锚点续跑都重新弹
+    // 确认框（与 PC 分享链取消语义同构）。
     resumingShare.value = false;
+    clearIntentChain();
     return;
   }
   const result = await saveAction('');
@@ -673,14 +739,17 @@ async function confirmSaveBeforeShare() {
   }
   resumingShare.value = false;
   if (result.success) {
-    openSharePopup();
+    // 云端节点已就位 → 续跑意图链执行原始分享（分派 share 动作开面板）
+    resumeIntent();
     return;
   }
   if (result.needLogin) {
-    pendingActionAfterLogin.value = 'share';
-    showLoginPrompt.value = true;
+    // 令牌过期等会话失效：复位守卫后重挂分享链走登录闸门
+    resumingShare.value = false;
+    void beginIntent(SHARE_CHAIN);
     return;
   }
+  clearIntentChain();
   showToast(result.message || t('保存失败，请稍后重试'));
 }
 
@@ -882,17 +951,12 @@ onMounted(async () => {
     editorState.setFileName('new.dwg');
   }
 
-  const pendingAction = sessionStorage.getItem('pendingAction');
-  if (pendingAction && isAuthenticated.value) {
-    sessionStorage.removeItem('pendingAction');
+  // 文档打开完成 = document-loaded 锚点：续跑登录前挂起的意图链。同 tab 登录
+  // 回跳是整页重挂载，isAuthenticated 无变化、watch 不会重放，这里是主续跑点
+  // （resumeIntent 幂等：无链直接返回，与登录 watch 双锚点互不冲突）
+  if (isAuthenticated.value && hasIntentChain()) {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    if (pendingAction === 'save') {
-      showCommitDialog.value = true;
-    } else if (pendingAction === 'saveAs') {
-      showSaveAsSheet.value = true;
-    } else if (pendingAction === 'version-history') {
-      showVersionHistory.value = true;
-    }
+    resumeIntent();
   }
 });
 // ‍  适配内容高度
@@ -1048,7 +1112,7 @@ setViewportHeight();
       :notice="saveAsNotice"
       @close="onSaveAsClose"
       @success="onSaveAsSuccess"
-      @login-required="showLoginPrompt = true"
+      @login-required="void beginIntent(SAVE_AS_CHAIN)"
     />
     <DownloadFormatPopup
       v-model:show="showExportFormat"

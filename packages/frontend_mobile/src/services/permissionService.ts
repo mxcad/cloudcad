@@ -105,12 +105,12 @@ export async function loadCADPermissions(projectId: string | null): Promise<void
 }
 
 /**
- * 导出下载方向（mxweb → 其他格式）会员预检（纯函数，编辑器菜单与库抽屉共用）：
+ * 导出下载方向（mxweb → 其他格式）静默放行判定（纯函数，无提示副作用）：
  * 有效 VIP（membershipTierLevel > 0 且未到期，判定走 @cloudcad/platform 唯一出口）
- * 或运行时开关 freeExportDownloadEnabled 开放时可导出，否则 toast 提示并短路
- * （后端仍有 403 门控兜底）。
+ * 或运行时开关 freeExportDownloadEnabled 开放。编辑器导出闸门与意图链
+ * （intentChain 的 `isVip` 事实槽）共用这一份口径。
  */
-export function canExportDownloadGate(
+export function isExportDownloadAllowedFor(
   user: unknown,
   freeExportDownloadEnabled: boolean,
 ): boolean {
@@ -121,7 +121,18 @@ export function canExportDownloadGate(
     tierLevel: typeof tierLevel === 'number' ? tierLevel : 0,
     expiresAt,
   }).isVip;
-  if (isVip || freeExportDownloadEnabled) return true;
+  return isVip || freeExportDownloadEnabled;
+}
+
+/**
+ * 导出下载会员预检（带提示，库抽屉等直接调用点共用）：放行判定走
+ * isExportDownloadAllowedFor，不放行时 toast 提示并短路（后端仍有 403 门控兜底）。
+ */
+export function canExportDownloadGate(
+  user: unknown,
+  freeExportDownloadEnabled: boolean,
+): boolean {
+  if (isExportDownloadAllowedFor(user, freeExportDownloadEnabled)) return true;
   showToast(t('导出下载为会员专属功能，开通 VIP 后即可使用'));
   return false;
 }
