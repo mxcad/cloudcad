@@ -33,8 +33,8 @@ const { getAdminLoginPath } = require('../lib/admin-login');
 // 强随机口令生成 + 默认简单口令：单一事实源 lib/secret-generator.js（ADR-0074，与 setup-offline 共用）
 const {
   generateStrongPassword,
+  generateInfraPasswords,
   DEFAULT_ADMIN_PASSWORD,
-  DEFAULT_INFRA_PASSWORD,
 } = require('../lib/secret-generator');
 const { promptPasswordWithConfirm } = require('../lib/prompt');
 const {
@@ -365,12 +365,13 @@ async function runSetupWizard() {
 }
 
 /**
- * 首次部署自动配置（数据库/Redis 统一默认口令 + 管理员口令三分支）
+ * 首次部署自动配置（数据库/Redis 各自独立随机口令 + 管理员口令三分支）
  *
  * 流程：
- * 1. 数据库 / Redis 密码取统一默认值（DEFAULT_INFRA_PASSWORD，12345678）并一次性
- *    展示（基础设施口令，部署后可用 cli.js db:reset-password / redis:reset-password
- *    轮换，不在本向导内编辑）
+ * 1. 数据库 / Redis 密码各自生成独立强随机口令（generateInfraPasswords：内部
+ *    基础设施，管理员登录用的是 INITIAL_ADMIN_PASSWORD，用户实际操作体验不经
+ *    这两个口令，故可安全随机化）并一次性展示（丢失可走 cli.js
+ *    db:reset-password / redis:reset-password 带外轮换，不在本向导内编辑）
  * 2. 管理员口令三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）
  * 3. 写入 .env 并展示最终生效配置，暂停等待用户记录后再启动服务
  *
@@ -385,10 +386,10 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   // JWT 密钥自动生成（无需用户编辑）
   updates.JWT_SECRET = generateJwtSecret(32);
 
-  // 数据库 / Redis 用统一默认口令（12345678，与管理员默认口令同值）；
+  // 数据库 / Redis 各自独立强随机口令（generateInfraPasswords：内部基础设施，
+  // 与管理员口令不同——用户实际体验不经过它们，故可安全随机化而非固定简单值）；
   // 管理员口令走三分支（默认简单口令）
-  const dbPassword = DEFAULT_INFRA_PASSWORD;
-  const redisPassword = DEFAULT_INFRA_PASSWORD;
+  const { dbPassword, redisPassword } = generateInfraPasswords();
 
   if (!interactive) {
     updates.DB_PASSWORD = dbPassword;
@@ -413,15 +414,10 @@ async function autoSetupAndShowPasswords({ interactive = true } = {}) {
   console.log(`  ${colors.bright}配置中心:${colors.reset}   http://localhost:${envConfig.CONFIG_SERVICE_PORT || '3002'}`);
   console.log(`  ${colors.bright}管理员登录:${colors.reset} http://localhost:${envConfig.FRONTEND_PORT || PORTS.frontend}${getAdminLoginPath()}`);
   console.log('');
-  console.log(`${colors.yellow}  以下密码为首次部署默认值，请记录保存：${colors.reset}`);
+  console.log(`${colors.yellow}  以下密码为首次部署随机生成，请记录保存：${colors.reset}`);
   console.log('');
   console.log(`  ${colors.bright}数据库密码:${colors.reset}     ${dbPassword}`);
   console.log(`  ${colors.bright}Redis 密码:${colors.reset}    ${redisPassword}`);
-  console.log('');
-  console.log(`${colors.cyan}数据库 / Redis 密码如需更换，部署后可执行：${colors.reset}`);
-  console.log(
-    `${colors.cyan}  cli.js db:reset-password / redis:reset-password${colors.reset}`
-  );
   console.log('');
 
   // 管理员口令三分支（回车=默认简单口令 / y=复杂随机 / n=自定义）

@@ -38,16 +38,6 @@ const { escapeEnvValue } = require('../config-updater');
 const DEFAULT_ADMIN_PASSWORD = '12345678';
 
 /**
- * 首次部署基础设施（数据库 / Redis）默认口令。
- *
- * 与管理员默认口令同值（12345678）：部署目标用户是非技术人员，统一简单口令
- * 降低记录/记忆成本；两者都只监听本机（localhost），暴露面有限。基础设施口令
- * 丢失/想轮换走 cli.js db:reset-password / redis:reset-password（ADR-0073 带外
- * 恢复通道），不影响数据目录。
- */
-const DEFAULT_INFRA_PASSWORD = '12345678';
-
-/**
  * 生成长度为 64 的随机密钥（十六进制）
  */
 function generateSecret() {
@@ -80,6 +70,27 @@ function generateStrongPassword() {
     [chars[i], chars[j]] = [chars[j], chars[i]];
   }
   return chars.join('');
+}
+
+/**
+ * 生成首次部署的数据库 / Redis 基础设施口令（各自独立强随机口令）。
+ *
+ * 数据库 / Redis 是内部基础设施：管理员登录用的是 INITIAL_ADMIN_PASSWORD
+ * （与这两个口令无关，用户实际操作体验不经过它们），故可安全用强随机口令——
+ * 这正是与管理员口令（DEFAULT_ADMIN_PASSWORD，有意保留简单口令供非技术用户
+ * 抄录）的差异点。两个口令独立生成不复用同值（避免一处泄露连带另一处）。
+ * 丢失/想轮换走 cli.js db:reset-password / redis:reset-password（ADR-0073 带外
+ * 恢复通道），不影响数据目录。
+ *
+ * 生成器刻意排除 `$`（Docker compose env_file 变量插值陷阱），裸机与 Docker
+ * 形态共用同一生成器，产物对两者都安全。
+ * @returns {{dbPassword: string, redisPassword: string}}
+ */
+function generateInfraPasswords() {
+  return {
+    dbPassword: generateStrongPassword(),
+    redisPassword: generateStrongPassword(),
+  };
 }
 
 /**
@@ -151,8 +162,8 @@ function fillEmptySecrets(envFile, logFn = () => {}) {
 
 module.exports = {
   DEFAULT_ADMIN_PASSWORD,
-  DEFAULT_INFRA_PASSWORD,
   generateSecret,
   generateStrongPassword,
+  generateInfraPasswords,
   fillEmptySecrets,
 };
