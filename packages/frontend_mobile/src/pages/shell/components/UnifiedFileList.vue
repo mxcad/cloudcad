@@ -244,7 +244,9 @@ function onSelectionAction(action: SelectionActionKey) {
 const emptyText = computed(() =>
   props.emptyText || (props.domain === 'project' ? t('暂无项目文件') : t('个人空间空空如也'))
 )
-const emptyIcon = computed(() => props.emptyIcon || 'friends-o')
+// 空文件/项目列表语义应为文档图标（默认 friends-o 是「人像组」与文件场景不符；
+// 注意 Vant 无 folder-o 图标，用 notes-o 文档 outline）
+const emptyIcon = computed(() => props.emptyIcon || 'notes-o')
 
 // 网格缩略图：已删项目根用项目图标（与普通文件夹区分），其余文件夹用文件夹图标
 function isProjectRoot(item: ListItem): boolean {

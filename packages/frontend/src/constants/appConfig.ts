@@ -172,7 +172,8 @@ const DEFAULT_BRAND_PROFILE: BrandProfile = {
     phone: '17381962637',
     hours: '周一至周五 9:00-18:00',
   },
-  docsUrl: 'https://help.mxdraw.com/',
+  docsUrl:
+    'https://demo.mxdraw3d.com/download/%E6%A2%A6%E6%83%B3CAD%E5%8D%8F%E5%90%8C%E5%B9%B3%E5%8F%B0%E7%A7%81%E6%9C%89%E5%8C%96%E9%83%A8%E7%BD%B2%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.pdf',
   subtitle: 'CAD 协同平台',
   legal: {
     productShortName: 'CloudCAD',

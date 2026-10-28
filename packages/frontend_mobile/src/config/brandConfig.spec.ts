@@ -61,7 +61,9 @@ describe('resolveBrand', () => {
   })
 
   it('docsUrl 三层优先级：单项运行时项 > brandProfile > 内置默认', () => {
-    expect(resolveBrand(null).docsUrl).toBe('https://help.mxdraw.com/')
+    expect(resolveBrand(null).docsUrl).toBe(
+      'https://demo.mxdraw3d.com/download/%E6%A2%A6%E6%83%B3CAD%E5%8D%8F%E5%90%8C%E5%B9%B3%E5%8F%B0%E7%A7%81%E6%9C%89%E5%8C%96%E9%83%A8%E7%BD%B2%E6%93%8D%E4%BD%9C%E6%8C%87%E5%8D%97.pdf',
+    )
     expect(
       resolveBrand({ brandProfile: { docsUrl: 'https://brand.example/' } }).docsUrl,
     ).toBe('https://brand.example/')
