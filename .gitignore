@@ -236,3 +236,6 @@ test-*.yml
 .scratch/
 playwright-report/
 gui-test-screenshots/
+
+# 运行时标记（部署自检 markInstalledVersion 写当前根路径，不入库）
+.deploy-root
