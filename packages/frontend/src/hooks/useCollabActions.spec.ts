@@ -48,6 +48,32 @@ vi.mock('../services/mxcadManager', () => ({
     wasPending: false,
   })),
   exitCurrentCollaboration: vi.fn(),
+  // 模拟引擎命令层：派发透传到 cooperate mock，回调驱动的用例保持原语义
+  // （真实 dispatchJoinWork 会吞派发异常返回 false，此处不吞，让「joinWork 抛异常」
+  // 用例仍走 handleJoinWork 的 catch 分支）
+  dispatchJoinWork: vi.fn(
+    (
+      workId: number,
+      cb: (ret: number) => void,
+      userId: string,
+      encodedUser: string
+    ) => {
+      cooperateMock.joinWork(workId, cb, userId, encodedUser);
+      return true;
+    }
+  ),
+  dispatchCreateWork: vi.fn(
+    (
+      cb: (workid: number) => void,
+      workData: string,
+      userId: string,
+      encodedUser: string
+    ) => {
+      cooperateMock.createWork(cb, workData, userId, encodedUser);
+      return true;
+    }
+  ),
+  dispatchExitWork: vi.fn(() => 0),
 }));
 
 vi.mock('../contexts/NotificationContext', () => ({

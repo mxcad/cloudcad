@@ -140,6 +140,8 @@ import {
   waitForDocumentLoaded,
 } from '../mxcadInstanceManager';
 import { getFileInfo } from '../mxcadHelpers';
+import { useCADEditorStore } from '@/stores/useCADEditorStore';
+import { FILE_CONTEXT_NONE } from '../mxcadTypes';
 
 type InstanceInternals = {
   mxcadView: unknown;
@@ -186,6 +188,10 @@ beforeEach(() => {
   state.viewInstances = 0;
   state.engineListenerRegistrations.length = 0;
   state.handlers.clear();
+  vi.mocked(useCADEditorStore.getState).mockReturnValue({
+    isInCollaboration: false,
+    fileContext: FILE_CONTEXT_NONE,
+  });
   vi.mocked(MxFun.on).mockImplementation((name: string) => {
     state.engineListenerRegistrations.push(name);
   });

@@ -119,7 +119,7 @@ describe('useLoginForm - 注销冷静期分流', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('账号登录：restored=true → 显示「账户已自动恢复」并延迟跳转', async () => {
+  it('账号登录：restored=true → 显示「账户已自动恢复」，跳转交给 redirect effect', async () => {
     mockLogin.mockResolvedValue(true);
 
     const result = await submitAccount();
@@ -127,20 +127,18 @@ describe('useLoginForm - 注销冷静期分流', () => {
     expect(result.current.success).toBe(
       t('您的账户已自动恢复，注销已取消')
     );
-    // 延迟 1.5s 跳转（与注销成功处理一致，让提示可见）
-    act(() => {
-      vi.advanceTimersByTime(1500);
-    });
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+    // 登录成功后的导航统一由 Login/index.tsx 的 redirect effect 负责
+    // （读取 ?redirect= 回用户意图页）；提交处理器不得 navigate('/') 抹掉该参数
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('账号登录：restored=false → 正常跳转不显示恢复提示', async () => {
+  it('账号登录：restored=false → 不显示恢复提示，跳转交给 redirect effect', async () => {
     mockLogin.mockResolvedValue(false);
 
     const result = await submitAccount();
 
     expect(result.current.success).toBeNull();
-    expect(mockNavigate).toHaveBeenCalledWith('/');
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('手机登录：ACCOUNT_DEACTIVATED 错误码 → 弹客服信息弹框', async () => {

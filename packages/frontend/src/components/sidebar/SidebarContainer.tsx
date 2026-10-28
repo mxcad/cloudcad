@@ -402,7 +402,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       icon={<FolderOpen size={40} />}
                       title={t('登录以访问我的项目')}
                       description={t('登录后可以查看和管理您的项目')}
-                      onLogin={handleLoginClick}
+                      // 意图 = 访问「我的项目」，登录后应落在项目管理页，而非留在 CAD 编辑器
+                      onLogin={() => handleLoginClick('/projects')}
                     />
                   )}
                 </div>
@@ -427,7 +428,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                       icon={<FileText size={40} />}
                       title={t('登录以访问个人空间')}
                       description={t('登录后可以查看和管理您的私人图纸')}
-                      onLogin={handleLoginClick}
+                      // 意图 = 访问「个人空间」，登录后应落在个人空间页
+                      onLogin={() => handleLoginClick('/personal-space')}
                     />
                   )}
                 </div>
@@ -463,7 +465,8 @@ export const SidebarContainer: React.FC<SidebarContainerProps> = ({
                     description={t(
                       '登录后可以使用个人空间、我的项目、协同等功能'
                     )}
-                    onLogin={handleLoginClick}
+                    // 意图 = 使用协同等完整功能（无独立页面），登录后留在当前页即可
+                    onLogin={() => handleLoginClick()}
                   />
                 </div>
               )}

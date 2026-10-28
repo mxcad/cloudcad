@@ -4,6 +4,8 @@ import { useCADEditorStore } from '../stores/useCADEditorStore';
 import {
   mxcadManager,
   getCooperate,
+  dispatchJoinWork,
+  dispatchExitWork,
   refreshFileName,
   isEmptyDocumentName,
 } from '../services/mxcadManager';
@@ -134,18 +136,16 @@ export function useCollabAutoJoin(onFileLoaded?: () => void): void {
       }
 
       useCADEditorStore.getState().setCollabPhase('joining');
-      cooperate.joinWork(
+      // 经 __joinCollabWork__ 引擎命令加入：引擎命令状态机先停掉在途绘图命令
+      // （如画线）再执行，避免「一边画线、一边加入协同」并发破坏引擎状态
+      const dispatched = dispatchJoinWork(
         workId,
         (iRet: number) => {
           if (cancelled) {
             // 组件已卸载/用户已离开：引擎 session 若已开则就地清理，
             // 防「引擎已加入但 store 说未加入」的会话泄漏
             if (iRet === 0 || iRet === 17) {
-              try {
-                getCooperate()?.exitWork();
-              } catch {
-                /* 忽略 */
-              }
+              dispatchExitWork();
             }
             useCADEditorStore.getState().setCollabPhase('idle');
             return;
@@ -199,6 +199,15 @@ export function useCollabAutoJoin(onFileLoaded?: () => void): void {
         u.id,
         encodeUserData(userData)
       );
+      if (!dispatched) {
+        // 派发失败（引擎异常）：回调不会再来，按瞬时失败进重试链
+        if (retryCount < AUTO_JOIN_MAX_RETRIES) {
+          retryCount++;
+          enginePollTimer = setTimeout(tryJoin, 1000);
+        } else {
+          settle(t('加入协同超时'), 'warning');
+        }
+      }
     };
 
     const waitEngineReady = () => {

@@ -229,13 +229,14 @@ export function useLoginForm(): UseLoginFormReturn {
         if (read('desktop_redirect_uri', 'session')) {
           return;
         }
+        // 登录成功后的跳转统一交给 Login/index.tsx 的 redirect effect
+        // （redirectParam → 回用户意图页，缺省 '/' → CAD 编辑器）。
+        // 此处不得 navigate('/')：它会先把 URL 重置为 '/'，抹掉 ?redirect= 参数，
+        // 使 redirect effect 读到 redirectParam=null，登录后回不到用户意图页。
         if (restored) {
-          // 注销冷静期内登录自动恢复：提示用户后跳转（与注销成功处理一致，延迟跳转让提示可见）
+          // 注销冷静期内自动恢复：保留提示（redirect effect 随后跳转）
           setSuccess(t('您的账户已自动恢复，注销已取消'));
-          setTimeout(() => navigate('/'), 1500);
-          return;
         }
-        navigate('/');
       } catch (err: unknown) {
         const errAny = err as Record<string, unknown>;
         const errResponse = errAny?.response as
@@ -314,13 +315,12 @@ export function useLoginForm(): UseLoginFormReturn {
         if (read('desktop_redirect_uri', 'session')) {
           return;
         }
+        // 登录成功后的跳转统一交给 Login/index.tsx 的 redirect effect
+        // （详见 handleAccountSubmit 的同款注释：不得 navigate('/') 抹掉 ?redirect=）。
         if (restored) {
-          // 注销冷静期内登录自动恢复：提示用户后跳转（与注销成功处理一致，延迟跳转让提示可见）
+          // 注销冷静期内自动恢复：保留提示（redirect effect 随后跳转）
           setSuccess(t('您的账户已自动恢复，注销已取消'));
-          setTimeout(() => navigate('/'), 1500);
-          return;
         }
-        navigate('/');
       } catch (err: unknown) {
         // 与账号路径一致：SDK 抛错形状可能变化（response.data 或直接错误体），两层兜底读取
         const errAny = err as Record<string, unknown>;

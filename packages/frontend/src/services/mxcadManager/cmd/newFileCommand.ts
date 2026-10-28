@@ -4,12 +4,12 @@ import { t } from '@/languages';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { CAD_EVENTS } from '@/constants/events';
 import { buildCadEditorUrl, getCadEditorBackUrl } from '@/utils/cadEditorRoute';
+import { globalShowConfirm } from '@/utils/notificationEvents';
 import {
   confirmExitCollaborationIfNeeded,
   checkAndConfirmUnsavedChanges,
 } from '../mxcadCollaboration';
 import { newSession, resetSessionRuntime, emit } from '../../drawingSession';
-import { mxcadManager } from '../mxcadManager';
 import { setEditorFileName } from '../mxcadHelpers';
 import type { Command, CommandContext, CommandResult } from './types';
 
@@ -26,6 +26,7 @@ export class NewFileCommand implements Command {
           silent: true,
         };
 
+      // 未保存三键框：仅当前图纸有未保存修改时弹（保存/不保存/取消）。
       const canProceed = await checkAndConfirmUnsavedChanges();
       if (!canProceed)
         return {
@@ -34,24 +35,32 @@ export class NewFileCommand implements Command {
           silent: true,
         };
 
+      // 无条件确认框：与引擎内置 Mx_NewFile 行为一致（引擎版 = 弹确认框 →
+      // mxcad.newFile()）。保证点「新建图纸」一定有确认，即使无未保存修改，
+      // 防止误触丢工作。有未保存修改时上方三键框先处理保存，这里再确认新建。
+      const confirmed = await globalShowConfirm({
+        title: t('新建图纸'),
+        message: t('确定新建图纸吗？当前未保存的更改将丢失。'),
+        confirmText: t('确定'),
+        cancelText: t('取消'),
+        type: 'warning',
+      });
+      if (!confirmed)
+        return {
+          success: false,
+          error: 'new file cancelled',
+          silent: true,
+        };
+
       // 立即把会话切到「新建空白图纸」（setFileContext 唯一写入者，发布
       // FILE_CONTEXT_CHANGED）：协同面板/标题/URL 等消费方全部由这一个事件
       // 驱动，不再逐分支手拼。新建图纸无云端身份（currentFileInfo 派生为
       // null），保存/分享命令走「无文件」分支进另存为。
       newSession();
-      // 登记待打开会话：打开成功后 openFileComplete 消费它做幂等确认；
-      // 失败时 60s 超时 / retCall 回滚清理，不再残留永久 hasPendingOpen 锁
-      // （旧实现裸发 __openWebFile__ 无失败通道，pending 泄漏 → Mx_Save 永久被拦）
-      mxcadManager.setPendingOpenInfo({
-        context: { kind: 'new', fileId: null, name: null },
-      });
-      // 标题必须在发打开命令之前就清掉，不能等 openFileComplete：
-      // 引擎的 openFileComplete 回调固定写 fileName.value = " - " + _name，而 _name 是
-      // 引擎模块级变量、前端绕过引擎 openWebFile 包装从不更新它；空模板这次打开若被引擎
-      // _isStopLoading 闩锁吞掉 openFileComplete（见 waitForDocumentLoaded 注释），
-      // 标题就会一直停留在上一张图纸。setEditorFileName 同时清 _name 与标题，
-      // 只清标题会被引擎那次回写覆盖回旧名。
-      setEditorFileName('');
+      // 标题必须在新建之前就设好：引擎 newFile() 不触发 openFileComplete，
+      // 不会回写标题，但引擎空模板的 empty_template.mxweb 是内部实现名，直接
+      // 露出会让用户困惑，故显示 new.dwg。setEditorFileName 同时写 _name 与标题。
+      setEditorFileName('new.dwg');
       resetSessionRuntime();
 
       // 新文件没有云端身份：URL 清空身份参数（fileId 路径段 / nodeId / hash），
@@ -73,15 +82,15 @@ export class NewFileCommand implements Command {
         projectId: null,
       });
 
+      // 引擎原生 newFile()：清空当前图上内容、新建空白图纸。不触发 readMxFile /
+      // openFileComplete，正是「新建图纸」语义。此前用 openFile(empty.mxweb) 走
+      // openWebFile → 引擎 readMxFile 读 /tmp 临时文件失败（error:3292）→
+      // waitForDocumentLoaded 超时，且绕过了引擎 Mx_NewFile 的确认框。newFile()
+      // 不派发 openFileComplete，故不设 pendingOpenInfo（那靠 openFileComplete
+      // 消费，此处会泄漏）。newFile 后重置图层/颜色/线型 store（引擎版同款）。
       const mxcad = MxCpp.getCurrentMxCAD();
       if (mxcad) {
-        // 走串行打开队列（enqueueOpen 唯一入口）：裸发 __openWebFile__ 会与在途
-        // 打开重叠，锁死引擎 _isStopLoading 闩锁吞掉 openFileComplete → pending
-        // 永不消费。fetchAttributes=1（仅载入内存）与引擎对空模板的原有语义一致。
-        await mxcadManager.openFile({
-          url: new URL('../../../public/empty.mxweb', import.meta.url).href,
-          fetchAttributes: 1,
-        });
+        mxcad.newFile();
         const { initLayerList } = store.useLayer();
         const { initColorIndexList } = store.useColor();
         const { initLineTypeList } = store.useLineType();

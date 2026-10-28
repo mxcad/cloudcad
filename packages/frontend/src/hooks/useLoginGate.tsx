@@ -30,8 +30,13 @@ export interface LoginGate {
   /** 闸门视图状态（只读） */
   showLoginPrompt: boolean;
   loginPromptAction: string;
-  /** 「立即登录」：置抑制 → onLoginStart → 隐藏编辑器 → 跳 buildLoginUrl(当前页) */
-  handleLoginClick: () => void;
+  /**
+   * 「立即登录」：置抑制 → onLoginStart → 隐藏编辑器 → 跳 buildLoginUrl(目标页)。
+   * @param returnPath 登录后要回的目标页。缺省 = 当前 URL（打开图纸/外部参照/
+   *   协同链接等「就地意图」，登录后继续原地动作）。侧边栏「我的项目/个人空间」
+   *   卡片传明确目标页（/projects、/personal-space），否则登录后会回到 CAD 编辑器。
+   */
+  handleLoginClick: (returnPath?: string) => void;
   /** 「稍后再说」：仅关闭闸门视图（不置抑制，后续动作仍可再弹） */
   handleLoginPromptClose: () => void;
   /** 闸门视图（模态由本模块渲染，消费方只负责挂载） */
@@ -78,25 +83,29 @@ export function useLoginGate({
     loginPromptDismissedRef.current = false;
   }, []);
 
-  const handleLoginClick = useCallback(() => {
-    loginPromptDismissedRef.current = true;
-    setShowLoginPrompt(false);
-    onLoginStart?.();
+  const handleLoginClick = useCallback(
+    (returnPath?: string) => {
+      loginPromptDismissedRef.current = true;
+      setShowLoginPrompt(false);
+      onLoginStart?.();
 
-    // adapter 1：隐藏 CAD 编辑器，避免遮挡登录页面（best-effort，不阻塞跳转）
-    import('../services/mxcadManager')
-      .then(({ mxcadManager }) => {
-        mxcadManager.showMxCAD(false);
-      })
-      .catch(() =>
-        console.warn('[useLoginGate] handleLoginClick: showMxCAD(false) 失败')
-      );
+      // adapter 1：隐藏 CAD 编辑器，避免遮挡登录页面（best-effort，不阻塞跳转）
+      import('../services/mxcadManager')
+        .then(({ mxcadManager }) => {
+          mxcadManager.showMxCAD(false);
+        })
+        .catch(() =>
+          console.warn('[useLoginGate] handleLoginClick: showMxCAD(false) 失败')
+        );
 
-    // adapter 2：return URL 走 buildLoginUrl 单一出口（禁止手拼 /login?redirect=）
-    navigate(buildLoginUrl(location.pathname + location.search), {
-      replace: true,
-    });
-  }, [navigate, location.pathname, location.search, onLoginStart]);
+      // adapter 2：return URL 走 buildLoginUrl 单一出口（禁止手拼 /login?redirect=）。
+      // 传入 returnPath = 「用户真正想去的目标页」（侧边栏项目/个人空间卡片）；
+      // 缺省才是当前页（打开图纸/外部参照/协同链接等就地意图，登录后继续原地动作）。
+      const target = returnPath ?? location.pathname + location.search;
+      navigate(buildLoginUrl(target), { replace: true });
+    },
+    [navigate, location.pathname, location.search, onLoginStart]
+  );
 
   const handleLoginPromptClose = useCallback(() => {
     setShowLoginPrompt(false);
@@ -107,7 +116,8 @@ export function useLoginGate({
     <LoginPrompt
       isOpen={showLoginPrompt}
       action={loginPromptAction}
-      onLogin={handleLoginClick}
+      // 包一层丢弃 Button 传入的 MouseEvent，避免其被当作 returnPath（truthy）
+      onLogin={() => handleLoginClick()}
       onClose={handleLoginPromptClose}
     />
   );

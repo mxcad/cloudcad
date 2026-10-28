@@ -115,6 +115,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `docs/adr/0027-shared-prisma-client.md` | @cloudcad/db 共享 Prisma Client —— schema 单一源 + 数据层类型唯一出口 |
 | `docs/adr/0056-deployment-runtime-packager-modularization.md` | 离线部署运行时与打包工具工程化 —— 双包架构（runtime-cli/packager）+ 两步迁移 + 前台真修复 + 入口双 facade（start=一键部署 / cloudcad=运维 CLI）+ 分层测试策略 |
 | `docs/adr/0070-platform-package-and-pc-mobile-url-interop.md` | @cloudcad/platform 跨端公共层（准入四条）+ PC↔移动端 URL 互通走「语义等价 + 双向翻译层」——映射表单一事实源、两端路由参数名同名铁律、移动端 URL 形态固定 `base?query#path`、双向逃生入口、消灭整页重载、守卫异步刷新 |
+| `docs/adr/0084-engine-command-mechanism-for-drawing-touching-operations.md` | 引擎命令机制铁律 —— 凡动图纸的操作（打开/加入协同/退出协同/创建协同）必须注册为引擎命令并经 `MxFun.sendStringToExecute` 派发，禁止 React 层裸调 SDK；`__openWebFile__` 是实例非特例；协同三命令 `__joinCollabWork__`/`__exitCollabWork__`/`__createCollabWork__` + dispatch 唯一入口；改协同/引擎交互代码前必读 |
 | `docs/deployment-runtime-refactor-plan.md` | 部署运行时工程化重构的**可执行路线图**（痛点 P1-P9、契约 C1-C11、决策点、回归矩阵 V1-V8）——改 `runtime/scripts`、`scripts/pack-offline.js`、`start.sh`、`cloudcad.sh`、打包/启动相关代码前必读 |
 | `docs/packaging-unification-plan.md` | 打包入口与交付形态统一的**可执行路线图**（v1 三类包统一入口/命名/交互/CI、v2 docker windows 宿主+private、v3 docker 升级包；痛点 P1-P10、契约 C1-C12、回归矩阵 V1-V8）——改 `pack-menu.js`、`pack-linux-docker.js`、`runtime/docker-runtime`、release.yml 打包/验证/CI 相关代码前必读 |
 
@@ -185,7 +186,7 @@ pnpm build                  # i18n compile → vite build
 | Prisma v7 | schema 变更后类型可能变 `ModelNameOmit`；枚举不可直接 `@ApiProperty` | prisma-database |
 | Express v5 | `session.destroy()`/`save()` 返回 `Promise<void>` | backend-coding-standards |
 | CAD 引擎黑盒 | `mxcadManager` 单例，`CADEditorDirect` 全局叠加层保 WebGL | cad-engine-integration |
-| 协同 SDK | `createWrok` 自动加入、`joinWork` 自动加载文件、`exitWork` 回退本地 | cad-engine-integration |
+| 协同 SDK | `createWrok` 自动加入、`joinWork` 自动加载文件、`exitWork` 回退本地；**加入/退出/创建协同必须走引擎命令**（`__joinCollabWork__`/`__exitCollabWork__`/`__createCollabWork__` + `dispatchJoinWork`/`dispatchExitWork`/`dispatchCreateWork` 唯一入口，禁裸调 `cooperate.joinWork/exitWork/createWork`）——引擎命令状态机先停掉在途绘图命令再执行，裸调会与画线等命令并发破坏引擎状态（内存溢出/崩溃）；`__openWebFile__` 是「凡动图纸都注册引擎命令」的实例非特例 | ADR-0084, cad-engine-integration |
 | 后端 i18n | 新增错误键必须写 4 个语言文件 | backend-coding-standards |
 | 外部参照路径 | `filesDataPath/YYYYMM/nodeId/src_file_md5/fileName` | file-storage-paths |
 | mxcad 转换子进程传参 | Windows 下 `spawn` 传含双引号的 JSON 参数**必须** `windowsVerbatimArguments: true`（`mxcad-exec.ts` 已设 `!isLinux`）：Node 默认把参数里的 `"` 转义成 `\"`，而 mxcadassembly 按原始命令行解析、不认转义 → 解析不到 `srcpath` 报 `read file error`（实例：aaf2626 把 exec 改 spawn 后回归）。**mxcadassembly 成功/失败退出码恒 2123，结果只认 JSON stdout 的 `code`，勿按退出码判成败** | — |

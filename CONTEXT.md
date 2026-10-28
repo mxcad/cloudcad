@@ -241,6 +241,10 @@ _避免_: 编辑器状态（指 store 本身）、当前文件状态、session �
 「打开一张图纸」的编排深模块——打开前守卫、全局 loading 配对、URL 构造（缓存戳）、引擎打开命令、打开完成事件与错误收尾只有一处实现。PC 端入口为 `services/mxcadManager/openDrawing.ts` 的 `openDrawing(req)`（判别联合：library / node / public-hash / external-ref，图纸库/图块库孪生折叠为 libraryKey 参数）；移动端入口为 `services/drawingOpener.ts` 的 `openDrawing(req)`（node / library / share / hash），实现载体为 useFileLoader。调用方只描述「打开什么」；成功时编辑器会话状态（fileId/permissions/projectId 等）由 interface 契约保证完整——绕过它直拼 URL 打开会静默退化（保存变另存为、缩略图不上传）。引擎层打开命令（PC `mxcadOpenFlow.openFile`、移动 `openMxWeb`）是其下游实现，不是编排入口。
 _避免_: 打开文件服务、openFile 包装器（指编排层）
 
+**引擎命令（Engine Command）**:
+mxcad/mxdraw 引擎内部的命令机制（命令状态机）：引擎同一时刻只执行一个命令。凡动图纸的操作（打开文件 / 加入协同 / 退出协同 / 创建协同 / …）必须经 `MxFun.addCommand` 注册、`MxFun.sendStringToExecute` 派发——引擎执行新命令前先停掉在途绘图命令（`stopCmd(kNewCommadIn)`），从 React 层裸调 SDK 则会与画线等在途命令并发，破坏引擎状态（内存溢出/意外崩溃）。`__openWebFile__`（打开文件）是该规则的**实例**而非特例；协同三命令 `__joinCollabWork__` / `__exitCollabWork__` / `__createCollabWork__` 在 `mxcadCollaboration.ts` 模块加载期注册，唯一入口 `dispatchJoinWork` / `dispatchExitWork` / `dispatchCreateWork`（barrel 导出）。参数按引用传递（同一 JS 上下文），回调函数可作参数。派发失败（false/-1）= 回调不会再来，调用方须自行落定。与 ADR-0005 的前端 UI 层 CommandRegistry 是两套机制（前者引擎状态机、后者前端命令路由），勿混。见 ADR-0084。
+_避免_: 引擎 API、裸调 SDK（指 React 层直调 joinWork/exitWork/createWork/openWebFile 的反模式）、命令模式（指 ADR-0005 的 UI 层 CommandRegistry）
+
 **运维中心（Ops Center）**:
 私有化部署场景的网页运维入口，是运维 CLI（cloudcad 入口）全部运维能力的可视化形态——服务状态与启停、部署/升级、数据库迁移、备份恢复、日志查看与打包、管理员 TOTP 解绑。面向部署机运维人员（可以是零运维经验的人），与产品管理后台（业务面，面向系统管理员）是两个独立入口。域约束：承载它的服务在部署全程存活（部署会停应用层，运维中心不能随之失联）。
 _避免_: 部署中心、运维后台、控制台

@@ -15,17 +15,40 @@ const {
   cooperateMock,
   globalShowConfirmMock,
   refreshFileNameMock,
-} = vi.hoisted(() => ({
-  MxCppMock: { getCurrentMxCAD: vi.fn() },
-  cooperateMock: {
-    init: vi.fn(),
-    exitWork: vi.fn(() => 0),
-  },
-  globalShowConfirmMock: vi.fn(),
-  refreshFileNameMock: vi.fn(),
-}));
+  engineCommands,
+} = vi.hoisted(() => {
+  // 模拟引擎命令表：addCommand 登记 handler，sendStringToExecute 同步派发
+  // （与 mxdraw MxCmdRunManager.runCmd 的同步执行语义一致）
+  const engineCommands = new Map<string, (args: unknown[]) => void>();
+  return {
+    MxCppMock: { getCurrentMxCAD: vi.fn() },
+    cooperateMock: {
+      init: vi.fn(),
+      exitWork: vi.fn(() => 0),
+      joinWork: vi.fn(),
+      createWork: vi.fn(),
+    },
+    globalShowConfirmMock: vi.fn(),
+    refreshFileNameMock: vi.fn(),
+    engineCommands,
+  };
+});
 
-vi.mock('mxcad', () => ({ MxCpp: MxCppMock }));
+// vitest 把 mxcad / mxdraw 别名到同一 stub：两侧导出须放进同一个 factory
+vi.mock('mxcad', () => ({
+  MxCpp: MxCppMock,
+  MxFun: {
+    addCommand: (name: string, fn: (args: unknown[]) => void) => {
+      engineCommands.set(name, fn);
+    },
+    sendStringToExecute: (name: string, args?: unknown[]) => {
+      const fn = engineCommands.get(name);
+      if (!fn) return false;
+      fn(args ?? []);
+      return true;
+    },
+  },
+}));
 vi.mock('@/languages', () => ({ t: (key: string) => key }));
 vi.mock('@/constants/appConfig', () => ({
   APP_COOPERATE_URL: '/api/cooperate',
@@ -44,6 +67,9 @@ vi.mock('../mxcadHelpers', () => ({
 
 import {
   confirmExitCollaborationIfNeeded,
+  dispatchCreateWork,
+  dispatchExitWork,
+  dispatchJoinWork,
   exitCollaboration,
   exitCurrentCollaboration,
 } from '../mxcadCollaboration';
@@ -239,5 +265,91 @@ describe('confirmExitCollaborationIfNeeded', () => {
     await expect(confirmExitCollaborationIfNeeded()).resolves.toBe(true);
     expect(cooperateMock.exitWork).toHaveBeenCalledTimes(1);
     expect(useCADEditorStore.getState().isInCollaboration).toBe(false);
+  });
+});
+
+describe('引擎命令：加入/退出/创建协同（命令机制铁律）', () => {
+  it('模块加载期注册 __joinCollabWork__ / __exitCollabWork__ / __createCollabWork__ 三个引擎命令', () => {
+    expect(engineCommands.has('__joinCollabWork__')).toBe(true);
+    expect(engineCommands.has('__exitCollabWork__')).toBe(true);
+    expect(engineCommands.has('__createCollabWork__')).toBe(true);
+  });
+
+  it('dispatchJoinWork：派发引擎命令，workId/回调/用户身份原样透传', () => {
+    const onResult = vi.fn();
+
+    const ok = dispatchJoinWork(7, onResult, 'u1', 'enc');
+
+    expect(ok).toBe(true);
+    expect(cooperateMock.init).toHaveBeenCalled();
+    expect(cooperateMock.joinWork).toHaveBeenCalledWith(7, onResult, 'u1', 'enc');
+  });
+
+  it('dispatchJoinWork：引擎未就绪 → false，不触碰协同对象、回调不触发', () => {
+    MxCppMock.getCurrentMxCAD.mockReturnValue(null);
+    const onResult = vi.fn();
+
+    expect(dispatchJoinWork(7, onResult, 'u1', 'enc')).toBe(false);
+    expect(cooperateMock.joinWork).not.toHaveBeenCalled();
+    expect(onResult).not.toHaveBeenCalled();
+  });
+
+  it('join 命令 handler：协同对象不可用 → 回调(-1)', () => {
+    MxCppMock.getCurrentMxCAD.mockReturnValue({ getCooperate: () => null });
+    const onResult = vi.fn();
+
+    dispatchJoinWork(7, onResult, 'u1', 'enc');
+
+    expect(onResult).toHaveBeenCalledWith(-1);
+    expect(cooperateMock.joinWork).not.toHaveBeenCalled();
+  });
+
+  it('dispatchExitWork：返回引擎错误码（0 = 成功）', () => {
+    cooperateMock.exitWork.mockReturnValue(0);
+
+    expect(dispatchExitWork()).toBe(0);
+    expect(cooperateMock.exitWork).toHaveBeenCalledTimes(1);
+  });
+
+  it('dispatchExitWork：引擎失败码原样透传', () => {
+    cooperateMock.exitWork.mockReturnValue(-7);
+
+    expect(dispatchExitWork()).toBe(-7);
+  });
+
+  it('dispatchExitWork：引擎未就绪 → -1，不触碰协同对象', () => {
+    MxCppMock.getCurrentMxCAD.mockReturnValue(null);
+
+    expect(dispatchExitWork()).toBe(-1);
+    expect(cooperateMock.exitWork).not.toHaveBeenCalled();
+  });
+
+  it('dispatchCreateWork：派发引擎命令，回调/workData/用户身份原样透传', () => {
+    const onResult = vi.fn();
+
+    const ok = dispatchCreateWork(onResult, 'wd', 'u1', 'enc');
+
+    expect(ok).toBe(true);
+    expect(cooperateMock.init).toHaveBeenCalled();
+    expect(cooperateMock.createWork).toHaveBeenCalledWith(onResult, 'wd', 'u1', 'enc');
+  });
+
+  it('dispatchCreateWork：引擎未就绪 → false，不触碰协同对象、回调不触发', () => {
+    MxCppMock.getCurrentMxCAD.mockReturnValue(null);
+    const onResult = vi.fn();
+
+    expect(dispatchCreateWork(onResult, 'wd', 'u1', 'enc')).toBe(false);
+    expect(cooperateMock.createWork).not.toHaveBeenCalled();
+    expect(onResult).not.toHaveBeenCalled();
+  });
+
+  it('create 命令 handler：协同对象不可用 → 回调(-1)', () => {
+    MxCppMock.getCurrentMxCAD.mockReturnValue({ getCooperate: () => null });
+    const onResult = vi.fn();
+
+    dispatchCreateWork(onResult, 'wd', 'u1', 'enc');
+
+    expect(onResult).toHaveBeenCalledWith(-1);
+    expect(cooperateMock.createWork).not.toHaveBeenCalled();
   });
 });

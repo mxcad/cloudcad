@@ -6,6 +6,9 @@ import {
   checkAndConfirmUnsavedChanges,
   refreshFileName,
   getCooperate,
+  dispatchCreateWork,
+  dispatchJoinWork,
+  dispatchExitWork,
   exitCollaboration,
   isEmptyDocumentName,
 } from '../services/mxcadManager';
@@ -206,18 +209,16 @@ export function useCollabActions(
 
         showGlobalLoading(t('正在创建协同...'), 'handleCreate');
         setCollabPhase('joining');
-        cooperate.createWork(
+        // 经 __createCollabWork__ 引擎命令创建（成功后引擎自动加入协同）：
+        // 引擎命令状态机先停掉在途绘图命令再执行，避免与画线等命令并发
+        const dispatched = dispatchCreateWork(
           (workid: number) => {
             hideGlobalLoading('handleCreate-success');
             setCreating(false);
             if (joinCancelledRef.current) {
               // 组件已卸载：引擎 session 若已开则就地清理，防会话泄漏
               if (workid > 0) {
-                try {
-                  getCooperate()?.exitWork();
-                } catch {
-                  /* 忽略 */
-                }
+                dispatchExitWork();
               }
               setCollabPhase('idle');
               return;
@@ -252,6 +253,14 @@ export function useCollabActions(
           user.id,
           encodeUserData(userData)
         );
+        if (!dispatched) {
+          // 引擎命令派发失败（引擎异常）：回调不会再来，立即落定
+          hideGlobalLoading('handleCreate-dispatchFailed');
+          setCreating(false);
+          setCollabPhase('idle');
+          fetchWorks();
+          showToast(t('协同对象未初始化'), 'error');
+        }
       } catch (error) {
         hideGlobalLoading('handleCreate-catch');
         setCreating(false);
@@ -341,7 +350,9 @@ export function useCollabActions(
 
         showGlobalLoading(t('正在打开协同文件...'), 'handleJoin');
         setCollabPhase('joining');
-        cooperate.joinWork(
+        // 经 __joinCollabWork__ 引擎命令加入：引擎命令状态机先停掉在途绘图命令
+        // （如画线）再执行，避免「一边画线、一边加入协同」并发破坏引擎状态
+        const dispatched = dispatchJoinWork(
           workId,
           (iRet: number) => {
             setJoiningWorkId(null);
@@ -349,11 +360,7 @@ export function useCollabActions(
             if (joinCancelledRef.current) {
               // 组件已卸载：引擎 session 若已开则就地清理，防会话泄漏
               if (iRet === 0 || iRet === 17) {
-                try {
-                  getCooperate()?.exitWork();
-                } catch {
-                  /* 忽略 */
-                }
+                dispatchExitWork();
               }
               setCollabPhase('idle');
               return;
@@ -383,6 +390,19 @@ export function useCollabActions(
           user.id,
           encodeUserData(userData)
         );
+        if (!dispatched) {
+          // 引擎命令派发失败（引擎异常）：立即落定，不等 safetyTimer
+          // （回调不会再来，phase/锁须就地复位，否则永久卡在 joining）
+          clearTimeout(safetyTimer);
+          hideGlobalLoading('handleJoin-dispatchFailed');
+          unsubscribeOpenComplete?.();
+          unsubscribeOpenComplete = null;
+          setJoiningWorkId(null);
+          joiningLockRef.current = false;
+          setCollabPhase('idle');
+          fetchWorks();
+          showToast(t('协同对象未初始化'), 'error');
+        }
       } catch (error) {
         hideGlobalLoading('handleJoin-catch');
         setJoiningWorkId(null);

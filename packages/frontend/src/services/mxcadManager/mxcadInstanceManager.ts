@@ -234,11 +234,17 @@ async function handleOpenCompleteSideEffects(): Promise<void> {
   if (info) {
     setEditorFileName(info.name);
   } else if (useCADEditorStore.getState().fileContext.kind === 'new') {
-    setEditorFileName('');
+    // 新建空白图纸：标题显示 new.dwg（引擎 openFileComplete 固定回写 " - " + _name，
+    // 须主动同步 _name 与标题，防止停留在上一张图纸名或露出引擎内部模板名）。
+    setEditorFileName('new.dwg');
   } else if (useCADEditorStore.getState().isInCollaboration) {
     refreshFileName();
     // openFileComplete 之后引擎可能异步再把标题改回当前文件名，延迟重设一次确保稳定
     setTimeout(refreshFileName, 500);
+  } else if (useCADEditorStore.getState().fileContext.kind === 'none') {
+    // 初始空模板（URL 无文件直达 cad-editor / 关闭会话）：引擎初始化时 hw 会把
+    // _name 设为 empty_template.mxweb 并回写标题，这里收敛为「新建图纸」语义 new.dwg。
+    setEditorFileName('new.dwg');
   }
 
   if (info) {
@@ -360,6 +366,17 @@ export class MxCADInstanceManager {
     if (this.userOpenDispatched) return;
     this.initialLoadSettled = true;
     this.initialLoadOk = ok;
+    // 初始空模板标题兜底：McObject 层 openFileComplete 一定触发（挂载不重试），而
+    // MxDrawObject 层监听可能落在 3s 重试窗口内漏掉初始空模板事件，导致
+    // handleOpenCompleteSideEffects 不执行、标题停留在引擎 hw 写入的
+    // empty_template.mxweb。无文件（kind none）且非协同（协同 auto-join 尚未把
+    // kind 升级为 local/cloud 的瞬间不改标题）时收敛为「新建图纸」new.dwg。
+    if (
+      useCADEditorStore.getState().fileContext.kind === 'none' &&
+      !useCADEditorStore.getState().isInCollaboration
+    ) {
+      setEditorFileName('new.dwg');
+    }
   }
 
   async initialize(): Promise<MxCADView> {

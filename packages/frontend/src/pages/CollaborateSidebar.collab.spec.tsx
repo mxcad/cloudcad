@@ -95,6 +95,31 @@ vi.mock('../services/mxcadManager', () => ({
   })),
   exitCurrentCollaboration: vi.fn(),
   checkAndConfirmUnsavedChanges: vi.fn(async () => true),
+  // 模拟引擎命令层：派发透传到 cooperate mock，真实 useCollabAutoJoin 的
+  // dispatchJoinWork 调用保持原 joinWork 回调语义
+  dispatchJoinWork: vi.fn(
+    (
+      workId: number,
+      cb: (ret: number) => void,
+      userId: string,
+      encodedUser: string
+    ) => {
+      cooperateMock.joinWork(workId, cb, userId, encodedUser);
+      return true;
+    }
+  ),
+  dispatchCreateWork: vi.fn(
+    (
+      cb: (workid: number) => void,
+      workData: string,
+      userId: string,
+      encodedUser: string
+    ) => {
+      cooperateMock.createWork(cb, workData, userId, encodedUser);
+      return true;
+    }
+  ),
+  dispatchExitWork: vi.fn(() => 0),
 }));
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual =

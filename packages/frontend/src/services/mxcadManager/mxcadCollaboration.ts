@@ -1,5 +1,6 @@
 import { t } from '@/languages';
 import { MxCpp } from 'mxcad';
+import { MxFun } from 'mxdraw';
 import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { APP_COOPERATE_URL } from '@/constants/appConfig';
 import {
@@ -16,6 +17,129 @@ export function getCooperate() {
   if (!cooperate) return null;
   cooperate.init({ server_addres: APP_COOPERATE_URL });
   return cooperate;
+}
+
+// ==================== 引擎命令：加入/退出协同 ====================
+//
+// 铁律（与 __openWebFile__ 同一规则）：凡动图纸的操作（打开/加入协同/退出协同）
+// 必须注册为引擎命令并经 MxFun.sendStringToExecute 派发。引擎命令状态机执行新命令
+// 前会先停掉在途绘图命令（stopCmd(kNewCommadIn)）；若在 React 层裸调 SDK，
+// 「一边画线、一边加入协同」会并发执行，破坏引擎状态（内存溢出/意外崩溃）。
+// 参数按引用传递（同一 JS 上下文），回调函数可直接作为参数传入
+// （与 __openWebFile__ 的 retCall 同模式）。
+// 测试环境把 mxdraw 别名到空模块（MxFun 为 undefined）：注册跳过，
+// 派发侧对应短路，模块加载不受影响。
+
+if (typeof MxFun?.addCommand === 'function') {
+  MxFun.addCommand(
+    '__joinCollabWork__',
+    (args: [number, (iRet: number) => void, string, string]) => {
+      const mxcad = MxCpp.getCurrentMxCAD();
+      const cooperate = mxcad?.getCooperate();
+      if (!cooperate) {
+        args[1]?.(-1);
+        return;
+      }
+      cooperate.init({ server_addres: APP_COOPERATE_URL });
+      cooperate.joinWork(args[0], args[1], args[2], args[3]);
+    }
+  );
+
+  MxFun.addCommand(
+    '__exitCollabWork__',
+    (args: [(ret: number) => void]) => {
+      const mxcad = MxCpp.getCurrentMxCAD();
+      const cooperate = mxcad?.getCooperate();
+      if (!cooperate) {
+        args[0]?.(-1);
+        return;
+      }
+      cooperate.init({ server_addres: APP_COOPERATE_URL });
+      args[0]?.(cooperate.exitWork());
+    }
+  );
+
+  MxFun.addCommand(
+    '__createCollabWork__',
+    (args: [(workid: number) => void, string, string, string]) => {
+      const mxcad = MxCpp.getCurrentMxCAD();
+      const cooperate = mxcad?.getCooperate();
+      if (!cooperate) {
+        args[0]?.(-1);
+        return;
+      }
+      cooperate.init({ server_addres: APP_COOPERATE_URL });
+      cooperate.createWork(args[0], args[1], args[2], args[3]);
+    }
+  );
+}
+
+/**
+ * 加入协同唯一入口：派发 __joinCollabWork__ 引擎命令（引擎命令状态机先停掉
+ * 在途绘图命令再执行）。引擎未就绪 / 派发失败时返回 false（回调不会被调用，
+ * 调用方须自行落定）。
+ */
+export function dispatchJoinWork(
+  workId: number,
+  onResult: (iRet: number) => void,
+  userId: string,
+  encodedUser: string
+): boolean {
+  if (!MxCpp.getCurrentMxCAD()) return false;
+  if (typeof MxFun?.sendStringToExecute !== 'function') return false;
+  try {
+    return MxFun.sendStringToExecute('__joinCollabWork__', [
+      workId,
+      onResult,
+      userId,
+      encodedUser,
+    ]);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 创建协同唯一入口：派发 __createCollabWork__ 引擎命令（成功后引擎自动加入
+ * 协同，无需再 joinWork）。引擎未就绪 / 派发失败时返回 false（回调不会被
+ * 调用，调用方须自行落定）。
+ */
+export function dispatchCreateWork(
+  onResult: (workid: number) => void,
+  workData: string,
+  userId: string,
+  encodedUser: string
+): boolean {
+  if (!MxCpp.getCurrentMxCAD()) return false;
+  if (typeof MxFun?.sendStringToExecute !== 'function') return false;
+  try {
+    return MxFun.sendStringToExecute('__createCollabWork__', [
+      onResult,
+      workData,
+      userId,
+      encodedUser,
+    ]);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 退出协同唯一入口（同步）：__exitCollabWork__ 引擎命令同步执行 exitWork，
+ * 回调同步落定。返回引擎错误码；-1 = 引擎/协同对象不可用或派发失败。
+ */
+export function dispatchExitWork(): number {
+  if (!MxCpp.getCurrentMxCAD()) return -1;
+  if (typeof MxFun?.sendStringToExecute !== 'function') return -1;
+  let ret = -1;
+  try {
+    MxFun.sendStringToExecute('__exitCollabWork__', [(r: number) => {
+      ret = r;
+    }]);
+  } catch {
+    return -1;
+  }
+  return ret;
 }
 
 /** 退出协同后的守卫窗：3s 内阻止 auto-join 把刚退出的 session 拉回 */
@@ -42,7 +166,8 @@ function performExitWorkSync(): ExitCollaborationResult {
     const cooperate = getCooperate();
     if (!cooperate) return { exited: false, wasPending: false };
 
-    const ret = cooperate.exitWork();
+    // 经 __exitCollabWork__ 引擎命令执行：先停掉在途绘图命令再 exitWork
+    const ret = dispatchExitWork();
     if (ret === 0) {
       const store = useCADEditorStore.getState();
       store.setCollaborationState({ isInCollaboration: false, workId: null });
@@ -160,10 +285,9 @@ export async function checkAndConfirmUnsavedChanges(): Promise<boolean> {
   if (!getModified()) return true;
   const choice = await showUnsavedChangesDialog();
   if (choice === 'cancel') return false;
-  if (choice === 'save') {
-    try {
-      const { MxFun } = await import('mxdraw');
-      MxFun.sendStringToExecute('Mx_Save');
+    if (choice === 'save') {
+      try {
+        MxFun.sendStringToExecute('Mx_Save');
       await new Promise((resolve) => setTimeout(resolve, 500));
       if (getModified()) return false;
     } catch (error) {

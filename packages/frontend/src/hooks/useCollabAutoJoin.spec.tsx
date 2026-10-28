@@ -36,6 +36,19 @@ vi.mock('../services/mxcadManager', () => ({
   getCooperate: vi.fn(() => cooperateMock),
   refreshFileName: vi.fn(),
   isEmptyDocumentName: vi.fn(() => false),
+  // 模拟引擎命令层：派发透传到 cooperate mock，既有的 joinWork 回调断言保持原语义
+  dispatchJoinWork: vi.fn(
+    (
+      workId: number,
+      cb: (ret: number) => void,
+      userId: string,
+      encodedUser: string
+    ) => {
+      cooperateMock.joinWork(workId, cb, userId, encodedUser);
+      return true;
+    }
+  ),
+  dispatchExitWork: vi.fn(() => 0),
 }));
 vi.mock('../services/drawingSession', () => ({
   patchSession: patchSessionMock,

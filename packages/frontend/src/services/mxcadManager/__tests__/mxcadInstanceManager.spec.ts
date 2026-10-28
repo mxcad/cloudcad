@@ -228,6 +228,38 @@ describe('MxCADInstanceManager.attachFileOpenListener — 结果码门控', () =
     }
   });
 
+  it('初始空模板（无文件、非协同）：openFileComplete 设标题 new.dwg，防 empty_template.mxweb 露出', async () => {
+    // 用户反馈（回归）：URL 无 fileId 直达 /cad-editor 时引擎初始化把 _name 设为
+    // empty_template.mxweb（mxcad-app hw 的默认空模板），此前 handleOpenCompleteSideEffects
+    // 对 kind 'none' 无分支、标题栏一直显示内部模板名。settleInitial（McObject 层可靠
+    // 触发）与 handleOpenCompleteSideEffects 双保险收敛为「新建图纸」new.dwg。
+    vi.mocked(useCADEditorStore.getState).mockReturnValue({
+      isInCollaboration: false,
+      fileContext: FILE_CONTEXT_NONE,
+    });
+    vi.mocked(getFileInfo).mockReturnValue(null);
+
+    openCompleteHandlers.forEach((h) => h(0));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(setEditorFileName).toHaveBeenCalledWith('new.dwg');
+  });
+
+  it('新建图纸（kind new）：openFileComplete 设标题 new.dwg（此前为空白，且引擎回写会覆盖回旧名）', async () => {
+    vi.mocked(useCADEditorStore.getState).mockReturnValue({
+      isInCollaboration: false,
+      fileContext: { kind: 'new', fileId: null, name: null },
+    });
+    vi.mocked(getFileInfo).mockReturnValue(null);
+
+    openCompleteHandlers.forEach((h) => h(0));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(setEditorFileName).toHaveBeenCalledWith('new.dwg');
+  });
+
   it('getMxDrawObject 抛「引擎未就绪」错误时重试，不立即退回 McObject 层', async () => {
     vi.useFakeTimers();
     try {
