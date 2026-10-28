@@ -1,6 +1,10 @@
 <script setup lang="ts">
 /**
- * 通知弹框（移动端）。
+ * 通知弹框（移动端，只承载 danger 级别）。
+ *
+ * 与 PC 端三级分流契约一致：danger 弹框阻塞（本组件）、warning 走轻提示
+ * （NoticeWarningToast）、info 只在列表可见不主动呈现。active 由
+ * useNoticeStream 只返回 danger，见 utils/noticeAck.ts 的 selectPopableNotice。
  *
  * 直接消费 useNoticeStream()，App.vue 只需挂一个 <NoticeDialog />。
  * title/body 按后端原文渲染（不走 t()）：管理员按目标语言填写公告，前端不二次翻译。

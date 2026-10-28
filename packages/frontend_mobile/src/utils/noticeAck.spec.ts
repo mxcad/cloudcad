@@ -8,6 +8,8 @@ import {
   isAcknowledged,
   pruneExpiredAcks,
   readAcks,
+  selectPopableNotice,
+  selectWarningNotices,
   sortNotices,
   writeAcks,
   type Notice,
@@ -231,5 +233,75 @@ describe('sortNotices', () => {
     const input = [notice({ id: 'b' }), notice({ id: 'a' })]
     sortNotices(input)
     expect(input.map((n) => n.id)).toEqual(['b', 'a'])
+  })
+})
+
+describe('selectPopableNotice', () => {
+  it('只返回 danger 级别中最高优先的一条（warning/info 不走弹框）', () => {
+    const active = selectPopableNotice(
+      sortNotices([
+        notice({ id: 'info_1', level: 'info' }),
+        notice({ id: 'warn_1', level: 'warning' }),
+        notice({ id: 'danger_1', level: 'danger' }),
+      ]),
+    )
+    expect(active?.id).toBe('danger_1')
+  })
+
+  it('多条 danger 取最优先（同级别按时间降序）', () => {
+    const active = selectPopableNotice(
+      sortNotices([
+        notice({ id: 'danger_old', level: 'danger', publishedAt: '2026-09-17T00:00:00.000Z' }),
+        notice({ id: 'danger_new', level: 'danger', publishedAt: '2026-09-17T12:00:00.000Z' }),
+      ]),
+    )
+    expect(active?.id).toBe('danger_new')
+  })
+
+  it('只有 warning/info 时不弹框（返回 null）', () => {
+    expect(
+      selectPopableNotice(sortNotices([
+        notice({ id: 'info_1', level: 'info' }),
+        notice({ id: 'warn_1', level: 'warning' }),
+      ])),
+    ).toBeNull()
+  })
+
+  it('只有 danger 时照常弹框', () => {
+    const active = selectPopableNotice(
+      sortNotices([notice({ id: 'danger_1', level: 'danger' })]),
+    )
+    expect(active?.id).toBe('danger_1')
+  })
+
+  it('空队列返回 null', () => {
+    expect(selectPopableNotice([])).toBeNull()
+  })
+
+  it('warning/info 不阻塞 danger：排在前面也不影响 danger 弹出', () => {
+    const active = selectPopableNotice([
+      notice({ id: 'warn_1', level: 'warning' }),
+      notice({ id: 'info_1', level: 'info' }),
+      notice({ id: 'danger_1', level: 'danger' }),
+    ])
+    expect(active?.id).toBe('danger_1')
+  })
+})
+
+describe('selectWarningNotices', () => {
+  it('只取 warning 级别', () => {
+    const warnings = selectWarningNotices(
+      sortNotices([
+        notice({ id: 'info_1', level: 'info' }),
+        notice({ id: 'danger_1', level: 'danger' }),
+        notice({ id: 'warn_1', level: 'warning' }),
+        notice({ id: 'warn_2', level: 'warning' }),
+      ]),
+    )
+    expect(warnings.map((n) => n.id)).toEqual(['warn_1', 'warn_2'])
+  })
+
+  it('无 warning 返回空数组', () => {
+    expect(selectWarningNotices([notice({ id: 'i', level: 'info' })])).toEqual([])
   })
 })

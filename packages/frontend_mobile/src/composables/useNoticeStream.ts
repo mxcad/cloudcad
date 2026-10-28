@@ -36,6 +36,8 @@ import {
   filterUnacknowledged,
   pruneExpiredAcks,
   readAcks,
+  selectPopableNotice,
+  selectWarningNotices,
   sortNotices,
   writeAcks,
   type Notice,
@@ -91,7 +93,13 @@ onSessionChanged((event) => {
 const pending = computed(() =>
   filterUnacknowledged(notices.value, acks.value, Date.now())
 );
-const active = computed(() => pending.value[0] ?? null);
+/**
+ * 当前应弹框的那一条：只取 danger，warning/info 不走弹框（见 selectPopableNotice）。
+ * 与 PC 端三级分流契约一致，纯函数在 utils/noticeAck.ts。
+ */
+const active = computed(() => selectPopableNotice(pending.value));
+/** warning 轻提示队列（未读、已排序），由提示组件一次展示一条并 ack 推进 */
+const warnings = computed(() => selectWarningNotices(pending.value));
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let mountedCount = 0;
@@ -148,8 +156,10 @@ export interface UseNoticeStream {
   notices: Ref<Notice[]>;
   /** 尚未提醒的通知队列 */
   pending: ComputedRef<Notice[]>;
-  /** 当前应弹的那一条；队列为空时 null */
+  /** 当前应弹框的那一条（仅 danger）；队列为空或只有 warning/info 时 null */
   active: ComputedRef<Notice | null>;
+  /** warning 轻提示队列（未读、已排序），一次展示一条并 ack 推进 */
+  warnings: ComputedRef<Notice[]>;
   /** 标记已读并推进到下一条 */
   acknowledge: (notice: Notice) => void;
   /** 立即拉取一次（如从后台切回时） */
@@ -174,5 +184,5 @@ export function useNoticeStream(): UseNoticeStream {
     }
   });
 
-  return { notices, pending, active, acknowledge, refresh: fetchCurrent };
+  return { notices, pending, active, warnings, acknowledge, refresh: fetchCurrent };
 }

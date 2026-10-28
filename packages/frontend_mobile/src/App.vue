@@ -21,6 +21,7 @@ import LegalPage from './pages/legal/LegalPage.vue';
 import AuthBackButton from './pages/auth/AuthBackButton.vue';
 import NotFoundPage from './pages/NotFoundPage.vue';
 import NoticeDialog from './components/NoticeDialog.vue';
+import NoticeWarningToast from './components/NoticeWarningToast.vue';
 import { AUTH_PAGE_PATHS } from '@/utils/authSession';
 
 /** 认证覆盖层路由单源见 authSession.AUTH_PAGE_PATHS（router 守卫共用），与下方 v-if 链保持一一对应 */
@@ -70,8 +71,10 @@ const route = useRoute();
     <!-- 认证覆盖层的统一「返回首页」出口，压在各覆盖层之上（z-index 1001 > 1000） -->
     <AuthBackButton v-if="isAuthPage" />
 
-    <!-- 系统公告弹框：压在所有覆盖层之上，编辑中与登录页都会弹 -->
+    <!-- 系统公告弹框（danger）：压在所有覆盖层之上，编辑中与登录页都会弹 -->
     <NoticeDialog />
+    <!-- 系统公告轻提示（warning）：toast，不弹框；info 不主动呈现 -->
+    <NoticeWarningToast />
 
     <van-number-keyboard safe-area-inset-bottom />
   </van-config-provider>

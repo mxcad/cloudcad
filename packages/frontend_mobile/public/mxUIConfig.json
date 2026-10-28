@@ -53,6 +53,7 @@
     },
     {
       "text": "分享",
+      "icon": "fenxiang",
       "cmd": "Mx_Share"
     },
     {

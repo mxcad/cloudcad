@@ -158,3 +158,23 @@ export function sortNotices(list: Notice[]): Notice[] {
     return a.id.localeCompare(b.id)
   })
 }
+
+/**
+ * 选出当前应弹框的那一条：只取 danger（最高优先），warning/info 不走弹框。
+ *
+ * 与 PC 端的三级分流契约一致（NoticeProvider）：danger 弹框阻塞、warning 用
+ * 轻提示、info 只在列表可见不主动呈现。入参须已按 sortNotices 排序
+ * （danger > warning > info），find 取到的一定是最高优先的 danger；
+ * 无 danger 或队列为空时返回 null（不弹框）。
+ */
+export function selectPopableNotice(pending: Notice[]): Notice | null {
+  return pending.find((n) => n.level === 'danger') ?? null
+}
+
+/**
+ * 选出 warning 轻提示队列（未读、已排序）。info 不主动呈现，不在此列。
+ * 队列由调用方一次展示一条，展示即写 ack 推进。
+ */
+export function selectWarningNotices(pending: Notice[]): Notice[] {
+  return pending.filter((n) => n.level === 'warning')
+}
