@@ -365,3 +365,107 @@ describe('UserCrudService.update（自我降权 / 最后一个管理员）', () 
     expect(auditLogService.log).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * 回归（移动端会员档位显示 Bug）：GET /users/profile/me（findById → findByIdInternal）
+ * 必须与 update 路径（flattenMembership）返回同一套会员字段（isVip / membershipTier）。
+ * 此前 findByIdInternal 只返回 membershipTierLevel/membershipExpiresAt、漏 isVip/membershipTier，
+ * 前端 MemberCenterPage 的 isVip 恒 undefined → 会员开通后仍显示「免费用户」。
+ */
+describe('UserCrudService.findById（profile/me 会员字段出口一致）', () => {
+  let service: UserCrudService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    prisma = {
+      user: { findUnique: jest.fn() },
+      userMembership: { deleteMany: jest.fn(), upsert: jest.fn() },
+      vipTier: { aggregate: jest.fn().mockResolvedValue({ _max: { level: 2 } }) },
+    };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        UserCrudService,
+        { provide: DatabaseService, useValue: prisma },
+        { provide: PermissionCacheService, useValue: {} },
+        { provide: AuditLogService, useValue: { log: jest.fn().mockResolvedValue(undefined) } },
+        { provide: RuntimeConfigService, useValue: {} },
+        { provide: PASSWORD_HASHER, useValue: {} },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+        {
+          provide: MembershipService,
+          useValue: { hasValidExternalWatermark: jest.fn().mockResolvedValue(false) },
+        },
+        { provide: StorageInfoService, useValue: {} },
+        {
+          provide: StorageUsageService,
+          useValue: { usageSize: jest.fn().mockResolvedValue(0) },
+        },
+        {
+          provide: PasswordPolicyService,
+          useValue: {
+            assertPasswordPolicy: jest.fn(),
+            getPasswordChangeStatus: jest.fn(),
+          },
+        },
+        {
+          provide: PiiCryptoService,
+          useValue: {
+            emailHmacIndex: jest.fn(),
+            phoneHmacIndex: jest.fn(),
+            derivePiiFields: jest.fn(() => ({})),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get(UserCrudService);
+  });
+
+  const baseUser = {
+    id: 'user-1',
+    email: 'u@x.com',
+    username: 'u1',
+    nickname: 'U1',
+    avatar: null,
+    phone: null,
+    phoneVerified: false,
+    password: 'hash',
+    wechatId: null,
+    provider: 'LOCAL',
+    role: null,
+    status: 'ACTIVE',
+    createdAt: new Date('2026-01-01'),
+    updatedAt: new Date('2026-01-01'),
+    passwordChangedAt: null,
+    totpEnabled: false,
+  };
+
+  it('有效会员（tierLevel>0 且未过期）→ 返回 isVip/membershipTier，与 update 路径一致', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      ...baseUser,
+      membership: { tierLevel: 1, expiresAt: new Date('2099-01-01T00:00:00.000Z') },
+    });
+
+    const r = (await service.findById('user-1')) as any;
+
+    expect(r.membershipTierLevel).toBe(1);
+    expect(r.membershipExpiresAt).toEqual(new Date('2099-01-01T00:00:00.000Z'));
+    expect(r.isVip).toBe(true);
+    expect(r.membershipTier).toBe('VIP1');
+    expect(r.hasPassword).toBe(true);
+    // 对外对象不得泄漏 password 与嵌套 membership
+    expect(r.password).toBeUndefined();
+    expect(r.membership).toBeUndefined();
+  });
+
+  it('免费用户（membership null）→ isVip=false / membershipTier=VIP0', async () => {
+    prisma.user.findUnique.mockResolvedValue({ ...baseUser, membership: null });
+
+    const r = (await service.findById('user-1')) as any;
+
+    expect(r.membershipTierLevel).toBe(0);
+    expect(r.isVip).toBe(false);
+    expect(r.membershipTier).toBe('VIP0');
+  });
+});

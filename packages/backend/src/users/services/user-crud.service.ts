@@ -438,17 +438,15 @@ export class UserCrudService {
       }
 
       const hasPassword = !!user.password;
-      const {
-        password: _,
-        membership: membershipRow,
-        ...userWithoutPassword
-      } = user;
+      // 与 update 路径（flattenMembership）保持同一会员字段出口：
+      // profile/me 必须同样返回 isVip/membershipTier，否则前端 MemberCenterPage
+      // 的 isVip 恒为 undefined → 会员开通后仍显示「免费用户」（实测回归）。
+      const { password: _, ...userWithoutPassword } =
+        this.flattenMembership(user);
 
       return {
         ...userWithoutPassword,
         hasPassword,
-        membershipTierLevel: membershipRow?.tierLevel ?? 0,
-        membershipExpiresAt: membershipRow?.expiresAt ?? null,
       };
     } catch (error) {
       this.logger.error(`查询用户失败：${error.message}`, error.stack);
