@@ -807,7 +807,7 @@ const {
       @select="onFabSheetSelect"
     />
 
-    <van-popup v-model:show="showCreateProjectDialog" position="bottom" round :style="{ height: '48%' }">
+    <van-popup v-model:show="showCreateProjectDialog" position="bottom" round :style="{ height: '30%' }">
       <div class="create-project-panel">
         <div class="panel-header">
           <button class="panel-cancel" @click="showCreateProjectDialog = false">{{ t('取消') }}</button>
@@ -827,7 +827,7 @@ const {
       </div>
     </van-popup>
 
-    <van-popup v-model:show="showCreateFolderDialog" position="bottom" round :style="{ height: '40%' }">
+    <van-popup v-model:show="showCreateFolderDialog" position="bottom" round :style="{ height: '30%' }">
       <div class="create-project-panel">
         <div class="panel-header">
           <button class="panel-cancel" @click="showCreateFolderDialog = false">{{ t('取消') }}</button>
@@ -847,7 +847,7 @@ const {
       </div>
     </van-popup>
 
-    <van-popup v-model:show="showCreateDrawingDialog" position="bottom" round :style="{ height: '40%' }">
+    <van-popup v-model:show="showCreateDrawingDialog" position="bottom" round :style="{ height: '30%' }">
       <div class="create-project-panel">
         <div class="panel-header">
           <button class="panel-cancel" @click="showCreateDrawingDialog = false">{{ t('取消') }}</button>
@@ -979,19 +979,19 @@ const {
   -webkit-overflow-scrolling: touch;
 }
 
+/* 与 ShareManagePage .filter-btn 同口径：半透明 accent 底 + accent 字（暗色主题下比实心填充更克制） */
 .filter-chip {
   flex: none;
-  border: 1px solid var(--divider);
+  border: none;
   background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border-radius: 14px;
+  color: var(--text-tertiary);
+  border-radius: 12px;
   padding: 5px 12px;
   font-size: 12px;
 
   &.active {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: #fff;
+    background: rgba(0, 169, 158, 0.14);
+    color: var(--accent);
   }
 }
 

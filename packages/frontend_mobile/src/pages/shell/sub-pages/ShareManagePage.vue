@@ -738,7 +738,10 @@ function onCustomDaysInput(e: Event) {
 
     <van-nav-bar :title="t('分享管理')" left-arrow @click-left="() => backOrFallback(router, '/shell')" />
 
-    <van-search v-model="keyword" :placeholder="t('搜索分享')" shape="round" />
+    <!-- 与 FileBrowserPage .search-bar 同口径：内缩 pill，避免通栏搜索与文件页视觉不一致 -->
+    <div class="search-bar">
+      <van-search v-model="keyword" :placeholder="t('搜索分享')" shape="round" />
+    </div>
 
     <div class="filter-bar">
       <button
@@ -1094,6 +1097,12 @@ function onCustomDaysInput(e: Event) {
   flex-direction: column;
   background: var(--bg-primary);
   overflow: hidden;
+}
+
+/* 与 FileBrowserPage .search-bar 同口径（padding 8px 14px 0） */
+.search-bar {
+  padding: 8px 14px 0;
+  flex: none;
 }
 
 .filter-bar {

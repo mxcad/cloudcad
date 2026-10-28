@@ -849,7 +849,7 @@ onMounted(() => {
               </van-dropdown-menu>
             </div>
             <div class="member-header-actions">
-              <button v-if="canManageRoles" class="add-member-btn" @click="goRoleManagement">
+              <button v-if="canManageRoles" class="add-member-btn secondary" @click="goRoleManagement">
                 <van-icon name="apps-o" size="14" />
                 {{ t('角色管理') }}
               </button>
@@ -1404,6 +1404,13 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+}
+
+/* 次要操作（角色管理）用 ghost，与主操作（添加成员）的实心填充区分层级 */
+.add-member-btn.secondary {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
 }
 
 .member-actions {
