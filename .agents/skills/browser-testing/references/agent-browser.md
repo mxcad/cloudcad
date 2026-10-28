@@ -56,3 +56,27 @@
 - 测移动端流程：先 `open` 再 `set device`，之后 snapshot / 操作照常。
 - 测完 PC 再测移动（或反之）时，记得 `set device` 切换形态——Vant 组件按移动视口布局，用桌面宽视口测移动端布局会错乱。
 - **移动端登录页会自动弹 guest 系统通知 `van-dialog.notice-dialog`（z-index 2001）**，盖住登录表单中部（含「手机登录」tab）。通知内容来自 `notices` 表，异步拉回所以首个 snapshot 可能看不到。**开测前先重新 snapshot 找 `dialog` 并点「知道了」关掉**，否则后续 `click` 会静默 no-op（见上「CDP click 被 overlay 覆盖」）。
+
+### 移动端实测补充（2026-10-27，7001 全流程验证）
+
+- **`open`/任何 agent-browser 命令的输出绝不能接管道（`| tail` / `| grep` 直读命令输出）**：session 守护进程持有 stdout/stderr 管道句柄、进程不退出，管道对端 `tail` 等 EOF 永不返回 → 命令永久挂起（实测 `open ... | tail -5` 挂 70s+ 直到 kill）。**一律 `> /tmp/<名>.log 2>&1` 重定向到文件再 `cat`**。注意：`grep`/`cat` 快照**文件**（已落盘）不受影响，坏的只是「直接管道读 agent-browser 命令输出」。
+- **移动端 CDP `click @eN` 比 PC 更容易静默 no-op**：关掉 guest 通知、ref 是当前 snapshot 的「立即登录」（enabled 无 disabled 属性），`click @e12` 仍返回 `✓ Done` 但 URL 不变、无 token、无错误。**一律用 eval 的 `element.click()` 兜底**（`eval "[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='立即登录')?.click(); 'done'"` 实测直达 `/shell`）；填表用 CSS 选择器（`fill 'input[placeholder="请输入用户名、邮箱或手机号"]' "..."`），实测能更新 Vue v-model（依赖按钮随即启用）。
+- **guest 系统通知 dialog 每次 `open`（含重开 /shell）都会重新弹出**，不是仅登录页首帧一次；换页再 open 又弹。操作前统一先 eval 点「知道了」，别假设只弹一次。
+- **登录成功后 `state save` 真实登录态文件 ~5KB**（含 accessToken/refreshToken）；停在登录页的空态文件仅几百字节——用文件体积判「存没存对」。
+
+### 移动端 CAD 编辑器页 about:blank 崩溃（2026-10-27 受控实验定案）
+
+- **现象**：`open http://localhost:7001/#/shell`（CAD 编辑器页）后，**无任何交互**，页面约 20-40s 随机变 `about:blank`（CDP session 崩溃，`localStorage` 读取 SecurityError）。
+- **根因隔离（受控实验）**：同 session、同设备模拟（iPhone 14），`/login`（**无** CAD Canvas）→ **90s 稳定不崩**；`/shell`（**有** Canvas）→ **~30s 必崩**。⇒ 崩溃由 **CAD Canvas / WebGL 渲染**（mxcad 引擎在 headless + SwiftShader 软 GL 下崩溃）驱动，**时间驱动、非交互触发、非设备模拟、非应用 bug**。带 Canvas 的页面才是触发源。
+- **影响**：任何涉及 CAD 编辑器的移动端交互测试都受限于崩溃窗口（每次 open 后约 5-40s 不稳定），跨命令交互不可靠。
+- **可靠应对（子代理实测有效）**：
+  1. **用 `async eval` 单次调用完成整个交互流程**（点击+填值+提交在同一步内，DB 验证同一步做），跨命令交互在崩溃窗口内不可靠。
+  2. 页面崩溃后 `open` 重试；每个功能在崩溃窗口内完成。
+  3. **双轨验证**：浏览器 UI 呈现 + `curl` 后端闭环（拿验证码 Redis、验 token、查 DB）——UI 只证明「用户看到什么/导航到哪」，后端闭环证明「业务真实成功」。崩溃时 UI 断言退化、后端断言仍可靠。
+- **判据（区分「工具崩」与「应用 bug」）**：`eval "location.href"` 变 `about:blank` 且无捕获 JS 错误 → 工具/环境问题；若停在原 URL 但有业务报错 → 查应用。
+- 测完记得 `agent-browser close --all` 清 session 守护进程（否则残留 daemon 占资源）。
+
+### 移动端登录态与 PC cookie 冲突（2026-10-27 实测）
+
+- **移动端登录态只存 `localStorage`**（`accessToken`/`refreshToken`/`user`），**不靠 cookie**。
+- **测移动端禁止 `state load` 一个含 PC cookie（`auth_token`，localhost 域）的 state 文件**：移动端检测到 PC 登录 cookie 会触发「跳回 PC 端」逻辑（`packages/frontend_mobile/src/utils/navigateBack.ts` `getPcBaseUrl()` → 8000），整页跳去 PC、移动端测不下去。**测移动端必须用纯移动端登录**（7001 登录页真实登录后 `state save`），再 `state load` 该移动端 state。若误载 PC state 导致跳 PC，重 `open 7001` + 重登录即可。
