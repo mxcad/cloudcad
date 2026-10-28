@@ -1,12 +1,25 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-import { Folder, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Input } from '../ui/Input';
+import {
+  Folder,
+  Check,
+  Loader2,
+  AlertCircle,
+  FolderPlus,
+  Plus,
+} from 'lucide-react';
 import { useFolderChildren } from './hooks/useFolderChildren';
 import { FileSystemNode } from '../../types/filesystem';
 import { handleError } from '@/utils/errorHandler';
+import { validateFolderName } from '@/utils/fileUtils';
 import { FileTree } from '../ui/FileTree';
 import { t } from '@/languages';
+import {
+  nodeControllerCreateFolder,
+  projectControllerCreateProject,
+} from '@/api-sdk';
 import {
   evaluateCrossProjectTransfer,
   fetchProjectTransferSettings,
@@ -74,18 +87,34 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
   const [transferVerdict, setTransferVerdict] =
     useState<CrossProjectTransferVerdict | null>(null);
 
+  // 选择界面内就地创建（新建文件夹 / 新建项目）
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  /** 本弹窗内新建的项目（本地追加到根切换器，不依赖父组件刷新） */
+  const [createdRoots, setCreatedRoots] = useState<TransferTargetRoot[]>([]);
+
   const { loadChildren } = useFolderChildren();
+
+  /** 根切换器数据源：父组件传入的根 + 本弹窗内新建的项目 */
+  const localRoots = useMemo(
+    () => [...(roots ?? []), ...createdRoots],
+    [roots, createdRoots]
+  );
 
   /** 项目 transfer 设置查询（缺省走 SDK；测试可注入） */
   const fetchTransfer =
     getProjectTransferSettings ?? fetchProjectTransferSettings;
 
   /** 当前目标根（roots 缺省时按当前项目根处理） */
-  const activeRoot = roots?.find((r) => r.id === activeRootId) ?? null;
+  const activeRoot = localRoots.find((r) => r.id === activeRootId) ?? null;
 
   /** 当前根名称（roots 缺省时用 projectId 单根） */
   const activeRootName =
-    roots?.find((r) => r.id === activeRootId)?.name ?? t('根目录');
+    localRoots.find((r) => r.id === activeRootId)?.name ?? t('根目录');
 
   // 打开时初始化活动根（当前项目优先，其次 roots 首项）
   useEffect(() => {
@@ -93,7 +122,9 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
       const initialRoot = projectId ?? roots?.[0]?.id ?? null;
       setActiveRootId(initialRoot);
       setSelectedFolderId(initialRoot);
+      cancelCreate();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, projectId, roots]);
 
   // 加载根文件夹
@@ -199,12 +230,13 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     [loadChildren]
   );
 
-  // 选择文件夹
+  // 选择文件夹（单选：点击已选中项不取消——根目录打开时已默认选中，
+  // 若点击「根目录」会切掉选中态导致确认按钮禁用、复制/移动静默无操作（P1-1））
   const selectFolder = useCallback(
     (nodeId: string) => {
-      setSelectedFolderId(nodeId === selectedFolderId ? null : nodeId);
+      setSelectedFolderId(nodeId);
     },
-    [selectedFolderId]
+    []
   );
 
   // 递归渲染文件夹树
@@ -269,6 +301,133 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
     fetchTransfer,
   ]);
 
+  // 递归把指定节点替换为 updater 的结果（就地插入新建文件夹用）
+  const mapTreeNode = (
+    nodes: FolderNode[],
+    id: string,
+    updater: (node: FolderNode) => FolderNode
+  ): FolderNode[] =>
+    nodes.map((node) => {
+      if (node.id === id) return updater(node);
+      if (node.children) {
+        return { ...node, children: mapTreeNode(node.children, id, updater) };
+      }
+      return node;
+    });
+
+  const startCreateFolder = () => {
+    setCreatingProject(false);
+    setCreatingFolder(true);
+    setNewFolderName('');
+    setCreateError(null);
+  };
+
+  const startCreateProject = () => {
+    setCreatingFolder(false);
+    setCreatingProject(true);
+    setNewProjectName('');
+    setCreateError(null);
+  };
+
+  const cancelCreate = () => {
+    setCreatingFolder(false);
+    setCreatingProject(false);
+    setCreateError(null);
+  };
+
+  /** 在选中文件夹下新建文件夹：成功后插入树并自动选中（移动/复制/另存为同用） */
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    const validation = validateFolderName(name);
+    if (!validation.valid) {
+      setCreateError(validation.error || t('文件夹名称无效'));
+      return;
+    }
+    if (!selectedFolderId) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const res = await nodeControllerCreateFolder({
+        path: { parentId: selectedFolderId },
+        body: { name },
+        throwOnError: true,
+      });
+      const created = (res.data ?? {}) as Partial<FileSystemNode> & {
+        id?: string;
+      };
+      const newId = created.id;
+      if (!newId) {
+        setCreateError(t('文件夹创建失败'));
+        return;
+      }
+      const newNode: FolderNode = {
+        ...(created as FileSystemNode),
+        id: newId,
+        name: created.name ?? name,
+        isFolder: true,
+        expanded: false,
+        children: [],
+        hasChildren: true,
+      };
+      if (selectedFolderId === activeRootId) {
+        setFolderTree((prev) => [newNode, ...prev]);
+      } else {
+        setFolderTree((prev) =>
+          mapTreeNode(prev, selectedFolderId, (node) => ({
+            ...node,
+            expanded: true,
+            children: [...(node.children ?? []), newNode],
+          }))
+        );
+      }
+      setSelectedFolderId(newId);
+      cancelCreate();
+    } catch (err) {
+      const appError = handleError(err, 'createFolder');
+      setCreateError(appError.message || t('文件夹创建失败'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  /** 根切换器新建项目：成功后追加本地根并切换过去（树随 activeRootId 重载） */
+  const handleCreateProject = async () => {
+    const name = newProjectName.trim();
+    const validation = validateFolderName(name);
+    if (!validation.valid) {
+      setCreateError(validation.error || t('项目名称无效'));
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const res = await projectControllerCreateProject({
+        body: { name },
+        throwOnError: true,
+      });
+      const created = res.data as unknown as { id?: string; name?: string };
+      const newId = created?.id;
+      if (!newId) {
+        setCreateError(t('项目创建失败'));
+        return;
+      }
+      const newRoot: TransferTargetRoot = {
+        id: newId,
+        name: created?.name ?? name,
+        kind: 'project',
+      };
+      setCreatedRoots((prev) => [...prev, newRoot]);
+      setActiveRootId(newId);
+      setSelectedFolderId(newId);
+      cancelCreate();
+    } catch (err) {
+      const appError = handleError(err, 'createProject');
+      setCreateError(appError.message || t('项目创建失败'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleConfirm = () => {
     // 防御性拦截：策略禁止时禁止确认（与按钮 disabled 双保险，防异步竞态）
     if (transferVerdict?.allowed === false) return;
@@ -280,6 +439,7 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
 
   const handleClose = () => {
     setSelectedFolderId(null);
+    cancelCreate();
     onClose();
   };
 
@@ -326,36 +486,69 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
           </div>
         )}
 
-        {/* 空状态 */}
-        {!loading && !error && folderTree.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Folder
-              size={48}
-              className="mb-3"
-              style={{ color: 'var(--text-muted)' }}
-            />
-            <p style={{ color: 'var(--text-tertiary)' }}>
-              {t('暂无可用文件夹')}
-            </p>
-          </div>
-        )}
-
-        {/* 文件夹列表 */}
-        {!loading && !error && folderTree.length > 0 && (
+        {/* 文件夹列表（新建文件夹/新建项目入口恒可用，空树时同样显示） */}
+        {!loading && !error && (
           <div
             className="border rounded-[3px]"
             style={{ borderColor: 'var(--border-default)' }}
           >
             <div
-              className="px-2 pt-1.5 pb-0.5"
+              className="flex items-center justify-between gap-2 px-2 pt-1.5 pb-0.5"
               style={{ color: 'var(--text-muted)' }}
             >
-              {t('点击文件夹名称选择，点击箭头展开/折叠')}
+              <span className="truncate">
+                {t('点击文件夹名称选择，点击箭头展开/折叠')}
+              </span>
+              <button
+                type="button"
+                className="flex items-center gap-1 px-1.5 h-[20px] text-xs rounded-[3px] cursor-pointer select-none shrink-0 transition-colors duration-150"
+                style={{
+                  color: 'var(--primary-600)',
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-default)',
+                }}
+                onClick={startCreateFolder}
+              >
+                <FolderPlus size={12} />
+                {t('新建文件夹')}
+              </button>
             </div>
-            {/* 跨项目根切换器（多根时显示） */}
-            {roots && roots.length > 1 && (
-              <div className="flex flex-wrap gap-1 px-2 pb-1">
-                {roots.map((root) => {
+            {/* 新建文件夹内联表单（创建在选中文件夹下，成功后自动选中） */}
+            {creatingFolder && (
+              <div className="flex items-center gap-1.5 px-2 pb-1">
+                <Input
+                  size="sm"
+                  wrapperClassName="flex-1"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+                  placeholder={t('请输入文件夹名称')}
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  onClick={handleCreateFolder}
+                  disabled={creating || !newFolderName.trim()}
+                >
+                  {t('创建')}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={cancelCreate}>
+                  {t('取消')}
+                </Button>
+              </div>
+            )}
+            {creatingFolder && createError && (
+              <div
+                className="px-2 pb-1 text-xs"
+                style={{ color: 'var(--error)' }}
+              >
+                {createError}
+              </div>
+            )}
+            {/* 跨项目根切换器（多根时显示；含本弹窗内新建的项目） */}
+            {localRoots.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1 px-2 pb-1">
+                {localRoots.map((root) => {
                   const isActive = activeRootId === root.id;
                   return (
                     <button
@@ -380,6 +573,50 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
                     </button>
                   );
                 })}
+                <button
+                  type="button"
+                  className="flex items-center gap-0.5 px-2 h-[24px] text-xs rounded-[3px] cursor-pointer select-none transition-colors duration-150"
+                  style={{
+                    color: 'var(--text-secondary)',
+                    background: 'var(--bg-secondary)',
+                    border: '1px dashed var(--border-default)',
+                  }}
+                  onClick={startCreateProject}
+                >
+                  <Plus size={12} />
+                  {t('新建项目')}
+                </button>
+              </div>
+            )}
+            {creatingProject && (
+              <div className="flex items-center gap-1.5 px-2 pb-1">
+                <Input
+                  size="sm"
+                  wrapperClassName="flex-1"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleCreateProject()}
+                  placeholder={t('请输入项目名称')}
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  onClick={handleCreateProject}
+                  disabled={creating || !newProjectName.trim()}
+                >
+                  {t('创建')}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={cancelCreate}>
+                  {t('取消')}
+                </Button>
+              </div>
+            )}
+            {creatingProject && createError && (
+              <div
+                className="px-2 pb-1 text-xs"
+                style={{ color: 'var(--error)' }}
+              >
+                {createError}
               </div>
             )}
             {activeRootId && (
@@ -436,12 +673,25 @@ export const SelectFolderModal: React.FC<SelectFolderModalProps> = ({
               className="max-h-80 overflow-y-auto"
               style={{ background: 'var(--bg-primary)' }}
             >
-              <FileTree
-                nodes={folderTree}
-                selectedId={selectedFolderId}
-                onToggleExpand={toggleExpand}
-                onSelect={(node) => selectFolder(node.id)}
-              />
+              {folderTree.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Folder
+                    size={48}
+                    className="mb-3"
+                    style={{ color: 'var(--text-muted)' }}
+                  />
+                  <p style={{ color: 'var(--text-tertiary)' }}>
+                    {t('暂无可用文件夹')}
+                  </p>
+                </div>
+              ) : (
+                <FileTree
+                  nodes={folderTree}
+                  selectedId={selectedFolderId}
+                  onToggleExpand={toggleExpand}
+                  onSelect={(node) => selectFolder(node.id)}
+                />
+              )}
             </div>
           </div>
         )}

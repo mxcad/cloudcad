@@ -384,7 +384,14 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
   }
 
   async function onPickerRootChange(rootId: string) {
-    await crossTransfer.onRootChange(rootId, transferTargets.roots.value)
+    const roots = transferTargets.roots.value
+    // 选择器内新建的项目不在 roots 列表（选择器本地追加后切根），
+    // 合成一个项目根传入，让跨项目策略对「新项目目标」也重算（否则静默 return）
+    const known = roots.some((r) => r.id === rootId)
+    await crossTransfer.onRootChange(
+      rootId,
+      known ? roots : [...roots, { id: rootId, name: '', domain: 'project' as const }],
+    )
   }
 
   /** 后端错误透传：403 策略被拒/权限/配额 等文案直接展示，不吞成通用「移动失败」 */

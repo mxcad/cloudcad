@@ -20,7 +20,8 @@ export function useTransferTargets() {
       if (personalSpaceId) {
         list.push({ id: personalSpaceId, name: t('个人空间'), domain: 'personalSpace' })
       }
-      const res = await projectControllerGetProjects({ query: { page: 1, limit: 200 } })
+      // 后端分页上限 100（query-projects.dto.ts @Max(100)），超限整体校验失败 → 项目根全丢
+      const res = await projectControllerGetProjects({ query: { page: 1, limit: 100 } })
       try {
         const data = unwrap<{ nodes?: FileSystemNodeDto[] }>(res)
         for (const n of data.nodes ?? []) {

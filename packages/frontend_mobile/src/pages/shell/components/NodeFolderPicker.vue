@@ -9,10 +9,16 @@
  * disabledReason 非空时（跨项目策略被拒）禁用确认并底部红字提示。
  */
 import { ref, watch, computed } from 'vue'
-import { nodeControllerGetChildren } from '@cloudcad/api-sdk/sdk.gen'
+import {
+  nodeControllerGetChildren,
+  nodeControllerCreateFolder,
+  projectControllerCreateProject,
+} from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import { t } from '@/languages'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
+import { validateName } from '@/utils/validateName'
+import { showToast } from 'vant'
 
 const props = withDefaults(
   defineProps<{
@@ -47,9 +53,13 @@ const show = computed({
 const isMultiRoot = computed(() => props.roots.length > 0)
 // 当前选中的根（多根模式）；单根模式恒等于 props.rootId
 const activeRootId = ref(props.rootId)
+/** 本弹窗内新建的项目（本地追加到根切换器，不依赖父组件刷新 roots） */
+const createdRoots = ref<Array<{ id: string; name: string }>>([])
+/** 根切换器数据源：父组件传入的根 + 本弹窗内新建的项目 */
+const allRoots = computed(() => [...props.roots, ...createdRoots.value])
 const activeRootName = computed(() =>
   isMultiRoot.value
-    ? props.roots.find((r) => r.id === activeRootId.value)?.name ?? props.rootName
+    ? allRoots.value.find((r) => r.id === activeRootId.value)?.name ?? props.rootName
     : props.rootName
 )
 
@@ -91,6 +101,8 @@ watch(
       activeRootId.value = props.rootId
       currentId.value = null
       crumbs.value = []
+      // 重新打开时清掉本地新建的项目：父组件会重拉 roots，新项目随之入列，避免重复
+      createdRoots.value = []
       loadFolders()
     }
   }
@@ -129,6 +141,75 @@ const currentFolderName = computed(() =>
 const isCurrentExcluded = computed(() => props.excludeIds.includes(currentFolderId.value))
 const isDisabled = computed(() => isCurrentExcluded.value || !!props.disabledReason)
 
+// ── 选择界面内就地创建（新建文件夹 / 新建项目）──
+const showNameDialog = ref(false)
+const nameMode = ref<'folder' | 'project'>('folder')
+const nameInput = ref('')
+const creating = ref(false)
+
+function openCreateFolder() {
+  nameMode.value = 'folder'
+  nameInput.value = ''
+  showNameDialog.value = true
+}
+
+function openCreateProject() {
+  nameMode.value = 'project'
+  nameInput.value = ''
+  showNameDialog.value = true
+}
+
+async function confirmCreate() {
+  const name = nameInput.value.trim()
+  const validation = validateName(name)
+  if (!validation.valid) {
+    showToast(validation.error || t('文件夹名称无效'))
+    return
+  }
+  if (creating.value) return
+  creating.value = true
+  try {
+    if (nameMode.value === 'folder') {
+      // 在当前文件夹下新建：成功后自动进入新文件夹（面包屑追加 + 下钻其子级）
+      const res = await nodeControllerCreateFolder({
+        path: { parentId: currentFolderId.value },
+        body: { name },
+      })
+      unwrap(res)
+      showNameDialog.value = false
+      showToast(t('文件夹创建成功'))
+      const created = res.data as { id?: string; name?: string } | undefined
+      const newId = created?.id
+      if (newId) {
+        crumbs.value = [...crumbs.value, { id: newId, name: created?.name ?? name }]
+        currentId.value = newId
+      }
+      await loadFolders()
+    } else {
+      // 新建项目：本地追加根并切换过去（root-change 让父组件重算跨项目策略）
+      const res = await projectControllerCreateProject({
+        body: { name },
+      })
+      unwrap(res)
+      showNameDialog.value = false
+      showToast(t('项目创建成功'))
+      const created = res.data as { id?: string; name?: string } | undefined
+      const newId = created?.id
+      if (newId) {
+        createdRoots.value = [
+          ...createdRoots.value,
+          { id: newId, name: created?.name ?? name },
+        ]
+        switchRoot(newId)
+      }
+    }
+  } catch (e) {
+    showToast(errMsg(e, t('创建失败，请重试')))
+  } finally {
+    creating.value = false
+  }
+}
+
 function onConfirm() {
   if (isDisabled.value) return
   emit('select', { id: currentFolderId.value, name: currentFolderName.value, rootId: activeRootId.value })
@@ -140,17 +221,28 @@ function onConfirm() {
     <div class="picker-panel">
       <div class="picker-header">
         <span class="picker-title">{{ t('选择文件夹') }}</span>
-        <van-icon name="cross" size="18" class="picker-close" @click="show = false" />
+        <div class="picker-header-actions">
+          <!-- 选择界面内就地新建文件夹：创建在当前文件夹下，成功后自动进入 -->
+          <button class="picker-create-folder" @click="openCreateFolder">
+            <van-icon name="plus" size="14" />
+            {{ t('新建文件夹') }}
+          </button>
+          <van-icon name="cross" size="18" class="picker-close" @click="show = false" />
+        </div>
       </div>
-      <!-- 二期 g 跨项目：目标根切换器（个人空间 + 我的项目） -->
+      <!-- 二期 g 跨项目：目标根切换器（个人空间 + 我的项目；含本弹窗内新建的项目） -->
       <div v-if="isMultiRoot" class="picker-roots">
         <button
-          v-for="r in roots"
+          v-for="r in allRoots"
           :key="r.id"
           :class="['picker-root', { active: activeRootId === r.id }]"
           @click="switchRoot(r.id)"
         >
           {{ r.name }}
+        </button>
+        <button class="picker-root picker-root--new" @click="openCreateProject">
+          <van-icon name="plus" size="12" />
+          {{ t('新建项目') }}
         </button>
       </div>
       <div class="picker-breadcrumb">
@@ -184,6 +276,31 @@ function onConfirm() {
       </div>
     </div>
   </van-popup>
+
+  <!-- 新建文件夹 / 新建项目 名称输入弹窗（对齐 FileBrowserPage 新建弹窗范式） -->
+  <van-popup v-model:show="showNameDialog" position="bottom" round :style="{ height: '30%' }">
+    <div class="create-panel">
+      <div class="panel-header">
+        <button class="panel-cancel" :disabled="creating" @click="showNameDialog = false">
+          {{ t('取消') }}
+        </button>
+        <span class="panel-title">
+          {{ nameMode === 'folder' ? t('新建文件夹') : t('新建项目') }}
+        </span>
+        <button class="panel-confirm" :disabled="creating || !nameInput.trim()" @click="confirmCreate">
+          {{ creating ? t('创建中...') : t('确定') }}
+        </button>
+      </div>
+      <van-field
+        v-model="nameInput"
+        maxlength="50"
+        :placeholder="nameMode === 'folder' ? t('请输入文件夹名称') : t('请输入项目名称')"
+        autofocus
+        clearable
+        @keyup.enter="confirmCreate"
+      />
+    </div>
+  </van-popup>
 </template>
 
 <style scoped lang="scss">
@@ -201,6 +318,69 @@ function onConfirm() {
 }
 
 .picker-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.picker-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.picker-create-folder {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.picker-root--new {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-style: dashed;
+  color: var(--text-secondary);
+}
+
+// 新建文件夹/新建项目名称输入弹窗（对齐 FileBrowserPage 弹窗范式）
+.create-panel {
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.panel-cancel,
+.panel-confirm {
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.panel-confirm {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.panel-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);

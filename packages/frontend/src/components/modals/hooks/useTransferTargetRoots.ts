@@ -17,10 +17,11 @@ export function useTransferTargetRoots(enabled = true): TransferTargetRoot[] {
   const projectsQuery = useQuery({
     queryKey: ['transfer-target-roots', 'projects'],
     queryFn: async () => {
-      // 全量拉取（分页上限放开到 200），保证第 2 页后的项目也可选为目标
+      // 全量拉取（后端分页上限 100，见 query-projects.dto.ts @Max(100)），
+      // 根切换器展示目标项目，100 个已远超实际可选范围
       const { nodes } = await fetchProjects({
         page: 1,
-        limit: 200,
+        limit: 100,
         excludeDeleted: true,
       });
       return nodes.map((p): TransferTargetRoot => ({

@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Select } from '@/components/ui/Select';
+import { Input } from '@/components/ui/Input';
 import { FileNameInput } from '@/components/ui/FileNameInput';
 import { Folder, ChevronRight } from 'lucide-react';
 import { SelectFolderModal } from './SelectFolderModal';
@@ -67,6 +68,7 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
     setSelectedFolderName,
     handleFolderConfirm,
     saveMutation,
+    createProject,
   } = useSaveAs({
     isOpen,
     personalSpaceId,
@@ -74,6 +76,39 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
     sourceNodeId,
     sourceFileHash,
   });
+
+  // 「选择项目」下拉的「新建项目」入口
+  const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [createProjectError, setCreateProjectError] = useState<string | null>(
+    null
+  );
+  const [creatingProject, setCreatingProject] = useState(false);
+
+  const handleCreateProjectConfirm = async () => {
+    const name = newProjectName.trim();
+    if (!name || creatingProject) return;
+    setCreatingProject(true);
+    setCreateProjectError(null);
+    try {
+      await createProject(name);
+      setShowCreateProjectDialog(false);
+      setNewProjectName('');
+    } catch (err) {
+      setCreateProjectError(
+        err instanceof Error ? err.message : t('项目创建失败')
+      );
+    } finally {
+      setCreatingProject(false);
+    }
+  };
+
+  const closeCreateProjectDialog = () => {
+    if (creatingProject) return;
+    setShowCreateProjectDialog(false);
+    setNewProjectName('');
+    setCreateProjectError(null);
+  };
 
   // 检查用户是否有公共资源库管理权限
   const hasLibraryPermission =
@@ -245,12 +280,20 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
               <Select
                 value={selectedProjectId}
                 onChange={(val) => {
+                  // 「新建项目」是动作项：只开弹窗，不改选中值
+                  if (val === '__create_project__') {
+                    setShowCreateProjectDialog(true);
+                    return;
+                  }
                   setSelectedProjectId(val);
                   setSelectedParentId(val);
                   setSelectedFolderName('');
                 }}
                 placeholder={t('请选择项目')}
-                options={projects.map((p) => ({ value: p.id, label: p.name }))}
+                options={[
+                  ...projects.map((p) => ({ value: p.id, label: p.name })),
+                  { value: '__create_project__', label: t('新建项目') },
+                ]}
                 disabled={saving}
               />
             </div>
@@ -336,6 +379,53 @@ export const SaveAsModal: React.FC<SaveAsModalProps> = ({
                 { value: 'mxweb', label: 'MXWEB' },
               ]}
               disabled={saving}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showCreateProjectDialog}
+        onClose={closeCreateProjectDialog}
+        title={t('新建项目')}
+        className="max-w-sm"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={closeCreateProjectDialog}
+              disabled={creatingProject}
+            >
+              {t('取消')}
+            </Button>
+            <Button
+              onClick={handleCreateProjectConfirm}
+              disabled={creatingProject || !newProjectName.trim()}
+            >
+              {creatingProject ? t('创建中...') : t('创建')}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {createProjectError && (
+            <div className="p-3 rounded-lg bg-[var(--bg-error)] border border-[var(--border-error)] text-[var(--error)]">
+              {createProjectError}
+            </div>
+          )}
+          <div>
+            <label
+              className="block font-medium mb-1"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {t('名称 *')}
+            </label>
+            <Input
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleCreateProjectConfirm()}
+              placeholder={t('请输入项目名称')}
+              autoFocus
             />
           </div>
         </div>

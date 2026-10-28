@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { stripDrawingExtension } from '@cloudcad/platform';
-import { saveControllerSaveMxwebAs } from '@/api-sdk';
+import {
+  saveControllerSaveMxwebAs,
+  projectControllerCreateProject,
+} from '@/api-sdk';
 import { fetchProjects } from '@/lib/projects';
 import { uploadMxCadFile } from '@/utils/mxcadUploadUtils';
 import { calculateFileHash } from '@/utils/hashUtils';
@@ -65,6 +72,12 @@ export const useSaveAs = ({
   const [error, setError] = useState<string | null>(null);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [selectedFolderName, setSelectedFolderName] = useState<string>('');
+  /** 刚新建的项目 id：等它出现在项目列表后自动选中（优先于「选第一个」） */
+  const [pendingNewProjectId, setPendingNewProjectId] = useState<
+    string | null
+  >(null);
+
+  const queryClient = useQueryClient();
 
   // 查询项目列表
   const { data: projects = [] } = useQuery<ProjectWithPermission[]>({
@@ -95,19 +108,48 @@ export const useSaveAs = ({
       // `plan.dwg.mxweb` 的节点另存为时会默认成「plan.dwg」，提交后再叠一层
       // 后缀得到 `plan.dwg.mxweb`——分享出去显示的名字就是这串内部标识
       setFileName(stripDrawingExtension(currentFileName) || 'untitled');
+      setPendingNewProjectId(null);
     }
   }, [isOpen, personalSpaceId, currentFileName]);
 
-  // 项目切换时自动选择第一个项目
+  // 自动选择项目：刚新建的项目优先（等它出现在列表里再选，期间不回退选第一个，
+  // 否则会先误选旧项目再跳变）；否则未选时选第一个
   useEffect(() => {
-    if (projects.length > 0 && !selectedProjectId) {
+    if (projects.length === 0) return;
+    if (pendingNewProjectId) {
+      const newProject = projects.find((p) => p.id === pendingNewProjectId);
+      if (newProject) {
+        setSelectedProjectId(newProject.id);
+        setSelectedParentId(newProject.id);
+        setPendingNewProjectId(null);
+      }
+      return;
+    }
+    if (!selectedProjectId) {
       const firstProject = projects[0];
       if (firstProject) {
         setSelectedProjectId(firstProject.id);
         setSelectedParentId(firstProject.id);
       }
     }
-  }, [projects, selectedProjectId]);
+  }, [projects, selectedProjectId, pendingNewProjectId]);
+
+  // 新建项目（「选择项目」下拉的「新建项目」入口）：
+  // 创建后刷新项目列表，新项目入列后由上面的 effect 自动选中
+  const createProject = useCallback(
+    async (name: string) => {
+      const result = await projectControllerCreateProject({
+        body: { name: name.trim() },
+        throwOnError: true,
+      });
+      const newId = (result.data as unknown as { id?: string })?.id;
+      if (newId) {
+        setPendingNewProjectId(newId);
+      }
+      queryClient.invalidateQueries({ queryKey: ['projects', 'all'] });
+    },
+    [queryClient]
+  );
 
   // 计算文件夹选择器的 projectId
   const getFolderPickerProjectId = useCallback(() => {
@@ -224,5 +266,6 @@ export const useSaveAs = ({
     resetError,
     handleFolderConfirm,
     saveMutation,
+    createProject,
   };
 };

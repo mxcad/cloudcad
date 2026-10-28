@@ -7,6 +7,7 @@ import { useUser } from '../../../composables/useUser';
 import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
 import { unwrap, errMsg } from '../../../utils/apiError';
+import { validateName } from '../../../utils/validateName';
 import type { FileSystemNodeDto } from '../../../api-sdk';
 import FloatingPopup from '../../../components/FloatingPopup.vue';
 
@@ -366,6 +367,97 @@ function selectRootFolder() {
   }
 }
 
+// ── 文件夹步：就地新建文件夹（创建在当前浏览位置，成功后自动进入）──
+const showCreateFolderDialog = ref(false);
+const createFolderName = ref('');
+const creatingFolder = ref(false);
+
+function openCreateFolderDialog() {
+  createFolderName.value = '';
+  showCreateFolderDialog.value = true;
+}
+
+async function confirmCreateFolder() {
+  const name = createFolderName.value.trim();
+  const validation = validateName(name);
+  if (!validation.valid) {
+    showToast(validation.error || t('文件夹名称无效'));
+    return;
+  }
+  if (creatingFolder.value) return;
+  // 当前浏览位置：面包屑末位（无则目标根）
+  const parentId =
+    folderPath.value.length > 0
+      ? folderPath.value[folderPath.value.length - 1].id
+      : resolveRootId();
+  if (!parentId) return;
+  creatingFolder.value = true;
+  try {
+    const { nodeControllerCreateFolder } = await import('../../../api-sdk');
+    const res = await nodeControllerCreateFolder({
+      path: { parentId },
+      body: { name },
+    });
+    unwrap(res);
+    showCreateFolderDialog.value = false;
+    showToast(t('文件夹创建成功'));
+    // 自动进入新文件夹：面包屑追加 + 加载其子级
+    const created = res.data as { id?: string; name?: string } | undefined;
+    const newId = created?.id;
+    if (newId) {
+      folderPath.value.push({ id: newId, name: created?.name ?? name });
+      folderLoading.value = true;
+      folderNodes.value = await loadFolderChildren(newId);
+      folderLoading.value = false;
+    }
+  } catch (e) {
+    showToast(errMsg(e, t('创建失败，请重试')));
+  } finally {
+    creatingFolder.value = false;
+  }
+}
+
+// ── 选项目处：新建项目（创建后刷新项目列表并选中新项目）──
+const showCreateProjectDialog = ref(false);
+const createProjectName = ref('');
+const creatingProject = ref(false);
+
+function openCreateProjectDialog() {
+  createProjectName.value = '';
+  showCreateProjectDialog.value = true;
+}
+
+async function confirmCreateProject() {
+  const name = createProjectName.value.trim();
+  const validation = validateName(name);
+  if (!validation.valid) {
+    showToast(validation.error || t('文件夹名称无效'));
+    return;
+  }
+  if (creatingProject.value) return;
+  creatingProject.value = true;
+  try {
+    const { projectControllerCreateProject } = await import('../../../api-sdk');
+    const res = await projectControllerCreateProject({ body: { name } });
+    unwrap(res);
+    showCreateProjectDialog.value = false;
+    showToast(t('项目创建成功'));
+    const created = res.data as { id?: string; name?: string } | undefined;
+    const newId = created?.id;
+    // 刷新项目列表并选中新项目（自动落新项目根，清掉旧文件夹路径）
+    await saveAs.loadProjects();
+    if (newId) {
+      saveAs.selectedProjectId.value = newId;
+      saveAs.selectedParentId.value = newId;
+      folderPath.value = [];
+    }
+  } catch (e) {
+    showToast(errMsg(e, t('创建失败，请重试')));
+  } finally {
+    creatingProject.value = false;
+  }
+}
+
 async function onTargetTypeChange(newType: SaveTargetType) {
   saveAs.targetType.value = newType;
   saveAs.selectedParentId.value = '';
@@ -439,6 +531,15 @@ function onLibraryTypeChange(newType: LibraryType) {
               {{ p.name }}
             </button>
           </template>
+          <!-- 就地新建文件夹：创建在当前浏览位置，成功后自动进入（资源库排除，走库专用接口） -->
+          <button
+            v-if="saveAs.targetType.value !== 'library'"
+            class="breadcrumb-create"
+            @click="openCreateFolderDialog"
+          >
+            <van-icon name="plus" size="12" />
+            {{ t('新建文件夹') }}
+          </button>
         </div>
 
         <!-- Loading -->
@@ -523,7 +624,14 @@ function onLibraryTypeChange(newType: LibraryType) {
         <!-- Project Picker (when project selected) -->
         <Transition name="slide-fade">
           <div v-if="saveAs.targetType.value === 'project'" class="form-section">
-            <label class="form-label">{{ t('选择项目') }}</label>
+            <div class="form-label-row">
+              <label class="form-label">{{ t('选择项目') }}</label>
+              <!-- 就地新建项目：创建后刷新项目列表并自动选中新项目 -->
+              <button class="inline-create-btn" @click="openCreateProjectDialog">
+                <van-icon name="plus" size="12" />
+                {{ t('新建项目') }}
+              </button>
+            </div>
             <button class="select-input" @click="showProjectPicker = true">
               <span :class="{ placeholder: !selectedProjectName }">
                 {{ selectedProjectName || t('请选择项目') }}
@@ -635,6 +743,52 @@ function onLibraryTypeChange(newType: LibraryType) {
       class="project-picker"
     />
   </van-popup>
+
+  <!-- 新建文件夹弹窗（文件夹步就地创建） -->
+  <van-popup v-model:show="showCreateFolderDialog" position="bottom" round :style="{ height: '30%' }">
+    <div class="create-panel">
+      <div class="panel-header">
+        <button class="panel-cancel" :disabled="creatingFolder" @click="showCreateFolderDialog = false">
+          {{ t('取消') }}
+        </button>
+        <span class="panel-title">{{ t('新建文件夹') }}</span>
+        <button class="panel-confirm" :disabled="creatingFolder || !createFolderName.trim()" @click="confirmCreateFolder">
+          {{ creatingFolder ? t('创建中...') : t('确定') }}
+        </button>
+      </div>
+      <van-field
+        v-model="createFolderName"
+        maxlength="50"
+        :placeholder="t('请输入文件夹名称')"
+        autofocus
+        clearable
+        @keyup.enter="confirmCreateFolder"
+      />
+    </div>
+  </van-popup>
+
+  <!-- 新建项目弹窗（选项目处就地创建） -->
+  <van-popup v-model:show="showCreateProjectDialog" position="bottom" round :style="{ height: '30%' }">
+    <div class="create-panel">
+      <div class="panel-header">
+        <button class="panel-cancel" :disabled="creatingProject" @click="showCreateProjectDialog = false">
+          {{ t('取消') }}
+        </button>
+        <span class="panel-title">{{ t('新建项目') }}</span>
+        <button class="panel-confirm" :disabled="creatingProject || !createProjectName.trim()" @click="confirmCreateProject">
+          {{ creatingProject ? t('创建中...') : t('确定') }}
+        </button>
+      </div>
+      <van-field
+        v-model="createProjectName"
+        maxlength="50"
+        :placeholder="t('请输入项目名称')"
+        autofocus
+        clearable
+        @keyup.enter="confirmCreateProject"
+      />
+    </div>
+  </van-popup>
 </template>
 
 <style scoped lang="scss">
@@ -686,6 +840,26 @@ function onLibraryTypeChange(newType: LibraryType) {
   color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+// 标签行（标签 + 右侧就地新建按钮）
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inline-create-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 14px;
+  cursor: pointer;
 }
 
 // === Filename Input ===
@@ -895,6 +1069,22 @@ function onLibraryTypeChange(newType: LibraryType) {
   }
 }
 
+// 面包屑右端「新建文件夹」：margin-left:auto 推到最右，不随内容滚动
+.breadcrumb-create {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 14px;
+  cursor: pointer;
+}
+
 .folder-loading {
   align-self: center;
   margin-top: 60px;
@@ -956,6 +1146,42 @@ function onLibraryTypeChange(newType: LibraryType) {
     margin: 0;
     font-size: var(--font-size-sm);
   }
+}
+
+// === 新建文件夹/新建项目名称输入弹窗 ===
+.create-panel {
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.panel-cancel,
+.panel-confirm {
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.panel-confirm {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 // === Footer Button ===
