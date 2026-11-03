@@ -42,11 +42,15 @@ function toEntry(raw: IpWhitelistEntryResponseDto): IpWhitelistEntry {
  * 管理员 IP 白名单列表查询（分页 + keyword 模糊搜索）
  * 后端返回 DB 条目 ∪ 服务器本地文件条目（合并分页）。
  */
-export function useIpWhitelistList(page: number, keyword?: string) {
+export function useIpWhitelistList(
+  page: number,
+  keyword?: string,
+  pageSize: number = IP_WHITELIST_PAGE_SIZE
+) {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: queryKeys.ipWhitelist.list({
       page,
-      pageSize: IP_WHITELIST_PAGE_SIZE,
+      pageSize,
       keyword,
     }),
     queryFn: async () => {
@@ -54,7 +58,7 @@ export function useIpWhitelistList(page: number, keyword?: string) {
         throwOnError: true,
         query: {
           page,
-          pageSize: IP_WHITELIST_PAGE_SIZE,
+          pageSize,
           ...(keyword ? { keyword } : {}),
         },
       });
@@ -63,7 +67,7 @@ export function useIpWhitelistList(page: number, keyword?: string) {
         items: (body?.items ?? []).map(toEntry),
         total: body?.total ?? 0,
         page: body?.page ?? page,
-        pageSize: body?.pageSize ?? IP_WHITELIST_PAGE_SIZE,
+        pageSize: body?.pageSize ?? pageSize,
       };
     },
     placeholderData: (prev) => prev,

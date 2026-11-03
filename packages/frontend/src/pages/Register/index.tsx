@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Gift } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRuntimeConfig } from '../../contexts/RuntimeConfigContext';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
@@ -160,6 +160,26 @@ export const Register: React.FC = () => {
     <RegisterLayout appName={appName} isDark={isDark} withLanguageSwitcher>
       <div className={styles.registerCard}>
         <RegisterBrand appName={appName} appLogo={appLogo} />
+
+        {/* 注册赠送会员营销吸引点：活动开启且月数>0 时展示（配置经 public 端点下发） */}
+        {runtimeConfig.registerGiftEnabled &&
+          runtimeConfig.registerGiftMonths > 0 && (
+            <div
+              className="flex items-center justify-center gap-2 mx-4 mb-4 px-4 py-2.5 rounded-lg text-sm font-medium"
+              style={{
+                background: 'var(--accent-100)',
+                color: 'var(--accent-700)',
+              }}
+              role="note"
+            >
+              <Gift size={16} className="shrink-0" />
+              <span>
+                {t('注册即送 VIP1 免费试用 {months} 个月', {
+                  months: String(runtimeConfig.registerGiftMonths),
+                })}
+              </span>
+            </div>
+          )}
 
         <RegisterSteps
           currentStep={currentStep}

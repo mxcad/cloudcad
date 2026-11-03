@@ -193,6 +193,8 @@ vi.mock('../services/mxcadManager', async () => {
       wasPending: false,
     })),
     editorDisplayName: (name: string | null) => name ?? '',
+    isEmptyDocumentName: (name: string | null) =>
+      !!name && ['empty_template.mxweb', 'empty.mxweb'].includes(name),
     openDrawing,
   };
 });

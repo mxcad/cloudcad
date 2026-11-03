@@ -13,6 +13,8 @@ import type { ToastType } from '@/components/ui/Toast';
 
 export interface UseExportConvertOptions {
   fileId: string | null;
+  /** 当前图纸文件 hash：游客态（fileId 为空）外部参照下载走公开端点 */
+  currentFileHash?: string;
   canExport?: boolean;
   /** save-as 本地下载联动：pending 的 mxweb blob（主 hook 持有） */
   saveAsBlob: Blob | null;
@@ -23,9 +25,9 @@ export interface UseExportConvertOptions {
 }
 
 export function useExportConvert(options: UseExportConvertOptions) {
-  const { fileId, showToast } = options;
+  const { fileId, currentFileHash, showToast } = options;
   const download = useDownloadFormatModal(options);
-  const extRef = useExtRefFormatModal({ fileId, showToast });
+  const extRef = useExtRefFormatModal({ fileId, currentFileHash, showToast });
   const pdf = usePdfExportModal({ showToast });
   const dwg = useDwgExportModal({ showToast });
 

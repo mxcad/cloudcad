@@ -126,6 +126,50 @@ describe('useLibrary 库域列表数据源', () => {
       query: { page: 1, limit: 30, search: '桥架' },
     })
   })
+
+  it('选中分类后搜索必须限制在该分类子树内（传分类 nodeId 而非库根）', async () => {
+    const s = SDK.drawing
+
+    vi.mocked(s.lib).mockResolvedValue({
+      data: { id: 'root-1', name: '公共图纸库', nodeType: 'LIBRARY_DRAWING' },
+      error: undefined,
+    } as never)
+    vi.mocked(s.cats).mockResolvedValue({
+      data: {
+        categories: [
+          { level: 0, items: [{ id: 'cat-1', name: '交通', parentId: 'root-1' }] },
+        ],
+      },
+      error: undefined,
+    } as never)
+    vi.mocked(s.allFiles).mockResolvedValue({
+      data: { nodes: [], total: 0, page: 1, limit: 30, totalPages: 1 },
+      error: undefined,
+    } as never)
+
+    const library = useLibrary('drawing')
+    await library.fetchRootAndCategories()
+    library.selectCategory(0, 'cat-1')
+    library.setSearch('天')
+
+    // setSearch 带 300ms 防抖；等带 search 参数的那次调用（selectCategory 也会触发一次无 search 调用）
+    await vi.waitFor(() =>
+      expect(s.allFiles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: expect.objectContaining({ search: '天' }),
+        }),
+      ),
+    )
+
+    expect(s.allFiles).toHaveBeenCalledWith({
+      path: { nodeId: 'cat-1' },
+      query: { page: 1, limit: 30, search: '天' },
+    })
+    // 搜索不得回退到库根（修复前若错传库根会跨分类命中）
+    expect(s.allFiles).not.toHaveBeenCalledWith(
+      expect.objectContaining({ path: { nodeId: 'root-1' }, query: expect.objectContaining({ search: '天' }) }),
+    )
+  })
 })
 
 describe('useLibrary 不得静默空态', () => {

@@ -20,6 +20,24 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * 触发浏览器直链下载（无 Blob，服务端流式响应）。
+ *
+ * 「URL 锚点下载」唯一出口（与移动端 triggerUrlDownload 同形）：反馈附件
+ * 签名 token 直链等「无鉴权头、URL 自带凭证」的下载统一走这里。
+ * 文件名默认由服务端 Content-Disposition 决定；仅当传入非空 filename 才设置
+ * download 属性（该属性存在时优先于响应头）。
+ */
+export function triggerUrlDownload(url: string, filename?: string): void {
+  const a = document.createElement('a');
+  a.href = url;
+  if (filename) a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function parseContentDispositionFilename(
   contentDisposition: string | null
 ): string | null {

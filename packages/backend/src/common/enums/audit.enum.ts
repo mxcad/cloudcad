@@ -104,6 +104,15 @@ export enum AuditAction {
   // resourceType=SYSTEM，resourceName=通道名。枚举值不因 D4 修订改名，
   // 既有审计数据仍按 CHANNEL_TEST 匹配）——
   CHANNEL_TEST = 'CHANNEL_TEST',
+  // —— 用户反馈：采纳 / 发放奖励 / 撤销奖励（人工发奖必须留痕；
+  // resourceType=FEEDBACK，resourceId=feedbackId，params 记档位/时长/目标账号）——
+  FEEDBACK_ADOPT = 'FEEDBACK_ADOPT',
+  FEEDBACK_REWARD_ISSUE = 'FEEDBACK_REWARD_ISSUE',
+  FEEDBACK_REWARD_REVOKE = 'FEEDBACK_REWARD_REVOKE',
+  // —— 用户反馈附件：上传 / 删除（证据文件管理留痕，ADR-0085；
+  // resourceType=FEEDBACK，resourceId=attachmentId，params 记 type/kind）——
+  FEEDBACK_ATTACHMENT_UPLOAD = 'FEEDBACK_ATTACHMENT_UPLOAD',
+  FEEDBACK_ATTACHMENT_DELETE = 'FEEDBACK_ATTACHMENT_DELETE',
 }
 
 /**
@@ -121,4 +130,5 @@ export enum ResourceType {
   IpBlacklistEntry = 'IpBlacklistEntry',
   IpWhitelistEntry = 'IpWhitelistEntry',
   NOTICE = 'NOTICE',
+  FEEDBACK = 'FEEDBACK',
 }

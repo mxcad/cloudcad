@@ -42,6 +42,7 @@ import { useVoerkaI18n } from '@voerkai18n/react';
 import { setSpaNavigate, buildLoginUrl } from './config/clientSetup';
 import { performMobileRedirectIfNeeded } from './utils/mobileRedirect';
 import { isConversionPanelRoute } from './utils/conversionPanelRoute';
+import { FeedbackFab } from './components/feedback/FeedbackFab';
 
 // ============================================================================
 // 页面懒加载 - 使用 React.lazy 实现代码分割
@@ -123,6 +124,11 @@ const AdminStatsPage = lazy(() => import('./pages/AdminStatsPage'));
 // IP 访问控制（黑名单 / 白名单 / 高危访问尝试 三 Tab；子页面由容器静态引用，同 chunk）
 const IpAccessControlPage = lazy(() => import('./pages/IpAccessControlPage'));
 const NoticeCenterPage = lazy(() => import('./pages/NoticeCenterPage'));
+
+// 用户反馈（匿名查询页公开；我的反馈页需登录）
+const FeedbackQueryPage = lazy(() => import('./pages/FeedbackQueryPage'));
+const FeedbackMinePage = lazy(() => import('./pages/FeedbackMinePage'));
+const AdminFeedbackPage = lazy(() => import('./pages/AdminFeedbackPage'));
 
 // ============================================================================
 // 路由保护组件
@@ -273,6 +279,8 @@ function AppContent() {
       <ConversionPanelGate />
       {/* 全局 CAD 编辑器覆盖层 — 仅 CAD 路由挂载，保护 WebGL 上下文 */}
       <CADEditorRouteGuard />
+      {/* 全局用户反馈悬浮按钮 — 公开页与后台页均可见（未登录也能提交/查询） */}
+      <FeedbackFab />
 
       <Routes>
         {/* 公开路由 - 不需要 Layout */}
@@ -415,6 +423,26 @@ function AppContent() {
         {/* CADEditorDirect 全局覆盖层已在上方渲染，会根据 URL 自动显示/隐藏 */}
         <Route path="/cad-editor" element={<></>} />
         <Route path="/cad-editor/:fileId" element={<></>} />
+
+        {/* 用户反馈匿名查询 - 公开访问，无需登录 */}
+        <Route
+          path="/feedback/query"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <FeedbackQueryPage />
+            </Suspense>
+          }
+        />
+
+        {/* 我的反馈 - 公开访问：未登录仅展示本设备本地记录，登录后云端+本地合并 */}
+        <Route
+          path="/feedback/mine"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <FeedbackMinePage />
+            </Suspense>
+          }
+        />
 
         {/* 受保护的路由 - 需要 Layout */}
         <Route
@@ -706,6 +734,20 @@ function AppContent() {
                       >
                         <Suspense fallback={<PageLoader />}>
                           <IpAccessControlPage />
+                        </Suspense>
+                      </PermissionRoute>
+                    }
+                  />
+
+                  {/* 用户反馈管理（列表 + 采纳 + 奖励发放台）- 需 SYSTEM_FEEDBACK_READ 权限 */}
+                  <Route
+                    path="/admin/feedback"
+                    element={
+                      <PermissionRoute
+                        permission={getRoutePermission('/admin/feedback')!}
+                      >
+                        <Suspense fallback={<PageLoader />}>
+                          <AdminFeedbackPage />
                         </Suspense>
                       </PermissionRoute>
                     }

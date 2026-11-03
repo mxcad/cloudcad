@@ -332,6 +332,27 @@ describe('IpBlacklistService', () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('BUG-ADMIN-001: rejects loopback exact IP (127.0.0.1)', async () => {
+      await expect(
+        service.addEntry({ ...baseDto, ip: '127.0.0.1' }, 'u1')
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(mockPrisma.ipBlacklistEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('BUG-ADMIN-001: rejects loopback CIDR (127.0.0.0/8)', async () => {
+      await expect(
+        service.addEntry({ ...baseDto, ip: '127.0.0.0/8' }, 'u1')
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(mockPrisma.ipBlacklistEntry.create).not.toHaveBeenCalled();
+    });
+
+    it('BUG-ADMIN-001: rejects IPv6 loopback (::1)', async () => {
+      await expect(
+        service.addEntry({ ...baseDto, ip: '::1' }, 'u1')
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(mockPrisma.ipBlacklistEntry.create).not.toHaveBeenCalled();
+    });
+
     it('rejects duplicate active entry', async () => {
       mockPrisma.ipBlacklistEntry.findFirst.mockResolvedValue({ id: 'e1' });
       await expect(service.addEntry(baseDto, 'u1')).rejects.toBeInstanceOf(

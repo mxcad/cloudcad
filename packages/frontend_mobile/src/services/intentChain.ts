@@ -18,6 +18,7 @@
  */
 import { ref } from 'vue';
 import {
+  CHAIN_IDS,
   clearPendingIntent,
   firstBlockedPrecondition,
   hasPendingIntent,
@@ -25,6 +26,7 @@ import {
   startPendingIntent,
   type IntentDef,
   type IntentFacts,
+  type IntentStart,
   type IntentStorage,
 } from '@cloudcad/platform';
 import router from '@/router';
@@ -38,7 +40,7 @@ import type { DownloadFormatPayload } from '@/pages/shell/components/DownloadFor
 
 /** 保存意图链：未登录时挂起，登录成功后自动续跑执行保存。 */
 export const SAVE_CHAIN: IntentDef = {
-  id: 'save-to-cloud',
+  id: CHAIN_IDS.save,
   action: { type: 'save' },
   preconditions: ['auth'],
   resumeAfter: 'document-loaded',
@@ -46,7 +48,7 @@ export const SAVE_CHAIN: IntentDef = {
 
 /** 另存为意图链：未登录时挂起，登录成功后自动续跑打开另存为面板。 */
 export const SAVE_AS_CHAIN: IntentDef = {
-  id: 'save-as-to-cloud',
+  id: CHAIN_IDS.saveAs,
   action: { type: 'saveAs' },
   preconditions: ['auth'],
   resumeAfter: 'document-loaded',
@@ -54,7 +56,7 @@ export const SAVE_AS_CHAIN: IntentDef = {
 
 /** 版本历史意图链：未登录时挂起，登录成功后自动续跑打开版本历史面板。 */
 export const VERSION_HISTORY_CHAIN: IntentDef = {
-  id: 'version-history',
+  id: CHAIN_IDS.versionHistory,
   action: { type: 'version-history' },
   preconditions: ['auth'],
   resumeAfter: 'document-loaded',
@@ -62,7 +64,7 @@ export const VERSION_HISTORY_CHAIN: IntentDef = {
 
 /** 分享意图链：未登录 → 登录；已登录但无云端节点 → 先保存到云端再分享（对齐 PC SHARE_CHAIN）。 */
 export const SHARE_CHAIN: IntentDef = {
-  id: 'share-current-drawing',
+  id: CHAIN_IDS.share,
   action: { type: 'share' },
   preconditions: ['auth', 'cloud-existence'],
   resumeAfter: 'document-loaded',
@@ -74,7 +76,7 @@ export const SHARE_CHAIN: IntentDef = {
  */
 export function exportChainDef(payload: DownloadFormatPayload): IntentDef {
   return {
-    id: 'export-download',
+    id: CHAIN_IDS.exportDownload,
     action: { type: 'export', payload },
     preconditions: ['auth', 'vip'],
     resumeAfter: 'document-loaded',
@@ -123,29 +125,39 @@ export function clearIntentChain(): void {
   clearPendingIntent(sessionIntentStorage);
 }
 
-/** `beginIntent` 的结论：调用方据此映射 UI 状态。 */
-export type IntentStart =
-  | 'auth-blocked'
-  | 'cloud-save-pending'
-  | 'vip-blocked'
-  | 'cancelled';
+/** `beginIntent` 的结论类型由 `@cloudcad/platform` 提供（两端共用）。 */
+
+/** `beginIntent` 的可选项。 */
+export interface BeginIntentOptions {
+  /**
+   * 未登录（auth-blocked）时是否置 `loginPromptRequired` 弹登录提示弹窗。
+   * 默认 true（弹窗两步走：提示 → 前往登录）。设为 false 时由调用方自行跳登录页
+   * （如分享菜单对齐「+」菜单分享的一次直达），意图链仍已持久化，登录后照常续跑。
+   */
+  showAuthPrompt?: boolean;
+}
 
 /**
  * 挂起意图链并决定下一步。
  *
- * - `auth-blocked`：未登录，已请求登录提示；登录成功后由 `resumeIntent` 续跑
+ * - `auth-blocked`：未登录。默认已请求登录提示（弹窗）；`showAuthPrompt:false`
+ *   时由调用方自行跳登录页——两种情况链都已持久化，登录成功后由 `resumeIntent` 续跑
  * - `cloud-save-pending`：已登录但无云端节点，页面弹「先保存到云端并分享」确认
  * - `vip-blocked`：已登录但会员闸门未过，已弹购买引导；闸门放行（充值成功 /
  *   开放免费导出）后由 `resumeIntent` 续跑
  * - `cancelled`：用户拒绝了确认框，或前置已满足（链已清除）
  */
-export async function beginIntent(def: IntentDef): Promise<IntentStart> {
+export async function beginIntent(
+  def: IntentDef,
+  options: BeginIntentOptions = {}
+): Promise<IntentStart> {
+  const { showAuthPrompt = true } = options;
   startPendingIntent(sessionIntentStorage, def);
 
   const blocked = firstBlockedPrecondition(def, intentFacts());
 
   if (blocked === 'auth') {
-    loginPromptRequired.value = def;
+    if (showAuthPrompt) loginPromptRequired.value = def;
     return 'auth-blocked';
   }
 

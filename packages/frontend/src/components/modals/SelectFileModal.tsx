@@ -19,18 +19,44 @@ import { fetchProjects } from '@/lib/projects';
 import type { FileSystemNode } from '@/types/filesystem';
 import { t } from '@/languages';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { useAuth } from '@/contexts/AuthContext';
 import { FileTree } from '../ui/FileTree';
 import type { FileTreeNode } from '../ui/FileTree';
 
 export interface SelectedFile {
   fileId: string;
   fileName: string;
+  /** 未登录 CAD 编辑器当前图纸（fileId 为空，按 hash 内容寻址） */
+  fileHash?: string;
+  /** 空间节点缩略图（/api/v1/file-system/nodes/{nodeId}/thumbnail） */
+  thumbnailUrl?: string;
+  /** 当前打开图纸快捷项 */
+  isCurrent?: boolean;
+  /** 当前图纸指定区域生成缩略图（引擎内框选区域） */
+  pickRegion?: boolean;
+}
+
+/** 当前打开图纸快捷项（登录=云图节点；未登录=hash 当前图纸） */
+export interface CurrentDrawingOption {
+  nodeId?: string;
+  fileHash?: string;
+  name: string;
+  /** 是否可指定区域生成缩略图（引擎在编辑器页且已就绪） */
+  thumbnailCapable?: boolean;
 }
 
 interface SelectFileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (files: SelectedFile[]) => void;
+  /** 弹框标题（默认「选择要分享的图纸」，供引用图纸等复用） */
+  title?: string;
+  /** 多选（默认 true；引用图纸用单选） */
+  multiSelect?: boolean;
+  /** 文件行显示节点缩略图（默认 false；引用图纸开启） */
+  showThumbnail?: boolean;
+  /** 当前打开图纸快捷项区（登录/未登录均可；未登录时仅显示此项，不加载空间树） */
+  currentDrawing?: CurrentDrawingOption | null;
 }
 
 interface SearchResult {
@@ -51,7 +77,12 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
+  title = t('选择要分享的图纸'),
+  multiSelect = true,
+  showThumbnail = false,
+  currentDrawing = null,
 }) => {
+  const { isAuthenticated } = useAuth();
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -81,6 +112,12 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
     setTimeout(() => inputRef.current?.focus(), 100);
 
     const loadRoots = async () => {
+      // 未登录：无个人空间/项目可浏览（API 会 401），仅显示当前图纸快捷项
+      if (!isAuthenticated) {
+        setTreeNodes([]);
+        setTreeLoading(false);
+        return;
+      }
       try {
         const [psRes, projectPage] = await Promise.all([
           projectControllerGetPersonalSpace(),
@@ -137,7 +174,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
     };
 
     loadRoots();
-  }, [isOpen]);
+  }, [isOpen, isAuthenticated]);
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
@@ -282,29 +319,41 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
     setTreeNodes(updated);
   }, []);
 
-  const toggleSelect = useCallback((id: string, name: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setSelectedNames((prev) => {
-      const next = new Map(prev);
-      if (next.has(id)) next.delete(id);
-      else next.set(id, name);
-      return next;
-    });
-  }, []);
+  const toggleSelect = useCallback(
+    (id: string, name: string) => {
+      if (!multiSelect) {
+        // 单选模式：直接替换选择（点击已选项仍保持选中）
+        setSelectedIds(new Set([id]));
+        setSelectedNames(new Map([[id, name]]));
+        return;
+      }
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+      setSelectedNames((prev) => {
+        const next = new Map(prev);
+        if (next.has(id)) next.delete(id);
+        else next.set(id, name);
+        return next;
+      });
+    },
+    [multiSelect]
+  );
 
   const handleTreeSelect = useCallback(
     (node: FileTreeNode) => {
-      // 多选模式下文件夹点击由 FileTree 直接展开，这里只处理文件勾选
-      if (!node.isFolder) {
-        toggleSelect(node.id, node.name);
+      // 单选模式（multiSelect=false）下 FileTree 文件夹点击走 onSelect（不展开），
+      // 这里补展开；多选模式 FileTree 已直接 onToggleExpand，此分支不重复触发。
+      if (node.isFolder) {
+        void toggleExpand(node.id);
+        return;
       }
+      toggleSelect(node.id, node.name);
     },
-    [toggleSelect]
+    [toggleSelect, toggleExpand]
   );
 
   const handleConfirm = () => {
@@ -312,6 +361,9 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
       const files: SelectedFile[] = Array.from(selectedIds).map((id) => ({
         fileId: id,
         fileName: selectedNames.get(id) || '',
+        thumbnailUrl: showThumbnail
+          ? `/api/v1/file-system/nodes/${id}/thumbnail`
+          : undefined,
       }));
       onConfirm(files);
     }
@@ -356,7 +408,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={t('选择要分享的图纸')}
+      title={title}
       footer={
         <>
           <Button variant="secondary" onClick={handleClose}>
@@ -380,6 +432,108 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
           leftIcon={Search}
           size="md"
         />
+
+        {/* 当前打开图纸快捷项：登录=云图节点（可直接引用）；未登录=hash 当前图纸 */}
+        {currentDrawing && (
+          <div
+            onClick={() =>
+              onConfirm([
+                {
+                  fileId: currentDrawing.nodeId || '',
+                  fileName: currentDrawing.name,
+                  fileHash: currentDrawing.fileHash,
+                  thumbnailUrl: currentDrawing.nodeId
+                    ? `/api/v1/file-system/nodes/${currentDrawing.nodeId}/thumbnail`
+                    : undefined,
+                  isCurrent: true,
+                },
+              ])
+            }
+            title={t('点击引用当前打开图纸')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 12px',
+              cursor: 'pointer',
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--primary-200)',
+              background: 'var(--primary-50)',
+            }}
+          >
+            {currentDrawing.nodeId ? (
+              <img
+                src={`/api/v1/file-system/nodes/${currentDrawing.nodeId}/thumbnail`}
+                alt={currentDrawing.name}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 'var(--radius-md)',
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <FileText
+                size={18}
+                style={{ color: 'var(--primary-500)', flexShrink: 0 }}
+              />
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 500,
+                  color: 'var(--text-primary)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentDrawing.name}
+              </div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                {t('当前打开图纸（点击引用）')}
+              </div>
+            </div>
+            {currentDrawing.thumbnailCapable && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onConfirm([
+                    {
+                      fileId: currentDrawing.nodeId || '',
+                      fileName: currentDrawing.name,
+                      fileHash: currentDrawing.fileHash,
+                      thumbnailUrl: currentDrawing.nodeId
+                        ? `/api/v1/file-system/nodes/${currentDrawing.nodeId}/thumbnail`
+                        : undefined,
+                      isCurrent: true,
+                      pickRegion: true,
+                    },
+                  ]);
+                }}
+                style={{
+                  flexShrink: 0,
+                  fontSize: 'var(--text-xs)',
+                  padding: '4px 8px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--primary-300)',
+                  background: 'var(--bg-primary)',
+                  color: 'var(--primary-600)',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('指定区域')}
+              </button>
+            )}
+            <Check size={16} style={{ color: 'var(--primary-500)', flexShrink: 0 }} />
+          </div>
+        )}
 
         {error && (
           <div
@@ -489,15 +643,32 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                           />
                         )}
                       </div>
-                      <FileText
-                        size={16}
-                        style={{
-                          flexShrink: 0,
-                          color: isFileSelected
-                            ? 'var(--primary-500)'
-                            : 'var(--text-tertiary)',
-                        }}
-                      />
+                      {showThumbnail ? (
+                        <img
+                          src={`/api/v1/file-system/nodes/${file.id}/thumbnail`}
+                          alt={file.name}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 'var(--radius-sm)',
+                            objectFit: 'cover',
+                            flexShrink: 0,
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <FileText
+                          size={16}
+                          style={{
+                            flexShrink: 0,
+                            color: isFileSelected
+                              ? 'var(--primary-500)'
+                              : 'var(--text-tertiary)',
+                          }}
+                        />
+                      )}
                       <span
                         style={{
                           fontSize: 'var(--text-sm)',
@@ -560,7 +731,7 @@ export const SelectFileModal: React.FC<SelectFileModalProps> = ({
                 <FileTree
                   nodes={treeNodes}
                   selectedIds={selectedIds}
-                  multiSelect
+                  multiSelect={multiSelect}
                   onToggleExpand={toggleExpand}
                   onSelect={handleTreeSelect}
                 />

@@ -210,6 +210,14 @@ function create(
       }
 
       const taskId = generateId();
+      // 批量委托的单任务超时透传（backend batch-delegate 下发）：优先于档位默认，
+      // 与单任务 convertFile 的 timeoutMs 同源语义（正值才生效，上限 1h）。
+      const batchTimeoutMs =
+        typeof body.timeoutMs === 'number' &&
+        Number.isFinite(body.timeoutMs) &&
+        body.timeoutMs > 0
+          ? Math.min(body.timeoutMs, 3600000)
+          : undefined;
       const task = {
         id: taskId,
         priority: body.priority,
@@ -217,6 +225,7 @@ function create(
         params: { tasks: body.tasks },
         callbackUrl: body.callbackUrl || null,
         createdAt: new Date().toISOString(),
+        ...(batchTimeoutMs !== undefined ? { timeoutMs: batchTimeoutMs } : {}),
       };
 
       workerPool.enqueue(task);
@@ -274,6 +283,9 @@ function create(
         // 不再按 error 文案反推（此前两侧靠中文字符串匹配，改文案即静默翻转语义）。
         errorCategory: task.errorCategory ?? null,
         errorCode: task.errorCode ?? null,
+        // 引擎原始输出（诊断）：FAILED 时透传，backend 的 data/debug 落盘拿到真因。
+        stdout: task.stdout ?? null,
+        stderr: task.stderr ?? null,
         // 排队位置（S6-5）：仅排队中任务有意义，运行中/未入队/终态为 null
         queuePosition: workerPool.getQueuePosition(taskId),
         priority: task.priority,

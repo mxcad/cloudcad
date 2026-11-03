@@ -1,6 +1,6 @@
 import React from 'react';
 import { SelectFileModal } from '@/components/modals/SelectFileModal';
-import { ShareDialog } from '@/components/modals/ShareDialog';
+import { ShareDialog, type ShareInfo } from '@/components/modals/ShareDialog';
 import { EditExpiryModal } from '@/components/modals/EditExpiryModal';
 import { ConfirmRevokeModal } from '@/components/modals/ConfirmRevokeModal';
 import { t } from '@/languages';
@@ -17,6 +17,7 @@ interface ShareModalsProps {
   showBatchRevokeConfirm: boolean;
   batchRevoking: boolean;
   batchCount: number;
+  initialShare?: ShareInfo | null;
   onCloseFileSelector: () => void;
   onSelectFiles: (files: ShareFileInfo[]) => void;
   onCloseShareDialog: () => void;
@@ -39,6 +40,7 @@ export const ShareModals: React.FC<ShareModalsProps> = ({
   showBatchRevokeConfirm,
   batchRevoking,
   batchCount,
+  initialShare,
   onCloseFileSelector,
   onSelectFiles,
   onCloseShareDialog,
@@ -62,6 +64,7 @@ export const ShareModals: React.FC<ShareModalsProps> = ({
           isOpen={showShareDialog}
           onClose={onCloseShareDialog}
           files={shareFiles}
+          initialShare={initialShare}
         />
       )}
 

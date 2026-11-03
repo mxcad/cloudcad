@@ -52,11 +52,6 @@
       "cmd": "Mx_SaveAsToCloud"
     },
     {
-      "text": "分享",
-      "icon": "fenxiang",
-      "cmd": "Mx_Share"
-    },
-    {
       "text": "布局",
       "icon": "buju",
       "cmd": "Mx_layouts"
@@ -94,7 +89,7 @@
         { "name": "箭头", "icon": "jiantoubiaozhu", "cmd": "m_mx_arrow" },
         { "name": "引线", "icon": "yinxianbiaoji", "cmd": "m_mx_lead_comment" },
         { "name": "云线", "icon": "yunxianpizhu", "cmd": "m_mx_revcloud" },
-        { "name": "音频", "icon": "yinpin" },
+        { "name": "音频", "icon": "yinpin", "hidden": true },
         { "name": "图片", "icon": "charutupian", "cmd": "m_mx_img" }
       ]
     },
@@ -110,7 +105,7 @@
         { "name": "椭圆", "icon": "tuoyuan", "cmd": "m_mx_elliptical" },
         { "name": "多线段", "icon": "duoxianduan", "cmd": "m_mx_polyline" },
         { "name": "插入块", "icon": "chuangjiankuai1", "cmd": "Mx_Insert" },
-        { "name": "插入表格", "icon": "juxing", "cmd": "Mx_InsertTable" },
+        { "name": "插入表格", "icon": "juxing", "cmd": "Mx_InsertTable", "hidden": true },
         { "name": "点", "icon": "dian", "cmd": "m_mx_point" }
       ]
     },
@@ -257,24 +252,13 @@
       "icon": "gongju",
       "isIconDefault": true,
       "list": [
-        { "name": "查找文字", "icon": "wenzichazhao", "cmd": "m_mx_find_text" },
-        { "name": "图纸比对", "icon": "bidui", "cmd": "Mx_CompareDWG" }
-      ]
-    },
-    {
-      "name": "剪贴板",
-      "icon": "fuzhi",
-      "list": [
-        { "name": "复制", "icon": "fuzhi", "cmd": "Mx_Copy" },
-        { "name": "粘贴", "icon": "niantie", "cmd": "Mx_PasteClip" },
-        { "name": "剪切", "icon": "jianqie", "cmd": "Mx_CutClip" },
-        { "name": "删除", "icon": "shanchu", "cmd": "Mx_Erase" },
-        { "name": "全部选择", "icon": "quanbuxuanze", "cmd": "Mx_select_all" }
+        { "name": "查找文字", "icon": "wenzichazhao", "cmd": "m_mx_find_text" }
       ]
     },
     {
       "name": "样式",
       "icon": "yanse",
+      "hidden": true,
       "list": [
         { "name": "颜色", "icon": "yanse", "cmd": "Mx_Color" },
         { "name": "线型", "icon": "xianxing", "cmd": "Mx_Linetype" },

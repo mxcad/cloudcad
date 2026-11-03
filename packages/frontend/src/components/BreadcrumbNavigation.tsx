@@ -170,7 +170,8 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
   }, [breadcrumbs, needsCollapse, visibleCount]);
 
   if (breadcrumbs.length === 0 && !isEditing) {
-    return null;
+    // panel 模式空面包屑仍保留「返回」按钮（如个人空间根目录）
+    if (variant !== 'panel') return null;
   }
 
   if (isEditing && editable) {
@@ -240,7 +241,7 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
         disabled={isLast}
         title={crumb.name}
       >
-        {variant !== 'panel' && index === 0 && crumb.isRoot ? (
+        {index === 0 && crumb.isRoot ? (
           <svg
             width="14"
             height="14"
@@ -302,10 +303,12 @@ export const BreadcrumbNavigation: React.FC<BreadcrumbNavigationProps> = ({
             <ArrowLeft size={14} />
             <span>{t('返回')}</span>
           </button>
-          <ChevronRightIcon
-            size={12}
-            className="text-slate-400 flex-shrink-0 mx-0.5"
-          />
+          {(breadcrumbs.length > 0 || !!onBackToProjects) && (
+            <ChevronRightIcon
+              size={12}
+              className="text-slate-400 flex-shrink-0 mx-0.5"
+            />
+          )}
           {onBackToProjects && (
             <>
               <button

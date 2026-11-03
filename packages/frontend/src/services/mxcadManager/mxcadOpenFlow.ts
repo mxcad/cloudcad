@@ -88,8 +88,23 @@ export class MxCADOpenFlow {
     // （emitFileOpened → patchSessionFlags / title）。故仅在结果码为 0 时 onSuccess，
     // 失败由同一次派发中稍后触发的 retCall（iRet!==0）走 onFail 统一收尾；
     // 403 等不触发 openFileComplete 的失败由上方 60s 超时兜底。
+    // 引擎初始化时先打开默认空模板（initializeMxCADView 不带 URL），其
+    // openFileComplete 可能在冷启动（WASM 慢、waitForDocumentLoaded 3s 超时后）
+    // 晚于本监听器注册才派发。若无条件接受，openFile 会提前 resolve（消费了
+    // 空模板的 openFileComplete），调用方摘掉 loading 时真实图纸仍在加载。
+    // 故校验引擎当前文件名是否匹配目标：不匹配说明这次 openFileComplete 属于
+    // 空模板（或其他文件），忽略并继续等目标图纸的 openFileComplete。
+    const targetFileName = (opts.url.split('/').pop() || '').split('?')[0];
     const onOpen = (iResult: number) => {
       if (iResult !== 0) return;
+      const currentFileName = this.manager.getCurrentFileName();
+      if (
+        targetFileName &&
+        currentFileName &&
+        !currentFileName.includes(targetFileName)
+      ) {
+        return;
+      }
       cleanup();
       this.manager.notifyOpenTerminated();
       opts.onSuccess();

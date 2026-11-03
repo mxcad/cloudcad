@@ -239,6 +239,23 @@ onMounted(() => {
           }}</p>
         </div>
 
+        <!-- 注册送会员活动营销引导（活动开启时展示；注册页本身即转化点，仅提示不跳转） -->
+        <div
+          v-if="config.registerGiftEnabled && config.registerGiftMonths > 0"
+          class="gift-banner"
+          role="note"
+          data-testid="register-gift-banner"
+        >
+          <van-icon name="gift-o" />
+          <span class="gift-banner-text">
+            {{
+              t('注册即送 VIP1 免费试用 {months} 个月', {
+                months: String(config.registerGiftMonths),
+              })
+            }}
+          </span>
+        </div>
+
         <div class="form-body">
           <template v-if="needPhoneCode">
             <van-field

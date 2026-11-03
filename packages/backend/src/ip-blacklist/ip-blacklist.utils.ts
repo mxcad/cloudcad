@@ -195,3 +195,21 @@ export function isValidIpOrCidr(value: string): boolean {
 export function normalizeStoredIp(value: string): string {
   return isCidr(value) ? value : normalizeIp(value);
 }
+
+/**
+ * 判断 IP/CIDR 条目是否命中环回地址（127.0.0.0/8 或 ::1/128）。
+ *
+ * BUG-ADMIN-001：环回是管理员 IP 白名单的「自救通道」（本机恒放行，见
+ * IpWhitelistService.isLoopback），把环回加入黑名单会锁死本机管理通道，
+ * 且黑名单判定先于白名单（fail-close），即使环回在白名单也会被拒——
+ * 无任何安全价值（攻击者无法让请求从 127.0.0.1 发出，除非已在本机）。
+ * 判定采用「127.0.0.1 / ::1 是否命中条目」：两者是环回段代表地址，
+ * 精确 IP 归一化后判 127.* / ::1，CIDR 用 cidrContains 判包含。
+ */
+export function isLoopbackEntry(value: string): boolean {
+  if (isCidr(value)) {
+    return cidrContains(value, '127.0.0.1') || cidrContains(value, '::1');
+  }
+  const normalized = normalizeIp(value);
+  return normalized === '::1' || normalized.startsWith('127.');
+}

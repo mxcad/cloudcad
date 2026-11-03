@@ -317,4 +317,39 @@ describe('Register', () => {
     expect(localStorage.getItem('accessToken')).toBeNull();
     expect(localStorage.getItem('user')).toBeNull();
   });
+
+  it('BUG-AUTH-01 弱密码提交：密码字段显示明确错误提示（非仅强度条）', async () => {
+    mockConfig({
+      mailEnabled: false,
+      requireEmailVerification: false,
+    });
+    mockAuth();
+    renderRegister();
+
+    await fillBasicInfoAndGoNext({ username: 'testuser' });
+
+    // 填弱密码（< policy.minLength=10）+ 一致确认密码后提交
+    fireEvent.change(screen.getByLabelText(/^密码/), {
+      target: { value: '123' },
+    });
+    fireEvent.change(screen.getByLabelText(/确认密码/), {
+      target: { value: '123' },
+    });
+    const form = document.querySelector('form');
+    expect(form).toBeTruthy();
+    fireEvent.submit(form!);
+
+    // 密码字段出现明确字段级错误提示（BUG-FS 前仅有 PasswordStrength 强度条，无文字错误）
+    await waitFor(() => {
+      expect(
+        document.querySelector('#password-error')
+      ).toHaveTextContent(/密码至少/);
+    });
+    // 错误提示通过 aria-describedby 关联到密码输入框
+    const pwd = screen.getByLabelText(/^密码/);
+    expect(pwd).toHaveAttribute('aria-describedby', 'password-error');
+    expect(pwd).toHaveAttribute('aria-invalid', 'true');
+    // 仍在 Step2（未跳转/未注册）
+    expect(screen.getByText('设置密码')).toBeTruthy();
+  });
 });

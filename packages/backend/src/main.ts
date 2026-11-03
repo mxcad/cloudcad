@@ -69,11 +69,11 @@ async function bootstrap() {
     process.exit(1);
   });
 
-  // 设置控制台编码为 UTF-8，解决 Windows 中文乱码问题
-  if (process.platform === 'win32' && process.stdout?.setEncoding) {
-    process.stdout.setEncoding('utf8');
-    process.stderr.setEncoding('utf8');
-  }
+  // 控制台中文乱码已在 pino-http-options.ts 的 buildPinoStreams 里根治：
+  // stdout 的 pino-pretty 不再放 worker 线程（worker 写 UTF-8 字节被 GBK 控制台按
+  // GBK 解码成 `馃殌` 乱码），改为主进程 process.stdout.write(string)——Windows 控制台
+  // TTY 走 WriteConsoleW（UTF-16，无视代码页）。此处无需再设 setEncoding('utf8')
+  //（它只改流解码方向、不影响写出、也管不到 pino 流，此前是无效补丁）。
 
   // 等待 ConfigModule 加载环境变量（官方推荐方式）
   // AppModule 的 ConfigModule.forRoot() 会自动加载 .env 和 .env.local

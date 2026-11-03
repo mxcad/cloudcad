@@ -42,14 +42,18 @@ function toFailureDetail(err: unknown): {
   message: string;
   category: ConversionFailureCategory;
   code?: number;
+  stdout?: string;
+  stderr?: string;
 } {
   const message = err instanceof Error ? err.message : String(err);
-  const source = (err ?? {}) as { category?: unknown; code?: unknown };
+  const source = (err ?? {}) as { category?: unknown; code?: unknown; stdout?: unknown; stderr?: unknown };
   const category = isConversionFailureCategory(source.category)
     ? source.category
     : 'unknown';
   const code = typeof source.code === 'number' ? source.code : undefined;
-  return { message, category, code };
+  const stdout = typeof source.stdout === 'string' ? source.stdout : undefined;
+  const stderr = typeof source.stderr === 'string' ? source.stderr : undefined;
+  return { message, category, code, stdout, stderr };
 }
 
 interface ScaleState {
@@ -403,11 +407,15 @@ class WorkerPool {
       if (current && current.status === 'CANCELLED') return;
       // 分类与错误码一并落记录，随 GET /tasks/:taskId 过线给 backend；
       // 此前只存 message，失败性质在跨线时丢失。
+      // stdout/stderr（引擎原始输出）一并落记录：backend 的 data/debug 落盘据此拿到真因
+      // （HTTP 模式 FAILED 的 metadata 为空，引擎输出从不过线）。
       const detail = toFailureDetail(err);
       this.taskStore.updateStatus(task.id, 'FAILED', {
         error: detail.message,
         errorCategory: detail.category,
         errorCode: detail.code,
+        stdout: detail.stdout,
+        stderr: detail.stderr,
       });
       this._notify(task.id, 'FAILED', null, detail.message);
     } finally {
@@ -423,7 +431,12 @@ class WorkerPool {
   async _executeBatch(task: TaskRecord, level: string, onChild: (kill: () => void) => void): Promise<{ results: unknown[] }> {
     const items: any[] = task.params && Array.isArray(task.params.tasks) ? task.params.tasks : [];
     if (items.length === 0) throw new Error('批量任务没有可转换的文件');
-    const timeout = PRIORITY_CONFIG[level].timeout;
+    // 单任务超时优先用调用方（backend batch-delegate）透传的 timeoutMs，否则落档位默认
+    //（此前批量子任务恒按 PRIORITY_CONFIG 档位，backend 的转换时长 env 对批量委托不生效）。
+    const timeout =
+      typeof task.timeoutMs === 'number' && task.timeoutMs > 0
+        ? task.timeoutMs
+        : PRIORITY_CONFIG[level].timeout;
     const results: unknown[] = [];
     let done = 0;
     for (const item of items) {
@@ -443,6 +456,9 @@ class WorkerPool {
           error: detail.message,
           errorCategory: detail.category,
           ...(detail.code !== undefined ? { errorCode: detail.code } : {}),
+          // 引擎原始输出随失败项过线（batch 逐任务明细，诊断缺口同单任务）
+          ...(detail.stdout !== undefined ? { stdout: detail.stdout } : {}),
+          ...(detail.stderr !== undefined ? { stderr: detail.stderr } : {}),
         });
       }
       done += 1;

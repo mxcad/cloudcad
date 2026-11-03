@@ -67,6 +67,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
             onKeyPress={(e) => e.key === 'Enter' && onRename()}
             placeholder={t('请输入新名称')}
             autoFocus
+            maxLength={100}
             suffix={
               editingNode && !editingNode.isFolder ? extension : undefined
             }

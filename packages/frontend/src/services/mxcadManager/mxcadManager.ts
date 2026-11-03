@@ -51,6 +51,11 @@ export class MxCADManager {
     return this.instanceManager.getCurrentView();
   }
 
+  /** 引擎初始化 Promise（正在初始化时为 Promise，未发起过为 null） */
+  getInitPromise(): Promise<void> | null {
+    return this.instanceManager.getInitPromise();
+  }
+
   async openFile(payload: OpenFilePayload): Promise<void> {
     // 完整退出命令：加入在途（joining）时等引擎回调落定再退出，
     // 避免「新文件已打开但旧协同 session 仍挂着」

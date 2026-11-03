@@ -27,7 +27,7 @@ export const AuditLogPage: React.FC = () => {
   const { showToast } = useNotification();
 
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit, setLimit] = useState(30);
   const [filters, setFilters] = useState<AuditFilters>(DEFAULT_FILTERS);
 
   const queryParams = {
@@ -72,7 +72,8 @@ export const AuditLogPage: React.FC = () => {
     displayNodes: logs,
     currentPage: page,
     handlePageChange: setPage,
-    resetKey: JSON.stringify(filters),
+    // 每页数量纳入查询身份：切换条数时整体替换累计列表（resetKey 语义含「每页数量」）
+    resetKey: JSON.stringify({ ...filters, limit }),
   });
 
   // ── 多选（ADR-0052 统一机制：选择内核 + 快捷键 + 滚动分页合并）──
@@ -137,6 +138,14 @@ export const AuditLogPage: React.FC = () => {
     refetchStats();
   };
 
+  // 每页条数变化：清空选择并重置到第一页（新条数下深层页码无意义）
+  const handlePageSizeChange = (next: number) => {
+    if (next === limit) return;
+    clearSelection();
+    setLimit(next);
+    setPage(1);
+  };
+
   // 批量导出 CSV：仅导出当前页选中行（前端生成，零后端改动）
   const handleExportSelected = () => {
     const selectedLogs = viewLogs.filter((l) => selectedNodes.has(l.id));
@@ -198,6 +207,7 @@ export const AuditLogPage: React.FC = () => {
           clearSelection();
           setPage(next);
         }}
+        onPageSizeChange={handlePageSizeChange}
         onScrollPageChange={handleScrollPageChange}
         minLoadedPage={minLoadedPage}
         hasFilters={hasFilters}

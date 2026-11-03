@@ -53,6 +53,10 @@ const mxcadManagerMock = vi.hoisted(() => ({
   isCreated: vi.fn(() => true),
   showMxCAD: vi.fn(),
   getCurrentFileName: vi.fn(() => 'empty_template.mxweb'),
+  isEmptyDocumentName: vi.fn(
+    (name: string | null | undefined) =>
+      name === 'empty_template.mxweb' || name === 'empty.mxweb'
+  ),
   openFile: vi.fn(async () => {}),
   reloadCurrentFile: vi.fn(async () => {}),
   adjustContainerPosition: vi.fn(),
@@ -88,6 +92,10 @@ vi.mock('../services/mxcadManager', () => ({
   setPersonalSpaceId: vi.fn(),
   setOpenedBackInfo: vi.fn(),
   refreshFileName: vi.fn(),
+  isEmptyDocumentName: vi.fn(
+    (name: string | null | undefined) =>
+      name === 'empty_template.mxweb' || name === 'empty.mxweb'
+  ),
   getCooperate: vi.fn(() => cooperateMock),
   exitCollaboration: vi.fn(async () => ({
     exited: true,

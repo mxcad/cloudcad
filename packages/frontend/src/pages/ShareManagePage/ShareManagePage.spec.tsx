@@ -21,6 +21,11 @@ import '@/config/clientSetup';
 import ShareManagePage from './index';
 import type { ShareListItemDto } from '@/api-sdk';
 
+// SelectFileModal 现用 useAuth（分享页内嵌文件选择器），测试须提供 AuthContext
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: true }),
+}));
+
 // ── 数据工厂 ────────────────────────────────────────────────────────────
 
 const FUTURE = new Date(Date.now() + 30 * 86400 * 1000).toISOString();

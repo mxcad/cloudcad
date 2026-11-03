@@ -82,7 +82,7 @@ const OUTPUT_DIR = path.join(PROJECT_ROOT, 'release');
 const { supportedOsList } = require('./pack-lib/linux-os');
 const SUPPORTED_OS = supportedOsList();
 // Linux 标准组件关键文件清单：单一事实源在 pack-lib/components.js（架构审查 ⑪）
-const { LINUX_ASSET_REQUIRED_FILES } = require('./pack-lib/components');
+const { LINUX_ASSET_REQUIRED_FILES, WINDOWS_VC_RUNTIME_DLLS } = require('./pack-lib/components');
 
 const PACKAGE_JSON = require(path.join(PROJECT_ROOT, 'package.json'));
 const VERSION = PACKAGE_JSON.version || '1.0.0';
@@ -1383,6 +1383,71 @@ function writePackageMetadata(tempDir) {
 }
 
 /**
+ * 补齐 Windows PostgreSQL 的 VC++ 运行库 DLL 到 pgsql/bin/。
+ *
+ * 背景：PG 15.x 官方 Windows 便携版（zip）的 initdb/pg_ctl/postgres 是 MSVC 编译，
+ * 依赖 VCRUNTIME140.dll + UCRT（api-ms-win-crt-*，Win10/Server2016+ 系统内置）；
+ * 而 VCRUNTIME140.dll / msvcp140.dll / vcruntime140_1.dll / concrt140.dll 只能由
+ * Microsoft Visual C++ 2015-2022 Redistributable (x64) 提供，便携版 zip 不自带。
+ * 目标机（纯净 win10/Server2022）未装 VC++ Redist 时，initdb 启动即
+ * STATUS_DLL_NOT_FOUND（0xC0000135）静默失败、无任何 stderr，pg-manager 只报
+ * "数据目录初始化失败"（2026-11-02 实测 win10 / Server2022 均复现）。
+ *
+ * 此处从构建机 System32 拷贝到 pgsql/bin/（exe 同目录优先加载），使目标机零前置依赖。
+ * 仅 Windows 打包机可执行（源在 C:\Windows\System32）；非 Windows 平台（Linux 容器
+ * cross-build Windows 包）跳过，交由下方 assertWindowsRuntimeComponents 的 gate 兜底——
+ * 若 runtime/windows 已从 Windows 机带入完整 DLL 则过，否则 fail-fast（宁可中止打包
+ * 也不能出带病部署包）。源目录可用环境变量 VC_RUNTIME_DLL_DIR 覆盖（无 System32 或
+ * 需指定特定版本时）。
+ *
+ * 幂等：目标已存在且大小与源一致则跳过。
+ */
+function ensureWindowsVcRuntimeDlls() {
+  if (os.platform() !== 'win32') {
+    log('Windows PostgreSQL VC++ 运行库补齐跳过（非 Windows 打包机，由 gate 校验兜底）。');
+    return;
+  }
+  const pgsqlBin = path.join(
+    PROJECT_ROOT,
+    'runtime',
+    'windows',
+    'postgresql',
+    'pgsql',
+    'bin'
+  );
+  const srcDir =
+    process.env.VC_RUNTIME_DLL_DIR ||
+    path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
+  const missing = [];
+  const copied = [];
+  for (const dll of WINDOWS_VC_RUNTIME_DLLS) {
+    const src = path.join(srcDir, dll);
+    const dst = path.join(pgsqlBin, dll);
+    if (!fs.existsSync(src)) {
+      missing.push(dll);
+      continue;
+    }
+    if (fs.existsSync(dst) && fs.statSync(dst).size === fs.statSync(src).size) {
+      continue; // 幂等：已就位且大小一致
+    }
+    fs.copyFileSync(src, dst);
+    copied.push(dll);
+  }
+  if (missing.length > 0) {
+    error(
+      `构建机缺少 VC++ 运行库 DLL（${missing.join(', ')}），无法打入 Windows 部署包。\n` +
+        `  请安装 Microsoft Visual C++ 2015-2022 Redistributable (x64)：\n` +
+        `    https://aka.ms/vs/17/release/vc_redist.x64.exe\n` +
+        `  或用环境变量 VC_RUNTIME_DLL_DIR 指向含这些 DLL 的目录后重跑打包。`
+    );
+    process.exit(1);
+  }
+  if (copied.length > 0) {
+    log(`已补齐 PostgreSQL VC++ 运行库 DLL 到 pgsql/bin/（${copied.join(', ')}）。`);
+  }
+}
+
+/**
  * Windows 标准运行时组件出包前校验（node / pm2 / postgresql / redis）。
  *
  * 背景：runtime/windows/ 在 manifest 中是整目录复制，只要 node/ 存在即可通过，
@@ -2051,6 +2116,9 @@ async function packDeploy(platform, variant = 'oss') {
         }
       }
     }
+    // 补齐 PostgreSQL VC++ 运行库 DLL（缺了目标机 initdb 静默失败），
+    // 必须在 gate 校验之前：拷入后下方断言才能通过
+    ensureWindowsVcRuntimeDlls();
     assertWindowsRuntimeComponents();
     // 同理：windows 包清掉跨平台累积的 linux 引擎残留
     cleanPrismaEnginesForPlatform('win');

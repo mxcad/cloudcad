@@ -5,7 +5,10 @@
  * handleExternalRefDownload / handleExtRefFormatDownload。
  */
 import { useState, useCallback } from 'react';
-import { mxcadFileAccessControllerGetFileDownloadExternalRef } from '@/api-sdk';
+import {
+  mxcadFileAccessControllerGetFileDownloadExternalRef,
+  publicFileControllerDownloadExternalRef,
+} from '@/api-sdk';
 import { triggerBlobDownload } from '@/utils/download';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { t } from '@/languages';
@@ -20,11 +23,14 @@ import type { ExtRefFormatState } from '../types';
 
 export interface ExtRefFormatModalOptions {
   fileId: string | null;
+  /** 当前图纸文件 hash：游客态（fileId 为空）下载外部参照时经公开端点定位 */
+  currentFileHash?: string;
   showToast: (message: string, type?: ToastType) => void;
 }
 
 export function useExtRefFormatModal({
   fileId,
+  currentFileHash,
   showToast,
 }: ExtRefFormatModalOptions) {
   const [showExtRefFormatModal, setShowExtRefFormatModal] = useState(false);
@@ -47,7 +53,7 @@ export function useExtRefFormatModal({
       dwgOptions?: DwgOptions
     ) => {
       const extRefFile = downloadingExtRefFile;
-      if (!extRefFile || !fileId) return;
+      if (!extRefFile) return;
       setExtRefDownloading(true);
       try {
         const query: Record<string, string> = { format };
@@ -60,13 +66,26 @@ export function useExtRefFormatModal({
         if ((format === 'dwg' || format === 'dxf') && dwgOptions) {
           query.dwgVersion = String(dwgOptions.dwgVersion);
         }
-        const result =
-          await mxcadFileAccessControllerGetFileDownloadExternalRef({
+        // 登录态：走私有端点（nodeId）；游客态：走公开端点（fileHash）。
+        // 两者皆无（无 fileId 且无 currentFileHash）时无法定位，静默返回。
+        let blobData: Blob | File | undefined;
+        if (fileId) {
+          const result =
+            await mxcadFileAccessControllerGetFileDownloadExternalRef({
+              throwOnError: true,
+              path: { nodeId: fileId, fileName: extRefFile.name },
+              query,
+            });
+          blobData = result?.data as Blob | File | undefined;
+        } else if (currentFileHash) {
+          const result = await publicFileControllerDownloadExternalRef({
             throwOnError: true,
-            path: { nodeId: fileId, fileName: extRefFile.name },
+            path: { hash: currentFileHash, filename: extRefFile.name },
             query,
           });
-        const blobData = result?.data;
+          blobData = result?.data as Blob | File | undefined;
+        }
+        if (!blobData) return;
         const blob =
           blobData instanceof Blob
             ? blobData
@@ -81,7 +100,7 @@ export function useExtRefFormatModal({
         setDownloadingExtRefFile(null);
       }
     },
-    [fileId, downloadingExtRefFile, showToast]
+    [fileId, currentFileHash, downloadingExtRefFile, showToast]
   );
 
   const state: ExtRefFormatState = {

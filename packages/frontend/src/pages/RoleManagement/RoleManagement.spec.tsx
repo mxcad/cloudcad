@@ -408,6 +408,23 @@ describe('RoleManagement 系统角色管理（#299：自定义角色管理已移
         screen.getByRole('button', { name: '保存配置' })
       ).toBeInTheDocument();
     });
+
+    it('BUG-ADMIN-003：纯空白角色名不发送请求并提示（!name 放过空格）', async () => {
+      grantAllPermissions();
+      render(<RoleManagement />);
+      await screen.findByText('系统管理员');
+
+      fireEvent.click(screen.getByRole('button', { name: '新建角色' }));
+      await screen.findByText('新建系统角色');
+
+      fireEvent.change(screen.getByPlaceholderText('请输入角色名称'), {
+        target: { value: '   ' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: '保存配置' }));
+
+      expect(await screen.findByText('请输入角色名称')).toBeInTheDocument();
+      expect(createBodies).toHaveLength(0);
+    });
   });
 
   describe('编辑系统角色权限', () => {

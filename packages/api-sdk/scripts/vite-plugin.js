@@ -23,7 +23,16 @@ export function apiSdkHotReload() {
 
       let debounceTimer;
       const triggerReload = (file) => {
-        if (!file.startsWith(apiSdkSrc) || !file.endsWith('.ts')) return;
+        // Windows 下 chokidar 返回反斜杠路径（已实证：chokidar@4 watch 回调
+        // 给 `D:\...\sdk.gen.ts`），而 apiSdkSrc 已统一为正斜杠。若不在此把
+        // file 也归一化，startsWith 永远不匹配 → SDK 变更静默不失效模块图
+        // （表现为浏览器拿旧 SDK，前端报「does not provide an export named」）。
+        const normalizedFile = String(file).replace(/\\/g, '/');
+        if (
+          !normalizedFile.startsWith(apiSdkSrc) ||
+          !normalizedFile.endsWith('.ts')
+        )
+          return;
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
           try {

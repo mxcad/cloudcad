@@ -86,6 +86,9 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
             placeholder={passwordPlaceholder(policy)}
             {...register('password')}
             aria-invalid={!!fieldErrors.password}
+            aria-describedby={
+              fieldErrors.password ? 'password-error' : undefined
+            }
             onFocus={() => setFocusedField('password')}
           />
           <Button
@@ -100,6 +103,11 @@ export const PasswordStep: React.FC<PasswordStepProps> = ({
           />
           <div className={styles.inputGlow} />
         </div>
+        {fieldErrors.password && (
+          <FieldErrorMessage id="password-error">
+            {fieldErrors.password}
+          </FieldErrorMessage>
+        )}
         {/* 强度条 + 要求清单走共享组件（唯一呈现出口）：清单常显，既是实时达标
             反馈，也是密码框提交失败时的唯一错误信号。空密码时清单仍显示未达标项 */}
         <PasswordStrength password={passwordValue} policy={policy} />

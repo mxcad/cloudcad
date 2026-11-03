@@ -46,6 +46,7 @@ vi.mock('@/api-sdk', () => ({
   downloadControllerDownloadNodeWithFormat: vi.fn(),
   mxcadFileAccessControllerGetFileDownloadExternalRef: vi.fn(),
   publicFileControllerConvertAndDownload: vi.fn(),
+  publicFileControllerDownloadExternalRef: vi.fn(),
 }));
 
 vi.mock('@/utils/hashUtils', () => ({
@@ -201,6 +202,7 @@ import {
   downloadControllerDownloadNodeWithFormat,
   mxcadFileAccessControllerGetFileDownloadExternalRef,
   publicFileControllerConvertAndDownload,
+  publicFileControllerDownloadExternalRef,
 } from '@/api-sdk';
 import { triggerBlobDownload } from '@/utils/download';
 import { uploadFile } from '@/utils/mxcadUploadUtils';
@@ -226,6 +228,9 @@ describe('ExportModals', () => {
     ).mockResolvedValue({ data: new Blob(['x']) });
     (
       publicFileControllerConvertAndDownload as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({ data: new Blob(['x']) });
+    (
+      publicFileControllerDownloadExternalRef as ReturnType<typeof vi.fn>
     ).mockResolvedValue({ data: new Blob(['x']) });
   });
 
@@ -553,5 +558,33 @@ describe('ExportModals', () => {
         query: { format: 'mxweb' },
       });
     });
+  });
+
+  it('游客态（fileId 为空）外部参照下载走公开端点，不调登录态端点', async () => {
+    const ref = createRef<ExportModalsHandle>();
+    render(<ExportModals ref={ref} fileId={null} currentFileHash="abc123" />);
+
+    const extRefFile: ExternalReferenceFile = {
+      name: 'ref.dwg',
+      type: 'ref',
+      uploadState: 'notSelected',
+      progress: 0,
+    };
+    act(() => {
+      ref.current?.openExtRefDownload(extRefFile);
+    });
+    expect(screen.getByText('选择下载格式')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('下载'));
+    await waitFor(() => {
+      expect(publicFileControllerDownloadExternalRef).toHaveBeenCalledWith({
+        throwOnError: true,
+        path: { hash: 'abc123', filename: 'ref.dwg' },
+        query: { format: 'mxweb' },
+      });
+    });
+    expect(
+      mxcadFileAccessControllerGetFileDownloadExternalRef
+    ).not.toHaveBeenCalled();
   });
 });

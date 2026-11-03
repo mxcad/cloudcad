@@ -28,7 +28,11 @@ import { pino } from 'pino';
 import { join, resolve } from 'path';
 import { mkdirSync } from 'fs';
 import { PROJECT_ROOT } from './config/configuration';
-import { buildPinoHttpOptions } from './config/pino-http-options';
+import {
+  buildPinoHttpOptions,
+  buildPinoStreamDescriptors,
+  buildPinoStreams,
+} from './config/pino-http-options';
 import { resolveLogLevels } from '@cloudcad/contracts';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
@@ -78,6 +82,7 @@ import { AlertModule } from './alert/alert.module';
 import { TaskRunModule } from './task-run/task-run.module';
 import { BackupModule } from './backup/backup.module';
 import { ConversionMonitorModule } from './conversion-monitor/conversion-monitor.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { NoticeCenterModule } from './notice-center/notice-center.module';
 
 // env 文件查找路径：支持多种运行模式
@@ -116,15 +121,22 @@ const logRetentionDays =
 // cleanup_run 等 info 日志在落盘前就被丢弃，#325 需临时 LOG_LEVEL=info 补救）。
 // 实时排障期用 LOG_CONSOLE_LEVEL 临时放开，不动落盘级别。
 const logLevels = resolveLogLevels(process.env, isProduction);
-// 应用日志实例：级别分裂 transport 的唯一持有者。放在模块求值期创建，
+// 应用日志实例：级别分裂（stdout 实时 + pino-roll 落盘）的唯一持有者。放在模块求值期创建，
 // 因为必须在 NestFactory.create() 之前就接管 NestJS 内置 Logger（见下方注释）。
-const appPinoOptions = buildPinoHttpOptions(
-  logLevels,
-  logDirAbs,
-  logRetentionDays,
-  isProduction,
+// buildPinoHttpOptions 返回基础配置（根级别/脱敏/mixin）；buildPinoStreams 物化两条流：
+// stdout 走主进程（Windows GBK 控制台乱码修复，见 pino-http-options.ts），落盘走 pino-roll worker。
+const appPinoOptions = buildPinoHttpOptions(logLevels);
+const appLogger = pino(
+  appPinoOptions,
+  buildPinoStreams(
+    buildPinoStreamDescriptors(
+      logLevels,
+      logDirAbs,
+      logRetentionDays,
+      isProduction,
+    ),
+  ),
 );
-const appLogger = pino(appPinoOptions);
 // NestJS 内置 Logger（全仓 181 处 `new Logger(...)`）与框架内部 logger
 //（[InstanceLoader] / [RouterExplorer] / [NestFactory]）直写 process.stdout，
 // 完全绕过上面的 pino transport：LOG_CONSOLE_LEVEL=error 对它们零作用
@@ -198,6 +210,7 @@ Logger.overrideLogger(
     TaskRunModule,
     BackupModule,
     ConversionMonitorModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [

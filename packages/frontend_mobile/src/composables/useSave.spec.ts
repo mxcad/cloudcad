@@ -227,6 +227,9 @@ describe('useSave.save — 既有门禁不得回归', () => {
       message: '请另存为到云图',
     });
     expect(saveToNode).not.toHaveBeenCalled();
+    // 新建图纸无保存对象：判定 must 先于引擎 blob 生成，否则引擎对空模板的
+    // saveFile 回调不触发会永挂、分享「先保存到云端并分享」确认后无反应
+    expect(getMxwebBlob).not.toHaveBeenCalled();
   });
 
   it('当前文件已被外部删除 → 需另存为新文件', async () => {

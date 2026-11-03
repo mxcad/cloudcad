@@ -1,16 +1,17 @@
 import { addCommand } from "@/plugins/mxcad/command";
 import { createVNode, defineComponent, h, onMounted, ref, render } from "vue";
-import { FloatingPanel, Row, Col, Icon } from "vant";
+import { Row, Col, Icon } from "vant";
 import { onClickOutside } from "@vueuse/core";
 import { MxCpp } from "mxcad";
 import { currentLayerNameHistoryState } from "./currentLayerNameHistoryState";
+import { FloatingPanelDrawer } from "@/components/FloatingPanelDrawer";
 
 const anchors = new Array(7).fill(0).map((_, index) => {
   if (index === 0) return 100;
   return Math.round(0.1 * index * window.innerHeight);
 });
 const height = ref(anchors[0]);
-const el = ref<InstanceType<typeof FloatingPanel>>();
+const el = ref<InstanceType<typeof FloatingPanelDrawer>>();
 export interface Layer {
   name: string;
   off: number;
@@ -50,13 +51,13 @@ const showLayerList = ()=> {
 // ‍ Return data or components used for rendering
 
       return ()=> (
-        <FloatingPanel
+        <FloatingPanelDrawer
           ref={el}
           v-model:height={height.value}
           anchors={anchors}
           content-draggable={false}
-          style="--van-floating-panel-background: #3C3C3C"
-          class="layer_list"
+          panel-style="--van-floating-panel-background: #3C3C3C"
+          onClose={closePanel}
         >
           { layerListData.value.map((item)=> (
               <Row class="layer_list_item" key={item.id} onClick={()=> setData(item, "off", item.off === 1 ? 0 : 1)}>
@@ -66,12 +67,12 @@ const showLayerList = ()=> {
                 <Col class="layer_list_item_name">{ item.name }</Col>
               </Row>
           )) }
-        </FloatingPanel>
+        </FloatingPanelDrawer>
       );
     },
   });
   
-  const vNode = createVNode(
+  vNode = createVNode(
     h(() => (
       <LayerList></LayerList>
     ))
@@ -80,14 +81,20 @@ const showLayerList = ()=> {
   setTimeout(() => {
     cancel && cancel();
     cancel = onClickOutside(el.value?.$el, () => {
-      vNode.el && vNode.el.remove()
-      cancel();
+      closePanel();
     });
   }, 500);
   
 }
 
 let cancel!: () => void;
+let vNode: ReturnType<typeof createVNode> | null = null;
+
+const closePanel = () => {
+  vNode?.el && vNode.el.remove();
+  vNode = null;
+  cancel && cancel();
+};
 
 async function layer_list() {
   const database =  MxCpp.getCurrentDatabase()

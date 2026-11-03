@@ -259,6 +259,7 @@ password_policy:
 ip_blacklist:
   invalid_ip: 無效的 IP 或 CIDR 格式
   duplicate_entry: 該 IP/CIDR 已在黑名單中
+  loopback_not_allowed: 不能將本機環回位址加入 IP 黑名單
   blocked: 拒絕訪問
   not_found: 黑名單條目不存在
 ip_whitelist:
@@ -312,6 +313,7 @@ billing:
   refund_failed_state_restored: 退款請求發送失敗，訂單狀態已恢復
   downgrade_not_allowed: 不能降級購買，請選擇升級或續費當前等級
   amount_below_minimum: 訂單金額低於支付網關最低限額，請檢查檔位價格配置
+  payment_disabled: 支付功能未開啟，暫時無法購買或續費
   refund_apply_not_allowed: 目前訂單狀態不允許申請退款
   refund_apply_already_pending: 該訂單已有待審核的退款申請
   refund_application_not_found: 退款申請不存在
@@ -447,3 +449,39 @@ mxcad_engine_extra:
   ini_read_failed: "讀取引擎設定檔失敗: {path}"
   ini_parse_failed: "引擎設定檔不是有效 JSON: {path}"
   ini_write_failed: "寫入引擎設定檔失敗: {path}"
+feedback:
+  anonymous_disabled: 當前未開放匿名回饋，請登錄後提交
+  anon_limit_exceeded: 您今天的匿名回饋次數已達上限，請登錄後繼續提交
+  user_limit_exceeded: 您今天的回饋次數已達上限，請明天再試
+  query_rate_limited: 查詢過於頻繁，請稍後再試
+  content_too_short: 回饋內容過短，請補充後再提交
+  content_too_long: 回饋內容過長，請精簡後再提交
+  code_not_found: 回饋不存在或查詢碼無效
+  not_found: 回饋不存在
+  status_locked_adopted: 已採納的回饋不可改狀態，如需撤銷請處理獎勵
+  reject_reason_required: 駁回必須填寫原因
+  already_adopted: 該回饋已採納
+  reward_exists: 該回饋已存在獎勵記錄
+  reward_not_found: 獎勵記錄不存在
+  reward_not_pending: 該獎勵已處理，不能重複發放
+  reward_already_revoked: 該獎勵已撤銷
+  remark_required: 發放獎勵必須填寫客服核實備註
+  tier_not_found: 會員等級不存在
+  user_not_found: 目標帳號不存在或已註銷
+  invalid_tier: 獎勵會員等級僅支援 1-3
+  invalid_duration: 獎勵時長僅支援 7/30/90 天
+  attachment_missing: 請選擇要上傳的檔案
+  attachment_type_unsupported: 不支援的附件類型
+  attachment_too_large: 附件大小超過上限
+  attachment_total_exceeded: 附件總數超過上限
+  attachment_image_exceeded: 圖片附件數量超過上限
+  attachment_drawing_exceeded: 圖紙附件數量超過上限
+  attachment_document_exceeded: 文件附件數量超過上限
+  attachment_invalid_image: 圖片檔案無效，請重新上傳
+  attachment_drawing_not_found: 圖紙不存在
+  attachment_reference_login_required: 引用既有圖紙請先登入
+  attachment_file_missing: 附件檔案不存在
+  attachment_not_found: 附件不存在
+  attachment_not_owner: 附件不屬於目前使用者
+  attachment_reference_no_file: 圖紙引用請透過圖紙介面下載
+  attachment_forbidden: 無權下載該附件

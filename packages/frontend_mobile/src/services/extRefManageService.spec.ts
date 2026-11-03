@@ -224,25 +224,28 @@ describe('extRefManageService', () => {
       expect(onProgress).toHaveBeenLastCalledWith(100);
     });
 
-    it('公开场景大文件：分片上传（1MB/片）', async () => {
-      // 2.5MB → 3 片
+    it('公开场景大文件：整体上传（后端契约无分片，分片会覆盖写只剩最后一片）', async () => {
       const big = new File(['x'.repeat(2.5 * 1024 * 1024)], 'big.dwg', { type: 'application/octet-stream' });
       mockPublicUploadExtReference.mockResolvedValue({ data: {}, error: undefined });
+      const onProgress = vi.fn();
       await replaceExtRef(
         PUBLIC_CTX,
         { name: 'big.dwg', type: 'ref', exists: false, uploadState: 'notSelected', progress: 0 },
-        big
+        big,
+        onProgress
       );
-      expect(mockPublicUploadExtReference).toHaveBeenCalledTimes(3);
-      const first = mockPublicUploadExtReference.mock.calls[0][0].body as Record<string, unknown>;
-      const last = mockPublicUploadExtReference.mock.calls[2][0].body as Record<string, unknown>;
-      expect(first.chunk).toBe(0);
-      expect(first.chunks).toBe(3);
-      expect(last.chunk).toBe(2);
-      expect(last.chunks).toBe(3);
+      // 一次整体上传，不带分片字段（分片会被后端当完整文件覆盖写 → 文件损坏）
+      expect(mockPublicUploadExtReference).toHaveBeenCalledTimes(1);
+      const body = mockPublicUploadExtReference.mock.calls[0][0].body as Record<string, unknown>;
+      expect(body.srcFileHash).toBe('abc123hash');
+      expect(body.extRefFile).toBe('big.dwg');
+      expect(body.file).toBe(big);
+      expect(body.chunk).toBeUndefined();
+      expect(body.chunks).toBeUndefined();
+      expect(onProgress).toHaveBeenLastCalledWith(100);
     });
 
-    it('节点场景图片：uploadExtRefImage 带 preloading 的 srcDwgfileHash', async () => {
+    it('节点场景图片：uploadExtRefImage 带 preloading 的 srcDwgfileHash + updatePreloading', async () => {
       const file = new File(['img'], 'a.png', { type: 'image/png' });
       mockGetPreloadingData.mockResolvedValue({ hash: 'src-hash', images: [], externalReference: [] });
       mockUploadExtRefImage.mockResolvedValue(undefined);
@@ -256,10 +259,32 @@ describe('extRefManageService', () => {
         file,
         srcDwgfileHash: 'src-hash',
         extRefFile: 'a.png',
+        updatePreloading: true,
+        originalXrefName: undefined,
       });
     });
 
-    it('节点场景图纸：uploadExtRefDwg', async () => {
+    it('节点场景图片（替换 exists=true）：传 originalXrefName 保持参照名不变', async () => {
+      const file = new File(['img'], 'new.png', { type: 'image/png' });
+      mockGetPreloadingData.mockResolvedValue({ hash: 'src-hash', images: [], externalReference: [] });
+      mockUploadExtRefImage.mockResolvedValue(undefined);
+      await replaceExtRef(
+        NODE_CTX,
+        { name: 'a.png', type: 'img', exists: true, uploadState: 'success', progress: 100 },
+        file
+      );
+      expect(mockUploadExtRefImage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nodeId: 'node-1',
+          file,
+          extRefFile: 'a.png',
+          updatePreloading: true,
+          originalXrefName: 'a.png',
+        })
+      );
+    });
+
+    it('节点场景图纸：uploadExtRefDwg 带 ext_ref_file（非空，后端 @IsNotEmpty）', async () => {
       const file = new File(['dwg'], 'b.dwg', { type: 'application/octet-stream' });
       mockUploadExtRefDwg.mockResolvedValue(undefined);
       await replaceExtRef(
@@ -267,7 +292,28 @@ describe('extRefManageService', () => {
         { name: 'b.dwg', type: 'ref', exists: false, uploadState: 'notSelected', progress: 0 },
         file
       );
-      expect(mockUploadExtRefDwg).toHaveBeenCalledWith({ nodeId: 'node-1', file });
+      expect(mockUploadExtRefDwg).toHaveBeenCalledWith({
+        nodeId: 'node-1',
+        file,
+        extRefFile: 'b.dwg',
+        originalXrefName: undefined,
+      });
+    });
+
+    it('节点场景图纸（替换 exists=true）：传 extRefFile + originalXrefName', async () => {
+      const file = new File(['dwg'], 'new.dwg', { type: 'application/octet-stream' });
+      mockUploadExtRefDwg.mockResolvedValue(undefined);
+      await replaceExtRef(
+        NODE_CTX,
+        { name: 'b.dwg', type: 'ref', exists: true, uploadState: 'success', progress: 100 },
+        file
+      );
+      expect(mockUploadExtRefDwg).toHaveBeenCalledWith({
+        nodeId: 'node-1',
+        file,
+        extRefFile: 'b.dwg',
+        originalXrefName: 'b.dwg',
+      });
     });
 
     it('上传失败即抛（不透传为成功）', async () => {

@@ -19,7 +19,7 @@ import {
   nodeControllerDeleteNode,
 } from '@cloudcad/api-sdk/sdk.gen'
 import { t } from '@/languages'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
 import { validateName } from '@/utils/validateName'
 import type { useUndoSnackbar } from '@/composables/useUndoSnackbar'
 
@@ -79,7 +79,8 @@ export function useCreateDrawing(
       }
     } catch (e) {
       closeToast()
-      showToast(t('创建失败，请重试'))
+      // 后端文案优先（如名称冲突/配额），网络异常等无后端文案时落回兜底
+      showToast(errMsg(e, t('创建失败，请重试')))
     }
   }
 

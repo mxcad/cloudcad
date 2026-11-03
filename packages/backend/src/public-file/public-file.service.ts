@@ -10,7 +10,7 @@
 // https://www.mxdraw.com/
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PublicFileUploadService } from './services/public-file-upload.service';
 import { FileConversionService } from '../mxcad/conversion/file-conversion.service';
 import { ConvertFileParamsDto } from './dto';
@@ -19,12 +19,13 @@ import { StorageManager } from '../storage-management/services/storage-manager.s
 import { RestrictionEngine } from '../vip/restriction-engine.service';
 import { QuotaExceededException } from '../vip/errors/quota-exceeded.error';
 import { PreloadingDataDto } from '../mxcad/dto/preloading-data.dto';
-import { FileTypeDetector } from '@cloudcad/contracts';
+import { FileTypeDetector, extRefDiskCandidates, extRefDisplayName } from '@cloudcad/contracts';
 import { enrichPreloadingFileInfoList } from '../mxcad/utils/preloading-file-info';
 import {
   findArtifactByHash,
   findReadyArtifactByHash,
 } from '../mxcad/utils/conversion-artifact';
+import { ExtRefStorageService } from '../mxcad/external-ref/ext-ref-storage.service';
 import { buildIngestConversionOptions } from '../mxcad/utils/ingest-conversion-options';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -34,7 +35,7 @@ import {
   ConversionCoreError,
   runConversionCore,
 } from '../file-system/file-download/conversion-core';
-import { isDirectFormat } from '../file-system/file-download/format-policy';
+import { isDirectFormat, resolveOutputFormat } from '../file-system/file-download/format-policy';
 
 import { I18nContext } from 'nestjs-i18n';
 /**
@@ -64,7 +65,8 @@ export class PublicFileService {
     private readonly databaseService: DatabaseService,
     private readonly storageManager: StorageManager,
     private readonly restrictionEngine: RestrictionEngine,
-    private readonly fileConversionService: FileConversionService
+    private readonly fileConversionService: FileConversionService,
+    private readonly extRefStorageService: ExtRefStorageService
   ) {}
 
   /**
@@ -112,21 +114,18 @@ export class PublicFileService {
   }
 
   /**
-   * 在 uploads/{hash} 目录下查找指定文件
-   * 如 findFileInDir(hash, "A1.dwg.mxweb") 返回 uploads/{hash}/A1.dwg.mxweb
+   * 在 uploads/{hash} 目录下查找指定外部参照文件（候选集统一，单一事实源）。
+   * 如 findFileInDir(hash, "block.dwg") 依序尝试 block.dwg.mxweb / block.dwg /
+   * block.mxweb（候选顺序见 @cloudcad/contracts 的 extRefDiskCandidates）。
    */
   async findFileInDir(hash: string, filename: string): Promise<string | null> {
     const dirPath = path.join(this.uploadService.getUploadPath(), hash);
-    const filePath = path.join(dirPath, filename);
 
-    if (this.isWithinUploadPath(filePath) && fs.existsSync(filePath)) {
-      return filePath;
-    }
-
-    // DWG/DXF 外部参照在磁盘上存储为 {filename}.mxweb
-    const mxwebPath = path.join(dirPath, `${filename}.mxweb`);
-    if (this.isWithinUploadPath(mxwebPath) && fs.existsSync(mxwebPath)) {
-      return mxwebPath;
+    for (const candidate of extRefDiskCandidates(filename)) {
+      const filePath = path.join(dirPath, candidate);
+      if (this.isWithinUploadPath(filePath) && fs.existsSync(filePath)) {
+        return filePath;
+      }
     }
 
     return null;
@@ -239,8 +238,9 @@ export class PublicFileService {
                       buildIngestConversionOptions({
                         srcPath: tempFilePath,
                         fileHash: hash,
-                        // 公开文件转换无节点，失败现场不挂节点目录
-                        debugNodeId: undefined,
+                        // 公开文件转换无节点：用文件 hash 兜底做落盘目录标识，
+                        // 失败现场仍落盘（否则未登录外部参照上传失败丢原因）
+                        debugNodeId: hash,
                       })
                     );
 
@@ -251,8 +251,18 @@ export class PublicFileService {
                     ) ?? `文件转换失败: ${ret?.message || '未知错误'}`;
                   }
 
-                  // 转换工具在原始文件旁边生成 {originalName}.mxweb，如: {hash}.dwg -> {hash}.dwg.mxweb
-                  const targetPath = tempFilePath + '.mxweb';
+                  // 引擎按 srcPath 临时文件完整名自定产物名：{临时文件名}.mxweb。
+                  // 实测（公开上传）：临时文件 = srcDir/{extRefFileName}（逻辑名），
+                  // 故产物 = srcDir/{extRefFileName}.mxweb。不能按 {hash}.{srcExt}.mxweb
+                  // 推导——那是登录态约定（登录态临时文件 = {hash}.{srcExt}），游客态
+                  // 临时文件用逻辑名，二者产物名不同（见 ext-ref-storage 契约注释）。
+                  const artifactPath = path.join(srcDir, `${extRefFileName}.mxweb`);
+                  // 落位为外部参照标准磁盘名 {extRefFileName}.mxweb（契约单一事实源）
+                  const targetPath = await this.extRefStorageService.stageConvertedExtRefArtifact({
+                    srcFilePath: artifactPath,
+                    targetDir: srcDir,
+                    logicalName: extRefFileName,
+                  });
 
                   logger.log(
                     `[uploadExtReference] 外部参照文件上传并转换成功: ${extRefFileName} -> ${targetPath}`
@@ -307,7 +317,7 @@ export class PublicFileService {
   }
 
   /**
-   * 检查外部参照文件是否存在
+   * 检查外部参照文件是否存在（候选集统一，与 findFileInDir 一致）
    * @param srcFileHash 主图纸文件的 hash
    * @param extRefFileName 外部参照文件名
    * @returns 是否存在
@@ -319,21 +329,131 @@ export class PublicFileService {
     const uploadPath = this.uploadService.getUploadPath();
     const srcDir = path.join(uploadPath, srcFileHash);
 
-    const isDwgFile = FileTypeDetector.isCadFile(extRefFileName);
-
-    let targetPath: string;
-    if (isDwgFile) {
-      targetPath = path.join(srcDir, `${extRefFileName}.mxweb`);
-    } else {
-      targetPath = path.join(srcDir, extRefFileName);
-    }
-
     // srcHash/fileName 来自公开查询参数且无格式校验，越界路径一律按不存在处理，
     // 否则 existsSync 成为任意文件存在性探测（oracle）
-    if (!this.isWithinUploadPath(targetPath)) {
-      return false;
+    for (const candidate of extRefDiskCandidates(extRefFileName)) {
+      const candidatePath = path.join(srcDir, candidate);
+      if (!this.isWithinUploadPath(candidatePath)) {
+        continue;
+      }
+      if (fs.existsSync(candidatePath)) {
+        return true;
+      }
     }
-    return fs.existsSync(targetPath);
+    return false;
+  }
+
+  /**
+   * 外部参照下载/格式转换（公开接口，无需认证——游客态）。
+   *
+   * 游客态无 nodeId，外部参照定位走 {filesDataPath}/uploads/{srcHash}/ 下的磁盘
+   * 候选集（extRefDiskCandidates，与登录态 findFileInDir / checkExtReferenceExists
+   * 同一契约，禁止自写命名清单）。路由与登录态 serveExternalRefDownload 同口径：
+   * - mxweb/original 或图片 → 直取源文件流（图片不转换，格式白名单不适用）；
+   * - dwg/dxf/pdf → 转换（resolveOutputFormat 决策 + withConversionQuota 频率占位）。
+   *
+   * @param srcHash 源图纸文件 hash（uploads/{srcHash}/ 目录标识）
+   * @param fileName 外部参照逻辑名（如 `block.dwg`，不拼 `.mxweb`）
+   * @param params 目标格式与转换参数（width/height/colorPolicy/dwgVersion）
+   * @param ip 客户端 IP（游客转换频率限制，ADR-0043）
+   * @param userId 可选认证用户（携带有效 JWT 时按 userId 计数）
+   * @returns 待流式返回的文件信息；isConverted=true 表示转换产物，流结束后须清理
+   * @throws NotFoundException 外部参照文件不存在
+   * @throws BadRequestException 未知/不支持的目标格式
+   * @throws QuotaExceededException 转换频率超限（ADR-0043）
+   */
+  async serveExternalRefDownload(
+    srcHash: string,
+    fileName: string,
+    params: {
+      format?: string;
+      width?: string;
+      height?: string;
+      colorPolicy?: string;
+      dwgVersion?: string;
+    },
+    ip?: string,
+    userId?: string,
+  ): Promise<{
+    filePath: string;
+    filename: string;
+    mimeType: string;
+    isConverted: boolean;
+  }> {
+    const filePath = await this.findFileInDir(srcHash, fileName);
+    if (!filePath) {
+      throw new NotFoundException(
+        I18nContext.current()?.t('error.file.not_found') ?? '文件不存在',
+      );
+    }
+
+    const ext = path.extname(fileName).toLowerCase();
+    const isImageFile = FileTypeDetector.isImageFile(fileName);
+    const downloadFormat = params.format || 'mxweb';
+
+    // 直取：mxweb/original 或图片。显示名剥 `.mxweb` 容器（契约单一事实源），
+    // 避免把 `block.dwg.mxweb` 当下载名暴露给用户。
+    if (isDirectFormat(downloadFormat) || isImageFile) {
+      return {
+        filePath,
+        filename: extRefDisplayName(fileName),
+        mimeType: 'application/octet-stream',
+        isConverted: false,
+      };
+    }
+
+    // 转换：dwg/dxf/pdf。格式决策（引擎参数默认值 / 产物扩展名 / 白名单）走
+    // FormatPolicy 单一出口，与登录态 serveExternalRefDownload 同口径。
+    const resolved = resolveOutputFormat(downloadFormat, {
+      width: params.width,
+      height: params.height,
+      colorPolicy: params.colorPolicy,
+      dwgVersion: params.dwgVersion ? Number(params.dwgVersion) : undefined,
+    });
+    const outDir = path.dirname(filePath);
+    const baseName = path.basename(fileName, ext);
+    const outName = `${baseName}${resolved.targetExt}`;
+    const outPath = path.join(outDir, outName);
+
+    // 频率占位（ADR-0043）：已登录按 userId，游客按 IP，超限 403。
+    // 占位/释放走 withConversionQuota 单点：成功消耗占位，任何失败保证释放。
+    await this.restrictionEngine.withConversionQuota(
+      { userId, ip },
+      async () => {
+        const convertResult = await this.fileConversionService.convertServerFile({
+          srcPath: filePath,
+          fileHash: '',
+          nodeId: '',
+          userId,
+          createPreloadingData: false,
+          outname: outName,
+          cmd: downloadFormat === 'pdf' ? 'toPdf' : 'toDwg',
+          ...resolved.engineParams,
+        });
+        if (convertResult?.code !== 0) {
+          throw new InternalServerErrorException(
+            I18nContext.current()?.t('error.mxcad.conversion_failed') ??
+              '文件转换失败',
+          );
+        }
+        try {
+          await fs.promises.access(outPath);
+        } catch {
+          throw new InternalServerErrorException(
+            I18nContext.current()?.t(
+              'error.mxcad.conversion_output_not_found',
+            ) ?? '转换输出文件不存在',
+          );
+        }
+      },
+    );
+
+    return {
+      filePath: outPath,
+      filename: outName,
+      mimeType: 'application/octet-stream',
+      isConverted: true,
+    };
   }
 
   /**

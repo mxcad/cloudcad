@@ -73,7 +73,9 @@ export const ShareManagePage: React.FC = () => {
           onCopy={actions.handleCopy}
           onEditExpiry={actions.handleEditExpiry}
           onRevoke={actions.confirmRevoke}
+          onPreviewPoster={actions.handlePreviewPoster}
           onPageChange={data.handlePageChange}
+          onPageSizeChange={data.handlePageSizeChange}
           onScrollPageChange={data.handleScrollPageChange}
           minLoadedPage={data.minLoadedPage}
           loadError={data.error}
@@ -104,6 +106,7 @@ export const ShareManagePage: React.FC = () => {
         showFileSelector={actions.showFileSelector}
         shareFiles={actions.shareFiles}
         showShareDialog={actions.showShareDialog}
+        initialShare={actions.initialShare}
         editTarget={actions.editTarget}
         showEditModal={actions.showEditModal}
         showRevokeConfirm={actions.showRevokeConfirm}

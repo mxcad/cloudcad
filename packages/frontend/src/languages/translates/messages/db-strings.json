@@ -484,5 +484,11 @@
         "en-US": "Current project policy does not allow {action}, blocked",
         "ko-KR": "현재 프로젝트 정책이 {action}을 허용하지 않아 차단됨",
         "$id": 1000130
+    },
+    "全部奖励": {
+        "zh-TW": "全部獎勵",
+        "en-US": "All Rewards",
+        "ko-KR": "모든 보상",
+        "$id": 1000372
     }
 }

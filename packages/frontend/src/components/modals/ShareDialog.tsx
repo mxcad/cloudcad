@@ -14,9 +14,13 @@ import {
   Plus,
   ArrowLeft,
   FileText,
+  Download,
+  Crop,
+  Image,
 } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useCopy } from '../../hooks/useCopy';
 import { useCADEditorStore } from '../../stores/useCADEditorStore';
@@ -40,6 +44,14 @@ import {
 } from '@/constants/share';
 import { t } from '@/languages';
 import { shareUrl } from '@/utils/shareUrl';
+import { API_BASE_URL } from '@/config/apiConfig';
+import {
+  SHARE_POSTER_DEFAULT_LAYOUT,
+  appendShareRegionToUrl,
+  type SharePosterLayout,
+} from '@cloudcad/platform';
+import { downloadSharePoster, composeSharePosterDataUrl } from '@/lib/sharePoster';
+import type { ThumbnailRegion } from '../../services/mxcadManager/mxcadThumbnail';
 import './ShareManageDialog.css';
 
 interface ShareListItem {
@@ -57,9 +69,11 @@ interface ShareDialogProps {
   fileName?: string;
   files?: Array<{ fileId: string; fileName: string }>;
   readOnly?: boolean;
+  /** 分享管理页行内「预览分享图片」：打开弹窗后自动预览该分享（null=不自动预览） */
+  initialShare?: ShareInfo | null;
 }
 
-interface ShareInfo {
+export interface ShareInfo {
   token: string;
   url: string;
   expiresAt: string | null;
@@ -81,6 +95,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   fileName,
   files: propFiles,
   readOnly = false,
+  initialShare,
 }) => {
   const { currentFileId } = useCADEditorStore();
   const { showToast } = useNotification();
@@ -137,6 +152,318 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
 
   type ViewMode = 'list' | 'create' | 'created';
   const [view, setView] = useState<ViewMode>('list');
+
+  // 分享图片（海报）下载：布局选择 + 下载中状态
+  const [posterLayout, setPosterLayout] = useState<SharePosterLayout>(
+    SHARE_POSTER_DEFAULT_LAYOUT
+  );
+  const [downloadingPoster, setDownloadingPoster] = useState(false);
+  // 指定区域生成缩略图（方案 A：图纸上框选）。null = 整图包围盒（默认）。
+  const [posterRegion, setPosterRegion] = useState<ThumbnailRegion | null>(null);
+  // 框选区域是否与图纸直角方形边框重合（决定海报是否省略圆角描边）。
+  // 必须在「框选结束瞬间」算好缓存：viewCoordLong2Cad 读当前实时视图缩放，出图时
+  // generatePosterImage 会把视口 zoomW 到区域改变缩放，再算就失真——故只在框选
+  // 结束（pickThumbnailRegion 返回）那一刻检测一次，下载/预览一律复用此缓存值。
+  const [posterHasBorder, setPosterHasBorder] = useState(false);
+  // 海报选项（预览弹框内动态调整）：底部名称 + 二维码大小。
+  // 底部名称 = 一个输入框（默认文件名称），**清空即不显示**（footerText=输入框内容或 null）。
+  const [footerName, setFooterName] = useState('');
+  // 二维码与「扫一扫看图纸」文字一体缩放（0.5~2.0，滑杆步进 0.1，默认 1）
+  const [qrScale, setQrScale] = useState(1);
+  // 最近一次 generatePosterImage 的高清图纸图 dataUrl：选项调整只重 canvas 合成
+  // （composeSharePosterDataUrl），不重新引擎截图（zoomW+createCanvasImageData 很重）。
+  const [posterThumbDataUrl, setPosterThumbDataUrl] = useState<string | null>(
+    null
+  );
+  // 当前预览的二维码内容（选项调整重合成用；列表行预览用该行原始 URL）
+  const [previewShareUrl, setPreviewShareUrl] = useState('');
+  // 预览：合成海报 dataURL + 加载态 + 框选进行中
+  const [showPosterPreview, setShowPosterPreview] = useState(false);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [pickingRegion, setPickingRegion] = useState(false);
+
+  // 布局（尺寸/比例）选项：用户拍板「风格=布局尺寸」，默认手机竖版
+  const POSTER_LAYOUT_OPTIONS = [
+    { value: 'phone', label: t('手机竖版') },
+    { value: 'square', label: t('正方形') },
+    { value: 'landscape', label: t('横版') },
+  ];
+
+  // 分享图片下载（路径 A：当前图纸在屏直接 canvas 生成；失败回落后端已有缩略图）。
+  // 仅当分享的文件 = 编辑器当前打开文件时才能直接生成；否则走路径 B（见 ShareTable）。
+  const isEditorContext = resolvedFileId === currentFileId;
+  // 后端返回相对 path，展示/复制/二维码统一走 platform toShareUrl（两端同一规则）
+  const fullUrl = shareUrl(shareInfo?.url);
+  /**
+   * 解析海报缩略图源：编辑器上下文（且当前文件 = 分享文件）直接出图（可用框选区域），
+   * 否则复用后端已有缩略图。返回 thumbnail=null 表示无可用缩略图；hasBorder 仅当
+   * 出图来源是 generatePosterImage（编辑器上下文）且有框选区域时才有意义（决定海报
+   * 是否省略圆角描边），后端缩略图回退时恒 false。
+   */
+  const resolvePosterThumbnail = useCallback(async (): Promise<{
+    thumbnail: string | null;
+    hasBorder: boolean;
+  }> => {
+    if (!resolvedFileId) return { thumbnail: null, hasBorder: false };
+    let thumbnail: string | null = null;
+    let hasBorder = false;
+    if (isEditorContext) {
+      const { generatePosterImage } = await import(
+        '../../services/mxcadManager/mxcadThumbnail'
+      );
+      // 海报图纸图用引擎高分辨率 BMP（指定区域只截该区域，整图截包围盒），清晰度远高于 200px 缩略图。
+      // 缩略图上传（200px png，文件列表/后台渲染用）与海报截图解耦：由节点保存/另存为/后台渲染
+      // 的独立机制上传（saveSequences/backgroundRender/mxcadInstanceManager），此处只出海报图。
+      // hasBorder 用框选结束瞬间缓存的 posterHasBorder（实时 viewCoordLong2Cad 在出图
+      // zoomW 后会失真，不能在此重算）。
+      const posterResult = await generatePosterImage(posterRegion, posterHasBorder);
+      if (posterResult?.dataUrl) {
+        thumbnail = posterResult.dataUrl;
+        hasBorder = posterResult.hasBorder;
+      }
+    }
+    if (!thumbnail) {
+      const { checkThumbnail } = await import(
+        '../../services/mxcadManager/mxcadThumbnail'
+      );
+      if (await checkThumbnail(resolvedFileId)) {
+        thumbnail = `${API_BASE_URL}/v1/file-system/nodes/${resolvedFileId}/thumbnail`;
+      } else {
+        // 无缩略图：后台渲染出图（分享管理页路径 B 能力）——ShareDialog 被管理页
+        // 行内「预览分享图片」复用时（非编辑器上下文）也能出图，不因「未打开图纸」失败。
+        const { renderShareThumbnailInBackground } = await import(
+          '../../services/mxcadManager/backgroundRender'
+        );
+        thumbnail = await renderShareThumbnailInBackground(resolvedFileId);
+      }
+    }
+    return { thumbnail, hasBorder };
+  }, [resolvedFileId, isEditorContext, posterRegion, posterHasBorder]);
+
+  // 名称/滑杆最新值同步到 ref：rerenderPreview 的 setTimeout 读 ref，避免闭包捕获旧 state
+  const posterOptsRef = useRef({
+    footerText: undefined as string | null | undefined,
+    qrScale: 1,
+  });
+  posterOptsRef.current = {
+    footerText: footerName.trim() || null,
+    qrScale,
+  };
+
+  /** 用缓存的图纸图 + 当前海报选项重合成预览（选项调整时调用；不重新引擎截图）。 */
+  const recomposeSeqRef = useRef(0);
+  const rerenderPreview = useCallback(async () => {
+    if (!posterThumbDataUrl) return;
+    const seq = ++recomposeSeqRef.current;
+    try {
+      const opts = posterOptsRef.current;
+      const next = await composeSharePosterDataUrl({
+        shareUrl: previewShareUrl,
+        fileName: effectiveFileName,
+        thumbnail: posterThumbDataUrl,
+        layout: posterLayout,
+        scanText: t('扫一扫看图纸'),
+        footerText: opts.footerText,
+        qrScale: opts.qrScale,
+        thumbnailHasBorder: posterHasBorder,
+      });
+      // 只认最后一次（连续拖动/输入时旧结果晚到不覆盖新图）；保留旧图直到新图就绪，避免闪烁
+      if (seq === recomposeSeqRef.current) setPreviewDataUrl(next);
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
+    }
+  }, [
+    posterThumbDataUrl,
+    previewShareUrl,
+    effectiveFileName,
+    posterLayout,
+    posterHasBorder,
+    showToast,
+    t,
+  ]);
+
+  // 名称/滑杆改动 → 250ms 节流重合成（连续拖动只留最后一次，避免每帧引擎级重绘）
+  const firstPosterOptsRender = useRef(true);
+  useEffect(() => {
+    if (firstPosterOptsRender.current) {
+      firstPosterOptsRender.current = false;
+      return;
+    }
+    const timer = window.setTimeout(rerenderPreview, 250);
+    return () => window.clearTimeout(timer);
+    // rerenderPreview 读 posterOptsRef 最新值，无需列入 deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [footerName, qrScale]);
+
+  const handleDownloadPoster = useCallback(async () => {
+    if (!resolvedFileId || !shareInfo) return;
+    setDownloadingPoster(true);
+    try {
+      const posterResult = await resolvePosterThumbnail();
+      if (!posterResult.thumbnail) {
+        showToast(t('缩略图生成失败，请先在编辑器中打开该图纸'), 'error');
+        return;
+      }
+      await downloadSharePoster(
+        {
+          // 二维码内容附框选区域：扫码打开后编辑器据此自动 zoom 到该区域
+          shareUrl: appendShareRegionToUrl(
+            fullUrl,
+            posterRegion,
+            window.location.origin
+          ),
+          fileName: effectiveFileName,
+          thumbnail: posterResult.thumbnail,
+          layout: posterLayout,
+          scanText: t('扫一扫看图纸'),
+          footerText: posterOptsRef.current.footerText,
+          qrScale: posterOptsRef.current.qrScale,
+          thumbnailHasBorder: posterResult.hasBorder,
+        },
+        `${effectiveFileName || '分享'}-分享图.png`
+      );
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
+    } finally {
+      setDownloadingPoster(false);
+    }
+  }, [
+    resolvedFileId,
+    shareInfo,
+    posterLayout,
+    fullUrl,
+    effectiveFileName,
+    showToast,
+    resolvePosterThumbnail,
+  ]);
+
+  /** 预览分享图片（合成海报 dataURL 展示，非下载）。share 可选：列表行预览时传入该行分享。 */
+  const handlePreviewPoster = useCallback(async (share?: ShareInfo) => {
+    const info = share ?? shareInfo;
+    if (!info) return;
+    if (share) setShareInfo(share);
+    setShowPosterPreview(true);
+    setPreviewLoading(true);
+    try {
+      const posterResult = await resolvePosterThumbnail();
+      if (!posterResult.thumbnail) {
+        showToast(t('缩略图生成失败，请先在编辑器中打开该图纸'), 'error');
+        setPreviewDataUrl(null);
+        return;
+      }
+      // 缓存高清图纸图 + 当前预览的二维码内容：后续海报选项调整只重 canvas 合成
+      // （rerenderPreview），不重新引擎截图。每次打开预览，底部名称默认回文件名称。
+      setPosterThumbDataUrl(posterResult.thumbnail);
+      setFooterName(effectiveFileName);
+      const currentPreviewShareUrl = share
+        ? shareUrl(info.url)
+        : appendShareRegionToUrl(
+            shareUrl(info.url),
+            posterRegion,
+            window.location.origin
+          );
+      setPreviewShareUrl(currentPreviewShareUrl);
+      setPreviewDataUrl(
+        await composeSharePosterDataUrl({
+          shareUrl: currentPreviewShareUrl,
+          fileName: effectiveFileName,
+          thumbnail: posterResult.thumbnail,
+          layout: posterLayout,
+          scanText: t('扫一扫看图纸'),
+          // 刚重置为默认：显示文件名称（footerText 语义：string=自定义/显示）
+          footerText: effectiveFileName,
+          qrScale: posterOptsRef.current.qrScale,
+          thumbnailHasBorder: posterResult.hasBorder,
+        })
+      );
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
+      setPreviewDataUrl(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }, [shareInfo, resolvePosterThumbnail, effectiveFileName, posterLayout, posterRegion, showToast]);
+
+  // 分享管理页行内「预览分享图片」：打开弹窗并自动预览指定分享（initialShare）。
+  // 用 ref 防重（handlePreviewPoster 依赖变化会重触发 useEffect）；关闭弹窗时复位，
+  // 下次再开可重新触发。handlePreviewPosterRef 存最新回调避免陈旧闭包。
+  const initialPreviewHandledRef = useRef(false);
+  const handlePreviewPosterRef = useRef(handlePreviewPoster);
+  handlePreviewPosterRef.current = handlePreviewPoster;
+  useEffect(() => {
+    if (isOpen && initialShare && !initialPreviewHandledRef.current) {
+      initialPreviewHandledRef.current = true;
+      setView('created');
+      void handlePreviewPosterRef.current(initialShare);
+    }
+    if (!isOpen) {
+      initialPreviewHandledRef.current = false;
+    }
+    // handlePreviewPoster 经 ref 读取最新回调，无需列入 deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialShare]);
+
+  /** 交互式框选区域（方案 A）：getCorner 拖矩形 → 更新区域 → 重出缩略图 + 预览 */
+  const handlePickRegion = useCallback(async () => {
+    if (!resolvedFileId || !isEditorContext || pickingRegion) return;
+    setPickingRegion(true);
+    // 关闭预览弹窗让出画布：Modal 遮罩（absolute inset-0 + onPointerDown 关闭）会拦截
+    // 画布鼠标事件，getCorner 永远收不到 mousedown。框选完成/取消后重新打开预览。
+    setShowPosterPreview(false);
+    try {
+      const { pickThumbnailRegion } = await import(
+        '../../services/mxcadManager/mxcadThumbnail'
+      );
+      const region = await pickThumbnailRegion(
+        t('指定缩略图区域，请框选矩形范围')
+      );
+      if (!region) return; // 用户 Esc 取消：保留原区域
+      setPosterRegion(region);
+      // 边框检测必须在「框选结束瞬间」执行并缓存：viewCoordLong2Cad 读当前实时视图缩放，
+      // generatePosterImage 内部会把视口 zoomW 到区域改变缩放，再算 tol 就失真。
+      // 之后下载/预览一律复用此缓存值（resolvePosterThumbnail），不再重算。
+      const { generatePosterImage, detectRegionBorder } = await import(
+        '../../services/mxcadManager/mxcadThumbnail'
+      );
+      const hasBorder = await detectRegionBorder(region);
+      setPosterHasBorder(hasBorder);
+      // 用新区域重出海报图并刷新预览（高清 BMP）；缩略图上传与海报截图解耦（由独立机制上传）
+      setPreviewLoading(true);
+      const posterResult = await generatePosterImage(region, hasBorder);
+      if (posterResult?.dataUrl) {
+        setPosterThumbDataUrl(posterResult.dataUrl);
+        setPreviewShareUrl(
+          appendShareRegionToUrl(fullUrl, region, window.location.origin)
+        );
+        setPreviewDataUrl(
+          await composeSharePosterDataUrl({
+            // 二维码内容附框选区域：扫码打开后编辑器据此自动 zoom 到该区域
+            shareUrl: appendShareRegionToUrl(
+              fullUrl,
+              region,
+              window.location.origin
+            ),
+            fileName: effectiveFileName,
+            thumbnail: posterResult.dataUrl,
+            layout: posterLayout,
+            scanText: t('扫一扫看图纸'),
+            footerText: posterOptsRef.current.footerText,
+            qrScale: posterOptsRef.current.qrScale,
+            thumbnailHasBorder: posterResult.hasBorder,
+          })
+        );
+      } else {
+        showToast(t('缩略图生成失败，请重试'), 'error');
+      }
+    } catch (error) {
+      showToast(getErrorMessage(error), 'error');
+    } finally {
+      setPreviewLoading(false);
+      setPickingRegion(false);
+      setShowPosterPreview(true);
+    }
+  }, [resolvedFileId, isEditorContext, pickingRegion, fullUrl, effectiveFileName, posterLayout, showToast]);
 
   const fetchShares = useCallback(async () => {
     if (!resolvedFileId) return;
@@ -413,9 +740,6 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
     await copyShareItem(shareUrl(linkUrl), token ?? linkUrl);
   };
 
-  // 后端返回相对 path，展示/复制/二维码统一走 platform toShareUrl（两端同一规则）
-  const fullUrl = shareUrl(shareInfo?.url);
-
   const renderListView = () => (
     <div className="share-dialog-body">
       {!readOnly && !isBatch && (
@@ -523,6 +847,21 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
                   </td>
                   <td>
                     <div className="share-dialog-action-cell">
+                      {!readOnly && (
+                        <Button
+                          variant="secondary"
+                          size="xs"
+                          icon={Image}
+                          onClick={() =>
+                            handlePreviewPoster({
+                              token: item.token,
+                              url: item.url,
+                              expiresAt: item.expiresAt,
+                            })
+                          }
+                          tooltip={t('预览分享图片')}
+                        />
+                      )}
                       {!readOnly && (
                         <Button
                           variant="secondary"
@@ -790,6 +1129,18 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
           </span>
         )}
 
+        {/* 分享图片（海报）：只保留「预览分享图片」入口；版式选择/下载/海报选项在预览弹框内 */}
+        <div className="share-dialog-poster-row">
+          <Button
+            variant="secondary"
+            onClick={() => handlePreviewPoster()}
+            style={{ flex: 1 }}
+          >
+            <Image size={14} />
+            {t('预览分享图片')}
+          </Button>
+        </div>
+
         <div className="share-dialog-created-actions">
           <Button
             variant="secondary"
@@ -849,7 +1200,7 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
   return (
     <>
       <Modal
-        isOpen={isOpen}
+        isOpen={isOpen && !pickingRegion}
         onClose={onClose}
         title={
           readOnly
@@ -887,6 +1238,115 @@ export const ShareDialog: React.FC<ShareDialogProps> = ({
         onConfirm={handleRevokeItem}
         loading={revoking}
       />
+
+      {/* 分享图片预览：合成海报 + 指定区域框选（编辑器上下文才可框选） */}
+      <Modal
+        isOpen={showPosterPreview}
+        onClose={() => setShowPosterPreview(false)}
+        title={t('预览分享图片')}
+        size="sm"
+        contentClassName="flex flex-col"
+        footer={
+          <>
+            {isEditorContext && (
+              <Button
+                variant="secondary"
+                onClick={handlePickRegion}
+                disabled={pickingRegion || previewLoading}
+                style={{ flex: 1 }}
+              >
+                {pickingRegion ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Crop size={14} />
+                )}
+                {posterRegion ? t('重新指定区域') : t('指定区域')}
+              </Button>
+            )}
+            <Button
+              variant="primary"
+              onClick={handleDownloadPoster}
+              disabled={downloadingPoster}
+              style={{ flex: 1 }}
+            >
+              {downloadingPoster ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              {t('下载分享图片')}
+            </Button>
+          </>
+        }
+      >
+        {previewLoading || !previewDataUrl ? (
+          <div className="share-dialog-loading-view">
+            <Loader2
+              size={24}
+              className="animate-spin"
+              style={{ color: 'var(--primary-500)' }}
+            />
+            <span className="share-dialog-loading-text">
+              {t('正在生成预览...')}
+            </span>
+          </div>
+        ) : (
+          <div className="share-dialog-preview-body">
+            <img
+              src={previewDataUrl}
+              alt={t('分享图片预览')}
+              className="share-dialog-preview-img"
+            />
+            {posterRegion && (
+              <span className="share-dialog-preview-region-hint">
+                {t('已按选定区域生成')}
+              </span>
+            )}
+            {/* 海报选项：底部名称（输入框默认文件名称，清空即不显示）+ 二维码大小（文字一体缩放） */}
+            <div className="share-dialog-poster-opts">
+              {/* 版式（手机竖版/正方形/横版）从弹窗顶部移入预览内部：用户拍板「风格=布局尺寸」 */}
+              <div className="share-dialog-poster-opts-row">
+                <Select
+                  value={posterLayout}
+                  onChange={(v) => setPosterLayout(v as SharePosterLayout)}
+                  options={POSTER_LAYOUT_OPTIONS}
+                  size="sm"
+                  wrapperClassName="share-dialog-poster-opts-select"
+                />
+              </div>
+              <div className="share-dialog-poster-opts-row">
+                <label className="share-dialog-poster-opts-label">
+                  {t('底部名称')}
+                </label>
+                <input
+                  className="share-dialog-poster-opts-input"
+                  value={footerName}
+                  onChange={(e) => setFooterName(e.target.value)}
+                  placeholder={effectiveFileName}
+                  maxLength={60}
+                />
+              </div>
+              <div className="share-dialog-poster-opts-row">
+                <label className="share-dialog-poster-opts-label">
+                  {t('二维码大小')}
+                </label>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={2}
+                  step={0.1}
+                  value={qrScale}
+                  onChange={(e) => setQrScale(Number(e.target.value))}
+                  className="share-dialog-poster-opts-range"
+                />
+                <span className="share-dialog-poster-opts-value">
+                  {Math.round(qrScale * 100)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   );
 };

@@ -10,7 +10,7 @@ import { Shield } from 'lucide-react';
 import { Button, Tag, Tabs, TabButton } from '@/components/ui';
 import { useCoreServices } from './hooks/useCoreServices';
 import { useCacheMonitor } from './hooks/useCacheMonitor';
-import { useAlertHistory } from './hooks/useAlertHistory';
+import { useAlertHistory, ALERT_PAGE_SIZE } from './hooks/useAlertHistory';
 import { useBackgroundTasks } from './hooks/useBackgroundTasks';
 import {
   useConversionQueue,
@@ -51,13 +51,24 @@ export const SystemMonitorPage: React.FC = () => {
   const [hasAccess, setHasAccess] = useState(false);
   const [activeTab, setActiveTab] = useState<MonitorTab>('core');
   const [alertPage, setAlertPage] = useState(1);
+  const [alertPageSize, setAlertPageSize] = useState(ALERT_PAGE_SIZE);
 
   const coreServices = useCoreServices();
   const cacheMonitor = useCacheMonitor(activeTab === 'cache');
-  const alertHistory = useAlertHistory(activeTab === 'alertHistory', alertPage);
+  const alertHistory = useAlertHistory(
+    activeTab === 'alertHistory',
+    alertPage,
+    alertPageSize
+  );
   const backgroundTasks = useBackgroundTasks(activeTab === 'backgroundTasks');
   const conversionQueue = useConversionQueue(activeTab === 'conversionQueue');
   const conversionTasks = useConversionTasks(activeTab === 'conversionQueue');
+
+  const handleAlertPageSizeChange = (next: number) => {
+    if (next === alertPageSize) return;
+    setAlertPageSize(next);
+    setAlertPage(1);
+  };
 
   useEffect(() => {
     const canAccess = hasPermission(SystemPermission.SYSTEM_MONITOR);
@@ -190,7 +201,9 @@ export const SystemMonitorPage: React.FC = () => {
           <AlertHistoryTab
             state={alertHistory}
             page={alertPage}
+            pageSize={alertPageSize}
             onPageChange={setAlertPage}
+            onPageSizeChange={handleAlertPageSizeChange}
           />
         )}
         {activeTab === 'backgroundTasks' && (

@@ -33,10 +33,30 @@ const WINDOWS_CRITICAL_FILES = {
   postgresql: 'pgsql/bin/initdb.exe',
 };
 
+// Windows PostgreSQL 需补齐的 VC++ 运行库 DLL。
+// PG 15.x 官方 Windows 便携版（zip）的 initdb/pg_ctl/postgres 是 MSVC 编译，均依赖
+// VCRUNTIME140.dll + UCRT（api-ms-win-crt-*，Win10/Server2016+ 系统内置）；而
+// VCRUNTIME140.dll / msvcp140.dll / vcruntime140_1.dll / concrt140.dll 只能由
+// Microsoft Visual C++ 2015-2022 Redistributable (x64) 提供，便携版 zip 不自带。
+// 目标机若是纯净系统（未装 VC++ Redist），initdb 启动即 STATUS_DLL_NOT_FOUND
+// （0xC0000135）静默失败、无任何 stderr，pg-manager 只报"数据目录初始化失败"
+// （2026-11-02 实测 win10 / Server2022 均复现）。打包时从构建机 System32 拷贝到
+// pgsql/bin/（exe 同目录优先加载），使目标机零前置依赖。注意：仅入打包 gate
+// （WINDOWS_ASSET_REQUIRED_FILES），不入 WINDOWS_CRITICAL_FILES——后者是
+// ensure-runtime 下载后的"组件就绪判定"，VC DLL 由打包补齐，不该触发重下。
+const WINDOWS_VC_RUNTIME_DLLS = [
+  'vcruntime140.dll',
+  'vcruntime140_1.dll',
+  'msvcp140.dll',
+  'concrt140.dll',
+];
+
 // Windows 资产/部署包 gate 的完整必需文件清单（相对 runtime/windows）。
-// 在 3 个标准组件关键文件之外额外断言两项：
+// 在 3 个标准组件关键文件之外额外断言三项：
 // - node/node_modules/pm2/bin/pm2 —— 与 Linux 侧同构，嵌在 node 内，缺了目标机 PM2 起不来
 // - postgresql/pgsql/bin/pg_ctl.exe —— 启动/停止 PG 必需（initdb 只用于初始化）
+// - postgresql/pgsql/bin/<VC++ 运行库>.dll —— PG 便携版不自带，缺了目标机 initdb 静默失败
+//   （见 WINDOWS_VC_RUNTIME_DLLS；pack-offline.js 的 ensureWindowsVcRuntimeDlls 会先补齐）
 // Windows 侧此前无此清单：gate 清单内联在 pack-assertions.js（5 项）、readiness 断言
 // 又内联在 build-windows-runtime.js（3 项），与本文件的 WINDOWS_CRITICAL_FILES 三份不一致。
 const WINDOWS_ASSET_REQUIRED_FILES = [
@@ -44,6 +64,7 @@ const WINDOWS_ASSET_REQUIRED_FILES = [
   'node/node_modules/pm2/bin/pm2',
   `postgresql/${WINDOWS_CRITICAL_FILES.postgresql}`,
   'postgresql/pgsql/bin/pg_ctl.exe',
+  ...WINDOWS_VC_RUNTIME_DLLS.map((dll) => `postgresql/pgsql/bin/${dll}`),
   `redis/${WINDOWS_CRITICAL_FILES.redis}`,
 ];
 
@@ -75,6 +96,7 @@ module.exports = {
   LINUX_CRITICAL_FILES,
   LINUX_ASSET_REQUIRED_FILES,
   WINDOWS_CRITICAL_FILES,
+  WINDOWS_VC_RUNTIME_DLLS,
   WINDOWS_ASSET_REQUIRED_FILES,
   PRODUCT_CRITICAL_FILES,
 };

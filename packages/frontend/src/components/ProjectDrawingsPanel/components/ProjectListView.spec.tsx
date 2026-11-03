@@ -4,7 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ProjectListView } from './ProjectListView';
 import type { FileSystemNode } from '@/types/filesystem';
 
@@ -98,5 +98,35 @@ describe('ProjectListView — 项目级动作接线', () => {
     const props = capturedFileItemProps[0];
     expect(props.onShowMembers).toBeTypeOf('function');
     expect(props.onShowRoles).toBeTypeOf('function');
+  });
+});
+
+describe('ProjectListView — 创建项目入口', () => {
+  const baseProps = {
+    projects: [projectNode],
+    searchQuery: '',
+    projectFilter: 'all' as const,
+    onProjectFilterChange: () => {},
+    nodePermissions: new Map(),
+    onEnterProject: () => {},
+    onEditProject: () => {},
+    onShowMembers: () => {},
+    onShowRoles: () => {},
+  };
+
+  it('未传 onCreateProject 时不渲染创建按钮（入口消失的旧缺陷）', () => {
+    render(<ProjectListView {...baseProps} />);
+    expect(
+      screen.queryByRole('button', { name: '+ 创建项目' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('传入 onCreateProject 时渲染创建按钮，点击触发回调', () => {
+    const onCreateProject = vi.fn();
+    render(<ProjectListView {...baseProps} onCreateProject={onCreateProject} />);
+    const btn = screen.getByRole('button', { name: '+ 创建项目' });
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    expect(onCreateProject).toHaveBeenCalledTimes(1);
   });
 });

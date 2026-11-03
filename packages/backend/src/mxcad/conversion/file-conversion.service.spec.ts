@@ -1388,13 +1388,16 @@ describe("FileConversionService", () => {
 			expect(task.timeoutMs).toBe(90000);
 			expect(task.callbackUrl).toBe("http://127.0.0.1:3001/v1/mxcad/conversion-callback");
 
-			// 调用方未持有任务 id：生成本地 id（cs_ 前缀），且不带 timeoutMs/callbackUrl 键
+			// 调用方未持有任务 id：生成本地 id（cs_ 前缀），且不带 callbackUrl 键。
+			// timeoutMs 恒透传（回落 conversionTimeoutMs，缺省 300000）：HTTP 模式与进程内模式
+			// 吃同一「真正转换时长」env（TIMEOUT_FILE_CONVERSION），不再落远端档位默认。
 			await svc.convertFile({ srcPath: "/tmp/f.dwg", fileHash: "abc" });
 			const task2 = (mockExecutor.invoke as unknown as { mock: { calls: unknown[][] } }).mock.calls[1][0] as {
 				id: string;
+				timeoutMs?: number;
 			};
 			expect(task2.id).toMatch(/^cs_/);
-			expect(task2).not.toHaveProperty("timeoutMs");
+			expect(task2.timeoutMs).toBe(300000);
 			expect(task2).not.toHaveProperty("callbackUrl");
 			await module.close();
 		});

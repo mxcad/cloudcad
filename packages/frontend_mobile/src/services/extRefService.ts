@@ -59,6 +59,10 @@ export async function uploadExtRefImage(params: {
   file: File;
   srcDwgfileHash: string;
   extRefFile: string;
+  /** 对齐 PC useExternalReferenceUpload：上传后写回 mxweb_preloading.json（默认 false） */
+  updatePreloading?: boolean;
+  /** 替换模式：被替换的原始参照名（文件名不变仅内容替换） */
+  originalXrefName?: string;
 }): Promise<void> {
   const result = await mxcadExternalRefControllerUploadExtReferenceImage({
     path: { nodeId: params.nodeId },
@@ -66,6 +70,8 @@ export async function uploadExtRefImage(params: {
       file: params.file,
       hash: params.srcDwgfileHash,
       ext_ref_file: params.extRefFile,
+      updatePreloading: params.updatePreloading,
+      originalXrefName: params.originalXrefName,
     },
   });
   unwrap(result);
@@ -75,10 +81,18 @@ export async function uploadExtRefImage(params: {
 export async function uploadExtRefDwg(params: {
   nodeId: string;
   file: File;
+  /** 外部参照文件名（含扩展名）。后端 @IsNotEmpty 必填，空串会被 400 拒 */
+  extRefFile: string;
+  /** 替换模式：被替换的原始参照名（文件名不变仅内容替换） */
+  originalXrefName?: string;
 }): Promise<void> {
   const result = await mxcadExternalRefControllerUploadExtReferenceDwg({
     path: { nodeId: params.nodeId },
-    body: { file: params.file, ext_ref_file: '' },
+    body: {
+      file: params.file,
+      ext_ref_file: params.extRefFile,
+      originalXrefName: params.originalXrefName,
+    },
   });
   unwrap(result);
 }

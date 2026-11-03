@@ -21,6 +21,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { LogIn } from 'lucide-react';
 import { t } from '@/languages';
+import { RegisterGiftEntry } from './RegisterGiftEntry';
 
 interface LoginPromptProps {
   isOpen: boolean;
@@ -71,6 +72,8 @@ export const LoginPrompt: React.FC<LoginPromptProps> = ({
         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
           {t('登录后可使用完整功能，包括保存文件、管理项目等')}
         </p>
+        {/* 注册送会员营销入口（活动开启时显示，点击跳注册页） */}
+        <RegisterGiftEntry className="mt-5" />
       </div>
     </Modal>
   );

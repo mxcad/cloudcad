@@ -19,6 +19,7 @@ type ShellPageName =
   | 'share'
   | 'profile'
   | 'member'
+  | 'feedback'
 
 /** 打开图纸前记录的来源页，用于壳顶栏「返回」回到原位置 */
 export interface ShellReturnTarget {
@@ -84,6 +85,8 @@ export const useShellStack = defineStore('shellStack', () => {
       '/shell/share': 'share',
       '/shell/profile': 'profile',
       '/shell/member': 'member',
+      '/shell/feedback': 'feedback',
+      '/shell/feedback/query': 'feedback',
     }
 
     // 检测项目详情路径

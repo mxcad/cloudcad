@@ -65,6 +65,13 @@ export interface ConversionResult {
   errorCategory?: ConversionFailureCategory;
   /** 引擎返回码（仅 content-error 时为非 0） */
   errorCode?: number;
+  /**
+   * 引擎原始 stdout/stderr（仅 FAILED 有意义，conversion-service 透传）。
+   * backend 的 data/debug 落盘（saveConversionDebugInfo）据此拿到真因——HTTP 模式
+   * FAILED 的 metadata 为空、引擎输出此前从不过线，运维只有一句远端文案。
+   */
+  stdout?: string;
+  stderr?: string;
 }
 
 /**
@@ -80,6 +87,9 @@ export interface TaskStatus {
   errorCategory?: ConversionFailureCategory;
   /** 引擎返回码（仅 content-error 时为非 0） */
   errorCode?: number;
+  /** 引擎原始 stdout/stderr（诊断透传，同 ConversionResult.stdout/stderr） */
+  stdout?: string;
+  stderr?: string;
   /**
    * 排队位置（S6-5）：任务在其优先级池 acquire 队列中的 1-based 序号。
    * 仅排队中（PENDING 且已入队）任务有意义，运行中/未入队/终态为 undefined。

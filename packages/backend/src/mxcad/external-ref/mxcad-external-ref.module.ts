@@ -27,6 +27,7 @@ import { ExternalReferenceHandler } from './external-reference-handler.service';
 import { ExternalReferenceUpdateService } from './external-reference-update.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
 import { ExtRefValidatorService } from './ext-ref-validator.service';
+import { ExtRefStorageService } from './ext-ref-storage.service';
 import { ExternalRefFacadeService } from './external-ref-facade.service';
 import { I_EXTERNAL_REF_FACADE } from './interfaces/ext-ref-facade.interface';
 
@@ -69,6 +70,7 @@ import { I_EXTERNAL_REF_FACADE } from './interfaces/ext-ref-facade.interface';
     ExternalReferenceHandler,
     ExtRefPreloadingService,
     ExtRefValidatorService,
+    ExtRefStorageService,
     ExternalRefFacadeService,
     {
       provide: I_EXTERNAL_REF_FACADE,

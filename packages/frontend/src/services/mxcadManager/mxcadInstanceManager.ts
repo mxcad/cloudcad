@@ -10,6 +10,7 @@ import { useCADEditorStore } from '@/stores/useCADEditorStore';
 import { isAuthenticated } from '../../utils/authCheck';
 import { handleError } from '@/utils/errorHandler';
 import { UrlHelper } from '@/utils/mxcadUtils';
+import { StoragePathConstants } from '@/constants/storage.constants';
 import { read } from '@/lib/browserStorage';
 import { extractShareTokenFromUrl } from './mxcadHelpers';
 import type {
@@ -160,6 +161,68 @@ export async function waitForDocumentLoaded(
 }
 
 /**
+ * 从 external-ref-view 访问 URL 提取 nodeId 段（登录态查看 DWG 外部参照用）；
+ * 非该形态返回 null
+ */
+function extractExternalRefNodeId(url: string): string | null {
+  const match = url.match(/\/api\/v1\/mxcad\/external-ref-view\/([^/?#]+)/);
+  return match?.[1] ?? null;
+}
+
+/**
+ * 解析外部参照（xref）URL：把引擎回调拿到的原始 xref 相对路径映射为前端可访问的完整 URL。
+ * 纯函数（无 IO / 无框架），供 buildViewOptions 的 extReferenceUrlResolver 使用，便于单测。
+ *
+ * 依据 activeUrl（当前打开文件的完整 URL）的形态选择解析策略：
+ * - /api/v1/public-file/access/{hash}[.ext].mxweb（未登录/公开分享）：按父文件 hash 段拼子参照
+ * - /api/v1/mxcad/filesData/YYYYMM/{nodeId}/xxx.mxweb（登录图纸库）：按父文件基底目录拼子参照
+ * - /api/v1/mxcad/external-ref-view/{nodeId}/{fileName}（登录态查看含嵌套 xref 的 DWG）：
+ *   按父文件 nodeId 拼子参照——嵌套 xref 的 URL 才能正确解析（否则落底部 return fileName
+ *   相对路径，引擎无法解析、加载失败）
+ * 其余形态兜底返回原始 fileName（相对路径，交由引擎尝试）。
+ *
+ * @param fileName 引擎回调拿到的原始 xref 相对路径（可能含子路径/中文）
+ * @param activeUrl 当前打开文件的完整 URL（无则 undefined，直接兜底）
+ * @param shareToken 共享图纸的 shareToken（未登录分享场景经 URL query 传递认证信息）
+ */
+export function resolveExtReferenceUrl(
+  fileName: string,
+  activeUrl?: string,
+  shareToken?: string
+): string {
+  if (!activeUrl) return fileName;
+
+  // 未登录（public-hash）场景：hash 段提取 + 去掉 .mxweb/原扩展名还原 rawHash
+  if (activeUrl.includes('/public-file/access/')) {
+    const hash = UrlHelper.extractPublicFileHash(activeUrl);
+    if (hash) {
+      const rawHash = hash.replace(/(?:\.[^.]+)?\.mxweb$/i, '');
+      return UrlHelper.buildPublicFileAccessUrl(`${rawHash}/${fileName}`, {
+        shareToken,
+      });
+    }
+  }
+  // activeUrl 格式: /api/v1/mxcad/filesData/YYYYMM/{nodeId}/{file}.mxweb?t=...
+  // 提取 YYYYMM/{nodeId} 作为基底目录
+  const baseDir = UrlHelper.extractMxwebBaseDir(activeUrl);
+  if (baseDir) {
+    return UrlHelper.buildMxwebFileUrl({
+      nodePath: `${baseDir}/${fileName}`,
+      shareToken,
+    });
+  }
+  // activeUrl 格式: /api/v1/mxcad/external-ref-view/{nodeId}/{fileName}
+  // 登录态查看的 DWG 内部再嵌套 xref：父文件走 external-ref-view 端点，
+  // 子参照以同一 nodeId 拼相对路径。fileName 可能含子路径/中文，直接拼接，
+  // 勿重复拼 /api/v1 前缀（StoragePathConstants.MXWEB_ACCESS_PREFIX 已含）。
+  const externalRefNodeId = extractExternalRefNodeId(activeUrl);
+  if (externalRefNodeId) {
+    return `${StoragePathConstants.MXWEB_ACCESS_PREFIX}external-ref-view/${externalRefNodeId}/${fileName}`;
+  }
+  return fileName;
+}
+
+/**
  * 构建 MxCADView 初始化配置（从 MxCADInstanceManager 拆出的模块级函数）
  */
 function buildViewOptions(openFile?: string) {
@@ -174,42 +237,20 @@ function buildViewOptions(openFile?: string) {
   if (currentShareToken) baseHeaders['x-share-token'] = currentShareToken;
   const hasHeaders = Object.keys(baseHeaders).length > 0;
 
-  const resolveExtReferenceUrl = (fileName: string) => {
-    // 优先从运行时获取当前文件 URL，提取路径部分构造外部参照 URL
-    const currentUrl = getCurrentFileUrl();
-    const activeUrl = currentUrl || openFile;
-    if (!activeUrl) return fileName;
-
-    // 使用模块级 currentShareToken（在 openFile 时已设置）
-    // WASM 层的 HTTP 请求不携带 requestHeaders，只能通过 URL 传递认证信息
-    const shareToken = currentShareToken || undefined;
-
-    // 未登录（public-hash）场景：hash 段提取 + 去掉 .mxweb/原扩展名还原 rawHash
-    if (activeUrl.includes('/public-file/access/')) {
-      const hash = UrlHelper.extractPublicFileHash(activeUrl);
-      if (hash) {
-        const rawHash = hash.replace(/(?:\.[^.]+)?\.mxweb$/i, '');
-        return UrlHelper.buildPublicFileAccessUrl(`${rawHash}/${fileName}`, {
-          shareToken,
-        });
-      }
-    }
-    // activeUrl 格式: /api/v1/mxcad/filesData/YYYYMM/{nodeId}/{file}.mxweb?t=...
-    // 提取 YYYYMM/{nodeId} 作为基底目录
-    const baseDir = UrlHelper.extractMxwebBaseDir(activeUrl);
-    if (baseDir) {
-      return UrlHelper.buildMxwebFileUrl({
-        nodePath: `${baseDir}/${fileName}`,
-        shareToken,
-      });
-    }
-    return fileName;
+  const resolveExtReferenceUrlResolver = (fileName: string) => {
+    // 委托给模块级纯函数 resolveExtReferenceUrl（可单测）：activeUrl / shareToken
+    // 每次调用实时取值，与拆出前行为一致
+    return resolveExtReferenceUrl(
+      fileName,
+      getCurrentFileUrl() || openFile,
+      currentShareToken || undefined
+    );
   };
   return {
     rootContainer: containerManager.getContainer(),
     ...(openFile && { openFile }),
     ...(hasHeaders && { requestHeaders: baseHeaders }),
-    extReferenceUrlResolver: resolveExtReferenceUrl,
+    extReferenceUrlResolver: resolveExtReferenceUrlResolver,
   };
 }
 

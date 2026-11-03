@@ -416,6 +416,9 @@ importers:
       '@cloudcad/api-sdk':
         specifier: workspace:*
         version: link:../api-sdk
+      '@cloudcad/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@cloudcad/platform':
         specifier: workspace:*
         version: link:../platform
@@ -479,6 +482,9 @@ importers:
       openapi-client-axios:
         specifier: ^7.5.5
         version: 7.9.0(axios@1.18.1)(js-yaml@4.3.2)
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
       qrcode.react:
         specifier: ^4.2.0
         version: 4.2.0(react@19.2.7)
@@ -540,6 +546,9 @@ importers:
       '@types/node':
         specifier: ^22.14.0
         version: 22.20.0
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.17
@@ -636,6 +645,9 @@ importers:
       '@cloudcad/api-sdk':
         specifier: workspace:*
         version: link:../api-sdk
+      '@cloudcad/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@cloudcad/platform':
         specifier: workspace:*
         version: link:../platform
@@ -813,6 +825,10 @@ importers:
   packages/mxVersionTool: {}
 
   packages/platform:
+    dependencies:
+      '@cloudcad/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       typescript:
         specifier: ~5.9.3

@@ -13,7 +13,7 @@ import type { Response, Request } from 'express';
 import * as fs from 'fs';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
-import { FileTypeDetector } from '@cloudcad/contracts';
+import { FileTypeDetector, extRefDisplayName } from '@cloudcad/contracts';
 import { ConfigService } from '@nestjs/config';
 import { I18nContext } from 'nestjs-i18n';
 import { AppConfig } from '../../config/app.config';
@@ -350,11 +350,13 @@ export class MxcadFileAccessService {
     const contentType = NodeUtils.getMimeType(ext);
 
     // 传输编排回归 streamFileToResponse 唯一出口：显示逻辑文件名（A1.dwg，而非磁盘
-    // A1.dwg.mxweb）+ 禁缓存（外部参照可被替换，URL 不变内容会变）+ 跨域 + inline
+    // A1.dwg.mxweb）+ 禁缓存（外部参照可被替换，URL 不变内容会变）+ 跨域 + inline。
+    // 显示名用契约 extRefDisplayName 剥 .mxweb 容器（防御调用方传入磁盘名）
+    const displayName = extRefDisplayName(fileName);
     void streamFileToResponse(
       res,
       filePath,
-      fileName,
+      displayName,
       contentType,
       undefined,
       {

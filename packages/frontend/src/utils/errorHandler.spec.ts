@@ -36,6 +36,19 @@ describe('getErrorMessage（#469：不丢后端 errors[]）', () => {
     ).toBe('缓存不存在');
   });
 
+  it('BUG-USER-02：支付关闭 403 响应原样透出后端本地化文案（下单失败 error 态）', () => {
+    // 后端 payment-gateway.factory 抛 ForbiddenException(i18n error.billing.payment_disabled)
+    // → 全局过滤器 403 {code:FORBIDDEN, message:中文}；前端 getErrorMessage 必须原样返回，
+    // 会员中心/套餐弹窗 orderError 才能展示友好提示而非 500 原始错误
+    expect(
+      getErrorMessage({
+        code: 'FORBIDDEN',
+        message: '支付功能未开启，暂时无法购买或续费',
+        error: 'Forbidden',
+      })
+    ).toBe('支付功能未开启，暂时无法购买或续费');
+  });
+
   it('message 为数组时逐项拼接', () => {
     expect(getErrorMessage({ message: ['a', 'b'] })).toBe('a b');
   });

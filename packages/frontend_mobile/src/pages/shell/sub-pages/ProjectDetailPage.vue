@@ -217,7 +217,8 @@ async function loadMembers() {
     unwrap(res)
     members.value = res.data ?? []
   } catch (e) {
-    memberError.value = t('加载成员失败')
+    // 后端文案优先（如项目不存在/无权限），无后端文案时落回兜底
+    memberError.value = errMsg(e, t('加载成员失败'))
   } finally {
     memberLoading.value = false
   }
@@ -596,6 +597,7 @@ const {
   formatTarget,
   formatDownloadMode,
   batchConvertCount,
+  formatDownloadLoading,
   onFormatDownloadConfirm,
 } = formatDownload
 
@@ -1048,7 +1050,7 @@ onMounted(() => {
       ref="fileInputRef"
       type="file"
       multiple
-      accept=".mxweb,.dwg,.dxf,.xlsx,.pdf,.jpg,.png,.zip,.rar,.7z"
+      accept=".dwg,.dxf,.mxweb"
       style="display:none"
       @change="onFileInputChange"
     />
@@ -1131,6 +1133,7 @@ onMounted(() => {
       v-model:show="showFormatPopup"
       :file-name="formatTarget?.name ?? ''"
       :batch-count="formatDownloadMode === 'batch' ? batchConvertCount : undefined"
+      :loading="formatDownloadLoading"
       @confirm="onFormatDownloadConfirm"
     />
     <BatchDownloadPanel v-model:show="showBatchPanel" />
@@ -1146,6 +1149,11 @@ onMounted(() => {
   flex-direction: column;
   background: var(--bg-primary);
   overflow: hidden;
+}
+
+/* nav-bar 右侧双图标（回收站 / 更多）：图标之间留间隙（vant 右槽是 flex，默认无 gap 会贴在一起） */
+:deep(.van-nav-bar__right) {
+  gap: 20px;
 }
 
 /* B-15 项目上传配额条 */

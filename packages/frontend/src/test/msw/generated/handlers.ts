@@ -168,6 +168,38 @@ export const handlers = [
     return HttpResponse.json(responseJson, init);
   }),
   http.post(
+    `${baseURL}/api/v1/admin/feedback/attachments/batch-delete`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getFeedbackAttachmentAdminControllerBatchRemove200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/admin/feedback/attachments/batch-delete`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
     `${baseURL}/api/v1/admin/permissions/cache/cleanup`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -508,6 +540,65 @@ export const handlers = [
     }
   ),
   http.get(
+    `${baseURL}/api/v1/admin/feedback/attachments`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getFeedbackAttachmentAdminControllerList200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/admin/feedback/attachments`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(`${baseURL}/api/v1/admin/feedback/rewards`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getFeedbackAdminControllerListRewards200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`get /api/v1/admin/feedback/rewards`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(
     `${baseURL}/api/v1/admin/mxcad-engine/config`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -557,6 +648,29 @@ export const handlers = [
       resultArray[
         next(`get /api/v1/admin/permissions/cache`) % resultArray.length
       ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(`${baseURL}/api/v1/admin/stats/active`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getAdminControllerGetActiveStats200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/admin/stats/active`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -847,6 +961,34 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(`${baseURL}/api/v1/feedback/reward/mine`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getFeedbackControllerListMineRewards200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`get /api/v1/feedback/reward/mine`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(
     `${baseURL}/api/v1/file-system/batch-download/tasks`,
     async ({ request }) => {
@@ -1734,6 +1876,37 @@ export const handlers = [
     return HttpResponse.json(responseJson, init);
   }),
   http.post(
+    `${baseURL}/api/v1/feedback/attachments/drawing`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getFeedbackAttachmentControllerRegisterDrawing200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/feedback/attachments/drawing`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
     `${baseURL}/api/v1/file-system/batch-download/merge-zip`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -2595,6 +2768,29 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(`${baseURL}/api/v1/admin/feedback`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getFeedbackAdminControllerList200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/admin/feedback`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(`${baseURL}/api/v1/admin/ip-blacklist`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -3101,6 +3297,29 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(`${baseURL}/api/v1/feedback/mine`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getFeedbackControllerListMine200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/feedback/mine`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(
     `${baseURL}/api/v1/file-system/personal-space`,
     async ({ request }) => {
@@ -3409,6 +3628,37 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(
+    `${baseURL}/api/v1/runtime-config/conflict-check`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getRuntimeConfigControllerCheckConflicts200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/runtime-config/conflict-check`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.get(
     `${baseURL}/api/v1/runtime-config/definitions`,
     async ({ request }) => {
@@ -4718,6 +4968,34 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(`${baseURL}/api/v1/feedback/attachments`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [
+        await getFeedbackAttachmentControllerUpload200Response(),
+        { status: 200 },
+      ],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[
+        next(`post /api/v1/feedback/attachments`) % resultArray.length
+      ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(
     `${baseURL}/api/v1/file-system/batch-download`,
     async ({ request }) => {
@@ -5425,6 +5703,29 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.post(`${baseURL}/api/v1/feedback`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getFeedbackControllerCreate200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`post /api/v1/feedback`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.post(`${baseURL}/api/v1/notices`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -5623,6 +5924,36 @@ export const handlers = [
       const [body, init] =
         resultArray[
           next(`delete /api/v1/admin/vip/tiers/:id/permanent`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(
+    `${baseURL}/api/v1/admin/feedback/attachments/:id/download`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 200 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/admin/feedback/attachments/:id/download`) %
             resultArray.length
         ];
       const responseJson =
@@ -5950,6 +6281,64 @@ export const handlers = [
     }
   ),
   http.post(
+    `${baseURL}/api/v1/admin/feedback/rewards/:id/issue`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [await getFeedbackAdminControllerIssue200Response(), { status: 200 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/admin/feedback/rewards/:id/issue`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/admin/feedback/rewards/:id/revoke`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [await getFeedbackAdminControllerRevoke200Response(), { status: 200 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/admin/feedback/rewards/:id/revoke`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
     `${baseURL}/api/v1/file-system/projects/:projectId/members/batch`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -6256,6 +6645,39 @@ export const handlers = [
     }
   ),
   http.delete(
+    `${baseURL}/api/v1/admin/feedback/attachments/:id`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (
+        shouldEchoRequestBody &&
+        ['post', 'put', 'patch'].includes('delete')
+      ) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 200 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`delete /api/v1/admin/feedback/attachments/:id`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.delete(
     `${baseURL}/api/v1/admin/vip/config-keys/:id`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -6529,6 +6951,66 @@ export const handlers = [
         : body;
     return HttpResponse.json(responseJson, init);
   }),
+  http.get(
+    `${baseURL}/api/v1/feedback/attachments/:id/download`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 200 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/feedback/attachments/:id/download`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.get(
+    `${baseURL}/api/v1/feedback/attachments/:id/thumbnail`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [[undefined, { status: 200 }]] as [
+        any,
+        { status: number },
+      ][];
+
+      const [body, init] =
+        resultArray[
+          next(`get /api/v1/feedback/attachments/:id/thumbnail`) %
+            resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.get(
     `${baseURL}/api/v1/file-system/batch-download/:taskId/download`,
     async ({ request }) => {
@@ -7251,6 +7733,37 @@ export const handlers = [
     }
   ),
   http.patch(
+    `${baseURL}/api/v1/admin/feedback/:id/status`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('patch')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getFeedbackAdminControllerUpdateStatus200Response(),
+          { status: 200 },
+        ],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`patch /api/v1/admin/feedback/:id/status`) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.patch(
     `${baseURL}/api/v1/library/block/nodes/:nodeId`,
     async ({ request }) => {
       const shouldEchoRequestBody = false;
@@ -7305,6 +7818,34 @@ export const handlers = [
         resultArray[
           next(`patch /api/v1/library/drawing/nodes/:nodeId`) %
             resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
+  http.post(
+    `${baseURL}/api/v1/admin/feedback/:id/adopt`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('post')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [await getFeedbackAdminControllerAdopt200Response(), { status: 200 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(`post /api/v1/admin/feedback/:id/adopt`) % resultArray.length
         ];
       const responseJson =
         requestJson && body && typeof body === 'object' && !Array.isArray(body)
@@ -8265,6 +8806,29 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(`${baseURL}/api/v1/admin/feedback/:id`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getFeedbackAdminControllerDetail200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/admin/feedback/:id`) % resultArray.length];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
   http.get(`${baseURL}/api/v1/audit/logs/:id`, async ({ request }) => {
     const shouldEchoRequestBody = false;
     let requestJson = null;
@@ -8338,6 +8902,29 @@ export const handlers = [
       resultArray[
         next(`get /api/v1/billing/orders/:orderNo`) % resultArray.length
       ];
+    const responseJson =
+      requestJson && body && typeof body === 'object' && !Array.isArray(body)
+        ? { ...body, ...requestJson }
+        : body;
+    return HttpResponse.json(responseJson, init);
+  }),
+  http.get(`${baseURL}/api/v1/feedback/code/:code`, async ({ request }) => {
+    const shouldEchoRequestBody = false;
+    let requestJson = null;
+    if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+      try {
+        requestJson = await request.clone().json();
+      } catch (e) {
+        requestJson = null;
+      }
+    }
+
+    const resultArray = [
+      [await getFeedbackControllerQueryByCode200Response(), { status: 200 }],
+    ] as [any, { status: number }][];
+
+    const [body, init] =
+      resultArray[next(`get /api/v1/feedback/code/:code`) % resultArray.length];
     const responseJson =
       requestJson && body && typeof body === 'object' && !Array.isArray(body)
         ? { ...body, ...requestJson }
@@ -9814,6 +10401,42 @@ export const handlers = [
       return HttpResponse.json(responseJson, init);
     }
   ),
+  http.get(
+    `${baseURL}/api/v1/public-file/ext-reference/download/:hash/:filename`,
+    async ({ request }) => {
+      const shouldEchoRequestBody = false;
+      let requestJson = null;
+      if (shouldEchoRequestBody && ['post', 'put', 'patch'].includes('get')) {
+        try {
+          requestJson = await request.clone().json();
+        } catch (e) {
+          requestJson = null;
+        }
+      }
+
+      const resultArray = [
+        [
+          await getPublicFileControllerDownloadExternalRef200Response(),
+          { status: 200 },
+        ],
+        [undefined, { status: 400 }],
+        [undefined, { status: 403 }],
+        [undefined, { status: 404 }],
+      ] as [any, { status: number }][];
+
+      const [body, init] =
+        resultArray[
+          next(
+            `get /api/v1/public-file/ext-reference/download/:hash/:filename`
+          ) % resultArray.length
+        ];
+      const responseJson =
+        requestJson && body && typeof body === 'object' && !Array.isArray(body)
+          ? { ...body, ...requestJson }
+          : body;
+      return HttpResponse.json(responseJson, init);
+    }
+  ),
   http.patch(
     `${baseURL}/api/v1/file-system/projects/:projectId/members/:userId`,
     async ({ request }) => {
@@ -10223,6 +10846,7 @@ export function getRuntimeConfigControllerGetAllConfigs200Response() {
       impact: '关闭后邮件验证码发送全部停止',
       dangerous: true,
       requires: ['mailEnabled'],
+      conflictsWith: ['requireEmailVerification'],
       channel: 'mail',
       channelSwitch: 'mail',
     }));
@@ -10273,6 +10897,7 @@ export function getRuntimeConfigControllerGetDefinitions200Response() {
       dangerous: faker.datatype.boolean(),
       envKey: 'SESSION_MAX_AGE',
       requires: ['mailEnabled'],
+      conflictsWith: ['requireEmailVerification'],
       channel: 'mail',
       channelSwitch: 'mail',
     }));
@@ -10289,6 +10914,20 @@ export function getRuntimeConfigControllerCheckDependencies200Response() {
     ].map((_) => ({
       dependent: 'requireEmailVerification',
       required: 'mailEnabled',
+    }));
+  })();
+}
+
+export function getRuntimeConfigControllerCheckConflicts200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      key: 'allowAutoRegisterOnPhoneLogin',
+      other: 'requireEmailVerification',
     }));
   })();
 }
@@ -10372,6 +11011,7 @@ export function getRuntimeConfigControllerGetConfig200Response() {
     impact: '关闭后邮件验证码发送全部停止',
     dangerous: true,
     requires: ['mailEnabled'],
+    conflictsWith: ['requireEmailVerification'],
     channel: 'mail',
     channelSwitch: 'mail',
   };
@@ -11996,6 +12636,155 @@ export function getUserCleanupControllerTriggerCleanup200Response() {
     deletedBatchJobs: faker.number.int(),
     markedForStorageCleanup: faker.number.int(),
     errors: [],
+  };
+}
+
+export function getNoticeCenterControllerGetCurrent200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      id: faker.string.uuid(),
+      kind: faker.lorem.words(),
+      level: faker.lorem.words(),
+      title: faker.lorem.words(),
+      body: faker.lorem.words(),
+      userId: faker.string.uuid(),
+      startAt: faker.date.anytime().toISOString(),
+      endAt: faker.date.anytime().toISOString(),
+      autoExpire: faker.datatype.boolean(),
+      publishedAt: faker.date.anytime().toISOString(),
+      notifiedAt: faker.date.anytime().toISOString(),
+      retractedAt: faker.date.anytime().toISOString(),
+      publishedById: faker.string.uuid(),
+      createdAt: faker.date.anytime().toISOString(),
+      updatedAt: faker.date.anytime().toISOString(),
+    }));
+  })();
+}
+
+export function getNoticeCenterControllerIssueTicket200Response() {
+  return {
+    ticket: faker.lorem.words(),
+  };
+}
+
+export function getNoticeCenterControllerListAll200Response() {
+  return (() => {
+    const arrayMin = 1;
+    const arrayMax = MAX_ARRAY_LENGTH;
+    const safeMin = Math.min(arrayMin, arrayMax);
+    return [
+      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+    ].map((_) => ({
+      id: faker.string.uuid(),
+      kind: faker.lorem.words(),
+      level: faker.lorem.words(),
+      title: faker.lorem.words(),
+      body: faker.lorem.words(),
+      userId: faker.string.uuid(),
+      startAt: faker.date.anytime().toISOString(),
+      endAt: faker.date.anytime().toISOString(),
+      autoExpire: faker.datatype.boolean(),
+      publishedAt: faker.date.anytime().toISOString(),
+      notifiedAt: faker.date.anytime().toISOString(),
+      retractedAt: faker.date.anytime().toISOString(),
+      publishedById: faker.string.uuid(),
+      createdAt: faker.date.anytime().toISOString(),
+      updatedAt: faker.date.anytime().toISOString(),
+    }));
+  })();
+}
+
+export function getNoticeCenterControllerCreate201Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getNoticeCenterControllerBatchDelete200Response() {
+  return {
+    requested: faker.number.int(),
+    deleted: faker.number.int(),
+    active: faker.number.int(),
+    notFound: [],
+  };
+}
+
+export function getNoticeCenterControllerPublish200Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getNoticeCenterControllerUpdate200Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
+  };
+}
+
+export function getNoticeCenterControllerRetract200Response() {
+  return {
+    id: faker.string.uuid(),
+    kind: faker.lorem.words(),
+    level: faker.lorem.words(),
+    title: faker.lorem.words(),
+    body: faker.lorem.words(),
+    userId: faker.string.uuid(),
+    startAt: faker.date.anytime().toISOString(),
+    endAt: faker.date.anytime().toISOString(),
+    autoExpire: faker.datatype.boolean(),
+    publishedAt: faker.date.anytime().toISOString(),
+    notifiedAt: faker.date.anytime().toISOString(),
+    retractedAt: faker.date.anytime().toISOString(),
+    publishedById: faker.string.uuid(),
+    createdAt: faker.date.anytime().toISOString(),
+    updatedAt: faker.date.anytime().toISOString(),
   };
 }
 
@@ -14392,6 +15181,28 @@ export function getAdminControllerGetPurchaseStats200Response() {
   };
 }
 
+export function getAdminControllerGetActiveStats200Response() {
+  return {
+    dau: 18,
+    mau: 97,
+    stickiness: 0.1856,
+    startDate: '2026-07-27',
+    endDate: '2026-08-25',
+    series: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        date: '2026-08-25',
+        dau: 42,
+        mau: 156,
+      }));
+    })(),
+  };
+}
+
 export function getAdminControllerGetCacheStats200Response() {
   return {
     totalEntries: faker.number.int(),
@@ -14569,155 +15380,6 @@ export function getQueueControllerGetQueueStats200Response() {
   ]);
 }
 
-export function getNoticeCenterControllerGetCurrent200Response() {
-  return (() => {
-    const arrayMin = 1;
-    const arrayMax = MAX_ARRAY_LENGTH;
-    const safeMin = Math.min(arrayMin, arrayMax);
-    return [
-      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-    ].map((_) => ({
-      id: faker.string.uuid(),
-      kind: faker.lorem.words(),
-      level: faker.lorem.words(),
-      title: faker.lorem.words(),
-      body: faker.lorem.words(),
-      userId: faker.string.uuid(),
-      startAt: faker.date.anytime().toISOString(),
-      endAt: faker.date.anytime().toISOString(),
-      autoExpire: faker.datatype.boolean(),
-      publishedAt: faker.date.anytime().toISOString(),
-      notifiedAt: faker.date.anytime().toISOString(),
-      retractedAt: faker.date.anytime().toISOString(),
-      publishedById: faker.string.uuid(),
-      createdAt: faker.date.anytime().toISOString(),
-      updatedAt: faker.date.anytime().toISOString(),
-    }));
-  })();
-}
-
-export function getNoticeCenterControllerIssueTicket200Response() {
-  return {
-    ticket: faker.lorem.words(),
-  };
-}
-
-export function getNoticeCenterControllerListAll200Response() {
-  return (() => {
-    const arrayMin = 1;
-    const arrayMax = MAX_ARRAY_LENGTH;
-    const safeMin = Math.min(arrayMin, arrayMax);
-    return [
-      ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
-    ].map((_) => ({
-      id: faker.string.uuid(),
-      kind: faker.lorem.words(),
-      level: faker.lorem.words(),
-      title: faker.lorem.words(),
-      body: faker.lorem.words(),
-      userId: faker.string.uuid(),
-      startAt: faker.date.anytime().toISOString(),
-      endAt: faker.date.anytime().toISOString(),
-      autoExpire: faker.datatype.boolean(),
-      publishedAt: faker.date.anytime().toISOString(),
-      notifiedAt: faker.date.anytime().toISOString(),
-      retractedAt: faker.date.anytime().toISOString(),
-      publishedById: faker.string.uuid(),
-      createdAt: faker.date.anytime().toISOString(),
-      updatedAt: faker.date.anytime().toISOString(),
-    }));
-  })();
-}
-
-export function getNoticeCenterControllerCreate201Response() {
-  return {
-    id: faker.string.uuid(),
-    kind: faker.lorem.words(),
-    level: faker.lorem.words(),
-    title: faker.lorem.words(),
-    body: faker.lorem.words(),
-    userId: faker.string.uuid(),
-    startAt: faker.date.anytime().toISOString(),
-    endAt: faker.date.anytime().toISOString(),
-    autoExpire: faker.datatype.boolean(),
-    publishedAt: faker.date.anytime().toISOString(),
-    notifiedAt: faker.date.anytime().toISOString(),
-    retractedAt: faker.date.anytime().toISOString(),
-    publishedById: faker.string.uuid(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
-export function getNoticeCenterControllerBatchDelete200Response() {
-  return {
-    requested: faker.number.int(),
-    deleted: faker.number.int(),
-    active: faker.number.int(),
-    notFound: [],
-  };
-}
-
-export function getNoticeCenterControllerPublish200Response() {
-  return {
-    id: faker.string.uuid(),
-    kind: faker.lorem.words(),
-    level: faker.lorem.words(),
-    title: faker.lorem.words(),
-    body: faker.lorem.words(),
-    userId: faker.string.uuid(),
-    startAt: faker.date.anytime().toISOString(),
-    endAt: faker.date.anytime().toISOString(),
-    autoExpire: faker.datatype.boolean(),
-    publishedAt: faker.date.anytime().toISOString(),
-    notifiedAt: faker.date.anytime().toISOString(),
-    retractedAt: faker.date.anytime().toISOString(),
-    publishedById: faker.string.uuid(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
-export function getNoticeCenterControllerUpdate200Response() {
-  return {
-    id: faker.string.uuid(),
-    kind: faker.lorem.words(),
-    level: faker.lorem.words(),
-    title: faker.lorem.words(),
-    body: faker.lorem.words(),
-    userId: faker.string.uuid(),
-    startAt: faker.date.anytime().toISOString(),
-    endAt: faker.date.anytime().toISOString(),
-    autoExpire: faker.datatype.boolean(),
-    publishedAt: faker.date.anytime().toISOString(),
-    notifiedAt: faker.date.anytime().toISOString(),
-    retractedAt: faker.date.anytime().toISOString(),
-    publishedById: faker.string.uuid(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
-export function getNoticeCenterControllerRetract200Response() {
-  return {
-    id: faker.string.uuid(),
-    kind: faker.lorem.words(),
-    level: faker.lorem.words(),
-    title: faker.lorem.words(),
-    body: faker.lorem.words(),
-    userId: faker.string.uuid(),
-    startAt: faker.date.anytime().toISOString(),
-    endAt: faker.date.anytime().toISOString(),
-    autoExpire: faker.datatype.boolean(),
-    publishedAt: faker.date.anytime().toISOString(),
-    notifiedAt: faker.date.anytime().toISOString(),
-    retractedAt: faker.date.anytime().toISOString(),
-    publishedById: faker.string.uuid(),
-    createdAt: faker.date.anytime().toISOString(),
-    updatedAt: faker.date.anytime().toISOString(),
-  };
-}
-
 export function getPublicFileControllerAccessFile200Response() {
   return null;
 }
@@ -14738,6 +15400,10 @@ export function getPublicFileControllerCheckExtReference200Response() {
   return {
     exists: faker.datatype.boolean(),
   };
+}
+
+export function getPublicFileControllerDownloadExternalRef200Response() {
+  return null;
 }
 
 export function getPublicFileControllerGetPreloadingData200Response() {
@@ -16028,5 +16694,840 @@ export function getConversionMonitorControllerListTasks200Response() {
       }));
     })(),
     total: faker.number.int(),
+  };
+}
+
+export function getFeedbackControllerCreate200Response() {
+  return {
+    id: faker.string.uuid(),
+    feedbackCode: faker.lorem.words(),
+    status: faker.helpers.arrayElement([
+      'PENDING',
+      'REVIEWING',
+      'ADOPTED',
+      'REJECTED',
+      'CLOSED',
+    ]),
+    rewardStatus: faker.helpers.arrayElement([
+      'NONE',
+      'PENDING',
+      'ISSUED',
+      'REVOKED',
+    ]),
+    claimRequired: faker.datatype.boolean(),
+    createdAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackControllerListMine200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        type: faker.helpers.arrayElement([
+          'BUG',
+          'SUGGESTION',
+          'COMPLAINT',
+          'OTHER',
+        ]),
+        status: faker.helpers.arrayElement([
+          'PENDING',
+          'REVIEWING',
+          'ADOPTED',
+          'REJECTED',
+          'CLOSED',
+        ]),
+        title: faker.lorem.words(),
+        content: faker.lorem.words(),
+        source: faker.helpers.arrayElement(['PC', 'MOBILE']),
+        submitterId: faker.string.uuid(),
+        submitterName: faker.person.fullName(),
+        contact: faker.lorem.words(),
+        pageUrl: faker.internet.url(),
+        ip: faker.lorem.words(),
+        feedbackCode: faker.lorem.words(),
+        reviewedById: faker.string.uuid(),
+        reviewedAt: faker.lorem.words(),
+        adoptNote: faker.lorem.words(),
+        rejectReason: faker.lorem.words(),
+        rewardStatus: faker.helpers.arrayElement([
+          'NONE',
+          'PENDING',
+          'ISSUED',
+          'REVOKED',
+        ]),
+        claimRequired: faker.datatype.boolean(),
+        reward: {
+          id: faker.string.uuid(),
+          feedbackId: faker.string.uuid(),
+          feedbackCode: faker.lorem.words(),
+          feedbackTitle: faker.lorem.words(),
+          feedbackType: faker.helpers.arrayElement([
+            'BUG',
+            'SUGGESTION',
+            'COMPLAINT',
+            'OTHER',
+          ]),
+          submitter: {
+            id: faker.string.uuid(),
+            username: faker.person.fullName(),
+            nickname: faker.person.fullName(),
+            email: faker.internet.email(),
+          },
+          userId: faker.string.uuid(),
+          user: {
+            id: faker.string.uuid(),
+            username: faker.person.fullName(),
+            nickname: faker.person.fullName(),
+            email: faker.internet.email(),
+          },
+          vipTierLevel: faker.number.int(),
+          durationDays: faker.number.int(),
+          status: faker.helpers.arrayElement([
+            'NONE',
+            'PENDING',
+            'ISSUED',
+            'REVOKED',
+          ]),
+          issuedById: faker.string.uuid(),
+          issuedAt: faker.lorem.words(),
+          remark: faker.lorem.words(),
+          createdAt: faker.lorem.words(),
+        },
+        attachments: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => ({
+            id: faker.string.uuid(),
+            feedbackId: faker.string.uuid(),
+            type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+            kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+            fileName: faker.person.fullName(),
+            mimeType: faker.lorem.words(),
+            size: faker.number.int(),
+            nodeId: faker.string.uuid(),
+            fileHash: faker.lorem.words(),
+            contentHash: faker.lorem.words(),
+            deduped: faker.datatype.boolean(),
+            region: faker.lorem.words(),
+            thumbnailUrl: faker.internet.url(),
+            viewUrl: faker.internet.url(),
+            downloadUrl: faker.internet.url(),
+            uploadedByName: faker.person.fullName(),
+            createdAt: faker.lorem.words(),
+          }));
+        })(),
+        createdAt: faker.lorem.words(),
+        updatedAt: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
+    page: faker.number.int(),
+    pageSize: faker.number.int(),
+  };
+}
+
+export function getFeedbackControllerQueryByCode200Response() {
+  return {
+    feedbackCode: faker.lorem.words(),
+    type: faker.helpers.arrayElement([
+      'BUG',
+      'SUGGESTION',
+      'COMPLAINT',
+      'OTHER',
+    ]),
+    status: faker.helpers.arrayElement([
+      'PENDING',
+      'REVIEWING',
+      'ADOPTED',
+      'REJECTED',
+      'CLOSED',
+    ]),
+    title: faker.lorem.words(),
+    content: faker.lorem.words(),
+    rewardStatus: faker.helpers.arrayElement([
+      'NONE',
+      'PENDING',
+      'ISSUED',
+      'REVOKED',
+    ]),
+    claimRequired: faker.datatype.boolean(),
+    adoptNote: faker.lorem.words(),
+    rejectReason: faker.lorem.words(),
+    attachments: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        feedbackId: faker.string.uuid(),
+        type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+        kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+        fileName: faker.person.fullName(),
+        mimeType: faker.lorem.words(),
+        size: faker.number.int(),
+        nodeId: faker.string.uuid(),
+        fileHash: faker.lorem.words(),
+        contentHash: faker.lorem.words(),
+        deduped: faker.datatype.boolean(),
+        region: faker.lorem.words(),
+        thumbnailUrl: faker.internet.url(),
+        viewUrl: faker.internet.url(),
+        downloadUrl: faker.internet.url(),
+        uploadedByName: faker.person.fullName(),
+        createdAt: faker.lorem.words(),
+      }));
+    })(),
+    createdAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackControllerListMineRewards200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        feedbackId: faker.string.uuid(),
+        feedbackCode: faker.lorem.words(),
+        feedbackTitle: faker.lorem.words(),
+        feedbackType: faker.helpers.arrayElement([
+          'BUG',
+          'SUGGESTION',
+          'COMPLAINT',
+          'OTHER',
+        ]),
+        submitter: {
+          id: faker.string.uuid(),
+          username: faker.person.fullName(),
+          nickname: faker.person.fullName(),
+          email: faker.internet.email(),
+        },
+        userId: faker.string.uuid(),
+        user: {
+          id: faker.string.uuid(),
+          username: faker.person.fullName(),
+          nickname: faker.person.fullName(),
+          email: faker.internet.email(),
+        },
+        vipTierLevel: faker.number.int(),
+        durationDays: faker.number.int(),
+        status: faker.helpers.arrayElement([
+          'NONE',
+          'PENDING',
+          'ISSUED',
+          'REVOKED',
+        ]),
+        issuedById: faker.string.uuid(),
+        issuedAt: faker.lorem.words(),
+        remark: faker.lorem.words(),
+        createdAt: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
+  };
+}
+
+export function getFeedbackAttachmentAdminControllerList200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        feedbackId: faker.string.uuid(),
+        type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+        kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+        fileName: faker.person.fullName(),
+        mimeType: faker.lorem.words(),
+        size: faker.number.int(),
+        nodeId: faker.string.uuid(),
+        fileHash: faker.lorem.words(),
+        contentHash: faker.lorem.words(),
+        deduped: faker.datatype.boolean(),
+        region: faker.lorem.words(),
+        thumbnailUrl: faker.internet.url(),
+        viewUrl: faker.internet.url(),
+        downloadUrl: faker.internet.url(),
+        uploadedByName: faker.person.fullName(),
+        createdAt: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
+    page: faker.number.int(),
+    pageSize: faker.number.int(),
+  };
+}
+
+export function getFeedbackAttachmentAdminControllerBatchRemove200Response() {
+  return {
+    deleted: faker.number.int(),
+    notFoundIds: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => faker.lorem.words());
+    })(),
+  };
+}
+
+export function getFeedbackAdminControllerList200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        type: faker.helpers.arrayElement([
+          'BUG',
+          'SUGGESTION',
+          'COMPLAINT',
+          'OTHER',
+        ]),
+        status: faker.helpers.arrayElement([
+          'PENDING',
+          'REVIEWING',
+          'ADOPTED',
+          'REJECTED',
+          'CLOSED',
+        ]),
+        title: faker.lorem.words(),
+        content: faker.lorem.words(),
+        source: faker.helpers.arrayElement(['PC', 'MOBILE']),
+        submitterId: faker.string.uuid(),
+        submitterName: faker.person.fullName(),
+        contact: faker.lorem.words(),
+        pageUrl: faker.internet.url(),
+        ip: faker.lorem.words(),
+        feedbackCode: faker.lorem.words(),
+        reviewedById: faker.string.uuid(),
+        reviewedAt: faker.lorem.words(),
+        adoptNote: faker.lorem.words(),
+        rejectReason: faker.lorem.words(),
+        rewardStatus: faker.helpers.arrayElement([
+          'NONE',
+          'PENDING',
+          'ISSUED',
+          'REVOKED',
+        ]),
+        claimRequired: faker.datatype.boolean(),
+        reward: {
+          id: faker.string.uuid(),
+          feedbackId: faker.string.uuid(),
+          feedbackCode: faker.lorem.words(),
+          feedbackTitle: faker.lorem.words(),
+          feedbackType: faker.helpers.arrayElement([
+            'BUG',
+            'SUGGESTION',
+            'COMPLAINT',
+            'OTHER',
+          ]),
+          submitter: {
+            id: faker.string.uuid(),
+            username: faker.person.fullName(),
+            nickname: faker.person.fullName(),
+            email: faker.internet.email(),
+          },
+          userId: faker.string.uuid(),
+          user: {
+            id: faker.string.uuid(),
+            username: faker.person.fullName(),
+            nickname: faker.person.fullName(),
+            email: faker.internet.email(),
+          },
+          vipTierLevel: faker.number.int(),
+          durationDays: faker.number.int(),
+          status: faker.helpers.arrayElement([
+            'NONE',
+            'PENDING',
+            'ISSUED',
+            'REVOKED',
+          ]),
+          issuedById: faker.string.uuid(),
+          issuedAt: faker.lorem.words(),
+          remark: faker.lorem.words(),
+          createdAt: faker.lorem.words(),
+        },
+        attachments: (() => {
+          const arrayMin = 1;
+          const arrayMax = MAX_ARRAY_LENGTH;
+          const safeMin = Math.min(arrayMin, arrayMax);
+          return [
+            ...new Array(
+              faker.number.int({ min: safeMin, max: arrayMax })
+            ).keys(),
+          ].map((_) => ({
+            id: faker.string.uuid(),
+            feedbackId: faker.string.uuid(),
+            type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+            kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+            fileName: faker.person.fullName(),
+            mimeType: faker.lorem.words(),
+            size: faker.number.int(),
+            nodeId: faker.string.uuid(),
+            fileHash: faker.lorem.words(),
+            contentHash: faker.lorem.words(),
+            deduped: faker.datatype.boolean(),
+            region: faker.lorem.words(),
+            thumbnailUrl: faker.internet.url(),
+            viewUrl: faker.internet.url(),
+            downloadUrl: faker.internet.url(),
+            uploadedByName: faker.person.fullName(),
+            createdAt: faker.lorem.words(),
+          }));
+        })(),
+        createdAt: faker.lorem.words(),
+        updatedAt: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
+    page: faker.number.int(),
+    pageSize: faker.number.int(),
+  };
+}
+
+export function getFeedbackAdminControllerListRewards200Response() {
+  return {
+    items: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        feedbackId: faker.string.uuid(),
+        feedbackCode: faker.lorem.words(),
+        feedbackTitle: faker.lorem.words(),
+        feedbackType: faker.helpers.arrayElement([
+          'BUG',
+          'SUGGESTION',
+          'COMPLAINT',
+          'OTHER',
+        ]),
+        submitter: {
+          id: faker.string.uuid(),
+          username: faker.person.fullName(),
+          nickname: faker.person.fullName(),
+          email: faker.internet.email(),
+        },
+        userId: faker.string.uuid(),
+        user: {
+          id: faker.string.uuid(),
+          username: faker.person.fullName(),
+          nickname: faker.person.fullName(),
+          email: faker.internet.email(),
+        },
+        vipTierLevel: faker.number.int(),
+        durationDays: faker.number.int(),
+        status: faker.helpers.arrayElement([
+          'NONE',
+          'PENDING',
+          'ISSUED',
+          'REVOKED',
+        ]),
+        issuedById: faker.string.uuid(),
+        issuedAt: faker.lorem.words(),
+        remark: faker.lorem.words(),
+        createdAt: faker.lorem.words(),
+      }));
+    })(),
+    total: faker.number.int(),
+  };
+}
+
+export function getFeedbackAdminControllerDetail200Response() {
+  return {
+    id: faker.string.uuid(),
+    type: faker.helpers.arrayElement([
+      'BUG',
+      'SUGGESTION',
+      'COMPLAINT',
+      'OTHER',
+    ]),
+    status: faker.helpers.arrayElement([
+      'PENDING',
+      'REVIEWING',
+      'ADOPTED',
+      'REJECTED',
+      'CLOSED',
+    ]),
+    title: faker.lorem.words(),
+    content: faker.lorem.words(),
+    source: faker.helpers.arrayElement(['PC', 'MOBILE']),
+    submitterId: faker.string.uuid(),
+    submitterName: faker.person.fullName(),
+    contact: faker.lorem.words(),
+    pageUrl: faker.internet.url(),
+    ip: faker.lorem.words(),
+    feedbackCode: faker.lorem.words(),
+    reviewedById: faker.string.uuid(),
+    reviewedAt: faker.lorem.words(),
+    adoptNote: faker.lorem.words(),
+    rejectReason: faker.lorem.words(),
+    rewardStatus: faker.helpers.arrayElement([
+      'NONE',
+      'PENDING',
+      'ISSUED',
+      'REVOKED',
+    ]),
+    claimRequired: faker.datatype.boolean(),
+    reward: {
+      id: faker.string.uuid(),
+      feedbackId: faker.string.uuid(),
+      feedbackCode: faker.lorem.words(),
+      feedbackTitle: faker.lorem.words(),
+      feedbackType: faker.helpers.arrayElement([
+        'BUG',
+        'SUGGESTION',
+        'COMPLAINT',
+        'OTHER',
+      ]),
+      submitter: {
+        id: faker.string.uuid(),
+        username: faker.person.fullName(),
+        nickname: faker.person.fullName(),
+        email: faker.internet.email(),
+      },
+      userId: faker.string.uuid(),
+      user: {
+        id: faker.string.uuid(),
+        username: faker.person.fullName(),
+        nickname: faker.person.fullName(),
+        email: faker.internet.email(),
+      },
+      vipTierLevel: faker.number.int(),
+      durationDays: faker.number.int(),
+      status: faker.helpers.arrayElement([
+        'NONE',
+        'PENDING',
+        'ISSUED',
+        'REVOKED',
+      ]),
+      issuedById: faker.string.uuid(),
+      issuedAt: faker.lorem.words(),
+      remark: faker.lorem.words(),
+      createdAt: faker.lorem.words(),
+    },
+    attachments: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        feedbackId: faker.string.uuid(),
+        type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+        kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+        fileName: faker.person.fullName(),
+        mimeType: faker.lorem.words(),
+        size: faker.number.int(),
+        nodeId: faker.string.uuid(),
+        fileHash: faker.lorem.words(),
+        contentHash: faker.lorem.words(),
+        deduped: faker.datatype.boolean(),
+        region: faker.lorem.words(),
+        thumbnailUrl: faker.internet.url(),
+        viewUrl: faker.internet.url(),
+        downloadUrl: faker.internet.url(),
+        uploadedByName: faker.person.fullName(),
+        createdAt: faker.lorem.words(),
+      }));
+    })(),
+    createdAt: faker.lorem.words(),
+    updatedAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackAdminControllerUpdateStatus200Response() {
+  return {
+    id: faker.string.uuid(),
+    type: faker.helpers.arrayElement([
+      'BUG',
+      'SUGGESTION',
+      'COMPLAINT',
+      'OTHER',
+    ]),
+    status: faker.helpers.arrayElement([
+      'PENDING',
+      'REVIEWING',
+      'ADOPTED',
+      'REJECTED',
+      'CLOSED',
+    ]),
+    title: faker.lorem.words(),
+    content: faker.lorem.words(),
+    source: faker.helpers.arrayElement(['PC', 'MOBILE']),
+    submitterId: faker.string.uuid(),
+    submitterName: faker.person.fullName(),
+    contact: faker.lorem.words(),
+    pageUrl: faker.internet.url(),
+    ip: faker.lorem.words(),
+    feedbackCode: faker.lorem.words(),
+    reviewedById: faker.string.uuid(),
+    reviewedAt: faker.lorem.words(),
+    adoptNote: faker.lorem.words(),
+    rejectReason: faker.lorem.words(),
+    rewardStatus: faker.helpers.arrayElement([
+      'NONE',
+      'PENDING',
+      'ISSUED',
+      'REVOKED',
+    ]),
+    claimRequired: faker.datatype.boolean(),
+    reward: {
+      id: faker.string.uuid(),
+      feedbackId: faker.string.uuid(),
+      feedbackCode: faker.lorem.words(),
+      feedbackTitle: faker.lorem.words(),
+      feedbackType: faker.helpers.arrayElement([
+        'BUG',
+        'SUGGESTION',
+        'COMPLAINT',
+        'OTHER',
+      ]),
+      submitter: {
+        id: faker.string.uuid(),
+        username: faker.person.fullName(),
+        nickname: faker.person.fullName(),
+        email: faker.internet.email(),
+      },
+      userId: faker.string.uuid(),
+      user: {
+        id: faker.string.uuid(),
+        username: faker.person.fullName(),
+        nickname: faker.person.fullName(),
+        email: faker.internet.email(),
+      },
+      vipTierLevel: faker.number.int(),
+      durationDays: faker.number.int(),
+      status: faker.helpers.arrayElement([
+        'NONE',
+        'PENDING',
+        'ISSUED',
+        'REVOKED',
+      ]),
+      issuedById: faker.string.uuid(),
+      issuedAt: faker.lorem.words(),
+      remark: faker.lorem.words(),
+      createdAt: faker.lorem.words(),
+    },
+    attachments: (() => {
+      const arrayMin = 1;
+      const arrayMax = MAX_ARRAY_LENGTH;
+      const safeMin = Math.min(arrayMin, arrayMax);
+      return [
+        ...new Array(faker.number.int({ min: safeMin, max: arrayMax })).keys(),
+      ].map((_) => ({
+        id: faker.string.uuid(),
+        feedbackId: faker.string.uuid(),
+        type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+        kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+        fileName: faker.person.fullName(),
+        mimeType: faker.lorem.words(),
+        size: faker.number.int(),
+        nodeId: faker.string.uuid(),
+        fileHash: faker.lorem.words(),
+        contentHash: faker.lorem.words(),
+        deduped: faker.datatype.boolean(),
+        region: faker.lorem.words(),
+        thumbnailUrl: faker.internet.url(),
+        viewUrl: faker.internet.url(),
+        downloadUrl: faker.internet.url(),
+        uploadedByName: faker.person.fullName(),
+        createdAt: faker.lorem.words(),
+      }));
+    })(),
+    createdAt: faker.lorem.words(),
+    updatedAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackAdminControllerAdopt200Response() {
+  return {
+    id: faker.string.uuid(),
+    feedbackId: faker.string.uuid(),
+    feedbackCode: faker.lorem.words(),
+    feedbackTitle: faker.lorem.words(),
+    feedbackType: faker.helpers.arrayElement([
+      'BUG',
+      'SUGGESTION',
+      'COMPLAINT',
+      'OTHER',
+    ]),
+    submitter: {
+      id: faker.string.uuid(),
+      username: faker.person.fullName(),
+      nickname: faker.person.fullName(),
+      email: faker.internet.email(),
+    },
+    userId: faker.string.uuid(),
+    user: {
+      id: faker.string.uuid(),
+      username: faker.person.fullName(),
+      nickname: faker.person.fullName(),
+      email: faker.internet.email(),
+    },
+    vipTierLevel: faker.number.int(),
+    durationDays: faker.number.int(),
+    status: faker.helpers.arrayElement([
+      'NONE',
+      'PENDING',
+      'ISSUED',
+      'REVOKED',
+    ]),
+    issuedById: faker.string.uuid(),
+    issuedAt: faker.lorem.words(),
+    remark: faker.lorem.words(),
+    createdAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackAdminControllerIssue200Response() {
+  return {
+    id: faker.string.uuid(),
+    feedbackId: faker.string.uuid(),
+    feedbackCode: faker.lorem.words(),
+    feedbackTitle: faker.lorem.words(),
+    feedbackType: faker.helpers.arrayElement([
+      'BUG',
+      'SUGGESTION',
+      'COMPLAINT',
+      'OTHER',
+    ]),
+    submitter: {
+      id: faker.string.uuid(),
+      username: faker.person.fullName(),
+      nickname: faker.person.fullName(),
+      email: faker.internet.email(),
+    },
+    userId: faker.string.uuid(),
+    user: {
+      id: faker.string.uuid(),
+      username: faker.person.fullName(),
+      nickname: faker.person.fullName(),
+      email: faker.internet.email(),
+    },
+    vipTierLevel: faker.number.int(),
+    durationDays: faker.number.int(),
+    status: faker.helpers.arrayElement([
+      'NONE',
+      'PENDING',
+      'ISSUED',
+      'REVOKED',
+    ]),
+    issuedById: faker.string.uuid(),
+    issuedAt: faker.lorem.words(),
+    remark: faker.lorem.words(),
+    createdAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackAdminControllerRevoke200Response() {
+  return {
+    id: faker.string.uuid(),
+    feedbackId: faker.string.uuid(),
+    feedbackCode: faker.lorem.words(),
+    feedbackTitle: faker.lorem.words(),
+    feedbackType: faker.helpers.arrayElement([
+      'BUG',
+      'SUGGESTION',
+      'COMPLAINT',
+      'OTHER',
+    ]),
+    submitter: {
+      id: faker.string.uuid(),
+      username: faker.person.fullName(),
+      nickname: faker.person.fullName(),
+      email: faker.internet.email(),
+    },
+    userId: faker.string.uuid(),
+    user: {
+      id: faker.string.uuid(),
+      username: faker.person.fullName(),
+      nickname: faker.person.fullName(),
+      email: faker.internet.email(),
+    },
+    vipTierLevel: faker.number.int(),
+    durationDays: faker.number.int(),
+    status: faker.helpers.arrayElement([
+      'NONE',
+      'PENDING',
+      'ISSUED',
+      'REVOKED',
+    ]),
+    issuedById: faker.string.uuid(),
+    issuedAt: faker.lorem.words(),
+    remark: faker.lorem.words(),
+    createdAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackAttachmentControllerUpload200Response() {
+  return {
+    id: faker.string.uuid(),
+    feedbackId: faker.string.uuid(),
+    type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+    kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+    fileName: faker.person.fullName(),
+    mimeType: faker.lorem.words(),
+    size: faker.number.int(),
+    nodeId: faker.string.uuid(),
+    fileHash: faker.lorem.words(),
+    contentHash: faker.lorem.words(),
+    deduped: faker.datatype.boolean(),
+    region: faker.lorem.words(),
+    thumbnailUrl: faker.internet.url(),
+    viewUrl: faker.internet.url(),
+    downloadUrl: faker.internet.url(),
+    uploadedByName: faker.person.fullName(),
+    createdAt: faker.lorem.words(),
+  };
+}
+
+export function getFeedbackAttachmentControllerRegisterDrawing200Response() {
+  return {
+    id: faker.string.uuid(),
+    feedbackId: faker.string.uuid(),
+    type: faker.helpers.arrayElement(['IMAGE', 'DOCUMENT', 'DRAWING']),
+    kind: faker.helpers.arrayElement(['FILE', 'REFERENCE']),
+    fileName: faker.person.fullName(),
+    mimeType: faker.lorem.words(),
+    size: faker.number.int(),
+    nodeId: faker.string.uuid(),
+    fileHash: faker.lorem.words(),
+    contentHash: faker.lorem.words(),
+    deduped: faker.datatype.boolean(),
+    region: faker.lorem.words(),
+    thumbnailUrl: faker.internet.url(),
+    viewUrl: faker.internet.url(),
+    downloadUrl: faker.internet.url(),
+    uploadedByName: faker.person.fullName(),
+    createdAt: faker.lorem.words(),
   };
 }

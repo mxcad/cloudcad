@@ -29,6 +29,7 @@ import type {
 import { USER_REPOSITORY, ROLE_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { InitializationService } from '../../services/initialization.service';
+import { RegistrationGiftService } from '../../services/registration-gift.service';
 import { establishSession } from '../../session-establishment';
 import { I18nContext } from 'nestjs-i18n';
 
@@ -60,8 +61,24 @@ export class OssAuthProvider
     private authTokenService: AuthTokenService,
     private accountRateLimitService: AccountRateLimitService,
     private initializationService: InitializationService,
-    private passwordPolicyService: PasswordPolicyService
+    private passwordPolicyService: PasswordPolicyService,
+    private registrationGiftService: RegistrationGiftService
   ) {}
+
+  /**
+   * 注册/登录/刷新响应的 user 对象补齐展平会员字段（ADR-0036 单点判定）。
+   *
+   * 手机/微信自动注册、refreshToken、getUserInfo 等出口的 user 来自
+   * userRepo.findById（不含 membership 关系），前端 useMembership() 读
+   * user.membershipTierLevel 恒 0 → VIP 徽章不渲染。契约允许携带会员字段
+   * （login 响应已带），此出口统一补齐；非会员降级 0/null（与 login 一致）。
+   */
+  private async withMembership<T extends { id: string }>(user: T) {
+    return {
+      ...user,
+      ...(await this.registrationGiftService.getMembershipProjection(user.id)),
+    };
+  }
 
   async login(
     credentials: LoginDto,
@@ -151,6 +168,9 @@ export class OssAuthProvider
           phoneVerified: true,
         });
 
+        // 注册赠送会员（best-effort，失败不阻断注册）
+        await this.registrationGiftService.grantGiftIfEnabled(newUser.id);
+
         this.logger.log(
           `手机号自动注册成功: ${formattedPhone}, username: ${username}`
         );
@@ -198,13 +218,13 @@ export class OssAuthProvider
     return {
       ...tokens,
       restored: restored || undefined,
-      user: {
+      user: await this.withMembership({
         ...toPublicUser(user),
         nickname: user.nickname || undefined,
         avatar: user.avatar || undefined,
         role: user.role,
         status: user.status,
-      },
+      }),
     };
   }
 
@@ -279,6 +299,9 @@ export class OssAuthProvider
           roleId: defaultRole.id,
           status: 'ACTIVE',
         });
+
+        // 注册赠送会员（best-effort，失败不阻断注册）
+        await this.registrationGiftService.grantGiftIfEnabled(user.id);
 
         this.logger.log(`微信自动注册新用户: ${username} (ID: ${user.id})`);
 
@@ -369,13 +392,13 @@ export class OssAuthProvider
       return {
         accessToken: '',
         refreshToken: '',
-        user: {
+        user: await this.withMembership({
           ...user,
           nickname: user.nickname || undefined,
           avatar: user.avatar || undefined,
           role: user.role,
           status: user.status,
-        },
+        }),
         restored: restored || undefined,
         requireEmailBinding: needEmailBinding,
         requirePhoneBinding: needPhoneBinding,
@@ -388,13 +411,13 @@ export class OssAuthProvider
     return {
       ...tokens,
       restored: restored || undefined,
-      user: {
+      user: await this.withMembership({
         ...user,
         nickname: user.nickname || undefined,
         avatar: user.avatar || undefined,
         role: user.role,
         status: user.status,
-      },
+      }),
       requireEmailBinding: false,
       requirePhoneBinding: false,
     };
@@ -418,14 +441,14 @@ export class OssAuthProvider
 
     return {
       ...result,
-      user: {
+      user: await this.withMembership({
         ...toPublicUser(user),
         nickname: user.nickname || undefined,
         avatar: user.avatar || undefined,
         role: user.role,
         status: user.status,
         hasPassword: result.user.hasPassword,
-      },
+      }),
     };
   }
 
@@ -436,12 +459,12 @@ export class OssAuthProvider
       throw new UnauthorizedException(I18nContext.current()?.t('error.user.not_found') ?? '用户不存在');
     }
 
-    return {
+    return this.withMembership({
       ...toPublicUser(user),
       nickname: user.nickname || undefined,
       avatar: user.avatar || undefined,
       phone: user.phone || undefined,
-    };
+    });
   }
 
   async verifyPhoneAndLogin(
@@ -502,10 +525,10 @@ export class OssAuthProvider
     return {
       ...tokens,
       restored: restored || undefined,
-      user: {
+      user: await this.withMembership({
         ...userWithoutPassword,
         phoneVerified: true,
-      },
+      }),
     };
   }
 
@@ -694,6 +717,9 @@ export class OssAuthProvider
       phoneVerified: true,
     });
 
+    // 注册赠送会员（best-effort，失败不阻断注册）
+    await this.registrationGiftService.grantGiftIfEnabled(user.id);
+
     this.logger.log(
       `手机号注册成功（邮箱验证后）: ${formattedPhone}, email: ${email}, username: ${username}`
     );
@@ -706,11 +732,11 @@ export class OssAuthProvider
 
     return {
       ...tokens,
-      user: {
+      user: await this.withMembership({
         ...user,
         role: user.role,
         status: user.status,
-      },
+      }),
     };
   }
 
@@ -776,6 +802,9 @@ export class OssAuthProvider
       phoneVerified: true,
     });
 
+    // 注册赠送会员（best-effort，失败不阻断注册）
+    await this.registrationGiftService.grantGiftIfEnabled(user.id);
+
     this.logger.log(`手机号注册成功: ${formattedPhone}, username: ${username}`);
 
     const tokens = await this.authTokenService.generateTokens(user);
@@ -786,11 +815,11 @@ export class OssAuthProvider
 
     return {
       ...tokens,
-      user: {
+      user: await this.withMembership({
         ...user,
         role: user.role,
         status: user.status,
-      },
+      }),
     };
   }
 

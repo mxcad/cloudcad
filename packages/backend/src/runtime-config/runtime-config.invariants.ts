@@ -60,70 +60,49 @@ const OPS_BASELINE = [
 ];
 
 /**
- * 各接口限流与账号锁定：必须在同一个 security 分组的同一个 advanced 档里，
+ * 限流与账号锁定项的判定谓词：从定义表结构派生（rate-limit / account-lock
+ * 子分组），而不是维护平行硬编码清单——新增限流键只要带上 `subgroup:
+ * 'rate-limit'` 就自动纳入本不变式（子分组闭集保证子分组值合法）。
+ * 只按 subgroup 匹配：category 改动仍命中，由下方循环校验 category 必须 security。
+ * 语义：这些键必须在同一个 security 分组的同一个 advanced 档里，
  * 否则「调一处安全策略」要翻好几个分组。
  */
-const RATE_LIMIT_KEYS = [
-  'rateLimitPublicMax',
-  'rateLimitPublicWindowMs',
-  'rateLimitAuthMax',
-  'rateLimitLoginMax',
-  'rateLimitLoginWindowMs',
-  'loginRateLimitMax',
-  'loginRateLimitWindowSeconds',
-  'passwordResetRateLimitMax',
-  'passwordResetRateLimitWindowSeconds',
-  'registerRateLimitMax',
-  'registerRateLimitWindowSeconds',
-  'orderCreateRateLimitMax',
-  'orderCreateRateLimitWindowSeconds',
-  'accountLockFailThreshold',
-  'accountLockWindowSeconds',
-  'accountLockDurationSeconds',
-  'smsDailyLimitPerPhone',
-  'smsHourlyLimitPerIp',
-];
-
-/** 口令策略 7 项（#504）：落回 advanced 等于「默认看不见」。 */
-const PASSWORD_POLICY_KEYS = [
-  'passwordPolicyMinLength',
-  'passwordPolicyMinCategories',
-  'passwordPolicyWeakCheckEnabled',
-  'passwordPolicyChangeIntervalDays',
-  'passwordPolicyExpiringSoonDays',
-  'passwordPolicyChangeEnforceEnabled',
-  'passwordPolicyHistoryCheckEnabled',
-];
+function isSecurityRateLimitKey(d: RuntimeConfigDefinition): boolean {
+  return d.subgroup === 'rate-limit' || d.subgroup === 'account-lock';
+}
 
 /**
- * 账号锁定的窗口与时长和阈值是一套：改一个不改另一个会互相抵消，故一起标 dangerous。
+ * 口令策略项判定谓词：从 `subgroup: 'password-policy'` 派生（#504）。
+ * 只按 subgroup 匹配（category 改动仍命中，由循环校验）。
+ * 语义：落回 advanced 等于「默认看不见」，故必须 admin + security。
  */
-const LOCK_SET_KEYS = ['accountLockWindowSeconds', 'accountLockDurationSeconds'];
+function isPasswordPolicyKey(d: RuntimeConfigDefinition): boolean {
+  return d.subgroup === 'password-policy';
+}
 
 /**
- * 品牌公开配置项：PC 的 BrandContext 与移动端 resolveBrand 都只消费
- * GET /runtime-config/public 返回的键；`isPublic` 一旦改成 false，管理端改了
- * 配置两端毫无反应且不报任何错。
+ * 账号锁定窗口/时长判定谓词：`subgroup: 'account-lock'` 的窗口与时长键。
+ * 语义：窗口与时长和阈值是一套（改一个不改另一个会互相抵消），故一起标
+ * dangerous；threshold 不是窗口，不在其列。
+ */
+function isLockWindowKey(d: RuntimeConfigDefinition): boolean {
+  return (
+    d.subgroup === 'account-lock' &&
+    (d.key.endsWith('WindowSeconds') || d.key.endsWith('DurationSeconds'))
+  );
+}
+
+/**
+ * 品牌公开配置项判定谓词：从 `category: 'brand'` 派生（全部品牌键都是公开的——
+ * PC 的 BrandContext 与移动端 resolveBrand 都只消费 GET /runtime-config/public
+ * 返回的键；`isPublic` 一旦改成 false，管理端改了配置两端毫无反应且不报任何错）。
  * 客服三件套 + 外观四键（#499）+ 版权/法务/服务时间六键（#501），全部是从
  * brandProfile 拆出的独立键；brandEditorTitle 是 CAD 编辑器标题栏的独立产品面，
  * 刻意不走 BRAND_FIELD_OVERRIDE_PATHS 合并链。
  */
-const BRAND_PUBLIC_KEYS = [
-  'supportEmail',
-  'supportPhone',
-  'supportHours',
-  'docsUrl',
-  'brandTitle',
-  'brandSubtitle',
-  'brandTagline',
-  'brandLogo',
-  'brandEditorTitle',
-  'brandCopyrightLine',
-  'brandCopyrightYear',
-  'brandCopyrightHolder',
-  'brandLegalProductName',
-  'brandLegalProductShortName',
-];
+function isBrandPublicKey(d: RuntimeConfigDefinition): boolean {
+  return d.category === 'brand';
+}
 
 /**
  * 分类闭集，须与前端 RuntimeConfigPage/meta.ts 的 CATEGORY_META 键集合一致
@@ -266,13 +245,11 @@ export function validateDefinitions(
   }
 
   // ── 品牌公开键：两端只读 /public，分类与档位写错等于「改了没人看得见」 ──
-  violations.push(...unregistered(BRAND_PUBLIC_KEYS, byKey, '品牌公开键'));
-  for (const key of BRAND_PUBLIC_KEYS) {
-    const d = byKey.get(key);
-    if (!d) continue;
+  // 清单从 category==='brand' 派生（品牌键都是公开的），派生键必然已登记，无需 unregistered
+  for (const d of definitions.filter(isBrandPublicKey)) {
     if (d.isPublic !== true || d.category !== 'brand' || d.tier !== 'user') {
       violations.push(
-        `品牌公开键 ${key} 必须是 isPublic + brand + user（实际 isPublic=${d.isPublic}, category=${d.category}, tier=${d.tier}）`
+        `品牌公开键 ${d.key} 必须是 isPublic + brand + user（实际 isPublic=${d.isPublic}, category=${d.category}, tier=${d.tier}）`
       );
     }
   }
@@ -308,23 +285,21 @@ export function validateDefinitions(
   }
 
   // ── 限流与锁定阈值成组落在 advanced + security ──
-  violations.push(...unregistered(RATE_LIMIT_KEYS, byKey, '限流/锁定项'));
-  for (const key of RATE_LIMIT_KEYS) {
-    const d = byKey.get(key);
-    if (d && (d.tier !== 'advanced' || d.category !== 'security')) {
+  // 清单从 security 分组的 rate-limit/account-lock 子分组派生
+  for (const d of definitions.filter(isSecurityRateLimitKey)) {
+    if (d.tier !== 'advanced' || d.category !== 'security') {
       violations.push(
-        `限流/锁定项 ${key} 必须是 advanced + security（实际 ${d.tier} + ${d.category}）`
+        `限流/锁定项 ${d.key} 必须是 advanced + security（实际 ${d.tier} + ${d.category}）`
       );
     }
   }
 
-  // ── 口令策略 7 项落 admin 档：受 profile 覆盖的项藏进 advanced 等于把偏离藏起来 ──
-  violations.push(...unregistered(PASSWORD_POLICY_KEYS, byKey, '口令策略项'));
-  for (const key of PASSWORD_POLICY_KEYS) {
-    const d = byKey.get(key);
-    if (d && (d.tier !== 'admin' || d.category !== 'security')) {
+  // ── 口令策略项落 admin 档：受 profile 覆盖的项藏进 advanced 等于把偏离藏起来 ──
+  // 清单从 subgroup==='password-policy' 派生
+  for (const d of definitions.filter(isPasswordPolicyKey)) {
+    if (d.tier !== 'admin' || d.category !== 'security') {
       violations.push(
-        `口令策略项 ${key} 必须是 admin + security（实际 ${d.tier} + ${d.category}）`
+        `口令策略项 ${d.key} 必须是 admin + security（实际 ${d.tier} + ${d.category}）`
       );
     }
   }
@@ -341,12 +316,15 @@ export function validateDefinitions(
       violations.push(`次数阈值 ${d.key} 必须标 dangerous`);
     }
   }
+  const lockSetKeys = new Set(
+    definitions.filter(isLockWindowKey).map((d) => d.key)
+  );
   for (const d of definitions) {
     const isWindow =
       d.key.endsWith('WindowMs') ||
       d.key.endsWith('WindowSeconds') ||
       d.key.endsWith('DurationSeconds');
-    if (isWindow && d.dangerous && !LOCK_SET_KEYS.includes(d.key)) {
+    if (isWindow && d.dangerous && !lockSetKeys.has(d.key)) {
       violations.push(`窗口长度 ${d.key} 不得标 dangerous（账号锁定窗口除外）`);
     }
   }

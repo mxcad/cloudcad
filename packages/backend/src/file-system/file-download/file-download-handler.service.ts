@@ -69,6 +69,9 @@ export class FileDownloadHandlerService {
       // 4. 设置 ETag 和 Cache-Control
       const node = await this.fileTreeService.getNode(nodeId);
       if (node && node.nodeType === NodeType.FILE && (node.fileHash || node.id)) {
+        // 下载响应不缓存（no-cache：允许存储但每次使用前必须向后端重验证）——
+        // 文件被删除/更新后浏览器不会在 max-age 内命中旧缓存返回 200（BUG-FS-02）。
+        res.setHeader('Cache-Control', 'no-cache');
         const etag = `"${node.fileHash || node.id}"`;
         res.setHeader('ETag', etag);
 
@@ -89,8 +92,6 @@ export class FileDownloadHandlerService {
           );
           return;
         }
-
-        res.setHeader('Cache-Control', 'public, max-age=3600');
       } else {
         // 对于动态生成的 ZIP，禁用缓存
         res.setHeader('Cache-Control', 'no-cache');

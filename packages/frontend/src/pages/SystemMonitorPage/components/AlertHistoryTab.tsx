@@ -6,14 +6,15 @@ import { Pagination } from '@/components/ui/Pagination';
 import { DescriptionText } from '@/components/ui/TruncateText';
 import type { AlertRecordDto } from '@/api-sdk';
 import type { AlertHistoryState } from '../hooks/useAlertHistory';
-import { ALERT_PAGE_SIZE } from '../hooks/useAlertHistory';
 import { formatDateTimeWithSeconds } from '@/utils/dateUtils';
 import styles from '../SystemMonitorPage.module.css';
 
 export interface AlertHistoryTabProps {
   state: AlertHistoryState;
   page: number;
+  pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
 /**
@@ -23,14 +24,16 @@ export interface AlertHistoryTabProps {
 export const AlertHistoryTab: React.FC<AlertHistoryTabProps> = ({
   state,
   page,
+  pageSize,
   onPageChange,
+  onPageSizeChange,
 }) => {
   const { data, loading, error, refreshCountdown, refresh } = state;
 
   const items = data?.items ?? [];
   const pagination = data?.pagination ?? {
     page: 1,
-    limit: ALERT_PAGE_SIZE,
+    limit: pageSize,
     total: 0,
     totalPages: 0,
   };
@@ -97,7 +100,13 @@ export const AlertHistoryTab: React.FC<AlertHistoryTabProps> = ({
           </div>
 
           {pagination.totalPages > 1 && (
-            <Pagination meta={pagination} onPageChange={onPageChange} />
+            <Pagination
+              meta={pagination}
+              onPageChange={onPageChange}
+              showSizeChanger
+              onPageSizeChange={onPageSizeChange}
+              pageSizeOptions={[30, 50, 100]}
+            />
           )}
         </div>
       </section>

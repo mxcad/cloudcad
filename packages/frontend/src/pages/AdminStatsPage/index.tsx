@@ -3,10 +3,12 @@ import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
 import { t } from '@/languages';
 import {
+  useActiveStats,
   useAdminStatsOverview,
   useDailyPurchases,
   useDailyRegistrations,
 } from './hooks/useAdminStats';
+import { ActiveUsersSection } from './components/ActiveUsersSection';
 import { RegistrationsSection } from './components/RegistrationsSection';
 import { PurchasesSection } from './components/PurchasesSection';
 import type { AdminStatsRangeParams } from './hooks/useAdminStats';
@@ -34,7 +36,7 @@ const PRESET_PARAMS: Record<'7' | '30' | '90', AdminStatsRangeParams> = {
 const PRESETS: RangePreset[] = ['7', '30', '90'];
 
 /**
- * 运营统计页——总量概览 / 每日新增用户 / 每日会员购买。
+ * 运营统计页——总量概览 / 每日新增用户 / 活跃用户（DAU/MAU）/ 每日会员购买。
  * 页面入口需 SYSTEM_USER_READ 或 SYSTEM_BILLING_READ 任一（路由守卫同规则）；
  * 区块按各自权限显隐，无权限的区块不发起请求。
  *
@@ -63,6 +65,7 @@ export default function AdminStatsPage({
       : PRESET_PARAMS[preset];
 
   const registrations = useDailyRegistrations(rangeParams, canReadUsers);
+  const active = useActiveStats(rangeParams, canReadUsers);
   const purchases = useDailyPurchases(rangeParams, canReadBilling);
   const overview = useAdminStatsOverview(canReadUsers || canReadBilling);
 
@@ -143,6 +146,10 @@ export default function AdminStatsPage({
           stats={registrations.stats}
           loading={registrations.loading}
         />
+      )}
+
+      {canReadUsers && (
+        <ActiveUsersSection stats={active.stats} loading={active.loading} />
       )}
 
       {canReadBilling && (

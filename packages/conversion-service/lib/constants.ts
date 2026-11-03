@@ -26,6 +26,18 @@ function resolveProjectRoot(): string {
 
 const PROJECT_ROOT = resolveProjectRoot();
 
+// 「真正转换时长」单一 env 入口（CONVERSION_SERVICE_TIMEOUT，毫秒）：
+// conversion-service 独立部署形态不经 backend，需自己的 env 覆盖档位执行超时；
+// 默认 5 分钟，与 backend timeout.fileConversion（TIMEOUT_FILE_CONVERSION）对齐——
+// 大图纸（十几 MB DWG、含外部参照）常超 60s，旧 60s/3min 档位会把慢转换误杀。
+// backend 经 body.timeoutMs 透传时优先于本值（routes/submitConvertTask 已 cap 1h）。
+// acquireTimeout = timeout 的 1/3（排队等待信号量许可的单次上限，见 PRIORITY_CONFIG 注释）。
+const CONVERSION_TIMEOUT_MS = (() => {
+  const n = parseInt(process.env.CONVERSION_SERVICE_TIMEOUT || '', 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 3600000) : 300000;
+})();
+const CONVERSION_ACQUIRE_TIMEOUT_MS = Math.floor(CONVERSION_TIMEOUT_MS / 3);
+
 // 优先级配置: 每级独立信号量池。worker 按 level 1→3 顺序调度（level 1 最先）。
 // 优先级由 backend 按入口类型指定（body.priority）：打开/预览=1（命脉）、导出=2、后台=3。
 // - timeout: 单次转换的执行超时（传给 runner.execute 的命令执行超时）
@@ -36,11 +48,11 @@ const PROJECT_ROOT = resolveProjectRoot();
 // 上传预转/缩略图/批量下载属后台（level 3），可容忍长排队。
 const PRIORITY_CONFIG: Record<string, PriorityConfig> = {
   // 1 = 打开/预览（用户正等着打开图纸，最高优先）
-  1: { label: 'open', maxConcurrent: 2, timeout: 180000, acquireTimeout: 60000 },
+  1: { label: 'open', maxConcurrent: 2, timeout: CONVERSION_TIMEOUT_MS, acquireTimeout: CONVERSION_ACQUIRE_TIMEOUT_MS },
   // 2 = 导出下载（用户主动触发，次于打开）
-  2: { label: 'export', maxConcurrent: 2, timeout: 180000, acquireTimeout: 60000 },
+  2: { label: 'export', maxConcurrent: 2, timeout: CONVERSION_TIMEOUT_MS, acquireTimeout: CONVERSION_ACQUIRE_TIMEOUT_MS },
   // 3 = 后台（上传预转/缩略图/批量下载，最低优先，可容忍长排队）
-  3: { label: 'background', maxConcurrent: 1, timeout: 120000, acquireTimeout: 40000 },
+  3: { label: 'background', maxConcurrent: 1, timeout: CONVERSION_TIMEOUT_MS, acquireTimeout: CONVERSION_ACQUIRE_TIMEOUT_MS },
 };
 
 // 引擎路径走 engine-exec 的唯一出口：跨平台 .env 误配置（Windows 路径被复制到 Linux）
@@ -78,7 +90,11 @@ export function coercePriority(raw: unknown): number {
 
 // 同步接口愿意等多久（客户端耐心），与 PRIORITY_CONFIG[*].timeout（单次转换执行上限）语义不同。
 // 调大执行超时时须同步抬升此值，否则同步接口会先报 TIMEOUT 谎称失败。
-const SYNC_WAIT_TIMEOUT_MS = 180000;
+// 缺省 = 执行超时（CONVERSION_TIMEOUT_MS），可经 CONVERSION_SERVICE_SYNC_WAIT_TIMEOUT 覆盖。
+const SYNC_WAIT_TIMEOUT_MS = (() => {
+  const n = parseInt(process.env.CONVERSION_SERVICE_SYNC_WAIT_TIMEOUT || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : CONVERSION_TIMEOUT_MS;
+})();
 
 const QUEUE_DRIVER = (process.env.QUEUE_DRIVER || 'local').toLowerCase();
 const REDIS_URL = process.env.REDIS_URL || '';
@@ -132,6 +148,7 @@ export {
   PORT,
   PROJECT_ROOT,
   PRIORITY_CONFIG,
+  CONVERSION_TIMEOUT_MS,
   SYNC_WAIT_TIMEOUT_MS,
   MXCAD_CONFIG,
   QUEUE_DRIVER,

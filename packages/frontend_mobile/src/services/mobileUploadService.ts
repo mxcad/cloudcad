@@ -15,6 +15,8 @@ export interface MobileUploadOptions {
   forceUpload?: boolean;
   forceConvert?: boolean;
   skipDb?: boolean;
+  /** 覆盖通用 maxFileSize 上限（MB）。反馈图纸等专用上限大于通用上限时用 */
+  maxSizeMb?: number;
   onBeginUpload?: () => void;
   onProgress?: (percentage: number) => void;
   onFileQueued?: (file: File) => void;
@@ -28,6 +30,8 @@ export interface MobileUploadResult {
   type: string;
   ext: string;
   isUseServerExistingFile: boolean;
+  /** 上传完成后图纸节点 ID（公开上传/秒传也可能有；失败/未建节点为 null） */
+  nodeId: string | null;
 }
 
 export function getFileExt(name: string): string {
@@ -45,6 +49,7 @@ export async function uploadFile(
     forceUpload,
     forceConvert,
     skipDb,
+    maxSizeMb,
     onBeginUpload,
     onProgress,
     onFileQueued,
@@ -58,12 +63,14 @@ export async function uploadFile(
   // 上传前按运行时配置拦截超大文件：后端同样会拒，但那时用户已白等一轮哈希，
   // 且只拿到通用的「上传失败」看不到原因。放在秒传/分片判断之前，
   // 一处覆盖全部上传入口（本地面板、原生选文件、文件浏览器、项目详情、另存）。
-  const maxSizeMb = useRuntimeConfig().config.value.maxFileSize;
-  if (maxSizeMb > 0 && file.size > maxSizeMb * 1024 * 1024) {
+  // 专用上限（maxSizeMb，如反馈图纸 300MB）大于通用 maxFileSize 时以专用为准。
+  const maxFileSize = useRuntimeConfig().config.value.maxFileSize;
+  const limitMb = maxSizeMb && maxSizeMb > 0 ? maxSizeMb : maxFileSize;
+  if (limitMb > 0 && file.size > limitMb * 1024 * 1024) {
     throw new Error(
       t('文件「{name}」超过大小上限（{size} MB）', {
         name: file.name,
-        size: String(maxSizeMb),
+        size: String(limitMb),
       }),
     );
   }
@@ -100,6 +107,7 @@ export async function uploadFile(
         type: file.type,
         ext: getFileExt(safeName),
         isUseServerExistingFile: true,
+        nodeId: data?.nodeId ?? null,
       };
     }
   }
@@ -107,7 +115,7 @@ export async function uploadFile(
   if (file.size <= chunkSize && !skipDb) {
     onBeginUpload?.();
 
-    await mxcadUploadControllerUploadFile({
+    const uploadRes = await mxcadUploadControllerUploadFile({
       body: {
         name: safeName,
         hash,
@@ -129,10 +137,13 @@ export async function uploadFile(
       type: file.type,
       ext: getFileExt(safeName),
       isUseServerExistingFile: false,
+      nodeId: uploadRes.data?.nodeId ?? null,
     };
   }
 
   onBeginUpload?.();
+
+  let finalNodeId: string | null = null;
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
     const start = chunkIndex * chunkSize;
@@ -159,7 +170,7 @@ export async function uploadFile(
       continue;
     }
 
-    await mxcadUploadControllerUploadFile({
+    const uploadRes = await mxcadUploadControllerUploadFile({
       body: {
         chunk: chunkIndex,
         chunks: totalChunks,
@@ -174,6 +185,7 @@ export async function uploadFile(
         ...forceConvertField,
       },
     });
+    if (uploadRes.data?.nodeId) finalNodeId = uploadRes.data.nodeId;
 
     if (chunkIndex === totalChunks - 1) {
       onProgress?.(100);
@@ -190,6 +202,7 @@ export async function uploadFile(
     type: file.type,
     ext: getFileExt(safeName),
     isUseServerExistingFile: false,
+    nodeId: finalNodeId,
   };
   } catch (e) {
     handleApiError(e, `${t('上传失败')}: ${file.name}`);

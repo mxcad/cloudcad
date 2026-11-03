@@ -173,3 +173,45 @@ describe('ProjectModal — 跨项目转移设置区块', () => {
     });
   });
 });
+
+describe('ProjectModal — 名称非法字符校验', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('合法名称：提交按钮可用，onSubmit 被调用', () => {
+    const onSubmit = vi.fn();
+    renderModal({ editingProject: null, formData: { name: '测试项目', description: '' }, onSubmit });
+    const btn = screen.getByRole('button', { name: '创建' });
+    expect(btn).not.toHaveProperty('disabled', true);
+    fireEvent.click(btn);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it('非法字符（<>:"/\|?*）：提交按钮禁用 + 显示错误文案', () => {
+    const onSubmit = vi.fn();
+    renderModal({
+      editingProject: null,
+      formData: { name: '测试<>项目', description: '' },
+      onSubmit,
+    });
+    const btn = screen.getByRole('button', { name: '创建' });
+    expect(btn).toHaveProperty('disabled', true);
+    expect(screen.getByText('名称包含非法字符：< > : " | ? * / \\')).toBeTruthy();
+    fireEvent.click(btn);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('表单内按 Enter 提交非法名称：被拦截（handleSubmit 守卫）', () => {
+    const onSubmit = vi.fn();
+    renderModal({
+      editingProject: null,
+      formData: { name: '项目|非法', description: '' },
+      onSubmit,
+    });
+    const input = screen.getByPlaceholderText('请输入名称') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '项目|非法' } });
+    fireEvent.submit(input.closest('form') as HTMLFormElement);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});

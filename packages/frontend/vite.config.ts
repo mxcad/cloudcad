@@ -198,7 +198,35 @@ export default defineConfig(({ mode }) => {
       'process.env.NODE_ENV': JSON.stringify(mode),
     },
     resolve: {
-      alias: [{ find: '@', replacement: path.resolve(__dirname, './src') }],
+      alias: [
+        { find: '@', replacement: path.resolve(__dirname, './src') },
+        // @cloudcad/contracts 的 files/* 子路径 dist 产物是 CJS（tsc 输出），
+        // Vite 对 workspace 链接包默认不预打包，`export * from` 重导出 CJS 会丢
+        // 具名导出 → platform re-export 后两端 App 静默不挂载。子路径指回 src
+        // TS 源码（纯函数无 db import），具名导出保留，Vite 可 transform。
+        {
+          find: '@cloudcad/contracts/files/name-rules',
+          replacement: path.resolve(
+            __dirname,
+            '../contracts/src/files/name-rules.ts'
+          ),
+        },
+        {
+          find: '@cloudcad/contracts/files/ext-ref-naming',
+          replacement: path.resolve(
+            __dirname,
+            '../contracts/src/files/ext-ref-naming.ts'
+          ),
+        },
+        // 与上同理：runtime-config 默认值注册表指回 TS 源码，避免 CJS dist 丢具名导出
+        {
+          find: '@cloudcad/contracts/runtime-config/defaults',
+          replacement: path.resolve(
+            __dirname,
+            '../contracts/src/runtime-config/defaults.ts'
+          ),
+        },
+      ],
     },
     build: {
       // 生产环境优化

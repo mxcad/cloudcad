@@ -224,7 +224,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
       })
     } catch (e) {
       closeToast()
-      showFailToast(t('删除失败'))
+      showFailToast(errMsg(e, t('删除失败')))
     }
   }
 
@@ -315,7 +315,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
       })
     } catch (e) {
       closeToast()
-      showFailToast(t('重命名失败'))
+      showFailToast(errMsg(e, t('重命名失败')))
     }
   }
 
@@ -553,7 +553,7 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
       }
     } catch (e) {
       closeToast()
-      showToast(t('创建失败，请重试'))
+      showToast(errMsg(e, t('创建失败，请重试')))
     }
   }
 
@@ -577,11 +577,26 @@ export function useFileNodeOps(ctx: FileNodeOpsContext) {
     const parentId = ctx.resolveParentId()
     if (!parentId) return
 
+    // 格式门禁（对齐 PC MxCadUploader handleSelectFiles）：普通「上传图纸」只允许
+    // CAD 格式（.dwg/.dxf/.mxweb），不支持的类型提示忽略数量；全部不支持则提示并中止。
+    const allowedFiles = files.filter((f) => isCadFileName(f.name))
+    if (allowedFiles.length === 0) {
+      showToast(t('所选文件类型不支持（支持 .dwg, .dxf, .mxweb）'))
+      return
+    }
+    if (allowedFiles.length !== files.length) {
+      showToast(
+        t('已忽略 {count} 个不支持的文件类型', {
+          count: String(files.length - allowedFiles.length),
+        }),
+      )
+    }
+
     // 多文件上传（阶段 5）：并发 2，逐文件独立成功/失败 toast，全部结束后统一重载一次
     showLoadingToast({ message: t('上传中...'), forbidClick: true, duration: 0 })
     try {
       await runUploadPool(
-        files,
+        allowedFiles,
         async (file) => {
           const hash = await calculateFileHash(file)
           await uploadFile({ file, hash, nodeId: parentId })

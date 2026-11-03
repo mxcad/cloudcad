@@ -38,6 +38,12 @@
 - 判定存没存对：真实登录态文件 ~几 KB（含 token / cookie）；停在登录页的空态 ~几百字节。
 - **`state save <path>` 的 path 是相对「当前工作目录」的**——cwd 不同会落到不同目录（实测：admin 态存到仓库根 `e2e/.auth/`，user 态用绝对路径存到 `packages/frontend/e2e/.auth/`，两处不一致）。**统一用绝对路径存 state**，避免登录态散落在意想不到的地方。
 
+## 默认会话干扰与截图不同步（2026-10-30 实测定案）
+
+- **`default` 会话会被并行 / 残留进程导航到其他页面**：`session list` 只显示 `default`，但它可能已被另一进程（并行子代理 / 上次残留 daemon）导航到项目管理、cad-editor 等页面——`snapshot` 拿到的 DOM 与预期页面不符，且难以察觉。
+- **`screenshot` 可能命中非当前操作的标签页**：与 `snapshot` 的 DOM 不同步——截图看着像 bug（页面不对），实际 `snapshot` 的 DOM 是另一处。**判据：截图与快照内容对不上 → 以 `snapshot -i` DOM 为准**。
+- **解法**：① 每个独立验证任务用**显式 `--session <名称>`**（不共用 `default`），任务完成即 `close --all`；② 下结论以 DOM `snapshot` 为权威，截图仅辅助视觉；③ 打开页面后先 `snapshot -i` 确认落在预期 URL/页面，再操作。
+
 ## 等待
 
 - `agent-browser wait --load networkidle` ❌ 本仓库禁用（CAD + 协同 WebSocket 永活跃，实测空等 28s）。

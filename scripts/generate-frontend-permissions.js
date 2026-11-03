@@ -538,6 +538,9 @@ function getPermissionLabel(permission) {
     SYSTEM_CONFIG_WRITE: '修改配置',
     SYSTEM_IP_BLACKLIST_MANAGE: '管理 IP 黑名单',
     SYSTEM_IP_WHITELIST_MANAGE: '管理管理员 IP 白名单',
+    SYSTEM_FEEDBACK_READ: '查看用户反馈',
+    SYSTEM_FEEDBACK_MANAGE: '处理用户反馈',
+    SYSTEM_FEEDBACK_REWARD: '发放反馈奖励',
     PROJECT_CREATE: '创建项目',
     // 公共资源库权限
     LIBRARY_DRAWING_MANAGE: '管理图纸库',

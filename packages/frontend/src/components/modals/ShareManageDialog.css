@@ -224,10 +224,118 @@
   color: var(--text-tertiary);
 }
 
+/* 分享图片（海报）行：布局选择 + 下载按钮 */
+.share-dialog-poster-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.share-dialog-poster-select {
+  flex-shrink: 0;
+}
+
 .share-dialog-created-actions {
   display: flex;
   gap: 8px;
   width: 100%;
+}
+
+/* 分享图片预览（合成海报） */
+.share-dialog-preview-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 4px;
+  /* 作为 Card.Body（contentClassName="flex flex-col"）的弹性子项撑满剩余空间
+     （flex:1 + min-height:0，不用 height:100%）：Card 只有 max-h-[60vh]
+     （max-height 非定高），height:100% 在部分引擎下解析不到弹性子项的计算高度，
+     会回落为 auto → 图按固有尺寸渲染 → Card.Body 的 overflow-y-auto 触发滚动条。
+     图 flex:1 + min-height:0 + object-fit contain 在剩余空间内等比自适应，
+     任意视口都不溢出。overflow:hidden 兜底防微溢出。 */
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.share-dialog-preview-img {
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  object-fit: contain;
+}
+
+.share-dialog-preview-region-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  color: var(--primary-600);
+  background: color-mix(in srgb, var(--primary-500) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-500) 28%, transparent);
+}
+
+/* 海报选项（预览弹框）：底部名称 + 二维码/文字大小滑杆（改动即节流重合成预览） */
+.share-dialog-poster-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.share-dialog-poster-opts-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.share-dialog-poster-opts-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.share-dialog-poster-opts-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-dialog-poster-opts-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: var(--text-xs);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.share-dialog-poster-opts-range {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--primary-500);
+}
+
+.share-dialog-poster-opts-value {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  width: 38px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .share-dialog-loading-view {

@@ -192,10 +192,12 @@
   </FloatingPopup>
 
   <!-- ═══ 条目操作（E-11/E-13） ═══ -->
+  <!-- z-index 2100：与分类弹窗一致，高于库抽屉 FloatingPopup（2005），否则被遮住 -->
   <van-action-sheet
     v-model:show="showActionSheet"
     :actions="actionSheetActions"
     :cancel-text="t('关闭')"
+    :style="{ zIndex: 2100 }"
     @select="onActionSheetSelect"
     @cancel="showActionSheet = false"
   />
@@ -204,10 +206,11 @@
   <BatchDownloadPanel v-model:show="showBatchPanel" />
 
   <!-- ═══ 分类级联选择 ═══ -->
+  <!-- z-index 2100：必须高于库抽屉 FloatingPopup（默认 2005），否则被抽屉遮住（层级问题） -->
   <van-popup
     v-model:show="showCategoryPopup"
     position="bottom"
-    :style="{ height: '50%' }"
+    :style="{ height: '50%', zIndex: 2100 }"
     round
   >
     <div class="category-popup">
@@ -217,18 +220,18 @@
       </div>
       <div class="category-levels">
         <div
-          v-for="(level, li) in library.categories.value"
-          :key="li"
+          v-for="lv in visibleCategoryLevels"
+          :key="lv.level"
           class="category-column"
         >
-          <div class="category-column-title">L{{ li + 1 }}</div>
+          <div class="category-column-title">{{ categoryLevelTitle(lv.level) }}</div>
           <div class="category-column-list">
             <div
-              v-for="item in filteredCategoryItems(li)"
+              v-for="item in filteredCategoryItems(lv.level)"
               :key="item.id"
               class="category-item"
-              :class="{ 'category-item--active': library.selectedPath.value[li] === item.id }"
-              @click="onSelectCategory(li, item.id)"
+              :class="{ 'category-item--active': library.selectedPath.value[lv.level] === item.id }"
+              @click="onSelectCategory(lv.level, item.id)"
             >
               {{ item.name }}
             </div>
@@ -313,6 +316,22 @@ const searchInput = ref('')
 // ── 分类弹窗 ──
 const showCategoryPopup = ref(false)
 
+// ── 分类弹窗：对齐 PC 端 CategoryTabs ──
+// PC 端是 3 级分类，但某级只含"全部"（无实际分类数据）时隐藏该列：
+// 常见情况只显示"一级分类/二级分类"两列，有第三级数据时自动显示第三列。
+// 表头用中文（一级分类/二级分类/三级分类），替代原先的 L1/L2/L3。
+function isOnlyAllLevel(lv: { items: { id: string }[] }): boolean {
+  return lv.items.length === 1 && lv.items[0]?.id === 'all'
+}
+const visibleCategoryLevels = computed(() =>
+  library.categories.value.filter((lv) => !isOnlyAllLevel(lv)),
+)
+function categoryLevelTitle(level: number): string {
+  if (level === 0) return t('一级分类')
+  if (level === 1) return t('二级分类')
+  return t('三级分类')
+}
+
 // 根据上级选择过滤当前级分类
 function filteredCategoryItems(level: number) {
   const levelData = library.categories.value[level]
@@ -326,7 +345,8 @@ function filteredCategoryItems(level: number) {
 
 function onSelectCategory(level: number, categoryId: string) {
   library.selectCategory(level, categoryId)
-  showCategoryPopup.value = false
+  // 选择分类后不关闭弹框，支持一次选择多级分类（L1+L2+L3）；
+  // 只有点击右上角关闭按钮（X）才关闭弹框
 }
 
 // ── 无限滚动 ──

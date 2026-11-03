@@ -133,6 +133,74 @@ export class PurchasesTotalsDto {
 }
 
 /**
+ * 活跃用户统计点（UTC+8 自然日；MAU 为该日往前 30 天滚动窗口去重值）
+ */
+export class ActiveStatsPointDto {
+  @ApiProperty({
+    description: '日期（YYYY-MM-DD，UTC+8 自然日）',
+    example: '2026-08-25',
+  })
+  date: string;
+
+  @ApiProperty({
+    description: '当日日活跃用户数（DAU，去重）',
+    example: 42,
+  })
+  dau: number;
+
+  @ApiProperty({
+    description:
+      '截至该日的月活跃用户数（MAU，近 30 天滚动窗口去重，含该日）',
+    example: 156,
+  })
+  mau: number;
+}
+
+/**
+ * 活跃用户统计响应（DAU/MAU/粘性 + 区间日序列）
+ *
+ * KPI（dau/mau/stickiness）为当前实时值，与统计区间无关：
+ * dau=今日 0 点至现在（东八区），mau=近 30 天滚动窗口（含今日）。
+ * 活跃口径=任意审计事件（成功登录/文件/项目/节点操作等），见 CONTEXT.md。
+ */
+export class ActiveStatsDto {
+  @ApiProperty({
+    description: '今日日活跃用户数（DAU，0 点至现在实时值，东八区切日）',
+    example: 18,
+  })
+  dau: number;
+
+  @ApiProperty({
+    description: '月活跃用户数（MAU，近 30 天滚动窗口含今日）',
+    example: 97,
+  })
+  mau: number;
+
+  @ApiProperty({
+    description: '粘性 = DAU/MAU（保留 4 位小数；MAU 为 0 时为 null）',
+    nullable: true,
+    type: 'number',
+    example: 0.1856,
+  })
+  stickiness: number | null;
+
+  @ApiProperty({
+    description: '开始日期（含，YYYY-MM-DD）',
+    example: '2026-07-27',
+  })
+  startDate: string;
+
+  @ApiProperty({
+    description: '结束日期（含，YYYY-MM-DD）',
+    example: '2026-08-25',
+  })
+  endDate: string;
+
+  @ApiProperty({ type: [ActiveStatsPointDto], description: '零填充日序列' })
+  series: ActiveStatsPointDto[];
+}
+
+/**
  * 每日会员购买统计响应
  */
 export class DailyPurchasesStatsDto {

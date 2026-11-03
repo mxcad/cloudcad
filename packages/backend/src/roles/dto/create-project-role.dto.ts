@@ -9,7 +9,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 import { ProjectPermission } from '../../common/enums/permissions.enum';
 
 export class CreateProjectRoleDto {
@@ -25,6 +25,7 @@ export class CreateProjectRoleDto {
   @ApiProperty({ description: '角色名称', example: '项目经理' })
   @IsString()
   @IsNotEmpty()
+  @Matches(/\S/, { message: '角色名称不能全为空白字符' })
   name!: string;
 
   @ApiProperty({

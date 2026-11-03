@@ -21,6 +21,8 @@ interface AuditLogTableProps {
   onToggleSelectAll: () => void;
   onRubberBandSelect?: (ids: string[]) => void;
   onPageChange: (page: number) => void;
+  /** 每页条数变化回调（切换后应重置页码并重新加载） */
+  onPageSizeChange?: (pageSize: number) => void;
   /** 滚动分页（滚动加载；提供后启用顶/底 loader 与页脚 visiblePage） */
   onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
   /** 列表第一项所属页码（prev 触发防重复加载已存在页） */
@@ -57,6 +59,7 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
   onToggleSelectAll,
   onRubberBandSelect,
   onPageChange,
+  onPageSizeChange,
   onScrollPageChange,
   minLoadedPage,
   hasFilters = false,
@@ -89,6 +92,9 @@ export const AuditLogTable: React.FC<AuditLogTableProps> = ({
         onToggleSelectAll={onToggleSelectAll}
         onRubberBandSelect={onRubberBandSelect}
         onPageChange={onPageChange}
+        showSizeChanger
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={[30, 50, 100]}
         onScrollPageChange={onScrollPageChange}
         minLoadedPage={minLoadedPage}
         renderHeader={() => (

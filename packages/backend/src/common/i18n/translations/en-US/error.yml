@@ -259,6 +259,7 @@ password_policy:
 ip_blacklist:
   invalid_ip: Invalid IP or CIDR format
   duplicate_entry: This IP/CIDR is already in the blacklist
+  loopback_not_allowed: Loopback addresses cannot be added to the IP blacklist
   blocked: Access denied
   not_found: Blacklist entry not found
 ip_whitelist:
@@ -312,6 +313,7 @@ billing:
   refund_failed_state_restored: Refund request failed, order status has been restored
   downgrade_not_allowed: Downgrade is not allowed. Please upgrade or renew your current plan.
   amount_below_minimum: Order amount is below the payment gateway minimum. Please check the tier price configuration.
+  payment_disabled: Payment is disabled. Purchasing or renewing is temporarily unavailable.
   refund_apply_not_allowed: This order is not eligible for a refund request
   refund_apply_already_pending: This order already has a pending refund request
   refund_application_not_found: Refund application not found
@@ -447,3 +449,39 @@ mxcad_engine_extra:
   ini_read_failed: "Failed to read engine config file: {path}"
   ini_parse_failed: "Engine config file is not valid JSON: {path}"
   ini_write_failed: "Failed to write engine config file: {path}"
+feedback:
+  anonymous_disabled: Anonymous feedback is currently disabled. Please sign in to submit.
+  anon_limit_exceeded: You have reached today's anonymous feedback limit. Please sign in to continue.
+  user_limit_exceeded: You have reached today's feedback limit. Please try again tomorrow.
+  query_rate_limited: Too many queries. Please try again later.
+  content_too_short: Feedback content is too short. Please add more details.
+  content_too_long: Feedback content is too long. Please shorten it.
+  code_not_found: Feedback not found or invalid query code.
+  not_found: Feedback not found.
+  status_locked_adopted: Adopted feedback cannot change status. To withdraw, handle the reward instead.
+  reject_reason_required: A rejection reason is required.
+  already_adopted: This feedback has already been adopted.
+  reward_exists: A reward record already exists for this feedback.
+  reward_not_found: Reward record not found.
+  reward_not_pending: This reward has already been processed and cannot be issued again.
+  reward_already_revoked: This reward has already been revoked.
+  remark_required: A customer-service verification note is required to issue the reward.
+  tier_not_found: Membership tier does not exist.
+  user_not_found: Target account does not exist or has been deactivated.
+  invalid_tier: Reward tier level must be 1-3.
+  invalid_duration: Reward duration must be 7/30/90 days.
+  attachment_missing: Please select a file to upload
+  attachment_type_unsupported: Unsupported attachment type
+  attachment_too_large: Attachment exceeds size limit
+  attachment_total_exceeded: Too many attachments
+  attachment_image_exceeded: Too many image attachments
+  attachment_drawing_exceeded: Too many drawing attachments
+  attachment_document_exceeded: Too many document attachments
+  attachment_invalid_image: Invalid image file, please re-upload
+  attachment_drawing_not_found: Drawing not found
+  attachment_reference_login_required: Please sign in to reference an existing drawing
+  attachment_file_missing: Attachment file not found
+  attachment_not_found: Attachment not found
+  attachment_not_owner: Attachment does not belong to current user
+  attachment_reference_no_file: Drawing reference must be downloaded via the drawing API
+  attachment_forbidden: You are not allowed to download this attachment

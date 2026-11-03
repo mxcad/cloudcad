@@ -17,6 +17,7 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import * as path from 'path';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiResponse } from '@nestjs/swagger';
 import { DrawingIngestService } from './drawing-ingest.service';
@@ -202,6 +203,18 @@ export class MxcadUploadController {
           I18nContext.current()?.t('error.mxcad.missing_params_chunks') ??
             '缺少必要参数: chunks'
         );
+      // 普通「上传图纸」只接受 CAD 格式（对齐前端 CAD_EXTENSIONS = .dwg/.dxf/.mxweb）。
+      // 外部参照图片上传走 ext-reference 专用端点（ext-ref-validator 另有限制），不在此列；
+      // 上传缩略图/反馈附件等也各有专用端点，不会误伤。
+      const allowedExtensions = ['.dwg', '.dxf', '.mxweb'];
+      const fileExt = path.extname(body.name).toLowerCase();
+      if (!allowedExtensions.includes(fileExt)) {
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.mxcad_extra.only_allowed_types', {
+            args: { types: allowedExtensions.join(', ') },
+          }) ?? `仅支持 ${allowedExtensions.join(', ')} 文件`
+        );
+      }
       context =
         await this.requestContextBuilder.buildContextFromRequest(request);
       let result: {

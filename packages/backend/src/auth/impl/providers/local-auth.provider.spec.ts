@@ -5,6 +5,7 @@ import { USER_REPOSITORY, ROLE_REPOSITORY } from '@cloudcad/contracts';
 import { OssAuthProvider } from './local-auth.provider';
 import { WechatService } from '../services/wechat.service';
 import { RegistrationService } from '../services/registration.service';
+import { RegistrationGiftService } from '../../services/registration-gift.service';
 import { LoginService } from '../services/login.service';
 import { PasswordService } from '../services/password.service';
 import { AuthTokenService } from '../services/auth-token.service';
@@ -144,6 +145,18 @@ describe('OssAuthProvider.loginByWechat（微信头像不落库微信 URL）', (
         {
           provide: PasswordPolicyService,
           useValue: mockPasswordPolicyService,
+        },
+        {
+          provide: RegistrationGiftService,
+          useValue: {
+            grantGiftIfEnabled: jest.fn().mockResolvedValue(undefined),
+            getMembershipProjection: jest.fn().mockResolvedValue({
+              membershipTierLevel: 0,
+              membershipExpiresAt: null,
+              isVip: false,
+              membershipTier: 'VIP0',
+            }),
+          },
         },
       ],
     }).compile();
@@ -343,6 +356,18 @@ describe('OssAuthProvider 注册路径的口令策略校验', () => {
         { provide: AccountRateLimitService, useValue: mockAccountRateLimitService },
         { provide: InitializationService, useValue: { assertInitialized: jest.fn() } },
         { provide: PasswordPolicyService, useValue: mockPasswordPolicyService },
+        {
+          provide: RegistrationGiftService,
+          useValue: {
+            grantGiftIfEnabled: jest.fn().mockResolvedValue(undefined),
+            getMembershipProjection: jest.fn().mockResolvedValue({
+              membershipTierLevel: 0,
+              membershipExpiresAt: null,
+              isVip: false,
+              membershipTier: 'VIP0',
+            }),
+          },
+        },
       ],
     }).compile();
     return module.get<OssAuthProvider>(OssAuthProvider);

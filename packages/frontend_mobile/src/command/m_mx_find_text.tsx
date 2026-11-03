@@ -14,13 +14,13 @@ import {
   showConfirmDialog,
   Field,
   showToast,
-  FloatingPanel,
   CellGroup,
   Cell,
 } from "vant";
 import { createVNode, defineComponent, h, ref, render, watch } from "vue";
+import { FloatingPanelDrawer } from "@/components/FloatingPanelDrawer";
 
-const el = ref<InstanceType<typeof FloatingPanel>>();
+const el = ref<InstanceType<typeof FloatingPanelDrawer>>();
 const anchors = new Array(4).fill(0).map((_, index) => {
   if (index === 0) return 100;
   return Math.round(0.1 * index * window.innerHeight);
@@ -75,12 +75,13 @@ const showFindTextList = () => {
 // ‍ Return data or components used for rendering
 
       return () => (
-        <FloatingPanel
+        <FloatingPanelDrawer
           ref={el}
           v-model:height={height.value}
           anchors={anchors}
           content-draggable={false}
-          style="--van-floating-panel-background: #3C3C3C"
+          panel-style="--van-floating-panel-background: #3C3C3C"
+          onClose={closePanel}
         >
           <CellGroup>
             {filterTextInfos.value.map((item) => (
@@ -92,18 +93,17 @@ const showFindTextList = () => {
               />
             ))}
           </CellGroup>
-        </FloatingPanel>
+        </FloatingPanelDrawer>
       );
     },
   });
-  const vNode = createVNode(h(() => <FindTextList></FindTextList>));
+  vNode = createVNode(h(() => <FindTextList></FindTextList>));
   
   render(vNode, document.body)
   setTimeout(() => {
     cancel && cancel();
     cancel = onClickOutside(el.value?.$el, () => {
-      vNode.el && vNode.el.remove()
-      cancel();
+      closePanel();
     });
   }, 500);
 };
@@ -111,6 +111,13 @@ const showFindTextList = () => {
 const updateDisplay = () => MxFun.updateDisplay();
 let selectRectBox!: THREE.Line;
 let cancel!: () => void;
+let vNode: ReturnType<typeof createVNode> | null = null;
+
+const closePanel = () => {
+  vNode?.el && vNode.el.remove();
+  vNode = null;
+  cancel && cancel();
+};
 export async function m_mx_find_text() {
   const mxcad = MxCpp.App.getCurrentMxCAD();
   selectRectBox && mxcad.mxdraw.removeObject(selectRectBox);

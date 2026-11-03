@@ -480,8 +480,11 @@ function initDatabase() {
   log('info', `参数: ${initdbArgs.join(' ')}`);
   log('info', `PG_SHARE_DIR: ${PG_SHARE_DIR || 'auto'}`);
 
+  // stdin ignore、stdout inherit（保留 initdb 进度输出）、stderr pipe（失败时打印）。
+  // 此前 stdio:'inherit' 使 result.stderr 恒为 null——initdb 的失败原因（如缺 VC++
+  // 运行库 DLL 静默失败）只在 PM2 日志里一闪而过，脚本自身不落任何诊断。
   const result = spawnSync(initdb, initdbArgs, {
-    stdio: 'inherit',
+    stdio: ['ignore', 'inherit', 'pipe'],
     shell: IS_WINDOWS,
     windowsHide: true,
     env: getEnv(),
@@ -493,8 +496,17 @@ function initDatabase() {
   }
 
   // 输出详细错误信息
-  const errorOutput = result.stderr || result.stdout || '';
-  log('error', `数据目录初始化失败: ${errorOutput}`);
+  const errorOutput = (result.stderr || '').toString().trim();
+  if (errorOutput) {
+    log('error', `数据目录初始化失败: ${errorOutput}`);
+  } else {
+    // stderr 为空常见于"进程启动即失败"：缺 VC++ 运行库/系统 DLL 是加载器级失败、无输出
+    log('error', '数据目录初始化失败（无错误输出）。');
+    log('error', '  常见原因：目标机缺少 Microsoft Visual C++ 2015-2022 Redistributable (x64)，');
+    log('error', '  或 initdb 依赖的 DLL（VCRUNTIME140.dll 等）缺失，进程启动即失败、无 stderr。');
+    log('error', '  可安装 vc_redist.x64.exe（https://aka.ms/vs/17/release/vc_redist.x64.exe）后重试，');
+    log('error', '  或检查部署包 pgsql/bin/ 下是否含全部依赖 DLL。');
+  }
   return false;
 }
 

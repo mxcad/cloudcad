@@ -9,6 +9,7 @@ import { USER_REPOSITORY, toPublicUser } from '@cloudcad/contracts';
 import { AccountRateLimitService } from '../../services/account-rate-limit.service';
 import { PasswordPolicyService } from '../../services/password-policy.service';
 import { InitializationService } from '../../services/initialization.service';
+import { RegistrationGiftService } from '../../services/registration-gift.service';
 import { establishSession } from '../../session-establishment';
 import { I18nContext } from 'nestjs-i18n';
 
@@ -27,8 +28,24 @@ export class RegistrationService implements IRegistrationService {
     @InjectRedis() private readonly redis: Redis,
     private accountRateLimitService: AccountRateLimitService,
     private passwordPolicyService: PasswordPolicyService,
-    private initializationService: InitializationService
+    private initializationService: InitializationService,
+    private registrationGiftService: RegistrationGiftService
   ) {}
+
+  /**
+   * 注册/验证邮箱成功响应的 user 对象补齐展平会员字段（ADR-0036 单点判定）。
+   *
+   * 注册赠送后新用户立即是 VIP1，但 userService.create 返回的 user 不带 membership
+   * 关系，前端 useMembership() 读 user.membershipTierLevel 恒 0 → VIP 徽章不渲染。
+   * user 契约本就允许携带会员字段（login 响应已带），此出口统一补齐；
+   * 未赠送/会员已过期时降级 0/null（与 login 一致）。
+   */
+  private async withMembership<T extends { id: string }>(user: T) {
+    return {
+      ...user,
+      ...(await this.registrationGiftService.getMembershipProjection(user.id)),
+    };
+  }
 
   async register(registerDto: RegisterDto, req?: SessionRequest): Promise<AuthResponseDto> {
     const { email, username, password, nickname, wechatTempToken } = registerDto;
@@ -107,13 +124,19 @@ export class RegistrationService implements IRegistrationService {
         await this.userService.syncWechatAvatar(user.id, wechatData.avatar);
       }
 
+      // 注册赠送会员（best-effort，失败不阻断注册）
+      await this.registrationGiftService.grantGiftIfEnabled(user.id);
+
       const tokens = await this.authTokenService.generateTokens(user);
 
       if (req && req.session) {
         await establishSession(req, user, { save: false });
       }
 
-      return { ...tokens, user: { ...user, role: user.role, status: user.status } };
+      return {
+        ...tokens,
+        user: await this.withMembership({ ...user, role: user.role, status: user.status }),
+      };
     }
 
     const requireEmailVerification = await this.runtimeConfigService.getValue<boolean>('requireEmailVerification');
@@ -140,13 +163,19 @@ export class RegistrationService implements IRegistrationService {
         await this.userService.syncWechatAvatar(user.id, wechatData.avatar);
       }
 
+      // 注册赠送会员（best-effort，失败不阻断注册）
+      await this.registrationGiftService.grantGiftIfEnabled(user.id);
+
       const tokens = await this.authTokenService.generateTokens(user);
 
       if (req && req.session) {
         await establishSession(req, user, { save: false });
       }
 
-      return { ...tokens, user: { ...user, role: user.role, status: user.status } };
+      return {
+        ...tokens,
+        user: await this.withMembership({ ...user, role: user.role, status: user.status }),
+      };
     }
 
     const registerKey = `register:pending:${email}`;
@@ -210,13 +239,19 @@ export class RegistrationService implements IRegistrationService {
         await this.userService.syncWechatAvatar(user.id, registerData.avatar);
       }
 
+      // 注册赠送会员（best-effort，失败不阻断注册）
+      await this.registrationGiftService.grantGiftIfEnabled(user.id);
+
       const tokens = await this.authTokenService.generateTokens(user);
 
       if (req && req.session) {
         await establishSession(req, user, { save: false });
       }
 
-      return { ...tokens, user: { ...user, role: user.role, status: user.status } };
+      return {
+        ...tokens,
+        user: await this.withMembership({ ...user, role: user.role, status: user.status }),
+      };
     }
 
     const existingUser = await this.userRepo.findByEmail(email);
@@ -237,6 +272,9 @@ export class RegistrationService implements IRegistrationService {
       await establishSession(req, updatedUser, { save: false });
     }
 
-    return { ...tokens, user: userWithoutPassword };
+    return {
+      ...tokens,
+      user: await this.withMembership(userWithoutPassword),
+    };
   }
 }

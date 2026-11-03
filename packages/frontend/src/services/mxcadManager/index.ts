@@ -28,7 +28,11 @@ import { useFileSystemStore } from '../../stores/fileSystemStore';
 
 export { CSS_CLASSES } from './mxcadTypes';
 
-export { generateThumbnail, uploadThumbnail } from './mxcadThumbnail';
+export {
+  generateThumbnail,
+  uploadThumbnail,
+  zoomToRegion,
+} from './mxcadThumbnail';
 
 export {
   refreshFileName,
@@ -88,7 +92,8 @@ export {
   intentFacts,
   signalShareChainCloudNodeCreated,
 } from './intentChain';
-export type { IntentStart } from './intentChain';
+// IntentStart 类型收敛到 @cloudcad/platform（两端共用），此处透传保兼容
+export type { IntentStart } from '@cloudcad/platform';
 
 // ==================== 私人空间 ID ====================
 

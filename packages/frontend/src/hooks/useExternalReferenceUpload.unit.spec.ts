@@ -272,6 +272,54 @@ describe('useExternalReferenceUpload Unit Tests', () => {
       expect(callArgs.path.nodeId).toBe(testNodeId);
       expect(callArgs.body.ext_ref_file).toBe('ref1.dwg');
     });
+
+    it('公开上传返回 ret=failed 时状态置 fail 并透传错误（防假成功回归）', async () => {
+      const sdk = await import('@/api-sdk');
+      const onError = vi.fn();
+      const mockFile = new File(['content'], 'ref1.dwg', {
+        type: 'application/octet-stream',
+      });
+
+      vi.mocked(sdk.publicFileControllerGetPreloadingData).mockResolvedValue({
+        data: {
+          tz: false,
+          src_file_md5: testFileHash,
+          images: [],
+          externalReference: [{ name: 'ref1.dwg', size: 4096, type: 'dwg' }],
+        },
+      } as any);
+      vi.mocked(sdk.publicFileControllerCheckExtReference).mockResolvedValue({
+        data: { exists: false },
+      } as any);
+      vi.mocked(sdk.publicFileControllerUploadExtReference).mockResolvedValue({
+        data: { ret: 'failed', message: '转换失败：引擎产物缺失' },
+      } as any);
+
+      const { result } = renderHook(() =>
+        useExternalReferenceUpload({ fileHash: testFileHash, onError })
+      );
+
+      let hasMissing = false;
+      await act(async () => {
+        hasMissing = await result.current.checkMissingReferences();
+      });
+      expect(hasMissing).toBe(true);
+
+      result.current.files.forEach((file) => {
+        if (file.name === 'ref1.dwg') addSource(file, mockFile);
+      });
+
+      await act(async () => {
+        await result.current.uploadFiles();
+      });
+
+      // 后端 ret=failed（HTTP 2xx）不得置 success——否则「上传成功但查看无效」假象
+      const uploaded = result.current.files.find(
+        (f) => f.name === 'ref1.dwg'
+      );
+      expect(uploaded?.uploadState).toBe('fail');
+      expect(onError).toHaveBeenCalled();
+    });
   });
 
   describe('modal controls', () => {

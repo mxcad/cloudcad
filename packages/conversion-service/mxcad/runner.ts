@@ -31,6 +31,10 @@ export class ConversionExecutionError extends Error {
   category: ConversionFailureCategory;
   /** 引擎返回码（仅 content-error 时为非 0） */
   code?: number;
+  /** 引擎原始 stdout（诊断透传：backend data/debug 落盘拿到真因） */
+  stdout?: string;
+  /** 引擎原始 stderr（诊断透传） */
+  stderr?: string;
 
   /**
    * 是否瞬态（可重试）：由 category 派生，不单独存储。
@@ -43,12 +47,16 @@ export class ConversionExecutionError extends Error {
   constructor(
     message: string,
     category: ConversionFailureCategory = 'unknown',
-    code?: number
+    code?: number,
+    stdout?: string,
+    stderr?: string
   ) {
     super(message);
     this.name = 'ConversionExecutionError';
     this.category = category;
     this.code = code;
+    this.stdout = stdout;
+    this.stderr = stderr;
   }
 }
 
@@ -87,10 +95,16 @@ class MxcadRunner {
     // Linux 下 mxcadassembly 依赖其自身目录加载资源。
     const cwd = isLinux ? MXCAD_CONFIG.binPath || undefined : undefined;
 
+    // 命令行日志（诊断缺口）：引擎调用命令行完整落日志，与 backend 进程内模式的
+    // 「执行 MxCAD 转换命令: ...」等价，便于失败时与手动执行比对定位（此前本侧缺失）。
+    log(`[MxcadRunner] 执行命令: ${MXCAD_CONFIG.assemblyPath} ${arg}`);
+
     const result = await runFn(MXCAD_CONFIG.assemblyPath, arg, {
       cwd,
       timeoutMs: timeout ?? 60000,
       onChild,
+      // 超时杀组日志（spawn.ts 的 logger.warn 钩子）：此前未传，超时只有裸杀组、无日志。
+      logger: { warn: (m) => log('warn', `[MxcadRunner] ${m}`) },
     });
 
     // 结果解读的唯一实现：超时救回 → signal → exitCode===null → 解析 → code 判定。
@@ -129,9 +143,18 @@ class MxcadRunner {
           `stdout=[${(result.stdout || '').slice(0, 500)}] ` +
           `stderr=[${(result.stderr || '').slice(0, 500)}]`
       );
+    } else {
+      // 非 content-error 失败（timeout/killed/not-started/output-unparseable）此前只 throw，
+      // 引擎原始输出（ENOENT 的 stderr、超时前的部分输出）从不落日志，真因被吞。
+      log(
+        `[MxcadRunner] 转换失败: cmd=${params.cmd || '-'} category=${outcome.category} ` +
+          `code=${outcome.result?.code ?? '-'} message=${outcome.result?.message ?? '-'} ` +
+          `stdout=[${(result.stdout || '').slice(0, 500)}] ` +
+          `stderr=[${(result.stderr || '').slice(0, 500)}]`
+      );
     }
 
-    throw this.toExecutionError(outcome, result.stderr || '');
+    throw this.toExecutionError(outcome, result);
   }
 
   /**
@@ -139,19 +162,28 @@ class MxcadRunner {
    *
    * message 是本服务对 backend 的**展示文案**，与 backend 进程内转换的中文文案刻意不同
    * （两侧各自面向自己的日志与 UI），但 category 同源，判定依据从不依赖文案。
+   *
+   * stdout/stderr（引擎原始输出）随错误过线：backend 的 data/debug 落盘（forwardViaExecutor
+   * 的 saveConversionDebugInfo）此前在 HTTP 模式下拿不到真因——FAILED 任务 metadata 为空、
+   * commandStr 是固定文案，引擎输出从不过线。现随错误携带，backend 落盘 stdout/stderr。
    */
   private toExecutionError(
     outcome: EngineRunOutcome,
-    stderr: string
+    result: { stdout?: string; stderr?: string }
   ): ConversionExecutionError {
+    const stdout = result.stdout ?? '';
+    const stderr = result.stderr ?? '';
     switch (outcome.category) {
       case 'timeout':
-        return new ConversionExecutionError('转换超时', 'timeout');
+        return new ConversionExecutionError('转换超时', 'timeout', undefined, stdout, stderr);
 
       case 'killed':
         return new ConversionExecutionError(
           `转换进程被终止 (${outcome.signal})`,
-          'killed'
+          'killed',
+          undefined,
+          stdout,
+          stderr
         );
 
       case 'not-started':
@@ -161,13 +193,19 @@ class MxcadRunner {
           `mxcadAssembly 进程未正常启动（stderr: ${
             stderr.slice(0, 200) || '无'
           }）`,
-          'not-started'
+          'not-started',
+          undefined,
+          stdout,
+          stderr
         );
 
       case 'output-unparseable':
         return new ConversionExecutionError(
           `转换输出格式错误（${outcome.rawFragment}）`,
-          'output-unparseable'
+          'output-unparseable',
+          undefined,
+          stdout,
+          stderr
         );
 
       default:
@@ -175,7 +213,9 @@ class MxcadRunner {
           outcome.result?.message ||
             `转换失败, code=${outcome.result?.code ?? 'unknown'}`,
           'content-error',
-          outcome.result?.code
+          outcome.result?.code,
+          stdout,
+          stderr
         );
     }
   }

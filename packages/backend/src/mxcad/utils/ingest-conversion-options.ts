@@ -16,15 +16,19 @@ import type { ConversionOptions } from '../interfaces/file-conversion.interface'
  * `debugNodeId` 声明为**必填**（值可为 `undefined`）：失败调试信息
  * （saveConversionDebugInfo）只在该字段非空时落盘。此前它是选填，8 条摄入路径里
  * 有多条静默漏传，外部参照 DWG 上传与无节点转换失败时完全不落失败现场，
- * 只能靠裸 stdout 日志排障。改为必填后，「没有节点可挂」的路径必须显式写
- * `debugNodeId: undefined`——漏传变成编译错误而非默认静默。
+ * 只能靠裸 stdout 日志排障。改为必填后，「没有节点可挂」的路径必须显式给值——
+ * 漏传变成编译错误而非默认静默。
+ *
+ * 无节点（未登录/游客/公开图纸/外部参照/内部流水线）路径现用稳定标识兜底做落盘目录名
+ * （通常为文件 hash，无 hash 时用输出文件名），失败现场与有节点路径一样落盘——
+ * 否则未登录用户转换失败同样丢原因（只看到一句远端文案、引擎输出从不过线）。
  */
 export type IngestConversionInput = {
   /** 源文件路径 */
   srcPath: string;
   /** 文件哈希 */
   fileHash: string;
-  /** 失败调试信息落盘的节点目录名；无节点的路径显式传 undefined */
+  /** 失败调试信息落盘的目录标识：有节点用 nodeId，无节点用文件 hash/输出文件名兜底 */
   debugNodeId: string | undefined;
 } & Omit<
   ConversionOptions,

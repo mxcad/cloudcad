@@ -167,11 +167,16 @@ export function useCollabAutoJoin(onFileLoaded?: () => void): void {
             });
             refreshFileName();
             syncCurrentFileNameToSession();
-            setTimeout(() => {
-              syncCurrentFileNameToSession();
+            // join 回调（iRet===0）= 加入成功。仅当协同文件（真实图纸）已加载才在此
+            // 关 loading；若此刻引擎当前文件仍是空模板（协同文件尚在加载），不在此
+            // 关——等协同文件的 OPEN_COMPLETE 由 CADEditorDirect 的集中式 handler 关
+            // （autoJoin 不再早退）。文件名若此刻尚未落定，openFileComplete 的
+            // handleOpenCompleteSideEffects 会再补一次。
+            const currentFileName = mxcadManager.getCurrentFileName();
+            if (currentFileName && !isEmptyDocumentName(currentFileName)) {
               hideGlobalLoading('autoJoin-fileLoaded');
-              onFileLoadedRef.current?.();
-            }, 500);
+            }
+            onFileLoadedRef.current?.();
             setCollabShareState({ fromCollabShare: false, targetWorkId: null });
           } else if (iRet === 17) {
             cancelled = true;

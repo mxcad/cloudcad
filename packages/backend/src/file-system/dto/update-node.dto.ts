@@ -13,12 +13,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsOptional, Length, IsIn } from 'class-validator';
 import { ProjectStatus } from '../../common/enums/project-status.enum';
+import { IsSafeName } from '../../common/decorators/is-safe-name.decorator';
 
 export class UpdateNodeDto {
   @ApiProperty({ description: '节点名称', required: false })
   @IsOptional()
   @IsString()
   @Length(1, 100)
+  @IsSafeName()
   name?: string;
 
   @ApiProperty({ description: '描述', required: false })

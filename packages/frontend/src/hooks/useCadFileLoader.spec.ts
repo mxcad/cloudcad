@@ -335,6 +335,69 @@ describe('useCadFileLoader — 视图已创建时仍必须发打开命令', () =
   });
 });
 
+describe('useCadFileLoader — 反馈 region 链接（?nodeId= 无 fileId 路径段）打开图纸', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockedGetNode.mockReturnValue({ data: FILE, error: undefined });
+    mxcadManagerMock.isCreated.mockReturnValue(true);
+    mxcadManagerMock.isReady.mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    clearDrawingSessionListeners();
+  });
+
+  it('fileId 为空 + nodeIdParam 指向文件节点 → 按 nodeIdParam 取节点并 openFile（不再早退）', async () => {
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            fileId: null,
+            nodeIdParam: 'f-1',
+            isActive: true,
+            isAuthenticated: true,
+            personalSpaceId: 'ps-1',
+            isInitializedRef: { current: false },
+          }),
+          createFns()
+        )
+    );
+    await flush();
+
+    // 按 nodeIdParam（文件自身节点 id）取节点，而非空 fileId
+    expect(mockedGetNode).toHaveBeenCalledWith(
+      expect.objectContaining({ path: { nodeId: 'f-1' } })
+    );
+    expect(mxcadManagerMock.openFile).toHaveBeenCalledTimes(1);
+    // 打开载荷的文件身份 = 取到的节点 id（URL 无 fileId 路径段）
+    const payload = mxcadManagerMock.openFile.mock.calls[0]![0]!;
+    expect(payload.fileInfo.fileId).toBe(FILE.id);
+    expect(payload.url).toContain(
+      '/api/v1/mxcad/filesData/202609/node-1/a.mxweb'
+    );
+  });
+
+  it('fileId/hash/nodeId 全空（home 模式）→ 守卫早退，不取节点不打开', async () => {
+    renderHook(
+      () =>
+        useCadFileLoader(
+          createDeps({
+            fileId: null,
+            nodeIdParam: null,
+            hashParam: null,
+            isActive: true,
+            isAuthenticated: false,
+          }),
+          createFns()
+        )
+    );
+    await flush();
+
+    expect(mockedGetNode).not.toHaveBeenCalled();
+    expect(mxcadManagerMock.openFile).not.toHaveBeenCalled();
+  });
+});
+
 describe('useCadFileLoader — 转换等待期不锁编辑器 + 打开前守卫复查', () => {
   const PROCESSING_FILE = {
     id: 'f-1',

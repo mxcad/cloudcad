@@ -180,6 +180,9 @@ export const UserManagement = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [deleteImmediately, setDeleteImmediately] = useState(false);
+  // BUG-ADMIN-004：删除目标为当前用户自己或管理员账户时非空（前端前置阻断原因，
+  // 后端 isAdminUser 硬保护已有，此处提前告知并禁用确认，避免点了确认才报错）
+  const [deleteBlockReason, setDeleteBlockReason] = useState<string | null>(null);
 
   const [membershipModalOpen, setMembershipModalOpen] = useState(false);
   const [membershipUser, setMembershipUser] = useState<UserTableUser | null>(
@@ -249,6 +252,8 @@ export const UserManagement = () => {
 
   // 批量注销（仅软删，进入冷静期；确认弹窗由 DeleteUserConfirm count 模式承担）
   const openBatchDelete = () => {
+    // 批量场景无"自己/管理员"单目标语义，清除可能残留的单删阻断原因，避免泄漏进批量确认
+    setDeleteBlockReason(null);
     setDeleteConfirmOpen(true);
   };
 
@@ -561,6 +566,18 @@ export const UserManagement = () => {
   };
 
   const handleDelete = (id: string) => {
+    // BUG-ADMIN-004：删除目标 = 当前用户自己 或 管理员账户 → 前置阻断提示并禁用确认。
+    // 后端 isAdminUser 硬保护（不能删除管理员账户）已存在；此处提前告知避免"点了确认才报错"。
+    const target = viewUsers.find((u) => u.id === id);
+    const isSelf = !!target && !!currentUser && target.id === currentUser.id;
+    const isAdminTarget = target?.role?.name === 'ADMIN';
+    setDeleteBlockReason(
+      isSelf
+        ? t('不能删除自己')
+        : isAdminTarget
+          ? t('不能删除管理员账户')
+          : null
+    );
     setUserToDelete(id);
     setDeleteConfirmOpen(true);
   };
@@ -575,6 +592,7 @@ export const UserManagement = () => {
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
       setDeleteImmediately(false);
+      setDeleteBlockReason(null);
       await loadUsers();
     } catch (err) {
       // 删除失败：toast 提示，弹窗保持打开以便用户重试或取消
@@ -586,6 +604,7 @@ export const UserManagement = () => {
     setDeleteConfirmOpen(false);
     setUserToDelete(null);
     setDeleteImmediately(false);
+    setDeleteBlockReason(null);
   };
 
   const handleRestore = async (id: string) => {
@@ -927,6 +946,7 @@ export const UserManagement = () => {
         count={userToDelete ? undefined : selectedCount}
         deleteImmediately={deleteImmediately}
         onDeleteImmediatelyChange={setDeleteImmediately}
+        blockReason={deleteBlockReason ?? undefined}
       />
 
       <Modal

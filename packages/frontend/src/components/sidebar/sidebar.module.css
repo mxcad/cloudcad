@@ -1841,3 +1841,9 @@
 [data-theme='dark'] .loginPromptButton:hover {
   box-shadow: 0 6px 20px rgba(0, 156, 255, 0.5);
 }
+
+/* 注册送会员营销入口（LoginPromptCard 内，位于「立即登录」按钮下方） */
+.loginPromptRegister {
+  margin-top: 12px;
+  font-size: var(--text-sm) !important;
+}

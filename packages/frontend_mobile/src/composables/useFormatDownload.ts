@@ -7,7 +7,7 @@ import {
 } from 'vant'
 import { t } from '@/languages'
 import { cachedApiUrl } from '@/utils/apiConfig'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
 import { triggerBlobDownload, triggerUrlDownload } from '@/utils/download'
 import { isCadFileName } from '@/utils/cadFile'
 import { downloadControllerDownloadNodeWithFormat } from '@cloudcad/api-sdk/sdk.gen'
@@ -44,6 +44,8 @@ export function useFormatDownload(options: {
   // 对慢转换会挂起至超时；mxweb/original 无转换开销，保持同步直下
   const showFormatPopup = ref(false)
   const formatTarget = ref<{ id: string; name: string } | null>(null)
+  // 格式下载进行中：DownloadFormatPopup 保持打开、下载按钮转圈，成功后由本状态机关闭弹窗（对齐 PC modal）
+  const formatDownloadLoading = ref(false)
   // 批量下载格式模式（多选含 CAD）：所选格式应用于全部选中图纸，zip 任务逐文件格式（对齐 PC 批量下载）
   const formatDownloadMode = ref<'single' | 'batch'>('single')
   const batchDownloadItems = ref<DownloadSelectionItem[]>([])
@@ -71,42 +73,38 @@ export function useFormatDownload(options: {
     const target = formatTarget.value
     if (!target) return
 
-    if (payload.format !== 'mxweb') {
-      showLoadingToast({ message: t('创建下载任务...'), forbidClick: true })
-      try {
+    // 弹窗保持打开、下载按钮转圈（取代旧的 loading toast），成功后关闭弹窗（对齐 PC modal）
+    formatDownloadLoading.value = true
+    try {
+      if (payload.format !== 'mxweb') {
         await createSingleFormatTask(target.id, target.name, payload.format, {
           dwgVersion: payload.dwgOptions?.dwgVersion,
           width: payload.pdfOptions?.width,
           height: payload.pdfOptions?.height,
           colorPolicy: payload.pdfOptions?.colorPolicy,
         })
-        closeToast()
+        showFormatPopup.value = false
         showSuccessToast(t('已加入下载队列'))
         showBatchPanel.value = true
-      } catch (e) {
-        closeToast()
-        showFailToast(t('创建下载任务失败'))
+      } else {
+        const res = await downloadControllerDownloadNodeWithFormat({
+          path: { nodeId: target.id },
+          query: { format: payload.format },
+          parseAs: 'blob',
+        } as never)
+        unwrap(res)
+        const blob = res.data as Blob
+        const nameWithoutExt = target.name.replace(/\.[^.]+$/, '')
+        const finalName = `${nameWithoutExt}.${payload.format}`
+        triggerBlobDownload(blob, finalName)
+        showFormatPopup.value = false
+        showSuccessToast(t('下载成功'))
       }
-      return
-    }
-
-    showLoadingToast({ message: t('下载中...'), forbidClick: true })
-    try {
-      const res = await downloadControllerDownloadNodeWithFormat({
-        path: { nodeId: target.id },
-        query: { format: payload.format },
-        parseAs: 'blob',
-      } as never)
-      closeToast()
-      unwrap(res)
-      const blob = res.data as Blob
-      const nameWithoutExt = target.name.replace(/\.[^.]+$/, '')
-      const finalName = `${nameWithoutExt}.${payload.format}`
-      triggerBlobDownload(blob, finalName)
-      showSuccessToast(t('下载成功'))
     } catch (e) {
-      closeToast()
-      showFailToast(t('下载失败'))
+      // 失败保留弹窗（可重试），按钮恢复可用；后端文案优先（配额/权限等）
+      showFailToast(errMsg(e, t(payload.format === 'mxweb' ? '下载失败' : '创建下载任务失败')))
+    } finally {
+      formatDownloadLoading.value = false
     }
   }
 
@@ -115,7 +113,7 @@ export function useFormatDownload(options: {
   async function confirmBatchFormatDownload(payload: DownloadFormatPayload) {
     const items = batchDownloadItems.value
     const format = payload.format
-    showLoadingToast({ message: t('正在创建打包任务...'), forbidClick: true })
+    formatDownloadLoading.value = true
     try {
       const fileList = items.map((i) => {
         // CAD 文件或文件夹都套用所选格式：文件夹的格式由后端 expandFolderItems 递归传播到内部文件
@@ -142,12 +140,13 @@ export function useFormatDownload(options: {
         name: t('下载'),
         ...(options.zipProjectId ? { projectId: options.zipProjectId() } : {}),
       })
-      closeToast()
+      showFormatPopup.value = false
       showSuccessToast(t('打包任务已创建'))
       showBatchPanel.value = true
     } catch (e) {
-      closeToast()
-      showFailToast(t('打包任务创建失败'))
+      showFailToast(errMsg(e, t('打包任务创建失败')))
+    } finally {
+      formatDownloadLoading.value = false
     }
   }
 
@@ -160,7 +159,7 @@ export function useFormatDownload(options: {
       showBatchPanel.value = true
     } catch (e) {
       closeToast()
-      showFailToast(t('打包任务创建失败'))
+      showFailToast(errMsg(e, t('打包任务创建失败')))
     }
   }
 
@@ -204,7 +203,7 @@ export function useFormatDownload(options: {
       showBatchPanel.value = true
     } catch (e) {
       closeToast()
-      showFailToast(t('打包任务创建失败'))
+      showFailToast(errMsg(e, t('打包任务创建失败')))
     }
   }
 
@@ -214,6 +213,7 @@ export function useFormatDownload(options: {
     formatTarget,
     formatDownloadMode,
     batchConvertCount,
+    formatDownloadLoading,
     openFormatDownload,
     openBatchFormatDownload,
     onFormatDownloadConfirm,

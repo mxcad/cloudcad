@@ -95,6 +95,15 @@ describe('beginIntent 挂起与分支', () => {
     expect(raw.id).toBe('save-to-cloud')
   })
 
+  it('未登录 + showAuthPrompt:false → auth-blocked：链持久化但不弹登录提示（调用方直达登录）', async () => {
+    const start = await beginIntent(SHARE_CHAIN, { showAuthPrompt: false })
+    expect(start).toBe('auth-blocked')
+    expect(hasIntentChain()).toBe(true)
+    expect(loginPromptRequired.value).toBeNull()
+    const raw = JSON.parse(sessionStorage.getItem('cloudcad.pendingIntent')!)
+    expect(raw.id).toBe(SHARE_CHAIN.id)
+  })
+
   it('已登录无云端节点（分享链）→ cloud-save-pending：确认触发器置位', async () => {
     h.auth.value = true
     const start = await beginIntent(SHARE_CHAIN)

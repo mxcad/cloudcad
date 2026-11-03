@@ -64,17 +64,25 @@ export class HttpConversionExecutor implements IFunctionExecutor {
         this.configService.get<string>('INTERNAL_SERVICE_SECRET'),
       ),
     };
+    // 「真正转换时长」与 backend timeout.fileConversion（TIMEOUT_FILE_CONVERSION）同源：
+    // 远端单任务执行超时（经 body.timeoutMs 透传）最长到该值，本侧轮询/单次 HTTP 超时必须
+    // 严格大于它，否则合法长转换会在超时整点被本侧先放弃并 best-effort 取消（race）。
+    // 缺省 = 转换超时 + 5min 缓冲；CONVERSION_SERVICE_POLL_TIMEOUT 仍可显式覆盖。
+    const conversionTimeoutMs =
+      Number(this.configService.get<number>('timeout.fileConversion')) || 300000;
+    const pollTimeoutMs = Number(
+      this.configService.get<string>('CONVERSION_SERVICE_POLL_TIMEOUT') ||
+        conversionTimeoutMs + 300000,
+    );
     this.client = new ConversionServiceClient({
       baseUrl: this.baseUrl,
-      timeoutMs: 300000,
+      timeoutMs: pollTimeoutMs,
       headers: this.headers,
     });
     this.pollIntervalMs = Number(
       this.configService.get<string>('CONVERSION_SERVICE_POLL_INTERVAL') || 1000,
     );
-    this.pollTimeoutMs = Number(
-      this.configService.get<string>('CONVERSION_SERVICE_POLL_TIMEOUT') || 300000,
-    );
+    this.pollTimeoutMs = pollTimeoutMs;
   }
 
   /**
@@ -180,6 +188,9 @@ export class HttpConversionExecutor implements IFunctionExecutor {
       // 失败性质分类结构化透传（此前只透传 error 字符串，backend 靠中文文案反推）
       errorCategory: toFailureCategory(response.errorCategory),
       errorCode: toErrorCode(response.errorCode),
+      // 引擎原始输出透传（诊断）：FAILED 时 backend data/debug 落盘拿到真因
+      stdout: typeof response.stdout === 'string' ? response.stdout : undefined,
+      stderr: typeof response.stderr === 'string' ? response.stderr : undefined,
       // 排队位置（S6-5）：conversion-service GET /tasks/:taskId 透传（仅排队中任务有意义，否则 null）
       queuePosition:
         typeof response.queuePosition === 'number'
@@ -234,6 +245,9 @@ export class HttpConversionExecutor implements IFunctionExecutor {
             error: status.error,
             errorCategory: status.errorCategory,
             errorCode: status.errorCode,
+            // 引擎原始输出（诊断）：forwardViaExecutor 落盘 saveConversionDebugInfo 拿真因
+            stdout: status.stdout,
+            stderr: status.stderr,
           };
         }
         // CANCELLED 是终态（#431 取消机制）：此前漏在轮询白名单外，被取消的任务

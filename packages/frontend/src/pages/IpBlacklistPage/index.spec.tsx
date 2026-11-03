@@ -217,6 +217,33 @@ describe('IpBlacklistPage', () => {
     });
   });
 
+  it('BUG-ADMIN-001：环回地址（127.0.0.1/::1/127.0.0.0/8）被前端拦截，不提交', () => {
+    render(<IpBlacklistPage />);
+
+    fireEvent.click(screen.getByText('添加'));
+    const ipInput = screen.getByPlaceholderText('如 203.0.113.7 或 203.0.113.0/24');
+    const reasonInput = screen.getByPlaceholderText('如：撞库扫描攻击');
+
+    // 精确 IPv4 环回
+    fireEvent.change(ipInput, { target: { value: '127.0.0.1' } });
+    fireEvent.change(reasonInput, { target: { value: '手滑' } });
+    fireEvent.click(screen.getByText('确认添加'));
+    expect(screen.getByText('不能将本机环回地址加入 IP 黑名单')).toBeTruthy();
+    expect(addValue.mutate).not.toHaveBeenCalled();
+
+    // IPv6 环回
+    fireEvent.change(ipInput, { target: { value: '::1' } });
+    fireEvent.click(screen.getByText('确认添加'));
+    expect(screen.getByText('不能将本机环回地址加入 IP 黑名单')).toBeTruthy();
+    expect(addValue.mutate).not.toHaveBeenCalled();
+
+    // 环回 CIDR
+    fireEvent.change(ipInput, { target: { value: '127.0.0.0/8' } });
+    fireEvent.click(screen.getByText('确认添加'));
+    expect(screen.getByText('不能将本机环回地址加入 IP 黑名单')).toBeTruthy();
+    expect(addValue.mutate).not.toHaveBeenCalled();
+  });
+
   it('添加成功后再次打开弹窗，表单已重置（不留上次输入）', () => {
     render(<IpBlacklistPage />);
 

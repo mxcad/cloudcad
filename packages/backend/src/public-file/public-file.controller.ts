@@ -46,6 +46,7 @@ import * as path from 'path';
 import { setContentDisposition } from '../common/utils/content-disposition';
 
 import { I18nContext } from 'nestjs-i18n';
+import { streamFileToResponse } from '../common/utils/stream-file';
 const ALLOWED_EXT_REFERENCE_EXTENSIONS = [
   '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp',
   '.dwg', '.dxf',
@@ -316,6 +317,111 @@ export class PublicFileController {
     );
 
     return { exists };
+  }
+
+  /**
+   * 外部参照下载/格式转换（公开接口，无需认证——游客态）
+   * GET /api/public-file/ext-reference/download/:hash/:filename?format=...
+   *
+   * 游客态无 nodeId，外部参照定位走 uploads/{hash}/ 下的磁盘候选集（契约单一事实源）。
+   * format 缺省/原样（mxweb）或图片 → 直取源文件流；dwg/dxf/pdf → 转换。
+   * 频率限制（ADR-0043）：匿名按客户端 IP 计数，携带有效 JWT 按 userId 计数。
+   */
+  @Get('ext-reference/download/:hash/:filename')
+  @Public()
+  @ApiOperation({ summary: '下载外部参照文件（公开接口，未登录可用）' })
+  @ApiQuery({ name: 'format', required: false })
+  @ApiQuery({ name: 'width', required: false })
+  @ApiQuery({ name: 'height', required: false })
+  @ApiQuery({ name: 'colorPolicy', required: false })
+  @ApiQuery({ name: 'dwgVersion', required: false })
+  @ApiResponse({
+    status: 200,
+    description: '返回文件二进制数据',
+    content: { 'application/octet-stream': {} },
+  })
+  @ApiResponse({ status: 400, description: '请求参数错误 / 转换失败' })
+  @ApiResponse({ status: 403, description: '转换频率超限 / 会员门控拒绝' })
+  @ApiResponse({ status: 404, description: '文件不存在' })
+  async downloadExternalRef(
+    @Param('hash') hash: string,
+    @Param('filename') filename: string,
+    @Query('format') format: string,
+    @Query('width') width: string,
+    @Query('height') height: string,
+    @Query('colorPolicy') colorPolicy: string,
+    @Query('dwgVersion') dwgVersion: string,
+    @Res() res: Response,
+    @Req() request: MxCadRequest,
+  ): Promise<void> {
+    if (!hash) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.public_file.missing_source_hash') ??
+          '缺少源图纸哈希值',
+      );
+    }
+
+    if (!filename) {
+      throw new BadRequestException(
+        I18nContext.current()?.t('error.public_file.missing_ref_filename') ??
+          '缺少外部参照文件名',
+      );
+    }
+
+    this.logger.log(
+      `[downloadExternalRef] 开始处理: srcHash=${hash}, filename=${filename}, format=${format || '原样'}`,
+    );
+
+    try {
+      const context =
+        await this.requestContextBuilder.buildContextFromRequest(request);
+      const result = await this.publicFileService.serveExternalRefDownload(
+        hash,
+        filename,
+        { format, width, height, colorPolicy, dwgVersion },
+        context.ip,
+        context.userId,
+      );
+
+      // 传输编排走 streamFileToResponse 唯一出口：转换产物在流关闭后清理，
+      // 直取（mxweb/图片）无清理；缓存/跨域与公开 access 端点同策略。
+      await streamFileToResponse(
+        res,
+        result.filePath,
+        result.filename,
+        result.mimeType,
+        result.isConverted
+          ? () => {
+              fs.promises.unlink(result.filePath).catch((err: unknown) => {
+                this.logger.warn(
+                  `清理外部参照转换临时文件失败: ${(err as Error).message}`,
+                );
+              });
+            }
+          : undefined,
+        { cacheControl: 'public, max-age=3600', allowOrigin: '*' },
+      );
+    } catch (error) {
+      // 保留 HTTP 异常原始状态码（404 定位缺失 / 400 格式 / 403 频控与会员门控），
+      // 仅把引擎意外异常翻回 400（与 convertAndDownload 同口径）。
+      if (
+        error instanceof QuotaExceededException ||
+        error instanceof VipFeatureRequiredException ||
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        `[downloadExternalRef] 外部参照下载/转换失败: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      throw new BadRequestException(
+        (error as Error).message ||
+          (I18nContext.current()?.t('error.file.conversion_failed') ??
+            '文件转换失败'),
+      );
+    }
   }
 
   /**

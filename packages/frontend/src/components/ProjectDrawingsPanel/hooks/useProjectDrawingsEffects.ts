@@ -86,7 +86,13 @@ export function useProjectDrawingsEffects({
 
   // 持久化状态标识（仅非库模式使用）
   const isPersistentMode = !isLibraryMode && !!tabId;
-  const persistentInitializedRef = useRef(false);
+  // 持久化模式下已初始化过的项目根：仅对同一项目跳过重复初始化；
+  // 回项目列表（selectedProjectId 置空）时必须重置，否则再点其他项目会跳过
+  // 初始化，导致新项目的面包屑/节点列表不加载
+  const persistentInitializedProjectIdRef = useRef<string | null>(null);
+  // 最新 selectedProjectId：异步初始化返回后复核，防项目快速切换时旧请求覆盖新状态
+  const selectedProjectIdRef = useRef(selectedProjectId);
+  selectedProjectIdRef.current = selectedProjectId;
   // parentId 导航已锚定的项目根：非空即表示目录归属已由当前图纸的父目录确定，
   // 项目根初始化不得再覆盖（否则正确目录会被切回项目根、当前图纸高亮丢失）
   const parentNavigatedProjectIdRef = useRef<string | null>(null);
@@ -97,6 +103,7 @@ export function useProjectDrawingsEffects({
     if (!selectedProjectId) {
       // 回到项目列表：目录归属重新交回项目根初始化
       parentNavigatedProjectIdRef.current = null;
+      persistentInitializedProjectIdRef.current = null;
       // 库模式由专门的 useLoadNodes 初始化 effect 管理，此处不干预
       if (!isLibraryMode) {
         resetNodes();
@@ -109,14 +116,18 @@ export function useProjectDrawingsEffects({
     // parentId 导航会 setSelectedProjectId，本 effect 会因此重跑。
     if (parentNavigatedProjectIdRef.current === selectedProjectId) return;
 
-    // 持久化模式：如果已初始化过，跳过重新加载
-    if (isPersistentMode && persistentInitializedRef.current) {
+    // 持久化模式：同一项目已初始化过，跳过重新加载
+    if (
+      isPersistentMode &&
+      persistentInitializedProjectIdRef.current === selectedProjectId
+    ) {
       return;
     }
 
-    // 在飞请求返回后复核归属：请求期间若发生 parentId 导航，结果作废
-    const supersededByParentNavigation = () =>
-      parentNavigatedProjectIdRef.current === selectedProjectId;
+    // 在飞请求返回后复核归属：请求期间若发生 parentId 导航或项目切换，结果作废
+    const superseded = () =>
+      parentNavigatedProjectIdRef.current === selectedProjectId ||
+      selectedProjectIdRef.current !== selectedProjectId;
 
     const initProject = async () => {
       try {
@@ -126,7 +137,7 @@ export function useProjectDrawingsEffects({
         });
         // SDK 默认不抛错：失败时错误在 result.error，显式抛出让 catch 记录真实原因
         const projectNode = response.data;
-        if (supersededByParentNavigation()) return;
+        if (superseded()) return;
         if (projectNode)
           setBreadcrumb([{ id: projectNode.id, name: projectNode.name }]);
       } catch (error: unknown) {
@@ -136,11 +147,11 @@ export function useProjectDrawingsEffects({
 
     // 先等待项目根节点就绪（可能触发服务端懒创建），再加载子节点
     initProject().then(() => {
-      if (supersededByParentNavigation()) return;
+      if (superseded()) return;
       loadNodes(selectedProjectId);
       // 标记持久化模式已初始化
       if (isPersistentMode) {
-        persistentInitializedRef.current = true;
+        persistentInitializedProjectIdRef.current = selectedProjectId;
       }
     });
   }, [visible, selectedProjectId, loadNodes, isPersistentMode]);

@@ -7,8 +7,8 @@
 import { t } from '@/languages';
 import type { IpWhitelistPreset } from './types';
 
-/** 管理员 IP 白名单每页条数（与后端 ListIpWhitelistQueryDto 默认一致） */
-export const IP_WHITELIST_PAGE_SIZE = 20;
+/** 管理员 IP 白名单每页条数（前端默认值，前端恒显式传 pageSize） */
+export const IP_WHITELIST_PAGE_SIZE = 30;
 
 /** 条目来源展示映射（manual=界面添加，auto=首次启动系统默认，file=服务器本地文件兜底） */
 export const IP_WHITELIST_SOURCE_META: Record<

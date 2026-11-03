@@ -35,6 +35,13 @@ interface ModalProps {
    * 优先级高于 closeOnOverlayClick。默认 false（保持原有随手可关行为）。
    */
   mustChoose?: boolean;
+  /**
+   * 视觉隐藏但保持挂载（`display:none` 包裹，不卸载 children）：
+   * 用于「临时让出画布给引擎框选，事后原样恢复弹框」的场景——isOpen=false 会卸载
+   * children（非受控 contenteditable 等 DOM 持有状态的内容会丢失），hidden 只藏不卸。
+   * 默认 false。
+   */
+  hidden?: boolean;
 }
 
 const sizeToMaxWidth: Record<string, string> = {
@@ -80,6 +87,7 @@ export const Modal: React.FC<ModalProps> = ({
   overlayClassName,
   closeOnOverlayClick = true,
   mustChoose = false,
+  hidden = false,
 }) => {
   const isMobile = useIsMobile();
   const defaultMaxWidth = 'max-w-md';
@@ -353,7 +361,19 @@ export const Modal: React.FC<ModalProps> = ({
     </div>
   );
 
-  return createPortal(modalContent, document.body);
+  // hidden=true：视觉隐藏但保持挂载（display:none 包裹），不卸载 children——
+  // 非受控 contenteditable 等 DOM 持有状态的内容不会丢失，且不遮挡画布鼠标事件。
+  // 用于「临时让出画布给引擎框选，事后原样恢复」场景。
+  return createPortal(
+    hidden ? (
+      <div style={{ display: 'none' }} aria-hidden="true">
+        {modalContent}
+      </div>
+    ) : (
+      modalContent
+    ),
+    document.body
+  );
 };
 
 export default Modal;

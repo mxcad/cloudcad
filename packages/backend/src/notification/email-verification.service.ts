@@ -69,8 +69,20 @@ export class EmailVerificationService implements IEmailVerificationService {
       throw new BadRequestException(I18nContext.current()?.t('error.auth.send_too_frequent') ?? '发送过于频繁，请稍后再试');
     }
 
+    // BUG-USER-01：验证码先入库（generateVerificationToken → storeCode）再发信。
+    // 若 SMTP 发信失败（mailerService.sendMail 抛错而非返回 success:false），
+    // 必须删除刚入库的孤儿码，否则用户拿不到邮件但 Redis 里躺着有效码——
+    // 「发送验证码失败」+ 码已落库 = 用户被孤儿化卡死。对照短信兄弟
+    // SmsVerificationService.sendVerificationCode 在发送失败时同样清理
+    // codeKey/rateLimitKey（架构审查 ⑥ 收敛时确立的既定模式）。
+    const codeKey = this.getCodeKey(email);
     const token = await this.generateVerificationToken(email);
-    await this.emailService.sendVerificationEmail(email, token);
+    try {
+      await this.emailService.sendVerificationEmail(email, token);
+    } catch (error) {
+      await this.redis.del(codeKey);
+      throw error;
+    }
 
     await this.redis.setex(rateLimitKey, this.rateLimitTTL, '1');
   }

@@ -50,6 +50,7 @@ import {
   UpdateCoordinateLogDto,
 } from './dto/mxcad-engine-config.dto';
 import {
+  ActiveStatsDto,
   DailyPurchasesStatsDto,
   DailyRegistrationsStatsDto,
   StatsOverviewDto,
@@ -154,6 +155,32 @@ export class AdminController {
       endDate,
       tierId,
     });
+  }
+
+  @Get('stats/active')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '活跃用户统计（DAU/MAU/粘性）' })
+  @ApiResponse({
+    status: 200,
+    description:
+      '活跃用户统计成功（活跃=任意审计事件；KPI 为当前实时值，序列按区间零填充，UTC+8 自然日）',
+    type: ActiveStatsDto,
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: '开始日期（含，YYYY-MM-DD），缺省为 endDate 前 29 天',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: '结束日期（含，YYYY-MM-DD），缺省为今天',
+  })
+  async getActiveStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ) {
+    return this.adminStatsService.getActiveStats({ startDate, endDate });
   }
 
   @Get('permissions/cache')

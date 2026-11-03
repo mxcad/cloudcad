@@ -39,6 +39,8 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
   private readonly client: ConversionServiceClient;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
+  /** 批量委托单任务超时（真正转换时长，同 timeout.fileConversion） */
+  private readonly taskTimeoutMs: number;
   private cooldownUntil = 0;
   private static readonly COOLDOWN_MS = 60_000;
 
@@ -85,6 +87,10 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
 
     this.pollTimeoutMs = batchConfig?.workflowTimeoutMs || 10 * 60 * 1000;
     this.pollIntervalMs = batchConfig?.workflowPollIntervalMs || 1500;
+    // 批量委托的单任务超时（真正转换时长）：与 timeout.fileConversion（TIMEOUT_FILE_CONVERSION）
+    // 同源，batchConvert 子任务不再落远端档位默认（300s 硬编码），吃同一 env。
+    this.taskTimeoutMs =
+      Number(configService.get<number>('timeout.fileConversion')) || 300000;
     // 单请求超时取轮询总超时的较小值与 60s 的下限：轮询超时负责整体兜底，
     // 单请求超时只防一个连接挂住
     this.client = new ConversionServiceClient({
@@ -130,7 +136,9 @@ export class BatchDelegateConversionExecutor implements IFunctionExecutor {
       const result = await this.client.request<{ taskId?: string }>(
         '/v1/conversions/batchConvert',
         'POST',
-        { tasks }
+        // timeoutMs：批量委托的单任务超时透传（远端 _executeBatch 优先用它，
+        // 否则落 PRIORITY_CONFIG 档位默认），与单任务 convertFile 同源语义。
+        { tasks, timeoutMs: this.taskTimeoutMs }
       );
       if (!result?.taskId) {
         throw new Error('Workflow batchConvert returned no taskId');

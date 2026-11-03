@@ -2172,7 +2172,7 @@ export type AuditExportDto = {
     /**
      * 操作类型过滤
      */
-    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_ROLE_CHANGE' | 'USER_STATUS_CHANGE' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET' | 'NOTICE_DELETE' | 'CHANNEL_TEST';
+    action?: 'PERMISSION_GRANT' | 'PERMISSION_REVOKE' | 'ROLE_CREATE' | 'ROLE_UPDATE' | 'ROLE_DELETE' | 'PROJECT_CREATE' | 'PROJECT_DELETE' | 'PROJECT_UPDATE' | 'PROJECT_TRANSFER' | 'ADD_MEMBER' | 'UPDATE_MEMBER' | 'REMOVE_MEMBER' | 'TRANSFER_OWNERSHIP' | 'FILE_DELETE' | 'FILE_SHARE' | 'USER_CHANGE_PASSWORD' | 'USER_ROLE_CHANGE' | 'USER_STATUS_CHANGE' | 'USER_DEACTIVATE' | 'USER_UNBIND_EMAIL' | 'USER_UNBIND_PHONE' | 'USER_UNBIND_WECHAT' | 'USER_SESSION_TRANSFER' | 'IP_BLACKLIST_ADD' | 'IP_BLACKLIST_REMOVE' | 'IP_WHITELIST_ADD' | 'IP_WHITELIST_REMOVE' | 'ADMIN_LOGIN' | 'FILE_CREATE' | 'FILE_UPDATE' | 'FOLDER_CREATE' | 'NODE_RENAME' | 'NODE_MOVE' | 'NODE_COPY' | 'NODE_RESTORE' | 'USER_LOGIN' | 'FILE_UPLOAD' | 'FILE_DOWNLOAD' | 'USER_REGISTER' | 'USER_VERIFY_EMAIL' | 'USER_LOGOUT' | 'USER_BIND_EMAIL' | 'USER_BIND_PHONE' | 'USER_REBIND_EMAIL' | 'USER_REBIND_PHONE' | 'USER_BIND_WECHAT' | 'ALERT_RESOLVE' | 'AUDIT_EXPORT' | 'AUDIT_CLEANUP' | 'REFUND_APPLY' | 'REFUND_APPROVE' | 'REFUND_REJECT' | 'MFA_BIND' | 'MFA_UNBIND' | 'ADMIN_PASSWORD_RESET' | 'DB_PASSWORD_RESET' | 'REDIS_PASSWORD_RESET' | 'NOTICE_DELETE' | 'CHANNEL_TEST' | 'FEEDBACK_ADOPT' | 'FEEDBACK_REWARD_ISSUE' | 'FEEDBACK_REWARD_REVOKE' | 'FEEDBACK_ATTACHMENT_UPLOAD' | 'FEEDBACK_ATTACHMENT_DELETE';
     /**
      * 项目 ID（项目维度过滤）
      */
@@ -2752,7 +2752,7 @@ export type RoleCategoryEnum = 'SYSTEM' | 'PROJECT' | 'CUSTOM';
 /**
  * 权限列表
  */
-export type AllPermissionsEnum = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE' | 'PROJECT_UPDATE' | 'PROJECT_DELETE' | 'PROJECT_MEMBER_MANAGE' | 'PROJECT_MEMBER_ASSIGN' | 'PROJECT_TRANSFER' | 'PROJECT_TRANSFER_MANAGE' | 'PROJECT_ROLE_MANAGE' | 'PROJECT_ROLE_PERMISSION_MANAGE' | 'FILE_CREATE' | 'FILE_UPLOAD' | 'FILE_OPEN' | 'FILE_EDIT' | 'FILE_DELETE' | 'FILE_TRASH_MANAGE' | 'FILE_DOWNLOAD' | 'FILE_SHARE' | 'FILE_MOVE' | 'FILE_COPY' | 'CAD_SAVE' | 'CAD_EXTERNAL_REFERENCE' | 'VERSION_READ';
+export type AllPermissionsEnum = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'SYSTEM_FEEDBACK_READ' | 'SYSTEM_FEEDBACK_MANAGE' | 'SYSTEM_FEEDBACK_REWARD' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE' | 'PROJECT_UPDATE' | 'PROJECT_DELETE' | 'PROJECT_MEMBER_MANAGE' | 'PROJECT_MEMBER_ASSIGN' | 'PROJECT_TRANSFER' | 'PROJECT_TRANSFER_MANAGE' | 'PROJECT_ROLE_MANAGE' | 'PROJECT_ROLE_PERMISSION_MANAGE' | 'FILE_CREATE' | 'FILE_UPLOAD' | 'FILE_OPEN' | 'FILE_EDIT' | 'FILE_DELETE' | 'FILE_TRASH_MANAGE' | 'FILE_DOWNLOAD' | 'FILE_SHARE' | 'FILE_MOVE' | 'FILE_COPY' | 'CAD_SAVE' | 'CAD_EXTERNAL_REFERENCE' | 'VERSION_READ';
 
 export type RoleDto = {
     /**
@@ -2818,7 +2818,7 @@ export type CreateRoleDto = {
     /**
      * 权限列表（数据库存储格式：大写）
      */
-    permissions: Array<'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE'>;
+    permissions: Array<'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'SYSTEM_FEEDBACK_READ' | 'SYSTEM_FEEDBACK_MANAGE' | 'SYSTEM_FEEDBACK_REWARD' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE'>;
 };
 
 export type UpdateRoleDto = {
@@ -2841,7 +2841,7 @@ export type UpdateRoleDto = {
     /**
      * 权限列表（更新时完全替换原有权限，数据库存储格式：大写）
      */
-    permissions?: Array<'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE'>;
+    permissions?: Array<'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'SYSTEM_FEEDBACK_READ' | 'SYSTEM_FEEDBACK_MANAGE' | 'SYSTEM_FEEDBACK_REWARD' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE'>;
 };
 
 /**
@@ -4657,6 +4657,48 @@ export type DailyPurchasesStatsDto = {
     byTier: Array<PurchasesTierBreakdownDto>;
 };
 
+export type ActiveStatsPointDto = {
+    /**
+     * 日期（YYYY-MM-DD，UTC+8 自然日）
+     */
+    date: string;
+    /**
+     * 当日日活跃用户数（DAU，去重）
+     */
+    dau: number;
+    /**
+     * 截至该日的月活跃用户数（MAU，近 30 天滚动窗口去重，含该日）
+     */
+    mau: number;
+};
+
+export type ActiveStatsDto = {
+    /**
+     * 今日日活跃用户数（DAU，0 点至现在实时值，东八区切日）
+     */
+    dau: number;
+    /**
+     * 月活跃用户数（MAU，近 30 天滚动窗口含今日）
+     */
+    mau: number;
+    /**
+     * 粘性 = DAU/MAU（保留 4 位小数；MAU 为 0 时为 null）
+     */
+    stickiness: number | null;
+    /**
+     * 开始日期（含，YYYY-MM-DD）
+     */
+    startDate: string;
+    /**
+     * 结束日期（含，YYYY-MM-DD）
+     */
+    endDate: string;
+    /**
+     * 零填充日序列
+     */
+    series: Array<ActiveStatsPointDto>;
+};
+
 export type CacheCleanupResultDto = {
     /**
      * 清理的缓存条目数
@@ -5594,9 +5636,352 @@ export type MonitorTaskListDto = {
 };
 
 /**
+ * 反馈类型
+ */
+export type FeedbackType = 'BUG' | 'SUGGESTION' | 'COMPLAINT' | 'OTHER';
+
+/**
+ * 提交来源：PC / 移动端
+ */
+export type FeedbackSource = 'PC' | 'MOBILE';
+
+export type CreateFeedbackDto = {
+    /**
+     * 反馈类型
+     */
+    type: FeedbackType;
+    /**
+     * 标题
+     */
+    title: string;
+    /**
+     * 反馈内容
+     */
+    content: string;
+    /**
+     * 提交来源：PC / 移动端
+     */
+    source: FeedbackSource;
+    /**
+     * 联系方式（匿名可选填，用于回访与查询校验）
+     */
+    contact?: string;
+    /**
+     * 匿名设备令牌（前端 localStorage 生成，后端只存 HMAC）
+     */
+    anonToken?: string;
+    /**
+     * 来源页面 URL
+     */
+    pageUrl?: string;
+    /**
+     * 已上传附件 ID 列表（先上传拿 id，再随反馈提交绑定）
+     */
+    attachmentIds?: Array<string>;
+};
+
+export type FeedbackStatus = 'PENDING' | 'REVIEWING' | 'ADOPTED' | 'REJECTED' | 'CLOSED';
+
+export type RewardStatus = 'NONE' | 'PENDING' | 'ISSUED' | 'REVOKED';
+
+export type SubmitFeedbackResultDto = {
+    id: string;
+    /**
+     * 匿名查询码（登录提交也为用户保留）
+     */
+    feedbackCode: string;
+    status: FeedbackStatus;
+    rewardStatus: RewardStatus;
+    claimRequired: boolean;
+    createdAt: string;
+};
+
+export type FeedbackSubmitterDto = {
+    /**
+     * 用户 ID
+     */
+    id: string;
+    /**
+     * 用户名
+     */
+    username: string;
+    /**
+     * 昵称
+     */
+    nickname: string | null;
+    /**
+     * 邮箱
+     */
+    email: string;
+};
+
+export type FeedbackRewardResponseDto = {
+    id: string;
+    feedbackId: string;
+    /**
+     * 关联反馈查询码（客服认领核对用）
+     */
+    feedbackCode: string;
+    /**
+     * 关联反馈标题
+     */
+    feedbackTitle: string;
+    /**
+     * 关联反馈类型（奖励分类）
+     */
+    feedbackType?: FeedbackType;
+    /**
+     * 反馈提交者账号（奖励发放默认账号；匿名反馈为 null，须客服搜索绑定）
+     */
+    submitter: FeedbackSubmitterDto | null;
+    userId: string | null;
+    /**
+     * 发放目标账号投影（未绑定为 null）
+     */
+    user: FeedbackSubmitterDto | null;
+    /**
+     * 会员等级（VipTier.level）
+     */
+    vipTierLevel: number;
+    /**
+     * 奖励时长（天）
+     */
+    durationDays: number;
+    status: RewardStatus;
+    issuedById: string | null;
+    issuedAt: string | null;
+    remark: string | null;
+    createdAt: string;
+};
+
+export type FeedbackAttachmentType = 'IMAGE' | 'DOCUMENT' | 'DRAWING';
+
+export type FeedbackAttachmentKind = 'FILE' | 'REFERENCE';
+
+export type FeedbackAttachmentDto = {
+    id: string;
+    feedbackId: string | null;
+    type: FeedbackAttachmentType;
+    kind: FeedbackAttachmentKind;
+    fileName: string | null;
+    mimeType: string | null;
+    size: number | null;
+    /**
+     * 图纸引用 nodeId（kind=REFERENCE）
+     */
+    nodeId: string | null;
+    fileHash: string | null;
+    /**
+     * 内容寻址 MD5（相同内容跨用户/匿名共享物理文件；前端本地去重用）
+     */
+    contentHash: string | null;
+    /**
+     * 本次上传命中已有相同内容（物理文件复用，未重复落盘）；列表投影恒为空
+     */
+    deduped?: boolean | null;
+    /**
+     * 图纸框选区域（CAD 世界坐标 "x1,y1,x2,y2"；非空时打开图纸定位到该区域）
+     */
+    region: string | null;
+    /**
+     * 缩略图访问 URL（仅 FILE 图纸；REFERENCE 无缩略图）
+     */
+    thumbnailUrl: string | null;
+    /**
+     * 查看 URL（打开附件文件内联；提交者可看图片/文档，图纸引用仅管理员）
+     */
+    viewUrl: string | null;
+    /**
+     * 下载 URL（仅管理员且有 SYSTEM_FEEDBACK_MANAGE；提交者恒 null）
+     */
+    downloadUrl: string | null;
+    /**
+     * 上传者用户名（匿名为 null）
+     */
+    uploadedByName: string | null;
+    createdAt: string;
+};
+
+export type FeedbackResponseDto = {
+    id: string;
+    type: FeedbackType;
+    status: FeedbackStatus;
+    title: string;
+    content: string;
+    source: FeedbackSource;
+    submitterId: string | null;
+    /**
+     * 提交者昵称/用户名（匿名为 null）
+     */
+    submitterName: string | null;
+    contact: string | null;
+    pageUrl: string | null;
+    /**
+     * 提交者 IP（仅管理端返回；提交者视角恒 null）
+     */
+    ip: string | null;
+    /**
+     * 匿名查询码
+     */
+    feedbackCode: string;
+    reviewedById: string | null;
+    reviewedAt: string | null;
+    adoptNote: string | null;
+    rejectReason: string | null;
+    rewardStatus: RewardStatus;
+    /**
+     * 匿名被采纳后需联系客服认领
+     */
+    claimRequired: boolean;
+    reward: FeedbackRewardResponseDto | null;
+    /**
+     * 附件列表（含下载 URL）
+     */
+    attachments: Array<FeedbackAttachmentDto>;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type FeedbackListResponseDto = {
+    items: Array<FeedbackResponseDto>;
+    total: number;
+    page: number;
+    pageSize: number;
+};
+
+export type FeedbackQueryResultDto = {
+    feedbackCode: string;
+    type: FeedbackType;
+    status: FeedbackStatus;
+    title: string;
+    /**
+     * 反馈正文（查询可读，含换行）
+     */
+    content: string;
+    rewardStatus: RewardStatus;
+    claimRequired: boolean;
+    adoptNote: string | null;
+    rejectReason: string | null;
+    /**
+     * 附件列表（匿名查询带短期签名下载 URL）
+     */
+    attachments: Array<FeedbackAttachmentDto>;
+    createdAt: string;
+};
+
+export type FeedbackRewardListResponseDto = {
+    items: Array<FeedbackRewardResponseDto>;
+    total: number;
+};
+
+export type AdminAttachmentListResponseDto = {
+    items: Array<FeedbackAttachmentDto>;
+    total: number;
+    page: number;
+    pageSize: number;
+};
+
+export type BatchDeleteAttachmentsDto = {
+    /**
+     * 附件 ID 列表
+     */
+    ids: Array<string>;
+};
+
+export type BatchDeleteAttachmentsResultDto = {
+    /**
+     * 实际删除的附件数
+     */
+    deleted: number;
+    /**
+     * 未找到（可能已被删除）的附件 ID
+     */
+    notFoundIds: Array<string>;
+};
+
+export type UpdateFeedbackStatusDto = {
+    /**
+     * 目标状态（REVIEWING/REJECTED/CLOSED；采纳走 adopt 端点）
+     */
+    status: FeedbackStatus;
+    /**
+     * 驳回/关闭原因（驳回必填）
+     */
+    reason?: string;
+};
+
+export type AdoptFeedbackDto = {
+    /**
+     * 奖励会员等级（对应 VipTier.level，1-3）
+     */
+    vipTierLevel: number;
+    /**
+     * 奖励时长（天），仅允许 7/30/90
+     */
+    durationDays: number;
+    /**
+     * 采纳说明（可展示给用户）
+     */
+    note?: string;
+};
+
+export type IssueRewardDto = {
+    /**
+     * 发放目标账号 userId（匿名认领时必填；登录用户可填反馈提交者）
+     */
+    userId: string;
+    /**
+     * 客服核实备注（必填，审计留痕）
+     */
+    remark?: string;
+    /**
+     * 覆盖采纳时选定的会员等级（1-3）
+     */
+    vipTierLevel?: number;
+    /**
+     * 覆盖采纳时选定的时长（天），仅允许 7/30/90
+     */
+    durationDays?: number;
+};
+
+export type RevokeRewardDto = {
+    /**
+     * 撤销原因（必填，审计留痕）
+     */
+    reason: string;
+};
+
+export type RegisterDrawingAttachmentDto = {
+    /**
+     * 图纸节点 ID（FileSystemNode.id；fileHash 定位时省略）
+     */
+    nodeId?: string;
+    /**
+     * 图纸 MD5（未登录 CAD 编辑器当前图纸，无 nodeId 时按 hash 内容寻址定位）
+     */
+    fileHash?: string;
+    /**
+     * copy=上传新图纸；reference=空间/当前图纸引用（两者都转真实附件副本）
+     */
+    kind: 'copy' | 'reference';
+    /**
+     * 原文件名
+     */
+    fileName?: string;
+    /**
+     * 缩略图（base64 dataURL，前端引擎内生成/指定区域后上传；云图节点已有缩略图则省略）
+     */
+    thumbnailData?: string;
+    /**
+     * 图纸框选区域（CAD 世界坐标 "x1,y1,x2,y2"；分享图纸同款）。非空时打开图纸定位到该区域。
+     */
+    region?: string;
+};
+
+/**
  * 系统权限枚举
  */
-export type SystemPermission = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE';
+export type SystemPermission = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'SYSTEM_FEEDBACK_READ' | 'SYSTEM_FEEDBACK_MANAGE' | 'SYSTEM_FEEDBACK_REWARD' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE';
 
 /**
  * 项目权限枚举
@@ -5606,7 +5991,7 @@ export type ProjectPermission = 'PROJECT_UPDATE' | 'PROJECT_DELETE' | 'PROJECT_M
 /**
  * 统一权限枚举
  */
-export type Permission = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE' | 'PROJECT_UPDATE' | 'PROJECT_DELETE' | 'PROJECT_MEMBER_MANAGE' | 'PROJECT_MEMBER_ASSIGN' | 'PROJECT_TRANSFER' | 'PROJECT_TRANSFER_MANAGE' | 'PROJECT_ROLE_MANAGE' | 'PROJECT_ROLE_PERMISSION_MANAGE' | 'FILE_CREATE' | 'FILE_UPLOAD' | 'FILE_OPEN' | 'FILE_EDIT' | 'FILE_DELETE' | 'FILE_TRASH_MANAGE' | 'FILE_DOWNLOAD' | 'FILE_SHARE' | 'FILE_MOVE' | 'FILE_COPY' | 'CAD_SAVE' | 'CAD_EXTERNAL_REFERENCE' | 'VERSION_READ';
+export type Permission = 'SYSTEM_USER_READ' | 'SYSTEM_USER_CREATE' | 'SYSTEM_USER_UPDATE' | 'SYSTEM_USER_DELETE' | 'SYSTEM_USER_MEMBERSHIP_MANAGE' | 'SYSTEM_ROLE_READ' | 'SYSTEM_ROLE_CREATE' | 'SYSTEM_ROLE_UPDATE' | 'SYSTEM_ROLE_DELETE' | 'SYSTEM_ROLE_PERMISSION_MANAGE' | 'SYSTEM_FONT_READ' | 'SYSTEM_FONT_UPLOAD' | 'SYSTEM_FONT_DELETE' | 'SYSTEM_FONT_DOWNLOAD' | 'SYSTEM_ADMIN' | 'AUDIT_ADMIN' | 'SYSTEM_BILLING_READ' | 'SYSTEM_BILLING_WRITE' | 'SYSTEM_MONITOR' | 'SYSTEM_CONFIG_READ' | 'SYSTEM_CONFIG_WRITE' | 'SYSTEM_IP_BLACKLIST_MANAGE' | 'SYSTEM_IP_WHITELIST_MANAGE' | 'SYSTEM_FEEDBACK_READ' | 'SYSTEM_FEEDBACK_MANAGE' | 'SYSTEM_FEEDBACK_REWARD' | 'LIBRARY_DRAWING_MANAGE' | 'LIBRARY_BLOCK_MANAGE' | 'PROJECT_CREATE' | 'PROJECT_UPDATE' | 'PROJECT_DELETE' | 'PROJECT_MEMBER_MANAGE' | 'PROJECT_MEMBER_ASSIGN' | 'PROJECT_TRANSFER' | 'PROJECT_TRANSFER_MANAGE' | 'PROJECT_ROLE_MANAGE' | 'PROJECT_ROLE_PERMISSION_MANAGE' | 'FILE_CREATE' | 'FILE_UPLOAD' | 'FILE_OPEN' | 'FILE_EDIT' | 'FILE_DELETE' | 'FILE_TRASH_MANAGE' | 'FILE_DOWNLOAD' | 'FILE_SHARE' | 'FILE_MOVE' | 'FILE_COPY' | 'CAD_SAVE' | 'CAD_EXTERNAL_REFERENCE' | 'VERSION_READ';
 
 export type AppControllerGetHelloData = {
     body?: never;
@@ -11782,6 +12167,31 @@ export type AdminControllerGetPurchaseStatsResponses = {
 
 export type AdminControllerGetPurchaseStatsResponse = AdminControllerGetPurchaseStatsResponses[keyof AdminControllerGetPurchaseStatsResponses];
 
+export type AdminControllerGetActiveStatsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 开始日期（含，YYYY-MM-DD），缺省为 endDate 前 29 天
+         */
+        startDate?: string;
+        /**
+         * 结束日期（含，YYYY-MM-DD），缺省为今天
+         */
+        endDate?: string;
+    };
+    url: '/api/v1/admin/stats/active';
+};
+
+export type AdminControllerGetActiveStatsResponses = {
+    /**
+     * 活跃用户统计成功（活跃=任意审计事件；KPI 为当前实时值，序列按区间零填充，UTC+8 自然日）
+     */
+    200: ActiveStatsDto;
+};
+
+export type AdminControllerGetActiveStatsResponse = AdminControllerGetActiveStatsResponses[keyof AdminControllerGetActiveStatsResponses];
+
 export type AdminControllerGetCacheStatsData = {
     body?: never;
     path?: never;
@@ -12284,6 +12694,46 @@ export type PublicFileControllerCheckExtReferenceResponses = {
 };
 
 export type PublicFileControllerCheckExtReferenceResponse = PublicFileControllerCheckExtReferenceResponses[keyof PublicFileControllerCheckExtReferenceResponses];
+
+export type PublicFileControllerDownloadExternalRefData = {
+    body?: never;
+    path: {
+        hash: string;
+        filename: string;
+    };
+    query?: {
+        format?: string;
+        width?: string;
+        height?: string;
+        colorPolicy?: string;
+        dwgVersion?: string;
+    };
+    url: '/api/v1/public-file/ext-reference/download/{hash}/{filename}';
+};
+
+export type PublicFileControllerDownloadExternalRefErrors = {
+    /**
+     * 请求参数错误 / 转换失败
+     */
+    400: unknown;
+    /**
+     * 转换频率超限 / 会员门控拒绝
+     */
+    403: unknown;
+    /**
+     * 文件不存在
+     */
+    404: unknown;
+};
+
+export type PublicFileControllerDownloadExternalRefResponses = {
+    /**
+     * 返回文件二进制数据
+     */
+    200: Blob | File;
+};
+
+export type PublicFileControllerDownloadExternalRefResponse = PublicFileControllerDownloadExternalRefResponses[keyof PublicFileControllerDownloadExternalRefResponses];
 
 export type PublicFileControllerGetPreloadingDataData = {
     body?: never;
@@ -13731,3 +14181,421 @@ export type ConversionMonitorControllerListTasksResponses = {
 };
 
 export type ConversionMonitorControllerListTasksResponse = ConversionMonitorControllerListTasksResponses[keyof ConversionMonitorControllerListTasksResponses];
+
+export type FeedbackControllerCreateData = {
+    body: CreateFeedbackDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/feedback';
+};
+
+export type FeedbackControllerCreateResponses = {
+    /**
+     * 提交成功，返回查询码
+     */
+    200: SubmitFeedbackResultDto;
+};
+
+export type FeedbackControllerCreateResponse = FeedbackControllerCreateResponses[keyof FeedbackControllerCreateResponses];
+
+export type FeedbackControllerListMineData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 页码，默认 1
+         */
+        page?: number;
+        /**
+         * 每页条数，默认 20
+         */
+        pageSize?: number;
+    };
+    url: '/api/v1/feedback/mine';
+};
+
+export type FeedbackControllerListMineResponses = {
+    /**
+     * 反馈列表
+     */
+    200: FeedbackListResponseDto;
+};
+
+export type FeedbackControllerListMineResponse = FeedbackControllerListMineResponses[keyof FeedbackControllerListMineResponses];
+
+export type FeedbackControllerQueryByCodeData = {
+    body?: never;
+    path: {
+        code: string;
+    };
+    query?: {
+        /**
+         * 提交时填写的联系方式（反馈留有联系方式的须匹配）
+         */
+        contact?: string;
+    };
+    url: '/api/v1/feedback/code/{code}';
+};
+
+export type FeedbackControllerQueryByCodeResponses = {
+    /**
+     * 反馈状态
+     */
+    200: FeedbackQueryResultDto;
+};
+
+export type FeedbackControllerQueryByCodeResponse = FeedbackControllerQueryByCodeResponses[keyof FeedbackControllerQueryByCodeResponses];
+
+export type FeedbackControllerListMineRewardsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/feedback/reward/mine';
+};
+
+export type FeedbackControllerListMineRewardsResponses = {
+    /**
+     * 奖励记录
+     */
+    200: FeedbackRewardListResponseDto;
+};
+
+export type FeedbackControllerListMineRewardsResponse = FeedbackControllerListMineRewardsResponses[keyof FeedbackControllerListMineRewardsResponses];
+
+export type FeedbackAttachmentAdminControllerListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 页码，默认 1
+         */
+        page?: number;
+        /**
+         * 每页条数，默认 20
+         */
+        pageSize?: number;
+        /**
+         * 按附件类型筛选
+         */
+        type?: 'IMAGE' | 'DOCUMENT' | 'DRAWING';
+        /**
+         * 按形态筛选
+         */
+        kind?: 'FILE' | 'REFERENCE';
+        /**
+         * 按文件名/查询码/上传者搜索
+         */
+        search?: string;
+        /**
+         * 起始日期（ISO）
+         */
+        fromDate?: string;
+        /**
+         * 结束日期（ISO）
+         */
+        toDate?: string;
+    };
+    url: '/api/v1/admin/feedback/attachments';
+};
+
+export type FeedbackAttachmentAdminControllerListResponses = {
+    /**
+     * 附件列表
+     */
+    200: AdminAttachmentListResponseDto;
+};
+
+export type FeedbackAttachmentAdminControllerListResponse = FeedbackAttachmentAdminControllerListResponses[keyof FeedbackAttachmentAdminControllerListResponses];
+
+export type FeedbackAttachmentAdminControllerDownloadData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/attachments/{id}/download';
+};
+
+export type FeedbackAttachmentAdminControllerDownloadResponses = {
+    200: unknown;
+};
+
+export type FeedbackAttachmentAdminControllerRemoveData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/attachments/{id}';
+};
+
+export type FeedbackAttachmentAdminControllerRemoveResponses = {
+    /**
+     * 删除成功
+     */
+    200: unknown;
+};
+
+export type FeedbackAttachmentAdminControllerBatchRemoveData = {
+    body: BatchDeleteAttachmentsDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/feedback/attachments/batch-delete';
+};
+
+export type FeedbackAttachmentAdminControllerBatchRemoveResponses = {
+    /**
+     * 批量删除结果
+     */
+    200: BatchDeleteAttachmentsResultDto;
+};
+
+export type FeedbackAttachmentAdminControllerBatchRemoveResponse = FeedbackAttachmentAdminControllerBatchRemoveResponses[keyof FeedbackAttachmentAdminControllerBatchRemoveResponses];
+
+export type FeedbackAdminControllerListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 页码，默认 1
+         */
+        page?: number;
+        /**
+         * 每页条数，默认 20
+         */
+        pageSize?: number;
+        /**
+         * 按类型筛选
+         */
+        type?: 'BUG' | 'SUGGESTION' | 'COMPLAINT' | 'OTHER';
+        /**
+         * 按状态筛选
+         */
+        status?: 'PENDING' | 'REVIEWING' | 'ADOPTED' | 'REJECTED' | 'CLOSED';
+        /**
+         * 按奖励状态筛选
+         */
+        rewardStatus?: 'NONE' | 'PENDING' | 'ISSUED' | 'REVOKED';
+        /**
+         * 按来源筛选
+         */
+        source?: 'PC' | 'MOBILE';
+        /**
+         * 按标题/内容/查询码搜索
+         */
+        search?: string;
+        /**
+         * 起始日期（ISO）
+         */
+        fromDate?: string;
+        /**
+         * 结束日期（ISO）
+         */
+        toDate?: string;
+    };
+    url: '/api/v1/admin/feedback';
+};
+
+export type FeedbackAdminControllerListResponses = {
+    /**
+     * 反馈列表
+     */
+    200: FeedbackListResponseDto;
+};
+
+export type FeedbackAdminControllerListResponse = FeedbackAdminControllerListResponses[keyof FeedbackAdminControllerListResponses];
+
+export type FeedbackAdminControllerListRewardsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 按奖励状态筛选
+         */
+        status?: 'PENDING' | 'ISSUED' | 'REVOKED';
+        /**
+         * 按反馈类型（分类）筛选
+         */
+        type?: 'BUG' | 'SUGGESTION' | 'COMPLAINT' | 'OTHER';
+        /**
+         * 按查询码/反馈标题/绑定账号搜索
+         */
+        search?: string;
+    };
+    url: '/api/v1/admin/feedback/rewards';
+};
+
+export type FeedbackAdminControllerListRewardsResponses = {
+    /**
+     * 奖励记录
+     */
+    200: FeedbackRewardListResponseDto;
+};
+
+export type FeedbackAdminControllerListRewardsResponse = FeedbackAdminControllerListRewardsResponses[keyof FeedbackAdminControllerListRewardsResponses];
+
+export type FeedbackAdminControllerDetailData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/{id}';
+};
+
+export type FeedbackAdminControllerDetailResponses = {
+    /**
+     * 反馈详情
+     */
+    200: FeedbackResponseDto;
+};
+
+export type FeedbackAdminControllerDetailResponse = FeedbackAdminControllerDetailResponses[keyof FeedbackAdminControllerDetailResponses];
+
+export type FeedbackAdminControllerUpdateStatusData = {
+    body: UpdateFeedbackStatusDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/{id}/status';
+};
+
+export type FeedbackAdminControllerUpdateStatusResponses = {
+    /**
+     * 更新后反馈
+     */
+    200: FeedbackResponseDto;
+};
+
+export type FeedbackAdminControllerUpdateStatusResponse = FeedbackAdminControllerUpdateStatusResponses[keyof FeedbackAdminControllerUpdateStatusResponses];
+
+export type FeedbackAdminControllerAdoptData = {
+    body: AdoptFeedbackDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/{id}/adopt';
+};
+
+export type FeedbackAdminControllerAdoptResponses = {
+    /**
+     * 奖励记录（PENDING）
+     */
+    200: FeedbackRewardResponseDto;
+};
+
+export type FeedbackAdminControllerAdoptResponse = FeedbackAdminControllerAdoptResponses[keyof FeedbackAdminControllerAdoptResponses];
+
+export type FeedbackAdminControllerIssueData = {
+    body: IssueRewardDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/rewards/{id}/issue';
+};
+
+export type FeedbackAdminControllerIssueResponses = {
+    /**
+     * 发放后奖励
+     */
+    200: FeedbackRewardResponseDto;
+};
+
+export type FeedbackAdminControllerIssueResponse = FeedbackAdminControllerIssueResponses[keyof FeedbackAdminControllerIssueResponses];
+
+export type FeedbackAdminControllerRevokeData = {
+    body: RevokeRewardDto;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/feedback/rewards/{id}/revoke';
+};
+
+export type FeedbackAdminControllerRevokeResponses = {
+    /**
+     * 撤销后奖励
+     */
+    200: FeedbackRewardResponseDto;
+};
+
+export type FeedbackAdminControllerRevokeResponse = FeedbackAdminControllerRevokeResponses[keyof FeedbackAdminControllerRevokeResponses];
+
+export type FeedbackAttachmentControllerUploadData = {
+    body: {
+        file?: Blob | File;
+        /**
+         * 匿名设备令牌（匿名提交时传）
+         */
+        anonToken?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/feedback/attachments';
+};
+
+export type FeedbackAttachmentControllerUploadResponses = {
+    200: FeedbackAttachmentDto;
+};
+
+export type FeedbackAttachmentControllerUploadResponse = FeedbackAttachmentControllerUploadResponses[keyof FeedbackAttachmentControllerUploadResponses];
+
+export type FeedbackAttachmentControllerRegisterDrawingData = {
+    body: RegisterDrawingAttachmentDto;
+    path?: never;
+    query?: never;
+    url: '/api/v1/feedback/attachments/drawing';
+};
+
+export type FeedbackAttachmentControllerRegisterDrawingResponses = {
+    200: FeedbackAttachmentDto;
+};
+
+export type FeedbackAttachmentControllerRegisterDrawingResponse = FeedbackAttachmentControllerRegisterDrawingResponses[keyof FeedbackAttachmentControllerRegisterDrawingResponses];
+
+export type FeedbackAttachmentControllerDownloadData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * 短期签名 token（匿名查看）
+         */
+        token?: string;
+        /**
+         * 反馈查询码（匿名查看）
+         */
+        code?: string;
+    };
+    url: '/api/v1/feedback/attachments/{id}/download';
+};
+
+export type FeedbackAttachmentControllerDownloadResponses = {
+    200: unknown;
+};
+
+export type FeedbackAttachmentControllerThumbnailData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * 短期签名 token（匿名查看）
+         */
+        token?: string;
+        /**
+         * 反馈查询码（匿名查看）
+         */
+        code?: string;
+    };
+    url: '/api/v1/feedback/attachments/{id}/thumbnail';
+};
+
+export type FeedbackAttachmentControllerThumbnailResponses = {
+    200: unknown;
+};

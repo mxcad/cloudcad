@@ -102,7 +102,8 @@ async function uploadSingleFile(info: UploadFileInfo, file: File): Promise<void>
 async function uploadFiles() {
   const el = document.createElement('input')
   el.type = 'file'
-  el.accept = '.dwg,image/*'
+  // 外部参照支持 CAD 图纸（.dwg/.dxf）+ 图片（对齐 PC useExternalReferenceUpload selectAndUploadFiles）
+  el.accept = '.dwg,.dxf,image/*'
   el.multiple = true
   el.style.display = 'none'
   document.body.appendChild(el)

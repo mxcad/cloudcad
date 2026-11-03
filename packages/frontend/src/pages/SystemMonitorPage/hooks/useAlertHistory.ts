@@ -7,7 +7,7 @@ import { parseAlertList } from '../types';
 import type { AlertListResult } from '../types';
 
 const REFRESH_INTERVAL_SECONDS = 30;
-export const ALERT_PAGE_SIZE = 20;
+export const ALERT_PAGE_SIZE = 30;
 const ALERT_LIST_KEY = 'alertHistoryList' as const;
 
 export interface AlertHistoryState {
@@ -21,22 +21,23 @@ export interface AlertHistoryState {
 /**
  * 告警历史数据（#248）
  * 仅 active（告警历史 Tab 激活）时轮询，30s 一次，复用 refreshCountdown 模式；
- * 数据获取由 react-query 驱动（queryKey 含 page，切页自动重新查询）
+ * 数据获取由 react-query 驱动（queryKey 含 page/pageSize，切页/切条数自动重新查询）
  */
 export function useAlertHistory(
   active: boolean,
-  page: number
+  page: number,
+  pageSize: number = ALERT_PAGE_SIZE
 ): AlertHistoryState {
   const [refreshCountdown, setRefreshCountdown] = useState(
     REFRESH_INTERVAL_SECONDS
   );
 
   const query = useQuery({
-    queryKey: [ALERT_LIST_KEY, page],
+    queryKey: [ALERT_LIST_KEY, page, pageSize],
     queryFn: async () => {
       const res = await alertControllerList({
         throwOnError: true,
-        query: { page, limit: ALERT_PAGE_SIZE },
+        query: { page, limit: pageSize },
       });
       return parseAlertList(res.data);
     },

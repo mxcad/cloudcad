@@ -133,22 +133,21 @@ export const ProjectPanelView: React.FC<ProjectPanelViewProps> = ({
         breadcrumb={
           !isLibraryMode ? (
             <div className={styles.breadcrumbPlaceholder}>
-              {(breadcrumb.length > 0 || !isPersonalSpace) && (
-                <BreadcrumbNavigation
-                  variant="panel"
-                  breadcrumbs={breadcrumb.map((b) => ({
-                    ...b,
-                    isRoot: false,
-                    isFolder: true,
-                  }))}
-                  onNavigate={(crumb) => {
-                    const idx = breadcrumb.findIndex((b) => b.id === crumb.id);
-                    if (idx >= 0) onBreadcrumbClick(idx);
-                  }}
-                  onBack={onBreadcrumbBack}
-                  onBackToProjects={undefined}
-                />
-              )}
+              <BreadcrumbNavigation
+                variant="panel"
+                breadcrumbs={breadcrumb.map((b, i) => ({
+                  ...b,
+                  // 首项为空间根（个人空间/项目根，渲染房屋图标，与 /personal-space、/projects 页一致）
+                  isRoot: i === 0,
+                  isFolder: true,
+                }))}
+                onNavigate={(crumb) => {
+                  const idx = breadcrumb.findIndex((b) => b.id === crumb.id);
+                  if (idx >= 0) onBreadcrumbClick(idx);
+                }}
+                onBack={onBreadcrumbBack}
+                onBackToProjects={undefined}
+              />
             </div>
           ) : undefined
         }

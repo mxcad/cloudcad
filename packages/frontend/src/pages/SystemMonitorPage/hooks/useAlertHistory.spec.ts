@@ -47,7 +47,7 @@ const mockAlert = {
 
 function mockListResponse(
   data: unknown[],
-  pagination: Record<string, unknown> = { page: 1, limit: 20, total: 0, totalPages: 0 }
+  pagination: Record<string, unknown> = { page: 1, limit: 30, total: 0, totalPages: 0 }
 ) {
   mockedList.mockResolvedValue({
     data: { data, pagination } as never,
@@ -79,7 +79,7 @@ describe('useAlertHistory', () => {
     const { wrapper } = createTestWrapper();
     mockListResponse(
       [mockAlert],
-      { page: 1, limit: 20, total: 23, totalPages: 2 }
+      { page: 1, limit: 30, total: 23, totalPages: 2 }
     );
 
     const { result } = renderHook(() => useAlertHistory(true, 1), {
@@ -90,13 +90,13 @@ describe('useAlertHistory', () => {
 
     expect(mockedList).toHaveBeenCalledWith({
       throwOnError: true,
-      query: { page: 1, limit: 20 },
+      query: { page: 1, limit: 30 },
     });
     expect(result.current.data?.items).toHaveLength(1);
     expect(result.current.data?.items[0].level).toBe('P1');
     expect(result.current.data?.pagination).toEqual({
       page: 1,
-      limit: 20,
+      limit: 30,
       total: 23,
       totalPages: 2,
     });
@@ -115,7 +115,7 @@ describe('useAlertHistory', () => {
     expect(result.current.data?.items).toEqual([]);
     expect(result.current.data?.pagination).toEqual({
       page: 1,
-      limit: 20,
+      limit: 30,
       total: 0,
       totalPages: 0,
     });
@@ -125,7 +125,7 @@ describe('useAlertHistory', () => {
     vi.useFakeTimers();
     try {
       const { wrapper } = createTestWrapper();
-      mockListResponse([mockAlert], { page: 1, limit: 20, total: 1, totalPages: 1 });
+      mockListResponse([mockAlert], { page: 1, limit: 30, total: 1, totalPages: 1 });
 
       const { result } = renderHook(() => useAlertHistory(true, 1), {
         wrapper,
@@ -151,7 +151,7 @@ describe('useAlertHistory', () => {
     vi.useFakeTimers();
     try {
       const { wrapper } = createTestWrapper();
-      mockListResponse([mockAlert], { page: 1, limit: 20, total: 1, totalPages: 1 });
+      mockListResponse([mockAlert], { page: 1, limit: 30, total: 1, totalPages: 1 });
 
       const { result } = renderHook(() => useAlertHistory(true, 1), {
         wrapper,

@@ -89,6 +89,24 @@ describe('refreshTokensOnce（唯一刷新出口）', () => {
     expect(localStorage.getItem('user')).toBeNull();
   });
 
+  it('SDK 返回 { error }（不 throw）的确定性认证失败也清会话，打断卡死态（回归：throwOnError:false 下 catch 是死代码）', async () => {
+    localStorage.setItem('refreshToken', 'expired-token');
+    localStorage.setItem('accessToken', 'old-access');
+    localStorage.setItem('user', '{}');
+    // 真实 SDK 行为：非 2xx 不 throw，而是 resolve { error: <body> }
+    mockRefreshToken.mockResolvedValue({
+      data: undefined,
+      error: { code: 'UNAUTHORIZED', message: '刷新Token无效或已过期' },
+    });
+
+    const result = await refreshTokensOnce();
+
+    expect(result).toBe(false);
+    expect(localStorage.getItem('refreshToken')).toBeNull();
+    expect(localStorage.getItem('accessToken')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
   it('网络错误保留 token 供重试', async () => {
     localStorage.setItem('refreshToken', 'valid-token');
     mockRefreshToken.mockRejectedValue(new TypeError('Failed to fetch'));

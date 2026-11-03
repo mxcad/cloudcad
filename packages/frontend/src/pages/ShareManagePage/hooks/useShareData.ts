@@ -31,6 +31,7 @@ export function useShareData() {
   const [search, setSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [sort, setSort] = useState<SortConfig>({
     field: 'createdAt',
     order: 'desc',
@@ -39,8 +40,9 @@ export function useShareData() {
   // useMemo 稳定 queryKey 引用：setItems/setTotal 依赖它，避免每次渲染重建
   // 导致 useShareActions 回调抖动
   const queryKey = useMemo(
-    () => ['shares', page, searchQuery, sort.field, sort.order] as const,
-    [page, searchQuery, sort.field, sort.order]
+    () =>
+      ['shares', page, pageSize, searchQuery, sort.field, sort.order] as const,
+    [page, pageSize, searchQuery, sort.field, sort.order]
   );
 
   const { data, isFetching, isLoading, error, refetch } =
@@ -51,7 +53,7 @@ export function useShareData() {
           throwOnError: true,
           query: {
             page,
-            pageSize: PAGE_SIZE,
+            pageSize,
             search: searchQuery || undefined,
             sortBy: sort.field,
             sortOrder: sort.order,
@@ -79,7 +81,7 @@ export function useShareData() {
     displayNodes: items,
     currentPage: page,
     handlePageChange: setPage,
-    resetKey: `${searchQuery}|${sort.field}|${sort.order}`,
+    resetKey: `${searchQuery}|${sort.field}|${sort.order}|${pageSize}`,
   });
 
   // 选择模型：以滚动合并列表为渲染依据（跨页多选连续），以分享 token 作为列表项 id
@@ -151,6 +153,17 @@ export function useShareData() {
     setPage(1);
   }, []);
 
+  // 每页条数变化：清空选择并重置到第一页（新条数下深层页码无意义）
+  const handlePageSizeChange = useCallback(
+    (next: number) => {
+      if (next === pageSize) return;
+      clearSelection();
+      setPageSize(next);
+      setPage(1);
+    },
+    [pageSize, clearSelection]
+  );
+
   const allSelected =
     viewItems.length > 0 && selectedNodes.size === viewItems.length;
 
@@ -158,10 +171,10 @@ export function useShareData() {
     () => ({
       total,
       page,
-      limit: PAGE_SIZE,
-      totalPages: Math.ceil(total / PAGE_SIZE),
+      limit: pageSize,
+      totalPages: Math.ceil(total / pageSize),
     }),
-    [total, page]
+    [total, page, pageSize]
   );
 
   const handlePageChange = useCallback((newPage: number) => {
@@ -173,7 +186,7 @@ export function useShareData() {
     items: viewItems,
     total,
     page,
-    pageSize: PAGE_SIZE,
+    pageSize,
     loading,
     error: errorMessage,
     search,
@@ -193,6 +206,7 @@ export function useShareData() {
     handleSort,
     paginationMeta,
     handlePageChange,
+    handlePageSizeChange,
     handleScrollPageChange,
     minLoadedPage,
   };

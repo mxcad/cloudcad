@@ -26,13 +26,20 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 vi.mock('@/contexts/RuntimeConfigContext', () => ({
   useRuntimeConfig: () => ({
-    config: { smsEnabled: true, mailEnabled: false, wechatEnabled: false },
+    config: {
+      smsEnabled: true,
+      mailEnabled: false,
+      wechatEnabled: false,
+      requirePhoneVerification: mockRequirePhoneVerification,
+    },
   }),
 }));
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
+
+let mockRequirePhoneVerification = false;
 
 describe('useLoginForm - handleSendCode', () => {
   beforeEach(() => {
@@ -77,6 +84,7 @@ describe('useLoginForm - 注销冷静期分流', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    mockRequirePhoneVerification = false;
   });
 
   afterEach(() => {
@@ -178,5 +186,64 @@ describe('useLoginForm - 注销冷静期分流', () => {
 
     expect(result.current.showSupportModal).toBe(false);
     expect(result.current.error).toBe('账号或密码错误');
+  });
+});
+
+describe('useLoginForm - BUG-AUTH-02 手机登录未注册 prefill 分流', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRequirePhoneVerification = false;
+  });
+
+  async function submitPhone() {
+    const { result } = renderHook(() => useLoginForm());
+    await act(async () => {
+      result.current.phoneFormHook.setValue('phone', '13800001234');
+      result.current.phoneFormHook.setValue('code', '123456');
+    });
+    await act(async () => {
+      await result.current.handlePhoneSubmit({
+        preventDefault: vi.fn(),
+      } as React.FormEvent);
+    });
+    return result;
+  }
+
+  it('requirePhoneVerification=true：PHONE_NOT_REGISTERED → 跳 /register 携带手机号+验证码 prefill', async () => {
+    mockRequirePhoneVerification = true;
+    mockLoginByPhone.mockRejectedValue({
+      response: {
+        data: {
+          code: 'PHONE_NOT_REGISTERED',
+          message: '手机号未注册，请先注册',
+          phone: '13800001234',
+        },
+      },
+    });
+
+    await submitPhone();
+
+    expect(mockNavigate).toHaveBeenCalledWith('/register', {
+      state: { prefillPhone: '13800001234', prefillCode: '123456' },
+    });
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it('requirePhoneVerification=false：PHONE_NOT_REGISTERED → 不跳注册页，就地显示错误（prefill 不丢无处落地）', async () => {
+    mockRequirePhoneVerification = false;
+    mockLoginByPhone.mockRejectedValue({
+      response: {
+        data: {
+          code: 'PHONE_NOT_REGISTERED',
+          message: '手机号未注册，请先注册',
+          phone: '13800001234',
+        },
+      },
+    });
+
+    const result = await submitPhone();
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(result.current.error).toBe('手机号未注册，请先注册');
   });
 });

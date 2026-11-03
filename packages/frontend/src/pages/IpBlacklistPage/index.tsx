@@ -45,6 +45,7 @@ export default function IpBlacklistPage({
   });
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(IP_BLACKLIST_PAGE_SIZE);
   const [addOpen, setAddOpen] = useState(false);
   const [removeTargets, setRemoveTargets] = useState<IpBlacklistEntry[] | null>(
     null
@@ -62,13 +63,17 @@ export default function IpBlacklistPage({
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { items, total, loading, refetch } = useIpBlacklistList(page, keyword);
+  const { items, total, loading, refetch } = useIpBlacklistList(
+    page,
+    keyword,
+    pageSize
+  );
   const addMutation = useAddIpBlacklistEntry(() => setAddOpen(false));
 
   // 不 max(…,1)：totalPages 未同步（total=0）时为 0，防首屏误报「已经是最后一页」
-  const totalPages = Math.ceil(total / IP_BLACKLIST_PAGE_SIZE);
+  const totalPages = Math.ceil(total / pageSize);
 
-  // 滚动分页数据合并（追加/前插/替换 + 竞态防护；搜索词变化时整体替换）
+  // 滚动分页数据合并（追加/前插/替换 + 竞态防护；搜索词/每页数量变化时整体替换）
   const {
     viewNodes: viewItems,
     handleScrollPageChange,
@@ -77,7 +82,7 @@ export default function IpBlacklistPage({
     displayNodes: items,
     currentPage: page,
     handlePageChange: setPage,
-    resetKey: keyword,
+    resetKey: `${keyword}|${pageSize}`,
   });
 
   // ── 多选（ADR-0052 统一机制：选择内核 + 快捷键 + 滚动分页合并）──
@@ -100,6 +105,17 @@ export default function IpBlacklistPage({
   useEffect(() => {
     clearSelection();
   }, [keyword, clearSelection]);
+
+  // 每页条数变化：清空选择并重置到第一页（新条数下深层页码无意义）
+  const handlePageSizeChange = useCallback(
+    (next: number) => {
+      if (next === pageSize) return;
+      clearSelection();
+      setPageSize(next);
+      setPage(1);
+    },
+    [pageSize, clearSelection]
+  );
 
   const openRemoveConfirm = useCallback(
     (entries: IpBlacklistEntry[]) => {
@@ -264,7 +280,7 @@ export default function IpBlacklistPage({
               paginationMeta={{
                 total,
                 page,
-                limit: IP_BLACKLIST_PAGE_SIZE,
+                limit: pageSize,
                 totalPages,
               }}
               onToggleSelect={handleNodeSelect}
@@ -274,7 +290,9 @@ export default function IpBlacklistPage({
                 clearSelection();
                 setPage(next);
               }}
-              paginationSimple
+              showSizeChanger
+              onPageSizeChange={handlePageSizeChange}
+              pageSizeOptions={[30, 50, 100]}
               onScrollPageChange={handleScrollPageChange}
               minLoadedPage={minLoadedPage}
               // 底部悬浮操作栏：列表滚动容器内 sticky 吸底（列表撑满一屏，不遮分页栏）

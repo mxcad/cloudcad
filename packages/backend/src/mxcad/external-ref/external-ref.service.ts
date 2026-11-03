@@ -3,14 +3,14 @@
 // All rights reserved.
 ///////////////////////////////////////////////////////////////////////////////
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { FileSystemService as MxFileSystemService } from '../infra/file-system.service';
 import { FileSystemNodeService } from '../node/filesystem-node.service';
 import { ExtRefPreloadingService } from './ext-ref-preloading.service';
+import { ExtRefStorageService } from './ext-ref-storage.service';
 import { FileSystemNodeContext } from '../node/filesystem-node.service';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
-import { I18nContext } from 'nestjs-i18n';
 import { NodeMutationGuard } from '../../file-operations/node-mutation.guard';
 
 @Injectable()
@@ -21,7 +21,8 @@ export class ExternalRefService {
     private readonly fileSystemService: MxFileSystemService,
     private readonly fileSystemNodeService: FileSystemNodeService,
     private readonly extRefPreloadingService: ExtRefPreloadingService,
-    private readonly nodeMutationGuard: NodeMutationGuard
+    private readonly nodeMutationGuard: NodeMutationGuard,
+    private readonly extRefStorageService: ExtRefStorageService
   ) {}
 
   async getExternalRefDirName(srcDwgNodeId: string): Promise<string> {
@@ -74,20 +75,13 @@ export class ExternalRefService {
         await fsPromises.mkdir(externalRefDir, { recursive: true });
       }
 
-      const targetFile = path.join(externalRefDir, `${extRefFileName}.mxweb`);
-
-      if (!(await this.fileSystemService.exists(srcFilePath))) {
-        throw new NotFoundException(
-          I18nContext.current()?.t(
-            'error.file_extra.converted_file_not_exist',
-            { args: { path: srcFilePath } }
-          ) ?? `转换后的文件不存在: ${srcFilePath}`
-        );
-      }
-
-      await fsPromises.copyFile(srcFilePath, targetFile);
+      const targetFile = await this.extRefStorageService.stageConvertedExtRefArtifact({
+        srcFilePath,
+        targetDir: externalRefDir,
+        logicalName: extRefFileName,
+      });
       this.logger.log(
-        `[handleExternalReferenceFile] mxweb 文件拷贝成功: ${targetFile}`
+        `[handleExternalReferenceFile] mxweb 文件落位成功: ${targetFile}`
       );
     } catch (error) {
       this.logger.error(

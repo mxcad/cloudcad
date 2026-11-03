@@ -120,9 +120,11 @@ export const FileSystemStates: React.FC<FileSystemStatesProps> = ({
             ? t('回收站是空的')
             : isProjectsEmpty
               ? t('暂无项目')
-              : isEmptyProject
-                ? t('项目中暂无文件')
-                : t('这个文件夹是空的')}
+              : searchTerm
+                ? t('未找到匹配的内容')
+                : isEmptyProject
+                  ? t('项目中暂无文件')
+                  : t('这个文件夹是空的')}
         </h3>
         <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>
           {isTrashView

@@ -233,4 +233,82 @@ describe('AdminStatsService', () => {
       expect(JSON.stringify(queryParams(3))).not.toContain('tier-9');
     });
   });
+
+  describe('getActiveStats', () => {
+    it('KPI 为当前实时值（东八区今日零点/近 30 天窗口），缺省区间最近 30 个自然日', async () => {
+      jest
+        .spyOn(Date, 'now')
+        .mockReturnValue(new Date('2026-08-25T10:00:00Z').getTime());
+      mockPrisma.$queryRaw
+        .mockResolvedValueOnce([{ count: 18 }])
+        .mockResolvedValueOnce([{ count: 97 }])
+        .mockResolvedValue([]);
+
+      const result = await service.getActiveStats();
+
+      // 两次 KPI 聚合 + 一次序列查询
+      expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(3);
+      // 东八区 2026-08-25 零点 = UTC 2026-08-24T16:00Z
+      expect(queryParams(0)[0]).toEqual(new Date('2026-08-24T16:00:00.000Z'));
+      // MAU 窗口起点 = 今日零点 - 29 天 = UTC 2026-07-26T16:00Z
+      expect(queryParams(1)[0]).toEqual(new Date('2026-07-26T16:00:00.000Z'));
+      // 序列下界 = 区间起点（2026-07-27 零点 CST = UTC 2026-07-26T16:00Z）再前扩 29 天
+      expect(queryParams(2)[0]).toEqual(new Date('2026-06-27T16:00:00.000Z'));
+      expect(queryParams(2)[1]).toEqual(new Date('2026-08-25T16:00:00.000Z'));
+
+      expect(result.dau).toBe(18);
+      expect(result.mau).toBe(97);
+      expect(result.stickiness).toBe(0.1856);
+      expect(result.startDate).toBe('2026-07-27');
+      expect(result.endDate).toBe('2026-08-25');
+      expect(result.series).toHaveLength(30);
+      expect(result.series[0]).toEqual({
+        date: '2026-07-27',
+        dau: 0,
+        mau: 0,
+      });
+    });
+
+    it('MAU 为 0 时 stickiness 为 null', async () => {
+      mockPrisma.$queryRaw
+        .mockResolvedValueOnce([{ count: 0 }])
+        .mockResolvedValueOnce([{ count: 0 }])
+        .mockResolvedValue([]);
+
+      const result = await service.getActiveStats();
+
+      expect(result.dau).toBe(0);
+      expect(result.mau).toBe(0);
+      expect(result.stickiness).toBeNull();
+    });
+
+    it('序列零填充，dau/mau 取查询结果（MAU 为滚动窗口值）', async () => {
+      mockPrisma.$queryRaw
+        .mockResolvedValueOnce([{ count: 1 }])
+        .mockResolvedValueOnce([{ count: 3 }])
+        .mockResolvedValueOnce([
+          { date: '2026-08-02', dau: 2, mau: 5 },
+        ]);
+
+      const result = await service.getActiveStats({
+        startDate: '2026-08-01',
+        endDate: '2026-08-03',
+      });
+
+      expect(result.series).toEqual([
+        { date: '2026-08-01', dau: 0, mau: 0 },
+        { date: '2026-08-02', dau: 2, mau: 5 },
+        { date: '2026-08-03', dau: 0, mau: 0 },
+      ]);
+    });
+
+    it.each(['20260801', 'not-a-date'])(
+      '非法日期格式 %s 抛出 BadRequestException',
+      async (bad) => {
+        await expect(
+          service.getActiveStats({ startDate: bad })
+        ).rejects.toThrow(BadRequestException);
+      }
+    );
+  });
 });

@@ -11,7 +11,10 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { t } from '@/languages';
-import { isValidIpOrCidr } from '@/utils/ipCidrValidation';
+import {
+  isLoopbackIpOrCidr,
+  isValidIpOrCidr,
+} from '@/utils/ipCidrValidation';
 import type { IpBlacklistEntryForm } from '../types';
 
 interface AddEntryModalProps {
@@ -76,6 +79,11 @@ export function AddEntryModal({
       valid = false;
     } else if (!isValidIpOrCidr(trimmedIp)) {
       setIpError(t('IP/CIDR 格式非法'));
+      valid = false;
+    } else if (isLoopbackIpOrCidr(trimmedIp)) {
+      // BUG-ADMIN-001：环回是管理员白名单本机自救通道，拉黑会锁死本机管理
+      // 通道（黑名单判定先于白名单 fail-close）且无安全价值——前端先行拦截
+      setIpError(t('不能将本机环回地址加入 IP 黑名单'));
       valid = false;
     } else {
       setIpError('');

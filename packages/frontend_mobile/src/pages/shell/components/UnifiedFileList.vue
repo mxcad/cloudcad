@@ -18,6 +18,7 @@ import { t } from '@/languages'
 import { vibrate } from '../../../utils/vibrate'
 import { isNearScrollBottom } from '../../../utils/scroll'
 import type { UnifiedDomain } from '../../../composables/useUnifiedFileList'
+import { useSortSheet } from '../../../composables/useSortSheet'
 import type { FileListItem } from '../../../composables/useNodeFormatter'
 import {
   FolderIcon,
@@ -269,33 +270,24 @@ function toggleSelectAll() {
   }
 }
 
-// ── A-10 排序（ActionSheet 选字段；同字段再点切换方向）──
-const sortOptions: Array<{ field: SortField; label: string }> = [
-  { field: 'updatedAt', label: t('修改时间') },
-  { field: 'createdAt', label: t('创建时间') },
-  { field: 'name', label: t('名称') },
-  { field: 'size', label: t('大小') },
-]
-const showSortSheet = ref(false)
-
-const sortSheetActions = computed(() =>
-  sortOptions.map((o) => ({
-    name: o.label,
-    subname: props.sortBy === o.field ? (props.sortOrder === 'asc' ? '↑' : '↓') : '',
-  })),
-)
-
-function onSortSheetSelect(action: { name: string }) {
-  const opt = sortOptions.find((o) => o.label === action.name)
-  if (opt) onSortSelect(opt.field)
-}
-
-function onSortSelect(field: SortField) {
-  showSortSheet.value = false
-  // 切换字段用该字段的自然默认方向；同字段重复选择则反转
-  const order: SortOrder = props.sortBy === field ? (props.sortOrder === 'asc' ? 'desc' : 'asc') : (field === 'name' ? 'asc' : 'desc')
-  emit('sortChange', field, order)
-}
+// ── A-10 排序（ActionSheet 选字段；同字段再点切换方向；排序逻辑在 useSortSheet）──
+const {
+  showSortSheet,
+  sortSheetActions,
+  openSortSheet,
+  onSortSheetSelect,
+} = useSortSheet<SortField>({
+  options: [
+    { field: 'updatedAt', label: t('修改时间') },
+    { field: 'createdAt', label: t('创建时间') },
+    { field: 'name', label: t('名称') },
+    { field: 'size', label: t('大小') },
+  ],
+  currentField: () => props.sortBy,
+  currentOrder: () => props.sortOrder,
+  // 受控形态：父组件持 sortBy/sortOrder，选中后 emit 出去
+  onSelect: (field, order) => emit('sortChange', field, order),
+})
 
 // ── A-15 下拉刷新 ──
 const refreshing = ref(false)
@@ -338,7 +330,7 @@ async function onPullRefresh() {
           <van-icon name="bars" size="18" />
         </button>
         <!-- A-10 排序（ActionSheet 选字段，同字段再点反转方向） -->
-        <button class="mode-btn" @click="showSortSheet = true">
+        <button class="mode-btn" @click="openSortSheet">
           <van-icon name="sort" size="18" />
         </button>
         <!-- 二期 d 高级筛选（格式/大小/时间区间），有生效筛选时高亮 -->

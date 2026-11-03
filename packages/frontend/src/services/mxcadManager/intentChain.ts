@@ -18,6 +18,7 @@
  */
 import { MxFun, store } from 'mxdraw';
 import {
+  CHAIN_IDS,
   clearPendingIntent,
   firstBlockedPrecondition,
   hasPendingIntent,
@@ -25,6 +26,7 @@ import {
   startPendingIntent,
   type IntentDef,
   type IntentFacts,
+  type IntentStart,
   type IntentStorage,
 } from '@cloudcad/platform';
 import { CAD_EVENTS } from '@/constants/events';
@@ -44,7 +46,7 @@ import { isExportDownloadAllowed } from './exportGate';
 
 /** 分享意图链定义：声明「分享需要哪些前置、在哪个锚点续跑」。 */
 export const SHARE_CHAIN: IntentDef = {
-  id: 'share-current-drawing',
+  id: CHAIN_IDS.share,
   action: { type: 'Mx_Share' },
   preconditions: ['auth', 'cloud-existence'],
   resumeAfter: 'document-loaded',
@@ -52,7 +54,7 @@ export const SHARE_CHAIN: IntentDef = {
 
 /** 另存为意图链：未登录时挂起，登录成功后自动续跑打开另存为对话框。 */
 export const SAVE_AS_CHAIN: IntentDef = {
-  id: 'save-as-to-cloud',
+  id: CHAIN_IDS.saveAs,
   action: { type: 'Mx_SaveAsToCloud' },
   preconditions: ['auth'],
   resumeAfter: 'document-loaded',
@@ -60,7 +62,7 @@ export const SAVE_AS_CHAIN: IntentDef = {
 
 /** 保存意图链：未登录时挂起，登录成功后自动续跑执行保存。 */
 export const SAVE_CHAIN: IntentDef = {
-  id: 'save-to-cloud',
+  id: CHAIN_IDS.save,
   action: { type: 'Mx_Save' },
   preconditions: ['auth'],
   resumeAfter: 'document-loaded',
@@ -120,12 +122,7 @@ function loginKindFor(def: IntentDef): SaveRequiredKind {
   return 'export';
 }
 
-/** `beginIntent` 的结论：调用方据此映射 CommandResult / UI 状态。 */
-export type IntentStart =
-  | 'auth-blocked'
-  | 'cloud-save-pending'
-  | 'vip-blocked'
-  | 'cancelled';
+/** `beginIntent` 的结论类型由 `@cloudcad/platform` 提供（两端共用）。 */
 
 /**
  * 挂起意图链并决定下一步。

@@ -107,6 +107,20 @@ describe('EmailVerificationService', () => {
       );
       expect(mockEmailService.sendVerificationEmail).not.toHaveBeenCalled();
     });
+
+    it('BUG-USER-01：SMTP 发信失败时删除孤儿码并原样重抛（不遗留有效码）', async () => {
+      mockEmailService.sendVerificationEmail.mockRejectedValueOnce(
+        new Error('SMTP connect failed')
+      );
+
+      await expect(service.sendVerificationEmail('a@b.com')).rejects.toThrow(
+        'SMTP connect failed'
+      );
+      // 孤儿码必须被删除：用户收不到邮件，Redis 里也不能躺着有效码
+      expect(mockRedis.store.has(codeKey('a@b.com'))).toBe(false);
+      // 发信失败不设置限流键，允许用户立即重试
+      expect(mockRedis.store.has(rateKey('a@b.com'))).toBe(false);
+    });
   });
 
   describe('verifyEmail', () => {

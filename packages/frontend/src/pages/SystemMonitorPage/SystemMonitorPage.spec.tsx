@@ -203,9 +203,9 @@ function mockAlertList(
       data: items,
       pagination: {
         page: 1,
-        limit: 20,
+        limit: 30,
         total: items.length,
-        totalPages: Math.max(1, Math.ceil(items.length / 20)),
+        totalPages: Math.max(1, Math.ceil(items.length / 30)),
         ...pagination,
       },
     } as never,
@@ -565,7 +565,7 @@ describe('SystemMonitorPage', () => {
     await waitFor(() => {
       expect(alertListMock).toHaveBeenCalledWith({
         throwOnError: true,
-        query: { page: 2, limit: 20 },
+        query: { page: 2, limit: 30 },
       });
     });
   });

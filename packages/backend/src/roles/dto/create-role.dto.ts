@@ -18,6 +18,7 @@ import {
   IsString,
   IsNumber,
   IsEnum,
+  Matches,
   MaxLength,
 } from 'class-validator';
 import {
@@ -29,6 +30,7 @@ export class CreateRoleDto {
   @ApiProperty({ description: '角色名称', example: '设计主管' })
   @IsString()
   @IsNotEmpty()
+  @Matches(/\S/, { message: '角色名称不能全为空白字符' })
   @MaxLength(50)
   name: string;
 

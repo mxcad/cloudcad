@@ -59,7 +59,10 @@ export function useRoleForm<T extends { id: string }>(
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!name) {
+    // BUG-ADMIN-003：仅 `!name` 会放过纯空白名（' ' 为真值），导致创建出空白名角色。
+    // trim 后校验可拦截「空名 + 纯空格名」；保存前 trim 去首尾空白（BUG-ADMIN-003）。
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       optionsRef.current.feedback.showError(t('请输入角色名称'));
       return;
     }
@@ -67,7 +70,7 @@ export function useRoleForm<T extends { id: string }>(
     setLoading(true);
     try {
       await optionsRef.current.onSave(
-        { name, desc, perms: selectedPerms },
+        { name: trimmedName, desc, perms: selectedPerms },
         editing
       );
       setModalOpen(false);

@@ -262,7 +262,7 @@ export function parseAlertList(raw: unknown): AlertListResult {
     items,
     pagination: {
       page: toNumber(paginationRaw.page, 1),
-      limit: toNumber(paginationRaw.limit, 20),
+      limit: toNumber(paginationRaw.limit, 30),
       total: toNumber(paginationRaw.total, 0),
       totalPages: toNumber(paginationRaw.totalPages, 0),
     },

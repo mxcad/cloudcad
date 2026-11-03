@@ -1,4 +1,5 @@
 import { Test, type TestingModule } from "@nestjs/testing";
+import { ForbiddenException } from "@nestjs/common";
 import { RuntimeConfigService } from "../../runtime-config/runtime-config.service";
 import { PaymentGatewayFactory } from "./payment-gateway.factory";
 import { MockPaymentGateway } from "./mock/mock-payment.gateway";
@@ -69,10 +70,10 @@ describe("PaymentGatewayFactory", () => {
   };
 
   describe("getActiveGateway", () => {
-    it("should throw error when paymentEnabled is false", async () => {
+    it("should throw ForbiddenException when paymentEnabled is false", async () => {
       setRuntimeValues(false, "mock");
 
-      await expect(factory.getActiveGateway()).rejects.toThrow("payment is disabled");
+      await expect(factory.getActiveGateway()).rejects.toThrow(ForbiddenException);
     });
 
     it("should throw when provider is mock and paymentMockAllowed is false", async () => {

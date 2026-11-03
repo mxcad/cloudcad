@@ -188,6 +188,12 @@ function proxyRequest(req, res, target) {
     },
   };
 
+  // 客户端是否已断开。SSE 长连接（EventSource 3s 自动重连 / 关标签 / 切页）会频繁
+  // 触发 res 'close' → 我们主动 destroy 上游，随之而来的 ECONNRESET/aborted 属正常
+  // 客户端断开噪声、不是后端故障，不打 [代理错误]（2026-10-28 部署日志刷屏）。
+  // 真后端死亡时客户端仍连着（res 未 close），clientClosed 为 false，日志照常打。
+  let clientClosed = false;
+
   const protocol = targetUrl.protocol === 'https:' ? https : http;
 
   const proxyReq = protocol.request(options, (proxyRes) => {
@@ -218,7 +224,9 @@ function proxyRequest(req, res, target) {
     // 后端响应流中途出错（如 ECONNRESET）：此时响应头往往已发给客户端，
     // 只能中止，不能再 writeHead，否则 ERR_HTTP_HEADERS_SENT 直接崩进程
     proxyRes.on('error', (err) => {
-      logProxyError(proxyErrorSide(res), err, target, req);
+      if (!clientClosed) {
+        logProxyError(proxyErrorSide(res), err, target, req);
+      }
       if (!res.headersSent) {
         res.writeHead(502);
       }
@@ -231,7 +239,9 @@ function proxyRequest(req, res, target) {
   // 到后端的请求出错（连接被拒/重置等）：
   // 头未发 → 回 502；头已发（后端回包中途断）→ 只能中止，不能重复 writeHead
   proxyReq.on('error', (err) => {
-    logProxyError(proxyErrorSide(res), err, target, req);
+    if (!clientClosed) {
+      logProxyError(proxyErrorSide(res), err, target, req);
+    }
     if (!res.headersSent) {
       res.writeHead(502);
       res.end(`Proxy Error: ${err.message}`);
@@ -240,9 +250,11 @@ function proxyRequest(req, res, target) {
     }
   });
 
-  // 客户端中途断开（关页面/取消请求）：主动掐断到后端的请求，
-  // 否则后端白干到底 + 连接泄漏
+  // 客户端中途断开（关页面/取消请求/SSE 重连）：主动掐断到后端的请求，
+  // 否则后端白干到底 + 连接泄漏。先置 clientClosed 再 destroy，destroy 触发的
+  // 上游 ECONNRESET/aborted 据此判为客户端断开噪声、不再打 [代理错误]
   res.on('close', () => {
+    clientClosed = true;
     proxyReq.destroy();
   });
 

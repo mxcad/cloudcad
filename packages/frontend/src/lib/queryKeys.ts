@@ -74,7 +74,7 @@ export const queryKeys = {
     project: (
       projectId: string,
       page: number,
-      filters?: { startDate?: string; endDate?: string }
+      filters?: Record<string, unknown>
     ) => ['auditLogProject', projectId, page, filters ?? {}] as const,
   },
 
@@ -99,7 +99,7 @@ export const queryKeys = {
       ['securityAttempt', 'list', params] as const,
   },
 
-  // ─── 运营统计（总量概览 / 每日新增用户 / 每日会员购买）──────────────
+  // ─── 运营统计（总量概览 / 每日新增用户 / 每日会员购买 / 活跃用户）────
   adminStats: {
     all: ['adminStats'] as const,
     overview: ['adminStats', 'overview'] as const,
@@ -107,6 +107,8 @@ export const queryKeys = {
       ['adminStats', 'registrations', params] as const,
     purchases: (params: Record<string, unknown>) =>
       ['adminStats', 'purchases', params] as const,
+    active: (params: Record<string, unknown>) =>
+      ['adminStats', 'active', params] as const,
   },
 
   // ─── Current User ─────────────────────────────────────────────────

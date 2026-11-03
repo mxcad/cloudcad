@@ -117,7 +117,7 @@ export class FileConversionService implements IMxcadConversionService {
 	private readonly conversionRateLimiter: RateLimiter;
 	private readonly mxcadDebugPath: string;
 	private readonly mxcadUploadPath: string;
-	/** 单次 mxcadassembly 转换超时（毫秒），来自 timeout.fileConversion，默认 180000 */
+	/** 单次 mxcadassembly 转换超时（毫秒），来自 timeout.fileConversion，默认 300000（5 分钟） */
 	private readonly conversionTimeoutMs: number;
 	/**
 	 * 独立转换服务执行器的惰性解析缓存。
@@ -202,13 +202,13 @@ export class FileConversionService implements IMxcadConversionService {
 		// 键与默认值的唯一出口 = resolveMxcadUploadDir（本赋值即其消费点之一）。
 		this.mxcadUploadPath = resolveMxcadUploadDir(this.configService);
 
-		// 转换超时可经 env TIMEOUT_FILE_CONVERSION 调整（默认 180000，
-		// 与 conversion-service 1/2 级超时对齐；大图纸常超 60s，旧默认会把慢转换误杀）
+		// 转换超时可经 env TIMEOUT_FILE_CONVERSION 调整（默认 300000，
+		// 与 conversion-service 档位超时对齐；大图纸常超 60s，旧默认会把慢转换误杀）
 		const timeoutMs = this.configService.get<number>('timeout.fileConversion');
 		this.conversionTimeoutMs =
 			typeof timeoutMs === "number" && timeoutMs > 0
 				? timeoutMs
-				: 180000;
+				: 300000;
 	}
 
 	/**
@@ -465,7 +465,10 @@ export class FileConversionService implements IMxcadConversionService {
 						// clientTaskId 协议：调用方已持有任务 id（node.taskId）时透传，
 						// 远端按别名登记，状态查询/取消/对账按 node.taskId 即可解析
 						taskId: options.taskId,
-						timeoutMs: options.timeout,
+						// 「真正转换时长」单一 env 入口（TIMEOUT_FILE_CONVERSION → timeout.fileConversion）：
+						// 调用方未显式传 options.timeout 时回落 conversionTimeoutMs，使 conversion-service
+						// HTTP 模式与进程内模式吃同一个 env，不再落远端 PRIORITY_CONFIG 档位默认。
+						timeoutMs: options.timeout || this.conversionTimeoutMs,
 						// 远端 CallbackEngine 终态回调（本地 postCallback 在远端模式跳过）
 						callbackUrl: options.resultposturl,
 					},
@@ -778,15 +781,20 @@ export class FileConversionService implements IMxcadConversionService {
 		// errorCode 缺省回落 -1（与旧实现一致），缺分类按瞬态处理。
 		const transient = isTransientFailure(result.errorCategory);
 		if (debugNodeId) {
-			// 转发模式失败现场落盘（与进程内路径对齐）：引擎输出在 metadata，无本地命令/stderr
+			// 转发模式失败现场落盘（与进程内路径对齐）。引擎原始 stdout/stderr 由远端
+			// 随 FAILED 透传（result.stdout/stderr），落盘拿到真因；远端实际命令行见
+			// conversion-service 日志（[MxcadRunner] 执行命令: ...）。
+			// 远端 COMPLETED 时引擎输出在 metadata（成功路径），FAILED 时 metadata 为空。
 			const metadata = result.metadata;
 			await this.saveConversionDebugInfo({
 				nodeId: debugNodeId,
 				srcPath: param.srcPath || "",
-				commandStr: `forwarded to conversion-service (${taskType}), no local command`,
+				commandStr: `forwarded to conversion-service (${taskType}), engine cmdline in conversion-service log`,
 				exitCode: result.errorCode ?? -1,
-				stdout: metadata ? JSON.stringify(metadata) : "",
-				stderr: "",
+				stdout:
+					result.stdout ??
+					(metadata ? JSON.stringify(metadata) : ""),
+				stderr: result.stderr ?? "",
 				errorMessage: result.error || "转换服务失败",
 			});
 		}
@@ -988,8 +996,9 @@ export class FileConversionService implements IMxcadConversionService {
 				// 保存时生成 bin 文件属于内部保存流水线（等价打开方向转换），
 				// 非用户主动导出下载，跳过导出下载会员门控。
 				skipExportGate: true,
-				// 内部保存流水线无节点目录可挂失败现场
-				debugNodeId: undefined,
+				// 内部保存流水线无节点：用输出文件名兜底做落盘目录标识，
+				// 失败现场仍落盘（fileHash 为空串无法作标识）
+				debugNodeId: outname,
 			})
 		);
 
@@ -1076,6 +1085,12 @@ export class FileConversionService implements IMxcadConversionService {
 					"convertBinToMxweb",
 					binRequest,
 					2,
+					undefined,
+					{
+						// 同 convertFile：无调用方显式超时时回落 conversionTimeoutMs（env
+						// TIMEOUT_FILE_CONVERSION），HTTP 模式与进程内模式吃同一「真正转换时长」。
+						timeoutMs: this.conversionTimeoutMs,
+					},
 				);
 				return result.isOk
 					? {

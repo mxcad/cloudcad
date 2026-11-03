@@ -389,6 +389,8 @@ export interface AppConfig {
   filesDataPath: string;
   avatarPath: string;
   brandAssetPath: string;
+  /** 反馈附件存储（非图纸资产，刻意不落 filesDataPath——那是 SVN 工作副本） */
+  feedbackAttachmentPath: string;
   mxRepoPath: string;
   mxcadUploadPath: string;
   mxcadTempPath: string;

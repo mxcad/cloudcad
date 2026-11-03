@@ -32,6 +32,14 @@
 - 查询走 `emailHmac`（PII HMAC 索引），非明文邮箱。
 - 门禁：`status` 须 `ACTIVE`；`mailEnabled && requireEmailVerification` 时须 `emailVerified`。
 
+## curl 打 API 的编码坑（中文 Windows Git Bash，2026-10-30 实测定案）
+
+**中文 Windows Git Bash 终端里，`curl` 命令字面量中的中文（JSON body / URL）会被按 GBK 编码发送**，后端按 UTF-8 解码 → `U+FFFD`（�）腐坏字节落库 → 后续功能（文件名、分享链接）看似「乱码」→ **极易误判为产品 bug**。
+
+- **判据**：腐坏字符是 `�`（U+FFFD）；改用 ASCII 参数不复现；DB 字段确实坏字节。真实浏览器恒发 UTF-8，不会腐坏。
+- **解法**：发多字节参数**一律显式 UTF-8**——把 JSON 写进临时 `.json` 文件，`curl --data-binary @file.json`（curl 读文件字节原样，不经终端编码）；或改用 Node 脚本发（`execFileSync` + `buf.toString('utf8')`）。
+- **推论**：下「编码 / 乱码 / 文件名」类产品缺陷结论前，必须用真实浏览器或 UTF-8 显式请求复核一次，排除环境因素。详见 SKILL.md「十三、E2E 发现判读」。
+
 ## 数据访问（PG / Redis）
 
 测认证 / 验证码分支常需直接读写 PG / Redis（拿 mock 码、改验证状态）。本机 dev 连接信息：
@@ -64,3 +72,8 @@
 - **装 chromium（慢，后台跑）**：`cd packages/frontend && npx playwright install chromium`。报 `Executable doesn't exist at ...chromium_headless_shell-...` 就是没装。
 - **起服务**：见上表。白屏先查前端 8000 是否还活着（看 dev server 日志 / 探活）。
 - **慢卡点后台跑**：用后台任务起装浏览器 / 起服务，前台继续探路，别干等。
+- **后端重建（改后端代码后要重启才生效，2026-10-30 实测三坑）**：
+  1. **Windows 上 `pnpm build` 报 ENOTEMPTY = dist 被锁**：后端正从 `dist` 运行时（`node dist/main`），构建无法覆盖被占用文件。**必须先停后端进程**再 `pnpm build`；停不了就 `taskkill /F /PID <pid>`（`netstat -ano | findstr :3001` 拿 PID）。
+  2. **重启后要等 Swagger + api-sdk 重新生成**（约 1-2 分钟）：后端启动会重新生成 Swagger + 触发 api-sdk，期间 3001 可能探活通过但 `/api/v1/...` 接口 404 / 旧契约——**以接口返回为准**，别以端口探活为准。
+  3. **类型检查用 `pnpm type-check`，别用 `npx tsc`**：`npx tsc` 会命中占位包（「这不是你要找的 tsc 命令」），静默给错结果。根目录或 `packages/backend` / `packages/frontend` 下 `pnpm type-check` 才对。
+- **测试数据清理（真实测试写 DB，测后必清，2026-10-30 实测定案）**：真实 API / 浏览器测试写进 DB 的行必须清理，否则污染下一轮（残留分享影响列表、残留黑名单影响后续登录验证、残留项目影响列表分页）。原则 = 每个真实写库测试脚本带**收尾清理**（trap EXIT 写回备份值 / 删测试条目）。常见清理点：分享 → 删 `file_shares` 行（或 `DELETE /api/v1/shares/:id`）；IP 黑名单 → 删 `ip_blacklists` 测试条目；项目 → 按模块约定软删/真删；用户 → 删 `users` 行（`refresh_tokens` 级联）。

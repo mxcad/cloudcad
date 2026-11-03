@@ -26,7 +26,9 @@ import { isCollaborationAllowed as isCollaborationDomainAllowed } from '@cloudca
 
 const BRAND_CONFIG_URL = '/brand/config.json';
 
-export const DEFAULT_APP_NAME = import.meta.env.VITE_APP_NAME || 'CloudCAD';
+// 显示名内置回退：与移动端 `DEFAULT_BRAND.title`、config-service `DEFAULT_CONFIG.title`
+// 保持一致（品牌回落链语义收敛）——'CloudCAD' 是逻辑产品名（包名/DB 名），不是显示名。
+export const DEFAULT_APP_NAME = import.meta.env.VITE_APP_NAME || '梦想网页CAD实时协同平台';
 export const DEFAULT_APP_LOGO = import.meta.env.VITE_APP_LOGO || '/logo.png';
 
 const DEFAULT_LEGAL_LANGUAGE = 'zh-CN';

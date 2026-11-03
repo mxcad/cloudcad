@@ -320,3 +320,82 @@ describe('AccountBindingService.unbindEmail/unbindPhone (验证码解绑)', () =
     expect(mockUserRepo.update).not.toHaveBeenCalled();
   });
 });
+
+describe('AccountBindingService.BUG-USER-01 验证码服务抛出的业务异常分类不被吞成 500', () => {
+  let service: AccountBindingService;
+
+  const mockUserRepo = {
+    findById: jest.fn(),
+    findByEmail: jest.fn(),
+    findByPhone: jest.fn(),
+    update: jest.fn(),
+  };
+  const mockEmail = { sendVerificationEmail: jest.fn(), verifyEmail: jest.fn() };
+  const mockSms = { sendVerificationCode: jest.fn(), verifyCode: jest.fn() };
+  const mockRuntimeConfig = { getValue: jest.fn().mockResolvedValue(true) };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    mockRuntimeConfig.getValue.mockResolvedValue(true);
+    mockUserRepo.findById.mockResolvedValue({
+      id: 'me',
+      email: 'me@example.com',
+      phone: '13800138000',
+      password: 'hash',
+    });
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AccountBindingService,
+        { provide: USER_REPOSITORY, useValue: mockUserRepo },
+        { provide: 'EMAIL', useValue: mockEmail },
+        { provide: 'SMS', useValue: mockSms },
+        { provide: 'CONFIG', useValue: mockRuntimeConfig },
+        { provide: WechatService, useValue: { validateState: jest.fn(), getAccessToken: jest.fn() } },
+        { provide: JwtService, useValue: { signAsync: jest.fn(), verify: jest.fn() } },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get<AccountBindingService>(AccountBindingService);
+  });
+
+  it('sendUnbindEmailCode：验证码服务限流 400 原样透出，不吞成 500', async () => {
+    mockEmail.sendVerificationEmail.mockRejectedValue(
+      new BadRequestException('发送过于频繁，请稍后再试')
+    );
+
+    // 断言具体文案：分类保持 400 限流文案，而非被吞成 500「发送验证码失败」
+    await expect(service.sendUnbindEmailCode('me')).rejects.toThrow(
+      '发送过于频繁，请稍后再试'
+    );
+  });
+
+  it('sendBindEmailCode：验证码服务限流 400 原样透出，不吞成 500', async () => {
+    mockEmail.sendVerificationEmail.mockRejectedValue(
+      new BadRequestException('发送过于频繁，请稍后再试')
+    );
+
+    await expect(service.sendBindEmailCode('me', 'new@example.com')).rejects.toThrow(
+      BadRequestException
+    );
+  });
+
+  it('sendUnbindPhoneCode：短信服务限流 400 原样透出，不吞成 500', async () => {
+    mockSms.sendVerificationCode.mockRejectedValue(
+      new BadRequestException('发送过于频繁，请58秒后再试')
+    );
+
+    await expect(service.sendUnbindPhoneCode('me')).rejects.toThrow(
+      BadRequestException
+    );
+  });
+
+  it('sendUnbindEmailCode：真正的发送失败（非 HttpException）仍落 500 友好文案', async () => {
+    mockEmail.sendVerificationEmail.mockRejectedValue(new Error('SMTP connect failed'));
+
+    await expect(service.sendUnbindEmailCode('me')).rejects.toThrow(
+      '发送验证码失败，请稍后重试'
+    );
+  });
+});

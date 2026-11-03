@@ -178,8 +178,14 @@ export const FILE_OPEN_RETRY_CONFIG = {
 /** MxCADView 初始化等待超时（ms）：openFile 在视图未就绪时等待初始化完成 */
 export const VIEW_INIT_TIMEOUT_MS = 60000;
 
-/** 外部参照打开前的引擎就绪等待超时（ms）：超时按失败处理（区别于首开的超时兜底继续） */
-export const EXTERNAL_REF_READY_TIMEOUT_MS = 20_000;
+/**
+ * 外部参照打开前的引擎就绪等待超时（ms）：超时按失败处理（区别于首开的超时兜底继续）。
+ * 外部参照查看经 window.open 开新标签页，引擎是冷加载 WASM，初始化预算 = useHomeInit 的
+ * VIEW_INIT_TIMEOUT_MS（60s）。此前固定 20s 过短：冷加载超过 20s 时 prepare() 先于引擎
+ * 就绪超时，误报「CAD 引擎未初始化」→「打开外部参照失败」（引擎其实稍后就能就绪）。
+ * 对齐协同 auto-join 的引擎初始化上限（VIEW_INIT_TIMEOUT_MS + 10s 余量）。
+ */
+export const EXTERNAL_REF_READY_TIMEOUT_MS = VIEW_INIT_TIMEOUT_MS + 10_000;
 
 /** 引擎就绪等待轮询间隔（ms）：ensureEngineReady 唯一轮询实现使用 */
 export const ENGINE_READY_POLL_INTERVAL_MS = 200;

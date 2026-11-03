@@ -1,7 +1,7 @@
 /**
  * 权限常量 - 自动生成，请勿手动修改
  *
- * 生成时间: 2026-10-10T05:50:46.409Z
+ * 生成时间: 2026-10-29T03:24:39.117Z
  * 来源: Prisma Schema (packages/db/prisma/schema.prisma)
  *
  * 如需修改权限，请编辑 packages/db/prisma/schema.prisma 文件，
@@ -46,6 +46,9 @@ export const SystemPermission = {
   SYSTEM_CONFIG_WRITE: 'SYSTEM_CONFIG_WRITE',
   SYSTEM_IP_BLACKLIST_MANAGE: 'SYSTEM_IP_BLACKLIST_MANAGE',
   SYSTEM_IP_WHITELIST_MANAGE: 'SYSTEM_IP_WHITELIST_MANAGE',
+  SYSTEM_FEEDBACK_READ: 'SYSTEM_FEEDBACK_READ',
+  SYSTEM_FEEDBACK_MANAGE: 'SYSTEM_FEEDBACK_MANAGE',
+  SYSTEM_FEEDBACK_REWARD: 'SYSTEM_FEEDBACK_REWARD',
   LIBRARY_DRAWING_MANAGE: 'LIBRARY_DRAWING_MANAGE',
   LIBRARY_BLOCK_MANAGE: 'LIBRARY_BLOCK_MANAGE',
   PROJECT_CREATE: 'PROJECT_CREATE',
@@ -161,6 +164,9 @@ export const PERMISSION_GROUPS: Record<
         { key: 'SYSTEM_CONFIG_WRITE', label: t('修改配置') },
         { key: 'SYSTEM_IP_BLACKLIST_MANAGE', label: t('管理 IP 黑名单') },
         { key: 'SYSTEM_IP_WHITELIST_MANAGE', label: t('管理管理员 IP 白名单') },
+        { key: 'SYSTEM_FEEDBACK_READ', label: t('查看用户反馈') },
+        { key: 'SYSTEM_FEEDBACK_MANAGE', label: t('处理用户反馈') },
+        { key: 'SYSTEM_FEEDBACK_REWARD', label: t('发放反馈奖励') },
       ],
     },
     {
@@ -299,7 +305,6 @@ export const getDependentPermissions = (
  */
 export const SYSTEM_ROLE_NAMES: Record<string, string> = {
   ADMIN: '系统管理员',
-  AUDIT_ADMIN: '审计管理员',
   USER_MANAGER: '用户管理员',
   FONT_MANAGER: '字体管理员',
   USER: '普通用户',

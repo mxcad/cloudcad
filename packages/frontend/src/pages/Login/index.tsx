@@ -29,6 +29,8 @@ import {
   ShieldCheck,
   Mail,
   Phone,
+  Gift,
+  ChevronRight,
 } from 'lucide-react';
 import { useLoginForm } from './hooks/useLoginForm';
 import { getReturnUrl } from '@/config/clientSetup';
@@ -311,6 +313,29 @@ export const Login: React.FC = () => {
             <FirstAdminSetupForm onSubmit={createFirstAdmin} />
           ) : (
             <>
+              {/* 注册赠送会员营销吸引点：活动开启时展示（点击直达注册页） */}
+              {runtimeConfig.registerGiftEnabled &&
+                runtimeConfig.registerGiftMonths > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/register')}
+                    className="flex items-center justify-center gap-2 w-full mb-4 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer"
+                    style={{
+                      background: 'var(--accent-100)',
+                      color: 'var(--accent-700)',
+                    }}
+                    data-testid="register-gift-banner"
+                  >
+                    <Gift size={16} className="shrink-0" />
+                    <span>
+                      {t('注册即送 VIP1 免费试用 {months} 个月', {
+                        months: String(runtimeConfig.registerGiftMonths),
+                      })}
+                    </span>
+                    <ChevronRight size={16} className="shrink-0" />
+                  </button>
+                )}
+
               {/* 登录方式 Tab 切换 */}
               {smsEnabled && (
                 <Tabs>

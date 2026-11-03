@@ -11,6 +11,12 @@ vi.mock('@/api-sdk', () => ({
   nodeControllerGetChildren: vi.fn(),
 }));
 
+// SelectFileModal 现用 useAuth（未登录仅显示当前图纸快捷项，不加载空间树）
+const authState = vi.hoisted(() => ({ isAuthenticated: true }));
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: authState.isAuthenticated }),
+}));
+
 import {
   projectControllerGetPersonalSpace,
   projectControllerGetProjects,
@@ -72,6 +78,7 @@ const mockFns = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  authState.isAuthenticated = true;
   vi.mocked(mockFns.projectControllerGetPersonalSpace).mockResolvedValue({
     data: { id: 'ps-1', name: '个人空间' },
   } as never);
@@ -128,6 +135,80 @@ describe('SelectFileModal', () => {
       })
     );
     expect(await screen.findByText('施工图')).toBeInTheDocument();
+  });
+
+  it('单选模式（multiSelect=false）点击文件夹名称也展开（handleTreeSelect 补展开）', async () => {
+    vi.mocked(mockFns.nodeControllerGetChildren).mockResolvedValue({
+      data: {
+        nodes: [{ id: 'folder-1', name: '施工图', isFolder: true }],
+      },
+    } as never);
+
+    render(
+      <SelectFileModal
+        isOpen
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        multiSelect={false}
+      />
+    );
+    fireEvent.click(await screen.findByText('个人空间'));
+
+    await waitFor(() =>
+      expect(mockFns.nodeControllerGetChildren).toHaveBeenCalledWith({
+        throwOnError: true,
+        path: { nodeId: 'ps-1' },
+      })
+    );
+    expect(await screen.findByText('施工图')).toBeInTheDocument();
+  });
+
+  it('未登录：不加载空间树，仅显示当前图纸快捷项（含指定区域）', async () => {
+    authState.isAuthenticated = false;
+    const onConfirm = vi.fn();
+    render(
+      <SelectFileModal
+        isOpen
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+        multiSelect={false}
+        currentDrawing={{
+          fileHash: 'abc123',
+          name: '未登录图纸.dwg',
+          thumbnailCapable: true,
+        }}
+      />
+    );
+    // 未登录不加载空间树
+    expect(mockFns.projectControllerGetPersonalSpace).not.toHaveBeenCalled();
+    expect(mockFns.projectControllerGetProjects).not.toHaveBeenCalled();
+    // 当前图纸快捷项展示
+    expect(screen.getByText('未登录图纸.dwg')).toBeInTheDocument();
+    expect(screen.getByText('当前打开图纸（点击引用）')).toBeInTheDocument();
+    // 指定区域 → pickRegion
+    fireEvent.click(screen.getByText('指定区域'));
+    expect(onConfirm).toHaveBeenCalledWith([
+      {
+        fileId: '',
+        fileName: '未登录图纸.dwg',
+        fileHash: 'abc123',
+        thumbnailUrl: undefined,
+        isCurrent: true,
+        pickRegion: true,
+      },
+    ]);
+    // 点击卡片本身 → 直接引用（无 pickRegion）
+    onConfirm.mockClear();
+    fireEvent.click(screen.getByText('未登录图纸.dwg'));
+    expect(onConfirm).toHaveBeenCalledWith([
+      {
+        fileId: '',
+        fileName: '未登录图纸.dwg',
+        fileHash: 'abc123',
+        thumbnailUrl: undefined,
+        isCurrent: true,
+      },
+    ]);
   });
 
   it('点击文件勾选，确认回调返回选中文件', async () => {

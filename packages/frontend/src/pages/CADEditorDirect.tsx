@@ -99,7 +99,13 @@ import {
   getCadEditorBackUrl,
   parseCADEditorRoute,
 } from '../utils/cadEditorRoute';
-import { editorDisplayName } from '../services/mxcadManager';
+import {
+  editorDisplayName,
+  mxcadManager,
+  isEmptyDocumentName,
+  zoomToRegion,
+} from '../services/mxcadManager';
+import { decodeShareRegion, extRefAccessPath } from '@cloudcad/platform';
 
 export const CADEditorDirect: React.FC = () => {
   const navigate = useNavigate();
@@ -473,10 +479,14 @@ export const CADEditorDirect: React.FC = () => {
         }
       } else {
         if (!xrefId) return;
-        // 同图片：public-file/access 有 1 小时浏览器缓存，追加时间戳确保替换后打开的是最新 mxweb
+        // 同图片：public-file/access 有 1 小时浏览器缓存，追加时间戳确保替换后打开的是最新 mxweb。
+        // 统一传逻辑名（不拼 .mxweb），磁盘名由后端 findFileInDir 按候选集兜底（契约单一事实源）
         const fileUrl = currentFileHash
           ? UrlHelper.buildPublicFileAccessUrl(
-              `${encodeURIComponent(currentFileHash!)}/${encodeURIComponent(file.name)}.mxweb`,
+              extRefAccessPath(currentFileHash!, file.name)
+                .split('/')
+                .map(encodeURIComponent)
+                .join('/'),
               { cacheBust: true }
             )
           : `/api/v1/mxcad/external-ref-view/${encodeURIComponent(fileId!)}/${encodeURIComponent(file.name)}`;
@@ -592,14 +602,42 @@ export const CADEditorDirect: React.FC = () => {
   useEffect(() => {
     const handleFileOpenComplete = () => {
       const { source, refCount } = getLoadingState();
-      // Auto-join/handleJoin manage their own loading — don't interfere
-      if (source === 'autoJoin' || source === 'handleJoin') return;
+      // handleJoin（手动加入协同）自管 loading——不干扰。
+      // autoJoin（URL 协同链接）不再早退：其 loading 前置到意图出现，空模板的
+      // OPEN_COMPLETE 落在 loading 窗口内，须由本 handler 在真实图纸（协同文件）
+      // 加载完成时才 hide（下方空模板判据），否则会在协同文件打开前就摘掉 loading。
+      if (source === 'handleJoin') return;
+      // 空模板（引擎初始化的默认文档）的 OPEN_COMPLETE 不是任何打开意图的终态：
+      // loading 前置到意图出现后，空模板的 openFileComplete 落在 loading 窗口内，
+      // 若在此 hide 会在真实图纸打开前就摘掉 loading（真实图纸随后无 loading 打开）。
+      // 仅当加载完成的是真实图纸（非空模板、非 null）时才兜底 hide。
+      const currentFileName = mxcadManager.getCurrentFileName();
+      if (!currentFileName || isEmptyDocumentName(currentFileName)) return;
       // 仅在有实际 loading 计数时兜底隐藏；调用方（openLibraryDrawing/useCadFileLoader 等）
       // 在 await openFile() 返回后也会显式 hide，避免此处与调用方重复递减导致 refCount 告警
       if (refCount > 0) hideGlobalLoading();
     };
 
     return subscribe(CAD_EVENTS.OPEN_COMPLETE, handleFileOpenComplete);
+  }, []);
+
+  // 分享二维码 URL 携带 region（框选区域）：真实图纸打开完成后自动 zoom 到该区域。
+  // 只执行一次（分享打开是单次意图）；空模板（引擎初始化的默认文档）不是任何打开
+  // 意图的终态，等真实图纸加载完成再 zoom（判据与上方 loading handler 一致）。
+  useEffect(() => {
+    const region = decodeShareRegion(
+      new URLSearchParams(window.location.search).get('region')
+    );
+    if (!region) return;
+    let zoomed = false;
+    const handleZoomToRegion = () => {
+      if (zoomed) return;
+      const currentFileName = mxcadManager.getCurrentFileName();
+      if (!currentFileName || isEmptyDocumentName(currentFileName)) return;
+      zoomed = true;
+      void zoomToRegion(region);
+    };
+    return subscribe(CAD_EVENTS.OPEN_COMPLETE, handleZoomToRegion);
   }, []);
 
   // 错误处理：返回项目列表或刷新页面

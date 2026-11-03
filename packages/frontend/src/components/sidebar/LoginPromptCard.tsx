@@ -13,6 +13,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { t } from '@/languages';
+import { RegisterGiftEntry } from '../auth/RegisterGiftEntry';
 import styles from './sidebar.module.css';
 
 interface LoginPromptCardProps {
@@ -51,6 +52,8 @@ export const LoginPromptCard: React.FC<LoginPromptCardProps> = ({
             {t('立即登录')}
           </Button>
         )}
+        {/* 注册送会员营销入口（活动开启时显示，点击跳注册页） */}
+        <RegisterGiftEntry className={styles.loginPromptRegister} />
       </div>
     </div>
   );

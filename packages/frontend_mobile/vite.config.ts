@@ -18,6 +18,23 @@ export default ({ command, mode }) => {
     resolve: {
       alias: [
         { find: '@', replacement: resolve(__dirname, 'src') },
+        // @cloudcad/contracts 的 files/* 子路径 dist 产物是 CJS，Vite 对 workspace
+        // 链接包不做预打包、CJS 当 ESM 服务会丢失具名导出（export * 全空，
+        // 导致 @cloudcad/platform 的 re-export 断链、App 无法挂载）。
+        // 指向 TS 源码让 Vite 直接转换，dev/build 均生效。
+        {
+          find: '@cloudcad/contracts/files/name-rules',
+          replacement: resolve(__dirname, '../contracts/src/files/name-rules.ts'),
+        },
+        {
+          find: '@cloudcad/contracts/files/ext-ref-naming',
+          replacement: resolve(__dirname, '../contracts/src/files/ext-ref-naming.ts'),
+        },
+        // 与上同理：runtime-config 默认值注册表指回 TS 源码，避免 CJS dist 丢具名导出
+        {
+          find: '@cloudcad/contracts/runtime-config/defaults',
+          replacement: resolve(__dirname, '../contracts/src/runtime-config/defaults.ts'),
+        },
       ]
     },
 

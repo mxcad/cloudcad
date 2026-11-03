@@ -10,6 +10,7 @@ import { getErrorMessage } from '@/utils/errorHandler';
 import { t } from '@/languages';
 import { useCopy } from '@/hooks/useCopy';
 import { shareUrl } from '@/utils/shareUrl';
+import type { ShareInfo } from '@/components/modals/ShareDialog';
 import type { ShareFileInfo, SortConfig } from '../types';
 
 interface UseShareActionsParams {
@@ -40,6 +41,8 @@ export function useShareActions({
   const [showFileSelector, setShowFileSelector] = useState(false);
   const [shareFiles, setShareFiles] = useState<ShareFileInfo[]>([]);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  // 分享管理页行内「预览分享图片」：打开 ShareDialog 时传入该行分享，ShareDialog 自动预览
+  const [initialShare, setInitialShare] = useState<ShareInfo | null>(null);
 
   const [editTarget, setEditTarget] = useState<{
     token: string;
@@ -161,9 +164,21 @@ export function useShareActions({
     }
   }, []);
 
+  /** 分享管理页行内「预览分享图片」：打开 ShareDialog 并自动预览该分享（下载在预览弹框内） */
+  const handlePreviewPoster = useCallback((item: ShareListItemDto) => {
+    setShareFiles([{ fileId: item.fileId, fileName: item.fileName }]);
+    setInitialShare({
+      token: item.token,
+      url: item.url,
+      expiresAt: item.expiresAt as string | null,
+    });
+    setShowShareDialog(true);
+  }, []);
+
   const closeShareDialog = useCallback(() => {
     setShowShareDialog(false);
     setShareFiles([]);
+    setInitialShare(null);
     fetchShares(page, search, sort);
   }, [fetchShares, page, search, sort]);
 
@@ -196,10 +211,12 @@ export function useShareActions({
     revoking,
     showBatchRevokeConfirm,
     batchRevoking,
+    initialShare,
     confirmRevoke,
     handleRevoke,
     handleBatchRevoke,
     handleCopy,
+    handlePreviewPoster,
     handleEditExpiry,
     handleSaveEdit,
     openFileSelector,

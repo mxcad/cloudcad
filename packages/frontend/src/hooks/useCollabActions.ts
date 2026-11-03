@@ -15,9 +15,7 @@ import {
 import {
   patchSession,
   patchSessionFlags,
-  subscribe,
 } from '../services/drawingSession';
-import { CAD_EVENTS } from '@/constants/events';
 import { useCADEditorStore } from '../stores/useCADEditorStore';
 import {
   parseWorkData,
@@ -33,7 +31,6 @@ import {
   showGlobalLoading,
   hideGlobalLoading,
 } from '../services/loadingService';
-import { AUTO_JOIN_SAFETY_TIMEOUT } from '@/constants/timeouts';
 import { t } from '@/languages';
 
 /**
@@ -290,9 +287,6 @@ export function useCollabActions(
       if (joiningLockRef.current) return;
       joiningLockRef.current = true;
 
-      // 提升到 try 外：catch 分支也要取消订阅，避免订阅泄漏累积（评审修复）
-      let unsubscribeOpenComplete: (() => void) | null = null;
-
       try {
         if (collaborationWorkId !== null && collaborationWorkId !== workId) {
           await exitCollaboration();
@@ -331,23 +325,10 @@ export function useCollabActions(
           avatar: user.avatar ?? undefined,
         };
 
-        const safetyTimer = setTimeout(() => {
-          hideGlobalLoading('handleJoin-safetyTimeout');
-          unsubscribeOpenComplete?.();
-          unsubscribeOpenComplete = null;
-        }, AUTO_JOIN_SAFETY_TIMEOUT);
-
-        const onFileOpen = () => {
-          clearTimeout(safetyTimer);
-          hideGlobalLoading('handleJoin-onFileOpen');
-          unsubscribeOpenComplete?.();
-          unsubscribeOpenComplete = null;
-        };
-        unsubscribeOpenComplete = subscribe(
-          CAD_EVENTS.OPEN_COMPLETE,
-          onFileOpen
-        );
-
+        // loading 由 __joinCollabWork__ 的 join 回调（iRet===0/17）关——回调才是
+        // 「协同文件打开 + 加入成功」的真实信号。此前靠 OPEN_COMPLETE 事件或
+        // 15s 安全定时器兜底：手动加入时文件已加载、OPEN_COMPLETE 不再派发，
+        // loading 只能干等满 15s 才关（用户看到「加入成功但 loading 还转」）。
         showGlobalLoading(t('正在打开协同文件...'), 'handleJoin');
         setCollabPhase('joining');
         // 经 __joinCollabWork__ 引擎命令加入：引擎命令状态机先停掉在途绘图命令
@@ -365,23 +346,16 @@ export function useCollabActions(
               setCollabPhase('idle');
               return;
             }
-            if (iRet === 0) {
-              setCurrentWorkId(workId);
-              setCollaborationState({ isInCollaboration: true, workId });
-              setPendingJoinWorkId(workId);
-              refreshFileName();
-              fetchWorks();
-            } else if (iRet === 17) {
+            if (iRet === 0 || iRet === 17) {
+              // join 回调 = 协同文件打开 + 加入成功，立即关 loading（事件驱动）
+              hideGlobalLoading('handleJoin-joined');
               setCurrentWorkId(workId);
               setCollaborationState({ isInCollaboration: true, workId });
               setPendingJoinWorkId(workId);
               refreshFileName();
               fetchWorks();
             } else {
-              clearTimeout(safetyTimer);
               hideGlobalLoading('handleJoin-error');
-              unsubscribeOpenComplete?.();
-              unsubscribeOpenComplete = null;
               setCollabPhase('idle');
               fetchWorks();
               showToast(t('该协同已关闭'), 'error');
@@ -391,12 +365,9 @@ export function useCollabActions(
           encodeUserData(userData)
         );
         if (!dispatched) {
-          // 引擎命令派发失败（引擎异常）：立即落定，不等 safetyTimer
-          // （回调不会再来，phase/锁须就地复位，否则永久卡在 joining）
-          clearTimeout(safetyTimer);
+          // 引擎命令派发失败（引擎异常）：回调不会再来，立即落定
+          // （phase/锁须就地复位，否则永久卡在 joining）
           hideGlobalLoading('handleJoin-dispatchFailed');
-          unsubscribeOpenComplete?.();
-          unsubscribeOpenComplete = null;
           setJoiningWorkId(null);
           joiningLockRef.current = false;
           setCollabPhase('idle');
@@ -407,8 +378,6 @@ export function useCollabActions(
         hideGlobalLoading('handleJoin-catch');
         setJoiningWorkId(null);
         joiningLockRef.current = false;
-        unsubscribeOpenComplete?.();
-        unsubscribeOpenComplete = null;
         setCollabPhase('idle');
         fetchWorks();
         showToast(getErrorMessage(error), 'error');

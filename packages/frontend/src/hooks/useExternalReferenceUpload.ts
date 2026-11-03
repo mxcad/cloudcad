@@ -11,6 +11,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { pickFiles } from '@/utils/pickFiles';
+import { extRefDiskFileName } from '@cloudcad/platform';
 import {
   mxcadExternalRefControllerGetPreloadingData,
   mxcadExternalRefControllerCheckExternalReference,
@@ -522,6 +523,13 @@ export const useExternalReferenceUpload = (
               originalXrefName: fileInfo.originalXrefName,
             } as UploadExtReferenceDto & { file: File },
           });
+          // 后端 ret='failed' 时 HTTP 仍为 2xx（转换失败/产物缺失返回对象），
+          // throwOnError 不拦，必须显式检查否则假成功（状态置 success 但文件不存在）
+          if (uploadResult?.data?.ret !== 'ok') {
+            throw new Error(
+              uploadResult?.data?.message || t('外部参照上传失败')
+            );
+          }
         } else {
           // 项目文件场景：使用节点 ID 上传
           if (fileInfo.type === 'img') {
@@ -774,8 +782,12 @@ export const useExternalReferenceUpload = (
           return;
         }
         // 私有分支：mxcad/filesData 下载。后端已声明 @Param('path')（ADR-0034 豁免已解除），
-        // SDK 会把 path 编码后发往通配符路由，Express 5 自动解码 %2F，路径语义不变
-        const fullName = file.type === 'ref' ? `${file.name}.mxweb` : file.name;
+        // SDK 会把 path 编码后发往通配符路由，Express 5 自动解码 %2F，路径语义不变。
+        // 磁盘名统一走契约 extRefDiskFileName（CAD 为 {名}.mxweb，其它原名）
+        const fullName =
+          file.type === 'ref'
+            ? extRefDiskFileName(file.name)
+            : file.name;
         const result = await mxcadFileAccessControllerGetFilesDataFile({
           path: { path: `${id}/${fullName}` },
           parseAs: 'blob',

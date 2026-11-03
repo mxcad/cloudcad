@@ -27,6 +27,7 @@ import { BlacklistSource, Prisma, type IpBlacklistEntry } from '@cloudcad/db';
 import {
   cidrContains,
   isCidr,
+  isLoopbackEntry,
   isValidIpOrCidr,
   normalizeIp,
   normalizeStoredIp,
@@ -240,6 +241,15 @@ export class IpBlacklistService {
         throw new BadRequestException(
           I18nContext.current()?.t('error.ip_blacklist.invalid_ip') ??
             '无效的 IP 或 CIDR 格式'
+        );
+      }
+      // BUG-ADMIN-001：环回（127.0.0.0/8 / ::1）是管理员白名单的本机自救通道，
+      // 黑名单判定先于白名单（fail-close）——把环回拉黑会锁死本机管理通道且
+      // 无安全价值（攻击者无法让请求从环回发出）。硬阻断，禁止添加。
+      if (isLoopbackEntry(ip)) {
+        throw new BadRequestException(
+          I18nContext.current()?.t('error.ip_blacklist.loopback_not_allowed') ??
+            '不能将本机环回地址加入 IP 黑名单'
         );
       }
       const storedIp = normalizeStoredIp(ip);

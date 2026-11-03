@@ -19,7 +19,11 @@ const { authState, mxcadManagerMock, cooperateMock, patchSessionMock,
   patchSessionFlagsMock, showGlobalLoadingMock, hideGlobalLoadingMock,
   globalShowToastMock } = vi.hoisted(() => ({
   authState: { user: { id: 'u1', username: 'tester', avatar: null } },
-  mxcadManagerMock: { isReady: vi.fn(() => true) },
+  mxcadManagerMock: {
+    isReady: vi.fn(() => true),
+    // join 回调仅在协同文件（真实图纸）已加载时关 loading；默认返回真实文件名
+    getCurrentFileName: vi.fn(() => 'test.dwg.mxweb'),
+  },
   cooperateMock: { joinWork: vi.fn(), exitWork: vi.fn() },
   patchSessionMock: vi.fn(),
   patchSessionFlagsMock: vi.fn(),

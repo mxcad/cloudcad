@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, unref, computed, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref, unref, computed, watch, nextTick } from 'vue';
 import { t } from '@/languages';
 import { errMsg } from '@/utils/apiError';
 import { createMxCAD } from '../../plugins/mxcad';
@@ -25,6 +25,7 @@ import {
 import { openDrawing } from '../../services/drawingOpener';
 import { exportDrawing } from '../../services/exportService';
 import { uploadThumbnailForNode } from '../../services/thumbnailService';
+import type { PosterRegion } from '../../stores/posterRegion';
 import { isHashLike } from '../../services/publicFileService';
 import {
   isExportDownloadAllowedFor,
@@ -48,6 +49,7 @@ import { useEditorStore } from '@/stores/editor';
 import { useSave } from '../../composables/useSave';
 import {
   saveAsToCloudTrigger,
+  saveAsRejectTrigger,
   saveLoginRequiredTrigger,
   saveToCloudTrigger,
 } from '../../composables/useSaveAs';
@@ -71,6 +73,7 @@ import {
   confirmExitCollaborationIfNeeded,
 } from '../../composables/useCooperate';
 import { useCollabAutoJoin } from '../../composables/useCollabAutoJoin';
+import { usePosterRegionFlow } from '../../composables/usePosterRegionFlow';
 import { useRuntimeConfig } from '../../composables/useRuntimeConfig';
 import { useBrand } from '../../composables/useBrand';
 import { isCollaborationAllowed } from '@cloudcad/platform';
@@ -179,6 +182,9 @@ const editorState = useEditorStore();
 const collabStore = useCollabStore();
 const { user, isAuthenticated } = useUser();
 
+// 分享图片「指定区域」：分享管理收起子页后由常驻 Home 承接打开文件 + 框选 + 出图
+usePosterRegionFlow();
+
 /**
  * 当前打开的原始图纸名。协同图纸以协同 store 的 fileNameCache（按 drawingId
  * 反查节点名）为准，再回退到会话里的 fileName（来自 work_data 的 drawingName，
@@ -268,6 +274,14 @@ const showSaveAsSheet = ref(false);
 // 面板被动弹出时的原因（保存被拒转另存为）。用户主动点「另存为」时为空。
 const saveAsNotice = ref('');
 watch(saveAsToCloudTrigger, () => {
+  // 用户主动「另存为」：无前置被拒原因，清掉可能残留的 notice
+  saveAsNotice.value = '';
+  showSaveAsSheet.value = true;
+});
+// 保存被拒（无云端节点/无权限/已删除）被动弹出另存为：必须带原因走面板常驻提示，
+// 用户才知道自己为什么停在另存为（对齐 PC checkAndConfirmUnsavedChanges → showSaveAsDialog）
+watch(saveAsRejectTrigger, (req) => {
+  saveAsNotice.value = req.reason;
   showSaveAsSheet.value = true;
 });
 watch(saveLoginRequiredTrigger, () => {
@@ -275,7 +289,8 @@ watch(saveLoginRequiredTrigger, () => {
 });
 watch(saveToCloudTrigger, () => {
   const state = editorState.state;
-  // 判定顺序对齐 PC SaveCommand：打开中 → 登录 → 公开文件 → 权限 → 弹修改说明。
+  // 判定顺序对齐 PC SaveCommand：打开中 → 登录 → 无云端节点(另存为) → 公开文件 →
+  // 权限(另存为) → 弹修改说明。
   // 登录必须排最前：游客在分享图纸上点保存，若先判权限只会看到「没有保存权限」，
   // 完全没有登录入口。
   if (state.loading) {
@@ -286,14 +301,17 @@ watch(saveToCloudTrigger, () => {
     void beginIntent(SAVE_CHAIN);
     return;
   }
-  if (state.isPublicFile) {
-    showToast(t('公开文件不支持保存'));
+  // 无云端节点（本地打开文件 / 新建图纸）：对齐 PC SaveCommand 的 !fileInfo 分支——
+  // 直接转「另存为到云图」。不先弹修改说明：保存对象还不存在，先填说明是徒劳往返。
+  // 必须排在 isPublicFile 之前：本地打开文件也会被 command/open 标记 isPublicFile=true，
+  // 若先判 isPublicFile 会被误拦成「公开文件不支持保存」，用户到不了另存为。
+  if (!state.fileId) {
+    saveAsNotice.value = '';
+    showSaveAsSheet.value = true;
     return;
   }
-  // 无云端节点（新建本地图纸）：对齐 PC SaveCommand 的 fileId 缺失分支——直接转
-  // 「另存为到云图」。不先弹修改说明：保存对象还不存在，先填说明是徒劳往返。
-  if (!state.fileId) {
-    showSaveAsSheet.value = true;
+  if (state.isPublicFile) {
+    showToast(t('公开文件不支持保存'));
     return;
   }
   // 资源库源不在此拦：库源 canSave 恒为 false（useFileLoader 固定写入），
@@ -302,7 +320,10 @@ watch(saveToCloudTrigger, () => {
   // needSaveAs + 库专属文案。在此拦会让用户看到与原因无关的权限提示，
   // 而不是可行动的指引。
   if (!state.libraryKey && !state.permissions.canSave) {
-    showToast(t('没有保存权限，请另存为'));
+    // 只读云端图纸：无法原位保存，弹另存为面板并说明原因（而非无声 toast），
+    // 用户能继续把图纸另存为到云图（对齐 PC 无权限 → showSaveAsDialog）
+    saveAsNotice.value = t('没有保存权限，请另存为');
+    showSaveAsSheet.value = true;
     return;
   }
   showCommitDialog.value = true;
@@ -337,7 +358,14 @@ watch(resumeAction, (act) => {
   if (!act) return;
   resumeAction.value = null;
   if (act.type === 'save') {
-    showCommitDialog.value = true;
+    // 登录后续跑保存：仍无云端节点（本地打开文件 / 新建图纸）→ 直接引导另存为，
+    // 而非先弹「保存文件」说明框（保存对象还不存在，先填说明是徒劳往返）
+    if (!editorState.state.fileId) {
+      saveAsNotice.value = '';
+      showSaveAsSheet.value = true;
+    } else {
+      showCommitDialog.value = true;
+    }
   } else if (act.type === 'saveAs') {
     showSaveAsSheet.value = true;
   } else if (act.type === 'version-history') {
@@ -373,6 +401,8 @@ watch(exportAllowed, (allowed) => {
 // 导出（菜单「导出」→ DownloadFormatPopup，对齐 PC 的 DownloadFormatModal：
 // MXWEB/DWG/DXF/PDF 单选 + DWG 版本 / PDF 宽高与色彩）。
 const showExportFormat = ref(false);
+// 下载进行中：弹窗保持打开、下载按钮转圈（对齐 PC modal 的 loading）
+const exportFormatLoading = ref(false);
 watch(exportDialogTrigger, () => {
   showExportFormat.value = true;
 });
@@ -388,15 +418,23 @@ async function onExportFormatConfirm(payload: DownloadFormatPayload) {
   ) {
     // 闸门未过 → 挂起导出意图链：未登录走登录闸门，已登录走购买引导
     // （确认后跳会员中心，充值/开放免费导出后自动续跑重放本次导出）
+    showExportFormat.value = false;
     void beginIntent(exportChainDef(payload));
     return;
   }
-  await exportDrawing(
-    payload.format,
-    undefined,
-    payload.pdfOptions,
-    payload.dwgOptions,
-  );
+  exportFormatLoading.value = true;
+  try {
+    await exportDrawing(
+      payload.format,
+      undefined,
+      payload.pdfOptions,
+      payload.dwgOptions,
+    );
+  } finally {
+    exportFormatLoading.value = false;
+  }
+  // 完成（成功或失败）后关弹窗：exportDrawing 内部已给出结果 toast
+  showExportFormat.value = false;
 }
 
 // 协同入口可用性 = 功能开关 && 当前域名在白名单内。
@@ -635,6 +673,10 @@ async function handleNewFile() {
   // 取消则不弹「是否保存」也不重置会话
   if (!(await confirmExitCollaborationIfNeeded())) return;
 
+  // 进入时是否有未保存修改会被真正丢弃：确认框文案据此决定是否提示
+  // 「未保存的更改将丢失」——只有用户选「不保存」放弃修改时才提示；
+  // 无修改或已保存成功则只提示「确定新建图纸吗？」，避免无谓的丢失警告。
+  let unsavedWillBeLost = false;
   if (editorState.state.isModified) {
     try {
       await showConfirmDialog({
@@ -648,15 +690,42 @@ async function handleNewFile() {
         // 「无权限/需另存为」的失败被当成成功，直接 resetNewFile 丢掉未保存更改
         const res = await saveAction();
         if (!res.success) {
-          if (res.message) showToast(res.message);
+          // 保存被拒（无云端节点/无权限/已删除）→ 弹另存为面板说明原因，用户能
+          // 继续把图纸另存为到云图（对齐 PC NewFileCommand → showSaveAsDialog）；
+          // 而非只 toast 一句就中止新建，看起来像「保存方法无效」
+          if (res.needSaveAs) {
+            saveAsNotice.value = res.message ?? '';
+            showSaveAsSheet.value = true;
+          } else if (res.message) {
+            showToast(res.message);
+          }
           return;
         }
+        // 保存成功 → 无未保存更改会丢失，unsavedWillBeLost 保持 false
       } catch {
         return;
       }
     } catch {
+      // 用户选「不保存」→ 未保存更改将被丢弃
       editorState.setIsModified(false);
+      unsavedWillBeLost = true;
     }
+  }
+
+  // 无条件确认框（对齐 PC NewFileCommand）：保证点「新建图纸」一定有确认，
+  // 即使无未保存修改也弹，防止误触丢工作。有未保存修改时上方先处理保存，
+  // 这里再确认新建。与引擎内置 Mx_NewFile 行为一致。
+  try {
+    await showConfirmDialog({
+      title: t('新建图纸'),
+      message: unsavedWillBeLost
+        ? t('确定新建图纸吗？当前未保存的更改将丢失。')
+        : t('确定新建图纸吗？'),
+      confirmButtonText: t('确定'),
+      cancelButtonText: t('取消'),
+    });
+  } catch {
+    return;
   }
 
   editorState.resetNewFile();
@@ -695,9 +764,39 @@ function openSharePopup() {
   showShareCurrent.value = true;
 }
 
-const handleShareCurrent = () => {
+// 分享当前图纸「指定区域」（share-current 弹窗）：当前图纸已在编辑器打开，无需
+// 后台开图——关闭弹窗让底层编辑器露出，直接在当前视图两点对角框选，完成后重开
+// 弹窗并传 region（ShareCurrentPopup 的 region-watch 据此用该区域重新出图）。
+// 取消框选（返回 null）保留上次 region，重开弹窗。
+const shareCurrentRegion = ref<PosterRegion | null>(null);
+
+async function onShareCurrentPickRegion() {
+  if (!editorState.state.fileId) {
+    showToast(t('请先打开图纸'));
+    return;
+  }
+  // 关闭弹窗让出画布（不经 onClose，created/海报保留）；等弹窗卸载后底层引擎可交互
+  showShareCurrent.value = false;
+  await nextTick();
+  try {
+    const { pickThumbnailRegion } = await import('../../services/thumbnailService');
+    const region = await pickThumbnailRegion();
+    if (region) shareCurrentRegion.value = region;
+    showShareCurrent.value = true;
+  } catch (e) {
+    showToast(e instanceof Error && e.message ? e.message : t('指定区域失败'));
+    showShareCurrent.value = true;
+  }
+}
+
+const handleShareCurrent = async () => {
   if (!isAuthenticated.value) {
-    void beginIntent(SHARE_CHAIN);
+    // 未登录：对齐「+」菜单分享的一次直达——挂起分享意图链后直接跳登录页，
+    // 不再先弹登录提示弹窗（弹窗是两步走，且旧行为只弹一句「请先登录后再分享图纸」
+    // 让用户以为点了没反应）。意图链已持久化，登录成功后由 resumeIntent 自动续跑
+    // 原始分享（打开分享面板 / 先保存到云端再分享）。
+    const step = await beginIntent(SHARE_CHAIN, { showAuthPrompt: false });
+    if (step === 'auth-blocked') navigateToLogin();
     return;
   }
   // 分享链接打开的图纸同样有 fileId（节点 id），可直接分享
@@ -982,13 +1081,7 @@ setViewportHeight();
       <div class="top_toolbar">
         <button
           class="item"
-          :disabled="
-            saving ||
-            isPublicFile ||
-            (!!editorState.state.fileId &&
-              !editorState.state.permissions.canSave &&
-              !editorState.state.libraryKey)
-          "
+          :disabled="saving"
           @click="callCommand('Mx_SaveToCloud')"
         >
           <MxIcon icon="baocun" isDefault class="zoomed"></MxIcon>
@@ -1117,6 +1210,7 @@ setViewportHeight();
     <DownloadFormatPopup
       v-model:show="showExportFormat"
       :file-name="currentDrawingName()"
+      :loading="exportFormatLoading"
       @confirm="onExportFormatConfirm"
     />
     <VersionHistoryPopup
@@ -1134,6 +1228,8 @@ setViewportHeight();
       v-model:show="showShareCurrent"
       :file-id="editorState.state.fileId ?? ''"
       :file-name="currentDrawingName()"
+      :region="shareCurrentRegion"
+      @pick-region="onShareCurrentPickRegion"
     />
     <van-dialog
       v-model:show="showCollabDisabled"

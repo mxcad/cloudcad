@@ -39,7 +39,9 @@ interface SheetItem {
  *  icon 须是 vant 内置图标名：van-action-sheet 按 van-icon-{name} 渲染，名字不存在时静默空白 */
 const SHEET_NAV_ITEMS: SheetItem[] = [
   { name: '文件', icon: 'records-o', route: '/shell/file' },
-  { name: '分享', icon: 'share-o', route: '/shell/share' },
+  // 「分享」不直接导航：合并编辑器菜单分享后，点它弹二级抽屉（分享当前图纸 / 管理分享图纸）
+  { name: '分享', icon: 'share-o', value: 'share' },
+  { name: '反馈', icon: 'comment-o', route: '/shell/feedback' },
   { name: '我的', icon: 'user-o', route: '/shell/profile' },
 ]
 
@@ -47,6 +49,7 @@ const SHEET_NAV_ITEMS: SheetItem[] = [
 /** 非导航项的标识值，用于在 onSheetSelect 里区分处理方式 */
 const ACTION_LANGUAGE = 'language'
 const ACTION_LOGOUT = 'logout'
+const ACTION_SHARE = 'share'
 
 const route = useRoute()
 const router = useRouter()
@@ -98,8 +101,35 @@ function onSheetSelect(action: SheetItem) {
     showLanguageSheet.value = true
     return
   }
+  if (action.value === ACTION_SHARE) {
+    showShareSheet.value = true
+    return
+  }
   if (action.value === ACTION_LOGOUT) {
     void confirmLogout()
+  }
+}
+
+/**
+ * 「分享」二级抽屉（合并编辑器菜单分享后的唯一入口）：
+ * - 分享当前图纸 → 派发 mxcad-share-current 事件，常驻 Home 监听 → handleShareCurrent
+ *   （复用分享意图链：未登录登录、无云端节点先保存到云端再分享）
+ * - 管理分享图纸 → 进分享管理子页
+ */
+const showShareSheet = ref(false)
+const shareSheetActions = computed<Array<{ name: string; icon?: string }>>(() => [
+  { name: t('分享当前图纸'), icon: 'share-o' },
+  { name: t('管理分享图纸'), icon: 'records-o' },
+])
+
+function onShareSheetSelect(action: { name: string }) {
+  showShareSheet.value = false
+  if (action.name === t('分享当前图纸')) {
+    window.dispatchEvent(new CustomEvent('mxcad-share-current'))
+    return
+  }
+  if (action.name === t('管理分享图纸')) {
+    router.push('/shell/share')
   }
 }
 
@@ -269,6 +299,14 @@ defineExpose({
       :actions="languageSheetItems"
       :close-on-click-overlay="true"
       @select="onLanguageSelect"
+    />
+
+    <!-- 分享二级抽屉（合并编辑器菜单分享后的唯一入口）：分享当前图纸 / 管理分享图纸 -->
+    <van-action-sheet
+      v-model:show="showShareSheet"
+      :actions="shareSheetActions"
+      :close-on-click-overlay="true"
+      @select="onShareSheetSelect"
     />
   </div>
 </template>

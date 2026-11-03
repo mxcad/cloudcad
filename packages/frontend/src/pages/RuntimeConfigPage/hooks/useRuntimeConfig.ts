@@ -6,6 +6,12 @@
 /**
  * 运行时配置页数据层：取值、草稿、本地校验、保存、单键/分类重置、修改历史、搜索分组。
  *
+ * 按职责切片组合（拆分 god-hook，见评审候选 2）：本文件保留「配置列表取值 +
+ * 草稿/保存 + 搜索分组」核心面，面板类职责委托给同目录子 hook——
+ * `useConfigHistory`（修改历史）、`useConfigChannel`（通道状态 + 测试）、
+ * `useModeSwitch`（安全模式切换）、`useResetCategory`（分类批量重置）。
+ * 对外返回形状不变，页面消费方零改动。
+ *
  * 权限说明：进本页的人已持有 SYSTEM_CONFIG_READ/WRITE，档位（tier）只做展示分层，
  * 因此这里不做任何额外的权限判断。
  */
@@ -16,14 +22,8 @@ import {
   runtimeConfigControllerGetAllConfigs,
   runtimeConfigControllerUpdateConfig,
   runtimeConfigControllerResetConfig,
-  runtimeConfigControllerGetConfigHistory,
-  runtimeConfigControllerResetCategory,
-  runtimeConfigControllerPreviewProfile,
-  runtimeConfigControllerApplyProfile,
-  runtimeConfigControllerGetChannelsStatus,
-  runtimeConfigControllerTestChannel,
+  type RuntimeProfilePreviewResponseDto,
 } from '@/api-sdk';
-import type { RuntimeProfilePreviewResponseDto } from '@/api-sdk';
 import { useNotification } from '@/contexts/NotificationContext';
 import { usePermission } from '@/hooks/usePermission';
 import { SystemPermission } from '@/constants/permissions';
@@ -36,8 +36,6 @@ import {
   CATEGORY_ORDER,
   buildSubgroupSections,
   toConfigItems,
-  toHistoryEntries,
-  toChannelStatuses,
   configItemId,
 } from '../meta';
 import type {
@@ -50,9 +48,10 @@ import type {
 } from '../types';
 import { defaultDraftOf, toSubmitValue, prettyJson } from '../validate';
 import type { DraftValue } from '../validate';
-
-/** 单条历史拉取条数（后端上限 100） */
-const HISTORY_LIMIT = 50;
+import { useConfigHistory } from './useConfigHistory';
+import { useConfigChannel } from './useConfigChannel';
+import { useModeSwitch } from './useModeSwitch';
+import { useResetCategory } from './useResetCategory';
 
 export interface RuntimeConfigStats {
   total: number;
@@ -182,25 +181,6 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Set<string>>(new Set());
-  const [savingCategory, setSavingCategory] = useState(false);
-  const [modeSwitchTarget, setModeSwitchTarget] = useState<
-    'secure' | 'normal' | null
-  >(null);
-  const [modePreviewing, setModePreviewing] = useState(false);
-  const [modePreviewTarget, setModePreviewTarget] = useState<
-    'secure' | 'normal' | null
-  >(null);
-  const [modePreview, setModePreview] = useState<
-    RuntimeProfilePreviewResponseDto[]
-  >([]);
-  const [modeSaving, setModeSaving] = useState(false);
-  const [resetPreviewCategory, setResetPreviewCategory] = useState<
-    string | null
-  >(null);
-  const [historyKey, setHistoryKey] = useState<string | null>(null);
-  const [history, setHistory] = useState<ConfigHistoryEntry[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
   /** 待定位的配置项（seq 递增保证连续点击同一键也能重新触发滚动） */
   const [focusRequest, setFocusRequest] = useState<{
     key: string;
@@ -217,17 +197,6 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
   const [secretVisible, setSecretVisible] = useState<Set<string>>(new Set());
   /** 首次拉取失败时的错误文案；非空时页面渲染错误态而非「暂无配置项」 */
   const [configsError, setConfigsError] = useState<string | null>(null);
-  /** 通道状态（配置完整度 + 验证记录）；拉取失败保持空数组，区块不渲染 */
-  const [channelStatuses, setChannelStatuses] = useState<ChannelStatus[]>([]);
-  const [channelTesting, setChannelTesting] = useState<Set<string>>(new Set());
-  const [channelTestTarget, setChannelTestTarget] = useState<string | null>(
-    null
-  );
-  const [channelTestRecipient, setChannelTestRecipient] = useState('');
-  /** 最近一次测试失败的结果（对话框内展示错误 + 出错配置项定位入口） */
-  const [channelTestResult, setChannelTestResult] = useState<
-    ChannelTestResult | null
-  >(null);
 
   const canManageConfig = hasPermission(SystemPermission.SYSTEM_CONFIG_WRITE);
 
@@ -283,64 +252,6 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     void fetchConfigs();
   }, [fetchConfigs]);
 
-  /**
-   * 拉取通道状态（配置完整度 + 验证记录）。通道区块是辅助信息：拉取失败
-   * 只 toast 不阻塞页面（配置列表已成功渲染），失败时保持空数组、区块不显示。
-   */
-  const fetchChannelStatuses = useCallback(
-    async (opts?: { silent?: boolean }) => {
-      try {
-        const result = await runtimeConfigControllerGetChannelsStatus({
-          throwOnError: true,
-        });
-        setChannelStatuses(toChannelStatuses(result.data));
-      } catch (error: unknown) {
-        if (opts?.silent) return;
-        handleError(error, t('获取通道状态失败'));
-        showToast(getErrorMessage(error) || t('获取通道状态失败'), 'error');
-      }
-    },
-    [showToast]
-  );
-
-  // 配置列表加载完成后拉一次通道状态
-  useEffect(() => {
-    if (loading) return;
-    void fetchChannelStatuses();
-  }, [loading, fetchChannelStatuses]);
-
-  /**
-   * 拉取模式预览。预览只读不写库，故点击切换时直接发；首次进页也取一次，
-   * 因为「模式受管项」计数没有别的来源（配置列表 DTO 不含 profiles 字段）。
-   * 两种模式返回同一组受管键，故只需取一个模式即可得到计数。
-   */
-  const loadModePreview = useCallback(
-    async (target: 'secure' | 'normal') => {
-      setModePreviewTarget(target);
-      setModePreviewing(true);
-      try {
-        const result = await runtimeConfigControllerPreviewProfile({
-          throwOnError: true,
-          body: { profile: target },
-        });
-        setModePreview(result.data ?? []);
-      } catch (error: unknown) {
-        // 首次静默失败只影响计数（显示 0）；打开对话框时同样失败则停在空清单、确认禁用
-        handleError(error, t('获取切换预览失败'));
-        showToast(getErrorMessage(error) || t('获取切换预览失败'), 'error');
-      } finally {
-        setModePreviewing(false);
-      }
-    },
-    [showToast]
-  );
-
-  // 首次进页取一次模式预览：「模式受管项」计数只来自这里
-  useEffect(() => {
-    if (loading || modePreviewTarget !== null) return;
-    void loadModePreview('secure');
-  }, [loading, modePreviewTarget, loadModePreview]);
-
   const configsByKey = useMemo(
     () => new Map(configs.map((item) => [item.key, item])),
     [configs]
@@ -366,11 +277,68 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     return map;
   }, [configs, configsByKey]);
 
-  /** 受安全模式管理的键：preview 响应只返回这类键，故其条数即受管项数 */
-  const modeProfileKeys = useMemo(
-    () => new Set(modePreview.map((e) => e.key)),
-    [modePreview]
+  // ---- 子 hook：修改历史 / 通道状态与测试 / 安全模式切换 / 分类批量重置 ----
+
+  const historyCtl = useConfigHistory();
+
+  const channelCtl = useConfigChannel(showToast);
+  // 子 hook 返回的是每次渲染新建的对象字面量，但成员函数是稳定的 useCallback。
+  // 解构出稳定成员直接引用，避免把不稳定的对象字面量写进下游 useCallback/useEffect
+  // 的依赖数组（react-hooks/exhaustive-deps 也会对 member 依赖报警）。
+  const { refreshChannelStatuses, loadChannelStatuses } = channelCtl;
+
+  const handleModeApplied = useCallback(
+    async (applied: string[], unchanged: string[]) => {
+      setDrafts((prev) => {
+        const next = { ...prev };
+        for (const key of applied) delete next[key];
+        for (const key of unchanged) delete next[key];
+        return next;
+      });
+      setFieldErrors({});
+      await fetchConfigs({ silent: true });
+      await refreshChannelStatuses();
+    },
+    [fetchConfigs, refreshChannelStatuses]
   );
+
+  const modeCtl = useModeSwitch(showToast, handleModeApplied);
+  const { modePreviewTarget, loadModePreview } = modeCtl;
+
+  const handleResetCategory = useCallback(
+    async (category: string) => {
+      setDrafts((prev) => {
+        const next = { ...prev };
+        for (const item of configs) {
+          if (item.category === category) delete next[item.key];
+        }
+        return next;
+      });
+      setFieldErrors({});
+      await fetchConfigs({ silent: true });
+      await invalidatePublicConfigCache(
+        configs.some((c) => c.category === category && c.isPublic)
+      );
+      await refreshChannelStatuses();
+    },
+    [configs, fetchConfigs, invalidatePublicConfigCache, refreshChannelStatuses]
+  );
+
+  const resetCategoryCtl = useResetCategory(configs, showToast, handleResetCategory);
+
+  // 配置列表加载完成后拉一次通道状态
+  useEffect(() => {
+    if (loading) return;
+    void loadChannelStatuses();
+  }, [loading, loadChannelStatuses]);
+
+  // 首次进页取一次模式预览：「模式受管项」计数只来自这里
+  useEffect(() => {
+    if (loading || modePreviewTarget !== null) return;
+    void loadModePreview('secure');
+  }, [loading, modePreviewTarget, loadModePreview]);
+
+  // ---- 派生：统计 / 分组 ----
 
   const stats: RuntimeConfigStats = useMemo(
     () => ({
@@ -381,9 +349,9 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
       ).length,
       pendingSave: configs.filter((c) => isDraftChanged(c, drafts[c.key]))
         .length,
-      modeManaged: modeProfileKeys.size,
+      modeManaged: modeCtl.modeProfileKeys.size,
     }),
-    [configs, drafts, modeProfileKeys]
+    [configs, drafts, modeCtl.modeProfileKeys]
   );
 
   /** 搜索 + 只看已修改 + 高级项开关 → 按分类分组（分类顺序固定，已修改项组内置顶） */
@@ -439,6 +407,8 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     [configs]
   );
 
+  // ---- 草稿 ----
+
   const draftOf = useCallback(
     (item: ConfigItem): DraftValue => {
       const draft = drafts[item.key];
@@ -484,6 +454,166 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     },
     [configsByKey]
   );
+
+  /**
+   * 保存单项。流程：本地校验 → 危险项二次确认 → 提交 → 就地错误 / toast。
+   * 危险项（dangerous）在保存前确认并说明 impact；普通项不弹确认框，避免干扰日常操作。
+   */
+  const handleSave = useCallback(
+    async (key: string): Promise<boolean> => {
+      const item = configsByKey.get(key);
+      if (!item) return false;
+
+      const outcome = toSubmitValue(item, draftOf(item));
+      if (!outcome.valid || outcome.value === undefined) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [key]: outcome.message ?? t('输入值不合法'),
+        }));
+        return false;
+      }
+
+      if (item.dangerous) {
+        const confirmed = await showConfirm({
+          title: t('确认修改危险配置'),
+          message: [
+            t('即将修改「{key}」，该配置已标记为危险项。', { key }),
+            item.impact ?? t('请确认了解该配置的影响面。'),
+          ].join('\n'),
+          confirmText: t('确认修改'),
+          cancelText: t('取消'),
+          type: 'warning',
+        });
+        if (!confirmed) return false;
+      }
+
+      try {
+        setSaving((prev) => new Set(prev).add(key));
+        const result = await runtimeConfigControllerUpdateConfig({
+          throwOnError: true,
+          path: { key },
+          body: { val: outcome.value as never },
+        });
+        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
+        // 否则保存失败仍会弹「配置已保存」
+        showToast(t('配置已保存'), 'success');
+        setDrafts((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        await fetchConfigs({ silent: true });
+        await invalidatePublicConfigCache(item.isPublic);
+        // 通道配置项变更会使验证记录失效，刷新通道区块状态
+        await refreshChannelStatuses();
+        return true;
+      } catch (error: unknown) {
+        handleError(error, t('保存配置失败'));
+        // 后端 400（范围/类型/枚举不合法）就地展示在对应卡片，而不是只弹全局 toast
+        setFieldErrors((prev) => ({
+          ...prev,
+          [key]: getErrorMessage(error) || t('保存失败'),
+        }));
+        showToast(getErrorMessage(error) || t('保存失败'), 'error');
+        return false;
+      } finally {
+        setSaving((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+    },
+    [
+      configsByKey,
+      draftOf,
+      showConfirm,
+      showToast,
+      fetchConfigs,
+      invalidatePublicConfigCache,
+      refreshChannelStatuses,
+    ]
+  );
+
+  /**
+   * 单键恢复默认。
+   * 后端语义是「清空显式修改标记」而非「写回默认值」：若该键在 .env 配了值，
+   * 生效值会退回 env 值而不是代码默认值，因此确认文案必须带这一提示。
+   */
+  const handleReset = useCallback(
+    async (key: string) => {
+      const item = configsByKey.get(key);
+      if (!item) return;
+
+      const hasEnv = item.envValue !== null && item.envValue !== undefined;
+      const lines = [t('确定要把「{key}」恢复默认吗？', { key })];
+      if (hasEnv) {
+        lines.push(
+          t(
+            '该项由系统预置为「{env}」，恢复出厂后仍由它生效，不会变成出厂默认值「{def}」。',
+            {
+              env: String(item.envValue),
+              def: String(item.defaultValue ?? ''),
+            }
+          )
+        );
+      } else {
+        lines.push(t('此操作会清空页面修改，不可撤销。'));
+      }
+
+      const confirmed = await showConfirm({
+        title: t('确认恢复默认'),
+        message: lines.join('\n'),
+        confirmText: t('确认恢复'),
+        cancelText: t('取消'),
+        type: 'warning',
+      });
+      if (!confirmed) return;
+
+      try {
+        setSaving((prev) => new Set(prev).add(key));
+        const result = await runtimeConfigControllerResetConfig({
+          throwOnError: true,
+          path: { key },
+        });
+        showToast(t('已恢复默认'), 'success');
+        setDrafts((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        setFieldErrors((prev) => {
+          if (!(key in prev)) return prev;
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        await fetchConfigs({ silent: true });
+        await invalidatePublicConfigCache(item.isPublic);
+        // 通道配置项重置会使验证记录失效，刷新通道区块状态
+        await refreshChannelStatuses();
+      } catch (error: unknown) {
+        handleError(error, t('恢复默认失败'));
+        showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
+      } finally {
+        setSaving((prev) => {
+          const next = new Set(prev);
+          next.delete(key);
+          return next;
+        });
+      }
+    },
+    [
+      configsByKey,
+      showConfirm,
+      showToast,
+      fetchConfigs,
+      invalidatePublicConfigCache,
+      refreshChannelStatuses,
+    ]
+  );
+
+  // ---- UI：折叠 / 定位 ----
 
   const toggleCollapsed = useCallback((category: string) => {
     setCollapsed((prev) => {
@@ -548,394 +678,33 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     });
   }, []);
 
-  const openChannelTest = useCallback((channel: string) => {
-    setChannelTestRecipient('');
-    setChannelTestResult(null);
-    setChannelTestTarget(channel);
-  }, []);
-
-  const closeChannelTest = useCallback(() => {
-    setChannelTestTarget(null);
-    setChannelTestRecipient('');
-    setChannelTestResult(null);
-  }, []);
-
-  /**
-   * 执行通道验证。后端语义：配置不完整/验证失败都返回 200 + ok:false
-   * （带原因文案 + 疑似出错的配置键），只有通道未注册等参数错误才 4xx——
-   * 两种失败都 toast 后端文案，并把结果保留在对话框里（错误文案 + 可点击
-   * 定位的出错配置项），随后刷新通道状态（成功会写验证记录，失败不写）。
-   */
-  const confirmChannelTest = useCallback(async () => {
-    const channel = channelTestTarget;
-    if (!channel) return;
-    setChannelTesting((prev) => new Set(prev).add(channel));
-    try {
-      const result = await runtimeConfigControllerTestChannel({
-        throwOnError: true,
-        path: { channel },
-        body: { to: channelTestRecipient.trim() || undefined },
-      });
-      const data = result.data;
-      if (data?.ok) {
-        showToast(data.message || t('验证成功'), 'success');
-        setChannelTestResult(null);
-        setChannelTestTarget(null);
-        setChannelTestRecipient('');
-      } else {
-        showToast(data?.message || t('验证失败'), 'error');
-        setChannelTestResult({
-          ok: false,
-          message: data?.message || t('验证失败'),
-          problemKeys: Array.isArray(data?.problemKeys)
-            ? (data.problemKeys as unknown[]).map(String)
-            : [],
-        });
-      }
-    } catch (error: unknown) {
-      handleError(error, t('验证失败'));
-      showToast(getErrorMessage(error) || t('验证失败'), 'error');
-      setChannelTestResult({
-        ok: false,
-        message: getErrorMessage(error) || t('验证失败'),
-        problemKeys: [],
-      });
-    } finally {
-      setChannelTesting((prev) => {
-        const next = new Set(prev);
-        next.delete(channel);
-        return next;
-      });
-      await fetchChannelStatuses({ silent: true });
-    }
-  }, [channelTestTarget, channelTestRecipient, showToast, fetchChannelStatuses]);
-
-  /**
-   * 保存单项。流程：本地校验 → 危险项二次确认 → 提交 → 就地错误 / toast。
-   * 危险项（dangerous）在保存前确认并说明 impact；普通项不弹确认框，避免干扰日常操作。
-   */
-  const handleSave = useCallback(
-    async (key: string): Promise<boolean> => {
-      const item = configsByKey.get(key);
-      if (!item) return false;
-
-      const outcome = toSubmitValue(item, draftOf(item));
-      if (!outcome.valid || outcome.value === undefined) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          [key]: outcome.message ?? t('输入值不合法'),
-        }));
-        return false;
-      }
-
-      if (item.dangerous) {
-        const confirmed = await showConfirm({
-          title: t('确认修改危险配置'),
-          message: [
-            t('即将修改「{key}」，该配置已标记为危险项。', { key }),
-            item.impact ?? t('请确认了解该配置的影响面。'),
-          ].join('\n'),
-          confirmText: t('确认修改'),
-          cancelText: t('取消'),
-          type: 'warning',
-        });
-        if (!confirmed) return false;
-      }
-
-      try {
-        setSaving((prev) => new Set(prev).add(key));
-        const result = await runtimeConfigControllerUpdateConfig({
-          throwOnError: true,
-          path: { key },
-          body: { val: outcome.value as never },
-        });
-        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
-        // 否则保存失败仍会弹「配置已保存」
-        showToast(t('配置已保存'), 'success');
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-        await fetchConfigs({ silent: true });
-        await invalidatePublicConfigCache(item.isPublic);
-        // 通道配置项变更会使验证记录失效，刷新通道区块状态
-        await fetchChannelStatuses({ silent: true });
-        return true;
-      } catch (error: unknown) {
-        handleError(error, t('保存配置失败'));
-        // 后端 400（范围/类型/枚举不合法）就地展示在对应卡片，而不是只弹全局 toast
-        setFieldErrors((prev) => ({
-          ...prev,
-          [key]: getErrorMessage(error) || t('保存失败'),
-        }));
-        showToast(getErrorMessage(error) || t('保存失败'), 'error');
-        return false;
-      } finally {
-        setSaving((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      }
-    },
-    [
-      configsByKey,
-      draftOf,
-      showConfirm,
-      showToast,
-      fetchConfigs,
-      invalidatePublicConfigCache,
-      fetchChannelStatuses,
-    ]
-  );
-
-  /**
-   * 单键恢复默认。
-   * 后端语义是「清空显式修改标记」而非「写回默认值」：若该键在 .env 配了值，
-   * 生效值会退回 env 值而不是代码默认值，因此确认文案必须带这一提示。
-   */
-  const handleReset = useCallback(
-    async (key: string) => {
-      const item = configsByKey.get(key);
-      if (!item) return;
-
-      const hasEnv = item.envValue !== null && item.envValue !== undefined;
-      const lines = [t('确定要把「{key}」恢复默认吗？', { key })];
-      if (hasEnv) {
-        lines.push(
-          t(
-            '该项由系统预置为「{env}」，恢复出厂后仍由它生效，不会变成出厂默认值「{def}」。',
-            {
-              env: String(item.envValue),
-              def: String(item.defaultValue ?? ''),
-            }
-          )
-        );
-      } else {
-        lines.push(t('此操作会清空页面修改，不可撤销。'));
-      }
-
-      const confirmed = await showConfirm({
-        title: t('确认恢复默认'),
-        message: lines.join('\n'),
-        confirmText: t('确认恢复'),
-        cancelText: t('取消'),
-        type: 'warning',
-      });
-      if (!confirmed) return;
-
-      try {
-        setSaving((prev) => new Set(prev).add(key));
-        const result = await runtimeConfigControllerResetConfig({
-          throwOnError: true,
-          path: { key },
-        });
-        showToast(t('已恢复默认'), 'success');
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-        setFieldErrors((prev) => {
-          if (!(key in prev)) return prev;
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-        await fetchConfigs({ silent: true });
-        await invalidatePublicConfigCache(item.isPublic);
-        // 通道配置项重置会使验证记录失效，刷新通道区块状态
-        await fetchChannelStatuses({ silent: true });
-      } catch (error: unknown) {
-        handleError(error, t('恢复默认失败'));
-        showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
-      } finally {
-        setSaving((prev) => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      }
-    },
-    [
-      configsByKey,
-      showConfirm,
-      showToast,
-      fetchConfigs,
-      invalidatePublicConfigCache,
-      fetchChannelStatuses,
-    ]
-  );
-
-  const requestResetCategory = useCallback((category: string) => {
-    setResetPreviewCategory(category);
-  }, []);
-
-  const cancelResetCategory = useCallback(() => {
-    setResetPreviewCategory(null);
-  }, []);
-
-  /** 打开切换对话框：目标模式与已取预览不同时才重新拉取 */
-  const requestModeSwitch = useCallback(
-    async (target: 'secure' | 'normal') => {
-      setModeSwitchTarget(target);
-      if (modePreviewTarget !== target) {
-        await loadModePreview(target);
-      }
-    },
-    [modePreviewTarget, loadModePreview]
-  );
-
-  /** 应用模式：写库成功后清空被覆盖项的草稿并刷新列表 */
-  const confirmModeSwitch = useCallback(async () => {
-    if (!modeSwitchTarget) return;
-    const target = modeSwitchTarget;
-    setModeSwitchTarget(null);
-    setModeSaving(true);
-    try {
-      const result = await runtimeConfigControllerApplyProfile({
-        throwOnError: true,
-        body: { profile: target },
-      });
-      const applied = result.data?.applied ?? [];
-      const unchanged = result.data?.unchanged ?? [];
-      showToast(
-        t('已切换到{mode}（{n} 项生效）', {
-          mode: target === 'secure' ? t('安全模式') : t('普通模式'),
-          n: String(applied.length),
-        }),
-        'success'
-      );
-      setDrafts((prev) => {
-        const next = { ...prev };
-        for (const key of applied) delete next[key];
-        for (const key of unchanged) delete next[key];
-        return next;
-      });
-      setFieldErrors({});
-      await fetchConfigs({ silent: true });
-      // securityMode 本身是公开项，Layout 横幅读的就是这个缓存
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.runtimeConfig.public,
-      });
-      // profile 批量应用改写通道配置项会使验证记录失效
-      await fetchChannelStatuses({ silent: true });
-    } catch (error: unknown) {
-      handleError(error, t('切换模式失败'));
-      showToast(getErrorMessage(error) || t('切换模式失败'), 'error');
-    } finally {
-      setModeSaving(false);
-    }
-  }, [modeSwitchTarget, showToast, fetchConfigs, queryClient, fetchChannelStatuses]);
-
-  const cancelModeSwitch = useCallback(() => {
-    setModeSwitchTarget(null);
-    setModePreview([]);
-  }, []);
-
-  /** 分类级批量恢复默认：先预览将恢复的项，确认后走 reset-category 端点 */
-  const confirmResetCategory = useCallback(async () => {
-    if (!resetPreviewCategory) return;
-    const category = resetPreviewCategory;
-    setResetPreviewCategory(null);
-    setSavingCategory(true);
-    try {
-      const result = await runtimeConfigControllerResetCategory({
-        throwOnError: true,
-        body: { category },
-      });
-      showToast(t('已恢复默认'), 'success');
-      setDrafts((prev) => {
-        const next = { ...prev };
-        for (const item of configs) {
-          if (item.category === category) delete next[item.key];
-        }
-        return next;
-      });
-      setFieldErrors({});
-        await fetchConfigs({ silent: true });
-        await invalidatePublicConfigCache(
-          configs.some((c) => c.category === category && c.isPublic)
-        );
-        // 分类批量重置可能覆盖通道配置项，刷新通道区块状态
-        await fetchChannelStatuses({ silent: true });
-    } catch (error: unknown) {
-      handleError(error, t('恢复默认失败'));
-      showToast(getErrorMessage(error) || t('恢复默认失败'), 'error');
-    } finally {
-      setSavingCategory(false);
-    }
-  }, [
-    resetPreviewCategory,
-    configs,
-    showToast,
-    fetchConfigs,
-    invalidatePublicConfigCache,
-    fetchChannelStatuses,
-  ]);
-
-  const resetPreviewItems = useMemo(
-    () =>
-      resetPreviewCategory
-        ? configs.filter((c) => c.category === resetPreviewCategory)
-        : [],
-    [configs, resetPreviewCategory]
-  );
-
-  const openHistory = useCallback(async (key: string) => {
-    setHistoryKey(key);
-    setHistoryLoading(true);
-    setHistoryError(null);
-    try {
-      const result = await runtimeConfigControllerGetConfigHistory({
-        throwOnError: true,
-        path: { key },
-        query: { limit: String(HISTORY_LIMIT) },
-      });
-      setHistory(toHistoryEntries(result.data));
-    } catch (error: unknown) {
-      handleError(error, t('获取修改历史失败'));
-      setHistoryError(getErrorMessage(error) || t('获取修改历史失败'));
-      setHistory([]);
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, []);
-
-  const closeHistory = useCallback(() => {
-    setHistoryKey(null);
-    setHistory([]);
-    setHistoryError(null);
-  }, []);
-
   return {
     configs,
     configsByKey,
     dependencyStatus,
-    channelStatuses,
-    channelTesting,
-    channelTestTarget,
-    channelTestRecipient,
-    channelTestResult,
+    channelStatuses: channelCtl.channelStatuses,
+    channelTesting: channelCtl.channelTesting,
+    channelTestTarget: channelCtl.channelTestTarget,
+    channelTestRecipient: channelCtl.channelTestRecipient,
+    channelTestResult: channelCtl.channelTestResult,
     groups,
     loading,
     configsError,
     drafts,
     fieldErrors,
     saving,
-    savingCategory,
-    modeSwitchTarget,
-    modePreviewing,
-    modePreviewTarget,
-    modePreview,
-    modeSaving,
-    resetPreviewCategory,
-    resetPreviewItems,
-    historyKey,
-    history,
-    historyLoading,
-    historyError,
+    savingCategory: resetCategoryCtl.savingCategory,
+    modeSwitchTarget: modeCtl.modeSwitchTarget,
+    modePreviewing: modeCtl.modePreviewing,
+    modePreviewTarget: modeCtl.modePreviewTarget,
+    modePreview: modeCtl.modePreview,
+    modeSaving: modeCtl.modeSaving,
+    resetPreviewCategory: resetCategoryCtl.resetPreviewCategory,
+    resetPreviewItems: resetCategoryCtl.resetPreviewItems,
+    historyKey: historyCtl.historyKey,
+    history: historyCtl.history,
+    historyLoading: historyCtl.historyLoading,
+    historyError: historyCtl.historyError,
     collapsed,
     keyword,
     onlyModified,
@@ -959,17 +728,17 @@ export function useRuntimeConfig(): UseRuntimeConfigReturn {
     handleSave,
     handleReset,
     toggleSecretVisibility,
-    openChannelTest,
-    closeChannelTest,
-    setChannelTestRecipient,
-    confirmChannelTest,
-    requestResetCategory,
-    confirmResetCategory,
-    cancelResetCategory,
-    requestModeSwitch,
-    confirmModeSwitch,
-    cancelModeSwitch,
-    openHistory,
-    closeHistory,
+    openChannelTest: channelCtl.openChannelTest,
+    closeChannelTest: channelCtl.closeChannelTest,
+    setChannelTestRecipient: channelCtl.setChannelTestRecipient,
+    confirmChannelTest: channelCtl.confirmChannelTest,
+    requestResetCategory: resetCategoryCtl.requestResetCategory,
+    confirmResetCategory: resetCategoryCtl.confirmResetCategory,
+    cancelResetCategory: resetCategoryCtl.cancelResetCategory,
+    requestModeSwitch: modeCtl.requestModeSwitch,
+    confirmModeSwitch: modeCtl.confirmModeSwitch,
+    cancelModeSwitch: modeCtl.cancelModeSwitch,
+    openHistory: historyCtl.openHistory,
+    closeHistory: historyCtl.closeHistory,
   };
 }

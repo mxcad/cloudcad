@@ -65,7 +65,7 @@ interface OperationHistoryModalProps {
   onClose: () => void;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 30;
 
 /** 项目操作历史筛选动作子集（与后端埋点动作对齐，label 复用 AuditLogPage 动作清单） */
 const PROJECT_AUDIT_ACTION_VALUES = [
@@ -201,6 +201,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
   onClose,
 }) => {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [action, setAction] = useState('');
@@ -231,6 +232,12 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
     setAction('');
     setMemberId('');
     setSearch('');
+    setPage(1);
+    listRef.current?.scrollTo({ top: 0 });
+  };
+  const handlePageSizeChange = (next: number) => {
+    if (next === pageSize) return;
+    setPageSize(next);
     setPage(1);
     listRef.current?.scrollTo({ top: 0 });
   };
@@ -267,6 +274,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
     queryKey: queryKeys.auditLog.project(projectId, page, {
       startDate,
       endDate,
+      pageSize,
       ...(action ? { action } : {}),
       ...(memberId ? { userId: memberId } : {}),
       ...(deferredSearch.trim() ? { search: deferredSearch.trim() } : {}),
@@ -277,7 +285,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
         path: { projectId },
         query: {
           page: String(page),
-          limit: String(PAGE_SIZE),
+          limit: String(pageSize),
           ...(startDate ? { startDate } : {}),
           ...(endDate ? { endDate } : {}),
           ...(action ? { action } : {}),
@@ -333,7 +341,7 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
 
   const logs = data?.logs ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const grouped = useMemo(() => groupByTime(logs), [logs]);
   const hasAnyLogs = logs.length > 0;
 
@@ -575,12 +583,14 @@ export const OperationHistoryModal: React.FC<OperationHistoryModalProps> = ({
         {totalPages > 1 && (
           <div className="flex justify-center pt-2">
             <Pagination
-              meta={{ total, page, limit: PAGE_SIZE, totalPages }}
+              meta={{ total, page, limit: pageSize, totalPages }}
               onPageChange={(p) => {
                 setPage(p);
                 listRef.current?.scrollTo({ top: 0 });
               }}
-              simple
+              showSizeChanger
+              onPageSizeChange={handlePageSizeChange}
+              pageSizeOptions={[30, 50, 100]}
             />
           </div>
         )}

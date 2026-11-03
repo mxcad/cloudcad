@@ -7,18 +7,19 @@
  * 点击列表项 → action sheet（打开/复制链接/修改有效期/查看二维码/撤销）
  * 新建分享 → 底部弹窗（文件选择 + 有效期 + 创建 + 二维码 + 复制）
  */
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
+import PosterPreviewPopup from '@/components/share/PosterPreviewPopup.vue'
 import { useShareLinkCopy } from '@/composables/useShareLinkCopy'
 import { useLongPress } from '@/composables/useLongPress'
 import { useMultiSelect } from '@/composables/useMultiSelect'
 import { useRouter } from 'vue-router'
-import { showToast, showConfirmDialog } from 'vant'
-import { shareControllerListShares, shareControllerRevokeShare, shareControllerUpdateShare, nodeControllerSearch } from '@cloudcad/api-sdk/sdk.gen'
+import { showToast, showConfirmDialog, showFailToast } from 'vant'
+import { shareControllerListShares, shareControllerRevokeShare, shareControllerUpdateShare, nodeControllerSearch, thumbnailControllerCheckThumbnail } from '@cloudcad/api-sdk/sdk.gen'
 import type { FileSystemNodeDto } from '@cloudcad/api-sdk/types.gen'
 import QRCode from 'qrcode'
 import { t } from '@/languages'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
 import { extractExtension } from '@/composables/useNodeFormatter'
 import { shareUrl } from '@/utils/shareUrl'
 import { formatShareExpiry } from '@/utils/shareDate'
@@ -26,6 +27,7 @@ import { vibrate } from '@/utils/vibrate'
 import { isNearScrollBottom } from '@/utils/scroll'
 import { backOrFallback } from '@/utils/backNavigation'
 import { useLoginPrompt } from '@/composables/useLoginPrompt'
+import { useSortSheet } from '@/composables/useSortSheet'
 import {
   SHARE_CUSTOM_DAYS_DEFAULT,
   SHARE_CUSTOM_DAYS_MAX,
@@ -36,13 +38,23 @@ import {
   detectShareExpiration,
   isShareExpired,
   type ShareExpirationOption,
+  SHARE_POSTER_DEFAULT_LAYOUT,
+  type SharePosterLayout,
 } from '@cloudcad/platform'
 import { useShareCreate, type ShareCreateResult } from '@/composables/useShareCreate'
 import { usePagedState, type PagedItems } from '@/composables/usePagedState'
+import { composeSharePosterDataUrl } from '@/utils/sharePoster'
+import { triggerBlobDownload } from '@/utils/download'
+import { usePosterRegionStore, type PosterRegion } from '@/stores/posterRegion'
+import { openDrawing } from '@/services/drawingOpener'
+import { useOpenGuard } from '@/composables/useOpenGuard'
+import { useEditorStore } from '@/stores/editor'
 
 interface ShareItem {
   id: string
   token: string
+  /** 文件节点 ID（分享图片缩略图复用/后台出图需要） */
+  fileId: string
   name: string
   ext: string
   // 后端 listShares 不返回 status（撤销=软删不出现在列表），状态由 expiresAt 客户端判定（对齐 PC isExpired）
@@ -93,35 +105,30 @@ const filterItems = [
   { key: 'expired' as const, label: t('已过期') },
 ]
 
-// C-04 分享列表排序（服务端 sortBy/sortOrder，对齐 PC SORTABLE_COLUMNS）
+// C-04 分享列表排序（服务端 sortBy/sortOrder，对齐 PC SORTABLE_COLUMNS；排序弹层在 useSortSheet）
 const sortBy = ref<'createdAt' | 'expiresAt' | 'usedCount'>('createdAt')
 const sortOrder = ref<'asc' | 'desc'>('desc')
-const showSortSheet = ref(false)
 
-const sortOptions = [
-  { field: 'createdAt' as const, label: t('创建时间') },
-  { field: 'expiresAt' as const, label: t('有效期') },
-  { field: 'usedCount' as const, label: t('次数') },
-]
-
-const sortSheetActions = computed(() =>
-  sortOptions.map((o) => ({
-    name: o.label,
-    subname: sortBy.value === o.field ? (sortOrder.value === 'asc' ? '↑' : '↓') : '',
-  }))
-)
-
-function onSortSelect(action: { name: string }) {
-  showSortSheet.value = false
-  const opt = sortOptions.find((o) => o.label === action.name)
-  if (!opt) return
-  if (sortBy.value === opt.field) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortBy.value = opt.field
-    sortOrder.value = 'desc'
-  }
-}
+const {
+  showSortSheet,
+  sortSheetActions,
+  openSortSheet,
+  onSortSheetSelect,
+  sortSheetOptions,
+} = useSortSheet({
+  options: [
+    { field: 'createdAt' as const, label: t('创建时间') },
+    { field: 'expiresAt' as const, label: t('有效期') },
+    { field: 'usedCount' as const, label: t('次数') },
+  ],
+  currentField: () => sortBy.value,
+  currentOrder: () => sortOrder.value,
+  // 非受控形态：选字段/反转直接写回本地 ref
+  onSelect: (field, order) => {
+    sortBy.value = field
+    sortOrder.value = order
+  },
+})
 
 // 单页取数：翻页号由 sharePaged 按当前页传入；totalPages 由 total 推导
 //（后端 ShareListResponseDto 无 totalPages 字段）
@@ -153,6 +160,7 @@ async function fetchSharePage(pageNo: number): Promise<PagedItems<ShareItem>> {
     return {
       id: s.id,
       token: s.token ?? '',
+      fileId: s.fileId ?? '',
       name: fileName,
       ext,
       status,
@@ -251,7 +259,7 @@ async function onRevokeShare(token: string): Promise<boolean> {
     loadShares()
     return true
   } catch (e) {
-    showToast(t('撤销失败'))
+    showToast(errMsg(e, t('撤销失败')))
     return false
   }
 }
@@ -388,7 +396,7 @@ async function onRenewConfirm() {
     showToast(t('有效期已更新'))
     loadShares()
   } catch (e) {
-    showToast(t('修改失败'))
+    showToast(errMsg(e, t('修改失败')))
   } finally {
     renewSaving.value = false
   }
@@ -417,6 +425,293 @@ function copyQrUrl() {
   void copy(qrPopupUrl.value)
 }
 
+// ── C-35 分享图片（对齐 PC 编辑器上下文：高清 BMP 海报 + 缩略图生成/上传分离）──
+const posterDownloading = ref('')
+
+/**
+ * 解析分享图片（海报）图纸图源（对齐 PC resolvePosterThumbnail 的返回形状与优先级）。
+ *
+ * PC 逻辑（ShareDialog 路径 A + ShareTable 路径 B）：
+ * - **编辑器上下文**（分享文件 = 当前打开图纸）：引擎出高清 BMP（isEditorContext），
+ *   无需后台开图——文件已在编辑器打开，不会触发 fetchFileNode 登录/权限校验。
+ * - **非编辑器上下文**：后端已有缩略图优先（checkThumbnail），无缩略图才回退后台开图
+ *   出 200px 缩略图（renderShareThumbnailInBackground）。同样不触发登录门槛。
+ *
+ * 移动端此前无条件 renderSharePosterInBackground（后台开图 → openDrawing → loadByNodeId →
+ * fetchFileNode → nodeControllerGetNode 需登录/权限），是「预览分享图片需要登录」的根因；
+ * 现对齐 PC：仅编辑器上下文出 BMP，非编辑器上下文走后端缩略图优先。
+ *
+ * 返回 null 表示无可用图纸图（调用方提示失败）；安全约束错误（未保存/协同）由
+ * renderSharePosterInBackground 抛错冒泡（调用方提示，不静默回退）。
+ */
+async function resolvePosterThumbnail(
+  item: ShareItem,
+): Promise<{ thumbnail: string | Blob; hasBorder: boolean } | null> {
+  if (!item.fileId) return null
+  const editorState = useEditorStore()
+  // 编辑器上下文（分享文件 = 当前打开图纸）：引擎出高清 BMP（长边 1000px，清晰度远高于
+  // 200px 缩略图），文件已打开无需后台开图。抛错 = 安全约束（未保存/协同），冒泡给调用方。
+  if (editorState.state.fileId === item.fileId) {
+    const { renderSharePosterInBackground } = await import(
+      '@/services/backgroundRender'
+    )
+    const result = await renderSharePosterInBackground(
+      item.fileId,
+      posterRegion.value,
+    )
+    if (result?.posterBlob) {
+      return { thumbnail: result.posterBlob, hasBorder: result.hasBorder }
+    }
+  }
+  // 非编辑器上下文（或 BMP 失败）：后端已有缩略图优先（PC 路径 B，无需后台开图/登录）；
+  // 无缩略图才回退后台开图出 200px 缩略图（同 PC 路径 B 兜底）
+  const check = await thumbnailControllerCheckThumbnail({
+    path: { nodeId: item.fileId },
+  })
+  if (check.data?.exists) {
+    const url = `/api/v1/file-system/nodes/${item.fileId}/thumbnail`
+    try {
+      // 转 Blob：预览面板调海报选项（名称/二维码/文字大小）时 rerenderPosterPreview
+      // 用 posterThumbBlob 重合成——URL 字符串时 posterThumbBlob=null 会提前返回不重合成。
+      // fetch 失败（缩略图接口本身 401 等）则回退后台开图出图。
+      const blob = await (await fetch(url, { credentials: 'include' })).blob()
+      return { thumbnail: blob, hasBorder: false }
+    } catch {
+      // 落到下方后台开图兜底
+    }
+  }
+  const { renderShareThumbnailInBackground } = await import(
+    '@/services/backgroundRender'
+  )
+  const thumbBlob = await renderShareThumbnailInBackground(item.fileId)
+  if (thumbBlob) {
+    return { thumbnail: thumbBlob, hasBorder: false }
+  }
+  return null
+}
+
+/** 下载当前已合成的海报 dataURL（所见即所得：预览里是什么就下载什么，不二次生成）。 */
+function downloadPreviewDataUrl(filename: string) {
+  const dataUrl = posterPreviewDataUrl.value
+  if (!dataUrl) return
+  const m = dataUrl.match(/^data:([^;,]+);base64,(.*)$/)
+  if (!m || !m[2]) {
+    showToast(t('分享图片生成失败'))
+    return
+  }
+  const bin = atob(m[2])
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  triggerBlobDownload(new Blob([bytes], { type: m[1] }), filename)
+  showToast(t('分享图片已下载'))
+}
+
+async function onDownloadPoster(item: ShareItem) {
+  if (posterDownloading.value) return
+  if (!item.fileId) {
+    showToast(t('链接生成失败，请重试'))
+    return
+  }
+  if (!posterPreviewDataUrl.value) {
+    showToast(t('分享图片生成失败'))
+    return
+  }
+  posterDownloading.value = item.token
+  try {
+    downloadPreviewDataUrl(`${item.name || '分享'}-分享图.png`)
+  } finally {
+    posterDownloading.value = ''
+  }
+}
+
+// ── C-36 预览分享图片（合成海报弹窗，可下载 + 指定区域）──
+const showPosterPreview = ref(false)
+const posterPreviewDataUrl = ref('')
+const posterPreviewing = ref(false)
+
+// 海报选项（预览面板内动态调整）：底部名称 + 二维码大小。
+// 底部名称 = 一个输入框（默认文件名称），**清空即不显示**（footerText=输入框内容或 null）。
+// 下载是「所见即所得」（下载当前 previewDataUrl），故调整只重合成预览即随下载生效。
+const footerName = ref('')
+const posterQrScale = ref(1)
+// 高清图纸图（Blob）+ 当前预览二维码内容：选项调整只重 canvas 合成（composeSharePosterDataUrl），
+// 不重新引擎截图（generatePosterImageBlob 会 zoomW 到区域，很重）。
+const posterThumbBlob = ref<Blob | null>(null)
+const previewShareUrl = ref('')
+// 框选区域是否与图纸直角方形边框重合（指定区域/预览缓存，选项重合成时保持一致）
+const posterHasBorderCache = ref(false)
+
+// 名称/滑杆最新值：rerender 读 ref 避免 watch 闭包旧值
+const posterOpts = computed(() => ({
+  footerText: footerName.value.trim() || null,
+  qrScale: posterQrScale.value,
+}))
+
+// 版式（手机竖版/正方形/横版）：与 PC 一致三档，预览内调整（改动即重合成预览）。
+// 版式选择弹层在共享 PosterPreviewPopup 组件内；此处只持有值，变化触发重合成。
+const posterLayout = ref<SharePosterLayout>(SHARE_POSTER_DEFAULT_LAYOUT)
+
+let posterRecomposeSeq = 0
+async function rerenderPosterPreview() {
+  if (!posterThumbBlob.value) return
+  const seq = ++posterRecomposeSeq
+  posterPreviewing.value = true
+  try {
+    const opts = posterOpts.value
+    const next = await composeSharePosterDataUrl({
+      shareUrl: previewShareUrl.value,
+      fileName: activeShare.value?.name ?? '',
+      thumbnail: posterThumbBlob.value,
+      scanText: t('扫一扫看图纸'),
+      footerText: opts.footerText,
+      qrScale: opts.qrScale,
+      layout: posterLayout.value,
+      thumbnailHasBorder: posterRegion.value ? posterHasBorderCache.value : false,
+    })
+    // 只认最后一次（连续拖动/输入时旧结果晚到不覆盖新图）；保留旧图直到新图就绪，避免闪烁
+    if (seq === posterRecomposeSeq) posterPreviewDataUrl.value = next
+  } catch (e) {
+    console.error('[ShareManagePage] rerenderPosterPreview:', e)
+    showToast(e instanceof Error && e.message ? e.message : t('预览分享图片失败'))
+  } finally {
+    posterPreviewing.value = false
+  }
+}
+
+// 名称/滑杆改动 → 250ms 节流重合成（连续拖动只留最后一次）
+let posterOptsTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  [footerName, posterQrScale],
+  () => {
+    if (posterOptsTimer) clearTimeout(posterOptsTimer)
+    posterOptsTimer = setTimeout(rerenderPosterPreview, 250)
+  }
+)
+
+// 版式改动 → 重合成预览（组件 emit update:layout 更新 posterLayout）
+watch([posterLayout], () => void rerenderPosterPreview())
+
+async function onPreviewPoster(item: ShareItem) {
+  if (posterPreviewing.value) return
+  if (!item.fileId) {
+    showToast(t('链接生成失败，请重试'))
+    return
+  }
+  posterPreviewing.value = true
+  try {
+    const resolved = await resolvePosterThumbnail(item)
+    if (!resolved) throw new Error(t('缩略图生成失败'))
+    // 缓存高清图 Blob + 二维码内容 + hasBorder：选项调整只重 canvas 合成，不重新引擎截图。
+    // 每次打开预览，底部名称默认回文件名称。
+    posterThumbBlob.value =
+      resolved.thumbnail instanceof Blob ? resolved.thumbnail : null
+    previewShareUrl.value = item.url
+    posterHasBorderCache.value = resolved.hasBorder
+    footerName.value = item.name
+    posterPreviewDataUrl.value = await composeSharePosterDataUrl({
+      shareUrl: item.url,
+      fileName: item.name,
+      thumbnail: resolved.thumbnail,
+      scanText: t('扫一扫看图纸'),
+      // 刚重置为默认：显示文件名称（footerText 语义：string=自定义/显示）
+      footerText: item.name,
+      qrScale: posterQrScale.value,
+      layout: posterLayout.value,
+      thumbnailHasBorder: resolved.hasBorder,
+    })
+    showPosterPreview.value = true
+  } catch (e) {
+    console.error('[ShareManagePage] previewPoster:', e)
+    showToast(e instanceof Error && e.message ? e.message : t('预览分享图片失败'))
+  } finally {
+    posterPreviewing.value = false
+  }
+}
+
+// ── C-37 指定区域（移动端：收起子页 → 底层编辑器两点对角框选 → 回来弹预览）──
+// 移动端画布被本子页（subpage-overlay）全屏遮挡，框选必须收起子页露出底层引擎，
+// 收起即卸载本组件（ref 丢失），故意图与结果走 posterRegion store 跨页传递，
+// 执行由常驻 Home 的 usePosterRegionFlow 承接（参考 m_mx_rect 两点对角交互）。
+const posterRegionStore = usePosterRegionStore()
+const posterRegion = ref<PosterRegion | null>(null)
+const pickingRegion = ref(false)
+
+function onPickRegion() {
+  if (pickingRegion.value) return
+  const item = activeShare.value
+  if (!item || !item.fileId) {
+    showToast(t('链接生成失败，请重试'))
+    return
+  }
+  pickingRegion.value = true
+  // 关闭预览弹窗让出画布；写意图后收起子页让底层引擎可见可交互。
+  // 必须用 replace('/shell') 而非 backOrFallback：backOrFallback 在历史栈 >1 时走
+  // router.back()，退到「上一条历史」——若用户从 /shell/profile 进到 /shell/share 再点
+  // 指定区域，会退回个人中心而非编辑器；replace 确定性落到编辑器壳根（与 handleOpenShare
+  // / usePosterRegionFlow 的回跳一致）。指定区域完成后 usePosterRegionFlow 会 replace 回
+  // /shell/share，故历史里不残留本子页，物理返回键也不会退回这里。
+  showPosterPreview.value = false
+  posterRegionStore.request(item.fileId, item)
+  void router.replace('/shell')
+  // 注意：本组件随即卸载（子页收起），pickingRegion 随组件销毁，无需在此复位
+}
+
+// 框选完成回来（子页重新挂载）消费结果
+onMounted(() => {
+  const intent = posterRegionStore.state
+  if (intent.status === 'done') {
+    if (intent.posterDataUrl) {
+      posterPreviewDataUrl.value = intent.posterDataUrl
+      posterRegion.value = intent.region
+      // 缓存高清图 Blob + 二维码内容 + hasBorder：预览面板调海报选项（名称/二维码/文字大小）时用它重合成
+      posterThumbBlob.value = intent.posterBlob
+      posterHasBorderCache.value = intent.posterHasBorder
+      // 打开预览：底部名称默认回文件名称（usePosterRegionFlow 已用 fileName 合成，一致）
+      footerName.value = intent.item?.name ?? ''
+      if (intent.item) {
+        activeShare.value = intent.item as unknown as ShareItem
+        previewShareUrl.value = intent.item.url
+      }
+      showPosterPreview.value = true
+    } else {
+      // 用户取消框选
+      showToast(t('已取消指定区域'))
+    }
+    posterRegionStore.clear()
+  } else if (intent.status === 'error') {
+    showToast(intent.error || t('指定区域失败'))
+    posterRegionStore.clear()
+  }
+})
+
+/**
+ * 分享管理页「打开」：以所属人身份直接打开（走打开图纸流程，非新标签页）。
+ *
+ * 镜像 useShellFileOpen.openFromList：守卫（未保存/协同确认）→ 清文件上下文 →
+ * openDrawing（source:'node'，补齐节点信息/权限/projectId/缓存）→ 成功后
+ * router.replace('/shell') 露出底层画布。失败 toast 留在原页。
+ */
+async function handleOpenShare(item: ShareItem) {
+  if (!item.fileId) {
+    showToast(t('链接生成失败，请重试'))
+    return
+  }
+  const { guardBeforeOpen } = useOpenGuard()
+  if (!(await guardBeforeOpen())) return
+  const editorState = useEditorStore()
+  // 清掉上一次的文件上下文与错误（保留 isModified/isActive/loading）
+  editorState.resetFileState()
+  const opened = await openDrawing({ source: 'node', nodeId: item.fileId })
+  if (!opened) {
+    // 错误 overlay 会被当前子页盖住，改为 toast 提示后留在原页
+    editorState.setError(null)
+    editorState.setErrorType(null)
+    showFailToast(t('打开文件失败'))
+    return
+  }
+  router.replace('/shell')
+}
+
 function onShareClick(item: ShareItem) {
   // 长按触发后抑制紧随的合成 click（消费式守卫，见 useLongPress）
   if (shareLongPress.shouldSuppressTap()) return
@@ -425,12 +720,14 @@ function onShareClick(item: ShareItem) {
     toggleSelect({ id: item.token })
     return
   }
-  // 对齐 PC ShareTable 行操作：打开 / 复制链接 / 修改有效期 / 撤销（二维码为移动端补充入口）
+  // 对齐 PC ShareTable 行操作：打开 / 复制链接 / 修改有效期 / 撤销（二维码为移动端补充入口）。
+  // 预览+下载分享图片合并为「分享图片」（点开海报预览弹窗，内含下载 + 指定区域）。
   const actions: Array<{ name: string; className?: string }> = [
     { name: t('打开') },
     { name: t('复制链接') },
     { name: t('修改有效期') },
     { name: t('查看二维码') },
+    { name: t('分享图片') },
     { name: t('撤销分享'), className: 'danger' },
   ]
 
@@ -452,13 +749,15 @@ function onActionSheetSelect(action: { name: string; className?: string }) {
   }
 
   if (action.name === t('打开')) {
-    window.open(url, '_blank')
+    void handleOpenShare(item)
   } else if (action.name === t('复制链接')) {
     void copy(url)
   } else if (action.name === t('修改有效期')) {
     openRenewPopup(item)
   } else if (action.name === t('查看二维码')) {
     void openQrPopup(url)
+  } else if (action.name === t('分享图片')) {
+    void onPreviewPoster(item)
   } else if (action.name === t('撤销分享')) {
     onRevokeShare(item.token)
   }
@@ -753,15 +1052,15 @@ function onCustomDaysInput(e: Event) {
         {{ f.label }}
       </button>
       <!-- C-04 排序入口：右侧对齐，点开 ActionSheet 选字段/切方向 -->
-      <button class="filter-btn sort-btn" @click="showSortSheet = true">
+      <button class="filter-btn sort-btn" @click="openSortSheet">
         <van-icon name="sort" size="14" />
-        {{ sortOptions.find((o) => o.field === sortBy)?.label }}
+        {{ sortSheetOptions.find((o) => o.field === sortBy)?.label }}
       </button>
     </div>
     <van-action-sheet
       v-model:show="showSortSheet"
       :actions="sortSheetActions"
-      @select="onSortSelect"
+      @select="onSortSheetSelect"
     />
 
     <div v-if="loading && shares.length === 0" class="state-box">
@@ -926,6 +1225,22 @@ function onCustomDaysInput(e: Event) {
         </div>
       </div>
     </van-popup>
+
+    <!-- C-36 分享图片预览（合成海报，可下载 + 指定区域）——统一 PosterPreviewPopup 抽屉 -->
+    <PosterPreviewPopup
+      v-model:show="showPosterPreview"
+      :data-url="posterPreviewDataUrl"
+      :file-name="activeShare?.name ?? ''"
+      v-model:footer-name="footerName"
+      v-model:qr-scale="posterQrScale"
+      v-model:layout="posterLayout"
+      :downloading="posterDownloading !== ''"
+      :generating="posterPreviewing"
+      :picking-region="pickingRegion"
+      :region-active="!!posterRegion"
+      @download="activeShare && onDownloadPoster(activeShare)"
+      @pick-region="onPickRegion"
+    />
 
     <van-popup v-model:show="showCreateSharePopup" position="bottom" round :style="{ height: '70%' }" @close="closeCreateSharePopup">
       <div class="create-share-panel">

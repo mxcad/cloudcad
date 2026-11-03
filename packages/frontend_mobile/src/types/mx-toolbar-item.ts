@@ -20,4 +20,6 @@ export interface MxToolbarItem {
   listTitle?: string;
   /** 点击后收起工具栏 */
   isClosed?: boolean;
+  /** 是否隐藏（「注释掉」机制：数据保留在 mxUIConfig.json、运行时过滤不渲染） */
+  hidden?: boolean;
 }

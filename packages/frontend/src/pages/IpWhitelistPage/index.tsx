@@ -60,6 +60,7 @@ export default function IpWhitelistPage({
   });
 
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(IP_WHITELIST_PAGE_SIZE);
   const [addOpen, setAddOpen] = useState(false);
   const [removeTargets, setRemoveTargets] = useState<IpWhitelistEntry[] | null>(
     null
@@ -77,13 +78,17 @@ export default function IpWhitelistPage({
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const { items, total, loading, refetch } = useIpWhitelistList(page, keyword);
+  const { items, total, loading, refetch } = useIpWhitelistList(
+    page,
+    keyword,
+    pageSize
+  );
   const addMutation = useAddIpWhitelistEntry(() => setAddOpen(false));
   const batchAddMutation = useBatchAddIpWhitelistPreset();
 
-  const totalPages = Math.ceil(total / IP_WHITELIST_PAGE_SIZE);
+  const totalPages = Math.ceil(total / pageSize);
 
-  // 滚动分页数据合并（追加/前插/替换 + 竞态防护；搜索词变化时整体替换）
+  // 滚动分页数据合并（追加/前插/替换 + 竞态防护；搜索词/每页数量变化时整体替换）
   const {
     viewNodes: viewItems,
     handleScrollPageChange,
@@ -92,7 +97,7 @@ export default function IpWhitelistPage({
     displayNodes: items,
     currentPage: page,
     handlePageChange: setPage,
-    resetKey: keyword,
+    resetKey: `${keyword}|${pageSize}`,
   });
 
   // ── 多选（ADR-0052 统一机制）──
@@ -117,6 +122,17 @@ export default function IpWhitelistPage({
   useEffect(() => {
     clearSelection();
   }, [keyword, clearSelection]);
+
+  // 每页条数变化：清空选择并重置到第一页（新条数下深层页码无意义）
+  const handlePageSizeChange = useCallback(
+    (next: number) => {
+      if (next === pageSize) return;
+      clearSelection();
+      setPageSize(next);
+      setPage(1);
+    },
+    [pageSize, clearSelection]
+  );
 
   const openRemoveConfirm = useCallback(
     (entries: IpWhitelistEntry[]) => {
@@ -306,7 +322,7 @@ export default function IpWhitelistPage({
               paginationMeta={{
                 total,
                 page,
-                limit: IP_WHITELIST_PAGE_SIZE,
+                limit: pageSize,
                 totalPages,
               }}
               onToggleSelect={handleNodeSelect}
@@ -316,7 +332,9 @@ export default function IpWhitelistPage({
                 clearSelection();
                 setPage(next);
               }}
-              paginationSimple
+              showSizeChanger
+              onPageSizeChange={handlePageSizeChange}
+              pageSizeOptions={[30, 50, 100]}
               onScrollPageChange={handleScrollPageChange}
               minLoadedPage={minLoadedPage}
               bottomBar={

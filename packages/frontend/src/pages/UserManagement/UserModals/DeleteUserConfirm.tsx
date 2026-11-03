@@ -15,6 +15,12 @@ interface DeleteUserConfirmProps {
   count?: number;
   deleteImmediately: boolean;
   onDeleteImmediatelyChange: (value: boolean) => void;
+  /**
+   * 前置阻断原因（BUG-ADMIN-004）：目标为当前用户自己或管理员账户时非空，
+   * 展示提示并禁用「确认删除」——后端 isAdminUser 硬保护已存在，此前 UI 未前置
+   * 提示，用户点确认后才被告知失败；与编辑弹窗 isSelf 的 formNotice 同一范式。
+   */
+  blockReason?: string;
 }
 
 export function DeleteUserConfirm({
@@ -25,8 +31,10 @@ export function DeleteUserConfirm({
   count,
   deleteImmediately,
   onDeleteImmediatelyChange,
+  blockReason,
 }: DeleteUserConfirmProps) {
   const isBatch = count !== undefined;
+  const blocked = !!blockReason;
   return (
     <Modal
       isOpen={isOpen}
@@ -39,7 +47,7 @@ export function DeleteUserConfirm({
           </Button>
           <Button
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || blocked}
             className={styles.dangerBtn}
           >
             {loading ? (
@@ -79,7 +87,12 @@ export function DeleteUserConfirm({
               })
             : t('确定要注销该用户吗？')}
         </p>
-        {!isBatch && (
+        {blocked && (
+          <div className={styles.formNotice} role="alert">
+            {blockReason}
+          </div>
+        )}
+        {!isBatch && !blocked && (
           <div className={styles.deleteOption}>
             <input
               type="checkbox"

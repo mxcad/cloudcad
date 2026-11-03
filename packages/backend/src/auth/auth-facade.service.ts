@@ -157,6 +157,9 @@ export class AuthFacadeService implements IAuthFacade {
     return this.smsAuthHandler.registerByPhone(registerDto, req);
   }
 
+  @Audit(AuditAction.USER_LOGIN, ResourceType.USER, {
+    details: () => ({ loginMethod: 'wechat' }),
+  })
   async loginWithWechat(
     code: string,
     state: string

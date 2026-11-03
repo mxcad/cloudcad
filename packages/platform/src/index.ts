@@ -54,6 +54,32 @@ export type { ShareExpirationOption } from './share/expiry';
 // ── 分享链接绝对化（纯计算，origin 由调用端传入） ──
 export { toShareUrl } from './share/url';
 
+// ── 分享图纸框选区域「直角方形边框」检测（纯计算，两端共用） ──
+export { isRectSurroundedByBorder } from './share/border';
+export type { RectBox } from './share/border';
+
+// ── 分享海报（分享图片）布局（纯计算，canvas 绘制留端包） ──
+export {
+  SHARE_POSTER_SIZES,
+  SHARE_POSTER_DEFAULT_LAYOUT,
+  computeSharePosterLayout,
+} from './share/poster';
+export type {
+  SharePosterLayout,
+  SharePosterSize,
+  SharePosterRect,
+  SharePosterLayoutSpec,
+  SharePosterLayoutOptions,
+} from './share/poster';
+
+// ── 分享图纸框选区域 URL 编解码（纯计算，跨端共用） ──
+export {
+  encodeShareRegion,
+  decodeShareRegion,
+  appendShareRegionToUrl,
+} from './share/region';
+export type { ShareRegion } from './share/region';
+
 // ── 会员计价与配额（纯计算） ──
 export {
   orderAmountCents,
@@ -70,6 +96,16 @@ export {
   stripDrawingExtension,
   stripMxwebContainer,
 } from './files/name-rules';
+
+// ── 外部参照命名契约（逻辑名→磁盘名/访问路径/显示名，跨端唯一事实源） ──
+export {
+  isCadExtRefName,
+  extRefDiskFileName,
+  extRefBaseName,
+  extRefDiskCandidates,
+  extRefAccessPath,
+  extRefDisplayName,
+} from './files/ext-ref-naming';
 
 // ── 法务文本占位符（纯替换，品牌实体映射留端包） ──
 export { resolvePlaceholders } from './legal/placeholder';
@@ -186,6 +222,7 @@ export type {
 // 是必绑端副作用，留在各端 adapter，不进这里。
 export {
   PENDING_INTENT_KEY,
+  CHAIN_IDS,
   isPreconditionSatisfied,
   firstBlockedPrecondition,
   startPendingIntent,
@@ -199,4 +236,5 @@ export type {
   IntentDef,
   IntentFacts,
   IntentStorage,
+  IntentStart,
 } from './intentChain/chain';

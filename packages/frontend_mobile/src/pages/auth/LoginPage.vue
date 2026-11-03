@@ -225,6 +225,25 @@ onMounted(() => {
         <p class="auth-subtitle">{{ t('欢迎回来，请登录您的账户') }}</p>
       </div>
 
+      <!-- 注册送会员活动营销引导（活动开启时展示，点击去注册） -->
+      <button
+        v-if="config.registerGiftEnabled && config.registerGiftMonths > 0"
+        class="gift-banner"
+        type="button"
+        data-testid="register-gift-banner"
+        @click="goRegister"
+      >
+        <van-icon name="gift-o" />
+        <span class="gift-banner-text">
+          {{
+            t('注册即送 VIP1 免费试用 {months} 个月', {
+              months: String(config.registerGiftMonths),
+            })
+          }}
+        </span>
+        <van-icon name="arrow" class="gift-banner-arrow" />
+      </button>
+
       <van-tabs v-model:active="activeTab" class="auth-tabs">
         <van-tab :title="t('账号登录')" name="account">
           <div class="tab-body">

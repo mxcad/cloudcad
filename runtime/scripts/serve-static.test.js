@@ -502,3 +502,57 @@ test('proxyErrorSide: 按 headersSent 派生失败侧，不再硬编码', () => 
     '响应侧（响应头已发给客户端）'
   );
 });
+
+test('代理错误: 客户端主动断开（SSE 重连/关标签）不打 [代理错误] 噪声', async () => {
+  // 背景（2026-10-28 部署日志刷屏）：SSE 长连接 EventSource 3s 自动重连 / 关标签 /
+  // 切页会频繁触发 res 'close' → 代理主动 destroy 上游 → 上游随之抛 ECONNRESET/aborted，
+  // 旧代码把这种「客户端自己断开」的正常噪声也打成 [代理错误]。现按 clientClosed 门控：
+  // 客户端已断开（res 'close' 先触发）不打日志；真后端死亡时客户端仍连着，日志照常打。
+  // 后端接受连接后持续推送并保持长连接（模拟 SSE 流），不主动断开。
+  const backend = await new Promise((resolve) => {
+    const srv = http.createServer((req, res) => {
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write('data: ping\n\n');
+      // 保持连接：客户端 abort 后代理 destroy 上游才会触发 ECONNRESET
+    });
+    srv.listen(0, '127.0.0.1', () =>
+      resolve({
+        target: `http://127.0.0.1:${srv.address().port}`,
+        stop: () =>
+          new Promise((r) => {
+            if (srv.closeAllConnections) srv.closeAllConnections();
+            srv.close(r);
+          }),
+      })
+    );
+  });
+  try {
+    const lines = await withCapturedError(async () => {
+      await withProxyServer(backend.target, async (port) => {
+        // 客户端收到响应头后主动 abort（模拟 EventSource 断开 / 关标签）
+        await new Promise((resolve) => {
+          const req = http.get(
+            { host: '127.0.0.1', port, path: '/api/v1/users/events/stream' },
+            (res) => {
+              res.resume();
+              // 给后端一点时间把响应头发给代理（headersSent=true）再 abort
+              setImmediate(() => {
+                req.destroy();
+                resolve();
+              });
+            }
+          );
+          req.on('error', () => resolve());
+        });
+        // 等代理侧 res 'close' → destroy 上游 → 上游 error 事件落地
+        await new Promise((r) => setTimeout(r, 150));
+      });
+    });
+    assert.ok(
+      !lines.some((l) => l.includes('[代理错误]')),
+      `客户端主动断开不应打 [代理错误]，实际: ${JSON.stringify(lines)}`
+    );
+  } finally {
+    await backend.stop();
+  }
+});

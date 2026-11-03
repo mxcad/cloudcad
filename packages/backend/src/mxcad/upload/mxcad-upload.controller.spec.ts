@@ -145,6 +145,36 @@ describe('MxcadUploadController - 分片上传配额预检', () => {
     expect(result.ret).toBe(MxUploadReturn.kOk);
   });
 
+  it('非 CAD 扩展名（如 .png）拒绝上传，不写入分片也不入库', async () => {
+    const req = chunkRequest({ name: 'photo.png' });
+    await expect(
+      controller.uploadFile(
+        [{} as Express.Multer.File],
+        req.body as never,
+        req as never
+      )
+    ).rejects.toThrow('仅支持 .dwg, .dxf, .mxweb 文件');
+
+    expect(mockChunkUploadManager.uploadChunk).not.toHaveBeenCalled();
+    expect(mockDrawingIngestService.ingest).not.toHaveBeenCalled();
+    expect(
+      mockDrawingIngestService.assertQuotaBeforeUpload
+    ).not.toHaveBeenCalled();
+  });
+
+  it('CAD 扩展名（.dwg/.dxf/.mxweb，含大写）均放行', async () => {
+    for (const name of ['a.dwg', 'b.DXF', 'c.MXWEB']) {
+      const req = chunkRequest({ name });
+      await expect(
+        controller.uploadFile(
+          [{} as Express.Multer.File],
+          req.body as never,
+          req as never
+        )
+      ).resolves.toBeDefined();
+    }
+  });
+
   it('合并成功时调用 FILE_CREATE 审计入口', async () => {
     mockChunkUploadManager.uploadChunk.mockResolvedValue({
       ret: MxUploadReturn.kOk,

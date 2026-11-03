@@ -27,7 +27,7 @@ export default function MembershipBadge() {
     : '';
   const title = !Number.isFinite(membership.daysRemaining)
     ? `VIP${membership.tierLevel} · ${t('永久有效')}`
-    : `VIP${membership.tierLevel} · 有效期至 ${expireDate} · 剩余${formatRemaining(membership.daysRemaining)}`;
+    : `VIP${membership.tierLevel} · 有效期至 ${expireDate} · ${formatRemaining(membership.daysRemaining)}`;
 
   return (
     <span

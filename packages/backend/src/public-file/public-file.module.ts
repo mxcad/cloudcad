@@ -17,6 +17,7 @@ import { memoryStorage } from 'multer';
 import { PublicFileController } from './public-file.controller';
 import { PublicFileService } from './public-file.service';
 import { PublicFileUploadService } from './services/public-file-upload.service';
+import { ExtRefStorageService } from '../mxcad/external-ref/ext-ref-storage.service';
 import { CommonModule } from '../common/common.module';
 import { StorageManagementModule } from '../storage-management/storage-management.module';
 import { MxcadCoreModule } from '../mxcad/core/mxcad-core.module';
@@ -48,7 +49,7 @@ import { buildMulterUploadLimits } from '../common/utils/multer-upload-limits';
     }),
   ],
   controllers: [PublicFileController],
-  providers: [PublicFileService, PublicFileUploadService],
+  providers: [PublicFileService, PublicFileUploadService, ExtRefStorageService],
   exports: [PublicFileService, PublicFileUploadService],
 })
 export class PublicFileModule {}

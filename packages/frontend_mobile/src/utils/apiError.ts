@@ -97,10 +97,16 @@ export function unwrap<T>(res: { error?: unknown; data?: unknown }): T {
   return (data ?? {}) as T
 }
 
-/** 展示用错误文案：裸字符串 → Error.message → 错误体 message → 兜底文案 */
+/**
+ * 展示用错误文案：裸字符串 → 错误体 message → Error.message → 兜底文案。
+ * 业务错误优先透传后端本地化文案（后端按 Accept-Language 返回，如「已存在同名
+ * 项目」），比任何前端通用文案都具体；网络异常没有可读的后端文案（原始 message
+ * 是英文 "Failed to fetch" / "Network Error"），落回调用方兜底文案。
+ */
 export function errMsg(e: unknown, fallback: string): string {
   // SDK 的 res.error 可能是裸字符串（如 'quota exceeded'），直通而非塌成兜底文案
   if (typeof e === 'string' && e) return e
+  if (errorKind(e) === 'network') return fallback
   const body = asRecord(e)
   const message = body?.message
   if (typeof message === 'string' && message) return message

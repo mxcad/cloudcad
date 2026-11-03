@@ -195,6 +195,9 @@ export async function replaceExtRef(
     await uploadPublicExtRef(ctx.identifier, file.name, newFile, onProgress);
     return;
   }
+  // 替换已有参照（exists=true）：传 originalXrefName 保持文件名不变仅换内容
+  // （对齐 PC useExternalReferenceUpload.selectAndUploadFiles 替换模式）；上传缺失参照不传。
+  const originalXrefName = file.exists ? file.name : undefined;
   if (file.type === 'img') {
     const preload = await getPreloadingData(ctx.identifier);
     await uploadExtRefImage({
@@ -202,14 +205,30 @@ export async function replaceExtRef(
       file: newFile,
       srcDwgfileHash: preload?.hash || ctx.identifier,
       extRefFile: file.name,
+      updatePreloading: true,
+      originalXrefName,
     });
   } else {
-    await uploadExtRefDwg({ nodeId: ctx.identifier, file: newFile });
+    await uploadExtRefDwg({
+      nodeId: ctx.identifier,
+      file: newFile,
+      extRefFile: file.name,
+      originalXrefName,
+    });
   }
   onProgress?.(100);
 }
 
-/** 公开场景分片上传（1MB/片），对齐 ExternalRefUploadPopup 既有逻辑。 */
+/**
+ * 公开场景上传（完整文件单次）。
+ *
+ * 后端 `public-file/ext-reference/upload` 契约是**完整文件**：DTO 无 chunk/chunks
+ * 字段（UploadExtReferenceDto），FileInterceptor 整体写盘、service 按 extRefFile
+ * 整份覆盖。此前按 1MB 分片上传会把每个分片当完整文件覆盖写——最终只剩最后一片
+ * 内容，文件损坏；对 DWG 每个分片还各触发一次转换（浪费配额）。
+ * 对齐 PC useExternalReferenceUpload 公开分支（publicFileControllerUploadExtReference
+ * 整体上传，不分片），大文件与超限由后端 extRefMaxFileSize 统一拦截。
+ */
 async function uploadPublicExtRef(
   hash: string,
   name: string,
@@ -217,33 +236,9 @@ async function uploadPublicExtRef(
   onProgress?: (pct: number) => void
 ): Promise<void> {
   const safeName = sanitizeFileName(name);
-  const chunkSize = 1 * 1024 * 1024;
-  if (file.size <= chunkSize) {
-    const result = await publicFileControllerUploadExtReference({
-      body: { file, srcFileHash: hash, extRefFile: safeName } as never,
-    });
-    unwrap(result);
-    onProgress?.(100);
-    return;
-  }
-  const totalChunks = Math.ceil(file.size / chunkSize);
-  let uploadedBytes = 0;
-  for (let i = 0; i < totalChunks; i++) {
-    const start = i * chunkSize;
-    const end = Math.min(start + chunkSize, file.size);
-    const chunk = file.slice(start, end);
-    const result = await publicFileControllerUploadExtReference({
-      body: {
-        file: chunk,
-        srcFileHash: hash,
-        extRefFile: safeName,
-        chunk: i,
-        chunks: totalChunks,
-      } as never,
-    });
-    unwrap(result);
-    uploadedBytes += chunk.size;
-    onProgress?.(Math.min(99, Math.round((uploadedBytes / file.size) * 100)));
-  }
+  const result = await publicFileControllerUploadExtReference({
+    body: { file, srcFileHash: hash, extRefFile: safeName } as never,
+  });
+  unwrap(result);
   onProgress?.(100);
 }

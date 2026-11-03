@@ -15,6 +15,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -28,13 +29,21 @@ export interface Response<T> {
 }
 
 @Injectable()
-export class ResponseInterceptor<T> implements NestInterceptor<T, Response<T>> {
+export class ResponseInterceptor<T>
+  implements NestInterceptor<T, Response<T> | StreamableFile> {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<Response<T>> {
+  ): Observable<Response<T> | StreamableFile> {
     return next.handle().pipe(
       map((data) => {
+        // 流式/文件响应不包装：下载端点返回 StreamableFile，若包成
+        // {code,message,data} JSON 信封，浏览器拿到的是 JSON 而非文件字节，
+        // <img> 内联渲染 / <a download> 下载全坏（实例：反馈附件下载
+        // /api/v1/feedback/attachments/:id/download）。
+        if (data instanceof StreamableFile) {
+          return data;
+        }
         const i18nCtx = I18nContext.current(context);
         const message = i18nCtx?.t('success.operation') ?? '操作成功';
         return {

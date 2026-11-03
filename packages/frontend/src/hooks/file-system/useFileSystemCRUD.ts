@@ -74,8 +74,8 @@ const validateFolderName = (
     return { valid: false, error: t('名称不能为空') };
   }
 
-  if (trimmedName.length > 255) {
-    return { valid: false, error: t('名称长度不能超过 255 个字符') };
+  if (trimmedName.length > 100) {
+    return { valid: false, error: t('名称长度不能超过 100 个字符') };
   }
 
   const illegalChars = /[<>:"|?*/\\]/;

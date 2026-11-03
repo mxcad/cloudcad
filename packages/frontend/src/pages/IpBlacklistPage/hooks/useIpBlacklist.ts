@@ -37,11 +37,15 @@ function toEntry(raw: IpBlacklistEntryResponseDto): IpBlacklistEntry {
 /**
  * IP 黑名单列表查询（分页 + keyword 模糊搜索）
  */
-export function useIpBlacklistList(page: number, keyword?: string) {
+export function useIpBlacklistList(
+  page: number,
+  keyword?: string,
+  pageSize: number = IP_BLACKLIST_PAGE_SIZE
+) {
   const { data, isLoading, isFetching, refetch } = useQuery({
     queryKey: queryKeys.ipBlacklist.list({
       page,
-      pageSize: IP_BLACKLIST_PAGE_SIZE,
+      pageSize,
       keyword,
     }),
     queryFn: async () => {
@@ -49,7 +53,7 @@ export function useIpBlacklistList(page: number, keyword?: string) {
         throwOnError: true,
         query: {
           page,
-          pageSize: IP_BLACKLIST_PAGE_SIZE,
+          pageSize,
           ...(keyword ? { keyword } : {}),
         },
       });
@@ -58,7 +62,7 @@ export function useIpBlacklistList(page: number, keyword?: string) {
         items: (body?.items ?? []).map(toEntry),
         total: body?.total ?? 0,
         page: body?.page ?? page,
-        pageSize: body?.pageSize ?? IP_BLACKLIST_PAGE_SIZE,
+        pageSize: body?.pageSize ?? pageSize,
       };
     },
     placeholderData: (prev) => prev,

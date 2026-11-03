@@ -9,6 +9,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./files/ext-ref-naming": {
+      "types": "./dist/files/ext-ref-naming.d.ts",
+      "default": "./dist/files/ext-ref-naming.js"
+    },
+    "./files/name-rules": {
+      "types": "./dist/files/name-rules.d.ts",
+      "default": "./dist/files/name-rules.js"
+    },
+    "./runtime-config/defaults": {
+      "types": "./dist/runtime-config/defaults.d.ts",
+      "default": "./dist/runtime-config/defaults.js"
     }
   },
   "scripts": {

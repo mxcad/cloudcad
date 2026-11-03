@@ -23,6 +23,16 @@ export type SaveFormat = 'dwg' | 'dxf' | 'mxweb';
 export const saveAsToCloudTrigger = ref(0);
 export const saveLoginRequiredTrigger = ref(0);
 export const saveToCloudTrigger = ref(0);
+/**
+ * 保存被拒（无云端节点 / 无保存权限 / 已删除）时被动弹出另存为面板的请求。
+ * 与 saveAsToCloudTrigger（用户主动「另存为」）区分：被拒弹出必须带原因，
+ * 走面板常驻提示（notice）而非无声弹面板，用户才知道自己为什么停在另存为。
+ * reason = 被拒原因；seq 自增确保同一原因也能重复触发（ref 对象值变化才触发 watch）。
+ */
+export const saveAsRejectTrigger = ref<{ reason: string; seq: number }>({
+  reason: '',
+  seq: 0,
+});
 
 interface ProjectInfo {
   id: string;

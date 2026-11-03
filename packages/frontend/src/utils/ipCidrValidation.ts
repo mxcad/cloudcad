@@ -153,3 +153,39 @@ export function isValidIpOrCidr(value: string): boolean {
   }
   return parseIpToBigInt(value) !== null;
 }
+
+/**
+ * 网络前缀掩码（主机位全 0）：返回高 bits 位为 1 的掩码
+ */
+function prefixMask(bits: number, version: 4 | 6): bigint {
+  const maxBits = version === 4 ? 32 : 128;
+  if (bits === 0) return 0n;
+  const hostBits = maxBits - bits;
+  const full = (1n << BigInt(maxBits)) - 1n;
+  return full ^ ((1n << BigInt(hostBits)) - 1n);
+}
+
+/**
+ * 判断 ip 是否命中 cidr（版本必须一致）
+ */
+export function cidrContains(cidr: string, ip: string): boolean {
+  const parsed = parseCidr(cidr);
+  if (!parsed) return false;
+  const ipParsed = parseIpToBigInt(ip);
+  if (!ipParsed || ipParsed.version !== parsed.version) return false;
+  return (ipParsed.value & prefixMask(parsed.bits, parsed.version)) === parsed.base;
+}
+
+/**
+ * 判断 IP/CIDR 条目是否命中环回地址（127.0.0.0/8 或 ::1/128）——
+ * 与后端 isLoopbackEntry 行为对齐（BUG-ADMIN-001：环回是管理员白名单
+ * 本机自救通道，拉黑会锁死本机管理通道且无安全价值）。
+ */
+export function isLoopbackIpOrCidr(value: string): boolean {
+  const trimmed = value.trim();
+  if (isCidr(trimmed)) {
+    return cidrContains(trimmed, '127.0.0.1') || cidrContains(trimmed, '::1');
+  }
+  const normalized = normalizeIpInput(trimmed);
+  return normalized === '::1' || normalized.startsWith('127.');
+}

@@ -108,6 +108,19 @@ export function useSave() {
       };
     }
 
+    // 无云端节点（新建本地图纸）：直接转「另存为到云图」。必须在 getMxwebBlob 之前
+    // 判定——新建图纸没有保存对象，先生成 mxweb blob 是徒劳往返，且引擎对空模板的
+    // saveFile 回调可能不触发，导致 save() 永不 resolve、分享「先保存到云端并分享」
+    // 确认后只闪一个 loading toast、另存为面板不打开（无反应）。对齐 PC saveCurrentFile：
+    // PC 对无 projectId/无 fileId 图纸直接 showSaveAsDialog，从不先生成 blob。
+    if (!state.fileId) {
+      return {
+        success: false,
+        needSaveAs: true,
+        message: t('请另存为到云图'),
+      };
+    }
+
     saving.value = true;
     showLoadingToast({
       message: t('正在保存文件...'),
@@ -136,16 +149,6 @@ export function useSave() {
       }
 
       const blob = await getMxwebBlob();
-
-      if (!state.fileId) {
-        saving.value = false;
-        closeToast();
-        return {
-          success: false,
-          needSaveAs: true,
-          message: t('请另存为到云图'),
-        };
-      }
 
       // 库源：有库管理权限则库内原位保存（对齐 PC saveFile 的 library 分支），
       // 无权限引导另存为到其他位置，不动库原件。放在文件系统节点存在性检查之前——

@@ -59,6 +59,9 @@ model User {
   paymentOrders        PaymentOrder[]
   refundApplications   RefundApplication[]
   refundReviews        RefundApplication[] @relation("RefundReviewer")
+  feedbacks            Feedback[]
+  feedbackRewards      FeedbackReward[]
+  feedbackAttachments  FeedbackAttachment[]
 
   @@index([deletedAt])
   @@map("users")
@@ -458,6 +461,12 @@ enum Permission {
   SYSTEM_CONFIG_WRITE
   SYSTEM_IP_BLACKLIST_MANAGE
   SYSTEM_IP_WHITELIST_MANAGE
+  /// 用户反馈：查看反馈列表/详情
+  SYSTEM_FEEDBACK_READ
+  /// 用户反馈：改状态、采纳/驳回、打标
+  SYSTEM_FEEDBACK_MANAGE
+  /// 用户反馈：发放/撤销奖励（客服可用）
+  SYSTEM_FEEDBACK_REWARD
   LIBRARY_DRAWING_MANAGE
   LIBRARY_BLOCK_MANAGE
   PROJECT_CREATE
@@ -586,6 +595,13 @@ enum AuditAction {
   NOTICE_DELETE
   // 通道测试动作（ADR-0082 D9：测试发送外发真实消息属敏感操作，承接 ADR-0079 CONFIG 类审计）
   CHANNEL_TEST
+  // —— 用户反馈：采纳 / 发放奖励 / 撤销奖励（人工发奖必须留痕）——
+  FEEDBACK_ADOPT
+  FEEDBACK_REWARD_ISSUE
+  FEEDBACK_REWARD_REVOKE
+  // —— 用户反馈附件：上传 / 删除（证据文件管理留痕，ADR-0085）——
+  FEEDBACK_ATTACHMENT_UPLOAD
+  FEEDBACK_ATTACHMENT_DELETE
 }
 
 enum ResourceType {
@@ -601,6 +617,8 @@ enum ResourceType {
   IpWhitelistEntry
   // 通知中心公告（notice-center）
   NOTICE
+  // 用户反馈（feedback 模块）
+  FEEDBACK
 }
 
 enum RoleCategory {
@@ -789,6 +807,174 @@ model ConfigKeyRegistry {
   updatedAt    DateTime @updatedAt
 
   @@map("config_key_registry")
+}
+
+// —— 用户反馈（feedback 模块）——
+// 类型：BUG / SUGGESTION / COMPLAINT / OTHER
+enum FeedbackType {
+  BUG
+  SUGGESTION
+  COMPLAINT
+  OTHER
+}
+
+// 处理状态：提交→处理中→（采纳|驳回），用户可撤回（CLOSED）
+enum FeedbackStatus {
+  PENDING
+  REVIEWING
+  ADOPTED
+  REJECTED
+  CLOSED
+}
+
+// 提交来源：PC / 移动端
+enum FeedbackSource {
+  PC
+  MOBILE
+}
+
+// 奖励状态（独立于反馈状态）：NONE=无需奖励；PENDING=待发放；
+// ISSUED=已发放（写 UserMembership）；REVOKED=撤销（误采纳/作弊）
+enum RewardStatus {
+  NONE
+  PENDING
+  ISSUED
+  REVOKED
+}
+
+// 用户反馈主记录。匿名提交允许（submitterId=null），奖励不可匿名：
+// 匿名被采纳后 claimRequired=true，须凭 feedbackCode 联系客服注册/绑定账号后发放。
+model Feedback {
+  id            String         @id @default(cuid())
+  type          FeedbackType
+  status        FeedbackStatus @default(PENDING)
+  title         String
+  content       String
+  source        FeedbackSource
+
+  // 提交者：登录用户有 submitterId；匿名=null
+  submitterId   String?
+  submitter     User?          @relation(fields: [submitterId], references: [id], onDelete: SetNull)
+  contact       String? // 匿名可选填（邮箱/手机），用于回访与查询校验
+  anonTokenHash String? // 匿名设备凭据的 HMAC（不采集指纹，只存 hash）
+  ip            String?
+  userAgent     String?
+  pageUrl       String?
+
+  // 匿名用户凭此码查询（高熵，防枚举）
+  feedbackCode  String         @unique // 形如 FB-YYYYMMDD-XXXXXXXX
+
+  // 处理（管理端）
+  reviewedById  String?
+  reviewedAt    DateTime?
+  adoptNote     String? // 采纳说明（可展示给用户）
+  rejectReason  String?
+
+  // 奖励
+  rewardStatus  RewardStatus   @default(NONE)
+  claimRequired Boolean        @default(false) // 匿名被采纳后 true，须认领
+  reward        FeedbackReward?
+  attachments   FeedbackAttachment[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status, createdAt])
+  @@index([submitterId, createdAt])
+  @@index([ip, createdAt])
+  @@index([type, status])
+  @@map("feedbacks")
+}
+
+// 奖励凭据 + 审计：发放时经 MembershipService.activate 写 UserMembership，
+// 本记录只做业务凭据与审计留痕（不新建会员表）。
+model FeedbackReward {
+  id            String       @id @default(cuid())
+  feedbackId    String       @unique
+  feedback      Feedback     @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  // 发放目标账号（匿名认领后回填；登录用户=反馈提交者）
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // 采纳时选定的档位（vipTierLevel 对应 VipTier.level；durationDays 7/30/90）
+  vipTierLevel  Int
+  durationDays  Int
+  status        RewardStatus @default(PENDING)
+
+  issuedById    String? // 客服/管理员
+  issuedAt      DateTime?
+  remark        String? // 客服核实备注（必填）
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("feedback_rewards")
+}
+
+// 附件类型：图片 / 文档 / 图纸（mxweb/dwg/dxf）
+enum FeedbackAttachmentType {
+  IMAGE
+  DOCUMENT
+  DRAWING
+}
+
+// 附件存在形态（ADR-0085）：
+// FILE=实际文件副本（独立存储在附件存储，防图纸缓存淘汰丢失）；
+// REFERENCE=图纸引用（仅存 nodeId，引用已有项目/个人空间图纸，不重复上传）
+enum FeedbackAttachmentKind {
+  FILE
+  REFERENCE
+}
+
+// 反馈证据附件（ADR-0085）。两种形态：
+// - FILE：上传的图片/文档/图纸副本，物理文件存 filesDataPath/attachments/{YYYYMM}/{assetId}/
+// - REFERENCE：引用已有图纸（项目/个人空间），仅存 nodeId，不重复上传
+// 上传时 feedbackId 可空（孤儿，未关联任何反馈）；反馈提交时绑定归属，孤儿超时由清理任务删除。
+model FeedbackAttachment {
+  id            String   @id @default(cuid())
+  feedbackId    String?
+  feedback      Feedback? @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  type          FeedbackAttachmentType
+  kind          FeedbackAttachmentKind
+
+  // 实际文件副本（kind=FILE）
+  storagePath   String? // 相对 filesDataPath 的路径
+  fileName      String?
+  mimeType      String?
+  size          Int?
+
+  // 图纸标识（kind=REFERENCE 或 DRAWING 型副本）
+  nodeId        String?
+  fileHash      String?
+
+  // 内容寻址去重：文件内容 MD5（物理文件按 {contentHash[:2]}/{contentHash} 存放，
+  // 相同内容跨用户/匿名共享一份；记录仍独立（归属/绑定不变），storagePath 指向共享文件）
+  contentHash   String?
+
+  // 图纸框选区域（CAD 世界坐标 "x1,y1,x2,y2"；分享图纸同款）。非空时打开图纸定位到该区域。
+  region        String?
+
+  // 缩略图（图片/图纸；管理端列表预览）
+  thumbnailPath String?
+
+  // 归属校验：匿名上传者 token hash（匿名查询/认领校验），登录用户 uploadedById
+  uploaderTokenHash String?
+  uploadedById      String?
+  uploadedBy        User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  ip                String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([feedbackId])
+  @@index([uploadedById, createdAt])
+  @@index([contentHash])
+  @@index([createdAt])
+  @@map("feedback_attachments")
 }
 
 enum AlertLevel {

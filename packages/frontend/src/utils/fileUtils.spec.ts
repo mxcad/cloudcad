@@ -428,4 +428,14 @@ describe('fileUtils', () => {
       expect(getOriginalFileUrl(file)).toBe('');
     });
   });
+
+  describe('validateFolderName — 名称长度上限对齐后端 @Length(1,100)', () => {
+    it('100 字符内合法；101 字符拒绝（BUG-FS-04：前端 255 与后端 100 不一致）', async () => {
+      const { validateFolderName } = await import('./fileUtils');
+      expect(validateFolderName('a'.repeat(100)).valid).toBe(true);
+      const over = validateFolderName('a'.repeat(101));
+      expect(over.valid).toBe(false);
+      expect(over.error).toBe('名称长度不能超过 100 个字符');
+    });
+  });
 });

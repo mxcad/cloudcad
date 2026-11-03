@@ -14,6 +14,7 @@ import { useRouter } from 'vue-router'
 import { useVoerkaI18n } from '@voerkai18n/vue'
 import { t } from '@/languages'
 import { useRuntimeConfig } from '@/composables/useRuntimeConfig'
+import { backOrFallback } from '@/utils/backNavigation'
 import {
   loadLegalText,
   LEGAL_COPYRIGHT_HOLDER,
@@ -55,11 +56,9 @@ async function load() {
 }
 
 function goBack() {
-  if (window.history.length > 1) {
-    router.back()
-  } else {
-    void router.replace('/login')
-  }
+  // 深链直开合规页时前一条记录与当前 URL 相同，back() 是空操作——
+  // 统一走 backOrFallback 判定（无有效前一条时落 /login）
+  backOrFallback(router, '/login')
 }
 
 onMounted(load)

@@ -159,6 +159,36 @@ button.link-btn {
   color: var(--text-tertiary);
 }
 
+/* 注册送会员活动营销引导（LoginPage / RegisterPage 共用）。
+   LoginPage 用 button（点击跳注册），RegisterPage 用 div（已在此页，纯提示）；
+   并列选择器让两种标签共用同一声明块（div 不受 button reset 影响，button 靠
+   button.gift-banner (0,1,1) 与 reset 打平后按源序胜出）。 */
+button.gift-banner,
+div.gift-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: rgba(0, 169, 158, 0.08);
+  color: var(--accent);
+  font-size: var(--font-size-body-lg);
+  font-weight: 500;
+  cursor: pointer;
+
+  .gift-banner-text {
+    flex: 1;
+    text-align: center;
+  }
+
+  .gift-banner-arrow {
+    flex-shrink: 0;
+  }
+}
+
 /* flex-wrap 必须开：.legal-links 用 flex-basis:100% 独占一行；nowrap 时它不但不换行，
    还会把同行的「还没有账号？/立即注册」挤成逐字竖排（390px 视口实测） */
 .auth-footer {

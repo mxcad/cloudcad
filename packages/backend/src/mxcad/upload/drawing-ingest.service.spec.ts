@@ -555,6 +555,8 @@ describe('DrawingIngestService', () => {
         srcPath: '/tmp/upload.dwg',
         fileHash: 'hash1',
         createPreloadingData: true,
+        // 无 nodeId 场景用文件 hash 兜底落盘目录标识（失败现场仍落盘）
+        debugNodeId: 'hash1',
       });
       expect(service.getNoNodeConversionStatus('hash1')).toBe('COMPLETED');
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
@@ -823,6 +825,8 @@ describe('DrawingIngestService', () => {
         srcPath: '/tmp/hash1.dwg',
         fileHash: 'hash1',
         createPreloadingData: true,
+        // 无 nodeId 场景用文件 hash 兜底落盘目录标识（失败现场仍落盘）
+        debugNodeId: 'hash1',
       });
       expect(service.getNoNodeConversionStatus('hash1')).toBe('COMPLETED');
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(

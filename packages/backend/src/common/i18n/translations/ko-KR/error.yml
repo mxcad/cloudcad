@@ -259,6 +259,7 @@ password_policy:
 ip_blacklist:
   invalid_ip: 잘못된 IP 또는 CIDR 형식입니다
   duplicate_entry: 해당 IP/CIDR는 이미 블랙리스트에 있습니다
+  loopback_not_allowed: 루프백 주소는 IP 블랙리스트에 추가할 수 없습니다
   blocked: 접근이 거부되었습니다
   not_found: 블랙리스트 항목이 존재하지 않습니다
 ip_whitelist:
@@ -312,6 +313,7 @@ billing:
   refund_failed_state_restored: 환불 요청이 실패했습니다. 주문 상태가 복원되었습니다
   downgrade_not_allowed: 등급을 낮출 수 없습니다. 업그레이드하거나 현재 요금제를 갱신해주세요.
   amount_below_minimum: 주문 금액이 결제 게이트웨이 최소 금액 미만입니다. 등급 가격 설정을 확인해주세요.
+  payment_disabled: 결제 기능이 꺼져 있어 현재 구매 또는 갱신을 할 수 없습니다
   refund_apply_not_allowed: 현재 주문 상태에서는 환불을 신청할 수 없습니다
   refund_apply_already_pending: 이 주문에는 이미 검토 중인 환불 신청이 있습니다
   refund_application_not_found: 환불 신청을 찾을 수 없습니다
@@ -447,3 +449,39 @@ mxcad_engine_extra:
   ini_read_failed: "엔진 설정 파일 읽기 실패: {path}"
   ini_parse_failed: "엔진 설정 파일이 유효한 JSON이 아닙니다: {path}"
   ini_write_failed: "엔진 설정 파일 쓰기 실패: {path}"
+feedback:
+  anonymous_disabled: 익명 피드백이 현재 비활성화되어 있습니다. 로그인 후 제출해 주세요.
+  anon_limit_exceeded: 오늘의 익명 피드백 제출 한도에 도달했습니다. 로그인 후 계속하세요.
+  user_limit_exceeded: 오늘의 피드백 제출 한도에 도달했습니다. 내일 다시 시도하세요.
+  query_rate_limited: 조회가 너무 잦습니다. 잠시 후 다시 시도하세요.
+  content_too_short: 피드백 내용이 너무 짧습니다. 더 자세히 작성해 주세요.
+  content_too_long: 피드백 내용이 너무 깁니다. 줄여 주세요.
+  code_not_found: 피드백을 찾을 수 없거나 조회 코드가 잘못되었습니다.
+  not_found: 피드백을 찾을 수 없습니다.
+  status_locked_adopted: 채택된 피드백은 상태를 변경할 수 없습니다. 철회하려면 보상을 처리하세요.
+  reject_reason_required: 거부 사유를 입력해야 합니다.
+  already_adopted: 이 피드백은 이미 채택되었습니다.
+  reward_exists: 이 피드백에 대한 보상 기록이 이미 존재합니다.
+  reward_not_found: 보상 기록을 찾을 수 없습니다.
+  reward_not_pending: 이 보상은 이미 처리되어 다시 지급할 수 없습니다.
+  reward_already_revoked: 이 보상은 이미 철회되었습니다.
+  remark_required: 보상 지급을 위해 고객 지원 확인 메모를 입력해야 합니다.
+  tier_not_found: 멤버십 등급이 존재하지 않습니다.
+  user_not_found: 대상 계정이 없거나 비활성화되었습니다.
+  invalid_tier: 보상 등급은 1-3이어야 합니다.
+  invalid_duration: 보상 기간은 7/30/90일이어야 합니다.
+  attachment_missing: 업로드할 파일을 선택하세요
+  attachment_type_unsupported: 지원하지 않는 첨부 유형입니다
+  attachment_too_large: 첨부 파일 크기 제한을 초과했습니다
+  attachment_total_exceeded: 첨부 파일 총 수가 제한을 초과했습니다
+  attachment_image_exceeded: 이미지 첨부 파일 수가 제한을 초과했습니다
+  attachment_drawing_exceeded: 도면 첨부 파일 수가 제한을 초과했습니다
+  attachment_document_exceeded: 문서 첨부 파일 수가 제한을 초과했습니다
+  attachment_invalid_image: 잘못된 이미지 파일입니다. 다시 업로드하세요
+  attachment_drawing_not_found: 도면을 찾을 수 없습니다
+  attachment_reference_login_required: 기존 도면을 참조하려면 로그인하세요
+  attachment_file_missing: 첨부 파일을 찾을 수 없습니다
+  attachment_not_found: 첨부를 찾을 수 없습니다
+  attachment_not_owner: 첨부가 현재 사용자 소유가 아닙니다
+  attachment_reference_no_file: 도면 참조는 도면 API를 통해 다운로드하세요
+  attachment_forbidden: 이 첨부 파일을 다운로드할 권한이 없습니다

@@ -1,7 +1,8 @@
-import { showConfirmDialog } from 'vant';
+import { showConfirmDialog, showToast } from 'vant';
 import { t } from '@/languages';
 import { useEditorStore } from '@/stores/editor';
 import { useSave } from '@/composables/useSave';
+import { saveAsRejectTrigger } from '@/composables/useSaveAs';
 import { confirmExitCollaborationIfNeeded } from '@/composables/useCooperate';
 
 /**
@@ -31,7 +32,22 @@ export function useOpenGuard() {
         cancelButtonText: t('不保存'),
       });
       const res = await save();
-      return res.success;
+      if (!res.success) {
+        // 不能静默 return false：用户点「保存」后弹窗关闭、再无任何反馈，
+        // 看起来就像「调用保存方法无效」。对齐 PC checkAndConfirmUnsavedChanges：
+        // 保存被拒（无云端节点 / 无权限 / 已删除）→ 弹出另存为面板并说明原因，
+        // 用户能继续把图纸另存为到云图；其他失败 → toast 原因。
+        if (res.needSaveAs) {
+          saveAsRejectTrigger.value = {
+            reason: res.message ?? '',
+            seq: saveAsRejectTrigger.value.seq + 1,
+          };
+        } else if (res.message) {
+          showToast(res.message);
+        }
+        return false;
+      }
+      return true;
     } catch {
       // 用户选「不保存」：丢弃更改，继续打开
       return true;

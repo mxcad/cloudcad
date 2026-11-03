@@ -86,4 +86,17 @@ const fire = (server, files) => files.forEach((f) => server.state.changeHandlers
   assert.deepEqual(server.state.sent, [{ type: 'full-reload', path: '*' }])
 }
 
-console.log('✔ apiSdkHotReload：4 组回归全部通过')
+// ── 5. Windows 反斜杠路径仍触发（chokidar 在 Windows 返回反斜杠，已实证） ──
+{
+  const server = makeServer()
+  apiSdkHotReload().configureServer(server)
+  // chokidar@4 在 Windows watch 回调返回 `D:\...\sdk.gen.ts`（反斜杠），
+  // 插件若只对 apiSdkSrc 归一化、不对 file 归一化，startsWith 永远不匹配。
+  fire(server, [`${SDK_SRC.replace(/\//g, '\\')}/client.gen.ts`])
+  await sleep(150)
+
+  assert.equal(server.state.invalidated.length, 1, '反斜杠路径必须同样触发失效（Windows chokidar 返回反斜杠）')
+  assert.deepEqual(server.state.sent, [{ type: 'full-reload', path: '*' }], '反斜杠路径同样触发整页刷新')
+}
+
+console.log('✔ apiSdkHotReload：5 组回归全部通过')

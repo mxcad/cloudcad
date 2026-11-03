@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, ConflictException, InternalServerErrorException, Inject } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException, InternalServerErrorException, HttpException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WechatService } from './wechat.service';
@@ -37,6 +37,10 @@ export class AccountBindingService implements IAccountBindingService {
       this.logger.log(`绑定邮箱验证码已发送: ${email}`);
       return { message: I18nContext.current()?.t('success.email_bind_sent') ?? '验证码已发送到您的邮箱' };
     } catch (error) {
+      // BUG-USER-01：保留业务异常分类（发送过于频繁 400 等），勿统一吞成 500。
+      // 验证码服务自身抛出的 BadRequestException（限流/日限/IP限）应原样透出，
+      // 只有真正的发送失败（SMTP 抛错）才落 500。
+      if (error instanceof HttpException) { throw error; }
       const err = error as Error;
       this.logger.error(`发送绑定邮箱验证码失败: ${err.message}`);
       throw new InternalServerErrorException(I18nContext.current()?.t('error.auth.send_code_failed') ?? '发送验证码失败，请稍后重试');
@@ -94,6 +98,8 @@ export class AccountBindingService implements IAccountBindingService {
       this.logger.log(`换绑验证码已发送：userId=${userId}, phone=${user.phone}`);
       return { success: true, message: I18nContext.current()?.t('success.phone_rebind_code_sent') ?? '验证码已发送到原手机号' };
     } catch (error) {
+      // BUG-USER-01：保留业务异常分类（短信 60s 限流/日限/IP限 均为 400），勿统一吞成 500。
+      if (error instanceof HttpException) { throw error; }
       const err = error as Error;
       this.logger.error(`发送换绑验证码失败：${err.message}`);
       throw new InternalServerErrorException(I18nContext.current()?.t('error.auth.send_code_failed') ?? '发送验证码失败，请稍后重试');
@@ -155,6 +161,8 @@ export class AccountBindingService implements IAccountBindingService {
       this.logger.log(`邮箱换绑验证码已发送：userId=${userId}, email=${user.email}`);
       return { success: true, message: I18nContext.current()?.t('success.email_rebind_code_sent') ?? '验证码已发送到原邮箱' };
     } catch (error) {
+      // BUG-USER-01：保留业务异常分类（发送过于频繁 400），勿统一吞成 500。
+      if (error instanceof HttpException) { throw error; }
       const err = error as Error;
       this.logger.error(`发送邮箱换绑验证码失败：${err.message}`);
       throw new InternalServerErrorException(I18nContext.current()?.t('error.auth.send_code_failed') ?? '发送验证码失败，请稍后重试');

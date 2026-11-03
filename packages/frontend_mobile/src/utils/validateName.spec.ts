@@ -65,4 +65,11 @@ describe('validateName（移动端薄适配：reasonCode → i18n 文案）', ()
       expect((r.error ?? '').length).toBeGreaterThan(0)
     }
   })
+
+  it('长度上限对齐后端 100（BUG-FS-04）：101 字符拒绝且文案含 100', () => {
+    expect(validateName('a'.repeat(100)).valid).toBe(true)
+    const over = validateName('a'.repeat(101))
+    expect(over.valid).toBe(false)
+    expect(over.error).toContain('100')
+  })
 })

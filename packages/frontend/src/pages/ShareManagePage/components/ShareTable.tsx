@@ -7,6 +7,7 @@ import {
   Edit3,
   ArrowUp,
   ArrowDown,
+  Image,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
@@ -41,7 +42,11 @@ interface ShareTableProps {
   onCopy: (linkUrl: string, token?: string) => void;
   onEditExpiry: (token: string, expiresAt: string | null) => void;
   onRevoke: (token: string) => void;
+  /** 预览分享图片（打开 ShareDialog 自动预览，下载在预览弹框内） */
+  onPreviewPoster: (item: ShareListItemDto) => void;
   onPageChange: (newPage: number) => void;
+  /** 每页条数变化回调（切换后应重置页码并重新加载） */
+  onPageSizeChange?: (pageSize: number) => void;
   /** 滚动分页（滚动加载；页脚跳页与滚动并存） */
   onScrollPageChange?: (page: number, direction: 'prev' | 'next') => void;
   /** 列表第一项所属页码（prev 触发防重复加载已存在页） */
@@ -72,7 +77,9 @@ export const ShareTable: React.FC<ShareTableProps> = ({
   onCopy,
   onEditExpiry,
   onRevoke,
+  onPreviewPoster,
   onPageChange,
+  onPageSizeChange,
   onScrollPageChange,
   minLoadedPage,
   loadError,
@@ -101,13 +108,15 @@ export const ShareTable: React.FC<ShareTableProps> = ({
         onToggleSelectAll={onToggleSelectAll}
         onRubberBandSelect={onRubberBandSelect}
         onPageChange={onPageChange}
+        showSizeChanger
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={[30, 50, 100]}
         onScrollPageChange={onScrollPageChange}
         minLoadedPage={minLoadedPage}
         loadError={loadError}
         onRetryLoadMore={onRetryLoadMore}
         loading={loading}
         selectedRowClassName={styles.rowSelected}
-        paginationSimple
         renderHeader={() => (
           <>
             <th className="text-left">{t('文件')}</th>
@@ -207,6 +216,13 @@ export const ShareTable: React.FC<ShareTableProps> = ({
                       )
                     }
                     tooltip={t('修改有效期')}
+                  />
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    icon={Image}
+                    onClick={() => onPreviewPoster(item)}
+                    tooltip={t('预览分享图片')}
                   />
                   <Button
                     variant="secondary"

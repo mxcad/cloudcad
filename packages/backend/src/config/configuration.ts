@@ -352,6 +352,11 @@ export default (): AppConfig => {
     // 版本提交（.png 不在 MX_IGNORE_PATTERNS 内）
     avatarPath: resolvePath(process.env.AVATAR_PATH || 'data/avatars'),
     brandAssetPath: resolvePath(process.env.BRAND_ASSET_PATH || 'data/brand'),
+    // 反馈附件存储：非图纸资产，刻意不落 filesDataPath（SVN 工作副本，会被
+    // DirectoryAllocator 当月份目录列举并卷入版本提交，同 avatar/brand 解耦先例）
+    feedbackAttachmentPath: resolvePath(
+      process.env.FEEDBACK_ATTACHMENT_PATH || 'data/feedback-attachments'
+    ),
     mxRepoPath: resolvePath(process.env.MX_REPO_PATH || 'data/mx-repo'),
     mxcadUploadPath: resolvePath(
       process.env.MXCAD_UPLOAD_PATH || 'data/uploads'
@@ -420,9 +425,11 @@ export default (): AppConfig => {
     // 超时配置（单位：毫秒）
     timeout: {
       fileConversion:
-        // 默认 3 分钟，与 conversion-service PRIORITY_CONFIG 1/2 级超时（180000ms）对齐：
-        // 大图纸（十几 MB DWG、含外部参照）常超 60s，旧默认会把慢转换误杀成「文件转换超时」
-        parseInt(process.env.TIMEOUT_FILE_CONVERSION || '180000', 10) || 180000,
+        // 默认 5 分钟，与 conversion-service PRIORITY_CONFIG 档位超时（300000ms）对齐：
+        // 大图纸（十几 MB DWG、含外部参照）常超 60s，旧 60s/3min 默认会把慢转换误杀成
+        // 「文件转换超时」；5 分钟是「真正转换时长」的单一 env 入口（TIMEOUT_FILE_CONVERSION），
+        // 进程内模式与 conversion-service HTTP 模式共用（HTTP 侧经 forward.timeoutMs 透传覆盖档位）。
+        parseInt(process.env.TIMEOUT_FILE_CONVERSION || '300000', 10) || 300000,
       distributedLock:
         parseInt(process.env.TIMEOUT_DISTRIBUTED_LOCK || '5000', 10) || 5000, // 5秒
       rateLimiter:

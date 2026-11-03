@@ -8,15 +8,8 @@ import { getMxwebBlob } from '../../../services/saveService';
 import { showToast } from 'vant';
 import { unwrap, errMsg } from '../../../utils/apiError';
 import { validateName } from '../../../utils/validateName';
-import type { FileSystemNodeDto } from '../../../api-sdk';
 import FloatingPopup from '../../../components/FloatingPopup.vue';
-
-interface FolderNode {
-  id: string;
-  name: string;
-  isFolder: boolean;
-  children?: FolderNode[];
-}
+import { useFolderTree } from '../../../composables/useFolderTree';
 
 const props = withDefaults(
   defineProps<{
@@ -51,10 +44,35 @@ const error = ref<string | null>(null);
 const step = ref<'form' | 'folder'>('form');
 const showProjectPicker = ref(false);
 
-const folderPath = ref<Array<{ id: string; name: string }>>([]);
-const folderNodes = ref<FolderNode[]>([]);
-const folderLoading = ref(false);
-const lastFolderPath = ref<Array<{ id: string; name: string }>>([]);
+const {
+  folderPath,
+  folderNodes,
+  folderLoading,
+  lastFolderPath,
+  openFolderPicker,
+  loadFolderChildren,
+  enterFolder,
+  goToRoot,
+  navigateToBreadcrumb,
+  goUp,
+  selectFolder,
+  clearFolderPath,
+} = useFolderTree({
+  getTargetType: () => saveAs.targetType.value,
+  getLibraryType: () => saveAs.libraryType.value,
+  resolveRootId,
+  getCurrentNodeId: () => props.currentNodeId,
+  onOpenPicker: () => {
+    step.value = 'folder';
+  },
+  onPickerFailed: () => {
+    step.value = 'form';
+  },
+  onSelectFolder: (nodeId) => {
+    saveAs.selectedParentId.value = nodeId;
+    step.value = 'form';
+  },
+});
 
 const invalidChars = /[\x00-\x1F\x7F\\/:*?"<>|]/;
 
@@ -152,7 +170,7 @@ function resolveRootId(): string {
 function onProjectConfirm({ selectedValues }: { selectedValues: string[] }) {
   saveAs.selectedProjectId.value = selectedValues[0];
   saveAs.selectedParentId.value = selectedValues[0] || '';
-  folderPath.value = [];
+  clearFolderPath();
   showProjectPicker.value = false;
 }
 
@@ -219,116 +237,6 @@ async function handleSave() {
   } catch (e: unknown) {
     error.value = errMsg(e, t('保存失败，请稍后重试'));
   }
-}
-
-async function openFolderPicker() {
-  folderLoading.value = true;
-  step.value = 'folder';
-
-  const rootId = resolveRootId();
-  if (!rootId) {
-    showToast(
-      saveAs.targetType.value === 'library' ? t('无法加载资源库') : t('请先选择项目')
-    );
-    step.value = 'form';
-    folderLoading.value = false;
-    return;
-  }
-
-  if (lastFolderPath.value.length > 0) {
-    folderPath.value = [...lastFolderPath.value];
-    const leaf = folderPath.value[folderPath.value.length - 1];
-    folderNodes.value = await loadFolderChildren(leaf.id);
-  } else {
-    folderPath.value = [];
-    folderNodes.value = await loadFolderChildren(rootId);
-  }
-  folderLoading.value = false;
-}
-
-async function loadFolderChildren(parentId: string): Promise<FolderNode[]> {
-  if (!parentId) return [];
-  try {
-    // 库节点走库专用子节点接口（与 PC LibrarySelectFolderModal 同口径）：
-    // 通用接口对库节点会多过一遍 RequireProjectPermission 的库访问判定
-    const {
-      nodeControllerGetChildren,
-      libraryControllerGetDrawingChildren,
-      libraryControllerGetBlockChildren,
-    } = await import('../../../api-sdk');
-    const apiFn = saveAs.targetType.value === 'library'
-      ? saveAs.libraryType.value === 'block'
-        ? libraryControllerGetBlockChildren
-        : libraryControllerGetDrawingChildren
-      : nodeControllerGetChildren;
-    const result = await apiFn({ path: { nodeId: parentId }, query: { nodeType: 'folder' } });
-    unwrap(result);
-    const data = result.data as unknown as { nodes: FileSystemNodeDto[] };
-    return (data?.nodes || [])
-      .filter(n => n.id !== props.currentNodeId)
-      .map(n => ({
-        id: n.id,
-        name: n.name,
-        isFolder: n.isFolder,
-      }));
-  } catch {
-    return [];
-  }
-}
-
-async function enterFolder(nodeId: string, nodeName: string) {
-  folderPath.value.push({ id: nodeId, name: nodeName });
-  folderLoading.value = true;
-  folderNodes.value = await loadFolderChildren(nodeId);
-  folderLoading.value = false;
-}
-
-async function goToRoot() {
-  folderPath.value = [];
-  await loadRootChildren();
-}
-
-async function navigateToBreadcrumb(index: number) {
-  if (index === folderPath.value.length - 1) return;
-  const target = folderPath.value[index];
-  if (!target) {
-    await goToRoot();
-    return;
-  }
-  folderPath.value = folderPath.value.slice(0, index + 1);
-  folderLoading.value = true;
-  folderNodes.value = await loadFolderChildren(target.id);
-  folderLoading.value = false;
-}
-
-async function loadRootChildren() {
-  const rootId = resolveRootId();
-  if (rootId) {
-    folderLoading.value = true;
-    folderNodes.value = await loadFolderChildren(rootId);
-    folderLoading.value = false;
-  }
-}
-
-async function goUp() {
-  if (folderPath.value.length === 0) return;
-  folderPath.value.pop();
-  const parentId =
-    folderPath.value.length > 0
-      ? folderPath.value[folderPath.value.length - 1].id
-      : resolveRootId();
-
-  if (parentId) {
-    folderLoading.value = true;
-    folderNodes.value = await loadFolderChildren(parentId);
-    folderLoading.value = false;
-  }
-}
-
-function selectFolder(nodeId: string) {
-  saveAs.selectedParentId.value = nodeId;
-  lastFolderPath.value = [...folderPath.value];
-  step.value = 'form';
 }
 
 function handleBeforeClose(): boolean | void {

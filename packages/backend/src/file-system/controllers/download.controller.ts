@@ -352,6 +352,10 @@ export class DownloadController {
         node.nodeType === NodeType.FILE &&
         (node.fileHash || node.id)
       ) {
+        // 下载响应不缓存（no-cache：允许存储但每次使用前必须向后端重验证）——
+        // 文件被删除/更新后浏览器不会在 max-age 内命中旧缓存返回 200（BUG-FS-02）。
+        // 重验证走下方 ETag：未变化返回 304（省流量），已删除则 service 层 404。
+        res.setHeader('Cache-Control', 'no-cache');
         // ETag 基于节点更新时间（fileHash 在编辑器保存时不变化，会导致 304 脏读）+
         // 格式参数（cacheKey 已编码 pdf 尺寸/颜色、dwg 版本），节点更新后 ETag 必然变化
         const updatedAtMs = node.updatedAt ? node.updatedAt.getTime() : 0;
@@ -370,8 +374,6 @@ export class DownloadController {
           }
           return res.status(304).end();
         }
-
-        res.setHeader('Cache-Control', 'public, max-age=3600');
       } else {
         res.setHeader('Cache-Control', 'no-cache');
       }

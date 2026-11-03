@@ -51,6 +51,7 @@
   },
   "dependencies": {
     "@cloudcad/api-sdk": "workspace:*",
+    "@cloudcad/contracts": "workspace:*",
     "@cloudcad/platform": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -72,6 +73,7 @@
     "lucide-react": "^0.556.0",
     "mxcad-app": "^1.0.83",
     "openapi-client-axios": "^7.5.5",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.1",
     "react-day-picker": "^9.14.0",
@@ -94,6 +96,7 @@
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.14.0",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/spark-md5": "^3.0.5",

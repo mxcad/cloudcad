@@ -126,4 +126,14 @@ describe('errMsg', () => {
     expect(errMsg({}, 'fb')).toBe('fb');
     expect(errMsg(null, 'fb')).toBe('fb');
   });
+
+  it('网络异常没有可读后端文案，落回调用方兜底而非原始英文 message', () => {
+    expect(errMsg(new TypeError('Failed to fetch'), 'fb')).toBe('fb');
+    expect(errMsg(new Error('Network Error'), 'fb')).toBe('fb');
+    expect(errMsg({ code: 'ERR_NETWORK', message: 'Network Error' }, 'fb')).toBe('fb');
+    // 业务错误不受影响：有后端文案就透传
+    expect(errMsg({ code: 'PROJECT_NAME_EXISTS', message: '已存在同名项目' }, 'fb')).toBe(
+      '已存在同名项目',
+    );
+  });
 });

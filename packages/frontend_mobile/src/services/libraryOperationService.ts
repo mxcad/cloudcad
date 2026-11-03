@@ -21,7 +21,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import type { LibraryType } from '@/composables/useLibrary'
 import { t } from '@/languages'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
 import { showLoadingToast, showSuccessToast, showFailToast, closeToast } from 'vant'
 import { triggerBlobDownload } from '@/utils/download'
 import { buildMxwebFileUrl, resolveCacheTimestamp } from '@/utils/mxwebUrl'
@@ -66,7 +66,7 @@ export async function renameLibraryNode(
   } catch (e) {
     closeToast()
     console.error('[LibraryOps] rename failed:', e)
-    showFailToast(t('重命名失败'))
+    showFailToast(errMsg(e, t('重命名失败')))
     return false
   }
 }
@@ -91,7 +91,7 @@ export async function deleteLibraryNode(
   } catch (e) {
     closeToast()
     console.error('[LibraryOps] delete failed:', e)
-    showFailToast(t('删除失败'))
+    showFailToast(errMsg(e, t('删除失败')))
     return false
   }
 }
@@ -119,7 +119,7 @@ export async function batchDeleteLibraryNodes(
   } catch (e) {
     closeToast()
     console.error('[LibraryOps] batch delete failed:', e)
-    showFailToast(t('删除失败'))
+    showFailToast(errMsg(e, t('删除失败')))
     return null
   }
 }
@@ -169,7 +169,7 @@ export async function downloadLibraryNode(
   } catch (e) {
     if (!silent) closeToast()
     console.error('[LibraryOps] download failed:', e)
-    if (!silent) showFailToast(t('下载失败'))
+    if (!silent) showFailToast(errMsg(e, t('下载失败')))
     return false
   }
 }

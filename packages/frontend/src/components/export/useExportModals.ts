@@ -148,6 +148,7 @@ export function useExportModals({
 
   const convert = useExportConvert({
     fileId,
+    currentFileHash,
     canExport,
     saveAsBlob,
     forceDownloadToLocal,

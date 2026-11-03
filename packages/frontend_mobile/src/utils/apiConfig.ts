@@ -84,9 +84,17 @@ async function doRefreshTokens(): Promise<boolean> {
       );
       return true;
     }
+    // SDK 默认 throwOnError:false，非 2xx 不 throw 而是返回 { error }（下方 catch 只兜
+    // throwOnError:true / 网络错误）：刷新失败必须从 res.error 识别确定性认证失败并清会话，
+    // 否则用户卡在「已登录」态、每次请求恒 401 无法自愈（对齐 PC handleTokenRefreshFailure）
+    if (res.error && isDefinitiveAuthError(res.error)) {
+      // 走会话唯一清理出口（同步 useAuthState/useUser 状态机）
+      clearSession();
+    }
     return false;
   } catch (error) {
-    // SDK 对非 2xx 直接 throw 解析后的 JSON body（无 status 字段），401 时 code 为 'UNAUTHORIZED'
+    // throwOnError:true 时 SDK 对非 2xx 直接 throw 解析后的 JSON body（无 status 字段），
+    // 401 时 code 为 'UNAUTHORIZED'；网络错误归 network 不会被误清
     if (isDefinitiveAuthError(error)) {
       // 走会话唯一清理出口（同步 useAuthState/useUser 状态机）
       clearSession();

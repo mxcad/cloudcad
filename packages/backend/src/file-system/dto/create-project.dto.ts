@@ -13,6 +13,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsIn, Length } from 'class-validator';
 import { CrossProjectTransferMode } from '@cloudcad/db';
+import { IsSafeName } from '../../common/decorators/is-safe-name.decorator';
 
 const TRANSFER_MODES = Object.values(CrossProjectTransferMode);
 
@@ -20,6 +21,7 @@ export class CreateProjectDto {
   @ApiProperty({ description: '项目名称', example: 'CAD图纸项目' })
   @IsString()
   @Length(1, 100)
+  @IsSafeName()
   name: string;
 
   @ApiProperty({ description: '项目描述', required: false })

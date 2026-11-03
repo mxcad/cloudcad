@@ -85,6 +85,26 @@ export { resolveLogLevels, isAtLeast } from './log-levels';
 export type { LogLevelName, LogLevelPlan } from './log-levels';
 // Webhook 告警模板渲染（ADR-0082 通道测试）：alert 生产发送与通道测试动作共享的纯算法
 export { escapeJsonText, renderTemplate } from './webhook-template';
+// 文件名规则 + 外部参照命名契约（跨端/后端共用纯函数，单一事实源）
+export {
+  DRAWING_EXTENSIONS,
+  MXWEB_EXTENSION,
+  checkFileName,
+  stripDrawingExtension,
+  stripMxwebContainer,
+} from './files/name-rules';
+export type { FileNameReason, FileNameCheckResult } from './files/name-rules';
+export {
+  isCadExtRefName,
+  extRefDiskFileName,
+  extRefBaseName,
+  extRefDiskCandidates,
+  extRefAccessPath,
+  extRefDisplayName,
+} from './files/ext-ref-naming';
+// 运行时配置公开键出厂默认值（单一事实源：backend 定义表 + PC/移动端兜底共用，ADR-0082）
+export { RUNTIME_CONFIG_DEFAULTS, RUNTIME_CONFIG_FAIL_SAFE } from './runtime-config/defaults';
+
 // Conversion engine contract (types + values，ADR-0064 / ADR-0069)
 export {
   ENGINE_INPUT_FIELDS,

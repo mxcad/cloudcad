@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import {
+  adminControllerGetActiveStats,
   adminControllerGetOverview,
   adminControllerGetPurchaseStats,
   adminControllerGetRegistrationStats,
 } from '@/api-sdk';
 import type {
+  ActiveStatsDto,
   DailyPurchasesStatsDto,
   DailyRegistrationsStatsDto,
   StatsOverviewDto,
@@ -23,6 +25,7 @@ export interface AdminStatsRangeParams {
 const OVERVIEW_ERROR = t('加载总量概览失败');
 const REGISTRATIONS_ERROR = t('加载新增用户统计失败');
 const PURCHASES_ERROR = t('加载会员购买统计失败');
+const ACTIVE_ERROR = t('加载活跃用户统计失败');
 
 /**
  * 运营总量概览（当前用户总数 / 累计付费用户，与统计区间无关）
@@ -96,5 +99,33 @@ export function useDailyPurchases(
     stats: data,
     loading: isLoading,
     error: error ? getErrorMessage(error) || PURCHASES_ERROR : null,
+  };
+}
+
+/**
+ * 活跃用户统计（DAU/MAU/粘性，SYSTEM_USER_READ）
+ * KPI 为当前实时值（与区间无关），序列按区间返回。
+ * @param enabled 无权限时为 false，不发请求
+ */
+export function useActiveStats(
+  params: AdminStatsRangeParams,
+  enabled: boolean
+) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: queryKeys.adminStats.active(params),
+    queryFn: async (): Promise<ActiveStatsDto> => {
+      const result = await adminControllerGetActiveStats({
+        throwOnError: true,
+        query: params,
+      });
+      return result.data as ActiveStatsDto;
+    },
+    enabled,
+  });
+
+  return {
+    stats: data,
+    loading: isLoading,
+    error: error ? getErrorMessage(error) || ACTIVE_ERROR : null,
   };
 }

@@ -14,6 +14,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, OrderStatus } from '@cloudcad/db';
 import { DatabaseService } from '../database/database.service';
 import {
+  ActiveStatsDto,
+  ActiveStatsPointDto,
   DailyPurchasesPointDto,
   DailyPurchasesStatsDto,
   DailyRegistrationsPointDto,
@@ -29,6 +31,8 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** 缺省统计范围：最近 30 个自然日（含今天） */
 const DEFAULT_RANGE_DAYS = 30;
+/** MAU 滚动窗口：近 30 个自然日（含锚定日） */
+const MAU_WINDOW_DAYS = 30;
 
 interface ResolvedRange {
   startDate: string;
@@ -74,13 +78,23 @@ interface TierBreakdownRow {
   amount: number | bigint;
 }
 
+interface ActiveStatsRow {
+  date: string;
+  dau: number;
+  mau: number;
+}
+
 /**
- * 运营统计服务——总量概览、每日新增用户数、每日会员购买数的实时聚合视图。
+ * 运营统计服务——总量概览、每日新增用户数、每日会员购买数、活跃用户（DAU/MAU）
+ * 的实时聚合视图。
  *
  * 口径（CONTEXT.md）：
  * - 每日新增用户：users.createdAt 按日聚合，排除软删账号（deletedAt IS NULL）
  * - 购买数：PaymentOrder status=SUCCEEDED，按 paidAt 归日（回退 createdAt），
  *   三项计数（订单笔数 / 去重付费用户数 / 金额分值）；退款单单列不扣减
+ * - 活跃用户：活跃行为 = 任意审计事件（成功登录 / 文件 / 项目 / 节点操作等）；
+ *   DAU = 当日产生事件的去重用户数，MAU = 近 30 天滚动窗口（含锚定日）去重用户数；
+ *   KPI 为当前实时值（与统计区间无关），序列按区间零填充
  * - 切日一律为东八区自然日；实时聚合，不落快照表
  */
 @Injectable()
@@ -258,6 +272,92 @@ export class AdminStatsService {
       series,
       totals,
       byTier,
+    };
+  }
+
+  /**
+   * 活跃用户统计（DAU / MAU / 粘性 + 区间日序列）。
+   *
+   * - KPI 为当前实时值，与统计区间无关：dau=今日 0 点至现在（东八区），
+   *   mau=近 30 天滚动窗口（含今日）；stickiness=dau/mau（mau 为 0 时 null）
+   * - series 按区间零填充：dau=当日去重活跃用户，mau=以该日为锚的近 30 天
+   *   滚动窗口去重值（查询下界向前扩 29 天）
+   * - 活跃口径=任意审计事件（audit_logs 按 userId+东八区自然日去重）
+   */
+  async getActiveStats(
+    options: { startDate?: string; endDate?: string } = {}
+  ): Promise<ActiveStatsDto> {
+    const range = this.resolveRange(options.startDate, options.endDate);
+
+    // KPI：当前实时值（东八区今日零点 / 近 30 天窗口起点，均为 UTC 时刻）
+    const todayStartUtc = new Date(
+      this.parseDateToUtcMs(this.todayCstDateString()) - CST_OFFSET_MS
+    );
+    const mauWindowStartUtc = new Date(
+      todayStartUtc.getTime() - (MAU_WINDOW_DAYS - 1) * MS_PER_DAY
+    );
+
+    const dauRows = await this.prisma.$queryRaw<OverviewCountRow[]>`
+      SELECT COUNT(DISTINCT "userId")::int AS "count"
+      FROM audit_logs
+      WHERE "createdAt" >= ${todayStartUtc}
+    `;
+    const mauRows = await this.prisma.$queryRaw<OverviewCountRow[]>`
+      SELECT COUNT(DISTINCT "userId")::int AS "count"
+      FROM audit_logs
+      WHERE "createdAt" >= ${mauWindowStartUtc}
+    `;
+
+    const dau = dauRows[0]?.count ?? 0;
+    const mau = mauRows[0]?.count ?? 0;
+    const stickiness =
+      mau > 0 ? Number((dau / mau).toFixed(4)) : null;
+
+    // 序列：user_days 去重 (userId, 东八区自然日)，下界向前扩 29 天供 MAU 窗口；
+    // 条件聚合一次算出每日的 dau（当日）与 mau（近 30 天窗口）
+    const extendedStartUtc = new Date(
+      range.startUtc.getTime() - (MAU_WINDOW_DAYS - 1) * MS_PER_DAY
+    );
+    const seriesRows = await this.prisma.$queryRaw<ActiveStatsRow[]>`
+      WITH user_days AS (
+        SELECT DISTINCT "userId",
+               (("createdAt" AT TIME ZONE 'UTC') + INTERVAL '8 hours')::date AS "day"
+        FROM audit_logs
+        WHERE "createdAt" >= ${extendedStartUtc}
+          AND "createdAt" < ${range.endUtcExclusive}
+      )
+      SELECT to_char(d.day, 'YYYY-MM-DD') AS "date",
+             COUNT(DISTINCT CASE WHEN ud."day" = d.day THEN ud."userId" END)::int AS "dau",
+             COUNT(DISTINCT CASE WHEN ud."day" BETWEEN d.day - ${
+               MAU_WINDOW_DAYS - 1
+             } AND d.day THEN ud."userId" END)::int AS "mau"
+      FROM (SELECT generate_series(${range.startDate}::date, ${range.endDate}::date, INTERVAL '1 day')::date AS day) d
+      LEFT JOIN user_days ud ON ud."day" BETWEEN d.day - ${
+        MAU_WINDOW_DAYS - 1
+      } AND d.day
+      GROUP BY d.day
+      ORDER BY d.day
+    `;
+
+    const pointByDate = new Map(
+      seriesRows.map((r) => [r.date, { dau: r.dau, mau: r.mau }])
+    );
+    const series: ActiveStatsPointDto[] = this.eachDay(range).map((date) => {
+      const point = pointByDate.get(date);
+      return {
+        date,
+        dau: point?.dau ?? 0,
+        mau: point?.mau ?? 0,
+      };
+    });
+
+    return {
+      dau,
+      mau,
+      stickiness,
+      startDate: range.startDate,
+      endDate: range.endDate,
+      series,
     };
   }
 

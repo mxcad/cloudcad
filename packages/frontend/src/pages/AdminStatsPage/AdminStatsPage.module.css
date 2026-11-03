@@ -124,6 +124,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* KPI 卡内数值下方的口径提示小字（如时间窗口说明） */
+.kpiHint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .chartBody {
   min-height: 260px;
 }

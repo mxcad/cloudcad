@@ -108,17 +108,26 @@ export function useLibraryQuery({
   const libraryId = libraryQuery.data?.libraryId ?? null;
   const isFolderMode = !!nodeId || !!libraryId;
 
+  // 搜索/列表共用目标节点：当前分类/目录 nodeId，未进入任何分类时回退库根。
+  // 搜索必须限制在该 nodeId 子树内（用户要求「在当前分类限制下查找」），
+  // 而非整个库根 —— 否则侧边栏/管理页搜索会跨分类命中（如「交通/其它」搜出「天王殿」）。
+  const effectiveNodeId = nodeId || libraryId;
+
   // ---- 2. 搜索模式：获取所有文件 ----
   const searchQuery = useQuery({
     queryKey: [
-      ...getAllFilesQueryKey(libraryType, libraryId || '__disabled__', search),
+      ...getAllFilesQueryKey(
+        libraryType,
+        effectiveNodeId || '__disabled__',
+        search
+      ),
       { page, limit },
     ] as const,
     queryFn: async (): Promise<ChildrenData> => {
       const api = getAllFilesApi(libraryType);
       const result = await withTimeout(
         api({
-          path: { nodeId: libraryId! },
+          path: { nodeId: effectiveNodeId! },
           query: { page, limit, search, sortBy, sortOrder },
         }),
         REQUEST_TIMEOUT_MS
@@ -145,7 +154,6 @@ export function useLibraryQuery({
   // ---- 3. 子节点列表（非搜索模式） ----
   // flatMode=true: 递归获取该节点下所有嵌套文件（getAllFiles，侧边栏用）
   // flatMode=false: 仅直接子节点（getChildren，管理页用）
-  const effectiveNodeId = nodeId || libraryId;
   const useAllFiles = flatMode && !!libraryId;
   const childrenQuery = useQuery({
     queryKey: [

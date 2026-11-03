@@ -611,6 +611,111 @@ describe('UserManagement 操作失败错误提示（回归：mutation 失败必�
     expect(screen.getByText('确定要注销该用户吗？')).toBeTruthy();
   });
 
+  describe('BUG-ADMIN-004 删除自己/管理员账户前置阻断', () => {
+    it('删除当前登录用户自己：确认弹窗展示「不能删除自己」且确认按钮禁用，不发送删除请求', async () => {
+      // 让列表中某用户 id 与当前登录用户（operator-1）一致
+      vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue({
+        ...mockCRUDReturn,
+        users: [
+          {
+            id: 'operator-1',
+            username: 'selfuser',
+            email: 'self@example.com',
+            nickname: 'Self User',
+            status: 'ACTIVE',
+            role: { id: 'role1', name: 'USER', isSystem: true },
+            hasPassword: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+        totalUsers: 1,
+      });
+
+      render(<UserManagement />);
+      fireEvent.click(screen.getByRole('button', { name: '注销' }));
+      await vi.waitFor(() => {
+        expect(screen.getByText('不能删除自己')).toBeTruthy();
+      });
+      // 阻断时确认按钮禁用，且"立即注销"选项被隐藏
+      expect(
+        (screen.getByRole('button', { name: '确认删除' }) as HTMLButtonElement)
+          .disabled
+      ).toBe(true);
+      expect(
+        screen.queryByText('立即注销（不等待30天冷静期，直接清理数据）')
+      ).toBeNull();
+      expect(mockCRUDReturn.deleteUser).not.toHaveBeenCalled();
+    });
+
+    it('删除其他管理员账户：确认弹窗展示「不能删除管理员账户」且确认按钮禁用', async () => {
+      vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue({
+        ...mockCRUDReturn,
+        users: [
+          {
+            id: 'other-admin',
+            username: 'admin2',
+            email: 'admin2@example.com',
+            nickname: 'Admin Two',
+            status: 'ACTIVE',
+            role: { id: 'role2', name: 'ADMIN', isSystem: true },
+            hasPassword: true,
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
+        totalUsers: 1,
+      });
+
+      render(<UserManagement />);
+      fireEvent.click(screen.getByRole('button', { name: '注销' }));
+      await vi.waitFor(() => {
+        expect(screen.getByText('不能删除管理员账户')).toBeTruthy();
+      });
+      expect(
+        (screen.getByRole('button', { name: '确认删除' }) as HTMLButtonElement)
+          .disabled
+      ).toBe(true);
+      expect(mockCRUDReturn.deleteUser).not.toHaveBeenCalled();
+    });
+
+    it('批量注销不携带单删阻断残留：确认按钮可点击且文案为「批量注销」', async () => {
+      // 把列表第一行改造成管理员以制造"单删管理员"阻断残留
+      vi.mocked(useUserCRUDModule.useUserCRUD).mockReturnValue({
+        ...mockCRUDReturn,
+        users: mockUsers.map((u, i) =>
+          i === 0
+            ? { ...u, role: { id: 'role2', name: 'ADMIN', isSystem: true } }
+            : u
+        ),
+      });
+      render(<UserManagement />);
+
+      // 先触发单删管理员（残留 blockReason），取消后再走批量
+      fireEvent.click(screen.getAllByRole('button', { name: '注销' })[0]);
+      await vi.waitFor(() => {
+        expect(screen.getByText('不能删除管理员账户')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByRole('button', { name: '取消' }));
+      await vi.waitFor(() => {
+        expect(screen.queryByText('不能删除管理员账户')).toBeNull();
+      });
+
+      // 批量路径（Ctrl+A + Delete）
+      fireEvent.keyDown(document.body, { key: 'a', ctrlKey: true });
+      fireEvent.keyDown(document.body, { key: 'Delete' });
+      await vi.waitFor(() => {
+        expect(
+          screen.getByText('确定要注销选中的 2 个用户吗？')
+        ).toBeTruthy();
+      });
+      // 页面上有两个「批量注销」：底栏操作条 + 确认弹窗 footer，取最后一个（弹窗内）
+      const batchBtns = screen.getAllByRole('button', { name: '批量注销' });
+      const batchBtn = batchBtns[batchBtns.length - 1] as HTMLButtonElement;
+      expect(batchBtn.disabled).toBe(false);
+    });
+  });
+
   it('批量注销部分失败：toast 汇总失败数并附带第一条具体错误', async () => {
     const deleteUserMock = vi
       .fn()

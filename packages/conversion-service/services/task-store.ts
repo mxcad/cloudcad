@@ -27,6 +27,11 @@ export interface TaskRecord {
   errorCategory?: string | null;
   // 引擎返回码（仅 content-error 时为非 0）
   errorCode?: number | null;
+  // 引擎原始 stdout/stderr（诊断透传）：FAILED 时随任务过线，backend 的 data/debug
+  // 落盘（saveConversionDebugInfo）此前拿不到真因——HTTP 模式 FAILED 的 metadata 为空、
+  // 引擎输出从不过线，运维只有一句远端文案。现透传引擎原始输出。
+  stdout?: string | null;
+  stderr?: string | null;
   callbackUrl: string | null;
   // 内容身份（content_hash + 源文件 + 目标格式派生，见 utils.deriveContentKey）。
   // 同 key 的在途任务合并去重（#431 门禁3）。
@@ -308,6 +313,9 @@ class TaskStore {
     // 否则 backend 只能按中文字符串反推「可重试 vs 确定性失败」）。
     if (extra.errorCategory) record.errorCategory = extra.errorCategory;
     if (extra.errorCode !== undefined) record.errorCode = extra.errorCode;
+    // 引擎原始输出透传（诊断）：用 !== undefined 判定，空串也覆盖（显式清空 vs 未记录）。
+    if (extra.stdout !== undefined) record.stdout = extra.stdout;
+    if (extra.stderr !== undefined) record.stderr = extra.stderr;
     if (extra.progress !== undefined) record.progress = extra.progress;
     this._persist(taskId, record);
     return record;

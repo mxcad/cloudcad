@@ -14,6 +14,7 @@ import {
   ScrollText,
   Activity,
   Bell,
+  MessageSquare,
 } from 'lucide-react';
 import { SystemPermission } from '../constants/permissions';
 
@@ -138,6 +139,14 @@ export const ROUTE_DECLARATIONS: RouteDeclaration[] = [
     // 与路由守卫一致用 SYSTEM_CONFIG_WRITE（通知管理需写权限；曾误用 READ，
     // READ-only 用户看到菜单却 403）
     permission: SystemPermission.SYSTEM_CONFIG_WRITE,
+  },
+  {
+    path: '/admin/feedback',
+    labelKey: '反馈管理',
+    icon: MessageSquare,
+    section: 'admin',
+    // 菜单显隐与路由守卫一致用 SYSTEM_FEEDBACK_READ；页内按权限显隐操作
+    permission: SystemPermission.SYSTEM_FEEDBACK_READ,
   },
   // 受守卫但无侧边栏菜单项的路由（仅声明权限，供路由守卫取值）
   {

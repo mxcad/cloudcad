@@ -95,7 +95,7 @@ describe('useShareCreate.createShares（批量分享）', () => {
   it('响应缺 token → 该文件失败；请求异常 → 该文件失败且循环继续', async () => {
     mockedCreate
       .mockResolvedValueOnce({ data: {}, error: null })
-      .mockRejectedValueOnce(new Error('network down'))
+      .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce({ data: { token: 't3', url: '/share/t3', expiresAt: null }, error: null })
     const { createShares } = useShareCreate()
     const results = await createShares(
@@ -109,8 +109,8 @@ describe('useShareCreate.createShares（批量分享）', () => {
     )
 
     expect(results[0]).toMatchObject({ fileName: 'a.mxweb', success: false, error: '创建分享链接失败' })
-    // 请求异常透出原始错误文案（errMsg 单一出口），不再一律塌成笼统兜底
-    expect(results[1]).toMatchObject({ fileName: 'b.mxweb', success: false, error: 'network down' })
+    // 非网络请求异常透出原始错误文案（errMsg 单一出口）；网络异常落回兜底（见 apiError.spec）
+    expect(results[1]).toMatchObject({ fileName: 'b.mxweb', success: false, error: 'boom' })
     expect(results[2].success).toBe(true)
   })
 

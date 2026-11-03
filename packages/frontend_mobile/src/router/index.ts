@@ -134,6 +134,21 @@ const routes: RouteRecordRaw[] = [
     component: () =>
       import('../pages/shell/sub-pages/MemberCenterPage.vue'),
   },
+  {
+    // 反馈中心（公开：未登录可匿名提交 + 查询进度；登录后含我的反馈/奖励）
+    // 不入 AUTH_REQUIRED_PREFIXES —— 匿名提交是产品原则，游客必须能达。
+    path: '/shell/feedback',
+    name: 'FeedbackHome',
+    component: () =>
+      import('../pages/shell/sub-pages/FeedbackHomePage.vue'),
+  },
+  {
+    // 反馈进度查询（公开路由，凭查询码查询，无需登录）
+    path: '/shell/feedback/query',
+    name: 'FeedbackQuery',
+    component: () =>
+      import('../pages/shell/sub-pages/FeedbackQueryPage.vue'),
+  },
 ];
 
 /** 需登录才能访问的路径前缀（/shell 根 = 编辑器，公开可游客使用） */

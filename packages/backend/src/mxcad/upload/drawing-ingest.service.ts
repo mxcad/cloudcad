@@ -757,8 +757,9 @@ export class DrawingIngestService {
         buildIngestConversionOptions({
           srcPath: filePath,
           fileHash: hash,
-          // 外部参照 DWG 不建自身节点（挂到源 DWG 的 ext-ref 列表），失败现场无节点目录可挂
-          debugNodeId: undefined,
+          // 外部参照 DWG 不建自身节点（挂到源 DWG 的 ext-ref 列表），无 nodeId 可挂；
+          // 用文件 hash 兜底做落盘目录标识，失败现场仍落盘（否则未登录/无节点失败丢原因）
+          debugNodeId: hash,
         })
       );
       isOk = result.isOk;
@@ -1244,8 +1245,9 @@ export class DrawingIngestService {
             srcPath: filepath,
             fileHash: hash,
             forceConvert,
-            // 无节点（游客/公开图纸）转换失败无节点目录可挂失败现场
-            debugNodeId: undefined,
+            // 无节点（游客/公开图纸）转换：用文件 hash 兜底做落盘目录标识，
+            // 失败现场仍落盘（否则未登录用户转换失败丢原因）
+            debugNodeId: hash,
           })
         );
         if (result.isOk) {

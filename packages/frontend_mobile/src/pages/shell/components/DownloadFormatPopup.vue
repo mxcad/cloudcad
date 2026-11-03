@@ -3,9 +3,10 @@
  * 下载格式转换弹窗（A-06）—— 底部弹窗选格式 + DWG 版本 / PDF 纸张与色彩。
  *
  * 对齐 PC DownloadFormatModal 字段（dwg/dxf/pdf/mxweb + dwgVersion + PDF width/height/colorPolicy），
- * 移动端底部弹窗形态。确认后 emit confirm，由父页调 downloadControllerDownloadNodeWithFormat（blob）。
+ * 移动端底部弹窗形态。确认后 emit confirm，由父页执行下载；弹窗不自关（对齐 PC modal，
+ * 关闭由父级在完成/门控跳转时控制），loading 时按钮转圈禁用。
  */
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { t } from '@/languages'
 
 export type DownloadFormat = 'dwg' | 'dxf' | 'pdf' | 'mxweb'
@@ -17,7 +18,13 @@ export interface DownloadFormatPayload {
 }
 
 // batchCount 非空=批量模式（多选下载含 CAD）：所选格式应用于全部选中图纸，文件区显示数量而非单文件名
-const props = defineProps<{ show: boolean; fileName: string; batchCount?: number }>()
+// loading=true=下载/转换进行中：下载按钮转圈禁用、遮罩与关闭按钮不可点，弹窗保持打开（由父级关闭）
+const props = defineProps<{
+  show: boolean
+  fileName: string
+  batchCount?: number
+  loading?: boolean
+}>()
 const emit = defineEmits<{
   'update:show': [value: boolean]
   confirm: [payload: DownloadFormatPayload]
@@ -29,14 +36,20 @@ const pdfWidth = ref('2000')
 const pdfHeight = ref('2000')
 const pdfColor = ref<'mono' | 'color'>('mono')
 
-// MXWEB 是源格式：纯本地另存为、不做转换，故标「另存为」而非「导出 MXWEB」
-// （对齐 PC Mx_SaveAsMxWeb 的「另存为」标签）
+// MXWEB 是源格式：纯本地另存为、不做转换，格式标签直接显示扩展名 mxweb
 const formatOptions: Array<{ key: DownloadFormat; label: string }> = [
-  { key: 'mxweb', label: t('另存为') },
+  { key: 'mxweb', label: 'mxweb' },
   { key: 'dwg', label: t('DWG') },
   { key: 'dxf', label: t('DXF') },
   { key: 'pdf', label: t('PDF') },
 ]
+
+// 文件区显示名随所选格式变化（对齐 PC DownloadFormatModal 的 getDisplayFileName）：
+// 去掉源扩展名后拼上当前格式扩展名，如 new.dwg 选 mxweb → new.mxweb
+const displayFileName = computed(() => {
+  const nameWithoutExt = (props.fileName || '').replace(/\.[^.]+$/, '')
+  return `${nameWithoutExt}.${format.value}`
+})
 
 const dwgVersionOptions = [
   { value: 23, label: t('CAD 2000（默认）') },
@@ -61,6 +74,7 @@ watch(
 )
 
 function onConfirm() {
+  if (props.loading) return
   if (format.value === 'pdf') {
     emit('confirm', {
       format: 'pdf',
@@ -71,16 +85,22 @@ function onConfirm() {
   } else {
     emit('confirm', { format: 'mxweb' })
   }
-  emit('update:show', false)
+  // 不自关：对齐 PC modal，由父级在下载完成/门控跳转时关闭（loading 期间保持打开显示按钮转圈）
 }
 </script>
 
 <template>
-  <van-popup v-model:show="props.show" position="bottom" round @update:show="emit('update:show', $event)">
+  <van-popup
+    v-model:show="props.show"
+    position="bottom"
+    round
+    :close-on-click-overlay="!props.loading"
+    @update:show="emit('update:show', $event)"
+  >
     <div class="df-panel">
       <div class="panel-header">
         <span class="panel-title">{{ t('选择下载格式') }}</span>
-        <button class="panel-close" @click="emit('update:show', false)">
+        <button class="panel-close" :disabled="props.loading" @click="emit('update:show', false)">
           <van-icon name="cross" size="18" />
         </button>
       </div>
@@ -91,7 +111,7 @@ function onConfirm() {
         </span>
         <template v-else>
           <span class="df-file-label">{{ t('文件：') }}</span>
-          <span class="df-file-name">{{ fileName }}</span>
+          <span class="df-file-name">{{ displayFileName }}</span>
         </template>
       </div>
 
@@ -141,8 +161,9 @@ function onConfirm() {
         </div>
       </div>
 
-      <button class="df-confirm" @click="onConfirm">
-        <van-icon name="down" size="14" />
+      <button class="df-confirm" :disabled="props.loading" @click="onConfirm">
+        <van-loading v-if="props.loading" size="14" color="#fff" />
+        <van-icon v-else name="down" size="14" />
         {{ t('下载') }}
       </button>
     </div>
@@ -176,6 +197,11 @@ function onConfirm() {
   background: none;
   color: var(--text-tertiary);
   cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .df-file {
@@ -288,6 +314,11 @@ function onConfirm() {
 
   &:active {
     opacity: 0.85;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 }
 </style>

@@ -11,6 +11,7 @@ import {
   type TransferSettings,
 } from '../../types/filesystem';
 import { t } from '@/languages';
+import { validateFolderName } from '@/utils/fileUtils';
 
 export type { TransferMode, TransferSettings };
 
@@ -113,6 +114,25 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   const { modeOptions, outItems, inItems } = useTransferItems();
 
+  // 名称合法性：空 / 长度 / 非法字符 / 控制字符 / 保留名 / 首尾点
+  // （规则收敛到 @cloudcad/platform 的 checkFileName，与文件夹/图纸命名一致）
+  const nameValidation = validateFolderName(formData?.name ?? '');
+  const nameInvalid = !nameValidation.valid;
+  // 空名时仅禁用按钮，不显示错误文案（避免未输入即报「不能为空」）
+  const nameError = nameInvalid && (formData?.name ?? '').trim()
+    ? nameValidation.error
+    : '';
+
+  // 提交守卫：按钮 disabled 已拦常规点击，但表单内按 Enter 仍会触发 submit，
+  // 这里同步拦截非法名称，确保前后端一致（后端 DTO 也校验，双保险）
+  const handleSubmit = (e: React.FormEvent) => {
+    if (nameInvalid) {
+      e.preventDefault();
+      return;
+    }
+    onSubmit(e);
+  };
+
   const handleClose = () => {
     onFormDataChange({ name: '', description: '' });
     onClose();
@@ -166,8 +186,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             {t('取消')}
           </Button>
           <Button
-            onClick={onSubmit}
-            disabled={loading || !(formData?.name || '').trim()}
+            onClick={handleSubmit}
+            disabled={loading || nameInvalid}
             data-tour="project-create-submit"
           >
             {loading ? t('处理中...') : editingProject ? t('保存') : t('创建')}
@@ -175,7 +195,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         </>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
             className="block font-medium mb-1"
@@ -195,9 +215,15 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             maxLength={100}
             data-tour="project-name-input"
           />
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            {formData.name.length}/100
-          </p>
+          {nameError ? (
+            <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>
+              {nameError}
+            </p>
+          ) : (
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              {formData.name.length}/100
+            </p>
+          )}
         </div>
         <div>
           <label

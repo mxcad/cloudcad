@@ -117,7 +117,8 @@ async function onRetryFailed(task: BatchTaskItem) {
 </script>
 
 <template>
-  <van-popup v-model:show="props.show" position="bottom" round :style="{ height: '70%' }" @update:show="emit('update:show', $event)">
+  <!-- z-index 2100：下载任务面板应浮在库抽屉 FloatingPopup（2005）及子页之上，否则被遮住 -->
+  <van-popup v-model:show="props.show" position="bottom" round :style="{ height: '70%', zIndex: 2100 }" @update:show="emit('update:show', $event)">
     <div class="bd-panel">
       <div class="panel-header">
         <span class="panel-title">{{ t('下载任务') }}</span>

@@ -42,6 +42,7 @@ import { FirstAdminSetupService } from './services/first-admin-setup.service';
 import { AccountRateLimitService } from './services/account-rate-limit.service';
 import { PasswordPolicyService } from './services/password-policy.service';
 import { MfaService } from './services/mfa.service';
+import { RegistrationGiftService } from './services/registration-gift.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
 import { AppConfig } from '../config/app.config';
@@ -157,6 +158,7 @@ export class AuthModule {
         AccountRateLimitService,
         PasswordPolicyService,
         MfaService,
+        RegistrationGiftService,
         JwtStrategy,
         RefreshTokenStrategy,
         // Token aliases for private auth implementation DI

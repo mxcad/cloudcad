@@ -81,6 +81,12 @@ export function useLoginForm(): UseLoginFormReturn {
 
   const smsEnabled = runtimeConfig?.smsEnabled ?? false;
   const mailEnabled = runtimeConfig?.mailEnabled ?? false;
+  // 手机号注册仅当 requirePhoneVerification 开启才启用（后端 registerByPhone 同判据，
+  // 注册页 BasicInfoStep 亦按此隐藏手机字段）——登录页手机 tab 只按 smsEnabled 显示，
+  // 因此未注册手机号时须据此判断能否跳 /register 携带 prefill，避免跳到无手机字段的
+  // 注册页导致 prefill 静默丢失（BUG-AUTH-02）。
+  const requirePhoneVerification =
+    runtimeConfig?.requirePhoneVerification ?? false;
 
   // Tab state
   const [activeTab, setActiveTab] = useState<LoginTab>('account');
@@ -352,12 +358,19 @@ export function useLoginForm(): UseLoginFormReturn {
         }
 
         if (errorCode === 'PHONE_NOT_REGISTERED') {
-          navigate('/register', {
-            state: {
-              prefillPhone: phone,
-              prefillCode: code,
-            },
-          });
+          if (requirePhoneVerification) {
+            // 手机号注册已启用：跳注册页携带手机号+验证码 prefill，用户可继续用手机注册
+            navigate('/register', {
+              state: {
+                prefillPhone: phone,
+                prefillCode: code,
+              },
+            });
+          } else {
+            // 手机号注册未启用（requirePhoneVerification=false）：注册页不渲染手机字段，
+            // prefill 无处落地，改为就地展示后端文案，避免静默丢信息（BUG-AUTH-02）
+            setError(errorMessage);
+          }
           return;
         }
 
@@ -366,7 +379,7 @@ export function useLoginForm(): UseLoginFormReturn {
         setLoading(false);
       }
     },
-    [phoneFormHook, loginByPhone, navigate]
+    [phoneFormHook, loginByPhone, navigate, requirePhoneVerification]
   );
 
   // WeChat login

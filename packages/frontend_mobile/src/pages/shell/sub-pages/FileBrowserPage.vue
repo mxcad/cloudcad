@@ -23,7 +23,7 @@ import {
 } from '@cloudcad/api-sdk/sdk.gen'
 import { loadProjectPermissions, invalidateProjectPermissions } from '@/services/permissionService'
 import { t } from '@/languages'
-import { unwrap } from '@/utils/apiError'
+import { unwrap, errMsg } from '@/utils/apiError'
 import { useCreateDrawing } from '@/composables/useCreateDrawing'
 import type { ProjectListResponseDto, FileSystemNodeDto, ProjectFilterType } from '@cloudcad/api-sdk/types.gen'
 import { useUnifiedFileList } from '@/composables/useUnifiedFileList'
@@ -467,6 +467,7 @@ const {
   formatTarget,
   formatDownloadMode,
   batchConvertCount,
+  formatDownloadLoading,
   onFormatDownloadConfirm,
 } = formatDownload
 
@@ -496,17 +497,14 @@ async function onCreateProjectConfirm() {
       body: { name },
     })
     unwrap(res)
-    const data = res.data as { id?: string; name?: string }
     closeToast()
     showToast(t('项目创建成功'))
-    if (data?.id) {
-      router.push(`/shell/file/project/${data.id}`)
-    } else {
-      await loadProjects()
-    }
+    // 不自动进入新项目（用户反应不过来）：留在项目列表刷新即可看到新项目（对齐 PC 端）
+    await loadProjects()
   } catch (e) {
     closeToast()
-    showToast(t('创建失败，请重试'))
+    // 后端文案优先（如「已存在同名项目」），网络异常等无后端文案时落回兜底
+    showToast(errMsg(e, t('创建失败，请重试')))
   }
 }
 
@@ -872,7 +870,7 @@ const {
       ref="fileInputRef"
       type="file"
       multiple
-      accept=".mxweb,.dwg,.dxf,.xlsx,.pdf,.jpg,.png,.zip,.rar,.7z"
+      accept=".dwg,.dxf,.mxweb"
       style="display:none"
       @change="onFileInputChange"
     />
@@ -947,6 +945,7 @@ const {
       v-model:show="showFormatPopup"
       :file-name="formatTarget?.name ?? ''"
       :batch-count="formatDownloadMode === 'batch' ? batchConvertCount : undefined"
+      :loading="formatDownloadLoading"
       @confirm="onFormatDownloadConfirm"
     />
     <BatchDownloadPanel v-model:show="showBatchPanel" />

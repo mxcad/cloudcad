@@ -1,5 +1,9 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import {
+  RUNTIME_CONFIG_DEFAULTS,
+  RUNTIME_CONFIG_FAIL_SAFE,
+} from '@cloudcad/contracts/runtime-config/defaults';
 import { runtimeConfigControllerGetPublicConfigs } from '@/api-sdk';
 import { queryKeys } from '@/lib/queryKeys';
 import { STALE_TIME_DEFAULT } from '@/constants/timeouts';
@@ -42,6 +46,10 @@ export type PublicRuntimeConfig = {
   /** 法务产品短名（i18n 插值）；留空回落品牌档案整块 legal.productShortName → 内置默认 */
   brandLegalProductShortName: string;
   allowRegister: boolean;
+  /** 注册赠送会员开关：开启时注册页展示「注册即送 VIP 免费试用」营销吸引点 */
+  registerGiftEnabled: boolean;
+  /** 注册赠送会员月数（注册页营销提示展示；月 = 30 天） */
+  registerGiftMonths: number;
   wechatEnabled: boolean;
   wechatAutoRegister: boolean;
   maxFileSize: number;
@@ -63,6 +71,30 @@ export type PublicRuntimeConfig = {
   passwordPolicyMinCategories: number;
   /** 品牌档案（标题/标语/Logo/版权/法务主体），覆盖前端内置默认值与 config.json */
   brandProfile: RuntimeBrandConfig;
+  /** 匿名反馈开关：关闭后未登录用户无法提交反馈（登录用户不受影响） */
+  feedbackAnonymousEnabled: boolean;
+  /** 匿名每日每 IP 提交上限 */
+  feedbackAnonymousDailyLimit: number;
+  /** 登录用户每日提交上限 */
+  feedbackUserDailyLimit: number;
+  /** 反馈内容最短字数 */
+  feedbackMinContentLength: number;
+  /** 反馈内容最长字数 */
+  feedbackMaxContentLength: number;
+  /** 反馈图片附件单张上限（MB） */
+  feedbackMaxImageSize: number;
+  /** 反馈图纸附件单文件上限（MB） */
+  feedbackMaxDrawingSize: number;
+  /** 反馈文档附件单文件上限（MB） */
+  feedbackMaxDocumentSize: number;
+  /** 单条反馈图片附件数量上限 */
+  feedbackMaxImageCount: number;
+  /** 单条反馈图纸附件数量上限 */
+  feedbackMaxDrawingCount: number;
+  /** 单条反馈文档附件数量上限 */
+  feedbackMaxDocumentCount: number;
+  /** 单条反馈附件总数上限 */
+  feedbackMaxAttachmentCount: number;
 };
 
 interface RuntimeConfigContextType {
@@ -70,40 +102,57 @@ interface RuntimeConfigContextType {
   loading: boolean;
 }
 
+// 兜底值全部来自 @cloudcad/contracts 的 RUNTIME_CONFIG_DEFAULTS（与后端 defaultValue 同一事实源），
+// 口令策略两键刻意用 RUNTIME_CONFIG_FAIL_SAFE（secure 基线 10/3，接口失败回退到更严侧）。
 const DEFAULT_CONFIG: PublicRuntimeConfig = {
-  mailEnabled: false,
-  requireEmailVerification: false,
-  smsEnabled: false,
-  requirePhoneVerification: false,
-  supportEmail: '',
-  supportPhone: '',
-  supportHours: '',
-  docsUrl: '',
-  brandTitle: '',
-  brandSubtitle: '',
-  brandTagline: '',
-  brandLogo: '',
-  brandEditorTitle: '',
-  brandCopyrightLine: '',
-  brandCopyrightYear: '',
-  brandCopyrightHolder: '',
-  brandLegalProductName: '',
-  brandLegalProductShortName: '',
-  allowRegister: true,
-  wechatEnabled: false,
-  wechatAutoRegister: false,
-  maxFileSize: 100,
-  collaborationEnabled: true,
-  collaborationDomains: '',
-  batchDownloadEnabled: false,
-  freeExportDownloadEnabled: true,
-  membershipEnabled: true,
-  userCancelGraceDays: 7,
-  securityMode: 'normal',
-  // 回落值 = 后端 secure 基线默认（与 @cloudcad/platform 的 PASSWORD_POLICY 兜底一致）
-  passwordPolicyMinLength: 10,
-  passwordPolicyMinCategories: 3,
+  mailEnabled: RUNTIME_CONFIG_DEFAULTS.mailEnabled,
+  requireEmailVerification: RUNTIME_CONFIG_DEFAULTS.requireEmailVerification,
+  smsEnabled: RUNTIME_CONFIG_DEFAULTS.smsEnabled,
+  requirePhoneVerification: RUNTIME_CONFIG_DEFAULTS.requirePhoneVerification,
+  supportEmail: RUNTIME_CONFIG_DEFAULTS.supportEmail,
+  supportPhone: RUNTIME_CONFIG_DEFAULTS.supportPhone,
+  supportHours: RUNTIME_CONFIG_DEFAULTS.supportHours,
+  docsUrl: RUNTIME_CONFIG_DEFAULTS.docsUrl,
+  brandTitle: RUNTIME_CONFIG_DEFAULTS.brandTitle,
+  brandSubtitle: RUNTIME_CONFIG_DEFAULTS.brandSubtitle,
+  brandTagline: RUNTIME_CONFIG_DEFAULTS.brandTagline,
+  brandLogo: RUNTIME_CONFIG_DEFAULTS.brandLogo,
+  brandEditorTitle: RUNTIME_CONFIG_DEFAULTS.brandEditorTitle,
+  brandCopyrightLine: RUNTIME_CONFIG_DEFAULTS.brandCopyrightLine,
+  brandCopyrightYear: RUNTIME_CONFIG_DEFAULTS.brandCopyrightYear,
+  brandCopyrightHolder: RUNTIME_CONFIG_DEFAULTS.brandCopyrightHolder,
+  brandLegalProductName: RUNTIME_CONFIG_DEFAULTS.brandLegalProductName,
+  brandLegalProductShortName: RUNTIME_CONFIG_DEFAULTS.brandLegalProductShortName,
+  allowRegister: RUNTIME_CONFIG_DEFAULTS.allowRegister,
+  registerGiftEnabled: RUNTIME_CONFIG_DEFAULTS.registerGiftEnabled,
+  registerGiftMonths: RUNTIME_CONFIG_DEFAULTS.registerGiftMonths,
+  wechatEnabled: RUNTIME_CONFIG_DEFAULTS.wechatEnabled,
+  wechatAutoRegister: RUNTIME_CONFIG_DEFAULTS.wechatAutoRegister,
+  maxFileSize: RUNTIME_CONFIG_DEFAULTS.maxFileSize,
+  collaborationEnabled: RUNTIME_CONFIG_DEFAULTS.collaborationEnabled,
+  collaborationDomains: RUNTIME_CONFIG_DEFAULTS.collaborationDomains,
+  batchDownloadEnabled: RUNTIME_CONFIG_DEFAULTS.batchDownloadEnabled,
+  freeExportDownloadEnabled: RUNTIME_CONFIG_DEFAULTS.freeExportDownloadEnabled,
+  membershipEnabled: RUNTIME_CONFIG_DEFAULTS.membershipEnabled,
+  userCancelGraceDays: RUNTIME_CONFIG_DEFAULTS.userCancelGraceDays,
+  securityMode: RUNTIME_CONFIG_DEFAULTS.securityMode,
+  // 刻意 fail-safe（接口失败回退到 secure 基线），见 contracts RUNTIME_CONFIG_FAIL_SAFE
+  passwordPolicyMinLength: RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinLength,
+  passwordPolicyMinCategories: RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinCategories,
   brandProfile: {},
+  // 反馈配置（缺键回落后端默认值，见 contracts RUNTIME_CONFIG_DEFAULTS feedback.*）
+  feedbackAnonymousEnabled: RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousEnabled,
+  feedbackAnonymousDailyLimit: RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousDailyLimit,
+  feedbackUserDailyLimit: RUNTIME_CONFIG_DEFAULTS.feedbackUserDailyLimit,
+  feedbackMinContentLength: RUNTIME_CONFIG_DEFAULTS.feedbackMinContentLength,
+  feedbackMaxContentLength: RUNTIME_CONFIG_DEFAULTS.feedbackMaxContentLength,
+  feedbackMaxImageSize: RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageSize,
+  feedbackMaxDrawingSize: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingSize,
+  feedbackMaxDocumentSize: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentSize,
+  feedbackMaxImageCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageCount,
+  feedbackMaxDrawingCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingCount,
+  feedbackMaxDocumentCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentCount,
+  feedbackMaxAttachmentCount: RUNTIME_CONFIG_DEFAULTS.feedbackMaxAttachmentCount,
 };
 
 const RuntimeConfigContext = createContext<
@@ -142,40 +191,55 @@ function mapPublicConfig(
     requireEmailVerification: Boolean(data.requireEmailVerification),
     smsEnabled: Boolean(data.smsEnabled),
     requirePhoneVerification: Boolean(data.requirePhoneVerification),
-    supportEmail: String(data.supportEmail ?? ''),
-    supportPhone: String(data.supportPhone ?? ''),
-    supportHours: String(data.supportHours ?? ''),
-    docsUrl: String(data.docsUrl ?? ''),
-    brandTitle: String(data.brandTitle ?? ''),
-    brandSubtitle: String(data.brandSubtitle ?? ''),
-    brandTagline: String(data.brandTagline ?? ''),
-    brandLogo: String(data.brandLogo ?? ''),
+    supportEmail: String(data.supportEmail ?? RUNTIME_CONFIG_DEFAULTS.supportEmail),
+    supportPhone: String(data.supportPhone ?? RUNTIME_CONFIG_DEFAULTS.supportPhone),
+    supportHours: String(data.supportHours ?? RUNTIME_CONFIG_DEFAULTS.supportHours),
+    docsUrl: String(data.docsUrl ?? RUNTIME_CONFIG_DEFAULTS.docsUrl),
+    brandTitle: String(data.brandTitle ?? RUNTIME_CONFIG_DEFAULTS.brandTitle),
+    brandSubtitle: String(data.brandSubtitle ?? RUNTIME_CONFIG_DEFAULTS.brandSubtitle),
+    brandTagline: String(data.brandTagline ?? RUNTIME_CONFIG_DEFAULTS.brandTagline),
+    brandLogo: String(data.brandLogo ?? RUNTIME_CONFIG_DEFAULTS.brandLogo),
     // 编辑器专属标题面：缺键（旧后端未上线）回落空串 = 使用编辑器 ini 自带值
-    brandEditorTitle: String(data.brandEditorTitle ?? ''),
-    brandCopyrightLine: String(data.brandCopyrightLine ?? ''),
-    brandCopyrightYear: String(data.brandCopyrightYear ?? ''),
-    brandCopyrightHolder: String(data.brandCopyrightHolder ?? ''),
-    brandLegalProductName: String(data.brandLegalProductName ?? ''),
-    brandLegalProductShortName: String(data.brandLegalProductShortName ?? ''),
-    allowRegister: Boolean(data.allowRegister ?? true),
-    wechatEnabled: Boolean(data.wechatEnabled ?? false),
-    wechatAutoRegister: Boolean(data.wechatAutoRegister ?? false),
-    maxFileSize: Number(data.maxFileSize ?? 100),
-    collaborationEnabled: Boolean(data.collaborationEnabled ?? true),
-    collaborationDomains: String(data.collaborationDomains ?? ''),
-    batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? false),
+    brandEditorTitle: String(data.brandEditorTitle ?? RUNTIME_CONFIG_DEFAULTS.brandEditorTitle),
+    brandCopyrightLine: String(data.brandCopyrightLine ?? RUNTIME_CONFIG_DEFAULTS.brandCopyrightLine),
+    brandCopyrightYear: String(data.brandCopyrightYear ?? RUNTIME_CONFIG_DEFAULTS.brandCopyrightYear),
+    brandCopyrightHolder: String(data.brandCopyrightHolder ?? RUNTIME_CONFIG_DEFAULTS.brandCopyrightHolder),
+    brandLegalProductName: String(data.brandLegalProductName ?? RUNTIME_CONFIG_DEFAULTS.brandLegalProductName),
+    brandLegalProductShortName: String(data.brandLegalProductShortName ?? RUNTIME_CONFIG_DEFAULTS.brandLegalProductShortName),
+    allowRegister: Boolean(data.allowRegister ?? RUNTIME_CONFIG_DEFAULTS.allowRegister),
+    // 缺键回落开启（与后端默认一致）：旧后端未公开该键时注册页仍展示营销吸引点
+    registerGiftEnabled: Boolean(data.registerGiftEnabled ?? RUNTIME_CONFIG_DEFAULTS.registerGiftEnabled),
+    registerGiftMonths: Number(data.registerGiftMonths ?? RUNTIME_CONFIG_DEFAULTS.registerGiftMonths),
+    wechatEnabled: Boolean(data.wechatEnabled ?? RUNTIME_CONFIG_DEFAULTS.wechatEnabled),
+    wechatAutoRegister: Boolean(data.wechatAutoRegister ?? RUNTIME_CONFIG_DEFAULTS.wechatAutoRegister),
+    maxFileSize: Number(data.maxFileSize ?? RUNTIME_CONFIG_DEFAULTS.maxFileSize),
+    collaborationEnabled: Boolean(data.collaborationEnabled ?? RUNTIME_CONFIG_DEFAULTS.collaborationEnabled),
+    collaborationDomains: String(data.collaborationDomains ?? RUNTIME_CONFIG_DEFAULTS.collaborationDomains),
+    batchDownloadEnabled: Boolean(data.batchDownloadEnabled ?? RUNTIME_CONFIG_DEFAULTS.batchDownloadEnabled),
     // 缺键回落开启（同 membershipEnabled）：配置拉取结果缺键不能把免费导出静默关掉
-    freeExportDownloadEnabled: Boolean(
-      data.freeExportDownloadEnabled ?? true
-    ),
+    freeExportDownloadEnabled: Boolean(data.freeExportDownloadEnabled ?? RUNTIME_CONFIG_DEFAULTS.freeExportDownloadEnabled),
     // 缺键（旧后端未上线此键）回落开启：配置拉取结果缺键不能把会员中心整块藏掉
-    membershipEnabled: Boolean(data.membershipEnabled ?? true),
-    userCancelGraceDays: Number(data.userCancelGraceDays ?? 7),
-    securityMode: data.securityMode === 'secure' ? 'secure' : 'normal',
-    // 旧后端未公开该两键（isPublic 未回填）时回落 secure 基线默认
-    passwordPolicyMinLength: Number(data.passwordPolicyMinLength ?? 10),
-    passwordPolicyMinCategories: Number(data.passwordPolicyMinCategories ?? 3),
+    membershipEnabled: Boolean(data.membershipEnabled ?? RUNTIME_CONFIG_DEFAULTS.membershipEnabled),
+    userCancelGraceDays: Number(data.userCancelGraceDays ?? RUNTIME_CONFIG_DEFAULTS.userCancelGraceDays),
+    securityMode: data.securityMode === 'secure' ? 'secure' : RUNTIME_CONFIG_DEFAULTS.securityMode,
+    // 旧后端未公开该两键（isPublic 未回填）时回落刻意 fail-safe（secure 基线）
+    passwordPolicyMinLength: Number(data.passwordPolicyMinLength ?? RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinLength),
+    passwordPolicyMinCategories: Number(data.passwordPolicyMinCategories ?? RUNTIME_CONFIG_FAIL_SAFE.passwordPolicyMinCategories),
     brandProfile: toBrandConfig(data.brandProfile),
+    // 反馈配置：后端键为点分形（feedback.minContentLength），前端类型为平铺形，此处做映射；
+    // 缺键回落后端默认值（见 contracts RUNTIME_CONFIG_DEFAULTS feedback.*）
+    feedbackAnonymousEnabled: Boolean(data['feedback.anonymousEnabled'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousEnabled),
+    feedbackAnonymousDailyLimit: Number(data['feedback.anonymousDailyLimit'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackAnonymousDailyLimit),
+    feedbackUserDailyLimit: Number(data['feedback.userDailyLimit'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackUserDailyLimit),
+    feedbackMinContentLength: Number(data['feedback.minContentLength'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMinContentLength),
+    feedbackMaxContentLength: Number(data['feedback.maxContentLength'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxContentLength),
+    feedbackMaxImageSize: Number(data['feedback.maxImageSize'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageSize),
+    feedbackMaxDrawingSize: Number(data['feedback.maxDrawingSize'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingSize),
+    feedbackMaxDocumentSize: Number(data['feedback.maxDocumentSize'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentSize),
+    feedbackMaxImageCount: Number(data['feedback.maxImageCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxImageCount),
+    feedbackMaxDrawingCount: Number(data['feedback.maxDrawingCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDrawingCount),
+    feedbackMaxDocumentCount: Number(data['feedback.maxDocumentCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxDocumentCount),
+    feedbackMaxAttachmentCount: Number(data['feedback.maxAttachmentCount'] ?? RUNTIME_CONFIG_DEFAULTS.feedbackMaxAttachmentCount),
   };
 }
 

@@ -14,6 +14,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showFailToast, showSuccessToast } from 'vant'
 import { t } from '@/languages'
+import { errMsg } from '@/utils/apiError'
 import { useMemberCenter } from '@/composables/useMemberCenter'
 import { formatSize, formatStorageSize } from '@/composables/useNodeFormatter'
 import {
@@ -387,13 +388,12 @@ async function onSubmitRefund(): Promise<void> {
   if (!target || !reason || refunding.value) return
   refunding.value = true
   try {
-    const ok = await applyRefund(target, reason)
-    if (ok) {
-      showRefund.value = false
-      showSuccessToast(t('退款申请已提交'))
-    } else {
-      showFailToast(t('退款申请提交失败，请重试'))
-    }
+    await applyRefund(target, reason)
+    showRefund.value = false
+    showSuccessToast(t('退款申请已提交'))
+  } catch (e) {
+    // 后端文案优先（如退款被驳回的原因），网络异常等无后端文案时落回兜底
+    showFailToast(errMsg(e, t('退款申请提交失败，请重试')))
   } finally {
     refunding.value = false
   }

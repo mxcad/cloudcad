@@ -10,6 +10,7 @@ import { ref, watch, computed } from 'vue'
 import { showToast, showConfirmDialog } from 'vant'
 import QRCode from 'qrcode'
 import ShareLinkSheet from '@/components/ShareLinkSheet.vue'
+import PosterPreviewPopup from '@/components/share/PosterPreviewPopup.vue'
 import { useShareLinkCopy } from '@/composables/useShareLinkCopy'
 import { t } from '@/languages'
 import { useAuthState } from '@/composables/useAuthState'
@@ -26,10 +27,15 @@ import {
   clampCustomDays,
   computeExpiresInSeconds,
   type ShareExpirationOption,
+  SHARE_POSTER_DEFAULT_LAYOUT,
+  type SharePosterLayout,
 } from '@cloudcad/platform'
 import { errMsg, unwrap } from '@/utils/apiError'
 import { shareUrl } from '@/utils/shareUrl'
 import { formatShareExpiry } from '@/utils/shareDate'
+import { composeSharePosterDataUrl } from '@/utils/sharePoster'
+import { triggerBlobDownload } from '@/utils/download'
+import type { PosterRegion } from '@/stores/posterRegion'
 
 // 后端 getFileShares 只返回 token/url/expiresAt/createdAt/createdBy/fileName
 // （无 id、无 usedCount，且服务端已过滤掉已过期项）
@@ -45,15 +51,20 @@ const props = withDefaults(
     show: boolean
     fileId: string
     fileName?: string
+    /** 指定区域结果（home 框选完成后传入）；null/未传 = 整图包围盒 */
+    region?: PosterRegion | null
   }>(),
   {
     fileName: '',
+    region: null,
   }
 )
 
 const emit = defineEmits<{
   (e: 'update:show', val: boolean): void
   (e: 'close'): void
+  /** 用户点「指定区域」：请求 home 关闭弹窗、在底层编辑器上框选（当前图纸已打开） */
+  (e: 'pick-region'): void
 }>()
 
 const visible = computed({
@@ -110,6 +121,11 @@ function onCustomDaysInput(v: string | number) {
 // 两条完全相同的条目，读起来像后端重复建了两条。
 const listShares = computed(() =>
   existingShares.value.filter((s) => s.token !== created.value?.token)
+)
+
+// 分享图片二维码内容：优先刚创建的分享链接；否则已有分享中最近一条（url 已绝对化）
+const activePosterShareUrl = computed(
+  () => created.value?.url ?? listShares.value[0]?.url ?? ''
 )
 
 async function loadExistingShares() {
@@ -210,23 +226,197 @@ async function handleRevoke(item: FileShareItem) {
   }
 }
 
-// 弹窗打开时重置并拉取已有分享
+// 弹窗打开时拉取已有分享。注意：不再在此重置 created/有效期——它们由 onClose
+// （用户主动关闭）清理；指定区域返回时 home 直接设 show=false 不经 onClose，
+// created/海报保留（否则指定区域返回会因 created 被清而丢掉分享图片区块）。
 watch(
   () => props.show,
   (val) => {
     if (val) {
-      expiration.value = SHARE_EXPIRATION_DEFAULT
-      customDays.value = SHARE_CUSTOM_DAYS_DEFAULT
-      created.value = null
-      qrDataUrl.value = ''
       void loadExistingShares()
     }
   },
   { immediate: true }
 )
 
+// ── 分享图片（海报）：补齐 PC ShareDialog 的分享图片能力 ──
+// 当前图纸已在编辑器打开（fileId === editorState.fileId），故出图走
+// renderSharePosterInBackground（内部跳过后台开图，不触发 fetchFileNode 登录门槛）；
+// 指定区域由 home 关闭弹窗后在底层编辑器框选，结果经 props.region 传回。
+// 海报选项（底部名称/二维码大小）与 ShareManagePage C-36 一致：
+// 底部名称 = 一个输入框（默认文件名称，清空即不显示）；二维码与「扫一扫看图纸」文字一体缩放。
+const posterDataUrl = ref('')
+const posterBlob = ref<Blob | null>(null)
+const posterHasBorder = ref(false)
+const posterGenerating = ref(false)
+// 分享图片抽屉（共享 PosterPreviewPopup）：「生成图片」按钮打开；已有海报直接展示
+const showPosterPopup = ref(false)
+// 当前海报二维码链接：默认刚创建/已有分享最近一条；点某条已有分享「分享图片」时切到该条
+const posterShareUrl = ref('')
+
+/** 「生成图片」按钮：始终用默认分享链接（刚创建或已有分享最近一条）。 */
+async function openPosterPopup() {
+  posterShareUrl.value = activePosterShareUrl.value
+  if (!posterDataUrl.value) {
+    await generatePoster()
+    if (!posterDataUrl.value) return
+  }
+  showPosterPopup.value = true
+}
+
+/** 已有分享行内「分享图片」：用该条分享链接生成/重合成海报并打开抽屉。 */
+async function openPosterPopupFor(item: FileShareItem) {
+  if (!item.url) {
+    showToast(t('分享图片生成失败'))
+    return
+  }
+  posterShareUrl.value = item.url
+  if (!posterBlob.value) {
+    await generatePoster()
+  } else {
+    // 海报图纸图可复用（同一图纸），仅换二维码内容重合成
+    await rerenderPoster()
+  }
+  if (posterDataUrl.value) showPosterPopup.value = true
+}
+const posterRegion = ref<PosterRegion | null>(props.region ?? null)
+const footerName = ref('')
+const posterQrScale = ref(1)
+
+const posterOpts = computed(() => ({
+  footerText: footerName.value.trim() || null,
+  qrScale: posterQrScale.value,
+}))
+
+// 版式（手机竖版/正方形/横版）：与 PC 一致三档，预览内调整（改动即重合成预览）。
+// 版式选择弹层在共享 PosterPreviewPopup 组件内；此处只持有值，变化触发重合成。
+const posterLayout = ref<SharePosterLayout>(SHARE_POSTER_DEFAULT_LAYOUT)
+
+/** 出图（有 region 用区域，无 region 整图包围盒）并合成海报预览。 */
+async function generatePoster(region?: PosterRegion | null) {
+  if (!props.fileId) {
+    showToast(t('请先打开图纸'))
+    return
+  }
+  if (!posterShareUrl.value) {
+    showToast(t('分享图片生成失败'))
+    return
+  }
+  if (posterGenerating.value) return
+  posterGenerating.value = true
+  try {
+    const { renderSharePosterInBackground } = await import(
+      '@/services/backgroundRender'
+    )
+    // 未显式传 region（「生成分享图片」按钮）时沿用已指定区域；指定区域返回（region 显式传）覆盖
+    const effectiveRegion = region !== undefined ? region : posterRegion.value
+    const result = await renderSharePosterInBackground(
+      props.fileId,
+      effectiveRegion ?? null
+    )
+    if (!result?.posterBlob) {
+      showToast(t('分享图片生成失败'))
+      return
+    }
+    posterBlob.value = result.posterBlob
+    posterHasBorder.value = result.hasBorder
+    // 每次生成，底部名称默认回文件名称（清空输入框即不显示）
+    footerName.value = props.fileName
+    await rerenderPoster()
+  } catch (e) {
+    showToast(e instanceof Error && e.message ? e.message : t('分享图片生成失败'))
+  } finally {
+    posterGenerating.value = false
+  }
+}
+
+/** 用缓存的图纸图 Blob + 当前海报选项重合成（选项调整时调用；不重新引擎截图）。 */
+let posterRecomposeSeq = 0
+async function rerenderPoster() {
+  if (!posterBlob.value || !posterShareUrl.value) return
+  const seq = ++posterRecomposeSeq
+  const opts = posterOpts.value
+  const next = await composeSharePosterDataUrl({
+    shareUrl: posterShareUrl.value,
+    fileName: props.fileName,
+    thumbnail: posterBlob.value,
+    scanText: t('扫一扫看图纸'),
+    footerText: opts.footerText,
+    qrScale: opts.qrScale,
+    layout: posterLayout.value,
+    thumbnailHasBorder: posterHasBorder.value,
+  })
+  // 只认最后一次（连续拖动/输入时旧结果晚到不覆盖新图）；保留旧图直到新图就绪，避免闪烁
+  if (seq === posterRecomposeSeq) posterDataUrl.value = next
+}
+
+/** 下载当前已合成的海报（所见即所得：预览里是什么就下载什么，不二次生成）。 */
+function downloadPoster() {
+  const dataUrl = posterDataUrl.value
+  if (!dataUrl) {
+    showToast(t('分享图片生成失败'))
+    return
+  }
+  const m = dataUrl.match(/^data:([^;,]+);base64,(.*)$/)
+  if (!m || !m[2]) {
+    showToast(t('分享图片生成失败'))
+    return
+  }
+  const bin = atob(m[2])
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  triggerBlobDownload(
+    new Blob([bytes], { type: m[1] }),
+    `${props.fileName || '分享'}-分享图.png`
+  )
+  showToast(t('分享图片已下载'))
+}
+
+function onPickRegion() {
+  // 关闭抽屉让出画布：PosterPreviewPopup 的 van-popup teleport 到 body，
+  // 仅关父弹窗（home 里 showShareCurrent=false）不影响它，不关会遮挡底层引擎框选。
+  showPosterPopup.value = false
+  emit('pick-region')
+}
+
+// 指定区域结果传入（home 框选完成后重开弹窗）→ 用该区域重新出图，完成后自动重开抽屉
+watch(
+  () => props.region,
+  (region) => {
+    posterRegion.value = region ?? null
+    if (region) {
+      void generatePoster(region).then(() => {
+        if (posterDataUrl.value) showPosterPopup.value = true
+      })
+    }
+  }
+)
+
+// 海报选项变化 → 250ms 节流重合成（连续拖动只留最后一次）
+let posterOptsTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  [footerName, posterQrScale],
+  () => {
+    if (posterOptsTimer) clearTimeout(posterOptsTimer)
+    posterOptsTimer = setTimeout(() => void rerenderPoster(), 250)
+  }
+)
+
+// 版式改动 → 重合成预览（组件 emit update:layout 更新 posterLayout）
+watch([posterLayout], () => void rerenderPoster())
+
 function onClose() {
   visible.value = false
+  // 用户主动关闭：重置分享结果与海报，下次打开是全新面板。
+  // 指定区域返回不经 onClose（home 直接设 show=false），created/海报/有效期保留。
+  expiration.value = SHARE_EXPIRATION_DEFAULT
+  customDays.value = SHARE_CUSTOM_DAYS_DEFAULT
+  created.value = null
+  qrDataUrl.value = ''
+  posterDataUrl.value = ''
+  showPosterPopup.value = false
+  posterBlob.value = null
+  posterRegion.value = props.region ?? null
 }
 </script>
 
@@ -304,6 +494,20 @@ function onClose() {
             </div>
           </div>
 
+          <!-- 分享图片（海报）：统一 PosterPreviewPopup 抽屉（与管理页一致）。
+               「生成图片」打开抽屉；下载/指定区域/版式/底部名称/二维码大小都在抽屉内。
+               有分享链接（刚创建或已有分享最近一条）才可生成。 -->
+          <div v-if="activePosterShareUrl" class="sc-section">
+            <div class="sc-section-title">{{ t('分享图片') }}</div>
+            <button
+              class="sc-poster-generate"
+              :disabled="posterGenerating"
+              @click="openPosterPopup"
+            >
+              {{ posterGenerating ? t('生成中...') : t('生成分享图片') }}
+            </button>
+          </div>
+
           <!-- 已有分享（对齐 PC ShareDialog 列表视图：链接 + 复制 + 有效期 + 撤销）。
                刚创建的那条已在上方结果区展示，若它也是唯一一条，整节收起——
                否则标题下只剩「还没有分享过这个文件」，与结果区自相矛盾。 -->
@@ -330,6 +534,14 @@ function onClose() {
                 </div>
                 <div class="sc-share-row sc-share-row--meta">
                   <span class="sc-share-expiry">{{ formatShareExpiry(item.expiresAt) }}</span>
+                  <button
+                    class="sc-share-poster"
+                    :disabled="posterGenerating"
+                    @click="openPosterPopupFor(item)"
+                  >
+                    <van-icon name="photograph" size="13" />
+                    <span>{{ t('分享图片') }}</span>
+                  </button>
                   <button class="sc-revoke" @click="handleRevoke(item)">{{ t('撤销') }}</button>
                 </div>
               </div>
@@ -341,6 +553,21 @@ function onClose() {
   </van-popup>
 
   <ShareLinkSheet v-model:show="showLinkSheet" :url="linkSheetUrl" />
+
+  <!-- 分享图片抽屉（统一 PosterPreviewPopup，与管理页一致）：
+       生成/下载/指定区域/版式/底部名称/二维码大小都在抽屉内 -->
+  <PosterPreviewPopup
+    v-model:show="showPosterPopup"
+    :data-url="posterDataUrl"
+    :file-name="props.fileName"
+    v-model:footer-name="footerName"
+    v-model:qr-scale="posterQrScale"
+    v-model:layout="posterLayout"
+    :generating="posterGenerating"
+    :region-active="!!posterRegion"
+    @download="downloadPoster"
+    @pick-region="onPickRegion"
+  />
 </template>
 
 <style scoped lang="scss">
@@ -497,6 +724,24 @@ function onClose() {
   color: var(--text-tertiary);
 }
 
+/* 分享图片（海报）区块：样式对齐 ShareManagePage C-36 的 poster-preview 面板 */
+
+.sc-poster-generate {
+  width: 100%;
+  padding: 12px;
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent, #00a99e);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
 .sc-share-list {
   display: flex;
   flex-direction: column;
@@ -543,6 +788,25 @@ function onClose() {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
+}
+
+/* 已有分享行内「分享图片」：打开统一 PosterPreviewPopup 抽屉（用该条分享链接） */
+.sc-share-poster {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+  }
 }
 
 .sc-share-expiry {

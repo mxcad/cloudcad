@@ -5,7 +5,10 @@
 
 import { useCallback, useState } from 'react';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
-import { nodeControllerUpdateNode } from '@/api-sdk';
+import {
+  nodeControllerUpdateNode,
+  projectControllerCreateProject,
+} from '@/api-sdk';
 import { useFileSystemNavigation } from '@/hooks/file-system';
 import { useLibraryOperations } from '@/hooks/library/useLibraryOperations';
 import { useProjectManagement } from '@/hooks/useProjectManagement';
@@ -154,7 +157,9 @@ export function useProjectDrawingsActions({
     closeModal: closeProjectModal,
     setFormData: setProjectFormData,
     handleUpdate: handleUpdateProjectSubmit,
+    handleCreate: handleCreateProjectSubmit,
   } = useProjectManagement({
+    onProjectCreated: refreshNodes,
     onProjectUpdated: refreshNodes,
     onProjectDeleted: refreshNodes,
     showToast,
@@ -209,17 +214,30 @@ export function useProjectDrawingsActions({
   const handleSubmitProject = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      handleUpdateProjectSubmit(async (id, data) => {
-        const result = await nodeControllerUpdateNode({
-          throwOnError: true,
-          path: { nodeId: id },
-          body: { name: data.name ?? undefined, description: data.description },
+      // 新建 vs 编辑分支：新建走创建接口，编辑走更新接口。
+      // 此前无条件走 handleUpdateProjectSubmit，新建时 useProjectManagement
+      // 的 handleUpdate 因 editingProject 为 null 直接 return，弹窗提交被静默吞掉
+      // （BUG-PROJ-01：面板创建入口恢复后仍无法建出项目）。
+      if (projectBeingEdited) {
+        handleUpdateProjectSubmit(async (id, data) => {
+          const result = await nodeControllerUpdateNode({
+            throwOnError: true,
+            path: { nodeId: id },
+            body: { name: data.name ?? undefined, description: data.description },
+          });
+          // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
+          // 否则外层 catch 不触发，弹窗照常关闭提示"更新成功"（历史 bug）
         });
-        // SDK 默认不抛错：失败时错误在 result.error，必须显式抛出，
-        // 否则外层 catch 不触发，弹窗照常关闭提示"更新成功"（历史 bug）
-      });
+      } else {
+        handleCreateProjectSubmit(async (name, description, transferSettings) => {
+          await projectControllerCreateProject({
+            throwOnError: true,
+            body: { name, description, ...transferSettings },
+          } as Parameters<typeof projectControllerCreateProject>[0]);
+        });
+      }
     },
-    [handleUpdateProjectSubmit]
+    [projectBeingEdited, handleUpdateProjectSubmit, handleCreateProjectSubmit]
   );
 
   // Rename submit

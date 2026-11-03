@@ -38,6 +38,39 @@ export interface IntentFacts {
 /** 续跑锚点：`document-loaded` = 当前文档真正加载完成后才允许续跑。 */
 export type IntentResumeAnchor = 'document-loaded';
 
+/**
+ * `beginIntent` 的结论：端侧调用方据此映射命令结果 / UI 状态。
+ * - `auth-blocked`：未登录，已请求登录闸门；
+ * - `cloud-save-pending`：已登录但无云端节点，已触发保存到云端；
+ * - `vip-blocked`：已登录但会员闸门未过，已弹购买引导；
+ * - `cancelled`：用户拒绝了确认框，或前置已满足（链已清除）。
+ * 两端 adapter 共用（PC `intentChain.ts` 与移动端 `intentChain.ts` 曾是逐字节重复）。
+ */
+export type IntentStart =
+  | 'auth-blocked'
+  | 'cloud-save-pending'
+  | 'vip-blocked'
+  | 'cancelled';
+
+/**
+ * 意图链 id 常量——跨端契约的单一事实源。
+ *
+ * id 会被持久化进 sessionStorage（`PENDING_INTENT_KEY`），端侧按它识别链身份
+ * （PC `loginKindFor` 按 id 选登录文案 kind；续跑分派用 `action.type`，但 id 是
+ * 日志/身份识别的稳定键）。两端曾各自写死字符串字面量，漂移会让持久化的链在
+ * 另一端找不到身份，故收敛到这里。值保持与既有字面量一致，零行为变化。
+ *
+ * 注意：`action.type` 是端侧分派键（PC 发引擎命令名 / 移动端发页面动作名），
+ * 必绑端、不能进本表；VIP 导出链的 id 是 `vip-<command>` 按命令派生、不在此列。
+ */
+export const CHAIN_IDS = {
+  save: 'save-to-cloud',
+  saveAs: 'save-as-to-cloud',
+  share: 'share-current-drawing',
+  versionHistory: 'version-history',
+  exportDownload: 'export-download',
+} as const;
+
 /** 意图定义：动作 + 前置条件 + 续跑锚点（声明式，无执行逻辑）。 */
 export interface IntentDef {
   /** 意图标识：续跑时按它分派具体动作（端侧 switch 的唯一入口）。 */

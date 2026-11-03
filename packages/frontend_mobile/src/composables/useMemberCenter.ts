@@ -362,21 +362,13 @@ export function useMemberCenter() {
     payQrDataUrl.value = '';
   }
 
-  /** 申请退款（含被驳回后重申，后端按订单号新建申请）；失败返回 false */
-  async function applyRefund(
-    order: BillingOrder,
-    reason: string
-  ): Promise<boolean> {
-    try {
-      await billingControllerApplyRefund({
-        path: { orderNo: order.orderNo },
-        body: { reason },
-      });
-      await loadOrders(true);
-      return true;
-    } catch {
-      return false;
-    }
+  /** 申请退款（含被驳回后重申，后端按订单号新建申请）；失败抛出原错误（调用方展示后端文案） */
+  async function applyRefund(order: BillingOrder, reason: string): Promise<void> {
+    await billingControllerApplyRefund({
+      path: { orderNo: order.orderNo },
+      body: { reason },
+    });
+    await loadOrders(true);
   }
 
   onUnmounted(stopPolling);

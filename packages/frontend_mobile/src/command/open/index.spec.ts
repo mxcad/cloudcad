@@ -196,6 +196,8 @@ describe('打开文件命令编排', () => {
     expect(openMxWebMock.mock.calls[0][1]).toEqual({
       fetchAttributes: NO_CACHE_FETCH_ATTRIBUTES,
     });
+    // 无缓存打开也必须检查外部参照（PC 语义：重新转换后弹外部参照框，即使以前上传过）
+    expect(checkExtRefsMock).toHaveBeenCalledWith(HASH_DWG);
   });
 
   it('引擎打开失败时提示打开图纸失败、不设活动态，遮罩仍要收起', async () => {
